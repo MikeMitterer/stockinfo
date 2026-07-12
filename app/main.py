@@ -11,23 +11,33 @@ from fastapi import FastAPI
 
 from app import __version__
 from app.config import Settings, get_settings
+from app.container import get_cached_quote_service
 from app.db import init_db
 from app.models import HealthResponse
 from app.routers import quotes
+from app.scheduler import RefreshScheduler
 
 logger = structlog.get_logger()
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Initialisiert Ressourcen beim Start (DB-Schema) und räumt beim Stopp auf."""
+    """Initialisiert DB-Schema und Refresh-Scheduler; stoppt ihn beim Herunterfahren."""
     settings: Settings = get_settings()
     init_db(settings.database_path)
+
+    scheduler = RefreshScheduler(
+        get_cached_quote_service(), settings.refresh_interval_hours
+    )
+    scheduler.start()
     logger.info(
         "app_started", database_path=settings.database_path, version=__version__
     )
-    yield
-    logger.info("app_stopped")
+    try:
+        yield
+    finally:
+        scheduler.shutdown()
+        logger.info("app_stopped")
 
 
 app = FastAPI(title="StockInfo", version=__version__, lifespan=lifespan)

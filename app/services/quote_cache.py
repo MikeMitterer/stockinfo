@@ -94,6 +94,39 @@ class CachedQuoteService:
             for row in rows
         ]
 
+    def refresh_all(self) -> int:
+        """Aktualisiert alle bekannten Instrumente live und speichert sie.
+
+        Wird vom Hintergrund-Scheduler aufgerufen. Umgeht die TTL bewusst. Ein
+        Fehler bei einem Instrument beendet den Lauf nicht.
+
+        Returns:
+            Anzahl erfolgreich aktualisierter Instrumente.
+        """
+        instruments = self._repository.list_instruments()
+        refreshed = 0
+        for instrument in instruments:
+            try:
+                fresh = self._fetch_live(instrument)
+                self._repository.save_quote(fresh)
+                refreshed += 1
+            except Exception as exc:
+                logger.warning(
+                    "refresh_failed",
+                    isin=instrument.get("isin"),
+                    symbol=instrument.get("symbol"),
+                    error=str(exc),
+                )
+        logger.info("refresh_completed", total=len(instruments), refreshed=refreshed)
+        return refreshed
+
+    def _fetch_live(self, instrument: dict) -> QuoteResponse:
+        """Beschafft einen frischen Kurs für ein bekanntes Instrument (ohne Cache)."""
+        isin = instrument.get("isin")
+        if isin:
+            return self._quote_service.get_quote_by_isin(isin)
+        return self._quote_service.get_quote_by_symbol(instrument["symbol"])
+
     def _get(self, instrument: dict | None, fetch) -> QuoteResponse:
         """Gemeinsame Cache-Logik: frischer Cache → nutzen, sonst neu beschaffen.
 
