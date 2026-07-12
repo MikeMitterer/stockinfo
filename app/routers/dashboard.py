@@ -46,7 +46,7 @@ def environment(settings: SettingsDep) -> EnvInfo:
 @router.post("/refresh", response_model=RefreshResult)
 def refresh_all(service: ServiceDep) -> RefreshResult:
     """Aktualisiert alle bekannten Instrumente live."""
-    total = len(service.list_instruments())
+    total = service.count_instruments()
     refreshed = service.refresh_all()
     return RefreshResult(total=total, refreshed=refreshed)
 

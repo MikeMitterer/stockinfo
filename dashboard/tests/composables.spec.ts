@@ -1,5 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
+// consola stummschalten — der Fehlerpfad-Test würde sonst eine rote Zeile ausgeben.
+vi.mock('consola', () => ({
+  consola: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+}))
+
 import { useEnvironment } from '../src/composables/useEnvironment'
 import { useHistory } from '../src/composables/useHistory'
 import { useInstruments } from '../src/composables/useInstruments'

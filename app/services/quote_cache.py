@@ -137,6 +137,10 @@ class CachedQuoteService:
         """Gibt alle Instrumente inkl. letztem Kurs zurück (für das Dashboard)."""
         return self._repository.list_instruments_with_latest()
 
+    def count_instruments(self) -> int:
+        """Gibt die Anzahl bekannter Instrumente zurück."""
+        return self._repository.count_instruments()
+
     def delete_instrument(self, isin: str) -> bool:
         """Löscht ein Instrument samt Historie; True bei Erfolg."""
         return self._repository.delete_instrument(isin)

@@ -134,6 +134,14 @@ class QuoteRepository:
             rows = connection.execute(query).fetchall()
             return [dict(row) for row in rows]
 
+    def count_instruments(self) -> int:
+        """Gibt die Anzahl bekannter Instrumente zurück (günstiger als eine Liste)."""
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT COUNT(*) AS n FROM instruments"
+            ).fetchone()
+            return int(row["n"])
+
     def delete_instrument(self, isin: str) -> bool:
         """Löscht ein Instrument (und seine Quotes via Cascade) anhand der ISIN.
 

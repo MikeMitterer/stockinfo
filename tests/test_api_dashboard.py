@@ -14,6 +14,9 @@ class FakeService:
         return [{"symbol": "VGWL.DE", "isin": "IE00B3RBWM25", "history_count": 2,
                  "latest_price": 161.0}]
 
+    def count_instruments(self) -> int:
+        return 1
+
     def refresh_all(self) -> int:
         return 3
 
