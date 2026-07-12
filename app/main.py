@@ -13,6 +13,7 @@ from app import __version__
 from app.config import Settings, get_settings
 from app.db import init_db
 from app.models import HealthResponse
+from app.routers import quotes
 
 logger = structlog.get_logger()
 
@@ -30,6 +31,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 
 app = FastAPI(title="StockInfo", version=__version__, lifespan=lifespan)
+app.include_router(quotes.router)
 
 
 @app.get("/health", response_model=HealthResponse)
