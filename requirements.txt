@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+yfinance
+justetf-scraping @ git+https://github.com/druzsan/justetf-scraping.git
+apscheduler
+pydantic-settings
+httpx
+structlog
