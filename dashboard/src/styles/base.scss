@@ -1,0 +1,22 @@
+@use './variables' as *;
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, sans-serif;
+  background: $color-bg;
+  color: $color-text;
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  border-radius: $radius;
+  padding: 0.4rem 0.8rem;
+  background: $color-accent;
+  color: $color-bg;
+  font-weight: 600;
+
+  &:disabled { opacity: 0.5; cursor: default; }
+}
