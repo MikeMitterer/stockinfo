@@ -44,6 +44,10 @@ hints: ## Nützliche URLs und Hinweise anzeigen
 	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Swagger" "http://localhost:$(PORT)/docs"
 	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Health"  "http://localhost:$(PORT)/health"
 	@echo
+	@echo "  $(YELLOW)Dashboard (cd dashboard && npm run dev)$(RESET)"
+	@echo
+	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Dashboard" "http://localhost:5173/"
+	@echo
 	@echo "  $(YELLOW)Beispiel$(RESET)"
 	@echo
 	@printf "    $(GREEN)%s$(RESET)\n" "curl http://localhost:$(PORT)/quote/IE00B4L5Y983"
