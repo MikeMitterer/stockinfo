@@ -77,3 +77,19 @@ stop: ## Hintergrund-Server stoppen
 .PHONY: logs
 logs: ## Server-Logs folgen
 	@tail -f $(LOG_FILE)
+
+# ─── Docker ───────────────────────────────────────────────────────────────────
+
+##@ Docker
+
+.PHONY: up
+up: ## Container starten (baut bei Bedarf, persistenter Cache)
+	docker compose up -d --build
+
+.PHONY: down
+down: ## Container stoppen und entfernen
+	docker compose down
+
+.PHONY: docker-logs
+docker-logs: ## Container-Logs folgen
+	docker compose logs -f

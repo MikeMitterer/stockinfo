@@ -1,0 +1,12 @@
+.venv/
+data/
+*.db
+__pycache__/
+*.pyc
+.git/
+.gitignore
+uvicorn.log
+tests/
+.env
+.idea/
+.libs/

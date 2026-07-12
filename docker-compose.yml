@@ -1,0 +1,19 @@
+services:
+  stockinfo:
+    build: .
+    image: stockinfo
+    ports:
+      - "${PORT:-8000}:8000"
+    env_file:
+      - .env
+    environment:
+      # Im Container feste Werte — überschreiben ggf. .env
+      HOST: 0.0.0.0
+      PORT: 8000
+      DATABASE_PATH: /data/stockinfo.db
+    volumes:
+      - stockinfo-data:/data
+    restart: unless-stopped
+
+volumes:
+  stockinfo-data:
