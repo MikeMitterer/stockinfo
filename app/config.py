@@ -28,6 +28,10 @@ class Settings(BaseSettings):
     refresh_interval_hours: int = 6
     metadata_ttl_days: int = 7
 
+    # ISIN-Auflösung
+    default_exchange: str = "XETR"  # bevorzugte Börse für ISIN-Abfragen (MIC)
+    openfigi_api_key: str = ""  # optional — höheres Rate-Limit bei OpenFIGI
+
     # Auth (leer = deaktiviert)
     api_key: str = ""
 
