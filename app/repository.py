@@ -113,6 +113,39 @@ class QuoteRepository:
             rows = connection.execute("SELECT * FROM instruments").fetchall()
             return [dict(row) for row in rows]
 
+    def list_instruments_with_latest(self) -> list[dict]:
+        """Gibt alle Instrumente inkl. jüngstem Kurs und History-Anzahl zurück."""
+        query = """
+            SELECT i.*,
+                   q.price      AS latest_price,
+                   q.quote_time AS latest_quote_time,
+                   q.currency   AS latest_currency,
+                   q.fetched_at AS latest_fetched_at,
+                   (SELECT COUNT(*) FROM quotes WHERE instrument_id = i.id)
+                       AS history_count
+            FROM instruments i
+            LEFT JOIN quotes q ON q.id = (
+                SELECT id FROM quotes WHERE instrument_id = i.id
+                ORDER BY quote_time DESC LIMIT 1
+            )
+            ORDER BY i.symbol
+        """
+        with self._connect() as connection:
+            rows = connection.execute(query).fetchall()
+            return [dict(row) for row in rows]
+
+    def delete_instrument(self, isin: str) -> bool:
+        """Löscht ein Instrument (und seine Quotes via Cascade) anhand der ISIN.
+
+        Returns:
+            True, wenn ein Instrument gelöscht wurde, sonst False.
+        """
+        with self._connect() as connection:
+            cursor = connection.execute(
+                "DELETE FROM instruments WHERE isin = ?", (isin,)
+            )
+            return cursor.rowcount > 0
+
     def save_quote(self, response: QuoteResponse) -> int:
         """Speichert Instrument-Metadaten und hängt den Kurspunkt an.
 
