@@ -120,6 +120,27 @@ class CachedQuoteService:
         logger.info("refresh_completed", total=len(instruments), refreshed=refreshed)
         return refreshed
 
+    def refresh_one(self, isin: str) -> QuoteResponse:
+        """Aktualisiert ein einzelnes Instrument per ISIN live und speichert es.
+
+        Umgeht die TTL bewusst.
+
+        Raises:
+            InstrumentNotFoundError: ISIN nicht auflösbar.
+            QuoteUnavailableError: Kein Kurs beschaffbar.
+        """
+        fresh = self._quote_service.get_quote_by_isin(isin)
+        self._repository.save_quote(fresh)
+        return fresh
+
+    def list_instruments(self) -> list[dict]:
+        """Gibt alle Instrumente inkl. letztem Kurs zurück (für das Dashboard)."""
+        return self._repository.list_instruments_with_latest()
+
+    def delete_instrument(self, isin: str) -> bool:
+        """Löscht ein Instrument samt Historie; True bei Erfolg."""
+        return self._repository.delete_instrument(isin)
+
     def _fetch_live(self, instrument: dict) -> QuoteResponse:
         """Beschafft einen frischen Kurs für ein bekanntes Instrument (ohne Cache)."""
         isin = instrument.get("isin")

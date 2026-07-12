@@ -32,6 +32,9 @@ class Settings(BaseSettings):
     default_exchange: str = "XETR"  # bevorzugte Börse für ISIN-Abfragen (MIC)
     openfigi_api_key: str = ""  # optional — höheres Rate-Limit bei OpenFIGI
 
+    # Dashboard / CORS
+    cors_origins: list[str] = ["http://localhost:5173"]
+
     # Auth (leer = deaktiviert)
     api_key: str = ""
 
