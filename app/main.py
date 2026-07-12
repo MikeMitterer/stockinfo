@@ -8,13 +8,14 @@ from collections.abc import AsyncIterator
 
 import structlog
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 
 from app import __version__
 from app.config import Settings, get_settings
 from app.container import get_cached_quote_service
 from app.db import init_db
 from app.models import HealthResponse
-from app.routers import quotes
+from app.routers import dashboard, quotes
 from app.scheduler import RefreshScheduler
 
 logger = structlog.get_logger()
@@ -42,6 +43,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
 app = FastAPI(title="StockInfo", version=__version__, lifespan=lifespan)
 app.include_router(quotes.router)
+app.include_router(dashboard.router)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=get_settings().cors_origins,
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 @app.get("/health", response_model=HealthResponse)
