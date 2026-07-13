@@ -225,20 +225,23 @@ Backend muss parallel laufen. Beides zusammen: **`make dev-up`** (siehe Schnells
 
 ## Docker (ein Container)
 
-Backend **und** Dashboard laufen in einem Image auf einem Port:
+Backend **und** Dashboard laufen in einem Image auf einem Port. Gebaut wird mit
+`docker/build.sh` (Ökosystem-Konvention, versioniert via `gitDockerTag`):
 
 ```bash
-make up        # baut & startet den Container → http://localhost:8000/
-make down      # stoppt & entfernt ihn
+make build     # Image bauen (docker/build.sh --build)
+make up        # Container starten → http://localhost:8000/
+make down      # stoppen & entfernen
+make docker-logs   # Logs folgen
 ```
 
 Das Dashboard wird von FastAPI mit ausgeliefert (relative API-Aufrufe), es
-ist kein separater Webserver nötig. Der Cache liegt im Volume `/data`.
+ist kein separater Webserver nötig. Der Cache liegt im Volume `stockinfo-data`
+(im Container unter `/data`).
 
-**Image bauen/pushen** (Ökosystem-Konvention, versioniert via `gitDockerTag`):
+**Push in eine Registry:**
 
 ```bash
-make build                    # docker/build.sh --build
 make push                     # docker/build.sh --push   (TARGET=ghcr, Default)
 TARGET=dockerhub make push    # alternativ Docker Hub
 ```
@@ -279,7 +282,6 @@ app/                    # FastAPI-Backend
 dashboard/              # Vue-Dashboard (eigenständige App)
 tests/                  # Backend-Tests (pytest)
 docker/                 # Dockerfile, build.sh (Ein-Image-Build)
-docker-compose.yml      # lokaler Container-Start (make up)
 Makefile                # Start/Stopp der Dienste (make help)
 ```
 

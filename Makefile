@@ -20,6 +20,11 @@ PORT       ?= 8000
 PID_FILE   := $(VENV)/uvicorn.pid
 LOG_FILE   := uvicorn.log
 
+# Docker (Image via docker/build.sh, Start via 'make up')
+IMAGE_NAME  ?= mangolila/stockinfo
+CONTAINER   ?= stockinfo
+DATA_VOLUME ?= stockinfo-data
+
 # ─── Hilfe ────────────────────────────────────────────────────────────────────
 
 .PHONY: help
@@ -104,17 +109,26 @@ logs: ## Server-Logs folgen
 ##@ Docker
 
 .PHONY: up
-up: ## Container-Stack starten (ein Image, Dashboard + API auf Port $(PORT))
-	docker compose up -d --build
-	@echo -e "  $(GREEN)✓$(RESET) Läuft — App $(BLUE)http://localhost:$(PORT)/$(RESET)"
+up: ## Container starten (Image aus 'make build'; Dashboard + API auf Port $(PORT))
+	-@docker rm -f $(CONTAINER) 2>/dev/null || true
+	docker run -d --name $(CONTAINER) \
+		-p $(PORT):8000 \
+		--env-file .env \
+		-e HOST=0.0.0.0 -e PORT=8000 -e DATABASE_PATH=/data/stockinfo.db \
+		-v $(DATA_VOLUME):/data \
+		--restart unless-stopped \
+		$(IMAGE_NAME):latest
+	@echo -e "  $(GREEN)✓$(RESET) Läuft — App $(BLUE)http://localhost:$(PORT)/$(RESET)  ($(WHITE)zuvor: make build$(RESET))"
 
 .PHONY: down
-down: ## Container-Stack stoppen und entfernen
-	docker compose down
+down: ## Container stoppen und entfernen
+	-@docker rm -f $(CONTAINER) 2>/dev/null \
+		&& echo -e "  $(GREEN)✓$(RESET) Gestoppt" \
+		|| echo -e "  $(YELLOW)⚠$(RESET) Kein Container '$(CONTAINER)'"
 
 .PHONY: docker-logs
 docker-logs: ## Container-Logs folgen
-	docker compose logs -f
+	docker logs -f $(CONTAINER)
 
 .PHONY: build
 build: ## Docker-Image bauen (docker/build.sh — versioniert via gitDockerTag)
