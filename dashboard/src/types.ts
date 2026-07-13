@@ -38,6 +38,12 @@ export interface QuotePoint {
   fetched_at: string
 }
 
+export interface DailyPoint {
+  date: string
+  close: number
+  currency: string | null
+}
+
 export interface RefreshResult {
   total: number
   refreshed: number
@@ -45,3 +51,6 @@ export interface RefreshResult {
 
 /** Aktive Unterseite/Tab des Dashboards. */
 export type TabKey = 'instruments' | 'environment' | 'links' | 'themes'
+
+/** Ausgewählter Chart-Zeitraum. 'intraday' = Tagesverlauf (Ticks), Rest = EOD. */
+export type RangeKey = 'intraday' | '1w' | '1m' | '3m' | '1y' | 'max'

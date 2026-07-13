@@ -1,26 +1,41 @@
 <script setup lang="ts">
 import {
-  CategoryScale,
   Chart as ChartJS,
   Filler,
   Legend,
   LinearScale,
   LineElement,
   PointElement,
+  TimeScale,
   Title,
   Tooltip,
+  type ChartData,
+  type ChartOptions,
 } from 'chart.js'
+import 'chartjs-adapter-date-fns'
+import { de } from 'date-fns/locale'
 import { computed } from 'vue'
 import { Line } from 'vue-chartjs'
 
 import { useTheme } from '../composables/useTheme'
-import type { QuotePoint } from '../types'
+import type { RangeKey } from '../types'
+import RangeSelector from './RangeSelector.vue'
 
 ChartJS.register(
-  CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler,
+  TimeScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, Filler,
 )
 
-const props = defineProps<{ points: QuotePoint[]; currency: string | null }>()
+const props = defineProps<{
+  series: { x: number; y: number }[]
+  currency: string | null
+  range: RangeKey
+  loading: boolean
+}>()
+
+const emit = defineEmits<{
+  (event: 'range-change', range: RangeKey): void
+}>()
+
 const { current } = useTheme()
 
 /** Liest eine CSS-Custom-Property vom <html> (mit Fallback). */
@@ -29,29 +44,29 @@ function cssVar(name: string, fallback: string): string {
   return value || fallback
 }
 
-const chartData = computed(() => {
-  void current.value // neu berechnen bei Theme-Wechsel
+const isIntraday = computed(() => props.range === 'intraday')
+
+const chartData = computed<ChartData<'line'>>(() => {
+  void current.value
   const accent = cssVar('--c-accent', '#df5430')
-  const ordered = [...props.points].reverse() // älteste zuerst
   return {
-    labels: ordered.map((point) => point.quote_time),
     datasets: [
       {
         label: `Kurs${props.currency ? ` (${props.currency})` : ''}`,
-        data: ordered.map((point) => point.price),
+        data: props.series,
         borderColor: accent,
         backgroundColor: `${accent}22`,
         pointBackgroundColor: accent,
-        pointRadius: 2,
+        pointRadius: isIntraday.value ? 2 : 1.5,
         borderWidth: 2,
-        tension: 0.25,
+        tension: 0.2,
         fill: true,
       },
     ],
   }
 })
 
-const chartOptions = computed(() => {
+const chartOptions = computed<ChartOptions<'line'>>(() => {
   void current.value
   const muted = cssVar('--c-muted', '#9a8fb0')
   const border = cssVar('--c-border', '#382c46')
@@ -60,7 +75,17 @@ const chartOptions = computed(() => {
     maintainAspectRatio: false,
     plugins: { legend: { labels: { color: muted } } },
     scales: {
-      x: { ticks: { color: muted, maxTicksLimit: 8 }, grid: { color: border } },
+      x: {
+        type: 'time',
+        adapters: { date: { locale: de } },
+        time: {
+          unit: isIntraday.value ? 'hour' : 'day',
+          tooltipFormat: isIntraday.value ? 'dd.MM. HH:mm' : 'dd.MM.yyyy',
+          displayFormats: { hour: 'HH:mm', day: 'dd.MM', month: 'MM.yy' },
+        },
+        ticks: { color: muted, maxTicksLimit: 8, autoSkip: true, maxRotation: 0 },
+        grid: { color: border },
+      },
       y: { ticks: { color: muted }, grid: { color: border } },
     },
   }
@@ -69,8 +94,13 @@ const chartOptions = computed(() => {
 
 <template>
   <section class="chart card">
-    <h2>Kurshistorie</h2>
-    <p v-if="points.length === 0" class="empty">Kein Instrument gewählt oder keine Historie.</p>
+    <header class="head">
+      <h2>Kurshistorie</h2>
+      <RangeSelector :active="range" @change="emit('range-change', $event)" />
+    </header>
+    <p v-if="series.length === 0" class="empty">
+      {{ loading ? 'Lade…' : 'Kein Instrument gewählt oder keine Historie im Zeitraum.' }}
+    </p>
     <div v-else class="canvas">
       <Line :data="chartData" :options="chartOptions" />
     </div>
@@ -85,6 +115,15 @@ const chartOptions = computed(() => {
   border: 1px solid $color-border;
   border-radius: $radius;
   padding: 1rem 1.1rem;
+}
+
+.head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+  h2 { margin: 0; }
 }
 
 .canvas { height: 320px; }

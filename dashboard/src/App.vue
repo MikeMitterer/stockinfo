@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import AppHeader from './components/AppHeader.vue'
 import EnvironmentPanel from './components/EnvironmentPanel.vue'
@@ -10,26 +10,42 @@ import StatusBar from './components/StatusBar.vue'
 import ThemesPanel from './components/ThemesPanel.vue'
 import Toolbar from './components/Toolbar.vue'
 import TopProgress from './components/TopProgress.vue'
+import { useDaily } from './composables/useDaily'
 import { useEnvironment } from './composables/useEnvironment'
 import { useHealth } from './composables/useHealth'
 import { useHistory } from './composables/useHistory'
 import { useInstrumentActions } from './composables/useInstrumentActions'
 import { useInstruments } from './composables/useInstruments'
 import { useRefresh } from './composables/useRefresh'
-import type { InstrumentSummary, TabKey } from './types'
+import type { InstrumentSummary, RangeKey, TabKey } from './types'
 
 const { env, load: loadEnv } = useEnvironment()
 const { instruments, load: loadInstruments } = useInstruments()
-const { points, load: loadHistory } = useHistory()
+const { points, load: loadHistory, loading: historyLoading } = useHistory()
+const { daily, load: loadDaily, loading: dailyLoading } = useDaily()
 const { refreshing, trigger } = useRefresh()
 const { busy, add, refreshOne, remove } = useInstrumentActions()
 const { status: healthStatus, version: healthVersion, start: startHealth, stop: stopHealth } =
   useHealth()
 
 const activeTab = ref<TabKey>('instruments')
-const selectedSymbol = ref<string | null>(null)
-const selectedCurrency = ref<string | null>(null)
+const selectedItem = ref<InstrumentSummary | null>(null)
+const selectedRange = ref<RangeKey>('intraday')
 const refreshingSymbol = ref<string | null>(null)
+
+const selectedSymbol = computed(() => selectedItem.value?.symbol ?? null)
+const selectedCurrency = computed(() => selectedItem.value?.latest_currency ?? null)
+const chartLoading = computed(() => historyLoading.value || dailyLoading.value)
+
+// Einheitliche Chart-Serie {x = Zeit (ms), y = Kurs} aus Intraday-Ticks oder EOD.
+const chartSeries = computed<{ x: number; y: number }[]>(() => {
+  if (selectedRange.value === 'intraday') {
+    return [...points.value]
+      .reverse()
+      .map((point) => ({ x: Date.parse(point.quote_time), y: point.price }))
+  }
+  return daily.value.map((point) => ({ x: Date.parse(point.date), y: point.close }))
+})
 
 onMounted(async () => {
   startHealth()
@@ -38,10 +54,25 @@ onMounted(async () => {
 
 onUnmounted(() => stopHealth())
 
+async function loadChart(): Promise<void> {
+  const item = selectedItem.value
+  if (!item) return
+  const range = selectedRange.value
+  if (range === 'intraday') {
+    await loadHistory(item)
+  } else {
+    await loadDaily(item, range)
+  }
+}
+
 async function select(item: InstrumentSummary): Promise<void> {
-  selectedSymbol.value = item.symbol
-  selectedCurrency.value = item.latest_currency
-  await loadHistory(item)
+  selectedItem.value = item
+  await loadChart()
+}
+
+async function onRangeChange(range: RangeKey): Promise<void> {
+  selectedRange.value = range
+  await loadChart()
 }
 
 async function onRefreshAll(): Promise<void> {
@@ -59,10 +90,7 @@ async function onRefreshOne(item: InstrumentSummary): Promise<void> {
   try {
     await refreshOne(item)
     await loadInstruments()
-    if (selectedSymbol.value === item.symbol) {
-      const updated = instruments.value.find((entry) => entry.symbol === item.symbol)
-      if (updated) await loadHistory(updated)
-    }
+    if (selectedItem.value?.symbol === item.symbol) await loadChart()
   } finally {
     refreshingSymbol.value = null
   }
@@ -70,9 +98,10 @@ async function onRefreshOne(item: InstrumentSummary): Promise<void> {
 
 async function onRemove(item: InstrumentSummary): Promise<void> {
   await remove(item)
-  if (selectedSymbol.value === item.symbol) {
-    selectedSymbol.value = null
+  if (selectedItem.value?.symbol === item.symbol) {
+    selectedItem.value = null
     points.value = []
+    daily.value = []
   }
   await loadInstruments()
 }
@@ -93,7 +122,13 @@ async function onRemove(item: InstrumentSummary): Promise<void> {
         @refresh="onRefreshOne"
         @remove="onRemove"
       />
-      <HistoryChart :points="points" :currency="selectedCurrency" />
+      <HistoryChart
+        :series="chartSeries"
+        :currency="selectedCurrency"
+        :range="selectedRange"
+        :loading="chartLoading"
+        @range-change="onRangeChange"
+      />
     </template>
 
     <EnvironmentPanel v-else-if="activeTab === 'environment'" :env="env" />
