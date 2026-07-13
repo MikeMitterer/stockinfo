@@ -246,9 +246,13 @@ make push                     # docker/build.sh --push   (TARGET=ghcr, Default)
 TARGET=dockerhub make push    # alternativ Docker Hub
 ```
 
-**Unraid:** Container aus dem Image `mangolila/stockinfo` (bzw.
-`ghcr.io/MikeMitterer/mangolila-stockinfo`), Port `8000:8000`, Pfad
-`/mnt/user/appdata/stockinfo → /data`, `.env` als Env-Variablen.
+**Unraid:** Es liegt ein fertiges Container-Template unter
+[`unraid/stockinfo.xml`](unraid/stockinfo.xml) bereit — Image
+`ghcr.io/mikemitterer/mangolila-stockinfo`, WebUI-Port `8000`, Pfad
+`/mnt/user/appdata/stockinfo → /data`, plus die wichtigsten Einstellungen als
+Variablen (Refresh-Intervall, TTLs, Börse, OpenFIGI-Key). Die XML in
+`/boot/config/plugins/dockerMan/templates-user/` ablegen (oder ihren Inhalt beim
+„Add Container" einfügen).
 
 [↑ Übersicht](#übersicht)
 
