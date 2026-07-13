@@ -242,13 +242,13 @@ ist kein separater Webserver nötig. Der Cache liegt im Volume `stockinfo-data`
 **Push in eine Registry:**
 
 ```bash
-make push                     # docker/build.sh --push   (TARGET=ghcr, Default)
-TARGET=dockerhub make push    # alternativ Docker Hub
+make push                     # docker/build.sh --push   (TARGET=dockerhub, Default)
+TARGET=ghcr make push         # alternativ GitHub Container Registry
 ```
 
 **Unraid:** Es liegt ein fertiges Container-Template unter
 [`unraid/stockinfo.xml`](unraid/stockinfo.xml) bereit — Image
-`ghcr.io/mikemitterer/mangolila-stockinfo`, WebUI-Port `8000`, Pfad
+`mangolila/stockinfo` (Docker Hub), WebUI-Port `8000`, Pfad
 `/mnt/user/appdata/stockinfo → /data`, plus die wichtigsten Einstellungen als
 Variablen (Refresh-Intervall, TTLs, Börse, OpenFIGI-Key). Die XML in
 `/boot/config/plugins/dockerMan/templates-user/` ablegen (oder ihren Inhalt beim
