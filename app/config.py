@@ -35,6 +35,11 @@ class Settings(BaseSettings):
     # Dashboard / CORS
     cors_origins: list[str] = ["http://localhost:5173"]
 
+    # Profil-Links (Platzhalter {isin} bzw. {symbol})
+    extraetf_etf_url: str = "https://extraetf.com/de/etf-profile/{isin}"
+    extraetf_stock_url: str = "https://extraetf.com/de/stock-profile/{isin}"
+    yahoo_url: str = "https://de.finance.yahoo.com/quote/{symbol}/"
+
     # Auth (leer = deaktiviert)
     api_key: str = ""
 

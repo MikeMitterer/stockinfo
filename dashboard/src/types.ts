@@ -28,6 +28,9 @@ export interface EnvInfo {
   port: number
   api_key_set: boolean
   openfigi_key_set: boolean
+  extraetf_etf_url: string
+  extraetf_stock_url: string
+  yahoo_url: string
 }
 
 export interface QuotePoint {

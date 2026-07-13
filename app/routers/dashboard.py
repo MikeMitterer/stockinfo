@@ -40,6 +40,9 @@ def environment(settings: SettingsDep) -> EnvInfo:
         port=settings.port,
         api_key_set=bool(settings.api_key),
         openfigi_key_set=bool(settings.openfigi_api_key),
+        extraetf_etf_url=settings.extraetf_etf_url,
+        extraetf_stock_url=settings.extraetf_stock_url,
+        yahoo_url=settings.yahoo_url,
     )
 
 
