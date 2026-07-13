@@ -68,3 +68,12 @@ def test_delete_by_symbol_service(repo: QuoteRepository) -> None:
 
     assert service.delete_by_symbol(saved["symbol"]) is True
     assert service.list_instruments() == []
+
+
+def test_get_history_by_symbol(repo: QuoteRepository) -> None:
+    service = CachedQuoteService(FakeQuoteService(), repo, ttl_hours=6)
+    service.refresh_one_by_symbol("BRYN.DE")
+    saved = service.list_instruments()[0]
+
+    history = service.get_history_by_symbol(saved["symbol"])
+    assert len(history) >= 1

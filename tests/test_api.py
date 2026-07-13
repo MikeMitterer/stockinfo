@@ -59,6 +59,15 @@ class FakeService:
             QuotePoint(price=161.0, quote_time="t2", fetched_at="t2"),
         ]
 
+    def get_history_by_symbol(
+        self,
+        symbol: str,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        limit: int = 100,
+    ) -> list[QuotePoint]:
+        return [QuotePoint(price=430.0, quote_time="t1", fetched_at="t1")]
+
 
 @pytest.fixture
 def client() -> Iterator[TestClient]:
@@ -121,3 +130,9 @@ def test_history_ungueltiges_limit_422(client: TestClient) -> None:
         client.get("/quote/IE00B3RBWM25/history", params={"limit": 0}).status_code
         == 422
     )
+
+
+def test_history_by_symbol(client: TestClient) -> None:
+    response = client.get("/quote/by-symbol/BRYN.DE/history")
+    assert response.status_code == 200
+    assert len(response.json()) == 1

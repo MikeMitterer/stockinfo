@@ -83,6 +83,33 @@ class CachedQuoteService:
             raise QuoteUnavailableError(isin)
 
         rows = self._repository.get_history(instrument["id"], date_from, date_to, limit)
+        return self._to_points(rows)
+
+    def get_history_by_symbol(
+        self,
+        symbol: str,
+        date_from: str | None = None,
+        date_to: str | None = None,
+        limit: int = 100,
+    ) -> list[QuotePoint]:
+        """Gibt die Kurs-Historie zu einem Symbol zurück (für Papiere ohne ISIN).
+
+        Raises:
+            QuoteUnavailableError: Instrument unbekannt und nicht beschaffbar.
+        """
+        instrument = self._repository.get_instrument_by_symbol(symbol)
+        if instrument is None:
+            self.get_by_symbol(symbol)  # legt Instrument + ersten Punkt an
+            instrument = self._repository.get_instrument_by_symbol(symbol)
+        if instrument is None:
+            raise QuoteUnavailableError(symbol)
+
+        rows = self._repository.get_history(instrument["id"], date_from, date_to, limit)
+        return self._to_points(rows)
+
+    @staticmethod
+    def _to_points(rows: list[dict]) -> list[QuotePoint]:
+        """Wandelt Quote-Zeilen in QuotePoint-Modelle um."""
         return [
             QuotePoint(
                 price=row["price"],

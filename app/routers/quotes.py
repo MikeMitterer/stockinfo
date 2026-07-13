@@ -47,6 +47,21 @@ def quote_by_isin(isin: str, service: ServiceDep) -> QuoteResponse:
         ) from exc
 
 
+@router.get("/quote/by-symbol/{symbol}/history", response_model=list[QuotePoint])
+def quote_history_by_symbol(
+    symbol: str,
+    service: ServiceDep,
+    date_from: Annotated[str | None, Query(alias="from")] = None,
+    date_to: Annotated[str | None, Query(alias="to")] = None,
+    limit: Annotated[int, Query(ge=1, le=1000)] = 100,
+) -> list[QuotePoint]:
+    """Liefert die Kurs-Historie zu einem Symbol (für Papiere ohne ISIN)."""
+    try:
+        return service.get_history_by_symbol(symbol, date_from, date_to, limit)
+    except QuoteUnavailableError as exc:
+        raise HTTPException(status_code=502, detail=f"Kein Kurs für {symbol}") from exc
+
+
 @router.get("/quote/{isin}/history", response_model=list[QuotePoint])
 def quote_history(
     isin: str,
