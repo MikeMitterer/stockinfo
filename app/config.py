@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     # Auth (leer = deaktiviert)
     api_key: str = ""
 
+    # Statisches Dashboard — Verzeichnis mit dem gebauten Vue-Bundle.
+    # Existiert es nicht (z.B. lokaler Dev), wird nichts ausgeliefert.
+    static_dir: str = "/app/web"
+
 
 @lru_cache
 def get_settings() -> Settings:

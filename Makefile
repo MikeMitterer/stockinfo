@@ -44,9 +44,10 @@ hints: ## Nützliche URLs und Hinweise anzeigen
 	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Swagger" "http://localhost:$(PORT)/docs"
 	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Health"  "http://localhost:$(PORT)/health"
 	@echo
-	@echo "  $(YELLOW)Dashboard$(RESET) $(WHITE)— separat starten: cd dashboard && npm run dev$(RESET)"
+	@echo "  $(YELLOW)Dashboard$(RESET) $(WHITE)— Dev: cd dashboard && npm run dev (Port 5173, Proxy → Backend)$(RESET)"
 	@echo
 	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Dashboard" "http://localhost:5173/"
+	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Container" "http://localhost:$(PORT)/  (make up — Dashboard + API)"
 	@echo
 	@echo "  $(YELLOW)Beispiel$(RESET)"
 	@echo
@@ -103,13 +104,22 @@ logs: ## Server-Logs folgen
 ##@ Docker
 
 .PHONY: up
-up: ## Gesamten Stack als Container starten — Backend + Dashboard (persistenter Cache)
+up: ## Container-Stack starten (ein Image, Dashboard + API auf Port $(PORT))
 	docker compose up -d --build
+	@echo -e "  $(GREEN)✓$(RESET) Läuft — App $(BLUE)http://localhost:$(PORT)/$(RESET)"
 
 .PHONY: down
-down: ## Gesamten Stack stoppen und entfernen
+down: ## Container-Stack stoppen und entfernen
 	docker compose down
 
 .PHONY: docker-logs
 docker-logs: ## Container-Logs folgen
 	docker compose logs -f
+
+.PHONY: build
+build: ## Docker-Image bauen (docker/build.sh — versioniert via gitDockerTag)
+	docker/build.sh --build
+
+.PHONY: push
+push: ## Image in Registry pushen (TARGET=ghcr|dockerhub|ecr, Default ghcr)
+	docker/build.sh --push

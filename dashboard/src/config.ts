@@ -1,3 +1,7 @@
-/** Basis-URL der StockInfo-API (aus VITE_API_BASE_URL, Default localhost:8000). */
-export const API_BASE_URL: string =
-  import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000'
+/** Basis-URL der StockInfo-API.
+ *
+ * Leer (Default) → relative Aufrufe (`/quote/…`): in Prod same-origin (FastAPI
+ * serviert das Dashboard), im Dev leitet der vite-Proxy die API-Präfixe ans
+ * Backend weiter. Über `VITE_API_BASE_URL` bei Bedarf überschreibbar.
+ */
+export const API_BASE_URL: string = import.meta.env.VITE_API_BASE_URL ?? ''

@@ -10,3 +10,7 @@ tests/
 .env
 .idea/
 .libs/
+dashboard/node_modules
+dashboard/dist
+dashboard/.env
+docs/
