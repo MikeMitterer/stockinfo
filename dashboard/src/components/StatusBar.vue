@@ -12,7 +12,10 @@ const labels: Record<HealthStatus, string> = {
 
 <template>
   <footer class="statusbar">
-    <span class="left">StockInfo · MangoLila</span>
+    <span class="left">
+      StockInfo powered by
+      <a href="https://www.mangolila.at/" target="_blank" rel="noopener">MangoLila</a>
+    </span>
     <span class="right">
       <span v-if="version" class="version mono">v{{ version }}</span>
       <span class="health" :class="status">
@@ -42,7 +45,10 @@ const labels: Record<HealthStatus, string> = {
   border-top: 1px solid $color-border;
   font-size: 0.78rem;
 
-  .left { color: $color-muted; }
+  .left {
+    color: $color-muted;
+    a { color: $color-accent; text-decoration: none; &:hover { text-decoration: underline; } }
+  }
   .right { display: flex; align-items: center; gap: 1rem; }
   .version { color: $color-muted; }
 

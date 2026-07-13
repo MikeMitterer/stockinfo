@@ -20,8 +20,7 @@ const tabs: { key: TabKey; label: string; icon: string }[] = [
 <template>
   <header class="appheader">
     <button class="brand" title="Zur Startseite" @click="emit('navigate', 'assets')">
-      <img class="logo" src="/logo.svg" alt="MangoLila" />
-      <span class="app">StockInfo</span>
+      <img class="logo" src="/stockinfo-logo.svg" alt="StockInfo" />
     </button>
     <nav>
       <button
@@ -64,18 +63,11 @@ const tabs: { key: TabKey; label: string; icon: string }[] = [
     min-width: 0;
     background: transparent;
     border: none;
-    padding: 0.2rem 0.3rem;
+    padding: 0;
     border-radius: $radius;
-    &:hover { background: $color-surface-2; }
+    &:hover { opacity: 0.85; }
   }
-  .logo { height: 30px; }
-  .app {
-    font-weight: 700;
-    letter-spacing: 0.04em;
-    padding-left: 0.75rem;
-    border-left: 1px solid $color-border;
-    color: $color-muted;
-  }
+  .logo { height: 40px; display: block; }
 
   nav { display: flex; gap: 0.25rem; }
   .tab {
