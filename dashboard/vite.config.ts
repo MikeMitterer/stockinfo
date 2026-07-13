@@ -6,7 +6,16 @@ import { defineConfig } from 'vite'
 const apiTarget = process.env.VITE_DEV_API_TARGET ?? 'http://localhost:8000'
 
 // Nur diese Präfixe sind API-Routen — alles andere serviert das SPA (Hash-Routing).
-const apiPrefixes = ['/quote', '/instruments', '/env', '/health', '/refresh']
+const apiPrefixes = [
+  '/quote',
+  '/instruments',
+  '/env',
+  '/health',
+  '/refresh',
+  '/docs',
+  '/redoc',
+  '/openapi.json',
+]
 
 export default defineConfig({
   plugins: [vue()],

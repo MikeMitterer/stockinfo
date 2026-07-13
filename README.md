@@ -209,10 +209,13 @@ TypeScript + SCSS) mit fixem Header (deep-linkbare Tab-Navigation) und Statuszei
 
 ```bash
 cd dashboard
-cp .env.example .env       # VITE_API_BASE_URL, Standard http://localhost:8000
 npm install
 npm run dev                # http://localhost:5173
 ```
+
+Der Vite-Dev-Proxy leitet API-Requests automatisch an das Backend
+(`http://localhost:8000`) weiter — `VITE_API_BASE_URL` ist im Dev-Betrieb nicht
+nötig (optional überschreibbar, siehe `dashboard/vite.config.ts`).
 
 Backend muss parallel laufen. Beides zusammen: **`make dev-up`** (siehe Schnellstart).
 
