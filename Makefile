@@ -38,13 +38,13 @@ help: ## Alle verfügbaren Befehle anzeigen
 .PHONY: hints
 hints: ## Nützliche URLs und Hinweise anzeigen
 	@echo
-	@echo "  $(YELLOW)URLs (nach make dev / make start)$(RESET)"
+	@echo "  $(YELLOW)Backend (make dev / make start)$(RESET) $(WHITE)— im Browser http:// verwenden, nicht https$(RESET)"
 	@echo
 	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "API"     "http://localhost:$(PORT)/"
 	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Swagger" "http://localhost:$(PORT)/docs"
 	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Health"  "http://localhost:$(PORT)/health"
 	@echo
-	@echo "  $(YELLOW)Dashboard (cd dashboard && npm run dev)$(RESET)"
+	@echo "  $(YELLOW)Dashboard$(RESET) $(WHITE)— separat starten: cd dashboard && npm run dev$(RESET)"
 	@echo
 	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Dashboard" "http://localhost:5173/"
 	@echo
