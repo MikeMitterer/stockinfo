@@ -4,6 +4,7 @@ import { onMounted, ref } from 'vue'
 import EnvironmentPanel from './components/EnvironmentPanel.vue'
 import HistoryChart from './components/HistoryChart.vue'
 import InstrumentsTable from './components/InstrumentsTable.vue'
+import LinksPanel from './components/LinksPanel.vue'
 import Toolbar from './components/Toolbar.vue'
 import { useEnvironment } from './composables/useEnvironment'
 import { useHistory } from './composables/useHistory'
@@ -62,6 +63,7 @@ async function onRemove(isin: string): Promise<void> {
     <h1>StockInfo Dashboard</h1>
     <Toolbar :refreshing="refreshing" :busy="busy" @refresh="onRefreshAll" @add="onAdd" />
     <EnvironmentPanel :env="env" />
+    <LinksPanel />
     <InstrumentsTable
       :instruments="instruments"
       :selected-isin="selectedIsin"
