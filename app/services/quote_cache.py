@@ -12,9 +12,17 @@ import structlog
 
 from app.models import QuotePoint, QuoteResponse
 from app.repository import QuoteRepository
-from app.services.quote_service import QuoteService, QuoteUnavailableError
+from app.services.quote_service import (
+    InstrumentNotFoundError,
+    QuoteService,
+    QuoteUnavailableError,
+)
 
 logger = structlog.get_logger()
+
+
+class IsinConflictError(Exception):
+    """Die ISIN ist bereits einem anderen Instrument zugeordnet."""
 
 
 class CachedQuoteService:
@@ -185,6 +193,20 @@ class CachedQuoteService:
     def delete_by_symbol(self, symbol: str) -> bool:
         """Löscht ein Instrument samt Historie per Symbol; True bei Erfolg."""
         return self._repository.delete_by_symbol(symbol)
+
+    def set_isin(self, symbol: str, isin: str) -> None:
+        """Trägt die ISIN eines Instruments nach (per Symbol).
+
+        Raises:
+            InstrumentNotFoundError: Symbol unbekannt.
+            IsinConflictError: ISIN bereits einem anderen Instrument zugeordnet.
+        """
+        if self._repository.get_instrument_by_symbol(symbol) is None:
+            raise InstrumentNotFoundError(symbol)
+        existing = self._repository.get_instrument_by_isin(isin)
+        if existing is not None and existing["symbol"] != symbol:
+            raise IsinConflictError(isin)
+        self._repository.set_isin(symbol, isin)
 
     def _fetch_live(self, instrument: dict) -> QuoteResponse:
         """Beschafft einen frischen Kurs für ein bekanntes Instrument (ohne Cache)."""

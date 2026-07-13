@@ -21,6 +21,7 @@ export function useInstrumentActions(): {
   add: (identifier: string) => Promise<void>
   refreshOne: (item: InstrumentRef) => Promise<void>
   remove: (item: InstrumentRef) => Promise<void>
+  setIsin: (symbol: string, isin: string) => Promise<void>
 } {
   const busy = ref<boolean>(false)
   const error = ref<string | null>(null)
@@ -60,5 +61,10 @@ export function useInstrumentActions(): {
     await run(() => apiClient.del(path), 'Löschen fehlgeschlagen')
   }
 
-  return { busy, error, add, refreshOne, remove }
+  async function setIsin(symbol: string, isin: string): Promise<void> {
+    const path = `/instruments/by-symbol/${encodeURIComponent(symbol)}/isin`
+    await run(() => apiClient.put(path, { isin }), 'ISIN konnte nicht gespeichert werden')
+  }
+
+  return { busy, error, add, refreshOne, remove, setIsin }
 }

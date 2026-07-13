@@ -6,6 +6,7 @@ from fastapi.testclient import TestClient
 from app.container import get_cached_quote_service
 from app.main import app
 from app.models import QuoteResponse
+from app.services.quote_cache import IsinConflictError
 from app.services.quote_service import InstrumentNotFoundError
 
 
@@ -35,6 +36,12 @@ class FakeService:
 
     def delete_by_symbol(self, symbol: str) -> bool:
         return not symbol.startswith("XX")
+
+    def set_isin(self, symbol: str, isin: str) -> None:
+        if symbol.startswith("XX"):
+            raise InstrumentNotFoundError(symbol)
+        if isin == "IE00B4L5Y983":
+            raise IsinConflictError(isin)
 
 
 @pytest.fixture
@@ -83,3 +90,27 @@ def test_refresh_by_symbol(client: TestClient) -> None:
 def test_delete_by_symbol(client: TestClient) -> None:
     assert client.delete("/instruments/by-symbol/BRYN.DE").status_code == 204
     assert client.delete("/instruments/by-symbol/XXNOPE").status_code == 404
+
+
+def test_set_isin_ok(client: TestClient) -> None:
+    r = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": "US0846707026"})
+    assert r.status_code == 200
+    assert r.json()["isin"] == "US0846707026"
+
+
+def test_set_isin_normalisiert_und_validiert(client: TestClient) -> None:
+    # klein + Leerzeichen → wird normalisiert
+    r = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": " us0846707026 "})
+    assert r.status_code == 200 and r.json()["isin"] == "US0846707026"
+    # ungültiges Format → 422
+    assert client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": "nope"}).status_code == 422
+
+
+def test_set_isin_unbekannt_404(client: TestClient) -> None:
+    r = client.put("/instruments/by-symbol/XXNOPE/isin", json={"isin": "US0846707026"})
+    assert r.status_code == 404
+
+
+def test_set_isin_konflikt_409(client: TestClient) -> None:
+    r = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": "IE00B4L5Y983"})
+    assert r.status_code == 409

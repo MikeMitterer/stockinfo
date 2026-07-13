@@ -100,3 +100,9 @@ class RefreshResult(BaseModel):
 
     total: int
     refreshed: int
+
+
+class IsinUpdate(BaseModel):
+    """Body zum nachträglichen Eintragen einer ISIN."""
+
+    isin: str

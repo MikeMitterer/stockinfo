@@ -235,6 +235,13 @@ class QuoteRepository:
             )
             return cursor.rowcount > 0
 
+    def set_isin(self, symbol: str, isin: str) -> None:
+        """Trägt die ISIN eines Instruments nachträglich ein (per Symbol)."""
+        with self._connect() as connection:
+            connection.execute(
+                "UPDATE instruments SET isin = ? WHERE symbol = ?", (isin, symbol)
+            )
+
     def delete_by_symbol(self, symbol: str) -> bool:
         """Löscht ein Instrument (und seine Quotes via Cascade) anhand des Symbols.
 

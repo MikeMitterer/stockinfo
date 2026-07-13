@@ -77,3 +77,34 @@ def test_get_history_by_symbol(repo: QuoteRepository) -> None:
 
     history = service.get_history_by_symbol(saved["symbol"])
     assert len(history) >= 1
+
+
+def test_set_isin_service(repo: QuoteRepository) -> None:
+    from app.services.quote_service import InstrumentNotFoundError
+    repo.save_quote(
+        QuoteResponse(isin=None, symbol="BRYN.DE", currency="EUR", price=430.0,
+                      quote_time="t", fetched_at="t", type="stock")
+    )
+    service = CachedQuoteService(FakeQuoteService(), repo, ttl_hours=6)
+
+    service.set_isin("BRYN.DE", "US0846707026")
+    assert repo.get_instrument_by_isin("US0846707026")["symbol"] == "BRYN.DE"
+
+    with pytest.raises(InstrumentNotFoundError):
+        service.set_isin("NOPE.DE", "US0378331005")
+
+
+def test_set_isin_konflikt(repo: QuoteRepository) -> None:
+    from app.services.quote_cache import IsinConflictError
+    repo.save_quote(
+        QuoteResponse(isin="IE00B3RBWM25", symbol="VGWL.DE", currency="EUR", price=1.0,
+                      quote_time="t", fetched_at="t", type="etf")
+    )
+    repo.save_quote(
+        QuoteResponse(isin=None, symbol="BRYN.DE", currency="EUR", price=1.0,
+                      quote_time="t", fetched_at="t", type="stock")
+    )
+    service = CachedQuoteService(FakeQuoteService(), repo, ttl_hours=6)
+
+    with pytest.raises(IsinConflictError):
+        service.set_isin("BRYN.DE", "IE00B3RBWM25")

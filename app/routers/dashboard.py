@@ -3,6 +3,7 @@
 Nur HTTP-Belange; Fachlogik liegt im CachedQuoteService.
 """
 
+import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -10,9 +11,17 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 from app import __version__
 from app.config import Settings, get_settings
 from app.container import get_cached_quote_service
-from app.models import EnvInfo, InstrumentSummary, QuoteResponse, RefreshResult
-from app.services.quote_cache import CachedQuoteService
+from app.models import (
+    EnvInfo,
+    InstrumentSummary,
+    IsinUpdate,
+    QuoteResponse,
+    RefreshResult,
+)
+from app.services.quote_cache import CachedQuoteService, IsinConflictError
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
+
+_ISIN_PATTERN = re.compile(r"[A-Z]{2}[A-Z0-9]{9}[0-9]")
 
 router = APIRouter(tags=["dashboard"])
 
@@ -82,6 +91,25 @@ def delete_instrument(isin: str, service: ServiceDep) -> Response:
     if not service.delete_instrument(isin):
         raise HTTPException(status_code=404, detail=f"Unbekannte ISIN {isin}")
     return Response(status_code=204)
+
+
+@router.put("/instruments/by-symbol/{symbol}/isin", response_model=dict)
+def set_isin(symbol: str, payload: IsinUpdate, service: ServiceDep) -> dict:
+    """Trägt die ISIN eines Instruments (per Symbol) nachträglich ein."""
+    isin = payload.isin.strip().upper()
+    if not _ISIN_PATTERN.fullmatch(isin):
+        raise HTTPException(status_code=422, detail=f"Ungültiges ISIN-Format: {isin}")
+    try:
+        service.set_isin(symbol, isin)
+    except InstrumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=404, detail=f"Unbekanntes Symbol {symbol}"
+        ) from exc
+    except IsinConflictError as exc:
+        raise HTTPException(
+            status_code=409, detail=f"ISIN {isin} ist bereits vergeben"
+        ) from exc
+    return {"symbol": symbol, "isin": isin}
 
 
 @router.delete("/instruments/by-symbol/{symbol}", status_code=204)

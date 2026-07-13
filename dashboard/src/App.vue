@@ -26,7 +26,7 @@ const { instruments, load: loadInstruments } = useInstruments()
 const { points, load: loadHistory, loading: historyLoading } = useHistory()
 const { daily, load: loadDaily, loading: dailyLoading } = useDaily()
 const { refreshing, trigger } = useRefresh()
-const { busy, add, refreshOne, remove } = useInstrumentActions()
+const { busy, add, refreshOne, remove, setIsin } = useInstrumentActions()
 const { status: healthStatus, version: healthVersion, start: startHealth, stop: stopHealth } =
   useHealth()
 
@@ -87,6 +87,11 @@ async function onAdd(identifier: string): Promise<void> {
   await loadInstruments()
 }
 
+async function onSetIsin(payload: { symbol: string; isin: string }): Promise<void> {
+  await setIsin(payload.symbol, payload.isin)
+  await loadInstruments()
+}
+
 async function onRefreshOne(item: InstrumentSummary): Promise<void> {
   refreshingSymbol.value = item.symbol
   try {
@@ -126,6 +131,7 @@ async function onRemove(item: InstrumentSummary): Promise<void> {
         @select="select"
         @refresh="onRefreshOne"
         @remove="onRemove"
+        @set-isin="onSetIsin"
       />
       <HistoryChart
         :series="chartSeries"

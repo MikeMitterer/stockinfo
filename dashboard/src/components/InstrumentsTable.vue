@@ -1,4 +1,6 @@
 <script setup lang="ts">
+import { ref } from 'vue'
+
 import type { InstrumentSummary } from '../types'
 
 const props = defineProps<{
@@ -14,7 +16,31 @@ const emit = defineEmits<{
   (event: 'select', item: InstrumentSummary): void
   (event: 'refresh', item: InstrumentSummary): void
   (event: 'remove', item: InstrumentSummary): void
+  (event: 'set-isin', payload: { symbol: string; isin: string }): void
 }>()
+
+// Inline-Eingabe zum nachträglichen Erfassen einer ISIN
+const editingSymbol = ref<string | null>(null)
+const isinDraft = ref<string>('')
+
+// Fokussiert das Eingabefeld direkt beim Einblenden.
+const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
+
+function startIsin(item: InstrumentSummary): void {
+  editingSymbol.value = item.symbol
+  isinDraft.value = ''
+}
+
+function cancelIsin(): void {
+  editingSymbol.value = null
+  isinDraft.value = ''
+}
+
+function confirmIsin(item: InstrumentSummary): void {
+  const value = isinDraft.value.trim().toUpperCase()
+  if (value) emit('set-isin', { symbol: item.symbol, isin: value })
+  cancelIsin()
+}
 
 /** Baut den extraETF-Profil-Link (ISIN-basiert, ETF/Stock unterschieden). */
 function extraetfLink(item: InstrumentSummary): string {
@@ -61,7 +87,24 @@ function ter(value: number | null): string {
             @click="emit('select', item)"
           >
             <td class="sym mono">{{ item.symbol }}</td>
-            <td class="mono dim">{{ item.isin ?? '—' }}</td>
+            <td class="mono dim isin-cell">
+              <span v-if="item.isin">{{ item.isin }}</span>
+              <span v-else-if="editingSymbol === item.symbol" class="isin-edit" @click.stop>
+                <input
+                  v-model="isinDraft"
+                  v-focus
+                  class="isin-input"
+                  placeholder="ISIN eintragen"
+                  @keyup.enter="confirmIsin(item)"
+                  @keyup.esc="cancelIsin"
+                />
+                <button class="mini ok" title="Speichern" @click="confirmIsin(item)">✓</button>
+                <button class="mini" title="Abbrechen" @click="cancelIsin">✕</button>
+              </span>
+              <button v-else class="mini add" title="ISIN nachtragen" @click.stop="startIsin(item)">
+                + ISIN
+              </button>
+            </td>
             <td class="name">{{ item.name ?? '—' }}</td>
             <td>
               <span v-if="item.type" class="badge" :class="item.type">{{ item.type }}</span>
@@ -144,6 +187,28 @@ tbody tr {
 .sym { font-weight: 600; }
 .name { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ccy { color: $color-muted; font-size: 0.75rem; margin-left: 0.2rem; }
+
+.isin-cell { white-space: nowrap; }
+.isin-edit { display: inline-flex; align-items: center; gap: 0.25rem; }
+.isin-input {
+  width: 140px;
+  padding: 0.15rem 0.4rem;
+  border-radius: 6px;
+  border: 1px solid $color-accent;
+  background: $color-bg;
+  color: $color-text;
+  font-family: $font-mono;
+  font-size: 0.8rem;
+  &:focus { outline: none; }
+}
+.mini {
+  padding: 0.12rem 0.45rem;
+  font-size: 0.72rem;
+  background: $color-surface-2;
+  &.add { color: $color-muted; }
+  &.add:hover { color: $color-accent; }
+  &.ok { color: $health-ok; }
+}
 
 .badge {
   display: inline-block;
