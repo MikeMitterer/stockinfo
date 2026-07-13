@@ -37,7 +37,7 @@ describe('composables', () => {
   it('useHistory setzt error bei Fehler', async () => {
     stubFetch('boom', 502)
     const { error, load } = useHistory()
-    await load('IE00B3RBWM25')
+    await load({ isin: 'IE00B3RBWM25', symbol: 'VGWL.DE' })
     expect(error.value).not.toBeNull()
   })
 })

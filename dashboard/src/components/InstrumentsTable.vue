@@ -1,10 +1,14 @@
 <script setup lang="ts">
 import type { InstrumentSummary } from '../types'
 
-defineProps<{ instruments: InstrumentSummary[]; selectedIsin: string | null }>()
+defineProps<{
+  instruments: InstrumentSummary[]
+  selectedSymbol: string | null
+  refreshingSymbol: string | null
+}>()
 
 const emit = defineEmits<{
-  (event: 'select', isin: string): void
+  (event: 'select', item: InstrumentSummary): void
   (event: 'refresh', item: InstrumentSummary): void
   (event: 'remove', item: InstrumentSummary): void
 }>()
@@ -38,8 +42,8 @@ function ter(value: number | null): string {
           <tr
             v-for="item in instruments"
             :key="item.symbol"
-            :class="{ selected: item.isin === selectedIsin }"
-            @click="item.isin && emit('select', item.isin)"
+            :class="{ selected: item.symbol === selectedSymbol }"
+            @click="emit('select', item)"
           >
             <td class="sym mono">{{ item.symbol }}</td>
             <td class="mono dim">{{ item.isin ?? '—' }}</td>
@@ -55,7 +59,13 @@ function ter(value: number | null): string {
             <td class="num mono dim">{{ ter(item.ter) }}</td>
             <td class="num mono dim">{{ item.history_count }}</td>
             <td class="actions" @click.stop>
-              <button class="icon" title="Aktualisieren" @click="emit('refresh', item)">↻</button>
+              <button
+                class="icon"
+                :class="{ spin: item.symbol === refreshingSymbol }"
+                :disabled="item.symbol === refreshingSymbol"
+                title="Aktualisieren"
+                @click="emit('refresh', item)"
+              >↻</button>
               <button class="icon danger" title="Löschen" @click="emit('remove', item)">✕</button>
             </td>
           </tr>
@@ -121,5 +131,8 @@ tbody tr {
   padding: 0.2rem 0.5rem;
   background: $color-surface-2;
   &.danger:hover { background: $color-danger; color: #fff; }
+  &.spin { animation: spin 0.7s linear infinite; color: $color-accent; }
 }
+
+@keyframes spin { to { transform: rotate(360deg); } }
 </style>

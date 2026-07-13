@@ -9,6 +9,7 @@ import LinksPanel from './components/LinksPanel.vue'
 import StatusBar from './components/StatusBar.vue'
 import ThemesPanel from './components/ThemesPanel.vue'
 import Toolbar from './components/Toolbar.vue'
+import TopProgress from './components/TopProgress.vue'
 import { useEnvironment } from './composables/useEnvironment'
 import { useHealth } from './composables/useHealth'
 import { useHistory } from './composables/useHistory'
@@ -26,8 +27,9 @@ const { status: healthStatus, version: healthVersion, start: startHealth, stop: 
   useHealth()
 
 const activeTab = ref<TabKey>('instruments')
-const selectedIsin = ref<string | null>(null)
+const selectedSymbol = ref<string | null>(null)
 const selectedCurrency = ref<string | null>(null)
+const refreshingSymbol = ref<string | null>(null)
 
 onMounted(async () => {
   startHealth()
@@ -36,11 +38,10 @@ onMounted(async () => {
 
 onUnmounted(() => stopHealth())
 
-async function select(isin: string): Promise<void> {
-  selectedIsin.value = isin
-  selectedCurrency.value =
-    instruments.value.find((item) => item.isin === isin)?.latest_currency ?? null
-  await loadHistory(isin)
+async function select(item: InstrumentSummary): Promise<void> {
+  selectedSymbol.value = item.symbol
+  selectedCurrency.value = item.latest_currency
+  await loadHistory(item)
 }
 
 async function onRefreshAll(): Promise<void> {
@@ -54,15 +55,23 @@ async function onAdd(identifier: string): Promise<void> {
 }
 
 async function onRefreshOne(item: InstrumentSummary): Promise<void> {
-  await refreshOne(item)
-  await loadInstruments()
-  if (item.isin && selectedIsin.value === item.isin) await loadHistory(item.isin)
+  refreshingSymbol.value = item.symbol
+  try {
+    await refreshOne(item)
+    await loadInstruments()
+    if (selectedSymbol.value === item.symbol) {
+      const updated = instruments.value.find((entry) => entry.symbol === item.symbol)
+      if (updated) await loadHistory(updated)
+    }
+  } finally {
+    refreshingSymbol.value = null
+  }
 }
 
 async function onRemove(item: InstrumentSummary): Promise<void> {
   await remove(item)
-  if (item.isin && selectedIsin.value === item.isin) {
-    selectedIsin.value = null
+  if (selectedSymbol.value === item.symbol) {
+    selectedSymbol.value = null
     points.value = []
   }
   await loadInstruments()
@@ -71,13 +80,15 @@ async function onRemove(item: InstrumentSummary): Promise<void> {
 
 <template>
   <AppHeader :active="activeTab" @navigate="activeTab = $event" />
+  <TopProgress :active="refreshing || busy" />
 
   <main class="content">
     <template v-if="activeTab === 'instruments'">
       <Toolbar :refreshing="refreshing" :busy="busy" @refresh="onRefreshAll" @add="onAdd" />
       <InstrumentsTable
         :instruments="instruments"
-        :selected-isin="selectedIsin"
+        :selected-symbol="selectedSymbol"
+        :refreshing-symbol="refreshingSymbol"
         @select="select"
         @refresh="onRefreshOne"
         @remove="onRemove"
