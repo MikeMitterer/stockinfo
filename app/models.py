@@ -49,6 +49,10 @@ class QuoteResponse(BaseModel):
     provider: str | None = None
     replication: str | None = None
     fund_size: float | None = None
+    volatility: float | None = Field(default=None, description="1-Jahres-Volatilität in %")
+    accumulating: bool | None = Field(
+        default=None, description="Thesaurierend (true) vs. ausschüttend (false)"
+    )
 
     source: str | None = None
     cached: bool = False
@@ -69,6 +73,8 @@ class InstrumentSummary(BaseModel):
     ter: float | None = None
     replication: str | None = None
     fund_size: float | None = None
+    volatility: float | None = None
+    accumulating: bool | None = None
     meta_fetched_at: str | None = None
     latest_price: float | None = None
     latest_quote_time: str | None = None

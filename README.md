@@ -35,8 +35,9 @@ Yahoo Finance, JSON-Export).
 - **Historie** – zwei Sichten: der **Tagesverlauf** aus den erfassten Ticks und die
   echten **Tages-Schlusskurse** (EOD von Yahoo, inkrementell gecacht – pro Anfrage wird
   nur die Differenz nachgeladen).
-- **Viele Infos** – neben Kurs und Zeitpunkt u.a. Bezeichnung, Währung, Volumen und
-  bei ETFs TER, Anbieter, Replikationsart und Fondsgröße.
+- **Viele Infos** – neben Kurs und Zeitpunkt u.a. Bezeichnung, Währung, Volumen,
+  Volatilität und bei ETFs TER, Anbieter, Replikationsart, Fondsgröße sowie
+  Thesaurierend/Ausschüttend.
 - **Dashboard** – Übersicht, Kurs-Chart, 8 Themes, Börsen-Legende, Profil-Links, JSON-Export.
 
 [↑ Übersicht](#übersicht)
@@ -49,8 +50,8 @@ Die App kombiniert drei **kostenlose** Datenquellen:
 
 | Quelle | Wofür |
 |---|---|
-| **yfinance** (Yahoo Finance) | Kurs, Währung, Volumen, Bezeichnung – Aktien & ETFs, EU & US |
-| **justETF** | ETF-Zusatzdaten: TER, Anbieter, Replikation, Fondsgröße |
+| **yfinance** (Yahoo Finance) | Kurs, Währung, Volumen, Bezeichnung, Tages-Schlusskurse (Basis der berechneten Volatilität) – Aktien & ETFs, EU & US |
+| **justETF** | ETF-Zusatzdaten: TER, Anbieter, Replikation, Fondsgröße, 1-Jahres-Volatilität, Ausschüttungspolitik |
 | **OpenFIGI** | löst eine ISIN gezielt zur gewünschten Börse auf (Standard: Xetra → EUR) |
 
 **Wichtig zur Währung:** Das Börsen-Suffix bestimmt die Börse, nicht die Währung –
@@ -149,12 +150,18 @@ Für Wertpapiere **ohne ISIN** gibt es jeweils eine `…/by-symbol/{symbol}`-Var
   "provider": "Vanguard",
   "replication": "Physical(Optimized sampling)",
   "fund_size": 22638.0,
+  "volatility": 9.95,
+  "accumulating": false,
   "source": "yfinance+justetf",
   "cached": false,
   "stale": false,
   "fetched_at": "2026-07-12T18:16:28+00:00"
 }
 ```
+
+`volatility` ist die 1-Jahres-Volatilität in Prozent – bei ETFs aus justETF, sonst
+aus den gecachten Tages-Schlusskursen berechnet (annualisiert). `accumulating` gibt
+an, ob ein ETF thesauriert (`true`) oder ausschüttet (`false`).
 
 Nicht ermittelbare Felder sind `null` (z.B. `ter` bei Einzelaktien). Schlägt eine
 Live-Abfrage fehl, aber ein alter Wert ist im Cache, wird dieser mit `"stale": true`

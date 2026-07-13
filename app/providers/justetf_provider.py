@@ -45,7 +45,25 @@ class JustEtfProvider:
             fund_size=self._as_float(overview.get("fund_size_eur")),
             currency=overview.get("fund_currency"),
             name=overview.get("name"),
+            volatility=self._as_float(overview.get("volatility_1y")),
+            accumulating=self._as_accumulating(overview.get("distribution_policy")),
         )
+
+    @staticmethod
+    def _as_accumulating(policy: Any) -> bool | None:
+        """Leitet aus der Ausschüttungspolitik ab, ob der ETF thesauriert.
+
+        Args:
+            policy: justETF-Feld ``distribution_policy`` (z.B. 'Accumulating',
+                'Distributing').
+
+        Returns:
+            ``True`` bei thesaurierend, ``False`` bei ausschüttend, ``None``
+            wenn unbekannt.
+        """
+        if not isinstance(policy, str) or not policy.strip():
+            return None
+        return policy.strip().lower().startswith("accumul")
 
     @staticmethod
     def _as_float(value: Any) -> float | None:

@@ -64,6 +64,17 @@ function price(value: number | null): string {
 function ter(value: number | null): string {
   return value === null ? '—' : `${value.toFixed(2)} %`
 }
+
+/** Formatiert die Volatilität als Prozent (oder '—'). */
+function volatility(value: number | null): string {
+  return value === null ? '—' : `${value.toFixed(2)} %`
+}
+
+/** Thesaurierend-Anzeige: Ja / Nein / '—' bei unbekannt. */
+function accumulating(value: boolean | null): string {
+  if (value === null) return '—'
+  return value ? 'Ja' : 'Nein'
+}
 </script>
 
 <template>
@@ -77,7 +88,8 @@ function ter(value: number | null): string {
         <thead>
           <tr>
             <th>Symbol</th><th>ISIN</th><th>Name</th><th>Typ</th>
-            <th class="num">Kurs</th><th class="num">TER</th><th class="num">Pkt.</th><th></th>
+            <th class="num">Kurs</th><th class="num">TER</th><th class="num">Vola</th>
+            <th class="center">Thes.</th><th class="num">Pkt.</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -116,6 +128,13 @@ function ter(value: number | null): string {
               <span class="ccy">{{ item.latest_currency ?? '' }}</span>
             </td>
             <td class="num mono dim">{{ ter(item.ter) }}</td>
+            <td class="num mono dim">{{ volatility(item.volatility) }}</td>
+            <td class="center">
+              <span v-if="item.accumulating !== null" class="thes" :class="{ acc: item.accumulating }">
+                {{ accumulating(item.accumulating) }}
+              </span>
+              <span v-else class="dim">—</span>
+            </td>
             <td class="num mono dim">{{ item.history_count }}</td>
             <td class="actions" @click.stop>
               <button class="ext" title="JSON-Abfrage anzeigen" @click="emit('json', item)">JSON</button>
@@ -185,7 +204,19 @@ tbody tr {
 }
 
 .num { text-align: right; }
+.center { text-align: center; }
 .dim { color: $color-muted; }
+
+.thes {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: $color-muted;
+  background: $color-surface-2;
+  &.acc { color: $color-accent; background: color-mix(in srgb, $color-accent 15%, transparent); }
+}
 .sym { font-weight: 600; }
 .name { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ccy { color: $color-muted; font-size: 0.75rem; margin-left: 0.2rem; }

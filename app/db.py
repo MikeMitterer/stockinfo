@@ -21,6 +21,8 @@ CREATE TABLE IF NOT EXISTS instruments (
     ter             REAL,
     replication     TEXT,
     fund_size       REAL,
+    volatility      REAL,
+    accumulating    INTEGER,
     first_seen      TEXT NOT NULL,
     meta_fetched_at TEXT
 );
@@ -85,6 +87,15 @@ def init_db(database_path: str) -> None:
     connection = get_connection(database_path)
     try:
         connection.executescript(_SCHEMA)
+        _migrate(connection)
         connection.commit()
     finally:
         connection.close()
+
+
+def _migrate(connection: sqlite3.Connection) -> None:
+    """Ergänzt fehlende Spalten in bestehenden Datenbanken (idempotent)."""
+    existing = {row["name"] for row in connection.execute("PRAGMA table_info(instruments)")}
+    for column, ddl in (("volatility", "REAL"), ("accumulating", "INTEGER")):
+        if column not in existing:
+            connection.execute(f"ALTER TABLE instruments ADD COLUMN {column} {ddl}")

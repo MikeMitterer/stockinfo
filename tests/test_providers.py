@@ -32,6 +32,8 @@ def test_justetf_mappt_dict_felder(monkeypatch) -> None:
         "replication": "Physical(Optimized sampling)",
         "fund_size_eur": 22638.0,
         "fund_currency": "USD",
+        "volatility_1y": 9.95,
+        "distribution_policy": "Distributing",
     }
     monkeypatch.setattr(
         justetf_module.justetf_scraping, "get_etf_overview", lambda isin: overview
@@ -43,6 +45,20 @@ def test_justetf_mappt_dict_felder(monkeypatch) -> None:
     assert details.ter == 0.19
     assert details.provider == "Vanguard"
     assert details.fund_size == 22638.0
+    assert details.volatility == 9.95
+    assert details.accumulating is False
+
+
+def test_justetf_thesaurierend_wird_erkannt(monkeypatch) -> None:
+    overview = {"name": "iShares Core MSCI World", "distribution_policy": "Accumulating"}
+    monkeypatch.setattr(
+        justetf_module.justetf_scraping, "get_etf_overview", lambda isin: overview
+    )
+
+    details = JustEtfProvider().fetch_etf("IE00B4L5Y983")
+
+    assert details is not None
+    assert details.accumulating is True
 
 
 def test_justetf_fehler_gibt_none(monkeypatch) -> None:

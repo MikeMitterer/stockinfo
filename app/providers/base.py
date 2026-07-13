@@ -46,6 +46,8 @@ class EtfDetails:
     fund_size: float | None = None
     currency: str | None = None
     name: str | None = None
+    volatility: float | None = None  # 1-Jahres-Volatilität in % (justETF)
+    accumulating: bool | None = None  # Thesaurierend (True) vs. Ausschüttend (False)
 
 
 class InstrumentResolver(Protocol):
