@@ -50,13 +50,13 @@ readonly PROJECT_NAME="${NAMESPACE}.${NAME}"
 #
 #   Überschreibbar per Env:   TARGET=dockerhub ./build.sh --push
 #
-#   ghcr       GitHub Container Registry (ghcr.io)                       [Default]
+#   ghcr       GitHub Container Registry (ghcr.io)
 #              Image:   ghcr.io/<GITHUB_OWNER>/<NAMESPACE>-<NAME>
 #              Login:   einmalig manuell —
 #                       echo <PAT> | docker login ghcr.io -u <user> --password-stdin   (Scope: write:packages)
 #              Braucht: GITHUB_OWNER  (per Env/.bashrc, sonst der hier gesetzte Default)
 #
-#   dockerhub  Docker Hub (docker.io)
+#   dockerhub  Docker Hub (docker.io)                                     [Default]
 #              Image:   <NAMESPACE>/<NAME>            (NAMESPACE = Docker-Hub-User/Org)
 #              Login:   loginToDockerHub — liest das Passwort aus ${DOCKER_PW_FILE} (12h-Cache)
 #              Braucht: DOCKER_PW_FILE  (Default: ${HOME}/.docker/dockerhub.sec)
@@ -67,7 +67,7 @@ readonly PROJECT_NAME="${NAMESPACE}.${NAME}"
 #              Braucht: AMAZON_REPO_URI  (z.B. 123456789012.dkr.ecr.eu-west-1.amazonaws.com)
 #                       AWS_REGION       (Default: eu-west-1)
 #
-readonly TARGET="${TARGET:-ghcr}"
+readonly TARGET="${TARGET:-dockerhub}"
 
 # Registry-spezifische Variablen setzen: REGISTRY (Anzeige) + IMAGE (voll qualifizierte
 # Registry-Referenz). Das lokal gebaute Image heisst immer ${NAMESPACE}/${NAME}.
@@ -352,7 +352,7 @@ usage() {
     echo -e "Base Image:   ${YELLOW}${DOCKER_BASE_IMAGE}${NC}"
     echo
     echo "Usage: $(basename "$0") [ options ]"
-    echo -e "       Env: ${YELLOW}TARGET=ghcr|dockerhub|ecr${NC} (Default: ghcr) — Registry-Ziel für --push"
+    echo -e "       Env: ${YELLOW}TARGET=ghcr|dockerhub|ecr${NC} (Default: dockerhub) — Registry-Ziel für --push"
     echo
     usageLine "-u | --update                          " "Update base image: ${YELLOW}${DOCKER_BASE_IMAGE}${NC}"
     echo

@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <Container version="2">
   <Name>StockInfo</Name>
-  <Repository>ghcr.io/mikemitterer/mangolila-stockinfo:latest</Repository>
-  <Registry>https://github.com/MikeMitterer/stockinfo/pkgs/container/mangolila-stockinfo</Registry>
+  <Repository>mangolila/stockinfo:latest</Repository>
+  <Registry>https://hub.docker.com/r/mangolila/stockinfo</Registry>
   <Network>bridge</Network>
   <MyIP/>
   <Shell>sh</Shell>
