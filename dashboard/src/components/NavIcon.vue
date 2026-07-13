@@ -13,7 +13,7 @@ defineProps<{ name: string }>()
     stroke-linejoin="round"
     aria-hidden="true"
   >
-    <template v-if="name === 'instruments'">
+    <template v-if="name === 'assets'">
       <path d="M3 6h.01M3 12h.01M3 18h.01M8 6h13M8 12h13M8 18h13" />
     </template>
     <template v-else-if="name === 'environment'">
@@ -22,6 +22,10 @@ defineProps<{ name: string }>()
     <template v-else-if="name === 'links'">
       <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
       <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+    </template>
+    <template v-else-if="name === 'exchanges'">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M3 12h18M12 3a14 14 0 0 1 4 9 14 14 0 0 1-4 9 14 14 0 0 1-4-9 14 14 0 0 1 4-9z" />
     </template>
     <template v-else-if="name === 'themes'">
       <rect x="3" y="3" width="7" height="7" rx="1.5" />

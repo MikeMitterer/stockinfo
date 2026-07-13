@@ -9,7 +9,8 @@ const emit = defineEmits<{
 }>()
 
 const tabs: { key: TabKey; label: string; icon: string }[] = [
-  { key: 'instruments', label: 'Instrumente', icon: 'instruments' },
+  { key: 'assets', label: 'Assets', icon: 'assets' },
+  { key: 'exchanges', label: 'Börsen', icon: 'exchanges' },
   { key: 'environment', label: 'Environment', icon: 'environment' },
   { key: 'links', label: 'API & Links', icon: 'links' },
   { key: 'themes', label: 'Themes', icon: 'themes' },
@@ -18,7 +19,7 @@ const tabs: { key: TabKey; label: string; icon: string }[] = [
 
 <template>
   <header class="appheader">
-    <button class="brand" title="Zur Startseite" @click="emit('navigate', 'instruments')">
+    <button class="brand" title="Zur Startseite" @click="emit('navigate', 'assets')">
       <img class="logo" src="/logo.svg" alt="MangoLila" />
       <span class="app">StockInfo</span>
     </button>

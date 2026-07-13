@@ -50,7 +50,7 @@ export interface RefreshResult {
 }
 
 /** Aktive Unterseite/Tab des Dashboards. */
-export type TabKey = 'instruments' | 'environment' | 'links' | 'themes'
+export type TabKey = 'assets' | 'exchanges' | 'environment' | 'links' | 'themes'
 
 /** Ausgewählter Chart-Zeitraum. 'intraday' = Tagesverlauf (Ticks), Rest = EOD. */
 export type RangeKey = 'intraday' | '1w' | '1m' | '3m' | '1y' | 'max'

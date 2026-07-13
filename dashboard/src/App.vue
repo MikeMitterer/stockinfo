@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import AppHeader from './components/AppHeader.vue'
 import EnvironmentPanel from './components/EnvironmentPanel.vue'
+import ExchangesPanel from './components/ExchangesPanel.vue'
 import HistoryChart from './components/HistoryChart.vue'
 import InstrumentsTable from './components/InstrumentsTable.vue'
 import LinksPanel from './components/LinksPanel.vue'
@@ -12,12 +13,13 @@ import Toolbar from './components/Toolbar.vue'
 import TopProgress from './components/TopProgress.vue'
 import { useDaily } from './composables/useDaily'
 import { useEnvironment } from './composables/useEnvironment'
+import { useHashTab } from './composables/useHashTab'
 import { useHealth } from './composables/useHealth'
 import { useHistory } from './composables/useHistory'
 import { useInstrumentActions } from './composables/useInstrumentActions'
 import { useInstruments } from './composables/useInstruments'
 import { useRefresh } from './composables/useRefresh'
-import type { InstrumentSummary, RangeKey, TabKey } from './types'
+import type { InstrumentSummary, RangeKey } from './types'
 
 const { env, load: loadEnv } = useEnvironment()
 const { instruments, load: loadInstruments } = useInstruments()
@@ -28,7 +30,7 @@ const { busy, add, refreshOne, remove } = useInstrumentActions()
 const { status: healthStatus, version: healthVersion, start: startHealth, stop: stopHealth } =
   useHealth()
 
-const activeTab = ref<TabKey>('instruments')
+const activeTab = useHashTab()
 const selectedItem = ref<InstrumentSummary | null>(null)
 const selectedRange = ref<RangeKey>('intraday')
 const refreshingSymbol = ref<string | null>(null)
@@ -112,7 +114,7 @@ async function onRemove(item: InstrumentSummary): Promise<void> {
   <TopProgress :active="refreshing || busy" />
 
   <main class="content">
-    <template v-if="activeTab === 'instruments'">
+    <template v-if="activeTab === 'assets'">
       <Toolbar :refreshing="refreshing" :busy="busy" @refresh="onRefreshAll" @add="onAdd" />
       <InstrumentsTable
         :instruments="instruments"
@@ -131,6 +133,7 @@ async function onRemove(item: InstrumentSummary): Promise<void> {
       />
     </template>
 
+    <ExchangesPanel v-else-if="activeTab === 'exchanges'" />
     <EnvironmentPanel v-else-if="activeTab === 'environment'" :env="env" />
     <LinksPanel v-else-if="activeTab === 'links'" />
     <ThemesPanel v-else />
