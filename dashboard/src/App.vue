@@ -7,6 +7,7 @@ import HistoryChart from './components/HistoryChart.vue'
 import InstrumentsTable from './components/InstrumentsTable.vue'
 import LinksPanel from './components/LinksPanel.vue'
 import StatusBar from './components/StatusBar.vue'
+import ThemesPanel from './components/ThemesPanel.vue'
 import Toolbar from './components/Toolbar.vue'
 import { useEnvironment } from './composables/useEnvironment'
 import { useHealth } from './composables/useHealth'
@@ -14,7 +15,7 @@ import { useHistory } from './composables/useHistory'
 import { useInstrumentActions } from './composables/useInstrumentActions'
 import { useInstruments } from './composables/useInstruments'
 import { useRefresh } from './composables/useRefresh'
-import type { TabKey } from './types'
+import type { InstrumentSummary, TabKey } from './types'
 
 const { env, load: loadEnv } = useEnvironment()
 const { instruments, load: loadInstruments } = useInstruments()
@@ -52,15 +53,15 @@ async function onAdd(identifier: string): Promise<void> {
   await loadInstruments()
 }
 
-async function onRefreshOne(isin: string): Promise<void> {
-  await refreshOne(isin)
+async function onRefreshOne(item: InstrumentSummary): Promise<void> {
+  await refreshOne(item)
   await loadInstruments()
-  if (selectedIsin.value === isin) await loadHistory(isin)
+  if (item.isin && selectedIsin.value === item.isin) await loadHistory(item.isin)
 }
 
-async function onRemove(isin: string): Promise<void> {
-  await remove(isin)
-  if (selectedIsin.value === isin) {
+async function onRemove(item: InstrumentSummary): Promise<void> {
+  await remove(item)
+  if (item.isin && selectedIsin.value === item.isin) {
     selectedIsin.value = null
     points.value = []
   }
@@ -85,8 +86,8 @@ async function onRemove(isin: string): Promise<void> {
     </template>
 
     <EnvironmentPanel v-else-if="activeTab === 'environment'" :env="env" />
-
-    <LinksPanel v-else />
+    <LinksPanel v-else-if="activeTab === 'links'" />
+    <ThemesPanel v-else />
   </main>
 
   <StatusBar :status="healthStatus" :version="healthVersion" />

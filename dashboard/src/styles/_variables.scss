@@ -1,20 +1,20 @@
-// ─── MangoLila-Marke ──────────────────────────────────────────────────────────
-$brand-orange: #df5430; // Mango
-$brand-purple: #812c7c; // Lila
-$brand-gradient: linear-gradient(120deg, #{$brand-orange}, #{$brand-purple});
+// ─── Marken-Basis (fixe Referenzwerte) ────────────────────────────────────────
+$brand-orange: #df5430;
+$brand-purple: #812c7c;
 
-// ─── Dunkles Theme (leicht ins Lila gezogen) ──────────────────────────────────
-$color-bg: #141019;
-$color-surface: #1e1826;
-$color-surface-2: #29202f;
-$color-border: #382c46;
-$color-text: #ece8f2;
-$color-muted: #9a8fb0;
-$color-accent: #df5430; // Mango als Primär-Akzent
-$color-accent-2: #b8478f; // Lila-Ton für Badges/Sekundär
+// ─── Themebare Farben — Werte kommen aus [data-theme] in base.scss ─────────────
+$color-bg: var(--c-bg);
+$color-surface: var(--c-surface);
+$color-surface-2: var(--c-surface-2);
+$color-border: var(--c-border);
+$color-text: var(--c-text);
+$color-muted: var(--c-muted);
+$color-accent: var(--c-accent);
+$color-accent-2: var(--c-accent-2);
+$brand-gradient: var(--c-grad);
+
+// ─── Health-Ampel (fix, semantisch) ───────────────────────────────────────────
 $color-danger: #e5534b;
-
-// ─── Health-Ampel ─────────────────────────────────────────────────────────────
 $health-ok: #3fb950;
 $health-warn: #f0a340;
 $health-down: #e5534b;

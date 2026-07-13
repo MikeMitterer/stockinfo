@@ -5,8 +5,8 @@ defineProps<{ instruments: InstrumentSummary[]; selectedIsin: string | null }>()
 
 const emit = defineEmits<{
   (event: 'select', isin: string): void
-  (event: 'refresh', isin: string): void
-  (event: 'remove', isin: string): void
+  (event: 'refresh', item: InstrumentSummary): void
+  (event: 'remove', item: InstrumentSummary): void
 }>()
 
 /** Formatiert einen Kurs mit zwei Nachkommastellen (oder '—'). */
@@ -55,8 +55,8 @@ function ter(value: number | null): string {
             <td class="num mono dim">{{ ter(item.ter) }}</td>
             <td class="num mono dim">{{ item.history_count }}</td>
             <td class="actions" @click.stop>
-              <button v-if="item.isin" class="icon" title="Aktualisieren" @click="emit('refresh', item.isin)">↻</button>
-              <button v-if="item.isin" class="icon danger" title="Löschen" @click="emit('remove', item.isin)">✕</button>
+              <button class="icon" title="Aktualisieren" @click="emit('refresh', item)">↻</button>
+              <button class="icon danger" title="Löschen" @click="emit('remove', item)">✕</button>
             </td>
           </tr>
         </tbody>
@@ -95,7 +95,7 @@ tbody tr {
   cursor: pointer;
   transition: background 0.1s ease;
   &:hover { background: $color-surface-2; }
-  &.selected { background: rgba(223, 84, 48, 0.12); box-shadow: inset 3px 0 0 $color-accent; }
+  &.selected { background: color-mix(in srgb, $color-accent 12%, transparent); box-shadow: inset 3px 0 0 $color-accent; }
 }
 
 .num { text-align: right; }
@@ -112,8 +112,8 @@ tbody tr {
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  &.etf { color: $brand-orange; background: rgba(223, 84, 48, 0.14); }
-  &.stock { color: $color-accent-2; background: rgba(184, 71, 143, 0.16); }
+  &.etf { color: $color-accent; background: color-mix(in srgb, $color-accent 15%, transparent); }
+  &.stock { color: $color-accent-2; background: color-mix(in srgb, $color-accent-2 16%, transparent); }
 }
 
 .actions { display: flex; gap: 0.3rem; justify-content: flex-end; }

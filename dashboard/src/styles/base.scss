@@ -1,5 +1,49 @@
 @use './variables' as *;
 
+// ─── Theme-Paletten (8 Themes, persistent via data-theme) ─────────────────────
+:root,
+[data-theme='classic'] {
+  --c-bg: #141019; --c-surface: #1e1826; --c-surface-2: #29202f; --c-border: #382c46;
+  --c-text: #ece8f2; --c-muted: #9a8fb0; --c-accent: #df5430; --c-accent-2: #b8478f;
+  --c-grad: linear-gradient(120deg, #df5430, #812c7c);
+}
+[data-theme='ocean'] {
+  --c-bg: #0c141c; --c-surface: #132030; --c-surface-2: #1b2c40; --c-border: #26384f;
+  --c-text: #e6eef6; --c-muted: #8aa0b8; --c-accent: #38bdf8; --c-accent-2: #6366f1;
+  --c-grad: linear-gradient(120deg, #38bdf8, #6366f1);
+}
+[data-theme='earth'] {
+  --c-bg: #17120d; --c-surface: #221a12; --c-surface-2: #2e2317; --c-border: #40311f;
+  --c-text: #f0e8dd; --c-muted: #b39d84; --c-accent: #e08a3c; --c-accent-2: #b5652c;
+  --c-grad: linear-gradient(120deg, #e08a3c, #a8632b);
+}
+[data-theme='night'] {
+  --c-bg: #0e0e1a; --c-surface: #171728; --c-surface-2: #202038; --c-border: #2e2e4a;
+  --c-text: #e7e5f5; --c-muted: #9a97c0; --c-accent: #8b7cf6; --c-accent-2: #c084fc;
+  --c-grad: linear-gradient(120deg, #8b7cf6, #c084fc);
+}
+[data-theme='mono'] {
+  --c-bg: #121212; --c-surface: #1c1c1c; --c-surface-2: #262626; --c-border: #363636;
+  --c-text: #ededed; --c-muted: #9a9a9a; --c-accent: #d0d0d0; --c-accent-2: #8a8a8a;
+  --c-grad: linear-gradient(120deg, #d0d0d0, #7a7a7a);
+}
+[data-theme='sunset'] {
+  --c-bg: #191016; --c-surface: #241620; --c-surface-2: #31202c; --c-border: #43303c;
+  --c-text: #f6e7ee; --c-muted: #c39aae; --c-accent: #fb7185; --c-accent-2: #f0883e;
+  --c-grad: linear-gradient(120deg, #fb7185, #f0883e);
+}
+[data-theme='forest'] {
+  --c-bg: #0e1512; --c-surface: #15211b; --c-surface-2: #1d2d25; --c-border: #2b4034;
+  --c-text: #e4f0e9; --c-muted: #8fb3a0; --c-accent: #34d399; --c-accent-2: #10b981;
+  --c-grad: linear-gradient(120deg, #34d399, #059669);
+}
+[data-theme='neon'] {
+  --c-bg: #0b0b12; --c-surface: #14141f; --c-surface-2: #1d1d2e; --c-border: #2c2c45;
+  --c-text: #eaeaf5; --c-muted: #9a9ac0; --c-accent: #22d3ee; --c-accent-2: #e635c9;
+  --c-grad: linear-gradient(120deg, #22d3ee, #e635c9);
+}
+
+// ─── Globales ─────────────────────────────────────────────────────────────────
 * { box-sizing: border-box; }
 
 html, body { height: 100%; }
@@ -31,7 +75,6 @@ button {
   &:disabled { opacity: 0.45; cursor: default; }
 }
 
-// Primärer Button in Markenfarbe
 button.primary {
   background: $brand-gradient;
   color: #fff;
@@ -40,10 +83,8 @@ button.primary {
 
 a { color: $color-accent; }
 
-// Monospace für Zahlen/Kurse
 .mono { font-family: $font-mono; font-variant-numeric: tabular-nums; }
 
-// Dezente Scrollbar
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: $color-border; border-radius: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }

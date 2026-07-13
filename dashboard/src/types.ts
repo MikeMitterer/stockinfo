@@ -44,4 +44,4 @@ export interface RefreshResult {
 }
 
 /** Aktive Unterseite/Tab des Dashboards. */
-export type TabKey = 'instruments' | 'environment' | 'links'
+export type TabKey = 'instruments' | 'environment' | 'links' | 'themes'
