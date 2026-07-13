@@ -57,8 +57,24 @@ hints: ## Nützliche URLs und Hinweise anzeigen
 
 ##@ Entwicklung
 
+.PHONY: dev-up
+dev-up: ## Gesamten Stack starten — Backend + Dashboard (overmind, Daemon)
+	overmind start -D -N -f Procfile.dev
+	@echo -e "  $(GREEN)✓$(RESET) Stack läuft — Backend $(BLUE)http://localhost:$(PORT)$(RESET) · Dashboard $(BLUE)http://localhost:5173$(RESET)  ($(WHITE)make dev-logs$(RESET))"
+
+.PHONY: dev-down
+dev-down: ## Gesamten Stack stoppen (overmind quit)
+	-@overmind quit 2>/dev/null || true
+	-@pkill -f "overmind" 2>/dev/null || true
+	-@rm -f $(CURDIR)/.overmind.sock
+	@echo -e "  $(GREEN)✓$(RESET) Stack gestoppt"
+
+.PHONY: dev-logs
+dev-logs: ## Logs des Stacks folgen (overmind echo)
+	overmind echo
+
 .PHONY: dev
-dev: ## Server im Vordergrund starten (uvicorn --reload)
+dev: ## Nur Backend im Vordergrund (uvicorn --reload)
 	$(UVICORN) $(APP_MODULE) --host $(HOST) --port $(PORT) --reload
 
 .PHONY: start
@@ -87,11 +103,11 @@ logs: ## Server-Logs folgen
 ##@ Docker
 
 .PHONY: up
-up: ## Container starten (baut bei Bedarf, persistenter Cache)
+up: ## Gesamten Stack als Container starten — Backend + Dashboard (persistenter Cache)
 	docker compose up -d --build
 
 .PHONY: down
-down: ## Container stoppen und entfernen
+down: ## Gesamten Stack stoppen und entfernen
 	docker compose down
 
 .PHONY: docker-logs
