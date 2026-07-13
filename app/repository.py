@@ -154,6 +154,20 @@ class QuoteRepository:
             )
             return cursor.rowcount > 0
 
+    def delete_by_symbol(self, symbol: str) -> bool:
+        """Löscht ein Instrument (und seine Quotes via Cascade) anhand des Symbols.
+
+        Für Wertpapiere ohne ISIN (nur per Symbol erfasst).
+
+        Returns:
+            True, wenn ein Instrument gelöscht wurde, sonst False.
+        """
+        with self._connect() as connection:
+            cursor = connection.execute(
+                "DELETE FROM instruments WHERE symbol = ?", (symbol,)
+            )
+            return cursor.rowcount > 0
+
     def save_quote(self, response: QuoteResponse) -> int:
         """Speichert Instrument-Metadaten und hängt den Kurspunkt an.
 

@@ -50,3 +50,21 @@ def test_list_und_delete(repo: QuoteRepository) -> None:
     assert len(listed) == 1 and listed[0]["symbol"] == "VGWL.DE"
     assert service.delete_instrument("IE00B3RBWM25") is True
     assert service.list_instruments() == []
+
+
+def test_refresh_one_by_symbol(repo: QuoteRepository) -> None:
+    service = CachedQuoteService(FakeQuoteService(), repo, ttl_hours=6)
+
+    result = service.refresh_one_by_symbol("BRYN.DE")
+
+    assert result.price == 200.0
+    assert len(service.list_instruments()) == 1
+
+
+def test_delete_by_symbol_service(repo: QuoteRepository) -> None:
+    service = CachedQuoteService(FakeQuoteService(), repo, ttl_hours=6)
+    service.refresh_one_by_symbol("BRYN.DE")
+    saved = service.list_instruments()[0]
+
+    assert service.delete_by_symbol(saved["symbol"]) is True
+    assert service.list_instruments() == []

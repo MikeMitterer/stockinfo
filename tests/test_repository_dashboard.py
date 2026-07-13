@@ -48,3 +48,11 @@ def test_count_instruments(repo: QuoteRepository) -> None:
     _save(repo, "IE00B3RBWM25", "VGWL.DE", 160.0, "2026-07-12T10:00:00+00:00")
     _save(repo, "IE0032077012", "EQQQ.DE", 635.0, "2026-07-12T10:00:00+00:00")
     assert repo.count_instruments() == 2
+
+
+def test_delete_by_symbol(repo: QuoteRepository) -> None:
+    _save(repo, None, "BRYN.DE", 430.0, "2026-07-12T10:00:00+00:00")
+
+    assert repo.delete_by_symbol("BRYN.DE") is True
+    assert repo.get_instrument_by_symbol("BRYN.DE") is None
+    assert repo.delete_by_symbol("BRYN.DE") is False

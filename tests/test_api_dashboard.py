@@ -26,8 +26,15 @@ class FakeService:
         return QuoteResponse(isin=isin, symbol="VGWL.DE", currency="EUR",
                              price=161.0, quote_time="t", fetched_at="t", type="etf")
 
+    def refresh_one_by_symbol(self, symbol: str) -> QuoteResponse:
+        return QuoteResponse(isin=None, symbol=symbol, currency="EUR",
+                             price=430.0, quote_time="t", fetched_at="t", type="stock")
+
     def delete_instrument(self, isin: str) -> bool:
         return not isin.startswith("XX")
+
+    def delete_by_symbol(self, symbol: str) -> bool:
+        return not symbol.startswith("XX")
 
 
 @pytest.fixture
@@ -65,3 +72,14 @@ def test_refresh_one_und_404(client: TestClient) -> None:
 def test_delete(client: TestClient) -> None:
     assert client.delete("/instruments/IE00B3RBWM25").status_code == 204
     assert client.delete("/instruments/XX0000000000").status_code == 404
+
+
+def test_refresh_by_symbol(client: TestClient) -> None:
+    response = client.post("/refresh/by-symbol/BRYN.DE")
+    assert response.status_code == 200
+    assert response.json()["symbol"] == "BRYN.DE"
+
+
+def test_delete_by_symbol(client: TestClient) -> None:
+    assert client.delete("/instruments/by-symbol/BRYN.DE").status_code == 204
+    assert client.delete("/instruments/by-symbol/XXNOPE").status_code == 404

@@ -133,6 +133,16 @@ class CachedQuoteService:
         self._repository.save_quote(fresh)
         return fresh
 
+    def refresh_one_by_symbol(self, symbol: str) -> QuoteResponse:
+        """Aktualisiert ein Instrument per Symbol live (für Papiere ohne ISIN).
+
+        Raises:
+            QuoteUnavailableError: Kein Kurs beschaffbar.
+        """
+        fresh = self._quote_service.get_quote_by_symbol(symbol)
+        self._repository.save_quote(fresh)
+        return fresh
+
     def list_instruments(self) -> list[dict]:
         """Gibt alle Instrumente inkl. letztem Kurs zurück (für das Dashboard)."""
         return self._repository.list_instruments_with_latest()
@@ -142,8 +152,12 @@ class CachedQuoteService:
         return self._repository.count_instruments()
 
     def delete_instrument(self, isin: str) -> bool:
-        """Löscht ein Instrument samt Historie; True bei Erfolg."""
+        """Löscht ein Instrument samt Historie per ISIN; True bei Erfolg."""
         return self._repository.delete_instrument(isin)
+
+    def delete_by_symbol(self, symbol: str) -> bool:
+        """Löscht ein Instrument samt Historie per Symbol; True bei Erfolg."""
+        return self._repository.delete_by_symbol(symbol)
 
     def _fetch_live(self, instrument: dict) -> QuoteResponse:
         """Beschafft einen frischen Kurs für ein bekanntes Instrument (ohne Cache)."""

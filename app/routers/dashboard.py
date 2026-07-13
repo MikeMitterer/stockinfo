@@ -62,9 +62,28 @@ def refresh_one(isin: str, service: ServiceDep) -> QuoteResponse:
         raise HTTPException(status_code=502, detail=f"Kein Kurs für {isin}") from exc
 
 
+@router.post("/refresh/by-symbol/{symbol}", response_model=QuoteResponse)
+def refresh_one_by_symbol(symbol: str, service: ServiceDep) -> QuoteResponse:
+    """Aktualisiert ein Instrument per Symbol (für Papiere ohne ISIN)."""
+    try:
+        return service.refresh_one_by_symbol(symbol)
+    except QuoteUnavailableError as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Kein Kurs für {symbol}"
+        ) from exc
+
+
 @router.delete("/instruments/{isin}", status_code=204)
 def delete_instrument(isin: str, service: ServiceDep) -> Response:
-    """Löscht ein Instrument samt Historie."""
+    """Löscht ein Instrument samt Historie per ISIN."""
     if not service.delete_instrument(isin):
         raise HTTPException(status_code=404, detail=f"Unbekannte ISIN {isin}")
+    return Response(status_code=204)
+
+
+@router.delete("/instruments/by-symbol/{symbol}", status_code=204)
+def delete_instrument_by_symbol(symbol: str, service: ServiceDep) -> Response:
+    """Löscht ein Instrument samt Historie per Symbol (für Papiere ohne ISIN)."""
+    if not service.delete_by_symbol(symbol):
+        raise HTTPException(status_code=404, detail=f"Unbekanntes Symbol {symbol}")
     return Response(status_code=204)
