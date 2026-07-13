@@ -220,18 +220,29 @@ Backend muss parallel laufen. Beides zusammen: **`make dev-up`** (siehe Schnells
 
 ---
 
-## Docker
+## Docker (ein Container)
 
-Der ganze Stack (**Backend + Dashboard**) läuft im Container; der SQLite-Cache liegt in
-einem persistenten Volume:
+Backend **und** Dashboard laufen in einem Image auf einem Port:
 
 ```bash
-make up          # ganzen Stack bauen und starten (Backend :8000 + Dashboard :5173)
-make docker-logs # Logs verfolgen
-make down        # stoppen und entfernen
+make up        # baut & startet den Container → http://localhost:8000/
+make down      # stoppt & entfernt ihn
 ```
 
-Danach sind API (`http://localhost:8000`) und Dashboard (`http://localhost:5173`) erreichbar.
+Das Dashboard wird von FastAPI mit ausgeliefert (relative API-Aufrufe), es
+ist kein separater Webserver nötig. Der Cache liegt im Volume `/data`.
+
+**Image bauen/pushen** (Ökosystem-Konvention, versioniert via `gitDockerTag`):
+
+```bash
+make build                    # docker/build.sh --build
+make push                     # docker/build.sh --push   (TARGET=ghcr, Default)
+TARGET=dockerhub make push    # alternativ Docker Hub
+```
+
+**Unraid:** Container aus dem Image `mangolila/stockinfo` (bzw.
+`ghcr.io/MikeMitterer/mangolila-stockinfo`), Port `8000:8000`, Pfad
+`/mnt/user/appdata/stockinfo → /data`, `.env` als Env-Variablen.
 
 [↑ Übersicht](#übersicht)
 
@@ -264,7 +275,8 @@ app/                    # FastAPI-Backend
   routers/              #   HTTP-Endpoints (quotes, dashboard)
 dashboard/              # Vue-Dashboard (eigenständige App)
 tests/                  # Backend-Tests (pytest)
-Dockerfile, docker-compose.yml
+docker/                 # Dockerfile, build.sh (Ein-Image-Build)
+docker-compose.yml      # lokaler Container-Start (make up)
 Makefile                # Start/Stopp der Dienste (make help)
 ```
 

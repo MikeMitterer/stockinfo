@@ -1,7 +1,9 @@
 services:
   stockinfo:
-    build: .
-    image: stockinfo
+    build:
+      context: .
+      dockerfile: docker/Dockerfile
+    image: mangolila/stockinfo
     ports:
       - "${PORT:-8000}:8000"
     env_file:
@@ -13,19 +15,6 @@ services:
       DATABASE_PATH: /data/stockinfo.db
     volumes:
       - stockinfo-data:/data
-    restart: unless-stopped
-
-  dashboard:
-    build:
-      context: ./dashboard
-      args:
-        # Browser ruft das Backend über den vom Host veröffentlichten Port auf
-        VITE_API_BASE_URL: http://localhost:${PORT:-8000}
-    image: stockinfo-dashboard
-    ports:
-      - "5173:80"
-    depends_on:
-      - stockinfo
     restart: unless-stopped
 
 volumes:
