@@ -17,6 +17,7 @@ const emit = defineEmits<{
   (event: 'refresh', item: InstrumentSummary): void
   (event: 'remove', item: InstrumentSummary): void
   (event: 'set-isin', payload: { symbol: string; isin: string }): void
+  (event: 'json', item: InstrumentSummary): void
 }>()
 
 // Inline-Eingabe zum nachträglichen Erfassen einer ISIN
@@ -117,6 +118,7 @@ function ter(value: number | null): string {
             <td class="num mono dim">{{ ter(item.ter) }}</td>
             <td class="num mono dim">{{ item.history_count }}</td>
             <td class="actions" @click.stop>
+              <button class="ext" title="JSON-Abfrage anzeigen" @click="emit('json', item)">JSON</button>
               <a
                 v-if="extraetfLink(item)"
                 class="ext"

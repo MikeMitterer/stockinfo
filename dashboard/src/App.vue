@@ -6,6 +6,7 @@ import EnvironmentPanel from './components/EnvironmentPanel.vue'
 import ExchangesPanel from './components/ExchangesPanel.vue'
 import HistoryChart from './components/HistoryChart.vue'
 import InstrumentsTable from './components/InstrumentsTable.vue'
+import JsonModal from './components/JsonModal.vue'
 import LinksPanel from './components/LinksPanel.vue'
 import StatusBar from './components/StatusBar.vue'
 import ThemesPanel from './components/ThemesPanel.vue'
@@ -34,6 +35,7 @@ const activeTab = useHashTab()
 const selectedItem = ref<InstrumentSummary | null>(null)
 const selectedRange = ref<RangeKey>('intraday')
 const refreshingSymbol = ref<string | null>(null)
+const jsonItem = ref<InstrumentSummary | null>(null)
 
 const selectedSymbol = computed(() => selectedItem.value?.symbol ?? null)
 const selectedCurrency = computed(() => selectedItem.value?.latest_currency ?? null)
@@ -132,6 +134,7 @@ async function onRemove(item: InstrumentSummary): Promise<void> {
         @refresh="onRefreshOne"
         @remove="onRemove"
         @set-isin="onSetIsin"
+        @json="jsonItem = $event"
       />
       <HistoryChart
         :series="chartSeries"
@@ -149,6 +152,7 @@ async function onRemove(item: InstrumentSummary): Promise<void> {
   </main>
 
   <StatusBar :status="healthStatus" :version="healthVersion" />
+  <JsonModal :item="jsonItem" @close="jsonItem = null" />
 </template>
 
 <style scoped lang="scss">
