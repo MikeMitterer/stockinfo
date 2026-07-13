@@ -1,7 +1,26 @@
-$color-bg: #0f172a;
-$color-surface: #1e293b;
-$color-text: #e2e8f0;
-$color-muted: #94a3b8;
-$color-accent: #38bdf8;
-$color-danger: #f87171;
-$radius: 8px;
+// ─── MangoLila-Marke ──────────────────────────────────────────────────────────
+$brand-orange: #df5430; // Mango
+$brand-purple: #812c7c; // Lila
+$brand-gradient: linear-gradient(120deg, #{$brand-orange}, #{$brand-purple});
+
+// ─── Dunkles Theme (leicht ins Lila gezogen) ──────────────────────────────────
+$color-bg: #141019;
+$color-surface: #1e1826;
+$color-surface-2: #29202f;
+$color-border: #382c46;
+$color-text: #ece8f2;
+$color-muted: #9a8fb0;
+$color-accent: #df5430; // Mango als Primär-Akzent
+$color-accent-2: #b8478f; // Lila-Ton für Badges/Sekundär
+$color-danger: #e5534b;
+
+// ─── Health-Ampel ─────────────────────────────────────────────────────────────
+$health-ok: #3fb950;
+$health-warn: #f0a340;
+$health-down: #e5534b;
+
+// ─── Maße & Schrift ───────────────────────────────────────────────────────────
+$radius: 10px;
+$font-mono: 'SF Mono', 'JetBrains Mono', 'Menlo', ui-monospace, monospace;
+$header-h: 58px;
+$status-h: 32px;

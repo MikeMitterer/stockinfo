@@ -20,15 +20,15 @@ function submit(): void {
 </script>
 
 <template>
-  <header class="toolbar">
-    <button :disabled="refreshing" @click="emit('refresh')">
-      {{ refreshing ? 'Aktualisiere…' : 'Alle aktualisieren' }}
-    </button>
+  <div class="toolbar">
     <form class="add" @submit.prevent="submit">
       <input v-model="identifier" placeholder="ISIN oder Symbol (z.B. VGWL.DE)" />
-      <button type="submit" :disabled="busy">Hinzufügen</button>
+      <button type="submit" class="primary" :disabled="busy">Hinzufügen</button>
     </form>
-  </header>
+    <button :disabled="refreshing" @click="emit('refresh')">
+      {{ refreshing ? 'Aktualisiere…' : '↻ Alle aktualisieren' }}
+    </button>
+  </div>
 </template>
 
 <style scoped lang="scss">
@@ -38,17 +38,22 @@ function submit(): void {
   display: flex;
   gap: 1rem;
   align-items: center;
+  justify-content: space-between;
   flex-wrap: wrap;
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
 
-  .add { display: flex; gap: 0.5rem; }
+  .add { display: flex; gap: 0.5rem; flex: 1; min-width: 280px; }
   input {
-    padding: 0.4rem 0.6rem;
+    flex: 1;
+    padding: 0.5rem 0.75rem;
     border-radius: $radius;
-    border: 1px solid $color-muted;
+    border: 1px solid $color-border;
     background: $color-surface;
     color: $color-text;
-    min-width: 260px;
+    font-size: 0.9rem;
+
+    &::placeholder { color: $color-muted; }
+    &:focus { outline: none; border-color: $color-accent; }
   }
 }
 </style>

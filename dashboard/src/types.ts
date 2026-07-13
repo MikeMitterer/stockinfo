@@ -42,3 +42,6 @@ export interface RefreshResult {
   total: number
   refreshed: number
 }
+
+/** Aktive Unterseite/Tab des Dashboards. */
+export type TabKey = 'instruments' | 'environment' | 'links'

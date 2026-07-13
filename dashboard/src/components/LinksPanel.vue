@@ -32,24 +32,28 @@ const links: ApiLink[] = [
 
 .links {
   background: $color-surface;
+  border: 1px solid $color-border;
   border-radius: $radius;
-  padding: 1rem;
-  margin: 1rem 0;
+  padding: 1.1rem 1.25rem;
 
-  .base { color: $color-muted; margin: 0.25rem 0 0.75rem; }
-  code { color: $color-text; }
+  .base { color: $color-muted; margin: 0.25rem 0 1rem; }
+  code { color: $color-text; font-family: $font-mono; }
   ul {
     list-style: none;
     padding: 0;
     margin: 0;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.75rem 1.25rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 0.6rem;
   }
   a {
+    display: block;
+    padding: 0.6rem 0.8rem;
+    border: 1px solid $color-border;
+    border-radius: $radius;
     color: $color-accent;
     text-decoration: none;
-    &:hover { text-decoration: underline; }
+    &:hover { background: $color-surface-2; border-color: $color-accent; }
   }
 }
 </style>

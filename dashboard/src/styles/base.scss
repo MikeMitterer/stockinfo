@@ -2,21 +2,48 @@
 
 * { box-sizing: border-box; }
 
+html, body { height: 100%; }
+
 body {
   margin: 0;
-  font-family: system-ui, sans-serif;
+  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
   background: $color-bg;
   color: $color-text;
+  font-size: 14px;
+  line-height: 1.45;
 }
+
+h1, h2, h3 { font-weight: 600; }
+h2 { font-size: 0.95rem; letter-spacing: 0.02em; margin: 0 0 0.75rem; }
 
 button {
   cursor: pointer;
-  border: none;
+  border: 1px solid transparent;
   border-radius: $radius;
-  padding: 0.4rem 0.8rem;
-  background: $color-accent;
-  color: $color-bg;
+  padding: 0.45rem 0.9rem;
+  background: $color-surface-2;
+  color: $color-text;
   font-weight: 600;
+  font-size: 0.85rem;
+  transition: filter 0.12s ease, background 0.12s ease;
 
-  &:disabled { opacity: 0.5; cursor: default; }
+  &:hover:not(:disabled) { filter: brightness(1.15); }
+  &:disabled { opacity: 0.45; cursor: default; }
 }
+
+// Primärer Button in Markenfarbe
+button.primary {
+  background: $brand-gradient;
+  color: #fff;
+  border-color: transparent;
+}
+
+a { color: $color-accent; }
+
+// Monospace für Zahlen/Kurse
+.mono { font-family: $font-mono; font-variant-numeric: tabular-nums; }
+
+// Dezente Scrollbar
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: $color-border; border-radius: 6px; }
+::-webkit-scrollbar-track { background: transparent; }

@@ -26,11 +26,13 @@ defineProps<{ env: EnvInfo | null }>()
 
 .env {
   background: $color-surface;
+  border: 1px solid $color-border;
   border-radius: $radius;
-  padding: 1rem;
+  padding: 1.1rem 1.25rem;
 
-  dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 0.5rem; }
-  dt { color: $color-muted; font-size: 0.8rem; }
-  dd { margin: 0; font-weight: 600; }
+  dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.9rem 1.5rem; }
+  div { display: flex; flex-direction: column; gap: 0.15rem; }
+  dt { color: $color-muted; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
+  dd { margin: 0; font-weight: 600; font-family: $font-mono; font-variant-numeric: tabular-nums; }
 }
 </style>
