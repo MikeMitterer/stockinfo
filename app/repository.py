@@ -107,6 +107,87 @@ class QuoteRepository:
             rows = connection.execute(query, params).fetchall()
             return [dict(row) for row in rows]
 
+    def get_daily_closes(
+        self, instrument_id: int, date_from: str | None = None
+    ) -> list[dict]:
+        """Gibt die gecachten Tages-Schlusskurse zurück (älteste zuerst).
+
+        Args:
+            instrument_id: ID des Instruments.
+            date_from: Optionale untere Grenze (ISO-Datum) auf ``date``.
+
+        Returns:
+            Liste von Tages-Schlusskurs-Dicts.
+        """
+        clauses = ["instrument_id = ?"]
+        params: list[object] = [instrument_id]
+        if date_from:
+            clauses.append("date >= ?")
+            params.append(date_from)
+        query = (
+            f"SELECT * FROM daily_closes WHERE {' AND '.join(clauses)} ORDER BY date"
+        )
+        with self._connect() as connection:
+            rows = connection.execute(query, params).fetchall()
+            return [dict(row) for row in rows]
+
+    def upsert_daily_closes(self, instrument_id: int, rows: list[dict]) -> None:
+        """Speichert/aktualisiert Tages-Schlusskurse (Update bei gleichem Datum).
+
+        Args:
+            instrument_id: ID des Instruments.
+            rows: Liste von ``{"date", "close", "currency"}``.
+        """
+        if not rows:
+            return
+        with self._connect() as connection:
+            connection.executemany(
+                "INSERT INTO daily_closes (instrument_id, date, close, currency) "
+                "VALUES (?, ?, ?, ?) "
+                "ON CONFLICT (instrument_id, date) "
+                "DO UPDATE SET close = excluded.close, currency = excluded.currency",
+                [
+                    (instrument_id, row["date"], row["close"], row.get("currency"))
+                    for row in rows
+                ],
+            )
+
+    def daily_closes_range(self, instrument_id: int) -> tuple[str, str] | None:
+        """Gibt (min, max) der gecachten Datumsgrenzen zurück (oder ``None``)."""
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT MIN(date) AS lo, MAX(date) AS hi FROM daily_closes "
+                "WHERE instrument_id = ?",
+                (instrument_id,),
+            ).fetchone()
+            if row is None or row["lo"] is None:
+                return None
+            return (row["lo"], row["hi"])
+
+    def get_daily_meta(self, instrument_id: int) -> dict | None:
+        """Gibt die Fetch-Wasserzeichen (fetched_from/to) zurück (oder ``None``).
+
+        ``None`` in einer Spalte bedeutet 'unbegrenzt' (gesamte Historie).
+        """
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM daily_meta WHERE instrument_id = ?", (instrument_id,)
+            ).fetchone()
+            return dict(row) if row else None
+
+    def set_daily_meta(
+        self, instrument_id: int, fetched_from: str | None, fetched_to: str | None
+    ) -> None:
+        """Setzt die Fetch-Wasserzeichen für ein Instrument."""
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO daily_meta (instrument_id, fetched_from, fetched_to) "
+                "VALUES (?, ?, ?) "
+                "ON CONFLICT (instrument_id) DO UPDATE SET "
+                "fetched_from = excluded.fetched_from, fetched_to = excluded.fetched_to",
+                (instrument_id, fetched_from, fetched_to),
+            )
+
     def list_instruments(self) -> list[dict]:
         """Gibt alle bekannten Instrumente zurück (für den Hintergrund-Refresh)."""
         with self._connect() as connection:

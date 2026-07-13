@@ -38,6 +38,24 @@ CREATE TABLE IF NOT EXISTS quotes (
 
 CREATE INDEX IF NOT EXISTS idx_quotes_instrument_time
     ON quotes (instrument_id, quote_time DESC);
+
+CREATE TABLE IF NOT EXISTS daily_closes (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    instrument_id INTEGER NOT NULL REFERENCES instruments(id) ON DELETE CASCADE,
+    date          TEXT NOT NULL,
+    close         REAL NOT NULL,
+    currency      TEXT,
+    UNIQUE (instrument_id, date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_daily_instrument_date
+    ON daily_closes (instrument_id, date);
+
+CREATE TABLE IF NOT EXISTS daily_meta (
+    instrument_id INTEGER PRIMARY KEY REFERENCES instruments(id) ON DELETE CASCADE,
+    fetched_from  TEXT,
+    fetched_to    TEXT
+);
 """
 
 

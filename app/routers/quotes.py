@@ -4,18 +4,22 @@ Der Router übersetzt nur zwischen HTTP und Service; Domain-Exceptions werden
 auf HTTP-Statuscodes abgebildet.
 """
 
-from typing import Annotated
+from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.container import get_cached_quote_service
-from app.models import QuotePoint, QuoteResponse
+from app.container import get_cached_quote_service, get_daily_history_service
+from app.models import DailyPoint, QuotePoint, QuoteResponse
+from app.services.daily_history import DailyHistoryService
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
 
 router = APIRouter(tags=["quotes"])
 
 ServiceDep = Annotated[CachedQuoteService, Depends(get_cached_quote_service)]
+DailyDep = Annotated[DailyHistoryService, Depends(get_daily_history_service)]
+
+Period = Literal["1w", "1m", "3m", "1y", "max"]
 
 
 @router.get("/quote", response_model=QuoteResponse)
@@ -44,6 +48,36 @@ def quote_by_isin(isin: str, service: ServiceDep) -> QuoteResponse:
     except QuoteUnavailableError as exc:
         raise HTTPException(
             status_code=502, detail=f"Kein Kurs für ISIN {isin}"
+        ) from exc
+
+
+@router.get("/quote/{isin}/daily", response_model=list[DailyPoint])
+def daily_history(
+    isin: str,
+    service: DailyDep,
+    period: Annotated[Period, Query()] = "1m",
+) -> list[DailyPoint]:
+    """Liefert echte Tages-Schlusskurse (EOD) zu einer ISIN, inkrementell gecacht."""
+    try:
+        return service.get_daily(isin=isin, period=period)
+    except (InstrumentNotFoundError, QuoteUnavailableError) as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Keine Historie für {isin}"
+        ) from exc
+
+
+@router.get("/quote/by-symbol/{symbol}/daily", response_model=list[DailyPoint])
+def daily_history_by_symbol(
+    symbol: str,
+    service: DailyDep,
+    period: Annotated[Period, Query()] = "1m",
+) -> list[DailyPoint]:
+    """Liefert echte Tages-Schlusskurse (EOD) zu einem Symbol, inkrementell gecacht."""
+    try:
+        return service.get_daily(symbol=symbol, period=period)
+    except (InstrumentNotFoundError, QuoteUnavailableError) as exc:
+        raise HTTPException(
+            status_code=502, detail=f"Keine Historie für {symbol}"
         ) from exc
 
 

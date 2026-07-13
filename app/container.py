@@ -12,6 +12,7 @@ from app.providers.openfigi_provider import OpenFigiClient
 from app.providers.yfinance_provider import YFinanceProvider
 from app.repository import QuoteRepository
 from app.resolver import CompositeResolver, OpenFigiResolver, YFinanceResolver
+from app.services.daily_history import DailyHistoryService
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteService
 
@@ -29,3 +30,14 @@ def get_cached_quote_service() -> CachedQuoteService:
     quote_service = QuoteService(YFinanceProvider(), JustEtfProvider(), resolver)
     repository = QuoteRepository(settings.database_path)
     return CachedQuoteService(quote_service, repository, settings.cache_ttl_hours)
+
+
+@lru_cache
+def get_daily_history_service() -> DailyHistoryService:
+    """Baut den (gecachten) DailyHistoryService für EOD-Historien."""
+    settings = get_settings()
+    return DailyHistoryService(
+        QuoteRepository(settings.database_path),
+        YFinanceProvider(),
+        get_cached_quote_service(),
+    )

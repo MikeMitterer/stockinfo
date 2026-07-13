@@ -20,6 +20,14 @@ class QuotePoint(BaseModel):
     fetched_at: str
 
 
+class DailyPoint(BaseModel):
+    """Ein Tages-Schlusskurs (EOD) der Langfrist-Historie."""
+
+    date: str
+    close: float
+    currency: str | None = None
+
+
 class QuoteResponse(BaseModel):
     """Vollständige Kurs- und Metadaten-Antwort für ein Wertpapier.
 

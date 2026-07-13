@@ -57,6 +57,45 @@ class YFinanceProvider:
             isin=self._safe_isin(ticker),
         )
 
+    def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict]:
+        """Holt echte Tages-Schlusskurse (EOD) von Yahoo Finance.
+
+        Args:
+            symbol: Yahoo-Symbol, z.B. 'VGWL.DE'.
+            start: Optionales Startdatum (ISO, YYYY-MM-DD). Ohne start die volle
+                verfügbare Historie.
+
+        Returns:
+            Liste von ``{"date", "close", "currency"}`` (leer bei Fehler).
+        """
+        try:
+            ticker = yf.Ticker(symbol)
+            if start:
+                history = ticker.history(start=start, interval="1d", auto_adjust=True)
+            else:
+                history = ticker.history(period="max", interval="1d", auto_adjust=True)
+        except Exception as exc:
+            logger.warning("fetch_daily_failed", symbol=symbol, error=str(exc))
+            return []
+
+        if history is None or history.empty:
+            return []
+
+        currency = self._fast_attr(ticker.fast_info, "currency")
+        rows: list[dict] = []
+        for index, row in history.iterrows():
+            close = row["Close"]
+            if close != close:  # NaN
+                continue
+            rows.append(
+                {
+                    "date": index.date().isoformat(),
+                    "close": float(close),
+                    "currency": currency,
+                }
+            )
+        return rows
+
     @staticmethod
     def _fast_attr(fast: Any, name: str) -> Any:
         """Liest ein FastInfo-Feld per Attribut-Zugriff; ``None`` bei Fehler.

@@ -5,10 +5,22 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
-from app.container import get_cached_quote_service
+from app.container import get_cached_quote_service, get_daily_history_service
 from app.main import app
-from app.models import QuotePoint, QuoteResponse
+from app.models import DailyPoint, QuotePoint, QuoteResponse
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
+
+
+class FakeDaily:
+    """Ersetzt den DailyHistoryService."""
+
+    def get_daily(
+        self, *, isin: str | None = None, symbol: str | None = None, period: str = "1m"
+    ) -> list[DailyPoint]:
+        return [
+            DailyPoint(date="2026-07-10", close=160.0, currency="EUR"),
+            DailyPoint(date="2026-07-13", close=162.0, currency="EUR"),
+        ]
 
 
 class FakeService:
@@ -73,6 +85,7 @@ class FakeService:
 def client() -> Iterator[TestClient]:
     """TestClient ohne Lifespan (kein Scheduler/DB), Service überschrieben."""
     app.dependency_overrides[get_cached_quote_service] = FakeService
+    app.dependency_overrides[get_daily_history_service] = FakeDaily
     yield TestClient(app)
     app.dependency_overrides.clear()
 
@@ -136,3 +149,20 @@ def test_history_by_symbol(client: TestClient) -> None:
     response = client.get("/quote/by-symbol/BRYN.DE/history")
     assert response.status_code == 200
     assert len(response.json()) == 1
+
+
+def test_daily_by_isin(client: TestClient) -> None:
+    response = client.get("/quote/IE00B3RBWM25/daily", params={"period": "1m"})
+    assert response.status_code == 200
+    body = response.json()
+    assert len(body) == 2 and body[0]["close"] == 160.0
+
+
+def test_daily_by_symbol(client: TestClient) -> None:
+    response = client.get("/quote/by-symbol/BRYN.DE/daily", params={"period": "1y"})
+    assert response.status_code == 200
+    assert len(response.json()) == 2
+
+
+def test_daily_ungueltiger_zeitraum_422(client: TestClient) -> None:
+    assert client.get("/quote/IE00B3RBWM25/daily", params={"period": "5x"}).status_code == 422
