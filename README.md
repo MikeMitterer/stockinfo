@@ -5,8 +5,10 @@ Eine kleine App, die **Aktien- und ETF-Kurse per REST-API** ausliefert und in ei
 **Symbol+Börse**; zurück kommt **JSON** mit Kurs, Währung, Zeitpunkt, Bezeichnung und
 – bei ETFs – Zusatzdaten wie TER, Anbieter und Fondsgröße.
 
-Dazu gibt es ein optionales **Web-Dashboard** (Vue), das den Datenbank-Inhalt und die
-Konfiguration anzeigt, Kurse aktualisiert und die Kurshistorie als Graph darstellt.
+Dazu gibt es ein **Web-Dashboard** (Vue): Assets-Übersicht, Konfiguration, Börsen-Legende,
+8 umschaltbare Themes, ein Kurs-Chart (Tagesverlauf **und** echte Tages-Schlusskurse)
+sowie pro Asset Aktionen (aktualisieren, löschen, ISIN nachtragen) und Links (extraETF,
+Yahoo Finance, JSON-Export).
 
 ## Übersicht
 
@@ -30,10 +32,12 @@ Konfiguration anzeigt, Kurse aktualisiert und die Kurshistorie als Graph darstel
   sofort aus dem Cache statt erneut aus dem Internet.
 - **Automatisch aktuell halten** – ein Hintergrundjob aktualisiert alle bekannten
   Wertpapiere in einem einstellbaren Intervall.
-- **Historie** – zu jedem Wertpapier wird eine Kurs-Zeitreihe gespeichert und ist
-  abfragbar.
+- **Historie** – zwei Sichten: der **Tagesverlauf** aus den erfassten Ticks und die
+  echten **Tages-Schlusskurse** (EOD von Yahoo, inkrementell gecacht – pro Anfrage wird
+  nur die Differenz nachgeladen).
 - **Viele Infos** – neben Kurs und Zeitpunkt u.a. Bezeichnung, Währung, Volumen und
   bei ETFs TER, Anbieter, Replikationsart und Fondsgröße.
+- **Dashboard** – Übersicht, Kurs-Chart, 8 Themes, Börsen-Legende, Profil-Links, JSON-Export.
 
 [↑ Übersicht](#übersicht)
 
@@ -82,13 +86,21 @@ python3.11 -m venv .venv
 .venv/bin/pip install -r requirements-dev.txt
 
 # 3. Server starten
-make dev            # im Vordergrund (mit Auto-Reload)
+make dev            # nur Backend im Vordergrund (Auto-Reload)
 #   oder
-make start          # im Hintergrund   →  make stop / make logs
+make start          # nur Backend im Hintergrund   →  make stop / make logs
+```
+
+Ganzer Stack (Backend **und** Dashboard) auf einmal – via
+[overmind](https://github.com/DarthSim/overmind):
+
+```bash
+make dev-up         # Backend :8000 + Dashboard :5173
+make dev-down       # beides stoppen   ·   make dev-logs für Logs
 ```
 
 Der Server läuft dann auf `http://localhost:8000`. Eine interaktive API-Doku
-(Swagger) gibt es unter `http://localhost:8000/docs`.
+(Swagger) gibt es unter `http://localhost:8000/docs` (im Browser `http://`, nicht `https://`).
 
 Erste Abfrage:
 
@@ -106,15 +118,19 @@ curl http://localhost:8000/quote/IE00B3RBWM25
 
 | Methode & Pfad | Zweck |
 |---|---|
-| `GET /health` | Health-Check |
+| `GET /health` | Health-Check (Status + Version) |
 | `GET /quote/{isin}` | Kurs per ISIN (bevorzugt Xetra/EUR) |
 | `GET /quote?symbol=VGWL.DE` | Kurs per vollständigem Yahoo-Symbol (Suffix = Börse) |
-| `GET /quote/{isin}/history?from=&to=&limit=` | Kurshistorie eines Wertpapiers |
+| `GET /quote/{isin}/history` | Intraday-Historie (erfasste Ticks) |
+| `GET /quote/{isin}/daily?period=1w\|1m\|3m\|1y\|max` | echte Tages-Schlusskurse (EOD, gecacht) |
 | `GET /instruments` | alle gecachten Wertpapiere mit letztem Kurs |
 | `GET /env` | aktuelle Konfiguration (Secrets maskiert) |
-| `POST /refresh` | alle Wertpapiere jetzt aktualisieren |
-| `POST /refresh/{isin}` | einzelnes Wertpapier aktualisieren |
+| `POST /refresh` · `POST /refresh/{isin}` | alle / einzelnes Wertpapier aktualisieren |
+| `PUT /instruments/by-symbol/{symbol}/isin` | ISIN nachträglich eintragen |
 | `DELETE /instruments/{isin}` | Wertpapier + Historie löschen |
+
+Für Wertpapiere **ohne ISIN** gibt es jeweils eine `…/by-symbol/{symbol}`-Variante
+(Kurs, History, Daily, Refresh, Delete).
 
 **Beispiel-Antwort** (`GET /quote/IE00B3RBWM25`):
 
@@ -161,6 +177,9 @@ Alle Werte lassen sich über `.env` überschreiben (`cp .env.example .env`):
 | `METADATA_TTL_DAYS` | Aktualisierungs-Rhythmus für ETF-Metadaten | `7` |
 | `DEFAULT_EXCHANGE` | bevorzugte Börse für ISIN-Abfragen (MIC) | `XETR` (Xetra) |
 | `OPENFIGI_API_KEY` | optionaler Key für höheres OpenFIGI-Limit | leer |
+| `EXTRAETF_ETF_URL` / `EXTRAETF_STOCK_URL` | Profil-Link-Vorlagen (Platzhalter `{isin}`) | extraetf.com/… |
+| `YAHOO_URL` | Yahoo-Link-Vorlage (Platzhalter `{symbol}`) | de.finance.yahoo.com/… |
+| `CORS_ORIGINS` | erlaubte Dashboard-Herkunft(en) | `http://localhost:5173` |
 | `API_KEY` | optionaler Zugriffsschutz (leer = aus) | leer |
 
 [↑ Übersicht](#übersicht)
@@ -170,9 +189,16 @@ Alle Werte lassen sich über `.env` überschreiben (`cp .env.example .env`):
 ## Dashboard
 
 Ein eigenständiges Web-Frontend liegt unter [`dashboard/`](dashboard/) (Vue 3 + Vite +
-TypeScript). Es zeigt die gecachten Wertpapiere und die Konfiguration, erlaubt das
-Hinzufügen/Löschen und Aktualisieren von Wertpapieren und zeichnet die Kurshistorie
-als Graph.
+TypeScript + SCSS) mit fixem Header (deep-linkbare Tab-Navigation) und Statuszeile
+(**Health-Ampel** grün/orange/rot + Version):
+
+- **Assets** – Übersicht mit letztem Kurs; hinzufügen (ISIN/Symbol), aktualisieren,
+  löschen, **ISIN nachtragen**; pro Zeile Links zu **extraETF**, **Yahoo Finance** und
+  ein **JSON-Popup** (URL + Ergebnis kopierbar).
+- **Chart** – Zeitraum-Umschalter `1T · 1W · 1M · 3M · 1J · Max`: `1T` = Tagesverlauf
+  (erfasste Ticks), Rest = echte Tages-Schlusskurse (EOD). Echte Zeitachse, kompakte Ticks.
+- **Börsen** – Legende der Yahoo-Suffixe (Börse, Region, Währung).
+- **Environment** – aktuelle Konfiguration; **Themes** – 8 wählbare, persistente Themes.
 
 ```bash
 cd dashboard
@@ -181,7 +207,7 @@ npm install
 npm run dev                # http://localhost:5173
 ```
 
-Voraussetzung: Der API-Server (siehe Schnellstart) läuft parallel.
+Backend muss parallel laufen. Beides zusammen: **`make dev-up`** (siehe Schnellstart).
 
 [↑ Übersicht](#übersicht)
 
@@ -189,15 +215,16 @@ Voraussetzung: Der API-Server (siehe Schnellstart) läuft parallel.
 
 ## Docker
 
-Die API läuft auch im Container; der SQLite-Cache liegt in einem persistenten Volume:
+Der ganze Stack (**Backend + Dashboard**) läuft im Container; der SQLite-Cache liegt in
+einem persistenten Volume:
 
 ```bash
-make up          # Container bauen und starten (docker compose up -d --build)
+make up          # ganzen Stack bauen und starten (Backend :8000 + Dashboard :5173)
 make docker-logs # Logs verfolgen
 make down        # stoppen und entfernen
 ```
 
-Danach ist die API wie gewohnt unter `http://localhost:8000` erreichbar.
+Danach sind API (`http://localhost:8000`) und Dashboard (`http://localhost:5173`) erreichbar.
 
 [↑ Übersicht](#übersicht)
 
