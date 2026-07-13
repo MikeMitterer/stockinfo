@@ -4,7 +4,9 @@ Kennt keine HTTP-Belange. Fehler werden als Domain-Exceptions signalisiert und
 in der Router-Schicht auf HTTP-Statuscodes abgebildet.
 """
 
-from datetime import datetime, timezone
+import math
+import statistics
+from datetime import datetime, timedelta, timezone
 
 import structlog
 
@@ -17,6 +19,34 @@ from app.providers.base import (
 )
 
 logger = structlog.get_logger()
+
+# Handelstage pro Jahr — Standardfaktor zur Annualisierung der Tagesvolatilität.
+_TRADING_DAYS_PER_YEAR = 252
+
+
+def annualized_volatility(closes: list[float]) -> float | None:
+    """Berechnet die annualisierte Volatilität aus Tages-Schlusskursen.
+
+    Volatilität = Standardabweichung der täglichen Renditen × √252, in Prozent.
+
+    Args:
+        closes: Chronologisch geordnete Tages-Schlusskurse.
+
+    Returns:
+        Annualisierte Volatilität in Prozent (gerundet), oder ``None`` bei zu
+        wenigen Datenpunkten.
+    """
+    if len(closes) < 5:
+        return None
+    returns = [
+        closes[i] / closes[i - 1] - 1.0
+        for i in range(1, len(closes))
+        if closes[i - 1]
+    ]
+    if len(returns) < 2:
+        return None
+    daily_sd = statistics.stdev(returns)
+    return round(daily_sd * math.sqrt(_TRADING_DAYS_PER_YEAR) * 100.0, 2)
 
 
 class InstrumentNotFoundError(Exception):
@@ -106,6 +136,11 @@ class QuoteService:
 
         if instrument_type == "etf" and isin:
             self._enrich_etf(response, isin)
+
+        # Volatilität aus Tages-Schlusskursen berechnen, wenn justETF keine
+        # liefert (Aktien generell, ETFs ohne justETF-Wert).
+        if response.volatility is None:
+            response.volatility = self._compute_volatility(resolved.symbol)
         return response
 
     def _enrich_etf(self, response: QuoteResponse, isin: str) -> None:
@@ -120,4 +155,30 @@ class QuoteService:
         response.fund_size = details.fund_size
         response.name = response.name or details.name
         response.currency = response.currency or details.currency
+        response.volatility = details.volatility
+        response.accumulating = details.accumulating
         response.source = "yfinance+justetf"
+
+    def _compute_volatility(self, symbol: str) -> float | None:
+        """Berechnet die 1-Jahres-Volatilität aus den Tages-Schlusskursen.
+
+        Best-effort: greift auf ``fetch_daily_closes`` des Kurs-Providers zu,
+        falls vorhanden. Fehler oder fehlende Daten ergeben ``None``.
+
+        Args:
+            symbol: Yahoo-Symbol des Wertpapiers.
+
+        Returns:
+            Annualisierte Volatilität in Prozent, oder ``None``.
+        """
+        fetch = getattr(self._quote_provider, "fetch_daily_closes", None)
+        if fetch is None:
+            return None
+        start = (datetime.now(timezone.utc).date() - timedelta(days=370)).isoformat()
+        try:
+            rows = fetch(symbol, start=start)
+        except Exception as exc:  # noqa: BLE001 — best-effort
+            logger.debug("volatility_fetch_failed", symbol=symbol, error=str(exc))
+            return None
+        closes = [row["close"] for row in rows if row.get("close") is not None]
+        return annualized_volatility(closes)

@@ -7,6 +7,7 @@ from app.services.quote_service import (
     InstrumentNotFoundError,
     QuoteService,
     QuoteUnavailableError,
+    annualized_volatility,
 )
 
 
@@ -28,6 +29,20 @@ class FakeEtfProvider:
 
     def fetch_etf(self, isin: str) -> EtfDetails | None:
         return self._details
+
+
+class FakeDailyQuoteProvider:
+    """Wie FakeQuoteProvider, liefert zusätzlich Tages-Schlusskurse."""
+
+    def __init__(self, raw: RawQuote | None, closes: list[float]) -> None:
+        self._raw = raw
+        self._closes = closes
+
+    def fetch_quote(self, symbol: str) -> RawQuote | None:
+        return self._raw
+
+    def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict]:
+        return [{"date": f"d{i}", "close": c, "currency": "EUR"} for i, c in enumerate(self._closes)]
 
 
 class FakeResolver:
@@ -133,3 +148,46 @@ def test_gbp_pence_wird_originalgetreu_uebernommen() -> None:
 
     assert result.currency == "GBp"
     assert result.price == 54211.0
+
+
+def test_etf_uebernimmt_volatilitaet_und_thesaurierend_von_justetf() -> None:
+    details = EtfDetails(ter=0.19, volatility=9.95, accumulating=True)
+    service = QuoteService(
+        FakeQuoteProvider(_etf_quote()),
+        FakeEtfProvider(details),
+        FakeResolver(
+            ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
+        ),
+    )
+
+    result = service.get_quote_by_isin("IE00B3RBWM25")
+
+    assert result.volatility == 9.95
+    assert result.accumulating is True
+
+
+def test_volatilitaet_wird_aus_tageskursen_berechnet_wenn_justetf_fehlt() -> None:
+    stock = RawQuote(
+        symbol="AAPL",
+        price=300.0,
+        quote_time="2026-07-12T17:35:00+00:00",
+        currency="USD",
+        type="stock",
+    )
+    closes = [100.0, 101.0, 99.5, 102.0, 100.5, 103.0, 101.5]
+    service = QuoteService(
+        FakeDailyQuoteProvider(stock, closes),
+        FakeEtfProvider(None),
+        FakeResolver(ResolvedInstrument(symbol="AAPL", type="stock")),
+    )
+
+    result = service.get_quote_by_symbol("AAPL")
+
+    assert result.volatility == annualized_volatility(closes)
+    assert result.volatility is not None
+    assert result.accumulating is None  # Aktie → keine Ausschüttungspolitik
+
+
+def test_annualized_volatility_zu_wenig_daten_ist_none() -> None:
+    assert annualized_volatility([100.0, 101.0]) is None
+    assert annualized_volatility([]) is None

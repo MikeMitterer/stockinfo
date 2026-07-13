@@ -22,6 +22,8 @@ _META_FIELDS = (
     "ter",
     "replication",
     "fund_size",
+    "volatility",
+    "accumulating",
 )
 
 

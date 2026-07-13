@@ -9,6 +9,8 @@ export interface InstrumentSummary {
   ter: number | null
   replication: string | null
   fund_size: number | null
+  volatility: number | null
+  accumulating: boolean | null
   meta_fetched_at: string | null
   latest_price: number | null
   latest_quote_time: string | null

@@ -21,6 +21,11 @@ from app.services.quote_service import (
 logger = structlog.get_logger()
 
 
+def _as_bool(value: object) -> bool | None:
+    """Wandelt einen gespeicherten Integer/None in ``bool | None`` um."""
+    return None if value is None else bool(value)
+
+
 class IsinConflictError(Exception):
     """Die ISIN ist bereits einem anderen Instrument zugeordnet."""
 
@@ -270,6 +275,8 @@ class CachedQuoteService:
             provider=instrument["provider"],
             replication=instrument["replication"],
             fund_size=instrument["fund_size"],
+            volatility=instrument["volatility"],
+            accumulating=_as_bool(instrument["accumulating"]),
             source="cache",
             cached=True,
             stale=stale,
