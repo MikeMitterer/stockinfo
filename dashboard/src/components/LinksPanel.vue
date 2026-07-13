@@ -13,6 +13,11 @@ const links: ApiLink[] = [
   { label: 'OpenAPI (JSON)', url: `${API_BASE_URL}/openapi.json` },
   { label: 'Health', url: `${API_BASE_URL}/health` },
 ]
+
+const projectLinks: ApiLink[] = [
+  { label: 'GitHub-Repo', url: 'https://github.com/MikeMitterer/stockinfo' },
+  { label: 'Issues', url: 'https://github.com/MikeMitterer/stockinfo/issues' },
+]
 </script>
 
 <template>
@@ -21,6 +26,13 @@ const links: ApiLink[] = [
     <p class="base">Basis: <code>{{ API_BASE_URL }}</code></p>
     <ul>
       <li v-for="link in links" :key="link.url">
+        <a :href="link.url" target="_blank" rel="noopener">{{ link.label }} ↗</a>
+      </li>
+    </ul>
+
+    <h3 class="group">Projekt</h3>
+    <ul>
+      <li v-for="link in projectLinks" :key="link.url">
         <a :href="link.url" target="_blank" rel="noopener">{{ link.label }} ↗</a>
       </li>
     </ul>
@@ -37,6 +49,13 @@ const links: ApiLink[] = [
   padding: 1.1rem 1.25rem;
 
   .base { color: $color-muted; margin: 0.25rem 0 1rem; }
+  .group {
+    margin: 1.4rem 0 0.75rem;
+    font-size: 0.78rem;
+    color: $color-muted;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+  }
   code { color: $color-text; font-family: $font-mono; }
   ul {
     list-style: none;
