@@ -213,21 +213,6 @@ pushImage() {
     esac
 }
 
-# ensureRegistryLogin — Login/Check vor einem direkten Registry-Push (Multiarch)
-#
-#   Der Single-Arch-Pfad pusht via push()→pushImage(), das den Login selbst kapselt.
-#   Der Multiarch-Pfad pusht dagegen direkt aus buildx heraus (buildMultiArchImage)
-#   und braucht den Login deshalb VOR dem Build.
-#
-ensureRegistryLogin() {
-    case "${TARGET}" in
-        ghcr)      checkCHCRLogin ;;
-        dockerhub) loginToDockerHub ;;
-        ecr)       aws ecr get-login-password --region "${AWS_REGION}" \
-                     | docker login --username AWS --password-stdin "${AMAZON_REPO_URI}" ;;
-    esac
-}
-
 # showBuiltImages — Lokale (und bei ECR zusätzlich Registry-)Images anzeigen
 #
 #   showImages nimmt optional die Amazon-URI als 4. Parameter und listet dann
@@ -254,7 +239,7 @@ build() {
     echo -e "\nBuilding for Platform: ${YELLOW}${PLATFORM}${NC} → Target: ${YELLOW}${TARGET}${NC}\n"
 
     if [[ "${BUILD_MULTIARCH}" == true ]]; then
-        ensureRegistryLogin
+        ensureRegistryLogin "${TARGET}" "${NAME}" "${AWS_REGION:-}" "${AMAZON_REPO_URI:-}"
         buildMultiArchImage "${PLATFORM}" "${IMAGE}" "${TAG}" "${LOGFILE}"
         # Push ist bereits erledigt — kein TAGFILE, push() nicht aufrufen
         return
