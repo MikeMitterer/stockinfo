@@ -1,10 +1,13 @@
+# syntax=docker/dockerfile:1
 # ─── Stage 1: Dashboard bauen ─────────────────────────────────────────────────
 FROM node:22-slim AS dashboard
 
 WORKDIR /dashboard
 
 COPY dashboard/package.json dashboard/package-lock.json ./
-RUN npm ci
+# Cache-Mount für den npm-Download-Cache — bleibt über Builds erhalten, auch wenn
+# der npm-ci-Layer neu gebaut werden muss (z.B. bei geändertem Lockfile).
+RUN --mount=type=cache,target=/root/.npm npm ci
 
 COPY dashboard/ ./
 
@@ -23,15 +26,23 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# Cache-Mount für den pip-Download-Cache (kein --no-cache-dir — der Mount ersetzt
+# ihn: Wheels bleiben über Builds erhalten statt sie ins Image zu schreiben).
+RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
 COPY app ./app
 
 # Gebautes Dashboard aus Stage 1 — FastAPI serviert es an / (siehe STATIC_DIR).
 COPY --from=dashboard /dashboard/dist ./web
 
+# UTF-8 erzwingen (statt C/ASCII) — explizit für Nicht-Python-Prozesse (Shell,
+# git, curl) und locale-unabhängige Zahlenformate. Python 3.12 ist im Container
+# ohnehin UTF-8 (PEP 540). Region-Locales wie de_AT.UTF-8 sind im slim-Image NICHT
+# generiert und würden auf C zurückfallen — daher C.UTF-8 (immer vorhanden).
 # Cache liegt im Volume /data (überlebt Container-Neustarts)
-ENV HOST=0.0.0.0 \
+ENV LANG=C.UTF-8 \
+    LC_ALL=C.UTF-8 \
+    HOST=0.0.0.0 \
     PORT=8000 \
     DATABASE_PATH=/data/stockinfo.db \
     STATIC_DIR=/app/web
