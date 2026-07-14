@@ -1,8 +1,8 @@
-fastapi
-uvicorn[standard]
-yfinance
-justetf-scraping @ git+https://github.com/druzsan/justetf-scraping.git
-apscheduler
-pydantic-settings
-httpx
-structlog
+fastapi==0.139.0
+uvicorn[standard]==0.51.0
+yfinance==1.5.1
+justetf-scraping @ git+https://github.com/druzsan/justetf-scraping.git@b52934a3b19d218b7e0f4f272deb0bd47bc89519
+apscheduler==3.11.3
+pydantic-settings==2.14.2
+httpx==0.28.1
+structlog==26.1.0
