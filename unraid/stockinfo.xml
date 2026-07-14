@@ -13,7 +13,7 @@
   <Category>Tools: Productivity:</Category>
   <WebUI>http://[IP]:[PORT:8000]/</WebUI>
   <TemplateURL/>
-  <Icon>https://raw.githubusercontent.com/MikeMitterer/stockinfo/master/dashboard/public/stockinfo-icon.svg</Icon>
+  <Icon>https://raw.githubusercontent.com/MikeMitterer/stockinfo/master/dashboard/public/stockinfo-icon.png</Icon>
   <ExtraParams/>
   <PostArgs/>
   <CPUset/>
