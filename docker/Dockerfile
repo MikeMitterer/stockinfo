@@ -30,6 +30,8 @@ COPY requirements.txt .
 # ihn: Wheels bleiben über Builds erhalten statt sie ins Image zu schreiben).
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
+# pyproject.toml ist die Versions-Quelle — app/__init__.py liest sie zur Laufzeit.
+COPY pyproject.toml .
 COPY app ./app
 
 # Gebautes Dashboard aus Stage 1 — FastAPI serviert es an / (siehe STATIC_DIR).
