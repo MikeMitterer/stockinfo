@@ -14,6 +14,8 @@
   <WebUI>http://[IP]:[PORT:8000]/</WebUI>
   <TemplateURL/>
   <Icon>https://raw.githubusercontent.com/MikeMitterer/stockinfo/master/dashboard/public/stockinfo-icon.png</Icon>
+  <Screenshot>https://raw.githubusercontent.com/MikeMitterer/stockinfo/master/unraid/screenshots/dashboard.png</Screenshot>
+  <Screenshot>https://raw.githubusercontent.com/MikeMitterer/stockinfo/master/unraid/screenshots/swagger.png</Screenshot>
   <ExtraParams/>
   <PostArgs/>
   <CPUset/>
