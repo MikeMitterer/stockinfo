@@ -26,6 +26,7 @@ Yahoo Finance, JSON export).
 - [Unraid](#unraid)
 - [Tests](#tests)
 - [Project layout](#project-layout)
+- [License](#license)
 
 ---
 
@@ -319,5 +320,13 @@ Makefile                # service start/stop (make help)
 
 Technical details and design decisions: see
 [`docs/superpowers/specs/`](docs/superpowers/specs/).
+
+[↑ Contents](#contents)
+
+---
+
+## License
+
+[MIT](LICENSE) © Mike Mitterer
 
 [↑ Contents](#contents)
