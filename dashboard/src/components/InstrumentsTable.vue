@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { ref, watch } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { isIsin } from '../api/paths'
+import { useTableSort, type SortKey } from '../composables/useTableSort'
 import type { InstrumentSummary } from '../types'
 
 const props = defineProps<{
@@ -23,6 +24,24 @@ const emit = defineEmits<{
 }>()
 
 const { t, locale } = useI18n()
+
+const { sortKey, direction, toggle, sort, init: initSort } = useTableSort()
+initSort()
+
+// Sortierbare Spaltenköpfe (Label-Key aus dem Katalog + optionale Zellklasse).
+const columns: { key: SortKey; label: string; align?: string }[] = [
+  { key: 'symbol', label: 'table.colSymbol' },
+  { key: 'isin', label: 'table.colIsin' },
+  { key: 'name', label: 'table.colName' },
+  { key: 'type', label: 'table.colType' },
+  { key: 'latest_price', label: 'table.colPrice', align: 'num' },
+  { key: 'ter', label: 'table.colTer', align: 'num' },
+  { key: 'volatility', label: 'table.colVola', align: 'num' },
+  { key: 'accumulating', label: 'table.colAccumulating', align: 'center' },
+  { key: 'history_count', label: 'table.colPoints', align: 'num' },
+]
+
+const sortedInstruments = computed(() => sort(props.instruments))
 
 // Inline-Eingabe zum nachträglichen Erfassen einer ISIN
 const editingSymbol = ref<string | null>(null)
@@ -104,17 +123,29 @@ function accumulating(value: boolean | null): string {
       <table class="data-table">
         <thead>
           <tr>
-            <th>{{ t('table.colSymbol') }}</th><th>{{ t('table.colIsin') }}</th>
-            <th>{{ t('table.colName') }}</th><th>{{ t('table.colType') }}</th>
-            <th class="num">{{ t('table.colPrice') }}</th><th class="num">{{ t('table.colTer') }}</th>
-            <th class="num">{{ t('table.colVola') }}</th>
-            <th class="center">{{ t('table.colAccumulating') }}</th>
-            <th class="num">{{ t('table.colPoints') }}</th><th></th>
+            <th
+              v-for="column in columns"
+              :key="column.key"
+              class="sortable"
+              :class="column.align"
+              :aria-sort="
+                sortKey === column.key
+                  ? direction === 'asc' ? 'ascending' : 'descending'
+                  : undefined
+              "
+              @click="toggle(column.key)"
+            >
+              {{ t(column.label) }}
+              <span v-if="sortKey === column.key" class="arrow">
+                {{ direction === 'asc' ? '▲' : '▼' }}
+              </span>
+            </th>
+            <th></th>
           </tr>
         </thead>
         <tbody>
           <tr
-            v-for="item in instruments"
+            v-for="item in sortedInstruments"
             :key="item.symbol"
             :class="{ selected: item.symbol === selectedSymbol }"
             @click="emit('select', item)"
@@ -205,6 +236,13 @@ function accumulating(value: boolean | null): string {
 .scroll { overflow-x: auto; }
 
 thead th { font-weight: 600; }
+thead th.sortable {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+  &:hover { color: $color-accent; }
+  .arrow { color: $color-accent; font-size: 0.6rem; }
+}
 tbody td { padding: 0.5rem 0.7rem; border-bottom: 1px solid rgba(56, 44, 70, 0.5); }
 tbody tr {
   cursor: pointer;
