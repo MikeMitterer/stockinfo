@@ -58,6 +58,10 @@ hints: ## Nützliche URLs und Hinweise anzeigen
 	@echo
 	@printf "    $(GREEN)%s$(RESET)\n" "curl http://localhost:$(PORT)/quote/IE00B4L5Y983"
 	@echo
+	@echo "  $(YELLOW)Unraid$(RESET) $(WHITE)— Template als User-Template installieren (auf dem Unraid ausführen)$(RESET)"
+	@echo
+	@printf "    $(GREEN)%s$(RESET)\n" "wget -O /boot/config/plugins/dockerMan/templates-user/my-stockinfo.xml https://raw.githubusercontent.com/MikeMitterer/stockinfo/master/unraid/stockinfo.xml"
+	@echo
 
 # ─── Entwicklung ──────────────────────────────────────────────────────────────
 
