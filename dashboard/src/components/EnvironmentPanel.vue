@@ -1,21 +1,25 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 import type { EnvInfo } from '../types'
 
 defineProps<{ env: EnvInfo | null }>()
+
+const { t } = useI18n()
 </script>
 
 <template>
   <section v-if="env" class="env card">
-    <h2>Environment</h2>
+    <h2>{{ t('env.title') }}</h2>
     <dl>
-      <div><dt>Version</dt><dd>{{ env.version }}</dd></div>
-      <div><dt>DB-Pfad</dt><dd>{{ env.database_path }}</dd></div>
-      <div><dt>Cache-TTL (h)</dt><dd>{{ env.cache_ttl_hours }}</dd></div>
-      <div><dt>Refresh-Intervall (h)</dt><dd>{{ env.refresh_interval_hours }}</dd></div>
-      <div><dt>Metadaten-TTL (d)</dt><dd>{{ env.metadata_ttl_days }}</dd></div>
-      <div><dt>Default-Börse</dt><dd>{{ env.default_exchange }}</dd></div>
-      <div><dt>Host:Port</dt><dd>{{ env.host }}:{{ env.port }}</dd></div>
-      <div><dt>OpenFIGI-Key gesetzt</dt><dd>{{ env.openfigi_key_set ? 'ja' : 'nein' }}</dd></div>
+      <div><dt>{{ t('env.version') }}</dt><dd>{{ env.version }}</dd></div>
+      <div><dt>{{ t('env.dbPath') }}</dt><dd>{{ env.database_path }}</dd></div>
+      <div><dt>{{ t('env.cacheTtl') }}</dt><dd>{{ env.cache_ttl_hours }}</dd></div>
+      <div><dt>{{ t('env.refreshInterval') }}</dt><dd>{{ env.refresh_interval_hours }}</dd></div>
+      <div><dt>{{ t('env.metadataTtl') }}</dt><dd>{{ env.metadata_ttl_days }}</dd></div>
+      <div><dt>{{ t('env.defaultExchange') }}</dt><dd>{{ env.default_exchange }}</dd></div>
+      <div><dt>{{ t('env.hostPort') }}</dt><dd>{{ env.host }}:{{ env.port }}</dd></div>
+      <div><dt>{{ t('env.openfigiKeySet') }}</dt><dd>{{ env.openfigi_key_set ? t('env.yes') : t('env.no') }}</dd></div>
     </dl>
   </section>
 </template>

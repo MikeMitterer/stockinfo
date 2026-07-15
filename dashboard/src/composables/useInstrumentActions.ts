@@ -3,6 +3,7 @@ import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
 import { instrumentPath, isIsin, quotePath } from '../api/paths'
+import { translate } from '../i18n'
 import type { InstrumentRef } from '../types'
 
 export { isIsin }
@@ -35,20 +36,20 @@ export function useInstrumentActions(): {
   async function add(identifier: string): Promise<void> {
     const trimmed = identifier.trim()
     const path = quotePath({ isin: isIsin(trimmed) ? trimmed : null, symbol: trimmed })
-    await run(() => apiClient.get(path), 'Hinzufügen fehlgeschlagen')
+    await run(() => apiClient.get(path), translate('errors.add'))
   }
 
   async function refreshOne(item: InstrumentRef): Promise<void> {
-    await run(() => apiClient.post(instrumentPath('/refresh', item)), 'Aktualisieren fehlgeschlagen')
+    await run(() => apiClient.post(instrumentPath('/refresh', item)), translate('errors.refreshOne'))
   }
 
   async function remove(item: InstrumentRef): Promise<void> {
-    await run(() => apiClient.del(instrumentPath('/instruments', item)), 'Löschen fehlgeschlagen')
+    await run(() => apiClient.del(instrumentPath('/instruments', item)), translate('errors.remove'))
   }
 
   async function setIsin(symbol: string, isin: string): Promise<void> {
     const path = `/instruments/by-symbol/${encodeURIComponent(symbol)}/isin`
-    await run(() => apiClient.put(path, { isin }), 'ISIN konnte nicht gespeichert werden')
+    await run(() => apiClient.put(path, { isin }), translate('errors.setIsin'))
   }
 
   return { busy, error, add, refreshOne, remove, setIsin }

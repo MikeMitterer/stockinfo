@@ -4,6 +4,7 @@ import { ref, type Ref } from 'vue'
 import { apiClient } from '../api/client'
 import { instrumentPath } from '../api/paths'
 import type { DailyPoint, InstrumentRef } from '../types'
+import { translate } from '../i18n'
 
 /** Zeitraum-Kürzel für die EOD-Historie. */
 export type DailyPeriod = '1w' | '1m' | '3m' | '1y' | 'max'
@@ -34,7 +35,7 @@ export function useDaily(): {
       daily.value = result
     } catch (err) {
       if (currentRequest !== requestId) return
-      error.value = 'Tageshistorie konnte nicht geladen werden'
+      error.value = translate('errors.daily')
       consola.error('useDaily.load', err)
     } finally {
       if (currentRequest === requestId) loading.value = false

@@ -4,6 +4,7 @@ import { ref, type Ref } from 'vue'
 import { apiClient } from '../api/client'
 import { instrumentPath } from '../api/paths'
 import type { InstrumentRef, QuotePoint } from '../types'
+import { translate } from '../i18n'
 
 /** Lädt die Kurshistorie eines Instruments — per ISIN oder (falls keine) per Symbol. */
 export function useHistory(): {
@@ -31,7 +32,7 @@ export function useHistory(): {
       points.value = result
     } catch (err) {
       if (currentRequest !== requestId) return
-      error.value = 'Historie konnte nicht geladen werden'
+      error.value = translate('errors.history')
       consola.error('useHistory.load', err)
     } finally {
       if (currentRequest === requestId) loading.value = false

@@ -1,13 +1,11 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 import type { HealthStatus } from '../composables/useHealth'
 
 defineProps<{ status: HealthStatus; version: string | null }>()
 
-const labels: Record<HealthStatus, string> = {
-  ok: 'Online',
-  degraded: 'Prüfe…',
-  down: 'Offline',
-}
+const { t } = useI18n()
 </script>
 
 <template>
@@ -20,7 +18,7 @@ const labels: Record<HealthStatus, string> = {
       <span v-if="version" class="version mono">v{{ version }}</span>
       <span class="health" :class="status">
         <span class="dot" />
-        {{ labels[status] }}
+        {{ t(`status.${status}`) }}
       </span>
     </span>
   </footer>

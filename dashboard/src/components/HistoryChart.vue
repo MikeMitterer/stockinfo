@@ -13,8 +13,9 @@ import {
   type ChartOptions,
 } from 'chart.js'
 import 'chartjs-adapter-date-fns'
-import { de } from 'date-fns/locale'
+import { de as dateFnsDe, enUS as dateFnsEn } from 'date-fns/locale'
 import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
 import { Line } from 'vue-chartjs'
 
 import { useTheme } from '../composables/useTheme'
@@ -37,6 +38,24 @@ const emit = defineEmits<{
 }>()
 
 const { current } = useTheme()
+const { t, locale } = useI18n()
+
+// Sprachabhängige Datumsformate für Achse und Tooltip.
+const dateFormats = computed(() =>
+  locale.value === 'de'
+    ? {
+        fnsLocale: dateFnsDe,
+        tooltipIntraday: 'dd.MM. HH:mm',
+        tooltipDay: 'dd.MM.yyyy',
+        display: { hour: 'HH:mm', day: 'dd.MM', month: 'MM.yy' },
+      }
+    : {
+        fnsLocale: dateFnsEn,
+        tooltipIntraday: 'MMM d, HH:mm',
+        tooltipDay: 'MM/dd/yyyy',
+        display: { hour: 'HH:mm', day: 'MM/dd', month: 'MM/yy' },
+      },
+)
 
 /** Liest eine CSS-Custom-Property vom <html> (mit Fallback). */
 function cssVar(name: string, fallback: string): string {
@@ -52,7 +71,7 @@ const chartData = computed<ChartData<'line'>>(() => {
   return {
     datasets: [
       {
-        label: `Kurs${props.currency ? ` (${props.currency})` : ''}`,
+        label: `${t('chart.priceLabel')}${props.currency ? ` (${props.currency})` : ''}`,
         data: props.series,
         borderColor: accent,
         backgroundColor: `${accent}22`,
@@ -77,11 +96,13 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
     scales: {
       x: {
         type: 'time',
-        adapters: { date: { locale: de } },
+        adapters: { date: { locale: dateFormats.value.fnsLocale } },
         time: {
           unit: isIntraday.value ? 'hour' : 'day',
-          tooltipFormat: isIntraday.value ? 'dd.MM. HH:mm' : 'dd.MM.yyyy',
-          displayFormats: { hour: 'HH:mm', day: 'dd.MM', month: 'MM.yy' },
+          tooltipFormat: isIntraday.value
+            ? dateFormats.value.tooltipIntraday
+            : dateFormats.value.tooltipDay,
+          displayFormats: dateFormats.value.display,
         },
         ticks: { color: muted, maxTicksLimit: 8, autoSkip: true, maxRotation: 0 },
         grid: { color: border },
@@ -95,11 +116,11 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
 <template>
   <section class="chart card">
     <header class="head">
-      <h2>Kurshistorie</h2>
+      <h2>{{ t('chart.title') }}</h2>
       <RangeSelector :active="range" @change="emit('range-change', $event)" />
     </header>
     <p v-if="series.length === 0" class="empty">
-      {{ loading ? 'Lade…' : 'Kein Instrument gewählt oder keine Historie im Zeitraum.' }}
+      {{ loading ? t('chart.loading') : t('chart.empty') }}
     </p>
     <div v-else class="canvas">
       <Line :data="chartData" :options="chartOptions" />

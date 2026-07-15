@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { isIsin } from '../api/paths'
 import type { InstrumentSummary } from '../types'
@@ -20,6 +21,8 @@ const emit = defineEmits<{
   (event: 'set-isin', payload: { symbol: string; isin: string }): void
   (event: 'json', item: InstrumentSummary): void
 }>()
+
+const { t, locale } = useI18n()
 
 // Inline-Eingabe zum nachträglichen Erfassen einer ISIN
 const editingSymbol = ref<string | null>(null)
@@ -72,9 +75,11 @@ function yahooLink(item: InstrumentSummary): string {
   return props.yahooUrl ? props.yahooUrl.replace('{symbol}', item.symbol) : ''
 }
 
-/** Formatiert einen Kurs mit zwei Nachkommastellen (oder '—'). */
+/** Formatiert einen Kurs mit zwei Nachkommastellen (oder '—'), sprachabhängig. */
 function price(value: number | null): string {
-  return value === null ? '—' : value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+  return value === null
+    ? '—'
+    : value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
 /** Formatiert einen Prozentwert mit zwei Nachkommastellen (oder '—'). */
@@ -85,23 +90,26 @@ function formatPercent(value: number | null): string {
 /** Thesaurierend-Anzeige: Ja / Nein / '—' bei unbekannt. */
 function accumulating(value: boolean | null): string {
   if (value === null) return '—'
-  return value ? 'Ja' : 'Nein'
+  return value ? t('table.yes') : t('table.no')
 }
 </script>
 
 <template>
   <section class="table card">
-    <h2>Assets</h2>
+    <h2>{{ t('table.title') }}</h2>
     <p v-if="instruments.length === 0" class="empty">
-      Noch keine Wertpapiere gecacht — oben per ISIN oder Symbol hinzufügen.
+      {{ t('table.empty') }}
     </p>
     <div v-else class="scroll">
       <table class="data-table">
         <thead>
           <tr>
-            <th>Symbol</th><th>ISIN</th><th>Name</th><th>Typ</th>
-            <th class="num">Kurs</th><th class="num">TER</th><th class="num">Vola</th>
-            <th class="center">Thes.</th><th class="num">Pkt.</th><th></th>
+            <th>{{ t('table.colSymbol') }}</th><th>{{ t('table.colIsin') }}</th>
+            <th>{{ t('table.colName') }}</th><th>{{ t('table.colType') }}</th>
+            <th class="num">{{ t('table.colPrice') }}</th><th class="num">{{ t('table.colTer') }}</th>
+            <th class="num">{{ t('table.colVola') }}</th>
+            <th class="center">{{ t('table.colAccumulating') }}</th>
+            <th class="num">{{ t('table.colPoints') }}</th><th></th>
           </tr>
         </thead>
         <tbody>
@@ -120,15 +128,15 @@ function accumulating(value: boolean | null): string {
                   v-focus
                   class="isin-input"
                   :class="{ invalid: isinInvalid }"
-                  placeholder="ISIN eintragen"
+                  :placeholder="t('table.isinPlaceholder')"
                   @keyup.enter="confirmIsin(item)"
                   @keyup.esc="cancelIsin"
                 />
-                <button class="mini ok" title="Speichern" @click="confirmIsin(item)">✓</button>
-                <button class="mini" title="Abbrechen" @click="cancelIsin">✕</button>
-                <span v-if="isinInvalid" class="isin-err">ungültige ISIN</span>
+                <button class="mini ok" :title="t('table.save')" @click="confirmIsin(item)">✓</button>
+                <button class="mini" :title="t('table.cancel')" @click="cancelIsin">✕</button>
+                <span v-if="isinInvalid" class="isin-err">{{ t('table.isinInvalid') }}</span>
               </span>
-              <button v-else class="mini add" title="ISIN nachtragen" @click.stop="startIsin(item)">
+              <button v-else class="mini add" :title="t('table.addIsin')" @click.stop="startIsin(item)">
                 + ISIN
               </button>
             </td>
@@ -151,14 +159,14 @@ function accumulating(value: boolean | null): string {
             </td>
             <td class="num mono dim">{{ item.history_count }}</td>
             <td class="actions" @click.stop>
-              <button class="ext" title="JSON-Abfrage anzeigen" @click="emit('json', item)">JSON</button>
+              <button class="ext" :title="t('table.showJson')" @click="emit('json', item)">JSON</button>
               <a
                 v-if="extraetfLink(item)"
                 class="ext"
                 :href="extraetfLink(item)"
                 target="_blank"
                 rel="noopener"
-                title="extraETF-Profil"
+                :title="t('table.extraetfProfile')"
               >eETF</a>
               <a
                 v-if="yahooLink(item)"
@@ -166,16 +174,16 @@ function accumulating(value: boolean | null): string {
                 :href="yahooLink(item)"
                 target="_blank"
                 rel="noopener"
-                title="Yahoo Finance"
+                :title="t('table.yahooFinance')"
               >Y!</a>
               <button
                 class="icon"
                 :class="{ spin: item.symbol === refreshingSymbol }"
                 :disabled="item.symbol === refreshingSymbol"
-                title="Aktualisieren"
+                :title="t('table.refresh')"
                 @click="emit('refresh', item)"
               >↻</button>
-              <button class="icon danger" title="Löschen" @click="emit('remove', item)">✕</button>
+              <button class="icon danger" :title="t('table.remove')" @click="emit('remove', item)">✕</button>
             </td>
           </tr>
         </tbody>

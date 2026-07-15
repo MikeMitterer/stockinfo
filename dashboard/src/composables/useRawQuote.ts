@@ -4,6 +4,7 @@ import { ref, type Ref } from 'vue'
 import { apiClient } from '../api/client'
 import { quotePath } from '../api/paths'
 import { API_BASE_URL } from '../config'
+import { translate } from '../i18n'
 import type { InstrumentRef } from '../types'
 
 /** Lädt die rohe /quote-Antwort eines Instruments als formatiertes JSON (für die Anzeige). */
@@ -37,7 +38,7 @@ export function useRawQuote(): {
       json.value = JSON.stringify(data, null, 2)
     } catch (err) {
       if (currentRequest !== requestId) return
-      error.value = 'Abfrage fehlgeschlagen'
+      error.value = translate('errors.rawQuote')
       consola.error('useRawQuote.load', err)
     } finally {
       if (currentRequest === requestId) loading.value = false

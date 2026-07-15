@@ -1,5 +1,8 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useI18n } from 'vue-i18n'
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   (event: 'refresh'): void
@@ -22,11 +25,11 @@ function submit(): void {
 <template>
   <div class="toolbar">
     <form class="add" @submit.prevent="submit">
-      <input v-model="identifier" placeholder="ISIN oder Symbol (z.B. VGWL.DE)" />
-      <button type="submit" class="primary" :disabled="busy">Hinzufügen</button>
+      <input v-model="identifier" :placeholder="t('toolbar.placeholder')" />
+      <button type="submit" class="primary" :disabled="busy">{{ t('toolbar.add') }}</button>
     </form>
     <button :disabled="refreshing" @click="emit('refresh')">
-      {{ refreshing ? 'Aktualisiere…' : '↻ Alle aktualisieren' }}
+      {{ refreshing ? t('toolbar.refreshing') : t('toolbar.refreshAll') }}
     </button>
   </div>
 </template>

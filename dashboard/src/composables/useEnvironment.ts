@@ -3,6 +3,7 @@ import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
 import type { EnvInfo } from '../types'
+import { translate } from '../i18n'
 
 /** Lädt den sichtbaren Ausschnitt der Backend-Konfiguration. */
 export function useEnvironment(): {
@@ -21,7 +22,7 @@ export function useEnvironment(): {
     try {
       env.value = await apiClient.get<EnvInfo>('/env')
     } catch (err) {
-      error.value = 'Environment konnte nicht geladen werden'
+      error.value = translate('errors.environment')
       consola.error('useEnvironment.load', err)
     } finally {
       loading.value = false

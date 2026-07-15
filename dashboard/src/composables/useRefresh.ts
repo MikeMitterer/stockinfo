@@ -3,6 +3,7 @@ import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
 import type { RefreshResult } from '../types'
+import { translate } from '../i18n'
 
 /** Globaler Refresh aller Instrumente. */
 export function useRefresh(): {
@@ -21,7 +22,7 @@ export function useRefresh(): {
     try {
       result.value = await apiClient.post<RefreshResult>('/refresh')
     } catch (err) {
-      error.value = 'Refresh fehlgeschlagen'
+      error.value = translate('errors.refresh')
       consola.error('useRefresh.trigger', err)
     } finally {
       refreshing.value = false

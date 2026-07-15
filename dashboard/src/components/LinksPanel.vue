@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
 import { API_BASE_URL } from '../config'
 
 interface ApiLink {
@@ -6,31 +9,32 @@ interface ApiLink {
   url: string
 }
 
-const links: ApiLink[] = [
-  { label: 'API-Wurzel', url: `${API_BASE_URL}/` },
-  { label: 'Swagger-UI (/docs)', url: `${API_BASE_URL}/docs` },
-  { label: 'ReDoc (/redoc)', url: `${API_BASE_URL}/redoc` },
-  { label: 'OpenAPI (JSON)', url: `${API_BASE_URL}/openapi.json` },
-  { label: 'Health', url: `${API_BASE_URL}/health` },
-]
+const { t } = useI18n()
 
-const projectLinks: ApiLink[] = [
-  { label: 'GitHub-Repo', url: 'https://github.com/MikeMitterer/stockinfo' },
-  { label: 'Issues', url: 'https://github.com/MikeMitterer/stockinfo/issues' },
-]
+const links = computed<ApiLink[]>(() => [
+  { label: t('links.apiRoot'), url: `${API_BASE_URL}/` },
+  { label: t('links.swagger'), url: `${API_BASE_URL}/docs` },
+  { label: t('links.openapi'), url: `${API_BASE_URL}/openapi.json` },
+  { label: t('links.health'), url: `${API_BASE_URL}/health` },
+])
+
+const projectLinks = computed<ApiLink[]>(() => [
+  { label: t('links.repo'), url: 'https://github.com/MikeMitterer/stockinfo' },
+  { label: t('links.issues'), url: 'https://github.com/MikeMitterer/stockinfo/issues' },
+])
 </script>
 
 <template>
   <section class="links card">
-    <h2>API &amp; Links</h2>
-    <p class="base">Basis: <code>{{ API_BASE_URL }}</code></p>
+    <h2>{{ t('links.title') }}</h2>
+    <p class="base">{{ t('links.base') }} <code>{{ API_BASE_URL }}</code></p>
     <ul>
       <li v-for="link in links" :key="link.url">
         <a :href="link.url" target="_blank" rel="noopener">{{ link.label }} ↗</a>
       </li>
     </ul>
 
-    <h3 class="group">Projekt</h3>
+    <h3 class="group">{{ t('links.project') }}</h3>
     <ul>
       <li v-for="link in projectLinks" :key="link.url">
         <a :href="link.url" target="_blank" rel="noopener">{{ link.label }} ↗</a>

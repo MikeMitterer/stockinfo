@@ -1,7 +1,11 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 import type { ErrorEntry } from '../types'
 
 defineProps<{ errors: ErrorEntry[] }>()
+
+const { t } = useI18n()
 
 const emit = defineEmits<{
   (event: 'dismiss', key: string): void
@@ -12,7 +16,7 @@ const emit = defineEmits<{
   <div v-if="errors.length" class="error-banner" role="alert">
     <div v-for="entry in errors" :key="entry.key" class="row">
       <span class="msg">⚠ {{ entry.message }}</span>
-      <button class="x" title="Ausblenden" @click="emit('dismiss', entry.key)">✕</button>
+      <button class="x" :title="t('errors.dismiss')" @click="emit('dismiss', entry.key)">✕</button>
     </div>
   </div>
 </template>

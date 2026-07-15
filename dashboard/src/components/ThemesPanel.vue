@@ -1,13 +1,16 @@
 <script setup lang="ts">
+import { useI18n } from 'vue-i18n'
+
 import { THEMES, useTheme } from '../composables/useTheme'
 
 const { current, setTheme } = useTheme()
+const { t } = useI18n()
 </script>
 
 <template>
   <section class="themes card">
-    <h2>Theme</h2>
-    <p class="hint">Auswahl wird gespeichert und beim nächsten Start wiederhergestellt.</p>
+    <h2>{{ t('themes.title') }}</h2>
+    <p class="hint">{{ t('themes.hint') }}</p>
     <div class="grid">
       <button
         v-for="theme in THEMES"

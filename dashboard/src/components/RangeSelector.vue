@@ -1,4 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+
 import type { RangeKey } from '../types'
 
 defineProps<{ active: RangeKey }>()
@@ -7,14 +10,16 @@ const emit = defineEmits<{
   (event: 'change', range: RangeKey): void
 }>()
 
-const ranges: { key: RangeKey; label: string }[] = [
-  { key: 'intraday', label: '1T' },
-  { key: '1w', label: '1W' },
-  { key: '1m', label: '1M' },
-  { key: '3m', label: '3M' },
-  { key: '1y', label: '1J' },
-  { key: 'max', label: 'Max' },
-]
+const { t } = useI18n()
+
+const ranges = computed<{ key: RangeKey; label: string }[]>(() => [
+  { key: 'intraday', label: t('chart.ranges.intraday') },
+  { key: '1w', label: t('chart.ranges.oneWeek') },
+  { key: '1m', label: t('chart.ranges.oneMonth') },
+  { key: '3m', label: t('chart.ranges.threeMonths') },
+  { key: '1y', label: t('chart.ranges.oneYear') },
+  { key: 'max', label: t('chart.ranges.max') },
+])
 </script>
 
 <template>

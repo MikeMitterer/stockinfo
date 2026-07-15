@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { consola } from 'consola'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 
 import { useRawQuote } from '../composables/useRawQuote'
 import type { InstrumentSummary } from '../types'
@@ -10,6 +11,7 @@ const emit = defineEmits<{ (event: 'close'): void }>()
 
 const { url, json, loading, error, load } = useRawQuote()
 const copied = ref<string | null>(null)
+const { t } = useI18n()
 
 watch(
   () => props.item,
@@ -45,25 +47,25 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     <div class="modal" role="dialog" aria-modal="true">
       <header class="head">
         <h3>JSON — {{ item.symbol }}</h3>
-        <button class="x" title="Schließen" @click="emit('close')">✕</button>
+        <button class="x" :title="t('json.close')" @click="emit('close')">✕</button>
       </header>
 
       <div class="url-row">
         <code class="url">{{ url }}</code>
         <button class="copy" @click="copy(url, 'url')">
-          {{ copied === 'url' ? 'kopiert ✓' : 'URL kopieren' }}
+          {{ copied === 'url' ? t('json.copied') : t('json.copyUrl') }}
         </button>
       </div>
 
       <div class="body">
-        <p v-if="loading" class="muted">Lade…</p>
+        <p v-if="loading" class="muted">{{ t('json.loading') }}</p>
         <p v-else-if="error" class="err">{{ error }}</p>
         <pre v-else>{{ json }}</pre>
       </div>
 
       <footer class="foot">
         <button class="copy primary" :disabled="!json" @click="copy(json, 'json')">
-          {{ copied === 'json' ? 'kopiert ✓' : 'JSON kopieren' }}
+          {{ copied === 'json' ? t('json.copied') : t('json.copyJson') }}
         </button>
       </footer>
     </div>

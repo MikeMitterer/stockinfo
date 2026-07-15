@@ -3,6 +3,7 @@ import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
 import type { InstrumentSummary } from '../types'
+import { translate } from '../i18n'
 
 /** Lädt die Liste aller gecachten Instrumente. */
 export function useInstruments(): {
@@ -21,7 +22,7 @@ export function useInstruments(): {
     try {
       instruments.value = await apiClient.get<InstrumentSummary[]>('/instruments')
     } catch (err) {
-      error.value = 'Instrumente konnten nicht geladen werden'
+      error.value = translate('errors.instruments')
       consola.error('useInstruments.load', err)
     } finally {
       loading.value = false
