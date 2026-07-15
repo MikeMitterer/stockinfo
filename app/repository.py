@@ -238,10 +238,16 @@ class QuoteRepository:
             return cursor.rowcount > 0
 
     def set_isin(self, symbol: str, isin: str) -> None:
-        """Trägt die ISIN eines Instruments nachträglich ein (per Symbol)."""
+        """Trägt die ISIN eines Instruments nachträglich ein (per Symbol).
+
+        Aktualisiert gezielt nur das erste Instrument zum Symbol — nie mehrere
+        Zeilen (würde den UNIQUE-Constraint auf ``isin`` verletzen).
+        """
         with self._connect() as connection:
             connection.execute(
-                "UPDATE instruments SET isin = ? WHERE symbol = ?", (isin, symbol)
+                "UPDATE instruments SET isin = ? WHERE id = ("
+                "SELECT id FROM instruments WHERE symbol = ? ORDER BY id LIMIT 1)",
+                (isin, symbol),
             )
 
     def delete_by_symbol(self, symbol: str) -> bool:
@@ -275,28 +281,26 @@ class QuoteRepository:
     def _upsert_instrument(
         self, connection: sqlite3.Connection, response: QuoteResponse
     ) -> int:
-        """Legt das Instrument an oder aktualisiert seine Metadaten."""
+        """Legt das Instrument an oder aktualisiert seine Metadaten.
+
+        Ein UNIQUE-Konflikt beim Anlegen (paralleler Erst-Request oder
+        Scheduler) wird aufgelöst, indem auf das inzwischen existierende
+        Instrument aktualisiert wird.
+        """
         existing_id = self._find_instrument_id(
             connection, response.isin, response.symbol
         )
         meta = {field: getattr(response, field) for field in _META_FIELDS}
 
         if existing_id is None:
-            columns = "isin, symbol, first_seen, meta_fetched_at, " + ", ".join(
-                _META_FIELDS
-            )
-            placeholders = ", ".join(["?"] * (4 + len(_META_FIELDS)))
-            values = [
-                response.isin,
-                response.symbol,
-                response.fetched_at,
-                response.fetched_at,
-                *meta.values(),
-            ]
-            cursor = connection.execute(
-                f"INSERT INTO instruments ({columns}) VALUES ({placeholders})", values
-            )
-            return int(cursor.lastrowid)
+            try:
+                return self._insert_instrument(connection, response, meta)
+            except sqlite3.IntegrityError:
+                existing_id = self._find_instrument_id(
+                    connection, response.isin, response.symbol
+                )
+                if existing_id is None:
+                    raise
 
         assignments = ", ".join(f"{field} = ?" for field in _META_FIELDS)
         connection.execute(
@@ -304,6 +308,27 @@ class QuoteRepository:
             [*meta.values(), response.fetched_at, existing_id],
         )
         return existing_id
+
+    @staticmethod
+    def _insert_instrument(
+        connection: sqlite3.Connection, response: QuoteResponse, meta: dict
+    ) -> int:
+        """Legt ein neues Instrument an und gibt seine ID zurück."""
+        columns = "isin, symbol, first_seen, meta_fetched_at, " + ", ".join(
+            _META_FIELDS
+        )
+        placeholders = ", ".join(["?"] * (4 + len(_META_FIELDS)))
+        values = [
+            response.isin,
+            response.symbol,
+            response.fetched_at,
+            response.fetched_at,
+            *meta.values(),
+        ]
+        cursor = connection.execute(
+            f"INSERT INTO instruments ({columns}) VALUES ({placeholders})", values
+        )
+        return int(cursor.lastrowid)
 
     @staticmethod
     def _find_instrument_id(

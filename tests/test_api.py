@@ -110,6 +110,16 @@ def test_quote_by_isin_unbekannt_404(client: TestClient) -> None:
     assert client.get("/quote/XX0000000000").status_code == 404
 
 
+def test_quote_by_isin_ungueltiges_format_422(client: TestClient) -> None:
+    assert client.get("/quote/NOT-AN-ISIN").status_code == 422
+
+
+def test_quote_by_isin_lowercase_wird_normalisiert(client: TestClient) -> None:
+    response = client.get("/quote/ie00b3rbwm25")
+    assert response.status_code == 200
+    assert response.json()["isin"] == "IE00B3RBWM25"
+
+
 def test_quote_by_isin_kein_kurs_502(client: TestClient) -> None:
     assert client.get("/quote/ZZ0000000000").status_code == 502
 

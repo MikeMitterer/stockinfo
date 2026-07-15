@@ -9,6 +9,7 @@ from app.db import init_db
 from app.models import QuoteResponse
 from app.repository import QuoteRepository
 from app.services.daily_history import DailyHistoryService
+from app.services.quote_service import QuoteUnavailableError
 
 
 @pytest.fixture
@@ -45,10 +46,17 @@ class FakeDailyProvider:
 
 
 class FakeQuotes:
-    """Stub — Instrument existiert bereits, muss nicht angelegt werden."""
+    """Stub — Instrument existiert bereits; reicht den Lookup ans Repo durch."""
 
-    def get_by_isin(self, isin: str) -> None: ...
-    def get_by_symbol(self, symbol: str) -> None: ...
+    def __init__(self, repo: QuoteRepository) -> None:
+        self._repo = repo
+
+    def ensure_instrument(
+        self, *, isin: str | None = None, symbol: str | None = None
+    ) -> dict:
+        if isin:
+            return self._repo.get_instrument_by_isin(isin)
+        return self._repo.get_instrument_by_symbol(symbol)
 
 
 def test_daily_repository_roundtrip(repo: QuoteRepository) -> None:
@@ -72,7 +80,7 @@ def test_daily_repository_roundtrip(repo: QuoteRepository) -> None:
 def test_daily_service_first_fetches_then_uses_cache(repo: QuoteRepository) -> None:
     _seed(repo)
     provider = FakeDailyProvider()
-    service = DailyHistoryService(repo, provider, FakeQuotes())
+    service = DailyHistoryService(repo, provider, FakeQuotes(repo))
 
     first = service.get_daily(isin="IE00B3RBWM25", period="1m")
     assert len(first) >= 1
@@ -89,3 +97,57 @@ def test_daily_service_first_fetches_then_uses_cache(repo: QuoteRepository) -> N
     # längerer Zeitraum → nur die Differenz (rückwärts) wird geholt
     service.get_daily(isin="IE00B3RBWM25", period="1y")
     assert provider.calls == [(date.today() - timedelta(days=366)).isoformat()]
+
+
+class FlakyDailyProvider:
+    """Schlägt die ersten ``fail_first`` Aufrufe fehl (None), danach Daten."""
+
+    def __init__(self, fail_first: int = 1) -> None:
+        self.calls: list[str | None] = []
+        self._fail_first = fail_first
+
+    def fetch_daily_closes(
+        self, symbol: str, start: str | None = None
+    ) -> list[dict] | None:
+        self.calls.append(start)
+        if len(self.calls) <= self._fail_first:
+            return None
+        return [{"date": "2026-07-13", "close": 162.0, "currency": "EUR"}]
+
+
+def test_fehlgeschlagener_erstabruf_setzt_kein_wasserzeichen(
+    repo: QuoteRepository,
+) -> None:
+    """Provider-Fehler beim Erstabruf → Fehler statt dauerhaft leerer Historie."""
+    inst = _seed(repo)
+    provider = FlakyDailyProvider(fail_first=1)
+    service = DailyHistoryService(repo, provider, FakeQuotes(repo))
+
+    with pytest.raises(QuoteUnavailableError):
+        service.get_daily(isin="IE00B3RBWM25", period="1m")
+    assert repo.get_daily_meta(inst["id"]) is None  # kein Wasserzeichen gesetzt
+
+    # nächster Versuch holt erneut und setzt das Wasserzeichen
+    result = service.get_daily(isin="IE00B3RBWM25", period="1m")
+    assert len(result) == 1
+    assert repo.get_daily_meta(inst["id"]) is not None
+
+
+def test_fehlgeschlagener_folgeabruf_liefert_cache_ohne_fortschreibung(
+    repo: QuoteRepository,
+) -> None:
+    """Provider-Fehler beim Nachladen → Cache liefern, ``fetched_to`` unverändert."""
+    inst = _seed(repo)
+    repo.upsert_daily_closes(
+        inst["id"], [{"date": "2026-07-10", "close": 160.0, "currency": "EUR"}]
+    )
+    stale_day = "2026-07-10"
+    repo.set_daily_meta(inst["id"], "2026-06-13", stale_day)
+    provider = FlakyDailyProvider(fail_first=99)  # jeder Fetch schlägt fehl
+    service = DailyHistoryService(repo, provider, FakeQuotes(repo))
+
+    result = service.get_daily(isin="IE00B3RBWM25", period="1m")
+
+    assert len(result) == 1  # Cache wird geliefert
+    meta = repo.get_daily_meta(inst["id"])
+    assert meta["fetched_to"] == stale_day  # NICHT auf heute fortgeschrieben

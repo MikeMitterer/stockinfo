@@ -180,5 +180,7 @@ class QuoteService:
         except Exception as exc:  # noqa: BLE001 — best-effort
             logger.debug("volatility_fetch_failed", symbol=symbol, error=str(exc))
             return None
+        if not rows:  # None (Provider-Fehler) oder leer → keine Berechnung
+            return None
         closes = [row["close"] for row in rows if row.get("close") is not None]
         return annualized_volatility(closes)

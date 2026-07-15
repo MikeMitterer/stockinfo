@@ -7,6 +7,10 @@ Repository-Schicht (repository.py), nicht hierher.
 import sqlite3
 from pathlib import Path
 
+import structlog
+
+logger = structlog.get_logger()
+
 # Schema — instruments (langsam veränderliche Metadaten) + quotes (Zeitreihe).
 _SCHEMA = """
 CREATE TABLE IF NOT EXISTS instruments (
@@ -68,13 +72,16 @@ def get_connection(database_path: str) -> sqlite3.Connection:
         database_path: Pfad zur SQLite-Datei (z.B. 'data/stockinfo.db').
 
     Returns:
-        Verbindung mit Row-Factory (Zugriff per Spaltenname) und aktivierten
-        Foreign-Keys.
+        Verbindung mit Row-Factory (Zugriff per Spaltenname), aktivierten
+        Foreign-Keys und WAL-Modus (Request-Threadpool und Scheduler schreiben
+        parallel).
     """
     Path(database_path).parent.mkdir(parents=True, exist_ok=True)
-    connection = sqlite3.connect(database_path, check_same_thread=False)
+    connection = sqlite3.connect(database_path, timeout=10.0, check_same_thread=False)
     connection.row_factory = sqlite3.Row
     connection.execute("PRAGMA foreign_keys = ON")
+    connection.execute("PRAGMA journal_mode = WAL")
+    connection.execute("PRAGMA busy_timeout = 10000")
     return connection
 
 
@@ -94,8 +101,53 @@ def init_db(database_path: str) -> None:
 
 
 def _migrate(connection: sqlite3.Connection) -> None:
-    """Ergänzt fehlende Spalten in bestehenden Datenbanken (idempotent)."""
+    """Ergänzt fehlende Spalten/Indizes in bestehenden Datenbanken (idempotent)."""
     existing = {row["name"] for row in connection.execute("PRAGMA table_info(instruments)")}
     for column, ddl in (("volatility", "REAL"), ("accumulating", "INTEGER")):
         if column not in existing:
             connection.execute(f"ALTER TABLE instruments ADD COLUMN {column} {ddl}")
+
+    # Vor dem UNIQUE-Index Alt-Duplikate zusammenführen — sonst schlägt die
+    # Index-Erstellung auf bestehenden Datenbanken fehl.
+    _dedupe_symbols(connection)
+    connection.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_symbol "
+        "ON instruments (symbol)"
+    )
+
+
+def _dedupe_symbols(connection: sqlite3.Connection) -> None:
+    """Führt Instrumente mit gleichem Symbol zusammen (Zeile mit ISIN gewinnt).
+
+    Duplikate konnten vor dem UNIQUE-Index durch parallele Erst-Requests
+    entstehen. Kurs-Historie und Tages-Schlusskurse werden auf das verbleibende
+    Instrument umgehängt; Kollisionen (gleicher Zeitpunkt/Tag) verfallen mit
+    dem gelöschten Duplikat.
+    """
+    duplicated = connection.execute(
+        "SELECT symbol FROM instruments GROUP BY symbol HAVING COUNT(*) > 1"
+    ).fetchall()
+    for row in duplicated:
+        symbol = row["symbol"]
+        keeper = connection.execute(
+            "SELECT id FROM instruments WHERE symbol = ? "
+            "ORDER BY (isin IS NULL), id LIMIT 1",
+            (symbol,),
+        ).fetchone()
+        duplicates = connection.execute(
+            "SELECT id FROM instruments WHERE symbol = ? AND id != ?",
+            (symbol, keeper["id"]),
+        ).fetchall()
+        for duplicate in duplicates:
+            for table in ("quotes", "daily_closes"):
+                connection.execute(
+                    f"UPDATE OR IGNORE {table} SET instrument_id = ? "
+                    "WHERE instrument_id = ?",
+                    (keeper["id"], duplicate["id"]),
+                )
+            connection.execute(
+                "DELETE FROM instruments WHERE id = ?", (duplicate["id"],)
+            )
+        logger.warning(
+            "duplicate_symbol_merged", symbol=symbol, kept_id=keeper["id"]
+        )

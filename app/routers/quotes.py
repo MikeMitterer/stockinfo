@@ -10,6 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.container import get_cached_quote_service, get_daily_history_service
 from app.models import DailyPoint, QuotePoint, QuoteResponse
+from app.routers.validation import IsinPath
 from app.services.daily_history import DailyHistoryService
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
@@ -37,7 +38,7 @@ def quote_by_symbol(
 
 
 @router.get("/quote/{isin}", response_model=QuoteResponse)
-def quote_by_isin(isin: str, service: ServiceDep) -> QuoteResponse:
+def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     """Liefert den Kurs zu einer ISIN (bevorzugt Xetra/EUR)."""
     try:
         return service.get_by_isin(isin)
@@ -53,7 +54,7 @@ def quote_by_isin(isin: str, service: ServiceDep) -> QuoteResponse:
 
 @router.get("/quote/{isin}/daily", response_model=list[DailyPoint])
 def daily_history(
-    isin: str,
+    isin: IsinPath,
     service: DailyDep,
     period: Annotated[Period, Query()] = "1m",
 ) -> list[DailyPoint]:
@@ -98,7 +99,7 @@ def quote_history_by_symbol(
 
 @router.get("/quote/{isin}/history", response_model=list[QuotePoint])
 def quote_history(
-    isin: str,
+    isin: IsinPath,
     service: ServiceDep,
     date_from: Annotated[str | None, Query(alias="from")] = None,
     date_to: Annotated[str | None, Query(alias="to")] = None,

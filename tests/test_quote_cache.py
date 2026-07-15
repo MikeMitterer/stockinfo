@@ -8,22 +8,28 @@ import pytest
 from app.db import init_db
 from app.models import QuoteResponse
 from app.repository import QuoteRepository
-from app.services.quote_cache import CachedQuoteService
-from app.services.quote_service import QuoteUnavailableError
+from app.services.quote_cache import CachedQuoteService, RefreshInProgressError
+from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
 
 
 class FakeQuoteService:
     """Zählt Aufrufe und liefert eine vorgegebene Antwort (oder wirft)."""
 
-    def __init__(self, response: QuoteResponse | None, raises: bool = False) -> None:
+    def __init__(
+        self,
+        response: QuoteResponse | None,
+        raises: bool = False,
+        exception: type[Exception] = QuoteUnavailableError,
+    ) -> None:
         self._response = response
         self._raises = raises
+        self._exception = exception
         self.calls = 0
 
     def get_quote_by_isin(self, isin: str) -> QuoteResponse:
         self.calls += 1
         if self._raises:
-            raise QuoteUnavailableError(isin)
+            raise self._exception(isin)
         return self._response
 
     def get_quote_by_symbol(self, symbol: str) -> QuoteResponse:
@@ -110,3 +116,37 @@ def test_fehler_ohne_cache_propagiert(repo: QuoteRepository) -> None:
 
     with pytest.raises(QuoteUnavailableError):
         service.get_by_isin("IE00B3RBWM25")
+
+
+def test_stale_auch_bei_resolver_ausfall(repo: QuoteRepository) -> None:
+    """Resolver-Ausfall (InstrumentNotFoundError) → stale Cache statt 404."""
+    repo.save_quote(_response(_hours_ago(10), price=155.0))  # alter Kurs
+    fake = FakeQuoteService(None, raises=True, exception=InstrumentNotFoundError)
+    service = CachedQuoteService(fake, repo, ttl_hours=6)
+
+    result = service.get_by_isin("IE00B3RBWM25")
+
+    assert result.stale is True
+    assert result.price == 155.0
+
+
+def test_resolver_ausfall_ohne_cache_propagiert(repo: QuoteRepository) -> None:
+    fake = FakeQuoteService(None, raises=True, exception=InstrumentNotFoundError)
+    service = CachedQuoteService(fake, repo, ttl_hours=6)
+
+    with pytest.raises(InstrumentNotFoundError):
+        service.get_by_isin("IE00B3RBWM25")
+
+
+def test_refresh_all_verweigert_parallellauf(repo: QuoteRepository) -> None:
+    """Läuft bereits ein Refresh, wird ein zweiter Aufruf abgewiesen."""
+    service = CachedQuoteService(FakeQuoteService(_response(_now())), repo, ttl_hours=6)
+
+    assert service._refresh_lock.acquire(blocking=False)  # Lauf simulieren
+    try:
+        with pytest.raises(RefreshInProgressError):
+            service.refresh_all()
+    finally:
+        service._refresh_lock.release()
+
+    assert service.refresh_all() == 0  # nach Freigabe läuft es wieder

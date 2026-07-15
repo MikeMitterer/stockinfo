@@ -3,7 +3,6 @@
 Nur HTTP-Belange; Fachlogik liegt im CachedQuoteService.
 """
 
-import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -18,10 +17,13 @@ from app.models import (
     QuoteResponse,
     RefreshResult,
 )
-from app.services.quote_cache import CachedQuoteService, IsinConflictError
+from app.routers.validation import IsinPath, normalize_isin
+from app.services.quote_cache import (
+    CachedQuoteService,
+    IsinConflictError,
+    RefreshInProgressError,
+)
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
-
-_ISIN_PATTERN = re.compile(r"[A-Z]{2}[A-Z0-9]{9}[0-9]")
 
 router = APIRouter(tags=["dashboard"])
 
@@ -47,7 +49,6 @@ def environment(settings: SettingsDep) -> EnvInfo:
         default_exchange=settings.default_exchange,
         host=settings.host,
         port=settings.port,
-        api_key_set=bool(settings.api_key),
         openfigi_key_set=bool(settings.openfigi_api_key),
         extraetf_etf_url=settings.extraetf_etf_url,
         extraetf_stock_url=settings.extraetf_stock_url,
@@ -59,12 +60,15 @@ def environment(settings: SettingsDep) -> EnvInfo:
 def refresh_all(service: ServiceDep) -> RefreshResult:
     """Aktualisiert alle bekannten Instrumente live."""
     total = service.count_instruments()
-    refreshed = service.refresh_all()
+    try:
+        refreshed = service.refresh_all()
+    except RefreshInProgressError as exc:
+        raise HTTPException(status_code=409, detail="Refresh läuft bereits") from exc
     return RefreshResult(total=total, refreshed=refreshed)
 
 
 @router.post("/refresh/{isin}", response_model=QuoteResponse)
-def refresh_one(isin: str, service: ServiceDep) -> QuoteResponse:
+def refresh_one(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     """Aktualisiert ein einzelnes Instrument per ISIN."""
     try:
         return service.refresh_one(isin)
@@ -86,7 +90,7 @@ def refresh_one_by_symbol(symbol: str, service: ServiceDep) -> QuoteResponse:
 
 
 @router.delete("/instruments/{isin}", status_code=204)
-def delete_instrument(isin: str, service: ServiceDep) -> Response:
+def delete_instrument(isin: IsinPath, service: ServiceDep) -> Response:
     """Löscht ein Instrument samt Historie per ISIN."""
     if not service.delete_instrument(isin):
         raise HTTPException(status_code=404, detail=f"Unbekannte ISIN {isin}")
@@ -96,9 +100,7 @@ def delete_instrument(isin: str, service: ServiceDep) -> Response:
 @router.put("/instruments/by-symbol/{symbol}/isin", response_model=dict)
 def set_isin(symbol: str, payload: IsinUpdate, service: ServiceDep) -> dict:
     """Trägt die ISIN eines Instruments (per Symbol) nachträglich ein."""
-    isin = payload.isin.strip().upper()
-    if not _ISIN_PATTERN.fullmatch(isin):
-        raise HTTPException(status_code=422, detail=f"Ungültiges ISIN-Format: {isin}")
+    isin = normalize_isin(payload.isin)
     try:
         service.set_isin(symbol, isin)
     except InstrumentNotFoundError as exc:

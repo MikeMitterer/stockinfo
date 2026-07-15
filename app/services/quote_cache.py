@@ -6,6 +6,8 @@ Beschaffung fehl, aber es liegt ein alter Wert vor, wird dieser als ``stale``
 zurückgegeben statt eines Fehlers.
 """
 
+import threading
+from collections.abc import Callable
 from datetime import datetime, timezone
 
 import structlog
@@ -30,6 +32,10 @@ class IsinConflictError(Exception):
     """Die ISIN ist bereits einem anderen Instrument zugeordnet."""
 
 
+class RefreshInProgressError(Exception):
+    """Ein ``refresh_all``-Lauf ist bereits aktiv (Scheduler oder Request)."""
+
+
 class CachedQuoteService:
     """Legt einen TTL-Cache (SQLite) vor die Live-Kursbeschaffung."""
 
@@ -48,6 +54,7 @@ class CachedQuoteService:
         self._quote_service = quote_service
         self._repository = repository
         self._ttl_hours = ttl_hours
+        self._refresh_lock = threading.Lock()
 
     def get_by_isin(self, isin: str) -> QuoteResponse:
         """Liefert den Kurs zu einer ISIN aus Cache oder frisch beschafft.
@@ -88,13 +95,7 @@ class CachedQuoteService:
             InstrumentNotFoundError: ISIN nicht auflösbar.
             QuoteUnavailableError: Instrument unbekannt und nicht beschaffbar.
         """
-        instrument = self._repository.get_instrument_by_isin(isin)
-        if instrument is None:
-            self.get_by_isin(isin)  # legt Instrument + ersten Punkt an
-            instrument = self._repository.get_instrument_by_isin(isin)
-        if instrument is None:
-            raise QuoteUnavailableError(isin)
-
+        instrument = self.ensure_instrument(isin=isin)
         rows = self._repository.get_history(instrument["id"], date_from, date_to, limit)
         return self._to_points(rows)
 
@@ -110,15 +111,41 @@ class CachedQuoteService:
         Raises:
             QuoteUnavailableError: Instrument unbekannt und nicht beschaffbar.
         """
-        instrument = self._repository.get_instrument_by_symbol(symbol)
-        if instrument is None:
-            self.get_by_symbol(symbol)  # legt Instrument + ersten Punkt an
-            instrument = self._repository.get_instrument_by_symbol(symbol)
-        if instrument is None:
-            raise QuoteUnavailableError(symbol)
-
+        instrument = self.ensure_instrument(symbol=symbol)
         rows = self._repository.get_history(instrument["id"], date_from, date_to, limit)
         return self._to_points(rows)
+
+    def ensure_instrument(
+        self, *, isin: str | None = None, symbol: str | None = None
+    ) -> dict:
+        """Holt das Instrument aus der DB oder legt es einmalig per Live-Fetch an.
+
+        Args:
+            isin: ISIN des Wertpapiers (bevorzugt).
+            symbol: Yahoo-Symbol (für Papiere ohne ISIN).
+
+        Returns:
+            Das Instrument-Dict aus der Datenbank.
+
+        Raises:
+            InstrumentNotFoundError: ISIN nicht auflösbar.
+            QuoteUnavailableError: Instrument unbekannt und nicht beschaffbar.
+        """
+        if isin:
+            instrument = self._repository.get_instrument_by_isin(isin)
+            if instrument is None:
+                self.get_by_isin(isin)  # legt Instrument + ersten Punkt an
+                instrument = self._repository.get_instrument_by_isin(isin)
+        elif symbol:
+            instrument = self._repository.get_instrument_by_symbol(symbol)
+            if instrument is None:
+                self.get_by_symbol(symbol)  # legt Instrument + ersten Punkt an
+                instrument = self._repository.get_instrument_by_symbol(symbol)
+        else:
+            instrument = None
+        if instrument is None:
+            raise QuoteUnavailableError(isin or symbol or "")
+        return instrument
 
     @staticmethod
     def _to_points(rows: list[dict]) -> list[QuotePoint]:
@@ -137,18 +164,30 @@ class CachedQuoteService:
     def refresh_all(self) -> int:
         """Aktualisiert alle bekannten Instrumente live und speichert sie.
 
-        Wird vom Hintergrund-Scheduler aufgerufen. Umgeht die TTL bewusst. Ein
-        Fehler bei einem Instrument beendet den Lauf nicht.
+        Wird vom Hintergrund-Scheduler und vom Dashboard aufgerufen. Umgeht die
+        TTL bewusst. Ein Fehler bei einem Instrument beendet den Lauf nicht.
+        Es läuft immer nur ein Lauf gleichzeitig.
 
         Returns:
             Anzahl erfolgreich aktualisierter Instrumente.
+
+        Raises:
+            RefreshInProgressError: Ein anderer Lauf ist bereits aktiv.
         """
+        if not self._refresh_lock.acquire(blocking=False):
+            raise RefreshInProgressError()
+        try:
+            return self._refresh_all_locked()
+        finally:
+            self._refresh_lock.release()
+
+    def _refresh_all_locked(self) -> int:
+        """Führt den eigentlichen Refresh-Lauf aus (Lock wird vom Aufrufer gehalten)."""
         instruments = self._repository.list_instruments()
         refreshed = 0
         for instrument in instruments:
             try:
-                fresh = self._fetch_live(instrument)
-                self._repository.save_quote(fresh)
+                self._save_fresh(self._fetch_live(instrument))
                 refreshed += 1
             except Exception as exc:
                 logger.warning(
@@ -169,9 +208,7 @@ class CachedQuoteService:
             InstrumentNotFoundError: ISIN nicht auflösbar.
             QuoteUnavailableError: Kein Kurs beschaffbar.
         """
-        fresh = self._quote_service.get_quote_by_isin(isin)
-        self._repository.save_quote(fresh)
-        return fresh
+        return self._save_fresh(self._quote_service.get_quote_by_isin(isin))
 
     def refresh_one_by_symbol(self, symbol: str) -> QuoteResponse:
         """Aktualisiert ein Instrument per Symbol live (für Papiere ohne ISIN).
@@ -179,7 +216,10 @@ class CachedQuoteService:
         Raises:
             QuoteUnavailableError: Kein Kurs beschaffbar.
         """
-        fresh = self._quote_service.get_quote_by_symbol(symbol)
+        return self._save_fresh(self._quote_service.get_quote_by_symbol(symbol))
+
+    def _save_fresh(self, fresh: QuoteResponse) -> QuoteResponse:
+        """Persistiert einen frisch beschafften Kurs und reicht ihn durch."""
         self._repository.save_quote(fresh)
         return fresh
 
@@ -220,7 +260,9 @@ class CachedQuoteService:
             return self._quote_service.get_quote_by_isin(isin)
         return self._quote_service.get_quote_by_symbol(instrument["symbol"])
 
-    def _get(self, instrument: dict | None, fetch) -> QuoteResponse:
+    def _get(
+        self, instrument: dict | None, fetch: Callable[[], QuoteResponse]
+    ) -> QuoteResponse:
         """Gemeinsame Cache-Logik: frischer Cache → nutzen, sonst neu beschaffen.
 
         Args:
@@ -238,14 +280,15 @@ class CachedQuoteService:
 
         try:
             fresh = fetch()
-        except QuoteUnavailableError:
+        except (QuoteUnavailableError, InstrumentNotFoundError):
+            # Auch ein Resolver-Ausfall (InstrumentNotFoundError) darf einen
+            # vorhandenen Cache-Wert nicht in einen Fehler verwandeln.
             if instrument and latest:
                 logger.warning("serving_stale_quote", isin=instrument.get("isin"))
                 return self._from_cache(instrument, latest, stale=True)
             raise
 
-        self._repository.save_quote(fresh)
-        return fresh
+        return self._save_fresh(fresh)
 
     def _is_fresh(self, fetched_at: str) -> bool:
         """Prüft, ob ein Zeitstempel jünger als die TTL ist."""

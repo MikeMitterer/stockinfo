@@ -8,7 +8,7 @@ läuft in einem eigenen Thread mit eigenen DB-Verbindungen (das Repository
 import structlog
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from app.services.quote_cache import CachedQuoteService
+from app.services.quote_cache import CachedQuoteService, RefreshInProgressError
 
 logger = structlog.get_logger()
 
@@ -31,7 +31,7 @@ class RefreshScheduler:
     def start(self) -> None:
         """Registriert den Job und startet den Scheduler."""
         self._scheduler.add_job(
-            self._service.refresh_all,
+            self._run_refresh,
             trigger="interval",
             hours=self._interval_hours,
             id=_JOB_ID,
@@ -39,6 +39,13 @@ class RefreshScheduler:
         )
         self._scheduler.start()
         logger.info("scheduler_started", interval_hours=self._interval_hours)
+
+    def _run_refresh(self) -> None:
+        """Führt ``refresh_all`` aus; überspringt den Lauf, wenn bereits einer läuft."""
+        try:
+            self._service.refresh_all()
+        except RefreshInProgressError:
+            logger.warning("refresh_skipped_already_running")
 
     def shutdown(self) -> None:
         """Stoppt den Scheduler (ohne auf laufende Jobs zu warten)."""

@@ -10,13 +10,10 @@ sondern stammt immer aus dem Live-Quote (siehe yfinance_provider).
 import structlog
 import yfinance as yf
 
-from app.providers.base import InstrumentResolver, ResolvedInstrument
+from app.providers.base import QUOTE_TYPE_MAP, InstrumentResolver, ResolvedInstrument
 from app.providers.openfigi_provider import OpenFigiClient
 
 logger = structlog.get_logger()
-
-# Yahoo quoteType → interner Typ
-_QUOTE_TYPE_MAP = {"ETF": "etf", "MUTUALFUND": "etf", "EQUITY": "stock"}
 
 # Bevorzugte Börse (MIC) → (Yahoo-Suffix, Anzeigename).
 # MIC wird 1:1 als OpenFIGI micCode verwendet.
@@ -106,7 +103,7 @@ class YFinanceResolver:
             isin=isin,
             exchange=top.get("exchDisp") or top.get("exchange"),
             name=top.get("shortname") or top.get("longname"),
-            type=_QUOTE_TYPE_MAP.get(quote_type),
+            type=QUOTE_TYPE_MAP.get(quote_type),
             currency=None,  # Währung kommt aus dem Live-Quote, nicht aus der Suche
         )
 

@@ -10,12 +10,9 @@ from typing import Any
 import structlog
 import yfinance as yf
 
-from app.providers.base import RawQuote
+from app.providers.base import QUOTE_TYPE_MAP, RawQuote
 
 logger = structlog.get_logger()
-
-# Yahoo quoteType → interner Typ
-_QUOTE_TYPE_MAP = {"ETF": "etf", "MUTUALFUND": "etf", "EQUITY": "stock"}
 
 
 class YFinanceProvider:
@@ -52,12 +49,14 @@ class YFinanceProvider:
             currency=self._fast_attr(fast, "currency"),
             volume=self._as_int(self._fast_attr(fast, "last_volume")),
             name=info.get("longName") or info.get("shortName"),
-            type=_QUOTE_TYPE_MAP.get(quote_type),
+            type=QUOTE_TYPE_MAP.get(quote_type),
             exchange=self._fast_attr(fast, "exchange"),
             isin=self._safe_isin(ticker),
         )
 
-    def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict]:
+    def fetch_daily_closes(
+        self, symbol: str, start: str | None = None
+    ) -> list[dict] | None:
         """Holt echte Tages-Schlusskurse (EOD) von Yahoo Finance.
 
         Args:
@@ -66,7 +65,9 @@ class YFinanceProvider:
                 verfügbare Historie.
 
         Returns:
-            Liste von ``{"date", "close", "currency"}`` (leer bei Fehler).
+            Liste von ``{"date", "close", "currency"}``; leer wenn Yahoo keine
+            Daten hat, ``None`` bei Fehler (Netz, Rate-Limit) — damit der
+            Aufrufer Fehler von 'keine Daten' unterscheiden kann.
         """
         try:
             ticker = yf.Ticker(symbol)
@@ -76,7 +77,7 @@ class YFinanceProvider:
                 history = ticker.history(period="max", interval="1d", auto_adjust=True)
         except Exception as exc:
             logger.warning("fetch_daily_failed", symbol=symbol, error=str(exc))
-            return []
+            return None
 
         if history is None or history.empty:
             return []

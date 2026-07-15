@@ -22,11 +22,15 @@ _PERIOD_DAYS = {"1w": 7, "1m": 31, "3m": 93, "1y": 366}
 
 
 class DailyCloseProvider(Protocol):
-    """Liefert echte Tages-Schlusskurse zu einem Symbol."""
+    """Liefert echte Tages-Schlusskurse zu einem Symbol.
+
+    ``None`` signalisiert einen Fehler (Netz, Rate-Limit); eine leere Liste
+    bedeutet 'erfolgreich abgefragt, aber keine Daten vorhanden'.
+    """
 
     def fetch_daily_closes(
         self, symbol: str, start: str | None = None
-    ) -> list[dict]: ...
+    ) -> list[dict] | None: ...
 
 
 class DailyHistoryService:
@@ -58,9 +62,10 @@ class DailyHistoryService:
         """Gibt die Tages-Schlusskurse für den Zeitraum zurück.
 
         Raises:
-            QuoteUnavailableError: Instrument unbekannt und nicht beschaffbar.
+            QuoteUnavailableError: Instrument unbekannt und nicht beschaffbar,
+                oder Erst-Abruf der Historie fehlgeschlagen.
         """
-        instrument = self._ensure_instrument(isin, symbol)
+        instrument = self._quotes.ensure_instrument(isin=isin, symbol=symbol)
         desired_start = self._period_start(period)
         self._sync(instrument, desired_start)
         rows = self._repository.get_daily_closes(instrument["id"], desired_start)
@@ -69,30 +74,17 @@ class DailyHistoryService:
             for row in rows
         ]
 
-    def _ensure_instrument(self, isin: str | None, symbol: str | None) -> dict:
-        """Holt das Instrument aus der DB oder legt es einmalig an."""
-        if isin:
-            instrument = self._repository.get_instrument_by_isin(isin)
-            if instrument is None:
-                self._quotes.get_by_isin(isin)
-                instrument = self._repository.get_instrument_by_isin(isin)
-        elif symbol:
-            instrument = self._repository.get_instrument_by_symbol(symbol)
-            if instrument is None:
-                self._quotes.get_by_symbol(symbol)
-                instrument = self._repository.get_instrument_by_symbol(symbol)
-        else:
-            instrument = None
-        if instrument is None:
-            raise QuoteUnavailableError(isin or symbol or "")
-        return instrument
-
     def _sync(self, instrument: dict, desired_start: str | None) -> None:
         """Lädt nur fehlende Tage nach — anhand der Fetch-Wasserzeichen.
 
         ``fetched_to`` = bis wann bereits abgefragt, ``fetched_from`` = ab wann
         (``None`` = gesamte Historie). So wird nichts doppelt geholt, selbst wenn
-        yfinance für ältere Zeiträume keine Daten mehr hat.
+        yfinance für ältere Zeiträume keine Daten mehr hat. Wasserzeichen werden
+        nur nach einem **erfolgreichen** Fetch fortgeschrieben — ein
+        Provider-Fehler hinterlässt keine dauerhafte Datenlücke.
+
+        Raises:
+            QuoteUnavailableError: Erst-Abruf fehlgeschlagen (kein Cache vorhanden).
         """
         instrument_id = instrument["id"]
         symbol = instrument["symbol"]
@@ -100,7 +92,8 @@ class DailyHistoryService:
         meta = self._repository.get_daily_meta(instrument_id)
 
         if meta is None:  # noch nie abgefragt → gesamten Zeitraum holen
-            self._fetch_and_store(instrument_id, symbol, desired_start)
+            if not self._fetch_and_store(instrument_id, symbol, desired_start):
+                raise QuoteUnavailableError(symbol)
             self._repository.set_daily_meta(instrument_id, desired_start, today)
             return
 
@@ -108,26 +101,35 @@ class DailyHistoryService:
         fetched_to = meta["fetched_to"]
 
         if fetched_to is None or fetched_to < today:  # neue Tage seither
-            self._fetch_and_store(instrument_id, symbol, fetched_to)
-            fetched_to = today
+            if self._fetch_and_store(instrument_id, symbol, fetched_to):
+                fetched_to = today
 
         if fetched_from is not None:  # gesamte Historie noch nicht geholt
             if desired_start is None:  # 'max' verlangt → alles holen
-                self._fetch_and_store(instrument_id, symbol, None)
-                fetched_from = None
+                if self._fetch_and_store(instrument_id, symbol, None):
+                    fetched_from = None
             elif desired_start < fetched_from:  # weiter zurück verlangt
-                self._fetch_and_store(instrument_id, symbol, desired_start)
-                fetched_from = desired_start
+                if self._fetch_and_store(instrument_id, symbol, desired_start):
+                    fetched_from = desired_start
 
         self._repository.set_daily_meta(instrument_id, fetched_from, fetched_to)
 
     def _fetch_and_store(
         self, instrument_id: int, symbol: str, start: str | None
-    ) -> None:
-        """Holt EOD-Kurse ab ``start`` und schreibt sie in den Cache."""
+    ) -> bool:
+        """Holt EOD-Kurse ab ``start`` und schreibt sie in den Cache.
+
+        Returns:
+            True bei erfolgreichem Fetch (auch ohne neue Zeilen), False wenn
+            der Provider einen Fehler signalisiert.
+        """
         rows = self._provider.fetch_daily_closes(symbol, start=start)
+        if rows is None:
+            logger.warning("daily_sync_failed", symbol=symbol, start=start)
+            return False
         self._repository.upsert_daily_closes(instrument_id, rows)
         logger.debug("daily_synced", symbol=symbol, start=start, rows=len(rows))
+        return True
 
     @staticmethod
     def _period_start(period: str) -> str | None:

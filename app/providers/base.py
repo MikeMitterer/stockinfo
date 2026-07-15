@@ -8,6 +8,10 @@ API-Antwort zusammen. Protokolle ermöglichen austauschbare Implementierungen
 from dataclasses import dataclass
 from typing import Protocol
 
+# Yahoo quoteType → interner Typ ("etf" | "stock") — gemeinsame Konstante für
+# Resolver und Provider.
+QUOTE_TYPE_MAP = {"ETF": "etf", "MUTUALFUND": "etf", "EQUITY": "stock"}
+
 
 @dataclass
 class ResolvedInstrument:
