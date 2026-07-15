@@ -1,6 +1,6 @@
 <?xml version="1.0"?>
 <Container version="2">
-  <Name>StockInfo</Name>
+  <Name>stockinfo</Name>
   <Repository>mangolila/stockinfo:latest</Repository>
   <Registry>https://hub.docker.com/r/mangolila/stockinfo</Registry>
   <Network>bridge</Network>
