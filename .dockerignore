@@ -14,3 +14,15 @@ dashboard/node_modules
 dashboard/dist
 dashboard/.env
 docs/
+# Kontext schlank halten — nur entrypoint.sh aus docker/ wird ins Image kopiert
+docker/
+!docker/entrypoint.sh
+.claude/
+.superpowers/
+.templates/
+.pytest_cache/
+.ruff_cache/
+unraid/
+Makefile
+Procfile.dev
+VERSION

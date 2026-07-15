@@ -1,4 +1,4 @@
 -r requirements.txt
-ruff
-pytest
-pytest-asyncio
+ruff==0.15.21
+pytest==9.1.1
+pytest-asyncio==1.4.0

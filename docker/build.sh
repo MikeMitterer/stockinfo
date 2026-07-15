@@ -26,9 +26,6 @@ cd "${SCRIPTPATH}"
 mkdir -p logs
 LOGFILE="logs/build-$(date +%y%m%d).log"
 
-# shellcheck disable=SC2155
-readonly DOCKER_BASE_IMAGE=$(\grep "^FROM " < Dockerfile | head -1 | sed "s/FROM //;s/ AS.*//")
-
 readonly NAMESPACE="mangolila"
 readonly NAME="stockinfo"
 
@@ -44,6 +41,17 @@ if [[ "${__DOCKER_LIB__:=""}"  == "" ]]; then . "${BASH_LIBS}/docker.lib.sh";  f
 if [[ "${__VERSION_LIB__:=""}" == "" ]]; then . "${BASH_LIBS}/version.lib.sh"; fi
 
 readonly PROJECT_NAME="${NAMESPACE}.${NAME}"
+
+# Base-Image aus dem Dockerfile lesen — über eine temporäre Variable, damit
+# DOCKER_BASE_IMAGE erst NACH der Prüfung readonly wird ('readonly VAR=$(cmd)'
+# würde den Exit-Code des Subshell-Befehls verschlucken).
+_BASE_IMAGE=$(\grep "^FROM " < Dockerfile | head -1 | sed "s/FROM //;s/ AS.*//") || _BASE_IMAGE=""
+if [[ -z "${_BASE_IMAGE}" ]]; then
+    echo -e "\n${RED}Fehler:${NC} Kein 'FROM' im Dockerfile gefunden (${SCRIPTPATH}/Dockerfile).\n" >&2
+    exit 1
+fi
+readonly DOCKER_BASE_IMAGE="${_BASE_IMAGE}"
+unset _BASE_IMAGE
 
 #------------------------------------------------------------------------------
 # Registry-Ziel (TARGET) — wohin `--push` das Image lädt
@@ -162,23 +170,29 @@ done
 #
 readonly STRICT=${STRICT:-2}
 
-_tag_rc=0
-TAG="$(gitDockerTag "${STRICT}")" || _tag_rc=$?
-if [[ $_tag_rc -eq 2 ]]; then
-    echo -e "\n${RED}Build abgebrochen:${NC} Kein Git-Tag gefunden." >&2
-    echo -e "${YELLOW}Tipp:${NC} semVerBump patch  ${BLUE}# oder manuell:${NC} git tag -a v0.1.0+$(date +%y%m%d.%H%M) -m 'Initial release'\n" >&2
-    exit 1
-elif [[ $_tag_rc -eq 3 ]]; then
-    echo -e "\n${RED}Build abgebrochen:${NC} Working-Tree ist dirty." >&2
-    echo -e "${YELLOW}Tipp:${NC} git commit oder git stash\n" >&2
-    exit 1
-elif [[ $_tag_rc -eq 4 ]]; then
-    echo -e "\n${RED}Build abgebrochen:${NC} Repo ist ahead vom letzten Tag (STRICT=1)." >&2
-    echo -e "${YELLOW}Tipp:${NC} semVerBump patch — oder mit ${BLUE}STRICT=2 ./build.sh --build${NC} (ahead erlaubt)\n" >&2
-    exit 1
-elif [[ $_tag_rc -ne 0 ]]; then
-    echo -e "\n${RED}Build abgebrochen:${NC} gitDockerTag fehlgeschlagen (rc=${_tag_rc}).\n" >&2
-    exit 1
+# Streng nur für --build (dort wird das Image getaggt). Für Anzeige/Hilfe reicht
+# best-effort (STRICT=0) — so funktioniert --help auch ohne Git-Tag im Clone.
+if [[ "${CMDLINE}" == "-b" || "${CMDLINE}" == "--build" ]]; then
+    _tag_rc=0
+    TAG="$(gitDockerTag "${STRICT}")" || _tag_rc=$?
+    if [[ $_tag_rc -eq 2 ]]; then
+        echo -e "\n${RED}Build abgebrochen:${NC} Kein Git-Tag gefunden." >&2
+        echo -e "${YELLOW}Tipp:${NC} semVerBump patch  ${BLUE}# oder manuell:${NC} git tag -a v0.1.0+$(date +%y%m%d.%H%M) -m 'Initial release'\n" >&2
+        exit 1
+    elif [[ $_tag_rc -eq 3 ]]; then
+        echo -e "\n${RED}Build abgebrochen:${NC} Working-Tree ist dirty." >&2
+        echo -e "${YELLOW}Tipp:${NC} git commit oder git stash\n" >&2
+        exit 1
+    elif [[ $_tag_rc -eq 4 ]]; then
+        echo -e "\n${RED}Build abgebrochen:${NC} Repo ist ahead vom letzten Tag (STRICT=1)." >&2
+        echo -e "${YELLOW}Tipp:${NC} semVerBump patch — oder mit ${BLUE}STRICT=2 ./build.sh --build${NC} (ahead erlaubt)\n" >&2
+        exit 1
+    elif [[ $_tag_rc -ne 0 ]]; then
+        echo -e "\n${RED}Build abgebrochen:${NC} gitDockerTag fehlgeschlagen (rc=${_tag_rc}).\n" >&2
+        exit 1
+    fi
+else
+    TAG="$(gitDockerTag 0 2>/dev/null)" || TAG="n/a"
 fi
 readonly TAG
 

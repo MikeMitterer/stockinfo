@@ -49,7 +49,16 @@ ENV LANG=C.UTF-8 \
 VOLUME ["/data"]
 EXPOSE 8000
 
+# Non-root: Die App läuft als 'stockinfo' (UID 99 = Unraid 'nobody', GID 100 =
+# 'users'). Der Entrypoint startet als root, übergibt /data an den App-User
+# (bestehende root-Volumes bleiben nutzbar) und droppt dann die Privilegien.
+RUN useradd --system --uid 99 --gid users --no-create-home stockinfo \
+    && mkdir -p /data && chown stockinfo:users /data
+COPY docker/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
     CMD curl -fsS "http://localhost:${PORT}/health" || exit 1
 
+ENTRYPOINT ["/entrypoint.sh"]
 CMD ["sh", "-c", "uvicorn app.main:app --host \"$HOST\" --port \"$PORT\""]

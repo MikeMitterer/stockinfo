@@ -8,3 +8,4 @@ uvicorn.log
 .overmind.sock
 docker/logs/
 docker/.last-build-tag
+docker/.last_login
