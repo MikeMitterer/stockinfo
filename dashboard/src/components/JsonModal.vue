@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 
 import { useRawQuote } from '../composables/useRawQuote'
 import type { InstrumentSummary } from '../types'
+import { copyText } from '../utils/clipboard'
 
 const props = defineProps<{ item: InstrumentSummary | null }>()
 const emit = defineEmits<{ (event: 'close'): void }>()
@@ -23,15 +24,14 @@ watch(
 
 /** Kopiert Text in die Zwischenablage und zeigt kurz eine Bestätigung. */
 async function copy(text: string, what: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(text)
-    copied.value = what
-    setTimeout(() => {
-      if (copied.value === what) copied.value = null
-    }, 1500)
-  } catch (err) {
-    consola.error('JsonModal.copy', err)
+  if (!(await copyText(text))) {
+    consola.error('JsonModal.copy: Kopieren fehlgeschlagen')
+    return
   }
+  copied.value = what
+  setTimeout(() => {
+    if (copied.value === what) copied.value = null
+  }, 1500)
 }
 
 function onKey(event: KeyboardEvent): void {
