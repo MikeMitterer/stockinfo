@@ -67,8 +67,8 @@ const tabs = computed<{ key: TabKey; label: string; icon: NavIconName }[]>(() =>
   z-index: 20;
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 1.5rem;
+  // Logo links, Navigation + Sprach-Umschalter als Gruppe rechts
+  gap: 0.75rem;
   padding: 0 1.25rem;
   background: color-mix(in srgb, $color-bg 85%, transparent);
   backdrop-filter: blur(8px);
@@ -87,7 +87,7 @@ const tabs = computed<{ key: TabKey; label: string; icon: NavIconName }[]>(() =>
   }
   .logo { height: 40px; display: block; }
 
-  nav { display: flex; gap: 0.25rem; }
+  nav { display: flex; gap: 0.25rem; margin-left: auto; }
   .tab {
     display: inline-flex;
     align-items: center;
