@@ -44,6 +44,7 @@ COPY --from=dashboard /dashboard/dist ./web
 # Cache liegt im Volume /data (überlebt Container-Neustarts)
 ENV LANG=C.UTF-8 \
     LC_ALL=C.UTF-8 \
+    PYTHONUNBUFFERED=1 \
     HOST=0.0.0.0 \
     PORT=8000 \
     DATABASE_PATH=/data/stockinfo.db \
