@@ -1,6 +1,7 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, watch } from 'vue'
 
+import { isIsin } from '../api/paths'
 import type { InstrumentSummary } from '../types'
 
 const props = defineProps<{
@@ -23,23 +24,39 @@ const emit = defineEmits<{
 // Inline-Eingabe zum nachträglichen Erfassen einer ISIN
 const editingSymbol = ref<string | null>(null)
 const isinDraft = ref<string>('')
+const isinInvalid = ref<boolean>(false)
 
 // Fokussiert das Eingabefeld direkt beim Einblenden.
 const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
 
+// Fehlerhinweis zurücksetzen, sobald der Entwurf geändert wird.
+watch(isinDraft, () => {
+  isinInvalid.value = false
+})
+
 function startIsin(item: InstrumentSummary): void {
   editingSymbol.value = item.symbol
   isinDraft.value = ''
+  isinInvalid.value = false
 }
 
 function cancelIsin(): void {
   editingSymbol.value = null
   isinDraft.value = ''
+  isinInvalid.value = false
 }
 
 function confirmIsin(item: InstrumentSummary): void {
   const value = isinDraft.value.trim().toUpperCase()
-  if (value) emit('set-isin', { symbol: item.symbol, isin: value })
+  if (!value) {
+    cancelIsin()
+    return
+  }
+  if (!isIsin(value)) {
+    isinInvalid.value = true // Hinweis zeigen, Eingabe offen lassen
+    return
+  }
+  emit('set-isin', { symbol: item.symbol, isin: value })
   cancelIsin()
 }
 
@@ -60,13 +77,8 @@ function price(value: number | null): string {
   return value === null ? '—' : value.toLocaleString('de-DE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-/** Formatiert die TER als Prozent (oder '—'). */
-function ter(value: number | null): string {
-  return value === null ? '—' : `${value.toFixed(2)} %`
-}
-
-/** Formatiert die Volatilität als Prozent (oder '—'). */
-function volatility(value: number | null): string {
+/** Formatiert einen Prozentwert mit zwei Nachkommastellen (oder '—'). */
+function formatPercent(value: number | null): string {
   return value === null ? '—' : `${value.toFixed(2)} %`
 }
 
@@ -84,7 +96,7 @@ function accumulating(value: boolean | null): string {
       Noch keine Wertpapiere gecacht — oben per ISIN oder Symbol hinzufügen.
     </p>
     <div v-else class="scroll">
-      <table>
+      <table class="data-table">
         <thead>
           <tr>
             <th>Symbol</th><th>ISIN</th><th>Name</th><th>Typ</th>
@@ -107,12 +119,14 @@ function accumulating(value: boolean | null): string {
                   v-model="isinDraft"
                   v-focus
                   class="isin-input"
+                  :class="{ invalid: isinInvalid }"
                   placeholder="ISIN eintragen"
                   @keyup.enter="confirmIsin(item)"
                   @keyup.esc="cancelIsin"
                 />
                 <button class="mini ok" title="Speichern" @click="confirmIsin(item)">✓</button>
                 <button class="mini" title="Abbrechen" @click="cancelIsin">✕</button>
+                <span v-if="isinInvalid" class="isin-err">ungültige ISIN</span>
               </span>
               <button v-else class="mini add" title="ISIN nachtragen" @click.stop="startIsin(item)">
                 + ISIN
@@ -120,17 +134,17 @@ function accumulating(value: boolean | null): string {
             </td>
             <td class="name">{{ item.name ?? '—' }}</td>
             <td>
-              <span v-if="item.type" class="badge" :class="item.type">{{ item.type }}</span>
+              <span v-if="item.type" class="badge type" :class="item.type">{{ item.type }}</span>
               <span v-else class="dim">—</span>
             </td>
             <td class="num mono">
               {{ price(item.latest_price) }}
               <span class="ccy">{{ item.latest_currency ?? '' }}</span>
             </td>
-            <td class="num mono dim">{{ ter(item.ter) }}</td>
-            <td class="num mono dim">{{ volatility(item.volatility) }}</td>
+            <td class="num mono dim">{{ formatPercent(item.ter) }}</td>
+            <td class="num mono dim">{{ formatPercent(item.volatility) }}</td>
             <td class="center">
-              <span v-if="item.accumulating !== null" class="thes" :class="{ acc: item.accumulating }">
+              <span v-if="item.accumulating !== null" class="badge thes" :class="{ acc: item.accumulating }">
                 {{ accumulating(item.accumulating) }}
               </span>
               <span v-else class="dim">—</span>
@@ -173,10 +187,8 @@ function accumulating(value: boolean | null): string {
 <style scoped lang="scss">
 @use '../styles/variables' as *;
 
-.card {
-  background: $color-surface;
-  border: 1px solid $color-border;
-  border-radius: $radius;
+.table {
+  // globale .card-Basis — kompakteres Padding + Abstand zum Chart darunter
   padding: 1rem 1.1rem;
   margin: 0 0 1.1rem;
 }
@@ -184,17 +196,7 @@ function accumulating(value: boolean | null): string {
 .empty { color: $color-muted; margin: 0.25rem 0 0; }
 .scroll { overflow-x: auto; }
 
-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-thead th {
-  text-align: left;
-  padding: 0.35rem 0.7rem;
-  color: $color-muted;
-  font-weight: 600;
-  font-size: 0.72rem;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-  border-bottom: 1px solid $color-border;
-}
+thead th { font-weight: 600; }
 tbody td { padding: 0.5rem 0.7rem; border-bottom: 1px solid rgba(56, 44, 70, 0.5); }
 tbody tr {
   cursor: pointer;
@@ -207,12 +209,7 @@ tbody tr {
 .center { text-align: center; }
 .dim { color: $color-muted; }
 
-.thes {
-  display: inline-block;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 700;
+.badge.thes {
   color: $color-muted;
   background: $color-surface-2;
   &.acc { color: $color-accent; background: color-mix(in srgb, $color-accent 15%, transparent); }
@@ -242,13 +239,11 @@ tbody tr {
   &.add:hover { color: $color-accent; }
   &.ok { color: $health-ok; }
 }
+.isin-input.invalid { border-color: $color-danger; }
+.isin-err { color: $color-danger; font-size: 0.72rem; white-space: nowrap; }
 
-.badge {
-  display: inline-block;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  font-size: 0.68rem;
-  font-weight: 700;
+// Varianten der globalen .badge-Pill
+.badge.type {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   &.etf { color: $color-accent; background: color-mix(in srgb, $color-accent 15%, transparent); }

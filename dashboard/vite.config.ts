@@ -25,5 +25,5 @@ export default defineConfig({
       apiPrefixes.map((prefix) => [prefix, { target: apiTarget, changeOrigin: true }]),
     ),
   },
-  test: { environment: 'jsdom' },
+  test: { environment: 'jsdom', setupFiles: ['tests/setup.ts'] },
 })

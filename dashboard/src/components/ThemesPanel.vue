@@ -31,12 +31,6 @@ const { current, setTheme } = useTheme()
 <style scoped lang="scss">
 @use '../styles/variables' as *;
 
-.card {
-  background: $color-surface;
-  border: 1px solid $color-border;
-  border-radius: $radius;
-  padding: 1.1rem 1.25rem;
-}
 .hint { color: $color-muted; margin: 0 0 1rem; font-size: 0.82rem; }
 
 .grid {

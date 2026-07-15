@@ -25,7 +25,7 @@ function apply(theme: ThemeKey): void {
   current.value = theme
   document.documentElement.dataset.theme = theme
   try {
-    localStorage.setItem(STORAGE_KEY, theme)
+    window.localStorage.setItem(STORAGE_KEY, theme)
   } catch {
     // localStorage nicht verfügbar — Theme bleibt nur zur Laufzeit gesetzt.
   }
@@ -41,7 +41,7 @@ export function useTheme(): {
   function init(): void {
     let saved: string | null = null
     try {
-      saved = localStorage.getItem(STORAGE_KEY)
+      saved = window.localStorage.getItem(STORAGE_KEY)
     } catch {
       saved = null
     }

@@ -110,10 +110,8 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
 <style scoped lang="scss">
 @use '../styles/variables' as *;
 
-.card {
-  background: $color-surface;
-  border: 1px solid $color-border;
-  border-radius: $radius;
+.chart {
+  // globale .card-Basis — kompakteres Padding wie die Assets-Tabelle
   padding: 1rem 1.1rem;
 }
 

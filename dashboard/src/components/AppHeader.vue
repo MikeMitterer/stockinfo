@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import type { TabKey } from '../types'
+import type { NavIconName, TabKey } from '../types'
 import NavIcon from './NavIcon.vue'
 
 defineProps<{ active: TabKey }>()
@@ -8,7 +8,7 @@ const emit = defineEmits<{
   (event: 'navigate', tab: TabKey): void
 }>()
 
-const tabs: { key: TabKey; label: string; icon: string }[] = [
+const tabs: { key: TabKey; label: string; icon: NavIconName }[] = [
   { key: 'assets', label: 'Assets', icon: 'assets' },
   { key: 'exchanges', label: 'Börsen', icon: 'exchanges' },
   { key: 'environment', label: 'Environment', icon: 'environment' },

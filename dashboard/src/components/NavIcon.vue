@@ -1,5 +1,19 @@
 <script setup lang="ts">
-defineProps<{ name: string }>()
+import { consola } from 'consola'
+import { watchEffect } from 'vue'
+
+import type { NavIconName } from '../types'
+
+const KNOWN_ICONS: NavIconName[] = ['assets', 'environment', 'links', 'exchanges', 'themes']
+
+const props = defineProps<{ name: NavIconName }>()
+
+// Unbekannter Name (z.B. nach Umbenennung eines Tabs) — niemals still ignorieren.
+watchEffect(() => {
+  if (!KNOWN_ICONS.includes(props.name)) {
+    consola.warn('NavIcon: unbekannter Icon-Name', { name: props.name })
+  }
+})
 </script>
 
 <template>
@@ -32,6 +46,10 @@ defineProps<{ name: string }>()
       <rect x="14" y="3" width="7" height="7" rx="1.5" />
       <rect x="14" y="14" width="7" height="7" rx="1.5" />
       <rect x="3" y="14" width="7" height="7" rx="1.5" />
+    </template>
+    <template v-else>
+      <!-- Fallback für unbekannte Namen — sichtbarer Punkt statt leerem SVG -->
+      <circle cx="12" cy="12" r="3" />
     </template>
   </svg>
 </template>

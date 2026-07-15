@@ -1,8 +1,11 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ApiError, apiClient } from '../src/api/client'
+import { ApiError, apiClient } from '../../src/api/client'
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => {
+  vi.unstubAllGlobals()
+  window.localStorage.clear()
+})
 
 describe('apiClient', () => {
   it('get parst JSON', async () => {

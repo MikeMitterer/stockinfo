@@ -2,39 +2,19 @@
 import { consola } from 'consola'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 
-import { apiClient } from '../api/client'
-import { API_BASE_URL } from '../config'
+import { useRawQuote } from '../composables/useRawQuote'
 import type { InstrumentSummary } from '../types'
 
 const props = defineProps<{ item: InstrumentSummary | null }>()
 const emit = defineEmits<{ (event: 'close'): void }>()
 
-const url = ref<string>('')
-const json = ref<string>('')
-const loading = ref<boolean>(false)
-const error = ref<string | null>(null)
+const { url, json, loading, error, load } = useRawQuote()
 const copied = ref<string | null>(null)
 
 watch(
   () => props.item,
-  async (item) => {
-    if (!item) return
-    error.value = null
-    json.value = ''
-    const path = item.isin
-      ? `/quote/${item.isin}`
-      : `/quote?symbol=${encodeURIComponent(item.symbol)}`
-    url.value = `${API_BASE_URL}${path}`
-    loading.value = true
-    try {
-      const data = await apiClient.get<unknown>(path)
-      json.value = JSON.stringify(data, null, 2)
-    } catch (err) {
-      error.value = 'Abfrage fehlgeschlagen'
-      consola.error('JsonModal', err)
-    } finally {
-      loading.value = false
-    }
+  (item) => {
+    if (item) void load(item)
   },
   { immediate: true },
 )

@@ -5,7 +5,7 @@ defineProps<{ env: EnvInfo | null }>()
 </script>
 
 <template>
-  <section v-if="env" class="env">
+  <section v-if="env" class="env card">
     <h2>Environment</h2>
     <dl>
       <div><dt>Version</dt><dd>{{ env.version }}</dd></div>
@@ -15,7 +15,6 @@ defineProps<{ env: EnvInfo | null }>()
       <div><dt>Metadaten-TTL (d)</dt><dd>{{ env.metadata_ttl_days }}</dd></div>
       <div><dt>Default-Börse</dt><dd>{{ env.default_exchange }}</dd></div>
       <div><dt>Host:Port</dt><dd>{{ env.host }}:{{ env.port }}</dd></div>
-      <div><dt>API-Key gesetzt</dt><dd>{{ env.api_key_set ? 'ja' : 'nein' }}</dd></div>
       <div><dt>OpenFIGI-Key gesetzt</dt><dd>{{ env.openfigi_key_set ? 'ja' : 'nein' }}</dd></div>
     </dl>
   </section>
@@ -25,11 +24,6 @@ defineProps<{ env: EnvInfo | null }>()
 @use '../styles/variables' as *;
 
 .env {
-  background: $color-surface;
-  border: 1px solid $color-border;
-  border-radius: $radius;
-  padding: 1.1rem 1.25rem;
-
   dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.9rem 1.5rem; }
   div { display: flex; flex-direction: column; gap: 0.15rem; }
   dt { color: $color-muted; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }

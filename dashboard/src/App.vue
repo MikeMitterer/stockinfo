@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import AppHeader from './components/AppHeader.vue'
 import EnvironmentPanel from './components/EnvironmentPanel.vue'
+import ErrorBanner from './components/ErrorBanner.vue'
 import ExchangesPanel from './components/ExchangesPanel.vue'
 import HistoryChart from './components/HistoryChart.vue'
 import InstrumentsTable from './components/InstrumentsTable.vue'
@@ -20,14 +21,26 @@ import { useHistory } from './composables/useHistory'
 import { useInstrumentActions } from './composables/useInstrumentActions'
 import { useInstruments } from './composables/useInstruments'
 import { useRefresh } from './composables/useRefresh'
-import type { InstrumentSummary, RangeKey } from './types'
+import type { ErrorEntry, InstrumentSummary, RangeKey } from './types'
 
 const { env, load: loadEnv } = useEnvironment()
-const { instruments, load: loadInstruments } = useInstruments()
-const { points, load: loadHistory, loading: historyLoading } = useHistory()
-const { daily, load: loadDaily, loading: dailyLoading } = useDaily()
-const { refreshing, trigger } = useRefresh()
-const { busy, add, refreshOne, remove, setIsin } = useInstrumentActions()
+const { instruments, load: loadInstruments, error: instrumentsError } = useInstruments()
+const {
+  load: loadHistory,
+  loading: historyLoading,
+  clear: clearHistory,
+  error: historyError,
+  points,
+} = useHistory()
+const {
+  load: loadDaily,
+  loading: dailyLoading,
+  clear: clearDaily,
+  error: dailyError,
+  daily,
+} = useDaily()
+const { refreshing, trigger, error: refreshError } = useRefresh()
+const { busy, add, refreshOne, remove, setIsin, error: actionsError } = useInstrumentActions()
 const { status: healthStatus, version: healthVersion, start: startHealth, stop: stopHealth } =
   useHealth()
 
@@ -40,6 +53,27 @@ const jsonItem = ref<InstrumentSummary | null>(null)
 const selectedSymbol = computed(() => selectedItem.value?.symbol ?? null)
 const selectedCurrency = computed(() => selectedItem.value?.latest_currency ?? null)
 const chartLoading = computed(() => historyLoading.value || dailyLoading.value)
+
+// Fehler aller Composables als dismissible Banner-Einträge.
+const errorSources = {
+  instruments: instrumentsError,
+  actions: actionsError,
+  history: historyError,
+  daily: dailyError,
+  refresh: refreshError,
+}
+
+const errors = computed<ErrorEntry[]>(() =>
+  Object.entries(errorSources)
+    .filter(([, source]) => source.value !== null)
+    .map(([key, source]) => ({ key, message: source.value ?? '' })),
+)
+
+/** Blendet einen Banner-Fehler aus, indem die zugehörige error-Ref geleert wird. */
+function dismissError(key: string): void {
+  const source = errorSources[key as keyof typeof errorSources]
+  if (source) source.value = null
+}
 
 // Einheitliche Chart-Serie {x = Zeit (ms), y = Kurs} aus Intraday-Ticks oder EOD.
 const chartSeries = computed<{ x: number; y: number }[]>(() => {
@@ -109,8 +143,8 @@ async function onRemove(item: InstrumentSummary): Promise<void> {
   await remove(item)
   if (selectedItem.value?.symbol === item.symbol) {
     selectedItem.value = null
-    points.value = []
-    daily.value = []
+    clearHistory()
+    clearDaily()
   }
   await loadInstruments()
 }
@@ -121,6 +155,7 @@ async function onRemove(item: InstrumentSummary): Promise<void> {
   <TopProgress :active="refreshing || busy" />
 
   <main class="content">
+    <ErrorBanner :errors="errors" @dismiss="dismissError" />
     <template v-if="activeTab === 'assets'">
       <Toolbar :refreshing="refreshing" :busy="busy" @refresh="onRefreshAll" @add="onAdd" />
       <InstrumentsTable

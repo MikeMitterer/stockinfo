@@ -1,3 +1,9 @@
+/** Ein Instrument, identifiziert per ISIN (falls vorhanden) oder Symbol. */
+export interface InstrumentRef {
+  isin: string | null
+  symbol: string
+}
+
 export interface InstrumentSummary {
   isin: string | null
   symbol: string
@@ -28,7 +34,6 @@ export interface EnvInfo {
   default_exchange: string
   host: string
   port: number
-  api_key_set: boolean
   openfigi_key_set: boolean
   extraetf_etf_url: string
   extraetf_stock_url: string
@@ -56,6 +61,15 @@ export interface RefreshResult {
 
 /** Aktive Unterseite/Tab des Dashboards. */
 export type TabKey = 'assets' | 'exchanges' | 'environment' | 'links' | 'themes'
+
+/** Bekannte Icon-Namen der Navigation (deckungsgleich mit den Tabs). */
+export type NavIconName = TabKey
+
+/** Ein anzeigbarer Fehler im ErrorBanner, identifiziert per Quelle. */
+export interface ErrorEntry {
+  key: string
+  message: string
+}
 
 /** Ausgewählter Chart-Zeitraum. 'intraday' = Tagesverlauf (Ticks), Rest = EOD. */
 export type RangeKey = 'intraday' | '1w' | '1m' | '3m' | '1y' | 'max'

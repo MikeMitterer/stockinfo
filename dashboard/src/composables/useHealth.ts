@@ -34,12 +34,14 @@ export function useHealth(intervalMs = 15000): {
   }
 
   function start(): void {
+    if (timer) return // bereits gestartet — kein zweites Intervall anlegen
     void check()
     timer = setInterval(() => void check(), intervalMs)
   }
 
   function stop(): void {
     if (timer) clearInterval(timer)
+    timer = undefined
   }
 
   return { status, version, start, stop }

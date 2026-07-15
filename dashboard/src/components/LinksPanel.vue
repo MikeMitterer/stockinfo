@@ -21,7 +21,7 @@ const projectLinks: ApiLink[] = [
 </script>
 
 <template>
-  <section class="links">
+  <section class="links card">
     <h2>API &amp; Links</h2>
     <p class="base">Basis: <code>{{ API_BASE_URL }}</code></p>
     <ul>
@@ -43,11 +43,6 @@ const projectLinks: ApiLink[] = [
 @use '../styles/variables' as *;
 
 .links {
-  background: $color-surface;
-  border: 1px solid $color-border;
-  border-radius: $radius;
-  padding: 1.1rem 1.25rem;
-
   .base { color: $color-muted; margin: 0.25rem 0 1rem; }
   .group {
     margin: 1.4rem 0 0.75rem;

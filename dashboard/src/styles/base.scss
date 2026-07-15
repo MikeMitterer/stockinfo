@@ -85,6 +85,42 @@ a { color: $color-accent; }
 
 .mono { font-family: $font-mono; font-variant-numeric: tabular-nums; }
 
+// ─── Geteilte Bausteine (Panels, Pills, Tabellen) ─────────────────────────────
+
+// Panel-Grundfläche — Padding bei Bedarf komponentenlokal überschreiben.
+.card {
+  background: $color-surface;
+  border: 1px solid $color-border;
+  border-radius: $radius;
+  padding: 1.1rem 1.25rem;
+}
+
+// Pill-Grundform — Farben/Varianten definieren die Komponenten.
+.badge {
+  display: inline-block;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+// Daten-Tabelle mit einheitlichem Header — Zellen-Styling bleibt lokal.
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+
+  th {
+    text-align: left;
+    padding: 0.35rem 0.7rem;
+    color: $color-muted;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    border-bottom: 1px solid $color-border;
+  }
+}
+
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: $color-border; border-radius: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
