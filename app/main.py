@@ -14,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app import __version__
 from app.config import Settings, get_settings
+from app.docs import register_docs
 from app.container import get_cached_quote_service
 from app.db import init_db
 from app.models import HealthResponse
@@ -43,7 +44,16 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.info("app_stopped")
 
 
-app = FastAPI(title="StockInfo", version=__version__, lifespan=lifespan)
+# Default-Docs deaktiviert: /redoc entfällt, /docs kommt als Dark-Variante
+# aus app.docs (siehe register_docs weiter unten).
+app = FastAPI(
+    title="StockInfo",
+    version=__version__,
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+)
+register_docs(app)
 app.include_router(quotes.router)
 app.include_router(dashboard.router)
 app.add_middleware(
