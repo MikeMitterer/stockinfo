@@ -121,6 +121,22 @@ a { color: $color-accent; }
   }
 }
 
-::-webkit-scrollbar { width: 10px; height: 10px; }
-::-webkit-scrollbar-thumb { background: $color-border; border-radius: 6px; }
+// Scrollbars — hauchdünn im Overlay-Look. Der Thumb ist unsichtbar und
+// erscheint nur während des Scrollens (html.scrolling — gesetzt von
+// utils/scrollbarActivity) oder beim Hover über dem scrollenden Container.
+* {
+  scrollbar-width: thin;                        // Firefox
+  scrollbar-color: transparent transparent;
+}
+::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: transparent; border-radius: 3px; }
+
+html.scrolling,
+html.scrolling * {
+  scrollbar-color: color-mix(in srgb, var(--c-muted) 45%, transparent) transparent;
+}
+html.scrolling ::-webkit-scrollbar-thumb,
+*:hover::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--c-muted) 45%, transparent);
+}
