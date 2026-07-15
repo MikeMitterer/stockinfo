@@ -74,6 +74,11 @@ export const de = {
   },
   env: {
     title: 'Environment',
+    refreshNote:
+      'Automatischer Kurs-Update: Ein Hintergrund-Scheduler aktualisiert die Kurse aller ' +
+      'gecachten Instrumente alle {hours} Stunden (Refresh-Intervall, per Setting änderbar). ' +
+      'Unabhängig davon gilt bei jeder Abfrage die Cache-TTL — ist ein Kurs älter, wird er ' +
+      'direkt frisch von der Quelle geholt.',
     version: 'Version',
     dbPath: 'DB-Pfad',
     cacheTtl: 'Cache-TTL (h)',

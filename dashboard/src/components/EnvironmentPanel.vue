@@ -11,6 +11,7 @@ const { t } = useI18n()
 <template>
   <section v-if="env" class="env card">
     <h2>{{ t('env.title') }}</h2>
+    <p class="hint">{{ t('env.refreshNote', { hours: env.refresh_interval_hours }) }}</p>
     <dl>
       <div><dt>{{ t('env.version') }}</dt><dd>{{ env.version }}</dd></div>
       <div><dt>{{ t('env.dbPath') }}</dt><dd>{{ env.database_path }}</dd></div>
@@ -28,6 +29,7 @@ const { t } = useI18n()
 @use '../styles/variables' as *;
 
 .env {
+  .hint { color: $color-muted; margin: 0 0 1rem; font-size: 0.85rem; max-width: 72ch; }
   dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.9rem 1.5rem; }
   div { display: flex; flex-direction: column; gap: 0.15rem; }
   dt { color: $color-muted; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }

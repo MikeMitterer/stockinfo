@@ -76,6 +76,11 @@ export const en = {
   },
   env: {
     title: 'Environment',
+    refreshNote:
+      'Automatic quote refresh: a background scheduler refreshes the quotes of all cached ' +
+      'instruments every {hours} hours (refresh interval, configurable via settings). ' +
+      'Independently, the cache TTL applies to every request — quotes older than the TTL ' +
+      'are fetched fresh from the source right away.',
     version: 'Version',
     dbPath: 'DB path',
     cacheTtl: 'Cache TTL (h)',
