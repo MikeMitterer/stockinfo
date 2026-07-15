@@ -12,7 +12,7 @@
   <Overview>StockInfo provides stock and ETF quotes via a REST API (JSON), caches them in a SQLite database and refreshes them periodically. Backend (FastAPI) and dashboard (Vue) run in a single image on one port — the dashboard is served at the root URL, the API under /quote, /instruments, etc. Data sources: yfinance (Yahoo), justETF, OpenFIGI.[br][br]Timezone: the &quot;Timezone&quot; setting (TZ) defaults to UTC — set it to your local zone for correct log timestamps. Valid values (TZ identifier column): https://en.wikipedia.org/wiki/List_of_tz_database_time_zones[br][br]OpenFIGI (optional): resolves an ISIN to the ticker at your preferred exchange (see &quot;Default exchange&quot;). It works without an API key, but only within OpenFIGI&apos;s low anonymous rate limit — once exceeded, resolution falls back to Yahoo search, which may return a different exchange or currency. A free key raises the limit and makes resolution reliable; enter it under &quot;OpenFIGI API key&quot;. Register and create a key: https://www.openfigi.com/api</Overview>
   <Category>Tools: Productivity:</Category>
   <WebUI>http://[IP]:[PORT:8000]/</WebUI>
-  <TemplateURL/>
+  <TemplateURL>https://raw.githubusercontent.com/selfhosters/unRAID-CA-templates/master/templates/stockinfo.xml</TemplateURL>
   <Icon>https://raw.githubusercontent.com/MikeMitterer/stockinfo/master/dashboard/public/stockinfo-icon.png</Icon>
   <Screenshot>https://raw.githubusercontent.com/MikeMitterer/stockinfo/master/unraid/screenshots/dashboard.png</Screenshot>
   <Screenshot>https://raw.githubusercontent.com/MikeMitterer/stockinfo/master/unraid/screenshots/swagger.png</Screenshot>
