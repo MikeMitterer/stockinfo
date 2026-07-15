@@ -45,7 +45,8 @@ export const en = {
     title: 'Price history',
     priceLabel: 'Price',
     loading: 'Loading…',
-    empty: 'No instrument selected or no history in this range.',
+    empty: 'No history in the selected range.',
+    close: 'Close',
     ranges: {
       intraday: '1D',
       oneWeek: '1W',

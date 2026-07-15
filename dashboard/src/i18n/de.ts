@@ -43,7 +43,8 @@ export const de = {
     title: 'Kurshistorie',
     priceLabel: 'Kurs',
     loading: 'Lade…',
-    empty: 'Kein Instrument gewählt oder keine Historie im Zeitraum.',
+    empty: 'Keine Historie im gewählten Zeitraum.',
+    close: 'Schließen',
     ranges: {
       intraday: '1T',
       oneWeek: '1W',

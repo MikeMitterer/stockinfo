@@ -29,12 +29,14 @@ ChartJS.register(
 const props = defineProps<{
   series: { x: number; y: number }[]
   currency: string | null
+  symbol: string | null
   range: RangeKey
   loading: boolean
 }>()
 
 const emit = defineEmits<{
   (event: 'range-change', range: RangeKey): void
+  (event: 'close'): void
 }>()
 
 const { current } = useTheme()
@@ -116,8 +118,13 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
 <template>
   <section class="chart card">
     <header class="head">
-      <h2>{{ t('chart.title') }}</h2>
-      <RangeSelector :active="range" @change="emit('range-change', $event)" />
+      <h2>
+        {{ t('chart.title') }}<span v-if="symbol" class="sym"> — {{ symbol }}</span>
+      </h2>
+      <div class="tools">
+        <RangeSelector :active="range" @change="emit('range-change', $event)" />
+        <button class="x" :title="t('chart.close')" @click="emit('close')">✕</button>
+      </div>
     </header>
     <p v-if="series.length === 0" class="empty">
       {{ loading ? t('chart.loading') : t('chart.empty') }}
@@ -143,8 +150,12 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
   gap: 1rem;
   margin-bottom: 0.75rem;
   h2 { margin: 0; }
+  .sym { color: $color-muted; font-weight: 400; font-family: $font-mono; }
+  .tools { display: flex; align-items: center; gap: 0.6rem; }
+  .x { background: $color-surface-2; padding: 0.2rem 0.55rem; }
 }
 
-.canvas { height: 320px; }
+// Dock-tauglich: skaliert mit der Viewport-Höhe statt fixer 320px
+.canvas { height: clamp(180px, 28vh, 300px); }
 .empty { color: $color-muted; margin: 0.25rem 0 0; }
 </style>
