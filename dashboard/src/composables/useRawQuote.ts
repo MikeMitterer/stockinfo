@@ -25,7 +25,9 @@ export function useRawQuote(): {
   async function load(item: InstrumentRef): Promise<void> {
     const currentRequest = ++requestId
     const path = quotePath(item)
-    url.value = `${API_BASE_URL}${path}`
+    // Absolute URL zum Kopieren/Teilen — bei leerem API_BASE_URL (same-origin)
+    // gegen den Seiten-Origin auflösen statt nur den Pfad anzuzeigen.
+    url.value = new URL(`${API_BASE_URL}${path}`, window.location.origin).toString()
     json.value = ''
     loading.value = true
     error.value = null
