@@ -256,6 +256,7 @@ build() {
         ensureRegistryLogin "${TARGET}" "${NAME}" "${AWS_REGION:-}" "${AMAZON_REPO_URI:-}"
         buildMultiArchImage "${PLATFORM}" "${IMAGE}" "${TAG}" "${LOGFILE}"
         # Push ist bereits erledigt — kein TAGFILE, push() nicht aufrufen
+        updateUnraidTemplate "${TAG}"
         return
     fi
 
@@ -317,6 +318,24 @@ push() {
     pushImage "${_tag}"
 
     echo -e "\n${GREEN}Push erfolgreich: ${IMAGE}:${_tag}${NC}"
+    updateUnraidTemplate "${_tag}"
+}
+
+# updateUnraidTemplate — Unraid-CA-Template auf den gepushten Tag umstellen
+#
+#   Das Template referenziert das Docker-Hub-Image (${NAMESPACE}/${NAME}) —
+#   Pushes zu anderen Targets (ghcr/ecr) betreffen es nicht.
+#
+#   Params:
+#     - Tag des gepushten Images
+#
+updateUnraidTemplate() {
+    local _tag=${1:?}
+
+    if [[ "${TARGET}" == "dockerhub" ]]; then
+        echo
+        "${SCRIPTPATH}/../scripts/update-template.sh" --tag "${_tag}"
+    fi
 }
 
 # Samples-Array — Beispiel-`docker run`-Befehle für dieses Image
