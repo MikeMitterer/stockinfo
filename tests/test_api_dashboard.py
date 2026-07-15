@@ -62,7 +62,7 @@ def test_env(client: TestClient) -> None:
     assert r.status_code == 200
     body = r.json()
     assert body["default_exchange"] == "XETR"
-    assert "api_key_set" in body and "version" in body
+    assert "openfigi_key_set" in body and "version" in body
 
 
 def test_refresh_global(client: TestClient) -> None:

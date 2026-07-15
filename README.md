@@ -187,7 +187,6 @@ Alle Werte lassen sich über `.env` überschreiben (`cp .env.example .env`):
 | `EXTRAETF_ETF_URL` / `EXTRAETF_STOCK_URL` | Profil-Link-Vorlagen (Platzhalter `{isin}`) | extraetf.com/… |
 | `YAHOO_URL` | Yahoo-Link-Vorlage (Platzhalter `{symbol}`) | de.finance.yahoo.com/… |
 | `CORS_ORIGINS` | erlaubte Dashboard-Herkunft(en) | `http://localhost:5173` |
-| `API_KEY` | optionaler Zugriffsschutz (leer = aus) | leer |
 
 [↑ Übersicht](#übersicht)
 

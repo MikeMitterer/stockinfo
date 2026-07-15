@@ -94,7 +94,6 @@ class EnvInfo(BaseModel):
     default_exchange: str
     host: str
     port: int
-    api_key_set: bool
     openfigi_key_set: bool
     extraetf_etf_url: str = ""
     extraetf_stock_url: str = ""

@@ -40,9 +40,6 @@ class Settings(BaseSettings):
     extraetf_stock_url: str = "https://extraetf.com/de/stock-profile/{isin}"
     yahoo_url: str = "https://de.finance.yahoo.com/quote/{symbol}/"
 
-    # Auth (leer = deaktiviert)
-    api_key: str = ""
-
     # Statisches Dashboard — Verzeichnis mit dem gebauten Vue-Bundle.
     # Existiert es nicht (z.B. lokaler Dev), wird nichts ausgeliefert.
     static_dir: str = "/app/web"

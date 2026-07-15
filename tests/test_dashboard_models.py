@@ -19,8 +19,7 @@ def test_env_info_und_refresh_result() -> None:
         default_exchange="XETR",
         host="0.0.0.0",
         port=8000,
-        api_key_set=False,
         openfigi_key_set=True,
     )
-    assert env.api_key_set is False
+    assert env.openfigi_key_set is True
     assert RefreshResult(total=5, refreshed=4).refreshed == 4
