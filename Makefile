@@ -11,6 +11,9 @@ export
 include ${DEV_MAKE}/colours.mk
 include ${DEV_MAKE}/tools.mk
 
+# ProjectTools (geteilte Dev-Scripte) — Fallback für nicht-interaktive Shells (Jenkins etc.)
+PROJECT_TOOLS ?= $(WORKSPACE)/.libs/ProjectTools/src
+
 VENV    := .venv
 UVICORN := $(VENV)/bin/uvicorn
 
@@ -141,6 +144,14 @@ build: ## Docker-Image bauen (docker/build.sh — versioniert via gitDockerTag)
 .PHONY: push
 push: ## Image in Registry pushen (TARGET=ghcr|dockerhub|ecr, Default dockerhub)
 	docker/build.sh --push
+
+# ─── Status ───────────────────────────────────────────────────────────────────
+
+##@ Status
+
+.PHONY: status
+status: ## Git-Status aller Workspace-Repos anzeigen
+	@bash $(PROJECT_TOOLS)/bash/repo-status.sh --show
 
 # ─── Versionierung ────────────────────────────────────────────────────────────
 

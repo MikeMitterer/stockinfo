@@ -9,3 +9,4 @@ uvicorn.log
 docker/logs/
 docker/.last-build-tag
 docker/.last_login
+.libs/
