@@ -266,16 +266,16 @@ TARGET=ghcr make push         # alternatively GitHub Container Registry
 
 ## Unraid
 
-A ready-made container template lives at
-[`unraid/stockinfo.xml`](unraid/stockinfo.xml) — image `mangolila/stockinfo:latest`
-(Docker Hub), WebUI port `8000`, path `/mnt/user/appdata/stockinfo → /data`, plus
-the most important settings as variables (refresh interval, TTLs, exchange,
-OpenFIGI key, timezone).
+A ready-made container template lives in the dedicated CA repo
+[`MikeMitterer/unraid-templates`](https://github.com/MikeMitterer/unraid-templates/blob/master/templates/stockinfo.xml)
+— image `mangolila/stockinfo:latest` (Docker Hub), WebUI port `8000`, path
+`/mnt/user/appdata/stockinfo → /data`, plus the most important settings as
+variables (refresh interval, TTLs, exchange, OpenFIGI key, timezone).
 
 Install it as a user template (run on the Unraid box):
 
 ```bash
-wget -O /boot/config/plugins/dockerMan/templates-user/my-stockinfo.xml https://raw.githubusercontent.com/MikeMitterer/stockinfo/master/unraid/stockinfo.xml
+wget -O /boot/config/plugins/dockerMan/templates-user/my-stockinfo.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml
 ```
 
 Then: **Docker → Add Container** → pick “stockinfo” under *User templates*.
@@ -314,7 +314,7 @@ app/                    # FastAPI backend
 dashboard/              # Vue dashboard (standalone app)
 tests/                  # backend tests (pytest)
 docker/                 # Dockerfile, build.sh (single-image build)
-unraid/                 # Unraid CA template (+ screenshots)
+unraid/screenshots/     # dashboard + swagger screenshots (README + CA template)
 Makefile                # service start/stop (make help)
 ```
 
