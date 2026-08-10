@@ -9,8 +9,9 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app import __version__
 from app.config import Settings, get_settings
-from app.container import get_cached_quote_service
+from app.container import get_cached_quote_service, get_quote_analyzer
 from app.models import (
+    AnalyzeResult,
     EnvInfo,
     InstrumentSummary,
     IsinUpdate,
@@ -18,6 +19,7 @@ from app.models import (
     RefreshResult,
 )
 from app.routers.validation import IsinPath, normalize_isin
+from app.services.analyzer import QuoteAnalyzer
 from app.services.quote_cache import (
     CachedQuoteService,
     IsinConflictError,
@@ -29,6 +31,7 @@ router = APIRouter(tags=["dashboard"])
 
 ServiceDep = Annotated[CachedQuoteService, Depends(get_cached_quote_service)]
 SettingsDep = Annotated[Settings, Depends(get_settings)]
+AnalyzerDep = Annotated[QuoteAnalyzer, Depends(get_quote_analyzer)]
 
 
 @router.get("/instruments", response_model=list[InstrumentSummary])
@@ -53,6 +56,26 @@ def environment(settings: SettingsDep) -> EnvInfo:
         extraetf_etf_url=settings.extraetf_etf_url,
         extraetf_stock_url=settings.extraetf_stock_url,
         yahoo_url=settings.yahoo_url,
+    )
+
+
+@router.get("/analyze", response_model=AnalyzeResult)
+def analyze(
+    analyzer: AnalyzerDep,
+    isin: str | None = None,
+    symbol: str | None = None,
+) -> AnalyzeResult:
+    """Misst die Dauer der Live-Fetch-Stages für ein Wertpapier (Diagnose).
+
+    Genau eines von ``isin``/``symbol`` angeben. Löst echte externe Abfragen aus
+    (kein Cache).
+    """
+    if bool(isin) == bool(symbol):
+        raise HTTPException(
+            status_code=422, detail="Genau eines von isin oder symbol angeben"
+        )
+    return analyzer.analyze(
+        isin=normalize_isin(isin) if isin else None, symbol=symbol
     )
 
 

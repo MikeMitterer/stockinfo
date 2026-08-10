@@ -3,9 +3,9 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
-from app.container import get_cached_quote_service
+from app.container import get_cached_quote_service, get_quote_analyzer
 from app.main import app
-from app.models import QuoteResponse
+from app.models import AnalyzeResult, AnalyzeStage, QuoteResponse
 from app.services.quote_cache import IsinConflictError
 from app.services.quote_service import InstrumentNotFoundError
 
@@ -114,3 +114,28 @@ def test_set_isin_unbekannt_404(client: TestClient) -> None:
 def test_set_isin_konflikt_409(client: TestClient) -> None:
     r = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": "IE00B4L5Y983"})
     assert r.status_code == 409
+
+
+def test_analyze_verlangt_genau_eine_kennung(client: TestClient) -> None:
+    assert client.get("/analyze").status_code == 422
+    assert client.get("/analyze?isin=IE00B4L5Y983&symbol=EUNL.DE").status_code == 422
+
+
+def test_analyze_liefert_stages(client: TestClient) -> None:
+    class _StubAnalyzer:
+        def analyze(self, *, isin=None, symbol=None) -> AnalyzeResult:
+            return AnalyzeResult(
+                symbol="EUNL.DE", isin=isin, total=1.23,
+                stages=[AnalyzeStage(stage="openfigi", seconds=0.5, status="ok")],
+            )
+
+    app.dependency_overrides[get_quote_analyzer] = lambda: _StubAnalyzer()
+    try:
+        response = client.get("/analyze?isin=IE00B4L5Y983")
+    finally:
+        app.dependency_overrides.pop(get_quote_analyzer, None)
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["total"] == 1.23
+    assert body["stages"][0]["stage"] == "openfigi"
