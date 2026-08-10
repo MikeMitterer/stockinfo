@@ -111,3 +111,21 @@ class IsinUpdate(BaseModel):
     """Body zum nachträglichen Eintragen einer ISIN."""
 
     isin: str
+
+
+class AnalyzeStage(BaseModel):
+    """Eine gemessene Stage des Live-Fetch (Diagnose)."""
+
+    stage: str = Field(description="openfigi | fast_info | get_info | isin | history | justetf")
+    seconds: float
+    status: str = Field(description="ok | error | empty | skipped")
+    detail: str | None = None
+
+
+class AnalyzeResult(BaseModel):
+    """Timing-Aufschlüsselung eines Live-Fetch für ein Wertpapier."""
+
+    symbol: str
+    isin: str | None = None
+    total: float
+    stages: list[AnalyzeStage]

@@ -12,6 +12,7 @@ from app.providers.openfigi_provider import OpenFigiClient
 from app.providers.yfinance_provider import YFinanceProvider
 from app.repository import QuoteRepository
 from app.resolver import CompositeResolver, OpenFigiResolver, YFinanceResolver
+from app.services.analyzer import QuoteAnalyzer
 from app.services.daily_history import DailyHistoryService
 from app.services.daily_sync import DailyCloseSync
 from app.services.quote_cache import CachedQuoteService
@@ -45,3 +46,16 @@ def get_daily_history_service() -> DailyHistoryService:
         YFinanceProvider(),
         get_cached_quote_service(),
     )
+
+
+@lru_cache
+def get_quote_analyzer() -> QuoteAnalyzer:
+    """Baut den (gecachten) QuoteAnalyzer aus der aktuellen Konfiguration."""
+    settings = get_settings()
+    resolver = CompositeResolver(
+        OpenFigiResolver(
+            OpenFigiClient(settings.openfigi_api_key), settings.default_exchange
+        ),
+        YFinanceResolver(),
+    )
+    return QuoteAnalyzer(resolver, JustEtfProvider())
