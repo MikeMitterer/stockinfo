@@ -8,6 +8,7 @@ export const en = {
     environment: 'Environment',
     links: 'API & Links',
     themes: 'Themes',
+    analysis: 'Analysis',
     home: 'Go to start page',
   },
   toolbar: {
@@ -92,6 +93,20 @@ export const en = {
     openfigiKeySet: 'OpenFIGI key set',
     yes: 'yes',
     no: 'no',
+  },
+  analysis: {
+    title: 'Live analysis',
+    hint: 'Measures the duration of each fetch step. Triggers real external requests (no cache).',
+    pickInstrument: 'Pick instrument',
+    orEnter: 'or enter ISIN/symbol',
+    placeholder: 'ISIN or symbol (e.g. EUNL.DE)',
+    run: 'Analyze',
+    running: 'Measuring…',
+    colStage: 'Step',
+    colSeconds: 'Duration',
+    colStatus: 'Status',
+    total: 'Total',
+    empty: 'No measurement yet — pick an instrument and click “Analyze”.',
   },
   links: {
     title: 'API & Links',

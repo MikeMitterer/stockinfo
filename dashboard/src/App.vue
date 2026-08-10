@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 
+import AnalysisPanel from './components/AnalysisPanel.vue'
 import AppHeader from './components/AppHeader.vue'
 import EnvironmentPanel from './components/EnvironmentPanel.vue'
 import ErrorBanner from './components/ErrorBanner.vue'
@@ -179,6 +180,7 @@ function closeChart(): void {
     <ExchangesPanel v-else-if="activeTab === 'exchanges'" />
     <EnvironmentPanel v-else-if="activeTab === 'environment'" :env="env" />
     <LinksPanel v-else-if="activeTab === 'links'" />
+    <AnalysisPanel v-else-if="activeTab === 'analysis'" :instruments="instruments" />
     <ThemesPanel v-else />
   </main>
 

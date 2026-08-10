@@ -6,6 +6,7 @@ export const de = {
     environment: 'Environment',
     links: 'API & Links',
     themes: 'Themes',
+    analysis: 'Analyse',
     home: 'Zur Startseite',
   },
   toolbar: {
@@ -90,6 +91,20 @@ export const de = {
     openfigiKeySet: 'OpenFIGI-Key gesetzt',
     yes: 'ja',
     no: 'nein',
+  },
+  analysis: {
+    title: 'Live-Analyse',
+    hint: 'Misst die Dauer der einzelnen Abfrage-Schritte. Löst echte externe Abfragen aus (kein Cache).',
+    pickInstrument: 'Instrument wählen',
+    orEnter: 'oder ISIN/Symbol eingeben',
+    placeholder: 'ISIN oder Symbol (z.B. EUNL.DE)',
+    run: 'Analysieren',
+    running: 'Messe…',
+    colStage: 'Schritt',
+    colSeconds: 'Dauer',
+    colStatus: 'Status',
+    total: 'Gesamt',
+    empty: 'Noch keine Messung — Instrument wählen und „Analysieren" klicken.',
   },
   links: {
     title: 'API & Links',
