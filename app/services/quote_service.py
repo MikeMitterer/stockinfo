@@ -6,7 +6,7 @@ in der Router-Schicht auf HTTP-Statuscodes abgebildet.
 
 import math
 import statistics
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 
 import structlog
 
@@ -136,11 +136,6 @@ class QuoteService:
 
         if instrument_type == "etf" and isin:
             self._enrich_etf(response, isin)
-
-        # Volatilität aus Tages-Schlusskursen berechnen, wenn justETF keine
-        # liefert (Aktien generell, ETFs ohne justETF-Wert).
-        if response.volatility is None:
-            response.volatility = self._compute_volatility(resolved.symbol)
         return response
 
     def _enrich_etf(self, response: QuoteResponse, isin: str) -> None:
@@ -158,29 +153,3 @@ class QuoteService:
         response.volatility = details.volatility
         response.accumulating = details.accumulating
         response.source = "yfinance+justetf"
-
-    def _compute_volatility(self, symbol: str) -> float | None:
-        """Berechnet die 1-Jahres-Volatilität aus den Tages-Schlusskursen.
-
-        Best-effort: greift auf ``fetch_daily_closes`` des Kurs-Providers zu,
-        falls vorhanden. Fehler oder fehlende Daten ergeben ``None``.
-
-        Args:
-            symbol: Yahoo-Symbol des Wertpapiers.
-
-        Returns:
-            Annualisierte Volatilität in Prozent, oder ``None``.
-        """
-        fetch = getattr(self._quote_provider, "fetch_daily_closes", None)
-        if fetch is None:
-            return None
-        start = (datetime.now(timezone.utc).date() - timedelta(days=370)).isoformat()
-        try:
-            rows = fetch(symbol, start=start)
-        except Exception as exc:  # noqa: BLE001 — best-effort
-            logger.debug("volatility_fetch_failed", symbol=symbol, error=str(exc))
-            return None
-        if not rows:  # None (Provider-Fehler) oder leer → keine Berechnung
-            return None
-        closes = [row["close"] for row in rows if row.get("close") is not None]
-        return annualized_volatility(closes)

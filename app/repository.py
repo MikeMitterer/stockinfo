@@ -250,6 +250,14 @@ class QuoteRepository:
                 (isin, symbol),
             )
 
+    def set_volatility(self, instrument_id: int, volatility: float) -> None:
+        """Aktualisiert gezielt die Volatilität eines Instruments."""
+        with self._connect() as connection:
+            connection.execute(
+                "UPDATE instruments SET volatility = ? WHERE id = ?",
+                (volatility, instrument_id),
+            )
+
     def delete_by_symbol(self, symbol: str) -> bool:
         """Löscht ein Instrument (und seine Quotes via Cascade) anhand des Symbols.
 

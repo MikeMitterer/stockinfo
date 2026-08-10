@@ -13,6 +13,7 @@ from app.providers.yfinance_provider import YFinanceProvider
 from app.repository import QuoteRepository
 from app.resolver import CompositeResolver, OpenFigiResolver, YFinanceResolver
 from app.services.daily_history import DailyHistoryService
+from app.services.daily_sync import DailyCloseSync
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteService
 
@@ -29,7 +30,10 @@ def get_cached_quote_service() -> CachedQuoteService:
     )
     quote_service = QuoteService(YFinanceProvider(), JustEtfProvider(), resolver)
     repository = QuoteRepository(settings.database_path)
-    return CachedQuoteService(quote_service, repository, settings.cache_ttl_hours)
+    daily_sync = DailyCloseSync(repository, YFinanceProvider())
+    return CachedQuoteService(
+        quote_service, repository, settings.cache_ttl_hours, daily_sync
+    )
 
 
 @lru_cache

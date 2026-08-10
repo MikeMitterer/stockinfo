@@ -8,8 +8,21 @@ from app.db import init_db
 from app.models import QuoteResponse
 from app.repository import QuoteRepository
 from app.scheduler import RefreshScheduler
+from app.services.daily_sync import DailyCloseSync
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteUnavailableError
+
+
+class _EmptyDailyProvider:
+    """Stub für Tests, die keine Volatilität interessiert: liefert nie Kurse."""
+
+    def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict]:
+        return []
+
+
+def _stub_daily_sync(repo: QuoteRepository) -> DailyCloseSync:
+    """Baut einen `DailyCloseSync`, der nie echte Tages-Schlusskurse liefert."""
+    return DailyCloseSync(repo, _EmptyDailyProvider())
 
 
 class FakeQuoteService:
@@ -67,7 +80,9 @@ def _seed(repo: QuoteRepository, isin: str | None, symbol: str) -> None:
 def test_refresh_all_aktualisiert_alle(repo: QuoteRepository) -> None:
     _seed(repo, "IE00B3RBWM25", "VGWL.DE")
     _seed(repo, None, "AAPL")
-    service = CachedQuoteService(FakeQuoteService(), repo, ttl_hours=6)
+    service = CachedQuoteService(
+        FakeQuoteService(), repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo)
+    )
 
     refreshed = service.refresh_all()
 
@@ -80,7 +95,8 @@ def test_refresh_all_isoliert_fehler(repo: QuoteRepository) -> None:
     _seed(repo, "IE00B3RBWM25", "VGWL.DE")  # wird fehlschlagen
     _seed(repo, None, "AAPL")  # bleibt erfolgreich
     service = CachedQuoteService(
-        FakeQuoteService(failing_isin="IE00B3RBWM25"), repo, ttl_hours=6
+        FakeQuoteService(failing_isin="IE00B3RBWM25"), repo, ttl_hours=6,
+        daily_sync=_stub_daily_sync(repo),
     )
 
     refreshed = service.refresh_all()

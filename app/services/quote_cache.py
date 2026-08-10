@@ -8,16 +8,18 @@ zurückgegeben statt eines Fehlers.
 
 import threading
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import date, datetime, timedelta, timezone
 
 import structlog
 
 from app.models import QuotePoint, QuoteResponse
 from app.repository import QuoteRepository
+from app.services.daily_sync import DailyCloseSync
 from app.services.quote_service import (
     InstrumentNotFoundError,
     QuoteService,
     QuoteUnavailableError,
+    annualized_volatility,
 )
 
 logger = structlog.get_logger()
@@ -44,16 +46,20 @@ class CachedQuoteService:
         quote_service: QuoteService,
         repository: QuoteRepository,
         ttl_hours: int,
+        daily_sync: DailyCloseSync,
     ) -> None:
         """
         Args:
             quote_service: Live-Beschaffung (yfinance + justETF).
             repository: SQLite-Persistenz für Cache und Historie.
             ttl_hours: Maximales Alter eines Kurses, bevor neu beschafft wird.
+            daily_sync: Inkrementelle EOD-Synchronisation für den akkumulierenden
+                Tages-Cache, aus dem die Volatilität berechnet wird.
         """
         self._quote_service = quote_service
         self._repository = repository
         self._ttl_hours = ttl_hours
+        self._daily_sync = daily_sync
         self._refresh_lock = threading.Lock()
 
     def get_by_isin(self, isin: str) -> QuoteResponse:
@@ -187,7 +193,7 @@ class CachedQuoteService:
         refreshed = 0
         for instrument in instruments:
             try:
-                self._save_fresh(self._fetch_live(instrument))
+                self._save_fresh_with_volatility(self._fetch_live(instrument))
                 refreshed += 1
             except Exception as exc:
                 logger.warning(
@@ -208,7 +214,7 @@ class CachedQuoteService:
             InstrumentNotFoundError: ISIN nicht auflösbar.
             QuoteUnavailableError: Kein Kurs beschaffbar.
         """
-        return self._save_fresh(self._quote_service.get_quote_by_isin(isin))
+        return self._save_fresh_with_volatility(self._quote_service.get_quote_by_isin(isin))
 
     def refresh_one_by_symbol(self, symbol: str) -> QuoteResponse:
         """Aktualisiert ein Instrument per Symbol live (für Papiere ohne ISIN).
@@ -216,12 +222,41 @@ class CachedQuoteService:
         Raises:
             QuoteUnavailableError: Kein Kurs beschaffbar.
         """
-        return self._save_fresh(self._quote_service.get_quote_by_symbol(symbol))
+        return self._save_fresh_with_volatility(
+            self._quote_service.get_quote_by_symbol(symbol)
+        )
 
     def _save_fresh(self, fresh: QuoteResponse) -> QuoteResponse:
         """Persistiert einen frisch beschafften Kurs und reicht ihn durch."""
         self._repository.save_quote(fresh)
         return fresh
+
+    def _save_fresh_with_volatility(self, fresh: QuoteResponse) -> QuoteResponse:
+        """Persistiert einen frischen Kurs und ergänzt die Volatilität aus dem Cache.
+
+        Nur wenn der Kurs selbst keine Volatilität mitbringt (justETF liefert für
+        ETFs bereits eine — die bleibt bevorzugt). Wird ausschließlich im
+        Refresh-Pfad aufgerufen, damit der lesende Request-Pfad schlank bleibt.
+        """
+        instrument_id = self._repository.save_quote(fresh)
+        if fresh.volatility is None:
+            volatility = self._volatility_from_cache(instrument_id, fresh.symbol)
+            if volatility is not None:
+                fresh.volatility = volatility
+                self._repository.set_volatility(instrument_id, volatility)
+        return fresh
+
+    def _volatility_from_cache(self, instrument_id: int, symbol: str) -> float | None:
+        """Berechnet die 1-Jahres-Volatilität aus dem akkumulierenden EOD-Cache.
+
+        Zieht zunächst das Delta nach (nur fehlende Tage) und rechnet dann über
+        die letzten ~370 Tage. Best-effort: fehlende/zu wenige Daten → ``None``.
+        """
+        start = (date.today() - timedelta(days=370)).isoformat()
+        self._daily_sync.sync(instrument_id, symbol, start)
+        rows = self._repository.get_daily_closes(instrument_id, start)
+        closes = [row["close"] for row in rows if row.get("close") is not None]
+        return annualized_volatility(closes)
 
     def list_instruments(self) -> list[dict]:
         """Gibt alle Instrumente inkl. letztem Kurs zurück (für das Dashboard)."""
