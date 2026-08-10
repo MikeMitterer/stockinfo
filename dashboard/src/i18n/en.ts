@@ -137,5 +137,6 @@ export const en = {
     refreshOne: 'Refresh failed',
     remove: 'Delete failed',
     setIsin: 'Could not save ISIN',
+    analysis: 'Analysis failed',
   },
 } satisfies typeof de

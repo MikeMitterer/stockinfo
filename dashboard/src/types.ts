@@ -60,7 +60,7 @@ export interface RefreshResult {
 }
 
 /** Aktive Unterseite/Tab des Dashboards. */
-export type TabKey = 'assets' | 'exchanges' | 'environment' | 'links' | 'themes'
+export type TabKey = 'assets' | 'exchanges' | 'environment' | 'links' | 'themes' | 'analysis'
 
 /** Bekannte Icon-Namen der Navigation (deckungsgleich mit den Tabs). */
 export type NavIconName = TabKey
@@ -73,3 +73,19 @@ export interface ErrorEntry {
 
 /** Ausgewählter Chart-Zeitraum. 'intraday' = Tagesverlauf (Ticks), Rest = EOD. */
 export type RangeKey = 'intraday' | '1w' | '1m' | '3m' | '1y' | 'max'
+
+/** Eine einzelne Stufe der On-Demand-Analyse (z.B. Kurs, Historie, Metadaten). */
+export interface AnalyzeStage {
+  stage: string
+  seconds: number
+  status: string
+  detail: string | null
+}
+
+/** Ergebnis einer On-Demand-Stage-Analyse für ein Instrument. */
+export interface AnalyzeResult {
+  symbol: string
+  isin: string | null
+  total: number
+  stages: AnalyzeStage[]
+}

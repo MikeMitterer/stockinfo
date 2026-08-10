@@ -33,3 +33,15 @@ export function quotePath(ref: InstrumentRef): string {
     ? `/quote/${encodeURIComponent(ref.isin)}`
     : `/quote?symbol=${encodeURIComponent(ref.symbol)}`
 }
+
+/**
+ * Baut den /analyze-Pfad — ISIN bevorzugt, sonst Symbol, jeweils als Query.
+ *
+ * @param ref - Instrument mit ISIN und/oder Symbol
+ * @returns `/analyze?isin={isin}` bzw. `/analyze?symbol={symbol}`
+ */
+export function analyzePath(ref: InstrumentRef): string {
+  return ref.isin
+    ? `/analyze?isin=${encodeURIComponent(ref.isin)}`
+    : `/analyze?symbol=${encodeURIComponent(ref.symbol)}`
+}

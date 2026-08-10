@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { instrumentPath, isIsin, quotePath } from '../../src/api/paths'
+import { analyzePath, instrumentPath, isIsin, quotePath } from '../../src/api/paths'
 
 describe('isIsin', () => {
   it('erkennt ISINs', () => {
@@ -36,5 +36,16 @@ describe('quotePath', () => {
 
   it('nutzt das Symbol als Query-Parameter (enkodiert)', () => {
     expect(quotePath({ isin: null, symbol: 'GOLD.SG&x=1' })).toBe('/quote?symbol=GOLD.SG%26x%3D1')
+  })
+})
+
+describe('analyzePath', () => {
+  it('nutzt die ISIN als Query', () => {
+    expect(analyzePath({ isin: 'IE00B4L5Y983', symbol: 'EUNL.DE' })).toBe(
+      '/analyze?isin=IE00B4L5Y983',
+    )
+  })
+  it('fällt ohne ISIN auf das Symbol zurück', () => {
+    expect(analyzePath({ isin: null, symbol: 'AAPL' })).toBe('/analyze?symbol=AAPL')
   })
 })

@@ -135,5 +135,6 @@ export const de = {
     refreshOne: 'Aktualisieren fehlgeschlagen',
     remove: 'Löschen fehlgeschlagen',
     setIsin: 'ISIN konnte nicht gespeichert werden',
+    analysis: 'Analyse fehlgeschlagen',
   },
 }
