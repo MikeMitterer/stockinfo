@@ -73,7 +73,7 @@ async function run(): Promise<void> {
         <tr class="total">
           <td>{{ t('analysis.total') }}</td>
           <td class="num">{{ result.total.toFixed(2) }}s</td>
-          <td>{{ result.symbol }}</td>
+          <td></td>
         </tr>
       </tbody>
     </table>

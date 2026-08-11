@@ -231,3 +231,31 @@ def test_refresh_behaelt_justetf_volatilitaet(tmp_path) -> None:
     result = service.refresh_one("IE00B3RBWM25")
 
     assert result.volatility == 9.95  # justETF-Wert bleibt
+
+
+def test_refresh_behaelt_letzte_volatilitaet_bei_fehlgeschlagener_neuberechnung(
+    tmp_path,
+) -> None:
+    """EOD-Cache leer und Delta-Fetch tot → letzter bekannter Wert bleibt erhalten."""
+
+    class _FailingDailyProvider:
+        """Liefert nie Kurse (leerer EOD-Cache, Delta-Fetch schlägt fehl)."""
+
+        def fetch_daily_closes(self, symbol: str, start: str | None = None):
+            return None
+
+    db_path = str(tmp_path / "vola3.db")
+    init_db(db_path)
+    repo = QuoteRepository(db_path)
+    daily_sync = DailyCloseSync(repo, _FailingDailyProvider())
+    service = CachedQuoteService(_StockQuoteService(), repo, ttl_hours=6, daily_sync=daily_sync)
+
+    repo.save_quote(_StockQuoteService().get_quote_by_isin("US0378331005"))
+    stored_before = repo.get_instrument_by_isin("US0378331005")
+    repo.set_volatility(stored_before["id"], 12.5)  # vorherige, bereits bekannte Volatilität
+
+    result = service.refresh_one("US0378331005")
+
+    assert result.volatility == 12.5  # nicht mit None überschrieben
+    stored = repo.get_instrument_by_isin("US0378331005")
+    assert stored["volatility"] == 12.5

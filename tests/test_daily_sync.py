@@ -67,5 +67,5 @@ def test_sync_holt_beim_zweiten_lauf_nur_das_delta(repo: QuoteRepository) -> Non
     provider.calls.clear()
     sync.sync(inst["id"], inst["symbol"], start)  # gleicher Zeitraum, Cache aktuell genug
 
-    # nur ein Delta-Fetch (fetched_to < heute), nicht erneut die volle Historie
-    assert provider.calls == [repo.get_daily_meta(inst["id"])["fetched_to"]] or provider.calls == []
+    # Cache bereits vollständig für heute und den gewünschten Zeitraum → kein Fetch
+    assert provider.calls == []

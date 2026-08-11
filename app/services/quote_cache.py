@@ -8,7 +8,7 @@ zurückgegeben statt eines Fehlers.
 
 import threading
 from collections.abc import Callable
-from datetime import date, datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone
 
 import structlog
 
@@ -237,14 +237,31 @@ class CachedQuoteService:
         Nur wenn der Kurs selbst keine Volatilität mitbringt (justETF liefert für
         ETFs bereits eine — die bleibt bevorzugt). Wird ausschließlich im
         Refresh-Pfad aufgerufen, damit der lesende Request-Pfad schlank bleibt.
+
+        Schlägt die Neuberechnung fehl (leerer EOD-Cache und toter Delta-Fetch),
+        wird der zuvor gespeicherte Wert wiederhergestellt statt ihn mit ``None``
+        zu überschreiben — behält den letzten bekannten Wert.
         """
+        previous_volatility = self._stored_volatility(fresh)
         instrument_id = self._repository.save_quote(fresh)
         if fresh.volatility is None:
             volatility = self._volatility_from_cache(instrument_id, fresh.symbol)
             if volatility is not None:
                 fresh.volatility = volatility
                 self._repository.set_volatility(instrument_id, volatility)
+            elif previous_volatility is not None:
+                fresh.volatility = previous_volatility
+                self._repository.set_volatility(instrument_id, previous_volatility)
         return fresh
+
+    def _stored_volatility(self, fresh: QuoteResponse) -> float | None:
+        """Liest die aktuell gespeicherte Volatilität, bevor ``save_quote`` sie überschreibt."""
+        instrument = (
+            self._repository.get_instrument_by_isin(fresh.isin)
+            if fresh.isin
+            else self._repository.get_instrument_by_symbol(fresh.symbol)
+        )
+        return instrument["volatility"] if instrument else None
 
     def _volatility_from_cache(self, instrument_id: int, symbol: str) -> float | None:
         """Berechnet die 1-Jahres-Volatilität aus dem akkumulierenden EOD-Cache.
@@ -252,7 +269,7 @@ class CachedQuoteService:
         Zieht zunächst das Delta nach (nur fehlende Tage) und rechnet dann über
         die letzten ~370 Tage. Best-effort: fehlende/zu wenige Daten → ``None``.
         """
-        start = (date.today() - timedelta(days=370)).isoformat()
+        start = (datetime.now(timezone.utc).date() - timedelta(days=370)).isoformat()
         self._daily_sync.sync(instrument_id, symbol, start)
         rows = self._repository.get_daily_closes(instrument_id, start)
         closes = [row["close"] for row in rows if row.get("close") is not None]

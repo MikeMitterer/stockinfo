@@ -10,13 +10,10 @@ from collections.abc import Callable
 from datetime import date, timedelta
 from typing import Any
 
-import structlog
 import yfinance as yf
 
 from app.models import AnalyzeResult, AnalyzeStage
 from app.providers.base import EtfEnricher, InstrumentResolver
-
-logger = structlog.get_logger()
 
 
 class QuoteAnalyzer:
@@ -73,7 +70,7 @@ class QuoteAnalyzer:
 
         ticker = self._ticker_factory(resolved_symbol)
         stages.append(self._measure("fast_info", lambda: _touch_fast_info(ticker)))
-        stages.append(self._measure("get_info", ticker.get_info))
+        stages.append(self._measure("get_info", lambda: ticker.get_info()))
         stages.append(self._measure("isin", lambda: getattr(ticker, "isin", None)))
         stages.append(
             self._measure(

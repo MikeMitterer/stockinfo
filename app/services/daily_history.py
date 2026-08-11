@@ -7,15 +7,11 @@ fehlende Tage) nach — nicht jede Anfrage landet bei yfinance.
 
 from datetime import date, timedelta
 
-import structlog
-
 from app.models import DailyPoint
 from app.repository import QuoteRepository
 from app.services.daily_sync import DailyCloseProvider, DailyCloseSync
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteUnavailableError
-
-logger = structlog.get_logger()
 
 # Zeitraum-Kürzel → Anzahl Tage rückwärts ('max' = alles)
 _PERIOD_DAYS = {"1w": 7, "1m": 31, "3m": 93, "1y": 366}
