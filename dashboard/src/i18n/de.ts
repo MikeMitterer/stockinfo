@@ -59,14 +59,13 @@ export const de = {
   exchanges: {
     title: 'Börsen-Suffixe',
     hint:
-      'Bei der Abfrage per Symbol bestimmt das Suffix die Börse (z.B. {example} = Stuttgart). ' +
+      'Bei der Abfrage per Symbol bestimmt das Suffix die Börse (z.B. {example} = Xetra). ' +
       'Die Währung kommt immer aus dem Live-Kurs — London notiert häufig in Pence.',
     colSuffix: 'Suffix',
     colExchange: 'Börse',
     colRegion: 'Region',
     colCurrency: 'Währung',
     noSuffix: '(ohne)',
-    standard: 'Standard',
     default: 'Standard',
     penceNote: 'oft Pence (1/100 GBP)!',
     regions: {

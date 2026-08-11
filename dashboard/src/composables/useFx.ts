@@ -20,6 +20,7 @@ export function useFx(): {
   async function convert(base: string, quote: string): Promise<void> {
     loading.value = true
     error.value = null
+    result.value = null
     try {
       result.value = await apiClient.get<FxRate>(fxPath(base, quote))
     } catch (err) {

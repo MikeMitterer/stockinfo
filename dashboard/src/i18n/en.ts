@@ -61,14 +61,13 @@ export const en = {
   exchanges: {
     title: 'Exchange suffixes',
     hint:
-      'When querying by symbol, the suffix selects the exchange (e.g. {example} = Stuttgart). ' +
+      'When querying by symbol, the suffix selects the exchange (e.g. {example} = Xetra). ' +
       'The currency always comes from the live quote — London often trades in pence.',
     colSuffix: 'Suffix',
     colExchange: 'Exchange',
     colRegion: 'Region',
     colCurrency: 'Currency',
     noSuffix: '(none)',
-    standard: 'Default',
     default: 'Default',
     penceNote: 'often pence (1/100 GBP)!',
     regions: {

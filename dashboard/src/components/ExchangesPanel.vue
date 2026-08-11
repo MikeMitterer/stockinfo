@@ -10,7 +10,7 @@ const { t } = useI18n()
 <template>
   <section v-if="data" class="exchanges card">
     <h2>{{ t('exchanges.title') }}</h2>
-    <p class="hint">{{ t('exchanges.hint', { example: 'GOLD.SG' }) }}</p>
+    <p class="hint">{{ t('exchanges.hint', { example: 'EUNL.DE' }) }}</p>
     <div class="scroll">
       <table class="data-table">
         <thead>
@@ -28,6 +28,7 @@ const { t } = useI18n()
             <td class="mono">{{ ex.currency }}</td>
             <td>
               <span v-if="ex.mic === data.default_exchange" class="badge std">{{ t('exchanges.default') }}</span>
+              <span v-if="ex.currency === 'GBp'" class="badge warn">{{ t('exchanges.penceNote') }}</span>
             </td>
           </tr>
         </tbody>
