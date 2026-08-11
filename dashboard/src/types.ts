@@ -32,12 +32,28 @@ export interface EnvInfo {
   refresh_interval_hours: number
   metadata_ttl_days: number
   default_exchange: string
+  strict_exchange: boolean
   host: string
   port: number
   openfigi_key_set: boolean
   extraetf_etf_url: string
   extraetf_stock_url: string
   yahoo_url: string
+}
+
+/** Eine weltweit unterstützte Börse mit Yahoo-Suffix und Notierungswährung. */
+export interface ExchangeInfo {
+  mic: string
+  suffix: string
+  name: string
+  region: string
+  currency: string
+}
+
+/** Antwort von GET /exchanges: die volle Börsentabelle plus konfigurierte Default-Börse. */
+export interface ExchangesResponse {
+  default_exchange: string
+  exchanges: ExchangeInfo[]
 }
 
 export interface QuotePoint {

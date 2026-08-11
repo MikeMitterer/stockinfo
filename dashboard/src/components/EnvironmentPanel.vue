@@ -19,6 +19,7 @@ const { t } = useI18n()
       <div><dt>{{ t('env.refreshInterval') }}</dt><dd>{{ env.refresh_interval_hours }}</dd></div>
       <div><dt>{{ t('env.metadataTtl') }}</dt><dd>{{ env.metadata_ttl_days }}</dd></div>
       <div><dt>{{ t('env.defaultExchange') }}</dt><dd>{{ env.default_exchange }}</dd></div>
+      <div><dt>{{ t('env.strictExchange') }}</dt><dd>{{ env.strict_exchange ? t('env.yes') : t('env.no') }}</dd></div>
       <div><dt>{{ t('env.hostPort') }}</dt><dd>{{ env.host }}:{{ env.port }}</dd></div>
       <div><dt>{{ t('env.openfigiKeySet') }}</dt><dd>{{ env.openfigi_key_set ? t('env.yes') : t('env.no') }}</dd></div>
     </dl>

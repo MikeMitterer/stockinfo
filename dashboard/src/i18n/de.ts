@@ -66,6 +66,7 @@ export const de = {
     colCurrency: 'Währung',
     noSuffix: '(ohne)',
     standard: 'Standard',
+    default: 'Standard',
     penceNote: 'oft Pence (1/100 GBP)!',
     regions: {
       germany: 'Deutschland',
@@ -87,6 +88,7 @@ export const de = {
     refreshInterval: 'Refresh-Intervall (h)',
     metadataTtl: 'Metadaten-TTL (d)',
     defaultExchange: 'Default-Börse',
+    strictExchange: 'Strikte Börse',
     hostPort: 'Host:Port',
     openfigiKeySet: 'OpenFIGI-Key gesetzt',
     yes: 'ja',
@@ -142,6 +144,7 @@ export const de = {
     dismiss: 'Ausblenden',
     instruments: 'Instrumente konnten nicht geladen werden',
     environment: 'Environment konnte nicht geladen werden',
+    exchanges: 'Börsen konnten nicht geladen werden',
     history: 'Historie konnte nicht geladen werden',
     daily: 'Tageshistorie konnte nicht geladen werden',
     refresh: 'Refresh fehlgeschlagen',

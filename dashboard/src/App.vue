@@ -16,6 +16,7 @@ import Toolbar from './components/Toolbar.vue'
 import TopProgress from './components/TopProgress.vue'
 import { useDaily } from './composables/useDaily'
 import { useEnvironment } from './composables/useEnvironment'
+import { useExchanges } from './composables/useExchanges'
 import { useHashTab } from './composables/useHashTab'
 import { useHealth } from './composables/useHealth'
 import { useHistory } from './composables/useHistory'
@@ -25,6 +26,7 @@ import { useRefresh } from './composables/useRefresh'
 import type { ErrorEntry, InstrumentSummary, RangeKey } from './types'
 
 const { env, load: loadEnv } = useEnvironment()
+const { data: exchanges, load: loadExchanges } = useExchanges()
 const { instruments, load: loadInstruments, error: instrumentsError } = useInstruments()
 const {
   load: loadHistory,
@@ -88,7 +90,7 @@ const chartSeries = computed<{ x: number; y: number }[]>(() => {
 
 onMounted(async () => {
   startHealth()
-  await Promise.all([loadEnv(), loadInstruments()])
+  await Promise.all([loadEnv(), loadInstruments(), loadExchanges()])
 })
 
 onUnmounted(() => stopHealth())
@@ -177,7 +179,7 @@ function closeChart(): void {
       />
     </template>
 
-    <ExchangesPanel v-else-if="activeTab === 'exchanges'" />
+    <ExchangesPanel v-else-if="activeTab === 'exchanges'" :data="exchanges" />
     <EnvironmentPanel v-else-if="activeTab === 'environment'" :env="env" />
     <LinksPanel v-else-if="activeTab === 'links'" />
     <AnalysisPanel v-else-if="activeTab === 'analysis'" :instruments="instruments" />

@@ -68,6 +68,7 @@ export const en = {
     colCurrency: 'Currency',
     noSuffix: '(none)',
     standard: 'Default',
+    default: 'Default',
     penceNote: 'often pence (1/100 GBP)!',
     regions: {
       germany: 'Germany',
@@ -89,6 +90,7 @@ export const en = {
     refreshInterval: 'Refresh interval (h)',
     metadataTtl: 'Metadata TTL (d)',
     defaultExchange: 'Default exchange',
+    strictExchange: 'Strict exchange',
     hostPort: 'Host:Port',
     openfigiKeySet: 'OpenFIGI key set',
     yes: 'yes',
@@ -144,6 +146,7 @@ export const en = {
     dismiss: 'Dismiss',
     instruments: 'Could not load instruments',
     environment: 'Could not load environment',
+    exchanges: 'Exchanges could not be loaded',
     history: 'Could not load history',
     daily: 'Could not load daily history',
     refresh: 'Refresh failed',
