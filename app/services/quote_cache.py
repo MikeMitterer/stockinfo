@@ -15,6 +15,7 @@ import structlog
 from app.models import QuotePoint, QuoteResponse
 from app.repository import QuoteRepository
 from app.services.daily_sync import DailyCloseSync
+from app.services.freshness import is_fresh
 from app.services.quote_service import (
     InstrumentNotFoundError,
     QuoteService,
@@ -327,7 +328,7 @@ class CachedQuoteService:
         latest = (
             self._repository.get_latest_quote(instrument["id"]) if instrument else None
         )
-        if instrument and latest and self._is_fresh(latest["fetched_at"]):
+        if instrument and latest and is_fresh(latest["fetched_at"], self._ttl_hours):
             return self._from_cache(instrument, latest, stale=False)
 
         try:
@@ -341,17 +342,6 @@ class CachedQuoteService:
             raise
 
         return self._save_fresh(fresh)
-
-    def _is_fresh(self, fetched_at: str) -> bool:
-        """Prüft, ob ein Zeitstempel jünger als die TTL ist."""
-        try:
-            timestamp = datetime.fromisoformat(fetched_at)
-        except ValueError:
-            return False
-        if timestamp.tzinfo is None:
-            timestamp = timestamp.replace(tzinfo=timezone.utc)
-        age_seconds = (datetime.now(timezone.utc) - timestamp).total_seconds()
-        return age_seconds < self._ttl_hours * 3600
 
     @staticmethod
     def _from_cache(instrument: dict, quote: dict, stale: bool) -> QuoteResponse:

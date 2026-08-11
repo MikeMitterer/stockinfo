@@ -372,3 +372,25 @@ class QuoteRepository:
                 response.fetched_at,
             ),
         )
+
+    def get_fx_rate(self, base: str, quote: str) -> dict | None:
+        """Gibt den gecachten Wechselkurs für ein Paar zurück (oder ``None``)."""
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM fx_rates WHERE base = ? AND quote = ?", (base, quote)
+            ).fetchone()
+            return dict(row) if row else None
+
+    def save_fx_rate(
+        self, base: str, quote: str, rate: float, quote_time: str, fetched_at: str
+    ) -> None:
+        """Speichert/aktualisiert einen Wechselkurs (Upsert auf (base, quote))."""
+        with self._connect() as connection:
+            connection.execute(
+                "INSERT INTO fx_rates (base, quote, rate, quote_time, fetched_at) "
+                "VALUES (?, ?, ?, ?, ?) "
+                "ON CONFLICT (base, quote) DO UPDATE SET "
+                "rate = excluded.rate, quote_time = excluded.quote_time, "
+                "fetched_at = excluded.fetched_at",
+                (base, quote, rate, quote_time, fetched_at),
+            )

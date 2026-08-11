@@ -62,6 +62,15 @@ CREATE TABLE IF NOT EXISTS daily_meta (
     fetched_from  TEXT,
     fetched_to    TEXT
 );
+
+CREATE TABLE IF NOT EXISTS fx_rates (
+    base       TEXT NOT NULL,
+    quote      TEXT NOT NULL,
+    rate       REAL NOT NULL,
+    quote_time TEXT NOT NULL,
+    fetched_at TEXT NOT NULL,
+    PRIMARY KEY (base, quote)
+);
 """
 
 

@@ -16,6 +16,7 @@ from app.resolver import CompositeResolver, OpenFigiResolver, YFinanceResolver
 from app.services.analyzer import QuoteAnalyzer
 from app.services.daily_history import DailyHistoryService
 from app.services.daily_sync import DailyCloseSync
+from app.services.fx_service import CachedFxService
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteService
 
@@ -60,3 +61,12 @@ def get_quote_analyzer() -> QuoteAnalyzer:
     settings = get_settings()
     resolver = _build_resolver(settings)
     return QuoteAnalyzer(resolver, JustEtfProvider())
+
+
+@lru_cache
+def get_fx_service() -> CachedFxService:
+    """Baut den (gecachten) CachedFxService aus der aktuellen Konfiguration."""
+    settings = get_settings()
+    return CachedFxService(
+        YFinanceProvider(), QuoteRepository(settings.database_path), settings.fx_ttl_hours
+    )
