@@ -15,7 +15,11 @@ _ENDPOINT = "https://api.openfigi.com/v3/mapping"
 
 
 class OpenFigiClient:
-    """Mappt ISINs über OpenFIGI auf den Ticker einer bestimmten Börse (MIC)."""
+    """Mappt ISINs über OpenFIGI auf den Ticker einer bestimmten Börse.
+
+    Auflösung entweder über ``micCode`` (einzelne Börse, z.B. Xetra) oder
+    ``exchCode`` (z.B. das US-Composite über alle US-Börsen hinweg).
+    """
 
     def __init__(self, api_key: str = "", timeout: float = 15.0) -> None:
         """
@@ -26,12 +30,17 @@ class OpenFigiClient:
         self._api_key = api_key
         self._timeout = timeout
 
-    def map_isin(self, isin: str, mic_code: str) -> str | None:
-        """Liefert den Ticker einer ISIN an der angegebenen Börse.
+    def map_isin(
+        self, isin: str, id_value: str, id_type: str = "micCode"
+    ) -> str | None:
+        """Liefert den Ticker einer ISIN an einer Börse.
 
         Args:
             isin: ISIN des Wertpapiers.
-            mic_code: MIC der Zielbörse (z.B. 'XETR' für Xetra).
+            id_value: Wert des Auflösungsmerkmals (z.B. 'XETR' für micCode,
+                'US' für exchCode).
+            id_type: OpenFIGI-Feld — 'micCode' (einzelne Börse) oder 'exchCode'
+                (z.B. das US-Composite).
 
         Returns:
             Ticker (z.B. 'VGWL') oder ``None``, wenn kein Mapping gefunden wird.
@@ -39,7 +48,7 @@ class OpenFigiClient:
         headers = {"Content-Type": "application/json"}
         if self._api_key:
             headers["X-OPENFIGI-APIKEY"] = self._api_key
-        payload = [{"idType": "ID_ISIN", "idValue": isin, "micCode": mic_code}]
+        payload = [{"idType": "ID_ISIN", "idValue": isin, id_type: id_value}]
         try:
             response = httpx.post(
                 _ENDPOINT, json=payload, headers=headers, timeout=self._timeout
@@ -47,7 +56,13 @@ class OpenFigiClient:
             response.raise_for_status()
             data = response.json()
         except Exception as exc:
-            logger.warning("openfigi_failed", isin=isin, mic=mic_code, error=str(exc))
+            logger.warning(
+                "openfigi_failed",
+                isin=isin,
+                id_type=id_type,
+                id_value=id_value,
+                error=str(exc),
+            )
             return None
         return self._extract_ticker(data)
 

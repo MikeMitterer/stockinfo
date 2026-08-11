@@ -7,6 +7,8 @@ Das Yahoo-Suffix wählt die *Börse* — die *Währung* wird NICHT daraus abgele
 sondern stammt immer aus dem Live-Quote (siehe yfinance_provider).
 """
 
+from dataclasses import dataclass
+
 import structlog
 import yfinance as yf
 
@@ -15,19 +17,62 @@ from app.providers.openfigi_provider import OpenFigiClient
 
 logger = structlog.get_logger()
 
-# Bevorzugte Börse (MIC) → (Yahoo-Suffix, Anzeigename).
-# MIC wird 1:1 als OpenFIGI micCode verwendet.
-EXCHANGES: dict[str, tuple[str, str]] = {
-    "XETR": (".DE", "Xetra"),
-    "XFRA": (".F", "Frankfurt"),
-    "XLON": (".L", "London"),
-    "XMIL": (".MI", "Milan"),
-    "XPAR": (".PA", "Paris"),
-    "XAMS": (".AS", "Amsterdam"),
-    "XSWX": (".SW", "SIX Swiss"),
-    "XMAD": (".MC", "Madrid"),
-    "XWBO": (".VI", "Vienna"),
-    "XBRU": (".BR", "Brussels"),
+
+@dataclass(frozen=True)
+class ExchangeDef:
+    """Definition einer Börse: Anzeige, Yahoo-Suffix, OpenFIGI-Auflösung.
+
+    ``currency`` ist nur Anzeige — die reale Kurswährung stammt aus dem Live-Quote.
+    ``figi_value`` leer ⇒ der Dict-Key (MIC) wird als Auflösungswert verwendet.
+    """
+
+    suffix: str
+    name: str
+    region: str  # "germany" | "usa" | "europe" | "global"
+    currency: str
+    figi_id_type: str = "micCode"
+    figi_value: str = ""
+
+
+# Weltweite Börsentabelle: Key = MIC (bzw. 'US'). Erweiterbar per Zeile.
+EXCHANGES: dict[str, ExchangeDef] = {
+    # Amerika
+    "US": ExchangeDef("", "NYSE / NASDAQ", "usa", "USD", "exchCode", "US"),
+    "XTSE": ExchangeDef(".TO", "Toronto", "global", "CAD"),
+    "XTSX": ExchangeDef(".V", "TSX Venture", "global", "CAD"),
+    "BVMF": ExchangeDef(".SA", "São Paulo (B3)", "global", "BRL"),
+    "XMEX": ExchangeDef(".MX", "Mexiko", "global", "MXN"),
+    # Europa
+    "XETR": ExchangeDef(".DE", "Xetra", "germany", "EUR"),
+    "XFRA": ExchangeDef(".F", "Frankfurt", "germany", "EUR"),
+    "XLON": ExchangeDef(".L", "London LSE", "europe", "GBp"),
+    "XMIL": ExchangeDef(".MI", "Mailand", "europe", "EUR"),
+    "XPAR": ExchangeDef(".PA", "Paris (Euronext)", "europe", "EUR"),
+    "XAMS": ExchangeDef(".AS", "Amsterdam", "europe", "EUR"),
+    "XBRU": ExchangeDef(".BR", "Brüssel", "europe", "EUR"),
+    "XLIS": ExchangeDef(".LS", "Lissabon", "europe", "EUR"),
+    "XMAD": ExchangeDef(".MC", "Madrid", "europe", "EUR"),
+    "XWBO": ExchangeDef(".VI", "Wien", "europe", "EUR"),
+    "XSWX": ExchangeDef(".SW", "SIX Swiss", "europe", "CHF"),
+    "XSTO": ExchangeDef(".ST", "Stockholm", "europe", "SEK"),
+    "XCSE": ExchangeDef(".CO", "Kopenhagen", "europe", "DKK"),
+    "XOSL": ExchangeDef(".OL", "Oslo", "europe", "NOK"),
+    "XHEL": ExchangeDef(".HE", "Helsinki", "europe", "EUR"),
+    "XWAR": ExchangeDef(".WA", "Warschau", "europe", "PLN"),
+    # Asien-Pazifik
+    "XTKS": ExchangeDef(".T", "Tokio", "global", "JPY"),
+    "XHKG": ExchangeDef(".HK", "Hongkong", "global", "HKD"),
+    "XSHG": ExchangeDef(".SS", "Shanghai", "global", "CNY"),
+    "XSHE": ExchangeDef(".SZ", "Shenzhen", "global", "CNY"),
+    "XASX": ExchangeDef(".AX", "Sydney (ASX)", "global", "AUD"),
+    "XSES": ExchangeDef(".SI", "Singapur", "global", "SGD"),
+    "XNSE": ExchangeDef(".NS", "Indien NSE", "global", "INR"),
+    "XBOM": ExchangeDef(".BO", "Indien BSE", "global", "INR"),
+    "XKRX": ExchangeDef(".KS", "Korea (KRX)", "global", "KRW"),
+    "XTAI": ExchangeDef(".TW", "Taiwan", "global", "TWD"),
+    # Afrika / Nahost
+    "XJSE": ExchangeDef(".JO", "Johannesburg", "global", "ZAR"),
+    "XTAE": ExchangeDef(".TA", "Tel Aviv", "global", "ILS"),
 }
 DEFAULT_EXCHANGE = "XETR"
 
@@ -47,25 +92,31 @@ class OpenFigiResolver:
         self._default_exchange = default_exchange
 
     def resolve_isin(self, isin: str) -> ResolvedInstrument | None:
-        """Löst eine ISIN zum Yahoo-Symbol der bevorzugten Börse auf.
+        """Löst eine ISIN zum Yahoo-Symbol der konfigurierten Börse auf.
 
         Args:
             isin: ISIN des Wertpapiers.
 
         Returns:
             Aufgelöstes Instrument oder ``None``, wenn OpenFIGI kein Listing an
-            der bevorzugten Börse kennt.
+            der konfigurierten Börse kennt.
         """
-        suffix, label = EXCHANGES.get(
-            self._default_exchange, EXCHANGES[DEFAULT_EXCHANGE]
-        )
-        ticker = self._client.map_isin(isin, self._default_exchange)
+        exch = EXCHANGES.get(self._default_exchange)
+        if exch is None:
+            logger.warning(
+                "unknown_default_exchange", configured=self._default_exchange
+            )
+            exch = EXCHANGES[DEFAULT_EXCHANGE]
+        id_value = exch.figi_value or self._default_exchange
+        ticker = self._client.map_isin(isin, id_value, id_type=exch.figi_id_type)
         if not ticker:
             logger.warning(
                 "openfigi_resolve_empty", isin=isin, exchange=self._default_exchange
             )
             return None
-        return ResolvedInstrument(symbol=f"{ticker}{suffix}", isin=isin, exchange=label)
+        return ResolvedInstrument(
+            symbol=f"{ticker}{exch.suffix}", isin=isin, exchange=exch.name
+        )
 
 
 class YFinanceResolver:
