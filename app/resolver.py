@@ -101,13 +101,13 @@ class OpenFigiResolver:
             Aufgelöstes Instrument oder ``None``, wenn OpenFIGI kein Listing an
             der konfigurierten Börse kennt.
         """
-        exch = EXCHANGES.get(self._default_exchange)
+        key = self._default_exchange
+        exch = EXCHANGES.get(key)
         if exch is None:
-            logger.warning(
-                "unknown_default_exchange", configured=self._default_exchange
-            )
-            exch = EXCHANGES[DEFAULT_EXCHANGE]
-        id_value = exch.figi_value or self._default_exchange
+            logger.warning("unknown_default_exchange", configured=key)
+            key = DEFAULT_EXCHANGE
+            exch = EXCHANGES[key]
+        id_value = exch.figi_value or key
         ticker = self._client.map_isin(isin, id_value, id_type=exch.figi_id_type)
         if not ticker:
             logger.warning(

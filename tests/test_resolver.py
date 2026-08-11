@@ -82,6 +82,7 @@ def test_unbekannte_boerse_faellt_auf_xetr_zurueck() -> None:
     resolved = OpenFigiResolver(figi, "NOPE").resolve_isin("IE00B4L5Y983")
     assert resolved is not None
     assert resolved.symbol == "EUNL.DE"
+    assert figi.calls == [("IE00B4L5Y983", "XETR", "micCode")]
 
 
 def test_us_ist_in_tabelle_mit_exchcode() -> None:
