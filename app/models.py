@@ -111,6 +111,19 @@ class ExchangeInfo(BaseModel):
     currency: str
 
 
+class FxRate(BaseModel):
+    """Ein Wechselkurs: 1 ``base`` = ``rate`` ``quote`` (base=von, quote=nach)."""
+
+    base: str
+    quote: str
+    rate: float
+    quote_time: str
+    source: str | None = None
+    cached: bool = False
+    stale: bool = False
+    fetched_at: str
+
+
 class ExchangesResponse(BaseModel):
     """Weltweite Börsentabelle + die konfigurierte Default-Börse der Instanz."""
 

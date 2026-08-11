@@ -121,3 +121,32 @@ def test_yfinance_helfer() -> None:
     assert provider._as_int("x") is None
     assert provider._quote_time({"regularMarketTime": 0}).startswith("1970-01-01")
     assert provider._safe_isin(FakeTicker()) == "IE00B3RBWM25"
+
+
+def test_yfinance_fetch_fx_rate(monkeypatch) -> None:
+    class _FxFast:
+        last_price = 1.1538
+
+    class _FxTicker:
+        fast_info = _FxFast()
+
+    captured = {}
+
+    def fake_ticker(symbol):
+        captured["symbol"] = symbol
+        return _FxTicker()
+
+    monkeypatch.setattr(yfinance_module.yf, "Ticker", fake_ticker)
+
+    rate = YFinanceProvider().fetch_fx_rate("EUR", "USD")
+
+    assert rate == 1.1538
+    assert captured["symbol"] == "EURUSD=X"
+
+
+def test_yfinance_fetch_fx_rate_ohne_wert_gibt_none(monkeypatch) -> None:
+    class _NoRate:
+        fast_info = type("F", (), {"last_price": None})()
+
+    monkeypatch.setattr(yfinance_module.yf, "Ticker", lambda s: _NoRate())
+    assert YFinanceProvider().fetch_fx_rate("EUR", "USD") is None

@@ -27,6 +27,7 @@ class Settings(BaseSettings):
     cache_ttl_hours: int = 6
     refresh_interval_hours: int = 6
     metadata_ttl_days: int = 7
+    fx_ttl_hours: int = 1  # maximales Alter eines Devisenkurses, bevor neu geholt wird
 
     # ISIN-Auflösung
     default_exchange: str = "XETR"  # bevorzugte Börse für ISIN-Abfragen (MIC)

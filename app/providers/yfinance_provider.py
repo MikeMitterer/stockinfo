@@ -97,6 +97,23 @@ class YFinanceProvider:
             )
         return rows
 
+    def fetch_fx_rate(self, base: str, quote: str) -> float | None:
+        """Holt den Wechselkurs 1 base = ? quote von Yahoo (Symbol '{BASE}{QUOTE}=X').
+
+        Returns:
+            Kurs als float, oder ``None`` bei Fehler bzw. fehlendem Kurs.
+        """
+        symbol = f"{base}{quote}=X"
+        try:
+            rate = self._fast_attr(yf.Ticker(symbol).fast_info, "last_price")
+        except Exception as exc:
+            logger.warning("fetch_fx_failed", pair=f"{base}{quote}", error=str(exc))
+            return None
+        if rate is None:
+            logger.warning("fetch_fx_no_rate", pair=f"{base}{quote}")
+            return None
+        return float(rate)
+
     @staticmethod
     def _fast_attr(fast: Any, name: str) -> Any:
         """Liest ein FastInfo-Feld per Attribut-Zugriff; ``None`` bei Fehler.
