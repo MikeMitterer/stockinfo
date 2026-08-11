@@ -18,7 +18,7 @@ from app.docs import register_docs
 from app.container import get_cached_quote_service
 from app.db import init_db
 from app.models import HealthResponse
-from app.routers import dashboard, quotes
+from app.routers import dashboard, fx, quotes
 from app.scheduler import RefreshScheduler
 
 logger = structlog.get_logger()
@@ -56,6 +56,7 @@ app = FastAPI(
 register_docs(app)
 app.include_router(quotes.router)
 app.include_router(dashboard.router)
+app.include_router(fx.router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=get_settings().cors_origins,
