@@ -16,6 +16,11 @@ Datenmodell zu verkomplizieren. Zwei unabhängige Stufen (aus der Konsumenten-An
   demselben Frische-Vertrag wie Kurse (Zeitstempel, Quelle, `stale`), damit die
   Konsumenten-App gemischte Depots umrechnen kann.
 
+**Priorität:** Stufe 1 ist tragend — mit einer regional konfigurierten Instanz kommt jede
+Position in der Landeswährung zurück (Kanadier → CAD, Amerikaner → USD, Europäer → EUR),
+ein **einwährungsiges** Depot braucht gar keine Umrechnung. Stufe 2 (FX) ist „nice to
+have" und nur für den Sonderfall **gemischter** Depots nötig. Daher: Stufe 1 zuerst.
+
 **Kernentscheidungen (mit dem Auftraggeber festgelegt):**
 - **Eine ISIN = eine Zeile** (pro Instanz). Keine koexistierenden Mehrfach-Notierungen,
   kein Schema-Rekey der Instrument-Identität. Die Notierung ist eine Instanz-Eigenschaft,
@@ -164,6 +169,13 @@ Neuer, kleiner Router `app/routers/fx.py`, eingebunden in `app/main.py`:
 GET /fx?base=EUR&quote=USD   → FxRate
 ```
 
+**Semantik:** `rate` = wie viel `quote` für **1** `base` (Standard-Marktkonvention,
+bildet Yahoo 1:1 ab). `/fx?base=EUR&quote=USD` → `1.15` = 1 EUR = 1,15 USD. Merksatz:
+**`base` = von, `quote` = nach, dann multiplizieren** — Betrag in `base` × `rate` = Betrag
+in `quote`. Beispiel: 100 USD → EUR = `/fx?base=USD&quote=EUR` (`rate ≈ 0.87`) → 87 EUR.
+Keine clientseitige Umkehrung/Triangulation nötig: Yahoo liefert beide Richtungen direkt
+(`EURUSD=X` **und** `USDEUR=X`), jede Anfrage holt ihr eigenes Symbol.
+
 - Validierung: `base`/`quote` je genau 3 Buchstaben, uppercase-normalisiert; sonst 422.
 - `base == quote` → Kurzschluss auf `rate = 1.0` (kein Fetch), `source = "identity"`.
 - Kein Kurs beschaffbar und kein Cache → 502 (analog zu den Quote-Routen).
@@ -171,12 +183,56 @@ GET /fx?base=EUR&quote=USD   → FxRate
 ### Config & Sichtbarkeit
 
 - `fx_ttl_hours: int = 1` (`app/config.py`), über `/env` + `EnvironmentPanel` sichtbar.
-- Kein Dashboard-Umrechner-UI — der Konsument ist die API, nicht der StockInfo-Nutzer.
+- Dashboard-Oberfläche: eigener „Devisen"-Tab (siehe Abschnitt *UI / Dashboard*).
 
 ### Fehlerbehandlung Stufe 2
 
 - Unbekanntes Währungspaar (Yahoo liefert nichts) und kein Cache → 502 mit klarer Meldung.
 - Alter Kurs bei Fetch-Fehler → `stale = true` mit Zeitstempel (nie stiller alter Wert).
+
+---
+
+## UI / Dashboard
+
+Jede Backend-Fähigkeit hat im Dashboard eine Oberfläche (Kurse→Tabelle, `/analyze`→Analyse-
+Tab, `/env`→Environment-Panel). Beide Stufen bekommen daher konsistente UI.
+
+### Stufe 1 — Börsen datengetrieben + Config sichtbar
+
+Heute pflegt `dashboard/src/components/ExchangesPanel.vue` eine **hartkodierte** Börsenliste,
+die von der Backend-`EXCHANGES`-Tabelle getrennt ist und bereits **auseinandergedriftet** ist
+(das Panel zeigt Börsen, die der Resolver nicht auflösen kann). Das wird zur einen Quelle der
+Wahrheit zusammengeführt:
+
+- **Neuer Endpoint `GET /exchanges`** (`app/routers/dashboard.py`) liefert die Welt-Tabelle
+  aus dem Backend als Liste `{mic, suffix, name, region, currency}`. Die Backend-`EXCHANGES`-
+  Tabelle wird dafür um die Anzeigefelder `region` und übliche `currency` angereichert
+  (statische Daten; die tatsächliche Kurswährung stammt weiterhin aus dem Live-Quote).
+  Antwort enthält zusätzlich die aktuell konfigurierte `default_exchange` der Instanz.
+- **`ExchangesPanel` wird datengetrieben** (neues Composable `useExchanges` → `/exchanges`)
+  statt der hartkodierten Liste; es zeigt exakt die auflösbaren Börsen und **hebt die
+  konfigurierte Default-Börse hervor**. Die pence-/standard-Badges bleiben (aus dem
+  Backend-Feld ableitbar oder clientseitig für `GBp`/`XETR`).
+- **`EnvironmentPanel`** zeigt zusätzlich `default_exchange` (bereits vorhanden) und neu
+  `strict_exchange` — analog zu `metadata_ttl_days`.
+
+### Stufe 2 — Devisen-Tab
+
+Neuer Tab `fx` nach dem Muster des Analyse-Tabs:
+
+- `TabKey` in `dashboard/src/types.ts` um `'fx'` erweitert; Eintrag in `AppHeader.vue`,
+  Icon in `NavIcon.vue`, Hash-Routing in `useHashTab.ts`, Render-Zweig in `App.vue`.
+- **`FxPanel.vue`**: zwei Währungs-Eingaben (`base`/`quote`, je 3 Buchstaben) + Tausch-Button
+  + „Umrechnen"-Button. Zeigt `rate`, `quote_time`, `source` und ein `stale`-Badge.
+- **`useFx`-Composable** (`{ result, loading, error, convert }`) → ruft `/fx` über den
+  bestehenden `apiClient`; `fxPath(base, quote)` in `api/paths.ts`.
+- Voll i18n (`nav.fx`, `fx.*`, `errors.fx`) in `de.ts` **und** `en.ts`.
+
+### Typen & i18n
+
+`dashboard/src/types.ts`: neue Interfaces `ExchangeInfo`, `FxRate`; `EnvInfo` um
+`strict_exchange` (+ ggf. `fx_ttl_hours`) erweitert. Alle neuen UI-Texte in de.ts **und**
+en.ts.
 
 ---
 
@@ -197,7 +253,6 @@ GET /fx?base=EUR&quote=USD   → FxRate
   widerspricht „eine ISIN, eine Zeile".
 - Modellierung von Währungs**risiko** (Durchschau auf Fondswährungen) — ausdrücklich nicht.
 - Historische Devisenkurse — die App rechnet nur mit dem Jetzt.
-- Dashboard-Währungsumrechner-UI.
 
 ## Testing
 
@@ -217,6 +272,13 @@ GET /fx?base=EUR&quote=USD   → FxRate
   ohne Fetch; 502 wenn nichts beschaffbar.
 - Provider `fetch_fx_rate` mit gefaktem Ticker (kein Netz im Test).
 
+**UI**
+- `GET /exchanges` liefert die Welt-Tabelle + konfigurierte `default_exchange`.
+- `useExchanges`/`useFx` (Composables) mit gestubbtem `fetch` — Erfolg + Fehlerpfad.
+- `fxPath` baut korrekte Query; `FxPanel`/`ExchangesPanel` rendern Ergebnis/Liste (vitest
+  + @vue/test-utils, i18n-Instanz); der Devisen-Tab ist über alle vier Verdrahtungspunkte
+  erreichbar.
+
 ## Betroffene Dateien (Überblick)
 
 **Backend:** `app/config.py` (strict_exchange, fx_ttl_hours), `app/resolver.py` (Welt-
@@ -224,8 +286,14 @@ Tabelle, US-Sonderpfad-Auswahl), `app/providers/openfigi_provider.py` (mic-/exch
 Auswahl), `app/providers/yfinance_provider.py` (fetch_fx_rate + RawFx), `app/models.py`
 (FxRate, EnvInfo-Erweiterung), `app/services/fx_service.py` (neu), `app/repository.py`
 (fx_rates-Methoden), `app/db.py` (fx_rates-Tabelle + Migration), `app/routers/fx.py`
-(neu), `app/routers/dashboard.py` (/env-Erweiterung), `app/main.py` (fx-Router),
-`app/container.py` (strict-Komposition, get_fx_service).
+(neu), `app/routers/dashboard.py` (/env-Erweiterung + neuer `/exchanges`-Endpoint),
+`app/main.py` (fx-Router), `app/container.py` (strict-Komposition, get_fx_service).
 
-**Frontend:** `dashboard/src/components/EnvironmentPanel.vue`, `dashboard/src/types.ts`
-(EnvInfo-Felder), `dashboard/src/i18n/de.ts` + `en.ts` (strict_exchange, fx_ttl_hours).
+**Frontend:** `dashboard/src/components/ExchangesPanel.vue` (datengetrieben statt
+hartkodiert), `dashboard/src/composables/useExchanges.ts` (neu),
+`dashboard/src/components/FxPanel.vue` (neu), `dashboard/src/composables/useFx.ts` (neu),
+`dashboard/src/api/paths.ts` (fxPath), `dashboard/src/components/EnvironmentPanel.vue`
+(strict_exchange), `dashboard/src/components/AppHeader.vue` + `NavIcon.vue` +
+`composables/useHashTab.ts` + `App.vue` (fx-Tab-Verdrahtung), `dashboard/src/types.ts`
+(ExchangeInfo, FxRate, EnvInfo-Felder, TabKey `'fx'`), `dashboard/src/i18n/de.ts` + `en.ts`
+(nav.fx, fx.*, errors.fx, strict_exchange).
