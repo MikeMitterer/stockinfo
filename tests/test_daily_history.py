@@ -138,11 +138,13 @@ def test_fehlgeschlagener_folgeabruf_liefert_cache_ohne_fortschreibung(
 ) -> None:
     """Provider-Fehler beim Nachladen → Cache liefern, ``fetched_to`` unverändert."""
     inst = _seed(repo)
+    today = date.today()
+    cached_day = (today - timedelta(days=5)).isoformat()   # innerhalb des 1-Monats-Fensters
+    from_day = (today - timedelta(days=40)).isoformat()
     repo.upsert_daily_closes(
-        inst["id"], [{"date": "2026-07-10", "close": 160.0, "currency": "EUR"}]
+        inst["id"], [{"date": cached_day, "close": 160.0, "currency": "EUR"}]
     )
-    stale_day = "2026-07-10"
-    repo.set_daily_meta(inst["id"], "2026-06-13", stale_day)
+    repo.set_daily_meta(inst["id"], from_day, cached_day)
     provider = FlakyDailyProvider(fail_first=99)  # jeder Fetch schlägt fehl
     service = DailyHistoryService(repo, provider, FakeQuotes(repo))
 
@@ -150,4 +152,4 @@ def test_fehlgeschlagener_folgeabruf_liefert_cache_ohne_fortschreibung(
 
     assert len(result) == 1  # Cache wird geliefert
     meta = repo.get_daily_meta(inst["id"])
-    assert meta["fetched_to"] == stale_day  # NICHT auf heute fortgeschrieben
+    assert meta["fetched_to"] == cached_day  # NICHT auf heute fortgeschrieben
