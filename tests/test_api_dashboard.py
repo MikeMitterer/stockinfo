@@ -127,6 +127,15 @@ def test_analyze_verlangt_genau_eine_kennung(client: TestClient) -> None:
     assert client.get("/analyze?isin=IE00B4L5Y983&symbol=EUNL.DE").status_code == 422
 
 
+def test_exchanges_liefert_welttabelle_und_default(client: TestClient) -> None:
+    body = client.get("/exchanges").json()
+    assert body["default_exchange"] == "XETR"
+    mics = {e["mic"]: e for e in body["exchanges"]}
+    assert mics["XTSE"]["suffix"] == ".TO"
+    assert mics["US"]["suffix"] == ""  # kein Suffix
+    assert mics["XETR"]["currency"] == "EUR"
+
+
 def test_analyze_liefert_stages(client: TestClient) -> None:
     class _StubAnalyzer:
         def analyze(self, *, isin=None, symbol=None) -> AnalyzeResult:

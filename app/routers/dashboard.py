@@ -13,11 +13,14 @@ from app.container import get_cached_quote_service, get_quote_analyzer
 from app.models import (
     AnalyzeResult,
     EnvInfo,
+    ExchangeInfo,
+    ExchangesResponse,
     InstrumentSummary,
     IsinUpdate,
     QuoteResponse,
     RefreshResult,
 )
+from app.resolver import EXCHANGES
 from app.routers.validation import IsinPath, normalize_isin
 from app.services.analyzer import QuoteAnalyzer
 from app.services.quote_cache import (
@@ -57,6 +60,20 @@ def environment(settings: SettingsDep) -> EnvInfo:
         extraetf_etf_url=settings.extraetf_etf_url,
         extraetf_stock_url=settings.extraetf_stock_url,
         yahoo_url=settings.yahoo_url,
+    )
+
+
+@router.get("/exchanges", response_model=ExchangesResponse)
+def exchanges(settings: SettingsDep) -> ExchangesResponse:
+    """Gibt die weltweite Börsentabelle und die konfigurierte Default-Börse zurück."""
+    return ExchangesResponse(
+        default_exchange=settings.default_exchange,
+        exchanges=[
+            ExchangeInfo(
+                mic=mic, suffix=d.suffix, name=d.name, region=d.region, currency=d.currency
+            )
+            for mic, d in EXCHANGES.items()
+        ],
     )
 
 

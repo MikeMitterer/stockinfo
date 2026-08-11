@@ -101,6 +101,23 @@ class EnvInfo(BaseModel):
     yahoo_url: str = ""
 
 
+class ExchangeInfo(BaseModel):
+    """Eine auflösbare Börse (aus der Backend-Tabelle)."""
+
+    mic: str
+    suffix: str
+    name: str
+    region: str
+    currency: str
+
+
+class ExchangesResponse(BaseModel):
+    """Weltweite Börsentabelle + die konfigurierte Default-Börse der Instanz."""
+
+    default_exchange: str
+    exchanges: list[ExchangeInfo]
+
+
 class RefreshResult(BaseModel):
     """Ergebnis eines globalen Refresh-Laufs."""
 
