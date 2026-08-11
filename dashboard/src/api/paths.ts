@@ -45,3 +45,13 @@ export function analyzePath(ref: InstrumentRef): string {
     ? `/analyze?isin=${encodeURIComponent(ref.isin)}`
     : `/analyze?symbol=${encodeURIComponent(ref.symbol)}`
 }
+
+/**
+ * Baut den /fx-Pfad für ein Währungspaar. rate = 1 base in quote.
+ *
+ * @param base - Ausgangswährung (von)
+ * @param quote - Zielwährung (nach)
+ */
+export function fxPath(base: string, quote: string): string {
+  return `/fx?base=${encodeURIComponent(base)}&quote=${encodeURIComponent(quote)}`
+}

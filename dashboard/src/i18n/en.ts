@@ -9,6 +9,7 @@ export const en = {
     links: 'API & Links',
     themes: 'Themes',
     analysis: 'Analysis',
+    fx: 'FX',
     home: 'Go to start page',
   },
   toolbar: {
@@ -110,6 +111,14 @@ export const en = {
     total: 'Total',
     empty: 'No measurement yet — pick an instrument and click “Analyze”.',
   },
+  fx: {
+    title: 'FX',
+    hint: 'Rate 1 base = x quote. Example: EUR→USD ≈ 1.15.',
+    base: 'Base', quote: 'Quote', swap: 'Swap',
+    convert: 'Convert', converting: 'Fetching…',
+    quoteTime: 'Quote time', source: 'Source', status: 'Status',
+    fresh: 'fresh', stale: 'stale',
+  },
   links: {
     title: 'API & Links',
     base: 'Base:',
@@ -156,5 +165,6 @@ export const en = {
     remove: 'Delete failed',
     setIsin: 'Could not save ISIN',
     analysis: 'Analysis failed',
+    fx: 'Exchange rate could not be loaded',
   },
 } satisfies typeof de

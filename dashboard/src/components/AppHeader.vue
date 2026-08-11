@@ -21,6 +21,7 @@ const tabs = computed<{ key: TabKey; label: string; icon: NavIconName }[]>(() =>
   { key: 'links', label: t('nav.links'), icon: 'links' },
   { key: 'themes', label: t('nav.themes'), icon: 'themes' },
   { key: 'analysis', label: t('nav.analysis'), icon: 'analysis' },
+  { key: 'fx', label: t('nav.fx'), icon: 'fx' },
 ])
 </script>
 

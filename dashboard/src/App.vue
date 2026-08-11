@@ -6,6 +6,7 @@ import AppHeader from './components/AppHeader.vue'
 import EnvironmentPanel from './components/EnvironmentPanel.vue'
 import ErrorBanner from './components/ErrorBanner.vue'
 import ExchangesPanel from './components/ExchangesPanel.vue'
+import FxPanel from './components/FxPanel.vue'
 import HistoryChart from './components/HistoryChart.vue'
 import InstrumentsTable from './components/InstrumentsTable.vue'
 import JsonModal from './components/JsonModal.vue'
@@ -183,6 +184,7 @@ function closeChart(): void {
     <EnvironmentPanel v-else-if="activeTab === 'environment'" :env="env" />
     <LinksPanel v-else-if="activeTab === 'links'" />
     <AnalysisPanel v-else-if="activeTab === 'analysis'" :instruments="instruments" />
+    <FxPanel v-else-if="activeTab === 'fx'" />
     <ThemesPanel v-else />
   </main>
 

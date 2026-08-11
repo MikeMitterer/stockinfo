@@ -2,7 +2,7 @@ import { onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
 
 import type { TabKey } from '../types'
 
-const TABS: TabKey[] = ['assets', 'exchanges', 'environment', 'links', 'themes', 'analysis']
+const TABS: TabKey[] = ['assets', 'exchanges', 'environment', 'links', 'themes', 'analysis', 'fx']
 const DEFAULT_TAB: TabKey = 'assets'
 
 /** Liest den aktiven Tab aus der URL-Hash-Route (#/assets …). */

@@ -75,8 +75,20 @@ export interface RefreshResult {
   refreshed: number
 }
 
+/** Ein Wechselkurs: 1 base = rate quote. */
+export interface FxRate {
+  base: string
+  quote: string
+  rate: number
+  quote_time: string
+  source: string | null
+  cached: boolean
+  stale: boolean
+  fetched_at: string
+}
+
 /** Aktive Unterseite/Tab des Dashboards. */
-export type TabKey = 'assets' | 'exchanges' | 'environment' | 'links' | 'themes' | 'analysis'
+export type TabKey = 'assets' | 'exchanges' | 'environment' | 'links' | 'themes' | 'analysis' | 'fx'
 
 /** Bekannte Icon-Namen der Navigation (deckungsgleich mit den Tabs). */
 export type NavIconName = TabKey

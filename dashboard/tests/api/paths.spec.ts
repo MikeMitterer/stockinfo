@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 
-import { analyzePath, instrumentPath, isIsin, quotePath } from '../../src/api/paths'
+import { analyzePath, fxPath, instrumentPath, isIsin, quotePath } from '../../src/api/paths'
 
 describe('isIsin', () => {
   it('erkennt ISINs', () => {
@@ -47,5 +47,11 @@ describe('analyzePath', () => {
   })
   it('fällt ohne ISIN auf das Symbol zurück', () => {
     expect(analyzePath({ isin: null, symbol: 'AAPL' })).toBe('/analyze?symbol=AAPL')
+  })
+})
+
+describe('fxPath', () => {
+  it('baut den /fx-Pfad mit encodeURIComponent', () => {
+    expect(fxPath('EUR', 'USD')).toBe('/fx?base=EUR&quote=USD')
   })
 })

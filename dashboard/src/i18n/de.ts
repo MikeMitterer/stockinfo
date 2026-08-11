@@ -7,6 +7,7 @@ export const de = {
     links: 'API & Links',
     themes: 'Themes',
     analysis: 'Analyse',
+    fx: 'Devisen',
     home: 'Zur Startseite',
   },
   toolbar: {
@@ -108,6 +109,14 @@ export const de = {
     total: 'Gesamt',
     empty: 'Noch keine Messung — Instrument wählen und „Analysieren" klicken.',
   },
+  fx: {
+    title: 'Devisen',
+    hint: 'Wechselkurs 1 Basis = x Ziel. Beispiel: EUR→USD ≈ 1,15.',
+    base: 'Basiswährung', quote: 'Zielwährung', swap: 'Tauschen',
+    convert: 'Umrechnen', converting: 'Hole…',
+    quoteTime: 'Kurszeit', source: 'Quelle', status: 'Status',
+    fresh: 'aktuell', stale: 'veraltet',
+  },
   links: {
     title: 'API & Links',
     base: 'Basis:',
@@ -154,5 +163,6 @@ export const de = {
     remove: 'Löschen fehlgeschlagen',
     setIsin: 'ISIN konnte nicht gespeichert werden',
     analysis: 'Analyse fehlgeschlagen',
+    fx: 'Wechselkurs konnte nicht geladen werden',
   },
 }

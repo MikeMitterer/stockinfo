@@ -4,7 +4,7 @@ import { watchEffect } from 'vue'
 
 import type { NavIconName } from '../types'
 
-const KNOWN_ICONS: NavIconName[] = ['assets', 'environment', 'links', 'exchanges', 'themes', 'analysis']
+const KNOWN_ICONS: NavIconName[] = ['assets', 'environment', 'links', 'exchanges', 'themes', 'analysis', 'fx']
 
 const props = defineProps<{ name: NavIconName }>()
 
@@ -50,6 +50,9 @@ watchEffect(() => {
     <template v-else-if="name === 'analysis'">
       <circle cx="11" cy="11" r="7" />
       <path d="M21 21l-4.35-4.35M11 8v3l2 2" />
+    </template>
+    <template v-else-if="name === 'fx'">
+      <path d="M4 7h13l-3-3M20 17H7l3 3" />
     </template>
     <template v-else>
       <!-- Fallback für unbekannte Namen — sichtbarer Punkt statt leerem SVG -->
