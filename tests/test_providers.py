@@ -69,6 +69,46 @@ def test_justetf_fehler_gibt_none(monkeypatch) -> None:
     assert JustEtfProvider().fetch_etf("IE00B3RBWM25") is None
 
 
+def test_justetf_ueberspringt_nicht_europaeische_isin(monkeypatch) -> None:
+    """US-/nicht-europäische ISINs werden gar nicht erst gescraped."""
+    calls: list[str] = []
+
+    def spy(isin: str) -> dict:
+        calls.append(isin)
+        return {"name": "sollte nicht passieren"}
+
+    monkeypatch.setattr(justetf_module.justetf_scraping, "get_etf_overview", spy)
+
+    assert JustEtfProvider().fetch_etf("US78462F1030") is None  # SPY (US)
+    assert calls == []  # kein Scrape-Aufruf
+
+
+def test_justetf_versucht_europaeische_isin(monkeypatch) -> None:
+    """Europäische UCITS-ISIN (IE/LU/…) wird gescraped."""
+    calls: list[str] = []
+
+    def overview(isin: str) -> dict:
+        calls.append(isin)
+        return {"name": "iShares", "ter": 0.2}
+
+    monkeypatch.setattr(justetf_module.justetf_scraping, "get_etf_overview", overview)
+
+    details = JustEtfProvider().fetch_etf("IE00B4L5Y983")
+    assert details is not None
+    assert calls == ["IE00B4L5Y983"]
+
+
+def test_is_european_isin() -> None:
+    from app.providers.justetf_provider import is_european_isin
+
+    assert is_european_isin("IE00B4L5Y983") is True
+    assert is_european_isin("LU0274208692") is True
+    assert is_european_isin("ie00b4l5y983") is True  # case-insensitive
+    assert is_european_isin("US78462F1030") is False
+    assert is_european_isin("CA0679011084") is False
+    assert is_european_isin("") is False
+
+
 # ─── yfinance ─────────────────────────────────────────────────────────────────
 
 
