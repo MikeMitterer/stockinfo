@@ -30,6 +30,7 @@ class Settings(BaseSettings):
 
     # ISIN-Auflösung
     default_exchange: str = "XETR"  # bevorzugte Börse für ISIN-Abfragen (MIC)
+    strict_exchange: bool = False  # True = nur Default-Börse, sonst 404 (kein Fallback)
     openfigi_api_key: str = ""  # optional — höheres Rate-Limit bei OpenFIGI
 
     # Dashboard / CORS

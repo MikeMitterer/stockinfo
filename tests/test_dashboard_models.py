@@ -17,6 +17,7 @@ def test_env_info_und_refresh_result() -> None:
         refresh_interval_hours=6,
         metadata_ttl_days=7,
         default_exchange="XETR",
+        strict_exchange=False,
         host="0.0.0.0",
         port=8000,
         openfigi_key_set=True,

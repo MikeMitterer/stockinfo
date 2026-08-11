@@ -50,6 +50,7 @@ def environment(settings: SettingsDep) -> EnvInfo:
         refresh_interval_hours=settings.refresh_interval_hours,
         metadata_ttl_days=settings.metadata_ttl_days,
         default_exchange=settings.default_exchange,
+        strict_exchange=settings.strict_exchange,
         host=settings.host,
         port=settings.port,
         openfigi_key_set=bool(settings.openfigi_api_key),

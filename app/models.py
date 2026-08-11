@@ -92,6 +92,7 @@ class EnvInfo(BaseModel):
     refresh_interval_hours: int
     metadata_ttl_days: int
     default_exchange: str
+    strict_exchange: bool
     host: str
     port: int
     openfigi_key_set: bool

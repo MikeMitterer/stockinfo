@@ -6,7 +6,8 @@ Dependency-Injection an die Router gereicht.
 
 from functools import lru_cache
 
-from app.config import get_settings
+from app.config import Settings, get_settings
+from app.providers.base import InstrumentResolver
 from app.providers.justetf_provider import JustEtfProvider
 from app.providers.openfigi_provider import OpenFigiClient
 from app.providers.yfinance_provider import YFinanceProvider
@@ -19,16 +20,21 @@ from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteService
 
 
+def _build_resolver(settings: Settings) -> InstrumentResolver:
+    """Baut den Resolver: strikt nur OpenFIGI, sonst mit Yahoo-Fallback."""
+    figi_resolver = OpenFigiResolver(
+        OpenFigiClient(settings.openfigi_api_key), settings.default_exchange
+    )
+    if settings.strict_exchange:
+        return figi_resolver
+    return CompositeResolver(figi_resolver, YFinanceResolver())
+
+
 @lru_cache
 def get_cached_quote_service() -> CachedQuoteService:
     """Baut den (gecachten) CachedQuoteService aus der aktuellen Konfiguration."""
     settings = get_settings()
-    resolver = CompositeResolver(
-        OpenFigiResolver(
-            OpenFigiClient(settings.openfigi_api_key), settings.default_exchange
-        ),
-        YFinanceResolver(),
-    )
+    resolver = _build_resolver(settings)
     quote_service = QuoteService(YFinanceProvider(), JustEtfProvider(), resolver)
     repository = QuoteRepository(settings.database_path)
     daily_sync = DailyCloseSync(repository, YFinanceProvider())
@@ -52,10 +58,5 @@ def get_daily_history_service() -> DailyHistoryService:
 def get_quote_analyzer() -> QuoteAnalyzer:
     """Baut den (gecachten) QuoteAnalyzer aus der aktuellen Konfiguration."""
     settings = get_settings()
-    resolver = CompositeResolver(
-        OpenFigiResolver(
-            OpenFigiClient(settings.openfigi_api_key), settings.default_exchange
-        ),
-        YFinanceResolver(),
-    )
+    resolver = _build_resolver(settings)
     return QuoteAnalyzer(resolver, JustEtfProvider())

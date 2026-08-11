@@ -65,6 +65,12 @@ def test_env(client: TestClient) -> None:
     assert "openfigi_key_set" in body and "version" in body
 
 
+def test_env_zeigt_strict_exchange(client: TestClient) -> None:
+    body = client.get("/env").json()
+    assert "strict_exchange" in body
+    assert body["strict_exchange"] is False  # Default
+
+
 def test_refresh_global(client: TestClient) -> None:
     r = client.post("/refresh")
     assert r.status_code == 200
