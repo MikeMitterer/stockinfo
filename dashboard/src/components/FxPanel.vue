@@ -3,8 +3,9 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useFx } from '../composables/useFx'
+import { formatDateTime } from '../utils/datetime'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { result, loading, error, convert } = useFx()
 
 const base = ref<string>('EUR')
@@ -18,6 +19,11 @@ async function run(): Promise<void> {
   const b = base.value.trim().toUpperCase()
   const q = quote.value.trim().toUpperCase()
   if (b.length === 3 && q.length === 3) await convert(b, q)
+}
+
+/** Rate lokalisiert mit höchstens 3 Nachkommastellen. */
+function formatRate(rate: number): string {
+  return rate.toLocaleString(locale.value, { maximumFractionDigits: 3 })
 }
 </script>
 
@@ -38,9 +44,12 @@ async function run(): Promise<void> {
     <p v-if="error" class="err">{{ error }}</p>
 
     <div v-if="result" class="result">
-      <p class="rate mono">1 {{ result.base }} = {{ result.rate }} {{ result.quote }}</p>
+      <p class="rate mono" :title="String(result.rate)">
+        1 {{ result.base }} = {{ formatRate(result.rate) }} {{ result.quote }}
+      </p>
       <dl>
-        <div><dt>{{ t('fx.quoteTime') }}</dt><dd class="mono">{{ result.quote_time }}</dd></div>
+        <div><dt>{{ t('fx.quoteTime') }}</dt>
+          <dd class="mono nowrap">{{ formatDateTime(result.quote_time, locale) }}</dd></div>
         <div><dt>{{ t('fx.source') }}</dt><dd class="mono">{{ result.source }}</dd></div>
         <div><dt>{{ t('fx.status') }}</dt>
           <dd><span :class="['badge', result.stale ? 'warn' : 'std']">
@@ -60,6 +69,7 @@ async function run(): Promise<void> {
   .swap { background: $color-surface-2; border: 1px solid $color-border; border-radius: $radius; padding: 0.4rem 0.6rem; }
   .err { color: #e5484d; }
   .rate { font-size: 1.4rem; font-weight: 700; margin: 0.5rem 0 1rem; }
+  .nowrap { white-space: nowrap; }
   dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.9rem 1.5rem; }
   dt { color: $color-muted; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
   dd { margin: 0; }
