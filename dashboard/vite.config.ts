@@ -9,6 +9,9 @@ const apiTarget = process.env.VITE_DEV_API_TARGET ?? 'http://localhost:8000'
 const apiPrefixes = [
   '/quote',
   '/instruments',
+  '/exchanges',
+  '/fx',
+  '/analyze',
   '/env',
   '/health',
   '/refresh',
