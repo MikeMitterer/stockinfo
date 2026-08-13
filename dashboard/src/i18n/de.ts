@@ -9,6 +9,7 @@ export const de = {
     analysis: 'Analyse',
     fx: 'Devisen',
     home: 'Zur Startseite',
+    menu: 'Menü',
   },
   toolbar: {
     placeholder: 'ISIN oder Symbol (z.B. VGWL.DE)',

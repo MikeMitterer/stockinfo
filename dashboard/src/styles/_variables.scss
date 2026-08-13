@@ -23,4 +23,6 @@ $health-down: #e5534b;
 $radius: 10px;
 $font-mono: 'SF Mono', 'JetBrains Mono', 'Menlo', ui-monospace, monospace;
 $header-h: 58px;
+$header-bp: 1024px; // konventionelle Desktop-Grenze (Tailwind lg / Material): ab hier
+                    // volle Tab-Zeile, darunter Hamburger-Drawer
 $status-h: 32px;

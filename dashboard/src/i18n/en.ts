@@ -11,6 +11,7 @@ export const en = {
     analysis: 'Analysis',
     fx: 'FX',
     home: 'Go to start page',
+    menu: 'Menu',
   },
   toolbar: {
     placeholder: 'ISIN or symbol (e.g. VGWL.DE)',
