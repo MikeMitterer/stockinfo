@@ -5,6 +5,8 @@ import { useI18n } from 'vue-i18n'
 import { useFx } from '../composables/useFx'
 import { formatDateTime } from '../utils/datetime'
 
+defineProps<{ currencies: string[] }>()
+
 const { t, locale } = useI18n()
 const { result, loading, error, convert } = useFx()
 
@@ -33,9 +35,13 @@ function formatRate(rate: number): string {
     <p class="hint">{{ t('fx.hint') }}</p>
 
     <div class="controls">
-      <input v-model="base" maxlength="3" class="code" :aria-label="t('fx.base')" />
+      <select v-model="base" class="code" :aria-label="t('fx.base')">
+        <option v-for="c in currencies" :key="c" :value="c">{{ c }}</option>
+      </select>
       <button class="swap" :title="t('fx.swap')" @click="swap">⇄</button>
-      <input v-model="quote" maxlength="3" class="code" :aria-label="t('fx.quote')" />
+      <select v-model="quote" class="code" :aria-label="t('fx.quote')">
+        <option v-for="c in currencies" :key="c" :value="c">{{ c }}</option>
+      </select>
       <button :disabled="loading" @click="run">
         {{ loading ? t('fx.converting') : t('fx.convert') }}
       </button>

@@ -11,12 +11,26 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals())
 
 describe('FxPanel', () => {
+  it('rendert Währungs-Dropdowns aus der currencies-Prop', () => {
+    const wrapper = mount(FxPanel, {
+      global: { plugins: [i18n] },
+      props: { currencies: ['EUR', 'GBP', 'USD'] },
+    })
+    const selects = wrapper.findAll('select')
+    expect(selects).toHaveLength(2)
+    const options = selects[0].findAll('option').map((o) => o.text())
+    expect(options).toEqual(['EUR', 'GBP', 'USD'])
+  })
+
   it('zeigt den Kurs auf 3 Nachkommastellen gerundet, Rohwert im title', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
       JSON.stringify({ base: 'EUR', quote: 'USD', rate: 1.1527377367019653, quote_time: '2026-08-13T07:41:13.759837+00:00', source: 'yfinance', cached: false, stale: false, fetched_at: 't' }),
       { status: 200 },
     )))
-    const wrapper = mount(FxPanel, { global: { plugins: [i18n] } })
+    const wrapper = mount(FxPanel, {
+      global: { plugins: [i18n] },
+      props: { currencies: ['EUR', 'USD'] },
+    })
     await wrapper.find('button:last-of-type').trigger('click')
     await flushPromises()
 
@@ -31,7 +45,10 @@ describe('FxPanel', () => {
       JSON.stringify({ base: 'EUR', quote: 'USD', rate: 1.15, quote_time: '2026-08-13T07:41:13.759837+00:00', source: 'yfinance', cached: false, stale: false, fetched_at: 't' }),
       { status: 200 },
     )))
-    const wrapper = mount(FxPanel, { global: { plugins: [i18n] } })
+    const wrapper = mount(FxPanel, {
+      global: { plugins: [i18n] },
+      props: { currencies: ['EUR', 'USD'] },
+    })
     await wrapper.find('button:last-of-type').trigger('click')
     await flushPromises()
     expect(wrapper.text()).not.toContain('2026-08-13T07:41:13') // kein ISO-Rohstring

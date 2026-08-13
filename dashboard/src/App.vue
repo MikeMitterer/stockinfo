@@ -25,9 +25,11 @@ import { useInstrumentActions } from './composables/useInstrumentActions'
 import { useInstruments } from './composables/useInstruments'
 import { useRefresh } from './composables/useRefresh'
 import type { ErrorEntry, InstrumentSummary, RangeKey } from './types'
+import { currenciesFromExchanges } from './utils/currencies'
 
 const { env, load: loadEnv } = useEnvironment()
 const { data: exchanges, load: loadExchanges } = useExchanges()
+const fxCurrencies = computed(() => currenciesFromExchanges(exchanges.value))
 const { instruments, load: loadInstruments, error: instrumentsError } = useInstruments()
 const {
   load: loadHistory,
@@ -184,7 +186,7 @@ function closeChart(): void {
     <EnvironmentPanel v-else-if="activeTab === 'environment'" :env="env" />
     <LinksPanel v-else-if="activeTab === 'links'" />
     <AnalysisPanel v-else-if="activeTab === 'analysis'" :instruments="instruments" />
-    <FxPanel v-else-if="activeTab === 'fx'" />
+    <FxPanel v-else-if="activeTab === 'fx'" :currencies="fxCurrencies" />
     <ThemesPanel v-else />
   </main>
 
