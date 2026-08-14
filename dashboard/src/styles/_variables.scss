@@ -23,6 +23,7 @@ $health-down: #e5534b;
 $radius: 10px;
 $font-mono: 'SF Mono', 'JetBrains Mono', 'Menlo', ui-monospace, monospace;
 $header-h: 58px;
-$header-bp: 1024px; // konventionelle Desktop-Grenze (Tailwind lg / Material): ab hier
-                    // volle Tab-Zeile, darunter Hamburger-Drawer
+$header-bp: 1280px; // Tailwind xl: ab hier volle Tab-Zeile, darunter Hamburger-Drawer.
+                    // 1280 statt 1024, weil die 7-Tab-Zeile ~1094px braucht (EN) und
+                    // knapp über 1024 sonst staucht ("API & Links" bricht um).
 $status-h: 32px;

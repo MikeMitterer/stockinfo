@@ -123,7 +123,6 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 
   .hamburger {
     display: none; // Desktop: versteckt
-    margin-left: auto;
     background: transparent;
     border: none;
     color: $color-text;
@@ -141,6 +140,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     display: inline-flex;
     align-items: center;
     gap: 0.45rem;
+    white-space: nowrap; // Label nie umbrechen (z.B. "API & Links")
     background: transparent;
     border: none;
     color: $color-muted;
@@ -211,7 +211,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       }
     }
 
-    .hamburger { display: inline-flex; align-items: center; }
+    // ☰ nach links (Drawer-Konvention), Sprache bleibt rechts
+    .hamburger { display: inline-flex; align-items: center; order: -1; }
+    .lang { margin-left: auto; }
 
     .backdrop {
       display: block;
