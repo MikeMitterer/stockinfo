@@ -32,7 +32,6 @@ Testszenarien für die letzten Änderungen (Commits `1729bee`…`aee2c84`):
 
 | Ticket | Thema | Status |
 |---|---|---|
-| [T-05](T-05-responsive-header-mobile.md) | **Bug:** Header/Menü auf Mobile unbrauchbar (kein Responsive) | offen |
 | [T-07](T-07-environment-quelle-anzeigen.md) | Environment-Tab: Herkunft der Config (.env/Docker) anzeigen | backlog |
 | [T-08](T-08-chart-prozent-veraenderung.md) | Kurs-Graph: %-Veränderung (Zeitraum + Hover) | backlog |
 | [T-09](T-09-manuelle-etf-werte-nachtragen.md) | Asset-Kennzahlen manuell nachtragen (persistent, DB+API+UI) | backlog |
@@ -47,6 +46,7 @@ Testszenarien für die letzten Änderungen (Commits `1729bee`…`aee2c84`):
 | T-03 | justETF nur europäische UCITS-ISINs — Guard-Test |
 | T-04 | **Bug:** Dev-Proxy reichte `/exchanges`,`/fx`,`/analyze` nicht durch — behoben |
 | T-06 | Devisen-UX: Dropdown (GBp→GBP), 3 Nachkommastellen, formatiertes Datum — umgesetzt + UI-getestet |
+| T-05 | **Bug:** Header/Menü Mobile — Hamburger-Drawer links, Breakpoint 1280px — vom Nutzer abgenommen |
 
 T-04–T-06 sind beim Testen entstanden (Nutzer-Findings).
 

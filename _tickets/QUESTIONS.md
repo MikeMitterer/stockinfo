@@ -21,4 +21,4 @@ Ephemerer Capture-Buffer. Jeder Eintrag drainiert zeitnah → **sofort erledigt*
   • „Asset-Kennzahlen manuell nachtragen"   → T-09
 -->
 
-_(leer)_
+- [ ] Analyse-Tab: „Instrument wählen"-Dropdown ist am Handy zu breit (Overflow) — Kontext: AnalysisPanel, Mobile
