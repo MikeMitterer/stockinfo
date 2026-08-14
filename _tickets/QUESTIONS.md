@@ -21,4 +21,9 @@ Ephemerer Capture-Buffer. Jeder Eintrag drainiert zeitnah → **sofort erledigt*
   • „Asset-Kennzahlen manuell nachtragen"   → T-09
 -->
 
-- [ ] Analyse-Tab: „Instrument wählen"-Dropdown ist am Handy zu breit (Overflow) — Kontext: AnalysisPanel, Mobile
+<!-- Gedrained 2026-08-14 (CC):
+  • „Analyse-Dropdown am Handy zu breit" → behoben (min-width:0 + max-width:100%; +16px/App-Schrift).
+    Die „zu kleine Schrift" war ein DevTools-Emulations-Artefakt (ohne Emulation normal).
+-->
+
+_(leer)_
