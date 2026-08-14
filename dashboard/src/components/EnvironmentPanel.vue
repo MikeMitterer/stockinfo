@@ -6,6 +6,9 @@ import type { EnvInfo } from '../types'
 defineProps<{ env: EnvInfo | null }>()
 
 const { t } = useI18n()
+
+// .env.example im Projekt-Repo (Verweis auf die Schlüssel-Vorlage).
+const ENV_EXAMPLE_URL = 'https://github.com/MikeMitterer/stockinfo/blob/master/.env.example'
 </script>
 
 <template>
@@ -19,10 +22,19 @@ const { t } = useI18n()
       <div><dt>{{ t('env.refreshInterval') }}</dt><dd>{{ env.refresh_interval_hours }}</dd></div>
       <div><dt>{{ t('env.metadataTtl') }}</dt><dd>{{ env.metadata_ttl_days }}</dd></div>
       <div><dt>{{ t('env.defaultExchange') }}</dt><dd>{{ env.default_exchange }}</dd></div>
-      <div><dt>{{ t('env.strictExchange') }}</dt><dd>{{ env.strict_exchange ? t('env.yes') : t('env.no') }}</dd></div>
+      <div>
+        <dt>{{ t('env.strictExchange') }}</dt>
+        <dd>{{ env.strict_exchange ? t('env.yes') : t('env.no') }}</dd>
+        <small class="fieldnote">{{ t('env.strictExchangeHint') }}</small>
+      </div>
       <div><dt>{{ t('env.hostPort') }}</dt><dd>{{ env.host }}:{{ env.port }}</dd></div>
       <div><dt>{{ t('env.openfigiKeySet') }}</dt><dd>{{ env.openfigi_key_set ? t('env.yes') : t('env.no') }}</dd></div>
     </dl>
+    <i18n-t keypath="env.sourceNote" tag="p" class="source-note">
+      <template #example>
+        <a :href="ENV_EXAMPLE_URL" target="_blank" rel="noopener noreferrer">.env.example</a>
+      </template>
+    </i18n-t>
   </section>
 </template>
 
@@ -35,5 +47,8 @@ const { t } = useI18n()
   div { display: flex; flex-direction: column; gap: 0.15rem; }
   dt { color: $color-muted; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
   dd { margin: 0; font-weight: 600; font-family: $font-mono; font-variant-numeric: tabular-nums; }
+  .fieldnote { color: $color-muted; margin-top: 0.2rem; font-size: 0.72rem; font-weight: 400; line-height: 1.35; max-width: 34ch; }
+  .source-note { color: $color-muted; margin: 1.25rem 0 0; font-size: 0.8rem; max-width: 72ch; }
+  .source-note a { color: $color-accent; }
 }
 </style>

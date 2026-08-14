@@ -90,10 +90,18 @@ export const de = {
     metadataTtl: 'Metadaten-TTL (d)',
     defaultExchange: 'Default-Börse',
     strictExchange: 'Strikte Börse',
+    strictExchangeHint:
+      'Aktiv (ja): Kurse werden nur an der Default-Börse abgefragt — findet die ' +
+      'Auflösung dort nichts, gibt es einen Fehler (404) statt Ausweichen auf eine ' +
+      'andere Börse.',
     hostPort: 'Host:Port',
     openfigiKeySet: 'OpenFIGI-Key gesetzt',
     yes: 'ja',
     no: 'nein',
+    sourceNote:
+      'Diese Werte stammen aus Umgebungsvariablen bzw. der .env-Datei (im ' +
+      'Docker-Container: Container-Environment) und werden beim Start gelesen. ' +
+      'Vorlage aller Schlüssel: {example}.',
   },
   analysis: {
     title: 'Live-Analyse',

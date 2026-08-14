@@ -92,10 +92,17 @@ export const en = {
     metadataTtl: 'Metadata TTL (d)',
     defaultExchange: 'Default exchange',
     strictExchange: 'Strict exchange',
+    strictExchangeHint:
+      'When on (yes): quotes are queried only at the default exchange — if resolution ' +
+      'finds nothing there, it returns an error (404) instead of falling back to ' +
+      'another exchange.',
     hostPort: 'Host:Port',
     openfigiKeySet: 'OpenFIGI key set',
     yes: 'yes',
     no: 'no',
+    sourceNote:
+      'These values come from environment variables or the .env file (in Docker: ' +
+      'the container environment), read at startup. Template of all keys: {example}.',
   },
   analysis: {
     title: 'Live analysis',
