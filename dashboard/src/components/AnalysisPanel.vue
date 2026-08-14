@@ -87,8 +87,12 @@ async function run(): Promise<void> {
 .analysis {
   .hint { color: $color-muted; margin: 0 0 1rem; font-size: 0.85rem; max-width: 72ch; }
   .controls { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 1rem; }
-  select, input { padding: 0.4rem 0.6rem; border-radius: $radius; border: 1px solid $color-border; background: $color-surface; color: $color-text; }
+  select, input { font: inherit; padding: 0.4rem 0.6rem; border-radius: $radius; border: 1px solid $color-border; background: $color-surface; color: $color-text; }
   input { flex: 1; min-width: 12rem; }
+  // Select nie breiter als der Container (längste Option würde sonst überlaufen)
+  select { min-width: 0; max-width: 100%; font-size: 1rem; }
+  // Optionen explizit (nicht nur geerbt): App-Schrift + 16px (mobile-Standard, kein iOS-Zoom)
+  select option { font-family: inherit; font-size: 1rem; }
   .err { color: #e5484d; margin: 0.5rem 0; }
   table.stages { width: 100%; border-collapse: collapse; font-family: $font-mono; font-variant-numeric: tabular-nums; }
   th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid $color-border; }
