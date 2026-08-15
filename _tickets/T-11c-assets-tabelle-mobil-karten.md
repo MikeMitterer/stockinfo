@@ -19,9 +19,15 @@ Legende: ✅ live · ⚠️ Einschränkung · ◑ teilweise · ➖ keine Live-Ve
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | `http://localhost:5173/` < 768 px | Assets als **Kartenliste**, kein waagrechtes Tabellen-Scrollen | ➖ | |
+| 1 | `http://localhost:5173/` < 768 px | Assets als **Kartenliste**, kein waagrechtes Tabellen-Scrollen (`scrollWidth − clientWidth = 0`) | ➖ | |
 | 2 | ≥ 768 px | volle Tabelle wie bisher | ➖ | |
 | 3 | Code | neues Composable `useIsCompact` (matchMedia), keine verstreuten CSS-Breakpoints | ➖ | |
+| 4 | Karte antippen (< 768 px) | öffnet den Kurs-Graph im Dock — wie am Desktop | ➖ | |
+| 5 | Karte aufklappen | zeigt ISIN, TER, Vola, Thes., Pkt.; Aufklappen löst **kein** Auswählen aus | ➖ | |
+| 6 | Kartenliste, alle Knöpfe | Trefferflächen ≥ **44 × 44 px** (messen, nicht schätzen) | ➖ | |
+| 7 | Sortierleiste (< 768 px) | Auswahl + Richtungsknopf ändern die Reihenfolge — Sortieren geht mobil weiterhin | ➖ | |
+| 8 | ISIN fehlt, Karte aufklappen | „+ ISIN" funktioniert auch mobil (`IsinEditor`) | ➖ | |
+| 9 | Dock offen bei 375 × 812 | Karten bleiben erreichbar; Dock verdeckt sie nicht dauerhaft (Höhe messen — Richtwert: Dock ~300 px = ⅓ des Bildes) | ➖ | |
 
 ---
 
