@@ -103,12 +103,9 @@ function accumulating(value: boolean | null): string {
 
 <template>
   <section class="table card">
-    <h2>{{ t('table.title') }}</h2>
-    <p v-if="instruments.length === 0" class="empty">
-      {{ t('table.empty') }}
-    </p>
-    <template v-else-if="compact">
-      <div class="tsort">
+    <div class="table__head" :class="{ 'table__head--compact': compact }">
+      <h2>{{ t('table.title') }}</h2>
+      <div v-if="compact && instruments.length > 0" class="tsort">
         <div class="tsort__trigger">
           <label class="visually-hidden" for="tsort-select">{{ t('table.sortBy') }}</label>
           <span class="tsort__icon" aria-hidden="true">⇅</span>
@@ -135,6 +132,11 @@ function accumulating(value: boolean | null): string {
           @click="toggleSortDirection"
         >{{ direction === 'asc' ? '▲' : '▼' }}</button>
       </div>
+    </div>
+    <p v-if="instruments.length === 0" class="empty">
+      {{ t('table.empty') }}
+    </p>
+    <template v-else-if="compact">
       <div class="cards">
         <InstrumentCard
           v-for="item in sortedInstruments"
@@ -249,6 +251,21 @@ function accumulating(value: boolean | null): string {
   margin: 0 0 1.1rem;
 }
 
+// Kopfzeile der Komponente (Überschrift + ggf. Sortierzeile). Ab Desktop bleibt
+// dies ein reiner Block-Wrapper ohne eigene Margin/Padding — die h2 sieht
+// exakt so aus wie zuvor (globale Regel aus base.scss, hier unangetastet).
+// Erst in der Kartenansicht (T-11c-Feedback) wird daraus eine Flex-Zeile,
+// damit die Sortierzeile rechts neben statt unter der Überschrift sitzt.
+.table__head--compact {
+  display: flex;
+  // Icon + Text der Sortierzeile liegen selbst in einem inline-flex und haben
+  // keine sauber gemeinsame Baseline mit der h2 — vertikal zentriert liest
+  // sich verlässlicher als eine zusammengehörige Zeile.
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+}
+
 .empty { color: $color-muted; margin: 0.25rem 0 0; }
 .scroll { overflow-x: auto; }
 
@@ -277,7 +294,11 @@ function accumulating(value: boolean | null): string {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  margin: 0 0 0.5rem;
+  // Sitzt jetzt als Flex-Item in .table__head--compact neben der h2 —
+  // keine eigene Außen-Margin mehr nötig, der Abstand zu den Karten darunter
+  // kommt weiterhin von der (unveränderten) globalen h2-Margin.
+  flex: none;
+  max-width: 100%;
 }
 .tsort__trigger {
   position: relative;
@@ -291,6 +312,11 @@ function accumulating(value: boolean | null): string {
   font-size: 0.85rem; // $font-sm-artig — bewusst klein, die Fläche liefert die Trefferzone
   white-space: nowrap;
   transition: background 0.1s ease, color 0.1s ease;
+  // Die 44px-Trefferfläche bleibt (min-height oben) — für die Zeilenhöhe der
+  // Kopfzeile zählt dank negativer Margin aber nur ein kleinerer Anteil davon,
+  // sonst würde allein der Sortier-Trigger die ganze Kopfzeile auf 44px
+  // aufblähen. Nichts wird abgeschnitten: .card hat kein overflow:hidden.
+  margin: -0.5rem 0;
   &:hover,
   &:focus-within { background: $color-surface-2; color: $color-text; }
 }
@@ -325,6 +351,9 @@ function accumulating(value: boolean | null): string {
   border-radius: $radius;
   font-size: 0.8rem;
   transition: background 0.1s ease, color 0.1s ease;
+  // Gleicher Grund wie beim Trigger: 44px Trefferfläche bleibt, zählt aber
+  // nicht komplett für die Höhe der Kopfzeile.
+  margin: -0.5rem 0;
   &:hover { background: $color-surface-2; color: $color-text; }
 }
 
