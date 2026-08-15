@@ -28,6 +28,16 @@ beforeEach(() => {
   i18n.global.locale.value = 'de'
 })
 
+// Hinweis zu T-11c (Fußzeilen-Overflow bei 375px): jsdom führt kein echtes
+// Layout aus (keine Box-Maße, kein Zeilenumbruch), daher lässt sich
+// `flex-wrap: wrap` hier nicht sinnvoll durch einen Test absichern — ein
+// Test, der nur `.icard__foot`/`.icard__actions` auf Existenz prüft, würde
+// nichts über das Umbruchverhalten aussagen und wäre eine Scheinsicherung.
+// Verifiziert wurde die Behebung stattdessen live im Browser bei 375px
+// Viewport: `.icard__foot` benötigt 318px (65px Toggle + 245.3px Actions +
+// 8px Gap) in 265px verfügbarer Breite, `.icard__actions` benötigt 245.3px
+// für fünf 44px-Ziele — beide Zeilen brechen jetzt um, `document
+// .documentElement.scrollWidth - clientWidth` ist wieder 0.
 describe('InstrumentCard', () => {
   it('zeigt Symbol, Typ, Kurs und Name', () => {
     const wrapper = mountCard()

@@ -171,6 +171,11 @@ function accumulating(value: boolean | null): string {
 .icard__foot {
   display: flex;
   align-items: center;
+  // Toggle + Actions passen bei 375px-Breite nicht in eine Zeile (5×44px-Ziele
+  // + Toggle > verfügbare Kartenbreite). Statt die Tap-Targets zu verkleinern
+  // (nicht verhandelbar), bricht die Fußzeile um — Actions bleiben dank
+  // justify-content dennoch rechtsbündig, solange genug Platz ist.
+  flex-wrap: wrap;
   justify-content: space-between;
   gap: 0.5rem;
   margin-top: 0.4rem;
@@ -194,7 +199,15 @@ function accumulating(value: boolean | null): string {
   &--open { transform: rotate(180deg); }
 }
 
-.icard__actions { display: flex; gap: 0.3rem; align-items: center; }
+.icard__actions {
+  display: flex;
+  gap: 0.3rem;
+  align-items: center;
+  // Sicherheitsnetz: auch die Actions selbst dürfen umbrechen (schmalere
+  // Screens, längere Übersetzungen) statt die 44px-Ziele zu quetschen.
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
 .icard__action {
   min-height: 44px;
   min-width: 44px;
