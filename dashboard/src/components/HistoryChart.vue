@@ -223,7 +223,9 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
   margin-bottom: 0.75rem;
   h2 { margin: 0; }
   .sym { color: $color-muted; font-weight: 400; font-family: $font-mono; }
-  .tools { display: flex; align-items: center; gap: 0.6rem; }
+  // 371px: .tools war 404px breit (Range allein 261px) → 18px horizontales
+  // Scrollen. Umbruch statt Kürzen, damit alle Range-Optionen nutzbar bleiben.
+  .tools { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
   .x { background: $color-surface-2; padding: 0.2rem 0.55rem; }
 
   // %-Veränderung über den Zeitraum — Vorzeichen + Pfeil, Farbe fix/semantisch
