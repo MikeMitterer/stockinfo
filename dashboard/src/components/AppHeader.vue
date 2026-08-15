@@ -2,7 +2,6 @@
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { LOCALES, setLanguage } from '../i18n'
 import type { NavIconName, TabKey } from '../types'
 import NavIcon from './NavIcon.vue'
 
@@ -12,18 +11,15 @@ const emit = defineEmits<{
   (event: 'navigate', tab: TabKey): void
 }>()
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 
 const isOpen = ref(false)
 
 const tabs = computed<{ key: TabKey; label: string; icon: NavIconName }[]>(() => [
   { key: 'assets', label: t('nav.assets'), icon: 'assets' },
   { key: 'exchanges', label: t('nav.exchanges'), icon: 'exchanges' },
-  { key: 'environment', label: t('nav.environment'), icon: 'environment' },
-  { key: 'links', label: t('nav.links'), icon: 'links' },
-  { key: 'themes', label: t('nav.themes'), icon: 'themes' },
-  { key: 'analysis', label: t('nav.analysis'), icon: 'analysis' },
   { key: 'fx', label: t('nav.fx'), icon: 'fx' },
+  { key: 'analysis', label: t('nav.analysis'), icon: 'analysis' },
 ])
 
 /** Navigiert zum Tab und schließt das mobile Menü. */
@@ -72,18 +68,15 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       </button>
     </nav>
 
-    <div class="lang" role="group" :aria-label="t('language.title')">
-      <button
-        v-for="lang in LOCALES"
-        :key="lang"
-        class="lng"
-        :class="{ active: locale === lang }"
-        :title="t(`language.${lang}`)"
-        @click="setLanguage(lang)"
-      >
-        {{ lang.toUpperCase() }}
-      </button>
-    </div>
+    <button
+      class="settings-btn"
+      :class="{ active: active === 'settings' }"
+      :title="t('nav.settings')"
+      :aria-label="t('nav.settings')"
+      @click="emit('navigate', 'settings')"
+    >
+      <NavIcon name="settings" />
+    </button>
   </header>
 </template>
 
@@ -99,7 +92,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   z-index: 20;
   display: flex;
   align-items: center;
-  // Logo links, Navigation + Sprach-Umschalter als Gruppe rechts
+  // Logo links, Navigation + Zahnrad als Gruppe rechts
   gap: 0.75rem;
   padding: 0 1.25rem;
   background: color-mix(in srgb, $color-bg 85%, transparent);
@@ -165,26 +158,18 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
     }
   }
 
-  .lang {
+  .settings-btn {
     display: inline-flex;
-    gap: 2px;
-    padding: 3px;
+    align-items: center;
+    background: transparent;
+    border: none;
+    color: $color-muted;
+    padding: 0.4rem 0.5rem;
     border-radius: $radius;
-    background: $color-surface;
-    border: 1px solid $color-border;
+    cursor: pointer;
 
-    .lng {
-      background: transparent;
-      border: none;
-      color: $color-muted;
-      padding: 0.2rem 0.5rem;
-      border-radius: 7px;
-      font-size: 0.75rem;
-      font-weight: 700;
-
-      &:hover { color: $color-text; }
-      &.active { color: #fff; background: $brand-gradient; }
-    }
+    &:hover { color: $color-text; background: $color-surface-2; }
+    &.active { color: $color-text; background: $color-surface; }
   }
 
   @media (max-width: $header-bp) {
@@ -211,9 +196,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       }
     }
 
-    // ☰ nach links (Drawer-Konvention), Sprache bleibt rechts
+    // ☰ nach links (Drawer-Konvention), Zahnrad bleibt rechts
     .hamburger { display: inline-flex; align-items: center; order: -1; }
-    .lang { margin-left: auto; }
+    .settings-btn { margin-left: auto; }
 
     .backdrop {
       display: block;

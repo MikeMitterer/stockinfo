@@ -12,23 +12,34 @@ beforeEach(() => {
   i18n.global.locale.value = 'de'
 })
 
-describe('AppHeader mobile menu', () => {
-  it('rendert einen Hamburger-Button mit aria-label aus nav.menu', () => {
+describe('AppHeader', () => {
+  it('rendert genau vier Arbeitsbereiche in fester Reihenfolge', () => {
     const wrapper = mountHeader()
-    const burger = wrapper.find('.hamburger')
-    expect(burger.exists()).toBe(true)
-    expect(burger.attributes('aria-label')).toBe('Menü')
+    const labels = wrapper.findAll('.nav-tabs .tab span').map((s) => s.text())
+    expect(labels).toEqual(['Assets', 'Börsen', 'Devisen', 'Analyse'])
+  })
+
+  it('zeigt keinen Sprach-Umschalter mehr in der Kopfzeile', () => {
+    const wrapper = mountHeader()
+    expect(wrapper.find('.lang').exists()).toBe(false)
+  })
+
+  it('rendert ein Zahnrad, das zu settings navigiert', async () => {
+    const wrapper = mountHeader()
+    const gear = wrapper.find('.settings-btn')
+    expect(gear.exists()).toBe(true)
+    expect(gear.attributes('aria-label')).toBe('Einstellungen')
+    await gear.trigger('click')
+    expect(wrapper.emitted('navigate')?.[0]).toEqual(['settings'])
   })
 
   it('öffnet den Drawer per Hamburger und schließt ihn bei Tab-Auswahl', async () => {
     const wrapper = mountHeader()
-    expect(wrapper.find('.nav-tabs').classes()).not.toContain('open')
-
     await wrapper.find('.hamburger').trigger('click')
     expect(wrapper.find('.nav-tabs').classes()).toContain('open')
 
     const tabButtons = wrapper.findAll('.nav-tabs .tab')
-    expect(tabButtons).toHaveLength(7)
+    expect(tabButtons).toHaveLength(4)
     await tabButtons[1].trigger('click') // exchanges
     expect(wrapper.emitted('navigate')?.[0]).toEqual(['exchanges'])
     expect(wrapper.find('.nav-tabs').classes()).not.toContain('open')
@@ -38,7 +49,6 @@ describe('AppHeader mobile menu', () => {
     const wrapper = mountHeader()
     await wrapper.find('.hamburger').trigger('click')
     expect(wrapper.find('.nav-tabs').classes()).toContain('open')
-
     window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }))
     await wrapper.vm.$nextTick()
     expect(wrapper.find('.nav-tabs').classes()).not.toContain('open')
