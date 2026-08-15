@@ -118,7 +118,7 @@ function formatRate(rate: number): string {
   dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.9rem 1.5rem; }
   dt { color: $color-muted; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
   dd { margin: 0; }
-  .badge { &.std { color: $color-accent; background: color-mix(in srgb, $color-accent 15%, transparent); }
-           &.warn { color: $health-warn; background: color-mix(in srgb, $health-warn 18%, transparent); } }
+  .badge { &.std { color: $color-accent; background: token(--accent, 0.15); }
+           &.warn { color: $health-warn; background: token(--status-near, 0.18); } }
 }
 </style>

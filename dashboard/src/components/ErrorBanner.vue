@@ -37,9 +37,9 @@ const emit = defineEmits<{
   justify-content: space-between;
   gap: 0.75rem;
   padding: 0.55rem 0.9rem;
-  border: 1px solid color-mix(in srgb, $color-danger 55%, transparent);
+  border: 1px solid token(--status-out, 0.55);
   border-radius: $radius;
-  background: color-mix(in srgb, $color-danger 12%, transparent);
+  background: token(--status-out, 0.12);
   color: $color-text;
   font-size: 0.85rem;
 }

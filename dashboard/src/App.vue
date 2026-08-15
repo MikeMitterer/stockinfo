@@ -222,7 +222,7 @@ function closeChart(): void {
   right: 0;
   bottom: $status-h;
   z-index: 15;
-  background: color-mix(in srgb, $color-bg 94%, transparent);
+  background: token(--surface-page, 0.94);
   backdrop-filter: blur(8px);
   border-top: 1px solid $color-border;
   padding: 0.6rem 1.25rem 0.75rem;

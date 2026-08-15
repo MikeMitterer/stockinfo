@@ -248,7 +248,7 @@ tbody tr {
   cursor: pointer;
   transition: background 0.1s ease;
   &:hover { background: $color-surface-2; }
-  &.selected { background: color-mix(in srgb, $color-accent 12%, transparent); box-shadow: inset 3px 0 0 $color-accent; }
+  &.selected { background: token(--accent, 0.12); box-shadow: inset 3px 0 0 $color-accent; }
 }
 
 .num { text-align: right; }
@@ -258,7 +258,7 @@ tbody tr {
 .badge.thes {
   color: $color-muted;
   background: $color-surface-2;
-  &.acc { color: $color-accent; background: color-mix(in srgb, $color-accent 15%, transparent); }
+  &.acc { color: $color-accent; background: token(--accent, 0.15); }
 }
 .sym { font-weight: 600; }
 .name { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -292,8 +292,8 @@ tbody tr {
 .badge.type {
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  &.etf { color: $color-accent; background: color-mix(in srgb, $color-accent 15%, transparent); }
-  &.stock { color: $color-accent-2; background: color-mix(in srgb, $color-accent-2 16%, transparent); }
+  &.etf { color: $color-accent; background: token(--accent, 0.15); }
+  &.stock { color: $color-accent-2; background: token(--accent-2, 0.16); }
 }
 
 .actions { display: flex; gap: 0.3rem; justify-content: flex-end; align-items: center; }

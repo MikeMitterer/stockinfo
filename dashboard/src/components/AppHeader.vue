@@ -95,7 +95,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   // Logo links, Navigation + Einstellungen-Knopf als Gruppe rechts
   gap: 0.75rem;
   padding: 0 1.25rem;
-  background: color-mix(in srgb, $color-bg 85%, transparent);
+  background: token(--surface-page, 0.85);
   backdrop-filter: blur(8px);
   border-bottom: 1px solid $color-border;
 
@@ -187,7 +187,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
         right: 0;
         margin-left: 0;
         padding: 0.5rem 1.25rem 0.75rem;
-        background: color-mix(in srgb, $color-bg 96%, transparent);
+        background: token(--surface-page, 0.96);
         backdrop-filter: blur(8px);
         border-bottom: 1px solid $color-border;
         z-index: 19;

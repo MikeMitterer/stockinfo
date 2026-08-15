@@ -216,9 +216,9 @@ a { color: $color-accent; }
 
 html.scrolling,
 html.scrolling * {
-  scrollbar-color: color-mix(in srgb, var(--c-muted) 45%, transparent) transparent;
+  scrollbar-color: token(--text-muted, 0.45) transparent;
 }
 html.scrolling ::-webkit-scrollbar-thumb,
 *:hover::-webkit-scrollbar-thumb {
-  background: color-mix(in srgb, var(--c-muted) 45%, transparent);
+  background: token(--text-muted, 0.45);
 }

@@ -44,15 +44,15 @@ const { t } = useI18n()
 .hint code { font-family: $font-mono; color: $color-text; }
 .scroll { overflow-x: auto; }
 
-td { padding: 0.45rem 0.7rem; border-bottom: 1px solid color-mix(in srgb, $color-border 55%, transparent); }
+td { padding: 0.45rem 0.7rem; border-bottom: 1px solid token(--border-default, 0.55); }
 .suffix { font-weight: 600; color: $color-accent; }
 .dim { color: $color-muted; }
 
-tr.is-default td { background: color-mix(in srgb, $color-accent 8%, transparent); }
+tr.is-default td { background: token(--accent, 0.08); }
 
 // Varianten der globalen .badge-Pill
 .badge {
-  &.std { color: $color-accent; background: color-mix(in srgb, $color-accent 15%, transparent); }
-  &.warn { color: $health-warn; background: color-mix(in srgb, $health-warn 18%, transparent); }
+  &.std { color: $color-accent; background: token(--accent, 0.15); }
+  &.warn { color: $health-warn; background: token(--status-near, 0.18); }
 }
 </style>

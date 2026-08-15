@@ -231,8 +231,8 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
     padding: 0.1rem 0.5rem;
     border-radius: $radius;
     white-space: nowrap;
-    &.up { color: $health-ok; background: color-mix(in srgb, $health-ok 15%, transparent); }
-    &.down { color: $health-down; background: color-mix(in srgb, $health-down 15%, transparent); }
+    &.up { color: $health-ok; background: token(--status-ok, 0.15); }
+    &.down { color: $health-down; background: token(--status-out, 0.15); }
     &.flat { color: $color-muted; background: $color-surface-2; }
   }
 }
