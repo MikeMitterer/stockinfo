@@ -92,7 +92,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   z-index: 20;
   display: flex;
   align-items: center;
-  // Logo links, Navigation + Zahnrad als Gruppe rechts
+  // Logo links, Navigation + Einstellungen-Knopf als Gruppe rechts
   gap: 0.75rem;
   padding: 0 1.25rem;
   background: color-mix(in srgb, $color-bg 85%, transparent);
@@ -197,7 +197,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
       }
     }
 
-    // ☰ nach links (Drawer-Konvention), Zahnrad bleibt rechts
+    // ☰ nach links (Drawer-Konvention), Einstellungen-Knopf bleibt rechts
     .hamburger { display: inline-flex; align-items: center; order: -1; }
     .settings-btn { margin-left: auto; }
 

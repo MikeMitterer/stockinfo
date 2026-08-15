@@ -32,7 +32,8 @@ watchEffect(() => {
       <path d="M3 12h18M12 3a14 14 0 0 1 4 9 14 14 0 0 1-4 9 14 14 0 0 1-4-9 14 14 0 0 1 4-9z" />
     </template>
     <template v-else-if="name === 'exchanges'">
-      <path d="M3 21h18M5 21V10M19 21V10M9 21v-6h6v6M2 10l10-7 10 7" />
+      <rect x="3" y="4" width="18" height="13" rx="2" />
+      <path d="M7 13l3-3.5 2.5 2.5L17 8" />
     </template>
     <template v-else-if="name === 'analysis'">
       <circle cx="11" cy="11" r="7" />
