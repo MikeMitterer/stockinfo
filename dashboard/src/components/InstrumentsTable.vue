@@ -241,6 +241,7 @@ function accumulating(value: boolean | null): string {
   flex: 1;
   min-width: 0;
   max-width: 100%;
+  min-height: 44px; // Trefferfläche: war 33.8px, unter dem 44px-Minimum
   font-size: 1rem; // unter 16px zoomt iOS beim Antippen die ganze Seite
   padding: 0.4rem 0.6rem;
   border-radius: $radius;
