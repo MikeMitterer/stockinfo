@@ -42,6 +42,7 @@ Testszenarien für die letzten Änderungen (Commits `1729bee`…`aee2c84`):
 | [T-11f](T-11f-schriften-inter-space-grotesk.md) | Schriften: Inter + Space Grotesk gebündelt (kein CDN) | backlog |
 | [T-11g](T-11g-symbole-statt-hamburger.md) | Symbole statt Hamburger, Einstellungen nach links (dreht T-05/T-11a teilweise zurück) | ready |
 | [T-11h](T-11h-zeichen-wortmarke-favicon.md) | Zeichen, Wortmarke und FavIcon trennen | ready |
+| [T-11i](T-11i-loeschen-bestaetigen.md) | **Bug-Schutz:** Löschen eines Assets bestätigen lassen (Dialog) | ready |
 
 **Erledigt (`solved/`):**
 
