@@ -47,6 +47,9 @@ export const en = {
     more: 'more',
     less: 'less',
     details: 'More metrics',
+    sortBy: 'Sort by',
+    sortAsc: 'Ascending',
+    sortDesc: 'Descending',
   },
   chart: {
     title: 'Price history',

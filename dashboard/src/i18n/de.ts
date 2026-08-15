@@ -45,6 +45,9 @@ export const de = {
     more: 'mehr',
     less: 'weniger',
     details: 'Weitere Kennzahlen',
+    sortBy: 'Sortieren nach',
+    sortAsc: 'Aufsteigend',
+    sortDesc: 'Absteigend',
   },
   chart: {
     title: 'Kurshistorie',

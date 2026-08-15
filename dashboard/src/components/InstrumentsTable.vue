@@ -2,7 +2,9 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import { useIsCompact } from '../composables/useIsCompact'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
+import InstrumentCard from './InstrumentCard.vue'
 import IsinEditor from './IsinEditor.vue'
 import type { InstrumentSummary } from '../types'
 
@@ -25,6 +27,8 @@ const emit = defineEmits<{
 
 const { t, locale } = useI18n()
 
+const compact = useIsCompact()
+
 const { sortKey, direction, toggle, sort, init: initSort } = useTableSort()
 initSort()
 
@@ -42,6 +46,16 @@ const columns: { key: SortKey; label: string; align?: string }[] = [
 ]
 
 const sortedInstruments = computed(() => sort(props.instruments))
+
+/**
+ * Kehrt die Sortierrichtung in der Kartenansicht um (nur auf/ab). `toggle()`
+ * kann das nicht liefern — bei gleichbleibendem Schlüssel schaltet es beim
+ * zweiten Aufruf die Sortierung ganz aus, was ein eigener Richtungsknopf
+ * nicht soll.
+ */
+function toggleSortDirection(): void {
+  direction.value = direction.value === 'asc' ? 'desc' : 'asc'
+}
 
 /** Baut den extraETF-Profil-Link (ISIN-basiert, ETF/Stock unterschieden). */
 function extraetfLink(item: InstrumentSummary): string {
@@ -80,6 +94,41 @@ function accumulating(value: boolean | null): string {
     <p v-if="instruments.length === 0" class="empty">
       {{ t('table.empty') }}
     </p>
+    <template v-else-if="compact">
+      <div class="tsort">
+        <select
+          v-model="sortKey"
+          class="tsort__select"
+          :aria-label="t('table.sortBy')"
+        >
+          <option v-for="column in columns" :key="column.key" :value="column.key">
+            {{ t(column.label) }}
+          </option>
+        </select>
+        <button
+          type="button"
+          class="tsort__dir"
+          :title="direction === 'asc' ? t('table.sortAsc') : t('table.sortDesc')"
+          @click="toggleSortDirection"
+        >{{ direction === 'asc' ? '▲' : '▼' }}</button>
+      </div>
+      <div class="cards">
+        <InstrumentCard
+          v-for="item in sortedInstruments"
+          :key="item.symbol"
+          :item="item"
+          :selected="item.symbol === selectedSymbol"
+          :refreshing="item.symbol === refreshingSymbol"
+          :extraetf-url="extraetfLink(item)"
+          :yahoo-url="yahooLink(item)"
+          @select="emit('select', $event)"
+          @refresh="emit('refresh', $event)"
+          @remove="emit('remove', $event)"
+          @json="emit('json', $event)"
+          @set-isin="emit('set-isin', $event)"
+        />
+      </div>
+    </template>
     <div v-else class="scroll">
       <table class="data-table">
         <thead>
@@ -179,6 +228,39 @@ function accumulating(value: boolean | null): string {
 
 .empty { color: $color-muted; margin: 0.25rem 0 0; }
 .scroll { overflow-x: auto; }
+
+.cards { display: flex; flex-direction: column; }
+
+.tsort {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 0.75rem;
+}
+.tsort__select {
+  flex: 1;
+  min-width: 0;
+  max-width: 100%;
+  font-size: 1rem; // unter 16px zoomt iOS beim Antippen die ganze Seite
+  padding: 0.4rem 0.6rem;
+  border-radius: $radius;
+  background: $color-surface-2;
+  color: $color-text;
+  option { font-family: inherit; font-size: 1rem; }
+}
+.tsort__dir {
+  flex: none;
+  min-height: 44px;
+  min-width: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: $color-surface-2;
+  color: $color-accent;
+  border-radius: $radius;
+  font-size: 0.9rem;
+  &:hover { background: $color-accent; color: #fff; }
+}
 
 thead th { font-weight: 600; }
 thead th.sortable {
