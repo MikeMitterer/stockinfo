@@ -33,6 +33,7 @@ Testszenarien für die letzten Änderungen (Commits `1729bee`…`aee2c84`):
 | Ticket | Thema | Status |
 |---|---|---|
 | [T-09](T-09-manuelle-etf-werte-nachtragen.md) | Asset-Kennzahlen manuell nachtragen (persistent, DB+API+UI) | backlog |
+| [T-11](T-11-ux-standards-angleichen.md) | **Epic:** App an ux-standards angleichen (Nav, Settings, Token, Mobil-Tabellen, Themes) | backlog |
 
 **Erledigt (`solved/`):**
 
