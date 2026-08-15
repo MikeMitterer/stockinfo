@@ -20,6 +20,7 @@ import { Line } from 'vue-chartjs'
 
 import { useTheme } from '../composables/useTheme'
 import type { RangeKey } from '../types'
+import { accentColors } from '../utils/chartColors'
 import { pctAxisBounds, periodChangePct, relChangePct } from '../utils/changePct'
 import RangeSelector from './RangeSelector.vue'
 
@@ -96,14 +97,17 @@ const changeText = computed(() => {
 
 const chartData = computed<ChartData<'line'>>(() => {
   void current.value
-  const accent = cssVar('--c-accent', '#f2673f')
+  const accentTriplet = cssVar('--accent', '242 103 63')
+  // Tokens sind seit T-11b RGB-Tripel, kein Hex mehr — daher keine
+  // Hex-Alpha-Verkettung (`${accent}22`) mehr, die war seit T-11b kaputt.
+  const { solid: accent, fill } = accentColors(accentTriplet)
   return {
     datasets: [
       {
         label: `${t('chart.priceLabel')}${props.currency ? ` (${props.currency})` : ''}`,
         data: props.series,
         borderColor: accent,
-        backgroundColor: `${accent}22`,
+        backgroundColor: fill,
         pointBackgroundColor: accent,
         pointRadius: isIntraday.value ? 2 : 1.5,
         borderWidth: 2,
@@ -116,8 +120,8 @@ const chartData = computed<ChartData<'line'>>(() => {
 
 const chartOptions = computed<ChartOptions<'line'>>(() => {
   void current.value
-  const muted = cssVar('--c-muted', '#b0a3c6')
-  const border = cssVar('--c-border', '#493a5c')
+  const muted = `rgb(${cssVar('--text-muted', '176 163 198')})`
+  const border = `rgb(${cssVar('--border-default', '73 58 92')})`
   const bounds = pctAxisBounds(props.series)
   return {
     responsive: true,
