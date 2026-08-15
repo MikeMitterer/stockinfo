@@ -57,6 +57,12 @@ function toggleSortDirection(): void {
   setDirection(direction.value === 'asc' ? 'desc' : 'asc')
 }
 
+/** Übernimmt die Select-Auswahl der mobilen Sortierleiste (leer = aus). */
+function onSortSelect(event: Event): void {
+  const value = (event.target as HTMLSelectElement).value
+  setSortKey(value === '' ? null : (value as SortKey))
+}
+
 /** Baut den extraETF-Profil-Link (ISIN-basiert, ETF/Stock unterschieden). */
 function extraetfLink(item: InstrumentSummary): string {
   if (!item.isin) return ''
@@ -96,12 +102,14 @@ function accumulating(value: boolean | null): string {
     </p>
     <template v-else-if="compact">
       <div class="tsort">
+        <label class="tsort__label" for="tsort-select">{{ t('table.sortBy') }}</label>
         <select
-          :value="sortKey"
+          id="tsort-select"
+          :value="sortKey ?? ''"
           class="tsort__select"
-          :aria-label="t('table.sortBy')"
-          @change="setSortKey(($event.target as HTMLSelectElement).value as SortKey)"
+          @change="onSortSelect"
         >
+          <option value="">{{ t('table.sortNone') }}</option>
           <option v-for="column in columns" :key="column.key" :value="column.key">
             {{ t(column.label) }}
           </option>
@@ -109,6 +117,7 @@ function accumulating(value: boolean | null): string {
         <button
           type="button"
           class="tsort__dir"
+          :disabled="sortKey === null"
           :title="direction === 'asc' ? t('table.sortAsc') : t('table.sortDesc')"
           @click="toggleSortDirection"
         >{{ direction === 'asc' ? '▲' : '▼' }}</button>
@@ -234,9 +243,17 @@ function accumulating(value: boolean | null): string {
 
 .tsort {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 0.5rem;
   margin: 0 0 0.75rem;
+}
+.tsort__label {
+  flex: none;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: $color-text;
+  white-space: nowrap;
 }
 .tsort__select {
   flex: 1;

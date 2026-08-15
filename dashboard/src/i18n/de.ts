@@ -46,6 +46,7 @@ export const de = {
     less: 'weniger',
     details: 'Weitere Kennzahlen',
     sortBy: 'Sortieren nach',
+    sortNone: 'Ohne Sortierung',
     sortAsc: 'Aufsteigend',
     sortDesc: 'Absteigend',
   },

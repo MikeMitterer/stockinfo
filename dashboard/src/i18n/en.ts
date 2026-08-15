@@ -48,6 +48,7 @@ export const en = {
     less: 'less',
     details: 'More metrics',
     sortBy: 'Sort by',
+    sortNone: 'No sorting',
     sortAsc: 'Ascending',
     sortDesc: 'Descending',
   },

@@ -2,6 +2,7 @@ import { mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import InstrumentsTable from '../../src/components/InstrumentsTable.vue'
+import { useTableSort } from '../../src/composables/useTableSort'
 import { i18n } from '../../src/i18n'
 import type { InstrumentSummary } from '../../src/types'
 
@@ -34,6 +35,9 @@ function mountTable() {
 
 beforeEach(() => {
   i18n.global.locale.value = 'de'
+  // sortKey/direction sind Modul-Level-Singletons — zwischen Tests zurücksetzen,
+  // sonst hängt eine Sortierung aus einem früheren Test nach.
+  useTableSort().setSortKey(null)
 })
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -59,6 +63,55 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
     const wrapper = mountTable()
     expect(wrapper.find('.tsort__select').exists()).toBe(true)
     expect(wrapper.find('.tsort__dir').exists()).toBe(true)
+  })
+
+  it('zeigt eine sichtbare Beschriftung, die auf das Select verweist', () => {
+    stubMatchMedia(true)
+    const wrapper = mountTable()
+    const label = wrapper.find('.tsort__label')
+    const select = wrapper.find('.tsort__select')
+    expect(label.exists()).toBe(true)
+    expect(label.text()).toBe('Sortieren nach')
+    expect(label.attributes('for')).toBe(select.attributes('id'))
+  })
+
+  it('erste Option ist der Platzhalter "Ohne Sortierung" mit leerem Wert', () => {
+    stubMatchMedia(true)
+    const wrapper = mountTable()
+    const options = wrapper.findAll('.tsort__select option')
+    expect(options[0].text()).toBe('Ohne Sortierung')
+    expect(options[0].attributes('value')).toBe('')
+  })
+
+  it('Select steht ohne aktive Sortierung auf dem leeren Platzhalter-Wert', () => {
+    stubMatchMedia(true)
+    const wrapper = mountTable()
+    const select = wrapper.find('.tsort__select')
+    expect((select.element as HTMLSelectElement).value).toBe('')
+  })
+
+  it('Richtungsknopf ist ohne aktive Sortierung deaktiviert', () => {
+    stubMatchMedia(true)
+    const wrapper = mountTable()
+    expect(wrapper.find('.tsort__dir').attributes('disabled')).toBeDefined()
+  })
+
+  it('Wahl des Platzhalters setzt eine aktive Sortierung zurück', async () => {
+    stubMatchMedia(true)
+    const wrapper = mountTable()
+    const select = wrapper.find('.tsort__select')
+
+    // erst eine Spalte wählen, damit Sortierung aktiv ist …
+    await select.setValue('name')
+    expect((select.element as HTMLSelectElement).value).toBe('name')
+    expect(wrapper.find('.tsort__dir').attributes('disabled')).toBeUndefined()
+    expect(window.localStorage.getItem('stockinfo-sort')).not.toBeNull()
+
+    // … dann den Platzhalter wählen und Reset prüfen
+    await select.setValue('')
+    expect((select.element as HTMLSelectElement).value).toBe('')
+    expect(wrapper.find('.tsort__dir').attributes('disabled')).toBeDefined()
+    expect(window.localStorage.getItem('stockinfo-sort')).toBeNull()
   })
 
   it('reicht select aus einer Karte nach oben durch', async () => {
