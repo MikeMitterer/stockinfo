@@ -93,11 +93,11 @@ async function run(): Promise<void> {
   select { min-width: 0; max-width: 100%; font-size: 1rem; }
   // Optionen explizit (nicht nur geerbt): App-Schrift + 16px (mobile-Standard, kein iOS-Zoom)
   select option { font-family: inherit; font-size: 1rem; }
-  .err { color: #e5484d; margin: 0.5rem 0; }
+  .err { color: $color-danger; margin: 0.5rem 0; }
   table.stages { width: 100%; border-collapse: collapse; font-family: $font-mono; font-variant-numeric: tabular-nums; }
   th, td { text-align: left; padding: 0.4rem 0.6rem; border-bottom: 1px solid $color-border; }
   .num { text-align: right; }
-  tr.error td { color: #e5484d; }
+  tr.error td { color: $color-danger; }
   tr.total td { font-weight: 700; border-top: 2px solid $color-border; }
 }
 </style>

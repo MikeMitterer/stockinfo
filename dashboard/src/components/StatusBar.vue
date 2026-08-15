@@ -38,7 +38,7 @@ const { t } = useI18n()
   align-items: center;
   justify-content: space-between;
   padding: 0 1.25rem;
-  background: rgba(20, 16, 25, 0.9);
+  background: token(--surface-page, 0.9);
   backdrop-filter: blur(8px);
   border-top: 1px solid $color-border;
   font-size: 0.78rem;

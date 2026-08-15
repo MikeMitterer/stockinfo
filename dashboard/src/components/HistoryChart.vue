@@ -96,7 +96,7 @@ const changeText = computed(() => {
 
 const chartData = computed<ChartData<'line'>>(() => {
   void current.value
-  const accent = cssVar('--c-accent', '#df5430')
+  const accent = cssVar('--c-accent', '#f2673f')
   return {
     datasets: [
       {
@@ -116,8 +116,8 @@ const chartData = computed<ChartData<'line'>>(() => {
 
 const chartOptions = computed<ChartOptions<'line'>>(() => {
   void current.value
-  const muted = cssVar('--c-muted', '#9a8fb0')
-  const border = cssVar('--c-border', '#382c46')
+  const muted = cssVar('--c-muted', '#b0a3c6')
+  const border = cssVar('--c-border', '#493a5c')
   const bounds = pctAxisBounds(props.series)
   return {
     responsive: true,

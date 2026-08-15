@@ -243,7 +243,7 @@ thead th.sortable {
   &:hover { color: $color-accent; }
   .arrow { color: $color-accent; font-size: 0.6rem; }
 }
-tbody td { padding: 0.5rem 0.7rem; border-bottom: 1px solid rgba(56, 44, 70, 0.5); }
+tbody td { padding: 0.5rem 0.7rem; border-bottom: 1px solid token(--border-default, 0.5); }
 tbody tr {
   cursor: pointer;
   transition: background 0.1s ease;

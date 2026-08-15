@@ -79,6 +79,8 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   position: fixed;
   inset: 0;
   z-index: 50;
+  // Bewusst neutrales Schwarz, kein Theme-Ton — der Schleier soll in jedem
+  // Theme gleich abdunkeln.
   background: rgba(0, 0, 0, 0.6);
   backdrop-filter: blur(3px);
   display: flex;

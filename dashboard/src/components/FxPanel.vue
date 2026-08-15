@@ -111,7 +111,7 @@ function formatRate(rate: number): string {
   .amount { width: 7rem; padding: 0.4rem 0.6rem; border-radius: $radius; border: 1px solid $color-border; background: $color-surface; color: $color-text; font-family: $font-mono; font-variant-numeric: tabular-nums; }
   .code { width: 5rem; text-transform: uppercase; text-align: center; padding: 0.4rem; border-radius: $radius; border: 1px solid $color-border; background: $color-surface; color: $color-text; font-family: $font-mono; }
   .swap { background: $color-surface-2; border: 1px solid $color-border; border-radius: $radius; padding: 0.4rem 0.6rem; }
-  .err { color: #e5484d; }
+  .err { color: $color-danger; }
   .amount-result { font-size: 1.4rem; font-weight: 700; margin: 0.5rem 0 0.15rem; font-variant-numeric: tabular-nums; }
   .rate { color: $color-muted; font-size: 0.95rem; margin: 0 0 1rem; }
   .nowrap { white-space: nowrap; }
