@@ -50,6 +50,8 @@ export const en = {
     loading: 'Loading…',
     empty: 'No history in the selected range.',
     close: 'Close',
+    periodChange: 'Change over the period',
+    vsStart: 'vs. start',
     ranges: {
       intraday: '1D',
       oneWeek: '1W',

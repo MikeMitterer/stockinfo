@@ -20,6 +20,7 @@ import { Line } from 'vue-chartjs'
 
 import { useTheme } from '../composables/useTheme'
 import type { RangeKey } from '../types'
+import { pctAxisBounds, periodChangePct, relChangePct } from '../utils/changePct'
 import RangeSelector from './RangeSelector.vue'
 
 ChartJS.register(
@@ -67,6 +68,32 @@ function cssVar(name: string, fallback: string): string {
 
 const isIntraday = computed(() => props.range === 'intraday')
 
+// Prozentuale Veränderung erster → letzter Kurs im gewählten Zeitraum.
+const changePct = computed(() => periodChangePct(props.series))
+
+/** Formatiert einen Prozentwert lokalisiert mit Vorzeichen (z.B. „+2,34 %"). */
+function fmtPct(value: number): string {
+  return (
+    value.toLocaleString(locale.value, {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+      signDisplay: 'exceptZero',
+    }) + ' %'
+  )
+}
+
+// Pfeil zusätzlich zur Farbe — Farbe ist nie alleiniger Info-Träger.
+const changeArrow = computed(() =>
+  changePct.value === null || changePct.value === 0 ? '→' : changePct.value > 0 ? '▲' : '▼',
+)
+const changeClass = computed(() =>
+  changePct.value === null || changePct.value === 0 ? 'flat' : changePct.value > 0 ? 'up' : 'down',
+)
+const changeText = computed(() => {
+  const value = changePct.value
+  return value === null ? '' : fmtPct(value)
+})
+
 const chartData = computed<ChartData<'line'>>(() => {
   void current.value
   const accent = cssVar('--c-accent', '#df5430')
@@ -91,10 +118,24 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
   void current.value
   const muted = cssVar('--c-muted', '#9a8fb0')
   const border = cssVar('--c-border', '#382c46')
+  const bounds = pctAxisBounds(props.series)
   return {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: muted } } },
+    plugins: {
+      legend: { labels: { color: muted } },
+      tooltip: {
+        callbacks: {
+          // Zweite Tooltip-Zeile: Veränderung des Punkts gegenüber dem Startwert.
+          afterLabel: (ctx) => {
+            const first = props.series[0]?.y
+            if (first === undefined) return ''
+            const pct = relChangePct(first, ctx.parsed.y ?? Number.NaN)
+            return pct === null ? '' : `${t('chart.vsStart')}: ${fmtPct(pct)}`
+          },
+        },
+      },
+    },
     scales: {
       x: {
         type: 'time',
@@ -109,7 +150,26 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
         ticks: { color: muted, maxTicksLimit: 8, autoSkip: true, maxRotation: 0 },
         grid: { color: border },
       },
-      y: { ticks: { color: muted }, grid: { color: border } },
+      y: {
+        ticks: { color: muted },
+        grid: { color: border },
+        ...(bounds ? { min: bounds.yMin, max: bounds.yMax } : {}),
+      },
+      // Rechte Achse: dieselbe physische Spanne wie die Kursachse, aber in %
+      // relativ zum ersten Punkt beschriftet.
+      yPct: {
+        position: 'right',
+        ...(bounds ? { min: bounds.pctMin, max: bounds.pctMax } : {}),
+        ticks: {
+          color: muted,
+          callback: (value) =>
+            Number(value).toLocaleString(locale.value, {
+              maximumFractionDigits: 1,
+              signDisplay: 'exceptZero',
+            }) + ' %',
+        },
+        grid: { drawOnChartArea: false }, // keine doppelten Gitterlinien
+      },
     },
   }
 })
@@ -122,6 +182,14 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
         {{ t('chart.title') }}<span v-if="symbol" class="sym"> — {{ symbol }}</span>
       </h2>
       <div class="tools">
+        <span
+          v-if="changePct !== null"
+          class="change"
+          :class="changeClass"
+          :title="t('chart.periodChange')"
+        >
+          {{ changeArrow }} {{ changeText }}
+        </span>
         <RangeSelector :active="range" @change="emit('range-change', $event)" />
         <button class="x" :title="t('chart.close')" @click="emit('close')">✕</button>
       </div>
@@ -153,6 +221,20 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
   .sym { color: $color-muted; font-weight: 400; font-family: $font-mono; }
   .tools { display: flex; align-items: center; gap: 0.6rem; }
   .x { background: $color-surface-2; padding: 0.2rem 0.55rem; }
+
+  // %-Veränderung über den Zeitraum — Vorzeichen + Pfeil, Farbe fix/semantisch
+  .change {
+    font-family: $font-mono;
+    font-variant-numeric: tabular-nums;
+    font-weight: 700;
+    font-size: 0.9rem;
+    padding: 0.1rem 0.5rem;
+    border-radius: $radius;
+    white-space: nowrap;
+    &.up { color: $health-ok; background: color-mix(in srgb, $health-ok 15%, transparent); }
+    &.down { color: $health-down; background: color-mix(in srgb, $health-down 15%, transparent); }
+    &.flat { color: $color-muted; background: $color-surface-2; }
+  }
 }
 
 // Dock-tauglich: skaliert mit der Viewport-Höhe statt fixer 320px

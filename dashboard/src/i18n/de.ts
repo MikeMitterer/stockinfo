@@ -48,6 +48,8 @@ export const de = {
     loading: 'Lade…',
     empty: 'Keine Historie im gewählten Zeitraum.',
     close: 'Schließen',
+    periodChange: 'Veränderung über den Zeitraum',
+    vsStart: 'ggü. Start',
     ranges: {
       intraday: '1T',
       oneWeek: '1W',
