@@ -1,46 +1,128 @@
 @use './variables' as *;
 
 // ─── Theme-Paletten (8 Themes, persistent via data-theme) ─────────────────────
+// Primär sind die ux-standards-Token als RGB-Tripel (rgb(var(--x)) / rgb(var(--x) / .5)).
+// Die --c-*-Namen bleiben als Rückwärts-Alias im SELBEN Block: ThemesPanel löst sie
+// je Vorschau-Kachel im eigenen [data-theme]-Kontext auf — ein Alias auf :root
+// würde dort fertig aufgelöst vererbt und alle Kacheln classic zeigen.
 :root,
 [data-theme='classic'] {
-  --c-bg: #100c16; --c-surface: #221b2d; --c-surface-2: #302640; --c-border: #493a5c;
-  --c-text: #f4f0fa; --c-muted: #b0a3c6; --c-accent: #f2673f; --c-accent-2: #d16bb5;
+  --surface-page: 16 12 22;    --surface-card: 34 27 45;
+  --surface-raised: 48 38 64;  --border-default: 73 58 92;
+  --text-primary: 244 240 250; --text-muted: 176 163 198;
+  --accent: 242 103 63;        --accent-2: 209 107 181;
+
+  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
+  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
+  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
+  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
   --c-grad: linear-gradient(120deg, #f2673f, #9a3593);
 }
 [data-theme='ocean'] {
-  --c-bg: #08111b; --c-surface: #10202f; --c-surface-2: #182f43; --c-border: #2c4763;
-  --c-text: #eef5fb; --c-muted: #9db6cf; --c-accent: #4cc5ff; --c-accent-2: #7c7bff;
+  --surface-page: 8 17 27;     --surface-card: 16 32 47;
+  --surface-raised: 24 47 67;  --border-default: 44 71 99;
+  --text-primary: 238 245 251; --text-muted: 157 182 207;
+  --accent: 76 197 255;        --accent-2: 124 123 255;
+
+  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
+  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
+  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
+  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
   --c-grad: linear-gradient(120deg, #4cc5ff, #7c7bff);
 }
 [data-theme='earth'] {
-  --c-bg: #150f09; --c-surface: #251b12; --c-surface-2: #352818; --c-border: #533f28;
-  --c-text: #f6eee2; --c-muted: #c4ad91; --c-accent: #f0973f; --c-accent-2: #c76f2f;
+  --surface-page: 21 15 9;     --surface-card: 37 27 18;
+  --surface-raised: 53 40 24;  --border-default: 83 63 40;
+  --text-primary: 246 238 226; --text-muted: 196 173 145;
+  --accent: 240 151 63;        --accent-2: 199 111 47;
+
+  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
+  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
+  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
+  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
   --c-grad: linear-gradient(120deg, #f0973f, #b56a2c);
 }
 [data-theme='night'] {
-  --c-bg: #0c0c17; --c-surface: #191930; --c-surface-2: #242444; --c-border: #3a3a63;
-  --c-text: #efedff; --c-muted: #aaa6d6; --c-accent: #9a8bff; --c-accent-2: #cf8bff;
+  --surface-page: 12 12 23;    --surface-card: 25 25 48;
+  --surface-raised: 36 36 68;  --border-default: 58 58 99;
+  --text-primary: 239 237 255; --text-muted: 170 166 214;
+  --accent: 154 139 255;       --accent-2: 207 139 255;
+
+  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
+  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
+  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
+  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
   --c-grad: linear-gradient(120deg, #9a8bff, #cf8bff);
 }
 [data-theme='mono'] {
-  --c-bg: #0e0e0e; --c-surface: #1e1e1e; --c-surface-2: #2c2c2c; --c-border: #474747;
-  --c-text: #f5f5f5; --c-muted: #b0b0b0; --c-accent: #e6e6e6; --c-accent-2: #9c9c9c;
+  --surface-page: 14 14 14;    --surface-card: 30 30 30;
+  --surface-raised: 44 44 44;  --border-default: 71 71 71;
+  --text-primary: 245 245 245; --text-muted: 176 176 176;
+  --accent: 230 230 230;       --accent-2: 156 156 156;
+
+  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
+  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
+  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
+  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
   --c-grad: linear-gradient(120deg, #e6e6e6, #808080);
 }
 [data-theme='sunset'] {
-  --c-bg: #160c12; --c-surface: #281824; --c-surface-2: #3a2433; --c-border: #593c4f;
-  --c-text: #fbeaf1; --c-muted: #d3a6bc; --c-accent: #ff7d8f; --c-accent-2: #ff934a;
+  --surface-page: 22 12 18;    --surface-card: 40 24 36;
+  --surface-raised: 58 36 51;  --border-default: 89 60 79;
+  --text-primary: 251 234 241; --text-muted: 211 166 188;
+  --accent: 255 125 143;       --accent-2: 255 147 74;
+
+  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
+  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
+  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
+  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
   --c-grad: linear-gradient(120deg, #ff7d8f, #ff934a);
 }
 [data-theme='forest'] {
-  --c-bg: #0b120f; --c-surface: #16241d; --c-surface-2: #21362b; --c-border: #35533f;
-  --c-text: #ecf6f0; --c-muted: #9dc2ad; --c-accent: #3ee39f; --c-accent-2: #17c07f;
+  --surface-page: 11 18 15;    --surface-card: 22 36 29;
+  --surface-raised: 33 54 43;  --border-default: 53 83 63;
+  --text-primary: 236 246 240; --text-muted: 157 194 173;
+  --accent: 62 227 159;        --accent-2: 23 192 127;
+
+  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
+  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
+  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
+  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
   --c-grad: linear-gradient(120deg, #3ee39f, #08a86f);
 }
 [data-theme='neon'] {
-  --c-bg: #08080f; --c-surface: #16162a; --c-surface-2: #21213c; --c-border: #383860;
-  --c-text: #f0f0ff; --c-muted: #a8a8d6; --c-accent: #2fe0ff; --c-accent-2: #ff45d6;
+  --surface-page: 8 8 15;      --surface-card: 22 22 42;
+  --surface-raised: 33 33 60;  --border-default: 56 56 96;
+  --text-primary: 240 240 255; --text-muted: 168 168 214;
+  --accent: 47 224 255;        --accent-2: 255 69 214;
+
+  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
+  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
+  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
+  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
   --c-grad: linear-gradient(120deg, #2fe0ff, #ff45d6);
+}
+
+// ─── Bedeutungstragende Farben (themeunabhängig) ──────────────────────────────
+// Werte = heutige Ampel-Töne. Die Skill-Stufen kommen mit den Paletten (T-11d).
+:root {
+  --status-ok: 63 185 80;
+  --status-near: 240 163 64;
+  --status-out: 229 83 75;
+}
+
+// ─── Skalen ───────────────────────────────────────────────────────────────────
+// Angelegt für neue Regeln; Bestandswerte werden bewusst NICHT nachgerüstet
+// (das wäre eine Optik-Änderung ohne Nutzen). --font-* sind Schriftgrößen,
+// die Textfarben heißen --text-*.
+:root {
+  --space-1: 0.25rem; --space-2: 0.5rem;  --space-3: 0.75rem;
+  --space-4: 1rem;    --space-6: 1.5rem;  --space-8: 2rem;
+
+  --radius-sm: 8px; --radius-lg: 12px; --radius-full: 9999px;
+
+  --font-xs: 0.75rem; --font-sm: 0.875rem; --font-base: 1rem;
+  --font-lg: 1.125rem; --font-xl: 1.5rem;
 }
 
 // ─── Globales ─────────────────────────────────────────────────────────────────
