@@ -21,6 +21,8 @@ Legende: ✅ live · ⚠️ Einschränkung · ◑ teilweise · ➖ keine Live-Ve
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | 1 | Statuszeile | links App-Name + Daten-Alter; rechts Version + farbiger Status-Punkt (anklickbar → Statusseite) | ➖ | |
+| 1b | Kopf-/Statuszeile in `slate`/`carbon`/`sepia` | Leisten holen ihre Flächen aus **Leisten-Token** (`--surface-header`/`-statusbar`, `--text-bar*`), nicht aus den Inhalts-Token | ➖ | |
+| 1c | breiter Schirm | Kopfzeile, Inhalt und Statuszeile enden an **derselben Kante** (gleicher zentrierter Streifen, `--content-max`) | ➖ | |
 | 2 | Fehlerfall | Meldung als **Toast** (schiebt Layout nicht); Fehler bleibt bis Klick, verschwindet bei Ursache-Wegfall | ➖ | |
 | 3 | Fachbegriff (z.B. `strict_exchange`) | „?"-Hinweis mit Verweis(en), „Zur Einstellung →" springt auf den Reiter | ➖ | |
 

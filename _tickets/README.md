@@ -39,6 +39,7 @@ Testszenarien für die letzten Änderungen (Commits `1729bee`…`aee2c84`):
 | [T-11c](T-11c-assets-tabelle-mobil-karten.md) | Assets-Tabelle mobil → Kartenliste (`useIsCompact`) | backlog |
 | [T-11d](T-11d-themes-namen-kontrast.md) | Themes-Namen/Kontrast abgleichen | backlog |
 | [T-11e](T-11e-statuszeile-toasts-hinweise.md) | Statuszeile + Toast-Meldungen + „?"-Hinweise | backlog |
+| [T-11f](T-11f-schriften-inter-space-grotesk.md) | Schriften: Inter + Space Grotesk gebündelt (kein CDN) | backlog |
 
 **Erledigt (`solved/`):**
 

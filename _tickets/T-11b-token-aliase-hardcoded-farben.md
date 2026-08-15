@@ -5,10 +5,21 @@
 | frontend | backlog | ~2 h | UI-only | — |
 
 **Löst:** Alias-Zeile auf die `ux-standards`-Token-Namen legen
-(`--surface-page/-card/-sunken`, `--edge`, `--ink-*`, `--accent`,
+(`--surface-page/-card/-raised/-sunken`, `--text-primary/-secondary/-muted`,
+`--border-default/-subtle`, `--accent`, `--accent-contrast`,
 `--status-ok/-near/-out`) → auf bestehende `--c-*`/`$health-*` mappen; keine
 Umbenennungswelle. Nebenbei hartkodierte Farben ersetzen (z.B. `#e5484d` in
 `.err` von `FxPanel.vue`/`AnalysisPanel.vue`). Teil-Ticket von **T-11** (Punkt 3).
+
+**Stand Skill 2026-08-15:** Farben als **RGB-Tripel ohne Funktion** (`10 10 10`,
+nicht `#0a0a0a`), Verwendung als `rgb(var(--name))` — nur so ist Deckkraft
+nachrüstbar (`rgb(var(--surface-card) / .7)`). Zusätzlich die **Leisten-Token**
+vorsehen (`--surface-header`, `--surface-statusbar`, `--text-bar`,
+`--text-bar-secondary`, `--text-bar-muted`, `--border-bar`) — optional mit
+Rückfall auf `--surface-page`/`--surface-card`/`--text-primary`; sie sind die
+Voraussetzung für T-11d/T-11e. Skalen ebenfalls benannt: `--space-*`,
+`--radius-sm/-lg/-full`, Schriftgrößen `--font-*` (**nicht** `--text-*` — das
+sind die Textfarben).
 
 <!-- Repo: frontend (dashboard/). Status: backlog. Scope: UI-only. -->
 
@@ -23,6 +34,8 @@ Legende: ✅ live · ⚠️ Einschränkung · ◑ teilweise · ➖ keine Live-Ve
 | 1 | `dashboard/src/styles/` | Alias-Zeile mappt Skill-Token auf bestehende `--c-*`/`$health-*` | ➖ | |
 | 2 | `grep -rn '#e5484d\|#[0-9a-fA-F]\{3,6\}' dashboard/src/components` | keine hartkodierten Farben mehr in Komponenten (nur Token) | ➖ | |
 | 3 | App in mehreren Themes | Farben unverändert (nur Namen dazugelegt, keine Optik-Änderung) | ➖ | |
+| 4 | DevTools → Elements | Farb-Token sind **RGB-Tripel** und werden als `rgb(var(--…))` verwendet; Deckkraft-Test `rgb(var(--surface-card) / .7)` ergibt eine sichtbare Fläche | ➖ | |
+| 5 | `dashboard/src/styles/` | Leisten-Token vorhanden (mit Rückfall); Skalen `--space-*`, `--radius-*`, `--font-*` benannt | ➖ | |
 
 ---
 
