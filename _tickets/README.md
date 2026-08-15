@@ -32,9 +32,7 @@ Testszenarien für die letzten Änderungen (Commits `1729bee`…`aee2c84`):
 
 | Ticket | Thema | Status |
 |---|---|---|
-| [T-08](T-08-chart-prozent-veraenderung.md) | Kurs-Graph: %-Veränderung (Zeitraum + Hover) | backlog |
 | [T-09](T-09-manuelle-etf-werte-nachtragen.md) | Asset-Kennzahlen manuell nachtragen (persistent, DB+API+UI) | backlog |
-| [T-10](T-10-fx-betrag-konvertieren.md) | Devisen: konkreten Betrag umrechnen (Betrag × Rate, Frontend) | backlog |
 
 **Erledigt (`solved/`):**
 
@@ -44,11 +42,13 @@ Testszenarien für die letzten Änderungen (Commits `1729bee`…`aee2c84`):
 | T-02 | Börsen-Panel datengetrieben + `strict_exchange` sichtbar — UI-getestet |
 | T-03 | justETF nur europäische UCITS-ISINs — Guard-Test |
 | T-04 | **Bug:** Dev-Proxy reichte `/exchanges`,`/fx`,`/analyze` nicht durch — behoben |
-| T-06 | Devisen-UX: Dropdown (GBp→GBP), 3 Nachkommastellen, formatiertes Datum — umgesetzt + UI-getestet |
 | T-05 | **Bug:** Header/Menü Mobile — Hamburger-Drawer links, Breakpoint 1280px — vom Nutzer abgenommen |
-| T-07 | Environment-Tab: Config-Herkunft + .env.example-Link + Strikte-Börse-Hinweis — vom Nutzer abgenommen |
+| T-06 | Devisen-UX: Dropdown (GBp→GBP), 3 Nachkommastellen, formatiertes Datum — UI-getestet |
+| T-07 | Environment-Tab: Config-Herkunft + .env.example-Link + Strikte-Börse-Hinweis — abgenommen |
+| T-08 | Kurs-Graph: %-Veränderung (rechte Achse, Badge, Tooltip) — abgenommen |
+| T-10 | Devisen: konkreten Betrag umrechnen (Betrag × Rate) — abgenommen |
 
-T-04–T-06 sind beim Testen entstanden (Nutzer-Findings).
+T-04–T-10 sind großteils beim Testen entstanden (Nutzer-Findings).
 
 **Voraussetzung Test:** Stack läuft (`make dev-up`) — Backend `:8000`,
 Dashboard `:5173`.
