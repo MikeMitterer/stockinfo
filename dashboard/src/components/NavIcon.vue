@@ -28,11 +28,11 @@ watchEffect(() => {
     aria-hidden="true"
   >
     <template v-if="name === 'assets'">
-      <path d="M3 6h.01M3 12h.01M3 18h.01M8 6h13M8 12h13M8 18h13" />
-    </template>
-    <template v-else-if="name === 'exchanges'">
       <circle cx="12" cy="12" r="9" />
       <path d="M3 12h18M12 3a14 14 0 0 1 4 9 14 14 0 0 1-4 9 14 14 0 0 1-4-9 14 14 0 0 1 4-9z" />
+    </template>
+    <template v-else-if="name === 'exchanges'">
+      <path d="M3 21h18M5 21V10M19 21V10M9 21v-6h6v6M2 10l10-7 10 7" />
     </template>
     <template v-else-if="name === 'analysis'">
       <circle cx="11" cy="11" r="7" />
@@ -42,8 +42,10 @@ watchEffect(() => {
       <path d="M4 7h13l-3-3M20 17H7l3 3" />
     </template>
     <template v-else-if="name === 'settings'">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+      <path d="M4 6h16M4 12h16M4 18h16" />
+      <circle cx="9" cy="6" r="2" fill="currentColor" />
+      <circle cx="15" cy="12" r="2" fill="currentColor" />
+      <circle cx="7" cy="18" r="2" fill="currentColor" />
     </template>
     <template v-else>
       <!-- Fallback für unbekannte Namen — sichtbarer Punkt statt leerem SVG -->
