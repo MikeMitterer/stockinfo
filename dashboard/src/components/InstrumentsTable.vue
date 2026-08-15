@@ -47,6 +47,13 @@ const columns: { key: SortKey; label: string; align?: string }[] = [
 
 const sortedInstruments = computed(() => sort(props.instruments))
 
+// Sichtbarer Text der mobilen Sortierzeile: aktive Spalte oder Leerlauf-Text
+// ("⇅ Sortieren"), reagiert auf Sprachwechsel wie die übrigen t()-Aufrufe.
+const sortLabel = computed(() => {
+  const column = columns.find((entry) => entry.key === sortKey.value)
+  return column ? t(column.label) : t('table.sortIdle')
+})
+
 /**
  * Kehrt die Sortierrichtung in der Kartenansicht um (nur auf/ab). `toggle()`
  * kann das nicht liefern — bei gleichbleibendem Schlüssel schaltet es beim
@@ -102,22 +109,28 @@ function accumulating(value: boolean | null): string {
     </p>
     <template v-else-if="compact">
       <div class="tsort">
-        <label class="tsort__label" for="tsort-select">{{ t('table.sortBy') }}</label>
-        <select
-          id="tsort-select"
-          :value="sortKey ?? ''"
-          class="tsort__select"
-          @change="onSortSelect"
-        >
-          <option value="">{{ t('table.sortNone') }}</option>
-          <option v-for="column in columns" :key="column.key" :value="column.key">
-            {{ t(column.label) }}
-          </option>
-        </select>
+        <div class="tsort__trigger">
+          <label class="visually-hidden" for="tsort-select">{{ t('table.sortBy') }}</label>
+          <span class="tsort__icon" aria-hidden="true">⇅</span>
+          <span class="tsort__text">{{ sortLabel }}</span>
+          <!-- Transparent über den Trigger gelegt: öffnet das native Mobil-Picker,
+               bleibt aber ein echtes, gelabeltes <select> für Screenreader/Tastatur. -->
+          <select
+            id="tsort-select"
+            :value="sortKey ?? ''"
+            class="tsort__select"
+            @change="onSortSelect"
+          >
+            <option value="">{{ t('table.sortNone') }}</option>
+            <option v-for="column in columns" :key="column.key" :value="column.key">
+              {{ t(column.label) }}
+            </option>
+          </select>
+        </div>
         <button
+          v-if="sortKey !== null"
           type="button"
           class="tsort__dir"
-          :disabled="sortKey === null"
           :title="direction === 'asc' ? t('table.sortAsc') : t('table.sortDesc')"
           @click="toggleSortDirection"
         >{{ direction === 'asc' ? '▲' : '▼' }}</button>
@@ -241,30 +254,63 @@ function accumulating(value: boolean | null): string {
 
 .cards { display: flex; flex-direction: column; }
 
+// Utility fürs Sortier-<label>: bleibt für Screenreader vorhanden, ist aber
+// visuell nicht vorhanden — nur ⇅-Symbol + Spaltenname tragen die Bedeutung
+// für sehende Nutzer. Im Projekt bislang keine geteilte Fassung vorhanden,
+// deshalb hier lokal (scoped) statt in variables.scss/base.scss ergänzt.
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+// Leise, rechtsbündige Textzeile statt Formularleiste (T-11c). Das native
+// <select> bleibt im DOM und liegt transparent über dem sichtbaren Trigger —
+// Antippen öffnet das native Mobil-Picker, die Optik kommt vom Text daneben.
 .tsort {
   display: flex;
-  flex-wrap: wrap;
+  justify-content: flex-end;
   align-items: center;
-  gap: 0.5rem;
-  margin: 0 0 0.75rem;
+  margin: 0 0 0.5rem;
 }
-.tsort__label {
-  flex: none;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: $color-text;
+.tsort__trigger {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  min-height: 44px; // Trefferfläche unabhängig vom (kleinen) Text
+  padding: 0.6rem 0.5rem;
+  border-radius: $radius;
+  color: $color-muted;
+  font-size: 0.85rem; // $font-sm-artig — bewusst klein, die Fläche liefert die Trefferzone
   white-space: nowrap;
+  transition: background 0.1s ease, color 0.1s ease;
+  &:hover,
+  &:focus-within { background: $color-surface-2; color: $color-text; }
 }
+.tsort__icon { font-size: 0.9rem; }
 .tsort__select {
-  flex: 1;
+  // Transparent über .tsort__trigger gelegt (inset: 0 füllt exakt dessen Box,
+  // die dank min-height 44px oben nie kleiner als die Trefferfläche ist).
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
   min-width: 0;
   max-width: 100%;
-  min-height: 44px; // Trefferfläche: war 33.8px, unter dem 44px-Minimum
+  min-height: 44px;
   font-size: 1rem; // unter 16px zoomt iOS beim Antippen die ganze Seite
-  padding: 0.4rem 0.6rem;
-  border-radius: $radius;
-  background: $color-surface-2;
-  color: $color-text;
+  padding: 0;
+  margin: 0;
+  border: 0;
+  opacity: 0;
+  cursor: pointer;
   option { font-family: inherit; font-size: 1rem; }
 }
 .tsort__dir {
@@ -274,11 +320,12 @@ function accumulating(value: boolean | null): string {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: $color-surface-2;
-  color: $color-accent;
+  background: none;
+  color: $color-muted;
   border-radius: $radius;
-  font-size: 0.9rem;
-  &:hover { background: $color-accent; color: #fff; }
+  font-size: 0.8rem;
+  transition: background 0.1s ease, color 0.1s ease;
+  &:hover { background: $color-surface-2; color: $color-text; }
 }
 
 thead th { font-weight: 600; }

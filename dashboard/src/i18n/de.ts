@@ -49,6 +49,7 @@ export const de = {
     sortNone: 'Ohne Sortierung',
     sortAsc: 'Aufsteigend',
     sortDesc: 'Absteigend',
+    sortIdle: 'Sortieren',
   },
   chart: {
     title: 'Kurshistorie',

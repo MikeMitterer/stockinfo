@@ -51,6 +51,7 @@ export const en = {
     sortNone: 'No sorting',
     sortAsc: 'Ascending',
     sortDesc: 'Descending',
+    sortIdle: 'Sort',
   },
   chart: {
     title: 'Price history',

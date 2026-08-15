@@ -62,17 +62,32 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
     stubMatchMedia(true)
     const wrapper = mountTable()
     expect(wrapper.find('.tsort__select').exists()).toBe(true)
-    expect(wrapper.find('.tsort__dir').exists()).toBe(true)
+    // Richtungsknopf erst sichtbar, sobald tatsächlich sortiert wird (s.u.)
+    expect(wrapper.find('.tsort__dir').exists()).toBe(false)
   })
 
-  it('zeigt eine sichtbare Beschriftung, die auf das Select verweist', () => {
+  it('hat ein (visuell verstecktes) Label, das auf das Select verweist', () => {
     stubMatchMedia(true)
     const wrapper = mountTable()
-    const label = wrapper.find('.tsort__label')
+    const label = wrapper.find('label')
     const select = wrapper.find('.tsort__select')
     expect(label.exists()).toBe(true)
+    expect(label.classes()).toContain('visually-hidden')
     expect(label.text()).toBe('Sortieren nach')
     expect(label.attributes('for')).toBe(select.attributes('id'))
+  })
+
+  it('zeigt den Leerlauf-Text, solange nichts sortiert ist', () => {
+    stubMatchMedia(true)
+    const wrapper = mountTable()
+    expect(wrapper.find('.tsort__text').text()).toBe('Sortieren')
+  })
+
+  it('zeigt den Spaltennamen als Trigger-Text, sobald sortiert wird', async () => {
+    stubMatchMedia(true)
+    const wrapper = mountTable()
+    await wrapper.find('.tsort__select').setValue('name')
+    expect(wrapper.find('.tsort__text').text()).toBe('Name')
   })
 
   it('erste Option ist der Platzhalter "Ohne Sortierung" mit leerem Wert', () => {
@@ -90,10 +105,10 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
     expect((select.element as HTMLSelectElement).value).toBe('')
   })
 
-  it('Richtungsknopf ist ohne aktive Sortierung deaktiviert', () => {
+  it('Richtungsknopf ist ohne aktive Sortierung nicht vorhanden', () => {
     stubMatchMedia(true)
     const wrapper = mountTable()
-    expect(wrapper.find('.tsort__dir').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('.tsort__dir').exists()).toBe(false)
   })
 
   it('Wahl des Platzhalters setzt eine aktive Sortierung zurück', async () => {
@@ -104,13 +119,13 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
     // erst eine Spalte wählen, damit Sortierung aktiv ist …
     await select.setValue('name')
     expect((select.element as HTMLSelectElement).value).toBe('name')
-    expect(wrapper.find('.tsort__dir').attributes('disabled')).toBeUndefined()
+    expect(wrapper.find('.tsort__dir').exists()).toBe(true)
     expect(window.localStorage.getItem('stockinfo-sort')).not.toBeNull()
 
     // … dann den Platzhalter wählen und Reset prüfen
     await select.setValue('')
     expect((select.element as HTMLSelectElement).value).toBe('')
-    expect(wrapper.find('.tsort__dir').attributes('disabled')).toBeDefined()
+    expect(wrapper.find('.tsort__dir').exists()).toBe(false)
     expect(window.localStorage.getItem('stockinfo-sort')).toBeNull()
   })
 
