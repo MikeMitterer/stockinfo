@@ -88,15 +88,7 @@ export interface FxRate {
 }
 
 /** Aktive Unterseite/Tab des Dashboards. */
-export type TabKey =
-  | 'assets'
-  | 'exchanges'
-  | 'environment'
-  | 'links'
-  | 'themes'
-  | 'analysis'
-  | 'fx'
-  | 'settings'
+export type TabKey = 'assets' | 'exchanges' | 'analysis' | 'fx' | 'settings'
 
 /** Reiter innerhalb der Einstellungsseite (adressierbar via #/settings?tab=…). */
 export type SettingsTab = 'appearance' | 'language' | 'links' | 'environment'

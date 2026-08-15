@@ -2,16 +2,7 @@ import { onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
 
 import type { SettingsTab, TabKey } from '../types'
 
-const TABS: TabKey[] = [
-  'assets',
-  'exchanges',
-  'environment',
-  'links',
-  'themes',
-  'analysis',
-  'fx',
-  'settings',
-]
+const TABS: TabKey[] = ['assets', 'exchanges', 'analysis', 'fx', 'settings']
 const DEFAULT_TAB: TabKey = 'assets'
 
 export const SETTINGS_TABS: SettingsTab[] = ['appearance', 'language', 'links', 'environment']

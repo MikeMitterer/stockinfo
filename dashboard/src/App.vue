@@ -3,17 +3,14 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import AppHeader from './components/AppHeader.vue'
-import EnvironmentPanel from './components/EnvironmentPanel.vue'
 import ErrorBanner from './components/ErrorBanner.vue'
 import ExchangesPanel from './components/ExchangesPanel.vue'
 import FxPanel from './components/FxPanel.vue'
 import HistoryChart from './components/HistoryChart.vue'
 import InstrumentsTable from './components/InstrumentsTable.vue'
 import JsonModal from './components/JsonModal.vue'
-import LinksPanel from './components/LinksPanel.vue'
 import SettingsPanel from './components/SettingsPanel.vue'
 import StatusBar from './components/StatusBar.vue'
-import ThemesPanel from './components/ThemesPanel.vue'
 import Toolbar from './components/Toolbar.vue'
 import TopProgress from './components/TopProgress.vue'
 import { useDaily } from './composables/useDaily'
@@ -184,16 +181,9 @@ function closeChart(): void {
     </template>
 
     <ExchangesPanel v-else-if="activeTab === 'exchanges'" :data="exchanges" />
-    <EnvironmentPanel v-else-if="activeTab === 'environment'" :env="env" />
-    <LinksPanel v-else-if="activeTab === 'links'" />
     <AnalysisPanel v-else-if="activeTab === 'analysis'" :instruments="instruments" />
     <FxPanel v-else-if="activeTab === 'fx'" :currencies="fxCurrencies" />
-    <SettingsPanel
-      v-else-if="activeTab === 'settings'"
-      v-model:tab="settingsTab"
-      :env="env"
-    />
-    <ThemesPanel v-else />
+    <SettingsPanel v-else-if="activeTab === 'settings'" v-model:tab="settingsTab" :env="env" />
   </main>
 
   <StatusBar :status="healthStatus" :version="healthVersion" />
