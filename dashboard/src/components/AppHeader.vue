@@ -112,7 +112,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   }
   .logo { height: 40px; display: block; }
 
-  .nav-tabs { display: flex; gap: 0.25rem; margin-left: auto; }
+  .nav-tabs { display: flex; gap: 0.25rem; }
 
   .hamburger {
     display: none; // Desktop: versteckt
@@ -161,6 +161,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKeydown))
   .settings-btn {
     display: inline-flex;
     align-items: center;
+    margin-left: auto;
     background: transparent;
     border: none;
     color: $color-muted;

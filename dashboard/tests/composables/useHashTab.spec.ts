@@ -91,4 +91,12 @@ describe('useHashTab', () => {
     expect(window.location.hash).toBe('#/assets')
     unmount()
   })
+
+  it('normalisiert bare #/settings auf ?tab=appearance beim Mount', async () => {
+    window.location.hash = '#/settings'
+    const { unmount } = mountHashTab()
+    await nextTick()
+    expect(window.location.hash).toBe('#/settings?tab=appearance')
+    unmount()
+  })
 })

@@ -31,6 +31,10 @@ Hauptmenü auf **vier Arbeitsbereiche** reduzieren, alle Config/Diagnose unter
   des DE/EN-Umschalters. Aktiv-Zustand am Zahnrad, wenn Settings offen.
   Begründung Skill: „Das Menü gehört dem Nutzer, nicht der Funktionsliste" —
   Einstellungen sind kein Arbeitsbereich.
+- Das Hauptmenü ist **linksbündig** (schließt an die Wortmarke an); die rechte
+  Seite trägt nur Nicht-Navigation: das **Zahnrad** (Settings) und künftig
+  **User/Login**. (ux-standards: „Alles, was zur Navigation gehört, steht
+  links … rechts steht nur, was nicht Navigation ist.")
 
 ### 2. `TabKey` & Routing-Struktur
 

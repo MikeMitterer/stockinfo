@@ -53,8 +53,9 @@ export function useHashTab(): { tab: Ref<TabKey>; settingsTab: Ref<SettingsTab> 
   })
 
   onMounted(() => {
-    if (!window.location.hash) {
-      window.location.hash = toHash(tab.value, settingsTab.value)
+    const next = toHash(tab.value, settingsTab.value)
+    if (window.location.hash !== next) {
+      window.location.hash = next
     }
     window.addEventListener('hashchange', onHashChange)
   })
