@@ -123,6 +123,7 @@ export const en = {
   fx: {
     title: 'FX',
     hint: 'Rate 1 base = x quote. Example: EUR→USD ≈ 1.15.',
+    amount: 'Amount',
     base: 'Base', quote: 'Quote', swap: 'Swap',
     convert: 'Convert', converting: 'Fetching…',
     quoteTime: 'Quote time', source: 'Source', status: 'Status',

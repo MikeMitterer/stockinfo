@@ -40,6 +40,36 @@ describe('FxPanel', () => {
     expect(rate.attributes('title')).toBe('1.1527377367019653')
   })
 
+  it('rechnet einen Betrag mit der Rate um (2 Nachkommastellen)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ base: 'EUR', quote: 'USD', rate: 1.15, quote_time: 't', source: 'yfinance', cached: false, stale: false, fetched_at: 't' }),
+      { status: 200 },
+    )))
+    const wrapper = mount(FxPanel, {
+      global: { plugins: [i18n] },
+      props: { currencies: ['EUR', 'USD'] },
+    })
+    await wrapper.find('.amount').setValue('200')
+    await wrapper.find('button:last-of-type').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.amount-result').text()).toContain('200 EUR = 230.00 USD')
+  })
+
+  it('fällt bei leerem Betrag auf 1 zurück (kein Crash)', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
+      JSON.stringify({ base: 'EUR', quote: 'USD', rate: 1.15, quote_time: 't', source: 'yfinance', cached: false, stale: false, fetched_at: 't' }),
+      { status: 200 },
+    )))
+    const wrapper = mount(FxPanel, {
+      global: { plugins: [i18n] },
+      props: { currencies: ['EUR', 'USD'] },
+    })
+    await wrapper.find('.amount').setValue('')
+    await wrapper.find('button:last-of-type').trigger('click')
+    await flushPromises()
+    expect(wrapper.find('.amount-result').text()).toContain('1 EUR = 1.15 USD')
+  })
+
   it('zeigt die Kurszeit formatiert (kein roher ISO-String)', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
       JSON.stringify({ base: 'EUR', quote: 'USD', rate: 1.15, quote_time: '2026-08-13T07:41:13.759837+00:00', source: 'yfinance', cached: false, stale: false, fetched_at: 't' }),

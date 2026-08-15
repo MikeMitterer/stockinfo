@@ -122,6 +122,7 @@ export const de = {
   fx: {
     title: 'Devisen',
     hint: 'Wechselkurs 1 Basis = x Ziel. Beispiel: EUR→USD ≈ 1,15.',
+    amount: 'Betrag',
     base: 'Basiswährung', quote: 'Zielwährung', swap: 'Tauschen',
     convert: 'Umrechnen', converting: 'Hole…',
     quoteTime: 'Kurszeit', source: 'Quelle', status: 'Status',

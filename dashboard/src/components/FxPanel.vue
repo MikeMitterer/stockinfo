@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { useFx } from '../composables/useFx'
@@ -12,6 +12,31 @@ const { result, loading, error, convert } = useFx()
 
 const base = ref<string>('EUR')
 const quote = ref<string>('USD')
+const amount = ref<string>('1')
+
+// Betrag defensiv: leer/ungültig/negativ → Fallback 1 (kein Crash).
+// `Number('')` ist 0 → leeren String separat abfangen; `String()`, weil ein
+// number-Input auch eine Zahl liefern kann.
+const amountNum = computed<number>(() => {
+  const raw = String(amount.value ?? '').trim()
+  if (raw === '') return 1
+  const n = Number(raw)
+  return Number.isFinite(n) && n >= 0 ? n : 1
+})
+
+/** Geldbetrag lokalisiert mit 2 Nachkommastellen. */
+function formatMoney(value: number): string {
+  return value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+}
+
+const amountText = computed(() =>
+  amountNum.value.toLocaleString(locale.value, { maximumFractionDigits: 4 }),
+)
+// Umgerechneter Betrag = Betrag × Rate (reaktiv, ohne erneuten Abruf).
+const convertedText = computed(() => {
+  const r = result.value
+  return r ? formatMoney(amountNum.value * r.rate) : ''
+})
 
 function swap(): void {
   ;[base.value, quote.value] = [quote.value, base.value]
@@ -35,6 +60,15 @@ function formatRate(rate: number): string {
     <p class="hint">{{ t('fx.hint') }}</p>
 
     <div class="controls">
+      <input
+        v-model="amount"
+        type="number"
+        min="0"
+        step="any"
+        class="amount"
+        :aria-label="t('fx.amount')"
+        @keyup.enter="run"
+      />
       <select v-model="base" class="code" :aria-label="t('fx.base')">
         <option v-for="c in currencies" :key="c" :value="c">{{ c }}</option>
       </select>
@@ -50,6 +84,9 @@ function formatRate(rate: number): string {
     <p v-if="error" class="err">{{ error }}</p>
 
     <div v-if="result" class="result">
+      <p class="amount-result mono">
+        {{ amountText }} {{ result.base }} = {{ convertedText }} {{ result.quote }}
+      </p>
       <p class="rate mono" :title="String(result.rate)">
         1 {{ result.base }} = {{ formatRate(result.rate) }} {{ result.quote }}
       </p>
@@ -71,10 +108,12 @@ function formatRate(rate: number): string {
 .fx {
   .hint { color: $color-muted; margin: 0 0 1rem; font-size: 0.85rem; max-width: 72ch; }
   .controls { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+  .amount { width: 7rem; padding: 0.4rem 0.6rem; border-radius: $radius; border: 1px solid $color-border; background: $color-surface; color: $color-text; font-family: $font-mono; font-variant-numeric: tabular-nums; }
   .code { width: 5rem; text-transform: uppercase; text-align: center; padding: 0.4rem; border-radius: $radius; border: 1px solid $color-border; background: $color-surface; color: $color-text; font-family: $font-mono; }
   .swap { background: $color-surface-2; border: 1px solid $color-border; border-radius: $radius; padding: 0.4rem 0.6rem; }
   .err { color: #e5484d; }
-  .rate { font-size: 1.4rem; font-weight: 700; margin: 0.5rem 0 1rem; }
+  .amount-result { font-size: 1.4rem; font-weight: 700; margin: 0.5rem 0 0.15rem; font-variant-numeric: tabular-nums; }
+  .rate { color: $color-muted; font-size: 0.95rem; margin: 0 0 1rem; }
   .nowrap { white-space: nowrap; }
   dl { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 0.9rem 1.5rem; }
   dt { color: $color-muted; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.04em; }
