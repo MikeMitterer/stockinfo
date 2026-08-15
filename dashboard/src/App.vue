@@ -11,6 +11,7 @@ import HistoryChart from './components/HistoryChart.vue'
 import InstrumentsTable from './components/InstrumentsTable.vue'
 import JsonModal from './components/JsonModal.vue'
 import LinksPanel from './components/LinksPanel.vue'
+import SettingsPanel from './components/SettingsPanel.vue'
 import StatusBar from './components/StatusBar.vue'
 import ThemesPanel from './components/ThemesPanel.vue'
 import Toolbar from './components/Toolbar.vue'
@@ -50,7 +51,7 @@ const { busy, add, refreshOne, remove, setIsin, error: actionsError } = useInstr
 const { status: healthStatus, version: healthVersion, start: startHealth, stop: stopHealth } =
   useHealth()
 
-const { tab: activeTab } = useHashTab()
+const { tab: activeTab, settingsTab } = useHashTab()
 const selectedItem = ref<InstrumentSummary | null>(null)
 const selectedRange = ref<RangeKey>('intraday')
 const refreshingSymbol = ref<string | null>(null)
@@ -187,6 +188,11 @@ function closeChart(): void {
     <LinksPanel v-else-if="activeTab === 'links'" />
     <AnalysisPanel v-else-if="activeTab === 'analysis'" :instruments="instruments" />
     <FxPanel v-else-if="activeTab === 'fx'" :currencies="fxCurrencies" />
+    <SettingsPanel
+      v-else-if="activeTab === 'settings'"
+      v-model:tab="settingsTab"
+      :env="env"
+    />
     <ThemesPanel v-else />
   </main>
 
