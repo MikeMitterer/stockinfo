@@ -127,4 +127,52 @@ describe('useTableSort', () => {
     init()
     expect(sortKey.value).toBeNull()
   })
+
+  it('setSortKey persistiert die Spalte mit aktueller Richtung', async () => {
+    const { useTableSort } = await import('../../src/composables/useTableSort')
+    const { setSortKey } = useTableSort()
+
+    setSortKey('latest_price')
+    expect(JSON.parse(window.localStorage.getItem('stockinfo-sort') ?? '')).toEqual({
+      key: 'latest_price',
+      dir: 'asc',
+    })
+  })
+
+  it('setDirection aktualisiert die gespeicherte Richtung', async () => {
+    const { useTableSort } = await import('../../src/composables/useTableSort')
+    const { setSortKey, setDirection } = useTableSort()
+
+    setSortKey('latest_price')
+    setDirection('desc')
+    expect(JSON.parse(window.localStorage.getItem('stockinfo-sort') ?? '')).toEqual({
+      key: 'latest_price',
+      dir: 'desc',
+    })
+  })
+
+  it('setSortKey(null) entfernt den localStorage-Eintrag', async () => {
+    const { useTableSort } = await import('../../src/composables/useTableSort')
+    const { setSortKey } = useTableSort()
+
+    setSortKey('latest_price')
+    setSortKey(null)
+    expect(window.localStorage.getItem('stockinfo-sort')).toBeNull()
+  })
+
+  it('mobil per setSortKey/setDirection gesetzte Sortierung übersteht init() wie ein Header-Klick', async () => {
+    const first = await import('../../src/composables/useTableSort')
+    const sortA = first.useTableSort()
+    // Zustand vor dem Test explizit zurücksetzen — Modul-Level-Singleton.
+    sortA.setSortKey(null)
+    sortA.setSortKey('ter')
+    sortA.setDirection('desc')
+
+    vi.resetModules()
+    const second = await import('../../src/composables/useTableSort')
+    const sortB = second.useTableSort()
+    sortB.init()
+    expect(sortB.sortKey.value).toBe('ter')
+    expect(sortB.direction.value).toBe('desc')
+  })
 })

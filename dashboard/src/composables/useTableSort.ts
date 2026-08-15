@@ -64,6 +64,8 @@ export function useTableSort(): {
   sortKey: Ref<SortKey | null>
   direction: Ref<SortDirection>
   toggle: (key: SortKey) => void
+  setSortKey: (key: SortKey | null) => void
+  setDirection: (dir: SortDirection) => void
   sort: (items: InstrumentSummary[]) => InstrumentSummary[]
   init: () => void
 } {
@@ -105,6 +107,18 @@ export function useTableSort(): {
     persist()
   }
 
+  /** Setzt die Sortierspalte (null = aus) und persistiert. */
+  function setSortKey(key: SortKey | null): void {
+    sortKey.value = key
+    persist()
+  }
+
+  /** Setzt die Sortierrichtung und persistiert. */
+  function setDirection(dir: SortDirection): void {
+    direction.value = dir
+    persist()
+  }
+
   /** Sortierte Kopie der Instrumente; ohne aktive Sortierung unverändert. */
   function sort(items: InstrumentSummary[]): InstrumentSummary[] {
     const key = sortKey.value
@@ -120,5 +134,5 @@ export function useTableSort(): {
     })
   }
 
-  return { sortKey, direction, toggle, sort, init }
+  return { sortKey, direction, toggle, setSortKey, setDirection, sort, init }
 }

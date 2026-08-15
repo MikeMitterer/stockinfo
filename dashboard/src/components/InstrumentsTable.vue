@@ -29,7 +29,7 @@ const { t, locale } = useI18n()
 
 const compact = useIsCompact()
 
-const { sortKey, direction, toggle, sort, init: initSort } = useTableSort()
+const { sortKey, direction, toggle, setSortKey, setDirection, sort, init: initSort } = useTableSort()
 initSort()
 
 // Sortierbare Spaltenköpfe (Label-Key aus dem Katalog + optionale Zellklasse).
@@ -51,10 +51,10 @@ const sortedInstruments = computed(() => sort(props.instruments))
  * Kehrt die Sortierrichtung in der Kartenansicht um (nur auf/ab). `toggle()`
  * kann das nicht liefern — bei gleichbleibendem Schlüssel schaltet es beim
  * zweiten Aufruf die Sortierung ganz aus, was ein eigener Richtungsknopf
- * nicht soll.
+ * nicht soll. `setDirection()` persistiert dabei wie ein Header-Klick.
  */
 function toggleSortDirection(): void {
-  direction.value = direction.value === 'asc' ? 'desc' : 'asc'
+  setDirection(direction.value === 'asc' ? 'desc' : 'asc')
 }
 
 /** Baut den extraETF-Profil-Link (ISIN-basiert, ETF/Stock unterschieden). */
@@ -97,9 +97,10 @@ function accumulating(value: boolean | null): string {
     <template v-else-if="compact">
       <div class="tsort">
         <select
-          v-model="sortKey"
+          :value="sortKey"
           class="tsort__select"
           :aria-label="t('table.sortBy')"
+          @change="setSortKey(($event.target as HTMLSelectElement).value as SortKey)"
         >
           <option v-for="column in columns" :key="column.key" :value="column.key">
             {{ t(column.label) }}
