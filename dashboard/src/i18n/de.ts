@@ -42,6 +42,9 @@ export const de = {
     yahooFinance: 'Yahoo Finance',
     refresh: 'Aktualisieren',
     remove: 'Löschen',
+    more: 'mehr',
+    less: 'weniger',
+    details: 'Weitere Kennzahlen',
   },
   chart: {
     title: 'Kurshistorie',

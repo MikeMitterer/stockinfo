@@ -44,6 +44,9 @@ export const en = {
     yahooFinance: 'Yahoo Finance',
     refresh: 'Refresh',
     remove: 'Delete',
+    more: 'more',
+    less: 'less',
+    details: 'More metrics',
   },
   chart: {
     title: 'Price history',
