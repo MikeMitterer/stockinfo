@@ -1,9 +1,9 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { isIsin } from '../api/paths'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
+import IsinEditor from './IsinEditor.vue'
 import type { InstrumentSummary } from '../types'
 
 const props = defineProps<{
@@ -42,45 +42,6 @@ const columns: { key: SortKey; label: string; align?: string }[] = [
 ]
 
 const sortedInstruments = computed(() => sort(props.instruments))
-
-// Inline-Eingabe zum nachträglichen Erfassen einer ISIN
-const editingSymbol = ref<string | null>(null)
-const isinDraft = ref<string>('')
-const isinInvalid = ref<boolean>(false)
-
-// Fokussiert das Eingabefeld direkt beim Einblenden.
-const vFocus = { mounted: (el: HTMLInputElement) => el.focus() }
-
-// Fehlerhinweis zurücksetzen, sobald der Entwurf geändert wird.
-watch(isinDraft, () => {
-  isinInvalid.value = false
-})
-
-function startIsin(item: InstrumentSummary): void {
-  editingSymbol.value = item.symbol
-  isinDraft.value = ''
-  isinInvalid.value = false
-}
-
-function cancelIsin(): void {
-  editingSymbol.value = null
-  isinDraft.value = ''
-  isinInvalid.value = false
-}
-
-function confirmIsin(item: InstrumentSummary): void {
-  const value = isinDraft.value.trim().toUpperCase()
-  if (!value) {
-    cancelIsin()
-    return
-  }
-  if (!isIsin(value)) {
-    isinInvalid.value = true // Hinweis zeigen, Eingabe offen lassen
-    return
-  }
-  emit('set-isin', { symbol: item.symbol, isin: value })
-  cancelIsin()
-}
 
 /** Baut den extraETF-Profil-Link (ISIN-basiert, ETF/Stock unterschieden). */
 function extraetfLink(item: InstrumentSummary): string {
@@ -153,23 +114,7 @@ function accumulating(value: boolean | null): string {
             <td class="sym mono">{{ item.symbol }}</td>
             <td class="mono dim isin-cell">
               <span v-if="item.isin">{{ item.isin }}</span>
-              <span v-else-if="editingSymbol === item.symbol" class="isin-edit" @click.stop>
-                <input
-                  v-model="isinDraft"
-                  v-focus
-                  class="isin-input"
-                  :class="{ invalid: isinInvalid }"
-                  :placeholder="t('table.isinPlaceholder')"
-                  @keyup.enter="confirmIsin(item)"
-                  @keyup.esc="cancelIsin"
-                />
-                <button class="mini ok" :title="t('table.save')" @click="confirmIsin(item)">✓</button>
-                <button class="mini" :title="t('table.cancel')" @click="cancelIsin">✕</button>
-                <span v-if="isinInvalid" class="isin-err">{{ t('table.isinInvalid') }}</span>
-              </span>
-              <button v-else class="mini add" :title="t('table.addIsin')" @click.stop="startIsin(item)">
-                + ISIN
-              </button>
+              <IsinEditor v-else :symbol="item.symbol" @save="emit('set-isin', $event)" />
             </td>
             <td class="name">{{ item.name ?? '—' }}</td>
             <td>
@@ -265,28 +210,6 @@ tbody tr {
 .ccy { color: $color-muted; font-size: 0.75rem; margin-left: 0.2rem; }
 
 .isin-cell { white-space: nowrap; }
-.isin-edit { display: inline-flex; align-items: center; gap: 0.25rem; }
-.isin-input {
-  width: 140px;
-  padding: 0.15rem 0.4rem;
-  border-radius: 6px;
-  border: 1px solid $color-accent;
-  background: $color-bg;
-  color: $color-text;
-  font-family: $font-mono;
-  font-size: 0.8rem;
-  &:focus { outline: none; }
-}
-.mini {
-  padding: 0.12rem 0.45rem;
-  font-size: 0.72rem;
-  background: $color-surface-2;
-  &.add { color: $color-muted; }
-  &.add:hover { color: $color-accent; }
-  &.ok { color: $health-ok; }
-}
-.isin-input.invalid { border-color: $color-danger; }
-.isin-err { color: $color-danger; font-size: 0.72rem; white-space: nowrap; }
 
 // Varianten der globalen .badge-Pill
 .badge.type {
