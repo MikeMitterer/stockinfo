@@ -221,10 +221,15 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
   justify-content: space-between;
   gap: 1rem;
   margin-bottom: 0.75rem;
+  // 371px, Dock offen, gemessen: .head bleibt nowrap → .tools wird von der
+  // Titel-Zeile in seine Content-Breite (261px Range allein) gezwungen, statt
+  // auf den verfügbaren Platz (~204px) zu schrumpfen — „Max" ragt 13px über
+  // den Viewport. .head muss selbst umbrechen, damit .tools bei Platzmangel
+  // in eine eigene volle Zeile unter den Titel fällt (261px < 331px nutzbare
+  // Breite dort passt wieder rein).
+  flex-wrap: wrap;
   h2 { margin: 0; }
   .sym { color: $color-muted; font-weight: 400; font-family: $font-mono; }
-  // 371px: .tools war 404px breit (Range allein 261px) → 18px horizontales
-  // Scrollen. Umbruch statt Kürzen, damit alle Range-Optionen nutzbar bleiben.
   .tools { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
   .x { background: $color-surface-2; padding: 0.2rem 0.55rem; }
 

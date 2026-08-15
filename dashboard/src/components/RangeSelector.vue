@@ -40,6 +40,9 @@ const ranges = computed<{ key: RangeKey; label: string }[]>(() => [
 
 .range {
   display: inline-flex;
+  // Sicherheitsnetz für sehr schmale Viewports (< 261px nutzbare Breite):
+  // ohne Umbruch würden einzelne Range-Buttons abgeschnitten statt umzubrechen.
+  flex-wrap: wrap;
   gap: 2px;
   padding: 3px;
   border-radius: $radius;
