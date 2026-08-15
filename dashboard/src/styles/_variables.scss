@@ -2,25 +2,35 @@
 $brand-orange: #df5430;
 $brand-purple: #812c7c;
 
+// ─── Farbzugriff ──────────────────────────────────────────────────────────────
+// Die Token sind RGB-Tripel (base.scss). token() macht daraus eine Farbe,
+// wahlweise mit Deckkraft: token(--accent, .15) statt color-mix(…).
+@function token($name, $alpha: 1) {
+  @if $alpha == 1 {
+    @return rgb(var(#{$name}));
+  }
+  @return rgb(var(#{$name}) / #{$alpha});
+}
+
 // ─── Themebare Farben — Werte kommen aus [data-theme] in base.scss ─────────────
-$color-bg: var(--c-bg);
-$color-surface: var(--c-surface);
-$color-surface-2: var(--c-surface-2);
-$color-border: var(--c-border);
-$color-text: var(--c-text);
-$color-muted: var(--c-muted);
-$color-accent: var(--c-accent);
-$color-accent-2: var(--c-accent-2);
+$color-bg: token(--surface-page);
+$color-surface: token(--surface-card);
+$color-surface-2: token(--surface-raised);
+$color-border: token(--border-default);
+$color-text: token(--text-primary);
+$color-muted: token(--text-muted);
+$color-accent: token(--accent);
+$color-accent-2: token(--accent-2);
 $brand-gradient: var(--c-grad);
 
-// ─── Health-Ampel (fix, semantisch) ───────────────────────────────────────────
-$color-danger: #e5534b;
-$health-ok: #3fb950;
-$health-warn: #f0a340;
-$health-down: #e5534b;
+// ─── Health-Ampel (themeunabhängig, semantisch) ───────────────────────────────
+$color-danger: token(--status-out);
+$health-ok: token(--status-ok);
+$health-warn: token(--status-near);
+$health-down: token(--status-out);
 
 // ─── Maße & Schrift ───────────────────────────────────────────────────────────
-$radius: 10px;
+$radius: 10px;      // Bestandswert; die Skala (--radius-*) gilt für neue Regeln.
 $font-mono: 'SF Mono', 'JetBrains Mono', 'Menlo', ui-monospace, monospace;
 $header-h: 58px;
 $header-bp: 1280px; // Tailwind xl: ab hier volle Tab-Zeile, darunter Hamburger-Drawer.
