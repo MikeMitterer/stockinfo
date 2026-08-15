@@ -18,6 +18,27 @@ Dazu **Leisten-Token** (`--surface-header`, `--surface-statusbar`, `--text-bar`,
 umgekehrt) — jede mindestens einmal vertreten. `carbon` bringt eigene,
 kräftigere Status-/Kategorie-Stufen mit.
 
+**Marke (Skill-Nachtrag, gleicher Tag):** Der Verlauf ist **themeunabhängig**
+und je App eigen — für StockInfo **Koralle → Pflaume, `#df5430` → `#812c7c`,
+135°**. Das sind exakt die heute toten `$brand-orange`/`$brand-purple` in
+`_variables.scss`; sie werden damit wieder lebendig. Heute ist `--c-grad`
+dagegen **pro Theme verschieden und 120°** — das fällt weg.
+
+**Achtung, zwei verwechselbare Token:**
+`--brand-contrast: 255 255 255` (fest, Zeichen auf dem Marken-Verlauf) steht
+**neben** `--accent-contrast` (Text auf der *Akzent*fläche, wechselt mit dem
+Theme — in sechs der elf Paletten nahezu schwarz). Die Plakette ist keine
+Akzentfläche; ein Zeichen darauf, das mit dem Theme umschlägt, verschwindet in
+genau diesen sechs. Die vier aus **T-11b** übrig gebliebenen `#fff` müssen
+deshalb **einzeln** zugeordnet werden:
+
+| Stelle | richtiges Token | warum |
+|---|---|---|
+| `base.scss` `button.primary` (auf `$brand-gradient`) | `--brand-contrast` | liegt auf dem Marken-Verlauf |
+| `SettingsPanel.vue` aktiver Sprach-Knopf (auf Verlauf) | `--brand-contrast` | dito |
+| `RangeSelector.vue` aktiver Zeitraum (auf Verlauf) | `--brand-contrast` | dito |
+| `InstrumentsTable.vue` `.ext:hover`, `.icon.danger:hover` (auf `$color-accent` bzw. `$color-danger`) | `--accent-contrast` | echte Akzent-/Statusfläche |
+
 <!-- Repo: frontend (dashboard/). Status: backlog. Scope: UI-only. -->
 
 ---
@@ -34,6 +55,8 @@ Legende: ✅ live · ⚠️ Einschränkung · ◑ teilweise · ➖ keine Live-Ve
 | 4 | Theme-Auswahl | alle **elf** Themes vorhanden, Werte 1:1 aus `themes.md` | ➖ | |
 | 5 | `slate`, `carbon`, `aurora`, `sepia` | Kopf-/Statuszeile nutzen **Leisten-Token** — Behandlung sichtbar (tiefer / heller / Farbschleier / umgekehrt) | ➖ | |
 | 6 | `sepia` (heller Inhalt, dunkle Leisten) | Wortmarke + Leisten-Text lesbar (eigene `--text-bar*`-Farben greifen) | ➖ | |
+| 7 | Plakette in der Kopfzeile, **alle** Themes durchschalten | Verlauf bleibt konstant Koralle→Pflaume (135°); das Zeichen darin bleibt weiß und verschwindet in **keinem** Theme | ➖ | |
+| 8 | `grep -rn '#fff' dashboard/src` | keine `#fff` mehr — je Stelle korrekt `--brand-contrast` (auf Verlauf) oder `--accent-contrast` (auf Akzent/Status) | ➖ | |
 
 ---
 
