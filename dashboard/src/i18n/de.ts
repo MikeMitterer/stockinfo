@@ -10,6 +10,7 @@ export const de = {
     fx: 'Devisen',
     home: 'Zur Startseite',
     menu: 'Menü',
+    settings: 'Einstellungen',
   },
   toolbar: {
     placeholder: 'ISIN oder Symbol (z.B. VGWL.DE)',
@@ -147,6 +148,20 @@ export const de = {
     title: 'Sprache',
     de: 'Deutsch',
     en: 'Englisch',
+  },
+  settings: {
+    title: 'Einstellungen',
+    tab: {
+      appearance: 'Darstellung',
+      language: 'Sprache',
+      links: 'API & Links',
+      environment: 'Environment',
+    },
+    language: {
+      hint:
+        'Ohne eigene Wahl folgt die Sprache dem Browser. Eine Auswahl hier wird ' +
+        'gespeichert und beim nächsten Start wiederhergestellt.',
+    },
   },
   status: {
     ok: 'Online',

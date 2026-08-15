@@ -12,6 +12,7 @@ export const en = {
     fx: 'FX',
     home: 'Go to start page',
     menu: 'Menu',
+    settings: 'Settings',
   },
   toolbar: {
     placeholder: 'ISIN or symbol (e.g. VGWL.DE)',
@@ -148,6 +149,20 @@ export const en = {
     title: 'Language',
     de: 'German',
     en: 'English',
+  },
+  settings: {
+    title: 'Settings',
+    tab: {
+      appearance: 'Appearance',
+      language: 'Language',
+      links: 'API & Links',
+      environment: 'Environment',
+    },
+    language: {
+      hint:
+        'Without an explicit choice the language follows the browser. A selection ' +
+        'here is saved and restored on next start.',
+    },
   },
   status: {
     ok: 'Online',
