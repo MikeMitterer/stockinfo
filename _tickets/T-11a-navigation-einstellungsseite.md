@@ -68,6 +68,14 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 > unabhängig nachgezogen im finalen Whole-Branch-Review. Nur vorbestehende
 > Sass-„legacy-JS-API"-Deprecation-Warnung (nicht neu).
 
+> **Achtung — Zeilen 2 und 8 werden durch [T-11g](T-11g-symbole-statt-hamburger.md)
+> überholt.** Dort wandert der Einstellungen-Knopf von **rechts nach links** in die
+> Menüzeile, und der Hamburger-Drawer entfällt zugunsten stehenbleibender Symbole.
+> Beides war zum Zeitpunkt von T-11a skillkonform (Stand T-05 bzw. früher
+> Skill-Stand) und ist es nach dem Nachtrag vom 2026-08-15 nicht mehr. Ein ✅ in
+> diesen beiden Zeilen bezieht sich also auf den **damaligen** Soll-Zustand — bei
+> der Abnahme von T-11g gilt dessen Matrix.
+
 ---
 
 ## Details
