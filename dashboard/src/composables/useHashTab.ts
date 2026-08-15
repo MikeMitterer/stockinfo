@@ -1,38 +1,74 @@
 import { onMounted, onUnmounted, ref, watch, type Ref } from 'vue'
 
-import type { TabKey } from '../types'
+import type { SettingsTab, TabKey } from '../types'
 
-const TABS: TabKey[] = ['assets', 'exchanges', 'environment', 'links', 'themes', 'analysis', 'fx']
+const TABS: TabKey[] = [
+  'assets',
+  'exchanges',
+  'environment',
+  'links',
+  'themes',
+  'analysis',
+  'fx',
+  'settings',
+]
 const DEFAULT_TAB: TabKey = 'assets'
 
-/** Liest den aktiven Tab aus der URL-Hash-Route (#/assets …). */
-function fromHash(): TabKey {
-  const key = window.location.hash.replace(/^#\/?/, '') as TabKey
-  return TABS.includes(key) ? key : DEFAULT_TAB
+export const SETTINGS_TABS: SettingsTab[] = ['appearance', 'language', 'links', 'environment']
+export const DEFAULT_SETTINGS_TAB: SettingsTab = 'appearance'
+
+interface HashRoute {
+  tab: TabKey
+  settingsTab: SettingsTab
 }
 
-/** Aktiver Tab, synchron mit einer deep-linkbaren Hash-Route (#/<tab>). */
-export function useHashTab(): Ref<TabKey> {
-  const active = ref<TabKey>(fromHash())
+/** Zerlegt die Hash-Route in Tab und (bei settings) Reiter — z.B. "#/settings?tab=language". */
+function parseHash(): HashRoute {
+  const raw = window.location.hash.replace(/^#\/?/, '')
+  const [tabPart, queryPart = ''] = raw.split('?')
+  const tab = (TABS as string[]).includes(tabPart) ? (tabPart as TabKey) : DEFAULT_TAB
+  const rawSettingsTab = new URLSearchParams(queryPart).get('tab') ?? ''
+  const settingsTab = (SETTINGS_TABS as string[]).includes(rawSettingsTab)
+    ? (rawSettingsTab as SettingsTab)
+    : DEFAULT_SETTINGS_TAB
+  return { tab, settingsTab }
+}
+
+/** Baut die Hash-Route: bei settings mit ?tab=<reiter>, sonst schlicht #/<tab>. */
+function toHash(tab: TabKey, settingsTab: SettingsTab): string {
+  return tab === 'settings' ? `#/settings?tab=${settingsTab}` : `#/${tab}`
+}
+
+/**
+ * Aktiver Tab + Settings-Reiter, synchron mit einer deep-linkbaren Hash-Route.
+ * Einzige Stelle, die die URL-Struktur besitzt.
+ */
+export function useHashTab(): { tab: Ref<TabKey>; settingsTab: Ref<SettingsTab> } {
+  const initial = parseHash()
+  const tab = ref<TabKey>(initial.tab)
+  const settingsTab = ref<SettingsTab>(initial.settingsTab)
 
   function onHashChange(): void {
-    active.value = fromHash()
+    const route = parseHash()
+    tab.value = route.tab
+    settingsTab.value = route.settingsTab
   }
 
-  watch(active, (tab) => {
-    if (fromHash() !== tab) {
-      window.location.hash = `#/${tab}`
+  watch([tab, settingsTab], ([t, s]) => {
+    const next = toHash(t, s)
+    if (window.location.hash !== next) {
+      window.location.hash = next
     }
   })
 
   onMounted(() => {
     if (!window.location.hash) {
-      window.location.hash = `#/${active.value}`
+      window.location.hash = toHash(tab.value, settingsTab.value)
     }
     window.addEventListener('hashchange', onHashChange)
   })
 
   onUnmounted(() => window.removeEventListener('hashchange', onHashChange))
 
-  return active
+  return { tab, settingsTab }
 }

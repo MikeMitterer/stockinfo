@@ -50,7 +50,7 @@ const { busy, add, refreshOne, remove, setIsin, error: actionsError } = useInstr
 const { status: healthStatus, version: healthVersion, start: startHealth, stop: stopHealth } =
   useHealth()
 
-const activeTab = useHashTab()
+const { tab: activeTab } = useHashTab()
 const selectedItem = ref<InstrumentSummary | null>(null)
 const selectedRange = ref<RangeKey>('intraday')
 const refreshingSymbol = ref<string | null>(null)
