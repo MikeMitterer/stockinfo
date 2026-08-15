@@ -33,7 +33,12 @@ Testszenarien für die letzten Änderungen (Commits `1729bee`…`aee2c84`):
 | Ticket | Thema | Status |
 |---|---|---|
 | [T-09](T-09-manuelle-etf-werte-nachtragen.md) | Asset-Kennzahlen manuell nachtragen (persistent, DB+API+UI) | backlog |
-| [T-11](T-11-ux-standards-angleichen.md) | **Epic:** App an ux-standards angleichen (Nav, Settings, Token, Mobil-Tabellen, Themes) | backlog |
+| [T-11](T-11-ux-standards-angleichen.md) | **Epic:** App an ux-standards angleichen (Nav, Settings, Token, Mobil-Tabellen, Themes) | in Arbeit |
+| [T-11a](T-11a-navigation-einstellungsseite.md) | Navigation entrümpeln + Einstellungsseite (Nav 4 Punkte, Settings-Reiter, Zahnrad) | Code fertig+reviewt → Browser-Abnahme |
+| [T-11b](T-11b-token-aliase-hardcoded-farben.md) | Token-Aliase + hartkodierte Farben ersetzen | backlog |
+| [T-11c](T-11c-assets-tabelle-mobil-karten.md) | Assets-Tabelle mobil → Kartenliste (`useIsCompact`) | backlog |
+| [T-11d](T-11d-themes-namen-kontrast.md) | Themes-Namen/Kontrast abgleichen | backlog |
+| [T-11e](T-11e-statuszeile-toasts-hinweise.md) | Statuszeile + Toast-Meldungen + „?"-Hinweise | backlog |
 
 **Erledigt (`solved/`):**
 
