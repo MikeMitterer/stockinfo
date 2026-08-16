@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NButton } from 'naive-ui'
 
 import IsinEditor from './IsinEditor.vue'
 import type { InstrumentSummary } from '../types'
@@ -63,20 +64,28 @@ function accumulating(value: boolean | null): string {
     </div>
 
     <div class="icard__foot">
-      <button
+      <NButton
         class="icard__toggle"
+        quaternary
+        size="small"
         :aria-expanded="expanded"
         :aria-controls="detailsId"
         @click.stop="toggle"
       >
         <span class="icard__chevron" :class="{ 'icard__chevron--open': expanded }">⌄</span>
         {{ expanded ? t('table.less') : t('table.more') }}
-      </button>
+      </NButton>
 
       <div class="icard__actions" @click.stop>
-        <button class="icard__action icard__action--json" :title="t('table.showJson')" @click="emit('json', item)">
+        <NButton
+          class="icard__action icard__action--json"
+          size="tiny"
+          quaternary
+          :title="t('table.showJson')"
+          @click="emit('json', item)"
+        >
           JSON
-        </button>
+        </NButton>
         <a
           v-if="extraetfUrl"
           class="icard__action icard__action--extraetf"
@@ -93,18 +102,27 @@ function accumulating(value: boolean | null): string {
           rel="noopener"
           :title="t('table.yahooFinance')"
         >Y!</a>
-        <button
+        <NButton
           class="icard__action icard__action--refresh"
-          :class="{ spin: refreshing }"
+          size="tiny"
+          quaternary
+          :loading="refreshing"
           :disabled="refreshing"
           :title="t('table.refresh')"
           @click="emit('refresh', item)"
-        >↻</button>
-        <button
+        >
+          ↻
+        </NButton>
+        <NButton
           class="icard__action icard__action--remove"
+          size="tiny"
+          quaternary
+          type="error"
           :title="t('table.remove')"
           @click="emit('remove', item)"
-        >✕</button>
+        >
+          ✕
+        </NButton>
       </div>
     </div>
 

@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NButton } from 'naive-ui'
 
 import type { InstrumentSummary } from '../types'
 
@@ -91,12 +92,20 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       </div>
 
       <footer class="foot">
-        <button ref="cancelBtnRef" class="confirm-delete__cancel" @click="emit('cancel')">
+        <NButton
+          ref="cancelBtnRef"
+          class="confirm-delete__cancel"
+          @click="emit('cancel')"
+        >
           {{ t('table.cancel') }}
-        </button>
-        <button class="confirm-delete__confirm" @click="emit('confirm')">
+        </NButton>
+        <NButton
+          class="confirm-delete__confirm"
+          type="error"
+          @click="emit('confirm')"
+        >
           {{ t('table.remove') }}
-        </button>
+        </NButton>
       </footer>
     </div>
   </div>

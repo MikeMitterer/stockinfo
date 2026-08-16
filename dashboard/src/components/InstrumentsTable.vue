@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NButton, NSelect } from 'naive-ui'
 
 import { useIsCompact } from '@mikemitterer/ux-foundation'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
@@ -47,12 +48,17 @@ const columns: { key: SortKey; label: string; align?: string }[] = [
 
 const sortedInstruments = computed(() => sort(props.instruments))
 
-// Sichtbarer Text der mobilen Sortierzeile: aktive Spalte oder Leerlauf-Text
-// ("⇅ Sortieren"), reagiert auf Sprachwechsel wie die übrigen t()-Aufrufe.
-const sortLabel = computed(() => {
-  const column = columns.find((entry) => entry.key === sortKey.value)
-  return column ? t(column.label) : t('table.sortIdle')
-})
+/**
+ * Auswahlliste der mobilen Sortierzeile.
+ *
+ * Der erste Eintrag ist der Leerlauf: Ohne ihn ließe sich eine einmal gesetzte
+ * Sortierung nicht mehr abschalten. Er trägt den leeren Wert, damit die
+ * Auswahl ihn als „nichts gewählt" zeigt.
+ */
+const sortOptions = computed(() => [
+  { value: '', label: t('table.sortNone') },
+  ...columns.map((column) => ({ value: column.key, label: t(column.label) })),
+])
 
 /**
  * Kehrt die Sortierrichtung in der Kartenansicht um (nur auf/ab). `toggle()`
@@ -64,9 +70,8 @@ function toggleSortDirection(): void {
   setDirection(direction.value === 'asc' ? 'desc' : 'asc')
 }
 
-/** Übernimmt die Select-Auswahl der mobilen Sortierleiste (leer = aus). */
-function onSortSelect(event: Event): void {
-  const value = (event.target as HTMLSelectElement).value
+/** Übernimmt die Auswahl der mobilen Sortierleiste (leer = aus). */
+function onSortSelect(value: string): void {
   setSortKey(value === '' ? null : (value as SortKey))
 }
 
@@ -106,31 +111,29 @@ function accumulating(value: boolean | null): string {
     <div class="table__head" :class="{ 'table__head--compact': compact }">
       <h2>{{ t('table.title') }}</h2>
       <div v-if="compact && instruments.length > 0" class="tsort">
-        <div class="tsort__trigger">
-          <label class="visually-hidden" for="tsort-select">{{ t('table.sortBy') }}</label>
-          <span class="tsort__icon" aria-hidden="true">⇅</span>
-          <span class="tsort__text">{{ sortLabel }}</span>
-          <!-- Transparent über den Trigger gelegt: öffnet das native Mobil-Picker,
-               bleibt aber ein echtes, gelabeltes <select> für Screenreader/Tastatur. -->
-          <select
-            id="tsort-select"
-            :value="sortKey ?? ''"
-            class="tsort__select"
-            @change="onSortSelect"
-          >
-            <option value="">{{ t('table.sortNone') }}</option>
-            <option v-for="column in columns" :key="column.key" :value="column.key">
-              {{ t(column.label) }}
-            </option>
-          </select>
-        </div>
-        <button
+        <!--
+          Naives Auswahlliste statt eines nativen `select`: Sie bringt Tastatur
+          und Beschriftung selbst mit, und die Oberfläche bleibt in einer
+          Formensprache. Die frühere Lösung legte ein transparentes `select`
+          über einen eigenen Trigger — zwei Elemente für eine Aufgabe.
+        -->
+        <NSelect
+          class="tsort__select"
+          size="small"
+          :value="sortKey ?? ''"
+          :options="sortOptions"
+          :aria-label="t('table.sortBy')"
+          @update:value="onSortSelect"
+        />
+        <NButton
           v-if="sortKey !== null"
-          type="button"
           class="tsort__dir"
+          size="small"
           :title="direction === 'asc' ? t('table.sortAsc') : t('table.sortDesc')"
           @click="toggleSortDirection"
-        >{{ direction === 'asc' ? '▲' : '▼' }}</button>
+        >
+          {{ direction === 'asc' ? '▲' : '▼' }}
+        </NButton>
       </div>
     </div>
     <p v-if="instruments.length === 0" class="empty">
@@ -209,7 +212,15 @@ function accumulating(value: boolean | null): string {
             </td>
             <td class="num mono dim">{{ item.history_count }}</td>
             <td class="actions" @click.stop>
-              <button class="ext" :title="t('table.showJson')" @click="emit('json', item)">JSON</button>
+              <NButton
+                class="ext"
+                size="tiny"
+                quaternary
+                :title="t('table.showJson')"
+                @click="emit('json', item)"
+              >
+                JSON
+              </NButton>
               <a
                 v-if="extraetfLink(item)"
                 class="ext"
@@ -226,14 +237,27 @@ function accumulating(value: boolean | null): string {
                 rel="noopener"
                 :title="t('table.yahooFinance')"
               >Y!</a>
-              <button
+              <NButton
                 class="icon"
-                :class="{ spin: item.symbol === refreshingSymbol }"
+                size="tiny"
+                quaternary
+                :loading="item.symbol === refreshingSymbol"
                 :disabled="item.symbol === refreshingSymbol"
                 :title="t('table.refresh')"
                 @click="emit('refresh', item)"
-              >↻</button>
-              <button class="icon danger" :title="t('table.remove')" @click="emit('remove', item)">✕</button>
+              >
+                ↻
+              </NButton>
+              <NButton
+                class="icon"
+                size="tiny"
+                quaternary
+                type="error"
+                :title="t('table.remove')"
+                @click="emit('remove', item)"
+              >
+                ✕
+              </NButton>
             </td>
           </tr>
         </tbody>
@@ -287,9 +311,9 @@ function accumulating(value: boolean | null): string {
   border: 0;
 }
 
-// Leise, rechtsbündige Textzeile statt Formularleiste (T-11c). Das native
-// <select> bleibt im DOM und liegt transparent über dem sichtbaren Trigger —
-// Antippen öffnet das native Mobil-Picker, die Optik kommt vom Text daneben.
+// Leise, rechtsbündige Zeile statt Formularleiste (T-11c). Die Auswahl selbst
+// bringt ihre Gestaltung von Naive UI mit — hier steht nur, wo sie sitzt und
+// wie breit sie sein darf.
 .tsort {
   display: flex;
   justify-content: flex-end;
@@ -300,45 +324,13 @@ function accumulating(value: boolean | null): string {
   flex: none;
   max-width: 100%;
 }
-.tsort__trigger {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  min-height: 44px; // Trefferfläche unabhängig vom (kleinen) Text
-  padding: 0.6rem 0.5rem;
-  border-radius: $radius;
-  color: $color-muted;
-  font-size: 0.85rem; // $font-sm-artig — bewusst klein, die Fläche liefert die Trefferzone
-  white-space: nowrap;
-  transition: background 0.1s ease, color 0.1s ease;
-  // Die 44px-Trefferfläche bleibt (min-height oben) — für die Zeilenhöhe der
-  // Kopfzeile zählt dank negativer Margin aber nur ein kleinerer Anteil davon,
-  // sonst würde allein der Sortier-Trigger die ganze Kopfzeile auf 44px
-  // aufblähen. Nichts wird abgeschnitten: .card hat kein overflow:hidden.
-  margin: -0.5rem 0;
-  &:hover,
-  &:focus-within { background: $color-surface-2; color: $color-text; }
-}
-.tsort__icon { font-size: 0.9rem; }
+
 .tsort__select {
-  // Transparent über .tsort__trigger gelegt (inset: 0 füllt exakt dessen Box,
-  // die dank min-height 44px oben nie kleiner als die Trefferfläche ist).
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 44px;
-  font-size: 1rem; // unter 16px zoomt iOS beim Antippen die ganze Seite
-  padding: 0;
-  margin: 0;
-  border: 0;
-  opacity: 0;
-  cursor: pointer;
-  option { font-family: inherit; font-size: 1rem; }
+  // Ohne feste Breite schrumpft die Auswahl im Flex-Container auf ihren
+  // Mindestinhalt — von "Marktwert" bliebe ein "M".
+  width: 11rem;
 }
+
 .tsort__dir {
   flex: none;
   min-height: 44px;
