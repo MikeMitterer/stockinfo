@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import AppHeader from './components/AppHeader.vue'
+import ConfirmDeleteDialog from './components/ConfirmDeleteDialog.vue'
 import ErrorBanner from './components/ErrorBanner.vue'
 import ExchangesPanel from './components/ExchangesPanel.vue'
 import FxPanel from './components/FxPanel.vue'
@@ -53,6 +54,7 @@ const selectedItem = ref<InstrumentSummary | null>(null)
 const selectedRange = ref<RangeKey>('intraday')
 const refreshingSymbol = ref<string | null>(null)
 const jsonItem = ref<InstrumentSummary | null>(null)
+const pendingRemoval = ref<InstrumentSummary | null>(null)
 
 const selectedSymbol = computed(() => selectedItem.value?.symbol ?? null)
 const selectedCurrency = computed(() => selectedItem.value?.latest_currency ?? null)
@@ -143,7 +145,16 @@ async function onRefreshOne(item: InstrumentSummary): Promise<void> {
   }
 }
 
-async function onRemove(item: InstrumentSummary): Promise<void> {
+// Löschen ist unwiderruflich (Kurshistorie geht mit verloren) — daher erst Rückfrage
+// im ConfirmDeleteDialog, bevor tatsächlich gelöscht wird (T-11i).
+function onRemove(item: InstrumentSummary): void {
+  pendingRemoval.value = item
+}
+
+async function confirmRemoval(): Promise<void> {
+  const item = pendingRemoval.value
+  if (!item) return
+  pendingRemoval.value = null
   await remove(item)
   if (selectedItem.value?.symbol === item.symbol) closeChart()
   await loadInstruments()
@@ -202,6 +213,11 @@ function closeChart(): void {
   </div>
 
   <JsonModal :item="jsonItem" @close="jsonItem = null" />
+  <ConfirmDeleteDialog
+    :item="pendingRemoval"
+    @confirm="confirmRemoval"
+    @cancel="pendingRemoval = null"
+  />
 </template>
 
 <style scoped lang="scss">

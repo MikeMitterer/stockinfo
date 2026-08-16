@@ -199,4 +199,9 @@ export const de = {
     analysis: 'Analyse fehlgeschlagen',
     fx: 'Wechselkurs konnte nicht geladen werden',
   },
+  confirmDelete: {
+    title: 'Asset löschen?',
+    history: 'Keine Kurspunkte gespeichert. | 1 Kurspunkt geht verloren. | {count} Kurspunkte gehen verloren.',
+    irreversible: 'Das lässt sich nicht rückgängig machen.',
+  },
 }

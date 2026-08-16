@@ -200,4 +200,9 @@ export const en = {
     analysis: 'Analysis failed',
     fx: 'Exchange rate could not be loaded',
   },
+  confirmDelete: {
+    title: 'Delete asset?',
+    history: 'No price points stored. | 1 price point will be lost. | {count} price points will be lost.',
+    irreversible: 'This cannot be undone.',
+  },
 } satisfies typeof de
