@@ -50,8 +50,10 @@ const tabs = computed<{ key: TabKey; label: string; icon: NavIconName }[]>(() =>
   >
     <template #badge>
       <!--
-        Kurstafel mit steigender Linie — dasselbe Motiv wie im FavIcon, dort
-        nur mit der Kachel darunter; die trägt hier das Fundament.
+        Drei aufsteigende Balken — **dasselbe Motiv** wie in
+        `public/stockinfo-icon.svg`, dort nur mit der Kachel darunter; die
+        trägt hier das Fundament. Weichen Plakette und FavIcon voneinander ab,
+        erkennt man die App im Reiter nicht wieder.
 
         Nur Formen, kein `text`: Ein SVG in einer geladenen Datei ist ein
         eigenes Dokument, sieht die Schriften der Seite nicht und erbt keine
@@ -60,15 +62,13 @@ const tabs = computed<{ key: TabKey; label: string; icon: NavIconName }[]>(() =>
       -->
       <svg
         viewBox="0 0 24 24"
-        fill="none"
-        stroke="rgb(var(--brand-contrast))"
-        stroke-width="2.2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
+        fill="rgb(var(--brand-contrast))"
         width="16"
         height="16"
       >
-        <path d="M4 18V9M9.5 18V5M15 18v-6M20.5 18v-9" />
+        <rect x="4" y="14" width="3.5" height="6" rx="1.2" />
+        <rect x="10.25" y="9.5" width="3.5" height="10.5" rx="1.2" />
+        <rect x="16.5" y="5" width="3.5" height="15" rx="1.2" />
       </svg>
     </template>
 

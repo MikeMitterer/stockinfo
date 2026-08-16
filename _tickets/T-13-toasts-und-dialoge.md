@@ -7,7 +7,8 @@
 **Löst:** Der Rest, den T-12 bewusst stehen ließ — Zustandsmeldungen als Toast
 statt als Banner im Textfluss, und die beiden selbstgebauten Dialoge auf
 `NModal`. Beides ändert Verhalten, das einzeln geprüft gehört, statt in der
-großen Umstellung mitzulaufen.
+großen Umstellung mitzulaufen. Dazu der letzte offene Punkt aus **T-11e**: die
+„?"-Hinweise an erklärungsbedürftigen Begriffen.
 
 <!--
   Repo:   frontend (dashboard/). Scope: UI-only, kein Backend-Change.
@@ -33,7 +34,9 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 | 5 | Asset löschen | Rückfrage als `NModal`, Escape schließt, Fokus liegt auf „Abbrechen" | | |
 | 6 | JSON ansehen | `NModal`, Inhalt scrollt, Kopieren funktioniert weiter | | |
 | 7 | Theme `sepia` (helle Fläche, dunkle Leisten) | Kopf- und Statuszeile lesbar, Wortmarke sichtbar (offen aus T-12 #4) | | |
-| 8 | `npx vitest run` + `vue-tsc -b` | Tests grün, Typecheck sauber | | |
+| 8 | Fachbegriff (z.B. `strict_exchange`) | „?"-Hinweis daneben, darin bis zu zwei Verweise: „Mehr dazu" und „Zur Einstellung →" (offen aus **T-11e #3**) | | |
+| 9 | Klick auf „Zur Einstellung →" | springt auf den zugehörigen Reiter, nicht nur auf die Seite | | |
+| 10 | `npx vitest run` + `vue-tsc -b` | Tests grün, Typecheck sauber | | |
 
 ```bash
 cd "${DEV_LOCAL}/DevWeb/Production/StockInfo/dashboard"
@@ -60,3 +63,16 @@ Aus T-12 übernommen, damit nichts verloren geht:
 - **`JsonModal`** ist der einfachere Fall: Anzeige plus zwei Kopieren-Knöpfe.
 - Verify #4 aus T-12 blieb ◑: Ein helles Theme mit umgekehrten Leisten wurde
   nicht live angesehen.
+
+### Zu den „?"-Hinweisen (aus T-11e)
+
+Der Skill verlangt: Erklärung dort, wo die Frage entsteht — zwei, drei Sätze am
+Begriff, nicht eine Hilfeseite. Im Hinweis stehen bis zu zwei Verweise in einer
+Zeile: **links** die Vertiefung, **rechts** die Stellschraube („Zur Einstellung
+→"). Letzteres setzt voraus, dass die Reiter über die Adresse ansteuerbar sind
+— das sind sie seit T-11a (`#/settings?tab=…`).
+
+StockPortfolio hat das als `InfoHint.vue` gelöst; sobald StockInfo eine zweite
+Fassung bräuchte, gehört die Komponente ins Fundament statt zweimal gebaut.
+Kandidaten hier: `strict_exchange`, die Datenlage-Angaben und die
+Environment-Herkunft.
