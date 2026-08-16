@@ -28,21 +28,39 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | `dashboard/src/styles/` | keine eigenen Paletten mehr; Token kommen aus `tokens.css` des Pakets | | |
-| 2 | Einstellungen → Themes | **alle** Paletten des Fundaments zur Wahl, Vorschau je Kachel | | |
-| 3 | localStorage auf `earth`/`night`/`sunset`/`neon` setzen, neu laden | App startet auf der Vorgabe statt auf leerem `data-theme` | | |
-| 4 | Kopf-/Statuszeile in einem hellen und einem dunklen Theme | Leisten holen ihre Flächen aus den Leisten-Token, Text bleibt lesbar | | |
-| 5 | < 768 px | vier Symbole bleiben in der Zeile, **kein** Hamburger; Beschriftung fällt weg (T-11g) | | |
-| 6 | Kopfzeile | Plakette als Inline-SVG + Wortmarke als HTML-Text, zweifarbig (T-11h) | | |
-| 7 | DevTools → Computed | Fließtext in Inter, Titel in Space Grotesk (T-11f) | | |
-| 8 | Konsole: `performance.getEntriesByType('resource').filter(r => !r.name.startsWith(location.origin))` | leer bis auf die eigene API — nichts vom CDN | | |
-| 9 | Fehlerfall (Backend stoppen) | Meldung als **Toast**, schiebt das Layout nicht (T-11e) | | |
-| 10 | Statuszeile | links Kontext + Daten-Alter, rechts Version + anklickbarer Backend-Punkt (T-11e) | | |
-| 11 | Code | kein direktes `localStorage.` mehr — alles über `safeStorage`; Wächter-Test grün | | |
-| 12 | Code | kein eigenes `useIsCompact`, `useTheme`, `NavIcon`, `token()` mehr | | |
-| 13 | Sprache DE/EN umschalten | Naive-eigene Texte („Bestätigen"/„Abbrechen") schalten mit | | |
-| 14 | `npx vitest run` + `vue-tsc -b` | Tests grün, Typecheck sauber | | |
-| 15 | breiter Schirm | Kopfzeile, Inhalt und Statuszeile enden an derselben Kante | | |
+| 1 | `dashboard/src/styles/` | keine eigenen Paletten mehr; Token kommen aus `tokens.css` des Pakets | ✅¹ | |
+| 2 | Einstellungen → Darstellung | **alle** Paletten des Fundaments zur Wahl, Vorschau je Kachel | ✅² | |
+| 3 | localStorage auf `earth`/`night`/`sunset`/`neon` setzen, neu laden | App startet auf der Vorgabe statt auf leerem `data-theme` | ✅³ | |
+| 4 | Kopf-/Statuszeile in einem hellen und einem dunklen Theme | Leisten holen ihre Flächen aus den Leisten-Token, Text bleibt lesbar | ◑⁴ | |
+| 5 | < 768 px | Symbole bleiben in der Zeile, **kein** Hamburger; Beschriftung fällt weg (T-11g) | ✅⁵ | |
+| 6 | Kopfzeile | Plakette als Inline-SVG + Wortmarke als HTML-Text, zweifarbig (T-11h) | ✅⁶ | |
+| 7 | DevTools → Computed | Fließtext in Inter, Titel in Space Grotesk (T-11f) | ✅⁷ | |
+| 8 | Konsole: `performance.getEntriesByType('resource')…` | leer bis auf die eigene API — nichts vom CDN | ✅⁸ | |
+| 9 | Fehlerfall (Backend stoppen) | Meldung als **Toast**, schiebt das Layout nicht (T-11e) | ➖⁹ | |
+| 10 | Statuszeile | links Kontext, rechts Version + anklickbarer Backend-Punkt (T-11e) | ✅¹⁰ | |
+| 11 | Code | kein direktes `localStorage.` mehr — alles über `safeStorage`; Wächter-Test grün | ✅¹¹ | |
+| 12 | Code | kein eigenes `useIsCompact`, `NavIcon`, `token()`, keine eigene Sprach-Erkennung mehr | ✅¹² | |
+| 13 | Sprache DE/EN umschalten | Wahl greift, `lang` zieht mit, Naive-Locale hängt an derselben Quelle | ✅¹³ | |
+| 14 | `npx vitest run` + `vue-tsc -b` | Tests grün, Typecheck sauber | ✅¹⁴ | |
+| 15 | breiter Schirm | Kopfzeile, Inhalt und Statuszeile enden an derselben Kante | ✅¹⁵ | |
+| 16 | Assets, Devisen, Einstellungen | keine nativen `input`/`select`/`button` mehr — alles Naive UI | ✅¹⁶ | |
+
+¹ `base.scss` enthält nur noch Marke, Globales und geteilte Bausteine; die acht Paletten sind entfallen.
+² Gemessen: 13 Kacheln, Namen aus dem Katalog („MangoLila", „Bernstein", „Petrol", „Klassisch"…).
+³ `sunset` gesetzt → nach dem Neuladen `data-theme="mangolila"`, Speicher auf `mangolila` korrigiert, Grundfläche `rgb(24 23 22)`.
+⁴ Nur in `mangolila` und `classic` live gesehen. Ein helles Theme mit umgekehrten Leisten (`sepia`) steht noch aus.
+⁵ Bei 375 px: fünf Menüpunkte, **null** sichtbare Beschriftungen, kein Hamburger, waagrechter Überhang 0.
+⁶ Plakette trägt das Kurstafel-Motiv im Markenverlauf, Wortmarke „Stock" + „Info" als Text.
+⁷ `Inter Variable` für den Fließtext, `Space Grotesk Variable` für Überschriften.
+⁸ Liste der fremden Ressourcen: leer.
+⁹ **Nicht umgesetzt.** `ErrorBanner` steht weiterhin im Textfluss; die Provider für Toasts sind verdrahtet, die Umstellung der fünf Fehlerquellen fehlt. Siehe „Offen".
+¹⁰ Punkt sichtbar und grün (`--status-ok`), Klick führt auf die Einstellungen; Kontext zeigt „5 Papiere".
+¹¹ `grep` nach direktem Zugriff liefert nur einen Kommentar; `tests/storageAccess.spec.ts` grün.
+¹² Alle vier Dateien gelöscht bzw. umgebogen; `NavIconName` kommt aus dem Paket.
+¹³ Umschalten auf Englisch: `lang` wechselt auf `en`, Speicher auf `en`; die Naive-Locale hängt am selben `locale`.
+¹⁴ 149 Tests in 34 Dateien, `vue-tsc -b` ohne Ausgabe, `vite build` erfolgreich.
+¹⁵ Linke und rechte Kante von Kopf- und Statuszeile stimmen überein.
+¹⁶ `grep` über alle Komponenten: kein `<button>`, `<input>`, `<select>`, `<textarea>` mehr.
 
 ```bash
 cd "${DEV_LOCAL}/DevWeb/Production/StockInfo/dashboard"
@@ -121,3 +139,19 @@ Hinweise kommen als Prop herein, damit die Komponente keinen Katalog braucht.
 - Der Stash `stash@{0}` auf `t-11d-themes` (Rohfassung der dreizehn Paletten,
   ungeprüft) ist mit dieser Umstellung **gegenstandslos** — die Paletten kommen
   aus dem Paket. Er bleibt liegen, bis jemand ihn bewusst verwirft.
+
+---
+
+## Offen
+
+- **Toasts statt `ErrorBanner`** (Verify #9). `NMessageProvider`/
+  `NNotificationProvider` hängen bereits in `App.vue`; umzustellen sind die
+  fünf Fehlerquellen in `errorSources`. Bewusst nicht in einem Zug mit der
+  Umstellung gemacht: Es ändert das Verhalten aller Fehlerpfade und gehört
+  einzeln geprüft.
+- **`ConfirmDeleteDialog` und `JsonModal`** sind noch eigenes Markup mit
+  eigenem Overlay. Die Knöpfe darin sind Naive, der Rahmen nicht — `NModal`
+  wäre die konsequente Form. Der Dialog trägt zehn Unit-Tests und
+  Fokus-Führung, deshalb getrennt.
+- **Ein helles Theme mit umgekehrten Leisten** (`sepia`) noch nicht live
+  angesehen (Verify #4).
