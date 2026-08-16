@@ -31,17 +31,18 @@ _tickets/
 | Ticket | Thema | Status |
 |---|---|---|
 | [T-09](T-09-manuelle-etf-werte-nachtragen.md) | Asset-Kennzahlen manuell nachtragen (persistent, DB+API+UI) | backlog |
-| [T-12](T-12-ux-foundation-naive-ui.md) | **Auf `ux-foundation` + Naive UI umstellen** — löst T-11d/e/f/g/h ab | in-progress |
+| [T-13](T-13-toasts-und-dialoge.md) | Toasts statt Banner, Dialoge auf `NModal` — der Rest aus T-12 | ready |
 
-**Erledigt (`solved/`):** T-01…T-08, T-10 (Devisen, Börsen, Charts, Bugfixes)
-und die gesamte T-11-Reihe.
+**Erledigt (`solved/`):** T-01…T-08, T-10, die gesamte T-11-Reihe und T-12.
 
-Zu T-11: Der Branch-Stapel `t-11a → t-11b → t-11c → t-11i → t-11d` wurde am
-16.08.2026 per Fast-Forward nach `master` geführt (147 Tests grün, `vue-tsc`
-sauber); die ausstehenden Human-Abnahmen entfielen auf Entscheid des
-Auftraggebers. T-11d/e/f/g/h wurden **nicht einzeln** umgesetzt — sie wollten
-nachbauen, was `@mikemitterer/ux-foundation` seit dem 16.08.2026 mitbringt, und
-gehen in T-12 auf.
+Zur T-11-Reihe: Der Branch-Stapel wurde am 16.08.2026 per Fast-Forward nach
+`master` geführt. T-11d/e/f/g/h wurden nicht einzeln umgesetzt — sie wollten
+nachbauen, was `@mikemitterer/ux-foundation` mitbringt, und gingen in T-12 auf.
+
+Zu T-12: Die App bezieht Token, Themes, Schriften, Reset, Symbole, Leisten und
+die wiederkehrenden Composables aus dem Fundament; Bedienelemente kommen von
+Naive UI. Die vier eigenen Paletten (`earth`, `night`, `sunset`, `neon`) sind
+entfallen. Eigen bleibt die **Marke** — Koralle nach Pflaume.
 
 **Voraussetzung Test:** Stack läuft (`make dev-up`) — Backend `:8000`,
 Dashboard `:5173`.

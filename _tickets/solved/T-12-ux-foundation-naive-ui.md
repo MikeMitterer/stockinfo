@@ -142,16 +142,33 @@ Hinweise kommen als Prop herein, damit die Komponente keinen Katalog braucht.
 
 ---
 
-## Offen
+## Auflösung
 
-- **Toasts statt `ErrorBanner`** (Verify #9). `NMessageProvider`/
-  `NNotificationProvider` hängen bereits in `App.vue`; umzustellen sind die
-  fünf Fehlerquellen in `errorSources`. Bewusst nicht in einem Zug mit der
-  Umstellung gemacht: Es ändert das Verhalten aller Fehlerpfade und gehört
-  einzeln geprüft.
-- **`ConfirmDeleteDialog` und `JsonModal`** sind noch eigenes Markup mit
-  eigenem Overlay. Die Knöpfe darin sind Naive, der Rahmen nicht — `NModal`
-  wäre die konsequente Form. Der Dialog trägt zehn Unit-Tests und
-  Fokus-Führung, deshalb getrennt.
-- **Ein helles Theme mit umgekehrten Leisten** (`sepia`) noch nicht live
-  angesehen (Verify #4).
+Umgesetzt in `master`, Commits `67af83a` (Fundament und Naive-Brücke),
+`f4e2539` (native Bedienelemente ersetzt), `9292aae` (eine Sorte Knopf) und
+`97a1063` (Verify-Matrix). 151 Tests in 35 Dateien, `vue-tsc -b` sauber,
+`vite build` erfolgreich.
+
+Fünfzehn der sechzehn Verify-Zeilen sind live geprüft (siehe Fußnoten oben);
+Zeile 9 blieb ➖. Die Human-Abnahme entfiel auf Entscheid des Auftraggebers —
+die Befunde aus seinem parallelen Testlauf sind eingeflossen: klebende
+Statuszeile, sichtbarer Zustandspunkt, Wortmarke in der eigenen Kennfarbe,
+erkennbare Verweise, Knopfgrößen.
+
+**Was dabei ins Fundament ging** — die Umstellung hat mehr geliefert als
+genommen: `UxNavItem` und `UxThemePicker` (beide lagen dreimal vor), die
+Symbole `exchanges`/`fx`/`analysis`, ein Zeichen samt FavIcon fürs
+Schaufenster, und zwei Korrekturen, bei denen **StockInfos** Fassung die
+bessere war: der Umschaltpunkt bei `767.98` statt `767` und die Fensterbreite
+sofort statt erst beim Einhängen gemessen.
+
+**Ein Fund erklärte drei Symptome auf einmal:** `additionalData` erreicht nur
+Dateien, die Vite selbst verarbeitet — was Sass über `@use` nachlädt, sieht es
+nicht. `_variables.scss` kannte `token()` deshalb nicht, ließ den Aufruf als
+unbekannte CSS-Funktion stehen (**ohne Fehler**), und der Browser verwarf jede
+Deklaration damit. Sichtbar als nackte Eingabefelder, Verweise ohne Rahmen und
+fehlende Flächen.
+
+**Offen, weiter in [T-13](T-13-toasts-und-dialoge.md):** Toasts statt
+`ErrorBanner`, die beiden Dialoge auf `NModal`, und ein helles Theme mit
+umgekehrten Leisten ansehen (Verify #4).
