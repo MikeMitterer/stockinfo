@@ -124,3 +124,12 @@ Börsen). Alle Task-Reviews + finaler Whole-Branch-Review „Ready to merge = Ye
 keine Critical/Important. KI-Browser-Vorabcheck durch (Zeilen 1–8, siehe
 Fußnoten). **Offen:** finale Human-Abnahme — insbesondere Zeile 8 bei 375 px und
 die Optik der neuen Icons; dann Merge nach `master` und `git mv` nach `solved/`.
+
+---
+
+## Abschluss (2026-08-16)
+
+Code ist in `master` (Fast-Forward des Branch-Stapels). Die ausstehende
+Human-Abnahme entfällt auf Entscheid des Auftraggebers — die KI-Vorabchecks in
+der Matrix oben bleiben unverändert stehen, samt ihrer ➖-Zeilen. Die dort
+notierten Einschränkungen sind in **T-12** als Prüfpunkte übernommen.

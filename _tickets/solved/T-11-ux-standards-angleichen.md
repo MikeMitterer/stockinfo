@@ -93,3 +93,17 @@ i18n für alle neuen Texte (Skill setzt code-standards/i18n voraus).
 
 ### Auflösung
 _(offen — Epic; beim Start in T-11a…e zerlegen)_
+
+---
+
+## Abschluss (2026-08-16)
+
+Epic geschlossen. Der Branch-Stapel `t-11a → t-11b → t-11c → t-11i → t-11d` ist
+per Fast-Forward nach `master` geführt (147 Tests grün, `vue-tsc` sauber).
+
+Die fünf noch offenen Teile (T-11d/e/f/g/h) werden **nicht einzeln** umgesetzt:
+Seit dem 16.08.2026 gibt es `@mikemitterer/ux-foundation`, und jedes dieser
+Tickets baut genau das nach, was das Paket mitbringt — Paletten, Schriften,
+Leisten, Symbole, Marke. Sie gehen in **T-12** auf, das die App auf das
+Fundament umstellt. Ihre inhaltlichen Anforderungen sind dort als
+Abnahmekriterien übernommen.

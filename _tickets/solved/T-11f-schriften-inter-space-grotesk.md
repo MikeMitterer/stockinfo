@@ -59,3 +59,12 @@ T-11b (Token/Skalen stehen dann), unabhängig von T-11d.
 
 ### Auflösung
 _(offen)_
+
+---
+
+## Abschluss (2026-08-16)
+
+**Nicht einzeln umgesetzt — abgelöst durch T-12.** Was dieses Ticket
+nachbauen wollte, liefert `@mikemitterer/ux-foundation` seit dem 16.08.2026
+fertig. Ein zweiter Nachbau wäre genau die Doppelung, die das Paket beenden
+soll. Die Anforderungen sind in T-12 als Abnahmekriterien übernommen.

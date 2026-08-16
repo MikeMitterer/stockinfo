@@ -106,3 +106,12 @@ Branch `t-11b-token-aliase` (gestapelt auf `t-11a-nav-settings`), Commits
 `842e491 · 20c59bb · 3d3fd0a · 1b35029`. Task-Reviews grün (Task 1 einzeln,
 Tasks 2+3 zusammengefasst, Task 4 im Whole-Branch-Review). **Offen:**
 Human-Abnahme, dann Merge.
+
+---
+
+## Abschluss (2026-08-16)
+
+Code ist in `master` (Fast-Forward des Branch-Stapels). Die ausstehende
+Human-Abnahme entfällt auf Entscheid des Auftraggebers — die KI-Vorabchecks in
+der Matrix oben bleiben unverändert stehen, samt ihrer ➖-Zeilen. Die dort
+notierten Einschränkungen sind in **T-12** als Prüfpunkte übernommen.

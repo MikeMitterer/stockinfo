@@ -115,3 +115,12 @@ Branch `t-11c-mobile-karten` (gestapelt auf `t-11b`). Tasks: `8aebb47` ·
 Reparatur einer T-11b-Regression im Chart, die der dortige Review fand.
 137 Tests grün, `vue-tsc`/`vite build` sauber.
 **Offen:** Human-Abnahme (echtes Gerät; Zeile 8 braucht ein Papier ohne ISIN).
+
+---
+
+## Abschluss (2026-08-16)
+
+Code ist in `master` (Fast-Forward des Branch-Stapels). Die ausstehende
+Human-Abnahme entfällt auf Entscheid des Auftraggebers — die KI-Vorabchecks in
+der Matrix oben bleiben unverändert stehen, samt ihrer ➖-Zeilen. Die dort
+notierten Einschränkungen sind in **T-12** als Prüfpunkte übernommen.

@@ -115,3 +115,12 @@ Neu: `ConfirmDeleteDialog.vue` + 10 Unit-Tests; `App.vue` verdrahtet;
 `confirmDelete`-Block in beiden Katalogen. 147 Tests grün, Build sauber.
 **Offen:** Human-Abnahme, insbesondere das tatsächliche Löschen (Zeile 4) —
 das habe ich bewusst nicht ausgelöst.
+
+---
+
+## Abschluss (2026-08-16)
+
+Code ist in `master` (Fast-Forward des Branch-Stapels). Die ausstehende
+Human-Abnahme entfällt auf Entscheid des Auftraggebers — die KI-Vorabchecks in
+der Matrix oben bleiben unverändert stehen, samt ihrer ➖-Zeilen. Die dort
+notierten Einschränkungen sind in **T-12** als Prüfpunkte übernommen.
