@@ -47,11 +47,6 @@ const emit = defineEmits<{
 
 .msg { min-width: 0; }
 
-.x {
-  padding: 0.1rem 0.45rem;
-  font-size: 0.75rem;
-  background: transparent;
-  color: $color-muted;
-  &:hover { color: $color-text; }
-}
+// Der Schließen-Knopf ist ein NButton — Fläche, Farbe und Innenabstand bringt
+// er mit. Eigene Werte darauf ergäben eine zweite Sorte Knopf.
 </style>

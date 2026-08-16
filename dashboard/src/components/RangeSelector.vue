@@ -41,41 +41,15 @@ const ranges = computed<{ key: RangeKey; label: string }[]>(() => [
 </template>
 
 <style scoped lang="scss">
-@use '../styles/variables' as *;
+/*
+ * Rahmen, Flächen und die Knöpfe selbst bringt `NButtonGroup` mit. Hier stand
+ * vorher ein nachgebautes Segmented-Control samt eigener Trefferflächen —
+ * eine zweite Sorte Knopf neben der des Hauses.
+ */
 
 .range {
-  display: inline-flex;
-  // Sicherheitsnetz für sehr schmale Viewports (< 261px nutzbare Breite):
-  // ohne Umbruch würden einzelne Range-Buttons abgeschnitten statt umzubrechen.
+  // Sicherheitsnetz für sehr schmale Schirme: ohne Umbruch würden einzelne
+  // Knöpfe abgeschnitten statt umzubrechen.
   flex-wrap: wrap;
-  gap: 2px;
-  padding: 3px;
-  border-radius: $radius;
-  background: $color-bg;
-  border: 1px solid $color-border;
-
-  button {
-    background: transparent;
-    border: none;
-    color: $color-muted;
-    padding: 0.25rem 0.7rem;
-    border-radius: 7px;
-    font-size: 0.8rem;
-
-    &:hover { color: $color-text; }
-
-    // Trefferfläche ≥44×44px (ux-standards), aber nur unterhalb md (768px):
-    // gemessen bei 371px war jeder Range-Knopf nur 23px hoch und 37-47px breit.
-    // Die Größe kommt aus Padding + Mindestmaßen, nicht aus der Schrift — der
-    // Text bleibt 0.8rem, das Dock soll ein kompaktes Segmented-Control bleiben.
-    @media (max-width: 767px) {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 44px;
-      min-height: 44px;
-      padding: 0.4rem 0.7rem;
-    }
-  }
 }
 </style>

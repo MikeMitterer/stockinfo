@@ -51,7 +51,13 @@ const { current: currentTheme } = useTheme()
  * erzwungen: Naive rechnet Hover- und Pressed-Zustände selbst aus der
  * Grundfarbe und kann ein `var(--accent)` nicht auflösen.
  */
-const naiveOverrides = ref<GlobalThemeOverrides>({})
+/*
+ * Beim ersten Bild **synchron** gelesen: `main.ts` setzt `data-theme`, bevor
+ * die App eingehängt wird, die Werte stehen also schon. Wartete man hier auf
+ * `requestAnimationFrame`, blitzte für ein Bild Naives eigenes Grün auf, bevor
+ * der Akzent der Palette greift.
+ */
+const naiveOverrides = ref<GlobalThemeOverrides>(buildNaiveOverrides())
 const isDark = computed(() => THEMES[currentTheme.value].isDark)
 
 /*
@@ -62,17 +68,13 @@ const isDark = computed(() => THEMES[currentTheme.value].isDark)
 const naiveLocale = computed(() => (locale.value === 'de' ? deDE : enUS))
 const naiveDateLocale = computed(() => (locale.value === 'de' ? dateDeDE : dateEnUS))
 
-watch(
-  currentTheme,
-  () => {
-    // Erst im nächsten Bild lesen: `data-theme` muss am Element stehen, bevor
-    // `getComputedStyle` die neuen Werte liefert.
-    requestAnimationFrame(() => {
-      naiveOverrides.value = buildNaiveOverrides()
-    })
-  },
-  { immediate: true },
-)
+watch(currentTheme, () => {
+  // Beim Wechsel erst im nächsten Bild lesen: `data-theme` muss am Element
+  // stehen, bevor `getComputedStyle` die neuen Werte liefert.
+  requestAnimationFrame(() => {
+    naiveOverrides.value = buildNaiveOverrides()
+  })
+})
 
 const { env, load: loadEnv } = useEnvironment()
 const { data: exchanges, load: loadExchanges } = useExchanges()

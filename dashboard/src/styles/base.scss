@@ -50,29 +50,29 @@ body {
 h1, h2, h3 { font-family: var(--font-display); font-weight: 600; }
 h2 { font-size: 0.95rem; letter-spacing: 0.02em; margin: 0 0 0.75rem; }
 
-button {
-  cursor: pointer;
-  border: 1px solid transparent;
-  border-radius: $radius;
-  padding: 0.45rem 0.9rem;
-  background: $color-surface-2;
-  color: $color-text;
-  font-weight: 600;
-  font-size: 0.85rem;
-  transition: filter 0.12s ease, background 0.12s ease;
-
-  &:hover:not(:disabled) { filter: brightness(1.15); }
-  &:disabled { opacity: 0.45; cursor: default; }
+/*
+ * Trefferfläche für Finger — an **einer** Stelle, für jeden Knopf der App.
+ *
+ * 44 px sind das Mindestmaß aus Apples Human Interface Guidelines und aus
+ * WCAG 2.1 (SC 2.5.5). `pointer: coarse` trifft Finger und Stift, nicht die
+ * Maus: Am Schreibtisch wäre ein Knopf, der zehn Pixel höher ist als alle
+ * anderen, eine Unregelmäßigkeit ohne Nutzen.
+ *
+ * Dieselbe Regel lag vorher in fünf Komponenten verstreut und addierte sich
+ * dort zu Naives eigenem Innenabstand. Es gibt eine Sorte Knopf.
+ */
+@media (pointer: coarse) {
+  .n-button,
+  .n-base-selection {
+    min-height: 44px;
+  }
 }
 
-// Der wichtigste Knopf einer Ansicht trägt den **Akzent**, nicht die Marke.
-// Der Markenverlauf ist eine Signatur und steht an der Plakette — beides unter
-// einen Namen zu legen war der Fehler, den `--c-grad` hier gemacht hat.
-button.primary {
-  background: token(--accent);
-  color: token(--accent-contrast);
-  border-color: transparent;
-}
+// Für `button` steht hier **nichts** mehr: Jeder Knopf der App ist ein
+// `NButton`, und eine globale Element-Regel träfe ihn mit — sie addierte sich
+// zu Naives eigenem Innenabstand und machte Knöpfe unbemerkt größer.
+// Der wichtigste Knopf einer Ansicht trägt `type="primary"`, also den Akzent;
+// der Markenverlauf bleibt der Plakette vorbehalten.
 
 a { color: $color-accent; }
 

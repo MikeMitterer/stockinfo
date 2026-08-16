@@ -86,22 +86,32 @@ function accumulating(value: boolean | null): string {
         >
           JSON
         </NButton>
-        <a
+        <NButton
           v-if="extraetfUrl"
           class="icard__action icard__action--extraetf"
+          tag="a"
+          size="tiny"
+          quaternary
           :href="extraetfUrl"
           target="_blank"
           rel="noopener"
           :title="t('table.extraetfProfile')"
-        >eETF</a>
-        <a
+        >
+          eETF
+        </NButton>
+        <NButton
           v-if="yahooUrl"
           class="icard__action icard__action--yahoo"
+          tag="a"
+          size="tiny"
+          quaternary
           :href="yahooUrl"
           target="_blank"
           rel="noopener"
           :title="t('table.yahooFinance')"
-        >Y!</a>
+        >
+          Y!
+        </NButton>
         <NButton
           class="icard__action icard__action--refresh"
           size="tiny"
@@ -159,7 +169,6 @@ function accumulating(value: boolean | null): string {
   align-items: center;
   gap: 0 0.5rem;
   cursor: pointer;
-  min-height: 44px;
 }
 
 .icard__symbol { font-weight: 600; }
@@ -189,27 +198,18 @@ function accumulating(value: boolean | null): string {
 .icard__foot {
   display: flex;
   align-items: center;
-  // Toggle + Actions passen bei 375px-Breite nicht in eine Zeile (5×44px-Ziele
-  // + Toggle > verfügbare Kartenbreite). Statt die Tap-Targets zu verkleinern
-  // (nicht verhandelbar), bricht die Fußzeile um — Actions bleiben dank
-  // justify-content dennoch rechtsbündig, solange genug Platz ist.
+  // Bei 375 px passen Toggle und Aktionen nicht in eine Zeile. Statt die
+  // Trefferflächen zu quetschen, bricht die Fußzeile um — rechtsbündig
+  // bleiben die Aktionen trotzdem, solange Platz ist.
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 0.5rem;
   margin-top: 0.4rem;
 }
 
+// Nur der Abstand zum Pfeil — alles Übrige ist Sache des Knopfes.
 .icard__toggle {
-  display: inline-flex;
-  align-items: center;
   gap: 0.3rem;
-  min-height: 44px;
-  padding: 0 0.6rem;
-  background: transparent;
-  color: $color-muted;
-  font-weight: 600;
-  font-size: 0.8rem;
-  &:hover { color: $color-accent; }
 }
 .icard__chevron {
   display: inline-block;
@@ -221,28 +221,10 @@ function accumulating(value: boolean | null): string {
   display: flex;
   gap: 0.3rem;
   align-items: center;
-  // Sicherheitsnetz: auch die Actions selbst dürfen umbrechen (schmalere
-  // Screens, längere Übersetzungen) statt die 44px-Ziele zu quetschen.
+  // Sicherheitsnetz: auch die Aktionen selbst dürfen umbrechen — schmalere
+  // Schirme, längere Übersetzungen.
   flex-wrap: wrap;
   justify-content: flex-end;
-}
-.icard__action {
-  min-height: 44px;
-  min-width: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 0.2rem 0.5rem;
-  border-radius: $radius;
-  text-decoration: none;
-  color: $color-accent;
-  background: $color-surface-2;
-  white-space: nowrap;
-  &:hover:not(:disabled) { background: $color-accent; color: #fff; }
-  &--remove:hover:not(:disabled) { background: $color-danger; color: #fff; }
-  &--refresh.spin { animation: spin 0.7s linear infinite; color: $color-accent; }
 }
 
 .icard__details {

@@ -221,22 +221,32 @@ function accumulating(value: boolean | null): string {
               >
                 JSON
               </NButton>
-              <a
-                v-if="extraetfLink(item)"
-                class="ext"
-                :href="extraetfLink(item)"
-                target="_blank"
-                rel="noopener"
-                :title="t('table.extraetfProfile')"
-              >eETF</a>
-              <a
-                v-if="yahooLink(item)"
-                class="ext"
-                :href="yahooLink(item)"
-                target="_blank"
-                rel="noopener"
-                :title="t('table.yahooFinance')"
-              >Y!</a>
+              <NButton
+          v-if="extraetfLink(item)"
+          class="ext"
+          tag="a"
+          size="tiny"
+          quaternary
+          :href="extraetfLink(item)"
+          target="_blank"
+          rel="noopener"
+          :title="t('table.extraetfProfile')"
+        >
+          eETF
+        </NButton>
+              <NButton
+          v-if="yahooLink(item)"
+          class="ext"
+          tag="a"
+          size="tiny"
+          quaternary
+          :href="yahooLink(item)"
+          target="_blank"
+          rel="noopener"
+          :title="t('table.yahooFinance')"
+        >
+          Y!
+        </NButton>
               <NButton
                 class="icon"
                 size="tiny"
@@ -331,22 +341,12 @@ function accumulating(value: boolean | null): string {
   width: 11rem;
 }
 
+// Nichts als die Ausrichtung: Größe, Fläche und Rundung bringt der Knopf
+// selbst mit. Hier standen vorher Farbe, Hintergrund, Radius und ein
+// negatives Margin — damit war er eine zweite Sorte Knopf und stand
+// sichtbar höher als die Auswahl daneben.
 .tsort__dir {
   flex: none;
-  min-height: 44px;
-  min-width: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  color: $color-muted;
-  border-radius: $radius;
-  font-size: 0.8rem;
-  transition: background 0.1s ease, color 0.1s ease;
-  // Gleicher Grund wie beim Trigger: 44px Trefferfläche bleibt, zählt aber
-  // nicht komplett für die Höhe der Kopfzeile.
-  margin: -0.5rem 0;
-  &:hover { background: $color-surface-2; color: $color-text; }
 }
 
 thead th { font-weight: 600; }
@@ -389,23 +389,6 @@ tbody tr {
 }
 
 .actions { display: flex; gap: 0.3rem; justify-content: flex-end; align-items: center; }
-.ext {
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.2rem 0.4rem;
-  border-radius: 6px;
-  text-decoration: none;
-  color: $color-accent;
-  background: $color-surface-2;
-  white-space: nowrap;
-  &:hover { background: $color-accent; color: #fff; }
-}
-.icon {
-  padding: 0.2rem 0.5rem;
-  background: $color-surface-2;
-  &.danger:hover { background: $color-danger; color: #fff; }
-  &.spin { animation: spin 0.7s linear infinite; color: $color-accent; }
-}
 
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>

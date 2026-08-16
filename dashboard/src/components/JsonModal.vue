@@ -108,7 +108,7 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   padding: 0.8rem 1rem;
   border-bottom: 1px solid $color-border;
   h3 { margin: 0; font-size: 0.95rem; }
-  .x { background: $color-surface-2; padding: 0.2rem 0.55rem; }
+  // Der Schließen-Knopf gestaltet sich selbst (NButton).
 }
 
 .url-row {

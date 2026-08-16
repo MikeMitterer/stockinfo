@@ -232,21 +232,6 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
   h2 { margin: 0; }
   .sym { color: $color-muted; font-weight: 400; font-family: $font-mono; }
   .tools { display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap; }
-  .x {
-    background: $color-surface-2;
-    padding: 0.2rem 0.55rem;
-
-    // Trefferfläche ≥44×44px (ux-standards), nur unterhalb md (768px) — siehe
-    // RangeSelector.vue für dieselbe Begründung. Schrift bleibt unverändert.
-    @media (max-width: 767px) {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 44px;
-      min-height: 44px;
-      padding: 0.4rem 0.7rem;
-    }
-  }
 
   // %-Veränderung über den Zeitraum — Vorzeichen + Pfeil, Farbe fix/semantisch
   .change {

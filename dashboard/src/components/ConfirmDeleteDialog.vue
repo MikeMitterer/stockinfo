@@ -170,16 +170,4 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
   gap: 0.6rem;
 }
 
-.confirm-delete__cancel,
-.confirm-delete__confirm {
-  min-width: 44px;
-  min-height: 44px;
-  padding: 0.5rem 1rem;
-}
-
-.confirm-delete__confirm {
-  background: $color-danger;
-  color: #fff;
-  &:hover:not(:disabled) { filter: brightness(1.1); }
-}
 </style>
