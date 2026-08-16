@@ -62,6 +62,19 @@ const ranges = computed<{ key: RangeKey; label: string }[]>(() => [
       color: #fff;
       background: $brand-gradient;
     }
+
+    // Trefferfläche ≥44×44px (ux-standards), aber nur unterhalb md (768px):
+    // gemessen bei 371px war jeder Range-Knopf nur 23px hoch und 37-47px breit.
+    // Die Größe kommt aus Padding + Mindestmaßen, nicht aus der Schrift — der
+    // Text bleibt 0.8rem, das Dock soll ein kompaktes Segmented-Control bleiben.
+    @media (max-width: 767px) {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 44px;
+      min-height: 44px;
+      padding: 0.4rem 0.7rem;
+    }
   }
 }
 </style>
