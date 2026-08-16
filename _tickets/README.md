@@ -34,15 +34,38 @@ Testszenarien für die letzten Änderungen (Commits `1729bee`…`aee2c84`):
 |---|---|---|
 | [T-09](T-09-manuelle-etf-werte-nachtragen.md) | Asset-Kennzahlen manuell nachtragen (persistent, DB+API+UI) | backlog |
 | [T-11](T-11-ux-standards-angleichen.md) | **Epic:** App an ux-standards angleichen (Nav, Settings, Token, Mobil-Tabellen, Themes) | in Arbeit |
-| [T-11a](T-11a-navigation-einstellungsseite.md) | Navigation entrümpeln + Einstellungsseite (Nav 4 Punkte, Settings-Reiter, Zahnrad) | Code fertig+reviewt → Browser-Abnahme |
-| [T-11b](T-11b-token-aliase-hardcoded-farben.md) | Token-Aliase + hartkodierte Farben ersetzen | backlog |
-| [T-11c](T-11c-assets-tabelle-mobil-karten.md) | Assets-Tabelle mobil → Kartenliste (`useIsCompact`) | backlog |
-| [T-11d](T-11d-themes-namen-kontrast.md) | Themes-Namen/Kontrast abgleichen | backlog |
+| [T-11a](T-11a-navigation-einstellungsseite.md) | Navigation entrümpeln + Einstellungsseite | **Code fertig + reviewt + browsergeprüft** → Abnahme |
+| [T-11b](T-11b-token-aliase-hardcoded-farben.md) | Token-Aliase + hartkodierte Farben | **Code fertig + reviewt + gemessen** → Abnahme |
+| [T-11c](T-11c-assets-tabelle-mobil-karten.md) | Assets-Tabelle mobil → Kartenliste | **Code fertig + browsergeprüft (11/12)** → Abnahme |
+| [T-11i](T-11i-loeschen-bestaetigen.md) | **Bug-Schutz:** Löschen bestätigen (Dialog) | **Code fertig + browsergeprüft (8/9)** → Abnahme |
+| [T-11d](T-11d-themes-namen-kontrast.md) | Themes: 13 Paletten, Leisten-Token, feste Marke | ⏸ **ruht** — wartet auf gemeinsame UX-Foundation |
 | [T-11e](T-11e-statuszeile-toasts-hinweise.md) | Statuszeile + Toast-Meldungen + „?"-Hinweise | backlog |
-| [T-11f](T-11f-schriften-inter-space-grotesk.md) | Schriften: Inter + Space Grotesk gebündelt (kein CDN) | backlog |
-| [T-11g](T-11g-symbole-statt-hamburger.md) | Symbole statt Hamburger, Einstellungen nach links (dreht T-05/T-11a teilweise zurück) | ready |
+| [T-11f](T-11f-schriften-inter-space-grotesk.md) | Schriften: Inter + Space Grotesk gebündelt | backlog |
+| [T-11g](T-11g-symbole-statt-hamburger.md) | Symbole statt Hamburger, Einstellungen nach links | ready |
 | [T-11h](T-11h-zeichen-wortmarke-favicon.md) | Zeichen, Wortmarke und FavIcon trennen | ready |
-| [T-11i](T-11i-loeschen-bestaetigen.md) | **Bug-Schutz:** Löschen eines Assets bestätigen lassen (Dialog) | ready |
+
+### Branch-Stapel (nichts nach `master` gemerged)
+
+```
+master
+ └─ t-11a-nav-settings        317ccb5   T-11a
+     └─ t-11b-token-aliase    d476275   + T-11b (inkl. Chart-Regression behoben)
+         └─ t-11c-mobile-karten      140b0ed   + T-11c
+             └─ t-11i-loeschen-bestaetigen  3fea8dd   + T-11i
+                 └─ t-11d-themes            a511983   nur Plan/Ticket, kein Code
+```
+
+**Offener Stash:** `stash@{0}` auf `t-11d-themes` — Rohfassung der 13 Paletten in
+`base.scss`, **ungeprüft** (Kontrastlauf kam nicht mehr dran). Bringt die
+UX-Foundation die Paletten mit → `git stash drop`. Sonst → `git stash pop` und
+mit `theme-tokens.py check --zonen` prüfen.
+
+**Vor der Abnahme wissen:**
+- T-11g dreht Teile von T-05 (Hamburger) und T-11a (Einstellungen rechts)
+  bewusst zurück — die ✅ in T-11a Zeile 2/8 meinen den damaligen Soll-Zustand.
+- T-11c Zeile 8 (ISIN mobil) ist ➖: es gibt kein Testpapier ohne ISIN.
+- T-11i Zeile 4 (echtes Löschen) ist ➖: bewusst nicht ausgelöst, hätte Daten
+  samt Historie vernichtet.
 
 **Erledigt (`solved/`):**
 
