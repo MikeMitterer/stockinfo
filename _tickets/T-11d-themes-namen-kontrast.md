@@ -5,10 +5,15 @@
 | frontend | backlog | ~3 h | UI-only | — |
 
 **Löst:** Paletten aus `ux-standards/references/themes.md` übernehmen — gleiche
-Theme-**Namen** ⇒ gleiche Farbe über Apps; Status/Kategorie themeunabhängig;
-Kontrast (ΔE) prüfen. Konkret: StockInfos `classic` (pflaume/korall) → `mangolila`
-umbenennen; `classic` wird für neutralgrau frei; helle `paper`-Palette ergänzen.
-Teil-Ticket von **T-11** (Punkt 5).
+Theme-**Namen** ⇒ gleiche Farbe über Apps; Status themeunabhängig in zwei Stufen;
+Kontrast mit dem Skill-Werkzeug belegen. Teil-Ticket von **T-11** (Punkt 5).
+
+**Überholt (Stand 2026-08-15):** Ursprünglich war geplant, StockInfos `classic`
+(pflaume/korall) in `mangolila` umzubenennen. Das gilt **nicht mehr**:
+`mangolila` ist im Skill inzwischen *warmes Anthrazit*, der Pflaumen-Entwurf
+wurde ausdrücklich verworfen (Farbton 264° statt 304° der Marke, nur 19° von
+`aurora` entfernt). StockInfos altes Pflaumen-Theme entspricht damit **keinem**
+Skill-Theme — die Paletten werden schlicht ersetzt, nicht zugeordnet.
 
 **Stand Skill 2026-08-16:** jetzt **dreizehn** Themes (neu gegenüber StockInfo:
 `mangolila`, `amber`, `petrol`, `slate`, `aurora`, `carbon`, `paper`, `sepia`,
@@ -16,8 +21,16 @@ Teil-Ticket von **T-11** (Punkt 5).
 Dazu **Leisten-Token** (`--surface-header`, `--surface-statusbar`, `--text-bar`,
 `--text-bar-secondary`, `--text-bar-muted`, `--border-bar`) und vier
 „Behandlungen" der Leisten (gleiche Ebene · tiefer · heller · Farbschleier ·
-umgekehrt) — jede mindestens einmal vertreten. `carbon` bringt eigene,
-kräftigere Status-/Kategorie-Stufen mit.
+umgekehrt) — jede mindestens einmal vertreten.
+
+**Widerspruch in der Quelle (beim Umsetzen beachten):** Der Fließtext in
+`themes.md` sagt zweimal, `carbon` bringe eigene, kräftigere Status-Stufen mit —
+im **erzeugten** `carbon`-Block stehen sie nicht (mehr). Da die Wertblöcke per
+`theme-tokens.py export` erzeugt werden und der Fließtext von Hand ist, gilt der
+Block: `carbon` bekommt **keine** eigenen Status-Werte. Ebenso veraltet ist die
+Aufzählung der dunklen Themes („mangolila, classic, slate, ocean, forest,
+aurora") — tatsächlich sind **neun** dunkel, zusätzlich `amber`, `petrol` und
+`carbon`. Beides an Mike gemeldet, nicht eigenmächtig im Skill korrigiert.
 
 **Marke (Skill-Nachtrag, gleicher Tag):** Der Verlauf ist **themeunabhängig**
 und je App eigen — für StockInfo **Koralle → Pflaume, `#df5430` → `#812c7c`,
@@ -28,9 +41,9 @@ dagegen **pro Theme verschieden und 120°** — das fällt weg.
 **Achtung, zwei verwechselbare Token:**
 `--brand-contrast: 255 255 255` (fest, Zeichen auf dem Marken-Verlauf) steht
 **neben** `--accent-contrast` (Text auf der *Akzent*fläche, wechselt mit dem
-Theme — in sechs der elf Paletten nahezu schwarz). Die Plakette ist keine
+Theme — in acht der dreizehn Paletten nahezu schwarz). Die Plakette ist keine
 Akzentfläche; ein Zeichen darauf, das mit dem Theme umschlägt, verschwindet in
-genau diesen sechs. Die vier aus **T-11b** übrig gebliebenen `#fff` müssen
+genau diesen acht. Die vier aus **T-11b** übrig gebliebenen `#fff` müssen
 deshalb **einzeln** zugeordnet werden:
 
 | Stelle | richtiges Token | warum |
@@ -50,7 +63,7 @@ Legende: ✅ live · ⚠️ Einschränkung · ◑ teilweise · ➖ keine Live-Ve
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | Theme-Auswahl | `mangolila` ist das pflaume/korall-Theme (früher `classic`); `classic` neutralgrau | ➖ | |
+| 1 | Theme-Auswahl | `mangolila` ist warmes **Anthrazit** (nicht pflaume); `classic` neutralgrau | ➖ | |
 | 2 | Theme-Auswahl | helle Palette `paper` vorhanden; `prefers-color-scheme: light` → `paper` | ➖ | |
 | 3 | Status/Kategorie-Farben | über alle Themes gleich; Kontrast geprüft (ΔE-Regeln) | ➖ | |
 | 4 | Theme-Auswahl | alle **dreizehn** Themes vorhanden, Werte 1:1 aus `themes.md` | ➖ | |
@@ -64,18 +77,21 @@ Legende: ✅ live · ⚠️ Einschränkung · ◑ teilweise · ➖ keine Live-Ve
 ## Details
 
 ### Kontext / Ziel
-Gap-Analyse-Punkt 5 aus **T-11**. Zuordnung wichtiger als Ersetzen — Theme unter
-falschem Namen wird umbenannt, nicht überschrieben.
+Gap-Analyse-Punkt 5 aus **T-11**. Die Werte werden **kopiert, nicht nachgerechnet**
+— der Skill sagt es wörtlich: dieselbe Palette zweimal zu lösen liefert
+schlimmstenfalls leicht andere Zahlen, und dann heißen zwei Paletten gleich und
+sehen verschieden aus.
 
 ### Akzeptanzkriterien
-- [ ] `mangolila`/`classic` korrekt zugeordnet
-- [ ] helle Palette `paper` ergänzt, System-Preference folgt
+- [ ] `earth`/`night`/`sunset`/`neon` entfallen; gespeicherte Wahl fällt sauber auf die Systemvorgabe
+- [ ] helle Paletten ergänzt; `prefers-color-scheme` entscheidet (dunkel → `mangolila`, hell → `paper`)
 - [ ] Kontrast geprüft, nicht geschätzt
 - [ ] alle dreizehn Paletten übernommen (Werte unverändert aus `themes.md`)
 - [ ] `theme-tokens.py check --zonen` läuft mit Exit-Code 0 durch
 - [ ] Leisten-Token gesetzt; mindestens je eine Behandlung sichtbar vertreten
-- [ ] Theme-Vorschau zeigt vier Farbflecken aus **fest notierten** Werten
-      (Token nicht aktiver Themes stehen im Dokument nicht zur Verfügung)
+- [ ] Theme-Vorschau zeigt vier Farbflecken (`--surface-page`, `--surface-card`,
+      `--text-primary`, `--accent`) — StockInfo löst das über `data-theme` an der
+      Kachel und braucht die im Skill beschriebene Kopie der Werte nicht
 
 ### Side-Effects
 Kein Backend-Change. Theme-Namen folgen MakeLib-Konvention (`MAKE_THEME`).
