@@ -1,145 +1,53 @@
 @use './variables' as *;
 
-// ─── Theme-Paletten (8 Themes, persistent via data-theme) ─────────────────────
-// Primär sind die ux-standards-Token als RGB-Tripel (rgb(var(--x)) / rgb(var(--x) / .5)).
-// Die --c-*-Namen bleiben als Rückwärts-Alias im SELBEN Block: ThemesPanel löst sie
-// je Vorschau-Kachel im eigenen [data-theme]-Kontext auf — ein Alias auf :root
-// würde dort fertig aufgelöst vererbt und alle Kacheln classic zeigen.
-:root,
-[data-theme='classic'] {
-  --surface-page: 16 12 22;    --surface-card: 34 27 45;
-  --surface-raised: 48 38 64;  --border-default: 73 58 92;
-  --text-primary: 244 240 250; --text-muted: 176 163 198;
-  --accent: 242 103 63;        --accent-2: 209 107 181;
+// Paletten, Skalen, Status- und Assetfarben stehen im Fundament
+// (`@mikemitterer/ux-foundation/styles/tokens.css`, eingebunden in `main.ts`).
+// Hier bleibt nur, was diese App über sich selbst weiß.
+//
+// Der Reset kommt ebenfalls von dort — was hier an `button`, `a` und `body`
+// steht, ist Gestaltung dieser App, keine Grundordnung.
 
-  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
-  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
-  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
-  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
-  --c-grad: linear-gradient(120deg, #f2673f, #9a3593);
-}
-[data-theme='ocean'] {
-  --surface-page: 8 17 27;     --surface-card: 16 32 47;
-  --surface-raised: 24 47 67;  --border-default: 44 71 99;
-  --text-primary: 238 245 251; --text-muted: 157 182 207;
-  --accent: 76 197 255;        --accent-2: 124 123 255;
+// ─── Die Marke dieser App ─────────────────────────────────────────────────────
+//
+// Themes kommen vollständig aus dem Fundament — die **Marke** nicht: Sie
+// unterscheidet die Apps. Zwei offene Browser-Reiter sollen am 16-px-Zeichen
+// auseinanderzuhalten sein, und StockInfo trägt seit jeher Koralle nach
+// Pflaume. Das Fundament liefert dafür nur die Vorgabe.
+//
+// Die Werte ändern sich **nie** mit dem Theme: Eine Marke, die je nach
+// Anstrich anders aussieht, ist keine.
 
-  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
-  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
-  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
-  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
-  --c-grad: linear-gradient(120deg, #4cc5ff, #7c7bff);
-}
-[data-theme='earth'] {
-  --surface-page: 21 15 9;     --surface-card: 37 27 18;
-  --surface-raised: 53 40 24;  --border-default: 83 63 40;
-  --text-primary: 246 238 226; --text-muted: 196 173 145;
-  --accent: 240 151 63;        --accent-2: 199 111 47;
-
-  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
-  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
-  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
-  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
-  --c-grad: linear-gradient(120deg, #f0973f, #b56a2c);
-}
-[data-theme='night'] {
-  --surface-page: 12 12 23;    --surface-card: 25 25 48;
-  --surface-raised: 36 36 68;  --border-default: 58 58 99;
-  --text-primary: 239 237 255; --text-muted: 170 166 214;
-  --accent: 154 139 255;       --accent-2: 207 139 255;
-
-  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
-  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
-  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
-  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
-  --c-grad: linear-gradient(120deg, #9a8bff, #cf8bff);
-}
-[data-theme='mono'] {
-  --surface-page: 14 14 14;    --surface-card: 30 30 30;
-  --surface-raised: 44 44 44;  --border-default: 71 71 71;
-  --text-primary: 245 245 245; --text-muted: 176 176 176;
-  --accent: 230 230 230;       --accent-2: 156 156 156;
-
-  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
-  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
-  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
-  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
-  --c-grad: linear-gradient(120deg, #e6e6e6, #808080);
-}
-[data-theme='sunset'] {
-  --surface-page: 22 12 18;    --surface-card: 40 24 36;
-  --surface-raised: 58 36 51;  --border-default: 89 60 79;
-  --text-primary: 251 234 241; --text-muted: 211 166 188;
-  --accent: 255 125 143;       --accent-2: 255 147 74;
-
-  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
-  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
-  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
-  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
-  --c-grad: linear-gradient(120deg, #ff7d8f, #ff934a);
-}
-[data-theme='forest'] {
-  --surface-page: 11 18 15;    --surface-card: 22 36 29;
-  --surface-raised: 33 54 43;  --border-default: 53 83 63;
-  --text-primary: 236 246 240; --text-muted: 157 194 173;
-  --accent: 62 227 159;        --accent-2: 23 192 127;
-
-  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
-  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
-  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
-  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
-  --c-grad: linear-gradient(120deg, #3ee39f, #08a86f);
-}
-[data-theme='neon'] {
-  --surface-page: 8 8 15;      --surface-card: 22 22 42;
-  --surface-raised: 33 33 60;  --border-default: 56 56 96;
-  --text-primary: 240 240 255; --text-muted: 168 168 214;
-  --accent: 47 224 255;        --accent-2: 255 69 214;
-
-  --c-bg: rgb(var(--surface-page));       --c-surface: rgb(var(--surface-card));
-  --c-surface-2: rgb(var(--surface-raised)); --c-border: rgb(var(--border-default));
-  --c-text: rgb(var(--text-primary));     --c-muted: rgb(var(--text-muted));
-  --c-accent: rgb(var(--accent));         --c-accent-2: rgb(var(--accent-2));
-  --c-grad: linear-gradient(120deg, #2fe0ff, #ff45d6);
-}
-
-// ─── Bedeutungstragende Farben (themeunabhängig) ──────────────────────────────
-// Werte = heutige Ampel-Töne. Die Skill-Stufen kommen mit den Paletten (T-11d).
 :root {
-  --status-ok: 63 185 80;
-  --status-near: 240 163 64;
-  --status-out: 229 83 75;
+  --brand-from: 223 84 48;    /* #df5430 — Koralle */
+  --brand-to: 129 44 124;     /* #812c7c — Pflaume */
+
+  /*
+   * Die Wortmarke braucht eine eigene Stufe: Der Verlauf funktioniert als
+   * Fläche, als Textfarbe nicht — Koralle auf heller Leiste reißt 4,5:1.
+   * Gemessen gegen alle Leisten-Flächen der Sammlung.
+   */
+  --brand-word: 240 144 111;  /* #f0906f — 4,8:1 bis 12:1 auf dunklen Leisten */
 }
 
-// ─── Skalen ───────────────────────────────────────────────────────────────────
-// Angelegt für neue Regeln; Bestandswerte werden bewusst NICHT nachgerüstet
-// (das wäre eine Optik-Änderung ohne Nutzen). --font-* sind Schriftgrößen,
-// die Textfarben heißen --text-*.
-:root {
-  --space-1: 0.25rem; --space-2: 0.5rem;  --space-3: 0.75rem;
-  --space-4: 1rem;    --space-6: 1.5rem;  --space-8: 2rem;
-
-  --radius-sm: 8px; --radius-lg: 12px; --radius-full: 9999px;
-
-  --font-xs: 0.75rem; --font-sm: 0.875rem; --font-base: 1rem;
-  --font-lg: 1.125rem; --font-xl: 1.5rem;
+:root[data-theme='paper'],
+:root[data-theme='mono'] {
+  --brand-word: 168 58 24;    /* #a83a18 — 5,2:1 auf hellen Leisten */
 }
 
 // ─── Globales ─────────────────────────────────────────────────────────────────
-* { box-sizing: border-box; }
 
 html, body { height: 100%; }
 
 body {
-  margin: 0;
-  font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  // Schrift aus dem Fundament: Inter für die Oberfläche und alle Zahlen.
+  font-family: var(--font-ui);
   background: $color-bg;
   color: $color-text;
   font-size: 14px;
   line-height: 1.45;
 }
 
-h1, h2, h3 { font-weight: 600; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; }
 h2 { font-size: 0.95rem; letter-spacing: 0.02em; margin: 0 0 0.75rem; }
 
 button {
@@ -157,9 +65,12 @@ button {
   &:disabled { opacity: 0.45; cursor: default; }
 }
 
+// Der wichtigste Knopf einer Ansicht trägt den **Akzent**, nicht die Marke.
+// Der Markenverlauf ist eine Signatur und steht an der Plakette — beides unter
+// einen Namen zu legen war der Fehler, den `--c-grad` hier gemacht hat.
 button.primary {
-  background: $brand-gradient;
-  color: #fff;
+  background: token(--accent);
+  color: token(--accent-contrast);
   border-color: transparent;
 }
 
@@ -171,9 +82,7 @@ a { color: $color-accent; }
 
 // Panel-Grundfläche — Padding bei Bedarf komponentenlokal überschreiben.
 .card {
-  background: $color-surface;
-  border: 1px solid $color-border;
-  border-radius: $radius;
+  @include card-surface;
   padding: 1.1rem 1.25rem;
 }
 
@@ -181,7 +90,7 @@ a { color: $color-accent; }
 .badge {
   display: inline-block;
   padding: 0.1rem 0.5rem;
-  border-radius: 999px;
+  border-radius: var(--radius-full);
   font-size: 0.68rem;
   font-weight: 700;
 }
@@ -195,8 +104,7 @@ a { color: $color-accent; }
   th {
     text-align: left;
     padding: 0.35rem 0.7rem;
-    color: $color-muted;
-    font-size: 0.72rem;
+    @include muted(0.72rem);
     text-transform: uppercase;
     letter-spacing: 0.04em;
     border-bottom: 1px solid $color-border;

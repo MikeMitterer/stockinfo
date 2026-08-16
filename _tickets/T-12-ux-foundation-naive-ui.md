@@ -111,7 +111,11 @@ Hinweise kommen als Prop herein, damit die Komponente keinen Katalog braucht.
 - **T-11g** dreht Teile von T-05 und T-11a bewusst zurück: kein Hamburger, die
   Einstellungen wandern in die Menüzeile links.
 - **T-11h:** `logo.svg`/`logo.png` bleiben unangetastet — Firmenmaterial, kein
-  App-Asset. Kennfarbe StockInfo: Koralle nach Pflaume.
+  App-Asset. Kennfarbe StockInfo: **Koralle nach Pflaume**. Das ist die eine
+  Ausnahme von „alles kommt aus dem Fundament" — Themes sind über alle Apps
+  dieselben, die Marke unterscheidet sie. Die App überschreibt `--brand-from`,
+  `--brand-to` und `--brand-word` auf `:root`; die beiden Stufen der Wortmarke
+  sind gegen alle Leisten-Flächen gemessen (4,8:1 dunkel, 5,2:1 hell).
 - **T-11c Zeile 8** blieb ➖: Es gibt kein Testpapier ohne ISIN.
 - **T-11i Zeile 4** blieb ➖: echtes Löschen bewusst nicht ausgelöst.
 - Der Stash `stash@{0}` auf `t-11d-themes` (Rohfassung der dreizehn Paletten,

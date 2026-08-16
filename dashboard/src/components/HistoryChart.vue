@@ -16,6 +16,7 @@ import 'chartjs-adapter-date-fns'
 import { de as dateFnsDe, enUS as dateFnsEn } from 'date-fns/locale'
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NButton } from 'naive-ui'
 import { Line } from 'vue-chartjs'
 
 import { useTheme } from '../composables/useTheme'
@@ -195,7 +196,7 @@ const chartOptions = computed<ChartOptions<'line'>>(() => {
           {{ changeArrow }} {{ changeText }}
         </span>
         <RangeSelector :active="range" @change="emit('range-change', $event)" />
-        <button class="x" :title="t('chart.close')" @click="emit('close')">✕</button>
+        <NButton class="x" quaternary circle size="small" :title="t('chart.close')" @click="emit('close')">✕</NButton>
       </div>
     </header>
     <p v-if="series.length === 0" class="empty">

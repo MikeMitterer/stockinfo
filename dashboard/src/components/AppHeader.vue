@@ -1,10 +1,24 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { UxNavItem, UxTopbar, type NavIconName } from '@mikemitterer/ux-foundation'
 
-import type { NavIconName, TabKey } from '../types'
-import NavIcon from './NavIcon.vue'
+import type { TabKey } from '../types'
 
+/**
+ * Die Kopfzeile dieser App.
+ *
+ * Rahmen, Plakette und Wortmarke liefert das Fundament (`UxTopbar`), den
+ * einzelnen Menüpunkt `UxNavItem`. Hier bleibt, was diese App ausmacht: welche
+ * Bereiche es gibt, welches Zeichen in der Plakette steht und wie ein Klick
+ * zum Tab wird.
+ *
+ * **Kein Hamburger mehr** (T-11g): Unterhalb `md` fällt die Beschriftung weg,
+ * nicht der Punkt. Fünf Symbole passen auf jedes Telefon, und die Navigation
+ * ist damit einen Griff entfernt statt zwei. Die Einstellungen stehen dabei
+ * links bei den anderen Punkten — sie sind eine Seite, also ein Ort, kein
+ * Werkzeug.
+ */
 defineProps<{ active: TabKey }>()
 
 const emit = defineEmits<{
@@ -13,201 +27,61 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 
-const isOpen = ref(false)
-
+/*
+ * Die Symbole stehen im Fundament, nicht hier — sie sind über alle Apps
+ * dieselben. `assets` heißt dort `instruments`: benannt nach der Rolle, nicht
+ * nach dem Wort, das diese App dafür verwendet.
+ */
 const tabs = computed<{ key: TabKey; label: string; icon: NavIconName }[]>(() => [
-  { key: 'assets', label: t('nav.assets'), icon: 'assets' },
+  { key: 'assets', label: t('nav.assets'), icon: 'instruments' },
   { key: 'exchanges', label: t('nav.exchanges'), icon: 'exchanges' },
   { key: 'fx', label: t('nav.fx'), icon: 'fx' },
   { key: 'analysis', label: t('nav.analysis'), icon: 'analysis' },
+  { key: 'settings', label: t('nav.settings'), icon: 'settings' },
 ])
-
-/** Navigiert zum Tab und schließt das mobile Menü. */
-function selectTab(key: TabKey): void {
-  emit('navigate', key)
-  isOpen.value = false
-}
-
-/** Schließt das mobile Menü bei Escape. */
-function onKeydown(event: KeyboardEvent): void {
-  if (event.key === 'Escape') isOpen.value = false
-}
-
-onMounted(() => window.addEventListener('keydown', onKeydown))
-onUnmounted(() => window.removeEventListener('keydown', onKeydown))
 </script>
 
 <template>
-  <header class="appheader">
-    <button class="brand" :title="t('nav.home')" @click="emit('navigate', 'assets')">
-      <img class="logo" src="/stockinfo-logo.svg" alt="StockInfo" />
-    </button>
+  <UxTopbar
+    :brand-lead="t('app.brandLead')"
+    :brand-accent="t('app.brandAccent')"
+    href="#/assets"
+    :aria-label="t('nav.home')"
+  >
+    <template #badge>
+      <!--
+        Kurstafel mit steigender Linie — dasselbe Motiv wie im FavIcon, dort
+        nur mit der Kachel darunter; die trägt hier das Fundament.
 
-    <button
-      class="hamburger"
-      :aria-label="t('nav.menu')"
-      :aria-expanded="isOpen"
-      aria-controls="mobile-nav"
-      @click="isOpen = !isOpen"
-    >
-      ☰
-    </button>
+        Nur Formen, kein `text`: Ein SVG in einer geladenen Datei ist ein
+        eigenes Dokument, sieht die Schriften der Seite nicht und erbt keine
+        Textfarbe. Genau daran hing hier die falsche Schrift samt fest
+        eingetragener Füllung.
+      -->
+      <svg
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="rgb(var(--brand-contrast))"
+        stroke-width="2.2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        width="16"
+        height="16"
+      >
+        <path d="M4 18V9M9.5 18V5M15 18v-6M20.5 18v-9" />
+      </svg>
+    </template>
 
-    <div v-if="isOpen" class="backdrop" @click="isOpen = false" />
-
-    <nav id="mobile-nav" class="nav-tabs" :class="{ open: isOpen }">
-      <button
+    <template #nav>
+      <UxNavItem
         v-for="tab in tabs"
         :key="tab.key"
-        class="tab"
-        :class="{ active: tab.key === active }"
-        @click="selectTab(tab.key)"
-      >
-        <NavIcon :name="tab.icon" />
-        <span>{{ tab.label }}</span>
-      </button>
-    </nav>
-
-    <button
-      class="settings-btn"
-      :class="{ active: active === 'settings' }"
-      :title="t('nav.settings')"
-      :aria-label="t('nav.settings')"
-      @click="emit('navigate', 'settings')"
-    >
-      <NavIcon name="settings" />
-    </button>
-  </header>
+        :icon="tab.icon"
+        :label="tab.label"
+        :active="tab.key === active"
+        :href="`#/${tab.key}`"
+        @select="emit('navigate', tab.key)"
+      />
+    </template>
+  </UxTopbar>
 </template>
-
-<style scoped lang="scss">
-@use '../styles/variables' as *;
-
-.appheader {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: $header-h;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  // Logo links, Navigation + Einstellungen-Knopf als Gruppe rechts
-  gap: 0.75rem;
-  padding: 0 1.25rem;
-  background: token(--surface-page, 0.85);
-  backdrop-filter: blur(8px);
-  border-bottom: 1px solid $color-border;
-
-  .brand {
-    display: flex;
-    align-items: center;
-    gap: 0.75rem;
-    min-width: 0;
-    background: transparent;
-    border: none;
-    padding: 0;
-    border-radius: $radius;
-    &:hover { opacity: 0.85; }
-  }
-  .logo { height: 40px; display: block; }
-
-  .nav-tabs { display: flex; gap: 0.25rem; }
-
-  .hamburger {
-    display: none; // Desktop: versteckt
-    background: transparent;
-    border: none;
-    color: $color-text;
-    font-size: 1.4rem;
-    line-height: 1;
-    padding: 0.3rem 0.55rem;
-    border-radius: $radius;
-    cursor: pointer;
-    &:hover { background: $color-surface-2; }
-  }
-
-  .backdrop { display: none; } // Desktop: nie
-
-  .tab {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.45rem;
-    white-space: nowrap; // Label nie umbrechen (z.B. "API & Links")
-    background: transparent;
-    border: none;
-    color: $color-muted;
-    padding: 0.4rem 0.8rem;
-    border-radius: $radius;
-    position: relative;
-
-    &:hover { color: $color-text; background: $color-surface-2; }
-    &.active {
-      color: $color-text;
-      background: $color-surface;
-    }
-    &.active::after {
-      content: '';
-      position: absolute;
-      left: 0.8rem;
-      right: 0.8rem;
-      bottom: -0.42rem;
-      height: 2px;
-      background: $brand-gradient;
-      border-radius: 2px;
-    }
-  }
-
-  .settings-btn {
-    display: inline-flex;
-    align-items: center;
-    margin-left: auto;
-    background: transparent;
-    border: none;
-    color: $color-muted;
-    padding: 0.4rem 0.5rem;
-    border-radius: $radius;
-    cursor: pointer;
-
-    &:hover { color: $color-text; background: $color-surface-2; }
-    &.active { color: $color-text; background: $color-surface; }
-  }
-
-  @media (max-width: $header-bp) {
-    .nav-tabs {
-      display: none; // geschlossen
-      &.open {
-        display: flex;
-        flex-direction: column;
-        align-items: stretch;
-        gap: 0.15rem;
-        position: fixed;
-        top: $header-h;
-        left: 0;
-        right: 0;
-        margin-left: 0;
-        padding: 0.5rem 1.25rem 0.75rem;
-        background: token(--surface-page, 0.96);
-        backdrop-filter: blur(8px);
-        border-bottom: 1px solid $color-border;
-        z-index: 19;
-
-        .tab { width: 100%; justify-content: flex-start; }
-        .tab.active::after { display: none; } // Unterstrich im Drawer weglassen
-      }
-    }
-
-    // ☰ nach links (Drawer-Konvention), Einstellungen-Knopf bleibt rechts
-    .hamburger { display: inline-flex; align-items: center; order: -1; }
-    .settings-btn { margin-left: auto; }
-
-    .backdrop {
-      display: block;
-      position: fixed;
-      inset: $header-h 0 0 0;
-      z-index: 18;
-      background: transparent;
-    }
-  }
-}
-</style>

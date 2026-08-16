@@ -1,5 +1,13 @@
 /** Deutscher Message-Katalog — Schema-Quelle für alle weiteren Sprachen. */
 export const de = {
+  /*
+   * Wortmarke in zwei Teilen: Farbig ist der Teil, der die App
+   * unterscheidet — "Stock" teilen sich alle. Getrennt im Katalog und
+   * nicht im Template zerschnitten, sonst wandert die Teilung nicht mit
+   * dem Namen.
+   */
+  app: { brandLead: 'Stock', brandAccent: 'Info' },
+
   nav: {
     assets: 'Assets',
     exchanges: 'Börsen',
@@ -151,6 +159,27 @@ export const de = {
   themes: {
     title: 'Theme',
     hint: 'Auswahl wird gespeichert und beim nächsten Start wiederhergestellt.',
+    active: 'aktiv',
+    /*
+     * Die Kennungen kommen aus dem Fundament; hier stehen nur die
+     * Worte. Fehlt eines, zeigt die Kachel die Kennung — besser als
+     * eine leere Beschriftung.
+     */
+    names: {
+      mangolila: 'MangoLila',
+      amber: 'Bernstein',
+      petrol: 'Petrol',
+      classic: 'Klassisch',
+      slate: 'Schiefer',
+      ocean: 'Ozean',
+      forest: 'Wald',
+      aurora: 'Aurora',
+      carbon: 'Karbon',
+      paper: 'Papier',
+      sepia: 'Sepia',
+      meadow: 'Wiese',
+      mono: 'Mono',
+    },
   },
   language: {
     title: 'Sprache',
@@ -172,6 +201,9 @@ export const de = {
     },
   },
   status: {
+    poweredBy: 'powered by',
+    version: 'v{version}',
+    instruments: 'keine Papiere | ein Papier | {count} Papiere',
     ok: 'Online',
     degraded: 'Prüfe…',
     down: 'Offline',

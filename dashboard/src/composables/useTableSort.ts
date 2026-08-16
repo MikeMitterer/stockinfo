@@ -1,4 +1,5 @@
 import { ref, type Ref } from 'vue'
+import { safeStorage } from '@mikemitterer/ux-foundation'
 
 import { i18n } from '../i18n'
 import type { InstrumentSummary } from '../types'
@@ -26,18 +27,13 @@ const direction = ref<SortDirection>('asc')
 
 /** Persistiert den aktuellen Sortierzustand (aus = Eintrag entfernen). */
 function persist(): void {
-  try {
-    if (sortKey.value === null) {
-      window.localStorage.removeItem(STORAGE_KEY)
-    } else {
-      window.localStorage.setItem(
-        STORAGE_KEY,
-        JSON.stringify({ key: sortKey.value, dir: direction.value }),
-      )
-    }
-  } catch {
-    // localStorage nicht verfügbar — Sortierung gilt nur zur Laufzeit.
+  // `safeStorage` fängt den blockierten Speicher ab — im privaten Modus wirft
+  // schon der Zugriff. Misslingt es, gilt die Sortierung für diese Sitzung.
+  if (sortKey.value === null) {
+    safeStorage.remove(STORAGE_KEY)
+    return
   }
+  safeStorage.write(STORAGE_KEY, JSON.stringify({ key: sortKey.value, dir: direction.value }))
 }
 
 /**
@@ -71,13 +67,10 @@ export function useTableSort(): {
 } {
   /** Stellt den persistierten Sortierzustand wieder her (ungültig → Default). */
   function init(): void {
-    let raw: string | null = null
-    try {
-      raw = window.localStorage.getItem(STORAGE_KEY)
-    } catch {
-      raw = null
-    }
+    const raw = safeStorage.read(STORAGE_KEY)
     if (!raw) return
+    // Das `try` gilt nur noch dem Inhalt: Was dort steht, hat eine frühere
+    // Fassung geschrieben und muss nicht mehr passen.
     try {
       const saved: unknown = JSON.parse(raw)
       const candidate = saved as { key?: unknown; dir?: unknown }

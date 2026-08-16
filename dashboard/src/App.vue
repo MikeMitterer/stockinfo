@@ -1,6 +1,21 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import {
+  NConfigProvider,
+  NDialogProvider,
+  NMessageProvider,
+  NNotificationProvider,
+  darkTheme,
+  dateDeDE,
+  dateEnUS,
+  deDE,
+  enUS,
+  type GlobalThemeOverrides,
+} from 'naive-ui'
+import { buildNaiveOverrides, THEMES, UxAppShell } from '@mikemitterer/ux-foundation'
 
+import { useTheme } from './composables/useTheme'
 import AnalysisPanel from './components/AnalysisPanel.vue'
 import AppHeader from './components/AppHeader.vue'
 import ConfirmDeleteDialog from './components/ConfirmDeleteDialog.vue'
@@ -25,6 +40,39 @@ import { useInstruments } from './composables/useInstruments'
 import { useRefresh } from './composables/useRefresh'
 import type { ErrorEntry, InstrumentSummary, RangeKey } from './types'
 import { currenciesFromExchanges } from './utils/currencies'
+
+const { locale } = useI18n()
+const { current: currentTheme } = useTheme()
+
+/*
+ * Die Brücke zu Naive UI: Aus den Token dieser Seite werden dessen Overrides
+ * gebaut. Die Richtung ist verbindlich — die Token sind die Quelle, Naive der
+ * Verbraucher. Dass zur Laufzeit per `getComputedStyle` gelesen wird, ist
+ * erzwungen: Naive rechnet Hover- und Pressed-Zustände selbst aus der
+ * Grundfarbe und kann ein `var(--accent)` nicht auflösen.
+ */
+const naiveOverrides = ref<GlobalThemeOverrides>({})
+const isDark = computed(() => THEMES[currentTheme.value].isDark)
+
+/*
+ * Naive mitziehen: Seine eingebauten Beschriftungen — „Bestätigen",
+ * „Abbrechen" in jeder Rückfrage — kämen sonst englisch heraus, während die
+ * Oberfläche deutsch ist.
+ */
+const naiveLocale = computed(() => (locale.value === 'de' ? deDE : enUS))
+const naiveDateLocale = computed(() => (locale.value === 'de' ? dateDeDE : dateEnUS))
+
+watch(
+  currentTheme,
+  () => {
+    // Erst im nächsten Bild lesen: `data-theme` muss am Element stehen, bevor
+    // `getComputedStyle` die neuen Werte liefert.
+    requestAnimationFrame(() => {
+      naiveOverrides.value = buildNaiveOverrides()
+    })
+  },
+  { immediate: true },
+)
 
 const { env, load: loadEnv } = useEnvironment()
 const { data: exchanges, load: loadExchanges } = useExchanges()
@@ -169,7 +217,34 @@ function closeChart(): void {
 </script>
 
 <template>
-  <AppHeader :active="activeTab" @navigate="activeTab = $event" />
+  <!--
+    Ein Rahmen um alles: `inline-theme-disabled`, weil Naive seine Variablen
+    sonst an jedes Element schreibt und der Theme-Wechsel sichtbar langsam wird.
+    Die Provider stehen hier, damit Toasts und Rückfragen überall erreichbar
+    sind.
+  -->
+  <NConfigProvider
+    :locale="naiveLocale"
+    :date-locale="naiveDateLocale"
+    :theme="isDark ? darkTheme : null"
+    :theme-overrides="naiveOverrides"
+    inline-theme-disabled
+  >
+  <NMessageProvider>
+  <NDialogProvider>
+  <NNotificationProvider :max="3">
+  <!--
+    Der Rahmen kommt aus dem Fundament. `position: sticky` allein hält die
+    Statuszeile **nicht** unten: Sticky greift nur, solange der umschließende
+    Block sichtbar ist — auf einer kurzen Seite (etwa den Einstellungen) endet
+    die Leiste dort, wo der Inhalt endet, mitten im Bild. Die Shell macht die
+    Spalte mindestens fensterhoch und lässt den Inhalt wachsen.
+  -->
+  <UxAppShell>
+    <template #topbar>
+      <AppHeader :active="activeTab" @navigate="activeTab = $event" />
+    </template>
+
   <TopProgress :active="refreshing || busy" />
 
   <main class="content" :class="{ 'with-dock': selectedItem && activeTab === 'assets' }">
@@ -197,7 +272,14 @@ function closeChart(): void {
     <SettingsPanel v-else-if="activeTab === 'settings'" v-model:tab="settingsTab" :env="env" />
   </main>
 
-  <StatusBar :status="healthStatus" :version="healthVersion" />
+    <template #statusbar>
+      <StatusBar
+        :status="healthStatus"
+        :version="healthVersion"
+        :instrument-count="instruments.length"
+        @open-status="activeTab = 'settings'"
+      />
+    </template>
 
   <!-- Chart-Dock: erscheint bei Zeilen-Auswahl am unteren Rand, über der StatusBar -->
   <div v-if="selectedItem && activeTab === 'assets'" class="chart-dock">
@@ -218,6 +300,11 @@ function closeChart(): void {
     @confirm="confirmRemoval"
     @cancel="pendingRemoval = null"
   />
+  </UxAppShell>
+  </NNotificationProvider>
+  </NDialogProvider>
+  </NMessageProvider>
+  </NConfigProvider>
 </template>
 
 <style scoped lang="scss">
@@ -226,10 +313,15 @@ function closeChart(): void {
 .content {
   max-width: 1200px;
   margin: 0 auto;
-  padding: calc(#{$header-h} + 1.25rem) 1.25rem calc(#{$status-h} + 1.25rem);
+  /*
+   * Kein Ausgleich mehr für die Leisten: Sie standen früher per `position:
+   * fixed` über dem Inhalt, jetzt hält die Shell sie als Spalte — der Inhalt
+   * beginnt und endet von selbst an der richtigen Stelle.
+   */
+  padding: 1.25rem;
 
   // Bei offenem Chart-Dock: Platz lassen, damit das Tabellenende erreichbar bleibt
-  &.with-dock { padding-bottom: calc(#{$status-h} + 30vh + 7rem); }
+  &.with-dock { padding-bottom: calc(30vh + 7rem); }
 }
 
 .chart-dock {

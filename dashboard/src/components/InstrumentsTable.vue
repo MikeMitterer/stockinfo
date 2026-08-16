@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { useIsCompact } from '../composables/useIsCompact'
+import { useIsCompact } from '@mikemitterer/ux-foundation'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
 import InstrumentCard from './InstrumentCard.vue'
 import IsinEditor from './IsinEditor.vue'
@@ -393,7 +393,7 @@ tbody tr {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   &.etf { color: $color-accent; background: token(--accent, 0.15); }
-  &.stock { color: $color-accent-2; background: token(--accent-2, 0.16); }
+  &.stock { color: $color-stock; background: token(--asset-stocks, 0.16); }
 }
 
 .actions { display: flex; gap: 0.3rem; justify-content: flex-end; align-items: center; }

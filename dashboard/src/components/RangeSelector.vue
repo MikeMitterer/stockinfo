@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NButton, NButtonGroup } from 'naive-ui'
 
 import type { RangeKey } from '../types'
 
@@ -23,16 +24,20 @@ const ranges = computed<{ key: RangeKey; label: string }[]>(() => [
 </script>
 
 <template>
-  <div class="range">
-    <button
+  <!--
+    Eine Gruppe, kein loser Haufen: Die Zeiträume schließen einander aus, und
+    genau das zeigt die zusammenhängende Form.
+  -->
+  <NButtonGroup class="range" size="small">
+    <NButton
       v-for="range in ranges"
       :key="range.key"
-      :class="{ active: range.key === active }"
+      :type="range.key === active ? 'primary' : 'default'"
       @click="emit('change', range.key)"
     >
       {{ range.label }}
-    </button>
-  </div>
+    </NButton>
+  </NButtonGroup>
 </template>
 
 <style scoped lang="scss">
@@ -58,10 +63,6 @@ const ranges = computed<{ key: RangeKey; label: string }[]>(() => [
     font-size: 0.8rem;
 
     &:hover { color: $color-text; }
-    &.active {
-      color: #fff;
-      background: $brand-gradient;
-    }
 
     // Trefferfläche ≥44×44px (ux-standards), aber nur unterhalb md (768px):
     // gemessen bei 371px war jeder Range-Knopf nur 23px hoch und 37-47px breit.

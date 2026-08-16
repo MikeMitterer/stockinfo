@@ -2,6 +2,14 @@ import type { de } from './de'
 
 /** Englischer Message-Katalog — muss dem Schema von `de` entsprechen. */
 export const en = {
+  /*
+   * Wortmarke in zwei Teilen: Farbig ist der Teil, der die App
+   * unterscheidet — "Stock" teilen sich alle. Getrennt im Katalog und
+   * nicht im Template zerschnitten, sonst wandert die Teilung nicht mit
+   * dem Namen.
+   */
+  app: { brandLead: 'Stock', brandAccent: 'Info' },
+
   nav: {
     assets: 'Assets',
     exchanges: 'Exchanges',
@@ -152,6 +160,27 @@ export const en = {
   themes: {
     title: 'Theme',
     hint: 'Your selection is saved and restored on the next start.',
+    active: 'active',
+    /*
+     * Die Kennungen kommen aus dem Fundament; hier stehen nur die
+     * Worte. Fehlt eines, zeigt die Kachel die Kennung — besser als
+     * eine leere Beschriftung.
+     */
+    names: {
+      mangolila: 'MangoLila',
+      amber: 'Amber',
+      petrol: 'Petrol',
+      classic: 'Classic',
+      slate: 'Slate',
+      ocean: 'Ocean',
+      forest: 'Forest',
+      aurora: 'Aurora',
+      carbon: 'Carbon',
+      paper: 'Paper',
+      sepia: 'Sepia',
+      meadow: 'Meadow',
+      mono: 'Mono',
+    },
   },
   language: {
     title: 'Language',
@@ -173,6 +202,9 @@ export const en = {
     },
   },
   status: {
+    poweredBy: 'powered by',
+    version: 'v{version}',
+    instruments: 'no instruments | one instrument | {count} instruments',
     ok: 'Online',
     degraded: 'Checking…',
     down: 'Offline',

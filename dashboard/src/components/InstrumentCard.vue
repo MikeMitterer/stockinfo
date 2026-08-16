@@ -150,7 +150,7 @@ function accumulating(value: boolean | null): string {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   &.etf { color: $color-accent; background: token(--accent, 0.15); }
-  &.stock { color: $color-accent-2; background: token(--accent-2, 0.16); }
+  &.stock { color: $color-stock; background: token(--asset-stocks, 0.16); }
 }
 
 .icard__price {

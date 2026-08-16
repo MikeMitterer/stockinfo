@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { NButton } from 'naive-ui'
 
 import type { ErrorEntry } from '../types'
 
@@ -16,7 +17,7 @@ const emit = defineEmits<{
   <div v-if="errors.length" class="error-banner" role="alert">
     <div v-for="entry in errors" :key="entry.key" class="row">
       <span class="msg">⚠ {{ entry.message }}</span>
-      <button class="x" :title="t('errors.dismiss')" @click="emit('dismiss', entry.key)">✕</button>
+      <NButton class="x" quaternary circle size="tiny" :title="t('errors.dismiss')" @click="emit('dismiss', entry.key)">✕</NButton>
     </div>
   </div>
 </template>

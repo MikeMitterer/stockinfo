@@ -22,8 +22,43 @@ const apiPrefixes = [
 
 export default defineConfig({
   plugins: [vue()],
+
+  /*
+   * Das Fundament liegt als `file:`-Abhängigkeit vor — npm legt dafür einen
+   * Symlink, Vite sieht also einen Pfad außerhalb des Projekts. Zwei Angaben
+   * sind deshalb nötig:
+   *
+   * `exclude` verhindert das Vorbündeln. Das Paket liefert Quellen aus, und
+   * esbuild kann mit `.vue` nichts anfangen — ohne diese Zeile bricht der
+   * Dev-Server beim ersten Import ab.
+   *
+   * `fs.allow` erlaubt dem Dev-Server, Dateien jenseits des Projektordners
+   * auszuliefern. Ohne sie antwortet er auf jede Datei des Pakets mit 403.
+   *
+   * Beides entfällt, sobald das Paket aus der Registry kommt.
+   */
+  optimizeDeps: {
+    exclude: ['@mikemitterer/ux-foundation'],
+  },
+
+  css: {
+    preprocessorOptions: {
+      scss: {
+        /*
+         * Breakpoint-Mixins und der Farb-Helfer stehen in jeder Komponente
+         * zur Verfügung, ohne dass jede SFC dieselbe `@use`-Zeile trägt.
+         * Die Datei erzeugt selbst kein CSS — sonst läge sie einmal je
+         * Komponente im Bündel.
+         */
+        additionalData: '@use "@mikemitterer/ux-foundation/styles/shared" as *;\n',
+      },
+    },
+  },
+
   server: {
     port: 5173,
+    // Das Fundament liegt als Symlink daneben — ohne das 403 auf jede Datei.
+    fs: { allow: ['..', '../..'] },
     proxy: Object.fromEntries(
       apiPrefixes.map((prefix) => [prefix, { target: apiTarget, changeOrigin: true }]),
     ),

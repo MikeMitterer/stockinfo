@@ -2,6 +2,7 @@
 import { consola } from 'consola'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NButton } from 'naive-ui'
 
 import { useRawQuote } from '../composables/useRawQuote'
 import type { InstrumentSummary } from '../types'
@@ -47,14 +48,14 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     <div class="modal" role="dialog" aria-modal="true">
       <header class="head">
         <h3>JSON — {{ item.symbol }}</h3>
-        <button class="x" :title="t('json.close')" @click="emit('close')">✕</button>
+        <NButton class="x" quaternary circle size="small" :title="t('json.close')" @click="emit('close')">✕</NButton>
       </header>
 
       <div class="url-row">
         <code class="url">{{ url }}</code>
-        <button class="copy" @click="copy(url, 'url')">
+        <NButton class="copy" size="small" @click="copy(url, 'url')">
           {{ copied === 'url' ? t('json.copied') : t('json.copyUrl') }}
-        </button>
+        </NButton>
       </div>
 
       <div class="body">
@@ -64,9 +65,9 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
       </div>
 
       <footer class="foot">
-        <button class="copy primary" :disabled="!json" @click="copy(json, 'json')">
+        <NButton class="copy" type="primary" size="small" :disabled="!json" @click="copy(json, 'json')">
           {{ copied === 'json' ? t('json.copied') : t('json.copyJson') }}
-        </button>
+        </NButton>
       </footer>
     </div>
   </div>

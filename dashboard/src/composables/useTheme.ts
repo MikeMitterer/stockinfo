@@ -1,53 +1,77 @@
+/**
+ * Das aktive Theme.
+ *
+ * Die Paletten, ihre Kennungen und die Vorgaben liegen im Fundament — hier
+ * bleibt nur, was diese App darüber weiß: unter welchem Schlüssel sie die Wahl
+ * speichert.
+ *
+ * Bewusst im `localStorage` und nicht in einer Datenbank: Die Wahl muss beim
+ * allerersten Bildaufbau feststehen, sonst blitzt kurz das falsche Theme auf.
+ */
 import { ref, type Ref } from 'vue'
-
-/** Verfügbare Themes (Namen an das MakeLib-Ökosystem angelehnt). */
-export const THEMES = [
-  { key: 'classic', label: 'Classic' },
-  { key: 'ocean', label: 'Ocean' },
-  { key: 'earth', label: 'Earth' },
-  { key: 'night', label: 'Night' },
-  { key: 'mono', label: 'Mono' },
-  { key: 'sunset', label: 'Sunset' },
-  { key: 'forest', label: 'Forest' },
-  { key: 'neon', label: 'Neon' },
-] as const
-
-export type ThemeKey = (typeof THEMES)[number]['key']
+import {
+  DEFAULT_DARK_THEME,
+  DEFAULT_LIGHT_THEME,
+  isThemeId,
+  safeStorage,
+  THEMES,
+  THEME_IDS,
+  type ThemeId,
+} from '@mikemitterer/ux-foundation'
 
 const STORAGE_KEY = 'stockinfo-theme'
-const DEFAULT_THEME: ThemeKey = 'classic'
 
 // Modul-Level-Singleton — alle Konsumenten teilen sich den Zustand.
-const current = ref<ThemeKey>(DEFAULT_THEME)
+const current = ref<ThemeId>(DEFAULT_DARK_THEME)
 
-/** Setzt das Theme (data-theme am <html>) und persistiert es. */
-function apply(theme: ThemeKey): void {
+/**
+ * Fragt das Betriebssystem, ob es dunkel eingestellt ist.
+ *
+ * Ältere Umgebungen und die Testumgebung kennen `matchMedia` nicht — dort gilt
+ * dunkel, weil die Sammlung überwiegend dunkle Themes mitbringt.
+ */
+function prefersDark(): boolean {
+  if (typeof window === 'undefined' || typeof window.matchMedia !== 'function') return true
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+}
+
+/** Vorgabe für den allerersten Start — richtet sich nach dem System. */
+export function systemTheme(): ThemeId {
+  return prefersDark() ? DEFAULT_DARK_THEME : DEFAULT_LIGHT_THEME
+}
+
+/** Setzt das Theme am Wurzelelement und merkt es sich. */
+function apply(theme: ThemeId): void {
   current.value = theme
   document.documentElement.dataset.theme = theme
-  try {
-    window.localStorage.setItem(STORAGE_KEY, theme)
-  } catch {
-    // localStorage nicht verfügbar — Theme bleibt nur zur Laufzeit gesetzt.
-  }
+  // Naive UI und Formularelemente richten sich nach `color-scheme`.
+  document.documentElement.style.colorScheme = THEMES[theme].isDark ? 'dark' : 'light'
+  safeStorage.write(STORAGE_KEY, theme)
+}
+
+/**
+ * Liest die gespeicherte Wahl.
+ *
+ * Die App hatte früher acht eigene Paletten; vier ihrer Namen (`earth`,
+ * `night`, `sunset`, `neon`) gibt es im Fundament nicht. Eine solche Wahl
+ * fällt hier auf die Systemvorgabe zurück — ohne diese Prüfung stünde ein
+ * ungültiges `data-theme` am Wurzelelement und die App wäre farblos.
+ */
+export function readStoredTheme(): ThemeId {
+  const gespeichert = safeStorage.read(STORAGE_KEY)
+  return isThemeId(gespeichert) ? gespeichert : systemTheme()
 }
 
 /** Theme-Verwaltung: aktuelles Theme, Liste, Setzen und Initialisieren. */
 export function useTheme(): {
-  current: Ref<ThemeKey>
-  themes: typeof THEMES
-  setTheme: (theme: ThemeKey) => void
+  current: Ref<ThemeId>
+  themes: readonly ThemeId[]
+  setTheme: (theme: ThemeId) => void
   init: () => void
 } {
   function init(): void {
-    let saved: string | null = null
-    try {
-      saved = window.localStorage.getItem(STORAGE_KEY)
-    } catch {
-      saved = null
-    }
-    const valid = THEMES.some((theme) => theme.key === saved)
-    apply(valid ? (saved as ThemeKey) : DEFAULT_THEME)
+    apply(readStoredTheme())
   }
 
-  return { current, themes: THEMES, setTheme: apply, init }
+  return { current, themes: THEME_IDS, setTheme: apply, init }
 }
