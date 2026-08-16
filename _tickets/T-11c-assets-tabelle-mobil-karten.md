@@ -29,7 +29,7 @@ Legende: ✅ live · ⚠️ Einschränkung · ◑ teilweise · ➖ keine Live-Ve
 | 8 | ISIN fehlt, Karte aufklappen | „+ ISIN" funktioniert auch mobil (`IsinEditor`) | ➖⁸ | |
 | 9 | Dock offen bei 375 × 812 | Karten bleiben erreichbar; Dock verdeckt sie nicht dauerhaft | ✅⁹ | |
 | 10 | Chart-Dock < 768 px | alle sechs Zeitraum-Knöpfe **vollständig sichtbar**, nichts abgeschnitten | ✅¹⁰ | |
-| 11 | Zeitraum-Knöpfe + Schließen im Dock | Trefferflächen ≥ 44 × 44 px | ⏳ | |
+| 11 | Zeitraum-Knöpfe + Schließen im Dock | Trefferflächen ≥ 44 × 44 px | ✅¹² | |
 | 12 | Sortierzeile | steht in **einer** Zeile mit „Assets", rechtsbündig, ohne Formularkasten | ✅¹¹ | |
 
 **Messweise:** Chrome lässt sich auf macOS nicht unter ~600 px verkleinern (der
@@ -65,6 +65,11 @@ samt `matchMedia`. Ersetzt keinen Test auf einem echten Gerät.
 > ¹¹ **(CC):** „Assets" 39–90, Sortierung 215–332, vertikaler Versatz 3 px =
 > eine Zeile. Trefferfläche 44 px bei 28 px sichtbarer Höhe. Erste Karte rückt
 > von 285 auf 229 px hoch.
+> ¹² **(CC):** bei 371 px alle sechs Knöpfe **44 × 44** (Max 47 × 44), rechteste
+> Kante 301 < 371; Schließen-Knopf ebenfalls 44 × 44. Vorher 23 px hoch.
+> Gegenprobe bei 1196 px: Knöpfe wieder 37 × 23 — die Vergrößerung greift **nur**
+> unterhalb 768 px, der Desktop bleibt kompakt (Tabelle da, keine Karten, keine
+> Sortierzeile, Überlauf 0).
 
 ---
 
@@ -75,12 +80,38 @@ Gap-Analyse-Punkt 4 aus **T-11**. Header ist mit T-05 bereits mobil; die Tabelle
 noch nicht.
 
 ### Akzeptanzkriterien
-- [ ] Kartenliste < md, Tabelle ≥ md
-- [ ] `useIsCompact`-Composable steuert die Umschaltung
-- [ ] Wichtigste Werte + Status je Karte sichtbar
+- [x] Kartenliste < md, Tabelle ≥ md
+- [x] `useIsCompact`-Composable steuert die Umschaltung (Breakpoint steht einmal im Code)
+- [x] Wichtigste Werte + Status je Karte sichtbar, Rest aufklappbar
+- [x] Mobil voll bedienbar: Auswahl, Aktualisieren, Löschen, JSON, Links, **Sortieren**, ISIN
+- [x] Kein waagrechtes Scrollen, auch nicht mit offenem Chart-Dock
+- [x] Alle Trefferflächen ≥ 44 × 44 px
+- [ ] Human-Abnahme auf einem echten Gerät
 
 ### Side-Effects
 Kein Backend-Change.
 
+**Bewusst mit aufgenommen (vorbestehend, vom Auftraggeber freigegeben):** das
+Chart-Dock war auf Telefonbreite nie geprüft — die Werkzeugzeile lief über und
+die Zeitraum-Knöpfe waren mit 23 px zu klein. Beides in diesem Ticket behoben,
+weil es sonst T-11cs eigenes Kriterium „kein waagrechtes Scrollen" gebrochen
+hätte.
+
+**Über den ursprünglichen Zuschnitt hinaus:** die Sortierung. Ohne Ersatz für die
+Spaltenköpfe hätte die Kartenansicht das Sortieren ganz verloren — das wäre ein
+Funktionsverlust, kein Umbau. Die erste Umsetzung (Beschriftung + Auswahlfeld +
+Knopf) wirkte zu wuchtig und wurde auf eine leise Textzeile in der
+Überschriftenzeile umgebaut; das native Auswahlfeld liegt durchsichtig darüber,
+damit auf dem Telefon das Systemrad aufgeht und Screenreader es finden.
+
+**Nicht hier gelöst:** Löschen ohne Rückfrage → **T-11i**.
+
 ### Auflösung
-_(offen)_
+Branch `t-11c-mobile-karten` (gestapelt auf `t-11b`). Tasks: `8aebb47` ·
+`dc44acc` · `1e98ee9` · `bc35625`. Verifikations-Fixes: `4553fbc` (Fußzeile) ·
+`9f9644b` (Auswahl 44 px) · `8256f9c` (Sortierung persistiert) · `bdda62e` +
+`2487d0d` (Dock-Umbruch) · `12636fc` (Platzhalter) · `e41b6ac` + `7cd09b4`
+(leise Sortierzeile) · `505ebe1` (Zeitraum-Knöpfe 44 px). Dazu `19601b4` —
+Reparatur einer T-11b-Regression im Chart, die der dortige Review fand.
+137 Tests grün, `vue-tsc`/`vite build` sauber.
+**Offen:** Human-Abnahme (echtes Gerät; Zeile 8 braucht ein Papier ohne ISIN).
