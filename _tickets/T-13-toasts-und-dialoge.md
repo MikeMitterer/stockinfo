@@ -40,8 +40,8 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 
 ```bash
 cd "${DEV_LOCAL}/DevWeb/Production/StockInfo/dashboard"
-npx vitest run          # #8
-npx vue-tsc -b          # #8
+npx vitest run          # #10
+npx vue-tsc -b          # #10
 ```
 
 ---
