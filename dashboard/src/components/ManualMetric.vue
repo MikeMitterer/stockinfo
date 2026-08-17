@@ -90,9 +90,33 @@ const merkmalTitel = computed(() => {
  * Tabelle mit Rahmen überzöge) reicht ein Klick weiter: ja → nein → nicht
  * gesetzt. Der Titel nennt jeweils den nächsten Zustand, sonst wäre es Raten.
  */
-const NAECHSTER: Record<string, boolean | null> = { true: false, false: null, null: true }
+/**
+ * Der nächste Zustand: ja → nein → nicht gesetzt → ja.
+ *
+ * Ausgeschrieben statt als Nachschlagetabelle: Die Tabelle lief über
+ * `String(wert)` und brauchte ein `?? true` für den Fall eines unbekannten
+ * Schlüssels — das verschluckte aber das **gültige** Ergebnis `null`. Aus
+ * „nein" wurde damit wieder „ja", und „nicht gesetzt" war nie erreichbar.
+ */
+function naechster(wert: boolean | null): boolean | null {
+  if (wert === true) return false
+  if (wert === false) return null
+  return true
+}
 
-const naechsterZustand = computed(() => NAECHSTER[String(props.item.accumulating)] ?? true)
+/*
+ * Gezykelt wird der **eingetragene** Wert, nicht der wirksame.
+ *
+ * Der Unterschied fällt nur auf, solange die Quelle den eigenen Wert verdeckt —
+ * dann aber hart: Bei Quelle „ja" und Eingabe „nein" zeigt die Zelle „ja", der
+ * nächste Zustand wäre daraus „nein", und genau das steht schon drin. Jeder
+ * Klick schriebe denselben Wert.
+ *
+ * Dass die Zelle sich dabei nicht rührt, ist kein Fehler, sondern die
+ * Vorrang-Regel: Die Quelle gewinnt. Was sich ändert, steht im Titel des
+ * Merkmals daneben — deshalb trägt es den eingetragenen Wert ausgeschrieben.
+ */
+const naechsterZustand = computed(() => naechster(props.item.manual_accumulating))
 
 const umschaltTitel = computed(() =>
   t('overrides.cycleTo', {
