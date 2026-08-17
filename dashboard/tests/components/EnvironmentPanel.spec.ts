@@ -35,8 +35,23 @@ describe('EnvironmentPanel', () => {
     expect(link.attributes('rel')).toContain('noopener')
   })
 
-  it('erklärt die Strikte Börse (Fehler statt Fallback)', () => {
+  it('erklärt die Strikte Börse (Fehler statt Fallback) am Begriff', () => {
+    /*
+     * Die Erklärung stand früher als Dauertext unter dem Wert; seit T-13 hängt
+     * sie am Fragezeichen daneben. Sichtbar wird sie erst beim Überfahren —
+     * lesbar ist sie aber immer, als zugänglicher Name des Auslösers.
+     */
     const wrapper = mount(EnvironmentPanel, { props: { env }, global: { plugins: [i18n] } })
-    expect(wrapper.find('.fieldnote').text()).toContain('404')
+    const hint = wrapper.find('.env__term .ux-hint__trigger')
+
+    expect(hint.exists()).toBe(true)
+    expect(hint.attributes('aria-label')).toContain('404')
+  })
+
+  it('führt vom Begriff auf die Börsentabelle', () => {
+    // Erklärung und Vertiefung gehören zusammen — sonst sucht man selbst.
+    const wrapper = mount(EnvironmentPanel, { props: { env }, global: { plugins: [i18n] } })
+
+    expect(wrapper.find('.env__term .ux-hint__trigger').attributes('href')).toBe('#/exchanges')
   })
 })

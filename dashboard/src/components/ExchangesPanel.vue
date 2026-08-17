@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
 
+import InfoHint from './InfoHint.vue'
 import type { ExchangesResponse } from '../types'
 
 defineProps<{ data: ExchangesResponse | null }>()
@@ -10,7 +11,15 @@ const { t } = useI18n()
 <template>
   <section v-if="data" class="exchanges card">
     <h2>{{ t('exchanges.title') }}</h2>
-    <p class="hint">{{ t('exchanges.hint', { example: 'EUNL.DE' }) }}</p>
+    <p class="hint">
+      {{ t('exchanges.hint', { example: 'EUNL.DE' }) }}
+      <!--
+        Die markierte Standard-Börse ist nur die halbe Auskunft: Ob daneben
+        überhaupt ausgewichen wird, entscheidet „Strikte Börse" — und die steht
+        eine Seite weiter. Deshalb der Verweis genau hier.
+      -->
+      <InfoHint :text="t('env.strictExchangeHint')" settings-tab="environment" />
+    </p>
     <div class="scroll">
       <table class="data-table">
         <thead>

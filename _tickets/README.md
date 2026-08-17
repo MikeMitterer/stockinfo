@@ -30,18 +30,36 @@ _tickets/
 
 | Ticket | Thema | Status |
 |---|---|---|
-| [T-09](T-09-manuelle-etf-werte-nachtragen.md) | Asset-Kennzahlen manuell nachtragen (persistent, DB+API+UI) | backlog |
-| [T-12](T-12-ux-foundation-naive-ui.md) | **Auf `ux-foundation` + Naive UI umstellen** — löst T-11d/e/f/g/h ab | in-progress |
+| [T-09](T-09-manuelle-etf-werte-nachtragen.md) | Asset-Kennzahlen manuell nachtragen (persistent, DB+API+UI) | in-review |
+| [T-13](T-13-toasts-und-dialoge.md) | Toasts statt Banner, Dialoge auf `NModal` — der Rest aus T-12 | in-review |
+| [T-14](T-14-kontrast-umgekehrte-leisten.md) | Kontrast auf umgekehrten Leisten — und ein Prüfskript, das ihn sieht | ready |
 
-**Erledigt (`solved/`):** T-01…T-08, T-10 (Devisen, Börsen, Charts, Bugfixes)
-und die gesamte T-11-Reihe.
+`in-review` heißt: umgesetzt, die `AI`-Spalte der Verify-Matrix ist gefüllt, die
+`Human`-Spalte noch nicht. **Nach `solved/` wandert ein Ticket erst auf Ansage** —
+die KI verschiebt es nie von sich aus.
 
-Zu T-11: Der Branch-Stapel `t-11a → t-11b → t-11c → t-11i → t-11d` wurde am
-16.08.2026 per Fast-Forward nach `master` geführt (147 Tests grün, `vue-tsc`
-sauber); die ausstehenden Human-Abnahmen entfielen auf Entscheid des
-Auftraggebers. T-11d/e/f/g/h wurden **nicht einzeln** umgesetzt — sie wollten
-nachbauen, was `@mikemitterer/ux-foundation` seit dem 16.08.2026 mitbringt, und
-gehen in T-12 auf.
+**Erledigt (`solved/`):** T-01…T-08, T-10, T-11-Reihe und T-12.
+
+Zur T-11-Reihe: Der Branch-Stapel wurde am 16.08.2026 per Fast-Forward nach
+`master` geführt. T-11d/e/f/g/h wurden nicht einzeln umgesetzt — sie wollten
+nachbauen, was `@mikemitterer/ux-foundation` mitbringt, und gingen in T-12 auf.
+
+Zu T-12: Die App bezieht Token, Themes, Schriften, Reset, Symbole, Leisten und
+die wiederkehrenden Composables aus dem Fundament; Bedienelemente kommen von
+Naive UI. Die vier eigenen Paletten (`earth`, `night`, `sunset`, `neon`) sind
+entfallen. Eigen bleibt die **Marke** — Koralle nach Pflaume.
+
+Zu T-13: Meldungen sind Toasts, die Dialoge sitzen auf `NModal`, und die
+„?"-Hinweise kommen als `UxInfoHint` aus dem Fundament. „Alle aktualisieren"
+ist dabei in die Kopfzeile gezogen — im oberen rechten Eck des Inhalts
+verdeckte die Meldung sonst den Knopf, mit dem man ihre Ursache behebt.
+Verify #7 (Kontrast in `sepia`) reißt und lebt als **T-14** weiter.
+
+Zu T-09: Fehlende Kennzahlen (TER, Vola, Thesaurierend) lassen sich an Ort und
+Stelle nachtragen und liegen in einer **eigenen** Tabelle — der Kurs-Refresh
+schreibt die Instrumentenzeile neu und hätte sie sonst mitgenommen. Vorrang hat
+die Quelle; verdeckt sie eine Eingabe, sagt die Oberfläche das und nennt den
+eigenen Wert.
 
 **Voraussetzung Test:** Stack läuft (`make dev-up`) — Backend `:8000`,
 Dashboard `:5173`.

@@ -1,30 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 import type { InstrumentSummary } from '../../src/types'
+import { makeInstrument } from '../fixtures/instrument'
 
 /** Baut ein minimales InstrumentSummary mit überschreibbaren Feldern. */
 function item(overrides: Partial<InstrumentSummary>): InstrumentSummary {
-  return {
+  return makeInstrument({
     isin: null,
     symbol: 'SYM',
     exchange: null,
     name: null,
     type: null,
     currency: null,
-    provider: null,
-    ter: null,
-    replication: null,
-    fund_size: null,
     volatility: null,
-    accumulating: null,
-    meta_fetched_at: null,
     latest_price: null,
-    latest_quote_time: null,
     latest_currency: null,
-    latest_fetched_at: null,
     history_count: 0,
     ...overrides,
-  }
+  })
 }
 
 beforeEach(() => {

@@ -2,6 +2,14 @@ import type { de } from './de'
 
 /** Englischer Message-Katalog — muss dem Schema von `de` entsprechen. */
 export const en = {
+  /*
+   * Wortmarke in zwei Teilen: Farbig ist der Teil, der die App
+   * unterscheidet — "Stock" teilen sich alle. Getrennt im Katalog und
+   * nicht im Template zerschnitten, sonst wandert die Teilung nicht mit
+   * dem Namen.
+   */
+  app: { brandLead: 'Stock', brandAccent: 'Info' },
+
   nav: {
     assets: 'Assets',
     exchanges: 'Exchanges',
@@ -18,7 +26,7 @@ export const en = {
     placeholder: 'ISIN or symbol (e.g. VGWL.DE)',
     add: 'Add',
     refreshing: 'Refreshing…',
-    refreshAll: '↻ Refresh all',
+    refreshAll: 'Refresh all',
   },
   table: {
     title: 'Assets',
@@ -152,6 +160,28 @@ export const en = {
   themes: {
     title: 'Theme',
     hint: 'Your selection is saved and restored on the next start.',
+    active: 'active',
+    /*
+     * Die Kennungen kommen aus dem Fundament; hier stehen nur die
+     * Worte. Fehlt eines, zeigt die Kachel die Kennung — besser als
+     * eine leere Beschriftung.
+     */
+    names: {
+      mangolila: 'MangoLila',
+      amber: 'Amber',
+      petrol: 'Petrol',
+      classic: 'Classic',
+      macos: 'macOS',
+      slate: 'Slate',
+      ocean: 'Ocean',
+      forest: 'Forest',
+      aurora: 'Aurora',
+      carbon: 'Carbon',
+      paper: 'Paper',
+      sepia: 'Sepia',
+      meadow: 'Meadow',
+      mono: 'Mono',
+    },
   },
   language: {
     title: 'Language',
@@ -173,6 +203,9 @@ export const en = {
     },
   },
   status: {
+    poweredBy: 'powered by',
+    version: 'v{version}',
+    instruments: 'no instruments | one instrument | {count} instruments',
     ok: 'Online',
     degraded: 'Checking…',
     down: 'Offline',
@@ -185,7 +218,8 @@ export const en = {
     close: 'Close',
   },
   errors: {
-    dismiss: 'Dismiss',
+    title: 'Error',
+    closesIn: 'closes in {n} s',
     instruments: 'Could not load instruments',
     environment: 'Could not load environment',
     exchanges: 'Exchanges could not be loaded',
@@ -199,6 +233,24 @@ export const en = {
     setIsin: 'Could not save ISIN',
     analysis: 'Analysis failed',
     fx: 'Exchange rate could not be loaded',
+    overrides: 'Could not save the metrics',
+  },
+  hints: {
+    more: 'More about this →',
+    openSetting: 'To the setting →',
+    points:
+      'Stored price points for this instrument — the depth of the history, not ' +
+      'how current it is. How often new ones arrive is set by the refresh interval.',
+  },
+  overrides: {
+    edit: 'Edit',
+    clear: 'Clear',
+    notSet: 'not set',
+    cycleTo: 'Switch to: {value}',
+    markManual: 'Entered by hand — the source has nothing for this instrument.',
+    markShadowed:
+      'Entered by hand: {value}. Shown is the value from the source — it takes precedence. ' +
+      'Your entry stays stored and applies again as soon as the source has nothing.',
   },
   confirmDelete: {
     title: 'Delete asset?',

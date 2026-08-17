@@ -29,7 +29,12 @@ defineProps<{ active: boolean }>()
     height: 100%;
     width: 40%;
     border-radius: 0 3px 3px 0;
-    background: $brand-gradient;
+    /*
+     * Akzent statt Markenverlauf: Der Balken zeigt einen Zustand — dafür ist
+     * die Akzentfarbe da. Die Marke ist eine Signatur und steht an der
+     * Plakette, nicht an jedem bewegten Element.
+     */
+    background: $color-accent;
     animation: slide 1.1s ease-in-out infinite;
   }
 }

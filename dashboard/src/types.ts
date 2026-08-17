@@ -4,6 +4,23 @@ export interface InstrumentRef {
   symbol: string
 }
 
+/** Kennzahlen, die sich von Hand nachtragen lassen (T-09). */
+export type OverrideField = 'ter' | 'volatility' | 'accumulating'
+
+export const OVERRIDE_FIELDS: OverrideField[] = ['ter', 'volatility', 'accumulating']
+
+/**
+ * Von Hand nachgetragene Kennzahlen.
+ *
+ * `null` heißt „nicht gepflegt" — und beim Schreiben „löschen": Es geht immer
+ * der vollständige Satz zum Backend.
+ */
+export interface InstrumentOverrides {
+  ter: number | null
+  volatility: number | null
+  accumulating: boolean | null
+}
+
 export interface InstrumentSummary {
   isin: string | null
   symbol: string
@@ -23,6 +40,19 @@ export interface InstrumentSummary {
   latest_currency: string | null
   latest_fetched_at: string | null
   history_count: number
+
+  /*
+   * `ter`, `volatility` und `accumulating` oben sind die **wirksamen** Werte —
+   * die Vorrang-Regel wendet das Backend an. Hier stehen die manuellen Werte
+   * roh, damit die Oberfläche sie im Editor zeigen und im Hinweis nennen kann.
+   */
+  manual_ter: number | null
+  manual_volatility: number | null
+  manual_accumulating: boolean | null
+  /** Kennzahlen, deren angezeigter Wert gerade von Hand kommt. */
+  manual_fields: OverrideField[]
+  /** Kennzahlen mit manuellem Wert, den die Quelle gerade verdeckt. */
+  shadowed_fields: OverrideField[]
 }
 
 export interface EnvInfo {
@@ -95,12 +125,6 @@ export type SettingsTab = 'appearance' | 'language' | 'links' | 'environment'
 
 /** Bekannte Icon-Namen der Navigation (deckungsgleich mit den Tabs). */
 export type NavIconName = TabKey
-
-/** Ein anzeigbarer Fehler im ErrorBanner, identifiziert per Quelle. */
-export interface ErrorEntry {
-  key: string
-  message: string
-}
 
 /** Ausgewählter Chart-Zeitraum. 'intraday' = Tagesverlauf (Ticks), Rest = EOD. */
 export type RangeKey = 'intraday' | '1w' | '1m' | '3m' | '1y' | 'max'

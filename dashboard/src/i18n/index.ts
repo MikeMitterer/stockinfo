@@ -1,4 +1,5 @@
 import { createI18n } from 'vue-i18n'
+import { detectLocale, persistLocale } from '@mikemitterer/ux-foundation'
 
 import { de } from './de'
 import { en } from './en'
@@ -20,21 +21,22 @@ export type LocaleKey = (typeof LOCALES)[number]
 const STORAGE_KEY = 'stockinfo-lang'
 const FALLBACK_LOCALE: LocaleKey = 'en'
 
-/** Ermittelt die Startsprache: localStorage → Browser-Sprache → Fallback (en). */
-export function detectLocale(): LocaleKey {
-  let saved: string | null = null
-  try {
-    saved = window.localStorage.getItem(STORAGE_KEY)
-  } catch {
-    saved = null
-  }
-  if (LOCALES.some((locale) => locale === saved)) return saved as LocaleKey
-  return navigator.language.toLowerCase().startsWith('de') ? 'de' : FALLBACK_LOCALE
+/**
+ * Ermittelt die Startsprache: gespeicherte Wahl → Browsersprache → Rückfall.
+ *
+ * Die Reihenfolge und die Abbildung `de-AT` → `de` liegen im Fundament. Die
+ * frühere Fassung hier las nur `navigator.language`: Wer Englisch an erster
+ * und Deutsch an zweiter Stelle führt, bekam Englisch, obwohl es den deutschen
+ * Katalog gibt. Das fällt niemandem auf, es zeigt nur manchmal die falsche
+ * Sprache.
+ */
+export function startLocale(): LocaleKey {
+  return detectLocale(LOCALES, FALLBACK_LOCALE, STORAGE_KEY)
 }
 
 export const i18n = createI18n({
   legacy: false,
-  locale: detectLocale(),
+  locale: startLocale(),
   fallbackLocale: FALLBACK_LOCALE,
   messages: { de, en },
 })
@@ -42,12 +44,9 @@ export const i18n = createI18n({
 /** Setzt die Sprache, persistiert sie und aktualisiert das lang-Attribut. */
 export function setLanguage(locale: LocaleKey): void {
   i18n.global.locale.value = locale
-  document.documentElement.lang = locale
-  try {
-    window.localStorage.setItem(STORAGE_KEY, locale)
-  } catch {
-    // localStorage nicht verfügbar — Sprache gilt nur zur Laufzeit.
-  }
+  // Schreibt die Wahl und zieht `lang` am Wurzelelement nach — ohne das trennt
+  // der Browser Wörter nach den Regeln der falschen Sprache.
+  persistLocale(locale, STORAGE_KEY)
 }
 
 /** Initialisiert das lang-Attribut passend zur erkannten Startsprache. */

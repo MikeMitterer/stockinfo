@@ -1,256 +1,83 @@
 <script setup lang="ts">
-import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import {
+  NConfigProvider,
+  NDialogProvider,
+  NMessageProvider,
+  darkTheme,
+  dateDeDE,
+  dateEnUS,
+  deDE,
+  enUS,
+} from 'naive-ui'
+import { buildNaiveOverrides, THEMES, UxNotificationProvider } from '@mikemitterer/ux-foundation'
 
-import AnalysisPanel from './components/AnalysisPanel.vue'
-import AppHeader from './components/AppHeader.vue'
-import ConfirmDeleteDialog from './components/ConfirmDeleteDialog.vue'
-import ErrorBanner from './components/ErrorBanner.vue'
-import ExchangesPanel from './components/ExchangesPanel.vue'
-import FxPanel from './components/FxPanel.vue'
-import HistoryChart from './components/HistoryChart.vue'
-import InstrumentsTable from './components/InstrumentsTable.vue'
-import JsonModal from './components/JsonModal.vue'
-import SettingsPanel from './components/SettingsPanel.vue'
-import StatusBar from './components/StatusBar.vue'
-import Toolbar from './components/Toolbar.vue'
-import TopProgress from './components/TopProgress.vue'
-import { useDaily } from './composables/useDaily'
-import { useEnvironment } from './composables/useEnvironment'
-import { useExchanges } from './composables/useExchanges'
-import { useHashTab } from './composables/useHashTab'
-import { useHealth } from './composables/useHealth'
-import { useHistory } from './composables/useHistory'
-import { useInstrumentActions } from './composables/useInstrumentActions'
-import { useInstruments } from './composables/useInstruments'
-import { useRefresh } from './composables/useRefresh'
-import type { ErrorEntry, InstrumentSummary, RangeKey } from './types'
-import { currenciesFromExchanges } from './utils/currencies'
+import AppDashboard from './components/AppDashboard.vue'
+import { useNaiveOverrides } from './composables/useNaiveOverrides'
+import { useTheme } from './composables/useTheme'
 
-const { env, load: loadEnv } = useEnvironment()
-const { data: exchanges, load: loadExchanges } = useExchanges()
-const fxCurrencies = computed(() => currenciesFromExchanges(exchanges.value))
-const { instruments, load: loadInstruments, error: instrumentsError } = useInstruments()
-const {
-  load: loadHistory,
-  loading: historyLoading,
-  clear: clearHistory,
-  error: historyError,
-  points,
-} = useHistory()
-const {
-  load: loadDaily,
-  loading: dailyLoading,
-  clear: clearDaily,
-  error: dailyError,
-  daily,
-} = useDaily()
-const { refreshing, trigger, error: refreshError } = useRefresh()
-const { busy, add, refreshOne, remove, setIsin, error: actionsError } = useInstrumentActions()
-const { status: healthStatus, version: healthVersion, start: startHealth, stop: stopHealth } =
-  useHealth()
+/**
+ * Der Rahmen: Theme-Brücke, Locale und die Provider von Naive UI.
+ *
+ * Der Inhalt liegt bewusst eine Ebene tiefer in `AppDashboard.vue` —
+ * `useNotifier()` braucht einen `NNotificationProvider` **über** sich, und der
+ * wird hier erst im Template aufgespannt.
+ */
 
-const { tab: activeTab, settingsTab } = useHashTab()
-const selectedItem = ref<InstrumentSummary | null>(null)
-const selectedRange = ref<RangeKey>('intraday')
-const refreshingSymbol = ref<string | null>(null)
-const jsonItem = ref<InstrumentSummary | null>(null)
-const pendingRemoval = ref<InstrumentSummary | null>(null)
+const { locale } = useI18n()
+const { current: currentTheme } = useTheme()
 
-const selectedSymbol = computed(() => selectedItem.value?.symbol ?? null)
-const selectedCurrency = computed(() => selectedItem.value?.latest_currency ?? null)
-const chartLoading = computed(() => historyLoading.value || dailyLoading.value)
+/*
+ * Die Brücke zu Naive UI: Aus den Token dieser Seite werden dessen Overrides
+ * gebaut. Die Richtung ist verbindlich — die Token sind die Quelle, Naive der
+ * Verbraucher. Dass zur Laufzeit per `getComputedStyle` gelesen wird, ist
+ * erzwungen: Naive rechnet Hover- und Pressed-Zustände selbst aus der
+ * Grundfarbe und kann ein `var(--accent)` nicht auflösen.
+ */
+const naiveOverrides = useNaiveOverrides(buildNaiveOverrides)
+const isDark = computed(() => THEMES[currentTheme.value].isDark)
 
-// Fehler aller Composables als dismissible Banner-Einträge.
-const errorSources = {
-  instruments: instrumentsError,
-  actions: actionsError,
-  history: historyError,
-  daily: dailyError,
-  refresh: refreshError,
-}
-
-const errors = computed<ErrorEntry[]>(() =>
-  Object.entries(errorSources)
-    .filter(([, source]) => source.value !== null)
-    .map(([key, source]) => ({ key, message: source.value ?? '' })),
-)
-
-/** Blendet einen Banner-Fehler aus, indem die zugehörige error-Ref geleert wird. */
-function dismissError(key: string): void {
-  const source = errorSources[key as keyof typeof errorSources]
-  if (source) source.value = null
-}
-
-// Einheitliche Chart-Serie {x = Zeit (ms), y = Kurs} aus Intraday-Ticks oder EOD.
-const chartSeries = computed<{ x: number; y: number }[]>(() => {
-  if (selectedRange.value === 'intraday') {
-    return [...points.value]
-      .reverse()
-      .map((point) => ({ x: Date.parse(point.quote_time), y: point.price }))
-  }
-  return daily.value.map((point) => ({ x: Date.parse(point.date), y: point.close }))
-})
-
-onMounted(async () => {
-  startHealth()
-  await Promise.all([loadEnv(), loadInstruments(), loadExchanges()])
-})
-
-onUnmounted(() => stopHealth())
-
-async function loadChart(): Promise<void> {
-  const item = selectedItem.value
-  if (!item) return
-  const range = selectedRange.value
-  if (range === 'intraday') {
-    await loadHistory(item)
-  } else {
-    await loadDaily(item, range)
-  }
-}
-
-async function select(item: InstrumentSummary): Promise<void> {
-  selectedItem.value = item
-  await loadChart()
-}
-
-async function onRangeChange(range: RangeKey): Promise<void> {
-  selectedRange.value = range
-  await loadChart()
-}
-
-async function onRefreshAll(): Promise<void> {
-  await trigger()
-  await loadInstruments()
-}
-
-async function onAdd(identifier: string): Promise<void> {
-  await add(identifier)
-  await loadInstruments()
-}
-
-async function onSetIsin(payload: { symbol: string; isin: string }): Promise<void> {
-  await setIsin(payload.symbol, payload.isin)
-  await loadInstruments()
-}
-
-async function onRefreshOne(item: InstrumentSummary): Promise<void> {
-  refreshingSymbol.value = item.symbol
-  try {
-    await refreshOne(item)
-    await loadInstruments()
-    if (selectedItem.value?.symbol === item.symbol) await loadChart()
-  } finally {
-    refreshingSymbol.value = null
-  }
-}
-
-// Löschen ist unwiderruflich (Kurshistorie geht mit verloren) — daher erst Rückfrage
-// im ConfirmDeleteDialog, bevor tatsächlich gelöscht wird (T-11i).
-function onRemove(item: InstrumentSummary): void {
-  pendingRemoval.value = item
-}
-
-async function confirmRemoval(): Promise<void> {
-  const item = pendingRemoval.value
-  if (!item) return
-  pendingRemoval.value = null
-  await remove(item)
-  if (selectedItem.value?.symbol === item.symbol) closeChart()
-  await loadInstruments()
-}
-
-/** Schließt das Chart-Dock und verwirft die geladene Historie. */
-function closeChart(): void {
-  selectedItem.value = null
-  clearHistory()
-  clearDaily()
-}
+/*
+ * Naive mitziehen: Seine eingebauten Beschriftungen — „Bestätigen",
+ * „Abbrechen" in jeder Rückfrage — kämen sonst englisch heraus, während die
+ * Oberfläche deutsch ist.
+ */
+const naiveLocale = computed(() => (locale.value === 'de' ? deDE : enUS))
+const naiveDateLocale = computed(() => (locale.value === 'de' ? dateDeDE : dateEnUS))
 </script>
 
 <template>
-  <AppHeader :active="activeTab" @navigate="activeTab = $event" />
-  <TopProgress :active="refreshing || busy" />
+  <!--
+    Ein Rahmen um alles: `inline-theme-disabled`, weil Naive seine Variablen
+    sonst an jedes Element schreibt und der Theme-Wechsel sichtbar langsam wird.
+    Die Provider stehen hier, damit Toasts und Rückfragen überall erreichbar
+    sind.
 
-  <main class="content" :class="{ 'with-dock': selectedItem && activeTab === 'assets' }">
-    <ErrorBanner :errors="errors" @dismiss="dismissError" />
-    <template v-if="activeTab === 'assets'">
-      <Toolbar :refreshing="refreshing" :busy="busy" @refresh="onRefreshAll" @add="onAdd" />
-      <InstrumentsTable
-        :instruments="instruments"
-        :selected-symbol="selectedSymbol"
-        :refreshing-symbol="refreshingSymbol"
-        :extraetf-etf-url="env?.extraetf_etf_url ?? ''"
-        :extraetf-stock-url="env?.extraetf_stock_url ?? ''"
-        :yahoo-url="env?.yahoo_url ?? ''"
-        @select="select"
-        @refresh="onRefreshOne"
-        @remove="onRemove"
-        @set-isin="onSetIsin"
-        @json="jsonItem = $event"
-      />
-    </template>
+    `UxNotificationProvider` statt `NNotificationProvider`: Der Versatz unter
+    die Bedienelemente der Kopfzeile und das Höchstmaß von drei Meldungen
+    kommen aus dem Fundament. Hier stand beides früher als eigene Zahl — bis
+    dasselbe im Schaufenster ein zweites Mal auftrat und damit ins Paket
+    gehörte.
 
-    <ExchangesPanel v-else-if="activeTab === 'exchanges'" :data="exchanges" />
-    <AnalysisPanel v-else-if="activeTab === 'analysis'" :instruments="instruments" />
-    <FxPanel v-else-if="activeTab === 'fx'" :currencies="fxCurrencies" />
-    <SettingsPanel v-else-if="activeTab === 'settings'" v-model:tab="settingsTab" :env="env" />
-  </main>
-
-  <StatusBar :status="healthStatus" :version="healthVersion" />
-
-  <!-- Chart-Dock: erscheint bei Zeilen-Auswahl am unteren Rand, über der StatusBar -->
-  <div v-if="selectedItem && activeTab === 'assets'" class="chart-dock">
-    <HistoryChart
-      :series="chartSeries"
-      :currency="selectedCurrency"
-      :symbol="selectedSymbol"
-      :range="selectedRange"
-      :loading="chartLoading"
-      @range-change="onRangeChange"
-      @close="closeChart"
-    />
-  </div>
-
-  <JsonModal :item="jsonItem" @close="jsonItem = null" />
-  <ConfirmDeleteDialog
-    :item="pendingRemoval"
-    @confirm="confirmRemoval"
-    @cancel="pendingRemoval = null"
-  />
+    Dass darunter nichts weiter kollidiert, ist der zweite Teil derselben
+    Änderung: „Alle aktualisieren" ist aus der Leiste über der Tabelle in die
+    Kopfzeile gezogen (siehe `AppHeader.vue`) — dorthin gehört es ohnehin, und
+    das obere rechte Eck des Inhalts ist damit frei.
+  -->
+  <NConfigProvider
+    :locale="naiveLocale"
+    :date-locale="naiveDateLocale"
+    :theme="isDark ? darkTheme : null"
+    :theme-overrides="naiveOverrides"
+    inline-theme-disabled
+  >
+    <NMessageProvider>
+      <NDialogProvider>
+        <UxNotificationProvider>
+          <AppDashboard />
+        </UxNotificationProvider>
+      </NDialogProvider>
+    </NMessageProvider>
+  </NConfigProvider>
 </template>
-
-<style scoped lang="scss">
-@use './styles/variables' as *;
-
-.content {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: calc(#{$header-h} + 1.25rem) 1.25rem calc(#{$status-h} + 1.25rem);
-
-  // Bei offenem Chart-Dock: Platz lassen, damit das Tabellenende erreichbar bleibt
-  &.with-dock { padding-bottom: calc(#{$status-h} + 30vh + 7rem); }
-}
-
-.chart-dock {
-  position: fixed;
-  left: 0;
-  right: 0;
-  bottom: $status-h;
-  z-index: 15;
-  background: token(--surface-page, 0.94);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid $color-border;
-  padding: 0.6rem 1.25rem 0.75rem;
-
-  // Card-Chrome des Charts im Dock neutralisieren — das Dock ist der Rahmen
-  :deep(.chart) {
-    border: none;
-    background: transparent;
-    padding: 0;
-    margin: 0;
-    max-width: 1200px;
-    margin-inline: auto;
-  }
-}
-</style>

@@ -2,6 +2,8 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('consola', () => ({ consola: { error: vi.fn() } }))
+import { NButton, NInputNumber, NSelect } from 'naive-ui'
+
 import FxPanel from '../../src/components/FxPanel.vue'
 import { i18n } from '../../src/i18n'
 
@@ -16,10 +18,12 @@ describe('FxPanel', () => {
       global: { plugins: [i18n] },
       props: { currencies: ['EUR', 'GBP', 'USD'] },
     })
-    const selects = wrapper.findAll('select')
+    // Über die Komponente statt über das DOM: Naives Auswahlliste rendert ihre
+    // Einträge erst beim Aufklappen, die Auswahl selbst steht aber sofort fest.
+    const selects = wrapper.findAllComponents(NSelect)
     expect(selects).toHaveLength(2)
-    const options = selects[0].findAll('option').map((o) => o.text())
-    expect(options).toEqual(['EUR', 'GBP', 'USD'])
+    const labels = selects[0].props('options')!.map((option) => option.label)
+    expect(labels).toEqual(['EUR', 'GBP', 'USD'])
   })
 
   it('zeigt den Kurs auf 3 Nachkommastellen gerundet, Rohwert im title', async () => {
@@ -31,7 +35,7 @@ describe('FxPanel', () => {
       global: { plugins: [i18n] },
       props: { currencies: ['EUR', 'USD'] },
     })
-    await wrapper.find('button:last-of-type').trigger('click')
+    await wrapper.findAllComponents(NButton).at(-1)!.trigger('click')
     await flushPromises()
 
     const rate = wrapper.find('.rate')
@@ -49,8 +53,9 @@ describe('FxPanel', () => {
       global: { plugins: [i18n] },
       props: { currencies: ['EUR', 'USD'] },
     })
-    await wrapper.find('.amount').setValue('200')
-    await wrapper.find('button:last-of-type').trigger('click')
+    wrapper.findComponent(NInputNumber).vm.$emit('update:value', 200)
+    await wrapper.vm.$nextTick()
+    await wrapper.findAllComponents(NButton).at(-1)!.trigger('click')
     await flushPromises()
     expect(wrapper.find('.amount-result').text()).toContain('200 EUR = 230.00 USD')
   })
@@ -64,8 +69,11 @@ describe('FxPanel', () => {
       global: { plugins: [i18n] },
       props: { currencies: ['EUR', 'USD'] },
     })
-    await wrapper.find('.amount').setValue('')
-    await wrapper.find('button:last-of-type').trigger('click')
+    // Geleertes Zahlenfeld liefert `null` — genau der Fall, den der Rückfall
+    // auf 1 abfangen soll.
+    wrapper.findComponent(NInputNumber).vm.$emit('update:value', null)
+    await wrapper.vm.$nextTick()
+    await wrapper.findAllComponents(NButton).at(-1)!.trigger('click')
     await flushPromises()
     expect(wrapper.find('.amount-result').text()).toContain('1 EUR = 1.15 USD')
   })
@@ -79,7 +87,7 @@ describe('FxPanel', () => {
       global: { plugins: [i18n] },
       props: { currencies: ['EUR', 'USD'] },
     })
-    await wrapper.find('button:last-of-type').trigger('click')
+    await wrapper.findAllComponents(NButton).at(-1)!.trigger('click')
     await flushPromises()
     expect(wrapper.text()).not.toContain('2026-08-13T07:41:13') // kein ISO-Rohstring
     expect(wrapper.text()).toContain('2026')                    // Jahr sichtbar

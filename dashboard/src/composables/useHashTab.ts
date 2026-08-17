@@ -31,6 +31,16 @@ function toHash(tab: TabKey, settingsTab: SettingsTab): string {
 }
 
 /**
+ * Adresse eines Tabs — für Verweise irgendwo in der App.
+ *
+ * Die URL-Struktur gehört dieser Datei; ein zusammengesetztes `#/settings?tab=…`
+ * an anderer Stelle wäre eine zweite Quelle, die beim ersten Umbau falsch wird.
+ */
+export function tabHref(tab: TabKey, settingsTab: SettingsTab = DEFAULT_SETTINGS_TAB): string {
+  return toHash(tab, settingsTab)
+}
+
+/**
  * Aktiver Tab + Settings-Reiter, synchron mit einer deep-linkbaren Hash-Route.
  * Einzige Stelle, die die URL-Struktur besitzt.
  */

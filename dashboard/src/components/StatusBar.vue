@@ -1,65 +1,59 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { UxStatusBar, type BackendState } from '@mikemitterer/ux-foundation'
 
 import type { HealthStatus } from '../composables/useHealth'
 
-defineProps<{ status: HealthStatus; version: string | null }>()
+/**
+ * Die Statuszeile dieser App.
+ *
+ * Aussehen und Aufbau liefert das Fundament (`UxStatusBar`). Hier bleibt die
+ * Verdrahtung: wie der Gesundheitszustand des Backends heißt und wie er auf
+ * die drei Zustände abgebildet wird, die eine Statuszeile kennt.
+ */
+const props = defineProps<{
+  status: HealthStatus
+  version: string | null
+  /** Anzahl der geführten Papiere — der aktive Kontext dieser App. */
+  instrumentCount?: number
+}>()
+
+const emit = defineEmits<{
+  (event: 'open-status'): void
+}>()
 
 const { t } = useI18n()
+
+/*
+ * Der Gesundheitszustand der App heißt anders als der Zustand, den eine
+ * Statuszeile kennt: `degraded` ist ein Prüfen, `down` ein Ausfall. Die
+ * Abbildung steht hier und nicht im Paket — wie eine App ihre Gegenstelle
+ * nennt, weiß nur sie.
+ */
+const backendState = computed<BackendState>(() => {
+  if (props.status === 'ok') return 'online'
+  if (props.status === 'degraded') return 'checking'
+  return 'offline'
+})
+
+const context = computed(() =>
+  props.instrumentCount === undefined
+    ? ''
+    : t('status.instruments', props.instrumentCount, { named: { count: props.instrumentCount } }),
+)
 </script>
 
 <template>
-  <footer class="statusbar">
-    <span class="left">
-      StockInfo powered by
-      <a href="https://www.mangolila.at/" target="_blank" rel="noopener">MangoLila</a>
-    </span>
-    <span class="right">
-      <span v-if="version" class="version mono">v{{ version }}</span>
-      <span class="health" :class="status">
-        <span class="dot" />
-        {{ t(`status.${status}`) }}
-      </span>
-    </span>
-  </footer>
+  <UxStatusBar
+    app-name="StockInfo"
+    :powered-by-label="t('status.poweredBy')"
+    origin-name="MangoLila"
+    origin-href="https://www.mangolila.at/"
+    :context="context"
+    :version="version ? t('status.version', { version }) : ''"
+    :backend-state="backendState"
+    :backend-state-label="t(`status.${status}`)"
+    @backend-click="emit('open-status')"
+  />
 </template>
-
-<style scoped lang="scss">
-@use '../styles/variables' as *;
-
-.statusbar {
-  position: fixed;
-  bottom: 0;
-  left: 0;
-  right: 0;
-  height: $status-h;
-  z-index: 20;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 1.25rem;
-  background: token(--surface-page, 0.9);
-  backdrop-filter: blur(8px);
-  border-top: 1px solid $color-border;
-  font-size: 0.78rem;
-
-  .left {
-    color: $color-muted;
-    a { color: $color-accent; text-decoration: none; &:hover { text-decoration: underline; } }
-  }
-  .right { display: flex; align-items: center; gap: 1rem; }
-  .version { color: $color-muted; }
-
-  .health {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.4rem;
-    font-weight: 600;
-
-    .dot { width: 8px; height: 8px; border-radius: 50%; }
-    &.ok { color: $health-ok; .dot { background: $health-ok; box-shadow: 0 0 6px $health-ok; } }
-    &.degraded { color: $health-warn; .dot { background: $health-warn; box-shadow: 0 0 6px $health-warn; } }
-    &.down { color: $health-down; .dot { background: $health-down; box-shadow: 0 0 6px $health-down; } }
-  }
-}
-</style>

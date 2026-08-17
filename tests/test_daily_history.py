@@ -30,8 +30,20 @@ def _seed(repo: QuoteRepository, isin: str = "IE00B3RBWM25", symbol: str = "VGWL
     return repo.get_instrument_by_isin(isin)
 
 
+def _tag(vor_tagen: int) -> str:
+    """Ein Handelstag relativ zu heute.
+
+    Die gelieferten Kurse **müssen** mitlaufen: Der Dienst rechnet sein Fenster
+    ab dem heutigen Datum („1m" = 31 Tage zurück), die Testdaten standen aber
+    auf festen Julitagen. Damit bestanden diese Tests genau so lange, bis der
+    Kalender darüber hinweggelaufen war — und meldeten danach einen Fehler, den
+    es im Code nicht gab.
+    """
+    return (date.today() - timedelta(days=vor_tagen)).isoformat()
+
+
 class FakeDailyProvider:
-    """Zählt Aufrufe und liefert feste Tages-Schlusskurse."""
+    """Zählt Aufrufe und liefert Tages-Schlusskurse innerhalb des 1-Monats-Fensters."""
 
     def __init__(self) -> None:
         self.calls: list[str | None] = []
@@ -39,9 +51,9 @@ class FakeDailyProvider:
     def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict]:
         self.calls.append(start)
         return [
-            {"date": "2026-07-10", "close": 160.0, "currency": "EUR"},
-            {"date": "2026-07-11", "close": 161.0, "currency": "EUR"},
-            {"date": "2026-07-13", "close": 162.0, "currency": "EUR"},
+            {"date": _tag(7), "close": 160.0, "currency": "EUR"},
+            {"date": _tag(6), "close": 161.0, "currency": "EUR"},
+            {"date": _tag(4), "close": 162.0, "currency": "EUR"},
         ]
 
 
@@ -112,7 +124,7 @@ class FlakyDailyProvider:
         self.calls.append(start)
         if len(self.calls) <= self._fail_first:
             return None
-        return [{"date": "2026-07-13", "close": 162.0, "currency": "EUR"}]
+        return [{"date": _tag(4), "close": 162.0, "currency": "EUR"}]
 
 
 def test_fehlgeschlagener_erstabruf_setzt_kein_wasserzeichen(

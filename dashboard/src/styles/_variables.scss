@@ -1,39 +1,49 @@
-// ─── Marken-Basis (fixe Referenzwerte) ────────────────────────────────────────
-$brand-orange: #df5430;
-$brand-purple: #812c7c;
+@use '@mikemitterer/ux-foundation/styles/shared' as ux;
 
-// ─── Farbzugriff ──────────────────────────────────────────────────────────────
-// Die Token sind RGB-Tripel (base.scss). token() macht daraus eine Farbe,
-// wahlweise mit Deckkraft: token(--accent, .15) statt color-mix(…).
-@function token($name, $alpha: 1) {
-  @if $alpha == 1 {
-    @return rgb(var(#{$name}));
-  }
-  @return rgb(var(#{$name}) / #{$alpha});
-}
+// Kurznamen für die Token des Fundaments.
+//
+// Das Fundament wird hier **ausdrücklich** geladen, obwohl `additionalData` es
+// jeder Komponente voranstellt: Dieses Voranstellen erreicht nur die Dateien,
+// die Vite selbst verarbeitet — was Sass über `@use` nachlädt, sieht es nicht.
+// Ohne die Zeile kennt Sass `token()` hier nicht, lässt den Aufruf als
+// unbekannte CSS-Funktion stehen (ohne Fehler!), und der Browser verwirft
+// jede Deklaration, die ihn enthält. Sichtbar wurde das als nackte
+// Eingabefelder und als Verweise ohne Rahmen.
+//
+// Mit Namensraum statt `as *`, sonst kollidieren die Namen mit denen, die
+// `additionalData` global einspielt.
+//
+// Die Bausteine selbst (`card-surface`, `muted`, `stack`, `row`, `trend`,
+// `truncate`, `content-frame`, `up`/`below`) werden hier **nicht** neu
+// definiert — in den Komponenten stehen sie global zur Verfügung.
 
-// ─── Themebare Farben — Werte kommen aus [data-theme] in base.scss ─────────────
-$color-bg: token(--surface-page);
-$color-surface: token(--surface-card);
-$color-surface-2: token(--surface-raised);
-$color-border: token(--border-default);
-$color-text: token(--text-primary);
-$color-muted: token(--text-muted);
-$color-accent: token(--accent);
-$color-accent-2: token(--accent-2);
-$brand-gradient: var(--c-grad);
+// ─── Themebare Farben ─────────────────────────────────────────────────────────
+$color-bg: ux.token(--surface-page);
+$color-surface: ux.token(--surface-card);
+$color-surface-2: ux.token(--surface-raised);
+$color-border: ux.token(--border-default);
+$color-text: ux.token(--text-primary);
+$color-muted: ux.token(--text-muted);
+$color-accent: ux.token(--accent);
+
+// Der Typ eines Papiers ist eine **Kategorie**, keine zweite Akzentfarbe.
+// Kategoriefarben liegen im Fundament und sind über alle Themes gleich —
+// sonst müsste man die Zuordnung bei jedem Themewechsel neu lernen.
+$color-stock: ux.token(--asset-stocks);
+
+// Die Plakette trägt den Markenverlauf — den zeichnet `UxTopbar` aus den
+// Token. Eine SCSS-Variable dafür gibt es hier nicht mehr: Vorher lag sie als
+// `var(--c-grad)` vor, je Theme ein anderer Verlauf, und derselbe Wert trug
+// die Plakette *und* den aktiven Zustand. Zustände tragen jetzt `--accent`.
 
 // ─── Health-Ampel (themeunabhängig, semantisch) ───────────────────────────────
-$color-danger: token(--status-out);
-$health-ok: token(--status-ok);
-$health-warn: token(--status-near);
-$health-down: token(--status-out);
+$color-danger: ux.token(--status-out);
+$health-ok: ux.token(--status-ok);
+$health-warn: ux.token(--status-near);
+$health-down: ux.token(--status-out);
 
 // ─── Maße & Schrift ───────────────────────────────────────────────────────────
-$radius: 10px;      // Bestandswert; die Skala (--radius-*) gilt für neue Regeln.
+$radius: var(--radius-lg);
 $font-mono: 'SF Mono', 'JetBrains Mono', 'Menlo', ui-monospace, monospace;
 $header-h: 58px;
-$header-bp: 1280px; // Tailwind xl: ab hier volle Tab-Zeile, darunter Hamburger-Drawer.
-                    // 1280 statt 1024, weil die 7-Tab-Zeile ~1094px braucht (EN) und
-                    // knapp über 1024 sonst staucht ("API & Links" bricht um).
 $status-h: 32px;

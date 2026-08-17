@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { useI18n } from 'vue-i18n'
+import { NButton, NButtonGroup, NTabPane, NTabs } from 'naive-ui'
 
 import { LOCALES, setLanguage } from '../i18n'
 import { SETTINGS_TABS } from '../composables/useHashTab'
@@ -8,6 +9,14 @@ import EnvironmentPanel from './EnvironmentPanel.vue'
 import LinksPanel from './LinksPanel.vue'
 import ThemesPanel from './ThemesPanel.vue'
 
+/**
+ * Die Einstellungsseite: eine Seite, darin Reiter.
+ *
+ * Reiter und Knöpfe kommen von Naive UI. Der aktive Reiter bleibt über die
+ * Adresse ansteuerbar (`#/settings?tab=…`) — nur so kann ein Hinweis irgendwo
+ * in der App auf die zugehörige Einstellung verweisen, statt "steht irgendwo
+ * in den Einstellungen" zu sagen.
+ */
 defineProps<{ tab: SettingsTab; env: EnvInfo | null }>()
 
 const emit = defineEmits<{
@@ -21,119 +30,77 @@ const { t, locale } = useI18n()
   <section class="settings">
     <h2 class="settings__title">{{ t('settings.title') }}</h2>
 
-    <nav class="settings__tabs" role="tablist" :aria-label="t('settings.title')">
-      <button
+    <NTabs
+      :value="tab"
+      type="line"
+      @update:value="emit('update:tab', $event as SettingsTab)"
+    >
+      <NTabPane
         v-for="key in SETTINGS_TABS"
         :key="key"
-        class="settings__tab"
-        :class="{ active: key === tab, 'settings__tab--diag': key === 'environment' }"
-        role="tab"
-        :aria-selected="key === tab"
-        @click="emit('update:tab', key)"
+        :name="key"
+        :tab="t(`settings.tab.${key}`)"
       >
-        {{ t(`settings.tab.${key}`) }}
-      </button>
-    </nav>
+        <ThemesPanel v-if="key === 'appearance'" />
 
-    <div class="settings__body">
-      <ThemesPanel v-if="tab === 'appearance'" />
-
-      <div v-else-if="tab === 'language'" class="settings__lang">
-        <p class="settings__hint">{{ t('settings.language.hint') }}</p>
-        <div class="lang-choice" role="group" :aria-label="t('language.title')">
-          <button
-            v-for="lang in LOCALES"
-            :key="lang"
-            class="lang-choice__btn"
-            :class="{ active: locale === lang }"
-            @click="setLanguage(lang)"
-          >
-            {{ t(`language.${lang}`) }}
-          </button>
+        <div
+          v-else-if="key === 'language'"
+          class="settings__lang"
+        >
+          <p class="settings__hint">
+            {{ t('settings.language.hint') }}
+          </p>
+          <!--
+            Eine Gruppe: Die Sprachen schließen einander aus, genau das zeigt
+            die zusammenhängende Form.
+          -->
+          <NButtonGroup :aria-label="t('language.title')">
+            <NButton
+              v-for="lang in LOCALES"
+              :key="lang"
+              class="lang-choice__btn"
+              :type="locale === lang ? 'primary' : 'default'"
+              @click="setLanguage(lang)"
+            >
+              {{ t(`language.${lang}`) }}
+            </NButton>
+          </NButtonGroup>
         </div>
-      </div>
 
-      <LinksPanel v-else-if="tab === 'links'" />
+        <LinksPanel v-else-if="key === 'links'" />
 
-      <EnvironmentPanel v-else-if="tab === 'environment'" :env="env" />
-    </div>
+        <EnvironmentPanel
+          v-else-if="key === 'environment'"
+          :env="env"
+        />
+      </NTabPane>
+    </NTabs>
   </section>
 </template>
 
 <style scoped lang="scss">
-@use '../styles/variables' as *;
+/*
+ * Reiter und Knöpfe bringen ihre Gestaltung von Naive UI mit — hier bleibt
+ * nur, was diese Seite ausmacht.
+ */
 
 .settings {
   &__title {
+    font-family: var(--font-display);
     font-size: 1.25rem;
     font-weight: 600;
     margin: 0 0 1rem;
   }
 
-  &__tabs {
-    display: flex;
-    gap: 0.25rem;
-    border-bottom: 1px solid $color-border;
-    margin-bottom: 1.25rem;
-  }
-
-  &__tab {
-    background: transparent;
-    border: none;
-    color: $color-muted;
-    padding: 0.5rem 0.9rem;
-    border-radius: $radius $radius 0 0;
-    white-space: nowrap;
-    position: relative;
-    cursor: pointer;
-
-    &:hover { color: $color-text; }
-
-    &.active {
-      color: $color-text;
-
-      // messungsfreier Unterstrich am aktiven Reiter — verrutscht nicht beim Sprachwechsel
-      &::after {
-        content: '';
-        position: absolute;
-        left: 0.9rem;
-        right: 0.9rem;
-        bottom: -1px;
-        height: 2px;
-        background: $brand-gradient;
-        border-radius: 2px;
-      }
-    }
-
-    // Diagnose-Reiter (Environment) sichtbar abgesetzt ganz rechts
-    &--diag { margin-left: auto; }
-  }
-
   &__hint {
-    color: $color-muted;
-    font-size: 0.875rem;
-    margin: 0 0 0.75rem;
+    @include muted(0.85rem);
+    max-width: 72ch;
+    margin: 0 0 1rem;
   }
-}
 
-.lang-choice {
-  display: inline-flex;
-  gap: 2px;
-  padding: 3px;
-  border-radius: $radius;
-  background: $color-surface;
-  border: 1px solid $color-border;
-
-  &__btn {
-    background: transparent;
-    border: none;
-    color: $color-muted;
-    padding: 0.35rem 0.8rem;
-    border-radius: 7px;
-    cursor: pointer;
-
-    &:hover { color: $color-text; }
-    &.active { color: #fff; background: $brand-gradient; }
+  &__lang {
+    @include stack(var(--space-3));
+    align-items: flex-start;
   }
 }
 </style>

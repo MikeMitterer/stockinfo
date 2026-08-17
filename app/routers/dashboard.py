@@ -15,6 +15,7 @@ from app.models import (
     EnvInfo,
     ExchangeInfo,
     ExchangesResponse,
+    InstrumentOverrides,
     InstrumentSummary,
     IsinUpdate,
     QuoteResponse,
@@ -153,6 +154,43 @@ def set_isin(symbol: str, payload: IsinUpdate, service: ServiceDep) -> dict:
             status_code=409, detail=f"ISIN {isin} ist bereits vergeben"
         ) from exc
     return {"symbol": symbol, "isin": isin}
+
+
+@router.get(
+    "/instruments/by-symbol/{symbol}/overrides", response_model=InstrumentOverrides
+)
+def get_overrides(symbol: str, service: ServiceDep) -> InstrumentOverrides:
+    """Gibt die von Hand nachgetragenen Kennzahlen eines Instruments zurück."""
+    try:
+        return InstrumentOverrides(**service.get_overrides(symbol))
+    except InstrumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=404, detail=f"Unbekanntes Symbol {symbol}"
+        ) from exc
+
+
+@router.put(
+    "/instruments/by-symbol/{symbol}/overrides", response_model=InstrumentOverrides
+)
+def set_overrides(
+    symbol: str, payload: InstrumentOverrides, service: ServiceDep
+) -> InstrumentOverrides:
+    """Schreibt die von Hand nachgetragenen Kennzahlen eines Instruments.
+
+    Immer der vollständige Satz: Ein weggelassenes bzw. ``null``-Feld **löscht**
+    den bisherigen Wert. Gespeichert wird unabhängig davon, ob die Quelle den
+    Wert gerade liefert — die Vorrang-Regel wirkt erst beim Lesen.
+    """
+    try:
+        return InstrumentOverrides(
+            **service.set_overrides(
+                symbol, payload.ter, payload.volatility, payload.accumulating
+            )
+        )
+    except InstrumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=404, detail=f"Unbekanntes Symbol {symbol}"
+        ) from exc
 
 
 @router.delete("/instruments/by-symbol/{symbol}", status_code=204)

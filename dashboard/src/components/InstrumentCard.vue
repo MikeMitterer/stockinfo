@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NButton } from 'naive-ui'
 
 import IsinEditor from './IsinEditor.vue'
-import type { InstrumentSummary } from '../types'
+import ManualMetric from './ManualMetric.vue'
+import type { InstrumentOverrides, InstrumentSummary } from '../types'
 
 const props = defineProps<{
   item: InstrumentSummary
@@ -11,6 +13,8 @@ const props = defineProps<{
   refreshing: boolean
   extraetfUrl: string
   yahooUrl: string
+  /** Wird gerade gespeichert? Dann nichts anfassen. */
+  saving: boolean
 }>()
 
 const emit = defineEmits<{
@@ -19,6 +23,7 @@ const emit = defineEmits<{
   (event: 'remove', item: InstrumentSummary): void
   (event: 'json', item: InstrumentSummary): void
   (event: 'set-isin', payload: { symbol: string; isin: string }): void
+  (event: 'override', patch: Partial<InstrumentOverrides>): void
 }>()
 
 const { t, locale } = useI18n()
@@ -38,16 +43,11 @@ function price(value: number | null): string {
     : value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-/** Formatiert einen Prozentwert mit zwei Nachkommastellen (oder '—'). Mirror von InstrumentsTable. */
-function formatPercent(value: number | null): string {
-  return value === null ? '—' : `${value.toFixed(2)} %`
-}
-
-/** Thesaurierend-Anzeige: Ja / Nein / '—' bei unbekannt. Mirror von InstrumentsTable. */
-function accumulating(value: boolean | null): string {
-  if (value === null) return '—'
-  return value ? t('table.yes') : t('table.no')
-}
+/*
+ * Die beiden Formatierer standen hier als „Mirror von InstrumentsTable" — also
+ * zweimal dieselbe Regel. Beide sind mit `ManualMetric` weggefallen: Dort steht
+ * die Darstellung einer Kennzahl jetzt an genau einer Stelle.
+ */
 </script>
 
 <template>
@@ -63,48 +63,75 @@ function accumulating(value: boolean | null): string {
     </div>
 
     <div class="icard__foot">
-      <button
+      <NButton
         class="icard__toggle"
+        quaternary
+        size="small"
         :aria-expanded="expanded"
         :aria-controls="detailsId"
         @click.stop="toggle"
       >
         <span class="icard__chevron" :class="{ 'icard__chevron--open': expanded }">⌄</span>
         {{ expanded ? t('table.less') : t('table.more') }}
-      </button>
+      </NButton>
 
       <div class="icard__actions" @click.stop>
-        <button class="icard__action icard__action--json" :title="t('table.showJson')" @click="emit('json', item)">
+        <NButton
+          class="icard__action icard__action--json"
+          size="tiny"
+          quaternary
+          :title="t('table.showJson')"
+          @click="emit('json', item)"
+        >
           JSON
-        </button>
-        <a
+        </NButton>
+        <NButton
           v-if="extraetfUrl"
           class="icard__action icard__action--extraetf"
+          tag="a"
+          size="tiny"
+          quaternary
           :href="extraetfUrl"
           target="_blank"
           rel="noopener"
           :title="t('table.extraetfProfile')"
-        >eETF</a>
-        <a
+        >
+          eETF
+        </NButton>
+        <NButton
           v-if="yahooUrl"
           class="icard__action icard__action--yahoo"
+          tag="a"
+          size="tiny"
+          quaternary
           :href="yahooUrl"
           target="_blank"
           rel="noopener"
           :title="t('table.yahooFinance')"
-        >Y!</a>
-        <button
+        >
+          Y!
+        </NButton>
+        <NButton
           class="icard__action icard__action--refresh"
-          :class="{ spin: refreshing }"
+          size="tiny"
+          quaternary
+          :loading="refreshing"
           :disabled="refreshing"
           :title="t('table.refresh')"
           @click="emit('refresh', item)"
-        >↻</button>
-        <button
+        >
+          ↻
+        </NButton>
+        <NButton
           class="icard__action icard__action--remove"
+          size="tiny"
+          quaternary
+          type="error"
           :title="t('table.remove')"
           @click="emit('remove', item)"
-        >✕</button>
+        >
+          ✕
+        </NButton>
       </div>
     </div>
 
@@ -114,12 +141,32 @@ function accumulating(value: boolean | null): string {
         <span v-if="item.isin" class="mono">{{ item.isin }}</span>
         <IsinEditor v-else :symbol="item.symbol" @save="emit('set-isin', $event)" />
       </dd>
+      <!--
+        Auch mobil bearbeitbar: „Voll bedienbar ist die Vorgabe" — eine reine
+        Leseansicht bräuchte einen Grund, und den gibt es hier nicht.
+      -->
       <dt>{{ t('table.colTer') }}</dt>
-      <dd class="mono">{{ formatPercent(item.ter) }}</dd>
+      <dd class="mono">
+        <ManualMetric :item="item" field="ter" :busy="saving" @commit="emit('override', $event)" />
+      </dd>
       <dt>{{ t('table.colVola') }}</dt>
-      <dd class="mono">{{ formatPercent(item.volatility) }}</dd>
+      <dd class="mono">
+        <ManualMetric
+          :item="item"
+          field="volatility"
+          :busy="saving"
+          @commit="emit('override', $event)"
+        />
+      </dd>
       <dt>{{ t('table.colAccumulating') }}</dt>
-      <dd>{{ accumulating(item.accumulating) }}</dd>
+      <dd>
+        <ManualMetric
+          :item="item"
+          field="accumulating"
+          :busy="saving"
+          @commit="emit('override', $event)"
+        />
+      </dd>
       <dt>{{ t('table.colPoints') }}</dt>
       <dd class="mono">{{ item.history_count }}</dd>
     </dl>
@@ -141,7 +188,6 @@ function accumulating(value: boolean | null): string {
   align-items: center;
   gap: 0 0.5rem;
   cursor: pointer;
-  min-height: 44px;
 }
 
 .icard__symbol { font-weight: 600; }
@@ -150,7 +196,7 @@ function accumulating(value: boolean | null): string {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   &.etf { color: $color-accent; background: token(--accent, 0.15); }
-  &.stock { color: $color-accent-2; background: token(--accent-2, 0.16); }
+  &.stock { color: $color-stock; background: token(--asset-stocks, 0.16); }
 }
 
 .icard__price {
@@ -171,27 +217,18 @@ function accumulating(value: boolean | null): string {
 .icard__foot {
   display: flex;
   align-items: center;
-  // Toggle + Actions passen bei 375px-Breite nicht in eine Zeile (5×44px-Ziele
-  // + Toggle > verfügbare Kartenbreite). Statt die Tap-Targets zu verkleinern
-  // (nicht verhandelbar), bricht die Fußzeile um — Actions bleiben dank
-  // justify-content dennoch rechtsbündig, solange genug Platz ist.
+  // Bei 375 px passen Toggle und Aktionen nicht in eine Zeile. Statt die
+  // Trefferflächen zu quetschen, bricht die Fußzeile um — rechtsbündig
+  // bleiben die Aktionen trotzdem, solange Platz ist.
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 0.5rem;
   margin-top: 0.4rem;
 }
 
+// Nur der Abstand zum Pfeil — alles Übrige ist Sache des Knopfes.
 .icard__toggle {
-  display: inline-flex;
-  align-items: center;
   gap: 0.3rem;
-  min-height: 44px;
-  padding: 0 0.6rem;
-  background: transparent;
-  color: $color-muted;
-  font-weight: 600;
-  font-size: 0.8rem;
-  &:hover { color: $color-accent; }
 }
 .icard__chevron {
   display: inline-block;
@@ -203,28 +240,10 @@ function accumulating(value: boolean | null): string {
   display: flex;
   gap: 0.3rem;
   align-items: center;
-  // Sicherheitsnetz: auch die Actions selbst dürfen umbrechen (schmalere
-  // Screens, längere Übersetzungen) statt die 44px-Ziele zu quetschen.
+  // Sicherheitsnetz: auch die Aktionen selbst dürfen umbrechen — schmalere
+  // Schirme, längere Übersetzungen.
   flex-wrap: wrap;
   justify-content: flex-end;
-}
-.icard__action {
-  min-height: 44px;
-  min-width: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.72rem;
-  font-weight: 700;
-  padding: 0.2rem 0.5rem;
-  border-radius: $radius;
-  text-decoration: none;
-  color: $color-accent;
-  background: $color-surface-2;
-  white-space: nowrap;
-  &:hover:not(:disabled) { background: $color-accent; color: #fff; }
-  &--remove:hover:not(:disabled) { background: $color-danger; color: #fff; }
-  &--refresh.spin { animation: spin 0.7s linear infinite; color: $color-accent; }
 }
 
 .icard__details {

@@ -1,17 +1,22 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NButton, NSelect } from 'naive-ui'
 
-import { useIsCompact } from '../composables/useIsCompact'
+import { useIsCompact } from '@mikemitterer/ux-foundation'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
+import InfoHint from './InfoHint.vue'
 import InstrumentCard from './InstrumentCard.vue'
 import IsinEditor from './IsinEditor.vue'
-import type { InstrumentSummary } from '../types'
+import ManualMetric from './ManualMetric.vue'
+import type { InstrumentOverrides, InstrumentSummary } from '../types'
 
 const props = defineProps<{
   instruments: InstrumentSummary[]
   selectedSymbol: string | null
   refreshingSymbol: string | null
+  /** Papier, dessen manuelle Kennzahlen gerade gespeichert werden. */
+  savingSymbol: string | null
   extraetfEtfUrl: string
   extraetfStockUrl: string
   yahooUrl: string
@@ -23,6 +28,10 @@ const emit = defineEmits<{
   (event: 'remove', item: InstrumentSummary): void
   (event: 'set-isin', payload: { symbol: string; isin: string }): void
   (event: 'json', item: InstrumentSummary): void
+  (
+    event: 'override',
+    payload: { item: InstrumentSummary; patch: Partial<InstrumentOverrides> },
+  ): void
 }>()
 
 const { t, locale } = useI18n()
@@ -47,12 +56,17 @@ const columns: { key: SortKey; label: string; align?: string }[] = [
 
 const sortedInstruments = computed(() => sort(props.instruments))
 
-// Sichtbarer Text der mobilen Sortierzeile: aktive Spalte oder Leerlauf-Text
-// ("⇅ Sortieren"), reagiert auf Sprachwechsel wie die übrigen t()-Aufrufe.
-const sortLabel = computed(() => {
-  const column = columns.find((entry) => entry.key === sortKey.value)
-  return column ? t(column.label) : t('table.sortIdle')
-})
+/**
+ * Auswahlliste der mobilen Sortierzeile.
+ *
+ * Der erste Eintrag ist der Leerlauf: Ohne ihn ließe sich eine einmal gesetzte
+ * Sortierung nicht mehr abschalten. Er trägt den leeren Wert, damit die
+ * Auswahl ihn als „nichts gewählt" zeigt.
+ */
+const sortOptions = computed(() => [
+  { value: '', label: t('table.sortNone') },
+  ...columns.map((column) => ({ value: column.key, label: t(column.label) })),
+])
 
 /**
  * Kehrt die Sortierrichtung in der Kartenansicht um (nur auf/ab). `toggle()`
@@ -64,9 +78,8 @@ function toggleSortDirection(): void {
   setDirection(direction.value === 'asc' ? 'desc' : 'asc')
 }
 
-/** Übernimmt die Select-Auswahl der mobilen Sortierleiste (leer = aus). */
-function onSortSelect(event: Event): void {
-  const value = (event.target as HTMLSelectElement).value
+/** Übernimmt die Auswahl der mobilen Sortierleiste (leer = aus). */
+function onSortSelect(value: string): void {
   setSortKey(value === '' ? null : (value as SortKey))
 }
 
@@ -89,16 +102,7 @@ function price(value: number | null): string {
     : value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-/** Formatiert einen Prozentwert mit zwei Nachkommastellen (oder '—'). */
-function formatPercent(value: number | null): string {
-  return value === null ? '—' : `${value.toFixed(2)} %`
-}
 
-/** Thesaurierend-Anzeige: Ja / Nein / '—' bei unbekannt. */
-function accumulating(value: boolean | null): string {
-  if (value === null) return '—'
-  return value ? t('table.yes') : t('table.no')
-}
 </script>
 
 <template>
@@ -106,31 +110,29 @@ function accumulating(value: boolean | null): string {
     <div class="table__head" :class="{ 'table__head--compact': compact }">
       <h2>{{ t('table.title') }}</h2>
       <div v-if="compact && instruments.length > 0" class="tsort">
-        <div class="tsort__trigger">
-          <label class="visually-hidden" for="tsort-select">{{ t('table.sortBy') }}</label>
-          <span class="tsort__icon" aria-hidden="true">⇅</span>
-          <span class="tsort__text">{{ sortLabel }}</span>
-          <!-- Transparent über den Trigger gelegt: öffnet das native Mobil-Picker,
-               bleibt aber ein echtes, gelabeltes <select> für Screenreader/Tastatur. -->
-          <select
-            id="tsort-select"
-            :value="sortKey ?? ''"
-            class="tsort__select"
-            @change="onSortSelect"
-          >
-            <option value="">{{ t('table.sortNone') }}</option>
-            <option v-for="column in columns" :key="column.key" :value="column.key">
-              {{ t(column.label) }}
-            </option>
-          </select>
-        </div>
-        <button
+        <!--
+          Naives Auswahlliste statt eines nativen `select`: Sie bringt Tastatur
+          und Beschriftung selbst mit, und die Oberfläche bleibt in einer
+          Formensprache. Die frühere Lösung legte ein transparentes `select`
+          über einen eigenen Trigger — zwei Elemente für eine Aufgabe.
+        -->
+        <NSelect
+          class="tsort__select"
+          size="small"
+          :value="sortKey ?? ''"
+          :options="sortOptions"
+          :aria-label="t('table.sortBy')"
+          @update:value="onSortSelect"
+        />
+        <NButton
           v-if="sortKey !== null"
-          type="button"
           class="tsort__dir"
+          size="small"
           :title="direction === 'asc' ? t('table.sortAsc') : t('table.sortDesc')"
           @click="toggleSortDirection"
-        >{{ direction === 'asc' ? '▲' : '▼' }}</button>
+        >
+          {{ direction === 'asc' ? '▲' : '▼' }}
+        </NButton>
       </div>
     </div>
     <p v-if="instruments.length === 0" class="empty">
@@ -144,6 +146,7 @@ function accumulating(value: boolean | null): string {
           :item="item"
           :selected="item.symbol === selectedSymbol"
           :refreshing="item.symbol === refreshingSymbol"
+          :saving="item.symbol === savingSymbol"
           :extraetf-url="extraetfLink(item)"
           :yahoo-url="yahooLink(item)"
           @select="emit('select', $event)"
@@ -151,6 +154,7 @@ function accumulating(value: boolean | null): string {
           @remove="emit('remove', $event)"
           @json="emit('json', $event)"
           @set-isin="emit('set-isin', $event)"
+          @override="emit('override', { item, patch: $event })"
         />
       </div>
     </template>
@@ -171,6 +175,14 @@ function accumulating(value: boolean | null): string {
               @click="toggle(column.key)"
             >
               {{ t(column.label) }}
+              <!--
+                `@click.stop`: Der Spaltenkopf sortiert bei jedem Klick — ohne
+                das würde schon das Antippen des Fragezeichens die Tabelle
+                umsortieren.
+              -->
+              <span v-if="column.key === 'history_count'" class="th-hint" @click.stop>
+                <InfoHint :text="t('hints.points')" settings-tab="environment" />
+              </span>
               <span v-if="sortKey === column.key" class="arrow">
                 {{ direction === 'asc' ? '▲' : '▼' }}
               </span>
@@ -199,41 +211,94 @@ function accumulating(value: boolean | null): string {
               {{ price(item.latest_price) }}
               <span class="ccy">{{ item.latest_currency ?? '' }}</span>
             </td>
-            <td class="num mono dim">{{ formatPercent(item.ter) }}</td>
-            <td class="num mono dim">{{ formatPercent(item.volatility) }}</td>
-            <td class="center">
-              <span v-if="item.accumulating !== null" class="badge thes" :class="{ acc: item.accumulating }">
-                {{ accumulating(item.accumulating) }}
-              </span>
-              <span v-else class="dim">—</span>
+            <!--
+              Die drei Kennzahlen sind an Ort und Stelle bearbeitbar (T-09) —
+              für Papiere, die nicht über justETF/extraETF laufen, gibt es
+              sonst keine Quelle dafür. `@click.stop`, weil ein Klick auf die
+              Zeile das Chart öffnet.
+            -->
+            <td class="num mono dim" @click.stop>
+              <ManualMetric
+                :item="item"
+                field="ter"
+                :busy="savingSymbol === item.symbol"
+                @commit="emit('override', { item, patch: $event })"
+              />
+            </td>
+            <td class="num mono dim" @click.stop>
+              <ManualMetric
+                :item="item"
+                field="volatility"
+                :busy="savingSymbol === item.symbol"
+                @commit="emit('override', { item, patch: $event })"
+              />
+            </td>
+            <td class="center" @click.stop>
+              <ManualMetric
+                :item="item"
+                field="accumulating"
+                :busy="savingSymbol === item.symbol"
+                @commit="emit('override', { item, patch: $event })"
+              />
             </td>
             <td class="num mono dim">{{ item.history_count }}</td>
             <td class="actions" @click.stop>
-              <button class="ext" :title="t('table.showJson')" @click="emit('json', item)">JSON</button>
-              <a
-                v-if="extraetfLink(item)"
+              <NButton
                 class="ext"
-                :href="extraetfLink(item)"
-                target="_blank"
-                rel="noopener"
-                :title="t('table.extraetfProfile')"
-              >eETF</a>
-              <a
-                v-if="yahooLink(item)"
-                class="ext"
-                :href="yahooLink(item)"
-                target="_blank"
-                rel="noopener"
-                :title="t('table.yahooFinance')"
-              >Y!</a>
-              <button
+                size="tiny"
+                quaternary
+                :title="t('table.showJson')"
+                @click="emit('json', item)"
+              >
+                JSON
+              </NButton>
+              <NButton
+          v-if="extraetfLink(item)"
+          class="ext"
+          tag="a"
+          size="tiny"
+          quaternary
+          :href="extraetfLink(item)"
+          target="_blank"
+          rel="noopener"
+          :title="t('table.extraetfProfile')"
+        >
+          eETF
+        </NButton>
+              <NButton
+          v-if="yahooLink(item)"
+          class="ext"
+          tag="a"
+          size="tiny"
+          quaternary
+          :href="yahooLink(item)"
+          target="_blank"
+          rel="noopener"
+          :title="t('table.yahooFinance')"
+        >
+          Y!
+        </NButton>
+              <NButton
                 class="icon"
-                :class="{ spin: item.symbol === refreshingSymbol }"
+                size="tiny"
+                quaternary
+                :loading="item.symbol === refreshingSymbol"
                 :disabled="item.symbol === refreshingSymbol"
                 :title="t('table.refresh')"
                 @click="emit('refresh', item)"
-              >↻</button>
-              <button class="icon danger" :title="t('table.remove')" @click="emit('remove', item)">✕</button>
+              >
+                ↻
+              </NButton>
+              <NButton
+                class="icon"
+                size="tiny"
+                quaternary
+                type="error"
+                :title="t('table.remove')"
+                @click="emit('remove', item)"
+              >
+                ✕
+              </NButton>
             </td>
           </tr>
         </tbody>
@@ -287,9 +352,9 @@ function accumulating(value: boolean | null): string {
   border: 0;
 }
 
-// Leise, rechtsbündige Textzeile statt Formularleiste (T-11c). Das native
-// <select> bleibt im DOM und liegt transparent über dem sichtbaren Trigger —
-// Antippen öffnet das native Mobil-Picker, die Optik kommt vom Text daneben.
+// Leise, rechtsbündige Zeile statt Formularleiste (T-11c). Die Auswahl selbst
+// bringt ihre Gestaltung von Naive UI mit — hier steht nur, wo sie sitzt und
+// wie breit sie sein darf.
 .tsort {
   display: flex;
   justify-content: flex-end;
@@ -300,61 +365,19 @@ function accumulating(value: boolean | null): string {
   flex: none;
   max-width: 100%;
 }
-.tsort__trigger {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  gap: 0.3rem;
-  min-height: 44px; // Trefferfläche unabhängig vom (kleinen) Text
-  padding: 0.6rem 0.5rem;
-  border-radius: $radius;
-  color: $color-muted;
-  font-size: 0.85rem; // $font-sm-artig — bewusst klein, die Fläche liefert die Trefferzone
-  white-space: nowrap;
-  transition: background 0.1s ease, color 0.1s ease;
-  // Die 44px-Trefferfläche bleibt (min-height oben) — für die Zeilenhöhe der
-  // Kopfzeile zählt dank negativer Margin aber nur ein kleinerer Anteil davon,
-  // sonst würde allein der Sortier-Trigger die ganze Kopfzeile auf 44px
-  // aufblähen. Nichts wird abgeschnitten: .card hat kein overflow:hidden.
-  margin: -0.5rem 0;
-  &:hover,
-  &:focus-within { background: $color-surface-2; color: $color-text; }
-}
-.tsort__icon { font-size: 0.9rem; }
+
 .tsort__select {
-  // Transparent über .tsort__trigger gelegt (inset: 0 füllt exakt dessen Box,
-  // die dank min-height 44px oben nie kleiner als die Trefferfläche ist).
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  min-width: 0;
-  max-width: 100%;
-  min-height: 44px;
-  font-size: 1rem; // unter 16px zoomt iOS beim Antippen die ganze Seite
-  padding: 0;
-  margin: 0;
-  border: 0;
-  opacity: 0;
-  cursor: pointer;
-  option { font-family: inherit; font-size: 1rem; }
+  // Ohne feste Breite schrumpft die Auswahl im Flex-Container auf ihren
+  // Mindestinhalt — von "Marktwert" bliebe ein "M".
+  width: 11rem;
 }
+
+// Nichts als die Ausrichtung: Größe, Fläche und Rundung bringt der Knopf
+// selbst mit. Hier standen vorher Farbe, Hintergrund, Radius und ein
+// negatives Margin — damit war er eine zweite Sorte Knopf und stand
+// sichtbar höher als die Auswahl daneben.
 .tsort__dir {
   flex: none;
-  min-height: 44px;
-  min-width: 44px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  color: $color-muted;
-  border-radius: $radius;
-  font-size: 0.8rem;
-  transition: background 0.1s ease, color 0.1s ease;
-  // Gleicher Grund wie beim Trigger: 44px Trefferfläche bleibt, zählt aber
-  // nicht komplett für die Höhe der Kopfzeile.
-  margin: -0.5rem 0;
-  &:hover { background: $color-surface-2; color: $color-text; }
 }
 
 thead th { font-weight: 600; }
@@ -364,8 +387,18 @@ thead th.sortable {
   white-space: nowrap;
   &:hover { color: $color-accent; }
   .arrow { color: $color-accent; font-size: 0.6rem; }
+  // Der Hinweis sortiert nicht — also auch kein Sortier-Zeiger darüber.
+  .th-hint { cursor: default; margin-left: 0.25rem; }
 }
-tbody td { padding: 0.5rem 0.7rem; border-bottom: 1px solid token(--border-default, 0.5); }
+/*
+ * Etwas enger als sonst, und das ist gemessen: Mit `nowrap` in den
+ * Zahlenspalten und dem Fragezeichen an „Pkt." brauchte die Tabelle 1150 px bei
+ * 1123 verfügbaren — die letzten 27 px klemmten ausgerechnet den Löschen-Knopf
+ * ab. Zehn Spalten mal 0.3 rem holen das zurück, ohne dass die Zeile gedrängt
+ * aussieht.
+ */
+tbody td { padding: 0.5rem 0.55rem; border-bottom: 1px solid token(--border-default, 0.5); }
+thead th { padding-inline: 0.55rem; }
 tbody tr {
   cursor: pointer;
   transition: background 0.1s ease;
@@ -373,7 +406,13 @@ tbody tr {
   &.selected { background: token(--accent, 0.12); box-shadow: inset 3px 0 0 $color-accent; }
 }
 
-.num { text-align: right; }
+/*
+ * Zahlenspalten brechen nicht um. Ohne das drückt jede Spalte, die etwas
+ * breiter wird — das Fragezeichen an „Pkt." reicht schon —, den Kurs auf zwei
+ * Zeilen: die Zahl oben, die Währung darunter. Passt die Tabelle dann nicht
+ * mehr, rollt sie waagrecht (`.scroll`), statt die Zahlen zu zerlegen.
+ */
+.num { text-align: right; white-space: nowrap; }
 .center { text-align: center; }
 .dim { color: $color-muted; }
 
@@ -393,27 +432,10 @@ tbody tr {
   text-transform: uppercase;
   letter-spacing: 0.03em;
   &.etf { color: $color-accent; background: token(--accent, 0.15); }
-  &.stock { color: $color-accent-2; background: token(--accent-2, 0.16); }
+  &.stock { color: $color-stock; background: token(--asset-stocks, 0.16); }
 }
 
 .actions { display: flex; gap: 0.3rem; justify-content: flex-end; align-items: center; }
-.ext {
-  font-size: 0.68rem;
-  font-weight: 700;
-  padding: 0.2rem 0.4rem;
-  border-radius: 6px;
-  text-decoration: none;
-  color: $color-accent;
-  background: $color-surface-2;
-  white-space: nowrap;
-  &:hover { background: $color-accent; color: #fff; }
-}
-.icon {
-  padding: 0.2rem 0.5rem;
-  background: $color-surface-2;
-  &.danger:hover { background: $color-danger; color: #fff; }
-  &.spin { animation: spin 0.7s linear infinite; color: $color-accent; }
-}
 
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>

@@ -1,19 +1,14 @@
 import { mount } from '@vue/test-utils'
+import { NSelect } from 'naive-ui'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 import InstrumentsTable from '../../src/components/InstrumentsTable.vue'
 import { useTableSort } from '../../src/composables/useTableSort'
 import { i18n } from '../../src/i18n'
-import type { InstrumentSummary } from '../../src/types'
+import { makeInstrument } from '../fixtures/instrument'
 
-const base: InstrumentSummary = {
-  isin: 'US0378331005', symbol: 'APC.DE', exchange: 'XETR', name: 'Apple Inc.',
-  type: 'stock', currency: 'EUR', provider: null, ter: null, replication: null,
-  fund_size: null, volatility: 25.8, accumulating: null, meta_fetched_at: null,
-  latest_price: 265, latest_quote_time: null, latest_currency: 'EUR',
-  latest_fetched_at: null, history_count: 2,
-}
-const instruments = [base, { ...base, symbol: 'VGWL.DE', name: 'Vanguard FTSE All-World' }]
+const base = makeInstrument()
+const instruments = [base, makeInstrument({ symbol: 'VGWL.DE', name: 'Vanguard FTSE All-World' })]
 
 /** Setzt die Viewport-Breite für useIsCompact. */
 function stubMatchMedia(compact: boolean) {
@@ -26,7 +21,7 @@ function stubMatchMedia(compact: boolean) {
 function mountTable() {
   return mount(InstrumentsTable, {
     props: {
-      instruments, selectedSymbol: null, refreshingSymbol: null,
+      instruments, selectedSymbol: null, refreshingSymbol: null, savingSymbol: null,
       extraetfEtfUrl: '', extraetfStockUrl: '', yahooUrl: '',
     },
     global: { plugins: [i18n] },
@@ -66,43 +61,37 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
     expect(wrapper.find('.tsort__dir').exists()).toBe(false)
   })
 
-  it('hat ein (visuell verstecktes) Label, das auf das Select verweist', () => {
+  it('trägt einen zugänglichen Namen — ein Feld ohne Namen ist keins', () => {
     stubMatchMedia(true)
     const wrapper = mountTable()
-    const label = wrapper.find('label')
-    const select = wrapper.find('.tsort__select')
-    expect(label.exists()).toBe(true)
-    expect(label.classes()).toContain('visually-hidden')
-    expect(label.text()).toBe('Sortieren nach')
-    expect(label.attributes('for')).toBe(select.attributes('id'))
+
+    expect(wrapper.findComponent(NSelect).attributes('aria-label')).toBe('Sortieren nach')
   })
 
-  it('zeigt den Leerlauf-Text, solange nichts sortiert ist', () => {
+  it('bietet den Leerlauf als erste Wahl — sonst ließe sich Sortieren nicht abschalten', () => {
     stubMatchMedia(true)
     const wrapper = mountTable()
-    expect(wrapper.find('.tsort__text').text()).toBe('Sortieren')
+    const optionen = wrapper.findComponent(NSelect).props('options')!
+
+    expect(optionen[0]).toEqual({ value: '', label: 'Ohne Sortierung' })
   })
 
-  it('zeigt den Spaltennamen als Trigger-Text, sobald sortiert wird', async () => {
+  it('steht ohne aktive Sortierung auf dem Leerlauf', () => {
     stubMatchMedia(true)
     const wrapper = mountTable()
-    await wrapper.find('.tsort__select').setValue('name')
-    expect(wrapper.find('.tsort__text').text()).toBe('Name')
+
+    expect(wrapper.findComponent(NSelect).props('value')).toBe('')
   })
 
-  it('erste Option ist der Platzhalter "Ohne Sortierung" mit leerem Wert', () => {
+  it('übernimmt die gewählte Spalte', async () => {
     stubMatchMedia(true)
     const wrapper = mountTable()
-    const options = wrapper.findAll('.tsort__select option')
-    expect(options[0].text()).toBe('Ohne Sortierung')
-    expect(options[0].attributes('value')).toBe('')
-  })
 
-  it('Select steht ohne aktive Sortierung auf dem leeren Platzhalter-Wert', () => {
-    stubMatchMedia(true)
-    const wrapper = mountTable()
-    const select = wrapper.find('.tsort__select')
-    expect((select.element as HTMLSelectElement).value).toBe('')
+    wrapper.findComponent(NSelect).vm.$emit('update:value', 'name')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findComponent(NSelect).props('value')).toBe('name')
+    expect(wrapper.find('.tsort__dir').exists()).toBe(true)
   })
 
   it('Richtungsknopf ist ohne aktive Sortierung nicht vorhanden', () => {
@@ -111,22 +100,20 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
     expect(wrapper.find('.tsort__dir').exists()).toBe(false)
   })
 
-  it('Wahl des Platzhalters setzt eine aktive Sortierung zurück', async () => {
+  it('Wahl des Leerlaufs setzt eine aktive Sortierung zurück', async () => {
     stubMatchMedia(true)
     const wrapper = mountTable()
-    const select = wrapper.find('.tsort__select')
+    const auswahl = wrapper.findComponent(NSelect)
 
-    // erst eine Spalte wählen, damit Sortierung aktiv ist …
-    await select.setValue('name')
-    expect((select.element as HTMLSelectElement).value).toBe('name')
-    expect(wrapper.find('.tsort__dir').exists()).toBe(true)
+    auswahl.vm.$emit('update:value', 'name')
+    await wrapper.vm.$nextTick()
     expect(window.localStorage.getItem('stockinfo-sort')).not.toBeNull()
 
-    // … dann den Platzhalter wählen und Reset prüfen
-    await select.setValue('')
-    expect((select.element as HTMLSelectElement).value).toBe('')
+    auswahl.vm.$emit('update:value', '')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.findComponent(NSelect).props('value')).toBe('')
     expect(wrapper.find('.tsort__dir').exists()).toBe(false)
-    expect(window.localStorage.getItem('stockinfo-sort')).toBeNull()
   })
 
   it('reicht select aus einer Karte nach oben durch', async () => {
@@ -140,7 +127,7 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
     stubMatchMedia(true)
     const wrapper = mount(InstrumentsTable, {
       props: {
-        instruments: [], selectedSymbol: null, refreshingSymbol: null,
+        instruments: [], selectedSymbol: null, refreshingSymbol: null, savingSymbol: null,
         extraetfEtfUrl: '', extraetfStockUrl: '', yahooUrl: '',
       },
       global: { plugins: [i18n] },

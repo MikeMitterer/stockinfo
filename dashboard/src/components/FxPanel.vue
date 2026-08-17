@@ -1,27 +1,29 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NButton, NInputNumber, NSelect } from 'naive-ui'
 
 import { useFx } from '../composables/useFx'
 import { formatDateTime } from '../utils/datetime'
 
-defineProps<{ currencies: string[] }>()
+const props = defineProps<{ currencies: string[] }>()
 
 const { t, locale } = useI18n()
 const { result, loading, error, convert } = useFx()
 
 const base = ref<string>('EUR')
 const quote = ref<string>('USD')
-const amount = ref<string>('1')
+// `NInputNumber` liefert eine Zahl oder `null`, wenn das Feld geleert wurde.
+const amount = ref<number | null>(1)
 
-// Betrag defensiv: leer/ungültig/negativ → Fallback 1 (kein Crash).
-// `Number('')` ist 0 → leeren String separat abfangen; `String()`, weil ein
-// number-Input auch eine Zahl liefern kann.
+/*
+ * Betrag defensiv: geleert, ungültig oder negativ → 1. Ein leeres Feld soll
+ * die Umrechnung nicht abstürzen lassen, sondern den Kurs für eine Einheit
+ * zeigen — das ist die Frage dahinter.
+ */
 const amountNum = computed<number>(() => {
-  const raw = String(amount.value ?? '').trim()
-  if (raw === '') return 1
-  const n = Number(raw)
-  return Number.isFinite(n) && n >= 0 ? n : 1
+  const value = amount.value
+  return value !== null && Number.isFinite(value) && value >= 0 ? value : 1
 })
 
 /** Geldbetrag lokalisiert mit 2 Nachkommastellen. */
@@ -52,6 +54,11 @@ async function run(): Promise<void> {
 function formatRate(rate: number): string {
   return rate.toLocaleString(locale.value, { maximumFractionDigits: 3 })
 }
+
+/** Währungen als Auswahlliste — Kennung ist zugleich Beschriftung. */
+const currencyOptions = computed(() =>
+  props.currencies.map((code) => ({ value: code, label: code })),
+)
 </script>
 
 <template>
@@ -60,25 +67,40 @@ function formatRate(rate: number): string {
     <p class="hint">{{ t('fx.hint') }}</p>
 
     <div class="controls">
-      <input
-        v-model="amount"
-        type="number"
-        min="0"
-        step="any"
+      <NInputNumber
+        v-model:value="amount"
         class="amount"
+        :min="0"
         :aria-label="t('fx.amount')"
         @keyup.enter="run"
       />
-      <select v-model="base" class="code" :aria-label="t('fx.base')">
-        <option v-for="c in currencies" :key="c" :value="c">{{ c }}</option>
-      </select>
-      <button class="swap" :title="t('fx.swap')" @click="swap">⇄</button>
-      <select v-model="quote" class="code" :aria-label="t('fx.quote')">
-        <option v-for="c in currencies" :key="c" :value="c">{{ c }}</option>
-      </select>
-      <button :disabled="loading" @click="run">
+      <NSelect
+        v-model:value="base"
+        class="code"
+        :options="currencyOptions"
+        :aria-label="t('fx.base')"
+      />
+      <NButton
+        quaternary
+        :title="t('fx.swap')"
+        @click="swap"
+      >
+        ⇄
+      </NButton>
+      <NSelect
+        v-model:value="quote"
+        class="code"
+        :options="currencyOptions"
+        :aria-label="t('fx.quote')"
+      />
+      <NButton
+        type="primary"
+        :disabled="loading"
+        :loading="loading"
+        @click="run"
+      >
         {{ loading ? t('fx.converting') : t('fx.convert') }}
-      </button>
+      </NButton>
     </div>
 
     <p v-if="error" class="err">{{ error }}</p>
@@ -108,9 +130,13 @@ function formatRate(rate: number): string {
 .fx {
   .hint { color: $color-muted; margin: 0 0 1rem; font-size: 0.85rem; max-width: 72ch; }
   .controls { display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
-  .amount { width: 7rem; padding: 0.4rem 0.6rem; border-radius: $radius; border: 1px solid $color-border; background: $color-surface; color: $color-text; font-family: $font-mono; font-variant-numeric: tabular-nums; }
-  .code { width: 5rem; text-transform: uppercase; text-align: center; padding: 0.4rem; border-radius: $radius; border: 1px solid $color-border; background: $color-surface; color: $color-text; font-family: $font-mono; }
-  .swap { background: $color-surface-2; border: 1px solid $color-border; border-radius: $radius; padding: 0.4rem 0.6rem; }
+  /*
+   * Rahmen, Fläche und Innenabstand kommen von Naive UI — hier steht nur noch
+   * die Breite. Sie muss stehen: Ein `NSelect` ohne Breitenangabe schrumpft im
+   * Flex-Container auf seinen Mindestinhalt, und von „EUR" bleibt ein „E".
+   */
+  .amount { width: 8rem; }
+  .code { width: 7rem; }
   .err { color: $color-danger; }
   .amount-result { font-size: 1.4rem; font-weight: 700; margin: 0.5rem 0 0.15rem; font-variant-numeric: tabular-nums; }
   .rate { color: $color-muted; font-size: 0.95rem; margin: 0 0 1rem; }

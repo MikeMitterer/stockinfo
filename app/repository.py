@@ -197,13 +197,21 @@ class QuoteRepository:
             return [dict(row) for row in rows]
 
     def list_instruments_with_latest(self) -> list[dict]:
-        """Gibt alle Instrumente inkl. jüngstem Kurs und History-Anzahl zurück."""
+        """Gibt alle Instrumente inkl. jüngstem Kurs, History-Anzahl und Overrides zurück.
+
+        Die manuellen Werte kommen **roh** mit (``manual_*``) — die Vorrang-Regel
+        gehört in die Fachschicht, nicht in SQL. Sonst stünde die Regel an einer
+        Stelle, die niemand liest, wenn er sie sucht.
+        """
         query = """
             SELECT i.*,
                    q.price      AS latest_price,
                    q.quote_time AS latest_quote_time,
                    q.currency   AS latest_currency,
                    q.fetched_at AS latest_fetched_at,
+                   o.ter          AS manual_ter,
+                   o.volatility   AS manual_volatility,
+                   o.accumulating AS manual_accumulating,
                    (SELECT COUNT(*) FROM quotes WHERE instrument_id = i.id)
                        AS history_count
             FROM instruments i
@@ -211,6 +219,7 @@ class QuoteRepository:
                 SELECT id FROM quotes WHERE instrument_id = i.id
                 ORDER BY quote_time DESC LIMIT 1
             )
+            LEFT JOIN instrument_overrides o ON o.instrument_id = i.id
             ORDER BY i.symbol
         """
         with self._connect() as connection:
@@ -248,6 +257,60 @@ class QuoteRepository:
                 "UPDATE instruments SET isin = ? WHERE id = ("
                 "SELECT id FROM instruments WHERE symbol = ? ORDER BY id LIMIT 1)",
                 (isin, symbol),
+            )
+
+    def get_overrides(self, instrument_id: int) -> dict | None:
+        """Gibt die von Hand gepflegten Kennzahlen eines Instruments zurück.
+
+        Returns:
+            Zeile als dict oder None, wenn nie etwas eingetragen wurde.
+        """
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM instrument_overrides WHERE instrument_id = ?",
+                (instrument_id,),
+            ).fetchone()
+            return dict(row) if row else None
+
+    def set_overrides(
+        self,
+        instrument_id: int,
+        ter: float | None,
+        volatility: float | None,
+        accumulating: bool | None,
+        updated_at: str,
+    ) -> None:
+        """Schreibt die manuellen Kennzahlen — alle drei auf einmal.
+
+        ``None`` heißt **löschen**, nicht „unverändert": Die Oberfläche schickt
+        immer den vollständigen Satz, und ein geleertes Feld muss den Wert
+        auch wieder entfernen können. Bleiben alle drei leer, verschwindet die
+        Zeile ganz — sonst sammelten sich Karteileichen ohne Inhalt.
+        """
+        with self._connect() as connection:
+            if ter is None and volatility is None and accumulating is None:
+                connection.execute(
+                    "DELETE FROM instrument_overrides WHERE instrument_id = ?",
+                    (instrument_id,),
+                )
+                return
+
+            connection.execute(
+                "INSERT INTO instrument_overrides "
+                "(instrument_id, ter, volatility, accumulating, updated_at) "
+                "VALUES (?, ?, ?, ?, ?) "
+                "ON CONFLICT(instrument_id) DO UPDATE SET "
+                "ter = excluded.ter, "
+                "volatility = excluded.volatility, "
+                "accumulating = excluded.accumulating, "
+                "updated_at = excluded.updated_at",
+                (
+                    instrument_id,
+                    ter,
+                    volatility,
+                    None if accumulating is None else int(accumulating),
+                    updated_at,
+                ),
             )
 
     def set_volatility(self, instrument_id: int, volatility: float) -> None:

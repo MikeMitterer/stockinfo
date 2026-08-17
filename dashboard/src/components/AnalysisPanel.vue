@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
+import { NButton, NInput, NSelect } from 'naive-ui'
 
 import { isIsin } from '../api/paths'
 import { useAnalysis } from '../composables/useAnalysis'
@@ -29,6 +30,14 @@ const target = computed<InstrumentRef | null>(() => {
 async function run(): Promise<void> {
   if (target.value) await analyze(target.value)
 }
+
+/** Auswahlliste für Naive: Wert ist das Symbol, Beschriftung nennt den Namen. */
+const instrumentOptions = computed(() =>
+  props.instruments.map((instrument) => ({
+    value: instrument.symbol,
+    label: `${instrument.symbol} — ${instrument.name ?? instrument.isin}`,
+  })),
+)
 </script>
 
 <template>
@@ -37,21 +46,29 @@ async function run(): Promise<void> {
     <p class="hint">{{ t('analysis.hint') }}</p>
 
     <div class="controls">
-      <select v-model="selectedSymbol" :aria-label="t('analysis.pickInstrument')">
-        <option value="">{{ t('analysis.pickInstrument') }}</option>
-        <option v-for="i in instruments" :key="i.symbol" :value="i.symbol">
-          {{ i.symbol }} — {{ i.name ?? i.isin }}
-        </option>
-      </select>
-      <input
-        v-model="freeInput"
-        type="text"
+      <NSelect
+        v-model:value="selectedSymbol"
+        class="controls__pick"
+        :options="instrumentOptions"
+        :placeholder="t('analysis.pickInstrument')"
+        :aria-label="t('analysis.pickInstrument')"
+        clearable
+      />
+      <NInput
+        v-model:value="freeInput"
+        class="controls__free"
         :placeholder="t('analysis.placeholder')"
         :aria-label="t('analysis.orEnter')"
+        @keyup.enter="run"
       />
-      <button :disabled="loading || !target" @click="run">
+      <NButton
+        type="primary"
+        :disabled="loading || !target"
+        :loading="loading"
+        @click="run"
+      >
         {{ loading ? t('analysis.running') : t('analysis.run') }}
-      </button>
+      </NButton>
     </div>
 
     <p v-if="error" class="err">{{ error }}</p>

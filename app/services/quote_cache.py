@@ -31,6 +31,56 @@ def _as_bool(value: object) -> bool | None:
     return None if value is None else bool(value)
 
 
+def apply_overrides(row: dict) -> dict:
+    """Legt die manuellen Kennzahlen über die der Quelle — **nur in Lücken**.
+
+    Die Regel in einem Satz: *Was die Quelle liefert, gewinnt; ein manueller
+    Wert füllt nur, was leer bleibt.* Damit kann eine spätere Lieferung von
+    justETF/extraETF eine Eingabe nie dauerhaft ersetzen — sie verdeckt sie nur,
+    solange sie etwas zu sagen hat.
+
+    Verdecken darf aber nicht stillschweigend passieren: Wer einen Wert
+    eingetragen hat und plötzlich einen anderen sieht, muss erfahren, warum.
+    Deshalb zwei Listen statt eines stillen Ergebnisses:
+
+    * ``manual_fields`` — hier kommt der angezeigte Wert gerade von Hand.
+    * ``shadowed_fields`` — hier liegt ein manueller Wert, den die Quelle
+      gerade überstimmt. Der rohe Wert steht in ``manual_<feld>``, damit die
+      Oberfläche ihn im Hinweis nennen kann.
+
+    Der Sonderfall ``accumulating``: Es ist ein Wahrheitswert, und ``False``
+    („ausschüttend") ist eine Aussage, keine Lücke. Geprüft wird deshalb auf
+    ``None``, nicht auf Falschheit — sonst hätte „ausschüttend" nie Bestand.
+
+    Args:
+        row: Zeile aus ``list_instruments_with_latest`` samt ``manual_*``.
+
+    Returns:
+        Dieselbe Zeile mit wirksamen Werten und den beiden Listen.
+    """
+    result = dict(row)
+    manual_fields: list[str] = []
+    shadowed_fields: list[str] = []
+
+    for feld in ("ter", "volatility", "accumulating"):
+        manuell = result.get(f"manual_{feld}")
+        if feld == "accumulating":
+            manuell = _as_bool(manuell)
+            result["manual_accumulating"] = manuell
+        if manuell is None:
+            continue
+
+        if result.get(feld) is None:
+            result[feld] = manuell
+            manual_fields.append(feld)
+        else:
+            shadowed_fields.append(feld)
+
+    result["manual_fields"] = manual_fields
+    result["shadowed_fields"] = shadowed_fields
+    return result
+
+
 class IsinConflictError(Exception):
     """Die ISIN ist bereits einem anderen Instrument zugeordnet."""
 
@@ -277,8 +327,57 @@ class CachedQuoteService:
         return annualized_volatility(closes)
 
     def list_instruments(self) -> list[dict]:
-        """Gibt alle Instrumente inkl. letztem Kurs zurück (für das Dashboard)."""
-        return self._repository.list_instruments_with_latest()
+        """Gibt alle Instrumente inkl. letztem Kurs und wirksamer Kennzahlen zurück."""
+        return [apply_overrides(row) for row in self._repository.list_instruments_with_latest()]
+
+    def get_overrides(self, symbol: str) -> dict:
+        """Gibt die von Hand gepflegten Kennzahlen eines Instruments zurück.
+
+        Raises:
+            InstrumentNotFoundError: Symbol unbekannt.
+        """
+        instrument = self._require_instrument(symbol)
+        stored = self._repository.get_overrides(instrument["id"]) or {}
+        return {
+            "ter": stored.get("ter"),
+            "volatility": stored.get("volatility"),
+            "accumulating": _as_bool(stored.get("accumulating")),
+        }
+
+    def set_overrides(
+        self,
+        symbol: str,
+        ter: float | None,
+        volatility: float | None,
+        accumulating: bool | None,
+    ) -> dict:
+        """Schreibt die manuellen Kennzahlen eines Instruments und gibt sie zurück.
+
+        Alle drei Werte auf einmal — ``None`` löscht. Die Vorrang-Regel wird
+        hier **nicht** angewandt: Gespeichert wird, was der Nutzer eingetragen
+        hat, auch wenn die Quelle den Wert gerade verdeckt. Sonst verschwände
+        seine Eingabe in dem Moment, in dem die Quelle wieder etwas liefert —
+        und käme nicht zurück, wenn sie es später wieder vergisst.
+
+        Raises:
+            InstrumentNotFoundError: Symbol unbekannt.
+        """
+        instrument = self._require_instrument(symbol)
+        self._repository.set_overrides(
+            instrument["id"],
+            ter,
+            volatility,
+            accumulating,
+            datetime.now(timezone.utc).isoformat(),
+        )
+        return self.get_overrides(symbol)
+
+    def _require_instrument(self, symbol: str) -> dict:
+        """Holt ein Instrument per Symbol oder wirft."""
+        instrument = self._repository.get_instrument_by_symbol(symbol)
+        if instrument is None:
+            raise InstrumentNotFoundError(symbol)
+        return instrument
 
     def count_instruments(self) -> int:
         """Gibt die Anzahl bekannter Instrumente zurück."""
