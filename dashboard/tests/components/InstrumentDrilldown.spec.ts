@@ -109,6 +109,33 @@ describe('InstrumentDrilldown', () => {
     expect(wrapper.text()).toContain(i18n.global.t('drilldown.fetchedAt'))
   })
 
+  /*
+   * Die Spec verlangt, dass die Schublade nicht nur den Zeitpunkt, sondern auch
+   * die **Quelle** nennt: `yfinance` allein heißt „justETF war nicht dabei",
+   * `yfinance+justetf` heißt „die ETF-Extras kommen von dort". Ohne das ist der
+   * Zeitstempel eine Zahl ohne Absender.
+   */
+  it('nennt die Quelle, aus der die Metadaten stammen', () => {
+    const wrapper = mount(InstrumentDrilldown, {
+      global: { plugins: [i18n] },
+      props: { item: makeInstrument({ source: 'yfinance+justetf' }) },
+    })
+
+    expect(wrapper.text()).toContain(i18n.global.t('drilldown.source'))
+    expect(wrapper.text()).toContain('yfinance+justetf')
+  })
+
+  // Ohne gespeicherte Quelle (Instrument aus einer Datenbank vor der Migration)
+  // bleibt die Zeile weg — eine Beschriftung ohne Wert erklärt nichts.
+  it('lässt die Quellenzeile weg, wenn nichts gespeichert ist', () => {
+    const wrapper = mount(InstrumentDrilldown, {
+      global: { plugins: [i18n] },
+      props: { item: makeInstrument({ source: null }) },
+    })
+
+    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.source'))
+  })
+
   it('reicht ein commit-Ereignis eines Editors unverändert nach oben durch', async () => {
     const wrapper = mount(InstrumentDrilldown, {
       global: { plugins: [i18n] },

@@ -277,6 +277,7 @@ export const de = {
   },
   drilldown: {
     fetchedAt: 'Stand der Quelle',
+    source: 'Quelle',
     explain:
       'Die Kennzahlen stammen, wo verfügbar, automatisch von justETF. Von Hand ' +
       'lässt sich nur ergänzen, was die Quelle nicht liefert — sie hat immer Vorrang.',

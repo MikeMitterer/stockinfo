@@ -133,6 +133,9 @@ class InstrumentSummary(BaseModel):
     fund_currency: str | None = None
     volatility: float | None = None
     accumulating: bool | None = None
+    source: str | None = Field(
+        default=None, description="Herkunft der Metadaten: yfinance | yfinance+justetf"
+    )
     meta_fetched_at: str | None = None
     latest_price: float | None = None
     latest_quote_time: str | None = None

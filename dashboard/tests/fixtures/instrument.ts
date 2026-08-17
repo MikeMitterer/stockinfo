@@ -26,6 +26,7 @@ export function makeInstrument(overrides: Partial<InstrumentSummary> = {}): Inst
     fund_currency: null,
     volatility: 25.8,
     accumulating: null,
+    source: 'yfinance',
     meta_fetched_at: null,
     latest_price: 265,
     latest_quote_time: null,

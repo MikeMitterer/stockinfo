@@ -13,7 +13,7 @@ from app.services.quote_service import InstrumentNotFoundError
 class FakeService:
     def list_instruments(self) -> list[dict]:
         return [{"symbol": "VGWL.DE", "isin": "IE00B3RBWM25", "history_count": 2,
-                 "latest_price": 161.0}]
+                 "latest_price": 161.0, "source": "yfinance+justetf"}]
 
     def count_instruments(self) -> int:
         return 1
@@ -55,6 +55,9 @@ def test_instruments(client: TestClient) -> None:
     r = client.get("/instruments")
     assert r.status_code == 200
     assert r.json()[0]["symbol"] == "VGWL.DE"
+    # Fehlt `source` auf `InstrumentSummary`, filtert FastAPI es stillschweigend
+    # aus der Antwort — die Repository-Tests merkten davon nichts.
+    assert r.json()[0]["source"] == "yfinance+justetf"
 
 
 def test_env(client: TestClient) -> None:

@@ -116,6 +116,14 @@ const fetchedAt = computed(() =>
     </dl>
 
     <div class="drilldown__source">
+      <!--
+        Zuerst wer, dann wann: Ohne Absender ist der Zeitstempel eine Zahl ohne
+        Aussage. `yfinance` allein heißt „justETF war nicht dabei",
+        `yfinance+justetf` heißt „die ETF-Extras kommen von dort".
+      -->
+      <p v-if="item.source" class="drilldown__fetched">
+        {{ t('drilldown.source') }}: <span class="mono">{{ item.source }}</span>
+      </p>
       <p v-if="fetchedAt" class="drilldown__fetched">
         {{ t('drilldown.fetchedAt') }}: <span class="mono">{{ fetchedAt }}</span>
       </p>

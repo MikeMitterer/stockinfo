@@ -263,6 +263,7 @@ export const en = {
   },
   drilldown: {
     fetchedAt: 'Source as of',
+    source: 'Source',
     explain:
       'Where available, the figures come automatically from justETF. You can only ' +
       'fill in by hand what the source does not provide — it always takes precedence.',

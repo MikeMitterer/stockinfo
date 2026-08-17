@@ -65,6 +65,8 @@ export interface InstrumentSummary {
   fund_currency: string | null
   volatility: number | null
   accumulating: boolean | null
+  /** Herkunft der Metadaten: `yfinance` oder `yfinance+justetf`. */
+  source: string | null
   meta_fetched_at: string | null
   latest_price: number | null
   latest_quote_time: string | null

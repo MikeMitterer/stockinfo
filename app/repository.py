@@ -26,6 +26,9 @@ _META_FIELDS = (
     "fund_currency",
     "volatility",
     "accumulating",
+    # Wandert mit den Metadaten mit, nicht mit dem Kurspunkt: Er sagt, woher
+    # der jüngste Metadaten-Stand kommt, und wird bei jedem Upsert überschrieben.
+    "source",
 )
 
 

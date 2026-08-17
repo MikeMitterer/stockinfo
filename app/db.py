@@ -29,6 +29,7 @@ CREATE TABLE IF NOT EXISTS instruments (
     accumulating    INTEGER,
     fund_domicile   TEXT,
     fund_currency   TEXT,
+    source          TEXT,
     first_seen      TEXT NOT NULL,
     meta_fetched_at TEXT
 );
@@ -142,6 +143,10 @@ def _migrate(connection: sqlite3.Connection) -> None:
             ("accumulating", "INTEGER"),
             ("fund_domicile", "TEXT"),
             ("fund_currency", "TEXT"),
+            # Woher die Kennzahlen stammen ('yfinance' bzw. 'yfinance+justetf').
+            # Die Schublade nennt das; ohne Nachzug bliebe die Angabe auf jeder
+            # bestehenden Datenbank für immer leer.
+            ("source", "TEXT"),
         ),
     )
     # Die Override-Tabelle wuchs mit: Nachgetragen wird jetzt alles, was
