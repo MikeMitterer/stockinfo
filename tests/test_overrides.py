@@ -497,3 +497,29 @@ def test_die_ter_grenze_laesst_reale_werte_durch(client: TestClient) -> None:
 
     assert antwort.status_code == 200
     assert antwort.json()["ter"] == 5
+
+
+def test_die_neuen_felder_werden_validiert(client: TestClient) -> None:
+    """Der Grund, Spalten statt einer generischen Tabelle zu nehmen."""
+    gueltig = client.put(
+        "/instruments/by-symbol/GOLD.SG/overrides",
+        json={"fund_size": 129445.0, "fund_currency": "USD", "fund_domicile": "Irland"},
+    )
+    assert gueltig.status_code == 200
+    assert gueltig.json()["fund_currency"] == "USD"
+
+
+@pytest.mark.parametrize(
+    "nutzlast",
+    [
+        {"fund_currency": "Euro"},          # kein ISO-Code
+        {"fund_currency": "usd"},           # klein geschrieben
+        {"fund_size": -1},                  # negativ
+        {"fund_size": 2_000_001},           # groesser als der ETF-Markt
+        {"provider": "x" * 101},            # laenger als erlaubt
+    ],
+)
+def test_die_neuen_felder_weisen_unsinn_ab(client: TestClient, nutzlast: dict) -> None:
+    antwort = client.put("/instruments/by-symbol/GOLD.SG/overrides", json=nutzlast)
+
+    assert antwort.status_code == 422
