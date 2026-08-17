@@ -1,4 +1,5 @@
 import { mount } from '@vue/test-utils'
+import { NSelect } from 'naive-ui'
 import { describe, expect, it } from 'vitest'
 
 import MetricEditor from '../../src/components/MetricEditor.vue'
@@ -42,5 +43,45 @@ describe('MetricEditor', () => {
     const wrapper = mountEditor(makeInstrument({ ter: 0.2 }))
 
     expect(wrapper.find('.metric-editor__remove').exists()).toBe(false)
+  })
+
+  /*
+   * Die vier Textfelder (provider, replication, fund_domicile, fund_currency)
+   * sind Auswahlfelder mit freier Eingabe: Reine Auswahl wäre falsch — ein
+   * Fonds mit unbekanntem Anbieter oder Domizil wäre sonst gar nicht
+   * pflegbar, und genau für solche Fälle ist das Feature gedacht.
+   */
+  it('bietet ein Textfeld als Auswahl mit freier Eingabe an', () => {
+    const wrapper = mountEditor(makeInstrument({ provider: null }), 'provider')
+
+    const select = wrapper.findComponent(NSelect)
+    expect(select.exists()).toBe(true)
+    expect(select.props('filterable')).toBe(true)
+    expect(select.props('tag')).toBe(true)
+  })
+
+  it('reicht die von außen übergebenen Vorschläge als Optionen durch', () => {
+    const wrapper = mount(MetricEditor, {
+      global: { plugins: [i18n] },
+      props: {
+        item: makeInstrument({ provider: null }),
+        field: 'provider',
+        options: ['Vanguard', 'iShares'],
+      },
+    })
+
+    const select = wrapper.findComponent(NSelect)
+    expect(select.props('options')).toEqual([
+      { label: 'Vanguard', value: 'Vanguard' },
+      { label: 'iShares', value: 'iShares' },
+    ])
+  })
+
+  it('committet eine neu getippte oder aus den Vorschlägen gewählte Auswahl', async () => {
+    const wrapper = mountEditor(makeInstrument({ provider: null }), 'provider')
+
+    await wrapper.findComponent(NSelect).vm.$emit('update:value', 'Xtrackers')
+
+    expect(wrapper.emitted('commit')?.[0]?.[0]).toEqual({ provider: 'Xtrackers' })
   })
 })

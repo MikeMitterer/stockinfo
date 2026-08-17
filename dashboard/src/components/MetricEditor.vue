@@ -1,7 +1,7 @@
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NButton, NInput } from 'naive-ui'
+import { NButton, NSelect } from 'naive-ui'
 import { UxInlineNumber } from '@mmit/ux-foundation'
 
 import { manualValue, overrideState } from '../composables/useOverrides'
@@ -16,9 +16,12 @@ import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../t
  * entscheidet, ob überhaupt etwas zu ändern ist — was die Quelle liefert,
  * gewinnt, ein eigener Wert füllt nur Lücken.
  *
- * Acht Felder, drei Bedienarten: Zahl (`UxInlineNumber`), Text (`NInput`,
- * Commit beim Verlassen) und der Dreier-Umschalter für die Thesaurierung.
- * Welche Art zu welchem Feld gehört, steht als Tabelle da — eine Verzweigung
+ * Acht Felder, drei Bedienarten: Zahl (`UxInlineNumber`), der Dreier-
+ * Umschalter für die Thesaurierung, und Text als Auswahl mit freier Eingabe
+ * (`NSelect` mit `filterable` + `tag`). Reine Auswahl wäre für die Textfelder
+ * falsch: Ein Fonds mit unbekanntem Anbieter oder Domizil wäre sonst gar
+ * nicht pflegbar — genau für solche Fälle ist das Feature gedacht. Welche
+ * Bedienart zu welchem Feld gehört, steht als Tabelle da — eine Verzweigung
  * mit acht gleichförmigen Zweigen wäre dieselbe Aussage, nur ausführlicher.
  *
  * Neu gegenüber `ManualMetric.vue`: der Entfernen-Knopf. Er erscheint immer,
@@ -32,6 +35,21 @@ const props = defineProps<{
   field: OverrideField
   /** Solange gespeichert wird, nichts anfassen. */
   busy?: boolean
+  /**
+   * Vorschlagswerte für die vier Textfelder — hier nur durchgereicht, nicht
+   * ermittelt.
+   *
+   * Diese Komponente kennt weder die Instrumentenliste noch die
+   * Börsentabelle, aus denen sich die Vorschläge ableiten (Anbieter,
+   * Replikationsart und Fondsdomizil aus den geladenen Instrumenten;
+   * Fondswährung aus `currenciesFromExchanges()`). Das bleibt bewusst eine
+   * Ebene höher: Acht `MetricEditor` je Zeile dürften diese Ableitung nicht
+   * acht Mal wiederholen, und ein Prop-Drilling von Instrumentenliste oder
+   * Börsentabelle bis in dieses Blatt hätte diese Komponente unnötig an
+   * Datenquellen gekoppelt, die mit ihrer eigentlichen Aufgabe nichts zu tun
+   * haben.
+   */
+  options?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -154,19 +172,35 @@ function onToggle(): void {
 
 // ─── Textfelder (provider, replication, fund_domicile, fund_currency) ──────
 
-const textValue = computed(() => (typeof manual.value === 'string' ? manual.value : ''))
+/** Der eingetragene Wert, `null` statt `''` — `NSelect` erwartet das für „nichts gewählt". */
+const selectValue = computed(() => (typeof manual.value === 'string' ? manual.value : null))
 
-/** Entwurf des Textfelds — committet wird erst beim Verlassen, nicht je Tastendruck. */
-const textDraft = ref<string>(textValue.value)
-watch(textValue, (value) => {
-  textDraft.value = value
+/** `NSelect` will Label/Value-Paare; hier sind beide gleich, das Label ist der Wert selbst. */
+const selectOptions = computed(() =>
+  (props.options ?? []).map((value) => ({ label: value, value })),
+)
+
+/** Katalog-Schlüssel der Feldbeschriftung — als Platzhalter im leeren Auswahlfeld. */
+const TEXT_FIELD_LABEL_KEY: Partial<Record<OverrideField, string>> = {
+  provider: 'overrides.fields.provider',
+  replication: 'overrides.fields.replication',
+  fund_domicile: 'overrides.fields.fundDomicile',
+  fund_currency: 'overrides.fields.fundCurrency',
+}
+
+const selectPlaceholder = computed(() => {
+  const key = TEXT_FIELD_LABEL_KEY[props.field]
+  return key ? t(key) : undefined
 })
 
-function onTextBlur(): void {
-  const trimmed = textDraft.value.trim()
-  const next = trimmed === '' ? null : trimmed
-  if (next === (textValue.value || null)) return
-  commit({ [props.field]: next } as Partial<InstrumentOverrides>)
+/**
+ * `NSelect` mit `tag` feuert dieses Event erst, wenn eine Auswahl (bestehend
+ * oder neu getippt und bestätigt) feststeht — anders als beim reinen Textfeld
+ * gibt es hier keinen offenen Entwurf, der noch zwischengespeichert werden
+ * müsste.
+ */
+function onSelect(value: string | null): void {
+  commit({ [props.field]: value } as Partial<InstrumentOverrides>)
 }
 </script>
 
@@ -206,12 +240,16 @@ function onTextBlur(): void {
         @commit="onNumber"
       />
 
-      <NInput
+      <NSelect
         v-else
-        v-model:value="textDraft"
+        :value="selectValue"
+        :options="selectOptions"
+        filterable
+        tag
         size="small"
         :disabled="busy"
-        @blur="onTextBlur"
+        :placeholder="selectPlaceholder"
+        @update:value="onSelect"
       />
     </template>
 
