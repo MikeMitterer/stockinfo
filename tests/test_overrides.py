@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from app.container import get_cached_quote_service
 from app.db import init_db
 from app.main import app
-from app.models import OVERRIDE_FIELDS, QuoteResponse
+from app.models import OVERRIDE_FIELDS, InstrumentOverrides, QuoteResponse
 from app.repository import QuoteRepository
 from app.services.quote_cache import CachedQuoteService, apply_overrides
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
@@ -536,6 +536,21 @@ def test_jede_kennzahl_tragende_antwort_kennt_die_regel() -> None:
         "InstrumentSummary",  # /instruments — über apply_overrides
         "InstrumentOverrides",  # die Eingaben selbst, absichtlich roh
     }
+
+
+def test_das_eingabemodell_deckt_genau_die_override_felder() -> None:
+    """`InstrumentOverrides` und `OVERRIDE_FIELDS` müssen deckungsgleich sein.
+
+    Der Endpoint schreibt bei jedem Aufruf den **vollständigen** Satz, und
+    `repository.set_overrides` siebt dabei nach `OVERRIDE_FIELDS`. Ein neuntes
+    Feld nur am Modell käme also durch die Validierung und würde beim Schreiben
+    stillschweigend weggeworfen — der Aufruf meldet Erfolg, der Wert ist weg.
+    Umgekehrt ließe sich ein Feld nur in `OVERRIDE_FIELDS` über den Endpoint
+    nie befüllen, weil das Eingabemodell es gar nicht annimmt.
+
+    Beide Fehler laufen ohne Ausnahme durch; nur dieser Vergleich zeigt sie.
+    """
+    assert set(OVERRIDE_FIELDS) == set(InstrumentOverrides.model_fields)
 
 
 def test_die_liste_des_dienstes_wendet_die_regel_an(repo: QuoteRepository) -> None:
