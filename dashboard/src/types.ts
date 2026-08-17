@@ -39,16 +39,18 @@ export type OverrideField = (typeof OVERRIDE_FIELDS)[number]
  *
  * `null` heißt „nicht gepflegt" — und beim Schreiben „löschen": Es geht immer
  * der vollständige Satz zum Backend.
+ *
+ * Die acht Namen standen hier ein drittes Mal (nach Union und Array). Jetzt
+ * bilden sie sich aus `OVERRIDE_FIELDS`, und die Werttypen kommen von den
+ * `manual_*`-Feldern in `InstrumentSummary` — Editor und Payload können sich
+ * über den Typ einer Kennzahl damit gar nicht mehr uneinig sein.
+ *
+ * Der Nutzen zeigt sich bei einer neunten Kennzahl: Sie kommt in
+ * `OVERRIDE_FIELDS` dazu, wächst hier von selbst mit, und `vue-tsc` meldet
+ * anschließend jede Stelle, die den Satz aufbaut, ohne sie mitzuschicken.
  */
-export interface InstrumentOverrides {
-  ter: number | null
-  volatility: number | null
-  accumulating: boolean | null
-  provider: string | null
-  replication: string | null
-  fund_size: number | null
-  fund_domicile: string | null
-  fund_currency: string | null
+export type InstrumentOverrides = {
+  [Field in OverrideField]: InstrumentSummary[`manual_${Field}`]
 }
 
 export interface InstrumentSummary {

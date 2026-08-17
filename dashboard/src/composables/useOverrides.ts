@@ -30,6 +30,18 @@ export function useOverrides(): {
     item: InstrumentSummary,
     patch: Partial<InstrumentOverrides>,
   ): Promise<void> {
+    /*
+     * Feld für Feld ausgeschrieben — und das bleibt so.
+     *
+     * Naheliegend wäre, den Satz generisch über `OVERRIDE_FIELDS` und
+     * `manualValue()` zu bauen. Das kostet aber eine Typzusicherung
+     * (`Object.fromEntries` gibt nur einen Index-Typ zurück), und genau die
+     * schaltet den Schutz ab, um den es hier geht: Kommt eine neunte Kennzahl
+     * dazu, meldet `vue-tsc` heute an dieser Stelle ein fehlendes Feld —
+     * nachgeprüft, indem `InstrumentOverrides` versuchsweise um ein Feld
+     * erweitert wurde. Mit Zusicherung liefe derselbe Fall stumm durch, und
+     * das Backend löschte die neue Kennzahl bei jedem Schreiben.
+     */
     const payload: InstrumentOverrides = {
       ter: item.manual_ter,
       volatility: item.manual_volatility,
