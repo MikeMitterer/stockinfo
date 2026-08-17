@@ -386,37 +386,31 @@ class CachedQuoteService:
         """
         instrument = self._require_instrument(symbol)
         stored = self._repository.get_overrides(instrument["id"]) or {}
-        return {
-            "ter": stored.get("ter"),
-            "volatility": stored.get("volatility"),
-            "accumulating": _as_bool(stored.get("accumulating")),
-        }
+        gespeichert = {feld: stored.get(feld) for feld in OVERRIDE_FIELDS}
+        gespeichert["accumulating"] = _as_bool(gespeichert["accumulating"])
+        return gespeichert
 
-    def set_overrides(
-        self,
-        symbol: str,
-        ter: float | None,
-        volatility: float | None,
-        accumulating: bool | None,
-    ) -> dict:
-        """Schreibt die manuellen Kennzahlen eines Instruments und gibt sie zurück.
+    def set_overrides(self, symbol: str, werte: dict[str, object]) -> dict:
+        """Schreibt die manuellen Kennzahlen eines Instruments und liest sie zurück.
 
-        Alle drei Werte auf einmal — ``None`` löscht. Die Vorrang-Regel wird
-        hier **nicht** angewandt: Gespeichert wird, was der Nutzer eingetragen
-        hat, auch wenn die Quelle den Wert gerade verdeckt. Sonst verschwände
-        seine Eingabe in dem Moment, in dem die Quelle wieder etwas liefert —
-        und käme nicht zurück, wenn sie es später wieder vergisst.
+        Alle acht Werte auf einmal — ``None`` (bzw. ein fehlendes Feld) löscht.
+        Die Vorrang-Regel wird hier **nicht** angewandt: Gespeichert wird, was
+        der Nutzer eingetragen hat, auch wenn die Quelle den Wert gerade
+        verdeckt. Sonst verschwände seine Eingabe in dem Moment, in dem die
+        Quelle wieder etwas liefert — und käme nicht zurück, wenn sie es später
+        wieder vergisst.
+
+        Args:
+            symbol: Yahoo-Symbol des Instruments.
+            werte: Werte je Feld aus ``OVERRIDE_FIELDS``; fehlende gelten als
+                ``None`` und löschen damit.
 
         Raises:
             InstrumentNotFoundError: Symbol unbekannt.
         """
         instrument = self._require_instrument(symbol)
         self._repository.set_overrides(
-            instrument["id"],
-            ter,
-            volatility,
-            accumulating,
-            datetime.now(timezone.utc).isoformat(),
+            instrument["id"], werte, datetime.now(timezone.utc).isoformat()
         )
         return self.get_overrides(symbol)
 

@@ -182,11 +182,7 @@ def set_overrides(
     Wert gerade liefert — die Vorrang-Regel wirkt erst beim Lesen.
     """
     try:
-        return InstrumentOverrides(
-            **service.set_overrides(
-                symbol, payload.ter, payload.volatility, payload.accumulating
-            )
-        )
+        return InstrumentOverrides(**service.set_overrides(symbol, payload.model_dump()))
     except InstrumentNotFoundError as exc:
         raise HTTPException(
             status_code=404, detail=f"Unbekanntes Symbol {symbol}"

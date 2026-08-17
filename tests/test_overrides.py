@@ -232,27 +232,17 @@ class _FakeService:
     """Merkt sich, was geschrieben wurde — der Endpoint soll nur durchreichen."""
 
     def __init__(self) -> None:
-        self.gespeichert: dict = {"ter": None, "volatility": None, "accumulating": None}
+        self.gespeichert: dict = dict.fromkeys(OVERRIDE_FIELDS)
 
     def get_overrides(self, symbol: str) -> dict:
         if symbol.startswith("XX"):
             raise InstrumentNotFoundError(symbol)
         return dict(self.gespeichert)
 
-    def set_overrides(
-        self,
-        symbol: str,
-        ter: float | None,
-        volatility: float | None,
-        accumulating: bool | None,
-    ) -> dict:
+    def set_overrides(self, symbol: str, werte: dict) -> dict:
         if symbol.startswith("XX"):
             raise InstrumentNotFoundError(symbol)
-        self.gespeichert = {
-            "ter": ter,
-            "volatility": volatility,
-            "accumulating": accumulating,
-        }
+        self.gespeichert = {feld: werte.get(feld) for feld in OVERRIDE_FIELDS}
         return dict(self.gespeichert)
 
 
@@ -591,3 +581,65 @@ def test_die_neuen_felder_weisen_unsinn_ab(client: TestClient, nutzlast: dict) -
     antwort = client.put("/instruments/by-symbol/GOLD.SG/overrides", json=nutzlast)
 
     assert antwort.status_code == 422
+
+
+def test_endpoint_schreibt_und_liest_alle_acht(client: TestClient) -> None:
+    antwort = client.put(
+        "/instruments/by-symbol/GOLD.SG/overrides",
+        json={"provider": "iShares", "fund_domicile": "Irland", "ter": 0.25},
+    )
+
+    assert antwort.status_code == 200
+    gelesen = client.get("/instruments/by-symbol/GOLD.SG/overrides").json()
+    assert gelesen["provider"] == "iShares"
+    assert gelesen["fund_domicile"] == "Irland"
+    assert gelesen["ter"] == 0.25
+
+
+def test_der_rundlauf_traegt_auch_die_fondswaehrung(client: TestClient) -> None:
+    """Aus Task 2 hierher gezogen: Erst hier reicht der Endpoint sie durch."""
+    client.put(
+        "/instruments/by-symbol/GOLD.SG/overrides",
+        json={"fund_size": 129445.0, "fund_currency": "USD", "fund_domicile": "Irland"},
+    )
+
+    gelesen = client.get("/instruments/by-symbol/GOLD.SG/overrides").json()
+
+    assert gelesen["fund_currency"] == "USD"
+    assert gelesen["fund_size"] == 129445.0
+
+
+# ─── Der echte Dienst ────────────────────────────────────────────────────────
+#
+# Alle Endpoint-Tests oben laufen über `_FakeService` — der Router bekommt
+# damit nie den echten `CachedQuoteService` zu Gesicht. Ohne diesen Test bliebe
+# unentdeckt, ob `CachedQuoteService.set_overrides` überhaupt zu der Signatur
+# passt, die `repository.set_overrides` seit Task 3 verlangt.
+
+
+def test_der_echte_dienst_schreibt_und_liest_alle_acht_felder(
+    repo: QuoteRepository,
+) -> None:
+    """Rundlauf ohne Attrappe: echter Dienst, echtes Repository, temporäre DB."""
+    repo.save_quote(_quote())
+    werte = {
+        "ter": 0.25,
+        "volatility": 30.0,
+        "accumulating": True,
+        "provider": "iShares",
+        "replication": "Physical",
+        "fund_size": 129445.0,
+        "fund_domicile": "Irland",
+        "fund_currency": "USD",
+    }
+
+    geschrieben = _dienst(repo).set_overrides("GOLD.SG", werte)
+    gelesen = _dienst(repo).get_overrides("GOLD.SG")
+
+    assert geschrieben == werte
+    assert gelesen == werte
+
+
+def test_der_echte_dienst_meldet_unbekanntes_symbol(repo: QuoteRepository) -> None:
+    with pytest.raises(InstrumentNotFoundError):
+        _dienst(repo).set_overrides("UNBEKANNT", {"ter": 0.25})
