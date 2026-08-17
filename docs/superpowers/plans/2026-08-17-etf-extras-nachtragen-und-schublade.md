@@ -13,7 +13,8 @@
 ## Global Constraints
 
 - **Namensgebung wie im Bestand, nicht strenger:** Öffentliche Namen — Funktionen, Methoden, Klassen, Felder, Props — sind **englisch** (`apply_overrides`, `_dedupe_symbols`, `fund_domicile`). **Lokale Variablen dürfen deutsch sein** und sind es im Bestand auch (`for feld in OVERRIDE_FIELDS`, `manuell = …` in `quote_cache.py`; `zeile`, `nutzlast`, `gespeichert` in den Tests). Kommentare und Doku deutsch, Testnamen deutsch. Wer eine bestehende Datei anfasst, folgt deren Idiom — `app/db.py` benennt seine lokalen Variablen englisch, also bleibt das dort so.
-- **`OVERRIDE_FIELDS` ist die einzige Feldliste.** Keine zweite Aufzählung der acht Felder irgendwo — weder in SQL, noch im Endpoint, noch in Tests.
+- **DRY — vor jeder Zeile.** Was zweimal dasteht, läuft auseinander; die zweite Stelle wird beim nächsten Feinschliff vergessen. Bevor du etwas schreibst: Gibt es das schon? Kann es aus einer vorhandenen Quelle abgeleitet werden, statt getippt zu werden? Das gilt für Feldlisten, SQL-Fragmente, Validierungsgrenzen, Testaufbauten und Komponenten gleichermaßen. Wiederholt sich ein Aufbau in mehr als zwei Tests, gehört er in einen Helfer. Gegenprobe ist KISS: Ein Helfer für genau einen Fall ist keine Wiederverwendung, sondern eine Ebene mehr — dann bleibt es stehen und wird kurz begründet.
+- **`OVERRIDE_FIELDS` ist die einzige Feldliste.** Der wichtigste Einzelfall der obigen Regel: keine zweite Aufzählung der acht Felder irgendwo — weder in SQL, noch im Endpoint, noch in Tests. Wo eine Liste gebraucht wird, wird sie aus der Konstante erzeugt.
 - **Kein sichtbarer Text ohne Katalog-Eintrag** (`de.ts` **und** `en.ts`).
 - **Vorrang-Regel unverändert:** Was die Quelle liefert, gewinnt; ein manueller Wert füllt nur Lücken. `accumulating` prüft auf `None`, nicht auf Falschheit.
 - **Migrationen idempotent** — `CREATE TABLE IF NOT EXISTS` plus `ALTER TABLE ADD COLUMN` nur, wenn die Spalte fehlt.
