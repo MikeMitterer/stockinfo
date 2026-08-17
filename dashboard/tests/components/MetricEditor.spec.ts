@@ -46,6 +46,32 @@ describe('MetricEditor', () => {
   })
 
   /*
+   * Der Umschalter (Thesaurierung) — bislang ungetestet in dieser Datei.
+   * Genau der gesperrte Zustand mit verdecktem Eintrag hat in diesem Projekt
+   * bereits mehrfach Fehler verursacht: Bedienelement weg, Entfernen-Knopf da.
+   */
+  it('lässt die Thesaurierung umschalten, wenn die Quelle nichts liefert', async () => {
+    const wrapper = mountEditor(
+      makeInstrument({ accumulating: null, manual_accumulating: null }),
+      'accumulating',
+    )
+
+    await wrapper.get('.metric-editor__toggle').trigger('click')
+
+    expect(wrapper.emitted('commit')?.[0]?.[0]).toEqual({ accumulating: true })
+  })
+
+  it('sperrt den Umschalter bei einem verdeckten Eintrag, bietet aber das Entfernen an', () => {
+    const wrapper = mountEditor(
+      makeInstrument({ accumulating: true, manual_accumulating: false, shadowed_fields: ['accumulating'] }),
+      'accumulating',
+    )
+
+    expect(wrapper.find('.metric-editor__toggle').exists()).toBe(false)
+    expect(wrapper.find('.metric-editor__remove').exists()).toBe(true)
+  })
+
+  /*
    * Die vier Textfelder (provider, replication, fund_domicile, fund_currency)
    * sind Auswahlfelder mit freier Eingabe: Reine Auswahl wäre falsch — ein
    * Fonds mit unbekanntem Anbieter oder Domizil wäre sonst gar nicht
@@ -83,5 +109,15 @@ describe('MetricEditor', () => {
     await wrapper.findComponent(NSelect).vm.$emit('update:value', 'Xtrackers')
 
     expect(wrapper.emitted('commit')?.[0]?.[0]).toEqual({ provider: 'Xtrackers' })
+  })
+
+  it('sperrt das Auswahlfeld bei einem verdeckten Eintrag, bietet aber das Entfernen an', () => {
+    const wrapper = mountEditor(
+      makeInstrument({ provider: 'iShares', manual_provider: 'Vanguard', shadowed_fields: ['provider'] }),
+      'provider',
+    )
+
+    expect(wrapper.findComponent(NSelect).exists()).toBe(false)
+    expect(wrapper.find('.metric-editor__remove').exists()).toBe(true)
   })
 })

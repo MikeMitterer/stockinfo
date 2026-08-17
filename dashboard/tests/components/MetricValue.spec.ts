@@ -27,4 +27,24 @@ describe('MetricValue', () => {
 
     expect(wrapper.find('.metric__mark').exists()).toBe(true)
   })
+
+  it('zeigt bei einem verdeckten Eintrag den Wert der Quelle, nicht den eingetragenen', () => {
+    /*
+     * Genau der Zustand, der in diesem Projekt bereits mehrfach Fehler
+     * verursacht hat: Es gibt eine eigene Eingabe, aber die Quelle liefert
+     * etwas und hat Vorrang. Angezeigt wird der Wert der Quelle — die eigene
+     * Eingabe bleibt gespeichert, greift aber gerade nicht.
+     */
+    const wrapper = mount(MetricValue, {
+      global: { plugins: [i18n] },
+      props: {
+        item: makeInstrument({ ter: 0.3, manual_ter: 0.2, shadowed_fields: ['ter'] }),
+        field: 'ter',
+      },
+    })
+
+    expect(wrapper.text()).toMatch(/0[.,]30/)
+    expect(wrapper.find('.metric--shadowed').exists()).toBe(true)
+    expect(wrapper.find('.metric__mark').exists()).toBe(true)
+  })
 })
