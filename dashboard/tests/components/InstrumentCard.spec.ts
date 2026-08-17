@@ -4,20 +4,13 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import InstrumentCard from '../../src/components/InstrumentCard.vue'
 import { i18n } from '../../src/i18n'
 import type { InstrumentSummary } from '../../src/types'
-
-const item: InstrumentSummary = {
-  isin: 'US0378331005', symbol: 'APC.DE', exchange: 'XETR', name: 'Apple Inc.',
-  type: 'stock', currency: 'EUR', provider: null, ter: null, replication: null,
-  fund_size: null, volatility: 25.8, accumulating: null, meta_fetched_at: null,
-  latest_price: 265, latest_quote_time: null, latest_currency: 'EUR',
-  latest_fetched_at: null, history_count: 2,
-}
+import { makeInstrument } from '../fixtures/instrument'
 
 function mountCard(overrides: Partial<InstrumentSummary> = {}) {
   return mount(InstrumentCard, {
     props: {
-      item: { ...item, ...overrides },
-      selected: false, refreshing: false,
+      item: makeInstrument(overrides),
+      selected: false, refreshing: false, saving: false,
       extraetfUrl: '', yahooUrl: '',
     },
     global: { plugins: [i18n] },
@@ -52,7 +45,9 @@ describe('InstrumentCard', () => {
     expect(wrapper.find('.icard__details').exists()).toBe(false)
     await wrapper.find('.icard__toggle').trigger('click')
     expect(wrapper.find('.icard__details').exists()).toBe(true)
-    expect(wrapper.find('.icard__details').text()).toContain('25.80')
+    // Deutsches Zahlenformat: Der Wert lief vorher über `toFixed` und stand
+    // deshalb mit Punkt in einer deutschen Oberfläche.
+    expect(wrapper.find('.icard__details').text()).toContain('25,80')
   })
 
   it('emittiert select beim Antippen der Karte', async () => {

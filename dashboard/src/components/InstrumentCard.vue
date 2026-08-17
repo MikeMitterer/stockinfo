@@ -4,7 +4,8 @@ import { useI18n } from 'vue-i18n'
 import { NButton } from 'naive-ui'
 
 import IsinEditor from './IsinEditor.vue'
-import type { InstrumentSummary } from '../types'
+import ManualMetric from './ManualMetric.vue'
+import type { InstrumentOverrides, InstrumentSummary } from '../types'
 
 const props = defineProps<{
   item: InstrumentSummary
@@ -12,6 +13,8 @@ const props = defineProps<{
   refreshing: boolean
   extraetfUrl: string
   yahooUrl: string
+  /** Wird gerade gespeichert? Dann nichts anfassen. */
+  saving: boolean
 }>()
 
 const emit = defineEmits<{
@@ -20,6 +23,7 @@ const emit = defineEmits<{
   (event: 'remove', item: InstrumentSummary): void
   (event: 'json', item: InstrumentSummary): void
   (event: 'set-isin', payload: { symbol: string; isin: string }): void
+  (event: 'override', patch: Partial<InstrumentOverrides>): void
 }>()
 
 const { t, locale } = useI18n()
@@ -39,16 +43,11 @@ function price(value: number | null): string {
     : value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-/** Formatiert einen Prozentwert mit zwei Nachkommastellen (oder '—'). Mirror von InstrumentsTable. */
-function formatPercent(value: number | null): string {
-  return value === null ? '—' : `${value.toFixed(2)} %`
-}
-
-/** Thesaurierend-Anzeige: Ja / Nein / '—' bei unbekannt. Mirror von InstrumentsTable. */
-function accumulating(value: boolean | null): string {
-  if (value === null) return '—'
-  return value ? t('table.yes') : t('table.no')
-}
+/*
+ * Die beiden Formatierer standen hier als „Mirror von InstrumentsTable" — also
+ * zweimal dieselbe Regel. Beide sind mit `ManualMetric` weggefallen: Dort steht
+ * die Darstellung einer Kennzahl jetzt an genau einer Stelle.
+ */
 </script>
 
 <template>
@@ -142,12 +141,32 @@ function accumulating(value: boolean | null): string {
         <span v-if="item.isin" class="mono">{{ item.isin }}</span>
         <IsinEditor v-else :symbol="item.symbol" @save="emit('set-isin', $event)" />
       </dd>
+      <!--
+        Auch mobil bearbeitbar: „Voll bedienbar ist die Vorgabe" — eine reine
+        Leseansicht bräuchte einen Grund, und den gibt es hier nicht.
+      -->
       <dt>{{ t('table.colTer') }}</dt>
-      <dd class="mono">{{ formatPercent(item.ter) }}</dd>
+      <dd class="mono">
+        <ManualMetric :item="item" field="ter" :busy="saving" @commit="emit('override', $event)" />
+      </dd>
       <dt>{{ t('table.colVola') }}</dt>
-      <dd class="mono">{{ formatPercent(item.volatility) }}</dd>
+      <dd class="mono">
+        <ManualMetric
+          :item="item"
+          field="volatility"
+          :busy="saving"
+          @commit="emit('override', $event)"
+        />
+      </dd>
       <dt>{{ t('table.colAccumulating') }}</dt>
-      <dd>{{ accumulating(item.accumulating) }}</dd>
+      <dd>
+        <ManualMetric
+          :item="item"
+          field="accumulating"
+          :busy="saving"
+          @commit="emit('override', $event)"
+        />
+      </dd>
       <dt>{{ t('table.colPoints') }}</dt>
       <dd class="mono">{{ item.history_count }}</dd>
     </dl>

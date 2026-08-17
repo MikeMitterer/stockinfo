@@ -5,16 +5,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import InstrumentsTable from '../../src/components/InstrumentsTable.vue'
 import { useTableSort } from '../../src/composables/useTableSort'
 import { i18n } from '../../src/i18n'
-import type { InstrumentSummary } from '../../src/types'
+import { makeInstrument } from '../fixtures/instrument'
 
-const base: InstrumentSummary = {
-  isin: 'US0378331005', symbol: 'APC.DE', exchange: 'XETR', name: 'Apple Inc.',
-  type: 'stock', currency: 'EUR', provider: null, ter: null, replication: null,
-  fund_size: null, volatility: 25.8, accumulating: null, meta_fetched_at: null,
-  latest_price: 265, latest_quote_time: null, latest_currency: 'EUR',
-  latest_fetched_at: null, history_count: 2,
-}
-const instruments = [base, { ...base, symbol: 'VGWL.DE', name: 'Vanguard FTSE All-World' }]
+const base = makeInstrument()
+const instruments = [base, makeInstrument({ symbol: 'VGWL.DE', name: 'Vanguard FTSE All-World' })]
 
 /** Setzt die Viewport-Breite für useIsCompact. */
 function stubMatchMedia(compact: boolean) {
@@ -27,7 +21,7 @@ function stubMatchMedia(compact: boolean) {
 function mountTable() {
   return mount(InstrumentsTable, {
     props: {
-      instruments, selectedSymbol: null, refreshingSymbol: null,
+      instruments, selectedSymbol: null, refreshingSymbol: null, savingSymbol: null,
       extraetfEtfUrl: '', extraetfStockUrl: '', yahooUrl: '',
     },
     global: { plugins: [i18n] },
@@ -133,7 +127,7 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
     stubMatchMedia(true)
     const wrapper = mount(InstrumentsTable, {
       props: {
-        instruments: [], selectedSymbol: null, refreshingSymbol: null,
+        instruments: [], selectedSymbol: null, refreshingSymbol: null, savingSymbol: null,
         extraetfEtfUrl: '', extraetfStockUrl: '', yahooUrl: '',
       },
       global: { plugins: [i18n] },

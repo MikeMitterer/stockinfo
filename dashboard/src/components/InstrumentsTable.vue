@@ -5,14 +5,18 @@ import { NButton, NSelect } from 'naive-ui'
 
 import { useIsCompact } from '@mikemitterer/ux-foundation'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
+import InfoHint from './InfoHint.vue'
 import InstrumentCard from './InstrumentCard.vue'
 import IsinEditor from './IsinEditor.vue'
-import type { InstrumentSummary } from '../types'
+import ManualMetric from './ManualMetric.vue'
+import type { InstrumentOverrides, InstrumentSummary } from '../types'
 
 const props = defineProps<{
   instruments: InstrumentSummary[]
   selectedSymbol: string | null
   refreshingSymbol: string | null
+  /** Papier, dessen manuelle Kennzahlen gerade gespeichert werden. */
+  savingSymbol: string | null
   extraetfEtfUrl: string
   extraetfStockUrl: string
   yahooUrl: string
@@ -24,6 +28,10 @@ const emit = defineEmits<{
   (event: 'remove', item: InstrumentSummary): void
   (event: 'set-isin', payload: { symbol: string; isin: string }): void
   (event: 'json', item: InstrumentSummary): void
+  (
+    event: 'override',
+    payload: { item: InstrumentSummary; patch: Partial<InstrumentOverrides> },
+  ): void
 }>()
 
 const { t, locale } = useI18n()
@@ -94,16 +102,7 @@ function price(value: number | null): string {
     : value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
-/** Formatiert einen Prozentwert mit zwei Nachkommastellen (oder '—'). */
-function formatPercent(value: number | null): string {
-  return value === null ? '—' : `${value.toFixed(2)} %`
-}
 
-/** Thesaurierend-Anzeige: Ja / Nein / '—' bei unbekannt. */
-function accumulating(value: boolean | null): string {
-  if (value === null) return '—'
-  return value ? t('table.yes') : t('table.no')
-}
 </script>
 
 <template>
@@ -147,6 +146,7 @@ function accumulating(value: boolean | null): string {
           :item="item"
           :selected="item.symbol === selectedSymbol"
           :refreshing="item.symbol === refreshingSymbol"
+          :saving="item.symbol === savingSymbol"
           :extraetf-url="extraetfLink(item)"
           :yahoo-url="yahooLink(item)"
           @select="emit('select', $event)"
@@ -154,6 +154,7 @@ function accumulating(value: boolean | null): string {
           @remove="emit('remove', $event)"
           @json="emit('json', $event)"
           @set-isin="emit('set-isin', $event)"
+          @override="emit('override', { item, patch: $event })"
         />
       </div>
     </template>
@@ -174,6 +175,14 @@ function accumulating(value: boolean | null): string {
               @click="toggle(column.key)"
             >
               {{ t(column.label) }}
+              <!--
+                `@click.stop`: Der Spaltenkopf sortiert bei jedem Klick — ohne
+                das würde schon das Antippen des Fragezeichens die Tabelle
+                umsortieren.
+              -->
+              <span v-if="column.key === 'history_count'" class="th-hint" @click.stop>
+                <InfoHint :text="t('hints.points')" settings-tab="environment" />
+              </span>
               <span v-if="sortKey === column.key" class="arrow">
                 {{ direction === 'asc' ? '▲' : '▼' }}
               </span>
@@ -202,13 +211,35 @@ function accumulating(value: boolean | null): string {
               {{ price(item.latest_price) }}
               <span class="ccy">{{ item.latest_currency ?? '' }}</span>
             </td>
-            <td class="num mono dim">{{ formatPercent(item.ter) }}</td>
-            <td class="num mono dim">{{ formatPercent(item.volatility) }}</td>
-            <td class="center">
-              <span v-if="item.accumulating !== null" class="badge thes" :class="{ acc: item.accumulating }">
-                {{ accumulating(item.accumulating) }}
-              </span>
-              <span v-else class="dim">—</span>
+            <!--
+              Die drei Kennzahlen sind an Ort und Stelle bearbeitbar (T-09) —
+              für Papiere, die nicht über justETF/extraETF laufen, gibt es
+              sonst keine Quelle dafür. `@click.stop`, weil ein Klick auf die
+              Zeile das Chart öffnet.
+            -->
+            <td class="num mono dim" @click.stop>
+              <ManualMetric
+                :item="item"
+                field="ter"
+                :busy="savingSymbol === item.symbol"
+                @commit="emit('override', { item, patch: $event })"
+              />
+            </td>
+            <td class="num mono dim" @click.stop>
+              <ManualMetric
+                :item="item"
+                field="volatility"
+                :busy="savingSymbol === item.symbol"
+                @commit="emit('override', { item, patch: $event })"
+              />
+            </td>
+            <td class="center" @click.stop>
+              <ManualMetric
+                :item="item"
+                field="accumulating"
+                :busy="savingSymbol === item.symbol"
+                @commit="emit('override', { item, patch: $event })"
+              />
             </td>
             <td class="num mono dim">{{ item.history_count }}</td>
             <td class="actions" @click.stop>
@@ -356,8 +387,18 @@ thead th.sortable {
   white-space: nowrap;
   &:hover { color: $color-accent; }
   .arrow { color: $color-accent; font-size: 0.6rem; }
+  // Der Hinweis sortiert nicht — also auch kein Sortier-Zeiger darüber.
+  .th-hint { cursor: default; margin-left: 0.25rem; }
 }
-tbody td { padding: 0.5rem 0.7rem; border-bottom: 1px solid token(--border-default, 0.5); }
+/*
+ * Etwas enger als sonst, und das ist gemessen: Mit `nowrap` in den
+ * Zahlenspalten und dem Fragezeichen an „Pkt." brauchte die Tabelle 1150 px bei
+ * 1123 verfügbaren — die letzten 27 px klemmten ausgerechnet den Löschen-Knopf
+ * ab. Zehn Spalten mal 0.3 rem holen das zurück, ohne dass die Zeile gedrängt
+ * aussieht.
+ */
+tbody td { padding: 0.5rem 0.55rem; border-bottom: 1px solid token(--border-default, 0.5); }
+thead th { padding-inline: 0.55rem; }
 tbody tr {
   cursor: pointer;
   transition: background 0.1s ease;
@@ -365,7 +406,13 @@ tbody tr {
   &.selected { background: token(--accent, 0.12); box-shadow: inset 3px 0 0 $color-accent; }
 }
 
-.num { text-align: right; }
+/*
+ * Zahlenspalten brechen nicht um. Ohne das drückt jede Spalte, die etwas
+ * breiter wird — das Fragezeichen an „Pkt." reicht schon —, den Kurs auf zwei
+ * Zeilen: die Zahl oben, die Währung darunter. Passt die Tabelle dann nicht
+ * mehr, rollt sie waagrecht (`.scroll`), statt die Zahlen zu zerlegen.
+ */
+.num { text-align: right; white-space: nowrap; }
 .center { text-align: center; }
 .dim { color: $color-muted; }
 
