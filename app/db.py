@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS instruments (
     fund_size       REAL,
     volatility      REAL,
     accumulating    INTEGER,
+    fund_domicile   TEXT,
+    fund_currency   TEXT,
     first_seen      TEXT NOT NULL,
     meta_fetched_at TEXT
 );
@@ -76,6 +78,11 @@ CREATE TABLE IF NOT EXISTS instrument_overrides (
     ter           REAL,
     volatility    REAL,
     accumulating  INTEGER,
+    provider      TEXT,
+    replication   TEXT,
+    fund_size     REAL,
+    fund_domicile TEXT,
+    fund_currency TEXT,
     updated_at    TEXT NOT NULL
 );
 
@@ -127,10 +134,29 @@ def init_db(database_path: str) -> None:
 
 def _migrate(connection: sqlite3.Connection) -> None:
     """Ergänzt fehlende Spalten/Indizes in bestehenden Datenbanken (idempotent)."""
-    existing = {row["name"] for row in connection.execute("PRAGMA table_info(instruments)")}
-    for column, ddl in (("volatility", "REAL"), ("accumulating", "INTEGER")):
-        if column not in existing:
-            connection.execute(f"ALTER TABLE instruments ADD COLUMN {column} {ddl}")
+    _ergaenze_spalten(
+        connection,
+        "instruments",
+        (
+            ("volatility", "REAL"),
+            ("accumulating", "INTEGER"),
+            ("fund_domicile", "TEXT"),
+            ("fund_currency", "TEXT"),
+        ),
+    )
+    # Die Override-Tabelle wuchs mit: Nachgetragen wird jetzt alles, was
+    # justETF beisteuert — nicht mehr nur die drei aus T-09.
+    _ergaenze_spalten(
+        connection,
+        "instrument_overrides",
+        (
+            ("provider", "TEXT"),
+            ("replication", "TEXT"),
+            ("fund_size", "REAL"),
+            ("fund_domicile", "TEXT"),
+            ("fund_currency", "TEXT"),
+        ),
+    )
 
     # Vor dem UNIQUE-Index Alt-Duplikate zusammenführen — sonst schlägt die
     # Index-Erstellung auf bestehenden Datenbanken fehl.
@@ -139,6 +165,16 @@ def _migrate(connection: sqlite3.Connection) -> None:
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_symbol "
         "ON instruments (symbol)"
     )
+
+
+def _ergaenze_spalten(
+    connection: sqlite3.Connection, tabelle: str, spalten: tuple[tuple[str, str], ...]
+) -> None:
+    """Fügt fehlende Spalten hinzu; vorhandene bleiben unangetastet."""
+    vorhanden = {row["name"] for row in connection.execute(f"PRAGMA table_info({tabelle})")}
+    for name, typ in spalten:
+        if name not in vorhanden:
+            connection.execute(f"ALTER TABLE {tabelle} ADD COLUMN {name} {typ}")
 
 
 def _dedupe_symbols(connection: sqlite3.Connection) -> None:

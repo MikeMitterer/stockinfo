@@ -93,3 +93,46 @@ def test_history_limit_und_grenzen(repo: QuoteRepository) -> None:
         date_to="2026-07-12T13:00:00+00:00",
     )
     assert len(ranged) == 2
+
+
+def test_migration_ergaenzt_die_neuen_spalten(tmp_path) -> None:
+    """Bestehende Datenbanken ziehen beim Start nach — ohne Zutun.
+
+    Nachgestellt wird eine DB im alten Stand: beide Tabellen ohne die neuen
+    Spalten. `init_db` muss sie ergaenzen, und ein zweiter Lauf darf nicht
+    daran scheitern, dass sie schon da sind.
+    """
+    import sqlite3
+
+    from app.db import init_db
+
+    pfad = str(tmp_path / "alt.db")
+    with sqlite3.connect(pfad) as verbindung:
+        verbindung.executescript(
+            """
+            CREATE TABLE instruments (
+                id INTEGER PRIMARY KEY, isin TEXT, symbol TEXT NOT NULL,
+                exchange TEXT, name TEXT, type TEXT, currency TEXT,
+                provider TEXT, ter REAL, replication TEXT, fund_size REAL,
+                meta_fetched_at TEXT
+            );
+            CREATE TABLE instrument_overrides (
+                instrument_id INTEGER PRIMARY KEY,
+                ter REAL, volatility REAL, accumulating INTEGER,
+                updated_at TEXT NOT NULL
+            );
+            """
+        )
+
+    init_db(pfad)
+    init_db(pfad)  # zweimal: die Migration muss idempotent sein
+
+    with sqlite3.connect(pfad) as verbindung:
+        verbindung.row_factory = sqlite3.Row
+        instrumente = {r["name"] for r in verbindung.execute("PRAGMA table_info(instruments)")}
+        overrides = {
+            r["name"] for r in verbindung.execute("PRAGMA table_info(instrument_overrides)")
+        }
+
+    assert {"fund_domicile", "fund_currency"} <= instrumente
+    assert {"provider", "replication", "fund_size", "fund_domicile", "fund_currency"} <= overrides
