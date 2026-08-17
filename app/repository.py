@@ -10,7 +10,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from app.db import get_connection
-from app.models import QuoteResponse
+from app.models import OVERRIDE_FIELDS, QuoteResponse
 
 # Instrument-Metadatenfelder (ohne id/isin/symbol/first_seen).
 _META_FIELDS = (
@@ -22,6 +22,8 @@ _META_FIELDS = (
     "ter",
     "replication",
     "fund_size",
+    "fund_domicile",
+    "fund_currency",
     "volatility",
     "accumulating",
 )
@@ -203,15 +205,16 @@ class QuoteRepository:
         gehört in die Fachschicht, nicht in SQL. Sonst stünde die Regel an einer
         Stelle, die niemand liest, wenn er sie sucht.
         """
-        query = """
+        manuell = ",\n                   ".join(
+            f"o.{feld} AS manual_{feld}" for feld in OVERRIDE_FIELDS
+        )
+        query = f"""
             SELECT i.*,
                    q.price      AS latest_price,
                    q.quote_time AS latest_quote_time,
                    q.currency   AS latest_currency,
                    q.fetched_at AS latest_fetched_at,
-                   o.ter          AS manual_ter,
-                   o.volatility   AS manual_volatility,
-                   o.accumulating AS manual_accumulating,
+                   {manuell},
                    (SELECT COUNT(*) FROM quotes WHERE instrument_id = i.id)
                        AS history_count
             FROM instruments i
@@ -273,44 +276,41 @@ class QuoteRepository:
             return dict(row) if row else None
 
     def set_overrides(
-        self,
-        instrument_id: int,
-        ter: float | None,
-        volatility: float | None,
-        accumulating: bool | None,
-        updated_at: str,
+        self, instrument_id: int, werte: dict[str, object], updated_at: str
     ) -> None:
-        """Schreibt die manuellen Kennzahlen — alle drei auf einmal.
+        """Schreibt die manuellen Kennzahlen — immer den vollständigen Satz.
 
         ``None`` heißt **löschen**, nicht „unverändert": Die Oberfläche schickt
-        immer den vollständigen Satz, und ein geleertes Feld muss den Wert
-        auch wieder entfernen können. Bleiben alle drei leer, verschwindet die
-        Zeile ganz — sonst sammelten sich Karteileichen ohne Inhalt.
+        stets alle Felder, und ein geleertes muss den Wert auch wieder entfernen
+        können. Bleibt nichts übrig, verschwindet die Zeile ganz.
+
+        Die Spaltenliste kommt aus ``OVERRIDE_FIELDS`` statt aus getippten
+        Parametern — bei acht Feldern wäre eine Signatur aus Einzelwerten nicht
+        mehr zu lesen, und jede neue Kennzahl müsste an vier Stellen nachgezogen
+        werden.
         """
+        gefiltert = {feld: werte.get(feld) for feld in OVERRIDE_FIELDS}
+        gefiltert["accumulating"] = (
+            None if gefiltert["accumulating"] is None else int(bool(gefiltert["accumulating"]))
+        )
+
         with self._connect() as connection:
-            if ter is None and volatility is None and accumulating is None:
+            if all(wert is None for wert in gefiltert.values()):
                 connection.execute(
                     "DELETE FROM instrument_overrides WHERE instrument_id = ?",
                     (instrument_id,),
                 )
                 return
 
+            spalten = ", ".join(OVERRIDE_FIELDS)
+            platzhalter = ", ".join("?" for _ in OVERRIDE_FIELDS)
+            zuweisungen = ", ".join(f"{feld} = excluded.{feld}" for feld in OVERRIDE_FIELDS)
             connection.execute(
-                "INSERT INTO instrument_overrides "
-                "(instrument_id, ter, volatility, accumulating, updated_at) "
-                "VALUES (?, ?, ?, ?, ?) "
-                "ON CONFLICT(instrument_id) DO UPDATE SET "
-                "ter = excluded.ter, "
-                "volatility = excluded.volatility, "
-                "accumulating = excluded.accumulating, "
+                f"INSERT INTO instrument_overrides (instrument_id, {spalten}, updated_at) "
+                f"VALUES (?, {platzhalter}, ?) "
+                f"ON CONFLICT(instrument_id) DO UPDATE SET {zuweisungen}, "
                 "updated_at = excluded.updated_at",
-                (
-                    instrument_id,
-                    ter,
-                    volatility,
-                    None if accumulating is None else int(accumulating),
-                    updated_at,
-                ),
+                (instrument_id, *(gefiltert[feld] for feld in OVERRIDE_FIELDS), updated_at),
             )
 
     def set_volatility(self, instrument_id: int, volatility: float) -> None:
