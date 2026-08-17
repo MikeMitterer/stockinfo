@@ -89,7 +89,7 @@ const fetchedAt = computed(() =>
 <template>
   <div class="drilldown">
     <dl class="drilldown__fields">
-      <template v-for="field in OVERRIDE_FIELDS" :key="field">
+      <div v-for="field in OVERRIDE_FIELDS" :key="field" class="drilldown__field">
         <dt class="drilldown__label">{{ t(FIELD_LABEL_KEY[field]) }}</dt>
         <dd class="drilldown__value">
           <MetricEditor
@@ -100,7 +100,7 @@ const fetchedAt = computed(() =>
             @commit="onCommit"
           />
         </dd>
-      </template>
+      </div>
     </dl>
 
     <div class="drilldown__source">
@@ -122,35 +122,59 @@ const fetchedAt = computed(() =>
 <style scoped lang="scss">
 @use '../styles/variables' as *;
 
-// Zweispaltig — links bearbeiten, rechts nachlesen (ux-standards: „aufgeklappter
-// Bereich ist zweispaltig"). Unter der Kartenliste bleibt kaum mehr Breite als
-// die einer Spalte übrig, dort fällt die Aufteilung von selbst auf eine Spalte.
+/*
+ * Nacharbeit Sichtprüfung, Befund 3: vorher zweispaltig — links bearbeiten,
+ * rechts nachlesen. Bei acht Feldern links und kaum mehr als einem Zeitstempel
+ * rechts blieb die rechte Spalte fast leer, der Schnitt wirkte kaputt.
+ *
+ * Jetzt einspaltig gestapelt: Die acht Felder oben bekommen die ganze Breite
+ * (mehrspaltig ab `md`, siehe `.drilldown__fields`), die Herkunft folgt darunter
+ * als schmale Fußzeile, durch `.drilldown__source` von den Feldern abgesetzt.
+ * Unter `md` ist das ohnehin die einzig sinnvolle Aufteilung — dort ist die
+ * Schublade der aufgeklappte Teil einer Karte, mit entsprechend wenig Breite.
+ */
 .drilldown {
-  display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr);
-  gap: 1rem 1.5rem;
-  padding: 0.75rem 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  padding: var(--space-3) var(--space-1);
+}
 
-  @media (max-width: 30rem) {
-    grid-template-columns: 1fr;
+// Einspaltig unter `md` — mehrspaltig erst, wo tatsächlich Breite dafür da
+// ist. Zwei Spalten ab `md`, drei ab `lg`: Die Breite gehört dem, wovon es
+// viel gibt (acht Felder), nicht einer fast leeren zweiten Spalte.
+.drilldown__fields {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: var(--space-2) var(--space-6);
+  margin: 0;
+
+  @include up(md) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  @include up(lg) {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
 
-.drilldown__fields {
-  display: grid;
-  grid-template-columns: auto 1fr;
+.drilldown__field {
+  display: flex;
   align-items: center;
-  gap: 0.5rem 0.75rem;
-  margin: 0;
+  gap: var(--space-2);
 }
 
 .drilldown__label { color: $color-muted; font-size: 0.85rem; }
 .drilldown__value { display: flex; justify-content: flex-start; }
 
+// Schmale Fußzeile, per feiner Linie von den Feldern abgesetzt.
 .drilldown__source {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
+  gap: var(--space-1);
+  max-width: 72ch;
+  padding-top: var(--space-3);
+  border-top: 1px solid token(--border-default, 0.55);
   font-size: 0.85rem;
   color: $color-muted;
 }
