@@ -183,14 +183,20 @@ git commit -m "feat(db): Spalten für alle ETF-Extras und deren Overrides"
 In `tests/test_overrides.py` anhängen:
 
 ```python
-def test_die_neuen_felder_werden_validiert(client: TestClient) -> None:
-    """Der Grund, Spalten statt einer generischen Tabelle zu nehmen."""
-    gueltig = client.put(
+def test_die_neuen_felder_kommen_durch_die_validierung(client: TestClient) -> None:
+    """Der Grund, Spalten statt einer generischen Tabelle zu nehmen.
+
+    Geprüft wird hier **nur** die Annahme: Ein gültiger Satz darf nicht an der
+    Validierung scheitern. Dass die Werte auch zurückkommen, kann dieser Task
+    noch nicht halten — Dienst und Endpoint reichen sie erst ab Task 4 durch.
+    Der Rundlauf wird dort geprüft.
+    """
+    antwort = client.put(
         "/instruments/by-symbol/GOLD.SG/overrides",
         json={"fund_size": 129445.0, "fund_currency": "USD", "fund_domicile": "Irland"},
     )
-    assert gueltig.status_code == 200
-    assert gueltig.json()["fund_currency"] == "USD"
+
+    assert antwort.status_code == 200
 
 
 @pytest.mark.parametrize(
@@ -468,6 +474,19 @@ def test_endpoint_schreibt_und_liest_alle_acht(client: TestClient) -> None:
     assert gelesen["provider"] == "iShares"
     assert gelesen["fund_domicile"] == "Irland"
     assert gelesen["ter"] == 0.25
+
+
+def test_der_rundlauf_traegt_auch_die_fondswaehrung(client: TestClient) -> None:
+    """Aus Task 2 hierher gezogen: Erst hier reicht der Endpoint sie durch."""
+    client.put(
+        "/instruments/by-symbol/GOLD.SG/overrides",
+        json={"fund_size": 129445.0, "fund_currency": "USD", "fund_domicile": "Irland"},
+    )
+
+    gelesen = client.get("/instruments/by-symbol/GOLD.SG/overrides").json()
+
+    assert gelesen["fund_currency"] == "USD"
+    assert gelesen["fund_size"] == 129445.0
 ```
 
 Die Attrappe `_FakeService` in derselben Datei auf die neue Signatur ziehen:
