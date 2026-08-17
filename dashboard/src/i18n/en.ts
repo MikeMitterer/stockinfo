@@ -219,6 +219,7 @@ export const en = {
   },
   errors: {
     title: 'Error',
+    closesIn: 'closes in {n} s',
     instruments: 'Could not load instruments',
     environment: 'Could not load environment',
     exchanges: 'Exchanges could not be loaded',

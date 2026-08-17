@@ -5,14 +5,13 @@ import {
   NConfigProvider,
   NDialogProvider,
   NMessageProvider,
-  NNotificationProvider,
   darkTheme,
   dateDeDE,
   dateEnUS,
   deDE,
   enUS,
 } from 'naive-ui'
-import { buildNaiveOverrides, THEMES } from '@mikemitterer/ux-foundation'
+import { buildNaiveOverrides, THEMES, UxNotificationProvider } from '@mikemitterer/ux-foundation'
 
 import AppDashboard from './components/AppDashboard.vue'
 import { useNaiveOverrides } from './composables/useNaiveOverrides'
@@ -55,14 +54,11 @@ const naiveDateLocale = computed(() => (locale.value === 'de' ? dateDeDE : dateE
     Die Provider stehen hier, damit Toasts und Rückfragen überall erreichbar
     sind.
 
-    `:max="3"` an den Meldungen ist Absicht: Fallen mehrere Quellen gleichzeitig
-    aus, soll daraus keine Stapel-Lawine werden, die den halben Bildschirm deckt.
-
-    Der Versatz nach unten ist keine Kosmetik. Naive setzt die Toasts 12 Pixel
-    unter den oberen Rand — also über die Kopfzeile. Da Fehler stehen bleiben,
-    bis sie weggeklickt werden, lag die rechte Gruppe der Leiste samt
-    „Aktualisieren" dauerhaft darunter. 4 rem ist die Kopfzeile (3.5 rem) plus
-    den Abstand, den Naive ohnehin einhält.
+    `UxNotificationProvider` statt `NNotificationProvider`: Der Versatz unter
+    die Bedienelemente der Kopfzeile und das Höchstmaß von drei Meldungen
+    kommen aus dem Fundament. Hier stand beides früher als eigene Zahl — bis
+    dasselbe im Schaufenster ein zweites Mal auftrat und damit ins Paket
+    gehörte.
 
     Dass darunter nichts weiter kollidiert, ist der zweite Teil derselben
     Änderung: „Alle aktualisieren" ist aus der Leiste über der Tabelle in die
@@ -78,9 +74,9 @@ const naiveDateLocale = computed(() => (locale.value === 'de' ? dateDeDE : dateE
   >
     <NMessageProvider>
       <NDialogProvider>
-        <NNotificationProvider :max="3" :container-style="{ top: '4rem' }">
+        <UxNotificationProvider>
           <AppDashboard />
-        </NNotificationProvider>
+        </UxNotificationProvider>
       </NDialogProvider>
     </NMessageProvider>
   </NConfigProvider>

@@ -82,8 +82,12 @@ const chartLoading = computed(() => historyLoading.value || dailyLoading.value)
  * Die Anzeigedauer ist fest `0` — Fehler bleiben stehen, bis sie weggeklickt
  * werden. Ein Zähler wäre erst dann sinnvoll, wenn es hier eine Einstellung
  * dafür gäbe; bis dahin wäre eine Zahl im Code eine geratene.
+ *
+ * Die Beschriftung des Zählers wird trotzdem mitgegeben: Das Fundament hat
+ * keinen Katalog und verlangt sie deshalb, statt ein deutsches Wort fest zu
+ * verdrahten. Sichtbar wird sie erst, wenn die Anzeigedauer über 0 geht.
  */
-const { notify } = useNotifier(ref(0))
+const { notify } = useNotifier(ref(0), (n) => t('errors.closesIn', { n }))
 
 const errorSources: Record<string, typeof instrumentsError> = {
   instruments: instrumentsError,

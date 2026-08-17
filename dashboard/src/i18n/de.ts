@@ -219,6 +219,13 @@ export const de = {
   errors: {
     // Überschrift des Fehler-Toasts; der Text darunter ist die Meldung selbst.
     title: 'Fehler',
+    /*
+     * Zähler im Toast. Heute unsichtbar — die Anzeigedauer steht fest auf 0,
+     * Fehler bleiben also stehen. Der Eintrag steht trotzdem hier, weil das
+     * Fundament die Beschriftung verlangt statt sie fest zu verdrahten: Es hat
+     * keinen Katalog, und ein deutsches Wort darin wäre in `en` sofort falsch.
+     */
+    closesIn: 'schließt in {n} s',
     instruments: 'Instrumente konnten nicht geladen werden',
     environment: 'Environment konnte nicht geladen werden',
     exchanges: 'Börsen konnten nicht geladen werden',
