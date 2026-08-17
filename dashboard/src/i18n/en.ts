@@ -263,6 +263,9 @@ export const en = {
   },
   drilldown: {
     fetchedAt: 'Source as of',
+    explain:
+      'Where available, the figures come automatically from justETF. You can only ' +
+      'fill in by hand what the source does not provide — it always takes precedence.',
     noEuropeanSource:
       'justETF only covers European UCITS ETFs (fund domicile EU, EEA, Switzerland or ' +
       'the UK). This ISIN falls outside that — the source is never queried for it, ' +

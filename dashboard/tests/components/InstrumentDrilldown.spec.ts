@@ -15,6 +15,36 @@ describe('InstrumentDrilldown', () => {
     expect(wrapper.findAllComponents({ name: 'MetricEditor' })).toHaveLength(8)
   })
 
+  /*
+   * Nacharbeit Sichtprüfung, Befund 2: Bisher erklärte sich die Schublade nur
+   * in den zwei Ausnahmefällen (nicht-europäische ISIN, leere Quelle). Im
+   * häufigsten Fall — europäisches Papier, Quelle liefert alles — stand dort
+   * nichts. Diese Erklärung muss immer da sein, unabhängig vom Zustand.
+   */
+  it('erklärt immer, woher die Daten stammen — auch wenn die Quelle alles liefert', () => {
+    const wrapper = mount(InstrumentDrilldown, {
+      global: { plugins: [i18n] },
+      props: {
+        item: makeInstrument({
+          isin: 'IE00B4L5Y983',
+          ter: 0.2,
+          volatility: 12,
+          accumulating: true,
+          provider: 'iShares',
+          replication: 'physisch',
+          fund_size: 100,
+          fund_domicile: 'IE',
+          fund_currency: 'EUR',
+        }),
+      },
+    })
+
+    expect(wrapper.text()).toContain(i18n.global.t('drilldown.explain'))
+    // Die beiden Sonderfälle greifen hier bewusst nicht — europäisch, Quelle voll.
+    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.noEuropeanSource'))
+    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.sourceEmpty'))
+  })
+
   it('erklärt, warum die Quelle nichts beigesteuert hat', () => {
     // Nicht-europäisches Domizil wird bewusst übersprungen — genau diese
     // Erklärung fehlt dem Nutzer heute.

@@ -13,12 +13,18 @@ import { isEuropeanIsin } from '../utils/isin'
  * Die aufklappbare Zeile (Task 8) — Pflege aller acht ETF-Kennzahlen an einer
  * Stelle, egal ob aus der Tabelle oder der Kartenliste geöffnet.
  *
- * Zweispaltig, wie für aufgeklappte Zeilen festgelegt: links bearbeiten (acht
- * `MetricEditor`), rechts nachlesen — Zeitpunkt der letzten Metadaten-Abfrage
- * und, falls justETF nichts beigesteuert hat, **warum**. Genau diese Erklärung
- * fehlte bisher: Für nicht-europäische ISINs überspringt das Backend die
- * Quelle bewusst (`is_european_isin` in `app/providers/justetf_provider.py`),
- * ohne dass die Oberfläche das je gesagt hätte.
+ * Die acht Felder stehen oben, mehrspaltig auf breitem Schirm; die Herkunft
+ * (Zeitpunkt der letzten Metadaten-Abfrage, Erklärung) folgt darunter als
+ * schmale Fußzeile, durch eine feine Linie abgesetzt (Nacharbeit Sichtprüfung,
+ * Befund 3 — vorher zweispaltig, mit einer rechten Spalte, die meist fast leer
+ * blieb).
+ *
+ * Die Erklärung selbst trägt immer, nicht nur in Ausnahmefällen (Befund 2):
+ * woher die Daten kommen und dass sich nur ergänzen lässt, was die Quelle
+ * nicht liefert. Zwei Sonderfälle kommen zusätzlich dazu, wenn sie zutreffen —
+ * für nicht-europäische ISINs überspringt das Backend die Quelle bewusst
+ * (`is_european_isin` in `app/providers/justetf_provider.py`), und wenn die
+ * Quelle abgefragt wurde, aber nichts geliefert hat.
  */
 const props = defineProps<{
   item: InstrumentSummary
@@ -101,6 +107,12 @@ const fetchedAt = computed(() =>
       <p v-if="fetchedAt" class="drilldown__fetched">
         {{ t('drilldown.fetchedAt') }}: <span class="mono">{{ fetchedAt }}</span>
       </p>
+      <!--
+        Trägt immer, unabhängig vom Zustand der Quelle — anders als die beiden
+        Sonderfälle darunter, die nur in ihrem jeweiligen Ausnahmefall dazukommen
+        (Nacharbeit Sichtprüfung, Befund 2).
+      -->
+      <p class="drilldown__explain">{{ t('drilldown.explain') }}</p>
       <p v-if="!european" class="drilldown__explain">{{ t('drilldown.noEuropeanSource') }}</p>
       <p v-else-if="sourceEmpty" class="drilldown__explain">{{ t('drilldown.sourceEmpty') }}</p>
     </div>

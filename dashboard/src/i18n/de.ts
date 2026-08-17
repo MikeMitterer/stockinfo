@@ -277,6 +277,9 @@ export const de = {
   },
   drilldown: {
     fetchedAt: 'Stand der Quelle',
+    explain:
+      'Die Kennzahlen stammen, wo verfügbar, automatisch von justETF. Von Hand ' +
+      'lässt sich nur ergänzen, was die Quelle nicht liefert — sie hat immer Vorrang.',
     noEuropeanSource:
       'justETF deckt nur europäische UCITS-ETFs ab (Fondsdomizil EU, EWR, Schweiz oder ' +
       'UK). Diese ISIN liegt außerhalb — die Quelle wird deshalb gar nicht erst ' +
