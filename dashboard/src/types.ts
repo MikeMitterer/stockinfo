@@ -12,17 +12,7 @@ export interface InstrumentRef {
  * das, was justETFs `get_etf_overview` beisteuert: Wo die Quelle nichts hat,
  * springt der Mensch ein.
  */
-export type OverrideField =
-  | 'ter'
-  | 'volatility'
-  | 'accumulating'
-  | 'provider'
-  | 'replication'
-  | 'fund_size'
-  | 'fund_domicile'
-  | 'fund_currency'
-
-export const OVERRIDE_FIELDS: OverrideField[] = [
+export const OVERRIDE_FIELDS = [
   'ter',
   'volatility',
   'accumulating',
@@ -31,7 +21,18 @@ export const OVERRIDE_FIELDS: OverrideField[] = [
   'fund_size',
   'fund_domicile',
   'fund_currency',
-]
+] as const
+
+/**
+ * Abgeleitet aus der Liste, nicht daneben geschrieben.
+ *
+ * Beides stand hier bis zur Gesamtprüfung nebeneinander — einmal als Union,
+ * einmal als Array, acht Namen doppelt. Eine neunte Kennzahl hätte an beiden
+ * Stellen nachgetragen werden müssen, und wer nur eine anfasst, merkt davon
+ * nichts: Die Union allein erweitern lässt das Feld aus jeder Schleife fallen,
+ * das Array allein erweitern lässt es nicht durch den Typcheck.
+ */
+export type OverrideField = (typeof OVERRIDE_FIELDS)[number]
 
 /**
  * Von Hand nachgetragene Kennzahlen.
