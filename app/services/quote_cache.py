@@ -12,7 +12,7 @@ from datetime import datetime, timedelta, timezone
 
 import structlog
 
-from app.models import QuotePoint, QuoteResponse
+from app.models import OVERRIDE_FIELDS, QuotePoint, QuoteResponse
 from app.repository import QuoteRepository
 from app.services.daily_sync import DailyCloseSync
 from app.services.freshness import is_fresh
@@ -62,7 +62,7 @@ def apply_overrides(row: dict) -> dict:
     manual_fields: list[str] = []
     shadowed_fields: list[str] = []
 
-    for feld in ("ter", "volatility", "accumulating"):
+    for feld in OVERRIDE_FIELDS:
         manuell = result.get(f"manual_{feld}")
         if feld == "accumulating":
             manuell = _as_bool(manuell)
@@ -277,10 +277,58 @@ class CachedQuoteService:
             self._quote_service.get_quote_by_symbol(symbol)
         )
 
+    def _with_overrides(
+        self, response: QuoteResponse, instrument_id: int | None = None
+    ) -> QuoteResponse:
+        """Legt die von Hand gepflegten Kennzahlen über eine Kurs-Antwort.
+
+        Die Vorrang-Regel galt bis dahin nur in der Instrumentenliste. Wer
+        dieselbe Kennzahl über ``/quote`` abfragte — das JSON-Fenster der
+        Oberfläche, Excel über Power Query, jedes Skript — bekam den rohen Wert
+        der Quelle und damit ein „nicht gesetzt", obwohl etwas eingetragen war.
+
+        Gerechnet wird mit :func:`apply_overrides` und nicht mit einer zweiten
+        Fassung derselben Regel: Zwei Stellen liefen sonst früher oder später
+        auseinander, und die Antwort widerspräche der Liste daneben.
+
+        Geschrieben wird dabei nichts — die Instrumentenzeile bleibt roh, damit
+        der nächste Refresh weiterhin nichts zu überschreiben findet.
+
+        Args:
+            response: Antwort mit den Werten der Quelle.
+            instrument_id: Bereits bekannte Id; sonst wird sie nachgeschlagen.
+
+        Returns:
+            Dieselbe Antwort, in deren Lücken die manuellen Werte stehen.
+        """
+        if instrument_id is None:
+            instrument = (
+                self._repository.get_instrument_by_isin(response.isin)
+                if response.isin
+                else self._repository.get_instrument_by_symbol(response.symbol)
+            )
+            if instrument is None:
+                return response
+            instrument_id = instrument["id"]
+
+        overrides = self._repository.get_overrides(instrument_id)
+        if overrides is None:
+            return response
+
+        zeile = apply_overrides(
+            {
+                **{feld: getattr(response, feld) for feld in OVERRIDE_FIELDS},
+                **{f"manual_{feld}": overrides[feld] for feld in OVERRIDE_FIELDS},
+            }
+        )
+        for feld in OVERRIDE_FIELDS:
+            setattr(response, feld, zeile[feld])
+        return response
+
     def _save_fresh(self, fresh: QuoteResponse) -> QuoteResponse:
         """Persistiert einen frisch beschafften Kurs und reicht ihn durch."""
         self._repository.save_quote(fresh)
-        return fresh
+        return self._with_overrides(fresh)
 
     def _save_fresh_with_volatility(self, fresh: QuoteResponse) -> QuoteResponse:
         """Persistiert einen frischen Kurs und ergänzt die Volatilität aus dem Cache.
@@ -303,7 +351,7 @@ class CachedQuoteService:
             elif previous_volatility is not None:
                 fresh.volatility = previous_volatility
                 self._repository.set_volatility(instrument_id, previous_volatility)
-        return fresh
+        return self._with_overrides(fresh, instrument_id)
 
     def _stored_volatility(self, fresh: QuoteResponse) -> float | None:
         """Liest die aktuell gespeicherte Volatilität, bevor ``save_quote`` sie überschreibt."""
@@ -428,7 +476,9 @@ class CachedQuoteService:
             self._repository.get_latest_quote(instrument["id"]) if instrument else None
         )
         if instrument and latest and is_fresh(latest["fetched_at"], self._ttl_hours):
-            return self._from_cache(instrument, latest, stale=False)
+            return self._with_overrides(
+                self._from_cache(instrument, latest, stale=False), instrument["id"]
+            )
 
         try:
             fresh = fetch()
@@ -437,7 +487,9 @@ class CachedQuoteService:
             # vorhandenen Cache-Wert nicht in einen Fehler verwandeln.
             if instrument and latest:
                 logger.warning("serving_stale_quote", isin=instrument.get("isin"))
-                return self._from_cache(instrument, latest, stale=True)
+                return self._with_overrides(
+                    self._from_cache(instrument, latest, stale=True), instrument["id"]
+                )
             raise
 
         return self._save_fresh(fresh)

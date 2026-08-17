@@ -37,7 +37,7 @@ export const en = {
     colType: 'Type',
     colPrice: 'Price',
     colTer: 'TER',
-    colVola: 'Vola',
+    colVola: 'Vola 1y',
     colAccumulating: 'Acc.',
     colPoints: 'Pts.',
     yes: 'Yes',
@@ -247,6 +247,7 @@ export const en = {
     clear: 'Clear',
     notSet: 'not set',
     cycleTo: 'Switch to: {value}',
+    fromSource: 'Comes from the data source — only missing values can be filled in by hand.',
     markManual: 'Entered by hand — the source has nothing for this instrument.',
     markShadowed:
       'Entered by hand: {value}. Shown is the value from the source — it takes precedence. ' +

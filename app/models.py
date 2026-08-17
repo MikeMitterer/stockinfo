@@ -75,7 +75,7 @@ class InstrumentOverrides(BaseModel):
     „löschen": Die Oberfläche schickt immer den vollständigen Satz.
     """
 
-    ter: float | None = Field(default=None, ge=0, le=100, description="TER in %")
+    ter: float | None = Field(default=None, ge=0, le=5, description="TER in %")
     volatility: float | None = Field(
         default=None, ge=0, le=500, description="1-Jahres-Volatilität in %"
     )

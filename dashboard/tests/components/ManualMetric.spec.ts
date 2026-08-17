@@ -3,34 +3,86 @@ import { describe, expect, it } from 'vitest'
 
 import ManualMetric from '../../src/components/ManualMetric.vue'
 import { i18n } from '../../src/i18n'
-import type { InstrumentSummary } from '../../src/types'
+import type { InstrumentSummary, OverrideField } from '../../src/types'
 import { makeInstrument } from '../fixtures/instrument'
 
 /**
- * Der Umschalter für „thesaurierend" — drei Zustände per Klick.
+ * Die Zelle für eine von Hand nachtragbare Kennzahl (T-09).
  *
- * Der Anlass ist ein Fehler: Gezykelt wurde der **wirksame** Wert. Solange die
- * Quelle nichts liefert, ist das derselbe wie der eingetragene und fällt nicht
- * auf. Verdeckt die Quelle den eigenen Wert, läuft es in eine Sackgasse — jeder
- * Klick schreibt, was schon drinsteht.
+ * Zwei Regeln entscheiden hier alles Weitere:
+ *
+ * 1. **Gepflegt wird nur, was fehlt.** Liefert die Quelle einen Wert, ist die
+ *    Zelle nicht bedienbar — vorher war jede editierbar, und eine Eingabe auf
+ *    einem Papier mit Provider-Wert verschwand wortlos hinter diesem.
+ * 2. **Gezykelt und geleert wird der eingetragene Wert**, nicht der wirksame.
  */
 
-/** Hängt die Zelle für „thesaurierend" ein und liefert den Umschalter dazu. */
-function mountToggle(item: InstrumentSummary) {
-  const wrapper = mount(ManualMetric, {
-    global: { plugins: [i18n] },
-    props: { item, field: 'accumulating' },
-  })
-  return { wrapper, toggle: wrapper.get('.metric__toggle') }
+/** Hängt die Zelle ein. */
+function mountCell(item: InstrumentSummary, field: OverrideField = 'accumulating') {
+  return mount(ManualMetric, { global: { plugins: [i18n] }, props: { item, field } })
 }
 
 /** Der Wert, den ein Klick auf den Umschalter schreiben würde. */
 async function geklickterWert(item: InstrumentSummary): Promise<boolean | null | undefined> {
-  const { wrapper, toggle } = mountToggle(item)
-  await toggle.trigger('click')
+  const wrapper = mountCell(item)
+  await wrapper.get('.metric__toggle').trigger('click')
   const commits = wrapper.emitted('commit')
   return (commits?.[0]?.[0] as { accumulating?: boolean | null })?.accumulating
 }
+
+describe('ManualMetric — was die Quelle liefert, wird nicht gepflegt', () => {
+  it('lässt eine Zelle mit Provider-Wert unbedienbar', () => {
+    const wrapper = mountCell(makeInstrument({ accumulating: true }))
+
+    expect(wrapper.find('.metric__toggle').exists()).toBe(false)
+    expect(wrapper.find('.metric__static').exists()).toBe(true)
+  })
+
+  it('lässt auch eine verdeckte Eingabe unbedienbar', () => {
+    /*
+     * Der Fall, der die Regel ausgelöst hat: Quelle „ja", eigene Eingabe
+     * „nein". Angezeigt wurde „ja", ein Klick schrieb ins Leere, und das
+     * Merkmal daneben war die einzige Spur. Jetzt steht dort nur noch der Wert
+     * der Quelle — das Merkmal nennt die Eingabe weiterhin.
+     */
+    const wrapper = mountCell(
+      makeInstrument({
+        accumulating: true,
+        manual_accumulating: false,
+        shadowed_fields: ['accumulating'],
+      }),
+    )
+
+    expect(wrapper.find('.metric__toggle').exists()).toBe(false)
+    expect(wrapper.find('.metric__mark').exists()).toBe(true)
+  })
+
+  it('sperrt auch die Zahlenspalten, sobald die Quelle etwas hat', () => {
+    const wrapper = mountCell(makeInstrument({ ter: 0.2 }), 'ter')
+
+    expect(wrapper.findComponent({ name: 'UxInlineNumber' }).exists()).toBe(false)
+    // Dezimaltrenner je Sprache — geprüft wird der Wert, nicht das Format.
+    expect(wrapper.get('.metric__static').text()).toMatch(/0[.,]20/)
+  })
+
+  it('lässt eine leere Zahlenspalte bearbeiten', () => {
+    const wrapper = mountCell(makeInstrument({ ter: null }), 'ter')
+
+    expect(wrapper.findComponent({ name: 'UxInlineNumber' }).exists()).toBe(true)
+  })
+
+  it('zeigt den Wert der Quelle unverändert an, nicht den eingetragenen', () => {
+    const wrapper = mountCell(
+      makeInstrument({
+        accumulating: true,
+        manual_accumulating: false,
+        shadowed_fields: ['accumulating'],
+      }),
+    )
+
+    expect(wrapper.get('.metric__static').text()).toBe(i18n.global.t('table.yes'))
+  })
+})
 
 describe('ManualMetric — Umschalter', () => {
   it('zykelt ohne Eingabe von „nicht gesetzt" auf „ja"', async () => {
@@ -39,7 +91,7 @@ describe('ManualMetric — Umschalter', () => {
     expect(await geklickterWert(item)).toBe(true)
   })
 
-  it('zykelt die eigene Eingabe weiter, wenn die Quelle nichts liefert', async () => {
+  it('zykelt die eigene Eingabe von „ja" auf „nein"', async () => {
     const item = makeInstrument({
       accumulating: true,
       manual_accumulating: true,
@@ -49,43 +101,19 @@ describe('ManualMetric — Umschalter', () => {
     expect(await geklickterWert(item)).toBe(false)
   })
 
-  it('zykelt die Eingabe und nicht den Wert der Quelle, wenn diese ihn verdeckt', async () => {
+  it('erreicht von „nein" aus wieder „nicht gesetzt"', async () => {
     /*
-     * Der eigentliche Fehler: Quelle „ja", eingetragen „nein". Angezeigt wird
-     * „ja", der nächste Zustand daraus wäre „nein" — und das steht schon drin.
-     * Vorher schrieb jeder Klick `false`, „nicht gesetzt" und „ja" waren nicht
-     * erreichbar.
+     * Der dritte Zustand war nie erreichbar: Die Nachschlagetabelle lief über
+     * `String(wert)` und brauchte ein `?? true` für unbekannte Schlüssel — das
+     * verschluckte aber das gültige Ergebnis `null`. Aus „nein" wurde damit
+     * wieder „ja".
      */
     const item = makeInstrument({
-      accumulating: true,
+      accumulating: false,
       manual_accumulating: false,
-      shadowed_fields: ['accumulating'],
+      manual_fields: ['accumulating'],
     })
 
     expect(await geklickterWert(item)).toBeNull()
-  })
-
-  it('kommt aus dem verdeckten Zustand wieder bis „ja" herum', async () => {
-    // Der Rundlauf schließt sich: nein → nicht gesetzt → ja.
-    const item = makeInstrument({
-      accumulating: true,
-      manual_accumulating: null,
-      shadowed_fields: ['accumulating'],
-    })
-
-    expect(await geklickterWert(item)).toBe(true)
-  })
-
-  it('zeigt weiter den Wert der Quelle, nicht den eingetragenen', async () => {
-    // Die Vorrang-Regel bleibt unangetastet — geändert hat sich nur, was ein
-    // Klick schreibt.
-    const item = makeInstrument({
-      accumulating: true,
-      manual_accumulating: false,
-      shadowed_fields: ['accumulating'],
-    })
-    const { toggle } = mountToggle(item)
-
-    expect(toggle.text()).toBe(i18n.global.t('table.yes'))
   })
 })

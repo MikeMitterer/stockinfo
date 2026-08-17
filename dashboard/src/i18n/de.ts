@@ -35,7 +35,7 @@ export const de = {
     colType: 'Typ',
     colPrice: 'Kurs',
     colTer: 'TER',
-    colVola: 'Vola',
+    colVola: 'Vola 1J',
     colAccumulating: 'Thes.',
     colPoints: 'Pkt.',
     yes: 'Ja',
@@ -257,6 +257,7 @@ export const de = {
     clear: 'Leeren',
     notSet: 'nicht gesetzt',
     cycleTo: 'Umschalten auf: {value}',
+    fromSource: 'Kommt aus der Quelle — von Hand nachgetragen wird nur, was dort fehlt.',
     markManual: 'Von Hand eingetragen — die Quelle liefert für dieses Papier nichts.',
     markShadowed:
       'Von Hand eingetragen: {value}. Angezeigt wird der Wert der Quelle — sie hat Vorrang. ' +

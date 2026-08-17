@@ -47,13 +47,43 @@ const wert = computed<number | boolean | null>(() => {
 const zahl = computed(() => (typeof wert.value === 'number' ? wert.value : null))
 
 /**
+ * Liefert die **Quelle** für dieses Feld etwas? Dann wird hier nichts gepflegt.
+ *
+ * Nachgetragen wird, was fehlt — nicht, was schon dasteht. Vorher war jede
+ * Zelle editierbar: Wer bei einem Papier mit Provider-Wert etwas eintrug, sah
+ * unverändert den alten Wert und daneben ein neues Merkmal. Das liest sich wie
+ * ein Fehler, obwohl die Vorrang-Regel genau das vorsieht.
+ *
+ * Erkannt am Zustand, nicht an einem zweiten Feld: Steht der angezeigte Wert
+ * `manual`, kommt er aus der Eingabe und die Quelle hat nichts. Sonst ist der
+ * angezeigte Wert der der Quelle — und ist er gesetzt, ist hier zu.
+ */
+const quelleHatWert = computed(() => zustand.value !== 'manual' && wert.value !== null)
+
+/**
+ * Der **eingetragene** Wert als Zahl — das, was bearbeitet und geleert wird.
+ *
+ * Getrennt vom wirksamen Wert, und zwar aus demselben Grund wie beim
+ * Umschalter: Angezeigt wird, was gilt; bearbeitet wird, was man selbst
+ * hinterlegt hat. Vorher bekam das Feld den wirksamen Wert — mit zwei Folgen:
+ * Das Löschkreuz erschien auch dort, wo es nichts zu löschen gab (ein Klick
+ * darauf schrieb `null` auf ein leeres Feld, sichtbar passierte nichts), und
+ * die Bearbeitung startete auf dem Wert der Quelle, den man mit Enter
+ * versehentlich als eigenen übernahm.
+ */
+const manuelleZahl = computed(() => {
+  const roh = manualValue(props.item, props.field)
+  return typeof roh === 'number' ? roh : null
+})
+
+/**
  * Obergrenze je Kennzahl — dieselben Werte prüft das Backend noch einmal.
  *
  * Zwei Stellen sind hier unvermeidbar: Das Feld soll beim Tippen begrenzen,
  * und der Endpoint darf sich nicht auf die Oberfläche verlassen. Die Zahlen
  * sind bewusst großzügig — sie fangen Tippfehler ab, nicht Meinungen.
  */
-const maximum = computed(() => (props.field === 'ter' ? 100 : 500))
+const maximum = computed(() => (props.field === 'ter' ? 5 : 500))
 
 /*
  * Immer zwei Nachkommastellen, und über `n()` statt `toFixed`.
@@ -139,8 +169,30 @@ function onUmschalten(): void {
 </script>
 
 <template>
-  <span class="metric" :class="`metric--${zustand ?? 'plain'}`">
-    <template v-if="field === 'accumulating'">
+  <span
+    class="metric"
+    :class="`metric--${zustand ?? 'plain'}`"
+    :title="quelleHatWert ? t('overrides.fromSource') : undefined"
+  >
+    <!--
+      Liefert die Quelle etwas, steht hier nur der Wert — kein Knopf, kein Feld.
+      Nachgetragen wird, was fehlt; was schon dasteht, gehört der Quelle. Der
+      Titel an der Zelle sagt das, sonst wirkt die tote Zelle wie ein Fehler.
+    -->
+    <span
+      v-if="quelleHatWert"
+      class="metric__static"
+      :class="{ 'metric__static--fest': field === 'accumulating' }"
+    >
+      <span
+        v-if="field === 'accumulating'"
+        class="badge thes"
+        :class="{ acc: item.accumulating }"
+      >{{ item.accumulating ? t('table.yes') : t('table.no') }}</span>
+      <template v-else>{{ anzeige }}</template>
+    </span>
+
+    <template v-else-if="field === 'accumulating'">
       <button
         class="metric__toggle"
         type="button"
@@ -157,7 +209,7 @@ function onUmschalten(): void {
 
     <UxInlineNumber
       v-else
-      :value="zahl"
+      :value="manuelleZahl"
       :display="anzeige"
       :precision="2"
       :min="0"
@@ -173,8 +225,23 @@ function onUmschalten(): void {
       Das Merkmal ist bewusst klein und trägt seinen Sinn im Titel: Farbe allein
       trüge die Aussage nicht, und ein „?"-Hinweis in jeder Zelle wären bei
       fünfzehn Zellen fünfzehn Fragezeichen.
+
+      Es liegt **außerhalb** des Flusses, rechts neben dem Wert im Innenabstand
+      der Zelle. Als Flex-Kind kostete es Breite, und zwar nur in markierten
+      Zeilen — der Wert rutschte dort nach links. Platz dafür zu reservieren
+      behob das zwar zeilenweise, verschob aber die ganze Spalte gegen ihren
+      Kopf: Gemessen endete „TER" bei 826 und die Zahl darunter bei 810, das
+      Prozentzeichen stand also unter dem T.
+
+      Ohne Breite stimmt beides: Zeilen untereinander und Spalte gegen Kopf.
     -->
-    <span v-if="zustand" class="metric__mark" :title="merkmalTitel" aria-hidden="true">•</span>
+    <span
+      v-if="zustand"
+      class="metric__mark"
+      :title="merkmalTitel"
+      aria-hidden="true"
+      >•</span
+    >
     <span v-if="zustand" class="visually-hidden">{{ merkmalTitel }}</span>
   </span>
 </template>
@@ -183,12 +250,34 @@ function onUmschalten(): void {
 @use '../styles/variables' as *;
 
 .metric {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 0.2rem;
   justify-content: flex-end;
 
+  /*
+   * Eine Breite für alle drei Zustände.
+   *
+   * „—", „Ja" und „Nein" sind 13.6, 28.7 und 40.5 Pixel breit; mittig gesetzt
+   * steht damit jede Zeile auf einer anderen Kante, und die Spalte wirkt
+   * verrutscht. Das ist dieselbe Regel wie beim Statusetikett: gleiche Breite
+   * über alle Zeilen, sonst wandert die Spalte. 2.75 rem fasst das längste
+   * Wort mit etwas Luft.
+   */
+  /* In der Thes.-Spalte dieselbe feste Breite wie der Umschalter — sonst
+     wandert die Spalte, je nachdem ob eine Zeile aus der Quelle kommt oder von
+     Hand. In den Zahlenspalten unnötig: Die sind rechtsbündig. */
+  &__static--fest {
+    display: inline-flex;
+    justify-content: center;
+    min-width: 2.75rem;
+  }
+
   &__toggle {
+    display: inline-flex;
+    justify-content: center;
+    min-width: 2.75rem;
     border: none;
     background: none;
     padding: 0;
@@ -199,9 +288,19 @@ function onUmschalten(): void {
 
   &__empty { color: $color-muted; }
 
+  /*
+   * Hängt rechts neben dem Wert, im Innenabstand der Zelle — ohne Breite.
+   * Nur so bleiben Zeilen mit und ohne Merkmal auf derselben Kante, und die
+   * Spalte bleibt bündig mit ihrem Kopf.
+   */
   &__mark {
+    position: absolute;
+    top: 50%;
+    left: 100%;
+    margin-left: 0.15rem;
     font-size: 0.7rem;
     line-height: 1;
+    transform: translateY(-50%);
   }
 
   // Der Wert kommt von Hand — das Merkmal trägt die Akzentfarbe.
