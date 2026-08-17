@@ -1,13 +1,19 @@
 <script setup lang="ts">
 import { consola } from 'consola'
-import { onMounted, onUnmounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NButton } from 'naive-ui'
+import { NButton, NModal } from 'naive-ui'
 
 import { useRawQuote } from '../composables/useRawQuote'
 import type { InstrumentSummary } from '../types'
 import { copyText } from '../utils/clipboard'
 
+/**
+ * Zeigt die rohe Abfrage samt Antwort — Adresse oben, JSON darunter.
+ *
+ * Rahmen, Schleier, Escape und der Klick daneben kommen von `NModal`; der
+ * Inhalt scrollt in seinem eigenen Bereich, damit Kopf und Fuß stehen bleiben.
+ */
 const props = defineProps<{ item: InstrumentSummary | null }>()
 const emit = defineEmits<{ (event: 'close'): void }>()
 
@@ -15,10 +21,18 @@ const { url, json, loading, error, load } = useRawQuote()
 const copied = ref<string | null>(null)
 const { t } = useI18n()
 
+/*
+ * Eigene Kopie des Papiers, damit der Kasten sich beim Ausblenden nicht leert:
+ * Der Aufrufer setzt seine Auswahl sofort zurück, die Animation läuft aber noch.
+ */
+const shown = ref<InstrumentSummary | null>(null)
+
 watch(
   () => props.item,
   (item) => {
-    if (item) void load(item)
+    if (!item) return
+    shown.value = item
+    void load(item)
   },
   { immediate: true },
 )
@@ -35,89 +49,71 @@ async function copy(text: string, what: string): Promise<void> {
   }, 1500)
 }
 
-function onKey(event: KeyboardEvent): void {
-  if (event.key === 'Escape' && props.item) emit('close')
+/** Escape, Klick auf die Fläche und das ✕ laufen alle hier zusammen. */
+function onUpdateShow(show: boolean): void {
+  if (!show && props.item) emit('close')
 }
-
-onMounted(() => window.addEventListener('keydown', onKey))
-onUnmounted(() => window.removeEventListener('keydown', onKey))
 </script>
 
 <template>
-  <div v-if="item" class="overlay" @click.self="emit('close')">
-    <div class="modal" role="dialog" aria-modal="true">
-      <header class="head">
-        <h3>JSON — {{ item.symbol }}</h3>
-        <NButton class="x" quaternary circle size="small" :title="t('json.close')" @click="emit('close')">✕</NButton>
-      </header>
-
-      <div class="url-row">
-        <code class="url">{{ url }}</code>
-        <NButton class="copy" size="small" @click="copy(url, 'url')">
+  <NModal
+    :show="item !== null"
+    preset="card"
+    :title="`JSON — ${shown?.symbol ?? ''}`"
+    :style="{ width: 'min(720px, calc(100vw - 3rem))' }"
+    :content-style="{ padding: 0 }"
+    @update:show="onUpdateShow"
+    @after-leave="shown = null"
+  >
+    <div v-if="shown" class="json">
+      <div class="json__url-row">
+        <code class="json__url">{{ url }}</code>
+        <NButton class="json__copy" size="small" @click="copy(url, 'url')">
           {{ copied === 'url' ? t('json.copied') : t('json.copyUrl') }}
         </NButton>
       </div>
 
-      <div class="body">
-        <p v-if="loading" class="muted">{{ t('json.loading') }}</p>
-        <p v-else-if="error" class="err">{{ error }}</p>
-        <pre v-else>{{ json }}</pre>
+      <!-- Nur dieser Bereich rollt: Adresse und Fuß bleiben stehen. -->
+      <div class="json__body">
+        <p v-if="loading" class="json__note">{{ t('json.loading') }}</p>
+        <p v-else-if="error" class="json__error">{{ error }}</p>
+        <pre v-else class="json__code">{{ json }}</pre>
       </div>
+    </div>
 
-      <footer class="foot">
-        <NButton class="copy" type="primary" size="small" :disabled="!json" @click="copy(json, 'json')">
+    <template #footer>
+      <div class="json__actions">
+        <NButton
+          class="json__copy"
+          type="primary"
+          size="small"
+          :disabled="!json"
+          @click="copy(json, 'json')"
+        >
           {{ copied === 'json' ? t('json.copied') : t('json.copyJson') }}
         </NButton>
-      </footer>
-    </div>
-  </div>
+      </div>
+    </template>
+  </NModal>
 </template>
 
 <style scoped lang="scss">
 @use '../styles/variables' as *;
 
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  // Bewusst neutrales Schwarz, kein Theme-Ton — der Schleier soll in jedem
-  // Theme gleich abdunkeln.
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(3px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-}
-
-.modal {
-  width: min(720px, 100%);
-  max-height: 80vh;
+.json {
   display: flex;
   flex-direction: column;
-  background: $color-surface;
-  border: 1px solid $color-border;
-  border-radius: $radius;
-  overflow: hidden;
-}
+  max-height: 60vh;
 
-.head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0.8rem 1rem;
-  border-bottom: 1px solid $color-border;
-  h3 { margin: 0; font-size: 0.95rem; }
-  // Der Schließen-Knopf gestaltet sich selbst (NButton).
-}
+  &__url-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid $color-border;
+  }
 
-.url-row {
-  display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  padding: 0.75rem 1rem;
-  border-bottom: 1px solid $color-border;
-  .url {
+  &__url {
     flex: 1;
     font-family: $font-mono;
     font-size: 0.8rem;
@@ -125,12 +121,13 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     overflow-x: auto;
     white-space: nowrap;
   }
-}
 
-.body {
-  padding: 0 1rem;
-  overflow: auto;
-  pre {
+  &__body {
+    padding: 0 1rem;
+    overflow: auto;
+  }
+
+  &__code {
     font-family: $font-mono;
     font-size: 0.8rem;
     line-height: 1.5;
@@ -138,16 +135,16 @@ onUnmounted(() => window.removeEventListener('keydown', onKey))
     margin: 0.9rem 0;
     white-space: pre;
   }
-  .muted { color: $color-muted; }
-  .err { color: $color-danger; }
-}
 
-.foot {
-  padding: 0.75rem 1rem;
-  border-top: 1px solid $color-border;
-  display: flex;
-  justify-content: flex-end;
-}
+  &__note { @include muted(null); }
+  &__error { color: $color-danger; }
 
-.copy { white-space: nowrap; }
+  // Der Kopieren-Knopf darf nicht umbrechen — Layout, nicht Gestaltung.
+  &__copy { white-space: nowrap; }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+  }
+}
 </style>

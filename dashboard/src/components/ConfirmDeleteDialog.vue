@@ -1,173 +1,121 @@
 <script setup lang="ts">
-import { nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
+import { ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NButton } from 'naive-ui'
+import { NButton, NModal } from 'naive-ui'
 
 import type { InstrumentSummary } from '../types'
 
+/**
+ * Rückfrage vor dem Löschen — das ist unwiderruflich, die Kurshistorie geht mit.
+ *
+ * Der Rahmen kommt von `NModal`: abdunkelnde Fläche, Escape, Klick daneben,
+ * Fokus-Falle und Fokus-Rückgabe bringt es mit. Vorher stand das alles hier als
+ * eigener Nachbau — rund achtzig Zeilen, die dasselbe schlechter konnten.
+ *
+ * Was hier bleibt, ist die eine Entscheidung, die Naive nicht treffen kann:
+ * Der Fokus landet auf **Abbrechen**, nicht auf Löschen. Ein versehentliches
+ * Enter soll abbrechen.
+ */
 const props = defineProps<{ item: InstrumentSummary | null }>()
 const emit = defineEmits<{ (event: 'confirm'): void; (event: 'cancel'): void }>()
 
 const { t } = useI18n()
 
-const modalRef = ref<HTMLElement | null>(null)
-const cancelBtnRef = ref<HTMLButtonElement | null>(null)
-let lastFocused: HTMLElement | null = null
+const cancelBtn = ref<InstanceType<typeof NButton> | null>(null)
 
-/** Alle innerhalb des Dialogs fokussierbaren Elemente, in DOM-Reihenfolge. */
-function focusableElements(): HTMLElement[] {
-  if (!modalRef.value) return []
-  return Array.from(
-    modalRef.value.querySelectorAll<HTMLElement>(
-      'button:not(:disabled), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-    ),
-  )
-}
+/*
+ * Der Inhalt hängt an einer eigenen Kopie, nicht direkt an `item`.
+ *
+ * Sonst leert sich der Kasten in dem Moment, in dem der Aufrufer die Auswahl
+ * zurücksetzt — und was ausgeblendet wird, ist ein leerer Rahmen mit zwei
+ * Knöpfen. Erst wenn die Animation durch ist, wird auch die Kopie verworfen.
+ */
+const shown = ref<InstrumentSummary | null>(null)
 
-/** Hält Tab/Shift+Tab innerhalb des Dialogs gefangen, solange er offen ist. */
-function trapTab(event: KeyboardEvent): void {
-  const elements = focusableElements()
-  if (elements.length === 0) return
-  const first = elements[0]
-  const last = elements[elements.length - 1]
-  if (event.shiftKey && document.activeElement === first) {
-    event.preventDefault()
-    last.focus()
-  } else if (!event.shiftKey && document.activeElement === last) {
-    event.preventDefault()
-    first.focus()
-  }
-}
-
-function onKey(event: KeyboardEvent): void {
-  if (!props.item) return
-  if (event.key === 'Escape') {
-    emit('cancel')
-  } else if (event.key === 'Tab') {
-    trapTab(event)
-  }
-}
-
-// Öffnen: Fokus merken und in den Dialog verschieben (auf Abbrechen, nicht Löschen —
-// ein versehentliches Enter soll abbrechen statt löschen). Schließen: Fokus zurückgeben.
 watch(
   () => props.item,
-  async (item, previous) => {
-    if (item && !previous) {
-      lastFocused = document.activeElement as HTMLElement | null
-      await nextTick()
-      cancelBtnRef.value?.focus()
-    } else if (!item && previous) {
-      lastFocused?.focus()
-      lastFocused = null
-    }
+  (item) => {
+    if (item) shown.value = item
   },
+  { immediate: true },
 )
 
-onMounted(() => window.addEventListener('keydown', onKey))
-onUnmounted(() => window.removeEventListener('keydown', onKey))
+/** Escape, Klick auf die Fläche und das ✕ laufen alle hier zusammen. */
+function onUpdateShow(show: boolean): void {
+  if (!show && props.item) emit('cancel')
+}
+
+/**
+ * Fokus auf „Abbrechen" — erst nach der Einblendung, vorher steht das Element
+ * noch nicht im Dokument.
+ */
+function focusCancel(): void {
+  const el = cancelBtn.value?.$el as HTMLElement | undefined
+  el?.focus()
+}
 </script>
 
 <template>
-  <div v-if="item" class="overlay" @click.self="emit('cancel')">
-    <div
-      ref="modalRef"
-      class="modal"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-delete-title"
-      aria-describedby="confirm-delete-body"
-    >
-      <header class="head">
-        <h3 id="confirm-delete-title">{{ t('confirmDelete.title') }}</h3>
-      </header>
+  <NModal
+    :show="item !== null"
+    preset="card"
+    :title="t('confirmDelete.title')"
+    :style="{ width: 'min(420px, calc(100vw - 3rem))' }"
+    :auto-focus="false"
+    role="dialog"
+    aria-modal="true"
+    @update:show="onUpdateShow"
+    @after-enter="focusCancel"
+    @after-leave="shown = null"
+  >
+    <div v-if="shown" class="confirm-delete">
+      <p class="confirm-delete__item">
+        <span class="confirm-delete__name">{{ shown.name ?? shown.symbol }}</span>
+        <span class="confirm-delete__symbol mono">{{ shown.symbol }}</span>
+      </p>
+      <p class="confirm-delete__history">{{ t('confirmDelete.history', shown.history_count) }}</p>
+      <p class="confirm-delete__irreversible">{{ t('confirmDelete.irreversible') }}</p>
+    </div>
 
-      <div id="confirm-delete-body" class="body">
-        <p class="confirm-delete__item">
-          <span class="confirm-delete__name">{{ item.name ?? item.symbol }}</span>
-          <span class="confirm-delete__symbol mono">{{ item.symbol }}</span>
-        </p>
-        <p class="confirm-delete__history">{{ t('confirmDelete.history', item.history_count) }}</p>
-        <p class="confirm-delete__irreversible">{{ t('confirmDelete.irreversible') }}</p>
-      </div>
-
-      <footer class="foot">
-        <NButton
-          ref="cancelBtnRef"
-          class="confirm-delete__cancel"
-          @click="emit('cancel')"
-        >
+    <template #footer>
+      <div class="confirm-delete__actions">
+        <NButton ref="cancelBtn" class="confirm-delete__cancel" @click="emit('cancel')">
           {{ t('table.cancel') }}
         </NButton>
-        <NButton
-          class="confirm-delete__confirm"
-          type="error"
-          @click="emit('confirm')"
-        >
+        <NButton class="confirm-delete__confirm" type="error" @click="emit('confirm')">
           {{ t('table.remove') }}
         </NButton>
-      </footer>
-    </div>
-  </div>
+      </div>
+    </template>
+  </NModal>
 </template>
 
 <style scoped lang="scss">
-@use '../styles/variables' as *;
-
-.overlay {
-  position: fixed;
-  inset: 0;
-  z-index: 50;
-  // Bewusst neutrales Schwarz, kein Theme-Ton — der Schleier soll in jedem Theme
-  // gleich abdunkeln (siehe JsonModal.vue).
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(3px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 1.5rem;
-}
-
-.modal {
-  width: min(420px, 100%);
-  display: flex;
-  flex-direction: column;
-  background: $color-surface;
-  border: 1px solid $color-border;
-  border-radius: $radius;
-  overflow: hidden;
-}
-
-.head {
-  padding: 0.9rem 1rem 0.6rem;
-  h3 { margin: 0; font-size: 1rem; }
-}
-
-.body {
-  padding: 0 1rem 0.9rem;
-
+/*
+ * Fläche, Rahmen und Innenabstände bringt `NModal` mit — hier steht nur, was
+ * diesen Inhalt ausmacht.
+ */
+.confirm-delete {
   p { margin: 0 0 0.5rem; }
   p:last-child { margin-bottom: 0; }
+
+  &__item {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+
+  &__name { font-weight: 600; }
+
+  &__symbol,
+  &__history,
+  &__irreversible { @include muted(0.85rem); }
+
+  &__actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.6rem;
+  }
 }
-
-.confirm-delete__item {
-  display: flex;
-  align-items: baseline;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-}
-
-.confirm-delete__name { font-weight: 600; }
-.confirm-delete__symbol { color: $color-muted; font-size: 0.85rem; }
-.confirm-delete__history,
-.confirm-delete__irreversible { color: $color-muted; font-size: 0.85rem; }
-
-.foot {
-  padding: 0.75rem 1rem;
-  border-top: 1px solid $color-border;
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.6rem;
-}
-
 </style>

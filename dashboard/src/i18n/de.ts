@@ -24,7 +24,7 @@ export const de = {
     placeholder: 'ISIN oder Symbol (z.B. VGWL.DE)',
     add: 'Hinzufügen',
     refreshing: 'Aktualisiere…',
-    refreshAll: '↻ Alle aktualisieren',
+    refreshAll: 'Alle aktualisieren',
   },
   table: {
     title: 'Assets',
@@ -170,6 +170,7 @@ export const de = {
       amber: 'Bernstein',
       petrol: 'Petrol',
       classic: 'Klassisch',
+      macos: 'macOS',
       slate: 'Schiefer',
       ocean: 'Ozean',
       forest: 'Wald',
@@ -216,7 +217,8 @@ export const de = {
     close: 'Schließen',
   },
   errors: {
-    dismiss: 'Ausblenden',
+    // Überschrift des Fehler-Toasts; der Text darunter ist die Meldung selbst.
+    title: 'Fehler',
     instruments: 'Instrumente konnten nicht geladen werden',
     environment: 'Environment konnte nicht geladen werden',
     exchanges: 'Börsen konnten nicht geladen werden',
@@ -230,6 +232,28 @@ export const de = {
     setIsin: 'ISIN konnte nicht gespeichert werden',
     analysis: 'Analyse fehlgeschlagen',
     fx: 'Wechselkurs konnte nicht geladen werden',
+    overrides: 'Kennzahlen konnten nicht gespeichert werden',
+  },
+  /*
+   * Kurzerklärungen am Begriff — zwei, drei Sätze dort, wo die Frage entsteht.
+   * `more` und `openSetting` sind die beiden Verweise darin.
+   */
+  hints: {
+    more: 'Mehr dazu →',
+    openSetting: 'Zur Einstellung →',
+    points:
+      'Gespeicherte Kurspunkte dieses Papiers — die Tiefe der Historie, nicht ' +
+      'die Aktualität. Wie oft neue dazukommen, bestimmt das Refresh-Intervall.',
+  },
+  overrides: {
+    edit: 'Bearbeiten',
+    clear: 'Leeren',
+    notSet: 'nicht gesetzt',
+    cycleTo: 'Umschalten auf: {value}',
+    markManual: 'Von Hand eingetragen — die Quelle liefert für dieses Papier nichts.',
+    markShadowed:
+      'Von Hand eingetragen: {value}. Angezeigt wird der Wert der Quelle — sie hat Vorrang. ' +
+      'Die Eingabe bleibt gespeichert und greift wieder, sobald die Quelle nichts liefert.',
   },
   confirmDelete: {
     title: 'Asset löschen?',
