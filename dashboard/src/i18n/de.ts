@@ -262,6 +262,18 @@ export const de = {
     markShadowed:
       'Von Hand eingetragen: {value}. Angezeigt wird der Wert der Quelle — sie hat Vorrang. ' +
       'Die Eingabe bleibt gespeichert und greift wieder, sobald die Quelle nichts liefert.',
+    removeOwn: 'Eigenen Wert entfernen',
+    /*
+     * Beschriftungen der fünf ETF-Extras, die T-15 nachträgt (T-09 deckte
+     * TER, Volatilität und Thesaurierung bereits über die Tabellenköpfe ab).
+     */
+    fields: {
+      provider: 'Anbieter',
+      replication: 'Replikationsart',
+      fundSize: 'Fondsvolumen',
+      fundDomicile: 'Fondsdomizil',
+      fundCurrency: 'Fondswährung',
+    },
   },
   confirmDelete: {
     title: 'Asset löschen?',

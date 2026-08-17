@@ -252,6 +252,14 @@ export const en = {
     markShadowed:
       'Entered by hand: {value}. Shown is the value from the source — it takes precedence. ' +
       'Your entry stays stored and applies again as soon as the source has nothing.',
+    removeOwn: 'Remove your entry',
+    fields: {
+      provider: 'Provider',
+      replication: 'Replication method',
+      fundSize: 'Fund size',
+      fundDomicile: 'Fund domicile',
+      fundCurrency: 'Fund currency',
+    },
   },
   confirmDelete: {
     title: 'Delete asset?',
