@@ -261,6 +261,14 @@ export const en = {
       fundCurrency: 'Fund currency',
     },
   },
+  drilldown: {
+    fetchedAt: 'Source as of',
+    noEuropeanSource:
+      'justETF only covers European UCITS ETFs (fund domicile EU, EEA, Switzerland or ' +
+      'the UK). This ISIN falls outside that — the source is never queried for it, ' +
+      'so every field can be entered by hand.',
+    sourceEmpty: 'The source was queried but returned nothing — every field can be entered by hand.',
+  },
   confirmDelete: {
     title: 'Delete asset?',
     history: 'No price points stored. | 1 price point will be lost. | {count} price points will be lost.',
