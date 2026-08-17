@@ -60,8 +60,38 @@ class QuoteResponse(BaseModel):
     fetched_at: str
 
 
+OVERRIDE_FIELDS = ("ter", "volatility", "accumulating")
+"""Kennzahlen, die von Hand nachgetragen werden können.
+
+Eine Quelle für Modell, Endpoint und Tests — sonst kennt jede Stelle eine
+andere Teilmenge.
+"""
+
+
+class InstrumentOverrides(BaseModel):
+    """Von Hand nachgetragene Kennzahlen.
+
+    ``None`` heißt „nicht gepflegt". Beim Schreiben ist das gleichbedeutend mit
+    „löschen": Die Oberfläche schickt immer den vollständigen Satz.
+    """
+
+    ter: float | None = Field(default=None, ge=0, le=100, description="TER in %")
+    volatility: float | None = Field(
+        default=None, ge=0, le=500, description="1-Jahres-Volatilität in %"
+    )
+    accumulating: bool | None = Field(
+        default=None, description="Thesaurierend (true) vs. ausschüttend (false)"
+    )
+
+
 class InstrumentSummary(BaseModel):
-    """Ein Instrument mit seinem letzten Kurs — für die DB-Übersicht."""
+    """Ein Instrument mit seinem letzten Kurs — für die DB-Übersicht.
+
+    ``ter``, ``volatility`` und ``accumulating`` sind die **wirksamen** Werte:
+    Was die Quelle liefert, gewinnt; ein manueller Wert füllt nur Lücken. Damit
+    die Oberfläche das erklären kann, kommen die manuellen Werte zusätzlich roh
+    mit — und zwei Listen sagen, wo sie gerade greifen und wo sie verdeckt sind.
+    """
 
     isin: str | None = None
     symbol: str
@@ -81,6 +111,17 @@ class InstrumentSummary(BaseModel):
     latest_currency: str | None = None
     latest_fetched_at: str | None = None
     history_count: int = 0
+
+    manual_ter: float | None = None
+    manual_volatility: float | None = None
+    manual_accumulating: bool | None = None
+    manual_fields: list[str] = Field(
+        default_factory=list, description="Kennzahlen, die gerade von Hand kommen"
+    )
+    shadowed_fields: list[str] = Field(
+        default_factory=list,
+        description="Kennzahlen mit manuellem Wert, den die Quelle gerade verdeckt",
+    )
 
 
 class EnvInfo(BaseModel):

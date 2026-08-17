@@ -63,6 +63,22 @@ CREATE TABLE IF NOT EXISTS daily_meta (
     fetched_to    TEXT
 );
 
+-- Von Hand nachgetragene Kennzahlen.
+--
+-- Bewusst eine eigene Tabelle statt zusätzlicher Spalten in `instruments`:
+-- Der Hintergrund-Refresh schreibt dort bei jeder Runde, und ein manueller
+-- Wert, der in derselben Zeile steht, wäre eine Zeile vom nächsten Upsert
+-- entfernt. Getrennt kann der Refresh nichts überschreiben, was er nicht kennt.
+--
+-- NULL heißt „nicht gepflegt" — nicht „0" und nicht „nein".
+CREATE TABLE IF NOT EXISTS instrument_overrides (
+    instrument_id INTEGER PRIMARY KEY REFERENCES instruments(id) ON DELETE CASCADE,
+    ter           REAL,
+    volatility    REAL,
+    accumulating  INTEGER,
+    updated_at    TEXT NOT NULL
+);
+
 CREATE TABLE IF NOT EXISTS fx_rates (
     base       TEXT NOT NULL,
     quote      TEXT NOT NULL,
