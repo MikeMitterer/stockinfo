@@ -1,8 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { UxNavItem, UxTopbar, type NavIconName } from '@mikemitterer/ux-foundation'
+import { NButton, NConfigProvider } from 'naive-ui'
+import {
+  UxNavItem,
+  UxTopbar,
+  buildBarNaiveOverrides,
+  type NavIconName,
+} from '@mikemitterer/ux-foundation'
 
+import { useNaiveOverrides } from '../composables/useNaiveOverrides'
 import type { TabKey } from '../types'
 
 /**
@@ -19,13 +26,28 @@ import type { TabKey } from '../types'
  * links bei den anderen Punkten — sie sind eine Seite, also ein Ort, kein
  * Werkzeug.
  */
-defineProps<{ active: TabKey }>()
+const props = defineProps<{ active: TabKey; refreshing: boolean }>()
 
 const emit = defineEmits<{
   (event: 'navigate', tab: TabKey): void
+  (event: 'refresh'): void
 }>()
 
 const { t } = useI18n()
+
+/*
+ * Ein zweiter Satz Naive-Farben, nur für die rechte Gruppe.
+ *
+ * Die Leiste holt ihre Flächen und Textfarben aus eigenen Token — genau
+ * deshalb darf ein Theme sie umkehren. Naive bekommt global aber die Farben
+ * des **Inhalts**: In `sepia` (heller Inhalt, dunkle Leisten) stand der Knopf
+ * mit 1,38:1 auf der Leiste, also unsichtbar.
+ */
+const barOverrides = useNaiveOverrides(buildBarNaiveOverrides)
+
+const aktionLabel = computed(() =>
+  props.refreshing ? t('toolbar.refreshing') : t('toolbar.refreshAll'),
+)
 
 /*
  * Die Symbole stehen im Fundament, nicht hier — sie sind über alle Apps
@@ -83,5 +105,56 @@ const tabs = computed<{ key: TabKey; label: string; icon: NavIconName }[]>(() =>
         @select="emit('navigate', tab.key)"
       />
     </template>
+
+    <!--
+      Rechts steht nur, was **nicht** Navigation ist: die eine Handlung, die
+      überall gilt. Sie stand vorher in der Leiste über der Tabelle, also im
+      oberen rechten Eck des Inhalts — genau dort, wo Meldungen erscheinen.
+      Ein Fehler-Toast verdeckte damit den Knopf, mit dem man ihn behebt.
+    -->
+    <template #actions>
+      <NConfigProvider :theme-overrides="barOverrides" inline-theme-disabled>
+        <!--
+          Rahmenlos wie ein Menüpunkt: Ein umrandeter Kasten rechts ruft lauter
+          als die Punkte links, obwohl er nicht wichtiger ist. `quaternary` ist
+          dabei eine Spielart derselben Sorte Knopf — kein eigenes CSS.
+        -->
+        <NButton
+          quaternary
+          size="small"
+          :disabled="refreshing"
+          :loading="refreshing"
+          :aria-label="aktionLabel"
+          @click="emit('refresh')"
+        >
+          <!--
+            Unterhalb `md` fällt die **Beschriftung** weg, nicht die Handlung —
+            dieselbe Reihenfolge wie bei den Menüpunkten links. Das ↻ steht
+            deshalb im Markup und nicht im Katalog: Es ist kein übersetzbarer
+            Text, und im Katalog ließe es sich nicht getrennt ausblenden.
+            `aria-label` trägt den Namen weiter, wenn der Text verschwindet.
+          -->
+          <span v-if="!refreshing" aria-hidden="true">↻</span>
+          <span class="topbar-action__label">{{ aktionLabel }}</span>
+        </NButton>
+      </NConfigProvider>
+    </template>
   </UxTopbar>
 </template>
+
+<style scoped lang="scss">
+/*
+ * Wird es eng, verschwindet die Beschriftung — das Symbol bleibt. Dieselbe
+ * Stufe wie bei den Menüpunkten links, damit die Kopfzeile nicht halb
+ * beschriftet dasteht.
+ */
+.topbar-action__label {
+  display: none;
+
+  // Abstand zum Zeichen erst dort, wo die Beschriftung auch steht.
+  @include up(md) {
+    display: inline;
+    margin-left: 0.35rem;
+  }
+}
+</style>

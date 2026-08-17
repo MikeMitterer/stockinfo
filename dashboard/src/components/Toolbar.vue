@@ -4,8 +4,11 @@ import { useI18n } from 'vue-i18n'
 import { NButton, NInput } from 'naive-ui'
 
 /**
- * Die Leiste über der Assets-Tabelle: ein Papier hinzufügen, alle
- * aktualisieren.
+ * Die Leiste über der Assets-Tabelle: ein Papier hinzufügen.
+ *
+ * „Alle aktualisieren" stand hier einmal rechts daneben und ist in die
+ * Kopfzeile gezogen — dorthin gehört die eine Handlung, die überall gilt, und
+ * das obere rechte Eck des Inhalts bleibt damit frei für Meldungen.
  *
  * Bedienelemente kommen von Naive UI — kein nacktes `input` oder `button`
  * mehr. Die vorherige Fassung stylte ihr Feld selbst; nach dem Wegfall des
@@ -15,11 +18,10 @@ import { NButton, NInput } from 'naive-ui'
 const { t } = useI18n()
 
 const emit = defineEmits<{
-  (event: 'refresh'): void
   (event: 'add', identifier: string): void
 }>()
 
-defineProps<{ refreshing: boolean; busy: boolean }>()
+defineProps<{ busy: boolean }>()
 
 const identifier = ref<string>('')
 
@@ -51,28 +53,21 @@ function submit(): void {
         {{ t('toolbar.add') }}
       </NButton>
     </form>
-
-    <NButton
-      :disabled="refreshing"
-      :loading="refreshing"
-      @click="emit('refresh')"
-    >
-      {{ refreshing ? t('toolbar.refreshing') : t('toolbar.refreshAll') }}
-    </NButton>
   </div>
 </template>
 
 <style scoped lang="scss">
 .toolbar {
-  @include row(1rem);
-  justify-content: space-between;
-  flex-wrap: wrap;
   margin-bottom: 1.1rem;
 
+  /*
+   * Feld und Knopf gehören zusammen und stehen links. Vorher zog sich die
+   * Zeile über die volle Breite, weil rechts noch „Alle aktualisieren" saß —
+   * ohne den Knopf bliebe sonst ein Eingabefeld von 1200 px für eine ISIN.
+   */
   .add {
     @include row(0.5rem);
-    flex: 1;
-    min-width: 280px;
+    max-width: 34rem;
   }
 
   .add__field { flex: 1; }

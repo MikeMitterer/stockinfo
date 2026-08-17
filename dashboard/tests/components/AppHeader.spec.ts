@@ -13,8 +13,11 @@ import { i18n } from '../../src/i18n'
  * sondern als fünfter Punkt links bei den anderen. Sie sind eine Seite, also
  * ein Ort, kein Werkzeug.
  */
-function mountHeader() {
-  return mount(AppHeader, { props: { active: 'assets' }, global: { plugins: [i18n] } })
+function mountHeader(refreshing = false) {
+  return mount(AppHeader, {
+    props: { active: 'assets', refreshing },
+    global: { plugins: [i18n] },
+  })
 }
 
 beforeEach(() => {
@@ -68,5 +71,37 @@ describe('AppHeader', () => {
 
     expect(aktiv).toHaveLength(1)
     expect(aktiv[0].text()).toContain('Assets')
+  })
+
+  /*
+   * Seit T-13 steht „Alle aktualisieren" rechts in der Leiste statt über der
+   * Tabelle. Der Grund ist nicht Geschmack: Im oberen rechten Eck des Inhalts
+   * erscheinen die Fehler-Toasts, und die bleiben stehen, bis man sie
+   * wegklickt — der Knopf lag also unter der Meldung, die er behebt.
+   */
+  it('trägt die Aktualisieren-Handlung rechts, nicht zwischen den Menüpunkten', () => {
+    const wrapper = mountHeader()
+    const aktionen = wrapper.find('.ux-topbar__actions')
+
+    expect(aktionen.exists()).toBe(true)
+    expect(aktionen.text()).toContain('Alle aktualisieren')
+    expect(aktionen.find('.ux-navitem').exists()).toBe(false)
+  })
+
+  it('meldet den Klick auf Aktualisieren', async () => {
+    const wrapper = mountHeader()
+
+    await wrapper.find('.ux-topbar__actions button').trigger('click')
+
+    expect(wrapper.emitted('refresh')).toHaveLength(1)
+  })
+
+  it('sperrt den Knopf, solange aktualisiert wird', () => {
+    // Sonst stößt ein zweiter Klick denselben Lauf noch einmal an.
+    const wrapper = mountHeader(true)
+    const knopf = wrapper.find('.ux-topbar__actions button')
+
+    expect(knopf.attributes('disabled')).toBeDefined()
+    expect(knopf.text()).toContain('Aktualisiere')
   })
 })
