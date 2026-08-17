@@ -5,7 +5,7 @@ import { NButton, NSelect } from 'naive-ui'
 import { UxInlineNumber } from '@mmit/ux-foundation'
 
 import MetricValue from './MetricValue.vue'
-import { manualValue, overrideState } from '../composables/useOverrides'
+import { manualValue, sourceProvides } from '../composables/useOverrides'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 /**
@@ -82,19 +82,15 @@ const FIELD_KIND: Record<OverrideField, FieldKind> = {
 
 const kind = computed(() => FIELD_KIND[props.field])
 
-const state = computed(() => overrideState(props.item, props.field))
-
-/** Der wirksame Wert — er entscheidet, ob die Quelle etwas beisteuert. */
-const effectiveValue = computed(() => props.item[props.field])
-
 /**
  * Liefert die Quelle etwas? Dann wird hier nichts gepflegt.
  *
- * Erkannt am Zustand, nicht an einem zweiten Feld: Steht der wirksame Wert
- * auf `manual`, kommt er aus der Eingabe und die Quelle hat nichts. Sonst ist
- * der wirksame Wert der der Quelle — und ist er gesetzt, ist hier zu.
+ * Über `sourceProvides()` statt einer eigenen Fassung der Vorrang-Regel
+ * (Nacharbeit Sichtprüfung, I4) — dieselbe Prüfung stand vorher hier, in
+ * `MetricValue.vue` und in `InstrumentDrilldown.vue`, je einmal anders
+ * formuliert.
  */
-const editable = computed(() => !(state.value !== 'manual' && effectiveValue.value !== null))
+const editable = computed(() => !sourceProvides(props.item, props.field))
 
 /** Der von Hand eingetragene Rohwert — das, was bearbeitet und entfernt wird. */
 const manual = computed(() => manualValue(props.item, props.field))

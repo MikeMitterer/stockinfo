@@ -280,6 +280,12 @@ export const de = {
     explain:
       'Die Kennzahlen stammen, wo verfügbar, automatisch von justETF. Von Hand ' +
       'lässt sich nur ergänzen, was die Quelle nicht liefert — sie hat immer Vorrang.',
+    notEtf:
+      'justETF liefert nur Kennzahlen zu ETFs — dieses Papier ist eine Aktie. Die ' +
+      'Quelle wird deshalb gar nicht erst abgefragt, alle Felder lassen sich von Hand nachtragen.',
+    noIsin:
+      'Ohne ISIN lässt sich justETF nicht abfragen. Sobald eine ISIN eingetragen ist ' +
+      '(Kennung in der Zeile), greift die Quelle wieder; bis dahin lassen sich alle Felder von Hand nachtragen.',
     noEuropeanSource:
       'justETF deckt nur europäische UCITS-ETFs ab (Fondsdomizil EU, EWR, Schweiz oder ' +
       'UK). Diese ISIN liegt außerhalb — die Quelle wird deshalb gar nicht erst ' +

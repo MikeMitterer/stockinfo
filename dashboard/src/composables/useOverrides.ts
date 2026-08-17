@@ -87,3 +87,20 @@ export function manualValue(
 ): number | boolean | string | null {
   return item[`manual_${field}`]
 }
+
+/**
+ * Liefert die Quelle einen Wert für dieses Feld — nicht nur die Eingabe?
+ *
+ * Die Vorrang-Regel in einer Funktion statt dreimal (Nacharbeit Sichtprüfung,
+ * I4): `MetricValue.vue`, `MetricEditor.vue` und `InstrumentDrilldown.vue`
+ * formulierten bislang unabhängig voneinander dieselbe Prüfung — heute
+ * gleichbedeutend, aus drei verschiedenen Tasks entstanden und beim nächsten
+ * Feinschliff ein Kandidat zum Auseinanderlaufen.
+ *
+ * `item[field]` ist bereits der **wirksame** Wert (das Backend löst die
+ * Vorrang-Regel auf); „nicht null" allein reicht deshalb nicht — im Zustand
+ * `manual` ist der wirksame Wert der eingetragene, nicht der der Quelle.
+ */
+export function sourceProvides(item: InstrumentSummary, field: OverrideField): boolean {
+  return overrideState(item, field) !== 'manual' && item[field] !== null
+}

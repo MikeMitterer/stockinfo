@@ -26,6 +26,7 @@ describe('InstrumentDrilldown', () => {
       global: { plugins: [i18n] },
       props: {
         item: makeInstrument({
+          type: 'etf',
           isin: 'IE00B4L5Y983',
           ter: 0.2,
           volatility: 12,
@@ -40,17 +41,49 @@ describe('InstrumentDrilldown', () => {
     })
 
     expect(wrapper.text()).toContain(i18n.global.t('drilldown.explain'))
-    // Die beiden Sonderfälle greifen hier bewusst nicht — europäisch, Quelle voll.
+    // Keiner der vier Sonderfälle greift hier — ETF, europäisch, Quelle voll.
+    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.notEtf'))
+    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.noIsin'))
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.noEuropeanSource'))
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.sourceEmpty'))
   })
 
-  it('erklärt, warum die Quelle nichts beigesteuert hat', () => {
-    // Nicht-europäisches Domizil wird bewusst übersprungen — genau diese
-    // Erklärung fehlt dem Nutzer heute.
+  /*
+   * Nacharbeit Sichtprüfung, I2 (Gesamtprüfung): Das Backend überspringt
+   * justETF aus drei Gründen (`app/services/quote_service.py:137`:
+   * `if instrument_type == "etf" and isin:`) — kein ETF, keine ISIN, oder
+   * nicht-europäische ISIN. Die Schublade kannte bisher nur den dritten.
+   * Eine Aktie mit deutscher (europäischer) ISIN bekam fälschlich „Die Quelle
+   * wurde abgefragt, hat aber nichts geliefert" — sie wurde nie abgefragt.
+   */
+  it('erklärt, dass eine Aktie gar nicht bei justETF abgefragt wird', () => {
     const wrapper = mount(InstrumentDrilldown, {
       global: { plugins: [i18n] },
-      props: { item: makeInstrument({ isin: 'US0378331005', ter: null }) },
+      props: { item: makeInstrument({ type: 'stock', isin: 'DE0007164600', ter: null }) },
+    })
+
+    expect(wrapper.text()).toContain(i18n.global.t('drilldown.notEtf'))
+    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.sourceEmpty'))
+  })
+
+  // Ein Papier ohne ISIN bekam fälschlich „Diese ISIN liegt außerhalb" — es
+  // gibt gar keine ISIN, die außerhalb liegen könnte.
+  it('erklärt, dass ein ETF ohne ISIN gar nicht abgefragt wird', () => {
+    const wrapper = mount(InstrumentDrilldown, {
+      global: { plugins: [i18n] },
+      props: { item: makeInstrument({ type: 'etf', isin: null, ter: null }) },
+    })
+
+    expect(wrapper.text()).toContain(i18n.global.t('drilldown.noIsin'))
+    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.noEuropeanSource'))
+  })
+
+  it('erklärt, warum die Quelle nichts beigesteuert hat', () => {
+    // Nicht-europäisches Domizil wird bewusst übersprungen — genau diese
+    // Erklärung fehlte dem Nutzer vor Task 8.
+    const wrapper = mount(InstrumentDrilldown, {
+      global: { plugins: [i18n] },
+      props: { item: makeInstrument({ type: 'etf', isin: 'US0378331005', ter: null }) },
     })
 
     expect(wrapper.text()).toContain(i18n.global.t('drilldown.noEuropeanSource'))
@@ -59,7 +92,9 @@ describe('InstrumentDrilldown', () => {
   it('erklärt eine leere Quelle bei europäischem Domizil', () => {
     const wrapper = mount(InstrumentDrilldown, {
       global: { plugins: [i18n] },
-      props: { item: makeInstrument({ isin: 'IE00B4L5Y983', ter: null, volatility: null }) },
+      props: {
+        item: makeInstrument({ type: 'etf', isin: 'IE00B4L5Y983', ter: null, volatility: null }),
+      },
     })
 
     expect(wrapper.text()).toContain(i18n.global.t('drilldown.sourceEmpty'))

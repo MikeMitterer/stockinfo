@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { manualValue, overrideState } from '../composables/useOverrides'
+import { manualValue, overrideState, sourceProvides } from '../composables/useOverrides'
 import type { InstrumentSummary, OverrideField } from '../types'
 
 /**
@@ -13,9 +13,10 @@ import type { InstrumentSummary, OverrideField } from '../types'
  * sondern in der aufklappbaren Zeile (Task 8) — deshalb ohne Umschalter, ohne
  * Eingabefeld, ohne `commit`-Event.
  *
- * Anzeige und Merkmal sind aus `ManualMetric.vue` übernommen — dort bleiben
- * sie bestehen, weil die Kartenliste (`InstrumentCard.vue`) dort noch mobil
- * pflegt.
+ * Anzeige und Merkmal stammen ursprünglich aus `ManualMetric.vue` — die Datei
+ * ist seit Task 8 gelöscht, ersetzt durch diese Komponente und `MetricEditor.vue`
+ * (Nacharbeit Sichtprüfung: Kommentar berichtigt, der die gelöschte Datei noch
+ * als bestehend beschrieb).
  *
  * Seit der T-15-Nacharbeit (Befund 1) deckt die Komponente alle acht Felder
  * ab, nicht mehr nur die drei Tabellenspalten: Sie steht jetzt auch im
@@ -42,12 +43,12 @@ const isPercentField = computed(() => props.field === 'ter' || props.field === '
 /**
  * Kommt der gezeigte Wert wirklich aus der Quelle — nicht aus der Eingabe?
  *
- * Die acht Felder in `InstrumentSummary` sind bereits die **wirksamen**
- * Werte (das Backend löst die Vorrang-Regel auf), deshalb reicht „nicht null"
- * allein nicht: Im Zustand `manual` ist der wirksame Wert der eingetragene,
- * und der Hinweis „Kommt aus der Quelle" wäre dann falsch.
+ * Über `sourceProvides()` statt einer eigenen Fassung der Vorrang-Regel
+ * (Nacharbeit Sichtprüfung, I4) — dieselbe Prüfung stand vorher hier,
+ * in `MetricEditor.vue` und in `InstrumentDrilldown.vue`, je einmal anders
+ * formuliert.
  */
-const fromSource = computed(() => state.value !== 'manual' && value.value !== null)
+const fromSource = computed(() => sourceProvides(props.item, props.field))
 
 /*
  * Immer zwei Nachkommastellen, und über `n()` statt `toFixed`.

@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import MetricEditor from './MetricEditor.vue'
-import { overrideState } from '../composables/useOverrides'
+import { sourceProvides } from '../composables/useOverrides'
 import { OVERRIDE_FIELDS } from '../types'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 import { formatDateTime } from '../utils/datetime'
@@ -64,8 +64,6 @@ function onCommit(patch: Partial<InstrumentOverrides>): void {
   emit('commit', patch)
 }
 
-const european = computed(() => isEuropeanIsin(props.item.isin))
-
 /**
  * Hat die Quelle für irgendeines der acht Felder etwas beigesteuert?
  *
@@ -73,13 +71,27 @@ const european = computed(() => isEuropeanIsin(props.item.isin))
  * eingetragener Wert (`overrideState === 'manual'`) füllt eine Lücke, die die
  * Quelle gelassen hat — er zählt hier nicht als ihr Beitrag.
  */
-const sourceEmpty = computed(() =>
-  OVERRIDE_FIELDS.every((field) => {
-    const state = overrideState(props.item, field)
-    const sourceValue = state === 'manual' ? null : props.item[field]
-    return sourceValue === null
-  }),
-)
+const sourceEmpty = computed(() => OVERRIDE_FIELDS.every((field) => !sourceProvides(props.item, field)))
+
+/**
+ * Warum justETF nichts beigesteuert hat — vier sich gegenseitig ausschließende
+ * Gründe (Nacharbeit Sichtprüfung, I2).
+ *
+ * Die Reihenfolge ist **kein** Stilmittel, sondern gehört dorthin: Sie spiegelt
+ * die Prüfung des Backends (`app/services/quote_service.py:137`,
+ * `if instrument_type == "etf" and isin:`, dahinter `is_european_isin()` in
+ * `justetf_provider.py`). Vertauscht man sie, behauptet die Erklärung einen
+ * Grund, der nicht der tatsächliche ist — genau der Fehler, den diese
+ * Nacharbeit behebt: Eine Aktie mit europäischer ISIN bekam „Quelle wurde
+ * abgefragt, hat nichts geliefert" (sie wurde nie abgefragt), ein Papier ohne
+ * ISIN bekam „Diese ISIN liegt außerhalb" (es gibt keine).
+ */
+const skipReason = computed<'notEtf' | 'noIsin' | 'notEuropean' | 'empty' | null>(() => {
+  if (props.item.type !== 'etf') return 'notEtf'
+  if (!props.item.isin) return 'noIsin'
+  if (!isEuropeanIsin(props.item.isin)) return 'notEuropean'
+  return sourceEmpty.value ? 'empty' : null
+})
 
 const fetchedAt = computed(() =>
   props.item.meta_fetched_at ? formatDateTime(props.item.meta_fetched_at, locale.value) : null,
@@ -113,8 +125,10 @@ const fetchedAt = computed(() =>
         (Nacharbeit Sichtprüfung, Befund 2).
       -->
       <p class="drilldown__explain">{{ t('drilldown.explain') }}</p>
-      <p v-if="!european" class="drilldown__explain">{{ t('drilldown.noEuropeanSource') }}</p>
-      <p v-else-if="sourceEmpty" class="drilldown__explain">{{ t('drilldown.sourceEmpty') }}</p>
+      <p v-if="skipReason === 'notEtf'" class="drilldown__explain">{{ t('drilldown.notEtf') }}</p>
+      <p v-else-if="skipReason === 'noIsin'" class="drilldown__explain">{{ t('drilldown.noIsin') }}</p>
+      <p v-else-if="skipReason === 'notEuropean'" class="drilldown__explain">{{ t('drilldown.noEuropeanSource') }}</p>
+      <p v-else-if="skipReason === 'empty'" class="drilldown__explain">{{ t('drilldown.sourceEmpty') }}</p>
     </div>
   </div>
 </template>

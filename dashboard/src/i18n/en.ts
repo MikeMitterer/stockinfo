@@ -266,6 +266,12 @@ export const en = {
     explain:
       'Where available, the figures come automatically from justETF. You can only ' +
       'fill in by hand what the source does not provide — it always takes precedence.',
+    notEtf:
+      'justETF only covers ETFs — this instrument is a stock. The source is never ' +
+      'queried for it, so every field can be entered by hand.',
+    noIsin:
+      'Without an ISIN, justETF cannot be queried. Once an ISIN is entered (the ' +
+      'symbol in the row), the source takes over again; until then, every field can be entered by hand.',
     noEuropeanSource:
       'justETF only covers European UCITS ETFs (fund domicile EU, EEA, Switzerland or ' +
       'the UK). This ISIN falls outside that — the source is never queried for it, ' +
