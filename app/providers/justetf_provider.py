@@ -64,7 +64,11 @@ class JustEtfProvider:
             return None
 
         try:
-            overview = justetf_scraping.get_etf_overview(isin)
+            # Ohne den Gettex-Kurs: Er kommt sonst per Extra-Request mit und
+            # wird hier verworfen — der Kurs kommt von yfinance. Gemessen an
+            # IE00B4L5Y983 kostete er rund die Hälfte der Scrape-Zeit
+            # (Median 0,99 s mit, 0,53 s ohne), und das bei jedem Refresh.
+            overview = justetf_scraping.get_etf_overview(isin, include_gettex=False)
         except Exception as exc:
             logger.warning("justetf_fetch_failed", isin=isin, error=str(exc))
             return None

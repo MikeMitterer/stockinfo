@@ -36,7 +36,7 @@ def test_justetf_mappt_dict_felder(monkeypatch) -> None:
         "distribution_policy": "Distributing",
     }
     monkeypatch.setattr(
-        justetf_module.justetf_scraping, "get_etf_overview", lambda isin: overview
+        justetf_module.justetf_scraping, "get_etf_overview", lambda isin, **kw: overview
     )
 
     details = JustEtfProvider().fetch_etf("IE00B3RBWM25")
@@ -52,7 +52,7 @@ def test_justetf_mappt_dict_felder(monkeypatch) -> None:
 def test_justetf_thesaurierend_wird_erkannt(monkeypatch) -> None:
     overview = {"name": "iShares Core MSCI World", "distribution_policy": "Accumulating"}
     monkeypatch.setattr(
-        justetf_module.justetf_scraping, "get_etf_overview", lambda isin: overview
+        justetf_module.justetf_scraping, "get_etf_overview", lambda isin, **kw: overview
     )
 
     details = JustEtfProvider().fetch_etf("IE00B4L5Y983")
@@ -62,7 +62,7 @@ def test_justetf_thesaurierend_wird_erkannt(monkeypatch) -> None:
 
 
 def test_justetf_fehler_gibt_none(monkeypatch) -> None:
-    def boom(isin: str) -> dict:
+    def boom(isin: str, **kw: object) -> dict:
         raise RuntimeError("scrape failed")
 
     monkeypatch.setattr(justetf_module.justetf_scraping, "get_etf_overview", boom)
@@ -73,7 +73,7 @@ def test_justetf_ueberspringt_nicht_europaeische_isin(monkeypatch) -> None:
     """US-/nicht-europäische ISINs werden gar nicht erst gescraped."""
     calls: list[str] = []
 
-    def spy(isin: str) -> dict:
+    def spy(isin: str, **kw: object) -> dict:
         calls.append(isin)
         return {"name": "sollte nicht passieren"}
 
@@ -83,11 +83,32 @@ def test_justetf_ueberspringt_nicht_europaeische_isin(monkeypatch) -> None:
     assert calls == []  # kein Scrape-Aufruf
 
 
+def test_justetf_holt_den_gettex_kurs_nicht_mit(monkeypatch) -> None:
+    """Der Gettex-Kurs kommt sonst per Extra-Request mit und wird verworfen.
+
+    Der Kurs stammt von yfinance; justETF wird nur für die ETF-Extras befragt.
+    Gemessen an `IE00B4L5Y983` kostete der ungenutzte Abruf rund die Hälfte der
+    Scrape-Zeit — Median 0,99 s mit, 0,53 s ohne — und das bei jedem Refresh
+    und jedem Papier.
+    """
+    aufrufe: list[dict] = []
+
+    def spion(isin: str, **kw: object) -> dict:
+        aufrufe.append(dict(kw))
+        return {"name": "iShares Core MSCI World", "ter": 0.2}
+
+    monkeypatch.setattr(justetf_module.justetf_scraping, "get_etf_overview", spion)
+
+    JustEtfProvider().fetch_etf("IE00B4L5Y983")
+
+    assert aufrufe == [{"include_gettex": False}]
+
+
 def test_justetf_versucht_europaeische_isin(monkeypatch) -> None:
     """Europäische UCITS-ISIN (IE/LU/…) wird gescraped."""
     calls: list[str] = []
 
-    def overview(isin: str) -> dict:
+    def overview(isin: str, **kw: object) -> dict:
         calls.append(isin)
         return {"name": "iShares", "ter": 0.2}
 
