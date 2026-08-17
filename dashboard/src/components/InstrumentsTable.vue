@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton, NSelect } from 'naive-ui'
 
@@ -7,9 +7,10 @@ import { useIsCompact } from '@mmit/ux-foundation'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
 import InfoHint from './InfoHint.vue'
 import InstrumentCard from './InstrumentCard.vue'
+import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
 import MetricValue from './MetricValue.vue'
-import type { InstrumentOverrides, InstrumentSummary } from '../types'
+import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 const props = defineProps<{
   instruments: InstrumentSummary[]
@@ -20,6 +21,8 @@ const props = defineProps<{
   extraetfEtfUrl: string
   extraetfStockUrl: string
   yahooUrl: string
+  /** Vorschläge je Textfeld für die Schublade — einmal weiter oben gebildet. */
+  fieldOptions?: Partial<Record<OverrideField, string[]>>
 }>()
 
 const emit = defineEmits<{
@@ -81,6 +84,29 @@ function toggleSortDirection(): void {
 /** Übernimmt die Auswahl der mobilen Sortierleiste (leer = aus). */
 function onSortSelect(value: string): void {
   setSortKey(value === '' ? null : (value as SortKey))
+}
+
+/*
+ * Die Schublade (Task 8): höchstens eine gleichzeitig offen, gehalten über das
+ * Symbol des Papiers — nicht über einen Index, der bei jeder Umsortierung ein
+ * anderes Papier träfe.
+ */
+const openSymbol = ref<string | null>(null)
+
+/** Ist die Schublade dieses Papiers gerade offen? */
+function isOpen(item: InstrumentSummary): boolean {
+  return openSymbol.value === item.symbol
+}
+
+/**
+ * Öffnet/schließt die Schublade eines Papiers — ausgelöst von Symbol oder Name.
+ *
+ * Eigener Name statt `toggle`: Das ist schon die Spaltensortierung von
+ * `useTableSort()`, ein zweiter `toggle` für etwas ganz anderes wäre hier
+ * verwirrend.
+ */
+function toggleDrawer(item: InstrumentSummary): void {
+  openSymbol.value = isOpen(item) ? null : item.symbol
 }
 
 /** Baut den extraETF-Profil-Link (ISIN-basiert, ETF/Stock unterschieden). */
@@ -191,94 +217,129 @@ function price(value: number | null): string {
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="item in sortedInstruments"
-            :key="item.symbol"
-            :class="{ selected: item.symbol === selectedSymbol }"
-            @click="emit('select', item)"
-          >
-            <td class="sym mono">{{ item.symbol }}</td>
-            <td class="mono dim isin-cell">
-              <span v-if="item.isin">{{ item.isin }}</span>
-              <IsinEditor v-else :symbol="item.symbol" @save="emit('set-isin', $event)" />
-            </td>
-            <td class="name">{{ item.name ?? '—' }}</td>
-            <td>
-              <span v-if="item.type" class="badge type" :class="item.type">{{ item.type }}</span>
-              <span v-else class="dim">—</span>
-            </td>
-            <td class="num mono">
-              {{ price(item.latest_price) }}
-              <span class="ccy">{{ item.latest_currency ?? '' }}</span>
-            </td>
-            <!--
-              Die drei Kennzahlen sind hier nur noch zu sehen (T-09) — gepflegt
-              wird in der aufklappbaren Zeile (Task 8), nicht mehr an Ort und
-              Stelle in der Zelle.
-            -->
-            <td class="num mono dim"><MetricValue :item="item" field="ter" /></td>
-            <td class="num mono dim"><MetricValue :item="item" field="volatility" /></td>
-            <td class="center"><MetricValue :item="item" field="accumulating" /></td>
-            <td class="num mono dim">{{ item.history_count }}</td>
-            <td class="actions" @click.stop>
-              <NButton
-                class="ext"
-                size="tiny"
-                quaternary
-                :title="t('table.showJson')"
-                @click="emit('json', item)"
-              >
-                JSON
-              </NButton>
-              <NButton
-          v-if="extraetfLink(item)"
-          class="ext"
-          tag="a"
-          size="tiny"
-          quaternary
-          :href="extraetfLink(item)"
-          target="_blank"
-          rel="noopener"
-          :title="t('table.extraetfProfile')"
-        >
-          eETF
-        </NButton>
-              <NButton
-          v-if="yahooLink(item)"
-          class="ext"
-          tag="a"
-          size="tiny"
-          quaternary
-          :href="yahooLink(item)"
-          target="_blank"
-          rel="noopener"
-          :title="t('table.yahooFinance')"
-        >
-          Y!
-        </NButton>
-              <NButton
-                class="icon"
-                size="tiny"
-                quaternary
-                :loading="item.symbol === refreshingSymbol"
-                :disabled="item.symbol === refreshingSymbol"
-                :title="t('table.refresh')"
-                @click="emit('refresh', item)"
-              >
-                ↻
-              </NButton>
-              <NButton
-                class="icon"
-                size="tiny"
-                quaternary
-                type="error"
-                :title="t('table.remove')"
-                @click="emit('remove', item)"
-              >
-                ✕
-              </NButton>
-            </td>
-          </tr>
+          <template v-for="item in sortedInstruments" :key="item.symbol">
+            <tr
+              :class="{ selected: item.symbol === selectedSymbol }"
+              @click="emit('select', item)"
+            >
+              <td class="sym mono">
+                <!--
+                  Kennung öffnet die Zeile (ux-standards): Symbol und Name sind
+                  eigene Schaltflächen und klinken sich mit `@click.stop` aus dem
+                  Zeilen-Klick aus — der bleibt fürs Chart zuständig.
+                -->
+                <button
+                  type="button"
+                  class="row-toggle"
+                  :aria-expanded="isOpen(item)"
+                  :aria-controls="`drawer-${item.symbol}`"
+                  @click.stop="toggleDrawer(item)"
+                >
+                  {{ item.symbol }}
+                </button>
+              </td>
+              <td class="mono dim isin-cell">
+                <span v-if="item.isin">{{ item.isin }}</span>
+                <IsinEditor v-else :symbol="item.symbol" @save="emit('set-isin', $event)" />
+              </td>
+              <td class="name">
+                <button
+                  type="button"
+                  class="row-toggle"
+                  :aria-expanded="isOpen(item)"
+                  :aria-controls="`drawer-${item.symbol}`"
+                  @click.stop="toggleDrawer(item)"
+                >
+                  {{ item.name ?? '—' }}
+                </button>
+              </td>
+              <td>
+                <span v-if="item.type" class="badge type" :class="item.type">{{ item.type }}</span>
+                <span v-else class="dim">—</span>
+              </td>
+              <td class="num mono">
+                {{ price(item.latest_price) }}
+                <span class="ccy">{{ item.latest_currency ?? '' }}</span>
+              </td>
+              <!--
+                Die drei Kennzahlen sind hier nur noch zu sehen (T-09) — gepflegt
+                wird in der aufklappbaren Zeile (Task 8), nicht mehr an Ort und
+                Stelle in der Zelle.
+              -->
+              <td class="num mono dim"><MetricValue :item="item" field="ter" /></td>
+              <td class="num mono dim"><MetricValue :item="item" field="volatility" /></td>
+              <td class="center"><MetricValue :item="item" field="accumulating" /></td>
+              <td class="num mono dim">{{ item.history_count }}</td>
+              <td class="actions" @click.stop>
+                <NButton
+                  class="ext"
+                  size="tiny"
+                  quaternary
+                  :title="t('table.showJson')"
+                  @click="emit('json', item)"
+                >
+                  JSON
+                </NButton>
+                <NButton
+                  v-if="extraetfLink(item)"
+                  class="ext"
+                  tag="a"
+                  size="tiny"
+                  quaternary
+                  :href="extraetfLink(item)"
+                  target="_blank"
+                  rel="noopener"
+                  :title="t('table.extraetfProfile')"
+                >
+                  eETF
+                </NButton>
+                <NButton
+                  v-if="yahooLink(item)"
+                  class="ext"
+                  tag="a"
+                  size="tiny"
+                  quaternary
+                  :href="yahooLink(item)"
+                  target="_blank"
+                  rel="noopener"
+                  :title="t('table.yahooFinance')"
+                >
+                  Y!
+                </NButton>
+                <NButton
+                  class="icon"
+                  size="tiny"
+                  quaternary
+                  :loading="item.symbol === refreshingSymbol"
+                  :disabled="item.symbol === refreshingSymbol"
+                  :title="t('table.refresh')"
+                  @click="emit('refresh', item)"
+                >
+                  ↻
+                </NButton>
+                <NButton
+                  class="icon"
+                  size="tiny"
+                  quaternary
+                  type="error"
+                  :title="t('table.remove')"
+                  @click="emit('remove', item)"
+                >
+                  ✕
+                </NButton>
+              </td>
+            </tr>
+            <tr v-if="isOpen(item)" :id="`drawer-${item.symbol}`" class="drawer-row">
+              <td :colspan="columns.length + 1">
+                <InstrumentDrilldown
+                  :item="item"
+                  :busy="item.symbol === savingSymbol"
+                  :field-options="fieldOptions"
+                  @commit="emit('override', { item, patch: $event })"
+                />
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
@@ -400,10 +461,57 @@ tbody tr {
   &.acc { color: $color-accent; background: token(--accent, 0.15); }
 }
 .sym { font-weight: 600; }
-.name { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name { max-width: 260px; }
 .ccy { color: $color-muted; font-size: 0.75rem; margin-left: 0.2rem; }
 
 .isin-cell { white-space: nowrap; }
+
+/*
+ * Kennung öffnet die Zeile (ux-standards): ein zurückgesetzter Knopf, der wie
+ * der bisherige Text aussieht — Markierung erst beim Überfahren/Fokus, eine
+ * gepunktete Linie statt einer dauerhaften Unterstreichung. Bei zwanzig Zeilen
+ * wäre jede Kennung sonst ein durchgehend blauer Verweis.
+ */
+.row-toggle {
+  display: inline;
+  max-width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover, &:focus-visible {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+  }
+}
+
+// In der Namensspalte übernimmt der Knopf die Kürzung, die vorher an der
+// Zelle selbst hing — die Zelle bleibt nur noch der Breitenrahmen dafür.
+.name .row-toggle {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Die Schublade (Task 8): eigene Zeile unter der Instrumentenzeile, über die
+// volle Spaltenbreite. Kein Zeilen-Hover/-Klick wie bei der Instrumentenzeile
+// — sie öffnet nichts, es gibt nichts zu klicken außer den Bedienelementen
+// darin.
+.drawer-row {
+  cursor: default;
+  &:hover { background: none; }
+
+  td {
+    padding: 0;
+    border-bottom: 1px solid token(--border-default, 0.5);
+  }
+}
 
 // Varianten der globalen .badge-Pill
 .badge.type {

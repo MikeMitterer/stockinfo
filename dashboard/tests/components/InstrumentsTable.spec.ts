@@ -135,3 +135,85 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
     expect(wrapper.find('.empty').exists()).toBe(true)
   })
 })
+
+/*
+ * Konflikt gelöst wie im Plan festgehalten: Die Zeile öffnet weiterhin das
+ * Chart (`@click`), nur Symbol und Name klinken sich mit `@click.stop` aus und
+ * öffnen stattdessen die Schublade.
+ */
+describe('InstrumentsTable — Schublade', () => {
+  it('öffnet die Schublade beim Klick auf das Symbol, ohne das Chart zu öffnen', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+
+    await wrapper.get('.row-toggle').trigger('click')
+
+    expect(wrapper.emitted('select')).toBeUndefined()
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(true)
+  })
+
+  it('öffnet die Schublade auch beim Klick auf den Namen', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+
+    await wrapper.get('.name .row-toggle').trigger('click')
+
+    expect(wrapper.emitted('select')).toBeUndefined()
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(true)
+  })
+
+  it('markiert den geöffneten Zustand am Knopf', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+    const toggle = wrapper.get('.row-toggle')
+
+    expect(toggle.attributes('aria-expanded')).toBe('false')
+    await toggle.trigger('click')
+    expect(toggle.attributes('aria-expanded')).toBe('true')
+  })
+
+  it('schließt die Schublade beim erneuten Klick', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+    const toggle = wrapper.get('.row-toggle')
+
+    await toggle.trigger('click')
+    await toggle.trigger('click')
+
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(false)
+  })
+
+  it('öffnet weiterhin das Chart bei einem Klick außerhalb von Symbol und Name', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+
+    await wrapper.get('tbody tr').trigger('click')
+
+    expect(wrapper.emitted('select')).toHaveLength(1)
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(false)
+  })
+
+  it('spannt die Schublade über alle Spalten der Kopfzeile', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+
+    await wrapper.get('.row-toggle').trigger('click')
+
+    const headCount = wrapper.findAll('thead th').length
+    expect(wrapper.get('.drawer-row td').attributes('colspan')).toBe(String(headCount))
+  })
+
+  it('reicht ein override aus der Schublade mit dem betroffenen Instrument nach oben durch', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+    await wrapper.get('.row-toggle').trigger('click')
+
+    const drilldown = wrapper.findComponent({ name: 'InstrumentDrilldown' })
+    drilldown.vm.$emit('commit', { provider: 'Vanguard' })
+
+    expect(wrapper.emitted('override')?.[0]?.[0]).toEqual({
+      item: base,
+      patch: { provider: 'Vanguard' },
+    })
+  })
+})
