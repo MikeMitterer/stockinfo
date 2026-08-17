@@ -202,7 +202,25 @@ const selectPlaceholder = computed(() => t(FIELD_LABEL_KEY[props.field]))
  * müsste.
  */
 function onSelect(value: string | null): void {
-  commit({ [props.field]: value } as Partial<InstrumentOverrides>)
+  commit({ [props.field]: normalizeText(value) } as Partial<InstrumentOverrides>)
+}
+
+/**
+ * Bringt einen getippten Text in die Form, die das Backend annimmt.
+ *
+ * Betrifft nur die Fondswährung: Sie ist freie Eingabe, das Backend verlangt
+ * aber `^[A-Z]{3}$` (`InstrumentOverrides.fund_currency`). Getipptes „usd"
+ * lief bislang in eine 422 und endete als generischer Fehler-Toast, aus dem
+ * nicht hervorging, dass bloß die Schreibweise nicht passte. Die Umschrift
+ * hier erspart die Sackgasse — sie ist verlustfrei, ein Währungscode hat keine
+ * bedeutungstragende Kleinschreibung.
+ *
+ * Die drei anderen Textfelder bleiben, wie sie getippt wurden: „iShares" ist
+ * ein Eigenname, kein Code.
+ */
+function normalizeText(value: string | null): string | null {
+  if (value === null || props.field !== 'fund_currency') return value
+  return value.trim().toUpperCase()
 }
 </script>
 

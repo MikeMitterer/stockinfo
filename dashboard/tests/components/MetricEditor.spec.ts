@@ -112,6 +112,29 @@ describe('MetricEditor', () => {
     expect(wrapper.emitted('commit')?.[0]?.[0]).toEqual({ provider: 'Xtrackers' })
   })
 
+  /*
+   * Die Fondswährung ist freie Eingabe, das Backend verlangt aber
+   * `^[A-Z]{3}$` (`InstrumentOverrides.fund_currency`). Getipptes „usd" lief
+   * bislang in eine 422 und endete als generischer Fehler-Toast — ohne einen
+   * Hinweis, dass nur die Schreibweise falsch war. Die Sackgasse fängt die
+   * Eingabe selbst ab.
+   */
+  it('hebt eine getippte Fondswährung in Großbuchstaben', async () => {
+    const wrapper = mountEditor(makeInstrument({ fund_currency: null }), 'fund_currency')
+
+    await wrapper.findComponent(NSelect).vm.$emit('update:value', ' usd ')
+
+    expect(wrapper.emitted('commit')?.[0]?.[0]).toEqual({ fund_currency: 'USD' })
+  })
+
+  it('lässt die anderen Textfelder in ihrer Schreibweise', () => {
+    const wrapper = mountEditor(makeInstrument({ provider: null }), 'provider')
+
+    wrapper.findComponent(NSelect).vm.$emit('update:value', 'iShares')
+
+    expect(wrapper.emitted('commit')?.[0]?.[0]).toEqual({ provider: 'iShares' })
+  })
+
   it('sperrt das Auswahlfeld bei einem verdeckten Eintrag, bietet aber das Entfernen an', () => {
     const wrapper = mountEditor(
       makeInstrument({ provider: 'iShares', manual_provider: 'Vanguard', shadowed_fields: ['provider'] }),
