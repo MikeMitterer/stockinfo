@@ -109,6 +109,24 @@ function toggleDrawer(item: InstrumentSummary): void {
   openSymbol.value = isOpen(item) ? null : item.symbol
 }
 
+/**
+ * Escape schließt die offene Schublade — der Ausweg, den die Teststrategie
+ * verlangt.
+ *
+ * Der Handler sitzt am Wurzelelement der Komponente, nicht am `document`:
+ * Öffnen und Schließen betreffen nur diese Tabelle, und ein globaler Listener
+ * müsste eigens wieder abgeräumt werden. Aus dem Knopf wie aus der Schublade
+ * steigt die Taste ohnehin hierher hoch.
+ *
+ * Hat ein Bedienelement darin die Taste bereits verarbeitet (`UxInlineNumber`
+ * verwirft damit seinen Entwurf), bleibt die Schublade offen: Ein Tastendruck
+ * soll nicht zwei Dinge auf einmal wegnehmen.
+ */
+function onEscape(event: KeyboardEvent): void {
+  if (event.defaultPrevented) return
+  openSymbol.value = null
+}
+
 /** Baut den extraETF-Profil-Link (ISIN-basiert, ETF/Stock unterschieden). */
 function extraetfLink(item: InstrumentSummary): string {
   if (!item.isin) return ''
@@ -132,7 +150,7 @@ function price(value: number | null): string {
 </script>
 
 <template>
-  <section class="table card">
+  <section class="table card" @keydown.esc="onEscape">
     <div class="table__head" :class="{ 'table__head--compact': compact }">
       <h2>{{ t('table.title') }}</h2>
       <div v-if="compact && instruments.length > 0" class="tsort">
