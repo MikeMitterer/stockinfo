@@ -1,5 +1,5 @@
 import { ref, type Ref } from 'vue'
-import { safeStorage } from '@mikemitterer/ux-foundation'
+import { safeStorage } from '@mmit/ux-foundation'
 
 import { i18n } from '../i18n'
 import type { InstrumentSummary } from '../types'

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { UxInfoHint } from '@mikemitterer/ux-foundation'
+import { UxInfoHint } from '@mmit/ux-foundation'
 
 import { tabHref } from '../composables/useHashTab'
 import type { SettingsTab, TabKey } from '../types'

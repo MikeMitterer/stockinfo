@@ -3,7 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton, NSelect } from 'naive-ui'
 
-import { useIsCompact } from '@mikemitterer/ux-foundation'
+import { useIsCompact } from '@mmit/ux-foundation'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
 import InfoHint from './InfoHint.vue'
 import InstrumentCard from './InstrumentCard.vue'

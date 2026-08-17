@@ -1,7 +1,7 @@
 @use './variables' as *;
 
 // Paletten, Skalen, Status- und Assetfarben stehen im Fundament
-// (`@mikemitterer/ux-foundation/styles/tokens.css`, eingebunden in `main.ts`).
+// (`@mmit/ux-foundation/styles/tokens.css`, eingebunden in `main.ts`).
 // Hier bleibt nur, was diese App über sich selbst weiß.
 //
 // Der Reset kommt ebenfalls von dort — was hier an `button`, `a` und `body`

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { UxAppShell, useNotifier } from '@mikemitterer/ux-foundation'
+import { UxAppShell, useNotifier } from '@mmit/ux-foundation'
 
 import AnalysisPanel from './AnalysisPanel.vue'
 import AppHeader from './AppHeader.vue'

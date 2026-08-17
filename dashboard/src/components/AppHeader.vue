@@ -7,7 +7,7 @@ import {
   UxTopbar,
   buildBarNaiveOverrides,
   type NavIconName,
-} from '@mikemitterer/ux-foundation'
+} from '@mmit/ux-foundation'
 
 import { useNaiveOverrides } from '../composables/useNaiveOverrides'
 import type { TabKey } from '../types'

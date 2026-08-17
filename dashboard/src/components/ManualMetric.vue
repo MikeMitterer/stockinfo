@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { UxInlineNumber } from '@mikemitterer/ux-foundation'
+import { UxInlineNumber } from '@mmit/ux-foundation'
 
 import { manualValue, overrideState } from '../composables/useOverrides'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
