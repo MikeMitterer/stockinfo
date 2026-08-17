@@ -134,7 +134,7 @@ def init_db(database_path: str) -> None:
 
 def _migrate(connection: sqlite3.Connection) -> None:
     """Ergänzt fehlende Spalten/Indizes in bestehenden Datenbanken (idempotent)."""
-    _ergaenze_spalten(
+    _add_missing_columns(
         connection,
         "instruments",
         (
@@ -146,7 +146,7 @@ def _migrate(connection: sqlite3.Connection) -> None:
     )
     # Die Override-Tabelle wuchs mit: Nachgetragen wird jetzt alles, was
     # justETF beisteuert — nicht mehr nur die drei aus T-09.
-    _ergaenze_spalten(
+    _add_missing_columns(
         connection,
         "instrument_overrides",
         (
@@ -167,14 +167,14 @@ def _migrate(connection: sqlite3.Connection) -> None:
     )
 
 
-def _ergaenze_spalten(
-    connection: sqlite3.Connection, tabelle: str, spalten: tuple[tuple[str, str], ...]
+def _add_missing_columns(
+    connection: sqlite3.Connection, table: str, columns: tuple[tuple[str, str], ...]
 ) -> None:
     """Fügt fehlende Spalten hinzu; vorhandene bleiben unangetastet."""
-    vorhanden = {row["name"] for row in connection.execute(f"PRAGMA table_info({tabelle})")}
-    for name, typ in spalten:
-        if name not in vorhanden:
-            connection.execute(f"ALTER TABLE {tabelle} ADD COLUMN {name} {typ}")
+    existing = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})")}
+    for column, ddl in columns:
+        if column not in existing:
+            connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
 
 
 def _dedupe_symbols(connection: sqlite3.Connection) -> None:

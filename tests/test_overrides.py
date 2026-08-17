@@ -119,13 +119,17 @@ def test_werte_ueberleben_das_erneute_lesen(repo: QuoteRepository) -> None:
 
     repo.set_overrides(instrument_id, 0.25, 30.0, True, "2026-08-17T10:00:00+00:00")
 
-    assert repo.get_overrides(instrument_id) == {
-        "instrument_id": instrument_id,
-        "ter": 0.25,
-        "volatility": 30.0,
-        "accumulating": 1,
-        "updated_at": "2026-08-17T10:00:00+00:00",
-    }
+    # Geprüft wird, dass die geschriebenen Werte beim Lesen wiederkommen —
+    # nicht die exakte Feldmenge des Dicts. Die Override-Tabelle wächst
+    # (T-15) um fünf weitere Spalten, die `get_overrides` per `SELECT *`
+    # mitliefert; die genaue Feldmenge deckt ab Task 3 ein eigener Test ab.
+    gespeichert = repo.get_overrides(instrument_id)
+    assert gespeichert is not None
+    assert gespeichert["instrument_id"] == instrument_id
+    assert gespeichert["ter"] == 0.25
+    assert gespeichert["volatility"] == 30.0
+    assert gespeichert["accumulating"] == 1
+    assert gespeichert["updated_at"] == "2026-08-17T10:00:00+00:00"
 
 
 def test_ein_kurs_update_ruehrt_die_manuellen_werte_nicht_an(
