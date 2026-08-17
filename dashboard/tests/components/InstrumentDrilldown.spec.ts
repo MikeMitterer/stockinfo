@@ -57,4 +57,23 @@ describe('InstrumentDrilldown', () => {
 
     expect(wrapper.emitted('commit')?.[0]?.[0]).toEqual({ provider: 'Vanguard' })
   })
+
+  it('reicht die Vorschläge je Feld an den passenden Editor durch', () => {
+    const wrapper = mount(InstrumentDrilldown, {
+      global: { plugins: [i18n] },
+      props: {
+        item: makeInstrument({ provider: null, fund_currency: null }),
+        fieldOptions: { provider: ['Vanguard', 'iShares'], fund_currency: ['EUR', 'USD'] },
+      },
+    })
+
+    const editors = wrapper.findAllComponents({ name: 'MetricEditor' })
+    const providerEditor = editors.find((editor) => editor.props('field') === 'provider')
+    const currencyEditor = editors.find((editor) => editor.props('field') === 'fund_currency')
+    const replicationEditor = editors.find((editor) => editor.props('field') === 'replication')
+
+    expect(providerEditor?.props('options')).toEqual(['Vanguard', 'iShares'])
+    expect(currencyEditor?.props('options')).toEqual(['EUR', 'USD'])
+    expect(replicationEditor?.props('options')).toBeUndefined()
+  })
 })

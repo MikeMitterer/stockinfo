@@ -216,4 +216,21 @@ describe('InstrumentsTable — Schublade', () => {
       patch: { provider: 'Vanguard' },
     })
   })
+
+  it('reicht fieldOptions unverändert an die Schublade durch', async () => {
+    stubMatchMedia(false)
+    const wrapper = mount(InstrumentsTable, {
+      props: {
+        instruments, selectedSymbol: null, refreshingSymbol: null, savingSymbol: null,
+        extraetfEtfUrl: '', extraetfStockUrl: '', yahooUrl: '',
+        fieldOptions: { provider: ['Vanguard', 'iShares'] },
+      },
+      global: { plugins: [i18n] },
+    })
+    await wrapper.get('.row-toggle').trigger('click')
+
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).props('fieldOptions')).toEqual({
+      provider: ['Vanguard', 'iShares'],
+    })
+  })
 })

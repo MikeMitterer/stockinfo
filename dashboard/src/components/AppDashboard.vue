@@ -27,6 +27,7 @@ import { useOverrides } from '../composables/useOverrides'
 import { useRefresh } from '../composables/useRefresh'
 import type { InstrumentOverrides, InstrumentSummary, RangeKey } from '../types'
 import { currenciesFromExchanges } from '../utils/currencies'
+import { buildFieldOptions } from '../utils/fieldOptions'
 
 /**
  * Der eigentliche Inhalt des Dashboards.
@@ -43,6 +44,12 @@ const { env, load: loadEnv } = useEnvironment()
 const { data: exchanges, load: loadExchanges } = useExchanges()
 const fxCurrencies = computed(() => currenciesFromExchanges(exchanges.value))
 const { instruments, load: loadInstruments, error: instrumentsError } = useInstruments()
+/**
+ * Vorschlagslisten der Schublade (Task 8) — einmal hier gebildet, nicht in
+ * jeder Tabellen- oder Kartenzeile neu: Bei zwanzig Zeilen wäre das sonst
+ * zwanzigmal dieselbe Ableitung aus Instrumentenliste und Börsentabelle.
+ */
+const metricFieldOptions = computed(() => buildFieldOptions(instruments.value, exchanges.value))
 const {
   load: loadHistory,
   loading: historyLoading,
@@ -244,6 +251,7 @@ function closeChart(): void {
           :extraetf-etf-url="env?.extraetf_etf_url ?? ''"
           :extraetf-stock-url="env?.extraetf_stock_url ?? ''"
           :yahoo-url="env?.yahoo_url ?? ''"
+          :field-options="metricFieldOptions"
           @select="select"
           @refresh="onRefreshOne"
           @remove="onRemove"

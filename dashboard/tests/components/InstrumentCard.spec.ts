@@ -74,6 +74,23 @@ describe('InstrumentCard', () => {
     expect(wrapper.emitted('override')?.[0]?.[0]).toEqual({ provider: 'Vanguard' })
   })
 
+  it('reicht fieldOptions unverändert an die Schublade durch', async () => {
+    const wrapper = mount(InstrumentCard, {
+      props: {
+        item: makeInstrument(),
+        selected: false, refreshing: false, saving: false,
+        extraetfUrl: '', yahooUrl: '',
+        fieldOptions: { provider: ['Vanguard', 'iShares'] },
+      },
+      global: { plugins: [i18n] },
+    })
+    await wrapper.find('.icard__toggle').trigger('click')
+
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).props('fieldOptions')).toEqual({
+      provider: ['Vanguard', 'iShares'],
+    })
+  })
+
   it('emittiert select beim Antippen der Karte', async () => {
     const wrapper = mountCard()
     await wrapper.find('.icard__head').trigger('click')
