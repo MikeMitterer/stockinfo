@@ -386,11 +386,11 @@ class CachedQuoteService:
         """
         instrument = self._require_instrument(symbol)
         stored = self._repository.get_overrides(instrument["id"]) or {}
-        gespeichert = {feld: stored.get(feld) for feld in OVERRIDE_FIELDS}
-        gespeichert["accumulating"] = _as_bool(gespeichert["accumulating"])
-        return gespeichert
+        result = {field: stored.get(field) for field in OVERRIDE_FIELDS}
+        result["accumulating"] = _as_bool(result["accumulating"])
+        return result
 
-    def set_overrides(self, symbol: str, werte: dict[str, object]) -> dict:
+    def set_overrides(self, symbol: str, values: dict[str, object]) -> dict:
         """Schreibt die manuellen Kennzahlen eines Instruments und liest sie zurück.
 
         Alle acht Werte auf einmal — ``None`` (bzw. ein fehlendes Feld) löscht.
@@ -402,7 +402,7 @@ class CachedQuoteService:
 
         Args:
             symbol: Yahoo-Symbol des Instruments.
-            werte: Werte je Feld aus ``OVERRIDE_FIELDS``; fehlende gelten als
+            values: Werte je Feld aus ``OVERRIDE_FIELDS``; fehlende gelten als
                 ``None`` und löschen damit.
 
         Raises:
@@ -410,7 +410,7 @@ class CachedQuoteService:
         """
         instrument = self._require_instrument(symbol)
         self._repository.set_overrides(
-            instrument["id"], werte, datetime.now(timezone.utc).isoformat()
+            instrument["id"], values, datetime.now(timezone.utc).isoformat()
         )
         return self.get_overrides(symbol)
 

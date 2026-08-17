@@ -232,18 +232,18 @@ class _FakeService:
     """Merkt sich, was geschrieben wurde — der Endpoint soll nur durchreichen."""
 
     def __init__(self) -> None:
-        self.gespeichert: dict = dict.fromkeys(OVERRIDE_FIELDS)
+        self.stored: dict = dict.fromkeys(OVERRIDE_FIELDS)
 
     def get_overrides(self, symbol: str) -> dict:
         if symbol.startswith("XX"):
             raise InstrumentNotFoundError(symbol)
-        return dict(self.gespeichert)
+        return dict(self.stored)
 
-    def set_overrides(self, symbol: str, werte: dict) -> dict:
+    def set_overrides(self, symbol: str, values: dict) -> dict:
         if symbol.startswith("XX"):
             raise InstrumentNotFoundError(symbol)
-        self.gespeichert = {feld: werte.get(feld) for feld in OVERRIDE_FIELDS}
-        return dict(self.gespeichert)
+        self.stored = {field: values.get(field) for field in OVERRIDE_FIELDS}
+        return dict(self.stored)
 
 
 @pytest.fixture
@@ -584,16 +584,16 @@ def test_die_neuen_felder_weisen_unsinn_ab(client: TestClient, nutzlast: dict) -
 
 
 def test_endpoint_schreibt_und_liest_alle_acht(client: TestClient) -> None:
-    antwort = client.put(
+    response = client.put(
         "/instruments/by-symbol/GOLD.SG/overrides",
         json={"provider": "iShares", "fund_domicile": "Irland", "ter": 0.25},
     )
 
-    assert antwort.status_code == 200
-    gelesen = client.get("/instruments/by-symbol/GOLD.SG/overrides").json()
-    assert gelesen["provider"] == "iShares"
-    assert gelesen["fund_domicile"] == "Irland"
-    assert gelesen["ter"] == 0.25
+    assert response.status_code == 200
+    fetched = client.get("/instruments/by-symbol/GOLD.SG/overrides").json()
+    assert fetched["provider"] == "iShares"
+    assert fetched["fund_domicile"] == "Irland"
+    assert fetched["ter"] == 0.25
 
 
 def test_der_rundlauf_traegt_auch_die_fondswaehrung(client: TestClient) -> None:
@@ -603,10 +603,10 @@ def test_der_rundlauf_traegt_auch_die_fondswaehrung(client: TestClient) -> None:
         json={"fund_size": 129445.0, "fund_currency": "USD", "fund_domicile": "Irland"},
     )
 
-    gelesen = client.get("/instruments/by-symbol/GOLD.SG/overrides").json()
+    fetched = client.get("/instruments/by-symbol/GOLD.SG/overrides").json()
 
-    assert gelesen["fund_currency"] == "USD"
-    assert gelesen["fund_size"] == 129445.0
+    assert fetched["fund_currency"] == "USD"
+    assert fetched["fund_size"] == 129445.0
 
 
 # ─── Der echte Dienst ────────────────────────────────────────────────────────
@@ -622,7 +622,7 @@ def test_der_echte_dienst_schreibt_und_liest_alle_acht_felder(
 ) -> None:
     """Rundlauf ohne Attrappe: echter Dienst, echtes Repository, temporäre DB."""
     repo.save_quote(_quote())
-    werte = {
+    values = {
         "ter": 0.25,
         "volatility": 30.0,
         "accumulating": True,
@@ -633,11 +633,11 @@ def test_der_echte_dienst_schreibt_und_liest_alle_acht_felder(
         "fund_currency": "USD",
     }
 
-    geschrieben = _dienst(repo).set_overrides("GOLD.SG", werte)
-    gelesen = _dienst(repo).get_overrides("GOLD.SG")
+    written = _dienst(repo).set_overrides("GOLD.SG", values)
+    fetched = _dienst(repo).get_overrides("GOLD.SG")
 
-    assert geschrieben == werte
-    assert gelesen == werte
+    assert written == values
+    assert fetched == values
 
 
 def test_der_echte_dienst_meldet_unbekanntes_symbol(repo: QuoteRepository) -> None:
