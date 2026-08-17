@@ -609,7 +609,7 @@ def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
     Fiel yfinance ohne Währung aus, rutschte bisher die Fondswährung in
     `currency` — bei einem Euro-Kurs stand dann USD daneben.
     """
-    ohne_waehrung = RawQuote(
+    quote_without_currency = RawQuote(
         symbol="VGWL.DE",
         price=160.98,
         quote_time="2026-07-12T17:35:00+00:00",
@@ -618,7 +618,7 @@ def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
         type="etf",
     )
     service = QuoteService(
-        FakeQuoteProvider(ohne_waehrung),
+        FakeQuoteProvider(quote_without_currency),
         FakeEtfProvider(EtfDetails(fund_currency="USD", fund_domicile="Ireland")),
         FakeResolver(
             ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
