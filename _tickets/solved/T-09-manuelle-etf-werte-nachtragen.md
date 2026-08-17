@@ -23,17 +23,17 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 **Voraussetzung:** Stack läuft — Backend `:8000`, Dashboard `:5173`.
 
-| # | Where | Look for | AI | Human |
-|---|---|---|:--:|---|
-| 1 | Asset ohne ETF-Quelle im UI | Felder TER/Vola/Thesaurierend sind manuell editierbar | ✅ [^1] | |
-| 2 | Nach Eingabe + Reload | Werte bleiben erhalten (aus DB gelesen, nicht überschrieben) | ✅ [^2] | |
-| 3 | Nach Auto-Refresh der Kurse | Manuelle Werte werden **nicht** von leeren Provider-Daten überschrieben | ✅ [^3] | |
-| 4 | DB | Neue Tabelle für manuelle Overrides vorhanden (Migration) | ✅ [^4] | |
-| 5 | Asset **mit** Provider-Wert, manuell etwas anderes eintragen | Angezeigt bleibt der Provider-Wert; das Merkmal daneben nennt den eigenen Wert und erklärt den Vorrang | ✅ [^5] | |
-| 6 | Feld leeren | Wert verschwindet („nicht gesetzt"), nicht „0 %" | ✅ [^6] | |
-| 7 | Unsinn schicken (TER 101, Vola −1, Text) | Endpoint antwortet 422, nichts wird gespeichert | ✅ [^7] | |
-| 8 | Mobil (< 768 px), Karte aufklappen | dieselben drei Werte sind auch dort editierbar | ✅ [^8] | |
-| 9 | Tests + Typecheck, alle drei Repos | grün | ✅ [^9] | |
+| # | Where | Look for | AI | Human          |
+|---|---|---|:--:|----------------|
+| 1 | Asset ohne ETF-Quelle im UI | Felder TER/Vola/Thesaurierend sind manuell editierbar | ✅ [^1] | ok             |
+| 2 | Nach Eingabe + Reload | Werte bleiben erhalten (aus DB gelesen, nicht überschrieben) | ✅ [^2] | ok             |
+| 3 | Nach Auto-Refresh der Kurse | Manuelle Werte werden **nicht** von leeren Provider-Daten überschrieben | ✅ [^3] | ok             |
+| 4 | DB | Neue Tabelle für manuelle Overrides vorhanden (Migration) | ✅ [^4] | ok             |
+| 5 | Asset **mit** Provider-Wert, manuell etwas anderes eintragen | Angezeigt bleibt der Provider-Wert; das Merkmal daneben nennt den eigenen Wert und erklärt den Vorrang | ✅ [^5] | ok             |
+| 6 | Feld leeren | Wert verschwindet („nicht gesetzt"), nicht „0 %" | ✅ [^6] | ok             |
+| 7 | Unsinn schicken (TER 101, Vola −1, Text) | Endpoint antwortet 422, nichts wird gespeichert | ✅ [^7] | ok              |
+| 8 | Mobil (< 768 px), Karte aufklappen | dieselben drei Werte sind auch dort editierbar | ✅ [^8] | ok             |
+| 9 | Tests + Typecheck, alle drei Repos | grün | ✅ [^9] | OK, glaube ich |
 
 ```bash
 # #4 — Schema
@@ -90,6 +90,39 @@ cd "${DEV_LOCAL}/DevWeb/StockPortfolio" && npx vitest run && npx vue-tsc -b --fo
 **Testdaten wieder entfernt:** Die beiden oben eingetragenen Werte (0,25 % bzw.
 0,90 %) sind erfunden und wurden nach der Prüfung gelöscht — die DB enthält
 keine Overrides mehr.
+
+### Nacharbeit aus der Abnahme (17.08.2026)
+
+**#1 und #5 — gepflegt wird nur, was fehlt.** Bisher war jede Zelle editierbar.
+Wer bei einem Papier mit Provider-Wert etwas eintrug, sah unverändert den alten
+Wert und daneben ein neues Merkmal — formal die Vorrang-Regel, gelesen wie ein
+Fehler. **Die Entscheidung von oben ist damit revidiert:** Liefert die Quelle
+einen Wert, ist die Zelle nicht mehr bedienbar; der Titel nennt den Grund. Die
+Regel selbst bleibt unangetastet, nur der Weg, ein verdecktes Paar überhaupt zu
+erzeugen, ist zu.
+
+Im Browser nachgemessen, alle fünf Zeilen:
+
+| Zeile | TER | Thes. |
+|---|---|---|
+| `APC.DE` (nichts vorhanden) | offen | offen |
+| `BRYN.DE` (eigener Wert) | offen | offen |
+| `EUNL.DE` (Quelle) | **zu** | **zu** |
+| `VGWL.DE` (Quelle verdeckt Eingabe) | **zu** | zu |
+
+**Folge, die bleibt:** Ein bereits verdeckter Eintrag lässt sich über die
+Oberfläche nicht mehr entfernen — in der laufenden DB betrifft das `VGWL.DE`
+(manuell 0,10 % unter Provider-0,14 %). Weg geht er über den Endpoint:
+`curl -X PUT …/instruments/by-symbol/VGWL.DE/overrides -d '{}'`.
+
+**#7 — TER-Grenze von 100 auf 5 %.** 50 % war gültig und ist keine TER, sondern
+ein Vertipper. 5 % lässt jeden handelbaren Fall zu (ETFs 0,03–1 %, aktive Fonds
+bis rund 3 %) und fängt die Zehnerpotenz ab. Gesetzt in `models.py` **und** am
+Feld — der Endpoint darf sich nicht auf die Oberfläche verlassen. Die
+Parametrisierung prüft jetzt 50 und 5,1 als 422, dazu 5 als gültig.
+
+Die Vola-Grenze (500 %) blieb, weil sie niemand beanstandet hat; realistisch
+wären eher 200.
 
 ---
 

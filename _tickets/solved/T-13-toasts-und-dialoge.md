@@ -26,20 +26,20 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 
 **Voraussetzung:** Stack läuft (`make dev-up`) — Backend `:8000`, Dashboard `:5173`.
 
-| # | Where | Look for | AI | Human |
-|---|---|---|:--:|---|
-| 1 | Backend stoppen, „Alle aktualisieren" | Meldung als **Toast**; das Layout darunter springt **nicht** | ✅ [^1] | |
-| 2 | Toast erscheint | bleibt stehen, bis er weggeklickt wird — Fehler verschwinden nicht von selbst | ✅ [^2] | |
-| 3 | Backend wieder starten, erneut laden | Meldung verschwindet, sobald ihre **Ursache** entfällt | ✅ [^3] | |
-| 4 | mehrere Fehler nacheinander | keine Stapel-Lawine; höchstens drei gleichzeitig | ✅ [^4] | |
-| 5 | Asset löschen | Rückfrage als `NModal`, Escape schließt, Fokus liegt auf „Abbrechen" | ✅ [^5] | |
-| 6 | JSON ansehen | `NModal`, Inhalt scrollt, Kopieren funktioniert weiter | ✅ [^6] | |
-| 7 | Theme `sepia` (helle Fläche, dunkle Leisten) | Kopf- und Statuszeile lesbar, Wortmarke sichtbar (offen aus T-12 #4) | ⚠️ [^7] | |
-| 8 | Fachbegriff (z.B. `strict_exchange`) | „?"-Hinweis daneben, darin bis zu zwei Verweise: „Mehr dazu" und „Zur Einstellung →" (offen aus **T-11e #3**) | ✅ [^8] | |
-| 9 | Klick auf „Zur Einstellung →" | springt auf den zugehörigen Reiter, nicht nur auf die Seite | ✅ [^9] | |
-| 10 | `npx vitest run` + `vue-tsc -b` | Tests grün, Typecheck sauber | ✅ [^10] | |
-| 11 | Toast steht, Maus auf „Alle aktualisieren" | der Knopf ist anklickbar, nicht von der Meldung verdeckt | ✅ [^11] | |
-| 12 | Dialog, Toast und „?"-Hinweis, hell **und** dunkel | jedes trägt einen sichtbaren Schatten, der Dialog den kräftigeren | ✅ [^12] | |
+| # | Where | Look for | AI | Human                                    |
+|---|---|---|:--:|------------------------------------------|
+| 1 | Backend stoppen, „Alle aktualisieren" | Meldung als **Toast**; das Layout darunter springt **nicht** | ✅ [^1] | OK                                       |
+| 2 | Toast erscheint | bleibt stehen, bis er weggeklickt wird — Fehler verschwinden nicht von selbst | ✅ [^2] | ok                                       |
+| 3 | Backend wieder starten, erneut laden | Meldung verschwindet, sobald ihre **Ursache** entfällt | ✅ [^3] | ok                                       |
+| 4 | mehrere Fehler nacheinander | keine Stapel-Lawine; höchstens drei gleichzeitig | ✅ [^4] | ok - nich nachvollzogen, aber glaube ich |
+| 5 | Asset löschen | Rückfrage als `NModal`, Escape schließt, Fokus liegt auf „Abbrechen" | ✅ [^5] | ok                                       |
+| 6 | JSON ansehen | `NModal`, Inhalt scrollt, Kopieren funktioniert weiter | ✅ [^6] | ok                                       |
+| 7 | Theme `sepia` (helle Fläche, dunkle Leisten) | Kopf- und Statuszeile lesbar, Wortmarke sichtbar (offen aus T-12 #4) | ⚠️ [^7] | ok                                       |
+| 8 | Fachbegriff (z.B. `strict_exchange`) | „?"-Hinweis daneben, darin bis zu zwei Verweise: „Mehr dazu" und „Zur Einstellung →" (offen aus **T-11e #3**) | ✅ [^8] | OK                                       |
+| 9 | Klick auf „Zur Einstellung →" | springt auf den zugehörigen Reiter, nicht nur auf die Seite | ✅ [^9] | ok                                       |
+| 10 | `npx vitest run` + `vue-tsc -b` | Tests grün, Typecheck sauber | ✅ [^10] | Glaube ich                               |
+| 11 | Toast steht, Maus auf „Alle aktualisieren" | der Knopf ist anklickbar, nicht von der Meldung verdeckt | ✅ [^11] | OK, nicht verifiziert                    |
+| 12 | Dialog, Toast und „?"-Hinweis, hell **und** dunkel | jedes trägt einen sichtbaren Schatten, der Dialog den kräftigeren | ✅ [^12] | ok, wird schon passen                    |
 
 ```bash
 cd "${DEV_LOCAL}/DevWeb/Production/StockInfo/dashboard"
