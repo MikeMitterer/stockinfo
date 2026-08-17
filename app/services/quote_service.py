@@ -149,7 +149,9 @@ class QuoteService:
         response.replication = details.replication
         response.fund_size = details.fund_size
         response.name = response.name or details.name
-        response.currency = response.currency or details.currency
+        # Kein Rückfall auf die Handelswährung: Zwei Begriffe, zwei Felder.
+        response.fund_currency = details.fund_currency
+        response.fund_domicile = details.fund_domicile
         response.volatility = details.volatility
         response.accumulating = details.accumulating
         response.source = "yfinance+justetf"

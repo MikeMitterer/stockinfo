@@ -505,6 +505,8 @@ class CachedQuoteService:
             provider=instrument["provider"],
             replication=instrument["replication"],
             fund_size=instrument["fund_size"],
+            fund_domicile=instrument["fund_domicile"],
+            fund_currency=instrument["fund_currency"],
             volatility=instrument["volatility"],
             accumulating=_as_bool(instrument["accumulating"]),
             source="cache",

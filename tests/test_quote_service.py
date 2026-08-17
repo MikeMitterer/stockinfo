@@ -152,6 +152,35 @@ def test_etf_uebernimmt_volatilitaet_und_thesaurierend_von_justetf() -> None:
     assert result.accumulating is True
 
 
+def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
+    """Zwei Begriffe, zwei Felder.
+
+    Fiel yfinance ohne Währung aus, rutschte bisher die Fondswährung in
+    `currency` — bei einem Euro-Kurs stand dann USD daneben.
+    """
+    ohne_waehrung = RawQuote(
+        symbol="VGWL.DE",
+        price=160.98,
+        quote_time="2026-07-12T17:35:00+00:00",
+        currency=None,
+        volume=1000,
+        type="etf",
+    )
+    service = QuoteService(
+        FakeQuoteProvider(ohne_waehrung),
+        FakeEtfProvider(EtfDetails(fund_currency="USD", fund_domicile="Ireland")),
+        FakeResolver(
+            ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
+        ),
+    )
+
+    result = service.get_quote_by_isin("IE00B3RBWM25")
+
+    assert result.currency is None
+    assert result.fund_currency == "USD"
+    assert result.fund_domicile == "Ireland"
+
+
 def test_annualized_volatility_zu_wenig_daten_ist_none() -> None:
     assert annualized_volatility([100.0, 101.0]) is None
     assert annualized_volatility([]) is None

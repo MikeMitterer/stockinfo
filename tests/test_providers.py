@@ -69,6 +69,23 @@ def test_justetf_fehler_gibt_none(monkeypatch) -> None:
     assert JustEtfProvider().fetch_etf("IE00B3RBWM25") is None
 
 
+def test_justetf_liefert_domizil_und_fondswaehrung(monkeypatch) -> None:
+    overview = {
+        "name": "iShares Core MSCI World",
+        "fund_domicile": "Ireland",
+        "fund_currency": "USD",
+    }
+    monkeypatch.setattr(
+        justetf_module.justetf_scraping, "get_etf_overview", lambda isin, **kw: overview
+    )
+
+    details = JustEtfProvider().fetch_etf("IE00B4L5Y983")
+
+    assert details is not None
+    assert details.fund_domicile == "Ireland"
+    assert details.fund_currency == "USD"
+
+
 def test_justetf_ueberspringt_nicht_europaeische_isin(monkeypatch) -> None:
     """US-/nicht-europäische ISINs werden gar nicht erst gescraped."""
     calls: list[str] = []
