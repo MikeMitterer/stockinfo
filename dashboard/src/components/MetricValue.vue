@@ -65,7 +65,10 @@ const manualAsText = computed(() => {
   const raw = manualValue(props.item, props.field)
   if (raw === null) return ''
   if (typeof raw === 'boolean') return raw ? t('table.yes') : t('table.no')
-  return `${n(raw, DIGITS)} %`
+  // `field` ist hier immer eines der drei alten Zahlenfelder (T-15 erweitert
+  // `manualValue` generisch auf acht Felder, diese Komponente kennt nur drei).
+  if (typeof raw === 'number') return `${n(raw, DIGITS)} %`
+  return ''
 })
 
 const markTitle = computed(() => {

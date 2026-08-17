@@ -4,10 +4,34 @@ export interface InstrumentRef {
   symbol: string
 }
 
-/** Kennzahlen, die sich von Hand nachtragen lassen (T-09). */
-export type OverrideField = 'ter' | 'volatility' | 'accumulating'
+/**
+ * Kennzahlen, die sich von Hand nachtragen lassen (T-09, erweitert um die
+ * ETF-Extras aus T-15).
+ *
+ * Dieselbe Menge wie `OVERRIDE_FIELDS` im Backend (`app/models.py`) — genau
+ * das, was justETFs `get_etf_overview` beisteuert: Wo die Quelle nichts hat,
+ * springt der Mensch ein.
+ */
+export type OverrideField =
+  | 'ter'
+  | 'volatility'
+  | 'accumulating'
+  | 'provider'
+  | 'replication'
+  | 'fund_size'
+  | 'fund_domicile'
+  | 'fund_currency'
 
-export const OVERRIDE_FIELDS: OverrideField[] = ['ter', 'volatility', 'accumulating']
+export const OVERRIDE_FIELDS: OverrideField[] = [
+  'ter',
+  'volatility',
+  'accumulating',
+  'provider',
+  'replication',
+  'fund_size',
+  'fund_domicile',
+  'fund_currency',
+]
 
 /**
  * Von Hand nachgetragene Kennzahlen.
@@ -19,6 +43,11 @@ export interface InstrumentOverrides {
   ter: number | null
   volatility: number | null
   accumulating: boolean | null
+  provider: string | null
+  replication: string | null
+  fund_size: number | null
+  fund_domicile: string | null
+  fund_currency: string | null
 }
 
 export interface InstrumentSummary {
@@ -32,6 +61,8 @@ export interface InstrumentSummary {
   ter: number | null
   replication: string | null
   fund_size: number | null
+  fund_domicile: string | null
+  fund_currency: string | null
   volatility: number | null
   accumulating: boolean | null
   meta_fetched_at: string | null
@@ -49,6 +80,11 @@ export interface InstrumentSummary {
   manual_ter: number | null
   manual_volatility: number | null
   manual_accumulating: boolean | null
+  manual_provider: string | null
+  manual_replication: string | null
+  manual_fund_size: number | null
+  manual_fund_domicile: string | null
+  manual_fund_currency: string | null
   /** Kennzahlen, deren angezeigter Wert gerade von Hand kommt. */
   manual_fields: OverrideField[]
   /** Kennzahlen mit manuellem Wert, den die Quelle gerade verdeckt. */

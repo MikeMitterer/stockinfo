@@ -105,7 +105,10 @@ const manuellAlsText = computed(() => {
   const roh = manualValue(props.item, props.field)
   if (roh === null) return ''
   if (typeof roh === 'boolean') return roh ? t('table.yes') : t('table.no')
-  return `${n(roh, ZIFFERN)} %`
+  // `field` ist hier immer eines der drei alten Zahlenfelder (T-15 erweitert
+  // `manualValue` generisch auf acht Felder, diese Komponente kennt nur drei).
+  if (typeof roh === 'number') return `${n(roh, ZIFFERN)} %`
+  return ''
 })
 
 const merkmalTitel = computed(() => {

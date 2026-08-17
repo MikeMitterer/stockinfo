@@ -34,6 +34,11 @@ export function useOverrides(): {
       ter: item.manual_ter,
       volatility: item.manual_volatility,
       accumulating: item.manual_accumulating,
+      provider: item.manual_provider,
+      replication: item.manual_replication,
+      fund_size: item.manual_fund_size,
+      fund_domicile: item.manual_fund_domicile,
+      fund_currency: item.manual_fund_currency,
       ...patch,
     }
 
@@ -69,12 +74,16 @@ export function overrideState(
   return null
 }
 
-/** Der von Hand gepflegte Rohwert einer Kennzahl. */
+/**
+ * Der von Hand gepflegte Rohwert einer Kennzahl.
+ *
+ * Ohne Verzweigung über die acht Felder: `manual_<field>` heißt für jedes
+ * Feld exakt so wie sein Gegenstück in `InstrumentSummary`, der Zugriff ist
+ * also generisch möglich statt in acht gleichförmigen Zweigen.
+ */
 export function manualValue(
   item: InstrumentSummary,
   field: OverrideField,
-): number | boolean | null {
-  if (field === 'ter') return item.manual_ter
-  if (field === 'volatility') return item.manual_volatility
-  return item.manual_accumulating
+): number | boolean | string | null {
+  return item[`manual_${field}`]
 }
