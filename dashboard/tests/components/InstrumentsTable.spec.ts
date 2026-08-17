@@ -233,4 +233,44 @@ describe('InstrumentsTable — Schublade', () => {
       provider: ['Vanguard', 'iShares'],
     })
   })
+
+  /*
+   * Fix-Runde 1: `fieldOptions` kam an die Tabellen-Schublade an, aber nicht
+   * an die Karten — der `InstrumentCard`-Aufruf im kompakten Zweig hatte
+   * keine `field-options`-Bindung. Der Test oben hätte das nie auffangen
+   * können, weil er ausschließlich Desktop (`stubMatchMedia(false)`) prüft.
+   * Dieser Test führt denselben Nachweis **durch `InstrumentsTable` im
+   * kompakten Zustand** — der einzige Weg, den fehlenden Draht zu sehen.
+   */
+  it('reicht fieldOptions auch über die Kartenliste bis zur Schublade durch (mobil)', async () => {
+    stubMatchMedia(true)
+    const wrapper = mount(InstrumentsTable, {
+      props: {
+        instruments, selectedSymbol: null, refreshingSymbol: null, savingSymbol: null,
+        extraetfEtfUrl: '', extraetfStockUrl: '', yahooUrl: '',
+        fieldOptions: { provider: ['Vanguard', 'iShares'] },
+      },
+      global: { plugins: [i18n] },
+    })
+
+    await wrapper.get('.icard__toggle').trigger('click')
+
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).props('fieldOptions')).toEqual({
+      provider: ['Vanguard', 'iShares'],
+    })
+  })
+
+  it('verknüpft den Symbol-Knopf per aria-controls mit der tatsächlichen Schubladen-Zeile', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+    const toggle = wrapper.get('.row-toggle')
+
+    await toggle.trigger('click')
+
+    // Attribut-Selektor statt `#id`: Das Symbol enthält einen Punkt
+    // („APC.DE"), den ein `#id`-Selektor als Klassentrenner läse.
+    const controlsId = toggle.attributes('aria-controls')
+    expect(controlsId).toBeTruthy()
+    expect(wrapper.find(`[id="${controlsId}"]`).classes()).toContain('drawer-row')
+  })
 })

@@ -175,6 +175,7 @@ function price(value: number | null): string {
           :saving="item.symbol === savingSymbol"
           :extraetf-url="extraetfLink(item)"
           :yahoo-url="yahooLink(item)"
+          :field-options="fieldOptions"
           @select="emit('select', $event)"
           @refresh="emit('refresh', $event)"
           @remove="emit('remove', $event)"
