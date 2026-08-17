@@ -8,7 +8,7 @@ import { useTableSort, type SortKey } from '../composables/useTableSort'
 import InfoHint from './InfoHint.vue'
 import InstrumentCard from './InstrumentCard.vue'
 import IsinEditor from './IsinEditor.vue'
-import ManualMetric from './ManualMetric.vue'
+import MetricValue from './MetricValue.vue'
 import type { InstrumentOverrides, InstrumentSummary } from '../types'
 
 const props = defineProps<{
@@ -212,35 +212,13 @@ function price(value: number | null): string {
               <span class="ccy">{{ item.latest_currency ?? '' }}</span>
             </td>
             <!--
-              Die drei Kennzahlen sind an Ort und Stelle bearbeitbar (T-09) —
-              für Papiere, die nicht über justETF/extraETF laufen, gibt es
-              sonst keine Quelle dafür. `@click.stop`, weil ein Klick auf die
-              Zeile das Chart öffnet.
+              Die drei Kennzahlen sind hier nur noch zu sehen (T-09) — gepflegt
+              wird in der aufklappbaren Zeile (Task 8), nicht mehr an Ort und
+              Stelle in der Zelle.
             -->
-            <td class="num mono dim" @click.stop>
-              <ManualMetric
-                :item="item"
-                field="ter"
-                :busy="savingSymbol === item.symbol"
-                @commit="emit('override', { item, patch: $event })"
-              />
-            </td>
-            <td class="num mono dim" @click.stop>
-              <ManualMetric
-                :item="item"
-                field="volatility"
-                :busy="savingSymbol === item.symbol"
-                @commit="emit('override', { item, patch: $event })"
-              />
-            </td>
-            <td class="center" @click.stop>
-              <ManualMetric
-                :item="item"
-                field="accumulating"
-                :busy="savingSymbol === item.symbol"
-                @commit="emit('override', { item, patch: $event })"
-              />
-            </td>
+            <td class="num mono dim"><MetricValue :item="item" field="ter" /></td>
+            <td class="num mono dim"><MetricValue :item="item" field="volatility" /></td>
+            <td class="center"><MetricValue :item="item" field="accumulating" /></td>
             <td class="num mono dim">{{ item.history_count }}</td>
             <td class="actions" @click.stop>
               <NButton
