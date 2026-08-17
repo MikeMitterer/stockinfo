@@ -144,8 +144,9 @@ function onNumber(value: number | null): void {
 /**
  * Der nächste Zustand: ja → nein → nicht gesetzt → ja.
  *
- * Ausgeschrieben statt als Nachschlagetabelle — wie in `ManualMetric.vue`:
- * Ein `?? true` würde das gültige Ergebnis `null` verschlucken.
+ * Ausgeschrieben statt als Nachschlagetabelle — so stand es schon in der seit
+ * Task 8 gelöschten `ManualMetric.vue`: Ein `?? true` würde das gültige
+ * Ergebnis `null` verschlucken.
  */
 function nextAccumulating(value: boolean | null): boolean | null {
   if (value === true) return false
