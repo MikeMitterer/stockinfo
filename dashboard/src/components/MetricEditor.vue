@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { NButton, NSelect } from 'naive-ui'
 import { UxInlineNumber } from '@mmit/ux-foundation'
 
+import MetricValue from './MetricValue.vue'
 import { manualValue, overrideState } from '../composables/useOverrides'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
@@ -12,9 +13,16 @@ import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../t
  *
  * Hervorgegangen aus `ManualMetric.vue`, aber auf eine Hälfte verkleinert:
  * Den wirksamen Wert **anzuzeigen** ist seit Task 6 Sache von
- * `MetricValue.vue`; hier geht es nur ums Ändern. Dieselbe Vorrang-Regel
+ * `MetricValue.vue`; hier geht es ums Ändern. Dieselbe Vorrang-Regel
  * entscheidet, ob überhaupt etwas zu ändern ist — was die Quelle liefert,
  * gewinnt, ein eigener Wert füllt nur Lücken.
+ *
+ * Ist ein Feld gesperrt, verschwindet nur die **Bedienung** — der wirksame
+ * Wert bleibt stehen, gerendert über `MetricValue` (Nacharbeit Sichtprüfung,
+ * Befund 1). Ohne das zeigte ein gesperrtes Feld ohne eigenen Wert acht
+ * Beschriftungen und daneben nichts: kein Wert, keine Erklärung. Eine dritte
+ * Anzeige-Komponente dafür zu bauen wäre dieselbe Aussage ein zweites Mal —
+ * `MetricValue` kann das bereits.
  *
  * Acht Felder, drei Bedienarten: Zahl (`UxInlineNumber`), der Dreier-
  * Umschalter für die Thesaurierung, und Text als Auswahl mit freier Eingabe
@@ -252,6 +260,8 @@ function onSelect(value: string | null): void {
         @update:value="onSelect"
       />
     </template>
+
+    <MetricValue v-else :item="item" :field="field" />
 
     <NButton
       v-if="removable"

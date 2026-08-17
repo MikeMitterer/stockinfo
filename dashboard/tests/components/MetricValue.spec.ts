@@ -47,4 +47,31 @@ describe('MetricValue', () => {
     expect(wrapper.find('.metric--shadowed').exists()).toBe(true)
     expect(wrapper.find('.metric__mark').exists()).toBe(true)
   })
+
+  /*
+   * T-15-Nacharbeit (Befund 1): `MetricValue` wird jetzt auch im gesperrten
+   * Zweig von `MetricEditor.vue` verwendet — dort für alle acht Felder, nicht
+   * nur für die drei, die die Tabellenspalten zeigen. Ohne diese Erweiterung
+   * bliebe ein Textfeld (Anbieter, Replikationsart, …) und das Fondsvolumen
+   * dort leer.
+   */
+  it('zeigt einen Textwert unformatiert', () => {
+    const wrapper = mount(MetricValue, {
+      global: { plugins: [i18n] },
+      props: { item: makeInstrument({ provider: 'iShares' }), field: 'provider' },
+    })
+
+    expect(wrapper.text()).toContain('iShares')
+  })
+
+  it('zeigt das Fondsvolumen als Zahl ohne Prozentzeichen', () => {
+    // Fondsvolumen ist keine Prozentzahl — anders als TER und Volatilität.
+    const wrapper = mount(MetricValue, {
+      global: { plugins: [i18n] },
+      props: { item: makeInstrument({ fund_size: 500.5 }), field: 'fund_size' },
+    })
+
+    expect(wrapper.text()).toMatch(/500[.,]50/)
+    expect(wrapper.text()).not.toContain('%')
+  })
 })

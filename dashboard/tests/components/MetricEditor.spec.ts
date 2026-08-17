@@ -3,6 +3,7 @@ import { NSelect } from 'naive-ui'
 import { describe, expect, it } from 'vitest'
 
 import MetricEditor from '../../src/components/MetricEditor.vue'
+import MetricValue from '../../src/components/MetricValue.vue'
 import { i18n } from '../../src/i18n'
 import type { InstrumentSummary, OverrideField } from '../../src/types'
 import { makeInstrument } from '../fixtures/instrument'
@@ -119,5 +120,42 @@ describe('MetricEditor', () => {
 
     expect(wrapper.findComponent(NSelect).exists()).toBe(false)
     expect(wrapper.find('.metric-editor__remove').exists()).toBe(true)
+  })
+
+  /*
+   * Nacharbeit Sichtprüfung, Befund 1 (schwer): Ein gesperrtes Feld hat bisher
+   * gar nichts gerendert, sobald es keinen eigenen Wert gab — acht
+   * Beschriftungen, daneben nichts. Die bisherigen Tests prüften im
+   * gesperrten Zustand nur die **Abwesenheit** des Bedienelements; das hat
+   * genau diese Lücke verdeckt. Hier wird die **Anwesenheit** des Werts
+   * geprüft — für alle drei Bedienarten.
+   */
+  describe('zeigt im gesperrten Zustand den wirksamen Wert', () => {
+    it('für ein Zahlenfeld', () => {
+      const wrapper = mountEditor(makeInstrument({ ter: 0.2 }))
+
+      expect(wrapper.text()).toMatch(/0[.,]20\s*%/)
+    })
+
+    it('für den Umschalter', () => {
+      const wrapper = mountEditor(
+        makeInstrument({ accumulating: true, manual_accumulating: null }),
+        'accumulating',
+      )
+
+      expect(wrapper.text()).toContain(i18n.global.t('table.yes'))
+    })
+
+    it('für ein Auswahlfeld', () => {
+      const wrapper = mountEditor(makeInstrument({ provider: 'iShares' }), 'provider')
+
+      expect(wrapper.text()).toContain('iShares')
+    })
+
+    it('über `MetricValue` — keine zweite Anzeige-Komponente', () => {
+      const wrapper = mountEditor(makeInstrument({ ter: 0.2 }))
+
+      expect(wrapper.findComponent(MetricValue).exists()).toBe(true)
+    })
   })
 })

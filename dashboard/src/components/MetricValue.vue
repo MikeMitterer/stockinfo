@@ -16,6 +16,11 @@ import type { InstrumentSummary, OverrideField } from '../types'
  * Anzeige und Merkmal sind aus `ManualMetric.vue` übernommen — dort bleiben
  * sie bestehen, weil die Kartenliste (`InstrumentCard.vue`) dort noch mobil
  * pflegt.
+ *
+ * Seit der T-15-Nacharbeit (Befund 1) deckt die Komponente alle acht Felder
+ * ab, nicht mehr nur die drei Tabellenspalten: Sie steht jetzt auch im
+ * gesperrten Zweig von `MetricEditor.vue`, sonst zeigte ein gesperrtes Feld
+ * ohne eigenen Wert dort **nichts** — weder Wert noch Erklärung.
  */
 const props = defineProps<{
   item: InstrumentSummary
@@ -27,21 +32,20 @@ const { t, n } = useI18n()
 const state = computed(() => overrideState(props.item, props.field))
 
 /** Der wirksame Wert — das, was die Zelle zeigt. */
-const value = computed<number | boolean | null>(() => {
-  if (props.field === 'ter') return props.item.ter
-  if (props.field === 'volatility') return props.item.volatility
-  return props.item.accumulating
-})
+const value = computed<number | boolean | string | null>(() => props.item[props.field])
 
 const numericValue = computed(() => (typeof value.value === 'number' ? value.value : null))
+
+/** Nur TER und Volatilität sind Prozentzahlen — Fondsvolumen nicht. */
+const isPercentField = computed(() => props.field === 'ter' || props.field === 'volatility')
 
 /**
  * Kommt der gezeigte Wert wirklich aus der Quelle — nicht aus der Eingabe?
  *
- * `item.accumulating`/`item.ter`/`item.volatility` sind bereits die
- * **wirksamen** Werte (das Backend löst die Vorrang-Regel auf), deshalb
- * reicht „nicht null" allein nicht: Im Zustand `manual` ist der wirksame Wert
- * der eingetragene, und der Hinweis „Kommt aus der Quelle" wäre dann falsch.
+ * Die acht Felder in `InstrumentSummary` sind bereits die **wirksamen**
+ * Werte (das Backend löst die Vorrang-Regel auf), deshalb reicht „nicht null"
+ * allein nicht: Im Zustand `manual` ist der wirksame Wert der eingetragene,
+ * und der Hinweis „Kommt aus der Quelle" wäre dann falsch.
  */
 const fromSource = computed(() => state.value !== 'manual' && value.value !== null)
 
@@ -55,9 +59,16 @@ const fromSource = computed(() => state.value !== 'manual' && value.value !== nu
  */
 const DIGITS = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
 
+/** Formatiert eine Zahl passend zum Feld — mit Prozentzeichen nur bei ter/volatility. */
+function formatNumber(raw: number): string {
+  const formatted = n(raw, DIGITS)
+  return isPercentField.value ? `${formatted} %` : formatted
+}
+
 const display = computed(() => {
+  if (typeof value.value === 'string') return value.value
   if (numericValue.value === null) return '—'
-  return `${n(numericValue.value, DIGITS)} %`
+  return formatNumber(numericValue.value)
 })
 
 /** Der eingetragene Wert als Text — für den Hinweis, wenn die Quelle ihn verdeckt. */
@@ -65,10 +76,8 @@ const manualAsText = computed(() => {
   const raw = manualValue(props.item, props.field)
   if (raw === null) return ''
   if (typeof raw === 'boolean') return raw ? t('table.yes') : t('table.no')
-  // `field` ist hier immer eines der drei alten Zahlenfelder (T-15 erweitert
-  // `manualValue` generisch auf acht Felder, diese Komponente kennt nur drei).
-  if (typeof raw === 'number') return `${n(raw, DIGITS)} %`
-  return ''
+  if (typeof raw === 'number') return formatNumber(raw)
+  return raw
 })
 
 const markTitle = computed(() => {
