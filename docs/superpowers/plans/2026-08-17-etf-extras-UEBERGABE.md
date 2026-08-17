@@ -116,3 +116,81 @@ ohne die Aufteilung nicht aufgefallen:
   meldete der Implementierer es, statt in Nachbartasks zu greifen.
 - **Die Frontend-Typen kannten nur drei der acht Felder.** Das Backend war
   längst weiter; niemand hatte nachgezogen.
+
+---
+
+# NACHTRAG — Stand nach Sichtprüfung und Gesamtprüfung
+
+**Wichtig: Der Branch ist derzeit NICHT mergefähig.** Die Punkte unten müssen
+vorher behoben sein.
+
+## Was seit dem ersten Teil dieser Datei passiert ist
+
+1. **Der Mensch hat die Schublade angesehen** und einen schweren Fehler
+   gefunden: Bei `EUNL.DE` standen acht Beschriftungen ohne Werte. Ursache:
+   `MetricEditor` umschloss mit `v-if="editable"` **alle** Anzeige-Zweige, nicht
+   nur deren Bedienbarkeit. Gesperrte Felder rendern dadurch nichts.
+   → Behoben in `3ae5c04`, `5c2d97f`, `bea0e22` (Wert anzeigen über
+   `MetricValue`, Erklärung immer sichtbar, Layout mehrspaltig mit Fußzeile).
+
+2. **Die Gesamtprüfung des Branches** (opus, 26 Commits) kam unabhängig zum
+   selben Befund und fand weitere Abweichungen von der Spec. Urteil:
+   *nicht mergefähig*. Backend solide — Migration auf einer Kopie der echten DB
+   verlustfrei und idempotent, Kette trägt bis in jede Antwort, Währungstrennung
+   konsequent. Das Frontend erfüllte seinen Zweck nicht.
+
+3. **Ein Fix-Agent ist hängengeblieben** (600 s ohne Fortschritt), ohne zu
+   committen. Sein halbfertiger Stand lag im Arbeitsbaum; ein frischer Agent auf
+   stärkerem Modell hat übernommen.
+
+## Befunde der Gesamtprüfung und ihr Stand
+
+| # | Befund | Stand |
+|---|---|---|
+| C1 | Gesperrte Felder zeigen keinen Wert; **Regression gegen T-09**: mobil waren TER/Vola/Thes. ganz verschwunden, der haltende Test wurde in Task 8 gelöscht | behoben |
+| C2 | Zustand „verdeckt" zeigt weder eigenen noch Quellwert, nur das Kreuz | behoben |
+| I1 | `source` fehlt in der Schublade (Spec §3); Feld existiert nicht auf `InstrumentSummary` | **in Arbeit** |
+| I2 | Erklärung kennt nur 1 von 3 Gründen und **lügt** in den anderen: Aktie mit DE-ISIN → „Quelle abgefragt, nichts geliefert" (nie abgefragt); Papier ohne ISIN → „Diese ISIN liegt außerhalb" (es gibt keine) | vermutlich behoben, **verifizieren** |
+| I3 | `Escape` schließt die Schublade nicht | **offen** |
+| I4 | Vorrang-Regel steht im Frontend dreimal, je anders formuliert (Task 6/7/8) | vermutlich behoben, **verifizieren** |
+| I5 | `app/repository.py` bricht als einzige Datei die Namensregel — inkl. des öffentlichen Parameters `werte`, während der Dienst `values` sagt | **offen** |
+| M1 | `MetricValue` nahm `OverrideField`, verstand aber nur drei | behoben (verallgemeinert) |
+| M2 | Toter Kommentarverweis auf gelöschte `ManualMetric.vue` | offen/prüfen |
+| M3 | `.visually-hidden` nur scoped in `InstrumentsTable` → Merkmalstext steht sichtbar in der Zelle | offen/prüfen |
+| M4 | Vier Commits lassen die Backend-Suite rot → `git bisect` unbrauchbar | bewusst (Urteile 2/5), bleibt |
+| M5 | `types.ts` zählt die acht Felder zweimal auf; `useOverrides` baut den Payload getippt; zwei Label-Karten für dieselbe Aussage | teils offen |
+| M6 | Kein Wächter `set(OVERRIDE_FIELDS) == set(InstrumentOverrides.model_fields)` | offen |
+| M7 | `fund_currency` freie Eingabe vs. Backend `^[A-Z]{3}$` → „usd" endet im generischen Fehler-Toast | offen |
+
+## Zwei weitere Urteile (Nr. 13 und 14)
+
+13. **Layout der Schublade weicht von der Hausregel ab.** Der `ux-standards`-
+    Skill schrieb „zweispaltig: links bearbeiten, rechts nachlesen" vor. Bei acht
+    Feldern und einer Zeile Herkunft trägt das nicht. Entschieden (vom Menschen):
+    Felder mehrspaltig, Herkunft als Fußzeile. *Kosten:* weicht von der bisherigen
+    Formulierung ab — der Skill ist deshalb aktualisiert worden.
+14. **Der `ux-standards`-Skill wurde geändert**: aus der Vorschrift wurde eine
+    Entscheidungsregel („Die Aufteilung folgt dem Inhalt") mit Tabelle für vier
+    Inhaltsverhältnisse, plus zwei Lehren: *was nicht bearbeitbar ist,
+    verschwindet nicht* und *erklär die Ansicht auch im Normalfall*.
+    *Kosten:* keine — die Regel beschreibt jetzt, was tatsächlich trägt.
+
+## Warum kein Task-Review C1 gefunden hat
+
+Meine Prüfaufträge fragten im gesperrten Zustand nach „Bedienelement fehlt,
+Entfernen-Knopf da" — nie nach der **Anwesenheit** des Wertes. Die Tests prüfen
+Abwesenheit; ein Feld, das gar nichts rendert, besteht sie glänzend. Fehler in
+der Fragestellung, nicht in der Ausführung. Für künftige Sperren gilt: beides
+testen.
+
+## Nächste Schritte
+
+1. Laufenden Fix-Agenten abwarten, Ergebnis prüfen (offene Punkte oben).
+2. **Browser-Prüfung** — steht komplett aus und ist jetzt zwingend, nicht
+   optional: Werte in der Schublade sichtbar, Spaltenkanten gegen die Köpfe,
+   kein waagrechter Überhang bei 375 px, Kontrast je Theme, `NSelect`-Verhalten
+   bei getippter Neueingabe.
+3. Erneute Gesamtprüfung nach den Fixes.
+4. Tickets anlegen (T-15, voraussichtlich zwei), Verify-Matrix zweistufig —
+   Backend-Zeilen per `curl` in die KI-Spalte, Human-Spalte nur für Sichtbares.
+5. Ledger löschen: `rm -rf .superpowers/sdd/2026-08-17-etf-extras-nachtragen-und-schublade`
