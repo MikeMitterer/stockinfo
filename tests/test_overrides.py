@@ -136,6 +136,26 @@ def test_werte_ueberleben_das_erneute_lesen(repo: QuoteRepository) -> None:
     assert gespeichert["updated_at"] == "2026-08-17T10:00:00+00:00"
 
 
+def test_werte_lassen_sich_als_schluesselwort_uebergeben(repo: QuoteRepository) -> None:
+    """Die öffentliche Signatur heißt englisch — ``values``, nicht ``werte``.
+
+    `repository.py` war die einzige Datei mit deutschen Bezeichnern, und der
+    Bruch reichte bis in diese Signatur. Der Dienst darüber
+    (`CachedQuoteService.set_overrides`) nennt seinen Parameter ``values`` und
+    reicht ihn heute nur positionell weiter; wer ihn einmal benennt, bekäme
+    sonst ein `TypeError`.
+    """
+    instrument_id = repo.save_quote(_quote())
+
+    repo.set_overrides(
+        instrument_id, values={"ter": 0.25}, updated_at="2026-08-17T10:00:00+00:00"
+    )
+
+    gespeichert = repo.get_overrides(instrument_id)
+    assert gespeichert is not None
+    assert gespeichert["ter"] == 0.25
+
+
 def test_ein_kurs_update_ruehrt_die_manuellen_werte_nicht_an(
     repo: QuoteRepository,
 ) -> None:

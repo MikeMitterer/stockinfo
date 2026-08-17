@@ -208,8 +208,8 @@ class QuoteRepository:
         gehört in die Fachschicht, nicht in SQL. Sonst stünde die Regel an einer
         Stelle, die niemand liest, wenn er sie sucht.
         """
-        manuell = ",\n                   ".join(
-            f"o.{feld} AS manual_{feld}" for feld in OVERRIDE_FIELDS
+        manual = ",\n                   ".join(
+            f"o.{field} AS manual_{field}" for field in OVERRIDE_FIELDS
         )
         query = f"""
             SELECT i.*,
@@ -217,7 +217,7 @@ class QuoteRepository:
                    q.quote_time AS latest_quote_time,
                    q.currency   AS latest_currency,
                    q.fetched_at AS latest_fetched_at,
-                   {manuell},
+                   {manual},
                    (SELECT COUNT(*) FROM quotes WHERE instrument_id = i.id)
                        AS history_count
             FROM instruments i
@@ -279,7 +279,7 @@ class QuoteRepository:
             return dict(row) if row else None
 
     def set_overrides(
-        self, instrument_id: int, werte: dict[str, object], updated_at: str
+        self, instrument_id: int, values: dict[str, object], updated_at: str
     ) -> None:
         """Schreibt die manuellen Kennzahlen — immer den vollständigen Satz.
 
@@ -292,28 +292,28 @@ class QuoteRepository:
         mehr zu lesen, und jede neue Kennzahl müsste an vier Stellen nachgezogen
         werden.
         """
-        gefiltert = {feld: werte.get(feld) for feld in OVERRIDE_FIELDS}
-        gefiltert["accumulating"] = (
-            None if gefiltert["accumulating"] is None else int(bool(gefiltert["accumulating"]))
+        filtered = {field: values.get(field) for field in OVERRIDE_FIELDS}
+        filtered["accumulating"] = (
+            None if filtered["accumulating"] is None else int(bool(filtered["accumulating"]))
         )
 
         with self._connect() as connection:
-            if all(wert is None for wert in gefiltert.values()):
+            if all(value is None for value in filtered.values()):
                 connection.execute(
                     "DELETE FROM instrument_overrides WHERE instrument_id = ?",
                     (instrument_id,),
                 )
                 return
 
-            spalten = ", ".join(OVERRIDE_FIELDS)
-            platzhalter = ", ".join("?" for _ in OVERRIDE_FIELDS)
-            zuweisungen = ", ".join(f"{feld} = excluded.{feld}" for feld in OVERRIDE_FIELDS)
+            columns = ", ".join(OVERRIDE_FIELDS)
+            placeholders = ", ".join("?" for _ in OVERRIDE_FIELDS)
+            assignments = ", ".join(f"{field} = excluded.{field}" for field in OVERRIDE_FIELDS)
             connection.execute(
-                f"INSERT INTO instrument_overrides (instrument_id, {spalten}, updated_at) "
-                f"VALUES (?, {platzhalter}, ?) "
-                f"ON CONFLICT(instrument_id) DO UPDATE SET {zuweisungen}, "
+                f"INSERT INTO instrument_overrides (instrument_id, {columns}, updated_at) "
+                f"VALUES (?, {placeholders}, ?) "
+                f"ON CONFLICT(instrument_id) DO UPDATE SET {assignments}, "
                 "updated_at = excluded.updated_at",
-                (instrument_id, *(gefiltert[feld] for feld in OVERRIDE_FIELDS), updated_at),
+                (instrument_id, *(filtered[field] for field in OVERRIDE_FIELDS), updated_at),
             )
 
     def set_volatility(self, instrument_id: int, volatility: float) -> None:

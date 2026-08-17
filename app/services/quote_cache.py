@@ -410,7 +410,9 @@ class CachedQuoteService:
         """
         instrument = self._require_instrument(symbol)
         self._repository.set_overrides(
-            instrument["id"], values, datetime.now(timezone.utc).isoformat()
+            instrument["id"],
+            values=values,
+            updated_at=datetime.now(timezone.utc).isoformat(),
         )
         return self.get_overrides(symbol)
 
