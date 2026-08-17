@@ -6,6 +6,7 @@ import { UxInlineNumber } from '@mmit/ux-foundation'
 
 import MetricValue from './MetricValue.vue'
 import { manualValue, sourceProvides } from '../composables/useOverrides'
+import { FIELD_LABEL_KEY } from '../utils/fieldLabels'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 /**
@@ -184,18 +185,15 @@ const selectOptions = computed(() =>
   (props.options ?? []).map((value) => ({ label: value, value })),
 )
 
-/** Katalog-Schlüssel der Feldbeschriftung — als Platzhalter im leeren Auswahlfeld. */
-const TEXT_FIELD_LABEL_KEY: Partial<Record<OverrideField, string>> = {
-  provider: 'overrides.fields.provider',
-  replication: 'overrides.fields.replication',
-  fund_domicile: 'overrides.fields.fundDomicile',
-  fund_currency: 'overrides.fields.fundCurrency',
-}
-
-const selectPlaceholder = computed(() => {
-  const key = TEXT_FIELD_LABEL_KEY[props.field]
-  return key ? t(key) : undefined
-})
+/*
+ * Der Platzhalter im leeren Auswahlfeld ist dieselbe Beschriftung, die die
+ * Schublade über das Feld schreibt — deshalb aus `FIELD_LABEL_KEY` statt aus
+ * einer eigenen Tabelle mit denselben vier Einträgen (Gesamtprüfung).
+ *
+ * Gelesen wird nur im Textzweig; für die anderen vier Felder bindet das
+ * Template den Platzhalter gar nicht.
+ */
+const selectPlaceholder = computed(() => t(FIELD_LABEL_KEY[props.field]))
 
 /**
  * `NSelect` mit `tag` feuert dieses Event erst, wenn eine Auswahl (bestehend

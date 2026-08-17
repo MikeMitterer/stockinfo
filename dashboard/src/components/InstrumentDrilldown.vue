@@ -7,6 +7,7 @@ import { sourceProvides } from '../composables/useOverrides'
 import { OVERRIDE_FIELDS } from '../types'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 import { formatDateTime } from '../utils/datetime'
+import { FIELD_LABEL_KEY } from '../utils/fieldLabels'
 import { isEuropeanIsin } from '../utils/isin'
 
 /**
@@ -42,18 +43,6 @@ const emit = defineEmits<{
 }>()
 
 const { t, locale } = useI18n()
-
-/** Beschriftung je Feld — dieselben Katalog-Einträge wie Tabellenkopf und Editor. */
-const FIELD_LABEL_KEY: Record<OverrideField, string> = {
-  ter: 'table.colTer',
-  volatility: 'table.colVola',
-  accumulating: 'table.colAccumulating',
-  provider: 'overrides.fields.provider',
-  replication: 'overrides.fields.replication',
-  fund_size: 'overrides.fields.fundSize',
-  fund_domicile: 'overrides.fields.fundDomicile',
-  fund_currency: 'overrides.fields.fundCurrency',
-}
 
 /** Vorschläge des jeweiligen Felds — `undefined` für die vier Nicht-Textfelder. */
 function optionsFor(field: OverrideField): string[] | undefined {
