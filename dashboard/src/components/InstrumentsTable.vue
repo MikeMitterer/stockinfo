@@ -394,21 +394,11 @@ function price(value: number | null): string {
 
 .cards { display: flex; flex-direction: column; }
 
-// Utility fürs Sortier-<label>: bleibt für Screenreader vorhanden, ist aber
-// visuell nicht vorhanden — nur ⇅-Symbol + Spaltenname tragen die Bedeutung
-// für sehende Nutzer. Im Projekt bislang keine geteilte Fassung vorhanden,
-// deshalb hier lokal (scoped) statt in variables.scss/base.scss ergänzt.
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
+// `.visually-hidden` stand hier als scoped Kopie — die Annahme „im Projekt
+// bislang keine geteilte Fassung vorhanden" stimmte schon damals nicht:
+// `@mmit/ux-foundation/styles/reset.css` bringt die Klasse global mit (via
+// `main.ts` geladen). Das Sortier-`<label>`, für das sie gedacht war, gibt es
+// seit dem Umbau auf `NSelect` ohnehin nicht mehr.
 
 // Leise, rechtsbündige Zeile statt Formularleiste (T-11c). Die Auswahl selbst
 // bringt ihre Gestaltung von Naive UI mit — hier steht nur, wo sie sitzt und
