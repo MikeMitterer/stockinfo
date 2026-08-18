@@ -219,6 +219,57 @@ describe('InstrumentsTable — Schublade', () => {
   })
 
   /*
+   * Im Browser gemessen, nicht in jsdom gefunden: Naive UI ruft bei Escape
+   * **kein** `preventDefault()`. Der `defaultPrevented`-Wächter greift damit
+   * nicht, und ein Escape aus der offenen Auswahlliste nahm Liste und
+   * Schublade auf einmal weg — wer bei „Fondsdomizil" danebentippte, verlor
+   * die ganze Zeile.
+   *
+   * Ob die Liste offen ist, steht als `n-base-selection--active` am Feld
+   * (gemessen: geschlossen trägt es die Klasse nicht).
+   */
+  it('lässt die Schublade offen, wenn Escape die offene Auswahlliste schließt', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+    await wrapper.get('.row-toggle').trigger('click')
+
+    const selection = wrapper.get('.drilldown .n-base-selection')
+    selection.element.classList.add('n-base-selection--active')
+
+    /*
+     * Naive schließt seine Liste in der **Ziel-Phase** — im Browser gemessen:
+     * Beim Capture trägt das Feld noch `--active`, beim Bubble nicht mehr.
+     * Genau daran scheiterte der erste Versuch, der die Klasse erst oben am
+     * Wurzelelement prüfte: in jsdom grün, im Browser wirkungslos. Der
+     * Listener hier stellt dieses Wegnehmen nach, damit der Test dieselbe
+     * Reihenfolge sieht wie der Browser.
+     */
+    selection.element.addEventListener('keydown', () => {
+      selection.element.classList.remove('n-base-selection--active')
+    })
+
+    await selection.trigger('keydown.esc')
+
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(true)
+  })
+
+  /*
+   * Die Gegenrichtung, und der Grund, warum nicht einfach jedes Escape aus
+   * einem Auswahlfeld verschluckt wird: Ist die Liste zu, ist die Taste
+   * wieder Sache der Schublade. Sonst käme man mit dem Fokus im Feld gar
+   * nicht mehr per Tastatur heraus — zweimal Escape, und nichts passiert.
+   */
+  it('schließt die Schublade, wenn Escape aus einer geschlossenen Auswahlliste kommt', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+    await wrapper.get('.row-toggle').trigger('click')
+
+    await wrapper.get('.drilldown .n-base-selection').trigger('keydown.esc')
+
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(false)
+  })
+
+  /*
    * Escape aus einem Bedienelement heraus, das die Taste selbst schon
    * verarbeitet hat (`UxInlineNumber` verwirft damit seinen Entwurf), darf die
    * Schublade **nicht** zusätzlich zuklappen — sonst verliert man mit einem

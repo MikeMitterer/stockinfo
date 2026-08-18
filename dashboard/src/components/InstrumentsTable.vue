@@ -110,6 +110,46 @@ function toggleDrawer(item: InstrumentSummary): void {
 }
 
 /**
+ * Naive UI meldet eine offene Auswahlliste über diese Klasse am Feld.
+ *
+ * Sie ist im Browser gemessen, nicht aus der Dokumentation abgeschrieben:
+ * geschlossen trägt das Feld `n-base-selection`, offen zusätzlich
+ * `n-base-selection--active`. Dass hier ein fremder Klassenname steht, ist der
+ * Preis dafür, dass Naive den Zustand sonst nirgends nach außen gibt — weder
+ * über `aria-expanded` noch über ein Event. Benennt Naive sie um, fällt der
+ * zugehörige Test, nicht die Oberfläche: Die Schublade schlösse dann wieder
+ * eine Taste zu früh.
+ */
+const NAIVE_SELECT_OPEN = 'n-base-selection--active'
+
+/**
+ * War beim letzten Escape eine Auswahlliste offen?
+ *
+ * Der Umweg über ein Merkfeld ist **erzwungen**, und zwar durch eine Messung:
+ * Naive schließt die Liste in der Ziel-Phase, also nach dem Capture und vor
+ * jedem Handler weiter oben. Am Wurzelelement angekommen ist die Klasse
+ * bereits weg — dort lässt sich nicht mehr feststellen, dass gerade eine Liste
+ * zuging.
+ *
+ * | Phase                     | Liste offen |
+ * |---------------------------|-------------|
+ * | `document`, Capture       | ja          |
+ * | `section`, Capture        | ja          |
+ * | `section`, Bubble         | **nein**    |
+ *
+ * Also wird im Capture gemerkt und im Bubble entschieden. Beides in den
+ * Capture zu ziehen geht nicht: `defaultPrevented` von `UxInlineNumber` steht
+ * dort noch nicht, das Feld setzt es erst am Ziel.
+ */
+let selectWasOpen = false
+
+/** Hält im Capture fest, was im Bubble nicht mehr zu sehen ist. */
+function onEscapeCapture(event: KeyboardEvent): void {
+  selectWasOpen =
+    event.target instanceof Element && event.target.closest(`.${NAIVE_SELECT_OPEN}`) !== null
+}
+
+/**
  * Escape schließt die offene Schublade — der Ausweg, den die Teststrategie
  * verlangt.
  *
@@ -118,12 +158,27 @@ function toggleDrawer(item: InstrumentSummary): void {
  * müsste eigens wieder abgeräumt werden. Aus dem Knopf wie aus der Schublade
  * steigt die Taste ohnehin hierher hoch.
  *
- * Hat ein Bedienelement darin die Taste bereits verarbeitet (`UxInlineNumber`
- * verwirft damit seinen Entwurf), bleibt die Schublade offen: Ein Tastendruck
- * soll nicht zwei Dinge auf einmal wegnehmen.
+ * Zwei Dinge halten die Schublade offen, und sie prüfen dasselbe auf zwei
+ * Wegen, weil die Bedienelemente sich unterschiedlich verhalten:
+ *
+ * 1. `defaultPrevented` — so meldet sich `UxInlineNumber`, das mit Escape
+ *    seinen Entwurf verwirft.
+ * 2. Eine **offene** Auswahlliste darüber, festgehalten in `selectWasOpen`.
+ *    Die vier Textfelder der Schublade (Anbieter, Replikationsart,
+ *    Fondsdomizil, Fondswährung) sind `NSelect`, und Naive ruft bei Escape
+ *    kein `preventDefault()` — die Taste stieg unverbraucht hierher hoch und
+ *    nahm Liste und Schublade auf einmal weg.
+ *
+ * Gemerkt wird ausdrücklich **offen**, nicht „kam aus einem Auswahlfeld": Bei
+ * geschlossener Liste gehört die Taste wieder der Schublade, sonst käme man
+ * mit dem Fokus im Feld per Tastatur nicht mehr heraus.
  */
 function onEscape(event: KeyboardEvent): void {
+  const listeWarOffen = selectWasOpen
+  selectWasOpen = false
+
   if (event.defaultPrevented) return
+  if (listeWarOffen) return
   openSymbol.value = null
 }
 
@@ -150,7 +205,7 @@ function price(value: number | null): string {
 </script>
 
 <template>
-  <section class="table card" @keydown.esc="onEscape">
+  <section class="table card" @keydown.esc.capture="onEscapeCapture" @keydown.esc="onEscape">
     <div class="table__head" :class="{ 'table__head--compact': compact }">
       <h2>{{ t('table.title') }}</h2>
       <div v-if="compact && instruments.length > 0" class="tsort">
