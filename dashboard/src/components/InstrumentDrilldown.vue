@@ -256,6 +256,21 @@ const fetchedAt = computed(() =>
  */
 .drilldown__fetched :deep(.ux-hint__trigger) {
   margin-left: 0.4rem;
+
+  /*
+   * Optische Korrektur nach oben. Rechnerisch sitzt der Auslöser mittig — der
+   * Kasten war 0,7 px von der Textmitte entfernt —, er **wirkt** aber zu tief.
+   * Der Grund ist `vertical-align: middle`: Es richtet an der Grundlinie plus
+   * halber x-Höhe aus, und diese Zeile besteht aus **Ziffern**. Die stehen auf
+   * Versalhöhe, also deutlich über der x-Höhe; ihre optische Mitte liegt damit
+   * höher als die Bezugslinie.
+   *
+   * Zwei Pixel, mit Augen bestimmt und nicht gerechnet: Bei einem Pixel blieb
+   * der Rest sichtbar. Eine feste Verschiebung ist hier gefahrlos, anders als
+   * beim Pfeil — der Kreis dreht sich nicht.
+   */
+  position: relative;
+  top: -2px;
 }
 
 .drilldown__explain { margin: 0; }
