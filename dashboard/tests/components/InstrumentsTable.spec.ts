@@ -173,11 +173,11 @@ describe('InstrumentsTable — Schublade', () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
 
-    expect(wrapper.get('.caret').classes()).not.toContain('caret--open')
+    expect(wrapper.get('.ux-caret').classes()).not.toContain('ux-caret--open')
 
     await wrapper.get('.row-toggle').trigger('click')
 
-    expect(wrapper.get('.caret').classes()).toContain('caret--open')
+    expect(wrapper.get('.ux-caret').classes()).toContain('ux-caret--open')
   })
 
   it('markiert den geöffneten Zustand am Knopf', async () => {

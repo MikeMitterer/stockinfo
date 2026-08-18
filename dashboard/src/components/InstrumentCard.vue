@@ -2,9 +2,9 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton } from 'naive-ui'
+import { UxCaret } from '@mmit/ux-foundation'
 
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
-import RowCaret from './RowCaret.vue'
 import IsinEditor from './IsinEditor.vue'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
@@ -74,7 +74,7 @@ function price(value: number | null): string {
         :aria-controls="detailsId"
         @click.stop="toggle"
       >
-        <RowCaret :open="expanded" />
+        <UxCaret :open="expanded" />
         {{ expanded ? t('table.less') : t('table.more') }}
       </NButton>
 
@@ -224,8 +224,8 @@ function price(value: number | null): string {
 .icard__toggle {
   gap: 0.3rem;
 }
-// Aussehen und Drehung stehen in `RowCaret.vue` — dieselbe Fassung wie in der
-// Tabelle. Vorher stand hier ein eigenes `⌄` mit eigener Drehung; zwei
+// Aussehen und Drehung stehen in `UxCaret` (Fundament) — dieselbe Fassung wie
+// in der Tabelle. Vorher stand hier ein eigenes `⌄` mit eigener Drehung; zwei
 // Schreibweisen für „hier geht etwas auf" waren eine zu viel.
 
 .icard__actions {

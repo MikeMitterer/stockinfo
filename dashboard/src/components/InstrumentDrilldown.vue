@@ -129,7 +129,7 @@ const fetchedAt = computed(() =>
         <template v-if="fetchedAt"
           >{{ t('drilldown.fetchedAt') }}: <span class="mono">{{ fetchedAt }}</span>
         </template>
-        <InfoHint :text="t('drilldown.explain')" />
+        <InfoHint :text="t('drilldown.explain')" icon="info" />
       </p>
       <p v-if="skipReason === 'notEtf'" class="drilldown__explain">{{ t('drilldown.notEtf') }}</p>
       <p v-else-if="skipReason === 'noIsin'" class="drilldown__explain">{{ t('drilldown.noIsin') }}</p>

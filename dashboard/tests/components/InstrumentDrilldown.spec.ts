@@ -44,6 +44,12 @@ describe('InstrumentDrilldown', () => {
 
     expect(wrapper.getComponent(InfoHint).props('text')).toBe(i18n.global.t('drilldown.explain'))
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.explain'))
+    /*
+     * `(i)` statt `?`: Hier ist kein Begriff abzugrenzen — der Satz ordnet die
+     * ganze Schublade ein. Ein Fragezeichen kündigt ein Missverständnis an, ein
+     * (i) eine Auskunft.
+     */
+    expect(wrapper.getComponent(InfoHint).props('icon')).toBe('info')
     // Keiner der vier Sonderfälle greift hier — ETF, europäisch, Quelle voll.
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.notEtf'))
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.noIsin'))

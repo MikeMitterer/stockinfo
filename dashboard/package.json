@@ -9,7 +9,7 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "@mmit/ux-foundation": "^0.2.1",
+    "@mmit/ux-foundation": "^0.3.0",
     "chart.js": "^4.4.3",
     "chartjs-adapter-date-fns": "^3.0.0",
     "consola": "^3.2.3",

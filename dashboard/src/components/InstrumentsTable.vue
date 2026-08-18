@@ -3,10 +3,9 @@ import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton, NSelect } from 'naive-ui'
 
-import { useIsCompact } from '@mmit/ux-foundation'
+import { UxCaret, useIsCompact } from '@mmit/ux-foundation'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
 import InfoHint from './InfoHint.vue'
-import RowCaret from './RowCaret.vue'
 import InstrumentCard from './InstrumentCard.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
@@ -310,7 +309,7 @@ function price(value: number | null): string {
                   :aria-controls="`drawer-${item.symbol}`"
                   @click.stop="toggleDrawer(item)"
                 >
-                  <RowCaret :open="isOpen(item)" />{{ item.symbol }}
+                  <UxCaret :open="isOpen(item)" />{{ item.symbol }}
                 </button>
               </td>
               <td class="mono dim isin-cell">
@@ -556,12 +555,17 @@ tbody tr {
 }
 
 /*
- * Aussehen und Drehung des Pfeils stehen in `RowCaret.vue` — hier nur der
- * Abstand zur Kennung daneben. `display: inline-block` am Pfeil hält dabei die
- * gepunktete Linie des Knopfes von ihm fern: Ein atomarer Kasten erbt die
- * Unterstreichung des Textes nicht.
+ * Aussehen und Drehung des Pfeils stehen in `UxCaret` (Fundament) — hier nur,
+ * was die Umgebung angeht: Abstand zur Kennung und die Akzentfarbe. Das Symbol
+ * zeichnet in `currentColor`, damit jede Umgebung selbst entscheidet.
+ *
+ * `display: inline-block` am Pfeil hält die gepunktete Linie des Knopfes von
+ * ihm fern: Ein atomarer Kasten erbt die Unterstreichung des Textes nicht.
  */
-.row-toggle .caret { margin-right: 0.3rem; }
+.row-toggle .ux-caret {
+  margin-right: 0.3rem;
+  color: $color-accent;
+}
 
 // In der Namensspalte übernimmt der Knopf die Kürzung, die vorher an der
 // Zelle selbst hing — die Zelle bleibt nur noch der Breitenrahmen dafür.

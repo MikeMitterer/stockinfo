@@ -29,6 +29,14 @@ const props = defineProps<{
    * selbst, in welchem Reiter es steckt.
    */
   settingsTab?: SettingsTab
+  /**
+   * Womit der Hinweis auf sich aufmerksam macht — durchgereicht ans Fundament.
+   *
+   * Vorgabe bleibt das Fragezeichen: Es steht am erklärungsbedürftigen
+   * **Begriff**. Das `(i)` passt dort, wo nichts abzugrenzen ist, sondern eine
+   * Ansicht als Ganzes eingeordnet wird.
+   */
+  icon?: 'question' | 'info'
 }>()
 
 const { t } = useI18n()
@@ -43,6 +51,7 @@ const settingHref = computed(() =>
 <template>
   <UxInfoHint
     :text="text"
+    :icon="icon"
     :more-href="moreHref"
     :more-label="moreTab ? t('hints.more') : undefined"
     :setting-href="settingHref"
