@@ -6,6 +6,7 @@ import { NButton, NSelect } from 'naive-ui'
 import { useIsCompact } from '@mmit/ux-foundation'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
 import InfoHint from './InfoHint.vue'
+import RowCaret from './RowCaret.vue'
 import InstrumentCard from './InstrumentCard.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
@@ -309,16 +310,7 @@ function price(value: number | null): string {
                   :aria-controls="`drawer-${item.symbol}`"
                   @click.stop="toggleDrawer(item)"
                 >
-                  <!--
-                    `aria-hidden`: Den Zustand sagt bereits `aria-expanded` am
-                    Knopf. Ein vorgelesenes „⌄" wäre eine zweite, stummere
-                    Fassung derselben Auskunft.
-                  -->
-                  <span
-                    class="row-toggle__caret"
-                    :class="{ 'row-toggle__caret--open': isOpen(item) }"
-                    aria-hidden="true"
-                  >⌄</span>{{ item.symbol }}
+                  <RowCaret :open="isOpen(item)" />{{ item.symbol }}
                 </button>
               </td>
               <td class="mono dim isin-cell">
@@ -564,29 +556,12 @@ tbody tr {
 }
 
 /*
- * Der Pfeil steht **zusätzlich** zur Kennung, nicht an ihrer Stelle
- * (ux-standards, „Die Kennung öffnet die Zeile"): Geklickt wird der Name, aber
- * ohne sichtbares Merkmal sieht man der Zeile nicht an, dass sie aufgeht.
- *
- * Zeichen und Drehung sind dieselben wie in der Kartenliste
- * (`InstrumentCard.vue`, `.icard__chevron`) — zwei Schreibweisen für „hier geht
- * etwas auf" wären eine zu viel. Er sitzt im Knopf und nicht daneben, damit er
- * dieselbe Fläche trifft wie die Kennung.
- *
- * `display: inline-block` ist kein Zierrat: Es macht den Pfeil zu einem
- * atomaren Kasten, und die gepunktete Linie des Knopfes läuft nicht mit
- * darunter durch.
+ * Aussehen und Drehung des Pfeils stehen in `RowCaret.vue` — hier nur der
+ * Abstand zur Kennung daneben. `display: inline-block` am Pfeil hält dabei die
+ * gepunktete Linie des Knopfes von ihm fern: Ein atomarer Kasten erbt die
+ * Unterstreichung des Textes nicht.
  */
-.row-toggle__caret {
-  display: inline-block;
-  margin-right: 0.3rem;
-  color: $color-accent;
-  font-size: 0.7rem;
-  line-height: 1;
-  transition: transform 0.12s ease;
-
-  &--open { transform: rotate(180deg); }
-}
+.row-toggle .caret { margin-right: 0.3rem; }
 
 // In der Namensspalte übernimmt der Knopf die Kürzung, die vorher an der
 // Zelle selbst hing — die Zelle bleibt nur noch der Breitenrahmen dafür.

@@ -4,6 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { NButton } from 'naive-ui'
 
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
+import RowCaret from './RowCaret.vue'
 import IsinEditor from './IsinEditor.vue'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
@@ -73,7 +74,7 @@ function price(value: number | null): string {
         :aria-controls="detailsId"
         @click.stop="toggle"
       >
-        <span class="icard__chevron" :class="{ 'icard__chevron--open': expanded }">⌄</span>
+        <RowCaret :open="expanded" />
         {{ expanded ? t('table.less') : t('table.more') }}
       </NButton>
 
@@ -223,11 +224,9 @@ function price(value: number | null): string {
 .icard__toggle {
   gap: 0.3rem;
 }
-.icard__chevron {
-  display: inline-block;
-  transition: transform 0.12s ease;
-  &--open { transform: rotate(180deg); }
-}
+// Aussehen und Drehung stehen in `RowCaret.vue` — dieselbe Fassung wie in der
+// Tabelle. Vorher stand hier ein eigenes `⌄` mit eigener Drehung; zwei
+// Schreibweisen für „hier geht etwas auf" waren eine zu viel.
 
 .icard__actions {
   display: flex;
