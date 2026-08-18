@@ -37,7 +37,7 @@ def test_list_instruments_with_latest(repo: QuoteRepository) -> None:
 
 def test_persists_source(repo: QuoteRepository) -> None:
     """`source` (`yfinance` bzw. `yfinance+justetf`) muss mit dem Instrument
-    mitwandern — sonst kann die Schublade nicht zeigen, woher die Kennzahlen
+    mitwandern — sonst kann der Detailbereich nicht zeigen, woher die Kennzahlen
     kommen (Nacharbeit Sichtprüfung, Gesamtprüfung I1).
     """
     repo.save_quote(

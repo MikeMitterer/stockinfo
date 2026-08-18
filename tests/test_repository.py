@@ -134,7 +134,7 @@ def test_migration_ergaenzt_die_neuen_spalten(tmp_path) -> None:
             r["name"] for r in verbindung.execute("PRAGMA table_info(instrument_overrides)")
         }
 
-    # `source` gehört dazu: Die Schublade nennt die Quelle, und ohne Nachzug
+    # `source` gehört dazu: Der Detailbereich nennt die Quelle, und ohne Nachzug
     # stünde dort auf jeder bestehenden Datenbank dauerhaft nichts.
     assert {"fund_domicile", "fund_currency", "source"} <= instrumente
     assert {"provider", "replication", "fund_size", "fund_domicile", "fund_currency"} <= overrides

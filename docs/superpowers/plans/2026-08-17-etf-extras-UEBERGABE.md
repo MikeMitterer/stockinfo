@@ -1,4 +1,4 @@
-# Übergabe — T-15 ETF-Extras nachtragen + Schublade
+# Übergabe — T-15 ETF-Extras nachtragen + Detailbereich
 
 **Stand:** 2026-08-17, Branch `t-15-etf-extras-nachtragen`, aus `master`.
 **Plan:** `docs/superpowers/plans/2026-08-17-etf-extras-nachtragen-und-schublade.md`
@@ -21,7 +21,7 @@ Alle acht Tasks des Plans sind implementiert, jeder mit eigenem Review.
 | 5 | Beschaffung: Domizil holen, Fondswährung trennen | ✅ Review sauber |
 | 6 | `MetricValue`, Tabelle wird lesend | ✅ Review sauber |
 | 7 | `MetricEditor` mit Entfernen im gesperrten Zustand | ✅ 1 Befund geparkt |
-| 8 | Schublade, Kartenliste, Aufräumen, Testlücken | Review lief zuletzt |
+| 8 | Detailbereich, Kartenliste, Aufräumen, Testlücken | Review lief zuletzt |
 
 **Zahlen zuletzt:** 199 Frontend-Tests, 163 Backend-Tests, `vue-tsc` sauber.
 `ruff` meldet einen vorbestehenden `F401` in `tests/test_resolver.py`, der nicht
@@ -32,17 +32,17 @@ aus dieser Arbeit stammt.
 1. **Gesamtprüfung über den Branch** (whole-branch review) — war der nächste
    Schritt. Dabei die unten stehenden „deferred minors" triagieren.
 2. **Ticket(s) anlegen** im Board `_tickets/`, Nummer T-15. Laut Spec sind
-   Backend (Daten + Beschaffung) und Frontend (Schublade) getrennt abnehmbar,
+   Backend (Daten + Beschaffung) und Frontend (Detailbereich) getrennt abnehmbar,
    also voraussichtlich zwei Tickets.
 3. **Verify-Matrix je Ticket**, zweistufig (`AI` / `Human`). Ausdrückliche
    Vorgabe des Nutzers: **Backend-Zeilen prüft die KI selbst per `curl`** gegen
    die laufende API (Port 8000, läuft mit `--reload`) — die gehören **nicht** in
    die Human-Spalte, das wäre doppelte Arbeit. Die Human-Spalte trägt nur, was
-   ein Mensch beurteilen muss: Oberfläche, Schublade, Ausrichtung, Bedienung.
+   ein Mensch beurteilen muss: Oberfläche, Detailbereich, Ausrichtung, Bedienung.
 4. **Browser-Prüfung** als Teil des KI-Vorabchecks — gemessen statt geschätzt.
    Offen aus den Reviews: Spaltenkanten gegen die Spaltenköpfe, kein waagrechter
    Überhang bei 375 px, Verhalten von `NSelect` mit `tag` bei getippter
-   Neueingabe (Vitest simuliert das nur), Kontrast der Schublade je Theme.
+   Neueingabe (Vitest simuliert das nur), Kontrast des Detailbereichs je Theme.
 5. **Ledger-Verzeichnis löschen**, wenn die Gesamtprüfung sauber ist:
    `rm -rf .superpowers/sdd/2026-08-17-etf-extras-nachtragen-und-schublade`.
 
@@ -126,7 +126,7 @@ vorher behoben sein.
 
 ## Was seit dem ersten Teil dieser Datei passiert ist
 
-1. **Der Mensch hat die Schublade angesehen** und einen schweren Fehler
+1. **Der Mensch hat den Detailbereich angesehen** und einen schweren Fehler
    gefunden: Bei `EUNL.DE` standen acht Beschriftungen ohne Werte. Ursache:
    `MetricEditor` umschloss mit `v-if="editable"` **alle** Anzeige-Zweige, nicht
    nur deren Bedienbarkeit. Gesperrte Felder rendern dadurch nichts.
@@ -149,9 +149,9 @@ vorher behoben sein.
 |---|---|---|
 | C1 | Gesperrte Felder zeigen keinen Wert; **Regression gegen T-09**: mobil waren TER/Vola/Thes. ganz verschwunden, der haltende Test wurde in Task 8 gelöscht | behoben |
 | C2 | Zustand „verdeckt" zeigt weder eigenen noch Quellwert, nur das Kreuz | behoben |
-| I1 | `source` fehlt in der Schublade (Spec §3); Feld existiert nicht auf `InstrumentSummary` | **in Arbeit** |
+| I1 | `source` fehlt im Detailbereich (Spec §3); Feld existiert nicht auf `InstrumentSummary` | **in Arbeit** |
 | I2 | Erklärung kennt nur 1 von 3 Gründen und **lügt** in den anderen: Aktie mit DE-ISIN → „Quelle abgefragt, nichts geliefert" (nie abgefragt); Papier ohne ISIN → „Diese ISIN liegt außerhalb" (es gibt keine) | vermutlich behoben, **verifizieren** |
-| I3 | `Escape` schließt die Schublade nicht | **offen** |
+| I3 | `Escape` schließt den Detailbereich nicht | **offen** |
 | I4 | Vorrang-Regel steht im Frontend dreimal, je anders formuliert (Task 6/7/8) | vermutlich behoben, **verifizieren** |
 | I5 | `app/repository.py` bricht als einzige Datei die Namensregel — inkl. des öffentlichen Parameters `werte`, während der Dienst `values` sagt | **offen** |
 | M1 | `MetricValue` nahm `OverrideField`, verstand aber nur drei | behoben (verallgemeinert) |
@@ -164,7 +164,7 @@ vorher behoben sein.
 
 ## Zwei weitere Urteile (Nr. 13 und 14)
 
-13. **Layout der Schublade weicht von der Hausregel ab.** Der `ux-standards`-
+13. **Layout des Detailbereichs weicht von der Hausregel ab.** Der `ux-standards`-
     Skill schrieb „zweispaltig: links bearbeiten, rechts nachlesen" vor. Bei acht
     Feldern und einer Zeile Herkunft trägt das nicht. Entschieden (vom Menschen):
     Felder mehrspaltig, Herkunft als Fußzeile. *Kosten:* weicht von der bisherigen
@@ -187,7 +187,7 @@ testen.
 
 1. Laufenden Fix-Agenten abwarten, Ergebnis prüfen (offene Punkte oben).
 2. **Browser-Prüfung** — steht komplett aus und ist jetzt zwingend, nicht
-   optional: Werte in der Schublade sichtbar, Spaltenkanten gegen die Köpfe,
+   optional: Werte im Detailbereich sichtbar, Spaltenkanten gegen die Köpfe,
    kein waagrechter Überhang bei 375 px, Kontrast je Theme, `NSelect`-Verhalten
    bei getippter Neueingabe.
 3. Erneute Gesamtprüfung nach den Fixes.

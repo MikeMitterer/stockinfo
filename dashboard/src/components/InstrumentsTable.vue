@@ -21,7 +21,7 @@ const props = defineProps<{
   extraetfEtfUrl: string
   extraetfStockUrl: string
   yahooUrl: string
-  /** Vorschläge je Textfeld für die Schublade — einmal weiter oben gebildet. */
+  /** Vorschläge je Textfeld für den Detailbereich — einmal weiter oben gebildet. */
   fieldOptions?: Partial<Record<OverrideField, string[]>>
 }>()
 
@@ -87,19 +87,19 @@ function onSortSelect(value: string): void {
 }
 
 /*
- * Die Schublade (Task 8): höchstens eine gleichzeitig offen, gehalten über das
+ * Der Detailbereich (Task 8): höchstens einer gleichzeitig offen, gehalten über das
  * Symbol des Papiers — nicht über einen Index, der bei jeder Umsortierung ein
  * anderes Papier träfe.
  */
 const openSymbol = ref<string | null>(null)
 
-/** Ist die Schublade dieses Papiers gerade offen? */
+/** Ist der Detailbereich dieses Papiers gerade offen? */
 function isOpen(item: InstrumentSummary): boolean {
   return openSymbol.value === item.symbol
 }
 
 /**
- * Öffnet/schließt die Schublade eines Papiers — ausgelöst von Symbol oder Name.
+ * Öffnet/schließt den Detailbereich eines Papiers — ausgelöst von Symbol oder Name.
  *
  * Eigener Name statt `toggle`: Das ist schon die Spaltensortierung von
  * `useTableSort()`, ein zweiter `toggle` für etwas ganz anderes wäre hier
@@ -117,7 +117,7 @@ function toggleDrawer(item: InstrumentSummary): void {
  * `n-base-selection--active`. Dass hier ein fremder Klassenname steht, ist der
  * Preis dafür, dass Naive den Zustand sonst nirgends nach außen gibt — weder
  * über `aria-expanded` noch über ein Event. Benennt Naive sie um, fällt der
- * zugehörige Test, nicht die Oberfläche: Die Schublade schlösse dann wieder
+ * zugehörige Test, nicht die Oberfläche: Der Detailbereich schlösse dann wieder
  * eine Taste zu früh.
  */
 const NAIVE_SELECT_OPEN = 'n-base-selection--active'
@@ -150,27 +150,27 @@ function onEscapeCapture(event: KeyboardEvent): void {
 }
 
 /**
- * Escape schließt die offene Schublade — der Ausweg, den die Teststrategie
+ * Escape schließt den offenen Detailbereich — der Ausweg, den die Teststrategie
  * verlangt.
  *
  * Der Handler sitzt am Wurzelelement der Komponente, nicht am `document`:
  * Öffnen und Schließen betreffen nur diese Tabelle, und ein globaler Listener
- * müsste eigens wieder abgeräumt werden. Aus dem Knopf wie aus der Schublade
+ * müsste eigens wieder abgeräumt werden. Aus dem Knopf wie aus dem Detailbereich
  * steigt die Taste ohnehin hierher hoch.
  *
- * Zwei Dinge halten die Schublade offen, und sie prüfen dasselbe auf zwei
+ * Zwei Dinge halten den Detailbereich offen, und sie prüfen dasselbe auf zwei
  * Wegen, weil die Bedienelemente sich unterschiedlich verhalten:
  *
  * 1. `defaultPrevented` — so meldet sich `UxInlineNumber`, das mit Escape
  *    seinen Entwurf verwirft.
  * 2. Eine **offene** Auswahlliste darüber, festgehalten in `selectWasOpen`.
- *    Die vier Textfelder der Schublade (Anbieter, Replikationsart,
+ *    Die vier Textfelder des Detailbereichs (Anbieter, Replikationsart,
  *    Fondsdomizil, Fondswährung) sind `NSelect`, und Naive ruft bei Escape
  *    kein `preventDefault()` — die Taste stieg unverbraucht hierher hoch und
- *    nahm Liste und Schublade auf einmal weg.
+ *    nahm Liste und Detailbereich auf einmal weg.
  *
  * Gemerkt wird ausdrücklich **offen**, nicht „kam aus einem Auswahlfeld": Bei
- * geschlossener Liste gehört die Taste wieder der Schublade, sonst käme man
+ * geschlossener Liste gehört die Taste wieder dem Detailbereich, sonst käme man
  * mit dem Fokus im Feld per Tastatur nicht mehr heraus.
  */
 function onEscape(event: KeyboardEvent): void {
@@ -306,7 +306,7 @@ function price(value: number | null): string {
                   type="button"
                   class="row-toggle"
                   :aria-expanded="isOpen(item)"
-                  :aria-controls="`drawer-${item.symbol}`"
+                  :aria-controls="`details-${item.symbol}`"
                   @click.stop="toggleDrawer(item)"
                 >
                   <UxCaret :open="isOpen(item)" />{{ item.symbol }}
@@ -321,7 +321,7 @@ function price(value: number | null): string {
                   type="button"
                   class="row-toggle"
                   :aria-expanded="isOpen(item)"
-                  :aria-controls="`drawer-${item.symbol}`"
+                  :aria-controls="`details-${item.symbol}`"
                   @click.stop="toggleDrawer(item)"
                 >
                   {{ item.name ?? '—' }}
@@ -403,7 +403,7 @@ function price(value: number | null): string {
                 </NButton>
               </td>
             </tr>
-            <tr v-if="isOpen(item)" :id="`drawer-${item.symbol}`" class="drawer-row">
+            <tr v-if="isOpen(item)" :id="`details-${item.symbol}`" class="details-row">
               <td :colspan="columns.length + 1">
                 <InstrumentDrilldown
                   :item="item"
@@ -576,11 +576,11 @@ tbody tr {
   white-space: nowrap;
 }
 
-// Die Schublade (Task 8): eigene Zeile unter der Instrumentenzeile, über die
+// Der Detailbereich (Task 8): eigene Zeile unter der Instrumentenzeile, über die
 // volle Spaltenbreite. Kein Zeilen-Hover/-Klick wie bei der Instrumentenzeile
 // — sie öffnet nichts, es gibt nichts zu klicken außer den Bedienelementen
 // darin.
-.drawer-row {
+.details-row {
   cursor: default;
   &:hover { background: none; }
 

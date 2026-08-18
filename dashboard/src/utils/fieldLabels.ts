@@ -10,7 +10,7 @@ import type { OverrideField } from '../types'
  * anders als im Platzhalter direkt darunter.
  *
  * Die drei Tabellenspalten borgen sich die Beschriftung vom Spaltenkopf
- * (`table.col*`) — dieselbe Kennzahl soll in Tabelle und Schublade nicht
+ * (`table.col*`) — dieselbe Kennzahl soll in Tabelle und Detailbereich nicht
  * verschieden heißen. Die restlichen fünf haben eigene Einträge aus T-07.
  */
 export const FIELD_LABEL_KEY: Record<OverrideField, string> = {

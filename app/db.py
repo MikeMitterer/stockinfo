@@ -144,7 +144,7 @@ def _migrate(connection: sqlite3.Connection) -> None:
             ("fund_domicile", "TEXT"),
             ("fund_currency", "TEXT"),
             # Woher die Kennzahlen stammen ('yfinance' bzw. 'yfinance+justetf').
-            # Die Schublade nennt das; ohne Nachzug bliebe die Angabe auf jeder
+            # Der Detailbereich nennt das; ohne Nachzug bliebe die Angabe auf jeder
             # bestehenden Datenbank für immer leer.
             ("source", "TEXT"),
         ),

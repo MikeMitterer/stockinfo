@@ -140,10 +140,10 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
 /*
  * Konflikt gelöst wie im Plan festgehalten: Die Zeile öffnet weiterhin das
  * Chart (`@click`), nur Symbol und Name klinken sich mit `@click.stop` aus und
- * öffnen stattdessen die Schublade.
+ * öffnen stattdessen den Detailbereich.
  */
-describe('InstrumentsTable — Schublade', () => {
-  it('öffnet die Schublade beim Klick auf das Symbol, ohne das Chart zu öffnen', async () => {
+describe('InstrumentsTable — Detailbereich', () => {
+  it('öffnet den Detailbereich beim Klick auf das Symbol, ohne das Chart zu öffnen', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
 
@@ -153,7 +153,7 @@ describe('InstrumentsTable — Schublade', () => {
     expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(true)
   })
 
-  it('öffnet die Schublade auch beim Klick auf den Namen', async () => {
+  it('öffnet den Detailbereich auch beim Klick auf den Namen', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
 
@@ -169,7 +169,7 @@ describe('InstrumentsTable — Schublade', () => {
    * intuitiv". Der Pfeil steht deshalb vorne in der Zeile, wie ihn die
    * Kartenliste unter `md` längst zeigt (`InstrumentCard.vue`).
    */
-  it('zeigt vorne in der Zeile einen Pfeil, der den Zustand der Schublade spiegelt', async () => {
+  it('zeigt vorne in der Zeile einen Pfeil, der den Zustand des Detailbereichs spiegelt', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
 
@@ -190,7 +190,7 @@ describe('InstrumentsTable — Schublade', () => {
     expect(toggle.attributes('aria-expanded')).toBe('true')
   })
 
-  it('schließt die Schublade beim erneuten Klick', async () => {
+  it('schließt den Detailbereich beim erneuten Klick', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
     const toggle = wrapper.get('.row-toggle')
@@ -203,10 +203,10 @@ describe('InstrumentsTable — Schublade', () => {
 
   /*
    * Die Teststrategie der Spec verlangt Escape als Ausweg. Bisher gab es
-   * keinen Tastatur-Handler: Wer die Schublade per Tastatur geöffnet hatte,
+   * keinen Tastatur-Handler: Wer den Detailbereich per Tastatur geöffnet hatte,
    * kam nur wieder heraus, indem er zum selben Knopf zurücktabbte.
    */
-  it('schließt die Schublade mit Escape', async () => {
+  it('schließt den Detailbereich mit Escape', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
 
@@ -222,13 +222,13 @@ describe('InstrumentsTable — Schublade', () => {
    * Im Browser gemessen, nicht in jsdom gefunden: Naive UI ruft bei Escape
    * **kein** `preventDefault()`. Der `defaultPrevented`-Wächter greift damit
    * nicht, und ein Escape aus der offenen Auswahlliste nahm Liste und
-   * Schublade auf einmal weg — wer bei „Fondsdomizil" danebentippte, verlor
+   * Detailbereich auf einmal weg — wer bei „Fondsdomizil" danebentippte, verlor
    * die ganze Zeile.
    *
    * Ob die Liste offen ist, steht als `n-base-selection--active` am Feld
    * (gemessen: geschlossen trägt es die Klasse nicht).
    */
-  it('lässt die Schublade offen, wenn Escape die offene Auswahlliste schließt', async () => {
+  it('lässt den Detailbereich offen, wenn Escape die offene Auswahlliste schließt', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
     await wrapper.get('.row-toggle').trigger('click')
@@ -256,10 +256,10 @@ describe('InstrumentsTable — Schublade', () => {
   /*
    * Die Gegenrichtung, und der Grund, warum nicht einfach jedes Escape aus
    * einem Auswahlfeld verschluckt wird: Ist die Liste zu, ist die Taste
-   * wieder Sache der Schublade. Sonst käme man mit dem Fokus im Feld gar
+   * wieder Sache des Detailbereichs. Sonst käme man mit dem Fokus im Feld gar
    * nicht mehr per Tastatur heraus — zweimal Escape, und nichts passiert.
    */
-  it('schließt die Schublade, wenn Escape aus einer geschlossenen Auswahlliste kommt', async () => {
+  it('schließt den Detailbereich, wenn Escape aus einer geschlossenen Auswahlliste kommt', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
     await wrapper.get('.row-toggle').trigger('click')
@@ -272,20 +272,20 @@ describe('InstrumentsTable — Schublade', () => {
   /*
    * Escape aus einem Bedienelement heraus, das die Taste selbst schon
    * verarbeitet hat (`UxInlineNumber` verwirft damit seinen Entwurf), darf die
-   * Schublade **nicht** zusätzlich zuklappen — sonst verliert man mit einem
+   * Detailbereich **nicht** zusätzlich zuklappen — sonst verliert man mit einem
    * Tastendruck zwei Dinge auf einmal. Erkannt an `defaultPrevented`.
    */
-  it('lässt die Schublade offen, wenn ein Bedienelement Escape schon verarbeitet hat', async () => {
+  it('lässt den Detailbereich offen, wenn ein Bedienelement Escape schon verarbeitet hat', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
 
     await wrapper.get('.row-toggle').trigger('click')
 
-    // Nachgestellt wie in echt: Das Bedienelement in der Schublade ist das Ziel
+    // Nachgestellt wie in echt: Das Bedienelement im Detailbereich ist das Ziel
     // und ruft `preventDefault()`, bevor das Ereignis zur Tabelle hochsteigt.
-    const drawer = wrapper.get('.drawer-row').element
-    drawer.addEventListener('keydown', (event) => event.preventDefault())
-    drawer.dispatchEvent(
+    const detailbereich = wrapper.get('.details-row').element
+    detailbereich.addEventListener('keydown', (event) => event.preventDefault())
+    detailbereich.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
     )
     await nextTick()
@@ -303,17 +303,17 @@ describe('InstrumentsTable — Schublade', () => {
     expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(false)
   })
 
-  it('spannt die Schublade über alle Spalten der Kopfzeile', async () => {
+  it('spannt den Detailbereich über alle Spalten der Kopfzeile', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
 
     await wrapper.get('.row-toggle').trigger('click')
 
     const headCount = wrapper.findAll('thead th').length
-    expect(wrapper.get('.drawer-row td').attributes('colspan')).toBe(String(headCount))
+    expect(wrapper.get('.details-row td').attributes('colspan')).toBe(String(headCount))
   })
 
-  it('reicht ein override aus der Schublade mit dem betroffenen Instrument nach oben durch', async () => {
+  it('reicht ein override aus dem Detailbereich mit dem betroffenen Instrument nach oben durch', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
     await wrapper.get('.row-toggle').trigger('click')
@@ -327,7 +327,7 @@ describe('InstrumentsTable — Schublade', () => {
     })
   })
 
-  it('reicht fieldOptions unverändert an die Schublade durch', async () => {
+  it('reicht fieldOptions unverändert an den Detailbereich durch', async () => {
     stubMatchMedia(false)
     const wrapper = mount(InstrumentsTable, {
       props: {
@@ -345,14 +345,14 @@ describe('InstrumentsTable — Schublade', () => {
   })
 
   /*
-   * Fix-Runde 1: `fieldOptions` kam an die Tabellen-Schublade an, aber nicht
+   * Fix-Runde 1: `fieldOptions` kam am Tabellen-Detailbereich an, aber nicht
    * an die Karten — der `InstrumentCard`-Aufruf im kompakten Zweig hatte
    * keine `field-options`-Bindung. Der Test oben hätte das nie auffangen
    * können, weil er ausschließlich Desktop (`stubMatchMedia(false)`) prüft.
    * Dieser Test führt denselben Nachweis **durch `InstrumentsTable` im
    * kompakten Zustand** — der einzige Weg, den fehlenden Draht zu sehen.
    */
-  it('reicht fieldOptions auch über die Kartenliste bis zur Schublade durch (mobil)', async () => {
+  it('reicht fieldOptions auch über die Kartenliste bis zum Detailbereich durch (mobil)', async () => {
     stubMatchMedia(true)
     const wrapper = mount(InstrumentsTable, {
       props: {
@@ -370,7 +370,7 @@ describe('InstrumentsTable — Schublade', () => {
     })
   })
 
-  it('verknüpft den Symbol-Knopf per aria-controls mit der tatsächlichen Schubladen-Zeile', async () => {
+  it('verknüpft den Symbol-Knopf per aria-controls mit der tatsächlichen Detailbereich-Zeile', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
     const toggle = wrapper.get('.row-toggle')
@@ -381,6 +381,6 @@ describe('InstrumentsTable — Schublade', () => {
     // („APC.DE"), den ein `#id`-Selektor als Klassentrenner läse.
     const controlsId = toggle.attributes('aria-controls')
     expect(controlsId).toBeTruthy()
-    expect(wrapper.find(`[id="${controlsId}"]`).classes()).toContain('drawer-row')
+    expect(wrapper.find(`[id="${controlsId}"]`).classes()).toContain('details-row')
   })
 })

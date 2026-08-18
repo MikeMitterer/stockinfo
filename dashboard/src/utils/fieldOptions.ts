@@ -3,7 +3,7 @@ import { currenciesFromExchanges } from './currencies'
 import { distinctFieldValues } from './suggestions'
 
 /**
- * Baut die Vorschlagslisten für die vier Textfelder der Schublade (Task 8).
+ * Baut die Vorschlagslisten für die vier Textfelder des Detailbereichs (Task 8).
  *
  * Einziger Ort, an dem `currenciesFromExchanges()` (Fondswährung) und
  * `distinctFieldValues()` (Anbieter, Replikationsart, Fondsdomizil)

@@ -79,7 +79,7 @@ describe('InstrumentDrilldown', () => {
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.explain'))
     /*
      * `(i)` statt `?`: Hier ist kein Begriff abzugrenzen — der Satz ordnet die
-     * ganze Schublade ein. Ein Fragezeichen kündigt ein Missverständnis an, ein
+     * ganzen Detailbereich ein. Ein Fragezeichen kündigt ein Missverständnis an, ein
      * (i) eine Auskunft.
      */
     expect(wrapper.getComponent(InfoHint).props('icon')).toBe('info')
@@ -94,7 +94,7 @@ describe('InstrumentDrilldown', () => {
    * Nacharbeit Sichtprüfung, I2 (Gesamtprüfung): Das Backend überspringt
    * justETF aus drei Gründen (`app/services/quote_service.py:137`:
    * `if instrument_type == "etf" and isin:`) — kein ETF, keine ISIN, oder
-   * nicht-europäische ISIN. Die Schublade kannte bisher nur den dritten.
+   * nicht-europäische ISIN. Der Detailbereich kannte bisher nur den dritten.
    * Eine Aktie mit deutscher (europäischer) ISIN bekam fälschlich „Die Quelle
    * wurde abgefragt, hat aber nichts geliefert" — sie wurde nie abgefragt.
    */
@@ -154,7 +154,7 @@ describe('InstrumentDrilldown', () => {
   /*
    * Der Hinweis hängt am Zeitstempel — den gibt es aber nicht immer (ein
    * Papier, das noch nie abgefragt wurde). Er darf deshalb nicht mit der Zeile
-   * verschwinden: Gerade wer eine leere Schublade vor sich hat, will wissen,
+   * verschwinden: Gerade wer einen leeren Detailbereich vor sich hat, will wissen,
    * woher hier etwas herkommen soll.
    */
   it('behält den Hinweis, auch wenn es keinen Zeitstempel gibt', () => {
@@ -168,7 +168,7 @@ describe('InstrumentDrilldown', () => {
   })
 
   /*
-   * Die Spec verlangt, dass die Schublade nicht nur den Zeitpunkt, sondern auch
+   * Die Spec verlangt, dass der Detailbereich nicht nur den Zeitpunkt, sondern auch
    * die **Quelle** nennt: `yfinance` allein heißt „justETF war nicht dabei",
    * `yfinance+justetf` heißt „die ETF-Extras kommen von dort". Ohne das ist der
    * Zeitstempel eine Zahl ohne Absender.

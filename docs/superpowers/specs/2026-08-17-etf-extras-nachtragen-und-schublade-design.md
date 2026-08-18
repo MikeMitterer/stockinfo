@@ -2,7 +2,7 @@
 
 **Datum:** 2026-08-17
 **Ticket:** Die Zerlegung in Tickets folgt aus dem Implementierungsplan —
-Backend (Daten + Beschaffung) und Frontend (Schublade) sind getrennt
+Backend (Daten + Beschaffung) und Frontend (Detailbereich) sind getrennt
 abnehmbar und werden getrennte Tickets.
 **Scope:** Backend (DB, Provider, Modelle) + Frontend (Dashboard). Kein ux-foundation-Change.
 **Bezug:** Baut auf T-09 (manuelle Kennzahlen) auf; Skill `ux-standards`
@@ -97,7 +97,7 @@ Nebenwirkung im Blick behalten: Bei Papieren, für die yfinance keine Währung
 liefert, bleibt `currency` künftig leer, wo bisher die Fondswährung einsprang.
 Von den fünf Papieren im laufenden Bestand ist keines betroffen.
 
-### 3. Die Schublade
+### 3. Der Detailbereich
 
 **Auslöser:** Symbol und Name der Zeile werden Schaltflächen — „Die Kennung
 öffnet die Zeile" (ux-standards). Der Pfeil bleibt zusätzlich, für Tastatur und
@@ -125,11 +125,11 @@ nach. Kommt die Quelle später doch, wären nach der reinen T-09-Regel alle acht
 Eingaben verdeckt und damit **gesperrt** — wegzubekommen nur noch per `curl`.
 Bei einem Feld war das vertretbar, bei acht ist es ein Konstruktionsfehler.
 Bearbeiten bleibt gesperrt (das war die Verwirrung, die T-09 auslöste),
-Entfernen nicht. In der Tabellenzelle fehlte dafür der Platz, in der Schublade
+Entfernen nicht. In der Tabellenzelle fehlte dafür der Platz, im Detailbereich
 steht der Wert der Quelle, daneben der eigene und daneben das Kreuz.
 
 **Mobil** ändert sich wenig: Unter `md` ist die Tabelle bereits eine
-Kartenliste, die Schublade wird der aufgeklappte Teil der Karte.
+Kartenliste, der Detailbereich wird der aufgeklappte Teil der Karte.
 
 ## Betroffene Einheiten
 
@@ -143,7 +143,7 @@ Kartenliste, die Schublade wird der aufgeklappte Teil der Karte.
 | `app/services/quote_cache.py` | `_from_cache` um zwei Felder; Vorrang-Wege wachsen über `OVERRIDE_FIELDS` von selbst |
 | `dashboard/src/components/InstrumentsTable.vue` | Kennung öffnet die Zeile, Editoren raus |
 | `dashboard/src/components/MetricValue.vue` | **neu** — zeigt Wert und Merkmal (Tabelle) |
-| `dashboard/src/components/MetricEditor.vue` | **neu** — pflegt, sperrt, entfernt (Schublade); ersetzt `ManualMetric.vue` |
+| `dashboard/src/components/MetricEditor.vue` | **neu** — pflegt, sperrt, entfernt (Detailbereich); ersetzt `ManualMetric.vue` |
 | `dashboard/src/components/InstrumentDrilldown.vue` | **neu** — der aufgeklappte Bereich |
 | `dashboard/src/i18n/{de,en}.ts` | Beschriftungen der fünf neuen Felder, Herkunfts-Erklärung, Entfernen-Aktion |
 
@@ -166,11 +166,11 @@ Sperrlogik steht an einer Stelle statt in zwei Zweigen einer Datei.
 - `MetricValue` zeigt den wirksamen Wert und das richtige Merkmal.
 - `MetricEditor` sperrt nach der Regel, lässt ein verdecktes Feld aber
   entfernen.
-- Schublade öffnet und schließt über Kennung und Pfeil, `aria-expanded` stimmt,
+- Detailbereich öffnet und schließt über Kennung und Pfeil, `aria-expanded` stimmt,
   `Escape` schließt.
 
 **Im Browser**, nach Hausstandard gemessen statt geschätzt: Ausrichtung der
-Spalten gegen ihre Köpfe, kein waagrechter Überhang bei 375 px, Schublade in
+Spalten gegen ihre Köpfe, kein waagrechter Überhang bei 375 px, Detailbereich in
 beiden Breiten, Kontrast der neuen Flächen je Theme.
 
 ## Bewusst NICHT im Scope (YAGNI)
@@ -182,6 +182,6 @@ beiden Breiten, Kontrast der neuen Flächen je Theme.
 - **`index`, `investment_focus`, `inception_date`, `legal_structure`,
   `sustainability`, `currency_hedged`, `description`.** Ebenfalls vorhanden,
   aber nicht verlangt.
-- **Zeilen-Knöpfe in die Schublade verschieben.** Ausdrücklich abgelehnt.
+- **Zeilen-Knöpfe in den Detailbereich verschieben.** Ausdrücklich abgelehnt.
 - **`load_overview` als ETF-Suche.** Die Library kann eine filterbare Tabelle
   aller ETFs liefern — ein eigenes Feature, kein Teil dieses Designs.

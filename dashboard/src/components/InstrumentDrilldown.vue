@@ -131,7 +131,7 @@ const fetchedAt = computed(() =>
       </p>
       <!--
         Der Absatz steht immer, auch ohne Zeitstempel: Er trägt das
-        Fragezeichen, und gerade wer eine leere Schublade vor sich hat, will
+        Fragezeichen, und gerade wer einen leeren Detailbereich vor sich hat, will
         wissen, woher hier etwas herkommen soll. Ohne Zeitstempel bleibt nur
         der Hinweis übrig.
       -->
@@ -161,7 +161,7 @@ const fetchedAt = computed(() =>
  * (mehrspaltig ab `md`, siehe `.drilldown__fields`), die Herkunft folgt darunter
  * als schmale Fußzeile, durch `.drilldown__source` von den Feldern abgesetzt.
  * Unter `md` ist das ohnehin die einzig sinnvolle Aufteilung — dort ist die
- * Schublade der aufgeklappte Teil einer Karte, mit entsprechend wenig Breite.
+ * Detailbereich der aufgeklappte Teil einer Karte, mit entsprechend wenig Breite.
  */
 .drilldown {
   display: flex;
@@ -237,6 +237,25 @@ const fetchedAt = computed(() =>
   margin: 0;
   font-size: var(--font-xs);
   opacity: 0.8;
+}
+
+/*
+ * Abstand zum Zeitstempel davor. Ohne ihn klebt der Auslöser an der Zahl: Er
+ * ist ein runder Kasten von 16 px neben Text von 12 px und braucht mehr Luft
+ * als ein Buchstabe. Gemessen war die Lücke vorher 0 px — das Leerzeichen aus
+ * dem Markup fällt beim Übersetzen weg.
+ *
+ * `:deep()` ist hier **nötig**, nicht bequem: Das Scope-Merkmal einer
+ * Komponente landet nur am **Wurzelknoten** ihrer direkten Kinder. Der Auslöser
+ * steckt zwei Ebenen tiefer (`InfoHint` → `UxInfoHint` → `NTooltip`-Slot) und
+ * trägt es deshalb nicht — eine gewöhnliche Regel greift dort nie. Beim Pfeil
+ * daneben geht es ohne, weil dessen Wurzel selbst das `svg` ist.
+ *
+ * Der Abstand gehört hierher und nicht ins Fundament: Wie eng es zugeht, weiß
+ * nur die Umgebung.
+ */
+.drilldown__fetched :deep(.ux-hint__trigger) {
+  margin-left: 0.4rem;
 }
 
 .drilldown__explain { margin: 0; }

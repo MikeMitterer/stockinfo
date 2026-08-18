@@ -16,7 +16,7 @@ const props = defineProps<{
   yahooUrl: string
   /** Wird gerade gespeichert? Dann nichts anfassen. */
   saving: boolean
-  /** Vorschläge je Textfeld für die Schublade — einmal weiter oben gebildet. */
+  /** Vorschläge je Textfeld für den Detailbereich — einmal weiter oben gebildet. */
   fieldOptions?: Partial<Record<OverrideField, string[]>>
 }>()
 
@@ -154,7 +154,7 @@ function price(value: number | null): string {
       </dl>
 
       <!--
-        Dieselbe Schublade wie am Schreibtisch (Task 8) — acht Felder statt
+        Derselbe Detailbereich wie am Schreibtisch (Task 8) — acht Felder statt
         der bisherigen drei `ManualMetric`, an derselben Stelle wie bisher.
       -->
       <InstrumentDrilldown
@@ -238,7 +238,7 @@ function price(value: number | null): string {
   justify-content: flex-end;
 }
 
-// Umschließt die Detail-Liste (ISIN, Pkt.) und die Schublade darunter — trägt
+// Umschließt die Detail-Liste (ISIN, Pkt.) und den Detailbereich darunter — trägt
 // die Trennlinie zum Kopf der Karte, die vorher an `.icard__details` selbst hing.
 .icard__expanded {
   margin: 0.6rem 0 0;

@@ -40,7 +40,7 @@ describe('InstrumentCard', () => {
     expect(wrapper.find('.icard__name').text()).toBe('Apple Inc.')
   })
 
-  it('hält Details und Schublade bis zum Aufklappen verborgen', async () => {
+  it('hält Details und Detailbereich bis zum Aufklappen verborgen', async () => {
     const wrapper = mountCard()
     expect(wrapper.find('.icard__details').exists()).toBe(false)
     expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(false)
@@ -65,7 +65,7 @@ describe('InstrumentCard', () => {
     expect(wrapper.find('.icard__details').text()).toContain('42')
   })
 
-  it('reicht ein commit aus der Schublade unverändert als override weiter', async () => {
+  it('reicht ein commit aus dem Detailbereich unverändert als override weiter', async () => {
     const wrapper = mountCard()
     await wrapper.find('.icard__toggle').trigger('click')
 
@@ -74,7 +74,7 @@ describe('InstrumentCard', () => {
     expect(wrapper.emitted('override')?.[0]?.[0]).toEqual({ provider: 'Vanguard' })
   })
 
-  it('reicht fieldOptions unverändert an die Schublade durch', async () => {
+  it('reicht fieldOptions unverändert an den Detailbereich durch', async () => {
     const wrapper = mount(InstrumentCard, {
       props: {
         item: makeInstrument(),

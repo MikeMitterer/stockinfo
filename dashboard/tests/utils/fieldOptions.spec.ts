@@ -14,7 +14,7 @@ const exchanges: ExchangesResponse = {
 
 /*
  * Diese Funktion ist der einzige Ort, an dem die vier Vorschlagslisten der
- * Schublade gebildet werden (Task 8, Teil 4) — `AppDashboard.vue` ruft sie
+ * Detailbereich gebildet werden (Task 8, Teil 4) — `AppDashboard.vue` ruft sie
  * einmal auf, nicht jede Zeile für sich.
  */
 describe('buildFieldOptions', () => {

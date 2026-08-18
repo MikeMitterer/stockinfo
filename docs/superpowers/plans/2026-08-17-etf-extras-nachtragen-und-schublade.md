@@ -713,7 +713,7 @@ git commit -m "feat(justetf): Fondsdomizil holen, Fondswährung getrennt führen
 `ManualMetric` ebenfalls dreimal — aber in ihrem **aufgeklappten** Bereich
 (`<dl v-if="expanded">`), also genau dort, wo mobil ohnehin gepflegt wird. Sie
 auf reine Anzeige umzustellen wäre ein Rückschritt gegen T-09 #8. Die Karte
-zieht in Task 8 auf die Schublade um; bis dahin läuft sie unverändert weiter.
+zieht in Task 8 auf den Detailbereich um; bis dahin läuft sie unverändert weiter.
 
 **Interfaces:**
 - Consumes: `manualValue`, `overrideState` aus `../composables/useOverrides`
@@ -771,7 +771,7 @@ In `InstrumentsTable.vue` die drei `ManualMetric`-Blöcke durch `MetricValue` er
             <td class="center"><MetricValue :item="item" field="accumulating" /></td>
 ```
 
-Import und der Kommentar über den Zellen werden entsprechend angepasst: Gepflegt wird jetzt in der Schublade.
+Import und der Kommentar über den Zellen werden entsprechend angepasst: Gepflegt wird jetzt im Detailbereich.
 
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -879,7 +879,7 @@ git commit -m "feat(ui): Kennzahlen-Editor mit Entfernen für verdeckte Werte"
 
 ---
 
-### Task 8: Die Schublade
+### Task 8: Der Detailbereich
 
 **Files:**
 - Create: `dashboard/src/components/InstrumentDrilldown.vue`
@@ -945,9 +945,9 @@ In `InstrumentsTable.vue`:
             </td>
 ```
 
-Der Name analog. Eine zweite `<tr v-if="isOpen(item)">` mit `<td :colspan="columns.length + 1">` trägt die Schublade. Der bestehende Zeilen-Klick (`emit('select', item)`, öffnet das Chart) **bleibt** — nur Symbol und Name klinken sich mit `@click.stop` aus.
+Der Name analog. Eine zweite `<tr v-if="isOpen(item)">` mit `<td :colspan="columns.length + 1">` trägt den Detailbereich. Der bestehende Zeilen-Klick (`emit('select', item)`, öffnet das Chart) **bleibt** — nur Symbol und Name klinken sich mit `@click.stop` aus.
 
-In `InstrumentCard.vue` den aufgeklappten Bereich auf dieselbe Schublade ziehen:
+In `InstrumentCard.vue` den aufgeklappten Bereich auf denselben Detailbereich ziehen:
 Die drei `ManualMetric` in `<dl v-if="expanded" class="icard__details">`
 weichen einem `<InstrumentDrilldown :item="item" :busy="saving" @commit="emit('override', $event)" />`.
 Mobil steht damit dasselbe zur Verfügung wie am Schreibtisch — acht Felder
@@ -976,7 +976,7 @@ Dev-Server starten, dann in der laufenden App prüfen — gemessen, nicht gesch�
 document.documentElement.scrollWidth - document.documentElement.clientWidth
 ```
 
-Erwartet: je Spalte ein einziger Wert, Überhang 0. Zusätzlich die Schublade in `sepia` öffnen und den Kontrast ihrer Flächen prüfen.
+Erwartet: je Spalte ein einziger Wert, Überhang 0. Zusätzlich den Detailbereich in `sepia` öffnen und den Kontrast ihrer Flächen prüfen.
 
 - [ ] **Step 6: Commit**
 
@@ -992,6 +992,6 @@ git commit -m "feat(ui): aufklappbare Zeile mit allen ETF-Kennzahlen"
 
 Die Spec sagt „Die Kennung öffnet die Zeile", die Zeile reagiert aber schon auf
 Klick: `@click="emit('select', item)"` öffnet das Chart. Dieser Plan löst es so,
-dass **Symbol und Name** die Schublade öffnen (`@click.stop`) und der übrige
+dass **Symbol und Name** den Detailbereich öffnen (`@click.stop`) und der übrige
 Zeilenbereich weiterhin das Chart. Wer das anders will, ändert nur Task 8,
 Schritt 3.

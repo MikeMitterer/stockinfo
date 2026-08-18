@@ -45,7 +45,7 @@ const { data: exchanges, load: loadExchanges } = useExchanges()
 const fxCurrencies = computed(() => currenciesFromExchanges(exchanges.value))
 const { instruments, load: loadInstruments, error: instrumentsError } = useInstruments()
 /**
- * Vorschlagslisten der Schublade (Task 8) — einmal hier gebildet, nicht in
+ * Vorschlagslisten des Detailbereichs (Task 8) — einmal hier gebildet, nicht in
  * jeder Tabellen- oder Kartenzeile neu: Bei zwanzig Zeilen wäre das sonst
  * zwanzigmal dieselbe Ableitung aus Instrumentenliste und Börsentabelle.
  */

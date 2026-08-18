@@ -10,7 +10,7 @@ import { FIELD_LABEL_KEY } from '../utils/fieldLabels'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 /**
- * Die Bearbeitungs-Hälfte einer Kennzahl (T-15) — für die Schublade (Task 8).
+ * Die Bearbeitungs-Hälfte einer Kennzahl (T-15) — für den Detailbereich (Task 8).
  *
  * Hervorgegangen aus `ManualMetric.vue`, aber auf eine Hälfte verkleinert:
  * Den wirksamen Wert **anzuzeigen** ist seit Task 6 Sache von
@@ -188,7 +188,7 @@ const selectOptions = computed(() =>
 
 /*
  * Der Platzhalter im leeren Auswahlfeld ist dieselbe Beschriftung, die die
- * Schublade über das Feld schreibt — deshalb aus `FIELD_LABEL_KEY` statt aus
+ * Detailbereich über das Feld schreibt — deshalb aus `FIELD_LABEL_KEY` statt aus
  * einer eigenen Tabelle mit denselben vier Einträgen (Gesamtprüfung).
  *
  * Gelesen wird nur im Textzweig; für die anderen vier Felder bindet das

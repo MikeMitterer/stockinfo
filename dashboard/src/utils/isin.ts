@@ -4,7 +4,7 @@
  * Spiegel der Allow-List aus `is_european_isin` im Backend
  * (`app/providers/justetf_provider.py`) — justETF liefert für alle anderen
  * ISINs garantiert nichts, das Backend scraped dort erst gar nicht. Diese
- * kleine Fassung dient nur der Erklärung in der Schublade (Task 8), nicht der
+ * kleine Fassung dient nur der Erklärung im Detailbereich (Task 8), nicht der
  * Entscheidung, ob gescraped wird — die bleibt allein im Backend.
  */
 const EUROPEAN_DOMICILES = new Set([
