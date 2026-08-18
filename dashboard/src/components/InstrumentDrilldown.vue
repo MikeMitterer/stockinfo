@@ -96,7 +96,17 @@ const fetchedAt = computed(() =>
 <template>
   <div class="drilldown">
     <dl class="drilldown__fields">
-      <div v-for="field in OVERRIDE_FIELDS" :key="field" class="drilldown__field">
+      <!--
+        Die Fläche markiert, wo etwas zu tun ist — nicht jedes Feld. Wo die
+        Quelle liefert, ist das Feld gesperrt (Vorrang-Regel), und eine
+        Hervorhebung behauptete dort eine Möglichkeit, die es nicht gibt.
+      -->
+      <div
+        v-for="field in OVERRIDE_FIELDS"
+        :key="field"
+        class="drilldown__field"
+        :class="{ 'drilldown__field--editable': !sourceProvides(item, field) }"
+      >
         <dt class="drilldown__label">{{ t(FIELD_LABEL_KEY[field]) }}</dt>
         <dd class="drilldown__value">
           <MetricEditor
@@ -178,25 +188,28 @@ const fetchedAt = computed(() =>
   }
 }
 
-/*
- * Jedes Feld liegt auf einer eigenen, leicht abgehobenen Fläche. Der Grund ist
- * nicht Zierrat: Beschriftung und Bedienelement stehen nebeneinander, und bei
- * drei Spalten mal drei Zeilen verlief vorher nichts mehr — man las quer statt
- * paarweise. Die Fläche bindet das Paar zusammen.
- *
- * Der Schatten trägt einen Hauch Akzent statt reinem Schwarz: Auf den dunklen
- * Themes ist ein schwarzer Schatten unsichtbar, ein getönter setzt sich in
- * beide Richtungen ab. Deckkraft über `token()`, weil die Farben im Fundament
- * als RGB-Tripel liegen — mit Hex-Werten bliebe die Fläche unsichtbar.
- */
 .drilldown__field {
   display: flex;
   align-items: center;
   gap: var(--space-2);
   padding: var(--space-2);
   border-radius: var(--radius-sm);
-  background: token(--surface-raised, 0.5);
-  box-shadow: 0 1px 2px token(--accent, 0.12);
+}
+
+/*
+ * Nur die pflegbaren Felder bekommen eine Fläche — sie sagt „hier lässt sich
+ * etwas eintragen". Läge sie unter jedem Feld, sagte sie nichts: Wo die Quelle
+ * liefert, hat sie Vorrang und das Feld ist gesperrt.
+ *
+ * Bewusst schwach: eine getönte Fläche ohne Rand und ohne abgesetzten Schatten.
+ * Ein Kasten mit Kante zog die Aufmerksamkeit auf den Rahmen statt auf den
+ * Inhalt. Der Ton kommt vom Akzent und nicht aus Grau — auf den dunklen Themes
+ * verschwindet eine graue Aufhellung, eine getönte trägt in beide Richtungen.
+ * Deckkraft über `token()`, weil die Farben im Fundament als RGB-Tripel liegen;
+ * mit Hex-Werten bliebe die Fläche unsichtbar.
+ */
+.drilldown__field--editable {
+  background: token(--accent, 0.06);
 }
 
 .drilldown__label { color: $color-muted; font-size: var(--font-sm); }

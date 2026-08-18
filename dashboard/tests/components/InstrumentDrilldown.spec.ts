@@ -23,6 +23,39 @@ describe('InstrumentDrilldown', () => {
    * jetzt im Fragezeichen hinter „Stand der Quelle" — genau die Bauform, die
    * ux-standards unter „Erklärungen in der App" dafür vorsieht.
    */
+  /*
+   * Die Fläche hinter einem Feld ist kein Schmuck, sondern eine Aussage: „hier
+   * lässt sich etwas eintragen". Trüge sie jedes Feld, sagte sie nichts — die
+   * Quelle hat Vorrang, und wo sie liefert, ist nichts zu tun.
+   */
+  it('hebt nur die Felder hervor, die sich tatsächlich ändern lassen', () => {
+    const wrapper = mount(InstrumentDrilldown, {
+      global: { plugins: [i18n] },
+      props: {
+        item: makeInstrument({
+          type: 'etf',
+          isin: 'IE00B4L5Y983',
+          // Kommt aus der Quelle → gesperrt, also keine Fläche.
+          ter: 0.2,
+          provider: 'iShares',
+          // Lücken der Quelle → von Hand pflegbar, also Fläche.
+          fund_domicile: null,
+          fund_currency: null,
+          replication: null,
+          fund_size: null,
+          volatility: null,
+          accumulating: null,
+        }),
+      },
+    })
+
+    const felder = wrapper.findAll('.drilldown__field')
+    const hervorgehoben = felder.filter((f) => f.classes().includes('drilldown__field--editable'))
+
+    expect(felder).toHaveLength(8)
+    expect(hervorgehoben).toHaveLength(6)
+  })
+
   it('hält die allgemeine Erklärung im Hinweis statt im Dauertext', () => {
     const wrapper = mount(InstrumentDrilldown, {
       global: { plugins: [i18n] },
