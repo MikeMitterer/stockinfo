@@ -254,7 +254,16 @@ function price(value: number | null): string {
                   :aria-controls="`drawer-${item.symbol}`"
                   @click.stop="toggleDrawer(item)"
                 >
-                  {{ item.symbol }}
+                  <!--
+                    `aria-hidden`: Den Zustand sagt bereits `aria-expanded` am
+                    Knopf. Ein vorgelesenes „⌄" wäre eine zweite, stummere
+                    Fassung derselben Auskunft.
+                  -->
+                  <span
+                    class="row-toggle__caret"
+                    :class="{ 'row-toggle__caret--open': isOpen(item) }"
+                    aria-hidden="true"
+                  >⌄</span>{{ item.symbol }}
                 </button>
               </td>
               <td class="mono dim isin-cell">
@@ -497,6 +506,31 @@ tbody tr {
     text-decoration: underline dotted;
     text-underline-offset: 0.2em;
   }
+}
+
+/*
+ * Der Pfeil steht **zusätzlich** zur Kennung, nicht an ihrer Stelle
+ * (ux-standards, „Die Kennung öffnet die Zeile"): Geklickt wird der Name, aber
+ * ohne sichtbares Merkmal sieht man der Zeile nicht an, dass sie aufgeht.
+ *
+ * Zeichen und Drehung sind dieselben wie in der Kartenliste
+ * (`InstrumentCard.vue`, `.icard__chevron`) — zwei Schreibweisen für „hier geht
+ * etwas auf" wären eine zu viel. Er sitzt im Knopf und nicht daneben, damit er
+ * dieselbe Fläche trifft wie die Kennung.
+ *
+ * `display: inline-block` ist kein Zierrat: Es macht den Pfeil zu einem
+ * atomaren Kasten, und die gepunktete Linie des Knopfes läuft nicht mit
+ * darunter durch.
+ */
+.row-toggle__caret {
+  display: inline-block;
+  margin-right: 0.3rem;
+  color: $color-accent;
+  font-size: 0.7rem;
+  line-height: 1;
+  transition: transform 0.12s ease;
+
+  &--open { transform: rotate(180deg); }
 }
 
 // In der Namensspalte übernimmt der Knopf die Kürzung, die vorher an der

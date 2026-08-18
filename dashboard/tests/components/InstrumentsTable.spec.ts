@@ -163,6 +163,23 @@ describe('InstrumentsTable — Schublade', () => {
     expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(true)
   })
 
+  /*
+   * Sichtprüfung: Symbol und Name öffnen die Zeile zwar, aber ohne sichtbares
+   * Merkmal sieht man ihnen das nicht an — „Klick auf das Symbol ist zu wenig
+   * intuitiv". Der Pfeil steht deshalb vorne in der Zeile, wie ihn die
+   * Kartenliste unter `md` längst zeigt (`InstrumentCard.vue`).
+   */
+  it('zeigt vorne in der Zeile einen Pfeil, der den Zustand der Schublade spiegelt', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+
+    expect(wrapper.get('.row-toggle__caret').classes()).not.toContain('row-toggle__caret--open')
+
+    await wrapper.get('.row-toggle').trigger('click')
+
+    expect(wrapper.get('.row-toggle__caret').classes()).toContain('row-toggle__caret--open')
+  })
+
   it('markiert den geöffneten Zustand am Knopf', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()

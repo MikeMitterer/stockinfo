@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
+import InfoHint from './InfoHint.vue'
 import MetricEditor from './MetricEditor.vue'
 import { sourceProvides } from '../composables/useOverrides'
 import { OVERRIDE_FIELDS } from '../types'
@@ -20,9 +21,14 @@ import { isEuropeanIsin } from '../utils/isin'
  * Befund 3 — vorher zweispaltig, mit einer rechten Spalte, die meist fast leer
  * blieb).
  *
- * Die Erklärung selbst trägt immer, nicht nur in Ausnahmefällen (Befund 2):
- * woher die Daten kommen und dass sich nur ergänzen lässt, was die Quelle
- * nicht liefert. Zwei Sonderfälle kommen zusätzlich dazu, wenn sie zutreffen —
+ * Die allgemeine Erklärung — woher die Daten kommen, dass sich nur ergänzen
+ * lässt, was die Quelle nicht liefert — bleibt immer erreichbar, steht aber
+ * nicht mehr dauerhaft im Text: Sie beantwortet eine Frage, die man einmal hat
+ * und danach nicht mehr, und nahm als Dauertext mehr Raum ein als die
+ * Kennzahlen darüber. Sie sitzt im Fragezeichen hinter dem Zeitstempel.
+ *
+ * Die Sonderfälle dagegen **stehen** da, denn sie sind keine Erklärung, sondern
+ * ein Befund über genau dieses Papier — sie kommen dazu, wenn sie zutreffen:
  * für nicht-europäische ISINs überspringt das Backend die Quelle bewusst
  * (`is_european_isin` in `app/providers/justetf_provider.py`), und wenn die
  * Quelle abgefragt wurde, aber nichts geliefert hat.
@@ -113,15 +119,18 @@ const fetchedAt = computed(() =>
       <p v-if="item.source" class="drilldown__fetched">
         {{ t('drilldown.source') }}: <span class="mono">{{ item.source }}</span>
       </p>
-      <p v-if="fetchedAt" class="drilldown__fetched">
-        {{ t('drilldown.fetchedAt') }}: <span class="mono">{{ fetchedAt }}</span>
-      </p>
       <!--
-        Trägt immer, unabhängig vom Zustand der Quelle — anders als die beiden
-        Sonderfälle darunter, die nur in ihrem jeweiligen Ausnahmefall dazukommen
-        (Nacharbeit Sichtprüfung, Befund 2).
+        Der Absatz steht immer, auch ohne Zeitstempel: Er trägt das
+        Fragezeichen, und gerade wer eine leere Schublade vor sich hat, will
+        wissen, woher hier etwas herkommen soll. Ohne Zeitstempel bleibt nur
+        der Hinweis übrig.
       -->
-      <p class="drilldown__explain">{{ t('drilldown.explain') }}</p>
+      <p class="drilldown__fetched">
+        <template v-if="fetchedAt"
+          >{{ t('drilldown.fetchedAt') }}: <span class="mono">{{ fetchedAt }}</span>
+        </template>
+        <InfoHint :text="t('drilldown.explain')" />
+      </p>
       <p v-if="skipReason === 'notEtf'" class="drilldown__explain">{{ t('drilldown.notEtf') }}</p>
       <p v-else-if="skipReason === 'noIsin'" class="drilldown__explain">{{ t('drilldown.noIsin') }}</p>
       <p v-else-if="skipReason === 'notEuropean'" class="drilldown__explain">{{ t('drilldown.noEuropeanSource') }}</p>
@@ -169,13 +178,28 @@ const fetchedAt = computed(() =>
   }
 }
 
+/*
+ * Jedes Feld liegt auf einer eigenen, leicht abgehobenen Fläche. Der Grund ist
+ * nicht Zierrat: Beschriftung und Bedienelement stehen nebeneinander, und bei
+ * drei Spalten mal drei Zeilen verlief vorher nichts mehr — man las quer statt
+ * paarweise. Die Fläche bindet das Paar zusammen.
+ *
+ * Der Schatten trägt einen Hauch Akzent statt reinem Schwarz: Auf den dunklen
+ * Themes ist ein schwarzer Schatten unsichtbar, ein getönter setzt sich in
+ * beide Richtungen ab. Deckkraft über `token()`, weil die Farben im Fundament
+ * als RGB-Tripel liegen — mit Hex-Werten bliebe die Fläche unsichtbar.
+ */
 .drilldown__field {
   display: flex;
   align-items: center;
   gap: var(--space-2);
+  padding: var(--space-2);
+  border-radius: var(--radius-sm);
+  background: token(--surface-raised, 0.5);
+  box-shadow: 0 1px 2px token(--accent, 0.12);
 }
 
-.drilldown__label { color: $color-muted; font-size: 0.85rem; }
+.drilldown__label { color: $color-muted; font-size: var(--font-sm); }
 .drilldown__value { display: flex; justify-content: flex-start; }
 
 // Schmale Fußzeile, per feiner Linie von den Feldern abgesetzt.
@@ -186,10 +210,21 @@ const fetchedAt = computed(() =>
   max-width: 72ch;
   padding-top: var(--space-3);
   border-top: 1px solid token(--border-default, 0.55);
-  font-size: 0.85rem;
+  font-size: var(--font-sm);
   color: $color-muted;
 }
 
-.drilldown__fetched { margin: 0; }
+/*
+ * Kleiner und leiser als der Rest der Fußzeile: Herkunft und Zeitstempel sind
+ * Beleg, nicht Inhalt — man sucht sie, wenn eine Zahl fragwürdig aussieht, und
+ * überliest sie sonst. Der Befund darunter (`__explain`) behält die volle
+ * Größe: Er sagt, warum ein Feld leer ist, und das ist keine Fußnote.
+ */
+.drilldown__fetched {
+  margin: 0;
+  font-size: var(--font-xs);
+  opacity: 0.8;
+}
+
 .drilldown__explain { margin: 0; }
 </style>

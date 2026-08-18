@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
+import InfoHint from '../../src/components/InfoHint.vue'
 import InstrumentDrilldown from '../../src/components/InstrumentDrilldown.vue'
 import { i18n } from '../../src/i18n'
 import { makeInstrument } from '../fixtures/instrument'
@@ -16,12 +17,13 @@ describe('InstrumentDrilldown', () => {
   })
 
   /*
-   * Nacharbeit Sichtprüfung, Befund 2: Bisher erklärte sich die Schublade nur
-   * in den zwei Ausnahmefällen (nicht-europäische ISIN, leere Quelle). Im
-   * häufigsten Fall — europäisches Papier, Quelle liefert alles — stand dort
-   * nichts. Diese Erklärung muss immer da sein, unabhängig vom Zustand.
+   * Die Erklärung bleibt immer erreichbar, steht aber nicht mehr dauerhaft im
+   * Text: Sie beantwortet eine Frage, die man einmal hat und danach nicht mehr,
+   * und nahm als Dauertext mehr Platz ein als die Kennzahlen darüber. Sie sitzt
+   * jetzt im Fragezeichen hinter „Stand der Quelle" — genau die Bauform, die
+   * ux-standards unter „Erklärungen in der App" dafür vorsieht.
    */
-  it('erklärt immer, woher die Daten stammen — auch wenn die Quelle alles liefert', () => {
+  it('hält die allgemeine Erklärung im Hinweis statt im Dauertext', () => {
     const wrapper = mount(InstrumentDrilldown, {
       global: { plugins: [i18n] },
       props: {
@@ -40,7 +42,8 @@ describe('InstrumentDrilldown', () => {
       },
     })
 
-    expect(wrapper.text()).toContain(i18n.global.t('drilldown.explain'))
+    expect(wrapper.getComponent(InfoHint).props('text')).toBe(i18n.global.t('drilldown.explain'))
+    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.explain'))
     // Keiner der vier Sonderfälle greift hier — ETF, europäisch, Quelle voll.
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.notEtf'))
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.noIsin'))
@@ -107,6 +110,22 @@ describe('InstrumentDrilldown', () => {
     })
 
     expect(wrapper.text()).toContain(i18n.global.t('drilldown.fetchedAt'))
+  })
+
+  /*
+   * Der Hinweis hängt am Zeitstempel — den gibt es aber nicht immer (ein
+   * Papier, das noch nie abgefragt wurde). Er darf deshalb nicht mit der Zeile
+   * verschwinden: Gerade wer eine leere Schublade vor sich hat, will wissen,
+   * woher hier etwas herkommen soll.
+   */
+  it('behält den Hinweis, auch wenn es keinen Zeitstempel gibt', () => {
+    const wrapper = mount(InstrumentDrilldown, {
+      global: { plugins: [i18n] },
+      props: { item: makeInstrument({ meta_fetched_at: null }) },
+    })
+
+    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.fetchedAt'))
+    expect(wrapper.getComponent(InfoHint).props('text')).toBe(i18n.global.t('drilldown.explain'))
   })
 
   /*
