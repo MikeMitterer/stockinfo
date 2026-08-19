@@ -262,6 +262,36 @@ export const de = {
     markShadowed:
       'Von Hand eingetragen: {value}. Angezeigt wird der Wert der Quelle — sie hat Vorrang. ' +
       'Die Eingabe bleibt gespeichert und greift wieder, sobald die Quelle nichts liefert.',
+    removeOwn: 'Eigenen Wert entfernen',
+    /*
+     * Beschriftungen der fünf ETF-Extras, die T-15 nachträgt (T-09 deckte
+     * TER, Volatilität und Thesaurierung bereits über die Tabellenköpfe ab).
+     */
+    fields: {
+      provider: 'Anbieter',
+      replication: 'Replikationsart',
+      fundSize: 'Fondsvolumen',
+      fundDomicile: 'Fondsdomizil',
+      fundCurrency: 'Fondswährung',
+    },
+  },
+  drilldown: {
+    fetchedAt: 'Stand der Quelle',
+    source: 'Quelle',
+    explain:
+      'Die Kennzahlen stammen, wo verfügbar, automatisch von justETF. Von Hand ' +
+      'lässt sich nur ergänzen, was die Quelle nicht liefert — sie hat immer Vorrang.',
+    notEtf:
+      'justETF liefert nur Kennzahlen zu ETFs — dieses Papier ist eine Aktie. Die ' +
+      'Quelle wird deshalb gar nicht erst abgefragt, alle Felder lassen sich von Hand nachtragen.',
+    noIsin:
+      'Ohne ISIN lässt sich justETF nicht abfragen. Sobald eine ISIN eingetragen ist ' +
+      '(Kennung in der Zeile), greift die Quelle wieder; bis dahin lassen sich alle Felder von Hand nachtragen.',
+    noEuropeanSource:
+      'justETF deckt nur europäische UCITS-ETFs ab (Fondsdomizil EU, EWR, Schweiz oder ' +
+      'UK). Diese ISIN liegt außerhalb — die Quelle wird deshalb gar nicht erst ' +
+      'abgefragt, alle Felder lassen sich von Hand nachtragen.',
+    sourceEmpty: 'Die Quelle wurde abgefragt, hat aber nichts geliefert — alle Felder lassen sich von Hand nachtragen.',
   },
   confirmDelete: {
     title: 'Asset löschen?',

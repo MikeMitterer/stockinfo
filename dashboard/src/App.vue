@@ -11,7 +11,7 @@ import {
   deDE,
   enUS,
 } from 'naive-ui'
-import { buildNaiveOverrides, THEMES, UxNotificationProvider } from '@mikemitterer/ux-foundation'
+import { buildNaiveOverrides, THEMES, UxNotificationProvider } from '@mmit/ux-foundation'
 
 import AppDashboard from './components/AppDashboard.vue'
 import { useNaiveOverrides } from './composables/useNaiveOverrides'

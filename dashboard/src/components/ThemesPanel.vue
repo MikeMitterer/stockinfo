@@ -7,7 +7,7 @@
  */
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { THEME_IDS, UxThemePicker, type ThemeId } from '@mikemitterer/ux-foundation'
+import { THEME_IDS, UxThemePicker, type ThemeId } from '@mmit/ux-foundation'
 
 import { useTheme } from '../composables/useTheme'
 

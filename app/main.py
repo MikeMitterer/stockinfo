@@ -8,7 +8,7 @@ from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
 import structlog
-from fastapi import FastAPI
+from fastapi import FastAPI, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
@@ -17,7 +17,7 @@ from app.config import Settings, get_settings
 from app.docs import register_docs
 from app.container import get_cached_quote_service
 from app.db import init_db
-from app.models import HealthResponse
+from app.models import HealthResponse, ReadinessResponse
 from app.routers import dashboard, fx, quotes
 from app.scheduler import RefreshScheduler
 
@@ -68,8 +68,38 @@ app.add_middleware(
 
 @app.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
-    """Liefert den Health-Status des Services (für Docker-Healthcheck & Monitoring)."""
+    """Liveness: Antwortet der Prozess überhaupt noch?
+
+    Bewusst billig und ohne Abhängigkeiten — die Antwort entscheidet über einen
+    Neustart, und ein Neustart hilft gegen eine kaputte Datenbank nicht.
+    Ob der Dienst *arbeiten* kann, beantwortet `/ready`.
+    """
     return HealthResponse(version=__version__)
+
+
+@app.get("/ready", response_model=ReadinessResponse)
+async def ready(response: Response) -> ReadinessResponse:
+    """Readiness: Kann der Dienst gerade arbeiten?
+
+    `/health` antwortete immer mit ``ok``, auch wenn die SQLite-Datei
+    verschwunden oder nicht mehr lesbar war — der Container galt dann bis zum
+    ersten echten Request als gesund. Diese Route sieht deshalb wirklich nach:
+    ein winziger Zugriff auf die Datenbank, mehr nicht.
+
+    Args:
+        response: Wird auf 503 gesetzt, wenn die Datenbank nicht erreichbar ist.
+
+    Returns:
+        Zustand samt Version. Der Statuscode ist die eigentliche Aussage —
+        503 heißt „gerade nicht bedienbar", nicht „tot".
+    """
+    try:
+        get_cached_quote_service().count_instruments()
+    except Exception as exc:
+        logger.warning("readiness_check_failed", error=str(exc))
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return ReadinessResponse(status="degraded", version=__version__, database="error")
+    return ReadinessResponse(status="ok", version=__version__, database="ok")
 
 
 def mount_dashboard(app: FastAPI, static_dir: str) -> bool:

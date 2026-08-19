@@ -1,0 +1,322 @@
+<script setup lang="ts">
+import { computed } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { NButton, NSelect } from 'naive-ui'
+import { UxInlineNumber } from '@mmit/ux-foundation'
+
+import MetricValue from './MetricValue.vue'
+import { manualValue, sourceProvides } from '../composables/useOverrides'
+import { FIELD_LABEL_KEY } from '../utils/fieldLabels'
+import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
+
+/**
+ * Die Bearbeitungs-Hälfte einer Kennzahl (T-15) — für den Detailbereich (Task 8).
+ *
+ * Hervorgegangen aus `ManualMetric.vue`, aber auf eine Hälfte verkleinert:
+ * Den wirksamen Wert **anzuzeigen** ist seit Task 6 Sache von
+ * `MetricValue.vue`; hier geht es ums Ändern. Dieselbe Vorrang-Regel
+ * entscheidet, ob überhaupt etwas zu ändern ist — was die Quelle liefert,
+ * gewinnt, ein eigener Wert füllt nur Lücken.
+ *
+ * Ist ein Feld gesperrt, verschwindet nur die **Bedienung** — der wirksame
+ * Wert bleibt stehen, gerendert über `MetricValue` (Nacharbeit Sichtprüfung,
+ * Befund 1). Ohne das zeigte ein gesperrtes Feld ohne eigenen Wert acht
+ * Beschriftungen und daneben nichts: kein Wert, keine Erklärung. Eine dritte
+ * Anzeige-Komponente dafür zu bauen wäre dieselbe Aussage ein zweites Mal —
+ * `MetricValue` kann das bereits.
+ *
+ * Acht Felder, drei Bedienarten: Zahl (`UxInlineNumber`), der Dreier-
+ * Umschalter für die Thesaurierung, und Text als Auswahl mit freier Eingabe
+ * (`NSelect` mit `filterable` + `tag`). Reine Auswahl wäre für die Textfelder
+ * falsch: Ein Fonds mit unbekanntem Anbieter oder Domizil wäre sonst gar
+ * nicht pflegbar — genau für solche Fälle ist das Feature gedacht. Welche
+ * Bedienart zu welchem Feld gehört, steht als Tabelle da — eine Verzweigung
+ * mit acht gleichförmigen Zweigen wäre dieselbe Aussage, nur ausführlicher.
+ *
+ * Neu gegenüber `ManualMetric.vue`: der Entfernen-Knopf. Er erscheint immer,
+ * wenn ein eigener Wert existiert — **auch im gesperrten Zustand**. Ohne ihn
+ * wäre das Feature eine Falle: Wer während eines Quellen-Ausfalls acht Felder
+ * nachträgt, käme nach dessen Ende an keines davon mehr heran, außer per
+ * direktem API-Aufruf.
+ */
+const props = defineProps<{
+  item: InstrumentSummary
+  field: OverrideField
+  /** Solange gespeichert wird, nichts anfassen. */
+  busy?: boolean
+  /**
+   * Vorschlagswerte für die vier Textfelder — hier nur durchgereicht, nicht
+   * ermittelt.
+   *
+   * Diese Komponente kennt weder die Instrumentenliste noch die
+   * Börsentabelle, aus denen sich die Vorschläge ableiten (Anbieter,
+   * Replikationsart und Fondsdomizil aus den geladenen Instrumenten;
+   * Fondswährung aus `currenciesFromExchanges()`). Das bleibt bewusst eine
+   * Ebene höher: Acht `MetricEditor` je Zeile dürften diese Ableitung nicht
+   * acht Mal wiederholen, und ein Prop-Drilling von Instrumentenliste oder
+   * Börsentabelle bis in dieses Blatt hätte diese Komponente unnötig an
+   * Datenquellen gekoppelt, die mit ihrer eigentlichen Aufgabe nichts zu tun
+   * haben.
+   */
+  options?: string[]
+}>()
+
+const emit = defineEmits<{
+  (event: 'commit', patch: Partial<InstrumentOverrides>): void
+}>()
+
+const { t, n } = useI18n()
+
+type FieldKind = 'number' | 'boolean' | 'text'
+
+/** Bedienart je Feld — steuert, welcher Zweig im Template greift. */
+const FIELD_KIND: Record<OverrideField, FieldKind> = {
+  ter: 'number',
+  volatility: 'number',
+  fund_size: 'number',
+  accumulating: 'boolean',
+  provider: 'text',
+  replication: 'text',
+  fund_domicile: 'text',
+  fund_currency: 'text',
+}
+
+const kind = computed(() => FIELD_KIND[props.field])
+
+/**
+ * Liefert die Quelle etwas? Dann wird hier nichts gepflegt.
+ *
+ * Über `sourceProvides()` statt einer eigenen Fassung der Vorrang-Regel
+ * (Nacharbeit Sichtprüfung, I4) — dieselbe Prüfung stand vorher hier, in
+ * `MetricValue.vue` und in `InstrumentDrilldown.vue`, je einmal anders
+ * formuliert.
+ */
+const editable = computed(() => !sourceProvides(props.item, props.field))
+
+/** Der von Hand eingetragene Rohwert — das, was bearbeitet und entfernt wird. */
+const manual = computed(() => manualValue(props.item, props.field))
+
+/**
+ * Der Entfernen-Knopf steht unabhängig vom Sperr-Zustand zur Verfügung.
+ *
+ * Bewusste Ausnahme von der Vorrang-Regel — siehe Kommentar am Komponenten-
+ * kopf. Ohne sie käme man an einen verdeckten Wert nur noch per API-Aufruf
+ * heran, sobald die Quelle doch etwas liefert.
+ */
+const removable = computed(() => manual.value !== null)
+
+function commit(patch: Partial<InstrumentOverrides>): void {
+  emit('commit', patch)
+}
+
+function onRemove(): void {
+  commit({ [props.field]: null } as Partial<InstrumentOverrides>)
+}
+
+// ─── Zahlenfelder (ter, volatility, fund_size) ─────────────────────────────
+
+const DIGITS = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
+
+/** Obergrenze je Zahlenfeld — dieselben Werte prüft das Backend noch einmal. */
+const NUMBER_MAX: Partial<Record<OverrideField, number>> = {
+  ter: 5,
+  volatility: 500,
+  fund_size: 2_000_000,
+}
+
+const numericValue = computed(() => (typeof manual.value === 'number' ? manual.value : null))
+
+const numberMax = computed(() => NUMBER_MAX[props.field] ?? Number.MAX_SAFE_INTEGER)
+
+/** Fondsvolumen ist keine Prozentzahl — TER und Volatilität schon. */
+const numberDisplay = computed(() => {
+  if (numericValue.value === null) return '—'
+  const formatted = n(numericValue.value, DIGITS)
+  return props.field === 'fund_size' ? formatted : `${formatted} %`
+})
+
+function onNumber(value: number | null): void {
+  commit({ [props.field]: value } as Partial<InstrumentOverrides>)
+}
+
+// ─── Thesaurierung ──────────────────────────────────────────────────────────
+
+/**
+ * Der nächste Zustand: ja → nein → nicht gesetzt → ja.
+ *
+ * Ausgeschrieben statt als Nachschlagetabelle — so stand es schon in der seit
+ * Task 8 gelöschten `ManualMetric.vue`: Ein `?? true` würde das gültige
+ * Ergebnis `null` verschlucken.
+ */
+function nextAccumulating(value: boolean | null): boolean | null {
+  if (value === true) return false
+  if (value === false) return null
+  return true
+}
+
+/*
+ * Gezykelt wird der **eingetragene** Wert, nicht der wirksame. Der Umschalter
+ * ist ohnehin nur sichtbar, solange die Quelle nichts liefert — dort sind
+ * beide Werte identisch, aber der eingetragene ist der, den wir ändern.
+ */
+const nextAccumulatingValue = computed(() => nextAccumulating(props.item.manual_accumulating))
+
+const toggleTitle = computed(() =>
+  t('overrides.cycleTo', {
+    value:
+      nextAccumulatingValue.value === null
+        ? t('overrides.notSet')
+        : nextAccumulatingValue.value
+          ? t('table.yes')
+          : t('table.no'),
+  }),
+)
+
+function onToggle(): void {
+  commit({ accumulating: nextAccumulatingValue.value })
+}
+
+// ─── Textfelder (provider, replication, fund_domicile, fund_currency) ──────
+
+/** Der eingetragene Wert, `null` statt `''` — `NSelect` erwartet das für „nichts gewählt". */
+const selectValue = computed(() => (typeof manual.value === 'string' ? manual.value : null))
+
+/** `NSelect` will Label/Value-Paare; hier sind beide gleich, das Label ist der Wert selbst. */
+const selectOptions = computed(() =>
+  (props.options ?? []).map((value) => ({ label: value, value })),
+)
+
+/*
+ * Der Platzhalter im leeren Auswahlfeld ist dieselbe Beschriftung, die die
+ * Detailbereich über das Feld schreibt — deshalb aus `FIELD_LABEL_KEY` statt aus
+ * einer eigenen Tabelle mit denselben vier Einträgen (Gesamtprüfung).
+ *
+ * Gelesen wird nur im Textzweig; für die anderen vier Felder bindet das
+ * Template den Platzhalter gar nicht.
+ */
+const selectPlaceholder = computed(() => t(FIELD_LABEL_KEY[props.field]))
+
+/**
+ * `NSelect` mit `tag` feuert dieses Event erst, wenn eine Auswahl (bestehend
+ * oder neu getippt und bestätigt) feststeht — anders als beim reinen Textfeld
+ * gibt es hier keinen offenen Entwurf, der noch zwischengespeichert werden
+ * müsste.
+ */
+function onSelect(value: string | null): void {
+  commit({ [props.field]: normalizeText(value) } as Partial<InstrumentOverrides>)
+}
+
+/**
+ * Bringt einen getippten Text in die Form, die das Backend annimmt.
+ *
+ * Betrifft nur die Fondswährung: Sie ist freie Eingabe, das Backend verlangt
+ * aber `^[A-Z]{3}$` (`InstrumentOverrides.fund_currency`). Getipptes „usd"
+ * lief bislang in eine 422 und endete als generischer Fehler-Toast, aus dem
+ * nicht hervorging, dass bloß die Schreibweise nicht passte. Die Umschrift
+ * hier erspart die Sackgasse — sie ist verlustfrei, ein Währungscode hat keine
+ * bedeutungstragende Kleinschreibung.
+ *
+ * Die drei anderen Textfelder bleiben, wie sie getippt wurden: „iShares" ist
+ * ein Eigenname, kein Code.
+ */
+function normalizeText(value: string | null): string | null {
+  if (value === null || props.field !== 'fund_currency') return value
+  return value.trim().toUpperCase()
+}
+</script>
+
+<template>
+  <span class="metric-editor">
+    <template v-if="editable">
+      <button
+        v-if="kind === 'boolean'"
+        type="button"
+        class="metric-editor__toggle"
+        :disabled="busy"
+        :title="toggleTitle"
+        @click="onToggle"
+      >
+        <span
+          v-if="item.manual_accumulating !== null"
+          class="badge thes"
+          :class="{ acc: item.manual_accumulating }"
+        >{{ item.manual_accumulating ? t('table.yes') : t('table.no') }}</span>
+        <span
+          v-else
+          class="metric-editor__empty"
+        >—</span>
+      </button>
+
+      <UxInlineNumber
+        v-else-if="kind === 'number'"
+        :value="numericValue"
+        :display="numberDisplay"
+        :precision="2"
+        :min="0"
+        :max="numberMax"
+        :empty-value="null"
+        :disabled="busy"
+        :edit-label="t('overrides.edit')"
+        :clear-label="t('overrides.clear')"
+        @commit="onNumber"
+      />
+
+      <NSelect
+        v-else
+        :value="selectValue"
+        :options="selectOptions"
+        filterable
+        tag
+        size="small"
+        :disabled="busy"
+        :placeholder="selectPlaceholder"
+        @update:value="onSelect"
+      />
+    </template>
+
+    <MetricValue v-else :item="item" :field="field" />
+
+    <NButton
+      v-if="removable"
+      class="metric-editor__remove"
+      size="tiny"
+      quaternary
+      :disabled="busy"
+      :title="t('overrides.removeOwn')"
+      @click="onRemove"
+    >
+      ✕
+    </NButton>
+  </span>
+</template>
+
+<style scoped lang="scss">
+@use '../styles/variables' as *;
+
+.metric-editor {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+
+  &__toggle {
+    display: inline-flex;
+    border: none;
+    background: none;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+    color: inherit;
+  }
+
+  &__empty { color: $color-muted; }
+}
+
+// Lokale Variante der globalen .badge-Pill — dieselben Farben wie die
+// Anzeige-Hälfte (`MetricValue.vue`), hier aber im eigenen Scope nötig, weil
+// die Badge innerhalb dieser Komponente gerendert wird.
+.badge.thes {
+  color: $color-muted;
+  background: $color-surface-2;
+  &.acc { color: $color-accent; background: token(--accent, 0.15); }
+}
+</style>

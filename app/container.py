@@ -40,7 +40,11 @@ def get_cached_quote_service() -> CachedQuoteService:
     repository = QuoteRepository(settings.database_path)
     daily_sync = DailyCloseSync(repository, YFinanceProvider())
     return CachedQuoteService(
-        quote_service, repository, settings.cache_ttl_hours, daily_sync
+        quote_service,
+        repository,
+        settings.cache_ttl_hours,
+        daily_sync,
+        settings.metadata_ttl_days,
     )
 
 

@@ -43,13 +43,13 @@ class FakeQuoteService:
         self._exception = exception
         self.calls = 0
 
-    def get_quote_by_isin(self, isin: str) -> QuoteResponse:
+    def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         self.calls += 1
         if self._raises:
             raise self._exception(isin)
         return self._response
 
-    def get_quote_by_symbol(self, symbol: str) -> QuoteResponse:
+    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
         return self.get_quote_by_isin(symbol)
 
 
@@ -188,7 +188,7 @@ class _FakeDailyProvider:
 class _StockQuoteService:
     """Minimaler QuoteService-Stub: liefert eine Aktien-Antwort ohne Volatilität."""
 
-    def get_quote_by_isin(self, isin: str) -> QuoteResponse:
+    def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         return QuoteResponse(
             isin=isin, symbol="AAPL.DE", currency="EUR", price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",
@@ -215,7 +215,7 @@ def test_refresh_behaelt_justetf_volatilitaet(tmp_path) -> None:
     """Liefert der QuoteService bereits eine Volatilität (justETF), wird sie nicht überschrieben."""
 
     class _EtfQuoteService:
-        def get_quote_by_isin(self, isin: str) -> QuoteResponse:
+        def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
             return QuoteResponse(
                 isin=isin, symbol="VGWL.DE", currency="EUR", price=160.0,
                 quote_time="2026-07-13T10:00:00+00:00",
@@ -259,3 +259,90 @@ def test_refresh_behaelt_letzte_volatilitaet_bei_fehlgeschlagener_neuberechnung(
     assert result.volatility == 12.5  # nicht mit None überschrieben
     stored = repo.get_instrument_by_isin("US0378331005")
     assert stored["volatility"] == 12.5
+
+
+class _MerkendeQuoteService:
+    """Merkt sich, ob justETF gefragt werden sollte."""
+
+    def __init__(self, response: QuoteResponse) -> None:
+        self._response = response
+        self.enrich_calls: list[bool] = []
+
+    def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
+        self.enrich_calls.append(enrich_etf)
+        return self._response
+
+    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
+        return self.get_quote_by_isin(symbol, enrich_etf)
+
+
+def _alter_stand(repo: QuoteRepository, meta_fetched_at: str) -> None:
+    """Setzt den Zeitstempel des Metadatenstands direkt in der DB."""
+    import sqlite3
+
+    with sqlite3.connect(repo._database_path) as verbindung:  # noqa: SLF001
+        verbindung.execute(
+            "UPDATE instruments SET meta_fetched_at = ?", (meta_fetched_at,)
+        )
+
+
+def test_junge_etf_kennzahlen_loesen_keinen_justetf_abruf_aus(repo) -> None:
+    """`metadata_ttl_days` war reine Anzeige — justETF lief bei jedem Kurs mit.
+
+    Kurse und Kennzahlen altern verschieden schnell: Ein Kurs ist nach Stunden
+    veraltet, ein Fondsdomizil ändert sich in Jahren nicht. Der Sammelrefresh
+    kostete dadurch einen Scrape je ETF und Runde.
+    """
+    fake = _MerkendeQuoteService(_response(_now()))
+    repo.save_quote(_response("2026-01-01T00:00:00+00:00"))
+    _alter_stand(repo, _now())  # Kennzahlen von gerade eben
+
+    service = CachedQuoteService(
+        fake, repo, ttl_hours=0, daily_sync=_stub_daily_sync(repo), metadata_ttl_days=7
+    )
+    service.get_by_isin("IE00B3RBWM25")
+
+    assert fake.enrich_calls == [False], "junger Stand — justETF bleibt außen vor"
+
+
+def test_alte_etf_kennzahlen_loesen_einen_justetf_abruf_aus(repo) -> None:
+    fake = _MerkendeQuoteService(_response(_now()))
+    repo.save_quote(_response("2026-01-01T00:00:00+00:00"))
+    _alter_stand(repo, (datetime.now(timezone.utc) - timedelta(days=30)).isoformat())
+
+    service = CachedQuoteService(
+        fake, repo, ttl_hours=0, daily_sync=_stub_daily_sync(repo), metadata_ttl_days=7
+    )
+    service.get_by_isin("IE00B3RBWM25")
+
+    assert fake.enrich_calls == [True]
+
+
+def test_unbekanntes_papier_wird_immer_angereichert(repo) -> None:
+    """Sonst bekäme ein frisch hinzugefügter ETF seine Kennzahlen nie."""
+    fake = _MerkendeQuoteService(_response(_now()))
+    service = CachedQuoteService(
+        fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo), metadata_ttl_days=7
+    )
+
+    service.get_by_isin("IE00B3RBWM25")
+
+    assert fake.enrich_calls == [True]
+
+
+def test_handrefresh_uebergeht_die_metadaten_ttl(repo) -> None:
+    """Wer bewusst auf ↻ drückt, will frische Zahlen — auch die Kennzahlen.
+
+    Der Sammel- und der Hintergrundlauf halten sich an die TTL; der Griff zum
+    einzelnen Papier ist die ausdrückliche Ansage, jetzt nachzusehen.
+    """
+    fake = _MerkendeQuoteService(_response(_now()))
+    repo.save_quote(_response("2026-01-01T00:00:00+00:00"))
+    _alter_stand(repo, _now())  # Kennzahlen taufrisch — die TTL griffe
+
+    service = CachedQuoteService(
+        fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo), metadata_ttl_days=7
+    )
+    service.refresh_one("IE00B3RBWM25")
+
+    assert fake.enrich_calls == [True]

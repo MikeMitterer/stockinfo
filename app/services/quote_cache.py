@@ -98,6 +98,7 @@ class CachedQuoteService:
         repository: QuoteRepository,
         ttl_hours: int,
         daily_sync: DailyCloseSync,
+        metadata_ttl_days: int = 7,
     ) -> None:
         """
         Args:
@@ -106,10 +107,16 @@ class CachedQuoteService:
             ttl_hours: Maximales Alter eines Kurses, bevor neu beschafft wird.
             daily_sync: Inkrementelle EOD-Synchronisation für den akkumulierenden
                 Tages-Cache, aus dem die Volatilität berechnet wird.
+            metadata_ttl_days: Maximales Alter der ETF-Kennzahlen, bevor justETF
+                erneut gefragt wird. Kurse und Kennzahlen altern verschieden
+                schnell: Ein Kurs ist nach Stunden veraltet, ein Fondsdomizil
+                ändert sich in Jahren nicht. Der Vorgabewert entspricht
+                `Settings.metadata_ttl_days`.
         """
         self._quote_service = quote_service
         self._repository = repository
         self._ttl_hours = ttl_hours
+        self._metadata_ttl_days = metadata_ttl_days
         self._daily_sync = daily_sync
         self._refresh_lock = threading.Lock()
 
@@ -121,8 +128,9 @@ class CachedQuoteService:
             QuoteUnavailableError: Kein Kurs beschaffbar und kein Cache vorhanden.
         """
         instrument = self._repository.get_instrument_by_isin(isin)
+        enrich = self._etf_metadata_is_stale(instrument)
         return self._get(
-            instrument, lambda: self._quote_service.get_quote_by_isin(isin)
+            instrument, lambda: self._quote_service.get_quote_by_isin(isin, enrich)
         )
 
     def get_by_symbol(self, symbol: str) -> QuoteResponse:
@@ -132,8 +140,9 @@ class CachedQuoteService:
             QuoteUnavailableError: Kein Kurs beschaffbar und kein Cache vorhanden.
         """
         instrument = self._repository.get_instrument_by_symbol(symbol)
+        enrich = self._etf_metadata_is_stale(instrument)
         return self._get(
-            instrument, lambda: self._quote_service.get_quote_by_symbol(symbol)
+            instrument, lambda: self._quote_service.get_quote_by_symbol(symbol, enrich)
         )
 
     def get_history(
@@ -386,26 +395,24 @@ class CachedQuoteService:
         """
         instrument = self._require_instrument(symbol)
         stored = self._repository.get_overrides(instrument["id"]) or {}
-        return {
-            "ter": stored.get("ter"),
-            "volatility": stored.get("volatility"),
-            "accumulating": _as_bool(stored.get("accumulating")),
-        }
+        result = {field: stored.get(field) for field in OVERRIDE_FIELDS}
+        result["accumulating"] = _as_bool(result["accumulating"])
+        return result
 
-    def set_overrides(
-        self,
-        symbol: str,
-        ter: float | None,
-        volatility: float | None,
-        accumulating: bool | None,
-    ) -> dict:
-        """Schreibt die manuellen Kennzahlen eines Instruments und gibt sie zurück.
+    def set_overrides(self, symbol: str, values: dict[str, object]) -> dict:
+        """Schreibt die manuellen Kennzahlen eines Instruments und liest sie zurück.
 
-        Alle drei Werte auf einmal — ``None`` löscht. Die Vorrang-Regel wird
-        hier **nicht** angewandt: Gespeichert wird, was der Nutzer eingetragen
-        hat, auch wenn die Quelle den Wert gerade verdeckt. Sonst verschwände
-        seine Eingabe in dem Moment, in dem die Quelle wieder etwas liefert —
-        und käme nicht zurück, wenn sie es später wieder vergisst.
+        Alle acht Werte auf einmal — ``None`` (bzw. ein fehlendes Feld) löscht.
+        Die Vorrang-Regel wird hier **nicht** angewandt: Gespeichert wird, was
+        der Nutzer eingetragen hat, auch wenn die Quelle den Wert gerade
+        verdeckt. Sonst verschwände seine Eingabe in dem Moment, in dem die
+        Quelle wieder etwas liefert — und käme nicht zurück, wenn sie es später
+        wieder vergisst.
+
+        Args:
+            symbol: Yahoo-Symbol des Instruments.
+            values: Werte je Feld aus ``OVERRIDE_FIELDS``; fehlende gelten als
+                ``None`` und löschen damit.
 
         Raises:
             InstrumentNotFoundError: Symbol unbekannt.
@@ -413,10 +420,8 @@ class CachedQuoteService:
         instrument = self._require_instrument(symbol)
         self._repository.set_overrides(
             instrument["id"],
-            ter,
-            volatility,
-            accumulating,
-            datetime.now(timezone.utc).isoformat(),
+            values=values,
+            updated_at=datetime.now(timezone.utc).isoformat(),
         )
         return self.get_overrides(symbol)
 
@@ -454,11 +459,37 @@ class CachedQuoteService:
         self._repository.set_isin(symbol, isin)
 
     def _fetch_live(self, instrument: dict) -> QuoteResponse:
-        """Beschafft einen frischen Kurs für ein bekanntes Instrument (ohne Cache)."""
+        """Beschafft einen frischen Kurs für ein bekanntes Instrument (ohne Cache).
+
+        justETF wird nur gefragt, wenn die gespeicherten Kennzahlen älter sind
+        als `metadata_ttl_days`. Das ist der Pfad des Sammelrefresh: Ohne die
+        Grenze kostet jede Runde einen Scrape je ETF, obwohl sich Anbieter,
+        Domizil und Replikationsart praktisch nie ändern.
+        """
+        enrich = self._etf_metadata_is_stale(instrument)
         isin = instrument.get("isin")
         if isin:
-            return self._quote_service.get_quote_by_isin(isin)
-        return self._quote_service.get_quote_by_symbol(instrument["symbol"])
+            return self._quote_service.get_quote_by_isin(isin, enrich)
+        return self._quote_service.get_quote_by_symbol(instrument["symbol"], enrich)
+
+    def _etf_metadata_is_stale(self, instrument: dict | None) -> bool:
+        """Ist der gespeicherte ETF-Metadatenstand alt genug für eine neue Abfrage?
+
+        Args:
+            instrument: Bekanntes Instrument, oder ``None`` für ein noch
+                unbekanntes Papier.
+
+        Returns:
+            ``True`` wenn justETF gefragt werden soll. Ein unbekanntes Papier
+            und eines ohne Zeitstempel gelten als alt — sonst bekäme ein neu
+            hinzugefügter ETF seine Kennzahlen nie.
+        """
+        if instrument is None:
+            return True
+        fetched_at = instrument.get("meta_fetched_at")
+        if not fetched_at:
+            return True
+        return not is_fresh(fetched_at, self._metadata_ttl_days * 24)
 
     def _get(
         self, instrument: dict | None, fetch: Callable[[], QuoteResponse]
@@ -511,6 +542,8 @@ class CachedQuoteService:
             provider=instrument["provider"],
             replication=instrument["replication"],
             fund_size=instrument["fund_size"],
+            fund_domicile=instrument["fund_domicile"],
+            fund_currency=instrument["fund_currency"],
             volatility=instrument["volatility"],
             accumulating=_as_bool(instrument["accumulating"]),
             source="cache",

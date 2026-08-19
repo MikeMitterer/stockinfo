@@ -48,7 +48,11 @@ class EtfDetails:
     provider: str | None = None
     replication: str | None = None
     fund_size: float | None = None
-    currency: str | None = None
+    # Die Währung des **Fonds** — nicht die des Handelsplatzes. Die kommt von
+    # yfinance und ist eine andere Aussage: EUNL handelt in EUR, der Fonds
+    # rechnet in USD.
+    fund_currency: str | None = None
+    fund_domicile: str | None = None
     name: str | None = None
     volatility: float | None = None  # 1-Jahres-Volatilität in % (justETF)
     accumulating: bool | None = None  # Thesaurierend (True) vs. Ausschüttend (False)

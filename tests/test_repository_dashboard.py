@@ -35,6 +35,44 @@ def test_list_instruments_with_latest(repo: QuoteRepository) -> None:
     assert row["history_count"] == 2
 
 
+def test_persists_source(repo: QuoteRepository) -> None:
+    """`source` (`yfinance` bzw. `yfinance+justetf`) muss mit dem Instrument
+    mitwandern — sonst kann der Detailbereich nicht zeigen, woher die Kennzahlen
+    kommen (Nacharbeit Sichtprüfung, Gesamtprüfung I1).
+    """
+    repo.save_quote(
+        QuoteResponse(
+            isin="IE00B3RBWM25", symbol="VGWL.DE", currency="EUR", price=160.0,
+            quote_time="2026-07-12T10:00:00+00:00", fetched_at="2026-07-12T10:00:00+00:00",
+            type="etf", source="yfinance+justetf",
+        )
+    )
+
+    rows = repo.list_instruments_with_latest()
+    assert rows[0]["source"] == "yfinance+justetf"
+
+
+def test_source_updates_on_refresh(repo: QuoteRepository) -> None:
+    """Ein erneutes Speichern aktualisiert `source` — kein Erstwert, der stehen bleibt."""
+    repo.save_quote(
+        QuoteResponse(
+            isin="IE00B3RBWM25", symbol="VGWL.DE", currency="EUR", price=160.0,
+            quote_time="2026-07-12T10:00:00+00:00", fetched_at="2026-07-12T10:00:00+00:00",
+            type="etf", source="yfinance",
+        )
+    )
+    repo.save_quote(
+        QuoteResponse(
+            isin="IE00B3RBWM25", symbol="VGWL.DE", currency="EUR", price=161.0,
+            quote_time="2026-07-12T11:00:00+00:00", fetched_at="2026-07-12T11:00:00+00:00",
+            type="etf", source="yfinance+justetf",
+        )
+    )
+
+    rows = repo.list_instruments_with_latest()
+    assert rows[0]["source"] == "yfinance+justetf"
+
+
 def test_delete_instrument(repo: QuoteRepository) -> None:
     _save(repo, "IE00B3RBWM25", "VGWL.DE", 160.0, "2026-07-12T10:00:00+00:00")
 

@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from app.container import get_cached_quote_service
 from app.db import init_db
 from app.main import app
-from app.models import OVERRIDE_FIELDS, QuoteResponse
+from app.models import OVERRIDE_FIELDS, InstrumentOverrides, QuoteResponse
 from app.repository import QuoteRepository
 from app.services.quote_cache import CachedQuoteService, apply_overrides
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
@@ -117,15 +117,43 @@ def test_mehrere_kennzahlen_werden_einzeln_entschieden() -> None:
 def test_werte_ueberleben_das_erneute_lesen(repo: QuoteRepository) -> None:
     instrument_id = repo.save_quote(_quote())
 
-    repo.set_overrides(instrument_id, 0.25, 30.0, True, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(
+        instrument_id,
+        {"ter": 0.25, "volatility": 30.0, "accumulating": True},
+        "2026-08-17T10:00:00+00:00",
+    )
 
-    assert repo.get_overrides(instrument_id) == {
-        "instrument_id": instrument_id,
-        "ter": 0.25,
-        "volatility": 30.0,
-        "accumulating": 1,
-        "updated_at": "2026-08-17T10:00:00+00:00",
-    }
+    # Geprüft wird, dass die geschriebenen Werte beim Lesen wiederkommen —
+    # nicht die exakte Feldmenge des Dicts. Die Override-Tabelle wächst
+    # (T-15) um fünf weitere Spalten, die `get_overrides` per `SELECT *`
+    # mitliefert; die genaue Feldmenge deckt ab Task 3 ein eigener Test ab.
+    gespeichert = repo.get_overrides(instrument_id)
+    assert gespeichert is not None
+    assert gespeichert["instrument_id"] == instrument_id
+    assert gespeichert["ter"] == 0.25
+    assert gespeichert["volatility"] == 30.0
+    assert gespeichert["accumulating"] == 1
+    assert gespeichert["updated_at"] == "2026-08-17T10:00:00+00:00"
+
+
+def test_werte_lassen_sich_als_schluesselwort_uebergeben(repo: QuoteRepository) -> None:
+    """Die öffentliche Signatur heißt englisch — ``values``, nicht ``werte``.
+
+    `repository.py` war die einzige Datei mit deutschen Bezeichnern, und der
+    Bruch reichte bis in diese Signatur. Der Dienst darüber
+    (`CachedQuoteService.set_overrides`) nennt seinen Parameter ``values`` und
+    reicht ihn heute nur positionell weiter; wer ihn einmal benennt, bekäme
+    sonst ein `TypeError`.
+    """
+    instrument_id = repo.save_quote(_quote())
+
+    repo.set_overrides(
+        instrument_id, values={"ter": 0.25}, updated_at="2026-08-17T10:00:00+00:00"
+    )
+
+    gespeichert = repo.get_overrides(instrument_id)
+    assert gespeichert is not None
+    assert gespeichert["ter"] == 0.25
 
 
 def test_ein_kurs_update_ruehrt_die_manuellen_werte_nicht_an(
@@ -138,7 +166,7 @@ def test_ein_kurs_update_ruehrt_die_manuellen_werte_nicht_an(
     manuelle Wert in derselben Zeile, wäre er danach weg.
     """
     instrument_id = repo.save_quote(_quote())
-    repo.set_overrides(instrument_id, 0.25, None, None, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(instrument_id, {"ter": 0.25}, "2026-08-17T10:00:00+00:00")
 
     repo.save_quote(_quote(price=124.00, quote_time="2026-08-17T09:00:00+00:00"))
 
@@ -153,16 +181,53 @@ def test_ein_kurs_update_ruehrt_die_manuellen_werte_nicht_an(
 def test_alles_leeren_entfernt_die_zeile(repo: QuoteRepository) -> None:
     # Sonst sammeln sich Karteileichen ohne Inhalt.
     instrument_id = repo.save_quote(_quote())
-    repo.set_overrides(instrument_id, 0.25, None, None, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(instrument_id, {"ter": 0.25}, "2026-08-17T10:00:00+00:00")
 
-    repo.set_overrides(instrument_id, None, None, None, "2026-08-17T11:00:00+00:00")
+    repo.set_overrides(instrument_id, {}, "2026-08-17T11:00:00+00:00")
+
+    assert repo.get_overrides(instrument_id) is None
+
+
+def test_alle_acht_felder_ueberleben_das_erneute_lesen(repo: QuoteRepository) -> None:
+    instrument_id = repo.save_quote(_quote())
+
+    repo.set_overrides(
+        instrument_id,
+        {
+            "ter": 0.25,
+            "volatility": 30.0,
+            "accumulating": True,
+            "provider": "iShares",
+            "replication": "Physical",
+            "fund_size": 129445.0,
+            "fund_domicile": "Irland",
+            "fund_currency": "USD",
+        },
+        "2026-08-17T10:00:00+00:00",
+    )
+
+    gespeichert = repo.get_overrides(instrument_id)
+    assert gespeichert is not None
+    assert gespeichert["provider"] == "iShares"
+    assert gespeichert["fund_currency"] == "USD"
+    assert gespeichert["accumulating"] == 1
+
+
+def test_alles_leeren_entfernt_die_zeile_auch_bei_acht_feldern(repo: QuoteRepository) -> None:
+    # Sonst sammeln sich Karteileichen ohne Inhalt.
+    instrument_id = repo.save_quote(_quote())
+    repo.set_overrides(instrument_id, {"provider": "iShares"}, "2026-08-17T10:00:00+00:00")
+
+    repo.set_overrides(instrument_id, dict.fromkeys(OVERRIDE_FIELDS), "2026-08-17T11:00:00+00:00")
 
     assert repo.get_overrides(instrument_id) is None
 
 
 def test_die_liste_bringt_die_manuellen_werte_mit(repo: QuoteRepository) -> None:
     instrument_id = repo.save_quote(_quote())
-    repo.set_overrides(instrument_id, 0.25, None, False, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(
+        instrument_id, {"ter": 0.25, "accumulating": False}, "2026-08-17T10:00:00+00:00"
+    )
 
     zeile = next(z for z in repo.list_instruments_with_latest() if z["id"] == instrument_id)
 
@@ -174,7 +239,7 @@ def test_das_loeschen_eines_instruments_nimmt_die_overrides_mit(
     repo: QuoteRepository,
 ) -> None:
     instrument_id = repo.save_quote(_quote())
-    repo.set_overrides(instrument_id, 0.25, None, None, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(instrument_id, {"ter": 0.25}, "2026-08-17T10:00:00+00:00")
 
     assert repo.delete_by_symbol("GOLD.SG") is True
     assert repo.get_overrides(instrument_id) is None
@@ -187,28 +252,18 @@ class _FakeService:
     """Merkt sich, was geschrieben wurde — der Endpoint soll nur durchreichen."""
 
     def __init__(self) -> None:
-        self.gespeichert: dict = {"ter": None, "volatility": None, "accumulating": None}
+        self.stored: dict = dict.fromkeys(OVERRIDE_FIELDS)
 
     def get_overrides(self, symbol: str) -> dict:
         if symbol.startswith("XX"):
             raise InstrumentNotFoundError(symbol)
-        return dict(self.gespeichert)
+        return dict(self.stored)
 
-    def set_overrides(
-        self,
-        symbol: str,
-        ter: float | None,
-        volatility: float | None,
-        accumulating: bool | None,
-    ) -> dict:
+    def set_overrides(self, symbol: str, values: dict) -> dict:
         if symbol.startswith("XX"):
             raise InstrumentNotFoundError(symbol)
-        self.gespeichert = {
-            "ter": ter,
-            "volatility": volatility,
-            "accumulating": accumulating,
-        }
-        return dict(self.gespeichert)
+        self.stored = {field: values.get(field) for field in OVERRIDE_FIELDS}
+        return dict(self.stored)
 
 
 @pytest.fixture
@@ -225,13 +280,18 @@ def test_endpoint_schreibt_und_liest(client: TestClient) -> None:
         json={"ter": 0.25, "volatility": 30.0, "accumulating": True},
     )
 
+    # Geprüft werden die drei geschriebenen Felder, nicht das ganze Dict —
+    # das trägt seit T-15 fünf weitere (per Attrappe stets leere) Schlüssel.
     assert antwort.status_code == 200
-    assert antwort.json() == {"ter": 0.25, "volatility": 30.0, "accumulating": True}
+    nutzlast = antwort.json()
+    assert nutzlast["ter"] == 0.25
+    assert nutzlast["volatility"] == 30.0
+    assert nutzlast["accumulating"] is True
     assert client.get("/instruments/by-symbol/GOLD.SG/overrides").json()["ter"] == 0.25
 
 
 def test_endpoint_leert_weggelassene_felder(client: TestClient) -> None:
-    """Der Satz ist vollständig — ein fehlendes Feld heißt „löschen"."""
+    """Der Satz ist vollständig — ein fehlendes Feld heißt „löschen", nicht „unverändert"."""
     client.put(
         "/instruments/by-symbol/GOLD.SG/overrides",
         json={"ter": 0.25, "volatility": 30.0, "accumulating": True},
@@ -239,7 +299,13 @@ def test_endpoint_leert_weggelassene_felder(client: TestClient) -> None:
 
     antwort = client.put("/instruments/by-symbol/GOLD.SG/overrides", json={"ter": 0.25})
 
-    assert antwort.json() == {"ter": 0.25, "volatility": None, "accumulating": None}
+    # Feldweise statt volle Dict-Gleichheit (s.o.) — aber weiterhin ein
+    # echter Nachweis des Löschens: `volatility`/`accumulating` waren gesetzt
+    # und müssen jetzt `None` sein, nicht bloß fehlen dürfen sie unverändert.
+    nutzlast = antwort.json()
+    assert nutzlast["ter"] == 0.25
+    assert nutzlast["volatility"] is None
+    assert nutzlast["accumulating"] is None
 
 
 @pytest.mark.parametrize(
@@ -285,10 +351,10 @@ class _Quelle:
             raise AssertionError(f"unerwartet live beschafft: {kennung}")
         return self._antwort.model_copy(deep=True)
 
-    def get_quote_by_isin(self, isin: str) -> QuoteResponse:
+    def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         return self._liefern(isin)
 
-    def get_quote_by_symbol(self, symbol: str) -> QuoteResponse:
+    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
         return self._liefern(symbol)
 
 
@@ -328,7 +394,9 @@ def test_der_kurs_endpoint_kennt_die_manuellen_werte(repo: QuoteRepository) -> N
     ein „nicht gesetzt", obwohl etwas eingetragen war.
     """
     instrument_id = repo.save_quote(_quote(accumulating=None, ter=None))
-    repo.set_overrides(instrument_id, 0.12, None, True, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(
+        instrument_id, {"ter": 0.12, "accumulating": True}, "2026-08-17T10:00:00+00:00"
+    )
 
     antwort = _dienst(repo).get_by_isin("DE000EWG0LD1")
 
@@ -339,7 +407,9 @@ def test_der_kurs_endpoint_kennt_die_manuellen_werte(repo: QuoteRepository) -> N
 def test_der_kurs_endpoint_laesst_der_quelle_den_vortritt(repo: QuoteRepository) -> None:
     """Dieselbe Vorrang-Regel wie in der Liste — nicht eine zweite daneben."""
     instrument_id = repo.save_quote(_quote(accumulating=True, ter=0.20))
-    repo.set_overrides(instrument_id, 0.99, None, False, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(
+        instrument_id, {"ter": 0.99, "accumulating": False}, "2026-08-17T10:00:00+00:00"
+    )
 
     antwort = _dienst(repo).get_by_isin("DE000EWG0LD1")
 
@@ -360,7 +430,7 @@ def test_der_kurs_endpoint_ohne_eintrag_bleibt_unveraendert(repo: QuoteRepositor
 def test_der_kurs_endpoint_kennt_sie_auch_per_symbol(repo: QuoteRepository) -> None:
     """Papiere ohne ISIN gehen über `/quote?symbol=` — derselbe Anspruch."""
     instrument_id = repo.save_quote(_quote(accumulating=None))
-    repo.set_overrides(instrument_id, None, None, True, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00")
 
     assert _dienst(repo).get_by_symbol("GOLD.SG").accumulating is True
 
@@ -372,7 +442,9 @@ def test_ein_frisch_beschaffter_kurs_kennt_sie_ebenfalls(repo: QuoteRepository) 
     Abfrage den eingetragenen Wert zeigt oder nicht.
     """
     instrument_id = repo.save_quote(_quote(accumulating=None, ter=None))
-    repo.set_overrides(instrument_id, 0.30, None, True, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(
+        instrument_id, {"ter": 0.30, "accumulating": True}, "2026-08-17T10:00:00+00:00"
+    )
 
     # TTL 0 ⇒ der gespeicherte Kurs gilt als alt, die Quelle wird gefragt.
     dienst = _dienst(repo, _Quelle(_quote(accumulating=None, ter=None)), ttl_hours=0)
@@ -385,7 +457,7 @@ def test_ein_frisch_beschaffter_kurs_kennt_sie_ebenfalls(repo: QuoteRepository) 
 def test_auch_ein_veralteter_kurs_kennt_sie(repo: QuoteRepository) -> None:
     """Fällt die Quelle aus, kommt der alte Wert — mit den Eingaben darauf."""
     instrument_id = repo.save_quote(_quote(accumulating=None))
-    repo.set_overrides(instrument_id, None, None, True, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00")
 
     dienst = _dienst(repo, _Quelle(fehler=True), ttl_hours=0)
     antwort = dienst.get_by_isin("DE000EWG0LD1")
@@ -397,7 +469,9 @@ def test_auch_ein_veralteter_kurs_kennt_sie(repo: QuoteRepository) -> None:
 def test_refresh_liefert_sie_mit_zurueck(repo: QuoteRepository) -> None:
     """`POST /refresh/{isin}` gibt die neue Antwort direkt an die Oberfläche."""
     instrument_id = repo.save_quote(_quote(accumulating=None, ter=None))
-    repo.set_overrides(instrument_id, 0.30, None, True, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(
+        instrument_id, {"ter": 0.30, "accumulating": True}, "2026-08-17T10:00:00+00:00"
+    )
 
     dienst = _dienst(repo, _Quelle(_quote(accumulating=None, ter=None)))
     antwort = dienst.refresh_one("DE000EWG0LD1")
@@ -408,7 +482,7 @@ def test_refresh_liefert_sie_mit_zurueck(repo: QuoteRepository) -> None:
 
 def test_refresh_per_symbol_liefert_sie_ebenfalls(repo: QuoteRepository) -> None:
     instrument_id = repo.save_quote(_quote(accumulating=None))
-    repo.set_overrides(instrument_id, None, None, True, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00")
 
     dienst = _dienst(repo, _Quelle(_quote(accumulating=None)))
 
@@ -425,7 +499,7 @@ def test_der_refresh_schreibt_den_manuellen_wert_nicht_in_die_zeile(
     ließe sich nie wieder von der Quelle unterscheiden.
     """
     instrument_id = repo.save_quote(_quote(accumulating=None))
-    repo.set_overrides(instrument_id, None, None, True, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00")
 
     _dienst(repo, _Quelle(_quote(accumulating=None))).refresh_one("DE000EWG0LD1")
 
@@ -464,6 +538,21 @@ def test_jede_kennzahl_tragende_antwort_kennt_die_regel() -> None:
     }
 
 
+def test_das_eingabemodell_deckt_genau_die_override_felder() -> None:
+    """`InstrumentOverrides` und `OVERRIDE_FIELDS` müssen deckungsgleich sein.
+
+    Der Endpoint schreibt bei jedem Aufruf den **vollständigen** Satz, und
+    `repository.set_overrides` siebt dabei nach `OVERRIDE_FIELDS`. Ein neuntes
+    Feld nur am Modell käme also durch die Validierung und würde beim Schreiben
+    stillschweigend weggeworfen — der Aufruf meldet Erfolg, der Wert ist weg.
+    Umgekehrt ließe sich ein Feld nur in `OVERRIDE_FIELDS` über den Endpoint
+    nie befüllen, weil das Eingabemodell es gar nicht annimmt.
+
+    Beide Fehler laufen ohne Ausnahme durch; nur dieser Vergleich zeigt sie.
+    """
+    assert set(OVERRIDE_FIELDS) == set(InstrumentOverrides.model_fields)
+
+
 def test_die_liste_des_dienstes_wendet_die_regel_an(repo: QuoteRepository) -> None:
     """`/instruments` — der eine Pfad, der die Regel schon vorher hatte.
 
@@ -472,7 +561,9 @@ def test_die_liste_des_dienstes_wendet_die_regel_an(repo: QuoteRepository) -> No
     auf.
     """
     instrument_id = repo.save_quote(_quote(accumulating=None, ter=None))
-    repo.set_overrides(instrument_id, 0.30, None, True, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(
+        instrument_id, {"ter": 0.30, "accumulating": True}, "2026-08-17T10:00:00+00:00"
+    )
 
     zeile = next(z for z in _dienst(repo).list_instruments() if z["id"] == instrument_id)
 
@@ -493,3 +584,97 @@ def test_die_ter_grenze_laesst_reale_werte_durch(client: TestClient) -> None:
 
     assert antwort.status_code == 200
     assert antwort.json()["ter"] == 5
+
+
+def test_die_neuen_felder_kommen_durch_die_validierung(client: TestClient) -> None:
+    """Der Grund, Spalten statt einer generischen Tabelle zu nehmen.
+
+    Geprüft wird hier **nur** die Annahme: Ein gültiger Satz darf nicht an der
+    Validierung scheitern. Dass die Werte auch zurückkommen, kann dieser Task
+    noch nicht halten — Dienst und Endpoint reichen sie erst ab Task 4 durch.
+    Der Rundlauf wird dort geprüft.
+    """
+    antwort = client.put(
+        "/instruments/by-symbol/GOLD.SG/overrides",
+        json={"fund_size": 129445.0, "fund_currency": "USD", "fund_domicile": "Irland"},
+    )
+
+    assert antwort.status_code == 200
+
+
+@pytest.mark.parametrize(
+    "nutzlast",
+    [
+        {"fund_currency": "Euro"},          # kein ISO-Code
+        {"fund_currency": "usd"},           # klein geschrieben
+        {"fund_size": -1},                  # negativ
+        {"fund_size": 2_000_001},           # groesser als der ETF-Markt
+        {"provider": "x" * 101},            # laenger als erlaubt
+    ],
+)
+def test_die_neuen_felder_weisen_unsinn_ab(client: TestClient, nutzlast: dict) -> None:
+    antwort = client.put("/instruments/by-symbol/GOLD.SG/overrides", json=nutzlast)
+
+    assert antwort.status_code == 422
+
+
+def test_endpoint_schreibt_und_liest_alle_acht(client: TestClient) -> None:
+    response = client.put(
+        "/instruments/by-symbol/GOLD.SG/overrides",
+        json={"provider": "iShares", "fund_domicile": "Irland", "ter": 0.25},
+    )
+
+    assert response.status_code == 200
+    fetched = client.get("/instruments/by-symbol/GOLD.SG/overrides").json()
+    assert fetched["provider"] == "iShares"
+    assert fetched["fund_domicile"] == "Irland"
+    assert fetched["ter"] == 0.25
+
+
+def test_der_rundlauf_traegt_auch_die_fondswaehrung(client: TestClient) -> None:
+    """Aus Task 2 hierher gezogen: Erst hier reicht der Endpoint sie durch."""
+    client.put(
+        "/instruments/by-symbol/GOLD.SG/overrides",
+        json={"fund_size": 129445.0, "fund_currency": "USD", "fund_domicile": "Irland"},
+    )
+
+    fetched = client.get("/instruments/by-symbol/GOLD.SG/overrides").json()
+
+    assert fetched["fund_currency"] == "USD"
+    assert fetched["fund_size"] == 129445.0
+
+
+# ─── Der echte Dienst ────────────────────────────────────────────────────────
+#
+# Alle Endpoint-Tests oben laufen über `_FakeService` — der Router bekommt
+# damit nie den echten `CachedQuoteService` zu Gesicht. Ohne diesen Test bliebe
+# unentdeckt, ob `CachedQuoteService.set_overrides` überhaupt zu der Signatur
+# passt, die `repository.set_overrides` seit Task 3 verlangt.
+
+
+def test_der_echte_dienst_schreibt_und_liest_alle_acht_felder(
+    repo: QuoteRepository,
+) -> None:
+    """Rundlauf ohne Attrappe: echter Dienst, echtes Repository, temporäre DB."""
+    repo.save_quote(_quote())
+    values = {
+        "ter": 0.25,
+        "volatility": 30.0,
+        "accumulating": True,
+        "provider": "iShares",
+        "replication": "Physical",
+        "fund_size": 129445.0,
+        "fund_domicile": "Irland",
+        "fund_currency": "USD",
+    }
+
+    written = _dienst(repo).set_overrides("GOLD.SG", values)
+    fetched = _dienst(repo).get_overrides("GOLD.SG")
+
+    assert written == values
+    assert fetched == values
+
+
+def test_der_echte_dienst_meldet_unbekanntes_symbol(repo: QuoteRepository) -> None:
+    with pytest.raises(InstrumentNotFoundError):
+        _dienst(repo).set_overrides("UNBEKANNT", {"ter": 0.25})

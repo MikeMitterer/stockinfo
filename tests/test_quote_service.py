@@ -152,6 +152,92 @@ def test_etf_uebernimmt_volatilitaet_und_thesaurierend_von_justetf() -> None:
     assert result.accumulating is True
 
 
+def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
+    """Zwei Begriffe, zwei Felder.
+
+    Fiel yfinance ohne Währung aus, rutschte bisher die Fondswährung in
+    `currency` — bei einem Euro-Kurs stand dann USD daneben.
+    """
+    quote_without_currency = RawQuote(
+        symbol="VGWL.DE",
+        price=160.98,
+        quote_time="2026-07-12T17:35:00+00:00",
+        currency=None,
+        volume=1000,
+        type="etf",
+    )
+    service = QuoteService(
+        FakeQuoteProvider(quote_without_currency),
+        FakeEtfProvider(EtfDetails(fund_currency="USD", fund_domicile="Ireland")),
+        FakeResolver(
+            ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
+        ),
+    )
+
+    result = service.get_quote_by_isin("IE00B3RBWM25")
+
+    assert result.currency is None
+    assert result.fund_currency == "USD"
+    assert result.fund_domicile == "Ireland"
+
+
 def test_annualized_volatility_zu_wenig_daten_ist_none() -> None:
     assert annualized_volatility([100.0, 101.0]) is None
     assert annualized_volatility([]) is None
+
+
+def test_gescheiterte_anreicherung_markiert_die_antwort_als_unvollstaendig() -> None:
+    """Ein Ausfall bei justETF muss sich in der Antwort niederschlagen.
+
+    Sonst sieht sie aus wie eine erfolgreiche Abfrage ohne ETF-Extras — und das
+    Repository schreibt den gespeicherten Stand mit lauter ``NULL`` zu.
+    """
+    service = QuoteService(
+        FakeQuoteProvider(_etf_quote()),
+        FakeEtfProvider(None),  # justETF nicht erreichbar
+        FakeResolver(
+            ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
+        ),
+    )
+
+    result = service.get_quote_by_isin("IE00B3RBWM25")
+
+    assert result.metadata_complete is False
+    assert result.ter is None
+    assert result.source == "yfinance"
+
+
+def test_erfolgreiche_anreicherung_gilt_als_vollstaendig() -> None:
+    service = QuoteService(
+        FakeQuoteProvider(_etf_quote()),
+        FakeEtfProvider(EtfDetails(ter=0.19, provider="Vanguard")),
+        FakeResolver(
+            ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
+        ),
+    )
+
+    assert service.get_quote_by_isin("IE00B3RBWM25").metadata_complete is True
+
+
+def test_eine_aktie_gilt_als_vollstaendig() -> None:
+    """Bei einer Aktie ist nichts anzureichern — es gibt also nichts zu schützen.
+
+    Bliebe sie auf ``False``, würde das Repository ihre Metadatenfelder nie
+    mehr aktualisieren.
+    """
+    aktie = RawQuote(
+        symbol="APC.DE",
+        price=262.95,
+        quote_time="2026-07-12T17:35:00+00:00",
+        currency="EUR",
+        type="stock",
+    )
+    service = QuoteService(
+        FakeQuoteProvider(aktie),
+        FakeEtfProvider(None),
+        FakeResolver(
+            ResolvedInstrument(symbol="APC.DE", isin="US0378331005", type="stock")
+        ),
+    )
+
+    assert service.get_quote_by_isin("US0378331005").metadata_complete is True

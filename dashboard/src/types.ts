@@ -4,21 +4,53 @@ export interface InstrumentRef {
   symbol: string
 }
 
-/** Kennzahlen, die sich von Hand nachtragen lassen (T-09). */
-export type OverrideField = 'ter' | 'volatility' | 'accumulating'
+/**
+ * Kennzahlen, die sich von Hand nachtragen lassen (T-09, erweitert um die
+ * ETF-Extras aus T-15).
+ *
+ * Dieselbe Menge wie `OVERRIDE_FIELDS` im Backend (`app/models.py`) — genau
+ * das, was justETFs `get_etf_overview` beisteuert: Wo die Quelle nichts hat,
+ * springt der Mensch ein.
+ */
+export const OVERRIDE_FIELDS = [
+  'ter',
+  'volatility',
+  'accumulating',
+  'provider',
+  'replication',
+  'fund_size',
+  'fund_domicile',
+  'fund_currency',
+] as const
 
-export const OVERRIDE_FIELDS: OverrideField[] = ['ter', 'volatility', 'accumulating']
+/**
+ * Abgeleitet aus der Liste, nicht daneben geschrieben.
+ *
+ * Beides stand hier bis zur Gesamtprüfung nebeneinander — einmal als Union,
+ * einmal als Array, acht Namen doppelt. Eine neunte Kennzahl hätte an beiden
+ * Stellen nachgetragen werden müssen, und wer nur eine anfasst, merkt davon
+ * nichts: Die Union allein erweitern lässt das Feld aus jeder Schleife fallen,
+ * das Array allein erweitern lässt es nicht durch den Typcheck.
+ */
+export type OverrideField = (typeof OVERRIDE_FIELDS)[number]
 
 /**
  * Von Hand nachgetragene Kennzahlen.
  *
  * `null` heißt „nicht gepflegt" — und beim Schreiben „löschen": Es geht immer
  * der vollständige Satz zum Backend.
+ *
+ * Die acht Namen standen hier ein drittes Mal (nach Union und Array). Jetzt
+ * bilden sie sich aus `OVERRIDE_FIELDS`, und die Werttypen kommen von den
+ * `manual_*`-Feldern in `InstrumentSummary` — Editor und Payload können sich
+ * über den Typ einer Kennzahl damit gar nicht mehr uneinig sein.
+ *
+ * Der Nutzen zeigt sich bei einer neunten Kennzahl: Sie kommt in
+ * `OVERRIDE_FIELDS` dazu, wächst hier von selbst mit, und `vue-tsc` meldet
+ * anschließend jede Stelle, die den Satz aufbaut, ohne sie mitzuschicken.
  */
-export interface InstrumentOverrides {
-  ter: number | null
-  volatility: number | null
-  accumulating: boolean | null
+export type InstrumentOverrides = {
+  [Field in OverrideField]: InstrumentSummary[`manual_${Field}`]
 }
 
 export interface InstrumentSummary {
@@ -32,8 +64,12 @@ export interface InstrumentSummary {
   ter: number | null
   replication: string | null
   fund_size: number | null
+  fund_domicile: string | null
+  fund_currency: string | null
   volatility: number | null
   accumulating: boolean | null
+  /** Herkunft der Metadaten: `yfinance` oder `yfinance+justetf`. */
+  source: string | null
   meta_fetched_at: string | null
   latest_price: number | null
   latest_quote_time: string | null
@@ -49,6 +85,11 @@ export interface InstrumentSummary {
   manual_ter: number | null
   manual_volatility: number | null
   manual_accumulating: boolean | null
+  manual_provider: string | null
+  manual_replication: string | null
+  manual_fund_size: number | null
+  manual_fund_domicile: string | null
+  manual_fund_currency: string | null
   /** Kennzahlen, deren angezeigter Wert gerade von Hand kommt. */
   manual_fields: OverrideField[]
   /** Kennzahlen mit manuellem Wert, den die Quelle gerade verdeckt. */

@@ -10,6 +10,19 @@ class HealthResponse(BaseModel):
     version: str
 
 
+class ReadinessResponse(BaseModel):
+    """Antwort des Readiness-Endpoints.
+
+    Getrennt von `HealthResponse`, weil beide verschiedene Fragen beantworten:
+    „Läuft der Prozess noch?" (billig, für den Neustart-Entscheid) gegen
+    „Kann er gerade arbeiten?" (prüft die Datenbank).
+    """
+
+    status: str
+    version: str
+    database: str = Field(description="ok | error")
+
+
 class QuotePoint(BaseModel):
     """Ein einzelner Kurspunkt der Zeitreihe."""
 
@@ -49,6 +62,10 @@ class QuoteResponse(BaseModel):
     provider: str | None = None
     replication: str | None = None
     fund_size: float | None = None
+    fund_domicile: str | None = None
+    fund_currency: str | None = Field(
+        default=None, description="Währung des Fonds — nicht die des Handelsplatzes"
+    )
     volatility: float | None = Field(default=None, description="1-Jahres-Volatilität in %")
     accumulating: bool | None = Field(
         default=None, description="Thesaurierend (true) vs. ausschüttend (false)"
@@ -59,12 +76,42 @@ class QuoteResponse(BaseModel):
     stale: bool = False
     fetched_at: str
 
+    metadata_complete: bool = Field(
+        default=True,
+        exclude=True,
+        description=(
+            "Weiss diese Antwort ueber die ETF-Extras Bescheid? False heisst: "
+            "justETF wurde nicht gefragt oder hat nicht geantwortet."
+        ),
+    )
+    """Sagt dem Repository, ob es die ETF-Extras ueberschreiben darf.
 
-OVERRIDE_FIELDS = ("ter", "volatility", "accumulating")
+    Ohne diese Unterscheidung sind zwei voellig verschiedene Lagen nicht
+    auseinanderzuhalten: „justETF hat geantwortet und das Feld ist leer" und
+    „justETF war nicht erreichbar". Das Repository schrieb deshalb beide Male
+    ``NULL`` — ein einzelner Ausfall loeschte den ganzen gepflegten
+    Metadatenstand.
+
+    ``exclude=True``: Das Flag ist eine interne Absprache zwischen Service und
+    Repository und gehoert nicht in die API-Antwort.
+    """
+
+
+OVERRIDE_FIELDS = (
+    "ter",
+    "volatility",
+    "accumulating",
+    "provider",
+    "replication",
+    "fund_size",
+    "fund_domicile",
+    "fund_currency",
+)
 """Kennzahlen, die von Hand nachgetragen werden können.
 
-Eine Quelle für Modell, Endpoint und Tests — sonst kennt jede Stelle eine
-andere Teilmenge.
+Eine Quelle für Modell, Repository, Endpoint und Tests — sonst kennt jede
+Stelle eine andere Teilmenge. Die Menge ist genau das, was justETFs
+`get_etf_overview` beisteuert: Wo die Quelle nichts hat, springt der Mensch ein.
 """
 
 
@@ -81,6 +128,18 @@ class InstrumentOverrides(BaseModel):
     )
     accumulating: bool | None = Field(
         default=None, description="Thesaurierend (true) vs. ausschüttend (false)"
+    )
+    provider: str | None = Field(default=None, max_length=100, description="Fondsanbieter")
+    replication: str | None = Field(default=None, max_length=100, description="Replikationsart")
+    # Obergrenze in Mio. EUR: 2 Bio. — der größte Fonds der Welt liegt bei rund 1,5.
+    fund_size: float | None = Field(
+        default=None, ge=0, le=2_000_000, description="Fondsvolumen in Mio. EUR"
+    )
+    fund_domicile: str | None = Field(default=None, max_length=100, description="Fondsdomizil")
+    fund_currency: str | None = Field(
+        default=None,
+        pattern=r"^[A-Z]{3}$",
+        description="Fondswährung als ISO-4217-Code",
     )
 
 
@@ -103,8 +162,13 @@ class InstrumentSummary(BaseModel):
     ter: float | None = None
     replication: str | None = None
     fund_size: float | None = None
+    fund_domicile: str | None = None
+    fund_currency: str | None = None
     volatility: float | None = None
     accumulating: bool | None = None
+    source: str | None = Field(
+        default=None, description="Herkunft der Metadaten: yfinance | yfinance+justetf"
+    )
     meta_fetched_at: str | None = None
     latest_price: float | None = None
     latest_quote_time: str | None = None
@@ -115,6 +179,11 @@ class InstrumentSummary(BaseModel):
     manual_ter: float | None = None
     manual_volatility: float | None = None
     manual_accumulating: bool | None = None
+    manual_provider: str | None = None
+    manual_replication: str | None = None
+    manual_fund_size: float | None = None
+    manual_fund_domicile: str | None = None
+    manual_fund_currency: str | None = None
     manual_fields: list[str] = Field(
         default_factory=list, description="Kennzahlen, die gerade von Hand kommen"
     )

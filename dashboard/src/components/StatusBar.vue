@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { UxStatusBar, type BackendState } from '@mikemitterer/ux-foundation'
+import { UxStatusBar, type BackendState } from '@mmit/ux-foundation'
 
 import type { HealthStatus } from '../composables/useHealth'
 

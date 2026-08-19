@@ -25,7 +25,7 @@ class FakeQuoteService:
     def __init__(self) -> None:
         self.calls = 0
 
-    def get_quote_by_isin(self, isin: str) -> QuoteResponse:
+    def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         self.calls += 1
         return QuoteResponse(
             isin=isin, symbol="VGWL.DE", currency="EUR", price=200.0,
@@ -33,7 +33,7 @@ class FakeQuoteService:
             fetched_at="2026-07-12T20:00:00+00:00", type="etf",
         )
 
-    def get_quote_by_symbol(self, symbol: str) -> QuoteResponse:  # pragma: no cover
+    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:  # pragma: no cover
         return self.get_quote_by_isin(symbol)
 
 

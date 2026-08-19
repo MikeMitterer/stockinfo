@@ -1,5 +1,7 @@
 """Tests der Provider-Parsing-Logik (externe Aufrufe gemockt, kein Netz)."""
 
+import pytest
+
 import app.providers.justetf_provider as justetf_module
 import app.providers.yfinance_provider as yfinance_module
 from app.providers.justetf_provider import JustEtfProvider
@@ -67,6 +69,23 @@ def test_justetf_fehler_gibt_none(monkeypatch) -> None:
 
     monkeypatch.setattr(justetf_module.justetf_scraping, "get_etf_overview", boom)
     assert JustEtfProvider().fetch_etf("IE00B3RBWM25") is None
+
+
+def test_justetf_liefert_domizil_und_fondswaehrung(monkeypatch) -> None:
+    overview = {
+        "name": "iShares Core MSCI World",
+        "fund_domicile": "Ireland",
+        "fund_currency": "USD",
+    }
+    monkeypatch.setattr(
+        justetf_module.justetf_scraping, "get_etf_overview", lambda isin, **kw: overview
+    )
+
+    details = JustEtfProvider().fetch_etf("IE00B4L5Y983")
+
+    assert details is not None
+    assert details.fund_domicile == "Ireland"
+    assert details.fund_currency == "USD"
 
 
 def test_justetf_ueberspringt_nicht_europaeische_isin(monkeypatch) -> None:
@@ -211,3 +230,103 @@ def test_yfinance_fetch_fx_rate_ohne_wert_gibt_none(monkeypatch) -> None:
 
     monkeypatch.setattr(yfinance_module.yf, "Ticker", lambda s: _NoRate())
     assert YFinanceProvider().fetch_fx_rate("EUR", "USD") is None
+
+
+def test_unbekannte_ausschuettungspolitik_bleibt_unbekannt(monkeypatch) -> None:
+    """Was justETF nicht als bekannt meldet, darf keine Aussage werden.
+
+    Die Regel lautete „beginnt mit accumul → thesaurierend, sonst
+    ausschüttend". Damit wurde jeder neue oder unerwartete Providerwert — eine
+    Umbenennung, eine Übersetzung, ein leeres Feld mit Leerzeichen — als
+    belastbares „ausschüttend" gespeichert. Die Dokumentation der Methode
+    versprach an dieser Stelle bereits `None`; nur der Code hielt sich nicht
+    daran.
+
+    `None` heißt „nicht gepflegt" und lässt sich von Hand nachtragen; ein
+    falsches `False` sieht wie eine gesicherte Angabe aus.
+    """
+    for politik in ("Thesaurierend", "unbekannt", "n/a", "Acc.", "-", "   "):
+        monkeypatch.setattr(
+            justetf_module.justetf_scraping,
+            "get_etf_overview",
+            lambda isin, **kw: {"distribution_policy": politik},
+        )
+
+        details = JustEtfProvider().fetch_etf("IE00B3RBWM25")
+
+        assert details is not None
+        assert details.accumulating is None, f"'{politik}' ist keine Aussage"
+
+
+def test_bekannte_ausschuettungspolitik_wird_unabhaengig_von_schreibweise_erkannt(
+    monkeypatch,
+) -> None:
+    """Gross-/Kleinschreibung und Leerraum sind Formatierung, keine Bedeutung."""
+    faelle = {
+        "Accumulating": True,
+        "accumulating": True,
+        "  ACCUMULATING ": True,
+        "Distributing": False,
+        "distributing": False,
+        "  DISTRIBUTING ": False,
+    }
+    for politik, erwartet in faelle.items():
+        monkeypatch.setattr(
+            justetf_module.justetf_scraping,
+            "get_etf_overview",
+            lambda isin, **kw: {"distribution_policy": politik},
+        )
+
+        details = JustEtfProvider().fetch_etf("IE00B3RBWM25")
+
+        assert details is not None
+        assert details.accumulating is erwartet, politik
+
+
+class _FakeTicker(FakeTicker):
+    """Wie `FakeTicker`, nur mit frei wählbarem Kurs."""
+
+    def __init__(self, price: float) -> None:
+        self.fast_info = type(
+            "F", (), {"last_price": price, "currency": "EUR", "last_volume": 1,
+                      "exchange": "GER", "quote_type": "ETF"}
+        )()
+
+
+@pytest.mark.parametrize("kaputt", [float("nan"), float("inf"), float("-inf"), 0.0, -1.5])
+def test_unbrauchbare_kurse_werden_verworfen(monkeypatch, kaputt) -> None:
+    """Nicht jeder Zahlenwert ist ein Kurs.
+
+    Geprüft wurde bisher nur gegen `None`. `NaN` und `Infinity` überstehen
+    Pydantic als float, landen in SQLite und brechen spätestens bei strikter
+    JSON-Serialisierung mit einem 500. Ein Kurs von 0 oder darunter ist
+    fachlich ebenso wenig ein Kurs — er würde Renditen und Volatilität
+    verfälschen, statt sie als fehlend auszuweisen.
+    """
+    monkeypatch.setattr(
+        yfinance_module.yf, "Ticker", lambda symbol: _FakeTicker(price=kaputt)
+    )
+
+    assert YFinanceProvider().fetch_quote("VGWL.DE") is None
+
+
+@pytest.mark.parametrize("kaputt", [float("nan"), float("inf"), 0.0, -1.0])
+def test_unbrauchbare_wechselkurse_werden_verworfen(monkeypatch, kaputt) -> None:
+    monkeypatch.setattr(
+        yfinance_module.yf, "Ticker", lambda symbol: _FakeTicker(price=kaputt)
+    )
+
+    assert YFinanceProvider().fetch_fx_rate("EUR", "USD") is None
+
+
+def test_brauchbarer_kurs_kommt_durch(monkeypatch) -> None:
+    """Die Gegenrichtung — sonst wäre die Prüfung ein stiller Totalausfall."""
+    monkeypatch.setattr(
+        yfinance_module.yf, "Ticker", lambda symbol: _FakeTicker(price=160.98)
+    )
+
+    quote = YFinanceProvider().fetch_quote("VGWL.DE")
+
+    assert quote is not None
+    assert quote.price == 160.98
+    assert YFinanceProvider().fetch_fx_rate("EUR", "USD") == 160.98

@@ -2,10 +2,11 @@
 import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton } from 'naive-ui'
+import { UxCaret } from '@mmit/ux-foundation'
 
+import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
-import ManualMetric from './ManualMetric.vue'
-import type { InstrumentOverrides, InstrumentSummary } from '../types'
+import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 const props = defineProps<{
   item: InstrumentSummary
@@ -15,6 +16,8 @@ const props = defineProps<{
   yahooUrl: string
   /** Wird gerade gespeichert? Dann nichts anfassen. */
   saving: boolean
+  /** Vorschläge je Textfeld für den Detailbereich — einmal weiter oben gebildet. */
+  fieldOptions?: Partial<Record<OverrideField, string[]>>
 }>()
 
 const emit = defineEmits<{
@@ -71,7 +74,7 @@ function price(value: number | null): string {
         :aria-controls="detailsId"
         @click.stop="toggle"
       >
-        <span class="icard__chevron" :class="{ 'icard__chevron--open': expanded }">⌄</span>
+        <UxCaret :open="expanded" />
         {{ expanded ? t('table.less') : t('table.more') }}
       </NButton>
 
@@ -135,41 +138,32 @@ function price(value: number | null): string {
       </div>
     </div>
 
-    <dl v-if="expanded" :id="detailsId" class="icard__details" :aria-label="t('table.details')">
-      <dt>{{ t('table.colIsin') }}</dt>
-      <dd>
-        <span v-if="item.isin" class="mono">{{ item.isin }}</span>
-        <IsinEditor v-else :symbol="item.symbol" @save="emit('set-isin', $event)" />
-      </dd>
+    <div v-if="expanded" :id="detailsId" class="icard__expanded">
       <!--
         Auch mobil bearbeitbar: „Voll bedienbar ist die Vorgabe" — eine reine
         Leseansicht bräuchte einen Grund, und den gibt es hier nicht.
       -->
-      <dt>{{ t('table.colTer') }}</dt>
-      <dd class="mono">
-        <ManualMetric :item="item" field="ter" :busy="saving" @commit="emit('override', $event)" />
-      </dd>
-      <dt>{{ t('table.colVola') }}</dt>
-      <dd class="mono">
-        <ManualMetric
-          :item="item"
-          field="volatility"
-          :busy="saving"
-          @commit="emit('override', $event)"
-        />
-      </dd>
-      <dt>{{ t('table.colAccumulating') }}</dt>
-      <dd>
-        <ManualMetric
-          :item="item"
-          field="accumulating"
-          :busy="saving"
-          @commit="emit('override', $event)"
-        />
-      </dd>
-      <dt>{{ t('table.colPoints') }}</dt>
-      <dd class="mono">{{ item.history_count }}</dd>
-    </dl>
+      <dl class="icard__details" :aria-label="t('table.details')">
+        <dt>{{ t('table.colIsin') }}</dt>
+        <dd>
+          <span v-if="item.isin" class="mono">{{ item.isin }}</span>
+          <IsinEditor v-else :symbol="item.symbol" @save="emit('set-isin', $event)" />
+        </dd>
+        <dt>{{ t('table.colPoints') }}</dt>
+        <dd class="mono">{{ item.history_count }}</dd>
+      </dl>
+
+      <!--
+        Derselbe Detailbereich wie am Schreibtisch (Task 8) — acht Felder statt
+        der bisherigen drei `ManualMetric`, an derselben Stelle wie bisher.
+      -->
+      <InstrumentDrilldown
+        :item="item"
+        :busy="saving"
+        :field-options="fieldOptions"
+        @commit="emit('override', $event)"
+      />
+    </div>
   </article>
 </template>
 
@@ -230,11 +224,9 @@ function price(value: number | null): string {
 .icard__toggle {
   gap: 0.3rem;
 }
-.icard__chevron {
-  display: inline-block;
-  transition: transform 0.12s ease;
-  &--open { transform: rotate(180deg); }
-}
+// Aussehen und Drehung stehen in `UxCaret` (Fundament) — dieselbe Fassung wie
+// in der Tabelle. Vorher stand hier ein eigenes `⌄` mit eigener Drehung; zwei
+// Schreibweisen für „hier geht etwas auf" waren eine zu viel.
 
 .icard__actions {
   display: flex;
@@ -246,10 +238,15 @@ function price(value: number | null): string {
   justify-content: flex-end;
 }
 
-.icard__details {
+// Umschließt die Detail-Liste (ISIN, Pkt.) und den Detailbereich darunter — trägt
+// die Trennlinie zum Kopf der Karte, die vorher an `.icard__details` selbst hing.
+.icard__expanded {
   margin: 0.6rem 0 0;
   padding-top: 0.5rem;
   border-top: 1px solid token(--border-default, 0.5);
+}
+
+.icard__details {
   display: grid;
   grid-template-columns: auto 1fr;
   gap: 0.3rem 0.6rem;

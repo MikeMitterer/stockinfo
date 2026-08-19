@@ -1,6 +1,6 @@
 """Tests für die ISIN-Auflösung (OpenFIGI-Client gemockt)."""
 
-from app.resolver import EXCHANGES, CompositeResolver, ExchangeDef, OpenFigiResolver
+from app.resolver import EXCHANGES, CompositeResolver, OpenFigiResolver
 from app.providers.base import ResolvedInstrument
 
 

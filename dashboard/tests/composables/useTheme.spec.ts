@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { DEFAULT_DARK_THEME, DEFAULT_LIGHT_THEME } from '@mikemitterer/ux-foundation'
+import { DEFAULT_DARK_THEME, DEFAULT_LIGHT_THEME } from '@mmit/ux-foundation'
 
 import { useTheme } from '../../src/composables/useTheme'
 

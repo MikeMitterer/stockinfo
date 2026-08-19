@@ -12,8 +12,9 @@
 
 ## Global Constraints
 
-- **Alle Bezeichner im Code englisch, alle Kommentare und Doku deutsch.** Testnamen deutsch (`def test_...` mit deutschem Namen), wie im Bestand.
-- **`OVERRIDE_FIELDS` ist die einzige Feldliste.** Keine zweite Aufzählung der acht Felder irgendwo — weder in SQL, noch im Endpoint, noch in Tests.
+- **Bezeichner englisch, ausnahmslos** — Funktionen, Klassen, Felder, Parameter und **auch lokale Variablen**: `columns` statt `spalten`, `existing` statt `vorhanden`, `for field in …` statt `for feld in …`. In Produktivcode wie in Tests. Deutsch bleibt die Sprache der Erklärung: Kommentare, Docstrings, Commit-Bodies und Testnamen (`def test_werte_ueberleben_das_erneute_lesen`). Wo im Bestand deutsche Bezeichner stehen, ist das Altlast und kein Idiom, dem man folgt — neuer Code ist englisch, und was ohnehin angefasst wird, zieht mit.
+- **DRY — vor jeder Zeile.** Was zweimal dasteht, läuft auseinander; die zweite Stelle wird beim nächsten Feinschliff vergessen. Bevor du etwas schreibst: Gibt es das schon? Kann es aus einer vorhandenen Quelle abgeleitet werden, statt getippt zu werden? Das gilt für Feldlisten, SQL-Fragmente, Validierungsgrenzen, Testaufbauten und Komponenten gleichermaßen. Wiederholt sich ein Aufbau in mehr als zwei Tests, gehört er in einen Helfer. Gegenprobe ist KISS: Ein Helfer für genau einen Fall ist keine Wiederverwendung, sondern eine Ebene mehr — dann bleibt es stehen und wird kurz begründet.
+- **`OVERRIDE_FIELDS` ist die einzige Feldliste.** Der wichtigste Einzelfall der obigen Regel: keine zweite Aufzählung der acht Felder irgendwo — weder in SQL, noch im Endpoint, noch in Tests. Wo eine Liste gebraucht wird, wird sie aus der Konstante erzeugt.
 - **Kein sichtbarer Text ohne Katalog-Eintrag** (`de.ts` **und** `en.ts`).
 - **Vorrang-Regel unverändert:** Was die Quelle liefert, gewinnt; ein manueller Wert füllt nur Lücken. `accumulating` prüft auf `None`, nicht auf Falschheit.
 - **Migrationen idempotent** — `CREATE TABLE IF NOT EXISTS` plus `ALTER TABLE ADD COLUMN` nur, wenn die Spalte fehlt.
@@ -111,7 +112,7 @@ Im `_SCHEMA`-Block `instruments` zusätzlich `fund_domicile TEXT,` und `fund_cur
 ```python
 def _migrate(connection: sqlite3.Connection) -> None:
     """Ergänzt fehlende Spalten/Indizes in bestehenden Datenbanken (idempotent)."""
-    _ergaenze_spalten(
+    _add_missing_columns(
         connection,
         "instruments",
         (
@@ -123,7 +124,7 @@ def _migrate(connection: sqlite3.Connection) -> None:
     )
     # Die Override-Tabelle wuchs mit: Nachgetragen wird jetzt alles, was
     # justETF beisteuert — nicht mehr nur die drei aus T-09.
-    _ergaenze_spalten(
+    _add_missing_columns(
         connection,
         "instrument_overrides",
         (
@@ -144,14 +145,14 @@ def _migrate(connection: sqlite3.Connection) -> None:
     )
 
 
-def _ergaenze_spalten(
-    connection: sqlite3.Connection, tabelle: str, spalten: tuple[tuple[str, str], ...]
+def _add_missing_columns(
+    connection: sqlite3.Connection, table: str, columns: tuple[tuple[str, str], ...]
 ) -> None:
     """Fügt fehlende Spalten hinzu; vorhandene bleiben unangetastet."""
-    vorhanden = {row["name"] for row in connection.execute(f"PRAGMA table_info({tabelle})")}
-    for name, typ in spalten:
-        if name not in vorhanden:
-            connection.execute(f"ALTER TABLE {tabelle} ADD COLUMN {name} {typ}")
+    existing = {row["name"] for row in connection.execute(f"PRAGMA table_info({table})")}
+    for column, ddl in columns:
+        if column not in existing:
+            connection.execute(f"ALTER TABLE {table} ADD COLUMN {column} {ddl}")
 ```
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -183,14 +184,20 @@ git commit -m "feat(db): Spalten für alle ETF-Extras und deren Overrides"
 In `tests/test_overrides.py` anhängen:
 
 ```python
-def test_die_neuen_felder_werden_validiert(client: TestClient) -> None:
-    """Der Grund, Spalten statt einer generischen Tabelle zu nehmen."""
-    gueltig = client.put(
+def test_die_neuen_felder_kommen_durch_die_validierung(client: TestClient) -> None:
+    """Der Grund, Spalten statt einer generischen Tabelle zu nehmen.
+
+    Geprüft wird hier **nur** die Annahme: Ein gültiger Satz darf nicht an der
+    Validierung scheitern. Dass die Werte auch zurückkommen, kann dieser Task
+    noch nicht halten — Dienst und Endpoint reichen sie erst ab Task 4 durch.
+    Der Rundlauf wird dort geprüft.
+    """
+    antwort = client.put(
         "/instruments/by-symbol/GOLD.SG/overrides",
         json={"fund_size": 129445.0, "fund_currency": "USD", "fund_domicile": "Irland"},
     )
-    assert gueltig.status_code == 200
-    assert gueltig.json()["fund_currency"] == "USD"
+
+    assert antwort.status_code == 200
 
 
 @pytest.mark.parametrize(
@@ -468,6 +475,19 @@ def test_endpoint_schreibt_und_liest_alle_acht(client: TestClient) -> None:
     assert gelesen["provider"] == "iShares"
     assert gelesen["fund_domicile"] == "Irland"
     assert gelesen["ter"] == 0.25
+
+
+def test_der_rundlauf_traegt_auch_die_fondswaehrung(client: TestClient) -> None:
+    """Aus Task 2 hierher gezogen: Erst hier reicht der Endpoint sie durch."""
+    client.put(
+        "/instruments/by-symbol/GOLD.SG/overrides",
+        json={"fund_size": 129445.0, "fund_currency": "USD", "fund_domicile": "Irland"},
+    )
+
+    gelesen = client.get("/instruments/by-symbol/GOLD.SG/overrides").json()
+
+    assert gelesen["fund_currency"] == "USD"
+    assert gelesen["fund_size"] == 129445.0
 ```
 
 Die Attrappe `_FakeService` in derselben Datei auf die neue Signatur ziehen:
@@ -589,7 +609,7 @@ def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
     Fiel yfinance ohne Währung aus, rutschte bisher die Fondswährung in
     `currency` — bei einem Euro-Kurs stand dann USD daneben.
     """
-    ohne_waehrung = RawQuote(
+    quote_without_currency = RawQuote(
         symbol="VGWL.DE",
         price=160.98,
         quote_time="2026-07-12T17:35:00+00:00",
@@ -598,7 +618,7 @@ def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
         type="etf",
     )
     service = QuoteService(
-        FakeQuoteProvider(ohne_waehrung),
+        FakeQuoteProvider(quote_without_currency),
         FakeEtfProvider(EtfDetails(fund_currency="USD", fund_domicile="Ireland")),
         FakeResolver(
             ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
@@ -693,7 +713,7 @@ git commit -m "feat(justetf): Fondsdomizil holen, Fondswährung getrennt führen
 `ManualMetric` ebenfalls dreimal — aber in ihrem **aufgeklappten** Bereich
 (`<dl v-if="expanded">`), also genau dort, wo mobil ohnehin gepflegt wird. Sie
 auf reine Anzeige umzustellen wäre ein Rückschritt gegen T-09 #8. Die Karte
-zieht in Task 8 auf die Schublade um; bis dahin läuft sie unverändert weiter.
+zieht in Task 8 auf den Detailbereich um; bis dahin läuft sie unverändert weiter.
 
 **Interfaces:**
 - Consumes: `manualValue`, `overrideState` aus `../composables/useOverrides`
@@ -751,7 +771,7 @@ In `InstrumentsTable.vue` die drei `ManualMetric`-Blöcke durch `MetricValue` er
             <td class="center"><MetricValue :item="item" field="accumulating" /></td>
 ```
 
-Import und der Kommentar über den Zellen werden entsprechend angepasst: Gepflegt wird jetzt in der Schublade.
+Import und der Kommentar über den Zellen werden entsprechend angepasst: Gepflegt wird jetzt im Detailbereich.
 
 
 - [ ] **Step 4: Run test to verify it passes**
@@ -859,7 +879,7 @@ git commit -m "feat(ui): Kennzahlen-Editor mit Entfernen für verdeckte Werte"
 
 ---
 
-### Task 8: Die Schublade
+### Task 8: Der Detailbereich
 
 **Files:**
 - Create: `dashboard/src/components/InstrumentDrilldown.vue`
@@ -925,9 +945,9 @@ In `InstrumentsTable.vue`:
             </td>
 ```
 
-Der Name analog. Eine zweite `<tr v-if="isOpen(item)">` mit `<td :colspan="columns.length + 1">` trägt die Schublade. Der bestehende Zeilen-Klick (`emit('select', item)`, öffnet das Chart) **bleibt** — nur Symbol und Name klinken sich mit `@click.stop` aus.
+Der Name analog. Eine zweite `<tr v-if="isOpen(item)">` mit `<td :colspan="columns.length + 1">` trägt den Detailbereich. Der bestehende Zeilen-Klick (`emit('select', item)`, öffnet das Chart) **bleibt** — nur Symbol und Name klinken sich mit `@click.stop` aus.
 
-In `InstrumentCard.vue` den aufgeklappten Bereich auf dieselbe Schublade ziehen:
+In `InstrumentCard.vue` den aufgeklappten Bereich auf denselben Detailbereich ziehen:
 Die drei `ManualMetric` in `<dl v-if="expanded" class="icard__details">`
 weichen einem `<InstrumentDrilldown :item="item" :busy="saving" @commit="emit('override', $event)" />`.
 Mobil steht damit dasselbe zur Verfügung wie am Schreibtisch — acht Felder
@@ -956,7 +976,7 @@ Dev-Server starten, dann in der laufenden App prüfen — gemessen, nicht gesch�
 document.documentElement.scrollWidth - document.documentElement.clientWidth
 ```
 
-Erwartet: je Spalte ein einziger Wert, Überhang 0. Zusätzlich die Schublade in `sepia` öffnen und den Kontrast ihrer Flächen prüfen.
+Erwartet: je Spalte ein einziger Wert, Überhang 0. Zusätzlich den Detailbereich in `sepia` öffnen und den Kontrast ihrer Flächen prüfen.
 
 - [ ] **Step 6: Commit**
 
@@ -972,6 +992,6 @@ git commit -m "feat(ui): aufklappbare Zeile mit allen ETF-Kennzahlen"
 
 Die Spec sagt „Die Kennung öffnet die Zeile", die Zeile reagiert aber schon auf
 Klick: `@click="emit('select', item)"` öffnet das Chart. Dieser Plan löst es so,
-dass **Symbol und Name** die Schublade öffnen (`@click.stop`) und der übrige
+dass **Symbol und Name** den Detailbereich öffnen (`@click.stop`) und der übrige
 Zeilenbereich weiterhin das Chart. Wer das anders will, ändert nur Task 8,
 Schritt 3.

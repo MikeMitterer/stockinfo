@@ -60,8 +60,11 @@ RUN useradd --system --uid 99 --gid users --no-create-home stockinfo \
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
+# Auf /ready, nicht /health: Der Healthcheck steuert Neustart und
+# Traffic-Freigabe, und dafuer zaehlt „kann arbeiten", nicht „Prozess lebt".
+# /health antwortet bewusst immer mit ok und haengt an nichts.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS "http://localhost:${PORT}/health" || exit 1
+    CMD curl -fsS "http://localhost:${PORT}/ready" || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["sh", "-c", "uvicorn app.main:app --host \"$HOST\" --port \"$PORT\""]

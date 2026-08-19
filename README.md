@@ -19,6 +19,7 @@ Yahoo Finance, JSON export).
 - [How quotes are fetched](#how-quotes-are-fetched)
 - [Requirements](#requirements)
 - [Quick start](#quick-start)
+- [Security model](#security-model)
 - [The REST API](#the-rest-api)
 - [Configuration (.env)](#configuration-env)
 - [Dashboard](#dashboard)
@@ -122,13 +123,51 @@ curl http://localhost:8000/quote/IE00B3RBWM25
 
 ---
 
+## Security model
+
+**StockInfo has no authentication, and it is not meant to have one.** Every
+endpoint is open to anyone who can reach the port — including the ones that
+change or destroy data:
+
+- `DELETE /instruments/{isin}` removes an instrument together with its entire
+  price history.
+- `PUT /instruments/{symbol}/isin` and `PUT /instruments/{symbol}/overrides`
+  change stored data.
+- `POST /refresh` and `GET /analyze` trigger live requests to Yahoo and
+  justETF and write their results to the database.
+
+The default bind address is `0.0.0.0`, so in Docker the port is reachable from
+the whole network the container is attached to.
+
+**Run it on a network you trust.** In practice that means one of:
+
+- bind it to loopback only (`HOST=127.0.0.1`) and reach it through an SSH
+  tunnel;
+- keep the published port inside your LAN and off the internet (the usual
+  Unraid setup);
+- or put an authenticating reverse proxy in front of it if it must be exposed.
+
+`CORS_ORIGINS` is **not** a protection. It restricts what a browser on another
+origin may do — it does nothing about `curl`, a script, or any server-to-server
+call.
+
+Two limits do exist, and they are about load rather than access: the global
+refresh takes a non-blocking lock so two runs cannot overlap, and justETF is
+only scraped once every `METADATA_TTL_DAYS` (an explicit single refresh still
+forces it).
+
+[↑ Contents](#contents)
+
+---
+
 ## The REST API
 
 ![Swagger UI (dark)](unraid/screenshots/swagger.png)
 
 | Method & path | Purpose |
 |---|---|
-| `GET /health` | health check (status + version) |
+| `GET /health` | liveness — answers as long as the process is alive |
+| `GET /ready` | readiness — also checks the database; `503` when it is unreachable |
 | `GET /quote/{isin}` | quote by ISIN (prefers Xetra/EUR) |
 | `GET /quote?symbol=VGWL.DE` | quote by full Yahoo symbol (suffix = exchange) |
 | `GET /quote/{isin}/history` | intraday history (collected ticks) |

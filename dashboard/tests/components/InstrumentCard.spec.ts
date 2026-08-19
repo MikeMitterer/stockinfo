@@ -40,14 +40,55 @@ describe('InstrumentCard', () => {
     expect(wrapper.find('.icard__name').text()).toBe('Apple Inc.')
   })
 
-  it('hält die Kennzahlen bis zum Aufklappen verborgen', async () => {
+  it('hält Details und Detailbereich bis zum Aufklappen verborgen', async () => {
     const wrapper = mountCard()
     expect(wrapper.find('.icard__details').exists()).toBe(false)
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(false)
+
     await wrapper.find('.icard__toggle').trigger('click')
+
     expect(wrapper.find('.icard__details').exists()).toBe(true)
-    // Deutsches Zahlenformat: Der Wert lief vorher über `toFixed` und stand
-    // deshalb mit Punkt in einer deutschen Oberfläche.
-    expect(wrapper.find('.icard__details').text()).toContain('25,80')
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(true)
+  })
+
+  it('bietet mobil dieselben acht Felder wie am Schreibtisch (Task 8)', async () => {
+    const wrapper = mountCard()
+    await wrapper.find('.icard__toggle').trigger('click')
+
+    expect(wrapper.findAllComponents({ name: 'MetricEditor' })).toHaveLength(8)
+  })
+
+  it('zeigt weiterhin die Anzahl gespeicherter Kurspunkte', async () => {
+    const wrapper = mountCard({ history_count: 42 })
+    await wrapper.find('.icard__toggle').trigger('click')
+
+    expect(wrapper.find('.icard__details').text()).toContain('42')
+  })
+
+  it('reicht ein commit aus dem Detailbereich unverändert als override weiter', async () => {
+    const wrapper = mountCard()
+    await wrapper.find('.icard__toggle').trigger('click')
+
+    wrapper.findComponent({ name: 'InstrumentDrilldown' }).vm.$emit('commit', { provider: 'Vanguard' })
+
+    expect(wrapper.emitted('override')?.[0]?.[0]).toEqual({ provider: 'Vanguard' })
+  })
+
+  it('reicht fieldOptions unverändert an den Detailbereich durch', async () => {
+    const wrapper = mount(InstrumentCard, {
+      props: {
+        item: makeInstrument(),
+        selected: false, refreshing: false, saving: false,
+        extraetfUrl: '', yahooUrl: '',
+        fieldOptions: { provider: ['Vanguard', 'iShares'] },
+      },
+      global: { plugins: [i18n] },
+    })
+    await wrapper.find('.icard__toggle').trigger('click')
+
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).props('fieldOptions')).toEqual({
+      provider: ['Vanguard', 'iShares'],
+    })
   })
 
   it('emittiert select beim Antippen der Karte', async () => {

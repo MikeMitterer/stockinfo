@@ -30,10 +30,27 @@ export function useOverrides(): {
     item: InstrumentSummary,
     patch: Partial<InstrumentOverrides>,
   ): Promise<void> {
+    /*
+     * Feld für Feld ausgeschrieben — und das bleibt so.
+     *
+     * Naheliegend wäre, den Satz generisch über `OVERRIDE_FIELDS` und
+     * `manualValue()` zu bauen. Das kostet aber eine Typzusicherung
+     * (`Object.fromEntries` gibt nur einen Index-Typ zurück), und genau die
+     * schaltet den Schutz ab, um den es hier geht: Kommt eine neunte Kennzahl
+     * dazu, meldet `vue-tsc` heute an dieser Stelle ein fehlendes Feld —
+     * nachgeprüft, indem `InstrumentOverrides` versuchsweise um ein Feld
+     * erweitert wurde. Mit Zusicherung liefe derselbe Fall stumm durch, und
+     * das Backend löschte die neue Kennzahl bei jedem Schreiben.
+     */
     const payload: InstrumentOverrides = {
       ter: item.manual_ter,
       volatility: item.manual_volatility,
       accumulating: item.manual_accumulating,
+      provider: item.manual_provider,
+      replication: item.manual_replication,
+      fund_size: item.manual_fund_size,
+      fund_domicile: item.manual_fund_domicile,
+      fund_currency: item.manual_fund_currency,
       ...patch,
     }
 
@@ -69,12 +86,33 @@ export function overrideState(
   return null
 }
 
-/** Der von Hand gepflegte Rohwert einer Kennzahl. */
+/**
+ * Der von Hand gepflegte Rohwert einer Kennzahl.
+ *
+ * Ohne Verzweigung über die acht Felder: `manual_<field>` heißt für jedes
+ * Feld exakt so wie sein Gegenstück in `InstrumentSummary`, der Zugriff ist
+ * also generisch möglich statt in acht gleichförmigen Zweigen.
+ */
 export function manualValue(
   item: InstrumentSummary,
   field: OverrideField,
-): number | boolean | null {
-  if (field === 'ter') return item.manual_ter
-  if (field === 'volatility') return item.manual_volatility
-  return item.manual_accumulating
+): number | boolean | string | null {
+  return item[`manual_${field}`]
+}
+
+/**
+ * Liefert die Quelle einen Wert für dieses Feld — nicht nur die Eingabe?
+ *
+ * Die Vorrang-Regel in einer Funktion statt dreimal (Nacharbeit Sichtprüfung,
+ * I4): `MetricValue.vue`, `MetricEditor.vue` und `InstrumentDrilldown.vue`
+ * formulierten bislang unabhängig voneinander dieselbe Prüfung — heute
+ * gleichbedeutend, aus drei verschiedenen Tasks entstanden und beim nächsten
+ * Feinschliff ein Kandidat zum Auseinanderlaufen.
+ *
+ * `item[field]` ist bereits der **wirksame** Wert (das Backend löst die
+ * Vorrang-Regel auf); „nicht null" allein reicht deshalb nicht — im Zustand
+ * `manual` ist der wirksame Wert der eingetragene, nicht der der Quelle.
+ */
+export function sourceProvides(item: InstrumentSummary, field: OverrideField): boolean {
+  return overrideState(item, field) !== 'manual' && item[field] !== null
 }

@@ -1,15 +1,16 @@
 <script setup lang="ts">
-import { computed } from 'vue'
+import { computed, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton, NSelect } from 'naive-ui'
 
-import { useIsCompact } from '@mikemitterer/ux-foundation'
+import { UxCaret, useIsCompact } from '@mmit/ux-foundation'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
 import InfoHint from './InfoHint.vue'
 import InstrumentCard from './InstrumentCard.vue'
+import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
-import ManualMetric from './ManualMetric.vue'
-import type { InstrumentOverrides, InstrumentSummary } from '../types'
+import MetricValue from './MetricValue.vue'
+import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 const props = defineProps<{
   instruments: InstrumentSummary[]
@@ -20,6 +21,8 @@ const props = defineProps<{
   extraetfEtfUrl: string
   extraetfStockUrl: string
   yahooUrl: string
+  /** Vorschläge je Textfeld für den Detailbereich — einmal weiter oben gebildet. */
+  fieldOptions?: Partial<Record<OverrideField, string[]>>
 }>()
 
 const emit = defineEmits<{
@@ -83,6 +86,102 @@ function onSortSelect(value: string): void {
   setSortKey(value === '' ? null : (value as SortKey))
 }
 
+/*
+ * Der Detailbereich (Task 8): höchstens einer gleichzeitig offen, gehalten über das
+ * Symbol des Papiers — nicht über einen Index, der bei jeder Umsortierung ein
+ * anderes Papier träfe.
+ */
+const openSymbol = ref<string | null>(null)
+
+/** Ist der Detailbereich dieses Papiers gerade offen? */
+function isOpen(item: InstrumentSummary): boolean {
+  return openSymbol.value === item.symbol
+}
+
+/**
+ * Öffnet/schließt den Detailbereich eines Papiers — ausgelöst von Symbol oder Name.
+ *
+ * Eigener Name statt `toggle`: Das ist schon die Spaltensortierung von
+ * `useTableSort()`, ein zweiter `toggle` für etwas ganz anderes wäre hier
+ * verwirrend.
+ */
+function toggleDrawer(item: InstrumentSummary): void {
+  openSymbol.value = isOpen(item) ? null : item.symbol
+}
+
+/**
+ * Naive UI meldet eine offene Auswahlliste über diese Klasse am Feld.
+ *
+ * Sie ist im Browser gemessen, nicht aus der Dokumentation abgeschrieben:
+ * geschlossen trägt das Feld `n-base-selection`, offen zusätzlich
+ * `n-base-selection--active`. Dass hier ein fremder Klassenname steht, ist der
+ * Preis dafür, dass Naive den Zustand sonst nirgends nach außen gibt — weder
+ * über `aria-expanded` noch über ein Event. Benennt Naive sie um, fällt der
+ * zugehörige Test, nicht die Oberfläche: Der Detailbereich schlösse dann wieder
+ * eine Taste zu früh.
+ */
+const NAIVE_SELECT_OPEN = 'n-base-selection--active'
+
+/**
+ * War beim letzten Escape eine Auswahlliste offen?
+ *
+ * Der Umweg über ein Merkfeld ist **erzwungen**, und zwar durch eine Messung:
+ * Naive schließt die Liste in der Ziel-Phase, also nach dem Capture und vor
+ * jedem Handler weiter oben. Am Wurzelelement angekommen ist die Klasse
+ * bereits weg — dort lässt sich nicht mehr feststellen, dass gerade eine Liste
+ * zuging.
+ *
+ * | Phase                     | Liste offen |
+ * |---------------------------|-------------|
+ * | `document`, Capture       | ja          |
+ * | `section`, Capture        | ja          |
+ * | `section`, Bubble         | **nein**    |
+ *
+ * Also wird im Capture gemerkt und im Bubble entschieden. Beides in den
+ * Capture zu ziehen geht nicht: `defaultPrevented` von `UxInlineNumber` steht
+ * dort noch nicht, das Feld setzt es erst am Ziel.
+ */
+let selectWasOpen = false
+
+/** Hält im Capture fest, was im Bubble nicht mehr zu sehen ist. */
+function onEscapeCapture(event: KeyboardEvent): void {
+  selectWasOpen =
+    event.target instanceof Element && event.target.closest(`.${NAIVE_SELECT_OPEN}`) !== null
+}
+
+/**
+ * Escape schließt den offenen Detailbereich — der Ausweg, den die Teststrategie
+ * verlangt.
+ *
+ * Der Handler sitzt am Wurzelelement der Komponente, nicht am `document`:
+ * Öffnen und Schließen betreffen nur diese Tabelle, und ein globaler Listener
+ * müsste eigens wieder abgeräumt werden. Aus dem Knopf wie aus dem Detailbereich
+ * steigt die Taste ohnehin hierher hoch.
+ *
+ * Zwei Dinge halten den Detailbereich offen, und sie prüfen dasselbe auf zwei
+ * Wegen, weil die Bedienelemente sich unterschiedlich verhalten:
+ *
+ * 1. `defaultPrevented` — so meldet sich `UxInlineNumber`, das mit Escape
+ *    seinen Entwurf verwirft.
+ * 2. Eine **offene** Auswahlliste darüber, festgehalten in `selectWasOpen`.
+ *    Die vier Textfelder des Detailbereichs (Anbieter, Replikationsart,
+ *    Fondsdomizil, Fondswährung) sind `NSelect`, und Naive ruft bei Escape
+ *    kein `preventDefault()` — die Taste stieg unverbraucht hierher hoch und
+ *    nahm Liste und Detailbereich auf einmal weg.
+ *
+ * Gemerkt wird ausdrücklich **offen**, nicht „kam aus einem Auswahlfeld": Bei
+ * geschlossener Liste gehört die Taste wieder dem Detailbereich, sonst käme man
+ * mit dem Fokus im Feld per Tastatur nicht mehr heraus.
+ */
+function onEscape(event: KeyboardEvent): void {
+  const listeWarOffen = selectWasOpen
+  selectWasOpen = false
+
+  if (event.defaultPrevented) return
+  if (listeWarOffen) return
+  openSymbol.value = null
+}
+
 /** Baut den extraETF-Profil-Link (ISIN-basiert, ETF/Stock unterschieden). */
 function extraetfLink(item: InstrumentSummary): string {
   if (!item.isin) return ''
@@ -106,7 +205,7 @@ function price(value: number | null): string {
 </script>
 
 <template>
-  <section class="table card">
+  <section class="table card" @keydown.esc.capture="onEscapeCapture" @keydown.esc="onEscape">
     <div class="table__head" :class="{ 'table__head--compact': compact }">
       <h2>{{ t('table.title') }}</h2>
       <div v-if="compact && instruments.length > 0" class="tsort">
@@ -149,6 +248,7 @@ function price(value: number | null): string {
           :saving="item.symbol === savingSymbol"
           :extraetf-url="extraetfLink(item)"
           :yahoo-url="yahooLink(item)"
+          :field-options="fieldOptions"
           @select="emit('select', $event)"
           @refresh="emit('refresh', $event)"
           @remove="emit('remove', $event)"
@@ -191,116 +291,129 @@ function price(value: number | null): string {
           </tr>
         </thead>
         <tbody>
-          <tr
-            v-for="item in sortedInstruments"
-            :key="item.symbol"
-            :class="{ selected: item.symbol === selectedSymbol }"
-            @click="emit('select', item)"
-          >
-            <td class="sym mono">{{ item.symbol }}</td>
-            <td class="mono dim isin-cell">
-              <span v-if="item.isin">{{ item.isin }}</span>
-              <IsinEditor v-else :symbol="item.symbol" @save="emit('set-isin', $event)" />
-            </td>
-            <td class="name">{{ item.name ?? '—' }}</td>
-            <td>
-              <span v-if="item.type" class="badge type" :class="item.type">{{ item.type }}</span>
-              <span v-else class="dim">—</span>
-            </td>
-            <td class="num mono">
-              {{ price(item.latest_price) }}
-              <span class="ccy">{{ item.latest_currency ?? '' }}</span>
-            </td>
-            <!--
-              Die drei Kennzahlen sind an Ort und Stelle bearbeitbar (T-09) —
-              für Papiere, die nicht über justETF/extraETF laufen, gibt es
-              sonst keine Quelle dafür. `@click.stop`, weil ein Klick auf die
-              Zeile das Chart öffnet.
-            -->
-            <td class="num mono dim" @click.stop>
-              <ManualMetric
-                :item="item"
-                field="ter"
-                :busy="savingSymbol === item.symbol"
-                @commit="emit('override', { item, patch: $event })"
-              />
-            </td>
-            <td class="num mono dim" @click.stop>
-              <ManualMetric
-                :item="item"
-                field="volatility"
-                :busy="savingSymbol === item.symbol"
-                @commit="emit('override', { item, patch: $event })"
-              />
-            </td>
-            <td class="center" @click.stop>
-              <ManualMetric
-                :item="item"
-                field="accumulating"
-                :busy="savingSymbol === item.symbol"
-                @commit="emit('override', { item, patch: $event })"
-              />
-            </td>
-            <td class="num mono dim">{{ item.history_count }}</td>
-            <td class="actions" @click.stop>
-              <NButton
-                class="ext"
-                size="tiny"
-                quaternary
-                :title="t('table.showJson')"
-                @click="emit('json', item)"
-              >
-                JSON
-              </NButton>
-              <NButton
-          v-if="extraetfLink(item)"
-          class="ext"
-          tag="a"
-          size="tiny"
-          quaternary
-          :href="extraetfLink(item)"
-          target="_blank"
-          rel="noopener"
-          :title="t('table.extraetfProfile')"
-        >
-          eETF
-        </NButton>
-              <NButton
-          v-if="yahooLink(item)"
-          class="ext"
-          tag="a"
-          size="tiny"
-          quaternary
-          :href="yahooLink(item)"
-          target="_blank"
-          rel="noopener"
-          :title="t('table.yahooFinance')"
-        >
-          Y!
-        </NButton>
-              <NButton
-                class="icon"
-                size="tiny"
-                quaternary
-                :loading="item.symbol === refreshingSymbol"
-                :disabled="item.symbol === refreshingSymbol"
-                :title="t('table.refresh')"
-                @click="emit('refresh', item)"
-              >
-                ↻
-              </NButton>
-              <NButton
-                class="icon"
-                size="tiny"
-                quaternary
-                type="error"
-                :title="t('table.remove')"
-                @click="emit('remove', item)"
-              >
-                ✕
-              </NButton>
-            </td>
-          </tr>
+          <template v-for="item in sortedInstruments" :key="item.symbol">
+            <tr
+              :class="{ selected: item.symbol === selectedSymbol }"
+              @click="emit('select', item)"
+            >
+              <td class="sym mono">
+                <!--
+                  Kennung öffnet die Zeile (ux-standards): Symbol und Name sind
+                  eigene Schaltflächen und klinken sich mit `@click.stop` aus dem
+                  Zeilen-Klick aus — der bleibt fürs Chart zuständig.
+                -->
+                <button
+                  type="button"
+                  class="row-toggle"
+                  :aria-expanded="isOpen(item)"
+                  :aria-controls="`details-${item.symbol}`"
+                  @click.stop="toggleDrawer(item)"
+                >
+                  <UxCaret :open="isOpen(item)" />{{ item.symbol }}
+                </button>
+              </td>
+              <td class="mono dim isin-cell">
+                <span v-if="item.isin">{{ item.isin }}</span>
+                <IsinEditor v-else :symbol="item.symbol" @save="emit('set-isin', $event)" />
+              </td>
+              <td class="name">
+                <button
+                  type="button"
+                  class="row-toggle"
+                  :aria-expanded="isOpen(item)"
+                  :aria-controls="`details-${item.symbol}`"
+                  @click.stop="toggleDrawer(item)"
+                >
+                  {{ item.name ?? '—' }}
+                </button>
+              </td>
+              <td>
+                <span v-if="item.type" class="badge type" :class="item.type">{{ item.type }}</span>
+                <span v-else class="dim">—</span>
+              </td>
+              <td class="num mono">
+                {{ price(item.latest_price) }}
+                <span class="ccy">{{ item.latest_currency ?? '' }}</span>
+              </td>
+              <!--
+                Die drei Kennzahlen sind hier nur noch zu sehen (T-09) — gepflegt
+                wird in der aufklappbaren Zeile (Task 8), nicht mehr an Ort und
+                Stelle in der Zelle.
+              -->
+              <td class="num mono dim"><MetricValue :item="item" field="ter" /></td>
+              <td class="num mono dim"><MetricValue :item="item" field="volatility" /></td>
+              <td class="center"><MetricValue :item="item" field="accumulating" /></td>
+              <td class="num mono dim">{{ item.history_count }}</td>
+              <td class="actions" @click.stop>
+                <NButton
+                  class="ext"
+                  size="tiny"
+                  quaternary
+                  :title="t('table.showJson')"
+                  @click="emit('json', item)"
+                >
+                  JSON
+                </NButton>
+                <NButton
+                  v-if="extraetfLink(item)"
+                  class="ext"
+                  tag="a"
+                  size="tiny"
+                  quaternary
+                  :href="extraetfLink(item)"
+                  target="_blank"
+                  rel="noopener"
+                  :title="t('table.extraetfProfile')"
+                >
+                  eETF
+                </NButton>
+                <NButton
+                  v-if="yahooLink(item)"
+                  class="ext"
+                  tag="a"
+                  size="tiny"
+                  quaternary
+                  :href="yahooLink(item)"
+                  target="_blank"
+                  rel="noopener"
+                  :title="t('table.yahooFinance')"
+                >
+                  Y!
+                </NButton>
+                <NButton
+                  class="icon"
+                  size="tiny"
+                  quaternary
+                  :loading="item.symbol === refreshingSymbol"
+                  :disabled="item.symbol === refreshingSymbol"
+                  :title="t('table.refresh')"
+                  @click="emit('refresh', item)"
+                >
+                  ↻
+                </NButton>
+                <NButton
+                  class="icon"
+                  size="tiny"
+                  quaternary
+                  type="error"
+                  :title="t('table.remove')"
+                  @click="emit('remove', item)"
+                >
+                  ✕
+                </NButton>
+              </td>
+            </tr>
+            <tr v-if="isOpen(item)" :id="`details-${item.symbol}`" class="details-row">
+              <td :colspan="columns.length + 1">
+                <InstrumentDrilldown
+                  :item="item"
+                  :busy="item.symbol === savingSymbol"
+                  :field-options="fieldOptions"
+                  @commit="emit('override', { item, patch: $event })"
+                />
+              </td>
+            </tr>
+          </template>
         </tbody>
       </table>
     </div>
@@ -336,21 +449,11 @@ function price(value: number | null): string {
 
 .cards { display: flex; flex-direction: column; }
 
-// Utility fürs Sortier-<label>: bleibt für Screenreader vorhanden, ist aber
-// visuell nicht vorhanden — nur ⇅-Symbol + Spaltenname tragen die Bedeutung
-// für sehende Nutzer. Im Projekt bislang keine geteilte Fassung vorhanden,
-// deshalb hier lokal (scoped) statt in variables.scss/base.scss ergänzt.
-.visually-hidden {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
+// `.visually-hidden` stand hier als scoped Kopie — die Annahme „im Projekt
+// bislang keine geteilte Fassung vorhanden" stimmte schon damals nicht:
+// `@mmit/ux-foundation/styles/reset.css` bringt die Klasse global mit (via
+// `main.ts` geladen). Das Sortier-`<label>`, für das sie gedacht war, gibt es
+// seit dem Umbau auf `NSelect` ohnehin nicht mehr.
 
 // Leise, rechtsbündige Zeile statt Formularleiste (T-11c). Die Auswahl selbst
 // bringt ihre Gestaltung von Naive UI mit — hier steht nur, wo sie sitzt und
@@ -422,10 +525,70 @@ tbody tr {
   &.acc { color: $color-accent; background: token(--accent, 0.15); }
 }
 .sym { font-weight: 600; }
-.name { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.name { max-width: 260px; }
 .ccy { color: $color-muted; font-size: 0.75rem; margin-left: 0.2rem; }
 
 .isin-cell { white-space: nowrap; }
+
+/*
+ * Kennung öffnet die Zeile (ux-standards): ein zurückgesetzter Knopf, der wie
+ * der bisherige Text aussieht — Markierung erst beim Überfahren/Fokus, eine
+ * gepunktete Linie statt einer dauerhaften Unterstreichung. Bei zwanzig Zeilen
+ * wäre jede Kennung sonst ein durchgehend blauer Verweis.
+ */
+.row-toggle {
+  display: inline;
+  max-width: 100%;
+  border: none;
+  background: none;
+  padding: 0;
+  margin: 0;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+
+  &:hover, &:focus-visible {
+    text-decoration: underline dotted;
+    text-underline-offset: 0.2em;
+  }
+}
+
+/*
+ * Aussehen und Drehung des Pfeils stehen in `UxCaret` (Fundament) — hier nur,
+ * was die Umgebung angeht: Abstand zur Kennung und die Akzentfarbe. Das Symbol
+ * zeichnet in `currentColor`, damit jede Umgebung selbst entscheidet.
+ *
+ * `display: inline-block` am Pfeil hält die gepunktete Linie des Knopfes von
+ * ihm fern: Ein atomarer Kasten erbt die Unterstreichung des Textes nicht.
+ */
+.row-toggle .ux-caret {
+  margin-right: 0.3rem;
+  color: $color-accent;
+}
+
+// In der Namensspalte übernimmt der Knopf die Kürzung, die vorher an der
+// Zelle selbst hing — die Zelle bleibt nur noch der Breitenrahmen dafür.
+.name .row-toggle {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+// Der Detailbereich (Task 8): eigene Zeile unter der Instrumentenzeile, über die
+// volle Spaltenbreite. Kein Zeilen-Hover/-Klick wie bei der Instrumentenzeile
+// — sie öffnet nichts, es gibt nichts zu klicken außer den Bedienelementen
+// darin.
+.details-row {
+  cursor: default;
+  &:hover { background: none; }
+
+  td {
+    padding: 0;
+    border-bottom: 1px solid token(--border-default, 0.5);
+  }
+}
 
 // Varianten der globalen .badge-Pill
 .badge.type {

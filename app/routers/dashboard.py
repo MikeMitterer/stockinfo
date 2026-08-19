@@ -22,7 +22,12 @@ from app.models import (
     RefreshResult,
 )
 from app.resolver import EXCHANGES
-from app.routers.validation import IsinPath, normalize_isin
+from app.routers.validation import (
+    IsinPath,
+    SymbolPath,
+    normalize_isin,
+    normalize_symbol,
+)
 from app.services.analyzer import QuoteAnalyzer
 from app.services.quote_cache import (
     CachedQuoteService,
@@ -94,7 +99,8 @@ def analyze(
             status_code=422, detail="Genau eines von isin oder symbol angeben"
         )
     return analyzer.analyze(
-        isin=normalize_isin(isin) if isin else None, symbol=symbol
+        isin=normalize_isin(isin) if isin else None,
+        symbol=normalize_symbol(symbol) if symbol else None,
     )
 
 
@@ -121,7 +127,7 @@ def refresh_one(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
 
 
 @router.post("/refresh/by-symbol/{symbol}", response_model=QuoteResponse)
-def refresh_one_by_symbol(symbol: str, service: ServiceDep) -> QuoteResponse:
+def refresh_one_by_symbol(symbol: SymbolPath, service: ServiceDep) -> QuoteResponse:
     """Aktualisiert ein Instrument per Symbol (für Papiere ohne ISIN)."""
     try:
         return service.refresh_one_by_symbol(symbol)
@@ -140,7 +146,7 @@ def delete_instrument(isin: IsinPath, service: ServiceDep) -> Response:
 
 
 @router.put("/instruments/by-symbol/{symbol}/isin", response_model=dict)
-def set_isin(symbol: str, payload: IsinUpdate, service: ServiceDep) -> dict:
+def set_isin(symbol: SymbolPath, payload: IsinUpdate, service: ServiceDep) -> dict:
     """Trägt die ISIN eines Instruments (per Symbol) nachträglich ein."""
     isin = normalize_isin(payload.isin)
     try:
@@ -159,7 +165,7 @@ def set_isin(symbol: str, payload: IsinUpdate, service: ServiceDep) -> dict:
 @router.get(
     "/instruments/by-symbol/{symbol}/overrides", response_model=InstrumentOverrides
 )
-def get_overrides(symbol: str, service: ServiceDep) -> InstrumentOverrides:
+def get_overrides(symbol: SymbolPath, service: ServiceDep) -> InstrumentOverrides:
     """Gibt die von Hand nachgetragenen Kennzahlen eines Instruments zurück."""
     try:
         return InstrumentOverrides(**service.get_overrides(symbol))
@@ -173,7 +179,7 @@ def get_overrides(symbol: str, service: ServiceDep) -> InstrumentOverrides:
     "/instruments/by-symbol/{symbol}/overrides", response_model=InstrumentOverrides
 )
 def set_overrides(
-    symbol: str, payload: InstrumentOverrides, service: ServiceDep
+    symbol: SymbolPath, payload: InstrumentOverrides, service: ServiceDep
 ) -> InstrumentOverrides:
     """Schreibt die von Hand nachgetragenen Kennzahlen eines Instruments.
 
@@ -182,11 +188,7 @@ def set_overrides(
     Wert gerade liefert — die Vorrang-Regel wirkt erst beim Lesen.
     """
     try:
-        return InstrumentOverrides(
-            **service.set_overrides(
-                symbol, payload.ter, payload.volatility, payload.accumulating
-            )
-        )
+        return InstrumentOverrides(**service.set_overrides(symbol, payload.model_dump()))
     except InstrumentNotFoundError as exc:
         raise HTTPException(
             status_code=404, detail=f"Unbekanntes Symbol {symbol}"
@@ -194,7 +196,7 @@ def set_overrides(
 
 
 @router.delete("/instruments/by-symbol/{symbol}", status_code=204)
-def delete_instrument_by_symbol(symbol: str, service: ServiceDep) -> Response:
+def delete_instrument_by_symbol(symbol: SymbolPath, service: ServiceDep) -> Response:
     """Löscht ein Instrument samt Historie per Symbol (für Papiere ohne ISIN)."""
     if not service.delete_by_symbol(symbol):
         raise HTTPException(status_code=404, detail=f"Unbekanntes Symbol {symbol}")

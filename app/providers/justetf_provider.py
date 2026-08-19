@@ -33,6 +33,17 @@ _EUROPEAN_DOMICILES = frozenset(
 )
 
 
+# Die Ausschüttungspolitiken, die justETF tatsächlich liefert.
+#
+# Bewusst eine geschlossene Zuordnung statt einer Präfixregel: Was hier nicht
+# steht, ist keine Aussage, sondern ein unbekannter Wert — und der gehört als
+# `None` gespeichert, nicht geraten.
+_DISTRIBUTION_POLICIES = {
+    "accumulating": True,
+    "distributing": False,
+}
+
+
 def is_european_isin(isin: str) -> bool:
     """Prüft anhand des ISIN-Länderpräfix, ob ein europäisches UCITS-Domizil vorliegt.
 
@@ -82,7 +93,8 @@ class JustEtfProvider:
             provider=overview.get("fund_provider"),
             replication=overview.get("replication"),
             fund_size=self._as_float(overview.get("fund_size_eur")),
-            currency=overview.get("fund_currency"),
+            fund_currency=overview.get("fund_currency"),
+            fund_domicile=overview.get("fund_domicile"),
             name=overview.get("name"),
             volatility=self._as_float(overview.get("volatility_1y")),
             accumulating=self._as_accumulating(overview.get("distribution_policy")),
@@ -92,6 +104,14 @@ class JustEtfProvider:
     def _as_accumulating(policy: Any) -> bool | None:
         """Leitet aus der Ausschüttungspolitik ab, ob der ETF thesauriert.
 
+        Bekannte Werte werden ausdrücklich zugeordnet, alles andere bleibt
+        offen. Die frühere Regel — „beginnt mit accumul, sonst ausschüttend" —
+        machte aus jedem unerwarteten Providerwert eine belastbare fachliche
+        Aussage: eine Umbenennung, eine Übersetzung oder ein Feld mit
+        Leerzeichen landete als „ausschüttend" in der Datenbank. ``None`` heißt
+        „nicht gepflegt" und lässt sich von Hand nachtragen; ein falsches
+        ``False`` sieht wie eine gesicherte Angabe aus.
+
         Args:
             policy: justETF-Feld ``distribution_policy`` (z.B. 'Accumulating',
                 'Distributing').
@@ -100,9 +120,9 @@ class JustEtfProvider:
             ``True`` bei thesaurierend, ``False`` bei ausschüttend, ``None``
             wenn unbekannt.
         """
-        if not isinstance(policy, str) or not policy.strip():
+        if not isinstance(policy, str):
             return None
-        return policy.strip().lower().startswith("accumul")
+        return _DISTRIBUTION_POLICIES.get(policy.strip().lower())
 
     @staticmethod
     def _as_float(value: Any) -> float | None:

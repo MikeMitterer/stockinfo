@@ -10,7 +10,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.container import get_cached_quote_service, get_daily_history_service
 from app.models import DailyPoint, QuotePoint, QuoteResponse
-from app.routers.validation import IsinPath
+from app.routers.validation import IsinPath, SymbolPath, TimeRange, normalize_symbol
 from app.services.daily_history import DailyHistoryService
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
@@ -31,6 +31,7 @@ def quote_by_symbol(
     ],
 ) -> QuoteResponse:
     """Liefert den Kurs zu einem vollständigen Yahoo-Symbol."""
+    symbol = normalize_symbol(symbol)
     try:
         return service.get_by_symbol(symbol)
     except QuoteUnavailableError as exc:
@@ -61,7 +62,14 @@ def daily_history(
     """Liefert echte Tages-Schlusskurse (EOD) zu einer ISIN, inkrementell gecacht."""
     try:
         return service.get_daily(isin=isin, period=period)
-    except (InstrumentNotFoundError, QuoteUnavailableError) as exc:
+    except InstrumentNotFoundError as exc:
+        # Nicht 502: Ein unbekanntes Papier ist ein Eingabefehler, kein
+        # Ausfall bei Yahoo. Beides auf denselben Code zu legen nimmt jedem
+        # Client die Möglichkeit, sie auseinanderzuhalten.
+        raise HTTPException(
+            status_code=404, detail=f"Keine Auflösung für ISIN {isin}"
+        ) from exc
+    except QuoteUnavailableError as exc:
         raise HTTPException(
             status_code=502, detail=f"Keine Historie für {isin}"
         ) from exc
@@ -69,14 +77,18 @@ def daily_history(
 
 @router.get("/quote/by-symbol/{symbol}/daily", response_model=list[DailyPoint])
 def daily_history_by_symbol(
-    symbol: str,
+    symbol: SymbolPath,
     service: DailyDep,
     period: Annotated[Period, Query()] = "1m",
 ) -> list[DailyPoint]:
     """Liefert echte Tages-Schlusskurse (EOD) zu einem Symbol, inkrementell gecacht."""
     try:
         return service.get_daily(symbol=symbol, period=period)
-    except (InstrumentNotFoundError, QuoteUnavailableError) as exc:
+    except InstrumentNotFoundError as exc:
+        raise HTTPException(
+            status_code=404, detail=f"Unbekanntes Symbol {symbol}"
+        ) from exc
+    except QuoteUnavailableError as exc:
         raise HTTPException(
             status_code=502, detail=f"Keine Historie für {symbol}"
         ) from exc
@@ -84,13 +96,13 @@ def daily_history_by_symbol(
 
 @router.get("/quote/by-symbol/{symbol}/history", response_model=list[QuotePoint])
 def quote_history_by_symbol(
-    symbol: str,
+    symbol: SymbolPath,
     service: ServiceDep,
-    date_from: Annotated[str | None, Query(alias="from")] = None,
-    date_to: Annotated[str | None, Query(alias="to")] = None,
+    zeitfenster: TimeRange,
     limit: Annotated[int, Query(ge=1, le=1000)] = 100,
 ) -> list[QuotePoint]:
     """Liefert die Kurs-Historie zu einem Symbol (für Papiere ohne ISIN)."""
+    date_from, date_to = zeitfenster
     try:
         return service.get_history_by_symbol(symbol, date_from, date_to, limit)
     except QuoteUnavailableError as exc:
@@ -101,11 +113,11 @@ def quote_history_by_symbol(
 def quote_history(
     isin: IsinPath,
     service: ServiceDep,
-    date_from: Annotated[str | None, Query(alias="from")] = None,
-    date_to: Annotated[str | None, Query(alias="to")] = None,
+    zeitfenster: TimeRange,
     limit: Annotated[int, Query(ge=1, le=1000)] = 100,
 ) -> list[QuotePoint]:
     """Liefert die gespeicherte Kurs-Historie zu einer ISIN (neueste zuerst)."""
+    date_from, date_to = zeitfenster
     try:
         return service.get_history(isin, date_from, date_to, limit)
     except InstrumentNotFoundError as exc:

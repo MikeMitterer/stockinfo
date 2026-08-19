@@ -1,5 +1,5 @@
 import { createI18n } from 'vue-i18n'
-import { detectLocale, persistLocale } from '@mikemitterer/ux-foundation'
+import { detectLocale, persistLocale } from '@mmit/ux-foundation'
 
 import { de } from './de'
 import { en } from './en'

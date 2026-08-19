@@ -10,7 +10,7 @@ from collections.abc import Iterator
 from contextlib import contextmanager
 
 from app.db import get_connection
-from app.models import QuoteResponse
+from app.models import OVERRIDE_FIELDS, QuoteResponse
 
 # Instrument-Metadatenfelder (ohne id/isin/symbol/first_seen).
 _META_FIELDS = (
@@ -22,8 +22,34 @@ _META_FIELDS = (
     "ter",
     "replication",
     "fund_size",
+    "fund_domicile",
+    "fund_currency",
     "volatility",
     "accumulating",
+    # Wandert mit den Metadaten mit, nicht mit dem Kurspunkt: Er sagt, woher
+    # der jüngste Metadaten-Stand kommt.
+    "source",
+)
+
+# Die Felder, über die allein justETF Auskunft gibt.
+#
+# Sie dürfen nur geschrieben werden, wenn die Antwort tatsächlich von dort
+# kommt (`QuoteResponse.metadata_complete`). Sonst löscht ein einzelner
+# Ausfall den gesamten gepflegten Stand — genau das ist am 2026-08-18
+# passiert. `source` gehört dazu, weil er die stehengebliebenen Werte
+# beschreibt und nicht den Abruf, der nichts geliefert hat.
+_ETF_META_FIELDS = frozenset(
+    {
+        "provider",
+        "ter",
+        "replication",
+        "fund_size",
+        "fund_domicile",
+        "fund_currency",
+        "volatility",
+        "accumulating",
+        "source",
+    }
 )
 
 
@@ -203,15 +229,16 @@ class QuoteRepository:
         gehört in die Fachschicht, nicht in SQL. Sonst stünde die Regel an einer
         Stelle, die niemand liest, wenn er sie sucht.
         """
-        query = """
+        manual = ",\n                   ".join(
+            f"o.{field} AS manual_{field}" for field in OVERRIDE_FIELDS
+        )
+        query = f"""
             SELECT i.*,
                    q.price      AS latest_price,
                    q.quote_time AS latest_quote_time,
                    q.currency   AS latest_currency,
                    q.fetched_at AS latest_fetched_at,
-                   o.ter          AS manual_ter,
-                   o.volatility   AS manual_volatility,
-                   o.accumulating AS manual_accumulating,
+                   {manual},
                    (SELECT COUNT(*) FROM quotes WHERE instrument_id = i.id)
                        AS history_count
             FROM instruments i
@@ -273,44 +300,41 @@ class QuoteRepository:
             return dict(row) if row else None
 
     def set_overrides(
-        self,
-        instrument_id: int,
-        ter: float | None,
-        volatility: float | None,
-        accumulating: bool | None,
-        updated_at: str,
+        self, instrument_id: int, values: dict[str, object], updated_at: str
     ) -> None:
-        """Schreibt die manuellen Kennzahlen — alle drei auf einmal.
+        """Schreibt die manuellen Kennzahlen — immer den vollständigen Satz.
 
         ``None`` heißt **löschen**, nicht „unverändert": Die Oberfläche schickt
-        immer den vollständigen Satz, und ein geleertes Feld muss den Wert
-        auch wieder entfernen können. Bleiben alle drei leer, verschwindet die
-        Zeile ganz — sonst sammelten sich Karteileichen ohne Inhalt.
+        stets alle Felder, und ein geleertes muss den Wert auch wieder entfernen
+        können. Bleibt nichts übrig, verschwindet die Zeile ganz.
+
+        Die Spaltenliste kommt aus ``OVERRIDE_FIELDS`` statt aus getippten
+        Parametern — bei acht Feldern wäre eine Signatur aus Einzelwerten nicht
+        mehr zu lesen, und jede neue Kennzahl müsste an vier Stellen nachgezogen
+        werden.
         """
+        filtered = {field: values.get(field) for field in OVERRIDE_FIELDS}
+        filtered["accumulating"] = (
+            None if filtered["accumulating"] is None else int(bool(filtered["accumulating"]))
+        )
+
         with self._connect() as connection:
-            if ter is None and volatility is None and accumulating is None:
+            if all(value is None for value in filtered.values()):
                 connection.execute(
                     "DELETE FROM instrument_overrides WHERE instrument_id = ?",
                     (instrument_id,),
                 )
                 return
 
+            columns = ", ".join(OVERRIDE_FIELDS)
+            placeholders = ", ".join("?" for _ in OVERRIDE_FIELDS)
+            assignments = ", ".join(f"{field} = excluded.{field}" for field in OVERRIDE_FIELDS)
             connection.execute(
-                "INSERT INTO instrument_overrides "
-                "(instrument_id, ter, volatility, accumulating, updated_at) "
-                "VALUES (?, ?, ?, ?, ?) "
-                "ON CONFLICT(instrument_id) DO UPDATE SET "
-                "ter = excluded.ter, "
-                "volatility = excluded.volatility, "
-                "accumulating = excluded.accumulating, "
+                f"INSERT INTO instrument_overrides (instrument_id, {columns}, updated_at) "
+                f"VALUES (?, {placeholders}, ?) "
+                f"ON CONFLICT(instrument_id) DO UPDATE SET {assignments}, "
                 "updated_at = excluded.updated_at",
-                (
-                    instrument_id,
-                    ter,
-                    volatility,
-                    None if accumulating is None else int(accumulating),
-                    updated_at,
-                ),
+                (instrument_id, *(filtered[field] for field in OVERRIDE_FIELDS), updated_at),
             )
 
     def set_volatility(self, instrument_id: int, volatility: float) -> None:
@@ -361,7 +385,7 @@ class QuoteRepository:
         existing_id = self._find_instrument_id(
             connection, response.isin, response.symbol
         )
-        meta = {field: getattr(response, field) for field in _META_FIELDS}
+        meta = {field: getattr(response, field) for field in self._writable_fields(response)}
 
         if existing_id is None:
             try:
@@ -373,12 +397,33 @@ class QuoteRepository:
                 if existing_id is None:
                     raise
 
-        assignments = ", ".join(f"{field} = ?" for field in _META_FIELDS)
+        assignments = ", ".join(f"{field} = ?" for field in meta)
         connection.execute(
             f"UPDATE instruments SET {assignments}, meta_fetched_at = ? WHERE id = ?",
             [*meta.values(), response.fetched_at, existing_id],
         )
         return existing_id
+
+    @staticmethod
+    def _writable_fields(response: QuoteResponse) -> tuple[str, ...]:
+        """Welche Metadatenfelder diese Antwort überschreiben darf.
+
+        Vollständige Antworten schreiben alles. Weiß eine Antwort über die
+        ETF-Extras nichts — justETF nicht gefragt oder nicht erreichbar —,
+        bleiben die zugehörigen Spalten unangetastet: Ihr gespeicherter Stand
+        ist mehr wert als ein ``NULL``, das nur „ich habe gerade nicht
+        nachgesehen" bedeutet.
+
+        Args:
+            response: Die zu speichernde Kurs-Antwort.
+
+        Returns:
+            Die zu schreibenden Spaltennamen, in der Reihenfolge von
+            ``_META_FIELDS``.
+        """
+        if response.metadata_complete:
+            return _META_FIELDS
+        return tuple(field for field in _META_FIELDS if field not in _ETF_META_FIELDS)
 
     @staticmethod
     def _insert_instrument(
