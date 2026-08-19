@@ -76,11 +76,15 @@ class QuoteService:
         self._etf_provider = etf_provider
         self._resolver = resolver
 
-    def get_quote_by_isin(self, isin: str) -> QuoteResponse:
+    def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         """Beschafft den Kurs zu einer ISIN.
 
         Args:
             isin: ISIN des Wertpapiers.
+            enrich_etf: Ob justETF gefragt wird. ``False`` heißt „der
+                gespeicherte Metadatenstand ist jung genug" — die Antwort
+                trägt die ETF-Extras dann nicht und ist als unvollständig
+                markiert, damit sie den Bestand nicht überschreibt.
 
         Returns:
             Vollständige, ggf. angereicherte Kurs-Antwort.
@@ -92,14 +96,15 @@ class QuoteService:
         resolved = self._resolver.resolve_isin(isin)
         if resolved is None:
             raise InstrumentNotFoundError(isin)
-        return self._build(resolved)
+        return self._build(resolved, enrich_etf)
 
-    def get_quote_by_symbol(self, symbol: str) -> QuoteResponse:
+    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
         """Beschafft den Kurs zu einem vollständigen Yahoo-Symbol.
 
         Args:
             symbol: Vollständiges Yahoo-Symbol inkl. Börsen-Suffix, z.B.
                 'VGWL.DE' (Xetra) oder 'AAPL' (US). Das Suffix wählt die Börse.
+            enrich_etf: Ob justETF gefragt wird — siehe `get_quote_by_isin`.
 
         Returns:
             Kurs-Antwort.
@@ -108,10 +113,21 @@ class QuoteService:
             QuoteUnavailableError: Kein Kurs beschaffbar.
         """
         resolved = ResolvedInstrument(symbol=symbol)
-        return self._build(resolved)
+        return self._build(resolved, enrich_etf)
 
-    def _build(self, resolved: ResolvedInstrument) -> QuoteResponse:
-        """Fragt den Kurs ab, baut die Antwort und reichert ETFs an."""
+    def _build(
+        self, resolved: ResolvedInstrument, enrich_etf: bool = True
+    ) -> QuoteResponse:
+        """Fragt den Kurs ab, baut die Antwort und reichert ETFs an.
+
+        Args:
+            resolved: Aufgelöstes Instrument (Symbol, ggf. ISIN und Typ).
+            enrich_etf: Ob justETF gefragt wird.
+
+        Returns:
+            Kurs-Antwort; ``metadata_complete`` sagt, ob ihre ETF-Felder
+            belastbar sind.
+        """
         raw = self._quote_provider.fetch_quote(resolved.symbol)
         if raw is None:
             raise QuoteUnavailableError(resolved.symbol)
@@ -135,15 +151,34 @@ class QuoteService:
         )
 
         if instrument_type == "etf" and isin:
-            self._enrich_etf(response, isin)
+            # Die Antwort weiß nur dann über die ETF-Extras Bescheid, wenn die
+            # Anreicherung gelaufen ist **und** geliefert hat. Sonst darf sie
+            # den gespeicherten Stand nicht ersetzen — siehe
+            # `QuoteResponse.metadata_complete`. Übersprungen und
+            # fehlgeschlagen sind hier dasselbe: In beiden Fällen weiß diese
+            # Antwort nichts.
+            response.metadata_complete = (
+                self._enrich_etf(response, isin) if enrich_etf else False
+            )
         return response
 
-    def _enrich_etf(self, response: QuoteResponse, isin: str) -> None:
-        """Ergänzt ETF-Details (TER, Anbieter, …) über justETF, best-effort."""
+    def _enrich_etf(self, response: QuoteResponse, isin: str) -> bool:
+        """Ergänzt ETF-Details (TER, Anbieter, …) über justETF, best-effort.
+
+        Args:
+            response: Antwort, die ergänzt wird.
+            isin: ISIN für die Abfrage.
+
+        Returns:
+            ``True`` wenn justETF geantwortet hat — nur dann sind die
+            ETF-Felder dieser Antwort belastbar. ``False`` heißt „nicht
+            erreichbar", **nicht** „hat nichts". Der Unterschied entscheidet,
+            ob der gespeicherte Stand überschrieben werden darf.
+        """
         details = self._etf_provider.fetch_etf(isin)
         if details is None:
             logger.debug("etf_enrichment_skipped", isin=isin)
-            return
+            return False
         response.ter = details.ter
         response.provider = details.provider
         response.replication = details.replication
@@ -155,3 +190,4 @@ class QuoteService:
         response.volatility = details.volatility
         response.accumulating = details.accumulating
         response.source = "yfinance+justetf"
+        return True

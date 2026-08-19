@@ -351,10 +351,10 @@ class _Quelle:
             raise AssertionError(f"unerwartet live beschafft: {kennung}")
         return self._antwort.model_copy(deep=True)
 
-    def get_quote_by_isin(self, isin: str) -> QuoteResponse:
+    def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         return self._liefern(isin)
 
-    def get_quote_by_symbol(self, symbol: str) -> QuoteResponse:
+    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
         return self._liefern(symbol)
 
 

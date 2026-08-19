@@ -63,6 +63,26 @@ class QuoteResponse(BaseModel):
     stale: bool = False
     fetched_at: str
 
+    metadata_complete: bool = Field(
+        default=True,
+        exclude=True,
+        description=(
+            "Weiss diese Antwort ueber die ETF-Extras Bescheid? False heisst: "
+            "justETF wurde nicht gefragt oder hat nicht geantwortet."
+        ),
+    )
+    """Sagt dem Repository, ob es die ETF-Extras ueberschreiben darf.
+
+    Ohne diese Unterscheidung sind zwei voellig verschiedene Lagen nicht
+    auseinanderzuhalten: „justETF hat geantwortet und das Feld ist leer" und
+    „justETF war nicht erreichbar". Das Repository schrieb deshalb beide Male
+    ``NULL`` — ein einzelner Ausfall loeschte den ganzen gepflegten
+    Metadatenstand.
+
+    ``exclude=True``: Das Flag ist eine interne Absprache zwischen Service und
+    Repository und gehoert nicht in die API-Antwort.
+    """
+
 
 OVERRIDE_FIELDS = (
     "ter",

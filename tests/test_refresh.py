@@ -31,7 +31,7 @@ class FakeQuoteService:
     def __init__(self, failing_isin: str | None = None) -> None:
         self._failing_isin = failing_isin
 
-    def get_quote_by_isin(self, isin: str) -> QuoteResponse:
+    def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         if isin == self._failing_isin:
             raise QuoteUnavailableError(isin)
         return QuoteResponse(
@@ -44,7 +44,7 @@ class FakeQuoteService:
             type="etf",
         )
 
-    def get_quote_by_symbol(self, symbol: str) -> QuoteResponse:
+    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
         return QuoteResponse(
             isin=None,
             symbol=symbol,

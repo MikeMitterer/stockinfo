@@ -9,6 +9,8 @@ from pathlib import Path
 
 import structlog
 
+from app.models import OVERRIDE_FIELDS
+
 logger = structlog.get_logger()
 
 # Schema — instruments (langsam veränderliche Metadaten) + quotes (Zeitreihe).
@@ -172,6 +174,123 @@ def _migrate(connection: sqlite3.Connection) -> None:
     )
 
 
+def _merge_overrides(
+    connection: sqlite3.Connection, keeper_id: int, duplicate_id: int
+) -> None:
+    """Zieht die von Hand gepflegten Kennzahlen eines Duplikats auf den Keeper.
+
+    Zusammengeführt wird **feldweise**, nicht zeilenweise: Was am Keeper steht,
+    bleibt stehen; wo er eine Lücke hat, füllt das Duplikat sie. So geht kein
+    einziger Wert verloren, und bei einem echten Konflikt behält die Zeile mit
+    der ISIN das letzte Wort — sie ist die kanonische.
+
+    Args:
+        connection: Offene Verbindung.
+        keeper_id: Instrument, das bestehen bleibt.
+        duplicate_id: Instrument, das gleich gelöscht wird.
+    """
+    duplicate = connection.execute(
+        "SELECT * FROM instrument_overrides WHERE instrument_id = ?", (duplicate_id,)
+    ).fetchone()
+    if duplicate is None:
+        return
+
+    keeper = connection.execute(
+        "SELECT * FROM instrument_overrides WHERE instrument_id = ?", (keeper_id,)
+    ).fetchone()
+    if keeper is None:
+        connection.execute(
+            "UPDATE instrument_overrides SET instrument_id = ? WHERE instrument_id = ?",
+            (keeper_id, duplicate_id),
+        )
+        return
+
+    merged = [
+        keeper[field] if keeper[field] is not None else duplicate[field]
+        for field in OVERRIDE_FIELDS
+    ]
+    assignments = ", ".join(f"{field} = ?" for field in OVERRIDE_FIELDS)
+    connection.execute(
+        f"UPDATE instrument_overrides SET {assignments}, updated_at = ? "
+        "WHERE instrument_id = ?",
+        [*merged, max(keeper["updated_at"], duplicate["updated_at"]), keeper_id],
+    )
+    connection.execute(
+        "DELETE FROM instrument_overrides WHERE instrument_id = ?", (duplicate_id,)
+    )
+
+
+def _merge_daily_meta(
+    connection: sqlite3.Connection, keeper_id: int, duplicate_id: int
+) -> None:
+    """Zieht das Daily-Wasserzeichen eines Duplikats auf den Keeper.
+
+    Das Wasserzeichen sagt „diese Spanne ist geholt". Zwei Spannen werden
+    deshalb **nur bei Überlappung** zu einer zusammengezogen: Läge dazwischen
+    eine Lücke, behauptete der zusammengefasste Bereich, Tage seien geholt
+    worden, die niemand geholt hat — und der nächste Abgleich überspränge sie
+    für immer. Ohne Überlappung bleibt die Spanne des Keepers stehen; im
+    schlimmsten Fall wird einmal zu viel geholt, und das ist folgenlos.
+
+    Args:
+        connection: Offene Verbindung.
+        keeper_id: Instrument, das bestehen bleibt.
+        duplicate_id: Instrument, das gleich gelöscht wird.
+    """
+    duplicate = connection.execute(
+        "SELECT * FROM daily_meta WHERE instrument_id = ?", (duplicate_id,)
+    ).fetchone()
+    if duplicate is None:
+        return
+
+    keeper = connection.execute(
+        "SELECT * FROM daily_meta WHERE instrument_id = ?", (keeper_id,)
+    ).fetchone()
+    if keeper is None:
+        connection.execute(
+            "UPDATE daily_meta SET instrument_id = ? WHERE instrument_id = ?",
+            (keeper_id, duplicate_id),
+        )
+        return
+
+    if _ranges_overlap(keeper, duplicate):
+        connection.execute(
+            "UPDATE daily_meta SET fetched_from = ?, fetched_to = ? "
+            "WHERE instrument_id = ?",
+            (
+                min(keeper["fetched_from"], duplicate["fetched_from"]),
+                max(keeper["fetched_to"], duplicate["fetched_to"]),
+                keeper_id,
+            ),
+        )
+    connection.execute(
+        "DELETE FROM daily_meta WHERE instrument_id = ?", (duplicate_id,)
+    )
+
+
+def _ranges_overlap(left: sqlite3.Row, right: sqlite3.Row) -> bool:
+    """Überlappen sich zwei Daily-Spannen?
+
+    ISO-Datumsstrings vergleichen sich lexikografisch richtig, ein Parsen ist
+    also nicht nötig. Fehlt an einer Zeile eine Grenze, ist ihre Spanne nicht
+    bestimmbar — dann wird nicht zusammengezogen.
+
+    Args:
+        left: Zeile aus `daily_meta`.
+        right: Zeile aus `daily_meta`.
+
+    Returns:
+        ``True`` wenn sich beide Spannen berühren oder überschneiden.
+    """
+    bounds = (
+        left["fetched_from"], left["fetched_to"],
+        right["fetched_from"], right["fetched_to"],
+    )
+    if any(bound is None for bound in bounds):
+        return False
+    return max(bounds[0], bounds[2]) <= min(bounds[1], bounds[3])
+
+
 def _add_missing_columns(
     connection: sqlite3.Connection, table: str, columns: tuple[tuple[str, str], ...]
 ) -> None:
@@ -189,6 +308,13 @@ def _dedupe_symbols(connection: sqlite3.Connection) -> None:
     entstehen. Kurs-Historie und Tages-Schlusskurse werden auf das verbleibende
     Instrument umgehängt; Kollisionen (gleicher Zeitpunkt/Tag) verfallen mit
     dem gelöschten Duplikat.
+
+    **Alles Abhängige muss mitwandern.** Umgehängt wurden lange nur `quotes`
+    und `daily_closes` — `daily_meta` und `instrument_overrides` blieben am
+    Duplikat und verschwanden mit ihm durch `ON DELETE CASCADE`. Damit gingen
+    ausgerechnet die Daten verloren, die niemand wiederbeschaffen kann: von
+    Hand gepflegte Kennzahlen. Die beiden Tabellen tragen je eine eigene
+    Merge-Regel, siehe `_merge_overrides` und `_merge_daily_meta`.
     """
     duplicated = connection.execute(
         "SELECT symbol FROM instruments GROUP BY symbol HAVING COUNT(*) > 1"
@@ -211,6 +337,8 @@ def _dedupe_symbols(connection: sqlite3.Connection) -> None:
                     "WHERE instrument_id = ?",
                     (keeper["id"], duplicate["id"]),
                 )
+            _merge_overrides(connection, keeper["id"], duplicate["id"])
+            _merge_daily_meta(connection, keeper["id"], duplicate["id"])
             connection.execute(
                 "DELETE FROM instruments WHERE id = ?", (duplicate["id"],)
             )

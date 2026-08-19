@@ -27,8 +27,29 @@ _META_FIELDS = (
     "volatility",
     "accumulating",
     # Wandert mit den Metadaten mit, nicht mit dem Kurspunkt: Er sagt, woher
-    # der jüngste Metadaten-Stand kommt, und wird bei jedem Upsert überschrieben.
+    # der jüngste Metadaten-Stand kommt.
     "source",
+)
+
+# Die Felder, über die allein justETF Auskunft gibt.
+#
+# Sie dürfen nur geschrieben werden, wenn die Antwort tatsächlich von dort
+# kommt (`QuoteResponse.metadata_complete`). Sonst löscht ein einzelner
+# Ausfall den gesamten gepflegten Stand — genau das ist am 2026-08-18
+# passiert. `source` gehört dazu, weil er die stehengebliebenen Werte
+# beschreibt und nicht den Abruf, der nichts geliefert hat.
+_ETF_META_FIELDS = frozenset(
+    {
+        "provider",
+        "ter",
+        "replication",
+        "fund_size",
+        "fund_domicile",
+        "fund_currency",
+        "volatility",
+        "accumulating",
+        "source",
+    }
 )
 
 
@@ -364,7 +385,7 @@ class QuoteRepository:
         existing_id = self._find_instrument_id(
             connection, response.isin, response.symbol
         )
-        meta = {field: getattr(response, field) for field in _META_FIELDS}
+        meta = {field: getattr(response, field) for field in self._writable_fields(response)}
 
         if existing_id is None:
             try:
@@ -376,12 +397,33 @@ class QuoteRepository:
                 if existing_id is None:
                     raise
 
-        assignments = ", ".join(f"{field} = ?" for field in _META_FIELDS)
+        assignments = ", ".join(f"{field} = ?" for field in meta)
         connection.execute(
             f"UPDATE instruments SET {assignments}, meta_fetched_at = ? WHERE id = ?",
             [*meta.values(), response.fetched_at, existing_id],
         )
         return existing_id
+
+    @staticmethod
+    def _writable_fields(response: QuoteResponse) -> tuple[str, ...]:
+        """Welche Metadatenfelder diese Antwort überschreiben darf.
+
+        Vollständige Antworten schreiben alles. Weiß eine Antwort über die
+        ETF-Extras nichts — justETF nicht gefragt oder nicht erreichbar —,
+        bleiben die zugehörigen Spalten unangetastet: Ihr gespeicherter Stand
+        ist mehr wert als ein ``NULL``, das nur „ich habe gerade nicht
+        nachgesehen" bedeutet.
+
+        Args:
+            response: Die zu speichernde Kurs-Antwort.
+
+        Returns:
+            Die zu schreibenden Spaltennamen, in der Reihenfolge von
+            ``_META_FIELDS``.
+        """
+        if response.metadata_complete:
+            return _META_FIELDS
+        return tuple(field for field in _META_FIELDS if field not in _ETF_META_FIELDS)
 
     @staticmethod
     def _insert_instrument(
