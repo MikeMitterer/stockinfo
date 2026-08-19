@@ -297,6 +297,16 @@ def test_unbekanntes_papier_ist_kein_providerausfall(client: TestClient) -> None
     assert client.get("/quote/ZZ0000000000/daily").status_code == 502
 
 
-def test_unbekanntes_symbol_in_der_daily_route_ist_ein_404(client: TestClient) -> None:
-    assert client.get("/quote/by-symbol/XXTEST/daily").status_code == 404
+def test_unbekanntes_symbol_bleibt_ein_502(client: TestClient) -> None:
+    """Auf dem Symbol-Pfad ist 404 nicht zu haben — und das ist kein Versehen.
+
+    Eine ISIN wird aufgeloest; scheitert das, ist das Papier nachweislich
+    unbekannt (404). Ein freies Symbol geht direkt an den Provider, und der
+    liefert `None`, ob er es nicht kennt oder gerade nicht antwortet. Ein 404
+    waere hier geraten.
+
+    Der Test stand zuerst andersherum da und war gruen, weil das Double
+    `InstrumentNotFoundError` warf — gegen die echte API kam 502. Gefunden
+    wurde das erst beim Ausfuehren der Verify-Commands aus T-15.
+    """
     assert client.get("/quote/by-symbol/ZZTEST/daily").status_code == 502

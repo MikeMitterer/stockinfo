@@ -84,11 +84,13 @@ def daily_history_by_symbol(
     """Liefert echte Tages-Schlusskurse (EOD) zu einem Symbol, inkrementell gecacht."""
     try:
         return service.get_daily(symbol=symbol, period=period)
-    except InstrumentNotFoundError as exc:
-        raise HTTPException(
-            status_code=404, detail=f"Unbekanntes Symbol {symbol}"
-        ) from exc
     except QuoteUnavailableError as exc:
+        # Bewusst 502 und nicht 404: Auf dem Symbol-Pfad gibt es keine
+        # Auflösung, die scheitern könnte — `fetch_quote` liefert `None`, ob
+        # Yahoo das Symbol nicht kennt oder gerade nicht antwortet. Die beiden
+        # auseinanderzuhalten hieße, den Provider danach zu fragen; solange er
+        # es nicht sagt, wäre ein 404 geraten. Der ISIN-Pfad kann es, dort
+        # scheitert die Auflösung sichtbar.
         raise HTTPException(
             status_code=502, detail=f"Keine Historie für {symbol}"
         ) from exc
