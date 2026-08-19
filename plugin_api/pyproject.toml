@@ -4,7 +4,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stockinfo-plugin-api"
-version = "1.0.0"
+# 0.x mit Absicht: Drei der fünf Rollen (Quote, DailyClose, Fx) fehlen noch, und
+# die gemeinsamen Typen werden sich dabei ändern. Eine 1.0 würde Stabilität
+# behaupten, die es nicht gibt.
+version = "0.1.0"
 description = "Vertrag für StockInfo-Datenquellen-Plugins"
 license = "MIT"
 requires-python = ">=3.11"

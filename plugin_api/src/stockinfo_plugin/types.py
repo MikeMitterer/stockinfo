@@ -136,6 +136,12 @@ class Reading:
     value: float | str | bool | None
     unit: Unit | None = None
     source: str = ""
+    currency: str | None = None
+    """Währung bei ``Unit.ABSOLUTE`` — ohne sie ist ein Betrag bedeutungslos.
+
+    Ein Fondsvolumen von 2.289.978.572.800 sagt nichts, solange nicht dabeisteht,
+    ob es USD oder CAD sind. Bei allen anderen Einheiten bleibt das Feld leer.
+    """
 
 
 FieldKind = Literal["number", "text", "boolean"]
@@ -162,10 +168,14 @@ class FieldSpec:
     Attributes:
         name: Kanonischer Feldname, z.B. ``ter``.
         kind: Bedienart für die Oberfläche.
-        unit: Einheit der gelieferten Werte. Ohne Angabe findet keine
-            Umrechnung statt.
-        plausible: Erlaubter Wertebereich **nach** der Umrechnung. Was
-            außerhalb liegt, gilt als *kein Wert* — nicht als *dieser Wert*.
+        unit: Einheit, in der **diese Quelle** liefert. Die kanonische
+            Zieleinheit kennt nur die App; hier steht die Quellenseite.
+        plausible: Erlaubter Wertebereich, **in der Einheit dieser
+            Deklaration** — also vor der Umrechnung. Eine Quelle kennt ihren
+            eigenen Wertebereich; was danach in der kanonischen Einheit noch
+            plausibel ist, prüft die App ein zweites Mal gegen ihren Katalog.
+            Zwei Prüfungen, jede dort, wo das Wissen sitzt.
+
             Der Anlass ist gemessen: Eine Quelle meldete ``0.0000`` als
             Kostenquote für einen Fonds, der real rund 0,06 % kostet. Eine
             stille Null tarnt sich als gültiger Wert.
@@ -187,7 +197,8 @@ class FieldSpec:
         """Liegt der Wert im erwarteten Bereich?
 
         Args:
-            value: Der zu prüfende Wert, bereits in der Zieleinheit.
+            value: Der zu prüfende Wert, in der Einheit dieser Deklaration
+                (`unit`) — also so, wie die Quelle ihn liefert.
 
         Returns:
             ``True``, wenn kein Bereich gesetzt ist, der Wert keine Zahl ist

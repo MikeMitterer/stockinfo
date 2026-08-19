@@ -45,8 +45,18 @@ class SourceContract:
         assert " " not in source.name, "name darf kein Leerzeichen enthalten"
 
     def test_vertragsversion_ist_bekannt(self) -> None:
-        """Ein Plugin gegen eine spätere Version würde stillschweigend brechen."""
-        assert self.make_source().api_version <= API_VERSION
+        """Ein Plugin gegen eine spätere Version würde stillschweigend brechen.
+
+        Die untere Grenze ist nicht überflüssig: ``api_version = 0`` oder ein
+        negativer Wert kämen sonst durch, und beides heißt in der Praxis „nicht
+        gesetzt" — der Vorgabewert der Basisklasse wurde überschrieben, ohne
+        eine gültige Version zu nennen.
+        """
+        version = self.make_source().api_version
+        assert isinstance(version, int), f"api_version ist {type(version).__name__}"
+        assert 1 <= version <= API_VERSION, (
+            f"api_version {version} liegt außerhalb von 1..{API_VERSION}"
+        )
 
     def test_kosten_sind_deklariert(self) -> None:
         """Die Kette sortiert danach — ein falscher Wert kostet echtes Geld."""
@@ -85,15 +95,24 @@ class ResolverContract(SourceContract):
         )
 
     def test_bekanntes_papier_wird_aufgeloest(self) -> None:
+        """Ticker und MIC sind getrennt und tragen Inhalt.
+
+        Hier stand einmal ``"." not in ticker`` als Prüfung darauf, dass kein
+        Börsensuffix mitkommt. Das war falsch: Ein Punkt gehört bei
+        Anteilsklassen zum Ticker selbst (``BRK.A``). Ob ein Suffix vorliegt,
+        lässt sich nur gegen die Börsentabelle entscheiden — und die kennt der
+        Vertrag bewusst nicht. Diese Prüfung gehört auf die App-Seite.
+        """
         antwort = self.make_source().resolve(self.responsible)
         assert isinstance(antwort, Resolved), (
             f"bekanntes Papier beantwortet mit {type(antwort).__name__}"
         )
-        assert antwort.ticker, "ticker fehlt"
-        assert antwort.mic, "mic fehlt — ohne Börse ist der Ticker mehrdeutig"
-        assert "." not in antwort.ticker, (
-            f"ticker '{antwort.ticker}' trägt ein Börsensuffix — "
-            "Ticker und MIC gehören getrennt"
+        assert antwort.ticker and antwort.ticker.strip() == antwort.ticker, (
+            f"ticker fehlt oder trägt Leerzeichen: {antwort.ticker!r}"
+        )
+        assert antwort.mic and antwort.mic.strip() == antwort.mic, (
+            f"mic fehlt oder trägt Leerzeichen: {antwort.mic!r} — "
+            "ohne Börse ist der Ticker mehrdeutig"
         )
 
     def test_unbekanntes_papier_ist_nicht_dasselbe_wie_unzustaendig(self) -> None:
@@ -124,7 +143,12 @@ class ResolverContract(SourceContract):
             antwort = source.resolve(kaputt)
         except Exception as exc:  # noqa: BLE001 — genau das ist der Prüfgegenstand
             pytest.fail(f"resolve() warf {type(exc).__name__}: {exc}")
-        assert antwort is not None
+        # Auf den Typ prüfen, nicht auf `is not None`: Sonst käme auch ein
+        # zurückgegebener String oder ein leeres Dict durch, und der Vertrag
+        # wäre nur scheinbar erfüllt.
+        assert isinstance(antwort, (Resolved, NotResponsible, NotFound, Unavailable)), (
+            f"resolve() gab {type(antwort).__name__} zurück, keine Resolution"
+        )
 
 
 class MetadataContract(SourceContract):
@@ -144,11 +168,14 @@ class MetadataContract(SourceContract):
         namen = [spec.name for spec in source.FIELDS]
         assert len(namen) == len(set(namen)), f"doppelte Felder: {namen}"
 
-    def test_neue_felder_tragen_eine_beschriftung(self) -> None:
-        """Ein Feld, das die App nicht kennt, braucht wenigstens einen englischen Namen.
+    def test_jedes_feld_traegt_eine_beschriftung(self) -> None:
+        """Jedes deklarierte Feld braucht wenigstens einen englischen Namen.
 
-        Sonst steht in der Oberfläche der rohe Feldname — und der Nutzer sieht
-        ``tracking_error`` statt „Tracking error".
+        Der Vertrag kann nicht wissen, welches Feld für die App neu ist — den
+        kanonischen Katalog kennt nur sie. Deshalb wird die Beschriftung für
+        **alle** Felder verlangt: Für bekannte gewinnt ohnehin der Katalog der
+        App, für unbekannte ist sie die einzige Rettung vor einem rohen
+        Feldnamen in der Oberfläche.
         """
         for spec in self.make_source().FIELDS:
             assert spec.label_en or spec.label_de, (
@@ -191,10 +218,18 @@ class MetadataContract(SourceContract):
         for reading in source.fetch(self.responsible) or []:
             assert reading.source, f"Feld '{reading.field}' nennt keine Herkunft"
 
-    def test_unzustaendig_liefert_nichts(self) -> None:
-        """Eine unzuständige Quelle darf keine Werte erfinden."""
+    def test_unzustaendig_liefert_eine_leere_liste(self) -> None:
+        """Unzuständig ist ``[]``, nicht ``None`` — der Unterschied trägt Bedeutung.
+
+        ``None`` heißt „konnte nicht nachsehen" und schützt den gespeicherten
+        Stand. Wer bei Unzuständigkeit ``None`` zurückgibt, macht aus einer
+        klaren Aussage einen Ausfall — und die Kette kann nicht mehr
+        unterscheiden, ob es sich zu warten lohnt.
+        """
         readings = self.make_source().fetch(self.not_responsible)
-        assert not readings, f"unzuständige Quelle lieferte {readings}"
+        assert readings == [], (
+            f"unzuständige Quelle lieferte {readings!r} statt einer leeren Liste"
+        )
 
     @pytest.mark.parametrize(
         "kaputt",

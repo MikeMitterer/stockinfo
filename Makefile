@@ -126,11 +126,18 @@ logs: ## Server-Logs folgen
 ##@ Tests
 
 .PHONY: test
-test: test-backend test-dashboard ## Alle Tests — Backend + Dashboard
+test: test-backend test-plugin-api test-dashboard ## Alle Tests — Backend + Plugin-API + Dashboard
 
 .PHONY: test-backend
 test-backend: ## Backend-Tests (pytest)  [ARGS="-k name"]
 	$(PYTEST) -q $(ARGS)
+
+# Eigener Lauf, nicht Teil von test-backend: `plugin_api/` ist ein
+# eigenständiges Paket mit eigenem Import-Pfad. Ohne dieses Target prüft die
+# reguläre Suite den öffentlichen Plugin-Vertrag überhaupt nicht.
+.PHONY: test-plugin-api
+test-plugin-api: ## Tests des Plugin-Vertrags (eigenes Paket)
+	cd plugin_api && $(WORKSPACE)/$(PYTEST) -q
 
 .PHONY: test-dashboard
 test-dashboard: ## Dashboard-Tests (vitest)

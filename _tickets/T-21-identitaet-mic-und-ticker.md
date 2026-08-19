@@ -11,6 +11,12 @@ Suffix-Schreibweise nachbilden.
 
 **Der Brocken der Serie.** Alles andere ist klein dagegen.
 
+> **Verschärft nach Codex-Review vom 2026-08-19.** Die erste Fassung wollte
+> `symbol` „einfach behalten". Das genügt nicht: Die Spalte ist `NOT NULL` und
+> global eindeutig — damit bliebe ein gültiges Yahoo-Symbol Pflicht für jedes
+> Instrument, auch für eines, das nur über EODHD verwaltet wird. Siehe
+> „Was `symbol` heute erzwingt".
+
 **Hängt an:** nichts. **Blockiert:** T-23 (ein Plugin, das Yahoo-Symbole erwarten
 muss, ist kein Plugin).
 
@@ -51,11 +57,40 @@ VTI      -> ticker=VTI   suffix=''   mic=US
 Kein Suffix ist doppelt belegt. Jedes gespeicherte Symbol lässt sich automatisch
 zerlegen — keine Handarbeit, kein Datenverlust.
 
-### Was sich ändert
+### Was `symbol` heute erzwingt
 
-* `instruments` bekommt `ticker` und `exchange_mic`; `symbol` **bleibt** als
-  Yahoo-Symbol erhalten, ist aber nicht mehr der Identifikator (die Profil-Links
-  `yahoo_url` und `extraetf_*_url` brauchen es weiter)
+```
+app/db.py:21    symbol TEXT NOT NULL
+app/db.py:172   CREATE UNIQUE INDEX idx_instruments_symbol
+```
+
+Pflichtfeld **und** global eindeutig. Bleibt das so, braucht auch ein Instrument,
+das ausschließlich über EODHD oder Twelve Data verwaltet wird, ein gültiges,
+eindeutiges **Yahoo**-Symbol. Yahoo wäre dann weiterhin Teil der Identität — das
+Ticket verfehlte sein eigenes Ziel.
+
+**Weg:** `symbol` wird `NULL`-fähig und verliert den Eindeutigkeits-Index. Die
+kanonische Identität ist `(ticker, exchange_mic)`; das Yahoo-Symbol ist ein
+**abgeleiteter Alias** für die Profil-Links. Die bestehenden `/by-symbol/`-Pfade
+bleiben als Kompatibilitätsschicht und werden als solche dokumentiert.
+
+Sind absehbar mehrere Anbieter-Aliase nötig, gehören sie in eine eigene Tabelle
+statt als Spalten in die Instrumentenzeile.
+
+### `US` ist kein MIC
+
+`EXCHANGES` führt `US` als Sammelcode für NYSE/NASDAQ (OpenFIGI `exchCode=US`).
+Das ist **kein** ISO-10383-MIC. Ein Feld namens `exchange_mic`, das mal echte
+MICs und mal diesen internen Code enthält, ist falsch benannt und wird beim
+ersten Anbieter, der echte MICs erwartet, zum Problem.
+
+**Zu entscheiden:** entweder auf echte MICs abbilden (`XNYS`, `XNAS`) und den
+Sammelcode nur intern führen, oder das Feld neutral benennen (`exchange_code`)
+und die Kodierung ausdrücklich modellieren. Nicht: beides unter einem Namen.
+
+### Was sich sonst ändert
+
+* `instruments` bekommt `ticker` und `exchange_mic`
 * Migration zerlegt bestehende Symbole über die Suffix-Tabelle
 * Wer Kurse holt, setzt sein Format selbst zusammen — Yahoo `{ticker}{suffix}`,
   EODHD `{ticker}.{code}`, Twelve Data `symbol` + `mic_code`
@@ -79,6 +114,13 @@ Die Migration ist die einzige der Serie, die bestehende Daten anfasst. Vor dem
 Lauf eine Kopie der Datenbank, und die Zerlegung vorher als Trockenlauf über die
 echten Daten prüfen — ein Symbol, das die Tabelle nicht kennt, muss auffallen
 statt still `NULL` zu werden.
+
+**Die Eindeutigkeit der Suffixe gilt für den Bestand, nicht für die Zukunft.**
+Gemessen wurde die heutige `EXCHANGES`-Tabelle. Nicht abgedeckt sind neue oder
+unbekannte Suffixe, suffixlose Nicht-US-Symbole, von Hand eingetragene Symbole
+und Ticker, in denen ein Punkt zum Namen gehört (`BRK.A`). Die Migration muss
+solche Fälle **melden** statt zu raten — und danach braucht es einen Weg, sie
+von Hand zuzuordnen.
 
 ---
 

@@ -1,17 +1,21 @@
-# T-19 · Neu auflösen, ohne die Historie zu verlieren
+# T-19 · Neu auflösen, ohne Messreihen zu vermischen
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend + Dashboard) | offen | 2 h | Korrekturweg, Herkunft, Quellen-Übersicht | — |
+| StockInfo (Backend + Dashboard) | offen | 4 h | Korrekturweg, Historien-Regel, Herkunft, Quellen-Übersicht | — |
 
 **Löst:** Der einzige Weg, eine falsche Auflösung zu korrigieren, ist heute
-`DELETE /instruments/{isin}` — und der kostet alles. Solange Quellenwechsel
-Ausnahmefälle sind, fällt das kaum auf; sobald Plugins dazukommen, wird es zum
-Normalvorgang.
+`DELETE /instruments/{isin}` — und der kostet Kurshistorie, Tageskurse und alle
+von Hand gepflegten Kennzahlen.
 
-**Hängt an:** nichts. Sollte **vor** dem Plugin-System stehen, nicht danach.
+> **Ziel korrigiert (Codex-Review vom 2026-08-19).** Die erste Fassung dieses
+> Tickets verlangte „nur Symbol, Börse und Gattung ändern, alles andere behalten".
+> Das ist **falsch** und wäre gefährlicher als der heutige Zustand — siehe
+> „Warum ‚kein Datenverlust' das falsche Ziel war".
 
 **Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+
+**Hängt an:** nichts. Sollte **vor** dem Plugin-System stehen.
 
 ---
 
@@ -21,63 +25,81 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | Papier mit Historie und eigenem TER → `POST /resolve/{isin}` | Symbol/Börse werden neu bestimmt, **Historie und TER bleiben** | | |
-| 2 | dasselbe Papier, `GET /quote/{isin}/history` | Zeitreihe unverändert lang wie vorher | | |
-| 3 | Detailbereich einer Zeile | zeigt „aufgelöst durch: openfigi" (o.ä.) | | |
-| 4 | `GET /sources` | listet alle Quellen je Rolle, mit Reihenfolge und `configured` | | |
-| 5 | `GET /sources` bei fehlendem OpenFIGI-Key | die Quelle erscheint mit `configured: false` und Begründung | | |
-| 6 | `make test` | Backend grün; Dashboard grün | | |
-
-```bash
-# #1/#2 — vor und nach dem Neu-Auflösen zählen
-curl -s "http://localhost:8000/quote/IE00B4L5Y983/history?limit=500" | python3 -c "import sys,json; print('Punkte:', len(json.load(sys.stdin)))"
-curl -s -X POST "http://localhost:8000/resolve/IE00B4L5Y983" | python3 -m json.tool
-curl -s "http://localhost:8000/quote/IE00B4L5Y983/history?limit=500" | python3 -c "import sys,json; print('Punkte:', len(json.load(sys.stdin)))"
-
-# #4/#5
-curl -s "http://localhost:8000/sources" | python3 -m json.tool
-```
+| 1 | Papier neu auflösen, Listing bleibt **gleich** (Ticker, MIC, Währung) | Historie und gepflegte Kennzahlen bleiben vollständig | | |
+| 2 | Papier neu auflösen, Listing **wechselt** (z.B. `.L`/GBp → `.DE`/EUR) | alte Kursreihe wird **nicht** mit der neuen vermischt | | |
+| 3 | nach #2: `GET /quote/{isin}/daily` | keine Reihe, die Pence und Euro mischt | | |
+| 4 | nach #2: Volatilität | wird neu aufgebaut, statt aus gemischten Werten zu stammen | | |
+| 5 | nach #2: `daily_meta` | behauptet keine Zeiträume mehr als synchronisiert, die zum alten Listing gehören | | |
+| 6 | nach #2: manuelle Kennzahlen (TER etc.) | bleiben — sie hängen am Papier, nicht am Listing | | |
+| 7 | Detailbereich einer Zeile | zeigt „aufgelöst durch: openfigi" (o.ä.) | | |
+| 8 | `GET /sources` | listet alle Quellen je Rolle, mit Reihenfolge und `configured` | | |
+| 9 | `make test` | Backend, Plugin-API und Dashboard grün | | |
 
 ---
 
 ## Details
 
-### Löschen ist zu grob
+### Warum „kein Datenverlust" das falsche Ziel war
 
-Am Instrument hängen **vier** Tabellen per `ON DELETE CASCADE` (`app/db.py`):
+`quotes` und `daily_closes` hängen **nur** an `instrument_id`. Beide haben zwar
+eine `currency`-Spalte, aber:
 
+* `UNIQUE (instrument_id, date)` — für einen Tag kann es nur **einen**
+  Schlusskurs geben, egal aus welcher Notierung
+* die Volatilitätsberechnung ignoriert die Währung vollständig
+  (`app/services/quote_cache.py:433`):
+
+```python
+closes = [row["close"] for row in rows if row.get("close") is not None]
+return annualized_volatility(closes)
 ```
-quotes                → die gesamte Kurshistorie
-daily_closes          → Tages-Schlusskurse (Basis der Volatilität)
-instrument_overrides  → die von Hand gepflegten Kennzahlen
-daily_meta            → der Sync-Stand
-```
 
-`set_isin` korrigiert nur die ISIN; für Symbol, Börse oder Gattung gibt es keinen
-Weg außer Löschen. In `repository.py:314` steht bereits ein Kommentar, dass genau
-dieser Datenverlust schon einmal eingetreten ist.
+Wechselt ein Papier von London (GBp) nach Xetra (EUR), stünde in derselben Reihe
+ein Sprung von rund **5400 auf 60**. Als Tagesrendite gelesen sind das −99 %; die
+Volatilität wird unbrauchbar, und der Chart zeigt einen Absturz, den es nie gab.
 
-**Weg:** `POST /resolve/{isin}` — löst neu auf und setzt **nur** Symbol, Börse und
-Gattung. Alles andere bleibt stehen. Eine Repository-Methode, ein Endpunkt, ein
-Knopf im Detailbereich.
+**Alles zu behalten ist also schlimmer als zu löschen** — es sieht plausibel aus.
+
+### Was stattdessen gilt
+
+Zwei Fälle, sauber getrennt:
+
+| Fall | Kursreihen | Manuelle Kennzahlen |
+|---|---|---|
+| Listing **unverändert** (Ticker, MIC, Währung gleich) | bleiben | bleiben |
+| Listing **gewechselt** | werden invalidiert, `daily_meta` zurückgesetzt | bleiben |
+
+Die manuellen Kennzahlen hängen am **Papier**, nicht an der Notierung: Ein TER
+ändert sich nicht, weil dasselbe Papier an einer anderen Börse gehandelt wird.
+Genau die gehen heute beim Löschen mit verloren — und genau die sind es, die
+niemand nachträgt.
+
+**Offen zur Entscheidung:** Ob die alte Reihe gelöscht oder archiviert wird
+(z.B. mit einer Listing-Generation an `quotes`/`daily_closes`). Archivieren ist
+sauberer und teurer; Löschen ist ehrlich, solange die Oberfläche es ankündigt.
+Bis das entschieden ist, ist das Ticket nicht umsetzungsreif.
+
+### Der Korrekturweg selbst
+
+`POST /resolve/{isin}` löst neu auf, vergleicht das Ergebnis mit dem
+gespeicherten Listing und wendet die Regel oben an. Der Endpunkt meldet zurück,
+was passiert ist — unverändert oder gewechselt samt Folge —, damit die
+Oberfläche vor dem Verwerfen fragen kann.
 
 ### Niemand sieht, wer aufgelöst hat
 
-`CompositeResolver` gibt das Ergebnis zurück, nicht seine Herkunft. Mit mehreren
-Quellen ist „wer war das" die erste Frage bei jedem Zweifel.
+`CompositeResolver` gibt das Ergebnis zurück, nicht seine Herkunft.
 
-**Weg:** Spalte `resolved_by` am Instrument, gefüllt beim Auflösen, angezeigt im
-Detailbereich neben „Quelle".
+**Weg:** Spalte `resolved_by` am Instrument, angezeigt im Detailbereich.
 
 ### „Ich habe das Plugin installiert und es passiert nichts"
 
-Das wird die häufigste Rückmeldung, sobald andere Quellen beisteuern — und sie hat
-meist zwei harmlose Ursachen: Die Quelle ist gar nicht geladen, oder das Papier
-wird nicht neu aufgelöst (siehe oben).
+`GET /sources` zeigt je Rolle die Kette in ihrer Reihenfolge, mit Name, Art und
+Konfigurationsstand. Ohne diese Ansicht ist jede Ferndiagnose Blindflug.
 
-**Weg:** `GET /sources` zeigt je Rolle die Kette in ihrer Reihenfolge, mit Name,
-Art, `configured` und einer Begründung, wenn nicht. Ohne diese Ansicht ist jede
-Ferndiagnose Blindflug.
+**Anmerkung aus der Review:** `is_configured()` liefert nur `bool` und kann
+keinen Grund nennen. Für die Anzeige braucht es entweder ein strukturiertes
+Ergebnis oder eine zusätzliche Diagnosemethode — Entscheidung offen, siehe Spec.
 
 ---
 
