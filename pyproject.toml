@@ -1,6 +1,6 @@
 [project]
 name = "stockinfo"
-version = "0.5.0"
+version = "0.6.0"
 description = "REST-Kursabfrage für Aktien und ETFs mit SQLite-Cache"
 license = "MIT"
 requires-python = ">=3.11"
