@@ -120,6 +120,7 @@ class QuoteService:
         symbol: str,
         isin: str | None = None,
         exchange: str | None = None,
+        instrument_type: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         """Beschafft den Kurs für ein **bereits aufgelöstes** Instrument.
@@ -134,13 +135,19 @@ class QuoteService:
         wird gespeichert. Im Depot fällt die Position damit aus der
         Währungsrechnung, und Gesamtwert wie Anteile stimmen nicht mehr.
 
-        Die ISIN wird trotzdem mitgegeben: `_build` braucht sie für die
-        justETF-Anreicherung, nicht für die Börsenwahl.
+        ISIN und Gattung werden trotzdem mitgegeben, und beide aus gutem Grund:
+        `_build` braucht die ISIN für die justETF-Anreicherung, und die Gattung
+        entscheidet, ob der ETF-Zweig überhaupt betreten wird. Fiele sie auf
+        ``None``, bliebe `metadata_complete` auf seiner Vorgabe ``True``, und das
+        Repository dürfte die gepflegten justETF-Felder mit nichts überschreiben.
+        Der Resolver war bisher der zweite Lieferant der Gattung — wer ihn
+        überspringt, muss sie aus der gespeicherten Zeile mitbringen.
 
         Args:
             symbol: Gespeichertes Yahoo-Symbol inkl. Börsen-Suffix.
             isin: Gespeicherte ISIN, für die ETF-Anreicherung.
             exchange: Gespeicherte Börse — sie bleibt, was sie war.
+            instrument_type: Gespeicherte Gattung ('etf', 'stock', …).
             enrich_etf: Ob justETF gefragt wird — siehe `get_quote_by_isin`.
 
         Returns:
@@ -149,7 +156,9 @@ class QuoteService:
         Raises:
             QuoteUnavailableError: Kein Kurs beschaffbar.
         """
-        resolved = ResolvedInstrument(symbol=symbol, isin=isin, exchange=exchange)
+        resolved = ResolvedInstrument(
+            symbol=symbol, isin=isin, exchange=exchange, type=instrument_type
+        )
         return self._build(resolved, enrich_etf)
 
     def _build(

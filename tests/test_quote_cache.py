@@ -57,6 +57,7 @@ class FakeQuoteService:
         symbol: str,
         isin: str | None = None,
         exchange: str | None = None,
+        instrument_type: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         return self.get_quote_by_isin(isin or symbol)
@@ -209,6 +210,7 @@ class _StockQuoteService:
         symbol: str,
         isin: str | None = None,
         exchange: str | None = None,
+        instrument_type: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         return self.get_quote_by_isin(isin or symbol, enrich_etf)
@@ -298,6 +300,7 @@ class _MerkendeQuoteService:
         symbol: str,
         isin: str | None = None,
         exchange: str | None = None,
+        instrument_type: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         self.enrich_calls.append(enrich_etf)
@@ -418,6 +421,7 @@ class _WanderndeAufloesung:
         symbol: str,
         isin: str | None = None,
         exchange: str | None = None,
+        instrument_type: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         self.known_calls += 1
@@ -472,3 +476,65 @@ def test_refresh_einer_unbekannten_isin_loest_weiterhin_auf(repo: QuoteRepositor
     service.refresh_one("IE00BCRY6557")
 
     assert fake.isin_calls == 1
+
+
+class _OhneTyp:
+    """Live-Antwort ohne `type` — yfinance liefert nicht immer einen quote_type.
+
+    Der gefährliche Fall: Ohne Typ läuft `_build` am ETF-Zweig vorbei,
+    `metadata_complete` bleibt auf seiner Vorgabe `True`, und das Repository
+    darf die von justETF gepflegten Felder überschreiben — mit nichts.
+    """
+
+    def __init__(self) -> None:
+        self.gesehener_typ: str | None = "nie aufgerufen"
+
+    def _antwort(self, typ: str | None) -> QuoteResponse:
+        return QuoteResponse(
+            isin="IE00B3RBWM25",
+            symbol="VGWL.DE",
+            currency="EUR",
+            exchange="Xetra",
+            price=161.0,
+            quote_time=_now(),
+            fetched_at=_now(),
+            type=typ,
+        )
+
+    def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
+        return self._antwort("etf")
+
+    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
+        return self._antwort("etf")
+
+    def get_quote_for_known(
+        self,
+        symbol: str,
+        isin: str | None = None,
+        exchange: str | None = None,
+        instrument_type: str | None = None,
+        enrich_etf: bool = True,
+    ) -> QuoteResponse:
+        self.gesehener_typ = instrument_type
+        # Der Live-Abruf weiß den Typ diesmal nicht — er muss vom Aufrufer kommen.
+        return self._antwort(instrument_type)
+
+
+def test_refresh_reicht_den_gespeicherten_typ_durch(repo: QuoteRepository) -> None:
+    """Ohne Typ liefe der Refresh am ETF-Schutz vorbei und löschte die Kennzahlen.
+
+    `resolve_isin` war der zweite Lieferant von `type`; wer ein bekanntes Papier
+    ohne Auflösung auffrischt, muss ihn deshalb aus der gespeicherten Zeile
+    mitgeben.
+    """
+    fake = _OhneTyp()
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+
+    # Erster Kontakt legt das Instrument als ETF an.
+    service.get_by_isin("IE00B3RBWM25")
+    assert repo.get_instrument_by_isin("IE00B3RBWM25")["type"] == "etf"
+
+    service.refresh_one("IE00B3RBWM25")
+
+    assert fake.gesehener_typ == "etf"
+    assert repo.get_instrument_by_isin("IE00B3RBWM25")["type"] == "etf"

@@ -286,7 +286,11 @@ class CachedQuoteService:
             # die Metadaten-TTL gilt hier nicht.
             return self._save_fresh_with_volatility(
                 self._quote_service.get_quote_for_known(
-                    symbol, instrument.get("isin"), instrument.get("exchange"), True
+                    symbol,
+                    isin=instrument.get("isin"),
+                    exchange=instrument.get("exchange"),
+                    instrument_type=instrument.get("type"),
+                    enrich_etf=True,
                 )
             )
         return self._save_fresh_with_volatility(self._quote_service.get_quote_by_isin(isin))
@@ -492,7 +496,11 @@ class CachedQuoteService:
         symbol = instrument.get("symbol")
         if symbol:
             return self._quote_service.get_quote_for_known(
-                symbol, instrument.get("isin"), instrument.get("exchange"), enrich
+                symbol,
+                isin=instrument.get("isin"),
+                exchange=instrument.get("exchange"),
+                instrument_type=instrument.get("type"),
+                enrich_etf=enrich,
             )
         # Ohne Symbol bleibt nur die Auflösung — das kann nur ein Datensatz
         # sein, der vor dem ersten erfolgreichen Abruf angelegt wurde.

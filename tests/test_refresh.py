@@ -60,6 +60,7 @@ class FakeQuoteService:
         symbol: str,
         isin: str | None = None,
         exchange: str | None = None,
+        instrument_type: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         """Der Weg des Sammelrefresh: bekanntes Listing, keine neue Auflösung."""
