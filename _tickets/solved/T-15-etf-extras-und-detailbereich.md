@@ -151,6 +151,12 @@ Statuscode-Validierung.
 
 ## Auflösung
 
+**Abgenommen am 2026-08-19 auf Zuruf** — pauschal, nicht zeilenweise. Die
+Mensch-Spalte oben bleibt deshalb leer: Sie steht für „selbst nachgesehen", und
+das wäre hier eine Behauptung. Wer die Zeilen einzeln nachstellen will, findet
+die Befehle im Block darüber; die vier `➖` sind die Stellen, an denen bisher
+nur Tests sprechen.
+
 Gemerged als `1c2fe50` (`--no-ff`, 55 Commits). Die tragenden:
 
 | Commit | Was |
