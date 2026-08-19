@@ -4,3 +4,9 @@ version = "0.6.0"
 description = "REST-Kursabfrage für Aktien und ETFs mit SQLite-Cache"
 license = "MIT"
 requires-python = ">=3.11"
+
+# Nur die Tests der App. `plugin_api/` ist ein eigenständiges Paket mit eigener
+# Suite und eigenem Import-Pfad — ohne diese Grenze zieht pytest es mit ein und
+# bricht beim Import ab, weil `stockinfo_plugin` hier nicht installiert ist.
+[tool.pytest.ini_options]
+testpaths = ["tests"]

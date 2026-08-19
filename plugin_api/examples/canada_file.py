@@ -1,0 +1,85 @@
+"""Beispiel-Plugin: löst ISINs über eine von Hand gepflegte Tabelle auf.
+
+Der Anlass ist ein gemessener Fall — für kanadische Papiere liefert weder
+OpenFIGI ein Listing an der bevorzugten Börse noch Yahoos ISIN-Suche einen
+Treffer. Wo keine automatische Quelle etwas weiß, trägt der Nutzer drei Werte
+von Hand ein, statt auf eine Quelle zu warten, die es vielleicht nie gibt.
+
+Dasselbe Prinzip wie bei den manuell gepflegten Kennzahlen, eine Ebene höher:
+*Wo die Quelle nichts hat, springt der Mensch ein.*
+
+Format der Datei (Semikolon, Kopfzeile erforderlich)::
+
+    isin;ticker;mic;name
+    CA78012H5675;RY;XTSE;Royal Bank of Canada
+"""
+
+import csv
+from pathlib import Path
+from typing import Any
+
+from stockinfo_plugin import (
+    NotFound,
+    NotResponsible,
+    Resolution,
+    Resolved,
+    ResolveRequest,
+    Resolver,
+    Unavailable,
+)
+
+
+class CanadaFileResolver(Resolver):
+    """Liest ISIN → Ticker + MIC aus einer CSV-Datei."""
+
+    name = "canada-file"
+    cost = "free"
+
+    def __init__(self, config: dict[str, Any] | None = None) -> None:
+        """
+        Args:
+            config: ``path`` — Pfad zur CSV-Datei. ``prefixes`` — Liste der
+                ISIN-Länderpräfixe, für die diese Quelle zuständig ist.
+        """
+        super().__init__(config)
+        self._path = Path(self._config.get("path", "/data/manual-isins.csv"))
+        self._prefixes = tuple(self._config.get("prefixes", ("CA",)))
+
+    def is_configured(self) -> bool:
+        """Ohne Datei gibt es nichts nachzuschlagen."""
+        return self._path.is_file()
+
+    def handles(self, request: ResolveRequest) -> bool:
+        """Zuständig für die konfigurierten Länderpräfixe."""
+        return bool(request.isin) and request.isin.upper().startswith(self._prefixes)
+
+    def resolve(self, request: ResolveRequest) -> Resolution:
+        """Schlägt die ISIN in der Tabelle nach."""
+        if not self.handles(request):
+            return NotResponsible(f"nur {'/'.join(self._prefixes)}-ISINs")
+        try:
+            entry = self._lookup(request.isin.upper())
+        except OSError as exc:
+            # Die Datei kann verschwinden, während die App läuft — das ist
+            # „konnte nicht nachsehen", nicht „gibt es nicht".
+            return Unavailable(f"{self._path} nicht lesbar: {exc}")
+        if entry is None:
+            return NotFound()
+        return Resolved(
+            ticker=entry["ticker"],
+            mic=entry["mic"],
+            isin=request.isin.upper(),
+            name=entry.get("name") or None,
+        )
+
+    def _lookup(self, isin: str) -> dict[str, str] | None:
+        """Sucht die Zeile zur ISIN. Gibt ``None`` zurück, wenn es keine gibt."""
+        with self._path.open(encoding="utf-8", newline="") as handle:
+            for row in csv.DictReader(handle, delimiter=";"):
+                if (row.get("isin") or "").strip().upper() == isin:
+                    return {key: (value or "").strip() for key, value in row.items()}
+        return None
+
+
+SOURCES = [CanadaFileResolver]
+"""Was die Registry lädt, wenn diese Datei als Einzeldatei-Plugin liegt."""
