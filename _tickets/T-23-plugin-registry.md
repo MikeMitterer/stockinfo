@@ -68,8 +68,8 @@ wegargumentieren — wer selbst hostet, hat aber ohnehin ein Container-Image
 installiert, dem er vertraut. Was die App schuldet: eine klare Ansage in der
 Dokumentation und **keine Automatik, die von selbst etwas nachlädt**.
 
-Der deklarative Weg (JSON/REST-Quellen ohne Code) umgeht das Risiko für den
-Großteil der Fälle — das ist ein eigenes Ticket, sobald dieses steht.
+Einen risikoärmeren Nebenweg gibt es nicht: Der deklarative Ansatz wurde
+gestrichen (siehe Design). Damit gilt diese Ansage für **jedes** Plugin.
 
 ---
 

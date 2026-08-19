@@ -1,15 +1,14 @@
-# StockInfo — Datenquellen als Plugins: deklarativ und als Code
+# StockInfo — Datenquellen als Python-Plugins
 
 **Datum:** 2026-08-19
-**Status:** Design zur Freigabe
+**Status:** Design zur Freigabe, überarbeitet nach Codex-Review
 **Tickets:** T-17 bis T-23
 
 ## Ziel
 
 Datenquellen — ISIN-Auflösung, Kurse, Tageshistorie, Devisen, ETF-Metadaten —
-werden austauschbar, ohne die App zu ändern. Beigesteuerte Quellen kommen auf
-zwei Wegen ins System: als **Beschreibungsdatei** ohne Code für den Normalfall
-und als **Python-Plugin** für den Sonderfall.
+werden austauschbar, ohne die App zu ändern. Beigesteuerte Quellen sind
+**Python-Plugins** gegen einen versionierten Vertrag.
 
 ## Motivation
 
@@ -27,82 +26,69 @@ Der Präzedenzfall ist Home Assistant — tausende Geräte, ein Kernteam, das di
 meisten nie besitzt, und ein Custom-Component-Verzeichnis, aus dem der Erfolg
 kommt.
 
-## Die Entscheidung: zwei Sorten, harte Grenze
+## Die Entscheidung: nur Python — kein zweites Format
 
-### Was gemessen wurde
+Eine frühere Fassung dieses Designs sah **zwei** Wege vor: Beschreibungsdateien
+(YAML) für REST-Quellen und Python für den Rest. Diese Entscheidung ist
+zurückgenommen. Es gibt genau eine Sorte Plugin, und die ist Python.
 
-Am 2026-08-19 geprüft, ob die bestehenden Quellen über schlichtes HTTP
-erreichbar sind — also ob eine Beschreibungsdatei sie fassen könnte:
+### Warum der deklarative Weg gestrichen wurde
 
-| Quelle | Über HTTP + JSON? | Beleg |
-|---|---|---|
-| OpenFIGI | **ja**, vollständig | `POST` → `$[0].data[0].ticker = AAPL` |
-| Yahoo Kurs | **ja**, Kernfall | `chart.result.0.meta.regularMarketPrice = 126.975` |
-| Yahoo ISIN-Suche | **ja** | `quotes.0.symbol = IWDA.L` |
-| justETF | **nein** | HTTP 200, aber `text/html`, 504 KB |
+**Der Interpreter wäre selbst ein erhebliches Stück Software.** Die
+Codex-Review vom 2026-08-19 hat aufgelistet, was ein tragfähiges Format
+mindestens braucht: HTTP-Methode, Query/JSON-Body/Form-Body/Header,
+Secret-Referenzen, URL-Kodierung der Platzhalter, Connect-/Read-/Gesamt-Timeout,
+maximale Antwortgröße, Redirect-Regeln, erlaubte Content-Types, JSON-Pfad-Syntax
+samt Verhalten bei mehrdeutigen Treffern, Typkonvertierung, statische
+Wertetabellen, Statuscode-Mapping auf `NotFound`/`Unavailable`, Redaction beim
+Protokollieren und eine eigene Schema-Version. Das ist zu spezifizieren, zu
+implementieren, zu testen und zu pflegen — für einen Funktionsumfang, den Python
+mitbringt.
 
-Und die Kandidaten, um die es real geht, sind sämtlich REST mit JSON: EODHD,
-Twelve Data, Financial Modeling Prep, Marketstack. Genau die Sorte, die ein
-kanadischer oder japanischer Nutzer beisteuern würde.
+**Der Machbarkeitsbeweis war unvollständig.** Das YAML-Beispiel der ersten
+Fassung konnte OpenFIGI nicht abbilden: Der Dienst braucht `POST` mit einem
+JSON-Array, das Schema kannte weder Methode noch Body. Ausgerechnet die eine
+Quelle, die als „vollständig deklarativ machbar" gemessen worden war.
 
-### Deklarativ ist der Regelfall
+**Das Sicherheitsargument war zu stark formuliert.** Eine Beschreibungsdatei
+führt keinen beliebigen Code aus — aber sie kann einen ihr übergebenen
+`{config.api_key}` an eine frei gewählte URL senden, gegen interne Dienste
+sprechen (SSRF), Weiterleitungen auf fremde Hosts folgen und Schlüssel in
+Protokolle schreiben. Der Vorteil schrumpft von „kein Risiko" auf „kein
+beliebiger Code" — real, aber deutlich kleiner als behauptet.
 
-```yaml
-name: eodhd
-kind: resolver
-handles:
-  isin_prefix: [CA, US]
-  mic: [XTSE, US]
-request:
-  url: https://eodhd.com/api/search/{isin}
-  params: { api_token: "{config.api_key}" }
-response:
-  pick: "$[0]"
-  map:
-    ticker: Code
-    mic:    Exchange
-    name:   Name
-```
+**Zwei Wege heißen doppelte Pflege.** Zwei Contract-Test-Suiten, zwei
+Dokumentationen, zwei Fehlerbilder — und bei jeder Vertragsänderung beides
+nachziehen.
 
-Drei Vorteile, die für dieses Vorhaben entscheidend sind:
+**Die Einstiegshürde ist gesunken.** Ein Plugin ist rund 60 Zeilen (siehe
+`plugin_api/examples/canada_file.py`), und der Contract-Test gibt die Zielvorgabe
+maschinell vor. Mit KI-Unterstützung ist das kein Hindernis mehr für jemanden,
+der seine API kennt.
 
-- **Kein Ausführungsrisiko.** Eine Beschreibungsdatei kann keine Schlüssel
-  abziehen. Die Sicherheitsfrage, die bei fremdem Code offenbleibt,
-  verschwindet für den Großteil der Fälle.
-- **Der Autor muss kein Python können** — nur seine API kennen. Das senkt die
-  Schwelle für genau die Nutzer, die erreicht werden sollen.
-- **Es ist laufzeitfähig.** Eine geänderte Datei neu einzulesen ist trivial;
-  ein Python-Modul sauber neu zu laden ist es nicht.
+### Was der Verzicht kostet
 
-Dazu: Eine Beschreibungsdatei ist Text. Sie lässt sich in ein Issue kopieren,
-per Pull Request beitragen und gegen ein Schema prüfen, bevor sie je läuft.
+Ehrlich benannt, damit es keine stille Annahme bleibt:
 
-**Es ist keine getrennte Baustelle.** Der `map:`-Teil ist dasselbe
-Feld-Mapping mit Einheiten, das ohnehin gebraucht wird — die `READS`-Tabelle
-kommt nur aus einer Datei statt aus einer Klasse.
+- **Kein Nachladen zur Laufzeit.** Eine YAML-Datei ließe sich ohne Neustart neu
+  einlesen, ein Python-Modul nicht sauber. Plugins werden beim Start geladen.
+- **Fremder Code läuft mit den Rechten der App.** Das gilt jetzt für *alle*
+  Plugins, nicht nur für die Sonderfälle. Siehe „Was bewusst nicht gebaut wird".
+- **Ein Beiträger braucht eine Python-Umgebung**, nicht nur einen Texteditor.
 
-### Python ist der Sonderfall
+### Was aus dem Ansatz bleibt
 
-Für Scraping (justETF), Bibliotheken mit eigenem Objektmodell (yfinance),
-mehrstufige Anmeldung und eigene Rate-Limit-Logik. Der Vertrag dafür steht
-bereits als eigenständiges Paket `stockinfo-plugin-api` (Commit `840121c`).
+Das Wertvollste daran war nie das Dateiformat, sondern das Modell dahinter — und
+das ist bereits in Python umgesetzt:
 
-### Die Grenze — und warum sie hart sein muss
+- **Zuständigkeit als Deklaration** statt als Code-Verzweigung (`handles()`)
+- **Feld-Zuordnung mit Einheiten** (`FieldSpec`, `Reading`, `convert()`) — die
+  Antwort auf `0.19` gegen `0.0003` gegen `19` für dieselbe Kostenquote
+- **Plausibilitätsbereiche** gegen die stille Null
 
-**Erlaubt in Beschreibungsdateien:** Pfad-Auswahl, Feld-Zuordnung,
-Einheiten-Umrechnung, Zuständigkeits-Deklaration.
-
-**Nicht erlaubt:** Bedingungen, Schleifen, Ausdrücke, HTML-Selektoren.
-
-Wer mehr braucht, schreibt ein Python-Plugin. Der Fallstrick heißt *inner
-platform effect*: Sobald Bedingungen und Transformationen ins YAML wandern, ist
-eine schlechte Programmiersprache entstanden. Diese Grenze schriftlich
-festzuhalten ist wichtiger als das Format selbst — sonst weicht sie schleichend
-auf, und zwar mit jeweils guten Einzelbegründungen.
-
-**HTML-Scraping bleibt bewusst draußen**, obwohl es technisch ginge (Home
-Assistant hat `scrape:`). HTML-Struktur ändert sich, Selektoren brechen still,
-und der Weg endet unweigerlich bei „hier bräuchte ich noch eine Bedingung".
+Damit entfällt auch die aufwendigste offene Frage der Review vollständig:
+Formales Schema und Bedrohungsmodell für deklarative Quellen werden nicht mehr
+gebraucht.
 
 ## Der Vertrag
 
@@ -138,7 +124,6 @@ für uns laufen lassen.
 |---|---|---|
 | Entry-Points (`pip install …`) | Beigesteuertes, versioniert, teilbar | ja |
 | Verzeichnis `data/plugins/` | Ausprobieren, lokale Anpassungen | ja |
-| Beschreibungsdateien | REST-Quellen ohne Code | perspektivisch nein |
 
 Beide Code-Wege landen in derselben Registry; `data/sources.yaml` bestimmt
 Auswahl und Reihenfolge. Geladen wird beim Start — das genügt und entspricht
@@ -155,8 +140,10 @@ Reload-Semantik für einen Gewinn, den man selten spürt.
 App. Wer selbst hostet, hat ohnehin ein Container-Image installiert, dem er
 vertraut — dieselbe Vertrauensentscheidung eine Stufe kleiner. Was die App
 schuldet: eine klare Ansage in der Dokumentation und **keine Automatik, die von
-selbst etwas nachlädt**. Der deklarative Weg umgeht das Risiko für den Großteil
-der Fälle.
+selbst etwas nachlädt**. Seit der deklarative Weg gestrichen ist, gilt das für
+**jedes** Plugin — es gibt keinen risikoarmen Nebenweg mehr, auf den man
+ausweichen könnte. Umso wichtiger sind die kuratierte Empfehlung und der
+Hinweis, nur zu installieren, was man geprüft hat.
 
 **Keine offene Feldmenge, zunächst.** Ein Plugin liefert eine Teilmenge der
 bekannten Felder; unbekannte werden protokolliert und verworfen. Grund: Bei acht
@@ -189,23 +176,88 @@ ETF-Quelle für außereuropäische Papiere. Die Redundanz ist scheinbar.
 | T-22 | Ketten und Schlüssel gehören in Konfiguration, nicht in die Composition-Root |
 | T-23 | Schlussstein — hängt an T-20, T-21, T-22 |
 
-Der deklarative Weg bekommt ein eigenes Ticket **nach** T-23: Vorher wüsste man
-nicht, wogegen man ihn baut. Er ist trotzdem der Regelfall — nur nicht der erste
-Bauschritt.
+Ein Ticket für deklarative Quellen entfällt — siehe „Die Entscheidung: nur
+Python".
 
-## Offene Punkte
+## Offene Entscheidungen
 
-- **Beschriftungen fremder Felder.** Ein Plugin kann keine Übersetzungen für
-  alle Sprachen liefern. Vorschlag: Rückfallkette App-Katalog → Plugin-Label in
-  der aktiven Sprache → Plugin-Label englisch → Feldname roh. Das ist eine
-  bewusste Ausnahme von „kein sichtbarer Text ohne Katalog-Eintrag" und braucht
-  eine Entscheidung.
-- **Wer schreibt Plugins?** Nur intern → Entry-Points entfallen, Verzeichnis
-  genügt. Auch Dritte → beide Wege, plus Vorlage-Repo.
-- **Konkreter Anbieter im Blick?** Bei Twelve Data (MIC-basiert) fällt T-21 fast
-  von selbst ab; bei EODHD kommt eine Zuordnungstabelle dazu.
+Aus der Codex-Review vom 2026-08-19 (`_tickets/codex-verification-2026-08-19-plugin-system-design.md`).
+Jede Zeile braucht eine Entscheidung, bevor T-21 bis T-23 umgesetzt werden.
+Die Empfehlung ist meine; die Entscheidung nicht.
+
+| # | Frage | Empfehlung |
+|---|---|---|
+| 1 | Kanonische Identität und Anbieter-Aliase | `(ticker, mic)` ist Identität; `symbol` wird `NULL`-fähig, verliert den Unique-Index und ist abgeleiteter Yahoo-Alias |
+| 2 | Historie beim Listingwechsel | Kursreihen invalidieren, manuelle Kennzahlen behalten. Offen: löschen oder archivieren — siehe T-19 |
+| 3 | Verträge für Quote, Daily, FX | vor T-22 ausformulieren; solange bleibt `0.x` |
+| 4 | Eigener `MetadataRequest` | ja — `ResolveRequest` kennt nur `preferred_mic`, nicht das aufgelöste Listing |
+| 5 | Herkunft und Stand je Metadatenfeld | zunächst **nicht** je Feld: feste Feldmenge, ein `source`, wie heute. Erst wenn zwei Quellen sich wirklich überlappen |
+| 6 | Aggregationsregeln der Ergebnisarten | `Unavailable` von irgendeiner zuständigen Quelle schlägt `NotFound` → 502. Sonst 404 |
+| 7 | Timeout-Modell für fremden Code | **kooperativ**, keine harte Garantie. Siehe unten |
+| 8 | Registry-Regeln (Entry-Point-Gruppe, Namen, Lifecycle, Versionsvergleich, Thread-Sicherheit) | mit T-23 festlegen, nicht vorher raten |
+| 9 | Installationsmodell für Docker/Unraid | abgeleitetes Image mit zusätzlichen `pip install`-Schritten; Verzeichnis-Plugins nur für Bibliotheken, die schon im Image sind |
+| 10 | Plugin-Tests im regulären Lauf | **erledigt** — `make test-plugin-api`, Teil von `make test` |
+
+### Zu 7 — der harte Timeout ist nicht umsetzbar
+
+T-23 verlangte, ein hängendes Plugin nach einer Zeitgrenze zu stoppen. Für
+synchron laufenden Python-Code im selben Prozess geht das nicht: Ein
+Future-Timeout lässt den **Aufrufer** zurückkehren, der Thread hängt weiter.
+Wiederholte Hänger erschöpfen den Threadpool; native Bibliotheken können den
+Prozess ganz blockieren.
+
+Zwei ehrliche Möglichkeiten:
+
+- **Eigene Worker-Prozesse** — ein hängender Aufruf lässt sich beenden. Preis:
+  IPC, Serialisierung, Prozess-Lebenszyklus.
+- **Kooperative Zeitgrenzen** — Plugins setzen ihre HTTP-Timeouts selbst, der
+  Vertrag verlangt es, der Contract-Test kann es nicht erzwingen. Ein
+  Schutzschalter verhindert *weitere* Aufrufe, nicht den laufenden.
+
+**Empfehlung: kooperativ**, und die fehlende Garantie ausdrücklich
+dokumentieren statt sie zu behaupten. Worker-Prozesse sind für eine
+selbstgehostete App mit wenigen Quellen unverhältnismäßig.
+
+### Zu 5 — der Widerspruch in der ersten Fassung
+
+Das Design sagte „unbekannte Felder werden verworfen", während `FieldSpec`
+Beschriftungen mitbringt, die nur für **neue** Felder einen Zweck haben. Beides
+zusammen geht nicht.
+
+Aufgelöst: Die Feldmenge bleibt vorerst geschlossen. `label_en`/`label_de`
+bleiben im Vertrag, weil sie nichts kosten und den Weg offenhalten — sie werden
+aber erst wirksam, wenn die generische Persistenz existiert. Bis dahin gewinnt
+der Katalog der App.
+
+### Zu 6 — was `is_configured()` nicht kann
+
+Sie liefert `bool` und damit keinen Grund, obwohl `/sources` einen anzeigen
+soll. Entweder ein strukturiertes Ergebnis oder eine zweite Diagnosemethode —
+mit T-19 zu entscheiden.
+
+Und: **OpenFIGI ohne Schlüssel ist nicht unkonfiguriert.** Der Dienst
+funktioniert anonym mit niedrigerem Limit (`app/providers/openfigi_provider.py:24-50`).
+Das Prüfkriterium in T-22 war falsch und ist korrigiert.
+
+### Zu 2 — Reihenfolge gegen Kosten
+
+Erste Fassung sagte beides: `sources.yaml` bestimmt die Reihenfolge, und `cost`
+steuert sie auch. Genau eine Regel gilt:
+
+1. Die ausdrückliche Reihenfolge in `sources.yaml` gewinnt immer.
+2. `cost` ist Information — für Anzeige und Warnung, nicht für Sortierung.
+3. Alphabetisch nur für Quellen, die nicht ausdrücklich konfiguriert sind.
+
+### Zu 13 der Review — ISIN-Land ist eine Heuristik
+
+Das ISIN-Präfix nennt die ausgebende Stelle, nicht den gewünschten Handelsplatz;
+ein Land kann mehrere Börsen haben, und ein irischer Fonds wird europaweit
+gehandelt. Die Kaskade in T-18 bleibt sinnvoll, gilt aber ausdrücklich als
+Rückfall-Heuristik — mit sichtbarer Abweichung von der Präferenz und sichtbarer
+Währung.
 
 ## Belege
+
 
 Alle Messungen vom 2026-08-19, nachstellbar über die Tickets. Zwei
 Einschränkungen in eigener Sache: Der Kanada-Befund stützt sich auf zwei ISINs,
