@@ -18,6 +18,13 @@ class FakeDaily:
     def get_daily(
         self, *, isin: str | None = None, symbol: str | None = None, period: str = "1m"
     ) -> list[DailyPoint]:
+        # Wie bei FakeService steuert das Praefix den Fehlerfall: XX = unbekannt,
+        # ZZ = Provider tot. Nur so lassen sich 404 und 502 unterscheiden.
+        kennung = isin or symbol or ""
+        if kennung.startswith("XX"):
+            raise InstrumentNotFoundError(kennung)
+        if kennung.startswith("ZZ"):
+            raise QuoteUnavailableError(kennung)
         return [
             DailyPoint(date="2026-07-10", close=160.0, currency="EUR"),
             DailyPoint(date="2026-07-13", close=162.0, currency="EUR"),
@@ -226,3 +233,70 @@ def test_liveness_bleibt_billig(client: TestClient, monkeypatch) -> None:
     monkeypatch.setattr(main_module, "get_cached_quote_service", _explodiert)
 
     assert client.get("/health").status_code == 200
+
+
+@pytest.mark.parametrize("unfug", ["../etc/passwd", "A" * 30, "AB CD", "A;B", "."])
+def test_unbrauchbare_symbole_werden_abgewiesen(client: TestClient, unfug) -> None:
+    """Symbole hatten weder Längen- noch Zeichengrenze.
+
+    Jede Zeichenkette ging damit an den Provider — und wurde bei Erfolg als
+    neues Instrument gespeichert. 422 sagt „das war keine Eingabe", 502 hätte
+    einen Ausfall bei Yahoo behauptet.
+    """
+    assert client.get("/quote", params={"symbol": unfug}).status_code == 422
+
+
+def test_symbole_werden_normalisiert(client: TestClient) -> None:
+    """Klein geschrieben ist dasselbe Papier — nicht ein zweites."""
+    response = client.get("/quote", params={"symbol": "vgwl.de"})
+
+    assert response.status_code == 200
+    assert response.json()["symbol"] == "VGWL.DE"
+
+
+@pytest.mark.parametrize("kaputt", ["2026-8-1", "01.08.2026", "gestern", "2026-13-01"])
+def test_unbrauchbare_zeitgrenzen_werden_abgewiesen(client: TestClient, kaputt) -> None:
+    """Die Abfrage vergleicht Zeitgrenzen lexikografisch gegen ISO-Zeitstempel.
+
+    Eine andere Schreibweise liefert dann klaglos einen falschen Bereich,
+    statt aufzufallen.
+    """
+    response = client.get("/quote/IE00B3RBWM25/history", params={"from": kaputt})
+
+    assert response.status_code == 422
+
+
+def test_verdrehtes_zeitfenster_wird_abgewiesen(client: TestClient) -> None:
+    """`from` nach `to` ist keine leere Antwort, sondern ein Eingabefehler."""
+    response = client.get(
+        "/quote/IE00B3RBWM25/history",
+        params={"from": "2026-08-01T00:00:00+00:00", "to": "2026-01-01T00:00:00+00:00"},
+    )
+
+    assert response.status_code == 422
+
+
+def test_gueltiges_zeitfenster_kommt_durch(client: TestClient) -> None:
+    """Die Gegenrichtung — sonst wäre die Prüfung ein stiller Totalausfall."""
+    response = client.get(
+        "/quote/IE00B3RBWM25/history",
+        params={"from": "2026-01-01", "to": "2026-12-31T23:59:59+00:00"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_unbekanntes_papier_ist_kein_providerausfall(client: TestClient) -> None:
+    """Die Daily-Route warf beides als 502 — Eingabefehler wie Upstream-Ausfall.
+
+    Ein Client konnte damit nicht unterscheiden, ob er die Anfrage korrigieren
+    oder es später erneut versuchen soll. Die normale Quote-Route trennt beides
+    seit jeher; die Daily-Route zieht nach.
+    """
+    assert client.get("/quote/XX0000000000/daily").status_code == 404
+    assert client.get("/quote/ZZ0000000000/daily").status_code == 502
+
+
+def test_unbekanntes_symbol_in_der_daily_route_ist_ein_404(client: TestClient) -> None:
+    assert client.get("/quote/by-symbol/XXTEST/daily").status_code == 404
+    assert client.get("/quote/by-symbol/ZZTEST/daily").status_code == 502
