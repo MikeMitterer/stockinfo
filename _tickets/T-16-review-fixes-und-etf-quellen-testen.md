@@ -2,18 +2,20 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend + Dashboard) | in-review | 45 min | Verifikation am laufenden System, kein Code | — |
+| StockInfo (Backend + Dashboard) | in-review | 15 min (nur noch UI) | Verifikation am laufenden System, kein Code | — |
 
 **Löst:** Vier Commits (`6ee6bbe`…`809c48a`) haben sechs Review-Befunde behoben
 und ETF-Metadaten auf zwei Quellen aufgeteilt. Die Unit-Tests decken die Logik
-ab, aber die Hälfte der Befunde lebt an Stellen, die kein Test erreicht: ein
-echtes Papier über die HTTP-API anlegen, der Knopf in der Zeile, der Container
-mit seiner Konfigurationsdatei. Genau dort saßen die Fehler.
+ab, aber die Hälfte der Befunde lebt an Stellen, die kein Test erreicht — genau
+dort saßen die Fehler.
+
+**Stand:** Die maschinell prüfbaren Zeilen sind durch (`./_tickets/T-16-smoke.sh --run`,
+11 von 12 grün). Offen sind die vier UI-Zeilen und ein neuer Befund (#5c).
 
 <!--
   Status: in-review — Code ist in master, die Mensch-Spalte fehlt.
-  Die AI-Spalte ist bewusst zurückhaltend: Was mit einem gefälschten
-  Quote-Provider lief, steht als ◑, nicht als ✅.
+  Das Prüf-Script startet einen eigenen Server auf Port 8765 mit temporärer DB;
+  die Arbeits-Datenbank bleibt unberührt.
 -->
 
 ---
@@ -24,43 +26,30 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 ◑ teilweise (Fußnote) · ➖ keine Live-Verifikation (nur Unit/Review).
 `AI` = nur KI · `Human` = nur Mensch (nie überschreiben).
 
-**Voraussetzung:** Stack läuft (`make dev-up`) — Backend `:8000`, Dashboard `:5173`.
+**Voraussetzung für die UI-Zeilen:** Stack läuft (`make dev-up`) — Backend `:8000`,
+Dashboard `:5173`. Die Script-Zeilen brauchen nur `./_tickets/T-16-smoke.sh --run`.
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | `curl` auf ein Krypto-Papier, leere DB (Block unten) | 200 statt 500 — früher `Incorrect number of bindings supplied` | ◑ [^1] | |
-| 2 | Assets → US-ETF aufnehmen (`US9229087690`) | Anbieter steht da („Vanguard"), Quelle sagt `yfinance`, TER bleibt leer | ◑ [^2] | |
-| 3 | dieselbe Zeile → Detailbereich → TER von Hand eintragen, dann Refresh | der eingetragene Wert bleibt stehen und wird nicht verdeckt | ➖ [^3] | |
-| 4 | Assets → kanadisches Papier (`CA46434V6817`, Symbol `XIC.TO`) | Anbieter „BlackRock Asset Management Canada Ltd" | ◑ [^2] | |
-| 5 | Assets → europäischer ETF (`IE00B4L5Y983`) | unverändert: TER, Replikation, Domizil da, Quelle `yfinance+justetf` | ◑ [^2] | |
-| 6 | Refresh-Knopf an einer **ETF-Zeile ohne ISIN-Spalte**, danach Detailbereich | TER/Anbieter werden tatsächlich aktualisiert statt still zu bleiben | ➖ [^4] | |
-| 7 | Ein Papier zweimal abrufen, dazwischen TTL abwarten (oder `CACHE_TTL_HOURS=0`) | Börse und Währung bleiben gleich — kein Sprung von `.DE`/EUR nach `.L`/GBP | ◑ [^5] | |
-| 8 | „Alles aktualisieren" in der Kopfzeile drücken | Balken läuft an der **Oberkante der Seite**, über der Kopfzeile — nicht darunter | ◑ [^6] | |
-| 9 | `make up` (Container), danach `docker logs stockinfo` | Container startet; **kein** `ValidationError` zu `strict_exchange` | ➖ [^7] | |
-| 10 | Ein ETF, dessen Kennzahlen gepflegt sind → warten bis `METADATA_TTL_DAYS` greift | justETF wird erneut gefragt, statt nach dem ersten Kontakt zu verstummen | ➖ [^8] | |
-| 11 | `make test` | Backend 244, Dashboard 230, `ruff` sauber | ✅ [^9] | |
+| 1 | Script `#1` | Krypto-Papier auf frischer DB legt an statt mit 500 abzustürzen | ✅ [^1] | |
+| 2 | Script `#2a–c` | US-ETF: Anbieter da, Quelle `yfinance`, **kein** geratenes TER | ✅ [^2] | |
+| 3 | Assets → US-ETF → Detailbereich → TER eintragen, dann Refresh | der eingetragene Wert bleibt stehen und wird nicht verdeckt | ➖ [^3] | |
+| 4 | Script `#4a/b` | kanadisches Papier: per Symbol ja, per ISIN nicht auflösbar | ⚠️ [^4] | |
+| 5 | Script `#5a/b` | EU-ETF unverändert: TER da, `yfinance+justetf` gespeichert | ✅ [^5] | |
+| 5c | Script `#5c` | **Live-Antwort zeigt `ter: null`, obwohl die DB 0.2 hält** | ❌ [^6] | |
+| 6 | Refresh-Knopf an einer ETF-Zeile, danach Detailbereich | TER/Anbieter werden tatsächlich aktualisiert | ◑ [^7] | |
+| 7 | Script `#7` | Börse und Währung bleiben über zwei Live-Abrufe gleich | ✅ [^8] | |
+| 8 | „Alles aktualisieren" in der Kopfzeile drücken | Balken läuft an der **Oberkante der Seite**, über der Kopfzeile | ◑ [^9] | |
+| 9 | `make up`, danach `docker logs stockinfo` | Container startet; **kein** `ValidationError` zu `strict_exchange` | ➖ [^10] | |
+| 10 | ETF mit gepflegten Kennzahlen, bis `METADATA_TTL_DAYS` greift | justETF wird erneut gefragt statt zu verstummen | ➖ [^11] | |
+| 11 | Script `#11` | Backend 244 grün | ✅ [^12] | |
 
 ```bash
-# #1 — Krypto-Papier auf frischer DB: früher 500, jetzt 200
-curl -s -o /dev/null -w "%{http_code}\n" "http://localhost:8000/quote/by-symbol/BTC-USD"
+# Zeilen #1, #2, #4, #5, #6, #7, #11 in einem Lauf
+./_tickets/T-16-smoke.sh --run
 
-# #2 — US-ETF: Anbieter da, Quelle yfinance, ter leer
-curl -s "http://localhost:8000/quote/US9229087690" | python3 -m json.tool
-
-# #4 — kanadischer ETF
-curl -s "http://localhost:8000/quote/by-symbol/XIC.TO" | python3 -m json.tool
-
-# #5 — europäischer ETF, muss unverändert vollständig sein
-curl -s "http://localhost:8000/quote/IE00B4L5Y983" | python3 -m json.tool
-
-# #7 — zweimal hintereinander, Symbol und Währung vergleichen
-curl -s "http://localhost:8000/quote/IE00BCRY6557" | python3 -c "import sys,json; d=json.load(sys.stdin); print(d['symbol'], d['currency'], d['exchange'])"
-
-# #9 — Container
+# #9 — Container (nicht im Script: baut ein Image und greift auf Docker zu)
 make build && make up && sleep 3 && docker logs stockinfo 2>&1 | tail -20
-
-# #11 — beide Suiten
-make test
 ```
 
 ---
@@ -76,51 +65,67 @@ make test
 | `5ec9c37` | Fünf Review-Befunde: Insert-Absturz, wandernde Börse im Lesepfad, Metadaten-Zeitstempel, Symbol-Refresh, Gattungswahl im Resolver |
 | `809c48a` | `is_responsible` trennt Zuständigkeit vom Ergebnis; `YFinanceEtfEnricher` + `CompositeEtfEnricher`; `EtfDetails.source` |
 
-**Offene Kante, bewusst so gelassen**
+### Neuer Befund #5c — die Antwort hält den Stand nicht
+
+Kurs-TTL abgelaufen, Metadaten-TTL noch frisch: `_build` fragt justETF dann
+nicht — richtig, der Stand ist jung. Die frische Antwort hat deshalb keine
+ETF-Felder, und `_save_fresh` reicht **genau diese Antwort** an den Client
+durch, statt den gespeicherten Stand zu liefern. Gemessen: `ter` in der Antwort
+`null`, in der Datenbank `0.2`.
+
+Die Daten sind nicht verloren, nur unsichtbar — beim nächsten Cache-Treffer sind
+sie wieder da. Der Weg wäre, in `_save_fresh` den gespeicherten Stand über die
+frische Antwort zu legen, so wie `_with_overrides` es für die manuellen Werte
+tut. **Vorbestehend**, nicht durch die vier Commits verursacht; die zweite
+ETF-Quelle macht ihn nur sichtbarer.
+
+### Grenzfall #4 — kanadische Papiere
+
+Über die ISIN scheitert schon die Auflösung: OpenFIGI kennt kein Listing
+(`openfigi_resolve_empty`), Yahoos ISIN-Suche liefert nichts
+(`resolve_isin_empty`) — auch mit `DEFAULT_EXCHANGE=XTSE`. Über das Symbol
+(`XIC.TO`) kommt das Papier herein, aber yfinance nennt dafür keine ISIN (`'-'`),
+und ohne sie greift der konservative Pfad: kein Anbieter, `metadata_complete`
+bleibt falsch.
+
+Der Enricher bräuchte die ISIN gar nicht zum Holen — nur um die Zuständigkeit zu
+bestimmen. Das ist der Punkt, an dem das Resolver-/Quellen-Konzept hakt.
+
+### Offene Kante, bewusst so gelassen
 
 Für nicht-europäische ETFs kostet die Anreicherung einen zusätzlichen
-Yahoo-Aufruf (`.info`), zusätzlich zu dem, den `YFinanceProvider.fetch_quote`
-ohnehin holt. Er läuft nur, wenn `METADATA_TTL_DAYS` abgelaufen ist — also
-selten. Vermeidbar wäre er, indem `RawQuote` den `fundFamily` mitbringt; das
-vermischt aber Kurs- und Metadatenpfad. Wenn #2 und #4 spürbar träge sind, ist
-das der Hebel.
+Yahoo-Aufruf (`.info`), zusätzlich zu dem aus `fetch_quote`. Er läuft nur nach
+Ablauf von `METADATA_TTL_DAYS`. Vermeidbar, indem `RawQuote` den `fundFamily`
+mitbringt — das vermischt aber Kurs- und Metadatenpfad.
 
-**Nicht abgedeckt**
-
-`is_responsible` entscheidet allein über das ISIN-Präfix. Ein japanisches oder
-australisches Papier fällt damit ebenfalls an Yahoo — gewollt, aber gegen echte
-Papiere von dort ungetestet.
-
-[^1]: Auf Repository-Ebene reproduziert und gefixt
-    (`test_erster_insert_mit_unvollstaendigen_metadaten`); der Fehler war exakt
-    `Incorrect number of bindings supplied. The current statement uses 17, and
-    there are 8 supplied.` **Nicht** über die laufende HTTP-Route geprüft.
-[^2]: Mit der echten Container-Verdrahtung (`_build_etf_enricher`) und echten
-    Yahoo-Antworten gemessen: VTI → Vanguard/`yfinance`/ter leer, XIC.TO →
-    BlackRock Asset Management Canada Ltd, EUNL.DE → iShares/`yfinance+justetf`/
-    ter 0.2. Der Kursteil war dabei gefälscht, die Papiere kamen also nicht über
-    die HTTP-API herein.
+[^1]: Live über die HTTP-Route auf frischer DB: `GET /quote?symbol=BTC-USD` → 200.
+    Vorher `Incorrect number of bindings supplied. The current statement uses 17,
+    and there are 8 supplied.`
+[^2]: `GET /quote/US9229087690` → `provider=Vanguard`, `source=yfinance`,
+    `ter=null`. Echte Yahoo-Antwort, kein Fake.
 [^3]: Nur aus `apply_overrides` abgeleitet („füllt nur Lücken"), nicht in der
-    Oberfläche durchgespielt. Der Grund, warum TER aus Yahoo bewusst *nicht*
+    Oberfläche durchgespielt. Der Grund, warum TER aus Yahoo bewusst nicht
     übernommen wird — ein gelieferter Wert verdeckt einen eingetragenen.
-[^4]: Unit-getestet (`test_refresh_per_symbol_reicht_die_gespeicherte_zeile_durch`),
-    aber nie am Knopf in der Oberfläche.
-[^5]: Mit einem Stub reproduziert, der bei jeder Auflösung eine andere Börse
-    liefert (`_WanderndeAufloesung`). Gegen echtes Yahoo nicht nachstellbar, weil
-    der Sprung dort nur gelegentlich auftritt.
-[^6]: Im Browser gemessen — Balken `y=0..3`, Kopfzeile `y=0..56`, z-index 25
-    gegen 10. Die Klasse `active` habe ich dabei von Hand gesetzt; ein echter
-    Lauf von „Alles aktualisieren" stand nicht dahinter.
-[^7]: Nur der Weg über Make ist geprüft (`make test` läuft jetzt). Der Container
-    bekommt seine Konfiguration über `--env-file` und übergibt Werte wörtlich —
-    der Trailing-Whitespace, der über Make stolperte, kann dort weiterhin
-    zuschlagen. Das ist der eigentliche Grund für diese Zeile.
-[^8]: Die TTL lässt sich in der Zeit nicht abkürzen, ohne den Zeitstempel in der
-    DB von Hand zu setzen. Logik ist unit-getestet
-    (`test_unvollstaendige_antwort_setzt_den_metadaten_zeitstempel_nicht_hoch`).
-[^9]: `make test` → 244 passed (Backend) und 230 passed (Dashboard),
-    `ruff check app tests` → All checks passed. Working Tree sauber, alles in
-    `master`.
+[^4]: Der Ist-Zustand ist geprüft, nicht der Wunschzustand: `#4a` bestätigt den
+    Symbol-Weg (CAD), `#4b` friert die Lücke bei der ISIN-Auflösung als 404 ein.
+    Siehe Abschnitt oben.
+[^5]: `ter=0.2` in der Antwort und `source=yfinance+justetf` in der gespeicherten
+    Zeile (`GET /instruments`).
+[^6]: Neuer Befund, siehe Abschnitt oben. Das Script meldet ihn als Fehlschlag —
+    der Lauf bleibt rot, bis er behoben ist.
+[^7]: Der API-Pfad ist live geprüft (`POST /refresh/by-symbol/EUNL.DE` liefert
+    `ter=0.2`), der Knopf in der Oberfläche nicht.
+[^8]: Zwei Live-Abrufe hintereinander bei `CACHE_TTL_HOURS=0`, beide
+    `EUNL.DE|EUR|Xetra`.
+[^9]: Im Browser gemessen — Balken `y=0..3`, Kopfzeile `y=0..56`, z-index 25
+    gegen 10. Die Klasse `active` war dabei von Hand gesetzt; ein echter Lauf
+    von „Alles aktualisieren" stand nicht dahinter.
+[^10]: Nur der Weg über Make ist geprüft. Der Container bekommt seine
+    Konfiguration über `--env-file` und übergibt Werte wörtlich — der
+    Trailing-Whitespace, der über Make stolperte, kann dort weiterhin zuschlagen.
+[^11]: Die TTL lässt sich in der Zeit nicht abkürzen, ohne den Zeitstempel von
+    Hand zu setzen. Logik ist unit-getestet.
+[^12]: 244 passed. Dashboard (230) und `ruff` laufen über `make test` mit.
 
 ---
 
