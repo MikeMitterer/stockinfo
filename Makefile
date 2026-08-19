@@ -5,8 +5,12 @@ SHELL := /bin/bash
 WORKSPACE    := $(realpath $(shell pwd))
 PROJECT_NAME := $(notdir $(WORKSPACE))
 
+# .env nur für Make selbst (PORT, HOST, …) — bewusst **ohne** `export`.
+# Ein pauschales `export` reicht die Werte 1:1 an jeden Kindprozess weiter,
+# inklusive Trailing-Whitespace, den Make im Gegensatz zu python-dotenv nicht
+# abschneidet ('false   ' ist für pydantic kein Boolean). Die App liest .env
+# ohnehin selbst (pydantic-settings), Docker via --env-file.
 -include .env
-export
 
 include ${DEV_MAKE}/colours.mk
 include ${DEV_MAKE}/tools.mk
@@ -16,6 +20,7 @@ PROJECT_TOOLS ?= $(WORKSPACE)/.libs/ProjectTools/src
 
 VENV    := .venv
 UVICORN := $(VENV)/bin/uvicorn
+PYTEST  := $(VENV)/bin/pytest
 
 APP_MODULE ?= app.main:app
 HOST       ?= 0.0.0.0
@@ -45,7 +50,7 @@ help: ## Alle verfügbaren Befehle anzeigen
 	@grep -hE '^(##@|[a-zA-Z0-9_-]+:.*?## )' $(MAKEFILE_LIST) | \
 	  awk 'BEGIN {FS = ":.*?## "}; \
 	    /^##@/ { printf "\n$(THEME_INDENT_GROUP)$(THEME_COLOR_GROUP)%s$(RESET)\n", substr($$0, 4); next }; \
-	    /^[^#]/ { printf "$(THEME_INDENT_TARGET)$(THEME_COLOR_TARGET)%-12s $(THEME_COLOR_DESC)%s$(RESET)\n", $$1, $$2 }'
+	    /^[^#]/ { printf "$(THEME_INDENT_TARGET)$(THEME_COLOR_TARGET)%-16s $(THEME_COLOR_DESC)%s$(RESET)\n", $$1, $$2 }'
 	@echo
 
 .PHONY: hints
@@ -116,6 +121,21 @@ stop: ## Hintergrund-Server stoppen
 logs: ## Server-Logs folgen
 	@tail -f $(LOG_FILE)
 
+# ─── Tests ────────────────────────────────────────────────────────────────────
+
+##@ Tests
+
+.PHONY: test
+test: test-backend test-dashboard ## Alle Tests — Backend + Dashboard
+
+.PHONY: test-backend
+test-backend: ## Backend-Tests (pytest)  [ARGS="-k name"]
+	$(PYTEST) -q $(ARGS)
+
+.PHONY: test-dashboard
+test-dashboard: ## Dashboard-Tests (vitest)
+	npm --prefix dashboard test
+
 # ─── Docker ───────────────────────────────────────────────────────────────────
 
 ##@ Docker
@@ -142,12 +162,19 @@ down: ## Container stoppen und entfernen
 docker-logs: ## Container-Logs folgen
 	docker logs -f $(CONTAINER)
 
+# `all` ist kein drittes Ziel neben x86 und arm, sondern ein anderer Ablauf:
+# buildx baut und pusht multi-arch in einem Schritt. Danach gibt es kein
+# `.last-build-tag`, und ein anschliessendes `make push` findet entweder nichts
+# oder — schlimmer — den Tag eines früheren Single-Arch-Builds und pusht den.
 .PHONY: build
-build: ## Docker-Image bauen (PLATFORM=x86|arm|all, Default x86)
+build: ## Docker-Image bauen (PLATFORM=x86|arm, Default x86; all = multi-arch inkl. Push)
 	docker/build.sh --build $(PLATFORM)
+	@if [[ "$(PLATFORM)" == "all" ]]; then \
+		echo -e "  $(YELLOW)⚠$(RESET) PLATFORM=all hat bereits gepusht — $(WHITE)make push$(RESET) entfällt"; \
+	fi
 
 .PHONY: push
-push: ## Image in Registry pushen (TARGET=ghcr|dockerhub|ecr, Default dockerhub)
+push: ## Image in Registry pushen (TARGET=ghcr|dockerhub|ecr, Default dockerhub; nicht nach PLATFORM=all)
 	docker/build.sh --push
 
 # ─── Status ───────────────────────────────────────────────────────────────────
