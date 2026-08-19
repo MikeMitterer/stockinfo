@@ -241,3 +241,46 @@ def test_eine_aktie_gilt_als_vollstaendig() -> None:
     )
 
     assert service.get_quote_by_isin("US0378331005").metadata_complete is True
+
+
+def test_unbekannte_gattung_gilt_nicht_als_vollstaendig() -> None:
+    """Ohne Gattung weiß die Antwort nichts über die ETF-Felder — und sagt das.
+
+    Der ETF-Zweig entscheidet über `metadata_complete`; wird er übersprungen,
+    blieb das Feld auf seiner Vorgabe ``True``, und das Repository durfte den
+    gepflegten justETF-Stand mit nichts überschreiben. Yahoo liefert nicht
+    immer einen ``quote_type``, und der Resolver ist nicht auf jedem Weg dabei
+    — dann steht hier ``None``, und „vollständig" wäre eine Behauptung.
+    """
+    ohne_typ = RawQuote(
+        symbol="VGWL.DE",
+        price=160.98,
+        quote_time="2026-07-12T17:35:00+00:00",
+        currency="EUR",
+        type=None,
+    )
+    service = QuoteService(
+        FakeQuoteProvider(ohne_typ),
+        FakeEtfProvider(EtfDetails(ter=0.19, provider="Vanguard")),
+        FakeResolver(ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25")),
+    )
+
+    assert service.get_quote_by_isin("IE00B3RBWM25").metadata_complete is False
+
+
+def test_etf_ohne_isin_gilt_nicht_als_vollstaendig() -> None:
+    """justETF wird über die ISIN gefragt — ohne sie ist nichts zu holen."""
+    etf_ohne_isin = RawQuote(
+        symbol="VGWL.DE",
+        price=160.98,
+        quote_time="2026-07-12T17:35:00+00:00",
+        currency="EUR",
+        type="etf",
+    )
+    service = QuoteService(
+        FakeQuoteProvider(etf_ohne_isin),
+        FakeEtfProvider(EtfDetails(ter=0.19)),
+        FakeResolver(ResolvedInstrument(symbol="VGWL.DE")),
+    )
+
+    assert service.get_quote_by_symbol("VGWL.DE").metadata_complete is False

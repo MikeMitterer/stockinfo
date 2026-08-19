@@ -196,16 +196,29 @@ class QuoteService:
             fetched_at=datetime.now(timezone.utc).isoformat(),
         )
 
-        if instrument_type == "etf" and isin:
+        if instrument_type == "etf":
             # Die Antwort weiß nur dann über die ETF-Extras Bescheid, wenn die
             # Anreicherung gelaufen ist **und** geliefert hat. Sonst darf sie
             # den gespeicherten Stand nicht ersetzen — siehe
-            # `QuoteResponse.metadata_complete`. Übersprungen und
-            # fehlgeschlagen sind hier dasselbe: In beiden Fällen weiß diese
-            # Antwort nichts.
+            # `QuoteResponse.metadata_complete`. Übersprungen, ohne ISIN und
+            # fehlgeschlagen sind hier dasselbe: In allen drei Fällen weiß
+            # diese Antwort nichts.
             response.metadata_complete = (
-                self._enrich_etf(response, isin) if enrich_etf else False
+                self._enrich_etf(response, isin) if (enrich_etf and isin) else False
             )
+        elif instrument_type is None:
+            # Ohne Gattung lief der ETF-Zweig gar nicht — `metadata_complete`
+            # blieb dann auf seiner Vorgabe `True`, und das Repository durfte
+            # provider, ter, replication, Fondsgröße, -domizil, -währung und
+            # source mit nichts überschreiben. yfinance liefert nicht immer
+            # einen `quote_type`, und der Resolver ist nicht auf jedem Weg
+            # dabei; „ich weiß nichts über die ETF-Felder" ist dann die
+            # ehrlichere Aussage als „vollständig".
+            #
+            # Eine bekannte Gattung außer `etf` bleibt bewusst vollständig: Da
+            # gibt es nichts anzureichern und also nichts zu schützen — sonst
+            # bekäme eine Aktie ihre Metadaten nie wieder aktualisiert.
+            response.metadata_complete = False
         return response
 
     def _enrich_etf(self, response: QuoteResponse, isin: str) -> bool:
