@@ -65,10 +65,11 @@ Yahoo Finance, JSON export).
 - **Rich data** — besides price and timestamp: name, currency, volume, volatility,
   and for ETFs TER, provider, replication method, fund size, fund domicile,
   fund currency and accumulating/distributing.
-- **Fill the gaps yourself** — whatever justETF does not deliver can be entered by
+- **Fill the gaps yourself** — whatever the sources do not deliver can be entered by
   hand in the expandable detail area of a row. The source always wins: a manual
   value fills a gap, it never overwrites. It stays stored while the source covers
-  it and applies again as soon as the source goes quiet.
+  it and applies again as soon as the source goes quiet. This is the intended route
+  for TER and fund size of non-European ETFs, which no free source states reliably.
 - **Dashboard** — overview with column sorting, docked price chart, 8 themes,
   German/English UI, exchange legend, profile links, JSON export.
 
@@ -82,9 +83,18 @@ The app combines three **free** data sources:
 
 | Source | Used for |
 |---|---|
-| **yfinance** (Yahoo Finance) | price, currency, volume, name, EOD closes (basis of the computed volatility) — stocks & ETFs, EU & US |
-| **justETF** | ETF extras: TER, provider, replication, fund size, 1-year volatility, distribution policy |
+| **yfinance** (Yahoo Finance) | price, currency, volume, name, EOD closes (basis of the computed volatility) — stocks & ETFs, EU & US. Also the fund provider for **non-European ETFs**, which justETF does not list |
+| **justETF** | ETF extras for **European** (UCITS) funds: TER, provider, replication, fund size, 1-year volatility, distribution policy |
 | **OpenFIGI** | resolves an ISIN to the listing at your preferred exchange (default: Xetra → EUR) |
+
+**ETFs outside Europe.** justETF is a database of European UCITS funds, so a US or
+Canadian ETF finds nothing there. For those, Yahoo supplies the fund provider —
+and deliberately nothing else: it reports the expense ratio in two fields with two
+different units (`0.03` vs `0.0003` for the same fund) and the fund size in local
+currency, while this app stores millions of EUR. A wrong number would be worse than
+none, because a value from a source *hides* one you entered by hand instead of
+leaving the gap open. So TER, fund size and domicile stay empty for those funds —
+enter them yourself and they stay put.
 
 **A note on currency:** the exchange suffix selects the exchange, not the currency —
 the currency always comes from the live quote. Example: the same ISIN trades on

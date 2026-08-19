@@ -59,17 +59,36 @@ def is_european_isin(isin: str) -> bool:
 class JustEtfProvider:
     """Reichert ETF-Daten anhand der ISIN über justETF (Scraping) an."""
 
-    def fetch_etf(self, isin: str) -> EtfDetails | None:
+    def is_responsible(self, isin: str) -> bool:
+        """Führt justETF dieses Papier überhaupt?
+
+        justETF ist eine Datenbank europäischer UCITS-Fonds. Für ein Papier
+        mit US-, kanadischem oder sonstigem außereuropäischem Domizil gibt es
+        dort nichts — und damit auch keinen gepflegten Stand, den eine leere
+        Antwort schützen müsste.
+
+        Args:
+            isin: ISIN des Wertpapiers.
+
+        Returns:
+            ``True`` bei europäischem Domizil.
+        """
+        return is_european_isin(isin)
+
+    def fetch_etf(self, isin: str, symbol: str | None = None) -> EtfDetails | None:
         """Holt ETF-Zusatzdaten zu einer ISIN.
 
         Args:
             isin: ISIN des ETFs.
+            symbol: Wird nicht gebraucht — justETF arbeitet über die ISIN. Das
+                Argument steht nur im Protokoll, weil Yahoo als zweite Quelle
+                ohne Symbol nichts abfragen kann.
 
         Returns:
             EtfDetails oder ``None``, wenn justETF nichts liefert bzw.
             fehlschlägt.
         """
-        if not is_european_isin(isin):
+        if not self.is_responsible(isin):
             # Nicht-europäische ISIN → justETF hat garantiert nichts, kein Scrape.
             logger.debug("justetf_skipped_non_european", isin=isin)
             return None
@@ -98,6 +117,7 @@ class JustEtfProvider:
             name=overview.get("name"),
             volatility=self._as_float(overview.get("volatility_1y")),
             accumulating=self._as_accumulating(overview.get("distribution_policy")),
+            source="yfinance+justetf",
         )
 
     @staticmethod

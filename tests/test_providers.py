@@ -3,9 +3,13 @@
 import pytest
 
 import app.providers.justetf_provider as justetf_module
+import app.providers.yfinance_etf_provider as yfinance_etf_module
 import app.providers.yfinance_provider as yfinance_module
+from app.providers.base import EtfDetails
+from app.providers.composite_etf import CompositeEtfEnricher
 from app.providers.justetf_provider import JustEtfProvider
 from app.providers.openfigi_provider import OpenFigiClient
+from app.providers.yfinance_etf_provider import YFinanceEtfEnricher
 from app.providers.yfinance_provider import YFinanceProvider
 
 
@@ -330,3 +334,153 @@ def test_brauchbarer_kurs_kommt_durch(monkeypatch) -> None:
     assert quote is not None
     assert quote.price == 160.98
     assert YFinanceProvider().fetch_fx_rate("EUR", "USD") == 160.98
+
+
+# ─── yfinance als ETF-Quelle (nicht-europäische Papiere) ──────────────────────
+
+
+class _FakeFundsTicker:
+    """Ersetzt ``yf.Ticker`` für den ETF-Enricher."""
+
+    def __init__(self, family: str | None = "Vanguard", boom: bool = False) -> None:
+        self._family = family
+        self._boom = boom
+
+    @property
+    def info(self) -> dict:
+        if self._boom:
+            raise RuntimeError("Yahoo antwortet nicht")
+        return {"fundFamily": self._family, "quoteType": "ETF", "currency": "USD"}
+
+
+def test_yfinance_etf_ist_fuer_europaeische_isins_nicht_zustaendig() -> None:
+    """Dort führt justETF das Papier — zwei Quellen für dasselbe Feld wären eine zu viel."""
+    enricher = YFinanceEtfEnricher()
+
+    assert enricher.is_responsible("IE00B4L5Y983") is False
+    assert enricher.is_responsible("DE0007164600") is False
+
+
+def test_yfinance_etf_ist_fuer_us_und_kanada_zustaendig() -> None:
+    enricher = YFinanceEtfEnricher()
+
+    assert enricher.is_responsible("US9229087690") is True
+    assert enricher.is_responsible("CA46434V6817") is True
+
+
+def test_yfinance_etf_liefert_den_anbieter(monkeypatch) -> None:
+    """Der Anbieter kommt verlässlich — mehr wird bewusst nicht übernommen.
+
+    `ter` und `fund_size` bleiben leer: yfinance nennt die Kostenquote je nach
+    Feld als Prozent (0.03) oder als Anteil (0.0003), und das Fondsvolumen in
+    Landeswährung, während das Modell Mio. EUR erwartet. Ein falscher Wert wäre
+    hier schlimmer als keiner — er verdeckt einen von Hand nachgetragenen,
+    statt die Lücke offen zu lassen (siehe `apply_overrides`).
+    """
+    monkeypatch.setattr(
+        yfinance_etf_module.yf, "Ticker", lambda symbol: _FakeFundsTicker("Vanguard")
+    )
+
+    details = YFinanceEtfEnricher().fetch_etf("US9229087690", symbol="VTI")
+
+    assert details is not None
+    assert details.provider == "Vanguard"
+    assert details.ter is None
+    assert details.fund_size is None
+    assert details.source == "yfinance"
+
+
+def test_yfinance_etf_ohne_anbieter_ist_trotzdem_eine_antwort(monkeypatch) -> None:
+    """„Abgefragt, nichts gefunden" ist eine Aussage — „nicht erreichbar" nicht.
+
+    Nur der Unterschied zwischen beiden entscheidet, ob `metadata_complete`
+    trägt. Käme hier ``None`` zurück, bliebe ein US-ETF ohne Anbieterangabe
+    dauerhaft unvollständig und damit ohne `source`.
+    """
+    monkeypatch.setattr(
+        yfinance_etf_module.yf, "Ticker", lambda symbol: _FakeFundsTicker(None)
+    )
+
+    details = YFinanceEtfEnricher().fetch_etf("US9229087690", symbol="VTI")
+
+    assert details is not None
+    assert details.provider is None
+
+
+def test_yfinance_etf_fehler_liefert_none(monkeypatch) -> None:
+    monkeypatch.setattr(
+        yfinance_etf_module.yf, "Ticker", lambda symbol: _FakeFundsTicker(boom=True)
+    )
+
+    assert YFinanceEtfEnricher().fetch_etf("US9229087690", symbol="VTI") is None
+
+
+def test_yfinance_etf_ohne_symbol_liefert_nichts(monkeypatch) -> None:
+    """Yahoo kennt keine ISINs — ohne Symbol ist nichts abzufragen."""
+    monkeypatch.setattr(
+        yfinance_etf_module.yf, "Ticker", lambda symbol: _FakeFundsTicker("Vanguard")
+    )
+
+    assert YFinanceEtfEnricher().fetch_etf("US9229087690") is None
+
+
+# ─── Zusammenspiel der ETF-Quellen ────────────────────────────────────────────
+
+
+class _StubEnricher:
+    """Zuständigkeit und Antwort getrennt vorgebbar."""
+
+    def __init__(self, responsible: bool, details: EtfDetails | None) -> None:
+        self._responsible = responsible
+        self._details = details
+        self.gefragt = 0
+
+    def is_responsible(self, isin: str) -> bool:
+        return self._responsible
+
+    def fetch_etf(self, isin: str, symbol: str | None = None) -> EtfDetails | None:
+        self.gefragt += 1
+        return self._details
+
+
+def test_composite_fragt_nur_die_zustaendige_quelle() -> None:
+    europaeisch = _StubEnricher(True, EtfDetails(provider="iShares"))
+    uebersee = _StubEnricher(False, EtfDetails(provider="Vanguard"))
+    composite = CompositeEtfEnricher(europaeisch, uebersee)
+
+    details = composite.fetch_etf("IE00B4L5Y983")
+
+    assert details is not None
+    assert details.provider == "iShares"
+    assert uebersee.gefragt == 0  # nicht zuständig, also gar nicht erst gefragt
+
+
+def test_composite_ist_zustaendig_wenn_eine_quelle_es_ist() -> None:
+    composite = CompositeEtfEnricher(
+        _StubEnricher(False, None), _StubEnricher(True, EtfDetails())
+    )
+
+    assert composite.is_responsible("US9229087690") is True
+
+
+def test_composite_ohne_zustaendige_quelle_meldet_das_ehrlich() -> None:
+    """Damit `_build` weiß: Hier gibt es nichts zu holen und nichts zu schützen."""
+    composite = CompositeEtfEnricher(
+        _StubEnricher(False, None), _StubEnricher(False, None)
+    )
+
+    assert composite.is_responsible("JP3633400001") is False
+    assert composite.fetch_etf("JP3633400001") is None
+
+
+def test_composite_geht_bei_ausfall_zur_naechsten_zustaendigen_quelle() -> None:
+    """Ein Ausfall der ersten Quelle darf eine zweite nicht verhindern."""
+    ausgefallen = _StubEnricher(True, None)
+    ersatz = _StubEnricher(True, EtfDetails(provider="Vanguard"))
+    composite = CompositeEtfEnricher(ausgefallen, ersatz)
+
+    details = composite.fetch_etf("US9229087690")
+
+    assert details is not None
+    assert details.provider == "Vanguard"
+    assert ausgefallen.gefragt == 1

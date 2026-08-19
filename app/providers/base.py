@@ -56,6 +56,11 @@ class EtfDetails:
     name: str | None = None
     volatility: float | None = None  # 1-Jahres-Volatilität in % (justETF)
     accumulating: bool | None = None  # Thesaurierend (True) vs. Ausschüttend (False)
+    # Woher dieser Stand kommt — die Quelle beschriftet sich selbst, statt dass
+    # der aufrufende Service sie rät. Seit es mehr als eine ETF-Quelle gibt,
+    # wäre ein fest verdrahtetes "yfinance+justetf" für die Hälfte der Papiere
+    # schlicht falsch.
+    source: str | None = None
 
 
 class InstrumentResolver(Protocol):
@@ -71,6 +76,17 @@ class QuoteProvider(Protocol):
 
 
 class EtfEnricher(Protocol):
-    """Liefert ETF-Zusatzdaten zu einer ISIN."""
+    """Liefert ETF-Zusatzdaten zu einer ISIN.
 
-    def fetch_etf(self, isin: str) -> EtfDetails | None: ...
+    Die beiden Methoden beantworten bewusst **verschiedene** Fragen. Eine
+    leere Antwort von `fetch_etf` heißt „gerade nichts bekommen" und schützt
+    den gespeicherten Stand; `is_responsible` sagt dagegen, ob diese Quelle für
+    das Papier überhaupt zuständig ist. Ohne die Trennung gilt für einen Nutzer
+    außerhalb Europas jeder ETF dauerhaft als unvollständig — justETF führt nur
+    europäische Papiere, und „nicht zuständig" käme als derselbe leere Wert an
+    wie „ausgefallen".
+    """
+
+    def is_responsible(self, isin: str) -> bool: ...
+
+    def fetch_etf(self, isin: str, symbol: str | None = None) -> EtfDetails | None: ...

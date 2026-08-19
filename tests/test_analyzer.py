@@ -16,7 +16,10 @@ class _FakeEtf:
     def __init__(self, details: EtfDetails | None) -> None:
         self._details = details
 
-    def fetch_etf(self, isin: str) -> EtfDetails | None:
+    def is_responsible(self, isin: str) -> bool:
+        return True
+
+    def fetch_etf(self, isin: str, symbol: str | None = None) -> EtfDetails | None:
         return self._details
 
 

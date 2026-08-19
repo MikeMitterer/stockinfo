@@ -197,15 +197,28 @@ class QuoteService:
         )
 
         if instrument_type == "etf":
-            # Die Antwort weiß nur dann über die ETF-Extras Bescheid, wenn die
-            # Anreicherung gelaufen ist **und** geliefert hat. Sonst darf sie
-            # den gespeicherten Stand nicht ersetzen — siehe
-            # `QuoteResponse.metadata_complete`. Übersprungen, ohne ISIN und
-            # fehlgeschlagen sind hier dasselbe: In allen drei Fällen weiß
-            # diese Antwort nichts.
-            response.metadata_complete = (
-                self._enrich_etf(response, isin) if (enrich_etf and isin) else False
-            )
+            if isin and not self._etf_provider.is_responsible(isin):
+                # Die Quelle führt dieses Papier gar nicht — ein US- oder
+                # kanadischer ETF steht nicht bei justETF. Dann gibt es nichts
+                # zu holen und damit auch keinen gepflegten Stand, den ein
+                # `False` schützen müsste. Bliebe es dabei, hätte ein Nutzer
+                # außerhalb Europas bei **jedem** ETF dauerhaft ein leeres
+                # `source` in der Tabelle: Das Feld gehört zu
+                # `_ETF_META_FIELDS` und würde nie geschrieben.
+                response.metadata_complete = True
+            elif enrich_etf and isin:
+                # Die Antwort weiß nur dann über die ETF-Extras Bescheid, wenn
+                # die Anreicherung gelaufen ist **und** geliefert hat. Sonst
+                # darf sie den gespeicherten Stand nicht ersetzen — siehe
+                # `QuoteResponse.metadata_complete`.
+                response.metadata_complete = self._enrich_etf(response, isin)
+            else:
+                # Übersprungen (TTL noch frisch) oder ohne ISIN. Ohne ISIN
+                # lässt sich die Zuständigkeit nicht beantworten: Das Papier
+                # könnte ein US-ETF sein oder ein europäischer, dessen ISIN
+                # gerade fehlt und dessen Kennzahlen niemand überschreiben
+                # will. Im Zweifel gewinnt der Schutz.
+                response.metadata_complete = False
         elif instrument_type is None:
             # Ohne Gattung lief der ETF-Zweig gar nicht — `metadata_complete`
             # blieb dann auf seiner Vorgabe `True`, und das Repository durfte
@@ -222,19 +235,19 @@ class QuoteService:
         return response
 
     def _enrich_etf(self, response: QuoteResponse, isin: str) -> bool:
-        """Ergänzt ETF-Details (TER, Anbieter, …) über justETF, best-effort.
+        """Ergänzt ETF-Details (TER, Anbieter, …) aus der ETF-Quelle, best-effort.
 
         Args:
             response: Antwort, die ergänzt wird.
             isin: ISIN für die Abfrage.
 
         Returns:
-            ``True`` wenn justETF geantwortet hat — nur dann sind die
+            ``True`` wenn die Quelle geantwortet hat — nur dann sind die
             ETF-Felder dieser Antwort belastbar. ``False`` heißt „nicht
             erreichbar", **nicht** „hat nichts". Der Unterschied entscheidet,
             ob der gespeicherte Stand überschrieben werden darf.
         """
-        details = self._etf_provider.fetch_etf(isin)
+        details = self._etf_provider.fetch_etf(isin, symbol=response.symbol)
         if details is None:
             logger.debug("etf_enrichment_skipped", isin=isin)
             return False
@@ -248,5 +261,7 @@ class QuoteService:
         response.fund_domicile = details.fund_domicile
         response.volatility = details.volatility
         response.accumulating = details.accumulating
-        response.source = "yfinance+justetf"
+        # Die Quelle beschriftet sich selbst — seit es mehr als eine gibt, wäre
+        # ein festes "yfinance+justetf" für die Hälfte der Papiere gelogen.
+        response.source = details.source or response.source
         return True

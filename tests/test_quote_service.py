@@ -22,12 +22,21 @@ class FakeQuoteProvider:
 
 
 class FakeEtfProvider:
-    """Liefert vorgegebene ETF-Details (oder None)."""
+    """Liefert vorgegebene ETF-Details (oder None).
 
-    def __init__(self, details: EtfDetails | None) -> None:
+    ``responsible`` bildet den zweiten, unabhängigen Zustand ab: Ob die Quelle
+    für dieses Papier überhaupt zuständig ist, ist eine andere Frage als ob sie
+    geantwortet hat.
+    """
+
+    def __init__(self, details: EtfDetails | None, responsible: bool = True) -> None:
         self._details = details
+        self._responsible = responsible
 
-    def fetch_etf(self, isin: str) -> EtfDetails | None:
+    def is_responsible(self, isin: str) -> bool:
+        return self._responsible
+
+    def fetch_etf(self, isin: str, symbol: str | None = None) -> EtfDetails | None:
         return self._details
 
 
@@ -53,7 +62,12 @@ def _etf_quote() -> RawQuote:
 
 
 def test_etf_wird_mit_justetf_angereichert() -> None:
-    details = EtfDetails(ter=0.19, provider="Vanguard", replication="Physical")
+    # `source` kommt aus der Quelle, nicht aus dem Service — ein Fake, der
+    # justETF nachbildet, muss sich deshalb auch so beschriften.
+    details = EtfDetails(
+        ter=0.19, provider="Vanguard", replication="Physical",
+        source="yfinance+justetf",
+    )
     service = QuoteService(
         FakeQuoteProvider(_etf_quote()),
         FakeEtfProvider(details),
@@ -284,3 +298,80 @@ def test_etf_ohne_isin_gilt_nicht_als_vollstaendig() -> None:
     )
 
     assert service.get_quote_by_symbol("VGWL.DE").metadata_complete is False
+
+
+def _us_etf_quote() -> RawQuote:
+    return RawQuote(
+        symbol="VTI",
+        price=291.4,
+        quote_time="2026-08-19T20:00:00+00:00",
+        currency="USD",
+        type="etf",
+        isin="US9229087690",
+    )
+
+
+def test_nicht_zustaendige_quelle_liefert_vollstaendige_metadaten() -> None:
+    """Ein US-ETF ist vollständig — es gibt für ihn nichts anzureichern.
+
+    justETF führt nur europäische Papiere. Für einen Nutzer aus den USA oder
+    Kanada galt bisher jeder ETF als unvollständig, weil „nicht zuständig" und
+    „ausgefallen" beide als ``fetch_etf() is None`` ankamen. Folge: `source`
+    steht in `_ETF_META_FIELDS` und wurde deshalb nie geschrieben — die Spalte
+    „Quelle" blieb in der Oberfläche dauerhaft leer.
+    """
+    service = QuoteService(
+        FakeQuoteProvider(_us_etf_quote()),
+        FakeEtfProvider(None, responsible=False),
+        FakeResolver(None),
+    )
+
+    result = service.get_quote_for_known(
+        "VTI", isin="US9229087690", instrument_type="etf"
+    )
+
+    assert result.metadata_complete is True
+    assert result.source == "yfinance"
+
+
+def test_zustaendige_quelle_ohne_antwort_bleibt_unvollstaendig() -> None:
+    """Der Schutz für europäische Papiere bleibt unangetastet.
+
+    Dieselbe leere Antwort, aber diesmal von einer zuständigen Quelle: Das
+    heißt „gerade nicht erreichbar" und darf den gepflegten Stand nicht
+    ersetzen.
+    """
+    service = QuoteService(
+        FakeQuoteProvider(_etf_quote()),
+        FakeEtfProvider(None, responsible=True),
+        FakeResolver(None),
+    )
+
+    result = service.get_quote_for_known(
+        "VGWL.DE", isin="IE00B3RBWM25", instrument_type="etf"
+    )
+
+    assert result.metadata_complete is False
+
+
+def test_etf_ohne_isin_bleibt_konservativ_unvollstaendig() -> None:
+    """Ohne ISIN lässt sich die Zuständigkeit nicht beantworten.
+
+    Das Papier könnte ein US-ETF sein (dann wäre „vollständig" richtig) oder
+    ein europäischer, dessen ISIN gerade fehlt und dessen gepflegte Kennzahlen
+    niemand überschreiben will. Im Zweifel gewinnt der Schutz.
+    """
+    service = QuoteService(
+        FakeQuoteProvider(
+            RawQuote(
+                symbol="ARKK", price=61.2, quote_time="2026-08-19T20:00:00+00:00",
+                currency="USD", type="etf",
+            )
+        ),
+        FakeEtfProvider(None, responsible=False),
+        FakeResolver(None),
+    )
+
+    result = service.get_quote_for_known("ARKK", instrument_type="etf")
+
+    assert result.metadata_complete is False
