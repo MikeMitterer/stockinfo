@@ -450,3 +450,78 @@ def test_erfolgreiche_anreicherung_darf_felder_weiterhin_leeren(
     )
 
     assert repo.get_instrument_by_isin("IE00B4L5Y983")["ter"] is None
+
+
+def test_erster_insert_mit_unvollstaendigen_metadaten(repo: QuoteRepository) -> None:
+    """Ein neues Papier ohne belastbare ETF-Felder muss sich anlegen lassen.
+
+    `_writable_fields` liefert bei `metadata_complete=False` nur die Nicht-ETF-
+    Spalten. Baute der INSERT seine Spaltenliste weiter aus `_META_FIELDS`,
+    zählte er dreizehn Platzhalter gegen vier Werte und brach mit
+    `Incorrect number of bindings supplied` ab — ein 500 auf einem schlichten
+    GET. Ausgelöst von jedem Papier, dessen Gattung yfinance nicht kennt
+    (Krypto, Index, Anleihe) oder dessen justETF-Abruf beim ersten Kontakt
+    scheitert.
+    """
+    repo.save_quote(
+        QuoteResponse(
+            isin=None, symbol="BTC-USD", type=None, currency="USD", price=61234.0,
+            quote_time="2026-08-19T10:00:00+00:00",
+            fetched_at="2026-08-19T10:00:00+00:00",
+            metadata_complete=False,
+        )
+    )
+
+    instrument = repo.get_instrument_by_symbol("BTC-USD")
+    assert instrument is not None
+    assert instrument["currency"] == "USD"
+    # Die geschützten Felder bleiben leer statt mit Platzhaltern gefüllt.
+    assert instrument["ter"] is None
+    assert instrument["provider"] is None
+
+
+def test_unvollstaendige_antwort_setzt_den_metadaten_zeitstempel_nicht_hoch(
+    repo: QuoteRepository,
+) -> None:
+    """Sonst läuft `metadata_ttl_days` leer und justETF wird nie wieder gefragt.
+
+    `_etf_metadata_is_stale` liest genau diese Spalte. Wandert sie bei jeder
+    unvollständigen Antwort mit, gilt der Stand dauerhaft als frisch — und der
+    Scheduler läuft weit häufiger als die sieben Tage. Ein ETF, der seine
+    Kennzahlen beim ersten Kontakt nicht bekam, behielte sie für immer leer.
+    """
+    repo.save_quote(
+        QuoteResponse(
+            isin="IE00B4L5Y983", symbol="EUNL.DE", type="etf", price=128.7,
+            quote_time="2026-08-01T10:00:00+00:00", ter=0.2, provider="iShares",
+            fetched_at="2026-08-01T10:00:00+00:00",
+        )
+    )
+    repo.save_quote(
+        QuoteResponse(
+            isin="IE00B4L5Y983", symbol="EUNL.DE", type="etf", price=129.1,
+            quote_time="2026-08-19T11:00:00+00:00",
+            fetched_at="2026-08-19T11:00:00+00:00",
+            metadata_complete=False,
+        )
+    )
+
+    instrument = repo.get_instrument_by_isin("IE00B4L5Y983")
+    assert instrument["meta_fetched_at"] == "2026-08-01T10:00:00+00:00"
+    assert instrument["ter"] == 0.2  # der gepflegte Stand bleibt ohnehin stehen
+
+
+def test_erster_insert_ohne_metadaten_gilt_sofort_als_faellig(
+    repo: QuoteRepository,
+) -> None:
+    """Kein Zeitstempel heißt „nie geholt" — der nächste Abruf sieht nach."""
+    repo.save_quote(
+        QuoteResponse(
+            isin="IE00B4L5Y983", symbol="EUNL.DE", type="etf", price=128.7,
+            quote_time="2026-08-19T10:00:00+00:00",
+            fetched_at="2026-08-19T10:00:00+00:00",
+            metadata_complete=False,
+        )
+    )
+
+    assert repo.get_instrument_by_isin("IE00B4L5Y983")["meta_fetched_at"] is None

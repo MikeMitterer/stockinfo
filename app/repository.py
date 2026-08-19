@@ -398,9 +398,18 @@ class QuoteRepository:
                     raise
 
         assignments = ", ".join(f"{field} = ?" for field in meta)
+        values = list(meta.values())
+        # Der Zeitstempel wandert nur mit, wenn die Antwort die ETF-Felder
+        # tatsächlich kennt. Sonst gälte ein Stand als frisch, den nie jemand
+        # geholt hat: `_etf_metadata_is_stale` liest genau diese Spalte, der
+        # Scheduler läuft weit häufiger als `metadata_ttl_days`, und justETF
+        # käme nach dem ersten Kontakt nie wieder an die Reihe.
+        if response.metadata_complete:
+            assignments += ", meta_fetched_at = ?"
+            values.append(response.fetched_at)
         connection.execute(
-            f"UPDATE instruments SET {assignments}, meta_fetched_at = ? WHERE id = ?",
-            [*meta.values(), response.fetched_at, existing_id],
+            f"UPDATE instruments SET {assignments} WHERE id = ?",
+            [*values, existing_id],
         )
         return existing_id
 
@@ -429,16 +438,23 @@ class QuoteRepository:
     def _insert_instrument(
         connection: sqlite3.Connection, response: QuoteResponse, meta: dict
     ) -> int:
-        """Legt ein neues Instrument an und gibt seine ID zurück."""
-        columns = "isin, symbol, first_seen, meta_fetched_at, " + ", ".join(
-            _META_FIELDS
-        )
-        placeholders = ", ".join(["?"] * (4 + len(_META_FIELDS)))
+        """Legt ein neues Instrument an und gibt seine ID zurück.
+
+        Die Spaltenliste kommt aus `meta`, nicht aus `_META_FIELDS`: Eine
+        unvollständige Antwort schreibt nur einen Teil der Felder (siehe
+        `_writable_fields`), und eine feste Spaltenliste zählte dann mehr
+        Platzhalter als Werte — SQLite bricht mit `Incorrect number of
+        bindings supplied` ab, mitten im ersten Anlegen eines Papiers.
+        """
+        columns = "isin, symbol, first_seen, meta_fetched_at, " + ", ".join(meta)
+        placeholders = ", ".join(["?"] * (4 + len(meta)))
         values = [
             response.isin,
             response.symbol,
             response.fetched_at,
-            response.fetched_at,
+            # Kein Zeitstempel ohne belastbare Metadaten — `None` heißt „nie
+            # geholt" und macht den Stand beim nächsten Abruf sofort fällig.
+            response.fetched_at if response.metadata_complete else None,
             *meta.values(),
         ]
         cursor = connection.execute(

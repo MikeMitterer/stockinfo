@@ -244,3 +244,50 @@ def test_yahoo_ohne_treffer_gibt_none(monkeypatch) -> None:
     resolver = YFinanceResolver(default_exchange="XETR")
 
     assert resolver.resolve_isin("IE00B3RBWM25") is None
+
+
+def test_yahoo_bevorzugt_die_gattung_des_bestplatzierten_treffers(monkeypatch) -> None:
+    """Das Börsen-Suffix allein reicht nicht — die Trefferliste mischt Gattungen.
+
+    Yahoos ISIN-Suche ist unscharf: Neben dem gesuchten ETF stehen dort
+    Zertifikate, Fonds und Optionsscheine desselben Basiswerts. Wer schlicht
+    den ersten Suffix-Treffer nimmt, holt sich einen davon ins Haus, obwohl
+    der bestplatzierte Treffer die richtige Gattung nennt.
+    """
+    _mit_suche(
+        monkeypatch,
+        [
+            {"symbol": "IS3M.L", "exchDisp": "LSE", "quoteType": "ETF"},
+            {"symbol": "XYZ.DE", "exchDisp": "XETRA", "quoteType": "MUTUALFUND"},
+            {"symbol": "IS3M.DE", "exchDisp": "XETRA", "quoteType": "ETF"},
+        ],
+    )
+    resolver = YFinanceResolver(default_exchange="XETR")
+
+    resolved = resolver.resolve_isin("IE00BCRY6557")
+
+    assert resolved is not None
+    assert resolved.symbol == "IS3M.DE"
+    assert resolved.type == "etf"
+
+
+def test_yahoo_nimmt_die_boerse_auch_bei_abweichender_gattung(monkeypatch) -> None:
+    """Die Gattung ist die Feinauswahl, nicht die Bedingung.
+
+    Nennt kein Treffer der bevorzugten Börse dieselbe Gattung wie der
+    bestplatzierte, gewinnt weiterhin die Börse — sonst kippte die Regel bei
+    jeder unsauberen `quoteType`-Angabe auf die Londoner Notierung zurück.
+    """
+    _mit_suche(
+        monkeypatch,
+        [
+            {"symbol": "IS3M.L", "exchDisp": "LSE", "quoteType": "ETF"},
+            {"symbol": "IS3M.DE", "exchDisp": "XETRA", "quoteType": ""},
+        ],
+    )
+    resolver = YFinanceResolver(default_exchange="XETR")
+
+    resolved = resolver.resolve_isin("IE00BCRY6557")
+
+    assert resolved is not None
+    assert resolved.symbol == "IS3M.DE"

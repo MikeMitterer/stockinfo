@@ -123,26 +123,38 @@ class CachedQuoteService:
     def get_by_isin(self, isin: str) -> QuoteResponse:
         """Liefert den Kurs zu einer ISIN aus Cache oder frisch beschafft.
 
+        Ein bekanntes Papier wird über sein gespeichertes Listing aufgefrischt
+        (`_fetch_live`), nicht neu aufgelöst — sonst wandert es beim schlichten
+        Nachschlagen die Börse, und weil `_get` das Ergebnis speichert, bleibt
+        die falsche stehen. Das ist derselbe Schutz wie in `refresh_one`, nur
+        auf dem meistgenutzten Endpunkt.
+
         Raises:
             InstrumentNotFoundError: ISIN nicht auflösbar.
             QuoteUnavailableError: Kein Kurs beschaffbar und kein Cache vorhanden.
         """
         instrument = self._repository.get_instrument_by_isin(isin)
-        enrich = self._etf_metadata_is_stale(instrument)
+        if instrument:
+            return self._get(instrument, lambda: self._fetch_live(instrument))
         return self._get(
-            instrument, lambda: self._quote_service.get_quote_by_isin(isin, enrich)
+            None, lambda: self._quote_service.get_quote_by_isin(isin, enrich_etf=True)
         )
 
     def get_by_symbol(self, symbol: str) -> QuoteResponse:
         """Liefert den Kurs zu einem Yahoo-Symbol aus Cache oder frisch beschafft.
 
+        Bekanntes Papier ohne erneute Auflösung — die Begründung steht bei
+        `get_by_isin`.
+
         Raises:
             QuoteUnavailableError: Kein Kurs beschaffbar und kein Cache vorhanden.
         """
         instrument = self._repository.get_instrument_by_symbol(symbol)
-        enrich = self._etf_metadata_is_stale(instrument)
+        if instrument:
+            return self._get(instrument, lambda: self._fetch_live(instrument))
         return self._get(
-            instrument, lambda: self._quote_service.get_quote_by_symbol(symbol, enrich)
+            None,
+            lambda: self._quote_service.get_quote_by_symbol(symbol, enrich_etf=True),
         )
 
     def get_history(
@@ -298,9 +310,28 @@ class CachedQuoteService:
     def refresh_one_by_symbol(self, symbol: str) -> QuoteResponse:
         """Aktualisiert ein Instrument per Symbol live (für Papiere ohne ISIN).
 
+        Reicht ISIN, Börse und Gattung der gespeicherten Zeile mit, genau wie
+        `refresh_one`. Ohne ISIN läuft die justETF-Anreicherung gar nicht erst
+        an (`enrich_etf and isin` in `_build`) — der Knopf an der Zeile ließe
+        TER, Anbieter und Domizil dann für immer stehen, obwohl er das
+        Gegenteil verspricht.
+
         Raises:
             QuoteUnavailableError: Kein Kurs beschaffbar.
         """
+        instrument = self._repository.get_instrument_by_symbol(symbol)
+        if instrument:
+            return self._save_fresh_with_volatility(
+                self._quote_service.get_quote_for_known(
+                    symbol,
+                    isin=instrument.get("isin"),
+                    exchange=instrument.get("exchange"),
+                    instrument_type=instrument.get("type"),
+                    # Der Griff zum einzelnen Papier übergeht die Metadaten-TTL
+                    # bewusst — siehe `refresh_one`.
+                    enrich_etf=True,
+                )
+            )
         return self._save_fresh_with_volatility(
             self._quote_service.get_quote_by_symbol(symbol)
         )

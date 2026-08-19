@@ -538,3 +538,146 @@ def test_refresh_reicht_den_gespeicherten_typ_durch(repo: QuoteRepository) -> No
 
     assert fake.gesehener_typ == "etf"
     assert repo.get_instrument_by_isin("IE00B3RBWM25")["type"] == "etf"
+
+
+def test_lesepfad_loest_bekanntes_instrument_nicht_neu_auf(repo: QuoteRepository) -> None:
+    """Derselbe Schutz wie beim Refresh — nur auf dem meistgenutzten Endpunkt.
+
+    `GET /quote/{isin}` mit abgelaufener TTL ging weiterhin über
+    `get_quote_by_isin` und damit durch den Resolver. Das Ergebnis wird
+    gespeichert, also konnte eine gepflegte Xetra-Zeile beim schlichten
+    Nachschlagen zu `IS3M.L`/GBP werden — genau der Fall, gegen den
+    `get_quote_for_known` gebaut wurde.
+    """
+    fake = _WanderndeAufloesung()
+    # Bekanntes Papier mit abgelaufenem Kurs.
+    repo.save_quote(
+        QuoteResponse(
+            isin="IE00BCRY6557", symbol="IS3M.DE", currency="EUR", exchange="Xetra",
+            price=100.0, quote_time=_hours_ago(10), fetched_at=_hours_ago(10),
+            type="etf",
+        )
+    )
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+
+    result = service.get_by_isin("IE00BCRY6557")
+
+    assert fake.isin_calls == 0  # entscheidend: keine erneute Auflösung
+    assert fake.known_calls == 1
+    assert result.symbol == "IS3M.DE"
+    assert result.currency == "EUR"
+    assert repo.get_instrument_by_isin("IE00BCRY6557")["symbol"] == "IS3M.DE"
+
+
+def test_lesepfad_per_symbol_loest_bekanntes_instrument_nicht_neu_auf(
+    repo: QuoteRepository,
+) -> None:
+    """`GET /quote/symbol/{symbol}` trägt dasselbe Risiko und braucht denselben Schutz."""
+    fake = _WanderndeAufloesung()
+    repo.save_quote(
+        QuoteResponse(
+            isin="IE00BCRY6557", symbol="IS3M.DE", currency="EUR", exchange="Xetra",
+            price=100.0, quote_time=_hours_ago(10), fetched_at=_hours_ago(10),
+            type="etf",
+        )
+    )
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+
+    result = service.get_by_symbol("IS3M.DE")
+
+    assert fake.symbol_calls == 0
+    assert fake.known_calls == 1
+    assert result.currency == "EUR"
+
+
+def test_unbekannte_isin_wird_im_lesepfad_weiterhin_aufgeloest(
+    repo: QuoteRepository,
+) -> None:
+    """Ohne Auflösung käme nie ein neues Papier herein — der Fallback bleibt."""
+    fake = _WanderndeAufloesung()
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+
+    service.get_by_isin("IE00BCRY6557")
+
+    assert fake.isin_calls == 1
+    assert fake.known_calls == 0
+
+
+class _MerktSichDenAufruf:
+    """Hält fest, mit welchen Angaben `get_quote_for_known` gerufen wurde."""
+
+    def __init__(self) -> None:
+        self.known_calls = 0
+        self.symbol_calls = 0
+        self.gesehene_isin: str | None = None
+        self.gesehener_typ: str | None = None
+        self.gesehene_boerse: str | None = None
+
+    def _antwort(self, symbol: str) -> QuoteResponse:
+        return QuoteResponse(
+            isin="IE00B4L5Y983", symbol=symbol, currency="EUR", exchange="Xetra",
+            price=129.1, quote_time=_now(), fetched_at=_now(), type="etf",
+        )
+
+    def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
+        return self._antwort("EUNL.DE")
+
+    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
+        self.symbol_calls += 1
+        return self._antwort(symbol)
+
+    def get_quote_for_known(
+        self,
+        symbol: str,
+        isin: str | None = None,
+        exchange: str | None = None,
+        instrument_type: str | None = None,
+        enrich_etf: bool = True,
+    ) -> QuoteResponse:
+        self.known_calls += 1
+        self.gesehene_isin = isin
+        self.gesehener_typ = instrument_type
+        self.gesehene_boerse = exchange
+        return self._antwort(symbol)
+
+
+def test_refresh_per_symbol_reicht_die_gespeicherte_zeile_durch(
+    repo: QuoteRepository,
+) -> None:
+    """Sonst greift der ETF-Schutz nicht und der Refresh-Knopf bleibt wirkungslos.
+
+    `get_quote_by_symbol` gab weder ISIN noch Gattung mit. Ohne ISIN läuft die
+    justETF-Anreicherung gar nicht erst an (`enrich_etf and isin` in `_build`),
+    die Antwort meldet `metadata_complete=False` — und TER, Anbieter und
+    Domizil bleiben stehen, wo sie sind. Der Knopf an der Zeile tat damit
+    nichts von dem, was er verspricht.
+    """
+    fake = _MerktSichDenAufruf()
+    repo.save_quote(
+        QuoteResponse(
+            isin="IE00B4L5Y983", symbol="EUNL.DE", currency="EUR", exchange="Xetra",
+            price=128.7, quote_time=_now(), fetched_at=_now(), type="etf",
+        )
+    )
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+
+    service.refresh_one_by_symbol("EUNL.DE")
+
+    assert fake.known_calls == 1
+    assert fake.symbol_calls == 0
+    assert fake.gesehene_isin == "IE00B4L5Y983"
+    assert fake.gesehener_typ == "etf"
+    assert fake.gesehene_boerse == "Xetra"
+
+
+def test_refresh_eines_unbekannten_symbols_geht_weiter_ueber_die_suche(
+    repo: QuoteRepository,
+) -> None:
+    """Ein Papier ohne gespeicherte Zeile hat nichts durchzureichen."""
+    fake = _MerktSichDenAufruf()
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+
+    service.refresh_one_by_symbol("EUNL.DE")
+
+    assert fake.symbol_calls == 1
+    assert fake.known_calls == 0

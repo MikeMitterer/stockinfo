@@ -18,6 +18,18 @@ from app.providers.openfigi_provider import OpenFigiClient
 logger = structlog.get_logger()
 
 
+def _gattung(quote: dict) -> str:
+    """Liest den ``quoteType`` eines Yahoo-Treffers normalisiert aus.
+
+    Args:
+        quote: Ein Treffer der Yahoo-Suche.
+
+    Returns:
+        Die Gattung in Großbuchstaben, oder ``''`` wenn Yahoo keine nennt.
+    """
+    return (quote.get("quoteType") or "").upper()
+
+
 @dataclass(frozen=True)
 class ExchangeDef:
     """Definition einer Börse: Anzeige, Yahoo-Suffix, OpenFIGI-Auflösung.
@@ -157,13 +169,12 @@ class YFinanceResolver:
             return None
         symbol = top["symbol"]
 
-        quote_type = (top.get("quoteType") or "").upper()
         return ResolvedInstrument(
             symbol=symbol,
             isin=isin,
             exchange=top.get("exchDisp") or top.get("exchange"),
             name=top.get("shortname") or top.get("longname"),
-            type=QUOTE_TYPE_MAP.get(quote_type),
+            type=QUOTE_TYPE_MAP.get(_gattung(top)),
             currency=None,  # Währung kommt aus dem Live-Quote, nicht aus der Suche
         )
 
@@ -180,6 +191,16 @@ class YFinanceResolver:
         Das Feld ``exchDisp`` daneben wäre der naheliegende Weg, ist aber
         Freitext von Yahoo („XETRA", „Frankfurt", „Milan") und taugt nicht als
         Schlüssel.
+
+        Steht an der bevorzugten Börse mehr als ein Listing, entscheidet die
+        **Gattung des bestplatzierten Treffers**. Yahoos Suche ist unscharf und
+        mischt Zertifikate, Fonds und Optionsscheine desselben Basiswerts unter
+        die Treffer; ohne diese Feinauswahl gewinnt der erste Suffix-Treffer,
+        auch wenn er ein ``MUTUALFUND`` neben dem gesuchten ETF ist. Die
+        Gattung ist dabei die Feinauswahl, nicht die Bedingung: Nennt kein
+        Treffer der bevorzugten Börse dieselbe, gewinnt weiterhin die Börse —
+        sonst kippte die Regel bei jeder unsauberen ``quoteType``-Angabe auf
+        die auswärtige Notierung zurück.
 
         Findet sich das bevorzugte Listing nicht, gewinnt der erste brauchbare
         Treffer — ein US-Papier ohne deutsche Notierung muss weiterhin
@@ -200,17 +221,19 @@ class YFinanceResolver:
         suffix = exchange.suffix
 
         if suffix:
-            passend = next(
-                (q for q in mit_symbol if str(q["symbol"]).endswith(suffix)), None
-            )
+            an_der_boerse = [q for q in mit_symbol if str(q["symbol"]).endswith(suffix)]
         else:
             # Börse ohne Suffix (`US`): Dort ist das punktlose Symbol die
             # Notierung. Ohne diesen Zweig liefe die Regel leer, weil jedes
             # Symbol auf `''` endet.
-            passend = next((q for q in mit_symbol if "." not in str(q["symbol"])), None)
+            an_der_boerse = [q for q in mit_symbol if "." not in str(q["symbol"])]
 
-        if passend is not None:
-            return passend
+        if an_der_boerse:
+            gattung = _gattung(mit_symbol[0])
+            return next(
+                (q for q in an_der_boerse if _gattung(q) == gattung),
+                an_der_boerse[0],
+            )
 
         logger.info(
             "resolve_isin_andere_boerse",
