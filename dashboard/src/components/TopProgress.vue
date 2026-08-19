@@ -13,7 +13,13 @@ defineProps<{ active: boolean }>()
 
 .top-progress {
   position: fixed;
-  top: $header-h;
+  /*
+   * An der Oberkante der Seite, nicht unter der Kopfzeile: Der Balken gehört
+   * zur ganzen Seite, nicht zum Inhalt darunter — dort liest man ihn als
+   * Rand der Leiste statt als Zustand. `z-index` liegt über der Kopfzeile
+   * (UxTopbar: 10), sonst verschwände er hinter ihr.
+   */
+  top: 0;
   left: 0;
   right: 0;
   height: 3px;
