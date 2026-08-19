@@ -13,6 +13,8 @@ Problem in Minuten. Also muss die Lösung von außen kommen können.
 Plugin müsste Yahoo-Symbole verstehen, Yahoos Gattungsnamen kennen und mit `None`
 drei Zustände ausdrücken.
 
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+
 ---
 
 ## Verify

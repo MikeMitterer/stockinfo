@@ -11,6 +11,8 @@ und unabhängig vom Plugin-Vorhaben.
 **Hängt an:** nichts. Kann sofort laufen und sollte es auch — Nummer 1 verfälscht
 gespeicherte Daten.
 
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+
 ---
 
 ## Verify

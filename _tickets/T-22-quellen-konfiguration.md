@@ -11,6 +11,8 @@ Feld in `Settings`. Mit zwei Quellen tragbar, mit vier nicht.
 **Hängt an:** T-20 (ohne differenzierte Antworten ist eine konfigurierbare Kette
 nicht sinnvoll steuerbar). **Blockiert:** T-23.
 
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+
 ---
 
 ## Verify

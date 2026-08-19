@@ -11,6 +11,8 @@ Normalvorgang.
 
 **Hängt an:** nichts. Sollte **vor** dem Plugin-System stehen, nicht danach.
 
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+
 ---
 
 ## Verify

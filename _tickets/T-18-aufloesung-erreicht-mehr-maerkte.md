@@ -11,6 +11,8 @@ aber ohne Anbieter. Beides gemessen am 2026-08-19.
 **Hängt an:** T-17 (die Gattungswahl in `_extract_ticker` ist Voraussetzung, sonst
 liefert die Kaskade schneller das falsche Listing).
 
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+
 ---
 
 ## Verify

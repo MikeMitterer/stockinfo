@@ -16,6 +16,8 @@ zieht die App nach.
 **Hängt an:** nichts. **Blockiert:** T-23 (ohne die Unterscheidung kann eine
 Plugin-Kette nicht sinnvoll weiterschalten).
 
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+
 ---
 
 ## Verify
