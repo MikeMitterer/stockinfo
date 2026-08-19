@@ -1,6 +1,11 @@
 """Tests für die ISIN-Auflösung (OpenFIGI-Client gemockt)."""
 
-from app.resolver import EXCHANGES, CompositeResolver, OpenFigiResolver
+from app.resolver import (
+    EXCHANGES,
+    CompositeResolver,
+    OpenFigiResolver,
+    YFinanceResolver,
+)
 from app.providers.base import ResolvedInstrument
 
 
@@ -12,7 +17,9 @@ class FakeFigiClient:
         self.last_id_value: str | None = None
         self.last_id_type: str | None = None
 
-    def map_isin(self, isin: str, id_value: str, id_type: str = "micCode") -> str | None:
+    def map_isin(
+        self, isin: str, id_value: str, id_type: str = "micCode"
+    ) -> str | None:
         self.last_id_value = id_value
         self.last_id_type = id_type
         return self._ticker
@@ -56,7 +63,9 @@ class _FakeFigi:
         self.ticker = ticker
         self.calls: list[tuple] = []
 
-    def map_isin(self, isin: str, id_value: str, id_type: str = "micCode") -> str | None:
+    def map_isin(
+        self, isin: str, id_value: str, id_type: str = "micCode"
+    ) -> str | None:
         self.calls.append((isin, id_value, id_type))
         return self.ticker
 
@@ -115,3 +124,123 @@ def test_composite_gibt_none_wenn_alle_leer() -> None:
     resolver = CompositeResolver(StubResolver(None), StubResolver(None))
 
     assert resolver.resolve_isin("XX0000000000") is None
+
+
+class _FakeSearch:
+    """Ersetzt ``yf.Search`` — liefert eine je Test gesetzte Trefferliste."""
+
+    treffer: list[dict] = []
+
+    def __init__(self, isin: str) -> None:
+        self.quotes = list(self.treffer)
+
+
+def _mit_suche(monkeypatch, treffer: list[dict]) -> None:
+    """Hängt die Fake-Suche an die Stelle, an der der Resolver sie holt."""
+    from app import resolver as resolver_modul
+
+    _FakeSearch.treffer = treffer
+    monkeypatch.setattr(resolver_modul.yf, "Search", _FakeSearch)
+
+
+def test_yahoo_nimmt_das_listing_der_bevorzugten_boerse(monkeypatch) -> None:
+    """Nicht der erste Treffer gewinnt, sondern der passende.
+
+    Der Anlass steht in DATA-03: Die Yahoo-Suche liefert für ein iShares-Papier
+    zuerst die Londoner Notierung. Wer sie nimmt, bekommt GBP statt EUR — und
+    im Depot fällt die Position aus der Währungsrechnung.
+    """
+    _mit_suche(
+        monkeypatch,
+        [
+            {"symbol": "IS3M.L", "exchDisp": "LSE", "quoteType": "ETF"},
+            {"symbol": "IS3M.DE", "exchDisp": "XETRA", "quoteType": "ETF"},
+        ],
+    )
+    resolver = YFinanceResolver(default_exchange="XETR")
+
+    resolved = resolver.resolve_isin("IE00BCRY6557")
+
+    assert resolved is not None
+    assert resolved.symbol == "IS3M.DE"
+
+
+def test_yahoo_nimmt_den_ersten_treffer_wenn_die_boerse_fehlt(monkeypatch) -> None:
+    """Ein US-Papier ohne deutsches Listing muss weiterhin durchgehen.
+
+    Genau dafür gibt es den Fallback — er darf nicht zum Nichts-Finden werden.
+    """
+    _mit_suche(
+        monkeypatch,
+        [
+            {"symbol": "AAPL", "exchDisp": "NasdaqGS", "quoteType": "EQUITY"},
+            {"symbol": "AAPL.MX", "exchDisp": "Mexico", "quoteType": "EQUITY"},
+        ],
+    )
+    resolver = YFinanceResolver(default_exchange="XETR")
+
+    resolved = resolver.resolve_isin("US0378331005")
+
+    assert resolved is not None
+    assert resolved.symbol == "AAPL"
+
+
+def test_yahoo_folgt_der_konfigurierten_boerse(monkeypatch) -> None:
+    _mit_suche(
+        monkeypatch,
+        [
+            {"symbol": "EQQQ.DE", "exchDisp": "XETRA", "quoteType": "ETF"},
+            {"symbol": "EQQQ.MI", "exchDisp": "Milan", "quoteType": "ETF"},
+        ],
+    )
+    resolver = YFinanceResolver(default_exchange="XMIL")
+
+    resolved = resolver.resolve_isin("IE0032077012")
+
+    assert resolved is not None
+    assert resolved.symbol == "EQQQ.MI"
+
+
+def test_yahoo_bevorzugt_bei_boerse_ohne_suffix_das_symbol_ohne_punkt(
+    monkeypatch,
+) -> None:
+    """`US` hat kein Suffix — dort ist das punktlose Symbol die Notierung.
+
+    Ohne diesen Zweig liefe die Regel leer: Jedes Symbol „endet auf ''".
+    """
+    _mit_suche(
+        monkeypatch,
+        [
+            {"symbol": "AAPL.DE", "exchDisp": "XETRA", "quoteType": "EQUITY"},
+            {"symbol": "AAPL", "exchDisp": "NasdaqGS", "quoteType": "EQUITY"},
+        ],
+    )
+    resolver = YFinanceResolver(default_exchange="US")
+
+    resolved = resolver.resolve_isin("US0378331005")
+
+    assert resolved is not None
+    assert resolved.symbol == "AAPL"
+
+
+def test_yahoo_ueberspringt_treffer_ohne_symbol(monkeypatch) -> None:
+    _mit_suche(
+        monkeypatch,
+        [
+            {"exchDisp": "XETRA", "quoteType": "ETF"},
+            {"symbol": "VGWL.DE", "exchDisp": "XETRA", "quoteType": "ETF"},
+        ],
+    )
+    resolver = YFinanceResolver(default_exchange="XETR")
+
+    resolved = resolver.resolve_isin("IE00B3RBWM25")
+
+    assert resolved is not None
+    assert resolved.symbol == "VGWL.DE"
+
+
+def test_yahoo_ohne_treffer_gibt_none(monkeypatch) -> None:
+    _mit_suche(monkeypatch, [])
+    resolver = YFinanceResolver(default_exchange="XETR")
+
+    assert resolver.resolve_isin("IE00B3RBWM25") is None

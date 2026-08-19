@@ -28,7 +28,10 @@ def _build_resolver(settings: Settings) -> InstrumentResolver:
     )
     if settings.strict_exchange:
         return figi_resolver
-    return CompositeResolver(figi_resolver, YFinanceResolver())
+    # Dieselbe Börse für beide: Sonst sucht der Fallback in eine andere
+    # Richtung als der Hauptweg und liefert je nach Tagesform ein anderes
+    # Listing — mit anderer Währung.
+    return CompositeResolver(figi_resolver, YFinanceResolver(settings.default_exchange))
 
 
 @lru_cache
@@ -72,5 +75,7 @@ def get_fx_service() -> CachedFxService:
     """Baut den (gecachten) CachedFxService aus der aktuellen Konfiguration."""
     settings = get_settings()
     return CachedFxService(
-        YFinanceProvider(), QuoteRepository(settings.database_path), settings.fx_ttl_hours
+        YFinanceProvider(),
+        QuoteRepository(settings.database_path),
+        settings.fx_ttl_hours,
     )

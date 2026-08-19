@@ -122,8 +122,17 @@ class OpenFigiResolver:
 class YFinanceResolver:
     """Löst ISINs über die Yahoo-Finance-Suche auf (Fallback, v.a. US-Titel)."""
 
+    def __init__(self, default_exchange: str = DEFAULT_EXCHANGE) -> None:
+        """
+        Args:
+            default_exchange: MIC der bevorzugten Börse — dieselbe Vorgabe wie
+                beim `OpenFigiResolver`. Sie entscheidet, welches Listing aus
+                der Trefferliste genommen wird.
+        """
+        self._default_exchange = default_exchange
+
     def resolve_isin(self, isin: str) -> ResolvedInstrument | None:
-        """Sucht das primäre Listing zu einer ISIN über Yahoo.
+        """Sucht das Listing der bevorzugten Börse zu einer ISIN über Yahoo.
 
         Args:
             isin: ISIN des Wertpapiers.
@@ -142,11 +151,11 @@ class YFinanceResolver:
             logger.warning("resolve_isin_empty", isin=isin)
             return None
 
-        top = quotes[0]
-        symbol = top.get("symbol")
-        if not symbol:
+        top = self._passendster(quotes, isin)
+        if top is None:
             logger.warning("resolve_isin_no_symbol", isin=isin)
             return None
+        symbol = top["symbol"]
 
         quote_type = (top.get("quoteType") or "").upper()
         return ResolvedInstrument(
@@ -157,6 +166,59 @@ class YFinanceResolver:
             type=QUOTE_TYPE_MAP.get(quote_type),
             currency=None,  # Währung kommt aus dem Live-Quote, nicht aus der Suche
         )
+
+    def _passendster(self, quotes: list[dict], isin: str) -> dict | None:
+        """Wählt aus der Trefferliste das Listing der bevorzugten Börse.
+
+        Yahoo sortiert nach eigenem Gutdünken, und der erste Treffer ist für ein
+        europäisches Papier oft die Londoner oder US-Notierung. Wer den nimmt,
+        holt sich GBP oder USD ins Haus, obwohl dasselbe Papier zwei Zeilen
+        weiter in Euro an Xetra steht — im Depot fällt die Position damit aus
+        der Währungsrechnung.
+
+        Erkannt wird die Börse am **Suffix des Symbols** (``.DE``, ``.MI``, …).
+        Das Feld ``exchDisp`` daneben wäre der naheliegende Weg, ist aber
+        Freitext von Yahoo („XETRA", „Frankfurt", „Milan") und taugt nicht als
+        Schlüssel.
+
+        Findet sich das bevorzugte Listing nicht, gewinnt der erste brauchbare
+        Treffer — ein US-Papier ohne deutsche Notierung muss weiterhin
+        durchgehen, dafür gibt es diesen Resolver überhaupt.
+
+        Args:
+            quotes: Trefferliste der Yahoo-Suche.
+            isin: Nur fürs Protokoll.
+
+        Returns:
+            Der gewählte Treffer oder ``None``, wenn keiner ein Symbol trägt.
+        """
+        mit_symbol = [q for q in quotes if q.get("symbol")]
+        if not mit_symbol:
+            return None
+
+        exchange = EXCHANGES.get(self._default_exchange) or EXCHANGES[DEFAULT_EXCHANGE]
+        suffix = exchange.suffix
+
+        if suffix:
+            passend = next(
+                (q for q in mit_symbol if str(q["symbol"]).endswith(suffix)), None
+            )
+        else:
+            # Börse ohne Suffix (`US`): Dort ist das punktlose Symbol die
+            # Notierung. Ohne diesen Zweig liefe die Regel leer, weil jedes
+            # Symbol auf `''` endet.
+            passend = next((q for q in mit_symbol if "." not in str(q["symbol"])), None)
+
+        if passend is not None:
+            return passend
+
+        logger.info(
+            "resolve_isin_andere_boerse",
+            isin=isin,
+            gewaehlt=mit_symbol[0]["symbol"],
+            erwartet=self._default_exchange,
+        )
+        return mit_symbol[0]
 
 
 class CompositeResolver:
