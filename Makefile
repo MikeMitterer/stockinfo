@@ -24,6 +24,11 @@ PID_FILE   := $(VENV)/uvicorn.pid
 LOG_FILE   := uvicorn.log
 
 # Docker (Image via docker/build.sh, Start via 'make up')
+# Zielplattform des Images. Vorgabe x86, **nicht** die des Rechners: Der Server,
+# auf dem das Image läuft, ist amd64 — ein ARM-Mac baute sonst still ein Image,
+# das dort nicht startet, und der Fehler fiele erst beim Update auf.
+# Überschreibbar: `make build PLATFORM=arm` oder `PLATFORM=all` (multi-arch).
+PLATFORM    ?= x86
 IMAGE_NAME  ?= mangolila/stockinfo
 CONTAINER   ?= stockinfo
 DATA_VOLUME ?= stockinfo-data
@@ -138,8 +143,8 @@ docker-logs: ## Container-Logs folgen
 	docker logs -f $(CONTAINER)
 
 .PHONY: build
-build: ## Docker-Image bauen (docker/build.sh — versioniert via gitDockerTag)
-	docker/build.sh --build
+build: ## Docker-Image bauen (PLATFORM=x86|arm|all, Default x86)
+	docker/build.sh --build $(PLATFORM)
 
 .PHONY: push
 push: ## Image in Registry pushen (TARGET=ghcr|dockerhub|ecr, Default dockerhub)
