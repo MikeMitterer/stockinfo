@@ -1,5 +1,6 @@
 """Tests der HTTP-Ebene via TestClient (Service gemockt, kein Netz, keine DB)."""
 
+import sqlite3
 from collections.abc import Iterator
 
 import pytest
@@ -176,3 +177,52 @@ def test_daily_by_symbol(client: TestClient) -> None:
 
 def test_daily_ungueltiger_zeitraum_422(client: TestClient) -> None:
     assert client.get("/quote/IE00B3RBWM25/daily", params={"period": "5x"}).status_code == 422
+
+
+def test_readiness_meldet_die_datenbank(client: TestClient) -> None:
+    """`/ready` sieht wirklich nach, statt nur zu antworten."""
+    response = client.get("/ready")
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["status"] == "ok"
+    assert body["database"] == "ok"
+
+
+def test_readiness_meldet_503_wenn_die_datenbank_nicht_erreichbar_ist(
+    client: TestClient, monkeypatch
+) -> None:
+    """Der eigentliche Zweck: eine kaputte Datenbank muss auffallen.
+
+    `/health` antwortete immer mit ``ok`` — ein Container mit verschwundener
+    SQLite-Datei galt bis zum ersten echten Request als gesund. Der
+    Docker-Healthcheck hängt daran.
+    """
+    import app.main as main_module
+
+    class _KaputterDienst:
+        def count_instruments(self) -> int:
+            raise sqlite3.OperationalError("unable to open database file")
+
+    monkeypatch.setattr(main_module, "get_cached_quote_service", lambda: _KaputterDienst())
+
+    response = client.get("/ready")
+
+    assert response.status_code == 503
+    assert response.json()["database"] == "error"
+
+
+def test_liveness_bleibt_billig(client: TestClient, monkeypatch) -> None:
+    """`/health` darf von der Datenbank nicht abhängen.
+
+    Die Antwort entscheidet über einen Neustart — und ein Neustart repariert
+    keine kaputte Datenbank. Wer beides vermischt, bekommt eine Neustartschleife.
+    """
+    import app.main as main_module
+
+    def _explodiert() -> None:
+        raise AssertionError("/health darf die Datenbank nicht anfassen")
+
+    monkeypatch.setattr(main_module, "get_cached_quote_service", _explodiert)
+
+    assert client.get("/health").status_code == 200

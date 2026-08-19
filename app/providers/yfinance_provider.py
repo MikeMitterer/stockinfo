@@ -7,6 +7,8 @@ Nutzt ``fast_info`` für die robusten Kernwerte (Preis, Währung, Volumen) und
 from datetime import datetime, timezone
 from typing import Any
 
+import math
+
 import structlog
 import yfinance as yf
 
@@ -36,15 +38,16 @@ class YFinanceProvider:
             logger.warning("fetch_quote_failed", symbol=symbol, error=str(exc))
             return None
 
+        price = self._as_tradeable_price(price)
         if price is None:
-            logger.warning("fetch_quote_no_price", symbol=symbol)
+            logger.warning("fetch_quote_no_price", symbol=symbol, raw=str(price))
             return None
 
         info = self._safe_info(ticker)
         quote_type = (self._fast_attr(fast, "quote_type") or "").upper()
         return RawQuote(
             symbol=symbol,
-            price=float(price),
+            price=price,
             quote_time=self._quote_time(info),
             currency=self._fast_attr(fast, "currency"),
             volume=self._as_int(self._fast_attr(fast, "last_volume")),
@@ -109,10 +112,41 @@ class YFinanceProvider:
         except Exception as exc:
             logger.warning("fetch_fx_failed", pair=f"{base}{quote}", error=str(exc))
             return None
+        rate = self._as_tradeable_price(rate)
         if rate is None:
             logger.warning("fetch_fx_no_rate", pair=f"{base}{quote}")
             return None
-        return float(rate)
+        return rate
+
+    @staticmethod
+    def _as_tradeable_price(value: Any) -> float | None:
+        """Gibt einen brauchbaren Kurs zurück — oder ``None``.
+
+        Geprüft wurde lange nur gegen ``None``. ``NaN`` und ``Infinity``
+        überstehen aber jede Float-Konvertierung, kommen durch Pydantic, landen
+        in SQLite und brechen spätestens bei strikter JSON-Serialisierung mit
+        einem 500. Sie sehen dabei bis zuletzt wie Zahlen aus.
+
+        Null und negative Werte sind fachlich ebenso wenig ein Kurs. Sie als
+        gültig durchzulassen hieße, Renditen und Volatilität still zu
+        verfälschen, statt den Wert als fehlend auszuweisen — und ein fehlender
+        Kurs hat hier einen definierten Weg: den Cache-Rückfall.
+
+        Args:
+            value: Rohwert vom Provider.
+
+        Returns:
+            Der Kurs als ``float``, oder ``None`` wenn er unbrauchbar ist.
+        """
+        if value is None:
+            return None
+        try:
+            price = float(value)
+        except (TypeError, ValueError):
+            return None
+        if not math.isfinite(price) or price <= 0:
+            return None
+        return price
 
     @staticmethod
     def _fast_attr(fast: Any, name: str) -> Any:

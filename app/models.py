@@ -10,6 +10,19 @@ class HealthResponse(BaseModel):
     version: str
 
 
+class ReadinessResponse(BaseModel):
+    """Antwort des Readiness-Endpoints.
+
+    Getrennt von `HealthResponse`, weil beide verschiedene Fragen beantworten:
+    „Läuft der Prozess noch?" (billig, für den Neustart-Entscheid) gegen
+    „Kann er gerade arbeiten?" (prüft die Datenbank).
+    """
+
+    status: str
+    version: str
+    database: str = Field(description="ok | error")
+
+
 class QuotePoint(BaseModel):
     """Ein einzelner Kurspunkt der Zeitreihe."""
 
