@@ -13,6 +13,27 @@ Yahoo Finance, JSON export).
 
 ![StockInfo dashboard](unraid/screenshots/dashboard.png)
 
+### What's new in 0.6.0
+
+- **All eight ETF metrics are maintainable by hand** — provider, replication,
+  fund size, fund domicile and fund currency join TER, volatility and
+  accumulating. Maintained in an expandable detail area per row, not in the
+  table cell.
+
+  ![Detail area](unraid/screenshots/detail-area.png)
+
+- **Stored metrics survive an outage.** A failed justETF request no longer wipes
+  what was already there — "asked and empty" is now distinguishable from "could
+  not ask". `METADATA_TTL_DAYS` finally does what it always claimed: justETF is
+  scraped once per cycle instead of on every quote.
+- **Merging duplicate instruments no longer loses data.** Manual values and the
+  daily-sync watermark move to the surviving row instead of being cascaded away.
+- **`/ready`** — a readiness probe that actually touches the database; `/health`
+  stays cheap. The Docker healthcheck now uses `/ready`.
+- **Stricter API contract** — symbols and time ranges are validated (`422`
+  instead of a wrong result), and an unresolvable ISIN answers `404` instead of
+  `502`.
+
 ## Contents
 
 - [What can it do?](#what-can-it-do)
@@ -42,8 +63,12 @@ Yahoo Finance, JSON export).
   real **end-of-day closes** (EOD from Yahoo, cached incrementally — each request
   only fetches the missing delta).
 - **Rich data** — besides price and timestamp: name, currency, volume, volatility,
-  and for ETFs TER, provider, replication method, fund size and
-  accumulating/distributing.
+  and for ETFs TER, provider, replication method, fund size, fund domicile,
+  fund currency and accumulating/distributing.
+- **Fill the gaps yourself** — whatever justETF does not deliver can be entered by
+  hand in the expandable detail area of a row. The source always wins: a manual
+  value fills a gap, it never overwrites. It stays stored while the source covers
+  it and applies again as soon as the source goes quiet.
 - **Dashboard** — overview with column sorting, docked price chart, 8 themes,
   German/English UI, exchange legend, profile links, JSON export.
 
@@ -353,7 +378,7 @@ app/                    # FastAPI backend
 dashboard/              # Vue dashboard (standalone app)
 tests/                  # backend tests (pytest)
 docker/                 # Dockerfile, build.sh (single-image build)
-unraid/screenshots/     # dashboard + swagger screenshots (README + CA template)
+unraid/screenshots/     # dashboard, detail area + swagger (README + CA template)
 Makefile                # service start/stop (make help)
 ```
 
