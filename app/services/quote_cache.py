@@ -268,12 +268,27 @@ class CachedQuoteService:
     def refresh_one(self, isin: str) -> QuoteResponse:
         """Aktualisiert ein einzelnes Instrument per ISIN live und speichert es.
 
-        Umgeht die TTL bewusst.
+        Umgeht die TTL bewusst. Ist das Papier bekannt, wird es über sein
+        gespeichertes Listing aufgefrischt statt neu aufgelöst — sonst wechselt
+        es bei jedem Refresh womöglich Börse und Währung
+        (siehe `get_quote_for_known`). Eine unbekannte ISIN muss dagegen
+        aufgelöst werden, sonst ließe sich nie ein neues Papier aufnehmen.
 
         Raises:
             InstrumentNotFoundError: ISIN nicht auflösbar.
             QuoteUnavailableError: Kein Kurs beschaffbar.
         """
+        instrument = self._repository.get_instrument_by_isin(isin)
+        symbol = instrument.get("symbol") if instrument else None
+        if instrument and symbol:
+            # `enrich_etf=True` und nicht über `_fetch_live`: Der Griff zum
+            # einzelnen Papier ist die ausdrückliche Ansage, jetzt nachzusehen —
+            # die Metadaten-TTL gilt hier nicht.
+            return self._save_fresh_with_volatility(
+                self._quote_service.get_quote_for_known(
+                    symbol, instrument.get("isin"), instrument.get("exchange"), True
+                )
+            )
         return self._save_fresh_with_volatility(self._quote_service.get_quote_by_isin(isin))
 
     def refresh_one_by_symbol(self, symbol: str) -> QuoteResponse:
@@ -465,12 +480,23 @@ class CachedQuoteService:
         als `metadata_ttl_days`. Das ist der Pfad des Sammelrefresh: Ohne die
         Grenze kostet jede Runde einen Scrape je ETF, obwohl sich Anbieter,
         Domizil und Replikationsart praktisch nie ändern.
+
+        **Ohne erneute Auflösung.** Das Papier ist bekannt, sein Listing steht
+        fest — die ISIN noch einmal aufzulösen hieße, bei jedem Refresh neu zu
+        würfeln, welche Börse man trifft (siehe `get_quote_for_known`). Ein
+        einmal falsch aufgelöstes Instrument heilt damit nicht mehr von selbst;
+        der Weg dafür ist `DELETE /instruments/{isin}`, danach löst der nächste
+        Abruf neu auf.
         """
         enrich = self._etf_metadata_is_stale(instrument)
-        isin = instrument.get("isin")
-        if isin:
-            return self._quote_service.get_quote_by_isin(isin, enrich)
-        return self._quote_service.get_quote_by_symbol(instrument["symbol"], enrich)
+        symbol = instrument.get("symbol")
+        if symbol:
+            return self._quote_service.get_quote_for_known(
+                symbol, instrument.get("isin"), instrument.get("exchange"), enrich
+            )
+        # Ohne Symbol bleibt nur die Auflösung — das kann nur ein Datensatz
+        # sein, der vor dem ersten erfolgreichen Abruf angelegt wurde.
+        return self._quote_service.get_quote_by_isin(instrument["isin"], enrich)
 
     def _etf_metadata_is_stale(self, instrument: dict | None) -> bool:
         """Ist der gespeicherte ETF-Metadatenstand alt genug für eine neue Abfrage?

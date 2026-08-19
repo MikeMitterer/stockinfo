@@ -115,6 +115,43 @@ class QuoteService:
         resolved = ResolvedInstrument(symbol=symbol)
         return self._build(resolved, enrich_etf)
 
+    def get_quote_for_known(
+        self,
+        symbol: str,
+        isin: str | None = None,
+        exchange: str | None = None,
+        enrich_etf: bool = True,
+    ) -> QuoteResponse:
+        """Beschafft den Kurs für ein **bereits aufgelöstes** Instrument.
+
+        Der Unterschied zu `get_quote_by_isin` ist der fehlende Resolver-Lauf,
+        und der ist der ganze Zweck: Die Auflösung ist nicht stabil. Findet
+        OpenFIGI kein Listing an der bevorzugten Börse — Zeitüberschreitung,
+        Rate-Limit, leere Antwort —, springt der Yahoo-Fallback ein und liefert
+        das primäre Listing, bei einem iShares-Papier also die Londoner oder
+        US-Notierung. Wer ein bekanntes Papier über die ISIN auffrischt,
+        bekommt so mal Xetra in EUR und mal London in GBP, und das Ergebnis
+        wird gespeichert. Im Depot fällt die Position damit aus der
+        Währungsrechnung, und Gesamtwert wie Anteile stimmen nicht mehr.
+
+        Die ISIN wird trotzdem mitgegeben: `_build` braucht sie für die
+        justETF-Anreicherung, nicht für die Börsenwahl.
+
+        Args:
+            symbol: Gespeichertes Yahoo-Symbol inkl. Börsen-Suffix.
+            isin: Gespeicherte ISIN, für die ETF-Anreicherung.
+            exchange: Gespeicherte Börse — sie bleibt, was sie war.
+            enrich_etf: Ob justETF gefragt wird — siehe `get_quote_by_isin`.
+
+        Returns:
+            Kurs-Antwort für genau dieses Listing.
+
+        Raises:
+            QuoteUnavailableError: Kein Kurs beschaffbar.
+        """
+        resolved = ResolvedInstrument(symbol=symbol, isin=isin, exchange=exchange)
+        return self._build(resolved, enrich_etf)
+
     def _build(
         self, resolved: ResolvedInstrument, enrich_etf: bool = True
     ) -> QuoteResponse:

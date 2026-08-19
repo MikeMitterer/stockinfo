@@ -52,6 +52,15 @@ class FakeQuoteService:
     def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
         return self.get_quote_by_isin(symbol)
 
+    def get_quote_for_known(
+        self,
+        symbol: str,
+        isin: str | None = None,
+        exchange: str | None = None,
+        enrich_etf: bool = True,
+    ) -> QuoteResponse:
+        return self.get_quote_by_isin(isin or symbol)
+
 
 def _response(fetched_at: str, price: float = 160.98) -> QuoteResponse:
     return QuoteResponse(
@@ -195,6 +204,15 @@ class _StockQuoteService:
             fetched_at="2026-07-13T10:00:00+00:00", type="stock", volatility=None,
         )
 
+    def get_quote_for_known(
+        self,
+        symbol: str,
+        isin: str | None = None,
+        exchange: str | None = None,
+        enrich_etf: bool = True,
+    ) -> QuoteResponse:
+        return self.get_quote_by_isin(isin or symbol, enrich_etf)
+
 
 def test_refresh_one_berechnet_volatilitaet_aus_cache(tmp_path) -> None:
     db_path = str(tmp_path / "vola.db")
@@ -275,6 +293,16 @@ class _MerkendeQuoteService:
     def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
         return self.get_quote_by_isin(symbol, enrich_etf)
 
+    def get_quote_for_known(
+        self,
+        symbol: str,
+        isin: str | None = None,
+        exchange: str | None = None,
+        enrich_etf: bool = True,
+    ) -> QuoteResponse:
+        self.enrich_calls.append(enrich_etf)
+        return self._response
+
 
 def _alter_stand(repo: QuoteRepository, meta_fetched_at: str) -> None:
     """Setzt den Zeitstempel des Metadatenstands direkt in der DB."""
@@ -346,3 +374,101 @@ def test_handrefresh_uebergeht_die_metadaten_ttl(repo) -> None:
     service.refresh_one("IE00B3RBWM25")
 
     assert fake.enrich_calls == [True]
+
+
+class _WanderndeAufloesung:
+    """QuoteService, dessen ISIN-Auflösung bei jedem Aufruf eine andere Börse trifft.
+
+    Genau das passiert in echt: `CompositeResolver` fragt zuerst OpenFIGI
+    (Xetra, EUR) und fällt bei Ausfall auf die Yahoo-Suche zurück, die das
+    primäre Listing liefert — bei einem iShares-Papier die Londoner Notierung
+    in GBP. Wer über die ISIN geht, bekommt also mal das eine, mal das andere.
+    """
+
+    def __init__(self) -> None:
+        self.isin_calls = 0
+        self.symbol_calls = 0
+        self.known_calls = 0
+
+    def _antwort(self, symbol: str, currency: str, exchange: str) -> QuoteResponse:
+        return QuoteResponse(
+            isin="IE00BCRY6557",
+            symbol=symbol,
+            currency=currency,
+            exchange=exchange,
+            price=101.19,
+            quote_time=_now(),
+            fetched_at=_now(),
+            type="etf",
+        )
+
+    def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
+        self.isin_calls += 1
+        # Erster Aufruf trifft Xetra, jeder weitere London.
+        if self.isin_calls == 1:
+            return self._antwort("IS3M.DE", "EUR", "Xetra")
+        return self._antwort("IS3M.L", "GBP", "London")
+
+    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
+        self.symbol_calls += 1
+        return self._antwort(symbol, "EUR", "Xetra")
+
+    def get_quote_for_known(
+        self,
+        symbol: str,
+        isin: str | None = None,
+        exchange: str | None = None,
+        enrich_etf: bool = True,
+    ) -> QuoteResponse:
+        self.known_calls += 1
+        return self._antwort(symbol, "EUR", exchange or "Xetra")
+
+
+def test_refresh_loest_bekanntes_instrument_nicht_neu_auf(repo: QuoteRepository) -> None:
+    """Ein bekanntes Papier behält seine Börse — auch wenn die Auflösung wandert.
+
+    Der Fall aus der Praxis: Nach einem Sammel-Refresh notierten zwei
+    Positionen plötzlich in USD und GBP, fielen damit aus der Währungsrechnung
+    des Depots und verfälschten Gesamtwert und Anteile.
+    """
+    fake = _WanderndeAufloesung()
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+
+    # Erster Kontakt: Das Papier ist unbekannt und wird aufgelöst.
+    service.get_by_isin("IE00BCRY6557")
+    assert fake.isin_calls == 1
+
+    result = service.refresh_one("IE00BCRY6557")
+
+    assert result.currency == "EUR"
+    assert result.symbol == "IS3M.DE"
+    # Entscheidend: Die ISIN wurde kein zweites Mal aufgelöst.
+    assert fake.isin_calls == 1
+    assert fake.known_calls == 1
+
+    stored = repo.get_instrument_by_isin("IE00BCRY6557")
+    assert stored["symbol"] == "IS3M.DE"
+
+
+def test_refresh_all_loest_bekannte_instrumente_nicht_neu_auf(repo: QuoteRepository) -> None:
+    """Derselbe Schutz für den Sammellauf — Scheduler und Dashboard gehen hier durch."""
+    fake = _WanderndeAufloesung()
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+
+    service.get_by_isin("IE00BCRY6557")
+    refreshed = service.refresh_all()
+
+    assert refreshed == 1
+    assert fake.isin_calls == 1
+    stored = repo.get_instrument_by_isin("IE00BCRY6557")
+    assert stored["symbol"] == "IS3M.DE"
+
+
+def test_refresh_einer_unbekannten_isin_loest_weiterhin_auf(repo: QuoteRepository) -> None:
+    """Ohne Auflösung ließe sich nie ein neues Papier aufnehmen."""
+    fake = _WanderndeAufloesung()
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+
+    service.refresh_one("IE00BCRY6557")
+
+    assert fake.isin_calls == 1

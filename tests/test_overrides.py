@@ -357,6 +357,15 @@ class _Quelle:
     def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
         return self._liefern(symbol)
 
+    def get_quote_for_known(
+        self,
+        symbol: str,
+        isin: str | None = None,
+        exchange: str | None = None,
+        enrich_etf: bool = True,
+    ) -> QuoteResponse:
+        return self._liefern(isin or symbol)
+
 
 class _StummerSync:
     """EOD-Sync, der nichts nachzieht — die Volatilität bleibt damit leer."""

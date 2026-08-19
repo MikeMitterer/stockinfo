@@ -55,6 +55,18 @@ class FakeQuoteService:
             type="stock",
         )
 
+    def get_quote_for_known(
+        self,
+        symbol: str,
+        isin: str | None = None,
+        exchange: str | None = None,
+        enrich_etf: bool = True,
+    ) -> QuoteResponse:
+        """Der Weg des Sammelrefresh: bekanntes Listing, keine neue Auflösung."""
+        if isin:
+            return self.get_quote_by_isin(isin, enrich_etf)
+        return self.get_quote_by_symbol(symbol, enrich_etf)
+
 
 @pytest.fixture
 def repo(tmp_path: Path) -> QuoteRepository:
