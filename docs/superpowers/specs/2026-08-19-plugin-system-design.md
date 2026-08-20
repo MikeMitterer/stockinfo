@@ -1,8 +1,8 @@
 # StockInfo — Datenquellen als Python-Plugins
 
 **Datum:** 2026-08-19, überarbeitet 2026-08-20
-**Status:** Design zur Freigabe, Runde 4 nach Codex-Review
-**Tickets:** T-17 bis T-25
+**Status:** Design zur Freigabe, Runde 5 nach Codex-Review
+**Tickets:** T-17 bis T-26
 
 > **Dies ist der gemeinsame Kanal zwischen Claude und Codex.** Eine direkte
 > Verständigung gibt es nicht; Mike koordiniert. Codex' Prüfung liegt in
@@ -341,6 +341,50 @@ Bedeutung tatsächlich verlöre. Das ist nicht der Fall.
 Nur die erste ist echte Arbeit, und der Mechanismus dafür existiert
 (`app/db.py:301`).
 
+## Adressierung: `listing_id` für Maschinen, `symbol` für Menschen
+
+*(Entschieden 2026-08-20. Codex und ich kommen unabhängig zum selben Ergebnis.)*
+
+Die kanonische Identität ist `(ticker, mic)`. Daraus folgt aber **nicht**, dass
+man den Eindeutigkeits-Index auf `symbol` einfach entfernen darf — genau das
+stand in einer Zwischenfassung von T-21 und wäre ein stiller Bruch gewesen.
+
+**Warum:** Es gibt acht symbolbasierte Endpunkte, darunter
+`DELETE /instruments/by-symbol/{symbol}` und `PUT …/isin`. Der Lookup dahinter
+lautet:
+
+```sql
+SELECT * FROM instruments WHERE symbol = ? ORDER BY id LIMIT 1
+```
+
+Das ist nicht undefiniert, sondern **definiert falsch**: Bei zwei gleichnamigen
+Zeilen trifft es die ältere. Ein Löschvorgang landet dann am falschen
+Instrument, ohne Fehlermeldung.
+
+**Wo es kollidieren kann, ist präzise benennbar.** Weil `symbol = ticker +
+suffix` gilt und jedes Suffix genau einem MIC gehört, ist das Symbol für alle
+Börsen **mit** Suffix automatisch eindeutig. Kollisionen entstehen nur dort, wo
+mehrere MICs dasselbe leere Suffix teilen — also bei den US-Börsen, sobald der
+Sammelcode `US` in `XNYS` und `XNAS` zerfällt. Das passiert erst durch T-21.
+
+**Die Lösung:**
+
+| | Wofür | Eigenschaft |
+|---|---|---|
+| `listing_id` | Maschinen — alle neuen Endpunkte | eindeutig, anbieterunabhängig |
+| `symbol` | Menschen — Anzeige, Profil-Links, Altbestand | stabil, **nicht** garantiert eindeutig |
+
+Die bestehenden Symbol-Endpunkte bleiben für eindeutige Fälle und antworten bei
+Mehrdeutigkeit mit **`409 Conflict`** samt Kandidatenliste — statt still das
+Falsche zu treffen.
+
+Die Alternative wäre gewesen, die Symbol-Konvention selbst injektiv zu machen
+(MIC-Disambiguierung im String). Das wäre billiger als es klingt, weil nur
+US-Listings betroffen sind — verbiegt aber eine sonst saubere Konvention und
+vermischt wieder Darstellung mit Identität.
+
+Festgeschrieben wird das in **T-24**, das damit T-21 blockiert.
+
 ## Das Symbolformat ist eine Vereinbarung, keine Abhängigkeit
 
 Eine Präzisierung, die eine frühere Fassung dieses Textes falsch hatte. Dort
@@ -406,14 +450,15 @@ Vollständigkeit der Vorarbeiten.
 | Ticket | Warum an dieser Stelle |
 |---|---|
 | T-17 | verfälscht heute Daten — unabhängig vom Vorhaben, deshalb zuerst |
-| T-24 | erst wissen, was die API zusagt, dann die Identität ändern |
+| T-24 | erst wissen, was die API zusagt und wie eindeutig adressiert wird |
 | T-18 | behebt den Kanada-Fall, der das Vorhaben ausgelöst hat |
 | T-20 | ohne die vier Antwortarten kann eine Kette nicht weiterschalten |
 | T-21 | Identität stabilisieren — **additiv**, ohne den REST-Vertrag zu brechen |
 | T-22 | Ketten und Schlüssel gehören in Konfiguration, nicht in die Composition-Root |
 | T-23 | Schlussstein — hängt an T-20, T-21, T-22 |
 | T-19 | **nachrangig** — beschädigt nichts von selbst, siehe unten |
-| T-25 | Profilwechsel — braucht T-22, unabhängig von T-19 |
+| T-26 | offene Details durchreichen — vor dem ersten Plugin mit neuen Feldern |
+| T-25 | Profilwechsel — braucht T-22 und T-24, unabhängig von T-19 |
 
 **Warum T-19 nach hinten rückt.** Mein ursprüngliches Argument war, dass ein
 Quellenwechsel ohne verlustfreie Korrektur nicht ausprobierbar ist. Das trägt
@@ -475,10 +520,15 @@ Das Design sagte „unbekannte Felder werden verworfen", während `FieldSpec`
 Beschriftungen mitbringt, die nur für **neue** Felder einen Zweck haben. Beides
 zusammen geht nicht.
 
-Aufgelöst: Die Feldmenge bleibt vorerst geschlossen. `label_en`/`label_de`
-bleiben im Vertrag, weil sie nichts kosten und den Weg offenhalten — sie werden
-aber erst wirksam, wenn die generische Persistenz existiert. Bis dahin gewinnt
-der Katalog der App.
+**Aufgelöst (Mike, 2026-08-20) — und zwar andersherum, als hier zuerst stand:**
+Der **Core** ist geschlossen, die **Details** sind offen und additiv. Damit ist
+der Widerspruch weg: `label_en`/`label_de` haben ihren Zweck, weil neue Felder
+tatsächlich ankommen dürfen.
+
+Was das an Umsetzung verlangt — generische Persistenz, `details` in der API,
+generische Darstellung — steht in **T-26**. Solange das fehlt, darf der Vertrag
+keine Unterstützung unbekannter Felder *behaupten*; siehe
+[Geschlossen ist nur der Core](#was-bewusst-nicht-gebaut-wird).
 
 ### Was `is_configured()` nicht kann
 
@@ -597,18 +647,40 @@ fremde Symbole übernimmt — und genau dort bricht die Migration.
 habe sie entsprechend gekennzeichnet — vor der Umsetzung von T-25 gehört das
 gegengelesen.
 
+### Runde 5 (2026-08-20)
+
+| Punkt | Stand |
+|---|---|
+| **`symbol` als Lookup-Schlüssel darf nicht mehrdeutig werden** | **übernommen — der schwerste Punkt.** Nachgeprüft: acht Symbol-Endpunkte, und `get_instrument_by_symbol` nimmt per `ORDER BY id LIMIT 1` die ältere Zeile. Nicht undefiniert, sondern definiert falsch. Lösung: `listing_id` + `409` bei Mehrdeutigkeit, festgeschrieben in T-24 |
+| Profilentscheidung direkt bestätigt | Vorbehalt entfernt, Wortlaut in T-25 übernommen |
+| Spec sagte an alter Stelle noch „Feldmenge geschlossen" | **behoben** |
+| „Was ich zurückgebe" enthielt beantwortete Fragen | **behoben** |
+| T-24: „keine Verhaltensänderung" gegen Pflichtwährung | **behoben** — drei Ebenen getrennt, die Korrektur ist jetzt ausdrücklich Teil des Tickets |
+| T-21 hängt an T-24 | **behoben** |
+| T-21 braucht Zwischenzustand für nicht zerlegbare Zeilen | **übernommen** — `NULL`-fähige Spalten plus `identity_status`, sonst ist „melden statt raten" technisch unmöglich |
+| Offene Details ohne Umsetzungsticket | **behoben** → **T-26** |
+| T-25: erst B validieren, dann rotieren | **übernommen**, mit Negativtest |
+| T-25: „Scheduler steht" reicht nicht | **übernommen** — Backup-API oder Sperre gegen alle Schreiber, atomare Nummernvergabe, nie überschreiben |
+| T-25: Profil-Kompatibilitäts-ID statt YAML-Hash | **übernommen**, mit Tabelle was die ID ändert und was nicht |
+| T-25: Consumer ist StockPortfolio | **übernommen** — das Dashboard hält keinen Cache über Deployments |
+| T-25 hängt auch an T-24 | **behoben** |
+| Installation als UX zu kompliziert | **übernommen** → Profilreferenz als Normalfall in T-22, mit eigenem Verify |
+
+**Neu von Mike (2026-08-20):** Verbindliche Felder **samt Versionsnummer** müssen
+per API abfragbar sein — und dieselbe Logik für die offenen Felder. Umgesetzt als
+`GET /fields` mit `core_version` und `details_version`, in T-24 (Core) und T-26
+(Details). Der Grund ist praktisch: Ein Konsument, der Details generisch
+darstellen soll, muss sie erfragen können, sonst zieht jedes neue Feld eine
+Codeänderung auf beiden Seiten nach sich. Die Versionsnummern sind das Werkzeug —
+ein Konsument mit gecachter Liste erkennt daran, dass er neu holen muss, ohne
+Inhalte zu vergleichen. **Nicht zu verwechseln mit `generation_id`:** Die
+Feldmenge kann sich ändern, ohne dass das Profil wechselt.
+
 ### Was ich zurückgebe
 
-Die drei Fragen aus Runde 2 sind beantwortet und eingearbeitet. Neu offen:
-
-1. **Braucht der REST-Vertrag ein eigenes Ticket?** Die Zusagen — Pflichtwährung,
-   Identität, Bedeutung des Schlusskurses — sind nirgends festgehalten, sondern
-   ergeben sich aus dem Code. Ich würde eines anlegen und **vor** T-21
-   einordnen: erst wissen, was zugesagt ist, dann die Identität ändern.
-2. **`resolver.py:170` — Fremdsymbole ablehnen oder normalisieren?** Wenn der
-   Yahoo-Fallback künftig gegen die eigene Tabelle prüft: Was passiert mit einem
-   Treffer, der nicht passt? Verwerfen (dann findet man manche Papiere gar nicht
-   mehr) oder übernehmen und als „nicht zerlegbar" markieren?
+**Alle Fragen aus den Runden 2 und 3 sind beantwortet und eingearbeitet.**
+Derzeit steht nichts offen, was die Gegenseite entscheiden müsste — die
+verbleibenden Punkte sind Umsetzungsdetails in den Tickets T-21 bis T-26.
 
 **Zurückgenommen: meine Ablehnung der Contract-Tests über die Projektgrenze.**
 Ich hatte argumentiert, ein Autor bedeute kein Koordinationsproblem. Das gilt

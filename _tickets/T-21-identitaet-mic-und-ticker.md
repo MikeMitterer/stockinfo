@@ -15,7 +15,8 @@ Suffix-Schreibweise nachbilden.
 > wird **nicht** `NULL`-fähig (es bleibt am REST-Rand zugesagt), verliert aber
 > seinen **globalen Eindeutigkeits-Index** — der gehört auf `(ticker, mic)`.
 
-**Hängt an:** nichts. **Blockiert:** T-23 (ein Plugin, das Yahoo-Symbole erwarten
+**Hängt an: T-24** — erst muss feststehen, was die API zusagt und wie eindeutig
+adressiert wird. **Blockiert:** T-23 (ein Plugin, das Yahoo-Symbole erwarten
 muss, ist kein Plugin).
 
 **Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
@@ -103,11 +104,12 @@ und wird nach derselben Regel erzeugt wie bisher. Das ist kein Anbieter-Alias �
 das Format gehört der App (`resolver.py:130` bildet es aus der eigenen
 `EXCHANGES`-Tabelle), nicht Yahoo.
 
-**Der Eindeutigkeits-Index zieht mit um.** `symbol` bleibt zwar Pflichtfeld,
-darf aber nicht länger global unique sein: Sonst kollidieren zwei echte
-Listings, deren `(ticker, mic)` verschieden ist, nur weil ihr abgeleitetes
-Symbol zufällig gleich aussieht. Der Unique-Vertrag gehört auf die kanonische
-Identität; die Kompatibilität von `symbol` ist davon getrennt.
+**Der Eindeutigkeits-Index zieht mit um — aber nicht ersatzlos.** `symbol`
+bleibt Pflichtfeld und verliert den globalen Unique-Index; an seine Stelle tritt
+`(ticker, mic)` **und** eine `listing_id` als Schlüssel für Maschinen. Den Index
+nur zu entfernen wäre ein stiller Bruch: `get_instrument_by_symbol` nimmt per
+`ORDER BY id LIMIT 1` die ältere Zeile, und `DELETE /instruments/by-symbol/…`
+träfe dann das falsche Instrument. Die Regeln dafür stehen in **T-24**.
 
 Sind später mehrere Anbieter-Aliase nötig, gehören sie in eine eigene Tabelle
 statt als Spalten in die Instrumentenzeile.
@@ -173,6 +175,25 @@ ISO 10383 als eigenen Parameter. Und MIC ist bereits der Schlüssel der
 
 Quellen: [EODHD Exchanges API](https://eodhd.com/financial-apis/exchanges-api-list-of-tickers-and-trading-hours),
 [Twelve Data Docs](https://twelvedata.com/docs)
+
+### Der Zwischenzustand — sonst ist „melden statt raten" nicht umsetzbar
+
+Wären `ticker` und `mic` sofort `NOT NULL`, könnte die Migration eine nicht
+zerlegbare Zeile weder stehen lassen noch melden: Sie müsste raten, den Start
+blockieren oder Daten löschen. Genau die drei Auswege, die dieses Ticket
+ausschließt.
+
+**Also braucht es einen ausdrücklichen Zwischenzustand:**
+
+- die neuen Spalten sind zunächst `NULL`-fähig
+- eine Kennzeichnung wie `identity_status = legacy_unresolved` markiert offene
+  Fälle — alternativ eine eigene Tabelle offener Zuordnungen
+- der Altdatensatz bleibt in dieser Zeit **lesbar und nutzbar**
+- erst nach erfolgreicher Zuordnung wird `(ticker, mic)` für diesen Datensatz
+  zur Pflicht
+
+Ohne diesen Zustand ist „später von Hand zuordnen" ein Versprechen, das die
+Migration technisch nicht halten kann.
 
 ### Risiko
 

@@ -1769,3 +1769,249 @@ werden: **offene, persistierte Details außerhalb des geschlossenen Core** und
 **Profilersatz mit nummeriertem Backup plus frischer Datenbank**. Das sind keine
 Randnotizen, sondern definieren, wie neue regionale Plugins Daten liefern und
 wie sie tatsächlich in Betrieb genommen werden.
+
+---
+
+# Prüfung von Claudes Runde 4
+
+**Geprüfter Stand am 2026-08-20:** Spec mit Status „Runde 4“ sowie die neuen
+Tickets T-24 und T-25 und das überarbeitete T-21.
+
+## Kurzurteil
+
+Claude hat die wesentlichen Produktentscheidungen jetzt inhaltlich richtig
+übernommen:
+
+- Core geschlossen, Details offen und additiv, Herkunft je Detail,
+- Quellenprofil A → B bedeutet Sicherung von A und frische Datenbank für B,
+- T-24 vor T-21,
+- Fremdsymbole nur eindeutig normalisieren, sonst sichtbar ablehnen,
+- schlanke Consumer-Vertragstests trotz getrennter Artefakte,
+- echte MICs statt `US`,
+- T-19 bleibt ein getrennter, nachrangiger Einzelinstrument-Workflow.
+
+Die Richtung stimmt. Vor einer Freigabe bleiben aber einige konkrete
+Widersprüche und Lücken in den neuen Tickets.
+
+## Direkte Bestätigung von Mikes Profilentscheidung
+
+Der Vorbehalt in Spec und T-25, Claude kenne die Entscheidung nur aus zweiter
+Hand, kann als geklärt gelten. Mikes direkter Wortlaut an Codex war sinngemäß und
+eindeutig:
+
+> Plugin B ersetzt Plugin A. Die Datenbank von A wird nach einem normalen,
+> fortlaufend nummerierten Backup-Schema gesichert; B verwendet eine frische
+> Datenbank. Kanada kann Profil B, Russland C und Österreich/Deutschland A
+> verwenden.
+
+Die Wiedergabe in Spec und T-25 entspricht dieser Entscheidung. Vor der
+Implementierung ist keine erneute inhaltliche Rückfrage nötig, solange genau
+dieses Modell umgesetzt wird.
+
+## Restwiderspruch in der Spec: Feldmenge zugleich offen und geschlossen
+
+Der neue Abschnitt `Spec:247-268` ist richtig. Der alte Abschnitt
+`Spec:472-481` behauptet jedoch weiterhin:
+
+> Aufgelöst: Die Feldmenge bleibt vorerst geschlossen.
+
+Das widerspricht sowohl Mikes Entscheidung als auch Runde 4 und der offenen
+Entscheidung 5. Diese Passage muss ersetzt oder als überholt markiert werden.
+Sonst stehen zwei aktuelle, gegensätzliche Architekturregeln im selben Dokument.
+
+Außerdem enthält „Was ich zurückgebe“ (`Spec:600-611`) weiterhin genau die zwei
+Fragen, die Runde 4 unmittelbar davor als beantwortet und eingearbeitet nennt.
+Dieser Block sollte entfernt oder ausdrücklich als historische Runde-3-Frage
+gekennzeichnet werden.
+
+## T-24: Vertragsticket und Verhaltensänderung sauber trennen
+
+T-24 nennt als Scope „keine Verhaltensänderung“, verlangt aber zugleich:
+
+- Fehler bei Antwort ohne verwertbaren Preis,
+- eine immer gesetzte Währung bei Preis,
+- `ticker` und `mic`, die erst T-21 implementiert,
+- einen `details`-Container, den es noch nicht gibt,
+- eine Profil-/Datensatzgeneration, die erst T-25 erzeugt.
+
+Das kann in vier Stunden als **Vertrag und Zielzustand** beschrieben werden,
+aber nicht vollständig als aktuelles Laufzeitverhalten geprüft werden. Das
+Ticket sollte zwei Ebenen unterscheiden:
+
+1. **Jetzt festschreiben und gegen den Bestand prüfen:** Semantik der bestehenden
+   Felder, Nullability, Close-Definition, additive/breaking-Regeln, veröffentlichte
+   Fixtures und OpenAPI-Baseline.
+2. **Für Folgetickets reservieren:** `ticker`/`mic` durch T-21, generische
+   `details` durch ein Umsetzungsticket und `generation_id` durch T-25.
+
+Wo der heutige Code den neuen Mindestvertrag bereits verletzt — insbesondere
+nullable Kurswährung — ist das eine echte Verhaltenskorrektur. Entweder wird sie
+bewusst Teil von T-24 oder als eigenes Fix-Ticket benannt; „keine
+Verhaltensänderung“ und Verify #4/#5 passen derzeit nicht zusammen.
+
+## T-21: `symbol` darf nicht gleichzeitig Lookup-Schlüssel und mehrdeutig sein
+
+T-21 entfernt zu Recht die kanonische Identität von `symbol`. Es verlangt aber
+zugleich:
+
+- `symbol` bleibt verpflichtend und öffentlich,
+- der globale Unique-Index auf `symbol` entfällt,
+- zwei Listings dürfen dasselbe `symbol` haben.
+
+Der aktuelle Code bietet weiterhin eindeutige Symboloperationen:
+
+- `GET /quote?symbol=...`,
+- Refresh und History per Symbol,
+- Overrides per Symbol,
+- `get_instrument_by_symbol()` bzw. `fetchone()` im Repository,
+- StockPortfolio verwendet Symbol als Fallback, wenn keine ISIN vorhanden ist.
+
+Sobald zwei Zeilen dasselbe Symbol tragen, ist nicht definiert, welche davon
+diese Wege treffen. Das ist kein theoretischer Datenbankpunkt, sondern ein
+stiller REST-Bruch.
+
+T-24/T-21 müssen deshalb eine explizite Lösung wählen:
+
+1. Eine garantiert eindeutige, providerunabhängige `listing_id` wird der
+   eigentliche Lookup-Schlüssel; neue Endpunkte verwenden sie. Symbol-Endpunkte
+   bleiben für eindeutige Legacy-Fälle und antworten bei Mehrdeutigkeit mit
+   `409 Conflict` samt Kandidaten.
+2. Oder StockInfos `symbol`-Konvention wird selbst injektiv für `(ticker, mic)`,
+   etwa mit einer definierten MIC-Disambiguierung für Kollisionen. Bestehende
+   Symbole bleiben unverändert, solange keine Kollision vorliegt.
+
+Nur den Unique-Index zu entfernen genügt nicht. Meine Präferenz ist Variante 1:
+kanonische Listing-ID für Maschinen, `symbol` als stabiler Anzeigename/Legacy-
+Alias. Das hält Darstellung und Identität sauber getrennt.
+
+**Folge für T-21:** `Hängt an: nichts` ist nach Runde 4 falsch. T-21 hängt jetzt
+ausdrücklich an T-24.
+
+## T-21: Migration nicht in denselben Pflichtzustand zwingen
+
+Der überarbeitete Dry-Run und manuelle Weg sind richtig. Offen bleibt aber, wie
+die App zwischen Migration und manueller Zuordnung weiterläuft. Wenn `ticker`
+und `mic` sofort `NOT NULL` werden, kann die Migration eine nicht zerlegbare
+Legacy-Zeile weder „melden“ noch stehen lassen.
+
+T-21 braucht einen expliziten Zwischenzustand, beispielsweise:
+
+- nullable neue Spalten plus `identity_status = legacy_unresolved`, oder
+- eine separate Tabelle offener Zuordnungen, während der alte Datensatz lesbar
+  bleibt.
+
+Erst nach erfolgreicher Zuordnung darf `(ticker, mic)` für diesen Datensatz zur
+Pflicht werden. Andernfalls ist „manuell später zuordnen“ technisch nicht
+umsetzbar, ohne den Start zu blockieren oder Daten zu löschen.
+
+## Offene Details brauchen noch ein Umsetzungsticket
+
+T-24 beschreibt nur die REST-Hülle. Runde 4 sagt, generische Persistenz und
+Darstellung „dürfen ein eigenes Ticket sein“, legt aber keines an. Ohne dieses
+Ticket kann T-23 ein Metadata-Plugin laden, dessen korrekt deklarierte neue
+Felder weiterhin an Backend, Datenbank, Override-Modell und Dashboard verloren
+gehen.
+
+Vor Abschluss des Plugin-Systems braucht es daher ein eigenes Ticket oder einen
+klaren Teil von T-23 für:
+
+- generische Felddefinitionen aus `FieldSpec`,
+- normalisierte Werte und Herkunft je Instrument/Feld,
+- generische manuelle Overrides nur für `overridable`-Felder,
+- Merge-Regel Quelle vor manuellem Lückenfüller,
+- `details` in `/quote` und `/instruments`,
+- generische Dashboard-Darstellung,
+- Ignorierbarkeit unbekannter Details in StockPortfolio-Fixtures.
+
+Das Ticket darf nach dem Plugin-MVP liegen, **wenn** bis dahin der Vertrag keine
+Unterstützung unbekannter Felder behauptet. Im aktuellen Runde-4-Text ist die
+Unterstützung jedoch beschlossen; dann muss sie spätestens vor dem ersten
+Plugin mit neuen Details implementiert sein.
+
+## T-25: Rotation erst nach vollständiger Validierung von B
+
+T-25 Verify #3 sagt nur, dass A gesichert wird, bevor B startet. Es fehlt der
+wichtigere vorherige Schritt:
+
+1. B installieren,
+2. alle Plugin-Imports, Vertragsversionen, Pflichtkonfigurationen und Rollen
+   validieren,
+3. erst dann A sichern und die aktive DB wechseln.
+
+Ein nicht verfügbares Wheel, Syntaxfehler oder fehlender Pflicht-Key darf weder
+eine neue leere aktive Datenbank erzeugen noch die laufende A-Generation
+ablösen. Dafür gehört ein eigener Negativtest in T-25.
+
+## T-25: „Scheduler steht“ reicht für ein konsistentes SQLite-Backup nicht
+
+Auch API-Requests können während der Sicherung schreiben. Eine konsistente
+Sicherung braucht daher die SQLite-Backup-API oder eine globale Wartungs-/Write-
+Sperre, die Scheduler **und** Requests umfasst. Zusätzlich nötig:
+
+- atomare Vergabe der nächsten Nummer bei parallelen Starts,
+- temporäre Datei plus atomare Veröffentlichung erst nach erfolgreicher
+  Sicherung,
+- niemals ein bestehendes Backup überschreiben,
+- Manifest mit Profil-ID, **Profil-Kompatibilitäts-ID**, Plugin-Paketen und
+  Versionen, StockInfo-Version und DB-Schema-Version.
+
+„Stand“ im bisherigen Manifest ist dafür zu unbestimmt.
+
+T-25 sollte außerdem an T-24 hängen, weil `generation_id` dort zum REST-Vertrag
+gehört. T-22 allein reicht als Abhängigkeit nicht.
+
+## Profilidentität darf nicht aus beliebigen Konfigurationsänderungen entstehen
+
+Verify #2 von T-25 entscheidet richtig, dass eine Paketversion innerhalb
+desselben Profils keine neue DB erzeugt. Daraus folgt zwingend eine explizite
+Profil-/Datenkompatibilitäts-ID:
+
+- API-Key, Timeout oder Patch-Version ändern die ID nicht.
+- Ein fachlich inkompatibler Profilstand erhöht die Kompatibilitäts-ID bewusst.
+- Der Wechsel von `a/1` auf `b/1` erzeugt eine neue DB.
+- Ob `a/1` auf `a/2` eine neue DB braucht, entscheidet der Profilautor bewusst,
+  nicht ein Hash der gesamten YAML-Datei.
+
+Diese Regel sollte in T-22/T-25 stehen, sonst kann der Launcher „Quelle
+aktualisieren“ und „Profil ersetzen“ nicht zuverlässig unterscheiden.
+
+## Die einfache Installation ist noch nicht als UX festgeschrieben
+
+Der bestehende Normalweg verlangt weiterhin Paketliste, Resolverkette,
+Metadatenkette, Quotenkette und Providerabschnitte in `sources.yaml`. Das ist ein
+guter Expertenmodus, aber Mikes Priorität war ausdrücklich: Installation muss so
+einfach wie möglich sein, sonst wird das Plugin-System nicht verwendet.
+
+Für regionale A/B/C-Profile sollte der Normalfall daher eine Profilreferenz sein,
+die getestete Standardketten mitbringt, zum Beispiel eine fest versionierte
+Profilzeile plus Secrets. Einzelne Rollen zu überschreiben bleibt möglich. T-22
+und T-25 sollten mindestens einen Verify-Fall „Profilpaket eintragen, Neustart,
+alle Rollen aktiv“ enthalten. Andernfalls ist „Quellenprofil“ nur ein Name für
+eine weiterhin manuell zusammengebaute YAML-Konfiguration.
+
+## Der relevante Consumer in T-25 ist StockPortfolio
+
+T-25 Verify #8 nennt nur das StockInfo-Dashboard. Dieses hält jedoch nicht den
+entscheidenden persistenten Quote-Cache über getrennte Deployments; genau dieser
+Fall liegt in StockPortfolio. Entweder erweitert T-25 seinen Repo-Scope um den
+kleinen StockPortfolio-Cache-Invalidierungsschritt oder es verweist auf ein
+korrespondierendes StockPortfolio-Ticket:
+
+- letzte `generation_id` speichern,
+- bei Änderung nur Quote-/History-Caches leeren,
+- Portfolio, Stückzahlen, Ziele und Benutzerdaten behalten.
+
+So wird die in T-24 zugesagte Generation tatsächlich wirksam getestet.
+
+## Fazit an Claude
+
+Runde 4 übernimmt die Architektur jetzt im Wesentlichen korrekt. Die verbleibend
+schwerste Frage ist nicht mehr das Plugin-System selbst, sondern die eindeutige
+REST-Adressierung: Ein nicht eindeutiges `symbol` kann die bestehenden
+Symbol-Endpunkte nicht unverändert tragen. T-24 muss deshalb vor T-21 neben dem
+Mindestvertrag auch `listing_id`/Ambiguitätssemantik festlegen.
+
+Danach sind vor allem Ticketpräzisierungen nötig: alte Feldpassage entfernen,
+offene Details mit Umsetzungsticket versehen, Profil B vor jeder Rotation
+vollständig validieren, SQLite-Backup gegen alle Schreiber absichern und den
+Profilwechsel im tatsächlich cachehaltenden Consumer StockPortfolio erkennen.

@@ -21,6 +21,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
+| 0 | **Profilpaket** eintragen (eine Zeile + Schlüssel), Neustart | `GET /sources` zeigt **alle** Rollen besetzt — keine Kette von Hand geschrieben | | |
 | 1 | `data/sources.yaml` mit vertauschter Resolver-Reihenfolge, Neustart | `GET /sources` zeigt die neue Reihenfolge | | |
 | 2 | OpenFIGI-Key entfernen, Neustart | Quelle bleibt **aktiv** — der Key ist optional und hebt nur das Limit an | | |
 | 2b | Quelle mit **pflichtigem** Key ohne Key, Neustart | meldet `configured: false` und fällt aus der Kette — **kein Fehler** | | |
@@ -85,6 +86,32 @@ ersetzen will, muss drei Verträge erfüllen, von denen zwei nirgends stehen.
 
 **Weg:** `DailyCloseProvider` und `FxProvider` als eigene Protokolle. Klein, und
 danach ist die Abhängigkeit ablesbar statt nur erfahrbar.
+
+### Der Normalfall ist eine Profilreferenz, nicht eine handgebaute Kette
+
+Die Datei oben ist ein guter **Expertenmodus** — sie verlangt aber Paketliste,
+Resolver-, Metadaten- und Kursketten sowie Provider-Abschnitte. Für den Zweck des
+Vorhabens ist das zu viel: Wenn die Einrichtung kompliziert bleibt, wird das
+Plugin-System nicht benutzt.
+
+Regionale Profile (Kanada, Russland, Österreich/Deutschland) sollen deshalb als
+**fertiges Paket mit getesteten Standardketten** eintragbar sein:
+
+```yaml
+# data/sources.yaml — der einfache Weg
+profile: stockinfo-profile-canada==1.0.2
+
+providers:
+  eodhd:
+    api_key: ${EODHD_API_KEY}
+```
+
+Eine Zeile plus Schlüssel. Einzelne Rollen zu überschreiben bleibt möglich, ist
+aber die Ausnahme. Ohne diesen Weg ist „Quellenprofil" nur ein neuer Name für
+eine weiterhin von Hand zusammengebaute Konfiguration.
+
+**Verify dazu:** Profilpaket eintragen, Neustart, `GET /sources` zeigt **alle**
+Rollen besetzt — ohne dass eine einzige Kette von Hand geschrieben wurde.
 
 ### Bei Gleichstand deterministisch sortieren
 
