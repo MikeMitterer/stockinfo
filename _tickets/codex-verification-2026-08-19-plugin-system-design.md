@@ -2015,3 +2015,285 @@ Danach sind vor allem Ticketpräzisierungen nötig: alte Feldpassage entfernen,
 offene Details mit Umsetzungsticket versehen, Profil B vor jeder Rotation
 vollständig validieren, SQLite-Backup gegen alle Schreiber absichern und den
 Profilwechsel im tatsächlich cachehaltenden Consumer StockPortfolio erkennen.
+
+---
+
+# Prüfung von Claudes Runde 5
+
+**Geprüfter Stand am 2026-08-20:** Spec mit Status „Runde 5“, T-21, T-22 sowie
+die neuen bzw. überarbeiteten Tickets T-24 bis T-26.
+
+## Gesamturteil
+
+Die Architektur ist jetzt in den wesentlichen Produktentscheidungen konsistent:
+
+- ein stabiler REST-Core mit verpflichtender Währung,
+- `listing_id` für Maschinen und `symbol` als Legacy-/Anzeigewert,
+- `409 Conflict` statt willkürlichem Symboltreffer,
+- ein ausdrücklicher Legacy-Zwischenzustand bei T-21,
+- ein einfacher Profilpaket-Normalfall in T-22,
+- offene, abfragbare und generisch persistierte Details in T-26,
+- sicherer Profilersatz A → B mit Backup und frischer DB in T-25,
+- StockPortfolio als echter Consumer der `generation_id`.
+
+Die früheren Blocker sind damit abgearbeitet. Vor der Implementierung sollten
+noch die folgenden Vertragsdetails präzisiert werden; sie ändern die
+Grundarchitektur nicht, verhindern aber neue stille Mehrdeutigkeiten.
+
+## 1. `listing_id` braucht eine konkrete Semantik
+
+T-24 nennt `listing_id` eindeutig und anbieterunabhängig, legt aber weder Typ
+noch Lebensdauer fest. Das ist gerade wegen des T-21-Zwischenzustands wichtig:
+Eine Legacy-Zeile ohne `ticker`/`mic` muss weiterhin maschinell eindeutig
+adressierbar sein.
+
+**Empfehlung:** `listing_id` ist eine opake, bei Anlage einmal erzeugte UUID und
+nicht aus `ticker`, `mic`, ISIN oder dem lokalen Integer-PK abgeleitet.
+
+Damit gelten klare Regeln:
+
+- jede Instrumentzeile erhält eine `listing_id`, auch
+  `identity_status=legacy_unresolved`,
+- die ID bleibt bei manueller Zuordnung und normalen Metadatenänderungen stabil,
+- Backup und Restore erhalten die gespeicherte ID,
+- eine frische Profil-B-Datenbank erzeugt neue IDs; `generation_id` zeigt den
+  Datasetwechsel an,
+- Konsumenten behandeln sie als opaken String und zerlegen sie nie.
+
+Ein Hash aus `(ticker, mic)` wäre ungeeignet: Er existiert für offene
+Legacy-Zeilen nicht und würde sich bei einer fachlichen Listingkorrektur ändern.
+Ein lokaler Integer wäre an der REST-Grenze zu leicht mit einer über Generationen
+stabilen Identität zu verwechseln.
+
+T-21 Verify sollte deshalb zusätzlich prüfen:
+
+1. jede Zeile hat sofort eine eindeutige `listing_id`, auch eine offene
+   Legacy-Zeile,
+2. manuelle Ticker-/MIC-Zuordnung ändert diese ID nicht,
+3. neue Listing-ID-Endpunkte treffen exakt die gewünschte Zeile,
+4. ein mehrdeutiger Symbol-Endpunkt liefert wirklich `409` und verändert bei
+   schreibenden Operationen keine der Kandidaten.
+
+## 2. Eine Kardinalitätsregel für ISIN und Listing fehlt
+
+Die heutige Datenbank hat `isin TEXT UNIQUE`, die neue kanonische Identität ist
+hingegen `(ticker, mic)`. Damit ist derzeit nur **ein aktives Listing je ISIN und
+Datenbank** möglich. Das passt zum bisherigen Modell: Ein Profil wählt genau ein
+Listing, T-19 ersetzt es gegebenenfalls.
+
+Diese Einschränkung sollte T-24/T-21 ausdrücklich nennen. Sonst suggerieren
+`listing_id` und `(ticker, mic)`, StockInfo könne mehrere gleichzeitige Listings
+derselben ISIN führen, obwohl der Unique-Constraint das verhindert. Falls das
+später gewünscht wird, ist es eine eigene Schema- und Consumer-Erweiterung.
+
+## 3. Die `details`-Hülle selbst ist noch nicht festgelegt
+
+T-26 definiert Feldkatalog und Persistenz, aber nicht die konkrete Form eines
+Werts in `/quote` bzw. `/instruments`. Vor der Umsetzung muss die stabile Hülle
+mindestens diese Semantik festlegen:
+
+- Feldschlüssel,
+- typisierter wirksamer Wert,
+- Einheit und gegebenenfalls Währung,
+- `origin = provider | manual`,
+- konkrete Quelle,
+- Stand/`as_of`,
+- optionaler Hinweis, dass ein manueller Wert gerade von der Quelle verdeckt
+  wird.
+
+`GET /fields` beschreibt, **welche** Felder existieren. `details` am Instrument
+trägt, **welchen wirksamen Wert** dieses Instrument dazu hat. Diese beiden
+Ebenen dürfen nicht vermischt werden.
+
+## 4. Namespaces und Feldkollisionen sind noch ungeregelt
+
+Zwei Plugins können beide ein Feld `yield` deklarieren und Verschiedenes meinen.
+T-26 braucht daher Regeln:
+
+- bekannte StockInfo-Felder wie `ter` verwenden den kanonischen Katalog,
+- ein Plugin darf ein kanonisches Feld nur mit kompatiblem Typ und kompatibler
+  Zieldimension bedienen,
+- wirklich neue Felder erhalten einen stabilen Namespace, etwa
+  `plugin-name.field-name`,
+- deklarieren zwei Quellen denselben Schlüssel mit widersprüchlichem Typ,
+  Einheit oder Semantik, wird die Quelle beim Laden abgelehnt; kein
+  „letzter gewinnt“,
+- Feldschlüssel werden nach Veröffentlichung nicht umgedeutet. Eine neue
+  Bedeutung braucht einen neuen Schlüssel.
+
+Diese Prüfung gehört sowohl in die Registry als auch in die Plugin-
+Contract-Tests.
+
+## 5. `details_version` muss jede Schemaveränderung erkennen
+
+T-26 erhöht die Version derzeit, „wenn Felder dazukommen“. Sie muss sich auch
+ändern, wenn:
+
+- ein Feld entfernt wird,
+- Typ, Einheit, Währungserfordernis oder `overridable` wechselt,
+- ein Feldschlüssel ersetzt wird,
+- Beschriftungen oder die in `/fields` ausgelieferte Quellenmenge geändert
+  werden, sofern diese Bestandteile des öffentlichen Feldschemas sind.
+
+Ein temporärer Provider-Ausfall oder ein geöffneter Schutzschalter darf die
+Version dagegen nicht verändern. Maßgeblich ist das konfigurierte und validierte
+Profilschema, nicht dessen momentane Gesundheit.
+
+Technisch kann `details_version` eine persistierte monotone Revision oder ein
+deterministischer Fingerprint der kanonisch sortierten Felddefinitionen sein.
+Wenn Mike ausdrücklich eine numerische Version möchte, muss sie bei jeder
+öffentlichen Schemaveränderung atomar fortgeschrieben werden. Consumer sollten
+den Cache mindestens mit `(generation_id, details_version)` adressieren.
+
+Für `core_version` braucht es ebenfalls eine kurze Regel, etwa:
+
+- Major: bestehendes Pflichtfeld entfernt oder inkompatibel geändert,
+- Minor: additive Core-Erweiterung,
+- Patch: reine Klarstellung ohne JSON-Vertragsänderung.
+
+## 6. `/fields.core` muss nach Response-Typ gegliedert sein
+
+StockInfo hat nicht einen einzigen flachen Core, sondern mehrere öffentliche
+Modelle: Quote, InstrumentSummary, DailyPoint, QuotePoint, FX und Status. Ein
+flaches Array mit `price` und `currency` sagt nicht, in welchem Response sie
+Pflicht sind.
+
+`GET /fields` sollte deshalb nach Schema bzw. Resource gliedern, beispielsweise
+`quote`, `instrument`, `daily`, `fx`, oder direkt stabile OpenAPI-
+Schemaidentifikatoren referenzieren. Sonst ist die abfragbare Nullability weniger
+präzise als das bereits vorhandene OpenAPI-Dokument.
+
+## 7. Die acht bekannten Metadaten brauchen eine einzige Wahrheit
+
+T-26 zeigt `ter` im generischen Detailkatalog; zugleich erwarten bestehende
+Consumer `ter`, `volatility` und weitere Felder weiterhin top-level. Damit ist
+eine zeitweise Doppelprojektion unvermeidlich.
+
+Es muss ausdrücklich gelten:
+
+- Providerwert, manueller Wert und Merge-Regel werden genau einmal generisch
+  gespeichert und berechnet.
+- Bestehende Top-Level-Felder sind nur eine Kompatibilitätsprojektion desselben
+  wirksamen Werts.
+- Ein Test vergleicht Top-Level-Wert und gleichnamigen Detailwert einschließlich
+  `null`-/Override-Fällen.
+
+Zwei getrennte Speicher- oder Mergepfade würden früher oder später
+widersprüchliche REST-Antworten erzeugen.
+
+## 8. T-26 braucht weitere Abhängigkeiten
+
+T-26 hängt formal nur an T-24. Für die tatsächliche Implementierung verwendet es
+aber:
+
+- die eindeutige Instrumentadressierung aus T-21, insbesondere für generische
+  Override-Endpunkte,
+- die geladenen `FieldSpec`-Deklarationen und Kollisionsprüfung der Registry aus
+  T-23.
+
+Die Abhängigkeiten sollten entsprechend ergänzt werden. Die Reihenfolge in der
+Spec erfüllt sie faktisch bereits; das Ticket sollte es auch ausdrücken.
+
+## 9. T-25 muss „gleiches Profil“ an die Kompatibilitäts-ID binden
+
+Verify #1 und #2 sagen pauschal, eine Quelle bzw. Paketversion im selben Profil
+verwende dieselbe DB. Das ist nur richtig, solange die
+**Profil-Kompatibilitäts-ID unverändert** bleibt.
+
+Ein Wechsel von adjusted auf unadjusted Daily Close oder auf eine Quelle mit
+anderer Listingauswahl darf nicht bloß deshalb alte Historien weiterverwenden,
+weil der Profilname gleich lautet. Der Profilautor muss in diesem Fall die
+Kompatibilitäts-ID erhöhen; dann gilt es fachlich als neue Generation mit frischer
+DB.
+
+Die beiden Verify-Zeilen sollten diesen Zusatz tragen.
+
+## 10. Profilrotation braucht einen absturzfesten Zustandsübergang
+
+T-25 sichert die Backup-Datei atomar, aber noch nicht den gesamten Übergang
+`A aktiv → Backup A → B aktiv`. Ein Abbruch zwischen diesen Schritten darf beim
+nächsten Start weder A erneut rotieren noch B mit As Datenbank öffnen.
+
+Erforderlich ist ein kleiner, persistenter Zustandsautomat bzw. ein atomarer
+Active-Profile-Marker mit mindestens:
+
+- bisher aktive Profil-/Kompatibilitäts-ID,
+- gewünschtes validiertes Zielprofil,
+- Backup-Nummer und Status,
+- Pfad der aktiven Datenbank,
+- Ziel-`generation_id`.
+
+Der Neustart muss jeden Zwischenzustand deterministisch fortsetzen oder auf A
+zurückrollen können.
+
+Außerdem braucht „A bleibt aktiv, wenn B ungültig ist“ eine gespeicherte
+Last-known-good-Konfiguration samt Plugin-Umgebung. Die geänderte
+`sources.yaml` zeigt sonst weiterhin auf B; nur die alte Datenbank zu behalten
+reicht nicht, um A wieder zu starten.
+
+## 11. `generation_id` beim Restore festlegen
+
+Beim Zurückholen eines Backups sollte jede **Aktivierung** eine neue
+`generation_id` erhalten, auch wenn im Backup eine alte ID gespeichert war.
+Andernfalls kann ein Consumer bei einer wiederholten Wiederherstellung denselben
+Identifier sehen und einen Cache behalten, obwohl sich der Dateninhalt geändert
+hat.
+
+Die fachlichen Listing-IDs innerhalb des Backups bleiben erhalten; die
+Aktivierungs-/Datasetgeneration wird neu vergeben. Das trennt Datenidentität von
+Betriebsereignis.
+
+## 12. StockPortfolio-Arbeit braucht ein eindeutiges Ticket
+
+T-25 lässt weiterhin offen, ob sein Scope erweitert oder auf ein
+StockPortfolio-Ticket verwiesen wird. Vor Umsetzung sollte eine Variante gewählt
+werden. Der Abnahmetest #8 kann nicht in einem Ticket mit Repo-Scope „StockInfo
+(Backend + Dashboard)“ grün werden, wenn im Nachbar-Repo keine Änderung
+autorisiert und verfolgt wird.
+
+Das StockPortfolio-Ticket sollte neben `generation_id` auch festhalten:
+
+- keine EUR-Ersatzwährung bei fehlender Kurswährung,
+- mittelfristig `listing_id` als bevorzugten Maschinen-/Cache-Schlüssel,
+- weiterhin Fallback auf ISIN/Symbol für alte gespeicherte Positionen,
+- nur Kurs-/History-Caches invalidieren, niemals Portfolio und Ziele.
+
+## 13. Zwei kleine Spec-Korrekturen
+
+1. `Spec:331-332` sagt noch, eine neue API-Version mit `listing_id` sei erst
+   nötig, wenn `symbol` seine Bedeutung verliert. Direkt danach wird
+   `listing_id` verbindlich eingeführt. Gemeint ist vermutlich: keine
+   **breaking Hauptversion** nötig, weil das Feld additiv ist. So sollte es dort
+   stehen.
+2. Die Aussage, Symbolkollisionen könnten „nur“ bei US-Börsen entstehen, gilt
+   für die heutige Tabelle. Regionale Plugins können weitere MICs und
+   Symbolkonventionen einführen. Die Laufzeitprüfung und `409`-Regel müssen daher
+   allgemein gelten; „derzeit nur US“ ist die belastbare Formulierung.
+
+## Aufwandseinschätzung
+
+Die Ein-Tages-Timeboxes für T-21, T-25 und T-26 wirken nach der jetzt korrekt
+erkannten Tiefe zu knapp:
+
+- T-21 umfasst Migration, Zwischenzustand, UUID, neue Endpunkte,
+  Ambiguitätsfehler und manuelle UI.
+- T-25 umfasst Launcher-State-Machine, konsistente Sicherung, Restore,
+  Last-known-good und StockPortfolio-Koordination.
+- T-26 umfasst Backend-Persistenz, Typvalidierung, Overrides, REST, Dashboard und
+  Kompatibilitätstests.
+
+Das ist kein Architekturproblem, aber ein Planungsrisiko. Sinnvoller sind
+kleinere Untertickets oder realistischere Timeboxes, statt die Sicherheitsfälle
+unter Zeitdruck wegzulassen.
+
+## Schlussfazit an Claude
+
+Runde 5 kann architektonisch freigegeben werden, sobald die Semantik von
+`listing_id`, Feldnamespace/Kollisionen und Versionsänderungen festgeschrieben
+ist. Die übrigen Punkte sind konkrete Ticketnachschärfungen, keine erneute
+Grundsatzdiskussion.
+
+Besonders wichtig vor dem ersten Code: opake UUID für jede Zeile einschließlich
+Legacy-Zwischenzustand; `details_version` bei jeder öffentlichen
+Schemaveränderung; ein absturzfester Profilwechsel mit Last-known-good; und ein
+explizit verfolgtes StockPortfolio-Ticket für Generation und Cache.

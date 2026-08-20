@@ -28,14 +28,18 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | Quelle **innerhalb** desselben Profils ergänzen, Neustart | bestehende Instrumente unverändert, **dieselbe** Datenbank | | |
-| 2 | Paketversion im selben Profil anheben, Neustart | dito — kein Datenbankwechsel | | |
+| 1 | Quelle **innerhalb** desselben Profils ergänzen, **Kompatibilitäts-ID unverändert** | bestehende Instrumente unverändert, **dieselbe** Datenbank | | |
+| 2 | Paketversion anheben, **Kompatibilitäts-ID unverändert** | dito — kein Datenbankwechsel | | |
+| 2b | Profilname gleich, aber **Kompatibilitäts-ID erhöht** (z.B. adjusted → unadjusted) | gilt als neue Generation, **frische** Datenbank | | |
 | 3 | Profil A durch B ersetzen | **erst B vollständig validieren**, dann A sichern, dann wechseln | | |
 | 3b | B mit fehlendem Wheel / Syntaxfehler / fehlendem Pflicht-Key | Rotation findet **nicht** statt; A bleibt aktiv, keine leere neue DB | | |
 | 4 | nach #3 | B läuft auf einer **frischen** Datenbank | | |
 | 4b | Sicherung läuft, gleichzeitig ein API-Schreibzugriff | Sicherung ist trotzdem konsistent | | |
 | 5 | Sicherungsverzeichnis | fortlaufend nummeriert, mit Manifest: Profil, Stand, Zeitpunkt | | |
+| 5b | Absturz **zwischen** Sicherung und Wechsel, dann Neustart | setzt deterministisch fort oder rollt auf A zurück — nie beides halb | | |
+| 5c | B ungültig, Neustart | A läuft wieder **vollständig** — Konfiguration *und* Plugin-Umgebung, nicht nur die alte Datenbank | | |
 | 6 | Wiederherstellung | ordnet Sicherung und Profil einander zu; ein unpassendes Paar wird abgelehnt | | |
+| 6b | dieselbe Sicherung zweimal einspielen | jede Aktivierung bekommt eine **neue** `generation_id` | | |
 | 7 | `GET /sources` oder `/env` | nennt das aktive Profil und dessen Generation | | |
 | 8 | **StockPortfolio** nach Profilwechsel | erkennt die neue `generation_id`, leert **nur** Quote-/History-Caches; Portfolio, Stückzahlen und Ziele bleiben | | |
 | 8b | dasselbe ohne Profilwechsel | Cache bleibt — die Generation ändert sich nicht bei jeder Konfigänderung | | |
@@ -119,9 +123,50 @@ dort liegt der eigentliche Fall. Nötig ist dort:
 - bei Änderung **nur** Quote- und History-Caches leeren
 - Portfolio, Stückzahlen, Ziele und Benutzerdaten behalten
 
-Das ist ein kleiner Schritt im Nachbar-Repo. Entweder erweitert dieses Ticket
-seinen Umfang dorthin, oder es verweist auf ein korrespondierendes
-StockPortfolio-Ticket — sonst bleibt die zugesagte Generation ungetestet.
+**Entschieden: ein eigenes Ticket im Nachbar-Repo.** Verify `#8` kann in einem
+Ticket mit Scope „StockInfo (Backend + Dashboard)" nicht grün werden, wenn dort
+keine Änderung autorisiert ist. Das StockPortfolio-Ticket hält fest:
+
+- letzte `generation_id` speichern, bei Änderung reagieren
+- **nur** Kurs- und History-Caches leeren — nie Portfolio, Stückzahlen, Ziele
+- **keine EUR-Ersatzwährung**, wenn die Kurswährung fehlt (heute wird geraten)
+- mittelfristig `listing_id` als bevorzugten Maschinen-/Cache-Schlüssel
+- Rückfall auf ISIN/Symbol für alte gespeicherte Positionen bleibt
+
+Bis dieses Ticket existiert, bleibt `#8` unbewertet — nicht stillschweigend
+übersprungen.
+
+### Absturzfester Übergang
+
+Die Sicherungsdatei atomar zu schreiben genügt nicht; auch der Übergang
+`A aktiv → A gesichert → B aktiv` muss es sein. Ein Abbruch dazwischen darf
+beim nächsten Start weder A erneut rotieren noch B mit As Datenbank öffnen.
+
+Dafür ein kleiner, dauerhafter Zustandsmarker mit:
+
+- bisher aktiver Profil- und Kompatibilitäts-ID
+- gewünschtem, **validiertem** Zielprofil
+- Sicherungsnummer und deren Status
+- Pfad der aktiven Datenbank
+- Ziel-`generation_id`
+
+Jeder Zwischenzustand muss beim Neustart deterministisch fortgesetzt **oder**
+auf A zurückgerollt werden können.
+
+**Und „A bleibt aktiv" braucht mehr als die alte Datenbank:** Die geänderte
+`sources.yaml` zeigt ja weiterhin auf B. Es braucht eine gespeicherte
+*last-known-good*-Konfiguration **samt Plugin-Umgebung**, sonst startet A nach
+einem gescheiterten Wechsel gar nicht mehr.
+
+### Wiederherstellung vergibt eine neue Generation
+
+Beim Zurückholen einer Sicherung bekommt **jede Aktivierung** eine neue
+`generation_id` — auch wenn im Backup eine alte gespeichert ist. Sonst sieht ein
+Konsument bei zweimaliger Wiederherstellung dieselbe Kennung und behält seinen
+Cache, obwohl sich der Inhalt geändert hat.
+
+Die fachlichen `listing_id`s im Backup bleiben dabei erhalten. Das trennt
+**Datenidentität** von **Betriebsereignis**.
 
 ---
 

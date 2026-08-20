@@ -64,14 +64,43 @@ trifft `DELETE /instruments/by-symbol/{symbol}` die ältere.
 
 **Festzulegen ist deshalb:**
 
-- **`listing_id`** — eindeutig, anbieterunabhängig, Schlüssel aller neuen Endpunkte
+- **`listing_id`** — eine **opake UUID**, bei Anlage einmal erzeugt und
+  **nicht** aus `ticker`, `mic`, ISIN oder dem lokalen Integer-Schlüssel
+  abgeleitet
 - **`symbol`** — bleibt Pflichtfeld und Anzeigename, aber **nicht** garantiert eindeutig
 - Symbol-Endpunkte antworten bei Mehrdeutigkeit mit **`409 Conflict`** samt
   Kandidatenliste, statt still das Falsche zu treffen
 
-Kollidieren kann es nur dort, wo mehrere MICs dasselbe leere Suffix teilen —
-also bei US-Börsen, sobald `US` in `XNYS`/`XNAS` zerfällt (durch T-21). Vorher
-ist das Symbol durch die Suffix-Regel automatisch eindeutig.
+**Warum opak und warum UUID** *(Codex, 2026-08-20)*: Ein Hash aus `(ticker, mic)`
+existiert für offene Legacy-Zeilen gar nicht und änderte sich bei jeder
+fachlichen Listing-Korrektur. Ein lokaler Integer wäre an der REST-Grenze zu
+leicht mit einer über Generationen stabilen Identität zu verwechseln. Daraus
+folgen klare Regeln:
+
+- **jede** Zeile bekommt sofort eine `listing_id` — auch eine mit
+  `identity_status = legacy_unresolved`
+- die ID überlebt manuelle Zuordnung und normale Metadatenänderungen
+- Sicherung und Wiederherstellung erhalten sie
+- eine frische Profil-B-Datenbank vergibt neue IDs; den Datensatzwechsel zeigt
+  `generation_id` an
+- Konsumenten behandeln sie als **opaken String** und zerlegen sie nie
+
+**Wo es kollidieren kann:** derzeit nur dort, wo mehrere MICs dasselbe leere
+Suffix teilen — also bei US-Börsen, sobald `US` in `XNYS`/`XNAS` zerfällt (durch
+T-21). „Derzeit" ist dabei wörtlich zu nehmen: Regionale Plugins können weitere
+MICs und Symbolkonventionen mitbringen. Die Laufzeitprüfung und die
+`409`-Regel gelten deshalb **allgemein**, nicht nur für US-Listings.
+
+### Ein aktives Listing je ISIN — heute eine Grenze, kein Zufall
+
+`isin TEXT UNIQUE` in der Datenbank bedeutet: **ein** aktives Listing je ISIN und
+Datenbank. Das passt zum Modell — ein Profil wählt genau ein Listing, T-19
+ersetzt es gegebenenfalls.
+
+Das gehört ausdrücklich in den Vertrag, sonst suggerieren `listing_id` und
+`(ticker, mic)`, StockInfo könne mehrere gleichzeitige Listings derselben ISIN
+führen. Soll das später möglich sein, ist es eine eigene Schema- **und**
+Konsumenten-Erweiterung.
 
 ### Was sonst festzulegen ist
 
@@ -92,15 +121,21 @@ ist das Symbol durch die Suffix-Regel automatisch eindeutig.
 kann, hilft einem Konsumenten nicht. Deshalb liefert `GET /fields` die
 Pflichtfelder **samt Vertragsversion**:
 
+**Nach Antworttyp gegliedert, nicht flach** *(Codex, 2026-08-20)*: StockInfo hat
+nicht einen Core, sondern mehrere öffentliche Modelle. Ein flaches Array mit
+`price` und `currency` sagt nicht, in welcher Antwort sie Pflicht sind — damit
+wäre die abfragbare Nullability ungenauer als das vorhandene OpenAPI-Dokument.
+
 ```
 GET /fields
 {
-  "core_version": "1.0",
-  "core": [
-    { "name": "price",    "kind": "number", "required": true },
-    { "name": "currency", "kind": "string", "required": true },
-    …
-  ],
+  "core_version": "1.2.0",
+  "core": {
+    "quote":      [ {"name": "price", "kind": "number", "required": true}, … ],
+    "instrument": [ … ],
+    "daily":      [ … ],
+    "fx":         [ … ]
+  },
   "details_version": 7,          ← die offene Menge, siehe T-26
   "details": [ … ]
 }
@@ -109,6 +144,15 @@ GET /fields
 Dieselbe Logik für beide Ebenen: Der Core hat eine Vertragsversion, die offenen
 Details haben eine eigene Nummer. Ein Konsument mit gecachter Feldliste erkennt
 an der Nummer, dass er neu holen muss — ohne den Inhalt zu vergleichen.
+Zwischenspeichern sollte er unter `(generation_id, details_version)`.
+
+**Regel für `core_version`:**
+
+| Stufe | Wann |
+|---|---|
+| Major | Pflichtfeld entfernt oder unverträglich geändert |
+| Minor | additive Erweiterung des Core |
+| Patch | Klarstellung ohne Änderung am JSON-Vertrag |
 
 Die Fixtures aus dem Verify-Teil sind der statische Gegenpart dazu: Sie prüfen
 denselben Vertrag beim Bauen, `GET /fields` beantwortet ihn im Betrieb.
