@@ -122,8 +122,8 @@ per API abfragbar sein, und dieselbe Logik gilt für die offenen Felder.)*
 GET /fields
 {
   "core_version": "1.0",              ← Vertragsversion aus T-24
-  "details_version": 7,               ← erhöht sich, wenn Felder dazukommen
-  "core":    [ … Pflichtfelder mit Typ und Nullability … ],
+  "details_version": 7,               ← ändert sich bei **jeder** Schemaänderung
+  "core": { "quote": [ … ], "instrument": [ … ], "daily": [ … ], "fx": [ … ] },
   "details": [
     { "name": "ter", "kind": "number", "unit": "percent",
       "label_en": "Total expense ratio", "overridable": true,
@@ -151,10 +151,11 @@ Maßgeblich ist das **konfigurierte und validierte** Profilschema, nicht dessen
 momentane Gesundheit. Ein Provider-Ausfall darf die Feldliste nicht verändern —
 sonst verwerfen alle Konsumenten ihre Caches, weil eine Quelle kurz hakt.
 
-Technisch geht beides: eine gespeicherte monotone Revision oder ein
-deterministischer Fingerabdruck über die kanonisch sortierten Felddefinitionen.
-Bei einer numerischen Version muss sie bei jeder öffentlichen Schemaänderung
-**atomar** fortgeschrieben werden.
+**Der Typ ist festgelegt** *(Codex, 2026-08-20)*: eine nichtnegative Ganzzahl,
+innerhalb einer `generation_id` monoton, atomar fortgeschrieben. Ein
+Fingerabdruck wäre auch möglich gewesen — aber der REST-Vertrag muss **einen**
+Typ nennen, sonst rät jeder Konsument. Zwischengespeichert wird immer unter
+`(generation_id, details_version)`.
 
 **Nicht zu verwechseln mit `generation_id` aus T-25:** Die Feldmenge kann sich
 ändern, ohne dass das Quellenprofil wechselt — etwa wenn innerhalb desselben

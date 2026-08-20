@@ -2297,3 +2297,428 @@ Besonders wichtig vor dem ersten Code: opake UUID für jede Zeile einschließlic
 Legacy-Zwischenzustand; `details_version` bei jeder öffentlichen
 Schemaveränderung; ein absturzfester Profilwechsel mit Last-known-good; und ein
 explizit verfolgtes StockPortfolio-Ticket für Generation und Cache.
+
+---
+
+# Prüfung von Claudes Runde 6 und Antwort zu T-27
+
+Geprüft wurden die mit Commit `4259c8d` überarbeitete Spec sowie T-20 bis T-27.
+
+## Gesamturteil
+
+Claude hat die 13 Punkte aus Runde 5 inhaltlich sauber übernommen. T-24 bis
+T-26 bilden jetzt ein grundsätzlich stimmiges Modell:
+
+- opake `listing_id` für jede Zeile, bei gleichzeitig genau einem aktiven
+  Listing je ISIN,
+- geschlossener, versionierter REST-Core und offene, separat versionierte
+  Details,
+- eine einzige generische Wahrheit hinter den acht bisherigen Top-Level-Feldern,
+- frische Datenbank je inkompatiblem Profil mit Backup, Last-known-good und
+  neuer `generation_id` je Aktivierung.
+
+Die Architektur muss deshalb nicht erneut grundsätzlich geöffnet werden. T-27
+ist aber noch nicht ausführungsreif: Testkit, interne Host-Tests und
+Integrations-Harness sind in einem Ein-Tages-Ticket vermischt. Außerdem enthält
+es zusammen mit T-23 noch einen technisch unmöglichen Hang-Test.
+
+## Antwort 1: Fake → Real ist richtig, braucht aber eine Freshness-Regel
+
+Fake → Real ist die richtige Grundlage. Ein bloßer `--real`-Schalter reicht
+aber nicht, weil niemand zuverlässig bemerkt, dass er seit Monaten nicht mehr
+gelaufen ist. Aufzeichnungen sollten mindestens folgende maschinenlesbare
+Metadaten tragen:
+
+- `recorded_at`,
+- Zeitpunkt des letzten erfolgreichen Real-Laufs,
+- Plugin- und Upstream-API-Version, soweit bekannt,
+- kanonische Signatur der abgedeckten Szenarien.
+
+Eine Altersprüfung ist sinnvoll, darf aber den normalen Offline-Test nicht nach
+Kalenderzeit rot werden lassen. Sonst kann ein Contributor ohne Provider-Key
+nach Ablauf der Frist nichts mehr bauen. Daher zwei Gates:
+
+1. `make test-plugin-api` läuft strikt offline. Unerwartete Requests und
+   Netz-Passthrough sind Fehler; fehlende Metadaten oder nicht bereinigte
+   Secrets ebenfalls. Alter erzeugt höchstens einen klaren Hinweis.
+2. Ein eigener Release-/Maintenance-Check schlägt bei überalterter oder nie real
+   bestätigter Aufzeichnung fehl und verlangt `pytest --real` beziehungsweise
+   eine Erneuerung.
+
+Die Frist sollte pro Plugin festlegbar sein. Ein wenig veränderlicher
+Referenzdienst braucht eine andere Frist als ein Provider ohne stabile
+API-Version. Entscheidend ist außerdem: Der Real-Lauf gehört in den Release-
+Prozess des **jeweiligen Plugins**. StockInfo kann nicht die Schlüssel und
+Kontingente sämtlicher fremder Plugins besitzen.
+
+„Dieselben Tests“ sollte dieselben Szenarien und semantischen Invarianten
+bedeuten, nicht bytegleiche Antworten. Preis, Abrufzeitpunkt und teilweise
+Metadaten ändern sich legitim. Beim Aufzeichnen müssen Header, Query-Parameter,
+Body, Cookies und gegebenenfalls sensible Antwortfelder bereinigt werden.
+Außerdem ist vor dem Commit roher Provider-Antworten zu prüfen, ob deren
+Nutzungsbedingungen das erlauben.
+
+Freshness beweist allein keine Gültigkeit. Maßgeblich bleibt ein erfolgreicher
+Real-Lauf; die Altersgrenze sorgt nur dafür, dass er nicht vergessen wird.
+
+## Antwort 2: drei Testebenen statt eines allwissenden Contract-Tests
+
+Claudes Grenze ist im Kern richtig. Man kann sie präziser in drei Ebenen teilen:
+
+1. **Plugin-Contract:** Typen, deklarierte Felder, Einheiten, Fehlerfälle,
+   Secrets und das Verhalten bei ungültigen Eingaben. Dies gehört in das
+   öffentliche Testkit.
+2. **StockInfo-Integration:** Kettenreihenfolge, `NotResponsible`, `NotFound`,
+   `Unavailable`, Merge, Registry, Schutzschalter, Persistenz und REST-
+   Projektion. Dies sind Tests des Hosts und gehören in T-20, T-23, T-24 und
+   T-26, nicht vollständig in das öffentliche Pluginpaket.
+3. **Markt-Akzeptanz:** Vom Pluginautor kuratierte Golden Cases wie
+   `ISIN -> erwarteter ticker, MIC, Name/Typ und Währung`. Sie sollen gegen
+   Aufnahme und Real-API laufen. Nur hier lässt sich ein bekanntes kanadisches
+   oder russisches Papier fachlich gegen eine unabhängige Erwartung prüfen.
+
+Maschinell prüfbar sind durchaus fachliche Invarianten: ISIN-Prüfziffer,
+Übereinstimmung von Anfrage- und Ergebnis-ISIN, echter MIC statt Sammelcode,
+gültige Währung, endliche Zahlen, sinnvolle Datumsreihenfolge, keine doppelten
+Tagespunkte, Typ-/Einheitenverträglichkeit und deklarierte Plausibilitätsgrenzen.
+
+Nicht allgemein beweisbar ist, dass der Provider bei jedem zukünftigen Papier
+das vom Nutzer gewünschte Listing gewählt hat. Auch ein formal korrektes
+`(ticker, mic)` kann fachlich das falsche Listing sein. Golden Cases erhöhen die
+Sicherheit erheblich, ersetzen aber nicht die Validierung durch jemanden, der
+den Markt und das konkrete Papier kennt. Das sollte ausdrücklich als Grenze in
+der Plugin-Dokumentation stehen.
+
+## Antwort 3: T-27 muss vor Abschluss von T-23 greifen, aber geschnitten werden
+
+„Vor dem ersten fremden Plugin“ ist zu spät. Laut T-23 ist die App selbst der
+erste Plugin-Autor; yfinance und justETF sollen den Vertrag bereits über
+denselben Weg benutzen. Das Testfundament muss daher vor oder parallel zu T-23
+entstehen, und T-23 darf erst abgeschlossen werden, wenn seine Registry- und
+Kettentests damit laufen.
+
+Das aktuelle „hängt an nichts“ verdeckt jedoch Abhängigkeiten. Empfohlener
+Schnitt:
+
+- **T-27a, früh:** öffentlicher Contract-Runner, striktes Record/Replay,
+  Secret-Scrubbing, Freshness-Metadaten, `FakeSource` und HTTP-Beispiel. Für die
+  vollständige Rollenabdeckung braucht dieser Teil die in T-22 fehlenden
+  Daily-/FX-Protokolle.
+- **T-20/T-23:** Ketten- und Registry-Tests mit den Doubles. Die kaputten
+  Plugin-Fixtures sind Abnahmemittel von T-23.
+- **T-23-Integration oder T-27b, danach:** Ein Plugin in eine echte temporäre
+  StockInfo-Instanz laden und einen Request bis zur REST-Antwort prüfen.
+- **T-25:** injizierbare Uhr und Tests der Profilrotation. Diese Uhr ist
+  Host-Infrastruktur und kein Bestandteil des öffentlichen Pluginvertrags.
+
+Damit gibt es keinen Kreis „T-27 prüft T-23, hängt aber selbst an T-23“. T-27a
+liefert die Werkzeuge; die jeweiligen Umsetzungstickets besitzen ihre
+fachlichen Host-Tests.
+
+## Verbleibender technischer Widerspruch: ein echter Hang öffnet so keinen Circuit
+
+T-23 Verify `#5` und T-27 Verify `#8` behaupten sinngemäß: Ein Plugin hängt,
+der laufende Aufruf wird nicht abgebrochen, aber der Schutzschalter greift ohne
+echte Wartezeit. Das folgt aus dem beschriebenen In-process-Modell nicht.
+
+Ein Circuit Breaker kann einen Fehler erst zählen, wenn der Aufruf fehlschlägt,
+zurückkehrt oder ein übergeordneter Timeout den Aufrufer freigibt. Bei einem
+wirklich endlos hängenden synchronen Aufruf und ohne Worker-/Future-Timeout
+kehrt die Anfrage nie zurück; eine Fake-Uhr ändert daran nichts. Die Spec sagt
+zugleich ausdrücklich, dass die Registry laufende Aufrufe nicht abbrechen kann
+und I/O-Zeitgrenzen Sache des Plugins sind.
+
+Für das gewählte einfache In-process-Modell sollten daraus zwei ehrliche Tests
+werden:
+
+- Eine Quelle liefert/erzeugt wiederholt `Unavailable`; danach öffnet der
+  Circuit, weitere Aufrufe werden unterdrückt und Half-open/Reset wird mit
+  Fake-Uhr geprüft.
+- Ein absichtlich endlos hängendes Plugin ist als **nicht beherrschbare Grenze**
+  dokumentiert und wird nicht mit einem vermeintlich wirksamen Circuit-Test
+  versehen.
+
+Soll auch der erste hängende Aufruf zeitlich begrenzt zum Client zurückkehren,
+braucht das Design ausdrücklich einen Executor-/Worker-Timeout samt Begrenzung
+hängender Threads oder echte Prozessisolation. Das wäre eine andere, deutlich
+größere Architekturentscheidung.
+
+## Kleine Restkorrekturen
+
+1. Das T-26-Beispiel zeigt `core` weiterhin als flaches Array, während T-24 es
+   korrekt nach `quote`, `instrument`, `daily` und `fx` gliedert. T-26 sollte
+   dieselbe Form zeigen.
+2. Im selben Beispiel steht noch, `details_version` erhöhe sich nur, wenn Felder
+   dazukommen. Die Tabelle darunter sagt korrekt: bei jeder öffentlichen
+   Schemaänderung.
+3. T-26 lässt als API-Typ sowohl monotone Zahl als auch Fingerabdruck offen.
+   Der REST-Vertrag muss einen Typ wählen. Empfehlung: nichtnegative, innerhalb
+   einer `generation_id` monotone Ganzzahl; gecacht wird immer unter
+   `(generation_id, details_version)`.
+4. Das StockPortfolio-Folgeticket ist entschieden, aber noch nicht angelegt.
+   T-25 Verify `#8` bleibt deshalb zu Recht offen; vor Umsetzung/Abnahme muss
+   das Ticket im Nachbar-Repo tatsächlich existieren.
+5. Ein Tag für Recorder, Scrubbing, Fake/Real, Doubles, kaputte Plugins,
+   HTTP-Beispiel und Integrations-Harness ist nicht realistisch. Der Schnitt in
+   T-27a/T-27b macht den Aufwand erst seriös schätzbar.
+
+## Schlussfazit an Claude
+
+Runde 6 ist für den fachlichen Plugin-, Profil- und REST-Vertrag akzeptiert.
+Für T-27 lautet die Entscheidung: Fake → Real plus getrennte Freshness-Gates,
+automatische Plausibilitätsprüfungen plus plugin-eigene Golden Cases, und das
+Testfundament vor Abschluss von T-23. Vor Umsetzung bitte den unmöglichen
+Hang-Test korrigieren, T-27 nach öffentlichem Testkit und Host-Integration
+schneiden sowie die drei kleinen `/fields`-Widersprüche beseitigen.
+
+---
+
+# Konkreter Vorschlag zur umfassenden Testbarkeit
+
+Dieser Abschnitt ist als umsetzbarer Zielzustand für Spec und Tickets gedacht.
+„Testbar“ sollte nicht nur heißen, dass ein Plugin eine Basisklasse erbt. Ein
+Plugin muss isoliert, in einer Quellenkette, in einer echten StockInfo-Instanz
+und am stabilen REST-Rand prüfbar sein.
+
+## 1. Alle fünf Pluginrollen brauchen Contract-Suiten
+
+Der jetzige SDK-Code besitzt `ResolverContract` und `MetadataContract`. Für eine
+vollständig austauschbare Quellenstruktur müssen nach T-22 dieselben
+Testmöglichkeiten für alle öffentlichen Rollen existieren:
+
+| Rolle | Verbindliche Tests |
+|---|---|
+| Resolver | Zuständigkeit, bekannt, unbekannt, Fehler, gültiger Ticker und echter MIC |
+| Metadata | deklarierte Felder, Typ, Einheit, Währung bei Beträgen, Herkunft, Plausibilität |
+| Quote | Preis und Pflichtwährung, Zeitpunkte, endliche Werte, Fehler statt Raten |
+| Daily | Datum, Schlusskurs, Währung, Sortierung, keine Duplikate, adjusted/unadjusted-Semantik |
+| FX | Base/Quote, positive endliche Rate, Zeitpunkt, Identitätsfall und Fehlerfall |
+
+Gemeinsame Tests für jede Rolle:
+
+- stabiler eindeutiger Quellenname und unterstützte `api_version`,
+- gültige Konfiguration sowie verständliche Diagnose bei fehlender
+  Pflichtkonfiguration,
+- kein Durchreichen fremder Exceptions,
+- nur deklarierte Ergebnisarten und Felder,
+- klarer Unterschied zwischen „nicht zuständig“, „nicht gefunden“ und
+  „vorübergehend nicht verfügbar“, soweit die Rolle diese Zustände kennt,
+- keine Änderung globalen Zustands zwischen zwei Testfällen.
+
+Damit wird vermieden, dass ein alternatives Plugin zwar die ISIN auflösen kann,
+für Quote, Historie oder FX aber erneut implizit an yfinance gebunden bleibt.
+
+## 2. Ein Szenarioformat für Offline, Real und Golden Cases
+
+Ein Pluginautor sollte seine Fälle nur einmal beschreiben müssen. Ein Fall
+enthält mindestens:
+
+- stabile Fall-ID,
+- Anfrage,
+- erwartete Ergebnisart,
+- bei einem bekannten Papier die unabhängig festgelegten Kernwerte wie ISIN,
+  Ticker, MIC, Instrumenttyp und erwartete Währung,
+- optionale Plausibilitätsregeln für dynamische Werte,
+- Kennzeichnung, ob der Fall im Real-Modus laufen darf und welche Credentials
+  er benötigt.
+
+Dasselbe Szenario läuft dann in zwei Betriebsarten:
+
+1. **Replay:** deterministisch und strikt ohne Netz, auf jedem Commit.
+2. **Real:** gegen den echten Provider, manuell, geplant oder vor einem
+   Pluginrelease.
+
+Der erwartete Ticker/MIC darf dabei nicht aus der aufgezeichneten Antwort als
+Erwartung erzeugt werden. Sonst bestätigt der Test nur, dass ein möglicherweise
+falscher Treffer reproduzierbar falsch ist. Golden-Erwartungen sind kleine,
+bewusst geprüfte Daten und getrennt von Provider-Aufzeichnungen zu pflegen.
+
+## 3. HTTP-Testbarkeit als empfohlener Bauweg vorgeben
+
+Record/Replay wird unnötig schwierig, wenn jedes Plugin seine HTTP-Bibliothek
+beliebig und fest verdrahtet. Der Pluginvertrag muss keine bestimmte Bibliothek
+erzwingen, das SDK sollte aber einen klaren Referenzweg anbieten:
+
+- Beispielplugins erhalten Client/Transport und Uhr per Konstruktor,
+- das SDK stellt einen kleinen Replay-Transport oder Adapter bereit,
+- Real- und Replay-Modus tauschen nur diesen Transport aus,
+- ein Offline-Test blockiert zusätzlich Socketzugriffe; fehlende Aufzeichnungen
+  dürfen niemals still ins Netz fallen.
+
+Für abweichende HTTP-Bibliotheken darf ein Autor einen eigenen Adapter
+verwenden. Entscheidend ist die nach außen prüfbare Eigenschaft, nicht die
+konkrete Bibliothek. Die Dokumentation sollte den injizierbaren Referenzweg
+zeigen, weil er für neue und per Vibe-Coding erstellte Plugins erheblich
+einfacher und sicherer ist als ein selbstgebauter Mock-Aufbau.
+
+## 4. Wiederverwendbare Doubles, aber Host-Tests beim Host belassen
+
+Das SDK sollte kleine skriptbare Doubles liefern:
+
+- vorgegebene Antworten pro Anfrage,
+- Aufrufprotokoll für Reihenfolge und Anzahl,
+- `Resolved`, `NotResponsible`, `NotFound`, `Unavailable`, Exception und
+  ungültige Antwort,
+- kontrollierbare Verzögerung, aber **kein** behaupteter Abbruch eines endlos
+  hängenden synchronen Aufrufs,
+- Fake-Uhr für TTL, Circuit-Reset und Half-open.
+
+Die Doubles sind Werkzeug. Die Verantwortung für die Kettensemantik bleibt bei
+StockInfo:
+
+- T-20 testet die Aggregation der Ergebnisarten bis zum richtigen HTTP-Status.
+- T-23 testet Reihenfolge, Registry, Fehlerisolation und Circuit Breaker.
+- T-26 testet Merge, Persistenz, Overrides und REST-Projektion der Details.
+- T-25 testet Profilrotation, Backup, Restore und Generation mit eigenen
+  Fehlerpunkten.
+
+So wird das öffentliche SDK nicht mit internen StockInfo-Implementierungsdetails
+beladen.
+
+## 5. Ein echter Host-Harness
+
+Zusätzlich zu isolierten Contracts braucht es einen kleinen Integrationslauf:
+
+1. temporäres Datenverzeichnis und leere Datenbank erzeugen,
+2. Beispielplugin als Datei und als Entry-Point laden,
+3. Profil/Quelle validieren,
+4. StockInfo-App mit Testkonfiguration starten,
+5. Papier über den öffentlichen REST-Endpunkt aufnehmen,
+6. Quote, Instrument, Details und `/fields` abfragen,
+7. prüfen, dass Core, `listing_id`, `generation_id`, Herkunft und unbekanntes
+   Detailfeld korrekt ankommen,
+8. Instanz und temporäre Daten vollständig abbauen.
+
+Dieser Lauf braucht keinen echten Serverprozess; eine In-process-ASGI-App mit
+temporärem Dateisystem genügt. Entscheidend ist, dass Registry, Container,
+Service, Repository und Pydantic-REST-Modell gemeinsam durchlaufen werden. Ein
+isolierter Contract-Test kann Fehler zwischen diesen Schichten nicht finden.
+
+## 6. Profilwechsel mit deterministischen Fehlerpunkten testen
+
+T-25 ist sicherheitskritischer als ein normaler Unit-Test. Der
+Profilwechsel-Service sollte deshalb benannte Fehlerpunkte besitzen, die nur im
+Test aktiviert werden:
+
+- nach Validierung von B,
+- während der temporären Sicherung,
+- nach Veröffentlichung der Sicherung,
+- nach Schreiben des Übergangsmarkers,
+- nach Anlegen der frischen Datenbank,
+- direkt vor und direkt nach Aktivierung von B.
+
+Für jeden Punkt: Abbruch simulieren, neuen Prozesszustand erzeugen und Recovery
+ausführen. Danach darf genau eine vollständige Generation aktiv sein, kein
+Backup überschrieben sein und A muss über Last-known-good vollständig startbar
+bleiben. Restore derselben Sicherung zweimal muss zwei neue `generation_id`s,
+aber dieselben enthaltenen `listing_id`s ergeben.
+
+Diese Tests benötigen temporäre Verzeichnisse, eine injizierbare Uhr und
+kontrollierte UUID-Erzeugung. Reale Wartezeiten oder Manipulation der
+Systemuhr gehören nicht in die Suite.
+
+## 7. Installation und Testbarkeit verbinden
+
+Weil die Installation so einfach wie möglich bleiben muss, sollte der Nutzer
+nicht selbst pytest-Kommandos zusammensuchen. Vorgeschlagen ist ein einheitlicher
+Preflight, den Launcher und Entwickler verwenden:
+
+```text
+stockinfo plugin check <paket-oder-datei>
+```
+
+Der Check läuft ohne dauerhafte Änderung der aktiven Instanz und liefert
+maschinenlesbare sowie verständliche Diagnosen für:
+
+- Import und Manifest/Entry-Point,
+- unterstützte API-Version,
+- eindeutige Namen und Felddeklarationen,
+- Pflichtkonfiguration ohne Ausgabe von Secrets,
+- Rollenabdeckung des Profils,
+- kurzer Offline-Selbsttest, sofern das Plugin Testfälle mitliefert.
+
+Der Profilwechsel verwendet denselben Preflight vor jeder Rotation. Damit gibt
+es keine zweite, abweichende Validierungslogik. Ein erfolgreicher Check beweist
+nicht die fachliche Richtigkeit des Providers, verhindert aber, dass ein
+Syntaxfehler, fehlendes Wheel oder unvollständiges Profil die aktive
+Datenbankgeneration ablöst.
+
+## 8. REST- und StockPortfolio-Kompatibilität
+
+StockInfo veröffentlicht versionierte JSON-Fixtures für mindestens:
+
+- Instrumentliste,
+- Quote,
+- Daily History,
+- FX,
+- `/fields`,
+- Fehler `404`, `409` und `502`,
+- Antworten mit und ohne offene Details.
+
+StockInfo prüft die Fixtures gegen seine Pydantic-/OpenAPI-Modelle.
+StockPortfolio prüft seine Mapper gegen exakt diese veröffentlichten Fixtures,
+ohne das StockInfo-Repo zur Testzeit zu klonen. Ein kleiner Release-Smoke-Test
+lädt zusätzlich eine bestehende StockPortfolio-Position gegen eine frische
+Profil-Datenbank.
+
+Unbekannte Detailfelder müssen ignoriert oder generisch dargestellt werden;
+fehlende Core-Pflichtfelder müssen dagegen sichtbar fehlschlagen. Genau diese
+Asymmetrie ist der wichtigste Consumer-Vertrag des Pluginmodells.
+
+## 9. Empfohlene Test-Gates
+
+| Zeitpunkt | Pflicht |
+|---|---|
+| jeder StockInfo-Commit | SDK-Contracts, Host-Unit-/Integrationstests, REST-Fixtures, kein Netz |
+| jeder Plugin-Commit | Contract-Suite und Replay-Golden-Cases, kein Netz |
+| geplant/vor Pluginrelease | Real-Golden-Cases und Freshness-Prüfung |
+| StockInfo-Release | Host-Harness, OpenAPI-Kompatibilität, Profilwechsel-Recovery |
+| StockPortfolio-Release | Mapper gegen veröffentlichte Fixtures, Generation-/Cache-Test |
+
+Provider-Ausfälle dürfen den normalen Build nicht rot machen. Ein Real-Test
+darf sehr wohl fehlschlagen und die Veröffentlichung des betroffenen Plugins
+blockieren; er darf aber nicht die gesamte Offline-Entwicklung von StockInfo
+lahmlegen.
+
+## 10. Vorgeschlagener Ticketzuschnitt
+
+T-27 sollte nicht als ein Tag Arbeit umgesetzt werden:
+
+1. **T-27a – Contract-Kit:** vollständige Contracts für alle Rollen,
+   Szenarioformat, Golden Cases und Doubles.
+2. **T-27b – HTTP Fake→Real:** injizierbarer Referenztransport,
+   Record/Replay, Socket-Sperre, Secret-Scrubbing und Freshness-Gate.
+3. **T-23 – Host/Registry:** kaputte Plugin-Fixtures, Ketten- und
+   Circuit-Tests sowie Preflight.
+4. **T-23b oder eigenes Integrationsticket:** temporärer Host-Harness vom
+   Plugin bis zur REST-Antwort.
+5. **T-25:** Recovery-/Crash-Matrix für den Profilwechsel.
+6. **StockPortfolio-Ticket:** Consumer-Fixtures, `generation_id` und gezielte
+   Cache-Invalidierung.
+
+T-27a/T-27b entstehen vor oder parallel zu T-23; T-23 darf ohne diese
+Abnahmewerkzeuge nicht als fertig gelten.
+
+## Definition of Done für „umfassend testbar“
+
+Die Pluginstruktur ist erst umfassend testbar, wenn mindestens Folgendes
+nachgewiesen ist:
+
+- jede öffentliche Rolle hat eine Contract-Suite,
+- ein echtes HTTP-Beispiel läuft offline per Replay und optional real,
+- der Offline-Lauf kann technisch nicht ins Netz ausweichen,
+- Aufzeichnungen enthalten keine Secrets und besitzen Freshness-Metadaten,
+- bekannte reale Listings werden gegen unabhängig gepflegte Golden Cases
+  geprüft,
+- kaputte Plugins verhindern weder App-Start noch Nutzung gesunder Quellen,
+- ein Plugin wird einmal vollständig bis zur REST-Antwort durchlaufen,
+- offene Detailfelder überleben Registry, Merge, Datenbank, Overrides und REST,
+- Profilwechsel und Restore bestehen die Crash-Matrix,
+- StockPortfolio besteht die veröffentlichten Core-Fixtures und reagiert
+  korrekt auf eine neue `generation_id`,
+- die Grenze eines endlos hängenden In-process-Plugins ist ehrlich dokumentiert.
+
+Mit diesem Zuschnitt ist die Pluginstruktur nicht nur theoretisch testbar. Ein
+kanadischer oder russischer Autor kann sein Plugin lokal mit einem einfachen
+Offline-Befehl prüfen, den echten Provider gezielt gegenprüfen und vor der
+Aktivierung denselben Preflight verwenden, den StockInfo selbst nutzt.

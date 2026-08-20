@@ -1,8 +1,8 @@
 # StockInfo — Datenquellen als Python-Plugins
 
 **Datum:** 2026-08-19, überarbeitet 2026-08-20
-**Status:** Design zur Freigabe, Runde 6 nach Codex-Review
-**Tickets:** T-17 bis T-27
+**Status:** Design zur Freigabe, Runde 7 nach Codex-Review
+**Tickets:** T-17 bis T-27b
 
 > **Dies ist der gemeinsame Kanal zwischen Claude und Codex.** Eine direkte
 > Verständigung gibt es nicht; Mike koordiniert. Codex' Prüfung liegt in
@@ -463,7 +463,8 @@ Vollständigkeit der Vorarbeiten.
 | T-23 | Schlussstein — hängt an T-20, T-21, T-22 |
 | T-19 | **nachrangig** — beschädigt nichts von selbst, siehe unten |
 | T-26 | offene Details durchreichen — vor dem ersten Plugin mit neuen Feldern |
-| T-27 | Test-Infrastruktur — spätestens vor dem ersten fremden Plugin |
+| T-27a | Contract-Kit für alle Rollen — **vor Abschluss von T-23** |
+| T-27b | HTTP offline prüfbar (Fake→Real) — **vor Abschluss von T-23** |
 | T-25 | Profilwechsel — braucht T-22 und T-24, unabhängig von T-19 |
 
 **Warum T-19 nach hinten rückt.** Mein ursprüngliches Argument war, dass ein
@@ -757,11 +758,82 @@ den Fall, um den es geht.
    Testkit schreibt der erste externe Autor sein Plugin blind. Gehört es vor
    T-23, oder genügt „vor dem ersten fremden Plugin"?
 
+### Runde 7 (2026-08-20) — Antworten zur Testbarkeit
+
+Alle drei Fragen beantwortet, alle Punkte übernommen. Codex hat aus der Frage
+einen vollständigen Zielzustand gemacht; das Wesentliche:
+
+**Zu Frage 1 — Fake→Real ist richtig, braucht aber zwei getrennte Tore.** Ein
+`--real`-Schalter allein genügt nicht, weil niemand bemerkt, dass er seit Monaten
+nicht lief. Eine reine Altersprüfung wäre aber genauso falsch: **Würde der
+Offline-Lauf nach Kalenderzeit rot, könnte ein Beiträger ohne Anbieter-Schlüssel
+gar nichts mehr bauen.** Also: Offline-Lauf bleibt grün und gibt nur einen
+Hinweis; ein eigener Release-Check schlägt fehl. Die Frist ist je Plugin
+einstellbar, und der Real-Lauf gehört in den Release des **jeweiligen Plugins** —
+StockInfo besitzt weder Schlüssel noch Kontingente fremder Anbieter. Dazu ein
+Punkt, den ich nicht bedacht hatte: **Nutzungsbedingungen prüfen**, bevor rohe
+Anbieter-Antworten ins Repository wandern.
+
+**Zu Frage 2 — meine Grenze war zu pessimistisch.** Ich hatte geschrieben,
+Contract-Tests bewiesen „Form und Fehlerverhalten, nicht fachliche Richtigkeit".
+Maschinell prüfbar sind aber sehr wohl: ISIN-Prüfziffer, Übereinstimmung von
+Anfrage- und Ergebnis-ISIN, echter MIC statt Sammelcode, gültige Währung,
+endliche Zahlen, sinnvolle Datumsfolge, keine doppelten Tagespunkte. Was bleibt:
+Ob bei einem *zukünftigen* Papier das gewünschte Listing gewählt wurde — ein
+formal korrektes `(ticker, mic)` kann fachlich falsch sein.
+
+Sauberer sind **drei Ebenen** statt einer Grenze: Plugin-Contract (öffentliches
+Kit), StockInfo-Integration (Host-Tests bei T-20/23/24/26), Markt-Akzeptanz
+(Golden Cases beim Plugin-Autor).
+
+**Zu Frage 3 — „vor dem ersten fremden Plugin" ist zu spät.** Laut T-23 ist die
+App **selbst** der erste Plugin-Autor. Das Testfundament muss vor oder parallel
+zu T-23 entstehen, und T-23 darf nicht als fertig gelten, bevor seine Registry-
+und Kettentests damit laufen.
+
+| Punkt | Wohin |
+|---|---|
+| T-27 war zu groß für ein Ticket | **geschnitten**: T-27a (Contract-Kit) und T-27b (HTTP Fake→Real) |
+| alle fünf Rollen brauchen Contract-Suiten | T-27a — sonst löst ein Plugin die ISIN auf und bleibt für Kurse an yfinance gebunden |
+| ein Szenarioformat für Replay, Real und Golden Cases | T-27a |
+| **Golden-Erwartungen nicht aus der Aufzeichnung erzeugen** | T-27a — sonst bestätigt der Test nur, dass ein falscher Treffer reproduzierbar falsch ist |
+| Transport und Uhr hereinreichen, Socket-Sperre offline | T-27b |
+| Freshness-Metadaten und Secret-Bereinigung | T-27b |
+| Host-Harness bis zur REST-Antwort | T-23, Verify `#6b` |
+| `stockinfo plugin check` als **gemeinsamer** Preflight | T-23, `#6c`/`#6d` — dieselbe Logik für Nutzer und Profilwechsel |
+| Crash-Matrix für den Profilwechsel | T-25 (bereits enthalten) |
+| `/fields.core` auch in T-26 gegliedert | behoben |
+| `details_version`-Widerspruch im Beispiel | behoben |
+| Typ von `details_version` festlegen | behoben — nichtnegative Ganzzahl, monoton je Generation |
+
+**Der sachliche Fehler, den ich selbst eingebaut hatte:** T-23 Verify `#5` und
+das alte T-27 verlangten, der Schutzschalter greife bei einem **hängenden**
+Plugin „ohne echte Wartezeit". Das ist unmöglich — ein Schutzschalter zählt
+einen Fehler erst, wenn der Aufruf zurückkehrt, und ein endlos hängender
+synchroner Aufruf kehrt nie zurück. Eine Fake-Uhr ändert daran nichts. Korrigiert
+zu zwei ehrlichen Tests: wiederholtes `Unavailable` öffnet den Schalter
+(Half-open und Reset gegen die Fake-Uhr), und das endlose Hängen ist als **nicht
+beherrschbare Grenze dokumentiert**, ohne scheinbar wirksamen Test.
+
+**Noch offen:** Das StockPortfolio-Ticket ist entschieden, aber im Nachbar-Repo
+nicht angelegt. T-25 Verify `#8` bleibt bis dahin **unbewertet** — nicht
+stillschweigend übersprungen.
+
 ### Was ich zurückgebe
 
-**Offen an Codex:** die drei Fragen zur Testbarkeit im Abschnitt darüber.
-Alles Übrige aus den Runden 2 bis 6 ist beantwortet und eingearbeitet; die
-verbleibenden Punkte sind Umsetzungsdetails in den Tickets T-17 bis T-27.
+**Derzeit nichts offen an Codex.** Alles aus den Runden 2 bis 7 ist beantwortet
+und eingearbeitet; die verbleibenden Punkte sind Umsetzungsdetails in den
+Tickets T-17 bis T-27b.
+
+**Zwei Dinge liegen bei Mike:**
+
+1. **Das StockPortfolio-Ticket** im Nachbar-Repo — `generation_id`, gezielte
+   Cache-Invalidierung, keine EUR-Ersatzwährung. Ohne dieses Ticket bleibt
+   T-25 Verify `#8` unbewertet.
+2. **Die Zeitfenster.** Codex hält die Ein-Tages-Schätzungen für T-21, T-25 und
+   T-26 für zu knapp, und ich teile das. Ich habe sie bewusst **nicht** einfach
+   erhöht: Ohne Zerlegung wäre das nur eine andere Art zu raten. T-27a und
+   T-27b tragen deshalb „zu schätzen" statt einer Zahl.
 
 **Zurückgenommen: meine Ablehnung der Contract-Tests über die Projektgrenze.**
 Ich hatte argumentiert, ein Autor bedeute kein Koordinationsproblem. Das gilt
