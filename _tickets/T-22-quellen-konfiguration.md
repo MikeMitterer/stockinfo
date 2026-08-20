@@ -22,7 +22,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | 1 | `data/sources.yaml` mit vertauschter Resolver-Reihenfolge, Neustart | `GET /sources` zeigt die neue Reihenfolge | | |
-| 2 | OpenFIGI-Key entfernen, Neustart | Quelle meldet `configured: false` und fällt aus der Kette — **kein Fehler** | | |
+| 2 | OpenFIGI-Key entfernen, Neustart | Quelle bleibt **aktiv** — der Key ist optional und hebt nur das Limit an | | |
+| 2b | Quelle mit **pflichtigem** Key ohne Key, Neustart | meldet `configured: false` und fällt aus der Kette — **kein Fehler** | | |
 | 3 | `sources.yaml` gelöscht | App startet mit sinnvollen Vorgaben, statt abzubrechen | | |
 | 4 | `sources.yaml` mit Tippfehler im Quellennamen | Meldung nennt den unbekannten Namen und die verfügbaren | | |
 | 5 | dieselbe Datei in ein Issue kopieren | enthält **keinen** Schlüssel, nur Verweise | | |
@@ -61,7 +62,15 @@ funktionierende Kette gefunden hat, ist sie genau das Artefakt, das er weitergib
 
 ### `is_configured()` ersetzt die Kaskade
 
-Eine Quelle ohne Schlüssel meldet `False` und wird gar nicht erst aufgenommen.
+Eine Quelle, der etwas **Pflichtiges** fehlt, meldet `False` und wird gar nicht
+erst aufgenommen.
+
+**Nicht jeder Schlüssel ist pflichtig.** OpenFIGI arbeitet anonym mit
+niedrigerem Limit und sendet den Key nur, wenn er da ist
+(`app/providers/openfigi_provider.py:24-50`). Eine Quelle deshalb abzuschalten
+wäre falsch — `is_configured()` fragt „kann ich arbeiten", nicht „ist alles
+gesetzt".
+
 Damit verschwindet jede Fallunterscheidung aus `container.py` — heute acht
 Verdrahtungspunkte, an denen konkrete Klassen genannt werden.
 

@@ -7,6 +7,12 @@ Deployment-Codepfade.
 **Ergebnis:** Die Grundarchitektur ist sinnvoll, aber vor der Freigabe sind
 mehrere Widersprüche und Architekturblocker zu klären.
 
+> **Fortschreibung:** Die ursprüngliche Prüfung unten dokumentiert den Stand
+> vom 2026-08-19. Claude hat anschließend wesentliche Punkte umgesetzt und die
+> Spezifikation auf Python-only geändert. Die maßgebliche erneute Bewertung des
+> aktuellen Stands steht am Ende unter „Nachprüfung der überarbeiteten
+> Spezifikation am 2026-08-20“.
+
 ## Kurzurteil
 
 Die Trennung zwischen deklarativen REST-Quellen und Python-Plugins passt zum
@@ -471,3 +477,240 @@ dem aktuellen `1.0.0`-Vertrag und dem bestehenden Yahoo-zentrierten Schema
 aufgebaut werden, bevor die obigen Punkte geklärt sind. Sonst entsteht zwar ein
 Plugin-Lader, aber die Quellen bleiben in Identität, Persistenz, Fehlersemantik
 und Deployment praktisch an den heutigen Sonderfällen gekoppelt.
+
+---
+
+# Nachprüfung der überarbeiteten Spezifikation am 2026-08-20
+
+**Geprüfter Stand:** Commit `a43364a` (`docs(specs): nur Python-Plugins — der
+deklarative Weg entfällt`) und die darin neu formulierten „Offenen
+Entscheidungen“.
+**Anlass:** Festlegen, ob der deklarative Weg noch einen hinreichenden Nutzen
+hat und wie Plugins so installiert werden, dass das System von normalen
+Docker-/Unraid-Nutzern tatsächlich verwendet wird.
+
+## Aktualisiertes Kurzurteil
+
+Die Entscheidung **nur Python-Plugins, kein deklaratives Zweitformat** ist
+richtig und sollte als abgeschlossen gelten. Die neue Spezifikation begründet
+das ausreichend. Ein YAML-Interpreter für HTTP-Quellen wäre kein kleines
+Mapping-Feature, sondern eine zweite, eingeschränkte Programmiersprache mit
+eigenem Vertrag, eigener Security-Oberfläche und eigener Testmatrix.
+
+Der offene Punkt **#9 Installation über ein abgeleitetes Docker-Image** ist
+dagegen aus Produktsicht nicht akzeptabel. Er widerspricht dem Ziel, dass lokale
+Marktkenntnis unkompliziert in die App gelangen soll. Wer zunächst ein
+Dockerfile schreiben, ein Image bauen, eine Registry bedienen und sein
+Unraid-Template auf ein eigenes Image umstellen muss, wird in der Regel kein
+Plugin installieren. Dann ist die technische Erweiterbarkeit vorhanden, aber
+praktisch wirkungslos.
+
+## Entscheidung zum deklarativen Format: streichen
+
+Der gestrichene deklarative Weg hatte drei behauptete Vorteile: geringere
+Einstiegshürde, geringeres Risiko und einfaches Reloading. Keiner davon trägt
+genug, um ein zweites Plugin-System zu rechtfertigen:
+
+- Mit Contract-Tests, Vorlage und KI-Unterstützung ist ein kleiner
+  Python-Adapter heute kein relevantes Hindernis mehr.
+- YAML kann zwar keinen beliebigen Python-Code ausführen, aber weiterhin Keys
+  exfiltrieren, interne HTTP-Dienste ansprechen und unkontrollierte Antworten
+  erzeugen. Der Sicherheitsgewinn ist real, aber viel kleiner als zunächst
+  angenommen.
+- Laufzeit-Reload ist für Datenquellen kein zentraler Anwendungsfall. Ein
+  Container-Neustart nach Installation oder Konfigurationsänderung ist
+  vertretbar.
+- Zwei Formate verdoppeln Dokumentation, Tests, Fehlerbilder und
+  Kompatibilitätsarbeit.
+- Sonderfälle wie mehrstufige Authentifizierung, Anbieter-Code-Tabellen,
+  Pagination oder herstellerspezifische Fehlerantworten landen früher oder
+  später doch in Python.
+
+**Empfehlung an Claude:** Diesen Punkt in „Offene Entscheidungen“ nicht wieder
+öffnen. Python-only ist die einfachere und langfristig belastbarere
+Produktentscheidung. Die frei werdende Komplexität sollte vollständig in eine
+sehr einfache Installation und eine hervorragende Plugin-Vorlage investiert
+werden.
+
+## Installation: Das abgeleitete Image als Standardweg verwerfen
+
+Die aktuelle Empfehlung in Entscheidung #9 lautet sinngemäß: Anwender bauen ein
+abgeleitetes Image mit zusätzlichen `pip install`-Schritten. Dieser Weg ist für
+Plugin-Autoren und CI sinnvoll, aber nicht als normaler Installationsweg für
+Self-Hoster.
+
+Konkrete Nachteile:
+
+- Der Nutzer braucht Dockerfile-, Build- und Registry-Kenntnisse.
+- Multi-Arch-Builds für amd64/arm64 werden sein Problem.
+- Offizielle StockInfo-Updates müssen in das eigene Image nachgezogen werden.
+- Das bestehende Unraid-Template kann nicht mehr unverändert verwendet werden.
+- Fehlersuche verteilt sich auf StockInfo, das abgeleitete Image und die
+  Plugin-Abhängigkeiten.
+- „`pip install …`“ klingt einfach, findet im aktuellen unveränderlichen
+  Image-Modell aber nicht dauerhaft statt.
+
+Ein abgeleitetes Image darf als reproduzierbare Expertenoption dokumentiert
+werden, aber nicht als primärer Nutzerweg.
+
+## Empfohlenes Installationsmodell
+
+### Nutzererlebnis
+
+Für einen normalen Nutzer sollte die Installation genau so aussehen:
+
+1. Plugin-Paket mit fester Version in `data/sources.yaml` eintragen.
+2. Die vom Plugin bereitgestellte Quelle in der gewünschten Kette eintragen.
+3. Container neu starten.
+4. `/sources` zeigt installiert/geladen/aktiv oder eine konkrete Fehlermeldung.
+
+Beispiel:
+
+```yaml
+plugins:
+  packages:
+    - stockinfo-source-eodhd==1.2.3
+
+resolvers: [eodhd, openfigi, yahoo-search]
+quotes: [eodhd, yfinance]
+
+providers:
+  eodhd:
+    api_key: ${EODHD_API_KEY}
+```
+
+Damit bleiben Installation, Aktivierung, Reihenfolge und Konfiguration in
+**einer** Datei. Secrets bleiben weiterhin in der Umgebung. Die Datei kann ohne
+Schlüssel in ein Issue kopiert werden.
+
+### Technische Umsetzung
+
+Das vorhandene persistente `/data`-Volume eignet sich bereits als
+Installationsziel:
+
+1. Ein kleiner StockInfo-Launcher liest vor dem Import der App ausschließlich
+   die explizite Paketliste aus `sources.yaml`.
+2. Aus der normalisierten Liste wird ein Hash gebildet.
+3. Existiert `/data/plugin-envs/<hash>/`, wird es ohne Netzwerkzugriff erneut
+   verwendet.
+4. Andernfalls installiert der Launcher die Pakete in ein temporäres
+   Zielverzeichnis unter `/data`, prüft den Erfolg und benennt es anschließend
+   atomar nach `<hash>` um.
+5. Dieses `site-packages`-Verzeichnis wird dem Python-Suchpfad hinzugefügt;
+   danach startet die App und entdeckt die Entry-Points.
+6. Ändert sich die Liste, entsteht eine neue Umgebung. Eine fehlgeschlagene
+   Installation beschädigt die zuletzt funktionierende Umgebung nicht.
+
+Das überlebt Container- und Image-Updates, weil nur `/data` beschrieben wird.
+Der Installer muss als unprivilegierter App-User laufen und darf nicht die
+systemweite Python-Installation verändern.
+
+### Sicherheits- und Reproduzierbarkeitsregeln
+
+- Nur ausdrücklich in `sources.yaml` genannte Pakete werden installiert.
+- Exakte Versionen (`==`) sind für externe Pakete Pflicht; kein stilles
+  „latest“ bei jedem Neustart.
+- Für den einfachen und vorhersehbaren Anfang nur Wheels akzeptieren
+  (`--only-binary=:all:`); keine Source-Build-Toolchain im Produktionsimage.
+- Der Plugin-API-Vertrag des Basisimages wird per Constraint geschützt, damit
+  ein Plugin keine zweite inkompatible Vertragskopie vor die App legt.
+- Paketname, Version, Installationszeitpunkt und Ladefehler erscheinen in
+  `/sources`, niemals Secrets oder vollständige Auth-URLs.
+- Installation bedeutet noch nicht Aktivierung: Nur eine in der jeweiligen
+  Kette genannte Source darf aufgerufen werden.
+- Bei geänderter Paketliste und fehlgeschlagener Installation sollte der Start
+  klar fehlschlagen oder sichtbar degradiert sein; niemals still mit einer
+  anderen als der gewünschten Plugin-Menge weiterlaufen.
+
+Das ist weiterhin eine Vertrauensentscheidung: Ein installiertes Python-Paket
+hat App-Rechte. Sie ist aber **explizit** durch den Eintrag des Nutzers und nicht
+das Ergebnis eines automatisch abgefragten Marketplace-Katalogs.
+
+### Drei Nutzungsebenen, aber nur ein Plugin-Vertrag
+
+Die Distribution darf mehrere Komfortstufen haben, ohne wieder mehrere
+Plugin-Arten einzuführen:
+
+1. **Mitgelieferte/kuratierte Quellen:** Bereits im offiziellen Image; der
+   Nutzer aktiviert sie nur in `sources.yaml`. Das ist für häufige Anbieter der
+   einfachste Weg.
+2. **Paketierte Drittanbieter-Plugins:** Paketzeile in `sources.yaml`, Neustart;
+   Installation persistent nach `/data` wie oben.
+3. **Lokale Entwicklung:** `data/plugins/*.py`, Neustart. Dieser Weg ist für
+   Experimente und einfache Plugins ohne zusätzliche Bibliotheken gedacht.
+
+Alle drei Wege liefern dieselben `Source`-Klassen an dieselbe Registry und
+verwenden dieselben Contract-Tests. Es sind Distributionswege, keine getrennten
+Plugin-Systeme.
+
+## Alternative Minimalvariante
+
+Falls der persistente Paketinstaller für T-23 zunächst zu groß ist, ist die
+ehrlichere erste Ausbaustufe:
+
+- häufige kuratierte Plugins in das offizielle Image aufnehmen,
+- lokale Einzeldateien aus `/data/plugins/` laden,
+- Entry-Point-Installation als Expertenweg zurückstellen.
+
+Auch das ist für Nutzer sinnvoller als ein abgeleitetes Image als einziger Weg.
+Es begrenzt zunächst die Zahl installierbarer Pakete, erhält aber ein klares und
+funktionierendes Betriebsmodell.
+
+## Bewertung der zehn offenen Entscheidungen
+
+| # | Bewertung nach erneuter Prüfung |
+|---|---|
+| 1 | **Zustimmung.** `(ticker, mic)` kanonisch; Yahoo-Alias optional und nicht eindeutig. Provider-Aliase langfristig separat modellieren. |
+| 2 | **Zustimmung mit Präzisierung.** Historie bei Listingwechsel nicht mischen. Für den ersten Schritt löschen/invalidieren; Archivierung nur, wenn sie sichtbar nach Listing getrennt wird. Manuelle Kennzahlen behalten. |
+| 3 | **Zustimmung.** Alle fünf Rollen vor einer stabilen API; bis dahin `0.x`. Das Runtime-Paket muss zusätzlich in App und Image installiert werden. |
+| 4 | **Zustimmung.** Eigener `MetadataRequest` mit tatsächlichem Ticker/MIC statt Yahoo-Symbol oder nur `preferred_mic`. |
+| 5 | **Nur als bewusste MVP-Grenze akzeptabel.** Ein gemeinsames `source` bedeutet: keine feldweise Kombination mehrerer Metadatenquellen versprechen. `Reading.source` und Dokumentation müssen dazu passen oder als rein flüchtige Diagnose gelten. |
+| 6 | **Präzisieren.** `Unavailable` schlägt `NotFound` nur, wenn keine Quelle erfolgreich war. Sobald irgendeine Quelle erfolgreich auflöst, ist das Gesamtergebnis Erfolg; vorherige Ausfälle können höchstens als Degradation protokolliert werden. |
+| 7 | **Zustimmung.** Kooperative Timeouts, ehrliche Dokumentation, Circuit-Breaker nur gegen Folgeaufrufe. Verify #5 in T-23 muss entsprechend geändert werden. |
+| 8 | **Nicht vollständig vertagen.** Details entstehen in T-23, aber Entry-Point-Gruppe, geliefertes Objekt, Namenskollisionen, Versionsregel, Aktivierung und `close()` sind Abnahmekriterien dieses Tickets und müssen vor Implementierungsende feststehen. |
+| 9 | **Ablehnung der aktuellen Empfehlung.** Abgeleitetes Image nur Expertenoption; Standardweg über explizite Paketliste und persistente Plugin-Umgebung in `/data`. |
+| 10 | **Bestätigt erledigt.** `make test-plugin-api` läuft mit 36 bestandenen Tests und ist Teil von `make test`. |
+
+## Inkonsistenzen, die Claude noch korrigieren sollte
+
+1. Die Unterüberschriften unter „Offene Entscheidungen“ verwenden falsche
+   Nummern: „Zu 6 — was `is_configured()` nicht kann“ gehört nicht zur
+   Tabellenentscheidung #6; „Zu 2 — Reihenfolge gegen Kosten“ gehört nicht zur
+   Tabellenentscheidung #2. Besser ohne Nummer oder mit eigenen stabilen IDs.
+2. T-23 Verify #5 behauptet weiterhin eine greifende harte Zeitgrenze, obwohl
+   die Spezifikation kooperative Timeouts empfiehlt. Das Prüfkriterium muss auf
+   „Plugin setzt/benutzt begrenzte I/O-Zeit; Circuit-Breaker verhindert weitere
+   Aufrufe nach Fehlern“ geändert werden, ohne einen nicht erzwingbaren Abbruch
+   zu versprechen.
+3. T-22 Verify #2 behauptet weiterhin, OpenFIGI sei ohne Key
+   `configured: false`. Die Spezifikation erklärt inzwischen korrekt das
+   Gegenteil. Ticket und Spec sind noch nicht synchron.
+4. `Source.cost` dokumentiert weiterhin, dass es die Reihenfolge steuere. Die
+   neue Spezifikation bestimmt dagegen ausdrücklich `sources.yaml` als einzige
+   Reihenfolge und `cost` nur als Information. Der öffentliche Vertrag muss
+   angepasst werden.
+5. `Source.__init__` behauptet, ein Python-Plugin habe keinen Zugriff auf
+   App-Einstellungen, Datenbank oder andere Quellen. Das ist keine
+   Sicherheitsgrenze: Fremder Python-Code kann Umgebung und Dateisystem lesen.
+   Gemeint sein kann nur, dass die App diese Interna nicht als stabilen Vertrag
+   übergibt.
+6. Der Text „keine Automatik, die von selbst etwas nachlädt“ muss von einer
+   explizit konfigurierten Installation unterschieden werden. Ein vom Nutzer
+   gepinntes Paket aus `sources.yaml`, das beim Neustart installiert wird, ist
+   kein selbsttätiger Marketplace-Download.
+
+## Aktualisierte Freigabeempfehlung
+
+Die Python-only-Entscheidung kann freigegeben werden. Das gesamte Design sollte
+aber erst freigegeben werden, wenn Entscheidung #9 ersetzt und der gewünschte
+Nutzerablauf als Verify-Kriterium in T-23 festgehalten ist.
+
+Der wichtigste End-to-End-Test lautet:
+
+> Ein Unraid-/Docker-Nutzer trägt ein versioniertes Plugin und seine Source in
+> `sources.yaml` ein, startet den unveränderten offiziellen Container neu und
+> sieht die Quelle anschließend in `/sources` als geladen und aktiv — ohne
+> eigenes Dockerfile, eigenes Image oder manuelles `pip` im Container.
+
+Wenn dieser Ablauf nicht erfüllt ist, ist das Plugin-System technisch vorhanden,
+aber für den vorgesehenen Community-Effekt zu schwer zugänglich.

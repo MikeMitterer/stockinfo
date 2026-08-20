@@ -36,16 +36,28 @@ class Source:
     """Vertragsversion, gegen die dieses Plugin gebaut wurde."""
 
     cost: Cost = "free"
-    """Was eine Anfrage kostet. Steuert, wie früh die Kette diese Quelle fragt."""
+    """Was eine Anfrage kostet — **Information, keine Sortierregel**.
+
+    Die Reihenfolge der Kette bestimmt ausschließlich `sources.yaml`. Dieser
+    Wert dient der Anzeige und der Warnung („diese Kette fragt eine
+    kostenpflichtige Quelle zuerst"), damit eine teure Quelle nicht unbemerkt
+    vor einer kostenlosen steht.
+    """
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
         Args:
-            config: Der eigene Abschnitt aus der Quellen-Konfiguration. Ein
-                Plugin sieht **nur** seinen eigenen — kein Zugriff auf die
-                Einstellungen der App, auf die Datenbank oder auf andere
-                Quellen. Diese Grenze ist Absicht: Sie hält ein fremdes Plugin
-                davon ab, sich an Interna zu binden, die sich ändern dürfen.
+            config: Der eigene Abschnitt aus der Quellen-Konfiguration.
+
+        Die App reicht **nur** diesen Abschnitt herein — nicht ihre
+        Einstellungen, nicht die Datenbank, nicht andere Quellen. Das ist eine
+        Vertrags-, **keine Sicherheitsgrenze**: Fremder Python-Code kann
+        Umgebungsvariablen und Dateisystem ohnehin lesen. Gemeint ist, dass
+        nichts davon als stabile Schnittstelle zugesagt wird — wer sich an
+        Interna bindet, bricht beim nächsten Umbau.
+
+        Wer echte Isolation braucht, findet sie hier nicht; siehe „Was bewusst
+        nicht gebaut wird" im Design.
         """
         self._config = config or {}
 

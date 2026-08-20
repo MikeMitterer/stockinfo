@@ -27,7 +27,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2 | dasselbe als installiertes Paket (Entry-Point) | erscheint gleichwertig, ohne Datei im Volume | | |
 | 3 | Plugin mit falscher `api_version` | wird abgelehnt, mit Meldung — App startet trotzdem | | |
 | 4 | Plugin, das bei jedem Aufruf wirft | wird nach wiederholtem Fehler stillgelegt; App bleibt bedienbar | | |
-| 5 | Plugin, das 60 s hängt | Zeitgrenze greift, Kette macht weiter | | |
+| 5 | Plugin, das 60 s hängt | Schutzschalter verhindert **weitere** Aufrufe; der laufende wird **nicht** abgebrochen — Verhalten ist dokumentiert, nicht behauptet | | |
 | 6 | `yfinance` und `justetf` in `GET /sources` | erscheinen als **normale Quellen**, nicht als Sonderfall | | |
 | 7 | `make test` | Backend grün | | |
 
@@ -37,9 +37,14 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 ### Zwei Ladewege, eine Registry
 
-**Entry-Points** (`importlib.metadata`) für Beigesteuertes — `pip install
-stockinfo-resolver-ca`, versioniert und teilbar. Der Python-Standard; pytest und
-Airflow machen es so.
+**Entry-Points** (`importlib.metadata`) für Beigesteuertes — versioniert und
+teilbar. Der Python-Standard; pytest und Airflow machen es so.
+
+Installiert wird **nicht** über ein selbstgebautes Image, sondern über eine
+Paketliste mit fester Version in `sources.yaml`; ein Launcher legt die Pakete
+vor dem App-Start in eine hash-benannte Umgebung unter `/data` und hängt sie in
+den Suchpfad. Das überlebt Image-Updates, weil nur `/data` beschrieben wird.
+Einzelheiten und Sicherheitsregeln stehen im Design.
 
 **Verzeichnis** (`data/plugins/*.py`) zum Ausprobieren und für lokale Anpassungen.
 Ein Modul exportiert `SOURCES = [MeineQuelle]`.
