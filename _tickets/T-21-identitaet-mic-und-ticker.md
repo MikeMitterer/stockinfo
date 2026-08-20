@@ -69,13 +69,36 @@ das ausschließlich über EODHD oder Twelve Data verwaltet wird, ein gültiges,
 eindeutiges **Yahoo**-Symbol. Yahoo wäre dann weiterhin Teil der Identität — das
 Ticket verfehlte sein eigenes Ziel.
 
-**Weg:** `symbol` wird `NULL`-fähig und verliert den Eindeutigkeits-Index. Die
-kanonische Identität ist `(ticker, exchange_mic)`; das Yahoo-Symbol ist ein
-**abgeleiteter Alias** für die Profil-Links. Die bestehenden `/by-symbol/`-Pfade
-bleiben als Kompatibilitätsschicht und werden als solche dokumentiert.
+**Weg (revidiert nach Codex-Runde 3):** `symbol` **bleibt verpflichtend** — die
+erste Fassung wollte es `NULL`-fähig machen, das würde **StockPortfolio
+brechen**. Nachgeprüft im Nachbar-Repo:
 
-Sind absehbar mehrere Anbieter-Aliase nötig, gehören sie in eine eigene Tabelle
+```ts
+src/api/types.ts:17        symbol: string                      // nicht nullable
+src/types/portfolio.ts:29  symbol: string                      // Pflicht je Position
+src/api/mappers.ts:56      return entry.isin ?? entry.symbol   // Cache-Schlüssel
+```
+
+Die dritte Stelle bräche **still**: Der Cache-Schlüssel wäre `undefined`.
+
+Stattdessen **additiv**: `ticker` und `exchange_mic` kommen dazu und werden die
+kanonische Identität; `symbol` bleibt als stabiler Listing-Bezeichner erhalten
+und wird nach derselben Regel erzeugt wie bisher. Das ist kein Anbieter-Alias —
+das Format gehört der App (`resolver.py:130` bildet es aus der eigenen
+`EXCHANGES`-Tabelle), nicht Yahoo.
+
+Sind später mehrere Anbieter-Aliase nötig, gehören sie in eine eigene Tabelle
 statt als Spalten in die Instrumentenzeile.
+
+### Der eine Pfad, der die Migration bricht
+
+`resolver.py:170` übernimmt im Yahoo-Fallback `top["symbol"]` — den String, den
+Yahoos Suche liefert. Der folgt der eigenen Konvention **nicht** zwingend
+(`BRK-B` mit Bindestrich). Solche Symbole sind später nicht sicher in `ticker` +
+`mic` zu zerlegen.
+
+**Zwei Dinge nötig:** Die Migration meldet sie, statt zu raten. Und der Fallback
+prüft künftig gegen die eigene Tabelle, statt Fremdformate zu übernehmen.
 
 ### `US` ist kein MIC
 
@@ -84,9 +107,13 @@ Das ist **kein** ISO-10383-MIC. Ein Feld namens `exchange_mic`, das mal echte
 MICs und mal diesen internen Code enthält, ist falsch benannt und wird beim
 ersten Anbieter, der echte MICs erwartet, zum Problem.
 
-**Zu entscheiden:** entweder auf echte MICs abbilden (`XNYS`, `XNAS`) und den
-Sammelcode nur intern führen, oder das Feld neutral benennen (`exchange_code`)
-und die Kodierung ausdrücklich modellieren. Nicht: beides unter einem Namen.
+**Entschieden (Codex, 2026-08-20):** Das kanonische Feld heißt `mic` und enthält
+**ausschließlich echte MICs** (`XNYS`, `XNAS`). Der Sammelcode `US` bleibt als
+interner OpenFIGI-Suchcode erhalten, taucht aber nie im kanonischen Feld auf.
+Niemals raten, und niemals beide Codearten unter einem Namen führen.
+
+Das betrifft auch T-18: Die Kaskade über die Heimatbörse muss auf echte MICs
+abbilden, nicht auf den Sammelcode.
 
 ### Was sich sonst ändert
 

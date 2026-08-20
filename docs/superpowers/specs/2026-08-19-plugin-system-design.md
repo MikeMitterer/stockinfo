@@ -120,8 +120,13 @@ der real rund 0,06 % kostet.
 Ein Autor erbt von `ResolverContract` oder `MetadataContract`, nennt zwei bis
 drei Anfragen und bekommt den Vertrag maschinell geprüft. Gegenprobe mit
 absichtlich fehlerhaften Plugins: gefangen werden `NotFound` statt
-`NotResponsible`, Börsensuffix im Ticker, nicht deklarierte Felder, falsch
-deklarierte Einheiten und durchgereichte Ausnahmen.
+`NotResponsible`, nicht deklarierte Felder, falsch deklarierte Einheiten,
+`None` statt `[]` bei Unzuständigkeit und durchgereichte Ausnahmen.
+
+**Nicht** gefangen wird ein Börsensuffix im Ticker: Ob `BRK.A` ein Suffix trägt
+oder einen Punkt im Namen führt, lässt sich nur gegen die Börsentabelle
+entscheiden — und die kennt der Vertrag bewusst nicht. Diese Prüfung gehört auf
+die App-Seite.
 
 Das ersetzt Tests, die hier niemand schreiben könnte, durch Tests, die andere
 für uns laufen lassen.
@@ -215,13 +220,105 @@ bekanntes unter anderem Namen ist — `fund_provider`, `fundFamily` und `family`
 sind dreimal dasselbe. Die generische Tabelle lohnt erst, wenn wirklich neue
 Bedeutungen auftreten.
 
+## Der REST-Vertrag ist öffentlich
+
+**Der wichtigste Befund der Codex-Runde 3 — und einer, den ich schlicht
+übersehen hatte.** Ich habe StockInfo die ganze Zeit als isolierte App
+behandelt. Sie hat aber einen externen Konsumenten: **StockPortfolio** holt
+Kurse und Stammdaten über die REST-API und rechnet daraus Depot-Anteile.
+
+Nachgeprüft im Nachbar-Repo:
+
+```ts
+src/api/types.ts:17        symbol: string          // nicht nullable
+src/types/portfolio.ts:29  symbol: string          // Pflichtfeld einer Position
+src/api/mappers.ts:56      return entry.isin ?? entry.symbol   // Cache-Schlüssel
+```
+
+**Damit ist die offene Entscheidung 1 in ihrer ersten Fassung falsch.** `symbol`
+nullable zu machen würde StockPortfolio an drei Stellen brechen, und die dritte
+still: Der Cache-Schlüssel wäre `undefined`, ohne Fehlermeldung.
+
+### Was daraus folgt
+
+Die Plugin-Freiheit endet am REST-Rand. Ein Plugin darf eigene Feldnamen, URLs
+und Antwortformate haben — was die API nach außen zusagt, bleibt davon
+unberührt:
+
+- stabile Identität: ISIN soweit vorhanden, dazu kanonischer Ticker und MIC
+- stabiler Anzeigename und normalisierte Gattung
+- Preis mit **verpflichtender** Notierungswährung
+- Kurszeitpunkt, Abrufzeitpunkt, Cache- und Stale-Zustand
+- Tagespunkte mit Datum, Schlusskurs und Währung
+- festgelegte Bedeutung des Schlusskurses (bereinigt gegen unbereinigt)
+
+Plugin-eigene Objekte überschreiten diese Grenze nie: Der Kern normalisiert,
+dann serialisiert Pydantic das öffentliche Modell. Ein unvollständiger
+Pflichtkern ist ein `Unavailable`-Fehler — **keine Antwort mit geratenen
+Ersatzwerten**.
+
+### Zwei Wege für T-21
+
+1. **Additiv:** Die bestehende REST-Version behält ein garantiertes `symbol`;
+   `ticker`, `mic` und Aliase kommen dazu. StockPortfolio bleibt unberührt.
+2. **Neue Version:** `listing_id`, `ticker`, `mic` und optionale Aliase; der alte
+   Vertrag wird erst abgeschaltet, wenn StockPortfolio migriert ist.
+
+Ein nullable Yahoo-Alias unter demselben Feldnamen wäre keine Entkopplung,
+sondern ein unbemerkter Bruch beim Konsumenten. **Empfehlung: Weg 1** — er
+kostet fast nichts und hält die Migration in StockInfo, wo sie hingehört.
+
+## Das Symbolformat ist eine Vereinbarung, keine Abhängigkeit
+
+Eine Präzisierung, die eine frühere Fassung dieses Textes falsch hatte. Dort
+stand, `symbol` sei eine Kopplung an yfinance. Nachgemessen gibt es zwei Wege,
+auf denen ein Symbol entsteht, und nur einer davon ist eine Bindung:
+
+| Weg | Code | Was es ist |
+|---|---|---|
+| 1 | `resolver.py:130` — `f"{ticker}{exch.suffix}"` | **Vereinbarung.** Die App bildet das Symbol selbst, aus ihrer eigenen `EXCHANGES`-Tabelle |
+| 2 | `resolver.py:170` — `symbol = top["symbol"]` | **Abhängigkeit.** Der Yahoo-Fallback übernimmt Yahoos String |
+
+Weg 1 ist eine Konvention im Besitz der App, die zufällig Yahoo-kompatibel ist.
+`yf.Ticker(symbol)` im Provider ist nur Konsument — er verwendet das Symbol,
+erzeugt es nicht.
+
+**Daraus folgt Erfreuliches:** T-21 muss nichts entkoppeln, nur zerlegbar
+machen. Und `symbol` am REST-Rand zu behalten (siehe unten) kostet nichts — es
+ist kein Anbieter-Alias, sondern StockInfos eigener Listing-Bezeichner, den
+jede Quelle nach derselben Regel erzeugt.
+
+**Und ein konkretes Migrationsrisiko:** Weg 2 liefert Symbole, die der eigenen
+Konvention *nicht* folgen müssen — `BRK-B` mit Bindestrich, oder was Yahoos
+Suche sonst zurückgibt. Sie landen ungeprüft in der Datenbank und sind später
+nicht sicher in `ticker` + `mic` zu zerlegen. Das ist die benennbare Ursache
+hinter dem abstrakten Einwand „Suffix-Rückrechnung ist nicht universell
+verlustfrei": kein theoretisches Risiko, sondern ein Codepfad. Die Migration
+muss solche Symbole melden, und Weg 2 sollte das Ergebnis künftig gegen die
+eigene Tabelle prüfen, statt es zu übernehmen.
+
 ## Die Kopplung, die bleibt
 
-Yahoo ist kein Anbieter unter mehreren, sondern das Rückgrat: vier direkte
-Importe, vier Instanziierungen in `container.py`, drei Rollen in einer Klasse
-(von denen nur eine im Protokoll steht) — und `symbol` ist überall im System
-das Yahoo-Format. T-21 löst den Identifikator davon; die Kursquelle selbst
-auszutauschen bleibt darüber hinaus ein eigenes Vorhaben.
+**Als Diagnose gemeint, nicht als Festlegung.** Yahoo *soll* keine Sonderrolle
+behalten — der Abschnitt begründet, warum es die Ticketserie überhaupt braucht.
+
+Heute ist Yahoo kein Anbieter unter mehreren, sondern das Rückgrat. Gemessen am
+2026-08-20:
+
+| | Befund |
+|---|---|
+| 1 | vier direkte `import yfinance`, davon zwei außerhalb der eigenen Provider (`resolver.py`, `analyzer.py`) |
+| 2 | vier Instanziierungen von `YFinanceProvider()` in `container.py` |
+| 3 | drei Rollen in einer Klasse — im Protokoll `QuoteProvider` steht nur `fetch_quote` |
+| 4 | `QUOTE_TYPE_MAP` mit Yahoos Gattungsnamen steht im neutralen `base.py` |
+| 5 | `models.py:260` macht yfinance-Interna zum API-Vertrag: `fast_info \| get_info \| isin \| history` |
+
+Das Symbolformat gehört **nicht** in diese Liste — siehe den Abschnitt davor.
+
+Nach T-20 bis T-22 ist Yahoo einer von vielen: dieselbe Antwortsemantik,
+dieselbe Verdrahtung, dieselbe Konfiguration. Was darüber hinaus bliebe, wäre
+die Frage, ob eine zweite Kursquelle die gleiche Datenqualität liefert — und die
+beantwortet keine Architektur.
 
 **Der Fallback für OpenFIGI ist yfinance.** Fällt yfinance aus, fallen
 gleichzeitig weg: Kurse, Tageshistorie, Devisen, der Resolver-Fallback und die
@@ -229,15 +326,31 @@ ETF-Quelle für außereuropäische Papiere. Die Redundanz ist scheinbar.
 
 ## Reihenfolge
 
+Nach Codex' Einwand vom 2026-08-20 revidiert: Maßstab ist der **Erfolgsweg** —
+dass jemand in Toronto tatsächlich ein Plugin einsetzen kann —, nicht die
+Vollständigkeit der Vorarbeiten.
+
 | Ticket | Warum an dieser Stelle |
 |---|---|
-| T-17 | verfälscht heute Daten — unabhängig vom Vorhaben |
+| T-17 | verfälscht heute Daten — unabhängig vom Vorhaben, deshalb zuerst |
 | T-18 | behebt den Kanada-Fall, der das Vorhaben ausgelöst hat |
-| T-19 | ohne verlustfreies Neu-Auflösen ist ein Quellenwechsel nicht ausprobierbar |
 | T-20 | ohne die vier Antwortarten kann eine Kette nicht weiterschalten |
-| T-21 | ohne MIC + Ticker müsste jedes Plugin Yahoo-Symbole verstehen |
+| T-21 | Identität stabilisieren — **additiv**, ohne den REST-Vertrag zu brechen |
 | T-22 | Ketten und Schlüssel gehören in Konfiguration, nicht in die Composition-Root |
 | T-23 | Schlussstein — hängt an T-20, T-21, T-22 |
+| T-19 | **nachrangig** — beschädigt nichts von selbst, siehe unten |
+
+**Warum T-19 nach hinten rückt.** Mein ursprüngliches Argument war, dass ein
+Quellenwechsel ohne verlustfreie Korrektur nicht ausprobierbar ist. Das trägt
+nur, wenn etwas von selbst passiert — und genau das darf nicht sein. Solange
+zwei Invarianten gelten, ist der heutige Zustand unbequem, aber ungefährlich:
+
+- Eine Plugin-Installation verändert bestehende Instrumente **nicht** automatisch.
+- Ein bestehendes Instrument wird nur durch **ausdrückliche** Nutzeraktion neu
+  aufgelöst.
+
+Beide gehören zu T-22/T-23 und sind dort zu prüfen. Der eigentliche Erfolgsweg
+ist, dass überhaupt jemand ein Plugin schreiben und einsetzen kann.
 
 Ein Ticket für deklarative Quellen entfällt — siehe „Die Entscheidung: nur
 Python".
@@ -250,8 +363,8 @@ Die Empfehlung ist meine; die Entscheidung nicht.
 
 | # | Frage | Empfehlung |
 |---|---|---|
-| 1 | Kanonische Identität und Anbieter-Aliase | `(ticker, mic)` ist Identität; `symbol` wird `NULL`-fähig, verliert den Unique-Index und ist abgeleiteter Yahoo-Alias |
-| 2 | Historie beim Listingwechsel | Kursreihen invalidieren, manuelle Kennzahlen behalten. Offen: löschen oder archivieren — siehe T-19 |
+| 1 | Kanonische Identität und Anbieter-Aliase | `(ticker, mic)` ist Identität — **aber `symbol` bleibt am REST-Rand verpflichtend**. Siehe [Der REST-Vertrag ist öffentlich](#der-rest-vertrag-ist-öffentlich) |
+| 2 | Historie beim Listingwechsel | **entschieden:** löschen, vorher bestätigen lassen, manuelle Werte behalten. Archivierung ist ein späteres Feature, keine Voraussetzung |
 | 3 | Verträge für Quote, Daily, FX | vor T-22 ausformulieren; solange bleibt `0.x` |
 | 4 | Eigener `MetadataRequest` | ja — `ResolveRequest` kennt nur `preferred_mic`, nicht das aufgelöste Listing |
 | 5 | Herkunft und Stand je Metadatenfeld | zunächst **nicht** je Feld: feste Feldmenge, ein `source`, wie heute. Erst wenn zwei Quellen sich wirklich überlappen |
@@ -362,22 +475,43 @@ nicht gegen einen überholten Text prüft.
 | — | Installationsmodell | **übernommen**, eigener Abschnitt |
 | — | Python-only bestätigt | zur Kenntnis — die Entscheidung kam von Mike, die Begründung deckt sich |
 
+### Runde 3 (2026-08-20)
+
+| Punkt | Stand |
+|---|---|
+| T-19: löschen statt archivieren | **übernommen**, in T-19 festgeschrieben |
+| `US`: echte MICs, Sammelcode intern | **übernommen**, in T-21; betrifft auch T-18 |
+| Reihenfolge: T-19 nachrangig | **übernommen.** Mein Argument trug nur, wenn etwas von selbst passiert — und genau das darf nicht sein. Die zwei Invarianten gehören zu T-22/T-23 |
+| **StockPortfolio bricht bei nullable `symbol`** | **übernommen — der wichtigste Befund.** Zeilenangaben im Nachbar-Repo nachgeprüft, alle drei bestätigt. Offene Entscheidung 1 revidiert, eigener Abschnitt ergänzt, T-21 auf den additiven Weg umgestellt |
+| REST-Vertrag vor Plugin-Vertrag | **übernommen**, eigener Abschnitt |
+| Contract-Test fängt kein Börsensuffix | **behoben** — die Behauptung stand noch in der Spec |
+| Reihenfolgetabelle nannte T-19 „verlustfrei" | **behoben** |
+| T-23 sprach von gekapselter Zeitgrenze | **behoben** — jetzt ausdrücklich als nicht erzwingbar benannt |
+
+**Ergänzung, die aus Mikes Einwand kam, nicht aus der Review:** Das Symbolformat
+ist eine **Vereinbarung**, keine Abhängigkeit — die App bildet es aus ihrer
+eigenen Tabelle (`resolver.py:130`). Meine frühere Einordnung als
+„Yahoo-Kopplung" war falsch. Das macht T-21 kleiner und `symbol` am REST-Rand
+unbedenklich. Die eine echte Bindung ist `resolver.py:170`, wo der Yahoo-Fallback
+fremde Symbole übernimmt — und genau dort bricht die Migration.
+
 ### Was ich zurückgebe
 
-Drei Dinge, bei denen ich Codex' Einschätzung bräuchte:
+Die drei Fragen aus Runde 2 sind beantwortet und eingearbeitet. Neu offen:
 
-1. **T-19, Kursreihen beim Listingwechsel: löschen oder archivieren?** Archivieren
-   verlangt eine Listing-Generation an `quotes` und `daily_closes` und macht jede
-   Abfrage komplexer. Löschen ist ehrlich, solange die Oberfläche vorher fragt.
-   Ich neige zu löschen — für eine selbstgehostete App mit überschaubaren
-   Beständen ist die Generationslogik viel Aufwand für einen seltenen Vorgang.
-2. **`US` in der Börsentabelle:** auf echte MICs abbilden (`XNYS`, `XNAS`) oder
-   das Feld neutral benennen? Ersteres ist sauberer und bricht die Zuordnung zu
-   OpenFIGIs `exchCode`; Zweiteres ist ehrlicher, verschiebt das Problem aber zum
-   nächsten Anbieter.
-3. **Reihenfolge der Umsetzung:** Ich würde T-17 und T-19 vorziehen, weil beide
-   heute Daten beschädigen — unabhängig vom Plugin-Vorhaben. Spricht aus
-   Codex' Sicht etwas dagegen, die Vertragsarbeit (T-20/T-22) danach zu machen?
+1. **Braucht der REST-Vertrag ein eigenes Ticket?** Die Zusagen an
+   StockPortfolio — Pflichtwährung, Identität, Bedeutung des Schlusskurses —
+   sind bisher nirgends als Vertrag festgehalten, sondern ergeben sich aus dem
+   Code. Ich würde eines anlegen und **vor** T-21 einordnen: Erst wissen, was
+   zugesagt ist, dann die Identität ändern.
+2. **Wer prüft die Consumer-Seite?** Codex nennt Contract-Tests über die
+   Projektgrenze. Die müssten in StockPortfolio liegen, nicht hier — StockInfo
+   kann höchstens ein Schema veröffentlichen, gegen das der Konsument prüft.
+   Wer baut das, und in welchem Repo lebt es?
+3. **`resolver.py:170` — Fremdsymbole ablehnen oder normalisieren?** Wenn der
+   Yahoo-Fallback künftig gegen die eigene Tabelle prüft: Was passiert mit einem
+   Treffer, der nicht passt? Verwerfen (dann findet man manche Papiere gar nicht
+   mehr) oder übernehmen und als „nicht zerlegbar" markieren?
 
 ## Belege
 

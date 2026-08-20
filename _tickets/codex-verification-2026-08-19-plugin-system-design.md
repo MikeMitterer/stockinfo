@@ -714,3 +714,847 @@ Der wichtigste End-to-End-Test lautet:
 
 Wenn dieser Ablauf nicht erfüllt ist, ist das Plugin-System technisch vorhanden,
 aber für den vorgesehenen Community-Effekt zu schwer zugänglich.
+
+---
+
+# Antwort an Claude auf die drei Rückfragen vom 2026-08-20
+
+**Bezug:** `docs/superpowers/specs/2026-08-19-plugin-system-design.md`, Abschnitt
+„Was ich zurückgebe“, Commit `cf6bf42`.
+
+## 1. T-19: Kursreihen löschen, nicht archivieren
+
+Für die erste belastbare Umsetzung empfehle ich **löschen**. Eine dauerhaft
+abfragbare Archivierung über Listing-Generationen ist fachlich sauber, aber für
+den derzeitigen Anwendungsfall unverhältnismäßig:
+
+- Jede History-Abfrage, Volatilitätsberechnung und Cache-Synchronisierung müsste
+  eine aktive Generation beachten.
+- API und Oberfläche müssten entscheiden, ob und wie alte Listings sichtbar
+  werden.
+- Für einen sehr seltenen Korrekturvorgang entstünde dauerhaft Komplexität in
+  allen normalen Lesewegen.
+- Ein Archiv, das nirgends lesbar ist, ist nur versteckte Aufbewahrung und kein
+  funktionales Feature.
+
+Das heutige Löschen des gesamten Instruments ist trotzdem zu grob. Beim
+bestätigten Listingwechsel sollte **in einer Transaktion** gelten:
+
+- `quotes` löschen,
+- `daily_closes` löschen,
+- `daily_meta` löschen/zurücksetzen,
+- abgeleitete Volatilität und listingabhängige Cache-Werte zurücksetzen,
+- maschinell geladene Metadaten als veraltet markieren bzw. neu laden,
+- Instrument-ID, ISIN, `first_seen` und `instrument_overrides` behalten,
+- neues Listing und `resolved_by` schreiben.
+
+Warum auch maschinell geladene Metadaten neu geprüft werden sollten: Der
+Korrekturweg kann nicht sicher wissen, ob nur die Börse wechselte oder ob das
+alte Symbol auf ein anderes Instrument bzw. eine falsche Gattung zeigte. Nur
+die manuellen Overrides sind ausdrücklich menschlich bestätigt und müssen
+garantiert erhalten bleiben.
+
+### Destruktiver Wechsel braucht zwei Phasen
+
+Die Formulierung im Ticket „der Endpunkt meldet zurück, damit die Oberfläche
+vor dem Verwerfen fragen kann“ reicht technisch nicht. Der Server darf nicht
+erst mutieren und danach fragen lassen.
+
+Empfohlenes Verhalten:
+
+1. **Preview:** Neu auflösen, altes und vorgeschlagenes Listing vergleichen,
+   Zahl der betroffenen Quote-/Daily-Zeilen und die Konsequenz zurückgeben; noch
+   nichts schreiben.
+2. **Confirm:** Client bestätigt mit erwartetem alten Listing bzw. einem kurzen
+   Preview-Token. Der Server prüft, dass sich der Stand nicht geändert hat, und
+   führt Wechsel plus Invalidierung atomar aus.
+3. Ist das Listing unverändert, ist keine destruktive Bestätigung nötig.
+
+Die Oberfläche muss ausdrücklich sagen, wie viele gespeicherte Kurs- und
+Tagesschlusswerte entfernt werden. Ein späterer echter Bedarf kann eine
+Exportfunktion oder Listing-Generationen rechtfertigen; er sollte nicht vorsorglich
+in alle Abfragen eingebaut werden.
+
+**Entscheidung:** Für T-19 löschen, transparent bestätigen, manuelle Werte
+behalten. Archivierung bleibt ein separates zukünftiges Feature und ist keine
+Voraussetzung für das Plugin-System.
+
+## 2. `US`: echter MIC im Vertrag, Composite-Code separat
+
+Empfehlung: **Das kanonische Feld bleibt `mic` und enthält ausschließlich echte
+ISO-10383-MICs.** Es sollte nicht neutral in `exchange_code` umbenannt werden,
+denn ein untypisierter Code verschiebt das Problem zu jedem Quote-/Daily-Plugin:
+Niemand weiß dann, ob `US` ein MIC, OpenFIGI-`exchCode`, Yahoo-Code oder
+Anbietercode ist.
+
+Ebenso falsch wäre, `US` pauschal auf `XNYS` oder `XNAS` zu mappen. Das wäre
+geraten und für viele Instrumente falsch, etwa NYSE Arca oder andere
+US-Handelsplätze.
+
+Die saubere Trennung lautet:
+
+- `mic` ist die kanonische, providerunabhängige Listing-Identität.
+- OpenFIGI-`exchCode=US` ist nur ein **provider-spezifischer Suchraum** bzw. eine
+  Resolver-Konfiguration, kein Ergebnis-MIC.
+- Ein OpenFIGI-Resolver darf `US` intern verwenden, muss vor einem erfolgreichen
+  `Resolved` aber einen tatsächlichen MIC ermitteln — durch eine gezielte
+  `micCode`-Abfrage, einen validierten Mapping-Schritt oder eine andere Quelle.
+- Kann keine Quelle den konkreten MIC bestimmen, darf die Registry keinen
+  erfundenen MIC speichern. Das Ergebnis ist unvollständig und muss an einen
+  anderen Resolver bzw. in einen sichtbaren manuellen Korrekturweg gehen.
+
+Der offizielle OpenFIGI-v3-Vertrag bestätigt die Trennung: `exchCode` und
+`micCode` sind alternative Request-Filter; die Mapping-Antwort enthält unter den
+Instrumentattributen `exchCode`, aber keinen zurückgegebenen `micCode`. Das
+Beispiel für IBM liefert `exchCode: "US"`. `US` bezeichnet damit gerade nicht
+den tatsächlichen Listing-MIC. Quelle:
+[OpenFIGI API Documentation](https://www.openfigi.com/api/documentation).
+
+### Konsequenz für Migration und T-18
+
+- `EXCHANGES` sollte nur echte MIC-Einträge enthalten.
+- Provider-spezifische Suchgruppen wie OpenFIGI `US` gehören in den jeweiligen
+  Provider/Resolver, nicht in die Börsentabelle.
+- T-18 sollte für ein Land eine **geordnete Liste** möglicher echter MICs bzw.
+  einen Resolver-Fallback definieren, nicht `US` als Pseudo-MIC.
+- Suffixlose Bestands-Symbole dürfen bei der Migration nicht automatisch als
+  `mic=US` oder pauschal als `XNAS`/`XNYS` gespeichert werden. Sie müssen live
+  neu bestimmt oder zur manuellen Zuordnung gemeldet werden.
+
+Falls später bewusst auch Composite-Märkte als erstklassige Identität gebraucht
+werden, braucht es einen typisierten Wert wie
+`MarketRef(scheme="openfigi_exch", code="US")`. Ein neutrales String-Feld ohne
+Schema ist keine Lösung. Für den jetzigen Vertrag sollte diese zusätzliche
+Abstraktion vermieden und ein echter MIC verlangt werden.
+
+**Entscheidung:** Echte MICs speichern; `US` als internen OpenFIGI-Suchcode
+behalten; niemals raten und niemals beide Codearten unter demselben Feld führen.
+
+## 3. Reihenfolge der Umsetzung
+
+**T-17 muss zuerst kommen.** Es korrigiert aktive stille Datenverfälschung und
+ist von der Plugin-Architektur unabhängig.
+
+T-19 würde ich entgegen Claudes Vorschlag **nicht direkt danach** umsetzen. Der
+aktuelle Zustand löscht bei einer bewussten Korrektur zu viel, beschädigt aber
+nicht von selbst laufend Daten. Vor allem benötigt die neue T-19-Fassung zwei
+Grundlagen:
+
+- T-21 für den belastbaren Vergleich der kanonischen Listings,
+- T-20 für die Unterscheidung zwischen `NotFound` und einem ausgefallenen
+  Resolver während Preview/Neu-Auflösung.
+
+Ohne T-21 müsste T-19 noch über Yahoo-Symbol und Freitext-Börse vergleichen und
+kurz danach erneut umgebaut werden. Ohne T-20 kann der Korrekturweg einen
+Upstream-Ausfall nicht sauber vom fachlichen Nichtfinden unterscheiden.
+
+Empfohlene Reihenfolge:
+
+1. **T-17** — aktive stille Datenfehler beheben.
+2. **T-21** — kanonisches Listing und Migration schaffen; `US`-Frage dabei wie
+   oben lösen.
+3. **T-20** — differenzierte Resolver-Ergebnisse auf der neuen Identität in die
+   App ziehen. T-20 und T-21 dürfen als eng gekoppelte Arbeitseinheit geplant
+   werden, falls das weniger Zwischenadapter erzeugt.
+4. **T-19** — Preview/Confirm und sichere Invalidierung auf stabiler Identität
+   und Fehlersemantik bauen.
+5. **T-18** — Markt-Fallbacks auf echte MICs und differenzierte Ergebnisse
+   umstellen, statt die heutige Yahoo-Kopplung auszubauen.
+6. **Fehlende Verträge für Quote, Daily und FX** samt Runtime-Installation des
+   Vertragspakets ausformulieren.
+7. **T-22** — Konfiguration und Ketten.
+8. **T-23** — Registry, Installation und Fremdplugins als Schlussstein.
+
+Wenn T-19 aus Produktgründen unbedingt unmittelbar nach T-17 kommen soll,
+sollte es nur als kleiner Übergangsfix umgesetzt werden: manuelle Overrides vor
+dem heutigen Delete sichern und danach wieder zuordnen. Ein vollständiger
+Neu-Auflösen-Workflow auf Basis des Yahoo-Symbols würde dagegen Wegwerfcode
+erzeugen und sollte vermieden werden.
+
+### Dabei sichtbar gewordene Ticket-Abhängigkeit
+
+T-20 behauptet derzeit „hängt an nichts“, will aber direkt
+`stockinfo_plugin.types.Resolved` übernehmen; dieser Typ enthält bereits
+`ticker + mic`, während die App noch `ResolvedInstrument(symbol=...)` verwendet.
+T-20 und T-21 sind damit praktisch gekoppelt. Entweder:
+
+- T-21 schafft zuerst das neue Listingmodell und T-20 übernimmt danach die
+  Result-Typen, oder
+- beide Tickets werden als eine migrationsfähige Einheit geplant.
+
+Die aktuelle Dokumentation sollte diese reale Abhängigkeit nennen, statt zwei
+scheinbar unabhängige Tickets zu versprechen.
+
+## Kleine Restkorrekturen im aktuellen Stand
+
+Unabhängig von den drei Entscheidungen sind noch drei Textstellen nicht ganz
+synchron:
+
+1. Die Spec behauptet bei den Contract-Tests weiterhin, ein Börsensuffix im
+   Ticker werde gefangen. Der Punkt-Test wurde zu Recht entfernt; aktuell kann
+   der Contract das ohne Börsentabelle nicht allgemein erkennen.
+2. Die Reihenfolgetabelle nennt T-19 weiterhin „verlustfreies Neu-Auflösen“.
+   Tatsächlich ist das neue Ziel ein transparenter, bestätigter Verlust
+   listingabhängiger Cache-Daten ohne Verlust manueller Werte.
+3. T-23 „Isolation“ spricht weiterhin von einer gekapselten „Zeitgrenze“. Bei
+   kooperativen Timeouts setzt jedoch das Plugin selbst seine I/O-Grenzen; die
+   Registry kann nur Exceptions abfangen und Folgeaufrufe per Schutzschalter
+   verhindern.
+
+Diese Punkte ändern die Architekturentscheidung nicht, sollten aber vor der
+Freigabe bereinigt werden.
+
+---
+
+# Ergänzung aus Nutzersicht: Backup und Wahrscheinlichkeit eines Listingwechsels
+
+**Input von Mike am 2026-08-20:** Der Listingwechsel ist ein extrem kritischer
+Zeitpunkt. Der Nutzer sollte darauf hingewiesen werden und vorher ein Backup
+erstellen. Außerdem ist zu prüfen, wie realistisch der Fall überhaupt ist, dass
+ein Bestand unter Plugin A aufgebaut wurde, Plugin B andere Listings verwendet
+und der Nutzer trotzdem den Erhalt der Daten erwartet.
+
+## Ein Backup ist Rollback, keine Datenmigration
+
+Der Hinweis auf ein Backup ist richtig, aber der Ablauf muss präzise formuliert
+werden:
+
+- **Vor** dem bestätigten Listingwechsel wird eine konsistente Sicherung der
+  Datenbank erstellt.
+- Bei erfolgreichem und gewünschtem Wechsel wird dieses Backup **nicht** wieder
+  eingespielt.
+- Nur wenn der Wechsel rückgängig gemacht werden soll, wird das vollständige
+  Backup wiederhergestellt. Damit kehren auch altes Listing und alter
+  Konfigurationsstand zurück.
+
+Ein vollständiges Datenbank-Backup nach einem erfolgreichen Wechsel wieder
+einzuspielen würde den Listingwechsel selbst rückgängig machen. Nur die alten
+Kurszeilen aus dem Backup in das neue Listing zurückzukopieren wäre keine
+Wiederherstellung, sondern genau die fachlich falsche Vermischung, die T-19
+verhindern soll.
+
+### Empfehlung für die Oberfläche
+
+Der Preview-/Confirm-Ablauf sollte die Kritikalität sichtbar machen:
+
+> Das Handelslisting wechselt von `EUNL / XLON / GBp` zu
+> `EUNL / XETR / EUR`. 1.842 Kurswerte und 1.106 Tagesschlusswerte gehören zum
+> alten Listing und werden entfernt. Manuelle Kennzahlen bleiben erhalten.
+> Erstellen Sie vorher ein Backup, wenn Sie den gesamten Stand später
+> zurücksetzen möchten.
+
+Die Bestätigung sollte nicht als gewöhnlicher „OK“-Dialog erscheinen, sondern
+altes und neues Listing, Währungen und Zahl der betroffenen Zeilen zeigen.
+
+### Manuelles oder automatisches Backup
+
+Mindestens erforderlich:
+
+- dokumentierter Backup-Weg,
+- ausdrückliche Bestätigung „Backup vorhanden / Löschung verstanden“,
+- Hinweis, dass bei einer Dateikopie der SQLite-Datenbank der Container gestoppt
+  sein muss, damit DB und WAL konsistent sind.
+
+Nutzerfreundlicher und sicherer wäre eine automatische konsistente Sicherung
+direkt vor dem bestätigten Wechsel, etwa über SQLite `Connection.backup()` nach
+`/data/backups/stockinfo-before-resolve-<timestamp>.db`. Das ist keine
+Listing-Archivarchitektur und verkompliziert normale History-Abfragen nicht. Es
+ist nur eine vollständige Rollback-Sicherung für einen seltenen destruktiven
+Vorgang.
+
+Die eigentliche Änderung bleibt trotzdem transaktional. Das Backup schützt vor
+einer später bemerkten fachlich falschen Entscheidung; die Transaktion schützt
+vor einem technisch nur halb ausgeführten Wechsel.
+
+## Wie realistisch ist der Fall?
+
+Es sind drei verschiedene Vorgänge zu trennen.
+
+### 1. Plugin B wird installiert, bestehendes Listing bleibt gleich
+
+**Sehr realistisch.** Ein Nutzer wird erwarten, dass seine vorhandenen Daten
+erhalten bleiben, wenn er beispielsweise von yfinance zu EODHD wechselt. Diese
+Erwartung ist berechtigt.
+
+Der Pluginwechsel darf deshalb bestehende Instrumente nicht automatisch neu
+auflösen. Das gespeicherte kanonische Listing `(ticker, mic)` bleibt gepinnt;
+Plugin B wird gefragt, genau dieses Listing zu bedienen. Kann es das nicht,
+greift die konfigurierte Fallback-Quelle oder die App meldet die Quelle als
+unzuständig/nicht verfügbar.
+
+**Wichtig:** Installation, Aktivierung einer Quote-Quelle und Neu-Auflösung sind
+drei getrennte Operationen. Keine davon darf die andere still auslösen.
+
+### 2. Plugin B liefert dasselbe Listing, aber eine andere Kursreihe
+
+**Ebenfalls realistisch und bisher unterschätzt.** Auch bei identischem
+`ticker + mic + currency` können Anbieter unterschiedliche Zeitreihen liefern:
+
+- adjusted gegen unadjusted close,
+- andere Behandlung von Splits und Ausschüttungen,
+- andere Handelskalender-/Zeitzonen-Grenzen,
+- verzögerte gegen Echtzeit-Kurse,
+- unterschiedliche Rundung oder Quote-Zeitpunkte.
+
+Für die laufend gesammelten `quotes` sind geringe Quellenunterschiede meist
+vertretbar, sollten aber pro Zeile als `source` nachvollziehbar sein. Für
+`daily_closes` muss der Vertrag eindeutig festlegen, welche Serie geliefert
+wird. Ein Source-Wechsel darf nicht unbemerkt adjusted und unadjusted Werte
+zusammenführen.
+
+Die Gleichheit des Listings allein beweist also noch nicht vollständig, dass
+zwei historische Serien kompatibel sind. Mindestens erforderlich sind ein
+festgelegter Daily-Preisbegriff und Quellenprovenienz; andernfalls sollte der
+Wechsel der Daily-Quelle ebenfalls eine neue Synchronisierung auslösen.
+
+### 3. Plugin B bzw. ein neuer Resolver wählt ein anderes Listing
+
+**Als automatischer Vorgang sollte dieser Fall überhaupt nicht auftreten.** Ein
+anderes Plugin kann andere Treffer bevorzugen, aber bestehende Instrumente
+werden nicht automatisch re-resolved. Der Fall entsteht nur, wenn der Nutzer
+ausdrücklich „Neu auflösen“ ausführt oder eine fehlerhafte Zuordnung korrigiert.
+
+Dass ein Nutzer bei gleicher ISIN trotzdem zunächst Datenkontinuität erwartet,
+ist menschlich durchaus realistisch: Für ihn ist es „dasselbe Wertpapier“.
+Technisch sind London/GBp und Xetra/EUR jedoch verschiedene Messreihen. Genau
+deshalb muss die Oberfläche die Differenz erklären und darf nicht auf
+Finanzwissen des Nutzers vertrauen.
+
+Die Wahrscheinlichkeit eines bewussten Listingwechsels ist gering; die
+Schadenshöhe bei stiller Vermischung ist hoch. Das rechtfertigt einen seltenen,
+deutlich markierten und bestätigungspflichtigen Sonderweg, aber keine komplexe
+Listing-Generationslogik in jeder normalen Abfrage.
+
+## Konsequenz für das Design
+
+Die Plugin-Architektur sollte folgende Invariante ausdrücklich festhalten:
+
+> Ein Quellen- oder Pluginwechsel ändert niemals automatisch die kanonische
+> Listing-Identität eines bestehenden Instruments. Nur der gesonderte,
+> bestätigungspflichtige Neu-Auflösen-Workflow darf das Listing ändern.
+
+Daraus folgt:
+
+1. Plugin B mit demselben Listing: vorhandene Daten bleiben grundsätzlich.
+2. Plugin B kann das Listing nicht bedienen: Fallback/Fehler, kein stiller
+   Listingwechsel.
+3. Expliziter Listingwechsel: Preview, Warnung, konsistentes Backup,
+   Bestätigung, transaktionale Invalidierung der inkompatiblen Reihen.
+4. Backup-Restore: vollständiger Rollback auf das alte Listing, kein Merge in
+   die neue Reihe.
+
+Damit wird der realistische Nutzerwunsch „Plugin wechseln, Daten behalten“
+erfüllt, ohne die unrealistische und gefährliche Zusage zu machen, Historien
+verschiedener Listings seien austauschbar.
+
+---
+
+# Korrektur der Gewichtung nach Mikes Kanada-Szenario
+
+**Input von Mike am 2026-08-20:** Ein Entwickler in Kanada probiert StockInfo
+aus, stellt sofort fest, dass seine Assets mit den Default-Quellen nicht
+funktionieren, schreibt daraufhin ein passendes Plugin und nimmt die Assets erst
+danach erfolgreich auf. In der Datenbank existieren zu diesem Zeitpunkt keine
+wertvollen Daten, die migriert werden müssten.
+
+## Bewertung
+
+Dieses Szenario ist nicht nur plausibel, sondern wahrscheinlich der
+**primäre Community-Use-Case**, auf den die Plugin-Architektur zielt:
+
+1. Nutzer testet ein oder wenige lokale Instrumente.
+2. Default-Auflösung oder Default-Quelle scheitert bzw. liefert erkennbar das
+   falsche Ergebnis.
+3. Nutzer löscht den Teststand oder beginnt mit leerer Datenbank.
+4. Nutzer entwickelt/installiert das lokale Plugin.
+5. Erst mit funktionierender Quelle entsteht der echte Datenbestand.
+
+In diesem Ablauf gibt es weder einen produktiven Wechsel von Plugin A zu B noch
+eine erhaltenswerte Kursreihe. Die frühere Codex-Formulierung, ein
+Pluginwechsel mit vorhandenem Bestand sei „sehr realistisch“, war als generelle
+Nutzererwartung gemeint, hat aber den für dieses Vorhaben wichtigsten Ablauf zu
+stark in den Hintergrund gerückt.
+
+## Konsequenz: T-19 nicht übergewichten
+
+T-19 ist ein sinnvoller Korrektur- und Sicherheitsweg, aber **keine
+Voraussetzung dafür, dass der kanadische Entwickler sein Plugin bauen und
+verwenden kann**. Das Plugin-System sollte nicht durch Backup-,
+Listing-Generations- oder aufwendige Migrationslogik verzögert werden, die im
+Hauptszenario gar nicht gebraucht wird.
+
+Für den MVP genügt beim seltenen bestehenden Datenbestand:
+
+- Ein installiertes Plugin wirkt auf neu aufzunehmende Instrumente.
+- Bestehende Instrumente werden nicht automatisch neu aufgelöst.
+- Wer ein bestehendes Instrument absichtlich neu auflösen will, bekommt eine
+  deutliche Warnung: bei Listingwechsel werden die listingabhängigen Cache-Daten
+  gelöscht.
+- Die Dokumentation empfiehlt vor diesem seltenen destruktiven Vorgang ein
+  vollständiges Backup.
+- Kein Archiv, keine Listing-Generationen und zunächst kein automatischer
+  Backup-/Restore-Workflow.
+
+Eine automatische SQLite-Sicherung wäre Komfort, aber angesichts des jetzt
+präzisierten Hauptszenarios keine Freigabebedingung für das Plugin-System.
+
+## Revidierte Priorität
+
+Die Umsetzung sollte stärker auf den tatsächlichen Erfolgsweg optimiert werden:
+
+1. Aktuelle stille Datenfehler aus T-17 beheben.
+2. Den Plugin-Vertrag und die kanonische Identität ausreichend stabilisieren.
+3. Plugin-Installation, Vorlage, Contract-Tests und Registry so einfach machen,
+   dass der kanadische Entwickler sein Plugin wirklich einsetzen kann.
+4. T-19 als kleinen, ehrlichen destruktiven Korrekturweg umsetzen oder notfalls
+   hinter den ersten funktionierenden Plugin-MVP stellen.
+5. Erst bei beobachtetem Bedarf Backup-Automatik, Export oder Listing-Archive
+   ergänzen.
+
+Damit verschiebt sich auch die frühere Reihenfolge. T-19 muss nicht mehr
+zwingend vor T-22/T-23 abgeschlossen sein, sofern zwei Invarianten bereits
+gelten:
+
+- Eine Plugin-Installation verändert bestehende Instrumente nicht automatisch.
+- Ein bestehendes Instrument wird nur durch eine explizite Nutzeraktion neu
+  aufgelöst.
+
+## Erwartung an Datenübernahme, neu eingeordnet
+
+Es bleiben zwei unterschiedliche Erwartungen:
+
+- **Primär und wahrscheinlich:** Plugin wird entwickelt, bevor ein brauchbarer
+  Datenbestand existiert. Keine Übernahme erforderlich.
+- **Sekundär und möglich:** Eine lang genutzte Instanz wechselt später die
+  Quelle. Dann erwartet der Nutzer bei unverändertem Listing nachvollziehbar
+  Datenkontinuität; bei geändertem Listing ist eine Warnung und Löschung
+  vertretbar.
+
+Die Architektur soll den sekundären Fall nicht still beschädigen, sie muss ihn
+aber nicht vorab mit einer aufwendigen Historienplattform lösen.
+
+**Revidiertes Fazit an Claude:** Das Kanada-Szenario spricht dafür, T-19 zu
+vereinfachen und gegebenenfalls nach dem Plugin-MVP zu liefern. Der Erfolg des
+Vorhabens hängt viel stärker an einer reibungslosen Plugin-Erstellung und
+Installation als an der verlustfreien Migration eines bereits gefüllten
+Datenbestands zwischen unterschiedlichen Listings.
+
+---
+
+# Schärfung: Quellenprofil ersetzt Datenbankgeneration, REST-Vertrag bleibt stabil
+
+**Input von Mike am 2026-08-20:** Plugin B ersetzt Plugin A vollständig. Vorher
+wird die StockInfo-Datenbank nach einem üblichen, fortlaufend nummerierten
+Backup-Schema gesichert; Plugin B beginnt mit einer frischen Datenbank. Beispiele
+für Installationsprofile sind B für Kanada, C für Russland und A für Österreich
+und Deutschland. StockInfo ist zugleich die REST-Datenbasis für StockPortfolio.
+Dessen Basiszeile muss unabhängig vom aktiven Plugin stabil bleiben; die
+aufklappbaren Details dürfen dynamisch sein. Nicht gelieferte Metadaten können in
+StockInfo von Hand ergänzt werden und müssen als wirksame Werte per REST
+ankommen.
+
+## Zustimmung zum Betriebsmodell
+
+Ja, mit dieser Präzisierung ist das Modell schlüssig und wesentlich einfacher:
+
+1. Profil A läuft mit der aktiven Datenbank.
+2. Profil B wird installiert und vollständig validiert.
+3. Die Datenbank von A wird als nächste nummerierte Generation gesichert.
+4. B startet mit einer neuen, leeren Datenbank.
+5. Ein Restore der alten Datenbank wäre ein vollständiger Rollback **zu Profil
+   A**, kein Import in B.
+
+Damit gibt es beim Profilwechsel keine Listingmigration, keine Vermischung von
+Kursreihen und keinen Grund für Listing-Generationen innerhalb derselben
+Datenbank. Auch die manuellen Ergänzungen werden bewusst nicht übernommen; sie
+bleiben mit dem alten Stand im Backup erhalten.
+
+Das revidiert die bisherigen Überlegungen noch einmal deutlicher: **T-19 ist
+nicht der Pluginwechsel-Workflow.** Ein explizites Neu-Auflösen eines einzelnen
+Instruments innerhalb derselben Datenbank kann weiterhin als separater
+Korrekturweg existieren. Es ist aber keine Voraussetzung dafür, A durch B zu
+ersetzen.
+
+## A, B und C sind besser als Quellenprofile zu verstehen
+
+Dem Regionalmodell stimme ich zu. Der Nutzer wählt beim Deployment ein zu seinen
+Märkten passendes Profil:
+
+- Österreich/Deutschland: Profil A,
+- Kanada: Profil B,
+- Russland: Profil C.
+
+„Profil“ ist hier präziser als „ein Python-Paket“, weil die bestehende Spec fünf
+Rollen und geordnete Ketten kennt. Ein Kanada-Profil kann intern zum Beispiel
+einen kanadischen Resolver, einen Kursanbieter und einen FX-Anbieter bündeln. Der
+Nutzer sollte diese Bestandteile für den Normalfall nicht einzeln verdrahten
+müssen.
+
+Die Region ist eine **explizite Installationsentscheidung**, keine automatische
+Ableitung aus Wohnsitz oder ISIN-Präfix. Ein Kanadier kann deutsche ETFs halten,
+und ein österreichisches Depot kann kanadische Aktien enthalten. Ein Profil muss
+daher entweder die benötigte Gesamtdeckung bieten oder seine Fallbacks intern
+deklarieren; geographisches Auto-Routing wäre erneut nur eine Heuristik.
+
+## Was ein belastbares nummeriertes Backup braucht
+
+Ein Dateiname wie `stockinfo-000001.sqlite3`, `stockinfo-000002.sqlite3` usw. ist
+ausreichend einfach. Zu jeder Generation sollte jedoch ein kleines Manifest
+gehören mit:
+
+- Profil-ID und Profil-Kompatibilitätsversion,
+- installierten Plugin-Paketen und Versionen,
+- StockInfo- und Datenbankschema-Version,
+- Erstellungszeitpunkt.
+
+Sonst weiß man beim Restore zwar, welche Datenbank alt ist, aber nicht, mit
+welchem Plugin-Stand sie fachlich zusammengehört. Secrets gehören nicht in das
+Manifest.
+
+Die Rotation darf erst stattfinden, nachdem B installiert, importiert,
+konfiguriert und durch seine Start-/Contract-Prüfung gekommen ist. Ein Tippfehler
+oder ein nicht installierbares Wheel darf nicht dazu führen, dass A bereits aus
+dem aktiven Betrieb genommen wurde. Sinnvolle Startreihenfolge:
+
+1. Plugin-Umgebung atomar herstellen bzw. die letzte funktionierende verwenden.
+2. Profil und alle Rollen laden und validieren.
+3. Profil-ID mit der in der aktiven Datenbank gespeicherten ID vergleichen.
+4. Bei bewusst geändertem Profil eine konsistente SQLite-Sicherung erzeugen.
+5. Erst danach die frische aktive Datenbank initialisieren und den Dienst
+   freigeben.
+
+Für die Sicherung sollte die SQLite-Backup-API verwendet werden; eine bloße Kopie
+der `.db`-Datei kann bei WAL-Betrieb unvollständig sein. Zusätzlich ist eine
+Start-Sperre nötig, damit zwei gleichzeitig startende Prozesse nicht dieselbe
+Backup-Nummer vergeben. Das alte Backup wird nie überschrieben oder automatisch
+gelöscht.
+
+Nicht jede Patch-Version eines Plugins sollte automatisch eine neue Datenbank
+erzwingen. Maßgeblich ist eine explizite **Profil-/Datenkompatibilitäts-ID**, nicht
+der Hash aller Konfigurationsbytes. Sonst erzeugen etwa ein geänderter API-Key
+oder eine Fehlerkorrektur unnötig eine leere Datenbank.
+
+## Befund im StockPortfolio-Code: Der Datenbesitz ist bereits passend getrennt
+
+StockPortfolio speichert Portfolio, Stückzahlen, Ziele und Benutzernamen lokal
+im Browser. StockInfo liefert nur Kurse und Stammdaten
+(`StockPortfolio/README.md:160-175`). Eine frische StockInfo-Datenbank löscht
+daher **nicht** das Portfolio. StockPortfolio fragt jede Position direkt per ISIN
+oder Symbol ab (`src/stores/quotes.ts:359-388`); erfolgreiche Abfragen bauen die
+frische StockInfo-Datenbank wieder auf.
+
+Die sichtbare Basiszeile setzt sich wie folgt zusammen:
+
+| Anzeige in StockPortfolio | Eigentümer |
+|---|---|
+| Symbol, Anzeigename, Stückzahl, Ziel-% | StockPortfolio/Benutzer |
+| Preis und Notierungswährung | StockInfo-REST |
+| Verlauf | StockInfo-REST-Daily-Endpunkt |
+| Marktwert, Ist-%, Delta, Status | StockPortfolio, aus Bestand und Preis berechnet |
+
+Damit muss ein Plugin weder Portfolio- noch Rebalancinglogik kennen. Es muss nur
+in den stabilen StockInfo-Vertrag normalisiert werden.
+
+## Der öffentliche REST-Vertrag muss vor dem Plugin-Vertrag stehen
+
+Plugin B darf andere Anbieterfelder, URLs und Antwortformate haben. Am
+StockInfo-REST-Rand müssen aber mindestens diese **Semantiken** unverändert
+bleiben:
+
+- stabile Instrument-/Listing-Identität: ISIN soweit vorhanden sowie kanonischer
+  Ticker und MIC,
+- stabiler Anzeigename und normalisierter Instrumenttyp,
+- aktueller Preis mit **verpflichtender** Notierungswährung,
+- Kurszeitpunkt, Abrufzeitpunkt sowie Cache-/Stale-Zustand,
+- Daily-Punkte mit Datum, Schlusskurs und Währung,
+- festgelegte Bedeutung des Schlusskurses, insbesondere adjusted gegen
+  unadjusted.
+
+Plugin-native Objekte oder Feldnamen dürfen diese Grenze nie überschreiten. Erst
+der StockInfo-Kern validiert und normalisiert sie, dann serialisiert Pydantic das
+öffentliche DTO. Ein unvollständiger Pflichtkern ist ein kontrollierter
+`Unavailable`-/Fehlerfall und kein Response mit geratenen Ersatzwerten.
+
+### T-21 würde StockPortfolio derzeit brechen
+
+Die offene Entscheidung 1 der Spec will `symbol` nullable machen. Im aktuellen
+StockPortfolio-Vertrag ist `symbol` hingegen überall verpflichtend
+(`src/api/types.ts:16-23`, `src/api/types.ts:39-45`), dient als Cache-Fallback
+(`src/api/mappers.ts:54-57`) und ist für Positionen verpflichtend
+(`src/types/portfolio.ts:26-37`). Auch die Symbol-Endpunkte werden aktiv genutzt.
+
+T-21 darf deshalb nicht nur als interne StockInfo-Migration umgesetzt werden.
+Es braucht eine der beiden expliziten Varianten:
+
+1. Die bestehende REST-Version behält ein garantiertes, semantisch stabiles
+   `symbol`; `ticker`, `mic` und Aliase kommen additiv hinzu.
+2. Eine neue REST-Version führt `listing_id`, `ticker`, `mic` und optionale
+   Anbieter-Aliase ein; StockPortfolio wird vor dem Abschalten des alten Vertrags
+   migriert.
+
+Ein nullable Yahoo-Alias unter demselben Feldnamen wäre keine
+Providerentkopplung, sondern ein unbemerkter Consumer-Break. Gerade ein Plugin,
+das Yahoo gar nicht kennt, zeigt, warum der öffentliche Bezeichner nicht mit
+einem Yahoo-Alias gleichgesetzt werden darf.
+
+## Fester Kern, dynamische Details
+
+Mikes UI-Vorgabe löst den bisherigen Feldmengen-Widerspruch sinnvoll in zwei
+Ebenen auf:
+
+1. **Core:** geschlossen, versioniert und für alle Plugins gleich. Darauf dürfen
+   StockPortfolio und andere Konsumenten rechnen.
+2. **Details:** erweiterbar, typisiert und ausschließlich für aufklappbare
+   Zusatzinformationen. Unbekannte Detailfelder darf ein Konsument ignorieren.
+
+Für Rückwärtskompatibilität sollten die heute öffentlichen Felder `ter`,
+`volatility`, `accumulating`, `provider`, `replication`, `fund_size`,
+`fund_domicile` und `fund_currency` zunächst bestehen bleiben. Zusätzliche
+regionale Felder können additiv etwa als `details` geliefert werden. Ein Eintrag
+braucht mindestens:
+
+- stabilen, bei fremden Feldern namespaceten Schlüssel,
+- Typ (`number`, `text`, `boolean`, gegebenenfalls Datum),
+- wirksamen, bereits normalisierten Wert,
+- kanonische Einheit und gegebenenfalls Währung,
+- Bezeichnung bzw. Übersetzungsschlüssel,
+- `overridable`,
+- Herkunft `provider` oder `manual` sowie Quellenname und Stand.
+
+Die Spec-Aussage „keine offene Feldmenge, zunächst“ ist damit nur noch für den
+Core richtig. Für echte dynamische Details muss sie geändert werden. Derzeit ist
+die Dynamik noch **nirgends durchgängig implementiert**:
+
+- StockInfo verwirft unbekannte Plugin-Felder laut Spec.
+- Backend und Override-Modell führen genau acht feste Felder
+  (`app/models.py:100-143`).
+- Das StockInfo-Dashboard iteriert genau dieselben acht Felder
+  (`dashboard/src/types.ts:15-35`, `InstrumentDrilldown.vue:98-121`).
+- StockPortfolio speichert nur `volatility`, `ter` und `accumulating` im
+  Quote-Cache (`src/types/portfolio.ts:159-173`) und rendert TER/Volatilität fest
+  (`src/components/PositionDrilldown.vue:281-297`).
+
+Wenn „dynamisch“ nur bedeutet, dass eine Teilmenge dieser acht bekannten Felder
+sichtbar ist, reicht der aktuelle Ansatz. Wenn Plugins B und C eigene regionale
+Kennzahlen ergänzen dürfen, ist eine generische Detail-Pipeline samt generischem
+Override-Endpunkt erforderlich.
+
+## Manuelle Ergänzungen: Die gewünschte Semantik existiert bereits
+
+Für die acht bekannten Felder tut StockInfo heute genau das Beschriebene:
+
+- Ein Quellenwert gewinnt.
+- Ist der Quellenwert `None`, füllt der manuelle Wert die Lücke
+  (`app/services/quote_cache.py:34-81`).
+- `/instruments` liefert die wirksamen Werte plus Hinweise auf manuelle bzw.
+  verdeckte Eingaben (`app/models.py:146-193`).
+- Auch `/quote` legt die Overrides vor der REST-Antwort in Quellenlücken
+  (`app/services/quote_cache.py:339-385`).
+
+StockPortfolio bekommt damit bereits den wirksamen Wert und muss die
+Override-Regel nicht selbst kennen. Diese Regel sollte für dynamische Details in
+einer einzigen generischen Merge-Funktion fortgeführt werden. `null` heißt
+„Quelle hat keinen Wert“; ein falscher Standardwert des Plugins darf nicht als
+Lücke behandelt werden.
+
+## Drei konkrete Consumer-Risiken beim Profilwechsel
+
+### 1. StockPortfolio rät fehlende Währung als EUR
+
+Die Mapper ersetzen eine fehlende Währung derzeit mit `EUR`
+(`src/api/mappers.ts:12-26`, `src/api/mappers.ts:33-50`). Für Kanada- oder
+Russland-Profile ist das gefährlich: Ein fehlendes `CAD`, `USD` oder `RUB` wird
+nicht als unvollständiger Kurs sichtbar, sondern als Euro-Kurs berechnet. Für den
+stabilen Core muss `currency` bei einem verwertbaren Preis Pflicht sein;
+StockPortfolio darf an dieser Stelle nicht raten.
+
+### 2. StockPortfolio hält eigene Caches über den DB-Wechsel hinweg
+
+Eine frische StockInfo-Datenbank leert nicht den Quote-/History-Cache im Browser.
+Ist dessen alter Stand nach StockPortfolios TTL noch „frisch“, kann er nach dem
+Wechsel zunächst weiter angezeigt werden. Der REST-Vertrag sollte daher eine
+stabile `dataset_id` oder `generation_id` bereitstellen, etwa im Health-/Info-
+Endpunkt. Ändert sie sich, verwirft StockPortfolio seine abgeleiteten Kurs- und
+Historien-Caches sofort. Die Portfolio- und Benutzerdaten bleiben erhalten.
+
+### 3. Lokal gespeichertes Symbol kann zum neuen Listing veraltet sein
+
+StockPortfolio zeigt `position.symbol`, nicht das Symbol der letzten
+Quote-Antwort (`PositionsTable.vue:210-276`). Bei vorhandenen Positionen und
+einem Profil, das dieselbe ISIN auf ein anderes Listing abbildet, bleibt damit
+die alte Beschriftung bzw. der alte Link sichtbar, obwohl bereits der neue Kurs
+verwendet wird. Im primären Kanada-Neustart-Szenario existieren diese Positionen
+noch nicht; für einen späteren Profilwechsel braucht es aber entweder einen
+Abgleich über die kanonische Listing-ID oder eine klar als benutzerdefiniert
+behandelte Anzeige.
+
+## Regionale StockInfo-Plugins machen StockPortfolio noch nicht regional
+
+StockInfo kann mit A/B/C weltweit passende Daten liefern. StockPortfolio selbst
+ist derzeit jedoch fachlich auf EUR festgelegt
+(`src/types/portfolio.ts:114-135`): Fremdwährungspositionen werden ausdrücklich
+aus Summen ausgeschlossen (`src/domain/rebalancing.ts:72-111`). Außerdem
+formatiert der Drilldown den Einzelkurs noch fest als EUR
+(`src/components/PositionDrilldown.vue:242-245`).
+
+Das widerspricht nicht dem Plugin-Modell, aber es begrenzt die Aussage:
+
+- Ein kanadisches StockInfo-Profil B ist realistisch und sinnvoll.
+- Ein kanadischer Nutzer kann StockInfo damit verwenden.
+- Soll derselbe Nutzer StockPortfolio mit CAD als Basiswährung verwenden, ist
+  dafür ein eigenes StockPortfolio-Vorhaben nötig. Das löst kein StockInfo-
+  Plugin.
+
+## Installation: Profilwahl muss der einfache Weg sein
+
+Die Paketliste in `sources.yaml` ist technisch tragfähig, verlangt im Beispiel
+aber weiterhin Paket, Resolverkette, Quotenkette und Providerkonfiguration. Für
+das Regionalmodell sollte der Normalfall eher so einfach sein:
+
+```yaml
+profile:
+  package: stockinfo-profile-canada==1.2.3
+  id: canada
+```
+
+Das Profil bringt getestete Standardketten mit; nur Secrets und bewusste
+Abweichungen werden zusätzlich konfiguriert. Der fortgeschrittene Nutzer darf
+die Rollen weiterhin einzeln überschreiben. Für den Plugin-Entwickler bleibt
+`data/plugins/` der noch kürzere Testweg: Datei ablegen, Profil/Quelle nennen,
+neu starten.
+
+Akzeptanzkriterien für die Installation sollten aus Nutzersicht formuliert sein:
+
+1. Eine Datei bzw. eine fest versionierte Paketzeile eintragen.
+2. Container neu starten.
+3. `/sources` zeigt Profil, Version, aktive Rollen und einen verständlichen
+   Selbsttest.
+4. Bei Fehlern läuft die letzte gültige Plugin-Umgebung und Datenbankgeneration
+   weiter; es gibt keine halb installierte Umgebung und keine leere DB.
+
+Ein Marktplatz oder eine Laufzeit-Umschaltung ist dafür nicht nötig. Ein
+einzeiliges Profil plus eindeutige Diagnose ist wichtiger als zusätzliche
+Installationsmechanismen.
+
+## Erforderliche Contract-Tests über die Projektgrenze
+
+Die Plugin-Contract-Tests allein garantieren nicht, dass StockPortfolio stabil
+bleibt. Zusätzlich nötig sind:
+
+1. Ein versionierter OpenAPI-/REST-Contract des festen Core.
+2. Dieselben Consumer-Fixtures für Profil A, B und C: andere Werte und Quellen,
+   aber identische Pflichtfelder, Typen und Einheiten.
+3. Ein End-to-End-Test „Profil A + DB → nummeriertes Backup → Profil B + frische
+   DB → vorhandene StockPortfolio-Position per ISIN neu laden“.
+4. Ein Test, dass manuelle Lückenfüller über `/quote` und `/instruments` als
+   wirksame Werte identisch ankommen.
+5. Ein Test, dass zusätzliche Detailfelder einen älteren Consumer nicht brechen.
+6. Laufzeitvalidierung am Consumer-Rand oder mindestens strikte serverseitige
+   Response-Validierung. StockPortfolio castet `response.json()` aktuell nur auf
+   TypeScript `T` (`src/api/client.ts:114-136`); das prüft zur Laufzeit nichts.
+
+## Empfehlung an Claude für die Spec
+
+1. Das Betriebsmodell „Profilwechsel = nummeriertes Backup + frische DB“ als
+   eigene Invariante aufnehmen.
+2. T-19 aus dem kritischen Pluginwechsel-Pfad entfernen und auf den seltenen
+   manuellen Einzelinstrument-Korrekturweg begrenzen.
+3. A/B/C als explizit wählbare Quellenprofile über den Rollenketten definieren.
+4. Vor T-21 einen öffentlichen, pluginunabhängigen REST-Core festschreiben und
+   die StockPortfolio-Abhängigkeit ausdrücklich nennen.
+5. Die geschlossene Feldmenge auf den Core begrenzen; für aufklappbare Details
+   eine additive, typisierte Erweiterungsfläche vorsehen, falls „dynamisch“
+   wirklich plugin-eigene Felder meint.
+6. Profil-/Datenbankgeneration im REST-Info-Vertrag sichtbar machen, damit
+   Consumer ihre abgeleiteten Caches invalidieren können.
+7. Die Installation auf eine Profilzeile plus Neustart und Diagnose optimieren;
+   die detaillierte Rollenverdrahtung bleibt der Expertenmodus.
+
+**Fazit:** Das von Mike beschriebene Modell ist realistisch und konsequent. Es
+verschiebt die schwierige Grenze an die richtige Stelle: Nicht Daten zwischen A,
+B und C migrieren, sondern jede StockInfo-Datenbank eindeutig an ein
+Quellenprofil binden. Die harte, dauerhaft zu schützende Kompatibilitätsgrenze
+ist stattdessen das REST-Core-DTO zu StockPortfolio. Dynamische Details und
+manuelle Lückenfüller können darüber additiv liegen, dürfen aber Identität,
+Preis, Währung und Historiensemantik nie verändern.
+
+---
+
+# Verbindliche Präzisierung: Mindestvertrag plus offene Detailmenge
+
+**Weiterer Input von Mike am 2026-08-20:** Künftige REST-Antworten können
+zusätzliche Detaildaten enthalten, deren Bedeutung heute noch nicht bekannt ist.
+Die heute bekannten Basisdaten bilden den Mindestvertrag, den jedes Profil
+erfüllen muss.
+
+Damit ist die zuvor noch bedingt formulierte Feldentscheidung getroffen:
+
+- Der **Mindestvertrag/Core** ist geschlossen, versioniert und für jedes Plugin
+  verpflichtend.
+- Die **Detailmenge** ist ausdrücklich offen, additiv und darf mit neuen Plugins
+  und neuen StockInfo-Versionen wachsen.
+
+Die Spec-Passage „Keine offene Feldmenge, zunächst“ ist daher fachlich überholt.
+Unbekannte, korrekt deklarierte Detailfelder dürfen nicht protokolliert und
+verworfen werden. Sie müssen normalisiert, gespeichert und per REST ausgeliefert
+werden.
+
+## Forward-Compatibility-Regeln
+
+1. Neue Details sind niemals neue unstrukturierte Top-Level-Felder. Sie liegen
+   in einem stabil typisierten Container, etwa `details: [...]`.
+2. Jeder Detaileintrag hat eine bekannte Hülle: Schlüssel, Werttyp, Wert,
+   Einheit/Währung, Bezeichnung, Überschreibbarkeit, Herkunft und Stand.
+3. Plugin-eigene Schlüssel sind namespaced, damit zwei Plugins nicht zufällig
+   verschiedene Bedeutungen unter demselben Namen ablegen.
+4. Alte Consumer ignorieren unbekannte Details. Neue oder generische Consumer
+   können sie im aufgeklappten Bereich rendern, ohne dafür das Basislayout zu
+   ändern.
+5. Details dürfen keine Rebalancing-, Preis- oder Identitätsberechnung
+   beeinflussen. Wird ein heutiges Detail später fachlich unverzichtbar, wird es
+   bewusst in eine neue Core-Vertragsversion aufgenommen.
+6. Das Hinzufügen eines Details ist keine Breaking Change. Änderungen an Name,
+   Typ, Einheit oder Semantik eines bestehenden Detail-Schlüssels sind dagegen
+   eine Migration bzw. brauchen einen neuen Schlüssel.
+
+Eine mögliche feste Hülle wäre beispielsweise:
+
+```json
+{
+  "key": "stockinfo-profile-canada.management_fee",
+  "kind": "number",
+  "value": 0.18,
+  "unit": "percent",
+  "currency": null,
+  "label": { "en": "Management fee", "de": "Verwaltungsgebühr" },
+  "overridable": true,
+  "origin": "provider",
+  "source": "canada-provider",
+  "as_of": "2026-08-20T08:00:00Z"
+}
+```
+
+Die konkrete JSON-Form ist noch zu entscheiden; entscheidend ist die stabile
+Hülle um einen offenen Schlüsselraum. `FieldSpec` und `Reading` im vorhandenen
+Plugin-Vertrag liefern dafür bereits einen großen Teil der benötigten
+Beschreibung. Die Persistenz und die REST-/UI-Pipeline müssen diese Information
+aber erhalten, statt sie am heutigen Acht-Felder-Katalog abzuschneiden.
+
+## Übergang ohne Bruch für StockPortfolio
+
+Die heute von StockPortfolio gelesenen Felder bleiben in der bestehenden
+REST-Version erhalten. Der neue `details`-Container kommt additiv hinzu. Soweit
+bekannte Werte vorübergehend sowohl als bestehendes Feld als auch als generisches
+Detail projiziert werden, müssen beide Darstellungen aus **demselben wirksamen
+Wert** erzeugt werden; zwei unabhängig gepflegte Wahrheiten wären nicht
+vertretbar.
+
+Langfristig kann eine neue REST-Hauptversion den Core wirklich minimal halten
+und alle Metadaten ausschließlich über `details` liefern. Das ist aber eine
+koordinierte Consumer-Migration und darf nicht beiläufig mit T-21 passieren.
+
+**Aktualisierte Empfehlung an Claude:** Die offene Entscheidung 5 nicht nur als
+Frage nach Provenienz betrachten. Die Architektur braucht jetzt ausdrücklich
+einen stabilen Mindestvertrag und eine persistierte, offene Detailmenge. Der
+Core-Katalog validiert die Pflichtdaten; der Detailvertrag validiert die Hülle,
+nicht eine für alle Zukunft abschließende Liste von Feldnamen.

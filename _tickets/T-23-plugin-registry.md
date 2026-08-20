@@ -56,9 +56,20 @@ Zustandsverwaltung für einen Gewinn, den man selten spürt.
 
 ### Isolation — die eine Stelle, an der fremdem Code misstraut wird
 
-Jeder Aufruf gekapselt: Zeitgrenze, `except Exception` → als `Unavailable`
-behandeln, nach wiederholtem Fehlschlag die Quelle stilllegen statt bei jedem
-Abruf erneut zu hängen. Dafür gibt es genau **einen** Ort.
+Jeder Aufruf gekapselt: `except Exception` → als `Unavailable` behandeln, nach
+wiederholtem Fehlschlag die Quelle stilllegen statt bei jedem Abruf erneut zu
+hängen. Dafür gibt es genau **einen** Ort.
+
+**Was die Registry nicht kann: einen laufenden Aufruf abbrechen.** Für
+synchronen Python-Code im selben Prozess gibt es keine harte Zeitgrenze — ein
+Future-Timeout lässt den Aufrufer zurückkehren, der Thread hängt weiter. Die
+Zeitgrenzen setzt deshalb das **Plugin** bei seinen eigenen I/O-Aufrufen; der
+Vertrag verlangt es, erzwingen kann er es nicht. Der Schutzschalter verhindert
+**weitere** Aufrufe, nicht den bereits laufenden.
+
+Das ist eine dokumentierte Grenze, keine Lücke im Entwurf — echte
+Abbruchgarantien bräuchten eigene Worker-Prozesse samt IPC, und das ist für
+eine selbstgehostete App mit wenigen Quellen unverhältnismäßig.
 
 ### Der erste Plugin-Autor ist die App selbst
 

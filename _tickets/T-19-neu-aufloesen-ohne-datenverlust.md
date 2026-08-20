@@ -74,10 +74,13 @@ Die manuellen Kennzahlen hängen am **Papier**, nicht an der Notierung: Ein TER
 Genau die gehen heute beim Löschen mit verloren — und genau die sind es, die
 niemand nachträgt.
 
-**Offen zur Entscheidung:** Ob die alte Reihe gelöscht oder archiviert wird
-(z.B. mit einer Listing-Generation an `quotes`/`daily_closes`). Archivieren ist
-sauberer und teurer; Löschen ist ehrlich, solange die Oberfläche es ankündigt.
-Bis das entschieden ist, ist das Ticket nicht umsetzungsreif.
+**Entschieden (Codex, 2026-08-20): löschen, nicht archivieren.** Die alte
+Kursreihe wird verworfen, und zwar erst **nach ausdrücklicher Bestätigung** in
+der Oberfläche — mit Angabe, wie viele Punkte betroffen sind. Eine
+Listing-Generation an `quotes`/`daily_closes` wäre sauberer, verlangt aber eine
+Generationslogik in jeder Abfrage; das ist viel Aufwand für einen seltenen
+Vorgang. Archivierung bleibt ein späteres Feature und ist **keine**
+Voraussetzung für das Plugin-System.
 
 ### Der Korrekturweg selbst
 
