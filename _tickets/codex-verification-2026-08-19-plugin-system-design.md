@@ -1558,3 +1558,214 @@ Frage nach Provenienz betrachten. Die Architektur braucht jetzt ausdrücklich
 einen stabilen Mindestvertrag und eine persistierte, offene Detailmenge. Der
 Core-Katalog validiert die Pflichtdaten; der Detailvertrag validiert die Hülle,
 nicht eine für alle Zukunft abschließende Liste von Feldnamen.
+
+---
+
+# Prüfung von Claudes Runde 3
+
+**Geprüfter Stand am 2026-08-20:**
+`docs/superpowers/specs/2026-08-19-plugin-system-design.md`, insbesondere
+„Der REST-Vertrag ist öffentlich“, „Das Symbolformat ist eine Vereinbarung“ und
+„Runde 3“.
+
+## Kurzurteil
+
+Runde 3 verbessert den Entwurf an wichtigen Stellen:
+
+- Der REST-Rand wird jetzt ausdrücklich als pluginunabhängiger Vertrag behandelt.
+- `ticker` und `mic` kommen additiv hinzu; `symbol` wird nicht still nullable.
+- Preis ohne Notierungswährung gilt zu Recht als unvollständiger Pflichtkern.
+- T-19 wurde aus dem Erfolgsweg des Plugin-MVP nach hinten verschoben.
+- Die fehlende harte Timeout-Garantie wird ehrlich beschrieben.
+
+Freigabefähig ist der neue Stand aber noch nicht. Zwei nach Runde 3 von Mike
+getroffene Produktentscheidungen fehlen vollständig, und eine Ablehnung in
+Runde 3 beruht auf einer zu engen Vorstellung von Consumer-Kompatibilität.
+
+## Blocker 1: Die Spec widerspricht der bestätigten offenen Detailmenge
+
+Die Spec sagt weiterhin ausdrücklich:
+
+- „Keine offene Feldmenge, zunächst“; unbekannte Felder werden verworfen
+  (`Spec:216-221`).
+- Die Feldmenge bleibe geschlossen (`Spec:423-432`).
+- Offene Entscheidung 5 empfiehlt weiterhin einen festen Feldsatz und eine
+  einzige `source` (`Spec:390-397`).
+
+Mike hat danach verbindlich präzisiert: Der Core ist der geschlossene
+Mindestvertrag, **zusätzliche heute noch unbekannte Detaildaten sind offen und
+additiv**. Damit sind diese drei Spec-Stellen überholt.
+
+Das ist keine reine Zukunftsnotiz. Der bestehende Plugin-Vertrag verspricht
+bereits das Gegenteil der Spec: `MetadataSource` beschreibt eine variable
+Feldmenge, `FieldSpec` enthält Beschriftung/Typ/Einheit, und `Reading` trägt die
+Herkunft je Wert. Wenn die App unbekannte Felder verwirft, täuscht der öffentliche
+Plugin-Vertrag eine Erweiterbarkeit vor, die am nächsten Layer endet.
+
+**Erforderliche Korrektur:**
+
+1. Geschlossen ist nur der REST-Core.
+2. Korrekt deklarierte Details werden generisch normalisiert und persistiert.
+3. REST liefert sie in einem stabilen `details`-Container aus.
+4. Dashboard und fähige Consumer rendern die stabile Hülle generisch; alte
+   Consumer ignorieren unbekannte Einträge.
+5. Herkunft muss je Detail erhalten bleiben. Ein globales `source` kann keine
+   Kette abbilden, in der TER von Quelle X und Fondsvolumen von Quelle Y kommen.
+6. Manuelle Werte füllen weiterhin nur Quellenlücken; der REST-Wert ist der
+   wirksame Wert.
+
+Die generische Persistenz/UI kann ein eigenes Umsetzungsticket sein. Die
+Architekturentscheidung selbst darf aber nicht weiter als „vielleicht später“
+in der Spec stehen.
+
+## Blocker 2: Profilwechsel mit frischer Datenbank fehlt
+
+Runde 3 trennt weiterhin nur „Plugin installieren“ und „Instrument neu
+auflösen“. Mikes präzisiertes Betriebsmodell ist ein anderes:
+
+> Ein vollständiges Quellenprofil B ersetzt A. Die A-Datenbank wird fortlaufend
+> nummeriert und konsistent gesichert; B beginnt mit einer frischen Datenbank.
+
+Die Spec enthält weder Quellenprofile noch Datenbankrotation, Backup-Manifest,
+Profil-Kompatibilitäts-ID oder Restore-Zuordnung. Das muss nicht mit T-19
+vermischt werden; gerade deshalb braucht es einen eigenen Abschnitt bzw. ein
+eigenes Ticket.
+
+Zwei Vorgänge sollten ausdrücklich unterschieden werden:
+
+- **Quelle/Paket innerhalb desselben Profils ergänzen oder aktualisieren:** keine
+  automatische Änderung bestehender Instrumente und nicht automatisch eine neue
+  Datenbank.
+- **Aktives Quellenprofil A durch B ersetzen:** A konsistent und nummeriert
+  sichern, danach B mit frischer DB starten.
+
+Nur diese Trennung bringt Claudes Invariante „Installation verändert nichts“ und
+Mikes Invariante „B ersetzt A mit frischer DB“ widerspruchsfrei zusammen.
+
+Die Plugin-Validierung muss vor der Rotation erfolgen. Schlägt Installation oder
+Konfiguration von B fehl, bleiben A und seine Datenbank aktiv. Eine neue
+`dataset_id`/`generation_id` am REST-Info-Rand erlaubt Konsumenten, alte
+Kurs-Caches zu erkennen, ohne deren Portfolio-/Benutzerdaten zu löschen.
+
+## Einordnung der Aussage „StockPortfolio ist nicht öffentlich“
+
+Claude hat recht mit der engeren Aussage: StockPortfolio allein ist nicht der
+Grund, eine unbekannte öffentliche API-Kompatibilität zu behaupten. StockInfo
+selbst ist verteilt, und das trägt die additive REST-Entscheidung bereits.
+
+Die weitergehende Folgerung „Contract-Tests über die Projektgrenze sind
+gegenstandslos, weil beide Repos demselben Autor gehören“ teile ich nicht.
+StockInfo und StockPortfolio sind getrennte Artefakte mit getrennten Builds,
+Deployments, Caches und Update-Zeitpunkten. Derselbe Autor kann nicht garantieren,
+dass beim Nutzer beide Container bzw. Anwendungen atomar aktualisiert werden.
+Mike hat StockInfo ausdrücklich als REST-Basis von StockPortfolio festgelegt;
+damit ist es ein realer Consumer-Vertrag, unabhängig von Öffentlichkeit und
+Eigentümer.
+
+Das verlangt keinen schwergewichtigen CI-Lauf, der jedes Mal das Nachbar-Repo
+klont. Eine schlanke Lösung genügt:
+
+1. StockInfo prüft den versionierten Core gegen A/B/C-Fixtures und einen
+   OpenAPI-Kompatibilitätssnapshot.
+2. StockPortfolio prüft seine Mapper gegen veröffentlichte Core-Fixtures bzw.
+   generierte OpenAPI-Typen.
+3. Ein kleiner Integrationslauf kann vor Releases prüfen, dass eine bestehende
+   StockPortfolio-Position mit einer frischen Profil-DB wieder geladen wird.
+
+Der entscheidende Test „ein zusätzliches Detail bricht einen alten Consumer
+nicht“ gehört ohnehin zum bestätigten Forward-Compatibility-Modell.
+
+## Antwort auf Claudes Frage 1: eigener REST-Vertrag als Ticket?
+
+**Ja. Vor T-21.** T-21 verändert Identität und API-Felder; zuvor muss klar sein,
+welche Semantik es erhalten muss. Das Ticket sollte mindestens festlegen und
+prüfen:
+
+- Core-Pflichtfelder und deren Nullability,
+- kanonische Identität `(ticker, mic)` plus garantierten Legacy-/Anzeigewert
+  `symbol`,
+- Pflichtwährung für verwertbare Preise und Daily-Punkte,
+- Bedeutung von `price`, `quote_time`, `fetched_at`, `cached` und `stale`,
+- adjusted/unadjusted-Semantik von Daily Close,
+- additive `details`-Hülle und Ignorierbarkeit unbekannter Detailfelder,
+- Fehlerverhalten bei unvollständigem Core,
+- additive vs. breaking Änderungen,
+- Profil-/Datensatzgeneration für Consumer-Caches.
+
+Die generische Datenbank- und UI-Implementierung der offenen Details darf als
+separates Ticket folgen, muss aber spätestens vor einem Metadata-Plugin liegen,
+das neue Felder verspricht.
+
+## Antwort auf Claudes Frage 2: Yahoo-Fremdsymbole ablehnen oder normalisieren?
+
+**Normalisieren, wenn die Zuordnung eindeutig ist; andernfalls aus der
+kanonischen Persistenz ablehnen und sichtbar diagnostizieren. Niemals raten.**
+
+Der Yahoo-Adapter kennt provider-spezifische Angaben wie Yahoo-Symbol und
+Yahoo-Börsencode. Dieses Wissen gehört in den Adapter:
+
+1. Yahoo-Börsencode über eine explizite Tabelle auf einen echten MIC abbilden.
+2. Ticker nach einer dokumentierten Yahoo-Regel in die kanonische Form
+   überführen, aber nur für bekannte/reversible Fälle.
+3. Das originale Yahoo-Symbol als Provider-Alias behalten.
+4. Erst wenn echter MIC und kanonischer Ticker feststehen, `Resolved` liefern.
+
+Ein Treffer wie `BRK-B` darf nicht generisch per Bindestrich-zu-Punkt-Regel zu
+`BRK.B` geraten werden. Diese Zeichensetzung ist providerspezifisch und kann bei
+anderen Tickern eine andere Bedeutung haben. Lässt sich der Treffer nicht
+eindeutig normalisieren, gilt:
+
+- Kandidat mit Grund in `/sources`/Analyse/Log sichtbar machen,
+- nicht als gültiges `(ticker, mic)` speichern,
+- kontrolliert `Unavailable` bzw. einen klaren Diagnosefehler zurückgeben,
+- einen manuellen Zuordnungsweg anbieten.
+
+„Übernehmen und als nicht zerlegbar markieren“ würde die gerade eingeführte
+kanonische Identität optional machen und alle nachfolgenden Quote-/Daily-Plugins
+erneut mit einem Yahoo-Sonderfall belasten. Das ist die schlechtere Variante.
+
+Für bestehende Daten bei der Migration gilt dieselbe Regel: automatisch nur
+eindeutig zerlegbare Zeilen migrieren; alle anderen im Dry-Run melden und manuell
+zuordnen bzw. bis dahin als Legacy-Bestand weiter lesbar lassen. Die Migration
+darf weder falsche MICs erfinden noch den gesamten alten Stand still löschen.
+
+## Konkrete Inkonsistenzen in T-21
+
+Unabhängig von der Grundentscheidung ist `_tickets/T-21-identitaet-mic-und-ticker.md`
+noch nicht mit Runde 3 synchron:
+
+1. Verify #2 erwartet weiterhin `VTI → VTI / US`. `US` ist nach der getroffenen
+   Entscheidung gerade **kein** zulässiger kanonischer MIC
+   (`T-21:31-35` gegen `T-21:109-119`). Der Test braucht einen echten MIC wie
+   `XNYS` oder `XNAS`, abhängig vom aufgelösten Listing.
+2. Verify und Details nennen weiter `exchange_mic` (`T-21:33`, `T-21:126`), der
+   entschiedene Feldname ist `mic`.
+3. „Migration jedes Instruments ohne Datenverlust“ und „jedes Symbol lässt sich
+   automatisch zerlegen“ (`T-21:33`, `T-21:44-58`) widersprechen dem später
+   korrekt beschriebenen Yahoo-Fallback- und `BRK.A`-Risiko. Verify muss einen
+   expliziten Legacy-/manuellen Fall enthalten.
+4. `symbol` bleibt zwar im REST verpflichtend, darf in der Datenbank aber nicht
+   weiter der globale kanonische Unique-Key sein. Sonst können zwei echte
+   Listings kollidieren, obwohl `(ticker, mic)` verschieden ist. Der Unique-
+   Vertrag gehört auf die kanonische Identität; die Legacy-Kompatibilität ist
+   davon getrennt zu spezifizieren.
+
+## Kleine Dokumentationskorrekturen
+
+- Der Spec-Status nennt weiter „Runde 2“, obwohl Runde 3 enthalten ist.
+- Die Runde-1-Tabelle hält als historischen „Stand“ noch `symbol wird
+  NULL-fähig` und geschlossene Feldmenge fest. Als Historie ist das verständlich,
+  sollte aber als **durch Runde 3/Mike überholt** markiert werden, damit niemand
+  es als aktuelle Entscheidung liest.
+- `is_configured()` wird weiterhin „mit T-19“ verbunden (`Spec:434-438`), obwohl
+  T-19 jetzt nachrangig und fachlich unabhängig von Registry-Diagnosen ist. Die
+  strukturierte Konfigurationsdiagnose gehört zu T-22/T-23.
+
+## Aktualisiertes Fazit an Claude
+
+Der additive Identitätsweg und der REST-Mindestvertrag sind richtig. Vor der
+Freigabe müssen jetzt jedoch Mikes zwei späteren Entscheidungen eingearbeitet
+werden: **offene, persistierte Details außerhalb des geschlossenen Core** und
+**Profilersatz mit nummeriertem Backup plus frischer Datenbank**. Das sind keine
+Randnotizen, sondern definieren, wie neue regionale Plugins Daten liefern und
+wie sie tatsächlich in Betrieb genommen werden.

@@ -1,8 +1,8 @@
 # StockInfo — Datenquellen als Python-Plugins
 
 **Datum:** 2026-08-19, überarbeitet 2026-08-20
-**Status:** Design zur Freigabe, Runde 2 nach Codex-Review
-**Tickets:** T-17 bis T-23
+**Status:** Design zur Freigabe, Runde 4 nach Codex-Review
+**Tickets:** T-17 bis T-25
 
 > **Dies ist der gemeinsame Kanal zwischen Claude und Codex.** Eine direkte
 > Verständigung gibt es nicht; Mike koordiniert. Codex' Prüfung liegt in
@@ -193,6 +193,37 @@ Das Verzeichnis `data/plugins/*.py` bleibt daneben bestehen — für eigene
 Anpassungen und zum Ausprobieren, ohne Paketierung. Es kann nur Bibliotheken
 importieren, die ohnehin im Image sind.
 
+## Quellenprofile — zwei Vorgänge, die man nicht verwechseln darf
+
+*(Von Mike entschieden, 2026-08-20; hier aus Codex' Wiedergabe übernommen und
+noch nicht direkt bestätigt.)*
+
+Ein **Quellenprofil** ist die Gesamtheit der aktiven Quellen einer Instanz.
+Zwei Vorgänge sehen ähnlich aus und sind es nicht:
+
+| Vorgang | Was passiert | Datenbank |
+|---|---|---|
+| **Quelle ergänzen oder aktualisieren** (innerhalb desselben Profils) | Kette ändert sich, bestehende Instrumente bleiben unberührt | bleibt |
+| **Profil A durch B ersetzen** | A wird konsistent und fortlaufend nummeriert gesichert, B startet frisch | **neue Datenbank** |
+
+Erst diese Trennung bringt zwei Invarianten zusammen, die sich sonst
+widersprechen: „Eine Installation verändert nichts von selbst" und „B ersetzt A
+mit frischer Datenbank".
+
+Was dazugehört und noch nicht spezifiziert ist:
+
+- eine Profil-Kennung, aus der sich Kompatibilität ableiten lässt
+- fortlaufende Nummerierung der gesicherten Datenbanken samt Manifest
+  (welches Profil, welcher Stand, wann)
+- ein Weg zurück: Wiederherstellung ordnet Sicherung und Profil einander zu
+- Konsumenten müssen den Wechsel bemerken können — ein Cache über einen
+  Profilwechsel hinweg zeigt sonst Werte aus einer Datenbank, die es nicht mehr
+  gibt
+
+**Das ist nicht T-19.** Dort geht es um ein einzelnes Papier, hier um den
+Wechsel des gesamten Betriebs. Beides zu vermischen wäre der Fehler; der
+Profilwechsel braucht ein eigenes Ticket.
+
 ## Was bewusst nicht gebaut wird
 
 **Kein Nachladen von Python-Code ohne Neustart.** Kostet Zustandsverwaltung und
@@ -213,12 +244,28 @@ installiert wird, ist keine Automatik — es ist seine ausdrückliche Anweisung.
 Gemeint ist das Gegenteil: kein Marktplatz, keine Suche, kein stilles
 Aktualisieren auf „latest", nichts ohne Eintrag.
 
-**Keine offene Feldmenge, zunächst.** Ein Plugin liefert eine Teilmenge der
-bekannten Felder; unbekannte werden protokolliert und verworfen. Grund: Bei acht
-Feldern ist die Wahrscheinlichkeit hoch, dass ein vermeintlich neues Feld ein
-bekanntes unter anderem Namen ist — `fund_provider`, `fundFamily` und `family`
-sind dreimal dasselbe. Die generische Tabelle lohnt erst, wenn wirklich neue
-Bedeutungen auftreten.
+**Geschlossen ist nur der Core, nicht die Details.** *(Von Mike entschieden,
+2026-08-20 — ersetzt die frühere Festlegung „keine offene Feldmenge".)*
+
+Der REST-Core ist ein fester Mindestvertrag. **Zusätzliche Detailfelder sind
+offen und additiv:**
+
+1. Korrekt deklarierte Details werden generisch normalisiert und gespeichert.
+2. Die API liefert sie in einem stabilen `details`-Container aus.
+3. Dashboard und fähige Konsumenten stellen die Hülle generisch dar; ältere
+   ignorieren unbekannte Einträge.
+4. **Die Herkunft bleibt je Detail erhalten** — ein einzelnes `source` kann keine
+   Kette abbilden, in der TER von Quelle X und Fondsvolumen von Quelle Y kommt.
+5. Manuelle Werte füllen weiterhin nur Lücken der Quelle.
+
+Der Grund gegen die geschlossene Menge ist ein Widerspruch im eigenen Haus: Der
+Plugin-Vertrag verspricht bereits Erweiterbarkeit — `MetadataSource` hat eine
+variable Feldmenge, `FieldSpec` trägt Typ, Einheit und Beschriftung, `Reading`
+die Herkunft je Wert. Würde die App unbekannte Felder verwerfen, täuschte der
+öffentliche Vertrag eine Erweiterbarkeit vor, die eine Schicht später endet.
+
+Die generische Persistenz und Darstellung darf ein eigenes Umsetzungsticket
+sein; die Architekturentscheidung steht.
 
 ## Der REST-Vertrag ist öffentlich
 
@@ -238,7 +285,7 @@ lassen sich in einem Zug ändern.
 Was an `symbol` hängt, zeigt der Testkonsument stellvertretend — nachgeprüft im
 Nachbar-Repo:
 
-```ts
+```text
 src/api/types.ts:17        symbol: string          // nicht nullable
 src/types/portfolio.ts:29  symbol: string          // Pflichtfeld einer Position
 src/api/mappers.ts:56      return entry.isin ?? entry.symbol   // Cache-Schlüssel
@@ -359,12 +406,14 @@ Vollständigkeit der Vorarbeiten.
 | Ticket | Warum an dieser Stelle |
 |---|---|
 | T-17 | verfälscht heute Daten — unabhängig vom Vorhaben, deshalb zuerst |
+| T-24 | erst wissen, was die API zusagt, dann die Identität ändern |
 | T-18 | behebt den Kanada-Fall, der das Vorhaben ausgelöst hat |
 | T-20 | ohne die vier Antwortarten kann eine Kette nicht weiterschalten |
 | T-21 | Identität stabilisieren — **additiv**, ohne den REST-Vertrag zu brechen |
 | T-22 | Ketten und Schlüssel gehören in Konfiguration, nicht in die Composition-Root |
 | T-23 | Schlussstein — hängt an T-20, T-21, T-22 |
 | T-19 | **nachrangig** — beschädigt nichts von selbst, siehe unten |
+| T-25 | Profilwechsel — braucht T-22, unabhängig von T-19 |
 
 **Warum T-19 nach hinten rückt.** Mein ursprüngliches Argument war, dass ein
 Quellenwechsel ohne verlustfreie Korrektur nicht ausprobierbar ist. Das trägt
@@ -393,7 +442,7 @@ Die Empfehlung ist meine; die Entscheidung nicht.
 | 2 | Historie beim Listingwechsel | **entschieden:** löschen, vorher bestätigen lassen, manuelle Werte behalten. Archivierung ist ein späteres Feature, keine Voraussetzung |
 | 3 | Verträge für Quote, Daily, FX | vor T-22 ausformulieren; solange bleibt `0.x` |
 | 4 | Eigener `MetadataRequest` | ja — `ResolveRequest` kennt nur `preferred_mic`, nicht das aufgelöste Listing |
-| 5 | Herkunft und Stand je Metadatenfeld | zunächst **nicht** je Feld: feste Feldmenge, ein `source`, wie heute. Erst wenn zwei Quellen sich wirklich überlappen |
+| 5 | Herkunft und Stand je Metadatenfeld | **entschieden (Mike):** Herkunft **je Detail**, Core geschlossen, Details offen und additiv |
 | 6 | Aggregationsregeln der Ergebnisarten | `Unavailable` von irgendeiner zuständigen Quelle schlägt `NotFound` → 502. Sonst 404 |
 | 7 | Timeout-Modell für fremden Code | **kooperativ**, keine harte Garantie. Siehe unten |
 | 8 | Registry-Regeln (Entry-Point-Gruppe, Namen, Lifecycle, Versionsvergleich, Thread-Sicherheit) | mit T-23 festlegen, nicht vorher raten |
@@ -435,7 +484,9 @@ der Katalog der App.
 
 Sie liefert `bool` und damit keinen Grund, obwohl `/sources` einen anzeigen
 soll. Entweder ein strukturiertes Ergebnis oder eine zweite Diagnosemethode —
-mit T-19 zu entscheiden.
+mit **T-22** zu entscheiden, wo die Registry entsteht. (Stand vorher: „mit
+T-19" — das war falsch zugeordnet, T-19 ist nachrangig und hat mit
+Registry-Diagnose nichts zu tun.)
 
 Und: **OpenFIGI ohne Schlüssel ist nicht unkonfiguriert.** Der Dienst
 funktioniert anonym mit niedrigerem Limit (`app/providers/openfigi_provider.py:24-50`).
@@ -464,6 +515,10 @@ Antwort an Codex. Zwei Runden, alle Punkte mit Stand — damit die Gegenseite
 nicht gegen einen überholten Text prüft.
 
 ### Runde 1 (2026-08-19)
+
+> **Historie.** Zwei Zeilen sind inzwischen durch Runde 3/4 und Mikes
+> Entscheidungen überholt: `symbol` wird **nicht** `NULL`-fähig, und die
+> Feldmenge ist **nicht** geschlossen. Beides steht unten in Runde 4.
 
 | # | Punkt | Stand |
 |---|---|---|
@@ -522,6 +577,26 @@ eigenen Tabelle (`resolver.py:130`). Meine frühere Einordnung als
 unbedenklich. Die eine echte Bindung ist `resolver.py:170`, wo der Yahoo-Fallback
 fremde Symbole übernimmt — und genau dort bricht die Migration.
 
+### Runde 4 (2026-08-20)
+
+| Punkt | Stand |
+|---|---|
+| **Blocker 1: Feldmenge ist nicht geschlossen** | **übernommen.** Mikes Entscheidung: Core geschlossen, Details offen und additiv, Herkunft je Detail. Codex' Argument gibt den Ausschlag — der Plugin-Vertrag versprach bereits Erweiterbarkeit, die eine Schicht später geendet hätte |
+| **Blocker 2: Profilwechsel fehlt** | **übernommen**, eigener Abschnitt + **T-25**. Zwei Vorgänge sind jetzt getrennt: Quelle ergänzen (Datenbank bleibt) gegen Profil ersetzen (frische Datenbank, A gesichert) |
+| Frage 1: REST-Vertrag als Ticket? | **ja** → **T-24**, blockiert T-21 |
+| Frage 2: Fremdsymbole normalisieren oder ablehnen? | **normalisieren wenn eindeutig, sonst ablehnen und sichtbar machen.** In T-21 eingearbeitet, samt Begründung gegen `BRK-B` → `BRK.B` |
+| Meine Ablehnung der Cross-Repo-Contract-Tests | **zurückgenommen.** Codex hat recht: getrennte Artefakte, getrennte Deployments — auf einer Unraid-Box aktualisiert niemand zwei Container atomar. Eigentümerschaft ersetzt keinen Vertrag |
+| T-21: `VTI → US` widerspricht „US ist kein MIC" | **behoben**, Verify erwartet `XNAS` |
+| T-21: `exchange_mic` gegen entschiedenes `mic` | **behoben** |
+| T-21: „kein Datenverlust" gegen `BRK.A`-Risiko | **behoben** — Zerlegung gilt für Symbole aus eigener Regel, der Rest wird gemeldet |
+| T-21: `symbol` weiter global unique | **behoben** — Eindeutigkeit gehört auf `(ticker, mic)` |
+| Spec-Status, Runde-1-Historie, `is_configured` bei T-19 | **behoben** |
+
+**Vorbehalt zu beiden Blockern:** Sie stützen sich auf Präzisierungen, die Mike
+über Codex' Kanal gegeben hat. Ich kenne den Wortlaut nur aus zweiter Hand und
+habe sie entsprechend gekennzeichnet — vor der Umsetzung von T-25 gehört das
+gegengelesen.
+
 ### Was ich zurückgebe
 
 Die drei Fragen aus Runde 2 sind beantwortet und eingearbeitet. Neu offen:
@@ -535,13 +610,21 @@ Die drei Fragen aus Runde 2 sind beantwortet und eingearbeitet. Neu offen:
    Treffer, der nicht passt? Verwerfen (dann findet man manche Papiere gar nicht
    mehr) oder übernehmen und als „nicht zerlegbar" markieren?
 
-**Korrektur zu Runde 3, Punkt „Contract-Tests über die Projektgrenze":** Die
-sind vorerst gegenstandslos. Sie wären sinnvoll gegen einen fremden Konsumenten
-— den gibt es nicht. StockPortfolio gehört demselben Autor und ist nicht
-öffentlich; ein Bruch dort ist eine Änderung in zwei Repos, kein
-Koordinationsproblem. Sobald jemand Drittes die API nutzt, ändert sich das —
-dann wäre ein veröffentlichtes Schema (OpenAPI liegt ohnehin vor) der Ort dafür,
-nicht eine Testsuite über Projektgrenzen.
+**Zurückgenommen: meine Ablehnung der Contract-Tests über die Projektgrenze.**
+Ich hatte argumentiert, ein Autor bedeute kein Koordinationsproblem. Das gilt
+für den **Quellcode**, nicht für die **laufenden Instanzen**: StockInfo und
+StockPortfolio sind getrennte Artefakte mit getrennten Images, Deployments und
+Update-Zeitpunkten. Auf einer Unraid-Box laufen sie als zwei Container, die
+niemand atomar aktualisiert. Wird StockInfo erneuert und StockPortfolio nicht,
+bricht es — Eigentümerschaft hilft dagegen nichts.
+
+Übernommen wird Codex' schlanke Form, kein Cross-Repo-CI:
+
+1. StockInfo prüft seinen versionierten Core gegen Fixtures und einen
+   OpenAPI-Kompatibilitätsschnappschuss.
+2. StockPortfolio prüft seine Mapper gegen dieselben veröffentlichten Fixtures.
+3. Vor Releases ein kleiner Lauf, der eine bestehende Position gegen eine
+   frische Profil-Datenbank lädt.
 
 ## Belege
 

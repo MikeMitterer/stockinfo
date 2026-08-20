@@ -11,11 +11,9 @@ Suffix-Schreibweise nachbilden.
 
 **Der Brocken der Serie.** Alles andere ist klein dagegen.
 
-> **Verschärft nach Codex-Review vom 2026-08-19.** Die erste Fassung wollte
-> `symbol` „einfach behalten". Das genügt nicht: Die Spalte ist `NOT NULL` und
-> global eindeutig — damit bliebe ein gültiges Yahoo-Symbol Pflicht für jedes
-> Instrument, auch für eines, das nur über EODHD verwaltet wird. Siehe
-> „Was `symbol` heute erzwingt".
+> **Stand nach Codex-Runde 4.** Zwei frühere Fassungen sind überholt: `symbol`
+> wird **nicht** `NULL`-fähig (es bleibt am REST-Rand zugesagt), verliert aber
+> seinen **globalen Eindeutigkeits-Index** — der gehört auf `(ticker, mic)`.
 
 **Hängt an:** nichts. **Blockiert:** T-23 (ein Plugin, das Yahoo-Symbole erwarten
 muss, ist kein Plugin).
@@ -30,12 +28,15 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | bestehende Datenbank, Migration laufen lassen | jedes Instrument hat `ticker` und `exchange_mic`, **kein Datenverlust** | | |
-| 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`, `VTI` → `VTI`/`US` | | |
+| 1 | bestehende Datenbank, Migration laufen lassen | zerlegbare Instrumente haben `ticker` und `mic`; **nicht** zerlegbare werden gemeldet, nicht geraten | | |
+| 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`, `AAPL` → `AAPL`/**`XNAS`** (echter MIC, nicht `US`) | | |
+| 2b | Instrument mit Fremdsymbol (`BRK-B`, aus dem Yahoo-Fallback) | erscheint in einer Liste offener Zuordnungen, mit Grund | | |
+| 2c | derselbe Fall, manuelle Zuordnung | lässt sich von Hand auf `(ticker, mic)` setzen | | |
 | 3 | `GET /instruments` | `symbol` weiterhin vorhanden und unverändert (Profil-Links hängen daran) | | |
+| 3b | Datenbank-Schema | Eindeutigkeit liegt auf `(ticker, mic)`; `symbol` ist **nicht mehr** global unique | | |
 | 4 | Dashboard, Assets-Tabelle | unverändert; Yahoo- und extraETF-Links funktionieren | | |
-| 5 | neues Papier aufnehmen | `ticker`/`exchange_mic` werden gefüllt, `symbol` daraus erzeugt | | |
-| 6 | `make test` | Backend grün, Dashboard grün | | |
+| 5 | neues Papier aufnehmen | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | | |
+| 6 | `make test` | Backend, Plugin-API und Dashboard grün | | |
 
 ---
 
@@ -51,11 +52,20 @@ Suffixe doppelt vergeben: keine — Zuordnung ist eindeutig
 
 EUNL.DE  -> ticker=EUNL  suffix=.DE  mic=XETR
 XIC.TO   -> ticker=XIC   suffix=.TO  mic=XTSE
-VTI      -> ticker=VTI   suffix=''   mic=US
+VTI      -> ticker=VTI   suffix=''   → Sammelcode US, **kein** MIC
 ```
 
-Kein Suffix ist doppelt belegt. Jedes gespeicherte Symbol lässt sich automatisch
-zerlegen — keine Handarbeit, kein Datenverlust.
+Die letzte Zeile zeigt zugleich die Grenze der Messung: Für suffixlose Symbole
+liefert die Tabelle nur den Sammelcode `US`. Welcher echte MIC gilt (`XNYS`
+gegen `XNAS`), steht dort nicht — das muss aus dem aufgelösten Listing kommen.
+
+Kein Suffix ist doppelt belegt. **Für Symbole, die aus der eigenen Regel
+stammen**, ist die Zerlegung damit eindeutig.
+
+Das gilt aber nicht für alle: Was der Yahoo-Fallback geliefert hat, folgt der
+Konvention nicht zwingend (siehe unten). Diese Fälle werden **gemeldet**, nicht
+geraten — „jedes Symbol lässt sich zerlegen" wäre eine Behauptung, die der
+nächste Bestand widerlegt.
 
 ### Was `symbol` heute erzwingt
 
@@ -79,7 +89,7 @@ nutzt, bekäme den Bruch ab, und man erfährt es nicht.
 
 Was an `symbol` hängt, zeigt der Testkonsument stellvertretend:
 
-```ts
+```text
 src/api/types.ts:17        symbol: string                      // nicht nullable
 src/types/portfolio.ts:29  symbol: string                      // Pflicht je Position
 src/api/mappers.ts:56      return entry.isin ?? entry.symbol   // Cache-Schlüssel
@@ -87,11 +97,17 @@ src/api/mappers.ts:56      return entry.isin ?? entry.symbol   // Cache-Schlüss
 
 Die dritte Stelle bräche **still**: Der Cache-Schlüssel wäre `undefined`.
 
-Stattdessen **additiv**: `ticker` und `exchange_mic` kommen dazu und werden die
+Stattdessen **additiv**: `ticker` und `mic` kommen dazu und werden die
 kanonische Identität; `symbol` bleibt als stabiler Listing-Bezeichner erhalten
 und wird nach derselben Regel erzeugt wie bisher. Das ist kein Anbieter-Alias —
 das Format gehört der App (`resolver.py:130` bildet es aus der eigenen
 `EXCHANGES`-Tabelle), nicht Yahoo.
+
+**Der Eindeutigkeits-Index zieht mit um.** `symbol` bleibt zwar Pflichtfeld,
+darf aber nicht länger global unique sein: Sonst kollidieren zwei echte
+Listings, deren `(ticker, mic)` verschieden ist, nur weil ihr abgeleitetes
+Symbol zufällig gleich aussieht. Der Unique-Vertrag gehört auf die kanonische
+Identität; die Kompatibilität von `symbol` ist davon getrennt.
 
 Sind später mehrere Anbieter-Aliase nötig, gehören sie in eine eigene Tabelle
 statt als Spalten in die Instrumentenzeile.
@@ -103,15 +119,32 @@ Yahoos Suche liefert. Der folgt der eigenen Konvention **nicht** zwingend
 (`BRK-B` mit Bindestrich). Solche Symbole sind später nicht sicher in `ticker` +
 `mic` zu zerlegen.
 
-**Zwei Dinge nötig:** Die Migration meldet sie, statt zu raten. Und der Fallback
-prüft künftig gegen die eigene Tabelle, statt Fremdformate zu übernehmen.
+**Entschieden (Codex, 2026-08-20): normalisieren, wenn eindeutig — sonst
+ablehnen und sichtbar machen. Niemals raten.**
+
+Der Yahoo-Adapter kennt Yahoos Eigenheiten, also gehört das Wissen dorthin:
+
+1. Yahoos Börsencode über eine **explizite** Tabelle auf einen echten MIC abbilden
+2. den Ticker nur für **bekannte, umkehrbare** Fälle in die kanonische Form bringen
+3. das ursprüngliche Yahoo-Symbol als Provider-Alias behalten
+4. `Resolved` erst liefern, wenn echter MIC **und** kanonischer Ticker feststehen
+
+`BRK-B` darf **nicht** per Bindestrich-zu-Punkt-Regel zu `BRK.B` geraten werden —
+diese Zeichensetzung ist anbieterspezifisch und bedeutet bei anderen Tickern
+etwas anderes. Bleibt ein Treffer mehrdeutig: mit Grund in `/sources` und Log
+sichtbar machen, nicht als `(ticker, mic)` speichern, `Unavailable` zurückgeben
+und einen Weg zur Zuordnung von Hand anbieten.
+
+„Übernehmen und als nicht zerlegbar markieren" wäre die schlechtere Variante:
+Sie macht die gerade eingeführte kanonische Identität wieder optional und
+belastet jedes spätere Quote- oder Daily-Plugin erneut mit einem Yahoo-Sonderfall.
 
 ### `US` ist kein MIC
 
 `EXCHANGES` führt `US` als Sammelcode für NYSE/NASDAQ (OpenFIGI `exchCode=US`).
-Das ist **kein** ISO-10383-MIC. Ein Feld namens `exchange_mic`, das mal echte
-MICs und mal diesen internen Code enthält, ist falsch benannt und wird beim
-ersten Anbieter, der echte MICs erwartet, zum Problem.
+Das ist **kein** ISO-10383-MIC. Ein Feld, das mal echte MICs und mal diesen
+internen Code enthält, wird beim ersten Anbieter, der echte MICs erwartet, zum
+Problem.
 
 **Entschieden (Codex, 2026-08-20):** Das kanonische Feld heißt `mic` und enthält
 **ausschließlich echte MICs** (`XNYS`, `XNAS`). Der Sammelcode `US` bleibt als
@@ -123,7 +156,7 @@ abbilden, nicht auf den Sammelcode.
 
 ### Was sich sonst ändert
 
-* `instruments` bekommt `ticker` und `exchange_mic`
+* `instruments` bekommt `ticker` und `mic` (nicht `exchange_mic` — der Name trüge sonst wieder zwei Codearten)
 * Migration zerlegt bestehende Symbole über die Suffix-Tabelle
 * Wer Kurse holt, setzt sein Format selbst zusammen — Yahoo `{ticker}{suffix}`,
   EODHD `{ticker}.{code}`, Twelve Data `symbol` + `mic_code`
