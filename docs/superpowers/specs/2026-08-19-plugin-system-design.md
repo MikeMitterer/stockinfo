@@ -222,12 +222,21 @@ Bedeutungen auftreten.
 
 ## Der REST-Vertrag ist öffentlich
 
-**Der wichtigste Befund der Codex-Runde 3 — und einer, den ich schlicht
-übersehen hatte.** Ich habe StockInfo die ganze Zeit als isolierte App
-behandelt. Sie hat aber einen externen Konsumenten: **StockPortfolio** holt
-Kurse und Stammdaten über die REST-API und rechnet daraus Depot-Anteile.
+**Zwei Dinge sind hier auseinanderzuhalten** — die erste Fassung dieses
+Abschnitts hat sie vermischt.
 
-Nachgeprüft im Nachbar-Repo:
+**StockInfo ist verteilt:** GitHub public, `mangolila/stockinfo` auf Docker Hub,
+Unraid-Template. Wer die REST-API direkt anspricht statt nur das mitgelieferte
+Dashboard zu nutzen, bekommt jeden Bruch ab — und man erfährt es nicht.
+**Das** ist der Grund, warum der REST-Rand ein Vertrag ist.
+
+**StockPortfolio ist es nicht.** Es ist Mikes Testkonsument, nicht öffentlich.
+Es taugt als *Beispiel* dafür, was an der API hängt, aber **nicht** als
+Begründung für Kompatibilitätsschichten: Beide Repos gehören demselben Autor und
+lassen sich in einem Zug ändern.
+
+Was an `symbol` hängt, zeigt der Testkonsument stellvertretend — nachgeprüft im
+Nachbar-Repo:
 
 ```ts
 src/api/types.ts:17        symbol: string          // nicht nullable
@@ -235,9 +244,14 @@ src/types/portfolio.ts:29  symbol: string          // Pflichtfeld einer Position
 src/api/mappers.ts:56      return entry.isin ?? entry.symbol   // Cache-Schlüssel
 ```
 
-**Damit ist die offene Entscheidung 1 in ihrer ersten Fassung falsch.** `symbol`
-nullable zu machen würde StockPortfolio an drei Stellen brechen, und die dritte
-still: Der Cache-Schlüssel wäre `undefined`, ohne Fehlermeldung.
+Die dritte Stelle ist die lehrreiche: Sie bräche **still** — der Cache-Schlüssel
+wäre `undefined`, ohne Fehlermeldung. Wer immer die API direkt nutzt, hat
+vermutlich ähnliche Annahmen, und die sieht man von hier aus nicht.
+
+**Die offene Entscheidung 1 in ihrer ersten Fassung bleibt damit falsch** —
+`symbol` einfach `NULL`-fähig zu machen ist der teuerste Weg: unsichtbarer
+Bruch bei unbekannten Nutzern, für einen Gewinn, den der additive Weg auch
+liefert.
 
 ### Was daraus folgt
 
@@ -257,16 +271,28 @@ dann serialisiert Pydantic das öffentliche Modell. Ein unvollständiger
 Pflichtkern ist ein `Unavailable`-Fehler — **keine Antwort mit geratenen
 Ersatzwerten**.
 
-### Zwei Wege für T-21
+### Der Weg für T-21
 
-1. **Additiv:** Die bestehende REST-Version behält ein garantiertes `symbol`;
-   `ticker`, `mic` und Aliase kommen dazu. StockPortfolio bleibt unberührt.
-2. **Neue Version:** `listing_id`, `ticker`, `mic` und optionale Aliase; der alte
-   Vertrag wird erst abgeschaltet, wenn StockPortfolio migriert ist.
+**Additiv:** `ticker` und `mic` kommen dazu, `symbol` bleibt garantiert und
+wird weiter nach derselben Regel erzeugt. Kein Bruch, keine API-Version, kein
+Migrationsfenster.
 
-Ein nullable Yahoo-Alias unter demselben Feldnamen wäre keine Entkopplung,
-sondern ein unbemerkter Bruch beim Konsumenten. **Empfehlung: Weg 1** — er
-kostet fast nichts und hält die Migration in StockInfo, wo sie hingehört.
+Das ist hier keine Zugeständnis-Lösung, sondern die billigste: Weil das
+Symbolformat der App gehört (siehe nächster Abschnitt), kostet das Beibehalten
+praktisch nichts — es ist derselbe String, nur nicht mehr der Identifikator.
+
+Eine neue API-Version mit `listing_id` wäre erst nötig, wenn `symbol` seine
+Bedeutung tatsächlich verlöre. Das ist nicht der Fall.
+
+### Nicht zu verwechseln: zwei Migrationen
+
+| | Was | Wen es betrifft |
+|---|---|---|
+| **Schema** | `symbol` in `ticker` + `mic` zerlegen, Spalten ergänzen | **jede laufende Instanz** — auch die von Docker-Hub- und Unraid-Nutzern |
+| **Konsument** | Aufrufer an geänderte Felder anpassen | beim additiven Weg: **niemanden** |
+
+Nur die erste ist echte Arbeit, und der Mechanismus dafür existiert
+(`app/db.py:301`).
 
 ## Das Symbolformat ist eine Vereinbarung, keine Abhängigkeit
 
@@ -482,8 +508,9 @@ nicht gegen einen überholten Text prüft.
 | T-19: löschen statt archivieren | **übernommen**, in T-19 festgeschrieben |
 | `US`: echte MICs, Sammelcode intern | **übernommen**, in T-21; betrifft auch T-18 |
 | Reihenfolge: T-19 nachrangig | **übernommen.** Mein Argument trug nur, wenn etwas von selbst passiert — und genau das darf nicht sein. Die zwei Invarianten gehören zu T-22/T-23 |
-| **StockPortfolio bricht bei nullable `symbol`** | **übernommen — der wichtigste Befund.** Zeilenangaben im Nachbar-Repo nachgeprüft, alle drei bestätigt. Offene Entscheidung 1 revidiert, eigener Abschnitt ergänzt, T-21 auf den additiven Weg umgestellt |
-| REST-Vertrag vor Plugin-Vertrag | **übernommen**, eigener Abschnitt |
+| **Nullable `symbol` bricht Konsumenten** | **übernommen, Begründung korrigiert.** Zeilenangaben nachgeprüft, alle drei bestätigt. Aber: StockPortfolio ist **nicht öffentlich** und gehört demselben Autor — es begründet keine Kompatibilitätsschicht. Tragend ist, dass **StockInfo** verteilt wird (Docker Hub, Unraid). Ergebnis dasselbe: additiver Weg |
+| REST-Vertrag vor Plugin-Vertrag | **übernommen**, eigener Abschnitt — mit der Einschränkung oben |
+| Contract-Tests über die Projektgrenze | **abgelehnt, vorerst.** Sie schützen vor einem fremden Konsumenten; den gibt es nicht. Siehe „Was ich zurückgebe" |
 | Contract-Test fängt kein Börsensuffix | **behoben** — die Behauptung stand noch in der Spec |
 | Reihenfolgetabelle nannte T-19 „verlustfrei" | **behoben** |
 | T-23 sprach von gekapselter Zeitgrenze | **behoben** — jetzt ausdrücklich als nicht erzwingbar benannt |
@@ -499,19 +526,22 @@ fremde Symbole übernimmt — und genau dort bricht die Migration.
 
 Die drei Fragen aus Runde 2 sind beantwortet und eingearbeitet. Neu offen:
 
-1. **Braucht der REST-Vertrag ein eigenes Ticket?** Die Zusagen an
-   StockPortfolio — Pflichtwährung, Identität, Bedeutung des Schlusskurses —
-   sind bisher nirgends als Vertrag festgehalten, sondern ergeben sich aus dem
-   Code. Ich würde eines anlegen und **vor** T-21 einordnen: Erst wissen, was
-   zugesagt ist, dann die Identität ändern.
-2. **Wer prüft die Consumer-Seite?** Codex nennt Contract-Tests über die
-   Projektgrenze. Die müssten in StockPortfolio liegen, nicht hier — StockInfo
-   kann höchstens ein Schema veröffentlichen, gegen das der Konsument prüft.
-   Wer baut das, und in welchem Repo lebt es?
-3. **`resolver.py:170` — Fremdsymbole ablehnen oder normalisieren?** Wenn der
+1. **Braucht der REST-Vertrag ein eigenes Ticket?** Die Zusagen — Pflichtwährung,
+   Identität, Bedeutung des Schlusskurses — sind nirgends festgehalten, sondern
+   ergeben sich aus dem Code. Ich würde eines anlegen und **vor** T-21
+   einordnen: erst wissen, was zugesagt ist, dann die Identität ändern.
+2. **`resolver.py:170` — Fremdsymbole ablehnen oder normalisieren?** Wenn der
    Yahoo-Fallback künftig gegen die eigene Tabelle prüft: Was passiert mit einem
    Treffer, der nicht passt? Verwerfen (dann findet man manche Papiere gar nicht
    mehr) oder übernehmen und als „nicht zerlegbar" markieren?
+
+**Korrektur zu Runde 3, Punkt „Contract-Tests über die Projektgrenze":** Die
+sind vorerst gegenstandslos. Sie wären sinnvoll gegen einen fremden Konsumenten
+— den gibt es nicht. StockPortfolio gehört demselben Autor und ist nicht
+öffentlich; ein Bruch dort ist eine Änderung in zwei Repos, kein
+Koordinationsproblem. Sobald jemand Drittes die API nutzt, ändert sich das —
+dann wäre ein veröffentlichtes Schema (OpenAPI liegt ohnehin vor) der Ort dafür,
+nicht eine Testsuite über Projektgrenzen.
 
 ## Belege
 

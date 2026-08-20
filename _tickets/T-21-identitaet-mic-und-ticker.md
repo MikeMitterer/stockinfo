@@ -70,8 +70,14 @@ eindeutiges **Yahoo**-Symbol. Yahoo wäre dann weiterhin Teil der Identität —
 Ticket verfehlte sein eigenes Ziel.
 
 **Weg (revidiert nach Codex-Runde 3):** `symbol` **bleibt verpflichtend** — die
-erste Fassung wollte es `NULL`-fähig machen, das würde **StockPortfolio
-brechen**. Nachgeprüft im Nachbar-Repo:
+erste Fassung wollte es `NULL`-fähig machen.
+
+Der Grund ist **nicht** StockPortfolio: Das gehört demselben Autor, ist nicht
+öffentlich und wäre in einem Zug mitzuändern. Der Grund ist, dass StockInfo
+selbst verteilt wird — GitHub, Docker Hub, Unraid-Template. Wer die API direkt
+nutzt, bekäme den Bruch ab, und man erfährt es nicht.
+
+Was an `symbol` hängt, zeigt der Testkonsument stellvertretend:
 
 ```ts
 src/api/types.ts:17        symbol: string                      // nicht nullable
