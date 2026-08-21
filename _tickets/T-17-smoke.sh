@@ -40,7 +40,8 @@ if [[ "${__APPS_LIB__:=""}"   == "" ]]; then . "${BASH_LIBS}/apps.lib.sh";   fi
 
 readonly APPNAME="$(basename "$0")"
 readonly PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-readonly PORT=8766
+# Überschreibbar, falls der Port belegt ist: `PORT=8790 ./T-17-smoke.sh --run`
+readonly PORT="${PORT:-8766}"
 readonly BASE_URL="http://127.0.0.1:${PORT}"
 readonly VENV_PY="${PROJECT_ROOT}/.venv/bin/python"
 
@@ -88,18 +89,40 @@ showInfo() {
     echo
 }
 
-# Beendet den laufenden Server, lässt das Arbeitsverzeichnis aber stehen.
+# Beendet den selbst gestarteten Server, lässt das Arbeitsverzeichnis stehen.
+#
+# **Nur die eigene PID.** Eine frühere Fassung räumte zusätzlich alles ab, was
+# auf dem Port lauschte — „Gürtel und Hosenträger". Das ist keine Absicherung,
+# sondern ein Risiko: Ist der Port belegt, gehört der Prozess dort jemand
+# anderem, womöglich Mikes laufendem Entwicklungsserver. Ein Prüf-Script darf
+# nichts beenden, was es nicht selbst gestartet hat. Gegen einen belegten Port
+# hilft `requirePortIsFree`, nicht der Holzhammer danach.
 stopServer() {
     if [[ -n "${SERVER_PID}" ]] && kill -0 "${SERVER_PID}" 2>/dev/null; then
         kill "${SERVER_PID}" 2>/dev/null
         wait "${SERVER_PID}" 2>/dev/null
     fi
-    # Gürtel und Hosenträger: Wer auch immer noch auf dem Port sitzt, geht mit.
-    # Ein zurückgelassener Server blockiert den nächsten Lauf still.
-    local _STRAGGLER
-    _STRAGGLER="$(lsof -ti ":${PORT}" 2>/dev/null)"
-    [[ -n "${_STRAGGLER}" ]] && kill ${_STRAGGLER} 2>/dev/null
     SERVER_PID=""
+}
+
+# Bricht ab, wenn auf dem Port schon jemand lauscht.
+#
+# Ohne diese Prüfung könnte der Health-Check unten den **fremden** Server für
+# den eigenen halten: Er fragt nur, ob `${BASE_URL}/health` antwortet, und das
+# tut auch ein Server, den jemand anderes gestartet hat. Der Lauf liefe dann
+# gegen die falsche Instanz und mit der falschen Datenbank.
+#
+# Returns:
+#   0 wenn der Port frei ist, sonst 1
+requirePortIsFree() {
+    local _OCCUPANT
+    _OCCUPANT="$(lsof -ti ":${PORT}" 2>/dev/null)"
+    [[ -z "${_OCCUPANT}" ]] && return 0
+
+    echo -e "  ${RED}✗${NC} Port ${PORT} ist belegt (PID ${_OCCUPANT//$'\n'/, })."
+    echo -e "      Dieses Script beendet nichts, was es nicht selbst gestartet hat."
+    echo -e "      Anderen Port wählen: ${GREEN}PORT=8790 ${APPNAME} --run${NC}"
+    return 1
 }
 
 # Räumt Server und Arbeitsverzeichnis ab. Wird per trap aufgerufen.
@@ -126,6 +149,7 @@ startServer() {
     local -r _MIC="$1"
     local -r _RUN="$2"
 
+    requirePortIsFree || return 1
     [[ -z "${WORKDIR}" ]] && WORKDIR="$(mktemp -d)"
     LOGFILE="${WORKDIR}/${_RUN}.log"
 
@@ -252,14 +276,14 @@ checkInputIsinWins() {
 # #2 — Die Abweichung gehört ins Protokoll, nicht ins Schweigen.
 checkDeviationIsLogged() {
     local _LINE
-    _LINE="$(grep -m1 "isin_abweichung" "${LOGFILE}" 2>/dev/null)"
+    _LINE="$(grep -m1 "isin_mismatch" "${LOGFILE}" 2>/dev/null)"
 
     if [[ -n "${_LINE}" ]]; then
         report "#2 " "Abweichende Anbieter-ISIN wird protokolliert" true \
             "$(echo "${_LINE}" | cut -c1-120)"
     else
         report "#2 " "Abweichende Anbieter-ISIN wird protokolliert" false \
-            "kein 'isin_abweichung' in ${LOGFILE}"
+            "kein 'isin_mismatch' in ${LOGFILE}"
     fi
 }
 

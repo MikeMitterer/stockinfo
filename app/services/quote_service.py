@@ -260,9 +260,9 @@ class QuoteService:
         """
         if resolved.isin and raw.isin and raw.isin != resolved.isin:
             logger.warning(
-                "isin_abweichung",
-                angefragt=resolved.isin,
-                gemeldet=raw.isin,
+                "isin_mismatch",
+                requested=resolved.isin,
+                reported=raw.isin,
                 symbol=resolved.symbol,
             )
         return resolved.isin or raw.isin

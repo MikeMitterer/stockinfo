@@ -127,18 +127,6 @@ def test_composite_gibt_none_wenn_alle_leer() -> None:
     assert resolver.resolve_isin("XX0000000000") is None
 
 
-class CountingResolver:
-    """Zählt seine Aufrufe — beantwortet die Frage, ob er überhaupt drankam."""
-
-    def __init__(self, result: ResolvedInstrument | None) -> None:
-        self._result = result
-        self.calls: list[str] = []
-
-    def resolve_isin(self, isin: str) -> ResolvedInstrument | None:
-        self.calls.append(isin)
-        return self._result
-
-
 class _FakeResponse:
     """Antwortobjekt für den gemockten OpenFIGI-Aufruf."""
 
@@ -152,7 +140,24 @@ class _FakeResponse:
         return self._payload
 
 
-def _mit_openfigi_antwort(monkeypatch, payload: object) -> None:
+class _RecordingSearch:
+    """Ersetzt ``yf.Search`` und merkt sich, wonach gesucht wurde.
+
+    Die Trefferliste ist die **einzige** Stelle, an der hier gemockt wird —
+    alles davor und danach ist echter Code. Nur so beantwortet der Test die
+    Frage, ob der Yahoo-Resolver wirklich lief, statt sie durch einen Stub zu
+    ersetzen, der die Antwort schon kennt.
+    """
+
+    hits: list[dict] = []
+    queries: list[str] = []
+
+    def __init__(self, isin: str) -> None:
+        _RecordingSearch.queries.append(isin)
+        self.quotes = list(_RecordingSearch.hits)
+
+
+def _with_openfigi_response(monkeypatch, payload: object) -> None:
     """Legt die OpenFIGI-Antwort fest, ohne den Dienst zu fragen."""
     import app.providers.openfigi_provider as openfigi_module
 
@@ -163,8 +168,26 @@ def _mit_openfigi_antwort(monkeypatch, payload: object) -> None:
     )
 
 
+def _with_recording_search(monkeypatch, hits: list[dict]) -> type[_RecordingSearch]:
+    """Hängt die aufzeichnende Suche an die Stelle, an der der Resolver sie holt."""
+    from app import resolver as resolver_module
+
+    _RecordingSearch.hits = hits
+    _RecordingSearch.queries = []
+    monkeypatch.setattr(resolver_module.yf, "Search", _RecordingSearch)
+    return _RecordingSearch
+
+
+def _chain_with_real_fallback() -> CompositeResolver:
+    """Die echte Kette: OpenFIGI, dann der echte Yahoo-Resolver."""
+    return CompositeResolver(
+        OpenFigiResolver(OpenFigiClient(), default_exchange="XTSE"),
+        YFinanceResolver(default_exchange="XTSE"),
+    )
+
+
 def test_bloomberg_bezeichner_laesst_den_fallback_ans_werk(monkeypatch) -> None:
-    """Die ganze Kette, nicht nur der Filter: Kommt der zweite Resolver dran?
+    """Die ganze Kette, nicht nur der Filter: Läuft der zweite Resolver wirklich?
 
     Gemessen am 2026-08-21: OpenFIGI liefert zu `CA78012H5675` (Vorzugsaktie
     der Royal Bank) den Bloomberg-Bezeichner `RY V3.65 PERP BB`. Daraus wurde
@@ -172,59 +195,58 @@ def test_bloomberg_bezeichner_laesst_den_fallback_ans_werk(monkeypatch) -> None:
     weil der `CompositeResolver` nur auf ``None`` prüft, galt das als Treffer.
     Der Yahoo-Fallback kam nie an die Reihe.
 
-    Der Test geht durch den echten Antwort-Parser des Clients; gemockt ist
-    allein der HTTP-Aufruf.
+    Echt sind hier beide Resolver samt Antwort-Parser; ersetzt sind allein die
+    zwei Außengrenzen — der HTTP-Aufruf zu OpenFIGI und `yf.Search`. Die leere
+    Trefferliste bildet die Live-Messung ab: Yahoo kennt diese ISIN ebenfalls
+    nicht. Das Papier bleibt also unauflösbar, und genau das prüft der Test —
+    die Kette läuft bis zum Ende durch und meldet ``None``, statt bei einem
+    Symbol stehenzubleiben, das es nicht gibt.
     """
-    _mit_openfigi_antwort(
+    _with_openfigi_response(
         monkeypatch,
         [{"data": [{"ticker": "RY V3.65 PERP BB", "exchCode": "TORONTO"}]}],
     )
-    fallback = CountingResolver(
-        ResolvedInstrument(symbol="RY-PH.TO", isin="CA78012H5675")
-    )
-    resolver = CompositeResolver(
-        OpenFigiResolver(OpenFigiClient(), default_exchange="XTSE"), fallback
-    )
+    search = _with_recording_search(monkeypatch, [])
 
-    resolved = resolver.resolve_isin("CA78012H5675")
+    resolved = _chain_with_real_fallback().resolve_isin("CA78012H5675")
 
-    assert fallback.calls == ["CA78012H5675"]
-    assert resolved is not None
-    assert resolved.symbol == "RY-PH.TO"
+    assert search.queries == ["CA78012H5675"]  # der Fallback lief wirklich
+    assert resolved is None
 
 
 def test_brauchbarer_ticker_laesst_den_fallback_in_ruhe(monkeypatch) -> None:
-    """Die Gegenprobe: Ein echtes Symbol beendet die Kette wie bisher."""
-    _mit_openfigi_antwort(monkeypatch, [{"data": [{"ticker": "RY"}]}])
-    fallback = CountingResolver(ResolvedInstrument(symbol="RY", isin="CA7800871021"))
-    resolver = CompositeResolver(
-        OpenFigiResolver(OpenFigiClient(), default_exchange="XTSE"), fallback
-    )
+    """Die Gegenprobe auf demselben echten Pfad: ein Symbol beendet die Kette."""
+    _with_openfigi_response(monkeypatch, [{"data": [{"ticker": "RY"}]}])
+    search = _with_recording_search(monkeypatch, [])
 
-    resolved = resolver.resolve_isin("CA7800871021")
+    resolved = _chain_with_real_fallback().resolve_isin("CA7800871021")
 
-    assert fallback.calls == []
+    assert search.queries == []  # gar nicht erst gefragt
     assert resolved is not None
     assert resolved.symbol == "RY.TO"
 
 
-def test_unbrauchbarer_ticker_ohne_fallback_ist_nicht_aufloesbar(monkeypatch) -> None:
-    """Findet auch die zweite Quelle nichts, bleibt es beim sauberen Fehlschlag.
+def test_der_fallback_darf_nach_einem_unbrauchbaren_ticker_treffen(
+    monkeypatch,
+) -> None:
+    """Und wenn Yahoo das Papier kennt, kommt es auch an.
 
-    Der Filter macht dieses Papier nicht auflösbar — Yahoos ISIN-Suche kennt
-    `CA78012H5675` ebenfalls nicht. Er sorgt allein dafür, dass die Kette
-    weiterläuft und am Ende 404 steht statt eines Symbols, das es nicht gibt.
+    Konstruierter Fall, kein Messwert: Für `CA78012H5675` findet Yahoo live
+    nichts. Geprüft wird der Mechanismus — ein verworfener OpenFIGI-Treffer
+    beendet die Kette nicht, sondern reicht sie weiter, und ein Treffer der
+    zweiten Quelle kommt beim Aufrufer an.
     """
-    _mit_openfigi_antwort(
-        monkeypatch, [{"data": [{"ticker": "RY V3.65 PERP BB"}]}]
-    )
-    fallback = CountingResolver(None)
-    resolver = CompositeResolver(
-        OpenFigiResolver(OpenFigiClient(), default_exchange="XTSE"), fallback
+    _with_openfigi_response(monkeypatch, [{"data": [{"ticker": "SOME THING BB"}]}])
+    search = _with_recording_search(
+        monkeypatch,
+        [{"symbol": "RY.TO", "exchDisp": "Toronto", "quoteType": "EQUITY"}],
     )
 
-    assert resolver.resolve_isin("CA78012H5675") is None
-    assert fallback.calls == ["CA78012H5675"]
+    resolved = _chain_with_real_fallback().resolve_isin("CA7800871021")
+
+    assert search.queries == ["CA7800871021"]
+    assert resolved is not None
+    assert resolved.symbol == "RY.TO"
 
 
 class _FakeSearch:

@@ -683,7 +683,7 @@ def test_refresh_eines_unbekannten_symbols_geht_weiter_ueber_die_suche(
     assert fake.known_calls == 0
 
 
-def _gepflegter_etf(fetched_at: str) -> QuoteResponse:
+def _maintained_etf(fetched_at: str) -> QuoteResponse:
     """Ein ETF mit vollständigem, aus der Quelle stammendem Metadatenstand."""
     return QuoteResponse(
         isin="IE00B3RBWM25",
@@ -701,7 +701,7 @@ def _gepflegter_etf(fetched_at: str) -> QuoteResponse:
     )
 
 
-def _unvollstaendige_antwort(fetched_at: str, price: float) -> QuoteResponse:
+def _incomplete_response(fetched_at: str, price: float) -> QuoteResponse:
     """Frischer Kurs ohne ETF-Extras — justETF wurde nicht gefragt."""
     return QuoteResponse(
         isin="IE00B3RBWM25",
@@ -716,7 +716,7 @@ def _unvollstaendige_antwort(fetched_at: str, price: float) -> QuoteResponse:
     )
 
 
-def test_unvollstaendige_antwort_traegt_den_gespeicherten_stand(
+def test_incomplete_response_traegt_den_gespeicherten_stand(
     repo: QuoteRepository,
 ) -> None:
     """Was in der Datenbank steht, muss auch in der Antwort stehen.
@@ -727,8 +727,8 @@ def test_unvollstaendige_antwort_traegt_den_gespeicherten_stand(
     durchgereicht. Gemessen am 2026-08-19: `ter` in der Antwort ``null``, in der
     Datenbank ``0.2``.
     """
-    repo.save_quote(_gepflegter_etf(_hours_ago(10)))
-    fake = FakeQuoteService(_unvollstaendige_antwort(_now(), price=170.0))
+    repo.save_quote(_maintained_etf(_hours_ago(10)))
+    fake = FakeQuoteService(_incomplete_response(_now(), price=170.0))
     service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
 
     result = service.get_by_isin("IE00B3RBWM25")
@@ -751,10 +751,10 @@ def test_vollstaendige_antwort_darf_einen_wert_auch_leeren(
     loswerden — und die Antwort widerspräche der Zeile, die daneben gespeichert
     wird.
     """
-    repo.save_quote(_gepflegter_etf(_hours_ago(10)))
-    vollstaendig = _unvollstaendige_antwort(_now(), price=170.0)
-    vollstaendig.metadata_complete = True
-    fake = FakeQuoteService(vollstaendig)
+    repo.save_quote(_maintained_etf(_hours_ago(10)))
+    complete = _incomplete_response(_now(), price=170.0)
+    complete.metadata_complete = True
+    fake = FakeQuoteService(complete)
     service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
 
     result = service.get_by_isin("IE00B3RBWM25")
@@ -772,8 +772,8 @@ def test_auch_der_refresh_haelt_den_gespeicherten_stand(
     die frische Antwort genauso unvollständig wie oben, und der Knopf an der
     Zeile leerte die Anzeige.
     """
-    repo.save_quote(_gepflegter_etf(_hours_ago(10)))
-    fake = FakeQuoteService(_unvollstaendige_antwort(_now(), price=170.0))
+    repo.save_quote(_maintained_etf(_hours_ago(10)))
+    fake = FakeQuoteService(_incomplete_response(_now(), price=170.0))
     service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
 
     result = service.refresh_one("IE00B3RBWM25")

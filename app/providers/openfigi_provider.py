@@ -114,7 +114,7 @@ class OpenFigiClient:
 
         Returns:
             Der Ticker, oder ``None`` wenn die Antwort keinen enthält oder er
-            als Yahoo-Symbol nicht taugt (siehe `_ist_symbolfaehig`).
+            als Yahoo-Symbol nicht taugt (siehe `_is_yahoo_compatible_symbol`).
         """
         if not isinstance(data, list) or not data:
             return None
@@ -124,6 +124,6 @@ class OpenFigiClient:
             return None
         ticker = results[0].get("ticker")
         if ticker and not _is_yahoo_compatible_symbol(ticker):
-            logger.info("openfigi_ticker_unbrauchbar", ticker=ticker)
+            logger.info("openfigi_ticker_unusable", ticker=ticker)
             return None
         return ticker

@@ -28,7 +28,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 3b | `GET /instruments` danach | kein Symbol mit Leerzeichen im Bestand | ✅ [^2] | |
 | 3c | `GET /quote/CA7800871021` (Stammaktie) | löst unverändert auf `RY.TO` auf | ✅ [^2] | |
 | 4 | Papier abrufen, Kurs-TTL ablaufen lassen, erneut abrufen | `ter` in der Antwort entspricht dem Wert in `GET /instruments` | ✅ [^3] | |
-| 5 | `./_tickets/T-16-smoke.sh --run` | Zeile `#5c` ist grün | ⚠️ [^4] | |
+| 5 | `./_tickets/T-16-smoke.sh --run` | Zeile `#5c` ist grün | ✅ [^4] | |
 | 6 | `make test` | Backend grün, neue Tests je Fehler | ✅ [^5] | |
 
 ```bash
@@ -51,16 +51,23 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     Yahoos ISIN-Suche kennt sie ebenfalls nicht. Er sorgt allein dafür, dass
     die Kette weiterläuft. Belegt durch
     `test_bloomberg_bezeichner_laesst_den_fallback_ans_werk` (zuerst rot):
-    der zweite Resolver wird nachweislich aufgerufen.
+    Dort laufen **beide** Resolver echt, ersetzt sind nur die zwei
+    Außengrenzen (`httpx.post` und `yf.Search`); die aufzeichnende Suche zeigt,
+    dass der Yahoo-Resolver mit der ISIN aufgerufen wurde, und die leere
+    Trefferliste bildet die Live-Messung ab.
 [^3]: `T-17-smoke.sh` Lauf 3 (`XETR`, `CACHE_TTL_HOURS=0`):
     `ter: 1. Abruf=0.2, 2. Abruf=0.2, DB=0.2`. Gegenprobe gemacht — mit
     zurückgenommenem Fix (`git stash` auf `quote_cache.py`) meldet dieselbe
     Zeile rot. Dazu drei Unit-Tests, darunter die Gegenprobe, dass eine
     **vollständige** Antwort einen Wert weiterhin leeren darf.
-[^4]: Grün (`ter: Antwort=0.2, DB=0.2`), aber die Zeile zeigt den Fehler
-    nicht: Der Lauf startet auf frischer DB, die Kurs-TTL ist beim zweiten
-    Abruf noch jung, und die Antwort kommt aus dem Cache. Sie war auch vor dem
-    Fix grün. Der Fall wird stattdessen von `T-17-smoke.sh #4` erreicht.
+[^4]: Grün: `ter: Antwort=0.2, DB=0.2`. Die Zeile **zeigt den Fehler auch** —
+    gegengeprüft mit `git checkout 84c9c2d^ -- app/services/quote_cache.py`:
+    dann meldet sie rot. Ich hatte hier zuerst das Gegenteil behauptet und
+    dabei eine 6-Stunden-TTL unterstellt; `T-16-smoke.sh` startet seinen
+    Server aber mit `CACHE_TTL_HOURS=0`, also geht auch der zweite Abruf live
+    und trifft genau den Fall. `T-17-smoke.sh #4` prüft dasselbe noch einmal
+    über die ISIN — doppelt, aber nicht überflüssig: dort steht die
+    Vorgabebörse fest, hier hängt sie an der Umgebung.
 [^5]: `.venv/bin/pytest tests/ -q` → `256 passed, 1 warning in 1.13s`,
     darunter zwölf neue Tests. Dashboard-Tests unberührt (kein
     Frontend-Anteil).
@@ -208,7 +215,10 @@ dort mitbehoben.
 
 ## Auflösung
 
-**Stand 2026-08-21 — umgesetzt, wartet auf Human-Verify und Codex-Review.**
+**Stand 2026-08-21 — umgesetzt, bei Codex im Review.**
+
+Die `Human`-Spalte bleibt bis zum Projektabschluss leer; die Abnahme durch
+Mike läuft gesammelt über **T-28**, nicht Ticket für Ticket.
 
 Branch `t-17-still-falsche-antworten`.
 
@@ -224,6 +234,22 @@ gesehen, wo er ein Verhalten ändert. Suite: `256 passed`.
 
 Prüf-Script `T-17-smoke.sh` (drei Läufe, je eigene Vorgabebörse) — acht Checks
 grün. Es wandert mit dem Ticket nach `solved/`.
+
+**Nach Codex-Review Runde 1** (`changes_requested`, drei Punkte, alle
+übernommen):
+
+- Das Script beendete am Ende jedes Laufs **alles**, was auf Port 8766 lauschte
+  — auch einen fremden Prozess, etwa Mikes Entwicklungsserver. Bei belegtem
+  Port hätte der Health-Check zudem die fremde Instanz für die eigene halten
+  können. Jetzt bricht es bei belegtem Port ab (`requirePortIsFree`), beendet
+  nur die selbst gestartete PID, und der Port lässt sich per `PORT=`
+  überschreiben. Nachgemessen mit einem Fremdprozess auf 8766: Abbruch, der
+  Prozess überlebt.
+- Der Kettentest ersetzte den Yahoo-Resolver durch einen Stub und bewies damit
+  nur, dass *irgendein* zweiter Resolver läuft. Jetzt laufen beide Resolver
+  echt; ersetzt sind allein `httpx.post` und `yf.Search`.
+- Bezeichner durchgehend englisch, auch die strukturierten Log-Felder:
+  `isin_mismatch` mit `requested`/`reported`, `openfigi_ticker_unusable`.
 
 **Zwei Punkte für später, hier nur festgehalten:**
 

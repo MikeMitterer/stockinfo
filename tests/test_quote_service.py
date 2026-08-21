@@ -244,17 +244,17 @@ def test_abweichende_anbieter_isin_wird_protokolliert() -> None:
     with structlog.testing.capture_logs() as logs:
         service.get_quote_by_isin("FR0000121014")
 
-    abweichungen = [e for e in logs if e["event"] == "isin_abweichung"]
-    assert len(abweichungen) == 1
-    assert abweichungen[0]["log_level"] == "warning"
-    assert abweichungen[0]["angefragt"] == "FR0000121014"
-    assert abweichungen[0]["gemeldet"] == "CA50244Q1037"
-    assert abweichungen[0]["symbol"] == "MC.PA"
+    mismatches = [e for e in logs if e["event"] == "isin_mismatch"]
+    assert len(mismatches) == 1
+    assert mismatches[0]["log_level"] == "warning"
+    assert mismatches[0]["requested"] == "FR0000121014"
+    assert mismatches[0]["reported"] == "CA50244Q1037"
+    assert mismatches[0]["symbol"] == "MC.PA"
 
 
 def test_uebereinstimmende_isin_wird_nicht_protokolliert() -> None:
     """Der Normalfall bleibt still — sonst warnt das Log bei jedem Abruf."""
-    passend = RawQuote(
+    matching = RawQuote(
         symbol="MC.PA",
         price=487.5,
         quote_time="2026-08-19T17:35:00+00:00",
@@ -263,7 +263,7 @@ def test_uebereinstimmende_isin_wird_nicht_protokolliert() -> None:
         isin="FR0000121014",
     )
     service = QuoteService(
-        FakeQuoteProvider(passend),
+        FakeQuoteProvider(matching),
         FakeEtfProvider(None),
         FakeResolver(ResolvedInstrument(symbol="MC.PA", isin="FR0000121014")),
     )
@@ -271,7 +271,7 @@ def test_uebereinstimmende_isin_wird_nicht_protokolliert() -> None:
     with structlog.testing.capture_logs() as logs:
         service.get_quote_by_isin("FR0000121014")
 
-    assert [e for e in logs if e["event"] == "isin_abweichung"] == []
+    assert [e for e in logs if e["event"] == "isin_mismatch"] == []
 
 
 def test_ohne_aufgeloeste_isin_gilt_weiterhin_die_des_anbieters() -> None:
