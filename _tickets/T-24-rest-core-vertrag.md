@@ -33,6 +33,11 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 7 | OpenAPI-Schnappschuss | ein Test schlägt an, wenn sich der Core unbemerkt ändert | | |
 | 7b | **`GET /fields`** | liefert die Pflichtfelder **samt Vertragsversion** — zur Laufzeit abfragbar, nicht nur dokumentiert | | |
 | 7c | Vertragsversion erhöhen | ein Konsument kann an der Nummer erkennen, dass er prüfen muss | | |
+| 7d | **`GET /generation`** | liefert nur `generation_id` (opake UUID), mit `Cache-Control: no-store` | | |
+| 7e | **jede** API-Antwort, auch `404`/`409`/`422`/`502` | trägt den Header `StockInfo-Generation` | | |
+| 7f | Header und Rumpf einer Antwort | stammen garantiert aus **derselben** Generation | | |
+| 7g | Cross-Origin-Abruf aus dem Browser | Header ist über `Access-Control-Expose-Headers` lesbar | | |
+| 7h | generationenfähiger Server **ohne** Header auf einer Antwort | gilt als **Vertragsfehler** | | |
 
 **Ebene 2 — bewusste Verhaltenskorrektur (kein „nur Dokumentation"):**
 
@@ -157,6 +162,60 @@ Zwischenspeichern sollte er unter `(generation_id, details_version)`.
 Die Fixtures aus dem Verify-Teil sind der statische Gegenpart dazu: Sie prüfen
 denselben Vertrag beim Bauen, `GET /fields` beantwortet ihn im Betrieb.
 
+### Der Generationstransport: `/generation` plus Header
+
+*(Codex, 2026-08-21 — Antwort auf meine drei Teilfragen. Ich hatte zum Header
+allein geneigt; das wäre ein Fehler gewesen, siehe unten.)*
+
+**Kanonisch ist ein eigener, schmaler Endpunkt:**
+
+```http
+GET /generation
+Cache-Control: no-store
+
+{ "generation_id": "550e8400-e29b-41d4-a716-446655440000" }
+```
+
+Nicht `/env` (ein Diagnosemodell voller Details, die kein Konsument braucht) und
+nicht `/sources` (beschreibt die Quellenkette — deren Zustand kann sich ändern,
+**ohne** dass die Datenbankgeneration wechselt). Ein Konsument muss die
+Generation abrufen können, **bevor** er persistente Kursdaten hydriert, ohne die
+ganze Umgebung zu laden.
+
+`generation_id` ist ein opaker UUID-String; verglichen wird nur auf Gleichheit.
+Profilname und Kompatibilitäts-ID dürfen additiv danebenstehen, sind aber **keine
+Cache-Identität**.
+
+**Dazu ein Header auf jeder Antwort — auch auf Fehlern:**
+
+```http
+StockInfo-Generation: 550e8400-e29b-41d4-a716-446655440000
+```
+
+Die Fehlerfälle sind kein Detail: Nach einem Profilwechsel kann ein bisher
+bekanntes Papier im neuen Profil fehlen. Ohne Header auf der `404` zeigt der
+Konsument seinen alten Cache weiter.
+
+**Warum der Header allein nicht genügt** — das ist der Punkt, den ich übersehen
+hatte: Zwei Anfragen können sich über einen Profilwechsel hinweg überschneiden.
+Eine verspätete Antwort aus A trifft nach einer schnellen aus B ein. **UUIDs
+tragen keine Reihenfolge**, also würde ein Client, der dem Header blind folgt,
+von B zurück auf A springen.
+
+Deshalb: **`/generation` ist die Wahrheit, der Header nur das Signal.** Weicht er
+ab, wird die Antwort verworfen, `/generation` bestätigt den Stand, und erst
+danach wird umgeschaltet. Kein Polling, keine Extra-Anfrage vor jedem Request.
+
+**CORS nicht vergessen** — nachgeprüft in `app/main.py:61-66`:
+
+```python
+allow_headers=["*"]     # ← gilt für REQUEST-Header
+                        # expose_headers fehlt
+```
+
+Ohne `expose_headers` kann Browser-JavaScript den Antwort-Header nicht lesen.
+StockPortfolio läuft cross-origin; der Header wäre dort unsichtbar.
+
 ### Warum das vor T-21 gehört
 
 StockInfo ist verteilt (GitHub, Docker Hub, Unraid-Template). Wer die API direkt
@@ -171,7 +230,9 @@ aktualisiert. Gemeinsame Eigentümerschaft ersetzt keinen Vertrag.
 ### Prüfbar, ohne Cross-Repo-CI
 
 1. StockInfo prüft den Core gegen **Fixtures** und einen
-   OpenAPI-Kompatibilitätsschnappschuss.
+   OpenAPI-Kompatibilitätsschnappschuss. Die Fixtures sind kein reines JSON,
+   sondern ein **HTTP-Umschlag aus Status, Headern und Rumpf** — sonst lässt
+   sich das Header-Verhalten der Generation gar nicht prüfen.
 2. StockPortfolio prüft seine Mapper gegen dieselben veröffentlichten Fixtures.
 3. Vor Releases ein kleiner Lauf: bestehende Position gegen frische Profil-DB.
 

@@ -36,6 +36,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 7 | Feld mit `overridable=False` | lässt sich **nicht** von Hand überschreiben | | |
 | 8 | Feld mit `overridable=True` | manueller Wert füllt nur die Lücke; ein Quellenwert gewinnt | | |
 | 9 | zwei Quellen, verschiedene Felder | Herkunft steht **je Feld**, nicht je Zeile | | |
+| 9b | **Harness-Stufe 3** (Fortsetzung des Laufs aus T-23/T-25) | unbekanntes Detailfeld, Herkunft, Persistenz und Override überstehen den ganzen Weg bis zur REST-Antwort | | |
 | 10 | älterer Konsument (Fixture ohne `details`) | ignoriert unbekannte Einträge, bricht nicht | | |
 | 11 | `make test` | grün | | |
 

@@ -42,7 +42,11 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 5c | B ungültig, Neustart | A läuft wieder **vollständig** — Konfiguration *und* Plugin-Umgebung, nicht nur die alte Datenbank | | |
 | 6 | Wiederherstellung | ordnet Sicherung und Profil einander zu; ein unpassendes Paar wird abgelehnt | | |
 | 6b | dieselbe Sicherung zweimal einspielen | jede Aktivierung bekommt eine **neue** `generation_id` | | |
-| 7 | `GET /sources` oder `/env` | nennt das aktive Profil und dessen Generation | | |
+| 7 | **`GET /generation`** | liefert die aktive `generation_id`, mit `Cache-Control: no-store` | | |
+| 7b | Prozessneustart **ohne** Profilwechsel | dieselbe `generation_id` | | |
+| 7c | verträgliche Konfigurationsänderung (Schlüssel, Zeitgrenze) | dieselbe `generation_id` | | |
+| 7d | Profilwechsel **und** jede Restore-Aktivierung | **neue** `generation_id` | | |
+| 7e | Harness-Stufe 2 | `/generation` und der Antwort-Header laufen im Integrationslauf mit | | |
 | 8 | **StockPortfolio** nach Profilwechsel (Abnahme in deren T-35) | erkennt die neue `generation_id`, leert **nur** Quote-/History-Caches; Portfolio, Stückzahlen und Ziele bleiben | | |
 | 8b | dasselbe ohne Profilwechsel | Cache bleibt — die Generation ändert sich nicht bei jeder Konfigänderung | | |
 
@@ -162,8 +166,9 @@ auf A zurückgerollt werden können.
 
 **Die Crash-Matrix, konkret** *(Codex, 2026-08-21 — eine frühere Fassung dieses
 Tickets hatte nur einen allgemeinen Absturztest, und die Spec behauptete
-fälschlich, die Matrix sei schon enthalten).* Sechs Fehlerpunkte, einzeln
-injizierbar, jeder mit Neustart und Recovery-Lauf:
+fälschlich, die Matrix sei schon enthalten).* **Sieben** Fehlerpunkte — „vor und
+nach Aktivierung" sind zwei verschiedene persistierte Zustände, nicht einer —,
+einzeln injizierbar, jeder mit Neustart und Recovery-Lauf:
 
 | # | Abbruch nach/während | |
 |---|---|---|
@@ -172,7 +177,8 @@ injizierbar, jeder mit Neustart und Recovery-Lauf:
 | 3 | atomarer Veröffentlichung des Backups | |
 | 4 | Schreiben des Übergangsmarkers | |
 | 5 | Anlegen der frischen B-Datenbank | |
-| 6 | unmittelbar vor **und** nach Aktivierung von B | |
+| 6 | unmittelbar **vor** Aktivierung von B | |
+| 7 | unmittelbar **nach** Aktivierung von B | |
 
 Für **jeden** Punkt gelten dieselben Invarianten: genau eine vollständige
 Generation aktiv, keine Backupnummer überschrieben, niemals B mit der Datenbank

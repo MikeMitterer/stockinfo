@@ -2952,3 +2952,190 @@ Umsetzungsfreigabe bitte noch:
 
 Danach ist die Testarchitektur nicht nur umfassend beschrieben, sondern auch
 ohne Abhängigkeitsschleifen implementierbar.
+
+---
+
+# Prüfung von Claudes Runde 8 und Entscheidung zur `generation_id`
+
+Geprüft wurden die Commits `b79a1cd` und `15771c0`, die aktualisierten Tickets
+T-23/T-25/T-27a sowie StockPortfolio T-35 in Commit `f3b0eba`.
+
+## Gesamturteil
+
+Claude hat die Blocker aus der letzten Prüfung korrekt bearbeitet:
+
+- Der Host-Harness ist jetzt nach T-23, T-25 und T-26 gestaffelt.
+- T-25 hängt für den Preflight ausdrücklich von T-23 ab.
+- Die Kandidatenumgebung isoliert den Preflight vom aktiven Datenbestand.
+- Die konkrete Crash-Matrix steht nun tatsächlich in T-25.
+- T-27a nimmt nur noch das Szenarioformat und den transportneutralen Vertrag ab;
+  Replay/Real gehört zu T-27b.
+- T-35 enthält den dritten EUR-Fallback, Runtime-Decoder,
+  generationsgebundene Cache-Namespaces, Basis-URL und Legacy-Fall.
+- T-35 ist versioniert, ohne die fremden Änderungen im StockPortfolio-Worktree
+  anzufassen.
+
+Damit sind die bisherigen strukturellen Blocker geschlossen. Offen ist jetzt
+tatsächlich nur noch der Generationstransport; dafür folgt eine verbindliche
+Empfehlung.
+
+## a) Kanonischer Endpunkt: `GET /generation`
+
+Die `generation_id` sollte nicht in `/env` oder `/sources` versteckt werden:
+
+- `/env` ist ein Diagnose-/Konfigurationsmodell und enthält für einen Consumer
+  viele irrelevante Implementierungsdetails.
+- `/sources` beschreibt die geladene Quellenkette. Deren Zustand kann sich
+  ändern, ohne dass die Datenbankgeneration wechselt.
+
+Empfohlen ist deshalb ein eigener kleiner öffentlicher Endpunkt:
+
+```http
+GET /generation
+Cache-Control: no-store
+
+{
+  "generation_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+`generation_id` ist ein opaker UUID-String. Ein Consumer vergleicht ihn nur auf
+Gleichheit. Profilname und Kompatibilitäts-ID können für Diagnosen additiv
+geliefert werden, sind aber keine Cacheidentität und dürfen nicht anstelle der
+Generation verwendet werden.
+
+Der Endpunkt ist bewusst schmal: StockPortfolio muss ihn **vor** dem Hydrieren
+persistenter Kursdaten aufrufen können, ohne die vollständige Umgebung oder
+Quellenliste zu laden. Die Antwort darf von Proxy und Browser nicht als
+langfristig cachebar behandelt werden.
+
+## b) Offene Sitzung: Header als Änderungssignal, nicht als einzige Wahrheit
+
+Zusätzlich sollte jede API-Antwort folgenden Header tragen:
+
+```http
+StockInfo-Generation: 550e8400-e29b-41d4-a716-446655440000
+```
+
+Das gilt auch für `404`, `409`, `422`, `502` und andere fachliche
+Fehlerantworten. Gerade nach einem Profilwechsel kann ein bisher bekanntes
+Papier im neuen Profil fehlen; ohne Header auf der `404`-Antwort würde der
+Consumer den alten Cache möglicherweise weiter anzeigen.
+
+Der Header muss die Generation bezeichnen, aus der **genau dieser Response-Body
+beziehungsweise Fehler** stammt. Bei Cross-Origin-Betrieb muss StockInfo ihn
+über `Access-Control-Expose-Headers` sichtbar machen; die aktuelle
+`CORSMiddleware`-Konfiguration exponiert benutzerdefinierte Antwortheader noch
+nicht.
+
+Der Header ist jedoch nicht allein autoritativ. Zwei Requests können sich über
+einen Profilwechsel hinweg überschneiden: Eine verspätete Antwort aus A kann
+nach einer schnellen Antwort aus B eintreffen. Da UUIDs keine Reihenfolge
+tragen, darf der Client durch diese alte Antwort nicht von B zurück auf A
+springen.
+
+Robuster Clientablauf:
+
+1. Vor Cache-Hydrierung `GET /generation` abrufen und den passenden Namespace
+   wählen.
+2. Bei jeder Datenantwort den Header mit der bestätigten Generation vergleichen.
+3. Bei Gleichheit Antwort normal verarbeiten.
+4. Bei Abweichung die Antwort **nicht speichern**, erneut `/generation`
+   abfragen, auf dessen Ergebnis umschalten und den ursprünglichen Request bei
+   Bedarf wiederholen.
+5. Eine verspätete Antwort einer alten Generation wird dadurch verworfen statt
+   zum Rückwechsel zu führen.
+
+Damit ist `/generation` die kanonische Wahrheit; der Header ist das kostenlose,
+sofortige Änderungssignal. Es braucht weder Polling noch eine Extra-Anfrage vor
+jedem normalen Request.
+
+## c) Server ohne Generation: sicherer Legacy-Modus
+
+Ein alter Server antwortet auf `/generation` mit `404` und liefert keinen
+Header. Das bedeutet ausschließlich: **Generation unbekannt**. Es darf weder
+eine feste Ersatz-ID noch eine aus URL, Version oder Startzeit geratene ID
+geben.
+
+Sicherer Standard:
+
+- Quote- und History-Werte dürfen in der aktuellen Sitzung im Speicher genutzt
+  werden.
+- Sie werden nicht als generationensicher persistiert beziehungsweise beim
+  nächsten Start nicht aus einem Legacy-Namespace hydriert.
+- Sobald ein Server erstmals `/generation` unterstützt, beginnt dessen echter
+  Namespace leer; Legacy-Daten werden niemals hineinmigriert.
+- Depot, Positionen, Einstellungen, Allowlist und Wert-Snapshots bleiben davon
+  unberührt.
+
+Das kostet bei einem alten StockInfo nach einem Browser-Neustart neue
+Kursabfragen, ist aber die einzige Variante, die keinen nicht erkennbaren
+Datenbankwechsel als sicher ausgibt. Falls später ein expliziter unsicherer
+Kompatibilitätsmodus gewünscht wird, muss er als solcher sichtbar sein; er darf
+nicht der stillschweigende Standard werden.
+
+Liefert ein neuer Server zwar `/generation`, lässt aber bei einer Datenantwort
+den verpflichtenden Header weg, ist das dagegen ein Vertragsfehler. Diese
+Antwort darf nicht persistent gecacht werden.
+
+## Konsequenzen für Tickets und Fixtures
+
+T-24 sollte festschreiben:
+
+- Schema und Semantik von `GET /generation`,
+- `Cache-Control: no-store`,
+- `StockInfo-Generation` auf allen API-Antworten einschließlich Fehlern,
+- CORS-Exposition des Headers,
+- Header und Body stammen garantiert aus derselben Request-Generation,
+- fehlender Header bei generationenfähigem Server ist ein Vertragsfehler.
+
+T-25 sollte:
+
+- Verify `#7` von „`/sources` oder `/env`“ auf `/generation` ändern,
+- prüfen, dass Prozessneustart und kompatible Konfigurationsänderung die ID
+  behalten,
+- prüfen, dass Profilwechsel und jede Restore-Aktivierung eine neue ID liefern,
+- den Harness um Generation-Endpoint und Header erweitern.
+
+T-35 sollte:
+
+- den beschriebenen Bestätigungsablauf bei Headerabweichung übernehmen,
+- alte, verspätete Responses explizit testen,
+- einen Header auf einer `404`-/`502`-Antwort testen,
+- nur `quoteCache` und `dailyHistory` generationell adressieren,
+- zusätzlich ausdrücklich bestätigen, dass `instrumentAllowlist` und
+  `valueSnapshots` wie Portfolio und Einstellungen erhalten bleiben.
+
+Die „JSON-Fixtures“ aus T-24 reichen für diesen Vertrag nicht mehr allein.
+Mindestens die Generationstests brauchen ein HTTP-Fixture-Envelope aus Status,
+Headern und Body. StockPortfolio kann damit Decoder **und** Headerverhalten
+prüfen, ohne StockInfo zu klonen.
+
+## Kleine Restpunkte aus Runde 8
+
+1. Die Crash-Matrix spricht von sechs Fehlerpunkten, enthält bei Punkt 6 aber
+   „unmittelbar vor **und** nach Aktivierung“. Das sind technisch zwei
+   unterschiedliche persistierte Zustände und damit sieben Testfälle. Die
+   Parametrisierung sollte beide getrennt aufführen.
+2. T-26 besitzt die fachlichen Verify-Zeilen für Harness-Stufe 3 bereits, sollte
+   sie aber ausdrücklich als Fortsetzung desselben Host-Harness kennzeichnen.
+   Das verbessert die Rückverfolgbarkeit, ohne eine neue Abhängigkeit zu
+   erzeugen.
+3. T-35 sagt noch, T-24 „liefert“ die Generation. Präziser: T-24 definiert den
+   öffentlichen Vertrag, T-25 implementiert und rotiert die Generation.
+
+## Schlussfazit an Claude
+
+Runde 8 ist akzeptiert. Für die letzte offene Vertragsfrage gilt:
+
+- **Bootstrap:** kanonisches `GET /generation`.
+- **Offene Sitzung:** `StockInfo-Generation` auf jeder API-Antwort als Signal.
+- **Abweichung:** Response verwerfen, kanonischen Endpunkt bestätigen, dann
+  gegebenenfalls erneut laden — niemals anhand verspäteter UUID-Header
+  zurückschalten.
+- **Alter Server:** kein Ersatzwert; serverseitige Caches nur in-memory und
+  nicht generationensicher persistieren.
+
+Dieser Doppelweg ist etwas ausführlicher als nur `/env` oder nur ein Header,
+löst aber Bootstrap, offene Sitzungen, Fehlerantworten und konkurrierende
+Requests ohne Raten und ohne Polling.
