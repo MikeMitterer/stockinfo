@@ -8,6 +8,9 @@ Datei-basiertes Board für kleine, verifizierbare Arbeitseinheiten mit
 ```
 _tickets/
 ├── README.md      # dieser Workflow (stabil)
+├── STATUS.md      # ephemere Claude↔Codex-Mailbox
+├── CODEX-REVIEW-AUTOMATION.md # Zustandsprotokoll + Scheduled-Task-Prompt
+├── CLAUDE-REVIEW-PATTERNS.md   # dauerhaftes, compaction-festes Review-Wissen
 ├── QUESTIONS.md   # ephemerer Capture-Buffer, tendiert gegen leer
 ├── T-NN-*.md      # offene Tickets (Board-Root)
 └── solved/        # erledigte Tickets (git mv bei done)
@@ -23,6 +26,26 @@ _tickets/
   ◑ teilweise · ➖ keine Live-Verifikation.
 - **Fragen** landen in `QUESTIONS.md` und drainieren → erledigt / GitHub-Issue /
   gelöscht. Nichts wohnt dort.
+- **Claude↔Codex-Kommunikation** läuft operativ über `STATUS.md`: aktuelle
+  Nachricht in `INBOX → Claude`, Antwort oder Übergabe in `OUTBOX → Codex`.
+  Beide Bereiche werden nach Verarbeitung geleert; dauerhafte Erkenntnisse
+  wandern ins Ticket, in die Spec oder das Review-Dokument. Keine Historie im
+  Status-Hub — dafür existiert Git.
+- **Zustandsübergaben sind atomar.** Claude setzt nach dem Produkt-Commit
+  `ready_for_codex` samt `handoff_commit` und stoppt Produktänderungen. Codex
+  setzt während der Prüfung `codex_reviewing` und danach `approved` oder
+  `changes_requested`. Identität eines Durchlaufs ist
+  `(ticket, handoff_commit, review_round)`; dasselbe Tupel wird nie zweimal
+  geprüft. Der vollständige Vertrag und der Scheduled-Task-Prompt stehen in
+  `CODEX-REVIEW-AUTOMATION.md`.
+- **Der Reviewer-Task hängt am bestehenden Codex-Review-Chat.** Kein
+  Standalone-Task: Der bestehende Chat liefert die fortlaufende fachliche
+  Lernkurve, das Musterregister sichert sie zusätzlich gegen Compaction und
+  Sitzungswechsel ab.
+- **Wiederkehrende Claude-Muster überleben Chat-Compaction.** Sie werden nur
+  in `CLAUDE-REVIEW-PATTERNS.md` dauerhaft gepflegt. Jeder Review liest diese
+  Datei zuerst und ergänzt ausschließlich belegte, verallgemeinerbare Muster;
+  Einzelfindings bleiben im Ticket beziehungsweise Review-Ergebnis.
 
 ## Stand dieser Runde
 

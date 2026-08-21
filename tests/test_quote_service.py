@@ -1,6 +1,7 @@
 """Tests für die Orchestrierung im QuoteService (Provider gemockt)."""
 
 import pytest
+import structlog
 
 from app.providers.base import EtfDetails, RawQuote, ResolvedInstrument
 from app.services.quote_service import (
@@ -193,6 +194,100 @@ def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
     assert result.currency is None
     assert result.fund_currency == "USD"
     assert result.fund_domicile == "Ireland"
+
+
+def _lvmh_quote_mit_fremder_isin() -> RawQuote:
+    """Der Pariser Kurs, den yfinance mit der kanadischen Zweitnotierung meldet.
+
+    Gemessen am 2026-08-19: `MC.PA` trägt bei yfinance `CA50244Q1037` — ein
+    kanadisches Hinterlegungspapier. Der Name stimmt, die Gattung nicht.
+    """
+    return RawQuote(
+        symbol="MC.PA",
+        price=487.5,
+        quote_time="2026-08-19T17:35:00+00:00",
+        currency="EUR",
+        type="stock",
+        isin="CA50244Q1037",
+    )
+
+
+def test_die_aufgeloeste_isin_gewinnt_gegen_die_des_anbieters() -> None:
+    """Wer eine ISIN eingibt, bekommt sie zurück — nicht die des Anbieters.
+
+    Bisher galt `raw.isin or resolved.isin`: Die Meldung von yfinance schlug die
+    Eingabe. Gespeichert wurde damit ein anderes Wertpapier als das gesuchte.
+    """
+    service = QuoteService(
+        FakeQuoteProvider(_lvmh_quote_mit_fremder_isin()),
+        FakeEtfProvider(None),
+        FakeResolver(ResolvedInstrument(symbol="MC.PA", isin="FR0000121014")),
+    )
+
+    result = service.get_quote_by_isin("FR0000121014")
+
+    assert result.isin == "FR0000121014"
+
+
+def test_abweichende_anbieter_isin_wird_protokolliert() -> None:
+    """Still verwerfen wäre so falsch wie still übernehmen.
+
+    Die Abweichung ist ein Befund über die Quelle — sie gehört ins Log, damit
+    sie auffällt, statt in der Antwort zu verschwinden.
+    """
+    service = QuoteService(
+        FakeQuoteProvider(_lvmh_quote_mit_fremder_isin()),
+        FakeEtfProvider(None),
+        FakeResolver(ResolvedInstrument(symbol="MC.PA", isin="FR0000121014")),
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        service.get_quote_by_isin("FR0000121014")
+
+    mismatches = [e for e in logs if e["event"] == "isin_mismatch"]
+    assert len(mismatches) == 1
+    assert mismatches[0]["log_level"] == "warning"
+    assert mismatches[0]["requested"] == "FR0000121014"
+    assert mismatches[0]["reported"] == "CA50244Q1037"
+    assert mismatches[0]["symbol"] == "MC.PA"
+
+
+def test_uebereinstimmende_isin_wird_nicht_protokolliert() -> None:
+    """Der Normalfall bleibt still — sonst warnt das Log bei jedem Abruf."""
+    matching = RawQuote(
+        symbol="MC.PA",
+        price=487.5,
+        quote_time="2026-08-19T17:35:00+00:00",
+        currency="EUR",
+        type="stock",
+        isin="FR0000121014",
+    )
+    service = QuoteService(
+        FakeQuoteProvider(matching),
+        FakeEtfProvider(None),
+        FakeResolver(ResolvedInstrument(symbol="MC.PA", isin="FR0000121014")),
+    )
+
+    with structlog.testing.capture_logs() as logs:
+        service.get_quote_by_isin("FR0000121014")
+
+    assert [e for e in logs if e["event"] == "isin_mismatch"] == []
+
+
+def test_ohne_aufgeloeste_isin_gilt_weiterhin_die_des_anbieters() -> None:
+    """Beim Abruf per Symbol gibt es keine Eingabe, die gewinnen könnte.
+
+    Dort ist die Meldung des Anbieters die einzige Quelle — und bleibt es.
+    """
+    service = QuoteService(
+        FakeQuoteProvider(_lvmh_quote_mit_fremder_isin()),
+        FakeEtfProvider(None),
+        FakeResolver(None),
+    )
+
+    result = service.get_quote_by_symbol("MC.PA")
+
+    assert result.isin == "CA50244Q1037"
 
 
 def test_annualized_volatility_zu_wenig_daten_ist_none() -> None:

@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, timezone
 import structlog
 
 from app.models import OVERRIDE_FIELDS, QuotePoint, QuoteResponse
-from app.repository import QuoteRepository
+from app.repository import PROTECTED_META_FIELDS, QuoteRepository
 from app.services.daily_sync import DailyCloseSync
 from app.services.freshness import is_fresh
 from app.services.quote_service import (
@@ -386,8 +386,61 @@ class CachedQuoteService:
 
     def _save_fresh(self, fresh: QuoteResponse) -> QuoteResponse:
         """Persistiert einen frisch beschafften Kurs und reicht ihn durch."""
+        stored = self._stored_metadata(fresh)
         self._repository.save_quote(fresh)
-        return self._with_overrides(fresh)
+        return self._with_overrides(self._keep_stored_metadata(fresh, stored))
+
+    @staticmethod
+    def _keep_stored_metadata(
+        fresh: QuoteResponse, stored: dict | None
+    ) -> QuoteResponse:
+        """Füllt die Lücken einer unvollständigen Antwort aus dem gespeicherten Stand.
+
+        Das Repository schützt seine ETF-Spalten, wenn eine Antwort über sie
+        nichts weiß (``metadata_complete=False``) — die Antwort an den Client
+        ging aber unverändert hinaus. Ergebnis: Kurs-TTL abgelaufen,
+        Metadaten-TTL frisch, justETF zu Recht nicht gefragt — und ``/quote``
+        meldete `ter: null`, während in der Datenbank `0.2` stand. Dieselbe
+        Kennzahl, zwei Antworten.
+
+        Überlagert wird **genau dann und genau das**, was auch nicht
+        geschrieben werden darf: dieselbe Bedingung, dieselbe Feldmenge wie in
+        `QuoteRepository._writable_fields`. Eine vollständige Antwort bleibt
+        unangetastet — sagt die Quelle zu einem Feld nichts mehr, ist das eine
+        Aussage, und die muss durchkommen.
+
+        Gefüllt werden nur **Lücken**; geprüft wird auf ``None`` und nicht auf
+        Falschheit, sonst verlöre „ausschüttend" (`accumulating=False`) seinen
+        Sinn. Einzige Ausnahme ist `source`: Es beschriftet die überlagerten
+        Felder, steht bei einer frischen Antwort aber nie auf ``None`` — bliebe
+        es stehen, hieße die Anzeige „yfinance" über Werten, die von justETF
+        stammen.
+
+        Args:
+            fresh: Frisch beschaffte Antwort.
+            stored: Instrumentenzeile vor dem Speichern, oder ``None`` für ein
+                bis dahin unbekanntes Papier.
+
+        Returns:
+            Dieselbe Antwort, in deren Lücken der gespeicherte Stand steht.
+        """
+        if fresh.metadata_complete or stored is None:
+            return fresh
+        for field in PROTECTED_META_FIELDS:
+            value = stored.get(field)
+            if value is None:
+                continue
+            if field == "accumulating":
+                value = _as_bool(value)
+            if field == "source" or getattr(fresh, field) is None:
+                setattr(fresh, field, value)
+        return fresh
+
+    def _stored_metadata(self, fresh: QuoteResponse) -> dict | None:
+        """Liest die Instrumentenzeile, bevor ``save_quote`` sie fortschreibt."""
+        if fresh.isin:
+            return self._repository.get_instrument_by_isin(fresh.isin)
+        return self._repository.get_instrument_by_symbol(fresh.symbol)
 
     def _save_fresh_with_volatility(self, fresh: QuoteResponse) -> QuoteResponse:
         """Persistiert einen frischen Kurs und ergänzt die Volatilität aus dem Cache.
@@ -400,7 +453,8 @@ class CachedQuoteService:
         wird der zuvor gespeicherte Wert wiederhergestellt statt ihn mit ``None``
         zu überschreiben — behält den letzten bekannten Wert.
         """
-        previous_volatility = self._stored_volatility(fresh)
+        stored = self._stored_metadata(fresh)
+        previous_volatility = stored["volatility"] if stored else None
         instrument_id = self._repository.save_quote(fresh)
         if fresh.volatility is None:
             volatility = self._volatility_from_cache(instrument_id, fresh.symbol)
@@ -410,16 +464,9 @@ class CachedQuoteService:
             elif previous_volatility is not None:
                 fresh.volatility = previous_volatility
                 self._repository.set_volatility(instrument_id, previous_volatility)
-        return self._with_overrides(fresh, instrument_id)
-
-    def _stored_volatility(self, fresh: QuoteResponse) -> float | None:
-        """Liest die aktuell gespeicherte Volatilität, bevor ``save_quote`` sie überschreibt."""
-        instrument = (
-            self._repository.get_instrument_by_isin(fresh.isin)
-            if fresh.isin
-            else self._repository.get_instrument_by_symbol(fresh.symbol)
+        return self._with_overrides(
+            self._keep_stored_metadata(fresh, stored), instrument_id
         )
-        return instrument["volatility"] if instrument else None
 
     def _volatility_from_cache(self, instrument_id: int, symbol: str) -> float | None:
         """Berechnet die 1-Jahres-Volatilität aus dem akkumulierenden EOD-Cache.

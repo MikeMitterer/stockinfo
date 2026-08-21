@@ -38,7 +38,12 @@ _META_FIELDS = (
 # Ausfall den gesamten gepflegten Stand — genau das ist am 2026-08-18
 # passiert. `source` gehört dazu, weil er die stehengebliebenen Werte
 # beschreibt und nicht den Abruf, der nichts geliefert hat.
-_ETF_META_FIELDS = frozenset(
+#
+# Öffentlich, weil dieselbe Menge zweimal gebraucht wird: Hier entscheidet sie,
+# was **nicht geschrieben** wird, und in `CachedQuoteService` darüber, was in
+# der Antwort aus dem gespeicherten Stand **stehen bleibt**. Zwei Listen liefen
+# auseinander, und die Antwort widerspräche der Zeile daneben.
+PROTECTED_META_FIELDS = frozenset(
     {
         "provider",
         "ter",
@@ -432,7 +437,9 @@ class QuoteRepository:
         """
         if response.metadata_complete:
             return _META_FIELDS
-        return tuple(field for field in _META_FIELDS if field not in _ETF_META_FIELDS)
+        return tuple(
+            field for field in _META_FIELDS if field not in PROTECTED_META_FIELDS
+        )
 
     @staticmethod
     def _insert_instrument(
