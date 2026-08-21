@@ -2,7 +2,17 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend) | offen | 6 h | Vertrag festschreiben + eine bewusste Verhaltenskorrektur | — |
+| StockInfo (Backend) | Teil 1 in-review | 6 h | Vertrag festschreiben + eine bewusste Verhaltenskorrektur | — |
+
+**Zwei Übergaben statt einer** *(Claude, 2026-08-21)*: Das Ticket zerfällt an
+einer natürlichen Kante in Definition und Laufzeit — dieselbe Trennlinie, die
+T-24 von T-25 trennt. Ein einzelner Commit über beides wäre für einen
+Diff-Review zu groß.
+
+| | Umfang | Zeilen | Commit |
+|---|---|---|---|
+| **Teil 1** | Vertragsartefakt, Fixtures, statische Konsistenz | `#1`–`#6`, `#7d`–`#7i` | `403020b` |
+| **Teil 2** | `GET /fields`, OpenAPI-Schnappschuss, Währungskorrektur | `#7`, `#7b`, `#7c`, `#8`–`#10` | offen |
 
 **Löst:** Was die API zusagt, ergibt sich heute aus dem Code — nirgends steht,
 welche Felder verbindlich sind, was `stale` bedeutet oder ob ein Schlusskurs
@@ -24,21 +34,67 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | Vertragsdokument | Core-Pflichtfelder samt Nullability sind benannt | | |
-| 2 | dasselbe | Bedeutung von `price`, `quote_time`, `fetched_at`, `cached`, `stale` steht fest | | |
-| 3 | dasselbe | bereinigt gegen unbereinigt beim Tages-Schlusskurs ist entschieden | | |
-| 4 | dasselbe | `listing_id` und das Verhalten bei mehrdeutigem `symbol` sind festgelegt | | |
-| 5 | dasselbe | Regel, was additiv ist und was ein Bruch wäre | | |
-| 6 | Core-Fixtures | liegen als Datei vor und sind von außen nutzbar | | |
-| 7 | OpenAPI-Schnappschuss | ein Test schlägt an, wenn sich der Core unbemerkt ändert | | |
-| 7b | **`GET /fields`** | liefert die Pflichtfelder **samt Vertragsversion** — zur Laufzeit abfragbar, nicht nur dokumentiert | | |
-| 7c | Vertragsversion erhöhen | ein Konsument kann an der Nummer erkennen, dass er prüfen muss | | |
-| 7d | Vertragsdokument | **Schema** von `GET /generation` steht fest: nur `generation_id` (opake UUID), `Cache-Control: no-store` | | |
-| 7e | dasselbe | **Name und Semantik** von `StockInfo-Generation` stehen fest — Pflicht auf **jeder** Antwort, auch `404`/`409`/`422`/`502` | | |
-| 7f | dasselbe | Regel „Header und Rumpf stammen aus **derselben** Generation" ist festgeschrieben | | |
-| 7g | dasselbe | `Access-Control-Expose-Headers` ist als Vertragspflicht benannt — ohne sie ist der Header cross-origin unlesbar | | |
-| 7h | HTTP-Fixtures | enthalten Positiv- **und** Negativfälle: `200`+Header, `404`/`502`+Header, generationenfähige Antwort **ohne** Header (Vertragsfehler), Header/Body-Widerspruch bei `/generation` | | |
-| 7i | **statisches** Vertragsartefakt und Fixtures | sind untereinander konsistent — jede Fixture erfüllt das dokumentierte Schema, Endpunktpfad und Headername stimmen überein. **Ohne laufende App.** Die Live-Konformität nimmt T-25 `#7j` ab | | |
+| 1 | Vertragsdokument | Core-Pflichtfelder samt Nullability sind benannt | ✅ [^a] | |
+| 2 | dasselbe | Bedeutung von `price`, `quote_time`, `fetched_at`, `cached`, `stale` steht fest | ✅ [^b] | |
+| 3 | dasselbe | bereinigt gegen unbereinigt beim Tages-Schlusskurs ist entschieden | ✅ [^c] | |
+| 4 | dasselbe | `listing_id` und das Verhalten bei mehrdeutigem `symbol` sind festgelegt | ✅ [^d] | |
+| 5 | dasselbe | Regel, was additiv ist und was ein Bruch wäre | ✅ [^e] | |
+| 6 | Core-Fixtures | liegen als Datei vor und sind von außen nutzbar | ✅ [^f] | |
+| 7 | OpenAPI-Schnappschuss | ein Test schlägt an, wenn sich der Core unbemerkt ändert | ➖ Teil 2 | |
+| 7b | **`GET /fields`** | liefert die Pflichtfelder **samt Vertragsversion** — zur Laufzeit abfragbar, nicht nur dokumentiert | ➖ Teil 2 | |
+| 7c | Vertragsversion erhöhen | ein Konsument kann an der Nummer erkennen, dass er prüfen muss | ➖ Teil 2 | |
+| 7d | Vertragsdokument | **Schema** von `GET /generation` steht fest: nur `generation_id` (opake UUID), `Cache-Control: no-store` | ✅ [^g] | |
+| 7e | dasselbe | **Name und Semantik** von `StockInfo-Generation` stehen fest — Pflicht auf **jeder** Antwort, auch `404`/`409`/`422`/`502` | ✅ [^h] | |
+| 7f | dasselbe | Regel „Header und Rumpf stammen aus **derselben** Generation" ist festgeschrieben | ✅ [^i] | |
+| 7g | dasselbe | `Access-Control-Expose-Headers` ist als Vertragspflicht benannt — ohne sie ist der Header cross-origin unlesbar | ✅ [^j] | |
+| 7h | HTTP-Fixtures | enthalten Positiv- **und** Negativfälle: `200`+Header, `404`/`502`+Header, generationenfähige Antwort **ohne** Header (Vertragsfehler), Header/Body-Widerspruch bei `/generation` | ✅ [^k] | |
+| 7i | **statisches** Vertragsartefakt und Fixtures | sind untereinander konsistent — jede Fixture erfüllt das dokumentierte Schema, Endpunktpfad und Headername stimmen überein. **Ohne laufende App.** Die Live-Konformität nimmt T-25 `#7j` ab | ✅ [^l] | |
+
+```bash
+.venv/bin/pytest tests/test_contract.py -q    # #7i und die Fixture-Zeilen
+```
+
+[^a]: `contract/core-contract.json` → `core`, fünf Modelle (`quote`,
+    `instrument`, `daily`, `history`, `fx`), je Feld `kind`, `required` und
+    `meaning`. Erzwungen von
+    `test_jeder_antworttyp_hat_felder_mit_art_und_pflicht`: Ein Feld ohne
+    Bedeutung oder mit unbekannter Art lässt den Test fallen.
+[^b]: `docs/rest-core-contract.md` → „Die Begriffe, die sich sonst niemand
+    erschließt", plus `meaning` je Feld im Artefakt. `quote_time` gegen
+    `fetched_at` und `cached` gegen `stale` sind gegeneinander abgegrenzt;
+    `stale=true` zieht `cached=true` nach sich. Belegt durch die Fixture
+    `quote-200-stale.json`.
+[^c]: **Unbereinigt.** Begründung im Dokument: Eine bereinigte Reihe ändert
+    rückwirkend alte Werte, und ein Depot mit Stückzahlen zu historischen
+    Kursen rechnet damit falsch. Im Artefakt unter `core.daily.close`.
+[^d]: Artefakt → `identity`: opake UUID, nicht abgeleitet, nicht zerlegbar;
+    `symbol` nicht garantiert eindeutig; `409` samt Kandidatenliste. Die
+    Fixture `quote-409-ambiguous-symbol.json` zeigt den Rumpf.
+[^e]: Artefakt → `compatibility` mit `additive`, `breaking`, `versioning` und
+    der Konsumentenregel „unbekannte Felder ignorieren".
+[^f]: Dreizehn Dateien unter `contract/fixtures/`, dazu `contract/README.md`
+    mit dem Umschlagformat. Von außen nutzbar heißt: StockPortfolio liest sie,
+    ohne StockInfo zu starten oder das Repo zu klonen.
+[^g]: Artefakt → `generation.endpoint`, `cache_control`, `id_kind`; Fixture
+    `generation-200.json`. Nur `generation_id`, sonst nichts.
+[^h]: Artefakt → `generation.required_on_every_response`. Fixtures für `404`
+    und `502` tragen den Header; `test_fixture_traegt_den_generationsheader`
+    lässt keine vertragstreue Fixture ohne ihn durch.
+[^i]: Artefakt → `generation.rule`, ausformuliert samt Begründung (UUIDs
+    tragen keine Reihenfolge, deshalb ist `/generation` die Wahrheit und der
+    Header nur das Signal). Geprüft von
+    `test_generationsfixture_haelt_header_und_rumpf_zusammen`.
+[^j]: Artefakt → `generation.expose_headers_required`; im Dokument unter „CORS
+    gehört dazu". Die Fixture `quote-200-ohne-generationsheader.json` nennt
+    den fehlenden Expose-Header als praktische Ursache desselben Symptoms.
+[^k]: Vier Negativfälle: `quote-200-ohne-generationsheader.json`,
+    `generation-200-header-widerspricht-rumpf.json` — dazu die Positivfälle
+    `quote-404.json` und `quote-502.json` **mit** Header. Jede
+    vertragswidrige Fixture nennt in `violates` die verletzte Regel.
+[^l]: `.venv/bin/pytest tests/test_contract.py -q` → `35 passed, 16 skipped`
+    (die Skips sind die Modell-Schemaprüfung für Fehler- und
+    `/generation`-Fixtures, die kein Core-Modell tragen). Der Test importiert
+    die App **nicht**. Gesamtsuite `291 passed`, Ruff sauber.
 
 **Ebene 2 — bewusste Verhaltenskorrektur (kein „nur Dokumentation"):**
 
