@@ -38,7 +38,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 7f | dasselbe | Regel „Header und Rumpf stammen aus **derselben** Generation" ist festgeschrieben | | |
 | 7g | dasselbe | `Access-Control-Expose-Headers` ist als Vertragspflicht benannt — ohne sie ist der Header cross-origin unlesbar | | |
 | 7h | HTTP-Fixtures | enthalten Positiv- **und** Negativfälle: `200`+Header, `404`/`502`+Header, generationenfähige Antwort **ohne** Header (Vertragsfehler), Header/Body-Widerspruch bei `/generation` | | |
-| 7i | OpenAPI-/Vertragsprüfung | schlägt an, wenn Endpunkt, Headername oder Schema von dieser Definition abweichen | | |
+| 7i | **statisches** Vertragsartefakt und Fixtures | sind untereinander konsistent — jede Fixture erfüllt das dokumentierte Schema, Endpunktpfad und Headername stimmen überein. **Ohne laufende App.** Die Live-Konformität nimmt T-25 `#7j` ab | | |
 
 **Ebene 2 — bewusste Verhaltenskorrektur (kein „nur Dokumentation"):**
 
@@ -235,11 +235,19 @@ Die Trennlinie läuft deshalb zwischen **Definition** und **Laufzeit**:
 | Name und Semantik des Headers | Middleware, die ihn setzt |
 | Regeln für Fehlerantworten, CORS, `no-store` | `expose_headers` in der App |
 | HTTP-Fixtures, positiv **und** negativ | persistierte aktive UUID, Rotation |
-| OpenAPI-/Vertragsprüfung gegen die Definition | atomare Bindung Request ↔ DB ↔ Generation |
+| **statische** Konsistenz von Artefakt und Fixtures | **Live-OpenAPI** stimmt mit dem Artefakt überein |
+| — | atomare Bindung Request ↔ DB ↔ Generation |
 
 T-24 formuliert also „Vertrag und Fixture legen fest", nicht „der Server tut".
 So kann T-24 abgeschlossen werden, bevor eine Zeile Middleware existiert — und
 genau das ist der Sinn eines Vertrags.
+
+**Der Schrägstrich in „OpenAPI-/Vertragsprüfung" war die letzte Lücke**
+*(Codex, 2026-08-21)*: Wird die OpenAPI aus der **laufenden** FastAPI-App
+erzeugt, verlangt T-24 wieder die Route, die erst T-25 baut — die Schleife wäre
+im Kleinen zurück. `#7i` prüft deshalb ausdrücklich nur das **statische**
+Artefakt gegen die Fixtures; dass die laufende App diesem Artefakt entspricht,
+nimmt T-25 `#7j` ab.
 
 ### Warum das vor T-21 gehört
 

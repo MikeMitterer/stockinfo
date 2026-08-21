@@ -42,17 +42,24 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 5c | B ungültig, Neustart | A läuft wieder **vollständig** — Konfiguration *und* Plugin-Umgebung, nicht nur die alte Datenbank | | |
 | 6 | Wiederherstellung | ordnet Sicherung und Profil einander zu; ein unpassendes Paar wird abgelehnt | | |
 | 6b | dieselbe Sicherung zweimal einspielen | jede Aktivierung bekommt eine **neue** `generation_id` | | |
-| 7 | **`GET /generation`** | liefert die aktive `generation_id`, mit `Cache-Control: no-store` | | |
+| 7 | **Route** `GET /generation` läuft | liefert die aktive `generation_id` mit `Cache-Control: no-store` | | |
 | 7b | Prozessneustart **ohne** Profilwechsel | dieselbe `generation_id` | | |
 | 7c | verträgliche Konfigurationsänderung (Schlüssel, Zeitgrenze) | dieselbe `generation_id` | | |
 | 7d | Profilwechsel **und** jede Restore-Aktivierung | **neue** `generation_id` | | |
 | 7e | Harness-Stufe 2 | `/generation` und der Antwort-Header laufen im Integrationslauf mit — Erfolgs- **und** Fehlerantworten | | |
-| 7f | **Route** `GET /generation` läuft | antwortet mit der aktiven UUID und `Cache-Control: no-store` | | |
 | 7g | **Middleware** | setzt `StockInfo-Generation` auf **jeder** Antwort, auch `404`/`409`/`422`/`502` | | |
 | 7h | `app/main.py` CORS | `expose_headers` enthält `StockInfo-Generation` — cross-origin im Browser lesbar | | |
 | 7i | Profilwechsel **während** eines laufenden Requests | Header und Rumpf stammen aus **derselben** Generation — Kontext am Requestanfang gebunden | | |
-| 8 | **StockPortfolio** nach Profilwechsel (Abnahme in deren T-35) | schaltet den sichtbaren Quote-/History-**Namespace** um; keine Werte der alten Generation sichtbar; Portfolio, Stückzahlen und Ziele bleiben | | |
-| 8b | dasselbe ohne Profilwechsel | Cache bleibt — die Generation ändert sich nicht bei jeder Konfigänderung | | |
+| 7j | **Live-OpenAPI der laufenden App** gegen das statische Vertragsartefakt aus T-24 | Route, Headername und Schema stimmen überein — hier die Konformität, in T-24 nur die Definition | | |
+
+**Nicht abschlussrelevant — Cross-Repo-Nachweis:** Die folgenden Zeilen werden
+**in StockPortfolio T-35 abgenommen** und blockieren den Abschluss von T-25
+nicht. Sie stehen hier nur, damit der Zusammenhang sichtbar bleibt.
+
+| # | Where | Look for | AI | Human |
+|---|---|---|:--:|---|
+| 8 | **StockPortfolio** nach Profilwechsel → **T-35 `#4`** | schaltet den sichtbaren Quote-/History-**Namespace** um; keine Werte der alten Generation sichtbar; Portfolio, Stückzahlen und Ziele bleiben | ➖ | — |
+| 8b | dasselbe ohne Profilwechsel → **T-35 `#6`** | Cache bleibt — die Generation ändert sich nicht bei jeder Konfigänderung | ➖ | — |
 
 ---
 
@@ -150,6 +157,14 @@ T-35 bewusst vermieden hat.
 **Angelegt am 2026-08-21: `StockPortfolio/_tickets/T-35-stockinfo-generation-und-waehrung.md`.**
 Verify `#8` kann in einem Ticket mit Scope „StockInfo (Backend + Dashboard)"
 nicht grün werden — es wird **dort** abgenommen. Das Ticket hält fest:
+
+> **`#8`/`#8b` blockieren den Abschluss von T-25 nicht** *(Codex, 2026-08-21)*.
+> Sie standen in der abschlussrelevanten Tabelle, während T-35 zugleich von T-25
+> abhängt — bei strenger Auslegung („alle Verify-Zeilen grün") wäre das dieselbe
+> Schleife wie eben zwischen T-24 und T-25. Die fachliche Reihenfolge ist
+> eindeutig: **T-25 schließt zuerst**, T-35 arbeitet währenddessen gegen die
+> veröffentlichten T-24-Fixtures und macht den echten Integrationslauf danach.
+> Das Consumer-Verhalten gehört **allein** T-35.
 
 - letzte `generation_id` speichern, bei Änderung reagieren
 - **nur** den Kurs-/History-Namespace umschalten — nie Portfolio, Stückzahlen, Ziele

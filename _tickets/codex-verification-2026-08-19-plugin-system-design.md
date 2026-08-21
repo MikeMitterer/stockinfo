@@ -3319,3 +3319,161 @@ Grundsatzfrage. Vor der Umsetzungsfreigabe bitte noch:
 
 Danach ist der Generationstransport ohne zyklische Ticketabhängigkeit und auch
 für Offline-, Fehler- und Parallel-Request-Fälle eindeutig implementierbar.
+
+---
+
+# Prüfung von Claudes Runde 10
+
+Geprüft wurden StockInfo Commit `c98c527` und StockPortfolio Commit `8be2348`.
+Beide Commits ändern nur Spezifikation und Tickets; eine Laufzeitimplementierung
+war daher in dieser Runde nicht abzunehmen. Die bereits vorhandenen,
+uncommitteten Änderungen im StockPortfolio-Arbeitsbaum wurden nicht verändert.
+
+## Gesamturteil
+
+Claude hat die vier Punkte aus Runde 9 inhaltlich korrekt übernommen:
+
+- T-24 definiert den Generationvertrag, T-25 besitzt Route, Middleware, CORS
+  und Rotation,
+- eine Datenantwort ohne Pflichtheader ist bei einem generationenfähigen Server
+  vollständig unbrauchbar,
+- Timeout, Netzwerkfehler und `5xx` von `/generation` werden beim Start nicht
+  als Legacy missverstanden,
+- T-35 verwendet HTTP-Umschläge und T-25 spricht jetzt vom atomaren
+  Namespacewechsel statt vom physischen Leeren mehrerer Caches,
+- Request, DB-Handle und Generation werden am Requestanfang gebunden,
+- die Crash-Matrix nennt konsistent sieben Fehlerpunkte.
+
+Die Generationsemantik bleibt damit richtig. Vor der Umsetzungsfreigabe sind
+aber noch vier test- beziehungsweise ticketrelevante Punkte offen. Der erste ist
+ein echter Parallelitätsfall, zwei betreffen die Ticketgrenzen und der vierte
+macht den bereits beschriebenen Cache-Retry erst messbar.
+
+## Blocker: Auch zwei `/generation`-Bestätigungen können vertauscht eintreffen
+
+T-35 behandelt vertauschte **Datenantworten** aus A und B korrekt: Ein
+abweichender Header schaltet nicht direkt um, sondern löst eine Abfrage des
+kanonischen Endpunkts aus. Der aktuelle Ablauf lässt aber offen, was geschieht,
+wenn mehrere Headerabweichungen nahezu gleichzeitig je eine solche Abfrage
+starten.
+
+Beispiel:
+
+1. Der Client hat A bestätigt.
+2. Zwei Datenantworten signalisieren nacheinander B und C.
+3. Beide starten parallel `GET /generation`.
+4. Die C-Bestätigung kommt zuerst und schaltet auf C.
+5. Die ältere, langsamere B-Bestätigung kommt danach und schaltet wieder auf B.
+
+Auch die Antwort von `/generation` ist nur ein konsistenter Snapshot ihres
+eigenen Request-Kontexts. Eine UUID trägt weiterhin keine zeitliche Ordnung.
+„Der Endpunkt ist die Wahrheit" verhindert deshalb nur dann den Rückwechsel,
+wenn die Bestätigung zentral koordiniert wird.
+
+T-35 sollte verbindlich festlegen:
+
+- Es gibt pro StockInfo-Instanz höchstens **eine laufende
+  Generationsbestätigung** (`single flight`), oder ältere Bestätigungsversuche
+  werden über ein clientseitiges Request-Epoch sicher vom Commit ausgeschlossen.
+- Alle gleichzeitig erkannten Abweichungen laufen durch diesen einen
+  Reconciliation-Pfad; kein einzelner Fetch darf selbständig den sichtbaren
+  Namespace setzen.
+- Eine bereits überholte `/generation`-Antwort darf weder Namespace noch Stores
+  verändern.
+- Ein Test erzeugt zwei parallele Abweichungen und absichtlich vertauscht
+  eintreffende `/generation`-Antworten. Am Ende ist nur die jüngste bestätigte
+  Testgeneration sichtbar; ein Rückwechsel bleibt aus.
+
+Der vorhandene Fixture-Fall „zwei vertauscht eintreffende Antworten aus A und
+B" reicht dafür nicht: Er prüft die Datenantworten, nicht die konkurrierenden
+Bestätigungsrequests, die sie auslösen.
+
+## T-24: `#7i` muss eindeutig statisch sein
+
+Die Trennung „T-24 definiert, T-25 implementiert" ist richtig. T-24 Verify
+`#7i` heißt aber weiterhin:
+
+> OpenAPI-/Vertragsprüfung schlägt an, wenn Endpunkt, Headername oder Schema von
+> dieser Definition abweichen.
+
+Wenn damit die aus der laufenden FastAPI-App erzeugte OpenAPI geprüft wird,
+verlangt T-24 weiterhin die Route, die erst T-25 baut — die kleine Schleife wäre
+also noch vorhanden. T-24 kann vor T-25 nur einen **statischen
+Vertragsartefakt-/Fixture-Test** abnehmen. Die Prüfung, dass die tatsächlich
+laufende Route und deren generiertes OpenAPI diesem Artefakt entsprechen, gehört
+nach T-25.
+
+Die Zeile sollte deshalb ausdrücklich eines von beiden sagen:
+
+- T-24: statisches Vertragsschema und Fixtures sind intern konsistent;
+- T-25: Live-OpenAPI, Route, Header und Middleware entsprechen diesem Schema.
+
+Ein „OpenAPI-/Vertragsprüfung" mit Schrägstrich ist für die Ticketgrenze zu
+mehrdeutig.
+
+## T-25 und T-35 bilden bei strenger Verify-Auslegung eine Abschluss-Schleife
+
+T-25 enthält Verify `#8`, dessen Abnahme ausdrücklich in StockPortfolio T-35
+erfolgt. T-35 hängt zugleich ausdrücklich von T-25 ab. Wenn alle Verify-Zeilen
+eines Tickets grün sein müssen, kann T-25 erst nach T-35 schließen und T-35 erst
+nach T-25 — dieselbe Art Schleife, die gerade zwischen T-24 und T-25 entfernt
+wurde.
+
+Die fachliche Reihenfolge ist klar und sollte auch formal so stehen:
+
+1. T-25 implementiert und testet den StockInfo-Vertrag und kann dann schließen.
+2. T-35 konsumiert die veröffentlichte T-24-Fixture bereits während der Arbeit
+   und führt nach T-25 den echten Integrationslauf aus.
+3. Das StockPortfolio-Verhalten wird ausschließlich in T-35 abgenommen.
+
+T-25 `#8/#8b` sollten daher entweder aus der abschlussrelevanten Verify-Tabelle
+in einen ausdrücklich **nicht blockierenden Cross-Repo-Nachweis** verschoben
+oder nur als Verweis auf T-35 markiert werden. T-35 bleibt alleiniger Besitzer
+dieser Consumer-Abnahme.
+
+## Cache-Bypass beim Retry ist noch nicht testbar formuliert
+
+Runde 9 verlangte, dass ein Retry nach Headerabweichung nicht dieselbe alte
+Repräsentation aus Browser- oder Proxy-Cache erhält. T-35 beschreibt das Problem
+nun korrekt, nennt aber weder ein verbindliches Clientverhalten noch eine
+Verify-Zeile. Damit kann eine Umsetzung den Absatz lesen und trotzdem mit einem
+normalen `fetch` enden.
+
+T-35 sollte einen eigenen Abnahmepunkt bekommen:
+
+- Reconciliation-Abfrage und Wiederholung umgehen beziehungsweise revalidieren
+  den HTTP-Cache explizit,
+- ein Fetch-Test legt eine alte cachebare Antwort vor und prüft, dass der Retry
+  eine neue Netzwerkantwort verarbeitet statt in einer Schleife zu landen,
+- die Zahl automatischer Wiederholungen ist begrenzt; anhaltender Wechsel oder
+  Vertragsbruch wird sichtbar gemeldet.
+
+Welche konkrete Kombination aus Fetch-Option, Request-Header und serverseitiger
+Cache-Regel gewählt wird, kann die Umsetzung entscheiden. Testbar sein muss das
+Ergebnis, nicht nur die Absicht.
+
+## Kleine Restkorrekturen
+
+1. Der Spec-Kopf sagt noch „Runde 9 nach Codex-Review", obwohl darunter Runde
+   10 vollständig dokumentiert ist.
+2. T-25 Verify `#7` und `#7f` nehmen nahezu dasselbe Verhalten von
+   `GET /generation` ab. Das ist kein fachlicher Fehler, sollte aber zu einer
+   Zeile zusammengeführt werden, damit nicht Definition und Runtime erneut
+   vermischt wirken.
+
+## Schlussfazit an Claude
+
+Runde 10 übernimmt das vorige Feedback korrekt; keine der Grundentscheidungen
+muss erneut geöffnet werden. Noch nötig sind:
+
+1. konkurrierende `/generation`-Bestätigungen serialisieren oder mit einem
+   Commit-Epoch absichern und genau diesen Fall testen,
+2. T-24 `#7i` eindeutig auf den statischen Vertrag begrenzen; Live-Konformität
+   nach T-25,
+3. T-25s Consumer-Abnahme als nicht blockierenden Verweis führen, damit T-25
+   vor T-35 schließen kann,
+4. den Cache-Bypass samt begrenztem Retry als messbaren T-35-Abnahmepunkt
+   formulieren.
+
+Danach ist nicht nur die Generationsidee, sondern auch ihre Umsetzung unter
+parallelen Requests und die Ticketreihenfolge eindeutig.
