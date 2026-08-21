@@ -32,7 +32,8 @@ if [[ "${__APPS_LIB__:=""}"   == "" ]]; then . "${BASH_LIBS}/apps.lib.sh";   fi
 
 readonly APPNAME="$(basename "$0")"
 readonly PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-readonly PORT=8765
+# Überschreibbar, falls der Port belegt ist: `PORT=8790 ./T-16-smoke.sh --run`
+readonly PORT="${PORT:-8765}"
 readonly BASE_URL="http://127.0.0.1:${PORT}"
 readonly VENV_PY="${PROJECT_ROOT}/.venv/bin/python"
 
@@ -80,17 +81,38 @@ showInfo() {
     echo
 }
 
+# Bricht ab, wenn auf dem Port schon jemand lauscht.
+#
+# Ohne diese Prüfung könnte der Health-Check in `startServer` den **fremden**
+# Server für den eigenen halten: Er fragt nur, ob `${BASE_URL}/health`
+# antwortet, und das tut auch ein Server, den jemand anderes gestartet hat.
+# Der Lauf liefe dann gegen die falsche Instanz und die falsche Datenbank.
+#
+# Returns:
+#   0 wenn der Port frei ist, sonst 1
+requirePortIsFree() {
+    local _OCCUPANT
+    _OCCUPANT="$(lsof -ti ":${PORT}" 2>/dev/null)"
+    [[ -z "${_OCCUPANT}" ]] && return 0
+
+    echo -e "  ${RED}✗${NC} Port ${PORT} ist belegt (PID ${_OCCUPANT//$'\n'/, })."
+    echo -e "      Dieses Script beendet nichts, was es nicht selbst gestartet hat."
+    echo -e "      Anderen Port wählen: ${GREEN}PORT=8790 ${APPNAME} --run${NC}"
+    return 1
+}
+
 # Räumt Server und Arbeitsverzeichnis ab. Wird per trap aufgerufen.
+#
+# **Nur die eigene PID.** Eine frühere Fassung räumte zusätzlich alles ab, was
+# auf dem Port lauschte — „Gürtel und Hosenträger". Das ist keine Absicherung,
+# sondern ein Risiko: Ist der Port belegt, gehört der Prozess dort jemand
+# anderem, womöglich einem laufenden Entwicklungsserver. Gegen einen belegten
+# Port hilft `requirePortIsFree` davor, nicht der Holzhammer danach.
 cleanup() {
     if [[ -n "${SERVER_PID}" ]] && kill -0 "${SERVER_PID}" 2>/dev/null; then
         kill "${SERVER_PID}" 2>/dev/null
         wait "${SERVER_PID}" 2>/dev/null
     fi
-    # Gürtel und Hosenträger: Wer auch immer noch auf dem Port sitzt, geht
-    # mit. Ein zurückgelassener Server blockiert den nächsten Lauf still.
-    local _NACHZUEGLER
-    _NACHZUEGLER="$(lsof -ti ":${PORT}" 2>/dev/null)"
-    [[ -n "${_NACHZUEGLER}" ]] && kill ${_NACHZUEGLER} 2>/dev/null
     if [[ -n "${WORKDIR}" && -d "${WORKDIR}" ]]; then
         if [[ "${KEEP_LOG}" == true ]]; then
             echo -e "  ${BLUE}ℹ${NC} Server-Log: ${WORKDIR}/server.log"
@@ -105,6 +127,7 @@ cleanup() {
 # Returns:
 #   0 wenn der Server erreichbar ist, 1 bei Zeitüberschreitung
 startServer() {
+    requirePortIsFree || return 1
     WORKDIR="$(mktemp -d)"
     echo -e "  ${BLUE}ℹ${NC} Frische DB unter ${WORKDIR}"
 
