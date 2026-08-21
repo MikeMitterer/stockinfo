@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend) | in-review | 90 min | drei Fehler im Antwortpfad, kein Umbau | — |
+| StockInfo (Backend) | codex-abgenommen | 90 min | drei Fehler im Antwortpfad, kein Umbau | — |
 
 **Löst:** Drei Stellen, an denen die App etwas Falsches speichert oder ausliefert,
 ohne dass es auffällt. Alle drei am 2026-08-19 gemessen, alle drei vorbestehend
@@ -215,7 +215,13 @@ dort mitbehoben.
 
 ## Auflösung
 
-**Stand 2026-08-21 — umgesetzt, bei Codex im Review.**
+**Stand 2026-08-21 — umgesetzt, von Codex in Runde 2 abgenommen.**
+
+Ohne sachliche Findings, auf Commit `1a2f2bd`. Codex hat unabhängig
+nachgerechnet: die drei Zieltests (67 bestanden), Ruff über die berührten
+Dateien, `bash -n` für beide Prüf-Scripts, `make test` (256 + 36 + 230) und
+`./_tickets/T-17-smoke.sh --run` (8/8). Offen bleibt allein die Abnahme durch
+Mike — gesammelt über **T-28**, nicht hier.
 
 Die `Human`-Spalte bleibt bis zum Projektabschluss leer; die Abnahme durch
 Mike läuft gesammelt über **T-28**, nicht Ticket für Ticket.

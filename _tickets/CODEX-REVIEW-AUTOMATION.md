@@ -4,6 +4,12 @@ Dieses Dokument ist der stabile Vertrag für den periodischen Claude→Codex-
 Review. Operativer Zustand und aktuelle Nachrichten stehen ausschließlich in
 `STATUS.md`; dieses Dokument enthält keine Laufhistorie.
 
+Der Scheduled Task läuft **in dem bestehenden Codex-Review-Chat**, nicht als
+Standalone-Task. So kehrt jeder Lauf in denselben fachlichen Kontext zurück.
+Die Chat-Historie ist die kurzfristige Lernschicht; das versionierte
+`CLAUDE-REVIEW-PATTERNS.md` ist die kanonische, compaction- und
+sitzungsfeste Lernschicht sowie die Datenbasis für den späteren Skill.
+
 ## Zustandsprotokoll
 
 `STATUS.md` enthält unter **Maschinenlesbarer Zustand** genau diese Felder:
@@ -37,12 +43,17 @@ die Phase `approved` mit `owner: mike` oder `changes_requested` mit
 
 ## Prompt für den periodischen Codex-Task
 
-Den folgenden Prompt in einem Codex Scheduled Task für dieses **lokale
-Projekt** verwenden. Kein separater Worktree: Claude und Codex müssen dasselbe
-`STATUS.md` und denselben Branch sehen.
+Den folgenden Prompt als Scheduled Task **in diesem bestehenden Review-Chat**
+für dieses **lokale Projekt** verwenden. Keinen Standalone-Task und keinen
+separaten Worktree wählen: Claude und Codex müssen dasselbe `STATUS.md` und
+denselben Branch sehen. Ein bereits bestehender Standalone-Task wird pausiert
+oder gelöscht, damit nicht zwei Reviewer dieselbe Übergabe bearbeiten.
 
 ```text
 Du bist der unabhängige Reviewer für Claudes Arbeit im Projekt StockInfo.
+Dieser Scheduled Task kehrt alle fünf Minuten in den bestehenden Review-Chat
+zurück. Nutze dessen bisherigen Kontext für die fortlaufende Mustererkennung,
+aber behandle die versionierten Projektdateien als kanonischen Zustand.
 Arbeite ausschließlich im aktuellen lokalen Projekt und beachte AGENTS.md,
 CLAUDE.md sowie die zutreffenden Skills, insbesondere
 task-verification-workflow und code-standards.
@@ -50,7 +61,8 @@ task-verification-workflow und code-standards.
 1. Lies zuerst _tickets/STATUS.md,
    _tickets/CODEX-REVIEW-AUTOMATION.md und
    _tickets/CLAUDE-REVIEW-PATTERNS.md vollständig. Diese Dateien sind das
-   Gedächtnis nach einer Chat-Compaction; verlasse dich nicht auf Chat-Historie.
+   Gedächtnis nach einer Chat-Compaction. Verbinde sie mit den bisherigen
+   Beobachtungen dieses Chats, statt bei jedem Lauf bei null anzufangen.
 2. Wenn phase nicht ready_for_codex ist: Verändere keine Datei und antworte
    knapp "Keine neue Claude-Übergabe" mit aktueller Phase. Beende den Lauf.
 3. Validiere bei ready_for_codex vor jedem Schreibzugriff:
@@ -80,6 +92,8 @@ task-verification-workflow und code-standards.
    Erwartung. Ergänze ein wiederkehrendes Claude-Fehlermuster ausschließlich
    dann in _tickets/CLAUDE-REVIEW-PATTERNS.md, wenn mindestens zwei konkrete
    Belege oder eine ausdrücklich falsche Vollständigkeitsbehauptung vorliegen.
+   Ergänze bei einem bekannten Muster den neuen Beleg am bestehenden Eintrag;
+   so wächst eine auswertbare Datensammlung für den späteren Skill.
    Entferne die verarbeitete Nachricht aus OUTBOX → Codex.
 8. Bei mindestens einem sachlichen Finding: phase changes_requested,
    owner claude. Ohne Finding: phase approved, owner mike. Aktualisiere

@@ -38,6 +38,10 @@ _tickets/
   `(ticket, handoff_commit, review_round)`; dasselbe Tupel wird nie zweimal
   geprüft. Der vollständige Vertrag und der Scheduled-Task-Prompt stehen in
   `CODEX-REVIEW-AUTOMATION.md`.
+- **Der Reviewer-Task hängt am bestehenden Codex-Review-Chat.** Kein
+  Standalone-Task: Der bestehende Chat liefert die fortlaufende fachliche
+  Lernkurve, das Musterregister sichert sie zusätzlich gegen Compaction und
+  Sitzungswechsel ab.
 - **Wiederkehrende Claude-Muster überleben Chat-Compaction.** Sie werden nur
   in `CLAUDE-REVIEW-PATTERNS.md` dauerhaft gepflegt. Jeder Review liest diese
   Datei zuerst und ergänzt ausschließlich belegte, verallgemeinerbare Muster;
