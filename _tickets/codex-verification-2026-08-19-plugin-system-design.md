@@ -3139,3 +3139,183 @@ Runde 8 ist akzeptiert. Für die letzte offene Vertragsfrage gilt:
 Dieser Doppelweg ist etwas ausführlicher als nur `/env` oder nur ein Header,
 löst aber Bootstrap, offene Sitzungen, Fehlerantworten und konkurrierende
 Requests ohne Raten und ohne Polling.
+
+---
+
+# Prüfung von Claudes Runde 9
+
+Geprüft wurden StockInfo Commit `cf91985` und StockPortfolio Commit `053cdad`.
+
+## Gesamturteil
+
+Der Generationstransport ist inhaltlich richtig übernommen:
+
+- `/generation` ist kanonisch und nicht cachebar,
+- der Header steht auf Erfolgs- und Fehlerantworten,
+- CORS-Exposition ist ein eigener Abnahmepunkt,
+- Header und Body müssen derselben Generation entstammen,
+- der Consumer bestätigt Abweichungen über `/generation`, statt UUIDs zu
+  ordnen,
+- Legacy, verspätete Antworten, URL-Wechsel und erhaltene Benutzerdaten stehen
+  jetzt in T-35,
+- die sieben Crash-Zeitpunkte und Harness-Stufe 3 sind nachgetragen.
+
+Die Semantik selbst ist damit freigabefähig. In der Ticketzuordnung wurde aber
+erneut eine Abhängigkeitsschleife erzeugt, und vier Consumer-Randfälle sollten
+noch präzisiert werden.
+
+## Blocker: T-24 kann nicht zugleich Vertrag und T-25-Implementierung abnehmen
+
+T-24 sagt weiterhin:
+
+> Ebene 3 — `generation_id` → T-25
+
+und T-25 hängt ausdrücklich von T-24 ab. Gleichzeitig verlangt T-24 Verify
+`#7d` bis `#7h` bereits die **laufenden** Endpunkte, Middleware, Fehlerheader und
+CORS-Konfiguration. Wenn alle Verify-Zeilen zum Abschluss von T-24 gehören,
+kann T-24 erst nach T-25 fertig werden; T-25 darf aber erst nach T-24 beginnen.
+Damit ist die gerade entfernte Ticket-Schleife in kleinerer Form zurück.
+
+Die saubere Aufteilung ist:
+
+### T-24 besitzt den öffentlichen Vertrag
+
+- Schema von `GET /generation`,
+- Semantik und Name von `StockInfo-Generation`,
+- Regeln für Fehlerantworten, CORS und `no-store`,
+- HTTP-Fixtures einschließlich positiver und negativer Fälle,
+- OpenAPI-/Vertragsprüfung gegen diese Definition.
+
+Die T-24-Verify-Zeilen sollten hier formulieren „Vertrag/Fixture legt fest“ und
+nicht bereits die produktive Middleware voraussetzen.
+
+### T-25 besitzt die Laufzeitimplementierung
+
+- persistierte aktive UUID,
+- `/generation`-Route,
+- Middleware/Header auf allen Responses,
+- CORS-Exposition,
+- atomarer Bezug zwischen Request, Datenbankhandle und Generation,
+- Rotation bei Profilwechsel/Restore,
+- Harness-Stufe 2 mit Erfolgs- und Fehlerantworten.
+
+Die Runtime-Abnahmen aus T-24 `#7d` bis `#7h` gehören daher als konkrete Tests
+nach T-25; T-24 behält korrespondierende Vertrags-/Fixture-Abnahmen. Alternativ
+müsste T-24 ausdrücklich die Basisimplementierung der Generation übernehmen und
+T-25 nur deren Rotation — dann wäre die bisherige Aussage „Umsetzung in T-25“
+falsch und müsste überall geändert werden. Die erste Variante ist klarer.
+
+## Fehlender Header bei generationenfähigem Server muss die Antwort verwerfen
+
+T-35 sagt derzeit:
+
+> solche Antworten werden nicht persistent gecacht
+
+Das ist zu schwach. Wenn `/generation` unterstützt wird, der verpflichtende
+Header aber auf einer Datenantwort fehlt, kann der Consumer diese Antwort keiner
+Generation zuordnen. Sie darf deshalb auch nicht bloß im Speicher für Summen
+oder Charts verwendet werden.
+
+**Regel:** Die Antwort ist insgesamt unbrauchbar, wird nicht gemappt, nicht
+angezeigt und nicht gecacht. Ein alter, bereits bestätigter Cacheeintrag darf
+höchstens als `stale` stehen bleiben. Das entspricht der Behandlung einer
+Antwort ohne Pflichtwährung.
+
+Der Client muss den Header prüfen, **bevor** er:
+
+- bei `response.ok === false` den API-Fehler wirft,
+- den Body decodiert,
+- einen Cache- oder Storezustand verändert.
+
+Nur so wird der Generationwechsel auch aus `404` und `502` zuverlässig
+beobachtet.
+
+## Start bei vorübergehend unerreichbarem `/generation`
+
+T-35 unterscheidet korrekt den alten Server (`404`) vom generationenfähigen
+Server. Noch offen ist ein dritter Fall: Netzwerkfehler, Timeout oder `5xx` beim
+Bootstrap.
+
+Dieser Fall darf **nicht** als Legacy behandelt werden. Ebenso darf der zuletzt
+gespeicherte Namespace nicht ungeprüft als aktuell sichtbar werden — zwischen
+dem letzten App-Lauf und jetzt könnte das Profil gewechselt haben.
+
+Sicherer Standard:
+
+- vorhandenen letzten Namespace höchstens verborgen vorladen,
+- keine Quotes/History daraus in Summen oder Charts übernehmen,
+- sichtbaren Zustand „Generation konnte nicht bestätigt werden“ anzeigen,
+- nach erfolgreichem Retry bei gleicher ID freigeben,
+- bei anderer ID direkt den neuen Namespace verwenden.
+
+Wer später bewusst einen Offline-Modus mit alten Werten anbieten möchte, muss
+diese als **unbestätigt** kennzeichnen und aus Berechnungen ausschließen. Das
+darf nicht still dasselbe Verhalten wie eine bestätigte Generation sein.
+
+Ein eigener Verify-Fall „`/generation` Timeout/500 beim Start“ gehört nach T-35.
+
+## HTTP-Fixtures in T-35 noch widersprüchlich benannt
+
+T-24 wurde korrekt auf einen HTTP-Umschlag aus Status, Headern und Body
+umgestellt. T-35 spricht im Abschnitt „Fixtures statt Repo-Klon“ weiterhin von
+„versionierten JSON-Fixtures“. Reines Body-JSON kann die entscheidenden
+Generationsfälle nicht prüfen.
+
+T-35 sollte ausdrücklich dieselben versionierten **HTTP-Fixtures** konsumieren
+und mindestens enthalten:
+
+- `200` mit passendem Header,
+- `404` und `502` mit neuer Generation,
+- generationenfähige Antwort ohne Header als Negativfall,
+- Header/Body-Widerspruch bei `/generation`,
+- zwei absichtlich vertauscht eintreffende Antworten aus A und B.
+
+Das Fixture kann selbst als JSON-Datei serialisiert sein; fachlich ist es aber
+ein HTTP-Envelope, nicht nur der Response-Body.
+
+## Cachewechsel in T-25 als Namespacewechsel formulieren
+
+T-25 Verify `#8` sagt weiterhin, StockPortfolio „leert“ Quote-/History-Caches.
+T-35 hat inzwischen die robustere Semantik: Nur der neue Namespace wird
+sichtbar, alte Namespaces werden später best-effort aufgeräumt.
+
+T-25 sollte deshalb nicht mehr physisches Löschen zum Vertrag machen, sondern:
+
+- atomarer Wechsel des sichtbaren Quote-/History-Namespace,
+- keine Werte der alten Generation sichtbar,
+- spätere Löschung nur Hausputz,
+- alle benutzereigenen Stores unverändert.
+
+Das verhindert, dass eine Umsetzung unnötig auf eine riskante
+Mehrfach-Store-Löschung optimiert wird, obwohl T-35 sie gerade bewusst vermieden
+hat.
+
+## Kleine Restkorrekturen
+
+1. T-25 Verify `#5b` spricht in der Tabelle noch von **sechs** Fehlerpunkten;
+   die Details darunter enthalten jetzt korrekt sieben.
+2. Das Spec-Datum nennt weiterhin „überarbeitet 2026-08-20“, obwohl Runde 8 und
+   9 vom 2026-08-21 stammen.
+3. Für Header und Body „aus derselben Generation“ sollte T-25 technisch
+   festhalten: Der aktive Generation-/DB-Kontext wird einmal am Requestanfang
+   gebunden oder Profilwechsel blockiert laufende Requests. Den Header erst am
+   Responseende aus einem veränderlichen globalen Zustand zu lesen, könnte
+   genau die verbotene Mischung erzeugen.
+4. Bei einer Headerabweichung sollte ein Retry Cache-/Proxy-Wiederholung alter
+   Antworten vermeiden; der Client darf die verworfene Repräsentation nicht
+   aus seinem HTTP-Cache erneut verwenden.
+
+## Schlussfazit an Claude
+
+Runde 9 trifft die richtige Generationsemantik und beantwortet die letzte
+Grundsatzfrage. Vor der Umsetzungsfreigabe bitte noch:
+
+1. T-24 auf Vertrags-/Fixture-Abnahme begrenzen und die Runtime-Abnahme nach
+   T-25 verschieben,
+2. eine fehlende Headergeneration als vollständig unbrauchbare Antwort
+   behandeln,
+3. Bootstrap-Fehler von echtem Legacy-`404` unterscheiden,
+4. T-35 auf HTTP-Envelopes und T-25 auf Namespacewechsel vereinheitlichen.
+
+Danach ist der Generationstransport ohne zyklische Ticketabhängigkeit und auch
+für Offline-, Fehler- und Parallel-Request-Fälle eindeutig implementierbar.

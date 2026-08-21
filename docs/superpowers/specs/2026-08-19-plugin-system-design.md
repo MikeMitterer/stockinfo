@@ -1,6 +1,6 @@
 # StockInfo — Datenquellen als Python-Plugins
 
-**Datum:** 2026-08-19, überarbeitet 2026-08-20
+**Datum:** 2026-08-19, überarbeitet 2026-08-21
 **Status:** Design zur Freigabe, Runde 9 nach Codex-Review
 **Tickets:** T-17 bis T-27b
 
@@ -940,9 +940,95 @@ lesen. Steht jetzt als Verify-Zeile in T-24.
 | nur `quoteCache` und `dailyHistory` generationell; Allowlist und Snapshots bleiben | T-35 `#6g` |
 | T-24 **definiert**, T-25 **implementiert** die Generation | T-35, Abhängigkeit präzisiert |
 
+### Runde 10 (2026-08-21) — vier Nachbesserungen, alle übernommen
+
+Codex hat Runde 9 geprüft und **nichts an der Semantik beanstandet**, wohl aber
+vier Stellen, an denen die Tickets ihr nicht folgen. Alle vier sind berechtigt.
+
+#### 1. Ich hatte die Ticket-Schleife wieder eingebaut — nur kleiner
+
+Das ist der peinlichste Punkt, weil ich denselben Fehler eine Runde zuvor selbst
+entfernt hatte. T-24 sagt „Ebene 3 — `generation_id` → T-25", T-25 hängt an
+T-24 — und trotzdem verlangten meine neuen Zeilen `#7d`–`#7h` in T-24 bereits
+die **laufenden** Endpunkte, Middleware, Fehlerheader und CORS-Konfiguration.
+Damit hätte T-24 erst nach T-25 fertig werden können und T-25 erst nach T-24
+beginnen dürfen.
+
+Die Trennlinie läuft zwischen **Definition** und **Laufzeit**:
+
+| T-24 | T-25 |
+|---|---|
+| Schema von `GET /generation` | die Route |
+| Name und Semantik des Headers | die Middleware |
+| Regeln für Fehler, CORS, `no-store` | `expose_headers` in der App |
+| HTTP-Fixtures, positiv und negativ | UUID-Persistenz und Rotation |
+| OpenAPI-Prüfung gegen die Definition | atomare Bindung Request ↔ DB ↔ Generation |
+
+T-24 formuliert jetzt „Vertrag und Fixture legen fest", nicht „der Server tut".
+Codex' Alternative — T-24 übernimmt die Basisimplementierung, T-25 nur die
+Rotation — wäre auch tragfähig, hätte aber die Aussage „Umsetzung in T-25" an
+allen Stellen falsch gemacht. Die erste Variante ist klarer.
+
+#### 2. „Nicht cachen" war zu schwach
+
+Ich hatte in T-35 geschrieben, eine Antwort ohne Pflichtheader werde „nicht
+persistent gecacht". Falsch gedacht: Ohne Header lässt sich die Antwort
+**keiner Generation zuordnen** — dann darf sie auch nicht für Summen oder
+Charts im Speicher gelten. Sie ist insgesamt unbrauchbar, genau wie eine Antwort
+ohne Pflichtwährung.
+
+Daraus folgt eine Reihenfolge, die man leicht falsch herum baut: Der Header wird
+geprüft, **bevor** bei `response.ok === false` der Fehler geworfen wird, bevor
+der Rumpf decodiert wird und bevor sich irgendein Zustand ändert. Wirft man
+vorher, ist der Header verloren — und genau dann bliebe der alte Cache nach
+einem Profilwechsel stehen.
+
+Dazu ein Detail, das ich nicht bedacht hatte: Ein Retry nach Header-Abweichung
+darf die verworfene Repräsentation nicht aus HTTP-Cache oder Proxy
+zurückbekommen. Sonst dreht sich die Schleife.
+
+#### 3. Ein unerreichbares `/generation` ist kein alter Server
+
+Ich hatte zwei Fälle unterschieden — Legacy (`404`) und generationenfähig — und
+den dritten übersehen: **Netzwerkfehler, Timeout oder `5xx` beim Start.** Ihn
+als Legacy zu behandeln wäre bequem und falsch.
+
+Ebenso wenig darf der zuletzt gespeicherte Namespace ungeprüft als aktuell
+gelten; zwischen dem letzten Lauf und jetzt kann das Profil gewechselt haben.
+Der sichere Standard: verborgen vorladen, nichts davon in Summen oder Charts,
+sichtbarer Zustand „Generation konnte nicht bestätigt werden", nach Retry mit
+gleicher ID freigeben, bei anderer ID direkt umschalten.
+
+#### 4. Zwei Begriffe waren zwischen den Tickets auseinandergelaufen
+
+T-35 sprach noch von „versionierten JSON-Fixtures", obwohl T-24 längst auf den
+HTTP-Umschlag umgestellt ist — und reines Body-JSON kann keinen einzigen
+Generationsfall prüfen, der Header steht nicht darin. Umgekehrt sagte T-25
+weiterhin, StockPortfolio „leert" die Caches, während T-35 längst den
+Namespace-Wechsel trägt. Beides ist keine Wortwahl: Physisches Löschen mehrerer
+Object-Stores ist mehrschrittig und kann mittendrin abbrechen — genau davor
+schützt der Namespace. Eine Umsetzung hätte auf das Falsche optimiert.
+
+#### Restkorrekturen
+
+| Punkt | Erledigt |
+|---|---|
+| T-25 `#5b` sagte in der Tabelle „sechs", die Details „sieben" | jetzt sieben an beiden Stellen |
+| Spec-Datum stand auf 2026-08-20 | auf 2026-08-21 gezogen |
+| Header darf nicht am Responseende aus globalem Zustand gelesen werden | T-25, eigener Abschnitt + `#7i` |
+
+| Punkt | Wohin |
+|---|---|
+| T-24 auf Vertrag/Fixture begrenzt, Runtime nach T-25 | T-24 `#7d`–`#7i`, T-25 `#7f`–`#7i` |
+| fehlender Header ⇒ Antwort komplett unbrauchbar | T-35 `#6d2` |
+| Bootstrap-Fehler ≠ Legacy | T-35 `#6d3`–`#6d5` |
+| Fixtures sind HTTP-Umschläge | T-35 `#7`/`#7b` |
+| Namespace-Wechsel statt Löschen | T-25 `#8` |
+| Kontext am Requestanfang binden | T-25 `#7i` |
+
 ### Was ich zurückgebe
 
-**Derzeit nichts offen an Codex.** Alle Punkte aus den Runden 2 bis 9 sind
+**Derzeit nichts offen an Codex.** Alle Punkte aus den Runden 2 bis 10 sind
 beantwortet und eingearbeitet — auch die letzte Vertragsfrage, der
 Generationstransport. Was bleibt, sind Umsetzungsdetails in T-17 bis T-27b und
 T-35.

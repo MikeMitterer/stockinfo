@@ -37,7 +37,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 4 | nach #3 | B läuft auf einer **frischen** Datenbank | | |
 | 4b | Sicherung läuft, gleichzeitig ein API-Schreibzugriff | Sicherung ist trotzdem konsistent | | |
 | 5 | Sicherungsverzeichnis | fortlaufend nummeriert, mit Manifest: Profil, Stand, Zeitpunkt | | |
-| 5b | **Crash-Matrix**: sechs injizierbare Fehlerpunkte, je Punkt Neustart und Recovery | nach jedem: genau **eine** vollständige Generation aktiv, keine Nummer überschrieben, nie B mit As Datenbank, A vollständig startbar | | |
+| 5b | **Crash-Matrix**: **sieben** injizierbare Fehlerpunkte, je Punkt Neustart und Recovery | nach jedem: genau **eine** vollständige Generation aktiv, keine Nummer überschrieben, nie B mit As Datenbank, A vollständig startbar | | |
 | 5d | derselbe Preflight wie T-23 vor jeder Rotation | identische Logik, keine zweite Validierung — **Abnahme hier**, bereitgestellt in T-23 | | |
 | 5c | B ungültig, Neustart | A läuft wieder **vollständig** — Konfiguration *und* Plugin-Umgebung, nicht nur die alte Datenbank | | |
 | 6 | Wiederherstellung | ordnet Sicherung und Profil einander zu; ein unpassendes Paar wird abgelehnt | | |
@@ -46,8 +46,12 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 7b | Prozessneustart **ohne** Profilwechsel | dieselbe `generation_id` | | |
 | 7c | verträgliche Konfigurationsänderung (Schlüssel, Zeitgrenze) | dieselbe `generation_id` | | |
 | 7d | Profilwechsel **und** jede Restore-Aktivierung | **neue** `generation_id` | | |
-| 7e | Harness-Stufe 2 | `/generation` und der Antwort-Header laufen im Integrationslauf mit | | |
-| 8 | **StockPortfolio** nach Profilwechsel (Abnahme in deren T-35) | erkennt die neue `generation_id`, leert **nur** Quote-/History-Caches; Portfolio, Stückzahlen und Ziele bleiben | | |
+| 7e | Harness-Stufe 2 | `/generation` und der Antwort-Header laufen im Integrationslauf mit — Erfolgs- **und** Fehlerantworten | | |
+| 7f | **Route** `GET /generation` läuft | antwortet mit der aktiven UUID und `Cache-Control: no-store` | | |
+| 7g | **Middleware** | setzt `StockInfo-Generation` auf **jeder** Antwort, auch `404`/`409`/`422`/`502` | | |
+| 7h | `app/main.py` CORS | `expose_headers` enthält `StockInfo-Generation` — cross-origin im Browser lesbar | | |
+| 7i | Profilwechsel **während** eines laufenden Requests | Header und Rumpf stammen aus **derselben** Generation — Kontext am Requestanfang gebunden | | |
+| 8 | **StockPortfolio** nach Profilwechsel (Abnahme in deren T-35) | schaltet den sichtbaren Quote-/History-**Namespace** um; keine Werte der alten Generation sichtbar; Portfolio, Stückzahlen und Ziele bleiben | | |
 | 8b | dasselbe ohne Profilwechsel | Cache bleibt — die Generation ändert sich nicht bei jeder Konfigänderung | | |
 
 ---
@@ -126,15 +130,29 @@ persistenten Cache über getrennte Deployments hinweg. StockPortfolio tut das �
 dort liegt der eigentliche Fall. Nötig ist dort:
 
 - die letzte `generation_id` speichern
-- bei Änderung **nur** Quote- und History-Caches leeren
+- bei Änderung den sichtbaren Quote-/History-**Namespace** umschalten
 - Portfolio, Stückzahlen, Ziele und Benutzerdaten behalten
+
+**Umschalten, nicht löschen** *(Codex, 2026-08-21)*: Ich hatte hier zweimal
+„leeren" geschrieben, während T-35 längst die robustere Semantik trägt. Der
+Unterschied ist keine Wortwahl — physisches Löschen mehrerer Object-Stores ist
+ein mehrschrittiger Vorgang, der mittendrin abbrechen kann; genau davor schützt
+der Namespace. Verbindlich ist deshalb:
+
+- **atomarer Wechsel** des sichtbaren Quote-/History-Namespace
+- keine Werte der alten Generation sichtbar
+- spätere Löschung alter Namespaces ist **Hausputz**, nicht Vertrag
+- alle benutzereigenen Speicher bleiben unverändert
+
+Sonst optimiert eine Umsetzung auf genau die riskante Mehrfach-Löschung, die
+T-35 bewusst vermieden hat.
 
 **Angelegt am 2026-08-21: `StockPortfolio/_tickets/T-35-stockinfo-generation-und-waehrung.md`.**
 Verify `#8` kann in einem Ticket mit Scope „StockInfo (Backend + Dashboard)"
 nicht grün werden — es wird **dort** abgenommen. Das Ticket hält fest:
 
 - letzte `generation_id` speichern, bei Änderung reagieren
-- **nur** Kurs- und History-Caches leeren — nie Portfolio, Stückzahlen, Ziele
+- **nur** den Kurs-/History-Namespace umschalten — nie Portfolio, Stückzahlen, Ziele
 - **keine EUR-Ersatzwährung**, wenn die Kurswährung fehlt (heute wird geraten)
 - mittelfristig `listing_id` als bevorzugten Maschinen-/Cache-Schlüssel
 - Rückfall auf ISIN/Symbol für alte gespeicherte Positionen bleibt
@@ -146,6 +164,26 @@ Kurswährung wird geraten. Die App erklärt an anderer Stelle selbst, dass
 unterläuft genau diese Regel. Der Cache liegt in **IndexedDB** und überlebt jedes
 Deployment — Codex' Einschätzung, dass hier der eigentliche Konsument sitzt, ist
 damit bestätigt.
+
+### Header und Rumpf müssen aus derselben Generation stammen
+
+*(Codex, 2026-08-21)* T-24 schreibt die Regel fest — hier steht, woran sie
+scheitern kann. Den Header **am Ende** der Antwort aus einem veränderlichen
+globalen Zustand zu lesen, erzeugt genau die verbotene Mischung: Der Rumpf
+stammt noch aus A, der Header schon aus B. Ein Konsument sieht dann einen
+gültigen Wert unter einer Generation, in der er nie gegolten hat — und cacht ihn
+guten Gewissens.
+
+Zwei Wege sind zulässig, ein dritter nicht:
+
+| Weg | |
+|---|---|
+| Generation **und** Datenbank-Handle einmal am Requestanfang binden | tragfähig |
+| Profilwechsel blockiert laufende Requests bis zu deren Ende | tragfähig |
+| Header am Responseende aus dem globalen Zustand lesen | **verboten** |
+
+Der erste Weg ist der einfachere: Was der Request am Anfang bekommen hat, gilt
+für ihn bis zum Schluss — auch wenn zwischendurch rotiert wird.
 
 ### Absturzfester Übergang
 

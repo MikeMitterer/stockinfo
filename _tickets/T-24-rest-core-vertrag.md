@@ -33,11 +33,12 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 7 | OpenAPI-Schnappschuss | ein Test schlägt an, wenn sich der Core unbemerkt ändert | | |
 | 7b | **`GET /fields`** | liefert die Pflichtfelder **samt Vertragsversion** — zur Laufzeit abfragbar, nicht nur dokumentiert | | |
 | 7c | Vertragsversion erhöhen | ein Konsument kann an der Nummer erkennen, dass er prüfen muss | | |
-| 7d | **`GET /generation`** | liefert nur `generation_id` (opake UUID), mit `Cache-Control: no-store` | | |
-| 7e | **jede** API-Antwort, auch `404`/`409`/`422`/`502` | trägt den Header `StockInfo-Generation` | | |
-| 7f | Header und Rumpf einer Antwort | stammen garantiert aus **derselben** Generation | | |
-| 7g | Cross-Origin-Abruf aus dem Browser | Header ist über `Access-Control-Expose-Headers` lesbar | | |
-| 7h | generationenfähiger Server **ohne** Header auf einer Antwort | gilt als **Vertragsfehler** | | |
+| 7d | Vertragsdokument | **Schema** von `GET /generation` steht fest: nur `generation_id` (opake UUID), `Cache-Control: no-store` | | |
+| 7e | dasselbe | **Name und Semantik** von `StockInfo-Generation` stehen fest — Pflicht auf **jeder** Antwort, auch `404`/`409`/`422`/`502` | | |
+| 7f | dasselbe | Regel „Header und Rumpf stammen aus **derselben** Generation" ist festgeschrieben | | |
+| 7g | dasselbe | `Access-Control-Expose-Headers` ist als Vertragspflicht benannt — ohne sie ist der Header cross-origin unlesbar | | |
+| 7h | HTTP-Fixtures | enthalten Positiv- **und** Negativfälle: `200`+Header, `404`/`502`+Header, generationenfähige Antwort **ohne** Header (Vertragsfehler), Header/Body-Widerspruch bei `/generation` | | |
+| 7i | OpenAPI-/Vertragsprüfung | schlägt an, wenn Endpunkt, Headername oder Schema von dieser Definition abweichen | | |
 
 **Ebene 2 — bewusste Verhaltenskorrektur (kein „nur Dokumentation"):**
 
@@ -215,6 +216,30 @@ allow_headers=["*"]     # ← gilt für REQUEST-Header
 
 Ohne `expose_headers` kann Browser-JavaScript den Antwort-Header nicht lesen.
 StockPortfolio läuft cross-origin; der Header wäre dort unsichtbar.
+
+#### Was hier abgenommen wird — und was nicht
+
+*(Codex, 2026-08-21 — ich hatte die gerade entfernte Ticket-Schleife in
+kleinerer Form wieder eingebaut.)*
+
+Die Zeilen `#7d`–`#7i` verlangten in der vorigen Fassung die **laufenden**
+Endpunkte samt Middleware und CORS-Konfiguration. Zugleich hängt T-25 an T-24 —
+also hätte T-24 erst nach T-25 fertig werden können, T-25 aber erst nach T-24
+beginnen dürfen. Ein Zyklus.
+
+Die Trennlinie läuft deshalb zwischen **Definition** und **Laufzeit**:
+
+| T-24 besitzt | T-25 besitzt |
+|---|---|
+| Schema von `GET /generation` | die Route selbst |
+| Name und Semantik des Headers | Middleware, die ihn setzt |
+| Regeln für Fehlerantworten, CORS, `no-store` | `expose_headers` in der App |
+| HTTP-Fixtures, positiv **und** negativ | persistierte aktive UUID, Rotation |
+| OpenAPI-/Vertragsprüfung gegen die Definition | atomare Bindung Request ↔ DB ↔ Generation |
+
+T-24 formuliert also „Vertrag und Fixture legen fest", nicht „der Server tut".
+So kann T-24 abgeschlossen werden, bevor eine Zeile Middleware existiert — und
+genau das ist der Sinn eines Vertrags.
 
 ### Warum das vor T-21 gehört
 
