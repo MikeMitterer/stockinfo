@@ -41,7 +41,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 6 | Wiederherstellung | ordnet Sicherung und Profil einander zu; ein unpassendes Paar wird abgelehnt | | |
 | 6b | dieselbe Sicherung zweimal einspielen | jede Aktivierung bekommt eine **neue** `generation_id` | | |
 | 7 | `GET /sources` oder `/env` | nennt das aktive Profil und dessen Generation | | |
-| 8 | **StockPortfolio** nach Profilwechsel | erkennt die neue `generation_id`, leert **nur** Quote-/History-Caches; Portfolio, Stückzahlen und Ziele bleiben | | |
+| 8 | **StockPortfolio** nach Profilwechsel (Abnahme in deren T-35) | erkennt die neue `generation_id`, leert **nur** Quote-/History-Caches; Portfolio, Stückzahlen und Ziele bleiben | | |
 | 8b | dasselbe ohne Profilwechsel | Cache bleibt — die Generation ändert sich nicht bei jeder Konfigänderung | | |
 
 ---
@@ -123,9 +123,9 @@ dort liegt der eigentliche Fall. Nötig ist dort:
 - bei Änderung **nur** Quote- und History-Caches leeren
 - Portfolio, Stückzahlen, Ziele und Benutzerdaten behalten
 
-**Entschieden: ein eigenes Ticket im Nachbar-Repo.** Verify `#8` kann in einem
-Ticket mit Scope „StockInfo (Backend + Dashboard)" nicht grün werden, wenn dort
-keine Änderung autorisiert ist. Das StockPortfolio-Ticket hält fest:
+**Angelegt am 2026-08-21: `StockPortfolio/_tickets/T-35-stockinfo-generation-und-waehrung.md`.**
+Verify `#8` kann in einem Ticket mit Scope „StockInfo (Backend + Dashboard)"
+nicht grün werden — es wird **dort** abgenommen. Das Ticket hält fest:
 
 - letzte `generation_id` speichern, bei Änderung reagieren
 - **nur** Kurs- und History-Caches leeren — nie Portfolio, Stückzahlen, Ziele
@@ -133,8 +133,13 @@ keine Änderung autorisiert ist. Das StockPortfolio-Ticket hält fest:
 - mittelfristig `listing_id` als bevorzugten Maschinen-/Cache-Schlüssel
 - Rückfall auf ISIN/Symbol für alte gespeicherte Positionen bleibt
 
-Bis dieses Ticket existiert, bleibt `#8` unbewertet — nicht stillschweigend
-übersprungen.
+Ein Befund aus der Prüfung dort ist unabhängig von diesem Vorhaben ernst:
+`mappers.ts:17` setzt `currency: response.currency ?? 'EUR'` — eine fehlende
+Kurswährung wird geraten. Die App erklärt an anderer Stelle selbst, dass
+„10.000 USD plus 10.000 EUR keine 20.000 von irgendetwas" ergeben; der Rückfall
+unterläuft genau diese Regel. Der Cache liegt in **IndexedDB** und überlebt jedes
+Deployment — Codex' Einschätzung, dass hier der eigentliche Konsument sitzt, ist
+damit bestätigt.
 
 ### Absturzfester Übergang
 

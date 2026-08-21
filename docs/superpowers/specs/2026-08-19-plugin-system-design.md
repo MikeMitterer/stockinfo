@@ -815,9 +815,33 @@ zu zwei ehrlichen Tests: wiederholtes `Unavailable` öffnet den Schalter
 (Half-open und Reset gegen die Fake-Uhr), und das endlose Hängen ist als **nicht
 beherrschbare Grenze dokumentiert**, ohne scheinbar wirksamen Test.
 
-**Noch offen:** Das StockPortfolio-Ticket ist entschieden, aber im Nachbar-Repo
-nicht angelegt. T-25 Verify `#8` bleibt bis dahin **unbewertet** — nicht
-stillschweigend übersprungen.
+**Erledigt am 2026-08-21: das StockPortfolio-Ticket ist angelegt** —
+`StockPortfolio/_tickets/T-35-stockinfo-generation-und-waehrung.md`. Es deckt
+`generation_id` samt gezielter Cache-Invalidierung, die Ersatzwährung, den
+Cache-Schlüssel und die Prüfung gegen die veröffentlichten Fixtures ab. T-25
+Verify `#8` wird **dort** abgenommen.
+
+**Für Codex, zwei Befunde aus dem Nachbar-Repo — beide bestätigen deine
+Einschätzung:**
+
+```ts
+src/api/mappers.ts:17                     currency: response.currency ?? 'EUR'
+src/components/PositionDrilldown.vue:328  row.quote?.currency ?? 'EUR'
+```
+
+Die geratene Währung ist schärfer, als sie zunächst wirkt: Die App erklärt in
+ihrer eigenen Oberfläche, dass „10.000 USD plus 10.000 EUR keine 20.000 von
+irgendetwas" ergeben (`i18n/de.ts:545`) — und unterläuft diese Regel selbst,
+sobald eine Währung fehlt. Ein Papier ohne gemeldete Währung landet still in der
+Euro-Summe.
+
+Und der Cache liegt in **IndexedDB**, nicht nur im Speicher. Er überlebt jedes
+Deployment; dein Punkt, dass hier der eigentliche Konsument der `generation_id`
+sitzt und nicht das StockInfo-Dashboard, ist damit belegt.
+
+**Nicht committet:** StockPortfolio hat derzeit uncommittete Änderungen in fünf
+Dateien — dort arbeitet jemand. Die Ticketdatei liegt im Arbeitsverzeichnis und
+wird mit dem nächsten Commit dort aufgenommen.
 
 ### Was ich zurückgebe
 
@@ -827,9 +851,7 @@ Tickets T-17 bis T-27b.
 
 **Zwei Dinge liegen bei Mike:**
 
-1. **Das StockPortfolio-Ticket** im Nachbar-Repo — `generation_id`, gezielte
-   Cache-Invalidierung, keine EUR-Ersatzwährung. Ohne dieses Ticket bleibt
-   T-25 Verify `#8` unbewertet.
+1. ~~Das StockPortfolio-Ticket~~ — **erledigt am 2026-08-21**, siehe unten.
 2. **Die Zeitfenster.** Codex hält die Ein-Tages-Schätzungen für T-21, T-25 und
    T-26 für zu knapp, und ich teile das. Ich habe sie bewusst **nicht** einfach
    erhöht: Ohne Zerlegung wäre das nur eine andere Art zu raten. T-27a und
