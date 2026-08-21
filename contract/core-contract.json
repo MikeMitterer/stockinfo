@@ -1,0 +1,134 @@
+{
+  "core_version": "1.0.0",
+  "details_version": 0,
+  "generation": {
+    "endpoint": "/generation",
+    "header": "StockInfo-Generation",
+    "cache_control": "no-store",
+    "id_kind": "opaque-uuid",
+    "required_on_every_response": true,
+    "expose_headers_required": true,
+    "rule": "Header und Rumpf einer Antwort stammen aus derselben Generation. Der Header ist das Signal, /generation ist die Wahrheit: Weicht der Header ab, wird die Antwort verworfen und erst nach Bestätigung durch /generation umgeschaltet."
+  },
+  "identity": {
+    "listing_id": "Opake UUID je Listing, bei Anlage einmal erzeugt und nicht aus ticker, mic, ISIN oder dem lokalen Schlüssel abgeleitet. Konsumenten behandeln sie als undurchsichtigen String und zerlegen sie nie.",
+    "symbol": "Pflichtfeld und Anzeigename, aber nicht garantiert eindeutig.",
+    "ambiguous_symbol_status": 409,
+    "one_active_listing_per_isin": true,
+    "note": "Ein Profil führt genau ein aktives Listing je ISIN. Mehrere gleichzeitige Listings derselben ISIN wären eine eigene Schema- und Konsumenten-Erweiterung."
+  },
+  "endpoints": {
+    "quote": ["/quote", "/quote/{isin}"],
+    "instrument": ["/instruments"],
+    "daily": ["/quote/{isin}/daily", "/quote/by-symbol/{symbol}/daily"],
+    "history": ["/quote/{isin}/history", "/quote/by-symbol/{symbol}/history"],
+    "fx": ["/fx"]
+  },
+  "core": {
+    "quote": [
+      {"name": "symbol", "kind": "string", "required": true, "meaning": "Anzeigename des Listings beim Kursanbieter. Nicht garantiert eindeutig."},
+      {"name": "price", "kind": "number", "required": true, "meaning": "Letzter bekannter Kurs in der Handelswährung. Nie geraten, nie umgerechnet."},
+      {"name": "currency", "kind": "string", "required": true, "meaning": "Handelswährung des Kurses. ISO-4217, mit einer Ausnahme: 'GBp' bezeichnet Pence und wird originalgetreu durchgereicht. Ohne Währung ist ein Preis nicht verwertbar — dann antwortet die API mit einem Fehler statt zu raten."},
+      {"name": "quote_time", "kind": "string", "required": true, "meaning": "Zeitpunkt, zu dem der Kurs an der Börse galt. ISO-8601 mit Zeitzone."},
+      {"name": "fetched_at", "kind": "string", "required": true, "meaning": "Zeitpunkt, zu dem StockInfo den Wert beschafft hat. ISO-8601 mit Zeitzone. Nicht zu verwechseln mit quote_time: Ein frisch geholter Kurs vom Freitagabend hat ein junges fetched_at und ein altes quote_time."},
+      {"name": "cached", "kind": "boolean", "required": true, "meaning": "true = die Antwort kommt aus dem lokalen Bestand, es gab keinen Anbieteraufruf. Sagt nichts über die Güte des Werts."},
+      {"name": "stale", "kind": "boolean", "required": true, "meaning": "true = die frische Beschaffung ist fehlgeschlagen und der zuletzt bekannte Wert wird ausgeliefert. Der Wert ist damit älter als die TTL. stale=true impliziert cached=true."},
+      {"name": "isin", "kind": "string", "required": false, "meaning": "ISIN des Wertpapiers, sofern bekannt. Ein über das Symbol aufgenommenes Papier kann keine haben."},
+      {"name": "exchange", "kind": "string", "required": false, "meaning": "Anzeigename des Handelsplatzes."},
+      {"name": "name", "kind": "string", "required": false, "meaning": "Name des Wertpapiers."},
+      {"name": "type", "kind": "string", "required": false, "meaning": "Gattung: 'stock' oder 'etf'. null heißt 'unbekannt', nicht 'keine'."},
+      {"name": "volume", "kind": "integer", "required": false, "meaning": "Handelsvolumen des Tages, sofern der Anbieter es nennt."},
+      {"name": "source", "kind": "string", "required": false, "meaning": "Woher der jüngste Metadatenstand kommt, z.B. 'yfinance+justetf' oder 'cache'."},
+      {"name": "ter", "kind": "number", "required": false, "meaning": "Gesamtkostenquote in Prozent (nur ETF)."},
+      {"name": "provider", "kind": "string", "required": false, "meaning": "Fondsanbieter (nur ETF)."},
+      {"name": "replication", "kind": "string", "required": false, "meaning": "Replikationsart (nur ETF)."},
+      {"name": "fund_size", "kind": "number", "required": false, "meaning": "Fondsvolumen (nur ETF)."},
+      {"name": "fund_domicile", "kind": "string", "required": false, "meaning": "Fondsdomizil (nur ETF)."},
+      {"name": "fund_currency", "kind": "string", "required": false, "meaning": "Währung des Fonds — nicht die des Handelsplatzes (nur ETF)."},
+      {"name": "volatility", "kind": "number", "required": false, "meaning": "Annualisierte Volatilität in Prozent über ein Jahr."},
+      {"name": "accumulating", "kind": "boolean", "required": false, "meaning": "true = thesaurierend, false = ausschüttend. false ist eine Aussage, keine Lücke."}
+    ],
+    "instrument": [
+      {"name": "symbol", "kind": "string", "required": true, "meaning": "Anzeigename des Listings. Siehe quote.symbol."},
+      {"name": "history_count", "kind": "integer", "required": true, "meaning": "Anzahl gespeicherter Kurspunkte zu diesem Instrument."},
+      {"name": "manual_fields", "kind": "array", "required": true, "meaning": "Kennzahlen, deren angezeigter Wert gerade von Hand stammt. Leer, wenn keine."},
+      {"name": "shadowed_fields", "kind": "array", "required": true, "meaning": "Kennzahlen mit manuellem Wert, den die Quelle gerade überstimmt. Der eingetragene Wert steht unter manual_<feld>."},
+      {"name": "isin", "kind": "string", "required": false, "meaning": "ISIN, sofern bekannt."},
+      {"name": "exchange", "kind": "string", "required": false, "meaning": "Anzeigename des Handelsplatzes."},
+      {"name": "name", "kind": "string", "required": false, "meaning": "Name des Wertpapiers."},
+      {"name": "type", "kind": "string", "required": false, "meaning": "Gattung: 'stock' oder 'etf'."},
+      {"name": "currency", "kind": "string", "required": false, "meaning": "Zuletzt gesehene Handelswährung des Instruments."},
+      {"name": "latest_price", "kind": "number", "required": false, "meaning": "Letzter gespeicherter Kurs. null, solange kein Kurspunkt vorliegt."},
+      {"name": "latest_quote_time", "kind": "string", "required": false, "meaning": "quote_time des letzten gespeicherten Kurses."},
+      {"name": "latest_currency", "kind": "string", "required": false, "meaning": "Währung des letzten gespeicherten Kurses."},
+      {"name": "latest_fetched_at", "kind": "string", "required": false, "meaning": "fetched_at des letzten gespeicherten Kurses."},
+      {"name": "meta_fetched_at", "kind": "string", "required": false, "meaning": "Wann die ETF-Kennzahlen zuletzt beschafft wurden. null heißt 'nie'."},
+      {"name": "source", "kind": "string", "required": false, "meaning": "Woher der jüngste Metadatenstand kommt."},
+      {"name": "ter", "kind": "number", "required": false, "meaning": "Wirksame Gesamtkostenquote (Quelle, sonst manueller Wert)."},
+      {"name": "provider", "kind": "string", "required": false, "meaning": "Wirksamer Fondsanbieter."},
+      {"name": "replication", "kind": "string", "required": false, "meaning": "Wirksame Replikationsart."},
+      {"name": "fund_size", "kind": "number", "required": false, "meaning": "Wirksames Fondsvolumen."},
+      {"name": "fund_domicile", "kind": "string", "required": false, "meaning": "Wirksames Fondsdomizil."},
+      {"name": "fund_currency", "kind": "string", "required": false, "meaning": "Wirksame Fondswährung."},
+      {"name": "volatility", "kind": "number", "required": false, "meaning": "Wirksame Volatilität in Prozent."},
+      {"name": "accumulating", "kind": "boolean", "required": false, "meaning": "Wirksame Ertragsverwendung."}
+    ],
+    "daily": [
+      {"name": "date", "kind": "string", "required": true, "meaning": "Handelstag als ISO-Datum (YYYY-MM-DD)."},
+      {"name": "close", "kind": "number", "required": true, "meaning": "Schlusskurs des Tages, **unbereinigt** — so, wie er an dem Tag galt. Dividenden und Splits sind nicht eingerechnet. Wer eine bereinigte Reihe braucht, rechnet sie selbst."},
+      {"name": "currency", "kind": "string", "required": true, "meaning": "Währung des Schlusskurses. Wie bei quote.currency gilt: ohne Währung kein verwertbarer Punkt."}
+    ],
+    "history": [
+      {"name": "price", "kind": "number", "required": true, "meaning": "Gespeicherter Kurs zu diesem Zeitpunkt."},
+      {"name": "quote_time", "kind": "string", "required": true, "meaning": "Zeitpunkt, zu dem der Kurs galt."},
+      {"name": "fetched_at", "kind": "string", "required": true, "meaning": "Zeitpunkt der Beschaffung."},
+      {"name": "currency", "kind": "string", "required": true, "meaning": "Währung des Kurses."},
+      {"name": "volume", "kind": "integer", "required": false, "meaning": "Handelsvolumen, sofern bekannt."}
+    ],
+    "fx": [
+      {"name": "base", "kind": "string", "required": true, "meaning": "Ausgangswährung. 1 base = rate quote."},
+      {"name": "quote", "kind": "string", "required": true, "meaning": "Zielwährung."},
+      {"name": "rate", "kind": "number", "required": true, "meaning": "Umrechnungsfaktor von base nach quote."},
+      {"name": "quote_time", "kind": "string", "required": true, "meaning": "Zeitpunkt, zu dem der Kurs galt."},
+      {"name": "fetched_at", "kind": "string", "required": true, "meaning": "Zeitpunkt der Beschaffung."},
+      {"name": "cached", "kind": "boolean", "required": true, "meaning": "Siehe quote.cached."},
+      {"name": "stale", "kind": "boolean", "required": true, "meaning": "Siehe quote.stale."},
+      {"name": "source", "kind": "string", "required": false, "meaning": "Woher der Kurs stammt."}
+    ]
+  },
+  "errors": {
+    "404": "Kein zuständiger Anbieter kennt das Papier. Der Bestand bleibt unverändert.",
+    "409": "Die Anfrage ist mehrdeutig — mehrere Listings tragen dasselbe Symbol. Der Rumpf nennt die Kandidaten samt listing_id; die API rät nicht.",
+    "422": "Die Anfrage ist formal falsch, z.B. eine ISIN mit falscher Prüfziffer.",
+    "502": "Mindestens ein zuständiger Anbieter war nicht erreichbar. Ein 404 wäre hier falsch: 'nicht gefunden' und 'nicht erreichbar' sind verschiedene Aussagen.",
+    "incomplete_core": "Fehlt einem Preis die Währung oder ein anderes Pflichtfeld, antwortet die API mit 502 statt mit einem geratenen Wert."
+  },
+  "compatibility": {
+    "additive": [
+      "Ein neues optionales Feld in einem Core-Modell (Minor).",
+      "Ein neuer Eintrag im details-Container (details_version).",
+      "Ein neuer Endpunkt.",
+      "Ein neuer Wert in einer offenen Aufzählung wie source."
+    ],
+    "breaking": [
+      "Ein Pflichtfeld entfernen oder umbenennen.",
+      "Die Art eines Feldes ändern.",
+      "Ein optionales Feld zum Pflichtfeld machen.",
+      "Die Bedeutung eines Feldes ändern, ohne den Namen zu ändern.",
+      "Einen Statuscode für einen bestehenden Fall austauschen."
+    ],
+    "versioning": {
+      "major": "Pflichtfeld entfernt oder unverträglich geändert.",
+      "minor": "Additive Erweiterung des Core.",
+      "patch": "Klarstellung ohne Änderung am JSON-Vertrag."
+    },
+    "consumer_rule": "Unbekannte Felder werden ignoriert, nicht als Fehler behandelt. Nur so bleibt eine additive Erweiterung wirklich additiv."
+  },
+  "planned": {
+    "note": "Entschieden, aber noch nicht zugesagt. Diese Einträge sind nicht Teil von core_version 1.0.0 — sie stehen hier, damit ein Konsument weiß, was kommt, und nicht, damit er sich darauf verlässt.",
+    "listing_id": {"ticket": "T-21", "effect": "wird Pflichtfeld in quote und instrument (Minor)"},
+    "ticker_mic": {"ticket": "T-21", "effect": "kanonische Identität (ticker, mic) neben symbol (Minor)"},
+    "details_container": {"ticket": "T-26", "effect": "die ETF-Kennzahlen ziehen in einen additiven details-Container um (Major)"},
+    "generation_runtime": {"ticket": "T-25", "effect": "Route /generation, Header-Middleware, expose_headers, persistierte UUID"}
+  }
+}

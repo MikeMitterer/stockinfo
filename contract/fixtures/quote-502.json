@@ -1,0 +1,21 @@
+{
+  "endpoint": "/quote/{isin}",
+  "model": null,
+  "contract_compliant": true,
+  "violates": null,
+  "note": "Ein zuständiger Anbieter war nicht erreichbar. Ein 404 wäre hier falsch: 'nicht gefunden' und 'nicht erreichbar' sind verschiedene Aussagen, und nur die erste darf einen Konsumenten dazu bringen, das Papier aufzugeben.",
+  "request": {
+    "method": "GET",
+    "path": "/quote/IE00B4L5Y983"
+  },
+  "response": {
+    "status": 502,
+    "headers": {
+      "Content-Type": "application/json",
+      "StockInfo-Generation": "550e8400-e29b-41d4-a716-446655440000"
+    },
+    "body": {
+      "detail": "Kein Kurs beschaffbar: EUNL.DE"
+    }
+  }
+}

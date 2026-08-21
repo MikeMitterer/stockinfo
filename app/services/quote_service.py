@@ -295,6 +295,6 @@ class QuoteService:
         response.volatility = details.volatility
         response.accumulating = details.accumulating
         # Die Quelle beschriftet sich selbst — seit es mehr als eine gibt, wäre
-        # ein festes "yfinance+justetf" für die Hälfte der Papiere gelogen.
+        # ein festes "yfinance+justetf" für die Hälfte der Papiere falsch.
         response.source = details.source or response.source
         return True

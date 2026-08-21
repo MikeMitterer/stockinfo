@@ -1,0 +1,28 @@
+{
+  "endpoint": "/fx",
+  "model": "fx",
+  "contract_compliant": true,
+  "violates": null,
+  "note": "1 base = rate quote. Die Richtung steht im Vertrag, weil sie sich aus den Namen allein nicht ablesen lässt — 'quote' ist hier die Zielwährung, nicht der Kurs.",
+  "request": {
+    "method": "GET",
+    "path": "/fx?base=EUR&quote=USD"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "StockInfo-Generation": "550e8400-e29b-41d4-a716-446655440000"
+    },
+    "body": {
+      "base": "EUR",
+      "quote": "USD",
+      "rate": 1.0842,
+      "quote_time": "2026-08-21T17:00:00+00:00",
+      "source": "yfinance",
+      "cached": false,
+      "stale": false,
+      "fetched_at": "2026-08-21T17:02:31+00:00"
+    }
+  }
+}
