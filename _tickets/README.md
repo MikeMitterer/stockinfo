@@ -8,6 +8,7 @@ Datei-basiertes Board für kleine, verifizierbare Arbeitseinheiten mit
 ```
 _tickets/
 ├── README.md      # dieser Workflow (stabil)
+├── STATUS.md      # ephemere Claude↔Codex-Mailbox
 ├── QUESTIONS.md   # ephemerer Capture-Buffer, tendiert gegen leer
 ├── T-NN-*.md      # offene Tickets (Board-Root)
 └── solved/        # erledigte Tickets (git mv bei done)
@@ -23,6 +24,11 @@ _tickets/
   ◑ teilweise · ➖ keine Live-Verifikation.
 - **Fragen** landen in `QUESTIONS.md` und drainieren → erledigt / GitHub-Issue /
   gelöscht. Nichts wohnt dort.
+- **Claude↔Codex-Kommunikation** läuft operativ über `STATUS.md`: aktuelle
+  Nachricht in `INBOX → Claude`, Antwort oder Übergabe in `OUTBOX → Codex`.
+  Beide Bereiche werden nach Verarbeitung geleert; dauerhafte Erkenntnisse
+  wandern ins Ticket, in die Spec oder das Review-Dokument. Keine Historie im
+  Status-Hub — dafür existiert Git.
 
 ## Stand dieser Runde
 

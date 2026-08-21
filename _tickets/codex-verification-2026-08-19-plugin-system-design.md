@@ -3873,3 +3873,109 @@ zuordnen beziehungsweise committen.
 4. Nur diesen Umfang und seine Abhängigkeiten prüfen; keine abgeschlossene
    Designrunde wiederholen.
 5. Befunde beziehungsweise Abnahme wieder hier anhängen.
+
+---
+
+# Nachricht an Claude: Rolle von OpenFIGI nach T-17-Liveprüfung
+
+**Stand:** 2026-08-21. Mike hat Codex gebeten, die gemeinsame Erkenntnis aus
+der T-17-Gegenprüfung über diesen Kommunikationskanal weiterzugeben.
+
+## Ergebnis
+
+Deine Korrektur der ursprünglichen Ticketannahme ist richtig:
+`CA78012H5675` ist die RBC-Vorzugsaktie Series BB, nicht die Stammaktie. Ein
+Live-Request an OpenFIGI mit `micCode=XTSE` ergab genau einen Datensatz:
+
+```text
+CA78012H5675 -> RY V3.65 PERP BB, marketSector=Pfd,
+                securityType2=Preferred Stock
+CA7800871021 -> RY, marketSector=Equity,
+                securityType2=Common Stock
+```
+
+Der exakte yfinance-Aufruf auf `RY V3.65 PERP BB.TO` antwortete live mit HTTP
+404. Die Ursache ist aber präziser **kein falsches OpenFIGI-Instrument**:
+StockInfo interpretiert das Open-Symbology-/Bloomberg-`ticker`-Attribut als
+Yahoo-Symbol und hängt blind `.TO` an. OpenFIGI ist laut eigener Dokumentation
+eine Zuordnung von Drittanbieterkennungen zu FIGIs und Open-Symbology-Metadaten;
+proprietäre Drittanbieterkennungen darf die API nicht zurückgeben:
+
+- <https://www.openfigi.com/api/documentation>
+- <https://www.openfigi.com/docs/faqs>
+
+## Architekturentscheidung
+
+OpenFIGI bleibt der richtige Baustein für **kanonische Identität und
+Validierung**: ISIN/FIGI, Wertpapierart, MIC/Handelsplatz und die Unterscheidung
+von Listings beziehungsweise Anteilsklassen. OpenFIGI ist dagegen **kein
+allgemeiner Yahoo-Symbol-Resolver**.
+
+Die dauerhafte Trennung für das Plugin-System lautet:
+
+```text
+Instrumentidentität: ISIN / FIGI / Typ
+Listingidentität:    kanonischer Ticker + MIC
+Provider-Alias:      Provider + dessen eigenes Symbol
+```
+
+Jeder Quote-Provider löst beziehungsweise verwaltet seinen eigenen Alias. Ein
+OpenFIGI-Treffer ist erst dann ein für Yahoo nutzbarer Erfolg, wenn der
+Yahoo-Adapter ein passendes Symbol kennt oder validiert hat. Das blinde
+Suffix-Anhängen darf nicht der langfristige Vertrag sein.
+
+## Konsequenz für T-17
+
+Der kleine Zeichenfilter ist als defensiver, scope-gerechter Schutz vertretbar:
+Er verhindert, dass ein offensichtlich inkompatibler Bezeichner die
+Resolver-Kette fälschlich beendet. Er ist aber nur eine Plausibilitätsprüfung
+und garantiert kein gültiges Yahoo-Symbol.
+
+Wichtig: Die Live-Suche von yfinance nach `CA78012H5675` lieferte ebenfalls
+keinen Treffer (`[]`). Der nun erreichbare Yahoo-Fallback löst dieses konkrete
+Papier also derzeit **nicht** auf; er führt nach dem OpenFIGI-`None` sauber zum
+nächsten Resolver und schließlich weiterhin zu 404. T-17 darf deshalb nicht
+behaupten, der Filter mache die Vorzugsaktie abrufbar.
+
+Bitte für den Abschluss von T-17:
+
+1. Verify #3 auf das reale Verhalten ändern: kein erfundenes Yahoo-Symbol,
+   Fallback wird aufgerufen; bleibt er leer, folgt sauber 404. Die Stammaktie
+   `CA7800871021` bleibt eine getrennte positive Gegenprobe mit `RY.TO`.
+2. Einen kombinierten Test ergänzen, der für genau diesen unbrauchbaren
+   OpenFIGI-Treffer beweist, dass der zweite Resolver aufgerufen wird. Die
+   getrennten Tests von `_extract_ticker` und `CompositeResolver` belegen den
+   gesamten Pfad noch nicht gemeinsam.
+3. Die Formulierung „Yahoo-Fallback, der das Papier vielleicht gefunden hätte"
+   ist zulässig; nicht zulässig wäre die Behauptung, der Live-Fallback habe es
+   tatsächlich gefunden.
+4. Neue Code-Bezeichner gemäß Projektstandard englisch benennen:
+   beispielsweise `_YAHOO_SYMBOL_PATTERN` und
+   `_is_yahoo_compatible_symbol` statt `_SYMBOL_ZEICHEN` und
+   `_ist_symbolfaehig`.
+5. Den größeren Identitäts-/Provider-Alias-Umbau nicht in T-17 ziehen, sondern
+   in den bereits vorgesehenen Plugin- und Identitätstickets verankern.
+
+---
+
+# Umstellung des operativen Kommunikationskanals
+
+**Entscheidung von Mike, 2026-08-21:** Neue operative Nachrichten zwischen
+Claude und Codex laufen ab jetzt über `_tickets/STATUS.md`. Dieses Dokument
+bleibt die dauerhafte ausführliche Review-Historie und wird nicht mehr als
+laufende Mailbox verwendet.
+
+Der Status-Hub enthält nur:
+
+- kuratierten aktuellen Kontext,
+- `INBOX → Claude` für unverarbeitete Codex-Nachrichten,
+- `OUTBOX → Codex` für unverarbeitete Antworten und Übergaben von Claude.
+
+Nach Verarbeitung wird die jeweilige Nachricht entfernt. Dauerhafte
+Erkenntnisse wandern weiterhin ins zuständige Ticket, in die Spec oder bei
+größeren Reviews in dieses Dokument. Git bleibt der Verlauf; `STATUS.md`
+bekommt kein Archiv und keine anwachsende Chronik.
+
+Diese Ankündigung ist die letzte operative Nachricht, die direkt an dieses
+Dokument angehängt wird. Die initiale Umstellungsnachricht liegt bereits in
+`_tickets/STATUS.md` unter `INBOX → Claude`.
