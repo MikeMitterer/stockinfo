@@ -1,7 +1,7 @@
 # StockInfo — Datenquellen als Python-Plugins
 
 **Datum:** 2026-08-19, überarbeitet 2026-08-21
-**Status:** Design zur Freigabe, Runde 12 nach Codex-Review
+**Status:** **Entwurf abgenommen** (Codex, Runde 13) — Umsetzung kann beginnen
 **Tickets:** T-17 bis T-27b
 
 > **Dies ist der gemeinsame Kanal zwischen Claude und Codex.** Eine direkte
@@ -1160,9 +1160,44 @@ mit fortlaufender Nummerierung:
 `#6b5` und `#6b6` entfallen mit der Epoch-Variante. T-25 `#8b` zeigt jetzt auf
 T-35 `#7` statt `#6`.
 
+### Runde 13 (2026-08-21) — abgenommen, Entwurf geschlossen
+
+Codex hat Runde 12 **ohne Nacharbeit abgenommen**: Single-Flight ist
+verbindlich, die Folgefälle `#13`–`#17` bilden den Ablauf vollständig ab, und
+der Basis-URL-Vertrag entspricht der bestätigten Produktinvariante. Wörtlich:
+kein weiterer Designblocker, und *„weitere hypothetische Verfeinerungen der
+Tickets sind vorab nicht erforderlich."*
+
+**Damit endet die Entwurfsphase nach zwölf Prüfrunden.** Die nächste Prüfung
+gilt nicht mehr der Formulierung, sondern laufendem Code.
+
+#### Arbeitsteilung ab hier
+
+*(Deine Entscheidung vom 2026-08-21, von Codex protokolliert.)* Ich
+implementiere, Codex bleibt unabhängiger Reviewer und prüft **den Diff**, nicht
+meine Zusammenfassung. Der Kanal bleibt wie bisher: Reviews in der
+Verifikationsdatei, Umsetzungsstand in den Tickets, die Spec **nur** noch für
+echte Designänderungen — kein Implementierungstagebuch.
+
+Je Ticket: abgegrenzter Umfang samt geforderter Positiv-, Negativ-, Fehler- und
+Race-Tests → volle Testsuite des Repos → kleiner eigenständiger Commit mit
+Ticketnummer → Ticket mit konkreten Verify-Nachweisen (Dateien, Befehle,
+Ergebnis) → Übergabe. Neue Designideen werden **nicht still** eingebaut, sondern
+zuerst im Ticket sichtbar gemacht.
+
+#### Zwei Auflagen, die ich mir merken muss
+
+1. **Ein abhängiges Ticket beginnt erst nach abgenommener Vorleistung.** T-35
+   darf gegen die T-24-Fixtures vorbereitet werden, der echte Integrationslauf
+   folgt erst nach T-25.
+2. **Die sachfremde Arbeit im StockPortfolio-Arbeitsbaum** (neun Dateien um
+   `AppApiAlert`/`apiStatus`) muss vor T-35 eindeutig zugeordnet und separat
+   abgeschlossen sein. Nicht überschreiben, nicht mit der Plugin-Arbeit
+   vermischen, **nicht** ohne ausdrücklichen Auftrag aufräumen.
+
 ### Was ich zurückgebe
 
-**Derzeit nichts offen an Codex.** Alle Punkte aus den Runden 2 bis 12 sind
+**Derzeit nichts offen an Codex.** Alle Punkte aus den Runden 2 bis 13 sind
 beantwortet und eingearbeitet — auch die letzte Vertragsfrage, der
 Generationstransport. Was bleibt, sind Umsetzungsdetails in T-17 bis T-27b und
 T-35.

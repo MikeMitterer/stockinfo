@@ -3614,3 +3614,262 @@ noch:
 
 Danach ist die Generationslogik auch als implementierbarer Testvertrag
 widerspruchsfrei; weitere Änderungen an der Grundarchitektur sind nicht nötig.
+
+---
+
+# Prüfung von Claudes Runde 12
+
+Geprüft wurden StockInfo Commit `99d9036` und StockPortfolio Commit `5fff63f`.
+Beide Commits ändern ausschließlich Spezifikation und Tickets. Die weiterhin
+vorhandenen, sachfremden Änderungen im StockPortfolio-Arbeitsbaum wurden nicht
+verändert.
+
+## Gesamturteil
+
+Runde 12 übernimmt die offenen Punkte aus Runde 11 vollständig und
+widerspruchsfrei:
+
+- T-35 entscheidet sich verbindlich für **Single-Flight**.
+- Pro normalisierter StockInfo-Basis-URL läuft genau ein
+  `/generation`-Request.
+- Gleichzeitige Abweichungen teilen dasselbe Ergebnis; ein einzelner Fetch darf
+  den Namespace nicht selbst setzen.
+- Ein weiteres Abweichungssignal während des Flights führt nur bei weiterhin
+  abweichendem Retry zu einer nachfolgenden, erneut einzelnen Bestätigung.
+- Die Retry-Kette ist begrenzt und endet bei anhaltendem Fehler mit einer
+  sichtbaren Meldung.
+- Der zur Epoch-Alternative gehörende, unter Single-Flight unmögliche Test mit
+  zwei vertauscht eintreffenden `/generation`-Antworten wurde entfernt.
+- Die Formulierung „jüngste Generation" ist entfernt; UUIDs werden weiterhin
+  ausschließlich auf Gleichheit geprüft.
+- Der Crash-Fall `#11` prüft jetzt Persistierung/Aktivierung des sichtbaren
+  Namespace statt das verworfene Modell „Generation speichern, Caches leeren".
+- Der Basis-URL-Fall `#12` ist korrekt auf **Neustart und anschließende
+  Cache-Hydrierung** begrenzt. Ein Live-Wechsel ist ausdrücklich ausgeschlossen.
+- Die Verify-Zeilen sind in fünf verständliche Blöcke mit fortlaufenden Nummern
+  gegliedert; T-25s Cross-Repo-Verweis wurde entsprechend aktualisiert.
+
+## Prüfung der Single-Flight-Folgefälle
+
+Die neue Aufteilung `#13`–`#17` bildet den notwendigen Ablauf vollständig ab:
+
+1. zwei gleichzeitige Signale erzeugen nur einen Flight,
+2. alle Aufrufer teilen sein Ergebnis und es gibt nur einen Namespace-Commit,
+3. ein währenddessen erkanntes weiteres Signal wird nicht eigenmächtig
+   committed,
+4. eine nach dem Flight weiterhin bestehende Abweichung darf einen neuen,
+   wiederum einzelnen Flight auslösen,
+5. Cache-Bypass und Retry-Grenze verhindern alte Antworten beziehungsweise eine
+   Endlosschleife.
+
+Damit sind weder parallele Bestätigungsantworten noch eine zeitliche Ordnung der
+UUIDs für die Implementierung erforderlich. Der zuvor gefundene Rückwechsel ist
+konstruktiv ausgeschlossen, sofern — wie jetzt ausdrücklich verlangt — jede
+Namespace-Mutation durch den gemeinsamen Coordinator läuft.
+
+## Prüfung des Basis-URL-Vertrags
+
+Die Formulierung entspricht nun der bestätigten Produktinvariante:
+
+- Änderung ausschließlich über Deployment-/Container-Konfiguration,
+- Wirksamkeit erst nach Neustart und Reload,
+- kein URL-Wechsel in einer laufenden SPA-Sitzung, auch künftig nicht,
+- Cache-Namespace enthält trotzdem die normalisierte URL, damit ein späterer
+  Start mit B niemals Daten der früheren URL A hydriert.
+
+Hier ist keine Konfigurationsepoche und kein Test mit offenen Requests der alten
+URL nötig.
+
+## Schlussfazit an Claude
+
+**Runde 12 ist abgenommen.** Die Generationslogik und die zugehörigen
+Ticketgrenzen sind jetzt als Testvertrag konsistent und implementierbar. Aus
+dieser Prüfung bleibt kein weiterer Designblocker offen.
+
+Die nächste belastbare Prüfung erfolgt sinnvollerweise an der tatsächlichen
+Implementierung und ihren Tests; weitere hypothetische Verfeinerungen der
+Tickets sind vorab nicht erforderlich.
+
+---
+
+# Vereinbarte Arbeitsteilung für die Implementierung
+
+**Entscheidung von Mike, 2026-08-21:** Claude übernimmt die Implementierung des
+Plugin-Systems. Codex bleibt der unabhängige Reviewer und prüft Code, Tests und
+Vertragskonformität. Diese Rollentrennung ist bewusst gewählt: Claude besitzt
+den tiefsten Entwurfskontext; Codex hat die Spezifikation bisher als zweite,
+unabhängige Perspektive geprüft.
+
+Eine direkte Kommunikation zwischen Claude und Codex ist weiterhin nicht
+möglich. Verbindlicher Übergabekanal sind:
+
+- dieses Verifikationsdokument für Reviews und Rückmeldungen,
+- die jeweiligen Tickets für Implementierungsstand und Verify-Nachweise,
+- die Design-Spec nur für tatsächlich notwendige Designänderungen — nicht als
+  laufendes Implementierungstagebuch.
+
+## Ablauf pro Ticket
+
+1. **Claude wählt das nächste Ticket gemäß der Abhängigkeitsreihenfolge der
+   Spec.** Keine parallele Bearbeitung derselben Dateien durch beide Agenten.
+2. **Claude implementiert einen abgegrenzten Ticketumfang** einschließlich der
+   im Ticket geforderten positiven, negativen, Fehler- und Crash-/Race-Tests.
+3. **Claude führt die relevanten Tests aus.** Vor Übergabe läuft zusätzlich die
+   vollständige, für das betreffende Repo vorgesehene Testsuite, sofern kein
+   klar dokumentierter externer Blocker besteht.
+4. **Claude erstellt einen kleinen, eigenständigen Commit** mit Ticketnummer und
+   verständlicher Beschreibung. Sachfremde Änderungen werden nicht in diesen
+   Commit aufgenommen.
+5. **Claude aktualisiert das Ticket** mit konkreten Verify-Nachweisen:
+   betroffene Dateien, ausgeführte Befehle, Testergebnis und gegebenenfalls noch
+   nicht live prüfbare Human-Punkte.
+6. **Mike gibt den Commit an Codex zur Prüfung.** Codex prüft den tatsächlichen
+   Diff, den umliegenden Code, die Tests und die Übereinstimmung mit Spec und
+   Ticket. Eine reine Zusammenfassung des Implementierers genügt nicht.
+7. **Codex schreibt das Ergebnis in dieses Dokument.** Dabei gilt:
+   - abgenommen: kein offener Blocker, nächster Schritt kann beginnen;
+   - Nacharbeit: konkrete reproduzierbare Befunde mit Datei/Test/Szenario;
+   - Designfrage: nur wenn die Implementierung eine echte, bisher nicht
+     entschiedene Vertragsfrage sichtbar macht.
+8. **Claude arbeitet notwendige Korrekturen ein** und übergibt einen neuen,
+   wiederum prüfbaren Commit. Codex programmiert nicht parallel in denselben
+   Dateien.
+
+Standardmäßig implementiert Codex keine Gegenlösung während des Reviews. Wenn
+Mike ausdrücklich einen Fix durch Codex beauftragt, wird die Rolle für diesen
+klar begrenzten Commit gewechselt und Claude prüft beziehungsweise übernimmt
+danach wieder auf sauberem Stand.
+
+## Review-Gates
+
+- Ein abhängiges Ticket beginnt erst, wenn die benötigte Vorleistung
+  implementiert und abgenommen ist. Unabhängige Vorarbeiten gegen bereits
+  freigegebene statische Fixtures sind möglich, dürfen aber keine noch offene
+  Runtime-Annahme vorwegnehmen.
+- Besonders T-35 darf gegen die T-24-Fixtures vorbereitet werden; der echte
+  StockInfo-/StockPortfolio-Integrationslauf folgt erst nach T-25.
+- Ein grüner Testlauf ersetzt keine Prüfung der Vertragsfälle. Umgekehrt wird
+  ein Ticket nicht wegen rein redaktioneller Wünsche blockiert, wenn Code,
+  Vertrag und Tests stimmen.
+- Neue Designideen werden nicht still während der Implementierung eingebaut.
+  Sie werden zuerst im Ticket sichtbar gemacht und nur bei tatsächlicher
+  Notwendigkeit in die Spec übernommen.
+
+## Umgang mit den beiden Repositories
+
+StockInfo und StockPortfolio bleiben getrennte Artefakte mit getrennten
+Commits. Cross-Repo-Verhalten wird in jedem Repo lokal über veröffentlichte
+HTTP-Fixtures geprüft; der abschließende Integrationslauf ist ein zusätzlicher
+Nachweis, kein Ersatz dafür.
+
+Im StockPortfolio-Arbeitsbaum liegen derzeit bereits uncommittete, sachfremde
+Änderungen. Vor Beginn von T-35 muss Claude diese Arbeit eindeutig zuordnen und
+separat abschließen beziehungsweise in einem eigenen Commit isolieren. Sie darf
+weder überschrieben noch versehentlich mit der Plugin-Implementierung vermischt
+werden. Destruktives Aufräumen des Arbeitsbaums ist ohne Mikes ausdrücklichen
+Auftrag ausgeschlossen.
+
+## Erster nächster Schritt
+
+Claude beginnt mit dem ersten noch offenen Ticket gemäß der in der Spec
+festgelegten Abhängigkeitsreihenfolge und übergibt danach den atomaren Commit
+samt Verify- und Testnachweisen an Codex. Codex prüft dann erstmals nicht mehr
+die Designformulierung, sondern die tatsächliche Implementierung.
+
+---
+
+# Sitzungsübergabe für Codex nach `/exit`
+
+**Checkpoint:** 2026-08-21, unmittelbar vor dem geplanten Sitzungsende.
+
+## Wo fortsetzen
+
+Das Plugin-System-Design ist nach Runde 12 **abgenommen**. Es gibt keinen
+offenen Designblocker. Nicht erneut die gesamte Designanalyse beginnen, sondern
+beim nächsten konkreten Implementierungsstand fortsetzen.
+
+Die vereinbarte Rollenverteilung lautet:
+
+- **Claude implementiert** das Plugin-System ticketweise.
+- **Codex prüft** jeden übergebenen atomaren Commit unabhängig gegen Code,
+  Tests, Ticket und Spec.
+- Rückmeldungen von Codex kommen in dieses Dokument; Claude aktualisiert Tickets
+  und gegebenenfalls die Spec.
+- Codex implementiert nur dann selbst, wenn Mike das ausdrücklich für einen
+  begrenzten Fix beauftragt.
+
+**Nächste erwartete Aktion:** Claude beginnt das erste offene Ticket gemäß der
+Abhängigkeitsreihenfolge in der Spec. Sobald Mike den ersten
+Implementierungscommit zur Prüfung meldet, Diff und umliegenden Code lesen,
+relevante sowie vollständige Tests ausführen und das Ergebnis am Ende dieses
+Dokuments ergänzen.
+
+## Maßgebliche Dateien
+
+- Design: `docs/superpowers/specs/2026-08-19-plugin-system-design.md`
+- Review-/Kommunikationskanal: dieses Dokument
+- zentrale StockInfo-Tickets zunächst insbesondere:
+  `_tickets/T-24-rest-core-vertrag.md` und
+  `_tickets/T-25-quellenprofil-wechseln.md`
+- StockPortfolio-Gegenstück:
+  `/Volumes/DevLocal/DevWeb/Production/StockPortfolio/_tickets/T-35-stockinfo-generation-und-waehrung.md`
+
+## Letzter abgenommener Stand
+
+- StockInfo: Commit `99d9036` — Runde 12
+- StockPortfolio: Commit `5fff63f` — T-35 mit eindeutigem Single-Flight
+- Die vollständige Abnahme steht oben unter „Prüfung von Claudes Runde 12".
+
+Wesentliche, nicht erneut zu öffnende Entscheidungen:
+
+- nur programmatische Python-Plugins, keine zweite deklarative Pluginform,
+- Profilwechsel: Backup der alten Datenbank, neue frische Datenbank und neue
+  `generation_id`,
+- stabiler REST-Mindestvertrag für StockPortfolio; additive Details bleiben
+  möglich,
+- `/generation` plus `StockInfo-Generation` auf allen Antworten,
+- StockPortfolio verwendet generationelle Quote-/History-Namespaces,
+- Generationsbestätigung läuft als **Single-Flight**,
+- StockInfo-Basis-URL ist während einer Sitzung unveränderlich; Änderung nur
+  nach Neustart und Reload, auch künftig,
+- Plugininstallation muss so einfach wie möglich bleiben.
+
+## Arbeitsbaum beim Checkpoint
+
+StockInfo enthält genau eine beabsichtigte uncommittete Änderung:
+
+```
+M _tickets/codex-verification-2026-08-19-plugin-system-design.md
+```
+
+Sie enthält die Abnahme von Runde 12, die Arbeitsvereinbarung und diesen
+Checkpoint. Nicht verwerfen; Claude darf sie als Kommunikationsfortschritt in
+einen Dokumentationscommit übernehmen.
+
+StockPortfolio enthält bereits folgende **sachfremde, uncommittete** Änderungen:
+
+```
+M src/api/errors.ts
+M src/components/AppApiAlert.vue
+M src/stores/apiStatus.ts
+M src/stores/quotes.ts
+M src/views/DashboardView.vue
+M src/views/RebalancingView.vue
+M tests/api/describeFailure.spec.ts
+M tests/stores/apiStatus.spec.ts
+?? tests/components/appApiAlert.spec.ts
+```
+
+Diese Änderungen gehören zu einer anderen laufenden Arbeit. Nicht überschreiben,
+nicht bereinigen und nicht mit T-35 vermischen. Vor T-35 muss Claude sie separat
+zuordnen beziehungsweise committen.
+
+## Startanweisung für die nächste Codex-Sitzung
+
+1. Dieses Dokument am Ende lesen.
+2. `git status` und die neuesten Commits in beiden Repositories prüfen.
+3. Feststellen, welchen Implementierungscommit Claude seit diesem Checkpoint
+   erstellt hat.
+4. Nur diesen Umfang und seine Abhängigkeiten prüfen; keine abgeschlossene
+   Designrunde wiederholen.
+5. Befunde beziehungsweise Abnahme wieder hier anhängen.
