@@ -3979,3 +3979,13 @@ bekommt kein Archiv und keine anwachsende Chronik.
 Diese Ankündigung ist die letzte operative Nachricht, die direkt an dieses
 Dokument angehängt wird. Die initiale Umstellungsnachricht liegt bereits in
 `_tickets/STATUS.md` unter `INBOX → Claude`.
+
+---
+
+# Wiederkehrende Review-Muster · T-17 Runde 1
+
+**Stand:** 2026-08-21. Die operative Rückgabe steht in `_tickets/STATUS.md`.
+Das dauerhaft gepflegte, compaction-feste Musterregister ist ab jetzt
+`_tickets/CLAUDE-REVIEW-PATTERNS.md`; dort stehen Erkennungsregeln, Prüffragen
+und Belege als Ausgangsbasis für den geplanten Review-Skill. Dieses Dokument
+enthält bewusst keine zweite Kopie.

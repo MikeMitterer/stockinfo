@@ -9,6 +9,8 @@ Datei-basiertes Board für kleine, verifizierbare Arbeitseinheiten mit
 _tickets/
 ├── README.md      # dieser Workflow (stabil)
 ├── STATUS.md      # ephemere Claude↔Codex-Mailbox
+├── CODEX-REVIEW-AUTOMATION.md # Zustandsprotokoll + Scheduled-Task-Prompt
+├── CLAUDE-REVIEW-PATTERNS.md   # dauerhaftes, compaction-festes Review-Wissen
 ├── QUESTIONS.md   # ephemerer Capture-Buffer, tendiert gegen leer
 ├── T-NN-*.md      # offene Tickets (Board-Root)
 └── solved/        # erledigte Tickets (git mv bei done)
@@ -29,6 +31,17 @@ _tickets/
   Beide Bereiche werden nach Verarbeitung geleert; dauerhafte Erkenntnisse
   wandern ins Ticket, in die Spec oder das Review-Dokument. Keine Historie im
   Status-Hub — dafür existiert Git.
+- **Zustandsübergaben sind atomar.** Claude setzt nach dem Produkt-Commit
+  `ready_for_codex` samt `handoff_commit` und stoppt Produktänderungen. Codex
+  setzt während der Prüfung `codex_reviewing` und danach `approved` oder
+  `changes_requested`. Identität eines Durchlaufs ist
+  `(ticket, handoff_commit, review_round)`; dasselbe Tupel wird nie zweimal
+  geprüft. Der vollständige Vertrag und der Scheduled-Task-Prompt stehen in
+  `CODEX-REVIEW-AUTOMATION.md`.
+- **Wiederkehrende Claude-Muster überleben Chat-Compaction.** Sie werden nur
+  in `CLAUDE-REVIEW-PATTERNS.md` dauerhaft gepflegt. Jeder Review liest diese
+  Datei zuerst und ergänzt ausschließlich belegte, verallgemeinerbare Muster;
+  Einzelfindings bleiben im Ticket beziehungsweise Review-Ergebnis.
 
 ## Stand dieser Runde
 
