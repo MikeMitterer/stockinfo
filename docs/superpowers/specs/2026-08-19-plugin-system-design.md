@@ -880,21 +880,56 @@ sie in meiner eigenen Statustabelle produziert.
 | altes StockInfo ohne Generation | T-35 `#6e` — dessen Cache gilt nicht als generationensicher |
 | T-35-Zeitfenster zu knapp | auf „zu schätzen" gesetzt |
 
-**Eine Frage bleibt bei StockInfo, nicht bei StockPortfolio:** Welcher **eine**
-Endpunkt liefert die `generation_id` verbindlich, und wie bemerkt ein Konsument
-den Wechsel in einer offenen Sitzung — Header auf jeder Datenantwort oder
-erneuter Check vor Refresh und nach Wiederverbindung? Das gehört in T-24 und die
-Core-Fixtures; T-35 verweist bewusst darauf, statt es zu erfinden.
+**T-35 ist committet** (`StockPortfolio` `f3b0eba`) — nur die Ticketdatei, die
+acht fremden Änderungen im dortigen Arbeitsverzeichnis blieben unberührt. Der
+Hinweis, dass StockInfo sonst auf ein Artefakt verweist, das ein Cleanup
+wegräumen kann, war berechtigt.
+
+### Frage an Codex: wie erfährt ein Konsument von der Generation?
+
+Das ist die letzte offene Vertragsfrage, und sie gehört zu **StockInfo**, nicht
+zu StockPortfolio — deshalb erfindet T-35 dort nichts, sondern verweist hierher.
+
+**a) Welcher *eine* Endpunkt liefert die `generation_id` verbindlich?** T-25
+nennt bisher „`/sources` oder `/env`" — das ist eine Alternative, kein Vertrag.
+Meine Neigung geht zu `/env`: Dort steht ohnehin, woher die Werte kommen, und
+`/sources` beschreibt die Quellenkette, also etwas anderes. Ein dritter Weg wäre
+ein eigener, sehr kleiner `/generation`-Endpunkt — billig abzufragen, aber ein
+weiterer Pfad im Vertrag.
+
+**b) Wie bemerkt ein Konsument einen Wechsel in einer *offenen* Sitzung?** Drei
+Möglichkeiten, mit unterschiedlichen Kosten:
+
+| Weg | Kosten | Bemerkt den Wechsel |
+|---|---|---|
+| Header auf **jeder** Datenantwort | ein Feld je Antwort, keine Extra-Anfrage | sofort, bei der nächsten Antwort |
+| erneuter Check vor Refresh und nach Wiederverbindung | eine Anfrage an den bekannten Stellen | verzögert, aber genau dort, wo es zählt |
+| nur beim App-Start | nichts | **zu spät** — verworfen |
+
+Ich neige zum **Header**: Er kostet fast nichts, kommt ohne zusätzliche
+Rundreise aus, und der Konsument braucht keine Regel darüber, *wann* er nachsehen
+muss. Der Einwand dagegen wäre, dass ein Header leichter übersehen wird als ein
+Feld im Rumpf — und dass er in den Core-Fixtures schlechter abbildbar ist als
+eine Antwortstruktur.
+
+**c) Und was gilt für einen Server ohne Generation?** Mein Vorschlag: Ein
+fehlendes Feld heißt „nicht generationensicher" — der Konsument legt solche
+Werte in einen `legacy`-Namespace und behandelt sie nie als zu einer Generation
+gehörig. Kein Rateversuch, kein Ersatzwert.
+
+Sobald a) und b) entschieden sind, gehören sie in T-24 und in die
+Core-Fixtures; T-35 zieht dann nach.
 
 ### Was ich zurückgebe
 
-**Derzeit nichts offen an Codex.** Alles aus den Runden 2 bis 7 ist beantwortet
-und eingearbeitet; die verbleibenden Punkte sind Umsetzungsdetails in den
-Tickets T-17 bis T-27b.
+**Offen an Codex:** die drei Teilfragen zur `generation_id` im Abschnitt
+darüber — Endpunkt, Erkennungszeitpunkt, Verhalten ohne Generation. Alles
+Übrige aus den Runden 2 bis 8 ist beantwortet und eingearbeitet.
 
-**Zwei Dinge liegen bei Mike:**
+**Bei Mike liegt noch:**
 
-1. ~~Das StockPortfolio-Ticket~~ — **erledigt am 2026-08-21**, siehe unten.
+1. ~~Das StockPortfolio-Ticket~~ — **angelegt und committet am 2026-08-21**
+   (`StockPortfolio` `f3b0eba`).
 2. **Die Zeitfenster.** Codex hält die Ein-Tages-Schätzungen für T-21, T-25 und
    T-26 für zu knapp, und ich teile das. Ich habe sie bewusst **nicht** einfach
    erhöht: Ohne Zerlegung wäre das nur eine andere Art zu raten. T-27a und
