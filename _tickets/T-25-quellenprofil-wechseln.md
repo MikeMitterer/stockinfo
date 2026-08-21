@@ -16,8 +16,9 @@ eine Quelle zu ergänzen — und dieser Unterschied fehlt im Entwurf bisher ganz
 > Datenbank. Kanada kann Profil B, Russland C und Österreich/Deutschland A
 > verwenden." Der frühere Vorbehalt „nur aus zweiter Hand" ist damit erledigt.
 
-**Hängt an:** T-22 (ohne Profil gibt es nichts zu wechseln) **und T-24**
-(`generation_id` gehört zum REST-Vertrag).
+**Hängt an:** T-22 (ohne Profil gibt es nichts zu wechseln), **T-24**
+(`generation_id` gehört zum REST-Vertrag) **und T-23** (liefert den
+programmatischen Preflight, den die Rotation wiederverwendet).
 **Nicht zu verwechseln mit T-19**, das ein einzelnes Papier neu auflöst.
 
 ---
@@ -36,7 +37,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 4 | nach #3 | B läuft auf einer **frischen** Datenbank | | |
 | 4b | Sicherung läuft, gleichzeitig ein API-Schreibzugriff | Sicherung ist trotzdem konsistent | | |
 | 5 | Sicherungsverzeichnis | fortlaufend nummeriert, mit Manifest: Profil, Stand, Zeitpunkt | | |
-| 5b | Absturz **zwischen** Sicherung und Wechsel, dann Neustart | setzt deterministisch fort oder rollt auf A zurück — nie beides halb | | |
+| 5b | **Crash-Matrix**: sechs injizierbare Fehlerpunkte, je Punkt Neustart und Recovery | nach jedem: genau **eine** vollständige Generation aktiv, keine Nummer überschrieben, nie B mit As Datenbank, A vollständig startbar | | |
+| 5d | derselbe Preflight wie T-23 vor jeder Rotation | identische Logik, keine zweite Validierung — **Abnahme hier**, bereitgestellt in T-23 | | |
 | 5c | B ungültig, Neustart | A läuft wieder **vollständig** — Konfiguration *und* Plugin-Umgebung, nicht nur die alte Datenbank | | |
 | 6 | Wiederherstellung | ordnet Sicherung und Profil einander zu; ein unpassendes Paar wird abgelehnt | | |
 | 6b | dieselbe Sicherung zweimal einspielen | jede Aktivierung bekommt eine **neue** `generation_id` | | |
@@ -157,6 +159,27 @@ Dafür ein kleiner, dauerhafter Zustandsmarker mit:
 
 Jeder Zwischenzustand muss beim Neustart deterministisch fortgesetzt **oder**
 auf A zurückgerollt werden können.
+
+**Die Crash-Matrix, konkret** *(Codex, 2026-08-21 — eine frühere Fassung dieses
+Tickets hatte nur einen allgemeinen Absturztest, und die Spec behauptete
+fälschlich, die Matrix sei schon enthalten).* Sechs Fehlerpunkte, einzeln
+injizierbar, jeder mit Neustart und Recovery-Lauf:
+
+| # | Abbruch nach/während | |
+|---|---|---|
+| 1 | erfolgreicher Validierung von B | |
+| 2 | dem temporären Backup | |
+| 3 | atomarer Veröffentlichung des Backups | |
+| 4 | Schreiben des Übergangsmarkers | |
+| 5 | Anlegen der frischen B-Datenbank | |
+| 6 | unmittelbar vor **und** nach Aktivierung von B | |
+
+Für **jeden** Punkt gelten dieselben Invarianten: genau eine vollständige
+Generation aktiv, keine Backupnummer überschrieben, niemals B mit der Datenbank
+von A, und A einschließlich Konfiguration und Plugin-Umgebung wieder startbar.
+
+Das braucht eine einspeisbare Uhr und kontrollierte UUID-Erzeugung — echte
+Wartezeiten oder Manipulation der Systemuhr gehören nicht in die Suite.
 
 **Und „A bleibt aktiv" braucht mehr als die alte Datenbank:** Die geänderte
 `sources.yaml` zeigt ja weiterhin auf B. Es braucht eine gespeicherte

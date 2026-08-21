@@ -2722,3 +2722,233 @@ Mit diesem Zuschnitt ist die Pluginstruktur nicht nur theoretisch testbar. Ein
 kanadischer oder russischer Autor kann sein Plugin lokal mit einem einfachen
 Offline-Befehl prüfen, den echten Provider gezielt gegenprüfen und vor der
 Aktivierung denselben Preflight verwenden, den StockInfo selbst nutzt.
+
+---
+
+# Prüfung von Claudes Runde 7 am 2026-08-21
+
+Geprüft wurden die Commits `d94c249` und `4d31542`, T-23, T-25, T-26, die neuen
+Tickets T-27a/T-27b sowie das noch uncommittete StockPortfolio-Ticket T-35.
+
+## Gesamturteil
+
+Claude hat den Testbarkeitsentwurf substanziell verbessert und die wichtigsten
+Punkte korrekt übernommen:
+
+- T-27 ist sinnvoll in Contract-Kit und HTTP Fake→Real geteilt,
+- alle fünf Rollen sind als prüfbare Verträge vorgesehen,
+- Golden Cases sind von Provider-Aufzeichnungen getrennt,
+- der Offline-Lauf kann nicht still ins Netz ausweichen,
+- der unmögliche Hang-/Circuit-Test ist ehrlich korrigiert,
+- `/fields` ist jetzt widerspruchsfrei gegliedert und `details_version` typisiert,
+- das StockPortfolio-Folgeticket existiert als Arbeitsdatei.
+
+Die Runde ist damit fachlich auf dem richtigen Weg, aber noch nicht vollständig
+ausführungsreif. Es bleiben zwei strukturelle Blocker und mehrere konkrete
+Lücken im neuen StockPortfolio-Ticket.
+
+## Blocker 1: Der Host-Harness erzeugt eine Ticket-Schleife
+
+T-23 Verify `#6b` verlangt in einem einzigen End-to-End-Lauf:
+
+- Core und `listing_id`,
+- `generation_id`,
+- Herkunft und ein unbekanntes Detailfeld.
+
+Diese Ergebnisse entstehen jedoch in verschiedenen Tickets:
+
+- `listing_id` kommt aus T-21/T-24,
+- `generation_id` wird in T-25 umgesetzt,
+- unbekannte Details werden erst in T-26 durchgereicht.
+
+T-26 hängt ausdrücklich von T-23 ab. T-23 kann deshalb nicht zugleich vor T-26
+fertig sein und als Abnahmekriterium bereits den T-26-Detailpfad verlangen.
+Ebenso hängt T-23 derzeit nicht von T-25 ab, verlangt aber dessen
+`generation_id`. Das ist keine bloße Reihenfolgefrage, sondern eine echte
+zyklische Definition von „fertig“.
+
+**Empfohlene Auflösung:** Den Harness schrittweise besitzen lassen:
+
+1. T-23 prüft Plugin laden → Resolver/Provider → stabiler Core-REST-Response.
+2. T-25 ergänzt denselben Harness um Profil und `generation_id`.
+3. T-26 ergänzt unbekanntes Detailfeld, Herkunft, Persistenz und Override.
+
+Alternativ ein eigenes finales Integrationsticket, das von T-23, T-25 und T-26
+abhängt. Der kleine Core-Harness sollte trotzdem in T-23 bleiben, damit die
+Registry nicht isoliert abgenommen wird.
+
+Dasselbe Problem besteht bei T-23 Verify `#6d`: Den Preflight stellt T-23 bereit,
+aber **dessen Wiederverwendung beim Profilwechsel** kann erst T-25 abnehmen.
+`#6d` gehört daher nach T-25; T-25 muss für den programmatischen Preflight von
+T-23 abhängen. Die Reihenfolgetabelle in der Spec sollte diese Abhängigkeiten
+ebenfalls zeigen.
+
+## Blocker 2: `generation_id` ist für den Consumer noch kein vollständiger Vertrag
+
+T-35 sagt richtig, dass StockPortfolio die letzte Generation speichern und bei
+Änderung Quote-/History-Caches verwerfen muss. Es bleibt aber offen:
+
+- welcher **eine** stabile Endpoint die ID liefert (`/sources` oder `/env` ist
+  in T-25 noch eine Alternative, kein Vertrag),
+- ob StockPortfolio die Generation vor dem Hydrieren aus IndexedDB kennt,
+- wie ein Profilwechsel während einer bereits geöffneten Sitzung erkannt wird,
+- was bei einem älteren StockInfo ohne `generation_id` geschieht,
+- was beim Wechsel der StockInfo-Basis-URL passiert,
+- wie ein Absturz zwischen „neue Generation speichern“ und „Caches löschen“
+  behandelt wird.
+
+Wird zuerst der bestehende Cache hydriert und erst danach die Generation
+abgefragt, erscheinen mindestens vorübergehend Werte aus Profil A unter Profil
+B. Wird die neue ID gespeichert und der Browser stürzt vor dem Leeren beider
+Object-Stores ab, kann der alte Cache beim nächsten Start sogar als passend
+gelten.
+
+**Robuste Empfehlung:** Cacheeinträge nicht nur nach Papier, sondern unter
+`(StockInfo-Instanz, generation_id, listing/legacy-key)` adressieren. Für die
+History gilt dasselbe. Vor dem Hydrieren wird die aktuelle Generation geladen;
+nur ihr Namespace wird sichtbar. Alte Namespaces können anschließend
+best-effort gelöscht werden, ohne dass deren Löschung sicherheitskritisch ist.
+
+Zur StockInfo-Instanz gehört mindestens die normalisierte Basis-URL. Sonst kann
+ein Wechsel von Server A zu Server B den Cache von A weiterverwenden, obwohl
+beide zufällig dieselbe lokale Situation anders abbilden.
+
+Für laufende Sitzungen braucht es zusätzlich eine Erkennungsregel. Möglichkeiten
+sind ein Generation-Header auf jeder Datenantwort oder ein erneuter Info-Check
+vor einem Refresh/nach Wiederverbindung. Nur „einmal beim App-Start“ genügt
+nicht. Der konkrete Endpoint und sein Antwortmodell gehören verbindlich in
+T-25/T-35 und in die Core-Fixtures.
+
+Beim ersten Kontakt mit einer neuen StockInfo-Version kann ein bisheriger
+Legacy-Cache einmal verworfen beziehungsweise in einen `legacy`-Namespace
+eingeordnet werden. Bei einem alten Server ohne Generation darf nicht so getan
+werden, als sei dessen Cache generationensicher.
+
+## T-27a/T-27b: eine kleine Abhängigkeit ist noch falsch herum
+
+T-27a Verify `#6` verlangt, dass ein Szenario bereits in Replay **und** Real
+läuft. Der HTTP-Runner, der genau diese beiden Betriebsarten umsetzt, gehört
+aber T-27b; T-27b hängt seinerseits von T-27a ab.
+
+T-27a sollte nur das gemeinsame Szenarioformat, seine Validierung und einen
+transportneutralen Runner-Vertrag abnehmen. Dass dasselbe Szenario tatsächlich
+offline aufgezeichnet und real ausgeführt wird, ist Verify in T-27b. Dann kann
+T-27a abgeschlossen werden, bevor T-27b darauf aufbaut.
+
+## Die behauptete Crash-Matrix steht noch nicht in T-25
+
+Die Runde-7-Tabelle nennt die „Crash-Matrix für den Profilwechsel“ als in T-25
+bereits enthalten. Tatsächlich enthält T-25 weiterhin nur einen allgemeinen
+Test „Absturz zwischen Sicherung und Wechsel“. Das prüft nicht die konkreten
+persistierten Zwischenzustände.
+
+Mindestens folgende Fehlerpunkte sollten einzeln injizierbar und mit einem
+Neustart geprüft werden:
+
+1. nach erfolgreicher Validierung von B,
+2. während des temporären Backups,
+3. nach atomarer Veröffentlichung des Backups,
+4. nach Schreiben des Übergangsmarkers,
+5. nach Anlegen der frischen B-Datenbank,
+6. unmittelbar vor und nach Aktivierung von B.
+
+Für jeden Punkt gelten dieselben Invarianten: genau eine vollständige Generation
+aktiv, keine Backupnummer überschrieben, nie B mit der Datenbank von A, und A
+einschließlich Konfiguration und Plugin-Umgebung wieder startbar. Diese Matrix
+sollte ausdrücklich in T-25 landen; „allgemeiner Absturztest“ ist dafür zu
+unscharf.
+
+## Der Preflight muss wirklich in einer Kandidatenumgebung laufen
+
+`stockinfo plugin check <paket-oder-datei>` ist die richtige UX. „Ohne die
+aktive Instanz zu ändern“ ist aber nur belastbar, wenn Paketinstallation,
+Import und Offline-Selbsttest in einer Kandidatenumgebung mit temporärem
+Datenverzeichnis stattfinden.
+
+Ein Python-Import kann bereits Seiteneffekte haben. Ein separater CLI-Prozess
+allein schützt die aktive Datenbank nicht, wenn er dieselben Pfade und
+Umgebungsvariablen erhält. Der Preflight sollte daher:
+
+- das Paket in die spätere hash-benannte Kandidatenumgebung installieren,
+- aktive DB-/Datenpfade nicht übergeben beziehungsweise auf temporäre Pfade
+  zeigen lassen,
+- Netz beim Offline-Selbsttest technisch sperren,
+- erst nach Erfolg den Aktivierungszeiger umstellen,
+- bei Fehlern die Last-known-good-Umgebung unangetastet lassen.
+
+Das ist keine Sicherheits-Sandbox gegen absichtlich bösartigen Code, aber eine
+notwendige Zustandsisolation gegen Fehler in einem vertrauenswürdigen Plugin.
+
+## StockPortfolio T-35: Währungsfehler ist noch nicht vollständig erfasst
+
+Claude nennt zwei EUR-Rückfälle. Im Code existiert ein dritter relevanter Pfad:
+
+```ts
+src/api/mappers.ts:42
+currency: instrument.latest_currency ?? instrument.currency ?? 'EUR'
+```
+
+Bei vorhandenem `latest_price`, aber fehlender `latest_currency` wird damit
+weiterhin geraten. Auch `instrument.currency` ist kein Ersatz für die explizite
+Währung genau dieses Kurswerts. T-35 sollte alle drei Stellen abdecken.
+
+Außerdem muss entschieden werden, wie eine unvollständige Kursantwort in das
+Domainmodell gelangt. `QuoteCacheEntry.currency` ist derzeit verpflichtend.
+Die sauberste Variante ist deshalb nicht, überall `string | null` einzuführen,
+sondern die Antwort am API-Rand als Vertragsverletzung abzulehnen:
+
+- kein neuer Cacheeintrag ohne Währung,
+- bei vorhandener alter, gültiger Quote diese höchstens als `stale` behalten,
+- bei einem neuen Papier Position sichtbar lassen, aber ohne verwertbaren Kurs,
+- Ursache in Oberfläche und Diagnose kenntlich machen.
+
+Damit benötigen `PriceChart` und andere Komponenten keinen erfundenen
+Formatierungswert.
+
+## StockPortfolio braucht Runtime-Validierung, nicht nur TypeScript-Typen
+
+T-35 Verify `#9` verlangt, dass eine Fixture ohne Core-Pflichtfeld sichtbar
+scheitert. Der bestehende Client tut derzeit jedoch nur:
+
+```ts
+return (await response.json()) as T
+```
+
+Das ist eine Compile-time-Behauptung, keine Prüfung der Serverantwort. Ein
+fehlendes Feld läuft zur Laufzeit als `undefined` weiter; genau dadurch konnten
+die EUR-Fallbacks den Vertragsbruch verbergen.
+
+T-35 muss daher einen Runtime-Decoder beziehungsweise explizite Validatoren an
+der API-Grenze verlangen. Mindestens Preis, Währung, Identität, Zeitpunkte und
+die je Response verbindlichen Core-Felder sind zu validieren. Unbekannte
+`details` bleiben erlaubt. Die veröffentlichten Negativ-Fixtures prüfen den
+Decoder, nicht bloß TypeScript-Kompilierung.
+
+Mit Generation-Namespace, IndexedDB-Anpassung, Runtime-Decodern, drei
+Währungspfaden und Consumer-Fixtures wirkt die T-35-Timebox von vier Stunden
+zu knapp und sollte nach Zerlegung neu geschätzt werden.
+
+## Status des StockPortfolio-Tickets
+
+T-35 ist inhaltlich angelegt, aber im Nachbar-Repo noch **untracked**. Dort
+liegen gleichzeitig fremde uncommittete Änderungen; korrekt war daher, nichts
+automatisch zu committen oder zu verändern. Bis die Ticketdatei versioniert
+ist, verweist StockInfo allerdings auf ein Artefakt, das bei einem Cleanup
+verloren gehen kann. Mike beziehungsweise der dort arbeitende Prozess sollte
+sie beim nächsten passenden Commit ausdrücklich aufnehmen.
+
+## Schlussfazit an Claude
+
+Runde 7 übernimmt den Testbarkeitsentwurf weitgehend richtig. Vor einer
+Umsetzungsfreigabe bitte noch:
+
+1. den T-23-Harness nach Core, Generation und Details staffeln oder ein finales
+   Integrationsticket anlegen,
+2. Preflight-Wiederverwendung und Crash-Matrix korrekt T-25 zuordnen,
+3. Replay/Real-Abnahme aus T-27a nach T-27b verschieben,
+4. für StockPortfolio Endpoint, Erkennungszeitpunkt und generationsgebundene
+   Cacheadressierung festlegen,
+5. T-35 um den dritten EUR-Fallback und echte Runtime-Validierung ergänzen.
+
+Danach ist die Testarchitektur nicht nur umfassend beschrieben, sondern auch
+ohne Abhängigkeitsschleifen implementierbar.

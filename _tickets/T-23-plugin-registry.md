@@ -32,9 +32,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 5 | Quelle liefert wiederholt `Unavailable` | Schutzschalter öffnet; weitere Aufrufe werden unterdrückt. Half-open und Reset mit **eingespeister Uhr** geprüft, ohne echte Wartezeit | | |
 | 5b | Plugin, das endlos hängt | **kein Test** — die Grenze ist dokumentiert, nicht behauptet (siehe unten) | | |
 | 6 | `yfinance` und `justetf` in `GET /sources` | erscheinen als **normale Quellen**, nicht als Sonderfall | | |
-| 6b | **Host-Harness**: temporäres Verzeichnis, leere DB, Plugin laden, Papier über REST aufnehmen | Core, `listing_id`, `generation_id`, Herkunft und ein unbekanntes Detailfeld kommen korrekt an | | |
-| 6c | `stockinfo plugin check <paket>` | prüft Import, `api_version`, Namen, Felddeklarationen, Pflichtkonfiguration und Rollenabdeckung — **ohne** die aktive Instanz zu ändern | | |
-| 6d | derselbe Preflight beim Profilwechsel | identische Logik, keine zweite Validierung | | |
+| 6b | **Host-Harness, Stufe 1**: temporäres Verzeichnis, leere DB, Plugin laden, Papier über REST aufnehmen | **Core-Antwort** kommt vollständig an. `generation_id` → T-25, Details/Herkunft → T-26 | | |
+| 6c | `stockinfo plugin check <paket>` | prüft Import, `api_version`, Namen, Felddeklarationen, Pflichtkonfiguration und Rollenabdeckung — in einer **Kandidatenumgebung**, nicht gegen die aktive Instanz | | |
 | 7 | `make test` | Backend grün | | |
 
 ---
@@ -100,19 +99,46 @@ eindeutige Namen und Felddeklarationen, Pflichtkonfiguration (**ohne Geheimnisse
 auszugeben**), Rollenabdeckung des Profils und — falls das Plugin Testfälle
 mitbringt — einen kurzen Offline-Selbsttest.
 
-**Denselben Preflight verwendet der Profilwechsel** vor jeder Rotation. Damit
-gibt es keine zweite, abweichende Validierungslogik. Ein bestandener Check
-beweist keine fachliche Richtigkeit, verhindert aber, dass ein Syntaxfehler, ein
-fehlendes Wheel oder ein unvollständiges Profil die aktive Datenbankgeneration
-ablöst.
+**Der Profilwechsel verwendet denselben Preflight** — die Abnahme dafür liegt
+aber bei **T-25**, nicht hier: T-23 stellt ihn bereit, T-25 weist die
+Wiederverwendung nach.
 
-### Der Harness: einmal ganz durch, in-process
+**„Ohne die aktive Instanz zu ändern" ist nur belastbar mit Kandidatenumgebung**
+*(Codex, 2026-08-21)*. Ein Python-Import kann bereits Seiteneffekte haben, und
+ein eigener Prozess schützt nichts, wenn er dieselben Pfade und
+Umgebungsvariablen bekommt. Also:
+
+- das Paket in die spätere **hash-benannte Kandidatenumgebung** installieren
+- aktive Datenbank- und Datenpfade **nicht** übergeben, sondern auf temporäre zeigen
+- Netz beim Offline-Selbsttest technisch sperren
+- den Aktivierungszeiger erst **nach** Erfolg umstellen
+- bei Fehlern die last-known-good-Umgebung unangetastet lassen
+
+Das ist keine Sandbox gegen bösartigen Code — es ist Zustandsisolation gegen
+Fehler in einem Plugin, dem man vertraut.
+
+### Der Harness: einmal ganz durch, in-process — aber gestaffelt
 
 Isolierte Contract-Tests finden keine Fehler **zwischen** den Schichten. Dafür
 ein kleiner Integrationslauf: temporäres Datenverzeichnis, leere Datenbank,
 Beispielplugin als Datei **und** als Entry-Point laden, App mit Testkonfiguration
-starten, ein Papier über den öffentlichen REST-Endpunkt aufnehmen, dann Quote,
-Instrument, Details und `/fields` abfragen — und am Ende alles abbauen.
+starten, ein Papier über den öffentlichen REST-Endpunkt aufnehmen — und am Ende
+alles abbauen.
+
+**Gestaffelt, sonst entsteht ein Ringschluss** *(Codex, 2026-08-21)*: Eine
+frühere Fassung verlangte hier in **einem** Lauf `listing_id`, `generation_id`,
+Herkunft und ein unbekanntes Detailfeld. Aber `generation_id` entsteht erst in
+T-25, die Details erst in T-26 — und T-26 hängt seinerseits an T-23. Damit hätte
+T-23 vor T-26 fertig sein und zugleich T-26-Ergebnisse abnehmen müssen. Das ist
+keine Reihenfolgefrage, sondern eine zirkuläre Definition von „fertig".
+
+| Stufe | Ticket | Prüft zusätzlich |
+|---|---|---|
+| 1 | **T-23** | Plugin laden → Resolver/Provider → stabile **Core**-Antwort |
+| 2 | **T-25** | Profil und `generation_id` |
+| 3 | **T-26** | unbekanntes Detailfeld, Herkunft, Persistenz, Override |
+
+Derselbe Harness wächst mit; jedes Ticket besitzt seine Stufe.
 
 Kein echter Serverprozess nötig: eine In-process-ASGI-App mit temporärem
 Dateisystem genügt. Entscheidend ist, dass Registry, Container, Service,

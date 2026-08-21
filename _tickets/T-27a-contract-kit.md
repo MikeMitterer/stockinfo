@@ -28,7 +28,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 3 | Daily-Contract | Datum, Schlusskurs, Währung, Sortierung, **keine Duplikate**, adjusted/unadjusted deklariert | | |
 | 4 | FX-Contract | Base/Quote, positive endliche Rate, Zeitpunkt, Identitäts- und Fehlerfall | | |
 | 5 | fachliche Invarianten | ISIN-Prüfziffer, Anfrage-ISIN = Ergebnis-ISIN, **echter MIC statt Sammelcode**, gültige Währung, sinnvolle Datumsfolge | | |
-| 6 | Szenarioformat | ein Fall wird **einmal** beschrieben und läuft in Replay **und** Real | | |
+| 6 | Szenarioformat | ein Fall wird **einmal** beschrieben; Format, Validierung und ein **transportneutraler** Runner-Vertrag stehen. Dass derselbe Fall offline **und** real läuft, nimmt T-27b ab | | |
 | 7 | Golden Cases | erwarteter Ticker/MIC stammt **nicht** aus der Aufzeichnung, sondern aus gepflegten Daten | | |
 | 8 | `FakeSource` | vorgebbare Antwort je Anfrage, Aufrufprotokoll für Reihenfolge und Anzahl | | |
 | 9 | Fake-Uhr | TTL, Half-open und Reset ohne echte Wartezeit prüfbar | | |
@@ -79,6 +79,12 @@ Real-Modus laufen darf.
 
 Derselbe Fall läuft dann als **Replay** (deterministisch, ohne Netz, bei jedem
 Commit) und als **Real** (gegen den echten Anbieter, vor einem Release).
+
+**Die Abnahme dieser beiden Betriebsarten liegt bei T-27b**, nicht hier: Der
+HTTP-Runner, der sie umsetzt, gehört dorthin — und T-27b hängt an T-27a. Hier
+wird nur das gemeinsame Format samt Validierung und ein transportneutraler
+Runner-Vertrag abgenommen, damit T-27a fertig sein kann, bevor T-27b darauf
+aufbaut.
 
 **Der wichtigste Fallstrick:** Der erwartete Ticker und MIC dürfen **nicht** aus
 der Aufzeichnung erzeugt werden. Sonst bestätigt der Test nur, dass ein
