@@ -27,6 +27,29 @@ def test_openfigi_extract_ticker_leer() -> None:
     assert OpenFigiClient._extract_ticker({}) is None
 
 
+def test_openfigi_verwirft_einen_bloomberg_bezeichner() -> None:
+    """Ein FIGI-Ticker ist nicht immer ein Symbol.
+
+    Gemessen am 2026-08-21: `CA78012H5675` (Vorzugsaktie der Royal Bank) liefert
+    an `XTSE` genau einen Treffer, `RY V3.65 PERP BB`. Mit Börsensuffix wird
+    daraus `RY V3.65 PERP BB.TO`, und yfinance antwortet 404. Weil OpenFIGI
+    „getroffen" hatte, kam der Yahoo-Fallback nie an die Reihe.
+    """
+    data = [{"data": [{"ticker": "RY V3.65 PERP BB", "exchCode": "TORONTO"}]}]
+    assert OpenFigiClient._extract_ticker(data) is None
+
+
+def test_openfigi_behaelt_uebliche_symbolzeichen() -> None:
+    """Punkt, Bindestrich und Ziffern kommen in echten Symbolen vor.
+
+    `BRK-B` (US), `RY.PR.J` (Toronto), `7203` (Tokio) — der Filter darf nur
+    aussortieren, was als Yahoo-Symbol nicht taugt.
+    """
+    for ticker in ("BRK-B", "RY.PR.J", "7203", "VGWL"):
+        data = [{"data": [{"ticker": ticker}]}]
+        assert OpenFigiClient._extract_ticker(data) == ticker
+
+
 # ─── justETF ──────────────────────────────────────────────────────────────────
 
 

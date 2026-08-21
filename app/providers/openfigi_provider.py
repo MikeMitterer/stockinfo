@@ -4,6 +4,7 @@ Findet zu einer ISIN gezielt den Ticker einer bevorzugten Börse (z.B. Xetra).
 Yahoos eigene ISIN-Suche liefert diese Notiz nicht — daher OpenFIGI davor.
 """
 
+import re
 from typing import Any
 
 import httpx
@@ -12,6 +13,47 @@ import structlog
 logger = structlog.get_logger()
 
 _ENDPOINT = "https://api.openfigi.com/v3/mapping"
+
+# Zeichen, die ein Yahoo-Symbol tragen kann: Buchstaben, Ziffern, Punkt,
+# Bindestrich, Zirkumflex (Indizes) und Gleichheitszeichen (Devisen/Futures).
+_YAHOO_SYMBOL_PATTERN = re.compile(r"^[A-Za-z0-9.^=-]+$")
+
+
+def _is_yahoo_compatible_symbol(ticker: str) -> bool:
+    """Könnte dieser FIGI-Ticker ein Yahoo-Symbol sein?
+
+    OpenFIGI liefert Bloomberg-Bezeichner, und die sind nicht durchweg
+    Symbole. Zur Vorzugsaktie `CA78012H5675` kommt `RY V3.65 PERP BB` zurück;
+    mit Börsensuffix wird daraus `RY V3.65 PERP BB.TO`, und yfinance antwortet
+    darauf 404. Schlimmer als der Fehlschlag ist seine Nebenwirkung: Der
+    `CompositeResolver` prüft auf ``None``, nicht auf Brauchbarkeit — ein
+    solcher „Treffer" verdeckt also den Yahoo-Fallback, der das Papier
+    vielleicht gefunden hätte.
+
+    **Das ist eine Plausibilitätsprüfung, keine Zusage.** Sie sortiert aus, was
+    als Symbol nicht funktionieren *kann*; ob Yahoo den Rest kennt, sagt sie
+    nicht. `RY.PR.H` — die TSX-Schreibweise derselben Vorzugsaktie — käme
+    durch, und Yahoo führt sie trotzdem nicht. Wer mehr will, braucht einen
+    Abgleich gegen eine Symbolliste, nicht einen strengeren Ausdruck.
+
+    Geprüft wird die Zeichenmenge und nicht die Gattung. `marketSector`
+    auszuwerten wäre naheliegend, ginge aber zu weit: Vorzugsaktien und
+    Anleihen sind handelbare Papiere, die jemand aufnehmen können soll, sobald
+    ein brauchbares Symbol dafür vorliegt.
+
+    Der Filter ist ein Schutz, keine Lösung. OpenFIGI ordnet Kennungen zu —
+    ISIN, FIGI, Gattung, Handelsplatz — und ist kein Yahoo-Symbol-Resolver;
+    das blinde Anhängen eines Börsensuffixes bleibt bis auf Weiteres eine
+    Annahme. Die Trennung von Instrument-, Listing- und Anbieter-Identität
+    gehört in die Identitäts- und Plugin-Tickets (T-21 ff.), nicht hierher.
+
+    Args:
+        ticker: Ticker aus der OpenFIGI-Antwort.
+
+    Returns:
+        ``True`` wenn der Ticker als Yahoo-Symbol taugen kann.
+    """
+    return bool(_YAHOO_SYMBOL_PATTERN.match(ticker))
 
 
 class OpenFigiClient:
@@ -68,11 +110,20 @@ class OpenFigiClient:
 
     @staticmethod
     def _extract_ticker(data: Any) -> str | None:
-        """Extrahiert den ersten Ticker aus der OpenFIGI-Antwortstruktur."""
+        """Extrahiert den ersten brauchbaren Ticker aus der OpenFIGI-Antwort.
+
+        Returns:
+            Der Ticker, oder ``None`` wenn die Antwort keinen enthält oder er
+            als Yahoo-Symbol nicht taugt (siehe `_ist_symbolfaehig`).
+        """
         if not isinstance(data, list) or not data:
             return None
         entry = data[0]
         results = entry.get("data") if isinstance(entry, dict) else None
         if not results:
             return None
-        return results[0].get("ticker")
+        ticker = results[0].get("ticker")
+        if ticker and not _is_yahoo_compatible_symbol(ticker):
+            logger.info("openfigi_ticker_unbrauchbar", ticker=ticker)
+            return None
+        return ticker

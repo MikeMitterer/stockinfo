@@ -15,6 +15,7 @@ from app.providers.base import (
     EtfEnricher,
     InstrumentResolver,
     QuoteProvider,
+    RawQuote,
     ResolvedInstrument,
 )
 
@@ -178,7 +179,7 @@ class QuoteService:
         if raw is None:
             raise QuoteUnavailableError(resolved.symbol)
 
-        isin = raw.isin or resolved.isin
+        isin = self._isin_of(resolved, raw)
         instrument_type = raw.type or resolved.type
         response = QuoteResponse(
             isin=isin,
@@ -233,6 +234,38 @@ class QuoteService:
             # bekäme eine Aktie ihre Metadaten nie wieder aktualisiert.
             response.metadata_complete = False
         return response
+
+    @staticmethod
+    def _isin_of(resolved: ResolvedInstrument, raw: RawQuote) -> str | None:
+        """Wählt die ISIN der Antwort — die bekannte schlägt die gemeldete.
+
+        `resolved.isin` ist entweder die Eingabe des Nutzers oder der
+        gespeicherte Stand; `raw.isin` ist, was der Kursanbieter zum Symbol
+        sagt. Bisher gewann der Anbieter, und das ist nachweislich falsch:
+        yfinance meldet zu `MC.PA` die kanadische Zweitnotierung
+        `CA50244Q1037` statt `FR0000121014`, zu `7203.T` entsprechend
+        `CA89238H1091` statt `JP3633400001`. Der Name stimmt dabei jedes Mal,
+        die Gattung nicht — beim Draufschauen fällt nichts auf, gespeichert
+        wird trotzdem ein anderes Papier.
+
+        Eine Abweichung wird protokolliert statt still verworfen: Sie sagt
+        etwas über die Quelle, und das gehört gesehen.
+
+        Args:
+            resolved: Aufgelöstes oder gespeichertes Instrument.
+            raw: Rohkurs des Anbieters.
+
+        Returns:
+            Die maßgebliche ISIN, oder ``None`` wenn keine Seite eine kennt.
+        """
+        if resolved.isin and raw.isin and raw.isin != resolved.isin:
+            logger.warning(
+                "isin_abweichung",
+                angefragt=resolved.isin,
+                gemeldet=raw.isin,
+                symbol=resolved.symbol,
+            )
+        return resolved.isin or raw.isin
 
     def _enrich_etf(self, response: QuoteResponse, isin: str) -> bool:
         """Ergänzt ETF-Details (TER, Anbieter, …) aus der ETF-Quelle, best-effort.

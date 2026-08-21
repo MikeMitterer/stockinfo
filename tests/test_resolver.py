@@ -7,6 +7,7 @@ from app.resolver import (
     YFinanceResolver,
 )
 from app.providers.base import ResolvedInstrument
+from app.providers.openfigi_provider import OpenFigiClient
 
 
 class FakeFigiClient:
@@ -124,6 +125,106 @@ def test_composite_gibt_none_wenn_alle_leer() -> None:
     resolver = CompositeResolver(StubResolver(None), StubResolver(None))
 
     assert resolver.resolve_isin("XX0000000000") is None
+
+
+class CountingResolver:
+    """Zählt seine Aufrufe — beantwortet die Frage, ob er überhaupt drankam."""
+
+    def __init__(self, result: ResolvedInstrument | None) -> None:
+        self._result = result
+        self.calls: list[str] = []
+
+    def resolve_isin(self, isin: str) -> ResolvedInstrument | None:
+        self.calls.append(isin)
+        return self._result
+
+
+class _FakeResponse:
+    """Antwortobjekt für den gemockten OpenFIGI-Aufruf."""
+
+    def __init__(self, payload: object) -> None:
+        self._payload = payload
+
+    def raise_for_status(self) -> None:
+        return None
+
+    def json(self) -> object:
+        return self._payload
+
+
+def _mit_openfigi_antwort(monkeypatch, payload: object) -> None:
+    """Legt die OpenFIGI-Antwort fest, ohne den Dienst zu fragen."""
+    import app.providers.openfigi_provider as openfigi_module
+
+    monkeypatch.setattr(
+        openfigi_module.httpx,
+        "post",
+        lambda *args, **kwargs: _FakeResponse(payload),
+    )
+
+
+def test_bloomberg_bezeichner_laesst_den_fallback_ans_werk(monkeypatch) -> None:
+    """Die ganze Kette, nicht nur der Filter: Kommt der zweite Resolver dran?
+
+    Gemessen am 2026-08-21: OpenFIGI liefert zu `CA78012H5675` (Vorzugsaktie
+    der Royal Bank) den Bloomberg-Bezeichner `RY V3.65 PERP BB`. Daraus wurde
+    das Symbol `RY V3.65 PERP BB.TO`, auf das yfinance mit 404 antwortet — und
+    weil der `CompositeResolver` nur auf ``None`` prüft, galt das als Treffer.
+    Der Yahoo-Fallback kam nie an die Reihe.
+
+    Der Test geht durch den echten Antwort-Parser des Clients; gemockt ist
+    allein der HTTP-Aufruf.
+    """
+    _mit_openfigi_antwort(
+        monkeypatch,
+        [{"data": [{"ticker": "RY V3.65 PERP BB", "exchCode": "TORONTO"}]}],
+    )
+    fallback = CountingResolver(
+        ResolvedInstrument(symbol="RY-PH.TO", isin="CA78012H5675")
+    )
+    resolver = CompositeResolver(
+        OpenFigiResolver(OpenFigiClient(), default_exchange="XTSE"), fallback
+    )
+
+    resolved = resolver.resolve_isin("CA78012H5675")
+
+    assert fallback.calls == ["CA78012H5675"]
+    assert resolved is not None
+    assert resolved.symbol == "RY-PH.TO"
+
+
+def test_brauchbarer_ticker_laesst_den_fallback_in_ruhe(monkeypatch) -> None:
+    """Die Gegenprobe: Ein echtes Symbol beendet die Kette wie bisher."""
+    _mit_openfigi_antwort(monkeypatch, [{"data": [{"ticker": "RY"}]}])
+    fallback = CountingResolver(ResolvedInstrument(symbol="RY", isin="CA7800871021"))
+    resolver = CompositeResolver(
+        OpenFigiResolver(OpenFigiClient(), default_exchange="XTSE"), fallback
+    )
+
+    resolved = resolver.resolve_isin("CA7800871021")
+
+    assert fallback.calls == []
+    assert resolved is not None
+    assert resolved.symbol == "RY.TO"
+
+
+def test_unbrauchbarer_ticker_ohne_fallback_ist_nicht_aufloesbar(monkeypatch) -> None:
+    """Findet auch die zweite Quelle nichts, bleibt es beim sauberen Fehlschlag.
+
+    Der Filter macht dieses Papier nicht auflösbar — Yahoos ISIN-Suche kennt
+    `CA78012H5675` ebenfalls nicht. Er sorgt allein dafür, dass die Kette
+    weiterläuft und am Ende 404 steht statt eines Symbols, das es nicht gibt.
+    """
+    _mit_openfigi_antwort(
+        monkeypatch, [{"data": [{"ticker": "RY V3.65 PERP BB"}]}]
+    )
+    fallback = CountingResolver(None)
+    resolver = CompositeResolver(
+        OpenFigiResolver(OpenFigiClient(), default_exchange="XTSE"), fallback
+    )
+
+    assert resolver.resolve_isin("CA78012H5675") is None
+    assert fallback.calls == ["CA78012H5675"]
 
 
 class _FakeSearch:
