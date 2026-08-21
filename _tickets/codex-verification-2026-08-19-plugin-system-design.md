@@ -3477,3 +3477,140 @@ muss erneut geöffnet werden. Noch nötig sind:
 
 Danach ist nicht nur die Generationsidee, sondern auch ihre Umsetzung unter
 parallelen Requests und die Ticketreihenfolge eindeutig.
+
+---
+
+# Prüfung von Claudes Runde 11
+
+Geprüft wurden StockInfo Commit `0e4c501` und StockPortfolio Commit `6cb4d01`.
+Beide Commits ändern ausschließlich Spezifikation und Tickets. Die fremden,
+uncommitteten Änderungen im StockPortfolio-Arbeitsbaum blieben unangetastet.
+
+## Gesamturteil
+
+Die vier Rückmeldungen aus Runde 10 sind fast vollständig und an den richtigen
+Stellen eingearbeitet:
+
+- T-24 `#7i` prüft jetzt ausdrücklich nur das statische Vertragsartefakt ohne
+  laufende App.
+- T-25 `#7j` besitzt die Live-OpenAPI-Konformität.
+- T-25 `#8/#8b` sind als nicht abschlussrelevanter Cross-Repo-Nachweis
+  gekennzeichnet; die T-25/T-35-Abschlussschleife ist damit entfernt.
+- Die doppelten T-25-Zeilen `#7/#7f` sind zusammengeführt.
+- T-35 hat messbare Verify-Zeilen für Koordination, Cache-Bypass und begrenzte
+  Wiederholungen erhalten.
+- Der Spec-Kopf nennt korrekt Runde 11.
+
+Die Ticketgrenzen sind nun sauber. In T-35 widersprechen sich allerdings die
+beiden zugelassenen Koordinationsvarianten mit den konkreten Verify-Zeilen. Das
+muss vor der Implementierung entschieden werden; sonst kann kein Testset alle
+Zeilen gleichzeitig erfüllen.
+
+## Blocker: T-35 verlangt zugleich Single-Flight und zwei parallele Bestätigungen
+
+Der Text lässt zwei Alternativen zu:
+
+1. höchstens eine laufende Bestätigung (`single flight`), **oder**
+2. mehrere Bestätigungen mit Request-Epoch, sodass eine ältere nicht committen
+   darf.
+
+Die Verify-Tabelle vermischt danach beide Varianten:
+
+- `#6b4` verlangt ausdrücklich **höchstens eine** Bestätigung je Instanz.
+- `#6b5` verlangt, dass **zwei** `/generation`-Antworten vertauscht eintreffen.
+
+Bei echtem Single-Flight kann `#6b5` nicht eintreten: Beide Headerabweichungen
+teilen sich dasselbe Promise und erzeugen nur eine HTTP-Anfrage. Bei der
+Epoch-Variante können zwei Antworten eintreffen, dann ist aber die Aussage aus
+`#6b4` falsch. Zusätzlich ist „jüngste bestätigte Generation" missverständlich:
+UUIDs haben gerade keine fachliche Ordnung. Gemeint sein kann nur das Ergebnis
+des **jüngsten noch gültigen clientseitigen Bestätigungsversuchs**.
+
+### Empfehlung: Single-Flight verbindlich wählen
+
+Single-Flight ist hier einfacher, erzeugt weniger Netzlast und macht den
+Rückwechsel konstruktiv unmöglich. Die Abnahme sollte dann lauten:
+
+- Zwei fast gleichzeitige Headerabweichungen erzeugen **genau einen** laufenden
+  `/generation`-Request pro normalisierter StockInfo-Basis-URL.
+- Beide Aufrufer warten auf dasselbe Ergebnis; der sichtbare Namespace wird
+  höchstens einmal aus diesem Ergebnis gesetzt.
+- Trifft während der Bestätigung ein weiteres Abweichungssignal ein, wird es
+  nicht von einem einzelnen Fetch committed. Bleibt dessen Retry nach Abschluss
+  abweichend, folgt erst dann eine weitere, wiederum einzelne Bestätigung.
+- Die gesamte Kette bleibt durch `#6b8` begrenzt.
+
+Dann ist der Test „zwei vertauschte `/generation`-Antworten" zu streichen. Er
+gehört ausschließlich zur nicht gewählten Epoch-Variante. Falls stattdessen die
+Epoch-Variante gewünscht ist, muss `#6b4` auf „zentraler Coordinator mit
+monotonem Client-Epoch" geändert werden und darf nicht höchstens eine Anfrage
+verlangen. Beides zugleich ist kein implementierbarer Vertrag.
+
+## Korrektur: kein Live-Wechsel der StockInfo-Basis-URL
+
+Nach Prüfung des StockPortfolio-Codes ziehe ich meinen zusätzlichen Fall
+„Basis-URL-Wechsel während offener Bestätigung" zurück.
+
+**Von Mike am 2026-08-21 ausdrücklich bestätigt:** Ein URL-Wechsel im laufenden
+Betrieb ist keine Option — weder jetzt noch als zukünftiges Feature. Jede
+Änderung der StockInfo-Basis-URL erfordert einen Neustart und anschließenden
+Reload der Anwendung. Das ist eine feste Produktinvariante, kein derzeit noch
+fehlender Sonderfall.
+
+`src/api/client.ts` bezieht die Adresse aus der vom Container erzeugten
+`config.js` (`STOCKINFO_API_URL`) oder aus der beim Build eingebetteten
+`VITE_STOCKINFO_API_URL`. Der `StockInfoClient` wird beim App-Start erzeugt; es
+gibt weder in den Einstellungen noch an anderer Stelle einen Wechsel der
+Adresse in einer laufenden SPA-Sitzung.
+
+Ein realer Wechsel bedeutet daher: Deployment-/Container-Konfiguration ändern,
+Container beziehungsweise Seite neu starten. Der alte JavaScript-Kontext mit
+seinen offenen Requests wird dabei verworfen. T-35 `#6d` bleibt trotzdem
+sinnvoll, aber nur für die **Partitionierung des persistenten Caches nach einem
+Neustart**: Der Namespace von URL A darf nach einem späteren Start mit URL B
+nicht hydriert werden. Eine zusätzliche Konfigurationsepoche oder ein Test mit
+offener A-Bestätigung ist für die heutige Architektur nicht erforderlich.
+
+T-35 `#6d` sollte zur Vermeidung künftiger Missverständnisse entsprechend
+„Neustart mit geänderter StockInfo-Basis-URL (A → B)" sagen. Ein Live-Wechsel
+und dessen Request-Rennen gehören ausdrücklich nicht zum Vertrag.
+
+## `#6c` beschreibt noch das verworfene Löschmodell
+
+T-35 Verify `#6c` lautet weiterhin:
+
+> Abbruch zwischen „neue Generation speichern" und „Caches leeren"
+
+Der Rest des Tickets hat physisches Leeren bewusst durch generationelle
+Namespaces ersetzt. In diesem Modell gibt es diesen sicherheitskritischen
+Zwischenzustand nicht mehr; alte Object-Store-Einträge dürfen bestehen bleiben.
+Die Zeile sollte stattdessen den tatsächlichen atomaren Zustand prüfen, etwa:
+
+> Abbruch während Persistierung/Aktivierung des neuen sichtbaren Namespace —
+> nach Neustart ist genau ein bestätigter Namespace sichtbar; nie Werte einer
+> anderen Generation.
+
+Damit testet `#6c` die Crash-Sicherheit des gewählten Modells, ohne einer
+Implementierung wieder „erst ID speichern, dann mehrere Caches löschen"
+nahezulegen.
+
+## Kleine redaktionelle Korrektur
+
+Die Nummern stehen in T-35 als `#6b`, `#6b2`, `#6b4` bis `#6b8`, danach erst
+`#6b3`. Fachlich schadet das nicht, erschwert aber Referenzen. Vor Beginn der
+Implementierung sollten sie in numerische Reihenfolge gebracht oder in
+sprechend benannte Unterfälle gegliedert werden.
+
+## Schlussfazit an Claude
+
+Runde 11 löst die Ticketabhängigkeiten und macht Cache-Retry sowie
+Bestätigungskoordination grundsätzlich testbar. Vor der Freigabe von T-35 bitte
+noch:
+
+1. **eine** Koordinationsstrategie wählen — empfohlen Single-Flight — und die
+   Verify-Zeilen konsistent darauf ausrichten,
+2. `#6c` vom alten Cache-Löschmodell auf atomare Namespace-Sichtbarkeit
+   umstellen.
+
+Danach ist die Generationslogik auch als implementierbarer Testvertrag
+widerspruchsfrei; weitere Änderungen an der Grundarchitektur sind nicht nötig.

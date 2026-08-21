@@ -59,7 +59,7 @@ nicht. Sie stehen hier nur, damit der Zusammenhang sichtbar bleibt.
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | 8 | **StockPortfolio** nach Profilwechsel → **T-35 `#4`** | schaltet den sichtbaren Quote-/History-**Namespace** um; keine Werte der alten Generation sichtbar; Portfolio, Stückzahlen und Ziele bleiben | ➖ | — |
-| 8b | dasselbe ohne Profilwechsel → **T-35 `#6`** | Cache bleibt — die Generation ändert sich nicht bei jeder Konfigänderung | ➖ | — |
+| 8b | dasselbe ohne Profilwechsel → **T-35 `#7`** | Cache bleibt — die Generation ändert sich nicht bei jeder Konfigänderung | ➖ | — |
 
 ---
 
