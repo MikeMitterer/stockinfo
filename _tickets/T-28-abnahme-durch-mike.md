@@ -42,6 +42,9 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2 | Dasselbe Papier später erneut ansehen | TER, Anbieter und Domizil stehen noch da — nichts ist über Nacht leer geworden | ➖ [^t17] | |
 | 3 | Ein Papier aufnehmen, dessen ISIN nirgends auflösbar ist | die App sagt das verständlich, statt eine kaputte Zeile anzulegen | ➖ [^t17] | |
 | 4 | Die Liste durchsehen, nachdem länger nichts angefasst wurde | keine Zeile trägt ein Symbol oder eine ISIN, die nicht zum Papier gehört | ➖ [^t17] | |
+| 5 | `curl http://localhost:8000/fields` | nennt eine Vertragsversion und je Antworttyp die Felder — lesbar, ohne ins Repo zu schauen | ➖ [^t24] | |
+| 6 | Ein Papier ansehen, dessen Kurs die Quelle ohne Währung meldet | die App sagt, dass sie keinen verwertbaren Kurs hat — statt eine Zahl ohne Währung anzuzeigen | ➖ [^t24] | |
+| 7 | Kurs, Tagesreihe und Historie desselben Papiers nebeneinander | überall dieselbe Währung, nirgends eine leere Angabe | ➖ [^t24] | |
 
 _(wächst mit jedem abgeschlossenen Ticket — je Ticket ein bis drei Zeilen,
 nicht mehr)_
@@ -49,6 +52,12 @@ nicht mehr)_
 [^t17]: T-17 — Fehler im Antwortpfad. Maschineller Nachweis:
     `./_tickets/T-17-smoke.sh --run` (acht Checks) und
     `./_tickets/T-16-smoke.sh --run` (`#5c`), dazu zwölf Unit-Tests.
+[^t24]: T-24 — REST-Core als Vertrag. Maschineller Nachweis: `tests/
+    test_contract.py`, `tests/test_contract_openapi.py`,
+    `tests/test_api_fields.py`, dazu die Währungstests in
+    `test_quote_service.py`, `test_quote_cache.py` und
+    `test_daily_history.py`. Zeile 6 ist im Alltag schwer herbeizuführen —
+    sie tritt nur ein, wenn eine Quelle wirklich keine Währung nennt.
 
 ---
 

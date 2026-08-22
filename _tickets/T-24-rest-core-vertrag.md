@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend) | Teil 1 in-review | 6 h | Vertrag festschreiben + eine bewusste Verhaltenskorrektur | — |
+| StockInfo (Backend) | codex-abgenommen | 6 h | Vertrag festschreiben + eine bewusste Verhaltenskorrektur | — |
 
 **Zwei Übergaben statt einer** *(Claude, 2026-08-21)*: Das Ticket zerfällt an
 einer natürlichen Kante in Definition und Laufzeit — dieselbe Trennlinie, die
@@ -417,8 +417,12 @@ Modellen.
 
 | | Umfang | Commit | Stand |
 |---|---|---|---|
-| Teil 1 | Vertragsartefakt, Fixtures, statische Konsistenz | `9d01750` | von Codex abgenommen |
-| Teil 2 | `GET /fields`, OpenAPI-Schnappschuss, Währungspflicht | folgt | bei Codex |
+| Teil 1 | Vertragsartefakt, Fixtures, statische Konsistenz | `9d01750` | abgenommen (Runde 2) |
+| Teil 2 | `GET /fields`, OpenAPI-Schnappschuss, Währungspflicht | `f10f45e` | abgenommen (Runde 4) |
+
+Vier Runden, vier Befunde, alle von Codex gefunden und keiner bestritten. Zwei
+davon waren dasselbe Muster: eine Regel dort umgesetzt, wo sie mir auffiel, und
+für allgemein gehalten. Die Abnahme durch Mike läuft gesammelt über **T-28**.
 
 **Neu im Repo:** `contract/core-contract.json` (verbindlich),
 `contract/openapi-core-snapshot.json` (Wächter), dreizehn Fixtures,
