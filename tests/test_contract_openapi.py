@@ -93,13 +93,54 @@ def _core_ausschnitt() -> dict:
             }
             _schema_namen(operation, schemas)
 
+    alle = dokument["components"]["schemas"]
     return {
         "core_version": core_contract()["core_version"],
         "paths": pfade,
-        "schemas": {
-            name: dokument["components"]["schemas"][name] for name in sorted(schemas)
-        },
+        "schemas": {name: alle[name] for name in sorted(_huelle(schemas, alle))},
     }
+
+
+def _huelle(namen: set[str], alle: dict) -> set[str]:
+    """Erweitert eine Schemamenge um alles, worauf sie verweist.
+
+    Ein Modell schützt nichts, wenn seine Bestandteile fehlen: `FieldsResponse`
+    verweist auf `FieldSpec` und `EndpointSpec`, und ohne die beiden konnte
+    `FieldSpec.meaning` von `string` auf `integer` wandern, ohne dass der
+    Schnappschuss anschlägt.
+
+    Args:
+        namen: Die direkt in den Operationen genannten Schemas.
+        alle: Alle Schemas des OpenAPI-Dokuments.
+
+    Returns:
+        Die transitive Hülle — jedes erreichbare Schema genau einmal.
+    """
+    gefunden = set(namen)
+    offen = list(gefunden)
+    while offen:
+        name = offen.pop()
+        for verwiesen in _schema_namen(alle.get(name, {}), set()):
+            if verwiesen not in gefunden:
+                gefunden.add(verwiesen)
+                offen.append(verwiesen)
+    return gefunden
+
+
+def test_der_schnappschuss_folgt_verweisen_bis_zum_ende() -> None:
+    """Ein Modell schützt nichts, wenn seine Bestandteile fehlen.
+
+    `FieldsResponse` verweist auf `FieldSpec` und `EndpointSpec`. Wurden nur
+    die direkt in den Operationen genannten Schemas aufgenommen, konnte
+    `FieldSpec.meaning` von `string` auf `integer` wandern, ohne dass der
+    Wächter anschlägt — die veröffentlichte Form von `/fields` war damit nur
+    eine Ebene tief geschützt (Codex, T-24 Runde 3).
+    """
+    schemas = _core_ausschnitt()["schemas"]
+
+    assert "FieldsResponse" in schemas
+    assert "FieldSpec" in schemas, "verwiesenes Modell fehlt im Schnappschuss"
+    assert "EndpointSpec" in schemas, "verwiesenes Modell fehlt im Schnappschuss"
 
 
 def test_alle_vertragspfade_existieren_in_der_app() -> None:

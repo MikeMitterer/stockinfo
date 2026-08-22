@@ -251,6 +251,62 @@
       "title": "DailyPoint",
       "type": "object"
     },
+    "EndpointSpec": {
+      "description": "Ein öffentlicher Endpunkt samt Methode und zulässigen Query-Namen.",
+      "properties": {
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "query": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Query",
+          "type": "array"
+        }
+      },
+      "required": [
+        "path",
+        "method"
+      ],
+      "title": "EndpointSpec",
+      "type": "object"
+    },
+    "FieldSpec": {
+      "description": "Ein Feld des Core-Vertrags samt Art, Pflicht und Bedeutung.",
+      "properties": {
+        "kind": {
+          "description": "string | number | integer | boolean | array | object",
+          "title": "Kind",
+          "type": "string"
+        },
+        "meaning": {
+          "title": "Meaning",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "required",
+        "meaning"
+      ],
+      "title": "FieldSpec",
+      "type": "object"
+    },
     "FieldsResponse": {
       "description": "Antwort von ``GET /fields`` — der Vertrag zur Laufzeit.\n\nNach Antworttyp gegliedert, nicht flach: Ein Array mit `price` und\n`currency` sagt nicht, in welcher Antwort sie Pflicht sind, und wäre damit\nungenauer als das OpenAPI-Dokument.\n\nZwei Nummern, zwei Ebenen: `core_version` folgt SemVer über den\ngeschlossenen Core, `details_version` zählt die offene Detailmenge\n(siehe T-26). Ein Konsument mit gecachter Feldliste erkennt an ihnen, dass\ner neu holen muss, ohne den Inhalt zu vergleichen.",
       "properties": {
@@ -954,6 +1010,46 @@
         "fetched_at"
       ],
       "title": "QuoteResponse",
+      "type": "object"
+    },
+    "ValidationError": {
+      "properties": {
+        "ctx": {
+          "title": "Context",
+          "type": "object"
+        },
+        "input": {
+          "title": "Input"
+        },
+        "loc": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Location",
+          "type": "array"
+        },
+        "msg": {
+          "title": "Message",
+          "type": "string"
+        },
+        "type": {
+          "title": "Error Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "loc",
+        "msg",
+        "type"
+      ],
+      "title": "ValidationError",
       "type": "object"
     }
   }

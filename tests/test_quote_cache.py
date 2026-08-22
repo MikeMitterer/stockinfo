@@ -683,6 +683,78 @@ def test_refresh_eines_unbekannten_symbols_geht_weiter_ueber_die_suche(
     assert fake.known_calls == 0
 
 
+def _entwaehrt(repo: QuoteRepository, isin: str = "IE00B3RBWM25") -> None:
+    """Nimmt Kurspunkt **und** Instrument die Währung — ein Altbestand ohne sie."""
+    instrument = repo.get_instrument_by_isin(isin)
+    with repo._connect() as connection:  # noqa: SLF001 — Altbestand nachstellen
+        connection.execute(
+            "UPDATE quotes SET currency = NULL WHERE instrument_id = ?",
+            (instrument["id"],),
+        )
+        connection.execute(
+            "UPDATE instruments SET currency = NULL WHERE id = ?", (instrument["id"],)
+        )
+
+
+def test_frischer_cache_ohne_waehrung_liefert_keinen_kurs(
+    repo: QuoteRepository,
+) -> None:
+    """Die Währungspflicht gilt auch für den meistgenutzten Weg.
+
+    Der Live-Pfad prüfte den Core, der Cache-Pfad nicht — und über den läuft
+    der Normalfall. Eine Antwort ohne Währung ist auch dann unverwertbar, wenn
+    sie aus dem eigenen Bestand kommt.
+    """
+    repo.save_quote(_response(_now()))
+    _entwaehrt(repo)
+    fake = FakeQuoteService(_response(_now()))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+
+    with pytest.raises(QuoteUnavailableError):
+        service.get_by_isin("IE00B3RBWM25")
+
+    assert fake.calls == 0, "der Cache war frisch — es hätte kein Live-Abruf laufen dürfen"
+
+
+def test_stale_cache_ohne_waehrung_liefert_keinen_kurs(repo: QuoteRepository) -> None:
+    """Auch der Notnagel darf keinen unverwertbaren Kurs ausliefern.
+
+    Schlägt die frische Beschaffung fehl, wird sonst der alte Wert gereicht —
+    und der trüge hier keine Währung. Ein Fehler ist die richtige Antwort:
+    Eine Position mit unbekannter Währung fällt aus jeder Depotrechnung.
+    """
+    repo.save_quote(_response(_hours_ago(10)))
+    _entwaehrt(repo)
+    service = CachedQuoteService(
+        FakeQuoteService(None, raises=True), repo, ttl_hours=6,
+        daily_sync=_stub_daily_sync(repo),
+    )
+
+    with pytest.raises(QuoteUnavailableError):
+        service.get_by_isin("IE00B3RBWM25")
+
+
+def test_cache_mit_waehrung_am_instrument_bleibt_nutzbar(repo: QuoteRepository) -> None:
+    """Die Gegenprobe: Trägt das Listing eine Währung, genügt das.
+
+    Sonst hätte die Verschärfung jeden älteren Kurspunkt unbrauchbar gemacht,
+    dessen Zeile die Währung nicht mitführt.
+    """
+    repo.save_quote(_response(_now()))
+    instrument = repo.get_instrument_by_isin("IE00B3RBWM25")
+    with repo._connect() as connection:  # noqa: SLF001
+        connection.execute(
+            "UPDATE quotes SET currency = NULL WHERE instrument_id = ?",
+            (instrument["id"],),
+        )
+    service = CachedQuoteService(
+        FakeQuoteService(_response(_now())), repo, ttl_hours=6,
+        daily_sync=_stub_daily_sync(repo),
+    )
+
+    assert service.get_by_isin("IE00B3RBWM25").currency == "EUR"
+
+
 def test_historienpunkt_ohne_waehrung_erbt_die_des_listings(
     repo: QuoteRepository,
 ) -> None:

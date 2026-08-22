@@ -21,6 +21,7 @@ from app.services.quote_service import (
     QuoteService,
     QuoteUnavailableError,
     annualized_volatility,
+    ensure_core_complete,
 )
 
 logger = structlog.get_logger()
@@ -656,8 +657,22 @@ class CachedQuoteService:
 
     @staticmethod
     def _from_cache(instrument: dict, quote: dict, stale: bool) -> QuoteResponse:
-        """Baut eine QuoteResponse aus gespeichertem Instrument + Kurspunkt."""
-        return QuoteResponse(
+        """Baut eine QuoteResponse aus gespeichertem Instrument + Kurspunkt.
+
+        Die Währung kommt aus dem Kurspunkt, ersatzweise vom Instrument — sie
+        gehört zum Listing, nicht zum einzelnen Punkt.
+
+        Am Ende steht dieselbe Core-Prüfung wie im Live-Pfad, und zwar aus
+        einem gemessenen Grund: Der Cache-Pfad hatte sie nicht, und über den
+        läuft der Normalfall. Eine Antwort ohne Währung ist auch dann
+        unverwertbar, wenn sie aus dem eigenen Bestand kommt.
+
+        Raises:
+            QuoteUnavailableError: Ein Pflichtfeld des Core fehlt. Betrifft
+                auch den ``stale``-Fall: Der alte Wert ist der Notnagel, nicht
+                die Ausnahme von der Regel.
+        """
+        response = QuoteResponse(
             isin=instrument["isin"],
             symbol=instrument["symbol"],
             exchange=instrument["exchange"],
@@ -680,3 +695,5 @@ class CachedQuoteService:
             stale=stale,
             fetched_at=quote["fetched_at"],
         )
+        ensure_core_complete(response)
+        return response

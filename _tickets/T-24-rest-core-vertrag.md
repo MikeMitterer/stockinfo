@@ -119,11 +119,16 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 [^m]: `contract/openapi-core-snapshot.json` plus
     `tests/test_contract_openapi.py`. Erfasst sind die neun zugesagten Pfade
-    und die Modelle dahinter — nicht das ganze Dokument: Ein Abbild über alles
-    wäre bei jeder Änderung an einem Diagnoseendpunkt rot, und einen Test, der
-    grundlos anschlägt, liest bald niemand. **Mutationsprobe:** neues Feld an
-    `QuoteResponse` → rot, neuer Query-Parameter an `/fx` → rot. Danach wieder
-    grün.
+    und die Modelle dahinter, **transitiv** — nicht das ganze Dokument: Ein
+    Abbild über alles wäre bei jeder Änderung an einem Diagnoseendpunkt rot,
+    und einen Test, der grundlos anschlägt, liest bald niemand. Die
+    Verweisverfolgung kam in Runde 3 dazu: Vorher lagen nur die direkt
+    genannten Schemas im Schnappschuss, `FieldSpec` und `EndpointSpec` fehlten
+    — `/fields` war damit nur eine Ebene tief geschützt.
+    **Mutationsprobe, fünf Fälle:** neues Feld an `QuoteResponse` → rot, neuer
+    Query-Parameter an `/fx` → rot, `core_version` erhöht → rot,
+    `FieldSpec.meaning` von `string` auf `integer` → rot, `EndpointSpec.method`
+    ebenso → rot. Danach wieder grün.
 [^n]: `GET /fields`, bedient aus `contract/core-contract.json` über
     `app/contract.py` — **eine** Quelle für Fixtures und Laufzeit. Fünf Tests
     in `tests/test_api_fields.py`, darunter der Nachweis, dass die Antwort mit
@@ -147,7 +152,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     „Bestandsprüfung". Kurz: Kurs ohne Währung (jetzt Fehler), Tagespunkt ohne
     Währung und Historienpunkt ohne Währung (beide erben jetzt die Währung des
     Listings, sonst Fehler). Je ein Test, alle zuerst rot.
-[^r]: `make test` → Backend `317 passed, 29 skipped`, Plugin-API `36 passed`,
+[^r]: `make test` → Backend `321 passed, 29 skipped`, Plugin-API `36 passed`,
     Dashboard `230 passed`. Ruff über `app` und `tests` sauber.
 
 **Ebene 3 — hier nur benannt, umgesetzt anderswo:** `ticker`/`mic` → T-21,
@@ -383,9 +388,16 @@ aufgeschrieben hatte, dass sie es nicht sein darf.
 
 | Wo | Was passierte | Weg |
 |---|---|---|
-| `quote` | Ein Preis ohne Währung ging durch und wurde gespeichert | `ensure_core_complete` in `_build` → Fehler statt Antwort |
+| `quote` (live) | Ein Preis ohne Währung ging durch und wurde gespeichert | `ensure_core_complete` in `_build` → Fehler statt Antwort |
+| `quote` (Cache) | **Nachgetragen in Runde 3.** `_from_cache` setzte zwar die Währung des Instruments ein, prüfte aber nicht, ob auch die fehlt — und über diesen Weg läuft der Normalfall | dieselbe Prüfung in `_from_cache`, für den frischen **und** den `stale`-Fall |
 | `daily` | `DailyPoint.currency` kam roh aus der Zeile; `upsert_daily_closes` schreibt `NULL`, wenn die Quelle nichts nennt | Währung des **Listings** einsetzen; kennt auch das Instrument keine → Fehler |
 | `history` | dasselbe für `QuotePoint` — ältere Zeilen können ohne Währung gespeichert sein | ebenso |
+
+Der Cache-Fall ist der Beleg dafür, dass „an allen Stellen umgesetzt" eine
+Behauptung war und keine Feststellung: Ich hatte den Live-Pfad geprüft und
+daraus geschlossen, dass die Regel greift. Codex hat den meistgenutzten Weg
+gegengeprüft und eine erfolgreiche Antwort mit `currency=None, cached=True`
+erhalten.
 
 Bei `daily` und `history` ist das kein Raten: Die Währung gehört zum Listing,
 nicht zum einzelnen Tag. Dieselbe Notiz, dieselbe Währung. Ein Fehler bleibt
