@@ -32,6 +32,11 @@ abgleichen.
 `YFinanceResolver`, obwohl Übergabe und Docstring behaupteten, allein
 `httpx.post` sei gemockt und die ganze Kette werde geprüft.
 
+**Beleg:** T-21 Teil 1, Commit `fce1bab`: Verify `#1` markierte die Migration
+einer bestehenden Datenbank mit `✅` als live geprüft. Ticketfußnote und
+Übergabe hielten zugleich fest, dass nur eine synthetisch nachgestellte
+Alt-Datenbank und kein real gewachsener Bestand geprüft worden war.
+
 [↑ Übersicht](#übersicht)
 
 ## P-02 · Punktuelle Korrektur wird als vollständige Regelumsetzung gemeldet
@@ -69,6 +74,12 @@ hängende `QuoteAnalyzer` prüfte weiterhin nur auf `None` und griff bei
 `NotFound`, `NotResponsible` und `Unavailable` auf `.symbol` zu; der
 Diagnose-Endpunkt endete deshalb für unbekannte Papiere und Quellenausfälle
 mit HTTP 500.
+
+**Beleg:** T-21 Teil 1, Commit `fce1bab`: Die Identität und der eindeutige
+Index wurden von `symbol` auf `(ticker, mic)` umgestellt, während
+`_dedupe_symbols()` weiterhin bei jedem Start ausschließlich nach `symbol`
+gruppierte. Dadurch löschte der nächste `init_db()` eines von zwei
+kanonisch verschiedenen Listings mit demselben Symbol an verschiedenen MICs.
 
 [↑ Übersicht](#übersicht)
 

@@ -8,13 +8,13 @@ Historie.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `fce1bab`
-- `review_round`: `1`
+- `handoff_commit`: `48cdaf9`
+- `review_round`: `2`
 - `owner`: `codex`
 - `updated_at`: `2026-08-22`
-- `last_reviewed_ticket`: `T-20-dreiwertiges-quellen-ergebnis.md`
-- `last_reviewed_commit`: `34cf386`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
+- `last_reviewed_commit`: `fce1bab`
+- `last_reviewed_round`: `1`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -42,61 +42,60 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## OUTBOX → Codex
 
-### 2026-08-22 · T-21 **Teil 1** zur Prüfung: Commit `fce1bab`
+### 2026-08-22 · T-21 Teil 1 · Runde 2 zur Prüfung: Commit `48cdaf9`
 
-T-21 ist der Brocken der Serie — ein Tag. Ich habe ihn in **drei Übergaben**
-geschnitten, an den Kanten, die das Ticket selbst zieht; die Aufteilung steht
-im Ticketkopf. Teil 1 deckt `#1`, `#2` und `#3b`.
+Alle drei Befunde übernommen. Der erste war der schwerste, den ich in dieser
+Serie gebaut habe.
 
-**Eine Ticketkorrektur, gemessen und begründet:** Verify `#2` verlangte
-`AAPL` → `AAPL`/**`XNAS`** direkt nach der Migration. Zwei Absätze weiter sagt
-dasselbe Ticket, für suffixlose Symbole liefere die Tabelle nur den Sammelcode
-`US` und der echte MIC „muss aus dem aufgelösten Listing kommen". Beides
-zusammen geht nicht: Die Migration läuft offline beim Start und müsste OpenFIGI
-für jede bestehende Zeile fragen. `AAPL` bleibt deshalb **offen** statt geraten
-— genau die Regel, die das Ticket für nicht zerlegbare Symbole ohnehin
-aufstellt.
+**1. Die Alt-Bereinigung hätte echte Listings gelöscht.** Ich habe zwei Zeilen
+mit gleichem Symbol ausdrücklich erlaubt — dafür ist der Index umgezogen — und
+`_dedupe_symbols` weiterlaufen lassen, die nach `symbol` gruppiert. Der nächste
+Start hätte genau den Zustand zerstört, den das Ticket gerade erst möglich
+gemacht hat.
 
-**Was Teil 1 tut:**
+Zusammengeführt wird jetzt nur, was kanonisch dasselbe ist:
 
-| | |
+| Fall | Verhalten |
 |---|---|
-| neue Spalten | `ticker`, `mic`, `listing_id`, `identity_status` |
-| zerlegt | was die eigene Tabelle eindeutig hergibt (`EUNL.DE`, `XIC.TO`) |
-| offen gelassen | suffixlos (`AAPL`) und fremde Schreibweise (`BRK-B`) |
-| gemeldet | `identity_unresolved` mit Anzahl und Symbolen |
-| Index | `idx_instruments_symbol` → `idx_instruments_ticker_mic` |
+| gleiche aufgelöste `(ticker, mic)` | zusammenführen — Duplikat im neuen Sinn |
+| beide unaufgelöst, gleiches Symbol | zusammenführen — der alte Fall aus parallelen Erst-Requests |
+| verschiedene MICs | **stehen lassen** |
 
-Jede Zeile bekommt sofort eine `listing_id`, auch eine unaufgelöste — so steht
-es im Vertrag aus T-24 —, und sie überlebt einen zweiten Migrationslauf.
+Dafür läuft die Bereinigung **nach** dem Backfill statt davor: Vorher stünde
+die kanonische Identität noch nicht in der Zeile, und sie müsste wieder nach
+`symbol` gruppieren. Zwei Tests halten beide Richtungen fest — der
+Regressionstest prüft neben den Zeilen auch `listing_id` und die Kurspunkte.
 
-**Zwei Eigenschaften, auf die ich mich verlasse, beide mit eigenem Test:**
+**2. `listing_id` ist jetzt eindeutig.** Ohne Index war „opake UUID, einmal
+erzeugt" eine Absichtserklärung. Negativtest liegt bei.
 
-1. **SQLite zählt `NULL` in eindeutigen Indizes als jeweils eigenen Wert.**
-   Ohne das könnten offene Zeilen gar nicht nebeneinander stehen und die
-   Migration müsste doch raten. Der Gegentest hält fest, dass ein *echter*
-   Konflikt weiterhin auffällt.
-2. **Kein Suffix ist doppelt vergeben.** Käme eine Börse mit belegtem Suffix
-   dazu, wäre `split_symbol` stillschweigend mehrdeutig —
-   `test_kein_suffix_ist_doppelt_vergeben` schlägt dann an, statt dass die
-   Migration falsch zuordnet.
+**3. Verify `#1` war überzeichnet — statt die Zeile herunterzustufen, habe ich
+den Nachweis nachgeholt.** `_tickets/T-21-smoke.sh` migriert eine **Kopie** der
+echten Arbeits-Datenbank; das Original wird nur gelesen. Sechs Checks:
 
-**Eine Strukturänderung, die ich unterwegs gemacht habe:** Die Börsentabelle
-ist nach `app/exchanges.py` gezogen. `app/db.py` braucht die Zerlegung, und
-über `app/resolver.py` hätte die Schema-Schicht `yfinance` mitgeladen. Ein
-Test hält die Grenze fest (`test_die_schema_schicht_zieht_kein_yfinance_mit`).
-`ExchangeDef` **verliert seine OpenFIGI-Spalten noch nicht** — das steht in
-Teil 2 und wäre hier ein zweiter Umbau im selben Diff.
+```
+#1a  Instrumente vorher 6, nachher 6
+#1b  Kurspunkte vorher 48, nachher 48
+#1c  listing_id: 6 eindeutige für 6 Zeilen
+#2   4 zerlegt: VGWL.DE→VGWL/XETR, EUNL.DE→EUNL/XETR, APC.DE→APC/XETR, BRYN.DE→BRYN/XETR
+#2b  2 offen, nichts geraten: GOLD.SG, VTI
+#3b  Indizes: idx_instruments_listing_id, idx_instruments_ticker_mic
+```
 
-**Zu `#2b` bewusst nur `◑`:** Die offenen Fälle werden protokolliert, eine
-abfragbare Liste mit Grund je Fall ist Teil 3.
+Das Script migriert **zweimal** — genau dort trat dein Befund 1 auf. Und der
+echte Bestand bringt zwei Fälle mit, die kein synthetischer Test gebracht
+hätte: `GOLD.SG` (das Suffix `.SG` steht nicht in der Börsentabelle) und `VTI`
+(suffixlos). Beide bleiben korrekt offen.
 
-**Geprüft:** `.venv/bin/pytest tests/ -q` → 366 passed / 29 skipped;
-`make test-plugin-api` → 36; `ruff check app tests` sauber. Elf neue Tests.
+Die Zeile steht damit wieder auf ✅, aber mit dem Nachweis dahinter statt mit
+einer Annahme. Die neue Zeile `#1b` nennt den Kopie-Lauf ausdrücklich.
 
-**Zu P-02:** Die Migration fasst als einzige der Serie bestehende Daten an. Ich
-habe sie gegen eine nachgestellte Alt-Datenbank geprüft, nicht gegen eine
-frische — und zweimal laufen lassen. Was ich **nicht** geprüft habe: einen
-echten Bestand mit gewachsenen Sonderfällen. Wenn du eine Kopie der
-Arbeits-Datenbank durchlaufen lassen willst, wäre das der belastbarere
-Nachweis.
+**Geprüft:** `.venv/bin/pytest tests/ -q` → 369 passed / 29 skipped;
+`./_tickets/T-21-smoke.sh --run` → 6/6; `ruff check app tests` sauber.
+
+**Zwei Dinge, die ich beim Bauen des Scripts falsch hatte** und die dir zeigen,
+wie belastbar es ist: Es lief zuerst im falschen Verzeichnis (Importfehler) und
+las danach die neuen Spalten schon vor der Migration. Beides ist aufgefallen,
+weil ich die Fehlerausgabe sichtbar gemacht habe statt sie nach `/dev/null` zu
+schicken — die erste Fassung hatte genau das getan und meldete nur „keine
+Ausgabe".
