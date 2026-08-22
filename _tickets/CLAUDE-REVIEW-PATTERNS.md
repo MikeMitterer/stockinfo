@@ -15,6 +15,7 @@ duplizieren.
 - [P-01 · Testtiefe wird überzeichnet](#p-01--testtiefe-wird-in-der-übergabe-überzeichnet)
 - [P-02 · Regelumsetzung wird zu früh vollständig gemeldet](#p-02--punktuelle-korrektur-wird-als-vollständige-regelumsetzung-gemeldet)
 - [P-03 · Prüfwerkzeuge räumen fremde Ressourcen auf](#p-03--prüfwerkzeuge-räumen-fremde-ressourcen-mit-auf)
+- [P-04 · Negativtests prüfen nur die Fehlerbeschriftung](#p-04--negativtests-prüfen-nur-die-fehlerbeschriftung)
 
 ## P-01 · Testtiefe wird in der Übergabe überzeichnet
 
@@ -63,5 +64,26 @@ Prozessgruppe verwenden und Konflikte vor dem Start abbrechen.
 beendete nach dem Lauf alle Prozesse auf Port 8766; ein bereits laufender
 fremder Server konnte zusätzlich den Health-Check bestehen und danach beendet
 werden.
+
+[↑ Übersicht](#übersicht)
+
+## P-04 · Negativtests prüfen nur die Fehlerbeschriftung
+
+**Erkennungsregel:** Eine absichtlich ungültige Fixture oder ein Negativfall gilt
+als geprüft, obwohl der Test nur ein Fehlerkennzeichen wie `violates`, einen
+Status oder eine Beschreibung verlangt, nicht aber die bezeichnete Verletzung
+selbst reproduziert.
+
+**Prüffrage:** Wird der Test rot, wenn man ausschließlich den eigentlichen
+Fehler im Negativfall beseitigt und dessen Beschriftung unverändert lässt? Für
+jede erlaubte Fehlerkennung muss eine konkrete, gegensinnige Assertion
+existieren.
+
+**Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-24 Teil 1,
+Commit `403020b`: Ticketzeile `#7i` war mit `✅` als statische Konsistenz von
+Artefakt und Fixtures markiert. In `tests/test_contract.py` genügte bei
+nicht-konformen Fixtures jedoch ein nichtleerer `violates`-Text; selbst eine
+angeblich widersprüchliche `/generation`-Fixture mit identischen UUIDs in Header
+und Body passierte beide einschlägigen Prüfungen (`MUTANT_UNERKANNT`).
 
 [↑ Übersicht](#übersicht)

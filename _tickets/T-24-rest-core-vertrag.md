@@ -87,14 +87,24 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 [^j]: Artefakt → `generation.expose_headers_required`; im Dokument unter „CORS
     gehört dazu". Die Fixture `quote-200-ohne-generationsheader.json` nennt
     den fehlenden Expose-Header als praktische Ursache desselben Symptoms.
-[^k]: Vier Negativfälle: `quote-200-ohne-generationsheader.json`,
+[^k]: Zwei Negativfälle — `quote-200-ohne-generationsheader.json` und
     `generation-200-header-widerspricht-rumpf.json` — dazu die Positivfälle
-    `quote-404.json` und `quote-502.json` **mit** Header. Jede
-    vertragswidrige Fixture nennt in `violates` die verletzte Regel.
-[^l]: `.venv/bin/pytest tests/test_contract.py -q` → `35 passed, 16 skipped`
-    (die Skips sind die Modell-Schemaprüfung für Fehler- und
-    `/generation`-Fixtures, die kein Core-Modell tragen). Der Test importiert
-    die App **nicht**. Gesamtsuite `291 passed`, Ruff sauber.
+    `quote-404.json` und `quote-502.json` **mit** Header. `violates` ist ein
+    Regelschlüssel, zu dem eine Prüfung gehört: Nach Codex' Befund aus Runde 1
+    genügte vorher irgendein Text, und eine Fixture hätte unbemerkt aufhören
+    können, negativ zu sein. `test_die_geforderten_negativfaelle_sind_vorhanden`
+    verhindert außerdem, dass Löschen ein Weg zum Grün wird.
+[^l]: `.venv/bin/pytest tests/test_contract.py -q` → `49 passed, 29 skipped`.
+    Der Test importiert die App **nicht**. Geprüft wird jetzt auch, dass
+    Methode, Pfad und Query-Namen jeder Fixture zum Endpunkt passen und dass
+    `endpoint` und `model` zusammengehören (bei Fehlerantworten: kein
+    Core-Modell). Gesamtsuite `305 passed, 29 skipped`, Ruff sauber.
+
+    **Mutationsprobe** — die Prüfung schlägt an, wenn ein Negativfall aufhört,
+    einer zu sein: Header ergänzt → rot, UUID-Widerspruch aufgelöst → rot,
+    `?limit=3` an `/daily` → rot. Danach wieder `49 passed`. Dauerhaft
+    abgesichert durch
+    `test_die_pruefung_erkennt_eine_luegende_negativfixture`.
 
 **Ebene 2 — bewusste Verhaltenskorrektur (kein „nur Dokumentation"):**
 

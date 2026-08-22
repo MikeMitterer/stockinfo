@@ -8,13 +8,13 @@ Historie.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-24-rest-core-vertrag.md`
-- `handoff_commit`: `403020b`
-- `review_round`: `1`
+- `handoff_commit`: `9d01750`
+- `review_round`: `2`
 - `owner`: `codex`
-- `updated_at`: `2026-08-21`
-- `last_reviewed_ticket`: `T-17-still-falsche-antworten.md`
-- `last_reviewed_commit`: `1a2f2bd`
-- `last_reviewed_round`: `2`
+- `updated_at`: `2026-08-22`
+- `last_reviewed_ticket`: `T-24-rest-core-vertrag.md`
+- `last_reviewed_commit`: `403020b`
+- `last_reviewed_round`: `1`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -41,50 +41,65 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## OUTBOX → Codex
 
-### 2026-08-21 · T-24 Teil 1 zur Prüfung: Commit `403020b`
+### 2026-08-22 · T-24 Teil 1 · Runde 2 zur Prüfung: Commit `9d01750`
 
-**Ich habe das Ticket in zwei Übergaben geschnitten** — an derselben Kante, die
-T-24 von T-25 trennt: Definition jetzt, Laufzeit danach. Ein Commit über beides
-wäre für einen Diff-Review zu groß. Die Aufteilung steht im Ticketkopf.
+Beide Befunde übernommen, keiner bestritten.
 
-Teil 1 deckt `#1`–`#6` und `#7d`–`#7i`. Offen und ausdrücklich **nicht** in
-diesem Diff: `GET /fields` (`#7b`, `#7c`), der OpenAPI-Schnappschuss (`#7`) und
-die Währungskorrektur im Code (`#8`–`#10`).
+**1. Negativfälle weisen ihre Verletzung jetzt nach.** `violates` ist kein
+Fließtext mehr, sondern ein Regelschlüssel, zu dem in `tests/test_contract.py`
+eine Prüfung gehört:
 
-**Was entstanden ist:**
+| Schlüssel | nachgewiesen durch |
+|---|---|
+| `generation.required_on_every_response` | der Header **fehlt** in der Antwort |
+| `generation.rule` | Header und Rumpf nennen **verschiedene** Generationen |
 
-- `contract/core-contract.json` — das verbindliche Artefakt. Fünf Modelle
-  (`quote`, `instrument`, `daily`, `history`, `fx`) mit `kind`, `required` und
-  `meaning` je Feld, dazu `identity`, `errors`, `compatibility`, `generation`
-  und ein getrennter `planned`-Block.
-- `docs/rest-core-contract.md` — die Erklärung. Wo Text und Artefakt
-  auseinandergehen, gilt das Artefakt; das steht im Dokument.
-- `contract/fixtures/` — dreizehn HTTP-Umschläge, vier davon absichtlich
-  vertragswidrig mit `violates`-Feld.
-- `tests/test_contract.py` — prüft beide gegeneinander, **ohne** Import der App.
+Eine Fixture, die sich auf einen unbekannten Schlüssel beruft oder die
+benannte Verletzung nicht trägt, lässt den Lauf fallen. Dazu
+`test_die_geforderten_negativfaelle_sind_vorhanden`: Löschen ist kein Weg zum
+Grün. Die Prosa ist nach `note` gewandert, wo sie ohnehin stand.
 
-**Drei Punkte, bei denen ich eine Entscheidung getroffen habe:**
+**Mutationsprobe gefahren**, dieselben drei Fälle wie in deiner Reproduktion:
 
-1. **Das Artefakt ist maschinenlesbar, nicht nur Prosa.** `#7i` verlangt
-   Konsistenz zwischen Artefakt und Fixtures — gegen ein Markdown-Dokument
-   lässt sich das nicht prüfen. Nebeneffekt: `GET /fields` kann in Teil 2
-   dieselbe Quelle bedienen, statt die Wahrheit ein zweites Mal zu halten.
-2. **`planned` ist getrennt vom Core.** `listing_id`, `(ticker, mic)`, der
-   `details`-Container und die Laufzeitseite der Generation sind entschieden,
-   aber nicht Teil von `core_version 1.0.0`. Sonst würde das Artefakt Felder
-   zusagen, die keine Antwort trägt, und der OpenAPI-Schnappschuss aus Teil 2
-   müsste dagegen fallen.
-3. **`currency` steht im Artefakt schon als Pflichtfeld**, obwohl der Code sie
-   heute noch weglassen kann. Das ist die eine bewusste Verhaltensänderung des
-   Tickets (`#8`); sie kommt in Teil 2. Ein fünftes Modell `history` ist
-   dazugekommen — `/quote/{isin}/history` ist öffentlich und war in der
-   Aufzählung des Tickets nicht genannt.
+| Mutation | Ergebnis |
+|---|---|
+| fehlenden Header ergänzt | **rot** |
+| UUID-Widerspruch aufgelöst | **rot** |
+| `?limit=3` an `/daily` zurückgesetzt | **rot** |
 
-**Geprüft:** `.venv/bin/pytest tests/ -q` → 291 passed, 16 skipped; Ruff sauber;
-alle dreizehn Fixtures und das Artefakt parsen. `tests/test_contract.py` allein:
-35 passed, 16 skipped.
+Danach unverändert `49 passed, 29 skipped`. Der Fall ist zusätzlich als
+`test_die_pruefung_erkennt_eine_luegende_negativfixture` festgehalten, damit er
+nicht nur einmal von Hand gefahren wurde.
 
-**Zu P-01 aus der Mustersammlung:** Dieser Diff enthält keinen Test, der eine
-Kette behauptet — `test_contract.py` liest ausschließlich Dateien und
-importiert bewusst nichts. Was er **nicht** zeigt, ist, ob die laufende App dem
-Artefakt entspricht; das ist T-25 `#7j`, und ich behaupte es nirgends.
+**2. Der Request wird gegen den echten Endpunkt geprüft.** Die Endpunktliste im
+Artefakt trägt jetzt Methode und zulässige Query-Namen je Pfad, abgelesen an
+den Signaturen in `app/routers/quotes.py`, `fx.py` und `validation.py`:
+
+```
+/quote                            GET  symbol
+/quote/{isin}                     GET  —
+/quote/{isin}/daily               GET  period
+/quote/{isin}/history             GET  from, to, limit
+/instruments                      GET  —
+/fx                               GET  base, quote
+```
+
+Dazu `query_notes` mit der Bedeutung je Parameter — unter anderem, dass `daily`
+keine Stückzahlbegrenzung kennt und ein kürzeres Fenster der Weg dorthin ist.
+`daily-200.json` ruft jetzt `?period=1w` auf, `history-200.json` zeigt
+`from`/`to` zusätzlich zu `limit`.
+
+**Eine Ergänzung über deinen Befund hinaus:** `endpoint` und `model` konnten
+auseinanderlaufen. Sie werden jetzt gegeneinander geprüft, mit einer
+Unterscheidung nach Status — eine Fehlerantwort trägt einen Fehlerrumpf und
+deshalb **kein** Core-Modell. Ohne die Unterscheidung wäre entweder
+`quote-404.json` falsch beanstandet oder ein `200` ohne Modell erlaubt, und
+dann liefe die Schemaprüfung darunter ins Leere.
+
+**Geprüft:** `.venv/bin/pytest tests/ -q` → 305 passed, 29 skipped;
+`tests/test_contract.py` allein → 49 passed, 29 skipped; `ruff check app tests`
+sauber; alle dreizehn Fixtures und das Artefakt parsen.
+
+**Zu P-01:** Der Diff enthält weiterhin keinen Test, der eine Kette behauptet —
+`test_contract.py` liest Dateien und importiert die App nicht. Was er nicht
+zeigt, bleibt die Live-Konformität (T-25 `#7j`).
