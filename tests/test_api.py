@@ -38,7 +38,12 @@ class FakeService:
         if isin.startswith("XX"):
             raise InstrumentNotFoundError(isin)
         if isin.startswith("ZZ"):
-            raise QuoteUnavailableError(isin)
+            # Der Text ist der, den `CompositeResolver` zusammensetzt: Er nennt
+            # die ausgefallenen Quellen, und genau das muss beim Client ankommen.
+            raise QuoteUnavailableError(
+                f"{isin}: keine Quelle konnte nachsehen — "
+                "openfigi: HTTP 503; yahoo: timeout"
+            )
         return QuoteResponse(
             isin=isin,
             symbol="VGWL.DE",
@@ -310,3 +315,19 @@ def test_unbekanntes_symbol_bleibt_ein_502(client: TestClient) -> None:
     wurde das erst beim Ausfuehren der Verify-Commands aus T-15.
     """
     assert client.get("/quote/by-symbol/ZZTEST/daily").status_code == 502
+
+
+def test_ausgefallene_quellen_nennen_sich_im_antwortkoerper(
+    client: TestClient,
+) -> None:
+    """T-20 `#3`: Der 502 soll sagen, wer nicht erreichbar war.
+
+    Ohne die Namen steht dort nur „ging nicht" — und wer die App betreibt,
+    weiß nicht, ob er auf OpenFIGI, Yahoo oder sein eigenes Netz schauen soll.
+    """
+    antwort = client.get("/quote/ZZ0000000000")
+
+    assert antwort.status_code == 502
+    detail = antwort.json()["detail"]
+    assert "ZZ0000000000" in detail
+    assert "openfigi" in detail and "yahoo" in detail

@@ -10,6 +10,8 @@ from typing import Any
 import httpx
 import structlog
 
+from app.providers.base import SourceUnavailableError
+
 logger = structlog.get_logger()
 
 _ENDPOINT = "https://api.openfigi.com/v3/mapping"
@@ -85,7 +87,14 @@ class OpenFigiClient:
                 (z.B. das US-Composite).
 
         Returns:
-            Ticker (z.B. 'VGWL') oder ``None``, wenn kein Mapping gefunden wird.
+            Ticker (z.B. 'VGWL') oder ``None``, wenn OpenFIGI das Papier an
+            dieser Börse **nicht kennt**.
+
+        Raises:
+            SourceUnavailableError: Der Dienst war nicht erreichbar oder hat
+                mit einem Fehler geantwortet. Früher kam auch dieser Fall als
+                ``None`` zurück — ununterscheidbar von „kenne ich nicht", und
+                damit wurde aus einem Ausfall ein 404.
         """
         headers = {"Content-Type": "application/json"}
         if self._api_key:
@@ -105,7 +114,7 @@ class OpenFigiClient:
                 id_value=id_value,
                 error=str(exc),
             )
-            return None
+            raise SourceUnavailableError(f"openfigi: {exc}") from exc
         return self._extract_ticker(data)
 
     @staticmethod

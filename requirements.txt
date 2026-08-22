@@ -1,3 +1,11 @@
+# Der Plugin-Vertrag liegt im selben Repository, ist aber ein eigenes Paket mit
+# eigener Version. Die App hängt daran, seit sie die Antwortarten der Quellen
+# (`NotResponsible`, `NotFound`, `Unavailable`) von dort bezieht statt sie ein
+# zweites Mal zu definieren — zwei Wahrheiten über denselben Vertrag wären der
+# Anfang vom Auseinanderlaufen. Editierbar, damit eine Änderung am Vertrag
+# sofort in der App sichtbar ist und nicht erst nach einem Neuinstall.
+-e ./plugin_api
+
 fastapi==0.139.0
 uvicorn[standard]==0.51.0
 yfinance==1.5.1
