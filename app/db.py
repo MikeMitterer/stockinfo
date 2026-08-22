@@ -5,11 +5,13 @@ Repository-Schicht (repository.py), nicht hierher.
 """
 
 import sqlite3
+import uuid
 from pathlib import Path
 
 import structlog
 
 from app.models import OVERRIDE_FIELDS
+from app.exchanges import split_symbol
 
 logger = structlog.get_logger()
 
@@ -165,13 +167,93 @@ def _migrate(connection: sqlite3.Connection) -> None:
         ),
     )
 
-    # Vor dem UNIQUE-Index Alt-Duplikate zusammenführen — sonst schlägt die
-    # Index-Erstellung auf bestehenden Datenbanken fehl.
+    # Vor dem Zusammenführen: Alt-Duplikate stören jeden Index.
     _dedupe_symbols(connection)
-    connection.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_symbol "
-        "ON instruments (symbol)"
+    _migrate_identity(connection)
+
+
+# Die kanonische Identität aus T-21. `identity_status` sagt, ob sie feststeht.
+_IDENTITY_RESOLVED = "resolved"
+_IDENTITY_UNRESOLVED = "legacy_unresolved"
+
+
+def _migrate_identity(connection: sqlite3.Connection) -> None:
+    """Legt `(ticker, mic)` neben `symbol` und vergibt jede `listing_id`.
+
+    Der Identifikator eines Papiers war bisher das Yahoo-Symbol — in der
+    Datenbank, in der API, im Dashboard. Damit wäre yfinance nicht ersetzbar,
+    sondern nur ergänzbar: Jede zweite Kursquelle müsste Yahoos
+    Suffix-Schreibweise nachbilden.
+
+    **Melden statt raten.** Zerlegt wird nur, was die eigene Börsentabelle
+    eindeutig hergibt. Alles andere bleibt offen (`legacy_unresolved`) und
+    wird protokolliert; der Datensatz bleibt dabei lesbar und nutzbar. Ohne
+    diesen Zwischenzustand müsste die Migration raten, den Start blockieren
+    oder Daten löschen — genau die drei Auswege, die T-21 ausschließt.
+
+    Der Index zieht mit: Der globale `UNIQUE` auf `symbol` hielt Yahoo in der
+    Identität und weicht `(ticker, mic)`. Dass mehrere offene Zeilen dort
+    `NULL` tragen, ist kein Konflikt — SQLite behandelt `NULL` in eindeutigen
+    Indizes als jeweils eigenen Wert.
+    """
+    _add_missing_columns(
+        connection,
+        "instruments",
+        (
+            ("ticker", "TEXT"),
+            ("mic", "TEXT"),
+            # Opake UUID, bei Anlage einmal erzeugt und nicht aus ticker, mic,
+            # ISIN oder dem lokalen Schlüssel abgeleitet (Vertrag in T-24).
+            ("listing_id", "TEXT"),
+            ("identity_status", "TEXT"),
+        ),
     )
+
+    for row in connection.execute(
+        "SELECT id, symbol, listing_id, identity_status FROM instruments"
+    ).fetchall():
+        if not row["listing_id"]:
+            connection.execute(
+                "UPDATE instruments SET listing_id = ? WHERE id = ?",
+                (str(uuid.uuid4()), row["id"]),
+            )
+        if row["identity_status"]:
+            continue  # schon einmal betrachtet — Bestand nicht überschreiben
+        ticker, mic = split_symbol(row["symbol"])
+        connection.execute(
+            "UPDATE instruments SET ticker = ?, mic = ?, identity_status = ? "
+            "WHERE id = ?",
+            (
+                ticker,
+                mic,
+                _IDENTITY_RESOLVED if mic else _IDENTITY_UNRESOLVED,
+                row["id"],
+            ),
+        )
+
+    connection.execute("DROP INDEX IF EXISTS idx_instruments_symbol")
+    connection.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_ticker_mic "
+        "ON instruments (ticker, mic)"
+    )
+    _report_unresolved(connection)
+
+
+def _report_unresolved(connection: sqlite3.Connection) -> None:
+    """Protokolliert die offenen Zuordnungen — sonst weiß niemand von ihnen.
+
+    „Später von Hand zuordnen" ist ohne diese Meldung ein Versprechen, das
+    niemand einlösen kann.
+    """
+    offen = [
+        row["symbol"]
+        for row in connection.execute(
+            "SELECT symbol FROM instruments WHERE identity_status = ? ORDER BY symbol",
+            (_IDENTITY_UNRESOLVED,),
+        )
+    ]
+    if offen:
+        logger.info("identity_unresolved", count=len(offen), symbols=offen)
 
 
 def _merge_overrides(

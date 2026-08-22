@@ -7,12 +7,17 @@ Das Yahoo-Suffix wählt die *Börse* — die *Währung* wird NICHT daraus abgele
 sondern stammt immer aus dem Live-Quote (siehe yfinance_provider).
 """
 
-from dataclasses import dataclass
 
 import structlog
 import yfinance as yf
 
 from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
+
+from app.exchanges import (
+    DEFAULT_EXCHANGE,
+    EXCHANGES,
+    home_exchange,
+)
 
 from app.providers.base import (
     QUOTE_TYPE_MAP,
@@ -36,118 +41,6 @@ def _gattung(quote: dict) -> str:
         Die Gattung in Großbuchstaben, oder ``''`` wenn Yahoo keine nennt.
     """
     return (quote.get("quoteType") or "").upper()
-
-
-@dataclass(frozen=True)
-class ExchangeDef:
-    """Definition einer Börse: Anzeige, Yahoo-Suffix, OpenFIGI-Auflösung.
-
-    ``currency`` ist nur Anzeige — die reale Kurswährung stammt aus dem Live-Quote.
-    ``figi_value`` leer ⇒ der Dict-Key (MIC) wird als Auflösungswert verwendet.
-    """
-
-    suffix: str
-    name: str
-    region: str  # "germany" | "usa" | "europe" | "global"
-    currency: str
-    figi_id_type: str = "micCode"
-    figi_value: str = ""
-
-
-# Weltweite Börsentabelle: Key = MIC (bzw. 'US'). Erweiterbar per Zeile.
-EXCHANGES: dict[str, ExchangeDef] = {
-    # Amerika
-    "US": ExchangeDef("", "NYSE / NASDAQ", "usa", "USD", "exchCode", "US"),
-    "XTSE": ExchangeDef(".TO", "Toronto", "global", "CAD"),
-    "XTSX": ExchangeDef(".V", "TSX Venture", "global", "CAD"),
-    "BVMF": ExchangeDef(".SA", "São Paulo (B3)", "global", "BRL"),
-    "XMEX": ExchangeDef(".MX", "Mexiko", "global", "MXN"),
-    # Europa
-    "XETR": ExchangeDef(".DE", "Xetra", "germany", "EUR"),
-    "XFRA": ExchangeDef(".F", "Frankfurt", "germany", "EUR"),
-    "XLON": ExchangeDef(".L", "London LSE", "europe", "GBp"),
-    "XMIL": ExchangeDef(".MI", "Mailand", "europe", "EUR"),
-    "XPAR": ExchangeDef(".PA", "Paris (Euronext)", "europe", "EUR"),
-    "XAMS": ExchangeDef(".AS", "Amsterdam", "europe", "EUR"),
-    "XBRU": ExchangeDef(".BR", "Brüssel", "europe", "EUR"),
-    "XLIS": ExchangeDef(".LS", "Lissabon", "europe", "EUR"),
-    "XMAD": ExchangeDef(".MC", "Madrid", "europe", "EUR"),
-    "XWBO": ExchangeDef(".VI", "Wien", "europe", "EUR"),
-    "XSWX": ExchangeDef(".SW", "SIX Swiss", "europe", "CHF"),
-    "XSTO": ExchangeDef(".ST", "Stockholm", "europe", "SEK"),
-    "XCSE": ExchangeDef(".CO", "Kopenhagen", "europe", "DKK"),
-    "XOSL": ExchangeDef(".OL", "Oslo", "europe", "NOK"),
-    "XHEL": ExchangeDef(".HE", "Helsinki", "europe", "EUR"),
-    "XWAR": ExchangeDef(".WA", "Warschau", "europe", "PLN"),
-    # Asien-Pazifik
-    "XTKS": ExchangeDef(".T", "Tokio", "global", "JPY"),
-    "XHKG": ExchangeDef(".HK", "Hongkong", "global", "HKD"),
-    "XSHG": ExchangeDef(".SS", "Shanghai", "global", "CNY"),
-    "XSHE": ExchangeDef(".SZ", "Shenzhen", "global", "CNY"),
-    "XASX": ExchangeDef(".AX", "Sydney (ASX)", "global", "AUD"),
-    "XSES": ExchangeDef(".SI", "Singapur", "global", "SGD"),
-    "XNSE": ExchangeDef(".NS", "Indien NSE", "global", "INR"),
-    "XBOM": ExchangeDef(".BO", "Indien BSE", "global", "INR"),
-    "XKRX": ExchangeDef(".KS", "Korea (KRX)", "global", "KRW"),
-    "XTAI": ExchangeDef(".TW", "Taiwan", "global", "TWD"),
-    # Afrika / Nahost
-    "XJSE": ExchangeDef(".JO", "Johannesburg", "global", "ZAR"),
-    "XTAE": ExchangeDef(".TA", "Tel Aviv", "global", "ILS"),
-}
-DEFAULT_EXCHANGE = "XETR"
-
-# Emissionsland (ISIN-Präfix) → Heimatbörse. Der Rückfall der Kaskade: Findet
-# die bevorzugte Börse nichts, ist die Heimatbörse der beste nächste Versuch.
-#
-# **Eine Heuristik, kein Gesetz.** Das Präfix nennt die ausgebende Stelle, nicht
-# den gewünschten Handelsplatz. Deshalb stehen hier nur Länder, bei denen die
-# Zuordnung eindeutig genug ist — `IE` und `LU` fehlen bewusst: Ein irischer
-# oder luxemburgischer Fonds wird europaweit gehandelt und hat an seinem
-# Domizil oft gar kein Listing. Für sie übernimmt der Yahoo-Fallback.
-HOME_EXCHANGES: dict[str, str] = {
-    "AT": "XWBO",
-    "AU": "XASX",
-    "BE": "XBRU",
-    "BR": "BVMF",
-    "CA": "XTSE",
-    "CH": "XSWX",
-    "CN": "XSHG",
-    "DE": "XETR",
-    "DK": "XCSE",
-    "ES": "XMAD",
-    "FI": "XHEL",
-    "FR": "XPAR",
-    "GB": "XLON",
-    "HK": "XHKG",
-    "IL": "XTAE",
-    "IN": "XNSE",
-    "IT": "XMIL",
-    "JP": "XTKS",
-    "KR": "XKRX",
-    "MX": "XMEX",
-    "NL": "XAMS",
-    "NO": "XOSL",
-    "PL": "XWAR",
-    "PT": "XLIS",
-    "SE": "XSTO",
-    "SG": "XSES",
-    "TW": "XTAI",
-    "US": "US",
-    "ZA": "XJSE",
-}
-
-
-def home_exchange(isin: str) -> str | None:
-    """Die Heimatbörse zum Emissionsland einer ISIN.
-
-    Args:
-        isin: ISIN des Wertpapiers.
-
-    Returns:
-        Der MIC der Heimatbörse, oder ``None`` wenn das Präfix keiner
-        zugeordnet ist.
-    """
-    return HOME_EXCHANGES.get(isin[:2].upper()) if len(isin) >= 2 else None
 
 
 class OpenFigiResolver:
