@@ -6,9 +6,13 @@
 # synthetischer Testbestand zeigt, dass die Regeln stimmen; er zeigt **nicht**,
 # was ein gewachsener Bestand an Sonderfällen mitbringt.
 #
-# Dieses Script arbeitet deshalb auf einer **Kopie** der Arbeits-Datenbank.
-# Die Originaldatei wird nur gelesen, nie geöffnet zum Schreiben — ein
-# Prüf-Script darf an echten Daten nichts verändern.
+# Gearbeitet wird auf einer **Sicherung** der Arbeits-Datenbank, erzeugt über
+# die SQLite-Backup-API. Ein `cp` der Hauptdatei würde nicht genügen: Die App
+# läuft im WAL-Modus, und committete Änderungen können noch im WAL stehen —
+# die Prüfung liefe dann an genau den neuesten Sonderfällen vorbei und meldete
+# trotzdem Vollständigkeit.
+#
+# Die Originaldatei wird nur gelesen.
 #
 # Verwendung:
 #   ./_tickets/T-21-smoke.sh --run
@@ -16,7 +20,7 @@
 #
 # Optionen:
 #   -r | --run        Checks ausführen
-#   -k | --keep       Kopie nach dem Lauf stehen lassen
+#   -k | --keep       Sicherung nach dem Lauf stehen lassen
 #   -i | --info       Einstellungen anzeigen
 #   -h | --help       Diese Hilfe anzeigen
 #------------------------------------------------------------------------------
@@ -31,7 +35,7 @@ if [[ "${__APPS_LIB__:=""}"   == "" ]]; then . "${BASH_LIBS}/apps.lib.sh";   fi
 readonly APPNAME="$(basename "$0")"
 readonly PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 readonly VENV_PY="${PROJECT_ROOT}/.venv/bin/python"
-readonly QUELLE="${DATABASE_PATH:-${PROJECT_ROOT}/data/stockinfo.db}"
+readonly SOURCE_DB="${DATABASE_PATH:-${PROJECT_ROOT}/data/stockinfo.db}"
 
 COUNT_OK=0
 COUNT_FAIL=0
@@ -43,8 +47,8 @@ usage() {
     echo
     echo "Usage: ${APPNAME} [ options ]"
     echo
-    usageLine "-r | --run       " "Migration gegen eine Kopie des Bestands prüfen"
-    usageLine "-k | --keep      " "Kopie nach dem Lauf stehen lassen"
+    usageLine "-r | --run       " "Migration gegen eine Sicherung des Bestands prüfen"
+    usageLine "-k | --keep      " "Sicherung nach dem Lauf stehen lassen"
     usageLine "-i | --info      " "Einstellungen anzeigen"
     usageLine "-h | --help      " "Diese Hilfe anzeigen"
     echo
@@ -52,8 +56,8 @@ usage() {
     echo -e "    Lauf:          ${GREEN}${APPNAME} --run${NC}"
     echo -e "    Andere DB:     ${GREEN}DATABASE_PATH=/pfad/zur/db ${APPNAME} --run${NC}"
     echo
-    echo -e "    Die Originaldatei wird ${YELLOW}nur gelesen${NC}. Gearbeitet wird auf einer"
-    echo -e "    Kopie in einem temporären Verzeichnis."
+    echo -e "    Ein ${YELLOW}leerer${NC} Bestand lässt den Lauf fehlschlagen — er würde sonst"
+    echo -e "    grün melden, ohne einen einzigen Migrationsfall geprüft zu haben."
     echo
 }
 
@@ -61,15 +65,15 @@ usage() {
 showInfo() {
     echo
     logFileStatus "Projekt-Root:" "${PROJECT_ROOT}"
-    logFileStatus "Datenbank:   " "${QUELLE}"
+    logFileStatus "Datenbank:   " "${SOURCE_DB}"
     echo
 }
 
-# Räumt die Kopie ab. Wird per trap aufgerufen.
+# Räumt die Sicherung ab. Wird per trap aufgerufen.
 cleanup() {
     if [[ -n "${WORKDIR}" && -d "${WORKDIR}" ]]; then
         if [[ "${KEEP}" == true ]]; then
-            echo -e "  ${BLUE}ℹ${NC} Kopie: ${WORKDIR}/kopie.db"
+            echo -e "  ${BLUE}ℹ${NC} Sicherung: ${WORKDIR}/backup.db"
         else
             rm -rf "${WORKDIR}"
         fi
@@ -77,6 +81,9 @@ cleanup() {
 }
 
 # Meldet das Ergebnis eines Checks und zählt mit.
+#
+# Params:
+#   $1 - Kennung, $2 - Beschreibung, $3 - true wenn bestanden, $4 - beobachtet
 report() {
     local -r _LINE="$1"
     local -r _WHAT="$2"
@@ -86,72 +93,122 @@ report() {
     if [[ "${_OK}" == true ]]; then
         COUNT_OK=$((COUNT_OK + 1))
         echo -e "  ${GREEN}✓${NC} ${_LINE} ${_WHAT}"
-        [[ -n "${_ACTUAL}" ]] && echo -e "      ${_ACTUAL}"
     else
         COUNT_FAIL=$((COUNT_FAIL + 1))
         echo -e "  ${RED}✗${NC} ${_LINE} ${_WHAT}"
-        echo -e "      ${RED}beobachtet:${NC} ${_ACTUAL}"
+        [[ -n "${_ACTUAL}" ]] && echo -e "      ${RED}beobachtet:${NC} ${_ACTUAL}"
     fi
 }
 
-# Führt die Migration auf der Kopie aus und prüft das Ergebnis.
+# Sichert die Datenbank und führt die Migration auf der Sicherung aus.
 #
-# Die eigentliche Arbeit macht Python: Zählen vorher, zweimal migrieren,
-# Zählen nachher, Eindeutigkeit prüfen. Ausgegeben wird eine Zeile je Check
-# im Format `KENNUNG|ok|text`.
+# Die Prüfungen rechnen die Erwartung **selbst nach**, statt sie zu behaupten:
+# Jede aufgelöste Zeile muss wieder auf ihre `(ticker, mic)` zerfallen, jede
+# offene muss sich tatsächlich nicht zerlegen lassen. Damit hängt der Lauf
+# nicht an einem bestimmten Bestand — und kann auch nicht leer bestehen.
 #
-# Der Wechsel ins Projektverzeichnis ist Pflicht, kein Stil: `app.db` liegt
-# relativ dazu, und ohne ihn scheitert schon der Import.
+# Ausgabe je Check: `KENNUNG|True|False|Text`.
 runMigration() {
     cd "${PROJECT_ROOT}" || return 1
-    "${VENV_PY}" - "$1" <<'PYTHON'
+    "${VENV_PY}" - "$1" "$2" <<'PYTHON'
 import sqlite3
 import sys
 
 from app.db import init_db
+from app.exchanges import split_symbol
 
-pfad = sys.argv[1]
+source, backup = sys.argv[1], sys.argv[2]
+
+# Transaktionskonsistente Sicherung über die Backup-API. `cp` würde committete
+# Einträge im WAL auslassen — der Lauf liefe dann an den neuesten Fällen vorbei
+# und meldete trotzdem Vollständigkeit.
+with sqlite3.connect(f"file:{source}?mode=ro", uri=True) as origin:
+    with sqlite3.connect(backup) as target:
+        origin.backup(target)
 
 
-# Vorher zählen, nicht lesen: Die neuen Spalten gibt es an dieser Stelle
-# naturgemäß noch nicht.
-with sqlite3.connect(pfad) as verbindung:
-    vorher = verbindung.execute("SELECT COUNT(*) FROM instruments").fetchone()[0]
-    kurse_vorher = verbindung.execute("SELECT COUNT(*) FROM quotes").fetchone()[0]
+def check(name: str, ok: bool, text: str) -> None:
+    print(f"{name}|{ok}|{text}")
 
-init_db(pfad)
-init_db(pfad)  # zweiter Start — hier hat die Alt-Bereinigung Listings gelöscht
 
-with sqlite3.connect(pfad) as verbindung:
-    verbindung.row_factory = sqlite3.Row
-    nachher = verbindung.execute(
-        "SELECT symbol, ticker, mic, identity_status, listing_id FROM instruments"
+with sqlite3.connect(backup) as connection:
+    instruments_before = connection.execute(
+        "SELECT COUNT(*) FROM instruments"
+    ).fetchone()[0]
+    quotes_before = connection.execute("SELECT COUNT(*) FROM quotes").fetchone()[0]
+
+# Ein leerer Bestand ist kein bestandener Lauf, sondern ein ungeprüfter.
+if instruments_before == 0:
+    check("#0 ", False, f"{source} enthält keine Instrumente — nichts zu prüfen")
+    sys.exit(0)
+
+init_db(backup)
+init_db(backup)  # zweiter Start — dort hat die Alt-Bereinigung Zeilen gelöscht
+
+with sqlite3.connect(backup) as connection:
+    connection.row_factory = sqlite3.Row
+    rows = connection.execute(
+        "SELECT symbol, isin, ticker, mic, identity_status, listing_id "
+        "FROM instruments"
     ).fetchall()
-    kurse_nachher = verbindung.execute("SELECT COUNT(*) FROM quotes").fetchone()[0]
-    indizes = {
-        r[1] for r in verbindung.execute("PRAGMA index_list(instruments)")
+    quotes_after = connection.execute("SELECT COUNT(*) FROM quotes").fetchone()[0]
+    indexes = {
+        r["name"]: r["unique"]
+        for r in connection.execute("PRAGMA index_list(instruments)")
     }
 
-aufgeloest = [r for r in nachher if r["identity_status"] == "resolved"]
-offen = [r for r in nachher if r["identity_status"] == "legacy_unresolved"]
-ids = [r["listing_id"] for r in nachher]
+resolved = [r for r in rows if r["identity_status"] == "resolved"]
+open_rows = [r for r in rows if r["identity_status"] == "legacy_unresolved"]
+listing_ids = [r["listing_id"] for r in rows]
 
-print(f"#1a|{vorher == len(nachher)}|Instrumente vorher {vorher}, nachher {len(nachher)}")
-print(f"#1b|{kurse_vorher == kurse_nachher}|Kurspunkte vorher {kurse_vorher}, nachher {kurse_nachher}")
-print(f"#1c|{all(ids) and len(set(ids)) == len(ids)}|listing_id: {len(set(ids))} eindeutige für {len(nachher)} Zeilen")
-print(
-    f"#2 |{all(r['ticker'] and r['mic'] for r in aufgeloest)}|"
-    f"{len(aufgeloest)} zerlegt: "
-    + ", ".join(f"{r['symbol']}→{r['ticker']}/{r['mic']}" for r in aufgeloest)
+check(
+    "#0 ", True,
+    f"{instruments_before} Instrumente, {quotes_before} Kurspunkte im Bestand",
 )
-print(
-    f"#2b|{all(r['ticker'] is None and r['mic'] is None for r in offen)}|"
-    f"{len(offen)} offen, nichts geraten: "
-    + (", ".join(r["symbol"] for r in offen) or "keine")
+check(
+    "#1a", len(rows) == instruments_before,
+    f"Instrumente vorher {instruments_before}, nachher {len(rows)}",
 )
-print(
-    f"#3b|{'idx_instruments_symbol' not in indizes and 'idx_instruments_ticker_mic' in indizes}|"
-    f"Indizes: {', '.join(sorted(indizes))}"
+check(
+    "#1b", quotes_after == quotes_before,
+    f"Kurspunkte vorher {quotes_before}, nachher {quotes_after}",
+)
+check(
+    "#1c",
+    all(listing_ids) and len(set(listing_ids)) == len(rows),
+    f"listing_id: {len(set(listing_ids))} eindeutige für {len(rows)} Zeilen",
+)
+
+# Jede Zeile muss zu ihrem Status passen — nachgerechnet, nicht behauptet.
+wrongly_resolved = [
+    r["symbol"] for r in resolved if split_symbol(r["symbol"]) != (r["ticker"], r["mic"])
+]
+wrongly_open = [
+    r["symbol"]
+    for r in open_rows
+    if split_symbol(r["symbol"]) != (None, None) or r["ticker"] or r["mic"]
+]
+check(
+    "#2 ",
+    not wrongly_resolved and len(resolved) + len(open_rows) == len(rows),
+    f"{len(resolved)} zerlegt, jede nachgerechnet: "
+    + (", ".join(f"{r['symbol']}→{r['ticker']}/{r['mic']}" for r in resolved) or "keine")
+    + (f" — falsch: {wrongly_resolved}" if wrongly_resolved else ""),
+)
+check(
+    "#2b",
+    not wrongly_open,
+    f"{len(open_rows)} offen, nichts geraten: "
+    + (", ".join(r["symbol"] for r in open_rows) or "keine")
+    + (f" — zu Unrecht offen: {wrongly_open}" if wrongly_open else ""),
+)
+check(
+    "#3b",
+    "idx_instruments_symbol" not in indexes
+    and indexes.get("idx_instruments_ticker_mic") == 1
+    and indexes.get("idx_instruments_listing_id") == 1,
+    "Indizes (1 = eindeutig): "
+    + ", ".join(f"{name}={flag}" for name, flag in sorted(indexes.items())),
 )
 PYTHON
 }
@@ -162,18 +219,17 @@ runChecks() {
     echo -e "${CYAN}▶ T-21 · Migration gegen einen echten Bestand${NC}"
     echo
 
-    if [[ ! -f "${QUELLE}" ]]; then
-        echo -e "  ${YELLOW}⚠${NC} Keine Datenbank unter ${QUELLE}."
+    if [[ ! -f "${SOURCE_DB}" ]]; then
+        echo -e "  ${RED}✗${NC} Keine Datenbank unter ${SOURCE_DB}."
         echo -e "      Ohne echten Bestand ist hier nichts zu prüfen — die Regeln"
         echo -e "      selbst deckt ${GREEN}pytest tests/test_identity_migration.py${NC} ab."
         echo
-        return 0
+        return 1
     fi
 
     WORKDIR="$(mktemp -d)"
-    cp "${QUELLE}" "${WORKDIR}/kopie.db"
-    echo -e "  ${BLUE}ℹ${NC} Kopie von ${QUELLE}"
-    echo -e "  ${BLUE}ℹ${NC} Das Original wird nicht angefasst"
+    echo -e "  ${BLUE}ℹ${NC} Sicherung von ${SOURCE_DB} über die SQLite-Backup-API"
+    echo -e "  ${BLUE}ℹ${NC} Das Original wird nur gelesen"
     echo
 
     local _LINE _OK _TEXT
@@ -181,19 +237,19 @@ runChecks() {
         # Nur die eigenen Checkzeilen: Die Migration protokolliert selbst nach
         # stdout, und ihre Meldungen sind keine Prüfergebnisse.
         [[ "${_LINE}" != \#* ]] && continue
-        report "${_LINE}" "$(echo "${_TEXT}" | cut -c1-100)" \
+        report "${_LINE}" "${_TEXT}" \
             "$([[ "${_OK}" == "True" ]] && echo true || echo false)" "${_TEXT}"
-    done < <(runMigration "${WORKDIR}/kopie.db" 2>"${WORKDIR}/fehler.log")
+    done < <(runMigration "${SOURCE_DB}" "${WORKDIR}/backup.db" 2>"${WORKDIR}/errors.log")
 
     echo
-    if [[ ${COUNT_FAIL} -eq 0 && ${COUNT_OK} -gt 0 ]]; then
-        echo -e "  ${GREEN}✓ ${COUNT_OK} Checks bestanden, keine Fehler${NC}"
-    elif [[ ${COUNT_OK} -eq 0 ]]; then
+    if [[ ${COUNT_OK} -eq 0 && ${COUNT_FAIL} -eq 0 ]]; then
         # Ohne diese Ausgabe stünde hier nur „keine Ausgabe" — und der Grund
         # (ein Importfehler etwa) bliebe unsichtbar.
         echo -e "  ${RED}✗ Die Migration lieferte keine Ausgabe:${NC}"
-        grep -v "^20" "${WORKDIR}/fehler.log" | tail -8
+        grep -v "^20" "${WORKDIR}/errors.log" | tail -8
         COUNT_FAIL=1
+    elif [[ ${COUNT_FAIL} -eq 0 ]]; then
+        echo -e "  ${GREEN}✓ ${COUNT_OK} Checks bestanden, keine Fehler${NC}"
     else
         echo -e "  ${RED}✗ ${COUNT_FAIL} von $((COUNT_OK + COUNT_FAIL)) Checks fehlgeschlagen${NC}"
     fi

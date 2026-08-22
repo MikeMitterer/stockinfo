@@ -256,15 +256,17 @@ def _report_unresolved(connection: sqlite3.Connection) -> None:
     „Später von Hand zuordnen" ist ohne diese Meldung ein Versprechen, das
     niemand einlösen kann.
     """
-    offen = [
+    unresolved = [
         row["symbol"]
         for row in connection.execute(
             "SELECT symbol FROM instruments WHERE identity_status = ? ORDER BY symbol",
             (_IDENTITY_UNRESOLVED,),
         )
     ]
-    if offen:
-        logger.info("identity_unresolved", count=len(offen), symbols=offen)
+    if unresolved:
+        logger.info(
+            "identity_unresolved", count=len(unresolved), symbols=unresolved
+        )
 
 
 def _merge_overrides(
@@ -402,19 +404,21 @@ def _dedupe_symbols(connection: sqlite3.Connection) -> None:
     Instrument umgehängt; Kollisionen (gleicher Zeitpunkt/Tag) verfallen mit
     dem gelöschten Duplikat.
 
-    **Gleiches Symbol heißt seit T-21 nicht mehr gleiches Papier.** Die
+    **Gleiches Symbol ist seit T-21 kein Identitätsnachweis.** Die
     Eindeutigkeit liegt auf `(ticker, mic)`, und sobald `US` in `XNYS` und
     `XNAS` zerfällt, tragen zwei verschiedene Listings dasselbe Symbol.
-    Zusammengeführt wird deshalb nur, was auch kanonisch dasselbe ist:
 
-    * beide Zeilen mit **derselben** aufgelösten `(ticker, mic)` — dann ist es
-      ein Duplikat im neuen Sinn;
-    * beide Zeilen **unaufgelöst** und mit demselben Symbol — der alte Fall aus
-      den parallelen Erst-Requests.
+    Zusammengeführt wird deshalb **nur bei bewiesener Gleichheit**: dieselbe
+    aufgelöste `(ticker, mic)`. Alles andere bleibt stehen — auch zwei
+    unaufgelöste Zeilen mit demselben Symbol. Die wären früher zusammengefasst
+    worden, „weil das der alte Fall aus parallelen Erst-Requests ist"; genau
+    das ist aber die Vermutung, die diese Migration nicht anstellen darf. Zwei
+    offene Zeilen mit demselben Symbol können zwei verschiedene Papiere sein,
+    und ihre ISINs sagen es oft sogar.
 
-    Zwei aufgelöste Zeilen mit verschiedenen MICs bleiben stehen. Vorher
-    zerstörte der nächste Start genau den Zustand, den die neue Eindeutigkeit
-    gerade erlaubt hatte.
+    Nötig ist das Zusammenführen ohnehin nicht mehr: Es gab die Funktion, weil
+    der `UNIQUE`-Index auf `symbol` sonst nicht anzulegen war. Diesen Index
+    gibt es nicht mehr.
 
     **Alles Abhängige muss mitwandern.** Umgehängt wurden lange nur `quotes`
     und `daily_closes` — `daily_meta` und `instrument_overrides` blieben am
@@ -423,25 +427,25 @@ def _dedupe_symbols(connection: sqlite3.Connection) -> None:
     Hand gepflegte Kennzahlen. Die beiden Tabellen tragen je eine eigene
     Merge-Regel, siehe `_merge_overrides` und `_merge_daily_meta`.
     """
-    # Die Gruppe ist die kanonische Identität, wenn sie feststeht — sonst das
-    # Symbol. `COALESCE` bildet genau das ab: Aufgelöste Zeilen gruppieren nach
-    # `ticker|mic`, unaufgelöste nach ihrem Symbol.
-    gruppe = "COALESCE(ticker || '|' || mic, 'unresolved|' || symbol)"
+    # Gruppiert wird ausschließlich über die aufgelöste Identität. Zeilen ohne
+    # sie fallen durch das `WHERE` und bleiben unangetastet.
+    identity = "ticker || '|' || mic"
     duplicated = connection.execute(
-        f"SELECT {gruppe} AS gruppe FROM instruments "
-        f"GROUP BY {gruppe} HAVING COUNT(*) > 1"
+        f"SELECT {identity} AS identity FROM instruments "
+        "WHERE ticker IS NOT NULL AND mic IS NOT NULL "
+        f"GROUP BY {identity} HAVING COUNT(*) > 1"
     ).fetchall()
     for row in duplicated:
-        gruppenwert = row["gruppe"]
+        identity_value = row["identity"]
         keeper = connection.execute(
-            f"SELECT id, symbol FROM instruments WHERE {gruppe} = ? "
+            f"SELECT id, symbol FROM instruments WHERE {identity} = ? "
             "ORDER BY (isin IS NULL), id LIMIT 1",
-            (gruppenwert,),
+            (identity_value,),
         ).fetchone()
         symbol = keeper["symbol"]
         duplicates = connection.execute(
-            f"SELECT id FROM instruments WHERE {gruppe} = ? AND id != ?",
-            (gruppenwert, keeper["id"]),
+            f"SELECT id FROM instruments WHERE {identity} = ? AND id != ?",
+            (identity_value, keeper["id"]),
         ).fetchall()
         for duplicate in duplicates:
             for table in ("quotes", "daily_closes"):

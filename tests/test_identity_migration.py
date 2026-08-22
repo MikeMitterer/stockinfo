@@ -5,7 +5,7 @@ legt die kanonische Identität daneben: `ticker` und `mic`, dazu eine opake
 `listing_id`.
 
 Die Leitregel steht in jedem einzelnen Test: **melden statt raten.** Was sich
-nicht sicher zerlegen lässt, bleibt offen und sichtbar — es wird nicht mit
+nicht sicher zerlegen lässt, bleibt open_rows und sichtbar — es wird nicht mit
 einer plausiblen Vermutung gefüllt.
 """
 
@@ -16,15 +16,15 @@ import pytest
 from app.db import init_db
 
 
-def _alte_datenbank(pfad: str, zeilen: list[tuple[str, str | None]]) -> None:
+def _legacy_database(path: str, rows: list[tuple[str, str | None]]) -> None:
     """Legt eine Datenbank im Stand **vor** T-21 an und füllt sie.
 
     Args:
-        pfad: Dateipfad der SQLite-Datenbank.
-        zeilen: Paare aus Symbol und ISIN (``None`` erlaubt).
+        path: Dateipfad der SQLite-Datenbank.
+        rows: Paare aus Symbol und ISIN (``None`` erlaubt).
     """
-    with sqlite3.connect(pfad) as verbindung:
-        verbindung.executescript(
+    with sqlite3.connect(path) as connection:
+        connection.executescript(
             """
             CREATE TABLE instruments (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -35,28 +35,28 @@ def _alte_datenbank(pfad: str, zeilen: list[tuple[str, str | None]]) -> None:
             );
             """
         )
-        verbindung.executemany(
+        connection.executemany(
             "INSERT INTO instruments (symbol, isin, first_seen) VALUES (?, ?, ?)",
-            [(symbol, isin, "2026-01-01T00:00:00+00:00") for symbol, isin in zeilen],
+            [(symbol, isin, "2026-01-01T00:00:00+00:00") for symbol, isin in rows],
         )
 
 
-def _instrumente(pfad: str) -> dict[str, sqlite3.Row]:
+def _instruments(path: str) -> dict[str, sqlite3.Row]:
     """Liest die Instrumentenzeilen, nach Symbol greifbar."""
-    with sqlite3.connect(pfad) as verbindung:
-        verbindung.row_factory = sqlite3.Row
+    with sqlite3.connect(path) as connection:
+        connection.row_factory = sqlite3.Row
         return {
             row["symbol"]: row
-            for row in verbindung.execute("SELECT * FROM instruments")
+            for row in connection.execute("SELECT * FROM instruments")
         }
 
 
 @pytest.fixture
-def migriert(tmp_path) -> str:
+def migrated(tmp_path) -> str:
     """Eine Alt-Datenbank mit vier bezeichnenden Fällen, einmal migriert."""
-    pfad = str(tmp_path / "alt.db")
-    _alte_datenbank(
-        pfad,
+    path = str(tmp_path / "alt.db")
+    _legacy_database(
+        path,
         [
             ("EUNL.DE", "IE00B4L5Y983"),  # Suffix bekannt → zerlegbar
             ("XIC.TO", None),             # dito, ohne ISIN
@@ -64,37 +64,37 @@ def migriert(tmp_path) -> str:
             ("BRK-B", "US0846707026"),    # aus dem Yahoo-Fallback, fremde Schreibweise
         ],
     )
-    init_db(pfad)
-    init_db(pfad)  # zweimal: die Migration muss idempotent sein
-    return pfad
+    init_db(path)
+    init_db(path)  # zweimal: die Migration muss idempotent sein
+    return path
 
 
-def test_die_neuen_spalten_kommen_dazu(migriert: str) -> None:
+def test_die_neuen_spalten_kommen_dazu(migrated: str) -> None:
     """Ohne sie gibt es keine kanonische Identität."""
-    with sqlite3.connect(migriert) as verbindung:
-        verbindung.row_factory = sqlite3.Row
-        spalten = {
-            r["name"] for r in verbindung.execute("PRAGMA table_info(instruments)")
+    with sqlite3.connect(migrated) as connection:
+        connection.row_factory = sqlite3.Row
+        columns = {
+            r["name"] for r in connection.execute("PRAGMA table_info(instruments)")
         }
 
-    assert {"ticker", "mic", "listing_id", "identity_status"} <= spalten
+    assert {"ticker", "mic", "listing_id", "identity_status"} <= columns
 
 
-def test_bekannte_suffixe_werden_zerlegt(migriert: str) -> None:
+def test_bekannte_suffixe_werden_zerlegt(migrated: str) -> None:
     """Die Börsentabelle kennt die Zuordnung — hier wird nichts geraten.
 
     Gemessen am 2026-08-19 über alle 33 Börsen: kein Suffix ist doppelt
     vergeben. Für Symbole aus der eigenen Regel ist die Rückrechnung deshalb
     eindeutig.
     """
-    zeilen = _instrumente(migriert)
+    rows = _instruments(migrated)
 
-    assert (zeilen["EUNL.DE"]["ticker"], zeilen["EUNL.DE"]["mic"]) == ("EUNL", "XETR")
-    assert (zeilen["XIC.TO"]["ticker"], zeilen["XIC.TO"]["mic"]) == ("XIC", "XTSE")
-    assert zeilen["EUNL.DE"]["identity_status"] == "resolved"
+    assert (rows["EUNL.DE"]["ticker"], rows["EUNL.DE"]["mic"]) == ("EUNL", "XETR")
+    assert (rows["XIC.TO"]["ticker"], rows["XIC.TO"]["mic"]) == ("XIC", "XTSE")
+    assert rows["EUNL.DE"]["identity_status"] == "resolved"
 
 
-def test_suffixloses_symbol_wird_nicht_geraten(migriert: str) -> None:
+def test_suffixloses_symbol_wird_nicht_geraten(migrated: str) -> None:
     """`US` ist ein Sammelcode, kein MIC — und `XNYS`/`XNAS` steht nirgends.
 
     Die Börsentabelle führt `US` als OpenFIGI-Suchcode für NYSE und NASDAQ
@@ -102,69 +102,69 @@ def test_suffixloses_symbol_wird_nicht_geraten(migriert: str) -> None:
     aufgelöste Listing. Die Migration läuft offline beim Start; sie füllt das
     Feld deshalb **nicht**, sondern markiert den Fall.
     """
-    zeile = _instrumente(migriert)["AAPL"]
+    row = _instruments(migrated)["AAPL"]
 
-    assert zeile["mic"] is None
-    assert zeile["ticker"] is None
-    assert zeile["identity_status"] == "legacy_unresolved"
+    assert row["mic"] is None
+    assert row["ticker"] is None
+    assert row["identity_status"] == "legacy_unresolved"
 
 
-def test_fremde_schreibweise_wird_nicht_geraten(migriert: str) -> None:
+def test_fremde_schreibweise_wird_nicht_geraten(migrated: str) -> None:
     """`BRK-B` darf nicht per Bindestrich-Regel zu `BRK.B` werden.
 
     Die Zeichensetzung ist anbieterspezifisch und bedeutet bei anderen Tickern
     etwas anderes. Was der Yahoo-Fallback geliefert hat, folgt der eigenen
-    Konvention nicht zwingend — solche Zeilen bleiben offen.
+    Konvention nicht zwingend — solche Zeilen bleiben open_rows.
     """
-    zeile = _instrumente(migriert)["BRK-B"]
+    row = _instruments(migrated)["BRK-B"]
 
-    assert zeile["ticker"] is None
-    assert zeile["mic"] is None
-    assert zeile["identity_status"] == "legacy_unresolved"
+    assert row["ticker"] is None
+    assert row["mic"] is None
+    assert row["identity_status"] == "legacy_unresolved"
 
 
-def test_jede_zeile_bekommt_eine_listing_id(migriert: str) -> None:
+def test_jede_zeile_bekommt_eine_listing_id(migrated: str) -> None:
     """Auch die offenen Fälle — die ID hängt nicht an der Auflösung.
 
     So steht in T-24: „**jede** Zeile bekommt sofort eine `listing_id` — auch
     eine mit `identity_status = legacy_unresolved`."
     """
-    zeilen = _instrumente(migriert)
-    ids = [zeile["listing_id"] for zeile in zeilen.values()]
+    rows = _instruments(migrated)
+    ids = [row["listing_id"] for row in rows.values()]
 
     assert all(ids), "eine Zeile ohne listing_id"
     assert len(set(ids)) == len(ids), "listing_id ist nicht eindeutig"
-    assert all(len(kennung) == 36 for kennung in ids), "keine UUID-Schreibweise"
+    assert all(len(identifier) == 36 for identifier in ids), "keine UUID-Schreibweise"
 
 
-def test_die_listing_id_ueberlebt_einen_zweiten_lauf(migriert: str) -> None:
+def test_die_listing_id_ueberlebt_einen_zweiten_lauf(migrated: str) -> None:
     """Sie ist die Identität für Maschinen — sie darf sich nie ändern."""
-    vorher = {s: z["listing_id"] for s, z in _instrumente(migriert).items()}
+    before = {s: z["listing_id"] for s, z in _instruments(migrated).items()}
 
-    init_db(migriert)
+    init_db(migrated)
 
-    assert {s: z["listing_id"] for s, z in _instrumente(migriert).items()} == vorher
+    assert {s: z["listing_id"] for s, z in _instruments(migrated).items()} == before
 
 
-def test_die_eindeutigkeit_liegt_auf_ticker_und_mic(migriert: str) -> None:
+def test_die_eindeutigkeit_liegt_auf_ticker_und_mic(migrated: str) -> None:
     """Der globale Index auf `symbol` weicht — er hielt Yahoo in der Identität.
 
     `symbol` bleibt Pflichtfeld und Anzeigename, ist aber nicht mehr global
     eindeutig: Sobald `US` in `XNYS` und `XNAS` zerfällt, können zwei Listings
     dasselbe Symbol tragen.
     """
-    with sqlite3.connect(migriert) as verbindung:
-        verbindung.row_factory = sqlite3.Row
-        indizes = {
+    with sqlite3.connect(migrated) as connection:
+        connection.row_factory = sqlite3.Row
+        indexes = {
             r["name"]: r
-            for r in verbindung.execute("PRAGMA index_list(instruments)")
+            for r in connection.execute("PRAGMA index_list(instruments)")
         }
 
-    assert "idx_instruments_symbol" not in indizes
-    assert indizes["idx_instruments_ticker_mic"]["unique"] == 1
+    assert "idx_instruments_symbol" not in indexes
+    assert indexes["idx_instruments_ticker_mic"]["unique"] == 1
 
 
-def test_offene_faelle_duerfen_mehrfach_leer_sein(migriert: str) -> None:
+def test_offene_faelle_duerfen_mehrfach_leer_sein(migrated: str) -> None:
     """Zwei unaufgelöste Zeilen sind kein Konflikt.
 
     Läge die Eindeutigkeit naiv auf `(ticker, mic)`, würde die zweite offene
@@ -173,40 +173,40 @@ def test_offene_faelle_duerfen_mehrfach_leer_sein(migriert: str) -> None:
     verlassen: Ohne diese Eigenschaft könnte die Migration offene Fälle gar
     nicht stehen lassen.
     """
-    with sqlite3.connect(migriert) as verbindung:
-        verbindung.execute(
+    with sqlite3.connect(migrated) as connection:
+        connection.execute(
             "INSERT INTO instruments (symbol, first_seen, identity_status) "
             "VALUES ('NOCH.EIN.FALL', '2026-01-01T00:00:00+00:00', "
             "'legacy_unresolved')"
         )
 
-    assert "NOCH.EIN.FALL" in _instrumente(migriert)
+    assert "NOCH.EIN.FALL" in _instruments(migrated)
 
 
-def test_ein_echter_konflikt_bleibt_einer(migriert: str) -> None:
+def test_ein_echter_konflikt_bleibt_einer(migrated: str) -> None:
     """Dieselbe Identität zweimal muss weiterhin auffallen."""
-    with sqlite3.connect(migriert) as verbindung, pytest.raises(sqlite3.IntegrityError):
-        verbindung.execute(
+    with sqlite3.connect(migrated) as connection, pytest.raises(sqlite3.IntegrityError):
+        connection.execute(
             "INSERT INTO instruments (symbol, first_seen, ticker, mic) "
             "VALUES ('EUNL.DE', '2026-01-01T00:00:00+00:00', 'EUNL', 'XETR')"
         )
 
 
-def test_die_offenen_faelle_werden_gemeldet(migriert: str, capsys) -> None:
+def test_die_offenen_faelle_werden_gemeldet(migrated: str, capsys) -> None:
     """Melden statt raten heißt: Es muss auch jemand davon erfahren.
 
     Ohne Meldung wäre „später von Hand zuordnen" ein Versprechen, das niemand
-    einlösen kann — man wüsste nicht, was offen ist.
+    einlösen kann — man wüsste nicht, was open_rows ist.
     """
     import structlog
 
     with structlog.testing.capture_logs() as logs:
-        init_db(migriert)
+        init_db(migrated)
 
-    meldungen = [e for e in logs if e["event"] == "identity_unresolved"]
-    assert meldungen, "kein Hinweis auf die offenen Zuordnungen"
-    assert meldungen[0]["count"] == 2
-    assert set(meldungen[0]["symbols"]) == {"AAPL", "BRK-B"}
+    messages = [e for e in logs if e["event"] == "identity_unresolved"]
+    assert messages, "kein Hinweis auf die offenen Zuordnungen"
+    assert messages[0]["count"] == 2
+    assert set(messages[0]["symbols"]) == {"AAPL", "BRK-B"}
 
 
 def test_zwei_listings_mit_gleichem_symbol_ueberleben_den_neustart(tmp_path) -> None:
@@ -220,12 +220,12 @@ def test_zwei_listings_mit_gleichem_symbol_ueberleben_den_neustart(tmp_path) -> 
     Geprüft wird alles, was daran hängt: beide Zeilen, ihre `listing_id` und
     ihre Kurspunkte.
     """
-    pfad = str(tmp_path / "zwei-listings.db")
-    _alte_datenbank(pfad, [("EUNL.DE", "IE00B4L5Y983")])
-    init_db(pfad)
+    path = str(tmp_path / "zwei-listings.db")
+    _legacy_database(path, [("EUNL.DE", "IE00B4L5Y983")])
+    init_db(path)
 
-    with sqlite3.connect(pfad) as verbindung:
-        verbindung.executescript(
+    with sqlite3.connect(path) as connection:
+        connection.executescript(
             """
             INSERT INTO instruments (symbol, first_seen, ticker, mic, listing_id,
                                      identity_status)
@@ -239,25 +239,25 @@ def test_zwei_listings_mit_gleichem_symbol_ueberleben_den_neustart(tmp_path) -> 
             """
         )
 
-    init_db(pfad)  # der zweite Start — hier wurde vorher zusammengeführt
+    init_db(path)  # der zweite Start — hier wurde before zusammengeführt
 
-    with sqlite3.connect(pfad) as verbindung:
-        verbindung.row_factory = sqlite3.Row
-        zeilen = verbindung.execute(
+    with sqlite3.connect(path) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(
             "SELECT mic, listing_id, id FROM instruments WHERE symbol = 'ABC' "
             "ORDER BY mic"
         ).fetchall()
-        kurse = verbindung.execute(
+        quote_count = connection.execute(
             "SELECT COUNT(*) AS anzahl FROM quotes WHERE instrument_id IN "
             "(SELECT id FROM instruments WHERE symbol = 'ABC')"
         ).fetchone()
 
-    assert [z["mic"] for z in zeilen] == ["XNAS", "XNYS"]
-    assert [z["listing_id"] for z in zeilen] == [
+    assert [z["mic"] for z in rows] == ["XNAS", "XNYS"]
+    assert [z["listing_id"] for z in rows] == [
         "aaaaaaaa-0000-4000-8000-000000000001",
         "aaaaaaaa-0000-4000-8000-000000000002",
     ]
-    assert kurse["anzahl"] == 2, "abhängige Daten sind verloren gegangen"
+    assert quote_count["anzahl"] == 2, "abhängige Daten sind verloren gegangen"
 
 
 def test_echte_altduplikate_werden_weiterhin_zusammengefuehrt(tmp_path) -> None:
@@ -268,17 +268,17 @@ def test_echte_altduplikate_werden_weiterhin_zusammengefuehrt(tmp_path) -> None:
     entstehen. Die gehören weiterhin zusammengeführt; sonst bliebe der Bestand
     doppelt.
     """
-    pfad = str(tmp_path / "altduplikate.db")
-    _alte_datenbank(pfad, [("EUNL.DE", "IE00B4L5Y983"), ("EUNL.DE", None)])
+    path = str(tmp_path / "altduplikate.db")
+    _legacy_database(path, [("EUNL.DE", "IE00B4L5Y983"), ("EUNL.DE", None)])
 
-    init_db(pfad)
+    init_db(path)
 
-    zeilen = _instrumente(pfad)
-    assert len(zeilen) == 1
-    assert zeilen["EUNL.DE"]["isin"] == "IE00B4L5Y983"  # die Zeile mit ISIN gewinnt
+    rows = _instruments(path)
+    assert len(rows) == 1
+    assert rows["EUNL.DE"]["isin"] == "IE00B4L5Y983"  # die Zeile mit ISIN gewinnt
 
 
-def test_die_listing_id_ist_eindeutig(migriert: str) -> None:
+def test_die_listing_id_ist_eindeutig(migrated: str) -> None:
     """Sie ist der Maschinenschlüssel — zweimal derselbe Wert wäre wertlos.
 
     Der Vertrag aus T-24 nennt sie „opake UUID, bei Anlage einmal erzeugt".
@@ -286,14 +286,59 @@ def test_die_listing_id_ist_eindeutig(migriert: str) -> None:
     Schreiber könnte denselben Wert eintragen, und ein Konsument, der darüber
     adressiert, bekäme zwei Papiere.
     """
-    with sqlite3.connect(migriert) as verbindung:
-        vorhandene = verbindung.execute(
+    with sqlite3.connect(migrated) as connection:
+        existing = connection.execute(
             "SELECT listing_id FROM instruments LIMIT 1"
         ).fetchone()[0]
 
-    with sqlite3.connect(migriert) as verbindung, pytest.raises(sqlite3.IntegrityError):
-        verbindung.execute(
+    with sqlite3.connect(migrated) as connection, pytest.raises(sqlite3.IntegrityError):
+        connection.execute(
             "INSERT INTO instruments (symbol, first_seen, listing_id) "
             "VALUES ('DOPPELT.DE', '2026-01-01T00:00:00+00:00', ?)",
-            (vorhandene,),
+            (existing,),
         )
+
+
+def test_zwei_offene_zeilen_mit_gleichem_symbol_bleiben_getrennt(tmp_path) -> None:
+    """Gleiches Symbol ist bei offenen Zeilen **kein** Identitätsnachweis.
+
+    Meine erste Fassung führte sie zusammen — mit der Begründung, das sei der
+    alte Fall aus parallelen Erst-Requests. Das ist genau die Vermutung, die
+    diese Migration nicht anstellen darf: Zwei unaufgelöste Zeilen mit
+    demselben Symbol können zwei verschiedene Papiere sein, und ihre ISINs
+    sagen es hier sogar.
+
+    Zusammengeführt wird nur noch, was **beweisbar** dasselbe ist: gleiche
+    aufgelöste `(ticker, mic)`. Alles andere bleibt stehen — der Index
+    verlangt es auch nicht mehr, seit die Eindeutigkeit dort liegt.
+    """
+    path = str(tmp_path / "open_rows.db")
+    _legacy_database(path, [("EUNL.DE", "IE00B4L5Y983")])
+    init_db(path)
+
+    with sqlite3.connect(path) as connection:
+        connection.executescript(
+            """
+            INSERT INTO instruments (symbol, isin, first_seen, listing_id,
+                                     identity_status)
+            VALUES ('OPEN', 'US1111111111', '2026-01-01T00:00:00+00:00',
+                    'bbbbbbbb-0000-4000-8000-000000000001', 'legacy_unresolved'),
+                   ('OPEN', 'US2222222222', '2026-01-01T00:00:00+00:00',
+                    'bbbbbbbb-0000-4000-8000-000000000002', 'legacy_unresolved');
+            """
+        )
+
+    init_db(path)  # der nächste Start
+
+    with sqlite3.connect(path) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute(
+            "SELECT isin, listing_id FROM instruments WHERE symbol = 'OPEN' "
+            "ORDER BY isin"
+        ).fetchall()
+
+    assert [r["isin"] for r in rows] == ["US1111111111", "US2222222222"]
+    assert [r["listing_id"] for r in rows] == [
+        "bbbbbbbb-0000-4000-8000-000000000001",
+        "bbbbbbbb-0000-4000-8000-000000000002",
+    ]

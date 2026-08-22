@@ -27,7 +27,7 @@ muss, ist kein Plugin).
 >
 > | | Umfang | Zeilen | Commit |
 > |---|---|---|---|
-> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 2 |
+> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 3 |
 > | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung, `ExchangeDef` aufräumen | `#5` | offen |
 > | **Teil 3** | API und Dashboard, offene Zuordnungen sichtbar und von Hand setzbar, Vertragsversion | `#2b`, `#2c`, `#3`, `#4` | offen |
 >
@@ -100,14 +100,25 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     ein echter Konflikt fällt weiterhin auf.
 [^f]: `.venv/bin/pytest tests/ -q` → `369 passed, 29 skipped`;
     `make test-plugin-api` → 36; Ruff sauber.
-[^g]: `./_tickets/T-21-smoke.sh --run` gegen eine **Kopie** von
+[^g]: `./_tickets/T-21-smoke.sh --run` gegen eine **Sicherung** von
     `data/stockinfo.db` (sechs gewachsene Papiere, 48 Kurspunkte) — das
-    Original wird nur gelesen. Sechs Checks grün: 6 Instrumente vorher und
+    Original wird nur gelesen. Die Sicherung entsteht über die
+    SQLite-Backup-API, nicht per `cp`: Die App läuft im WAL-Modus, und ein
+    Dateikopie ließe committete Einträge aus — der Lauf liefe dann an genau
+    den neuesten Fällen vorbei (Codex, Runde 2). Sieben Checks grün: 6 Instrumente vorher und
     nachher, 48 Kurspunkte vorher und nachher, sechs eindeutige `listing_id`,
     vier zerlegt (`VGWL.DE`, `EUNL.DE`, `APC.DE`, `BRYN.DE` → `XETR`), zwei
     offen (`GOLD.SG` — das Suffix `.SG` steht nicht in der Tabelle — und
-    `VTI`, suffixlos), Indizes umgezogen. Das Script migriert **zweimal**;
-    genau dort hat die Alt-Bereinigung in Runde 1 Listings gelöscht.
+    `VTI`, suffixlos), Indizes umgezogen **und eindeutig**. Das Script
+    migriert **zweimal**; genau dort hat die Alt-Bereinigung in Runde 1
+    Listings gelöscht.
+
+    Die Prüfungen rechnen nach statt zu behaupten: Jede aufgelöste Zeile muss
+    wieder auf ihre `(ticker, mic)` zerfallen, jede offene sich tatsächlich
+    nicht zerlegen lassen. Ein leerer Bestand lässt den Lauf **fehlschlagen** —
+    vorher hätte er dort grün gemeldet, ohne einen einzigen Fall geprüft zu
+    haben (Codex, Runde 2). Gegenproben: leere Datenbank → Exit 1; ein
+    committeter Eintrag im WAL → wird mitgesichert und mitgezählt (7 statt 6).
 
 ---
 
