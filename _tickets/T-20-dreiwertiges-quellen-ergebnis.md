@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend) | in-review | 3 h | Rückgabetypen der Quellen, Kettenlogik | — |
+| StockInfo (Backend) | codex-abgenommen | 3 h | Rückgabetypen der Quellen, Kettenlogik | — |
 
 **Löst:** `resolve_isin` gibt `None` zurück, und das bedeutet drei verschiedene
 Dinge: *nicht mein Bereich*, *kenne ich nicht*, *gerade kaputt*. Die Kette kann sie
@@ -107,7 +107,10 @@ gibt es zwei Wahrheiten über denselben Vertrag.
 
 ## Auflösung
 
-**Stand 2026-08-22 — umgesetzt, bei Codex.**
+**Stand 2026-08-22 — von Codex in Runde 2 abgenommen** (`34cf386`).
+
+Runde 1 brachte einen Befund: Der Diagnose-Endpunkt wertete die neuen
+Antwortarten nicht aus und lief in einen 500. Eingearbeitet und gegengeprüft.
 
 | Was | Wo |
 |---|---|

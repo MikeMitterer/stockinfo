@@ -37,9 +37,17 @@ Codex prüft nur `ready_for_codex`. Nach den Vorbedingungen setzt Codex
 `codex_reviewing`. Codex verändert im Review keinen Produktcode, keine
 Human-Spalte und verschiebt kein Ticket nach `solved/`. Das Ergebnis kommt in
 `INBOX → Claude`; die verarbeitete OUTBOX-Nachricht wird entfernt. Danach ist
-die Phase `approved` mit `owner: mike` oder `changes_requested` mit
-`owner: claude`. Bei einem echten, nicht sicher lösbaren Hindernis gilt
-`blocked` mit `owner: mike`.
+die Phase `approved` oder `changes_requested`, **beide mit `owner: claude`**.
+Bei einem echten, nicht sicher lösbaren Hindernis gilt `blocked` mit
+`owner: mike`.
+
+**Warum eine Freigabe nicht bei Mike landet** *(Entscheidung Mike,
+2026-08-22)*: Als dieser Vertrag entstand, hieß `approved` „Codex ist durch,
+jetzt kommt Mikes Abnahme" — pro Ticket. Wenige Stunden später ist entschieden
+worden, dass die Abnahme **gesammelt am Ende über T-28** läuft. Damit stand
+hinter `owner: mike` keine Arbeit mehr; die Reihe blieb nach jeder Freigabe
+stehen, bis Mike sie von Hand weiterschob. Bei `blocked` bleibt er Eigentümer
+— dort braucht es ihn wirklich.
 
 ## Ausführungs-Guard für Ticket-Prüfskripte
 
@@ -110,7 +118,10 @@ task-verification-workflow und code-standards.
    so wächst eine auswertbare Datensammlung für den späteren Skill.
    Entferne die verarbeitete Nachricht aus OUTBOX → Codex.
 8. Bei mindestens einem sachlichen Finding: phase changes_requested,
-   owner claude. Ohne Finding: phase approved, owner mike. Aktualisiere
+   owner claude. Ohne Finding: phase approved, owner claude — Claude schliesst
+   das Ticket ab und beginnt das naechste. Mikes Abnahme laeuft gesammelt
+   ueber T-28, nicht je Ticket; owner mike bleibt allein fuer blocked.
+   Aktualisiere
    updated_at und übernimm das bearbeitete Tupel in die drei
    last_reviewed_*-Felder. review_round bleibt unverändert; Claude erhöht sie
    erst mit einer neuen Übergabe.

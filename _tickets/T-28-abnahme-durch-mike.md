@@ -48,6 +48,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 8 | Ein kanadisches oder japanisches Papier per ISIN aufnehmen (`CA7800871021`, `JP3633400001`) | kommt herein — an seiner Heimatbörse, in der dortigen Währung | ➖ [^t18] | |
 | 9 | Ein außereuropäischer ETF in der Liste (z.B. `XIC.TO` per Symbol) | Anbieter ist gefüllt, nicht leer | ➖ [^t18] | |
 | 10 | Ein europäisches Papier daneben (`IE00B4L5Y983`) | unverändert an der eingestellten Börse, in EUR — nichts ist ausgewandert | ➖ [^t18] | |
+| 11 | Netzstecker ziehen (oder WLAN aus), ein bekanntes Papier abrufen | die App sagt „konnte nicht nachsehen" und nennt die Quellen — sie behauptet nicht, das Papier gäbe es nicht | ➖ [^t20] | |
+| 12 | Netz wieder an, dasselbe Papier | kommt normal herein; nichts ist in der Zwischenzeit gelöscht oder überschrieben worden | ➖ [^t20] | |
 
 _(wächst mit jedem abgeschlossenen Ticket — je Ticket ein bis drei Zeilen,
 nicht mehr)_
@@ -65,6 +67,10 @@ nicht mehr)_
     `./_tickets/T-18-smoke.sh --run` (acht Checks, darunter genau diese drei
     Fälle), dazu die Resolver- und Provider-Tests. Zeile 10 ist die
     Gegenprobe: Die Kaskade darf europäische Papiere nicht auswandern lassen.
+[^t20]: T-20 — Quellen antworten differenziert. Maschineller Nachweis:
+    `./_tickets/T-20-smoke.sh --run` (zwei Läufe, Netz einmal offen und einmal
+    abgeschnitten). Zeile 11 ist der Fall, der vorher als „gibt es nicht"
+    ankam; Zeile 12 die Gegenprobe, dass der Ausfall nichts zerstört hat.
 
 ---
 
