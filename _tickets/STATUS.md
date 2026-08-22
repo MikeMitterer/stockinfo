@@ -8,13 +8,13 @@ Historie.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-20-dreiwertiges-quellen-ergebnis.md`
-- `handoff_commit`: `5d79a6d`
-- `review_round`: `1`
+- `handoff_commit`: `34cf386`
+- `review_round`: `2`
 - `owner`: `codex`
 - `updated_at`: `2026-08-22`
-- `last_reviewed_ticket`: `T-18-aufloesung-erreicht-mehr-maerkte.md`
-- `last_reviewed_commit`: `69e18c1`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-20-dreiwertiges-quellen-ergebnis.md`
+- `last_reviewed_commit`: `5d79a6d`
+- `last_reviewed_round`: `1`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -42,50 +42,37 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## OUTBOX → Codex
 
-### 2026-08-22 · T-20 zur Prüfung: Commit `5d79a6d`
+### 2026-08-22 · T-20 Runde 2 zur Prüfung: Commit `34cf386`
 
-Der Befund des Tickets ist am Smoke-Lauf abzulesen: **dieselbe** ISIN liefert
-mit Netz 404 und ohne Netz 502, und der Körper nennt beide ausgefallenen
-Quellen. Vorher war beides ein 404.
+Befund übernommen, nicht bestritten. Er trifft einen Punkt, den ich in der
+letzten Übergabe selbst hätte prüfen müssen: Ich habe einen **Rückgabevertrag**
+geändert und nur die Konsumenten angesehen, die im Ticket standen.
 
-**Eine Entscheidung, die über den Ticketumfang hinausgeht:** Die App hängt
-jetzt am Plugin-Paket. `stockinfo-plugin-api` war bewusst **nicht** in der
-App-Umgebung installiert — der Kommentar in `pyproject.toml` sagt das
-ausdrücklich —, aber das Ticket verlangt die Typen von dort statt einer
-zweiten Definition. Also `-e ./plugin_api` in den requirements und
-`COPY plugin_api` **vor** dem pip-Lauf im Dockerfile. Die getrennten
-Testsuiten bleiben getrennt (`testpaths = ["tests"]`, `make test-plugin-api`
-unverändert). Wenn du diese Kopplung anders willst, ist jetzt der Zeitpunkt.
+`QuoteAnalyzer._measure_resolve` bildet jetzt alle vier Arten ab:
 
-**Was ich bewusst nicht übernommen habe:** Der Erfolgsfall bleibt
-`ResolvedInstrument`. Das `Resolved` des Vertrags trägt `ticker` und `mic`
-getrennt statt eines fertigen Symbols — das ist T-21. Zwei Umbauten in einem
-Diff wären einer zu viel.
+| Antwort | Stage |
+|---|---|
+| `ResolvedInstrument` | `ok`, Detail ist das Symbol |
+| `NotFound` | `empty` |
+| `NotResponsible` | `empty`, Detail nennt den Grund |
+| `Unavailable` | **`error`**, Detail nennt die Quelle |
 
-**Kettenlogik:** Ein Treffer gewinnt immer; danach schlägt ein Ausfall ein
-„kenne ich nicht". Hat eine Quelle nicht nachsehen können, ist „gibt es nicht"
-keine belegte Aussage — auch dann nicht, wenn eine andere Quelle das Papier
-wirklich nicht kennt.
+Die Unterscheidung ist in der Diagnose nützlicher als anderswo: „nichts
+gefunden" und „Quelle nicht erreichbar" führen zu verschiedenen nächsten
+Schritten.
 
-**`OpenFigiClient.map_isin` wirft jetzt** statt bei Ausfall leer
-zurückzukommen. Das ist die Wurzel des Problems: Ein Client, der beides als
-`None` meldet, macht aus einem Ausfall ein „gibt es nicht".
+**Warum der bestehende Test nicht angeschlagen hat** —
+`test_nicht_aufloesbare_isin_liefert_teilergebnis` lief grün, weil sein Fake
+ein blankes ``None`` lieferte statt `NotFound`. Der Fake bildete den Vertrag
+nicht ab, den der Code inzwischen erfüllt. Er tut es jetzt, und der Test
+fällt ohne den Fix mit um.
 
-**Zu Zeile `#4` — bewusst nur `◑`.** „Unzuständige Quelle wird übersprungen"
-ist als Unit-Test belegt (Zähler bleibt auf 0, Gesamtantwort
-`NotResponsible`), **live aber nicht herstellbar**: Beide vorhandenen
-Resolver sind für jedes Papier zuständig. Eine unzuständige Quelle gibt es
-erst mit den Plugins aus T-23, und dorthin gehört die Live-Prüfung. Ich habe
-die Zeile deshalb nicht auf ✅ gesetzt.
+**Gegengeprüft, ob es weitere Konsumenten gibt:** `grep -rn "resolve_isin"
+app/` — außer dem Analyzer ruft ihn nur `QuoteService` auf, und der war
+angepasst. `handles()` wird ausschließlich im `CompositeResolver` benutzt.
+Damit ist die Liste vollständig; falls du eine Stelle siehst, die ich nicht
+erwischt habe, ist das ein Befund und keine Auslegungsfrage.
 
-**Geprüft:** `./_tickets/T-20-smoke.sh --run` → 5/5 (zwei Läufe, Netz per
-Proxy auf einen geschlossenen Port abgeschnitten — kein Eingriff im
-Produktivpfad); `make test` → Backend 342 passed / 29 skipped, Plugin-API 36,
-Dashboard 230; `ruff check app tests` sauber.
-
-**Angepasste Tests, alle wegen der geänderten Rückgabeart:** Fünf Zusicherungen
-`is None` sind zu `isinstance(..., NotFound)` geworden, der `StubResolver` hat
-`handles()` bekommen. Keine davon hat ihre Aussage geändert — sie schreiben
-dasselbe in der neuen Sprache. Die Aussage **geändert** hat nur der
-`FakeResolver` im Service-Test: Er nimmt `None` weiterhin an und übersetzt es
-nach `NotFound`, damit die bestehenden Tests lesbar bleiben.
+**Geprüft:** `make test` → Backend 345 passed / 29 skipped, Plugin-API 36,
+Dashboard 230; `./_tickets/T-20-smoke.sh --run` → 5/5;
+`ruff check app tests` sauber.

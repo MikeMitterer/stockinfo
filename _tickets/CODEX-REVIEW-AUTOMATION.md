@@ -41,6 +41,16 @@ die Phase `approved` mit `owner: mike` oder `changes_requested` mit
 `owner: claude`. Bei einem echten, nicht sicher lösbaren Hindernis gilt
 `blocked` mit `owner: mike`.
 
+## Ausführungs-Guard für Ticket-Prüfskripte
+
+Mike hat die Ausführung aller versionierten Prüfskripte nach dem Muster
+`./_tickets/T-*.sh` ausdrücklich und dauerhaft freigegeben. Codex darf diese
+Skripte im Review ohne erneute fachliche Rückfrage ausführen, einschließlich
+der für lokale Testserver oder externe Testquellen nötigen Sandbox-Freigabe.
+Vor dem Lauf bleibt die übliche Sicherheitsprüfung des konkreten Skripts
+verbindlich; die Freigabe erweitert weder den erlaubten Review-Scope noch die
+Berechtigung, Produktcode oder fremde Ressourcen zu verändern.
+
 ## Prompt für den periodischen Codex-Task
 
 Den folgenden Prompt als Scheduled Task **in diesem bestehenden Review-Chat**
@@ -83,6 +93,10 @@ task-verification-workflow und code-standards.
    - Aussagekraft der Tests. Mocke nur externe Grenzen und lasse eigenen Code
      real durchlaufen;
    - die relevanten Tests und, risikogerecht, die vollständige Testsuite.
+   Alle versionierten `./_tickets/T-*.sh`-Prüfskripte sind von Mike dauerhaft
+   zur Ausführung freigegeben; führe das zum Ticket gehörende Skript ohne
+   erneute fachliche Rückfrage aus, nachdem du es auf sichere Ziel- und
+   Cleanup-Grenzen geprüft hast.
    Verlasse dich nicht auf Claudes Zusammenfassung oder grüne Tests allein.
 6. Verändere niemals Produktcode, die Human-Spalte, bestehende
    Nutzeränderungen oder den Git-Verlauf. Kein reset, checkout --, amend,
