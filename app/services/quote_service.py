@@ -236,7 +236,19 @@ class QuoteService:
         ensure_core_complete(response)
 
         if instrument_type == "etf":
-            if isin and not self._etf_provider.is_responsible(isin):
+            # Ohne ISIN beantworten Börse und Währung die Zuständigkeit mit —
+            # für `XIC.TO` nennt yfinance keine ISIN, und `.TO` in CAD sagt
+            # bereits, dass justETF dieses Papier nicht führt. Vorher fiel
+            # jedes solche Papier in den konservativen Zweig und blieb ohne
+            # Anbieter (T-18).
+            # Dass die Frage überhaupt beantwortbar ist, garantiert die
+            # Core-Prüfung oben: Ohne Währung kommt eine Antwort gar nicht bis
+            # hierher. Der Fall „niemand weiß etwas" ist damit an dieser Stelle
+            # unerreichbar — die Quellen behandeln ihn trotzdem konservativ,
+            # weil sie auch von anderswo aufgerufen werden.
+            if not self._etf_provider.is_responsible(
+                isin, exchange=response.exchange, currency=response.currency
+            ):
                 # Die Quelle führt dieses Papier gar nicht — ein US- oder
                 # kanadischer ETF steht nicht bei justETF. Dann gibt es nichts
                 # zu holen und damit auch keinen gepflegten Stand, den ein
@@ -245,18 +257,19 @@ class QuoteService:
                 # `source` in der Tabelle: Das Feld gehört zu
                 # `_ETF_META_FIELDS` und würde nie geschrieben.
                 response.metadata_complete = True
-            elif enrich_etf and isin:
+            elif enrich_etf:
                 # Die Antwort weiß nur dann über die ETF-Extras Bescheid, wenn
                 # die Anreicherung gelaufen ist **und** geliefert hat. Sonst
                 # darf sie den gespeicherten Stand nicht ersetzen — siehe
                 # `QuoteResponse.metadata_complete`.
+                #
+                # Die ISIN ist dafür keine Bedingung mehr: Yahoo arbeitet über
+                # das Symbol, und die zuständige Quelle steht schon fest.
                 response.metadata_complete = self._enrich_etf(response, isin)
             else:
-                # Übersprungen (TTL noch frisch) oder ohne ISIN. Ohne ISIN
-                # lässt sich die Zuständigkeit nicht beantworten: Das Papier
-                # könnte ein US-ETF sein oder ein europäischer, dessen ISIN
-                # gerade fehlt und dessen Kennzahlen niemand überschreiben
-                # will. Im Zweifel gewinnt der Schutz.
+                # Übersprungen, weil die Metadaten-TTL noch frisch ist. Was
+                # hier steht, sagt nichts über die ETF-Felder — also darf es
+                # den gespeicherten Stand nicht ersetzen.
                 response.metadata_complete = False
         elif instrument_type is None:
             # Ohne Gattung lief der ETF-Zweig gar nicht — `metadata_complete`
@@ -305,7 +318,7 @@ class QuoteService:
             )
         return resolved.isin or raw.isin
 
-    def _enrich_etf(self, response: QuoteResponse, isin: str) -> bool:
+    def _enrich_etf(self, response: QuoteResponse, isin: str | None) -> bool:
         """Ergänzt ETF-Details (TER, Anbieter, …) aus der ETF-Quelle, best-effort.
 
         Args:
@@ -318,7 +331,12 @@ class QuoteService:
             erreichbar", **nicht** „hat nichts". Der Unterschied entscheidet,
             ob der gespeicherte Stand überschrieben werden darf.
         """
-        details = self._etf_provider.fetch_etf(isin, symbol=response.symbol)
+        details = self._etf_provider.fetch_etf(
+            isin,
+            symbol=response.symbol,
+            exchange=response.exchange,
+            currency=response.currency,
+        )
         if details is None:
             logger.debug("etf_enrichment_skipped", isin=isin)
             return False

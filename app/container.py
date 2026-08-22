@@ -24,9 +24,17 @@ from app.services.quote_service import QuoteService
 
 
 def _build_resolver(settings: Settings) -> InstrumentResolver:
-    """Baut den Resolver: strikt nur OpenFIGI, sonst mit Yahoo-Fallback."""
+    """Baut den Resolver: strikt nur OpenFIGI, sonst mit Kaskade und Fallback.
+
+    `strict_exchange` schaltet **beides** ab, was von der Vorgabebörse
+    wegführen könnte: den Yahoo-Fallback und die Heimatbörsen-Kaskade. Wer die
+    Einstellung wählt, will diese Börse oder gar nichts — eine Kaskade wäre
+    genau die Überraschung in fremder Währung, die er ausgeschlossen hat.
+    """
     figi_resolver = OpenFigiResolver(
-        OpenFigiClient(settings.openfigi_api_key), settings.default_exchange
+        OpenFigiClient(settings.openfigi_api_key),
+        settings.default_exchange,
+        home_fallback=not settings.strict_exchange,
     )
     if settings.strict_exchange:
         return figi_resolver

@@ -27,6 +27,56 @@ def test_openfigi_extract_ticker_leer() -> None:
     assert OpenFigiClient._extract_ticker({}) is None
 
 
+def test_zustaendigkeit_ohne_isin_haengt_an_boerse_und_waehrung() -> None:
+    """Ohne ISIN muss die Zuständigkeit trotzdem beantwortbar sein.
+
+    Für `XIC.TO` nennt yfinance keine ISIN. Bisher griff dann der
+    konservative Pfad, und der Anbieter blieb leer — obwohl `.TO` in CAD
+    ersichtlich nicht europäisch ist und justETF dieses Papier gar nicht
+    führt. Die Frage „führt diese Quelle das Papier?" braucht die ISIN nicht,
+    wenn Börse und Währung sie schon beantworten.
+    """
+    justetf = JustEtfProvider()
+    yahoo = YFinanceEtfEnricher()
+
+    assert justetf.is_responsible(None, exchange="Toronto", currency="CAD") is False
+    assert yahoo.is_responsible(None, exchange="Toronto", currency="CAD") is True
+
+    assert justetf.is_responsible(None, exchange="Xetra", currency="EUR") is True
+    assert yahoo.is_responsible(None, exchange="Xetra", currency="EUR") is False
+
+
+def test_zustaendigkeit_ohne_jeden_hinweis_bleibt_konservativ() -> None:
+    """Weder ISIN noch Börse noch Währung: dann weiß niemand etwas.
+
+    Der Schutz des gespeicherten Standes gewinnt im Zweifel — ein
+    europäischer ETF, dessen ISIN gerade fehlt, darf seine Kennzahlen nicht
+    verlieren.
+    """
+    assert JustEtfProvider().is_responsible(None) is False
+    assert YFinanceEtfEnricher().is_responsible(None) is False
+
+
+def test_die_isin_schlaegt_boerse_und_waehrung() -> None:
+    """Ist die ISIN da, entscheidet sie — sie ist die genauere Angabe.
+
+    Ein irischer UCITS-ETF an der Londoner Börse in GBp bleibt ein Fall für
+    justETF, auch wenn die Börse nach etwas anderem aussieht.
+    """
+    assert (
+        JustEtfProvider().is_responsible(
+            "IE00B4L5Y983", exchange="London LSE", currency="GBp"
+        )
+        is True
+    )
+    assert (
+        JustEtfProvider().is_responsible(
+            "US9229087690", exchange="Xetra", currency="EUR"
+        )
+        is False
+    )
+
+
 def test_openfigi_verwirft_einen_bloomberg_bezeichner() -> None:
     """Ein FIGI-Ticker ist nicht immer ein Symbol.
 
@@ -458,10 +508,23 @@ class _StubEnricher:
         self._details = details
         self.gefragt = 0
 
-    def is_responsible(self, isin: str) -> bool:
+    def is_responsible(
+        self,
+        isin: str | None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> bool:
         return self._responsible
 
-    def fetch_etf(self, isin: str, symbol: str | None = None) -> EtfDetails | None:
+    def fetch_etf(
+        self,
+        isin: str | None,
+        symbol: str | None = None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> EtfDetails | None:
         self.gefragt += 1
         return self._details
 
