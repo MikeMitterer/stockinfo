@@ -1,0 +1,139 @@
+"""Schlägt an, wenn sich der Core unbemerkt ändert (T-24 `#7`, `#7c`).
+
+Der Schnappschuss unter `contract/openapi-core-snapshot.json` hält fest, wie
+die Core-Endpunkte und ihre Modelle heute aussehen. Weicht die App davon ab,
+gibt es genau zwei richtige Antworten: die Änderung zurücknehmen, oder sie
+wollen — dann steigt `core_version`, und der Schnappschuss wird erneuert.
+
+Der Unterschied zu `tests/test_contract.py`: Dort wird das Artefakt gegen die
+Fixtures geprüft, ohne die App. Hier wird die App gegen ihren eigenen
+Vergangenheitsstand geprüft. Beides zusammen deckt die Frage „hat sich etwas
+geändert, ohne dass es jemand gesagt hat?" ab.
+
+Erneuern:
+
+    UPDATE_CORE_SNAPSHOT=1 .venv/bin/pytest tests/test_contract_openapi.py -q
+"""
+
+import json
+import os
+from pathlib import Path
+
+import pytest
+
+from app.contract import core_contract
+from app.main import app
+
+SNAPSHOT_FILE = Path(__file__).resolve().parent.parent / "contract" / "openapi-core-snapshot.json"
+
+_HINWEIS_ERNEUERN = (
+    "Ist die Änderung gewollt? Dann `core_version` im Artefakt erhöhen "
+    "(Major bei entferntem oder unverträglich geändertem Pflichtfeld, Minor "
+    "bei additiver Erweiterung) und danach\n"
+    "    UPDATE_CORE_SNAPSHOT=1 .venv/bin/pytest tests/test_contract_openapi.py -q"
+)
+
+
+def _schema_namen(knoten: object, gefunden: set[str]) -> set[str]:
+    """Sammelt alle `#/components/schemas/…`-Verweise unterhalb eines Knotens."""
+    if isinstance(knoten, dict):
+        verweis = knoten.get("$ref")
+        if isinstance(verweis, str) and verweis.startswith("#/components/schemas/"):
+            gefunden.add(verweis.rsplit("/", 1)[-1])
+        for wert in knoten.values():
+            _schema_namen(wert, gefunden)
+    elif isinstance(knoten, list):
+        for eintrag in knoten:
+            _schema_namen(eintrag, gefunden)
+    return gefunden
+
+
+def _zugesagte_pfade() -> set[str]:
+    """Alle Pfade, für die der Vertrag eine Form zusagt.
+
+    Die Core-Endpunkte **und** die, die den Vertrag selbst ausliefern: Ein
+    Konsument hängt auch an der Form von `/fields`. Nicht dabei sind die
+    Diagnose- und Schreibendpunkte — ein Schnappschuss über alles wäre
+    ständig grundlos rot.
+    """
+    vertrag = core_contract()
+    pfade = {
+        spec["path"]
+        for spezifikationen in vertrag["endpoints"].values()
+        for spec in spezifikationen
+    }
+    return pfade | {spec["path"] for spec in vertrag["contract_endpoints"]}
+
+
+def _core_ausschnitt() -> dict:
+    """Der Teil der OpenAPI, den der Vertrag zusagt — Pfade und ihre Modelle.
+
+    Bewusst ein Ausschnitt: Ein Schnappschuss über das ganze Dokument schlüge
+    bei jeder Änderung an einem Diagnoseendpunkt an, und niemand liest einen
+    Test, der ständig grundlos rot ist.
+    """
+    dokument = app.openapi()
+    vertragspfade = _zugesagte_pfade()
+
+    pfade: dict[str, dict] = {}
+    schemas: set[str] = set()
+    for pfad, operationen in dokument["paths"].items():
+        if pfad not in vertragspfade:
+            continue
+        pfade[pfad] = {}
+        for methode, operation in operationen.items():
+            pfade[pfad][methode] = {
+                "parameters": sorted(
+                    parameter["name"] for parameter in operation.get("parameters", [])
+                ),
+                "responses": {
+                    code: antwort.get("content", {})
+                    for code, antwort in operation.get("responses", {}).items()
+                },
+            }
+            _schema_namen(operation, schemas)
+
+    return {
+        "core_version": core_contract()["core_version"],
+        "paths": pfade,
+        "schemas": {
+            name: dokument["components"]["schemas"][name] for name in sorted(schemas)
+        },
+    }
+
+
+def test_alle_vertragspfade_existieren_in_der_app() -> None:
+    """Ein Vertrag über einen Pfad, den es nicht gibt, ist keiner."""
+    vorhanden = set(app.openapi()["paths"])
+    zugesagt = _zugesagte_pfade()
+
+    assert zugesagt <= vorhanden, f"fehlende Pfade: {sorted(zugesagt - vorhanden)}"
+
+
+def test_der_core_entspricht_dem_schnappschuss() -> None:
+    """Der eigentliche Wächter: unbemerkte Änderungen am Core gibt es nicht."""
+    aktuell = _core_ausschnitt()
+
+    if os.environ.get("UPDATE_CORE_SNAPSHOT"):
+        SNAPSHOT_FILE.write_text(
+            json.dumps(aktuell, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+        pytest.skip(f"Schnappschuss erneuert: {SNAPSHOT_FILE.name}")
+
+    assert SNAPSHOT_FILE.is_file(), (
+        f"{SNAPSHOT_FILE} fehlt. Einmalig anlegen mit\n"
+        "    UPDATE_CORE_SNAPSHOT=1 .venv/bin/pytest tests/test_contract_openapi.py -q"
+    )
+    gespeichert = json.loads(SNAPSHOT_FILE.read_text(encoding="utf-8"))
+
+    assert aktuell["core_version"] == gespeichert["core_version"], (
+        "Die Vertragsversion hat sich geändert, ohne dass der Schnappschuss "
+        f"erneuert wurde.\n{_HINWEIS_ERNEUERN}"
+    )
+    assert aktuell["paths"] == gespeichert["paths"], (
+        f"Die Core-Pfade haben sich geändert.\n{_HINWEIS_ERNEUERN}"
+    )
+    assert aktuell["schemas"] == gespeichert["schemas"], (
+        f"Ein Core-Modell hat sich geändert.\n{_HINWEIS_ERNEUERN}"
+    )

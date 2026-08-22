@@ -7,9 +7,16 @@ das, was hier liegt.**
 
 ```
 contract/
-├── core-contract.json   # der Vertrag: Felder, Nullability, Bedeutung, Regeln
-└── fixtures/            # echte HTTP-Antworten dazu, positiv und negativ
+├── core-contract.json           # der Vertrag: Felder, Nullability, Bedeutung, Regeln
+├── openapi-core-snapshot.json   # der Stand von gestern — Wächter gegen stille Änderungen
+└── fixtures/                    # echte HTTP-Antworten dazu, positiv und negativ
 ```
+
+Zur Laufzeit beantwortet **`GET /fields`** denselben Vertrag: Feldliste je
+Antworttyp, `core_version` und `details_version`. Ein Konsument speichert
+seine Kopie unter `(generation_id, core_version, details_version)` zwischen und
+erkennt an den Nummern, dass er neu holen muss — ohne den Inhalt zu
+vergleichen.
 
 ## Für Konsumenten
 
@@ -64,6 +71,21 @@ Artefakt entspricht, nimmt T-25 `#7j` ab.
 ```bash
 .venv/bin/pytest tests/test_contract.py -q
 ```
+
+`tests/test_contract_openapi.py` hält die andere Richtung: Es vergleicht die
+**App** mit `openapi-core-snapshot.json` und schlägt an, sobald sich ein
+Core-Modell, ein Core-Pfad oder `/fields` ändert. Dann gibt es genau zwei
+richtige Antworten — die Änderung zurücknehmen, oder sie wollen:
+
+```bash
+# 1. core_version im Artefakt erhöhen (Major/Minor/Patch nach compatibility)
+# 2. Schnappschuss erneuern:
+UPDATE_CORE_SNAPSHOT=1 .venv/bin/pytest tests/test_contract_openapi.py -q
+```
+
+Der Schnappschuss deckt bewusst nur die zugesagten Pfade ab. Ein Abbild des
+ganzen OpenAPI-Dokuments wäre bei jeder Änderung an einem Diagnoseendpunkt
+rot, und einen Test, der ständig grundlos anschlägt, liest bald niemand mehr.
 
 ## Wenn sich etwas ändert
 

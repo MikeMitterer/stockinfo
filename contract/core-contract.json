@@ -37,6 +37,10 @@
       {"path": "/fx", "method": "GET", "query": ["base", "quote"]}
     ]
   },
+  "contract_endpoints": [
+    {"path": "/fields", "method": "GET", "query": []}
+  ],
+  "contract_endpoints_note": "Endpunkte, die den Vertrag selbst ausliefern statt Kursdaten. Sie tragen kein Core-Modell, gehören aber in den Schnappschuss: Ein Konsument hängt auch an ihrer Form. /generation kommt mit T-25 dazu.",
   "query_notes": {
     "period": "Zeitfenster der Tagesreihe: '1w', '1m', '3m', '1y' oder 'max'. Vorgabe '1m'. Es gibt keine Stückzahlbegrenzung — wer weniger Punkte will, wählt ein kürzeres Fenster.",
     "from": "Untere Grenze der Historie (einschließlich), ISO 8601.",

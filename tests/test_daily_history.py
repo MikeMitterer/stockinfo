@@ -165,3 +165,50 @@ def test_fehlgeschlagener_folgeabruf_liefert_cache_ohne_fortschreibung(
     assert len(result) == 1  # Cache wird geliefert
     meta = repo.get_daily_meta(inst["id"])
     assert meta["fetched_to"] == cached_day  # NICHT auf heute fortgeschrieben
+
+
+class _ProviderOhneWaehrung:
+    """Liefert Tagespunkte, wie eine Quelle sie ohne Währungsangabe schickt."""
+
+    def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict]:
+        return [
+            {"date": _tag(5), "close": 160.0},
+            {"date": _tag(3), "close": 161.0},
+        ]
+
+
+def test_tagespunkt_ohne_waehrung_erbt_die_des_listings(repo: QuoteRepository) -> None:
+    """Die Währung gehört zum Listing, nicht zum einzelnen Tag.
+
+    Der Vertrag macht `currency` bei `daily` zur Pflicht. Die gespeicherte
+    Zeile kann sie trotzdem leer haben — die Quelle nennt sie nicht immer, und
+    `upsert_daily_closes` schreibt dann `NULL`. Statt einen vertragswidrigen
+    Punkt auszuliefern, gilt die Währung des Instruments: Dieselbe Notiz, also
+    dieselbe Währung.
+    """
+    _seed(repo)  # Instrument in EUR
+    dienst = DailyHistoryService(repo, _ProviderOhneWaehrung(), FakeQuotes(repo))
+
+    punkte = dienst.get_daily(isin="IE00B3RBWM25")
+
+    assert punkte, "keine Punkte geliefert"
+    assert all(punkt.currency == "EUR" for punkt in punkte)
+
+
+def test_tagespunkt_ohne_jede_waehrung_wird_zum_fehler(repo: QuoteRepository) -> None:
+    """Kennt auch das Instrument keine Währung, ist der Punkt nicht verwertbar.
+
+    Dann fehlt die Angabe wirklich, und Raten ist keine Option — genau wie
+    beim Kurs selbst.
+    """
+    repo.save_quote(
+        QuoteResponse(
+            isin="IE00B3RBWM25", symbol="VGWL.DE", currency=None, price=100.0,
+            quote_time="2026-07-13T10:00:00+00:00",
+            fetched_at="2026-07-13T10:00:00+00:00", type="etf",
+        )
+    )
+    dienst = DailyHistoryService(repo, _ProviderOhneWaehrung(), FakeQuotes(repo))
+
+    with pytest.raises(QuoteUnavailableError):
+        dienst.get_daily(isin="IE00B3RBWM25")

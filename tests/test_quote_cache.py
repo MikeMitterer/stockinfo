@@ -683,6 +683,35 @@ def test_refresh_eines_unbekannten_symbols_geht_weiter_ueber_die_suche(
     assert fake.known_calls == 0
 
 
+def test_historienpunkt_ohne_waehrung_erbt_die_des_listings(
+    repo: QuoteRepository,
+) -> None:
+    """Auch `history.currency` ist Pflicht — und gehört zum Listing.
+
+    Ältere Kurspunkte können ohne Währung gespeichert sein: Vor der
+    Währungspflicht ging eine Antwort ohne sie durch. Beim Lesen gilt deshalb
+    die Währung des Instruments, statt einen vertragswidrigen Punkt
+    auszuliefern.
+    """
+    repo.save_quote(_response(_now()))  # Instrument in EUR
+    instrument = repo.get_instrument_by_isin("IE00B3RBWM25")
+    with repo._connect() as connection:  # noqa: SLF001 — Altbestand nachstellen
+        connection.execute(
+            "UPDATE quotes SET currency = NULL WHERE instrument_id = ?",
+            (instrument["id"],),
+        )
+
+    service = CachedQuoteService(
+        FakeQuoteService(_response(_now())), repo, ttl_hours=6,
+        daily_sync=_stub_daily_sync(repo),
+    )
+
+    punkte = service.get_history("IE00B3RBWM25")
+
+    assert punkte, "keine Punkte geliefert"
+    assert all(punkt.currency == "EUR" for punkt in punkte)
+
+
 def _maintained_etf(fetched_at: str) -> QuoteResponse:
     """Ein ETF mit vollständigem, aus der Quelle stammendem Metadatenstand."""
     return QuoteResponse(

@@ -145,13 +145,39 @@ Laufzeitseite der Generation mit T-25. Diese Einträge sind **nicht** Teil von
 `core_version 1.0.0`. Sie stehen da, damit ein Konsument weiß, was kommt — nicht,
 damit er sich darauf verlässt.
 
+## Der Vertrag ist abfragbar, nicht nur dokumentiert
+
+Ein Dokument, das niemand zur Laufzeit lesen kann, hilft einem Konsumenten
+nicht — er müsste raten, ob seine gecachte Feldliste noch stimmt. `GET /fields`
+liefert deshalb dieselbe Auskunft im Betrieb:
+
+```json
+{
+  "core_version": "1.0.0",
+  "core": { "quote": [ {"name": "price", "kind": "number", "required": true, "meaning": "…"} ], … },
+  "endpoints": { "quote": [ {"path": "/quote/{isin}", "method": "GET", "query": []} ], … },
+  "details_version": 0,
+  "details": []
+}
+```
+
+Bedient wird das aus **derselben Datei**, gegen die auch die Fixtures geprüft
+werden. Eine zweite Feldliste im Code gäbe es sonst sofort — und der Konsument
+bekäme je nach Weg eine andere Zusage.
+
+Zwei Nummern, zwei Ebenen: `core_version` folgt SemVer über den geschlossenen
+Core, `details_version` zählt die offene Detailmenge (T-26). Zwischenspeichern
+sollte ein Konsument unter `(generation_id, core_version, details_version)`.
+
 ## Wie man den Vertrag prüft
 
 Ohne Cross-Repo-CI, in drei Stufen:
 
 1. **StockInfo** prüft Artefakt und Fixtures statisch gegeneinander
-   (`tests/test_contract.py`) und den Core gegen einen
-   OpenAPI-Kompatibilitätsschnappschuss.
+   (`tests/test_contract.py`) und die App gegen einen
+   OpenAPI-Schnappschuss (`tests/test_contract_openapi.py`) — der schlägt an,
+   sobald sich ein Core-Modell, ein Core-Pfad oder `/fields` ändert, ohne dass
+   jemand die Vertragsversion angefasst hat.
 2. **StockPortfolio** prüft seine Mapper gegen dieselben veröffentlichten
    Fixtures unter [`contract/fixtures/`](../contract/fixtures/).
 3. **Vor Releases** ein kleiner Lauf: eine bestehende Position gegen eine
