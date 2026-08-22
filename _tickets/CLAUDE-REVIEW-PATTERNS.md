@@ -48,6 +48,13 @@ Produktbezeichner waren englisch, gleichzeitig entstanden neue deutsche
 Test-Helper, Variablen und strukturierte Log-Felder; ein Docstring verwies
 weiter auf `_ist_symbolfaehig`.
 
+**Beleg:** T-24 Teil 2, Commit `d792ce9`: Die Übergabe erklärte die
+Währungspflicht als an „allen“ gefundenen Stellen umgesetzt und markierte
+`#9` mit ✅. Live-, Daily- und History-Pfade waren korrigiert, aber der
+meistgenutzte frische sowie der stale Cache-Pfad baute in
+`CachedQuoteService._from_cache` weiterhin eine erfolgreiche `QuoteResponse`
+mit `currency=None`, wenn Kurspunkt und Instrument keine Währung hatten.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
