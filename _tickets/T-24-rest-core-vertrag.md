@@ -11,8 +11,11 @@ Diff-Review zu groß.
 
 | | Umfang | Zeilen | Commit |
 |---|---|---|---|
-| **Teil 1** | Vertragsartefakt, Fixtures, statische Konsistenz | `#1`–`#6`, `#7d`–`#7i` | `403020b` |
-| **Teil 2** | `GET /fields`, OpenAPI-Schnappschuss, Währungskorrektur | `#7`, `#7b`, `#7c`, `#8`–`#10` | offen |
+| **Teil 1** | Vertragsartefakt, Fixtures, statische Konsistenz | `#1`–`#6`, `#7d`–`#7i` | `9d01750` ✔ abgenommen |
+| **Teil 2** | `GET /fields`, OpenAPI-Schnappschuss, Währungskorrektur | `#7`, `#7b`, `#7c`, `#8`–`#10` | in Arbeit |
+
+Teil 1 ist von Codex in Runde 2 ohne Findings freigegeben (`9d01750`). Runde 1
+hatte zwei Befunde gebracht — beide eingearbeitet, siehe Fußnoten `#7h`/`#7i`.
 
 **Löst:** Was die API zusagt, ergibt sich heute aus dem Code — nirgends steht,
 welche Felder verbindlich sind, was `stale` bedeutet oder ob ein Schlusskurs
