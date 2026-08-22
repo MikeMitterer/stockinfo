@@ -81,6 +81,13 @@ Index wurden von `symbol` auf `(ticker, mic)` umgestellt, während
 gruppierte. Dadurch löschte der nächste `init_db()` eines von zwei
 kanonisch verschiedenen Listings mit demselben Symbol an verschiedenen MICs.
 
+**Beleg:** T-21 Teil 1 Runde 2, Commit `48cdaf9`: Die Korrektur erklärte, nur
+noch „kanonisch gleiche“ Instrumente würden zusammengeführt. Für offene Zeilen
+gruppierte sie jedoch weiterhin allein nach `symbol`, obwohl dort gerade keine
+kanonische Identität bekannt ist. Eine Gegenprobe mit gleichem Symbol, aber
+verschiedenen ISINs und `listing_id` verlor beim nächsten `init_db()` erneut
+eine der beiden Zeilen.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
@@ -118,5 +125,11 @@ Artefakt und Fixtures markiert. In `tests/test_contract.py` genügte bei
 nicht-konformen Fixtures jedoch ein nichtleerer `violates`-Text; selbst eine
 angeblich widersprüchliche `/generation`-Fixture mit identischen UUIDs in Header
 und Body passierte beide einschlägigen Prüfungen (`MUTANT_UNERKANNT`).
+
+**Beleg:** T-21 Teil 1 Runde 2, Commit `48cdaf9`: Das neue
+`T-21-smoke.sh` meldete die behaupteten sechs Migrationschecks auch auf einer
+vollständig leeren Datenbank als bestanden. `all(...)` auf leeren Mengen und
+Vergleiche `0 == 0` ersetzten den Nachweis der konkret behaupteten
+Auflösungen; selbst `#3b` prüfte nur Indexnamen statt deren Eindeutigkeit.
 
 [↑ Übersicht](#übersicht)

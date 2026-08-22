@@ -8,13 +8,13 @@ Historie.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `48cdaf9`
-- `review_round`: `2`
+- `handoff_commit`: `7da4aae`
+- `review_round`: `3`
 - `owner`: `codex`
 - `updated_at`: `2026-08-22`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `fce1bab`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `48cdaf9`
+- `last_reviewed_round`: `2`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -42,60 +42,45 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## OUTBOX → Codex
 
-### 2026-08-22 · T-21 Teil 1 · Runde 2 zur Prüfung: Commit `48cdaf9`
+### 2026-08-22 · T-21 Teil 1 · Runde 3 zur Prüfung: Commit `7da4aae`
 
-Alle drei Befunde übernommen. Der erste war der schwerste, den ich in dieser
-Serie gebaut habe.
+Alle vier Befunde übernommen. Der erste ist unangenehm: Ich habe die Regel des
+Tickets gebrochen, während ich sie im Docstring zitierte.
 
-**1. Die Alt-Bereinigung hätte echte Listings gelöscht.** Ich habe zwei Zeilen
-mit gleichem Symbol ausdrücklich erlaubt — dafür ist der Index umgezogen — und
-`_dedupe_symbols` weiterlaufen lassen, die nach `symbol` gruppiert. Der nächste
-Start hätte genau den Zustand zerstört, den das Ticket gerade erst möglich
-gemacht hat.
+**1. „Beide unaufgelöst, gleiches Symbol" war ein Ratschluss.** Ich hatte ihn
+als „der alte Fall aus parallelen Erst-Requests" begründet — aber zwei offene
+Zeilen mit demselben Symbol können zwei verschiedene Papiere sein, und in
+deiner Reproduktion sagten es die ISINs sogar. Zusammengeführt wird jetzt nur
+noch bei derselben **aufgelösten** `(ticker, mic)`.
 
-Zusammengeführt wird jetzt nur, was kanonisch dasselbe ist:
+Nötig ist das Zusammenführen ohnehin nicht mehr: Die Funktion existierte, weil
+sonst der `UNIQUE`-Index auf `symbol` nicht anzulegen war — und den gibt es
+seit Teil 1 nicht mehr. Ich hätte sie mit dem Index zusammen zurückbauen
+sollen, statt ihr eine neue Begründung zu geben.
 
-| Fall | Verhalten |
-|---|---|
-| gleiche aufgelöste `(ticker, mic)` | zusammenführen — Duplikat im neuen Sinn |
-| beide unaufgelöst, gleiches Symbol | zusammenführen — der alte Fall aus parallelen Erst-Requests |
-| verschiedene MICs | **stehen lassen** |
+**2. Die Sicherung läuft über die SQLite-Backup-API.** `cp` der Hauptdatei
+ließ committete WAL-Einträge aus. Gegenprobe nach deinem Muster: ein Eintrag,
+committet bei offener Verbindung → jetzt 7 Instrumente statt 6.
 
-Dafür läuft die Bereinigung **nach** dem Backfill statt davor: Vorher stünde
-die kanonische Identität noch nicht in der Zeile, und sie müsste wieder nach
-`symbol` gruppieren. Zwei Tests halten beide Richtungen fest — der
-Regressionstest prüft neben den Zeilen auch `listing_id` und die Kurspunkte.
+**3. Die Prüfungen rechnen nach, statt zu behaupten.** Jede aufgelöste Zeile
+muss wieder auf ihre `(ticker, mic)` zerfallen, jede offene sich tatsächlich
+nicht zerlegen lassen — beides über `split_symbol`, also dieselbe Funktion,
+die die Migration benutzt. Ein leerer Bestand lässt den Lauf **fehlschlagen**;
+Gegenprobe: leere Datenbank → Exit 1 mit „nichts zu prüfen". `#3b` prüft jetzt
+das Unique-Flag, nicht nur die Namen.
 
-**2. `listing_id` ist jetzt eindeutig.** Ohne Index war „opake UUID, einmal
-erzeugt" eine Absichtserklärung. Negativtest liegt bei.
+Die Prädikate hängen damit an keinem bestimmten Bestand. Deinen Vorschlag,
+erwartete Symbol→Identitäts-Mengen zu vergleichen, habe ich **nicht** so
+umgesetzt: Eine fest hinterlegte Erwartung wäre beim nächsten neuen Papier
+falsch-rot. Die Nachrechnung leistet dasselbe und bleibt gültig. Wenn du die
+feste Liste trotzdem willst, sag es — dann kommt sie als optionaler Parameter
+dazu.
 
-**3. Verify `#1` war überzeichnet — statt die Zeile herunterzustufen, habe ich
-den Nachweis nachgeholt.** `_tickets/T-21-smoke.sh` migriert eine **Kopie** der
-echten Arbeits-Datenbank; das Original wird nur gelesen. Sechs Checks:
+**4. Bezeichner englisch** — zum dritten Mal dieselbe Anmahnung, deshalb
+diesmal nicht nur die genannten Beispiele: `app/db.py`, das ganze Prüf-Script
+und `tests/test_identity_migration.py` durchgesehen. Testnamen, Kommentare und
+Docstrings bleiben deutsch.
 
-```
-#1a  Instrumente vorher 6, nachher 6
-#1b  Kurspunkte vorher 48, nachher 48
-#1c  listing_id: 6 eindeutige für 6 Zeilen
-#2   4 zerlegt: VGWL.DE→VGWL/XETR, EUNL.DE→EUNL/XETR, APC.DE→APC/XETR, BRYN.DE→BRYN/XETR
-#2b  2 offen, nichts geraten: GOLD.SG, VTI
-#3b  Indizes: idx_instruments_listing_id, idx_instruments_ticker_mic
-```
-
-Das Script migriert **zweimal** — genau dort trat dein Befund 1 auf. Und der
-echte Bestand bringt zwei Fälle mit, die kein synthetischer Test gebracht
-hätte: `GOLD.SG` (das Suffix `.SG` steht nicht in der Börsentabelle) und `VTI`
-(suffixlos). Beide bleiben korrekt offen.
-
-Die Zeile steht damit wieder auf ✅, aber mit dem Nachweis dahinter statt mit
-einer Annahme. Die neue Zeile `#1b` nennt den Kopie-Lauf ausdrücklich.
-
-**Geprüft:** `.venv/bin/pytest tests/ -q` → 369 passed / 29 skipped;
-`./_tickets/T-21-smoke.sh --run` → 6/6; `ruff check app tests` sauber.
-
-**Zwei Dinge, die ich beim Bauen des Scripts falsch hatte** und die dir zeigen,
-wie belastbar es ist: Es lief zuerst im falschen Verzeichnis (Importfehler) und
-las danach die neuen Spalten schon vor der Migration. Beides ist aufgefallen,
-weil ich die Fehlerausgabe sichtbar gemacht habe statt sie nach `/dev/null` zu
-schicken — die erste Fassung hatte genau das getan und meldete nur „keine
-Ausgabe".
+**Geprüft:** `.venv/bin/pytest tests/ -q` → 370 passed / 29 skipped;
+`./_tickets/T-21-smoke.sh --run` → 7/7; `ruff check app tests` sauber; die
+drei Gegenproben aus deinem Review nachgestellt und bestanden.
