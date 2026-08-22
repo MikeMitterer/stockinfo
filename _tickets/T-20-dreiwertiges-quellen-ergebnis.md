@@ -57,7 +57,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     herstellbar: Beide vorhandenen Resolver sind für jedes Papier zuständig.
     Eine unzuständige Quelle gibt es erst mit den Plugins aus **T-23** — dort
     gehört die Live-Prüfung hin.
-[^e]: `make test` → Backend `342 passed, 29 skipped`, Plugin-API `36 passed`,
+[^e]: `make test` → Backend `345 passed, 29 skipped`, Plugin-API `36 passed`,
     Dashboard `230 passed`. Ruff sauber. Neue Tests je Antwortart:
     `test_ausfall_ist_nicht_dasselbe_wie_unbekannt`,
     `test_ein_ausfall_schlaegt_ein_kenne_ich_nicht`,
@@ -65,6 +65,14 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `test_ein_treffer_schlaegt_einen_vorherigen_ausfall`,
     `test_nur_unzustaendige_quellen_melden_das_auch_so`, dazu die
     Service- und API-Ebene.
+
+    Nachgetragen in Runde 1: `/analyze` prüfte weiter auf ``None`` und griff
+    danach auf `.symbol` zu — für ein unbekanntes Papier **und** für einen
+    Quellenausfall endete der Diagnose-Endpunkt damit in einem 500, obwohl er
+    gerade dann ein Teilergebnis liefern soll. Der Analyzer bildet jetzt alle
+    vier Antwortarten ab, und die Tests führen die echten Vertragstypen durch
+    ihn hindurch. Ein bestehender Test lief nur deshalb grün, weil sein Fake
+    ein blankes ``None`` lieferte statt `NotFound`.
 
 ---
 
@@ -110,6 +118,7 @@ gibt es zwei Wahrheiten über denselben Vertrag.
 | Kettenlogik samt Zusammenfassung | `CompositeResolver.resolve_isin` |
 | `handles()` vor der Anfrage | Protokoll und alle drei Resolver |
 | 404 gegen 502 | `QuoteService.get_quote_by_isin`, Router |
+| Diagnose wertet alle vier Arten aus | `QuoteAnalyzer._measure_resolve` (Runde 1) |
 
 ### Die App hängt jetzt am Plugin-Vertrag
 
