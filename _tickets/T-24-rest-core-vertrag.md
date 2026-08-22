@@ -43,9 +43,9 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 4 | dasselbe | `listing_id` und das Verhalten bei mehrdeutigem `symbol` sind festgelegt | ✅ [^d] | |
 | 5 | dasselbe | Regel, was additiv ist und was ein Bruch wäre | ✅ [^e] | |
 | 6 | Core-Fixtures | liegen als Datei vor und sind von außen nutzbar | ✅ [^f] | |
-| 7 | OpenAPI-Schnappschuss | ein Test schlägt an, wenn sich der Core unbemerkt ändert | ➖ Teil 2 | |
-| 7b | **`GET /fields`** | liefert die Pflichtfelder **samt Vertragsversion** — zur Laufzeit abfragbar, nicht nur dokumentiert | ➖ Teil 2 | |
-| 7c | Vertragsversion erhöhen | ein Konsument kann an der Nummer erkennen, dass er prüfen muss | ➖ Teil 2 | |
+| 7 | OpenAPI-Schnappschuss | ein Test schlägt an, wenn sich der Core unbemerkt ändert | ✅ [^m] | |
+| 7b | **`GET /fields`** | liefert die Pflichtfelder **samt Vertragsversion** — zur Laufzeit abfragbar, nicht nur dokumentiert | ✅ [^n] | |
+| 7c | Vertragsversion erhöhen | ein Konsument kann an der Nummer erkennen, dass er prüfen muss | ✅ [^o] | |
 | 7d | Vertragsdokument | **Schema** von `GET /generation` steht fest: nur `generation_id` (opake UUID), `Cache-Control: no-store` | ✅ [^g] | |
 | 7e | dasselbe | **Name und Semantik** von `StockInfo-Generation` stehen fest — Pflicht auf **jeder** Antwort, auch `404`/`409`/`422`/`502` | ✅ [^h] | |
 | 7f | dasselbe | Regel „Header und Rumpf stammen aus **derselben** Generation" ist festgeschrieben | ✅ [^i] | |
@@ -113,9 +113,42 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 8 | Antwort mit Preis, aber ohne Währung von der Quelle | **Fehler** statt Antwort mit geratenem Wert | | |
-| 9 | Bestandsprüfung | wo der heutige Code den Mindestvertrag verletzt, ist es benannt und behoben | | |
-| 10 | `make test` | grün | | |
+| 8 | Antwort mit Preis, aber ohne Währung von der Quelle | **Fehler** statt Antwort mit geratenem Wert | ✅ [^p] | |
+| 9 | Bestandsprüfung | wo der heutige Code den Mindestvertrag verletzt, ist es benannt und behoben | ✅ [^q] | |
+| 10 | `make test` | grün | ✅ [^r] | |
+
+[^m]: `contract/openapi-core-snapshot.json` plus
+    `tests/test_contract_openapi.py`. Erfasst sind die neun zugesagten Pfade
+    und die Modelle dahinter — nicht das ganze Dokument: Ein Abbild über alles
+    wäre bei jeder Änderung an einem Diagnoseendpunkt rot, und einen Test, der
+    grundlos anschlägt, liest bald niemand. **Mutationsprobe:** neues Feld an
+    `QuoteResponse` → rot, neuer Query-Parameter an `/fx` → rot. Danach wieder
+    grün.
+[^n]: `GET /fields`, bedient aus `contract/core-contract.json` über
+    `app/contract.py` — **eine** Quelle für Fixtures und Laufzeit. Fünf Tests
+    in `tests/test_api_fields.py`, darunter der Nachweis, dass die Antwort mit
+    dem Artefakt übereinstimmt, und dass `currency` im Kurs Pflicht ist, in
+    der Instrumentenzeile nicht. Fehlt das Artefakt, antwortet der Endpunkt
+    mit 503 statt mit einer leeren Feldliste, die wie eine Zusage aussähe.
+    Das Dockerfile kopiert `contract/` jetzt ins Image — ohne diese Zeile
+    liefe der Endpunkt lokal und im Container nicht.
+[^o]: `core_version` steht im Artefakt, in der Antwort von `/fields` **und**
+    im Schnappschuss. **Mutationsprobe:** `core_version` auf `1.1.0` gesetzt →
+    der Schnappschuss-Test wird rot und nennt den Weg (Version erhöhen,
+    Schnappschuss erneuern). Ein Konsument sieht dieselbe Nummer über
+    `/fields`.
+[^p]: `ensure_core_complete` in `app/services/quote_service.py`, aufgerufen in
+    `_build`. Die Feldliste kommt aus dem Artefakt (`required_fields("quote")`),
+    nicht aus einer zweiten Aufzählung — sonst verspräche `/fields` etwas
+    anderes, als der Code durchlässt. Test
+    `test_preis_ohne_waehrung_ist_kein_verwertbarer_kurs` (zuerst rot); der
+    Router bildet auf 502 ab.
+[^q]: Drei Verletzungen gefunden, alle behoben — Einzelheiten unten unter
+    „Bestandsprüfung". Kurz: Kurs ohne Währung (jetzt Fehler), Tagespunkt ohne
+    Währung und Historienpunkt ohne Währung (beide erben jetzt die Währung des
+    Listings, sonst Fehler). Je ein Test, alle zuerst rot.
+[^r]: `make test` → Backend `317 passed, 29 skipped`, Plugin-API `36 passed`,
+    Dashboard `230 passed`. Ruff über `app` und `tests` sauber.
 
 **Ebene 3 — hier nur benannt, umgesetzt anderswo:** `ticker`/`mic` → T-21,
 `details`-Container → T-26, `generation_id` → T-25.
@@ -342,6 +375,52 @@ Kein Repo klont das andere.
 
 ---
 
+## Bestandsprüfung (`#9`)
+
+Drei Stellen, an denen der Code den eigenen Mindestvertrag verletzte. Alle drei
+haben dieselbe Wurzel: `currency` war überall optional, weil niemand
+aufgeschrieben hatte, dass sie es nicht sein darf.
+
+| Wo | Was passierte | Weg |
+|---|---|---|
+| `quote` | Ein Preis ohne Währung ging durch und wurde gespeichert | `ensure_core_complete` in `_build` → Fehler statt Antwort |
+| `daily` | `DailyPoint.currency` kam roh aus der Zeile; `upsert_daily_closes` schreibt `NULL`, wenn die Quelle nichts nennt | Währung des **Listings** einsetzen; kennt auch das Instrument keine → Fehler |
+| `history` | dasselbe für `QuotePoint` — ältere Zeilen können ohne Währung gespeichert sein | ebenso |
+
+Bei `daily` und `history` ist das kein Raten: Die Währung gehört zum Listing,
+nicht zum einzelnen Tag. Dieselbe Notiz, dieselbe Währung. Ein Fehler bleibt
+nur der Fall, in dem auch das Instrument keine kennt — dann fehlt die Angabe
+wirklich.
+
+**Was geprüft und in Ordnung war:** `instrument` (`history_count`,
+`manual_fields`, `shadowed_fields` sind immer gesetzt), `fx` (alle
+Pflichtfelder sind im Modell nicht optional) und die Zeitstempel in allen
+Modellen.
+
+---
+
 ## Auflösung
 
-_(offen)_
+**Stand 2026-08-22 — beide Teile umgesetzt.**
+
+| | Umfang | Commit | Stand |
+|---|---|---|---|
+| Teil 1 | Vertragsartefakt, Fixtures, statische Konsistenz | `9d01750` | von Codex abgenommen |
+| Teil 2 | `GET /fields`, OpenAPI-Schnappschuss, Währungspflicht | folgt | bei Codex |
+
+**Neu im Repo:** `contract/core-contract.json` (verbindlich),
+`contract/openapi-core-snapshot.json` (Wächter), dreizehn Fixtures,
+`docs/rest-core-contract.md` (Erklärung), `app/contract.py` (ein Leser für
+beide Wege), `app/routers/fields.py`.
+
+**Drei Wächter, jeder mit Gegenprobe:**
+
+1. Artefakt ↔ Fixtures, ohne App (`test_contract.py`) — drei Mutationen erkannt.
+2. App ↔ Schnappschuss (`test_contract_openapi.py`) — drei Mutationen erkannt.
+3. Code ↔ Artefakt: `ensure_core_complete` liest die Pflichtfelder aus dem
+   Artefakt, statt sie zu wiederholen.
+
+**Nicht in diesem Ticket, bewusst:** `listing_id` und `(ticker, mic)` (T-21),
+der `details`-Container (T-26), die Laufzeitseite der Generation — Route,
+Middleware, `expose_headers` (T-25). Sie stehen im Artefakt unter `planned`,
+getrennt vom zugesagten Core.
