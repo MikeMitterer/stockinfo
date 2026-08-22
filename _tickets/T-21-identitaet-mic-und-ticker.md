@@ -27,7 +27,7 @@ muss, ist kein Plugin).
 >
 > | | Umfang | Zeilen | Commit |
 > |---|---|---|---|
-> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | `HANDOFF` |
+> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | `fce1bab` |
 > | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung, `ExchangeDef` aufräumen | `#5` | offen |
 > | **Teil 3** | API und Dashboard, offene Zuordnungen sichtbar und von Hand setzbar, Vertragsversion | `#2b`, `#2c`, `#3`, `#4` | offen |
 >
