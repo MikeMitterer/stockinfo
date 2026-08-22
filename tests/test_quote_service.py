@@ -33,11 +33,26 @@ class FakeEtfProvider:
     def __init__(self, details: EtfDetails | None, responsible: bool = True) -> None:
         self._details = details
         self._responsible = responsible
+        self.gesehene_zustaendigkeit: list[tuple] = []
 
-    def is_responsible(self, isin: str) -> bool:
+    def is_responsible(
+        self,
+        isin: str | None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> bool:
+        self.gesehene_zustaendigkeit.append((isin, exchange, currency))
         return self._responsible
 
-    def fetch_etf(self, isin: str, symbol: str | None = None) -> EtfDetails | None:
+    def fetch_etf(
+        self,
+        isin: str | None,
+        symbol: str | None = None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> EtfDetails | None:
         return self._details
 
 
@@ -418,8 +433,14 @@ def test_unbekannte_gattung_gilt_nicht_als_vollstaendig() -> None:
     assert service.get_quote_by_isin("IE00B3RBWM25").metadata_complete is False
 
 
-def test_etf_ohne_isin_gilt_nicht_als_vollstaendig() -> None:
-    """justETF wird über die ISIN gefragt — ohne sie ist nichts zu holen."""
+def test_europaeischer_etf_ohne_isin_bleibt_geschuetzt() -> None:
+    """Ein europäisch aussehendes Papier ohne ISIN behält seinen Stand.
+
+    Die Zuständigkeit ist beantwortbar — EUR spricht für justETF —, aber
+    justETF arbeitet über die ISIN und kann ohne sie nichts liefern. Die
+    Antwort weiß damit nichts über die ETF-Felder und darf den gespeicherten
+    Stand nicht ersetzen.
+    """
     etf_ohne_isin = RawQuote(
         symbol="VGWL.DE",
         price=160.98,
@@ -429,11 +450,32 @@ def test_etf_ohne_isin_gilt_nicht_als_vollstaendig() -> None:
     )
     service = QuoteService(
         FakeQuoteProvider(etf_ohne_isin),
-        FakeEtfProvider(EtfDetails(ter=0.19)),
+        FakeEtfProvider(None, responsible=True),  # zuständig, liefert nichts
         FakeResolver(ResolvedInstrument(symbol="VGWL.DE")),
     )
 
     assert service.get_quote_by_symbol("VGWL.DE").metadata_complete is False
+
+
+def test_die_zustaendigkeit_bekommt_boerse_und_waehrung_mit() -> None:
+    """Ohne die beiden Angaben kann die Quelle ohne ISIN nichts entscheiden."""
+    etf = RawQuote(
+        symbol="XIC.TO",
+        price=41.2,
+        quote_time="2026-08-21T20:00:00+00:00",
+        currency="CAD",
+        type="etf",
+    )
+    enricher = FakeEtfProvider(EtfDetails(provider="BlackRock"), responsible=True)
+    service = QuoteService(
+        FakeQuoteProvider(etf),
+        enricher,
+        FakeResolver(ResolvedInstrument(symbol="XIC.TO", exchange="Toronto")),
+    )
+
+    service.get_quote_by_symbol("XIC.TO")
+
+    assert enricher.gesehene_zustaendigkeit == [(None, None, "CAD")]
 
 
 def _us_etf_quote() -> RawQuote:
@@ -490,12 +532,13 @@ def test_zustaendige_quelle_ohne_antwort_bleibt_unvollstaendig() -> None:
     assert result.metadata_complete is False
 
 
-def test_etf_ohne_isin_bleibt_konservativ_unvollstaendig() -> None:
-    """Ohne ISIN lässt sich die Zuständigkeit nicht beantworten.
+def test_etf_ohne_isin_aber_mit_waehrung_ist_beantwortbar() -> None:
+    """Die Währung beantwortet die Zuständigkeit, wenn die ISIN fehlt.
 
-    Das Papier könnte ein US-ETF sein (dann wäre „vollständig" richtig) oder
-    ein europäischer, dessen ISIN gerade fehlt und dessen gepflegte Kennzahlen
-    niemand überschreiben will. Im Zweifel gewinnt der Schutz.
+    Vorher galt: ohne ISIN keine Aussage, also konservativ unvollständig. Das
+    traf einen US- oder kanadischen ETF dauerhaft — sein `source` blieb leer,
+    weil das Feld geschützt und nie geschrieben wurde. USD sagt aber deutlich,
+    dass justETF hier nichts führt: nichts zu holen, nichts zu schützen.
     """
     service = QuoteService(
         FakeQuoteProvider(
@@ -510,4 +553,28 @@ def test_etf_ohne_isin_bleibt_konservativ_unvollstaendig() -> None:
 
     result = service.get_quote_for_known("ARKK", instrument_type="etf")
 
-    assert result.metadata_complete is False
+    assert result.metadata_complete is True
+
+
+def test_ohne_waehrung_kommt_die_zustaendigkeitsfrage_gar_nicht_auf() -> None:
+    """Der Fall „niemand weiß etwas" ist im Service unerreichbar.
+
+    Ohne Währung greift schon die Core-Prüfung aus T-24 — die Antwort kommt
+    nie bis zum ETF-Zweig. Deshalb steht dort kein konservativer Sonderfall
+    mehr; die Quellen behandeln ihn trotzdem so, weil sie auch von anderswo
+    aufgerufen werden (siehe `test_zustaendigkeit_ohne_jeden_hinweis_bleibt_konservativ`).
+    """
+    service = QuoteService(
+        FakeQuoteProvider(
+            RawQuote(
+                symbol="ARKK", price=61.2, quote_time="2026-08-19T20:00:00+00:00",
+                currency=None, type="etf",
+            )
+        ),
+        FakeEtfProvider(None, responsible=False),
+        FakeResolver(None),
+    )
+
+    # Ohne Währung greift schon die Core-Prüfung — der Vertrag verlangt sie.
+    with pytest.raises(QuoteUnavailableError):
+        service.get_quote_for_known("ARKK", instrument_type="etf")

@@ -56,10 +56,57 @@ def is_european_isin(isin: str) -> bool:
     return len(isin) >= 2 and isin[:2].upper() in _EUROPEAN_DOMICILES
 
 
+# Währungen, in denen an europäischen Börsen notiert wird. 'GBp' ist Pence und
+# steht neben 'GBP', weil beide vorkommen.
+_EUROPEAN_CURRENCIES = frozenset(
+    {"EUR", "CHF", "GBP", "GBp", "SEK", "DKK", "NOK", "PLN", "CZK", "HUF", "RON"}
+)
+
+
+def is_european_listing(
+    *, exchange: str | None = None, currency: str | None = None
+) -> bool:
+    """Sieht dieses Listing nach einem europäischen Handelsplatz aus?
+
+    Der Rückfall für Papiere **ohne ISIN**: Die Währung ist das belastbarere
+    Merkmal — ein Kurs in CAD stammt von keiner europäischen Börse. Der
+    Börsenname kommt aus der eigenen Tabelle (`EXCHANGES`) und dient als
+    zweites Signal, wenn die Währung fehlt.
+
+    Bewusst **keine** Vermutung ohne Anhaltspunkt: Ohne beides ist die Antwort
+    ``False``, und das heißt „unbekannt", nicht „außereuropäisch". Der Aufrufer
+    behandelt beide Quellen dann als unzuständig und schützt den gespeicherten
+    Stand.
+
+    Args:
+        exchange: Anzeigename des Handelsplatzes, z.B. 'Xetra'.
+        currency: Handelswährung des Kurses.
+
+    Returns:
+        ``True`` wenn Währung oder Börse europäisch sind.
+    """
+    if currency:
+        return currency in _EUROPEAN_CURRENCIES
+    if exchange:
+        from app.resolver import EXCHANGES
+
+        return any(
+            definition.name == exchange and definition.region in {"germany", "europe"}
+            for definition in EXCHANGES.values()
+        )
+    return False
+
+
 class JustEtfProvider:
     """Reichert ETF-Daten anhand der ISIN über justETF (Scraping) an."""
 
-    def is_responsible(self, isin: str) -> bool:
+    def is_responsible(
+        self,
+        isin: str | None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> bool:
         """Führt justETF dieses Papier überhaupt?
 
         justETF ist eine Datenbank europäischer UCITS-Fonds. Für ein Papier
@@ -67,15 +114,39 @@ class JustEtfProvider:
         dort nichts — und damit auch keinen gepflegten Stand, den eine leere
         Antwort schützen müsste.
 
+        **Ohne ISIN entscheiden Börse und Währung.** Für `XIC.TO` nennt
+        yfinance keine ISIN; bisher griff dann der konservative Pfad, und der
+        Anbieter blieb dauerhaft leer. Dabei beantwortet `.TO` in CAD die
+        Frage bereits: Dieses Papier steht nicht bei justETF. Die ISIN bleibt
+        die genauere Angabe und schlägt beide, wenn sie da ist — ein irischer
+        UCITS-ETF an der Londoner Börse ist ein Fall für justETF, egal wie die
+        Börse heißt.
+
+        Fehlt jeder Hinweis, gewinnt der Schutz: Ein europäischer ETF, dessen
+        ISIN gerade fehlt, darf seine Kennzahlen nicht verlieren. Dann meldet
+        **keine** Quelle Zuständigkeit, und `metadata_complete` bleibt
+        ``False``.
+
         Args:
-            isin: ISIN des Wertpapiers.
+            isin: ISIN des Wertpapiers, sofern bekannt.
+            exchange: Anzeigename des Handelsplatzes, z.B. 'Toronto'.
+            currency: Handelswährung des Kurses.
 
         Returns:
             ``True`` bei europäischem Domizil.
         """
-        return is_european_isin(isin)
+        if isin:
+            return is_european_isin(isin)
+        return is_european_listing(exchange=exchange, currency=currency)
 
-    def fetch_etf(self, isin: str, symbol: str | None = None) -> EtfDetails | None:
+    def fetch_etf(
+        self,
+        isin: str | None,
+        symbol: str | None = None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> EtfDetails | None:
         """Holt ETF-Zusatzdaten zu einer ISIN.
 
         Args:

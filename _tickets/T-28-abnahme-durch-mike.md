@@ -45,6 +45,9 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 5 | `curl http://localhost:8000/fields` | nennt eine Vertragsversion und je Antworttyp die Felder — lesbar, ohne ins Repo zu schauen | ➖ [^t24] | |
 | 6 | Ein Papier ansehen, dessen Kurs die Quelle ohne Währung meldet | die App sagt, dass sie keinen verwertbaren Kurs hat — statt eine Zahl ohne Währung anzuzeigen | ➖ [^t24] | |
 | 7 | Kurs, Tagesreihe und Historie desselben Papiers nebeneinander | überall dieselbe Währung, nirgends eine leere Angabe | ➖ [^t24] | |
+| 8 | Ein kanadisches oder japanisches Papier per ISIN aufnehmen (`CA7800871021`, `JP3633400001`) | kommt herein — an seiner Heimatbörse, in der dortigen Währung | ➖ [^t18] | |
+| 9 | Ein außereuropäischer ETF in der Liste (z.B. `XIC.TO` per Symbol) | Anbieter ist gefüllt, nicht leer | ➖ [^t18] | |
+| 10 | Ein europäisches Papier daneben (`IE00B4L5Y983`) | unverändert an der eingestellten Börse, in EUR — nichts ist ausgewandert | ➖ [^t18] | |
 
 _(wächst mit jedem abgeschlossenen Ticket — je Ticket ein bis drei Zeilen,
 nicht mehr)_
@@ -58,6 +61,10 @@ nicht mehr)_
     `test_quote_service.py`, `test_quote_cache.py` und
     `test_daily_history.py`. Zeile 6 ist im Alltag schwer herbeizuführen —
     sie tritt nur ein, wenn eine Quelle wirklich keine Währung nennt.
+[^t18]: T-18 — Auflösung erreicht mehr Märkte. Maschineller Nachweis:
+    `./_tickets/T-18-smoke.sh --run` (acht Checks, darunter genau diese drei
+    Fälle), dazu die Resolver- und Provider-Tests. Zeile 10 ist die
+    Gegenprobe: Die Kaskade darf europäische Papiere nicht auswandern lassen.
 
 ---
 

@@ -55,6 +55,13 @@ meistgenutzte frische sowie der stale Cache-Pfad baute in
 `CachedQuoteService._from_cache` weiterhin eine erfolgreiche `QuoteResponse`
 mit `currency=None`, wenn Kurspunkt und Instrument keine Währung hatten.
 
+**Beleg:** T-18 Runde 1, Commit `32e08ea`: Die Übergabe erklärte die neue
+`fetch_etf`-Signatur an allen Stellen nachgezogen. Der Composite akzeptierte
+`exchange` und `currency` und nutzte sie für `is_responsible`, verwarf beide
+aber beim anschließenden `enricher.fetch_etf(...)`-Aufruf. Ein Provider, der
+den neuen Kontext auch zum Abruf benötigt, wurde deshalb zuständig gewählt
+und danach ohne den Kontext aufgerufen.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf

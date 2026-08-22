@@ -87,6 +87,19 @@ class EtfEnricher(Protocol):
     wie „ausgefallen".
     """
 
-    def is_responsible(self, isin: str) -> bool: ...
+    def is_responsible(
+        self,
+        isin: str | None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> bool: ...
 
-    def fetch_etf(self, isin: str, symbol: str | None = None) -> EtfDetails | None: ...
+    def fetch_etf(
+        self,
+        isin: str | None,
+        symbol: str | None = None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> EtfDetails | None: ...

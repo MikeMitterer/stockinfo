@@ -88,43 +88,139 @@ EXCHANGES: dict[str, ExchangeDef] = {
 }
 DEFAULT_EXCHANGE = "XETR"
 
+# Emissionsland (ISIN-Präfix) → Heimatbörse. Der Rückfall der Kaskade: Findet
+# die bevorzugte Börse nichts, ist die Heimatbörse der beste nächste Versuch.
+#
+# **Eine Heuristik, kein Gesetz.** Das Präfix nennt die ausgebende Stelle, nicht
+# den gewünschten Handelsplatz. Deshalb stehen hier nur Länder, bei denen die
+# Zuordnung eindeutig genug ist — `IE` und `LU` fehlen bewusst: Ein irischer
+# oder luxemburgischer Fonds wird europaweit gehandelt und hat an seinem
+# Domizil oft gar kein Listing. Für sie übernimmt der Yahoo-Fallback.
+HOME_EXCHANGES: dict[str, str] = {
+    "AT": "XWBO",
+    "AU": "XASX",
+    "BE": "XBRU",
+    "BR": "BVMF",
+    "CA": "XTSE",
+    "CH": "XSWX",
+    "CN": "XSHG",
+    "DE": "XETR",
+    "DK": "XCSE",
+    "ES": "XMAD",
+    "FI": "XHEL",
+    "FR": "XPAR",
+    "GB": "XLON",
+    "HK": "XHKG",
+    "IL": "XTAE",
+    "IN": "XNSE",
+    "IT": "XMIL",
+    "JP": "XTKS",
+    "KR": "XKRX",
+    "MX": "XMEX",
+    "NL": "XAMS",
+    "NO": "XOSL",
+    "PL": "XWAR",
+    "PT": "XLIS",
+    "SE": "XSTO",
+    "SG": "XSES",
+    "TW": "XTAI",
+    "US": "US",
+    "ZA": "XJSE",
+}
+
+
+def home_exchange(isin: str) -> str | None:
+    """Die Heimatbörse zum Emissionsland einer ISIN.
+
+    Args:
+        isin: ISIN des Wertpapiers.
+
+    Returns:
+        Der MIC der Heimatbörse, oder ``None`` wenn das Präfix keiner
+        zugeordnet ist.
+    """
+    return HOME_EXCHANGES.get(isin[:2].upper()) if len(isin) >= 2 else None
+
 
 class OpenFigiResolver:
     """Löst ISINs über OpenFIGI zum Listing einer bevorzugten Börse auf."""
 
     def __init__(
-        self, client: OpenFigiClient, default_exchange: str = DEFAULT_EXCHANGE
+        self,
+        client: OpenFigiClient,
+        default_exchange: str = DEFAULT_EXCHANGE,
+        home_fallback: bool = True,
     ) -> None:
         """
         Args:
             client: OpenFIGI-Client für das ISIN→Ticker-Mapping.
             default_exchange: MIC der bevorzugten Börse (z.B. 'XETR').
+            home_fallback: Ob bei erfolglosem Versuch die Heimatbörse aus dem
+                ISIN-Präfix gefragt wird. ``False`` bei `STRICT_EXCHANGE` —
+                wer diese Einstellung wählt, will keine Überraschung in
+                fremder Währung.
         """
         self._client = client
         self._default_exchange = default_exchange
+        self._home_fallback = home_fallback
 
     def resolve_isin(self, isin: str) -> ResolvedInstrument | None:
-        """Löst eine ISIN zum Yahoo-Symbol der konfigurierten Börse auf.
+        """Löst eine ISIN zum Yahoo-Symbol auf — bevorzugte Börse, dann Heimat.
+
+        Die Kaskade ist der Kern von T-18: `CA7800871021` hat an Xetra kein
+        Listing, an Toronto schon. Bisher fiel das Papier durch, weil nur die
+        Vorgabebörse gefragt wurde. Das Emissionsland steckt im ISIN-Präfix —
+        niemand muss es konfigurieren.
+
+        Die Reihenfolge ist keine Feinheit: Die **bevorzugte** Börse gewinnt
+        immer, wenn sie ein Listing hat. Sonst kippte ein europäischer ETF auf
+        sein Domizil, und `IE00B4L5Y983` notierte plötzlich in Dublin statt an
+        Xetra.
 
         Args:
             isin: ISIN des Wertpapiers.
 
         Returns:
-            Aufgelöstes Instrument oder ``None``, wenn OpenFIGI kein Listing an
-            der konfigurierten Börse kennt.
+            Aufgelöstes Instrument, oder ``None`` wenn weder die bevorzugte
+            noch die Heimatbörse ein Listing kennt.
         """
-        key = self._default_exchange
-        exch = EXCHANGES.get(key)
-        if exch is None:
-            logger.warning("unknown_default_exchange", configured=key)
-            key = DEFAULT_EXCHANGE
-            exch = EXCHANGES[key]
-        id_value = exch.figi_value or key
-        ticker = self._client.map_isin(isin, id_value, id_type=exch.figi_id_type)
+        preferred = self._default_exchange
+        if preferred not in EXCHANGES:
+            logger.warning("unknown_default_exchange", configured=preferred)
+            preferred = DEFAULT_EXCHANGE
+
+        resolved = self._try_exchange(isin, preferred)
+        if resolved is not None:
+            return resolved
+
+        home = home_exchange(isin) if self._home_fallback else None
+        if home is None or home == preferred or home not in EXCHANGES:
+            logger.warning("openfigi_resolve_empty", isin=isin, exchange=preferred)
+            return None
+
+        resolved = self._try_exchange(isin, home)
+        if resolved is None:
+            logger.warning("openfigi_resolve_empty", isin=isin, exchange=home)
+            return resolved
+
+        # Sichtbar machen, was passiert ist: Wer sein Papier plötzlich in CAD
+        # sieht, muss den Grund im Protokoll finden.
+        logger.info(
+            "resolve_home_exchange",
+            isin=isin,
+            preferred=preferred,
+            home=home,
+            symbol=resolved.symbol,
+        )
+        return resolved
+
+    def _try_exchange(self, isin: str, mic: str) -> ResolvedInstrument | None:
+        """Fragt OpenFIGI nach dem Listing an genau einer Börse."""
+        exch = EXCHANGES[mic]
+        ticker = self._client.map_isin(
+            isin, exch.figi_value or mic, id_type=exch.figi_id_type
+        )
         if not ticker:
-            logger.warning(
-                "openfigi_resolve_empty", isin=isin, exchange=self._default_exchange
-            )
             return None
         return ResolvedInstrument(
             symbol=f"{ticker}{exch.suffix}", isin=isin, exchange=exch.name

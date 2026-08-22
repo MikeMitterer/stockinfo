@@ -13,7 +13,7 @@ import structlog
 import yfinance as yf
 
 from app.providers.base import EtfDetails
-from app.providers.justetf_provider import is_european_isin
+from app.providers.justetf_provider import is_european_isin, is_european_listing
 
 logger = structlog.get_logger()
 
@@ -42,22 +42,47 @@ class YFinanceEtfEnricher:
     dann trägt der Mensch es ein und behält es.
     """
 
-    def is_responsible(self, isin: str) -> bool:
+    def is_responsible(
+        self,
+        isin: str | None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> bool:
         """Ist diese Quelle für das Papier zuständig?
 
         Genau das Gegenstück zu `JustEtfProvider.is_responsible`: Wo justETF
         führt, hält sich Yahoo heraus. Zwei Quellen für dasselbe Feld wären eine
         zu viel, und die europäischen Daten sind bei justETF vollständiger.
 
+        Ohne ISIN entscheiden Börse und Währung — mit einer Ausnahme vom
+        einfachen Gegenteil: Weiß **niemand** etwas, ist auch diese Quelle
+        nicht zuständig. Sonst spräche ein fehlender Hinweis für „nicht
+        europäisch", und ein europäischer ETF ohne ISIN verlöre seine
+        gepflegten Kennzahlen an eine Yahoo-Antwort, die sie nicht kennt.
+
         Args:
-            isin: ISIN des Wertpapiers.
+            isin: ISIN des Wertpapiers, sofern bekannt.
+            exchange: Anzeigename des Handelsplatzes.
+            currency: Handelswährung des Kurses.
 
         Returns:
             ``True`` bei außereuropäischem Domizil.
         """
-        return not is_european_isin(isin)
+        if isin:
+            return not is_european_isin(isin)
+        if not exchange and not currency:
+            return False
+        return not is_european_listing(exchange=exchange, currency=currency)
 
-    def fetch_etf(self, isin: str, symbol: str | None = None) -> EtfDetails | None:
+    def fetch_etf(
+        self,
+        isin: str | None,
+        symbol: str | None = None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> EtfDetails | None:
         """Holt den Fondsanbieter zu einem Papier.
 
         Args:

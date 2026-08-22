@@ -100,6 +100,95 @@ def test_us_ist_in_tabelle_mit_exchcode() -> None:
     assert EXCHANGES["US"].suffix == ""
 
 
+class _FigiNachBoerse:
+    """Liefert Ticker je Börse — bildet ab, dass ein Papier nur dort notiert."""
+
+    def __init__(self, treffer: dict[str, str]) -> None:
+        self._treffer = treffer
+        self.calls: list[str] = []
+
+    def map_isin(
+        self, isin: str, id_value: str, id_type: str = "micCode"
+    ) -> str | None:
+        self.calls.append(id_value)
+        return self._treffer.get(id_value)
+
+
+def test_kaskade_weicht_auf_die_heimatboerse_aus() -> None:
+    """Der Kanada-Fall, der das Vorhaben ausgelöst hat.
+
+    Gemessen am 2026-08-22: `CA7800871021` (RBC Stammaktie) hat an Xetra kein
+    Listing, an Toronto schon. Bisher fiel das Papier durch — die
+    Vorgabebörse war die einzige, die gefragt wurde. Das Emissionsland steckt
+    im ISIN-Präfix, also muss niemand es konfigurieren.
+    """
+    figi = _FigiNachBoerse({"XTSE": "RY"})
+
+    resolved = OpenFigiResolver(figi, "XETR").resolve_isin("CA7800871021")
+
+    assert figi.calls == ["XETR", "XTSE"]  # erst die Vorgabe, dann die Heimat
+    assert resolved is not None
+    assert resolved.symbol == "RY.TO"
+    assert resolved.exchange == "Toronto"
+
+
+def test_kaskade_meldet_die_abweichung(monkeypatch) -> None:
+    """Wer sein Papier plötzlich in CAD sieht, muss den Grund finden können."""
+    import structlog
+
+    figi = _FigiNachBoerse({"XTKS": "7203"})
+
+    with structlog.testing.capture_logs() as logs:
+        OpenFigiResolver(figi, "XETR").resolve_isin("JP3633400001")
+
+    ausweichungen = [e for e in logs if e["event"] == "resolve_home_exchange"]
+    assert len(ausweichungen) == 1
+    assert ausweichungen[0]["preferred"] == "XETR"
+    assert ausweichungen[0]["home"] == "XTKS"
+
+
+def test_die_bevorzugte_boerse_bleibt_vorrangig() -> None:
+    """Ein Papier mit Listing an der Vorgabebörse wandert nicht aus.
+
+    Sonst kippte die Kaskade europäische ETFs auf ihre Heimatbörse — und
+    `IE00B4L5Y983` notierte plötzlich in Dublin statt an Xetra.
+    """
+    figi = _FigiNachBoerse({"XETR": "EUNL", "XTSE": "IRRELEVANT"})
+
+    resolved = OpenFigiResolver(figi, "XETR").resolve_isin("IE00B4L5Y983")
+
+    assert figi.calls == ["XETR"]  # die Heimat wird gar nicht erst gefragt
+    assert resolved is not None
+    assert resolved.symbol == "EUNL.DE"
+
+
+def test_ohne_heimatboerse_bleibt_es_beim_einen_versuch() -> None:
+    """Für ein Präfix ohne zugeordnete Börse gibt es nichts auszuweichen.
+
+    Ein irischer Fonds wird europaweit gehandelt; das Präfix nennt die
+    ausgebende Stelle, nicht den gewünschten Handelsplatz. Solche Länder
+    stehen bewusst nicht in der Tabelle — dort übernimmt der Yahoo-Fallback.
+    """
+    figi = _FigiNachBoerse({})
+
+    assert OpenFigiResolver(figi, "XETR").resolve_isin("IE00B4L5Y983") is None
+    assert figi.calls == ["XETR"]
+
+
+def test_strikte_boerse_kennt_keine_kaskade() -> None:
+    """`STRICT_EXCHANGE=true` heißt: diese Börse oder gar nicht.
+
+    Wer das einstellt, will keine Überraschung in fremder Währung — die
+    Kaskade wäre genau das.
+    """
+    figi = _FigiNachBoerse({"XTSE": "RY"})
+
+    resolver = OpenFigiResolver(figi, "XETR", home_fallback=False)
+
+    assert resolver.resolve_isin("CA7800871021") is None
+    assert figi.calls == ["XETR"]
+
+
 class StubResolver:
     """Resolver-Stub für den CompositeResolver-Test."""
 
