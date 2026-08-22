@@ -62,6 +62,14 @@ aber beim anschließenden `enricher.fetch_etf(...)`-Aufruf. Ein Provider, der
 den neuen Kontext auch zum Abruf benötigt, wurde deshalb zuständig gewählt
 und danach ohne den Kontext aufgerufen.
 
+**Beleg:** T-20 Runde 1, Commit `5d79a6d`: Der Resolververtrag wurde von
+`ResolvedInstrument | None` auf vier Ergebnisarten umgestellt und die
+Quote-Kette samt Tests angepasst. Der ebenfalls am `InstrumentResolver`
+hängende `QuoteAnalyzer` prüfte weiterhin nur auf `None` und griff bei
+`NotFound`, `NotResponsible` und `Unavailable` auf `.symbol` zu; der
+Diagnose-Endpunkt endete deshalb für unbekannte Papiere und Quellenausfälle
+mit HTTP 500.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf

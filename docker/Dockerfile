@@ -26,6 +26,9 @@ RUN apt-get update \
 WORKDIR /app
 
 COPY requirements.txt .
+# Der Plugin-Vertrag wird aus dem Repository installiert (`-e ./plugin_api` in
+# den requirements) und muss deshalb **vor** dem pip-Lauf im Image liegen.
+COPY plugin_api ./plugin_api
 # Cache-Mount für den pip-Download-Cache (kein --no-cache-dir — der Mount ersetzt
 # ihn: Wheels bleiben über Builds erhalten statt sie ins Image zu schreiben).
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt

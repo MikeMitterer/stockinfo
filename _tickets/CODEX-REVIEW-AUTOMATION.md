@@ -37,9 +37,27 @@ Codex prüft nur `ready_for_codex`. Nach den Vorbedingungen setzt Codex
 `codex_reviewing`. Codex verändert im Review keinen Produktcode, keine
 Human-Spalte und verschiebt kein Ticket nach `solved/`. Das Ergebnis kommt in
 `INBOX → Claude`; die verarbeitete OUTBOX-Nachricht wird entfernt. Danach ist
-die Phase `approved` mit `owner: mike` oder `changes_requested` mit
-`owner: claude`. Bei einem echten, nicht sicher lösbaren Hindernis gilt
-`blocked` mit `owner: mike`.
+die Phase `approved` oder `changes_requested`, **beide mit `owner: claude`**.
+Bei einem echten, nicht sicher lösbaren Hindernis gilt `blocked` mit
+`owner: mike`.
+
+**Warum eine Freigabe nicht bei Mike landet** *(Entscheidung Mike,
+2026-08-22)*: Als dieser Vertrag entstand, hieß `approved` „Codex ist durch,
+jetzt kommt Mikes Abnahme" — pro Ticket. Wenige Stunden später ist entschieden
+worden, dass die Abnahme **gesammelt am Ende über T-28** läuft. Damit stand
+hinter `owner: mike` keine Arbeit mehr; die Reihe blieb nach jeder Freigabe
+stehen, bis Mike sie von Hand weiterschob. Bei `blocked` bleibt er Eigentümer
+— dort braucht es ihn wirklich.
+
+## Ausführungs-Guard für Ticket-Prüfskripte
+
+Mike hat die Ausführung aller versionierten Prüfskripte nach dem Muster
+`./_tickets/T-*.sh` ausdrücklich und dauerhaft freigegeben. Codex darf diese
+Skripte im Review ohne erneute fachliche Rückfrage ausführen, einschließlich
+der für lokale Testserver oder externe Testquellen nötigen Sandbox-Freigabe.
+Vor dem Lauf bleibt die übliche Sicherheitsprüfung des konkreten Skripts
+verbindlich; die Freigabe erweitert weder den erlaubten Review-Scope noch die
+Berechtigung, Produktcode oder fremde Ressourcen zu verändern.
 
 ## Prompt für den periodischen Codex-Task
 
@@ -83,6 +101,10 @@ task-verification-workflow und code-standards.
    - Aussagekraft der Tests. Mocke nur externe Grenzen und lasse eigenen Code
      real durchlaufen;
    - die relevanten Tests und, risikogerecht, die vollständige Testsuite.
+   Alle versionierten `./_tickets/T-*.sh`-Prüfskripte sind von Mike dauerhaft
+   zur Ausführung freigegeben; führe das zum Ticket gehörende Skript ohne
+   erneute fachliche Rückfrage aus, nachdem du es auf sichere Ziel- und
+   Cleanup-Grenzen geprüft hast.
    Verlasse dich nicht auf Claudes Zusammenfassung oder grüne Tests allein.
 6. Verändere niemals Produktcode, die Human-Spalte, bestehende
    Nutzeränderungen oder den Git-Verlauf. Kein reset, checkout --, amend,
@@ -96,7 +118,10 @@ task-verification-workflow und code-standards.
    so wächst eine auswertbare Datensammlung für den späteren Skill.
    Entferne die verarbeitete Nachricht aus OUTBOX → Codex.
 8. Bei mindestens einem sachlichen Finding: phase changes_requested,
-   owner claude. Ohne Finding: phase approved, owner mike. Aktualisiere
+   owner claude. Ohne Finding: phase approved, owner claude — Claude schliesst
+   das Ticket ab und beginnt das naechste. Mikes Abnahme laeuft gesammelt
+   ueber T-28, nicht je Ticket; owner mike bleibt allein fuer blocked.
+   Aktualisiere
    updated_at und übernimm das bearbeitete Tupel in die drei
    last_reviewed_*-Felder. review_round bleibt unverändert; Claude erhöht sie
    erst mit einer neuen Übergabe.

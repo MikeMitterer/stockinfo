@@ -10,6 +10,8 @@ from datetime import datetime, timezone
 
 import structlog
 
+from stockinfo_plugin.types import Unavailable
+
 from app.contract import required_fields
 from app.models import QuoteResponse
 from app.providers.base import (
@@ -127,13 +129,23 @@ class QuoteService:
             Vollständige, ggf. angereicherte Kurs-Antwort.
 
         Raises:
-            InstrumentNotFoundError: ISIN nicht auflösbar.
-            QuoteUnavailableError: Kein Kurs beschaffbar.
+            InstrumentNotFoundError: Die Quellen haben nachgesehen und kennen
+                das Papier nicht — oder keine war zuständig. Führt zu 404.
+            QuoteUnavailableError: Mindestens eine zuständige Quelle konnte
+                gar nicht nachsehen. Führt zu **502**, und der Antwortkörper
+                nennt die ausgefallenen Quellen. Vorher lief dieser Fall über
+                dasselbe ``None`` wie „kenne ich nicht" und wurde zu 404 — ein
+                Konsument gab das Papier daraufhin auf, obwohl nur das Netz
+                weg war.
         """
-        resolved = self._resolver.resolve_isin(isin)
-        if resolved is None:
+        resolution = self._resolver.resolve_isin(isin)
+        if isinstance(resolution, Unavailable):
+            raise QuoteUnavailableError(
+                f"{isin}: keine Quelle konnte nachsehen — {resolution.error}"
+            )
+        if not isinstance(resolution, ResolvedInstrument):
             raise InstrumentNotFoundError(isin)
-        return self._build(resolved, enrich_etf)
+        return self._build(resolution, enrich_etf)
 
     def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
         """Beschafft den Kurs zu einem vollständigen Yahoo-Symbol.

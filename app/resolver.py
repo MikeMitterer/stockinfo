@@ -12,7 +12,15 @@ from dataclasses import dataclass
 import structlog
 import yfinance as yf
 
-from app.providers.base import QUOTE_TYPE_MAP, InstrumentResolver, ResolvedInstrument
+from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
+
+from app.providers.base import (
+    QUOTE_TYPE_MAP,
+    InstrumentResolver,
+    Resolution,
+    ResolvedInstrument,
+    SourceUnavailableError,
+)
 from app.providers.openfigi_provider import OpenFigiClient
 
 logger = structlog.get_logger()
@@ -164,7 +172,11 @@ class OpenFigiResolver:
         self._default_exchange = default_exchange
         self._home_fallback = home_fallback
 
-    def resolve_isin(self, isin: str) -> ResolvedInstrument | None:
+    def handles(self, isin: str) -> bool:
+        """OpenFIGI deckt alle Märkte ab — hier gibt es nichts abzulehnen."""
+        return True
+
+    def resolve_isin(self, isin: str) -> Resolution:
         """Löst eine ISIN zum Yahoo-Symbol auf — bevorzugte Börse, dann Heimat.
 
         Die Kaskade ist der Kern von T-18: `CA7800871021` hat an Xetra kein
@@ -181,27 +193,34 @@ class OpenFigiResolver:
             isin: ISIN des Wertpapiers.
 
         Returns:
-            Aufgelöstes Instrument, oder ``None`` wenn weder die bevorzugte
-            noch die Heimatbörse ein Listing kennt.
+            `ResolvedInstrument` bei einem Treffer, `NotFound` wenn OpenFIGI
+            das Papier an keiner der gefragten Börsen kennt, `Unavailable`
+            wenn der Dienst nicht antwortet. Die Unterscheidung ist der Zweck
+            von T-20: Vorher war beides ``None``, und ein Ausfall wurde zu
+            einem 404.
         """
         preferred = self._default_exchange
         if preferred not in EXCHANGES:
             logger.warning("unknown_default_exchange", configured=preferred)
             preferred = DEFAULT_EXCHANGE
 
-        resolved = self._try_exchange(isin, preferred)
-        if resolved is not None:
-            return resolved
+        try:
+            resolved = self._try_exchange(isin, preferred)
+            if resolved is not None:
+                return resolved
 
-        home = home_exchange(isin) if self._home_fallback else None
-        if home is None or home == preferred or home not in EXCHANGES:
-            logger.warning("openfigi_resolve_empty", isin=isin, exchange=preferred)
-            return None
+            home = home_exchange(isin) if self._home_fallback else None
+            if home is None or home == preferred or home not in EXCHANGES:
+                logger.warning("openfigi_resolve_empty", isin=isin, exchange=preferred)
+                return NotFound()
 
-        resolved = self._try_exchange(isin, home)
+            resolved = self._try_exchange(isin, home)
+        except SourceUnavailableError as exc:
+            return Unavailable(error=str(exc))
+
         if resolved is None:
             logger.warning("openfigi_resolve_empty", isin=isin, exchange=home)
-            return resolved
+            return NotFound()
 
         # Sichtbar machen, was passiert ist: Wer sein Papier plötzlich in CAD
         # sieht, muss den Grund im Protokoll finden.
@@ -239,30 +258,36 @@ class YFinanceResolver:
         """
         self._default_exchange = default_exchange
 
-    def resolve_isin(self, isin: str) -> ResolvedInstrument | None:
+    def handles(self, isin: str) -> bool:
+        """Yahoos Suche kennt keine Marktgrenze — hier gibt es nichts abzulehnen."""
+        return True
+
+    def resolve_isin(self, isin: str) -> Resolution:
         """Sucht das Listing der bevorzugten Börse zu einer ISIN über Yahoo.
 
         Args:
             isin: ISIN des Wertpapiers.
 
         Returns:
-            Aufgelöstes Instrument oder ``None``, wenn nichts gefunden wurde.
+            `ResolvedInstrument` bei einem Treffer, `NotFound` wenn die Suche
+            leer bleibt, `Unavailable` wenn sie gar nicht erst antwortet. Ein
+            Netzfehler ist kein „gibt es nicht".
         """
         try:
             quotes = yf.Search(isin).quotes
         except Exception as exc:
-            # Netzwerk/Parsing kann fehlschlagen — defensiv behandeln.
+            # Netz oder Parsing — nachgesehen hat hier niemand.
             logger.warning("resolve_isin_failed", isin=isin, error=str(exc))
-            return None
+            return Unavailable(error=f"yahoo: {exc}")
 
         if not quotes:
             logger.warning("resolve_isin_empty", isin=isin)
-            return None
+            return NotFound()
 
         top = self._passendster(quotes, isin)
         if top is None:
             logger.warning("resolve_isin_no_symbol", isin=isin)
-            return None
+            return NotFound()
         symbol = top["symbol"]
 
         return ResolvedInstrument(
@@ -350,10 +375,55 @@ class CompositeResolver:
         """
         self._resolvers = resolvers
 
-    def resolve_isin(self, isin: str) -> ResolvedInstrument | None:
-        """Gibt das erste erfolgreiche Auflösungsergebnis zurück."""
+    def handles(self, isin: str) -> bool:
+        """Zuständig, sobald irgendeine Quelle der Kette es ist."""
+        return any(resolver.handles(isin) for resolver in self._resolvers)
+
+    def resolve_isin(self, isin: str) -> Resolution:
+        """Fragt die Kette der Reihe nach und fasst die Antwortarten zusammen.
+
+        Die Zusammenfassung ist der Kern von T-20 — sie entscheidet, ob am
+        Ende ein 404 oder ein 502 steht:
+
+        | Unterwegs gesehen | Gesamtantwort | HTTP |
+        |---|---|---|
+        | ein Treffer | `ResolvedInstrument` | 200 |
+        | mindestens ein Ausfall | `Unavailable` | **502** |
+        | sonst mindestens ein „kenne ich nicht" | `NotFound` | 404 |
+        | nur Unzuständige | `NotResponsible` | 404 |
+
+        **Ein Ausfall schlägt ein „kenne ich nicht".** Hat eine Quelle gar
+        nicht nachsehen können, ist „gibt es nicht" keine belegte Aussage —
+        auch dann nicht, wenn eine andere Quelle das Papier tatsächlich nicht
+        kennt. Ein 404 würde einen Konsumenten dazu bringen, das Papier
+        aufzugeben.
+
+        Unzuständige Quellen werden **vor** der Anfrage übersprungen; sie
+        kosten damit weder Netz noch Kontingent.
+
+        Args:
+            isin: ISIN des Wertpapiers.
+
+        Returns:
+            Die zusammengefasste Antwort der Kette.
+        """
+        ausfaelle: list[str] = []
+        jemand_hat_nachgesehen = False
+
         for resolver in self._resolvers:
+            if not resolver.handles(isin):
+                continue
             result = resolver.resolve_isin(isin)
-            if result is not None:
+            if isinstance(result, ResolvedInstrument):
                 return result
-        return None
+            if isinstance(result, Unavailable):
+                ausfaelle.append(result.error)
+            elif isinstance(result, NotFound):
+                jemand_hat_nachgesehen = True
+
+        if ausfaelle:
+            logger.warning("resolve_chain_unavailable", isin=isin, quellen=ausfaelle)
+            return Unavailable(error="; ".join(ausfaelle))
+        if jemand_hat_nachgesehen:
+            return NotFound()
+        return NotResponsible(reason="keine zuständige Quelle in der Kette")

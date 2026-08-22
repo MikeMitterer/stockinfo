@@ -8,6 +8,8 @@ API-Antwort zusammen. Protokolle ermöglichen austauschbare Implementierungen
 from dataclasses import dataclass
 from typing import Protocol
 
+from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
+
 # Yahoo quoteType → interner Typ ("etf" | "stock") — gemeinsame Konstante für
 # Resolver und Provider.
 QUOTE_TYPE_MAP = {"ETF": "etf", "MUTUALFUND": "etf", "EQUITY": "stock"}
@@ -63,10 +65,42 @@ class EtfDetails:
     source: str | None = None
 
 
-class InstrumentResolver(Protocol):
-    """Löst eine ISIN zu einem handelbaren Symbol auf."""
+class SourceUnavailableError(Exception):
+    """Eine Quelle war nicht arbeitsfähig — Netz, Kontingent, Fehlerantwort.
 
-    def resolve_isin(self, isin: str) -> ResolvedInstrument | None: ...
+    Der Unterschied zu „nichts gefunden" ist der ganze Zweck: Ein Client, der
+    beides als ``None`` meldet, macht aus einem Ausfall ein „gibt es nicht"
+    und damit aus einem 502 ein 404. Wer einen Dienst anspricht, wirft
+    deshalb, statt leer zurückzukommen.
+    """
+
+
+Resolution = ResolvedInstrument | NotResponsible | NotFound | Unavailable
+"""Was ein Resolver antworten kann.
+
+Die drei Fehlfälle kommen aus `stockinfo_plugin.types`, dem Vertrag für
+Plugins — sie hier ein zweites Mal zu definieren hieße, zwei Wahrheiten über
+denselben Vertrag zu führen.
+
+Der Erfolgsfall ist noch `ResolvedInstrument` und nicht das `Resolved` des
+Plugin-Vertrags: Jenes trägt `ticker` und `mic` getrennt statt eines fertigen
+Anbieter-Symbols, und diese Umstellung ist die Identitätsfrage aus **T-21**.
+Sie hier vorwegzunehmen hieße, zwei Umbauten in einem Diff zu vermischen.
+"""
+
+
+class InstrumentResolver(Protocol):
+    """Löst eine ISIN zu einem handelbaren Symbol auf.
+
+    `handles` beantwortet die Frage **vor** der Anfrage: Eine Quelle, die für
+    ein Papier gar nicht zuständig ist, soll nichts kosten — kein Netz, kein
+    Kontingent. Erst danach entscheidet `resolve_isin`, ob sie das Papier
+    kennt (`NotFound`) oder gerade nicht nachsehen kann (`Unavailable`).
+    """
+
+    def handles(self, isin: str) -> bool: ...
+
+    def resolve_isin(self, isin: str) -> Resolution: ...
 
 
 class QuoteProvider(Protocol):

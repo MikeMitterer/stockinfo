@@ -1,13 +1,15 @@
 """Tests für die ISIN-Auflösung (OpenFIGI-Client gemockt)."""
 
+from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
+
+from app.providers.base import ResolvedInstrument, SourceUnavailableError
+from app.providers.openfigi_provider import OpenFigiClient
 from app.resolver import (
     EXCHANGES,
     CompositeResolver,
     OpenFigiResolver,
     YFinanceResolver,
 )
-from app.providers.base import ResolvedInstrument
-from app.providers.openfigi_provider import OpenFigiClient
 
 
 class FakeFigiClient:
@@ -39,10 +41,11 @@ def test_openfigi_baut_xetra_symbol() -> None:
     assert client.last_id_type == "micCode"
 
 
-def test_openfigi_ohne_treffer_gibt_none() -> None:
+def test_openfigi_ohne_treffer_meldet_not_found() -> None:
+    """Kein Treffer heißt „kenne ich nicht" — nicht „konnte nicht nachsehen"."""
     resolver = OpenFigiResolver(FakeFigiClient(None), default_exchange="XETR")
 
-    assert resolver.resolve_isin("DE000A0S9GB0") is None
+    assert isinstance(resolver.resolve_isin("DE000A0S9GB0"), NotFound)
 
 
 def test_openfigi_respektiert_andere_boerse() -> None:
@@ -98,6 +101,42 @@ def test_unbekannte_boerse_faellt_auf_xetr_zurueck() -> None:
 def test_us_ist_in_tabelle_mit_exchcode() -> None:
     assert EXCHANGES["US"].figi_id_type == "exchCode"
     assert EXCHANGES["US"].suffix == ""
+
+
+class _FigiFaellt:
+    """Der Dienst ist nicht erreichbar — Netz, Kontingent, Fehlerseite."""
+
+    def map_isin(
+        self, isin: str, id_value: str, id_type: str = "micCode"
+    ) -> str | None:
+        raise SourceUnavailableError("openfigi: HTTP 503")
+
+
+def test_ausfall_ist_nicht_dasselbe_wie_unbekannt() -> None:
+    """Der Kern des Tickets: `None` bedeutete drei verschiedene Dinge.
+
+    Ein ausgefallener Dienst und ein unbekanntes Papier kamen beide als
+    ``None`` an. Die Kette konnte sie nicht unterscheiden, der Router auch
+    nicht — jeder Fehlschlag wurde zu 404, auch wenn niemand nachgesehen hatte.
+    """
+    ausfall = OpenFigiResolver(_FigiFaellt(), "XETR").resolve_isin("IE00B4L5Y983")
+    unbekannt = OpenFigiResolver(_FigiNachBoerse({}), "XETR").resolve_isin(
+        "IE00B4L5Y983"
+    )
+
+    assert isinstance(ausfall, Unavailable)
+    assert "openfigi" in ausfall.error
+    assert isinstance(unbekannt, NotFound)
+
+
+def test_treffer_bleibt_ein_aufgeloestes_instrument() -> None:
+    """Der Erfolgsfall trägt weiterhin das Symbol, das die App braucht."""
+    resolved = OpenFigiResolver(_FigiNachBoerse({"XETR": "EUNL"}), "XETR").resolve_isin(
+        "IE00B4L5Y983"
+    )
+
+    assert isinstance(resolved, ResolvedInstrument)
+    assert resolved.symbol == "EUNL.DE"
 
 
 class _FigiNachBoerse:
@@ -171,7 +210,7 @@ def test_ohne_heimatboerse_bleibt_es_beim_einen_versuch() -> None:
     """
     figi = _FigiNachBoerse({})
 
-    assert OpenFigiResolver(figi, "XETR").resolve_isin("IE00B4L5Y983") is None
+    assert isinstance(OpenFigiResolver(figi, "XETR").resolve_isin("IE00B4L5Y983"), NotFound)
     assert figi.calls == ["XETR"]
 
 
@@ -185,22 +224,32 @@ def test_strikte_boerse_kennt_keine_kaskade() -> None:
 
     resolver = OpenFigiResolver(figi, "XETR", home_fallback=False)
 
-    assert resolver.resolve_isin("CA7800871021") is None
+    assert isinstance(resolver.resolve_isin("CA7800871021"), NotFound)
     assert figi.calls == ["XETR"]
 
 
 class StubResolver:
-    """Resolver-Stub für den CompositeResolver-Test."""
+    """Resolver-Stub für den CompositeResolver-Test.
 
-    def __init__(self, result: ResolvedInstrument | None) -> None:
+    `handles` ist getrennt vorgebbar: Eine unzuständige Quelle darf gar nicht
+    erst gefragt werden, und genau das prüft einer der Tests.
+    """
+
+    def __init__(self, result, handles: bool = True) -> None:
         self._result = result
+        self._handles = handles
+        self.gefragt = 0
 
-    def resolve_isin(self, isin: str) -> ResolvedInstrument | None:
+    def handles(self, isin: str) -> bool:
+        return self._handles
+
+    def resolve_isin(self, isin: str):
+        self.gefragt += 1
         return self._result
 
 
 def test_composite_nimmt_ersten_treffer() -> None:
-    primary = StubResolver(None)
+    primary = StubResolver(NotFound())
     fallback = StubResolver(ResolvedInstrument(symbol="BRK-B", isin="US0846707026"))
     resolver = CompositeResolver(primary, fallback)
 
@@ -210,10 +259,78 @@ def test_composite_nimmt_ersten_treffer() -> None:
     assert resolved.symbol == "BRK-B"
 
 
-def test_composite_gibt_none_wenn_alle_leer() -> None:
-    resolver = CompositeResolver(StubResolver(None), StubResolver(None))
+def test_composite_meldet_not_found_wenn_alle_nachgesehen_haben() -> None:
+    """Alle haben nachgesehen, keiner kennt es — das rechtfertigt ein 404."""
+    resolver = CompositeResolver(StubResolver(NotFound()), StubResolver(NotFound()))
 
-    assert resolver.resolve_isin("XX0000000000") is None
+    assert isinstance(resolver.resolve_isin("XX0000000000"), NotFound)
+
+
+def test_ein_ausfall_schlaegt_ein_kenne_ich_nicht() -> None:
+    """Der Kern der Kettenlogik — und der Grund für 502 statt 404.
+
+    Hat eine Quelle gar nicht nachsehen können, ist „gibt es nicht" keine
+    belegte Aussage, auch wenn eine andere Quelle das Papier tatsächlich nicht
+    kennt. Ein 404 brächte einen Konsumenten dazu, das Papier aufzugeben.
+    """
+    resolver = CompositeResolver(
+        StubResolver(Unavailable(error="openfigi: HTTP 503")),
+        StubResolver(NotFound()),
+    )
+
+    ergebnis = resolver.resolve_isin("IE00B4L5Y983")
+
+    assert isinstance(ergebnis, Unavailable)
+    assert "openfigi" in ergebnis.error
+
+
+def test_die_kette_nennt_alle_ausgefallenen_quellen() -> None:
+    """Der Antwortkörper soll sagen, wer nicht erreichbar war."""
+    resolver = CompositeResolver(
+        StubResolver(Unavailable(error="openfigi: HTTP 503")),
+        StubResolver(Unavailable(error="yahoo: timeout")),
+    )
+
+    ergebnis = resolver.resolve_isin("IE00B4L5Y983")
+
+    assert isinstance(ergebnis, Unavailable)
+    assert "openfigi" in ergebnis.error
+    assert "yahoo" in ergebnis.error
+
+
+def test_ein_treffer_schlaegt_einen_vorherigen_ausfall() -> None:
+    """Wer liefert, gewinnt — ein Ausfall davor macht das Ergebnis nicht schlechter."""
+    resolver = CompositeResolver(
+        StubResolver(Unavailable(error="openfigi: HTTP 503")),
+        StubResolver(ResolvedInstrument(symbol="EUNL.DE", isin="IE00B4L5Y983")),
+    )
+
+    resolved = resolver.resolve_isin("IE00B4L5Y983")
+
+    assert isinstance(resolved, ResolvedInstrument)
+    assert resolved.symbol == "EUNL.DE"
+
+
+def test_unzustaendige_quelle_wird_nicht_gefragt() -> None:
+    """Eine Quelle, die nicht zuständig ist, kostet weder Netz noch Kontingent."""
+    unzustaendig = StubResolver(NotFound(), handles=False)
+    zustaendig = StubResolver(ResolvedInstrument(symbol="EUNL.DE"))
+    resolver = CompositeResolver(unzustaendig, zustaendig)
+
+    resolver.resolve_isin("IE00B4L5Y983")
+
+    assert unzustaendig.gefragt == 0
+    assert zustaendig.gefragt == 1
+
+
+def test_nur_unzustaendige_quellen_melden_das_auch_so() -> None:
+    """Niemand war zuständig — das ist etwas anderes als „nachgesehen und nichts"."""
+    resolver = CompositeResolver(
+        StubResolver(NotFound(), handles=False),
+        StubResolver(NotFound(), handles=False),
+    )
+
+    assert isinstance(resolver.resolve_isin("XX0000000000"), NotResponsible)
 
 
 class _FakeResponse:
@@ -300,7 +417,7 @@ def test_bloomberg_bezeichner_laesst_den_fallback_ans_werk(monkeypatch) -> None:
     resolved = _chain_with_real_fallback().resolve_isin("CA78012H5675")
 
     assert search.queries == ["CA78012H5675"]  # der Fallback lief wirklich
-    assert resolved is None
+    assert isinstance(resolved, NotFound)
 
 
 def test_brauchbarer_ticker_laesst_den_fallback_in_ruhe(monkeypatch) -> None:
@@ -451,11 +568,12 @@ def test_yahoo_ueberspringt_treffer_ohne_symbol(monkeypatch) -> None:
     assert resolved.symbol == "VGWL.DE"
 
 
-def test_yahoo_ohne_treffer_gibt_none(monkeypatch) -> None:
+def test_yahoo_ohne_treffer_meldet_not_found(monkeypatch) -> None:
+    """Die Suche war erreichbar und leer — das ist „kenne ich nicht"."""
     _mit_suche(monkeypatch, [])
     resolver = YFinanceResolver(default_exchange="XETR")
 
-    assert resolver.resolve_isin("IE00B3RBWM25") is None
+    assert isinstance(resolver.resolve_isin("IE00B3RBWM25"), NotFound)
 
 
 def test_yahoo_bevorzugt_die_gattung_des_bestplatzierten_treffers(monkeypatch) -> None:

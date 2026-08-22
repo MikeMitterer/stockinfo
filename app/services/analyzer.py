@@ -12,8 +12,10 @@ from typing import Any
 
 import yfinance as yf
 
+from stockinfo_plugin.types import NotResponsible, Unavailable
+
 from app.models import AnalyzeResult, AnalyzeStage
-from app.providers.base import EtfEnricher, InstrumentResolver
+from app.providers.base import EtfEnricher, InstrumentResolver, ResolvedInstrument
 
 
 class QuoteAnalyzer:
@@ -99,19 +101,48 @@ class QuoteAnalyzer:
         )
 
     def _measure_resolve(self, isin: str) -> tuple[Any, AnalyzeStage]:
-        """Misst die OpenFIGI-Auflösung; ``empty`` wenn kein Symbol gefunden."""
+        """Misst die Auflösung und bildet alle vier Antwortarten ab.
+
+        Seit T-20 antwortet der Resolver differenziert, und die Diagnose ist
+        genau der Ort, an dem der Unterschied etwas nützt:
+
+        | Antwort | Stage |
+        |---|---|
+        | `ResolvedInstrument` | `ok`, Detail ist das Symbol |
+        | `NotFound` | `empty` — nachgesehen, nichts da |
+        | `NotResponsible` | `empty`, Detail nennt den Grund |
+        | `Unavailable` | **`error`**, Detail nennt die Quelle |
+
+        Die Unterscheidung zwischen `empty` und `error` ist der Zweck des
+        Endpunkts: „nichts gefunden" und „Quelle nicht erreichbar" führen zu
+        verschiedenen nächsten Schritten.
+        """
         start = time.perf_counter()
         try:
-            resolved = self._resolver.resolve_isin(isin)
+            resolution = self._resolver.resolve_isin(isin)
         except Exception as exc:  # noqa: BLE001 — Diagnose erfasst Fehler
             return None, AnalyzeStage(
                 stage="openfigi", seconds=_elapsed(start), status="error",
                 detail=type(exc).__name__,
             )
-        if resolved is None:
-            return None, AnalyzeStage(stage="openfigi", seconds=_elapsed(start), status="empty")
-        return resolved, AnalyzeStage(
-            stage="openfigi", seconds=_elapsed(start), status="ok", detail=resolved.symbol
+
+        if isinstance(resolution, ResolvedInstrument):
+            return resolution, AnalyzeStage(
+                stage="openfigi", seconds=_elapsed(start), status="ok",
+                detail=resolution.symbol,
+            )
+        if isinstance(resolution, Unavailable):
+            return None, AnalyzeStage(
+                stage="openfigi", seconds=_elapsed(start), status="error",
+                detail=resolution.error or "Quelle nicht erreichbar",
+            )
+        if isinstance(resolution, NotResponsible):
+            return None, AnalyzeStage(
+                stage="openfigi", seconds=_elapsed(start), status="empty",
+                detail=resolution.reason or None,
+            )
+        return None, AnalyzeStage(
+            stage="openfigi", seconds=_elapsed(start), status="empty"
         )
 
     @staticmethod

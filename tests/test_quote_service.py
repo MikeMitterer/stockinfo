@@ -2,6 +2,7 @@
 
 import pytest
 import structlog
+from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
 
 from app.providers.base import EtfDetails, RawQuote, ResolvedInstrument
 from app.services.quote_service import (
@@ -57,12 +58,20 @@ class FakeEtfProvider:
 
 
 class FakeResolver:
-    """Liefert ein vorgegebenes ResolvedInstrument (oder None)."""
+    """Liefert eine vorgegebene Resolution.
 
-    def __init__(self, resolved: ResolvedInstrument | None) -> None:
-        self._resolved = resolved
+    ``None`` steht weiterhin für „kenne ich nicht" — die bestehenden Tests
+    schreiben es so, und der Service muss beide Schreibweisen vertragen, weil
+    `NotFound` genau dasselbe bedeutet.
+    """
 
-    def resolve_isin(self, isin: str) -> ResolvedInstrument | None:
+    def __init__(self, resolved) -> None:
+        self._resolved = NotFound() if resolved is None else resolved
+
+    def handles(self, isin: str) -> bool:
+        return True
+
+    def resolve_isin(self, isin: str):
         return self._resolved
 
 
@@ -122,6 +131,38 @@ def test_aktie_wird_nicht_angereichert() -> None:
     assert result.type == "stock"
     assert result.ter is None
     assert result.source == "yfinance"
+
+
+def test_ausgefallene_quellen_werfen_unavailable_statt_not_found() -> None:
+    """„Konnte nicht nachsehen" ist kein „gibt es nicht".
+
+    Vorher lief beides über dasselbe ``None`` und wurde zu 404. Ein Konsument
+    gab das Papier daraufhin auf, obwohl nur das Netz weg war.
+    """
+    service = QuoteService(
+        FakeQuoteProvider(_etf_quote()),
+        FakeEtfProvider(None),
+        FakeResolver(Unavailable(error="openfigi: HTTP 503; yahoo: timeout")),
+    )
+
+    with pytest.raises(QuoteUnavailableError) as fehler:
+        service.get_quote_by_isin("IE00B3RBWM25")
+
+    # Der Text landet im Antwortkörper — er muss die Quellen nennen.
+    assert "openfigi" in str(fehler.value)
+    assert "yahoo" in str(fehler.value)
+
+
+def test_keine_zustaendige_quelle_ist_ein_not_found() -> None:
+    """Niemand war zuständig — dann gibt es das Papier hier nicht."""
+    service = QuoteService(
+        FakeQuoteProvider(_etf_quote()),
+        FakeEtfProvider(None),
+        FakeResolver(NotResponsible(reason="keine zuständige Quelle")),
+    )
+
+    with pytest.raises(InstrumentNotFoundError):
+        service.get_quote_by_isin("XX0000000000")
 
 
 def test_unbekannte_isin_wirft_not_found() -> None:

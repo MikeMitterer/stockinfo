@@ -48,9 +48,11 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
             status_code=404, detail=f"Keine Auflösung für ISIN {isin}"
         ) from exc
     except QuoteUnavailableError as exc:
-        raise HTTPException(
-            status_code=502, detail=f"Kein Kurs für ISIN {isin}"
-        ) from exc
+        # Der Text der Ausnahme nennt die ausgefallenen Quellen (T-20 `#3`).
+        # Ohne ihn stünde im Körper nur „ging nicht", und wer die App
+        # betreibt, wüsste nicht, ob er auf OpenFIGI, Yahoo oder sein eigenes
+        # Netz schauen soll.
+        raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
 @router.get("/quote/{isin}/daily", response_model=list[DailyPoint])

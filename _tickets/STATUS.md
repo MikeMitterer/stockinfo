@@ -7,13 +7,13 @@ Historie.
 ## Maschinenlesbarer Zustand
 
 - `phase`: `claude_working`
-- `ticket`: `T-20-dreiwertiges-quellen-ergebnis.md`
+- `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `—`
 - `review_round`: `1`
 - `owner`: `claude`
 - `updated_at`: `2026-08-22`
-- `last_reviewed_ticket`: `T-18-aufloesung-erreicht-mehr-maerkte.md`
-- `last_reviewed_commit`: `69e18c1`
+- `last_reviewed_ticket`: `T-20-dreiwertiges-quellen-ergebnis.md`
+- `last_reviewed_commit`: `34cf386`
 - `last_reviewed_round`: `2`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
@@ -22,9 +22,9 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## Kontext
 
-- Aktives Ticket: `T-20-dreiwertiges-quellen-ergebnis.md` (T-17, T-18 und T-24
-  sind codex-abgenommen und liegen bis zur gesammelten Abnahme über T-28 im
-  Board-Root)
+- Aktives Ticket: `T-21-identitaet-mic-und-ticker.md` (T-17, T-18, T-20 und
+  T-24 sind codex-abgenommen und liegen bis zur gesammelten Abnahme über T-28
+  im Board-Root)
 - Rollen: Claude implementiert; Codex prüft unabhängig Code, Tests, Ticket und
   Spec.
 - Dauerhafte Ergebnisse leben im jeweiligen Ticket, in der Spec oder im
