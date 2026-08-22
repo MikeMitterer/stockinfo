@@ -2,7 +2,7 @@
   "endpoint": "/quote/{isin}",
   "model": "quote",
   "contract_compliant": false,
-  "violates": "generation.required_on_every_response — die Antwort ist generationenfähig, trägt den Header StockInfo-Generation aber nicht.",
+  "violates": "generation.required_on_every_response",
   "note": "Absichtlich vertragswidrig. Ein Konsument muss diesen Fall erkennen können, statt die Antwort stillschweigend seiner zuletzt bekannten Generation zuzuordnen — sonst mischt er nach einem Profilwechsel zwei Datensätze. Praktisch entsteht der Fall auch cross-origin, wenn Access-Control-Expose-Headers fehlt: Der Header ist dann gesetzt, für Browser-JavaScript aber unsichtbar.",
   "request": {
     "method": "GET",

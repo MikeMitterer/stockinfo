@@ -3,10 +3,10 @@
   "model": "daily",
   "contract_compliant": true,
   "violates": null,
-  "note": "Tages-Schlusskurse, **unbereinigt** — so, wie sie an dem Tag galten. Die Währung ist Pflicht: Ein Punkt ohne sie ist für eine Depotrechnung wertlos.",
+  "note": "Tages-Schlusskurse, **unbereinigt** — so, wie sie an dem Tag galten. Die Währung ist Pflicht: Ein Punkt ohne sie ist für eine Depotrechnung wertlos. Der Endpunkt kennt nur `period`; eine Stückzahlbegrenzung gibt es nicht, wer weniger Punkte will, wählt ein kürzeres Fenster. Die drei Zeilen hier sind ein gekürzter Ausschnitt einer 1w-Antwort.",
   "request": {
     "method": "GET",
-    "path": "/quote/IE00B4L5Y983/daily?limit=3"
+    "path": "/quote/IE00B4L5Y983/daily?period=1w"
   },
   "response": {
     "status": 200,

@@ -18,11 +18,33 @@
     "note": "Ein Profil führt genau ein aktives Listing je ISIN. Mehrere gleichzeitige Listings derselben ISIN wären eine eigene Schema- und Konsumenten-Erweiterung."
   },
   "endpoints": {
-    "quote": ["/quote", "/quote/{isin}"],
-    "instrument": ["/instruments"],
-    "daily": ["/quote/{isin}/daily", "/quote/by-symbol/{symbol}/daily"],
-    "history": ["/quote/{isin}/history", "/quote/by-symbol/{symbol}/history"],
-    "fx": ["/fx"]
+    "quote": [
+      {"path": "/quote", "method": "GET", "query": ["symbol"]},
+      {"path": "/quote/{isin}", "method": "GET", "query": []}
+    ],
+    "instrument": [
+      {"path": "/instruments", "method": "GET", "query": []}
+    ],
+    "daily": [
+      {"path": "/quote/{isin}/daily", "method": "GET", "query": ["period"]},
+      {"path": "/quote/by-symbol/{symbol}/daily", "method": "GET", "query": ["period"]}
+    ],
+    "history": [
+      {"path": "/quote/{isin}/history", "method": "GET", "query": ["from", "to", "limit"]},
+      {"path": "/quote/by-symbol/{symbol}/history", "method": "GET", "query": ["from", "to", "limit"]}
+    ],
+    "fx": [
+      {"path": "/fx", "method": "GET", "query": ["base", "quote"]}
+    ]
+  },
+  "query_notes": {
+    "period": "Zeitfenster der Tagesreihe: '1w', '1m', '3m', '1y' oder 'max'. Vorgabe '1m'. Es gibt keine Stückzahlbegrenzung — wer weniger Punkte will, wählt ein kürzeres Fenster.",
+    "from": "Untere Grenze der Historie (einschließlich), ISO 8601.",
+    "to": "Obere Grenze der Historie (einschließlich), ISO 8601.",
+    "limit": "Höchstzahl zurückgegebener Kurspunkte, 1 bis 1000, Vorgabe 100. Gilt nur für die Historie, nicht für die Tagesreihe.",
+    "symbol": "Vollständiges Symbol inklusive Börsensuffix, z.B. 'EUNL.DE'.",
+    "base": "Ausgangswährung des Wechselkurses.",
+    "quote": "Zielwährung des Wechselkurses."
   },
   "core": {
     "quote": [

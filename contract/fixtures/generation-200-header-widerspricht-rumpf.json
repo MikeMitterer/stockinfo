@@ -2,7 +2,7 @@
   "endpoint": "/generation",
   "model": null,
   "contract_compliant": false,
-  "violates": "generation.rule — Header und Rumpf stammen aus verschiedenen Generationen.",
+  "violates": "generation.rule",
   "note": "Absichtlich vertragswidrig. Der Fall entsteht, wenn der Header aus einer anderen Quelle stammt als der Rumpf — etwa aus einer Middleware, die den Wert unabhängig vom Datenbankzugriff liest. Ein Konsument, der beides vergleicht, erkennt ihn; einer, der nur dem Header folgt, schaltet auf eine Generation um, die die Antwort gar nicht beschreibt.",
   "request": {
     "method": "GET",

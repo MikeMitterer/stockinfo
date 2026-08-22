@@ -30,15 +30,25 @@ nicht prüfen:
 ```
 
 Ein Konsument — etwa StockPortfolio — fährt seine Mapper gegen diese Dateien,
-ohne StockInfo zu starten und ohne das Repository zu klonen. Zwei Regeln dabei:
+ohne StockInfo zu starten und ohne das Repository zu klonen. Drei Regeln dabei:
 
 - **`contract_compliant: false` ist Absicht.** Diese Fixtures zeigen, was ein
   Konsument **erkennen** können muss: eine generationenfähige Antwort ohne
   Header, ein `/generation`, dessen Header dem Rumpf widerspricht. Wer sie
-  fehlerfrei durchlaufen lässt, hat einen blinden Fleck. `violates` nennt die
-  verletzte Regel.
+  fehlerfrei durchlaufen lässt, hat einen blinden Fleck.
+- **`violates` ist ein Regelschlüssel, kein Fließtext** — `generation.rule`,
+  `generation.required_on_every_response`. Zu jedem Schlüssel gehört in
+  `tests/test_contract.py` eine Prüfung, die nachweist, dass die Fixture die
+  Verletzung wirklich trägt. Ein Negativfall kann damit nicht unbemerkt
+  aufhören, einer zu sein; die Erklärung steht in `note`.
 - **Unbekannte Felder werden ignoriert**, nicht als Fehler behandelt. Sonst
   bricht die nächste additive Erweiterung den Konsumenten.
+
+Der `request` einer Fixture ist ein echter Aufruf, kein Muster: Methode, Pfad
+und Query-Namen werden gegen die Endpunktliste im Artefakt geprüft
+(`endpoints`, dazu `query_notes` mit der Bedeutung je Parameter). Ein Beispiel
+mit einem Parameter, den es nicht gibt, sieht sonst aus wie eine zugesagte
+Funktion — FastAPI ignoriert Unbekanntes still.
 
 ## Für dieses Repo
 

@@ -6,7 +6,7 @@
   "note": "Die gespeicherten Kurspunkte. Anders als bei daily trägt jeder Punkt sein fetched_at — die Historie sagt damit auch, wann StockInfo den Wert gesehen hat, nicht nur wann er galt.",
   "request": {
     "method": "GET",
-    "path": "/quote/IE00B4L5Y983/history?limit=2"
+    "path": "/quote/IE00B4L5Y983/history?from=2026-08-20&to=2026-08-21&limit=2"
   },
   "response": {
     "status": 200,
