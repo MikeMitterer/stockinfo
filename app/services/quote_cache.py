@@ -21,6 +21,7 @@ from app.services.quote_service import (
     QuoteService,
     QuoteUnavailableError,
     annualized_volatility,
+    ensure_core_complete,
 )
 
 logger = structlog.get_logger()
@@ -175,7 +176,7 @@ class CachedQuoteService:
         """
         instrument = self.ensure_instrument(isin=isin)
         rows = self._repository.get_history(instrument["id"], date_from, date_to, limit)
-        return self._to_points(rows)
+        return self._to_points(rows, instrument)
 
     def get_history_by_symbol(
         self,
@@ -191,7 +192,7 @@ class CachedQuoteService:
         """
         instrument = self.ensure_instrument(symbol=symbol)
         rows = self._repository.get_history(instrument["id"], date_from, date_to, limit)
-        return self._to_points(rows)
+        return self._to_points(rows, instrument)
 
     def ensure_instrument(
         self, *, isin: str | None = None, symbol: str | None = None
@@ -226,18 +227,35 @@ class CachedQuoteService:
         return instrument
 
     @staticmethod
-    def _to_points(rows: list[dict]) -> list[QuotePoint]:
-        """Wandelt Quote-Zeilen in QuotePoint-Modelle um."""
-        return [
-            QuotePoint(
-                price=row["price"],
-                quote_time=row["quote_time"],
-                volume=row["volume"],
-                currency=row["currency"],
-                fetched_at=row["fetched_at"],
+    def _to_points(rows: list[dict], instrument: dict) -> list[QuotePoint]:
+        """Wandelt Quote-Zeilen in QuotePoint-Modelle um.
+
+        Die Währung ist im Vertrag Pflicht (`core.history.currency`), ältere
+        Zeilen können sie aber leer haben — vor der Währungspflicht ging eine
+        Antwort ohne sie durch. Ausgeliefert wird dann die Währung des
+        Listings: Dieselbe Notiz, dieselbe Währung.
+
+        Raises:
+            QuoteUnavailableError: Auch das Instrument kennt keine Währung.
+        """
+        currency = instrument.get("currency")
+        punkte = []
+        for row in rows:
+            wirksam = row["currency"] or currency
+            if wirksam is None:
+                raise QuoteUnavailableError(
+                    f"{instrument['symbol']}: Kurspunkt {row['quote_time']} ohne Währung"
+                )
+            punkte.append(
+                QuotePoint(
+                    price=row["price"],
+                    quote_time=row["quote_time"],
+                    volume=row["volume"],
+                    currency=wirksam,
+                    fetched_at=row["fetched_at"],
+                )
             )
-            for row in rows
-        ]
+        return punkte
 
     def refresh_all(self) -> int:
         """Aktualisiert alle bekannten Instrumente live und speichert sie.
@@ -639,8 +657,22 @@ class CachedQuoteService:
 
     @staticmethod
     def _from_cache(instrument: dict, quote: dict, stale: bool) -> QuoteResponse:
-        """Baut eine QuoteResponse aus gespeichertem Instrument + Kurspunkt."""
-        return QuoteResponse(
+        """Baut eine QuoteResponse aus gespeichertem Instrument + Kurspunkt.
+
+        Die Währung kommt aus dem Kurspunkt, ersatzweise vom Instrument — sie
+        gehört zum Listing, nicht zum einzelnen Punkt.
+
+        Am Ende steht dieselbe Core-Prüfung wie im Live-Pfad, und zwar aus
+        einem gemessenen Grund: Der Cache-Pfad hatte sie nicht, und über den
+        läuft der Normalfall. Eine Antwort ohne Währung ist auch dann
+        unverwertbar, wenn sie aus dem eigenen Bestand kommt.
+
+        Raises:
+            QuoteUnavailableError: Ein Pflichtfeld des Core fehlt. Betrifft
+                auch den ``stale``-Fall: Der alte Wert ist der Notnagel, nicht
+                die Ausnahme von der Regel.
+        """
+        response = QuoteResponse(
             isin=instrument["isin"],
             symbol=instrument["symbol"],
             exchange=instrument["exchange"],
@@ -663,3 +695,5 @@ class CachedQuoteService:
             stale=stale,
             fetched_at=quote["fetched_at"],
         )
+        ensure_core_complete(response)
+        return response

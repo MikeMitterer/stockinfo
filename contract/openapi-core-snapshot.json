@@ -1,0 +1,1056 @@
+{
+  "core_version": "1.0.0",
+  "paths": {
+    "/fields": {
+      "get": {
+        "parameters": [],
+        "responses": {
+          "200": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FieldsResponse"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/fx": {
+      "get": {
+        "parameters": [
+          "base",
+          "quote"
+        ],
+        "responses": {
+          "200": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FxRate"
+              }
+            }
+          },
+          "422": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/instruments": {
+      "get": {
+        "parameters": [],
+        "responses": {
+          "200": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/InstrumentSummary"
+                },
+                "title": "Response List Instruments Instruments Get",
+                "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quote": {
+      "get": {
+        "parameters": [
+          "symbol"
+        ],
+        "responses": {
+          "200": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteResponse"
+              }
+            }
+          },
+          "422": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quote/by-symbol/{symbol}/daily": {
+      "get": {
+        "parameters": [
+          "period",
+          "symbol"
+        ],
+        "responses": {
+          "200": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/DailyPoint"
+                },
+                "title": "Response Daily History By Symbol Quote By Symbol  Symbol  Daily Get",
+                "type": "array"
+              }
+            }
+          },
+          "422": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quote/by-symbol/{symbol}/history": {
+      "get": {
+        "parameters": [
+          "from",
+          "limit",
+          "symbol",
+          "to"
+        ],
+        "responses": {
+          "200": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/QuotePoint"
+                },
+                "title": "Response Quote History By Symbol Quote By Symbol  Symbol  History Get",
+                "type": "array"
+              }
+            }
+          },
+          "422": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quote/{isin}": {
+      "get": {
+        "parameters": [
+          "isin"
+        ],
+        "responses": {
+          "200": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/QuoteResponse"
+              }
+            }
+          },
+          "422": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quote/{isin}/daily": {
+      "get": {
+        "parameters": [
+          "isin",
+          "period"
+        ],
+        "responses": {
+          "200": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/DailyPoint"
+                },
+                "title": "Response Daily History Quote  Isin  Daily Get",
+                "type": "array"
+              }
+            }
+          },
+          "422": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/quote/{isin}/history": {
+      "get": {
+        "parameters": [
+          "from",
+          "isin",
+          "limit",
+          "to"
+        ],
+        "responses": {
+          "200": {
+            "application/json": {
+              "schema": {
+                "items": {
+                  "$ref": "#/components/schemas/QuotePoint"
+                },
+                "title": "Response Quote History Quote  Isin  History Get",
+                "type": "array"
+              }
+            }
+          },
+          "422": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "schemas": {
+    "DailyPoint": {
+      "description": "Ein Tages-Schlusskurs (EOD) der Langfrist-Historie.",
+      "properties": {
+        "close": {
+          "title": "Close",
+          "type": "number"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Currency"
+        },
+        "date": {
+          "title": "Date",
+          "type": "string"
+        }
+      },
+      "required": [
+        "date",
+        "close"
+      ],
+      "title": "DailyPoint",
+      "type": "object"
+    },
+    "EndpointSpec": {
+      "description": "Ein öffentlicher Endpunkt samt Methode und zulässigen Query-Namen.",
+      "properties": {
+        "method": {
+          "title": "Method",
+          "type": "string"
+        },
+        "path": {
+          "title": "Path",
+          "type": "string"
+        },
+        "query": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Query",
+          "type": "array"
+        }
+      },
+      "required": [
+        "path",
+        "method"
+      ],
+      "title": "EndpointSpec",
+      "type": "object"
+    },
+    "FieldSpec": {
+      "description": "Ein Feld des Core-Vertrags samt Art, Pflicht und Bedeutung.",
+      "properties": {
+        "kind": {
+          "description": "string | number | integer | boolean | array | object",
+          "title": "Kind",
+          "type": "string"
+        },
+        "meaning": {
+          "title": "Meaning",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "required": {
+          "title": "Required",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "required",
+        "meaning"
+      ],
+      "title": "FieldSpec",
+      "type": "object"
+    },
+    "FieldsResponse": {
+      "description": "Antwort von ``GET /fields`` — der Vertrag zur Laufzeit.\n\nNach Antworttyp gegliedert, nicht flach: Ein Array mit `price` und\n`currency` sagt nicht, in welcher Antwort sie Pflicht sind, und wäre damit\nungenauer als das OpenAPI-Dokument.\n\nZwei Nummern, zwei Ebenen: `core_version` folgt SemVer über den\ngeschlossenen Core, `details_version` zählt die offene Detailmenge\n(siehe T-26). Ein Konsument mit gecachter Feldliste erkennt an ihnen, dass\ner neu holen muss, ohne den Inhalt zu vergleichen.",
+      "properties": {
+        "core": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/components/schemas/FieldSpec"
+            },
+            "type": "array"
+          },
+          "title": "Core",
+          "type": "object"
+        },
+        "core_version": {
+          "description": "SemVer des geschlossenen Core",
+          "title": "Core Version",
+          "type": "string"
+        },
+        "details": {
+          "items": {
+            "$ref": "#/components/schemas/FieldSpec"
+          },
+          "title": "Details",
+          "type": "array"
+        },
+        "details_version": {
+          "description": "Zähler der offenen Detailmenge",
+          "title": "Details Version",
+          "type": "integer"
+        },
+        "endpoints": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/components/schemas/EndpointSpec"
+            },
+            "type": "array"
+          },
+          "title": "Endpoints",
+          "type": "object"
+        }
+      },
+      "required": [
+        "core_version",
+        "core",
+        "endpoints",
+        "details_version"
+      ],
+      "title": "FieldsResponse",
+      "type": "object"
+    },
+    "FxRate": {
+      "description": "Ein Wechselkurs: 1 ``base`` = ``rate`` ``quote`` (base=von, quote=nach).",
+      "properties": {
+        "base": {
+          "title": "Base",
+          "type": "string"
+        },
+        "cached": {
+          "default": false,
+          "title": "Cached",
+          "type": "boolean"
+        },
+        "fetched_at": {
+          "title": "Fetched At",
+          "type": "string"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        },
+        "quote_time": {
+          "title": "Quote Time",
+          "type": "string"
+        },
+        "rate": {
+          "title": "Rate",
+          "type": "number"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source"
+        },
+        "stale": {
+          "default": false,
+          "title": "Stale",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "base",
+        "quote",
+        "rate",
+        "quote_time",
+        "fetched_at"
+      ],
+      "title": "FxRate",
+      "type": "object"
+    },
+    "HTTPValidationError": {
+      "properties": {
+        "detail": {
+          "items": {
+            "$ref": "#/components/schemas/ValidationError"
+          },
+          "title": "Detail",
+          "type": "array"
+        }
+      },
+      "title": "HTTPValidationError",
+      "type": "object"
+    },
+    "InstrumentSummary": {
+      "description": "Ein Instrument mit seinem letzten Kurs — für die DB-Übersicht.\n\n``ter``, ``volatility`` und ``accumulating`` sind die **wirksamen** Werte:\nWas die Quelle liefert, gewinnt; ein manueller Wert füllt nur Lücken. Damit\ndie Oberfläche das erklären kann, kommen die manuellen Werte zusätzlich roh\nmit — und zwei Listen sagen, wo sie gerade greifen und wo sie verdeckt sind.",
+      "properties": {
+        "accumulating": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Accumulating"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Currency"
+        },
+        "exchange": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Exchange"
+        },
+        "fund_currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fund Currency"
+        },
+        "fund_domicile": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fund Domicile"
+        },
+        "fund_size": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fund Size"
+        },
+        "history_count": {
+          "default": 0,
+          "title": "History Count",
+          "type": "integer"
+        },
+        "isin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Isin"
+        },
+        "latest_currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Latest Currency"
+        },
+        "latest_fetched_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Latest Fetched At"
+        },
+        "latest_price": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Latest Price"
+        },
+        "latest_quote_time": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Latest Quote Time"
+        },
+        "manual_accumulating": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Manual Accumulating"
+        },
+        "manual_fields": {
+          "description": "Kennzahlen, die gerade von Hand kommen",
+          "items": {
+            "type": "string"
+          },
+          "title": "Manual Fields",
+          "type": "array"
+        },
+        "manual_fund_currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Manual Fund Currency"
+        },
+        "manual_fund_domicile": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Manual Fund Domicile"
+        },
+        "manual_fund_size": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Manual Fund Size"
+        },
+        "manual_provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Manual Provider"
+        },
+        "manual_replication": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Manual Replication"
+        },
+        "manual_ter": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Manual Ter"
+        },
+        "manual_volatility": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Manual Volatility"
+        },
+        "meta_fetched_at": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Meta Fetched At"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Name"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Provider"
+        },
+        "replication": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Replication"
+        },
+        "shadowed_fields": {
+          "description": "Kennzahlen mit manuellem Wert, den die Quelle gerade verdeckt",
+          "items": {
+            "type": "string"
+          },
+          "title": "Shadowed Fields",
+          "type": "array"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Herkunft der Metadaten: yfinance | yfinance+justetf",
+          "title": "Source"
+        },
+        "symbol": {
+          "title": "Symbol",
+          "type": "string"
+        },
+        "ter": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ter"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Type"
+        },
+        "volatility": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Volatility"
+        }
+      },
+      "required": [
+        "symbol"
+      ],
+      "title": "InstrumentSummary",
+      "type": "object"
+    },
+    "QuotePoint": {
+      "description": "Ein einzelner Kurspunkt der Zeitreihe.",
+      "properties": {
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Currency"
+        },
+        "fetched_at": {
+          "title": "Fetched At",
+          "type": "string"
+        },
+        "price": {
+          "title": "Price",
+          "type": "number"
+        },
+        "quote_time": {
+          "title": "Quote Time",
+          "type": "string"
+        },
+        "volume": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Volume"
+        }
+      },
+      "required": [
+        "price",
+        "quote_time",
+        "fetched_at"
+      ],
+      "title": "QuotePoint",
+      "type": "object"
+    },
+    "QuoteResponse": {
+      "description": "Vollständige Kurs- und Metadaten-Antwort für ein Wertpapier.\n\nNicht ermittelbare Felder bleiben ``None`` (z.B. ``ter`` bei Einzelaktien).",
+      "properties": {
+        "accumulating": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Thesaurierend (true) vs. ausschüttend (false)",
+          "title": "Accumulating"
+        },
+        "cached": {
+          "default": false,
+          "title": "Cached",
+          "type": "boolean"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Currency"
+        },
+        "exchange": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Exchange"
+        },
+        "fetched_at": {
+          "title": "Fetched At",
+          "type": "string"
+        },
+        "fund_currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Währung des Fonds — nicht die des Handelsplatzes",
+          "title": "Fund Currency"
+        },
+        "fund_domicile": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fund Domicile"
+        },
+        "fund_size": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Fund Size"
+        },
+        "isin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Isin"
+        },
+        "name": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Name"
+        },
+        "price": {
+          "title": "Price",
+          "type": "number"
+        },
+        "provider": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Provider"
+        },
+        "quote_time": {
+          "title": "Quote Time",
+          "type": "string"
+        },
+        "replication": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Replication"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source"
+        },
+        "stale": {
+          "default": false,
+          "title": "Stale",
+          "type": "boolean"
+        },
+        "symbol": {
+          "title": "Symbol",
+          "type": "string"
+        },
+        "ter": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Ter"
+        },
+        "type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "stock | etf",
+          "title": "Type"
+        },
+        "volatility": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "1-Jahres-Volatilität in %",
+          "title": "Volatility"
+        },
+        "volume": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Volume"
+        }
+      },
+      "required": [
+        "symbol",
+        "price",
+        "quote_time",
+        "fetched_at"
+      ],
+      "title": "QuoteResponse",
+      "type": "object"
+    },
+    "ValidationError": {
+      "properties": {
+        "ctx": {
+          "title": "Context",
+          "type": "object"
+        },
+        "input": {
+          "title": "Input"
+        },
+        "loc": {
+          "items": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "integer"
+              }
+            ]
+          },
+          "title": "Location",
+          "type": "array"
+        },
+        "msg": {
+          "title": "Message",
+          "type": "string"
+        },
+        "type": {
+          "title": "Error Type",
+          "type": "string"
+        }
+      },
+      "required": [
+        "loc",
+        "msg",
+        "type"
+      ],
+      "title": "ValidationError",
+      "type": "object"
+    }
+  }
+}

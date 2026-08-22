@@ -1,0 +1,41 @@
+{
+  "endpoint": "/quote/{isin}",
+  "model": "quote",
+  "contract_compliant": true,
+  "violates": null,
+  "note": "Die frische Beschaffung ist fehlgeschlagen, der zuletzt bekannte Wert wird ausgeliefert. stale=true zieht cached=true nach sich — beides zusammen heißt: älter als die TTL, und niemand konnte es auffrischen.",
+  "request": {
+    "method": "GET",
+    "path": "/quote/IE00B4L5Y983"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "StockInfo-Generation": "550e8400-e29b-41d4-a716-446655440000"
+    },
+    "body": {
+      "isin": "IE00B4L5Y983",
+      "symbol": "EUNL.DE",
+      "exchange": "Xetra",
+      "name": "iShares Core MSCI World UCITS ETF",
+      "type": "etf",
+      "currency": "EUR",
+      "price": 127.9,
+      "quote_time": "2026-08-19T17:35:00+00:00",
+      "volume": 98120,
+      "ter": 0.2,
+      "provider": "iShares",
+      "replication": "Physical",
+      "fund_size": 89123000000.0,
+      "fund_domicile": "Ireland",
+      "fund_currency": "USD",
+      "volatility": 11.4,
+      "accumulating": true,
+      "source": "cache",
+      "cached": true,
+      "stale": true,
+      "fetched_at": "2026-08-19T17:36:02+00:00"
+    }
+  }
+}

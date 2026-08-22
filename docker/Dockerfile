@@ -34,6 +34,11 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 COPY pyproject.toml .
 COPY app ./app
 
+# Das Vertragsartefakt liegt neben `app/` — genau dort sucht `app/contract.py`,
+# im Repository wie im Image. Ohne diese Zeile antwortet `GET /fields` im
+# Container mit 503, während er lokal läuft.
+COPY contract ./contract
+
 # Gebautes Dashboard aus Stage 1 — FastAPI serviert es an / (siehe STATIC_DIR).
 COPY --from=dashboard /dashboard/dist ./web
 

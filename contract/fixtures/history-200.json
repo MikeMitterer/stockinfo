@@ -1,0 +1,34 @@
+{
+  "endpoint": "/quote/{isin}/history",
+  "model": "history",
+  "contract_compliant": true,
+  "violates": null,
+  "note": "Die gespeicherten Kurspunkte. Anders als bei daily trägt jeder Punkt sein fetched_at — die Historie sagt damit auch, wann StockInfo den Wert gesehen hat, nicht nur wann er galt.",
+  "request": {
+    "method": "GET",
+    "path": "/quote/IE00B4L5Y983/history?from=2026-08-20&to=2026-08-21&limit=2"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "StockInfo-Generation": "550e8400-e29b-41d4-a716-446655440000"
+    },
+    "body": [
+      {
+        "price": 128.2,
+        "quote_time": "2026-08-20T17:35:00+00:00",
+        "volume": 117400,
+        "currency": "EUR",
+        "fetched_at": "2026-08-20T17:36:05+00:00"
+      },
+      {
+        "price": 128.7,
+        "quote_time": "2026-08-21T17:35:00+00:00",
+        "volume": 152340,
+        "currency": "EUR",
+        "fetched_at": "2026-08-21T17:36:12+00:00"
+      }
+    ]
+  }
+}

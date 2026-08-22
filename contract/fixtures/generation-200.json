@@ -1,0 +1,22 @@
+{
+  "endpoint": "/generation",
+  "model": null,
+  "contract_compliant": true,
+  "violates": null,
+  "note": "Der schmale Endpunkt, der die Wahrheit sagt. Nur generation_id, opake UUID, no-store — ein Konsument muss die Generation abrufen können, bevor er persistente Kursdaten hydriert, ohne die ganze Umgebung zu laden.",
+  "request": {
+    "method": "GET",
+    "path": "/generation"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+      "StockInfo-Generation": "550e8400-e29b-41d4-a716-446655440000"
+    },
+    "body": {
+      "generation_id": "550e8400-e29b-41d4-a716-446655440000"
+    }
+  }
+}

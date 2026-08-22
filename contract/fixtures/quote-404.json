@@ -1,0 +1,21 @@
+{
+  "endpoint": "/quote/{isin}",
+  "model": null,
+  "contract_compliant": true,
+  "violates": null,
+  "note": "Kein zuständiger Anbieter kennt das Papier. Der Generationsheader steht auch hier — nach einem Profilwechsel kann ein bisher bekanntes Papier fehlen, und ohne Header zeigt der Konsument seinen alten Cache weiter.",
+  "request": {
+    "method": "GET",
+    "path": "/quote/CA78012H5675"
+  },
+  "response": {
+    "status": 404,
+    "headers": {
+      "Content-Type": "application/json",
+      "StockInfo-Generation": "550e8400-e29b-41d4-a716-446655440000"
+    },
+    "body": {
+      "detail": "Wertpapier nicht gefunden: CA78012H5675"
+    }
+  }
+}

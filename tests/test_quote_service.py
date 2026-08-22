@@ -170,19 +170,19 @@ def test_etf_uebernimmt_volatilitaet_und_thesaurierend_von_justetf() -> None:
 def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
     """Zwei Begriffe, zwei Felder.
 
-    Fiel yfinance ohne Währung aus, rutschte bisher die Fondswährung in
-    `currency` — bei einem Euro-Kurs stand dann USD daneben.
+    Die Fondswährung darf nicht in `currency` rutschen — bei einem Euro-Kurs
+    stünde sonst USD daneben.
     """
-    quote_without_currency = RawQuote(
+    euro_kurs = RawQuote(
         symbol="VGWL.DE",
         price=160.98,
         quote_time="2026-07-12T17:35:00+00:00",
-        currency=None,
+        currency="EUR",
         volume=1000,
         type="etf",
     )
     service = QuoteService(
-        FakeQuoteProvider(quote_without_currency),
+        FakeQuoteProvider(euro_kurs),
         FakeEtfProvider(EtfDetails(fund_currency="USD", fund_domicile="Ireland")),
         FakeResolver(
             ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
@@ -191,9 +191,50 @@ def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
 
     result = service.get_quote_by_isin("IE00B3RBWM25")
 
-    assert result.currency is None
+    assert result.currency == "EUR"
     assert result.fund_currency == "USD"
     assert result.fund_domicile == "Ireland"
+
+
+def test_preis_ohne_waehrung_ist_kein_verwertbarer_kurs() -> None:
+    """Der Vertrag verlangt die Währung — geraten wird nicht.
+
+    „Wird schon Euro sein" ist bei einem Londoner Listing in Pence falsch, und
+    eine Depotposition mit unbekannter Währung fällt aus jeder Rechnung. Statt
+    einen Preis ohne Währung auszuliefern, meldet die Beschaffung einen
+    Fehler; der Router bildet ihn auf 502 ab (`errors.incomplete_core` im
+    Vertragsartefakt).
+    """
+    ohne_waehrung = RawQuote(
+        symbol="VGWL.DE",
+        price=160.98,
+        quote_time="2026-07-12T17:35:00+00:00",
+        currency=None,
+        volume=1000,
+        type="etf",
+    )
+    service = QuoteService(
+        FakeQuoteProvider(ohne_waehrung),
+        FakeEtfProvider(None),
+        FakeResolver(
+            ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
+        ),
+    )
+
+    with pytest.raises(QuoteUnavailableError):
+        service.get_quote_by_isin("IE00B3RBWM25")
+
+
+def test_die_pflichtfelder_kommen_aus_dem_vertragsartefakt() -> None:
+    """Die Prüfung liest, was der Vertrag zusagt — sie hält keine eigene Liste.
+
+    Zwei Listen liefen auseinander, und dann verspräche `GET /fields` etwas
+    anderes, als der Code durchlässt.
+    """
+    from app.contract import required_fields
+
+    assert "currency" in required_fields("quote")
+    assert "price" in required_fields("quote")
 
 
 def _lvmh_quote_mit_fremder_isin() -> RawQuote:

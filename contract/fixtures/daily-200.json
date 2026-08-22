@@ -1,0 +1,23 @@
+{
+  "endpoint": "/quote/{isin}/daily",
+  "model": "daily",
+  "contract_compliant": true,
+  "violates": null,
+  "note": "Tages-Schlusskurse, **unbereinigt** — so, wie sie an dem Tag galten. Die Währung ist Pflicht: Ein Punkt ohne sie ist für eine Depotrechnung wertlos. Der Endpunkt kennt nur `period`; eine Stückzahlbegrenzung gibt es nicht, wer weniger Punkte will, wählt ein kürzeres Fenster. Die drei Zeilen hier sind ein gekürzter Ausschnitt einer 1w-Antwort.",
+  "request": {
+    "method": "GET",
+    "path": "/quote/IE00B4L5Y983/daily?period=1w"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "StockInfo-Generation": "550e8400-e29b-41d4-a716-446655440000"
+    },
+    "body": [
+      {"date": "2026-08-19", "close": 127.9, "currency": "EUR"},
+      {"date": "2026-08-20", "close": 128.2, "currency": "EUR"},
+      {"date": "2026-08-21", "close": 128.7, "currency": "EUR"}
+    ]
+  }
+}

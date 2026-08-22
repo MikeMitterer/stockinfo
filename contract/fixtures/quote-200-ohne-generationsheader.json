@@ -1,0 +1,32 @@
+{
+  "endpoint": "/quote/{isin}",
+  "model": "quote",
+  "contract_compliant": false,
+  "violates": "generation.required_on_every_response",
+  "note": "Absichtlich vertragswidrig. Ein Konsument muss diesen Fall erkennen können, statt die Antwort stillschweigend seiner zuletzt bekannten Generation zuzuordnen — sonst mischt er nach einem Profilwechsel zwei Datensätze. Praktisch entsteht der Fall auch cross-origin, wenn Access-Control-Expose-Headers fehlt: Der Header ist dann gesetzt, für Browser-JavaScript aber unsichtbar.",
+  "request": {
+    "method": "GET",
+    "path": "/quote/IE00B4L5Y983"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json"
+    },
+    "body": {
+      "isin": "IE00B4L5Y983",
+      "symbol": "EUNL.DE",
+      "exchange": "Xetra",
+      "name": "iShares Core MSCI World UCITS ETF",
+      "type": "etf",
+      "currency": "EUR",
+      "price": 128.7,
+      "quote_time": "2026-08-21T17:35:00+00:00",
+      "volume": 152340,
+      "source": "yfinance+justetf",
+      "cached": false,
+      "stale": false,
+      "fetched_at": "2026-08-21T17:36:12+00:00"
+    }
+  }
+}

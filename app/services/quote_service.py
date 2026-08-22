@@ -10,6 +10,7 @@ from datetime import datetime, timezone
 
 import structlog
 
+from app.contract import required_fields
 from app.models import QuoteResponse
 from app.providers.base import (
     EtfEnricher,
@@ -56,6 +57,41 @@ class InstrumentNotFoundError(Exception):
 
 class QuoteUnavailableError(Exception):
     """Es konnte kein aktueller Kurs beschafft werden."""
+
+
+def ensure_core_complete(response: QuoteResponse) -> None:
+    """Wirft, wenn ein Pflichtfeld des Core-Vertrags leer ist.
+
+    Der praktische Fall ist die fehlende Währung: Ein Preis ohne sie ist für
+    eine Depotrechnung wertlos, und die naheliegende Vermutung — „wird schon
+    Euro sein" — ist bei einem Londoner Listing in Pence falsch. Bisher ging
+    so eine Antwort durch und wurde gespeichert.
+
+    Die Feldliste kommt aus `contract/core-contract.json`, nicht aus einer
+    zweiten Aufzählung hier: Sonst verspräche `GET /fields` etwas anderes, als
+    der Code durchlässt. Pydantic deckt die übrigen Pflichtfelder schon beim
+    Bauen ab; übrig bleiben die, die zwar Pflicht sind, aber ``None`` sein
+    könnten.
+
+    Args:
+        response: Die fertig gebaute Antwort.
+
+    Raises:
+        QuoteUnavailableError: Ein Pflichtfeld ist ``None``. Der Router bildet
+            das auf 502 ab — „nicht verwertbar" ist näher an „Quelle
+            unbrauchbar" als an „nicht gefunden".
+    """
+    fehlend = [
+        feld for feld in required_fields("quote") if getattr(response, feld, None) is None
+    ]
+    if not fehlend:
+        return
+    logger.warning(
+        "core_unvollstaendig", symbol=response.symbol, fehlend=fehlend
+    )
+    raise QuoteUnavailableError(
+        f"{response.symbol}: Pflichtfelder fehlen — {', '.join(fehlend)}"
+    )
 
 
 class QuoteService:
@@ -197,6 +233,8 @@ class QuoteService:
             fetched_at=datetime.now(timezone.utc).isoformat(),
         )
 
+        ensure_core_complete(response)
+
         if instrument_type == "etf":
             if isin and not self._etf_provider.is_responsible(isin):
                 # Die Quelle führt dieses Papier gar nicht — ein US- oder
@@ -295,6 +333,6 @@ class QuoteService:
         response.volatility = details.volatility
         response.accumulating = details.accumulating
         # Die Quelle beschriftet sich selbst — seit es mehr als eine gibt, wäre
-        # ein festes "yfinance+justetf" für die Hälfte der Papiere gelogen.
+        # ein festes "yfinance+justetf" für die Hälfte der Papiere falsch.
         response.source = details.source or response.source
         return True

@@ -193,6 +193,43 @@ class InstrumentSummary(BaseModel):
     )
 
 
+class FieldSpec(BaseModel):
+    """Ein Feld des Core-Vertrags samt Art, Pflicht und Bedeutung."""
+
+    name: str
+    kind: str = Field(description="string | number | integer | boolean | array | object")
+    required: bool
+    meaning: str
+
+
+class EndpointSpec(BaseModel):
+    """Ein öffentlicher Endpunkt samt Methode und zulässigen Query-Namen."""
+
+    path: str
+    method: str
+    query: list[str] = Field(default_factory=list)
+
+
+class FieldsResponse(BaseModel):
+    """Antwort von ``GET /fields`` — der Vertrag zur Laufzeit.
+
+    Nach Antworttyp gegliedert, nicht flach: Ein Array mit `price` und
+    `currency` sagt nicht, in welcher Antwort sie Pflicht sind, und wäre damit
+    ungenauer als das OpenAPI-Dokument.
+
+    Zwei Nummern, zwei Ebenen: `core_version` folgt SemVer über den
+    geschlossenen Core, `details_version` zählt die offene Detailmenge
+    (siehe T-26). Ein Konsument mit gecachter Feldliste erkennt an ihnen, dass
+    er neu holen muss, ohne den Inhalt zu vergleichen.
+    """
+
+    core_version: str = Field(description="SemVer des geschlossenen Core")
+    core: dict[str, list[FieldSpec]]
+    endpoints: dict[str, list[EndpointSpec]]
+    details_version: int = Field(description="Zähler der offenen Detailmenge")
+    details: list[FieldSpec] = Field(default_factory=list)
+
+
 class EnvInfo(BaseModel):
     """Sichtbarer Ausschnitt der Konfiguration (Secrets nur als Booleans)."""
 

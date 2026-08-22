@@ -1,0 +1,22 @@
+{
+  "endpoint": "/generation",
+  "model": null,
+  "contract_compliant": false,
+  "violates": "generation.rule",
+  "note": "Absichtlich vertragswidrig. Der Fall entsteht, wenn der Header aus einer anderen Quelle stammt als der Rumpf — etwa aus einer Middleware, die den Wert unabhängig vom Datenbankzugriff liest. Ein Konsument, der beides vergleicht, erkennt ihn; einer, der nur dem Header folgt, schaltet auf eine Generation um, die die Antwort gar nicht beschreibt.",
+  "request": {
+    "method": "GET",
+    "path": "/generation"
+  },
+  "response": {
+    "status": 200,
+    "headers": {
+      "Content-Type": "application/json",
+      "Cache-Control": "no-store",
+      "StockInfo-Generation": "7c9e6679-7425-40de-944b-e07fc1f90ae7"
+    },
+    "body": {
+      "generation_id": "550e8400-e29b-41d4-a716-446655440000"
+    }
+  }
+}

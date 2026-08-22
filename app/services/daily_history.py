@@ -54,10 +54,31 @@ class DailyHistoryService:
         if not self._sync.sync(instrument["id"], instrument["symbol"], desired_start):
             raise QuoteUnavailableError(instrument["symbol"])
         rows = self._repository.get_daily_closes(instrument["id"], desired_start)
-        return [
-            DailyPoint(date=row["date"], close=row["close"], currency=row["currency"])
-            for row in rows
-        ]
+        return [self._to_point(row, instrument) for row in rows]
+
+    @staticmethod
+    def _to_point(row: dict, instrument: dict) -> DailyPoint:
+        """Baut einen Tagespunkt und stellt seine Währung sicher.
+
+        Der Vertrag macht `currency` bei `daily` zur Pflicht (siehe
+        `contract/core-contract.json`), die gespeicherte Zeile kann sie aber
+        leer haben: Nicht jede Quelle nennt sie je Tag, und
+        `upsert_daily_closes` schreibt dann ``NULL``. Ausgeliefert wird
+        deshalb die Währung des **Listings** — dieselbe Notiz, dieselbe
+        Währung. Das ist kein Raten, sondern die Angabe von der Stelle, an der
+        sie hingehört.
+
+        Raises:
+            QuoteUnavailableError: Auch das Instrument kennt keine Währung.
+                Dann fehlt sie wirklich, und ein Punkt ohne sie ist für eine
+                Depotrechnung wertlos.
+        """
+        currency = row["currency"] or instrument.get("currency")
+        if currency is None:
+            raise QuoteUnavailableError(
+                f"{instrument['symbol']}: Tagespunkt {row['date']} ohne Währung"
+            )
+        return DailyPoint(date=row["date"], close=row["close"], currency=currency)
 
     @staticmethod
     def _period_start(period: str) -> str | None:

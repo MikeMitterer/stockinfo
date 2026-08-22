@@ -1,0 +1,99 @@
+# `contract/` — der REST-Core als prüfbares Artefakt
+
+Was StockInfo seinen Konsumenten zusagt, in einer Form, die eine Maschine lesen
+kann. Erklärt wird der Vertrag in
+[`docs/rest-core-contract.md`](../docs/rest-core-contract.md); **verbindlich ist
+das, was hier liegt.**
+
+```
+contract/
+├── core-contract.json           # der Vertrag: Felder, Nullability, Bedeutung, Regeln
+├── openapi-core-snapshot.json   # der Stand von gestern — Wächter gegen stille Änderungen
+└── fixtures/                    # echte HTTP-Antworten dazu, positiv und negativ
+```
+
+Zur Laufzeit beantwortet **`GET /fields`** denselben Vertrag: Feldliste je
+Antworttyp, `core_version` und `details_version`. Ein Konsument speichert
+seine Kopie unter `(generation_id, core_version, details_version)` zwischen und
+erkennt an den Nummern, dass er neu holen muss — ohne den Inhalt zu
+vergleichen.
+
+## Für Konsumenten
+
+Die Fixtures sind kein reines JSON, sondern ein **HTTP-Umschlag** aus Status,
+Headern und Rumpf — anders ließe sich das Header-Verhalten der Generation gar
+nicht prüfen:
+
+```json
+{
+  "endpoint": "/quote/{isin}",
+  "model": "quote",
+  "contract_compliant": true,
+  "violates": null,
+  "note": "…",
+  "request":  { "method": "GET", "path": "…" },
+  "response": { "status": 200, "headers": { … }, "body": { … } }
+}
+```
+
+Ein Konsument — etwa StockPortfolio — fährt seine Mapper gegen diese Dateien,
+ohne StockInfo zu starten und ohne das Repository zu klonen. Drei Regeln dabei:
+
+- **`contract_compliant: false` ist Absicht.** Diese Fixtures zeigen, was ein
+  Konsument **erkennen** können muss: eine generationenfähige Antwort ohne
+  Header, ein `/generation`, dessen Header dem Rumpf widerspricht. Wer sie
+  fehlerfrei durchlaufen lässt, hat einen blinden Fleck.
+- **`violates` ist ein Regelschlüssel, kein Fließtext** — `generation.rule`,
+  `generation.required_on_every_response`. Zu jedem Schlüssel gehört in
+  `tests/test_contract.py` eine Prüfung, die nachweist, dass die Fixture die
+  Verletzung wirklich trägt. Ein Negativfall kann damit nicht unbemerkt
+  aufhören, einer zu sein; die Erklärung steht in `note`.
+- **Unbekannte Felder werden ignoriert**, nicht als Fehler behandelt. Sonst
+  bricht die nächste additive Erweiterung den Konsumenten.
+
+Der `request` einer Fixture ist ein echter Aufruf, kein Muster: Methode, Pfad
+und Query-Namen werden gegen die Endpunktliste im Artefakt geprüft
+(`endpoints`, dazu `query_notes` mit der Bedeutung je Parameter). Ein Beispiel
+mit einem Parameter, den es nicht gibt, sieht sonst aus wie eine zugesagte
+Funktion — FastAPI ignoriert Unbekanntes still.
+
+## Für dieses Repo
+
+`tests/test_contract.py` prüft beide Dateiarten gegeneinander: dieselben
+Endpunktpfade, derselbe Headername, jede Erfolgsfixture erfüllt die
+Pflichtfelder ihres Modells, jede `/generation`-Fixture hält Header und Rumpf
+zusammen.
+
+Bewusst **ohne die laufende App** (T-24 `#7i`): Der Vertrag muss prüfbar sein,
+bevor die Routen existieren, die T-25 baut. Dass die laufende App diesem
+Artefakt entspricht, nimmt T-25 `#7j` ab.
+
+```bash
+.venv/bin/pytest tests/test_contract.py -q
+```
+
+`tests/test_contract_openapi.py` hält die andere Richtung: Es vergleicht die
+**App** mit `openapi-core-snapshot.json` und schlägt an, sobald sich ein
+Core-Modell, ein Core-Pfad oder `/fields` ändert. Dann gibt es genau zwei
+richtige Antworten — die Änderung zurücknehmen, oder sie wollen:
+
+```bash
+# 1. core_version im Artefakt erhöhen (Major/Minor/Patch nach compatibility)
+# 2. Schnappschuss erneuern:
+UPDATE_CORE_SNAPSHOT=1 .venv/bin/pytest tests/test_contract_openapi.py -q
+```
+
+Der Schnappschuss deckt bewusst nur die zugesagten Pfade ab. Ein Abbild des
+ganzen OpenAPI-Dokuments wäre bei jeder Änderung an einem Diagnoseendpunkt
+rot, und einen Test, der ständig grundlos anschlägt, liest bald niemand mehr.
+
+## Wenn sich etwas ändert
+
+`core_version` folgt SemVer — Major bei entferntem oder unverträglich
+geändertem Pflichtfeld, Minor bei additiver Erweiterung, Patch bei einer
+Klarstellung ohne Änderung am JSON. Die offene Detailmenge zählt getrennt über
+`details_version` (siehe T-26).
+
+Wer ein Feld ergänzt, ergänzt **beides**: den Eintrag im Artefakt und mindestens
+eine Fixture, die ihn zeigt. Der Test schlägt sonst nicht an — er prüft, was
+dasteht, nicht was fehlt.
