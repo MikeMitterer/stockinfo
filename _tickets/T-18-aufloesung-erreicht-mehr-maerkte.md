@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend) | in-review | 3 h | Resolver-Kaskade und Zuständigkeit ohne ISIN | — |
+| StockInfo (Backend) | codex-abgenommen | 3 h | Resolver-Kaskade und Zuständigkeit ohne ISIN | — |
 
 **Löst:** Ein kanadisches Papier ist heute praktisch nicht aufnehmbar. Über die
 ISIN scheitert die Auflösung vollständig, über das Symbol kommt es herein, bleibt
@@ -136,7 +136,10 @@ T-22, und sie über Plugins zu erweitern T-23.
 
 ## Auflösung
 
-**Stand 2026-08-22 — umgesetzt, bei Codex.**
+**Stand 2026-08-22 — von Codex in Runde 2 abgenommen** (`69e18c1`).
+
+Runde 1 brachte einen Befund: Der Composite reichte den neuen Kontext nicht
+bis zum Abruf durch. Eingearbeitet und gegengeprüft.
 
 | Was | Wo |
 |---|---|
