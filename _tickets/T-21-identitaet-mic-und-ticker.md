@@ -27,7 +27,7 @@ muss, ist kein Plugin).
 >
 > | | Umfang | Zeilen | Commit |
 > |---|---|---|---|
-> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | `fce1bab` |
+> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 2 |
 > | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung, `ExchangeDef` aufräumen | `#5` | offen |
 > | **Teil 3** | API und Dashboard, offene Zuordnungen sichtbar und von Hand setzbar, Vertragsversion | `#2b`, `#2c`, `#3`, `#4` | offen |
 >
@@ -65,6 +65,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | 1 | bestehende Datenbank, Migration laufen lassen | zerlegbare Instrumente haben `ticker` und `mic`; **nicht** zerlegbare werden gemeldet, nicht geraten | ✅ [^a] | |
+| 1b | dieselbe Migration auf einer **Kopie des echten Bestands** | keine Zeile und kein Kurspunkt geht verloren, auch beim zweiten Start nicht | ✅ [^g] | |
 | 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`; `AAPL` bleibt **offen** statt geraten (siehe Kasten oben) | ✅ [^b] | |
 | 2b | Instrument mit Fremdsymbol (`BRK-B`, aus dem Yahoo-Fallback) | erscheint in einer Liste offener Zuordnungen, mit Grund | ◑ [^c] | |
 | 2c | derselbe Fall, manuelle Zuordnung | lässt sich von Hand auf `(ticker, mic)` setzen | ➖ Teil 3 | |
@@ -74,8 +75,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 5 | neues Papier aufnehmen | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | ➖ Teil 2 | |
 | 6 | `make test` | Backend, Plugin-API und Dashboard grün | ✅ [^f] | |
 
-[^a]: `tests/test_identity_migration.py`, zehn Tests gegen eine nachgestellte
-    Alt-Datenbank mit vier bezeichnenden Fällen. Zerlegt werden `EUNL.DE` und
+[^a]: `tests/test_identity_migration.py`, dreizehn Tests gegen eine
+    nachgestellte Alt-Datenbank mit vier bezeichnenden Fällen. Zerlegt werden `EUNL.DE` und
     `XIC.TO`; `AAPL` (suffixlos) und `BRK-B` (fremde Schreibweise) bleiben
     offen. Die Migration läuft zweimal — sie muss idempotent sein.
 [^b]: `test_bekannte_suffixe_werden_zerlegt` und die beiden Gegenproben
@@ -97,8 +98,16 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     ist eindeutig. Zwei weitere Tests halten die Folgen fest — mehrere offene
     Zeilen dürfen nebeneinander stehen (SQLite zählt `NULL` als eigenen Wert),
     ein echter Konflikt fällt weiterhin auf.
-[^f]: `.venv/bin/pytest tests/ -q` → `366 passed, 29 skipped`;
+[^f]: `.venv/bin/pytest tests/ -q` → `369 passed, 29 skipped`;
     `make test-plugin-api` → 36; Ruff sauber.
+[^g]: `./_tickets/T-21-smoke.sh --run` gegen eine **Kopie** von
+    `data/stockinfo.db` (sechs gewachsene Papiere, 48 Kurspunkte) — das
+    Original wird nur gelesen. Sechs Checks grün: 6 Instrumente vorher und
+    nachher, 48 Kurspunkte vorher und nachher, sechs eindeutige `listing_id`,
+    vier zerlegt (`VGWL.DE`, `EUNL.DE`, `APC.DE`, `BRYN.DE` → `XETR`), zwei
+    offen (`GOLD.SG` — das Suffix `.SG` steht nicht in der Tabelle — und
+    `VTI`, suffixlos), Indizes umgezogen. Das Script migriert **zweimal**;
+    genau dort hat die Alt-Bereinigung in Runde 1 Listings gelöscht.
 
 ---
 

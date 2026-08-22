@@ -167,8 +167,6 @@ def _migrate(connection: sqlite3.Connection) -> None:
         ),
     )
 
-    # Vor dem Zusammenführen: Alt-Duplikate stören jeden Index.
-    _dedupe_symbols(connection)
     _migrate_identity(connection)
 
 
@@ -231,10 +229,23 @@ def _migrate_identity(connection: sqlite3.Connection) -> None:
             ),
         )
 
+    # Erst jetzt bereinigen: Vorher stünde die kanonische Identität noch nicht
+    # in der Zeile, und die Bereinigung müsste wieder nach `symbol` gruppieren
+    # — genau der Fehler, den sie seit T-21 nicht mehr machen darf.
+    _dedupe_symbols(connection)
+
     connection.execute("DROP INDEX IF EXISTS idx_instruments_symbol")
     connection.execute(
         "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_ticker_mic "
         "ON instruments (ticker, mic)"
+    )
+    # Die `listing_id` ist der Maschinenschlüssel des öffentlichen Vertrags.
+    # Ohne Index wäre „opake UUID, einmal erzeugt" eine Absichtserklärung: Ein
+    # zweiter Schreiber könnte denselben Wert eintragen, und wer darüber
+    # adressiert, bekäme zwei Papiere.
+    connection.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_listing_id "
+        "ON instruments (listing_id)"
     )
     _report_unresolved(connection)
 
@@ -384,12 +395,26 @@ def _add_missing_columns(
 
 
 def _dedupe_symbols(connection: sqlite3.Connection) -> None:
-    """Führt Instrumente mit gleichem Symbol zusammen (Zeile mit ISIN gewinnt).
+    """Führt **gleiche** Instrumente zusammen (Zeile mit ISIN gewinnt).
 
     Duplikate konnten vor dem UNIQUE-Index durch parallele Erst-Requests
     entstehen. Kurs-Historie und Tages-Schlusskurse werden auf das verbleibende
     Instrument umgehängt; Kollisionen (gleicher Zeitpunkt/Tag) verfallen mit
     dem gelöschten Duplikat.
+
+    **Gleiches Symbol heißt seit T-21 nicht mehr gleiches Papier.** Die
+    Eindeutigkeit liegt auf `(ticker, mic)`, und sobald `US` in `XNYS` und
+    `XNAS` zerfällt, tragen zwei verschiedene Listings dasselbe Symbol.
+    Zusammengeführt wird deshalb nur, was auch kanonisch dasselbe ist:
+
+    * beide Zeilen mit **derselben** aufgelösten `(ticker, mic)` — dann ist es
+      ein Duplikat im neuen Sinn;
+    * beide Zeilen **unaufgelöst** und mit demselben Symbol — der alte Fall aus
+      den parallelen Erst-Requests.
+
+    Zwei aufgelöste Zeilen mit verschiedenen MICs bleiben stehen. Vorher
+    zerstörte der nächste Start genau den Zustand, den die neue Eindeutigkeit
+    gerade erlaubt hatte.
 
     **Alles Abhängige muss mitwandern.** Umgehängt wurden lange nur `quotes`
     und `daily_closes` — `daily_meta` und `instrument_overrides` blieben am
@@ -398,19 +423,25 @@ def _dedupe_symbols(connection: sqlite3.Connection) -> None:
     Hand gepflegte Kennzahlen. Die beiden Tabellen tragen je eine eigene
     Merge-Regel, siehe `_merge_overrides` und `_merge_daily_meta`.
     """
+    # Die Gruppe ist die kanonische Identität, wenn sie feststeht — sonst das
+    # Symbol. `COALESCE` bildet genau das ab: Aufgelöste Zeilen gruppieren nach
+    # `ticker|mic`, unaufgelöste nach ihrem Symbol.
+    gruppe = "COALESCE(ticker || '|' || mic, 'unresolved|' || symbol)"
     duplicated = connection.execute(
-        "SELECT symbol FROM instruments GROUP BY symbol HAVING COUNT(*) > 1"
+        f"SELECT {gruppe} AS gruppe FROM instruments "
+        f"GROUP BY {gruppe} HAVING COUNT(*) > 1"
     ).fetchall()
     for row in duplicated:
-        symbol = row["symbol"]
+        gruppenwert = row["gruppe"]
         keeper = connection.execute(
-            "SELECT id FROM instruments WHERE symbol = ? "
+            f"SELECT id, symbol FROM instruments WHERE {gruppe} = ? "
             "ORDER BY (isin IS NULL), id LIMIT 1",
-            (symbol,),
+            (gruppenwert,),
         ).fetchone()
+        symbol = keeper["symbol"]
         duplicates = connection.execute(
-            "SELECT id FROM instruments WHERE symbol = ? AND id != ?",
-            (symbol, keeper["id"]),
+            f"SELECT id FROM instruments WHERE {gruppe} = ? AND id != ?",
+            (gruppenwert, keeper["id"]),
         ).fetchall()
         for duplicate in duplicates:
             for table in ("quotes", "daily_closes"):

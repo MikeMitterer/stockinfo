@@ -207,3 +207,93 @@ def test_die_offenen_faelle_werden_gemeldet(migriert: str, capsys) -> None:
     assert meldungen, "kein Hinweis auf die offenen Zuordnungen"
     assert meldungen[0]["count"] == 2
     assert set(meldungen[0]["symbols"]) == {"AAPL", "BRK-B"}
+
+
+def test_zwei_listings_mit_gleichem_symbol_ueberleben_den_neustart(tmp_path) -> None:
+    """Der Fall, den die neue Eindeutigkeit gerade erst erlaubt hat.
+
+    Sobald `US` in `XNYS` und `XNAS` zerfällt, tragen zwei **verschiedene**
+    Listings dasselbe Symbol. Die Alt-Bereinigung gruppierte weiter nach
+    `symbol` und löschte alles bis auf eine Zeile — sie hätte beim nächsten
+    Start genau das zerstört, wofür der Index umgezogen ist.
+
+    Geprüft wird alles, was daran hängt: beide Zeilen, ihre `listing_id` und
+    ihre Kurspunkte.
+    """
+    pfad = str(tmp_path / "zwei-listings.db")
+    _alte_datenbank(pfad, [("EUNL.DE", "IE00B4L5Y983")])
+    init_db(pfad)
+
+    with sqlite3.connect(pfad) as verbindung:
+        verbindung.executescript(
+            """
+            INSERT INTO instruments (symbol, first_seen, ticker, mic, listing_id,
+                                     identity_status)
+            VALUES ('ABC', '2026-01-01T00:00:00+00:00', 'ABC', 'XNAS',
+                    'aaaaaaaa-0000-4000-8000-000000000001', 'resolved'),
+                   ('ABC', '2026-01-01T00:00:00+00:00', 'ABC', 'XNYS',
+                    'aaaaaaaa-0000-4000-8000-000000000002', 'resolved');
+            INSERT INTO quotes (instrument_id, price, quote_time, fetched_at)
+            SELECT id, 1.0, '2026-08-01T00:00:00+00:00', '2026-08-01T00:00:00+00:00'
+            FROM instruments WHERE symbol = 'ABC';
+            """
+        )
+
+    init_db(pfad)  # der zweite Start — hier wurde vorher zusammengeführt
+
+    with sqlite3.connect(pfad) as verbindung:
+        verbindung.row_factory = sqlite3.Row
+        zeilen = verbindung.execute(
+            "SELECT mic, listing_id, id FROM instruments WHERE symbol = 'ABC' "
+            "ORDER BY mic"
+        ).fetchall()
+        kurse = verbindung.execute(
+            "SELECT COUNT(*) AS anzahl FROM quotes WHERE instrument_id IN "
+            "(SELECT id FROM instruments WHERE symbol = 'ABC')"
+        ).fetchone()
+
+    assert [z["mic"] for z in zeilen] == ["XNAS", "XNYS"]
+    assert [z["listing_id"] for z in zeilen] == [
+        "aaaaaaaa-0000-4000-8000-000000000001",
+        "aaaaaaaa-0000-4000-8000-000000000002",
+    ]
+    assert kurse["anzahl"] == 2, "abhängige Daten sind verloren gegangen"
+
+
+def test_echte_altduplikate_werden_weiterhin_zusammengefuehrt(tmp_path) -> None:
+    """Die Gegenprobe — der Grund, warum es die Bereinigung überhaupt gibt.
+
+    Vor dem Index konnten durch parallele Erst-Requests zwei Zeilen mit
+    demselben Symbol **und** derselben (noch unaufgelösten) Identität
+    entstehen. Die gehören weiterhin zusammengeführt; sonst bliebe der Bestand
+    doppelt.
+    """
+    pfad = str(tmp_path / "altduplikate.db")
+    _alte_datenbank(pfad, [("EUNL.DE", "IE00B4L5Y983"), ("EUNL.DE", None)])
+
+    init_db(pfad)
+
+    zeilen = _instrumente(pfad)
+    assert len(zeilen) == 1
+    assert zeilen["EUNL.DE"]["isin"] == "IE00B4L5Y983"  # die Zeile mit ISIN gewinnt
+
+
+def test_die_listing_id_ist_eindeutig(migriert: str) -> None:
+    """Sie ist der Maschinenschlüssel — zweimal derselbe Wert wäre wertlos.
+
+    Der Vertrag aus T-24 nennt sie „opake UUID, bei Anlage einmal erzeugt".
+    Ohne Index in der Datenbank wäre das eine Absichtserklärung: Ein zweiter
+    Schreiber könnte denselben Wert eintragen, und ein Konsument, der darüber
+    adressiert, bekäme zwei Papiere.
+    """
+    with sqlite3.connect(migriert) as verbindung:
+        vorhandene = verbindung.execute(
+            "SELECT listing_id FROM instruments LIMIT 1"
+        ).fetchone()[0]
+
+    with sqlite3.connect(migriert) as verbindung, pytest.raises(sqlite3.IntegrityError):
+        verbindung.execute(
+            "INSERT INTO instruments (symbol, first_seen, listing_id) "
+            "VALUES ('DOPPELT.DE', '2026-01-01T00:00:00+00:00', ?)",
+            (vorhandene,),
+        )
