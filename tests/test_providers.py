@@ -500,6 +500,62 @@ def test_yfinance_etf_ohne_symbol_liefert_nichts(monkeypatch) -> None:
 # ─── Zusammenspiel der ETF-Quellen ────────────────────────────────────────────
 
 
+class _KontextabhaengigerEnricher:
+    """Liefert nur, wenn er beim **Abruf** Börse und Währung bekommt.
+
+    Bildet ab, was das Protokoll zusagt: `fetch_etf` nimmt denselben Kontext
+    entgegen wie `is_responsible`. Die beiden heutigen Quellen brauchen ihn
+    beim Abruf zufällig nicht — Yahoo arbeitet über das Symbol, justETF über
+    die ISIN. Eine dritte Quelle (T-23) darf sich darauf verlassen.
+    """
+
+    def __init__(self) -> None:
+        self.fetch_kontext: tuple | None = None
+
+    def is_responsible(
+        self,
+        isin: str | None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> bool:
+        return currency == "CAD"
+
+    def fetch_etf(
+        self,
+        isin: str | None,
+        symbol: str | None = None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> EtfDetails | None:
+        self.fetch_kontext = (exchange, currency)
+        if not exchange or not currency:
+            return None
+        return EtfDetails(provider="BlackRock Canada", source="test")
+
+
+def test_composite_reicht_den_kontext_bis_zum_abruf_durch() -> None:
+    """Das Protokoll zusagen und den Kontext dann fallen lassen, geht nicht.
+
+    Der Composite nahm `exchange` und `currency` entgegen, nutzte sie für die
+    Zuständigkeitswahl und rief die gewählte Quelle anschließend ohne sie auf.
+    Bei den zwei heutigen Quellen fiel das nicht auf; eine dritte, die den
+    Kontext zum Holen braucht, bekäme eine erfolgreiche Zuständigkeitsprüfung
+    und danach nichts.
+    """
+    enricher = _KontextabhaengigerEnricher()
+    composite = CompositeEtfEnricher(enricher)
+
+    details = composite.fetch_etf(
+        None, symbol="XIC.TO", exchange="Toronto", currency="CAD"
+    )
+
+    assert enricher.fetch_kontext == ("Toronto", "CAD")
+    assert details is not None
+    assert details.provider == "BlackRock Canada"
+
+
 class _StubEnricher:
     """Zuständigkeit und Antwort getrennt vorgebbar."""
 

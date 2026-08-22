@@ -74,8 +74,17 @@ curl -s "http://localhost:8000/quote?symbol=XIC.TO" | python3 -m json.tool  # #5
 [^e]: Smoke `#5 .provider = BlackRock Asset Management Canada Ltd` — vorher
     leer. Code: `is_responsible` bekommt Börse und Währung, `_build` nutzt sie.
     Vier Provider-Tests und zwei Service-Tests.
-[^f]: `make test` → Backend `331 passed, 29 skipped`, Plugin-API `36 passed`,
+[^f]: `make test` → Backend `332 passed, 29 skipped`, Plugin-API `36 passed`,
     Dashboard `230 passed`. Ruff sauber.
+
+    Nachgetragen in Runde 1: Der `CompositeEtfEnricher` nahm Börse und Währung
+    entgegen, nutzte sie für die Zuständigkeitswahl und rief die gewählte
+    Quelle dann **ohne** sie auf — das Protokoll war nur äußerlich erfüllt.
+    Bei den zwei heutigen Quellen fiel das nicht auf, weil Yahoo über das
+    Symbol und justETF über die ISIN arbeitet; eine dritte (T-23) hätte eine
+    erfolgreiche Zuständigkeitsprüfung und danach nichts bekommen.
+    `test_composite_reicht_den_kontext_bis_zum_abruf_durch` hält das fest —
+    mit einer Quelle, die den Kontext zum Holen wirklich braucht.
 [^g]: Von Hand gegengeprüft mit einem eigenen Server auf Port 8768:
     `CA7800871021` → **404**, `IE00B4L5Y983` → 200 (die bevorzugte Börse
     bleibt erreichbar), **null** `resolve_home_exchange`-Zeilen im Log. Dazu
@@ -135,6 +144,7 @@ T-22, und sie über Plugins zu erweitern T-23.
 | `strict_exchange` schaltet sie ab | `home_fallback`-Schalter, gesetzt in `container.py` |
 | Zuständigkeit ohne ISIN | `is_european_listing`, neue Signatur von `is_responsible` |
 | Anreicherung ohne ISIN | `QuoteService._build` und `_enrich_etf` |
+| Kontext bis zum Abruf | `CompositeEtfEnricher.fetch_etf` reicht ihn durch (Runde 1) |
 
 **Die Länderzuordnung ist eine Heuristik, und sie steht als solche da.** Das
 ISIN-Präfix nennt die ausgebende Stelle, nicht den gewünschten Handelsplatz.

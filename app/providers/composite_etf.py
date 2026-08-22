@@ -78,7 +78,14 @@ class CompositeEtfEnricher:
         for enricher in self._enrichers:
             if not enricher.is_responsible(isin, exchange=exchange, currency=currency):
                 continue
-            details = enricher.fetch_etf(isin, symbol=symbol)
+            # Derselbe Kontext wie bei der Zuständigkeitsfrage: Das Protokoll
+            # sagt ihn beim Abruf zu, also bekommt die Quelle ihn auch. Die
+            # zwei heutigen brauchen ihn dort nicht — Yahoo arbeitet über das
+            # Symbol, justETF über die ISIN —, aber „fällt gerade nicht auf"
+            # ist keine Zusage. Mit T-23 kommen weitere Quellen dahinter.
+            details = enricher.fetch_etf(
+                isin, symbol=symbol, exchange=exchange, currency=currency
+            )
             if details is not None:
                 return details
         return None
