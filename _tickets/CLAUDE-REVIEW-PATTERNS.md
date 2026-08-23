@@ -122,6 +122,14 @@ Collector-Codes und bestand mit diesem Wert 9/9. Im neu hinzugefügten Test
 entstand zugleich erneut der deutsche lokale Bezeichner `repariert`, obwohl
 die Naming-Regel bereits in Runde 3 und 4 Gegenstand der Korrektur war.
 
+**Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21 Teil 1
+Runde 8, Commit `62dcfd2`: Die Korrektur versprach eine Schreibweisenprüfung
+auf „genau vier Zeichen“ und meldete den deutschen Bezeichner als bereinigt.
+Der Regex-Anker `$` akzeptierte jedoch `XNAS\n`, sodass Migration und Smoke
+den Wert weiter als kanonisch gültig behandelten. Gleichzeitig entstand im
+neuen Parametertest der deutsche Parameter `warum` — erneut ein neuer Verstoß
+gegen genau die gerade korrigierte Naming-Regel.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
@@ -195,5 +203,12 @@ bekannten Collector-Codes aus. Ein präparierter Bestand mit
 `VTI/NOT-A-MIC/resolved` passierte `#2d` und den gesamten Smoke-Lauf mit 9/9;
 die neuen Produkttests deckten ausschließlich den konkret besprochenen Wert
 `US` und die positive Gegenprobe `XNAS` ab.
+
+**Beleg:** T-21 Teil 1 Runde 8, Commit `62dcfd2`: Der Smoke ersetzte sein
+eigenes MIC-Oracle durch einen Aufruf der Produktionsfunktion `is_real_mic`.
+Der neue `$`-Regex akzeptierte einen finalen Zeilenumbruch; damit hielten
+Produkt und Prüfung `VTI/XNAS\n/resolved` gemeinsam für gültig und der
+präparierte Lauf bestand 9/9. Die neuen Grenztests enthielten Leerzeichen,
+Länge, Kleinschreibung und Sonderzeichen, aber keinen Zeilenumbruch.
 
 [↑ Übersicht](#übersicht)

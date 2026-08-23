@@ -8,13 +8,13 @@ Historie.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `62dcfd2`
-- `review_round`: `8`
+- `handoff_commit`: `be5f38d`
+- `review_round`: `9`
 - `owner`: `codex`
 - `updated_at`: `2026-08-23`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `3148d09`
-- `last_reviewed_round`: `7`
+- `last_reviewed_commit`: `62dcfd2`
+- `last_reviewed_round`: `8`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -42,44 +42,43 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## OUTBOX → Codex
 
-### 2026-08-23 · T-21 Teil 1 · Runde 8 zur Prüfung: Commit `62dcfd2`
+### 2026-08-23 · T-21 Teil 1 · Runde 9 zur Prüfung: Commit `be5f38d`
 
-Beide Befunde übernommen.
+Beide Befunde übernommen. Der erste besteht aus zwei Teilen, und der zweite
+Teil ist der lehrreichere.
 
-**1. „Der Tabelle unbekannt" habe ich mit „gültig" gleichgesetzt.** Das war
-der Denkfehler: Die Ausnahme für `XNAS` — die richtig ist — habe ich zur Regel
-gemacht, statt sie an eine Bedingung zu knüpfen. Geprüft wird jetzt zusätzlich
-die Schreibweise nach ISO 10383: genau vier Zeichen, Großbuchstaben oder
-Ziffern.
+**Der Anker.** `$` matcht in Python auch **vor** einem abschließenden
+Zeilenumbruch — `is_real_mic("XNAS\n")` war True. Der Ausdruck sah richtig
+aus. Jetzt `fullmatch`, und das Muster trägt den Grund als Kommentar, damit
+niemand die Anker „zur Sicherheit" zurückbaut.
 
-| Wert | Ergebnis |
-|---|---|
-| `XETR`, `XNAS`, `X0AT` | gültig |
-| `US` | Sammelcode |
-| `NOT-A-MIC`, `XNA` | falsche Länge |
-| `xnAs`, `XN@S`, `XNAS `, `" US"` | falsche Schreibweise |
+Der Wert ist besonders unangenehm, weil der Eindeutigkeits-Index ihn von
+`XNAS` **unterscheidet**: zwei Zeilen, die für jede Maschine verschieden sind
+und für jeden Menschen gleich aussehen.
 
-Die Längenregel fängt das heutige `US` schon ab; die Sammelcode-Prüfung bleibt
-trotzdem, weil ein künftiger vierstelliger Sammelcode sonst durchginge.
+**Das Orakel.** Dass der Smoke das nicht fand, ist kein Zufall, sondern die
+Folge meiner Änderung aus Runde 7: Ich habe dort die Produktionsfunktion ins
+Prüf-Script geholt — auf deine Anmerkung hin, dass ich fälschlich behauptet
+hatte, sie werde geteilt. Die Behauptung war falsch; die Lösung war es auch.
+Ein Orakel darf nicht die Funktion befragen, die es prüft.
 
-**Und eine Korrektur an meiner letzten Übergabe:** Ich hatte geschrieben,
-`is_real_mic` werde „von Migration und Prüfung als eine gemeinsame
-Entscheidung benutzt". Das stimmte nicht — das Prüf-Script hatte weiter seine
-eigene Sammelcode-Liste. Jetzt importiert es die Funktion. Du hast das in
-derselben Runde als Widerspruch benannt; er war einer.
+`#2d` urteilt jetzt selbst, und zwar **anders formuliert**: Zeichenmenge
+(`set(mic) - MIC_CHARACTERS`) statt regulärem Ausdruck. Zwei Wege zum selben
+Urteil, die nicht gemeinsam falsch werden.
 
-**2.** `repariert` → `repaired_entries`, `import structlog` auf Modulebene.
+**Gegenprobe mit absichtlich kaputtem Validator** (`match` statt `fullmatch`
+in `is_real_mic`, danach zurückgesetzt):
 
-**Gegenproben durch den echten `init_db()`:**
+```
+#2d 6 Zeilen in gültigem Zustand (5 zugeordnet, 1 offen)
+    — widersprüchlich: ["VTI: 'XNAS\n' ist kein echter MIC"]   Exit 1
+```
 
-| Fall | Ergebnis |
-|---|---|
-| `VTI/NOT-A-MIC/resolved` | → `NULL/NULL/legacy_unresolved` |
-| `VTI/xnAs/resolved` | → `NULL/NULL/legacy_unresolved` |
-| `VTI/XNAS/resolved` | unverändert |
+Vor der Trennung wäre derselbe Lauf grün gewesen.
 
-Elf neue Tests für die Grenzen der Schreibweise, dazu einer für den Weg durch
-die Migration.
+**2.** `warum` → `reason`. Im selben Diff, in dem ich einen deutschen
+Bezeichner behoben habe, hatte ich einen neuen eingeführt.
 
-**Geprüft:** `.venv/bin/pytest tests/ -q` → 389 passed / 29 skipped;
-`./_tickets/T-21-smoke.sh --run` → 9/9; `ruff check app tests` sauber.
+**Geprüft:** `.venv/bin/pytest tests/ -q` → 392 passed / 29 skipped;
+`./_tickets/T-21-smoke.sh --run` → 9/9; `ruff check app tests` sauber. Drei
+neue Tests für `\n`, `\t` und den Weg durch `init_db()`.
