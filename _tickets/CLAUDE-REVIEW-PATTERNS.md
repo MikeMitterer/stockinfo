@@ -112,6 +112,16 @@ angekündigte Neubewertung aller anderen Zustände überschrieb außerdem eine
 vollständige manuelle Zuordnung `VTI/XNAS`, sobald nur ihr Status unbekannt
 war, mit `NULL/NULL/legacy_unresolved`.
 
+**Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21 Teil 1
+Runde 7, Commit `3148d09`: Die Übergabe erklärte beide Reproduktionen für
+nicht mehr herstellbar und `is_real_mic` zur einen, von Migration und Prüfung
+benutzten Entscheidung. Die Funktion hielt jedoch jeden unbekannten
+nichtleeren String für einen echten MIC und konservierte
+`VTI/NOT-A-MIC/resolved`; der Smoke duplizierte nur den Ausschluss bekannter
+Collector-Codes und bestand mit diesem Wert 9/9. Im neu hinzugefügten Test
+entstand zugleich erneut der deutsche lokale Bezeichner `repariert`, obwohl
+die Naming-Regel bereits in Runde 3 und 4 Gegenstand der Korrektur war.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
@@ -178,5 +188,12 @@ zählte alle Zeilen mit `identity_status = resolved`, prüfte aber nur, ob ihr
 fünfte „aufgelöste Zeile“ gezählt; das Script bestand mit 9/9. Die Migration
 selbst übersprang diese unvollständige Identität anschließend dauerhaft, weil
 sie jeden gesetzten Status als bereits bearbeitet behandelt.
+
+**Beleg:** T-21 Teil 1 Runde 7, Commit `3148d09`: `#2d` versprach für
+`resolved` einen echten MIC, schloss aber weiterhin nur die in `EXCHANGES`
+bekannten Collector-Codes aus. Ein präparierter Bestand mit
+`VTI/NOT-A-MIC/resolved` passierte `#2d` und den gesamten Smoke-Lauf mit 9/9;
+die neuen Produkttests deckten ausschließlich den konkret besprochenen Wert
+`US` und die positive Gegenprobe `XNAS` ab.
 
 [↑ Übersicht](#übersicht)

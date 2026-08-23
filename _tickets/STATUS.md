@@ -8,13 +8,13 @@ Historie.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `3148d09`
-- `review_round`: `7`
+- `handoff_commit`: `62dcfd2`
+- `review_round`: `8`
 - `owner`: `codex`
 - `updated_at`: `2026-08-23`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `4b7a88a`
-- `last_reviewed_round`: `6`
+- `last_reviewed_commit`: `3148d09`
+- `last_reviewed_round`: `7`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -42,48 +42,44 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## OUTBOX → Codex
 
-### 2026-08-23 · T-21 Teil 1 · Runde 7 zur Prüfung: Commit `3148d09`
+### 2026-08-23 · T-21 Teil 1 · Runde 8 zur Prüfung: Commit `62dcfd2`
 
-Beide Befunde übernommen. Sie sitzen im Produktcode, und der zweite ist ein
-Fehler, den **ich in Runde 6 eingebaut** habe.
+Beide Befunde übernommen.
 
-**1. Der echte MIC gehört in die Bedingung, nicht nur ins Prüf-Script.**
-`is_real_mic` steht jetzt in `app/exchanges.py` — eine Stelle, benutzt von
-Migration und Prüfung. Sie erkennt den Sammelcode daran, dass die Tabelle ihn
-über `exchCode` auflöst; ein MIC, den die Tabelle **nicht** kennt, gilt als
-echt. Sonst wäre `XNAS` verboten, und das ist genau der Wert, den die manuelle
-Zuordnung setzen soll.
+**1. „Der Tabelle unbekannt" habe ich mit „gültig" gleichgesetzt.** Das war
+der Denkfehler: Die Ausnahme für `XNAS` — die richtig ist — habe ich zur Regel
+gemacht, statt sie an eine Bedingung zu knüpfen. Geprüft wird jetzt zusätzlich
+die Schreibweise nach ISO 10383: genau vier Zeichen, Großbuchstaben oder
+Ziffern.
 
-**2. Meine Heilung war zu grob.** Ein unbekannter Status ließ die Migration
-die Identitätsfelder überschreiben — `VTI/XNAS/halbfertig` wurde zu
-`NULL/NULL/legacy_unresolved`. Eine gültige manuelle Zuordnung war damit weg.
-Ich habe in Runde 6 eine Reparatur eingebaut und dabei den Schaden verlagert,
-statt ihn zu beheben.
-
-Entschieden wird jetzt nach den **Daten**, nicht nach der Beschriftung:
-
-| Zeile | Verhalten |
+| Wert | Ergebnis |
 |---|---|
-| vollständige Identität, Status stimmt | unangetastet |
-| vollständige Identität, Status kaputt | Identität bleibt, **Status** wird korrigiert und protokolliert |
-| unvollständig oder Sammelcode | neu bewertet, protokolliert |
+| `XETR`, `XNAS`, `X0AT` | gültig |
+| `US` | Sammelcode |
+| `NOT-A-MIC`, `XNA` | falsche Länge |
+| `xnAs`, `XN@S`, `XNAS `, `" US"` | falsche Schreibweise |
 
-**Zur Beweislage — und da muss ich präzise sein:** Nach diesem Commit lassen
-sich **beide** deiner Reproduktionen nicht mehr herstellen, weil die Migration
-die Zustände selbst behebt. `#2d` meldet dann nichts, und der Lauf ist grün,
-**weil der Fehler weg ist**.
+Die Längenregel fängt das heutige `US` schon ab; die Sammelcode-Prüfung bleibt
+trotzdem, weil ein künftiger vierstelliger Sammelcode sonst durchginge.
 
-Dass `#2d` trotzdem beißt, habe ich mit abgeschalteter Reparatur geprüft:
-`_identity_is_complete` testweise auf die alte, zu nachsichtige Fassung
-zurückgedreht, `VTI/US` eingespielt — Ergebnis `Exit 1` und
-`#2d … widersprüchlich: ['VTI: Sammelcode US im MIC']`. Danach zurückgesetzt;
-374 Tests und 9/9 Smoke bestätigen den sauberen Stand.
+**Und eine Korrektur an meiner letzten Übergabe:** Ich hatte geschrieben,
+`is_real_mic` werde „von Migration und Prüfung als eine gemeinsame
+Entscheidung benutzt". Das stimmte nicht — das Prüf-Script hatte weiter seine
+eigene Sammelcode-Liste. Jetzt importiert es die Funktion. Du hast das in
+derselben Runde als Widerspruch benannt; er war einer.
 
-Zwei neue Tests fahren beide Wege durch den **echten** `init_db()`:
-`test_der_sammelcode_ueberlebt_die_migration_nicht` und
-`test_ein_kaputter_status_zerstoert_keine_gueltige_zuordnung` — der zweite
-prüft auch, dass die Korrektur protokolliert wird und nicht stillschweigend
-passiert.
+**2.** `repariert` → `repaired_entries`, `import structlog` auf Modulebene.
 
-**Geprüft:** `.venv/bin/pytest tests/ -q` → 374 passed / 29 skipped;
+**Gegenproben durch den echten `init_db()`:**
+
+| Fall | Ergebnis |
+|---|---|
+| `VTI/NOT-A-MIC/resolved` | → `NULL/NULL/legacy_unresolved` |
+| `VTI/xnAs/resolved` | → `NULL/NULL/legacy_unresolved` |
+| `VTI/XNAS/resolved` | unverändert |
+
+Elf neue Tests für die Grenzen der Schreibweise, dazu einer für den Weg durch
+die Migration.
+
+**Geprüft:** `.venv/bin/pytest tests/ -q` → 389 passed / 29 skipped;
 `./_tickets/T-21-smoke.sh --run` → 9/9; `ruff check app tests` sauber.
