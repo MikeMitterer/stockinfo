@@ -12,6 +12,7 @@ einer plausiblen Vermutung gefüllt.
 import sqlite3
 
 import pytest
+import structlog
 
 from app.db import init_db
 
@@ -205,8 +206,6 @@ def test_die_offenen_faelle_werden_gemeldet(migrated: str, capsys) -> None:
     Ohne Meldung wäre „später von Hand zuordnen" ein Versprechen, das niemand
     einlösen kann — man wüsste nicht, was offen ist.
     """
-    import structlog
-
     with structlog.testing.capture_logs() as logs:
         init_db(migrated)
 
@@ -443,8 +442,6 @@ def test_ein_kaputter_status_zerstoert_keine_gueltige_zuordnung(tmp_path) -> Non
     Eine vollständige Identität bleibt jetzt stehen; korrigiert wird nur die
     Beschriftung, und der kaputte Status wird protokolliert.
     """
-    import structlog
-
     path = str(tmp_path / "kaputter-status.db")
     _legacy_database(path, [("VTI", "US9229087690")])
     init_db(path)
@@ -462,6 +459,32 @@ def test_ein_kaputter_status_zerstoert_keine_gueltige_zuordnung(tmp_path) -> Non
     assert (row["ticker"], row["mic"]) == ("VTI", "XNAS"), "die Zuordnung ist weg"
     assert row["identity_status"] == "resolved"
 
-    repariert = [entry for entry in logs if entry["event"] == "identity_status_repaired"]
-    assert repariert, "der kaputte Status wurde stillschweigend geheilt"
-    assert repariert[0]["previous"] == "halbfertig"
+    repaired_entries = [
+        entry for entry in logs if entry["event"] == "identity_status_repaired"
+    ]
+    assert repaired_entries, "der kaputte Status wurde stillschweigend geheilt"
+    assert repaired_entries[0]["previous"] == "halbfertig"
+
+
+def test_ein_unsinniger_mic_ueberlebt_die_migration_nicht(tmp_path) -> None:
+    """Was nicht einmal wie ein MIC aussieht, ist keine gültige Zuordnung.
+
+    `is_real_mic` ließ jeden der Tabelle unbekannten String durch — auch
+    `NOT-A-MIC`. Die Migration hielt solche Zeilen damit für vollständig und
+    ließ sie für immer stehen.
+    """
+    path = str(tmp_path / "unsinn.db")
+    _legacy_database(path, [("VTI", "US9229087690")])
+    init_db(path)
+
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE instruments SET identity_status = 'resolved', "
+            "ticker = 'VTI', mic = 'NOT-A-MIC' WHERE symbol = 'VTI'"
+        )
+
+    init_db(path)
+
+    row = _instruments(path)["VTI"]
+    assert (row["ticker"], row["mic"]) == (None, None)
+    assert row["identity_status"] == "legacy_unresolved"

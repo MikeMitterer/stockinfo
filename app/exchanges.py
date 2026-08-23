@@ -8,11 +8,15 @@ Das Symbolformat ist eine **Vereinbarung der App**, keine Abhängigkeit zu
 Yahoo: Es entsteht hier aus `ticker` und dem Suffix der eigenen Tabelle.
 """
 
+import re
 from dataclasses import dataclass
 
 import structlog
 
 logger = structlog.get_logger()
+
+# Ein MIC nach ISO 10383: genau vier Zeichen, Großbuchstaben oder Ziffern.
+_MIC_PATTERN = re.compile(r"^[A-Z0-9]{4}$")
 
 
 @dataclass(frozen=True)
@@ -122,10 +126,22 @@ def is_real_mic(mic: str | None) -> bool:
     diesen Code enthält, wird beim ersten Anbieter zum Problem, der echte MICs
     erwartet (T-21).
 
-    Erkennbar sind die Sammelcodes daran, dass sie über `exchCode` aufgelöst
-    werden statt über `micCode`. Ein MIC, den die Tabelle gar nicht kennt,
-    gilt als echt: `XNAS` steht dort nicht, ist aber genau der Wert, den eine
-    manuelle Zuordnung setzen soll.
+    Geprüft wird **beides**:
+
+    1. **Die Schreibweise.** Ein MIC nach ISO 10383 hat genau vier Zeichen,
+       Großbuchstaben oder Ziffern. „Der Tabelle unbekannt" ist kein
+       Gütesiegel — meine erste Fassung ließ jeden nichtleeren String durch,
+       und damit hätte auch `NOT-A-MIC`, `xnAs` oder `XNAS ` im kanonischen
+       Feld stehen können.
+    2. **Kein Sammelcode.** Erkennbar daran, dass die Tabelle ihn über
+       `exchCode` auflöst statt über `micCode`. Die Längenregel fängt das
+       heutige `US` schon ab; die Prüfung bleibt trotzdem, weil ein künftiger
+       vierstelliger Sammelcode sonst durchginge.
+
+    Ein MIC, den die Tabelle nicht kennt, aber richtig geschrieben ist, gilt
+    als echt: `XNAS` steht dort nicht und ist genau der Wert, den eine
+    manuelle Zuordnung setzen soll. Die Tabelle ist eine Auswahl der Börsen,
+    die StockInfo auflösen kann — kein Verzeichnis aller MICs.
 
     Args:
         mic: Der zu prüfende Code, oder ``None``.
@@ -133,7 +149,7 @@ def is_real_mic(mic: str | None) -> bool:
     Returns:
         ``True`` wenn der Wert als kanonischer MIC taugt.
     """
-    if not mic:
+    if not mic or not _MIC_PATTERN.match(mic):
         return False
     definition = EXCHANGES.get(mic)
     return definition is None or definition.figi_id_type == "micCode"

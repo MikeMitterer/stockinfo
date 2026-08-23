@@ -2,7 +2,7 @@
 
 import pytest
 
-from app.exchanges import EXCHANGES, split_symbol
+from app.exchanges import EXCHANGES, is_real_mic, split_symbol
 
 
 @pytest.mark.parametrize(
@@ -72,3 +72,39 @@ def test_die_schema_schicht_zieht_kein_yfinance_mit() -> None:
 
     assert "app.resolver" not in module
     assert "app.exchanges" in module
+
+
+@pytest.mark.parametrize("mic", ["XETR", "XTSE", "XNAS", "XNYS", "X0AT"])
+def test_echte_mics_werden_angenommen(mic: str) -> None:
+    """Vier Großbuchstaben oder Ziffern — auch wenn die Tabelle sie nicht kennt.
+
+    `XNAS` steht nicht in der eigenen Börsentabelle und ist trotzdem der Wert,
+    den eine manuelle Zuordnung setzen soll. Die Tabelle ist eine Auswahl, kein
+    Verzeichnis aller MICs.
+    """
+    assert is_real_mic(mic) is True
+
+
+@pytest.mark.parametrize(
+    ("mic", "warum"),
+    [
+        ("US", "Sammelcode der eigenen Tabelle, kein ISO-MIC"),
+        (None, "gar kein Wert"),
+        ("", "leer"),
+        ("NOT-A-MIC", "zu lang"),
+        ("XNA", "zu kurz"),
+        ("xnAs", "Kleinbuchstaben"),
+        ("XN@S", "Sonderzeichen"),
+        ("XNAS ", "Leerzeichen am Ende"),
+        (" US", "Leerzeichen am Anfang"),
+    ],
+)
+def test_ungueltige_mics_werden_abgelehnt(mic: str | None, warum: str) -> None:
+    """Unbekannt heißt nicht gültig.
+
+    Meine erste Fassung ließ jeden nichtleeren String durch, den die Tabelle
+    nicht kannte — damit konnte im kanonischen Feld alles stehen, auch
+    `NOT-A-MIC`. Ein MIC nach ISO 10383 hat genau vier Zeichen, Großbuchstaben
+    oder Ziffern.
+    """
+    assert is_real_mic(mic) is False, warum

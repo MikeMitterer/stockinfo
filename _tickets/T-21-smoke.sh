@@ -120,7 +120,7 @@ import sqlite3
 import sys
 
 from app.db import init_db
-from app.exchanges import EXCHANGES
+from app.exchanges import EXCHANGES, is_real_mic
 
 source, backup = sys.argv[1], sys.argv[2]
 
@@ -217,15 +217,6 @@ check(
     f"listing_id: {len(set(listing_ids))} eindeutige für {len(after)} Zeilen",
 )
 
-# Sammelcodes sind keine MICs. `US` steht in der Börsentabelle als
-# OpenFIGI-Suchcode für NYSE und NASDAQ; im kanonischen Feld darf er nie
-# auftauchen. Erkennbar ist er daran, dass er über `exchCode` aufgelöst wird.
-COLLECTOR_CODES = {
-    mic for mic, definition in EXCHANGES.items()
-    if definition.figi_id_type != "micCode"
-}
-
-
 def composed(row: dict) -> str | None:
     """Setzt `symbol` aus `(ticker, mic)` zusammen — die Gegenrichtung.
 
@@ -247,8 +238,8 @@ def invalid_state(row: dict) -> str | None:
     if status == "resolved":
         if not row["ticker"] or not row["mic"]:
             return f"{row['symbol']}: resolved ohne vollständige Identität"
-        if row["mic"] in COLLECTOR_CODES:
-            return f"{row['symbol']}: Sammelcode {row['mic']} im MIC"
+        if not is_real_mic(row["mic"]):
+            return f"{row['symbol']}: {row['mic']!r} ist kein echter MIC"
         return None
     if status == "legacy_unresolved":
         if row["ticker"] or row["mic"]:

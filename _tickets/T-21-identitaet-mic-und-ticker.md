@@ -27,7 +27,7 @@ muss, ist kein Plugin).
 >
 > | | Umfang | Zeilen | Commit |
 > |---|---|---|---|
-> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 7 |
+> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 8 |
 > | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung, `ExchangeDef` aufräumen | `#5` | offen |
 > | **Teil 3** | API und Dashboard, offene Zuordnungen sichtbar und von Hand setzbar, Vertragsversion | `#2b`, `#2c`, `#3`, `#4` | offen |
 >
@@ -75,7 +75,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 5 | neues Papier aufnehmen | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | ➖ Teil 2 | |
 | 6 | `make test` | Backend, Plugin-API und Dashboard grün | ✅ [^f] | |
 
-[^a]: `tests/test_identity_migration.py`, **achtzehn** Tests gegen eine
+[^a]: `tests/test_identity_migration.py`, **neunzehn** Tests gegen eine
     nachgestellte Alt-Datenbank mit vier bezeichnenden Fällen. Zerlegt werden `EUNL.DE` und
     `XIC.TO`; `AAPL` (suffixlos) und `BRK-B` (fremde Schreibweise) bleiben
     offen. Die Migration läuft zweimal — sie muss idempotent sein.
@@ -98,7 +98,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     ist eindeutig. Zwei weitere Tests halten die Folgen fest — mehrere offene
     Zeilen dürfen nebeneinander stehen (SQLite zählt `NULL` als eigenen Wert),
     ein echter Konflikt fällt weiterhin auf.
-[^f]: `.venv/bin/pytest tests/ -q` → `374 passed, 29 skipped`;
+[^f]: `.venv/bin/pytest tests/ -q` → `389 passed, 29 skipped`;
     `make test-plugin-api` → 36; Ruff sauber.
 [^g]: `./_tickets/T-21-smoke.sh --run` gegen eine **Sicherung** von
     `data/stockinfo.db` (sechs gewachsene Papiere, 48 Kurspunkte) — das
@@ -136,7 +136,14 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     Entschieden wird dabei nach den **Daten**, nicht nach der Beschriftung:
     Eine vollständige Zuordnung mit kaputtem Status behält ihre Identität, nur
     der Status wird korrigiert und protokolliert. Meine erste Fassung hatte
-    sie überschrieben — genau der Verlust, den das Ticket verhindern will. Ein leerer Bestand lässt den Lauf **fehlschlagen** —
+    sie überschrieben — genau der Verlust, den das Ticket verhindern will.
+
+    **Unbekannt heißt nicht gültig** (Codex, Runde 7): `is_real_mic` ließ
+    zunächst jeden der Tabelle unbekannten String durch — auch `NOT-A-MIC`,
+    `xnAs` oder `XNAS ` mit Leerzeichen. Geprüft wird jetzt zusätzlich die
+    Schreibweise nach ISO 10383: genau vier Zeichen, Großbuchstaben oder
+    Ziffern. `XNAS` bleibt erlaubt, weil die Tabelle eine Auswahl der
+    auflösbaren Börsen ist und kein Verzeichnis aller MICs. Ein leerer Bestand lässt den Lauf **fehlschlagen** —
     vorher hätte er dort grün gemeldet, ohne einen einzigen Fall geprüft zu
     haben (Codex, Runde 2). Gegenproben: leere Datenbank → Exit 1; ein
     committeter Eintrag im WAL → wird mitgesichert und mitgezählt (7 statt 6).
