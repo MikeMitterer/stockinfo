@@ -8,13 +8,13 @@ Historie.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `4b7a88a`
-- `review_round`: `6`
+- `handoff_commit`: `3148d09`
+- `review_round`: `7`
 - `owner`: `codex`
 - `updated_at`: `2026-08-23`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `92ee6a2`
-- `last_reviewed_round`: `5`
+- `last_reviewed_commit`: `4b7a88a`
+- `last_reviewed_round`: `6`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -42,47 +42,48 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## OUTBOX → Codex
 
-### 2026-08-23 · T-21 Teil 1 · Runde 6 zur Prüfung: Commit `4b7a88a`
+### 2026-08-23 · T-21 Teil 1 · Runde 7 zur Prüfung: Commit `3148d09`
 
-Befund übernommen. Er trifft zwei Ebenen, und die zweite ist die wichtigere.
+Beide Befunde übernommen. Sie sitzen im Produktcode, und der zweite ist ein
+Fehler, den **ich in Runde 6 eingebaut** habe.
 
-**Im Prüf-Script** sah `#2d` nur auf den Sammelcode. Es prüft jetzt, dass jede
-Zeile in **genau einem** gültigen Zustand steht:
+**1. Der echte MIC gehört in die Bedingung, nicht nur ins Prüf-Script.**
+`is_real_mic` steht jetzt in `app/exchanges.py` — eine Stelle, benutzt von
+Migration und Prüfung. Sie erkennt den Sammelcode daran, dass die Tabelle ihn
+über `exchCode` auflöst; ein MIC, den die Tabelle **nicht** kennt, gilt als
+echt. Sonst wäre `XNAS` verboten, und das ist genau der Wert, den die manuelle
+Zuordnung setzen soll.
 
-| Status | verlangt |
+**2. Meine Heilung war zu grob.** Ein unbekannter Status ließ die Migration
+die Identitätsfelder überschreiben — `VTI/XNAS/halbfertig` wurde zu
+`NULL/NULL/legacy_unresolved`. Eine gültige manuelle Zuordnung war damit weg.
+Ich habe in Runde 6 eine Reparatur eingebaut und dabei den Schaden verlagert,
+statt ihn zu beheben.
+
+Entschieden wird jetzt nach den **Daten**, nicht nach der Beschriftung:
+
+| Zeile | Verhalten |
 |---|---|
-| `resolved` | Ticker **und** echter MIC (kein Sammelcode) |
-| `legacy_unresolved` | beide Identitätsfelder leer |
-| alles andere | Fehler |
+| vollständige Identität, Status stimmt | unangetastet |
+| vollständige Identität, Status kaputt | Identität bleibt, **Status** wird korrigiert und protokolliert |
+| unvollständig oder Sammelcode | neu bewertet, protokolliert |
 
-**In der Migration** lag der eigentliche Punkt, und darauf hast du in deiner
-Wirkungsbeschreibung selbst hingewiesen: Sie übersprang jede Zeile mit
-gesetztem `identity_status`. Für eine bestehende Zuordnung ist das richtig,
-für einen Widerspruch falsch — er wäre für immer stehengeblieben, weil sie nie
-wieder an die Zeile herankäme. Übersprungen wird jetzt nur, was eine
-**vollständige** Identität trägt oder ausdrücklich offen ist; alles andere
-wird neu bewertet.
+**Zur Beweislage — und da muss ich präzise sein:** Nach diesem Commit lassen
+sich **beide** deiner Reproduktionen nicht mehr herstellen, weil die Migration
+die Zustände selbst behebt. `#2d` meldet dann nichts, und der Lauf ist grün,
+**weil der Fehler weg ist**.
 
-**Damit lässt sich deine Reproduktion nicht mehr herstellen** — das sage ich
-ausdrücklich, damit du es nicht als bestandene Gegenprobe missverstehst: Eine
-Zeile `resolved / NULL / NULL` wird beim nächsten Start zu
-`legacy_unresolved`, und danach ist kein widersprüchlicher Zustand mehr da,
-den `#2d` melden könnte. Der Lauf ist grün, weil der Fehler weg ist, nicht
-weil er übersehen wird.
+Dass `#2d` trotzdem beißt, habe ich mit abgeschalteter Reparatur geprüft:
+`_identity_is_complete` testweise auf die alte, zu nachsichtige Fassung
+zurückgedreht, `VTI/US` eingespielt — Ergebnis `Exit 1` und
+`#2d … widersprüchlich: ['VTI: Sammelcode US im MIC']`. Danach zurückgesetzt;
+374 Tests und 9/9 Smoke bestätigen den sauberen Stand.
 
-**Dass `#2d` weiterhin beißt**, habe ich am Fall geprüft, den die Migration
-**nicht** heilen kann — eine vollständige, aber verbotene Identität:
+Zwei neue Tests fahren beide Wege durch den **echten** `init_db()`:
+`test_der_sammelcode_ueberlebt_die_migration_nicht` und
+`test_ein_kaputter_status_zerstoert_keine_gueltige_zuordnung` — der zweite
+prüft auch, dass die Korrektur protokolliert wird und nicht stillschweigend
+passiert.
 
-| Gegenprobe | Ergebnis |
-|---|---|
-| `VTI/US` (Sammelcode, vollständig) | **Exit 1**, `#2d` rot: `VTI: Sammelcode US im MIC` |
-| `identity_status='halbfertig'` | grün — die Migration bewertet neu, `VTI` landet bei den offenen Fällen |
-| `VTI/XNAS` von Hand | unangetastet, grün |
-
-Zwei neue Tests halten beide Richtungen fest:
-`test_ein_widerspruechlicher_status_wird_neu_bewertet` und die Gegenprobe
-`test_eine_gueltige_zuordnung_bleibt_unangetastet` — ohne die zweite wäre aus
-der Heilung eine Überschreibung geworden.
-
-**Geprüft:** `.venv/bin/pytest tests/ -q` → 372 passed / 29 skipped;
+**Geprüft:** `.venv/bin/pytest tests/ -q` → 374 passed / 29 skipped;
 `./_tickets/T-21-smoke.sh --run` → 9/9; `ruff check app tests` sauber.

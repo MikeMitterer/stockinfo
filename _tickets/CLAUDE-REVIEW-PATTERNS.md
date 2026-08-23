@@ -103,6 +103,15 @@ newly_resolved`, in `tests/test_identity_migration.py` weiterhin „solche
 Zeilen bleiben `open_rows`“. Außerdem beschreiben Script und Ticket das
 ersetzte Rückwärts-Oracle weiter als aktuelle Prüfung.
 
+**Beleg:** T-21 Teil 1 Runde 6, Commit `4b7a88a`: Die Korrektur bezeichnete
+jede `resolved`-Zeile mit nichtleerem Ticker und MIC als vollständige
+kanonische Identität. Der Smoke-Check schloss den verbotenen Collector-Code
+`US` korrekt aus, die neue Produktfunktion `_has_valid_identity` prüfte aber
+nur auf nichtleere Strings und konservierte `VTI/US` bei jedem Start. Die
+angekündigte Neubewertung aller anderen Zustände überschrieb außerdem eine
+vollständige manuelle Zuordnung `VTI/XNAS`, sobald nur ihr Status unbekannt
+war, mit `NULL/NULL/legacy_unresolved`.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
