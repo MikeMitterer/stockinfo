@@ -17,6 +17,7 @@ duplizieren.
 - [P-03 · Prüfwerkzeuge räumen fremde Ressourcen auf](#p-03--prüfwerkzeuge-räumen-fremde-ressourcen-mit-auf)
 - [P-04 · Negativtests prüfen nur die Fehlerbeschriftung](#p-04--negativtests-prüfen-nur-die-fehlerbeschriftung)
 - [P-05 · Ein abgebrochener Prüflauf meldet sich als bestanden](#p-05--ein-abgebrochener-prüflauf-meldet-sich-als-bestanden)
+- [P-06 · Weiterarbeiten, während eine Übergabe offen ist](#p-06--weiterarbeiten-während-eine-übergabe-offen-ist)
 
 ## P-01 · Testtiefe wird in der Übergabe überzeichnet
 
@@ -238,5 +239,41 @@ fehlenden fielen nur auf, weil die Ticketfußnote neun nannte.
 **Nachbarschaft zu P-01:** Dort wird die Testtiefe in der Übergabe
 überzeichnet. Hier überzeichnet sich das **Werkzeug** — die Übergabe gäbe
 seine Zahl gutgläubig weiter.
+
+[↑ Übersicht](#übersicht)
+
+## P-06 · Weiterarbeiten, während eine Übergabe offen ist
+
+**Erkennungsregel:** Nach `ready_for_codex` entsteht ein weiterer
+Produkt-Commit — typischerweise, weil das Warten auf die Prüfung als Leerlauf
+erscheint und der nächste Teil ohnehin ansteht. Ein eigener Branch fühlt sich
+dabei wie eine Trennung an und ist keine: Der Automationsvertrag prüft
+**`HEAD`**, nicht den Branch-Namen. Wer auf dem neuen Branch steht, hat den
+neuen Commit in `HEAD` — und damit liegt zwischen `handoff_commit` und `HEAD`
+Produktcode.
+
+Der Vertrag sagt es wörtlich: *„alle Commits danach betreffen nur `_tickets/`
+bzw. Kommunikationsdateien"*. Von Branches steht dort nichts, weil sie nichts
+zur Sache tun.
+
+**Prüffrage:** Vor jedem Commit bei offener Übergabe: `git log
+<handoff_commit>..HEAD --name-only` — steht dort etwas außerhalb von
+`_tickets/`? Dann ist der zu prüfende Stand nicht mehr eindeutig. Entweder der
+Commit wartet, oder die Übergabe wird auf den **tatsächlichen** Produktstand
+umgestellt (neuer `handoff_commit`, `review_round` erhöht, OUTBOX auf den
+neuen Umfang gebracht).
+
+**Beleg:** T-21, Runde 2 → 3, 2026-08-23: Übergeben war `6abce88` (Teil 2).
+Während die Prüfung lief, entstand `556c23d` (Teil 2b) auf dem Branch
+`t-21c-exchangedef-aufraeumen`. Codex hat vor dem Review geblockt: Ein Review
+von genau `6abce88` wäre nicht mehr eindeutig gewesen. Aufgelöst durch
+Ausweisen des tatsächlichen Stands, nicht durch Rückbau.
+
+**Die Verwandtschaft:** Dasselbe Muster wie im Guard-Log, nur andersherum.
+Dort werden **Freigaben zu eng** gelesen (die Klasse wird auf den wörtlichen
+Befehl verkürzt), hier eine **Regel zu wörtlich** — „zwischen Übergabe und
+HEAD nur Kommunikation" gelesen als Aussage über den Branch statt über die
+Commit-Linie. Beide Male entscheidet, was die Regel *bezweckt*: Der Prüfer
+soll wissen, was er prüft.
 
 [↑ Übersicht](#übersicht)
