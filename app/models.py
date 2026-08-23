@@ -54,6 +54,17 @@ class QuoteResponse(BaseModel):
     type: str | None = Field(default=None, description="stock | etf")
     currency: str | None = None
 
+    ticker: str | None = Field(
+        default=None,
+        exclude=True,
+        description="Kanonischer Ticker — noch nicht am REST-Rand (T-21, Teil 3)",
+    )
+    mic: str | None = Field(
+        default=None,
+        exclude=True,
+        description="ISO-10383-MIC des Handelsplatzes — noch nicht am REST-Rand",
+    )
+
     price: float
     quote_time: str
     volume: int | None = None

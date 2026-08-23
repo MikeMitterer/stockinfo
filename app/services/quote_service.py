@@ -232,6 +232,10 @@ class QuoteService:
         response = QuoteResponse(
             isin=isin,
             symbol=resolved.symbol,
+            # Die kanonische Identität aus der Auflösung (T-21). Sie reist bis
+            # zum Repository mit; am REST-Rand erscheint sie noch nicht.
+            ticker=resolved.ticker,
+            mic=resolved.mic,
             exchange=resolved.exchange or raw.exchange,
             name=raw.name or resolved.name,
             type=instrument_type,

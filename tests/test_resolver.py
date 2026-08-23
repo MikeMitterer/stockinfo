@@ -82,12 +82,23 @@ def test_tsx_bildet_punkt_to_symbol() -> None:
     assert figi.calls == [("CA7800871021", "XTSE", "micCode")]
 
 
-def test_us_nutzt_exchcode_und_leeres_suffix() -> None:
+def test_der_sammelcode_us_wird_gar_nicht_erst_gefragt() -> None:
+    """Seit T-21: Ohne echten MIC gibt es keine Identität — und keine Anfrage.
+
+    Früher lieferte dieser Weg `AAPL` ohne Börse. Der Wert taugte für yfinance
+    und für sonst nichts: `US` fasst NYSE, NASDAQ, Arca, American und Cboe
+    zusammen, und welcher davon gilt, sagt OpenFIGI hier nicht.
+
+    Die Anfrage entfällt deshalb ganz, statt ihr Ergebnis wegzuwerfen — sie
+    zählte gegen das Kontingent, ohne je etwas Verwertbares zu liefern. Den
+    Fall löst der Yahoo-Fallback, der den Handelsplatz benennt.
+    """
     figi = _FakeFigi("AAPL")
-    resolved = OpenFigiResolver(figi, "US").resolve_isin("US0378331005")
-    assert resolved is not None
-    assert resolved.symbol == "AAPL"  # kein Suffix
-    assert figi.calls == [("US0378331005", "US", "exchCode")]
+
+    aufgeloest = OpenFigiResolver(figi, "US").resolve_isin("US0378331005")
+
+    assert getattr(aufgeloest, "symbol", None) is None
+    assert figi.calls == []
 
 
 def test_unbekannte_boerse_faellt_auf_xetr_zurueck() -> None:
@@ -502,8 +513,8 @@ def test_yahoo_nimmt_den_ersten_treffer_wenn_die_boerse_fehlt(monkeypatch) -> No
     _mit_suche(
         monkeypatch,
         [
-            {"symbol": "AAPL", "exchDisp": "NasdaqGS", "quoteType": "EQUITY"},
-            {"symbol": "AAPL.MX", "exchDisp": "Mexico", "quoteType": "EQUITY"},
+            {"symbol": "AAPL", "exchange": "NMS", "exchDisp": "NasdaqGS", "quoteType": "EQUITY"},
+            {"symbol": "AAPL.MX", "exchange": "MEX", "exchDisp": "Mexico", "quoteType": "EQUITY"},
         ],
     )
     resolver = YFinanceResolver(default_exchange="XETR")
@@ -540,8 +551,8 @@ def test_yahoo_bevorzugt_bei_boerse_ohne_suffix_das_symbol_ohne_punkt(
     _mit_suche(
         monkeypatch,
         [
-            {"symbol": "AAPL.DE", "exchDisp": "XETRA", "quoteType": "EQUITY"},
-            {"symbol": "AAPL", "exchDisp": "NasdaqGS", "quoteType": "EQUITY"},
+            {"symbol": "AAPL.DE", "exchange": "GER", "exchDisp": "XETRA", "quoteType": "EQUITY"},
+            {"symbol": "AAPL", "exchange": "NMS", "exchDisp": "NasdaqGS", "quoteType": "EQUITY"},
         ],
     )
     resolver = YFinanceResolver(default_exchange="US")

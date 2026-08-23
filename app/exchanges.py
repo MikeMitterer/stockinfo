@@ -23,6 +23,11 @@ logger = structlog.get_logger()
 # unterscheidet.
 _MIC_PATTERN = re.compile(r"[A-Z0-9]{4}")
 
+# Ein kanonischer Ticker: Großbuchstaben und Ziffern, sonst nichts.
+#
+# Ebenfalls ohne Anker und mit `fullmatch` — aus demselben Grund wie oben.
+_TICKER_PATTERN = re.compile(r"[A-Z0-9]+")
+
 
 @dataclass(frozen=True)
 class ExchangeDef:
@@ -162,6 +167,73 @@ def is_real_mic(mic: str | None) -> bool:
     return definition is None or definition.figi_id_type == "micCode"
 
 
+# Der Wert der Spalte `identity_status`. Er steht hier und nicht in `db.py`,
+# weil ihn zwei Wege setzen — die Migration des Bestands und das Anlegen neuer
+# Papiere — und beide dieselbe Regel brauchen.
+IDENTITY_RESOLVED = "resolved"
+IDENTITY_UNRESOLVED = "legacy_unresolved"
+
+
+def canonical_identity(
+    ticker: str | None, mic: str | None
+) -> tuple[str | None, str | None, str]:
+    """Die eine Stelle, die eine **neue** Identität für gültig erklärt.
+
+    Vollständig ist sie nur zu zweit: kanonischer Ticker **und** echter MIC.
+    Eine halbe Zuordnung wird nicht gespeichert — ein Ticker ohne Handelsplatz
+    ist bei jeder Quelle mehrdeutig, und ein Handelsplatz ohne Ticker sagt gar
+    nichts. Beides zusammen leer und als offen beschriftet ist der ehrlichere
+    Zustand: Er taucht in der Liste offener Zuordnungen auf, statt eine
+    Zuordnung vorzutäuschen.
+
+    **Strenger als das, was der Bestand tragen darf.** `_identity_is_complete`
+    in `app/db.py` beurteilt *gespeicherte* Zeilen milder — eine von Hand
+    gesetzte Zuordnung wie `RDS-A`/`XLON` bleibt dort stehen, statt beim
+    nächsten Start verworfen zu werden. Streng beim Erzeugen, nachsichtig beim
+    Annehmen: Sonst löschte ein Regel-Nachziehen menschliche Arbeit.
+
+    Args:
+        ticker: Vorgeschlagener Ticker, oder ``None``.
+        mic: Vorgeschlagener MIC, oder ``None``.
+
+    Returns:
+        `(ticker, mic, status)` — bei unvollständiger Zuordnung
+        ``(None, None, IDENTITY_UNRESOLVED)``.
+    """
+    if is_canonical_ticker(ticker) and is_real_mic(mic):
+        return ticker, mic, IDENTITY_RESOLVED
+    return None, None, IDENTITY_UNRESOLVED
+
+
+def is_canonical_ticker(ticker: str | None) -> bool:
+    """Taugt dieser Ticker als kanonische Hälfte der Identität?
+
+    Erlaubt sind Großbuchstaben und Ziffern — `EUNL`, `AAPL`, `7203` (Tokio
+    notiert numerisch). Alles andere ist **anbieterspezifische Zeichensetzung**
+    und wird nicht übernommen:
+
+    * Yahoo schreibt Anteilsklassen mit Bindestrich (`BRK-B`),
+    * OpenFIGI mit Schrägstrich (`BRK/B`),
+    * an der NYSE selbst steht ein Punkt (`BRK.B`).
+
+    Drei Schreibweisen desselben Papiers — welche die richtige ist, entscheidet
+    die Börse, nicht der Anbieter, bei dem der Wert gerade herkam. Eine davon
+    zur kanonischen zu erklären hieße raten, und geraten wird hier nichts: Der
+    Fall bleibt offen und sichtbar, bis ihn jemand von Hand zuordnet.
+
+    Der Punkt ist zusätzlich **doppeldeutig**: In `EUNL.DE` trennt er die
+    Börse ab, in `BRK.B` die Anteilsklasse. Ein Ticker mit Punkt würde die
+    Zerlegung `f"{ticker}{suffix}"` unumkehrbar machen.
+
+    Args:
+        ticker: Der zu prüfende Ticker, oder ``None``.
+
+    Returns:
+        ``True`` wenn der Wert als kanonischer Ticker taugt.
+    """
+    return bool(ticker) and bool(_TICKER_PATTERN.fullmatch(ticker))
+
+
 def split_symbol(symbol: str) -> tuple[str | None, str | None]:
     """Rechnet ein Symbol auf `(ticker, mic)` zurück — oder gibt auf.
 
@@ -179,7 +251,12 @@ def split_symbol(symbol: str) -> tuple[str | None, str | None]:
       erwartet.
     * **Fremde Schreibweise** (`BRK-B` aus der Yahoo-Suche). Der Bindestrich
       ist anbieterspezifisch und bedeutet bei anderen Tickern etwas anderes;
-      `BRK.B` daraus zu machen wäre geraten.
+      `BRK.B` daraus zu machen wäre geraten. Das gilt auch, wenn die **Börse**
+      feststeht: `RDS-A.L` hat ein bekanntes Suffix, trägt aber weiterhin
+      Yahoos Zeichensetzung im Ticker. Geprüft wird deshalb mit
+      `is_canonical_ticker` — derselben Regel, an der sich die Erzeugung neuer
+      Papiere misst. Sonst gälte für gewachsene Zeilen eine andere Wahrheit
+      als für neue.
 
     Args:
         symbol: Das gespeicherte Listing-Symbol, z.B. ``'EUNL.DE'``.
@@ -196,7 +273,7 @@ def split_symbol(symbol: str) -> tuple[str | None, str | None]:
         if definition.suffix == suffix and definition.figi_id_type == "micCode":
             # `figi_id_type` unterscheidet echte MICs vom Sammelcode `US`:
             # Nur die einzelnen Börsen werden über `micCode` aufgelöst.
-            return (ticker, mic) if ticker else (None, None)
+            return (ticker, mic) if is_canonical_ticker(ticker) else (None, None)
     return None, None
 
 

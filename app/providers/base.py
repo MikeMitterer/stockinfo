@@ -26,6 +26,14 @@ class ResolvedInstrument:
     type: str | None = None  # "stock" | "etf"
     currency: str | None = None
 
+    # Die kanonische Identität (T-21). `symbol` bleibt daneben stehen: Es ist
+    # der **Anbieter-Alias**, mit dem yfinance den Kurs holt und an dem die
+    # Profil-Links hängen — `ticker` + `mic` sind das, was jede andere Quelle
+    # versteht. Beide sind `None`, solange die Zuordnung nicht eindeutig ist;
+    # geraten wird nichts.
+    ticker: str | None = None
+    mic: str | None = None
+
 
 @dataclass
 class RawQuote:

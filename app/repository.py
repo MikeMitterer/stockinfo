@@ -6,11 +6,17 @@ Hintergrund-Scheduler teilen sich keine Connection).
 """
 
 import sqlite3
+import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
 
+import structlog
+
 from app.db import get_connection
+from app.exchanges import IDENTITY_RESOLVED, canonical_identity
 from app.models import OVERRIDE_FIELDS, QuoteResponse
+
+logger = structlog.get_logger()
 
 # Instrument-Metadatenfelder (ohne id/isin/symbol/first_seen).
 _META_FIELDS = (
@@ -402,6 +408,8 @@ class QuoteRepository:
                 if existing_id is None:
                     raise
 
+        meta = {**meta, **self._identity_update(connection, existing_id, response)}
+
         assignments = ", ".join(f"{field} = ?" for field in meta)
         values = list(meta.values())
         # Der Zeitstempel wandert nur mit, wenn die Antwort die ETF-Felder
@@ -417,6 +425,68 @@ class QuoteRepository:
             [*values, existing_id],
         )
         return existing_id
+
+    @staticmethod
+    def _identity_update(
+        connection: sqlite3.Connection, instrument_id: int, response: QuoteResponse
+    ) -> dict:
+        """Was diese Antwort an der gespeicherten Identität ändern darf.
+
+        Die Regel hat **eine Richtung**: Eine vollständige Zuordnung darf eine
+        offene oder überholte ersetzen, eine leere niemals eine bestehende.
+
+        * **Nachtragen.** Die Migration lässt `AAPL` offen — den Handelsplatz
+          kann sie offline nicht kennen. Die Auflösung kennt ihn (`NMS` →
+          `XNAS`), und hier wird er eingetragen. Ohne diesen Weg bliebe jede
+          einmal offene Zeile es für immer.
+        * **Mitwandern.** Stellt jemand die bevorzugte Börse um, löst dieselbe
+          ISIN auf ein anderes Listing auf. Bliebe die Identität stehen, zeigte
+          `symbol` auf Mailand und `mic` auf Xetra — dieselbe Zeile, zwei
+          Handelsplätze.
+        * **Nicht leeren.** Weiß eine Antwort nichts, bleibt der gespeicherte
+          Stand. Eine bestehende Zuordnung zu überschreiben, weil gerade
+          niemand nachgesehen hat, ist derselbe Datenverlust, den
+          `_writable_fields` bei den ETF-Feldern verhindert.
+
+        Jede Änderung an einer schon vollständigen Zuordnung wird
+        protokolliert: Sie ist selten und für den, der sie bemerkt, erklärungs-
+        bedürftig.
+
+        **Offen für Teil 3:** Eine von Hand gesetzte Zuordnung ist hier noch
+        nicht von einer maschinellen zu unterscheiden — beide tragen
+        `resolved`. Solange das so ist, kann die Auflösung eine manuelle
+        Korrektur überschreiben. Teil 3 braucht dafür einen eigenen Status,
+        den der automatische Weg nicht anfasst.
+
+        Args:
+            connection: Offene Verbindung innerhalb der Transaktion.
+            instrument_id: Die Zeile, die aktualisiert wird.
+            response: Die zu speichernde Antwort.
+
+        Returns:
+            Die zu schreibenden Identitätsfelder — leer, wenn nichts zu tun ist.
+        """
+        ticker, mic, status = canonical_identity(response.ticker, response.mic)
+        if status != IDENTITY_RESOLVED:
+            return {}
+
+        row = connection.execute(
+            "SELECT ticker, mic FROM instruments WHERE id = ?", (instrument_id,)
+        ).fetchone()
+        if row and (row["ticker"], row["mic"]) == (ticker, mic):
+            return {}
+
+        if row and row["ticker"] and row["mic"]:
+            logger.info(
+                "identity_changed",
+                instrument_id=instrument_id,
+                symbol=response.symbol,
+                previous_ticker=row["ticker"],
+                previous_mic=row["mic"],
+                ticker=ticker,
+                mic=mic,
+            )
+        return {"ticker": ticker, "mic": mic, "identity_status": status}
 
     @staticmethod
     def _writable_fields(response: QuoteResponse) -> tuple[str, ...]:
@@ -453,8 +523,12 @@ class QuoteRepository:
         Platzhalter als Werte — SQLite bricht mit `Incorrect number of
         bindings supplied` ab, mitten im ersten Anlegen eines Papiers.
         """
-        columns = "isin, symbol, first_seen, meta_fetched_at, " + ", ".join(meta)
-        placeholders = ", ".join(["?"] * (4 + len(meta)))
+        ticker, mic, status = canonical_identity(response.ticker, response.mic)
+        columns = (
+            "isin, symbol, first_seen, meta_fetched_at, "
+            "ticker, mic, listing_id, identity_status, " + ", ".join(meta)
+        )
+        placeholders = ", ".join(["?"] * (8 + len(meta)))
         values = [
             response.isin,
             response.symbol,
@@ -462,6 +536,15 @@ class QuoteRepository:
             # Kein Zeitstempel ohne belastbare Metadaten — `None` heißt „nie
             # geholt" und macht den Stand beim nächsten Abruf sofort fällig.
             response.fetched_at if response.metadata_complete else None,
+            ticker,
+            mic,
+            # Die dauerhafte Kennung entsteht **hier**, nicht erst beim
+            # nächsten Start. Sie allein in der Migration zu vergeben ließ jede
+            # zur Laufzeit angelegte Zeile ohne — und weil SQLite `NULL` im
+            # Eindeutigkeits-Index als eigenen Wert zählt, fiel das nicht
+            # einmal auf.
+            str(uuid.uuid4()),
+            status,
             *meta.values(),
         ]
         cursor = connection.execute(

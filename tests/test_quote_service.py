@@ -619,3 +619,29 @@ def test_ohne_waehrung_kommt_die_zustaendigkeitsfrage_gar_nicht_auf() -> None:
     # Ohne Währung greift schon die Core-Prüfung — der Vertrag verlangt sie.
     with pytest.raises(QuoteUnavailableError):
         service.get_quote_for_known("ARKK", instrument_type="etf")
+
+
+def test_die_identitaet_der_aufloesung_reist_bis_zur_speicherung_mit() -> None:
+    """T-21, Teil 2: `ticker` und `mic` dürfen unterwegs nicht verlorengehen.
+
+    Der Resolver ermittelt sie, das Repository schreibt sie — dazwischen liegt
+    die Antwort des Service. Ohne diese Zeile fiele die Identität genau hier
+    heraus, und beide Enden sähen trotzdem richtig aus.
+
+    Am REST-Rand erscheinen die Felder noch nicht (`exclude=True`); das ist
+    Teil 3 samt Vertragsversion.
+    """
+    service = QuoteService(
+        FakeQuoteProvider(_etf_quote()),
+        FakeEtfProvider(None, responsible=False),
+        FakeResolver(
+            ResolvedInstrument(
+                symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf",
+                ticker="VGWL", mic="XETR",
+            )
+        ),
+    )
+
+    result = service.get_quote_by_isin("IE00B3RBWM25")
+
+    assert (result.ticker, result.mic) == ("VGWL", "XETR")

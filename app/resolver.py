@@ -17,6 +17,9 @@ from app.exchanges import (
     DEFAULT_EXCHANGE,
     EXCHANGES,
     home_exchange,
+    is_canonical_ticker,
+    is_real_mic,
+    split_symbol,
 )
 
 from app.providers.base import (
@@ -29,6 +32,74 @@ from app.providers.base import (
 from app.providers.openfigi_provider import OpenFigiClient
 
 logger = structlog.get_logger()
+
+
+# Yahoos Börsencodes → echter MIC. **Bewusst kurz.**
+#
+# Gebraucht wird die Tabelle nur dort, wo die eigene Börsentabelle nichts
+# hergibt: bei **suffixlosen** Symbolen. Für `EUNL.DE` liefert `split_symbol`
+# den MIC aus der eigenen Konvention — Yahoos `GER` steht hier deshalb nicht,
+# und jede Zeile, die dort schon beantwortet wird, gehört auch nicht her.
+#
+# Suffixlos notiert bei Yahoo genau ein Markt: die USA. Die Börsentabelle führt
+# ihn als Sammelcode `US` zusammen, weil OpenFIGI so sucht — welcher der sechs
+# Handelsplätze gemeint ist, weiß erst der Treffer.
+#
+# Alle sechs Codes sind am 2026-08-23 über `yf.Search` **gemessen**, nicht aus
+# der Erinnerung notiert (`AAPL`/`MSFT` → NMS, `QQQ` → NGM, `NAKDX` → NAS,
+# `IBM`/`GME`/`BRK-B` → NYQ, `SPY`/`VTI` → PCX, `NAK`/`IMO` → ASE, `PBUS` →
+# BTS). Die drei NASDAQ-Segmente (Global Select, Global Market, Capital
+# Market) bekommen denselben MIC `XNAS`: Das ist der Betreiber-MIC, und die
+# Segment-MICs (`XNGS`, `XNMS`, `XNCM`) sagen über den Handelsplatz nichts,
+# was eine Kursquelle bräuchte.
+YAHOO_EXCHANGE_MICS: dict[str, str] = {
+    "NYQ": "XNYS",  # NYSE
+    "NMS": "XNAS",  # NASDAQ Global Select
+    "NGM": "XNAS",  # NASDAQ Global Market
+    "NAS": "XNAS",  # NASDAQ Capital Market
+    "PCX": "ARCX",  # NYSE Arca
+    "ASE": "XASE",  # NYSE American
+    "BTS": "BATS",  # Cboe BZX
+}
+
+
+def _identitaet(symbol: str, boersencode: str | None) -> tuple[str | None, str | None]:
+    """Bestimmt `(ticker, mic)` zu einem Yahoo-Treffer — oder gibt auf.
+
+    Zwei Wege, in dieser Reihenfolge:
+
+    1. **Das Suffix** über die eigene Börsentabelle (`EUNL.DE` → `XETR`). Das
+       ist StockInfos eigene Konvention und braucht Yahoo nicht.
+    2. **Yahoos Börsencode** für suffixlose Symbole (`AAPL` bei `NMS` →
+       `XNAS`). Nur hier ist die Zuordnungstabelle nötig.
+
+    Der Ticker muss in beiden Fällen kanonisch sein. `BRK-B` scheitert daran,
+    obwohl sein MIC feststeht — die Schreibweise ist Yahoos, nicht die der
+    Börse.
+
+    Args:
+        symbol: Das Symbol aus der Yahoo-Suche.
+        boersencode: Yahoos Feld ``exchange``, falls vorhanden.
+
+    Returns:
+        `(ticker, mic)` bei eindeutiger Zuordnung, sonst ``(None, None)``.
+    """
+    ticker, mic = split_symbol(symbol)
+    if ticker and mic:
+        return ticker, mic
+
+    if "." in symbol:
+        # Ein Suffix, das die Tabelle nicht kennt (`GOLD.SG`). Yahoos Code
+        # darauf anzuwenden wäre falsch: Der Ticker vor dem Punkt gehört zu
+        # einer Börse, die StockInfo nicht führt — und `.SG` an einen MIC zu
+        # binden, ohne die Börse in die eigene Tabelle aufzunehmen, hinge in
+        # der Luft (das Symbol liesse sich danach nicht mehr zusammensetzen).
+        return None, None
+
+    mic = YAHOO_EXCHANGE_MICS.get((boersencode or "").upper())
+    if mic and is_canonical_ticker(symbol):
+        return symbol, mic
+    return None, None
 
 
 def _gattung(quote: dict) -> str:
@@ -128,14 +199,41 @@ class OpenFigiResolver:
 
     def _try_exchange(self, isin: str, mic: str) -> ResolvedInstrument | None:
         """Fragt OpenFIGI nach dem Listing an genau einer Börse."""
+        if not is_real_mic(mic):
+            # Der Sammelcode `US` fasst sechs Handelsplätze zusammen. OpenFIGI
+            # beantwortet darauf die Frage „welcher Ticker", nicht „welche
+            # Börse" — und ohne echten MIC ist die Identität unvollständig.
+            #
+            # Deshalb wird hier **gar nicht erst gefragt**: Die Antwort wäre
+            # ohnehin nicht verwendbar, und jede Anfrage zählt gegen OpenFIGIs
+            # Kontingent. Auflösen kann den Fall der Yahoo-Fallback, der den
+            # Handelsplatz benennt (`NMS` → `XNAS`).
+            logger.info("resolve_ohne_identitaet", isin=isin, quelle="openfigi", mic=mic)
+            return None
+
         exch = EXCHANGES[mic]
         ticker = self._client.map_isin(
             isin, exch.figi_value or mic, id_type=exch.figi_id_type
         )
         if not ticker:
             return None
+        if not is_canonical_ticker(ticker):
+            # OpenFIGI schreibt Anteilsklassen mit Schrägstrich (`BRK/B`) —
+            # das ist die Schreibweise des Anbieters, nicht die der Börse.
+            logger.info(
+                "resolve_ohne_identitaet",
+                isin=isin,
+                quelle="openfigi",
+                ticker=ticker,
+                mic=mic,
+            )
+            return None
         return ResolvedInstrument(
-            symbol=f"{ticker}{exch.suffix}", isin=isin, exchange=exch.name
+            symbol=f"{ticker}{exch.suffix}",
+            isin=isin,
+            exchange=exch.name,
+            ticker=ticker,
+            mic=mic,
         )
 
 
@@ -182,11 +280,38 @@ class YFinanceResolver:
             logger.warning("resolve_isin_no_symbol", isin=isin)
             return NotFound()
         symbol = top["symbol"]
+        boersencode = top.get("exchange")
+        ticker, mic = _identitaet(symbol, boersencode)
+        if not ticker or not mic:
+            # **Ablehnen statt halb anlegen** (Ticket T-21, entschieden mit
+            # Codex am 2026-08-20). Die Alternative — übernehmen und als „nicht
+            # zerlegbar" markieren — macht die gerade eingeführte kanonische
+            # Identität wieder optional und belastet jedes spätere Plugin mit
+            # einem Yahoo-Sonderfall.
+            #
+            # `Unavailable`, nicht `NotFound`: Das Papier **gibt es**, nur ist
+            # seine Zuordnung offen. Der Unterschied ist für den Aufrufer der
+            # zwischen „falsche ISIN" und „hier muss jemand nachhelfen".
+            logger.warning(
+                "resolve_isin_uneindeutig",
+                isin=isin,
+                symbol=symbol,
+                boersencode=boersencode,
+            )
+            return Unavailable(
+                error=(
+                    f"yahoo: Treffer '{symbol}' ist nicht eindeutig zuzuordnen "
+                    f"(Börsencode {boersencode or '—'}); "
+                    "Ticker und MIC müssen von Hand gesetzt werden"
+                )
+            )
 
         return ResolvedInstrument(
             symbol=symbol,
             isin=isin,
-            exchange=top.get("exchDisp") or top.get("exchange"),
+            exchange=top.get("exchDisp") or boersencode,
+            ticker=ticker,
+            mic=mic,
             name=top.get("shortname") or top.get("longname"),
             type=QUOTE_TYPE_MAP.get(_gattung(top)),
             currency=None,  # Währung kommt aus dem Live-Quote, nicht aus der Suche
