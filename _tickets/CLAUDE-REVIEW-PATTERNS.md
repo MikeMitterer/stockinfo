@@ -162,4 +162,12 @@ erzeugen; `#2` meldete wörtlich `VTI/US→VTI` und das Script bestand mit 8/8.
 Auf einem bereits migrierten Bestand bestand derselbe Check außerdem mit „0
 neu zerlegt“ und prüfte damit keine einzige Zuordnung.
 
+**Beleg:** T-21 Teil 1 Runde 5, Commit `92ee6a2`: Der ergänzte Check `#2d`
+zählte alle Zeilen mit `identity_status = resolved`, prüfte aber nur, ob ihr
+`mic` in der Menge bekannter Sammelcodes liegt. Eine vorbestehende Zeile
+`VTI` mit Status `resolved`, aber `ticker=NULL` und `mic=NULL`, wurde als
+fünfte „aufgelöste Zeile“ gezählt; das Script bestand mit 9/9. Die Migration
+selbst übersprang diese unvollständige Identität anschließend dauerhaft, weil
+sie jeden gesetzten Status als bereits bearbeitet behandelt.
+
 [↑ Übersicht](#übersicht)
