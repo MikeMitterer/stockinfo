@@ -115,7 +115,7 @@ def test_fremde_schreibweise_wird_nicht_geraten(migrated: str) -> None:
 
     Die Zeichensetzung ist anbieterspezifisch und bedeutet bei anderen Tickern
     etwas anderes. Was der Yahoo-Fallback geliefert hat, folgt der eigenen
-    Konvention nicht zwingend — solche Zeilen bleiben open_rows.
+    Konvention nicht zwingend — solche Zeilen bleiben offen.
     """
     row = _instruments(migrated)["BRK-B"]
 
@@ -319,7 +319,7 @@ def test_zwei_offene_zeilen_mit_gleichem_symbol_bleiben_getrennt(tmp_path) -> No
     aufgelöste `(ticker, mic)`. Alles andere bleibt stehen — der Index
     verlangt es auch nicht mehr, seit die Eindeutigkeit dort liegt.
     """
-    path = str(tmp_path / "open_rows.db")
+    path = str(tmp_path / "unresolved.db")
     _legacy_database(path, [("EUNL.DE", "IE00B4L5Y983")])
     init_db(path)
 

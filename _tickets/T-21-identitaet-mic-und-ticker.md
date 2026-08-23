@@ -27,7 +27,7 @@ muss, ist kein Plugin).
 >
 > | | Umfang | Zeilen | Commit |
 > |---|---|---|---|
-> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 4 |
+> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 5 |
 > | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung, `ExchangeDef` aufräumen | `#5` | offen |
 > | **Teil 3** | API und Dashboard, offene Zuordnungen sichtbar und von Hand setzbar, Vertragsversion | `#2b`, `#2c`, `#3`, `#4` | offen |
 >
@@ -91,21 +91,21 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     schreibt. Eine abfragbare *Liste* offener Zuordnungen ist Teil 3 — dort
     steht auch der Grund je Fall.
 [^d]: Der Index auf `symbol` ist weg, die Spalte nicht: `symbol TEXT NOT NULL`
-    steht unverändert im Schema, und die 366 Tests der Suite fahren die
+    steht unverändert im Schema, und die 370 Tests der Suite fahren die
     bestehenden Symbol-Endpunkte weiter durch.
 [^e]: `test_die_eindeutigkeit_liegt_auf_ticker_und_mic` prüft beides:
     `idx_instruments_symbol` ist verschwunden, `idx_instruments_ticker_mic`
     ist eindeutig. Zwei weitere Tests halten die Folgen fest — mehrere offene
     Zeilen dürfen nebeneinander stehen (SQLite zählt `NULL` als eigenen Wert),
     ein echter Konflikt fällt weiterhin auf.
-[^f]: `.venv/bin/pytest tests/ -q` → `369 passed, 29 skipped`;
+[^f]: `.venv/bin/pytest tests/ -q` → `370 passed, 29 skipped`;
     `make test-plugin-api` → 36; Ruff sauber.
 [^g]: `./_tickets/T-21-smoke.sh --run` gegen eine **Sicherung** von
     `data/stockinfo.db` (sechs gewachsene Papiere, 48 Kurspunkte) — das
     Original wird nur gelesen. Die Sicherung entsteht über die
     SQLite-Backup-API, nicht per `cp`: Die App läuft im WAL-Modus, und eine
     Dateikopie ließe committete Einträge aus — der Lauf liefe dann an genau
-    den neuesten Fällen vorbei (Codex, Runde 2). Acht Checks grün: 6 Instrumente vorher und
+    den neuesten Fällen vorbei (Codex, Runde 2). Neun Checks grün: 6 Instrumente vorher und
     nachher, 48 Kurspunkte vorher und nachher, sechs eindeutige `listing_id`,
     vier zerlegt (`VGWL.DE`, `EUNL.DE`, `APC.DE`, `BRYN.DE` → `XETR`), zwei
     offen (`GOLD.SG` — das Suffix `.SG` steht nicht in der Tabelle — und
@@ -113,9 +113,12 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     migriert **zweimal**; genau dort hat die Alt-Bereinigung in Runde 1
     Listings gelöscht.
 
-    Die Prüfungen rechnen nach statt zu behaupten: Jede aufgelöste Zeile muss
-    wieder auf ihre `(ticker, mic)` zerfallen, jede offene sich tatsächlich
-    nicht zerlegen lassen. Ein leerer Bestand lässt den Lauf **fehlschlagen** —
+    Die Prüfungen rechnen nach statt zu behaupten, und zwar in der
+    **Gegenrichtung**: Was dieser Lauf zugeordnet hat, muss sich aus
+    `(ticker, mic)` wieder zu `symbol` zusammensetzen; offene Zeilen tragen
+    weder Ticker noch MIC; bereits bestehende Zuordnungen bleiben unverändert
+    (`#2c`) und dürfen keinen Sammelcode tragen (`#2d`). Ein Lauf, der nichts
+    zugeordnet hat, gilt als **nicht geprüft**. Ein leerer Bestand lässt den Lauf **fehlschlagen** —
     vorher hätte er dort grün gemeldet, ohne einen einzigen Fall geprüft zu
     haben (Codex, Runde 2). Gegenproben: leere Datenbank → Exit 1; ein
     committeter Eintrag im WAL → wird mitgesichert und mitgezählt (7 statt 6).

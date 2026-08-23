@@ -102,10 +102,15 @@ report() {
 
 # Sichert die Datenbank und führt die Migration auf der Sicherung aus.
 #
-# Die Prüfungen rechnen die Erwartung **selbst nach**, statt sie zu behaupten:
-# Jede aufgelöste Zeile muss wieder auf ihre `(ticker, mic)` zerfallen, jede
-# offene muss sich tatsächlich nicht zerlegen lassen. Damit hängt der Lauf
-# nicht an einem bestimmten Bestand — und kann auch nicht leer bestehen.
+# Die Prüfungen rechnen die Erwartung **selbst nach**, statt sie zu behaupten,
+# und zwar in der **Gegenrichtung** zur Migration: Diese zerlegt `symbol` in
+# `(ticker, mic)`, die Prüfung setzt es daraus wieder zusammen. Geprüft wird
+# nur, was dieser Lauf zugeordnet hat; bereits bestehende — etwa von Hand
+# gesetzte — Zuordnungen werden nicht nachvalidiert, sondern nur darauf, dass
+# sie unverändert blieben und keinen Sammelcode tragen.
+#
+# Ein Lauf, der nichts zugeordnet hat, gilt als **nicht geprüft**, nicht als
+# bestanden.
 #
 # Ausgabe je Check: `KENNUNG|True|False|Text`.
 runMigration() {
@@ -212,15 +217,35 @@ check(
     f"listing_id: {len(set(listing_ids))} eindeutige für {len(after)} Zeilen",
 )
 
-# Vorwärts zusammensetzen statt rückwärts zerlegen: Die Migration rechnet
-# `symbol` → `(ticker, mic)`, hier wird `(ticker, mic)` → `symbol` gerechnet.
-# Ein Fehler in der Zerlegung — etwa ein Suffix am falschen MIC — fällt so auf;
-# mit derselben Funktion zu prüfen hieße, sich selbst recht zu geben.
+# Sammelcodes sind keine MICs. `US` steht in der Börsentabelle als
+# OpenFIGI-Suchcode für NYSE und NASDAQ; im kanonischen Feld darf er nie
+# auftauchen. Erkennbar ist er daran, dass er über `exchCode` aufgelöst wird.
+COLLECTOR_CODES = {
+    mic for mic, definition in EXCHANGES.items()
+    if definition.figi_id_type != "micCode"
+}
+
+
 def composed(row: dict) -> str | None:
+    """Setzt `symbol` aus `(ticker, mic)` zusammen — die Gegenrichtung.
+
+    ``None`` für einen MIC, den die eigene Tabelle nicht kennt: Ein von Hand
+    zugeordnetes `XNAS` steht dort nicht, und die Zusammensetzung ist dann
+    keine Aussage. Geprüft wird solch eine Zeile nur auf den Sammelcode.
+    """
     definition = EXCHANGES.get(row["mic"] or "")
     return f"{row['ticker']}{definition.suffix}" if definition else None
 
 
+# Zwei getrennte Fragen, beide an **allen** aufgelösten Zeilen:
+#   1. Steht dort ein Sammelcode? Das wäre die zentrale Regression des Tickets.
+#   2. Setzt sich das Symbol aus der Identität wieder zusammen?
+resolved_rows = [row for row in after.values() if row["identity_status"] == "resolved"]
+collector_in_mic = [
+    f"{row['symbol']}→{row['mic']}"
+    for row in resolved_rows
+    if row["mic"] in COLLECTOR_CODES
+]
 wrongly_resolved = [
     f"{row['symbol']}≠{composed(row)}"
     for row in newly_resolved
@@ -233,12 +258,26 @@ changed = [
     if (old["ticker"], old["mic"]) != (new["ticker"], new["mic"])
 ]
 
+# Ein Lauf, der nichts zugeordnet hat, hat die Migration nicht geprüft. Das
+# passiert, wenn die Quelle schon migriert war — dann ist die Antwort „nicht
+# geprüft", nicht „bestanden".
 check(
     "#2 ",
-    not wrongly_resolved,
+    bool(newly_resolved) and not wrongly_resolved,
     f"{len(newly_resolved)} neu zerlegt, vorwärts gegengerechnet: "
-    + (", ".join(f"{r['ticker']}/{r['mic']}→{r['symbol']}" for r in newly_resolved) or "keine")
+    + (
+        ", ".join(
+            f"{row['ticker']}/{row['mic']}→{row['symbol']}" for row in newly_resolved
+        )
+        or "keine — der Bestand war bereits migriert, die Zerlegung ist ungeprüft"
+    )
     + (f" — falsch: {wrongly_resolved}" if wrongly_resolved else ""),
+)
+check(
+    "#2d",
+    not collector_in_mic,
+    f"{len(resolved_rows)} aufgelöste Zeilen, kein Sammelcode im MIC"
+    + (f" — verboten: {collector_in_mic}" if collector_in_mic else ""),
 )
 check(
     "#2b",
