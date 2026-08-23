@@ -80,7 +80,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 3 | `GET /instruments` | `symbol` weiterhin vorhanden und unverändert (Profil-Links hängen daran) | ✅ [^d] | |
 | 3b | Datenbank-Schema | Eindeutigkeit liegt auf `(ticker, mic)`; `symbol` ist **nicht mehr** global unique | ✅ [^e] | |
 | 4 | Dashboard, Assets-Tabelle | unverändert; Yahoo- und extraETF-Links funktionieren | | |
-| 5 | neues Papier aufnehmen | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | ✅ [^h] | |
+| 5 | neues Papier aufnehmen — **auf jedem Weg** | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | ✅ [^h] | |
 | 6 | `make test` | Backend, Plugin-API und Dashboard grün | ✅ [^f] | |
 
 [^a]: `tests/test_identity_migration.py`, **zwanzig** Tests gegen eine
@@ -130,6 +130,34 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     Yahoos Bindestrich zum Punkt raten (1), eine leere Identität die
     gespeicherte überschreiben lassen (1).
 
+    **Runde 3 hat gezeigt, dass dieses ✅ zu früh kam** (Codex): Geprüft war
+    der ISIN-Weg. StockInfo hat aber drei Aufnahmewege, und zwei gingen an der
+    Identitätsbildung vorbei — wer ein unbekanntes `VGWL.DE` über
+    `GET /quote?symbol=` aufnahm, bekam `ticker=NULL, mic=NULL,
+    legacy_unresolved`, obwohl das Symbol eindeutig zerlegbar ist.
+
+    Unsichtbar blieb das, weil meine Tests an beiden Enden ansetzten: Die
+    Speicherung bekam die fertige Identität **von Hand** übergeben, der
+    Service-Test prüfte nur den ISIN-Pfad. Beide Enden sahen richtig aus, die
+    Strecke dazwischen war nie gelaufen.
+
+    `tests/test_identity_intake_paths.py` schließt das: die **echte Kette** —
+    Router → Cache-Dienst → Quote-Service → Repository auf echter SQLite —,
+    ersetzt sind nur die Außengrenzen, an denen sonst das Netz hinge. Zwei
+    Mutanten belegen, dass die Tests beißen.
+
+    Der dritte Weg (`get_quote_for_known`, über den der Scheduler läuft) hatte
+    dasselbe Loch und trägt jetzt offene Zeilen **nach**. Damit ist die zweite
+    Einschränkung unten erledigt, statt eine Fußnote zu bleiben.
+
+    **Ein Unterschied bleibt, und zwar mit Absicht:** Der Symbol-Weg lehnt ein
+    unzerlegbares Symbol **nicht** ab. Auf dem ISIN-Weg wählt StockInfo eine
+    Notierung aus mehreren aus — eine halb geratene Identität wäre dort eine
+    Entscheidung, die niemand getroffen hat. Auf dem Symbol-Weg nennt der
+    Aufrufer das Listing selbst; ihm die Auskunft zu verweigern, weil die
+    Börsentabelle für suffixlose Symbole nur einen Sammelcode führt, nähme ihm
+    eine Abfrage weg, die es heute gibt. Die Zeile entsteht sichtbar offen.
+
     Was dabei **offen geblieben** ist und nicht zu `#5` gehört:
 
     * `XNAS`, `XNYS`, `ARCX`, `XASE`, `BATS` stehen nicht in `EXCHANGES`. Aus
@@ -137,10 +165,11 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
       die Rückrichtung MIC → Suffix fehlt für die US-Plätze. Heute stört das
       nichts (das Symbol ist gespeichert), aber T-23 braucht sie: Dort setzt
       jede Quelle ihr Format selbst zusammen.
-    * Der Nachtrag einer offenen Zeile passiert nur, wenn jemand das Papier
-      **über seine ISIN** abruft. Der Scheduler-Refresh löst nicht auf und
-      trägt deshalb nichts nach. `AAPL` aus dem Altbestand bleibt offen, bis
-      es angefragt oder von Hand zugeordnet wird (Teil 3).
+    * ~~Der Nachtrag einer offenen Zeile passiert nur über die ISIN.~~
+      **Erledigt in Runde 3:** Auch der Weg für bekannte Papiere trägt nach,
+      also auch der Scheduler-Refresh. Offen bleibt nur, was sich aus dem
+      Symbol nicht zerlegen lässt (`GOLD.SG`, `VTI`) — dafür ist die manuelle
+      Zuordnung aus Teil 3 da.
     * Eine **von Hand** gesetzte Zuordnung ist von einer maschinellen nicht zu
       unterscheiden — beide tragen `resolved`. Solange das so ist, kann eine
       spätere Auflösung eine manuelle Korrektur überschreiben. Teil 3 braucht
