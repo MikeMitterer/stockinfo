@@ -95,6 +95,14 @@ bleiben. Die mechanische Ersetzung hinterließ jedoch Sätze wie „bleibt
 `open_rows` und sichtbar“ und „wurde `before` zusammengeführt“ sowie weiterhin
 nichtsprechende Einbuchstaben-Bezeichner im berührten Test- und Smoke-Code.
 
+**Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21 Teil 1
+Runde 4, Commit `d6c4c19`: Die Übergabe erklärte die verbliebenen Kurznamen
+`r`, `s`, `z` und `e` für sprechend umbenannt und die beschädigte deutsche
+Prosa für geheilt. Im geänderten Smoke-Code blieb dennoch `for r in
+newly_resolved`, in `tests/test_identity_migration.py` weiterhin „solche
+Zeilen bleiben `open_rows`“. Außerdem beschreiben Script und Ticket das
+ersetzte Rückwärts-Oracle weiter als aktuelle Prüfung.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
@@ -145,5 +153,13 @@ Erwartungswerts. Damit bestätigte die Produktionsfunktion sich selbst und
 verwarf zugleich einen laut Ticket gültigen Zielzustand: Ein bereits manuell
 aufgelöstes suffixloses Listing `WALONLY/XNAS` wurde von `#2` als falsch
 markiert, weil sein Legacy-Symbol absichtlich nicht rückwärts zerlegbar ist.
+
+**Beleg:** T-21 Teil 1 Runde 4, Commit `d6c4c19`: Das neue Vorwärts-Oracle
+setzte `(ticker, mic)` über jeden Eintrag aus `EXCHANGES` zu `symbol` zusammen,
+ohne echte MICs vom ausdrücklich verbotenen internen Sammelcode `US` zu
+trennen. Eine Gegenprobe ließ die Migration `VTI` als `VTI/US` und `resolved`
+erzeugen; `#2` meldete wörtlich `VTI/US→VTI` und das Script bestand mit 8/8.
+Auf einem bereits migrierten Bestand bestand derselbe Check außerdem mit „0
+neu zerlegt“ und prüfte damit keine einzige Zuordnung.
 
 [↑ Übersicht](#übersicht)
