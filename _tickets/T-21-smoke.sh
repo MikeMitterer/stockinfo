@@ -237,14 +237,29 @@ def composed(row: dict) -> str | None:
     return f"{row['ticker']}{definition.suffix}" if definition else None
 
 
-# Zwei getrennte Fragen, beide an **allen** aufgelösten Zeilen:
-#   1. Steht dort ein Sammelcode? Das wäre die zentrale Regression des Tickets.
-#   2. Setzt sich das Symbol aus der Identität wieder zusammen?
+# Jede Zeile muss nach dem Lauf in **genau einem** gültigen Zustand sein.
+# Nur auf den Sammelcode zu prüfen genügte nicht: Eine Zeile, die `resolved`
+# behauptet und weder Ticker noch MIC trägt, käme sonst durch — und die
+# Migration überspringt sie beim nächsten Start wieder.
+def invalid_state(row: dict) -> str | None:
+    """Nennt den Widerspruch einer Zeile, oder ``None`` wenn sie stimmig ist."""
+    status = row["identity_status"]
+    if status == "resolved":
+        if not row["ticker"] or not row["mic"]:
+            return f"{row['symbol']}: resolved ohne vollständige Identität"
+        if row["mic"] in COLLECTOR_CODES:
+            return f"{row['symbol']}: Sammelcode {row['mic']} im MIC"
+        return None
+    if status == "legacy_unresolved":
+        if row["ticker"] or row["mic"]:
+            return f"{row['symbol']}: offen, trägt aber eine Identität"
+        return None
+    return f"{row['symbol']}: unbekannter Status {status!r}"
+
+
 resolved_rows = [row for row in after.values() if row["identity_status"] == "resolved"]
-collector_in_mic = [
-    f"{row['symbol']}→{row['mic']}"
-    for row in resolved_rows
-    if row["mic"] in COLLECTOR_CODES
+broken_states = [
+    problem for problem in (invalid_state(row) for row in after.values()) if problem
 ]
 wrongly_resolved = [
     f"{row['symbol']}≠{composed(row)}"
@@ -275,9 +290,10 @@ check(
 )
 check(
     "#2d",
-    not collector_in_mic,
-    f"{len(resolved_rows)} aufgelöste Zeilen, kein Sammelcode im MIC"
-    + (f" — verboten: {collector_in_mic}" if collector_in_mic else ""),
+    not broken_states,
+    f"{len(after)} Zeilen in gültigem Zustand "
+    f"({len(resolved_rows)} zugeordnet, {len(still_open)} offen)"
+    + (f" — widersprüchlich: {broken_states}" if broken_states else ""),
 )
 check(
     "#2b",

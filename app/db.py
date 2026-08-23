@@ -175,6 +175,32 @@ _IDENTITY_RESOLVED = "resolved"
 _IDENTITY_UNRESOLVED = "legacy_unresolved"
 
 
+def _has_valid_identity(row: sqlite3.Row) -> bool:
+    """Trägt diese Zeile eine **vollständige** kanonische Identität?
+
+    Der Unterschied zu „hat einen Status" ist der Punkt: Eine Zeile, die
+    `resolved` behauptet und weder Ticker noch MIC trägt, ist keine Zuordnung,
+    sondern ein Widerspruch. Sie zu überspringen hieße, ihn dauerhaft zu
+    konservieren — die Migration käme nie wieder an sie heran.
+
+    Eine vollständige Zuordnung bleibt dagegen unangetastet, auch wenn sich
+    ihr Symbol nicht zerlegen ließe: Ein von Hand gesetztes `VTI` → `VTI/XNAS`
+    ist genau der Fall, für den es die manuelle Zuordnung gibt.
+
+    Args:
+        row: Instrumentenzeile mit `identity_status`, `ticker` und `mic`.
+
+    Returns:
+        ``True`` bei vollständiger Zuordnung oder ausdrücklich offenem Fall.
+    """
+    status = row["identity_status"]
+    if status == _IDENTITY_RESOLVED:
+        return bool(row["ticker"]) and bool(row["mic"])
+    if status == _IDENTITY_UNRESOLVED:
+        return not row["ticker"] and not row["mic"]
+    return False
+
+
 def _migrate_identity(connection: sqlite3.Connection) -> None:
     """Legt `(ticker, mic)` neben `symbol` und vergibt jede `listing_id`.
 
@@ -208,15 +234,16 @@ def _migrate_identity(connection: sqlite3.Connection) -> None:
     )
 
     for row in connection.execute(
-        "SELECT id, symbol, listing_id, identity_status FROM instruments"
+        "SELECT id, symbol, ticker, mic, listing_id, identity_status "
+        "FROM instruments"
     ).fetchall():
         if not row["listing_id"]:
             connection.execute(
                 "UPDATE instruments SET listing_id = ? WHERE id = ?",
                 (str(uuid.uuid4()), row["id"]),
             )
-        if row["identity_status"]:
-            continue  # schon einmal betrachtet — Bestand nicht überschreiben
+        if _has_valid_identity(row):
+            continue  # bestehende Zuordnung — die wird nicht überschrieben
         ticker, mic = split_symbol(row["symbol"])
         connection.execute(
             "UPDATE instruments SET ticker = ?, mic = ?, identity_status = ? "

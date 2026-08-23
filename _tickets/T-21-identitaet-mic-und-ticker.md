@@ -27,7 +27,7 @@ muss, ist kein Plugin).
 >
 > | | Umfang | Zeilen | Commit |
 > |---|---|---|---|
-> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 5 |
+> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 6 |
 > | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung, `ExchangeDef` aufräumen | `#5` | offen |
 > | **Teil 3** | API und Dashboard, offene Zuordnungen sichtbar und von Hand setzbar, Vertragsversion | `#2b`, `#2c`, `#3`, `#4` | offen |
 >
@@ -75,7 +75,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 5 | neues Papier aufnehmen | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | ➖ Teil 2 | |
 | 6 | `make test` | Backend, Plugin-API und Dashboard grün | ✅ [^f] | |
 
-[^a]: `tests/test_identity_migration.py`, **vierzehn** Tests gegen eine
+[^a]: `tests/test_identity_migration.py`, **sechzehn** Tests gegen eine
     nachgestellte Alt-Datenbank mit vier bezeichnenden Fällen. Zerlegt werden `EUNL.DE` und
     `XIC.TO`; `AAPL` (suffixlos) und `BRK-B` (fremde Schreibweise) bleiben
     offen. Die Migration läuft zweimal — sie muss idempotent sein.
@@ -98,7 +98,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     ist eindeutig. Zwei weitere Tests halten die Folgen fest — mehrere offene
     Zeilen dürfen nebeneinander stehen (SQLite zählt `NULL` als eigenen Wert),
     ein echter Konflikt fällt weiterhin auf.
-[^f]: `.venv/bin/pytest tests/ -q` → `370 passed, 29 skipped`;
+[^f]: `.venv/bin/pytest tests/ -q` → `372 passed, 29 skipped`;
     `make test-plugin-api` → 36; Ruff sauber.
 [^g]: `./_tickets/T-21-smoke.sh --run` gegen eine **Sicherung** von
     `data/stockinfo.db` (sechs gewachsene Papiere, 48 Kurspunkte) — das
@@ -118,7 +118,13 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `(ticker, mic)` wieder zu `symbol` zusammensetzen; offene Zeilen tragen
     weder Ticker noch MIC; bereits bestehende Zuordnungen bleiben unverändert
     (`#2c`) und dürfen keinen Sammelcode tragen (`#2d`). Ein Lauf, der nichts
-    zugeordnet hat, gilt als **nicht geprüft**. Ein leerer Bestand lässt den Lauf **fehlschlagen** —
+    zugeordnet hat, gilt als **nicht geprüft**.
+
+    `#2d` prüft, dass jede Zeile in **genau einem** gültigen Zustand steht:
+    `resolved` verlangt Ticker und echten MIC, `legacy_unresolved` verlangt
+    beide Felder leer, ein unbekannter Status ist ein Fehler. Nur auf den
+    Sammelcode zu sehen genügte nicht — eine Zeile, die `resolved` behauptet
+    und nichts trägt, kam sonst durch (Codex, Runde 5). Ein leerer Bestand lässt den Lauf **fehlschlagen** —
     vorher hätte er dort grün gemeldet, ohne einen einzigen Fall geprüft zu
     haben (Codex, Runde 2). Gegenproben: leere Datenbank → Exit 1; ein
     committeter Eintrag im WAL → wird mitgesichert und mitgezählt (7 statt 6).

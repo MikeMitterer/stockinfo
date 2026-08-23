@@ -349,3 +349,56 @@ def test_zwei_offene_zeilen_mit_gleichem_symbol_bleiben_getrennt(tmp_path) -> No
         "bbbbbbbb-0000-4000-8000-000000000001",
         "bbbbbbbb-0000-4000-8000-000000000002",
     ]
+
+
+def test_ein_widerspruechlicher_status_wird_neu_bewertet(tmp_path) -> None:
+    """`resolved` ohne Identität ist kein Zustand, den man konservieren darf.
+
+    Die Migration übersprang bisher jede Zeile mit gesetztem
+    `identity_status` — mit gutem Grund, denn eine bestehende Zuordnung darf
+    sie nicht überschreiben. Eine Zeile, die `resolved` behauptet und weder
+    Ticker noch MIC trägt, ist aber keine Zuordnung, sondern ein Widerspruch;
+    sie bliebe sonst für immer stehen.
+
+    Bewertet wird sie deshalb neu — und landet dort, wo sie hingehört: bei den
+    offenen Fällen, wenn sich ihr Symbol nicht zerlegen lässt.
+    """
+    path = str(tmp_path / "widerspruch.db")
+    _legacy_database(path, [("EUNL.DE", "IE00B4L5Y983"), ("VTI", "US9229087690")])
+    init_db(path)
+
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE instruments SET identity_status = 'resolved', "
+            "ticker = NULL, mic = NULL WHERE symbol = 'VTI'"
+        )
+
+    init_db(path)  # der nächste Start
+
+    row = _instruments(path)["VTI"]
+    assert row["identity_status"] == "legacy_unresolved"
+    assert (row["ticker"], row["mic"]) == (None, None)
+
+
+def test_eine_gueltige_zuordnung_bleibt_unangetastet(tmp_path) -> None:
+    """Die Gegenprobe — sonst wäre die Neubewertung eine Überschreibung.
+
+    Ein von Hand gesetztes `VTI/XNAS` ist vollständig und trägt keinen
+    Sammelcode. Die Migration lässt es in Ruhe, auch wenn sich `symbol` nicht
+    zerlegen ließe.
+    """
+    path = str(tmp_path / "manuell.db")
+    _legacy_database(path, [("VTI", "US9229087690")])
+    init_db(path)
+
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE instruments SET identity_status = 'resolved', "
+            "ticker = 'VTI', mic = 'XNAS' WHERE symbol = 'VTI'"
+        )
+
+    init_db(path)
+
+    row = _instruments(path)["VTI"]
+    assert (row["ticker"], row["mic"]) == ("VTI", "XNAS")
+    assert row["identity_status"] == "resolved"
