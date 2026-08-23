@@ -50,6 +50,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 10 | Ein europäisches Papier daneben (`IE00B4L5Y983`) | unverändert an der eingestellten Börse, in EUR — nichts ist ausgewandert | ➖ [^t18] | |
 | 11 | Netzstecker ziehen (oder WLAN aus), ein bekanntes Papier abrufen | die App sagt „konnte nicht nachsehen" und nennt die Quellen — sie behauptet nicht, das Papier gäbe es nicht | ➖ [^t20] | |
 | 12 | Netz wieder an, dasselbe Papier | kommt normal herein; nichts ist in der Zwischenzeit gelöscht oder überschrieben worden | ➖ [^t20] | |
+| 13 | Nach dem Update einmal die Instrumentenliste durchsehen | alle Papiere sind noch da, mit ihrer Historie — die Umstellung auf die neue Identität hat nichts gekostet | ➖ [^t21] | |
+| 14 | Ein Papier, das die App nicht zuordnen konnte (z.B. `GOLD.SG`, `VTI`) | ist weiter abrufbar und benutzbar, nur eben als offener Fall gekennzeichnet | ➖ [^t21] | |
 
 _(wächst mit jedem abgeschlossenen Ticket — je Ticket ein bis drei Zeilen,
 nicht mehr)_
@@ -71,6 +73,11 @@ nicht mehr)_
     `./_tickets/T-20-smoke.sh --run` (zwei Läufe, Netz einmal offen und einmal
     abgeschnitten). Zeile 11 ist der Fall, der vorher als „gibt es nicht"
     ankam; Zeile 12 die Gegenprobe, dass der Ausfall nichts zerstört hat.
+[^t21]: T-21 Teil 1 — Identität auf `(ticker, mic)`. Maschineller Nachweis:
+    `./_tickets/T-21-smoke.sh --run` gegen eine Sicherung des echten
+    Bestands (neun Checks) und zwanzig Migrationstests. Zeile 14 ist der
+    Punkt, der bei einer Migration am ehesten schiefgeht: Ein Papier, das
+    sich nicht zuordnen ließ, darf dadurch nicht unbrauchbar werden.
 
 ---
 

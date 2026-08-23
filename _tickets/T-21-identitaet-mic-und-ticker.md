@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend + Dashboard) | Teil 1 in-review | 1 Tag | Schema-Migration, Symbolerzeugung | — |
+| StockInfo (Backend + Dashboard) | Teil 1 abgenommen | 1 Tag | Schema-Migration, Symbolerzeugung | — |
 
 **Löst:** Der Identifikator eines Papiers ist heute das **Yahoo-Symbol**
 (`EUNL.DE`) — in der Datenbank, in der API, im Dashboard. Damit ist yfinance
@@ -27,8 +27,8 @@ muss, ist kein Plugin).
 >
 > | | Umfang | Zeilen | Commit |
 > |---|---|---|---|
-> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 9 |
-> | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung, `ExchangeDef` aufräumen | `#5` | offen |
+> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | `be5f38d` ✔ abgenommen |
+> | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung, `ExchangeDef` aufräumen | `#5` | in Arbeit |
 > | **Teil 3** | API und Dashboard, offene Zuordnungen sichtbar und von Hand setzbar, Vertragsversion | `#2b`, `#2c`, `#3`, `#4` | offen |
 >
 > `#6` (`make test`) läuft in jeder Übergabe mit.
