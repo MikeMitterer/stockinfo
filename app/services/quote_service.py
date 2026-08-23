@@ -13,6 +13,7 @@ import structlog
 from stockinfo_plugin.types import Unavailable
 
 from app.contract import required_fields
+from app.exchanges import split_symbol
 from app.models import QuoteResponse
 from app.providers.base import (
     EtfEnricher,
@@ -161,7 +162,21 @@ class QuoteService:
         Raises:
             QuoteUnavailableError: Kein Kurs beschaffbar.
         """
-        resolved = ResolvedInstrument(symbol=symbol)
+        # Die Identität kann hier nicht aus einer Auflösung kommen — es gibt
+        # keine ISIN zu fragen. Sie entsteht aus dem Symbol selbst, mit
+        # derselben Rechnung, mit der die Migration den Bestand zerlegt hat
+        # (T-21). Ohne diese beiden Zeilen legte der Symbol-Weg auch das
+        # eindeutig zerlegbare `VGWL.DE` als offenen Fall an.
+        #
+        # Bleibt das Symbol unzerlegbar (`AAPL`, `BRK-B.DE`), wird **nicht**
+        # geraten: `split_symbol` liefert dann `(None, None)`, die Zeile
+        # entsteht sichtbar offen. Anders als auf dem ISIN-Weg wird sie aber
+        # nicht abgelehnt — dort wählt StockInfo eine Notierung aus mehreren
+        # aus, hier nennt der Aufrufer sie selbst. Ihm die Auskunft zu
+        # verweigern, weil die Börsentabelle für suffixlose Symbole nur einen
+        # Sammelcode führt, nähme ihm eine Abfrage weg, die es heute gibt.
+        ticker, mic = split_symbol(symbol)
+        resolved = ResolvedInstrument(symbol=symbol, ticker=ticker, mic=mic)
         return self._build(resolved, enrich_etf)
 
     def get_quote_for_known(
@@ -205,8 +220,22 @@ class QuoteService:
         Raises:
             QuoteUnavailableError: Kein Kurs beschaffbar.
         """
+        # Auch hier aus dem Symbol, aus demselben Grund wie oben. Dieser Weg
+        # trägt die Zuordnung bei bereits bekannten Papieren **nach**: Eine
+        # Zeile, die einmal offen war, bliebe es sonst bei jedem weiteren
+        # Kurs — der Scheduler löst nichts auf, er holt nur Kurse.
+        #
+        # Überschrieben wird dabei nichts: Das Repository nimmt eine
+        # vollständige Zuordnung nur an, wenn sie vollständig **ist**, und eine
+        # leere ersetzt nie eine gespeicherte.
+        ticker, mic = split_symbol(symbol)
         resolved = ResolvedInstrument(
-            symbol=symbol, isin=isin, exchange=exchange, type=instrument_type
+            symbol=symbol,
+            isin=isin,
+            exchange=exchange,
+            type=instrument_type,
+            ticker=ticker,
+            mic=mic,
         )
         return self._build(resolved, enrich_etf)
 

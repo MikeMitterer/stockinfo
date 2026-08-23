@@ -46,9 +46,9 @@ def test_die_boersentabelle_traegt_kein_anbieterwissen_mehr() -> None:
     `ExchangeDef`: Es ist der bequemste Ort, weil dort schon alle Börsen
     stehen.
     """
-    felder = set(ExchangeDef.__dataclass_fields__)
+    fields = set(ExchangeDef.__dataclass_fields__)
 
-    assert felder == {"suffix", "name", "region", "currency"}
+    assert fields == {"suffix", "name", "region", "currency"}
 
 
 def test_der_sammelcode_ist_ausdruecklich_benannt() -> None:

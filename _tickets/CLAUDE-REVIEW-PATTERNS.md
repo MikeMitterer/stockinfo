@@ -132,6 +132,18 @@ den Wert weiter als kanonisch gültig behandelten. Gleichzeitig entstand im
 neuen Parametertest der deutsche Parameter `warum` — erneut ein neuer Verstoß
 gegen genau die gerade korrigierte Naming-Regel.
 
+**Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21 Teil 2
+und 2b, Commit `556c23d`: Commit und Übergabe erklärten, neue Papiere brächten
+`ticker` und `mic` beim Anlegen mit, und Verify `#5` stand auf ✅. Der
+öffentliche Symbolpfad `GET /quote?symbol=…` erzeugte jedoch weiterhin nur ein
+`ResolvedInstrument(symbol=…)`; selbst das eindeutig zerlegbare `VGWL.DE`
+landete dadurch als `NULL/NULL/legacy_unresolved` in der Datenbank. Die neuen
+Tests bauten entweder bereits eine fertige `QuoteResponse` mit Identität oder
+prüften ausschließlich den ISIN-Resolver-Pfad. Im selben Diff entstanden nach
+den wiederholten Naming-Korrekturen außerdem erneut deutsche Produktbezeichner
+und strukturierte Log-Felder wie `_identitaet`, `boersencode`,
+`_FIGI_AUSNAHMEN` und `quelle`.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf

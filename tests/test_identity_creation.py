@@ -4,6 +4,10 @@ Das Gegenstück zu `test_identity_migration.py`: Dort wird der **Bestand**
 zerlegt, hier entsteht ein **Neuzugang**. Ohne diesen Weg liefe die Migration
 gegen einen Zulauf an — jedes zur Laufzeit angelegte Papier wäre wieder ein
 offener Fall, und der Start müsste ihn beim nächsten Mal nachziehen.
+
+Geprüft wird hier die **Speicherung**. Dass die Identität auf jedem Weg
+überhaupt entsteht, prüft `test_identity_intake_paths.py` über die echte
+Kette — dieser Unterschied hat in Runde 2 einen ganzen Aufnahmeweg verdeckt.
 """
 
 from pathlib import Path
@@ -17,14 +21,14 @@ from app.repository import QuoteRepository
 
 @pytest.fixture
 def repo(tmp_path: Path) -> QuoteRepository:
-    db_path = str(tmp_path / "identitaet.db")
+    db_path = str(tmp_path / "identity.db")
     init_db(db_path)
     return QuoteRepository(db_path)
 
 
-def _antwort(**felder) -> QuoteResponse:
+def _response(**overrides) -> QuoteResponse:
     """Eine Kurs-Antwort, wie der Quote-Service sie nach der Auflösung baut."""
-    basis = {
+    defaults = {
         "isin": "IE00B3RBWM25",
         "symbol": "VGWL.DE",
         "ticker": "VGWL",
@@ -37,10 +41,10 @@ def _antwort(**felder) -> QuoteResponse:
         "quote_time": "2026-08-23T10:00:00+00:00",
         "fetched_at": "2026-08-23T10:00:05+00:00",
     }
-    return QuoteResponse(**{**basis, **felder})
+    return QuoteResponse(**{**defaults, **overrides})
 
 
-def _zeile(repo: QuoteRepository, instrument_id: int) -> dict:
+def _row(repo: QuoteRepository, instrument_id: int) -> dict:
     with repo._connect() as connection:
         row = connection.execute(
             "SELECT ticker, mic, listing_id, identity_status, symbol "
@@ -52,10 +56,10 @@ def _zeile(repo: QuoteRepository, instrument_id: int) -> dict:
 
 def test_ein_neues_papier_wird_mit_ticker_und_mic_angelegt(repo) -> None:
     """Verify `#5`: `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt."""
-    zeile = _zeile(repo, repo.save_quote(_antwort()))
+    row = _row(repo, repo.save_quote(_response()))
 
-    assert (zeile["ticker"], zeile["mic"]) == ("VGWL", "XETR")
-    assert zeile["identity_status"] == "resolved"
+    assert (row["ticker"], row["mic"]) == ("VGWL", "XETR")
+    assert row["identity_status"] == "resolved"
 
 
 def test_das_symbol_laesst_sich_aus_der_identitaet_zusammensetzen(repo) -> None:
@@ -69,9 +73,9 @@ def test_das_symbol_laesst_sich_aus_der_identitaet_zusammensetzen(repo) -> None:
     """
     from app.exchanges import EXCHANGES
 
-    zeile = _zeile(repo, repo.save_quote(_antwort()))
+    row = _row(repo, repo.save_quote(_response()))
 
-    assert f"{zeile['ticker']}{EXCHANGES[zeile['mic']].suffix}" == zeile["symbol"]
+    assert f"{row['ticker']}{EXCHANGES[row['mic']].suffix}" == row["symbol"]
 
 
 def test_jedes_neue_papier_bekommt_eine_eigene_listing_id(repo) -> None:
@@ -81,14 +85,14 @@ def test_jedes_neue_papier_bekommt_eine_eigene_listing_id(repo) -> None:
     angelegtes Papier blieb damit ohne — und der eindeutige Index zählt
     `NULL` in SQLite als eigenen Wert, also fiel es nicht einmal auf.
     """
-    erste = _zeile(repo, repo.save_quote(_antwort()))
-    zweite = _zeile(
+    first = _row(repo, repo.save_quote(_response()))
+    second = _row(
         repo,
-        repo.save_quote(_antwort(isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL")),
+        repo.save_quote(_response(isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL")),
     )
 
-    assert erste["listing_id"]
-    assert erste["listing_id"] != zweite["listing_id"]
+    assert first["listing_id"]
+    assert first["listing_id"] != second["listing_id"]
 
 
 def test_ein_zweiter_kurs_laesst_die_identitaet_unangetastet(repo) -> None:
@@ -97,14 +101,14 @@ def test_ein_zweiter_kurs_laesst_die_identitaet_unangetastet(repo) -> None:
     Jeder Kursabruf läuft durch dieselbe Speicherung. Würde sie die Kennung
     neu vergeben, hinge jeder Verweis darauf an einem Zufallswert.
     """
-    vorher = _zeile(repo, repo.save_quote(_antwort()))
+    before = _row(repo, repo.save_quote(_response()))
 
-    nachher = _zeile(repo, repo.save_quote(_antwort(price=130.0)))
+    after = _row(repo, repo.save_quote(_response(price=130.0)))
 
     # Ohne die erste Zeile prüfte der Vergleich `None == None` und wäre auch
     # dann grün, wenn die Kennung nie vergeben würde.
-    assert vorher["listing_id"] is not None
-    assert nachher["listing_id"] == vorher["listing_id"]
+    assert before["listing_id"] is not None
+    assert after["listing_id"] == before["listing_id"]
 
 
 def test_ohne_eindeutige_zuordnung_bleibt_die_zeile_offen(repo) -> None:
@@ -116,11 +120,11 @@ def test_ohne_eindeutige_zuordnung_bleibt_die_zeile_offen(repo) -> None:
     gefüllt. `legacy_unresolved` ist derselbe Status, den die Migration
     vergibt — die Liste offener Fälle (Teil 3) kennt damit nur einen.
     """
-    zeile = _zeile(repo, repo.save_quote(_antwort(symbol="BRK-B", ticker=None, mic=None)))
+    row = _row(repo, repo.save_quote(_response(symbol="BRK-B", ticker=None, mic=None)))
 
-    assert (zeile["ticker"], zeile["mic"]) == (None, None)
-    assert zeile["identity_status"] == "legacy_unresolved"
-    assert zeile["listing_id"]
+    assert (row["ticker"], row["mic"]) == (None, None)
+    assert row["identity_status"] == "legacy_unresolved"
+    assert row["listing_id"]
 
 
 def test_eine_offene_zeile_wird_spaeter_nachgetragen(repo) -> None:
@@ -131,18 +135,20 @@ def test_eine_offene_zeile_wird_spaeter_nachgetragen(repo) -> None:
     `XNAS`) und trägt ihn nach. Ohne diesen Weg bliebe jede Zeile, die einmal
     offen war, es für immer.
     """
-    offen = repo.save_quote(_antwort(isin="US0378331005", symbol="AAPL", ticker=None, mic=None))
-
-    repo.save_quote(
-        _antwort(isin="US0378331005", symbol="AAPL", ticker="AAPL", mic="XNAS")
+    unresolved = repo.save_quote(
+        _response(isin="US0378331005", symbol="AAPL", ticker=None, mic=None)
     )
 
-    zeile = _zeile(repo, offen)
-    assert (zeile["ticker"], zeile["mic"]) == ("AAPL", "XNAS")
-    assert zeile["identity_status"] == "resolved"
+    repo.save_quote(
+        _response(isin="US0378331005", symbol="AAPL", ticker="AAPL", mic="XNAS")
+    )
+
+    row = _row(repo, unresolved)
+    assert (row["ticker"], row["mic"]) == ("AAPL", "XNAS")
+    assert row["identity_status"] == "resolved"
 
 
-def test_eine_offene_auflösung_verwirft_keine_bestehende_zuordnung(repo) -> None:
+def test_eine_offene_aufloesung_verwirft_keine_bestehende_zuordnung(repo) -> None:
     """Rückwärts gilt es **nicht** — sonst wäre die Zuordnung wieder weg.
 
     Kommt eine Antwort ohne Identität (Yahoo hat nur ein Fremdsymbol, oder die
@@ -150,11 +156,11 @@ def test_eine_offene_auflösung_verwirft_keine_bestehende_zuordnung(repo) -> Non
     Stand stehen. Eine bestehende Zuordnung zu leeren ist Datenverlust — und
     genau der Fehler, den Teil 1 in Runde 1 gemacht hat.
     """
-    angelegt = repo.save_quote(_antwort())
+    created = repo.save_quote(_response())
 
-    repo.save_quote(_antwort(price=130.0, ticker=None, mic=None))
+    repo.save_quote(_response(price=130.0, ticker=None, mic=None))
 
-    assert _zeile(repo, angelegt)["ticker"] == "VGWL"
+    assert _row(repo, created)["ticker"] == "VGWL"
 
 
 def test_ein_wechsel_des_handelsplatzes_wird_protokolliert(repo) -> None:
@@ -167,14 +173,14 @@ def test_ein_wechsel_des_handelsplatzes_wird_protokolliert(repo) -> None:
     """
     import structlog
 
-    angelegt = repo.save_quote(_antwort(symbol="EQQQ.DE", ticker="EQQQ", mic="XETR"))
+    created = repo.save_quote(_response(symbol="EQQQ.DE", ticker="EQQQ", mic="XETR"))
 
     with structlog.testing.capture_logs() as logs:
-        repo.save_quote(_antwort(symbol="EQQQ.MI", ticker="EQQQ", mic="XMIL"))
+        repo.save_quote(_response(symbol="EQQQ.MI", ticker="EQQQ", mic="XMIL"))
 
-    assert _zeile(repo, angelegt)["mic"] == "XMIL"
-    wechsel = [e for e in logs if e["event"] == "identity_changed"]
-    assert wechsel and wechsel[0]["previous_mic"] == "XETR"
+    assert _row(repo, created)["mic"] == "XMIL"
+    changes = [entry for entry in logs if entry["event"] == "identity_changed"]
+    assert changes and changes[0]["previous_mic"] == "XETR"
 
 
 def test_die_identitaet_steht_nicht_in_der_rest_antwort() -> None:
@@ -185,7 +191,7 @@ def test_die_identitaet_steht_nicht_in_der_rest_antwort() -> None:
     `core_version` erhöht wurde; der Schnappschuss-Test hätte es gemeldet.
     Diese Zeile hält fest, dass das Weglassen Absicht ist.
     """
-    payload = _antwort().model_dump()
+    payload = _response().model_dump()
 
     assert "ticker" not in payload
     assert "mic" not in payload

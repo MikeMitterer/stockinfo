@@ -59,6 +59,37 @@ Vor dem Lauf bleibt die übliche Sicherheitsprüfung des konkreten Skripts
 verbindlich; die Freigabe erweitert weder den erlaubten Review-Scope noch die
 Berechtigung, Produktcode oder fremde Ressourcen zu verändern.
 
+## DRY-Prüfguard
+
+DRY ist eine **eigene Abnahmebedingung** und darf nicht still unter dem
+Sammelbegriff „Code-Standards“ verschwinden. Jeder inhaltliche Review prüft den
+Übergabediff und den berührten Umgebungscode ausdrücklich auf doppelte
+Implementierung und doppelte Wissensquellen.
+
+Dabei gilt:
+
+- Jede neue oder geänderte Regel, Konstante, Zuordnung, Validierung,
+  Transformation, Fehlerbehandlung und Hilfsfunktion wird mit `rg` im gesamten
+  Projekt gesucht. Geprüft wird auch gegen vorhandene Package-Utilities,
+  Composables sowie `.libs/`; ein anderer Name oder leicht abweichende Syntax
+  macht dieselbe Fachregel nicht zu neuer Logik.
+- Zwei Stellen mit identischer oder fast identischer Fachlogik sind bereits
+  eine DRY-Verletzung. Besonders kritisch sind parallele Sources of Truth wie
+  mehrfach gepflegte Feldlisten, Statuswerte, Regex-Regeln, Börsen-/Provider-
+  Mappings, Endpoint-Pfade und Serialisierungsregeln.
+- Tests und Prüfskripte sind nicht ausgenommen. Wiederholtes Setup gehört in
+  Fixtures oder Helper; wiederverwendbare Bash-Logik in BashLib. Eigenständige
+  Erwartungen dürfen denselben fachlichen Wert dagegen bewusst wiederholen,
+  wenn gerade diese Unabhängigkeit ein belastbares Orakel bildet.
+- Notwendiges Wiring, Protokoll-Implementierungen und absichtlich unabhängige
+  Orakel sind nicht automatisch Duplikation. Wo DRY und KISS kollidieren, muss
+  die Nicht-Extraktion fachlich begründet sein; bloß grüne Tests sind keine
+  Begründung.
+- Das Review-Ergebnis nennt immer knapp den geprüften DRY-Scope und das
+  Ergebnis. Ein gefundener Kandidat wird bis zur gemeinsamen Wissensquelle
+  zurückverfolgt; bei einem Finding stehen beide Fundstellen und die erwartete
+  gemeinsame Abstraktion oder Source of Truth dabei.
+
 ## Prompt für den periodischen Codex-Task
 
 Den folgenden Prompt als Scheduled Task **in diesem bestehenden Review-Chat**
@@ -98,6 +129,10 @@ task-verification-workflow und code-standards.
    - Ticket, Spezifikation und Akzeptanzkriterien;
    - exakt den Diff des handoff_commit plus den berührten Umgebungscode;
    - Fehlerpfade, Regressionen, Architektur- und Code-Standards;
+   - den DRY-Prüfguard dieses Dokuments: Suche jede neue oder geänderte
+     Fachregel projektweit auf identische oder fast identische Logik und
+     parallele Sources of Truth; dokumentiere DRY-Scope und Ergebnis im
+     Review, auch wenn kein DRY-Finding vorliegt;
    - Aussagekraft der Tests. Mocke nur externe Grenzen und lasse eigenen Code
      real durchlaufen;
    - die relevanten Tests und, risikogerecht, die vollständige Testsuite.

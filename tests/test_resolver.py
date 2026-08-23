@@ -95,9 +95,9 @@ def test_der_sammelcode_us_wird_gar_nicht_erst_gefragt() -> None:
     """
     figi = _FakeFigi("AAPL")
 
-    aufgeloest = OpenFigiResolver(figi, "US").resolve_isin("US0378331005")
+    resolved = OpenFigiResolver(figi, "US").resolve_isin("US0378331005")
 
-    assert getattr(aufgeloest, "symbol", None) is None
+    assert getattr(resolved, "symbol", None) is None
     assert figi.calls == []
 
 

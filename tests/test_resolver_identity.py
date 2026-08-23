@@ -17,7 +17,7 @@ from app.resolver import YAHOO_EXCHANGE_MICS, OpenFigiResolver, YFinanceResolver
 from stockinfo_plugin.types import Unavailable
 
 
-class _Suche:
+class _Search:
     """Ersetzt ``yf.Search`` durch eine feste Trefferliste."""
 
     hits: list[dict] = []
@@ -27,24 +27,24 @@ class _Suche:
 
     @property
     def quotes(self) -> list[dict]:
-        return _Suche.hits
+        return _Search.hits
 
 
-def _mit_treffer(monkeypatch, *treffer: dict) -> None:
+def _with_hits(monkeypatch, *hits: dict) -> None:
     from app import resolver as resolver_module
 
-    _Suche.hits = list(treffer)
-    monkeypatch.setattr(resolver_module.yf, "Search", _Suche)
+    _Search.hits = list(hits)
+    monkeypatch.setattr(resolver_module.yf, "Search", _Search)
 
 
 class _FigiClient:
     """Liefert einen vorgegebenen Ticker je Börse."""
 
-    def __init__(self, nach_boerse: dict[str, str]) -> None:
-        self._nach_boerse = nach_boerse
+    def __init__(self, by_exchange: dict[str, str]) -> None:
+        self._by_exchange = by_exchange
 
     def map_isin(self, isin: str, id_value: str, id_type: str = "micCode") -> str | None:
-        return self._nach_boerse.get(id_value)
+        return self._by_exchange.get(id_value)
 
 
 # --- Yahoo: der Börsencode schließt die Lücke, die das Suffix offen lässt ---
@@ -58,12 +58,12 @@ def test_suffixloses_symbol_bekommt_seinen_mic_aus_dem_boersencode(monkeypatch) 
     steht dort nicht. Die **Auflösung** weiß es — Yahoo nennt den Handelsplatz
     im Feld `exchange`.
     """
-    _mit_treffer(monkeypatch, {"symbol": "AAPL", "exchange": "NMS", "quoteType": "EQUITY"})
+    _with_hits(monkeypatch, {"symbol": "AAPL", "exchange": "NMS", "quoteType": "EQUITY"})
 
-    aufgeloest = YFinanceResolver(default_exchange="US").resolve_isin("US0378331005")
+    resolved = YFinanceResolver(default_exchange="US").resolve_isin("US0378331005")
 
-    assert aufgeloest.ticker == "AAPL"
-    assert aufgeloest.mic == "XNAS"
+    assert resolved.ticker == "AAPL"
+    assert resolved.mic == "XNAS"
 
 
 def test_das_suffix_entscheidet_ohne_yahoos_boersencode(monkeypatch) -> None:
@@ -73,11 +73,11 @@ def test_das_suffix_entscheidet_ohne_yahoos_boersencode(monkeypatch) -> None:
     StockInfo den MIC aus der eigenen Börsentabelle. Die Yahoo-Zuordnung ist
     die Ausnahme für suffixlose Notierungen, nicht der Regelweg.
     """
-    _mit_treffer(monkeypatch, {"symbol": "EUNL.DE", "exchange": "GER", "quoteType": "ETF"})
+    _with_hits(monkeypatch, {"symbol": "EUNL.DE", "exchange": "GER", "quoteType": "ETF"})
 
-    aufgeloest = YFinanceResolver(default_exchange="XETR").resolve_isin("IE00B4L5Y983")
+    resolved = YFinanceResolver(default_exchange="XETR").resolve_isin("IE00B4L5Y983")
 
-    assert (aufgeloest.ticker, aufgeloest.mic) == ("EUNL", "XETR")
+    assert (resolved.ticker, resolved.mic) == ("EUNL", "XETR")
     assert "GER" not in YAHOO_EXCHANGE_MICS
 
 
@@ -87,11 +87,11 @@ def test_das_yahoo_symbol_bleibt_als_alias_erhalten(monkeypatch) -> None:
     Es ist weiterhin das, womit yfinance den Kurs holt — und woran die
     Profil-Links im Dashboard hängen.
     """
-    _mit_treffer(monkeypatch, {"symbol": "EUNL.DE", "exchange": "GER", "quoteType": "ETF"})
+    _with_hits(monkeypatch, {"symbol": "EUNL.DE", "exchange": "GER", "quoteType": "ETF"})
 
-    aufgeloest = YFinanceResolver(default_exchange="XETR").resolve_isin("IE00B4L5Y983")
+    resolved = YFinanceResolver(default_exchange="XETR").resolve_isin("IE00B4L5Y983")
 
-    assert aufgeloest.symbol == "EUNL.DE"
+    assert resolved.symbol == "EUNL.DE"
 
 
 def test_fremde_schreibweise_wird_abgelehnt_statt_umgedeutet(monkeypatch) -> None:
@@ -102,16 +102,16 @@ def test_fremde_schreibweise_wird_abgelehnt_statt_umgedeutet(monkeypatch) -> Non
     anderen Tickern bedeutet dieselbe Zeichensetzung etwas anderes. Ein halb
     geratenes Papier anzulegen ist schlechter, als es sichtbar offen zu lassen.
     """
-    _mit_treffer(monkeypatch, {"symbol": "BRK-B", "exchange": "NYQ", "quoteType": "EQUITY"})
+    _with_hits(monkeypatch, {"symbol": "BRK-B", "exchange": "NYQ", "quoteType": "EQUITY"})
 
     with structlog.testing.capture_logs() as logs:
-        antwort = YFinanceResolver(default_exchange="US").resolve_isin("US0846707026")
+        result = YFinanceResolver(default_exchange="US").resolve_isin("US0846707026")
 
-    assert isinstance(antwort, Unavailable)
-    assert "BRK-B" in antwort.error
-    meldungen = [e for e in logs if e["event"] == "resolve_isin_uneindeutig"]
-    assert len(meldungen) == 1
-    assert meldungen[0]["symbol"] == "BRK-B"
+    assert isinstance(result, Unavailable)
+    assert "BRK-B" in result.error
+    records = [entry for entry in logs if entry["event"] == "resolve_isin_ambiguous"]
+    assert len(records) == 1
+    assert records[0]["symbol"] == "BRK-B"
 
 
 def test_unbekannter_handelsplatz_wird_gemeldet_statt_geraten(monkeypatch) -> None:
@@ -121,14 +121,14 @@ def test_unbekannter_handelsplatz_wird_gemeldet_statt_geraten(monkeypatch) -> No
     echtem Bestand. Ohne Eintrag in der Börsentabelle gibt es keinen MIC, und
     einen zu erfinden hieße, ein falsches Listing festzuschreiben.
     """
-    _mit_treffer(monkeypatch, {"symbol": "GOLD.SG", "exchange": "STU", "quoteType": "ETF"})
+    _with_hits(monkeypatch, {"symbol": "GOLD.SG", "exchange": "STU", "quoteType": "ETF"})
 
     with structlog.testing.capture_logs() as logs:
-        antwort = YFinanceResolver(default_exchange="XETR").resolve_isin("DE000A0S9GB0")
+        result = YFinanceResolver(default_exchange="XETR").resolve_isin("DE000A0S9GB0")
 
-    assert isinstance(antwort, Unavailable)
-    meldungen = [e for e in logs if e["event"] == "resolve_isin_uneindeutig"]
-    assert meldungen and meldungen[0]["boersencode"] == "STU"
+    assert isinstance(result, Unavailable)
+    records = [entry for entry in logs if entry["event"] == "resolve_isin_ambiguous"]
+    assert records and records[0]["exchange_code"] == "STU"
 
 
 @pytest.mark.parametrize("code", sorted(YAHOO_EXCHANGE_MICS))
@@ -152,9 +152,9 @@ def test_openfigi_traegt_die_befragte_boerse_als_mic_ein() -> None:
     """
     resolver = OpenFigiResolver(_FigiClient({"XETR": "VGWL"}), default_exchange="XETR")
 
-    aufgeloest = resolver.resolve_isin("IE00B3RBWM25")
+    resolved = resolver.resolve_isin("IE00B3RBWM25")
 
-    assert (aufgeloest.ticker, aufgeloest.mic) == ("VGWL", "XETR")
+    assert (resolved.ticker, resolved.mic) == ("VGWL", "XETR")
 
 
 def test_der_sammelcode_us_liefert_keine_identitaet() -> None:
@@ -168,10 +168,10 @@ def test_der_sammelcode_us_liefert_keine_identitaet() -> None:
     resolver = OpenFigiResolver(_FigiClient({"US": "AAPL"}), default_exchange="US")
 
     with structlog.testing.capture_logs() as logs:
-        antwort = resolver.resolve_isin("US0378331005")
+        result = resolver.resolve_isin("US0378331005")
 
-    assert getattr(antwort, "mic", None) is None
-    assert [e for e in logs if e["event"] == "resolve_ohne_identitaet"]
+    assert getattr(result, "mic", None) is None
+    assert [entry for entry in logs if entry["event"] == "resolve_without_identity"]
 
 
 def test_openfigi_lehnt_eine_fremde_ticker_schreibweise_ab() -> None:
@@ -182,9 +182,9 @@ def test_openfigi_lehnt_eine_fremde_ticker_schreibweise_ab() -> None:
     """
     resolver = OpenFigiResolver(_FigiClient({"XNYS": "BRK/B"}), default_exchange="XNYS")
 
-    antwort = resolver.resolve_isin("US0846707026")
+    result = resolver.resolve_isin("US0846707026")
 
-    assert getattr(antwort, "ticker", None) is None
+    assert getattr(result, "ticker", None) is None
 
 
 # --- dieselbe Regel gilt rückwärts, in der Zerlegung ---

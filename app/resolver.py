@@ -63,7 +63,7 @@ YAHOO_EXCHANGE_MICS: dict[str, str] = {
 }
 
 
-def _identitaet(symbol: str, boersencode: str | None) -> tuple[str | None, str | None]:
+def _identity(symbol: str, exchange_code: str | None) -> tuple[str | None, str | None]:
     """Bestimmt `(ticker, mic)` zu einem Yahoo-Treffer — oder gibt auf.
 
     Zwei Wege, in dieser Reihenfolge:
@@ -79,7 +79,7 @@ def _identitaet(symbol: str, boersencode: str | None) -> tuple[str | None, str |
 
     Args:
         symbol: Das Symbol aus der Yahoo-Suche.
-        boersencode: Yahoos Feld ``exchange``, falls vorhanden.
+        exchange_code: Yahoos Feld ``exchange``, falls vorhanden.
 
     Returns:
         `(ticker, mic)` bei eindeutiger Zuordnung, sonst ``(None, None)``.
@@ -96,7 +96,7 @@ def _identitaet(symbol: str, boersencode: str | None) -> tuple[str | None, str |
         # der Luft (das Symbol liesse sich danach nicht mehr zusammensetzen).
         return None, None
 
-    mic = YAHOO_EXCHANGE_MICS.get((boersencode or "").upper())
+    mic = YAHOO_EXCHANGE_MICS.get((exchange_code or "").upper())
     if mic and is_canonical_ticker(symbol):
         return symbol, mic
     return None, None
@@ -208,7 +208,7 @@ class OpenFigiResolver:
             # ohnehin nicht verwendbar, und jede Anfrage zählt gegen OpenFIGIs
             # Kontingent. Auflösen kann den Fall der Yahoo-Fallback, der den
             # Handelsplatz benennt (`NMS` → `XNAS`).
-            logger.info("resolve_ohne_identitaet", isin=isin, quelle="openfigi", mic=mic)
+            logger.info("resolve_without_identity", isin=isin, source="openfigi", mic=mic)
             return None
 
         exch = EXCHANGES[mic]
@@ -220,9 +220,9 @@ class OpenFigiResolver:
             # OpenFIGI schreibt Anteilsklassen mit Schrägstrich (`BRK/B`) —
             # das ist die Schreibweise des Anbieters, nicht die der Börse.
             logger.info(
-                "resolve_ohne_identitaet",
+                "resolve_without_identity",
                 isin=isin,
-                quelle="openfigi",
+                source="openfigi",
                 ticker=ticker,
                 mic=mic,
             )
@@ -279,8 +279,8 @@ class YFinanceResolver:
             logger.warning("resolve_isin_no_symbol", isin=isin)
             return NotFound()
         symbol = top["symbol"]
-        boersencode = top.get("exchange")
-        ticker, mic = _identitaet(symbol, boersencode)
+        exchange_code = top.get("exchange")
+        ticker, mic = _identity(symbol, exchange_code)
         if not ticker or not mic:
             # **Ablehnen statt halb anlegen** (Ticket T-21, entschieden mit
             # Codex am 2026-08-20). Die Alternative — übernehmen und als „nicht
@@ -292,15 +292,15 @@ class YFinanceResolver:
             # seine Zuordnung offen. Der Unterschied ist für den Aufrufer der
             # zwischen „falsche ISIN" und „hier muss jemand nachhelfen".
             logger.warning(
-                "resolve_isin_uneindeutig",
+                "resolve_isin_ambiguous",
                 isin=isin,
                 symbol=symbol,
-                boersencode=boersencode,
+                exchange_code=exchange_code,
             )
             return Unavailable(
                 error=(
                     f"yahoo: Treffer '{symbol}' ist nicht eindeutig zuzuordnen "
-                    f"(Börsencode {boersencode or '—'}); "
+                    f"(Börsencode {exchange_code or '—'}); "
                     "Ticker und MIC müssen von Hand gesetzt werden"
                 )
             )
@@ -308,7 +308,7 @@ class YFinanceResolver:
         return ResolvedInstrument(
             symbol=symbol,
             isin=isin,
-            exchange=top.get("exchDisp") or boersencode,
+            exchange=top.get("exchDisp") or exchange_code,
             ticker=ticker,
             mic=mic,
             name=top.get("shortname") or top.get("longname"),
@@ -424,8 +424,8 @@ class CompositeResolver:
         Returns:
             Die zusammengefasste Antwort der Kette.
         """
-        ausfaelle: list[str] = []
-        jemand_hat_nachgesehen = False
+        failures: list[str] = []
+        someone_looked = False
 
         for resolver in self._resolvers:
             if not resolver.handles(isin):
@@ -434,13 +434,13 @@ class CompositeResolver:
             if isinstance(result, ResolvedInstrument):
                 return result
             if isinstance(result, Unavailable):
-                ausfaelle.append(result.error)
+                failures.append(result.error)
             elif isinstance(result, NotFound):
-                jemand_hat_nachgesehen = True
+                someone_looked = True
 
-        if ausfaelle:
-            logger.warning("resolve_chain_unavailable", isin=isin, quellen=ausfaelle)
-            return Unavailable(error="; ".join(ausfaelle))
-        if jemand_hat_nachgesehen:
+        if failures:
+            logger.warning("resolve_chain_unavailable", isin=isin, sources=failures)
+            return Unavailable(error="; ".join(failures))
+        if someone_looked:
             return NotFound()
         return NotResponsible(reason="keine zuständige Quelle in der Kette")

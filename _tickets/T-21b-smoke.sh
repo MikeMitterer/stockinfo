@@ -221,7 +221,7 @@ print("\n".join(zeilen))
 #
 # Ausgabe:
 #   Der HTTP-Statuscode.
-holeKurs() {
+fetchQuote() {
     curl -s -o /dev/null -w "%{http_code}" --max-time 90 "${BASE_URL}/quote/$1"
 }
 
@@ -231,19 +231,19 @@ holeKurs() {
 # **gesetzt** ist und dass sie **stimmt**. Die zweite rechnet in der
 # Gegenrichtung nach — aus `(ticker, mic)` muss sich über die Börsentabelle
 # wieder genau das Symbol ergeben, unter dem der Kurs geholt wurde.
-checkXetraWeg() {
+checkExchangeTablePath() {
     local _STATUS
-    _STATUS="$(holeKurs "${ISIN_XETRA}")"
+    _STATUS="$(fetchQuote "${ISIN_XETRA}")"
     if [[ "${_STATUS}" != "200" ]]; then
         report "#5a" "Xetra-Papier wird angelegt" false \
             "HTTP ${_STATUS} — ohne Netz gibt es hier nichts zu prüfen"
         return 1
     fi
 
-    local _ZEILE
-    _ZEILE="$(dbQuery "SELECT symbol, ticker, mic, identity_status FROM instruments WHERE isin = '${ISIN_XETRA}'")"
-    local _SYMBOL="${_ZEILE%%|*}"
-    local _REST="${_ZEILE#*|}"
+    local _ROW
+    _ROW="$(dbQuery "SELECT symbol, ticker, mic, identity_status FROM instruments WHERE isin = '${ISIN_XETRA}'")"
+    local _SYMBOL="${_ROW%%|*}"
+    local _REST="${_ROW#*|}"
     local _TICKER="${_REST%%|*}"
     _REST="${_REST#*|}"
     local _MIC="${_REST%%|*}"
@@ -258,20 +258,20 @@ checkXetraWeg() {
         return 1
     fi
 
-    local _GEBAUT
-    _GEBAUT="$("${VENV_PY}" -c '
+    local _COMPOSED
+    _COMPOSED="$("${VENV_PY}" -c '
 import sys
 sys.path.insert(0, sys.argv[3])
 from app.exchanges import EXCHANGES
 print(f"{sys.argv[1]}{EXCHANGES[sys.argv[2]].suffix}")
 ' "${_TICKER}" "${_MIC}" "${PROJECT_ROOT}")"
 
-    if [[ "${_GEBAUT}" == "${_SYMBOL}" ]]; then
+    if [[ "${_COMPOSED}" == "${_SYMBOL}" ]]; then
         report "#5b" "das Symbol lässt sich aus der Identität zusammensetzen" true \
-            "${_TICKER} + Suffix(${_MIC}) = ${_GEBAUT}"
+            "${_TICKER} + Suffix(${_MIC}) = ${_COMPOSED}"
     else
         report "#5b" "das Symbol lässt sich aus der Identität zusammensetzen" false \
-            "${_GEBAUT} statt ${_SYMBOL}"
+            "${_COMPOSED} statt ${_SYMBOL}"
     fi
 }
 
@@ -280,36 +280,36 @@ print(f"{sys.argv[1]}{EXCHANGES[sys.argv[2]].suffix}")
 # Die Migration konnte `AAPL` nicht zuordnen: Für suffixlose Symbole führt die
 # Börsentabelle nur den Sammelcode `US`, und welcher der sechs Handelsplätze
 # gilt, steht dort nicht. Die Auflösung weiß es.
-checkUsWeg() {
+checkYahooCodePath() {
     local _STATUS
-    _STATUS="$(holeKurs "${ISIN_US}")"
+    _STATUS="$(fetchQuote "${ISIN_US}")"
     if [[ "${_STATUS}" != "200" ]]; then
         report "#5c" "US-Papier bekommt einen echten MIC" false \
             "HTTP ${_STATUS} — ohne Netz gibt es hier nichts zu prüfen"
         return 1
     fi
 
-    local _ZEILE
-    _ZEILE="$(dbQuery "SELECT symbol, ticker, mic FROM instruments WHERE isin = '${ISIN_US}'")"
-    local _SYMBOL="${_ZEILE%%|*}"
-    local _REST="${_ZEILE#*|}"
+    local _ROW
+    _ROW="$(dbQuery "SELECT symbol, ticker, mic FROM instruments WHERE isin = '${ISIN_US}'")"
+    local _SYMBOL="${_ROW%%|*}"
+    local _REST="${_ROW#*|}"
     local _TICKER="${_REST%%|*}"
     local _MIC="${_REST#*|}"
 
-    local _ECHT
-    _ECHT="$("${VENV_PY}" -c '
+    local _IS_REAL
+    _IS_REAL="$("${VENV_PY}" -c '
 import sys
 sys.path.insert(0, sys.argv[2])
 from app.exchanges import is_real_mic
 print("ja" if is_real_mic(sys.argv[1]) else "nein")
 ' "${_MIC}" "${PROJECT_ROOT}")"
 
-    if [[ "${_ECHT}" == "ja" && "${_TICKER}" == "${_SYMBOL}" ]]; then
+    if [[ "${_IS_REAL}" == "ja" && "${_TICKER}" == "${_SYMBOL}" ]]; then
         report "#5c" "US-Papier bekommt einen echten MIC statt des Sammelcodes" true \
             "${_SYMBOL} → ${_TICKER}/${_MIC}"
     else
         report "#5c" "US-Papier bekommt einen echten MIC statt des Sammelcodes" false \
-            "${_SYMBOL} → '${_TICKER}'/'${_MIC}' (echter MIC: ${_ECHT})"
+            "${_SYMBOL} → '${_TICKER}'/'${_MIC}' (echter MIC: ${_IS_REAL})"
     fi
 }
 
@@ -319,9 +319,9 @@ print("ja" if is_real_mic(sys.argv[1]) else "nein")
 # und ein halb geratenes Papier anzulegen ist schlechter, als den Fall
 # sichtbar offen zu lassen. Geprüft wird beides: die Absage nach außen und
 # dass **keine Zeile** entstanden ist.
-checkUneindeutigWirdAbgelehnt() {
+checkAmbiguousIsRejected() {
     local _STATUS
-    _STATUS="$(holeKurs "${ISIN_UNEINDEUTIG}")"
+    _STATUS="$(fetchQuote "${ISIN_UNEINDEUTIG}")"
 
     if [[ "${_STATUS}" == "502" ]]; then
         report "#5d" "uneindeutiger Treffer wird abgelehnt statt geraten" true \
@@ -331,13 +331,13 @@ checkUneindeutigWirdAbgelehnt() {
             "HTTP ${_STATUS} statt 502"
     fi
 
-    local _ANZAHL
-    _ANZAHL="$(dbQuery "SELECT COUNT(*) FROM instruments WHERE isin = '${ISIN_UNEINDEUTIG}'")"
-    if [[ "${_ANZAHL}" == "0" ]]; then
+    local _COUNT
+    _COUNT="$(dbQuery "SELECT COUNT(*) FROM instruments WHERE isin = '${ISIN_UNEINDEUTIG}'")"
+    if [[ "${_COUNT}" == "0" ]]; then
         report "#5e" "und hinterlässt keine halbe Zeile" true "keine Zeile angelegt"
     else
         report "#5e" "und hinterlässt keine halbe Zeile" false \
-            "${_ANZAHL} Zeile(n) in der Datenbank"
+            "${_COUNT} Zeile(n) in der Datenbank"
     fi
 }
 
@@ -347,19 +347,19 @@ checkUneindeutigWirdAbgelehnt() {
 # Papier blieb ohne — und weil SQLite `NULL` im Eindeutigkeits-Index als
 # eigenen Wert zählt, fiel das nicht einmal auf.
 checkListingIds() {
-    local _ZAHLEN
-    _ZAHLEN="$(dbQuery "SELECT COUNT(*), COUNT(listing_id), COUNT(DISTINCT listing_id) FROM instruments")"
-    local _GESAMT="${_ZAHLEN%%|*}"
-    local _REST="${_ZAHLEN#*|}"
-    local _MIT="${_REST%%|*}"
-    local _VERSCHIEDEN="${_REST#*|}"
+    local _COUNTS
+    _COUNTS="$(dbQuery "SELECT COUNT(*), COUNT(listing_id), COUNT(DISTINCT listing_id) FROM instruments")"
+    local _TOTAL="${_COUNTS%%|*}"
+    local _REST="${_COUNTS#*|}"
+    local _WITH_ID="${_REST%%|*}"
+    local _DISTINCT="${_REST#*|}"
 
-    if [[ "${_GESAMT}" -gt 0 && "${_MIT}" == "${_GESAMT}" && "${_VERSCHIEDEN}" == "${_GESAMT}" ]]; then
+    if [[ "${_TOTAL}" -gt 0 && "${_WITH_ID}" == "${_TOTAL}" && "${_DISTINCT}" == "${_TOTAL}" ]]; then
         report "#5f" "jede Zeile hat eine eigene listing_id" true \
-            "${_GESAMT} Papiere, ${_VERSCHIEDEN} verschiedene Kennungen"
+            "${_TOTAL} Papiere, ${_DISTINCT} verschiedene Kennungen"
     else
         report "#5f" "jede Zeile hat eine eigene listing_id" false \
-            "${_GESAMT} Papiere, ${_MIT} mit Kennung, ${_VERSCHIEDEN} verschieden"
+            "${_TOTAL} Papiere, ${_WITH_ID} mit Kennung, ${_DISTINCT} verschieden"
     fi
 }
 
@@ -371,15 +371,15 @@ runChecks() {
 
     echo -e "  ${BLUE}ℹ${NC} Lauf 1 von 2 — über die eigene Börsentabelle (#5a, #5b)"
     startServer "xetra" "XETR" || exit 1
-    checkXetraWeg
+    checkExchangeTablePath
     checkListingIds
     stopServer
 
     echo
     echo -e "  ${BLUE}ℹ${NC} Lauf 2 von 2 — über Yahoos Börsencode (#5c) und die Gegenprobe (#5d, #5e)"
     startServer "us" "US" || exit 1
-    checkUsWeg
-    checkUneindeutigWirdAbgelehnt
+    checkYahooCodePath
+    checkAmbiguousIsRejected
     stopServer
 
     echo

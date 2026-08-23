@@ -26,7 +26,7 @@ _ENDPOINT = "https://api.openfigi.com/v3/mapping"
 # in der Börsentabelle der App. Dort waren sie am falschen Ort: Sie sagen
 # nichts über die Börse, sondern über **einen Anbieter**. Die nächste
 # Kursquelle hätte ihre eigenen zwei Spalten danebengestellt.
-_FIGI_AUSNAHMEN: dict[str, tuple[str, str]] = {
+_FIGI_EXCEPTIONS: dict[str, tuple[str, str]] = {
     "US": ("exchCode", "US"),
 }
 
@@ -41,7 +41,7 @@ def figi_lookup(mic: str) -> tuple[str, str]:
         `(id_type, id_value)` für die Anfrage: im Regelfall
         ``("micCode", mic)``.
     """
-    return _FIGI_AUSNAHMEN.get(mic, ("micCode", mic))
+    return _FIGI_EXCEPTIONS.get(mic, ("micCode", mic))
 
 # Zeichen, die ein Yahoo-Symbol tragen kann: Buchstaben, Ziffern, Punkt,
 # Bindestrich, Zirkumflex (Indizes) und Gleichheitszeichen (Devisen/Futures).

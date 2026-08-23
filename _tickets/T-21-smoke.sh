@@ -364,13 +364,13 @@ runChecks() {
     echo
 
     local _LINE _OK _TEXT
-    local _VOLLSTAENDIG=false
+    local _COMPLETE=false
     while IFS='|' read -r _LINE _OK _TEXT; do
         # Nur die eigenen Checkzeilen: Die Migration protokolliert selbst nach
         # stdout, und ihre Meldungen sind keine Prüfergebnisse.
         [[ "${_LINE}" != \#* ]] && continue
         if [[ "${_LINE}" == "#ende" ]]; then
-            _VOLLSTAENDIG=true
+            _COMPLETE=true
             continue
         fi
         report "${_LINE}" "${_TEXT}" \
@@ -380,7 +380,7 @@ runChecks() {
     # Ein abgebrochener Lauf hat nicht bestanden — er hat aufgehört. Ohne diese
     # Prüfung zählt die Schleife die Ergebnisse, die noch kamen, und meldet
     # „keine Fehler".
-    if [[ "${_VOLLSTAENDIG}" != true && ${COUNT_OK} -gt 0 ]]; then
+    if [[ "${_COMPLETE}" != true && ${COUNT_OK} -gt 0 ]]; then
         echo
         echo -e "  ${RED}✗${NC} Der Lauf brach nach ${COUNT_OK} Prüfungen ab:"
         grep -v "^20" "${WORKDIR}/errors.log" | tail -8
