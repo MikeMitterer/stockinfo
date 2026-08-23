@@ -5,7 +5,7 @@ legt die kanonische Identität daneben: `ticker` und `mic`, dazu eine opake
 `listing_id`.
 
 Die Leitregel steht in jedem einzelnen Test: **melden statt raten.** Was sich
-nicht sicher zerlegen lässt, bleibt open_rows und sichtbar — es wird nicht mit
+nicht sicher zerlegen lässt, bleibt offen und sichtbar — es wird nicht mit
 einer plausiblen Vermutung gefüllt.
 """
 
@@ -74,7 +74,8 @@ def test_die_neuen_spalten_kommen_dazu(migrated: str) -> None:
     with sqlite3.connect(migrated) as connection:
         connection.row_factory = sqlite3.Row
         columns = {
-            r["name"] for r in connection.execute("PRAGMA table_info(instruments)")
+            column["name"]
+            for column in connection.execute("PRAGMA table_info(instruments)")
         }
 
     assert {"ticker", "mic", "listing_id", "identity_status"} <= columns
@@ -130,20 +131,26 @@ def test_jede_zeile_bekommt_eine_listing_id(migrated: str) -> None:
     eine mit `identity_status = legacy_unresolved`."
     """
     rows = _instruments(migrated)
-    ids = [row["listing_id"] for row in rows.values()]
+    listing_ids = [row["listing_id"] for row in rows.values()]
 
-    assert all(ids), "eine Zeile ohne listing_id"
-    assert len(set(ids)) == len(ids), "listing_id ist nicht eindeutig"
-    assert all(len(identifier) == 36 for identifier in ids), "keine UUID-Schreibweise"
+    assert all(listing_ids), "eine Zeile ohne listing_id"
+    assert len(set(listing_ids)) == len(listing_ids), "listing_id ist nicht eindeutig"
+    assert all(len(value) == 36 for value in listing_ids), "keine UUID-Schreibweise"
 
 
 def test_die_listing_id_ueberlebt_einen_zweiten_lauf(migrated: str) -> None:
     """Sie ist die Identität für Maschinen — sie darf sich nie ändern."""
-    before = {s: z["listing_id"] for s, z in _instruments(migrated).items()}
+    before = {
+        symbol: row["listing_id"]
+        for symbol, row in _instruments(migrated).items()
+    }
 
     init_db(migrated)
 
-    assert {s: z["listing_id"] for s, z in _instruments(migrated).items()} == before
+    assert {
+        symbol: row["listing_id"]
+        for symbol, row in _instruments(migrated).items()
+    } == before
 
 
 def test_die_eindeutigkeit_liegt_auf_ticker_und_mic(migrated: str) -> None:
@@ -156,8 +163,8 @@ def test_die_eindeutigkeit_liegt_auf_ticker_und_mic(migrated: str) -> None:
     with sqlite3.connect(migrated) as connection:
         connection.row_factory = sqlite3.Row
         indexes = {
-            r["name"]: r
-            for r in connection.execute("PRAGMA index_list(instruments)")
+            index["name"]: index
+            for index in connection.execute("PRAGMA index_list(instruments)")
         }
 
     assert "idx_instruments_symbol" not in indexes
@@ -196,14 +203,14 @@ def test_die_offenen_faelle_werden_gemeldet(migrated: str, capsys) -> None:
     """Melden statt raten heißt: Es muss auch jemand davon erfahren.
 
     Ohne Meldung wäre „später von Hand zuordnen" ein Versprechen, das niemand
-    einlösen kann — man wüsste nicht, was open_rows ist.
+    einlösen kann — man wüsste nicht, was offen ist.
     """
     import structlog
 
     with structlog.testing.capture_logs() as logs:
         init_db(migrated)
 
-    messages = [e for e in logs if e["event"] == "identity_unresolved"]
+    messages = [entry for entry in logs if entry["event"] == "identity_unresolved"]
     assert messages, "kein Hinweis auf die offenen Zuordnungen"
     assert messages[0]["count"] == 2
     assert set(messages[0]["symbols"]) == {"AAPL", "BRK-B"}
@@ -239,7 +246,7 @@ def test_zwei_listings_mit_gleichem_symbol_ueberleben_den_neustart(tmp_path) -> 
             """
         )
 
-    init_db(path)  # der zweite Start — hier wurde before zusammengeführt
+    init_db(path)  # der zweite Start — hier wurde vorher zusammengeführt
 
     with sqlite3.connect(path) as connection:
         connection.row_factory = sqlite3.Row
@@ -252,8 +259,8 @@ def test_zwei_listings_mit_gleichem_symbol_ueberleben_den_neustart(tmp_path) -> 
             "(SELECT id FROM instruments WHERE symbol = 'ABC')"
         ).fetchone()
 
-    assert [z["mic"] for z in rows] == ["XNAS", "XNYS"]
-    assert [z["listing_id"] for z in rows] == [
+    assert [row["mic"] for row in rows] == ["XNAS", "XNYS"]
+    assert [row["listing_id"] for row in rows] == [
         "aaaaaaaa-0000-4000-8000-000000000001",
         "aaaaaaaa-0000-4000-8000-000000000002",
     ]
@@ -337,8 +344,8 @@ def test_zwei_offene_zeilen_mit_gleichem_symbol_bleiben_getrennt(tmp_path) -> No
             "ORDER BY isin"
         ).fetchall()
 
-    assert [r["isin"] for r in rows] == ["US1111111111", "US2222222222"]
-    assert [r["listing_id"] for r in rows] == [
+    assert [row["isin"] for row in rows] == ["US1111111111", "US2222222222"]
+    assert [row["listing_id"] for row in rows] == [
         "bbbbbbbb-0000-4000-8000-000000000001",
         "bbbbbbbb-0000-4000-8000-000000000002",
     ]

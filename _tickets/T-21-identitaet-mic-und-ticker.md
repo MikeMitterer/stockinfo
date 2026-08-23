@@ -27,7 +27,7 @@ muss, ist kein Plugin).
 >
 > | | Umfang | Zeilen | Commit |
 > |---|---|---|---|
-> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 3 |
+> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 4 |
 > | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung, `ExchangeDef` aufräumen | `#5` | offen |
 > | **Teil 3** | API und Dashboard, offene Zuordnungen sichtbar und von Hand setzbar, Vertragsversion | `#2b`, `#2c`, `#3`, `#4` | offen |
 >
@@ -75,7 +75,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 5 | neues Papier aufnehmen | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | ➖ Teil 2 | |
 | 6 | `make test` | Backend, Plugin-API und Dashboard grün | ✅ [^f] | |
 
-[^a]: `tests/test_identity_migration.py`, dreizehn Tests gegen eine
+[^a]: `tests/test_identity_migration.py`, **vierzehn** Tests gegen eine
     nachgestellte Alt-Datenbank mit vier bezeichnenden Fällen. Zerlegt werden `EUNL.DE` und
     `XIC.TO`; `AAPL` (suffixlos) und `BRK-B` (fremde Schreibweise) bleiben
     offen. Die Migration läuft zweimal — sie muss idempotent sein.
@@ -103,9 +103,9 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 [^g]: `./_tickets/T-21-smoke.sh --run` gegen eine **Sicherung** von
     `data/stockinfo.db` (sechs gewachsene Papiere, 48 Kurspunkte) — das
     Original wird nur gelesen. Die Sicherung entsteht über die
-    SQLite-Backup-API, nicht per `cp`: Die App läuft im WAL-Modus, und ein
+    SQLite-Backup-API, nicht per `cp`: Die App läuft im WAL-Modus, und eine
     Dateikopie ließe committete Einträge aus — der Lauf liefe dann an genau
-    den neuesten Fällen vorbei (Codex, Runde 2). Sieben Checks grün: 6 Instrumente vorher und
+    den neuesten Fällen vorbei (Codex, Runde 2). Acht Checks grün: 6 Instrumente vorher und
     nachher, 48 Kurspunkte vorher und nachher, sechs eindeutige `listing_id`,
     vier zerlegt (`VGWL.DE`, `EUNL.DE`, `APC.DE`, `BRYN.DE` → `XETR`), zwei
     offen (`GOLD.SG` — das Suffix `.SG` steht nicht in der Tabelle — und
@@ -119,6 +119,15 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     vorher hätte er dort grün gemeldet, ohne einen einzigen Fall geprüft zu
     haben (Codex, Runde 2). Gegenproben: leere Datenbank → Exit 1; ein
     committeter Eintrag im WAL → wird mitgesichert und mitgezählt (7 statt 6).
+
+    **Das Oracle rechnet vorwärts** (Codex, Runde 3): Die Migration zerlegt
+    `symbol` → `(ticker, mic)`, die Prüfung setzt `(ticker, mic)` → `symbol`
+    zusammen. Mit derselben Funktion zu prüfen hieße, sich selbst recht zu
+    geben — und es verwarf einen gültigen Zielzustand: Ein von Hand
+    zugeordnetes `VTI` → `VTI/XNAS` behält sein suffixloses `symbol`.
+    Nachvalidiert wird deshalb nur, was **dieser Lauf** zugeordnet hat; `#2c`
+    hält zusätzlich fest, dass bestehende Zuordnungen unverändert bleiben.
+    Gegenprobe mit `WALONLY/XNAS` im WAL: angenommen.
 
 ---
 

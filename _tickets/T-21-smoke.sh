@@ -115,7 +115,7 @@ import sqlite3
 import sys
 
 from app.db import init_db
-from app.exchanges import split_symbol
+from app.exchanges import EXCHANGES
 
 source, backup = sys.argv[1], sys.argv[2]
 
@@ -131,14 +131,35 @@ def check(name: str, ok: bool, text: str) -> None:
     print(f"{name}|{ok}|{text}")
 
 
+def state_before(connection: sqlite3.Connection) -> dict[int, dict]:
+    """Der Zustand je Zeile **vor** der Migration.
+
+    Auf einer Alt-Datenbank gibt es die Identitätsspalten noch nicht — dann
+    gilt jede Zeile als unbetrachtet. Nur so lässt sich hinterher sagen,
+    welche Zeile *dieser* Lauf zugeordnet hat.
+    """
+    connection.row_factory = sqlite3.Row
+    columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(instruments)")
+    }
+    has_identity = {"ticker", "mic", "identity_status"} <= columns
+    selection = (
+        "id, symbol, ticker, mic, identity_status"
+        if has_identity
+        else "id, symbol, NULL AS ticker, NULL AS mic, NULL AS identity_status"
+    )
+    return {
+        row["id"]: dict(row)
+        for row in connection.execute(f"SELECT {selection} FROM instruments")
+    }
+
+
 with sqlite3.connect(backup) as connection:
-    instruments_before = connection.execute(
-        "SELECT COUNT(*) FROM instruments"
-    ).fetchone()[0]
+    before = state_before(connection)
     quotes_before = connection.execute("SELECT COUNT(*) FROM quotes").fetchone()[0]
 
 # Ein leerer Bestand ist kein bestandener Lauf, sondern ein ungeprüfter.
-if instruments_before == 0:
+if not before:
     check("#0 ", False, f"{source} enthält keine Instrumente — nichts zu prüfen")
     sys.exit(0)
 
@@ -147,27 +168,39 @@ init_db(backup)  # zweiter Start — dort hat die Alt-Bereinigung Zeilen gelösc
 
 with sqlite3.connect(backup) as connection:
     connection.row_factory = sqlite3.Row
-    rows = connection.execute(
-        "SELECT symbol, isin, ticker, mic, identity_status, listing_id "
-        "FROM instruments"
-    ).fetchall()
+    after = {
+        row["id"]: dict(row)
+        for row in connection.execute(
+            "SELECT id, symbol, isin, ticker, mic, identity_status, listing_id "
+            "FROM instruments"
+        )
+    }
     quotes_after = connection.execute("SELECT COUNT(*) FROM quotes").fetchone()[0]
     indexes = {
-        r["name"]: r["unique"]
-        for r in connection.execute("PRAGMA index_list(instruments)")
+        index["name"]: index["unique"]
+        for index in connection.execute("PRAGMA index_list(instruments)")
     }
 
-resolved = [r for r in rows if r["identity_status"] == "resolved"]
-open_rows = [r for r in rows if r["identity_status"] == "legacy_unresolved"]
-listing_ids = [r["listing_id"] for r in rows]
+listing_ids = [row["listing_id"] for row in after.values()]
+# Nur die Zeilen, die **dieser** Lauf zugeordnet hat. Was schon eine Identität
+# trug — etwa von Hand gesetzt — wird nicht nachvalidiert.
+newly_resolved = [
+    row
+    for identifier, row in after.items()
+    if row["identity_status"] == "resolved"
+    and not before.get(identifier, {}).get("identity_status")
+]
+still_open = [row for row in after.values() if row["identity_status"] == "legacy_unresolved"]
+preexisting = [
+    (before[identifier], row)
+    for identifier, row in after.items()
+    if before.get(identifier, {}).get("identity_status")
+]
 
+check("#0 ", True, f"{len(before)} Instrumente, {quotes_before} Kurspunkte im Bestand")
 check(
-    "#0 ", True,
-    f"{instruments_before} Instrumente, {quotes_before} Kurspunkte im Bestand",
-)
-check(
-    "#1a", len(rows) == instruments_before,
-    f"Instrumente vorher {instruments_before}, nachher {len(rows)}",
+    "#1a", len(after) == len(before),
+    f"Instrumente vorher {len(before)}, nachher {len(after)}",
 )
 check(
     "#1b", quotes_after == quotes_before,
@@ -175,32 +208,50 @@ check(
 )
 check(
     "#1c",
-    all(listing_ids) and len(set(listing_ids)) == len(rows),
-    f"listing_id: {len(set(listing_ids))} eindeutige für {len(rows)} Zeilen",
+    all(listing_ids) and len(set(listing_ids)) == len(after),
+    f"listing_id: {len(set(listing_ids))} eindeutige für {len(after)} Zeilen",
 )
 
-# Jede Zeile muss zu ihrem Status passen — nachgerechnet, nicht behauptet.
+# Vorwärts zusammensetzen statt rückwärts zerlegen: Die Migration rechnet
+# `symbol` → `(ticker, mic)`, hier wird `(ticker, mic)` → `symbol` gerechnet.
+# Ein Fehler in der Zerlegung — etwa ein Suffix am falschen MIC — fällt so auf;
+# mit derselben Funktion zu prüfen hieße, sich selbst recht zu geben.
+def composed(row: dict) -> str | None:
+    definition = EXCHANGES.get(row["mic"] or "")
+    return f"{row['ticker']}{definition.suffix}" if definition else None
+
+
 wrongly_resolved = [
-    r["symbol"] for r in resolved if split_symbol(r["symbol"]) != (r["ticker"], r["mic"])
+    f"{row['symbol']}≠{composed(row)}"
+    for row in newly_resolved
+    if composed(row) != row["symbol"]
 ]
-wrongly_open = [
-    r["symbol"]
-    for r in open_rows
-    if split_symbol(r["symbol"]) != (None, None) or r["ticker"] or r["mic"]
+wrongly_open = [row["symbol"] for row in still_open if row["ticker"] or row["mic"]]
+changed = [
+    f"{old['symbol']}: {old['ticker']}/{old['mic']} → {new['ticker']}/{new['mic']}"
+    for old, new in preexisting
+    if (old["ticker"], old["mic"]) != (new["ticker"], new["mic"])
 ]
+
 check(
     "#2 ",
-    not wrongly_resolved and len(resolved) + len(open_rows) == len(rows),
-    f"{len(resolved)} zerlegt, jede nachgerechnet: "
-    + (", ".join(f"{r['symbol']}→{r['ticker']}/{r['mic']}" for r in resolved) or "keine")
+    not wrongly_resolved,
+    f"{len(newly_resolved)} neu zerlegt, vorwärts gegengerechnet: "
+    + (", ".join(f"{r['ticker']}/{r['mic']}→{r['symbol']}" for r in newly_resolved) or "keine")
     + (f" — falsch: {wrongly_resolved}" if wrongly_resolved else ""),
 )
 check(
     "#2b",
     not wrongly_open,
-    f"{len(open_rows)} offen, nichts geraten: "
-    + (", ".join(r["symbol"] for r in open_rows) or "keine")
+    f"{len(still_open)} offen, nichts geraten: "
+    + (", ".join(row["symbol"] for row in still_open) or "keine")
     + (f" — zu Unrecht offen: {wrongly_open}" if wrongly_open else ""),
+)
+check(
+    "#2c",
+    not changed,
+    f"{len(preexisting)} bereits zugeordnete Zeilen unverändert"
+    + (f" — verändert: {changed}" if changed else ""),
 )
 check(
     "#3b",
