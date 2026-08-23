@@ -28,8 +28,16 @@ muss, ist kein Plugin).
 > | | Umfang | Zeilen | Commit |
 > |---|---|---|---|
 > | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | `be5f38d` ✔ abgenommen |
-> | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung, `ExchangeDef` aufräumen | `#5` | in Arbeit |
+> | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung | `#5` | `6abce88` — zur Prüfung |
+> | **Teil 2b** | `ExchangeDef` aufräumen (`figi_id_type`, `figi_value` zum Provider) | — | offen |
 > | **Teil 3** | API und Dashboard, offene Zuordnungen sichtbar und von Hand setzbar, Vertragsversion | `#2b`, `#2c`, `#3`, `#4` | offen |
+>
+> **Teil 2b abgetrennt** *(Claude, 2026-08-23)* — das Aufräumen von
+> `ExchangeDef` ist ein reiner Umbau ohne Verhaltensänderung und hat mit der
+> Erzeugung nichts zu tun. In einer Übergabe mit ihr vermischt, stünde ein
+> Diff zur Prüfung, in dem sich Verhalten und Verschiebung nicht trennen
+> lassen — bei einem Ticket, das in Teil 1 neun Runden gebraucht hat, ist das
+> der schlechtere Schnitt.
 >
 > `#6` (`make test`) läuft in jeder Übergabe mit.
 
@@ -72,7 +80,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 3 | `GET /instruments` | `symbol` weiterhin vorhanden und unverändert (Profil-Links hängen daran) | ✅ [^d] | |
 | 3b | Datenbank-Schema | Eindeutigkeit liegt auf `(ticker, mic)`; `symbol` ist **nicht mehr** global unique | ✅ [^e] | |
 | 4 | Dashboard, Assets-Tabelle | unverändert; Yahoo- und extraETF-Links funktionieren | | |
-| 5 | neues Papier aufnehmen | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | ➖ Teil 2 | |
+| 5 | neues Papier aufnehmen | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | ✅ [^h] | |
 | 6 | `make test` | Backend, Plugin-API und Dashboard grün | ✅ [^f] | |
 
 [^a]: `tests/test_identity_migration.py`, **zwanzig** Tests gegen eine
@@ -100,6 +108,49 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     ein echter Konflikt fällt weiterhin auf.
 [^f]: `.venv/bin/pytest tests/ -q` → `392 passed, 29 skipped`;
     `make test-plugin-api` → 36; Ruff sauber.
+[^h]: `./_tickets/T-21b-smoke.sh --run` — **sechs Checks live gegen das echte
+    Netz**, auf frischen temporären Datenbanken, über den HTTP-Weg. Zwei
+    Läufe, weil die Kaskade zwei Wege hat: `VGWL.DE → VGWL/XETR` über die
+    eigene Börsentabelle (`#5a`) mit der Rückrechnung `VGWL + Suffix(XETR) =
+    VGWL.DE` (`#5b`), und `AAPL → AAPL/XNAS` über Yahoos Börsencode (`#5c`).
+
+    **Damit ist die Lücke aus Teil 1 geschlossen**, und zwar dort, wo das
+    Ticket sie verortet hat: Der echte MIC kommt aus dem aufgelösten Listing,
+    nicht aus der Börsentabelle und nicht geraten.
+
+    Die **Gegenprobe** trägt den Lauf: `BRK-B` wird abgelehnt (`#5d`, HTTP
+    502) und hinterlässt **keine** Zeile (`#5e`). Ohne sie prüfte das Script
+    nur, dass Erfolgsfälle gelingen. Dazu `#5f`: jede Zeile eine eigene
+    `listing_id` — die entsteht jetzt beim Anlegen statt erst beim nächsten
+    Start.
+
+    Dazu 15 neue Tests (`tests/test_resolver_identity.py`,
+    `tests/test_identity_creation.py`). **Drei Mutanten belegen, dass sie
+    beißen**: `canonical_identity` alles durchwinken lassen (2 Tests fallen),
+    Yahoos Bindestrich zum Punkt raten (1), eine leere Identität die
+    gespeicherte überschreiben lassen (1).
+
+    Was dabei **offen geblieben** ist und nicht zu `#5` gehört:
+
+    * `XNAS`, `XNYS`, `ARCX`, `XASE`, `BATS` stehen nicht in `EXCHANGES`. Aus
+      `(AAPL, XNAS)` lässt sich deshalb **kein** Yahoo-Symbol zusammensetzen —
+      die Rückrichtung MIC → Suffix fehlt für die US-Plätze. Heute stört das
+      nichts (das Symbol ist gespeichert), aber T-23 braucht sie: Dort setzt
+      jede Quelle ihr Format selbst zusammen.
+    * Der Nachtrag einer offenen Zeile passiert nur, wenn jemand das Papier
+      **über seine ISIN** abruft. Der Scheduler-Refresh löst nicht auf und
+      trägt deshalb nichts nach. `AAPL` aus dem Altbestand bleibt offen, bis
+      es angefragt oder von Hand zugeordnet wird (Teil 3).
+    * Eine **von Hand** gesetzte Zuordnung ist von einer maschinellen nicht zu
+      unterscheiden — beide tragen `resolved`. Solange das so ist, kann eine
+      spätere Auflösung eine manuelle Korrektur überschreiben. Teil 3 braucht
+      dafür einen eigenen Status, den der automatische Weg nicht anfasst.
+    * **Verhaltensänderung, absichtlich:** Ein Yahoo-Treffer an einer Börse,
+      die `EXCHANGES` nicht führt (`GOLD.SG`, Stuttgart), wird jetzt
+      abgelehnt statt übernommen. Das ist die Regel des Tickets — wer die
+      Börse aufnehmen will, trägt sie in die Tabelle ein, dann greift wieder
+      der Suffix-Weg.
+
 [^g]: `./_tickets/T-21-smoke.sh --run` gegen eine **Sicherung** von
     `data/stockinfo.db` (sechs gewachsene Papiere, 48 Kurspunkte) — das
     Original wird nur gelesen. Die Sicherung entsteht über die
