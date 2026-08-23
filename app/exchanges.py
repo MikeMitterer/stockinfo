@@ -114,6 +114,31 @@ HOME_EXCHANGES: dict[str, str] = {
 }
 
 
+def is_real_mic(mic: str | None) -> bool:
+    """Ist das ein echter MIC — oder einer der internen Sammelcodes?
+
+    Die Tabelle führt `US` als OpenFIGI-Suchcode für NYSE und NASDAQ zusammen.
+    Das ist **kein** ISO-10383-MIC, und ein Feld, das mal echte MICs und mal
+    diesen Code enthält, wird beim ersten Anbieter zum Problem, der echte MICs
+    erwartet (T-21).
+
+    Erkennbar sind die Sammelcodes daran, dass sie über `exchCode` aufgelöst
+    werden statt über `micCode`. Ein MIC, den die Tabelle gar nicht kennt,
+    gilt als echt: `XNAS` steht dort nicht, ist aber genau der Wert, den eine
+    manuelle Zuordnung setzen soll.
+
+    Args:
+        mic: Der zu prüfende Code, oder ``None``.
+
+    Returns:
+        ``True`` wenn der Wert als kanonischer MIC taugt.
+    """
+    if not mic:
+        return False
+    definition = EXCHANGES.get(mic)
+    return definition is None or definition.figi_id_type == "micCode"
+
+
 def split_symbol(symbol: str) -> tuple[str | None, str | None]:
     """Rechnet ein Symbol auf `(ticker, mic)` zurück — oder gibt auf.
 

@@ -11,7 +11,7 @@ from pathlib import Path
 import structlog
 
 from app.models import OVERRIDE_FIELDS
-from app.exchanges import split_symbol
+from app.exchanges import is_real_mic, split_symbol
 
 logger = structlog.get_logger()
 
@@ -175,30 +175,27 @@ _IDENTITY_RESOLVED = "resolved"
 _IDENTITY_UNRESOLVED = "legacy_unresolved"
 
 
-def _has_valid_identity(row: sqlite3.Row) -> bool:
+def _identity_is_complete(row: sqlite3.Row) -> bool:
     """Trägt diese Zeile eine **vollständige** kanonische Identität?
 
-    Der Unterschied zu „hat einen Status" ist der Punkt: Eine Zeile, die
-    `resolved` behauptet und weder Ticker noch MIC trägt, ist keine Zuordnung,
-    sondern ein Widerspruch. Sie zu überspringen hieße, ihn dauerhaft zu
-    konservieren — die Migration käme nie wieder an sie heran.
+    Entschieden wird nach den **Daten**, nicht nach der Beschriftung. Das ist
+    der Kern: Ein `identity_status`, der `resolved` behauptet, macht aus zwei
+    leeren Feldern keine Zuordnung — und ein kaputter Status macht aus einer
+    gültigen Zuordnung keinen Müll.
 
-    Eine vollständige Zuordnung bleibt dagegen unangetastet, auch wenn sich
-    ihr Symbol nicht zerlegen ließe: Ein von Hand gesetztes `VTI` → `VTI/XNAS`
-    ist genau der Fall, für den es die manuelle Zuordnung gibt.
+    Vollständig heißt: ein Ticker **und** ein **echter** MIC. Der Sammelcode
+    `US` zählt nicht; er ist ein interner Suchcode und darf im kanonischen
+    Feld nie stehen. Ein MIC, den die eigene Tabelle nicht kennt, zählt
+    dagegen sehr wohl — `XNAS` ist genau der Wert, den eine manuelle
+    Zuordnung setzen soll.
 
     Args:
-        row: Instrumentenzeile mit `identity_status`, `ticker` und `mic`.
+        row: Instrumentenzeile mit `ticker` und `mic`.
 
     Returns:
-        ``True`` bei vollständiger Zuordnung oder ausdrücklich offenem Fall.
+        ``True`` bei vollständiger, kanonisch zulässiger Identität.
     """
-    status = row["identity_status"]
-    if status == _IDENTITY_RESOLVED:
-        return bool(row["ticker"]) and bool(row["mic"])
-    if status == _IDENTITY_UNRESOLVED:
-        return not row["ticker"] and not row["mic"]
-    return False
+    return bool(row["ticker"]) and is_real_mic(row["mic"])
 
 
 def _migrate_identity(connection: sqlite3.Connection) -> None:
@@ -242,8 +239,34 @@ def _migrate_identity(connection: sqlite3.Connection) -> None:
                 "UPDATE instruments SET listing_id = ? WHERE id = ?",
                 (str(uuid.uuid4()), row["id"]),
             )
-        if _has_valid_identity(row):
-            continue  # bestehende Zuordnung — die wird nicht überschrieben
+        if _identity_is_complete(row):
+            # Bestehende Zuordnung — die Daten bleiben unangetastet. Stimmt die
+            # Beschriftung nicht, wird **sie** korrigiert, nicht die Identität:
+            # Ein kaputter Status darf keine gültige Zuordnung kosten.
+            if row["identity_status"] != _IDENTITY_RESOLVED:
+                logger.warning(
+                    "identity_status_repaired",
+                    symbol=row["symbol"],
+                    previous=row["identity_status"],
+                )
+                connection.execute(
+                    "UPDATE instruments SET identity_status = ? WHERE id = ?",
+                    (_IDENTITY_RESOLVED, row["id"]),
+                )
+            continue
+
+        if row["ticker"] or row["mic"]:
+            # Angefangen, aber nicht zulässig — etwa der Sammelcode `US` im
+            # MIC oder ein Ticker ohne Börse. Solche Zeilen werden neu
+            # bewertet; stillschweigend stehenbleiben dürfen sie nicht, sonst
+            # kommt die Migration nie wieder an sie heran.
+            logger.warning(
+                "identity_incomplete_reset",
+                symbol=row["symbol"],
+                ticker=row["ticker"],
+                mic=row["mic"],
+                status=row["identity_status"],
+            )
         ticker, mic = split_symbol(row["symbol"])
         connection.execute(
             "UPDATE instruments SET ticker = ?, mic = ?, identity_status = ? "

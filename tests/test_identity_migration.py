@@ -402,3 +402,66 @@ def test_eine_gueltige_zuordnung_bleibt_unangetastet(tmp_path) -> None:
     row = _instruments(path)["VTI"]
     assert (row["ticker"], row["mic"]) == ("VTI", "XNAS")
     assert row["identity_status"] == "resolved"
+
+
+def test_der_sammelcode_ueberlebt_die_migration_nicht(tmp_path) -> None:
+    """`US` ist kein MIC — auch nicht, wenn eine Zeile ihn als solchen führt.
+
+    Das Prüf-Script erkannte diesen Zustand, die Migration nicht: Sie sah zwei
+    nichtleere Felder und ließ die Zeile in Ruhe. Damit blieb der ausdrücklich
+    nichtkanonische Sammelcode dauerhaft als MIC gespeichert — der grüne
+    Smoke-Lauf bewies nur, dass er ihn hinterher meldet.
+
+    Vollständig ist eine Identität erst mit einem **echten** MIC. Alles andere
+    wird neu bewertet und landet bei den offenen Fällen.
+    """
+    path = str(tmp_path / "sammelcode.db")
+    _legacy_database(path, [("VTI", "US9229087690")])
+    init_db(path)
+
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE instruments SET identity_status = 'resolved', "
+            "ticker = 'VTI', mic = 'US' WHERE symbol = 'VTI'"
+        )
+
+    init_db(path)
+
+    row = _instruments(path)["VTI"]
+    assert (row["ticker"], row["mic"]) == (None, None)
+    assert row["identity_status"] == "legacy_unresolved"
+
+
+def test_ein_kaputter_status_zerstoert_keine_gueltige_zuordnung(tmp_path) -> None:
+    """Entschieden wird nach den **Daten**, nicht nach der Beschriftung.
+
+    Meine erste Fassung behandelte jeden unbekannten Status als „keine
+    Identität" und überschrieb die Felder aus dem Legacy-Symbol. Damit ging
+    eine fachlich gültige, von Hand gesetzte Zuordnung lautlos verloren — genau
+    das, was dieses Ticket verhindern will.
+
+    Eine vollständige Identität bleibt jetzt stehen; korrigiert wird nur die
+    Beschriftung, und der kaputte Status wird protokolliert.
+    """
+    import structlog
+
+    path = str(tmp_path / "kaputter-status.db")
+    _legacy_database(path, [("VTI", "US9229087690")])
+    init_db(path)
+
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE instruments SET identity_status = 'halbfertig', "
+            "ticker = 'VTI', mic = 'XNAS' WHERE symbol = 'VTI'"
+        )
+
+    with structlog.testing.capture_logs() as logs:
+        init_db(path)
+
+    row = _instruments(path)["VTI"]
+    assert (row["ticker"], row["mic"]) == ("VTI", "XNAS"), "die Zuordnung ist weg"
+    assert row["identity_status"] == "resolved"
+
+    repariert = [entry for entry in logs if entry["event"] == "identity_status_repaired"]
+    assert repariert, "der kaputte Status wurde stillschweigend geheilt"
+    assert repariert[0]["previous"] == "halbfertig"
