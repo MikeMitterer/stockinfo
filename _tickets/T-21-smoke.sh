@@ -117,10 +117,11 @@ runMigration() {
     cd "${PROJECT_ROOT}" || return 1
     "${VENV_PY}" - "$1" "$2" <<'PYTHON'
 import sqlite3
+import string
 import sys
 
 from app.db import init_db
-from app.exchanges import EXCHANGES, is_real_mic
+from app.exchanges import EXCHANGES
 
 source, backup = sys.argv[1], sys.argv[2]
 
@@ -232,13 +233,32 @@ def composed(row: dict) -> str | None:
 # Nur auf den Sammelcode zu prüfen genügte nicht: Eine Zeile, die `resolved`
 # behauptet und weder Ticker noch MIC trägt, käme sonst durch — und die
 # Migration überspringt sie beim nächsten Start wieder.
+# Eigenes MIC-Urteil, bewusst **ohne** `is_real_mic`: Ein Orakel darf nicht
+# die Funktion befragen, die es prüft. Sonst bestätigt es nur, dass sie mit
+# sich selbst übereinstimmt — ein fehlerhafter regulärer Ausdruck bliebe
+# unsichtbar (Codex, Runde 8). Formuliert ist die Regel deshalb anders:
+# Zeichenmenge statt Muster.
+MIC_CHARACTERS = set(string.ascii_uppercase + string.digits)
+COLLECTOR_CODES = {
+    mic for mic, definition in EXCHANGES.items()
+    if definition.figi_id_type != "micCode"
+}
+
+
+def looks_like_mic(mic: str | None) -> bool:
+    """Vier Zeichen aus `A-Z0-9`, und kein interner Sammelcode."""
+    if not mic or len(mic) != 4 or set(mic) - MIC_CHARACTERS:
+        return False
+    return mic not in COLLECTOR_CODES
+
+
 def invalid_state(row: dict) -> str | None:
     """Nennt den Widerspruch einer Zeile, oder ``None`` wenn sie stimmig ist."""
     status = row["identity_status"]
     if status == "resolved":
         if not row["ticker"] or not row["mic"]:
             return f"{row['symbol']}: resolved ohne vollständige Identität"
-        if not is_real_mic(row["mic"]):
+        if not looks_like_mic(row["mic"]):
             return f"{row['symbol']}: {row['mic']!r} ist kein echter MIC"
         return None
     if status == "legacy_unresolved":

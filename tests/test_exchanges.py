@@ -86,7 +86,7 @@ def test_echte_mics_werden_angenommen(mic: str) -> None:
 
 
 @pytest.mark.parametrize(
-    ("mic", "warum"),
+    ("mic", "reason"),
     [
         ("US", "Sammelcode der eigenen Tabelle, kein ISO-MIC"),
         (None, "gar kein Wert"),
@@ -97,14 +97,21 @@ def test_echte_mics_werden_angenommen(mic: str) -> None:
         ("XN@S", "Sonderzeichen"),
         ("XNAS ", "Leerzeichen am Ende"),
         (" US", "Leerzeichen am Anfang"),
+        ("XNAS\n", "Zeilenumbruch am Ende — `$` würde ihn durchlassen"),
+        ("XNAS\t", "Tabulator am Ende"),
     ],
 )
-def test_ungueltige_mics_werden_abgelehnt(mic: str | None, warum: str) -> None:
+def test_ungueltige_mics_werden_abgelehnt(mic: str | None, reason: str) -> None:
     """Unbekannt heißt nicht gültig.
 
     Meine erste Fassung ließ jeden nichtleeren String durch, den die Tabelle
     nicht kannte — damit konnte im kanonischen Feld alles stehen, auch
     `NOT-A-MIC`. Ein MIC nach ISO 10383 hat genau vier Zeichen, Großbuchstaben
     oder Ziffern.
+
+    Der Zeilenumbruch am Ende ist der tückischste Fall: In Python matcht `$`
+    auch **vor** einem abschließenden `\n`. Der Ausdruck sah richtig aus und
+    ließ `XNAS\n` durch — ein Wert, den der Eindeutigkeits-Index sogar von
+    `XNAS` unterscheidet.
     """
-    assert is_real_mic(mic) is False, warum
+    assert is_real_mic(mic) is False, reason

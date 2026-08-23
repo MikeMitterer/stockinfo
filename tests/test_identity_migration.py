@@ -488,3 +488,28 @@ def test_ein_unsinniger_mic_ueberlebt_die_migration_nicht(tmp_path) -> None:
     row = _instruments(path)["VTI"]
     assert (row["ticker"], row["mic"]) == (None, None)
     assert row["identity_status"] == "legacy_unresolved"
+
+
+def test_ein_mic_mit_zeilenumbruch_ueberlebt_die_migration_nicht(tmp_path) -> None:
+    """`XNAS\n` ist kein MIC — auch wenn der reguläre Ausdruck es durchließ.
+
+    Python lässt `$` auch vor einem abschließenden Zeilenumbruch matchen. Die
+    Prüfung sah damit richtig aus und akzeptierte einen Wert, den der
+    Eindeutigkeits-Index sogar von `XNAS` unterscheidet: zwei Zeilen, die für
+    jede Maschine verschieden sind und für jeden Menschen gleich aussehen.
+    """
+    path = str(tmp_path / "umbruch.db")
+    _legacy_database(path, [("VTI", "US9229087690")])
+    init_db(path)
+
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            "UPDATE instruments SET identity_status = 'resolved', "
+            "ticker = 'VTI', mic = 'XNAS\n' WHERE symbol = 'VTI'"
+        )
+
+    init_db(path)
+
+    row = _instruments(path)["VTI"]
+    assert (row["ticker"], row["mic"]) == (None, None)
+    assert row["identity_status"] == "legacy_unresolved"

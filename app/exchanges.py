@@ -16,7 +16,12 @@ import structlog
 logger = structlog.get_logger()
 
 # Ein MIC nach ISO 10383: genau vier Zeichen, Großbuchstaben oder Ziffern.
-_MIC_PATTERN = re.compile(r"^[A-Z0-9]{4}$")
+#
+# Ohne Anker, weil er mit `fullmatch` benutzt wird: `$` würde in Python auch
+# **vor** einem abschließenden Zeilenumbruch matchen, und `"XNAS\n"` käme
+# durch — ein Wert, den der Eindeutigkeits-Index sogar von `XNAS`
+# unterscheidet.
+_MIC_PATTERN = re.compile(r"[A-Z0-9]{4}")
 
 
 @dataclass(frozen=True)
@@ -132,7 +137,9 @@ def is_real_mic(mic: str | None) -> bool:
        Großbuchstaben oder Ziffern. „Der Tabelle unbekannt" ist kein
        Gütesiegel — meine erste Fassung ließ jeden nichtleeren String durch,
        und damit hätte auch `NOT-A-MIC`, `xnAs` oder `XNAS ` im kanonischen
-       Feld stehen können.
+       Feld stehen können. Geprüft wird mit `fullmatch`: `$` matcht in Python
+       auch vor einem abschließenden Zeilenumbruch, und `"XNAS\n"` wäre
+       durchgegangen.
     2. **Kein Sammelcode.** Erkennbar daran, dass die Tabelle ihn über
        `exchCode` auflöst statt über `micCode`. Die Längenregel fängt das
        heutige `US` schon ab; die Prüfung bleibt trotzdem, weil ein künftiger
@@ -149,7 +156,7 @@ def is_real_mic(mic: str | None) -> bool:
     Returns:
         ``True`` wenn der Wert als kanonischer MIC taugt.
     """
-    if not mic or not _MIC_PATTERN.match(mic):
+    if not mic or not _MIC_PATTERN.fullmatch(mic):
         return False
     definition = EXCHANGES.get(mic)
     return definition is None or definition.figi_id_type == "micCode"

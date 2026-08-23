@@ -27,7 +27,7 @@ muss, ist kein Plugin).
 >
 > | | Umfang | Zeilen | Commit |
 > |---|---|---|---|
-> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 8 |
+> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | Runde 9 |
 > | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung, `ExchangeDef` aufräumen | `#5` | offen |
 > | **Teil 3** | API und Dashboard, offene Zuordnungen sichtbar und von Hand setzbar, Vertragsversion | `#2b`, `#2c`, `#3`, `#4` | offen |
 >
@@ -75,7 +75,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 5 | neues Papier aufnehmen | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | ➖ Teil 2 | |
 | 6 | `make test` | Backend, Plugin-API und Dashboard grün | ✅ [^f] | |
 
-[^a]: `tests/test_identity_migration.py`, **neunzehn** Tests gegen eine
+[^a]: `tests/test_identity_migration.py`, **zwanzig** Tests gegen eine
     nachgestellte Alt-Datenbank mit vier bezeichnenden Fällen. Zerlegt werden `EUNL.DE` und
     `XIC.TO`; `AAPL` (suffixlos) und `BRK-B` (fremde Schreibweise) bleiben
     offen. Die Migration läuft zweimal — sie muss idempotent sein.
@@ -98,7 +98,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     ist eindeutig. Zwei weitere Tests halten die Folgen fest — mehrere offene
     Zeilen dürfen nebeneinander stehen (SQLite zählt `NULL` als eigenen Wert),
     ein echter Konflikt fällt weiterhin auf.
-[^f]: `.venv/bin/pytest tests/ -q` → `389 passed, 29 skipped`;
+[^f]: `.venv/bin/pytest tests/ -q` → `392 passed, 29 skipped`;
     `make test-plugin-api` → 36; Ruff sauber.
 [^g]: `./_tickets/T-21-smoke.sh --run` gegen eine **Sicherung** von
     `data/stockinfo.db` (sechs gewachsene Papiere, 48 Kurspunkte) — das
@@ -143,7 +143,16 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `xnAs` oder `XNAS ` mit Leerzeichen. Geprüft wird jetzt zusätzlich die
     Schreibweise nach ISO 10383: genau vier Zeichen, Großbuchstaben oder
     Ziffern. `XNAS` bleibt erlaubt, weil die Tabelle eine Auswahl der
-    auflösbaren Börsen ist und kein Verzeichnis aller MICs. Ein leerer Bestand lässt den Lauf **fehlschlagen** —
+    auflösbaren Börsen ist und kein Verzeichnis aller MICs. Geprüft wird mit
+    `fullmatch`: `$` matcht in Python auch **vor** einem abschließenden
+    Zeilenumbruch, und `XNAS\n` wäre durchgegangen — ein Wert, den der
+    Eindeutigkeits-Index sogar von `XNAS` unterscheidet (Codex, Runde 8).
+
+    `#2d` im Prüf-Script hat dafür ein **eigenes** Urteil, formuliert über die
+    Zeichenmenge statt über ein Muster. Ein Orakel darf die Funktion nicht
+    befragen, die es prüft — sonst bestätigt es nur, dass sie mit sich selbst
+    übereinstimmt. Gegengeprüft mit absichtlich kaputtem Validator
+    (`match` statt `fullmatch`): `#2d` schlägt an, Exit 1. Ein leerer Bestand lässt den Lauf **fehlschlagen** —
     vorher hätte er dort grün gemeldet, ohne einen einzigen Fall geprüft zu
     haben (Codex, Runde 2). Gegenproben: leere Datenbank → Exit 1; ein
     committeter Eintrag im WAL → wird mitgesichert und mitgezählt (7 statt 6).
