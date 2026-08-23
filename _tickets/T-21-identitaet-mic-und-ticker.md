@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend + Dashboard) | offen | 1 Tag | Schema-Migration, Symbolerzeugung | — |
+| StockInfo (Backend + Dashboard) | Teil 1 abgenommen | 1 Tag | Schema-Migration, Symbolerzeugung | — |
 
 **Löst:** Der Identifikator eines Papiers ist heute das **Yahoo-Symbol**
 (`EUNL.DE`) — in der Datenbank, in der API, im Dashboard. Damit ist yfinance
@@ -21,6 +21,41 @@ muss, ist kein Plugin).
 
 **Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 
+> **Drei Übergaben statt einer** *(Claude, 2026-08-22)* — ein Tag Arbeit ist für
+> einen Diff-Review zu viel am Stück. Die Schnitte liegen dort, wo das Ticket
+> selbst schon trennt:
+>
+> | | Umfang | Zeilen | Commit |
+> |---|---|---|---|
+> | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | `be5f38d` ✔ abgenommen |
+> | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung, `ExchangeDef` aufräumen | `#5` | in Arbeit |
+> | **Teil 3** | API und Dashboard, offene Zuordnungen sichtbar und von Hand setzbar, Vertragsversion | `#2b`, `#2c`, `#3`, `#4` | offen |
+>
+> `#6` (`make test`) läuft in jeder Übergabe mit.
+
+> **Verify `#2` verlangt für `AAPL` mehr, als die Migration wissen kann**
+> *(Claude, 2026-08-22)*
+>
+> Die Zeile erwartet `AAPL` → `AAPL`/**`XNAS`** direkt nach der Migration. Das
+> Ticket sagt zwei Absätze weiter aber selbst: Für suffixlose Symbole liefert
+> die Börsentabelle nur den Sammelcode `US`, und „welcher echte MIC gilt,
+> **steht dort nicht** — das muss aus dem aufgelösten Listing kommen".
+>
+> Beides zusammen geht nicht. Die Migration läuft beim Start und offline; sie
+> müsste OpenFIGI fragen, um `XNYS` von `XNAS` zu unterscheiden — ein Start,
+> der Netz braucht und in ein Rate-Limit laufen kann, und das für jede
+> bestehende Zeile.
+>
+> **Umgesetzt ist deshalb:** Ein suffixloses Symbol wird **nicht geraten**. Die
+> Zeile bekommt `identity_status = legacy_unresolved` und erscheint in der
+> Liste offener Zuordnungen; den echten MIC trägt der nächste erfolgreiche
+> Auflösungslauf nach (Teil 2) oder ein Mensch von Hand (Teil 3). Das ist genau
+> die Regel, die das Ticket für nicht zerlegbare Symbole ohnehin aufstellt —
+> `AAPL` ist einer dieser Fälle, nicht die Ausnahme davon.
+>
+> Verify `#2` prüft entsprechend `EUNL.DE` → `EUNL`/`XETR` und `XIC.TO` →
+> `XIC`/`XTSE` **nach der Migration**, `AAPL` dagegen als offenen Fall.
+
 ---
 
 ## Verify
@@ -29,15 +64,107 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | bestehende Datenbank, Migration laufen lassen | zerlegbare Instrumente haben `ticker` und `mic`; **nicht** zerlegbare werden gemeldet, nicht geraten | | |
-| 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`, `AAPL` → `AAPL`/**`XNAS`** (echter MIC, nicht `US`) | | |
-| 2b | Instrument mit Fremdsymbol (`BRK-B`, aus dem Yahoo-Fallback) | erscheint in einer Liste offener Zuordnungen, mit Grund | | |
-| 2c | derselbe Fall, manuelle Zuordnung | lässt sich von Hand auf `(ticker, mic)` setzen | | |
-| 3 | `GET /instruments` | `symbol` weiterhin vorhanden und unverändert (Profil-Links hängen daran) | | |
-| 3b | Datenbank-Schema | Eindeutigkeit liegt auf `(ticker, mic)`; `symbol` ist **nicht mehr** global unique | | |
+| 1 | bestehende Datenbank, Migration laufen lassen | zerlegbare Instrumente haben `ticker` und `mic`; **nicht** zerlegbare werden gemeldet, nicht geraten | ✅ [^a] | |
+| 1b | dieselbe Migration auf einer **Kopie des echten Bestands** | keine Zeile und kein Kurspunkt geht verloren, auch beim zweiten Start nicht | ✅ [^g] | |
+| 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`; `AAPL` bleibt **offen** statt geraten (siehe Kasten oben) | ✅ [^b] | |
+| 2b | Instrument mit Fremdsymbol (`BRK-B`, aus dem Yahoo-Fallback) | erscheint in einer Liste offener Zuordnungen, mit Grund | ◑ [^c] | |
+| 2c | derselbe Fall, manuelle Zuordnung | lässt sich von Hand auf `(ticker, mic)` setzen | ➖ Teil 3 | |
+| 3 | `GET /instruments` | `symbol` weiterhin vorhanden und unverändert (Profil-Links hängen daran) | ✅ [^d] | |
+| 3b | Datenbank-Schema | Eindeutigkeit liegt auf `(ticker, mic)`; `symbol` ist **nicht mehr** global unique | ✅ [^e] | |
 | 4 | Dashboard, Assets-Tabelle | unverändert; Yahoo- und extraETF-Links funktionieren | | |
-| 5 | neues Papier aufnehmen | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | | |
-| 6 | `make test` | Backend, Plugin-API und Dashboard grün | | |
+| 5 | neues Papier aufnehmen | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | ➖ Teil 2 | |
+| 6 | `make test` | Backend, Plugin-API und Dashboard grün | ✅ [^f] | |
+
+[^a]: `tests/test_identity_migration.py`, **zwanzig** Tests gegen eine
+    nachgestellte Alt-Datenbank mit vier bezeichnenden Fällen. Zerlegt werden `EUNL.DE` und
+    `XIC.TO`; `AAPL` (suffixlos) und `BRK-B` (fremde Schreibweise) bleiben
+    offen. Die Migration läuft zweimal — sie muss idempotent sein.
+[^b]: `test_bekannte_suffixe_werden_zerlegt` und die beiden Gegenproben
+    `test_suffixloses_symbol_wird_nicht_geraten` /
+    `test_fremde_schreibweise_wird_nicht_geraten`. Dazu
+    `tests/test_exchanges.py` mit der Rückrechnung selbst — einschließlich
+    `test_kein_suffix_ist_doppelt_vergeben`: Käme eine Börse mit belegtem
+    Suffix dazu, wäre `split_symbol` stillschweigend mehrdeutig, und dieser
+    Test schlägt an, statt dass die Migration falsch zuordnet.
+[^c]: **Nur als Protokollmeldung.** `test_die_offenen_faelle_werden_gemeldet`
+    belegt, dass die Migration `identity_unresolved` mit Anzahl und Symbolen
+    schreibt. Eine abfragbare *Liste* offener Zuordnungen ist Teil 3 — dort
+    steht auch der Grund je Fall.
+[^d]: Der Index auf `symbol` ist weg, die Spalte nicht: `symbol TEXT NOT NULL`
+    steht unverändert im Schema, und die 370 Tests der Suite fahren die
+    bestehenden Symbol-Endpunkte weiter durch.
+[^e]: `test_die_eindeutigkeit_liegt_auf_ticker_und_mic` prüft beides:
+    `idx_instruments_symbol` ist verschwunden, `idx_instruments_ticker_mic`
+    ist eindeutig. Zwei weitere Tests halten die Folgen fest — mehrere offene
+    Zeilen dürfen nebeneinander stehen (SQLite zählt `NULL` als eigenen Wert),
+    ein echter Konflikt fällt weiterhin auf.
+[^f]: `.venv/bin/pytest tests/ -q` → `392 passed, 29 skipped`;
+    `make test-plugin-api` → 36; Ruff sauber.
+[^g]: `./_tickets/T-21-smoke.sh --run` gegen eine **Sicherung** von
+    `data/stockinfo.db` (sechs gewachsene Papiere, 48 Kurspunkte) — das
+    Original wird nur gelesen. Die Sicherung entsteht über die
+    SQLite-Backup-API, nicht per `cp`: Die App läuft im WAL-Modus, und eine
+    Dateikopie ließe committete Einträge aus — der Lauf liefe dann an genau
+    den neuesten Fällen vorbei (Codex, Runde 2). Neun Checks grün: 6 Instrumente vorher und
+    nachher, 48 Kurspunkte vorher und nachher, sechs eindeutige `listing_id`,
+    vier zerlegt (`VGWL.DE`, `EUNL.DE`, `APC.DE`, `BRYN.DE` → `XETR`), zwei
+    offen (`GOLD.SG` — das Suffix `.SG` steht nicht in der Tabelle — und
+    `VTI`, suffixlos), Indizes umgezogen **und eindeutig**. Das Script
+    migriert **zweimal**; genau dort hat die Alt-Bereinigung in Runde 1
+    Listings gelöscht.
+
+    Die Prüfungen rechnen nach statt zu behaupten, und zwar in der
+    **Gegenrichtung**: Was dieser Lauf zugeordnet hat, muss sich aus
+    `(ticker, mic)` wieder zu `symbol` zusammensetzen; offene Zeilen tragen
+    weder Ticker noch MIC; bereits bestehende Zuordnungen bleiben unverändert
+    (`#2c`) und dürfen keinen Sammelcode tragen (`#2d`). Ein Lauf, der nichts
+    zugeordnet hat, gilt als **nicht geprüft**.
+
+    `#2d` prüft, dass jede Zeile in **genau einem** gültigen Zustand steht:
+    `resolved` verlangt Ticker und echten MIC, `legacy_unresolved` verlangt
+    beide Felder leer, ein unbekannter Status ist ein Fehler. Nur auf den
+    Sammelcode zu sehen genügte nicht — eine Zeile, die `resolved` behauptet
+    und nichts trägt, kam sonst durch (Codex, Runde 5).
+
+    **Die Regel gehört in den Produktcode, nicht nur ins Prüf-Script**
+    (Codex, Runde 6): Vollständig ist eine Identität erst mit einem
+    **echten** MIC — `is_real_mic` in `app/exchanges.py` ist die eine Stelle,
+    die das entscheidet, benutzt von Migration und Prüfung. Der Sammelcode
+    `US` überlebt die Migration damit nicht mehr; er wird neu bewertet und
+    landet bei den offenen Fällen.
+
+    Entschieden wird dabei nach den **Daten**, nicht nach der Beschriftung:
+    Eine vollständige Zuordnung mit kaputtem Status behält ihre Identität, nur
+    der Status wird korrigiert und protokolliert. Meine erste Fassung hatte
+    sie überschrieben — genau der Verlust, den das Ticket verhindern will.
+
+    **Unbekannt heißt nicht gültig** (Codex, Runde 7): `is_real_mic` ließ
+    zunächst jeden der Tabelle unbekannten String durch — auch `NOT-A-MIC`,
+    `xnAs` oder `XNAS ` mit Leerzeichen. Geprüft wird jetzt zusätzlich die
+    Schreibweise nach ISO 10383: genau vier Zeichen, Großbuchstaben oder
+    Ziffern. `XNAS` bleibt erlaubt, weil die Tabelle eine Auswahl der
+    auflösbaren Börsen ist und kein Verzeichnis aller MICs. Geprüft wird mit
+    `fullmatch`: `$` matcht in Python auch **vor** einem abschließenden
+    Zeilenumbruch, und `XNAS\n` wäre durchgegangen — ein Wert, den der
+    Eindeutigkeits-Index sogar von `XNAS` unterscheidet (Codex, Runde 8).
+
+    `#2d` im Prüf-Script hat dafür ein **eigenes** Urteil, formuliert über die
+    Zeichenmenge statt über ein Muster. Ein Orakel darf die Funktion nicht
+    befragen, die es prüft — sonst bestätigt es nur, dass sie mit sich selbst
+    übereinstimmt. Gegengeprüft mit absichtlich kaputtem Validator
+    (`match` statt `fullmatch`): `#2d` schlägt an, Exit 1. Ein leerer Bestand lässt den Lauf **fehlschlagen** —
+    vorher hätte er dort grün gemeldet, ohne einen einzigen Fall geprüft zu
+    haben (Codex, Runde 2). Gegenproben: leere Datenbank → Exit 1; ein
+    committeter Eintrag im WAL → wird mitgesichert und mitgezählt (7 statt 6).
+
+    **Das Oracle rechnet vorwärts** (Codex, Runde 3): Die Migration zerlegt
+    `symbol` → `(ticker, mic)`, die Prüfung setzt `(ticker, mic)` → `symbol`
+    zusammen. Mit derselben Funktion zu prüfen hieße, sich selbst recht zu
+    geben — und es verwarf einen gültigen Zielzustand: Ein von Hand
+    zugeordnetes `VTI` → `VTI/XNAS` behält sein suffixloses `symbol`.
+    Nachvalidiert wird deshalb nur, was **dieser Lauf** zugeordnet hat; `#2c`
+    hält zusätzlich fest, dass bestehende Zuordnungen unverändert bleiben.
+    Gegenprobe mit `WALONLY/XNAS` im WAL: angenommen.
 
 ---
 

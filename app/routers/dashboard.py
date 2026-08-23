@@ -21,7 +21,7 @@ from app.models import (
     QuoteResponse,
     RefreshResult,
 )
-from app.resolver import EXCHANGES
+from app.exchanges import EXCHANGES
 from app.routers.validation import (
     IsinPath,
     SymbolPath,

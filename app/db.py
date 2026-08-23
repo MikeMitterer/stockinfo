@@ -5,11 +5,13 @@ Repository-Schicht (repository.py), nicht hierher.
 """
 
 import sqlite3
+import uuid
 from pathlib import Path
 
 import structlog
 
 from app.models import OVERRIDE_FIELDS
+from app.exchanges import is_real_mic, split_symbol
 
 logger = structlog.get_logger()
 
@@ -165,13 +167,156 @@ def _migrate(connection: sqlite3.Connection) -> None:
         ),
     )
 
-    # Vor dem UNIQUE-Index Alt-Duplikate zusammenführen — sonst schlägt die
-    # Index-Erstellung auf bestehenden Datenbanken fehl.
-    _dedupe_symbols(connection)
-    connection.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_symbol "
-        "ON instruments (symbol)"
+    _migrate_identity(connection)
+
+
+# Die kanonische Identität aus T-21. `identity_status` sagt, ob sie feststeht.
+_IDENTITY_RESOLVED = "resolved"
+_IDENTITY_UNRESOLVED = "legacy_unresolved"
+
+
+def _identity_is_complete(row: sqlite3.Row) -> bool:
+    """Trägt diese Zeile eine **vollständige** kanonische Identität?
+
+    Entschieden wird nach den **Daten**, nicht nach der Beschriftung. Das ist
+    der Kern: Ein `identity_status`, der `resolved` behauptet, macht aus zwei
+    leeren Feldern keine Zuordnung — und ein kaputter Status macht aus einer
+    gültigen Zuordnung keinen Müll.
+
+    Vollständig heißt: ein Ticker **und** ein **echter** MIC. Der Sammelcode
+    `US` zählt nicht; er ist ein interner Suchcode und darf im kanonischen
+    Feld nie stehen. Ein MIC, den die eigene Tabelle nicht kennt, zählt
+    dagegen sehr wohl — `XNAS` ist genau der Wert, den eine manuelle
+    Zuordnung setzen soll.
+
+    Args:
+        row: Instrumentenzeile mit `ticker` und `mic`.
+
+    Returns:
+        ``True`` bei vollständiger, kanonisch zulässiger Identität.
+    """
+    return bool(row["ticker"]) and is_real_mic(row["mic"])
+
+
+def _migrate_identity(connection: sqlite3.Connection) -> None:
+    """Legt `(ticker, mic)` neben `symbol` und vergibt jede `listing_id`.
+
+    Der Identifikator eines Papiers war bisher das Yahoo-Symbol — in der
+    Datenbank, in der API, im Dashboard. Damit wäre yfinance nicht ersetzbar,
+    sondern nur ergänzbar: Jede zweite Kursquelle müsste Yahoos
+    Suffix-Schreibweise nachbilden.
+
+    **Melden statt raten.** Zerlegt wird nur, was die eigene Börsentabelle
+    eindeutig hergibt. Alles andere bleibt offen (`legacy_unresolved`) und
+    wird protokolliert; der Datensatz bleibt dabei lesbar und nutzbar. Ohne
+    diesen Zwischenzustand müsste die Migration raten, den Start blockieren
+    oder Daten löschen — genau die drei Auswege, die T-21 ausschließt.
+
+    Der Index zieht mit: Der globale `UNIQUE` auf `symbol` hielt Yahoo in der
+    Identität und weicht `(ticker, mic)`. Dass mehrere offene Zeilen dort
+    `NULL` tragen, ist kein Konflikt — SQLite behandelt `NULL` in eindeutigen
+    Indizes als jeweils eigenen Wert.
+    """
+    _add_missing_columns(
+        connection,
+        "instruments",
+        (
+            ("ticker", "TEXT"),
+            ("mic", "TEXT"),
+            # Opake UUID, bei Anlage einmal erzeugt und nicht aus ticker, mic,
+            # ISIN oder dem lokalen Schlüssel abgeleitet (Vertrag in T-24).
+            ("listing_id", "TEXT"),
+            ("identity_status", "TEXT"),
+        ),
     )
+
+    for row in connection.execute(
+        "SELECT id, symbol, ticker, mic, listing_id, identity_status "
+        "FROM instruments"
+    ).fetchall():
+        if not row["listing_id"]:
+            connection.execute(
+                "UPDATE instruments SET listing_id = ? WHERE id = ?",
+                (str(uuid.uuid4()), row["id"]),
+            )
+        if _identity_is_complete(row):
+            # Bestehende Zuordnung — die Daten bleiben unangetastet. Stimmt die
+            # Beschriftung nicht, wird **sie** korrigiert, nicht die Identität:
+            # Ein kaputter Status darf keine gültige Zuordnung kosten.
+            if row["identity_status"] != _IDENTITY_RESOLVED:
+                logger.warning(
+                    "identity_status_repaired",
+                    symbol=row["symbol"],
+                    previous=row["identity_status"],
+                )
+                connection.execute(
+                    "UPDATE instruments SET identity_status = ? WHERE id = ?",
+                    (_IDENTITY_RESOLVED, row["id"]),
+                )
+            continue
+
+        if row["ticker"] or row["mic"]:
+            # Angefangen, aber nicht zulässig — etwa der Sammelcode `US` im
+            # MIC oder ein Ticker ohne Börse. Solche Zeilen werden neu
+            # bewertet; stillschweigend stehenbleiben dürfen sie nicht, sonst
+            # kommt die Migration nie wieder an sie heran.
+            logger.warning(
+                "identity_incomplete_reset",
+                symbol=row["symbol"],
+                ticker=row["ticker"],
+                mic=row["mic"],
+                status=row["identity_status"],
+            )
+        ticker, mic = split_symbol(row["symbol"])
+        connection.execute(
+            "UPDATE instruments SET ticker = ?, mic = ?, identity_status = ? "
+            "WHERE id = ?",
+            (
+                ticker,
+                mic,
+                _IDENTITY_RESOLVED if mic else _IDENTITY_UNRESOLVED,
+                row["id"],
+            ),
+        )
+
+    # Erst jetzt bereinigen: Vorher stünde die kanonische Identität noch nicht
+    # in der Zeile, und die Bereinigung müsste wieder nach `symbol` gruppieren
+    # — genau der Fehler, den sie seit T-21 nicht mehr machen darf.
+    _dedupe_symbols(connection)
+
+    connection.execute("DROP INDEX IF EXISTS idx_instruments_symbol")
+    connection.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_ticker_mic "
+        "ON instruments (ticker, mic)"
+    )
+    # Die `listing_id` ist der Maschinenschlüssel des öffentlichen Vertrags.
+    # Ohne Index wäre „opake UUID, einmal erzeugt" eine Absichtserklärung: Ein
+    # zweiter Schreiber könnte denselben Wert eintragen, und wer darüber
+    # adressiert, bekäme zwei Papiere.
+    connection.execute(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_listing_id "
+        "ON instruments (listing_id)"
+    )
+    _report_unresolved(connection)
+
+
+def _report_unresolved(connection: sqlite3.Connection) -> None:
+    """Protokolliert die offenen Zuordnungen — sonst weiß niemand von ihnen.
+
+    „Später von Hand zuordnen" ist ohne diese Meldung ein Versprechen, das
+    niemand einlösen kann.
+    """
+    unresolved = [
+        row["symbol"]
+        for row in connection.execute(
+            "SELECT symbol FROM instruments WHERE identity_status = ? ORDER BY symbol",
+            (_IDENTITY_UNRESOLVED,),
+        )
+    ]
+    if unresolved:
+        logger.info(
+            "identity_unresolved", count=len(unresolved), symbols=unresolved
+        )
 
 
 def _merge_overrides(
@@ -302,12 +447,28 @@ def _add_missing_columns(
 
 
 def _dedupe_symbols(connection: sqlite3.Connection) -> None:
-    """Führt Instrumente mit gleichem Symbol zusammen (Zeile mit ISIN gewinnt).
+    """Führt **gleiche** Instrumente zusammen (Zeile mit ISIN gewinnt).
 
     Duplikate konnten vor dem UNIQUE-Index durch parallele Erst-Requests
     entstehen. Kurs-Historie und Tages-Schlusskurse werden auf das verbleibende
     Instrument umgehängt; Kollisionen (gleicher Zeitpunkt/Tag) verfallen mit
     dem gelöschten Duplikat.
+
+    **Gleiches Symbol ist seit T-21 kein Identitätsnachweis.** Die
+    Eindeutigkeit liegt auf `(ticker, mic)`, und sobald `US` in `XNYS` und
+    `XNAS` zerfällt, tragen zwei verschiedene Listings dasselbe Symbol.
+
+    Zusammengeführt wird deshalb **nur bei bewiesener Gleichheit**: dieselbe
+    aufgelöste `(ticker, mic)`. Alles andere bleibt stehen — auch zwei
+    unaufgelöste Zeilen mit demselben Symbol. Die wären früher zusammengefasst
+    worden, „weil das der alte Fall aus parallelen Erst-Requests ist"; genau
+    das ist aber die Vermutung, die diese Migration nicht anstellen darf. Zwei
+    offene Zeilen mit demselben Symbol können zwei verschiedene Papiere sein,
+    und ihre ISINs sagen es oft sogar.
+
+    Nötig ist das Zusammenführen ohnehin nicht mehr: Es gab die Funktion, weil
+    der `UNIQUE`-Index auf `symbol` sonst nicht anzulegen war. Diesen Index
+    gibt es nicht mehr.
 
     **Alles Abhängige muss mitwandern.** Umgehängt wurden lange nur `quotes`
     und `daily_closes` — `daily_meta` und `instrument_overrides` blieben am
@@ -316,19 +477,25 @@ def _dedupe_symbols(connection: sqlite3.Connection) -> None:
     Hand gepflegte Kennzahlen. Die beiden Tabellen tragen je eine eigene
     Merge-Regel, siehe `_merge_overrides` und `_merge_daily_meta`.
     """
+    # Gruppiert wird ausschließlich über die aufgelöste Identität. Zeilen ohne
+    # sie fallen durch das `WHERE` und bleiben unangetastet.
+    identity = "ticker || '|' || mic"
     duplicated = connection.execute(
-        "SELECT symbol FROM instruments GROUP BY symbol HAVING COUNT(*) > 1"
+        f"SELECT {identity} AS identity FROM instruments "
+        "WHERE ticker IS NOT NULL AND mic IS NOT NULL "
+        f"GROUP BY {identity} HAVING COUNT(*) > 1"
     ).fetchall()
     for row in duplicated:
-        symbol = row["symbol"]
+        identity_value = row["identity"]
         keeper = connection.execute(
-            "SELECT id FROM instruments WHERE symbol = ? "
+            f"SELECT id, symbol FROM instruments WHERE {identity} = ? "
             "ORDER BY (isin IS NULL), id LIMIT 1",
-            (symbol,),
+            (identity_value,),
         ).fetchone()
+        symbol = keeper["symbol"]
         duplicates = connection.execute(
-            "SELECT id FROM instruments WHERE symbol = ? AND id != ?",
-            (symbol, keeper["id"]),
+            f"SELECT id FROM instruments WHERE {identity} = ? AND id != ?",
+            (identity_value, keeper["id"]),
         ).fetchall()
         for duplicate in duplicates:
             for table in ("quotes", "daily_closes"):

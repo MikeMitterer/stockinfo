@@ -88,7 +88,7 @@ def is_european_listing(
     if currency:
         return currency in _EUROPEAN_CURRENCIES
     if exchange:
-        from app.resolver import EXCHANGES
+        from app.exchanges import EXCHANGES
 
         return any(
             definition.name == exchange and definition.region in {"germany", "europe"}

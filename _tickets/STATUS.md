@@ -11,10 +11,10 @@ Historie.
 - `handoff_commit`: `—`
 - `review_round`: `1`
 - `owner`: `claude`
-- `updated_at`: `2026-08-22`
-- `last_reviewed_ticket`: `T-20-dreiwertiges-quellen-ergebnis.md`
-- `last_reviewed_commit`: `34cf386`
-- `last_reviewed_round`: `2`
+- `updated_at`: `2026-08-23`
+- `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
+- `last_reviewed_commit`: `be5f38d`
+- `last_reviewed_round`: `9`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
