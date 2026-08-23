@@ -239,10 +239,15 @@ def composed(row: dict) -> str | None:
 # unsichtbar (Codex, Runde 8). Formuliert ist die Regel deshalb anders:
 # Zeichenmenge statt Muster.
 MIC_CHARACTERS = set(string.ascii_uppercase + string.digits)
-COLLECTOR_CODES = {
-    mic for mic, definition in EXCHANGES.items()
-    if definition.figi_id_type != "micCode"
-}
+# **Bewusst als Literal**, nicht aus der App geholt. Dieses Script prüft die
+# Migration von außen; übernähme es die Liste des Produktcodes, prüfte es die
+# Regel gegen sich selbst. Kommt ein Sammelcode dazu, gehört diese Zeile
+# angefasst — und genau das soll auffallen.
+#
+# Vorher stand hier eine Ableitung aus `ExchangeDef.figi_id_type`. Die Spalte
+# ist mit T-21 Teil 2b zum OpenFIGI-Provider gezogen, und die Ableitung ließ
+# das Script mitten im Lauf abstürzen.
+COLLECTOR_CODES = {"US"}
 
 
 def looks_like_mic(mic: str | None) -> bool:
@@ -327,6 +332,15 @@ check(
     "Indizes (1 = eindeutig): "
     + ", ".join(f"{name}={flag}" for name, flag in sorted(indexes.items())),
 )
+
+# Schlussmarke. Ohne sie ist ein Abbruch mitten im Lauf von einem vollständigen
+# Lauf nicht zu unterscheiden: Die Shell liest, was schon kam, zählt es und
+# meldet „keine Fehler" — ein Script, das vier von neun Prüfungen geschafft
+# hat, sieht dann aus wie eines, das alle bestanden hat.
+#
+# Genau das ist am 2026-08-23 passiert, als der Umbau aus Teil 2b eine
+# Spalte entfernte, die dieses Script noch las.
+print("#ende|True|alle Prüfungen durchlaufen")
 PYTHON
 }
 
@@ -350,13 +364,28 @@ runChecks() {
     echo
 
     local _LINE _OK _TEXT
+    local _VOLLSTAENDIG=false
     while IFS='|' read -r _LINE _OK _TEXT; do
         # Nur die eigenen Checkzeilen: Die Migration protokolliert selbst nach
         # stdout, und ihre Meldungen sind keine Prüfergebnisse.
         [[ "${_LINE}" != \#* ]] && continue
+        if [[ "${_LINE}" == "#ende" ]]; then
+            _VOLLSTAENDIG=true
+            continue
+        fi
         report "${_LINE}" "${_TEXT}" \
             "$([[ "${_OK}" == "True" ]] && echo true || echo false)" "${_TEXT}"
     done < <(runMigration "${SOURCE_DB}" "${WORKDIR}/backup.db" 2>"${WORKDIR}/errors.log")
+
+    # Ein abgebrochener Lauf hat nicht bestanden — er hat aufgehört. Ohne diese
+    # Prüfung zählt die Schleife die Ergebnisse, die noch kamen, und meldet
+    # „keine Fehler".
+    if [[ "${_VOLLSTAENDIG}" != true && ${COUNT_OK} -gt 0 ]]; then
+        echo
+        echo -e "  ${RED}✗${NC} Der Lauf brach nach ${COUNT_OK} Prüfungen ab:"
+        grep -v "^20" "${WORKDIR}/errors.log" | tail -8
+        COUNT_FAIL=$((COUNT_FAIL + 1))
+    fi
 
     echo
     if [[ ${COUNT_OK} -eq 0 && ${COUNT_FAIL} -eq 0 ]]; then

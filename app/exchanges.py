@@ -31,24 +31,27 @@ _TICKER_PATTERN = re.compile(r"[A-Z0-9]+")
 
 @dataclass(frozen=True)
 class ExchangeDef:
-    """Definition einer Börse: Anzeige, Yahoo-Suffix, OpenFIGI-Auflösung.
+    """Definition einer Börse: Suffix, Anzeige, Region, Währung.
 
     ``currency`` ist nur Anzeige — die reale Kurswährung stammt aus dem Live-Quote.
-    ``figi_value`` leer ⇒ der Dict-Key (MIC) wird als Auflösungswert verwendet.
+
+    **Was hier nicht steht.** Bis T-21 trug jede Zeile zwei Spalten mit, die
+    nur OpenFIGI etwas angingen (`figi_id_type`, `figi_value`). Sie sind zum
+    Provider gezogen: Sonst legte jede weitere Kursquelle ihre eigenen zwei
+    Spalten dazu, und die Börsentabelle würde zur Sammelstelle für
+    Anbieter-Eigenheiten. Sie beschreibt die **Börse**, nicht den Weg zu ihr.
     """
 
     suffix: str
     name: str
     region: str  # "germany" | "usa" | "europe" | "global"
     currency: str
-    figi_id_type: str = "micCode"
-    figi_value: str = ""
 
 
 # Weltweite Börsentabelle: Key = MIC (bzw. 'US'). Erweiterbar per Zeile.
 EXCHANGES: dict[str, ExchangeDef] = {
     # Amerika
-    "US": ExchangeDef("", "NYSE / NASDAQ", "usa", "USD", "exchCode", "US"),
+    "US": ExchangeDef("", "NYSE / NASDAQ", "usa", "USD"),
     "XTSE": ExchangeDef(".TO", "Toronto", "global", "CAD"),
     "XTSX": ExchangeDef(".V", "TSX Venture", "global", "CAD"),
     "BVMF": ExchangeDef(".SA", "São Paulo (B3)", "global", "BRL"),
@@ -86,6 +89,16 @@ EXCHANGES: dict[str, ExchangeDef] = {
     "XTAE": ExchangeDef(".TA", "Tel Aviv", "global", "ILS"),
 }
 DEFAULT_EXCHANGE = "XETR"
+
+# Codes, die **mehrere** Handelsplätze zusammenfassen. Sie stehen in der
+# Tabelle, weil StockInfo über sie sucht — im kanonischen Feld `mic` dürfen sie
+# nie landen.
+#
+# Vorher war dieses Merkmal indirekt zu haben: „wird bei OpenFIGI über
+# `exchCode` gesucht" hieß „ist kein echter MIC". Die Kopplung war bequem und
+# falsch — ein Sammelcode bleibt einer, auch wenn ihn nie jemand bei OpenFIGI
+# sucht. Mit dem Umzug der Anbieter-Spalten wird sie ausdrücklich.
+COLLECTOR_CODES = frozenset({"US"})
 
 # Emissionsland (ISIN-Präfix) → Heimatbörse. Der Rückfall der Kaskade: Findet
 # die bevorzugte Börse nichts, ist die Heimatbörse der beste nächste Versuch.
@@ -145,10 +158,9 @@ def is_real_mic(mic: str | None) -> bool:
        Feld stehen können. Geprüft wird mit `fullmatch`: `$` matcht in Python
        auch vor einem abschließenden Zeilenumbruch, und `"XNAS\n"` wäre
        durchgegangen.
-    2. **Kein Sammelcode.** Erkennbar daran, dass die Tabelle ihn über
-       `exchCode` auflöst statt über `micCode`. Die Längenregel fängt das
-       heutige `US` schon ab; die Prüfung bleibt trotzdem, weil ein künftiger
-       vierstelliger Sammelcode sonst durchginge.
+    2. **Kein Sammelcode.** Geprüft gegen `COLLECTOR_CODES`. Die Längenregel
+       fängt das heutige `US` schon ab; die Prüfung bleibt trotzdem, weil ein
+       künftiger vierstelliger Sammelcode sonst durchginge.
 
     Ein MIC, den die Tabelle nicht kennt, aber richtig geschrieben ist, gilt
     als echt: `XNAS` steht dort nicht und ist genau der Wert, den eine
@@ -163,8 +175,7 @@ def is_real_mic(mic: str | None) -> bool:
     """
     if not mic or not _MIC_PATTERN.fullmatch(mic):
         return False
-    definition = EXCHANGES.get(mic)
-    return definition is None or definition.figi_id_type == "micCode"
+    return mic not in COLLECTOR_CODES
 
 
 # Der Wert der Spalte `identity_status`. Er steht hier und nicht in `db.py`,
@@ -270,9 +281,9 @@ def split_symbol(symbol: str) -> tuple[str | None, str | None]:
     ticker, _, rest = symbol.partition(".")
     suffix = f".{rest}"
     for mic, definition in EXCHANGES.items():
-        if definition.suffix == suffix and definition.figi_id_type == "micCode":
-            # `figi_id_type` unterscheidet echte MICs vom Sammelcode `US`:
-            # Nur die einzelnen Börsen werden über `micCode` aufgelöst.
+        if definition.suffix == suffix and mic not in COLLECTOR_CODES:
+            # Ein Sammelcode steht für mehrere Handelsplätze und taugt nicht
+            # als kanonischer MIC — auch dann nicht, wenn er ein Suffix trüge.
             return (ticker, mic) if is_canonical_ticker(ticker) else (None, None)
     return None, None
 

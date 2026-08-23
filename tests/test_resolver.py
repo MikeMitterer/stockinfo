@@ -109,8 +109,14 @@ def test_unbekannte_boerse_faellt_auf_xetr_zurueck() -> None:
     assert figi.calls == [("IE00B4L5Y983", "XETR", "micCode")]
 
 
-def test_us_ist_in_tabelle_mit_exchcode() -> None:
-    assert EXCHANGES["US"].figi_id_type == "exchCode"
+def test_us_notiert_ohne_suffix() -> None:
+    """Was von diesem Test übrig bleibt, nachdem das Anbieterwissen umgezogen ist.
+
+    Das leere Suffix ist eine Eigenschaft der **Börse**: In den USA ist das
+    punktlose Symbol die Notierung. Dass OpenFIGI dort über `exchCode` sucht,
+    ist dagegen eine Eigenschaft des Anbieters und steht seit T-21 Teil 2b bei
+    ihm — geprüft in `tests/test_openfigi_lookup.py`.
+    """
     assert EXCHANGES["US"].suffix == ""
 
 

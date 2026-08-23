@@ -29,7 +29,7 @@ from app.providers.base import (
     ResolvedInstrument,
     SourceUnavailableError,
 )
-from app.providers.openfigi_provider import OpenFigiClient
+from app.providers.openfigi_provider import OpenFigiClient, figi_lookup
 
 logger = structlog.get_logger()
 
@@ -212,9 +212,8 @@ class OpenFigiResolver:
             return None
 
         exch = EXCHANGES[mic]
-        ticker = self._client.map_isin(
-            isin, exch.figi_value or mic, id_type=exch.figi_id_type
-        )
+        id_type, id_value = figi_lookup(mic)
+        ticker = self._client.map_isin(isin, id_value, id_type=id_type)
         if not ticker:
             return None
         if not is_canonical_ticker(ticker):

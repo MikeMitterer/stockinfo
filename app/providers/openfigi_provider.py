@@ -16,6 +16,33 @@ logger = structlog.get_logger()
 
 _ENDPOINT = "https://api.openfigi.com/v3/mapping"
 
+# Börsen, die OpenFIGI **nicht** über ihren MIC adressiert. Nur Ausnahmen.
+#
+# Der Regelfall braucht keinen Eintrag: `micCode` mit dem MIC selbst. Hier
+# steht, wo OpenFIGI davon abweicht — `US` ist sein Composite für NYSE und
+# NASDAQ und wird über ein anderes Feld gesucht.
+#
+# Bis T-21 trugen diese beiden Angaben als Spalten in `ExchangeDef` mit, also
+# in der Börsentabelle der App. Dort waren sie am falschen Ort: Sie sagen
+# nichts über die Börse, sondern über **einen Anbieter**. Die nächste
+# Kursquelle hätte ihre eigenen zwei Spalten danebengestellt.
+_FIGI_AUSNAHMEN: dict[str, tuple[str, str]] = {
+    "US": ("exchCode", "US"),
+}
+
+
+def figi_lookup(mic: str) -> tuple[str, str]:
+    """Wie OpenFIGI nach dieser Börse zu fragen ist.
+
+    Args:
+        mic: MIC der Börse — oder ein Sammelcode der eigenen Tabelle.
+
+    Returns:
+        `(id_type, id_value)` für die Anfrage: im Regelfall
+        ``("micCode", mic)``.
+    """
+    return _FIGI_AUSNAHMEN.get(mic, ("micCode", mic))
+
 # Zeichen, die ein Yahoo-Symbol tragen kann: Buchstaben, Ziffern, Punkt,
 # Bindestrich, Zirkumflex (Indizes) und Gleichheitszeichen (Devisen/Futures).
 _YAHOO_SYMBOL_PATTERN = re.compile(r"^[A-Za-z0-9.^=-]+$")
