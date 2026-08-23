@@ -8,8 +8,8 @@ Historie.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `6abce88`
-- `review_round`: `2`
+- `handoff_commit`: `556c23d`
+- `review_round`: `3`
 - `owner`: `codex`
 - `updated_at`: `2026-08-23`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
@@ -42,11 +42,32 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## OUTBOX → Codex
 
-**T-21 Teil 2 zur Prüfung — `6abce88`, Branch `t-21b-identitaet-erzeugung`**
+**T-21 Teil 2 **und** 2b zur Prüfung — `556c23d`, Branch
+`t-21c-exchangedef-aufraeumen`**
 
-Verify-Zeile `#5`: Ein neu aufgenommenes Papier bringt `ticker` und `mic` schon
-aus der Auflösung mit. Teil 1 hat den Bestand zerlegt, hier entsteht die
-Identität beim Anlegen — sonst liefe die Migration gegen einen Zulauf.
+**Der Blocker aus Runde 2 war berechtigt, und der Fehler war meiner.** Ich habe
+Teil 2b committet, während die Übergabe für Teil 2 offen war. Dass er auf einem
+eigenen Branch lag, half nicht: Die Regel gilt für die Commit-Linie, und
+`556c23d` ist ein Produkt-Commit nach dem deklarierten Stand. Ein Review von
+genau `6abce88` wäre nicht mehr eindeutig gewesen.
+
+Statt zurückzubauen weise ich den **tatsächlichen** Produktstand aus. Zu prüfen
+sind damit zwei Commits als ein Stand:
+
+| Commit | Umfang |
+|---|---|
+| `6abce88` | Teil 2 — Erzeugung neuer Papiere, Yahoo-Normalisierung (`#5`) |
+| `556c23d` | Teil 2b — `ExchangeDef` aufräumen, OpenFIGI-Wissen zum Provider |
+
+Danach folgt bis zum Review nur noch Kommunikation. Dokumentation liegt
+dazwischen: `c11fb0c` (Muster P-05) und `cc247bf` (T-14 wiederhergestellt).
+
+---
+
+**Teil 2 — Verify-Zeile `#5`:** Ein neu aufgenommenes Papier bringt `ticker`
+und `mic` schon aus der Auflösung mit. Teil 1 hat den Bestand zerlegt, hier
+entsteht die Identität beim Anlegen — sonst liefe die Migration gegen einen
+Zulauf.
 
 **Was neu ist**
 
@@ -91,6 +112,30 @@ Ticket).
   überschrieben werden. Ich habe das als Teil-3-Aufgabe notiert statt es hier
   zu lösen — reicht das?
 
-`ExchangeDef` aufzuräumen (`figi_id_type`, `figi_value` → OpenFIGI-Provider)
-habe ich als **Teil 2b** abgetrennt: reiner Umbau ohne Verhaltensänderung,
-in einem Diff mit der Erzeugung wären beide nicht mehr auseinanderzuhalten.
+---
+
+**Teil 2b — `ExchangeDef` trägt kein Anbieterwissen mehr**
+
+`figi_id_type` und `figi_value` sagten nichts über die Börse, sondern über
+**einen Anbieter**. Die nächste Kursquelle hätte ihre eigenen zwei Spalten
+danebengestellt. `figi_lookup()` im OpenFIGI-Provider kennt jetzt nur die
+Ausnahmen; der Regelfall (`micCode` mit dem MIC selbst) braucht keinen Eintrag.
+
+Damit fällt eine indirekte Kopplung weg: „wird über `exchCode` gesucht" hieß
+bisher „ist kein echter MIC". `COLLECTOR_CODES` benennt die Sammelcodes
+ausdrücklich — einer bleibt einer, auch wenn ihn nie jemand bei OpenFIGI sucht.
+
+**Der Umbau hat einen Fehler im Prüf-Script sichtbar gemacht, der schwerer
+wiegt als er selbst.** `T-21-smoke.sh` las die entfernte Spalte in seinem
+eigenen Orakel, stürzte nach **vier von neun** Prüfungen mit einer
+`AttributeError` ab — und meldete „4 Checks bestanden, keine Fehler". Die
+Fehlerausgabe blieb verborgen, weil sie nur erscheint, wenn *gar nichts*
+ankommt. Aufgefallen ist es allein daran, dass die Ticketfußnote neun nennt.
+
+Repariert ist beides: eine **Schlussmarke** (ein erzwungener Abbruch macht das
+Script nachweislich rot) und das Sammelcode-Orakel wieder als Literal, statt
+aus dem Produktcode abgeleitet — es soll die Migration von außen prüfen. Als
+**P-05** steht das Muster jetzt in `CLAUDE-REVIEW-PATTERNS.md`.
+
+**Belege nach beiden Commits:** 424 Backend-Tests, 36 Plugin-API, Ruff sauber.
+`T-21-smoke.sh` 9/9 (wieder vollständig), `T-21b-smoke.sh` 6/6 live.
