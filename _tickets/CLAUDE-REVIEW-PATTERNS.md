@@ -16,6 +16,7 @@ duplizieren.
 - [P-02 · Regelumsetzung wird zu früh vollständig gemeldet](#p-02--punktuelle-korrektur-wird-als-vollständige-regelumsetzung-gemeldet)
 - [P-03 · Prüfwerkzeuge räumen fremde Ressourcen auf](#p-03--prüfwerkzeuge-räumen-fremde-ressourcen-mit-auf)
 - [P-04 · Negativtests prüfen nur die Fehlerbeschriftung](#p-04--negativtests-prüfen-nur-die-fehlerbeschriftung)
+- [P-05 · Ein abgebrochener Prüflauf meldet sich als bestanden](#p-05--ein-abgebrochener-prüflauf-meldet-sich-als-bestanden)
 
 ## P-01 · Testtiefe wird in der Übergabe überzeichnet
 
@@ -210,5 +211,32 @@ Der neue `$`-Regex akzeptierte einen finalen Zeilenumbruch; damit hielten
 Produkt und Prüfung `VTI/XNAS\n/resolved` gemeinsam für gültig und der
 präparierte Lauf bestand 9/9. Die neuen Grenztests enthielten Leerzeichen,
 Länge, Kleinschreibung und Sonderzeichen, aber keinen Zeilenumbruch.
+
+[↑ Übersicht](#übersicht)
+
+## P-05 · Ein abgebrochener Prüflauf meldet sich als bestanden
+
+**Erkennungsregel:** Ein Prüf-Script zählt die Ergebnisse, die es bekommen hat,
+und schließt daraus auf Vollständigkeit. Bricht der geprüfte Vorgang mitten im
+Lauf ab, sieht das Ergebnis aus wie ein vollständiger Lauf ohne Fehler — nur
+mit weniger Zeilen. Verstärkt wird es, wenn die Fehlerausgabe nur dann gezeigt
+wird, wenn **gar nichts** ankam.
+
+**Prüffrage:** Woran erkennt das Script, dass der Lauf **zu Ende** gelaufen ist
+— und nicht nur, dass das Angekommene grün war? Es braucht eine Schlussmarke
+oder eine erwartete Anzahl; die Zahl im Erfolgssatz ist kein Beleg, sie zählt
+nur mit. Gegenprobe: einen Abbruch mitten im Lauf erzwingen und nachsehen, ob
+das Script rot wird.
+
+**Beleg:** T-21 Teil 2b, 2026-08-23: Der Umzug von `figi_id_type` zum
+OpenFIGI-Provider entfernte eine Spalte, die `T-21-smoke.sh` in seinem eigenen
+Orakel noch las. Das Script stürzte nach vier von neun Prüfungen mit einer
+`AttributeError` ab, die Fehlerausgabe blieb verborgen — und es meldete
+„4 Checks bestanden, keine Fehler". Die vier Zeilen davor waren echt; die fünf
+fehlenden fielen nur auf, weil die Ticketfußnote neun nannte.
+
+**Nachbarschaft zu P-01:** Dort wird die Testtiefe in der Übergabe
+überzeichnet. Hier überzeichnet sich das **Werkzeug** — die Übergabe gäbe
+seine Zahl gutgläubig weiter.
 
 [↑ Übersicht](#übersicht)

@@ -29,7 +29,7 @@ muss, ist kein Plugin).
 > |---|---|---|---|
 > | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | `be5f38d` ✔ abgenommen |
 > | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung | `#5` | `6abce88` — zur Prüfung |
-> | **Teil 2b** | `ExchangeDef` aufräumen (`figi_id_type`, `figi_value` zum Provider) | — | offen |
+> | **Teil 2b** | `ExchangeDef` aufräumen (`figi_id_type`, `figi_value` zum Provider) | — | `556c23d` — wartet auf Teil 2 |
 > | **Teil 3** | API und Dashboard, offene Zuordnungen sichtbar und von Hand setzbar, Vertragsversion | `#2b`, `#2c`, `#3`, `#4` | offen |
 >
 > **Teil 2b abgetrennt** *(Claude, 2026-08-23)* — das Aufräumen von
