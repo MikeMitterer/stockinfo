@@ -88,6 +88,13 @@ kanonische Identität bekannt ist. Eine Gegenprobe mit gleichem Symbol, aber
 verschiedenen ISINs und `listing_id` verlor beim nächsten `init_db()` erneut
 eine der beiden Zeilen.
 
+**Beleg:** T-21 Teil 1 Runde 3, Commit `7da4aae`: Die Übergabe meldete nach der
+dritten Naming-Anmahnung `app/db.py`, das ganze Prüfskript und die gesamte
+Migrationstestdatei als durchgesehen; Kommentare und Docstrings sollten deutsch
+bleiben. Die mechanische Ersetzung hinterließ jedoch Sätze wie „bleibt
+`open_rows` und sichtbar“ und „wurde `before` zusammengeführt“ sowie weiterhin
+nichtsprechende Einbuchstaben-Bezeichner im berührten Test- und Smoke-Code.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
@@ -131,5 +138,12 @@ und Body passierte beide einschlägigen Prüfungen (`MUTANT_UNERKANNT`).
 vollständig leeren Datenbank als bestanden. `all(...)` auf leeren Mengen und
 Vergleiche `0 == 0` ersetzten den Nachweis der konkret behaupteten
 Auflösungen; selbst `#3b` prüfte nur Indexnamen statt deren Eindeutigkeit.
+
+**Beleg:** T-21 Teil 1 Runde 3, Commit `7da4aae`: Der reparierte Smoke-Check
+verwendete `split_symbol` sowohl in der Migration als auch zur Berechnung des
+Erwartungswerts. Damit bestätigte die Produktionsfunktion sich selbst und
+verwarf zugleich einen laut Ticket gültigen Zielzustand: Ein bereits manuell
+aufgelöstes suffixloses Listing `WALONLY/XNAS` wurde von `#2` als falsch
+markiert, weil sein Legacy-Symbol absichtlich nicht rückwärts zerlegbar ist.
 
 [↑ Übersicht](#übersicht)

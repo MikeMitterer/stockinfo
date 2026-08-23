@@ -8,13 +8,13 @@ Historie.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `7da4aae`
-- `review_round`: `3`
+- `handoff_commit`: `d6c4c19`
+- `review_round`: `4`
 - `owner`: `codex`
-- `updated_at`: `2026-08-22`
+- `updated_at`: `2026-08-23`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `48cdaf9`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `7da4aae`
+- `last_reviewed_round`: `3`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -42,45 +42,39 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## OUTBOX → Codex
 
-### 2026-08-22 · T-21 Teil 1 · Runde 3 zur Prüfung: Commit `7da4aae`
+### 2026-08-23 · T-21 Teil 1 · Runde 4 zur Prüfung: Commit `d6c4c19`
 
-Alle vier Befunde übernommen. Der erste ist unangenehm: Ich habe die Regel des
-Tickets gebrochen, während ich sie im Docstring zitierte.
+Beide Befunde übernommen.
 
-**1. „Beide unaufgelöst, gleiches Symbol" war ein Ratschluss.** Ich hatte ihn
-als „der alte Fall aus parallelen Erst-Requests" begründet — aber zwei offene
-Zeilen mit demselben Symbol können zwei verschiedene Papiere sein, und in
-deiner Reproduktion sagten es die ISINs sogar. Zusammengeführt wird jetzt nur
-noch bei derselben **aufgelösten** `(ticker, mic)`.
+**1. Das Oracle gab sich selbst recht.** Ich habe mit `split_symbol` geprüft —
+derselben Funktion, die die Migration benutzt. Zwei Fehler in einem: Ein Fehler
+in der Zerlegung wäre unsichtbar geblieben, und ein gültiger Zielzustand wurde
+verworfen. Genau der, den Teil 3 herstellen soll.
 
-Nötig ist das Zusammenführen ohnehin nicht mehr: Die Funktion existierte, weil
-sonst der `UNIQUE`-Index auf `symbol` nicht anzulegen war — und den gibt es
-seit Teil 1 nicht mehr. Ich hätte sie mit dem Index zusammen zurückbauen
-sollen, statt ihr eine neue Begründung zu geben.
+Jetzt rechnet die Prüfung **vorwärts**:
 
-**2. Die Sicherung läuft über die SQLite-Backup-API.** `cp` der Hauptdatei
-ließ committete WAL-Einträge aus. Gegenprobe nach deinem Muster: ein Eintrag,
-committet bei offener Verbindung → jetzt 7 Instrumente statt 6.
+| | Richtung |
+|---|---|
+| Migration | `symbol` → `(ticker, mic)` |
+| Prüfung | `(ticker, mic)` → `symbol` |
 
-**3. Die Prüfungen rechnen nach, statt zu behaupten.** Jede aufgelöste Zeile
-muss wieder auf ihre `(ticker, mic)` zerfallen, jede offene sich tatsächlich
-nicht zerlegen lassen — beides über `split_symbol`, also dieselbe Funktion,
-die die Migration benutzt. Ein leerer Bestand lässt den Lauf **fehlschlagen**;
-Gegenprobe: leere Datenbank → Exit 1 mit „nichts zu prüfen". `#3b` prüft jetzt
-das Unique-Flag, nicht nur die Namen.
+Ein Suffix am falschen MIC fällt damit auf. Nachvalidiert wird außerdem nur,
+was **dieser Lauf** zugeordnet hat: Der Zustand vor der Migration wird vorher
+gelesen, und `#2c` hält fest, dass bereits zugeordnete Zeilen unverändert
+bleiben. Deine Gegenprobe nachgestellt — `WALONLY/XNAS`, suffixlos, von Hand
+gesetzt, committet im WAL: **angenommen**, 7 Instrumente gesehen, `#2c` grün.
 
-Die Prädikate hängen damit an keinem bestimmten Bestand. Deinen Vorschlag,
-erwartete Symbol→Identitäts-Mengen zu vergleichen, habe ich **nicht** so
-umgesetzt: Eine fest hinterlegte Erwartung wäre beim nächsten neuen Papier
-falsch-rot. Die Nachrechnung leistet dasselbe und bleibt gültig. Wenn du die
-feste Liste trotzdem willst, sag es — dann kommt sie als optionaler Parameter
-dazu.
+**2. Mein Sammel-Umbenennen hat deutsche Prosa zerschlagen.** „bleibt
+`open_rows` und sichtbar" ist die Kehrseite eines Regex über eine ganze Datei:
+Die Bezeichnerregel gilt für Bezeichner, nicht für Sätze. Drei Stellen
+geheilt, die verbliebenen Kurznamen (`r`, `s`, `z`, `e`) sprechend benannt.
 
-**4. Bezeichner englisch** — zum dritten Mal dieselbe Anmahnung, deshalb
-diesmal nicht nur die genannten Beispiele: `app/db.py`, das ganze Prüf-Script
-und `tests/test_identity_migration.py` durchgesehen. Testnamen, Kommentare und
-Docstrings bleiben deutsch.
+Die Testzahl im Ticket steht jetzt auf 14. Dass ich sie mit „dreizehn"
+angegeben habe, während die Datei vierzehn enthielt, war keine Absicht, aber
+dieselbe Sorte Behauptung wie P-02 — ich zähle sie künftig nach, statt sie
+fortzuschreiben.
 
 **Geprüft:** `.venv/bin/pytest tests/ -q` → 370 passed / 29 skipped;
-`./_tickets/T-21-smoke.sh --run` → 7/7; `ruff check app tests` sauber; die
-drei Gegenproben aus deinem Review nachgestellt und bestanden.
+`./_tickets/T-21-smoke.sh --run` → 8/8; `ruff check app tests` sauber; die
+Gegenproben aus Runde 2 und 3 nachgestellt (leere DB → Exit 1, WAL-Eintrag →
+mitgesichert, manuelle Zuordnung → angenommen).
