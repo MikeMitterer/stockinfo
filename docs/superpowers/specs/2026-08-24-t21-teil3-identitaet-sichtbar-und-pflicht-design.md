@@ -1,7 +1,7 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 16** ·
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 17** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
 „Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
 Entwurfsprüfung ohne Produktcode.
@@ -59,12 +59,46 @@ Fehler. Mit `DEFAULT_EXCHANGE=XETR`: `IE00B4L5Y983` → `EUNL.DE`/`XETR`,
 
 **1. Die Handzuordnung entfällt** (Verify `#2c`, Entscheidung Mike). Statt offene
 Zeilen zu reparieren, entstehen sie nicht mehr: Der Symbolweg verlangt die
-vollständige Kombination. Damit entfällt auch die Statusfrage aus Runde 3;
-`identity_status` bleibt zweiwertig.
+vollständige Kombination.
 
-**2. Der Migrationspfad wird nicht eng gesehen** (Entscheidung Mike). Was sich
-einfach migrieren lässt, wird migriert; der Rest bleibt offen und bekommt eine
-verständliche Meldung. Kein Reparaturwerkzeug für Altbestand.
+**2. Es gibt keine halbe Identität mehr — nirgends** *(Entscheidung Mike,
+2026-08-24, nach Runde 16; kehrt den bisherigen Zwischenzustand um)*.
+
+Eine nicht auflösbare Altzeile darf **nicht** als `NULL`-Identität weiterleben —
+weder im aktiven `instruments`-Bestand noch im REST-Vertrag noch im UI. Damit:
+
+* Was sich **einfach und eindeutig** auflösen lässt, wird migriert.
+* Alles andere kommt **nicht in den gültigen Bestand** und wird von keinem
+  Instrument- oder Quote-Endpunkt serialisiert.
+* `ticker` und `mic` sind danach **Pflicht**. Als Invariante nach erfolgreichem
+  Start: `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`.
+* Der Benutzer bekommt einen verständlichen **Bericht**: altes Symbol,
+  konkreter Ablehnungsgrund, Aufforderung zur Neuerfassung. Entfallen dabei
+  Kurspunkte, nennt der Bericht auch das; der Vorabhinweis verweist auf das
+  Backup.
+* Ein technischer Fehlerbericht oder eine Quarantäne darf die Rohinformation
+  halten — sie ist aber **kein aktiver Instrumentdatensatz** und tritt über
+  keinen Endpunkt als `NULL`-Zeile aus.
+
+**Was dadurch gegenstandslos wird:** `identity_status` hätte nur noch **einen**
+Wert. Die Spalte, ihre Konstanten in `app/exchanges.py` und die privaten Kopien
+in `app/db.py` entfallen ersatzlos — damit erledigt sich auch der frühere
+Abschnitt „Eine Quelle für den Identitätsstatus": Die beste Zahl an Quellen für
+einen Wert, den es nicht mehr gibt, ist null. Ebenso entfällt die *offene
+Zuordnung als Instrumentzustand*; der Abweichungszustand zur Vorzugsbörse
+bleibt unberührt.
+
+**Was das im echten Bestand kostet — nachgemessen**, damit die Entscheidung
+nicht abstrakt bleibt:
+
+| Papier | Tageskurse | unter der neuen Regel |
+|---|---|---|
+| `GOLD.SG` | **257** | migriert — **sofern `XSTU` vorher im Katalog steht** |
+| `VTI` | **0** | abgelehnt; verliert praktisch nichts |
+| `EUNL.DE`, `VGWL.DE`, `APC.DE`, `BRYN.DE` | 256–2234 | migrieren über das Suffix |
+
+Der Preis der strengen Regel ist also **ein** Papier ohne Historie. Das Risiko
+liegt woanders — siehe die Reihenfolge im Umsetzungsschnitt.
 
 **3. Bewusste Umkehr gegenüber Teil 2.** Der Kommentar in `quote_service.py`
 argumentiert dagegen, die Auskunft zu verweigern. Neu ist das Wissen, dass genau
@@ -285,14 +319,24 @@ darunter und ist gestrichen. Der Alias entsteht ausschließlich im Adapter, übe
 Identität ein Providerformat baut. Wem der Alias **gehört** und was beim
 Providerwechsel mit ihm geschieht, klärt **T-29**, nicht dieser Entwurf.
 
-### B. Sichtbarkeit: zwei Zustände
+### B. Sichtbarkeit — was davon übrig bleibt
 
-`GET /instruments/identity` liefert:
+Die Entscheidung 2 hat diesen Abschnitt halbiert. Sichtbar zu machen ist noch:
 
-1. **Offen** — `identity_status = legacy_unresolved`, mit **Grund** je Fall
-   (`suffixlos`, `Suffix unbekannt`, `fremde Schreibweise`). Deckt Verify `#2b`.
-2. **Von der Vorzugsbörse abgewichen** — mit erwartetem und tatsächlichem MIC,
-   Anzeigenamen und **beiden Währungen**.
+1. **Von der Vorzugsbörse abgewichen** — mit erwartetem und tatsächlichem MIC,
+   Anzeigenamen und **beiden Währungen**. Ein Zustand des laufenden Betriebs,
+   von der Migration unberührt.
+2. **Der Migrationsbericht** — und der ist etwas anderes als eine Liste offener
+   Instrumente: Er zählt Zeilen auf, die **nicht** in den Bestand gekommen
+   sind, mit altem Symbol, Ablehnungsgrund, verlorenen Kurspunkten und der
+   Aufforderung zur Neuerfassung. Er liest **nicht** aus `instruments` — dort
+   gibt es diese Zeilen ja gerade nicht mehr —, sondern aus dem getrennten
+   Quarantäne-/Berichtsspeicher.
+
+**Verify `#2b` ändert damit seine Bedeutung**, statt zu entfallen: Es prüft
+nicht mehr „erscheint in einer Liste offener Zuordnungen", sondern „erscheint
+im Migrationsbericht, mit Grund". Die alte Formulierung stammt aus einer Welt,
+in der offene Zeilen im Bestand bleiben durften.
 
 **Die Währung kommt aus den Kursdaten, nicht aus der Tabelle.** Die tatsächliche
 Währung steht in `instruments.currency` — was die Quelle geliefert hat, ist die
@@ -380,24 +424,27 @@ verschieden. Das macht den Umfang von Teil 3 kleiner, nicht größer.
 geht `1.0.0` → `2.0.0`, Snapshot per
 `UPDATE_CORE_SNAPSHOT=1 .venv/bin/pytest tests/test_contract_openapi.py -q`.
 
-**`ticker` und `mic` werden zugesagt, aber nicht pflichtig.** Der frühere
-Entwurf sprach von „neuen Pflichtfeldern" und widersprach damit dem Ticket:
-Eine nicht zerlegbare Altzeile behält ausdrücklich `ticker = NULL`,
-`mic = NULL`, `legacy_unresolved` und bleibt **lesbar und nutzbar** — genau der
-Zwischenzustand, ohne den „melden statt raten" nicht umsetzbar wäre. Wären beide
-Felder nicht-nullbar, könnte `GET /instruments` diesen Zustand nicht mehr
-serialisieren und liefe in einen Response-Validation-Fehler statt in ein `200`.
+**`ticker`, `mic` und `listing_id` sind Pflichtfelder.** Diese Zeile hat sich
+zwischen Runde 15 und 16 gedreht, und der Grund ist nicht Unentschlossenheit,
+sondern eine geänderte Voraussetzung:
 
-Deshalb:
+* **Runde 15** verlangte zu Recht `nullable`. Damals durfte eine nicht
+  zerlegbare Altzeile mit `NULL`-Identität im Bestand bleiben; nicht-nullbare
+  Felder hätten `GET /instruments` bei genau diesem Zustand in einen
+  Response-Validation-Fehler laufen lassen.
+* **Entscheidung 2** hat diesen Zustand abgeschafft. Es gibt keine Zeile mehr,
+  die `NULL` tragen dürfte — die Invariante nach dem Start lautet
+  `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`.
 
-| Feld | im allgemeinen Instrument-/Quote-Vertrag | in `IntakeResult.summary` |
-|---|---|---|
-| `listing_id` | **Pflicht** — jede Zeile hat eine, auch eine unaufgelöste | Pflicht |
-| `ticker`, `mic` | zugesagt, aber **nullable** | garantiert nicht-null |
+Damit ist `nullable` nicht mehr nötig, sondern **schädlich**: Es wäre eine
+Zusage an Konsumenten, mit einem Zustand zu rechnen, den es nicht geben darf,
+und würde genau die halbe Identität wieder salonfähig machen, die dieses Ticket
+austreibt.
 
-Ein Vertragstest serialisiert eine `legacy_unresolved`-Zeile mit
-`ticker: null` und `mic: null`; die Intake-Tests prüfen beide Erfolgsantworten
-mit echten Werten.
+**Der Vertragstest kehrt sich mit um:** Statt eine `legacy_unresolved`-Zeile mit
+`ticker: null` zu serialisieren, belegt er künftig die **Invariante** — nach dem
+Start trägt keine Zeile eine halbe Identität, und der Migrationsbericht nennt
+die abgelehnten Fälle. Verify `#2j3` entfällt ersatzlos.
 
 **Der Erfolgsvertrag von `POST /instruments/intake`** — ohne ihn dürfte die
 Umsetzung zwischen `200 null`, `QuoteResponse`, `InstrumentSummary` und `204`
@@ -421,12 +468,24 @@ Descriptor zwei Eintragsarten; sie weiter `exchanges` zu nennen, während
 Sammelcodes darin stehen, wäre dieselbe Unehrlichkeit wie `mic="US"`. Die
 Antwort heißt `catalog`, ihre Einträge sind die diskriminierte Union.
 
-### E. Eine Quelle für den Identitätsstatus
+### E. `identity_status` entfällt ersatzlos
 
-`app/db.py:173-175` hält private Kopien von `resolved` und `legacy_unresolved`
-aus `app/exchanges.py:181-185`, obwohl der dortige Kommentar ausdrücklich eine
-einzige Regelquelle verspricht. Die Kopien entfallen; Migration und
-Laufzeitlogik importieren dieselben Konstanten.
+Hier stand bis Runde 16, dass die privaten Kopien von `resolved` und
+`legacy_unresolved` in `app/db.py:173-175` gegen die kanonischen Konstanten in
+`app/exchanges.py:181-185` zusammengeführt werden. Mit Entscheidung 2 ist die
+Frage erledigt, aber anders als gedacht: Wenn keine Zeile mehr offen sein
+**darf**, trägt die Spalte nur noch einen einzigen Wert.
+
+Also entfallen: die Spalte `identity_status`, `IDENTITY_RESOLVED` und
+`IDENTITY_UNRESOLVED` in `app/exchanges.py`, die privaten Kopien in
+`app/db.py`, `_report_unresolved` und alles, was daran hängt. Die
+Vollständigkeitsaussage von `canonical_identity` bleibt — sie entscheidet
+weiterhin, ob eine Identität gültig ist; sie schreibt das Ergebnis nur nicht
+mehr als Status weg, sondern führt zu Annahme oder Ablehnung.
+
+Ein Glück für den Rückbau: `identity_status` ist **nie** in den REST-Vertrag
+oder ins Dashboard gelangt — nachgeprüft, `contract/` und `dashboard/src/`
+kennen ihn nicht. Der Ausbau bleibt damit intern.
 
 ### F. Dokumentationsinventur — wonach gesucht wurde
 
@@ -521,10 +580,21 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 
 | | Umfang | Vertrag |
 |---|---|---|
-| **1 — Börsenkatalog** | Descriptor, Union, `catalog`, die sechs neuen Einträge, `COLLECTOR_CODES` abgeleitet, Statuskonstanten entdoppelt | **kein** Versionssprung — `/exchanges` liegt außerhalb des geschlossenen Core |
-| **2 — Aufnahmeweg, atomar mit dem Vertrag** | `POST /instruments/intake`, Intake-Service mit `IntakeResult`, Fehlerkennungen, der strengere `/quote?symbol=`, die neuen Pflichtfelder von `InstrumentSummary`, Aufnahme des Endpunkts in den Core-Vertrag, **`core_version 2.0.0`** und Snapshot | **alles in einer Übergabe** |
-| **3 — Sichtbarkeit** | beide Zustände, Environment-Panel | additiv; Snapshot erneuern, Version nach der Regel im Artefakt |
-| **4 — Dashboard und Inventur** | Fehlerpfad in beiden Sprachen, Dokumentationsinventur | Snapshot nur, wenn der Core sich noch einmal ändert |
+| **1 — Börsenkatalog** | Descriptor, Union, `catalog`, die sechs neuen Einträge (**darunter `XSTU`**), `COLLECTOR_CODES` abgeleitet | **kein** Versionssprung — `/exchanges` liegt außerhalb des geschlossenen Core |
+| **2 — Migration ohne halbe Identität** | Migrieren-oder-ablehnen, Quarantäne und Bericht, `identity_status` ausbauen, `ticker`/`mic` auf `NOT NULL`, Invariante | intern; berührt den Core erst über die Pflichtfelder in Teil 3 |
+| **3 — Aufnahmeweg, atomar mit dem Vertrag** | `POST /instruments/intake`, Intake-Service mit `IntakeResult`, Fehlerkennungen, der strengere `/quote?symbol=`, `ticker`/`mic`/`listing_id` als Pflichtfelder, Aufnahme des Endpunkts in den Core-Vertrag, **`core_version 2.0.0`** und Snapshot | **alles in einer Übergabe** |
+| **4 — Sichtbarkeit, Dashboard, Inventur** | Abweichungszustand, Migrationsbericht im UI, Fehlerpfad in beiden Sprachen, Dokumentationsinventur | Snapshot nur, wenn der Core sich noch einmal ändert |
+
+> ### ⚠️ Die Reihenfolge ist kein Geschmacksfrage — sie entscheidet über Daten
+>
+> **Teil 1 muss vor Teil 2 laufen.** Solange `XSTU`/`.SG` nicht im Katalog
+> steht, ist `GOLD.SG` nicht auflösbar — und unter der neuen Regel wird es dann
+> **abgelehnt statt migriert**. Im echten Bestand hängen daran **257
+> Tageskurse**, nachgemessen. Andersherum migriert dieselbe Zeile sauber.
+>
+> Das ist der teuerste Fehler, den dieser Schnitt zulässt, und er ist durch
+> nichts wiedergutzumachen außer dem Backup. Deshalb steht er hier und nicht in
+> einer Fußnote.
 
 **Warum Teil 2 nicht teilbar ist:** Der strengere `/quote?symbol=` ändert einen
 Endpunkt **im** geschlossenen Core — eine Anfrage, die heute `200` liefert,
@@ -565,6 +635,16 @@ ausdrücklich, statt es offen zu lassen.
   ein Papier an der Vorzugsbörse taucht nicht auf, und die tatsächliche Währung
   kommt aus den Kursdaten, auch wenn die Tabelle etwas anderes erwarten ließe.
 * **Vertrag:** `test_contract_openapi.py` gegen den Snapshot mit `2.0.0`.
+* **Migration ohne halbe Identität:** zerlegbare Zeilen kommen durch;
+  `AAPL`-artige werden **abgelehnt** und erscheinen im Bericht mit Grund und
+  verlorenen Kurspunkten; nach dem Lauf gilt die Invariante
+  `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`; die Quarantäne ist über
+  keinen Instrument-Endpunkt erreichbar. **Und:** mit `XSTU` im Katalog
+  migriert `GOLD.SG` samt seiner Kurspunkte, statt abgelehnt zu werden.
+* **`_tickets/T-21-smoke.sh` wird umgestellt** — er wertet heute `GOLD.SG` und
+  `VTI` als zwei gültige offene `NULL`-Fälle und würde die neue Regel grün
+  melden. Neu: vier bis fünf migrierte Zeilen, kein offener Fall, der Rest im
+  Bericht.
 * **Eingabe über den echten Weg**, nicht gegen einen Parser-Unittest: Router →
   Service → Repository für ISIN, `TICKER.DE`, `TICKER.XETR` und unbekannte
   Form. **Keine eigene Core-Komponente wird dabei gemockt** — nur die äußeren

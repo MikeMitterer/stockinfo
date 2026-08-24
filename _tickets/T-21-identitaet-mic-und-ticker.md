@@ -151,8 +151,10 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 |---|---|---|:--:|---|
 | 1 | bestehende Datenbank, Migration laufen lassen | zerlegbare Instrumente haben `ticker` und `mic`; **nicht** zerlegbare werden gemeldet, nicht geraten | ✅ [^a] | |
 | 1b | dieselbe Migration auf einer **Kopie des echten Bestands** | keine Zeile und kein Kurspunkt geht verloren, auch beim zweiten Start nicht | ✅ [^g] | |
-| 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`; `AAPL` bleibt **offen** statt geraten (siehe Kasten oben) | ✅ [^b] | |
-| 2b | Instrument mit Fremdsymbol (`BRK-B`, aus dem Yahoo-Fallback) | erscheint in einer Liste offener Zuordnungen, mit Grund | ◑ [^c] | |
+| 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`; `AAPL` wird **abgelehnt** statt geraten — die frühere Erwartung „bleibt offen" ist mit der Entscheidung nach Runde 16 hinfällig | ✅ [^b] | |
+| 2b | Instrument mit Fremdsymbol (`BRK-B`) | erscheint im **Migrationsbericht** mit Grund und verlorenen Kurspunkten — nicht mehr als offene Zeile im Bestand | ◑ [^c] | |
+| 2b2 | nach erfolgreichem Start | Invariante `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`; kein Instrument-/Quote-Endpunkt serialisiert eine halbe Identität | | |
+| 2b3 | Reihenfolge Katalog vor Migration | `GOLD.SG` migriert (257 Tageskurse bleiben), wird **nicht** abgelehnt — der Katalog mit `XSTU` steht vorher | | |
 | ~~2c~~ | ~~derselbe Fall, manuelle Zuordnung~~ | **gestrichen** — der Symbolweg verlangt die Kombination künftig im Vertrag, damit entstehen die Fälle nicht mehr. Siehe Kasten „Die Handzuordnung ist gestrichen" | ➖ | |
 | 2d | Aufnahmefeld: nackter Ticker `AAPL` | 400, Text nennt beide Auswege mit Beispiel; `AAPL.XNAS` legt die Zeile `resolved` an | | |
 | 2d2 | `EUNL.DE` und `EUNL.XETR`, dazu `GOLD.SG` und `GOLD.XSTU` | je Paar **dieselbe** Identität *und* **derselbe** Provider-Alias; geprüft wird auch, womit die Quelle aufgerufen wurde | | |
@@ -164,7 +166,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2i | `POST /instruments/intake` | Neuanlage `201` mit `InstrumentSummary`, bestehendes Papier `200` mit demselben Typ, unauflösbar `400`, Quelle tot `502` — je im OpenAPI-Snapshot zugesagt und über die echte Kette geprüft | | |
 | 2j | Schichtengrenze am Aufnahmeweg | der Intake-Service liefert `IntakeResult(summary, created)`; im Router steht **kein zweiter Existenz-Check** und keine Repository-Abfrage, er mappt nur `created` auf `201`/`200` | | |
 | 2j2 | `created` unter Parallelität | kommt aus der **schreibenden Transaktion**, nicht aus einem Preflight; im abgefangenen UNIQUE-Rennen ist `created=false`, nicht `201` | | |
-| 2j3 | `GET /instruments` mit einer `legacy_unresolved`-Zeile | serialisiert `ticker: null`, `mic: null` und liefert `200` — nicht Response-Validation-Fehler; `listing_id` ist trotzdem Pflicht | | |
+| ~~2j3~~ | ~~`GET /instruments` mit einer `legacy_unresolved`-Zeile~~ | **entfällt** — mit der Entscheidung nach Runde 16 gibt es diesen Zustand nicht mehr. `ticker`, `mic` und `listing_id` sind Pflicht, siehe `#2b2` | ➖ | |
 | 2k | Übergabe 2 als Einheit | `core_version 2.0.0`, Vertragsartefakt und Snapshot kommen **mit** der ersten Änderung am geschlossenen Core, nicht danach — zwischenzeitlich gibt es keinen öffentlich geänderten, aber unzugesagten Endpunkt | | |
 | 2g | Fehlerpfad im Dashboard, **je in DE und EN** | bekannte Kennung, unbekannte Kennung, kaputtes JSON, leerer Rumpf, Netzwerkfehler — alle ergeben einen übersetzten Text, nie `statusText` und nie rohes JSON | | |
 | 3 | `GET /instruments` | `symbol` weiterhin vorhanden und unverändert (Profil-Links hängen daran) | ✅ [^d] | |
@@ -487,21 +489,40 @@ ISO 10383 als eigenen Parameter. Und MIC ist bereits der Schlüssel der
 Quellen: [EODHD Exchanges API](https://eodhd.com/financial-apis/exchanges-api-list-of-tickers-and-trading-hours),
 [Twelve Data Docs](https://twelvedata.com/docs)
 
-### Der Zwischenzustand — sonst ist „melden statt raten" nicht umsetzbar
+### ~~Der Zwischenzustand~~ — aufgehoben, es gibt keine halbe Identität mehr
 
-Wären `ticker` und `mic` sofort `NOT NULL`, könnte die Migration eine nicht
+> **Entscheidung Mike, 2026-08-24 (nach Runde 16).** Der unten beschriebene
+> Zwischenzustand ist **aufgehoben**. Eine nicht auflösbare Altzeile darf
+> nirgendwo als `NULL`-Identität weiterleben — nicht im aktiven Bestand, nicht
+> im REST-Vertrag, nicht im UI.
+>
+> **Stattdessen:** Was einfach und eindeutig auflösbar ist, wird migriert. Alles
+> andere kommt **nicht** in den gültigen Bestand und wird dem Benutzer mit altem
+> Symbol, konkretem Grund, verlorenen Kurspunkten und der Aufforderung zur
+> Neuerfassung gemeldet. `ticker` und `mic` sind danach Pflicht; als Invariante
+> gilt `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`. Eine Quarantäne darf
+> die Rohinformation halten, ist aber kein aktiver Instrumentdatensatz.
+>
+> **Der dritte Ausweg, den der Text unten für ausgeschlossen hielt** — „Daten
+> löschen" — ist damit gewählt, aber unter einer Bedingung, die er nicht kannte:
+> Es wird nicht stillschweigend gelöscht, sondern **abgelehnt und benannt**.
+> Nachgemessen kostet das im echten Bestand ein einziges Papier (`VTI`, null
+> Tageskurse), sofern `XSTU` vorher im Katalog steht. Steht es das nicht, kostet
+> es `GOLD.SG` mit **257** Kurspunkten — siehe die Reihenfolgewarnung im
+> Entwurf.
+>
+> `identity_status` entfällt damit ersatzlos: Die Spalte hätte nur noch einen
+> Wert.
+
+~~Wären `ticker` und `mic` sofort `NOT NULL`, könnte die Migration eine nicht
 zerlegbare Zeile weder stehen lassen noch melden: Sie müsste raten, den Start
-blockieren oder Daten löschen. Genau die drei Auswege, die dieses Ticket
-ausschließt.
+blockieren oder Daten löschen.~~
 
-**Also braucht es einen ausdrücklichen Zwischenzustand:**
-
-- die neuen Spalten sind zunächst `NULL`-fähig
-- eine Kennzeichnung wie `identity_status = legacy_unresolved` markiert offene
-  Fälle — alternativ eine eigene Tabelle offener Zuordnungen
-- der Altdatensatz bleibt in dieser Zeit **lesbar und nutzbar**
-- erst nach erfolgreicher Zuordnung wird `(ticker, mic)` für diesen Datensatz
-  zur Pflicht
+~~**Also braucht es einen ausdrücklichen Zwischenzustand:** die neuen Spalten
+sind zunächst `NULL`-fähig, eine Kennzeichnung wie
+`identity_status = legacy_unresolved` markiert offene Fälle, der Altdatensatz
+bleibt lesbar und nutzbar, und erst nach erfolgreicher Zuordnung wird
+`(ticker, mic)` zur Pflicht.~~
 
 Ohne diesen Zustand ist „später von Hand zuordnen" ein Versprechen, das die
 Migration technisch nicht halten kann.
