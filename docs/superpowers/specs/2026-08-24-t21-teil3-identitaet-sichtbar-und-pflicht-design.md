@@ -1,7 +1,7 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 22** ·
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 23** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
 „Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
 Entwurfsprüfung ohne Produktcode.
@@ -651,13 +651,29 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 > | `GET` | `/migration` | Vorschau: was würde abgelehnt, mit Grund und Kurspunktzahl |
 > | `POST` | `/migration/confirm` | die Bestätigung |
 > | `GET` | `/migration/report` | der Bericht danach |
-> | `GET` | `/`, `/index.html`, `/favicon.png`, `/logo.svg`, `/logo.png`, `/stockinfo-icon.png`, `/assets/*` | die statische Oberfläche — **abschließend aufgezählt**, kein Präfix-Platzhalter |
+> | `GET` | **jede Datei, die im konfigurierten `static_dir` tatsächlich liegt** — abgeleitet, nicht abgeschrieben | die statische Oberfläche |
 >
-> **Warum die statischen Pfade einzeln dastehen:** Das Dashboard ist heute unter
-> `/` gemountet (`app/main.py:106-125`), und `/` als Präfix freizugeben hieße,
-> jede Fach-API-Route mit freizugeben. Die Liste entspricht dem, was
-> `dashboard/dist` tatsächlich ausliefert; kommt eine Datei dazu, kommt sie hier
-> dazu.
+> #### Warum die statischen Pfade **nicht** von Hand aufgezählt werden
+>
+> Der vorige Entwurf listete sie einzeln — und die Liste war schon beim
+> Aufschreiben falsch: Sie nannte `/stockinfo-icon.png`, aber nicht
+> `/stockinfo-icon.svg`, und genau das fordert `dashboard/index.html:6` als
+> FavIcon an. Im Pending-Zustand hätte der Guard einen realen
+> Dashboard-Request abgewiesen. *(Die Ursache war eine abgeschnittene Messung —
+> `ls dashboard/dist | head -6`. Der siebte Eintrag war die SVG.)*
+>
+> Eine handgepflegte Kopie von `dashboard/dist` ist eine **zweite Wahrheit, die
+> driftet**. Also: Die erlaubten statischen Pfade werden aus dem **realen
+> Dateibestand des konfigurierten `static_dir`** abgeleitet — begrenzt auf genau
+> dieses Verzeichnis, ohne Pfadausbruch. `/` als Präfix bleibt verboten: Das
+> Dashboard ist unter `/` gemountet (`app/main.py:106-125`), und ein
+> Präfix-Platzhalter gäbe jede Fach-API mit frei.
+>
+> **Der Test enumeriert nicht die Konstante, sondern die Wirklichkeit:** Er baut
+> das Dashboard, fordert **jede** tatsächlich ausgelieferte Wurzeldatei und
+> jedes Asset im Pending-Zustand an und prüft zusätzlich, dass unbekannte Pfade
+> und Fach-APIs gesperrt bleiben. Ein Test, der nur die Allowlist gegen sich
+> selbst prüft, hätte die fehlende SVG nie gefunden.
 >
 > Alles andere wird mit einer **stabilen Kennung** abgewiesen — aus derselben
 > Zustandsquelle. Einzelprüfungen in den Routern wären eine parallele
@@ -732,6 +748,23 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 >
 > Bestehende, weiterhin wahre Assertions bleiben — aber „unverändert" ist
 > README und Test-Suite als Ganzes eben nicht.
+>
+> #### Der Vite-Proxy ist eine dritte Routingquelle — und kennt die neuen Pfade nicht
+>
+> Der Pflichtablauf ruft `/migration` und seine Unterpfade **relativ** auf.
+> Laut `dashboard/src/config.ts:3-5` gelangen relative API-Aufrufe im
+> Dev-Betrieb ausschließlich über den Vite-Proxy zum Backend — und dessen feste
+> Liste in `dashboard/vite.config.ts:8-21` kennt weder `/migration` noch
+> `/operational`. **`/ready` fehlt dort ebenfalls**, schon heute.
+>
+> Ohne Ergänzung liefert Vite das SPA-HTML statt der API-Antwort, und der
+> verpflichtende Ablauf wäre lokal schlicht nicht benutzbar. Das ist kein
+> theoretischer Fall: Genau dieser Fehler steht als gelöstes Ticket im Board —
+> `_tickets/solved/T-04-vite-proxy-fehlende-praefixe.md:42-58`.
+>
+> Also: `/migration`, `/operational` und `/ready` kommen in `apiPrefixes`, und
+> ein **Dev-Proxy-Test** belegt für jeden neuen Präfix eine API-Antwort statt
+> `index.html`.
 >
 > #### Eine Routenquelle, drei Verbraucher
 >
