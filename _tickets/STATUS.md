@@ -39,6 +39,14 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > `get_quote_for_known` schließt sie nie — es löst nicht auf, es holt Kurse.
 > Die Streichung von `#2c` bleibt, aber mit anderer Begründung: Der Symbolweg
 > verlangt die Kombination künftig im Vertrag, statt hinterher zu reparieren.
+>
+> **Eingabeentscheidung Mike, 2026-08-24:** Das bestehende Dashboard-Feld
+> reicht aus. Neben der bevorzugten ISIN akzeptiert es eine klar dokumentierte
+> Inline-Konvention `TICKER.MIC`; dafür ist kein zweites MIC-Feld erforderlich.
+> Die Default-Börse unterstützt weiterhin die automatische Auflösung. Die
+> aufgelösten Werte werden in der Datenbank gehalten und anschließend im UI
+> angezeigt. Der Vertrag muss echten MIC (`XETR`) und Yahoo-Suffix (`.DE`)
+> begrifflich und syntaktisch eindeutig auseinanderhalten.
 
 - Aktives Ticket: `T-21-identitaet-mic-und-ticker.md` (T-17, T-18, T-20 und
   T-24 sind codex-abgenommen und liegen bis zur gesammelten Abnahme über T-28
@@ -93,23 +101,24 @@ braucht dennoch folgende Korrekturen, bevor er umgesetzt werden kann:
    (oder Collector-Defaults ausdrücklich ausschließen). Tests mindestens für
    `VTI/ARCX` bei XETR und `AAPL/XNAS` bei Default `US`.
 
-3. **Mittel — Das Dashboard kann die verlangten Zusatzdaten weder erfassen
-   noch den konkreten Fehler erklären.** Der Entwurf ändert unter
+3. **Mittel — Die beschlossene Ein-Feld-Eingabe und ihre Rückmeldung fehlen im
+   Entwurf.** Der Entwurf ändert unter
    `...teil3-identitaet-sichtbar-und-pflicht-design.md:143-151` nur das
    Environment-Panel. Das vorhandene Formular hat aber nur ein Eingabefeld
    (`dashboard/src/components/Toolbar.vue:20-32`), und
    `dashboard/src/api/paths.ts:24-35` kann keinen `mic`-Parameter erzeugen.
    Darüber hinaus ersetzt `dashboard/src/composables/useInstrumentActions.ts:23-40`
-   den API-Detailtext durch das generische „Hinzufügen fehlgeschlagen“. Damit
-   kann ein Nutzer nach gescheiterter ISIN-Auflösung beziehungsweise bei einem
-   suffixlosen Symbol die verlangte Kombination nicht eingeben und erfährt
-   nicht, welche Form erwartet wird. Bekannte vollständige Symbole wie
-   `EUNL.DE` sind davon nicht betroffen. **Erwartung:**
-   Im Entwurf einen vollständigen, i18n-fähigen Recovery-/Eingabefluss für
-   kanonischen Ticker plus echten MIC festlegen, einschließlich konkreter
-   Beispiele, API-Detailanzeige und Dashboard-Tests. Der bevorzugte Weg bleibt
-   ISIN plus Default-Börse; erst wenn die Auflösung scheitert, werden die
-   zusätzlichen Daten verlangt.
+   den API-Detailtext durch das generische „Hinzufügen fehlgeschlagen“. Die von
+   Mike festgelegte Konvention ist: bevorzugt ISIN, andernfalls im **selben**
+   Feld `TICKER.MIC`; ein zweites Feld ist nicht erforderlich. Bekannte
+   vollständige Provider-Symbole wie `EUNL.DE` bleiben ebenfalls eindeutig.
+   **Erwartung:** Im Entwurf das Parsing der Inline-Form, die Abbildung auf den
+   API-Vertrag, verständliche i18n-Hilfe und konkrete Beispiele festlegen.
+   `EUNL.XETR` (kanonischer MIC) und `EUNL.DE` (Yahoo-Suffix) dürfen nicht
+   begrifflich vermischt werden. Nach der Auflösung müssen Ticker und echter
+   MIC gespeichert, von der API geliefert und im UI angezeigt werden. Tests
+   decken ISIN+Default-Börse, Inline-Eingabe, bekannte Suffixform sowie den
+   erklärenden Fehlerfall ab.
 
 4. **Mittel — Die behauptete vollständige Dokumentationsinventur lässt mehrere
    Zusagen zur gestrichenen Handzuordnung stehen.**
