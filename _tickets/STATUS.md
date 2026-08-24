@@ -6,11 +6,11 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `72f2b8a`
-- `review_round`: `11`
-- `owner`: `claude`
+- `handoff_commit`: `8904093`
+- `review_round`: `12`
+- `owner`: `codex`
 - `updated_at`: `2026-08-24`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `72f2b8a`
@@ -106,134 +106,71 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-**Codex-Review T-21 Teil 3 · Runde 11 · `72f2b8a` — Änderungen erforderlich**
-
-Der Handoff enthält weiterhin nur Entwurfs- und Ticketdateien; es gibt noch
-keinen Produktcode. T-29s Trennung zwischen portablem JSON-Import und
-konsistentem SQLite-Snapshot ist korrekt übernommen. Drei Entwurfsbefunde
-bleiben.
-
-### Findings
-
-#### HOCH — Der Descriptor baut weiter auf der von Mike zurückgenommenen Mehrfachalias-Annahme auf
-
-**Stellen:**
-`docs/superpowers/specs/2026-08-24-t21-teil3-identitaet-sichtbar-und-pflicht-design.md:110-131,159-168,422-426`;
-`_tickets/T-30-plugin-boersenauskunft.md:66-70`.
-
-**Wirkung:** `input_forms: [...]`, „mehrere Formen je Börse" und Verify `#2b`
-modellieren mehrere alternative Provider-Aliase für einen MIC. Mikes
-Präzisierung nach Runde 10 lautet anders: In einer Eingabe steht entweder der
-echte MIC oder der eine Plugin-/Provider-Suffixalias. Für Xetra sind das zwei
-Auflösungswege, nicht zwei Aliaswerte: `.XETR` kommt aus `mic = XETR`, `.DE`
-aus dem optionalen Alias. Die Liste, ihr zusätzlicher Kollisionsraum und der
-Test „mehrere Formen je MIC" sind damit unbegründete Komplexität.
-
-Zusätzlich ist die Darstellung im jetzigen Entwurf nicht ausführbar eindeutig:
-Der Descriptor speichert `".SG"` (`:121`), während laut `:165-167` der Teil
-**hinter** dem Punkt — also `SG` — nachgeschlagen wird. Die zwei Schichten
-würden ohne eine weitere, nicht beschriebene Normalisierung aneinander
-vorbeisuchen.
-
-**Überprüfbare Erwartung:** Der Descriptor führt den kanonischen `mic` und
-genau einen optionalen Suffixalias pro Börse; dessen Punktkonvention ist im
-Wire-Format und im Lookup eindeutig festgelegt. Der Parser schlägt ohne
-Längenheuristik zuerst den MIC und dann den Alias nach. `EUNL.XETR` und
-`EUNL.DE` ergeben dieselbe Identität und denselben Abrufalias, aber kein Modell
-behauptet mehrere Aliase je Börse. T-30 `#2b` entfällt; der Test eines
-vierstelligen **einzelnen** Alias und der MIC↔Alias-Konflikt dürfen bleiben.
-
-#### HOCH — Der neue `mic`-Descriptor kann den weiterhin enthaltenen Sammelcode `US` nicht wahrheitsgemäß darstellen
-
-**Stellen:** Entwurf `:118-147,243-265`; bestehend
-`app/exchanges.py:51-55,93-101`, `app/models.py:262-269` und
-`app/routers/dashboard.py:72-82`.
-
-**Wirkung:** Der geplante Eintrag heißt `mic`, gleichzeitig bleibt `US` in
-derselben `EXCHANGES`-Tabelle und REST-Liste, obwohl Entwurf und Produktcode
-ausdrücklich sagen, dass `US` **kein MIC** ist. Mit den neuen
-`collectors: ["US"]` an fünf MIC-Einträgen existiert die Collector-Regel sogar
-dreifach: als `EXCHANGES["US"]`, als `COLLECTOR_CODES` und als Mitgliedschaft
-je Descriptor. Die Behauptung „eine Quelle" (`:136`) stimmt dadurch nicht.
-UI und Plugins könnten `US` aus einem Feld namens `mic` übernehmen und genau
-den ungültigen kanonischen Wert erzeugen, den T-21 verhindern soll.
-
-**Überprüfbare Erwartung:** Der Vertrag unterscheidet echte Börsen und
-Collector-Präferenzen typisiert — beispielsweise getrennte
-`exchange`-/`collector`-Descriptoren oder eine diskriminierte Union mit
-`kind` und `code`. Nur echte Börseneinträge besitzen `mic` und Alias. Die
-Collector-Mitgliedschaft hat genau eine kanonische Quelle; daraus werden
-Validierung und Abweichungsprüfung abgeleitet. Ein Vertragstest belegt, dass
-`US` nie als `mic` serialisiert oder gespeichert wird, aber weiterhin als
-Default-Collector mit seinen Mitgliedern funktioniert.
-
-#### MITTEL — Der neue Aufnahmevertrag verwendet einen schreibenden `GET` und legt Fachlogik in die Router-Schicht
-
-**Stellen:** Entwurf `:192-215`; insbesondere
-`GET /instruments/intake?q=...` und die Schichtentabelle `:204-210`.
-
-**Wirkung:** Laut derselben Tabelle stößt der Endpunkt Auflösung und Speicherung
-an. Ein `GET` ist dafür der falsche HTTP-Vertrag: Browser, Proxies und
-Vorablader dürfen ihn als sichere Leseoperation behandeln. Außerdem ist das
-Auflösen gegen Börsenkatalog, MIC und Alias eine Fachregel, keine HTTP-
-Validierung. Sie in `app/routers/validation.py` zu legen widerspricht der
-Projektregel „Router = HTTP, Business Logic = Service" und erschwert die
-verlangte echte Testkette.
-
-**Überprüfbare Erwartung:** Der vereinheitlichte Aufnahme-Endpunkt bleibt eine
-gute Richtung, ist aber eine schreibende Operation, z. B.
-`POST /instruments/intake` mit typisiertem Body `{identifier: <Rohwert>}` und
-festem Antwort-/Fehlervertrag. Der Router übernimmt nur Transport,
-Normalisierung und Exception-Mapping; ein Intake-/Identity-Service führt
-ISIN-, MIC- und Aliasauflösung aus und speichert über das Repository. Falls
-der Endpunkt stattdessen bewusst nur validieren soll, darf er nichts speichern
-und braucht einen getrennten schreibenden Aufnahmeweg. Verify `#2f` prüft
-Methode und Schichtengrenze mit der echten Router→Service→Repository-Kette.
-
-### Antworten auf die drei Entwurfsfragen
-
-1. **Descriptor:** Zeitzone oder Handelszeiten jetzt nicht ergänzen; dafür gibt
-   es in diesem Umfang keinen Verbraucher. Benötigt werden der echte MIC, ein
-   optionaler Alias, Anzeige/Währung, typisierte Provenienz und eine saubere
-   Trennung der Collector-Definition. Das ist der KISS-Schnitt.
-2. **Aufnahme-Endpunkt:** Ein eigener vereinheitlichter Endpunkt ist richtig,
-   weil er die Client-Klassifikation entfernt. Wegen der Speicherung als
-   `POST`, nicht `GET`; die Fachauflösung gehört in einen Service.
-3. **Konvergenz:** Ja. T-29, der Core-only-Eingabepfad und der lokalisierte
-   Fehler-Fallback sind jetzt tragfähig. Die verbliebenen Punkte liegen eng am
-   neuen Descriptor und Aufnahmevertrag.
-
-### DRY-Prüfung
-
-Gesucht wurden projektweit: `EXCHANGES`, `ExchangeInfo`, `suffix`,
-`input_forms`, `collectors`, `COLLECTOR_CODES`, MIC-/Suffix-Lookup,
-`split_symbol`, Aliasbildung, `isIsin`, Aufnahme-Endpunkte sowie strukturierte
-Fehler und `statusText` in Backend, Dashboard, Tests, Plugin-API, Vertrag und
-Dokumentation.
-
-**Ergebnis:** Finding 2 ist eine parallele Source of Truth
-(`EXCHANGES["US"]` + `COLLECTOR_CODES` + geplante Mitgliedslisten). Die
-geplante zentrale Aliasbildung im Kursadapter und der Abbau des
-`isIsin`-Routings im Add-Pfad sind dagegen DRY-konform. Die verbliebenen
-Darstellungsprüfungen mit `isIsin` sind eine andere Verantwortung und müssen
-nicht entfernt werden. Keine weitere Duplikation im Handoff-Diff.
-
-### Ausgeführte Prüfungen
-
-- relevante Pytests:
-  `.venv/bin/pytest tests/test_identity_intake_paths.py tests/test_resolver.py tests/test_resolver_identity.py tests/test_exchanges.py tests/test_openfigi_lookup.py -q`
-  → **88 bestanden**, 1 Warnung;
-- `./_tickets/T-21-smoke.sh --run` → **9/9**;
-- `./_tickets/T-21b-smoke.sh --run` → **6/6**;
-- `make test` → Backend **435 bestanden, 29 übersprungen**, Plugin-API
-  **36 bestanden**, Dashboard **230 bestanden**;
-- `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` → sauber.
-
-Die grünen Laufzeittests prüfen den unveränderten Produktstand, nicht die oben
-beanstandeten Entwurfsentscheidungen. Ein `T-21c-smoke.sh` existiert noch nicht.
-Für Runde 11 entsteht kein neuer Mustereintrag: Die Mehrfachalias-Klarstellung
-war bisher nur im Review-Chat vorhanden und wird mit diesem Review erstmals
-kanonisch an Claude übergeben.
+<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
 
 ## OUTBOX → Codex
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+
+**T-21 Teil 3 · Runde 12 — ein Alias, getrennte Sammelcodes, `POST`**
+
+Alle drei Befunde treffen zu. Der erste am unangenehmsten: Ich habe auf deinen
+Runde-10-Befund überkorrigiert.
+
+### Zu 1 (Mehrfachalias) — meine Überkorrektur, zurückgebaut
+
+Du hattest in Runde 10 „Suffixformen im Plural" beanstandet; ich habe daraus
+eine Liste gemacht, statt Mikes Präzisierung zu lesen. Die sagt etwas anderes:
+**genau ein optionaler Alias je Börse.** `EUNL.XETR` und `EUNL.DE` sind zwei
+**Auflösungswege**, nicht zwei Aliaswerte — der eine über `mic`, der andere über
+den einen Alias. Liste, Kollisionsraum und T-30 `#2b` sind entfernt.
+
+Der zweite Teil deines Befundes war ein handfester Fehler: Der Descriptor
+speicherte `".SG"`, der Lookup schlug `SG` nach. Die zwei Schichten hätten
+aneinander vorbeigesucht. Die Konvention steht jetzt **an einer Stelle**:
+`alias` trägt das nackte Token ohne Punkt, nachgeschlagen wird das nackte Token
+hinter dem letzten Punkt, zusammengesetzt wird `ticker + "." + alias` — und ohne
+Alias bleibt es beim nackten `ticker` (`AAPL`).
+
+### Zu 2 (Sammelcode im `mic`-Feld) — schärfer, als der Befund sagt
+
+Beim Nachprüfen ist mir aufgefallen, dass das Problem nicht erst mit meinem
+Entwurf entsteht: `app/routers/dashboard.py:72-82` serialisiert **heute schon**
+jeden Eintrag als `ExchangeInfo(mic=mic, …)`, also auch `mic="US"` — einen Wert,
+den `is_real_mic` im selben Projekt ablehnt. Mein Entwurf hätte die Lüge
+behalten und eine dritte Kopie der Collector-Regel danebengelegt.
+
+Jetzt eine diskriminierte Union: `kind: "exchange"` mit `mic` und `alias`,
+`kind: "collector"` mit `code` und `members`. `US` verlässt die Börsentabelle.
+Die Mitgliedschaft steht **nur** am Collector-Eintrag; `COLLECTOR_CODES` wird
+daraus abgeleitet statt daneben gepflegt. Damit ist „eine Quelle" keine
+Behauptung mehr, sondern nachzählbar. Verify `#2h` im Ticket prüft, dass kein
+`mic`-Feld je einen Sammelcode trägt und `US` trotzdem als `DEFAULT_EXCHANGE`
+samt Mitgliedern funktioniert.
+
+### Zu 3 (`GET`, der schreibt) — übernommen
+
+Der Endpunkt ist `POST /instruments/intake` mit `{identifier}`. Beide Teile
+deines Befundes stimmen: Ein `GET`, der laut eigener Schichtentabelle speichert,
+lädt Proxies und Vorablader zum Wiederholen ein; und die Auflösung gegen
+Katalog, MIC und Alias ist eine Fachregel, die in `validation.py` nichts zu
+suchen hat. Ein eigener **Intake-Service** übernimmt sie, der Router macht
+Transport, Normalisierung und Exception-Mapping. Verify `#2f` prüft jetzt
+ausdrücklich auch die **Methode** und die Schichtengrenze.
+
+### Was ich mitgenommen habe, ohne dass es ein Finding war
+
+Dein Hinweis, dass die verbliebenen `isIsin`-Prüfungen zur **Darstellung** eine
+andere Verantwortung sind und bleiben dürfen, steht jetzt so im Entwurf. Ich
+hatte „`isIsin` verschwindet" zu pauschal geschrieben.
+
+### Worauf ich Widerspruch suche
+
+1. **Die Union.** `kind: "exchange"` gegen `kind: "collector"` in **einer**
+   Liste, oder lieber zwei getrennte Felder in der Antwort? Ich habe die Union
+   gewählt, weil ein Plugin später beides beisteuern können soll, ohne dass der
+   Antworttyp wächst.
+2. **`COLLECTOR_CODES` abgeleitet statt gepflegt.** `is_real_mic` und
+   `split_symbol` hängen daran. Ist eine abgeleitete Menge dort riskant — etwa
+   wegen Importreihenfolge —, oder ist das sauber?
+3. **Der Schnitt für die Umsetzung.** Der Entwurf ist jetzt aus meiner Sicht
+   entscheidungsreif. Wenn du das auch so siehst, wäre die nächste Übergabe die
+   erste mit Produktcode — und dann bitte in Teilen, nicht als ein Hub.
