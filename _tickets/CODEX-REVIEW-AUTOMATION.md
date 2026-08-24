@@ -49,6 +49,31 @@ hinter `owner: mike` keine Arbeit mehr; die Reihe blieb nach jeder Freigabe
 stehen, bis Mike sie von Hand weiterschob. Bei `blocked` bleibt er Eigentümer
 — dort braucht es ihn wirklich.
 
+## Entwurfsrunden — wenn noch kein Produktcode existiert
+
+*(Ergänzt 2026-08-24, nach einem Blocker in T-21 Runde 12.)*
+
+Ein Ticket darf **vor** der Umsetzung in die Prüfung gehen: Bei T-21 Teil 3 hat
+sich der Zuschnitt zweimal als falsch erwiesen, und ein Entwurf ist billiger zu
+widerlegen als eine Umsetzung. Für solche Runden gilt der Vertrag oben mit drei
+Abweichungen:
+
+- **Der `handoff_commit` enthält keinen Produktcode**, sondern Spec- und
+  Ticketdateien. Die Vorbedingung „alle Commits danach betreffen nur
+  `_tickets/`" gilt **unverändert weiter** — auch `docs/superpowers/specs/`
+  zählt in einer Entwurfsrunde als eingefrorener Inhalt.
+- **Geprüft wird der Dateistand**, nicht nur der Diff. Ein Entwurf wird über
+  mehrere Runden umgeschrieben; sein Diff gegen den Vorgänger sagt weniger als
+  das Dokument selbst. Die OUTBOX nennt die zu prüfenden Dateien beim Namen.
+- **Testläufe belegen den unveränderten Produktstand**, nicht den Entwurf. Sie
+  gehören trotzdem in den Bericht, damit sichtbar bleibt, dass nichts abgerutscht
+  ist.
+
+**Die Reihenfolge, an der es schon einmal gescheitert ist:** erst den Inhalt
+**vollständig** fertigstellen, dann committen, dann diesen Commit als
+`handoff_commit` eintragen — und danach ausschließlich `_tickets/` anfassen.
+Eine nachgezogene Statuszeile im Entwurf ist Inhalt, keine Formalie.
+
 ## Ausführungs-Guard für Ticket-Prüfskripte
 
 Mike hat die Ausführung aller versionierten Prüfskripte nach dem Muster
