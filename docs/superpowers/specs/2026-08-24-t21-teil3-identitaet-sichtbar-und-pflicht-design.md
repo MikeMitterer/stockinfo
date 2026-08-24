@@ -1,7 +1,7 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 20** ·
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 21** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
 „Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
 Entwurfsprüfung ohne Produktcode.
@@ -631,38 +631,72 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 > und dann stimmt die vorgerechnete Auswirkung bei der Bestätigung nicht mehr.
 >
 > Deshalb ein **zentraler Migration-Pending-Guard** im Server, **eine** Quelle
-> für den Zustand. Erlaubt sind währenddessen nur:
+> für den Zustand. Die Allowlist ist eine **Liste aus Methode und Pfad**, nicht
+> die Faustregel „alles ohne Datenbankzugriff" — die hätte die Diagnosewege
+> gleich mitgesperrt, weil `/ready` selbst die Datenbank anfasst
+> (`count_instruments()`). Erlaubt sind:
 >
-> * die statische Oberfläche,
-> * die Liveness (`/health` — sie hängt an nichts und soll das bleiben),
-> * Vorschau, Bestätigung und Bericht.
+> | Pfad | warum |
+> |---|---|
+> | die statische Oberfläche | sonst gäbe es nichts zu bestätigen |
+> | `GET /health` | Liveness, hängt an nichts |
+> | der **Healthcheck-Endpunkt** aus dem Abschnitt unten | sonst flaggt das Image während einer korrekten Wartezeit |
+> | `GET /ready` | **liest die Datenbank** und muss trotzdem antworten dürfen — sonst kann niemand den Pending-Zustand abfragen |
+> | Vorschau, Bestätigung, Bericht | der Zweck der Phase |
 >
-> Alles andere, was die Datenbank liest oder schreibt, wird mit einer **stabilen
-> Kennung** abgewiesen. Einzelprüfungen in den Routern wären eine parallele
-> Fachregel — genau das nicht.
+> Alles andere wird mit einer **stabilen Kennung** abgewiesen — aus derselben
+> Zustandsquelle. Einzelprüfungen in den Routern wären eine parallele
+> Fachregel, ein Sonderweg für die Diagnose eine zweite Ausnahmequelle; beides
+> nicht.
+>
+> Ein **Routentabellen-Test** ruft im Pending-Zustand jeden erlaubten Pfad
+> erfolgreich auf, weist mindestens je einen normalen Lese- **und** Schreibpfad
+> mit der stabilen Kennung ab und belegt, dass Datenbank und Vorschau
+> unverändert bleiben.
 >
 > Die Bestätigung ist gegen **parallele und doppelte** Aufrufe verriegelt.
 >
-> #### `/ready` bleibt gesund — sonst tötet der Healthcheck die Migration
+> #### `/ready` behält seine Bedeutung — der Healthcheck zieht um
 >
-> Mein voriger Entwurf ließ `/ready` „nicht bereit" melden. Das wäre ein
-> Selbstmord auf Raten: `docker/Dockerfile:71-75` nutzt genau `/ready` als
-> `HEALTHCHECK`, und der Kommentar dort sagt ausdrücklich, dass er *„Neustart
-> und Traffic-Freigabe steuert"*. Nach `start-period=20s` und drei Fehlversuchen
-> gilt eine völlig ordnungsgemäß auf die Bestätigung wartende Instanz als
-> `unhealthy` — die Runtime startet sie neu oder nimmt sie aus dem Routing und
-> entzieht dem Benutzer damit den einzigen Weg, zu bestätigen.
+> **Eine Selbstkorrektur.** Der vorige Entwurf ließ `/ready` in Phase 1 mit
+> `200` antworten, begründet mit einem drohenden Restart- und Routing-Deadlock.
+> Diese Begründung stammte aus dem **Kommentar** in `docker/Dockerfile:71-75`
+> (*„steuert Neustart und Traffic-Freigabe"*) — nicht aus geprüftem
+> Laufzeitverhalten. Nachgemessen stimmt sie für dieses Deployment nicht:
 >
-> Also werden **zwei Fragen getrennt**, die bisher eine waren:
+> * Ein `HEALTHCHECK` markiert den Container als `unhealthy`. **Die Docker
+>   Engine startet ihn deswegen nicht neu.**
+> * Die verwendete Policy `--restart unless-stopped` (`Makefile:158`) reagiert
+>   auf einen **beendeten Prozess**, nicht auf den Health-Status.
+> * Ein Router, der anhand des Status Traffic freigibt, existiert im Projekt
+>   nicht.
 >
-> | Frage | Antwort in Phase 1 |
-> |---|---|
-> | Kann der Prozess seine Aufgabe erfüllen? | **ja** — er bedient die Migrations-Oberfläche. `/ready` bleibt `200`. |
-> | Ist der normale Fachbetrieb freigegeben? | **nein** — sichtbar als eigenes Feld in der `/ready`-Antwort und über den Vorschau-Endpunkt |
+> Damit war `200` nicht nur unnötig, sondern **falsch**: `/ready` ist im
+> öffentlichen Diagnosevertrag die Arbeitsbereitschaft — `app/main.py:81-103`
+> nennt den Statuscode „die eigentliche Aussage", `ReadinessResponse` fragt
+> „Kann er gerade arbeiten?", und die README beschreibt es genauso. Während der
+> Guard sämtliche Fachrequests abweist, wäre `200` eine Lüge an jeden
+> Consumer, der Readiness bestimmungsgemäß am Statuscode bewertet.
 >
-> Ein Image-Test hält den Pending-Zustand **länger als die Retry-Frist**,
-> erreicht Vorschau und Bestätigung weiterhin und belegt, dass kein Restart-
-> oder Traffic-Deadlock entsteht. Für Unraid gilt dieselbe Semantik.
+> **Also drei Zustände statt zwei, mit je eigener Frage:**
+>
+> | Frage | Endpunkt | in Phase 1 |
+> |---|---|---|
+> | Läuft der Prozess? | `/health` | `200`, wie immer |
+> | Ist der Prozess arbeitsfähig — Migrations-UI **oder** Fachbetrieb? | **neuer Healthcheck-Endpunkt** | `200` |
+> | Ist der **normale Fachbetrieb** freigegeben? | `/ready` | **`503`**, `status: "migration_pending"` |
+>
+> Der Docker-`HEALTHCHECK` zieht auf den mittleren Endpunkt um. `/ready` behält
+> Bedeutung, Modell, README und Tests unverändert — es sagt weiterhin die
+> Wahrheit, und die lautet in Phase 1 „nein".
+>
+> **Zusagen über Restart und Routing macht dieser Entwurf keine mehr.** Sie
+> gälten nur für eine konkret vorhandene Orchestrator-Konfiguration und wären
+> dort über Health-Status, Container-ID, Restart-Zähler und Erreichbarkeit zu
+> prüfen — nicht durch Warten. Der Image-Test belegt deshalb das Nachprüfbare:
+> Der Pending-Zustand überdauert `start-period` + 3 × `interval`, der
+> Healthcheck-Endpunkt bleibt `200`, `/ready` bleibt `503`, und Vorschau wie
+> Bestätigung sind durchgehend erreichbar.
 >
 > #### Ein verbindlicher Ablauf, kein Wahlrecht
 >
