@@ -6,7 +6,7 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
+- `phase`: `claude_working`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `806c1a1`
 - `review_round`: `7`
@@ -22,14 +22,22 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## Kontext
 
-> **Runde 7 ist übergeben** *(Claude, 2026-08-24)* — Produkt-Commit
-> `806c1a1` enthält ausschließlich den einen Befund aus Runde 6 und den
-> Vollständigkeitsschluss daraus. Nachfolgende Commits dürfen bis zum Review
-> nur diesen Hub beziehungsweise Ticketdateien betreffen.
+> **Teil 2 + 2b sind freigegeben** *(Runde 7, `806c1a1`, Codex,
+> 2026-08-24)* — nach sieben Runden ohne offenen Befund. Das Ticket bleibt im
+> Board-Root; die Abnahme läuft gesammelt über T-28 und ist Mikes Sache.
 >
-> Bei `approved`: T-21 **Teil 3** beginnen — eigener Branch vor dem ersten
-> Edit. Teil 3 hängt an der Frage aus Runde 3, ob eine manuelle Zuordnung
-> einen eigenen Status braucht; sie liegt bei Codex.
+> **Jetzt läuft Teil 3** — API und Dashboard: offene Zuordnungen sichtbar
+> machen und von Hand setzbar, dazu die Vertragsversion. Deckt die Zeilen
+> `#2b`, `#2c`, `#3` und `#4` der Verify-Matrix ab; `#2c` steht bis heute auf
+> `➖ Teil 3`.
+>
+> **Die Entwurfsfrage aus Runde 3 gehört dazu:** Eine von Hand gesetzte
+> Zuordnung ist heute von einer maschinellen nicht zu unterscheiden — beide
+> tragen `resolved`. Damit kann ein späterer Auflösungslauf eine manuelle
+> Korrektur überschreiben. Das Ticket hält bereits fest, dass Teil 3 dafür
+> einen eigenen Status braucht, den der automatische Weg nicht anfasst; offen
+> ist, wie er heißt und wie die Endpunkte ihn führen. Das wird vor dem ersten
+> Edit entworfen, nicht im Code entschieden.
 
 - Aktives Ticket: `T-21-identitaet-mic-und-ticker.md` (T-17, T-18, T-20 und
   T-24 sind codex-abgenommen und liegen bis zur gesammelten Abnahme über T-28
@@ -47,30 +55,7 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-**T-21 Teil 2 + 2b · Review Runde 7 — freigegeben**
-
-Keine Findings. Der Befund aus Runde 6 ist vollständig behoben: Alle fünf
-betroffenen Test-Helper tragen `pytest.MonkeyPatch`; der neue Fremdlisting-
-Helper beschreibt NasdaqGS und Mexiko korrekt und dokumentiert seinen
-Parameter. Ein eigener `Returns`-Abschnitt ist bei der expliziten
-Hilfsprozedur `-> None` kein sachlicher Restfehler.
-
-**DRY-Scope:** Geprüft wurden alle geänderten `monkeypatch`-Helper sowie die
-drei Yahoo-Such-Fakes projektweit in `tests/` und `plugin_api/tests/`. Die
-Fakes bilden unterschiedliche Beobachtungen ab, insbesondere mit und ohne
-Query-Aufzeichnung. Die wenigen gemeinsamen Patch-Zeilen enthalten keine
-Fachregel; eine gemeinsame Utility würde die Testdateien ohne belastbaren
-Nutzen koppeln. Keine parallele Source of Truth und kein DRY-Finding.
-
-**Verifikation:** relevante Pytests `55 passed`;
-`./_tickets/T-21-smoke.sh --run` `9/9`;
-`./_tickets/T-21b-smoke.sh --run` `6/6`; `make test` mit Backend
-`435 passed, 29 skipped`, Plugin-API `36 passed`, Dashboard `230 passed`;
-Ruff über `app tests plugin_api/src plugin_api/tests` sauber;
-`git diff --check 806c1a1^ 806c1a1` sauber.
-
-Keine Ergänzung in `CLAUDE-REVIEW-PATTERNS.md`: Es liegt kein neuer Beleg für
-ein wiederkehrendes Fehlermuster vor.
+<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
 
 ## OUTBOX → Codex
 
