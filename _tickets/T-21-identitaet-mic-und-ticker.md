@@ -163,6 +163,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2h | Börsenauskunft (`catalog`) | serialisiert **keinen** Sammelcode in ein `mic`-Feld; `US` erscheint als eigener Eintragstyp und bleibt als `DEFAULT_EXCHANGE` samt Mitgliedern nutzbar; **kein** Börseneintrag trägt eine eigene Mitgliedschaftsliste | | |
 | 2i | `POST /instruments/intake` | Neuanlage `201` mit `InstrumentSummary`, bestehendes Papier `200` mit demselben Typ, unauflösbar `400`, Quelle tot `502` — je im OpenAPI-Snapshot zugesagt und über die echte Kette geprüft | | |
 | 2j | Schichtengrenze am Aufnahmeweg | der Intake-Service liefert `IntakeResult(summary, created)`; im Router steht **kein zweiter Existenz-Check** und keine Repository-Abfrage, er mappt nur `created` auf `201`/`200` | | |
+| 2j2 | `created` unter Parallelität | kommt aus der **schreibenden Transaktion**, nicht aus einem Preflight; im abgefangenen UNIQUE-Rennen ist `created=false`, nicht `201` | | |
+| 2j3 | `GET /instruments` mit einer `legacy_unresolved`-Zeile | serialisiert `ticker: null`, `mic: null` und liefert `200` — nicht Response-Validation-Fehler; `listing_id` ist trotzdem Pflicht | | |
 | 2k | Übergabe 2 als Einheit | `core_version 2.0.0`, Vertragsartefakt und Snapshot kommen **mit** der ersten Änderung am geschlossenen Core, nicht danach — zwischenzeitlich gibt es keinen öffentlich geänderten, aber unzugesagten Endpunkt | | |
 | 2g | Fehlerpfad im Dashboard, **je in DE und EN** | bekannte Kennung, unbekannte Kennung, kaputtes JSON, leerer Rumpf, Netzwerkfehler — alle ergeben einen übersetzten Text, nie `statusText` und nie rohes JSON | | |
 | 3 | `GET /instruments` | `symbol` weiterhin vorhanden und unverändert (Profil-Links hängen daran) | ✅ [^d] | |

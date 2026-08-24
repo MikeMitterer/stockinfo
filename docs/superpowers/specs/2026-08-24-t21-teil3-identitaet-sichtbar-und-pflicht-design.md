@@ -1,7 +1,7 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 15** ·
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 16** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
 „Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
 Entwurfsprüfung ohne Produktcode.
@@ -256,8 +256,22 @@ ermitteln — genau die Fach- und Repository-Logik, die er laut Zeile darüber
 nicht enthalten darf. `IntakeResult` trägt beides; der Router mappt
 ausschließlich `created` auf den Status und serialisiert `summary`.
 
-Der Kettentest prüft **beide Zweige** und belegt, dass im Router **kein zweiter
-Existenz-Check** steht.
+**`created` ist eine Tatsache der schreibenden Transaktion, keine Vorabfrage.**
+`_upsert_instrument` (`app/repository.py:387-427`) behandelt heute schon den
+parallelen Erst-Request: Schlägt der Insert mit `IntegrityError` fehl, wird auf
+die inzwischen existierende Zeile aktualisiert. Die Funktion **weiß** also, was
+passiert ist, wirft es aber weg und gibt nur die ID zurück. Ein Existenzcheck
+*vor* dem Schreiben wäre genau deshalb falsch: Ein konkurrierender Insert kann
+ihn überholen, und der Aufnahmeweg meldete `201` für ein Papier, das jemand
+anders gerade angelegt hat.
+
+Also: Die Repository-Operation liefert **innerhalb derselben Transaktion**
+`(instrument_id, created)`; im abgefangenen UNIQUE-Rennen ist `created = false`.
+Der Service baut daraus Summary und `IntakeResult`, **ohne** eigenen Preflight.
+
+Der Kettentest prüft **beide Zweige** und belegt, dass weder im Router noch im
+Service ein zweiter Existenz-Check steht; ein Repository-Test deckt zusätzlich
+den Konfliktpfad ab.
 
 Die Auflösung gegen Börsenkatalog, MIC und Alias ist eine **Fachregel**, keine
 HTTP-Prüfung. Sie gehört deshalb nicht in `app/routers/validation.py`, wo der
@@ -365,6 +379,25 @@ verschieden. Das macht den Umfang von Teil 3 kleiner, nicht größer.
 `InstrumentSummary` bekommt `ticker`, `mic` und `listing_id`. `core_version`
 geht `1.0.0` → `2.0.0`, Snapshot per
 `UPDATE_CORE_SNAPSHOT=1 .venv/bin/pytest tests/test_contract_openapi.py -q`.
+
+**`ticker` und `mic` werden zugesagt, aber nicht pflichtig.** Der frühere
+Entwurf sprach von „neuen Pflichtfeldern" und widersprach damit dem Ticket:
+Eine nicht zerlegbare Altzeile behält ausdrücklich `ticker = NULL`,
+`mic = NULL`, `legacy_unresolved` und bleibt **lesbar und nutzbar** — genau der
+Zwischenzustand, ohne den „melden statt raten" nicht umsetzbar wäre. Wären beide
+Felder nicht-nullbar, könnte `GET /instruments` diesen Zustand nicht mehr
+serialisieren und liefe in einen Response-Validation-Fehler statt in ein `200`.
+
+Deshalb:
+
+| Feld | im allgemeinen Instrument-/Quote-Vertrag | in `IntakeResult.summary` |
+|---|---|---|
+| `listing_id` | **Pflicht** — jede Zeile hat eine, auch eine unaufgelöste | Pflicht |
+| `ticker`, `mic` | zugesagt, aber **nullable** | garantiert nicht-null |
+
+Ein Vertragstest serialisiert eine `legacy_unresolved`-Zeile mit
+`ticker: null` und `mic: null`; die Intake-Tests prüfen beide Erfolgsantworten
+mit echten Werten.
 
 **Der Erfolgsvertrag von `POST /instruments/intake`** — ohne ihn dürfte die
 Umsetzung zwischen `200 null`, `QuoteResponse`, `InstrumentSummary` und `204`
@@ -500,6 +533,19 @@ dazwischen öffentlich geändert, aber nicht zugesagt, und Verify `#2i` ließe s
 bis dahin gar nicht prüfen. Vertragsartefakt, `core_version` und Snapshot ziehen
 deshalb **mit der ersten Änderung am geschlossenen Core** um, nicht danach.
 Jede weitere Core-Änderung erneuert den Snapshot erneut.
+
+**Teil 2 korrigiert dabei auch die Vertragsprosa.**
+`docs/rest-core-contract.md:33-34` sagt heute pauschal, „die Schreibvorgänge des
+Dashboards" seien nicht im Core. Nimmt Teil 2 `POST /instruments/intake` in den
+geschlossenen Core auf, wird diese Aussage falsch — und sie darf nicht bis zur
+Inventur in Teil 4 falsch stehen bleiben. Die Präzisierung gehört in **dieselbe**
+Übergabe wie der Endpunkt.
+
+**Teil 3 entscheidet sich am Scope:** Wird `/instruments/identity` in den
+geschlossenen Core aufgenommen, gehören Snapshot und SemVer in dieselbe
+Übergabe. Bleibt er ein interner Dashboard-Endpunkt — wie `/exchanges` und die
+Diagnosewege —, bleibt der Vertrag unverändert. Der T-3-Entwurf entscheidet das
+ausdrücklich, statt es offen zu lassen.
 
 ## Testen
 

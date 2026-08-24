@@ -74,6 +74,30 @@ Abweichungen:
 `handoff_commit` eintragen — und danach ausschließlich `_tickets/` anfassen.
 Eine nachgezogene Statuszeile im Entwurf ist Inhalt, keine Formalie.
 
+## Der Übergabe-Riegel — `ready_for_codex` steht zuletzt
+
+*(Ergänzt 2026-08-24, nach einer Race Condition in Runde 15.)*
+
+`STATUS.md` ist ein **gemeinsamer Dateihub**, kein Postfach mit Sperre. Codex
+liest die Datei, nicht den Git-Verlauf. Sobald dort `ready_for_codex` steht,
+darf er claimen — auch wenn der Rest der Datei noch halb geschrieben ist.
+
+In Runde 15 stand `phase: ready_for_codex` bereits auf der Platte, während die
+`OUTBOX → Codex` noch leer war. Codex hat in genau diesem Fenster geclaimt und
+ein Review ohne Nachricht begonnen. Kein Schaden, aber sichtbar Glück.
+
+**Deshalb gilt für Claude bei jeder Übergabe diese Reihenfolge, ohne Ausnahme:**
+
+1. Inhalt fertigstellen und committen.
+2. `INBOX` leeren und `OUTBOX` **vollständig** schreiben.
+3. **Zuletzt** `phase`, `owner`, `handoff_commit` und `review_round` setzen.
+4. Sofort committen — der Zustand soll nicht länger als nötig nur auf der
+   Platte liegen.
+
+Schritt 3 ist der Riegel: Vorher gibt es nichts zu claimen. **Nach dem Claim
+schreibt Claude bis zum Review-Ergebnis nicht mehr in `STATUS.md`** — auch nicht
+„nur schnell" einen Tippfehler.
+
 ## Ausführungs-Guard für Ticket-Prüfskripte
 
 Mike hat die Ausführung aller versionierten Prüfskripte nach dem Muster
