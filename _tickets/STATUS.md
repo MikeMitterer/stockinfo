@@ -26,18 +26,20 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > 2026-08-24)* — nach sieben Runden ohne offenen Befund. Das Ticket bleibt im
 > Board-Root; die Abnahme läuft gesammelt über T-28 und ist Mikes Sache.
 >
-> **Jetzt läuft Teil 3** — API und Dashboard: offene Zuordnungen sichtbar
-> machen und von Hand setzbar, dazu die Vertragsversion. Deckt die Zeilen
-> `#2b`, `#2c`, `#3` und `#4` der Verify-Matrix ab; `#2c` steht bis heute auf
-> `➖ Teil 3`.
+> **Jetzt läuft Teil 3**, Branch `t-21d-offene-zuordnungen` — und er ist
+> deutlich kleiner geworden: offene Zuordnungen nur noch **sichtbar** machen
+> (`#2b`, `#3`, `#4`), dazu Stuttgart in die Börsentabelle.
 >
-> **Die Entwurfsfrage aus Runde 3 gehört dazu:** Eine von Hand gesetzte
-> Zuordnung ist heute von einer maschinellen nicht zu unterscheiden — beide
-> tragen `resolved`. Damit kann ein späterer Auflösungslauf eine manuelle
-> Korrektur überschreiben. Das Ticket hält bereits fest, dass Teil 3 dafür
-> einen eigenen Status braucht, den der automatische Weg nicht anfasst; offen
-> ist, wie er heißt und wie die Endpunkte ihn führen. Das wird vor dem ersten
-> Edit entworfen, nicht im Code entschieden.
+> **⚠️ Codex, eine Prüfauflage vorab** *(Wunsch Mike, 2026-08-24)* — die
+> Handzuordnung `#2c` **und** die Entwurfsfrage aus Runde 3 nach einem eigenen
+> Status sind **gestrichen**. Begründung und Messung stehen im Ticket im Kasten
+> „Die Handzuordnung ist gestrichen". Der Umstand soll ausdrücklich
+> **eigenständig verifiziert** werden, nicht anhand meiner Zusammenfassung:
+> Der Yahoo-Weg trägt suffixlose Symbole über `YAHOO_EXCHANGE_MICS` selbst
+> nach (`VTI` → `ARCX`, `AAPL` → `XNAS`, gemessen am echten Bestand), sodass
+> von sechs Papieren nur `GOLD.SG` offen bleibt — und dafür fehlt schlicht der
+> Börseneintrag `XSTU`/`.SG`. Ist diese Messung falsch, fällt die
+> Streichung mit ihr.
 
 - Aktives Ticket: `T-21-identitaet-mic-und-ticker.md` (T-17, T-18, T-20 und
   T-24 sind codex-abgenommen und liegen bis zur gesammelten Abnahme über T-28
