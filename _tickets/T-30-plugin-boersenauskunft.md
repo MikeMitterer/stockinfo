@@ -63,12 +63,11 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | `plugin_api` | ein deklarativer Typ für Börsen (MIC, Anzeigename, Suffixformen); `API_VERSION` additiv erhöht | | |
+| 1 | `plugin_api` | ein deklarativer Typ für Börsen (MIC, Anzeigename, **ein** optionaler Alias) und getrennt davon für Sammelcodes; `API_VERSION` additiv erhöht | | |
 | 2 | Core | validiert und normalisiert die Deklaration; speichert nur kanonische Werte | | |
-| 2b | ein MIC mit **mehreren** akzeptierten Eingabeformen | alle Formen lösen dieselbe Identität auf | | |
-| 2c | eine **vierstellige** Eingabeform | wird als Form erkannt, nicht wegen ihrer Länge für einen MIC gehalten | | |
-| 2d | ein Token trifft als MIC **und** als Form verschiedene Listings | benannter Konflikt mit eigener Fehlerkennung, kein stiller Vorrang | | |
-| 2e | ein MIC in **mehreren** `collectors` | bleibt auflösbar; die Abweichungsprüfung bleibt richtig | | |
+| 2c | ein **vierstelliger** Alias | wird als Alias erkannt, nicht wegen seiner Länge für einen MIC gehalten | | |
+| 2d | ein Token trifft als MIC **und** als Alias verschiedene Börsen | benannter Konflikt mit eigener Fehlerkennung, kein stiller Vorrang | | |
+| 2e | ein Plugin meldet einen Sammelcode | er landet als `kind: collector`, **nie** in einem `mic`-Feld | | |
 | 3 | zwei Plugins, dasselbe Suffix | Kollision wird erkannt und gemeldet, nicht stillschweigend aufgelöst | | |
 | 4 | Plugin und Core führen denselben MIC | die Vorrangregel greift nachvollziehbar | | |
 | 5 | Eintrag im REST | Provenienz ist ablesbar (Core oder welches Plugin) | | |

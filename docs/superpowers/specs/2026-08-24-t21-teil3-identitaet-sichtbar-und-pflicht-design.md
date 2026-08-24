@@ -113,38 +113,53 @@ heute genau **ein** `suffix: str` — T-30 verlangt aber „Suffixformen" im Plu
 und müsste den Typ also doch ändern. Teil 3 legt deshalb gleich die tragfähige
 Form fest:
 
+**Zwei Arten von Eintrag, als diskriminierte Union.** Eine Börse und ein
+Sammelcode sind verschiedene Dinge, und nur eines davon hat einen MIC:
+
 ```
-{
-  "mic": "XSTU",
-  "name": "Stuttgart",
-  "currency": "EUR",
-  "input_forms": [".SG"],          // Liste, nicht ein Wert
-  "collectors": [],                // ausdrückliche Zugehörigkeit
-  "provenance": { "kind": "core" } // typisiert, nicht ein String
-}
+{ "kind": "exchange",
+  "mic": "XSTU", "name": "Stuttgart", "currency": "EUR",
+  "alias": "SG",                      // genau einer, optional
+  "provenance": { "kind": "core" } }
+
+{ "kind": "collector",
+  "code": "US", "name": "NYSE / NASDAQ", "currency": "USD",
+  "members": ["XNAS", "XNYS", "ARCX", "XASE", "BATS"],
+  "provenance": { "kind": "core" } }
 ```
 
-Drei Entscheidungen, jede aus einem Befund:
+Vier Entscheidungen, jede aus einem Befund:
 
-* **`input_forms` ist eine Liste.** Eine Börse darf mehrere akzeptierte Formen
-  haben. Mit einem einzelnen Feld verlöre T-30 entweder Formen oder müsste den
-  Antworttyp brechen.
-* **`collectors` steht ausdrücklich am Eintrag**, statt aus `region` abgeleitet
-  zu werden. Der frühere Vorschlag war zu clever und trägt nicht: Kanada steht
-  heute als `region: "global"` — nachgemessen an `XTSE` und `XTSX` —, und zwei
-  überlappende Collector-Sichten derselben Region wären gar nicht ausdrückbar.
-  Eine ausdrückliche Liste bleibt trotzdem **eine** Quelle.
-* **`provenance` ist typisiert**, nicht ein Herkunfts-String. Heute steht dort
-  immer `{"kind": "core"}`; T-30 fügt `{"kind": "plugin", "id": …}` hinzu, ohne
-  den Typ zu ändern.
+* **`US` verlässt die Börsentabelle.** Heute serialisiert
+  `app/routers/dashboard.py:72-82` jeden Eintrag als
+  `ExchangeInfo(mic=mic, …)` — auch `US`. Die REST-API behauptet damit einen
+  MIC, den `is_real_mic` selbst ablehnt. Ein Feld `mic` darf nie einen
+  Sammelcode tragen; ein Plugin oder das UI könnte ihn sonst als kanonischen
+  Wert übernehmen und genau den Zustand erzeugen, den T-21 verhindert.
+* **Genau ein optionaler `alias`, keine Liste.** *(Präzisierung Mike nach
+  Runde 10.)* `EUNL.XETR` und `EUNL.DE` sind **zwei Auflösungswege, nicht zwei
+  Aliaswerte**: Der eine kommt über `mic`, der andere über den einen Alias. Die
+  Liste aus Runde 11 war eine Überkorrektur auf einen Befund, der etwas anderes
+  meinte, und bringt einen Kollisionsraum mit, den niemand braucht.
+* **Die Punktkonvention steht an genau einer Stelle.** `alias` trägt das
+  **nackte Token ohne Punkt** (`"SG"`, `"DE"`). Nachgeschlagen wird der Teil
+  hinter dem letzten Punkt, also ebenfalls nackt; zusammengesetzt wird
+  `ticker + "." + alias`, und ohne Alias bleibt es beim nackten `ticker`
+  (`AAPL`). Der vorige Entwurf speicherte `".SG"` und schlug `SG` nach — die
+  zwei Schichten hätten aneinander vorbeigesucht.
+* **Die Collector-Mitgliedschaft steht genau einmal**, nämlich als `members` am
+  Collector-Eintrag. Nicht zusätzlich als `collectors` an jeder Börse, nicht
+  zusätzlich als `COLLECTOR_CODES`: Letzteres wird künftig **aus** den
+  Collector-Einträgen abgeleitet, statt daneben gepflegt zu werden. Aus dem
+  `region`-Feld abzuleiten ist ebenfalls verworfen — Kanada steht als
+  `region: "global"`, und überlappende Sichten wären nicht ausdrückbar.
 
 `region` bleibt, was es ist — eine Anzeigegruppe für die Oberfläche, keine
 Fachregel.
 
-Der Eindeutigkeitstest prüft künftig, dass sich **keine nichtleere Eingabeform**
-zwei MICs teilt, und dass jeder Eintrag Währung und Anzeigename hat. Der
-Sammelcode `US` bleibt bestehen; er ist Vorgabewert für `DEFAULT_EXCHANGE` und
-keine Handelsplatzangabe.
+**Vertragstests dazu:** Kein `mic`-Feld serialisiert je einen Sammelcode; `US`
+funktioniert weiterhin als `DEFAULT_EXCHANGE` samt seinen Mitgliedern; kein
+Alias ist zweimal vergeben; jeder Börseneintrag hat Währung und Anzeigename.
 
 ## Die Pflicht-Kombinationen für den Benutzer
 
@@ -159,15 +174,19 @@ Am Ende muss immer `(kanonischer Ticker, echter MIC)` herauskommen:
 **Die Trennung entsteht durch Nachschlagen, nicht durch Zählen.** Der frühere
 Entwurf klassifizierte nach Länge — „vier Großbuchstaben = MIC, ein bis zwei
 Zeichen = Suffix". Das trägt nur den heutigen Bestand: Ein Plugin darf einen
-vierstelligen Provider-Alias oder mehrere Formen je Börse mitbringen, und dann
-wäre die Länge eine Rateregel mit hübscher Begründung.
+**vierstelligen** Provider-Alias mitbringen, und dann wäre die Länge eine
+Rateregel mit hübscher Begründung.
 
 Stattdessen: Der Teil hinter dem letzten Punkt wird **im Börsenkatalog
-nachgeschlagen** — erst als kanonischer MIC, dann unter den akzeptierten
-Eingabeformen. Trifft er beides und zeigt auf **verschiedene** Listings, ist das
-ein benannter Konflikt mit eigener Fehlerkennung, kein stillschweigender
-Vorrang. Trifft er nichts, ist es ein unbekannter Handelsplatz — mit einer
-Meldung, die sagt, was der Katalog kennt.
+nachgeschlagen** — erst als kanonischer MIC, dann als Alias. Trifft er beides
+und zeigt auf **verschiedene** Börsen, ist das ein benannter Konflikt mit
+eigener Fehlerkennung, kein stillschweigender Vorrang. Trifft er nichts, ist es
+ein unbekannter Handelsplatz — mit einer Meldung, die sagt, was der Katalog
+kennt.
+
+Eine Eingabe enthält dabei **genau eine** der beiden Formen; `EUNL.XETR` geht
+über den MIC, `EUNL.DE` über den Alias, und beide enden bei derselben Identität
+`(EUNL, XETR)` und demselben Abrufalias `EUNL.DE`.
 
 Ergänzende Regeln:
 
@@ -191,23 +210,32 @@ Ergänzende Regeln:
 
 ### A. Der Vertrag am Aufnahmeweg
 
-**Ein Endpunkt, ein Parameter, ein roher Wert.** Das Dashboard schickt genau
-das, was im Feld steht:
+**Ein Endpunkt, ein roher Wert — und er schreibt, also ist er ein `POST`.**
 
 ```
-GET /instruments/intake?q=<roher Feldwert>
+POST /instruments/intake     { "identifier": "<roher Feldwert>" }
 ```
 
 Kein `isin`/`symbol`-Verzweigen mehr am Client, kein zweiter Parameter für den
-MIC. Was `q` bedeutet, entscheidet **allein der Core**.
+MIC. Was `identifier` bedeutet, entscheidet **allein der Core**.
+
+Der vorige Entwurf hatte hier ein `GET`, das laut eigener Schichtentabelle
+auflöst **und speichert**. Das ist der falsche HTTP-Vertrag: Browser, Proxies
+und Vorablader dürfen ein `GET` als sichere Leseoperation behandeln und es
+beliebig wiederholen oder vorziehen.
 
 **Die Schichten, ohne Doppeldeutigkeit:**
 
 | Schicht | Aufgabe | Ergebnis |
 |---|---|---|
-| Router / `validation.py` | Rohwert gegen den Börsenkatalog auflösen | `(ticker, mic)` oder ein benannter Fehler |
-| Quote-Service | Auflösung anstoßen, speichern | kanonische Identität in `ticker`/`mic` |
+| Router | Transport, Normalisierung, Exception-Mapping — **keine Fachregel** | HTTP-Status und `{code, params}` |
+| Intake-Service | Rohwert gegen den Börsenkatalog auflösen, Auflösung anstoßen, über das Repository speichern | kanonische Identität in `ticker`/`mic` |
 | Kursquelle (Yahoo-Adapter) | aus `(ticker, mic)` ihr eigenes Format bilden | Abrufalias, z. B. `GOLD.SG` |
+
+Die Auflösung gegen Börsenkatalog, MIC und Alias ist eine **Fachregel**, keine
+HTTP-Prüfung. Sie gehört deshalb nicht in `app/routers/validation.py`, wo der
+vorige Entwurf sie hinlegte, sondern in einen eigenen Intake-Service — dieselbe
+Trennung, die der Rest des Projekts schon einhält.
 
 Die Validierung liefert **nur** `(ticker, mic)`. Der frühere Satz, sie liefere
 „`(ticker, mic)` und den Alias", war ein direkter Widerspruch zum Absatz
@@ -281,9 +309,10 @@ verschieden. Das macht den Umfang von Teil 3 kleiner, nicht größer.
   `dashboard/src/api/paths.ts:3-5` das Format, und
   `useInstrumentActions.ts:36-39` wählt danach zwischen zwei REST-Formen — das
   ist die Doppelimplementierung, die Runde 10 zu Recht benannt hat. Künftig
-  transportiert `add(identifier)` den getrimmten Wert unverändert nach
-  `/instruments/intake?q=…`. `isIsin` bleibt nur, wo es um Darstellung geht,
-  nicht um Routing.
+  schickt `add(identifier)` den getrimmten Wert unverändert als
+  `POST /instruments/intake` mit `{identifier}`. `isIsin` bleibt nur, wo es um
+  **Darstellung** geht, nicht um Routing — dort ist es eine andere
+  Verantwortung und muss nicht verschwinden.
 * **Fehlerrückmeldung als Code, nicht als Text.** Der Core liefert
   `{code, params}` (etwa `identity.mic_required` mit dem erkannten Ticker); das
   Dashboard übersetzt über `de.ts`/`en.ts`. Ein deutscher Backendtext in der
@@ -390,10 +419,11 @@ umwerfen müsste.
 
 **Die REST-Form der Börsenauskunft wird so entworfen, dass ein Plugin später
 Einträge beisteuern kann, ohne dass sich der Antworttyp ändert.** Das leistet
-der Exchange-Descriptor oben — `input_forms` als Liste, `collectors`
-ausdrücklich, `provenance` typisiert. Ein bloßes Herkunftsfeld hätte **nicht**
-gereicht; das war der Irrtum aus Runde 10, und `ExchangeInfo` mit seinem
-einzelnen `suffix: str` hätte T-30 zur Typänderung gezwungen. Verify `#8` in
+der Exchange-Descriptor oben — die diskriminierte Union aus Börse und
+Sammelcode, der optionale `alias` und die typisierte `provenance`. Ein bloßes
+Herkunftsfeld hätte **nicht** gereicht; das war der Irrtum aus Runde 10, und
+`ExchangeInfo` mit seinem einzelnen `suffix: str` und dem `mic="US"` hätte T-30
+zur Typänderung gezwungen. Verify `#8` in
 T-30 prüft rückwirkend, ob es gehalten hat.
 
 ## Testen
@@ -419,11 +449,15 @@ T-30 prüft rückwirkend, ob es gehalten hat.
   Form. **Keine eigene Core-Komponente wird dabei gemockt** — nur die äußeren
   Grenzen. Die Zeilen stehen in der Verify-Matrix des T-21-Tickets, nicht nur
   hier in der Prosa.
-* **Börsenkatalog als Descriptor:** mehrere `input_forms` je MIC lösen dieselbe
-  Identität auf; eine vierstellige Eingabeform wird als Form erkannt und nicht
-  wegen ihrer Länge für einen MIC gehalten; ein Token, das als MIC **und** als
-  Form auf verschiedene Listings zeigt, ergibt den benannten Konflikt; ein MIC
-  in mehreren `collectors` bleibt auflösbar.
+* **Börsenkatalog als Descriptor:** `EUNL.XETR` und `EUNL.DE` ergeben dieselbe
+  Identität und denselben Abrufalias; ein **vierstelliger** Alias wird als Alias
+  erkannt und nicht wegen seiner Länge für einen MIC gehalten; ein Token, das
+  als MIC **und** als Alias auf verschiedene Börsen zeigt, ergibt den benannten
+  Konflikt.
+* **Der Sammelcode als Vertragstest:** `US` wird **nie** als `mic` serialisiert
+  oder gespeichert, funktioniert aber weiterhin als `DEFAULT_EXCHANGE` samt
+  seinen Mitgliedern. Das ist die Zeile, die den heutigen `mic="US"` aus
+  `GET /exchanges` fallen lässt.
 * **Dashboard:** Vitest für den rohen Durchreichweg **ohne** `isIsin`-Routing,
   und für den Fehlerpfad in beiden Sprachen — bekannte Kennung, unbekannte
   Kennung, kaputtes JSON, leerer Rumpf, Netzwerkfehler. Dazu die beiden Zähler.
