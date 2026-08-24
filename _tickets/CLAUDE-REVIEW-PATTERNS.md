@@ -256,6 +256,18 @@ Docker-Kommentar und Test-Docstrings wiederholen die gerade widerlegte
 Restart-/Healthcheck-Erklärung. Die punktuelle Korrektur inventarisierte ihre
 unmittelbaren Vertragsverbraucher erneut nicht vollständig.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Runde 22, Commit `a9fde37`: OUTBOX und Commit bezeichneten die
+Methode/Pfad-Allowlist als vollständig und ihre statischen Pfade als
+abschließende Wiedergabe von `dashboard/dist`. Die Liste ließ jedoch das von
+`dashboard/index.html` tatsächlich angeforderte `/stockinfo-icon.svg` aus.
+Außerdem inventarisierte sie den vorhandenen Dev-Router
+`dashboard/vite.config.ts:apiPrefixes` nicht; ohne `/migration` liefert Vite
+dem verpflichtenden Migrations-UI-Ablauf das SPA-HTML statt der Backend-Antwort
+— exakt der bereits in T-04 dokumentierte Ausfallmodus. Der aus einer
+Driftkorrektur entstandene neue Routenvertrag wurde damit erneut nur gegen
+seine neuen Verbraucher, nicht gegen die vorhandenen Routingquellen geprüft.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
