@@ -63,6 +63,30 @@ und nachträglichem Bericht.
 T-21, T-25 und die Plugin-Spec müssen am Ende **denselben** Vertrag nennen. Das
 ist Teil der Abnahme dieses Tickets, nicht eine Nebenwirkung.
 
+## Zwei Backup-Arten, die nichts miteinander zu tun haben
+
+*(Mike, 2026-08-24, nach Runde 9 — im Entwurf und in der Oberfläche strikt zu
+trennen. Sie zu verwechseln hieße, einen Best-Effort-Import für ein bitgenaues
+Rollback zu halten.)*
+
+| | **(a) Portables JSON** | **(b) SQLite-Snapshot** |
+|---|---|---|
+| Zweck | Umzug, auch **über Plugins hinweg** | **exakter Rollback** derselben Instanz |
+| Wo | im UI exportieren **und** importieren | Datei mit Datum-/Zeit-Suffix |
+| Semantik | **Best-Effort** | bitgenau, alles oder nichts |
+| Vorher | Vorschau und ausdrückliche Bestätigung, Hinweis auf mögliche Auslassungen | — |
+| Nachher | konkreter Importbericht der nicht übernommenen Fälle | — |
+| Aliase | alte werden **nicht** importiert; neue nur, wo eindeutig | unverändert, es ist dieselbe Datenbank |
+
+**Der Snapshot ist trotz des simplen Ergebnisses nicht simpel herzustellen.**
+Ein rohes `cp` einer aktiven WAL-Datenbank genügt **nicht** — committete
+Einträge fehlten dann. Er entsteht über die SQLite-Backup-API oder eine Sperre,
+die **alle** Schreiber umfasst, Scheduler und Requests. Dieselbe Lehre steckt
+schon in `T-21-smoke.sh` (Codex, Runde 2) und in T-25.
+
+**Wenn das den Ein-Tages-Rahmen sprengt**, werden (a) und (b) getrennt
+geschnitten. Der Entwurf entscheidet das, nicht die Umsetzung.
+
 ## Die offene Entwurfsentscheidung
 
 Zwei zulässige Wege stehen zur Wahl, und der Entwurf muss festlegen, **welcher
@@ -83,7 +107,12 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 1 | Datenmodell | ein Alias ist eindeutig einem Provider bzw. einer Generation zugeordnet; `(ticker, mic)` bleibt providerunabhängig | | |
 | 2 | Wechsel A → B | **kein** Alias von A überlebt beim neuen Provider — auch dann nicht, wenn Restore oder Neuberechnung einzelner Listings scheitert | | |
 | 3 | nicht überführbarer Fall | bleibt ohne Alias, wird nicht geraten, erscheint im Bericht | | |
-| 4 | vor dem Wechsel | Backup wird verlangt und ausdrücklich bestätigt; das Risiko unvollständiger Wiederherstellung steht vorher da | | |
+| 4 | vor dem Wechsel | Backup wird verlangt und ausdrücklich bestätigt; das Risiko unvollständiger Wiederherstellung steht **vorher** da | | |
+| 4a | **(a) JSON** — Export im UI | versioniert, portabel, enthält **keine** Provider-Aliase | | |
+| 4b | **(a) JSON** — Import im UI, anderes Plugin | Vorschau und Bestätigung; Best-Effort; neue Aliase nur, wo eindeutig | | |
+| 4c | **(b) Snapshot** — Erzeugung | vollständige Kopie mit Datum-/Zeit-Suffix, über SQLite-Backup-API oder Sperre über **alle** Schreiber; ein rohes `cp` fällt durch | | |
+| 4d | **(b) Snapshot** — Rollback | stellt denselben Stand bitgenau wieder her, ohne Best-Effort-Semantik | | |
+| 4e | UI | (a) und (b) sind in Benennung, Zweck und Restore-Semantik **nicht** verwechselbar | | |
 | 5 | nach dem Wechsel | Importbericht listet die nicht wiederhergestellten Fälle **konkret** und nennt das weitere Vorgehen | | |
 | 6 | Symbol-Endpunkte, Links, Cache | kein alter Alias lebt über sie weiter | | |
 | 7 | T-21, T-25, Plugin-Spec | nennen denselben Vertrag; die alte T-25-Aussage ist ersetzt, nicht nur ergänzt | | |

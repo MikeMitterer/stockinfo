@@ -1,9 +1,10 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, Runde 9 ·
-**Vorlauf:** Runde 8 hat fünf Befunde gebracht; die zwei „Hoch"-Befunde waren
-Entwurfsfehler und sind hier behoben.
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 11** ·
+**Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
+„Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
+Entwurfsprüfung ohne Produktcode.
 
 ## Worum es geht
 
@@ -96,17 +97,54 @@ Teil 3 ergänzt sie:
 
 **Die Tabelle wird damit richtungsabhängig, und das ist beabsichtigt:**
 
-* **MIC → Suffix, Währung, Anzeigename** ist ab jetzt **vollständig**. Daran
+* **MIC → Formen, Währung, Anzeigename** ist ab jetzt **vollständig**. Daran
   hängen Alias-Ableitung und Anzeige.
-* **Suffix → MIC** bleibt **eindeutig**, weil das leere Suffix aus dieser
-  Richtung ausgeschlossen ist. Fünf US-MICs teilen es sich; welcher gemeint ist,
-  sagt nur die Auflösung oder der Benutzer. Genau diesen Fall benennt der
-  Plugin-Entwurf schon vorab (`2026-08-19-plugin-system-design.md:365-373`).
+* **Form → MIC** bleibt **eindeutig**, weil leere Formen aus dieser Richtung
+  ausgeschlossen sind. Fünf US-MICs teilen sich das leere Suffix; welcher
+  gemeint ist, sagt nur die Auflösung oder der Benutzer. Genau diesen Fall
+  benennt der Plugin-Entwurf vorab
+  (`2026-08-19-plugin-system-design.md:365-373`).
 
-`test_kein_suffix_ist_doppelt_vergeben` prüft künftig die Eindeutigkeit **der
-nichtleeren** Suffixe und zusätzlich, dass jeder Eintrag Währung und
-Anzeigename hat. Der Sammelcode `US` bleibt bestehen; er ist der Vorgabewert für
-`DEFAULT_EXCHANGE` und keine Handelsplatzangabe.
+### Der Exchange-Descriptor — erweiterbar von Anfang an
+
+Ein bloßes Herkunftsfeld reicht **nicht**, wie Runde 10 gezeigt hat.
+`ExchangeInfo` (`app/models.py:262-269`, `dashboard/src/types.ts:115-127`) trägt
+heute genau **ein** `suffix: str` — T-30 verlangt aber „Suffixformen" im Plural
+und müsste den Typ also doch ändern. Teil 3 legt deshalb gleich die tragfähige
+Form fest:
+
+```
+{
+  "mic": "XSTU",
+  "name": "Stuttgart",
+  "currency": "EUR",
+  "input_forms": [".SG"],          // Liste, nicht ein Wert
+  "collectors": [],                // ausdrückliche Zugehörigkeit
+  "provenance": { "kind": "core" } // typisiert, nicht ein String
+}
+```
+
+Drei Entscheidungen, jede aus einem Befund:
+
+* **`input_forms` ist eine Liste.** Eine Börse darf mehrere akzeptierte Formen
+  haben. Mit einem einzelnen Feld verlöre T-30 entweder Formen oder müsste den
+  Antworttyp brechen.
+* **`collectors` steht ausdrücklich am Eintrag**, statt aus `region` abgeleitet
+  zu werden. Der frühere Vorschlag war zu clever und trägt nicht: Kanada steht
+  heute als `region: "global"` — nachgemessen an `XTSE` und `XTSX` —, und zwei
+  überlappende Collector-Sichten derselben Region wären gar nicht ausdrückbar.
+  Eine ausdrückliche Liste bleibt trotzdem **eine** Quelle.
+* **`provenance` ist typisiert**, nicht ein Herkunfts-String. Heute steht dort
+  immer `{"kind": "core"}`; T-30 fügt `{"kind": "plugin", "id": …}` hinzu, ohne
+  den Typ zu ändern.
+
+`region` bleibt, was es ist — eine Anzeigegruppe für die Oberfläche, keine
+Fachregel.
+
+Der Eindeutigkeitstest prüft künftig, dass sich **keine nichtleere Eingabeform**
+zwei MICs teilt, und dass jeder Eintrag Währung und Anzeigename hat. Der
+Sammelcode `US` bleibt bestehen; er ist Vorgabewert für `DEFAULT_EXCHANGE` und
+keine Handelsplatzangabe.
 
 ## Die Pflicht-Kombinationen für den Benutzer
 
@@ -118,10 +156,18 @@ Am Ende muss immer `(kanonischer Ticker, echter MIC)` herauskommen:
 | **2 — Ticker + Suffix** | `EUNL.DE` | `(EUNL, XETR)`, Alias `EUNL.DE` |
 | **3 — Ticker + MIC** | `EUNL.XETR`, `AAPL.XNAS`, `GOLD.XSTU` | `(EUNL, XETR)` / `(AAPL, XNAS)` / `(GOLD, XSTU)`, Alias `EUNL.DE` / `AAPL` / `GOLD.SG` |
 
-**Die Trennung ist syntaktisch eindeutig**, nicht geraten: Suffixe sind ein bis
-zwei Zeichen (`.F`, `.DE`, `.TO`), echte MICs genau vier (`XETR`, `XNAS`). Ein
-Token von vier Großbuchstaben hinter dem Punkt ist ein MIC, alles Kürzere ein
-Suffix. Beide werden gegen `EXCHANGES` geprüft, nichts wird erraten.
+**Die Trennung entsteht durch Nachschlagen, nicht durch Zählen.** Der frühere
+Entwurf klassifizierte nach Länge — „vier Großbuchstaben = MIC, ein bis zwei
+Zeichen = Suffix". Das trägt nur den heutigen Bestand: Ein Plugin darf einen
+vierstelligen Provider-Alias oder mehrere Formen je Börse mitbringen, und dann
+wäre die Länge eine Rateregel mit hübscher Begründung.
+
+Stattdessen: Der Teil hinter dem letzten Punkt wird **im Börsenkatalog
+nachgeschlagen** — erst als kanonischer MIC, dann unter den akzeptierten
+Eingabeformen. Trifft er beides und zeigt auf **verschiedene** Listings, ist das
+ein benannter Konflikt mit eigener Fehlerkennung, kein stillschweigender
+Vorrang. Trifft er nichts, ist es ein unbekannter Handelsplatz — mit einer
+Meldung, die sagt, was der Katalog kennt.
 
 Ergänzende Regeln:
 
@@ -145,14 +191,30 @@ Ergänzende Regeln:
 
 ### A. Der Vertrag am Aufnahmeweg
 
-`GET /quote` bekommt einen optionalen Query-Parameter `mic`. Die Prüfung sitzt
-in `app/routers/validation.py`, wo die übrigen Eingabeprüfungen liegen, und
-liefert `(ticker, mic)` **und** den Alias.
+**Ein Endpunkt, ein Parameter, ein roher Wert.** Das Dashboard schickt genau
+das, was im Feld steht:
 
-Der Alias entsteht in der Kursquelle, nicht in der Validierung — sonst wäre die
-Plugin-Grenze verletzt. Der Yahoo-Adapter bekommt dafür eine Funktion
-`provider_alias(ticker, mic)`; sie ist die einzige Stelle, die
-`ticker + suffix` bildet.
+```
+GET /instruments/intake?q=<roher Feldwert>
+```
+
+Kein `isin`/`symbol`-Verzweigen mehr am Client, kein zweiter Parameter für den
+MIC. Was `q` bedeutet, entscheidet **allein der Core**.
+
+**Die Schichten, ohne Doppeldeutigkeit:**
+
+| Schicht | Aufgabe | Ergebnis |
+|---|---|---|
+| Router / `validation.py` | Rohwert gegen den Börsenkatalog auflösen | `(ticker, mic)` oder ein benannter Fehler |
+| Quote-Service | Auflösung anstoßen, speichern | kanonische Identität in `ticker`/`mic` |
+| Kursquelle (Yahoo-Adapter) | aus `(ticker, mic)` ihr eigenes Format bilden | Abrufalias, z. B. `GOLD.SG` |
+
+Die Validierung liefert **nur** `(ticker, mic)`. Der frühere Satz, sie liefere
+„`(ticker, mic)` und den Alias", war ein direkter Widerspruch zum Absatz
+darunter und ist gestrichen. Der Alias entsteht ausschließlich im Adapter, über
+`provider_alias(ticker, mic)` — die einzige Stelle im Projekt, die aus einer
+Identität ein Providerformat baut. Wem der Alias **gehört** und was beim
+Providerwechsel mit ihm geschieht, klärt **T-29**, nicht dieser Entwurf.
 
 ### B. Sichtbarkeit: zwei Zustände
 
@@ -195,9 +257,10 @@ erwartete Währung.
   und erwarteter Währung `USD`, aber ohne erwarteten MIC.
 * `VTI`/`ARCX` bei Präferenz `XETR` → Abweichung mit vollem erwartetem MIC.
 
-Die Mitgliedschaft (`US` → `{XNAS, XNYS, ARCX, XASE, BATS}`) wird aus dem
-`region`-Feld der Einträge abgeleitet, damit sie nicht als dritte Liste gepflegt
-werden muss — Sammelcode und Mitglieder tragen dieselbe Region.
+Die Mitgliedschaft steht als `collectors` am jeweiligen Eintrag — `XNAS`,
+`XNYS`, `ARCX`, `XASE` und `BATS` tragen dort `["US"]`. Sie aus `region`
+abzuleiten war der Vorschlag aus Runde 9 und ist verworfen; die Begründung steht
+beim Exchange-Descriptor.
 
 **Keine Schemaänderung.** Beide Zustände sind aus gespeicherten Spalten und der
 Konfiguration ableitbar.
@@ -214,19 +277,27 @@ hätte dieselbe Grammatik ein zweites Mal implementiert, und sobald T-30
 zusätzliche Formen erlaubt, klassifizierten UI und Core dieselbe Eingabe
 verschieden. Das macht den Umfang von Teil 3 kleiner, nicht größer.
 
-* **`dashboard/src/api/paths.ts:24-35`** bildet den Rohwert auf den
-  Aufnahme-Endpunkt ab — ein Parameter, nicht zwei.
-* **Fehlerrückmeldung als Code, nicht als Text.** Der Core liefert einen
-  strukturierten Fehler mit Kennung und Parametern (etwa
-  `identity.mic_required` mit dem erkannten Ticker); das Dashboard übersetzt ihn
-  über `de.ts`/`en.ts`. Ein deutsch formulierter Backendtext, der unverändert in
-  der englischen Oberfläche landet, wäre die falsche Lösung.
-* **Sicheres Lesen des Fehlerrumpfs.** `dashboard/src/api/client.ts:18-20` liest
-  Fehler heute mit `response.text()`, FastAPI liefert aber
-  `{"detail": …}` — der Benutzer sähe rohes JSON. Der Client parst künftig JSON
-  und fällt bei unbekannter Form auf `statusText` zurück.
-* **i18n-Hilfe** in `de.ts` und `en.ts` mit den drei Formen als Beispiel, plus
-  ein Auffangtext für unbekannte Fehlerkennungen.
+* **`isIsin` verschwindet aus dem Aufnahmeweg.** Heute klassifiziert
+  `dashboard/src/api/paths.ts:3-5` das Format, und
+  `useInstrumentActions.ts:36-39` wählt danach zwischen zwei REST-Formen — das
+  ist die Doppelimplementierung, die Runde 10 zu Recht benannt hat. Künftig
+  transportiert `add(identifier)` den getrimmten Wert unverändert nach
+  `/instruments/intake?q=…`. `isIsin` bleibt nur, wo es um Darstellung geht,
+  nicht um Routing.
+* **Fehlerrückmeldung als Code, nicht als Text.** Der Core liefert
+  `{code, params}` (etwa `identity.mic_required` mit dem erkannten Ticker); das
+  Dashboard übersetzt über `de.ts`/`en.ts`. Ein deutscher Backendtext in der
+  englischen Oberfläche wäre auch bei sauberem Parsen falsch.
+* **Der Fallback ist ein Katalogeintrag, nicht `statusText`.**
+  `dashboard/src/api/client.ts:18-20` liest Fehler heute mit `response.text()`,
+  FastAPI liefert aber `{"detail": …}` — der Benutzer sähe rohes JSON. Der
+  Client parst künftig den typisierten Fehler; **unbekannte Kennung,
+  Nicht-JSON, leerer Rumpf und Netzwerkfehler laufen alle auf einen
+  übersetzten Katalogeintrag** in DE und EN. `status` und `statusText` gehören
+  ins Log, nicht in die Oberfläche: Sie sind browser- und serverabhängig, oft
+  leer oder englisch („Bad Request") und erklären dem Benutzer nichts über die
+  verlangte Eingabe.
+* **i18n-Hilfe** in `de.ts` und `en.ts` mit den drei Formen als Beispiel.
 * **Anzeige:** Nach der Auflösung zeigt das UI Ticker und echten MIC mit
   lesbarem Börsennamen; die Werte kommen aus der Core-REST-API.
 
@@ -244,7 +315,7 @@ aus `app/exchanges.py:181-185`, obwohl der dortige Kommentar ausdrücklich eine
 einzige Regelquelle verspricht. Die Kopien entfallen; Migration und
 Laufzeitlogik importieren dieselben Konstanten.
 
-### F. Dokumentationsinventur, diesmal vollständig
+### F. Dokumentationsinventur — wonach gesucht wurde
 
 Zweimal hintereinander stand hier „vollständig", und zweimal fehlten Stellen.
 Das lag an der Methode: Gesucht wurde nach **Formulierungen**, nicht nach dem
@@ -318,9 +389,12 @@ Bedeutung von `symbol`. Der Entwurf zementiert damit nichts, was T-29 später
 umwerfen müsste.
 
 **Die REST-Form der Börsenauskunft wird so entworfen, dass ein Plugin später
-Einträge beisteuern kann, ohne dass sich der Antworttyp ändert.** Jeder Eintrag
-trägt dafür von Anfang an ein Herkunftsfeld; heute steht dort immer `core`.
-Verify `#8` in T-30 prüft, ob das gehalten hat.
+Einträge beisteuern kann, ohne dass sich der Antworttyp ändert.** Das leistet
+der Exchange-Descriptor oben — `input_forms` als Liste, `collectors`
+ausdrücklich, `provenance` typisiert. Ein bloßes Herkunftsfeld hätte **nicht**
+gereicht; das war der Irrtum aus Runde 10, und `ExchangeInfo` mit seinem
+einzelnen `suffix: str` hätte T-30 zur Typänderung gezwungen. Verify `#8` in
+T-30 prüft rückwirkend, ob es gehalten hat.
 
 ## Testen
 
@@ -340,13 +414,19 @@ Verify `#8` in T-30 prüft, ob das gehalten hat.
   ein Papier an der Vorzugsbörse taucht nicht auf, und die tatsächliche Währung
   kommt aus den Kursdaten, auch wenn die Tabelle etwas anderes erwarten ließe.
 * **Vertrag:** `test_contract_openapi.py` gegen den Snapshot mit `2.0.0`.
-* **Eingabe als Integrationstest, nicht als Parser-Unittest:** ISIN,
-  `TICKER.DE`, `TICKER.XETR`, unbekannte Form — jeweils durch den Core, weil dort
-  die einzige Grammatik lebt.
-* **Dashboard:** Vitest für den rohen Durchreichweg, für die Übersetzung der
-  Fehlerkennung in Deutsch **und** Englisch, für den Auffangtext bei unbekannter
-  Kennung, für das sichere Lesen eines JSON-Fehlerrumpfs und für die beiden
-  Zähler.
+* **Eingabe über den echten Weg**, nicht gegen einen Parser-Unittest: Router →
+  Service → Repository für ISIN, `TICKER.DE`, `TICKER.XETR` und unbekannte
+  Form. **Keine eigene Core-Komponente wird dabei gemockt** — nur die äußeren
+  Grenzen. Die Zeilen stehen in der Verify-Matrix des T-21-Tickets, nicht nur
+  hier in der Prosa.
+* **Börsenkatalog als Descriptor:** mehrere `input_forms` je MIC lösen dieselbe
+  Identität auf; eine vierstellige Eingabeform wird als Form erkannt und nicht
+  wegen ihrer Länge für einen MIC gehalten; ein Token, das als MIC **und** als
+  Form auf verschiedene Listings zeigt, ergibt den benannten Konflikt; ein MIC
+  in mehreren `collectors` bleibt auflösbar.
+* **Dashboard:** Vitest für den rohen Durchreichweg **ohne** `isIsin`-Routing,
+  und für den Fehlerpfad in beiden Sprachen — bekannte Kennung, unbekannte
+  Kennung, kaputtes JSON, leerer Rumpf, Netzwerkfehler. Dazu die beiden Zähler.
 * **Smoke:** `_tickets/T-21c-smoke.sh` auf eigenem Port — `GOLD.SG` vor und nach
   dem Börseneintrag, der 400er am Aufnahmeweg, beide Listen.
 
