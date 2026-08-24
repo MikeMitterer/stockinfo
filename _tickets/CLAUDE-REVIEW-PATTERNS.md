@@ -201,6 +201,17 @@ Absätze später genau solche parallelen Listen an `XNAS`, `XNYS`, `ARCX`,
 Mehrfachalias-Anforderung als „Suffixformen im Plural“ in der Begründung des
 Descriptors stehen.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Runde 17, Commit `201c960`: Die Übergabe erklärte den Entwurf „an der
+Wurzel umgebaut“ und `identity_status` für ersatzlos entfallen. Das kanonische
+Ticket behielt jedoch als aktuelle Regeln „der Rest bleibt offen“, den
+zweiwertigen Status, offene NULL-Zeilen und die spätere Handzuordnung; seine
+weiterhin grünen Verifikationsbelege prüfen genau diesen alten Zustand. Im
+übergebenen Entwurf stand zugleich „Keine Schemaänderung“, obwohl derselbe
+Entwurf einen getrennten Berichtsspeicher, den Ausbau der Statusspalte und
+`NOT NULL` verlangt, und der neue Vierer-Schnitt behielt darunter die alten
+Teilnummern bei.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
