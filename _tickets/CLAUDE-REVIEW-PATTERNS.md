@@ -222,6 +222,16 @@ Zuordnung von Hand und genau der beanstandete Schlusssatz aktiv und
 ungestrichen. Der neue Warnhinweis stand nur vor den Fußnoten und erfasste
 diese anderen Abschnitte nicht.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Runde 19, Commit `20a4422`: OUTBOX und Commit meldeten das Ticket als
+„einstimmig“ und die Gegenprobe als leer, begrenzten die Suche aber auf den
+Bereich oberhalb des Fußnotenblocks. Im weiterhin aktiven Detailabschnitt
+forderte `_tickets/T-21-identitaet-mic-und-ticker.md:481` unverändert einen
+„Weg zur Zuordnung von Hand“. Besonders eindeutig war der Fund, weil die
+Dokumentationsinventur im selben übergebenen Entwurf genau diese Ticketstelle
+selbst aufführte, ohne sie zu korrigieren. Die Fundliste war damit vorhanden;
+die Fachregel wurde erneut nicht über den ganzen kanonischen Text angewendet.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
