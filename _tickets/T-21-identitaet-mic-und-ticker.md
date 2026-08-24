@@ -30,7 +30,7 @@ muss, ist kein Plugin).
 > | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | `be5f38d` ✔ abgenommen |
 > | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung | `#5` | `6abce88` — zur Prüfung |
 > | **Teil 2b** | `ExchangeDef` aufräumen (`figi_id_type`, `figi_value` zum Provider) | — | `556c23d` — wartet auf Teil 2 |
-> | **Teil 3** | API und Dashboard, offene Zuordnungen **sichtbar**; Stuttgart in die Börsentabelle | `#2b`, `#3`, `#4` | offen |
+> | **Teil 3** | Symbolweg verlangt `(symbol, mic)` im Vertrag (`core_version 2.0.0`); offene Zuordnungen und Börsenabweichung sichtbar; Stuttgart in die Börsentabelle | `#2b`, `#2d`, `#2e`, `#3`, `#4` | offen |
 > | ~~Handzuordnung~~ | ~~offene Zuordnungen von Hand setzbar, eigener Status~~ | ~~`#2c`~~ | **gestrichen**, siehe Kasten |
 >
 > **Teil 2b abgetrennt** *(Claude, 2026-08-23)* — das Aufräumen von
@@ -42,53 +42,61 @@ muss, ist kein Plugin).
 >
 > `#6` (`make test`) läuft in jeder Übergabe mit.
 
-> **Die Handzuordnung ist gestrichen — der automatische Weg holt die Fälle
-> ein** *(Claude, 2026-08-24; Entscheidung Mike)*
+> **Die Handzuordnung ist gestrichen — der Symbolweg verlangt die Kombination
+> künftig im Vertrag** *(Claude, 2026-08-24; Entscheidungen Mike)*
 >
-> **⚠️ Codex: diesen Umstand bitte eigenständig verifizieren.** Die Streichung
-> von `#2c` hängt vollständig an der Messung unten. Ist sie falsch, ist die
-> Entscheidung falsch. Nicht die Zusammenfassung prüfen, sondern den Resolver
-> selbst gegen die Fälle laufen lassen.
+> **Entwurf:** [`docs/superpowers/specs/2026-08-24-t21-teil3-identitaet-sichtbar-und-pflicht-design.md`](../docs/superpowers/specs/2026-08-24-t21-teil3-identitaet-sichtbar-und-pflicht-design.md)
 >
-> Teil 3 stand auf der Annahme, ein Mensch müsse offene Zuordnungen von Hand
-> setzen. Gegen den echten Bestand der Live-Datenbank gemessen, trifft das auf
-> **kein einziges** der sechs Papiere zu:
+> **⚠️ Codex: die Messungen bitte eigenständig nachvollziehen**, nicht anhand
+> dieser Zusammenfassung. Der ganze Zuschnitt hängt an ihnen.
 >
-> | Papier | Suffix-Weg | Yahoo-Weg | Ergebnis |
-> |---|---|---|---|
-> | `EUNL.DE`, `VGWL.DE`, `BRYN.DE` | `XETR` | — | automatisch |
-> | `APC.DE` | `APC`/`XETR` | `AAPL`/`XNAS` | automatisch |
-> | `VTI` (suffixlos) | — | `PCX` → `ARCX` | **automatisch** |
-> | `GOLD.SG` | `.SG` fehlt | `STU` unbekannt | bleibt offen |
+> **Erster Anlauf, und warum er falsch war.** Zuerst stand hier, der
+> automatische Weg hole die offenen Fälle von selbst ein — gemessen am
+> ISIN-Weg, und dort stimmt es: `VTI` → `ARCX`, `AAPL` → `XNAS` über
+> `YAHOO_EXCHANGE_MICS`. Diese Messung übersah aber einen **zweiten
+> Aufnahmeweg**. Mikes Rückfrage, ob es hier überhaupt um die Migration gehe,
+> hat ihn aufgedeckt:
 >
-> Die Annahme galt für die **Migration** — die läuft beim Start und offline,
-> und dort ist ein suffixloses Symbol tatsächlich nicht zerlegbar. Der
-> Auflösungsweg aus Teil 2 hat aber `YAHOO_EXCHANGE_MICS`, und der trägt genau
-> diese Fälle nach, auch für bestehende Papiere über den Scheduler-Refresh
-> (Runde 3). Ein offener Fall ist damit ein **vorübergehender** Zustand, kein
-> dauerhafter — was die Liste aus `#2b` nicht überflüssig macht, aber ihre
-> Rolle ändert: Sie zeigt, was noch nicht nachgetragen ist, nicht, was ein
-> Mensch abarbeiten muss.
+> | Quelle | Wann | Heilt sich selbst? |
+> |---|---|---|
+> | Migration (`app/db.py:277`) | beim Start, offline, Altbestand | ja, sobald eine ISIN-Auflösung läuft |
+> | Symbolweg (`app/services/quote_service.py:179`) | laufend, bei jedem suffixlosen Symbol | **nein** |
 >
-> Bleibt `GOLD.SG`. Dafür ist die Handzuordnung das schlechtere Werkzeug: Sie
-> repariert eine Zeile und lässt das nächste Stuttgarter Papier wieder
-> auflaufen. Stuttgart fehlt schlicht in `EXCHANGES` — 33 Börsen stehen dort,
-> Frankfurt mit `.F` ist dabei. Ein Eintrag `XSTU`/`.SG` schließt den Fall
-> dauerhaft und jedes künftige Stuttgart-Papier mit. Das ist die Regel, die
-> dieses Ticket weiter unten ohnehin aufstellt.
+> Eine über `GET /quote?symbol=AAPL` angelegte Zeile bleibt bei jedem weiteren
+> Abruf offen. Der Grund steht im Kommentar von `get_quote_for_known` selbst —
+> *„der Scheduler löst nichts auf, er holt nur Kurse."* Die Auffrischung zieht
+> die Zuordnung aus `split_symbol(symbol)`, und das liefert für `AAPL`
+> dauerhaft `(None, None)`.
+>
+> **Die Lösung ist deshalb nicht Reparatur, sondern Verhinderung.** Der
+> Symbolweg verlangt künftig die vollständige Kombination: bekanntes Suffix
+> **oder** `mic` als Parameter. Ein suffixloses Symbol ohne `mic` wird mit 400
+> abgelehnt, statt stillschweigend eine dauerhaft offene Zeile anzulegen. Damit
+> entstehen die Fälle gar nicht erst, die `#2c` hätte aufräumen sollen.
+>
+> **Das ist eine bewusste Umkehr gegenüber Teil 2**, dessen Kommentar wörtlich
+> dagegen argumentiert (*„nähme ihm eine Abfrage weg, die es heute gibt"*). Neu
+> ist das Wissen, dass genau diese Abfrage die unzuordenbaren Zeilen erzeugt.
+> Der Parameter ist zudem seit jeher als *„Vollständiges Yahoo-Symbol inkl.
+> Suffix"* dokumentiert — suffixlose Symbole waren nie zugesagt.
+>
+> **`core_version` steigt auf `2.0.0`** (Entscheidung Mike): Eine Anfrage, die
+> heute 200 liefert, liefert künftig 400.
+>
+> **Der Migrationspfad wird nicht eng gesehen** (Entscheidung Mike): Was sich
+> einfach migrieren lässt, wird migriert; der Rest bleibt offen und bekommt
+> eine verständliche Meldung. `GOLD.SG` löst ohnehin ein Eintrag `XSTU`/`.SG`
+> in `EXCHANGES` — Stuttgart fehlt dort schlicht, Frankfurt mit `.F` ist dabei.
 >
 > **Was damit ebenfalls entfällt:** die Entwurfsfrage aus Runde 3 nach einem
 > eigenen Status für von Hand gesetzte Zuordnungen. Den braucht es nur, *weil*
-> es manuelle Zuordnungen gibt, die ein Auflösungslauf überschreiben könnte.
-> Ohne sie bleibt `identity_status` bei den zwei Werten aus Teil 1.
+> es manuelle Zuordnungen gibt. `identity_status` bleibt zweiwertig.
 >
-> **Was bewusst offen bleibt** — drei Fälle, für die es heute keinen Beleg
-> gibt und die deshalb nach YAGNI nicht gebaut werden:
->
-> 1. Eine Börse, die niemand in die Tabelle aufnehmen will. Dann funktioniert
->    das Papier ohnehin nur halb (Währung, Links).
-> 2. Yahoo findet die ISIN gar nicht. Da hilft eine Handzuordnung nicht — es
->    fehlt das Symbol, und dafür gibt es `PUT /instruments/by-symbol/{symbol}/isin`.
+> **Was dazukommt:** Die Sichtbarkeit zeigt **zwei** Zustände statt einem —
+> offene Zuordnungen *und* „von der Vorzugsbörse abgewichen" mit beiden MICs
+> und Währungen (erwartet `XETR`/EUR, tatsächlich `ARCX`/USD). Heute ist das
+> nur die Logzeile `resolve_foreign_exchange`; im Dashboard sieht niemand, dass
+> ein Papier in USD hereinkommt, obwohl XETR eingestellt ist.
 > 3. Eine **falsche** automatische Zuordnung überschreiben. Der einzige Fall,
 >    in dem wirklich ein Mensch entscheiden muss — und es ist Korrektur, nicht
 >    Erstzuordnung. Taucht er auf, ist er ein eigenes Ticket.
@@ -128,7 +136,9 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 1b | dieselbe Migration auf einer **Kopie des echten Bestands** | keine Zeile und kein Kurspunkt geht verloren, auch beim zweiten Start nicht | ✅ [^g] | |
 | 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`; `AAPL` bleibt **offen** statt geraten (siehe Kasten oben) | ✅ [^b] | |
 | 2b | Instrument mit Fremdsymbol (`BRK-B`, aus dem Yahoo-Fallback) | erscheint in einer Liste offener Zuordnungen, mit Grund | ◑ [^c] | |
-| ~~2c~~ | ~~derselbe Fall, manuelle Zuordnung~~ | **gestrichen** — der Auflösungsweg trägt die Fälle selbst nach, `GOLD.SG` löst ein Börseneintrag. Siehe Kasten „Die Handzuordnung ist gestrichen" | ➖ | |
+| ~~2c~~ | ~~derselbe Fall, manuelle Zuordnung~~ | **gestrichen** — der Symbolweg verlangt die Kombination künftig im Vertrag, damit entstehen die Fälle nicht mehr. Siehe Kasten „Die Handzuordnung ist gestrichen" | ➖ | |
+| 2d | `GET /quote?symbol=AAPL` ohne `mic` | 400 mit beiden Auswegen im Text; mit `&mic=XNAS` entsteht die Zeile `resolved` | | |
+| 2e | Papier abseits der Vorzugsbörse (`VTI` bei `XETR`) | erscheint als „abgewichen" mit erwartetem und tatsächlichem MIC **und** beiden Währungen | | |
 | 3 | `GET /instruments` | `symbol` weiterhin vorhanden und unverändert (Profil-Links hängen daran) | ✅ [^d] | |
 | 3b | Datenbank-Schema | Eindeutigkeit liegt auf `(ticker, mic)`; `symbol` ist **nicht mehr** global unique | ✅ [^e] | |
 | 4 | Dashboard, Assets-Tabelle | unverändert; Yahoo- und extraETF-Links funktionieren | | |
@@ -229,10 +239,12 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
       **Erledigt in Runde 3:** Auch der Weg für bekannte Papiere trägt nach,
       also auch der Scheduler-Refresh. ~~Offen bleibt nur, was sich aus dem
       Symbol nicht zerlegen lässt (`GOLD.SG`, `VTI`) — dafür ist die manuelle
-      Zuordnung aus Teil 3 da.~~ **Nachgemessen 2026-08-24:** `VTI` trägt der
-      Yahoo-Weg über `PCX` → `ARCX` selbst nach. Offen bleibt allein `GOLD.SG`,
-      und das löst ein Eintrag `XSTU`/`.SG` in `EXCHANGES`, nicht eine
-      Handzuordnung.
+      Zuordnung aus Teil 3 da.~~ **Nachgemessen 2026-08-24, mit einer wichtigen
+      Einschränkung:** Auf dem **ISIN-Weg** trägt der Yahoo-Weg nach (`VTI` →
+      `ARCX`). Auf dem **Symbolweg** nicht — `get_quote_for_known` löst nicht
+      auf, es holt nur Kurse, und `split_symbol('AAPL')` bleibt für immer
+      `(None, None)`. Deshalb verlangt Teil 3 dort die Kombination im Vertrag,
+      statt hinterher zu reparieren.
     * ~~Eine **von Hand** gesetzte Zuordnung ist von einer maschinellen nicht
       zu unterscheiden — beide tragen `resolved`. Teil 3 braucht dafür einen
       eigenen Status.~~ **Hinfällig seit 2026-08-24:** Mit der gestrichenen
