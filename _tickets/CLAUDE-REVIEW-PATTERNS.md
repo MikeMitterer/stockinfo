@@ -244,6 +244,18 @@ Health-Status und `unless-stopped` definiert. Die Korrektur übernahm damit
 erneut das besprochene Beispiel, ohne seine neue Regel gegen die angrenzenden
 Vertragsverbraucher und ihre tatsächliche Betriebssemantik zu prüfen.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Runde 21, Commit `28ba9f9`: OUTBOX erklärte beide Round-20-Befunde für
+umgesetzt und die Allowlist als „Liste aus Methode und Pfad“. Tatsächlich waren
+nur `GET /health` und `GET /ready` konkret; statische UI, der neue
+Healthcheck-Endpunkt sowie Vorschau, Bestätigung und Bericht blieben
+unbenannte Platzhalter. Zugleich sollten Bedeutung, Modell, README und Tests
+unverändert bleiben, obwohl die README den Docker-Healthcheck weiter an
+`/ready` bindet und nur eine nicht erreichbare DB als 503-Ursache kennt;
+Docker-Kommentar und Test-Docstrings wiederholen die gerade widerlegte
+Restart-/Healthcheck-Erklärung. Die punktuelle Korrektur inventarisierte ihre
+unmittelbaren Vertragsverbraucher erneut nicht vollständig.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
