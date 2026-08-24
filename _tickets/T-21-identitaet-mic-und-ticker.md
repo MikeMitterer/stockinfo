@@ -168,7 +168,10 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2b | Instrument mit Fremdsymbol (`BRK-B`) | erscheint im **Migrationsbericht** mit Grund und verlorenen Kurspunkten — nicht mehr als offene Zeile im Bestand | ➖ [^c] | |
 | 2b4 | Bericht und Ablehnung | entstehen in **derselben Transaktion**; ein zweiter Start dupliziert sie nicht; der Eintrag bleibt abrufbar, **nachdem** die aktive Zeile weg ist | | |
 | 2b5 | Auslieferung von Teil 2 | **zweiphasig:** Phase 1 erkennt die ausstehende Migration und rechnet vor, ohne etwas zu ändern; erst die Bestätigung löst sie aus. Gleichzeitigkeit im Commit genügt **nicht** — `init_db()` läuft im Lifespan, bevor das UI erreichbar ist | | |
-| 2b6 | Phase 1 | Scheduler **aus**, `/ready` meldet „Migration ausstehend"; die eingeschränkte Oberfläche zeigt Symbole, Gründe und Kurspunktzahlen samt Backup-Hinweis | | |
+| 2b6 | Phase 1, serverseitig verriegelt | `/quote`, `/refresh`, `PUT` und `DELETE` **direkt per HTTP** aufgerufen ändern nichts und werden mit stabiler Kennung abgewiesen; DB und Vorschau bleiben unverändert. Erlaubt sind nur statische UI, `/health`, Vorschau, Bestätigung, Bericht | | |
+| 2b6b | `/ready` in Phase 1 | antwortet **`200`** — sonst tötet der Docker-`HEALTHCHECK` (`Dockerfile:71-75`) die wartende Instanz. Dass der Fachbetrieb noch gesperrt ist, steht als eigenes Feld in der Antwort | | |
+| 2b6c | Image-Test | hält den Pending-Zustand **länger als `start-period` + 3 × `interval`**; Vorschau und Bestätigung bleiben erreichbar, kein Restart- oder Traffic-Deadlock | | |
+| 2b6d | Bestätigung | gegen parallele und doppelte Aufrufe verriegelt; Scheduler und normale Endpunkte werden **genau einmal** freigegeben | | |
 | 2b7 | Vorschau, Bericht und Meldungen | **stabile Reason-Codes** statt freier Texte, DE/EN übersetzt — in Teil 2, nicht erst in Teil 4 | | |
 | 2b2 | nach erfolgreichem Start | Invariante `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`; kein Instrument-/Quote-Endpunkt serialisiert eine halbe Identität | | |
 | 2b3 | Reihenfolge Katalog vor Migration | `GOLD.SG` migriert (257 Tageskurse bleiben), wird **nicht** abgelehnt — der Katalog mit `XSTU` steht vorher | | |
@@ -478,7 +481,9 @@ Der Yahoo-Adapter kennt Yahoos Eigenheiten, also gehört das Wissen dorthin:
 diese Zeichensetzung ist anbieterspezifisch und bedeutet bei anderen Tickern
 etwas anderes. Bleibt ein Treffer mehrdeutig: mit Grund in `/sources` und Log
 sichtbar machen, nicht als `(ticker, mic)` speichern, `Unavailable` zurückgeben
-und einen Weg zur Zuordnung von Hand anbieten.
+~~und einen Weg zur Zuordnung von Hand anbieten~~ — **seit Runde 16:** mit
+**stabilem Reason-Code** ablehnen. Der Rückweg ist die Neuerfassung über den
+Aufnahmeweg (ISIN, `TICKER.DE` oder `TICKER.XETR`), nicht eine Handzuordnung.
 
 „Übernehmen und als nicht zerlegbar markieren" wäre die schlechtere Variante:
 Sie macht die gerade eingeführte kanonische Identität wieder optional und

@@ -1,7 +1,7 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 19** ·
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 20** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
 „Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
 Entwurfsprüfung ohne Produktcode.
@@ -619,16 +619,60 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 > | Phase | Was passiert | Was der Benutzer sieht |
 > |---|---|---|
 > | **1 — erkennen** | Der Start erkennt eine ausstehende Migration und **rechnet ihre Auswirkung vor**: welche Symbole, aus welchem Grund, wie viele Kurspunkte. **Es wird nichts verändert.** | Eine eingeschränkte Oberfläche mit genau dieser Liste, dem Backup-Hinweis und einer ausdrücklichen Bestätigung |
-> | **2 — ausführen** | Erst die Bestätigung löst die **atomare** Migration aus. Danach werden Scheduler und normale Readiness freigegeben. | Der Bericht über das, was tatsächlich passiert ist |
+> | **2 — ausführen** | Erst die Bestätigung löst die **atomare** Migration aus. Danach werden Scheduler und normale Endpunkte freigegeben — **genau einmal**. | Der Bericht über das, was tatsächlich passiert ist |
 >
-> In Phase 1 bleibt der Scheduler **aus** und `/ready` meldet „nicht bereit,
-> Migration ausstehend" — sonst schriebe der Refresh in einen Bestand, über den
-> gerade noch entschieden wird.
+> #### Phase 1 ist serverseitig verriegelt, nicht nur im UI ausgeblendet
 >
-> **Die zulässige Alternative** ist ein gleichwertiger, ausdrücklicher
-> Offline-Schritt **vor** dem App-Start — etwa ein `make`-Ziel, das vorrechnet,
-> bestätigen lässt und migriert. Was **nicht** zulässig ist: beides in einem
-> Lifespan, weil dort keine Bestätigung möglich ist.
+> Den Scheduler abzuschalten genügt **nicht**: Auch normale Requests schreiben.
+> `/quote` legt Instrumente an und aktualisiert sie
+> (`app/routers/quotes.py:26-116`), dazu kommen `/refresh` sowie mehrere `PUT`-
+> und `DELETE`-Routen (`app/routers/dashboard.py:107-198`). Eine eingeschränkte
+> Oberfläche hindert weder ein `curl` noch einen alten offenen Browser-Tab —
+> und dann stimmt die vorgerechnete Auswirkung bei der Bestätigung nicht mehr.
+>
+> Deshalb ein **zentraler Migration-Pending-Guard** im Server, **eine** Quelle
+> für den Zustand. Erlaubt sind währenddessen nur:
+>
+> * die statische Oberfläche,
+> * die Liveness (`/health` — sie hängt an nichts und soll das bleiben),
+> * Vorschau, Bestätigung und Bericht.
+>
+> Alles andere, was die Datenbank liest oder schreibt, wird mit einer **stabilen
+> Kennung** abgewiesen. Einzelprüfungen in den Routern wären eine parallele
+> Fachregel — genau das nicht.
+>
+> Die Bestätigung ist gegen **parallele und doppelte** Aufrufe verriegelt.
+>
+> #### `/ready` bleibt gesund — sonst tötet der Healthcheck die Migration
+>
+> Mein voriger Entwurf ließ `/ready` „nicht bereit" melden. Das wäre ein
+> Selbstmord auf Raten: `docker/Dockerfile:71-75` nutzt genau `/ready` als
+> `HEALTHCHECK`, und der Kommentar dort sagt ausdrücklich, dass er *„Neustart
+> und Traffic-Freigabe steuert"*. Nach `start-period=20s` und drei Fehlversuchen
+> gilt eine völlig ordnungsgemäß auf die Bestätigung wartende Instanz als
+> `unhealthy` — die Runtime startet sie neu oder nimmt sie aus dem Routing und
+> entzieht dem Benutzer damit den einzigen Weg, zu bestätigen.
+>
+> Also werden **zwei Fragen getrennt**, die bisher eine waren:
+>
+> | Frage | Antwort in Phase 1 |
+> |---|---|
+> | Kann der Prozess seine Aufgabe erfüllen? | **ja** — er bedient die Migrations-Oberfläche. `/ready` bleibt `200`. |
+> | Ist der normale Fachbetrieb freigegeben? | **nein** — sichtbar als eigenes Feld in der `/ready`-Antwort und über den Vorschau-Endpunkt |
+>
+> Ein Image-Test hält den Pending-Zustand **länger als die Retry-Frist**,
+> erreicht Vorschau und Bestätigung weiterhin und belegt, dass kein Restart-
+> oder Traffic-Deadlock entsteht. Für Unraid gilt dieselbe Semantik.
+>
+> #### Ein verbindlicher Ablauf, kein Wahlrecht
+>
+> Der Browser-Ablauf ist **Pflicht** — Mikes Entscheidung verlangt Bestätigung
+> und Bericht beim Benutzer. Ein `make`-Ziel, das dasselbe offline vorrechnet
+> und ausführt, ist ein **zusätzliches Werkzeug** für den Betrieb, **keine
+> Alternative**: Der frühere Entwurf nannte beides gleichwertig und verlangte
+> zugleich API-Form und `/ready`-Verhalten, was eine reine Offline-Umsetzung
+> gar nicht erfüllen kann. Ein Wahlrecht bräuchte zwei vollständig prüfbare
+> Zweige; das ist mehr Aufwand als Nutzen.
 >
 > **Was Phase 1 und 2 gemeinsam brauchen** — und was Teil 2 mitliefert, nicht
 > Teil 4: die API-Form für Vorschau und Bericht, **stabile Reason-Codes** statt
