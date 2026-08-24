@@ -212,6 +212,16 @@ Entwurf einen getrennten Berichtsspeicher, den Ausbau der Statusspalte und
 `NOT NULL` verlangt, und der neue Vierer-Schnitt behielt darunter die alten
 Teilnummern bei.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Runde 18, Commit `c9d6670`: Die Übergabe erklärte die überholten Stellen
+des kanonischen Tickets als Historie markiert und nannte ausdrücklich den in
+Runde 17 beanstandeten Schlusssatz. Dennoch blieben im aktuellen Scope „offene
+Zuordnungen sichtbar“, im Entscheidungskasten zwei Zustände einschließlich
+offener Zuordnungen, im AAPL-Block `legacy_unresolved`, im Detailabschnitt die
+Zuordnung von Hand und genau der beanstandete Schlusssatz aktiv und
+ungestrichen. Der neue Warnhinweis stand nur vor den Fußnoten und erfasste
+diese anderen Abschnitte nicht.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
