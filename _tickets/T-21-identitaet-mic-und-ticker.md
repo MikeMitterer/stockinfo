@@ -28,9 +28,9 @@ muss, ist kein Plugin).
 > | | Umfang | Zeilen | Commit |
 > |---|---|---|---|
 > | **Teil 1** | Schema, Migration, Meldung offener Fälle, Index-Umzug | `#1`, `#2`, `#3b` | `be5f38d` ✔ abgenommen |
-> | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung | `#5` | `6abce88` — zur Prüfung |
-> | **Teil 2b** | `ExchangeDef` aufräumen (`figi_id_type`, `figi_value` zum Provider) | — | `556c23d` — wartet auf Teil 2 |
-> | **Teil 3** | Symbolweg verlangt `(symbol, mic)` im Vertrag (`core_version 2.0.0`); offene Zuordnungen und Börsenabweichung sichtbar; Stuttgart in die Börsentabelle | `#2b`, `#2d`, `#2e`, `#3`, `#4` | offen |
+> | **Teil 2** | Erzeugung neuer Papiere, Yahoo-Normalisierung | `#5` | `6abce88` ✔ abgenommen |
+> | **Teil 2b** | `ExchangeDef` aufräumen (`figi_id_type`, `figi_value` zum Provider) | — | `556c23d` ✔ abgenommen |
+> | **Teil 3** | in **vier** Übergaben, siehe Entwurf: 1 Börsenkatalog · 2 Migration **samt ihrer Meldung** · 3 Aufnahmeweg samt `core_version 2.0.0` · 4 Börsenabweichung, Fehlerpfad, Inventur | `#2b`, `#2d`, `#2e`, `#3`, `#4` | offen |
 > | ~~Handzuordnung~~ | ~~offene Zuordnungen von Hand setzbar, eigener Status~~ | ~~`#2c`~~ | **gestrichen**, siehe Kasten |
 >
 > **Teil 2b abgetrennt** *(Claude, 2026-08-23)* — das Aufräumen von
@@ -114,11 +114,14 @@ muss, ist kein Plugin).
 > **`identity_status` entfällt ersatzlos** — die Spalte hätte nur noch einen
 > Wert.
 >
-> **Was dazukommt:** Die Sichtbarkeit zeigt **zwei** Zustände statt einem —
-> offene Zuordnungen *und* „von der Vorzugsbörse abgewichen" mit beiden MICs
-> und Währungen (erwartet `XETR`/EUR, tatsächlich `ARCX`/USD). Heute ist das
-> nur die Logzeile `resolve_foreign_exchange`; im Dashboard sieht niemand, dass
-> ein Papier in USD hereinkommt, obwohl XETR eingestellt ist.
+> **Was dazukommt:** Sichtbar zu machen sind ~~zwei Zustände — offene
+> Zuordnungen *und*~~ **seit Runde 16 zwei verschiedene Dinge:** der
+> **Migrationsbericht** über Zeilen, die *nicht* in den Bestand gekommen sind,
+> und im laufenden Betrieb „von der Vorzugsbörse abgewichen" mit beiden MICs
+> und Währungen (erwartet `XETR`/EUR, tatsächlich `ARCX`/USD). Heute ist
+> Letzteres nur die Logzeile `resolve_foreign_exchange`; im Dashboard sieht
+> niemand, dass ein Papier in USD hereinkommt, obwohl XETR eingestellt ist.
+> Eine **offene Zuordnung als Instrumentzustand** gibt es nicht mehr.
 > 3. Eine **falsche** automatische Zuordnung überschreiben. Der einzige Fall,
 >    in dem wirklich ein Mensch entscheiden muss — und es ist Korrektur, nicht
 >    Erstzuordnung. Taucht er auf, ist er ein eigenes Ticket.
@@ -136,15 +139,20 @@ muss, ist kein Plugin).
 > der Netz braucht und in ein Rate-Limit laufen kann, und das für jede
 > bestehende Zeile.
 >
-> **Umgesetzt ist deshalb:** Ein suffixloses Symbol wird **nicht geraten**. Die
-> Zeile bekommt `identity_status = legacy_unresolved` und erscheint in der
-> Liste offener Zuordnungen; den echten MIC trägt der nächste erfolgreiche
-> Auflösungslauf nach (Teil 2) — für `AAPL` und `VTI` nachgemessen. Das ist genau
-> die Regel, die das Ticket für nicht zerlegbare Symbole ohnehin aufstellt —
-> `AAPL` ist einer dieser Fälle, nicht die Ausnahme davon.
+> ~~**Umgesetzt ist deshalb:** Die Zeile bekommt
+> `identity_status = legacy_unresolved` und erscheint in der Liste offener
+> Zuordnungen; den echten MIC trägt der nächste erfolgreiche Auflösungslauf
+> nach.~~
+>
+> **Seit Runde 16 gilt stattdessen:** Ein suffixloses Symbol wird weiterhin
+> **nicht geraten** — aber die Zeile bleibt auch nicht offen liegen. Sie wird
+> **abgelehnt** und erscheint im Migrationsbericht mit Grund und verlorenen
+> Kurspunkten; der Weg zurück ist die Neuerfassung über den Aufnahmeweg. Der
+> Kern des Kastens stimmt unverändert: Die Migration läuft offline und **kann**
+> den echten MIC nicht wissen. Nur die Folge daraus ist eine andere.
 >
 > Verify `#2` prüft entsprechend `EUNL.DE` → `EUNL`/`XETR` und `XIC.TO` →
-> `XIC`/`XTSE` **nach der Migration**, `AAPL` dagegen als offenen Fall.
+> `XIC`/`XTSE` **nach der Migration**, `AAPL` dagegen als **abgelehnten** Fall.
 
 ---
 
@@ -159,7 +167,9 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`; `AAPL` wird **abgelehnt** statt geraten | ➖ [^b] | |
 | 2b | Instrument mit Fremdsymbol (`BRK-B`) | erscheint im **Migrationsbericht** mit Grund und verlorenen Kurspunkten — nicht mehr als offene Zeile im Bestand | ➖ [^c] | |
 | 2b4 | Bericht und Ablehnung | entstehen in **derselben Transaktion**; ein zweiter Start dupliziert sie nicht; der Eintrag bleibt abrufbar, **nachdem** die aktive Zeile weg ist | | |
-| 2b5 | Auslieferung von Teil 2 | Vorabwarnung und Berichtsanzeige sind **verfügbar, bevor** der Startpfad die erste Zeile verwirft — beides kommt in derselben Übergabe | | |
+| 2b5 | Auslieferung von Teil 2 | **zweiphasig:** Phase 1 erkennt die ausstehende Migration und rechnet vor, ohne etwas zu ändern; erst die Bestätigung löst sie aus. Gleichzeitigkeit im Commit genügt **nicht** — `init_db()` läuft im Lifespan, bevor das UI erreichbar ist | | |
+| 2b6 | Phase 1 | Scheduler **aus**, `/ready` meldet „Migration ausstehend"; die eingeschränkte Oberfläche zeigt Symbole, Gründe und Kurspunktzahlen samt Backup-Hinweis | | |
+| 2b7 | Vorschau, Bericht und Meldungen | **stabile Reason-Codes** statt freier Texte, DE/EN übersetzt — in Teil 2, nicht erst in Teil 4 | | |
 | 2b2 | nach erfolgreichem Start | Invariante `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`; kein Instrument-/Quote-Endpunkt serialisiert eine halbe Identität | | |
 | 2b3 | Reihenfolge Katalog vor Migration | `GOLD.SG` migriert (257 Tageskurse bleiben), wird **nicht** abgelehnt — der Katalog mit `XSTU` steht vorher | | |
 | ~~2c~~ | ~~derselbe Fall, manuelle Zuordnung~~ | **gestrichen** — der Symbolweg verlangt die Kombination künftig im Vertrag, damit entstehen die Fälle nicht mehr. Siehe Kasten „Die Handzuordnung ist gestrichen" | ➖ | |
@@ -544,8 +554,11 @@ sind zunächst `NULL`-fähig, eine Kennzeichnung wie
 bleibt lesbar und nutzbar, und erst nach erfolgreicher Zuordnung wird
 `(ticker, mic)` zur Pflicht.~~
 
-Ohne diesen Zustand ist „später von Hand zuordnen" ein Versprechen, das die
-Migration technisch nicht halten kann.
+~~Ohne diesen Zustand ist „später von Hand zuordnen" ein Versprechen, das die
+Migration technisch nicht halten kann.~~ **Der Satz stimmt weiter — und ist
+genau deshalb hinfällig:** Weil die Migration „später von Hand" nicht halten
+kann, wird seit Runde 16 gar nichts mehr versprochen, was sie nicht halten
+kann. Sie lehnt ab und meldet.
 
 ### Risiko
 

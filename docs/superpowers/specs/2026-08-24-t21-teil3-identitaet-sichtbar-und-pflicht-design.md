@@ -1,7 +1,7 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 18** ·
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 19** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
 „Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
 Entwurfsprüfung ohne Produktcode.
@@ -604,18 +604,36 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 | **3 — Aufnahmeweg, atomar mit dem Vertrag** | `POST /instruments/intake`, Intake-Service mit `IntakeResult`, Fehlerkennungen, der strengere `/quote?symbol=`, `ticker`/`mic`/`listing_id` als Pflichtfelder, Aufnahme des Endpunkts in den Core-Vertrag, **`core_version 2.0.0`** und Snapshot | **alles in einer Übergabe** |
 | **4 — Abweichung, Fehlerpfad, Inventur** | Abweichungszustand sichtbar, Fehlerkennungen in beiden Sprachen, Dokumentationsinventur | Snapshot nur, wenn der Core sich noch einmal ändert |
 
-> ### ⚠️ Warum die Berichtsanzeige nicht nach Teil 2 rutschen darf
+> ### ⚠️ Gleichzeitige Auslieferung genügt **nicht** — es braucht zwei Phasen
 >
-> Teil 2 ist die **einzige** Übergabe der Serie, die bestehende Daten wegwirft —
-> und sie läuft **automatisch beim Start**. Läge die Berichtsanzeige erst in
-> Teil 4, gäbe es ein Fenster, in dem der Startpfad Zeilen samt Kursen
-> entfernt, während der Benutzer weder die Vorabwarnung noch den Bericht sehen
-> kann. Die Zusage „wird konkret gemeldet" wäre dann für die Dauer einer
-> Auslieferung schlicht nicht eingelöst.
+> Der frühere Text hier sagte, Ablehnung und Sichtbarkeit müssten „in dieselbe
+> Übergabe". Das ist zu wenig, und der Grund steht im Code:
+> `app/main.py:27-32` ruft `init_db()` im **FastAPI-Lifespan** auf — also
+> bevor die App den ersten Request bedient —, und das gebaute Dashboard wird
+> erst nach abgeschlossenem Lifespan erreichbar (`app/main.py:106-125`). Ein
+> gemeinsam ausgeliefertes UI kann den Benutzer damit **nicht** warnen: Wenn er
+> es sieht, ist die Migration längst gelaufen.
 >
-> Deshalb: **Ablehnung und ihre Sichtbarkeit gehören in dieselbe Übergabe.**
-> Wer sie trennen will, muss die Migration bis dahin gesperrt lassen — dann ist
-> Teil 2 aber nur zur Hälfte ausgeliefert und der Aufwand derselbe.
+> **Der Ablauf ist deshalb zweiphasig:**
+>
+> | Phase | Was passiert | Was der Benutzer sieht |
+> |---|---|---|
+> | **1 — erkennen** | Der Start erkennt eine ausstehende Migration und **rechnet ihre Auswirkung vor**: welche Symbole, aus welchem Grund, wie viele Kurspunkte. **Es wird nichts verändert.** | Eine eingeschränkte Oberfläche mit genau dieser Liste, dem Backup-Hinweis und einer ausdrücklichen Bestätigung |
+> | **2 — ausführen** | Erst die Bestätigung löst die **atomare** Migration aus. Danach werden Scheduler und normale Readiness freigegeben. | Der Bericht über das, was tatsächlich passiert ist |
+>
+> In Phase 1 bleibt der Scheduler **aus** und `/ready` meldet „nicht bereit,
+> Migration ausstehend" — sonst schriebe der Refresh in einen Bestand, über den
+> gerade noch entschieden wird.
+>
+> **Die zulässige Alternative** ist ein gleichwertiger, ausdrücklicher
+> Offline-Schritt **vor** dem App-Start — etwa ein `make`-Ziel, das vorrechnet,
+> bestätigen lässt und migriert. Was **nicht** zulässig ist: beides in einem
+> Lifespan, weil dort keine Bestätigung möglich ist.
+>
+> **Was Phase 1 und 2 gemeinsam brauchen** — und was Teil 2 mitliefert, nicht
+> Teil 4: die API-Form für Vorschau und Bericht, **stabile Reason-Codes** statt
+> freier Texte, und die DE/EN-Übersetzung dazu. Bloße Gleichzeitigkeit im
+> Commit erfüllt `#2b5` nicht.
 >
 > **Für den Berichtseintrag gilt zusätzlich:** Ablehnung, Zählung der
 > verlorenen Kurspunkte und der dauerhafte Eintrag entstehen in **derselben
