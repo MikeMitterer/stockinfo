@@ -165,6 +165,14 @@ zugleich der deutsche strukturierte Event-Identifier
 ebenfalls vollständig inventarisierten `tests/test_resolver.py` blieb `e`.
 Der Bezeichner-Scan erfasste den Log-Event als String grundsätzlich nicht.
 
+**Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21 Teil 3
+Runde 8, Commit `f65dfcc`: Der Entwurf behauptete, „zwei Stellen im Produktcode“
+versprächen noch die inzwischen gestrichene Handzuordnung, und nannte daneben
+nur README und Service-Kommentar. Projektweit blieben dieselben Zusagen jedoch
+mindestens in `app/repository.py`, `app/resolver.py`, `app/db.py` und
+`docs/rest-core-contract.md` stehen. Die angekündigte Dokumentationskorrektur
+hatte ihren behaupteten Scope damit nicht vollständig inventarisiert.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
