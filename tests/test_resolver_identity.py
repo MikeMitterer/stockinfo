@@ -30,7 +30,13 @@ class _Search:
         return _Search.hits
 
 
-def _with_hits(monkeypatch, *hits: dict) -> None:
+def _with_hits(monkeypatch: pytest.MonkeyPatch, *hits: dict) -> None:
+    """Hängt die Fake-Suche mit den angegebenen Treffern an den Resolver.
+
+    Args:
+        monkeypatch: Fixture, über die die Fake-Suche gesetzt wird.
+        hits: Yahoo-Treffer in der Reihenfolge, in der die Suche sie liefert.
+    """
     from app import resolver as resolver_module
 
     _Search.hits = list(hits)

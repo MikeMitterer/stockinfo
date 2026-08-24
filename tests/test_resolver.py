@@ -1,5 +1,6 @@
 """Tests für die ISIN-Auflösung (OpenFIGI-Client gemockt)."""
 
+import pytest
 from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
 
 from app.providers.base import ResolvedInstrument, SourceUnavailableError
@@ -382,7 +383,7 @@ class _RecordingSearch:
         self.quotes = list(_RecordingSearch.hits)
 
 
-def _with_openfigi_response(monkeypatch, payload: object) -> None:
+def _with_openfigi_response(monkeypatch: pytest.MonkeyPatch, payload: object) -> None:
     """Legt die OpenFIGI-Antwort fest, ohne den Dienst zu fragen."""
     import app.providers.openfigi_provider as openfigi_module
 
@@ -393,7 +394,9 @@ def _with_openfigi_response(monkeypatch, payload: object) -> None:
     )
 
 
-def _with_recording_search(monkeypatch, hits: list[dict]) -> type[_RecordingSearch]:
+def _with_recording_search(
+    monkeypatch: pytest.MonkeyPatch, hits: list[dict]
+) -> type[_RecordingSearch]:
     """Hängt die aufzeichnende Suche an die Stelle, an der der Resolver sie holt."""
     from app import resolver as resolver_module
 
@@ -483,7 +486,7 @@ class _FakeSearch:
         self.quotes = list(self.hits)
 
 
-def _with_search(monkeypatch, hits: list[dict]) -> None:
+def _with_search(monkeypatch: pytest.MonkeyPatch, hits: list[dict]) -> None:
     """Hängt die Fake-Suche an die Stelle, an der der Resolver sie holt."""
     from app import resolver as resolver_module
 
@@ -491,8 +494,16 @@ def _with_search(monkeypatch, hits: list[dict]) -> None:
     monkeypatch.setattr(resolver_module.yf, "Search", _FakeSearch)
 
 
-def _with_foreign_us_listing(monkeypatch) -> None:
-    """Lässt Yahoo ausschließlich ein US-Listing ohne Xetra-Alternative finden."""
+def _with_foreign_us_listing(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Lässt Yahoo nur auswärtige Listings ohne Xetra-Alternative finden.
+
+    Die Suche liefert absichtlich mehrere Treffer — NasdaqGS und Mexiko —,
+    aber keinen an der bevorzugten Börse. Genau dann muss der Fallback greifen
+    und den ersten Treffer nehmen, statt gar nichts zu finden.
+
+    Args:
+        monkeypatch: Fixture, über die die Fake-Suche gesetzt wird.
+    """
     _with_search(
         monkeypatch,
         [
