@@ -191,6 +191,16 @@ einzige Parserquelle sein, ohne den bereits produktiven ISIN-Parser
 `dashboard/src/api/paths.ts:isIsin` und dessen Routing in
 `useInstrumentActions.add` als zu entfernende Stellen zu erfassen.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Runde 13, Commit `8f0e9b4`: Die Übergabe erklärte die
+Collector-Mitgliedschaft als ausschließlich am Collector-Eintrag geführt und
+damit „nachzählbar“ zu einer Quelle. Der übergebene Entwurf schloss
+`collectors` an jeder Börse zunächst ausdrücklich aus, verlangte aber wenige
+Absätze später genau solche parallelen Listen an `XNAS`, `XNYS`, `ARCX`,
+`XASE` und `BATS`. Gleichzeitig blieb die angeblich zurückgebaute
+Mehrfachalias-Anforderung als „Suffixformen im Plural“ in der Begründung des
+Descriptors stehen.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
