@@ -158,6 +158,14 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     Börsentabelle für suffixlose Symbole nur einen Sammelcode führt, nähme ihm
     eine Abfrage weg, die es heute gibt. Die Zeile entsteht sichtbar offen.
 
+    **Runde 4** hat am Verhalten nichts mehr geändert, aber am Werkzeug: Die
+    leeren Außengrenzen der Tests standen viermal nebeneinander und liegen
+    jetzt in `tests/boundaries.py`. `tests/test_boundaries.py` vergleicht sie
+    über `inspect.signature` gegen `EtfEnricher` und `DailyCloseProvider` —
+    eine Grenze mit `*args, **kwargs` nimmt sonst jeden Aufruf an und verdeckt
+    einen gebrochenen Vertrag ausgerechnet in dem Test, der die echte Kette
+    prüfen soll.
+
     Was dabei **offen geblieben** ist und nicht zu `#5` gehört:
 
     * `XNAS`, `XNYS`, `ARCX`, `XASE`, `BATS` stehen nicht in `EXCHANGES`. Aus
