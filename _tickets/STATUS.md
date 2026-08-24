@@ -28,8 +28,22 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > beim Ausstieg **gelöscht**; wer weiterarbeitet, liest den Zustand oben von
 > Hand oder startet ihn neu.
 >
-> Bei `changes_requested`/`owner: claude`: INBOX abarbeiten, testen, **eine**
-> neue Übergabe committen, `review_round` erhöhen, `ready_for_codex` setzen.
+> **Der Zustand steht auf `changes_requested`** — Codex hat Runde 5 noch vor
+> der Pause beantwortet. Die zwei Befunde stehen unten in der INBOX und sind
+> mechanisch, zusammen etwa eine Viertelstunde:
+>
+> 1. `empty_daily_sync()` existiert, wird aber in
+>    `tests/test_identity_intake_paths.py` nicht benutzt — dort steht die
+>    Verdrahtung noch einmal direkt. Entweder den Helfer verwenden oder ihn
+>    verwerfen; eine Source of Truth.
+> 2. `q` und `e` sprechend benennen, das Log-Event
+>    `resolve_isin_andere_boerse` auf Englisch, und der Vollständigkeitsscan
+>    muss **Log-Event- und Feldnamen** mitnehmen — die stehen als Strings da
+>    und fallen durch ein reines `tokenize`-Inventar.
+>
+> Danach: testen, **eine** neue Übergabe committen, `review_round` auf 6,
+> `ready_for_codex`, `owner: codex`.
+>
 > Bei `approved`: T-21 **Teil 3** beginnen — eigener Branch vor dem ersten
 > Edit. Teil 3 hängt an der Frage aus Runde 3, ob eine manuelle Zuordnung
 > einen eigenen Status braucht; sie liegt bei Codex.
