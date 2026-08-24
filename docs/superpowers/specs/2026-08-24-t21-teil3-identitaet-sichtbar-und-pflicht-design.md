@@ -1,7 +1,7 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 14** ·
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 15** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
 „Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
 Entwurfsprüfung ohne Produktcode.
@@ -243,9 +243,21 @@ beliebig wiederholen oder vorziehen.
 
 | Schicht | Aufgabe | Ergebnis |
 |---|---|---|
-| Router | Transport, Normalisierung, Exception-Mapping — **keine Fachregel** | HTTP-Status und `{code, params}` |
-| Intake-Service | Rohwert gegen den Börsenkatalog auflösen, Auflösung anstoßen, über das Repository speichern | kanonische Identität in `ticker`/`mic` |
+| Router | Transport, Exception-Mapping, `created` → `201`/`200` — **keine Fachregel** | HTTP-Status und Rumpf |
+| Intake-Service | Rohwert gegen den Börsenkatalog auflösen, Auflösung anstoßen, über das Repository speichern | **`IntakeResult(summary, created)`** |
 | Kursquelle (Yahoo-Adapter) | aus `(ticker, mic)` ihr eigenes Format bilden | Abrufalias, z. B. `GOLD.SG` |
+
+**Warum der Service ein typisiertes Ergebnis liefert und nicht nur die
+Identität:** Der Erfolgsvertrag unten verlangt ein vollständiges
+`InstrumentSummary` **und** die Unterscheidung „neu angelegt" gegen „gab es
+schon". Gäbe der Service nur `(ticker, mic)` zurück, müsste der Router die
+Summary selbst beschaffen und den vorherigen Datenbankzustand ein zweites Mal
+ermitteln — genau die Fach- und Repository-Logik, die er laut Zeile darüber
+nicht enthalten darf. `IntakeResult` trägt beides; der Router mappt
+ausschließlich `created` auf den Status und serialisiert `summary`.
+
+Der Kettentest prüft **beide Zweige** und belegt, dass im Router **kein zweiter
+Existenz-Check** steht.
 
 Die Auflösung gegen Börsenkatalog, MIC und Alias ist eine **Fachregel**, keine
 HTTP-Prüfung. Sie gehört deshalb nicht in `app/routers/validation.py`, wo der
@@ -464,6 +476,30 @@ Herkunftsfeld hätte **nicht** gereicht; das war der Irrtum aus Runde 10, und
 `ExchangeInfo` mit seinem einzelnen `suffix: str` und dem `mic="US"` hätte T-30
 zur Typänderung gezwungen. Verify `#8` in
 T-30 prüft rückwirkend, ob es gehalten hat.
+
+## Der Schnitt für die Umsetzung
+
+Vier Übergaben statt einer — Teil 1 brauchte neun Runden, Teil 2 sieben, und
+ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
+
+**Die Vertragsgrenze bestimmt den Schnitt, nicht die Bequemlichkeit.**
+`docs/rest-core-contract.md:33-34` nimmt die Schreibvorgänge des Dashboards und
+`/exchanges` ausdrücklich vom geschlossenen Core aus. Daraus folgt:
+
+| | Umfang | Vertrag |
+|---|---|---|
+| **1 — Börsenkatalog** | Descriptor, Union, `catalog`, die sechs neuen Einträge, `COLLECTOR_CODES` abgeleitet, Statuskonstanten entdoppelt | **kein** Versionssprung — `/exchanges` liegt außerhalb des geschlossenen Core |
+| **2 — Aufnahmeweg, atomar mit dem Vertrag** | `POST /instruments/intake`, Intake-Service mit `IntakeResult`, Fehlerkennungen, der strengere `/quote?symbol=`, die neuen Pflichtfelder von `InstrumentSummary`, Aufnahme des Endpunkts in den Core-Vertrag, **`core_version 2.0.0`** und Snapshot | **alles in einer Übergabe** |
+| **3 — Sichtbarkeit** | beide Zustände, Environment-Panel | additiv; Snapshot erneuern, Version nach der Regel im Artefakt |
+| **4 — Dashboard und Inventur** | Fehlerpfad in beiden Sprachen, Dokumentationsinventur | Snapshot nur, wenn der Core sich noch einmal ändert |
+
+**Warum Teil 2 nicht teilbar ist:** Der strengere `/quote?symbol=` ändert einen
+Endpunkt **im** geschlossenen Core — eine Anfrage, die heute `200` liefert,
+liefert dann `400`. Käme der Versionssprung erst in Teil 4, wäre der Endpunkt
+dazwischen öffentlich geändert, aber nicht zugesagt, und Verify `#2i` ließe sich
+bis dahin gar nicht prüfen. Vertragsartefakt, `core_version` und Snapshot ziehen
+deshalb **mit der ersten Änderung am geschlossenen Core** um, nicht danach.
+Jede weitere Core-Änderung erneuert den Snapshot erneut.
 
 ## Testen
 
