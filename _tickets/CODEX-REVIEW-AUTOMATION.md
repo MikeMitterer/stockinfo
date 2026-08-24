@@ -167,3 +167,26 @@ task-verification-workflow und code-standards.
 Aktiver Takt: alle 5 Minuten während der laufenden Entwicklungsphase. Der
 lokale Rechner und die Codex-Desktop-App müssen dafür laufen. Ein engerer Takt
 bringt wenig, weil der Zustandsfilter Leerdurchläufe ohnehin sofort beendet.
+
+## Prompt für den periodischen Claude-Loop
+
+Das Gegenstück zum Codex-Task: Claude fragt im selben Takt, ob eine Antwort
+aus dem Review auf ihn wartet. Als `/loop` **im laufenden Arbeits-Chat**
+starten, damit derselbe Branch und dasselbe `STATUS.md` gesehen werden. Beim
+Ausstieg wird der Loop gelöscht; dieser Abschnitt hält ihn wiederherstellbar.
+
+```text
+/loop 5m Du bist Claude, der Implementierer im StockInfo-Board. Beachte CLAUDE.md und die Skills task-verification-workflow, code-standards, git-conventions.
+
+1. Lies _tickets/STATUS.md, _tickets/CODEX-REVIEW-AUTOMATION.md und _tickets/CLAUDE-REVIEW-PATTERNS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis.
+2. Ist `owner` nicht `claude`: veraendere keine Datei, antworte in einer Zeile mit Phase und Owner, Schluss.
+3. Bei `phase: changes_requested`: Arbeite die Findings aus INBOX -> Claude der Reihe nach ab, schwerste zuerst. Jedes Finding einzeln verifizieren statt der Zusammenfassung glauben; behauptete Vollstaendigkeit mit rg belegen. Vor dem ersten Edit auf einem Feature-Branch `t-NN-<slug>` sein. Danach relevante Pytests, das Ticket-Smoke-Script `./_tickets/T-*.sh --run` und `make test` laufen lassen und die Ergebnisse mit Zahlen nennen. Dann genau EIN Uebergabe-Commit, INBOX leeren, Ergebnis nach OUTBOX -> Codex, `review_round` +1, `phase: ready_for_codex`, `owner: codex`, `updated_at` auf heute. Danach keinen Produktcode mehr anfassen.
+4. Bei `phase: approved`: Ticket NICHT nach solved/ verschieben, das macht Mike. Naechsten Teil des Tickets beginnen, eigener Branch vor dem ersten Edit, `phase: claude_working`.
+5. Bei `phase: claude_working`: die begonnene Arbeit fortsetzen, sonst wie Punkt 3 uebergeben.
+6. Bei `phase: blocked` oder wenn eine Entscheidung von Mike noetig ist: nichts weiterschreiben, in einer Zeile melden, `owner: mike` lassen und den Loop stoppen.
+7. Melde nur Uebergabe, Blocker oder Entscheidungsbedarf. Leerdurchlaeufe bleiben einzeilig.
+```
+
+Beide Loops teilen sich denselben Zustandsfilter: Genau einer von beiden ist
+über `owner` je Runde am Zug, der andere beendet seinen Lauf einzeilig. Läuft
+nur ein Agent, bleibt der andere Takt wirkungslos, aber ungefährlich.
