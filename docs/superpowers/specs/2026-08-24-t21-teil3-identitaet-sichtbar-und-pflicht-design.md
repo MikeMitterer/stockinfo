@@ -1,7 +1,7 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 21** ·
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 22** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
 „Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
 Entwurfsprüfung ohne Produktcode.
@@ -600,7 +600,8 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 | | Umfang | Vertrag |
 |---|---|---|
 | **1 — Börsenkatalog** | Descriptor, Union, `catalog`, die sechs neuen Einträge (**darunter `XSTU`**), `COLLECTOR_CODES` abgeleitet | **kein** Versionssprung — `/exchanges` liegt außerhalb des geschlossenen Core |
-| **2 — Migration **mit** ihrer Meldung** | Migrieren-oder-ablehnen, Quarantäne, Berichtsspeicher, `identity_status` ausbauen, `ticker`/`mic` auf `NOT NULL`, Invariante — **und im selben Zug** die Vorabwarnung und die Berichtsanzeige im UI | intern; berührt den Core erst über die Pflichtfelder in Teil 3 |
+| **2A — Migration, Backend** | Migrieren-oder-ablehnen, Quarantäne, Berichtsspeicher, `identity_status` ausbauen, `ticker`/`mic` auf `NOT NULL`, Invariante, Pending-Guard, `/migration`, `/migration/confirm`, `/migration/report`, `/operational`, `/ready`-Erweiterung, Reason-Codes, Integrationstests | intern |
+| **2B — Migration, Pflicht-UI und Image** | Dashboard-Ablauf mit Vorschau, Backup-Hinweis und Bestätigung, DE/EN, Docker-`HEALTHCHECK` auf `/operational`, README- und Docstring-Abgleich, Image-Test | intern |
 | **3 — Aufnahmeweg, atomar mit dem Vertrag** | `POST /instruments/intake`, Intake-Service mit `IntakeResult`, Fehlerkennungen, der strengere `/quote?symbol=`, `ticker`/`mic`/`listing_id` als Pflichtfelder, Aufnahme des Endpunkts in den Core-Vertrag, **`core_version 2.0.0`** und Snapshot | **alles in einer Übergabe** |
 | **4 — Abweichung, Fehlerpfad, Inventur** | Abweichungszustand sichtbar, Fehlerkennungen in beiden Sprachen, Dokumentationsinventur | Snapshot nur, wenn der Core sich noch einmal ändert |
 
@@ -613,6 +614,12 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 > erst nach abgeschlossenem Lifespan erreichbar (`app/main.py:106-125`). Ein
 > gemeinsam ausgeliefertes UI kann den Benutzer damit **nicht** warnen: Wenn er
 > es sieht, ist die Migration längst gelaufen.
+>
+> **2A und 2B sind zwei Übergaben, aber eine Auslieferung.** Der Schnitt aus
+> Runde 21 trennt Prüfbarkeit von Auslieferbarkeit: Beide bleiben auf dem
+> Feature-Branch, und **2A allein wird nicht gemergt und nicht ausgeliefert** —
+> sonst entstünde genau das Fenster, das dieser Kasten verhindern soll. Erst
+> mit 2B geht der Zweig hinaus.
 >
 > **Der Ablauf ist deshalb zweiphasig:**
 >
@@ -636,13 +643,21 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 > gleich mitgesperrt, weil `/ready` selbst die Datenbank anfasst
 > (`count_instruments()`). Erlaubt sind:
 >
-> | Pfad | warum |
-> |---|---|
-> | die statische Oberfläche | sonst gäbe es nichts zu bestätigen |
-> | `GET /health` | Liveness, hängt an nichts |
-> | der **Healthcheck-Endpunkt** aus dem Abschnitt unten | sonst flaggt das Image während einer korrekten Wartezeit |
-> | `GET /ready` | **liest die Datenbank** und muss trotzdem antworten dürfen — sonst kann niemand den Pending-Zustand abfragen |
-> | Vorschau, Bestätigung, Bericht | der Zweck der Phase |
+> | Methode | Pfad | warum |
+> |---|---|---|
+> | `GET` | `/health` | Liveness, hängt an nichts |
+> | `GET` | `/operational` | der neue Healthcheck-Endpunkt, siehe unten |
+> | `GET` | `/ready` | **liest die Datenbank** und muss trotzdem antworten dürfen — sonst kann niemand den Pending-Zustand abfragen |
+> | `GET` | `/migration` | Vorschau: was würde abgelehnt, mit Grund und Kurspunktzahl |
+> | `POST` | `/migration/confirm` | die Bestätigung |
+> | `GET` | `/migration/report` | der Bericht danach |
+> | `GET` | `/`, `/index.html`, `/favicon.png`, `/logo.svg`, `/logo.png`, `/stockinfo-icon.png`, `/assets/*` | die statische Oberfläche — **abschließend aufgezählt**, kein Präfix-Platzhalter |
+>
+> **Warum die statischen Pfade einzeln dastehen:** Das Dashboard ist heute unter
+> `/` gemountet (`app/main.py:106-125`), und `/` als Präfix freizugeben hieße,
+> jede Fach-API-Route mit freizugeben. Die Liste entspricht dem, was
+> `dashboard/dist` tatsächlich ausliefert; kommt eine Datei dazu, kommt sie hier
+> dazu.
 >
 > Alles andere wird mit einer **stabilen Kennung** abgewiesen — aus derselben
 > Zustandsquelle. Einzelprüfungen in den Routern wären eine parallele
@@ -682,13 +697,50 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 >
 > | Frage | Endpunkt | in Phase 1 |
 > |---|---|---|
-> | Läuft der Prozess? | `/health` | `200`, wie immer |
-> | Ist der Prozess arbeitsfähig — Migrations-UI **oder** Fachbetrieb? | **neuer Healthcheck-Endpunkt** | `200` |
-> | Ist der **normale Fachbetrieb** freigegeben? | `/ready` | **`503`**, `status: "migration_pending"` |
+> | Läuft der Prozess? | `GET /health` | `200`, wie immer |
+> | Kann der Prozess seine **derzeitige** Aufgabe erfüllen? | `GET /operational` **(neu)** | `200` |
+> | Ist der **normale Fachbetrieb** freigegeben? | `GET /ready` | **`503`** |
 >
-> Der Docker-`HEALTHCHECK` zieht auf den mittleren Endpunkt um. `/ready` behält
-> Bedeutung, Modell, README und Tests unverändert — es sagt weiterhin die
-> Wahrheit, und die lautet in Phase 1 „nein".
+> **Der Vertrag von `/operational`** — vollständig, weil der Docker-`HEALTHCHECK`
+> daran hängt:
+>
+> | Lage | Status | `mode` |
+> |---|---|---|
+> | Migration ausstehend, DB erreichbar | `200` | `migration_pending` |
+> | normaler Betrieb, DB erreichbar | `200` | `serving` |
+> | DB nicht erreichbar | `503` | `degraded` |
+>
+> **`/ready` bleibt inhaltlich, was es war**, bekommt aber einen zweiten
+> `503`-Grund: bisher nur „DB nicht erreichbar", künftig auch „Migration
+> ausstehend". Beide sind über `status` unterscheidbar, und `status` wird ein
+> **`Literal`**, kein freier `str` — sonst ist der neue Zustand nicht prüfbar.
+>
+> #### Was dadurch **doch** angefasst werden muss
+>
+> Der vorige Entwurf behauptete „Bedeutung, Modell, README und Tests
+> unverändert". Das stimmt nur für die *Bedeutung*. Die Verbraucher der
+> Diagnoseregel liegen verteilt und werden mit umgestellt:
+>
+> | Stelle | was dort steht |
+> |---|---|
+> | `README.md:31-32` | *„The Docker healthcheck now uses `/ready`."* — künftig `/operational` |
+> | `README.md:202-205` | kennt bei `/ready` nur die unerreichbare DB als `503`-Grund |
+> | `docker/Dockerfile:71-75` | Pfad **und** die widerlegte Restart-/Traffic-Begründung im Kommentar |
+> | `app/main.py:70-76` | Docstring von `/health` verweist auf die alte Zweiteilung |
+> | `tests/test_api.py:204-240` | wiederholt dieselbe Erklärung |
+> | `app/models.py` | `ReadinessResponse.status` wird `Literal`; `OperationalResponse` kommt dazu |
+>
+> Bestehende, weiterhin wahre Assertions bleiben — aber „unverändert" ist
+> README und Test-Suite als Ganzes eben nicht.
+>
+> #### Eine Routenquelle, drei Verbraucher
+>
+> Guard, Routentabellen-Test und Dockerfile dürfen die Pfade **nicht** je für
+> sich als Literal führen. Die Allowlist lebt als eine Konstante im Code; der
+> Test enumeriert **aus ihr**. Der Dockerfile kann kein Python importieren —
+> deshalb prüft ein Test, dass die im Dockerfile stehende `HEALTHCHECK`-URL
+> genau der Pfad aus dieser Konstante ist. Ohne diesen Test driften die beiden
+> beim nächsten Umbenennen auseinander, und zwar unbemerkt bis zum Deployment.
 >
 > **Zusagen über Restart und Routing macht dieser Entwurf keine mehr.** Sie
 > gälten nur für eine konkret vorhandene Orchestrator-Konfiguration und wären
