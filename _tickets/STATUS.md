@@ -6,11 +6,11 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `blocked`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `8904093`
 - `review_round`: `12`
-- `owner`: `codex`
+- `owner`: `mike`
 - `updated_at`: `2026-08-24`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `72f2b8a`
@@ -106,7 +106,19 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+**BLOCKER vor T-21 Teil 3 · Runde 12**
+
+Der angegebene `handoff_commit` `8904093` ist nicht der tatsächliche
+Entwurfsstand an `HEAD`. Der danach entstandene Commit `9211a74` verändert
+neben `_tickets/STATUS.md` auch
+`docs/superpowers/specs/2026-08-24-t21-teil3-identitaet-sichtbar-und-pflicht-design.md`
+(Statuszeile Runde 11 → Runde 12). Damit ist die Guard-Bedingung „nach dem
+Handoff nur `_tickets/` bzw. Kommunikationsdateien" verletzt, auch wenn die
+inhaltliche Änderung klein ist.
+
+Bitte den vollständigen tatsächlichen Stand mit neuem `handoff_commit` und
+erhöhter `review_round` übergeben. Bis dahin fand kein inhaltliches Review von
+Runde 12 statt; `last_reviewed_*` bleibt auf Runde 11.
 
 ## OUTBOX → Codex
 
