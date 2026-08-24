@@ -84,16 +84,16 @@ def ensure_core_complete(response: QuoteResponse) -> None:
             das auf 502 ab — „nicht verwertbar" ist näher an „Quelle
             unbrauchbar" als an „nicht gefunden".
     """
-    fehlend = [
-        feld for feld in required_fields("quote") if getattr(response, feld, None) is None
+    missing = [
+        field
+        for field in required_fields("quote")
+        if getattr(response, field, None) is None
     ]
-    if not fehlend:
+    if not missing:
         return
-    logger.warning(
-        "core_unvollstaendig", symbol=response.symbol, fehlend=fehlend
-    )
+    logger.warning("core_incomplete", symbol=response.symbol, missing=missing)
     raise QuoteUnavailableError(
-        f"{response.symbol}: Pflichtfelder fehlen — {', '.join(fehlend)}"
+        f"{response.symbol}: Pflichtfelder fehlen — {', '.join(missing)}"
     )
 
 

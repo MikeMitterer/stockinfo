@@ -5,20 +5,8 @@ import pytest
 from app.db import init_db
 from app.models import QuoteResponse
 from app.repository import QuoteRepository
-from app.services.daily_sync import DailyCloseSync
 from app.services.quote_cache import CachedQuoteService
-
-
-class _EmptyDailyProvider:
-    """Stub für Tests, die keine Volatilität interessiert: liefert nie Kurse."""
-
-    def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict]:
-        return []
-
-
-def _stub_daily_sync(repo: QuoteRepository) -> DailyCloseSync:
-    """Baut einen `DailyCloseSync`, der nie echte Tages-Schlusskurse liefert."""
-    return DailyCloseSync(repo, _EmptyDailyProvider())
+from tests.boundaries import empty_daily_sync
 
 
 class FakeQuoteService:
@@ -46,7 +34,7 @@ def repo(tmp_path: Path) -> QuoteRepository:
 
 def test_refresh_one_forciert_und_speichert(repo: QuoteRepository) -> None:
     fake = FakeQuoteService()
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     result = service.refresh_one("IE00B3RBWM25")
 
@@ -57,7 +45,7 @@ def test_refresh_one_forciert_und_speichert(repo: QuoteRepository) -> None:
 
 def test_list_und_delete(repo: QuoteRepository) -> None:
     service = CachedQuoteService(
-        FakeQuoteService(), repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo)
+        FakeQuoteService(), repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)
     )
     service.refresh_one("IE00B3RBWM25")
 
@@ -69,7 +57,7 @@ def test_list_und_delete(repo: QuoteRepository) -> None:
 
 def test_refresh_one_by_symbol(repo: QuoteRepository) -> None:
     service = CachedQuoteService(
-        FakeQuoteService(), repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo)
+        FakeQuoteService(), repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)
     )
 
     result = service.refresh_one_by_symbol("BRYN.DE")
@@ -80,7 +68,7 @@ def test_refresh_one_by_symbol(repo: QuoteRepository) -> None:
 
 def test_delete_by_symbol_service(repo: QuoteRepository) -> None:
     service = CachedQuoteService(
-        FakeQuoteService(), repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo)
+        FakeQuoteService(), repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)
     )
     service.refresh_one_by_symbol("BRYN.DE")
     saved = service.list_instruments()[0]
@@ -91,7 +79,7 @@ def test_delete_by_symbol_service(repo: QuoteRepository) -> None:
 
 def test_get_history_by_symbol(repo: QuoteRepository) -> None:
     service = CachedQuoteService(
-        FakeQuoteService(), repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo)
+        FakeQuoteService(), repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)
     )
     service.refresh_one_by_symbol("BRYN.DE")
     saved = service.list_instruments()[0]
@@ -107,7 +95,7 @@ def test_set_isin_service(repo: QuoteRepository) -> None:
                       quote_time="t", fetched_at="t", type="stock")
     )
     service = CachedQuoteService(
-        FakeQuoteService(), repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo)
+        FakeQuoteService(), repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)
     )
 
     service.set_isin("BRYN.DE", "US0846707026")
@@ -128,7 +116,7 @@ def test_set_isin_konflikt(repo: QuoteRepository) -> None:
                       quote_time="t", fetched_at="t", type="stock")
     )
     service = CachedQuoteService(
-        FakeQuoteService(), repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo)
+        FakeQuoteService(), repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)
     )
 
     with pytest.raises(IsinConflictError):

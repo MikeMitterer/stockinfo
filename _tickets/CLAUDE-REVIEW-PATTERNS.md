@@ -144,6 +144,16 @@ den wiederholten Naming-Korrekturen außerdem erneut deutsche Produktbezeichner
 und strukturierte Log-Felder wie `_identitaet`, `boersencode`,
 `_FIGI_AUSNAHMEN` und `quelle`.
 
+**Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21 Teil 2
+und 2b Runde 4, Commit `c6f69a9`: Die Übergabe erklärte, ein `tokenize`-Scan
+belege „keine deutschen Bezeichner mehr in den berührten Dateien“. Im
+berührten `app/services/quote_service.py` blieben jedoch `fehlend`, `feld`
+sowie die strukturierten Log-Bezeichner `core_unvollstaendig` und `fehlend`;
+`tests/test_resolver.py` enthält unter anderem `_FigiNachBoerse`, `treffer`,
+`unzustaendig`, `zustaendig` und `_mit_suche`. Im ebenfalls berührten
+`_tickets/T-21b-smoke.sh` blieb im eingebetteten Python `zeilen`. Der
+angekündigte Scan deckte seinen behaupteten Dateiscope damit nicht ab.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf

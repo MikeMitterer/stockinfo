@@ -15,18 +15,7 @@ from app.services.quote_service import (
     QuoteUnavailableError,
     annualized_volatility,
 )
-
-
-class _EmptyDailyProvider:
-    """Stub für Tests, die keine Volatilität interessiert: liefert nie Kurse."""
-
-    def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict]:
-        return []
-
-
-def _stub_daily_sync(repo: QuoteRepository) -> DailyCloseSync:
-    """Baut einen `DailyCloseSync`, der nie echte Tages-Schlusskurse liefert."""
-    return DailyCloseSync(repo, _EmptyDailyProvider())
+from tests.boundaries import empty_daily_sync
 
 
 class FakeQuoteService:
@@ -92,7 +81,7 @@ def _hours_ago(hours: int) -> str:
 
 def test_cache_miss_beschafft_und_speichert(repo: QuoteRepository) -> None:
     fake = FakeQuoteService(_response(_now()))
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     result = service.get_by_isin("IE00B3RBWM25")
 
@@ -103,7 +92,7 @@ def test_cache_miss_beschafft_und_speichert(repo: QuoteRepository) -> None:
 
 def test_frischer_cache_vermeidet_zweiten_fetch(repo: QuoteRepository) -> None:
     fake = FakeQuoteService(_response(_now()))
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     service.get_by_isin("IE00B3RBWM25")  # füllt Cache
     result = service.get_by_isin("IE00B3RBWM25")  # Cache-Hit
@@ -116,7 +105,7 @@ def test_frischer_cache_vermeidet_zweiten_fetch(repo: QuoteRepository) -> None:
 def test_abgelaufener_cache_beschafft_neu(repo: QuoteRepository) -> None:
     repo.save_quote(_response(_hours_ago(10)))  # alter Kurs
     fake = FakeQuoteService(_response(_now(), price=200.0))
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     result = service.get_by_isin("IE00B3RBWM25")
 
@@ -128,7 +117,7 @@ def test_abgelaufener_cache_beschafft_neu(repo: QuoteRepository) -> None:
 def test_stale_bei_fehler_und_vorhandenem_cache(repo: QuoteRepository) -> None:
     repo.save_quote(_response(_hours_ago(10), price=155.0))  # alter Kurs
     fake = FakeQuoteService(None, raises=True)  # Live-Beschaffung schlägt fehl
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     result = service.get_by_isin("IE00B3RBWM25")
 
@@ -139,7 +128,7 @@ def test_stale_bei_fehler_und_vorhandenem_cache(repo: QuoteRepository) -> None:
 
 def test_fehler_ohne_cache_propagiert(repo: QuoteRepository) -> None:
     fake = FakeQuoteService(None, raises=True)
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     with pytest.raises(QuoteUnavailableError):
         service.get_by_isin("IE00B3RBWM25")
@@ -149,7 +138,7 @@ def test_stale_auch_bei_resolver_ausfall(repo: QuoteRepository) -> None:
     """Resolver-Ausfall (InstrumentNotFoundError) → stale Cache statt 404."""
     repo.save_quote(_response(_hours_ago(10), price=155.0))  # alter Kurs
     fake = FakeQuoteService(None, raises=True, exception=InstrumentNotFoundError)
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     result = service.get_by_isin("IE00B3RBWM25")
 
@@ -159,7 +148,7 @@ def test_stale_auch_bei_resolver_ausfall(repo: QuoteRepository) -> None:
 
 def test_resolver_ausfall_ohne_cache_propagiert(repo: QuoteRepository) -> None:
     fake = FakeQuoteService(None, raises=True, exception=InstrumentNotFoundError)
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     with pytest.raises(InstrumentNotFoundError):
         service.get_by_isin("IE00B3RBWM25")
@@ -169,7 +158,7 @@ def test_refresh_all_verweigert_parallellauf(repo: QuoteRepository) -> None:
     """Läuft bereits ein Refresh, wird ein zweiter Aufruf abgewiesen."""
     service = CachedQuoteService(
         FakeQuoteService(_response(_now())), repo, ttl_hours=6,
-        daily_sync=_stub_daily_sync(repo),
+        daily_sync=empty_daily_sync(repo),
     )
 
     assert service._refresh_lock.acquire(blocking=False)  # Lauf simulieren
@@ -329,7 +318,7 @@ def test_junge_etf_kennzahlen_loesen_keinen_justetf_abruf_aus(repo) -> None:
     _alter_stand(repo, _now())  # Kennzahlen von gerade eben
 
     service = CachedQuoteService(
-        fake, repo, ttl_hours=0, daily_sync=_stub_daily_sync(repo), metadata_ttl_days=7
+        fake, repo, ttl_hours=0, daily_sync=empty_daily_sync(repo), metadata_ttl_days=7
     )
     service.get_by_isin("IE00B3RBWM25")
 
@@ -342,7 +331,7 @@ def test_alte_etf_kennzahlen_loesen_einen_justetf_abruf_aus(repo) -> None:
     _alter_stand(repo, (datetime.now(timezone.utc) - timedelta(days=30)).isoformat())
 
     service = CachedQuoteService(
-        fake, repo, ttl_hours=0, daily_sync=_stub_daily_sync(repo), metadata_ttl_days=7
+        fake, repo, ttl_hours=0, daily_sync=empty_daily_sync(repo), metadata_ttl_days=7
     )
     service.get_by_isin("IE00B3RBWM25")
 
@@ -353,7 +342,7 @@ def test_unbekanntes_papier_wird_immer_angereichert(repo) -> None:
     """Sonst bekäme ein frisch hinzugefügter ETF seine Kennzahlen nie."""
     fake = _MerkendeQuoteService(_response(_now()))
     service = CachedQuoteService(
-        fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo), metadata_ttl_days=7
+        fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo), metadata_ttl_days=7
     )
 
     service.get_by_isin("IE00B3RBWM25")
@@ -372,7 +361,7 @@ def test_handrefresh_uebergeht_die_metadaten_ttl(repo) -> None:
     _alter_stand(repo, _now())  # Kennzahlen taufrisch — die TTL griffe
 
     service = CachedQuoteService(
-        fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo), metadata_ttl_days=7
+        fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo), metadata_ttl_days=7
     )
     service.refresh_one("IE00B3RBWM25")
 
@@ -436,7 +425,7 @@ def test_refresh_loest_bekanntes_instrument_nicht_neu_auf(repo: QuoteRepository)
     des Depots und verfälschten Gesamtwert und Anteile.
     """
     fake = _WanderndeAufloesung()
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     # Erster Kontakt: Das Papier ist unbekannt und wird aufgelöst.
     service.get_by_isin("IE00BCRY6557")
@@ -457,7 +446,7 @@ def test_refresh_loest_bekanntes_instrument_nicht_neu_auf(repo: QuoteRepository)
 def test_refresh_all_loest_bekannte_instrumente_nicht_neu_auf(repo: QuoteRepository) -> None:
     """Derselbe Schutz für den Sammellauf — Scheduler und Dashboard gehen hier durch."""
     fake = _WanderndeAufloesung()
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     service.get_by_isin("IE00BCRY6557")
     refreshed = service.refresh_all()
@@ -471,7 +460,7 @@ def test_refresh_all_loest_bekannte_instrumente_nicht_neu_auf(repo: QuoteReposit
 def test_refresh_einer_unbekannten_isin_loest_weiterhin_auf(repo: QuoteRepository) -> None:
     """Ohne Auflösung ließe sich nie ein neues Papier aufnehmen."""
     fake = _WanderndeAufloesung()
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     service.refresh_one("IE00BCRY6557")
 
@@ -528,7 +517,7 @@ def test_refresh_reicht_den_gespeicherten_typ_durch(repo: QuoteRepository) -> No
     mitgeben.
     """
     fake = _OhneTyp()
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     # Erster Kontakt legt das Instrument als ETF an.
     service.get_by_isin("IE00B3RBWM25")
@@ -558,7 +547,7 @@ def test_lesepfad_loest_bekanntes_instrument_nicht_neu_auf(repo: QuoteRepository
             type="etf",
         )
     )
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     result = service.get_by_isin("IE00BCRY6557")
 
@@ -581,7 +570,7 @@ def test_lesepfad_per_symbol_loest_bekanntes_instrument_nicht_neu_auf(
             type="etf",
         )
     )
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     result = service.get_by_symbol("IS3M.DE")
 
@@ -595,7 +584,7 @@ def test_unbekannte_isin_wird_im_lesepfad_weiterhin_aufgeloest(
 ) -> None:
     """Ohne Auflösung käme nie ein neues Papier herein — der Fallback bleibt."""
     fake = _WanderndeAufloesung()
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     service.get_by_isin("IE00BCRY6557")
 
@@ -659,7 +648,7 @@ def test_refresh_per_symbol_reicht_die_gespeicherte_zeile_durch(
             price=128.7, quote_time=_now(), fetched_at=_now(), type="etf",
         )
     )
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     service.refresh_one_by_symbol("EUNL.DE")
 
@@ -675,7 +664,7 @@ def test_refresh_eines_unbekannten_symbols_geht_weiter_ueber_die_suche(
 ) -> None:
     """Ein Papier ohne gespeicherte Zeile hat nichts durchzureichen."""
     fake = _MerktSichDenAufruf()
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     service.refresh_one_by_symbol("EUNL.DE")
 
@@ -708,7 +697,7 @@ def test_frischer_cache_ohne_waehrung_liefert_keinen_kurs(
     repo.save_quote(_response(_now()))
     _entwaehrt(repo)
     fake = FakeQuoteService(_response(_now()))
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     with pytest.raises(QuoteUnavailableError):
         service.get_by_isin("IE00B3RBWM25")
@@ -727,7 +716,7 @@ def test_stale_cache_ohne_waehrung_liefert_keinen_kurs(repo: QuoteRepository) ->
     _entwaehrt(repo)
     service = CachedQuoteService(
         FakeQuoteService(None, raises=True), repo, ttl_hours=6,
-        daily_sync=_stub_daily_sync(repo),
+        daily_sync=empty_daily_sync(repo),
     )
 
     with pytest.raises(QuoteUnavailableError):
@@ -749,7 +738,7 @@ def test_cache_mit_waehrung_am_instrument_bleibt_nutzbar(repo: QuoteRepository) 
         )
     service = CachedQuoteService(
         FakeQuoteService(_response(_now())), repo, ttl_hours=6,
-        daily_sync=_stub_daily_sync(repo),
+        daily_sync=empty_daily_sync(repo),
     )
 
     assert service.get_by_isin("IE00B3RBWM25").currency == "EUR"
@@ -775,7 +764,7 @@ def test_historienpunkt_ohne_waehrung_erbt_die_des_listings(
 
     service = CachedQuoteService(
         FakeQuoteService(_response(_now())), repo, ttl_hours=6,
-        daily_sync=_stub_daily_sync(repo),
+        daily_sync=empty_daily_sync(repo),
     )
 
     punkte = service.get_history("IE00B3RBWM25")
@@ -830,7 +819,7 @@ def test_incomplete_response_traegt_den_gespeicherten_stand(
     """
     repo.save_quote(_maintained_etf(_hours_ago(10)))
     fake = FakeQuoteService(_incomplete_response(_now(), price=170.0))
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     result = service.get_by_isin("IE00B3RBWM25")
 
@@ -856,7 +845,7 @@ def test_vollstaendige_antwort_darf_einen_wert_auch_leeren(
     complete = _incomplete_response(_now(), price=170.0)
     complete.metadata_complete = True
     fake = FakeQuoteService(complete)
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     result = service.get_by_isin("IE00B3RBWM25")
 
@@ -875,7 +864,7 @@ def test_auch_der_refresh_haelt_den_gespeicherten_stand(
     """
     repo.save_quote(_maintained_etf(_hours_ago(10)))
     fake = FakeQuoteService(_incomplete_response(_now(), price=170.0))
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=_stub_daily_sync(repo))
+    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     result = service.refresh_one("IE00B3RBWM25")
 

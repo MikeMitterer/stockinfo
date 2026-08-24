@@ -23,12 +23,13 @@ from fastapi.testclient import TestClient
 from app.container import get_cached_quote_service
 from app.db import init_db
 from app.main import app
-from app.providers.base import EtfDetails, RawQuote
+from app.providers.base import RawQuote
 from app.repository import QuoteRepository
 from app.services.daily_sync import DailyCloseSync
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteService
 from stockinfo_plugin.types import NotFound
+from tests.boundaries import EmptyDailyCloseProvider, EmptyEtfEnricher
 
 
 class _QuoteSource:
@@ -42,23 +43,6 @@ class _QuoteSource:
             currency="EUR",
             type="etf",
         )
-
-
-class _EtfSource:
-    """Die Außengrenze zu justETF."""
-
-    def is_responsible(self, *args, **kwargs) -> bool:
-        return False
-
-    def fetch_etf(self, *args, **kwargs) -> EtfDetails | None:
-        return None
-
-
-class _DailySource:
-    """Die Außengrenze zur EOD-Historie."""
-
-    def fetch_daily_closes(self, *args, **kwargs) -> list:
-        return []
 
 
 class _NoResolver:
@@ -82,10 +66,10 @@ def client_and_repo(tmp_path: Path) -> Iterator[tuple[TestClient, QuoteRepositor
     init_db(db_path)
     repository = QuoteRepository(db_path)
     service = CachedQuoteService(
-        QuoteService(_QuoteSource(), _EtfSource(), _NoResolver()),
+        QuoteService(_QuoteSource(), EmptyEtfEnricher(), _NoResolver()),
         repository,
         ttl_hours=0,
-        daily_sync=DailyCloseSync(repository, _DailySource()),
+        daily_sync=DailyCloseSync(repository, EmptyDailyCloseProvider()),
     )
 
     app.dependency_overrides[get_cached_quote_service] = lambda: service

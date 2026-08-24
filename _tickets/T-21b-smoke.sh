@@ -209,8 +209,8 @@ dbQuery() {
     "${VENV_PY}" -c '
 import sqlite3, sys
 con = sqlite3.connect(sys.argv[1])
-zeilen = ["|".join("" if v is None else str(v) for v in row) for row in con.execute(sys.argv[2])]
-print("\n".join(zeilen))
+rows = ["|".join("" if v is None else str(v) for v in row) for row in con.execute(sys.argv[2])]
+print("\n".join(rows))
 ' "${DB_PATH}" "${_SQL}"
 }
 

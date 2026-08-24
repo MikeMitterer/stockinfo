@@ -102,7 +102,7 @@ def _identity(symbol: str, exchange_code: str | None) -> tuple[str | None, str |
     return None, None
 
 
-def _gattung(quote: dict) -> str:
+def _quote_type(quote: dict) -> str:
     """Liest den ``quoteType`` eines Yahoo-Treffers normalisiert aus.
 
     Args:
@@ -274,7 +274,7 @@ class YFinanceResolver:
             logger.warning("resolve_isin_empty", isin=isin)
             return NotFound()
 
-        top = self._passendster(quotes, isin)
+        top = self._best_match(quotes, isin)
         if top is None:
             logger.warning("resolve_isin_no_symbol", isin=isin)
             return NotFound()
@@ -312,11 +312,11 @@ class YFinanceResolver:
             ticker=ticker,
             mic=mic,
             name=top.get("shortname") or top.get("longname"),
-            type=QUOTE_TYPE_MAP.get(_gattung(top)),
+            type=QUOTE_TYPE_MAP.get(_quote_type(top)),
             currency=None,  # Währung kommt aus dem Live-Quote, nicht aus der Suche
         )
 
-    def _passendster(self, quotes: list[dict], isin: str) -> dict | None:
+    def _best_match(self, quotes: list[dict], isin: str) -> dict | None:
         """Wählt aus der Trefferliste das Listing der bevorzugten Börse.
 
         Yahoo sortiert nach eigenem Gutdünken, und der erste Treffer ist für ein
@@ -351,35 +351,35 @@ class YFinanceResolver:
         Returns:
             Der gewählte Treffer oder ``None``, wenn keiner ein Symbol trägt.
         """
-        mit_symbol = [q for q in quotes if q.get("symbol")]
-        if not mit_symbol:
+        with_symbol = [q for q in quotes if q.get("symbol")]
+        if not with_symbol:
             return None
 
         exchange = EXCHANGES.get(self._default_exchange) or EXCHANGES[DEFAULT_EXCHANGE]
         suffix = exchange.suffix
 
         if suffix:
-            an_der_boerse = [q for q in mit_symbol if str(q["symbol"]).endswith(suffix)]
+            at_exchange = [q for q in with_symbol if str(q["symbol"]).endswith(suffix)]
         else:
             # Börse ohne Suffix (`US`): Dort ist das punktlose Symbol die
             # Notierung. Ohne diesen Zweig liefe die Regel leer, weil jedes
             # Symbol auf `''` endet.
-            an_der_boerse = [q for q in mit_symbol if "." not in str(q["symbol"])]
+            at_exchange = [q for q in with_symbol if "." not in str(q["symbol"])]
 
-        if an_der_boerse:
-            gattung = _gattung(mit_symbol[0])
+        if at_exchange:
+            quote_type = _quote_type(with_symbol[0])
             return next(
-                (q for q in an_der_boerse if _gattung(q) == gattung),
-                an_der_boerse[0],
+                (q for q in at_exchange if _quote_type(q) == quote_type),
+                at_exchange[0],
             )
 
         logger.info(
             "resolve_isin_andere_boerse",
             isin=isin,
-            gewaehlt=mit_symbol[0]["symbol"],
-            erwartet=self._default_exchange,
+            chosen=with_symbol[0]["symbol"],
+            expected=self._default_exchange,
         )
-        return mit_symbol[0]
+        return with_symbol[0]
 
 
 class CompositeResolver:

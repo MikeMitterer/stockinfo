@@ -120,7 +120,7 @@ def test_us_notiert_ohne_suffix() -> None:
     assert EXCHANGES["US"].suffix == ""
 
 
-class _FigiFaellt:
+class _FigiFails:
     """Der Dienst ist nicht erreichbar — Netz, Kontingent, Fehlerseite."""
 
     def map_isin(
@@ -136,19 +136,19 @@ def test_ausfall_ist_nicht_dasselbe_wie_unbekannt() -> None:
     ``None`` an. Die Kette konnte sie nicht unterscheiden, der Router auch
     nicht — jeder Fehlschlag wurde zu 404, auch wenn niemand nachgesehen hatte.
     """
-    ausfall = OpenFigiResolver(_FigiFaellt(), "XETR").resolve_isin("IE00B4L5Y983")
-    unbekannt = OpenFigiResolver(_FigiNachBoerse({}), "XETR").resolve_isin(
+    failure = OpenFigiResolver(_FigiFails(), "XETR").resolve_isin("IE00B4L5Y983")
+    unknown = OpenFigiResolver(_FigiByExchange({}), "XETR").resolve_isin(
         "IE00B4L5Y983"
     )
 
-    assert isinstance(ausfall, Unavailable)
-    assert "openfigi" in ausfall.error
-    assert isinstance(unbekannt, NotFound)
+    assert isinstance(failure, Unavailable)
+    assert "openfigi" in failure.error
+    assert isinstance(unknown, NotFound)
 
 
 def test_treffer_bleibt_ein_aufgeloestes_instrument() -> None:
     """Der Erfolgsfall trägt weiterhin das Symbol, das die App braucht."""
-    resolved = OpenFigiResolver(_FigiNachBoerse({"XETR": "EUNL"}), "XETR").resolve_isin(
+    resolved = OpenFigiResolver(_FigiByExchange({"XETR": "EUNL"}), "XETR").resolve_isin(
         "IE00B4L5Y983"
     )
 
@@ -156,18 +156,18 @@ def test_treffer_bleibt_ein_aufgeloestes_instrument() -> None:
     assert resolved.symbol == "EUNL.DE"
 
 
-class _FigiNachBoerse:
+class _FigiByExchange:
     """Liefert Ticker je Börse — bildet ab, dass ein Papier nur dort notiert."""
 
-    def __init__(self, treffer: dict[str, str]) -> None:
-        self._treffer = treffer
+    def __init__(self, hits: dict[str, str]) -> None:
+        self._tickers = hits
         self.calls: list[str] = []
 
     def map_isin(
         self, isin: str, id_value: str, id_type: str = "micCode"
     ) -> str | None:
         self.calls.append(id_value)
-        return self._treffer.get(id_value)
+        return self._tickers.get(id_value)
 
 
 def test_kaskade_weicht_auf_die_heimatboerse_aus() -> None:
@@ -178,7 +178,7 @@ def test_kaskade_weicht_auf_die_heimatboerse_aus() -> None:
     Vorgabebörse war die einzige, die gefragt wurde. Das Emissionsland steckt
     im ISIN-Präfix, also muss niemand es konfigurieren.
     """
-    figi = _FigiNachBoerse({"XTSE": "RY"})
+    figi = _FigiByExchange({"XTSE": "RY"})
 
     resolved = OpenFigiResolver(figi, "XETR").resolve_isin("CA7800871021")
 
@@ -192,15 +192,15 @@ def test_kaskade_meldet_die_abweichung(monkeypatch) -> None:
     """Wer sein Papier plötzlich in CAD sieht, muss den Grund finden können."""
     import structlog
 
-    figi = _FigiNachBoerse({"XTKS": "7203"})
+    figi = _FigiByExchange({"XTKS": "7203"})
 
     with structlog.testing.capture_logs() as logs:
         OpenFigiResolver(figi, "XETR").resolve_isin("JP3633400001")
 
-    ausweichungen = [e for e in logs if e["event"] == "resolve_home_exchange"]
-    assert len(ausweichungen) == 1
-    assert ausweichungen[0]["preferred"] == "XETR"
-    assert ausweichungen[0]["home"] == "XTKS"
+    fallbacks = [e for e in logs if e["event"] == "resolve_home_exchange"]
+    assert len(fallbacks) == 1
+    assert fallbacks[0]["preferred"] == "XETR"
+    assert fallbacks[0]["home"] == "XTKS"
 
 
 def test_die_bevorzugte_boerse_bleibt_vorrangig() -> None:
@@ -209,7 +209,7 @@ def test_die_bevorzugte_boerse_bleibt_vorrangig() -> None:
     Sonst kippte die Kaskade europäische ETFs auf ihre Heimatbörse — und
     `IE00B4L5Y983` notierte plötzlich in Dublin statt an Xetra.
     """
-    figi = _FigiNachBoerse({"XETR": "EUNL", "XTSE": "IRRELEVANT"})
+    figi = _FigiByExchange({"XETR": "EUNL", "XTSE": "IRRELEVANT"})
 
     resolved = OpenFigiResolver(figi, "XETR").resolve_isin("IE00B4L5Y983")
 
@@ -225,7 +225,7 @@ def test_ohne_heimatboerse_bleibt_es_beim_einen_versuch() -> None:
     ausgebende Stelle, nicht den gewünschten Handelsplatz. Solche Länder
     stehen bewusst nicht in der Tabelle — dort übernimmt der Yahoo-Fallback.
     """
-    figi = _FigiNachBoerse({})
+    figi = _FigiByExchange({})
 
     assert isinstance(OpenFigiResolver(figi, "XETR").resolve_isin("IE00B4L5Y983"), NotFound)
     assert figi.calls == ["XETR"]
@@ -237,7 +237,7 @@ def test_strikte_boerse_kennt_keine_kaskade() -> None:
     Wer das einstellt, will keine Überraschung in fremder Währung — die
     Kaskade wäre genau das.
     """
-    figi = _FigiNachBoerse({"XTSE": "RY"})
+    figi = _FigiByExchange({"XTSE": "RY"})
 
     resolver = OpenFigiResolver(figi, "XETR", home_fallback=False)
 
@@ -255,13 +255,13 @@ class StubResolver:
     def __init__(self, result, handles: bool = True) -> None:
         self._result = result
         self._handles = handles
-        self.gefragt = 0
+        self.asked = 0
 
     def handles(self, isin: str) -> bool:
         return self._handles
 
     def resolve_isin(self, isin: str):
-        self.gefragt += 1
+        self.asked += 1
         return self._result
 
 
@@ -295,10 +295,10 @@ def test_ein_ausfall_schlaegt_ein_kenne_ich_nicht() -> None:
         StubResolver(NotFound()),
     )
 
-    ergebnis = resolver.resolve_isin("IE00B4L5Y983")
+    outcome = resolver.resolve_isin("IE00B4L5Y983")
 
-    assert isinstance(ergebnis, Unavailable)
-    assert "openfigi" in ergebnis.error
+    assert isinstance(outcome, Unavailable)
+    assert "openfigi" in outcome.error
 
 
 def test_die_kette_nennt_alle_ausgefallenen_quellen() -> None:
@@ -308,11 +308,11 @@ def test_die_kette_nennt_alle_ausgefallenen_quellen() -> None:
         StubResolver(Unavailable(error="yahoo: timeout")),
     )
 
-    ergebnis = resolver.resolve_isin("IE00B4L5Y983")
+    outcome = resolver.resolve_isin("IE00B4L5Y983")
 
-    assert isinstance(ergebnis, Unavailable)
-    assert "openfigi" in ergebnis.error
-    assert "yahoo" in ergebnis.error
+    assert isinstance(outcome, Unavailable)
+    assert "openfigi" in outcome.error
+    assert "yahoo" in outcome.error
 
 
 def test_ein_treffer_schlaegt_einen_vorherigen_ausfall() -> None:
@@ -330,14 +330,14 @@ def test_ein_treffer_schlaegt_einen_vorherigen_ausfall() -> None:
 
 def test_unzustaendige_quelle_wird_nicht_gefragt() -> None:
     """Eine Quelle, die nicht zuständig ist, kostet weder Netz noch Kontingent."""
-    unzustaendig = StubResolver(NotFound(), handles=False)
-    zustaendig = StubResolver(ResolvedInstrument(symbol="EUNL.DE"))
-    resolver = CompositeResolver(unzustaendig, zustaendig)
+    not_responsible = StubResolver(NotFound(), handles=False)
+    responsible = StubResolver(ResolvedInstrument(symbol="EUNL.DE"))
+    resolver = CompositeResolver(not_responsible, responsible)
 
     resolver.resolve_isin("IE00B4L5Y983")
 
-    assert unzustaendig.gefragt == 0
-    assert zustaendig.gefragt == 1
+    assert not_responsible.asked == 0
+    assert responsible.asked == 1
 
 
 def test_nur_unzustaendige_quellen_melden_das_auch_so() -> None:
@@ -475,18 +475,18 @@ def test_der_fallback_darf_nach_einem_unbrauchbaren_ticker_treffen(
 class _FakeSearch:
     """Ersetzt ``yf.Search`` — liefert eine je Test gesetzte Trefferliste."""
 
-    treffer: list[dict] = []
+    hits: list[dict] = []
 
     def __init__(self, isin: str) -> None:
-        self.quotes = list(self.treffer)
+        self.quotes = list(self.hits)
 
 
-def _mit_suche(monkeypatch, treffer: list[dict]) -> None:
+def _with_search(monkeypatch, hits: list[dict]) -> None:
     """Hängt die Fake-Suche an die Stelle, an der der Resolver sie holt."""
-    from app import resolver as resolver_modul
+    from app import resolver as resolver_module
 
-    _FakeSearch.treffer = treffer
-    monkeypatch.setattr(resolver_modul.yf, "Search", _FakeSearch)
+    _FakeSearch.hits = hits
+    monkeypatch.setattr(resolver_module.yf, "Search", _FakeSearch)
 
 
 def test_yahoo_nimmt_das_listing_der_bevorzugten_boerse(monkeypatch) -> None:
@@ -496,7 +496,7 @@ def test_yahoo_nimmt_das_listing_der_bevorzugten_boerse(monkeypatch) -> None:
     zuerst die Londoner Notierung. Wer sie nimmt, bekommt GBP statt EUR — und
     im Depot fällt die Position aus der Währungsrechnung.
     """
-    _mit_suche(
+    _with_search(
         monkeypatch,
         [
             {"symbol": "IS3M.L", "exchDisp": "LSE", "quoteType": "ETF"},
@@ -516,7 +516,7 @@ def test_yahoo_nimmt_den_ersten_treffer_wenn_die_boerse_fehlt(monkeypatch) -> No
 
     Genau dafür gibt es den Fallback — er darf nicht zum Nichts-Finden werden.
     """
-    _mit_suche(
+    _with_search(
         monkeypatch,
         [
             {"symbol": "AAPL", "exchange": "NMS", "exchDisp": "NasdaqGS", "quoteType": "EQUITY"},
@@ -532,7 +532,7 @@ def test_yahoo_nimmt_den_ersten_treffer_wenn_die_boerse_fehlt(monkeypatch) -> No
 
 
 def test_yahoo_folgt_der_konfigurierten_boerse(monkeypatch) -> None:
-    _mit_suche(
+    _with_search(
         monkeypatch,
         [
             {"symbol": "EQQQ.DE", "exchDisp": "XETRA", "quoteType": "ETF"},
@@ -554,7 +554,7 @@ def test_yahoo_bevorzugt_bei_boerse_ohne_suffix_das_symbol_ohne_punkt(
 
     Ohne diesen Zweig liefe die Regel leer: Jedes Symbol „endet auf ''".
     """
-    _mit_suche(
+    _with_search(
         monkeypatch,
         [
             {"symbol": "AAPL.DE", "exchange": "GER", "exchDisp": "XETRA", "quoteType": "EQUITY"},
@@ -570,7 +570,7 @@ def test_yahoo_bevorzugt_bei_boerse_ohne_suffix_das_symbol_ohne_punkt(
 
 
 def test_yahoo_ueberspringt_treffer_ohne_symbol(monkeypatch) -> None:
-    _mit_suche(
+    _with_search(
         monkeypatch,
         [
             {"exchDisp": "XETRA", "quoteType": "ETF"},
@@ -587,7 +587,7 @@ def test_yahoo_ueberspringt_treffer_ohne_symbol(monkeypatch) -> None:
 
 def test_yahoo_ohne_treffer_meldet_not_found(monkeypatch) -> None:
     """Die Suche war erreichbar und leer — das ist „kenne ich nicht"."""
-    _mit_suche(monkeypatch, [])
+    _with_search(monkeypatch, [])
     resolver = YFinanceResolver(default_exchange="XETR")
 
     assert isinstance(resolver.resolve_isin("IE00B3RBWM25"), NotFound)
@@ -601,7 +601,7 @@ def test_yahoo_bevorzugt_die_gattung_des_bestplatzierten_treffers(monkeypatch) -
     den ersten Suffix-Treffer nimmt, holt sich einen davon ins Haus, obwohl
     der bestplatzierte Treffer die richtige Gattung nennt.
     """
-    _mit_suche(
+    _with_search(
         monkeypatch,
         [
             {"symbol": "IS3M.L", "exchDisp": "LSE", "quoteType": "ETF"},
@@ -625,7 +625,7 @@ def test_yahoo_nimmt_die_boerse_auch_bei_abweichender_gattung(monkeypatch) -> No
     bestplatzierte, gewinnt weiterhin die Börse — sonst kippte die Regel bei
     jeder unsauberen `quoteType`-Angabe auf die Londoner Notierung zurück.
     """
-    _mit_suche(
+    _with_search(
         monkeypatch,
         [
             {"symbol": "IS3M.L", "exchDisp": "LSE", "quoteType": "ETF"},
