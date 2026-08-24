@@ -100,14 +100,19 @@ muss, ist kein Plugin).
 > **`core_version` steigt auf `2.0.0`** (Entscheidung Mike): Eine Anfrage, die
 > heute 200 liefert, liefert künftig 400.
 >
-> **Der Migrationspfad wird nicht eng gesehen** (Entscheidung Mike): Was sich
+> ~~**Der Migrationspfad wird nicht eng gesehen** (Entscheidung Mike): Was sich
 > einfach migrieren lässt, wird migriert; der Rest bleibt offen und bekommt
-> eine verständliche Meldung. `GOLD.SG` löst ohnehin ein Eintrag `XSTU`/`.SG`
-> in `EXCHANGES` — Stuttgart fehlt dort schlicht, Frankfurt mit `.F` ist dabei.
+> eine verständliche Meldung.~~ **Überholt nach Runde 16** — der Rest bleibt
+> *nicht* offen, er kommt gar nicht erst in den Bestand. Es gilt der Kasten
+> „Der Zwischenzustand — aufgehoben" weiter unten. `GOLD.SG` löst weiterhin ein
+> Eintrag `XSTU`/`.SG` in `EXCHANGES`, und **der muss vor der Migration da
+> sein** — sonst kostet die Ablehnung 257 Tageskurse.
 >
 > **Was damit ebenfalls entfällt:** die Entwurfsfrage aus Runde 3 nach einem
 > eigenen Status für von Hand gesetzte Zuordnungen. Den braucht es nur, *weil*
-> es manuelle Zuordnungen gibt. `identity_status` bleibt zweiwertig.
+> es manuelle Zuordnungen gibt. ~~`identity_status` bleibt zweiwertig.~~
+> **`identity_status` entfällt ersatzlos** — die Spalte hätte nur noch einen
+> Wert.
 >
 > **Was dazukommt:** Die Sichtbarkeit zeigt **zwei** Zustände statt einem —
 > offene Zuordnungen *und* „von der Vorzugsbörse abgewichen" mit beiden MICs
@@ -149,10 +154,12 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | bestehende Datenbank, Migration laufen lassen | zerlegbare Instrumente haben `ticker` und `mic`; **nicht** zerlegbare werden gemeldet, nicht geraten | ✅ [^a] | |
-| 1b | dieselbe Migration auf einer **Kopie des echten Bestands** | keine Zeile und kein Kurspunkt geht verloren, auch beim zweiten Start nicht | ✅ [^g] | |
-| 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`; `AAPL` wird **abgelehnt** statt geraten — die frühere Erwartung „bleibt offen" ist mit der Entscheidung nach Runde 16 hinfällig | ✅ [^b] | |
-| 2b | Instrument mit Fremdsymbol (`BRK-B`) | erscheint im **Migrationsbericht** mit Grund und verlorenen Kurspunkten — nicht mehr als offene Zeile im Bestand | ◑ [^c] | |
+| 1 | bestehende Datenbank, Migration laufen lassen | zerlegbare Instrumente haben `ticker` und `mic`; **nicht** zerlegbare werden abgelehnt und gemeldet, nicht geraten | ➖ [^a] | |
+| 1b | dieselbe Migration auf einer **Kopie des echten Bestands** | ~~keine Zeile und kein Kurspunkt geht verloren~~ **neu:** kein Kurspunkt einer *migrierten* Zeile geht verloren, auch beim zweiten Start nicht; abgelehnte Zeilen verschwinden **absichtlich** und stehen mit ihrer Kurspunktzahl im Bericht | ➖ [^g] | |
+| 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`; `AAPL` wird **abgelehnt** statt geraten | ➖ [^b] | |
+| 2b | Instrument mit Fremdsymbol (`BRK-B`) | erscheint im **Migrationsbericht** mit Grund und verlorenen Kurspunkten — nicht mehr als offene Zeile im Bestand | ➖ [^c] | |
+| 2b4 | Bericht und Ablehnung | entstehen in **derselben Transaktion**; ein zweiter Start dupliziert sie nicht; der Eintrag bleibt abrufbar, **nachdem** die aktive Zeile weg ist | | |
+| 2b5 | Auslieferung von Teil 2 | Vorabwarnung und Berichtsanzeige sind **verfügbar, bevor** der Startpfad die erste Zeile verwirft — beides kommt in derselben Übergabe | | |
 | 2b2 | nach erfolgreichem Start | Invariante `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`; kein Instrument-/Quote-Endpunkt serialisiert eine halbe Identität | | |
 | 2b3 | Reihenfolge Katalog vor Migration | `GOLD.SG` migriert (257 Tageskurse bleiben), wird **nicht** abgelehnt — der Katalog mit `XSTU` steht vorher | | |
 | ~~2c~~ | ~~derselbe Fall, manuelle Zuordnung~~ | **gestrichen** — der Symbolweg verlangt die Kombination künftig im Vertrag, damit entstehen die Fälle nicht mehr. Siehe Kasten „Die Handzuordnung ist gestrichen" | ➖ | |
@@ -174,6 +181,19 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 4 | Dashboard, Assets-Tabelle | unverändert; Yahoo- und extraETF-Links funktionieren | | |
 | 5 | neues Papier aufnehmen — **auf jedem Weg** | `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt | ✅ [^h] | |
 | 6 | `make test` | Backend, Plugin-API und Dashboard grün | ✅ [^f] | |
+
+> **⚠️ Zu allen Fußnoten unterhalb dieser Zeile** *(2026-08-24, nach Runde 16)*
+>
+> Sie beschreiben **Belege des alten Zielzustands** und stehen als Historie da,
+> nicht als geltende Erwartung. Wo sie offene `NULL`-Zeilen,
+> `identity_status = legacy_unresolved` oder „bleibt offen" als richtiges
+> Ergebnis führen, ist genau das seit der Entscheidung **falsch**: Solche Zeilen
+> kommen nicht mehr in den Bestand.
+>
+> Deshalb stehen die betroffenen Zeilen `#1`, `#1b`, `#2` und `#2b` in der
+> AI-Spalte wieder auf `➖`. Sie werden erst hochgestuft, wenn neue Tests
+> Ablehnung, Bericht und die `NULL`-Invariante belegen. Die **Human-Spalte
+> bleibt unberührt** — sie gehört Mike.
 
 [^a]: `tests/test_identity_migration.py`, **zwanzig** Tests gegen eine
     nachgestellte Alt-Datenbank mit vier bezeichnenden Fällen. Zerlegt werden `EUNL.DE` und
@@ -538,8 +558,10 @@ statt still `NULL` zu werden.
 Gemessen wurde die heutige `EXCHANGES`-Tabelle. Nicht abgedeckt sind neue oder
 unbekannte Suffixe, suffixlose Nicht-US-Symbole, von Hand eingetragene Symbole
 und Ticker, in denen ein Punkt zum Namen gehört (`BRK.A`). Die Migration muss
-solche Fälle **melden** statt zu raten — und danach braucht es einen Weg, sie
-von Hand zuzuordnen.
+solche Fälle **melden** statt zu raten — ~~und danach braucht es einen Weg, sie
+von Hand zuzuordnen.~~ **Seit Runde 16:** Sie werden abgelehnt und im Bericht
+genannt; der Weg zurück ist die Neuerfassung über den Aufnahmeweg, nicht eine
+Handzuordnung.
 
 ---
 

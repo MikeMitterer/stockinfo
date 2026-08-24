@@ -1,7 +1,7 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 17** ·
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 18** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
 „Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
 Entwurfsprüfung ohne Produktcode.
@@ -377,8 +377,12 @@ Plugin-Merge liefen die Seiten auseinander. Aus `region` abzuleiten war der
 Vorschlag aus Runde 9 und ist ebenfalls verworfen; beide Begründungen stehen
 beim Exchange-Descriptor.
 
-**Keine Schemaänderung.** Beide Zustände sind aus gespeicherten Spalten und der
-Konfiguration ableitbar.
+**Der Abweichungszustand braucht keine Schemaänderung** — er ist aus `mic`,
+`instruments.currency` und der Konfiguration ableitbar. Das galt in Runde 13
+noch für beide Zustände; seit Entscheidung 2 stimmt es nur noch für diesen.
+Der **Migrationsbericht** liest aus einem eigenen Speicher, und Teil 2 ändert
+das Schema ohnehin: `identity_status` fliegt raus, `ticker` und `mic` werden
+`NOT NULL`.
 
 ### C. Dashboard: ein Feld, zwei Formen
 
@@ -528,6 +532,21 @@ ihm eine Abfrage weg, die es heute gibt"*. Sie wird durch Entscheidung 3
 hinfällig und gehört mit berichtigt. Dazu die README-Zeile zu
 `GET /quote?symbol=…` (`README.md:207`), die nur das Suffix-Beispiel zeigt.
 
+**Ein dritter Begriff, seit Entscheidung 2:** alles, was den
+`legacy_unresolved`-Zwischenzustand als gültiges Ziel beschreibt. Zwei
+Fundstellen liegen **außerhalb** von T-21 und sind eigene versionierte
+Wissensquellen — sie werden mit berichtigt, sonst widersprechen sich die
+Dokumente gegenseitig:
+
+| Stelle | Was dort steht |
+|---|---|
+| `_tickets/T-24-rest-core-vertrag.md:194` | führt `identity_status = legacy_unresolved` als Vertragsgegenstand |
+| `docs/superpowers/specs/2026-08-19-plugin-system-design.md:667` | *„T-21 braucht Zwischenzustand … `NULL`-fähige Spalten plus `identity_status`, sonst ist ‚melden statt raten' technisch unmöglich"* — als **übernommen** markiert |
+
+Die zweite ist die heikelste: Sie steht als abgehakte Entscheidung in einem
+fremden Entwurf. Wer dort nachliest und T-21 nicht kennt, baut den
+Zwischenzustand nach.
+
 **Ausdrücklich nicht angefasst:** alle Stellen zu von Hand gepflegten
 **Kennzahlen** aus T-09 (`overrides`, `manual_fields`, `MetricEditor`). Andere
 Fachlichkeit, die derselbe Wortlaut mitfängt — rund dreißig Treffer, die beim
@@ -581,9 +600,28 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 | | Umfang | Vertrag |
 |---|---|---|
 | **1 — Börsenkatalog** | Descriptor, Union, `catalog`, die sechs neuen Einträge (**darunter `XSTU`**), `COLLECTOR_CODES` abgeleitet | **kein** Versionssprung — `/exchanges` liegt außerhalb des geschlossenen Core |
-| **2 — Migration ohne halbe Identität** | Migrieren-oder-ablehnen, Quarantäne und Bericht, `identity_status` ausbauen, `ticker`/`mic` auf `NOT NULL`, Invariante | intern; berührt den Core erst über die Pflichtfelder in Teil 3 |
+| **2 — Migration **mit** ihrer Meldung** | Migrieren-oder-ablehnen, Quarantäne, Berichtsspeicher, `identity_status` ausbauen, `ticker`/`mic` auf `NOT NULL`, Invariante — **und im selben Zug** die Vorabwarnung und die Berichtsanzeige im UI | intern; berührt den Core erst über die Pflichtfelder in Teil 3 |
 | **3 — Aufnahmeweg, atomar mit dem Vertrag** | `POST /instruments/intake`, Intake-Service mit `IntakeResult`, Fehlerkennungen, der strengere `/quote?symbol=`, `ticker`/`mic`/`listing_id` als Pflichtfelder, Aufnahme des Endpunkts in den Core-Vertrag, **`core_version 2.0.0`** und Snapshot | **alles in einer Übergabe** |
-| **4 — Sichtbarkeit, Dashboard, Inventur** | Abweichungszustand, Migrationsbericht im UI, Fehlerpfad in beiden Sprachen, Dokumentationsinventur | Snapshot nur, wenn der Core sich noch einmal ändert |
+| **4 — Abweichung, Fehlerpfad, Inventur** | Abweichungszustand sichtbar, Fehlerkennungen in beiden Sprachen, Dokumentationsinventur | Snapshot nur, wenn der Core sich noch einmal ändert |
+
+> ### ⚠️ Warum die Berichtsanzeige nicht nach Teil 2 rutschen darf
+>
+> Teil 2 ist die **einzige** Übergabe der Serie, die bestehende Daten wegwirft —
+> und sie läuft **automatisch beim Start**. Läge die Berichtsanzeige erst in
+> Teil 4, gäbe es ein Fenster, in dem der Startpfad Zeilen samt Kursen
+> entfernt, während der Benutzer weder die Vorabwarnung noch den Bericht sehen
+> kann. Die Zusage „wird konkret gemeldet" wäre dann für die Dauer einer
+> Auslieferung schlicht nicht eingelöst.
+>
+> Deshalb: **Ablehnung und ihre Sichtbarkeit gehören in dieselbe Übergabe.**
+> Wer sie trennen will, muss die Migration bis dahin gesperrt lassen — dann ist
+> Teil 2 aber nur zur Hälfte ausgeliefert und der Aufwand derselbe.
+>
+> **Für den Berichtseintrag gilt zusätzlich:** Ablehnung, Zählung der
+> verlorenen Kurspunkte und der dauerhafte Eintrag entstehen in **derselben
+> Transaktion**; ein zweiter Start dupliziert sie nicht; und der Eintrag bleibt
+> abrufbar, **nachdem** die aktive Zeile weg ist — sonst verschwände genau die
+> Information, die den Verlust erklären soll.
 
 > ### ⚠️ Die Reihenfolge ist kein Geschmacksfrage — sie entscheidet über Daten
 >
@@ -596,7 +634,7 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 > nichts wiedergutzumachen außer dem Backup. Deshalb steht er hier und nicht in
 > einer Fußnote.
 
-**Warum Teil 2 nicht teilbar ist:** Der strengere `/quote?symbol=` ändert einen
+**Warum Teil 3 nicht teilbar ist:** Der strengere `/quote?symbol=` ändert einen
 Endpunkt **im** geschlossenen Core — eine Anfrage, die heute `200` liefert,
 liefert dann `400`. Käme der Versionssprung erst in Teil 4, wäre der Endpunkt
 dazwischen öffentlich geändert, aber nicht zugesagt, und Verify `#2i` ließe sich
@@ -604,18 +642,21 @@ bis dahin gar nicht prüfen. Vertragsartefakt, `core_version` und Snapshot ziehe
 deshalb **mit der ersten Änderung am geschlossenen Core** um, nicht danach.
 Jede weitere Core-Änderung erneuert den Snapshot erneut.
 
-**Teil 2 korrigiert dabei auch die Vertragsprosa.**
+**Teil 3 korrigiert dabei auch die Vertragsprosa.**
 `docs/rest-core-contract.md:33-34` sagt heute pauschal, „die Schreibvorgänge des
-Dashboards" seien nicht im Core. Nimmt Teil 2 `POST /instruments/intake` in den
+Dashboards" seien nicht im Core. Nimmt Teil 3 `POST /instruments/intake` in den
 geschlossenen Core auf, wird diese Aussage falsch — und sie darf nicht bis zur
 Inventur in Teil 4 falsch stehen bleiben. Die Präzisierung gehört in **dieselbe**
 Übergabe wie der Endpunkt.
 
-**Teil 3 entscheidet sich am Scope:** Wird `/instruments/identity` in den
-geschlossenen Core aufgenommen, gehören Snapshot und SemVer in dieselbe
-Übergabe. Bleibt er ein interner Dashboard-Endpunkt — wie `/exchanges` und die
-Diagnosewege —, bleibt der Vertrag unverändert. Der T-3-Entwurf entscheidet das
-ausdrücklich, statt es offen zu lassen.
+**Teil 4 entscheidet sich am Scope:** Der Abweichungszustand braucht einen
+Leseendpunkt. Wird er in den geschlossenen Core aufgenommen, gehören Snapshot
+und SemVer in dieselbe Übergabe; bleibt er intern — wie `/exchanges` und die
+Diagnosewege —, bleibt der Vertrag unverändert. Der Teil-4-Entwurf entscheidet
+das ausdrücklich, statt es offen zu lassen. Den früher hier genannten Namen
+`/instruments/identity` gibt es nicht mehr: Er trug beide Zustände, und seit
+Entscheidung 2 ist der eine ein Migrationsbericht und der andere ein
+Betriebszustand.
 
 ## Testen
 
