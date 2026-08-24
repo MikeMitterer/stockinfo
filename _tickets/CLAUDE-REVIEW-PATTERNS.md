@@ -232,6 +232,18 @@ Dokumentationsinventur im selben übergebenen Entwurf genau diese Ticketstelle
 selbst aufführte, ohne sie zu korrigieren. Die Fundliste war damit vorhanden;
 die Fachregel wurde erneut nicht über den ganzen kanonischen Text angewendet.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Runde 20, Commit `5970806`: OUTBOX und Commit erklärten alle vier
+Reviewbefunde für umgesetzt und `/ready` ausdrücklich für im Pending-Zustand
+erreichbar. Die neu formulierte zentrale Allowlist erlaubte aber nur statische
+UI, `/health`, Vorschau, Bestätigung und Bericht; `/ready` fehlte unmittelbar
+vor seiner eigenen `200`-Anforderung. Zugleich wurde aus dem vorhandenen
+Dockerfile-Kommentar ungeprüft abgeleitet, der Docker-`HEALTHCHECK` starte den
+Container neu und steuere Traffic, obwohl die Projektkonfiguration nur einen
+Health-Status und `unless-stopped` definiert. Die Korrektur übernahm damit
+erneut das besprochene Beispiel, ohne seine neue Regel gegen die angrenzenden
+Vertragsverbraucher und ihre tatsächliche Betriebssemantik zu prüfen.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
