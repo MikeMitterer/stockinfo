@@ -173,12 +173,31 @@ Das ist keine neue Regel, sondern eine schon aufgeschriebene: Der Docstring von
 stammt aus dem Live-Quote."* Der Entwurf aus Runde 8 hat genau diese Zusage
 gebrochen, indem er beide Währungen aus der Tabelle nehmen wollte.
 
-**Die Prüfung ist Collector-bewusst.** Steht `DEFAULT_EXCHANGE` auf einem
-Sammelcode wie `US`, ist ein realer US-MIC **keine** Abweichung — sonst wäre bei
-der Vorgabe `US` jedes einzelne US-Papier fälschlich abweichend. Dafür bekommt
-`app/exchanges.py` eine ausdrückliche Zuordnung Sammelcode → Mitglieder
-(`US` → `{XNAS, XNYS, ARCX, XASE, BATS}`), abgeleitet aus dem `region`-Feld der
-Einträge, damit sie nicht als dritte Liste gepflegt werden muss.
+**Die Präferenz ist nicht immer ein Handelsplatz — der Antworttyp muss das
+tragen.** `DEFAULT_EXCHANGE` darf ein Sammelcode sein (`US`), und dann gibt es
+schlicht keinen „erwarteten MIC". Ein Antworttyp, der ihn zusagt, kann seinen
+eigenen Vertrag bei einer ganz normalen Konfiguration nicht erfüllen. Deshalb
+wird die Präferenz **typisiert** ausgeliefert:
+
+```
+preferred: { code: "US",   kind: "collector", currency: "USD" }
+actual:    { mic:  "XLON", name: "London LSE", currency: "GBp" }
+```
+
+Bei `kind: "mic"` trägt `code` einen echten MIC und `name` den Anzeigenamen; bei
+`kind: "collector"` gibt es keinen einzelnen Handelsplatz, aber sehr wohl eine
+erwartete Währung.
+
+**Die Abweichungsprüfung ist damit Collector-bewusst:**
+
+* `AAPL`/`XNAS` bei Präferenz `US` → **keine** Abweichung, `XNAS` gehört dazu.
+* `VOD`/`XLON` bei Präferenz `US` → **Abweichung**, mit `preferred.code = US`
+  und erwarteter Währung `USD`, aber ohne erwarteten MIC.
+* `VTI`/`ARCX` bei Präferenz `XETR` → Abweichung mit vollem erwartetem MIC.
+
+Die Mitgliedschaft (`US` → `{XNAS, XNYS, ARCX, XASE, BATS}`) wird aus dem
+`region`-Feld der Einträge abgeleitet, damit sie nicht als dritte Liste gepflegt
+werden muss — Sammelcode und Mitglieder tragen dieselbe Region.
 
 **Keine Schemaänderung.** Beide Zustände sind aus gespeicherten Spalten und der
 Konfiguration ableitbar.
@@ -186,17 +205,28 @@ Konfiguration ableitbar.
 ### C. Dashboard: ein Feld, zwei Formen
 
 Das bestehende Feld in `dashboard/src/components/Toolbar.vue:20-32` bleibt das
-einzige. Ergänzt werden:
+einzige.
 
-* **Parsing** in einem eigenen, testbaren Helfer (nicht in der Komponente):
-  ISIN erkannt → ISIN-Weg. Sonst am letzten Punkt trennen; vier Großbuchstaben
-  → MIC-Parameter, ein bis zwei Zeichen → Suffix, kein Punkt → Fehler mit Hilfe.
-* **`dashboard/src/api/paths.ts:24-35`** kann heute keinen `mic`-Parameter
-  bilden und bekommt ihn.
-* **Fehlerdurchreichung:** `useInstrumentActions.ts:23-40` ersetzt den
-  API-Detailtext durch das generische „Hinzufügen fehlgeschlagen". Genau dieser
-  Detailtext ist die Erklärung, die der Benutzer braucht — er wird durchgereicht.
-* **i18n-Hilfe** in `de.ts` und `en.ts` mit den drei Formen als Beispiel.
+**Der Core ist die einzige Parser- und Validierungsquelle.** Das Dashboard
+schickt den **rohen** Feldwert und beschränkt sich auf Darstellung, Transport
+und i18n. Der TypeScript-Parser aus dem vorigen Entwurf entfällt ersatzlos: Er
+hätte dieselbe Grammatik ein zweites Mal implementiert, und sobald T-30
+zusätzliche Formen erlaubt, klassifizierten UI und Core dieselbe Eingabe
+verschieden. Das macht den Umfang von Teil 3 kleiner, nicht größer.
+
+* **`dashboard/src/api/paths.ts:24-35`** bildet den Rohwert auf den
+  Aufnahme-Endpunkt ab — ein Parameter, nicht zwei.
+* **Fehlerrückmeldung als Code, nicht als Text.** Der Core liefert einen
+  strukturierten Fehler mit Kennung und Parametern (etwa
+  `identity.mic_required` mit dem erkannten Ticker); das Dashboard übersetzt ihn
+  über `de.ts`/`en.ts`. Ein deutsch formulierter Backendtext, der unverändert in
+  der englischen Oberfläche landet, wäre die falsche Lösung.
+* **Sicheres Lesen des Fehlerrumpfs.** `dashboard/src/api/client.ts:18-20` liest
+  Fehler heute mit `response.text()`, FastAPI liefert aber
+  `{"detail": …}` — der Benutzer sähe rohes JSON. Der Client parst künftig JSON
+  und fällt bei unbekannter Form auf `statusText` zurück.
+* **i18n-Hilfe** in `de.ts` und `en.ts` mit den drei Formen als Beispiel, plus
+  ein Auffangtext für unbekannte Fehlerkennungen.
 * **Anzeige:** Nach der Auflösung zeigt das UI Ticker und echten MIC mit
   lesbarem Börsennamen; die Werte kommen aus der Core-REST-API.
 
@@ -216,47 +246,81 @@ Laufzeitlogik importieren dieselben Konstanten.
 
 ### F. Dokumentationsinventur, diesmal vollständig
 
-Runde 8 hat zu Recht beanstandet, dass die Inventur aus einem zu engen Grep kam.
-Der breite Scan über `app/`, `tests/`, `dashboard/src/`, `docs/`, `README.md`
-und `plugin_api/src/` findet diese Zusagen zur gestrichenen Handzuordnung:
+Zweimal hintereinander stand hier „vollständig", und zweimal fehlten Stellen.
+Das lag an der Methode: Gesucht wurde nach **Formulierungen**, nicht nach dem
+**Begriff**. Ab hier steht deshalb nicht mehr „vollständig", sondern wonach
+gesucht wurde — nachvollziehbar und wiederholbar.
+
+**Suchausdruck** über `app/`, `tests/`, `dashboard/src/`, `docs/`, `README.md`,
+`plugin_api/src/` und `contract/`, ohne Vorfilter, jeder Treffer einzeln
+eingeordnet:
+
+```
+manuelle[rn]? zuordnung | handzuordnung | von hand (zu|ge)?(ordn|setz) |
+zur zuordnung | teil 3
+```
+
+Das ergibt siebzehn Treffer. Alle betreffen die gestrichene Handzuordnung:
 
 | Stelle | Was dort steht |
 |---|---|
 | **`app/resolver.py:304`** | **Benutzer-Fehlermeldung:** *„Ticker und MIC müssen von Hand gesetzt werden"* — die sichtbarste Stelle überhaupt |
-| `app/repository.py:455-459` | „Offen für Teil 3 … braucht dafür einen eigenen Status" |
-| `app/db.py:303-307` | „Später von Hand zuordnen" als Versprechen der Meldung |
-| `app/exchanges.py:201` | „eine von Hand gesetzte Zuordnung wie `RDS-A`/`XLON`" |
+| `app/repository.py:455,458` | „Offen für Teil 3 … braucht dafür einen eigenen Status" |
+| `app/db.py:306` | „Später von Hand zuordnen" als Versprechen der Meldung |
+| `app/exchanges.py:167` | „die Tabelle ist eine Auswahl der Börsen, die eine manuelle Zuordnung setzen soll" |
 | `app/exchanges.py:233` | „bis ihn jemand von Hand zuordnet" |
 | `app/models.py:60` | „noch nicht am REST-Rand (T-21, Teil 3)" — ändert sich mit D |
-| `docs/rest-core-contract.md:82-85` | „überlebt manuelle Zuordnung" |
+| `docs/rest-core-contract.md:84` | „überlebt manuelle Zuordnung" |
+| `tests/test_exchanges.py:82` | dieselbe Aussage wie `exchanges.py:167`, gespiegelt |
+| `tests/test_openfigi_lookup.py:36` | „Eine manuelle Zuordnung darf einen Wert …" |
 | `tests/test_identity_creation.py:121,187` | „die Liste offener Fälle (Teil 3)", „Vertrag ändert sich erst in Teil 3" |
-| `tests/test_identity_intake_paths.py:9,129` | „Teil 3 listet sie zur Zuordnung von Hand auf" |
+| `tests/test_identity_intake_paths.py:129` | „Teil 3 listet sie zur Zuordnung von Hand auf" |
+| `tests/test_identity_migration.py:206,385,439` | „später von Hand zuordnen", „ein von Hand gesetztes `VTI/XNAS`" |
 | `tests/test_quote_service.py:632` | „Teil 3 samt Vertragsversion" |
-| `tests/test_identity_migration.py:385,439` | „ein von Hand gesetztes `VTI/XNAS`" |
+| `_tickets/T-21-…:480` | „Ohne diesen Zustand ist ‚später von Hand zuordnen' ein Versprechen …" |
 
-Nicht betroffen und ausdrücklich **nicht** angefasst: alle Stellen zu „von Hand
-gepflegten **Kennzahlen**" aus T-09 (`overrides`, `manual_fields`). Das ist eine
-andere Fachlichkeit, die der Suchbegriff mitfängt.
+**Ein zweiter Begriff, der nicht im selben Ausdruck steckt:** die Begründung der
+Nachsicht am Aufnahmeweg in `app/services/quote_service.py:171-177` — *„nähme
+ihm eine Abfrage weg, die es heute gibt"*. Sie wird durch Entscheidung 3
+hinfällig und gehört mit berichtigt. Dazu die README-Zeile zu
+`GET /quote?symbol=…` (`README.md:207`), die nur das Suffix-Beispiel zeigt.
 
-## Was auf Teil 4 verschoben wird
+**Ausdrücklich nicht angefasst:** alle Stellen zu von Hand gepflegten
+**Kennzahlen** aus T-09 (`overrides`, `manual_fields`, `MetricEditor`). Andere
+Fachlichkeit, die derselbe Wortlaut mitfängt — rund dreißig Treffer, die beim
+Einordnen ausgeschieden sind.
 
-Befund 3 verlangt zusätzlich, dass **regionale Plugins** weitere MICs,
-Anzeigenamen und Suffixkonventionen deklarativ an den Core melden, der sie
-validiert, normalisiert und über REST ans UI liefert. Das ist richtig und folgt
-aus `2026-08-19-plugin-system-design.md:365-373` — aber:
+## Was in eigene Tickets geht
 
-* Der heutige Plugin-Vertrag hat **keinen Typ dafür**. Es wäre eine additive
-  Erweiterung von `plugin_api` samt `API_VERSION`-Sprung.
-* Teil 3 kommt ohne aus: Die fünf US-MICs und Stuttgart sind Core-Wissen und
-  gehören in `EXCHANGES`, nicht in ein Plugin.
-* Teil 1 brauchte neun Runden, Teil 2 sieben. Einen neuen Plugin-Typ in
-  denselben Hub zu legen wie Vertrag, Börsentabelle, Sichtbarkeit und Dashboard
-  macht den Diff unprüfbar.
+Entscheidung Mike, 2026-08-24: aufteilen. Zwei Themen sind aus diesem Entwurf
+herausgeschnitten und liegen als Tickets im Board:
 
-**Vorschlag zur Entscheidung durch Mike:** Teil 3 wie hier beschrieben, und die
-plugin-deklarierte Börsenauskunft wird ein eigenes Ticket. Die REST-Form aus C
-wird so entworfen, dass ein Plugin später zusätzliche Einträge beisteuern kann,
-ohne dass sich der Antworttyp ändert.
+* **[`T-29`](../../../_tickets/T-29-alias-lebenszyklus-und-providerwechsel.md)
+  — Provider-Alias: Eigentümer, Lebenszyklus, Wechsel.** Aus Runde 9, Finding 1.
+  Wer `symbol` besitzt, was beim Providerwechsel damit geschieht, Backup-Pflicht
+  und Best-Effort-Restore samt Importbericht. Revidiert außerdem
+  `T-25-quellenprofil-wechseln.md:94-110`.
+* **[`T-30`](../../../_tickets/T-30-plugin-boersenauskunft.md) — plugin-
+  deklarierte Börsenauskunft.** Aus Runde 8 (Finding 3) und Runde 9 (Finding 5).
+  Neuer `plugin_api`-Typ samt Merge-, Vorrang-, Kollisions-, Provenienz- und
+  Invalidierungsregeln.
+
+### Was Teil 3 deshalb ausdrücklich *nicht* tut
+
+**Teil 3 stärkt die Zusage zu `symbol` nicht.** Das Vertragsartefakt nennt die
+Spalte heute *„Anzeigename beim Kursanbieter"*
+(`contract/core-contract.json:13-16, 49, 55`), der Plugin-Entwurf einen
+*stabilen, App-eigenen Anzeigewert*
+(`2026-08-19-plugin-system-design.md:323-329, 379-411`). Diese Unschärfe wird in
+**T-29** aufgelöst, nicht hier. Der Sprung auf `core_version 2.0.0` betrifft
+`ticker`, `mic`, `listing_id` und den strengeren Aufnahmeweg — **nicht** die
+Bedeutung von `symbol`. Der Entwurf zementiert damit nichts, was T-29 später
+umwerfen müsste.
+
+**Die REST-Form der Börsenauskunft wird so entworfen, dass ein Plugin später
+Einträge beisteuern kann, ohne dass sich der Antworttyp ändert.** Jeder Eintrag
+trägt dafür von Anfang an ein Herkunftsfeld; heute steht dort immer `core`.
+Verify `#8` in T-30 prüft, ob das gehalten hat.
 
 ## Testen
 
@@ -269,13 +333,20 @@ ohne dass sich der Antworttyp ändert.
   Identität prüft, hätte den falschen Alias nicht bemerkt.
 * **Börsentabelle:** Eindeutigkeit der nichtleeren Suffixe; jeder Eintrag hat
   Währung und Anzeigename; die fünf US-MICs sind da.
-* **Abweichung:** `VTI/ARCX` bei `XETR` ist eine Abweichung mit `USD` gegen
-  `EUR`; **`AAPL/XNAS` bei Default `US` ist keine**; ein Papier an der
-  Vorzugsbörse taucht nicht auf; die tatsächliche Währung kommt aus den
-  Kursdaten, auch wenn die Tabelle etwas anderes erwarten ließe.
+* **Abweichung, alle drei Konfigurationen:** `VTI/ARCX` bei `XETR` → Abweichung
+  mit vollem erwartetem MIC, `USD` gegen `EUR`; **`AAPL/XNAS` bei Default `US`
+  → keine Abweichung**; **`VOD/XLON` bei Default `US` → Abweichung mit
+  `kind: collector`, erwarteter Währung `USD` und *ohne* erwarteten MIC**. Dazu:
+  ein Papier an der Vorzugsbörse taucht nicht auf, und die tatsächliche Währung
+  kommt aus den Kursdaten, auch wenn die Tabelle etwas anderes erwarten ließe.
 * **Vertrag:** `test_contract_openapi.py` gegen den Snapshot mit `2.0.0`.
-* **Dashboard:** Vitest für den Parsing-Helfer (alle drei Formen plus
-  Fehlerfälle), für die durchgereichte Fehlermeldung und für die beiden Zähler.
+* **Eingabe als Integrationstest, nicht als Parser-Unittest:** ISIN,
+  `TICKER.DE`, `TICKER.XETR`, unbekannte Form — jeweils durch den Core, weil dort
+  die einzige Grammatik lebt.
+* **Dashboard:** Vitest für den rohen Durchreichweg, für die Übersetzung der
+  Fehlerkennung in Deutsch **und** Englisch, für den Auffangtext bei unbekannter
+  Kennung, für das sichere Lesen eines JSON-Fehlerrumpfs und für die beiden
+  Zähler.
 * **Smoke:** `_tickets/T-21c-smoke.sh` auf eigenem Port — `GOLD.SG` vor und nach
   dem Börseneintrag, der 400er am Aufnahmeweg, beide Listen.
 

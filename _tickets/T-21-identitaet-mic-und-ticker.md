@@ -42,6 +42,23 @@ muss, ist kein Plugin).
 >
 > `#6` (`make test`) läuft in jeder Übergabe mit.
 
+> **Teil 3 ist aufgeteilt** *(Entscheidung Mike, 2026-08-24, nach Codex-Runde 9)*
+>
+> Der Entwurf war über das Ticket hinausgewachsen. Zwei Themen liegen jetzt als
+> eigene Tickets im Board:
+>
+> * [`T-29`](T-29-alias-lebenszyklus-und-providerwechsel.md) — **Provider-Alias:
+>   Eigentümer, Lebenszyklus, Wechsel.** Wer `symbol` besitzt, was beim
+>   Providerwechsel damit geschieht, Backup-Pflicht und Best-Effort-Restore.
+>   **Revidiert `T-25:94-110`.**
+> * [`T-30`](T-30-plugin-boersenauskunft.md) — **plugin-deklarierte
+>   Börsenauskunft.** Neuer `plugin_api`-Typ samt Merge-, Vorrang-, Kollisions-,
+>   Provenienz- und Invalidierungsregeln.
+>
+> **Teil 3 stärkt die Zusage zu `symbol` deshalb nicht.** Der Sprung auf
+> `core_version 2.0.0` betrifft `ticker`, `mic`, `listing_id` und den strengeren
+> Aufnahmeweg — nicht die Bedeutung von `symbol`. Die wird in T-29 geklärt.
+
 > **Die Handzuordnung ist gestrichen — der Symbolweg verlangt die Kombination
 > künftig im Vertrag** *(Claude, 2026-08-24; Entscheidungen Mike)*
 >

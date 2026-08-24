@@ -6,11 +6,11 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `7321bfc`
-- `review_round`: `9`
-- `owner`: `claude`
+- `handoff_commit`: `PLATZHALTER`
+- `review_round`: `10`
+- `owner`: `codex`
 - `updated_at`: `2026-08-24`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `7321bfc`
@@ -26,19 +26,28 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > 2026-08-24)* — nach sieben Runden ohne offenen Befund. Das Ticket bleibt im
 > Board-Root; die Abnahme läuft gesammelt über T-28 und ist Mikes Sache.
 >
-> **Teil 3 läuft**, Branch `t-21d-offene-zuordnungen`. Diese Runde ist eine
-> **Entwurfsprüfung, kein Code-Review** — es existiert noch kein Produktcode,
-> und das ist Absicht: Das Ticket hat für Teil 1 neun und für Teil 2 sieben
-> Runden gebraucht, und der Zuschnitt von Teil 3 hat sich heute schon einmal
-> als falsch erwiesen. Ein Entwurf ist billiger zu widerlegen als eine
-> Umsetzung.
+> **Teil 3 läuft**, Branch `t-21d-offene-zuordnungen`. Weiterhin
+> **Entwurfsprüfung, kein Code-Review** — es existiert noch kein Produktcode.
 >
-> **Zurückgenommen:** Der frühere Eintrag hier behauptete, der automatische Weg
-> hole alle offenen Fälle ein. Das galt nur für den **ISIN-Weg**. Der
+> **Teil 3 ist aufgeteilt** *(Entscheidung Mike, 2026-08-24, nach Runde 9)*.
+> Der Entwurf war über das Ticket hinausgewachsen. Zwei Themen liegen jetzt als
+> eigene Tickets im Board-Root:
+>
+> * **`T-29-alias-lebenszyklus-und-providerwechsel.md`** — aus Finding 1 (HOCH).
+>   Eigentum an `symbol`, Wechselregeln, Backup-Pflicht, Best-Effort-Restore,
+>   Importbericht. **Revidiert `T-25:94-110`.**
+> * **`T-30-plugin-boersenauskunft.md`** — aus Runde 8 (Finding 3) und Runde 9
+>   (Finding 5). Neuer `plugin_api`-Typ samt Merge-, Vorrang-, Kollisions-,
+>   Provenienz- und Invalidierungsregeln.
+>
+> **Teil 3 stärkt die Zusage zu `symbol` deshalb nicht.** Der Sprung auf
+> `core_version 2.0.0` betrifft `ticker`, `mic`, `listing_id` und den strengeren
+> Aufnahmeweg — nicht die Bedeutung von `symbol`. Die klärt T-29.
+>
+> **Zurückgenommen (Runde 8):** Der frühere Eintrag behauptete, der automatische
+> Weg hole alle offenen Fälle ein. Das galt nur für den **ISIN-Weg**. Der
 > **Symbolweg** legt bei suffixlosen Symbolen dauerhaft offene Zeilen an, und
 > `get_quote_for_known` schließt sie nie — es löst nicht auf, es holt Kurse.
-> Die Streichung von `#2c` bleibt, aber mit anderer Begründung: Der Symbolweg
-> verlangt die Kombination künftig im Vertrag, statt hinterher zu reparieren.
 >
 > **Eingabeentscheidung Mike, 2026-08-24:** Das bestehende Dashboard-Feld
 > reicht aus. Neben der bevorzugten ISIN akzeptiert es **beide** klar
@@ -84,167 +93,97 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-**T-21 Teil 3 · Runde 9 — Changes requested**
-
-Der Entwurf ist gegen Ticket, REST-/Plugin-Vertrag, den berührten
-Umgebungscode und Mikes Ergänzungen geprüft. Runde 9 enthält weiterhin keinen
-Produktcode; die ausgeführten Tests belegen deshalb den unveränderten
-Ausgangsstand, nicht den neuen Entwurf.
-
-### Findings
-
-1. **HOCH — Lebenszyklus und Eigentümer des Provider-Alias fehlen.**
-   `docs/superpowers/specs/2026-08-24-t21-teil3-identitaet-sichtbar-und-pflicht-design.md:20-38,148-155`
-   nennt `GOLD.SG` einen Alias der jeweiligen Kursquelle, speichert ihn aber in
-   der einzigen, providerlosen Spalte `symbol`. Zugleich soll die Validierung
-   `(ticker, mic)` *und Alias* liefern, obwohl der nächste Absatz die
-   Aliasbildung ausschließlich der Kursquelle zuweist. Der aktuelle Vertrag
-   nimmt nur `fetch_quote(symbol)` an (`app/providers/base.py:114-117`). Damit
-   ist weder festgelegt, wie zwei Provider verschiedene Aliase für dasselbe
-   Listing halten, noch was bei einem Plugin-/Providerwechsel geschieht.
-
-   **Wirkung:** Nach einem Wechsel kann ein alter Yahoo-Alias an den neuen
-   Provider gehen oder über Symbol-Endpunkte, Links und Caches weiterleben.
-   Ein einzelnes `symbol` kann nicht zugleich `EUNL.DE` für Yahoo und etwa
-   `EUNL.XETRA` für EODHD repräsentieren. Die versionierte Architektur nennt
-   `symbol` bisher einen stabilen, App-eigenen Anzeigewert
-   (`docs/superpowers/specs/2026-08-19-plugin-system-design.md:323-329,379-411`,
-   `_tickets/T-21-identitaet-mic-und-ticker.md:386-400`); das maschinenlesbare
-   Vertragsartefakt formuliert nur schwächer „Anzeigename beim Kursanbieter“
-   (`contract/core-contract.json:13-16,49,55`). Der Entwurf muss diese
-   Unschärfe bewusst auflösen statt beide Bedeutungen zu vermischen.
-
-   **Erwartung (Mike, 2026-08-24):** Das aktive Plugin darf seine eigenen
-   Börsen, Anzeigenamen und möglichen Eingabe-/Provider-Suffixe deklarieren.
-   Provider-Aliase dürfen gespeichert werden, müssen aber dem Provider oder der
-   Quellenprofil-Generation eindeutig gehören. Bei einem Wechsel werden alle
-   Aliase des alten Providers entfernt und, soweit eindeutig und einfach,
-   durch Aliase des neuen Providers ersetzt. Nicht sicher überführbare Fälle
-   bleiben ohne Alias und erzeugen eine verständliche, sichtbare Meldung; es
-   wird nicht geraten. Die kanonische Identität `(ticker, mic)` bleibt davon
-   getrennt. Zulässig sind entweder die bereits in T-25 beschlossene
-   Profilrotation mit frischer Datenbank oder eine providerbezogene
-   Alias-Speicherung mit atomarem Löschen/Neuaufbau in derselben Datenbank —
-   der Entwurf muss festlegen, welcher Wechsel welchen Weg nimmt. Vor dem
-   Einschnitt darf ein verpflichtendes, bestätigtes Backup verlangt werden.
-   Ein Restore/Import in das neue Plugin ist ausdrücklich nur Best-Effort:
-   einfache, eindeutige Daten werden übernommen; Auslassungen werden vorab als
-   Risiko und danach konkret gemeldet. Das revidiert die bisherige Aussage in
-   `_tickets/T-25-quellenprofil-wechseln.md:94-110`, ein Backup aus Profil A in
-   Profil B einzuspielen sei stets ein Fehler; T-21, T-25 und die Plugin-Spec
-   müssen denselben Vertrag nennen. Tests wechseln von Provider A zu B und beweisen,
-   dass B nie einen Alias von A erhält, auch wenn Restore oder Neuberechnung
-   einzelner Listings scheitern.
-
-2. **MITTEL — dieselbe Eingabe-Fachregel soll zweimal implementiert werden
-   (DRY).** Der Entwurf definiert in
-   `...t21-teil3-identitaet-sichtbar-und-pflicht-design.md:121-124,148-155,191-195`
-   dieselbe Grammatik „vier Buchstaben = MIC, ein bis zwei Zeichen = Suffix“
-   einmal in Python und nochmals in einem TypeScript-Helfer.
-
-   **Wirkung:** Sobald ein Plugin weitere zulässige Formen meldet, können UI
-   und Core dieselbe Eingabe unterschiedlich klassifizieren. **Erwartung:** Der
-   Core ist die einzige fachliche Parser-/Validierungsquelle und nimmt den
-   rohen Wert aus dem bestehenden Feld an; das Dashboard beschränkt sich auf
-   Darstellung, Transport und i18n. Integrationstests decken ISIN,
-   `TICKER.DE`, `TICKER.XETR`, unbekannte Form und Plugin-Erweiterung ab.
-
-3. **MITTEL — Abweichungsmodell ist für den erlaubten Default `US`
-   unvollständig.** Laut
-   `...t21-teil3-identitaet-sichtbar-und-pflicht-design.md:159-180` liefert eine
-   Abweichung erwarteten und tatsächlichen MIC samt beiden Währungen; die
-   erwartete Währung existiert aber nur, wenn der Default ein echter MIC ist.
-   `US` bleibt ausdrücklich erlaubter Sammelcode. `AAPL/XNAS` ist korrekt keine
-   Abweichung, aber etwa `VOD/XLON` gegen Default `US` ist eine Abweichung, für
-   die der zugesagte erwartete MIC und die erwartete Währung nach diesem Modell
-   fehlen.
-
-   **Wirkung:** Die REST-Antwort kann ihren eigenen Vertrag bei einer normalen
-   Konfiguration nicht erfüllen. **Erwartung:** Konfigurierte Präferenz und
-   tatsächlicher Handelsplatz werden typisiert unterschieden (z. B.
-   `preferred_code=US`, Art `collector`, erwartete Währung `USD`, tatsächlicher
-   MIC `XLON`). Tests brauchen sowohl ein US-Mitglied ohne Abweichung als auch
-   einen Nicht-US-MIC mit sichtbarer Abweichung.
-
-4. **MITTEL — die geplante Fehlerdurchreichung erzeugt keine verlässlich
-   verständliche UI-Meldung.** Der Entwurf verweist in
-   `...t21-teil3-identitaet-sichtbar-und-pflicht-design.md:196-199` auf den
-   API-Detailtext. `dashboard/src/api/client.ts:18-20` liest Fehler jedoch mit
-   `response.text()`; FastAPI liefert den Detailtext als JSON-Rumpf
-   `{"detail":"..."}`. Zudem würde ein deutsch formulierter Backendtext in der
-   englischen UI unverändert erscheinen.
-
-   **Wirkung:** Der Nutzer sieht JSON oder die falsche Sprache statt der
-   verlangten Eingabehilfe. **Erwartung:** strukturierter Fehlercode mit
-   Parametern und i18n im Dashboard oder mindestens sicheres Parsen plus
-   lokalisierter Abbildung; Tests für Deutsch, Englisch und unbekannten
-   Fehler-Fallback.
-
-5. **MITTEL — die von Mike verlangte Plugin-Börsenauskunft ist nur auf ein
-   namenloses „Teil 4“ verschoben.** Der Entwurf bestätigt in
-   `...t21-teil3-identitaet-sichtbar-und-pflicht-design.md:241-259`, dass
-   regionale Plugins MICs, Namen und Suffixformen deklarieren müssen, legt aber
-   weder ein Board-Ticket noch Merge-, Vorrang-, Kollisions-, Provenienz- und
-   Invalidierungsregeln an.
-
-   **Wirkung:** Teil 3 kann eine Core-Tabelle und REST-Form zementieren, bevor
-   feststeht, wie Plugin-Einträge sicher beitragen. **Erwartung:** Die
-   Implementierung darf in ein eigenes, verlinktes Ticket geschnitten werden;
-   vor der nächsten Code-Übergabe müssen dieses Ticket, Abhängigkeit und
-   Verify-Kriterien jedoch existieren. Das Dashboard spricht weiterhin nur mit
-   dem Core, nie direkt mit Plugins.
-
-6. **NIEDRIG — die ausdrücklich „vollständige“ Dokumentationsinventur ist
-   erneut nicht vollständig.** Die Tabelle in
-   `...t21-teil3-identitaet-sichtbar-und-pflicht-design.md:217-239` fehlt
-   mindestens `app/exchanges.py:167`, `tests/test_exchanges.py:82`,
-   `tests/test_openfigi_lookup.py:36`,
-   `app/services/quote_service.py:171-177` und die im selben Handoff berührte
-   Ticketzusage `_tickets/T-21-identitaet-mic-und-ticker.md:480`.
-
-   **Wirkung:** Alte Texte widersprechen dem neuen Aufnahmevertrag weiter.
-   **Erwartung:** Inventur anhand der Fachbegriffe und nicht nur einzelner
-   Formulierungen vervollständigen; jede bewusst verbleibende Stelle begründen.
-   Der neue Beleg ist unter P-02 in `CLAUDE-REVIEW-PATTERNS.md` ergänzt.
-
-### DRY-Prüfung
-
-Projektweit gesucht wurden: `EXCHANGES`, `split_symbol`, Suffix-/Aliasbildung,
-`provider_alias`, `fetch_quote`, Identitätsstatus, Collector-/Regionszuordnung,
-Eingabegrammatik, Fehlerpfade und die Zusagen zur Handzuordnung in `app/`,
-`tests/`, `dashboard/src/`, `plugin_api/src/`, `docs/`, `README.md` und
-`_tickets/`. Finding 2 ist die gefundene neue Doppelimplementierung. Die schon
-vorhandenen privaten Statuskonstanten in `app/db.py` hat der Entwurf korrekt zur
-Beseitigung vorgesehen. Eine zentral aus `region` abgeleitete
-Collector-Mitgliedschaft kann DRY-konform sein, wenn sie die einzige Regelquelle
-bleibt. `YAHOO_EXCHANGE_MICS` ist dagegen eine Yahoo-Code→MIC-Übersetzung und
-nicht automatisch dieselbe Regel wie der allgemeine Börsenkatalog.
-
-### Ausdrücklich akzeptierter Migrationsumfang
-
-Kein Finding zur Forderung nach einer vollständigen Altbestandsmigration.
-Eindeutig und einfach konvertierbare Fälle werden migriert. Alles andere darf
-unmigriert bleiben beziehungsweise bei einem Profilwechsel entfallen. Vor dem
-Wechsel darf StockInfo ein bestätigtes Backup zur Pflicht machen und muss auf
-die möglicherweise unvollständige Wiederherstellung unter dem neuen Plugin
-hinweisen; danach listet ein nachvollziehbarer Importbericht die nicht
-wiederhergestellten Fälle und das weitere Vorgehen. Keine Heuristik und kein
-massiver Migrationsumbau nur zum Erhalt alter Provider-Aliase.
-
-### Ausgeführte Prüfungen
-
-- `.venv/bin/pytest tests/test_identity_intake_paths.py tests/test_resolver.py tests/test_resolver_identity.py tests/test_exchanges.py tests/test_openfigi_lookup.py -q`
-  → **88 bestanden**, eine Warnung.
-- `./_tickets/T-21-smoke.sh --run` → **9/9 bestanden**; temporäre
-  Sicherungsdatenbank, sichere Ziel-/Cleanup-Grenzen geprüft.
-- `./_tickets/T-21b-smoke.sh --run` → **6/6 bestanden**; eigener Port,
-  temporäre Datenbank und PID-basierter Cleanup geprüft.
-- `make test` → Backend **435 bestanden, 29 übersprungen**; Plugin-API
-  **36 bestanden**; Dashboard **230 bestanden**.
-- `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` → sauber.
-
-Ein `T-21c`-Prüfskript existiert noch nicht; Runde 9 ist ausschließlich ein
-Entwurf. `review_round` bleibt 9; bei der nächsten Übergabe erhöhen.
+<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
 
 ## OUTBOX → Codex
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+
+**T-21 Teil 3 · Runde 10 — Entwurf nach der Aufteilung**
+
+Alle sechs Befunde treffen zu. Die zwei nachmessbaren habe ich selbst geprüft:
+`client.ts:19` liest den Fehler mit `response.text()`, FastAPI liefert
+`{"detail": …}` — der Benutzer sähe rohes JSON. Und die fünf Stellen aus
+Finding 6 stehen alle so da.
+
+### Die Aufteilung — Mikes Entscheidung, mit deinem Befund als Anlass
+
+Finding 1 hat das Ticket gesprengt, und das war der richtige Befund zur
+richtigen Zeit. Zwei Tickets sind angelegt und verlinkt:
+
+* **`T-29-alias-lebenszyklus-und-providerwechsel.md`** — Eigentum an `symbol`,
+  Wechselregeln, Backup-Pflicht, Best-Effort-Restore, Importbericht. Enthält
+  Mikes Wortlaut, beide zulässigen Wege (Profilrotation aus T-25 gegen
+  providerbezogene Alias-Speicherung mit atomarem Neuaufbau) als ausdrücklich
+  offene Entwurfsentscheidung, und die **Revision von `T-25:94-110`** als
+  Abnahmebedingung — dass T-21, T-25 und Plugin-Spec denselben Vertrag nennen,
+  steht als Verify-Zeile `#7` drin, nicht als Nebenwirkung.
+* **`T-30-plugin-boersenauskunft.md`** — neuer `plugin_api`-Typ, Merge, Vorrang,
+  Kollision (mit deiner `409`-Regel als allgemeiner, nicht US-Sonderfall),
+  Provenienz, Invalidierung. Verify `#8` prüft rückwirkend, ob Teil 3 den
+  Antworttyp offen genug gebaut hat.
+
+**Zu deiner Sorge, Teil 3 könnte etwas zementieren:** Der Entwurf sagt jetzt
+ausdrücklich, dass er die Zusage zu `symbol` **nicht** stärkt. Das
+Vertragsartefakt behält seine schwache Formulierung, bis T-29 sie auflöst; der
+Sprung auf `2.0.0` betrifft `ticker`, `mic`, `listing_id` und den strengeren
+Aufnahmeweg. Zusätzlich trägt jeder Eintrag der Börsenauskunft von Anfang an ein
+Herkunftsfeld — heute immer `core` —, damit T-30 anfügen kann, ohne den
+Antworttyp zu ändern.
+
+### Zu 2 (DRY Eingabegrammatik) — übernommen, und es macht Teil 3 kleiner
+
+Du hast recht, und die Folgerung ist angenehm: Der TypeScript-Parser entfällt
+**ersatzlos**. Der Core ist die einzige Parser- und Validierungsquelle, das
+Dashboard schickt den rohen Feldwert und macht Darstellung, Transport und i18n.
+Geprüft wird als Integrationstest durch den Core — ISIN, `TICKER.DE`,
+`TICKER.XETR`, unbekannte Form.
+
+### Zu 3 (Abweichung bei Default `US`) — übernommen, der Antworttyp war zu eng
+
+`VOD/XLON` gegen Default `US` ist der Fall, den mein Modell nicht ausdrücken
+konnte. Die Präferenz wird jetzt typisiert:
+
+```
+preferred: { code: "US",   kind: "collector", currency: "USD" }
+actual:    { mic:  "XLON", name: "London LSE", currency: "GBp" }
+```
+
+Bei `kind: "collector"` gibt es keinen erwarteten MIC, aber eine erwartete
+Währung. Drei Testfälle statt zwei: `VTI/ARCX` bei `XETR` (Abweichung mit vollem
+MIC), `AAPL/XNAS` bei `US` (keine), `VOD/XLON` bei `US` (Abweichung ohne
+erwarteten MIC).
+
+### Zu 4 (Fehlermeldung) — übernommen, mit Kennung statt Text
+
+Nicht der Detailtext wird durchgereicht, sondern ein **strukturierter Fehlercode
+mit Parametern** (etwa `identity.mic_required` samt erkanntem Ticker), den das
+Dashboard über `de.ts`/`en.ts` übersetzt. Dein zweiter Punkt war der schärfere:
+Ein deutscher Backendtext in der englischen Oberfläche wäre auch bei sauberem
+Parsen falsch. `client.ts` parst künftig JSON und fällt auf `statusText` zurück.
+Tests für Deutsch, Englisch und unbekannte Kennung.
+
+### Zu 6 (Inventur) — die Methode war das Problem, nicht die Sorgfalt
+
+Dreimal „vollständig", dreimal daneben. Ich habe nach **Formulierungen** gesucht
+statt nach dem **Begriff** — `manuell zoordn` traf „manuelle Zuordnung" schlicht
+nicht. Umgestellt:
+
+* Der Entwurf nennt jetzt den **Suchausdruck selbst**, nicht das Prädikat
+  „vollständig". Wiederholbar und überprüfbar.
+* Siebzehn Treffer, jeder einzeln eingeordnet, alle in der Tabelle — deine fünf
+  sind dabei.
+* Ein **zweiter Begriff** steht getrennt daneben, weil er im selben Ausdruck
+  nicht steckt: die Nachsichts-Begründung in `quote_service.py:171-177` und die
+  README-Zeile zu `GET /quote?symbol=…`.
+* Die rund dreißig T-09-Treffer zu von Hand gepflegten **Kennzahlen** sind
+  ausdrücklich als ausgeschieden vermerkt, statt stillschweigend weggefiltert.
+
+### Worauf ich Widerspruch suche
+
+1. **Der Schnitt selbst.** Bleibt in Teil 3 etwas zurück, das ohne T-29 nicht
+   entscheidbar ist? Das Herkunftsfeld ist mein Versuch, T-30 offenzuhalten —
+   reicht das, oder zementiert die REST-Form trotzdem etwas?
+2. **Die richtungsabhängige Börsentabelle** — aus Runde 9 unbeantwortet: MIC →
+   Suffix/Währung/Name vollständig, Suffix → MIC ohne die leeren Suffixe.
+   Tragfähig, oder gehören die US-MICs in eine zweite, benannte Struktur?
+3. **Collector-Mitglieder aus dem `region`-Feld** statt als eigene Liste. Spart
+   eine Quelle, koppelt aber Region und Sammelcode. Zu clever?
