@@ -50,6 +50,15 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > aufgelösten Werte werden in der Datenbank gehalten und anschließend im UI
 > angezeigt. Der Vertrag muss echten MIC (`XETR`) und Yahoo-Suffix (`.DE`)
 > begrifflich und syntaktisch eindeutig auseinanderhalten.
+>
+> **Plugin-Grenze:** Das Dashboard spricht nicht direkt mit Plugins. Ein
+> Resolver-Plugin liefert dem Core die aufgelöste Identität `(ticker, mic)`;
+> die jeweilige Kursquelle übersetzt diese Identität in ihr eigenes
+> Provider-Format. Zusätzliche MICs, Anzeigenamen und akzeptierte
+> Eingabe-/Suffixformen, die erst ein regionales Plugin kennt, müssen vom Plugin
+> deklarativ an den Core gemeldet werden. Der Core validiert und normalisiert
+> sie, speichert nur seine kanonischen Werte und liefert die für Hilfe, Auswahl
+> und Anzeige nötigen Informationen über seine REST-API an das UI.
 
 - Aktives Ticket: `T-21-identitaet-mic-und-ticker.md` (T-17, T-18, T-20 und
   T-24 sind codex-abgenommen und liegen bis zur gesammelten Abnahme über T-28
@@ -86,6 +95,10 @@ braucht dennoch folgende Korrekturen, bevor er umgesetzt werden kann:
    `GOLD.SG` fragen und den falschen Provider-Alias speichern. **Erwartung:**
    Einen widerspruchsfreien Vertrag festlegen und ausdrücklich beschreiben, wie
    aus `(ticker, mic)` der Provider-Alias für Abruf und Speicherung entsteht.
+   Dabei gilt die Plugin-Grenze aus
+   `plugin_api/src/stockinfo_plugin/types.py:54-71`: Der Resolver liefert keinen
+   Provider-Alias, sondern `ticker` und `mic`; jede Kursquelle setzt daraus ihr
+   eigenes Format zusammen (`_tickets/T-21-identitaet-mic-und-ticker.md:442-449`).
    Tests müssen Provider-Aufruf, gespeichertes `symbol`, `ticker` und `mic`
    gemeinsam prüfen. Nach Aufnahme von XSTU müssen `GOLD.SG` und `GOLD.XSTU`
    beide funktionieren und auf denselben Provider-Alias `GOLD.SG` sowie
@@ -122,8 +135,15 @@ braucht dennoch folgende Korrekturen, bevor er umgesetzt werden kann:
    dürfen aber intern nicht begrifflich vermischt werden; beide normalisieren
    zu Provider-Alias `EUNL.DE` und Identität `EUNL/XETR`. Nach der Auflösung
    müssen Ticker und echter MIC gespeichert, von der API geliefert und im UI
-   angezeigt werden. Tests decken ISIN+Default-Börse, beide Inline-Formen,
-   deren identisches Ergebnis sowie den erklärenden Fehlerfall ab.
+   angezeigt werden. Hilfetexte, Auswahlwerte und lesbare Börsenangaben kommen
+   dabei über den Core, nicht durch einen direkten Dashboard↔Plugin-Zugriff.
+   Weil regionale Plugins laut
+   `docs/superpowers/specs/2026-08-19-plugin-system-design.md:365-373` weitere
+   MICs und Symbolkonventionen mitbringen können, muss der Entwurf auch deren
+   deklarative Bereitstellung, Validierung und REST-Ausgabe festlegen; der
+   heutige Plugin-Vertrag besitzt dafür noch keinen Typ. Tests decken
+   ISIN+Default-Börse, beide Inline-Formen, deren identisches Ergebnis, eine
+   plugin-gelieferte Börseninformation und den erklärenden Fehlerfall ab.
 
 4. **Mittel — Die behauptete vollständige Dokumentationsinventur lässt mehrere
    Zusagen zur gestrichenen Handzuordnung stehen.**
