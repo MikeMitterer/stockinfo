@@ -173,6 +173,15 @@ mindestens in `app/repository.py`, `app/resolver.py`, `app/db.py` und
 `docs/rest-core-contract.md` stehen. Die angekündigte Dokumentationskorrektur
 hatte ihren behaupteten Scope damit nicht vollständig inventarisiert.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Runde 9, Commit `7321bfc`: Nach dem Befund aus Runde 8 trug der Entwurf
+den Titel „Dokumentationsinventur, diesmal vollständig“ und nannte einen breiten
+Scan über Produktcode, Tests, Dashboard, Dokumentation und Plugin-API. Dennoch
+fehlten mindestens `app/exchanges.py:167`, `tests/test_exchanges.py:82`,
+`tests/test_openfigi_lookup.py:36`, `app/services/quote_service.py:171-177` und
+die weiterhin widersprechende Zusage im selben Handoff berührten
+`_tickets/T-21-identitaet-mic-und-ticker.md:480`.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
