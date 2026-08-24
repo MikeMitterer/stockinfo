@@ -182,6 +182,15 @@ fehlten mindestens `app/exchanges.py:167`, `tests/test_exchanges.py:82`,
 die weiterhin widersprechende Zusage im selben Handoff berührten
 `_tickets/T-21-identitaet-mic-und-ticker.md:480`.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Runde 10, Commit `2421f65`: Die Korrektur erklärte, der Entwurf nenne
+jetzt nicht mehr das Prädikat „vollständig“, ließ aber unmittelbar über dieser
+Aussage die Überschrift „Dokumentationsinventur, diesmal vollständig“ stehen.
+Zugleich sollte der TypeScript-Parser „ersatzlos“ entfallen und der Core die
+einzige Parserquelle sein, ohne den bereits produktiven ISIN-Parser
+`dashboard/src/api/paths.ts:isIsin` und dessen Routing in
+`useInstrumentActions.add` als zu entfernende Stellen zu erfassen.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
