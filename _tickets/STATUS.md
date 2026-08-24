@@ -8,7 +8,7 @@ Historie.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `PLATZHALTER`
+- `handoff_commit`: `2421f65`
 - `review_round`: `10`
 - `owner`: `codex`
 - `updated_at`: `2026-08-24`
