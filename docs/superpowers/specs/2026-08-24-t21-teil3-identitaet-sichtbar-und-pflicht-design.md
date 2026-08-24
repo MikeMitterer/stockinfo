@@ -1,7 +1,9 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, nicht umgesetzt
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, Runde 9 ·
+**Vorlauf:** Runde 8 hat fünf Befunde gebracht; die zwei „Hoch"-Befunde waren
+Entwurfsfehler und sind hier behoben.
 
 ## Worum es geht
 
@@ -10,205 +12,280 @@ das Anlegen neuer Papiere darauf umgestellt. Teil 3 schließt das Ticket ab: Was
 sich nicht zuordnen lässt, wird **sichtbar**, und der Weg, auf dem unzuordenbare
 Zeilen überhaupt entstehen, wird im **Vertrag** geschlossen.
 
-Der ursprüngliche Zuschnitt sah eine Handzuordnung über die Oberfläche vor
-(Verify `#2c`) und dafür einen eigenen `identity_status`, den der automatische
-Weg nicht anfasst (Frage aus Review-Runde 3). Beides entfällt — siehe
-„Entscheidungen".
+## Drei Begriffe, die nicht vermischt werden dürfen
 
-## Ausgangslage, gemessen
+Der schwerste Fehler in Runde 8 kam daher, dass der Entwurf zwei verschiedene
+Dinge „Symbol" nannte. Deshalb zuerst die Begriffe:
 
-Offene Zuordnungen entstehen aus zwei Quellen, nicht aus einer:
+| Begriff | Beispiel | Wer ihn führt |
+|---|---|---|
+| **Kanonische Identität** | `(GOLD, XSTU)` | der Core — gespeichert in `ticker`/`mic` |
+| **Provider-Alias** | `GOLD.SG` | die jeweilige Kursquelle — gespeichert in `symbol` |
+| **Eingabeform** | `GOLD.SG` oder `GOLD.XSTU` | der Benutzer im Dashboard-Feld |
+
+`app/services/quote_service.py:255` fragt die Quelle mit
+`self._quote_provider.fetch_quote(resolved.symbol)` und speichert
+`symbol=resolved.symbol`. Der Provider-Alias ist also nicht schmückendes
+Beiwerk, sondern **abrufrelevant** — ein Weg, der nur `(ticker, mic)` liefert,
+fragt Yahoo nach `GOLD` statt `GOLD.SG` und speichert den falschen Alias.
+
+**Die Ableitungsrichtung ist festgelegt:** Aus der Identität entsteht der Alias,
+nie umgekehrt. Für Yahoo gilt `alias = ticker + EXCHANGES[mic].suffix`. Die
+Plugin-Grenze bleibt gewahrt (`plugin_api/src/stockinfo_plugin/types.py:54-71`):
+Ein Resolver liefert `(ticker, mic)`, und **jede Kursquelle setzt daraus ihr
+eigenes Format zusammen**. Der Core kennt die Yahoo-Ableitung nur, weil Yahoo
+heute die eingebaute Quelle ist; sie lebt bei der Quelle, nicht in der
+Validierung.
+
+## Ausgangslage, gemessen und von Codex bestätigt
+
+Offene Zuordnungen entstehen aus zwei Quellen:
 
 | Quelle | Wann | Heilt sich selbst? |
 |---|---|---|
 | Migration (`app/db.py:277`) | beim Start, offline, Altbestand | ja, sobald eine ISIN-Auflösung läuft |
 | Symbolweg (`app/services/quote_service.py:179`) | laufend, bei jedem suffixlosen Symbol | **nein** |
 
-Belegt mit einer Wegwerf-Sonde gegen eine frische Datenbank: Eine über
-`GET /quote?symbol=AAPL` angelegte Zeile bleibt bei jedem weiteren Abruf offen.
-Der Grund steht im Kommentar von `get_quote_for_known` selbst — *„der Scheduler
-löst nichts auf, er holt nur Kurse."* Die Auffrischung zieht die Zuordnung aus
-`split_symbol(symbol)`, und das liefert für `AAPL` dauerhaft `(None, None)`.
+`get_quote_for_known` löst nicht auf — *„der Scheduler löst nichts auf, er holt
+nur Kurse."* Für `AAPL` bleibt `split_symbol` dauerhaft `(None, None)`.
 
-Der ISIN-Weg dagegen liefert immer eine vollständige Identität oder einen
-definierten Fehler. Gemessen mit `DEFAULT_EXCHANGE=XETR` gegen die echte Kette:
-
-| ISIN | `STRICT_EXCHANGE=false` | `STRICT_EXCHANGE=true` |
-|---|---|---|
-| `IE00B4L5Y983` | `EUNL.DE` → `EUNL`/`XETR` | gleich |
-| `US0378331005` | `APC.DE` → `APC`/`XETR` | gleich |
-| `US9229087690` | `VTI` → `VTI`/`ARCX` (Yahoo-Fallback) | `NotFound` (404) |
+Der ISIN-Weg liefert immer eine vollständige Identität oder einen definierten
+Fehler. Mit `DEFAULT_EXCHANGE=XETR`: `IE00B4L5Y983` → `EUNL.DE`/`XETR`,
+`US0378331005` → `APC.DE`/`XETR`, `US9229087690` → `VTI`/`ARCX`; mit
+`STRICT_EXCHANGE=true` wird aus der dritten Zeile `NotFound`.
 
 ## Entscheidungen
 
-**1. Die Handzuordnung entfällt** (Verify `#2c` gestrichen, Entscheidung Mike).
-Statt offene Zeilen nachträglich von Hand zu reparieren, entstehen sie gar nicht
-erst: Der Symbolweg verlangt künftig die vollständige Kombination. Damit
-entfällt auch die Statusfrage aus Runde 3 — einen Status, den der automatische
-Weg nicht anfasst, braucht es nur, *weil* es manuelle Zuordnungen gibt.
+**1. Die Handzuordnung entfällt** (Verify `#2c`, Entscheidung Mike). Statt offene
+Zeilen zu reparieren, entstehen sie nicht mehr: Der Symbolweg verlangt die
+vollständige Kombination. Damit entfällt auch die Statusfrage aus Runde 3;
 `identity_status` bleibt zweiwertig.
 
 **2. Der Migrationspfad wird nicht eng gesehen** (Entscheidung Mike). Was sich
 einfach migrieren lässt, wird migriert; der Rest bleibt offen und bekommt eine
 verständliche Meldung. Kein Reparaturwerkzeug für Altbestand.
 
-**3. Bewusste Umkehr gegenüber Teil 2.** Teil 2 hat den Symbolweg absichtlich
-nachsichtig gelassen; der Kommentar in `quote_service.py` argumentiert wörtlich
-dagegen, die Auskunft zu verweigern, weil das *„eine Abfrage wegnähme, die es
-heute gibt"*. Diese Entscheidung wird hier umgedreht. Das ist keine Drift,
-sondern eine Abwägung mit neuem Wissen: Die weggenommene Abfrage ist genau die,
-die dauerhaft unzuordenbare Zeilen erzeugt. Der Parameter ist zudem seit jeher
-als *„Vollständiges Yahoo-Symbol inkl. Suffix"* dokumentiert — suffixlose
-Symbole waren nie zugesagt, sie wurden nur angenommen.
+**3. Bewusste Umkehr gegenüber Teil 2.** Der Kommentar in `quote_service.py`
+argumentiert dagegen, die Auskunft zu verweigern. Neu ist das Wissen, dass genau
+diese Abfrage dauerhaft unzuordenbare Zeilen erzeugt. Der Parameter ist zudem
+seit jeher als *„Vollständiges Yahoo-Symbol inkl. Suffix"* dokumentiert.
 
-**4. `core_version` steigt auf `2.0.0`** (Entscheidung Mike). Eine Anfrage, die
-heute 200 liefert, liefert künftig 400. Nach der Regel im Artefakt
-(*„Pflichtfeld entfernt oder unverträglich geändert"*) ist das ein Major, auch
-wenn die betroffene Form nie dokumentiert war. Die Alternative — ein Minor mit
-der Begründung, suffixlose Symbole seien nie zugesagt gewesen — wurde verworfen:
-Ein Konsument, dessen Aufruf bricht, hat von dieser Begründung nichts.
+**4. `core_version` steigt auf `2.0.0`** (Entscheidung Mike).
+
+**5. Ein Eingabefeld, zwei erlaubte Formen** (Entscheidung Mike). Bevorzugt die
+ISIN; sonst im **selben** Feld entweder Provider-Suffix (`EUNL.DE`) oder echter
+MIC (`EUNL.XETR`). Kein zweites Feld. Beide Formen normalisieren auf dieselbe
+Identität `EUNL`/`XETR` und denselben Alias `EUNL.DE`.
+
+## Die Börsentabelle wird vollständig
+
+`EXCHANGES` führt heute 33 Einträge und **keinen einzigen echten US-MIC** —
+`ARCX`, `XNAS`, `XNYS`, `XASE` und `BATS` fehlen, `US` steht als Sammelcode mit
+Währung `USD`. Das trägt weder die Alias-Ableitung noch die Währungsanzeige.
+
+Teil 3 ergänzt sie:
+
+```python
+"XSTU": ExchangeDef(".SG", "Stuttgart",   "germany", "EUR"),
+"XNAS": ExchangeDef("",    "NASDAQ",      "usa",     "USD"),
+"XNYS": ExchangeDef("",    "NYSE",        "usa",     "USD"),
+"ARCX": ExchangeDef("",    "NYSE Arca",   "usa",     "USD"),
+"XASE": ExchangeDef("",    "NYSE American","usa",    "USD"),
+"BATS": ExchangeDef("",    "Cboe BZX",    "usa",     "USD"),
+```
+
+**Die Tabelle wird damit richtungsabhängig, und das ist beabsichtigt:**
+
+* **MIC → Suffix, Währung, Anzeigename** ist ab jetzt **vollständig**. Daran
+  hängen Alias-Ableitung und Anzeige.
+* **Suffix → MIC** bleibt **eindeutig**, weil das leere Suffix aus dieser
+  Richtung ausgeschlossen ist. Fünf US-MICs teilen es sich; welcher gemeint ist,
+  sagt nur die Auflösung oder der Benutzer. Genau diesen Fall benennt der
+  Plugin-Entwurf schon vorab (`2026-08-19-plugin-system-design.md:365-373`).
+
+`test_kein_suffix_ist_doppelt_vergeben` prüft künftig die Eindeutigkeit **der
+nichtleeren** Suffixe und zusätzlich, dass jeder Eintrag Währung und
+Anzeigename hat. Der Sammelcode `US` bleibt bestehen; er ist der Vorgabewert für
+`DEFAULT_EXCHANGE` und keine Handelsplatzangabe.
 
 ## Die Pflicht-Kombinationen für den Benutzer
 
-Am Ende muss immer `(kanonischer Ticker, echter MIC)` herauskommen. Drei Wege
-führen dorthin:
+Am Ende muss immer `(kanonischer Ticker, echter MIC)` herauskommen:
 
-| Weg | Pflicht | Woher `(ticker, mic)` kommt | ISIN nötig? |
-|---|---|---|---|
-| **1 — ISIN** `GET /quote/{isin}` | ISIN | StockInfo löst auf, Vorzugsbörse entscheidet | ist der Weg |
-| **2 — Symbol mit bekanntem Suffix** `GET /quote?symbol=EUNL.DE` | Symbol | Zerlegung: `EUNL` + `.DE` → `XETR` | nein |
-| **3 — Symbol + MIC** `GET /quote?symbol=AAPL&mic=XNAS` | **beides** | direkt vom Aufrufer | nein |
+| Weg | Eingabe | Ergebnis |
+|---|---|---|
+| **1 — ISIN** | `IE00B4L5Y983` | Auflösung wählt das Listing, Vorzugsbörse entscheidet |
+| **2 — Ticker + Suffix** | `EUNL.DE` | `(EUNL, XETR)`, Alias `EUNL.DE` |
+| **3 — Ticker + MIC** | `EUNL.XETR`, `AAPL.XNAS`, `GOLD.XSTU` | `(EUNL, XETR)` / `(AAPL, XNAS)` / `(GOLD, XSTU)`, Alias `EUNL.DE` / `AAPL` / `GOLD.SG` |
+
+**Die Trennung ist syntaktisch eindeutig**, nicht geraten: Suffixe sind ein bis
+zwei Zeichen (`.F`, `.DE`, `.TO`), echte MICs genau vier (`XETR`, `XNAS`). Ein
+Token von vier Großbuchstaben hinter dem Punkt ist ein MIC, alles Kürzere ein
+Suffix. Beide werden gegen `EXCHANGES` geprüft, nichts wird erraten.
 
 Ergänzende Regeln:
 
-* **MIC wird Pflicht**, sobald das Symbol keinen in `EXCHANGES` bekannten Suffix
-  hat. Er muss ein echter MIC sein: `mic=US` wird abgelehnt, weil `US` in
-  `COLLECTOR_CODES` steht und offenlässt, ob NYSE oder NASDAQ gemeint ist.
-* **Die ISIN ist für keinen Kurs Pflicht.** Sie ist aber Voraussetzung für die
-  ETF-Anreicherung über justETF — Weg 2 und 3 liefern Kurse ohne TER,
-  Fondsgröße und Thesaurierung.
-* **Nicht kanonische Ticker gehen auf keinem Weg außer 1.** `is_canonical_ticker`
-  lässt nur `[A-Z0-9]` zu; `BRK-B`, `BRK/B` und `BRK.B` sind drei Schreibweisen
-  desselben Papiers. Ein mitgegebener MIC rettet das nicht — `symbol=BRK-B&mic=XNYS`
-  bleibt abgelehnt. Für solche Papiere liefert die ISIN die kanonische
-  Schreibweise mit.
-* **Widerspruch ist ein Fehler.** `symbol=EUNL.DE&mic=XLON` — Suffix sagt Xetra,
-  Parameter sagt London — führt zu 400 mit benanntem Widerspruch. Einen der
-  beiden gewinnen zu lassen wäre genau das Raten, das dieses Ticket abschafft.
-* **Mit `mic` muss das Symbol der reine Ticker sein.** `symbol=GOLD.SG&mic=XSTU`
-  wird abgelehnt: `.SG` ist kein bekanntes Suffix, also bleibt `GOLD.SG` als
-  Ticker stehen — und der ist wegen des Punktes nicht kanonisch. Richtig ist
-  `symbol=GOLD&mic=XSTU`. Ein unbekanntes Suffix bei einem gesetzten `mic`
-  stillschweigend abzuschneiden hieße raten: In `EUNL.DE` trennt der Punkt die
-  Börse ab, in `BRK.B` die Anteilsklasse, und von außen ist beides dasselbe
-  Zeichen. Der Fehlertext nennt die richtige Form.
+* **Ein nackter Ticker ohne beides wird abgelehnt** — `AAPL` allein ergibt keine
+  Identität. Der Fehlertext nennt beide Auswege mit Beispiel.
+* **Widerspruch ist ein Fehler.** Führt die Eingabe zu zwei verschiedenen MICs,
+  gibt es 400 mit benanntem Widerspruch, statt einen gewinnen zu lassen.
+* **`US` als Eingabe wird abgelehnt**, weil es offenlässt, ob NYSE oder NASDAQ
+  gemeint ist. Als `DEFAULT_EXCHANGE` bleibt es zulässig — dort heißt es „such
+  in den USA", nicht „dieser Handelsplatz".
+* **Nicht kanonische Ticker gehen nur über Weg 1.** `is_canonical_ticker` lässt
+  nur `[A-Z0-9]` zu; `BRK-B`, `BRK/B` und `BRK.B` sind drei Schreibweisen
+  desselben Papiers. Auch `BRK-B.XNYS` bleibt abgelehnt — die ISIN liefert die
+  kanonische Schreibweise mit.
+* **Nach Aufnahme von `XSTU` müssen `GOLD.SG` und `GOLD.XSTU` beide
+  funktionieren** und auf dieselbe Identität `(GOLD, XSTU)` sowie denselben
+  Alias `GOLD.SG` führen. Die Regel aus Runde 8, die `GOLD.SG` verwarf, ist
+  **gestrichen** — sie widersprach dem Stuttgart-Eintrag im selben Entwurf.
 
 ## Was gebaut wird
 
-### A. Der Vertrag am Symbolweg
+### A. Der Vertrag am Aufnahmeweg
 
 `GET /quote` bekommt einen optionalen Query-Parameter `mic`. Die Prüfung sitzt
-vor dem Service, im Router beziehungsweise in `app/routers/validation.py`, wo
-die übrigen Eingabeprüfungen schon liegen.
+in `app/routers/validation.py`, wo die übrigen Eingabeprüfungen liegen, und
+liefert `(ticker, mic)` **und** den Alias.
 
-Ablauf: Symbol normalisieren → `split_symbol` → bekanntes Suffix? Dann muss ein
-mitgegebener `mic` dazu passen, sonst 400. Kein bekanntes Suffix? Dann ist `mic`
-Pflicht, sonst 400. Der 400er nennt beide Auswege wörtlich.
+Der Alias entsteht in der Kursquelle, nicht in der Validierung — sonst wäre die
+Plugin-Grenze verletzt. Der Yahoo-Adapter bekommt dafür eine Funktion
+`provider_alias(ticker, mic)`; sie ist die einzige Stelle, die
+`ticker + suffix` bildet.
 
-### B. Stuttgart in die Börsentabelle
+### B. Sichtbarkeit: zwei Zustände
 
-`"XSTU": ExchangeDef(".SG", "Stuttgart", "germany", "EUR")` in `EXCHANGES`.
-`test_kein_suffix_ist_doppelt_vergeben` deckt die Kollisionsfreiheit ab. Damit
-löst sich `GOLD.SG` — der einzige offene Fall im echten Bestand — ohne
-Handzuordnung, und jedes künftige Stuttgarter Papier gleich mit.
-
-### C. Sichtbarkeit: zwei Zustände, nicht einer
-
-`GET /instruments/identity` liefert beides:
+`GET /instruments/identity` liefert:
 
 1. **Offen** — `identity_status = legacy_unresolved`, mit **Grund** je Fall
-   (`suffixlos`, `Suffix unbekannt`, `fremde Schreibweise`). Der Grund entsteht
-   serverseitig aus `split_symbol` und `is_canonical_ticker`; im Dashboard ist
-   er nicht rekonstruierbar. Deckt Verify `#2b`.
-2. **Von der Vorzugsbörse abgewichen** — `mic != default_exchange`, mit dem MIC
-   und der Währung beider Seiten: *erwartet `XETR` (EUR), tatsächlich `ARCX`
-   (USD)*. Heute ist das nur die Logzeile `resolve_foreign_exchange`; im
-   Dashboard sieht niemand, dass ein Papier in USD hereinkommt, obwohl XETR
-   eingestellt ist. Das ist die Fehlerklasse, die im Depot weh tut.
+   (`suffixlos`, `Suffix unbekannt`, `fremde Schreibweise`). Deckt Verify `#2b`.
+2. **Von der Vorzugsbörse abgewichen** — mit erwartetem und tatsächlichem MIC,
+   Anzeigenamen und **beiden Währungen**.
 
-**Keine Schemaänderung nötig.** Die Abweichung ist ableitbar: Die Zeile hat
-`mic`, die Konfiguration hat `default_exchange`, und `EXCHANGES` kennt zu beiden
-die Währung. Nichts wird zusätzlich gespeichert, nichts muss migriert werden.
+**Die Währung kommt aus den Kursdaten, nicht aus der Tabelle.** Die tatsächliche
+Währung steht in `instruments.currency` — was die Quelle geliefert hat, ist die
+belastbare Aussage; die Tabelle sagt nur, was zu erwarten *wäre*. Die erwartete
+Währung kommt aus `EXCHANGES[default_exchange]`, sofern das ein echter MIC ist.
 
-### D. Dashboard
+Das ist keine neue Regel, sondern eine schon aufgeschriebene: Der Docstring von
+`ExchangeDef` sagt wörtlich *„`currency` ist nur Anzeige — die reale Kurswährung
+stammt aus dem Live-Quote."* Der Entwurf aus Runde 8 hat genau diese Zusage
+gebrochen, indem er beide Währungen aus der Tabelle nehmen wollte.
 
-Eine Zeile im **Environment-Panel** — dort steht der Systemzustand schon als
-Schlüssel/Wert-Liste (Version, DB-Pfad, TTLs, Vorzugsbörse). Zwei Zähler
-(`Offene Zuordnungen`, `Abweichende Börse`), aufklappbar zur Detailliste. Kein
-neuer Nav-Punkt: Beide Zustände sind selten und nichts, was man täglich ansieht.
-Die Assets-Tabelle bleibt unberührt — Verify `#4`.
+**Die Prüfung ist Collector-bewusst.** Steht `DEFAULT_EXCHANGE` auf einem
+Sammelcode wie `US`, ist ein realer US-MIC **keine** Abweichung — sonst wäre bei
+der Vorgabe `US` jedes einzelne US-Papier fälschlich abweichend. Dafür bekommt
+`app/exchanges.py` eine ausdrückliche Zuordnung Sammelcode → Mitglieder
+(`US` → `{XNAS, XNYS, ARCX, XASE, BATS}`), abgeleitet aus dem `region`-Feld der
+Einträge, damit sie nicht als dritte Liste gepflegt werden muss.
 
-Texte über `vue-i18n` in `de.ts` und `en.ts`, wie im Rest der Oberfläche.
+**Keine Schemaänderung.** Beide Zustände sind aus gespeicherten Spalten und der
+Konfiguration ableitbar.
 
-### E. Vertrag und Version
+### C. Dashboard: ein Feld, zwei Formen
+
+Das bestehende Feld in `dashboard/src/components/Toolbar.vue:20-32` bleibt das
+einzige. Ergänzt werden:
+
+* **Parsing** in einem eigenen, testbaren Helfer (nicht in der Komponente):
+  ISIN erkannt → ISIN-Weg. Sonst am letzten Punkt trennen; vier Großbuchstaben
+  → MIC-Parameter, ein bis zwei Zeichen → Suffix, kein Punkt → Fehler mit Hilfe.
+* **`dashboard/src/api/paths.ts:24-35`** kann heute keinen `mic`-Parameter
+  bilden und bekommt ihn.
+* **Fehlerdurchreichung:** `useInstrumentActions.ts:23-40` ersetzt den
+  API-Detailtext durch das generische „Hinzufügen fehlgeschlagen". Genau dieser
+  Detailtext ist die Erklärung, die der Benutzer braucht — er wird durchgereicht.
+* **i18n-Hilfe** in `de.ts` und `en.ts` mit den drei Formen als Beispiel.
+* **Anzeige:** Nach der Auflösung zeigt das UI Ticker und echten MIC mit
+  lesbarem Börsennamen; die Werte kommen aus der Core-REST-API.
+
+### D. Vertrag und Version
 
 `listing_id` und `ticker_mic` wandern aus `planned` in den zugesagten Core.
 `InstrumentSummary` bekommt `ticker`, `mic` und `listing_id`. `core_version`
 geht `1.0.0` → `2.0.0`, Snapshot per
 `UPDATE_CORE_SNAPSHOT=1 .venv/bin/pytest tests/test_contract_openapi.py -q`.
 
-### F. Mitzuziehende Dokumentation
+### E. Eine Quelle für den Identitätsstatus
 
-Zwei Stellen im Produktcode versprechen noch die gestrichene Handzuordnung und
-werden mit der Umsetzung berichtigt — sonst steht im Code eine Zusage, die es
-nicht mehr gibt:
+`app/db.py:173-175` hält private Kopien von `resolved` und `legacy_unresolved`
+aus `app/exchanges.py:181-185`, obwohl der dortige Kommentar ausdrücklich eine
+einzige Regelquelle verspricht. Die Kopien entfallen; Migration und
+Laufzeitlogik importieren dieselben Konstanten.
 
-* `app/exchanges.py:233` — *„Der Fall bleibt offen und sichtbar, bis ihn jemand
-  von Hand zuordnet."*
-* `tests/test_identity_intake_paths.py:129` — *„Teil 3 listet sie zur Zuordnung
-  von Hand auf."*
+### F. Dokumentationsinventur, diesmal vollständig
 
-Dazu der Kommentar in `get_quote_for_known`, der die alte Nachsicht des
-Symbolwegs begründet, und die README-Zeile zu `GET /quote?symbol=…`.
+Runde 8 hat zu Recht beanstandet, dass die Inventur aus einem zu engen Grep kam.
+Der breite Scan über `app/`, `tests/`, `dashboard/src/`, `docs/`, `README.md`
+und `plugin_api/src/` findet diese Zusagen zur gestrichenen Handzuordnung:
+
+| Stelle | Was dort steht |
+|---|---|
+| **`app/resolver.py:304`** | **Benutzer-Fehlermeldung:** *„Ticker und MIC müssen von Hand gesetzt werden"* — die sichtbarste Stelle überhaupt |
+| `app/repository.py:455-459` | „Offen für Teil 3 … braucht dafür einen eigenen Status" |
+| `app/db.py:303-307` | „Später von Hand zuordnen" als Versprechen der Meldung |
+| `app/exchanges.py:201` | „eine von Hand gesetzte Zuordnung wie `RDS-A`/`XLON`" |
+| `app/exchanges.py:233` | „bis ihn jemand von Hand zuordnet" |
+| `app/models.py:60` | „noch nicht am REST-Rand (T-21, Teil 3)" — ändert sich mit D |
+| `docs/rest-core-contract.md:82-85` | „überlebt manuelle Zuordnung" |
+| `tests/test_identity_creation.py:121,187` | „die Liste offener Fälle (Teil 3)", „Vertrag ändert sich erst in Teil 3" |
+| `tests/test_identity_intake_paths.py:9,129` | „Teil 3 listet sie zur Zuordnung von Hand auf" |
+| `tests/test_quote_service.py:632` | „Teil 3 samt Vertragsversion" |
+| `tests/test_identity_migration.py:385,439` | „ein von Hand gesetztes `VTI/XNAS`" |
+
+Nicht betroffen und ausdrücklich **nicht** angefasst: alle Stellen zu „von Hand
+gepflegten **Kennzahlen**" aus T-09 (`overrides`, `manual_fields`). Das ist eine
+andere Fachlichkeit, die der Suchbegriff mitfängt.
+
+## Was auf Teil 4 verschoben wird
+
+Befund 3 verlangt zusätzlich, dass **regionale Plugins** weitere MICs,
+Anzeigenamen und Suffixkonventionen deklarativ an den Core melden, der sie
+validiert, normalisiert und über REST ans UI liefert. Das ist richtig und folgt
+aus `2026-08-19-plugin-system-design.md:365-373` — aber:
+
+* Der heutige Plugin-Vertrag hat **keinen Typ dafür**. Es wäre eine additive
+  Erweiterung von `plugin_api` samt `API_VERSION`-Sprung.
+* Teil 3 kommt ohne aus: Die fünf US-MICs und Stuttgart sind Core-Wissen und
+  gehören in `EXCHANGES`, nicht in ein Plugin.
+* Teil 1 brauchte neun Runden, Teil 2 sieben. Einen neuen Plugin-Typ in
+  denselben Hub zu legen wie Vertrag, Börsentabelle, Sichtbarkeit und Dashboard
+  macht den Diff unprüfbar.
+
+**Vorschlag zur Entscheidung durch Mike:** Teil 3 wie hier beschrieben, und die
+plugin-deklarierte Börsenauskunft wird ein eigenes Ticket. Die REST-Form aus C
+wird so entworfen, dass ein Plugin später zusätzliche Einträge beisteuern kann,
+ohne dass sich der Antworttyp ändert.
 
 ## Testen
 
-* **Vertrag am Symbolweg:** suffixloses Symbol ohne `mic` → 400 mit beiden
-  Auswegen im Text; mit gültigem `mic` → 200 und Zeile entsteht `resolved`;
-  `mic=US` → 400; Widerspruch Suffix/`mic` → 400; suffixbehaftetes Symbol ohne
-  `mic` → unverändert 200.
-* **Stuttgart:** Zerlegung `GOLD.SG` → `GOLD`/`XSTU` und die Rückrichtung, plus
-  der bestehende Kollisionstest.
-* **Sichtbarkeit:** offene Liste mit Grund je Fall; leere Liste bei sauberem
-  Bestand; Abweichungsliste mit beiden Währungen; ein Papier an der
-  Vorzugsbörse taucht **nicht** auf.
-* **Vertrag:** der bestehende `test_contract_openapi.py` gegen den erneuerten
-  Snapshot mit `core_version 2.0.0`.
-* **Dashboard:** Vitest für das Panel, beide Zähler und der leere Zustand.
-* **Smoke:** `_tickets/T-21c-smoke.sh` gegen einen laufenden Server auf eigenem
-  Port — `GOLD.SG` vor und nach dem Börseneintrag, der 400er am Symbolweg, die
-  beiden Listen.
+* **Aufnahmeweg:** nackter Ticker → 400 mit beiden Auswegen; `EUNL.DE` und
+  `EUNL.XETR` → identische Identität **und** identischer Alias; `GOLD.SG` und
+  `GOLD.XSTU` ebenso; `AAPL.XNAS` → Alias `AAPL`; `mic=US` → 400; Widerspruch →
+  400; `BRK-B.XNYS` → 400.
+* **Provider-Aufruf, gespeichertes `symbol`, `ticker` und `mic` werden
+  gemeinsam geprüft** — genau die Lücke aus Befund 1. Ein Test, der nur die
+  Identität prüft, hätte den falschen Alias nicht bemerkt.
+* **Börsentabelle:** Eindeutigkeit der nichtleeren Suffixe; jeder Eintrag hat
+  Währung und Anzeigename; die fünf US-MICs sind da.
+* **Abweichung:** `VTI/ARCX` bei `XETR` ist eine Abweichung mit `USD` gegen
+  `EUR`; **`AAPL/XNAS` bei Default `US` ist keine**; ein Papier an der
+  Vorzugsbörse taucht nicht auf; die tatsächliche Währung kommt aus den
+  Kursdaten, auch wenn die Tabelle etwas anderes erwarten ließe.
+* **Vertrag:** `test_contract_openapi.py` gegen den Snapshot mit `2.0.0`.
+* **Dashboard:** Vitest für den Parsing-Helfer (alle drei Formen plus
+  Fehlerfälle), für die durchgereichte Fehlermeldung und für die beiden Zähler.
+* **Smoke:** `_tickets/T-21c-smoke.sh` auf eigenem Port — `GOLD.SG` vor und nach
+  dem Börseneintrag, der 400er am Aufnahmeweg, beide Listen.
 
 ## Was bewusst nicht gebaut wird
 
-* **Handzuordnung über die Oberfläche** — siehe Entscheidung 1.
-* **Ein eigener Status für manuelle Zuordnungen** — ohne Handzuordnung
-  gegenstandslos.
-* **Ein Reparaturwerkzeug für Altbestand** — siehe Entscheidung 2.
-* **Eine gespeicherte Abweichungsmarkierung** — ableitbar, siehe C.
+* **Handzuordnung über die Oberfläche** und ein **eigener Status** dafür.
+* **Ein Reparaturwerkzeug für Altbestand.**
+* **Eine gespeicherte Abweichungsmarkierung** — ableitbar.
+* **Ein zweites MIC-Eingabefeld** — Entscheidung Mike.
 
 Taucht ein realer Fall auf, in dem ein Mensch eine **falsche** automatische
-Zuordnung überschreiben muss, ist das ein eigenes Ticket. Das ist Korrektur,
-nicht Erstzuordnung, und es ist heute durch nichts belegt.
-
-## Prüfauflage an Codex
-
-Die Streichung von `#2c` hängt an den beiden Messungen oben. Beide bitte
-**eigenständig nachvollziehen**, nicht anhand dieser Zusammenfassung:
-
-1. Dass eine über den Symbolweg ohne ISIN angelegte Zeile dauerhaft offen
-   bleibt — `get_quote_for_known` löst nicht auf.
-2. Dass der ISIN-Weg mit `DEFAULT_EXCHANGE=XETR` die Tabelle oben liefert,
-   einschließlich `APC.DE` für Apple und des Yahoo-Fallbacks für VTI.
-
-Ist eine davon falsch, fällt der Zuschnitt mit ihr.
+Zuordnung überschreiben muss, ist das ein eigenes Ticket: Korrektur, nicht
+Erstzuordnung.

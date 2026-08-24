@@ -137,8 +137,10 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`; `AAPL` bleibt **offen** statt geraten (siehe Kasten oben) | ✅ [^b] | |
 | 2b | Instrument mit Fremdsymbol (`BRK-B`, aus dem Yahoo-Fallback) | erscheint in einer Liste offener Zuordnungen, mit Grund | ◑ [^c] | |
 | ~~2c~~ | ~~derselbe Fall, manuelle Zuordnung~~ | **gestrichen** — der Symbolweg verlangt die Kombination künftig im Vertrag, damit entstehen die Fälle nicht mehr. Siehe Kasten „Die Handzuordnung ist gestrichen" | ➖ | |
-| 2d | `GET /quote?symbol=AAPL` ohne `mic` | 400 mit beiden Auswegen im Text; mit `&mic=XNAS` entsteht die Zeile `resolved` | | |
-| 2e | Papier abseits der Vorzugsbörse (`VTI` bei `XETR`) | erscheint als „abgewichen" mit erwartetem und tatsächlichem MIC **und** beiden Währungen | | |
+| 2d | Aufnahmefeld: nackter Ticker `AAPL` | 400, Text nennt beide Auswege mit Beispiel; `AAPL.XNAS` legt die Zeile `resolved` an | | |
+| 2d2 | `EUNL.DE` und `EUNL.XETR`, dazu `GOLD.SG` und `GOLD.XSTU` | je Paar **dieselbe** Identität *und* **derselbe** Provider-Alias; geprüft wird auch, womit die Quelle aufgerufen wurde | | |
+| 2e | Papier abseits der Vorzugsbörse (`VTI` bei `XETR`) | erscheint als „abgewichen" mit beiden MICs; tatsächliche Währung aus den Kursdaten, nicht aus der Tabelle | | |
+| 2e2 | `AAPL`/`XNAS` bei `DEFAULT_EXCHANGE=US` | **keine** Abweichung — der Sammelcode umfasst die US-Plätze | | |
 | 3 | `GET /instruments` | `symbol` weiterhin vorhanden und unverändert (Profil-Links hängen daran) | ✅ [^d] | |
 | 3b | Datenbank-Schema | Eindeutigkeit liegt auf `(ticker, mic)`; `symbol` ist **nicht mehr** global unique | ✅ [^e] | |
 | 4 | Dashboard, Assets-Tabelle | unverändert; Yahoo- und extraETF-Links funktionieren | | |
