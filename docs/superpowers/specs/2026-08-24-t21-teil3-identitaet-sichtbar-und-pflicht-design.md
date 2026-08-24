@@ -1,7 +1,7 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 13** ·
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 14** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
 „Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
 Entwurfsprüfung ohne Produktcode.
@@ -107,11 +107,17 @@ Teil 3 ergänzt sie:
 
 ### Der Exchange-Descriptor — erweiterbar von Anfang an
 
-Ein bloßes Herkunftsfeld reicht **nicht**, wie Runde 10 gezeigt hat.
-`ExchangeInfo` (`app/models.py:262-269`, `dashboard/src/types.ts:115-127`) trägt
-heute genau **ein** `suffix: str` — T-30 verlangt aber „Suffixformen" im Plural
-und müsste den Typ also doch ändern. Teil 3 legt deshalb gleich die tragfähige
-Form fest:
+Ein bloßes Herkunftsfeld reicht **nicht**, wie Runde 10 gezeigt hat — der
+Typwechsel kommt aber nicht von mehreren Suffixformen. Die Forderung nach
+„Suffixformen im Plural" ist mit Mikes Präzisierung zurückgenommen, und dieser
+Entwurf hält sie nicht mehr am Leben.
+
+Nötig ist der Typwechsel aus drei anderen Gründen: `ExchangeInfo`
+(`app/models.py:262-269`, `dashboard/src/types.ts:115-127`) kennt **keine
+Unterscheidung zwischen Börse und Sammelcode** — es serialisiert heute
+`mic="US"` —, es hat **keine Provenienz**, und sein `suffix: str` ist
+**nicht optional**, obwohl die US-Plätze keinen Alias haben. Teil 3 legt deshalb
+gleich die tragfähige Form fest:
 
 **Zwei Arten von Eintrag, als diskriminierte Union.** Eine Börse und ein
 Sammelcode sind verschiedene Dinge, und nur eines davon hat einen MIC:
@@ -159,7 +165,16 @@ Fachregel.
 
 **Vertragstests dazu:** Kein `mic`-Feld serialisiert je einen Sammelcode; `US`
 funktioniert weiterhin als `DEFAULT_EXCHANGE` samt seinen Mitgliedern; kein
-Alias ist zweimal vergeben; jeder Börseneintrag hat Währung und Anzeigename.
+Alias ist zweimal vergeben; jeder Börseneintrag hat Währung und Anzeigename;
+und **kein Börseneintrag trägt eine eigene Mitgliedschaftsliste** — die
+Zugehörigkeit steht ausschließlich als `members` am Collector.
+
+**`COLLECTOR_CODES` wird abgeleitet, nicht gepflegt** — aus den
+Collector-Einträgen derselben Katalogschicht, in der auch der Descriptor lebt;
+damit entsteht kein Importzyklus. **Für T-30 ist das eine Auflage:** Sobald
+Plugins Einträge beisteuern, darf keine beim Import eingefrorene Menge als
+Wahrheit dienen. Dann wird der **zusammengeführte** Katalog gefragt oder die
+Ableitung bei Invalidierung erneuert.
 
 ## Die Pflicht-Kombinationen für den Benutzer
 
@@ -285,9 +300,11 @@ erwartete Währung.
   und erwarteter Währung `USD`, aber ohne erwarteten MIC.
 * `VTI`/`ARCX` bei Präferenz `XETR` → Abweichung mit vollem erwartetem MIC.
 
-Die Mitgliedschaft steht als `collectors` am jeweiligen Eintrag — `XNAS`,
-`XNYS`, `ARCX`, `XASE` und `BATS` tragen dort `["US"]`. Sie aus `region`
-abzuleiten war der Vorschlag aus Runde 9 und ist verworfen; die Begründung steht
+Die Mitgliedschaft wird **am Collector-Eintrag** nachgeschlagen: `US` führt
+`members: ["XNAS", "XNYS", "ARCX", "XASE", "BATS"]`. Die Börseneinträge tragen
+**keine** eigene Liste — sonst gäbe es die Regel wieder zweimal, und beim
+Plugin-Merge liefen die Seiten auseinander. Aus `region` abzuleiten war der
+Vorschlag aus Runde 9 und ist ebenfalls verworfen; beide Begründungen stehen
 beim Exchange-Descriptor.
 
 **Keine Schemaänderung.** Beide Zustände sind aus gespeicherten Spalten und der
@@ -336,6 +353,28 @@ verschieden. Das macht den Umfang von Teil 3 kleiner, nicht größer.
 `InstrumentSummary` bekommt `ticker`, `mic` und `listing_id`. `core_version`
 geht `1.0.0` → `2.0.0`, Snapshot per
 `UPDATE_CORE_SNAPSHOT=1 .venv/bin/pytest tests/test_contract_openapi.py -q`.
+
+**Der Erfolgsvertrag von `POST /instruments/intake`** — ohne ihn dürfte die
+Umsetzung zwischen `200 null`, `QuoteResponse`, `InstrumentSummary` und `204`
+wählen, und Snapshot wie Integrationstest hätten keine Erwartung:
+
+| Fall | Status | Rumpf |
+|---|---|---|
+| Papier neu angelegt | `201 Created` | `InstrumentSummary` |
+| Papier gab es schon, Kurs aufgefrischt | `200 OK` | `InstrumentSummary` |
+| Eingabe nicht auflösbar | `400` | `{code, params}` |
+| Quelle nicht erreichbar | `502` | `{code, params}` |
+
+`204` wäre die bequemere Zusage, wirft aber genau die Information weg, um die
+der Aufrufer gerade gebeten hat: Welche Identität ist daraus geworden? Der
+Rumpf erspart dem Dashboard den zweiten Roundtrip, um Ticker und echten MIC
+anzuzeigen. Beide Erfolgsfälle tragen denselben Typ; unterschieden wird nur der
+Status, damit „war schon da" nicht als Neuanlage erscheint.
+
+**Die Börsenauskunft heißt nicht mehr `exchanges`.** Die Liste trägt seit dem
+Descriptor zwei Eintragsarten; sie weiter `exchanges` zu nennen, während
+Sammelcodes darin stehen, wäre dieselbe Unehrlichkeit wie `mic="US"`. Die
+Antwort heißt `catalog`, ihre Einträge sind die diskriminierte Union.
 
 ### E. Eine Quelle für den Identitätsstatus
 
@@ -456,8 +495,13 @@ T-30 prüft rückwirkend, ob es gehalten hat.
   Konflikt.
 * **Der Sammelcode als Vertragstest:** `US` wird **nie** als `mic` serialisiert
   oder gespeichert, funktioniert aber weiterhin als `DEFAULT_EXCHANGE` samt
-  seinen Mitgliedern. Das ist die Zeile, die den heutigen `mic="US"` aus
-  `GET /exchanges` fallen lässt.
+  seinen Mitgliedern. Das ist die Zeile, die den heutigen `mic="US"` aus der
+  Börsenauskunft fallen lässt. Dazu: **kein** Börseneintrag trägt eine eigene
+  Mitgliedschaftsliste.
+* **Der Erfolgsvertrag des Aufnahmewegs:** `201` bei Neuanlage, `200` bei einem
+  schon bekannten Papier, beide mit `InstrumentSummary`; `400` und `502` mit
+  `{code, params}`. Im OpenAPI-Snapshot zugesagt und über die echte Kette
+  geprüft, nicht nur im Modell.
 * **Dashboard:** Vitest für den rohen Durchreichweg **ohne** `isIsin`-Routing,
   und für den Fehlerpfad in beiden Sprachen — bekannte Kennung, unbekannte
   Kennung, kaputtes JSON, leerer Rumpf, Netzwerkfehler. Dazu die beiden Zähler.
