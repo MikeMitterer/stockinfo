@@ -41,8 +41,11 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > verlangt die Kombination künftig im Vertrag, statt hinterher zu reparieren.
 >
 > **Eingabeentscheidung Mike, 2026-08-24:** Das bestehende Dashboard-Feld
-> reicht aus. Neben der bevorzugten ISIN akzeptiert es eine klar dokumentierte
-> Inline-Konvention `TICKER.MIC`; dafür ist kein zweites MIC-Feld erforderlich.
+> reicht aus. Neben der bevorzugten ISIN akzeptiert es **beide** klar
+> dokumentierten Formen: Provider-Suffix (`TICKER.DE`) und echter MIC
+> (`TICKER.XETR`); dafür ist kein zweites MIC-Feld erforderlich. Beide Eingaben
+> werden auf dieselbe kanonische Identität und denselben Provider-Alias
+> normalisiert.
 > Die Default-Börse unterstützt weiterhin die automatische Auflösung. Die
 > aufgelösten Werte werden in der Datenbank gehalten und anschließend im UI
 > angezeigt. Der Vertrag muss echten MIC (`XETR`) und Yahoo-Suffix (`.DE`)
@@ -84,8 +87,9 @@ braucht dennoch folgende Korrekturen, bevor er umgesetzt werden kann:
    Einen widerspruchsfreien Vertrag festlegen und ausdrücklich beschreiben, wie
    aus `(ticker, mic)` der Provider-Alias für Abruf und Speicherung entsteht.
    Tests müssen Provider-Aufruf, gespeichertes `symbol`, `ticker` und `mic`
-   gemeinsam prüfen; `GOLD.SG&mic=XSTU` braucht nach Aufnahme von XSTU genau
-   ein definiertes Ergebnis.
+   gemeinsam prüfen. Nach Aufnahme von XSTU müssen `GOLD.SG` und `GOLD.XSTU`
+   beide funktionieren und auf denselben Provider-Alias `GOLD.SG` sowie
+   dieselbe Identität `GOLD/XSTU` führen.
 
 2. **Hoch — `mic != default_exchange` plus Währungen aus `EXCHANGES` kann die
    zugesagte Abweichung nicht korrekt ableiten.** Der Entwurf behauptet in
@@ -110,15 +114,16 @@ braucht dennoch folgende Korrekturen, bevor er umgesetzt werden kann:
    Darüber hinaus ersetzt `dashboard/src/composables/useInstrumentActions.ts:23-40`
    den API-Detailtext durch das generische „Hinzufügen fehlgeschlagen“. Die von
    Mike festgelegte Konvention ist: bevorzugt ISIN, andernfalls im **selben**
-   Feld `TICKER.MIC`; ein zweites Feld ist nicht erforderlich. Bekannte
-   vollständige Provider-Symbole wie `EUNL.DE` bleiben ebenfalls eindeutig.
+   Feld wahlweise Provider-Suffix (`TICKER.DE`) oder echter MIC
+   (`TICKER.XETR`); ein zweites Feld ist nicht erforderlich.
    **Erwartung:** Im Entwurf das Parsing der Inline-Form, die Abbildung auf den
    API-Vertrag, verständliche i18n-Hilfe und konkrete Beispiele festlegen.
-   `EUNL.XETR` (kanonischer MIC) und `EUNL.DE` (Yahoo-Suffix) dürfen nicht
-   begrifflich vermischt werden. Nach der Auflösung müssen Ticker und echter
-   MIC gespeichert, von der API geliefert und im UI angezeigt werden. Tests
-   decken ISIN+Default-Börse, Inline-Eingabe, bekannte Suffixform sowie den
-   erklärenden Fehlerfall ab.
+   `EUNL.XETR` (kanonischer MIC) und `EUNL.DE` (Yahoo-Suffix) sind beide gültig,
+   dürfen aber intern nicht begrifflich vermischt werden; beide normalisieren
+   zu Provider-Alias `EUNL.DE` und Identität `EUNL/XETR`. Nach der Auflösung
+   müssen Ticker und echter MIC gespeichert, von der API geliefert und im UI
+   angezeigt werden. Tests decken ISIN+Default-Börse, beide Inline-Formen,
+   deren identisches Ergebnis sowie den erklärenden Fehlerfall ab.
 
 4. **Mittel — Die behauptete vollständige Dokumentationsinventur lässt mehrere
    Zusagen zur gestrichenen Handzuordnung stehen.**
