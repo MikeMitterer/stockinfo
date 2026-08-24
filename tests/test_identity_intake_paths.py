@@ -25,11 +25,10 @@ from app.db import init_db
 from app.main import app
 from app.providers.base import RawQuote
 from app.repository import QuoteRepository
-from app.services.daily_sync import DailyCloseSync
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteService
 from stockinfo_plugin.types import NotFound
-from tests.boundaries import EmptyDailyCloseProvider, EmptyEtfEnricher
+from tests.boundaries import EmptyEtfEnricher, empty_daily_sync
 
 
 class _QuoteSource:
@@ -69,7 +68,7 @@ def client_and_repo(tmp_path: Path) -> Iterator[tuple[TestClient, QuoteRepositor
         QuoteService(_QuoteSource(), EmptyEtfEnricher(), _NoResolver()),
         repository,
         ttl_hours=0,
-        daily_sync=DailyCloseSync(repository, EmptyDailyCloseProvider()),
+        daily_sync=empty_daily_sync(repository),
     )
 
     app.dependency_overrides[get_cached_quote_service] = lambda: service

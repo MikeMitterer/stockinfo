@@ -197,7 +197,9 @@ def test_kaskade_meldet_die_abweichung(monkeypatch) -> None:
     with structlog.testing.capture_logs() as logs:
         OpenFigiResolver(figi, "XETR").resolve_isin("JP3633400001")
 
-    fallbacks = [e for e in logs if e["event"] == "resolve_home_exchange"]
+    fallbacks = [
+        entry for entry in logs if entry["event"] == "resolve_home_exchange"
+    ]
     assert len(fallbacks) == 1
     assert fallbacks[0]["preferred"] == "XETR"
     assert fallbacks[0]["home"] == "XTKS"
@@ -489,6 +491,27 @@ def _with_search(monkeypatch, hits: list[dict]) -> None:
     monkeypatch.setattr(resolver_module.yf, "Search", _FakeSearch)
 
 
+def _with_foreign_us_listing(monkeypatch) -> None:
+    """Lässt Yahoo ausschließlich ein US-Listing ohne Xetra-Alternative finden."""
+    _with_search(
+        monkeypatch,
+        [
+            {
+                "symbol": "AAPL",
+                "exchange": "NMS",
+                "exchDisp": "NasdaqGS",
+                "quoteType": "EQUITY",
+            },
+            {
+                "symbol": "AAPL.MX",
+                "exchange": "MEX",
+                "exchDisp": "Mexico",
+                "quoteType": "EQUITY",
+            },
+        ],
+    )
+
+
 def test_yahoo_nimmt_das_listing_der_bevorzugten_boerse(monkeypatch) -> None:
     """Nicht der erste Treffer gewinnt, sondern der passende.
 
@@ -516,19 +539,37 @@ def test_yahoo_nimmt_den_ersten_treffer_wenn_die_boerse_fehlt(monkeypatch) -> No
 
     Genau dafür gibt es den Fallback — er darf nicht zum Nichts-Finden werden.
     """
-    _with_search(
-        monkeypatch,
-        [
-            {"symbol": "AAPL", "exchange": "NMS", "exchDisp": "NasdaqGS", "quoteType": "EQUITY"},
-            {"symbol": "AAPL.MX", "exchange": "MEX", "exchDisp": "Mexico", "quoteType": "EQUITY"},
-        ],
-    )
+    _with_foreign_us_listing(monkeypatch)
     resolver = YFinanceResolver(default_exchange="XETR")
 
     resolved = resolver.resolve_isin("US0378331005")
 
     assert resolved is not None
     assert resolved.symbol == "AAPL"
+
+
+def test_yahoo_protokolliert_das_auswaertige_listing(monkeypatch) -> None:
+    """Das strukturierte Event benennt die Abweichung samt Entscheidungsdaten."""
+    import structlog
+
+    _with_foreign_us_listing(monkeypatch)
+    resolver = YFinanceResolver(default_exchange="XETR")
+
+    with structlog.testing.capture_logs() as logs:
+        resolver.resolve_isin("US0378331005")
+
+    records = [
+        entry for entry in logs if entry["event"] == "resolve_foreign_exchange"
+    ]
+    assert records == [
+        {
+            "event": "resolve_foreign_exchange",
+            "isin": "US0378331005",
+            "chosen": "AAPL",
+            "expected": "XETR",
+            "log_level": "info",
+        }
+    ]
 
 
 def test_yahoo_folgt_der_konfigurierten_boerse(monkeypatch) -> None:

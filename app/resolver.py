@@ -351,7 +351,7 @@ class YFinanceResolver:
         Returns:
             Der gewählte Treffer oder ``None``, wenn keiner ein Symbol trägt.
         """
-        with_symbol = [q for q in quotes if q.get("symbol")]
+        with_symbol = [quote for quote in quotes if quote.get("symbol")]
         if not with_symbol:
             return None
 
@@ -359,22 +359,32 @@ class YFinanceResolver:
         suffix = exchange.suffix
 
         if suffix:
-            at_exchange = [q for q in with_symbol if str(q["symbol"]).endswith(suffix)]
+            at_exchange = [
+                quote
+                for quote in with_symbol
+                if str(quote["symbol"]).endswith(suffix)
+            ]
         else:
             # Börse ohne Suffix (`US`): Dort ist das punktlose Symbol die
             # Notierung. Ohne diesen Zweig liefe die Regel leer, weil jedes
             # Symbol auf `''` endet.
-            at_exchange = [q for q in with_symbol if "." not in str(q["symbol"])]
+            at_exchange = [
+                quote for quote in with_symbol if "." not in str(quote["symbol"])
+            ]
 
         if at_exchange:
             quote_type = _quote_type(with_symbol[0])
             return next(
-                (q for q in at_exchange if _quote_type(q) == quote_type),
+                (
+                    quote
+                    for quote in at_exchange
+                    if _quote_type(quote) == quote_type
+                ),
                 at_exchange[0],
             )
 
         logger.info(
-            "resolve_isin_andere_boerse",
+            "resolve_foreign_exchange",
             isin=isin,
             chosen=with_symbol[0]["symbol"],
             expected=self._default_exchange,
