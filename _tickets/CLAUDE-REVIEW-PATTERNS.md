@@ -154,6 +154,17 @@ sowie die strukturierten Log-Bezeichner `core_unvollstaendig` und `fehlend`;
 `_tickets/T-21b-smoke.sh` blieb im eingebetteten Python `zeilen`. Der
 angekündigte Scan deckte seinen behaupteten Dateiscope damit nicht ab.
 
+**Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21 Teil 2
+und 2b Runde 5, Commit `3cc223d`: Die Korrektur erklärte alle vier Kopien der
+leeren Außengrenzen einschließlich des Helfers für ersetzt und
+`app/resolver.py` für „ganz englisch“. Der Aufnahmewege-Test verdrahtete
+`DailyCloseSync(repository, EmptyDailyCloseProvider())` jedoch weiterhin
+parallel zum neu eingeführten `empty_daily_sync(repository)`. Im Resolver blieb
+zugleich der deutsche strukturierte Event-Identifier
+`resolve_isin_andere_boerse` sowie der nichtsprechende Bezeichner `q`; im
+ebenfalls vollständig inventarisierten `tests/test_resolver.py` blieb `e`.
+Der Bezeichner-Scan erfasste den Log-Event als String grundsätzlich nicht.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
