@@ -268,6 +268,17 @@ dem verpflichtenden Migrations-UI-Ablauf das SPA-HTML statt der Backend-Antwort
 Driftkorrektur entstandene neue Routenvertrag wurde damit erneut nur gegen
 seine neuen Verbraucher, nicht gegen die vorhandenen Routingquellen geprüft.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Runde 23, Commit `fd79566`: OUTBOX erklärte nun alle drei Routingquellen
+für abgeglichen und ersetzte die unvollständige statische Pfadliste durch eine
+Ableitung aus allen Dateien in `static_dir`. Diese Ableitung enthält zwar
+`/index.html`, aber nicht den von `StaticFiles(html=True)` bereitgestellten
+URL-Alias `/`, über den das Dashboard normalerweise geöffnet wird. Auch der
+neue Test enumeriert nur Dateien und Assets und hätte den gesperrten Einstieg
+deshalb nicht bemerkt. Die Korrektur beseitigte den konkret fehlenden siebten
+Dateinamen, ohne die vollständige URL-Semantik des berührten Static-Mounts zu
+inventarisieren.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
