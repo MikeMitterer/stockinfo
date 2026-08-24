@@ -6,15 +6,15 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `changes_requested`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `72f2b8a`
 - `review_round`: `11`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-24`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `2421f65`
-- `last_reviewed_round`: `10`
+- `last_reviewed_commit`: `72f2b8a`
+- `last_reviewed_round`: `11`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -55,6 +55,13 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > aufgelösten Werte werden in der Datenbank gehalten und anschließend im UI
 > angezeigt. Der Vertrag muss echten MIC (`XETR`) und Yahoo-Suffix (`.DE`)
 > begrifflich und syntaktisch eindeutig auseinanderhalten.
+>
+> **Präzisierung Mike nach Runde 10:** Eine einzelne Eingabe enthält genau
+> **eine** der beiden Formen. Pro Börse genügt neben dem kanonischen MIC genau
+> **ein optionaler Plugin-/Provider-Suffixalias**: `EUNL.XETR` wird über den
+> MIC erkannt, `EUNL.DE` über den Alias. Verschiedene Zeilen dürfen
+> unterschiedliche Formen verwenden; mehrere Aliase je Börse sind derzeit
+> keine Anforderung.
 >
 > **Plugin-Grenze:** Das Dashboard spricht nicht direkt mit Plugins. Ein
 > Resolver-Plugin liefert dem Core die aufgelöste Identität `(ticker, mic)`;
@@ -99,92 +106,134 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+**Codex-Review T-21 Teil 3 · Runde 11 · `72f2b8a` — Änderungen erforderlich**
+
+Der Handoff enthält weiterhin nur Entwurfs- und Ticketdateien; es gibt noch
+keinen Produktcode. T-29s Trennung zwischen portablem JSON-Import und
+konsistentem SQLite-Snapshot ist korrekt übernommen. Drei Entwurfsbefunde
+bleiben.
+
+### Findings
+
+#### HOCH — Der Descriptor baut weiter auf der von Mike zurückgenommenen Mehrfachalias-Annahme auf
+
+**Stellen:**
+`docs/superpowers/specs/2026-08-24-t21-teil3-identitaet-sichtbar-und-pflicht-design.md:110-131,159-168,422-426`;
+`_tickets/T-30-plugin-boersenauskunft.md:66-70`.
+
+**Wirkung:** `input_forms: [...]`, „mehrere Formen je Börse" und Verify `#2b`
+modellieren mehrere alternative Provider-Aliase für einen MIC. Mikes
+Präzisierung nach Runde 10 lautet anders: In einer Eingabe steht entweder der
+echte MIC oder der eine Plugin-/Provider-Suffixalias. Für Xetra sind das zwei
+Auflösungswege, nicht zwei Aliaswerte: `.XETR` kommt aus `mic = XETR`, `.DE`
+aus dem optionalen Alias. Die Liste, ihr zusätzlicher Kollisionsraum und der
+Test „mehrere Formen je MIC" sind damit unbegründete Komplexität.
+
+Zusätzlich ist die Darstellung im jetzigen Entwurf nicht ausführbar eindeutig:
+Der Descriptor speichert `".SG"` (`:121`), während laut `:165-167` der Teil
+**hinter** dem Punkt — also `SG` — nachgeschlagen wird. Die zwei Schichten
+würden ohne eine weitere, nicht beschriebene Normalisierung aneinander
+vorbeisuchen.
+
+**Überprüfbare Erwartung:** Der Descriptor führt den kanonischen `mic` und
+genau einen optionalen Suffixalias pro Börse; dessen Punktkonvention ist im
+Wire-Format und im Lookup eindeutig festgelegt. Der Parser schlägt ohne
+Längenheuristik zuerst den MIC und dann den Alias nach. `EUNL.XETR` und
+`EUNL.DE` ergeben dieselbe Identität und denselben Abrufalias, aber kein Modell
+behauptet mehrere Aliase je Börse. T-30 `#2b` entfällt; der Test eines
+vierstelligen **einzelnen** Alias und der MIC↔Alias-Konflikt dürfen bleiben.
+
+#### HOCH — Der neue `mic`-Descriptor kann den weiterhin enthaltenen Sammelcode `US` nicht wahrheitsgemäß darstellen
+
+**Stellen:** Entwurf `:118-147,243-265`; bestehend
+`app/exchanges.py:51-55,93-101`, `app/models.py:262-269` und
+`app/routers/dashboard.py:72-82`.
+
+**Wirkung:** Der geplante Eintrag heißt `mic`, gleichzeitig bleibt `US` in
+derselben `EXCHANGES`-Tabelle und REST-Liste, obwohl Entwurf und Produktcode
+ausdrücklich sagen, dass `US` **kein MIC** ist. Mit den neuen
+`collectors: ["US"]` an fünf MIC-Einträgen existiert die Collector-Regel sogar
+dreifach: als `EXCHANGES["US"]`, als `COLLECTOR_CODES` und als Mitgliedschaft
+je Descriptor. Die Behauptung „eine Quelle" (`:136`) stimmt dadurch nicht.
+UI und Plugins könnten `US` aus einem Feld namens `mic` übernehmen und genau
+den ungültigen kanonischen Wert erzeugen, den T-21 verhindern soll.
+
+**Überprüfbare Erwartung:** Der Vertrag unterscheidet echte Börsen und
+Collector-Präferenzen typisiert — beispielsweise getrennte
+`exchange`-/`collector`-Descriptoren oder eine diskriminierte Union mit
+`kind` und `code`. Nur echte Börseneinträge besitzen `mic` und Alias. Die
+Collector-Mitgliedschaft hat genau eine kanonische Quelle; daraus werden
+Validierung und Abweichungsprüfung abgeleitet. Ein Vertragstest belegt, dass
+`US` nie als `mic` serialisiert oder gespeichert wird, aber weiterhin als
+Default-Collector mit seinen Mitgliedern funktioniert.
+
+#### MITTEL — Der neue Aufnahmevertrag verwendet einen schreibenden `GET` und legt Fachlogik in die Router-Schicht
+
+**Stellen:** Entwurf `:192-215`; insbesondere
+`GET /instruments/intake?q=...` und die Schichtentabelle `:204-210`.
+
+**Wirkung:** Laut derselben Tabelle stößt der Endpunkt Auflösung und Speicherung
+an. Ein `GET` ist dafür der falsche HTTP-Vertrag: Browser, Proxies und
+Vorablader dürfen ihn als sichere Leseoperation behandeln. Außerdem ist das
+Auflösen gegen Börsenkatalog, MIC und Alias eine Fachregel, keine HTTP-
+Validierung. Sie in `app/routers/validation.py` zu legen widerspricht der
+Projektregel „Router = HTTP, Business Logic = Service" und erschwert die
+verlangte echte Testkette.
+
+**Überprüfbare Erwartung:** Der vereinheitlichte Aufnahme-Endpunkt bleibt eine
+gute Richtung, ist aber eine schreibende Operation, z. B.
+`POST /instruments/intake` mit typisiertem Body `{identifier: <Rohwert>}` und
+festem Antwort-/Fehlervertrag. Der Router übernimmt nur Transport,
+Normalisierung und Exception-Mapping; ein Intake-/Identity-Service führt
+ISIN-, MIC- und Aliasauflösung aus und speichert über das Repository. Falls
+der Endpunkt stattdessen bewusst nur validieren soll, darf er nichts speichern
+und braucht einen getrennten schreibenden Aufnahmeweg. Verify `#2f` prüft
+Methode und Schichtengrenze mit der echten Router→Service→Repository-Kette.
+
+### Antworten auf die drei Entwurfsfragen
+
+1. **Descriptor:** Zeitzone oder Handelszeiten jetzt nicht ergänzen; dafür gibt
+   es in diesem Umfang keinen Verbraucher. Benötigt werden der echte MIC, ein
+   optionaler Alias, Anzeige/Währung, typisierte Provenienz und eine saubere
+   Trennung der Collector-Definition. Das ist der KISS-Schnitt.
+2. **Aufnahme-Endpunkt:** Ein eigener vereinheitlichter Endpunkt ist richtig,
+   weil er die Client-Klassifikation entfernt. Wegen der Speicherung als
+   `POST`, nicht `GET`; die Fachauflösung gehört in einen Service.
+3. **Konvergenz:** Ja. T-29, der Core-only-Eingabepfad und der lokalisierte
+   Fehler-Fallback sind jetzt tragfähig. Die verbliebenen Punkte liegen eng am
+   neuen Descriptor und Aufnahmevertrag.
+
+### DRY-Prüfung
+
+Gesucht wurden projektweit: `EXCHANGES`, `ExchangeInfo`, `suffix`,
+`input_forms`, `collectors`, `COLLECTOR_CODES`, MIC-/Suffix-Lookup,
+`split_symbol`, Aliasbildung, `isIsin`, Aufnahme-Endpunkte sowie strukturierte
+Fehler und `statusText` in Backend, Dashboard, Tests, Plugin-API, Vertrag und
+Dokumentation.
+
+**Ergebnis:** Finding 2 ist eine parallele Source of Truth
+(`EXCHANGES["US"]` + `COLLECTOR_CODES` + geplante Mitgliedslisten). Die
+geplante zentrale Aliasbildung im Kursadapter und der Abbau des
+`isIsin`-Routings im Add-Pfad sind dagegen DRY-konform. Die verbliebenen
+Darstellungsprüfungen mit `isIsin` sind eine andere Verantwortung und müssen
+nicht entfernt werden. Keine weitere Duplikation im Handoff-Diff.
+
+### Ausgeführte Prüfungen
+
+- relevante Pytests:
+  `.venv/bin/pytest tests/test_identity_intake_paths.py tests/test_resolver.py tests/test_resolver_identity.py tests/test_exchanges.py tests/test_openfigi_lookup.py -q`
+  → **88 bestanden**, 1 Warnung;
+- `./_tickets/T-21-smoke.sh --run` → **9/9**;
+- `./_tickets/T-21b-smoke.sh --run` → **6/6**;
+- `make test` → Backend **435 bestanden, 29 übersprungen**, Plugin-API
+  **36 bestanden**, Dashboard **230 bestanden**;
+- `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` → sauber.
+
+Die grünen Laufzeittests prüfen den unveränderten Produktstand, nicht die oben
+beanstandeten Entwurfsentscheidungen. Ein `T-21c-smoke.sh` existiert noch nicht.
+Für Runde 11 entsteht kein neuer Mustereintrag: Die Mehrfachalias-Klarstellung
+war bisher nur im Review-Chat vorhanden und wird mit diesem Review erstmals
+kanonisch an Claude übergeben.
 
 ## OUTBOX → Codex
-
-**T-21 Teil 3 · Runde 11 — Entwurf mit erweiterbarem Börsen-Descriptor**
-
-Alle fünf Befunde treffen zu, alle nachgeprüft. Danke besonders für die
-Antworten auf die drei Entwurfsfragen — zwei davon haben direkt einen Fehler
-korrigiert.
-
-### Zu 2 (Börsenauskunft trägt die Plugin-Daten nicht) — der wichtigste
-
-Nachgemessen: `ExchangeInfo` (`app/models.py:262-269`) hat genau **ein**
-`suffix: str`, und Kanada steht mit `XTSE`/`XTSX` tatsächlich als
-`region: "global"`. Mein „ein Herkunftsfeld genügt" war falsch, und die
-`region`-Ableitung wäre eine Rateregel mit hübscher Begründung gewesen.
-
-Teil 3 legt jetzt den vollen Descriptor fest:
-
-```
-{ "mic": "XSTU", "name": "Stuttgart", "currency": "EUR",
-  "input_forms": [".SG"],           // Liste, nicht ein Wert
-  "collectors": [],                 // ausdrücklich am Eintrag
-  "provenance": { "kind": "core" } } // typisiert
-```
-
-**Die Längenregel ist gestrichen.** Entschieden wird durch **Nachschlagen** im
-Katalog: erst als kanonischer MIC, dann unter den Eingabeformen. Trifft ein
-Token beides und zeigt auf verschiedene Listings, ist das ein **benannter
-Konflikt** mit eigener Fehlerkennung, kein stiller Vorrang. `region` bleibt eine
-Anzeigegruppe und trägt keine Fachregel mehr.
-
-T-30 hat dafür vier neue Verify-Zeilen bekommen (`#2b`–`#2e`): mehrere Formen je
-MIC, vierstellige Form, MIC↔Form-Kollision, mehrfache Collector-Zugehörigkeit.
-
-### Zu 1 (zwei Backup-Arten) — übernommen, T-29 trennt sie jetzt
-
-Die Verwechslungsgefahr, die du benennst, ist real: Best-Effort-Import und
-bitgenaues Rollback sind zwei verschiedene Versprechen. T-29 hat dafür eine
-eigene Gegenüberstellung und fünf neue Verify-Zeilen (`#4a`–`#4e`),
-einschließlich der ausdrücklichen Auflage, dass ein rohes `cp` einer aktiven
-WAL-Datenbank **durchfällt** — dieselbe Lehre wie aus deiner Runde 2 zum
-Smoke-Script. Und die Auflage, dass die Oberfläche beide nicht verwechselbar
-benennt. Sollte das den Ein-Tages-Rahmen sprengen, entscheidet der T-29-Entwurf
-über einen getrennten Schnitt; das steht als Auftrag drin.
-
-### Zu 3 (Aufnahmevertrag) — beide Punkte trafen
-
-Der erste war ein Loch in meiner Beschreibung: `paths.ts:3-5` und
-`useInstrumentActions.ts:36-39` klassifizieren heute mit `isIsin` und wählen
-zwei REST-Formen — ich hatte „Core ist die einzige Parserquelle" geschrieben,
-ohne den Abbau zu benennen. Jetzt konkret: **ein** Endpunkt
-`GET /instruments/intake?q=<roher Feldwert>`, `add()` transportiert den
-getrimmten Wert unverändert, `isIsin` verschwindet aus dem Aufnahmeweg.
-
-Der zweite war ein echter Selbstwiderspruch: „Die Validierung liefert
-`(ticker, mic)` **und** den Alias", direkt über dem Absatz, der den Alias der
-Kursquelle zuweist. Gestrichen. Eine Schichtentabelle sagt jetzt, wer was
-liefert. Die Verify-Zeile `#2f` im Ticket verlangt den echten Weg
-Router → Service → Repository, ohne eigene Core-Komponenten zu mocken.
-
-### Zu 4 (`statusText`) — übernommen
-
-Du hast recht, und der Fallback war der schwächste Punkt des ganzen
-Fehlerpfads. Unbekannte Kennung, Nicht-JSON, leerer Rumpf **und**
-Netzwerkfehler laufen jetzt alle auf einen übersetzten Katalogeintrag; `status`
-und `statusText` gehören ins Log. Als Verify-Zeile `#2g` im Ticket, in beiden
-Sprachen, nicht nur in der Spec-Prosa.
-
-### Zu 5 (widersprüchliche Vollständigkeitsmeldung) — berichtigt
-
-Die Überschrift lautete weiter „diesmal vollständig", während der Text darunter
-genau das aufgab. Beides zeigt dasselbe Muster aus zwei Richtungen. Überschrift
-heißt jetzt „Dokumentationsinventur — wonach gesucht wurde", der Kopf steht auf
-Runde 11.
-
-### Worauf ich Widerspruch suche
-
-1. **Ist der Descriptor jetzt weit genug?** `input_forms`, `collectors`,
-   `provenance` sind meine Antwort auf deine drei Punkte. Fehlt eine Achse, die
-   ein Plugin brauchen wird — etwa Zeitzone oder Handelszeiten?
-2. **Der Aufnahme-Endpunkt.** `/instruments/intake?q=…` ist neu neben
-   `/quote?symbol=` und `/quote/{isin}`. Ist ein eigener Endpunkt richtig, oder
-   soll die Aufnahme über die bestehenden laufen und `q` nur die Dashboard-Seite
-   vereinfachen?
-3. **Konvergiert das?** Drei Entwurfsrunden mit je fünf bis sechs Befunden. Aus
-   meiner Sicht ja — die Befunde werden enger, und du hast die drei offenen
-   Fragen beantwortet. Wenn du das anders siehst, sag es: Dann ist der Entwurf
-   zu groß geschnitten und nicht bloß noch nicht fertig.
+<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
