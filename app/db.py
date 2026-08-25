@@ -11,7 +11,12 @@ from pathlib import Path
 import structlog
 
 from app.models import OVERRIDE_FIELDS
-from app.exchanges import is_real_mic, split_symbol
+from app.migration import (
+    MigrationPlan,
+    apply_migration,
+    harden_identity_schema,
+    plan_migration,
+)
 
 logger = structlog.get_logger()
 
@@ -21,6 +26,16 @@ CREATE TABLE IF NOT EXISTS instruments (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     isin            TEXT UNIQUE,
     symbol          TEXT NOT NULL,
+    -- Die kanonische Identität ist **Pflicht** (T-21 Teil 3, `#2b2`). Bei
+    -- einer frischen Installation steht sie damit von Anfang an im Schema;
+    -- ein gewachsener Bestand bekommt sie beim bestätigten Umzug, siehe
+    -- `app/migration.py`. `CREATE TABLE IF NOT EXISTS` fasst ihn hier nicht
+    -- an — er behält seine alte Tabelle, bis der Benutzer zustimmt.
+    ticker          TEXT NOT NULL,
+    mic             TEXT NOT NULL,
+    -- Opake UUID, bei Anlage einmal erzeugt und nicht aus ticker, mic, ISIN
+    -- oder dem lokalen Schlüssel abgeleitet (Vertrag in T-24).
+    listing_id      TEXT,
     exchange        TEXT,
     name            TEXT,
     type            TEXT,
@@ -37,6 +52,16 @@ CREATE TABLE IF NOT EXISTS instruments (
     first_seen      TEXT NOT NULL,
     meta_fetched_at TEXT
 );
+
+-- Die Eindeutigkeit liegt auf der kanonischen Identität, nicht auf `symbol`:
+-- Der frühere globale UNIQUE auf `symbol` hielt Yahoo in der Identität.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_ticker_mic
+    ON instruments (ticker, mic);
+
+-- Die `listing_id` ist der Maschinenschlüssel des öffentlichen Vertrags. Ohne
+-- Index wäre „opake UUID, einmal erzeugt" eine Absichtserklärung.
+CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_listing_id
+    ON instruments (listing_id);
 
 CREATE TABLE IF NOT EXISTS quotes (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -122,19 +147,100 @@ def get_connection(database_path: str) -> sqlite3.Connection:
     return connection
 
 
-def init_db(database_path: str) -> None:
-    """Erstellt das Datenbankschema, falls es noch nicht existiert.
+def init_db(database_path: str) -> bool:
+    """Erstellt das Schema und sagt, ob ein Identitäts-Umzug **aussteht**.
+
+    **Der Bestand wird hier nicht angefasst.** Bis T-21 Teil 3 zerlegte diese
+    Funktion die Altzeilen gleich mit — im FastAPI-Lifespan, also bevor die App
+    den ersten Request bedient. Seit die Migration Zeilen auch **ablehnt**,
+    geht das nicht mehr: Ein UI, das erst nach dem Lifespan erreichbar wird,
+    könnte niemanden mehr warnen, und der Benutzer stünde vor einem Bestand,
+    aus dem etwas fehlt.
+
+    Ergänzt werden deshalb nur Dinge, die nichts verwerfen: das Grundschema
+    und nachgetragene Metadatenspalten. Ob etwas aussteht, entscheidet die
+    Vorschau — und die schreibt nicht.
 
     Args:
         database_path: Pfad zur SQLite-Datei.
+
+    Returns:
+        ``True``, wenn ein Umzug aussteht und der Dienst in den
+        Pending-Zustand gehört.
     """
     connection = get_connection(database_path)
     try:
         connection.executescript(_SCHEMA)
         _migrate(connection)
         connection.commit()
+        return plan_migration(connection).is_pending
     finally:
         connection.close()
+
+
+def run_migration(database_path: str, rejected_at: str) -> MigrationPlan:
+    """Führt den bestätigten Umzug aus — Phase 2, **alles oder nichts**.
+
+    Aufgerufen erst nach der ausdrücklichen Bestätigung des Benutzers, nie im
+    Lifespan.
+
+    `PRAGMA foreign_keys` steht **vor** der Transaktion: SQLite ignoriert das
+    PRAGMA innerhalb einer, und der Tabellen-Neuaufbau in
+    `harden_identity_schema` kopiert `instruments` um — mit eingeschalteten
+    Fremdschlüsseln nähme er die Kurszeilen mit.
+
+    Args:
+        database_path: Pfad zur SQLite-Datei.
+        rejected_at: Zeitstempel für die Berichtseinträge (ISO-8601).
+
+    Returns:
+        Die Bilanz des Laufs — dieselbe, die die Vorschau gezeigt hat.
+    """
+    connection = get_connection(database_path)
+    try:
+        connection.execute("PRAGMA foreign_keys = OFF")
+        connection.execute("BEGIN")
+        plan = apply_migration(connection, rejected_at)
+        _assign_listing_ids(connection)
+        _dedupe_symbols(connection)
+        harden_identity_schema(connection)
+        connection.executescript(_IDENTITY_INDICES)
+        connection.commit()
+        return plan
+    except Exception:
+        connection.rollback()
+        raise
+    finally:
+        connection.execute("PRAGMA foreign_keys = ON")
+        connection.close()
+
+
+# Die Indizes müssen **nach** dem Tabellen-Neuaufbau neu entstehen: Ein `DROP
+# TABLE` nimmt sie mit, und `PRAGMA table_info` kennt `UNIQUE` gar nicht.
+_IDENTITY_INDICES = """
+DROP INDEX IF EXISTS idx_instruments_symbol;
+CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_ticker_mic
+    ON instruments (ticker, mic);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_listing_id
+    ON instruments (listing_id);
+CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_isin
+    ON instruments (isin);
+"""
+
+
+def _assign_listing_ids(connection: sqlite3.Connection) -> None:
+    """Vergibt jeder Zeile ihre `listing_id`, die noch keine hat.
+
+    Args:
+        connection: Offene Verbindung innerhalb der Transaktion.
+    """
+    for row in connection.execute(
+        "SELECT id FROM instruments WHERE listing_id IS NULL"
+    ).fetchall():
+        connection.execute(
+            "UPDATE instruments SET listing_id = ? WHERE id = ?",
+            (str(uuid.uuid4()), row["id"]),
+        )
 
 
 def _migrate(connection: sqlite3.Connection) -> None:
@@ -166,157 +272,6 @@ def _migrate(connection: sqlite3.Connection) -> None:
             ("fund_currency", "TEXT"),
         ),
     )
-
-    _migrate_identity(connection)
-
-
-# Die kanonische Identität aus T-21. `identity_status` sagt, ob sie feststeht.
-_IDENTITY_RESOLVED = "resolved"
-_IDENTITY_UNRESOLVED = "legacy_unresolved"
-
-
-def _identity_is_complete(row: sqlite3.Row) -> bool:
-    """Trägt diese Zeile eine **vollständige** kanonische Identität?
-
-    Entschieden wird nach den **Daten**, nicht nach der Beschriftung. Das ist
-    der Kern: Ein `identity_status`, der `resolved` behauptet, macht aus zwei
-    leeren Feldern keine Zuordnung — und ein kaputter Status macht aus einer
-    gültigen Zuordnung keinen Müll.
-
-    Vollständig heißt: ein Ticker **und** ein **echter** MIC. Der Sammelcode
-    `US` zählt nicht; er ist ein interner Suchcode und darf im kanonischen
-    Feld nie stehen. Ein MIC, den die eigene Tabelle nicht kennt, zählt
-    dagegen sehr wohl — `XNAS` ist genau der Wert, den eine manuelle
-    Zuordnung setzen soll.
-
-    Args:
-        row: Instrumentenzeile mit `ticker` und `mic`.
-
-    Returns:
-        ``True`` bei vollständiger, kanonisch zulässiger Identität.
-    """
-    return bool(row["ticker"]) and is_real_mic(row["mic"])
-
-
-def _migrate_identity(connection: sqlite3.Connection) -> None:
-    """Legt `(ticker, mic)` neben `symbol` und vergibt jede `listing_id`.
-
-    Der Identifikator eines Papiers war bisher das Yahoo-Symbol — in der
-    Datenbank, in der API, im Dashboard. Damit wäre yfinance nicht ersetzbar,
-    sondern nur ergänzbar: Jede zweite Kursquelle müsste Yahoos
-    Suffix-Schreibweise nachbilden.
-
-    **Melden statt raten.** Zerlegt wird nur, was die eigene Börsentabelle
-    eindeutig hergibt. Alles andere bleibt offen (`legacy_unresolved`) und
-    wird protokolliert; der Datensatz bleibt dabei lesbar und nutzbar. Ohne
-    diesen Zwischenzustand müsste die Migration raten, den Start blockieren
-    oder Daten löschen — genau die drei Auswege, die T-21 ausschließt.
-
-    Der Index zieht mit: Der globale `UNIQUE` auf `symbol` hielt Yahoo in der
-    Identität und weicht `(ticker, mic)`. Dass mehrere offene Zeilen dort
-    `NULL` tragen, ist kein Konflikt — SQLite behandelt `NULL` in eindeutigen
-    Indizes als jeweils eigenen Wert.
-    """
-    _add_missing_columns(
-        connection,
-        "instruments",
-        (
-            ("ticker", "TEXT"),
-            ("mic", "TEXT"),
-            # Opake UUID, bei Anlage einmal erzeugt und nicht aus ticker, mic,
-            # ISIN oder dem lokalen Schlüssel abgeleitet (Vertrag in T-24).
-            ("listing_id", "TEXT"),
-            ("identity_status", "TEXT"),
-        ),
-    )
-
-    for row in connection.execute(
-        "SELECT id, symbol, ticker, mic, listing_id, identity_status "
-        "FROM instruments"
-    ).fetchall():
-        if not row["listing_id"]:
-            connection.execute(
-                "UPDATE instruments SET listing_id = ? WHERE id = ?",
-                (str(uuid.uuid4()), row["id"]),
-            )
-        if _identity_is_complete(row):
-            # Bestehende Zuordnung — die Daten bleiben unangetastet. Stimmt die
-            # Beschriftung nicht, wird **sie** korrigiert, nicht die Identität:
-            # Ein kaputter Status darf keine gültige Zuordnung kosten.
-            if row["identity_status"] != _IDENTITY_RESOLVED:
-                logger.warning(
-                    "identity_status_repaired",
-                    symbol=row["symbol"],
-                    previous=row["identity_status"],
-                )
-                connection.execute(
-                    "UPDATE instruments SET identity_status = ? WHERE id = ?",
-                    (_IDENTITY_RESOLVED, row["id"]),
-                )
-            continue
-
-        if row["ticker"] or row["mic"]:
-            # Angefangen, aber nicht zulässig — etwa der Sammelcode `US` im
-            # MIC oder ein Ticker ohne Börse. Solche Zeilen werden neu
-            # bewertet; stillschweigend stehenbleiben dürfen sie nicht, sonst
-            # kommt die Migration nie wieder an sie heran.
-            logger.warning(
-                "identity_incomplete_reset",
-                symbol=row["symbol"],
-                ticker=row["ticker"],
-                mic=row["mic"],
-                status=row["identity_status"],
-            )
-        ticker, mic = split_symbol(row["symbol"])
-        connection.execute(
-            "UPDATE instruments SET ticker = ?, mic = ?, identity_status = ? "
-            "WHERE id = ?",
-            (
-                ticker,
-                mic,
-                _IDENTITY_RESOLVED if mic else _IDENTITY_UNRESOLVED,
-                row["id"],
-            ),
-        )
-
-    # Erst jetzt bereinigen: Vorher stünde die kanonische Identität noch nicht
-    # in der Zeile, und die Bereinigung müsste wieder nach `symbol` gruppieren
-    # — genau der Fehler, den sie seit T-21 nicht mehr machen darf.
-    _dedupe_symbols(connection)
-
-    connection.execute("DROP INDEX IF EXISTS idx_instruments_symbol")
-    connection.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_ticker_mic "
-        "ON instruments (ticker, mic)"
-    )
-    # Die `listing_id` ist der Maschinenschlüssel des öffentlichen Vertrags.
-    # Ohne Index wäre „opake UUID, einmal erzeugt" eine Absichtserklärung: Ein
-    # zweiter Schreiber könnte denselben Wert eintragen, und wer darüber
-    # adressiert, bekäme zwei Papiere.
-    connection.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_listing_id "
-        "ON instruments (listing_id)"
-    )
-    _report_unresolved(connection)
-
-
-def _report_unresolved(connection: sqlite3.Connection) -> None:
-    """Protokolliert die offenen Zuordnungen — sonst weiß niemand von ihnen.
-
-    „Später von Hand zuordnen" ist ohne diese Meldung ein Versprechen, das
-    niemand einlösen kann.
-    """
-    unresolved = [
-        row["symbol"]
-        for row in connection.execute(
-            "SELECT symbol FROM instruments WHERE identity_status = ? ORDER BY symbol",
-            (_IDENTITY_UNRESOLVED,),
-        )
-    ]
-    if unresolved:
-        logger.info(
-            "identity_unresolved", count=len(unresolved), symbols=unresolved
-        )
 
 
 def _merge_overrides(

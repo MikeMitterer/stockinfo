@@ -235,27 +235,26 @@ def is_real_mic(mic: str | None) -> bool:
     return mic not in COLLECTOR_CODES
 
 
-# Der Wert der Spalte `identity_status`. Er steht hier und nicht in `db.py`,
-# weil ihn zwei Wege setzen — die Migration des Bestands und das Anlegen neuer
-# Papiere — und beide dieselbe Regel brauchen.
-IDENTITY_RESOLVED = "resolved"
-IDENTITY_UNRESOLVED = "legacy_unresolved"
-
-
 def canonical_identity(
     ticker: str | None, mic: str | None
-) -> tuple[str | None, str | None, str]:
+) -> tuple[str, str] | None:
     """Die eine Stelle, die eine **neue** Identität für gültig erklärt.
 
     Vollständig ist sie nur zu zweit: kanonischer Ticker **und** echter MIC.
     Eine halbe Zuordnung wird nicht gespeichert — ein Ticker ohne Handelsplatz
     ist bei jeder Quelle mehrdeutig, und ein Handelsplatz ohne Ticker sagt gar
-    nichts. Beides zusammen leer und als offen beschriftet ist der ehrlichere
-    Zustand: Er taucht in der Liste offener Zuordnungen auf, statt eine
-    Zuordnung vorzutäuschen.
+    nichts.
 
-    **Strenger als das, was der Bestand tragen darf.** `_identity_is_complete`
-    in `app/db.py` beurteilt *gespeicherte* Zeilen milder — eine von Hand
+    **Der Status ist mit T-21 Teil 3 entfallen.** Die Funktion gab früher
+    `(ticker, mic, status)` zurück und schrieb das Ergebnis als
+    `identity_status` in die Zeile. Seit eine halbe Identität nirgends mehr
+    weiterleben darf, hätte die Spalte nur noch einen einzigen Wert — und die
+    beste Zahl an Quellen für einen Wert, den es nicht mehr gibt, ist null.
+    Geblieben ist die Vollständigkeitsaussage; sie führt jetzt zu **Annahme
+    oder Ablehnung** statt zu einer Beschriftung.
+
+    **Strenger als das, was der Bestand tragen darf.** `keeps_its_identity` in
+    `app/migration.py` beurteilt *gespeicherte* Zeilen milder — eine von Hand
     gesetzte Zuordnung wie `RDS-A`/`XLON` bleibt dort stehen, statt beim
     nächsten Start verworfen zu werden. Streng beim Erzeugen, nachsichtig beim
     Annehmen: Sonst löschte ein Regel-Nachziehen menschliche Arbeit.
@@ -265,12 +264,12 @@ def canonical_identity(
         mic: Vorgeschlagener MIC, oder ``None``.
 
     Returns:
-        `(ticker, mic, status)` — bei unvollständiger Zuordnung
-        ``(None, None, IDENTITY_UNRESOLVED)``.
+        `(ticker, mic)` bei vollständiger Zuordnung, sonst ``None``.
     """
     if is_canonical_ticker(ticker) and is_real_mic(mic):
-        return ticker, mic, IDENTITY_RESOLVED
-    return None, None, IDENTITY_UNRESOLVED
+        assert ticker is not None and mic is not None  # von beiden Prüfungen
+        return ticker, mic
+    return None
 
 
 def is_canonical_ticker(ticker: str | None) -> bool:

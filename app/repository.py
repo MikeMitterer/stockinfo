@@ -13,10 +13,26 @@ from contextlib import contextmanager
 import structlog
 
 from app.db import get_connection
-from app.exchanges import IDENTITY_RESOLVED, canonical_identity
+from app.exchanges import canonical_identity
 from app.models import OVERRIDE_FIELDS, QuoteResponse
 
 logger = structlog.get_logger()
+
+
+class IncompleteIdentityError(ValueError):
+    """Ein Papier soll angelegt werden, ohne dass seine Identität feststeht.
+
+    Seit T-21 Teil 3 gibt es dafür keinen Zustand mehr: `ticker` und `mic`
+    sind Pflicht, und zwar im Schema. Ohne diesen Fehler liefe der Aufrufer in
+    eine `NOT NULL`-Verletzung — dieselbe Ablehnung, nur als `500` und ohne zu
+    sagen, was fehlt.
+    """
+
+    def __init__(self, symbol: str) -> None:
+        super().__init__(
+            f"'{symbol}' trägt keine kanonische Identität (ticker und MIC)"
+        )
+        self.symbol = symbol
 
 # Instrument-Metadatenfelder (ohne id/isin/symbol/first_seen).
 _META_FIELDS = (
@@ -466,9 +482,10 @@ class QuoteRepository:
         Returns:
             Die zu schreibenden Identitätsfelder — leer, wenn nichts zu tun ist.
         """
-        ticker, mic, status = canonical_identity(response.ticker, response.mic)
-        if status != IDENTITY_RESOLVED:
+        identity = canonical_identity(response.ticker, response.mic)
+        if identity is None:
             return {}
+        ticker, mic = identity
 
         row = connection.execute(
             "SELECT ticker, mic FROM instruments WHERE id = ?", (instrument_id,)
@@ -486,7 +503,7 @@ class QuoteRepository:
                 ticker=ticker,
                 mic=mic,
             )
-        return {"ticker": ticker, "mic": mic, "identity_status": status}
+        return {"ticker": ticker, "mic": mic}
 
     @staticmethod
     def _writable_fields(response: QuoteResponse) -> tuple[str, ...]:
@@ -523,12 +540,21 @@ class QuoteRepository:
         Platzhalter als Werte — SQLite bricht mit `Incorrect number of
         bindings supplied` ab, mitten im ersten Anlegen eines Papiers.
         """
-        ticker, mic, status = canonical_identity(response.ticker, response.mic)
+        identity = canonical_identity(response.ticker, response.mic)
+        if identity is None:
+            # **Kein Anlegen ohne Identität** (T-21 Teil 3, `#2b2`). Vorher
+            # entstand hier eine Zeile mit `identity_status =
+            # legacy_unresolved`; seit die halbe Identität nirgends mehr
+            # weiterleben darf, ist das kein Zustand mehr, sondern ein Fehler
+            # des Aufrufers — und er gehört dort beantwortet, wo er entsteht.
+            raise IncompleteIdentityError(response.symbol)
+        ticker, mic = identity
+
         columns = (
             "isin, symbol, first_seen, meta_fetched_at, "
-            "ticker, mic, listing_id, identity_status, " + ", ".join(meta)
+            "ticker, mic, listing_id, " + ", ".join(meta)
         )
-        placeholders = ", ".join(["?"] * (8 + len(meta)))
+        placeholders = ", ".join(["?"] * (7 + len(meta)))
         values = [
             response.isin,
             response.symbol,
@@ -544,7 +570,6 @@ class QuoteRepository:
             # Eindeutigkeits-Index als eigenen Wert zählt, fiel das nicht
             # einmal auf.
             str(uuid.uuid4()),
-            status,
             *meta.values(),
         ]
         cursor = connection.execute(
