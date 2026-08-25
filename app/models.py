@@ -17,12 +17,94 @@ class ReadinessResponse(BaseModel):
 
     Getrennt von `HealthResponse`, weil beide verschiedene Fragen beantworten:
     „Läuft der Prozess noch?" (billig, für den Neustart-Entscheid) gegen
-    „Kann er gerade arbeiten?" (prüft die Datenbank).
+    „Ist der normale Fachbetrieb freigegeben?" (prüft die Datenbank **und**
+    den Migrationszustand).
+
+    **`status` ist ein `Literal`, kein freier `str`** (T-21 Teil 3, `#2b6b`).
+    Seit T-21 Teil 3 gibt es zwei Gründe für ein `503` — die unerreichbare
+    Datenbank und der ausstehende Umzug —, und ein Konsument muss sie
+    auseinanderhalten können. Bei einem freien String wäre der neue Wert nicht
+    im Vertrag sichtbar und ein Tippfehler nicht prüfbar.
     """
 
-    status: str
+    status: Literal["ok", "degraded", "migration_pending"]
     version: str
     database: str = Field(description="ok | error")
+
+
+class OperationalResponse(BaseModel):
+    """Kann der Prozess seine **derzeitige** Aufgabe erfüllen?
+
+    Die dritte Frage neben `/health` und `/ready`, und der Endpunkt, an dem
+    seit T-21 Teil 3 der Docker-`HEALTHCHECK` hängt. Der Unterschied zu
+    `/ready` ist der ganze Zweck: Während eines ausstehenden Umzugs weist der
+    Guard jeden Fachrequest ab — `/ready` sagt dann ehrlich `503`, denn der
+    normale Betrieb ist nicht freigegeben. Der Prozess ist deshalb aber nicht
+    kaputt: Er tut genau das, was er tun soll, nämlich auf die Bestätigung
+    warten.
+
+    Ein Healthcheck, der in dieser Lage `unhealthy` meldete, würde einen
+    Fehler behaupten, wo eine Rückfrage läuft.
+
+    | Lage | Status | `mode` |
+    |---|---|---|
+    | Umzug ausstehend, DB erreichbar | `200` | `migration_pending` |
+    | normaler Betrieb, DB erreichbar | `200` | `serving` |
+    | DB nicht erreichbar | `503` | `degraded` |
+    """
+
+    mode: Literal["serving", "migration_pending", "degraded"]
+    version: str
+
+
+class RejectedInstrument(BaseModel):
+    """Ein Papier, das den gültigen Bestand verlässt oder verlassen hat.
+
+    Dasselbe Modell für **Vorschau und Bericht**, und das mit Absicht: Was der
+    Benutzer vorher sieht, muss er hinterher wiedererkennen. Zwei Modelle
+    liefen beim ersten zusätzlichen Feld auseinander, und ausgerechnet an
+    dieser Stelle wäre der Unterschied teuer — er beträfe die Liste, auf deren
+    Grundlage jemand einer Löschung zustimmt.
+
+    `reason` ist eine **stabile Kennung**, kein Satz. Der Text gehört ins UI
+    und muss in DE und EN vorliegen; wer darauf reagiert, prüft diesen Wert.
+    """
+
+    symbol: str
+    isin: str | None = None
+    name: str | None = None
+    reason: str = Field(description="stabile Kennung, siehe app/migration.py")
+    quotes: int = Field(description="Intraday-Kurspunkte, die entfallen")
+    daily_closes: int = Field(description="Tagesschlusskurse, die entfallen")
+
+
+class MigrationPreview(BaseModel):
+    """Was der bestätigte Umzug tun **würde** — Phase 1.
+
+    `migrating` und `unchanged` stehen neben den Ablehnungen, damit die Liste
+    als vollständige Bilanz lesbar ist. Ohne sie könnte der Benutzer nicht
+    sehen, ob die genannten Zeilen *alle* betroffenen sind — und genau das
+    muss er wissen, bevor er zustimmt.
+    """
+
+    pending: bool
+    migrating: int
+    unchanged: int
+    rejected: list[RejectedInstrument]
+    lost_quotes: int
+    lost_daily_closes: int
+
+
+class MigrationReport(BaseModel):
+    """Was tatsächlich geschehen ist — abrufbar auch später noch.
+
+    Der Bericht überlebt die gelöschten Zeilen; das ist sein Zweck. Ohne ihn
+    stünde der Benutzer vor einem Bestand, aus dem etwas fehlt, ohne zu
+    erfahren, was und warum.
+    """
+
+    completed: bool
+    rejected: list[RejectedInstrument]
 
 
 class QuotePoint(BaseModel):
