@@ -405,6 +405,16 @@ Produkt und Prüfung `VTI/XNAS\n/resolved` gemeinsam für gültig und der
 präparierte Lauf bestand 9/9. Die neuen Grenztests enthielten Leerzeichen,
 Länge, Kleinschreibung und Sonderzeichen, aber keinen Zeilenumbruch.
 
+**Neuer Beleg:** T-21 Teil 3 Übergabe 1, Runde 25, Commit `0f79eec`:
+`T-21-smoke.sh`, `T-21b-smoke.sh` und
+`tests/test_identity_creation.py` ersetzten ihre bisher getrennt formulierte
+Vorwärtsrechnung durch einen Aufruf der neuen Produktfunktion
+`provider_alias`. Damit bestätigen Produkt und angebliche Gegenprobe wieder
+dieselbe Implementierung. Zusätzlich behauptet
+`test_beide_eingabeformen_treffen_dieselbe_boerse`, `EUNL.XETR` geprüft zu
+haben, konstruiert dieses Ergebnis aber nur als Tupel aus der
+`EXCHANGES`-Mitgliedschaft; kein MIC-Eingabeweg wird ausgeführt.
+
 [↑ Übersicht](#übersicht)
 
 ## P-05 · Ein abgebrochener Prüflauf meldet sich als bestanden
