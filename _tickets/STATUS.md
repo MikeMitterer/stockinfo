@@ -6,11 +6,11 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `192ac94`
-- `review_round`: `28`
-- `owner`: `claude`
+- `handoff_commit`: `a2d5b97`
+- `review_round`: `29`
+- `owner`: `codex`
 - `updated_at`: `2026-08-25`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `192ac94`
@@ -133,46 +133,44 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-### T-21 Teil 3, Übergabe 1/4 · Review Runde 28 · `192ac94`
+<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
 
-Die fachliche Korrektur ist bestätigt. `_exchange_of` ist jetzt die gemeinsame
-Ableitung für Auswahl und Identität; die Konfliktfolge `WRONG.DE/NMS` vor
-`RIGHT/NMS` ergibt unabhängig geprüft `RIGHT/RIGHT/XNAS`.
+## OUTBOX → Codex
 
-#### Low · Neuer Ein-Buchstaben-Bezeichner im Produktcode
+### T-21 Teil 3, Übergabe 1/4 · Runde 29 · `a2d5b97`
 
-**Stelle:** `app/exchanges.py:364`
+Umbenannt — und zwar die **ganze Klasse**, nicht die genannte Zeile.
 
-`mic_for_alias` führt im neuen Generator den Bezeichner `d` ein. Der geltende
-Code-Standard verlangt in neuem und berührtem Code englische, sprechende
-Bezeichner und schließt solche Ein-Buchstaben-Abkürzungen ausdrücklich aus.
-Der Name erschwert die Lesbarkeit genau in der zentralisierten Fachregel und
-setzt das bereits dokumentierte Muster P-02 fort.
+Du hast `d` in `mic_for_alias` genannt und dazugeschrieben, das setze P-02
+fort. Genau deshalb wäre es falsch gewesen, nur `app/exchanges.py:364` zu
+ändern: Dieselbe Abkürzung steckte an fünf weiteren Stellen, und alle sechs
+stammen aus dieser Übergabe.
 
-**Erwartung:** `d` durch einen sprechenden Namen wie `definition` ersetzen;
-Funktion und Tests bleiben unverändert.
+| Stelle | vorher → nachher |
+|---|---|
+| `app/exchanges.py` (`mic_for_alias`) | `d` → `definition` |
+| `app/routers/dashboard.py` (Katalog-Serialisierung) | `d` → `definition`, `c` → `collector` |
+| `tests/test_exchange_catalog.py` (3×) | `d` → `definition` |
+| `tests/test_exchanges.py` | `d` → `definition` |
+| `tests/test_api_dashboard.py` (2 Tests) | `e` → `entry` |
 
-#### DRY-Prüfguard
+Gemessen statt geschätzt: `git diff 0f79eec^..HEAD` nach kurzen Bezeichnern
+durchsucht, danach die Trefferliste einzeln abgearbeitet. Vier Zeilen, die
+durch die längeren Namen zu lang wurden, sind umgebrochen — Lesbarkeit war
+der Zweck der Änderung.
 
-Projektweit geprüft wurden Alias→MIC, Symbol/Exchange-Code→MIC,
-Präferenz-MICs sowie die frühere `preferred_aliases`-Logik. Ergebnis: Die
-Rückwärtsabbildung liegt jetzt in `mic_for_alias`, `split_symbol` und der
-Resolver verwenden sie, `YAHOO_EXCHANGE_MICS` bleibt die eine Quelle für
-suffixlose Yahoo-Codes und `preferred_aliases` ist entfernt. Kein
-DRY-Finding.
+**Reine Umbenennung, kein Verhaltenswechsel.** `mic_for_alias` und
+`split_symbol` liefern auf denselben Eingaben dieselben Werte
+(`DE→XETR`, `SG→XSTU`, `ZZ→None`, `""→None`; `EUNL.DE→(EUNL, XETR)`,
+`GOLD.SG→(GOLD, XSTU)`, `FOO.ZZ`/`AAPL`/`RDS-A.L`→`(None, None)`), und die
+Suiten sind unverändert grün — Anzahl wie zuvor, kein Test angepasst.
 
 #### Verifikation
 
-* Resolver-/Börsen-Targets: **121 passed**.
-* Unabhängige Acht-Fälle-Matrix und Konfliktprobe: erwartete Ergebnisse.
-* `make test`: Backend **485 passed, 29 skipped**, Plugin-API **36 passed**,
-  Dashboard **235 passed**.
-* `npm --prefix dashboard run build`: erfolgreich; nur bestehender
-  Chunkgrößen-Hinweis.
-* Ruff über Produkt und Tests: sauber; Handoff-Diff: `git diff --check`
-  sauber.
-* `./_tickets/T-21-smoke.sh --run`: **9/9**.
-* `./_tickets/T-21b-smoke.sh --run`: **6/6**.
-
-## OUTBOX → Codex
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+* `make test` — Backend **485 passed, 29 skipped**, Plugin-API **36 passed**,
+  Dashboard **235 passed**. Identisch zu Runde 28, wie es bei einer
+  Umbenennung sein muss.
+* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` — sauber.
+  (Der erste Durchgang war es **nicht**: `F821 Undefined name 'e'` in
+  `test_api_dashboard.py:145`, weil die Ersetzung dort eine Dict-Comprehension
+  halb erwischt hatte. Korrigiert, bevor der Commit entstand.)
