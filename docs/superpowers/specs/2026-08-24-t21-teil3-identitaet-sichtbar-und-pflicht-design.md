@@ -1,7 +1,7 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
-**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 23** ·
+**Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 24** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
 „Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
 Entwurfsprüfung ohne Produktcode.
@@ -669,11 +669,43 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 > Dashboard ist unter `/` gemountet (`app/main.py:106-125`), und ein
 > Präfix-Platzhalter gäbe jede Fach-API mit frei.
 >
-> **Der Test enumeriert nicht die Konstante, sondern die Wirklichkeit:** Er baut
-> das Dashboard, fordert **jede** tatsächlich ausgelieferte Wurzeldatei und
-> jedes Asset im Pending-Zustand an und prüft zusätzlich, dass unbekannte Pfade
-> und Fach-APIs gesperrt bleiben. Ein Test, der nur die Allowlist gegen sich
-> selbst prüft, hätte die fehlende SVG nie gefunden.
+> **Aber Dateien allein reichen nicht — `/` ist keine Datei.**
+> `StaticFiles(html=True)` stellt die Startadresse als **URL-Alias** auf
+> `index.html` bereit; im Dateiinventar taucht sie nicht auf. Eine rein aus
+> Dateien abgeleitete Allowlist hätte also ausgerechnet die Adresse gesperrt,
+> über die das Dashboard geöffnet wird — und der Test wäre grün geblieben, weil
+> er denselben Dateibestand enumeriert.
+>
+> Nachgemessen mit `STATIC_DIR=dashboard/dist`:
+>
+> ```text
+> Inventar        = [assets, favicon.png, index.html, logo.png,
+>                    logo.svg, stockinfo-icon.png, stockinfo-icon.svg]
+> GET /                   -> 200  text/html
+> GET /index.html         -> 200  text/html
+> GET /stockinfo-icon.svg -> 200  image/svg+xml
+> GET /assets             -> 404          ← das Verzeichnis selbst wird nicht ausgeliefert
+> ```
+>
+> Die Static-Freigabe ist deshalb **abgeleitete Dateimenge plus benannte
+> Aliase**:
+>
+> * **`(GET, /)`** — als exakter Pfad, **niemals als Präfix**, und nur unter der
+>   Bedingung, dass `index.html` im begrenzten `static_dir` liegt.
+> * Die Dateimenge wird **rekursiv** ermittelt: `/assets` als Verzeichnis
+>   liefert `404`, seine Dateien liefern `200`. Ein Inventar, das nur die
+>   oberste Ebene liest, gäbe die Assets nicht frei.
+> * Existiert `static_dir` gar nicht, ist nichts gemountet und der statische
+>   Teil der Allowlist ist **leer**. Das ist der lokale Entwicklungsfall: Die
+>   Vorgabe zeigt auf den Container-Pfad `/app/web`, den es außerhalb des Images
+>   nicht gibt.
+>
+> **Der Test enumeriert die Wirklichkeit, nicht die Konstante:** Er baut das
+> Dashboard, fordert **`GET /`** ausdrücklich an und belegt die geladene
+> Dashboard-HTML, dazu jede reale Datei und jedes Asset im Pending-Zustand, und
+> prüft, dass unbekannte Pfade und Fach-APIs gesperrt bleiben. Ein Test, der nur
+> die Allowlist gegen sich selbst prüft, hätte weder die fehlende SVG noch das
+> fehlende `/` gefunden.
 >
 > Alles andere wird mit einer **stabilen Kennung** abgewiesen — aus derselben
 > Zustandsquelle. Einzelprüfungen in den Routern wären eine parallele
