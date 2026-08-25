@@ -337,6 +337,21 @@ darunter und ist gestrichen. Der Alias entsteht ausschließlich im Adapter, übe
 Identität ein Providerformat baut. Wem der Alias **gehört** und was beim
 Providerwechsel mit ihm geschieht, klärt **T-29**, nicht dieser Entwurf.
 
+**Die Gegenrichtung hat ebenfalls genau eine Stelle** *(Nachtrag aus Runde
+27.)* Aus einem Anbietertreffer auf die Börse zu schließen, geht über
+`_exchange_of(symbol, exchange_code)`, und zwar mit einer festen Rangfolge:
+Ein **bekanntes Suffix entscheidet allein** und wird nie vom Börsencode des
+Anbieters überstimmt; ist keines da, gilt der Code. Ein unbekanntes Suffix
+heißt „keine Börse", nicht „dann eben der Code" — sonst hinge ein MIC an einem
+Symbol, das sich danach nicht mehr zusammensetzen ließe.
+
+Der Grund, das festzuhalten: Auswahl der Vorzugsbörse und Identitätsbildung
+stellen dieselbe Frage, und getrennt formuliert liefen sie auseinander — ein
+`WRONG.DE` mit dem Code `NMS` galt der Auswahl als NASDAQ-Notierung, während
+die Identität ihm `XETR` gab. Der Alias-Lookup selbst liegt in
+`mic_for_alias`, die Umkehrung von `ExchangeDef.alias`, und wird von
+`split_symbol` und `_exchange_of` geteilt.
+
 ### B. Sichtbarkeit — was davon übrig bleibt
 
 Die Entscheidung 2 hat diesen Abschnitt halbiert. Sichtbar zu machen ist noch:

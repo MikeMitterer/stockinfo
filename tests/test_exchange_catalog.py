@@ -18,8 +18,8 @@ from app.exchanges import (
     COLLECTORS,
     EXCHANGES,
     is_real_mic,
+    mic_for_alias,
     preference_kind,
-    preferred_aliases,
     preferred_mics,
     provider_alias,
     split_symbol,
@@ -196,16 +196,28 @@ def test_eine_praeferenz_umfasst_ihre_handelsplaetze(
     assert preferred_mics(code) == expected
 
 
-def test_die_aliase_sind_aus_den_handelsplaetzen_abgeleitet() -> None:
-    """Eine Quelle für „welche Plätze?", nicht zwei nebeneinander.
+@pytest.mark.parametrize(
+    ("alias", "expected"),
+    [
+        ("DE", "XETR"),
+        ("SG", "XSTU"),
+        ("ZZ", None),
+        ("", None),
+    ],
+    ids=["xetra", "stuttgart", "unbekannt", "leer"],
+)
+def test_der_alias_findet_seine_boerse_zurueck(alias: str, expected: str | None) -> None:
+    """Die Umkehrung von `ExchangeDef.alias` — an genau einer Stelle.
 
-    Der Sammelcode `US` umfasst fünf Plätze und steuert **keinen** Alias bei —
-    ein leeres Ergebnis heißt „keiner hängt ein Kürzel an", nicht „egal".
+    Der Leerstring gehört zu den Negativfällen: Eine Börse **ohne** Alias
+    lässt sich nicht über ihn finden. Gäbe es hier einen Treffer, träfe
+    `AAPL.` auf einen der fünf US-Plätze.
+
+    Zwei Schichten stellen diese Frage — die Zerlegung eines gespeicherten
+    Symbols und die Börsenauswahl im Resolver. Beantworteten sie sie getrennt,
+    liefen sie beim ersten neuen Eintrag auseinander.
     """
-    assert preferred_aliases("XETR") == ("DE",)
-    assert preferred_aliases("XNAS") == ()
-    assert preferred_aliases("US") == ()
-    assert len(preferred_mics("US")) == 5
+    assert mic_for_alias(alias) == expected
 
 
 def test_der_alias_weg_landet_beim_kanonischen_mic() -> None:

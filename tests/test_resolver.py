@@ -653,6 +653,37 @@ def test_yahoo_unterscheidet_eine_us_boerse_vom_sammelcode(monkeypatch) -> None:
     assert (resolved.symbol, resolved.mic) == ("ONEQ", "XNAS")
 
 
+def test_yahoo_laesst_das_suffix_nicht_vom_boersencode_ueberstimmen(
+    monkeypatch,
+) -> None:
+    """Trägt ein Symbol ein bekanntes Suffix, entscheidet **nur** dieses.
+
+    Der Befund aus Runde 27: Auswahl und Identitätsbildung leiteten die Börse
+    getrennt ab. Die Auswahl zog Yahoos Code auch bei einem suffigierten
+    Symbol heran, und `WRONG.DE` mit dem Code `NMS` galt ihr als
+    NASDAQ-Notierung — während `_identity` demselben Treffer gleich darauf
+    `XETR` gab. Anzeige, gewählte Präferenz und gespeicherter MIC
+    widersprachen einander, und der gültige NASDAQ-Treffer dahinter wurde
+    verdrängt.
+
+    Beide Treffer tragen denselben Yahoo-Code; **allein** das Suffix
+    unterscheidet sie. Der falsche steht wieder zuerst.
+    """
+    _with_search(
+        monkeypatch,
+        [
+            {"symbol": "WRONG.DE", "exchange": "NMS", "exchDisp": "NasdaqGS", "quoteType": "ETF"},
+            {"symbol": "RIGHT", "exchange": "NMS", "exchDisp": "NasdaqGS", "quoteType": "ETF"},
+        ],
+    )
+    resolver = YFinanceResolver(default_exchange="XNAS")
+
+    resolved = resolver.resolve_isin("US0378331005")
+
+    assert isinstance(resolved, ResolvedInstrument)
+    assert (resolved.symbol, resolved.ticker, resolved.mic) == ("RIGHT", "RIGHT", "XNAS")
+
+
 def test_yahoo_laesst_einen_unbekannten_punktlosen_treffer_nicht_gewinnen(
     monkeypatch,
 ) -> None:

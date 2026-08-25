@@ -336,10 +336,32 @@ def split_symbol(symbol: str) -> tuple[str | None, str | None]:
         return None, None
 
     ticker, _, alias = symbol.partition(".")
-    for mic, definition in EXCHANGES.items():
-        if definition.alias and definition.alias == alias:
-            return (ticker, mic) if is_canonical_ticker(ticker) else (None, None)
-    return None, None
+    mic = mic_for_alias(alias)
+    if mic is None:
+        return None, None
+    return (ticker, mic) if is_canonical_ticker(ticker) else (None, None)
+
+
+def mic_for_alias(alias: str) -> str | None:
+    """Welche Börse hängt diesen Alias an? — die Umkehrung von `ExchangeDef.alias`.
+
+    Die **eine** Stelle, die vom Alias zurück auf die Börse schließt. Sie ist
+    möglich, weil kein Alias doppelt vergeben ist; `test_kein_alias_ist_doppelt_vergeben`
+    hält das fest.
+
+    Eigens herausgezogen, weil zwei Schichten die Frage stellen: die Zerlegung
+    eines gespeicherten Symbols (`split_symbol`) und die Auswahl der
+    bevorzugten Börse im Resolver. Beantworteten sie sie getrennt, liefen sie
+    beim ersten neuen Eintrag auseinander.
+
+    Args:
+        alias: Das nackte Token hinter dem Punkt, etwa ``'DE'``.
+
+    Returns:
+        Der MIC der Börse, oder ``None`` — auch für den Leerstring, denn eine
+        Börse *ohne* Alias lässt sich nicht über ihn finden.
+    """
+    return next((mic for mic, d in EXCHANGES.items() if d.alias == alias), None)
 
 
 def preference_kind(code: str) -> str | None:
@@ -393,29 +415,6 @@ def preferred_mics(code: str) -> tuple[str, ...]:
     if collector is not None:
         return tuple(mic for mic in collector.members if mic in EXCHANGES)
     return (DEFAULT_EXCHANGE,)
-
-
-def preferred_aliases(code: str) -> tuple[str, ...]:
-    """Die Aliase der Handelsplätze, die zu einer Präferenz gehören.
-
-    Aus `preferred_mics` abgeleitet, nicht daneben gepflegt: Die Frage „welche
-    Plätze umfasst der Vorgabewert?" hat genau eine Antwort, und die steht dort.
-
-    Börsen ohne Alias steuern **nichts** bei, statt eine Abwesenheit in die
-    Liste zu legen. Ein leeres Ergebnis heißt deshalb genau eines: „keiner der
-    in Frage kommenden Plätze hängt ein Kürzel an". Es heißt **nicht** „jedes
-    punktlose Symbol gehört dazu" — welche Plätze gemeint sind, sagt allein
-    `preferred_mics`.
-
-    Args:
-        code: Der konfigurierte Vorgabewert.
-
-    Returns:
-        Die vorhandenen Aliase, möglicherweise keiner.
-    """
-    return tuple(
-        alias for mic in preferred_mics(code) if (alias := EXCHANGES[mic].alias)
-    )
 
 
 def provider_alias(ticker: str, mic: str) -> str:

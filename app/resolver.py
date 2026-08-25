@@ -19,11 +19,10 @@ from app.exchanges import (
     home_exchange,
     is_canonical_ticker,
     is_real_mic,
+    mic_for_alias,
     preference_kind,
-    preferred_aliases,
     preferred_mics,
     provider_alias,
-    split_symbol,
 )
 
 from app.providers.base import (
@@ -41,9 +40,11 @@ logger = structlog.get_logger()
 # Yahoos Börsencodes → echter MIC. **Bewusst kurz.**
 #
 # Gebraucht wird die Tabelle nur dort, wo die eigene Börsentabelle nichts
-# hergibt: bei **suffixlosen** Symbolen. Für `EUNL.DE` liefert `split_symbol`
+# hergibt: bei **suffixlosen** Symbolen. Für `EUNL.DE` liefert `mic_for_alias`
 # den MIC aus der eigenen Konvention — Yahoos `GER` steht hier deshalb nicht,
 # und jede Zeile, die dort schon beantwortet wird, gehört auch nicht her.
+#
+# Die Rangfolge steht an genau einer Stelle: `_exchange_of`.
 #
 # Suffixlos notiert bei Yahoo genau ein Markt: die USA. Die Börsentabelle führt
 # ihn als Sammelcode `US` zusammen, weil OpenFIGI so sucht — welcher der sechs
@@ -67,19 +68,47 @@ YAHOO_EXCHANGE_MICS: dict[str, str] = {
 }
 
 
+def _exchange_of(symbol: str, exchange_code: str | None) -> str | None:
+    """An welcher Börse liegt dieser Yahoo-Treffer?
+
+    **Die eine Ableitung**, aus der Auswahl *und* Identitätsbildung ihren MIC
+    beziehen. Getrennt formuliert liefen die beiden auseinander: Die Auswahl
+    zog Yahoos Code auch bei einem suffigierten Symbol heran, und ein
+    `WRONG.DE`-Treffer mit dem Code `NMS` galt ihr als NASDAQ-Notierung,
+    während `_identity` ihm gleich darauf `XETR` gab. Anzeige, gewählte
+    Präferenz und gespeicherter MIC widersprachen einander.
+
+    Die Rangfolge ist **nicht** „erst probieren, dann das andere":
+
+    1. **Das Symbol trägt ein Suffix.** Dann entscheidet allein die eigene
+       Börsentabelle. Kennt sie das Suffix nicht (`FOO.ZZ`), ist die Antwort
+       ``None`` — Yahoos Code darauf anzuwenden wäre falsch: Der Ticker vor
+       dem Punkt gehört zu einer Börse, die StockInfo nicht führt, und das
+       Symbol ließe sich danach nicht mehr zusammensetzen.
+    2. **Das Symbol trägt keines.** Erst dann hilft `YAHOO_EXCHANGE_MICS`.
+       Suffixlos notiert bei Yahoo genau ein Markt, die USA — und dort trägt
+       nur der Code die Auskunft, welcher der fünf Plätze gemeint ist.
+
+    Args:
+        symbol: Das Symbol aus der Yahoo-Suche.
+        exchange_code: Yahoos Feld ``exchange``, falls vorhanden.
+
+    Returns:
+        Der MIC, oder ``None`` wenn sich die Börse nicht bestimmen lässt.
+    """
+    if "." in symbol:
+        return mic_for_alias(symbol.partition(".")[2])
+    return YAHOO_EXCHANGE_MICS.get((exchange_code or "").upper())
+
+
 def _identity(symbol: str, exchange_code: str | None) -> tuple[str | None, str | None]:
     """Bestimmt `(ticker, mic)` zu einem Yahoo-Treffer — oder gibt auf.
 
-    Zwei Wege, in dieser Reihenfolge:
-
-    1. **Das Suffix** über die eigene Börsentabelle (`EUNL.DE` → `XETR`). Das
-       ist StockInfos eigene Konvention und braucht Yahoo nicht.
-    2. **Yahoos Börsencode** für suffixlose Symbole (`AAPL` bei `NMS` →
-       `XNAS`). Nur hier ist die Zuordnungstabelle nötig.
-
-    Der Ticker muss in beiden Fällen kanonisch sein. `BRK-B` scheitert daran,
+    Die Börse kommt aus `_exchange_of`; hier kommt allein die Frage dazu, ob
+    der **Ticker** taugt. Er muss kanonisch sein: `BRK-B` scheitert daran,
     obwohl sein MIC feststeht — die Schreibweise ist Yahoos, nicht die der
-    Börse.
+    Börse. Dieselbe Regel misst die Erzeugung neuer Papiere, sonst gälte für
+    gewachsene Zeilen eine andere Wahrheit als für neue.
 
     Args:
         symbol: Das Symbol aus der Yahoo-Suche.
@@ -88,64 +117,12 @@ def _identity(symbol: str, exchange_code: str | None) -> tuple[str | None, str |
     Returns:
         `(ticker, mic)` bei eindeutiger Zuordnung, sonst ``(None, None)``.
     """
-    ticker, mic = split_symbol(symbol)
-    if ticker and mic:
-        return ticker, mic
-
-    if "." in symbol:
-        # Ein Suffix, das die Tabelle nicht kennt (`GOLD.SG`). Yahoos Code
-        # darauf anzuwenden wäre falsch: Der Ticker vor dem Punkt gehört zu
-        # einer Börse, die StockInfo nicht führt — und `.SG` an einen MIC zu
-        # binden, ohne die Börse in die eigene Tabelle aufzunehmen, hinge in
-        # der Luft (das Symbol liesse sich danach nicht mehr zusammensetzen).
+    mic = _exchange_of(symbol, exchange_code)
+    if mic is None:
         return None, None
 
-    mic = YAHOO_EXCHANGE_MICS.get((exchange_code or "").upper())
-    if mic and is_canonical_ticker(symbol):
-        return symbol, mic
-    return None, None
-
-
-def _at_exchange(
-    quote: dict, aliases: tuple[str, ...], mics: frozenset[str]
-) -> bool:
-    """Liegt dieser Yahoo-Treffer an einem der bevorzugten Handelsplätze?
-
-    Zwei Wege, weil ein Treffer seine Börse auf zwei Arten verrät — und der
-    zweite ist genau der, den die US-Plätze brauchen:
-
-    1. **Das Suffix** (`EUNL.DE`). StockInfos eigene Konvention.
-    2. **Yahoos Börsencode** (`NMS`, `PCX`) über `YAHOO_EXCHANGE_MICS`.
-       Dieselbe Abbildung, die `_identity` benutzt, um dem Treffer später
-       seinen MIC zu geben — keine zweite Tabelle daneben.
-
-    **Warum es den zweiten Weg braucht.** Vorher galt für aliaslose Plätze
-    „jedes punktlose Symbol gehört dazu". Das machte `XNAS` und den Sammelcode
-    `US` ununterscheidbar: Bei `DEFAULT_EXCHANGE=XNAS` gewann ein Arca-Treffer
-    (`PCX`) vor dem NASDAQ-Treffer, der zwei Zeilen später stand, und bei `US`
-    verdrängte ein punktloser Treffer mit unbekanntem Code ein gültiges
-    Mitglied — die anschließende MIC-Abbildung machte daraus dann
-    `Unavailable`, obwohl ein auflösbarer Treffer vorlag.
-
-    Ein Treffer, dessen Börse sich auf **keinem** der beiden Wege bestimmen
-    lässt, gehört nicht zur Präferenz. Er kann weiterhin gewinnen — aber nur
-    über den Fremdbörsen-Fallback, wenn kein Treffer der bevorzugten Börse
-    dasteht.
-
-    Args:
-        quote: Ein Treffer der Yahoo-Suche.
-        aliases: Die Aliase der bevorzugten Plätze, möglicherweise keiner.
-        mics: Die MICs der bevorzugten Plätze.
-
-    Returns:
-        ``True``, wenn der Treffer an einem der bevorzugten Plätze liegt.
-    """
-    symbol = str(quote["symbol"])
-    if any(symbol.endswith(f".{alias}") for alias in aliases):
-        return True
-
-    mic = YAHOO_EXCHANGE_MICS.get(str(quote.get("exchange") or "").upper())
-    return mic is not None and mic in mics
+    ticker = symbol.partition(".")[0]
+    return (ticker, mic) if is_canonical_ticker(ticker) else (None, None)
 
 
 def _quote_type(quote: dict) -> str:
@@ -376,11 +353,17 @@ class YFinanceResolver:
         weiter in Euro an Xetra steht — im Depot fällt die Position damit aus
         der Währungsrechnung.
 
-        Erkannt wird die Börse am **Suffix des Symbols** (``.DE``, ``.MI``, …)
-        oder — wo es keines gibt — an **Yahoos Börsencode** (`NMS`, `PCX`),
-        siehe `_at_exchange`. Das Feld ``exchDisp`` daneben wäre der
-        naheliegende Weg, ist aber Freitext von Yahoo („XETRA", „Frankfurt",
-        „Milan") und taugt nicht als Schlüssel.
+        Erkannt wird die Börse über `_exchange_of` — dieselbe Ableitung, die
+        dem gewählten Treffer gleich darauf seinen MIC gibt. Am **Suffix des
+        Symbols** (``.DE``, ``.MI``, …), und nur wo es keines gibt, an
+        **Yahoos Börsencode** (`NMS`, `PCX`). Das Feld ``exchDisp`` daneben
+        wäre der naheliegende Weg, ist aber Freitext von Yahoo („XETRA",
+        „Frankfurt", „Milan") und taugt nicht als Schlüssel.
+
+        Ein Treffer, dessen Börse sich so nicht bestimmen lässt, gehört zu
+        keiner Präferenz. Er kann weiterhin gewinnen — aber nur über den
+        Fremdbörsen-Fallback unten, wenn kein Treffer der bevorzugten Börse
+        dasteht.
 
         Steht an der bevorzugten Börse mehr als ein Listing, entscheidet die
         **Gattung des bestplatzierten Treffers**. Yahoos Suche ist unscharf und
@@ -407,10 +390,11 @@ class YFinanceResolver:
         if not with_symbol:
             return None
 
-        aliases = preferred_aliases(self._default_exchange)
         mics = frozenset(preferred_mics(self._default_exchange))
         at_exchange = [
-            quote for quote in with_symbol if _at_exchange(quote, aliases, mics)
+            quote
+            for quote in with_symbol
+            if _exchange_of(str(quote["symbol"]), quote.get("exchange")) in mics
         ]
 
         if at_exchange:

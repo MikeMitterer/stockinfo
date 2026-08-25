@@ -191,6 +191,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2h | Börsenauskunft (`catalog`) | serialisiert **keinen** Sammelcode in ein `mic`-Feld; `US` erscheint als eigener Eintragstyp und bleibt als `DEFAULT_EXCHANGE` samt Mitgliedern nutzbar; **kein** Börseneintrag trägt eine eigene Mitgliedschaftsliste | ✅ [^i] | |
 | 2h2 | Katalog-Vertrag: Alias und Provenienz | `alias` ist in Python, OpenAPI und TypeScript **optional** — fehlend **oder** `null`, in allen drei Schichten. Der Leerstring ist verboten; das trägt das Backend (`min_length=1`, im OpenAPI-Schema sichtbar), nicht TypeScript. Die fünf US-Plätze liefern `null`. `provenance` ist eine **diskriminierte Union**: Core ohne Plugin-ID, Plugin mit verpflichtender nichtleerer ID; beide ungültigen Kombinationen werden abgelehnt | ✅ [^j] | |
 | 2h3 | Auswahl der bevorzugten Börse bei aliaslosen Plätzen | `DEFAULT_EXCHANGE=XNAS` wählt den NASDAQ-Treffer, auch wenn ein Arca-Treffer vorn steht; beim Sammelcode `US` verdrängt ein punktloser Treffer mit unbekanntem Börsencode kein gültiges Mitglied. Der Fremdbörsen-Fallback bleibt | ✅ [^k] | |
+| 2h4 | Börsenableitung eines Yahoo-Treffers | **eine** Ableitung für Auswahl **und** Identität (`_exchange_of`): Ein bekanntes Suffix entscheidet allein und wird nie von Yahoos `exchange` überstimmt; Yahoos Code gilt nur für suffixlose Symbole. Auswahl und gespeicherter MIC können demselben Treffer keine verschiedenen Börsen zuschreiben | ✅ [^l] | |
 | 2i | `POST /instruments/intake` | Neuanlage `201` mit `InstrumentSummary`, bestehendes Papier `200` mit demselben Typ, unauflösbar `400`, Quelle tot `502` — je im OpenAPI-Snapshot zugesagt und über die echte Kette geprüft | | |
 | 2j | Schichtengrenze am Aufnahmeweg | der Intake-Service liefert `IntakeResult(summary, created)`; im Router steht **kein zweiter Existenz-Check** und keine Repository-Abfrage, er mappt nur `created` auf `201`/`200` | | |
 | 2j2 | `created` unter Parallelität | kommt aus der **schreibenden Transaktion**, nicht aus einem Preflight; im abgefangenen UNIQUE-Rennen ist `created=false`, nicht `201` | | |
@@ -279,6 +280,27 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `resolve_isin_ambiguous`/`Unavailable`-Pfad aus dem Befund.
     Der Fremdbörsen-Fallback bleibt von
     `test_yahoo_nimmt_den_ersten_treffer_wenn_die_boerse_fehlt` gedeckt.
+[^l]: Nachtrag aus Runde 27. Die Auswahl prüfte Suffix **oder** Yahoo-Code,
+    `_identity` dagegen Suffix und *nur bei dessen Fehlen* den Code. Für
+    `WRONG.DE` mit dem Code `NMS` hieß das: Die Auswahl hielt ihn bei
+    `DEFAULT_EXCHANGE=XNAS` für eine NASDAQ-Notierung, `_identity` gab ihm
+    `XETR` — und der gültige NASDAQ-Treffer dahinter fiel raus.
+
+    Jetzt hat die Rangfolge einen Ort: `_exchange_of(symbol, exchange_code)`.
+    `_identity` baut darauf auf und fügt allein die Ticker-Prüfung hinzu; die
+    Auswahl fragt dieselbe Funktion. Der Alias-Lookup selbst liegt in
+    `app.exchanges.mic_for_alias`, den auch `split_symbol` benutzt — eine
+    Umkehrung von `ExchangeDef.alias`, nicht zwei.
+
+    `preferred_aliases` ist damit **entfallen**: Es existierte nur, um die
+    Auswahl zu beantworten, und diese Frage hat jetzt eine andere, einzige
+    Antwort. Eine zweite Aliasregel danebenstehen zu lassen wäre genau der
+    Zustand, aus dem dieser Befund entstand.
+
+    `test_yahoo_laesst_das_suffix_nicht_vom_boersencode_ueberstimmen` deckt die
+    Konfliktreihenfolge ab; beide Treffer tragen denselben Yahoo-Code, allein
+    das Suffix unterscheidet sie. **Mutationsgeprüft:** die alte
+    Oder-Verknüpfung wieder eingesetzt → Test rot mit `'WRONG.DE' != 'RIGHT'`.
 [^h]: `./_tickets/T-21b-smoke.sh --run` — **sechs Checks live gegen das echte
     Netz**, auf frischen temporären Datenbanken, über den HTTP-Weg. Zwei
     Läufe, weil die Kaskade zwei Wege hat: `VGWL.DE → VGWL/XETR` über die
