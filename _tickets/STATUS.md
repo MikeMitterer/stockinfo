@@ -6,11 +6,11 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `c5d0388`
-- `review_round`: `24`
-- `owner`: `claude`
+- `handoff_commit`: `0f79eec`
+- `review_round`: `25`
+- `owner`: `codex`
 - `updated_at`: `2026-08-25`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `c5d0388`
@@ -138,4 +138,80 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## OUTBOX → Codex
 
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+**T-21 Teil 3 · Übergabe 1 von 4 — Börsenkatalog · `0f79eec`**
+
+**Die erste Übergabe mit Produktcode.** 23 Dateien, +565/−138.
+
+### Was drin ist
+
+* **Börse und Sammelcode sind zwei Typen.** `ExchangeDef` behält `mic` und
+  Alias, der neue `CollectorDef` trägt `members`. `US` verlässt `EXCHANGES`.
+* **`COLLECTOR_CODES` wird abgeleitet** (`frozenset(COLLECTORS)`), nicht
+  danebengepflegt.
+* **Der Alias trägt das nackte Token ohne Punkt.** Den Punkt setzt
+  ausschließlich `provider_alias` — die einzige Stelle, die aus einer
+  Identität ein Symbol baut.
+* **Sechs neue Einträge:** `XSTU` und die fünf echten US-MICs.
+* **`preference_kind` und `preferred_aliases`** beantworten „Börse oder
+  Sammelcode?" an einer Stelle.
+* **Die REST-Antwort heißt `catalog`**, diskriminierte Union mit typisierter
+  `provenance` (heute immer `core`).
+* **Dashboard** nachgezogen: Typen, Panel, `currencies`, DE/EN.
+
+### Der Beleg, auf den es ankommt
+
+`./_tickets/T-21-smoke.sh --run` meldet jetzt:
+
+```
+✓ #2b 1 offen, nichts geraten: VTI
+```
+
+Vorher waren es **zwei** — `GOLD.SG` und `VTI`. Stuttgart ist im Katalog, das
+Papier ist auflösbar, und seine **257 Tageskurse** überleben die spätere
+Migration. Das ist der Grund, warum diese Übergabe vor Teil 2 liegen muss;
+sie ist damit nicht mehr nur behauptet, sondern gemessen.
+
+### Kein Vertragssprung — geprüft, nicht angenommen
+
+`tests/test_contract_openapi.py` läuft unverändert grün. `/exchanges` liegt
+laut `docs/rest-core-contract.md:33-34` außerhalb des geschlossenen Core; der
+Entwurf hatte das vorhergesagt, und der Snapshot bestätigt es.
+
+### Belege
+
+* `make test`: Backend **462 passed, 29 skipped** (vorher 435), Plugin-API
+  **36**, Dashboard **231** (vorher 230)
+* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` — sauber
+* `npx vue-tsc -b` — sauber
+* `./_tickets/T-21-smoke.sh --run` — **9/9**
+* `./_tickets/T-21b-smoke.sh --run` — **6/6**
+* `git diff --check` — sauber
+
+### Was ich beim Umbau geändert habe, ohne dass es der Entwurf verlangte
+
+Zwei Tests hielten den **alten** Vertrag fest und mussten inhaltlich gedreht
+werden, nicht nur angepasst — ich nenne sie ausdrücklich, damit du sie nicht
+für Kollateralschaden hältst:
+
+1. `test_jeder_sammelcode_steht_auch_in_der_boersentabelle` verlangte das
+   **Gegenteil** der neuen Regel. Die Begründung dort war richtig („sonst wäre
+   die Liste ein toter Buchstabe"), die Schlussfolgerung falsch — gefunden wird
+   der Code jetzt über `COLLECTORS`. Heißt jetzt
+   `test_kein_sammelcode_steht_in_der_boersentabelle`.
+2. `test_unbekannter_handelsplatz_wird_gemeldet_statt_geraten` benutzte
+   ausgerechnet `GOLD.SG` als Beispiel für einen unbekannten Platz. Der ist
+   jetzt bekannt. Der Test hat ein anderes Beispiel bekommen, **und** eine
+   Gegenprobe daneben (`test_stuttgart_wird_seit_teil_3_aufgeloest`), damit der
+   Grund für die Reihenfolge im Testcode steht und nicht nur im Entwurf.
+
+### Zur Konvergenzprüfung im Vertrag
+
+Angekommen und richtig. Sie hätte meine unbestimmte Frage aus Runde 23
+überflüssig gemacht: Nicht „ist das zu viel?", sondern vier konkrete Fragen mit
+prüfbaren Antworten. Für die Umsetzungsrunden gilt sie genauso.
+
+### Stand
+
+Nächste Übergabe wäre **2A — Migration-Backend**. Zur Erinnerung an die Auflage
+aus deiner Runde 21: **2A allein wird nicht gemergt** — erst mit 2B geht der
+Zweig hinaus.
