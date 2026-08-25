@@ -18,6 +18,49 @@ duplizieren.
 - [P-04 · Negativtests prüfen nur die Fehlerbeschriftung](#p-04--negativtests-prüfen-nur-die-fehlerbeschriftung)
 - [P-05 · Ein abgebrochener Prüflauf meldet sich als bestanden](#p-05--ein-abgebrochener-prüflauf-meldet-sich-als-bestanden)
 - [P-06 · Weiterarbeiten, während eine Übergabe offen ist](#p-06--weiterarbeiten-während-eine-übergabe-offen-ist)
+- [Leitplanken für das spätere Skill-Proposal](#leitplanken-für-das-spätere-skill-proposal)
+
+## Leitplanken für das spätere Skill-Proposal
+
+Dieser Abschnitt ist **kein Claude-Fehlermuster**, sondern das Prozesslearning
+aus T-21 Teil 3. Dort brauchte ein reiner Entwurf die Runden 8 bis 24. Ein
+Review-Skill muss deshalb nicht nur Fehler finden, sondern aktiv Konvergenz
+erzwingen und klare Grenzen setzen:
+
+1. **Scope-Grenze:** Eine Übergabe hat genau ein beobachtbares Ergebnis.
+   Mehrere unabhängig lieferbare Regeln werden vor dem Review getrennt; ein
+   vertikaler Schnitt darf mehrere Schichten berühren, muss aber als eine
+   durchgehende Kette prüfbar bleiben.
+2. **Runden-Grenze:** Nach spätestens drei nicht erfolgreichen
+   Entwurfsrunden endet die punktuelle Reparaturschleife. Der Reviewer verlangt
+   eine konsolidierte Neufassung oder einen kleineren Zuschnitt, statt nur den
+   nächsten lokalen Widerspruch zu melden.
+3. **Entscheidungs-Grenze:** Eine neue Grundentscheidung invalidiert alle
+   davon abhängigen Aussagen, Tests und Verify-Markierungen. Der Entwurf wird
+   auf eine neue Basis gestellt; alte Regeln werden nicht mit Warnungen,
+   Durchstreichungen und Nachträgen weitergeschleppt.
+4. **Auswirkungs-Grenze:** Vor einer Vollständigkeitsbehauptung wird jede neue
+   Fachregel einmal über ihre Erzeuger und Verbraucher verfolgt: Datenmodell,
+   Repository, Service, REST, UI, Migration, Betrieb, Dokumentation und Tests.
+   Nicht zutreffende Schichten werden ausdrücklich ausgeschlossen.
+5. **Evidenz-Grenze:** Lange Prosa ersetzt keine ausführbare Gegenprobe.
+   Vertrags- und Integrationsfragen werden früh mit kleinen Spikes oder Tests
+   gegen den realen Umgebungscode geprüft.
+6. **Rollen-Grenze:** Technische Folgefragen bleiben bei Implementierer und
+   Reviewer. Der Mensch wird nur für eine echte Produktentscheidung oder eine
+   notwendige Scope-Erweiterung unterbrochen, nicht für unbestimmte Fragen wie
+   „trägt der Entwurf zu viele Sonderfälle?".
+7. **Reviewer-Verantwortung:** Der Reviewer bewertet auch den Prozess. Er muss
+   eine nicht konvergierende Schleife stoppen, selbst wenn jedes einzelne
+   Finding sachlich korrekt ist.
+
+**Auslöser für das Skill-Proposal:** T-21 Teil 3 endete nach 17
+Entwurfsrunden bei einer 936-zeiligen Spec. Die Runden 8, 9, 10, 13 und 17 bis
+23 lieferten zugleich elf Belege für P-02. Das zeigt: Fachliche Gründlichkeit
+ohne Scope-, Runden- und Entscheidungsgrenzen verhindert keine
+Review-Eskalation.
+
+[↑ Übersicht](#übersicht)
 
 ## P-01 · Testtiefe wird in der Übergabe überzeichnet
 
