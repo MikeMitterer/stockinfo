@@ -68,11 +68,31 @@ RUN useradd --system --uid 99 --gid users --no-create-home stockinfo \
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
 
-# Auf /ready, nicht /health: Der Healthcheck steuert Neustart und
-# Traffic-Freigabe, und dafuer zaehlt „kann arbeiten", nicht „Prozess lebt".
-# /health antwortet bewusst immer mit ok und haengt an nichts.
+# Auf /operational, nicht /ready und nicht /health — drei Fragen, drei
+# Antworten:
+#
+#   /health       Laeuft der Prozess?                    haengt an nichts
+#   /operational  Erfuellt er seine derzeitige Aufgabe?  <- der Healthcheck
+#   /ready        Ist der Fachbetrieb freigegeben?       503 bei Umzug
+#
+# Waehrend eines ausstehenden Identitaets-Umzugs weist der Guard jeden
+# Fachrequest ab; /ready sagt dann ehrlich 503. Der Prozess ist deswegen aber
+# nicht kaputt — er wartet auf die Bestaetigung des Benutzers. Ein
+# Healthcheck auf /ready meldete hier unhealthy und behauptete einen Fehler,
+# wo eine Rueckfrage laeuft.
+#
+# **Zurueckgenommen:** Hier stand, der Healthcheck steuere Neustart und
+# Traffic-Freigabe. Nachgemessen stimmt das fuer dieses Deployment nicht: Ein
+# unhealthy-Container wird von der Docker Engine nicht neu gestartet, die
+# Policy --restart unless-stopped reagiert auf einen beendeten Prozess, und
+# einen Router, der anhand des Status Traffic freigibt, gibt es im Projekt
+# nicht.
+#
+# Der Pfad steht als HEALTHCHECK_PATH in app/migration_guard.py; ein Test
+# vergleicht ihn gegen diese Zeile. Ohne ihn driften die beiden beim
+# naechsten Umbenennen unbemerkt bis zum Deployment.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
-    CMD curl -fsS "http://localhost:${PORT}/ready" || exit 1
+    CMD curl -fsS "http://localhost:${PORT}/operational" || exit 1
 
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["sh", "-c", "uvicorn app.main:app --host \"$HOST\" --port \"$PORT\""]
