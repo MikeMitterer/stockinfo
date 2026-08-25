@@ -14,7 +14,8 @@ import sqlite3
 import pytest
 import structlog
 
-from app.db import init_db
+from app.db import init_db, run_migration
+from app.migration import REASON_NO_SUFFIX
 
 
 def _legacy_database(path: str, rows: list[tuple[str, str | None]]) -> None:
@@ -52,26 +53,50 @@ def _instruments(path: str) -> dict[str, sqlite3.Row]:
         }
 
 
+_STAMP = "2026-08-25T12:00:00+00:00"
+
+
+def _rejections(path: str) -> dict[str, sqlite3.Row]:
+    """Liest die Berichtseinträge, nach Symbol greifbar."""
+    with sqlite3.connect(path) as connection:
+        connection.row_factory = sqlite3.Row
+        return {
+            row["symbol"]: row
+            for row in connection.execute("SELECT * FROM migration_rejections")
+        }
+
+
 @pytest.fixture
 def migrated(tmp_path) -> str:
-    """Eine Alt-Datenbank mit vier bezeichnenden Fällen, einmal migriert."""
+    """Eine Alt-Datenbank mit vier bezeichnenden Fällen, einmal umgezogen.
+
+    Der Ablauf ist seit T-21 Teil 3 **zweiphasig**: `init_db` erkennt nur,
+    `run_migration` führt aus. Beides zweimal aufzurufen prüft nebenbei die
+    Idempotenz — der zweite Lauf findet nichts mehr vor.
+    """
     path = str(tmp_path / "alt.db")
     _legacy_database(
         path,
         [
             ("EUNL.DE", "IE00B4L5Y983"),  # Suffix bekannt → zerlegbar
             ("XIC.TO", None),             # dito, ohne ISIN
-            ("AAPL", "US0378331005"),     # suffixlos → Sammelcode US, kein echter MIC
+            ("AAPL", "US0378331005"),     # suffixlos → kein MIC ableitbar
             ("BRK-B", "US0846707026"),    # aus dem Yahoo-Fallback, fremde Schreibweise
         ],
     )
-    init_db(path)
-    init_db(path)  # zweimal: die Migration muss idempotent sein
+    assert init_db(path) is True
+    run_migration(path, rejected_at=_STAMP)
+    assert init_db(path) is False
     return path
 
 
 def test_die_neuen_spalten_kommen_dazu(migrated: str) -> None:
-    """Ohne sie gibt es keine kanonische Identität."""
+    """Ohne sie gibt es keine kanonische Identität.
+
+    `identity_status` steht bewusst **nicht** mehr dabei: Seit eine halbe
+    Identität nirgends mehr weiterleben darf, trüge die Spalte nur noch einen
+    einzigen Wert.
+    """
     with sqlite3.connect(migrated) as connection:
         connection.row_factory = sqlite3.Row
         columns = {
@@ -79,7 +104,8 @@ def test_die_neuen_spalten_kommen_dazu(migrated: str) -> None:
             for column in connection.execute("PRAGMA table_info(instruments)")
         }
 
-    assert {"ticker", "mic", "listing_id", "identity_status"} <= columns
+    assert {"ticker", "mic", "listing_id"} <= columns
+    assert "identity_status" not in columns
 
 
 def test_bekannte_suffixe_werden_zerlegt(migrated: str) -> None:
@@ -93,22 +119,25 @@ def test_bekannte_suffixe_werden_zerlegt(migrated: str) -> None:
 
     assert (rows["EUNL.DE"]["ticker"], rows["EUNL.DE"]["mic"]) == ("EUNL", "XETR")
     assert (rows["XIC.TO"]["ticker"], rows["XIC.TO"]["mic"]) == ("XIC", "XTSE")
-    assert rows["EUNL.DE"]["identity_status"] == "resolved"
 
 
-def test_suffixloses_symbol_wird_nicht_geraten(migrated: str) -> None:
-    """`US` ist ein Sammelcode, kein MIC — und `XNYS`/`XNAS` steht nirgends.
+def test_suffixloses_symbol_verlaesst_den_bestand(migrated: str) -> None:
+    """`AAPL` nennt seinen Handelsplatz nicht — und wird deshalb abgelehnt.
 
-    Die Börsentabelle führt `US` als OpenFIGI-Suchcode für NYSE und NASDAQ
-    zusammen. Welcher der beiden echten MICs für `AAPL` gilt, weiß erst das
-    aufgelöste Listing. Die Migration läuft offline beim Start; sie füllt das
-    Feld deshalb **nicht**, sondern markiert den Fall.
+    **Hier stand bis T-21 Teil 3 das Gegenteil.** Die Zeile blieb als offener
+    Fall liegen, mit leerem `ticker`, leerem `mic` und der Beschriftung
+    `legacy_unresolved`. Seit der Entscheidung nach Runde 16 gibt es diesen
+    Zustand nicht mehr: Was sich nicht auflösen lässt, kommt nicht in den
+    gültigen Bestand — es wird gemeldet, mit Symbol und Grund.
+
+    Welcher der fünf US-Plätze für `AAPL` gilt, weiß weiterhin erst das
+    aufgelöste Listing; geraten wird nach wie vor nicht.
     """
-    row = _instruments(migrated)["AAPL"]
+    assert "AAPL" not in _instruments(migrated)
 
-    assert row["mic"] is None
-    assert row["ticker"] is None
-    assert row["identity_status"] == "legacy_unresolved"
+    bericht = _rejections(migrated)["AAPL"]
+    assert bericht["reason"] == REASON_NO_SUFFIX
+    assert bericht["isin"] == "US0378331005"
 
 
 def test_fremde_schreibweise_wird_nicht_geraten(migrated: str) -> None:
@@ -116,24 +145,26 @@ def test_fremde_schreibweise_wird_nicht_geraten(migrated: str) -> None:
 
     Die Zeichensetzung ist anbieterspezifisch und bedeutet bei anderen Tickern
     etwas anderes. Was der Yahoo-Fallback geliefert hat, folgt der eigenen
-    Konvention nicht zwingend — solche Zeilen bleiben offen.
+    Konvention nicht zwingend.
+
+    Geraten wird also weiterhin nicht — nur bleibt die Zeile jetzt nicht mehr
+    offen liegen, sondern verlässt den Bestand mit einer Begründung.
     """
-    row = _instruments(migrated)["BRK-B"]
-
-    assert row["ticker"] is None
-    assert row["mic"] is None
-    assert row["identity_status"] == "legacy_unresolved"
+    assert "BRK-B" not in _instruments(migrated)
+    assert _rejections(migrated)["BRK-B"]["reason"] == REASON_NO_SUFFIX
 
 
-def test_jede_zeile_bekommt_eine_listing_id(migrated: str) -> None:
-    """Auch die offenen Fälle — die ID hängt nicht an der Auflösung.
+def test_jede_verbliebene_zeile_bekommt_eine_listing_id(migrated: str) -> None:
+    """Der Maschinenschlüssel des öffentlichen Vertrags (T-24).
 
-    So steht in T-24: „**jede** Zeile bekommt sofort eine `listing_id` — auch
-    eine mit `identity_status = legacy_unresolved`."
+    **Der Zusatz „auch die offenen Fälle" ist entfallen**, weil es sie nicht
+    mehr gibt: Was den Bestand verlässt, braucht keinen Schlüssel — es steht
+    im Bericht, nicht in der Tabelle.
     """
     rows = _instruments(migrated)
     listing_ids = [row["listing_id"] for row in rows.values()]
 
+    assert sorted(rows) == ["EUNL.DE", "XIC.TO"]
     assert all(listing_ids), "eine Zeile ohne listing_id"
     assert len(set(listing_ids)) == len(listing_ids), "listing_id ist nicht eindeutig"
     assert all(len(value) == 36 for value in listing_ids), "keine UUID-Schreibweise"
@@ -172,23 +203,25 @@ def test_die_eindeutigkeit_liegt_auf_ticker_und_mic(migrated: str) -> None:
     assert indexes["idx_instruments_ticker_mic"]["unique"] == 1
 
 
-def test_offene_faelle_duerfen_mehrfach_leer_sein(migrated: str) -> None:
-    """Zwei unaufgelöste Zeilen sind kein Konflikt.
+def test_eine_zeile_ohne_identitaet_ist_nicht_mehr_einfuegbar(migrated: str) -> None:
+    """**Die Umkehrung eines Tests, der genau das Gegenteil festhielt.**
 
-    Läge die Eindeutigkeit naiv auf `(ticker, mic)`, würde die zweite offene
-    Zeile den Index verletzen — SQLite behandelt `NULL` in eindeutigen Indizes
-    aber als jeweils eigenen Wert. Der Test hält fest, dass wir uns darauf
-    verlassen: Ohne diese Eigenschaft könnte die Migration offene Fälle gar
-    nicht stehen lassen.
+    Hier stand: „Zwei unaufgelöste Zeilen sind kein Konflikt" — SQLite zählt
+    `NULL` im eindeutigen Index als eigenen Wert, und die Migration verließ
+    sich darauf, um offene Fälle stehen zu lassen.
+
+    Seit der Entscheidung nach Runde 16 gibt es offene Fälle nicht mehr, und
+    die Eigenschaft wird nicht mehr gebraucht. An ihre Stelle tritt die
+    härtere Zusage: Eine Zeile **ohne** Identität lässt sich gar nicht erst
+    einfügen. Das ist `#2b2` im Schema statt in einer Prüfung.
     """
-    with sqlite3.connect(migrated) as connection:
+    with sqlite3.connect(migrated) as connection, pytest.raises(
+        sqlite3.IntegrityError
+    ):
         connection.execute(
-            "INSERT INTO instruments (symbol, first_seen, identity_status) "
-            "VALUES ('NOCH.EIN.FALL', '2026-01-01T00:00:00+00:00', "
-            "'legacy_unresolved')"
+            "INSERT INTO instruments (symbol, first_seen) "
+            "VALUES ('NOCH.EIN.FALL', '2026-01-01T00:00:00+00:00')"
         )
-
-    assert "NOCH.EIN.FALL" in _instruments(migrated)
 
 
 def test_ein_echter_konflikt_bleibt_einer(migrated: str) -> None:
@@ -200,19 +233,22 @@ def test_ein_echter_konflikt_bleibt_einer(migrated: str) -> None:
         )
 
 
-def test_die_offenen_faelle_werden_gemeldet(migrated: str, capsys) -> None:
+def test_die_abgelehnten_faelle_stehen_im_bericht(migrated: str) -> None:
     """Melden statt raten heißt: Es muss auch jemand davon erfahren.
 
-    Ohne Meldung wäre „später von Hand zuordnen" ein Versprechen, das niemand
-    einlösen kann — man wüsste nicht, was offen ist.
-    """
-    with structlog.testing.capture_logs() as logs:
-        init_db(migrated)
+    **Der Adressat hat gewechselt.** Vorher genügte eine Protokollmeldung —
+    die Zeile blieb ja lesbar im Bestand, das Log war nur der Hinweis, dass
+    jemand nachhelfen sollte. Jetzt verschwindet die Zeile, und damit ist ein
+    Logeintrag zu wenig: Der Benutzer bekommt einen **dauerhaften Bericht**,
+    den er auch morgen noch abrufen kann.
 
-    messages = [entry for entry in logs if entry["event"] == "identity_unresolved"]
-    assert messages, "kein Hinweis auf die offenen Zuordnungen"
-    assert messages[0]["count"] == 2
-    assert set(messages[0]["symbols"]) == {"AAPL", "BRK-B"}
+    Ein Log wäre außerdem der falsche Ort für eine Auskunft, die das UI in DE
+    und EN anzeigen muss.
+    """
+    bericht = _rejections(migrated)
+
+    assert set(bericht) == {"AAPL", "BRK-B"}
+    assert all(row["rejected_at"] == _STAMP for row in bericht.values())
 
 
 def test_zwei_listings_mit_gleichem_symbol_ueberleben_den_neustart(tmp_path) -> None:
