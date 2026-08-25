@@ -143,17 +143,17 @@ def test_was_geht_hinterlaesst_seinen_bericht(bestand) -> None:
     _migrate(bestand)
 
     with _connect(bestand) as connection:
-        aktiv = [row["symbol"] for row in connection.execute(
+        active = [row["symbol"] for row in connection.execute(
             "SELECT symbol FROM instruments ORDER BY symbol")]
-        bericht = [
+        report = [
             (row["symbol"], row["reason"], row["quotes"], row["daily_closes"])
             for row in connection.execute(
                 "SELECT symbol, reason, quotes, daily_closes "
                 "FROM migration_rejections ORDER BY symbol")
         ]
 
-    assert aktiv == ["EUNL.DE", "GOLD.SG"]
-    assert bericht == [
+    assert active == ["EUNL.DE", "GOLD.SG"]
+    assert report == [
         ("BRK-B.DE", REASON_NON_CANONICAL_TICKER, 4, 9),
         ("VTI", REASON_NO_SUFFIX, 1, 0),
     ]
@@ -189,12 +189,12 @@ def test_ein_zweiter_lauf_dupliziert_den_bericht_nicht(bestand) -> None:
     _migrate(bestand)
 
     with _connect(bestand) as connection:
-        anzahl = connection.execute(
+        count = connection.execute(
             "SELECT COUNT(*) FROM migration_rejections"
         ).fetchone()[0]
         plan = plan_migration(connection)
 
-    assert anzahl == 2
+    assert count == 2
     assert plan.needs_migration is False
 
 
@@ -213,13 +213,13 @@ def test_ein_abbruch_laesst_alles_stehen(bestand) -> None:
         connection.close()
 
     with _connect(bestand) as connection:
-        aktiv = [row["symbol"] for row in connection.execute(
+        active = [row["symbol"] for row in connection.execute(
             "SELECT symbol FROM instruments ORDER BY symbol")]
-        tabellen = {row["name"] for row in connection.execute(
+        tables = {row["name"] for row in connection.execute(
             "SELECT name FROM sqlite_master WHERE type = 'table'")}
 
-    assert aktiv == ["BRK-B.DE", "EUNL.DE", "GOLD.SG", "VTI"]
-    assert "migration_rejections" not in tabellen
+    assert active == ["BRK-B.DE", "EUNL.DE", "GOLD.SG", "VTI"]
+    assert "migration_rejections" not in tables
 
 
 def test_die_kurspunkte_der_bleibenden_ueberleben(bestand) -> None:
@@ -236,13 +236,13 @@ def test_die_kurspunkte_der_bleibenden_ueberleben(bestand) -> None:
             "SELECT COUNT(*) FROM daily_closes d JOIN instruments i "
             "ON i.id = d.instrument_id WHERE i.symbol = 'GOLD.SG'"
         ).fetchone()[0]
-        waisen = connection.execute(
+        orphans = connection.execute(
             "SELECT COUNT(*) FROM quotes q LEFT JOIN instruments i "
             "ON i.id = q.instrument_id WHERE i.id IS NULL"
         ).fetchone()[0]
 
     assert gold == 257
-    assert waisen == 0
+    assert orphans == 0
 
 
 def test_nach_dem_umzug_ist_die_halbe_identitaet_unmoeglich(bestand) -> None:
@@ -255,14 +255,14 @@ def test_nach_dem_umzug_ist_die_halbe_identitaet_unmoeglich(bestand) -> None:
     _migrate(bestand)
 
     with _connect(bestand) as connection:
-        offen = connection.execute(
+        open_rows = connection.execute(
             "SELECT COUNT(*) FROM instruments WHERE ticker IS NULL OR mic IS NULL"
         ).fetchone()[0]
-        spalten = {row["name"] for row in connection.execute(
+        columns = {row["name"] for row in connection.execute(
             "PRAGMA table_info(instruments)")}
 
-        assert offen == 0
-        assert "identity_status" not in spalten
+        assert open_rows == 0
+        assert "identity_status" not in columns
 
         with pytest.raises(sqlite3.IntegrityError):
             connection.execute(
@@ -301,34 +301,34 @@ def test_ein_spaeter_fehler_rollt_den_ganzen_umzug_zurueck(
 
     Ausgelöst wird der Fehler deshalb an der spätesten Stelle, die es gibt.
     """
-    from app import db as db_modul
+    from app import db as db_module
 
-    vorher_symbols = _symbols(bestand)
-    vorher_spalten = _columns(bestand)
+    symbols_before = _symbols(bestand)
+    columns_before = _columns(bestand)
 
     monkeypatch.setattr(
-        db_modul,
+        db_module,
         "_IDENTITY_INDICES",
         (
-            *db_modul._IDENTITY_INDICES,
-            "CREATE UNIQUE INDEX kaputt ON instruments (gibt_es_nicht)",
+            *db_module._IDENTITY_INDICES,
+            "CREATE UNIQUE INDEX fails ON instruments (gibt_es_nicht)",
         ),
     )
 
     with pytest.raises(sqlite3.Error):
         run_migration(bestand, rejected_at=_STAMP)
 
-    assert _symbols(bestand) == vorher_symbols, "Zeilen sind verschwunden"
-    assert _columns(bestand) == vorher_spalten, "das Schema wurde gehärtet"
+    assert _symbols(bestand) == symbols_before, "Zeilen sind verschwunden"
+    assert _columns(bestand) == columns_before, "das Schema wurde gehärtet"
 
     with _connect(bestand) as connection:
-        tabellen = {
+        tables = {
             row["name"]
             for row in connection.execute(
                 "SELECT name FROM sqlite_master WHERE type = 'table'"
             )
         }
-    assert "migration_rejections" not in tabellen, "der Bericht blieb stehen"
+    assert "migration_rejections" not in tables, "der Bericht blieb stehen"
 
 
 def test_eine_gesetzte_zuordnung_ueberlebt_den_umzug(tmp_path) -> None:

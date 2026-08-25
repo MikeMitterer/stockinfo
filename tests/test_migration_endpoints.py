@@ -25,6 +25,7 @@ from app.container import get_cached_quote_service
 from app.main import app, mount_dashboard
 from app.migration_guard import ALLOWED_ROUTES, HEALTHCHECK_PATH
 from app.routers.migration import get_gate
+from app.scheduler import RefreshScheduler
 
 _DIST = "dashboard/dist"
 
@@ -54,11 +55,26 @@ def _legacy_database(path: str, rows: list[tuple[str, str | None]]) -> None:
             );
             """
         )
+        # **Nichtleere, unterschiedliche Werte** für Börse, Gattung und
+        # Währung. Bis Runde 31 blieben sie `NULL`, und der Metadatentest
+        # verglich Vorschau und Bericht dann als `None == None` — er hätte
+        # grün bleiben können, während beide Abbildungen die Felder weglassen.
         connection.executemany(
-            "INSERT INTO instruments (symbol, isin, name, first_seen) "
-            "VALUES (?, ?, ?, ?)",
-            [(symbol, isin, f"Papier {symbol}", "2026-01-01T00:00:00+00:00")
-             for symbol, isin in rows],
+            "INSERT INTO instruments "
+            "(symbol, isin, name, exchange, type, currency, first_seen) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?)",
+            [
+                (
+                    symbol,
+                    isin,
+                    f"Papier {symbol}",
+                    f"Börse {symbol}",
+                    "etf" if symbol.endswith(".DE") else "stock",
+                    "EUR" if symbol.endswith(".DE") else "USD",
+                    "2026-01-01T00:00:00+00:00",
+                )
+                for symbol, isin in rows
+            ],
         )
 
 
@@ -192,17 +208,17 @@ def test_die_erwartungstabelle_deckt_die_allowlist_ab() -> None:
     nächsten neuen Pfad zurückbleibt — und die Lücke fiele niemandem auf,
     weil ein nicht aufgezählter Pfad einfach nicht geprüft würde.
     """
-    geprueft = set(_ERWARTETE_ANTWORTEN) | {("POST", "/migration/confirm")}
+    covered = set(_ERWARTETE_ANTWORTEN) | {("POST", "/migration/confirm")}
 
-    assert geprueft == set(ALLOWED_ROUTES)
+    assert covered == set(ALLOWED_ROUTES)
 
 
 @pytest.mark.parametrize(
-    ("method", "path", "erwartet"),
+    ("method", "path", "expected"),
     [(m, p, code) for (m, p), code in sorted(_ERWARTETE_ANTWORTEN.items())],
 )
 def test_jeder_erlaubte_pfad_antwortet_auch_wirklich(
-    pending: TestClient, method: str, path: str, erwartet: int
+    pending: TestClient, method: str, path: str, expected: int
 ) -> None:
     """Jeder Allowlist-Eintrag mit seinem **konkreten** Status.
 
@@ -211,7 +227,7 @@ def test_jeder_erlaubte_pfad_antwortet_auch_wirklich(
     """
     response = pending.request(method, path)
 
-    assert response.status_code == erwartet
+    assert response.status_code == expected
     assert response.headers["content-type"].startswith("application/json")
 
 
@@ -291,10 +307,10 @@ def test_die_bestaetigung_fuehrt_aus_und_gibt_frei(pending: TestClient) -> None:
     Danach ist der Fachbetrieb offen, und der Bericht nennt, was gegangen ist
     — mit Symbol und Grund, nicht nur mit einer Zahl.
     """
-    bericht = pending.post("/migration/confirm")
+    report = pending.post("/migration/confirm")
 
-    assert bericht.status_code == 200
-    assert [entry["symbol"] for entry in bericht.json()["rejected"]] == ["VTI"]
+    assert report.status_code == 200
+    assert [entry["symbol"] for entry in report.json()["rejected"]] == ["VTI"]
 
     assert pending.get("/ready").json()["status"] == "ok"
     assert pending.get(HEALTHCHECK_PATH).json()["mode"] == "serving"
@@ -319,18 +335,30 @@ def test_vorschau_und_bericht_nennen_genug_zur_neuerfassung(
     Der Test läuft **vor und nach** der Löschung, weil beide Wege verschiedene
     Quellen haben: die Vorschau den Plan, der Bericht die Tabelle. Nur einen
     zu prüfen ließe den anderen driften.
-    """
-    vorher = pending.get("/migration").json()["rejected"][0]
 
-    assert vorher["symbol"] == "VTI"
-    assert vorher["isin"] == "US9229087690"
-    assert vorher["name"] == "Papier VTI"
+    **Verglichen wird gegen ausgeschriebene Werte, nicht miteinander.** Bis
+    Runde 31 stellte der Test Vorschau und Bericht gegenüber — und weil die
+    Fixture `exchange`, `type` und `currency` leer ließ, war das `None ==
+    None`. Beide Abbildungen hätten die drei Felder weglassen können, und der
+    Test wäre grün geblieben.
+    """
+    expected = {
+        "symbol": "VTI",
+        "isin": "US9229087690",
+        "name": "Papier VTI",
+        "exchange": "Börse VTI",
+        "type": "stock",
+        "currency": "USD",
+        "reason": "symbol_without_exchange_suffix",
+    }
+
+    preview = pending.get("/migration").json()["rejected"][0]
+    assert {field: preview[field] for field in expected} == expected
 
     pending.post("/migration/confirm")
-    nachher = pending.get("/migration/report").json()["rejected"][0]
+    report = pending.get("/migration/report").json()["rejected"][0]
 
-    for feld in ("symbol", "isin", "name", "exchange", "type", "currency", "reason"):
-        assert nachher[feld] == vorher[feld], feld
+    assert {field: report[field] for field in expected} == expected
 
 
 def test_die_bestaetigung_startet_den_scheduler(pending: TestClient) -> None:
@@ -355,6 +383,73 @@ def test_die_bestaetigung_startet_den_scheduler(pending: TestClient) -> None:
     # Und **nicht** ein zweites Mal.
     pending.post("/migration/confirm")
     assert gestartet == ["scheduler"]
+
+
+def test_ein_gescheiterter_scheduler_start_meldet_keinen_normalbetrieb(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """`#2b6d`: „Scheduler **und** Endpunkte" — die Kopplung, ernst genommen.
+
+    **Der Befund aus Runde 31.** Vorher schluckte `release()` jeden
+    Rückruffehler: Die Bestätigung antwortete `200`, `/ready` sagte `ok`, der
+    Riegel war offen — und kein Scheduler lief. Der Dienst meldete gesund und
+    lieferte normal aus, während seine Kurse unbemerkt veralteten. Genau der
+    betriebliche Fehler, den Runde 30 abstellen sollte, eine Ebene höher.
+
+    **Der Test fährt den echten Weg.** Der vorige ersetzte den Rückruf durch
+    ein `lambda` und belegte damit nur, dass ein Callback gerufen wird — nicht,
+    dass der *Scheduler* startet. Hier scheitert `RefreshScheduler.start`
+    selbst, und der Lifespan-Rückruf läuft bis dorthin durch.
+
+    Der Umzug wird dabei **nicht** zurückgenommen: Er ist festgeschrieben, und
+    ihn als ungeschehen auszugeben wäre die entgegengesetzte Lüge.
+    """
+    db_path = str(tmp_path / "kaputter-start.db")
+    _legacy_database(db_path, [("EUNL.DE", "IE00B4L5Y983"), ("VTI", None)])
+    _mit_eigener_datenbank(monkeypatch, db_path)
+
+    attempts: list[int] = []
+    real_start = RefreshScheduler.start
+
+    def start_fails(self) -> None:
+        attempts.append(1)
+        raise RuntimeError("Scheduler startet nicht")
+
+    monkeypatch.setattr(RefreshScheduler, "start", start_fails)
+
+    with TestClient(app) as client:
+        response = client.post("/migration/confirm")
+
+        assert response.status_code == 503
+        assert response.json()["detail"] == "startup_failed"
+        assert attempts == [1], "der echte Scheduler wurde versucht"
+
+        # Der Umzug **ist** durch — das darf niemand bestreiten.
+        assert client.get("/migration").json()["pending"] is False
+        assert client.get("/migration/report").json()["completed"] is True
+
+        # Aber bereit ist der Dienst nicht, und beide Diagnosewege sagen es.
+        ready = client.get("/ready")
+        operational = client.get(HEALTHCHECK_PATH)
+        assert (ready.status_code, ready.json()["status"]) == (503, "degraded")
+        assert (operational.status_code, operational.json()["mode"]) == (
+            503,
+            "degraded",
+        )
+
+        # Und der Zustand ist **anstoßbar**: Ist der Grund behoben, genügt
+        # eine weitere Bestätigung — kein Neustart nötig. Wiederhergestellt
+        # wird der **echte** Start, nicht ein No-op: Sonst liefe der
+        # Wiederholungsweg wieder gegen eine Attrappe, und der Lifespan
+        # fände beim Herunterfahren einen Scheduler vor, der nie lief.
+        monkeypatch.setattr(RefreshScheduler, "start", real_start)
+        assert client.post("/migration/confirm").status_code == 200
+        assert client.get("/ready").json()["status"] == "ok"
+        assert client.get(HEALTHCHECK_PATH).json()["mode"] == "serving"
+
+    get_gate().on_release(None)
+    get_settings.cache_clear()
+    get_cached_quote_service.cache_clear()
 
 
 def test_eine_zweite_bestaetigung_laeuft_ins_leere(pending: TestClient) -> None:
@@ -388,18 +483,18 @@ def test_die_oberflaeche_bleibt_im_pending_zustand_erreichbar(
     Ein Test, der stattdessen die Konstante durchginge, hätte weder das
     gefunden noch die fehlende `stockinfo-icon.svg` des früheren Entwurfs.
     """
-    startseite = pending.get("/")
-    assert startseite.status_code == 200
-    assert "<!doctype html" in startseite.text.lower()
+    home = pending.get("/")
+    assert home.status_code == 200
+    assert "<!doctype html" in home.text.lower()
 
-    gesperrt = []
+    blocked = []
     for directory, _, filenames in os.walk(_DIST):
         for filename in filenames:
             pfad = "/" + os.path.relpath(os.path.join(directory, filename), _DIST)
             if pending.get(pfad).status_code == 503:
-                gesperrt.append(pfad)
+                blocked.append(pfad)
 
-    assert gesperrt == []
+    assert blocked == []
     assert pending.get("/stockinfo-icon.svg").status_code == 200
 
 

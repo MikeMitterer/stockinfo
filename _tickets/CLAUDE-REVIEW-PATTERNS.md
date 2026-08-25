@@ -372,6 +372,20 @@ Migration weiter `executescript(_IDENTITY_INDICES)` auf. Eine erzwungene
 Indexfehler-Gegenprobe warf zwar eine Exception, ließ Daten, Berichtstabelle
 und gehärtetes Schema aber bereits dauerhaft committed zurück.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Übergabe 2A, Runde 31, Commit `d06a6a1`: OUTBOX erklärte „alle sieben
+Befunde umgesetzt“. Der Callback-Befund aus Runde 30 blieb jedoch als bewusst
+festgeschriebenes Verhalten bestehen: `MigrationGate.release()` setzt den
+Gate vor dem Callback frei und schluckt dessen Fehler. Eine Gegenprobe über den
+echten Lifespan mit fehlschlagender `RefreshScheduler.start()` erhielt `200`
+auf die Bestätigung und danach `200/ok` auf `/ready`, obwohl kein Scheduler
+lief. Der als Integrationsbeleg benannte Test ersetzt den Produktcallback
+weiterhin durch `lambda: ...`; der neue Callbackfehler-Test erklärt gerade das
+falsche Freigabeverhalten zur Erwartung. Zugleich behauptete die Übergabe, der
+REST-Test belege Börse, Gattung und Währung, obwohl seine Fixture alle drei
+Felder `NULL` lässt und der Test nur `None == None` zwischen Vorschau und
+Bericht vergleicht.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
@@ -482,6 +496,14 @@ Allowlist eingetragener, aber nicht existierender Pfad liefert `404` und der
 Test bleibt grün. Damit prüft der angekündigte Routentabellen-Test nur die
 Beschriftung „nicht vom Guard gesperrt“, nicht die Zusage, dass der erlaubte
 Endpunkt tatsächlich existiert und erfolgreich antwortet.
+
+**Neuer Beleg:** T-21 Teil 3 Übergabe 2A, Runde 31, Commit `d06a6a1`:
+`test_vorschau_und_bericht_nennen_genug_zur_neuerfassung` soll die neu durch
+REST geführten Felder Börse, Gattung und Währung absichern. Seine Fixture
+setzt aber keines davon; der Test vergleicht anschließend nur Bericht gegen
+Vorschau. Werden die Felder in beiden Mappings wieder weggelassen, bleibt
+`None == None` grün. Der Erwartungswert kommt damit aus dem zweiten zu
+prüfenden Pfad statt aus einem ausgeschriebenen, nichtleeren Orakel.
 
 [↑ Übersicht](#übersicht)
 

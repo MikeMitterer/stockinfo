@@ -213,6 +213,16 @@ async def ready(response: Response) -> ReadinessResponse:
         return ReadinessResponse(
             status="migration_pending", version=__version__, database="ok"
         )
+
+    if get_gate().startup_failed:
+        # Der Umzug ist durch, der Hintergrund-Refresh läuft nicht. Hier `ok`
+        # zu melden wäre die Lüge aus Runde 31: Der Dienst lieferte normal
+        # aus, und seine Kurse veralteten unbemerkt.
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return ReadinessResponse(
+            status="degraded", version=__version__, database="ok"
+        )
+
     return ReadinessResponse(status="ok", version=__version__, database="ok")
 
 
@@ -243,8 +253,18 @@ async def operational(response: Response) -> OperationalResponse:
         response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
         return OperationalResponse(mode="degraded", version=__version__)
 
-    mode = "migration_pending" if get_gate().pending else "serving"
-    return OperationalResponse(mode=mode, version=__version__)
+    if get_gate().pending:
+        return OperationalResponse(mode="migration_pending", version=__version__)
+
+    if get_gate().startup_failed:
+        # **Hier ist `degraded` richtig**, anders als beim Warten auf die
+        # Bestätigung: Der Prozess kann seine derzeitige Aufgabe *nicht*
+        # erfüllen. Er hält keine Rückfrage offen, ihm fehlt der Refresh. Ein
+        # `unhealthy` ist genau die Auskunft, die der Healthcheck geben soll.
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return OperationalResponse(mode="degraded", version=__version__)
+
+    return OperationalResponse(mode="serving", version=__version__)
 
 
 def mount_dashboard(app: FastAPI, static_dir: str) -> bool:

@@ -27,6 +27,14 @@ logger = structlog.get_logger()
 # vorliegen. Wer darauf reagiert, prüft diesen Wert, nicht eine Formulierung.
 REASON_MIGRATION_PENDING = "migration_pending"
 
+# Die Kennung für „umgezogen, aber der Betrieb läuft nicht an".
+#
+# Eigene Kennung und nicht `migration_pending`: Die beiden verlangen
+# Verschiedenes. Beim einen wartet der Dienst auf eine Bestätigung, beim
+# anderen ist die längst erteilt und der Start scheitert — wer sie
+# zusammenwirft, schickt den Benutzer in den falschen Ablauf.
+REASON_STARTUP_FAILED = "startup_failed"
+
 # Der Pfad, den der Docker-`HEALTHCHECK` abfragt.
 #
 # **Eine** Konstante, drei Verbraucher: der Guard hier, der Routentabellen-Test
@@ -128,8 +136,29 @@ class MigrationGate:
     def __init__(self) -> None:
         self._pending = False
         self._running = False
+        self._startup_failed = False
         self._lock = threading.Lock()
         self._on_release: Callable[[], None] | None = None
+
+    @property
+    def startup_failed(self) -> bool:
+        """Ist der Umzug durch, der **Betrieb** aber nicht angelaufen?
+
+        Der ehrliche vierte Zustand. Er entsteht, wenn der Umzug festgeschrieben
+        ist, der Scheduler aber nicht startet: Die Daten stimmen, der Dienst
+        holt trotzdem keine Kurse.
+
+        **Ein Logeintrag genügt dafür nicht** (Codex, Runde 31). Bis dahin
+        schluckte `release` den Fehler und meldete Erfolg — der Dienst stand
+        auf `ready/serving`, und seine Kurse veralteten unbemerkt. Genau der
+        betriebliche Fehler, den Runde 30 abstellen sollte, war damit wieder
+        da, nur eine Ebene höher.
+
+        Den Umzug deswegen als „nicht geschehen" auszugeben wäre die andere
+        Lüge — er *ist* geschehen. Also sagt dieser Zustand, was gilt: Migration
+        fertig, Betrieb nicht bereit.
+        """
+        return self._startup_failed
 
     @property
     def pending(self) -> bool:
@@ -189,27 +218,59 @@ class MigrationGate:
             self._running = True
             return True
 
-    def release(self) -> None:
+    def release(self) -> bool:
         """Gibt den Betrieb frei — **nach** dem erfolgreichen Commit.
 
         Erst hier fallen die Fachwege auf, und erst hier läuft der Rückruf.
-        Ein Fehler im Rückruf wird **protokolliert, nicht hochgereicht**: Der
-        Umzug ist zu diesem Zeitpunkt festgeschrieben, und den Dienst danach
-        wieder zu sperren behauptete einen Zustand, den es nicht mehr gibt.
-        Was dann fehlt — der Scheduler — ist ein Betriebsproblem und gehört
-        laut ins Log, nicht in eine stille Rücknahme.
+
+        **Der Rückgabewert ist neu und der Kern des Befunds aus Runde 31.**
+        Vorher schluckte diese Funktion jeden Rückruffehler und meldete nichts;
+        die Bestätigung antwortete `200`, `/ready` sagte `ok`, und kein
+        Scheduler lief. Jetzt sagt sie, ob der Betrieb wirklich angelaufen ist
+        — und wer sie ruft, muss die Antwort verwenden.
+
+        Returns:
+            ``True``, wenn auch der Betrieb steht; ``False``, wenn der Umzug
+            zwar festgeschrieben ist, der Start aber scheiterte.
         """
         with self._lock:
             self._pending = False
             self._running = False
+        return self._run_release()
+
+    def retry_release(self) -> bool:
+        """Startet den Betrieb erneut — nach einem gescheiterten Anlauf.
+
+        Damit ist der Fehlerzustand **anstoßbar** und nicht nur beobachtbar:
+        Wer den Grund behoben hat, bestätigt einfach noch einmal. Ohne diesen
+        Weg bliebe nur ein Neustart des Dienstes.
+
+        Returns:
+            ``True``, wenn der Betrieb jetzt steht.
+        """
+        return self._run_release()
+
+    def _run_release(self) -> bool:
+        """Führt den Rückruf aus und merkt sich, ob er getragen hat."""
+        with self._lock:
             callback = self._on_release
 
         if callback is None:
-            return
+            with self._lock:
+                self._startup_failed = False
+            return True
+
         try:
             callback()
         except Exception:
+            with self._lock:
+                self._startup_failed = True
             logger.exception("migration_release_callback_failed")
+            return False
+
+        with self._lock:
+            self._startup_failed = False
+        return True
 
     def abandon(self) -> None:
         """Gibt den Anspruch zurück — der Umzug ist gescheitert.

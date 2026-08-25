@@ -197,20 +197,20 @@ def test_die_freigabe_gewinnt_genau_ein_aufrufer() -> None:
     """
     gate = MigrationGate()
     gate.block()
-    gewonnen: list[bool] = []
+    won: list[bool] = []
     barrier = threading.Barrier(8)
 
-    def beanspruchen() -> None:
+    def claim_it() -> None:
         barrier.wait()
-        gewonnen.append(gate.claim())
+        won.append(gate.claim())
 
-    threads = [threading.Thread(target=beanspruchen) for _ in range(8)]
+    threads = [threading.Thread(target=claim_it) for _ in range(8)]
     for thread in threads:
         thread.start()
     for thread in threads:
         thread.join()
 
-    assert gewonnen.count(True) == 1
+    assert won.count(True) == 1
     assert gate.pending is True, "der Anspruch darf nichts freigeben"
     assert gate.running is True
 
@@ -227,18 +227,18 @@ def test_waehrend_der_umzug_laeuft_bleibt_alles_gesperrt() -> None:
     """
     gate = MigrationGate()
     gate.block()
-    gerufen: list[str] = []
-    gate.on_release(lambda: gerufen.append("scheduler"))
+    called: list[str] = []
+    gate.on_release(lambda: called.append("scheduler"))
 
     assert gate.claim() is True
 
     assert gate.pending is True
-    assert gerufen == []
+    assert called == []
 
     gate.release()
 
     assert gate.pending is False
-    assert gerufen == ["scheduler"]
+    assert called == ["scheduler"]
 
 
 def test_ein_gescheiterter_umzug_gibt_nur_den_anspruch_zurueck() -> None:
@@ -250,14 +250,14 @@ def test_ein_gescheiterter_umzug_gibt_nur_den_anspruch_zurueck() -> None:
     """
     gate = MigrationGate()
     gate.block()
-    gerufen: list[str] = []
-    gate.on_release(lambda: gerufen.append("scheduler"))
+    called: list[str] = []
+    gate.on_release(lambda: called.append("scheduler"))
 
     assert gate.claim() is True
     gate.abandon()
 
     assert gate.pending is True, "ein Fehlschlag darf nicht freigeben"
-    assert gerufen == [], "der Rückruf gehört hinter den Commit"
+    assert called == [], "der Rückruf gehört hinter den Commit"
     assert gate.claim() is True, "ein neuer Versuch muss möglich sein"
 
 
@@ -273,10 +273,10 @@ def test_ein_fehler_im_rueckruf_sperrt_nicht_wieder_zu() -> None:
     gate = MigrationGate()
     gate.block()
 
-    def kaputt() -> None:
+    def fails() -> None:
         raise RuntimeError("Scheduler startet nicht")
 
-    gate.on_release(kaputt)
+    gate.on_release(fails)
     assert gate.claim() is True
 
     gate.release()  # wirft nicht

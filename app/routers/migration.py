@@ -10,6 +10,7 @@ Router enthalten nur HTTP-Belange. Was der Umzug tut, steht in `app.migration`
 und `app.db`.
 """
 
+import sqlite3
 from datetime import datetime, timezone
 from typing import Annotated
 
@@ -19,7 +20,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.config import Settings, get_settings
 from app.db import get_connection, run_migration
 from app.migration import MigrationPlan, Rejection, plan_migration
-from app.migration_guard import MigrationGate
+from app.migration_guard import REASON_STARTUP_FAILED, MigrationGate
 from app.models import MigrationPreview, MigrationReport, RejectedInstrument
 
 logger = structlog.get_logger()
@@ -47,26 +48,50 @@ def get_gate() -> MigrationGate:
     return _gate
 
 
-def _as_rejected(rejection: Rejection) -> RejectedInstrument:
-    """Übersetzt einen Planeintrag in die REST-Form.
+# Die Felder eines Ablehnungseintrags — **eine** Liste, drei Verbraucher.
+#
+# Vorschau, Bestätigungsantwort und gespeicherter Bericht bauen dasselbe
+# `RejectedInstrument`. Bis Runde 31 taten sie das aus **zwei** neunstelligen
+# Aufzählungen, und genau deshalb mussten Name, Börse, Gattung und Währung an
+# beiden Stellen einzeln nachgetragen werden. Zwei Serialisierungsregeln für
+# dasselbe Ding sind eine zweite Wahrheit; die nächste Eigenschaft hätte
+# wieder an einer davon gefehlt.
+#
+# Die **SQL-Auswahl** bleibt getrennt — sie hängt an der Tabelle, nicht am
+# Vertrag. Dass sie vollständig ist, sichert der HTTP-Test mit nichtleeren
+# Werten ab, nicht diese Liste.
+_REJECTION_FIELDS = (
+    "symbol",
+    "isin",
+    "name",
+    "exchange",
+    "type",
+    "currency",
+    "reason",
+    "quotes",
+    "daily_closes",
+)
 
-    **Vollständig**, seit Runde 30. Vorher fielen Name, Börse, Gattung und
-    Währung hier heraus: Die Tabelle hielt sie, das REST-Modell kannte nur den
-    Namen, und `_as_rejected` setzte nicht einmal den. Das UI in 2B hätte den
-    Benutzer auffordern sollen, ein Papier neu zu erfassen, und ihm dazu nur
-    ein Symbol nennen können.
+
+def _as_rejected(source: Rejection | sqlite3.Row) -> RejectedInstrument:
+    """Übersetzt einen Planeintrag **oder** eine Berichtszeile in die REST-Form.
+
+    Beide tragen dieselben Feldnamen — der Plan als Attribute, die Zeile als
+    Spalten. Ein Mapper für beide heißt: Eine neue Eigenschaft wird an genau
+    einer Stelle verdrahtet.
+
+    Args:
+        source: Ein `Rejection` aus dem Plan oder eine Zeile aus
+            `migration_rejections`.
+
+    Returns:
+        Der REST-Eintrag.
     """
-    return RejectedInstrument(
-        symbol=rejection.symbol,
-        isin=rejection.isin,
-        name=rejection.name,
-        exchange=rejection.exchange,
-        type=rejection.type,
-        currency=rejection.currency,
-        reason=rejection.reason,
-        quotes=rejection.quotes,
-        daily_closes=rejection.daily_closes,
-    )
+    if isinstance(source, Rejection):
+        values = {field: getattr(source, field) for field in _REJECTION_FIELDS}
+    else:
+        values = {field: source[field] for field in _REJECTION_FIELDS}
+    return RejectedInstrument(**values)
 
 
 def _preview(plan: MigrationPlan) -> MigrationPreview:
@@ -116,6 +141,14 @@ def migration_confirm(settings: SettingsDep) -> MigrationReport:
     mehr vorfindet.
     """
     gate = get_gate()
+
+    if gate.startup_failed:
+        # Der Umzug ist längst durch; was fehlt, ist der Betrieb. Ein zweiter
+        # Aufruf ist deshalb kein Fehler, sondern der Wiederholungsweg.
+        if gate.retry_release():
+            return _stored_report(settings.database_path)
+        raise HTTPException(status_code=503, detail=REASON_STARTUP_FAILED)
+
     if not gate.claim():
         raise HTTPException(
             status_code=409,
@@ -132,7 +165,13 @@ def migration_confirm(settings: SettingsDep) -> MigrationReport:
         logger.exception("migration_failed")
         raise
 
-    gate.release()
+    if not gate.release():
+        # **Der Umzug ist festgeschrieben, der Betrieb nicht angelaufen.**
+        # Beides gehört gesagt: `503` statt `200`, denn eine erfolgreiche
+        # Bestätigung hieße, der Dienst sei bereit — und das ist er nicht.
+        # Zurückgerollt wird nichts; die Daten *sind* umgezogen.
+        raise HTTPException(status_code=503, detail=REASON_STARTUP_FAILED)
+
     logger.info("migration_confirmed", rejected=len(plan.rejected))
     return MigrationReport(
         completed=True,
@@ -148,38 +187,35 @@ def migration_report(settings: SettingsDep) -> MigrationReport:
     abgelehnten Zeilen sind dort nicht mehr, und genau deshalb gibt es den
     Speicher.
     """
-    connection = get_connection(settings.database_path)
+    return _stored_report(settings.database_path)
+
+
+def _stored_report(database_path: str) -> MigrationReport:
+    """Liest den gespeicherten Bericht.
+
+    Args:
+        database_path: Pfad zur SQLite-Datei.
+
+    Returns:
+        Der Bericht; ``completed=False`` mit leerer Liste, wenn noch nie ein
+        Umzug gelaufen ist — kein Fehler, nur nichts zu berichten.
+    """
+    connection = get_connection(database_path)
     try:
         exists = connection.execute(
             "SELECT 1 FROM sqlite_master WHERE type = 'table' "
             "AND name = 'migration_rejections'"
         ).fetchone()
         if exists is None:
-            # Noch nie ein Umzug gelaufen. Kein Fehler — nur nichts zu
-            # berichten.
             return MigrationReport(completed=False, rejected=[])
 
         rows = connection.execute(
-            "SELECT symbol, isin, name, exchange, type, currency, reason, "
-            "quotes, daily_closes FROM migration_rejections ORDER BY symbol"
+            "SELECT " + ", ".join(_REJECTION_FIELDS) + " FROM migration_rejections "
+            "ORDER BY symbol"
         ).fetchall()
     finally:
         connection.close()
 
     return MigrationReport(
-        completed=True,
-        rejected=[
-            RejectedInstrument(
-                symbol=row["symbol"],
-                isin=row["isin"],
-                name=row["name"],
-                exchange=row["exchange"],
-                type=row["type"],
-                currency=row["currency"],
-                reason=row["reason"],
-                quotes=row["quotes"],
-                daily_closes=row["daily_closes"],
-            )
-            for row in rows
-        ],
+        completed=True, rejected=[_as_rejected(row) for row in rows]
     )
