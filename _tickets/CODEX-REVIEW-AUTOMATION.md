@@ -4,9 +4,12 @@ Dieses Dokument ist der stabile Vertrag für den periodischen Claude→Codex-
 Review. Operativer Zustand und aktuelle Nachrichten stehen ausschließlich in
 `STATUS.md`; dieses Dokument enthält keine Laufhistorie.
 
-Der Scheduled Task läuft **in dem bestehenden Codex-Review-Chat**, nicht als
-Standalone-Task. So kehrt jeder Lauf in denselben fachlichen Kontext zurück.
-Die Chat-Historie ist die kurzfristige Lernschicht; das versionierte
+Der kurze Laufzeitvertrag des internen Schedulers steht separat in
+`CODEX-IN-CONTEXT-SCHEDULER.md`. Er läuft **in dem bestehenden
+Codex-Review-Chat** und ist weder `/goal` noch ein ChatGPT-Scheduled-Task oder
+eine Desktop-App-Automation. So kehrt nur eine neue Übergabe in denselben
+fachlichen Kontext zurück. Die Chat-Historie ist die kurzfristige Lernschicht;
+das versionierte
 `CLAUDE-REVIEW-PATTERNS.md` ist die kanonische, compaction- und
 sitzungsfeste Lernschicht sowie die Datenbasis für den späteren Skill.
 
@@ -171,90 +174,19 @@ Dabei gilt:
   zurückverfolgt; bei einem Finding stehen beide Fundstellen und die erwartete
   gemeinsame Abstraktion oder Source of Truth dabei.
 
-## Prompt für den periodischen Codex-Task
+## Trigger für den Codex-In-Context-Scheduler
 
-Den folgenden Prompt als Scheduled Task **in diesem bestehenden Review-Chat**
-für dieses **lokale Projekt** verwenden. Keinen Standalone-Task und keinen
-separaten Worktree wählen: Claude und Codex müssen dasselbe `STATUS.md` und
-denselben Branch sehen. Ein bereits bestehender Standalone-Task wird pausiert
-oder gelöscht, damit nicht zwei Reviewer dieselbe Übergabe bearbeiten.
+Der Scheduler enthält keine Kopie des Review-Verfahrens. Sein vollständiger
+Auftrag ist:
 
 ```text
-Du bist der unabhängige Reviewer für Claudes Arbeit im Projekt StockInfo.
-Dieser Scheduled Task kehrt alle fünf Minuten in den bestehenden Review-Chat
-zurück. Nutze dessen bisherigen Kontext für die fortlaufende Mustererkennung,
-aber behandle die versionierten Projektdateien als kanonischen Zustand.
-Arbeite ausschließlich im aktuellen lokalen Projekt und beachte AGENTS.md,
-CLAUDE.md sowie die zutreffenden Skills, insbesondere
-task-verification-workflow und code-standards.
-
-1. Lies zuerst _tickets/STATUS.md,
-   _tickets/CODEX-REVIEW-AUTOMATION.md und
-   _tickets/CLAUDE-REVIEW-PATTERNS.md vollständig. Diese Dateien sind das
-   Gedächtnis nach einer Chat-Compaction. Verbinde sie mit den bisherigen
-   Beobachtungen dieses Chats, statt bei jedem Lauf bei null anzufangen.
-2. Wenn phase nicht ready_for_codex ist: Verändere keine Datei und antworte
-   knapp "Keine neue Claude-Übergabe" mit aktueller Phase. Beende den Lauf.
-3. Validiere bei ready_for_codex vor jedem Schreibzugriff:
-   - ticket, handoff_commit und review_round sind gesetzt;
-   - Ticketdatei und Commit existieren;
-   - handoff_commit ist Vorfahr von HEAD;
-   - alle Commits danach betreffen nur _tickets/ bzw. Kommunikationsdateien;
-   - der Arbeitsbaum enthält keine uncommittierten Produktänderungen.
-   Ist eine Bedingung verletzt, setze phase blocked und owner mike, schreibe
-   den konkreten Grund in INBOX → Claude und beende den Lauf.
-4. Prüfe, dass dieses Tupel (ticket, handoff_commit, review_round) nicht den
-   drei last_reviewed_*-Feldern entspricht. Setze dann phase codex_reviewing,
-   owner codex und aktualisiere updated_at.
-5. Prüfe unabhängig:
-   - Ticket, Spezifikation und Akzeptanzkriterien;
-   - exakt den Diff des handoff_commit plus den berührten Umgebungscode;
-   - Fehlerpfade, Regressionen, Architektur- und Code-Standards;
-   - den DRY-Prüfguard dieses Dokuments: Suche jede neue oder geänderte
-     Fachregel projektweit auf identische oder fast identische Logik und
-     parallele Sources of Truth; dokumentiere DRY-Scope und Ergebnis im
-     Review, auch wenn kein DRY-Finding vorliegt;
-   - Aussagekraft der Tests. Mocke nur externe Grenzen und lasse eigenen Code
-     real durchlaufen;
-   - die relevanten Tests und, risikogerecht, die vollständige Testsuite.
-   Alle versionierten `./_tickets/T-*.sh`-Prüfskripte sind von Mike dauerhaft
-   zur Ausführung freigegeben; führe das zum Ticket gehörende Skript ohne
-   erneute fachliche Rückfrage aus, nachdem du es auf sichere Ziel- und
-   Cleanup-Grenzen geprüft hast.
-   - bei einer reinen Entwurfsübergabe nach ungefähr drei aufeinanderfolgenden
-     inhaltlich erfolglosen Reviews desselben Scope die Konvergenzprüfung
-     dieses Dokuments. Drei Runden sind ein Richtwert, keine harte Grenze.
-     Erlaube eine weitere punktuelle Runde, wenn Rest und Abschlussweg konkret
-     und voraussichtlich abschließend sind; verlange sonst Rebaseline oder
-     Scope-Verkleinerung. Wiederhole diese Bewertung nach jeder weiteren
-     erfolglosen Entwurfsrunde.
-   Verlasse dich nicht auf Claudes Zusammenfassung oder grüne Tests allein.
-6. Verändere niemals Produktcode, die Human-Spalte, bestehende
-   Nutzeränderungen oder den Git-Verlauf. Kein reset, checkout --, amend,
-   merge, push oder Verschieben nach solved/.
-7. Schreibe das Ergebnis unter INBOX → Claude, Findings zuerst und nach
-   Schweregrad sortiert, jeweils mit Datei/Zeile, Wirkung und überprüfbarer
-   Erwartung. Ergänze ein wiederkehrendes Claude-Fehlermuster ausschließlich
-   dann in _tickets/CLAUDE-REVIEW-PATTERNS.md, wenn mindestens zwei konkrete
-   Belege oder eine ausdrücklich falsche Vollständigkeitsbehauptung vorliegen.
-   Ergänze bei einem bekannten Muster den neuen Beleg am bestehenden Eintrag;
-   so wächst eine auswertbare Datensammlung für den späteren Skill.
-   Entferne die verarbeitete Nachricht aus OUTBOX → Codex.
-8. Bei mindestens einem sachlichen Finding: phase changes_requested,
-   owner claude. Ohne Finding: phase approved, owner claude — Claude schliesst
-   das Ticket ab und beginnt das naechste. Mikes Abnahme laeuft gesammelt
-   ueber T-28, nicht je Ticket; owner mike bleibt allein fuer blocked.
-   Aktualisiere
-   updated_at und übernimm das bearbeitete Tupel in die drei
-   last_reviewed_*-Felder. review_round bleibt unverändert; Claude erhöht sie
-   erst mit einer neuen Übergabe.
-9. Melde Mike nur ein neues Review-Ergebnis, einen Blocker oder eine nötige
-   Entscheidung. Gib getestete Befehle und Ergebnis knapp an.
+Führe _tickets/CODEX-IN-CONTEXT-SCHEDULER.md aus.
 ```
 
-Aktiver Takt: alle 5 Minuten während der laufenden Entwicklungsphase. Der
-lokale Rechner und die Codex-Desktop-App müssen dafür laufen. Ein engerer Takt
-bringt wenig, weil der Zustandsfilter Leerdurchläufe ohnehin sofort beendet.
+Erst wenn dieser kurze Vertrag eine neue Übergabe erkennt, liest Codex dieses
+Dokument und `CLAUDE-REVIEW-PATTERNS.md` vollständig und führt das Review aus.
+Damit kosten Leerdurchläufe nur den Zustandscheck; die ausführlichen Regeln
+bleiben trotzdem versioniert und überstehen Exit sowie Compaction.
 
 ## Prompt für den periodischen Claude-Loop
 

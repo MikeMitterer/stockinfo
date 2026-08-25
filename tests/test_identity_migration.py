@@ -12,7 +12,6 @@ einer plausiblen Vermutung gefüllt.
 import sqlite3
 
 import pytest
-import structlog
 
 from app.db import init_db, run_migration
 from app.migration import REASON_NO_SUFFIX
@@ -265,16 +264,16 @@ def test_zwei_listings_mit_gleichem_symbol_ueberleben_den_neustart(tmp_path) -> 
     path = str(tmp_path / "zwei-listings.db")
     _legacy_database(path, [("EUNL.DE", "IE00B4L5Y983")])
     init_db(path)
+    run_migration(path, rejected_at=_STAMP)
 
     with sqlite3.connect(path) as connection:
         connection.executescript(
             """
-            INSERT INTO instruments (symbol, first_seen, ticker, mic, listing_id,
-                                     identity_status)
+            INSERT INTO instruments (symbol, first_seen, ticker, mic, listing_id)
             VALUES ('ABC', '2026-01-01T00:00:00+00:00', 'ABC', 'XNAS',
-                    'aaaaaaaa-0000-4000-8000-000000000001', 'resolved'),
+                    'aaaaaaaa-0000-4000-8000-000000000001'),
                    ('ABC', '2026-01-01T00:00:00+00:00', 'ABC', 'XNYS',
-                    'aaaaaaaa-0000-4000-8000-000000000002', 'resolved');
+                    'aaaaaaaa-0000-4000-8000-000000000002');
             INSERT INTO quotes (instrument_id, price, quote_time, fetched_at)
             SELECT id, 1.0, '2026-08-01T00:00:00+00:00', '2026-08-01T00:00:00+00:00'
             FROM instruments WHERE symbol = 'ABC';
@@ -314,6 +313,7 @@ def test_echte_altduplikate_werden_weiterhin_zusammengefuehrt(tmp_path) -> None:
     _legacy_database(path, [("EUNL.DE", "IE00B4L5Y983"), ("EUNL.DE", None)])
 
     init_db(path)
+    run_migration(path, rejected_at=_STAMP)
 
     rows = _instruments(path)
     assert len(rows) == 1
@@ -341,102 +341,77 @@ def test_die_listing_id_ist_eindeutig(migrated: str) -> None:
         )
 
 
-def test_zwei_offene_zeilen_mit_gleichem_symbol_bleiben_getrennt(tmp_path) -> None:
-    """Gleiches Symbol ist bei offenen Zeilen **kein** Identitätsnachweis.
+def test_zwei_unaufloesbare_zeilen_werden_einzeln_gemeldet(tmp_path) -> None:
+    """Gleiches Symbol ist **kein** Identitätsnachweis — auch beim Ablehnen nicht.
 
-    Meine erste Fassung führte sie zusammen — mit der Begründung, das sei der
-    alte Fall aus parallelen Erst-Requests. Das ist genau die Vermutung, die
-    diese Migration nicht anstellen darf: Zwei unaufgelöste Zeilen mit
-    demselben Symbol können zwei verschiedene Papiere sein, und ihre ISINs
+    Der Test hieß „zwei offene Zeilen bleiben getrennt" und prüfte, dass die
+    Bereinigung sie nicht zusammenführt. Meine erste Fassung tat genau das —
+    mit der Begründung, das sei der alte Fall aus parallelen Erst-Requests.
+    Das ist die Vermutung, die hier nicht angestellt werden darf: Zwei Zeilen
+    mit demselben Symbol können zwei verschiedene Papiere sein, und ihre ISINs
     sagen es hier sogar.
 
-    Zusammengeführt wird nur noch, was **beweisbar** dasselbe ist: gleiche
-    aufgelöste `(ticker, mic)`. Alles andere bleibt stehen — der Index
-    verlangt es auch nicht mehr, seit die Eindeutigkeit dort liegt.
+    Offene Zeilen gibt es nicht mehr, die Vermutung aber schon. Sie hat nur
+    einen neuen Ort: Werden beide abgelehnt, muss der Bericht **zwei**
+    Einträge tragen. Einer wäre die Behauptung, es sei ein Papier gewesen —
+    und der Benutzer erführe nie, dass er zwei neu erfassen muss.
     """
     path = str(tmp_path / "unresolved.db")
-    _legacy_database(path, [("EUNL.DE", "IE00B4L5Y983")])
+    _legacy_database(
+        path, [("OPEN", "US1111111111"), ("OPEN", "US2222222222")]
+    )
+
     init_db(path)
-
-    with sqlite3.connect(path) as connection:
-        connection.executescript(
-            """
-            INSERT INTO instruments (symbol, isin, first_seen, listing_id,
-                                     identity_status)
-            VALUES ('OPEN', 'US1111111111', '2026-01-01T00:00:00+00:00',
-                    'bbbbbbbb-0000-4000-8000-000000000001', 'legacy_unresolved'),
-                   ('OPEN', 'US2222222222', '2026-01-01T00:00:00+00:00',
-                    'bbbbbbbb-0000-4000-8000-000000000002', 'legacy_unresolved');
-            """
-        )
-
-    init_db(path)  # der nächste Start
+    run_migration(path, rejected_at=_STAMP)
 
     with sqlite3.connect(path) as connection:
         connection.row_factory = sqlite3.Row
-        rows = connection.execute(
-            "SELECT isin, listing_id FROM instruments WHERE symbol = 'OPEN' "
+        eintraege = connection.execute(
+            "SELECT isin FROM migration_rejections WHERE symbol = 'OPEN' "
             "ORDER BY isin"
         ).fetchall()
 
-    assert [row["isin"] for row in rows] == ["US1111111111", "US2222222222"]
-    assert [row["listing_id"] for row in rows] == [
-        "bbbbbbbb-0000-4000-8000-000000000001",
-        "bbbbbbbb-0000-4000-8000-000000000002",
-    ]
+    assert [row["isin"] for row in eintraege] == ["US1111111111", "US2222222222"]
+    assert _instruments(path) == {}
 
 
-def test_ein_widerspruechlicher_status_wird_neu_bewertet(tmp_path) -> None:
-    """`resolved` ohne Identität ist kein Zustand, den man konservieren darf.
+def _mit_gesetzter_identitaet(
+    path: str, symbol: str, ticker: str | None, mic: str | None
+) -> None:
+    """Setzt eine Zuordnung von Hand — der Zustand *vor* dem Umzug.
 
-    Die Migration übersprang bisher jede Zeile mit gesetztem
-    `identity_status` — mit gutem Grund, denn eine bestehende Zuordnung darf
-    sie nicht überschreiben. Eine Zeile, die `resolved` behauptet und weder
-    Ticker noch MIC trägt, ist aber keine Zuordnung, sondern ein Widerspruch;
-    sie bliebe sonst für immer stehen.
-
-    Bewertet wird sie deshalb neu — und landet dort, wo sie hingehört: bei den
-    offenen Fällen, wenn sich ihr Symbol nicht zerlegen lässt.
+    Die Spalten werden eigens angelegt, weil eine Alt-Datenbank sie nicht hat.
+    Das ist genau die Lage, in der eine gewachsene Installation steckt: Teil 1
+    hat die Felder eingeführt, jemand hat eine Zeile korrigiert, und jetzt
+    kommt Teil 3.
     """
-    path = str(tmp_path / "widerspruch.db")
-    _legacy_database(path, [("EUNL.DE", "IE00B4L5Y983"), ("VTI", "US9229087690")])
-    init_db(path)
-
     with sqlite3.connect(path) as connection:
+        for column in ("ticker", "mic"):
+            connection.execute(f"ALTER TABLE instruments ADD COLUMN {column} TEXT")
         connection.execute(
-            "UPDATE instruments SET identity_status = 'resolved', "
-            "ticker = NULL, mic = NULL WHERE symbol = 'VTI'"
+            "UPDATE instruments SET ticker = ?, mic = ? WHERE symbol = ?",
+            (ticker, mic, symbol),
         )
-
-    init_db(path)  # der nächste Start
-
-    row = _instruments(path)["VTI"]
-    assert row["identity_status"] == "legacy_unresolved"
-    assert (row["ticker"], row["mic"]) == (None, None)
 
 
 def test_eine_gueltige_zuordnung_bleibt_unangetastet(tmp_path) -> None:
-    """Die Gegenprobe — sonst wäre die Neubewertung eine Überschreibung.
+    """Handarbeit wird nicht zurückgenommen.
 
     Ein von Hand gesetztes `VTI/XNAS` ist vollständig und trägt keinen
-    Sammelcode. Die Migration lässt es in Ruhe, auch wenn sich `symbol` nicht
-    zerlegen ließe.
+    Sammelcode. Der Umzug lässt es in Ruhe, obwohl sich `symbol` nicht
+    zerlegen ließe — sonst nähme er genau die Arbeit zurück, die jemand
+    vorher hineingesteckt hat.
     """
     path = str(tmp_path / "manuell.db")
     _legacy_database(path, [("VTI", "US9229087690")])
-    init_db(path)
-
-    with sqlite3.connect(path) as connection:
-        connection.execute(
-            "UPDATE instruments SET identity_status = 'resolved', "
-            "ticker = 'VTI', mic = 'XNAS' WHERE symbol = 'VTI'"
-        )
+    _mit_gesetzter_identitaet(path, "VTI", "VTI", "XNAS")
 
     init_db(path)
+    run_migration(path, rejected_at=_STAMP)
 
     row = _instruments(path)["VTI"]
     assert (row["ticker"], row["mic"]) == ("VTI", "XNAS")
-    assert row["identity_status"] == "resolved"
+    assert _rejections(path) == {}
 
 
 def test_der_sammelcode_ueberlebt_die_migration_nicht(tmp_path) -> None:
@@ -448,104 +423,63 @@ def test_der_sammelcode_ueberlebt_die_migration_nicht(tmp_path) -> None:
     Smoke-Lauf bewies nur, dass er ihn hinterher meldet.
 
     Vollständig ist eine Identität erst mit einem **echten** MIC. Alles andere
-    wird neu bewertet und landet bei den offenen Fällen.
+    wird neu bewertet — und `VTI` verlässt dabei den Bestand, weil sich sein
+    Symbol nicht zerlegen lässt.
     """
     path = str(tmp_path / "sammelcode.db")
     _legacy_database(path, [("VTI", "US9229087690")])
-    init_db(path)
-
-    with sqlite3.connect(path) as connection:
-        connection.execute(
-            "UPDATE instruments SET identity_status = 'resolved', "
-            "ticker = 'VTI', mic = 'US' WHERE symbol = 'VTI'"
-        )
+    _mit_gesetzter_identitaet(path, "VTI", "VTI", "US")
 
     init_db(path)
+    run_migration(path, rejected_at=_STAMP)
 
-    row = _instruments(path)["VTI"]
-    assert (row["ticker"], row["mic"]) == (None, None)
-    assert row["identity_status"] == "legacy_unresolved"
+    assert "VTI" not in _instruments(path)
+    assert _rejections(path)["VTI"]["reason"] == REASON_NO_SUFFIX
 
 
-def test_ein_kaputter_status_zerstoert_keine_gueltige_zuordnung(tmp_path) -> None:
-    """Entschieden wird nach den **Daten**, nicht nach der Beschriftung.
+# **Zwei Tests sind hier entfallen**, und zwar ersatzlos:
+# `test_ein_widerspruechlicher_status_wird_neu_bewertet` und
+# `test_ein_kaputter_status_zerstoert_keine_gueltige_zuordnung`. Beide prüften
+# den Umgang mit einer **Beschriftung**, die es nicht mehr gibt: Ein `resolved`
+# ohne Identität, ein `halbfertig` neben einer gültigen Zuordnung. Ihre Lehre —
+# „entschieden wird nach den Daten, nicht nach dem Etikett" — ist mit dem
+# Wegfall von `identity_status` strukturell geworden: Es gibt kein Etikett
+# mehr, das widersprechen könnte. Ein Test dafür hätte nichts zu prüfen.
+#
+# Was von ihnen überlebt, steht oben: Eine gültige Zuordnung bleibt
+# unangetastet, und eine unvollständige wird neu bewertet.
 
-    Meine erste Fassung behandelte jeden unbekannten Status als „keine
-    Identität" und überschrieb die Felder aus dem Legacy-Symbol. Damit ging
-    eine fachlich gültige, von Hand gesetzte Zuordnung lautlos verloren — genau
-    das, was dieses Ticket verhindern will.
 
-    Eine vollständige Identität bleibt jetzt stehen; korrigiert wird nur die
-    Beschriftung, und der kaputte Status wird protokolliert.
+@pytest.mark.parametrize(
+    ("mic", "warum"),
+    [
+        ("NOT-A-MIC", "sieht nicht einmal wie ein MIC aus"),
+        ("XNAS\n", "trägt einen Zeilenumbruch"),
+        ("US", "ist ein Sammelcode"),
+    ],
+    ids=["unsinn", "zeilenumbruch", "sammelcode"],
+)
+def test_ein_untauglicher_mic_ueberlebt_den_umzug_nicht(
+    tmp_path, mic: str, warum: str
+) -> None:
+    """Was kein echter MIC ist, macht eine Zeile nicht vollständig.
+
+    `is_real_mic` ließ früher jeden der Tabelle unbekannten String durch —
+    auch `NOT-A-MIC`. Und `XNAS\\n` kam durch, weil Python `$` auch vor einem
+    abschließenden Zeilenumbruch matchen lässt: ein Wert, den der
+    Eindeutigkeits-Index sogar von `XNAS` unterscheidet, für jeden Menschen
+    aber gleich aussieht.
+
+    Solche Zeilen galten als vollständig und blieben für immer stehen. Jetzt
+    werden sie neu bewertet — und `VTI` verlässt dabei den Bestand, weil sich
+    sein Symbol nicht zerlegen lässt.
     """
-    path = str(tmp_path / "kaputter-status.db")
+    path = str(tmp_path / "untauglich.db")
     _legacy_database(path, [("VTI", "US9229087690")])
-    init_db(path)
-
-    with sqlite3.connect(path) as connection:
-        connection.execute(
-            "UPDATE instruments SET identity_status = 'halbfertig', "
-            "ticker = 'VTI', mic = 'XNAS' WHERE symbol = 'VTI'"
-        )
-
-    with structlog.testing.capture_logs() as logs:
-        init_db(path)
-
-    row = _instruments(path)["VTI"]
-    assert (row["ticker"], row["mic"]) == ("VTI", "XNAS"), "die Zuordnung ist weg"
-    assert row["identity_status"] == "resolved"
-
-    repaired_entries = [
-        entry for entry in logs if entry["event"] == "identity_status_repaired"
-    ]
-    assert repaired_entries, "der kaputte Status wurde stillschweigend geheilt"
-    assert repaired_entries[0]["previous"] == "halbfertig"
-
-
-def test_ein_unsinniger_mic_ueberlebt_die_migration_nicht(tmp_path) -> None:
-    """Was nicht einmal wie ein MIC aussieht, ist keine gültige Zuordnung.
-
-    `is_real_mic` ließ jeden der Tabelle unbekannten String durch — auch
-    `NOT-A-MIC`. Die Migration hielt solche Zeilen damit für vollständig und
-    ließ sie für immer stehen.
-    """
-    path = str(tmp_path / "unsinn.db")
-    _legacy_database(path, [("VTI", "US9229087690")])
-    init_db(path)
-
-    with sqlite3.connect(path) as connection:
-        connection.execute(
-            "UPDATE instruments SET identity_status = 'resolved', "
-            "ticker = 'VTI', mic = 'NOT-A-MIC' WHERE symbol = 'VTI'"
-        )
+    _mit_gesetzter_identitaet(path, "VTI", "VTI", mic)
 
     init_db(path)
+    run_migration(path, rejected_at=_STAMP)
 
-    row = _instruments(path)["VTI"]
-    assert (row["ticker"], row["mic"]) == (None, None)
-    assert row["identity_status"] == "legacy_unresolved"
-
-
-def test_ein_mic_mit_zeilenumbruch_ueberlebt_die_migration_nicht(tmp_path) -> None:
-    """`XNAS\n` ist kein MIC — auch wenn der reguläre Ausdruck es durchließ.
-
-    Python lässt `$` auch vor einem abschließenden Zeilenumbruch matchen. Die
-    Prüfung sah damit richtig aus und akzeptierte einen Wert, den der
-    Eindeutigkeits-Index sogar von `XNAS` unterscheidet: zwei Zeilen, die für
-    jede Maschine verschieden sind und für jeden Menschen gleich aussehen.
-    """
-    path = str(tmp_path / "umbruch.db")
-    _legacy_database(path, [("VTI", "US9229087690")])
-    init_db(path)
-
-    with sqlite3.connect(path) as connection:
-        connection.execute(
-            "UPDATE instruments SET identity_status = 'resolved', "
-            "ticker = 'VTI', mic = 'XNAS\n' WHERE symbol = 'VTI'"
-        )
-
-    init_db(path)
-
-    row = _instruments(path)["VTI"]
-    assert (row["ticker"], row["mic"]) == (None, None)
-    assert row["identity_status"] == "legacy_unresolved"
+    assert "VTI" not in _instruments(path), warum
+    assert _rejections(path)["VTI"]["reason"] == REASON_NO_SUFFIX
