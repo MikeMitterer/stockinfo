@@ -16,7 +16,7 @@ import pytest
 
 from app.db import init_db
 from app.models import QuoteResponse
-from app.repository import QuoteRepository
+from app.repository import IncompleteIdentityError, QuoteRepository
 
 
 @pytest.fixture
@@ -47,8 +47,7 @@ def _response(**overrides) -> QuoteResponse:
 def _row(repo: QuoteRepository, instrument_id: int) -> dict:
     with repo._connect() as connection:
         row = connection.execute(
-            "SELECT ticker, mic, listing_id, identity_status, symbol "
-            "FROM instruments WHERE id = ?",
+            "SELECT ticker, mic, listing_id, symbol FROM instruments WHERE id = ?",
             (instrument_id,),
         ).fetchone()
     return dict(row)
@@ -59,7 +58,6 @@ def test_ein_neues_papier_wird_mit_ticker_und_mic_angelegt(repo) -> None:
     row = _row(repo, repo.save_quote(_response()))
 
     assert (row["ticker"], row["mic"]) == ("VGWL", "XETR")
-    assert row["identity_status"] == "resolved"
 
 
 @pytest.mark.parametrize(
@@ -94,7 +92,6 @@ def test_das_gespeicherte_symbol_passt_zur_identitaet(
 
     assert row["symbol"] == symbol
     assert (row["ticker"], row["mic"]) == (ticker, mic)
-    assert row["identity_status"] == "resolved"
 
 
 def test_jedes_neue_papier_bekommt_eine_eigene_listing_id(repo) -> None:
@@ -130,41 +127,46 @@ def test_ein_zweiter_kurs_laesst_die_identitaet_unangetastet(repo) -> None:
     assert after["listing_id"] == before["listing_id"]
 
 
-def test_ohne_eindeutige_zuordnung_bleibt_die_zeile_offen(repo) -> None:
-    """Der Fall, den der Resolver heute abweist — die Datenbank hält ihn aus.
+def test_ohne_eindeutige_zuordnung_entsteht_gar_keine_zeile(repo) -> None:
+    """**Die Umkehr aus T-21 Teil 3** — hier stand „bleibt die Zeile offen".
 
-    Der Yahoo-Adapter liefert für `BRK-B` gar kein `Resolved` mehr. Die
-    Speicherung darf sich darauf trotzdem nicht verlassen: Ein Papier ohne
-    Zuordnung wird als **offen** angelegt und nicht mit geratenen Werten
-    gefüllt. `legacy_unresolved` ist derselbe Status, den die Migration
-    vergibt — die Liste offener Fälle (Teil 3) kennt damit nur einen.
+    Die alte Zusage lautete: Ein Papier ohne Zuordnung wird als **offen**
+    angelegt statt mit geratenen Werten gefüllt, und die Liste offener Fälle
+    kennt dann nur einen Status. Geraten wird weiterhin nicht — aber die
+    offene Zeile ist nicht mehr der ehrlichere Zustand, sondern der, den es
+    nicht mehr geben darf.
+
+    Abgelehnt wird mit einem eigenen Fehler statt mit einer
+    `NOT NULL`-Verletzung: dieselbe Ablehnung, aber sie sagt, was fehlt.
     """
-    row = _row(repo, repo.save_quote(_response(symbol="BRK-B", ticker=None, mic=None)))
+    with pytest.raises(IncompleteIdentityError):
+        repo.save_quote(_response(symbol="BRK-B", ticker=None, mic=None))
 
-    assert (row["ticker"], row["mic"]) == (None, None)
-    assert row["identity_status"] == "legacy_unresolved"
-    assert row["listing_id"]
+    with repo._connect() as connection:
+        anzahl = connection.execute("SELECT COUNT(*) FROM instruments").fetchone()[0]
+    assert anzahl == 0
 
 
-def test_eine_offene_zeile_wird_spaeter_nachgetragen(repo) -> None:
+def test_eine_ueberholte_zuordnung_wird_nachgezogen(repo) -> None:
     """Der im Ticket versprochene Nachtrag — hier passiert er.
 
-    Die Migration lässt `AAPL` offen, weil sie den Handelsplatz offline nicht
-    kennen kann. Der nächste erfolgreiche Auflösungslauf kennt ihn (`NMS` →
-    `XNAS`) und trägt ihn nach. Ohne diesen Weg bliebe jede Zeile, die einmal
-    offen war, es für immer.
+    **Der Aufbau musste wechseln.** Vorher begann der Test mit einer *offenen*
+    Zeile: `AAPL` ohne Handelsplatz, weil die Migration ihn offline nicht
+    kennen konnte. Diesen Zustand gibt es nicht mehr. Was es weiterhin gibt,
+    ist eine Zuordnung, die **nicht mehr stimmt** — etwa nach einem Wechsel
+    der Vorzugsbörse. Auch sie muss der nächste Lauf nachziehen, sonst zeigte
+    `symbol` auf den einen und `mic` auf den anderen Handelsplatz.
     """
-    unresolved = repo.save_quote(
-        _response(isin="US0378331005", symbol="AAPL", ticker=None, mic=None)
+    instrument_id = repo.save_quote(
+        _response(isin="US0378331005", symbol="AAPL", ticker="AAPL", mic="XNYS")
     )
 
     repo.save_quote(
         _response(isin="US0378331005", symbol="AAPL", ticker="AAPL", mic="XNAS")
     )
 
-    row = _row(repo, unresolved)
+    row = _row(repo, instrument_id)
     assert (row["ticker"], row["mic"]) == ("AAPL", "XNAS")
-    assert row["identity_status"] == "resolved"
 
 
 def test_eine_offene_aufloesung_verwirft_keine_bestehende_zuordnung(repo) -> None:
