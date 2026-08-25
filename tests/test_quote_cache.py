@@ -194,7 +194,8 @@ class _StockQuoteService:
 
     def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         return QuoteResponse(
-            isin=isin, symbol="AAPL.DE", currency="EUR", price=100.0,
+            isin=isin, symbol="AAPL.DE", ticker="AAPL", mic="XETR",
+            currency="EUR", price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",
             fetched_at="2026-07-13T10:00:00+00:00", type="stock", volatility=None,
         )
@@ -231,7 +232,8 @@ def test_refresh_behaelt_justetf_volatilitaet(tmp_path) -> None:
     class _EtfQuoteService:
         def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
             return QuoteResponse(
-                isin=isin, symbol="VGWL.DE", currency="EUR", price=160.0,
+                isin=isin, symbol="VGWL.DE", ticker="VGWL", mic="XETR",
+                currency="EUR", price=160.0,
                 quote_time="2026-07-13T10:00:00+00:00",
                 fetched_at="2026-07-13T10:00:00+00:00", type="etf", volatility=9.95,
             )
@@ -391,6 +393,11 @@ class _WanderndeAufloesung:
         return QuoteResponse(
             isin="IE00BCRY6557",
             symbol=symbol,
+            # Der Ticker steht vor dem Punkt. Die Börsen stehen ausgeschrieben
+            # da, statt aus dem Suffix gerechnet zu werden — die Fake-Quelle
+            # soll die Zerlegungsregel des Produkts nicht nachbauen.
+            ticker=symbol.split(".")[0],
+            mic={"DE": "XETR", "L": "XLON", "MI": "XMIL"}[symbol.split(".")[1]],
             currency=currency,
             exchange=exchange,
             price=101.19,
@@ -487,6 +494,8 @@ class _OhneTyp:
         return QuoteResponse(
             isin="IE00B3RBWM25",
             symbol="VGWL.DE",
+            ticker="VGWL",
+            mic="XETR",
             currency="EUR",
             exchange="Xetra",
             price=161.0,
@@ -547,7 +556,8 @@ def test_lesepfad_loest_bekanntes_instrument_nicht_neu_auf(repo: QuoteRepository
     # Bekanntes Papier mit abgelaufenem Kurs.
     repo.save_quote(
         QuoteResponse(
-            isin="IE00BCRY6557", symbol="IS3M.DE", currency="EUR", exchange="Xetra",
+            isin="IE00BCRY6557", symbol="IS3M.DE", ticker="IS3M", mic="XETR",
+            currency="EUR", exchange="Xetra",
             price=100.0, quote_time=_hours_ago(10), fetched_at=_hours_ago(10),
             type="etf",
         )
@@ -570,7 +580,8 @@ def test_lesepfad_per_symbol_loest_bekanntes_instrument_nicht_neu_auf(
     fake = _WanderndeAufloesung()
     repo.save_quote(
         QuoteResponse(
-            isin="IE00BCRY6557", symbol="IS3M.DE", currency="EUR", exchange="Xetra",
+            isin="IE00BCRY6557", symbol="IS3M.DE", ticker="IS3M", mic="XETR",
+            currency="EUR", exchange="Xetra",
             price=100.0, quote_time=_hours_ago(10), fetched_at=_hours_ago(10),
             type="etf",
         )
@@ -609,7 +620,8 @@ class _MerktSichDenAufruf:
 
     def _antwort(self, symbol: str) -> QuoteResponse:
         return QuoteResponse(
-            isin="IE00B4L5Y983", symbol=symbol, currency="EUR", exchange="Xetra",
+            isin="IE00B4L5Y983", symbol=symbol, ticker=symbol.split(".")[0],
+            mic="XETR", currency="EUR", exchange="Xetra",
             price=129.1, quote_time=_now(), fetched_at=_now(), type="etf",
         )
 
@@ -649,7 +661,8 @@ def test_refresh_per_symbol_reicht_die_gespeicherte_zeile_durch(
     fake = _MerktSichDenAufruf()
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B4L5Y983", symbol="EUNL.DE", currency="EUR", exchange="Xetra",
+            isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
+            currency="EUR", exchange="Xetra",
             price=128.7, quote_time=_now(), fetched_at=_now(), type="etf",
         )
     )
@@ -783,6 +796,8 @@ def _maintained_etf(fetched_at: str) -> QuoteResponse:
     return QuoteResponse(
         isin="IE00B3RBWM25",
         symbol="VGWL.DE",
+        ticker="VGWL",
+        mic="XETR",
         currency="EUR",
         price=160.98,
         quote_time=fetched_at,
@@ -801,6 +816,8 @@ def _incomplete_response(fetched_at: str, price: float) -> QuoteResponse:
     return QuoteResponse(
         isin="IE00B3RBWM25",
         symbol="VGWL.DE",
+        ticker="VGWL",
+        mic="XETR",
         currency="EUR",
         price=price,
         quote_time=fetched_at,
