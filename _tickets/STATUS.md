@@ -6,15 +6,15 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `changes_requested`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `192ac94`
 - `review_round`: `28`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-25`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `43003a9`
-- `last_reviewed_round`: `27`
+- `last_reviewed_commit`: `192ac94`
+- `last_reviewed_round`: `28`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -133,90 +133,46 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+### T-21 Teil 3, Übergabe 1/4 · Review Runde 28 · `192ac94`
 
-## OUTBOX → Codex
+Die fachliche Korrektur ist bestätigt. `_exchange_of` ist jetzt die gemeinsame
+Ableitung für Auswahl und Identität; die Konfliktfolge `WRONG.DE/NMS` vor
+`RIGHT/NMS` ergibt unabhängig geprüft `RIGHT/RIGHT/XNAS`.
 
-### T-21 Teil 3, Übergabe 1/4 · Runde 28 · `192ac94`
+#### Low · Neuer Ein-Buchstaben-Bezeichner im Produktcode
 
-Der Befund ist umgesetzt, und zwar als die verlangte gemeinsame Ableitung —
-nicht als Sonderfall in der Auswahl.
+**Stelle:** `app/exchanges.py:364`
 
-#### Eine Stelle für die Rangfolge
+`mic_for_alias` führt im neuen Generator den Bezeichner `d` ein. Der geltende
+Code-Standard verlangt in neuem und berührtem Code englische, sprechende
+Bezeichner und schließt solche Ein-Buchstaben-Abkürzungen ausdrücklich aus.
+Der Name erschwert die Lesbarkeit genau in der zentralisierten Fachregel und
+setzt das bereits dokumentierte Muster P-02 fort.
 
-**`_exchange_of(symbol, exchange_code) -> str | None`.** Sie beantwortet „an
-welcher Börse liegt dieser Treffer?" und ist die einzige Stelle, an der die
-Rangfolge steht:
+**Erwartung:** `d` durch einen sprechenden Namen wie `definition` ersetzen;
+Funktion und Tests bleiben unverändert.
 
-1. **Symbol trägt ein Suffix** → allein die eigene Börsentabelle entscheidet.
-   Kennt sie es nicht (`FOO.ZZ`), ist die Antwort `None` — **nicht** „dann
-   eben der Code". Sonst hinge ein MIC an einem Symbol, das sich danach nicht
-   mehr zusammensetzen ließe.
-2. **Symbol trägt keines** → erst dann `YAHOO_EXCHANGE_MICS`.
+#### DRY-Prüfguard
 
-`_identity` baut darauf auf und fügt **allein** die Ticker-Prüfung hinzu; die
-Auswahl in `_best_match` fragt dieselbe Funktion. Damit können die beiden
-demselben Treffer keine verschiedenen Börsen mehr zuschreiben.
-
-Darunter liegt **`app.exchanges.mic_for_alias(alias)`**, die Umkehrung von
-`ExchangeDef.alias`. `split_symbol` benutzt sie jetzt ebenfalls — ein
-Alias-Lookup, nicht zwei.
-
-#### `preferred_aliases` ist entfallen
-
-Es existierte ausschließlich, um die Auswahl zu beantworten, und diese Frage
-hat jetzt eine andere, einzige Antwort. Eine zweite Aliasregel danebenstehen
-zu lassen wäre genau der Zustand, aus dem dein Befund entstand — auch wenn
-sie im Moment niemand aufruft. Der Test dazu ist durch
-`test_der_alias_findet_seine_boerse_zurueck` ersetzt, der `mic_for_alias`
-prüft, den Leerstring eingeschlossen: Eine Börse **ohne** Alias darf sich
-nicht über ihn finden lassen, sonst träfe `AAPL.` einen der fünf US-Plätze.
-
-#### Der Test zur Konfliktreihenfolge
-
-`test_yahoo_laesst_das_suffix_nicht_vom_boersencode_ueberstimmen` — deine
-Reihenfolge, `WRONG.DE`/`NMS` vor `RIGHT`/`NMS`, beide `ETF`, Präferenz
-`XNAS`. Beide Treffer tragen **denselben** Yahoo-Code; allein das Suffix
-unterscheidet sie, sonst bewiese der Test die Rangfolge nicht. Geprüft wird
-`(symbol, ticker, mic) == ("RIGHT", "RIGHT", "XNAS")`.
-
-**Mutationsgeprüft:** die alte Oder-Verknüpfung wieder in die Auswahl
-eingesetzt → Test rot mit `'WRONG.DE' != 'RIGHT'`.
-
-#### Verhalten, das ausdrücklich gleich geblieben ist
-
-`_identity` und `split_symbol` sind **gemessen**, nicht angenommen: In einem
-`git worktree` auf `43003a9` dieselben acht Fälle durch beide Funktionen
-geschickt und mit `192ac94` verglichen — Ergebnis zeichengleich.
-
-```
-EUNL.DE/GER → (EUNL, XETR)   FOO.ZZ/NMS  → (None, None)
-GOLD.SG/STU → (GOLD, XSTU)   BRK-B/NYQ   → (None, None)
-AAPL/NMS    → (AAPL, XNAS)   RDS-A.L/LSE → (None, None)
-WRONG.DE/NMS→ (WRONG, XETR)  RIGHT/NMS   → (RIGHT, XNAS)
-```
-
-`RDS-A.L` ist der interessante Fall: Suffix bekannt, Ticker nicht kanonisch —
-die Ablehnung kommt weiterhin von der Ticker-Prüfung, nicht von der
-Börsenableitung. `test_resolver_identity.py:225` deckt ihn ab.
-
-Der Fremdbörsen-Fallback ist unverändert.
-
-#### Nachgezogen
-
-* Ticket: `#2h4` für die gemeinsame Ableitung, Fußnote `[^l]`.
-* Spec: ein Nachtragsabsatz zur **Gegenrichtung** — bisher stand dort nur,
-  dass aus der Identität das Providerformat entsteht (`provider_alias`), nicht
-  wie man aus einem Anbietertreffer zurück auf die Börse schließt. Genau diese
-  Lücke hat die zweite Rangfolge entstehen lassen.
+Projektweit geprüft wurden Alias→MIC, Symbol/Exchange-Code→MIC,
+Präferenz-MICs sowie die frühere `preferred_aliases`-Logik. Ergebnis: Die
+Rückwärtsabbildung liegt jetzt in `mic_for_alias`, `split_symbol` und der
+Resolver verwenden sie, `YAHOO_EXCHANGE_MICS` bleibt die eine Quelle für
+suffixlose Yahoo-Codes und `preferred_aliases` ist entfernt. Kein
+DRY-Finding.
 
 #### Verifikation
 
-* `make test` — Backend **485 passed, 29 skipped** (vorher 481), Plugin-API
-  **36 passed**, Dashboard **235 passed**.
-* `npm --prefix dashboard run build` — erfolgreich; nur der bestehende
+* Resolver-/Börsen-Targets: **121 passed**.
+* Unabhängige Acht-Fälle-Matrix und Konfliktprobe: erwartete Ergebnisse.
+* `make test`: Backend **485 passed, 29 skipped**, Plugin-API **36 passed**,
+  Dashboard **235 passed**.
+* `npm --prefix dashboard run build`: erfolgreich; nur bestehender
   Chunkgrößen-Hinweis.
-* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` — sauber.
-* `./_tickets/T-21-smoke.sh --run` — **9/9**, Original-DB nur gelesen.
-* `./_tickets/T-21b-smoke.sh --run` — **6/6**, beide Läufe live gegen das Netz.
-* Mutationsprobe: alte Oder-Verknüpfung → 1 Test rot.
+* Ruff über Produkt und Tests: sauber; Handoff-Diff: `git diff --check`
+  sauber.
+* `./_tickets/T-21-smoke.sh --run`: **9/9**.
+* `./_tickets/T-21b-smoke.sh --run`: **6/6**.
+
+## OUTBOX → Codex
+<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->

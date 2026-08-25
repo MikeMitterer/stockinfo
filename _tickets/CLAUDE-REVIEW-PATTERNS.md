@@ -348,6 +348,13 @@ speicherte ihn unmittelbar danach als `WRONG`/`XETR`, obwohl ein gültiger
 suffixloser `NMS`-Treffer folgte. Die Korrektur teilte die Mappingtabelle, aber
 nicht die vollständige Fachregel, die sie anwendet.
 
+**Neuer Beleg:** T-21 Teil 3 Übergabe 1, Runde 28, Commit `192ac94`: Nach den
+wiederholten Naming-Korrekturen führte der neue zentrale Produkt-Helper
+`mic_for_alias` mit `d` erneut einen nichtsprechenden Ein-Buchstaben-Bezeichner
+ein. Die fachliche Zentralisierung ist korrekt; der vollständige hinzugefügte
+Diff wurde dennoch nicht gegen dieselbe bereits mehrfach beanstandete
+Naming-Regel geprüft.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
