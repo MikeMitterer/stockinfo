@@ -113,15 +113,16 @@ def test_unbekannte_boerse_faellt_auf_xetr_zurueck() -> None:
 def test_us_notiert_ohne_suffix() -> None:
     """Was von diesem Test übrig bleibt, nachdem das Anbieterwissen umgezogen ist.
 
-    Der leere Alias ist eine Eigenschaft der **Börse**: In den USA ist das
+    Der fehlende Alias ist eine Eigenschaft der **Börse**: In den USA ist das
     punktlose Symbol die Notierung. Dass OpenFIGI dort über `exchCode` sucht,
     ist dagegen eine Eigenschaft des Anbieters und steht seit T-21 Teil 2b bei
     ihm — geprüft in `tests/test_openfigi_lookup.py`.
 
     Seit Teil 3 steht hier ein **echter MIC** statt des Sammelcodes `US`: Die
-    Eigenschaft gehört dem Handelsplatz, und `US` ist keiner.
+    Eigenschaft gehört dem Handelsplatz, und `US` ist keiner. Die Abwesenheit
+    steht als `None` da, nicht als Leerstring.
     """
-    assert EXCHANGES["XNAS"].alias == ""
+    assert EXCHANGES["XNAS"].alias is None
 
 
 class _FigiFails:

@@ -365,20 +365,19 @@ class YFinanceResolver:
 
         aliases = preferred_aliases(self._default_exchange)
 
-        if any(aliases):
+        if aliases:
             at_exchange = [
                 quote
                 for quote in with_symbol
                 if any(
-                    alias and str(quote["symbol"]).endswith(f".{alias}")
-                    for alias in aliases
+                    str(quote["symbol"]).endswith(f".{alias}") for alias in aliases
                 )
             ]
         else:
-            # Alle in Frage kommenden Börsen führen keinen Alias — beim
+            # Keine der in Frage kommenden Börsen führt einen Alias — beim
             # Sammelcode `US` sind das seine fünf Mitglieder. Dort ist das
             # punktlose Symbol die Notierung. Ohne diesen Zweig liefe die
-            # Regel leer, weil jedes Symbol auf `''` endet.
+            # Regel leer, weil es kein Suffix zum Vergleichen gibt.
             at_exchange = [
                 quote for quote in with_symbol if "." not in str(quote["symbol"])
             ]

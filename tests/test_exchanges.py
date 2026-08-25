@@ -6,7 +6,7 @@ from app.exchanges import EXCHANGES, is_real_mic, split_symbol
 
 
 @pytest.mark.parametrize(
-    ("symbol", "erwartet"),
+    ("symbol", "expected"),
     [
         ("EUNL.DE", ("EUNL", "XETR")),
         ("XIC.TO", ("XIC", "XTSE")),
@@ -15,10 +15,10 @@ from app.exchanges import EXCHANGES, is_real_mic, split_symbol
     ],
 )
 def test_bekannte_suffixe_sind_eindeutig_umkehrbar(
-    symbol: str, erwartet: tuple[str, str]
+    symbol: str, expected: tuple[str, str]
 ) -> None:
     """Die Rückrechnung funktioniert, weil kein Suffix doppelt vergeben ist."""
-    assert split_symbol(symbol) == erwartet
+    assert split_symbol(symbol) == expected
 
 
 @pytest.mark.parametrize(
@@ -51,9 +51,9 @@ def test_kein_suffix_ist_doppelt_vergeben() -> None:
     Leere Aliase sind ausgenommen: Die fünf US-Plätze teilen sich den leeren,
     und genau deshalb ist `AAPL` nicht rückrechenbar.
     """
-    aliase = [d.alias for d in EXCHANGES.values() if d.alias]
+    aliases = [d.alias for d in EXCHANGES.values() if d.alias]
 
-    assert len(aliase) == len(set(aliase))
+    assert len(aliases) == len(set(aliases))
 
 
 def test_die_schema_schicht_zieht_kein_yfinance_mit() -> None:

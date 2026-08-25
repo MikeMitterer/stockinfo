@@ -355,6 +355,18 @@ Fehler im Negativfall beseitigt und dessen Beschriftung unverändert lässt? Fü
 jede erlaubte Fehlerkennung muss eine konkrete, gegensinnige Assertion
 existieren.
 
+**Zweite Prüffrage — das Orakel.** Ein Großteil der Belege unten ist derselbe
+Griff: Die Gegenprobe ruft die Funktion auf, die sie prüfen soll. Deshalb vor
+jeder Vollständigkeitsbehauptung zusätzlich fragen: *Woher kommt der
+Erwartungswert?* Zulässig sind ein **Literal** und eine **hier eigens
+ausgeschriebene Regel**; unzulässig ist jeder Aufruf der geprüften Logik. Eine
+Tabelle nachzuschlagen ist erlaubt — sie ist Daten. Die Regel auf sie
+anzuwenden ist es nicht.
+
+Der DRY-Reflex zeigt hier in die falsche Richtung: Im Orakel ist die Dopplung
+der **Zweck**. Wo sie absichtlich steht, gehört ein Satz dazu, der das sagt —
+sonst zentralisiert sie der nächste Durchgang weg.
+
 **Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-24 Teil 1,
 Commit `403020b`: Ticketzeile `#7i` war mit `✅` als statische Konsistenz von
 Artefakt und Fixtures markiert. In `tests/test_contract.py` genügte bei

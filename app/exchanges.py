@@ -35,15 +35,22 @@ class ExchangeDef:
 
     ``currency`` ist nur Anzeige — die reale Kurswährung stammt aus dem Live-Quote.
 
-    ``alias`` ist das **nackte Token ohne Punkt** (``'DE'``, ``'SG'``, ``''``).
+    ``alias`` ist das **nackte Token ohne Punkt** (``'DE'``, ``'SG'``).
     Bis T-21 Teil 3 stand hier ``'.DE'`` mit Punkt, während `split_symbol` den
     Teil *hinter* dem Punkt verglich — zwei Schichten, die ohne eine nirgends
     beschriebene Normalisierung aneinander vorbeigesucht hätten. Den Punkt
     setzt jetzt ausschließlich `provider_alias`.
 
-    Ein leerer Alias heißt „diese Börse hängt kein Kürzel an den Ticker" — bei
-    den US-Plätzen der Normalfall. Fünf teilen sich ihn, und genau deshalb ist
-    die Rückrechnung von ``AAPL`` auf einen MIC nicht möglich.
+    ``None`` heißt „diese Börse hängt kein Kürzel an den Ticker" — bei den
+    US-Plätzen der Normalfall. Fünf teilen sich die Abwesenheit, und genau
+    deshalb ist die Rückrechnung von ``AAPL`` auf einen MIC nicht möglich.
+
+    **Abwesenheit ist `None`, nicht `''`.** Der Leerstring wäre ein magischer
+    Wert: ein Alias, der zufällig aus null Zeichen besteht. Er zwingt jede
+    Schicht — Python, REST, TypeScript — zu derselben ungeschriebenen
+    Übereinkunft, und T-30 müsste seinen deklarativ gemeldeten Alias an eine
+    Form anfügen, die Abwesenheit nicht benennen kann. Der Alias ist **einer
+    oder keiner**, und der Typ sagt das.
 
     **Was hier nicht steht.** Bis T-21 trug jede Zeile zwei Spalten mit, die
     nur OpenFIGI etwas angingen (`figi_id_type`, `figi_value`). Sie sind zum
@@ -52,7 +59,7 @@ class ExchangeDef:
     Anbieter-Eigenheiten. Sie beschreibt die **Börse**, nicht den Weg zu ihr.
     """
 
-    alias: str
+    alias: str | None
     name: str
     region: str  # "germany" | "usa" | "europe" | "global"
     currency: str
@@ -82,14 +89,14 @@ class CollectorDef:
 
 # Weltweite Börsentabelle: Key = MIC (bzw. 'US'). Erweiterbar per Zeile.
 EXCHANGES: dict[str, ExchangeDef] = {
-    # Amerika — die fünf US-Plätze führen keinen Alias und teilen sich deshalb
-    # den leeren. Aus `AAPL` lässt sich weiterhin kein MIC ableiten; neu ist
-    # nur die Gegenrichtung, `(AAPL, XNAS)` → `AAPL`.
-    "XNAS": ExchangeDef("", "NASDAQ", "usa", "USD"),
-    "XNYS": ExchangeDef("", "NYSE", "usa", "USD"),
-    "ARCX": ExchangeDef("", "NYSE Arca", "usa", "USD"),
-    "XASE": ExchangeDef("", "NYSE American", "usa", "USD"),
-    "BATS": ExchangeDef("", "Cboe BZX", "usa", "USD"),
+    # Amerika — die fünf US-Plätze führen keinen Alias, und das steht als
+    # `None` da, nicht als Leerstring. Aus `AAPL` lässt sich weiterhin kein MIC
+    # ableiten; neu ist nur die Gegenrichtung, `(AAPL, XNAS)` → `AAPL`.
+    "XNAS": ExchangeDef(None, "NASDAQ", "usa", "USD"),
+    "XNYS": ExchangeDef(None, "NYSE", "usa", "USD"),
+    "ARCX": ExchangeDef(None, "NYSE Arca", "usa", "USD"),
+    "XASE": ExchangeDef(None, "NYSE American", "usa", "USD"),
+    "BATS": ExchangeDef(None, "Cboe BZX", "usa", "USD"),
     "XTSE": ExchangeDef("TO", "Toronto", "global", "CAD"),
     "XTSX": ExchangeDef("V", "TSX Venture", "global", "CAD"),
     "BVMF": ExchangeDef("SA", "São Paulo (B3)", "global", "BRL"),
@@ -369,21 +376,28 @@ def preferred_aliases(code: str) -> tuple[str, ...]:
     Nachsicht wie in der Auflösungskaskade, damit eine vertippte Konfiguration
     die Auswahl nicht leer laufen lässt.
 
+    Börsen ohne Alias steuern **nichts** bei, statt eine Abwesenheit in die
+    Liste zu legen. Ein leeres Ergebnis heißt deshalb genau eines: „keiner der
+    in Frage kommenden Plätze hängt ein Kürzel an" — beim Sammelcode `US` gilt
+    das für alle fünf Mitglieder.
+
     Args:
         code: Der konfigurierte Vorgabewert.
 
     Returns:
-        Die Aliase, möglicherweise mehrere leere — fünf US-Plätze führen
-        keinen.
+        Die vorhandenen Aliase, möglicherweise keiner.
     """
     if code in EXCHANGES:
-        return (EXCHANGES[code].alias,)
-    collector = COLLECTORS.get(code)
-    if collector is not None:
-        return tuple(
-            EXCHANGES[mic].alias for mic in collector.members if mic in EXCHANGES
-        )
-    return (EXCHANGES[DEFAULT_EXCHANGE].alias,)
+        mics: tuple[str, ...] = (code,)
+    else:
+        collector = COLLECTORS.get(code)
+        mics = collector.members if collector is not None else (DEFAULT_EXCHANGE,)
+
+    return tuple(
+        alias
+        for mic in mics
+        if (alias := EXCHANGES[mic].alias if mic in EXCHANGES else None)
+    )
 
 
 def provider_alias(ticker: str, mic: str) -> str:
@@ -405,7 +419,7 @@ def provider_alias(ticker: str, mic: str) -> str:
         keinen Alias führt.
     """
     definition = EXCHANGES.get(mic)
-    alias = definition.alias if definition else ""
+    alias = definition.alias if definition else None
     return f"{ticker}.{alias}" if alias else ticker
 
 

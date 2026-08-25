@@ -142,11 +142,11 @@ def test_exchanges_liefert_den_katalog_und_die_vorgabe(client: TestClient) -> No
     assert body["default_exchange"] == "XETR"
     assert body["default_exchange_kind"] == "exchange"
 
-    boersen = {e["mic"]: e for e in body["catalog"] if e["kind"] == "exchange"}
-    assert boersen["XTSE"]["alias"] == "TO"
-    assert boersen["XSTU"]["alias"] == "SG"
-    assert boersen["XETR"]["currency"] == "EUR"
-    assert boersen["XNAS"]["alias"] == ""
+    exchanges = {e["mic"]: e for e in body["catalog"] if e["kind"] == "exchange"}
+    assert exchanges["XTSE"]["alias"] == "TO"
+    assert exchanges["XSTU"]["alias"] == "SG"
+    assert exchanges["XETR"]["currency"] == "EUR"
+    assert exchanges["XNAS"]["alias"] is None
 
 
 def test_kein_katalogeintrag_serialisiert_einen_sammelcode_als_mic(
@@ -160,11 +160,25 @@ def test_kein_katalogeintrag_serialisiert_einen_sammelcode_als_mic(
     """
     body = client.get("/exchanges").json()
 
-    sammelcodes = [e for e in body["catalog"] if e["kind"] == "collector"]
-    assert [e["code"] for e in sammelcodes] == ["US"]
-    assert set(sammelcodes[0]["members"]) == {"XNAS", "XNYS", "ARCX", "XASE", "BATS"}
-    assert all("mic" not in e for e in sammelcodes)
+    collectors = [e for e in body["catalog"] if e["kind"] == "collector"]
+    assert [e["code"] for e in collectors] == ["US"]
+    assert set(collectors[0]["members"]) == {"XNAS", "XNYS", "ARCX", "XASE", "BATS"}
+    assert all("mic" not in e for e in collectors)
     assert all(e["mic"] != "US" for e in body["catalog"] if e["kind"] == "exchange")
+
+
+def test_der_alias_ist_im_openapi_vertrag_optional(client: TestClient) -> None:
+    """Der Vertrag muss die Abwesenheit selbst benennen, nicht nur zulassen.
+
+    Bis zu dieser Korrektur stand `alias` in `required` und die fünf US-Plätze
+    kamen als `""` herein. Ein Client-Generator hätte daraus ein Pflichtfeld
+    gebaut, und T-30 müsste seinen deklarativ gemeldeten Alias an eine Form
+    anfügen, die „keiner" nicht ausdrücken kann.
+    """
+    schema = client.get("/openapi.json").json()["components"]["schemas"]["ExchangeEntry"]
+
+    assert "alias" not in schema.get("required", [])
+    assert {"type": "null"} in schema["properties"]["alias"]["anyOf"]
 
 
 def test_der_sammelcode_bleibt_eine_zulaessige_vorgabe(client: TestClient) -> None:

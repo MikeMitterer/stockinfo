@@ -2,7 +2,7 @@
 
 from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class HealthResponse(BaseModel):
@@ -261,33 +261,66 @@ class EnvInfo(BaseModel):
     yahoo_url: str = ""
 
 
-class Provenance(BaseModel):
-    """Woher ein Katalogeintrag stammt.
+class CoreProvenance(BaseModel):
+    """Der Eintrag stammt aus dem Core — und trägt deshalb **keine** Plugin-ID.
 
-    Heute steht hier immer ``core``. Typisiert statt als bloßer String, damit
-    T-30 später ``{"kind": "plugin", "id": …}` ergänzen kann, **ohne** den
-    Antworttyp zu ändern.
+    `extra="forbid"` ist hier die halbe Aussage: Ohne das Verbot nähme das
+    Modell ein mitgeschicktes ``id`` stillschweigend an und ließe es unter den
+    Tisch fallen. Ein Konsument, der ``{"kind": "core", "id": "demo"}``
+    schickt, meint etwas — und muss erfahren, dass es diesen Zustand nicht
+    gibt.
     """
 
-    kind: Literal["core", "plugin"] = "core"
-    id: str | None = None
+    model_config = ConfigDict(extra="forbid")
+
+    kind: Literal["core"] = "core"
+
+
+class PluginProvenance(BaseModel):
+    """Der Eintrag stammt aus einem Plugin — und nennt **welchem**.
+
+    Die ID ist Pflicht und nichtleer. „Von irgendeinem Plugin" ist für T-30
+    keine verwertbare Herkunft: Beim Merge entscheidet sie über Vorrang,
+    Kollision und Invalidierung.
+    """
+
+    kind: Literal["plugin"]
+    id: str = Field(min_length=1)
+
+
+Provenance = Annotated[
+    CoreProvenance | PluginProvenance, Field(discriminator="kind")
+]
+"""Woher ein Katalogeintrag stammt — Core **oder** ein benanntes Plugin.
+
+Eine diskriminierte Union statt eines Modells mit zwei optionalen Feldern:
+Jenes ließ ``{"kind": "plugin", "id": null}`` und ``{"kind": "core",
+"id": "demo"}`` durch, also genau die beiden Kombinationen, die T-30
+auseinanderhalten muss. Der Typ kann sie jetzt nicht mehr ausdrücken.
+"""
 
 
 class ExchangeEntry(BaseModel):
     """Ein **Handelsplatz** im Katalog — hat einen echten MIC.
 
     ``alias`` ist das nackte Token ohne Punkt, das die aktive Kursquelle an den
-    Ticker hängt; leer bei den US-Plätzen. Genau ein Alias je Börse: Die zweite
-    zulässige Eingabeform ist der kanonische MIC selbst.
+    Ticker hängt — oder ``None``, wenn die Börse keines anhängt (die fünf
+    US-Plätze). Genau ein Alias je Börse: Die zweite zulässige Eingabeform ist
+    der kanonische MIC selbst.
+
+    ``None`` und nicht ``""``: Abwesenheit ist kein Alias aus null Zeichen.
+    Der Leerstring wird deshalb auch **abgelehnt** — sonst gäbe es die
+    Abwesenheit zweimal, und jede Vergleichsstelle müsste beide Formen kennen.
+    Siehe `ExchangeDef` in `app.exchanges` für den Grund.
     """
 
     kind: Literal["exchange"] = "exchange"
     mic: str
-    alias: str
+    alias: Annotated[str, Field(min_length=1)] | None = None
     name: str
     region: str
     currency: str
-    provenance: Provenance = Provenance()
+    provenance: Provenance = CoreProvenance()
 
 
 class CollectorEntry(BaseModel):
@@ -306,7 +339,7 @@ class CollectorEntry(BaseModel):
     region: str
     currency: str
     members: list[str]
-    provenance: Provenance = Provenance()
+    provenance: Provenance = CoreProvenance()
 
 
 CatalogEntry = Annotated[ExchangeEntry | CollectorEntry, Field(discriminator="kind")]

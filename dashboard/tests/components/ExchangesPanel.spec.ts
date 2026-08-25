@@ -5,7 +5,7 @@ import ExchangesPanel from '../../src/components/ExchangesPanel.vue'
 import { i18n } from '../../src/i18n'
 
 describe('ExchangesPanel', () => {
-  const core = { kind: 'core' as const, id: null }
+  const core = { kind: 'core' as const }
 
   it('rendert Börsen und markiert die Default-Börse', () => {
     const wrapper = mount(ExchangesPanel, {
@@ -15,7 +15,7 @@ describe('ExchangesPanel', () => {
         default_exchange_kind: 'exchange' as const,
         catalog: [
           { kind: 'exchange' as const, mic: 'XETR', alias: 'DE', name: 'Xetra', region: 'germany', currency: 'EUR', provenance: core },
-          { kind: 'exchange' as const, mic: 'XNAS', alias: '', name: 'NASDAQ', region: 'usa', currency: 'USD', provenance: core },
+          { kind: 'exchange' as const, mic: 'XNAS', alias: null, name: 'NASDAQ', region: 'usa', currency: 'USD', provenance: core },
         ],
       } },
     })

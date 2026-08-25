@@ -62,20 +62,39 @@ def test_ein_neues_papier_wird_mit_ticker_und_mic_angelegt(repo) -> None:
     assert row["identity_status"] == "resolved"
 
 
-def test_das_symbol_laesst_sich_aus_der_identitaet_zusammensetzen(repo) -> None:
-    """Die Gegenprobe — gerechnet, nicht behauptet.
+@pytest.mark.parametrize(
+    ("ticker", "mic", "symbol"),
+    [
+        ("VGWL", "XETR", "VGWL.DE"),
+        ("GOLD", "XSTU", "GOLD.SG"),
+        ("AAPL", "XNAS", "AAPL"),
+    ],
+    ids=["xetra", "stuttgart", "us_ohne_alias"],
+)
+def test_das_gespeicherte_symbol_passt_zur_identitaet(
+    repo, ticker: str, mic: str, symbol: str
+) -> None:
+    """Symbol und Identität bleiben beim Speichern beieinander.
 
-    Das gespeicherte Symbol muss sich aus `(ticker, mic)` über die eigene
-    Börsentabelle wieder ergeben. Wäre die Zuordnung falsch, käme hier ein
-    anderes Symbol heraus als das, unter dem der Kurs geholt wurde.
+    Bis zu dieser Korrektur rief der Test `provider_alias` auf, um sich seine
+    Erwartung selbst auszurechnen — dieselbe Funktion, die das Symbol beim
+    Auflösen gebildet hatte. Ein Fehler in ihr wäre auf beiden Seiten
+    aufgetreten und grün geblieben. Erwartung und Zuordnung stehen jetzt als
+    Literale in der Parametrisierung; sie ändern sich nur von Hand.
 
-    Dieselbe Vorwärtsrechnung prüft `T-21-smoke.sh` am echten Bestand.
+    Dass die Börsentabelle aus `(ticker, mic)` das richtige Symbol bildet,
+    prüft `test_exchange_catalog.py` — ebenfalls gegen ausgeschriebene Werte.
+    Hier geht es allein um die **Speicherung**: Sie darf das Symbol weder
+    hinter dem Aufrufer neu bilden noch von der Zuordnung trennen.
+
+    Der US-Fall ist der interessante: Ohne Alias bleibt es beim nackten
+    Ticker, und genau dort hätte ein Leerstring-Suffix ein `AAPL.` erzeugt.
     """
-    from app.exchanges import provider_alias
+    row = _row(repo, repo.save_quote(_response(ticker=ticker, mic=mic, symbol=symbol)))
 
-    row = _row(repo, repo.save_quote(_response()))
-
-    assert provider_alias(row["ticker"], row["mic"]) == row["symbol"]
+    assert row["symbol"] == symbol
+    assert (row["ticker"], row["mic"]) == (ticker, mic)
+    assert row["identity_status"] == "resolved"
 
 
 def test_jedes_neue_papier_bekommt_eine_eigene_listing_id(repo) -> None:

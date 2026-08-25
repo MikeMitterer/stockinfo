@@ -104,7 +104,8 @@ report() {
 #
 # Die Prüfungen rechnen die Erwartung **selbst nach**, statt sie zu behaupten,
 # und zwar in der **Gegenrichtung** zur Migration: Diese zerlegt `symbol` in
-# `(ticker, mic)`, die Prüfung setzt es daraus wieder zusammen. Geprüft wird
+# `(ticker, mic)`, die Prüfung setzt es daraus wieder zusammen — mit einer
+# hier eigens formulierten Regel, nicht mit der Funktion des Produkts. Geprüft wird
 # nur, was dieser Lauf zugeordnet hat; bereits bestehende — etwa von Hand
 # gesetzte — Zuordnungen werden nicht nachvalidiert, sondern nur darauf, dass
 # sie unverändert blieben und keinen Sammelcode tragen.
@@ -121,7 +122,7 @@ import string
 import sys
 
 from app.db import init_db
-from app.exchanges import EXCHANGES, provider_alias
+from app.exchanges import EXCHANGES
 
 source, backup = sys.argv[1], sys.argv[2]
 
@@ -225,10 +226,19 @@ def composed(row: dict) -> str | None:
     Zusammensetzung keine Aussage.
 
     Seit T-21 Teil 3 kennt die Tabelle auch die fünf US-Plätze, `XNAS` steht
-    also nicht mehr darin fehl. Zusammengesetzt wird über `provider_alias` —
-    die einzige Stelle, die den Punkt setzt.
+    also nicht mehr darin fehl.
+
+    **Die Regel steht hier absichtlich noch einmal**, statt `provider_alias`
+    aufzurufen. Das ist keine übersehene Dopplung: Ein Orakel, das die geprüfte
+    Funktion benutzt, bestätigt nur, dass sie mit sich selbst übereinstimmt —
+    ein falsch gesetzter Punkt oder ein vertauschter Alias träte im Produkt und
+    in der Gegenrechnung gleich auf und bliebe grün. Nachgeschlagen wird nur
+    die Tabelle; sie ist Daten, nicht die geprüfte Logik.
     """
-    return provider_alias(row["ticker"], row["mic"]) if row["mic"] in EXCHANGES else None
+    if row["mic"] not in EXCHANGES:
+        return None
+    alias = EXCHANGES[row["mic"]].alias
+    return f"{row['ticker']}.{alias}" if alias else row["ticker"]
 
 
 # Jede Zeile muss nach dem Lauf in **genau einem** gültigen Zustand sein.

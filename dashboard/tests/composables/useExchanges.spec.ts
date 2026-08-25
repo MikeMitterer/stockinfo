@@ -15,7 +15,7 @@ describe('useExchanges', () => {
         catalog: [{
           kind: 'exchange', mic: 'XETR', alias: 'DE', name: 'Xetra',
           region: 'germany', currency: 'EUR',
-          provenance: { kind: 'core', id: null },
+          provenance: { kind: 'core' },
         }],
       }),
       { status: 200 },
@@ -24,7 +24,7 @@ describe('useExchanges', () => {
     await load()
     expect(data.value?.default_exchange).toBe('XETR')
     expect(data.value?.default_exchange_kind).toBe('exchange')
-    const erste = data.value?.catalog[0]
-    expect(erste?.kind === 'exchange' && erste.mic).toBe('XETR')
+    const first = data.value?.catalog[0]
+    expect(first?.kind === 'exchange' && first.mic).toBe('XETR')
   })
 })

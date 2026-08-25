@@ -229,8 +229,14 @@ fetchQuote() {
 #
 # Zwei Prüfungen in einer Zeile wären zwei Behauptungen: dass die Zuordnung
 # **gesetzt** ist und dass sie **stimmt**. Die zweite rechnet in der
-# Gegenrichtung nach — aus `(ticker, mic)` muss sich über die Börsentabelle
-# wieder genau das Symbol ergeben, unter dem der Kurs geholt wurde.
+# Gegenrichtung nach — aus `(ticker, mic)` muss sich wieder genau das Symbol
+# ergeben, unter dem der Kurs geholt wurde.
+#
+# Die Erwartung steht dabei **ausgeschrieben**: `#5a` hat den MIC bereits auf
+# `XETR` festgenagelt, und Xetras Alias ist `DE`. Früher rief diese Stelle
+# `provider_alias` auf — dieselbe Funktion, die das Symbol beim Auflösen
+# gebildet hatte. Ein vertauschter Alias wäre auf beiden Seiten aufgetreten
+# und hätte den Check trotzdem bestanden.
 checkExchangeTablePath() {
     local _STATUS
     _STATUS="$(fetchQuote "${ISIN_XETRA}")"
@@ -258,20 +264,14 @@ checkExchangeTablePath() {
         return 1
     fi
 
-    local _COMPOSED
-    _COMPOSED="$("${VENV_PY}" -c '
-import sys
-sys.path.insert(0, sys.argv[3])
-from app.exchanges import provider_alias
-print(provider_alias(sys.argv[1], sys.argv[2]))
-' "${_TICKER}" "${_MIC}" "${PROJECT_ROOT}")"
+    local -r _EXPECTED="${_TICKER}.DE"
 
-    if [[ "${_COMPOSED}" == "${_SYMBOL}" ]]; then
+    if [[ "${_EXPECTED}" == "${_SYMBOL}" ]]; then
         report "#5b" "das Symbol lässt sich aus der Identität zusammensetzen" true \
-            "${_TICKER} + Suffix(${_MIC}) = ${_COMPOSED}"
+            "${_TICKER} + Xetra-Alias DE = ${_EXPECTED}"
     else
         report "#5b" "das Symbol lässt sich aus der Identität zusammensetzen" false \
-            "${_COMPOSED} statt ${_SYMBOL}"
+            "${_EXPECTED} erwartet, gespeichert ist ${_SYMBOL}"
     fi
 }
 

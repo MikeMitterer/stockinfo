@@ -112,22 +112,26 @@ export interface EnvInfo {
   yahoo_url: string
 }
 
-/** Woher ein Katalogeintrag stammt — heute immer `core`, ab T-30 auch Plugins. */
-export interface Provenance {
-  kind: 'core' | 'plugin'
-  id: string | null
-}
+/**
+ * Woher ein Katalogeintrag stammt — heute immer `core`, ab T-30 auch Plugins.
+ *
+ * Eine diskriminierte Union, damit `kind` das Narrowing trägt: Core hat keine
+ * ID, ein Plugin hat immer eine. Ein Interface mit `id: string | null` konnte
+ * beide ungültigen Kombinationen ausdrücken — `plugin` ohne ID und `core` mit.
+ */
+export type Provenance = { kind: 'core' } | { kind: 'plugin'; id: string }
 
 /**
  * Ein **Handelsplatz**: echter MIC und höchstens ein Provider-Alias.
  *
- * `alias` ist das nackte Token ohne Punkt (`'DE'`, `''`). Den Punkt setzt das
- * Backend beim Zusammensetzen des Symbols.
+ * `alias` ist das nackte Token ohne Punkt (`'DE'`) oder `null`, wenn die Börse
+ * keines anhängt. Den Punkt setzt das Backend beim Zusammensetzen des Symbols.
+ * `null` statt `''`: Abwesenheit ist kein Alias aus null Zeichen.
  */
 export interface ExchangeEntry {
   kind: 'exchange'
   mic: string
-  alias: string
+  alias: string | null
   name: string
   region: string
   currency: string

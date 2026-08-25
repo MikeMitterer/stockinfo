@@ -188,7 +188,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2e2 | `AAPL`/`XNAS` bei `DEFAULT_EXCHANGE=US` | **keine** Abweichung — der Sammelcode umfasst die US-Plätze | | |
 | 2e3 | `VOD`/`XLON` bei `DEFAULT_EXCHANGE=US` | Abweichung mit `kind: collector` und erwarteter Währung `USD`, **ohne** erwarteten MIC | | |
 | 2f | Aufnahmeweg über den **echten** Weg Router → Intake-Service → Repository, für ISIN, `TICKER.DE`, `TICKER.XETR` und unbekannte Form | keine eigene Core-Komponente gemockt, nur die Außengrenzen; geprüft wird auch die **Methode** (`POST`) und dass im Router keine Fachregel sitzt | | |
-| 2h | Börsenauskunft (`catalog`) | serialisiert **keinen** Sammelcode in ein `mic`-Feld; `US` erscheint als eigener Eintragstyp und bleibt als `DEFAULT_EXCHANGE` samt Mitgliedern nutzbar; **kein** Börseneintrag trägt eine eigene Mitgliedschaftsliste | | |
+| 2h | Börsenauskunft (`catalog`) | serialisiert **keinen** Sammelcode in ein `mic`-Feld; `US` erscheint als eigener Eintragstyp und bleibt als `DEFAULT_EXCHANGE` samt Mitgliedern nutzbar; **kein** Börseneintrag trägt eine eigene Mitgliedschaftsliste | ✅ [^i] | |
+| 2h2 | Katalog-Vertrag: Alias und Provenienz | `alias` ist in Python, OpenAPI und TypeScript **optional** — fehlend oder `null`, nie `""`; die fünf US-Plätze liefern `null`. `provenance` ist eine **diskriminierte Union**: Core ohne Plugin-ID, Plugin mit verpflichtender nichtleerer ID; beide ungültigen Kombinationen werden abgelehnt | ✅ [^j] | |
 | 2i | `POST /instruments/intake` | Neuanlage `201` mit `InstrumentSummary`, bestehendes Papier `200` mit demselben Typ, unauflösbar `400`, Quelle tot `502` — je im OpenAPI-Snapshot zugesagt und über die echte Kette geprüft | | |
 | 2j | Schichtengrenze am Aufnahmeweg | der Intake-Service liefert `IntakeResult(summary, created)`; im Router steht **kein zweiter Existenz-Check** und keine Repository-Abfrage, er mappt nur `created` auf `201`/`200` | | |
 | 2j2 | `created` unter Parallelität | kommt aus der **schreibenden Transaktion**, nicht aus einem Preflight; im abgefangenen UNIQUE-Rennen ist `created=false`, nicht `201` | | |
@@ -239,6 +240,25 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     ein echter Konflikt fällt weiterhin auf.
 [^f]: `.venv/bin/pytest tests/ -q` → `392 passed, 29 skipped`;
     `make test-plugin-api` → 36; Ruff sauber.
+[^i]: `tests/test_api_dashboard.py::test_kein_katalogeintrag_serialisiert_einen_sammelcode_als_mic`
+    prüft die Antwort selbst: kein `mic`-Feld an einem Sammelcode, kein
+    Börseneintrag mit `mic == "US"`.
+    `test_der_sammelcode_bleibt_eine_zulaessige_vorgabe` hält fest, dass `US`
+    als `DEFAULT_EXCHANGE` weiter gilt und als `collector` ausgewiesen wird.
+    `tests/test_exchange_catalog.py::test_die_mitgliedschaft_steht_nur_am_sammelcode`
+    deckt die Gegenrichtung ab.
+[^j]: Nachtrag aus Runde 25 — die erste Umsetzung führte `alias` trotz des
+    Entwurfs als Pflichtfeld mit `""` bei den US-Plätzen, und `Provenance`
+    konnte `plugin` ohne ID wie `core` mit ID ausdrücken.
+    `tests/test_exchange_catalog.py` prüft jetzt beide Richtungen: fehlender
+    und `null`-Alias gültig, `""` abgelehnt, US-Eintrag serialisiert `null`;
+    für die Provenienz die zwei gültigen und **vier** ungültigen
+    Kombinationen. `test_der_alias_ist_im_openapi_vertrag_optional` misst den
+    ausgelieferten Vertrag statt des Modells.
+    `dashboard/tests/types/provenance.spec.ts` hält die TypeScript-Seite mit
+    `@ts-expect-error` fest — `vue-tsc` prüft `tests/` mit, ein Aufweichen des
+    Typs bricht `npm run build`. **Live gegengeprüft:** Die Zeile absichtlich
+    gültig gemacht → `TS2578: Unused '@ts-expect-error' directive`, Build rot.
 [^h]: `./_tickets/T-21b-smoke.sh --run` — **sechs Checks live gegen das echte
     Netz**, auf frischen temporären Datenbanken, über den HTTP-Weg. Zwei
     Läufe, weil die Kaskade zwei Wege hat: `VGWL.DE → VGWL/XETR` über die

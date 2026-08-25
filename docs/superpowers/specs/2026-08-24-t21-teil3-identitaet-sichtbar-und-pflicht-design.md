@@ -31,7 +31,8 @@ Beiwerk, sondern **abrufrelevant** — ein Weg, der nur `(ticker, mic)` liefert,
 fragt Yahoo nach `GOLD` statt `GOLD.SG` und speichert den falschen Alias.
 
 **Die Ableitungsrichtung ist festgelegt:** Aus der Identität entsteht der Alias,
-nie umgekehrt. Für Yahoo gilt `alias = ticker + EXCHANGES[mic].suffix`. Die
+nie umgekehrt. Für Yahoo gilt `alias = ticker + "." + EXCHANGES[mic].alias`,
+und ohne Alias bleibt es beim nackten `ticker`. Die
 Plugin-Grenze bleibt gewahrt (`plugin_api/src/stockinfo_plugin/types.py:54-71`):
 Ein Resolver liefert `(ticker, mic)`, und **jede Kursquelle setzt daraus ihr
 eigenes Format zusammen**. Der Core kennt die Yahoo-Ableitung nur, weil Yahoo
@@ -187,6 +188,17 @@ Vier Entscheidungen, jede aus einem Befund:
   `ticker + "." + alias`, und ohne Alias bleibt es beim nackten `ticker`
   (`AAPL`). Der vorige Entwurf speicherte `".SG"` und schlug `SG` nach — die
   zwei Schichten hätten aneinander vorbeigesucht.
+* **Abwesenheit heißt `null`, nicht `""`.** *(Nachtrag aus Runde 25.)* „Optional"
+  ist keine Beschreibung der Serialisierung: Die erste Umsetzung führte `alias`
+  als Pflichtfeld und schrieb bei den fünf US-Plätzen einen Leerstring hinein —
+  einen magischen Wert, den jede Schicht eigens deuten muss. Der Alias fehlt im
+  Python-, REST- und TypeScript-Vertrag ausdrücklich (`None` / `null` /
+  weggelassen), und der Leerstring wird **abgelehnt**; sonst gäbe es die
+  Abwesenheit zweimal. Für die Provenienz gilt dasselbe strenger: Sie ist eine
+  **diskriminierte Union** — Core ohne Plugin-ID, Plugin mit verpflichtender
+  nichtleerer ID. Ein Modell mit zwei optionalen Feldern konnte
+  `{"kind": "plugin", "id": null}` und `{"kind": "core", "id": "demo"}`
+  ausdrücken, also genau die beiden Zustände, die T-30 unterscheiden muss.
 * **Die Collector-Mitgliedschaft steht genau einmal**, nämlich als `members` am
   Collector-Eintrag. Nicht zusätzlich als `collectors` an jeder Börse, nicht
   zusätzlich als `COLLECTOR_CODES`: Letzteres wird künftig **aus** den

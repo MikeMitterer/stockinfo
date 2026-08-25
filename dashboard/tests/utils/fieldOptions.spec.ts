@@ -4,7 +4,7 @@ import { buildFieldOptions } from '../../src/utils/fieldOptions'
 import type { ExchangesResponse } from '../../src/types'
 import { makeInstrument } from '../fixtures/instrument'
 
-const core = { kind: 'core' as const, id: null }
+const core = { kind: 'core' as const }
 
 const exchanges: ExchangesResponse = {
   default_exchange: 'XETR',
