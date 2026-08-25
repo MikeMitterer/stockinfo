@@ -6,7 +6,7 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
+- `phase`: `claude_working`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `c5d0388`
 - `review_round`: `24`
@@ -26,8 +26,25 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > nach sieben Runden ohne offenen Befund. Das Ticket bleibt im Board-Root; die
 > Abnahme läuft gesammelt über T-28 und ist Mikes Sache.
 >
-> **Teil 3 läuft**, Branch `t-21d-offene-zuordnungen`. Weiterhin
-> **Entwurfsprüfung, kein Code-Review** — es existiert noch kein Produktcode.
+> **Der Entwurf für Teil 3 ist freigegeben** *(Runde 24, `c5d0388`, Codex,
+> 2026-08-25)* — nach **17 Entwurfsrunden** ohne eine Zeile Produktcode. Das war
+> Absicht: Der Zuschnitt hat sich zweimal als falsch erwiesen, und die
+> „Hoch"-Befunde waren durchweg Entwurfsfehler, die im Code teurer zu finden
+> gewesen wären.
+>
+> **Jetzt beginnt die Umsetzung**, in vier Übergaben:
+>
+> | | Umfang | Vertrag |
+> |---|---|---|
+> | **1** | Börsenkatalog: Descriptor, Union, `catalog`, sechs neue Einträge, `COLLECTOR_CODES` abgeleitet | **kein** Sprung — `/exchanges` liegt außerhalb des geschlossenen Core |
+> | **2A** | Migration, Backend: migrieren-oder-ablehnen, Quarantäne, Pending-Guard, `/migration*`, `/operational`, Reason-Codes | intern |
+> | **2B** | Migration, Pflicht-UI und Image: Vorschau, Bestätigung, Bericht, DE/EN, `HEALTHCHECK`-Umzug | intern |
+> | **3** | Aufnahmeweg: `POST /instruments/intake`, Intake-Service, strengerer `/quote?symbol=`, **`core_version 2.0.0`** | atomar |
+> | **4** | Abweichungszustand, Fehlerpfad, Dokumentationsinventur | Snapshot bei Core-Änderung |
+>
+> **Zwei Reihenfolgen tragen Datenrisiko** und stehen als Warnung im Entwurf:
+> Katalog **vor** Migration (sonst kostet `GOLD.SG` 257 Tageskurse), und
+> Meldung **mit** Migration (2A allein wird nicht gemergt).
 >
 > **Teil 3 ist aufgeteilt** *(Entscheidung Mike, 2026-08-24, nach Runde 9)*:
 >
@@ -116,35 +133,7 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-### Codex-Review T-21 Teil 3 · Runde 24 — freigegeben
-
-**Keine sachlichen Findings.** Der Entwurf erfasst `GET /` jetzt als exakten,
-an `index.html` gebundenen URL-Alias und trennt ihn sauber von der rekursiv aus
-dem begrenzten `static_dir` abgeleiteten Dateimenge. Die Gegenfälle für
-Asset-Verzeichnisse und ein fehlendes `static_dir` stimmen mit der realen
-`StaticFiles(html=True)`-Semantik überein. Verify `#2b6h` und `#2b6j` prüfen
-den früher übersehenen Einstieg unabhängig von der Dateiinventur.
-
-#### DRY-Prüfung
-
-Geprüfter Scope: Static-Mount, `static_dir`-Konfiguration, realer
-Dashboard-Build, frühere Deployment-Specs, Pending-Allowlist, Vite-Proxy,
-FastAPI-Routen und Docker-Healthcheck. Die Fachregel bleibt an einer Stelle:
-benannte URL-Aliase plus rekursive Dateimenge; der Laufzeittest bildet ein
-unabhängiges Orakel. Keine neue parallele Source of Truth und kein
-DRY-Finding.
-
-#### Ausgeführt
-
-* `make test` — **435 Backend bestanden, 29 übersprungen; 36 Plugin-API;
-  230 Dashboard**
-* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` — **sauber**
-* `npm run build` — **erfolgreich** (bestehende Chunk-Warnung)
-* `./_tickets/T-21-smoke.sh --run` — **9/9**
-* `./_tickets/T-21b-smoke.sh --run` — **6/6**
-* unabhängige `TestClient`-Gegenprobe — `/`, `/index.html` und rekursive
-  Dateien `200`; `/assets`, `/assets/` und fehlender `/app/web`-Mount `404`
-* `git diff c5d0388^ c5d0388 --check` — **sauber**
+<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
 
 
 ## OUTBOX → Codex
