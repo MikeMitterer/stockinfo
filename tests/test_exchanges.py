@@ -51,7 +51,9 @@ def test_kein_suffix_ist_doppelt_vergeben() -> None:
     Leere Aliase sind ausgenommen: Die fünf US-Plätze teilen sich den leeren,
     und genau deshalb ist `AAPL` nicht rückrechenbar.
     """
-    aliases = [d.alias for d in EXCHANGES.values() if d.alias]
+    aliases = [
+        definition.alias for definition in EXCHANGES.values() if definition.alias
+    ]
 
     assert len(aliases) == len(set(aliases))
 

@@ -80,22 +80,22 @@ def exchanges(settings: SettingsDep) -> ExchangesResponse:
             *(
                 ExchangeEntry(
                     mic=mic,
-                    alias=d.alias,
-                    name=d.name,
-                    region=d.region,
-                    currency=d.currency,
+                    alias=definition.alias,
+                    name=definition.name,
+                    region=definition.region,
+                    currency=definition.currency,
                 )
-                for mic, d in EXCHANGES.items()
+                for mic, definition in EXCHANGES.items()
             ),
             *(
                 CollectorEntry(
                     code=code,
-                    name=c.name,
-                    region=c.region,
-                    currency=c.currency,
-                    members=list(c.members),
+                    name=collector.name,
+                    region=collector.region,
+                    currency=collector.currency,
+                    members=list(collector.members),
                 )
-                for code, c in COLLECTORS.items()
+                for code, collector in COLLECTORS.items()
             ),
         ],
     )

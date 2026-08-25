@@ -142,7 +142,11 @@ def test_exchanges_liefert_den_katalog_und_die_vorgabe(client: TestClient) -> No
     assert body["default_exchange"] == "XETR"
     assert body["default_exchange_kind"] == "exchange"
 
-    exchanges = {e["mic"]: e for e in body["catalog"] if e["kind"] == "exchange"}
+    exchanges = {
+        entry["mic"]: entry
+        for entry in body["catalog"]
+        if entry["kind"] == "exchange"
+    }
     assert exchanges["XTSE"]["alias"] == "TO"
     assert exchanges["XSTU"]["alias"] == "SG"
     assert exchanges["XETR"]["currency"] == "EUR"
@@ -160,11 +164,11 @@ def test_kein_katalogeintrag_serialisiert_einen_sammelcode_als_mic(
     """
     body = client.get("/exchanges").json()
 
-    collectors = [e for e in body["catalog"] if e["kind"] == "collector"]
-    assert [e["code"] for e in collectors] == ["US"]
+    collectors = [entry for entry in body["catalog"] if entry["kind"] == "collector"]
+    assert [entry["code"] for entry in collectors] == ["US"]
     assert set(collectors[0]["members"]) == {"XNAS", "XNYS", "ARCX", "XASE", "BATS"}
-    assert all("mic" not in e for e in collectors)
-    assert all(e["mic"] != "US" for e in body["catalog"] if e["kind"] == "exchange")
+    assert all("mic" not in entry for entry in collectors)
+    assert all(entry["mic"] != "US" for entry in body["catalog"] if entry["kind"] == "exchange")
 
 
 def test_der_alias_ist_im_openapi_vertrag_optional(client: TestClient) -> None:

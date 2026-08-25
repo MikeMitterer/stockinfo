@@ -120,7 +120,9 @@ def test_kein_alias_ist_doppelt_vergeben() -> None:
     Börsen ohne Alias sind ausgenommen: Fünf US-Plätze führen keinen, und
     genau deshalb ist die Rückrechnung dort nicht möglich.
     """
-    aliases = [d.alias for d in EXCHANGES.values() if d.alias]
+    aliases = [
+        definition.alias for definition in EXCHANGES.values() if definition.alias
+    ]
 
     assert len(aliases) == len(set(aliases))
 
@@ -129,8 +131,8 @@ def test_jeder_eintrag_hat_waehrung_und_anzeigename() -> None:
     """Beides hängt an der Anzeige und an der Abweichungsprüfung."""
     incomplete = [
         code
-        for code, d in [*EXCHANGES.items(), *COLLECTORS.items()]
-        if not d.name or not d.currency
+        for code, definition in [*EXCHANGES.items(), *COLLECTORS.items()]
+        if not definition.name or not definition.currency
     ]
 
     assert incomplete == []
@@ -144,7 +146,9 @@ def test_der_alias_traegt_kein_punkt() -> None:
     Normalisierung aneinander vorbeigesucht.
     """
     with_dot = [
-        (mic, d.alias) for mic, d in EXCHANGES.items() if d.alias and "." in d.alias
+        (mic, definition.alias)
+        for mic, definition in EXCHANGES.items()
+        if definition.alias and "." in definition.alias
     ]
 
     assert with_dot == []

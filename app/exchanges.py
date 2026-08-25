@@ -361,7 +361,10 @@ def mic_for_alias(alias: str) -> str | None:
         Der MIC der Börse, oder ``None`` — auch für den Leerstring, denn eine
         Börse *ohne* Alias lässt sich nicht über ihn finden.
     """
-    return next((mic for mic, d in EXCHANGES.items() if d.alias == alias), None)
+    return next(
+        (mic for mic, definition in EXCHANGES.items() if definition.alias == alias),
+        None,
+    )
 
 
 def preference_kind(code: str) -> str | None:
