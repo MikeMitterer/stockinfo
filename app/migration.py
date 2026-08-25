@@ -18,7 +18,7 @@ from dataclasses import dataclass
 
 import structlog
 
-from app.exchanges import is_canonical_ticker, is_real_mic, mic_for_alias
+from app.exchanges import identity_from_symbol, is_real_mic, mic_for_alias
 
 logger = structlog.get_logger()
 
@@ -84,6 +84,10 @@ class Rejection:
     instrument_id: int
     symbol: str
     isin: str | None
+    name: str | None
+    exchange: str | None
+    type: str | None
+    currency: str | None
     reason: str
     quotes: int
     daily_closes: int
@@ -112,16 +116,33 @@ class MigrationPlan:
     migrated: tuple[Migration, ...]
     rejected: tuple[Rejection, ...]
     unchanged: int
+    schema_outdated: bool = False
 
     @property
-    def is_pending(self) -> bool:
-        """Steht überhaupt etwas an?
+    def needs_migration(self) -> bool:
+        """Ist überhaupt etwas zu tun — an Zeilen **oder** am Schema?
 
-        Eine leere Datenbank und ein bereits umgezogener Bestand sind beide
-        **nicht** ausstehend — und beide müssen es sein, sonst verlangte eine
-        frische Installation eine Bestätigung für nichts.
+        **Der Schemazustand gehört dazu, und das war ein Fehler.** Bis Runde 30
+        zählte nur die Zeilenarbeit. Damit galt eine **leere** Pre-T-21-Datenbank
+        als fertig, obwohl `ticker`, `mic` und `listing_id` ganz fehlten — die
+        nächste Neuanlage wäre an den fehlenden Spalten gebrochen. Und ein
+        bereits vollständig zugeordneter Bestand aus Teil 1 galt ebenfalls als
+        fertig, obwohl die Spalten nullable blieben und `identity_status` noch
+        stand: Die zugesagte Invariante war schlicht falsch.
         """
-        return bool(self.migrated or self.rejected)
+        return bool(self.migrated or self.rejected) or self.schema_outdated
+
+    @property
+    def needs_confirmation(self) -> bool:
+        """Muss der Benutzer zustimmen — weil etwas **verloren** geht?
+
+        Nur dann. Ein verlustloser Umzug — nichts abzulehnen, nur Spalten und
+        Zuordnungen nachzuziehen — darf beim Start durchlaufen: Es gibt nichts
+        zu warnen, und eine Bestätigung für nichts wäre bloß eine Hürde.
+
+        Die Zustimmung schützt vor **Datenverlust**, nicht vor Schemaarbeit.
+        """
+        return bool(self.rejected)
 
     @property
     def lost_daily_closes(self) -> int:
@@ -176,29 +197,14 @@ def rejection_reason(symbol: str) -> str | None:
     return REASON_NON_CANONICAL_TICKER
 
 
-def identity_of(symbol: str) -> tuple[str, str] | None:
-    """Die kanonische Identität eines Altsymbols — oder ``None``.
-
-    Bewusst eine eigene, sehr kleine Funktion statt eines Aufrufs von
-    `split_symbol`: Sie liefert hier ein **Ergebnis oder nichts**, während
-    `split_symbol` ein Tupel aus zwei Optionalen zurückgibt, das jeder
-    Aufrufer wieder auseinandernehmen muss. Die Regel selbst ist dieselbe und
-    steht weiterhin dort; geprüft wird sie gegen ausgeschriebene Erwartungen.
-
-    Args:
-        symbol: Das gespeicherte Listing-Symbol.
-
-    Returns:
-        `(ticker, mic)`, oder ``None`` wenn sich keine gewinnen lässt.
-    """
-    if not symbol or "." not in symbol:
-        return None
-
-    ticker, _, alias = symbol.partition(".")
-    mic = mic_for_alias(alias)
-    if mic is None or not is_canonical_ticker(ticker):
-        return None
-    return ticker, mic
+# Die Zerlegungsregel steht in `app.exchanges` — **einmal**.
+#
+# Hier stand bis Runde 30 eine eigene, gleich aussehende Implementierung: Punkt
+# prüfen, `partition`, `mic_for_alias`, `is_canonical_ticker`. Nur die
+# Fehlerform unterschied sich. Zwei Implementierungen derselben Fachregel
+# laufen beim ersten neuen Fall auseinander, und dann entscheidet der Umzug
+# anders als der übrige Core — über die Identität von Papieren.
+identity_of = identity_from_symbol
 
 
 def keeps_its_identity(ticker: str | None, mic: str | None) -> bool:
@@ -235,7 +241,7 @@ def plan_migration(connection: sqlite3.Connection) -> MigrationPlan:
         connection: Offene Verbindung; wird nur gelesen.
 
     Returns:
-        Der Plan. `is_pending` sagt, ob überhaupt etwas ansteht.
+        Der Plan. `needs_migration` sagt, ob etwas zu tun ist; `needs_confirmation`, ob dabei etwas verloren geht.
     """
     migrated: list[Migration] = []
     rejected: list[Rejection] = []
@@ -246,7 +252,15 @@ def plan_migration(connection: sqlite3.Connection) -> MigrationPlan:
     # sie hier anzulegen wäre bereits eine Schemaänderung. Phase 1 ändert
     # nichts, also fragt sie erst, was da ist, statt es sich zurechtzulegen.
     has_identity = _has_identity_columns(connection)
-    columns = "id, symbol, isin" + (", ticker, mic" if has_identity else "")
+    # Name, Börse, Gattung und Währung stehen **hier** und nicht erst beim
+    # Löschen: Der Benutzer soll in der Vorschau sehen, welches Papier er neu
+    # erfassen muss — und ein Symbol allein sagt ihm das nicht. Bis Runde 30
+    # holte der Plan sie nicht, und der Bericht bekam sie deshalb nur aus der
+    # Tabelle; über REST kamen sie nie an.
+    columns = (
+        "id, symbol, isin, name, exchange, type, currency"
+        + (", ticker, mic" if has_identity else "")
+    )
 
     for row in connection.execute(
         f"SELECT {columns} FROM instruments ORDER BY symbol"
@@ -275,6 +289,10 @@ def plan_migration(connection: sqlite3.Connection) -> MigrationPlan:
                 instrument_id=row["id"],
                 symbol=row["symbol"],
                 isin=row["isin"],
+                name=row["name"],
+                exchange=row["exchange"],
+                type=row["type"],
+                currency=row["currency"],
                 reason=reason,
                 quotes=_count_rows(connection, "quotes", row["id"]),
                 daily_closes=_count_rows(connection, "daily_closes", row["id"]),
@@ -282,8 +300,42 @@ def plan_migration(connection: sqlite3.Connection) -> MigrationPlan:
         )
 
     return MigrationPlan(
-        migrated=tuple(migrated), rejected=tuple(rejected), unchanged=unchanged
+        migrated=tuple(migrated),
+        rejected=tuple(rejected),
+        unchanged=unchanged,
+        schema_outdated=schema_outdated(connection),
     )
+
+
+def schema_outdated(connection: sqlite3.Connection) -> bool:
+    """Trägt `instruments` noch **nicht** die Zielform?
+
+    Drei Dinge machen die Zielform aus, und jedes einzelne fehlt für sich
+    genommen:
+
+    * die Spalten `ticker`, `mic`, `listing_id`,
+    * `NOT NULL` auf `ticker` und `mic` — die Invariante aus `#2b2` steht im
+      Schema, nicht in einer Prüfung,
+    * das **Fehlen** von `identity_status`.
+
+    Gefragt wird `PRAGMA table_info`, nicht der Zeilenbestand: Eine leere
+    Datenbank hat keine Zeile, die etwas verrät, und genau sie war der Fall,
+    der bis Runde 30 durchrutschte.
+
+    Args:
+        connection: Offene Verbindung; wird nur gelesen.
+
+    Returns:
+        ``True``, wenn am Schema noch etwas zu tun ist.
+    """
+    columns = {
+        row["name"]: row for row in connection.execute("PRAGMA table_info(instruments)")
+    }
+    if not {"ticker", "mic", "listing_id"} <= set(columns):
+        return True
+    if "identity_status" in columns:
+        return True
+    return not all(columns[name]["notnull"] for name in ("ticker", "mic"))
 
 
 def _has_identity_columns(connection: sqlite3.Connection) -> bool:
@@ -400,19 +452,17 @@ def _record_rejection(
 ) -> None:
     """Schreibt den Berichtseintrag, **bevor** die Zeile verschwindet.
 
-    Die Metadaten kommen aus der Zeile selbst — nach dem Löschen sind sie
-    weg, und ein Bericht, der nur „irgendein Symbol" nennt, hilft bei der
-    Neuerfassung nicht.
+    Die Metadaten kommen aus dem Plan, der sie beim Lesen mitgenommen hat —
+    nach dem Löschen sind sie weg, und ein Bericht, der nur „irgendein Symbol"
+    nennt, hilft bei der Neuerfassung nicht. Sie hier ein zweites Mal aus der
+    Datenbank zu holen wäre dieselbe Abfrage zweimal, und die Vorschau bekäme
+    sie trotzdem nicht.
 
     Args:
         connection: Offene Verbindung innerhalb der Transaktion.
         rejection: Der Eintrag aus dem Plan.
         rejected_at: Zeitstempel (ISO-8601).
     """
-    row = connection.execute(
-        "SELECT name, exchange, type, currency FROM instruments WHERE id = ?",
-        (rejection.instrument_id,),
-    ).fetchone()
     connection.execute(
         "INSERT INTO migration_rejections "
         "(symbol, isin, name, exchange, type, currency, reason, quotes, "
@@ -421,10 +471,10 @@ def _record_rejection(
         (
             rejection.symbol,
             rejection.isin,
-            row["name"] if row else None,
-            row["exchange"] if row else None,
-            row["type"] if row else None,
-            row["currency"] if row else None,
+            rejection.name,
+            rejection.exchange,
+            rejection.type,
+            rejection.currency,
             rejection.reason,
             rejection.quotes,
             rejection.daily_closes,

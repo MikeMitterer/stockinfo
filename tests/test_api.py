@@ -227,8 +227,14 @@ def test_readiness_meldet_503_wenn_die_datenbank_nicht_erreichbar_ist(
 def test_liveness_bleibt_billig(client: TestClient, monkeypatch) -> None:
     """`/health` darf von der Datenbank nicht abhängen.
 
-    Die Antwort entscheidet über einen Neustart — und ein Neustart repariert
-    keine kaputte Datenbank. Wer beides vermischt, bekommt eine Neustartschleife.
+    Liveness beantwortet **eine** Frage: Läuft der Prozess? Hängt sie an der
+    Datenbank, beantwortet sie zwei — und keine davon zuverlässig.
+
+    **Die frühere Begründung ist zurückgenommen.** Hier stand, die Antwort
+    entscheide über einen Neustart. Für dieses Deployment stimmt das nicht:
+    Ein `unhealthy`-Container wird von der Docker Engine nicht neu gestartet,
+    und `--restart unless-stopped` reagiert auf einen beendeten Prozess. Die
+    Trennung ist trotzdem richtig, nur nicht aus diesem Grund.
     """
     import app.main as main_module
 

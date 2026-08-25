@@ -6,6 +6,7 @@ Repository-Schicht (repository.py), nicht hierher.
 
 import sqlite3
 import uuid
+from datetime import datetime, timezone
 from pathlib import Path
 
 import structlog
@@ -151,12 +152,17 @@ def init_db(database_path: str) -> bool:
     und nachgetragene Metadatenspalten. Ob etwas aussteht, entscheidet die
     Vorschau — und die schreibt nicht.
 
+    **Verlustlos wird ohne Rückfrage erledigt.** Fehlen nur Spalten oder
+    Zuordnungen und geht dabei nichts verloren, läuft der Umzug hier durch: Es
+    gibt nichts zu warnen, und eine Bestätigung für nichts wäre bloß eine
+    Hürde. Die Zustimmung schützt vor **Datenverlust**, nicht vor Schemaarbeit.
+
     Args:
         database_path: Pfad zur SQLite-Datei.
 
     Returns:
-        ``True``, wenn ein Umzug aussteht und der Dienst in den
-        Pending-Zustand gehört.
+        ``True``, wenn ein Umzug aussteht, **bei dem etwas verloren geht** —
+        dann gehört der Dienst in den Pending-Zustand.
     """
     connection = get_connection(database_path)
     try:
@@ -164,9 +170,28 @@ def init_db(database_path: str) -> bool:
         _migrate(connection)
         _create_identity_indices(connection)
         connection.commit()
-        return plan_migration(connection).is_pending
+        plan = plan_migration(connection)
     finally:
         connection.close()
+
+    if plan.needs_confirmation:
+        return True
+
+    if plan.needs_migration:
+        # Verlustlos: Spalten, Zuordnungen, Härtung — nichts davon kostet den
+        # Benutzer etwas, also fragt hier auch niemand.
+        logger.info(
+            "migration_lossless",
+            migrated=len(plan.migrated),
+            schema_outdated=plan.schema_outdated,
+        )
+        run_migration(database_path, rejected_at=_now())
+    return False
+
+
+def _now() -> str:
+    """Der aktuelle Zeitpunkt als ISO-8601-String."""
+    return datetime.now(timezone.utc).isoformat()
 
 
 def run_migration(database_path: str, rejected_at: str) -> MigrationPlan:
@@ -195,7 +220,8 @@ def run_migration(database_path: str, rejected_at: str) -> MigrationPlan:
         _assign_listing_ids(connection)
         _dedupe_symbols(connection)
         harden_identity_schema(connection)
-        connection.executescript(_IDENTITY_INDICES)
+        for statement in _IDENTITY_INDICES:
+            connection.execute(statement)
         connection.commit()
         return plan
     except Exception:
@@ -206,26 +232,35 @@ def run_migration(database_path: str, rejected_at: str) -> MigrationPlan:
         connection.close()
 
 
-# Die Indizes der kanonischen Identität.
+# Die Indizes der kanonischen Identität — als **einzelne** Anweisungen.
 #
 # Sie stehen **nicht** im Grundschema, und das ist kein Versehen: Auf einer
 # Alt-Datenbank lässt `CREATE TABLE IF NOT EXISTS` die alte Tabelle stehen,
 # und ein `CREATE INDEX ... (ticker, mic)` bräche dann mit „no such column".
 # Der Start einer noch nicht umgezogenen Installation wäre damit unmöglich —
-# das genaue Gegenteil von „erkennen statt ausführen". Ein Test hat es
-# gezeigt, kein Review.
+# das genaue Gegenteil von „erkennen statt ausführen".
 #
 # Nach dem Tabellen-Neuaufbau müssen sie ohnehin neu entstehen: Ein `DROP
 # TABLE` nimmt sie mit, und `PRAGMA table_info` kennt `UNIQUE` gar nicht.
-_IDENTITY_INDICES = """
-DROP INDEX IF EXISTS idx_instruments_symbol;
-CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_ticker_mic
-    ON instruments (ticker, mic);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_listing_id
-    ON instruments (listing_id);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_isin
-    ON instruments (isin);
-"""
+#
+# **Warum kein Script.** Hier stand ein `executescript`, und das setzt vor dem
+# Ausführen ein `COMMIT` ab. Innerhalb von `run_migration` beendete es damit
+# die offene Transaktion: Ein Fehler beim letzten Index ließ Identitäten,
+# Berichtstabelle und gehärtetes Schema dauerhaft zurück, obwohl die Funktion
+# „alles oder nichts" zusagt.
+#
+# Derselbe Fehler war in `app/migration.py` bereits gefunden, behoben und im
+# Kommentar festgehalten — und hier zwei Stunden später wieder eingebaut
+# (Codex, Runde 30). Eine Liste statt eines Scripts macht ihn unmöglich.
+_IDENTITY_INDICES = (
+    "DROP INDEX IF EXISTS idx_instruments_symbol",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_ticker_mic "
+    "ON instruments (ticker, mic)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_listing_id "
+    "ON instruments (listing_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_isin "
+    "ON instruments (isin)",
+)
 
 
 def _create_identity_indices(connection: sqlite3.Connection) -> None:
@@ -242,7 +277,8 @@ def _create_identity_indices(connection: sqlite3.Connection) -> None:
         row["name"] for row in connection.execute("PRAGMA table_info(instruments)")
     }
     if {"ticker", "mic", "listing_id"} <= columns:
-        connection.executescript(_IDENTITY_INDICES)
+        for statement in _IDENTITY_INDICES:
+            connection.execute(statement)
 
 
 def _assign_listing_ids(connection: sqlite3.Connection) -> None:

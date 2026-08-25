@@ -156,9 +156,20 @@ app.add_middleware(
 async def health() -> HealthResponse:
     """Liveness: Antwortet der Prozess überhaupt noch?
 
-    Bewusst billig und ohne Abhängigkeiten — die Antwort entscheidet über einen
-    Neustart, und ein Neustart hilft gegen eine kaputte Datenbank nicht.
-    Ob der Dienst *arbeiten* kann, beantwortet `/ready`.
+    Bewusst billig und ohne Abhängigkeiten. Genau deshalb sagt die Antwort
+    **nichts** über die Datenbank: Ein Prozess kann laufen und trotzdem nicht
+    arbeiten können.
+
+    **Was hier nicht mehr steht.** Der Docstring behauptete, die Antwort
+    entscheide über einen Neustart. Nachgemessen stimmt das für dieses
+    Deployment nicht — ein `unhealthy`-Container wird von der Docker Engine
+    nicht neu gestartet, und `--restart unless-stopped` reagiert auf einen
+    beendeten Prozess, nicht auf den Health-Status. Eine
+    Orchestrator-Semantik, die es nicht gibt, gehört in keine Zusage.
+
+    Die beiden anderen Fragen: `/operational` — kann der Prozess seine
+    derzeitige Aufgabe erfüllen? `/ready` — ist der normale Fachbetrieb
+    freigegeben?
     """
     return HealthResponse(version=__version__)
 

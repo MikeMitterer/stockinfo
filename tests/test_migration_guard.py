@@ -190,28 +190,103 @@ def test_die_freigabe_gewinnt_genau_ein_aufrufer() -> None:
     Ein einfaches Flag hätte zwei Löcher: Zwei gleichzeitige Bestätigungen
     liefen beide durch, und eine wiederholte gäbe den Betrieb ein zweites Mal
     frei. Geprüft wird deshalb mit echten Threads, nicht nacheinander.
+
+    **Der Anspruch gibt nichts frei.** Nach acht gleichzeitigen `claim` ist
+    genau einer erfolgreich — und der Riegel ist trotzdem noch zu, weil der
+    Umzug ja erst beginnt.
     """
     gate = MigrationGate()
     gate.block()
     gewonnen: list[bool] = []
     barrier = threading.Barrier(8)
 
-    def bestaetigen() -> None:
+    def beanspruchen() -> None:
         barrier.wait()
-        gewonnen.append(gate.confirm())
+        gewonnen.append(gate.claim())
 
-    threads = [threading.Thread(target=bestaetigen) for _ in range(8)]
+    threads = [threading.Thread(target=beanspruchen) for _ in range(8)]
     for thread in threads:
         thread.start()
     for thread in threads:
         thread.join()
 
     assert gewonnen.count(True) == 1
+    assert gate.pending is True, "der Anspruch darf nichts freigeben"
+    assert gate.running is True
+
+
+def test_waehrend_der_umzug_laeuft_bleibt_alles_gesperrt() -> None:
+    """Die Lage, die bis Runde 30 fehlte.
+
+    `confirm()` setzte den Riegel zurück und startete den Scheduler, **bevor**
+    der Umzug begann. Währenddessen meldete `/ready` schon `ok`, normale
+    Requests durften auf den alten Bestand, und der Scheduler schrieb hinein.
+
+    Zwischen Anspruch und Freigabe muss deshalb gesperrt bleiben — und der
+    Rückruf darf in dieser Zeit **nicht** gelaufen sein.
+    """
+    gate = MigrationGate()
+    gate.block()
+    gerufen: list[str] = []
+    gate.on_release(lambda: gerufen.append("scheduler"))
+
+    assert gate.claim() is True
+
+    assert gate.pending is True
+    assert gerufen == []
+
+    gate.release()
+
     assert gate.pending is False
+    assert gerufen == ["scheduler"]
 
 
-def test_ohne_ausstehenden_umzug_gibt_es_nichts_freizugeben() -> None:
-    """Eine Bestätigung ins Leere ist kein Erfolg.
+def test_ein_gescheiterter_umzug_gibt_nur_den_anspruch_zurueck() -> None:
+    """Der Riegel bleibt zu, ein neuer Versuch ist möglich.
+
+    Ohne `abandon` bliebe der Umzug für immer „läuft gerade", und niemand
+    käme mehr an ihn heran — der Dienst wäre dauerhaft gesperrt, ohne dass
+    ihn jemand entsperren könnte.
+    """
+    gate = MigrationGate()
+    gate.block()
+    gerufen: list[str] = []
+    gate.on_release(lambda: gerufen.append("scheduler"))
+
+    assert gate.claim() is True
+    gate.abandon()
+
+    assert gate.pending is True, "ein Fehlschlag darf nicht freigeben"
+    assert gerufen == [], "der Rückruf gehört hinter den Commit"
+    assert gate.claim() is True, "ein neuer Versuch muss möglich sein"
+
+
+def test_ein_fehler_im_rueckruf_sperrt_nicht_wieder_zu() -> None:
+    """Nach dem Commit ist der Umzug eine Tatsache.
+
+    Bis Runde 30 lief der Rückruf **vor** dem Umzug, und ein Fehler darin ließ
+    den Riegel dauerhaft offen. Jetzt läuft er danach — und ein Fehler darf
+    den Dienst nicht wieder sperren, denn der Bestand *ist* umgezogen. Was
+    fehlt, ist der Scheduler; das gehört laut ins Log, nicht in eine stille
+    Rücknahme.
+    """
+    gate = MigrationGate()
+    gate.block()
+
+    def kaputt() -> None:
+        raise RuntimeError("Scheduler startet nicht")
+
+    gate.on_release(kaputt)
+    assert gate.claim() is True
+
+    gate.release()  # wirft nicht
+
+    assert gate.pending is False
+    assert gate.running is False
+
+
+def test_ohne_ausstehenden_umzug_gibt_es_nichts_zu_beanspruchen() -> None:
+    """Ein Anspruch ins Leere ist kein Erfolg.
 
     Sonst könnte ein zweiter Aufruf denselben Ablauf ein weiteres Mal
     auslösen — Scheduler und Endpunkte werden **genau einmal** freigegeben.
@@ -219,4 +294,4 @@ def test_ohne_ausstehenden_umzug_gibt_es_nichts_freizugeben() -> None:
     gate = MigrationGate()
 
     assert gate.pending is False
-    assert gate.confirm() is False
+    assert gate.claim() is False

@@ -102,29 +102,55 @@ def static_allowlist(static_dir: str) -> frozenset[str]:
 
 
 class MigrationGate:
-    """Der Zustand „Umzug steht aus" — und seine **einmalige** Freigabe.
+    """Der Zustand „Umzug steht aus" — mit **drei** Lagen, nicht zwei.
 
-    Ein einfaches Flag hätte zwei Löcher: Zwei gleichzeitige Bestätigungen
-    liefen beide durch, und eine wiederholte gäbe den Betrieb ein zweites Mal
-    frei. `confirm` liefert deshalb genau **einem** Aufrufer ``True`` —
-    derjenige führt die Migration aus und startet den Scheduler; alle anderen
-    bekommen ``False`` und wissen, dass sie nichts zu tun haben.
+    | Lage | `pending` | was gilt |
+    |---|---|---|
+    | wartet auf Bestätigung | ``True`` | Fachwege gesperrt |
+    | **Umzug läuft gerade** | ``True`` | Fachwege **weiter** gesperrt |
+    | freigegeben | ``False`` | Normalbetrieb |
+
+    **Die mittlere Lage fehlte bis Runde 30**, und das war ein
+    betriebsgefährdender Fehler: `confirm()` setzte den Riegel zurück und
+    startete den Scheduler, *bevor* der Umzug überhaupt begann. Währenddessen
+    meldete `/ready` schon `ok`, normale Requests durften auf den **alten**
+    Bestand, und der Scheduler schrieb hinein. Scheiterte der Umzug danach,
+    lief der bereits gestartete Scheduler weiter; scheiterte der Rückruf,
+    blieb der Riegel sogar dauerhaft offen.
+
+    Deshalb sind Anspruch und Freigabe getrennt: `claim` nimmt den Umzug an
+    sich, **ohne** etwas freizugeben; `release` gibt frei, und zwar erst nach
+    einem erfolgreichen Commit. `abandon` gibt den Anspruch zurück, wenn der
+    Umzug scheitert — der Riegel bleibt dann geschlossen, ein neuer Versuch
+    ist möglich.
     """
 
     def __init__(self) -> None:
         self._pending = False
+        self._running = False
         self._lock = threading.Lock()
         self._on_release: Callable[[], None] | None = None
 
     @property
     def pending(self) -> bool:
-        """Steht der Umzug noch aus?"""
+        """Sind die Fachwege gesperrt?
+
+        Auch **während** der Umzug läuft. Der Bestand ist in dieser Zeit noch
+        der alte, teilweise umgebaute — ihn zu bedienen wäre schlimmer als zu
+        warten.
+        """
         return self._pending
+
+    @property
+    def running(self) -> bool:
+        """Läuft gerade ein Umzug?"""
+        return self._running
 
     def block(self) -> None:
         """Versetzt den Dienst in den Pending-Zustand."""
         with self._lock:
             self._pending = True
+            self._running = False
         logger.warning("migration_pending")
 
     def on_release(self, callback: Callable[[], None] | None) -> None:
@@ -146,23 +172,55 @@ class MigrationGate:
         with self._lock:
             self._on_release = callback
 
-    def confirm(self) -> bool:
-        """Gibt den Betrieb frei — **genau einmal**.
+    def claim(self) -> bool:
+        """Nimmt den Umzug an sich — **ohne** irgendetwas freizugeben.
+
+        Genau ein Aufrufer gewinnt. Ein zweiter, gleichzeitiger bekommt
+        ``False``, und zwar auch dann, wenn der erste noch mitten im Umzug
+        steckt: `running` ist der Grund, warum ein einfaches Flag hier nicht
+        genügt.
 
         Returns:
-            ``True`` für den einen Aufrufer, der die Freigabe gewonnen hat;
-            ``False`` für jeden weiteren und für den Fall, dass gar nichts
-            ausstand.
+            ``True`` für den einen Aufrufer, der den Umzug ausführen darf.
         """
         with self._lock:
-            if not self._pending:
+            if not self._pending or self._running:
                 return False
+            self._running = True
+            return True
+
+    def release(self) -> None:
+        """Gibt den Betrieb frei — **nach** dem erfolgreichen Commit.
+
+        Erst hier fallen die Fachwege auf, und erst hier läuft der Rückruf.
+        Ein Fehler im Rückruf wird **protokolliert, nicht hochgereicht**: Der
+        Umzug ist zu diesem Zeitpunkt festgeschrieben, und den Dienst danach
+        wieder zu sperren behauptete einen Zustand, den es nicht mehr gibt.
+        Was dann fehlt — der Scheduler — ist ein Betriebsproblem und gehört
+        laut ins Log, nicht in eine stille Rücknahme.
+        """
+        with self._lock:
             self._pending = False
+            self._running = False
             callback = self._on_release
 
-        if callback is not None:
+        if callback is None:
+            return
+        try:
             callback()
-        return True
+        except Exception:
+            logger.exception("migration_release_callback_failed")
+
+    def abandon(self) -> None:
+        """Gibt den Anspruch zurück — der Umzug ist gescheitert.
+
+        Der Riegel bleibt geschlossen; ein neuer Versuch ist möglich. Ohne
+        diesen Weg bliebe der Umzug für immer „läuft gerade", und niemand
+        käme mehr an ihn heran.
+        """
+        with self._lock:
+            self._running = False
+        logger.warning("migration_abandoned")
 
 
 def is_allowed(

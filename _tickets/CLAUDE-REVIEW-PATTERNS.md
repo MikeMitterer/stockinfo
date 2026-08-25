@@ -84,6 +84,14 @@ einer bestehenden Datenbank mit `✅` als live geprüft. Ticketfußnote und
 Übergabe hielten zugleich fest, dass nur eine synthetisch nachgestellte
 Alt-Datenbank und kein real gewachsener Bestand geprüft worden war.
 
+**Neuer Beleg wegen ausdrücklich falscher Testtiefenbehauptung:** T-21 Teil 3
+Übergabe 2A, Runde 30, Commit `d361fbc`: Ticketfußnote und Test-Docstring
+erklärten, `test_die_bestaetigung_startet_den_scheduler` prüfe, dass der
+Scheduler anlaufe. Der Test ersetzt den registrierten Produkt-Callback jedoch
+durch `lambda: gestartet.append("scheduler")`; weder `RefreshScheduler` noch
+sein `start()` laufen. Geprüft ist nur, dass irgendein Callback aufgerufen
+wird — und auch das vor statt nach der Migration.
+
 [↑ Übersicht](#übersicht)
 
 ## P-02 · Punktuelle Korrektur wird als vollständige Regelumsetzung gemeldet
@@ -355,6 +363,15 @@ ein. Die fachliche Zentralisierung ist korrekt; der vollständige hinzugefügte
 Diff wurde dennoch nicht gegen dieselbe bereits mehrfach beanstandete
 Naming-Regel geprüft.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Übergabe 2A, Runde 30, Commit `d361fbc`: OUTBOX und Ticketfußnote
+erklärten den durch `executescript` ausgelösten Vorab-Commit für beseitigt und
+den Rollback-Test als Beleg für „alles oder nichts“. Korrigiert wurde nur die
+Tabellenanlage in `app/migration.py`; `app/db.py:198` ruft innerhalb derselben
+Migration weiter `executescript(_IDENTITY_INDICES)` auf. Eine erzwungene
+Indexfehler-Gegenprobe warf zwar eine Exception, ließ Daten, Berichtstabelle
+und gehärtetes Schema aber bereits dauerhaft committed zurück.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
@@ -457,6 +474,14 @@ dieselbe Implementierung. Zusätzlich behauptet
 `test_beide_eingabeformen_treffen_dieselbe_boerse`, `EUNL.XETR` geprüft zu
 haben, konstruiert dieses Ergebnis aber nur als Tupel aus der
 `EXCHANGES`-Mitgliedschaft; kein MIC-Eingabeweg wird ausgeführt.
+
+**Neuer Beleg:** T-21 Teil 3 Übergabe 2A, Runde 30, Commit `d361fbc`:
+`test_jeder_erlaubte_pfad_antwortet_auch_wirklich` akzeptiert jede Antwort,
+solange sie nicht exakt `503` mit `migration_pending` ist. Ein in die
+Allowlist eingetragener, aber nicht existierender Pfad liefert `404` und der
+Test bleibt grün. Damit prüft der angekündigte Routentabellen-Test nur die
+Beschriftung „nicht vom Guard gesperrt“, nicht die Zusage, dass der erlaubte
+Endpunkt tatsächlich existiert und erfolgreich antwortet.
 
 [↑ Übersicht](#übersicht)
 

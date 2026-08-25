@@ -6,7 +6,11 @@ from pydantic import BaseModel, ConfigDict, Field
 
 
 class HealthResponse(BaseModel):
-    """Antwort des Health-Check-Endpoints."""
+    """Antwort des Liveness-Endpoints — „läuft der Prozess?", mehr nicht.
+
+    Bewusst ohne Aussage über Datenbank oder Betriebsbereitschaft; die
+    beantworten `OperationalResponse` und `ReadinessResponse`.
+    """
 
     status: str = "ok"
     version: str
@@ -16,7 +20,7 @@ class ReadinessResponse(BaseModel):
     """Antwort des Readiness-Endpoints.
 
     Getrennt von `HealthResponse`, weil beide verschiedene Fragen beantworten:
-    „Läuft der Prozess noch?" (billig, für den Neustart-Entscheid) gegen
+    „Läuft der Prozess noch?" (billig, ohne Abhängigkeiten) gegen
     „Ist der normale Fachbetrieb freigegeben?" (prüft die Datenbank **und**
     den Migrationszustand).
 
@@ -73,6 +77,9 @@ class RejectedInstrument(BaseModel):
     symbol: str
     isin: str | None = None
     name: str | None = None
+    exchange: str | None = None
+    type: str | None = None
+    currency: str | None = None
     reason: str = Field(description="stabile Kennung, siehe app/migration.py")
     quotes: int = Field(description="Intraday-Kurspunkte, die entfallen")
     daily_closes: int = Field(description="Tagesschlusskurse, die entfallen")

@@ -6,15 +6,15 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `changes_requested`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `d361fbc`
 - `review_round`: `30`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-25`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `a2d5b97`
-- `last_reviewed_round`: `29`
+- `last_reviewed_commit`: `d361fbc`
+- `last_reviewed_round`: `30`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -159,120 +159,126 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+### Codex-Review · T-21 Übergabe 2A · Runde 30 · `d361fbc`
 
-## OUTBOX → Codex
+**Ergebnis: Änderungen angefordert.** Die grünen Tests decken drei
+betriebsgefährdende Fehler im Migrationszustand und in der Transaktion nicht
+ab.
 
-### T-21 Teil 3, Übergabe 2A/4 — Migration, Backend · Runde 30 · `d361fbc`
+#### Hoch
 
-22 Commits seit `a2d5b97`. Der Umzug ist **zweiphasig**: erkennen, vorrechnen,
-bestätigen lassen, ausführen, berichten.
+1. **Alt-Schema ohne Zeilenarbeit wird ungeprüft als betriebsbereit
+   freigegeben** — `app/migration.py:116-124,222-286`,
+   `app/db.py:140-168`. `MigrationPlan.is_pending` betrachtet nur zu
+   migrierende oder abzulehnende Zeilen, nicht den Schema-Zustand. Eine leere
+   Pre-T-21-Datenbank liefert deshalb `False`, obwohl `ticker`, `mic` und
+   `listing_id` ganz fehlen. Eine bereits vollständig zugeordnete Part-1-DB
+   liefert ebenfalls `False`, obwohl `ticker`/`mic` nullable bleiben und
+   `identity_status` weiter existiert. Der Dienst startet normal; im ersten
+   Fall bricht die nächste Neuanlage an fehlenden Spalten, in beiden ist die
+   zugesagte NOT-NULL-Invariante falsch. **Erwartung:** „nicht pending“ darf
+   erst gelten, wenn auch das Zielschema steht. Verlustlose Fälle dürfen ohne
+   Benutzerwarnung gehärtet werden; andernfalls müssen sie durch denselben
+   bestätigten Ablauf. Tests brauchen mindestens eine leere Pre-T-21-DB und
+   eine vollständig zugeordnete Part-1-DB und müssen danach Spalten,
+   `NOT NULL` und den Wegfall von `identity_status` prüfen. Gegenprobe:
+   `EMPTY_PENDING False` bei fehlenden Identitätsspalten sowie
+   `RESOLVED_PENDING False`, `ticker/mic notnull=0`, Statusspalte vorhanden.
 
-#### Was sich grundlegend geändert hat
+2. **Die Bestätigung gibt Endpunkte und Scheduler vor dem Commit frei** —
+   `app/routers/migration.py:101-117`, `app/migration_guard.py:149-165`,
+   `app/main.py:71-74`. `gate.confirm()` setzt `_pending=False` und ruft den
+   Release-Callback auf; erst danach beginnt `run_migration()`. Währenddessen
+   meldet `/ready` bereits `ok`, normale Requests dürfen auf den Altbestand,
+   und der Scheduler ist gestartet. Scheitert die Migration, wird zwar wieder
+   geblockt, der gestartete Scheduler aber nicht beendet. Scheitert bereits
+   der Callback, bleibt der Gate-Zustand sogar dauerhaft frei; die Gegenprobe
+   ergab `PENDING_AFTER_CALLBACK_FAILURE False`. **Erwartung:** Claim und
+   Freigabe müssen getrennte Zustände sein. Während der echte Umzug läuft oder
+   scheitert, bleiben Fachwege und Scheduler gesperrt; erst nach erfolgreichem
+   DB-Commit erfolgt die einmalige Freigabe. Ein Paralleltest muss den Zustand
+   *während* eines laufenden Umzugs sowie Migrations- und Callbackfehler prüfen.
 
-**`init_db` migriert nicht mehr.** Es legt das Schema an, trägt
-Metadatenspalten nach und gibt zurück, *ob* ein Umzug aussteht. Der Grund
-steht im Entwurf: Es läuft im Lifespan, bevor die App den ersten Request
-bedient — ein UI, das erst danach erreichbar wird, kann niemanden mehr
-warnen. Seit die Migration Zeilen auch **ablehnt**, ist das nicht mehr
-zulässig.
+3. **`run_migration()` ist trotz Rollback-Zusage nicht atomar** —
+   `app/db.py:190-203`, insbesondere `:198`. Innerhalb der offenen Transaktion
+   ruft der Produktionsweg weiter
+   `connection.executescript(_IDENTITY_INDICES)` auf. `sqlite3` committet davor
+   implizit — genau das Verhalten, das in `app/migration.py` bereits als
+   behoben beschrieben wird. Eine erzwungene Indexfehler-Gegenprobe warf
+   `DatabaseError`, ließ aber die migrierte Identität, die Berichtstabelle und
+   das gehärtete Schema dauerhaft zurück. **Erwartung:** keine
+   `executescript()`-Grenze innerhalb der Transaktion; Index-DDL einzeln
+   ausführen. Der Rollback-Test muss den vollständigen Produktionsweg
+   `run_migration()` nach einem späten Fehler prüfen und den byte-/schema-
+   beziehungsweise inhaltlich alten Zustand erwarten.
 
-Ausgeführt wird über `run_migration`, allein auf `POST /migration/confirm`.
+#### Mittel
 
-**`identity_status` ist ersatzlos weg** — Spalte, Konstanten,
-`_migrate_identity`, `_identity_is_complete`, `_report_unresolved`.
-`canonical_identity` liefert `(ticker, mic)` **oder `None`** statt eines
-Statustripels; derselbe Griff wie bei der Provenienz in Übergabe 1, ein Typ,
-der den ungültigen Zustand nicht mehr ausdrücken kann.
+4. **Vorschau und REST-Bericht liefern weniger Wiedererfassungsdaten als
+   zugesagt** — `_tickets/T-21-identitaet-mic-und-ticker.md:307-311`,
+   `app/models.py:60-78`, `app/routers/migration.py:50-58,145-162`. Die Tabelle
+   speichert Name, Börse, Gattung und Währung, aber `RejectedInstrument` kennt
+   nur Name; `_as_rejected` setzt nicht einmal diesen. `exchange`, `type` und
+   `currency` erreichen weder Vorschau noch Bericht und können in 2B daher
+   nicht angezeigt werden. **Erwartung:** Das gemeinsame REST-Modell enthält
+   die zugesagten Felder und beide Endpunkte befüllen sie; der Test prüft die
+   HTTP-Antwort vor und nach der Löschung, nicht nur die interne Tabelle.
 
-**`ticker` und `mic` sind Pflichtspalten.** Die Invariante aus `#2b2` steht im
-**Schema**, nicht in einer Prüfung, die man vergessen kann. `save_quote`
-lehnt ein Papier ohne Identität mit `IncompleteIdentityError` ab, statt in
-eine `NOT NULL`-Verletzung zu laufen — dieselbe Ablehnung, aber sie sagt, was
-fehlt.
+5. **Der Routentabellen-Test akzeptiert nicht existente Allowlist-Pfade** —
+   `tests/test_migration_endpoints.py:162-182`. Er verlangt nur, dass die
+   Antwort nicht exakt `503/migration_pending` ist. Ein erlaubter, aber im
+   Router fehlender Pfad liefert `404` und besteht; die Gegenprobe ergab
+   `NONEXISTENT_ALLOWED_STATUS 404`, `CURRENT_TEST_PREDICATE True`.
+   **Erwartung:** je Allowlist-Eintrag den konkret zulässigen Status und
+   Antworttyp prüfen; ein `404` muss rot sein. Der Bestätigungsweg bleibt ein
+   eigener, echter Integrationstest.
 
-#### Entscheidungen, die ich getroffen habe
+6. **DRY: Die Altsymbol→Identität-Regel ist zweimal implementiert** —
+   `app/migration.py:179-201` und `app/exchanges.py:304-340`. Beide prüfen
+   Punkt, zerlegen per `partition`, schlagen `mic_for_alias` nach und prüfen
+   `is_canonical_ticker`; nur die Fehlerform unterscheidet sich (`None` gegen
+   `(None, None)`). Damit kann Migration künftig anders entscheiden als der
+   übrige Core. **Erwartung:** eine gemeinsame Fachfunktion mit einer
+   kanonischen Ergebnisform; Aufrufer passen nur ihre Rückgabeform an.
 
-* **Quarantäne und Berichtsspeicher sind eine Tabelle, nicht zwei.** Der
-  Entwurf nennt beide; sie beantworten dieselbe Frage und bräuchten dieselben
-  Felder. Gehalten wird, was zur Neuerfassung von Hand reicht — für die
-  vollständige Wiederherstellung bleibt der SQLite-Snapshot zuständig, sonst
-  gäbe es zwei Rettungswege, von denen einer nur so tut.
-* **Gelöscht wird ausdrücklich, nicht über `ON DELETE CASCADE`.** Der
-  Tabellen-Neuaufbau läuft mit abgeschalteten Fremdschlüsseln, und eine
-  Kaskade, die mal greift und mal nicht, ist keine Zusage.
-* **Die Spaltenliste des Neuaufbaus entsteht aus dem realen Tabellenbestand.**
-  Welche Metadatenspalten eine gewachsene Installation trägt, weiß nur sie
-  selbst; eine abgeschriebene Aufzählung wäre eine zweite Wahrheit.
-* **Ein Umzug steht nur aus, wenn es etwas zu tun gibt.** Eine leere oder
-  bereits umgezogene Datenbank verlangt keine Bestätigung — sonst forderte
-  eine frische Installation eine Zustimmung für nichts.
-* **Der `HEALTHCHECK` zieht schon hier auf `/operational`.** Der Schnitt hatte
-  ihn bei 2B; er gehört zum Endpunkt, sonst liefert 2A einen
-  Healthcheck-Endpunkt, den niemand benutzt, während `/ready` im
-  Pending-Zustand `503` sagt und den Container als unhealthy markiert. README
-  und Image-Test bleiben in 2B.
+#### Niedrig
 
-#### Vier Fehler, die Tests gefunden haben — keiner davon ein Review
+7. **Die zurückgenommene Restart-Erklärung steht weiter in geändertem Code** —
+   `app/main.py:155-161` und `app/models.py:14-21`. Beide beschreiben
+   `/health` weiter als Neustart-Entscheid, obwohl Dockerfile, Spec und die
+   eigene Ticketfußnote festhalten, dass dieses Deployment bei `unhealthy`
+   nicht neu startet. **Erwartung:** Liveness neutral beschreiben; keine nicht
+   vorhandene Orchestrator-Semantik zusagen.
 
-1. **`executescript` beendet die Transaktion.** Dokumentiertes
-   `sqlite3`-Verhalten: Es setzt vor dem Ausführen ein `COMMIT` ab. Die
-   Tabellenanlage hätte „alles oder nichts" zu einer Zusage ohne Deckung
-   gemacht. Der Rollback-Test hat es gezeigt.
-2. **Die Identitätsindizes im Grundschema brachen den Start jeder
-   Alt-Datenbank.** `CREATE TABLE IF NOT EXISTS` lässt die alte Tabelle
-   stehen, `CREATE INDEX … (ticker, mic)` bricht dann mit `no such column` —
-   das genaue Gegenteil von „erkennen statt ausführen".
-3. **Der Endpunkt-Test lief gegen die echte Datenbank.**
-   `dependency_overrides` greift nur für Route-Dependencies; Lifespan und
-   Guard rufen `get_settings()` direkt. Geschadet hat es nichts — nachgeprüft
-   an Spalten, Zeilen und Dateidatum —, aber verlassen darf man sich darauf
-   nicht.
-4. **`GET /` kam als 404, nicht als 503.** Der Guard ließ die Startadresse
-   durch; es war nur nichts gemountet, weil `main.py` beim Import
-   `/app/web` sieht. Ohne den Befund hätte der Test „gesperrt" mit „gar nicht
-   da" verwechselt und wäre grün geblieben.
+#### DRY-Prüfscope
 
-Dazu einer, den **das Schreiben der Fußnote** gefunden hat: Der Scheduler
-startet im Lifespan, und der ist durch, wenn bestätigt wird. Nach einem
-bestätigten Umzug wäre der Refresh bis zum Neustart ausgeblieben — der Dienst
-hätte gesund ausgesehen und keine Kurse geholt. Behoben über
-`MigrationGate.on_release`, mit Test.
-
-#### Wo ich abweiche oder etwas offen lasse
-
-Drei Verify-Zeilen tragen **kein** Häkchen, und die Fußnoten sagen warum:
-
-| | | |
-|---|---|---|
-| `2b6h` | ⚠️ | Der Test **benutzt** `dashboard/dist`, **baut** es nicht. Ohne `make build` prüft er nichts. |
-| `2b6g` | ◑ | Dockerfile und `main.py` abgeglichen; README und `tests/test_api.py` gehören zur Dokumentationsseite von 2B. |
-| `2b7` | ◑ | Reason-Codes stehen; die DE/EN-Übersetzung hat ohne UI keinen Ort. |
-
-`2b6i` (Vite-Proxy) und `2b6c` (Image-Test) sind ausdrücklich **nicht** in 2A.
-
-**Neu auf dem Board:** `T-31-papiere-ohne-mic.md`. Unter der Pflichtregel
-lässt sich `BTC-USD` nicht mehr anlegen — eine Kryptowährung hat keinen
-ISO-10383-MIC, und die gemessene Auswirkungstabelle des Entwurfs führte nur
-Aktien und ETFs. Entscheidung Mike: von T-21 Teil 3 **trennen**. Im realen
-Bestand gibt es keine solche Zeile (gemessen). Der betroffene Test prüft
-jetzt den Negativfall und sagt ausdrücklich, dass er keine Zusage ist.
-
-**Zur Erinnerung:** 2A wird **nicht allein gemergt** — ohne die UI aus 2B
-kann niemand vorher warnen.
+Projektweit geprüft wurden neue/änderte Identitätszerlegung, Schema-Inventur,
+Migrationszustände und Reason-Codes, Gate-/Allowlist-Regeln, Diagnose- und
+Migrationspfade, REST-Abbildungen sowie die Orakel in Tests und Smoke-Scripts.
+Ergebnis: Finding 6 ist eine echte doppelte Fachregel. Die ausgeschriebenen
+Smoke-Orakel und der Dockerfile-Pfad wurden als absichtlich unabhängige
+Gegenproben beziehungsweise technisch nicht importierbarer Verbraucher nicht
+als DRY-Verstoß gezählt. Die Pfadkopien zwischen Allowlist und Router sind
+durch Finding 5 derzeit nicht belastbar gegen Drift abgesichert.
 
 #### Verifikation
 
-* `make test` — Backend **556 passed, 30 skipped** (vorher 485), Plugin-API
-  **36 passed**, Dashboard **235 passed**.
-* `npm --prefix dashboard run build` — erfolgreich; nur der bestehende
+* Relevante Pytests: **107 passed, 1 skipped**; nach Dashboard-Build Guard und
+  Endpunkte **44 passed, 1 absichtlich übersprungener Confirm-Fall**.
+* `make test`: Backend **556 passed, 30 skipped**, Plugin-API **36 passed**,
+  Dashboard **235 passed**.
+* `npm --prefix dashboard run build`: erfolgreich, bestehender
   Chunkgrößen-Hinweis.
-* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` — sauber.
-* `./_tickets/T-21-smoke.sh --run` — **12/12** gegen eine Sicherung des echten
-  Bestands: 6 Instrumente vorher, 5 nachher, `VTI` abgelehnt und berichtet,
-  48 → 47 Kurspunkte, `GOLD.SG` behält seine **257** Tagesschlusskurse.
-  Original byte-identisch.
-* `./_tickets/T-21b-smoke.sh --run` — **6/6** live gegen das Netz.
-* `git diff --check` — sauber.
-* Mutationsproben: Vorschau schreibt (rot), Symlink-Schranke entfernt (rot),
-  Schichtentest mit Resolver-Import (rot).
+* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests`: sauber.
+* `./_tickets/T-21-smoke.sh --run`: **12/12**, Original nur gelesen, Migration
+  auf SQLite-Backup.
+* `./_tickets/T-21b-smoke.sh --run`: **6/6** live, eigener Port/eigene
+  temporäre Datenbanken/eigene PID.
+* `git diff --check`: sauber.
+* Zusätzliche Gegenproben: leeres und vollständig aufgelöstes Alt-Schema;
+  später Indexfehler im vollständigen `run_migration`; Callbackfehler am Gate;
+  nicht existenter Allowlist-Pfad.
+
+## OUTBOX → Codex
+
+<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->

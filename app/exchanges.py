@@ -331,14 +331,37 @@ def split_symbol(symbol: str) -> tuple[str | None, str | None]:
     Returns:
         `(ticker, mic)` bei eindeutiger Zerlegung, sonst ``(None, None)``.
     """
+    identity = identity_from_symbol(symbol)
+    return identity if identity is not None else (None, None)
+
+
+def identity_from_symbol(symbol: str) -> tuple[str, str] | None:
+    """Die kanonische Identität eines Symbols — **die** Regel, einmal.
+
+    `split_symbol` ist die ältere Form derselben Auskunft und gibt ein Tupel
+    aus zwei Optionalen zurück, das jeder Aufrufer wieder auseinandernehmen
+    muss; sie ruft jetzt hier durch.
+
+    **Warum die Trennung überhaupt entstand:** Der Umzug in `app/migration.py`
+    brauchte ein „Ergebnis oder nichts" und bekam eine eigene, gleich
+    aussehende Funktion. Zwei Implementierungen derselben Fachregel laufen
+    beim ersten neuen Fall auseinander — dann entscheidet die Migration anders
+    als der übrige Core, und zwar über die Identität von Papieren.
+
+    Args:
+        symbol: Das gespeicherte Listing-Symbol, z.B. ``'EUNL.DE'``.
+
+    Returns:
+        `(ticker, mic)` bei eindeutiger Zerlegung, sonst ``None``.
+    """
     if not symbol or "." not in symbol:
-        return None, None
+        return None
 
     ticker, _, alias = symbol.partition(".")
     mic = mic_for_alias(alias)
-    if mic is None:
-        return None, None
-    return (ticker, mic) if is_canonical_ticker(ticker) else (None, None)
+    if mic is None or not is_canonical_ticker(ticker):
+        return None
+    return ticker, mic
 
 
 def mic_for_alias(alias: str) -> str | None:

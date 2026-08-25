@@ -11,6 +11,7 @@ import sqlite3
 
 import pytest
 
+from app.db import init_db
 from app.migration import (
     REASON_NO_SUFFIX,
     REASON_NON_CANONICAL_TICKER,
@@ -167,7 +168,7 @@ def test_die_vorschau_trennt_migration_von_ablehnung(tmp_path) -> None:
     with _connect(path) as connection:
         plan = plan_migration(connection)
 
-    assert plan.is_pending
+    assert plan.needs_migration
     assert [(m.symbol, m.ticker, m.mic) for m in plan.migrated] == [
         ("EUNL.DE", "EUNL", "XETR"),
         ("GOLD.SG", "GOLD", "XSTU"),
@@ -212,7 +213,7 @@ def test_die_vorschau_schreibt_nicht(tmp_path) -> None:
     with _connect(path, read_only=True) as connection:
         plan = plan_migration(connection)
 
-    assert plan.is_pending
+    assert plan.needs_migration
     with _connect(path) as connection:
         columns = {
             row["name"] for row in connection.execute("PRAGMA table_info(instruments)")
@@ -221,16 +222,106 @@ def test_die_vorschau_schreibt_nicht(tmp_path) -> None:
     assert "mic" not in columns
 
 
-def test_ein_leerer_bestand_steht_nicht_aus(tmp_path) -> None:
-    """Eine frische Installation darf keine Bestätigung für nichts verlangen."""
+def test_ein_leeres_alt_schema_ist_arbeit_ohne_rueckfrage(tmp_path) -> None:
+    """**Hier stand die falsche Zusage** — und sie war betriebsgefährdend.
+
+    Der Test hieß „ein leerer Bestand steht nicht aus" und behauptete
+    `is_pending is False`. Das stimmte für die Zeilen und war für das
+    **Schema** falsch: Einer leeren Pre-T-21-Datenbank fehlen `ticker`, `mic`
+    und `listing_id` ganz. Der Dienst wäre normal gestartet, und die erste
+    Neuanlage wäre an den fehlenden Spalten gebrochen (Codex, Runde 30).
+
+    Richtig ist die Unterscheidung: Es **ist** etwas zu tun, aber es geht
+    nichts verloren — also läuft es beim Start durch, ohne Rückfrage. Die
+    Zustimmung schützt vor Datenverlust, nicht vor Schemaarbeit.
+    """
     path = str(tmp_path / "leer.db")
     _legacy_database(path, [])
 
     with _connect(path) as connection:
         plan = plan_migration(connection)
 
-    assert plan.is_pending is False
+    assert plan.needs_migration is True, "die Identitätsspalten fehlen"
+    assert plan.needs_confirmation is False, "es geht nichts verloren"
+    assert plan.schema_outdated is True
     assert (plan.migrated, plan.rejected, plan.unchanged) == ((), (), 0)
+
+
+def test_ein_vollstaendig_zugeordneter_altbestand_braucht_die_haertung(
+    tmp_path,
+) -> None:
+    """Der zweite Fall aus Runde 30: Teil 1 ist durch, die Härtung nicht.
+
+    Jede Zeile trägt `ticker` und `mic`, es ist also nichts zu migrieren und
+    nichts abzulehnen. Trotzdem sind die Spalten **nullable**, und
+    `identity_status` steht noch — die zugesagte Invariante wäre schlicht
+    falsch gewesen, und der alte `is_pending` hätte `False` gesagt.
+    """
+    path = str(tmp_path / "teil1.db")
+    _legacy_database(path, [("EUNL.DE", "IE00B4L5Y983")])
+    with sqlite3.connect(path) as connection:
+        for column in ("ticker", "mic", "listing_id", "identity_status"):
+            connection.execute(f"ALTER TABLE instruments ADD COLUMN {column} TEXT")
+        connection.execute(
+            "UPDATE instruments SET ticker = 'EUNL', mic = 'XETR', "
+            "listing_id = 'alt-1', identity_status = 'resolved'"
+        )
+
+    with _connect(path) as connection:
+        plan = plan_migration(connection)
+
+    assert plan.unchanged == 1, "die Zeile ist bereits zugeordnet"
+    assert (plan.migrated, plan.rejected) == ((), ())
+    assert plan.schema_outdated is True, "nullable Spalten und identity_status"
+    assert plan.needs_migration is True
+    assert plan.needs_confirmation is False
+
+
+def test_ein_fertiger_bestand_hat_nichts_mehr_zu_tun(tmp_path) -> None:
+    """Die Gegenprobe — sonst wäre `schema_outdated` immer wahr.
+
+    Nach `init_db` auf einer frischen Datei steht die Zielform: Spalten da,
+    `NOT NULL` gesetzt, `identity_status` weg.
+    """
+    path = str(tmp_path / "fertig.db")
+    assert init_db(path) is False
+
+    with _connect(path) as connection:
+        plan = plan_migration(connection)
+        columns = {
+            row["name"]: row
+            for row in connection.execute("PRAGMA table_info(instruments)")
+        }
+
+    assert plan.needs_migration is False
+    assert plan.schema_outdated is False
+    assert "identity_status" not in columns
+    assert all(columns[name]["notnull"] for name in ("ticker", "mic"))
+
+
+def test_ein_verlustloser_altbestand_wird_beim_start_gehaertet(tmp_path) -> None:
+    """Die Kehrseite: `init_db` erledigt es wirklich, statt es nur zu melden.
+
+    Das ist der Fall, in dem der Dienst ohne Rückfrage weiterläuft — dann muss
+    das Schema hinterher aber auch **stehen**. Sonst hätte die Unterscheidung
+    nur den Namen der Lüge geändert.
+    """
+    path = str(tmp_path / "verlustlos.db")
+    _legacy_database(path, [("EUNL.DE", "IE00B4L5Y983"), ("GOLD.SG", None)])
+
+    assert init_db(path) is False, "nichts geht verloren, also keine Rückfrage"
+
+    with _connect(path) as connection:
+        plan = plan_migration(connection)
+        rows = {
+            row["symbol"]: (row["ticker"], row["mic"])
+            for row in connection.execute(
+                "SELECT symbol, ticker, mic FROM instruments"
+            )
+        }
+
+    assert plan.needs_migration is False
+    assert rows == {"EUNL.DE": ("EUNL", "XETR"), "GOLD.SG": ("GOLD", "XSTU")}
 
 
 @pytest.mark.parametrize(

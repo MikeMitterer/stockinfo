@@ -126,8 +126,13 @@ def pending(tmp_path: Path, monkeypatch) -> Iterator[TestClient]:
         assert client.get("/migration").json()["pending"] is True
         yield client
 
-    get_gate().confirm()  # Riegel für die nächsten Tests zurücksetzen
+    # Der Riegel ist Modulzustand; bliebe er zu, bekämen alle folgenden Tests
+    # `503`. Genau das ist beim ersten Anlauf passiert — `test_overrides.py`
+    # war plötzlich rot, obwohl es allein grün lief.
+    get_gate().release()
+    get_gate().on_release(None)
     get_settings.cache_clear()
+    get_cached_quote_service.cache_clear()
 
 
 @pytest.fixture
@@ -139,7 +144,9 @@ def serving(tmp_path: Path, monkeypatch) -> Iterator[TestClient]:
     with TestClient(app) as client:
         yield client
 
+    get_gate().on_release(None)
     get_settings.cache_clear()
+    get_cached_quote_service.cache_clear()
 
 
 def test_der_start_erkennt_den_ausstehenden_umzug(pending: TestClient) -> None:
@@ -159,27 +166,53 @@ def test_der_start_erkennt_den_ausstehenden_umzug(pending: TestClient) -> None:
     }
 
 
-@pytest.mark.parametrize(("method", "path"), sorted(ALLOWED_ROUTES))
-def test_jeder_erlaubte_pfad_antwortet_auch_wirklich(
-    pending: TestClient, method: str, path: str
-) -> None:
-    """Der Routentabellen-Test zählt **aus der Allowlist** auf.
+# Was jeder erlaubte Pfad im Pending-Zustand **konkret** antworten muss.
+#
+# Bis Runde 30 verlangte der Test nur „nicht `503`/`migration_pending`". Ein
+# Pfad, der in der Allowlist steht, den es im Router aber gar nicht gibt,
+# antwortet `404` — und bestand. Die Allowlist hätte gegen den Router driften
+# können, ohne dass etwas rot wird; genau davor sollte `#2b6f` schützen.
+#
+# `/migration/confirm` fehlt hier bewusst: Er **führt aus**. Ein Test, der ihn
+# nebenbei aufriefe, zöge dem Rest der Datei den Boden weg — er hat weiter
+# unten einen eigenen, echten Integrationstest.
+_ERWARTETE_ANTWORTEN = {
+    ("GET", "/health"): 200,
+    ("GET", HEALTHCHECK_PATH): 200,
+    ("GET", "/ready"): 503,  # ehrlich: der Fachbetrieb ist gesperrt
+    ("GET", "/migration"): 200,
+    ("GET", "/migration/report"): 200,
+}
 
-    Sie hier abzuschreiben hieße, zwei Listen zu pflegen; der Test bestätigte
-    dann seine eigene Kopie. Geprüft wird, dass der Guard nicht dazwischengeht
-    — `503` mit der stabilen Kennung wäre der Fehlerfall.
 
-    `/migration/confirm` ist ausgenommen: Er *führt aus*, und ein Test, der
-    ihn nebenbei aufriefe, zöge dem Rest der Datei den Boden weg.
+def test_die_erwartungstabelle_deckt_die_allowlist_ab() -> None:
+    """Der Test über den Test: keine Zeile darf stillschweigend fehlen.
+
+    Ohne diese Prüfung wäre die Tabelle oben eine **zweite** Liste, die beim
+    nächsten neuen Pfad zurückbleibt — und die Lücke fiele niemandem auf,
+    weil ein nicht aufgezählter Pfad einfach nicht geprüft würde.
     """
-    if path == "/migration/confirm":
-        pytest.skip("führt aus — eigener Test weiter unten")
+    geprueft = set(_ERWARTETE_ANTWORTEN) | {("POST", "/migration/confirm")}
 
+    assert geprueft == set(ALLOWED_ROUTES)
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "erwartet"),
+    [(m, p, code) for (m, p), code in sorted(_ERWARTETE_ANTWORTEN.items())],
+)
+def test_jeder_erlaubte_pfad_antwortet_auch_wirklich(
+    pending: TestClient, method: str, path: str, erwartet: int
+) -> None:
+    """Jeder Allowlist-Eintrag mit seinem **konkreten** Status.
+
+    Ein `404` ist damit rot: Er hieße, dass die Allowlist einen Pfad freigibt,
+    den es nicht gibt — und dass Guard und Router auseinandergelaufen sind.
+    """
     response = pending.request(method, path)
 
-    assert response.status_code != 503 or response.json().get("detail") != (
-        "migration_pending"
-    )
+    assert response.status_code == erwartet
+    assert response.headers["content-type"].startswith("application/json")
 
 
 @pytest.mark.parametrize(
@@ -270,6 +303,34 @@ def test_die_bestaetigung_fuehrt_aus_und_gibt_frei(pending: TestClient) -> None:
     nachher = pending.get("/migration/report").json()
     assert nachher["completed"] is True
     assert nachher["rejected"][0]["reason"] == "symbol_without_exchange_suffix"
+
+
+def test_vorschau_und_bericht_nennen_genug_zur_neuerfassung(
+    pending: TestClient,
+) -> None:
+    """Geprüft wird die **HTTP-Antwort**, nicht die interne Tabelle.
+
+    Bis Runde 30 hielt die Tabelle Name, Börse, Gattung und Währung — und
+    keines davon kam über REST an: Das Modell kannte nur `name`, und die
+    Übersetzung setzte nicht einmal den. Das UI in 2B hätte den Benutzer
+    auffordern sollen, ein Papier neu zu erfassen, und ihm dazu nur ein Symbol
+    nennen können.
+
+    Der Test läuft **vor und nach** der Löschung, weil beide Wege verschiedene
+    Quellen haben: die Vorschau den Plan, der Bericht die Tabelle. Nur einen
+    zu prüfen ließe den anderen driften.
+    """
+    vorher = pending.get("/migration").json()["rejected"][0]
+
+    assert vorher["symbol"] == "VTI"
+    assert vorher["isin"] == "US9229087690"
+    assert vorher["name"] == "Papier VTI"
+
+    pending.post("/migration/confirm")
+    nachher = pending.get("/migration/report").json()["rejected"][0]
+
+    for feld in ("symbol", "isin", "name", "exchange", "type", "currency", "reason"):
+        assert nachher[feld] == vorher[feld], feld
 
 
 def test_die_bestaetigung_startet_den_scheduler(pending: TestClient) -> None:

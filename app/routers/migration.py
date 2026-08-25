@@ -48,10 +48,21 @@ def get_gate() -> MigrationGate:
 
 
 def _as_rejected(rejection: Rejection) -> RejectedInstrument:
-    """Übersetzt einen Planeintrag in die REST-Form."""
+    """Übersetzt einen Planeintrag in die REST-Form.
+
+    **Vollständig**, seit Runde 30. Vorher fielen Name, Börse, Gattung und
+    Währung hier heraus: Die Tabelle hielt sie, das REST-Modell kannte nur den
+    Namen, und `_as_rejected` setzte nicht einmal den. Das UI in 2B hätte den
+    Benutzer auffordern sollen, ein Papier neu zu erfassen, und ihm dazu nur
+    ein Symbol nennen können.
+    """
     return RejectedInstrument(
         symbol=rejection.symbol,
         isin=rejection.isin,
+        name=rejection.name,
+        exchange=rejection.exchange,
+        type=rejection.type,
+        currency=rejection.currency,
         reason=rejection.reason,
         quotes=rejection.quotes,
         daily_closes=rejection.daily_closes,
@@ -61,7 +72,7 @@ def _as_rejected(rejection: Rejection) -> RejectedInstrument:
 def _preview(plan: MigrationPlan) -> MigrationPreview:
     """Baut die Vorschau aus dem Plan."""
     return MigrationPreview(
-        pending=plan.is_pending,
+        pending=plan.needs_migration,
         migrating=len(plan.migrated),
         unchanged=plan.unchanged,
         rejected=[_as_rejected(rejection) for rejection in plan.rejected],
@@ -90,16 +101,22 @@ def migration_preview(settings: SettingsDep) -> MigrationPreview:
 def migration_confirm(settings: SettingsDep) -> MigrationReport:
     """Führt den Umzug aus — auf ausdrückliche Bestätigung, **genau einmal**.
 
-    `MigrationGate.confirm()` gewinnt genau ein Aufrufer; alle weiteren
-    bekommen `409`. Ohne diese Verriegelung liefen zwei gleichzeitige
-    Bestätigungen beide durch, und eine wiederholte gäbe den Betrieb ein
-    zweites Mal frei.
+    **Anspruch und Freigabe sind getrennt**, und das ist der Kern. Bis Runde
+    30 stand hier ein `confirm()`, das den Riegel öffnete und den Scheduler
+    startete, *bevor* der Umzug begann: Während er lief, meldete `/ready`
+    schon `ok`, normale Requests durften auf den alten Bestand, und der
+    Scheduler schrieb hinein.
 
-    Der Scheduler wird hier **nicht** gestartet: Das entscheidet der Lifespan,
-    der ihn beim Übergang in den Normalbetrieb übernimmt.
+    Jetzt nimmt `claim()` den Umzug an sich, ohne etwas freizugeben; die
+    Fachwege bleiben gesperrt, bis der Commit durch ist. Erst dann `release()`.
+    Scheitert der Umzug, gibt `abandon()` nur den Anspruch zurück — der Riegel
+    bleibt zu, und ein neuer Versuch ist möglich.
+
+    Ein zweiter, gleichzeitiger Aufruf bekommt `409`; ebenso einer, der nichts
+    mehr vorfindet.
     """
     gate = get_gate()
-    if not gate.confirm():
+    if not gate.claim():
         raise HTTPException(
             status_code=409,
             detail="Es steht kein Umzug aus, oder er läuft bereits.",
@@ -109,13 +126,13 @@ def migration_confirm(settings: SettingsDep) -> MigrationReport:
     try:
         plan = run_migration(settings.database_path, rejected_at=stamp)
     except Exception:
-        # Der Umzug ist gescheitert und hat nichts geändert — die Transaktion
-        # rollt zurück. Der Riegel muss zurück, sonst stünde der Dienst offen,
-        # obwohl der Bestand unverändert alt ist.
-        gate.block()
+        # Die Transaktion rollt zurück, der Bestand ist unverändert alt. Nur
+        # der Anspruch geht zurück — freigegeben wurde nie etwas.
+        gate.abandon()
         logger.exception("migration_failed")
         raise
 
+    gate.release()
     logger.info("migration_confirmed", rejected=len(plan.rejected))
     return MigrationReport(
         completed=True,
@@ -143,8 +160,8 @@ def migration_report(settings: SettingsDep) -> MigrationReport:
             return MigrationReport(completed=False, rejected=[])
 
         rows = connection.execute(
-            "SELECT symbol, isin, name, reason, quotes, daily_closes "
-            "FROM migration_rejections ORDER BY symbol"
+            "SELECT symbol, isin, name, exchange, type, currency, reason, "
+            "quotes, daily_closes FROM migration_rejections ORDER BY symbol"
         ).fetchall()
     finally:
         connection.close()
@@ -156,6 +173,9 @@ def migration_report(settings: SettingsDep) -> MigrationReport:
                 symbol=row["symbol"],
                 isin=row["isin"],
                 name=row["name"],
+                exchange=row["exchange"],
+                type=row["type"],
+                currency=row["currency"],
                 reason=row["reason"],
                 quotes=row["quotes"],
                 daily_closes=row["daily_closes"],

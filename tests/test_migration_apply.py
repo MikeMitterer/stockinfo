@@ -15,6 +15,7 @@ import sqlite3
 
 import pytest
 
+from app.db import run_migration
 from app.migration import (
     REASON_NO_SUFFIX,
     REASON_NON_CANONICAL_TICKER,
@@ -194,7 +195,7 @@ def test_ein_zweiter_lauf_dupliziert_den_bericht_nicht(bestand) -> None:
         plan = plan_migration(connection)
 
     assert anzahl == 2
-    assert plan.is_pending is False
+    assert plan.needs_migration is False
 
 
 def test_ein_abbruch_laesst_alles_stehen(bestand) -> None:
@@ -267,6 +268,67 @@ def test_nach_dem_umzug_ist_die_halbe_identitaet_unmoeglich(bestand) -> None:
             connection.execute(
                 "INSERT INTO instruments (symbol, first_seen) VALUES ('X.DE', 'jetzt')"
             )
+
+
+def _symbols(path: str) -> list[str]:
+    """Die Symbole des aktiven Bestands, sortiert."""
+    with _connect(path) as connection:
+        return sorted(
+            row["symbol"]
+            for row in connection.execute("SELECT symbol FROM instruments")
+        )
+
+
+def _columns(path: str) -> set[tuple[str, int]]:
+    """Spaltennamen samt `NOT NULL`-Flag — das Schema in vergleichbarer Form."""
+    with _connect(path) as connection:
+        return {
+            (row["name"], row["notnull"])
+            for row in connection.execute("PRAGMA table_info(instruments)")
+        }
+
+
+def test_ein_spaeter_fehler_rollt_den_ganzen_umzug_zurueck(
+    bestand, monkeypatch
+) -> None:
+    """`run_migration` als **ganzer** Weg — nicht nur `apply_migration`.
+
+    Der bisherige Rollback-Test rief nur den Anwendungsteil. Genau dazwischen
+    stand der Fehler: `run_migration` setzte die Indizes mit `executescript`,
+    und das committet vorher implizit. Ein Fehler beim **letzten** Index ließ
+    migrierte Identitäten, Berichtstabelle und gehärtetes Schema dauerhaft
+    zurück — obwohl die Funktion „alles oder nichts" zusagt (Codex, Runde 30).
+
+    Ausgelöst wird der Fehler deshalb an der spätesten Stelle, die es gibt.
+    """
+    from app import db as db_modul
+
+    vorher_symbols = _symbols(bestand)
+    vorher_spalten = _columns(bestand)
+
+    monkeypatch.setattr(
+        db_modul,
+        "_IDENTITY_INDICES",
+        (
+            *db_modul._IDENTITY_INDICES,
+            "CREATE UNIQUE INDEX kaputt ON instruments (gibt_es_nicht)",
+        ),
+    )
+
+    with pytest.raises(sqlite3.Error):
+        run_migration(bestand, rejected_at=_STAMP)
+
+    assert _symbols(bestand) == vorher_symbols, "Zeilen sind verschwunden"
+    assert _columns(bestand) == vorher_spalten, "das Schema wurde gehärtet"
+
+    with _connect(bestand) as connection:
+        tabellen = {
+            row["name"]
+            for row in connection.execute(
+                "SELECT name FROM sqlite_master WHERE type = 'table'"
+            )
+        }
+    assert "migration_rejections" not in tabellen, "der Bericht blieb stehen"
 
 
 def test_eine_gesetzte_zuordnung_ueberlebt_den_umzug(tmp_path) -> None:
