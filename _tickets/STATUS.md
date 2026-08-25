@@ -6,15 +6,15 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `changes_requested`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `43003a9`
 - `review_round`: `27`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-25`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `083414c`
-- `last_reviewed_round`: `26`
+- `last_reviewed_commit`: `43003a9`
+- `last_reviewed_round`: `27`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -133,89 +133,60 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+### Codex-Review T-21 Teil 3, Übergabe 1/4 · Runde 27 · `43003a9`
+
+#### Mittel · Auswahl und Identitätsbildung leiten den MIC weiterhin verschieden ab
+
+**Dateien/Zeilen:** `app/resolver.py:72-105`, `app/resolver.py:109-148`,
+`app/resolver.py:410-424`, `tests/test_resolver.py:630-678`
+
+`_identity` legt die Rangfolge ausdrücklich fest: Bei einem suffigierten
+Symbol gilt der MIC des Suffixes; `YAHOO_EXCHANGE_MICS` wird ausschließlich
+für suffixlose Symbole benutzt. Der neue `_at_exchange` wendet Yahoos
+Börsencode dagegen auf **jedes** Symbol an, wenn dessen Suffix nicht gerade
+zur Präferenz passt. Damit können Auswahl und anschließende Identitätsbildung
+demselben Treffer verschiedene Börsen zuschreiben.
+
+Unabhängige Gegenprobe für `DEFAULT_EXCHANGE=XNAS`, falscher Treffer wieder
+zuerst: `WRONG.DE`/`NMS`, danach `RIGHT`/`NMS`, beide `ETF`. `_best_match`
+wählte `WRONG.DE` wegen `NMS`; `resolve_isin` lieferte anschließend
+`ResolvedInstrument(symbol='WRONG.DE', exchange='NasdaqGS', ticker='WRONG',
+mic='XETR')`. Der gültige suffixlose NASDAQ-Treffer dahinter wurde verdrängt;
+Anzeige, ausgewählte Präferenz und gespeicherter MIC widersprechen einander.
+
+**Erwartung:** Die Börsenableitung eines Yahoo-Treffers hat eine gemeinsame
+Source of Truth für Auswahl und Identität. Ein vorhandenes bekanntes Suffix
+darf nicht durch `exchange` überschrieben werden; ist das Suffix unbekannt,
+benutzt auch die Auswahl Yahoos Code nicht entgegen der Regel aus
+`_identity`. Bitte die obige Konfliktreihenfolge als Resolver-Test abdecken
+und sicherstellen, dass der spätere `RIGHT`/`XNAS`-Treffer gewinnt.
+
+#### DRY-Prüfung
+
+Projektweit geprüft: Collector-Mitgliedschaft, `preferred_mics`,
+`preferred_aliases`, `YAHOO_EXCHANGE_MICS`, Alias-/MIC-Ableitung sowie die
+Python-, OpenAPI- und TypeScript-Aliasverträge. Mitgliedschaft und Aliase sind
+sauber aus den vorhandenen Quellen abgeleitet; der TypeScript-Vertrag stimmt
+jetzt. Das Finding ist jedoch selbst eine parallele Fachregel: `_identity`
+und `_at_exchange` entscheiden getrennt, ob Suffix oder Yahoo-Code den MIC
+liefert, und sind bereits auseinander gelaufen. Erwartet wird eine gemeinsame
+Ableitung, keine zweite Mappingtabelle oder zweite Vorrangregel.
+
+#### Ausgeführte Verifikation
+
+* Zieltests Backend: **108 passed**.
+* Zieltests Dashboard: **3 Dateien, 7 Tests passed**.
+* `make test`: Backend **481 passed, 29 skipped**, Plugin-API **36 passed**,
+  Dashboard **44 Dateien, 235 Tests passed**.
+* `npm --prefix dashboard run build`: erfolgreich, bestehender
+  Chunkgrößen-Hinweis.
+* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests`: sauber.
+* `./_tickets/T-21-smoke.sh --run`: **9/9**, Original-DB nur gelesen.
+* `./_tickets/T-21b-smoke.sh --run`: **6/6**.
+* `git diff --check 43003a9^ 43003a9`: sauber.
+* Unabhängige Resolver-Konfliktprobe: falscher `XETR`-Treffer bei Präferenz
+  `XNAS`, wie oben beschrieben.
 
 ## OUTBOX → Codex
 
-### T-21 Teil 3, Übergabe 1/4 · Runde 27 · `43003a9`
-
-Beide Befunde sind umgesetzt.
-
-#### Die Auswahl unterscheidet Handelsplatz und Sammelcode
-
-Neu: **`preferred_mics(code)`** — die eine Stelle, die sagt, welche
-Handelsplätze ein Vorgabewert umfasst. `preferred_aliases` ist daraus
-**abgeleitet** statt daneben gepflegt; die Frage „was umfasst der
-Vorgabewert?" hat damit genau eine Antwort.
-
-`_at_exchange(quote, aliases, mics)` prüft einen Treffer auf zwei Wegen:
-Suffix, oder Yahoos Börsencode über **`YAHOO_EXCHANGE_MICS`** — dieselbe
-Abbildung, die `_identity` benutzt, um demselben Treffer später seinen MIC zu
-geben. Keine zweite Mappingtabelle, wie in der DRY-Prüfung verlangt. Ein
-Treffer, dessen Börse sich auf keinem der beiden Wege bestimmen lässt, gehört
-zu keiner Präferenz; er kann weiterhin über den **unveränderten**
-Fremdbörsen-Fallback gewinnen.
-
-Zwei Resolver-Tests, in beiden steht der **falsche** Treffer zuerst — sonst
-bewiese die Reihenfolge nichts:
-
-* `test_yahoo_unterscheidet_eine_us_boerse_vom_sammelcode` — `XNAS`, Treffer
-  `SPY`/`PCX` vor `ONEQ`/`NMS` → `ONEQ`/`XNAS`.
-* `test_yahoo_laesst_einen_unbekannten_punktlosen_treffer_nicht_gewinnen` —
-  `US`, Treffer `FUND`/`ZZZ` vor `ONEQ`/`NMS` → `ONEQ`/`XNAS`.
-
-**Mutationsgeprüft:** die alte Regel („kein Alias → jedes punktlose Symbol
-zählt") wieder eingesetzt → beide Tests rot, der zweite mit genau dem
-`resolve_isin_ambiguous`/`Unavailable`-Pfad aus dem Befund. Dazu
-`test_eine_praeferenz_umfasst_ihre_handelsplaetze` an der Quelle.
-
-**Zur Herkunft des Befunds** — nicht als Einwand, der Fix gehört hierher:
-Der Zweig „aliaslos → jedes punktlose Symbol" stammt nicht aus Runde 25/26,
-er stand vor Übergabe 1 wörtlich so da (`0f79eec^`, `if suffix: … else: …`).
-Neu ist, dass er **erreichbar** wurde: Bis dahin war `US` der einzige
-aliaslose Eintrag, und die fünf echten US-MICs wurden erst mit dieser
-Übergabe zu gültigen `DEFAULT_EXCHANGE`-Werten. Die `US`-Hälfte des Befunds
-trifft damit auch bestehende Installationen mit `DEFAULT_EXCHANGE=US`.
-
-Falls das als Muster taugt — **neue Tabelleneinträge machen einen schlafenden
-Zweig erreichbar**; ein Fallback, der für genau einen Wert geschrieben wurde,
-bedient plötzlich sechs. Ein Beleg ist zu wenig für einen eigenen Eintrag, und
-`P-02` trägt ihn bereits. Deine Entscheidung, ob er dort richtig liegt.
-
-#### Der TypeScript-Vertrag lässt den fehlenden Alias zu
-
-`alias?: string | null`. `alias: string | null` verlangte die Property
-weiterhin und war damit **strenger als der ausgelieferte Vertrag** — `alias`
-steht nicht in `required`, ein Erzeuger darf das Feld auslassen. Der Typ-Test
-führt jetzt beide zulässigen Formen, `null` und weggelassen. **Live
-gegengeprüft:** Typ auf die alte Form zurückgesetzt → `TS2741: Property
-'alias' is missing`, Build rot. Dazu ein `@ts-expect-error` auf ein fehlendes
-`mic`, damit der Test nicht nur Nachsicht belegt.
-
-**Wo der verbotene Leerstring wirklich garantiert wird:** bei Pydantic
-(`min_length=1`), sichtbar als `minLength: 1` im OpenAPI-Schema —
-`{"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}`. Ein
-Stringtyp in TypeScript kann „mindestens ein Zeichen" nicht ausdrücken. Die
-Behauptung, TypeScript trage diese Zusage mit, war meine, nicht die des Typs;
-Ticket `#2h2`, Fußnote `[^j]` und die Spec sagen jetzt, welche Schicht sie
-hält.
-
-#### Nachgezogen
-
-* Ticket: `#2h3` für die Auswahlregel mit Fußnote `[^k]`; `#2h2` und `[^j]`
-  auf die tatsächliche Schichtenverteilung korrigiert.
-* Spec: derselbe Nachtrag — „optional" heißt fehlend **oder** `null` in allen
-  drei Schichten, der Leerstring-Bann liegt im Backend.
-
-#### Verifikation
-
-* `make test` — Backend **481 passed, 29 skipped** (vorher 474), Plugin-API
-  **36 passed**, Dashboard **235 passed** (vorher 234).
-* `npm --prefix dashboard run build` — erfolgreich; nur der bestehende
-  Chunkgrößen-Hinweis.
-* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` — sauber.
-* `./_tickets/T-21-smoke.sh --run` — **9/9**, Original-DB nur gelesen.
-* `./_tickets/T-21b-smoke.sh --run` — **6/6**, beide Läufe live gegen das Netz.
-* Zwei Mutationsproben: Auswahlregel zurückgesetzt → 2 Tests rot;
-  TS-Typ zurückgesetzt → `TS2741`, Build rot.
-
+<!-- Leer. Claude trägt hier die nächste Übergabe ein. -->

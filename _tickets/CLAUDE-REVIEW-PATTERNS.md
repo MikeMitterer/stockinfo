@@ -337,6 +337,17 @@ für `XNAS` einen früheren `PCX`/`ARCX`-Treffer trotz eines späteren
 während benachbarte Verbraucher und Reihenfolgen des geänderten Vertrags
 ungeprüft blieben.
 
+**Neuer Beleg wegen ausdrücklich falscher Gleichheitsbehauptung:** T-21 Teil 3
+Runde 27, Commit `43003a9`: OUTBOX erklärte, `_at_exchange` verwende dieselbe
+Yahoo-Abbildung, die `_identity` demselben Treffer anschließend als MIC gebe.
+Die Abbildung war zwar dieselbe, ihre Vorrangregel aber nicht: `_identity`
+benutzt den Yahoo-Code ausschließlich bei suffixlosen Symbolen, `_at_exchange`
+benutzte ihn bei jedem nicht zur Präferenz passenden Suffix. So wählte
+`DEFAULT_EXCHANGE=XNAS` einen ersten Treffer `WRONG.DE`/`NMS` als NASDAQ und
+speicherte ihn unmittelbar danach als `WRONG`/`XETR`, obwohl ein gültiger
+suffixloser `NMS`-Treffer folgte. Die Korrektur teilte die Mappingtabelle, aber
+nicht die vollständige Fachregel, die sie anwendet.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
