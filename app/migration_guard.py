@@ -15,6 +15,7 @@ Fachregel; ein Sonderweg für die Diagnose wäre eine zweite Ausnahmequelle.
 
 import os
 import threading
+from collections.abc import Callable
 
 import structlog
 
@@ -113,6 +114,7 @@ class MigrationGate:
     def __init__(self) -> None:
         self._pending = False
         self._lock = threading.Lock()
+        self._on_release: Callable[[], None] | None = None
 
     @property
     def pending(self) -> bool:
@@ -124,6 +126,25 @@ class MigrationGate:
         with self._lock:
             self._pending = True
         logger.warning("migration_pending")
+
+    def on_release(self, callback: Callable[[], None] | None) -> None:
+        """Was beim Übergang in den Normalbetrieb noch geschehen muss.
+
+        **Der Grund ist der Scheduler.** Er läuft im Lifespan an, und der ist
+        längst durch, wenn der Benutzer bestätigt. Ohne diesen Rückruf liefe
+        der Hintergrund-Refresh nach einem bestätigten Umzug bis zum nächsten
+        Neustart nicht — der Dienst sähe gesund aus und holte keine Kurse.
+
+        Ein Rückruf statt eines Imports, weil die Richtung sonst falsch
+        stünde: Der Bestätigungs-Endpunkt müsste `app.main` importieren, das
+        ihn selbst einbindet.
+
+        Args:
+            callback: Wird beim erfolgreichen `confirm` **einmal** gerufen;
+                ``None`` löst die Registrierung.
+        """
+        with self._lock:
+            self._on_release = callback
 
     def confirm(self) -> bool:
         """Gibt den Betrieb frei — **genau einmal**.
@@ -137,7 +158,11 @@ class MigrationGate:
             if not self._pending:
                 return False
             self._pending = False
-            return True
+            callback = self._on_release
+
+        if callback is not None:
+            callback()
+        return True
 
 
 def is_allowed(

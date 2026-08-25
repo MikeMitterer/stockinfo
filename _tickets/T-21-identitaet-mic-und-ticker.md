@@ -165,22 +165,22 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 1 | bestehende Datenbank, Migration laufen lassen | zerlegbare Instrumente haben `ticker` und `mic`; **nicht** zerlegbare werden abgelehnt und gemeldet, nicht geraten | ➖ [^a] | |
 | 1b | dieselbe Migration auf einer **Kopie des echten Bestands** | ~~keine Zeile und kein Kurspunkt geht verloren~~ **neu:** kein Kurspunkt einer *migrierten* Zeile geht verloren, auch beim zweiten Start nicht; abgelehnte Zeilen verschwinden **absichtlich** und stehen mit ihrer Kurspunktzahl im Bericht | ➖ [^g] | |
 | 2 | Stichprobe nach der Migration | `EUNL.DE` → `EUNL`/`XETR`, `XIC.TO` → `XIC`/`XTSE`; `AAPL` wird **abgelehnt** statt geraten | ➖ [^b] | |
-| 2b | Instrument mit Fremdsymbol (`BRK-B`) | erscheint im **Migrationsbericht** mit Grund und verlorenen Kurspunkten — nicht mehr als offene Zeile im Bestand | ➖ [^c] | |
-| 2b4 | Bericht und Ablehnung | entstehen in **derselben Transaktion**; ein zweiter Start dupliziert sie nicht; der Eintrag bleibt abrufbar, **nachdem** die aktive Zeile weg ist | | |
-| 2b5 | Auslieferung von Teil 2 | **zweiphasig:** Phase 1 erkennt die ausstehende Migration und rechnet vor, ohne etwas zu ändern; erst die Bestätigung löst sie aus. Gleichzeitigkeit im Commit genügt **nicht** — `init_db()` läuft im Lifespan, bevor das UI erreichbar ist | | |
-| 2b6 | Phase 1, serverseitig verriegelt — **Routentabellen-Test** | jeder Pfad der Allowlist (statische UI, `/health`, Healthcheck-Endpunkt, `/ready`, Vorschau, Bestätigung, Bericht) antwortet; je ein normaler **Lese-** und **Schreibpfad** (`/quote`, `/refresh`, `PUT`, `DELETE`) wird mit stabiler Kennung abgewiesen; DB und Vorschau bleiben unverändert | | |
-| 2b6b | `/ready` in Phase 1 | antwortet **`503`** mit `status: "migration_pending"`, unterscheidbar vom `503` bei unerreichbarer DB; `status` ist ein `Literal`, kein freier `str` | | |
-| 2b6e | `GET /operational` (neu) | `200`/`migration_pending` in Phase 1, `200`/`serving` im Normalbetrieb, `503`/`degraded` bei unerreichbarer DB. Der Docker-`HEALTHCHECK` zieht hierher um | | |
-| 2b6f | eine Routenquelle | Guard und Routentabellen-Test lesen **dieselbe** Allowlist-Konstante; ein Test vergleicht die `HEALTHCHECK`-URL im `Dockerfile` gegen genau diesen Pfad — sonst driften sie unbemerkt bis zum Deployment | | |
-| 2b6h | statische Dateien im Pending-Zustand | der Test **baut das Dashboard** und fordert **`GET /`** (belegt die geladene HTML) sowie *jede* real ausgelieferte Datei **rekursiv** an — insbesondere `/stockinfo-icon.svg` aus `index.html:6` und die Dateien unter `/assets`. Keine handgepflegte Kopie; unbekannte Pfade und Fach-APIs bleiben gesperrt | | |
-| 2b6j | `/` als URL-Alias | steht **ausdrücklich** in der Allowlist, als exakter Pfad und nie als Präfix, unter der Bedingung `index.html` im begrenzten `static_dir`. Fehlt `static_dir` ganz (lokal: Vorgabe `/app/web`), ist der statische Teil leer | | |
-| 2b6i | Vite-Dev-Proxy | `/migration`, `/operational` und `/ready` stehen in `apiPrefixes` (`dashboard/vite.config.ts:8-21`); ein Test belegt je Präfix eine **API-Antwort statt `index.html`** — der Fehler ist als `solved/T-04-vite-proxy-fehlende-praefixe.md` schon einmal passiert | | |
-| 2b6g | Diagnose-Verbraucher | `README.md:31-32` und `:202-205`, `docker/Dockerfile:71-75`, `app/main.py:70-76` und `tests/test_api.py:204-240` sind auf die **drei** Fragen abgeglichen; die widerlegte Restart-/Traffic-Begründung steht nirgends mehr | | |
-| 2b6c | Image-Test | Pending-Zustand überdauert `start-period` + 3 × `interval`; Healthcheck-Endpunkt bleibt `200`, `/ready` bleibt `503`, Vorschau und Bestätigung durchgehend erreichbar. **Keine** Restart-/Routing-Zusage — die gälte nur für eine konkrete Orchestrator-Konfiguration | | |
-| 2b6d | Bestätigung | gegen parallele und doppelte Aufrufe verriegelt; Scheduler und normale Endpunkte werden **genau einmal** freigegeben | | |
-| 2b7 | Vorschau, Bericht und Meldungen | **stabile Reason-Codes** statt freier Texte, DE/EN übersetzt — in Teil 2, nicht erst in Teil 4 | | |
-| 2b2 | nach erfolgreichem Start | Invariante `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`; kein Instrument-/Quote-Endpunkt serialisiert eine halbe Identität | | |
-| 2b3 | Reihenfolge Katalog vor Migration | `GOLD.SG` migriert (257 Tageskurse bleiben), wird **nicht** abgelehnt — der Katalog mit `XSTU` steht vorher | | |
+| 2b | Instrument mit Fremdsymbol (`BRK-B`) | erscheint im **Migrationsbericht** mit Grund und verlorenen Kurspunkten — nicht mehr als offene Zeile im Bestand | ✅ [^m] | |
+| 2b4 | Bericht und Ablehnung | entstehen in **derselben Transaktion**; ein zweiter Start dupliziert sie nicht; der Eintrag bleibt abrufbar, **nachdem** die aktive Zeile weg ist | ✅ [^n] | |
+| 2b5 | Auslieferung von Teil 2 | **zweiphasig:** Phase 1 erkennt die ausstehende Migration und rechnet vor, ohne etwas zu ändern; erst die Bestätigung löst sie aus. Gleichzeitigkeit im Commit genügt **nicht** — `init_db()` läuft im Lifespan, bevor das UI erreichbar ist | ✅ [^o] | |
+| 2b6 | Phase 1, serverseitig verriegelt — **Routentabellen-Test** | jeder Pfad der Allowlist (statische UI, `/health`, Healthcheck-Endpunkt, `/ready`, Vorschau, Bestätigung, Bericht) antwortet; je ein normaler **Lese-** und **Schreibpfad** (`/quote`, `/refresh`, `PUT`, `DELETE`) wird mit stabiler Kennung abgewiesen; DB und Vorschau bleiben unverändert | ✅ [^p] | |
+| 2b6b | `/ready` in Phase 1 | antwortet **`503`** mit `status: "migration_pending"`, unterscheidbar vom `503` bei unerreichbarer DB; `status` ist ein `Literal`, kein freier `str` | ✅ [^q] | |
+| 2b6e | `GET /operational` (neu) | `200`/`migration_pending` in Phase 1, `200`/`serving` im Normalbetrieb, `503`/`degraded` bei unerreichbarer DB. Der Docker-`HEALTHCHECK` zieht hierher um | ✅ [^r] | |
+| 2b6f | eine Routenquelle | Guard und Routentabellen-Test lesen **dieselbe** Allowlist-Konstante; ein Test vergleicht die `HEALTHCHECK`-URL im `Dockerfile` gegen genau diesen Pfad — sonst driften sie unbemerkt bis zum Deployment | ✅ [^s] | |
+| 2b6h | statische Dateien im Pending-Zustand | der Test **baut das Dashboard** und fordert **`GET /`** (belegt die geladene HTML) sowie *jede* real ausgelieferte Datei **rekursiv** an — insbesondere `/stockinfo-icon.svg` aus `index.html:6` und die Dateien unter `/assets`. Keine handgepflegte Kopie; unbekannte Pfade und Fach-APIs bleiben gesperrt | ⚠️ [^t] | |
+| 2b6j | `/` als URL-Alias | steht **ausdrücklich** in der Allowlist, als exakter Pfad und nie als Präfix, unter der Bedingung `index.html` im begrenzten `static_dir`. Fehlt `static_dir` ganz (lokal: Vorgabe `/app/web`), ist der statische Teil leer | ✅ [^u] | |
+| 2b6i | Vite-Dev-Proxy | `/migration`, `/operational` und `/ready` stehen in `apiPrefixes` (`dashboard/vite.config.ts:8-21`); ein Test belegt je Präfix eine **API-Antwort statt `index.html`** — der Fehler ist als `solved/T-04-vite-proxy-fehlende-praefixe.md` schon einmal passiert | ➖ [^v] | |
+| 2b6g | Diagnose-Verbraucher | `README.md:31-32` und `:202-205`, `docker/Dockerfile:71-75`, `app/main.py:70-76` und `tests/test_api.py:204-240` sind auf die **drei** Fragen abgeglichen; die widerlegte Restart-/Traffic-Begründung steht nirgends mehr | ◑ [^w] | |
+| 2b6c | Image-Test | Pending-Zustand überdauert `start-period` + 3 × `interval`; Healthcheck-Endpunkt bleibt `200`, `/ready` bleibt `503`, Vorschau und Bestätigung durchgehend erreichbar. **Keine** Restart-/Routing-Zusage — die gälte nur für eine konkrete Orchestrator-Konfiguration | ➖ [^x] | |
+| 2b6d | Bestätigung | gegen parallele und doppelte Aufrufe verriegelt; Scheduler und normale Endpunkte werden **genau einmal** freigegeben | ✅ [^y] | |
+| 2b7 | Vorschau, Bericht und Meldungen | **stabile Reason-Codes** statt freier Texte, DE/EN übersetzt — in Teil 2, nicht erst in Teil 4 | ◑ [^z] | |
+| 2b2 | nach erfolgreichem Start | Invariante `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`; kein Instrument-/Quote-Endpunkt serialisiert eine halbe Identität | ✅ [^aa] | |
+| 2b3 | Reihenfolge Katalog vor Migration | `GOLD.SG` migriert (257 Tageskurse bleiben), wird **nicht** abgelehnt — der Katalog mit `XSTU` steht vorher | ✅ [^ab] | |
 | ~~2c~~ | ~~derselbe Fall, manuelle Zuordnung~~ | **gestrichen** — der Symbolweg verlangt die Kombination künftig im Vertrag, damit entstehen die Fälle nicht mehr. Siehe Kasten „Die Handzuordnung ist gestrichen" | ➖ | |
 | 2d | Aufnahmefeld: nackter Ticker `AAPL` | 400, Text nennt beide Auswege mit Beispiel; `AAPL.XNAS` legt die Zeile `resolved` an | | |
 | 2d2 | `EUNL.DE` und `EUNL.XETR`, dazu `GOLD.SG` und `GOLD.XSTU` | je Paar **dieselbe** Identität *und* **derselbe** Provider-Alias; geprüft wird auch, womit die Quelle aufgerufen wurde | | |
@@ -301,6 +301,119 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     Konfliktreihenfolge ab; beide Treffer tragen denselben Yahoo-Code, allein
     das Suffix unterscheidet sie. **Mutationsgeprüft:** die alte
     Oder-Verknüpfung wieder eingesetzt → Test rot mit `'WRONG.DE' != 'RIGHT'`.
+
+<!-- Übergabe 2A — Migration, Backend -->
+
+[^m]: `tests/test_migration_apply.py::test_was_geht_hinterlaesst_seinen_bericht`
+    und `…::test_der_bericht_nennt_genug_zur_neuerfassung`. Der Eintrag trägt
+    Symbol, ISIN, Name, Börse, Gattung, Währung, Grund und **beide**
+    Kurspunktzahlen getrennt — `quotes` und `daily_closes` sind verschiedene
+    Dinge, und der gemessene Fall hängt an den Tagesschlüssen.
+[^n]: `tests/test_migration_apply.py`, vier Tests: Der Bericht überlebt die
+    gelöschte Zeile; ein Abbruch lässt **alles** stehen (Rollback-Test); ein
+    zweiter Lauf dupliziert nichts; die Kurspunkte der Bleibenden überleben.
+    Die Idempotenz ist **verhaltensmäßig** geprüft, nicht per `UNIQUE`: Eine
+    Eindeutigkeitsbedingung hätte denselben Test bestanden, ohne dass der Lauf
+    idempotent wäre.
+
+    **Dabei gefunden:** `executescript` setzt vor dem Ausführen ein `COMMIT`
+    ab — dokumentiertes `sqlite3`-Verhalten. Die Tabellenanlage hätte die
+    offene Transaktion beendet und „alles oder nichts" zu einer Zusage ohne
+    Deckung gemacht. Jetzt eine einzelne `execute`-Anweisung; der
+    Rollback-Test belegt es.
+[^o]: `tests/test_migration_plan.py::test_die_vorschau_schreibt_nicht` prüft an
+    einer **schreibgeschützten** Verbindung, dass Phase 1 nichts ändert —
+    mutationsgeprüft mit einer `ALTER TABLE`-Zeile, die den Test rot macht
+    (`attempt to write a readonly database`). Ein Test, der nur die Zeilen
+    hinterher vergleicht, hätte die Schemaänderung übersehen.
+
+    `tests/test_migration_endpoints.py::test_der_start_erkennt_den_ausstehenden_umzug`
+    fährt denselben Nachweis über den **echten Lifespan**.
+[^p]: `tests/test_migration_endpoints.py`: Der Routentabellen-Test zählt **aus
+    der Allowlist** auf (nicht aus einer Kopie) und fordert jeden Pfad
+    wirklich an; sechs Lese- **und** Schreibwege werden mit der stabilen
+    Kennung `migration_pending` abgewiesen, darunter `/quote`, `/refresh`,
+    `DELETE /instruments/1` und ausdrücklich auch die **Lese**wege
+    `/instruments` und `/exchanges`. `test_die_gesperrten_wege_lassen_die_datenbank_in_ruhe`
+    vergleicht die Vorschau vor und nach den abgewiesenen Requests.
+[^q]: `tests/test_migration_endpoints.py::test_ready_und_operational_beantworten_verschiedene_fragen`
+    samt Gegenprobe im Normalbetrieb — ohne sie bewiese der Test nur, dass
+    *irgendetwas* `503` sagt. `status` ist als `Literal` im Modell und damit
+    im OpenAPI-Vertrag.
+[^r]: Derselbe Test, plus `test_im_normalbetrieb_sagen_beide_ja`. Der
+    `HEALTHCHECK` ist auf `/operational` umgezogen; die widerlegte
+    Restart-/Traffic-Begründung im Dockerfile-Kommentar ist ersetzt.
+
+    **Scope-Abweichung, bewusst:** Der Schnitt hatte den Dockerfile bei 2B.
+    Er gehört zum Endpunkt — sonst liefert 2A einen Healthcheck-Endpunkt, den
+    niemand benutzt, während `/ready` im Pending-Zustand `503` sagt und den
+    Container als unhealthy markiert.
+[^s]: `tests/test_migration_endpoints.py::test_der_dockerfile_zeigt_auf_denselben_pfad`
+    liest die `HEALTHCHECK`-Zeile und vergleicht sie gegen `HEALTHCHECK_PATH`.
+    Der Dockerfile kann kein Python importieren, also kann er die Konstante
+    nicht teilen — geprüft werden kann er.
+[^t]: **Mit Einschränkung.** Der Test fordert `GET /` an (und belegt die
+    geladene Dashboard-HTML) sowie **jede real ausgelieferte Datei rekursiv**,
+    einschließlich `/stockinfo-icon.svg` und der Dateien unter `/assets`; dazu
+    die Gegenprobe, dass ein unbekannter Pfad gesperrt bleibt.
+
+    Was er **nicht** tut: das Dashboard selbst bauen. Er benutzt
+    `dashboard/dist`, wenn es da ist, und überspringt sonst. Auf einem frisch
+    ausgecheckten Baum ohne `make build` prüft er also nichts. Das steht hier,
+    statt die Zeile grün zu machen.
+
+    Beim ersten Anlauf kam `GET /` als **404** zurück, nicht als 503 — der
+    Guard ließ es durch, es war nur nichts gemountet, weil `main.py` beim
+    Import den Container-Pfad `/app/web` sieht. Ohne diesen Befund hätte der
+    Test „gesperrt" mit „gar nicht da" verwechselt und wäre grün geblieben.
+[^u]: `tests/test_migration_guard.py`, vier Tests: `/` nur bei vorhandener
+    `index.html`, als exakter Pfad und **nie** als Präfix (`/quote/EUNL.DE`
+    bleibt gesperrt); ohne Verzeichnis ist die Menge leer; ein Symlink aus dem
+    Verzeichnis hinaus wird nicht freigegeben — mutationsgeprüft.
+[^v]: **Nicht in 2A.** Der Vite-Proxy betrifft den Dev-Betrieb der
+    Oberfläche, und die kommt mit 2B. Ohne UI ruft niemand `/migration`
+    relativ auf.
+[^w]: **Teilweise.** `docker/Dockerfile` und die Docstrings in `app/main.py`
+    sind abgeglichen, die widerlegte Restart-/Traffic-Begründung steht dort
+    nicht mehr. **Offen:** `README.md:31-32` und `:202-205` sowie
+    `tests/test_api.py:204-240` — sie gehören zur Dokumentationsseite von 2B.
+[^x]: **Nicht in 2A.** Der Image-Test braucht ein gebautes Image und gehört
+    zu 2B.
+[^y]: Dass die Freigabe genau einmal gewinnt, ist mit acht Threads an einer
+    Barriere geprüft
+    (`tests/test_migration_guard.py::test_die_freigabe_gewinnt_genau_ein_aufrufer`),
+    und ein zweiter `POST /migration/confirm` bekommt `409`
+    (`…::test_eine_zweite_bestaetigung_laeuft_ins_leere`).
+
+    **Der Scheduler war zuerst vergessen.** Er startet im Lifespan, und der
+    ist längst durch, wenn der Benutzer bestätigt — nach einem bestätigten
+    Umzug wäre der Hintergrund-Refresh bis zum nächsten Neustart ausgeblieben.
+    Der Dienst hätte gesund ausgesehen, `/ready` hätte `ok` gesagt, und
+    trotzdem wäre kein einziger neuer Kurs gekommen. Aufgefallen ist es beim
+    Schreiben dieser Fußnote, nicht beim Bauen.
+
+    Behoben über `MigrationGate.on_release`: Der Lifespan hinterlegt den
+    Start, die Bestätigung ruft ihn. Ein Rückruf statt eines Imports, weil der
+    Endpunkt sonst `app.main` importieren müsste, das ihn selbst einbindet.
+    `…::test_die_bestaetigung_startet_den_scheduler` prüft beides — dass er
+    anläuft und dass ein zweiter Aufruf ihn nicht noch einmal startet.
+[^z]: **Teilweise.** Die Reason-Codes sind stabil und stehen an einer Stelle
+    (`app/migration.py`), Vorschau und Bericht teilen ein Antwortmodell, und
+    `tests/test_migration_plan.py` prüft jeden Code gegen eine ausgeschriebene
+    Erwartung. **Offen:** die DE/EN-Übersetzung — sie hat ohne UI keinen Ort.
+[^aa]: `tests/test_migration_apply.py::test_nach_dem_umzug_ist_die_halbe_identitaet_unmoeglich`
+    und `./_tickets/T-21-smoke.sh` `#2e`. Beide prüfen nicht nur, dass gerade
+    keine halbe Zeile **da** ist, sondern dass keine mehr **entstehen kann**:
+    Der `INSERT` ohne Identität muss scheitern. Eine Zählung
+    `COUNT(*) WHERE ticker IS NULL` hätte die schwächere Aussage getroffen.
+
+    Dass kein Endpunkt eine halbe Identität serialisiert, folgt daraus — es
+    gibt keine Zeile mehr, die es könnte.
+[^ab]: `./_tickets/T-21-smoke.sh --run` gegen eine Sicherung des **echten**
+    Bestands: `GOLD.SG` migriert zu `GOLD/XSTU` und behält seine **257**
+    Tagesschlusskurse, `VGWL.DE` seine 2234. Abgelehnt wird allein `VTI` mit
+    einem Kurspunkt. Genau die Bilanz aus dem Entwurf; das Original war
+    hinterher byte-identisch.
 [^h]: `./_tickets/T-21b-smoke.sh --run` — **sechs Checks live gegen das echte
     Netz**, auf frischen temporären Datenbanken, über den HTTP-Weg. Zwei
     Läufe, weil die Kaskade zwei Wege hat: `VGWL.DE → VGWL/XETR` über die

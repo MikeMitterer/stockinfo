@@ -50,12 +50,28 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if init_db(settings.database_path):
         get_gate().block()
 
-    scheduler: RefreshScheduler | None = None
-    if not get_gate().pending:
+    laufende: list[RefreshScheduler] = []
+
+    def scheduler_starten() -> None:
+        """Startet den Refresh — **einmal**, sobald der Betrieb freigegeben ist.
+
+        Nach einer Bestätigung zur Laufzeit ist der Lifespan längst durch.
+        Ohne diesen Weg liefe der Hintergrund-Refresh bis zum nächsten
+        Neustart nicht: Der Dienst sähe gesund aus und holte keine Kurse.
+        """
+        if laufende:
+            return
         scheduler = RefreshScheduler(
             get_cached_quote_service(), settings.refresh_interval_hours
         )
         scheduler.start()
+        laufende.append(scheduler)
+        logger.info("scheduler_started")
+
+    if get_gate().pending:
+        get_gate().on_release(scheduler_starten)
+    else:
+        scheduler_starten()
 
     logger.info(
         "app_started",
@@ -66,7 +82,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     try:
         yield
     finally:
-        if scheduler is not None:
+        get_gate().on_release(None)
+        for scheduler in laufende:
             scheduler.shutdown()
         logger.info("app_stopped")
 

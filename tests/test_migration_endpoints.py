@@ -272,6 +272,30 @@ def test_die_bestaetigung_fuehrt_aus_und_gibt_frei(pending: TestClient) -> None:
     assert nachher["rejected"][0]["reason"] == "symbol_without_exchange_suffix"
 
 
+def test_die_bestaetigung_startet_den_scheduler(pending: TestClient) -> None:
+    """`#2b6d`: Scheduler **und** Endpunkte werden freigegeben, genau einmal.
+
+    Der Scheduler läuft im Lifespan an — und der ist längst durch, wenn der
+    Benutzer bestätigt. Ohne einen eigenen Weg liefe der Hintergrund-Refresh
+    bis zum nächsten Neustart nicht: Der Dienst sähe gesund aus, `/ready`
+    sagte `ok`, und trotzdem käme kein einziger neuer Kurs. Genau die Sorte
+    Fehler, die niemand bemerkt, bis die Kurse zu alt sind.
+
+    Geprüft wird der Rückruf, nicht nur die Endpunktfreigabe — sonst bliebe
+    die Hälfte der Zusage ungeprüft.
+    """
+    gestartet: list[str] = []
+    get_gate().on_release(lambda: gestartet.append("scheduler"))
+
+    assert pending.post("/migration/confirm").status_code == 200
+
+    assert gestartet == ["scheduler"]
+
+    # Und **nicht** ein zweites Mal.
+    pending.post("/migration/confirm")
+    assert gestartet == ["scheduler"]
+
+
 def test_eine_zweite_bestaetigung_laeuft_ins_leere(pending: TestClient) -> None:
     """`#2b6d`: Freigegeben wird **genau einmal**.
 
