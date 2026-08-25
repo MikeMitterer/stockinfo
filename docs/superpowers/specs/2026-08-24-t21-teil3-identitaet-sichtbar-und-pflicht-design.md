@@ -880,6 +880,26 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 > nichts wiedergutzumachen außer dem Backup. Deshalb steht er hier und nicht in
 > einer Fußnote.
 
+> ### ⚠️ Korrektur des Schnitts, 2026-08-25 (Entscheidung Mike, vor 2A)
+>
+> **Der strengere `/quote?symbol=` wandert nach 2A**, das Vertragspaket bleibt
+> in Übergabe 3. Der Grund ist derselbe wie bei „Katalog vor Migration": eine
+> Reihenfolge, die sonst kaputte Daten oder kaputte Antworten erzeugt.
+>
+> 2A macht `ticker` und `mic` zu Pflichtspalten (`#2b2`). Derselbe Endpunkt
+> schreibt heute aber bewusst `(None, None)` — `app/services/quote_service.py`
+> ruft an zwei Stellen `split_symbol(symbol)` und legt für ein suffixloses
+> `AAPL` eine offene Zeile an. Zwischen 2A und Übergabe 3 wäre der Aufruf
+> deshalb kein sauberes `400`, sondern ein `500` an der NOT-NULL-Bedingung —
+> und Entscheidung 2 („keine halbe Identität, nirgends") wäre innerhalb von 2A
+> verletzt.
+>
+> **`core_version 2.0.0`, Vertragsartefakt und Snapshot bleiben in Übergabe
+> 3.** Das trägt dasselbe Argument, mit dem dieser Abschnitt 2A und 2B trennt:
+> Beide bleiben auf dem Feature-Branch, 2A wird nicht allein ausgeliefert.
+> Solange der Zweig nicht hinausgeht, ist nie ein Endpunkt öffentlich geändert
+> und zugleich unzugesagt.
+
 **Warum Teil 3 nicht teilbar ist:** Der strengere `/quote?symbol=` ändert einen
 Endpunkt **im** geschlossenen Core — eine Anfrage, die heute `200` liefert,
 liefert dann `400`. Käme der Versionssprung erst in Teil 4, wäre der Endpunkt

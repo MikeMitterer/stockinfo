@@ -118,6 +118,17 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > Schreibsperre entstehen; ein rohes `cp` einer aktiven WAL-Datenbank genügt
 > nicht.
 >
+> **Zuschnittsentscheidung Mike, 2026-08-25, vor Übergabe 2A:** Der strengere
+> `/quote?symbol=` wird **in 2A** gebaut, nicht erst in Übergabe 3. Grund:
+> 2A macht `ticker`/`mic` zu Pflichtspalten (`#2b2`), während derselbe
+> Endpunkt heute über `split_symbol` bewusst `(None, None)` schreibt
+> (`quote_service.py:178,231`) — dazwischen wäre `/quote?symbol=AAPL` kein
+> sauberes `400`, sondern ein `500` an der NOT-NULL-Bedingung.
+> **`core_version 2.0.0`, Vertragsartefakt und Snapshot bleiben in Übergabe
+> 3.** Das trägt dasselbe Argument, mit dem die Spec 2A und 2B trennt: Der
+> Branch geht dazwischen nicht hinaus, also ist nie ein Endpunkt öffentlich
+> geändert und zugleich unzugesagt.
+>
 > **Migrationsentscheidung Mike, 2026-08-24, nach Runde 16:** Eine nicht
 > auflösbare Altzeile darf **nirgendwo als `NULL`-Identität weiterleben** —
 > weder im aktiven `instruments`-Bestand noch im REST-Vertrag oder UI. Einfach
