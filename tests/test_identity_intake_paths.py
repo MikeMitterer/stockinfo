@@ -79,8 +79,7 @@ def client_and_repo(tmp_path: Path) -> Iterator[tuple[TestClient, QuoteRepositor
 def _row(repository: QuoteRepository, symbol: str) -> dict:
     with repository._connect() as connection:
         row = connection.execute(
-            "SELECT ticker, mic, identity_status, listing_id FROM instruments "
-            "WHERE symbol = ?",
+            "SELECT ticker, mic, listing_id FROM instruments WHERE symbol = ?",
             (symbol,),
         ).fetchone()
     return dict(row) if row else {}
@@ -101,7 +100,6 @@ def test_ein_zerlegbares_symbol_wird_zugeordnet(client_and_repo) -> None:
     assert _row(repository, "VGWL.DE") | {"listing_id": None} == {
         "ticker": "VGWL",
         "mic": "XETR",
-        "identity_status": "resolved",
         "listing_id": None,
     }
 
@@ -115,43 +113,56 @@ def test_auch_dieser_weg_vergibt_eine_listing_id(client_and_repo) -> None:
     assert _row(repository, "VGWL.DE")["listing_id"]
 
 
-def test_ein_suffixloses_symbol_bleibt_sichtbar_offen(client_and_repo) -> None:
-    """`AAPL` nennt keine Börse — und der Weg wird trotzdem nicht verweigert.
-
-    **Hier unterscheidet sich der Symbol-Weg bewusst vom ISIN-Weg.** Dort
-    wählt StockInfo aus mehreren Notierungen eine aus; eine halb geratene
-    Identität wäre eine Entscheidung, die niemand getroffen hat, also wird
-    abgelehnt. Hier nennt der Aufrufer das Listing selbst — ihm die Auskunft zu
-    verweigern, weil die Börsentabelle für suffixlose Symbole nur einen
-    Sammelcode führt, nähme ihm eine Abfrage weg, die heute funktioniert.
-
-    Die Zeile entsteht deshalb **offen und sichtbar**, mit demselben Status,
-    den die Migration vergibt. Teil 3 listet sie zur Zuordnung von Hand auf.
-    """
-    client, repository = client_and_repo
-
-    response = client.get("/quote", params={"symbol": "AAPL"})
-
-    assert response.status_code == 200
-    row = _row(repository, "AAPL")
-    assert (row["ticker"], row["mic"]) == (None, None)
-    assert row["identity_status"] == "legacy_unresolved"
-
-
-def test_eine_fremde_schreibweise_wird_auch_hier_nicht_uebernommen(
-    client_and_repo,
+@pytest.mark.parametrize(
+    ("symbol", "warum"),
+    [
+        ("AAPL", "nennt keine Börse"),
+        ("BRK-B.DE", "trägt Yahoos Schreibweise im Ticker"),
+    ],
+    ids=["suffixlos", "fremde_schreibweise"],
+)
+def test_ein_unzuordenbares_symbol_wird_abgelehnt(
+    client_and_repo, symbol: str, warum: str
 ) -> None:
-    """`BRK-B.DE` hat ein bekanntes Suffix — der Ticker bleibt trotzdem Yahoos.
+    """**Die Umkehr aus T-21 Teil 3** — hier stand das Gegenteil.
 
-    Ohne diese Zeile könnte der Symbol-Weg eine Schreibweise in das kanonische
-    Feld schreiben, die der ISIN-Weg zurückweist.
+    Der Test hieß „bleibt sichtbar offen" und begründete das so: Auf dem
+    ISIN-Weg wähle StockInfo aus mehreren Notierungen eine aus, eine halb
+    geratene Identität wäre also eine Entscheidung, die niemand getroffen hat.
+    Hier nenne der Aufrufer das Listing dagegen selbst; ihm die Auskunft zu
+    verweigern, nähme ihm eine Abfrage weg, die funktioniert.
+
+    **Das Argument hielt nicht.** Genau dieser Weg war die Quelle, die
+    dauerhaft offene Zeilen nachlieferte — und `get_quote_for_known` schloss
+    sie nie, weil es nicht auflöst, sondern Kurse holt. Der Bestand füllte
+    sich also schneller mit halben Identitäten, als eine Migration sie
+    aufräumen konnte.
+
+    Geraten wird weiterhin nicht. Neu ist nur, dass das Nichtwissen zu einer
+    **Ablehnung** führt statt zu einer Zeile, die es konserviert.
     """
     client, repository = client_and_repo
 
-    client.get("/quote", params={"symbol": "BRK-B.DE"})
+    response = client.get("/quote", params={"symbol": symbol})
 
-    row = _row(repository, "BRK-B.DE")
-    assert (row["ticker"], row["mic"]) == (None, None)
+    assert response.status_code == 400, warum
+    assert _row(repository, symbol) == {}, "eine halbe Zeile ist entstanden"
+
+
+def test_die_ablehnung_nennt_beide_auswege(client_and_repo) -> None:
+    """Ein `400`, das nur „geht nicht" sagt, ist eine Sackgasse.
+
+    Der Benutzer hat zwei Möglichkeiten, und beide gehören in den Text: das
+    Provider-Suffix und den echten MIC. Die ISIN wird als zuverlässigster Weg
+    genannt, weil sie ohne Kenntnis der Schreibweise auskommt.
+    """
+    client, _ = client_and_repo
+
+    detail = client.get("/quote", params={"symbol": "AAPL"}).json()["detail"]
+
+    assert "EUNL.DE" in detail
+    assert "EUNL.XETR" in detail
+    assert "ISIN" in detail
 
 
 def test_ein_bekanntes_papier_wird_beim_naechsten_kurs_nachgetragen(
@@ -167,24 +178,30 @@ def test_ein_bekanntes_papier_wird_beim_naechsten_kurs_nachgetragen(
     Genau diese Lücke hatte ich in Runde 2 als „Nachtrag passiert nur auf dem
     ISIN-Weg" ins Ticket geschrieben. Sie gehört nicht in eine Fußnote,
     sondern behoben: Die Rechnung ist dieselbe und kostet nichts.
+
+    **Der Aufbau musste wechseln.** Vorher stand hier eine Zeile *ohne*
+    Identität — der Zustand, den die alte Migration hinterließ. Den gibt es
+    seit T-21 Teil 3 nicht mehr; `NOT NULL` lässt ihn nicht entstehen. Geprüft
+    wird deshalb der Fall, den es weiterhin gibt: eine **überholte**
+    Zuordnung. Der geprüfte Weg ist derselbe, und die Zusage auch — was
+    `get_quote_for_known` über die Identität weiß, trägt es nach.
     """
     client, repository = client_and_repo
-    # Der Zustand, den die Migration für ein unzerlegbares Symbol hinterlässt —
-    # hier absichtlich für ein zerlegbares gesetzt, wie ihn der Symbol-Weg vor
-    # dieser Runde erzeugt hat.
+    # Eine Zuordnung, die nicht mehr zum Symbol passt: `EUNL.DE` liegt an
+    # Xetra, nicht in Mailand. So sieht die Zeile aus, nachdem jemand die
+    # Vorzugsbörse umgestellt hat und dasselbe Papier neu aufgelöst wurde.
     with repository._connect() as connection:
         connection.execute(
             "INSERT INTO instruments (isin, symbol, first_seen, listing_id, "
-            "identity_status) VALUES (?, ?, ?, ?, ?)",
+            "ticker, mic) VALUES (?, ?, ?, ?, ?, ?)",
             ("IE00B4L5Y983", "EUNL.DE", "2026-08-01T00:00:00+00:00", "alt-1",
-             "legacy_unresolved"),
+             "EUNL", "XMIL"),
         )
 
     client.get("/quote", params={"symbol": "EUNL.DE"})
 
     row = _row(repository, "EUNL.DE")
     assert (row["ticker"], row["mic"]) == ("EUNL", "XETR")
-    assert row["identity_status"] == "resolved"
     assert row["listing_id"] == "alt-1", "die dauerhafte Kennung bleibt"
 
 

@@ -62,6 +62,24 @@ class QuoteUnavailableError(Exception):
     """Es konnte kein aktueller Kurs beschafft werden."""
 
 
+class UnresolvableSymbolError(Exception):
+    """Aus diesem Symbol lässt sich keine kanonische Identität gewinnen.
+
+    **Ein Eingabefehler, kein Ausfall.** Der Aufrufer hat ein Symbol genannt,
+    das seine Börse nicht nennt (`AAPL`) oder eine fremde Schreibweise trägt
+    (`BRK-B.DE`). Beides ist behebbar, und die Meldung sagt wie — deshalb
+    nennt sie **beide** zulässigen Formen und nicht nur, dass etwas fehlt.
+    """
+
+    def __init__(self, symbol: str) -> None:
+        super().__init__(
+            f"'{symbol}' nennt keinen eindeutigen Handelsplatz. "
+            "Zulässig sind das Provider-Suffix (z.B. 'EUNL.DE') oder der "
+            "echte MIC (z.B. 'EUNL.XETR'); am zuverlässigsten ist die ISIN."
+        )
+        self.symbol = symbol
+
+
 def ensure_core_complete(response: QuoteResponse) -> None:
     """Wirft, wenn ein Pflichtfeld des Core-Vertrags leer ist.
 
@@ -164,18 +182,21 @@ class QuoteService:
         """
         # Die Identität kann hier nicht aus einer Auflösung kommen — es gibt
         # keine ISIN zu fragen. Sie entsteht aus dem Symbol selbst, mit
-        # derselben Rechnung, mit der die Migration den Bestand zerlegt hat
-        # (T-21). Ohne diese beiden Zeilen legte der Symbol-Weg auch das
-        # eindeutig zerlegbare `VGWL.DE` als offenen Fall an.
+        # derselben Rechnung, mit der der Umzug den Bestand zerlegt.
         #
-        # Bleibt das Symbol unzerlegbar (`AAPL`, `BRK-B.DE`), wird **nicht**
-        # geraten: `split_symbol` liefert dann `(None, None)`, die Zeile
-        # entsteht sichtbar offen. Anders als auf dem ISIN-Weg wird sie aber
-        # nicht abgelehnt — dort wählt StockInfo eine Notierung aus mehreren
-        # aus, hier nennt der Aufrufer sie selbst. Ihm die Auskunft zu
-        # verweigern, weil die Börsentabelle für suffixlose Symbole nur einen
-        # Sammelcode führt, nähme ihm eine Abfrage weg, die es heute gibt.
+        # **Bleibt das Symbol unzerlegbar, wird abgelehnt.** Hier stand bis
+        # T-21 Teil 3 das Gegenteil: Die Zeile entstand „sichtbar offen", mit
+        # dem Argument, der Aufrufer nenne das Listing ja selbst. Das Argument
+        # hielt nicht — dieser Weg war die Quelle, die dauerhaft offene Zeilen
+        # nachlieferte, und `get_quote_for_known` schloss sie nie, weil es
+        # nicht auflöst, sondern Kurse holt. Seit eine halbe Identität nirgends
+        # mehr weiterleben darf, ist Ablehnen der einzige ehrliche Ausgang.
+        #
+        # Geraten wird weiterhin nicht: `AAPL` bekommt keinen erfundenen MIC.
         ticker, mic = split_symbol(symbol)
+        if not ticker or not mic:
+            raise UnresolvableSymbolError(symbol)
+
         resolved = ResolvedInstrument(symbol=symbol, ticker=ticker, mic=mic)
         return self._build(resolved, enrich_etf)
 

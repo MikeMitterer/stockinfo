@@ -13,7 +13,11 @@ from app.models import DailyPoint, QuotePoint, QuoteResponse
 from app.routers.validation import IsinPath, SymbolPath, TimeRange, normalize_symbol
 from app.services.daily_history import DailyHistoryService
 from app.services.quote_cache import CachedQuoteService
-from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
+from app.services.quote_service import (
+    InstrumentNotFoundError,
+    QuoteUnavailableError,
+    UnresolvableSymbolError,
+)
 
 router = APIRouter(tags=["quotes"])
 
@@ -30,10 +34,20 @@ def quote_by_symbol(
         str, Query(description="Vollständiges Yahoo-Symbol inkl. Suffix, z.B. VGWL.DE")
     ],
 ) -> QuoteResponse:
-    """Liefert den Kurs zu einem vollständigen Yahoo-Symbol."""
+    """Liefert den Kurs zu einem vollständigen Yahoo-Symbol.
+
+    Das Symbol muss seinen Handelsplatz nennen. `AAPL` allein tut das nicht —
+    suffixlos notiert bei Yahoo ein ganzer Markt, und welcher der fünf
+    US-Plätze gemeint ist, weiß erst das aufgelöste Listing. Solche Anfragen
+    werden **abgelehnt** statt mit einer halben Identität gespeichert.
+    """
     symbol = normalize_symbol(symbol)
     try:
         return service.get_by_symbol(symbol)
+    except UnresolvableSymbolError as exc:
+        # 400 und nicht 502: Der Aufrufer kann es besser machen, und der Text
+        # sagt ihm wie. Ein 502 behauptete einen Ausfall, den es nicht gab.
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
     except QuoteUnavailableError as exc:
         raise HTTPException(status_code=502, detail=f"Kein Kurs für {symbol}") from exc
 
