@@ -74,6 +74,38 @@ Abweichungen:
 `handoff_commit` eintragen — und danach ausschließlich `_tickets/` anfassen.
 Eine nachgezogene Statuszeile im Entwurf ist Inhalt, keine Formalie.
 
+### Konvergenzprüfung statt starrer Rundengrenze
+
+Mehrere Entwurfsrunden sind kein Qualitätsmerkmal und ihre Anzahl allein ist
+auch kein Abbruchgrund. Als **grober Richtwert** lösen ungefähr drei
+aufeinanderfolgende inhaltlich erfolglose Reviews desselben Entwurfsscope eine
+ausdrückliche Konvergenzprüfung aus. Ein formaler Handoff-Blocker zählt dabei
+nicht als inhaltlich erfolglose Runde.
+
+Der Reviewer beantwortet dann im Review knapp:
+
+1. Sind die Grundentscheidungen stabil und alle betroffenen Schichten
+   inventarisiert?
+2. Ist der verbleibende Rest konkret, klein und abschließend benennbar?
+3. Fehlt weder eine Produktentscheidung noch ein weiterer unabhängiger Scope?
+4. Warum ist eine weitere Korrekturrunde voraussichtlich die letzte — oder
+   warum wäre diese Annahme nicht belastbar?
+
+Sind Rest und Abschlussweg konkret, ist auch eine vierte oder weitere Runde
+zulässig. Der Richtwert ist **keine absolute Grenze**. Je länger die Schleife
+läuft, desto konkreter muss jedoch die Begründung für eine weitere punktuelle
+Korrektur sein. Ist keine belastbare Konvergenz absehbar, endet die
+Patch-Schleife: Claude erstellt eine konsolidierte Neufassung oder verkleinert
+den Scope auf ein beobachtbares Ergebnis. Eine neue Grundentscheidung löst
+dieselbe Neubewertung sofort aus; abhängige alte Aussagen, Tests und
+Verify-Markierungen werden nicht nur mit Nachträgen überklebt.
+
+Die Konvergenzprüfung ändert die Rollen nicht. Ein technischer Rebaseline- oder
+Split-Auftrag bleibt `changes_requested` mit `owner: claude`. `blocked` und
+`owner: mike` gelten weiterhin ausschließlich für ein echtes Hindernis oder
+eine tatsächlich notwendige Produktentscheidung. Nach jeder weiteren
+inhaltlich erfolglosen Entwurfsrunde wird die Konvergenz erneut beurteilt.
+
 ## Der Übergabe-Riegel — `ready_for_codex` steht zuletzt
 
 *(Ergänzt 2026-08-24, nach einer Race Condition in Runde 15.)*
@@ -189,6 +221,13 @@ task-verification-workflow und code-standards.
    zur Ausführung freigegeben; führe das zum Ticket gehörende Skript ohne
    erneute fachliche Rückfrage aus, nachdem du es auf sichere Ziel- und
    Cleanup-Grenzen geprüft hast.
+   - bei einer reinen Entwurfsübergabe nach ungefähr drei aufeinanderfolgenden
+     inhaltlich erfolglosen Reviews desselben Scope die Konvergenzprüfung
+     dieses Dokuments. Drei Runden sind ein Richtwert, keine harte Grenze.
+     Erlaube eine weitere punktuelle Runde, wenn Rest und Abschlussweg konkret
+     und voraussichtlich abschließend sind; verlange sonst Rebaseline oder
+     Scope-Verkleinerung. Wiederhole diese Bewertung nach jeder weiteren
+     erfolglosen Entwurfsrunde.
    Verlasse dich nicht auf Claudes Zusammenfassung oder grüne Tests allein.
 6. Verändere niemals Produktcode, die Human-Spalte, bestehende
    Nutzeränderungen oder den Git-Verlauf. Kein reset, checkout --, amend,
@@ -229,7 +268,7 @@ Ausstieg wird der Loop gelöscht; dieser Abschnitt hält ihn wiederherstellbar.
 
 1. Lies _tickets/STATUS.md, _tickets/CODEX-REVIEW-AUTOMATION.md und _tickets/CLAUDE-REVIEW-PATTERNS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis.
 2. Ist `owner` nicht `claude`: veraendere keine Datei, antworte in einer Zeile mit Phase und Owner, Schluss.
-3. Bei `phase: changes_requested`: Arbeite die Findings aus INBOX -> Claude der Reihe nach ab, schwerste zuerst. Jedes Finding einzeln verifizieren statt der Zusammenfassung glauben; behauptete Vollstaendigkeit mit rg belegen. Vor dem ersten Edit auf einem Feature-Branch `t-NN-<slug>` sein. Danach relevante Pytests, das Ticket-Smoke-Script `./_tickets/T-*.sh --run` und `make test` laufen lassen und die Ergebnisse mit Zahlen nennen. Dann genau EIN Uebergabe-Commit, INBOX leeren, Ergebnis nach OUTBOX -> Codex, `review_round` +1, `phase: ready_for_codex`, `owner: codex`, `updated_at` auf heute. Danach keinen Produktcode mehr anfassen.
+3. Bei `phase: changes_requested`: Arbeite die Findings aus INBOX -> Claude der Reihe nach ab, schwerste zuerst. Jedes Finding einzeln verifizieren statt der Zusammenfassung glauben; behauptete Vollstaendigkeit mit rg belegen. Bei wiederholter Entwurfsnacharbeit gilt die Konvergenzpruefung dieses Dokuments: ungefaehr drei erfolglose Runden sind ein Richtwert, keine harte Grenze. Ist eine weitere punktuelle Runde konkret und voraussichtlich abschliessend, begruende das mit dem vollstaendigen Restumfang in der OUTBOX. Verlangt das Review Rebaseline oder Scope-Verkleinerung, korrigiere nicht weiter lokal, sondern konsolidiere beziehungsweise schneide neu. Vor dem ersten Edit auf einem Feature-Branch `t-NN-<slug>` sein. Danach relevante Pytests, das Ticket-Smoke-Script `./_tickets/T-*.sh --run` und `make test` laufen lassen und die Ergebnisse mit Zahlen nennen. Dann genau EIN Uebergabe-Commit, INBOX leeren, Ergebnis nach OUTBOX -> Codex, `review_round` +1, `phase: ready_for_codex`, `owner: codex`, `updated_at` auf heute. Danach keinen Produktcode mehr anfassen.
 4. Bei `phase: approved`: Ticket NICHT nach solved/ verschieben, das macht Mike. Naechsten Teil des Tickets beginnen, eigener Branch vor dem ersten Edit, `phase: claude_working`.
 5. Bei `phase: claude_working`: die begonnene Arbeit fortsetzen, sonst wie Punkt 3 uebergeben.
 6. Bei `phase: blocked` oder wenn eine Entscheidung von Mike noetig ist: nichts weiterschreiben, in einer Zeile melden, `owner: mike` lassen und den Loop stoppen.

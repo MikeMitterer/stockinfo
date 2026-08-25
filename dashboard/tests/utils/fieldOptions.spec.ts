@@ -4,11 +4,14 @@ import { buildFieldOptions } from '../../src/utils/fieldOptions'
 import type { ExchangesResponse } from '../../src/types'
 import { makeInstrument } from '../fixtures/instrument'
 
+const core = { kind: 'core' as const, id: null }
+
 const exchanges: ExchangesResponse = {
   default_exchange: 'XETR',
-  exchanges: [
-    { mic: 'XETR', suffix: '.DE', name: 'Xetra', region: 'germany', currency: 'EUR' },
-    { mic: 'XLON', suffix: '.L', name: 'London', region: 'europe', currency: 'GBp' },
+  default_exchange_kind: 'exchange',
+  catalog: [
+    { kind: 'exchange', mic: 'XETR', alias: 'DE', name: 'Xetra', region: 'germany', currency: 'EUR', provenance: core },
+    { kind: 'exchange', mic: 'XLON', alias: 'L', name: 'London', region: 'europe', currency: 'GBp', provenance: core },
   ],
 }
 

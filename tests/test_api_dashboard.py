@@ -3,6 +3,7 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
+from app.config import Settings, get_settings
 from app.container import get_cached_quote_service, get_quote_analyzer
 from app.main import app
 from app.models import AnalyzeResult, AnalyzeStage, QuoteResponse
@@ -130,13 +131,57 @@ def test_analyze_verlangt_genau_eine_kennung(client: TestClient) -> None:
     assert client.get("/analyze?isin=IE00B4L5Y983&symbol=EUNL.DE").status_code == 422
 
 
-def test_exchanges_liefert_welttabelle_und_default(client: TestClient) -> None:
+def test_exchanges_liefert_den_katalog_und_die_vorgabe(client: TestClient) -> None:
+    """Der Katalog trägt seit T-21 Teil 3 zwei Eintragsarten.
+
+    Die Liste heißt deshalb `catalog` und nicht mehr `exchanges` — sonst hieße
+    eine Liste mit Sammelcodes darin weiterhin „Börsen".
+    """
     body = client.get("/exchanges").json()
+
     assert body["default_exchange"] == "XETR"
-    mics = {e["mic"]: e for e in body["exchanges"]}
-    assert mics["XTSE"]["suffix"] == ".TO"
-    assert mics["US"]["suffix"] == ""  # kein Suffix
-    assert mics["XETR"]["currency"] == "EUR"
+    assert body["default_exchange_kind"] == "exchange"
+
+    boersen = {e["mic"]: e for e in body["catalog"] if e["kind"] == "exchange"}
+    assert boersen["XTSE"]["alias"] == "TO"
+    assert boersen["XSTU"]["alias"] == "SG"
+    assert boersen["XETR"]["currency"] == "EUR"
+    assert boersen["XNAS"]["alias"] == ""
+
+
+def test_kein_katalogeintrag_serialisiert_einen_sammelcode_als_mic(
+    client: TestClient,
+) -> None:
+    """Der Vertragstest zur Trennung — hier wäre der alte Fehler sichtbar.
+
+    Bis Teil 3 lieferte dieser Endpunkt ``mic="US"`` aus: einen Wert, den
+    `is_real_mic` im selben Backend ablehnt. Ein Konsument, der ihn übernahm,
+    erzeugte genau die halbe Identität, die T-21 austreibt.
+    """
+    body = client.get("/exchanges").json()
+
+    sammelcodes = [e for e in body["catalog"] if e["kind"] == "collector"]
+    assert [e["code"] for e in sammelcodes] == ["US"]
+    assert set(sammelcodes[0]["members"]) == {"XNAS", "XNYS", "ARCX", "XASE", "BATS"}
+    assert all("mic" not in e for e in sammelcodes)
+    assert all(e["mic"] != "US" for e in body["catalog"] if e["kind"] == "exchange")
+
+
+def test_der_sammelcode_bleibt_eine_zulaessige_vorgabe(client: TestClient) -> None:
+    """`US` hat die Börsentabelle verlassen, nicht die Konfiguration.
+
+    Ohne diese Zeile wäre die Trennung ein Rückschritt: Der Vorgabewert `US`
+    ist dokumentiert und muss weiterhin gelten — er heißt jetzt nur
+    ausdrücklich `collector` statt heimlich `mic`.
+    """
+    app.dependency_overrides[get_settings] = lambda: Settings(default_exchange="US")
+    try:
+        body = client.get("/exchanges").json()
+    finally:
+        app.dependency_overrides.pop(get_settings, None)
+
+    assert body["default_exchange"] == "US"
+    assert body["default_exchange_kind"] == "collector"
 
 
 def test_analyze_liefert_stages(client: TestClient) -> None:

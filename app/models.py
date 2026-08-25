@@ -1,5 +1,7 @@
 """Pydantic-Response-Modelle der API."""
 
+from typing import Annotated, Literal
+
 from pydantic import BaseModel, Field
 
 
@@ -259,14 +261,55 @@ class EnvInfo(BaseModel):
     yahoo_url: str = ""
 
 
-class ExchangeInfo(BaseModel):
-    """Eine auflösbare Börse (aus der Backend-Tabelle)."""
+class Provenance(BaseModel):
+    """Woher ein Katalogeintrag stammt.
 
+    Heute steht hier immer ``core``. Typisiert statt als bloßer String, damit
+    T-30 später ``{"kind": "plugin", "id": …}` ergänzen kann, **ohne** den
+    Antworttyp zu ändern.
+    """
+
+    kind: Literal["core", "plugin"] = "core"
+    id: str | None = None
+
+
+class ExchangeEntry(BaseModel):
+    """Ein **Handelsplatz** im Katalog — hat einen echten MIC.
+
+    ``alias`` ist das nackte Token ohne Punkt, das die aktive Kursquelle an den
+    Ticker hängt; leer bei den US-Plätzen. Genau ein Alias je Börse: Die zweite
+    zulässige Eingabeform ist der kanonische MIC selbst.
+    """
+
+    kind: Literal["exchange"] = "exchange"
     mic: str
-    suffix: str
+    alias: str
     name: str
     region: str
     currency: str
+    provenance: Provenance = Provenance()
+
+
+class CollectorEntry(BaseModel):
+    """Ein **Sammelcode** im Katalog — mehrere Handelsplätze, kein MIC.
+
+    Bewusst ein eigener Typ und **kein** `mic`-Feld: Bis T-21 Teil 3 lag `US`
+    in derselben Liste wie die Börsen und wurde als ``mic="US"`` ausgeliefert —
+    ein Wert, den `is_real_mic` im Backend selbst ablehnt. Ein Konsument, der
+    ihn übernahm, erzeugte genau die halbe Identität, die dieses Ticket
+    austreibt.
+    """
+
+    kind: Literal["collector"] = "collector"
+    code: str
+    name: str
+    region: str
+    currency: str
+    members: list[str]
+    provenance: Provenance = Provenance()
+
+
+CatalogEntry = Annotated[ExchangeEntry | CollectorEntry, Field(discriminator="kind")]
 
 
 class FxRate(BaseModel):
@@ -283,10 +326,21 @@ class FxRate(BaseModel):
 
 
 class ExchangesResponse(BaseModel):
-    """Weltweite Börsentabelle + die konfigurierte Default-Börse der Instanz."""
+    """Der Börsenkatalog + die konfigurierte Vorgabe der Instanz.
+
+    Die Liste heißt `catalog` und nicht mehr `exchanges`: Sie trägt seit T-21
+    Teil 3 **zwei** Eintragsarten, und eine heterogene Liste `exchanges` zu
+    nennen, während Sammelcodes darin stehen, wäre dieselbe Unehrlichkeit wie
+    das frühere ``mic="US"``.
+
+    `default_exchange_kind` sagt, was der Vorgabewert **ist** — ein
+    Handelsplatz oder ein Sammelcode. Ohne diese Auskunft müsste jeder
+    Konsument beide Listen durchsuchen und sich seine eigene Regel bauen.
+    """
 
     default_exchange: str
-    exchanges: list[ExchangeInfo]
+    default_exchange_kind: Literal["exchange", "collector", "unknown"]
+    catalog: list[CatalogEntry]
 
 
 class RefreshResult(BaseModel):

@@ -86,6 +86,7 @@ export const de = {
     colRegion: 'Region',
     colCurrency: 'Währung',
     noSuffix: '(ohne)',
+    collector: 'Sammelcode',
     default: 'Standard',
     penceNote: 'oft Pence (1/100 GBP)!',
     regions: {

@@ -11,7 +11,7 @@ Währung.
 
 import pytest
 
-from app.exchanges import COLLECTOR_CODES, EXCHANGES, ExchangeDef, is_real_mic
+from app.exchanges import COLLECTOR_CODES, COLLECTORS, EXCHANGES, ExchangeDef, is_real_mic
 from app.providers.openfigi_provider import figi_lookup
 
 
@@ -48,7 +48,7 @@ def test_die_boersentabelle_traegt_kein_anbieterwissen_mehr() -> None:
     """
     fields = set(ExchangeDef.__dataclass_fields__)
 
-    assert fields == {"suffix", "name", "region", "currency"}
+    assert fields == {"alias", "name", "region", "currency"}
 
 
 def test_der_sammelcode_ist_ausdruecklich_benannt() -> None:
@@ -63,10 +63,17 @@ def test_der_sammelcode_ist_ausdruecklich_benannt() -> None:
 
 
 @pytest.mark.parametrize("code", sorted(COLLECTOR_CODES))
-def test_jeder_sammelcode_steht_auch_in_der_boersentabelle(code: str) -> None:
-    """Sonst wäre die Liste ein toter Buchstabe.
+def test_kein_sammelcode_steht_in_der_boersentabelle(code: str) -> None:
+    """Umgekehrt seit T-21 Teil 3 — und das ist der Kern der Trennung.
 
-    Ein Sammelcode, den `EXCHANGES` nicht führt, kann nirgends auftauchen —
-    dann fehlt entweder die Zeile oder der Eintrag ist übrig geblieben.
+    Bis dahin verlangte dieser Test das **Gegenteil**: Ein Sammelcode musste
+    in `EXCHANGES` stehen, sonst sei er „ein toter Buchstabe". Die Begründung
+    war richtig, die Schlussfolgerung falsch — er stand dort nicht als Börse,
+    sondern damit ihn irgendjemand findet. Deshalb lieferte `GET /exchanges`
+    ihn als ``mic="US"`` aus, einen Wert, den `is_real_mic` nebenan ablehnt.
+
+    Gefunden wird er jetzt über `COLLECTORS`; ein toter Buchstabe ist er damit
+    nicht, aber auch kein Handelsplatz mehr.
     """
-    assert code in EXCHANGES
+    assert code not in EXCHANGES
+    assert code in COLLECTORS

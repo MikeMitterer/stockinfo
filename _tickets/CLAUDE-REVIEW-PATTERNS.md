@@ -31,10 +31,12 @@ erzwingen und klare Grenzen setzen:
    Mehrere unabhängig lieferbare Regeln werden vor dem Review getrennt; ein
    vertikaler Schnitt darf mehrere Schichten berühren, muss aber als eine
    durchgehende Kette prüfbar bleiben.
-2. **Runden-Grenze:** Nach spätestens drei nicht erfolgreichen
-   Entwurfsrunden endet die punktuelle Reparaturschleife. Der Reviewer verlangt
-   eine konsolidierte Neufassung oder einen kleineren Zuschnitt, statt nur den
-   nächsten lokalen Widerspruch zu melden.
+2. **Runden-Leitplanke:** Ungefähr drei nicht erfolgreiche Entwurfsrunden sind
+   ein Richtwert für eine ausdrückliche Konvergenzprüfung, keine absolute
+   Grenze. Eine weitere Runde ist sinnvoll, wenn Rest und Abschlussweg konkret,
+   klein und voraussichtlich abschließend sind; andernfalls verlangt der
+   Reviewer eine konsolidierte Neufassung oder einen kleineren Zuschnitt.
+   Nach jeder weiteren erfolglosen Runde wird neu bewertet.
 3. **Entscheidungs-Grenze:** Eine neue Grundentscheidung invalidiert alle
    davon abhängigen Aussagen, Tests und Verify-Markierungen. Der Entwurf wird
    auf eine neue Basis gestellt; alte Regeln werden nicht mit Warnungen,

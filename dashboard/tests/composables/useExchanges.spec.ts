@@ -9,12 +9,22 @@ afterEach(() => vi.unstubAllGlobals())
 describe('useExchanges', () => {
   it('lädt die Börsentabelle', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(
-      JSON.stringify({ default_exchange: 'XETR', exchanges: [{ mic: 'XETR', suffix: '.DE', name: 'Xetra', region: 'germany', currency: 'EUR' }] }),
+      JSON.stringify({
+        default_exchange: 'XETR',
+        default_exchange_kind: 'exchange',
+        catalog: [{
+          kind: 'exchange', mic: 'XETR', alias: 'DE', name: 'Xetra',
+          region: 'germany', currency: 'EUR',
+          provenance: { kind: 'core', id: null },
+        }],
+      }),
       { status: 200 },
     )))
     const { data, load } = useExchanges()
     await load()
     expect(data.value?.default_exchange).toBe('XETR')
-    expect(data.value?.exchanges[0].mic).toBe('XETR')
+    expect(data.value?.default_exchange_kind).toBe('exchange')
+    const erste = data.value?.catalog[0]
+    expect(erste?.kind === 'exchange' && erste.mic).toBe('XETR')
   })
 })

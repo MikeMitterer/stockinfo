@@ -10,6 +10,8 @@ import type { ExchangesResponse } from '../types'
  */
 export function currenciesFromExchanges(data: ExchangesResponse | null): string[] {
   if (!data) return []
-  const codes = data.exchanges.map((ex) => (ex.currency === 'GBp' ? 'GBP' : ex.currency))
+  const codes = data.catalog.map((entry) =>
+    entry.currency === 'GBp' ? 'GBP' : entry.currency,
+  )
   return [...new Set(codes)].sort()
 }

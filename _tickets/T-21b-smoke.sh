@@ -262,8 +262,8 @@ checkExchangeTablePath() {
     _COMPOSED="$("${VENV_PY}" -c '
 import sys
 sys.path.insert(0, sys.argv[3])
-from app.exchanges import EXCHANGES
-print(f"{sys.argv[1]}{EXCHANGES[sys.argv[2]].suffix}")
+from app.exchanges import provider_alias
+print(provider_alias(sys.argv[1], sys.argv[2]))
 ' "${_TICKER}" "${_MIC}" "${PROJECT_ROOT}")"
 
     if [[ "${_COMPOSED}" == "${_SYMBOL}" ]]; then

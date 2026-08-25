@@ -12,8 +12,9 @@ from app.config import Settings, get_settings
 from app.container import get_cached_quote_service, get_quote_analyzer
 from app.models import (
     AnalyzeResult,
+    CollectorEntry,
     EnvInfo,
-    ExchangeInfo,
+    ExchangeEntry,
     ExchangesResponse,
     InstrumentOverrides,
     InstrumentSummary,
@@ -21,7 +22,7 @@ from app.models import (
     QuoteResponse,
     RefreshResult,
 )
-from app.exchanges import EXCHANGES
+from app.exchanges import COLLECTORS, EXCHANGES, preference_kind
 from app.routers.validation import (
     IsinPath,
     SymbolPath,
@@ -74,11 +75,28 @@ def exchanges(settings: SettingsDep) -> ExchangesResponse:
     """Gibt die weltweite Börsentabelle und die konfigurierte Default-Börse zurück."""
     return ExchangesResponse(
         default_exchange=settings.default_exchange,
-        exchanges=[
-            ExchangeInfo(
-                mic=mic, suffix=d.suffix, name=d.name, region=d.region, currency=d.currency
-            )
-            for mic, d in EXCHANGES.items()
+        default_exchange_kind=preference_kind(settings.default_exchange) or "unknown",
+        catalog=[
+            *(
+                ExchangeEntry(
+                    mic=mic,
+                    alias=d.alias,
+                    name=d.name,
+                    region=d.region,
+                    currency=d.currency,
+                )
+                for mic, d in EXCHANGES.items()
+            ),
+            *(
+                CollectorEntry(
+                    code=code,
+                    name=c.name,
+                    region=c.region,
+                    currency=c.currency,
+                    members=list(c.members),
+                )
+                for code, c in COLLECTORS.items()
+            ),
         ],
     )
 

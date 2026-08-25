@@ -31,9 +31,19 @@ _TICKER_PATTERN = re.compile(r"[A-Z0-9]+")
 
 @dataclass(frozen=True)
 class ExchangeDef:
-    """Definition einer Börse: Suffix, Anzeige, Region, Währung.
+    """Definition einer **Börse**: Alias, Anzeige, Region, Währung.
 
     ``currency`` ist nur Anzeige — die reale Kurswährung stammt aus dem Live-Quote.
+
+    ``alias`` ist das **nackte Token ohne Punkt** (``'DE'``, ``'SG'``, ``''``).
+    Bis T-21 Teil 3 stand hier ``'.DE'`` mit Punkt, während `split_symbol` den
+    Teil *hinter* dem Punkt verglich — zwei Schichten, die ohne eine nirgends
+    beschriebene Normalisierung aneinander vorbeigesucht hätten. Den Punkt
+    setzt jetzt ausschließlich `provider_alias`.
+
+    Ein leerer Alias heißt „diese Börse hängt kein Kürzel an den Ticker" — bei
+    den US-Plätzen der Normalfall. Fünf teilen sich ihn, und genau deshalb ist
+    die Rückrechnung von ``AAPL`` auf einen MIC nicht möglich.
 
     **Was hier nicht steht.** Bis T-21 trug jede Zeile zwei Spalten mit, die
     nur OpenFIGI etwas angingen (`figi_id_type`, `figi_value`). Sie sind zum
@@ -42,63 +52,103 @@ class ExchangeDef:
     Anbieter-Eigenheiten. Sie beschreibt die **Börse**, nicht den Weg zu ihr.
     """
 
-    suffix: str
+    alias: str
     name: str
     region: str  # "germany" | "usa" | "europe" | "global"
     currency: str
 
 
+@dataclass(frozen=True)
+class CollectorDef:
+    """Ein **Sammelcode** — mehrere Handelsplätze unter einem Suchbegriff.
+
+    Kein Handelsplatz und deshalb **kein MIC**: `US` steht für „irgendwo in
+    den USA" und taugt nie als kanonischer Wert in `instruments.mic`. Bis
+    Teil 3 lag der Eintrag trotzdem in derselben Tabelle wie die Börsen, und
+    `GET /exchanges` lieferte ihn als ``mic="US"`` aus — einen Wert, den
+    `is_real_mic` im selben Modul ablehnt.
+
+    ``members`` ist die **einzige** Stelle, an der die Zugehörigkeit steht.
+    Sie zusätzlich an jede Börse zu schreiben wäre dieselbe Regel zweimal und
+    liefe beim Plugin-Merge auseinander, sobald zwei Quellen dieselbe Börse
+    beisteuern.
+    """
+
+    name: str
+    region: str
+    currency: str
+    members: tuple[str, ...]
+
+
 # Weltweite Börsentabelle: Key = MIC (bzw. 'US'). Erweiterbar per Zeile.
 EXCHANGES: dict[str, ExchangeDef] = {
-    # Amerika
-    "US": ExchangeDef("", "NYSE / NASDAQ", "usa", "USD"),
-    "XTSE": ExchangeDef(".TO", "Toronto", "global", "CAD"),
-    "XTSX": ExchangeDef(".V", "TSX Venture", "global", "CAD"),
-    "BVMF": ExchangeDef(".SA", "São Paulo (B3)", "global", "BRL"),
-    "XMEX": ExchangeDef(".MX", "Mexiko", "global", "MXN"),
+    # Amerika — die fünf US-Plätze führen keinen Alias und teilen sich deshalb
+    # den leeren. Aus `AAPL` lässt sich weiterhin kein MIC ableiten; neu ist
+    # nur die Gegenrichtung, `(AAPL, XNAS)` → `AAPL`.
+    "XNAS": ExchangeDef("", "NASDAQ", "usa", "USD"),
+    "XNYS": ExchangeDef("", "NYSE", "usa", "USD"),
+    "ARCX": ExchangeDef("", "NYSE Arca", "usa", "USD"),
+    "XASE": ExchangeDef("", "NYSE American", "usa", "USD"),
+    "BATS": ExchangeDef("", "Cboe BZX", "usa", "USD"),
+    "XTSE": ExchangeDef("TO", "Toronto", "global", "CAD"),
+    "XTSX": ExchangeDef("V", "TSX Venture", "global", "CAD"),
+    "BVMF": ExchangeDef("SA", "São Paulo (B3)", "global", "BRL"),
+    "XMEX": ExchangeDef("MX", "Mexiko", "global", "MXN"),
     # Europa
-    "XETR": ExchangeDef(".DE", "Xetra", "germany", "EUR"),
-    "XFRA": ExchangeDef(".F", "Frankfurt", "germany", "EUR"),
-    "XLON": ExchangeDef(".L", "London LSE", "europe", "GBp"),
-    "XMIL": ExchangeDef(".MI", "Mailand", "europe", "EUR"),
-    "XPAR": ExchangeDef(".PA", "Paris (Euronext)", "europe", "EUR"),
-    "XAMS": ExchangeDef(".AS", "Amsterdam", "europe", "EUR"),
-    "XBRU": ExchangeDef(".BR", "Brüssel", "europe", "EUR"),
-    "XLIS": ExchangeDef(".LS", "Lissabon", "europe", "EUR"),
-    "XMAD": ExchangeDef(".MC", "Madrid", "europe", "EUR"),
-    "XWBO": ExchangeDef(".VI", "Wien", "europe", "EUR"),
-    "XSWX": ExchangeDef(".SW", "SIX Swiss", "europe", "CHF"),
-    "XSTO": ExchangeDef(".ST", "Stockholm", "europe", "SEK"),
-    "XCSE": ExchangeDef(".CO", "Kopenhagen", "europe", "DKK"),
-    "XOSL": ExchangeDef(".OL", "Oslo", "europe", "NOK"),
-    "XHEL": ExchangeDef(".HE", "Helsinki", "europe", "EUR"),
-    "XWAR": ExchangeDef(".WA", "Warschau", "europe", "PLN"),
+    "XETR": ExchangeDef("DE", "Xetra", "germany", "EUR"),
+    "XFRA": ExchangeDef("F", "Frankfurt", "germany", "EUR"),
+    "XSTU": ExchangeDef("SG", "Stuttgart", "germany", "EUR"),
+    "XLON": ExchangeDef("L", "London LSE", "europe", "GBp"),
+    "XMIL": ExchangeDef("MI", "Mailand", "europe", "EUR"),
+    "XPAR": ExchangeDef("PA", "Paris (Euronext)", "europe", "EUR"),
+    "XAMS": ExchangeDef("AS", "Amsterdam", "europe", "EUR"),
+    "XBRU": ExchangeDef("BR", "Brüssel", "europe", "EUR"),
+    "XLIS": ExchangeDef("LS", "Lissabon", "europe", "EUR"),
+    "XMAD": ExchangeDef("MC", "Madrid", "europe", "EUR"),
+    "XWBO": ExchangeDef("VI", "Wien", "europe", "EUR"),
+    "XSWX": ExchangeDef("SW", "SIX Swiss", "europe", "CHF"),
+    "XSTO": ExchangeDef("ST", "Stockholm", "europe", "SEK"),
+    "XCSE": ExchangeDef("CO", "Kopenhagen", "europe", "DKK"),
+    "XOSL": ExchangeDef("OL", "Oslo", "europe", "NOK"),
+    "XHEL": ExchangeDef("HE", "Helsinki", "europe", "EUR"),
+    "XWAR": ExchangeDef("WA", "Warschau", "europe", "PLN"),
     # Asien-Pazifik
-    "XTKS": ExchangeDef(".T", "Tokio", "global", "JPY"),
-    "XHKG": ExchangeDef(".HK", "Hongkong", "global", "HKD"),
-    "XSHG": ExchangeDef(".SS", "Shanghai", "global", "CNY"),
-    "XSHE": ExchangeDef(".SZ", "Shenzhen", "global", "CNY"),
-    "XASX": ExchangeDef(".AX", "Sydney (ASX)", "global", "AUD"),
-    "XSES": ExchangeDef(".SI", "Singapur", "global", "SGD"),
-    "XNSE": ExchangeDef(".NS", "Indien NSE", "global", "INR"),
-    "XBOM": ExchangeDef(".BO", "Indien BSE", "global", "INR"),
-    "XKRX": ExchangeDef(".KS", "Korea (KRX)", "global", "KRW"),
-    "XTAI": ExchangeDef(".TW", "Taiwan", "global", "TWD"),
+    "XTKS": ExchangeDef("T", "Tokio", "global", "JPY"),
+    "XHKG": ExchangeDef("HK", "Hongkong", "global", "HKD"),
+    "XSHG": ExchangeDef("SS", "Shanghai", "global", "CNY"),
+    "XSHE": ExchangeDef("SZ", "Shenzhen", "global", "CNY"),
+    "XASX": ExchangeDef("AX", "Sydney (ASX)", "global", "AUD"),
+    "XSES": ExchangeDef("SI", "Singapur", "global", "SGD"),
+    "XNSE": ExchangeDef("NS", "Indien NSE", "global", "INR"),
+    "XBOM": ExchangeDef("BO", "Indien BSE", "global", "INR"),
+    "XKRX": ExchangeDef("KS", "Korea (KRX)", "global", "KRW"),
+    "XTAI": ExchangeDef("TW", "Taiwan", "global", "TWD"),
     # Afrika / Nahost
-    "XJSE": ExchangeDef(".JO", "Johannesburg", "global", "ZAR"),
-    "XTAE": ExchangeDef(".TA", "Tel Aviv", "global", "ILS"),
+    "XJSE": ExchangeDef("JO", "Johannesburg", "global", "ZAR"),
+    "XTAE": ExchangeDef("TA", "Tel Aviv", "global", "ILS"),
+}
+
+# Sammelcodes — **getrennt** von den Börsen, weil sie keine sind.
+#
+# `US` bleibt ein gültiger `DEFAULT_EXCHANGE` und ein gültiger
+# OpenFIGI-Suchcode; es ist nur kein Handelsplatz. Wer es als `mic` speichert,
+# erzeugt genau den Zustand, den T-21 austreibt.
+COLLECTORS: dict[str, CollectorDef] = {
+    "US": CollectorDef(
+        name="NYSE / NASDAQ",
+        region="usa",
+        currency="USD",
+        members=("XNAS", "XNYS", "ARCX", "XASE", "BATS"),
+    ),
 }
 DEFAULT_EXCHANGE = "XETR"
 
-# Codes, die **mehrere** Handelsplätze zusammenfassen. Sie stehen in der
-# Tabelle, weil StockInfo über sie sucht — im kanonischen Feld `mic` dürfen sie
-# nie landen.
-#
-# Vorher war dieses Merkmal indirekt zu haben: „wird bei OpenFIGI über
-# `exchCode` gesucht" hieß „ist kein echter MIC". Die Kopplung war bequem und
-# falsch — ein Sammelcode bleibt einer, auch wenn ihn nie jemand bei OpenFIGI
-# sucht. Mit dem Umzug der Anbieter-Spalten wird sie ausdrücklich.
-COLLECTOR_CODES = frozenset({"US"})
+# Abgeleitet, nicht gepflegt: Die Sammelcodes **sind** die Schlüssel von
+# `COLLECTORS`. Eine zweite Liste danebenzustellen hieße, dieselbe Regel an
+# zwei Orten zu führen — und genau das ist in Teil 3 aufgefallen, als der
+# frühere Entwurf sie zusätzlich als Mitgliedschaft an jede Börse schreiben
+# wollte: dreimal dasselbe Wissen.
+COLLECTOR_CODES = frozenset(COLLECTORS)
 
 # Emissionsland (ISIN-Präfix) → Heimatbörse. Der Rückfall der Kaskade: Findet
 # die bevorzugte Börse nichts, ist die Heimatbörse der beste nächste Versuch.
@@ -278,14 +328,85 @@ def split_symbol(symbol: str) -> tuple[str | None, str | None]:
     if not symbol or "." not in symbol:
         return None, None
 
-    ticker, _, rest = symbol.partition(".")
-    suffix = f".{rest}"
+    ticker, _, alias = symbol.partition(".")
     for mic, definition in EXCHANGES.items():
-        if definition.suffix == suffix and mic not in COLLECTOR_CODES:
-            # Ein Sammelcode steht für mehrere Handelsplätze und taugt nicht
-            # als kanonischer MIC — auch dann nicht, wenn er ein Suffix trüge.
+        if definition.alias and definition.alias == alias:
             return (ticker, mic) if is_canonical_ticker(ticker) else (None, None)
     return None, None
+
+
+def preference_kind(code: str) -> str | None:
+    """Was ist dieser Vorgabewert — eine Börse, ein Sammelcode, oder nichts?
+
+    `DEFAULT_EXCHANGE` darf beides sein: `XETR` meint einen Handelsplatz,
+    `US` meint „irgendwo in den USA". Seit die beiden in getrennten Tabellen
+    liegen, muss ein Aufrufer wissen, welches von beiden er in der Hand hält —
+    sonst baut sich jeder seine eigene Regel aus zwei Lookups.
+
+    Args:
+        code: Der konfigurierte Wert, etwa aus `DEFAULT_EXCHANGE`.
+
+    Returns:
+        ``'exchange'``, ``'collector'`` oder ``None`` für einen unbekannten
+        Wert.
+    """
+    if code in EXCHANGES:
+        return "exchange"
+    if code in COLLECTORS:
+        return "collector"
+    return None
+
+
+def preferred_aliases(code: str) -> tuple[str, ...]:
+    """Die Aliase, die zu einer Präferenz gehören — Börse **oder** Sammelcode.
+
+    Eine Börse steuert ihren einen Alias bei, ein Sammelcode die seiner
+    Mitglieder. Damit lässt sich „liegt dieses Symbol an der bevorzugten
+    Börse?" für beide Arten mit **einer** Regel beantworten, statt an jeder
+    Aufrufstelle zwei Fälle zu unterscheiden.
+
+    Ein unbekannter Code fällt auf `DEFAULT_EXCHANGE` zurück — dieselbe
+    Nachsicht wie in der Auflösungskaskade, damit eine vertippte Konfiguration
+    die Auswahl nicht leer laufen lässt.
+
+    Args:
+        code: Der konfigurierte Vorgabewert.
+
+    Returns:
+        Die Aliase, möglicherweise mehrere leere — fünf US-Plätze führen
+        keinen.
+    """
+    if code in EXCHANGES:
+        return (EXCHANGES[code].alias,)
+    collector = COLLECTORS.get(code)
+    if collector is not None:
+        return tuple(
+            EXCHANGES[mic].alias for mic in collector.members if mic in EXCHANGES
+        )
+    return (EXCHANGES[DEFAULT_EXCHANGE].alias,)
+
+
+def provider_alias(ticker: str, mic: str) -> str:
+    """Baut aus der kanonischen Identität das abrufbare Symbol.
+
+    **Die einzige Stelle, die den Punkt setzt.** Aus der Identität entsteht
+    das Symbol, nie umgekehrt — und ohne Alias bleibt es beim nackten Ticker,
+    weil die US-Plätze keinen führen.
+
+    Wem der so entstandene Wert *gehört* und was bei einem Providerwechsel mit
+    ihm geschieht, klärt T-29. Hier geht es nur um seine Bildung.
+
+    Args:
+        ticker: Kanonischer Ticker, etwa ``'EUNL'``.
+        mic: Echter MIC, etwa ``'XETR'``.
+
+    Returns:
+        Das Symbol, etwa ``'EUNL.DE'`` — oder ``'AAPL'``, wenn die Börse
+        keinen Alias führt.
+    """
+    definition = EXCHANGES.get(mic)
+    alias = definition.alias if definition else ""
+    return f"{ticker}.{alias}" if alias else ticker
 
 
 def home_exchange(isin: str) -> str | None:

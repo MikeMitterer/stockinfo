@@ -19,6 +19,9 @@ from app.exchanges import (
     home_exchange,
     is_canonical_ticker,
     is_real_mic,
+    preference_kind,
+    preferred_aliases,
+    provider_alias,
     split_symbol,
 )
 
@@ -164,7 +167,12 @@ class OpenFigiResolver:
             einem 404.
         """
         preferred = self._default_exchange
-        if preferred not in EXCHANGES:
+        if preference_kind(preferred) is None:
+            # Seit T-21 Teil 3 liegen Börsen und Sammelcodes in getrennten
+            # Tabellen. Geprüft wird deshalb die **Präferenz**, nicht die
+            # Mitgliedschaft in `EXCHANGES` — sonst gälte der zulässige
+            # Vorgabewert `US` plötzlich als unbekannt und fiele still auf
+            # Xetra zurück.
             logger.warning("unknown_default_exchange", configured=preferred)
             preferred = DEFAULT_EXCHANGE
 
@@ -228,7 +236,7 @@ class OpenFigiResolver:
             )
             return None
         return ResolvedInstrument(
-            symbol=f"{ticker}{exch.suffix}",
+            symbol=provider_alias(ticker, mic),
             isin=isin,
             exchange=exch.name,
             ticker=ticker,
@@ -355,19 +363,22 @@ class YFinanceResolver:
         if not with_symbol:
             return None
 
-        exchange = EXCHANGES.get(self._default_exchange) or EXCHANGES[DEFAULT_EXCHANGE]
-        suffix = exchange.suffix
+        aliases = preferred_aliases(self._default_exchange)
 
-        if suffix:
+        if any(aliases):
             at_exchange = [
                 quote
                 for quote in with_symbol
-                if str(quote["symbol"]).endswith(suffix)
+                if any(
+                    alias and str(quote["symbol"]).endswith(f".{alias}")
+                    for alias in aliases
+                )
             ]
         else:
-            # Börse ohne Suffix (`US`): Dort ist das punktlose Symbol die
-            # Notierung. Ohne diesen Zweig liefe die Regel leer, weil jedes
-            # Symbol auf `''` endet.
+            # Alle in Frage kommenden Börsen führen keinen Alias — beim
+            # Sammelcode `US` sind das seine fünf Mitglieder. Dort ist das
+            # punktlose Symbol die Notierung. Ohne diesen Zweig liefe die
+            # Regel leer, weil jedes Symbol auf `''` endet.
             at_exchange = [
                 quote for quote in with_symbol if "." not in str(quote["symbol"])
             ]

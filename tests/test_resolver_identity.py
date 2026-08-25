@@ -123,18 +123,36 @@ def test_fremde_schreibweise_wird_abgelehnt_statt_umgedeutet(monkeypatch) -> Non
 def test_unbekannter_handelsplatz_wird_gemeldet_statt_geraten(monkeypatch) -> None:
     """Ein Suffix, das die Tabelle nicht kennt, und kein zugeordneter Code.
 
-    `GOLD.SG` (Stuttgart) ist genau dieser Fall — er steht so auch in Mikes
-    echtem Bestand. Ohne Eintrag in der Börsentabelle gibt es keinen MIC, und
-    einen zu erfinden hieße, ein falsches Listing festzuschreiben.
+    Bis T-21 Teil 3 stand hier `GOLD.SG` (Stuttgart) — der Fall aus Mikes
+    echtem Bestand. Mit dem Eintrag `XSTU`/`SG` ist Stuttgart **bekannt**, und
+    genau deshalb überlebt das Papier die Migration samt seiner 257
+    Tageskurse. Die Regel selbst gilt unverändert; sie braucht nur ein Beispiel,
+    das die Tabelle wirklich nicht kennt.
     """
-    _with_hits(monkeypatch, {"symbol": "GOLD.SG", "exchange": "STU", "quoteType": "ETF"})
+    _with_hits(monkeypatch, {"symbol": "ABC.XY", "exchange": "XYZ", "quoteType": "ETF"})
 
     with structlog.testing.capture_logs() as logs:
         result = YFinanceResolver(default_exchange="XETR").resolve_isin("DE000A0S9GB0")
 
     assert isinstance(result, Unavailable)
     records = [entry for entry in logs if entry["event"] == "resolve_isin_ambiguous"]
-    assert records and records[0]["exchange_code"] == "STU"
+    assert records and records[0]["exchange_code"] == "XYZ"
+
+
+def test_stuttgart_wird_seit_teil_3_aufgeloest(monkeypatch) -> None:
+    """Die Gegenprobe zum Test darüber — und der Grund für die Reihenfolge.
+
+    Diese Übergabe **muss** vor der Migration ausgeliefert werden. Vorher wäre
+    `GOLD.SG` nicht auflösbar und würde nach der Migrationsregel aus Runde 16
+    abgelehnt statt migriert; im echten Bestand hängen daran 257 Tageskurse.
+    """
+    _with_hits(monkeypatch, {"symbol": "GOLD.SG", "exchange": "STU", "quoteType": "ETF"})
+
+    result = YFinanceResolver(default_exchange="XETR").resolve_isin("DE000A0S9GB0")
+
+    assert result.ticker == "GOLD"
+    assert result.mic == "XSTU"
+    assert result.symbol == "GOLD.SG"
 
 
 @pytest.mark.parametrize("code", sorted(YAHOO_EXCHANGE_MICS))

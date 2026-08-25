@@ -71,11 +71,11 @@ def test_das_symbol_laesst_sich_aus_der_identitaet_zusammensetzen(repo) -> None:
 
     Dieselbe Vorwärtsrechnung prüft `T-21-smoke.sh` am echten Bestand.
     """
-    from app.exchanges import EXCHANGES
+    from app.exchanges import provider_alias
 
     row = _row(repo, repo.save_quote(_response()))
 
-    assert f"{row['ticker']}{EXCHANGES[row['mic']].suffix}" == row["symbol"]
+    assert provider_alias(row["ticker"], row["mic"]) == row["symbol"]
 
 
 def test_jedes_neue_papier_bekommt_eine_eigene_listing_id(repo) -> None:

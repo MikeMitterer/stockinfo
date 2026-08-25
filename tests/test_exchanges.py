@@ -44,13 +44,16 @@ def test_unklare_symbole_werden_nicht_geraten(symbol: str) -> None:
 def test_kein_suffix_ist_doppelt_vergeben() -> None:
     """Die Voraussetzung der ganzen Rückrechnung — hier festgehalten.
 
-    Käme eine Börse mit einem schon belegten Suffix dazu, wäre `split_symbol`
+    Käme eine Börse mit einem schon belegten Alias dazu, wäre `split_symbol`
     stillschweigend mehrdeutig. Dieser Test schlägt dann an, statt dass die
     Migration ein falsches Listing zuordnet.
-    """
-    suffixe = [d.suffix for d in EXCHANGES.values() if d.suffix]
 
-    assert len(suffixe) == len(set(suffixe))
+    Leere Aliase sind ausgenommen: Die fünf US-Plätze teilen sich den leeren,
+    und genau deshalb ist `AAPL` nicht rückrechenbar.
+    """
+    aliase = [d.alias for d in EXCHANGES.values() if d.alias]
+
+    assert len(aliase) == len(set(aliase))
 
 
 def test_die_schema_schicht_zieht_kein_yfinance_mit() -> None:

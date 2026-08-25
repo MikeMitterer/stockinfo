@@ -112,19 +112,52 @@ export interface EnvInfo {
   yahoo_url: string
 }
 
-/** Eine weltweit unterstützte Börse mit Yahoo-Suffix und Notierungswährung. */
-export interface ExchangeInfo {
+/** Woher ein Katalogeintrag stammt — heute immer `core`, ab T-30 auch Plugins. */
+export interface Provenance {
+  kind: 'core' | 'plugin'
+  id: string | null
+}
+
+/**
+ * Ein **Handelsplatz**: echter MIC und höchstens ein Provider-Alias.
+ *
+ * `alias` ist das nackte Token ohne Punkt (`'DE'`, `''`). Den Punkt setzt das
+ * Backend beim Zusammensetzen des Symbols.
+ */
+export interface ExchangeEntry {
+  kind: 'exchange'
   mic: string
-  suffix: string
+  alias: string
   name: string
   region: string
   currency: string
+  provenance: Provenance
 }
 
-/** Antwort von GET /exchanges: die volle Börsentabelle plus konfigurierte Default-Börse. */
+/**
+ * Ein **Sammelcode**: mehrere Handelsplätze, **kein** MIC.
+ *
+ * Bewusst ohne `mic`-Feld. Bis T-21 Teil 3 lag `US` in derselben Liste wie die
+ * Börsen und kam als `mic: 'US'` herein — ein Wert, den das Backend selbst als
+ * ungültigen MIC ablehnt.
+ */
+export interface CollectorEntry {
+  kind: 'collector'
+  code: string
+  name: string
+  region: string
+  currency: string
+  members: string[]
+  provenance: Provenance
+}
+
+export type CatalogEntry = ExchangeEntry | CollectorEntry
+
+/** Antwort von GET /exchanges: der Börsenkatalog plus konfigurierte Vorgabe. */
 export interface ExchangesResponse {
   default_exchange: string
-  exchanges: ExchangeInfo[]
+  default_exchange_kind: 'exchange' | 'collector' | 'unknown'
+  catalog: CatalogEntry[]
 }
 
 export interface QuotePoint {

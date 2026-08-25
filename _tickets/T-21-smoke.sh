@@ -121,7 +121,7 @@ import string
 import sys
 
 from app.db import init_db
-from app.exchanges import EXCHANGES
+from app.exchanges import EXCHANGES, provider_alias
 
 source, backup = sys.argv[1], sys.argv[2]
 
@@ -221,12 +221,14 @@ check(
 def composed(row: dict) -> str | None:
     """Setzt `symbol` aus `(ticker, mic)` zusammen — die Gegenrichtung.
 
-    ``None`` für einen MIC, den die eigene Tabelle nicht kennt: Ein von Hand
-    zugeordnetes `XNAS` steht dort nicht, und die Zusammensetzung ist dann
-    keine Aussage. Geprüft wird solch eine Zeile nur auf den Sammelcode.
+    ``None`` für einen MIC, den die eigene Tabelle nicht kennt — dann ist die
+    Zusammensetzung keine Aussage.
+
+    Seit T-21 Teil 3 kennt die Tabelle auch die fünf US-Plätze, `XNAS` steht
+    also nicht mehr darin fehl. Zusammengesetzt wird über `provider_alias` —
+    die einzige Stelle, die den Punkt setzt.
     """
-    definition = EXCHANGES.get(row["mic"] or "")
-    return f"{row['ticker']}{definition.suffix}" if definition else None
+    return provider_alias(row["ticker"], row["mic"]) if row["mic"] in EXCHANGES else None
 
 
 # Jede Zeile muss nach dem Lauf in **genau einem** gültigen Zustand sein.
