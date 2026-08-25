@@ -324,6 +324,19 @@ deshalb nicht bemerkt. Die Korrektur beseitigte den konkret fehlenden siebten
 Dateinamen, ohne die vollständige URL-Semantik des berührten Static-Mounts zu
 inventarisieren.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Runde 26, Commit `083414c`: OUTBOX erklärte alle vier Befunde ohne
+Auslassung umgesetzt und Ticket #2h2 den Alias in Python, OpenAPI und
+TypeScript als optional. Das TypeScript-Interface verlangte die Property aber
+weiterhin; der neue Typ-Test belegte nur `null`, nicht die ebenfalls zugesagte
+fehlende Form. Gleichzeitig setzte die Korrektur eine konkrete aliaslose
+US-Börse und den Sammelcode `US` auf dasselbe leere Alias-Ergebnis. Der
+Resolver behandelte daher jeden punktlosen Treffer als bevorzugt und konnte
+für `XNAS` einen früheren `PCX`/`ARCX`-Treffer trotz eines späteren
+`NMS`/`XNAS`-Treffers wählen. Erneut waren die genannten Beispiele grün,
+während benachbarte Verbraucher und Reihenfolgen des geänderten Vertrags
+ungeprüft blieben.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
