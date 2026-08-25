@@ -32,11 +32,22 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > „Hoch"-Befunde waren durchweg Entwurfsfehler, die im Code teurer zu finden
 > gewesen wären.
 >
+> **Übergabe 1 ist freigegeben** *(Runde 29, `a2d5b97`, Codex, 2026-08-25)* —
+> nach fünf Runden. Die vier Runden davor waren **keine** Fachfehler im
+> Katalog selbst: Sie betrafen Verträge, die weniger zusagten als behauptet
+> (Pflicht-Alias, ungültige Provenienz-Kombinationen, TypeScript strenger als
+> OpenAPI), Orakel, die sich selbst bestätigten, und zwei getrennte
+> Rangfolgen für dieselbe Frage. Das Ticket bleibt im Board-Root; die Abnahme
+> läuft gesammelt über T-28 und ist Mikes Sache.
+>
+> **Als Nächstes: Übergabe 2A** — und sie wird **nicht allein gemergt**,
+> siehe die Reihenfolgewarnung unten.
+>
 > **Jetzt beginnt die Umsetzung**, in vier Übergaben:
 >
 > | | Umfang | Vertrag |
 > |---|---|---|
-> | **1** | Börsenkatalog: Descriptor, Union, `catalog`, sechs neue Einträge, `COLLECTOR_CODES` abgeleitet | **kein** Sprung — `/exchanges` liegt außerhalb des geschlossenen Core |
+> | **1** ✅ | Börsenkatalog: Descriptor, Union, `catalog`, sechs neue Einträge, `COLLECTOR_CODES` abgeleitet | **kein** Sprung — `/exchanges` liegt außerhalb des geschlossenen Core |
 > | **2A** | Migration, Backend: migrieren-oder-ablehnen, Quarantäne, Pending-Guard, `/migration*`, `/operational`, Reason-Codes | intern |
 > | **2B** | Migration, Pflicht-UI und Image: Vorschau, Bestätigung, Bericht, DE/EN, `HEALTHCHECK`-Umzug | intern |
 > | **3** | Aufnahmeweg: `POST /instruments/intake`, Intake-Service, strengerer `/quote?symbol=`, **`core_version 2.0.0`** | atomar |
@@ -133,32 +144,7 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-### T-21 Teil 3, Übergabe 1/4 · Review Runde 29 · `a2d5b97`
-
-**Keine Findings. Freigegeben.**
-
-Die Umbenennung ist verhaltensneutral und deckt den seit `0f79eec^` neu
-hinzugefügten Scope ab: In den neuen Python-Zeilen bleibt als einstelliger
-Bezeichner nur das bewusste Wegwerfziel `_`; im hinzugefügten TypeScript-/
-Vue-Code gibt es keinen einstelligen lokalen Bezeichner. `definition`,
-`collector` und `entry` sind sprechend und entsprechen dem Code-Standard.
-
-#### DRY-Prüfguard
-
-Geprüft wurden die Alias→MIC-Rückwärtsabbildung, die Katalogserialisierung
-und die zugehörigen Testausdrücke projektweit. Der Handoff ändert keine
-Fachregel und führt keine zweite Source of Truth ein; `mic_for_alias` bleibt
-die gemeinsame Aliasableitung. Kein DRY-Finding.
-
-#### Verifikation
-
-* Gezielte Katalog-, Resolver- und API-Tests: **139 passed**.
-* `make test`: Backend **485 passed, 29 skipped**, Plugin-API **36 passed**,
-  Dashboard **235 passed**.
-* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests`: sauber.
-* Handoff-Diff: `git diff --check` sauber.
-* `./_tickets/T-21-smoke.sh --run`: **9/9**.
-* `./_tickets/T-21b-smoke.sh --run`: **6/6**.
+<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
 
 ## OUTBOX → Codex
 <!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
