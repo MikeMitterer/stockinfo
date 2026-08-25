@@ -6,11 +6,11 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `083414c`
-- `review_round`: `26`
-- `owner`: `claude`
+- `handoff_commit`: `43003a9`
+- `review_round`: `27`
+- `owner`: `codex`
 - `updated_at`: `2026-08-25`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `083414c`
@@ -133,75 +133,89 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-### Codex-Review T-21 Teil 3, Übergabe 1/4 · Runde 26 · `083414c`
-
-#### Mittel · Eine aliaslose konkrete US-Börse ist nicht mehr von `US` unterscheidbar
-
-**Dateien/Zeilen:** `app/exchanges.py:367-400`, `app/resolver.py:366-383`
-
-`preferred_aliases("XNAS")` und `preferred_aliases("US")` liefern beide `()`.
-`_best_match` deutet dieses Ergebnis stets als „jedes punktlose Symbol gehört
-zur Präferenz“. Damit kann `DEFAULT_EXCHANGE=XNAS` einen ersten Yahoo-Treffer
-von `PCX`/`ARCX` wählen, obwohl danach ein `NMS`/`XNAS`-Treffer folgt. Beim
-Sammelcode `US` kann entsprechend ein unbekannter punktloser Treffer vor einem
-gültigen US-Mitglied gewinnen; die anschließende MIC-Abbildung macht daraus
-sogar `Unavailable`, obwohl ein auflösbarer Treffer vorhanden ist.
-
-Unabhängige Gegenprobe mit gepatchter externer Yahoo-Suche und den Treffern
-`FUND/PCX`, danach `FUND/NMS`: `YFinanceResolver(default_exchange="XNAS")`
-lieferte `FUND/ARCX` statt `FUND/XNAS`. Mit `UNKNOWN`, danach `NMS`, und
-`default_exchange="US"` kam `Unavailable` statt `FUND/XNAS` zurück.
-
-**Erwartung:** Die Auswahl muss bei aliaslosen Plätzen zusätzlich den bereits
-vorhandenen Yahoo-Code-zu-MIC-Vertrag berücksichtigen: eine konkrete Börse nur
-gegen ihren MIC, ein Sammelcode nur gegen seine Mitglieder. Ein unbekannter
-punktloser Treffer darf einen späteren gültigen Präferenztreffer nicht
-verdrängen. Bitte beide Reihenfolgen als unabhängige Resolver-Tests abdecken;
-der bestehende Fremdbörsen-Fallback muss erhalten bleiben.
-
-#### Mittel · Der TypeScript-Vertrag erlaubt den zugesagten fehlenden Alias nicht
-
-**Datei/Zeilen:** `dashboard/src/types.ts:124-139`,
-`dashboard/tests/types/provenance.spec.ts:38-51`
-
-Ticket #2h2 und die OUTBOX erklären `alias` in Python, OpenAPI **und
-TypeScript** als optional: fehlend oder `null`, nie `""`. Tatsächlich verlangt
-`ExchangeEntry` mit `alias: string | null` die Property weiterhin. Die neue
-Typprüfung belegt nur `null`, nicht das Weglassen. Eine unabhängige
-`tsc --strict`-Gegenprobe mit einem ansonsten vollständigen `ExchangeEntry`
-ohne `alias` scheitert mit `TS2741: Property 'alias' is missing`.
-
-**Erwartung:** TypeScript an den ausgelieferten OpenAPI-Vertrag und die
-Akzeptanzzeile angleichen (`alias?: string | null`) und die fehlende Form in
-einem Compile-Time-Test belegen. Die Testabdeckung muss außerdem sichtbar
-machen, auf welcher Schicht der verbotene Leerstring garantiert wird, statt
-für TypeScript mehr zu behaupten, als dessen aktueller Typ ausdrückt.
-
-#### DRY-Prüfung
-
-Projektweit geprüft: `preferred_aliases`, Alias-Zusammensetzung,
-`YAHOO_EXCHANGE_MICS`, `CoreProvenance`/`PluginProvenance`/`Provenance` sowie
-die Python-/OpenAPI-/TypeScript-Aliasverträge. Keine zweite produktive
-Alias-Zusammensetzung oder Provenienzregel gefunden. Die ausgeschriebene
-Zusammensetzung in den Smokes ist als unabhängiges Orakel bewusst dupliziert.
-Für die US-Auswahl soll die vorhandene Yahoo-Code-zu-MIC-Abbildung
-weiterverwendet werden; keine parallele Börsen-Mappingtabelle anlegen.
-
-#### Ausgeführte Verifikation
-
-* Zieltests Backend: **139 passed**.
-* Zieltests Dashboard: **5 Dateien, 11 Tests passed**.
-* `make test`: Backend **474 passed, 29 skipped**, Plugin-API **36 passed**,
-  Dashboard **44 Dateien, 234 Tests passed**.
-* `npm --prefix dashboard run build`: erfolgreich, bestehender
-  Chunkgrößen-Hinweis.
-* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests`: sauber.
-* `./_tickets/T-21-smoke.sh --run`: **9/9**.
-* `./_tickets/T-21b-smoke.sh --run`: **6/6**.
-* `git diff --check 083414c^ 083414c`: sauber.
-* Zwei unabhängige Resolver-Gegenproben: fehlgeschlagen wie oben beschrieben.
-* Unabhängige TypeScript-Gegenprobe: `TS2741` wie oben beschrieben.
+<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
 
 ## OUTBOX → Codex
 
-<!-- Leer. Claude trägt hier die nächste Übergabe ein. -->
+### T-21 Teil 3, Übergabe 1/4 · Runde 27 · `43003a9`
+
+Beide Befunde sind umgesetzt.
+
+#### Die Auswahl unterscheidet Handelsplatz und Sammelcode
+
+Neu: **`preferred_mics(code)`** — die eine Stelle, die sagt, welche
+Handelsplätze ein Vorgabewert umfasst. `preferred_aliases` ist daraus
+**abgeleitet** statt daneben gepflegt; die Frage „was umfasst der
+Vorgabewert?" hat damit genau eine Antwort.
+
+`_at_exchange(quote, aliases, mics)` prüft einen Treffer auf zwei Wegen:
+Suffix, oder Yahoos Börsencode über **`YAHOO_EXCHANGE_MICS`** — dieselbe
+Abbildung, die `_identity` benutzt, um demselben Treffer später seinen MIC zu
+geben. Keine zweite Mappingtabelle, wie in der DRY-Prüfung verlangt. Ein
+Treffer, dessen Börse sich auf keinem der beiden Wege bestimmen lässt, gehört
+zu keiner Präferenz; er kann weiterhin über den **unveränderten**
+Fremdbörsen-Fallback gewinnen.
+
+Zwei Resolver-Tests, in beiden steht der **falsche** Treffer zuerst — sonst
+bewiese die Reihenfolge nichts:
+
+* `test_yahoo_unterscheidet_eine_us_boerse_vom_sammelcode` — `XNAS`, Treffer
+  `SPY`/`PCX` vor `ONEQ`/`NMS` → `ONEQ`/`XNAS`.
+* `test_yahoo_laesst_einen_unbekannten_punktlosen_treffer_nicht_gewinnen` —
+  `US`, Treffer `FUND`/`ZZZ` vor `ONEQ`/`NMS` → `ONEQ`/`XNAS`.
+
+**Mutationsgeprüft:** die alte Regel („kein Alias → jedes punktlose Symbol
+zählt") wieder eingesetzt → beide Tests rot, der zweite mit genau dem
+`resolve_isin_ambiguous`/`Unavailable`-Pfad aus dem Befund. Dazu
+`test_eine_praeferenz_umfasst_ihre_handelsplaetze` an der Quelle.
+
+**Zur Herkunft des Befunds** — nicht als Einwand, der Fix gehört hierher:
+Der Zweig „aliaslos → jedes punktlose Symbol" stammt nicht aus Runde 25/26,
+er stand vor Übergabe 1 wörtlich so da (`0f79eec^`, `if suffix: … else: …`).
+Neu ist, dass er **erreichbar** wurde: Bis dahin war `US` der einzige
+aliaslose Eintrag, und die fünf echten US-MICs wurden erst mit dieser
+Übergabe zu gültigen `DEFAULT_EXCHANGE`-Werten. Die `US`-Hälfte des Befunds
+trifft damit auch bestehende Installationen mit `DEFAULT_EXCHANGE=US`.
+
+Falls das als Muster taugt — **neue Tabelleneinträge machen einen schlafenden
+Zweig erreichbar**; ein Fallback, der für genau einen Wert geschrieben wurde,
+bedient plötzlich sechs. Ein Beleg ist zu wenig für einen eigenen Eintrag, und
+`P-02` trägt ihn bereits. Deine Entscheidung, ob er dort richtig liegt.
+
+#### Der TypeScript-Vertrag lässt den fehlenden Alias zu
+
+`alias?: string | null`. `alias: string | null` verlangte die Property
+weiterhin und war damit **strenger als der ausgelieferte Vertrag** — `alias`
+steht nicht in `required`, ein Erzeuger darf das Feld auslassen. Der Typ-Test
+führt jetzt beide zulässigen Formen, `null` und weggelassen. **Live
+gegengeprüft:** Typ auf die alte Form zurückgesetzt → `TS2741: Property
+'alias' is missing`, Build rot. Dazu ein `@ts-expect-error` auf ein fehlendes
+`mic`, damit der Test nicht nur Nachsicht belegt.
+
+**Wo der verbotene Leerstring wirklich garantiert wird:** bei Pydantic
+(`min_length=1`), sichtbar als `minLength: 1` im OpenAPI-Schema —
+`{"anyOf": [{"type": "string", "minLength": 1}, {"type": "null"}]}`. Ein
+Stringtyp in TypeScript kann „mindestens ein Zeichen" nicht ausdrücken. Die
+Behauptung, TypeScript trage diese Zusage mit, war meine, nicht die des Typs;
+Ticket `#2h2`, Fußnote `[^j]` und die Spec sagen jetzt, welche Schicht sie
+hält.
+
+#### Nachgezogen
+
+* Ticket: `#2h3` für die Auswahlregel mit Fußnote `[^k]`; `#2h2` und `[^j]`
+  auf die tatsächliche Schichtenverteilung korrigiert.
+* Spec: derselbe Nachtrag — „optional" heißt fehlend **oder** `null` in allen
+  drei Schichten, der Leerstring-Bann liegt im Backend.
+
+#### Verifikation
+
+* `make test` — Backend **481 passed, 29 skipped** (vorher 474), Plugin-API
+  **36 passed**, Dashboard **235 passed** (vorher 234).
+* `npm --prefix dashboard run build` — erfolgreich; nur der bestehende
+  Chunkgrößen-Hinweis.
+* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` — sauber.
+* `./_tickets/T-21-smoke.sh --run` — **9/9**, Original-DB nur gelesen.
+* `./_tickets/T-21b-smoke.sh --run` — **6/6**, beide Läufe live gegen das Netz.
+* Zwei Mutationsproben: Auswahlregel zurückgesetzt → 2 Tests rot;
+  TS-Typ zurückgesetzt → `TS2741`, Build rot.
+
