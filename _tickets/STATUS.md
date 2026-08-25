@@ -6,11 +6,11 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `a2d5b97`
-- `review_round`: `29`
-- `owner`: `claude`
+- `handoff_commit`: `d361fbc`
+- `review_round`: `30`
+- `owner`: `codex`
 - `updated_at`: `2026-08-25`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `a2d5b97`
@@ -163,11 +163,116 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## OUTBOX → Codex
 
-### Kein Review offen — Übergabe 2A ist in Arbeit
+### T-21 Teil 3, Übergabe 2A/4 — Migration, Backend · Runde 30 · `d361fbc`
 
-Falls du zwischendurch nachsiehst: Nach der Freigabe von Übergabe 1 lag
-korrekt nichts für dich bereit. **Übergabe 2A (Migration-Backend) ist seit
-`2026-08-25` in Arbeit**; `phase` steht deshalb auf `claude_working`. Die
-nächste Übergabe kommt als Runde 30 mit eigenem `handoff_commit`.
+22 Commits seit `a2d5b97`. Der Umzug ist **zweiphasig**: erkennen, vorrechnen,
+bestätigen lassen, ausführen, berichten.
 
-Diese Notiz ersetzt kein Review und wird mit der Übergabe entfernt.
+#### Was sich grundlegend geändert hat
+
+**`init_db` migriert nicht mehr.** Es legt das Schema an, trägt
+Metadatenspalten nach und gibt zurück, *ob* ein Umzug aussteht. Der Grund
+steht im Entwurf: Es läuft im Lifespan, bevor die App den ersten Request
+bedient — ein UI, das erst danach erreichbar wird, kann niemanden mehr
+warnen. Seit die Migration Zeilen auch **ablehnt**, ist das nicht mehr
+zulässig.
+
+Ausgeführt wird über `run_migration`, allein auf `POST /migration/confirm`.
+
+**`identity_status` ist ersatzlos weg** — Spalte, Konstanten,
+`_migrate_identity`, `_identity_is_complete`, `_report_unresolved`.
+`canonical_identity` liefert `(ticker, mic)` **oder `None`** statt eines
+Statustripels; derselbe Griff wie bei der Provenienz in Übergabe 1, ein Typ,
+der den ungültigen Zustand nicht mehr ausdrücken kann.
+
+**`ticker` und `mic` sind Pflichtspalten.** Die Invariante aus `#2b2` steht im
+**Schema**, nicht in einer Prüfung, die man vergessen kann. `save_quote`
+lehnt ein Papier ohne Identität mit `IncompleteIdentityError` ab, statt in
+eine `NOT NULL`-Verletzung zu laufen — dieselbe Ablehnung, aber sie sagt, was
+fehlt.
+
+#### Entscheidungen, die ich getroffen habe
+
+* **Quarantäne und Berichtsspeicher sind eine Tabelle, nicht zwei.** Der
+  Entwurf nennt beide; sie beantworten dieselbe Frage und bräuchten dieselben
+  Felder. Gehalten wird, was zur Neuerfassung von Hand reicht — für die
+  vollständige Wiederherstellung bleibt der SQLite-Snapshot zuständig, sonst
+  gäbe es zwei Rettungswege, von denen einer nur so tut.
+* **Gelöscht wird ausdrücklich, nicht über `ON DELETE CASCADE`.** Der
+  Tabellen-Neuaufbau läuft mit abgeschalteten Fremdschlüsseln, und eine
+  Kaskade, die mal greift und mal nicht, ist keine Zusage.
+* **Die Spaltenliste des Neuaufbaus entsteht aus dem realen Tabellenbestand.**
+  Welche Metadatenspalten eine gewachsene Installation trägt, weiß nur sie
+  selbst; eine abgeschriebene Aufzählung wäre eine zweite Wahrheit.
+* **Ein Umzug steht nur aus, wenn es etwas zu tun gibt.** Eine leere oder
+  bereits umgezogene Datenbank verlangt keine Bestätigung — sonst forderte
+  eine frische Installation eine Zustimmung für nichts.
+* **Der `HEALTHCHECK` zieht schon hier auf `/operational`.** Der Schnitt hatte
+  ihn bei 2B; er gehört zum Endpunkt, sonst liefert 2A einen
+  Healthcheck-Endpunkt, den niemand benutzt, während `/ready` im
+  Pending-Zustand `503` sagt und den Container als unhealthy markiert. README
+  und Image-Test bleiben in 2B.
+
+#### Vier Fehler, die Tests gefunden haben — keiner davon ein Review
+
+1. **`executescript` beendet die Transaktion.** Dokumentiertes
+   `sqlite3`-Verhalten: Es setzt vor dem Ausführen ein `COMMIT` ab. Die
+   Tabellenanlage hätte „alles oder nichts" zu einer Zusage ohne Deckung
+   gemacht. Der Rollback-Test hat es gezeigt.
+2. **Die Identitätsindizes im Grundschema brachen den Start jeder
+   Alt-Datenbank.** `CREATE TABLE IF NOT EXISTS` lässt die alte Tabelle
+   stehen, `CREATE INDEX … (ticker, mic)` bricht dann mit `no such column` —
+   das genaue Gegenteil von „erkennen statt ausführen".
+3. **Der Endpunkt-Test lief gegen die echte Datenbank.**
+   `dependency_overrides` greift nur für Route-Dependencies; Lifespan und
+   Guard rufen `get_settings()` direkt. Geschadet hat es nichts — nachgeprüft
+   an Spalten, Zeilen und Dateidatum —, aber verlassen darf man sich darauf
+   nicht.
+4. **`GET /` kam als 404, nicht als 503.** Der Guard ließ die Startadresse
+   durch; es war nur nichts gemountet, weil `main.py` beim Import
+   `/app/web` sieht. Ohne den Befund hätte der Test „gesperrt" mit „gar nicht
+   da" verwechselt und wäre grün geblieben.
+
+Dazu einer, den **das Schreiben der Fußnote** gefunden hat: Der Scheduler
+startet im Lifespan, und der ist durch, wenn bestätigt wird. Nach einem
+bestätigten Umzug wäre der Refresh bis zum Neustart ausgeblieben — der Dienst
+hätte gesund ausgesehen und keine Kurse geholt. Behoben über
+`MigrationGate.on_release`, mit Test.
+
+#### Wo ich abweiche oder etwas offen lasse
+
+Drei Verify-Zeilen tragen **kein** Häkchen, und die Fußnoten sagen warum:
+
+| | | |
+|---|---|---|
+| `2b6h` | ⚠️ | Der Test **benutzt** `dashboard/dist`, **baut** es nicht. Ohne `make build` prüft er nichts. |
+| `2b6g` | ◑ | Dockerfile und `main.py` abgeglichen; README und `tests/test_api.py` gehören zur Dokumentationsseite von 2B. |
+| `2b7` | ◑ | Reason-Codes stehen; die DE/EN-Übersetzung hat ohne UI keinen Ort. |
+
+`2b6i` (Vite-Proxy) und `2b6c` (Image-Test) sind ausdrücklich **nicht** in 2A.
+
+**Neu auf dem Board:** `T-31-papiere-ohne-mic.md`. Unter der Pflichtregel
+lässt sich `BTC-USD` nicht mehr anlegen — eine Kryptowährung hat keinen
+ISO-10383-MIC, und die gemessene Auswirkungstabelle des Entwurfs führte nur
+Aktien und ETFs. Entscheidung Mike: von T-21 Teil 3 **trennen**. Im realen
+Bestand gibt es keine solche Zeile (gemessen). Der betroffene Test prüft
+jetzt den Negativfall und sagt ausdrücklich, dass er keine Zusage ist.
+
+**Zur Erinnerung:** 2A wird **nicht allein gemergt** — ohne die UI aus 2B
+kann niemand vorher warnen.
+
+#### Verifikation
+
+* `make test` — Backend **556 passed, 30 skipped** (vorher 485), Plugin-API
+  **36 passed**, Dashboard **235 passed**.
+* `npm --prefix dashboard run build` — erfolgreich; nur der bestehende
+  Chunkgrößen-Hinweis.
+* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` — sauber.
+* `./_tickets/T-21-smoke.sh --run` — **12/12** gegen eine Sicherung des echten
+  Bestands: 6 Instrumente vorher, 5 nachher, `VTI` abgelehnt und berichtet,
+  48 → 47 Kurspunkte, `GOLD.SG` behält seine **257** Tagesschlusskurse.
+  Original byte-identisch.
+* `./_tickets/T-21b-smoke.sh --run` — **6/6** live gegen das Netz.
+* `git diff --check` — sauber.
+* Mutationsproben: Vorschau schreibt (rot), Symlink-Schranke entfernt (rot),
+  Schichtentest mit Resolver-Import (rot).
