@@ -37,6 +37,40 @@ REJECTION_REASONS = frozenset(
 )
 
 
+# Der Berichtsspeicher. **Eine** Tabelle, nicht zwei.
+#
+# Der Entwurf nennt „Quarantäne" und „Berichtsspeicher" nebeneinander. Beide
+# beantworten aber dieselbe Frage — *welche Zeile ist warum gegangen, und was
+# hing daran* —, und der Bericht braucht dieselben Felder, die die Quarantäne
+# hält. Zwei Tabellen wären dieselbe Auskunft an zwei Orten, die beim ersten
+# zusätzlichen Feld auseinanderlaufen.
+#
+# Gehalten wird, was zur **Neuerfassung von Hand** reicht: Symbol, ISIN, Name,
+# Börse, Gattung, Währung. Für die vollständige Wiederherstellung ist der
+# SQLite-Snapshot zuständig, nicht diese Tabelle — sonst gäbe es zwei
+# Rettungswege, von denen einer nur so tut.
+#
+# **Eine** Anweisung, kein Script. `executescript` setzt vor dem Ausführen ein
+# COMMIT ab — dokumentiertes `sqlite3`-Verhalten. Innerhalb des Umzugs hätte
+# das die offene Transaktion beendet, und „alles oder nichts" wäre eine
+# Zusage ohne Deckung gewesen. Ein Test hat es gezeigt, kein Review.
+REJECTIONS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS migration_rejections (
+    id            INTEGER PRIMARY KEY AUTOINCREMENT,
+    symbol        TEXT NOT NULL,
+    isin          TEXT,
+    name          TEXT,
+    exchange      TEXT,
+    type          TEXT,
+    currency      TEXT,
+    reason        TEXT NOT NULL,
+    quotes        INTEGER NOT NULL,
+    daily_closes  INTEGER NOT NULL,
+    rejected_at   TEXT NOT NULL
+);
+"""
+
+
 @dataclass(frozen=True)
 class Rejection:
     """Eine Zeile, die den gültigen Bestand verlässt — samt Preis.
@@ -295,3 +329,231 @@ def _count_rows(
     return connection.execute(
         f"SELECT COUNT(*) FROM {table} WHERE instrument_id = ?", (instrument_id,)
     ).fetchone()[0]
+
+
+# Die Kindtabellen eines Instruments. Sie stehen hier als **eine** Liste,
+# damit das Löschen einer abgelehnten Zeile keine vergisst.
+#
+# Verlassen wird sich dabei **nicht** auf `ON DELETE CASCADE`: Der
+# Tabellen-Neuaufbau weiter unten läuft mit abgeschalteten Fremdschlüsseln,
+# und eine Kaskade, die mal greift und mal nicht, ist keine Zusage. Gelöscht
+# wird ausdrücklich — und gezählt wird dabei auch.
+_CHILD_TABLES = ("quotes", "daily_closes", "daily_meta", "instrument_overrides")
+
+
+def apply_migration(
+    connection: sqlite3.Connection, rejected_at: str
+) -> MigrationPlan:
+    """Führt den Umzug aus — **alles oder nichts**, in einer Transaktion.
+
+    Phase 2 des zweiphasigen Ablaufs, ausgelöst allein durch die Bestätigung
+    des Benutzers. Die Reihenfolge ist nicht beliebig:
+
+    1. **Erst der Bericht, dann die Löschung.** Beide in derselben
+       Transaktion — sonst könnte ein Abbruch dazwischen eine Zeile entfernen,
+       deren Verschwinden danach niemand mehr erklären kann. Genau das
+       verlangt `#2b4`.
+    2. **Dann die Identitäten.** Was migriert, bekommt `(ticker, mic)`.
+
+    Das **Schema** härtet danach `harden_identity_schema` — getrennt, weil
+    der Tabellen-Neuaufbau abgeschaltete Fremdschlüssel braucht und die
+    Reihenfolge damit am Aufrufer hängt, nicht hier drinnen.
+
+    Der Aufrufer verantwortet Transaktion und `PRAGMA foreign_keys` — beides
+    lässt sich nicht sinnvoll hier drinnen setzen, weil SQLite das PRAGMA
+    innerhalb einer Transaktion ignoriert.
+
+    Args:
+        connection: Offene Verbindung innerhalb der Transaktion.
+        rejected_at: Zeitstempel für die Berichtseinträge (ISO-8601).
+
+    Returns:
+        Der ausgeführte Plan — dieselbe Bilanz, die die Vorschau gezeigt hat.
+    """
+    plan = plan_migration(connection)
+    connection.execute(REJECTIONS_SCHEMA)
+
+    for rejection in plan.rejected:
+        _record_rejection(connection, rejection, rejected_at)
+        _delete_instrument(connection, rejection.instrument_id)
+
+    _ensure_identity_columns(connection)
+    for migration in plan.migrated:
+        connection.execute(
+            "UPDATE instruments SET ticker = ?, mic = ? WHERE id = ?",
+            (migration.ticker, migration.mic, migration.instrument_id),
+        )
+
+    logger.info(
+        "migration_applied",
+        migrated=len(plan.migrated),
+        rejected=len(plan.rejected),
+        unchanged=plan.unchanged,
+        lost_quotes=plan.lost_quotes,
+        lost_daily_closes=plan.lost_daily_closes,
+    )
+    return plan
+
+
+def _record_rejection(
+    connection: sqlite3.Connection, rejection: Rejection, rejected_at: str
+) -> None:
+    """Schreibt den Berichtseintrag, **bevor** die Zeile verschwindet.
+
+    Die Metadaten kommen aus der Zeile selbst — nach dem Löschen sind sie
+    weg, und ein Bericht, der nur „irgendein Symbol" nennt, hilft bei der
+    Neuerfassung nicht.
+
+    Args:
+        connection: Offene Verbindung innerhalb der Transaktion.
+        rejection: Der Eintrag aus dem Plan.
+        rejected_at: Zeitstempel (ISO-8601).
+    """
+    row = connection.execute(
+        "SELECT name, exchange, type, currency FROM instruments WHERE id = ?",
+        (rejection.instrument_id,),
+    ).fetchone()
+    connection.execute(
+        "INSERT INTO migration_rejections "
+        "(symbol, isin, name, exchange, type, currency, reason, quotes, "
+        " daily_closes, rejected_at) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            rejection.symbol,
+            rejection.isin,
+            row["name"] if row else None,
+            row["exchange"] if row else None,
+            row["type"] if row else None,
+            row["currency"] if row else None,
+            rejection.reason,
+            rejection.quotes,
+            rejection.daily_closes,
+            rejected_at,
+        ),
+    )
+
+
+def _delete_instrument(connection: sqlite3.Connection, instrument_id: int) -> None:
+    """Entfernt ein Instrument samt allem, was daran hängt.
+
+    Ausdrücklich statt über die Kaskade — siehe `_CHILD_TABLES`.
+
+    Args:
+        connection: Offene Verbindung innerhalb der Transaktion.
+        instrument_id: Die Zeile, die geht.
+    """
+    for table in _CHILD_TABLES:
+        if _table_exists(connection, table):
+            connection.execute(
+                f"DELETE FROM {table} WHERE instrument_id = ?", (instrument_id,)
+            )
+    connection.execute("DELETE FROM instruments WHERE id = ?", (instrument_id,))
+
+
+def _ensure_identity_columns(connection: sqlite3.Connection) -> None:
+    """Legt `ticker`, `mic` und `listing_id` an, falls sie fehlen.
+
+    Erst hier und nicht in der Vorschau: Eine Spalte anzulegen ist bereits
+    eine Änderung, und Phase 1 verspricht, keine zu machen.
+
+    Args:
+        connection: Offene Verbindung innerhalb der Transaktion.
+    """
+    existing = {
+        row["name"] for row in connection.execute("PRAGMA table_info(instruments)")
+    }
+    for column in ("ticker", "mic", "listing_id"):
+        if column not in existing:
+            connection.execute(f"ALTER TABLE instruments ADD COLUMN {column} TEXT")
+
+
+def harden_identity_schema(connection: sqlite3.Connection) -> None:
+    """Macht `ticker` und `mic` zu Pflichtspalten und entfernt `identity_status`.
+
+    **Der Punkt ohne Wiederkehr.** Danach kann keine halbe Identität mehr
+    entstehen — nicht durch einen Programmierfehler, nicht durch einen
+    Endpunkt, den jemand übersehen hat. Die Invariante aus `#2b2` steht damit
+    im Schema und nicht in einer Prüfung, die man vergessen kann.
+
+    SQLite kann eine Spalte nicht nachträglich auf `NOT NULL` setzen; die
+    Tabelle wird deshalb neu gebaut und umkopiert. Die Spaltenliste entsteht
+    aus dem **realen** Bestand der Tabelle, nicht aus einer abgeschriebenen
+    Aufzählung: Welche Metadatenspalten eine gewachsene Installation trägt,
+    weiß nur sie selbst, und eine Kopie hier wäre eine zweite Wahrheit, die
+    beim nächsten `_add_missing_columns` driftet.
+
+    `identity_status` fällt beim Umkopieren weg — die Spalte trüge nur noch
+    einen einzigen Wert, und die beste Zahl an Quellen für einen Wert, den es
+    nicht mehr gibt, ist null.
+
+    Args:
+        connection: Offene Verbindung innerhalb der Transaktion, mit
+            **abgeschalteten** Fremdschlüsseln.
+    """
+    columns = [
+        row for row in connection.execute("PRAGMA table_info(instruments)")
+        if row["name"] != "identity_status"
+    ]
+    if not any(column["name"] == "ticker" for column in columns):
+        raise RuntimeError("harden_identity_schema vor _ensure_identity_columns")
+
+    definitions = ", ".join(_column_definition(column) for column in columns)
+    names = ", ".join(column["name"] for column in columns)
+
+    connection.execute("DROP TABLE IF EXISTS instruments_hardened")
+    connection.execute(f"CREATE TABLE instruments_hardened ({definitions})")
+    connection.execute(
+        f"INSERT INTO instruments_hardened ({names}) SELECT {names} FROM instruments"
+    )
+    connection.execute("DROP TABLE instruments")
+    connection.execute("ALTER TABLE instruments_hardened RENAME TO instruments")
+
+
+def _column_definition(column: sqlite3.Row) -> str:
+    """Baut die DDL einer Spalte für die gehärtete Tabelle nach.
+
+    `ticker` und `mic` bekommen ihr `NOT NULL` — darum geht das Ganze. Alles
+    andere behält, was es hatte: Typ, `NOT NULL`, `PRIMARY KEY` und
+    Vorgabewert.
+
+    ``UNIQUE`` steht **nicht** hier: SQLite führt es als eigenen Index, nicht
+    als Spalteneigenschaft, und `PRAGMA table_info` nennt es gar nicht. Die
+    Eindeutigkeit von `isin`, `(ticker, mic)` und `listing_id` wird deshalb
+    nach dem Umbau als Index neu gesetzt — dort, wo sie ohnehin steht.
+
+    Args:
+        column: Eine Zeile aus `PRAGMA table_info`.
+
+    Returns:
+        Das DDL-Fragment, etwa ``'ticker TEXT NOT NULL'``.
+    """
+    parts = [column["name"], column["type"] or "TEXT"]
+    if column["pk"]:
+        parts.append("PRIMARY KEY AUTOINCREMENT")
+    elif column["name"] in ("ticker", "mic") or column["notnull"]:
+        parts.append("NOT NULL")
+    if column["dflt_value"] is not None:
+        parts.append(f"DEFAULT {column['dflt_value']}")
+    return " ".join(parts)
+
+
+def _table_exists(connection: sqlite3.Connection, table: str) -> bool:
+    """Gibt es diese Tabelle?
+
+    Eine Alt-Datenbank kennt nicht jede Kindtabelle — `daily_meta` und
+    `instrument_overrides` kamen später dazu. Ohne diese Frage bräche der
+    Umzug an einem Bestand, der alt genug ist, um ihn nötig zu haben.
+
+    Args:
+        connection: Offene Verbindung.
+        table: Tabellenname.
+
+    Returns:
+        ``True``, wenn die Tabelle existiert.
+    """
+    return (
+        connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?", (table,)
+        ).fetchone()
+        is not None
+    )
