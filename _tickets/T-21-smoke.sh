@@ -121,7 +121,7 @@ import sqlite3
 import string
 import sys
 
-from app.db import init_db
+from app.db import init_db, run_migration
 from app.exchanges import EXCHANGES
 
 source, backup = sys.argv[1], sys.argv[2]
@@ -139,7 +139,7 @@ def check(name: str, ok: bool, text: str) -> None:
 
 
 def state_before(connection: sqlite3.Connection) -> dict[int, dict]:
-    """Der Zustand je Zeile **vor** der Migration.
+    """Der Zustand je Zeile **vor** dem Umzug.
 
     Auf einer Alt-Datenbank gibt es die Identitätsspalten noch nicht — dann
     gilt jede Zeile als unbetrachtet. Nur so lässt sich hinterher sagen,
@@ -149,11 +149,11 @@ def state_before(connection: sqlite3.Connection) -> dict[int, dict]:
     columns = {
         row["name"] for row in connection.execute("PRAGMA table_info(instruments)")
     }
-    has_identity = {"ticker", "mic", "identity_status"} <= columns
+    has_identity = {"ticker", "mic"} <= columns
     selection = (
-        "id, symbol, ticker, mic, identity_status"
+        "id, symbol, ticker, mic"
         if has_identity
-        else "id, symbol, NULL AS ticker, NULL AS mic, NULL AS identity_status"
+        else "id, symbol, NULL AS ticker, NULL AS mic"
     )
     return {
         row["id"]: dict(row)
@@ -170,16 +170,24 @@ if not before:
     check("#0 ", False, f"{source} enthält keine Instrumente — nichts zu prüfen")
     sys.exit(0)
 
-init_db(backup)
-init_db(backup)  # zweiter Start — dort hat die Alt-Bereinigung Zeilen gelöscht
+# **Zweiphasig, seit T-21 Teil 3.** `init_db` erkennt nur noch und meldet, ob
+# etwas aussteht; ausgeführt wird erst auf Bestätigung. Das Script bestätigt
+# hier stellvertretend — es prüft den Umzug, nicht die Oberfläche.
+#
+# Ein Bestand, der nichts auszustehen hat, ist **nicht geprüft**: Dann läuft
+# `run_migration` ins Leere und alle folgenden Zusagen wären leere Mengen.
+pending = init_db(backup)
+plan = run_migration(backup, rejected_at="2026-08-25T00:00:00+00:00")
+init_db(backup)  # zweiter Start — er darf nichts mehr vorfinden
+rejected_symbols = [rejection.symbol for rejection in plan.rejected]
+lost_quotes = plan.lost_quotes
 
 with sqlite3.connect(backup) as connection:
     connection.row_factory = sqlite3.Row
     after = {
         row["id"]: dict(row)
         for row in connection.execute(
-            "SELECT id, symbol, isin, ticker, mic, identity_status, listing_id "
-            "FROM instruments"
+            "SELECT id, symbol, isin, ticker, mic, listing_id FROM instruments"
         )
     }
     quotes_after = connection.execute("SELECT COUNT(*) FROM quotes").fetchone()[0]
@@ -187,6 +195,22 @@ with sqlite3.connect(backup) as connection:
         index["name"]: index["unique"]
         for index in connection.execute("PRAGMA index_list(instruments)")
     }
+    report = {
+        row["symbol"]: dict(row)
+        for row in connection.execute(
+            "SELECT symbol, reason, quotes, daily_closes FROM migration_rejections"
+        )
+    }
+    # Trägt das Schema die Invariante wirklich, oder sind die Felder nur
+    # zufällig gefüllt? Der Unterschied ist der ganze Punkt von `#2b2`.
+    try:
+        connection.execute(
+            "INSERT INTO instruments (symbol, first_seen) VALUES ('X.PROBE', 'jetzt')"
+        )
+        connection.execute("DELETE FROM instruments WHERE symbol = 'X.PROBE'")
+        not_null_enforced = False
+    except sqlite3.IntegrityError:
+        not_null_enforced = True
 
 listing_ids = [row["listing_id"] for row in after.values()]
 # Nur die Zeilen, die **dieser** Lauf zugeordnet hat. Was schon eine Identität
@@ -194,24 +218,38 @@ listing_ids = [row["listing_id"] for row in after.values()]
 newly_resolved = [
     row
     for identifier, row in after.items()
-    if row["identity_status"] == "resolved"
-    and not before.get(identifier, {}).get("identity_status")
+    if not before.get(identifier, {}).get("mic")
 ]
-still_open = [row for row in after.values() if row["identity_status"] == "legacy_unresolved"]
 preexisting = [
     (before[identifier], row)
     for identifier, row in after.items()
-    if before.get(identifier, {}).get("identity_status")
+    if before.get(identifier, {}).get("mic")
 ]
 
 check("#0 ", True, f"{len(before)} Instrumente, {quotes_before} Kurspunkte im Bestand")
+check("#0b", pending, "der Start hat den ausstehenden Umzug erkannt")
+# **Die Bilanz muss aufgehen.** Vorher genügte „vorher == nachher"; seit der
+# Umzug Zeilen auch ablehnt, wäre das die falsche Zusage — sie würde bei einem
+# stillen Datenverlust ebenso rot wie bei einer gemeldeten Ablehnung. Geprüft
+# wird deshalb, dass jede fehlende Zeile **im Bericht steht**.
 check(
-    "#1a", len(after) == len(before),
-    f"Instrumente vorher {len(before)}, nachher {len(after)}",
+    "#1a",
+    len(after) + len(rejected_symbols) == len(before),
+    f"Instrumente vorher {len(before)}, nachher {len(after)}, "
+    f"abgelehnt {len(rejected_symbols)}"
+    + (f" ({', '.join(rejected_symbols)})" if rejected_symbols else ""),
 )
 check(
-    "#1b", quotes_after == quotes_before,
-    f"Kurspunkte vorher {quotes_before}, nachher {quotes_after}",
+    "#1b",
+    quotes_after + lost_quotes == quotes_before,
+    f"Kurspunkte vorher {quotes_before}, nachher {quotes_after}, "
+    f"mit den abgelehnten Zeilen entfallen {lost_quotes}",
+)
+check(
+    "#1d",
+    set(report) == set(rejected_symbols) and all(report[s]["reason"] for s in report),
+    f"Bericht deckt die Ablehnungen: "
+    + (", ".join(f"{s}:{report[s]['reason']}" for s in sorted(report)) or "keine"),
 )
 check(
     "#1c",
@@ -270,22 +308,19 @@ def looks_like_mic(mic: str | None) -> bool:
 
 
 def invalid_state(row: dict) -> str | None:
-    """Nennt den Widerspruch einer Zeile, oder ``None`` wenn sie stimmig ist."""
-    status = row["identity_status"]
-    if status == "resolved":
-        if not row["ticker"] or not row["mic"]:
-            return f"{row['symbol']}: resolved ohne vollständige Identität"
-        if not looks_like_mic(row["mic"]):
-            return f"{row['symbol']}: {row['mic']!r} ist kein echter MIC"
-        return None
-    if status == "legacy_unresolved":
-        if row["ticker"] or row["mic"]:
-            return f"{row['symbol']}: offen, trägt aber eine Identität"
-        return None
-    return f"{row['symbol']}: unbekannter Status {status!r}"
+    """Nennt den Widerspruch einer Zeile, oder ``None`` wenn sie stimmig ist.
+
+    **Ohne Status**, seit T-21 Teil 3: Es gibt keine Beschriftung mehr, die
+    einer Zeile widersprechen könnte. Geprüft wird allein, was in ihr steht —
+    ein Ticker und ein echter MIC, sonst nichts.
+    """
+    if not row["ticker"] or not row["mic"]:
+        return f"{row['symbol']}: halbe Identität nach dem Umzug"
+    if not looks_like_mic(row["mic"]):
+        return f"{row['symbol']}: {row['mic']!r} ist kein echter MIC"
+    return None
 
 
-resolved_rows = [row for row in after.values() if row["identity_status"] == "resolved"]
 broken_states = [
     problem for problem in (invalid_state(row) for row in after.values()) if problem
 ]
@@ -294,7 +329,8 @@ wrongly_resolved = [
     for row in newly_resolved
     if composed(row) != row["symbol"]
 ]
-wrongly_open = [row["symbol"] for row in still_open if row["ticker"] or row["mic"]]
+still_present = [symbol for symbol in rejected_symbols
+                 if symbol in {row["symbol"] for row in after.values()}]
 changed = [
     f"{old['symbol']}: {old['ticker']}/{old['mic']} → {new['ticker']}/{new['mic']}"
     for old, new in preexisting
@@ -319,16 +355,22 @@ check(
 check(
     "#2d",
     not broken_states,
-    f"{len(after)} Zeilen in gültigem Zustand "
-    f"({len(resolved_rows)} zugeordnet, {len(still_open)} offen)"
+    f"{len(after)} Zeilen mit vollständiger Identität"
     + (f" — widersprüchlich: {broken_states}" if broken_states else ""),
 )
 check(
+    "#2e",
+    not_null_enforced,
+    "das Schema lässt keine halbe Identität mehr zu (NOT NULL greift)"
+    if not_null_enforced
+    else "eine Zeile ohne Identität liess sich einfügen — NOT NULL fehlt",
+)
+check(
     "#2b",
-    not wrongly_open,
-    f"{len(still_open)} offen, nichts geraten: "
-    + (", ".join(row["symbol"] for row in still_open) or "keine")
-    + (f" — zu Unrecht offen: {wrongly_open}" if wrongly_open else ""),
+    not still_present,
+    f"{len(rejected_symbols)} abgelehnt und aus dem Bestand entfernt: "
+    + (", ".join(rejected_symbols) or "keine")
+    + (f" — noch vorhanden: {still_present}" if still_present else ""),
 )
 check(
     "#2c",

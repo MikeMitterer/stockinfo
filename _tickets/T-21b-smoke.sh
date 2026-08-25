@@ -246,21 +246,23 @@ checkExchangeTablePath() {
         return 1
     fi
 
+    # `identity_status` ist mit T-21 Teil 3 entfallen — die Spalte trüge nur
+    # noch einen einzigen Wert. Die Vollständigkeit steht jetzt im Schema
+    # (`NOT NULL`), nicht in einer Beschriftung; geprüft wird deshalb, was in
+    # der Zeile steht.
     local _ROW
-    _ROW="$(dbQuery "SELECT symbol, ticker, mic, identity_status FROM instruments WHERE isin = '${ISIN_XETRA}'")"
+    _ROW="$(dbQuery "SELECT symbol, ticker, mic FROM instruments WHERE isin = '${ISIN_XETRA}'")"
     local _SYMBOL="${_ROW%%|*}"
     local _REST="${_ROW#*|}"
     local _TICKER="${_REST%%|*}"
-    _REST="${_REST#*|}"
-    local _MIC="${_REST%%|*}"
-    local _STATE="${_REST#*|}"
+    local _MIC="${_REST#*|}"
 
-    if [[ -n "${_TICKER}" && "${_MIC}" == "XETR" && "${_STATE}" == "resolved" ]]; then
+    if [[ -n "${_TICKER}" && "${_MIC}" == "XETR" ]]; then
         report "#5a" "Xetra-Papier bringt ticker und mic mit" true \
-            "${_SYMBOL} → ${_TICKER}/${_MIC} (${_STATE})"
+            "${_SYMBOL} → ${_TICKER}/${_MIC}"
     else
         report "#5a" "Xetra-Papier bringt ticker und mic mit" false \
-            "${_SYMBOL} → '${_TICKER}'/'${_MIC}' (${_STATE})"
+            "${_SYMBOL} → '${_TICKER}'/'${_MIC}'"
         return 1
     fi
 
