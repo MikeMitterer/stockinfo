@@ -155,7 +155,7 @@ def test_duplikate_verlieren_weder_overrides_noch_daily_wasserzeichen(tmp_path) 
     """
     import sqlite3
 
-    from app.db import init_db
+    from app.db import init_db, run_migration
 
     pfad = str(tmp_path / "duplikate.db")
     with sqlite3.connect(pfad) as verbindung:
@@ -204,7 +204,10 @@ def test_duplikate_verlieren_weder_overrides_noch_daily_wasserzeichen(tmp_path) 
             """
         )
 
+    # Die Bereinigung läuft seit T-21 Teil 3 im **bestätigten** Umzug, nicht
+    # mehr im Start: `init_db` erkennt nur noch, `run_migration` führt aus.
     init_db(pfad)
+    run_migration(pfad, rejected_at="2026-08-25T12:00:00+00:00")
 
     with sqlite3.connect(pfad) as verbindung:
         verbindung.row_factory = sqlite3.Row
@@ -273,7 +276,7 @@ def test_overrides_werden_feldweise_zusammengefuehrt(tmp_path) -> None:
     """
     import sqlite3
 
-    from app.db import init_db
+    from app.db import init_db, run_migration
 
     pfad = str(tmp_path / "konflikt.db")
     _alte_db_mit_duplikat(
@@ -288,7 +291,10 @@ def test_overrides_werden_feldweise_zusammengefuehrt(tmp_path) -> None:
         """,
     )
 
+    # Die Bereinigung läuft seit T-21 Teil 3 im **bestätigten** Umzug, nicht
+    # mehr im Start: `init_db` erkennt nur noch, `run_migration` führt aus.
     init_db(pfad)
+    run_migration(pfad, rejected_at="2026-08-25T12:00:00+00:00")
 
     with sqlite3.connect(pfad) as verbindung:
         verbindung.row_factory = sqlite3.Row
@@ -309,7 +315,7 @@ def test_daily_spannen_mit_luecke_werden_nicht_zusammengezogen(tmp_path) -> None
     """
     import sqlite3
 
-    from app.db import init_db
+    from app.db import init_db, run_migration
 
     pfad = str(tmp_path / "luecke.db")
     _alte_db_mit_duplikat(
@@ -323,7 +329,10 @@ def test_daily_spannen_mit_luecke_werden_nicht_zusammengezogen(tmp_path) -> None
         """,
     )
 
+    # Die Bereinigung läuft seit T-21 Teil 3 im **bestätigten** Umzug, nicht
+    # mehr im Start: `init_db` erkennt nur noch, `run_migration` führt aus.
     init_db(pfad)
+    run_migration(pfad, rejected_at="2026-08-25T12:00:00+00:00")
 
     with sqlite3.connect(pfad) as verbindung:
         verbindung.row_factory = sqlite3.Row
@@ -338,7 +347,7 @@ def test_ueberlappende_daily_spannen_werden_geweitet(tmp_path) -> None:
     """Überlappen sich die Spannen, ist die Vereinigung lückenlos — also zulässig."""
     import sqlite3
 
-    from app.db import init_db
+    from app.db import init_db, run_migration
 
     pfad = str(tmp_path / "ueberlappung.db")
     _alte_db_mit_duplikat(
@@ -351,7 +360,10 @@ def test_ueberlappende_daily_spannen_werden_geweitet(tmp_path) -> None:
         """,
     )
 
+    # Die Bereinigung läuft seit T-21 Teil 3 im **bestätigten** Umzug, nicht
+    # mehr im Start: `init_db` erkennt nur noch, `run_migration` führt aus.
     init_db(pfad)
+    run_migration(pfad, rejected_at="2026-08-25T12:00:00+00:00")
 
     with sqlite3.connect(pfad) as verbindung:
         verbindung.row_factory = sqlite3.Row

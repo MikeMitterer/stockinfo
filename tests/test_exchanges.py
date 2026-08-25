@@ -59,24 +59,41 @@ def test_kein_suffix_ist_doppelt_vergeben() -> None:
 
 
 def test_die_schema_schicht_zieht_kein_yfinance_mit() -> None:
-    """`app/db.py` darf für die Migration nicht den halben Netzstack laden.
+    """`app/db.py` darf für den Umzug nicht den halben Netzstack laden.
 
     Die Zerlegung sitzt deshalb in `app/exchanges.py` und nicht im Resolver:
     Dort steht `import yfinance`, und die Schema-Schicht hat damit nichts zu
-    tun. Ohne diesen Test rutscht die Abhängigkeit beim nächsten Import
-    unbemerkt zurück.
+    tun.
+
+    **Der Test misst jetzt die Wirklichkeit statt der Importzeilen.** Vorher
+    parste er `app/db.py` und verlangte, dass `app.exchanges` dort *wörtlich*
+    steht. Das war ein Stellvertreter, und er ging in dem Moment kaputt, in
+    dem `db.py` denselben Code über `app.migration` bezieht — obwohl die
+    eigentliche Zusage unberührt blieb. Schlimmer noch: Eine indirekte
+    Abhängigkeit auf den Resolver hätte er **nicht** gesehen, denn er las nur
+    eine einzige Datei.
+
+    Geprüft wird deshalb der ganze Importbaum, in einem frischen Prozess:
+    Nach `import app.db` darf `yfinance` nicht geladen sein.
     """
-    import ast
+    import subprocess
+    import sys
 
-    quelle = ast.parse((__import__("pathlib").Path("app/db.py")).read_text(encoding="utf-8"))
-    module = {
-        knoten.module
-        for knoten in ast.walk(quelle)
-        if isinstance(knoten, ast.ImportFrom) and knoten.module
-    }
+    ergebnis = subprocess.run(
+        [
+            sys.executable,
+            "-c",
+            "import sys; import app.db; "
+            "print('yfinance' in sys.modules or 'app.resolver' in sys.modules)",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
+    )
 
-    assert "app.resolver" not in module
-    assert "app.exchanges" in module
+    assert ergebnis.stdout.strip() == "False", (
+        "app.db zieht den Netzstack mit: " + ergebnis.stdout
+    )
 
 
 @pytest.mark.parametrize("mic", ["XETR", "XTSE", "XNAS", "XNYS", "X0AT"])

@@ -38,6 +38,8 @@ class FakeQuoteService:
         return QuoteResponse(
             isin=None,
             symbol=symbol,
+            ticker=symbol.split(".")[0],
+            mic="XETR",
             currency="USD",
             price=210.0,
             quote_time="2026-07-12T20:00:00+00:00",
@@ -71,6 +73,8 @@ def _seed(repo: QuoteRepository, isin: str | None, symbol: str) -> None:
         QuoteResponse(
             isin=isin,
             symbol=symbol,
+            ticker=symbol.split(".")[0],
+            mic="XETR",
             currency="EUR",
             price=100.0,
             quote_time="2026-07-12T10:00:00+00:00",

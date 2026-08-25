@@ -20,9 +20,14 @@ def repo(tmp_path: Path) -> QuoteRepository:
 
 
 def _seed(repo: QuoteRepository, isin: str = "IE00B3RBWM25", symbol: str = "VGWL.DE") -> dict:
+    """Legt ein Papier an — mit der Identität, die seit T-21 Teil 3 Pflicht ist.
+
+    Alle Symbole dieses Tests liegen an Xetra; der Ticker steht vor dem Punkt.
+    """
     repo.save_quote(
         QuoteResponse(
-            isin=isin, symbol=symbol, currency="EUR", price=100.0,
+            isin=isin, symbol=symbol, ticker=symbol.split(".")[0], mic="XETR",
+            currency="EUR", price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",
             fetched_at="2026-07-13T10:00:00+00:00", type="etf",
         )
