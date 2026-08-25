@@ -608,7 +608,9 @@ def test_yahoo_bevorzugt_bei_boerse_ohne_suffix_das_symbol_ohne_punkt(
 ) -> None:
     """`US` hat kein Suffix — dort ist das punktlose Symbol die Notierung.
 
-    Ohne diesen Zweig liefe die Regel leer: Jedes Symbol „endet auf ''".
+    Erkannt wird es nicht daran, dass der Punkt fehlt, sondern an Yahoos
+    Börsencode: `NMS` bildet auf `XNAS` ab, und `XNAS` ist ein Mitglied von
+    `US`. Der Xetra-Treffer scheidet über sein Suffix aus.
     """
     _with_search(
         monkeypatch,
@@ -623,6 +625,57 @@ def test_yahoo_bevorzugt_bei_boerse_ohne_suffix_das_symbol_ohne_punkt(
 
     assert resolved is not None
     assert resolved.symbol == "AAPL"
+
+
+def test_yahoo_unterscheidet_eine_us_boerse_vom_sammelcode(monkeypatch) -> None:
+    """`DEFAULT_EXCHANGE=XNAS` meint NASDAQ, nicht „irgendwo in den USA".
+
+    Der Befund aus Runde 26: Solange die Auswahl allein am Alias hing, waren
+    `XNAS` und der Sammelcode `US` ununterscheidbar — beide führen keinen, und
+    die Regel deutete das als „jedes punktlose Symbol gehört dazu". Der
+    Arca-Treffer stand vorn und gewann, obwohl der NASDAQ-Treffer zwei Zeilen
+    später kam.
+
+    Die Reihenfolge ist deshalb Absicht: Der **falsche** Treffer steht zuerst.
+    """
+    _with_search(
+        monkeypatch,
+        [
+            {"symbol": "SPY", "exchange": "PCX", "exchDisp": "NYSEArca", "quoteType": "ETF"},
+            {"symbol": "ONEQ", "exchange": "NMS", "exchDisp": "NasdaqGS", "quoteType": "ETF"},
+        ],
+    )
+    resolver = YFinanceResolver(default_exchange="XNAS")
+
+    resolved = resolver.resolve_isin("US0378331005")
+
+    assert isinstance(resolved, ResolvedInstrument)
+    assert (resolved.symbol, resolved.mic) == ("ONEQ", "XNAS")
+
+
+def test_yahoo_laesst_einen_unbekannten_punktlosen_treffer_nicht_gewinnen(
+    monkeypatch,
+) -> None:
+    """Ein Treffer, dessen Börse niemand kennt, gehört zu keiner Präferenz.
+
+    Vorher zählte er beim Sammelcode `US` als Treffer der bevorzugten Börse,
+    verdrängte das gültige Mitglied dahinter — und die anschließende
+    MIC-Abbildung machte daraus `Unavailable`. Der Fehlerfall war damit
+    schlimmer als kein Vorzug: Ein auflösbarer Treffer lag vor.
+    """
+    _with_search(
+        monkeypatch,
+        [
+            {"symbol": "FUND", "exchange": "ZZZ", "exchDisp": "Nirgendwo", "quoteType": "ETF"},
+            {"symbol": "ONEQ", "exchange": "NMS", "exchDisp": "NasdaqGS", "quoteType": "ETF"},
+        ],
+    )
+    resolver = YFinanceResolver(default_exchange="US")
+
+    resolved = resolver.resolve_isin("US0378331005")
+
+    assert isinstance(resolved, ResolvedInstrument)
+    assert (resolved.symbol, resolved.mic) == ("ONEQ", "XNAS")
 
 
 def test_yahoo_ueberspringt_treffer_ohne_symbol(monkeypatch) -> None:

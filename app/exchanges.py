@@ -364,22 +364,48 @@ def preference_kind(code: str) -> str | None:
     return None
 
 
-def preferred_aliases(code: str) -> tuple[str, ...]:
-    """Die Aliase, die zu einer Präferenz gehören — Börse **oder** Sammelcode.
+def preferred_mics(code: str) -> tuple[str, ...]:
+    """Die Handelsplätze, die zu einer Präferenz gehören — Börse **oder** Sammelcode.
 
-    Eine Börse steuert ihren einen Alias bei, ein Sammelcode die seiner
-    Mitglieder. Damit lässt sich „liegt dieses Symbol an der bevorzugten
-    Börse?" für beide Arten mit **einer** Regel beantworten, statt an jeder
-    Aufrufstelle zwei Fälle zu unterscheiden.
+    Die **eine** Stelle, die „was umfasst dieser Vorgabewert?" beantwortet.
+    Eine Börse umfasst sich selbst, ein Sammelcode seine Mitglieder.
 
     Ein unbekannter Code fällt auf `DEFAULT_EXCHANGE` zurück — dieselbe
     Nachsicht wie in der Auflösungskaskade, damit eine vertippte Konfiguration
     die Auswahl nicht leer laufen lässt.
 
+    **Warum die MICs und nicht nur die Aliase.** Die fünf US-Plätze führen
+    keinen Alias, und über den Alias sind sie deshalb ununterscheidbar:
+    `XNAS` und der Sammelcode `US` sähen beide gleich aus. Wer nur die Aliase
+    kennt, muss die Abwesenheit als „alles Punktlose zählt" deuten — und wählt
+    dann für `DEFAULT_EXCHANGE=XNAS` einen Arca-Treffer. Der MIC trägt die
+    Unterscheidung, die dem Alias fehlt.
+
+    Args:
+        code: Der konfigurierte Vorgabewert.
+
+    Returns:
+        Die MICs der umfassten Handelsplätze, nie leer.
+    """
+    if code in EXCHANGES:
+        return (code,)
+    collector = COLLECTORS.get(code)
+    if collector is not None:
+        return tuple(mic for mic in collector.members if mic in EXCHANGES)
+    return (DEFAULT_EXCHANGE,)
+
+
+def preferred_aliases(code: str) -> tuple[str, ...]:
+    """Die Aliase der Handelsplätze, die zu einer Präferenz gehören.
+
+    Aus `preferred_mics` abgeleitet, nicht daneben gepflegt: Die Frage „welche
+    Plätze umfasst der Vorgabewert?" hat genau eine Antwort, und die steht dort.
+
     Börsen ohne Alias steuern **nichts** bei, statt eine Abwesenheit in die
     Liste zu legen. Ein leeres Ergebnis heißt deshalb genau eines: „keiner der
-    in Frage kommenden Plätze hängt ein Kürzel an" — beim Sammelcode `US` gilt
-    das für alle fünf Mitglieder.
+    in Frage kommenden Plätze hängt ein Kürzel an". Es heißt **nicht** „jedes
+    punktlose Symbol gehört dazu" — welche Plätze gemeint sind, sagt allein
+    `preferred_mics`.
 
     Args:
         code: Der konfigurierte Vorgabewert.
@@ -387,16 +413,8 @@ def preferred_aliases(code: str) -> tuple[str, ...]:
     Returns:
         Die vorhandenen Aliase, möglicherweise keiner.
     """
-    if code in EXCHANGES:
-        mics: tuple[str, ...] = (code,)
-    else:
-        collector = COLLECTORS.get(code)
-        mics = collector.members if collector is not None else (DEFAULT_EXCHANGE,)
-
     return tuple(
-        alias
-        for mic in mics
-        if (alias := EXCHANGES[mic].alias if mic in EXCHANGES else None)
+        alias for mic in preferred_mics(code) if (alias := EXCHANGES[mic].alias)
     )
 
 

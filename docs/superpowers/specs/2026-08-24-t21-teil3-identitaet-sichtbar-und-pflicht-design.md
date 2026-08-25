@@ -192,9 +192,15 @@ Vier Entscheidungen, jede aus einem Befund:
   ist keine Beschreibung der Serialisierung: Die erste Umsetzung führte `alias`
   als Pflichtfeld und schrieb bei den fünf US-Plätzen einen Leerstring hinein —
   einen magischen Wert, den jede Schicht eigens deuten muss. Der Alias fehlt im
-  Python-, REST- und TypeScript-Vertrag ausdrücklich (`None` / `null` /
-  weggelassen), und der Leerstring wird **abgelehnt**; sonst gäbe es die
-  Abwesenheit zweimal. Für die Provenienz gilt dasselbe strenger: Sie ist eine
+  Python-, REST- und TypeScript-Vertrag ausdrücklich — `None`, `null` **oder
+  weggelassen**, und zwar in allen drei Schichten: `alias` steht nicht in
+  `required`, also darf ein Erzeuger das Feld auslassen, und ein Typ, der nur
+  `null` zulässt, wäre strenger als der Vertrag. Der Leerstring wird
+  **abgelehnt**; sonst gäbe es die Abwesenheit zweimal. Diese eine Zusage trägt
+  das **Backend** (`min_length=1`, als `minLength: 1` im OpenAPI-Schema
+  sichtbar) — ein Stringtyp in TypeScript kann sie nicht ausdrücken, und mehr
+  zu behaupten wäre eine Zusage ohne Schicht, die sie hält.
+  Für die Provenienz gilt dasselbe strenger: Sie ist eine
   **diskriminierte Union** — Core ohne Plugin-ID, Plugin mit verpflichtender
   nichtleerer ID. Ein Modell mit zwei optionalen Feldern konnte
   `{"kind": "plugin", "id": null}` und `{"kind": "core", "id": "demo"}`

@@ -124,14 +124,23 @@ export type Provenance = { kind: 'core' } | { kind: 'plugin'; id: string }
 /**
  * Ein **Handelsplatz**: echter MIC und höchstens ein Provider-Alias.
  *
- * `alias` ist das nackte Token ohne Punkt (`'DE'`) oder `null`, wenn die Börse
- * keines anhängt. Den Punkt setzt das Backend beim Zusammensetzen des Symbols.
- * `null` statt `''`: Abwesenheit ist kein Alias aus null Zeichen.
+ * `alias` ist das nackte Token ohne Punkt (`'DE'`). Den Punkt setzt das Backend
+ * beim Zusammensetzen des Symbols.
+ *
+ * **Optional und nullable, beides.** Das Backend liefert heute `null`, aber der
+ * OpenAPI-Vertrag führt `alias` nicht in `required` — ein Erzeuger darf das Feld
+ * also weglassen. Ein Typ, der nur `null` erlaubt, wäre strenger als der
+ * Vertrag und würde gültige Antworten ablehnen.
+ *
+ * **Was TypeScript hier nicht leisten kann.** Dass `''` verboten ist, steht im
+ * OpenAPI-Schema (`minLength: 1`) und wird von Pydantic durchgesetzt. Ein
+ * Stringtyp kann das nicht ausdrücken; die Zusage lebt auf der Backend-Schicht,
+ * nicht hier.
  */
 export interface ExchangeEntry {
   kind: 'exchange'
   mic: string
-  alias: string | null
+  alias?: string | null
   name: string
   region: string
   currency: string

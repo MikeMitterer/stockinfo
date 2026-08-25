@@ -19,6 +19,8 @@ from app.exchanges import (
     EXCHANGES,
     is_real_mic,
     preference_kind,
+    preferred_aliases,
+    preferred_mics,
     provider_alias,
     split_symbol,
 )
@@ -165,6 +167,45 @@ def test_der_provider_alias_entsteht_an_einer_stelle(
     Ohne Alias bleibt es beim nackten Ticker — die US-Plätze führen keinen.
     """
     assert provider_alias(ticker, mic) == expected
+
+
+@pytest.mark.parametrize(
+    ("code", "expected"),
+    [
+        ("XETR", ("XETR",)),
+        ("XNAS", ("XNAS",)),
+        ("US", ("XNAS", "XNYS", "ARCX", "XASE", "BATS")),
+        ("XXXX", ("XETR",)),
+    ],
+    ids=["boerse_mit_alias", "boerse_ohne_alias", "sammelcode", "unbekannt"],
+)
+def test_eine_praeferenz_umfasst_ihre_handelsplaetze(
+    code: str, expected: tuple[str, ...]
+) -> None:
+    """Was der Vorgabewert umfasst, steht an genau einer Stelle.
+
+    Die Zeile `XNAS` ist der Grund für diese Funktion: Über den Alias sind
+    `XNAS` und der Sammelcode `US` ununterscheidbar — beide führen keinen. Wer
+    die Auswahl allein am Alias festmacht, muss die Abwesenheit als „alles
+    Punktlose zählt" deuten und wählt für `DEFAULT_EXCHANGE=XNAS` dann einen
+    Arca-Treffer. Der MIC trägt die Unterscheidung, die dem Alias fehlt.
+
+    Ein unbekannter Code fällt auf `DEFAULT_EXCHANGE` zurück, damit eine
+    vertippte Konfiguration die Auswahl nicht leer laufen lässt.
+    """
+    assert preferred_mics(code) == expected
+
+
+def test_die_aliase_sind_aus_den_handelsplaetzen_abgeleitet() -> None:
+    """Eine Quelle für „welche Plätze?", nicht zwei nebeneinander.
+
+    Der Sammelcode `US` umfasst fünf Plätze und steuert **keinen** Alias bei —
+    ein leeres Ergebnis heißt „keiner hängt ein Kürzel an", nicht „egal".
+    """
+    assert preferred_aliases("XETR") == ("DE",)
+    assert preferred_aliases("XNAS") == ()
+    assert preferred_aliases("US") == ()
+    assert len(preferred_mics("US")) == 5
 
 
 def test_der_alias_weg_landet_beim_kanonischen_mic() -> None:

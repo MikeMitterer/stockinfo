@@ -36,8 +36,21 @@ describe('Provenance', () => {
 })
 
 describe('ExchangeEntry', () => {
-  it('drückt den fehlenden Alias als null aus, nicht als Leerstring', () => {
-    const nasdaq: ExchangeEntry = {
+  /**
+   * Beide Formen, die der OpenAPI-Vertrag zulässt.
+   *
+   * `alias` steht nicht in `required`, also darf das Feld **fehlen**; sein Typ
+   * ist `anyOf: [string(minLength 1), null]`, also darf es `null` sein. Ein
+   * TypeScript-Typ, der nur eine der beiden Formen kennt, lehnt gültige
+   * Antworten ab — genau das war der Befund aus Runde 26.
+   *
+   * Den verbotenen Leerstring prüft TypeScript **nicht**: Ein Stringtyp kann
+   * „mindestens ein Zeichen" nicht ausdrücken. Diese Zusage liegt im Backend
+   * (`ExchangeEntry.alias` mit `min_length=1`) und wird dort geprüft, samt der
+   * Gegenprobe am ausgelieferten OpenAPI-Schema.
+   */
+  it('erlaubt den fehlenden Alias als null und als weggelassenes Feld', () => {
+    const explicitlyNull: ExchangeEntry = {
       kind: 'exchange',
       mic: 'XNAS',
       alias: null,
@@ -46,7 +59,29 @@ describe('ExchangeEntry', () => {
       currency: 'USD',
       provenance: { kind: 'core' },
     }
+    const omitted: ExchangeEntry = {
+      kind: 'exchange',
+      mic: 'XNYS',
+      name: 'NYSE',
+      region: 'usa',
+      currency: 'USD',
+      provenance: { kind: 'core' },
+    }
 
-    expect(nasdaq.alias).toBeNull()
+    expect(explicitlyNull.alias).toBeNull()
+    expect(omitted.alias).toBeUndefined()
+  })
+
+  it('verlangt die Felder, die der Vertrag als required führt', () => {
+    // @ts-expect-error — `mic` steht in `required`, anders als `alias`.
+    const withoutMic: ExchangeEntry = {
+      kind: 'exchange',
+      name: 'NASDAQ',
+      region: 'usa',
+      currency: 'USD',
+      provenance: { kind: 'core' },
+    }
+
+    expect(withoutMic.name).toBe('NASDAQ')
   })
 })

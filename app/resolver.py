@@ -21,6 +21,7 @@ from app.exchanges import (
     is_real_mic,
     preference_kind,
     preferred_aliases,
+    preferred_mics,
     provider_alias,
     split_symbol,
 )
@@ -103,6 +104,48 @@ def _identity(symbol: str, exchange_code: str | None) -> tuple[str | None, str |
     if mic and is_canonical_ticker(symbol):
         return symbol, mic
     return None, None
+
+
+def _at_exchange(
+    quote: dict, aliases: tuple[str, ...], mics: frozenset[str]
+) -> bool:
+    """Liegt dieser Yahoo-Treffer an einem der bevorzugten Handelsplätze?
+
+    Zwei Wege, weil ein Treffer seine Börse auf zwei Arten verrät — und der
+    zweite ist genau der, den die US-Plätze brauchen:
+
+    1. **Das Suffix** (`EUNL.DE`). StockInfos eigene Konvention.
+    2. **Yahoos Börsencode** (`NMS`, `PCX`) über `YAHOO_EXCHANGE_MICS`.
+       Dieselbe Abbildung, die `_identity` benutzt, um dem Treffer später
+       seinen MIC zu geben — keine zweite Tabelle daneben.
+
+    **Warum es den zweiten Weg braucht.** Vorher galt für aliaslose Plätze
+    „jedes punktlose Symbol gehört dazu". Das machte `XNAS` und den Sammelcode
+    `US` ununterscheidbar: Bei `DEFAULT_EXCHANGE=XNAS` gewann ein Arca-Treffer
+    (`PCX`) vor dem NASDAQ-Treffer, der zwei Zeilen später stand, und bei `US`
+    verdrängte ein punktloser Treffer mit unbekanntem Code ein gültiges
+    Mitglied — die anschließende MIC-Abbildung machte daraus dann
+    `Unavailable`, obwohl ein auflösbarer Treffer vorlag.
+
+    Ein Treffer, dessen Börse sich auf **keinem** der beiden Wege bestimmen
+    lässt, gehört nicht zur Präferenz. Er kann weiterhin gewinnen — aber nur
+    über den Fremdbörsen-Fallback, wenn kein Treffer der bevorzugten Börse
+    dasteht.
+
+    Args:
+        quote: Ein Treffer der Yahoo-Suche.
+        aliases: Die Aliase der bevorzugten Plätze, möglicherweise keiner.
+        mics: Die MICs der bevorzugten Plätze.
+
+    Returns:
+        ``True``, wenn der Treffer an einem der bevorzugten Plätze liegt.
+    """
+    symbol = str(quote["symbol"])
+    if any(symbol.endswith(f".{alias}") for alias in aliases):
+        return True
+
+    mic = YAHOO_EXCHANGE_MICS.get(str(quote.get("exchange") or "").upper())
+    return mic is not None and mic in mics
 
 
 def _quote_type(quote: dict) -> str:
@@ -333,10 +376,11 @@ class YFinanceResolver:
         weiter in Euro an Xetra steht — im Depot fällt die Position damit aus
         der Währungsrechnung.
 
-        Erkannt wird die Börse am **Suffix des Symbols** (``.DE``, ``.MI``, …).
-        Das Feld ``exchDisp`` daneben wäre der naheliegende Weg, ist aber
-        Freitext von Yahoo („XETRA", „Frankfurt", „Milan") und taugt nicht als
-        Schlüssel.
+        Erkannt wird die Börse am **Suffix des Symbols** (``.DE``, ``.MI``, …)
+        oder — wo es keines gibt — an **Yahoos Börsencode** (`NMS`, `PCX`),
+        siehe `_at_exchange`. Das Feld ``exchDisp`` daneben wäre der
+        naheliegende Weg, ist aber Freitext von Yahoo („XETRA", „Frankfurt",
+        „Milan") und taugt nicht als Schlüssel.
 
         Steht an der bevorzugten Börse mehr als ein Listing, entscheidet die
         **Gattung des bestplatzierten Treffers**. Yahoos Suche ist unscharf und
@@ -364,23 +408,10 @@ class YFinanceResolver:
             return None
 
         aliases = preferred_aliases(self._default_exchange)
-
-        if aliases:
-            at_exchange = [
-                quote
-                for quote in with_symbol
-                if any(
-                    str(quote["symbol"]).endswith(f".{alias}") for alias in aliases
-                )
-            ]
-        else:
-            # Keine der in Frage kommenden Börsen führt einen Alias — beim
-            # Sammelcode `US` sind das seine fünf Mitglieder. Dort ist das
-            # punktlose Symbol die Notierung. Ohne diesen Zweig liefe die
-            # Regel leer, weil es kein Suffix zum Vergleichen gibt.
-            at_exchange = [
-                quote for quote in with_symbol if "." not in str(quote["symbol"])
-            ]
+        mics = frozenset(preferred_mics(self._default_exchange))
+        at_exchange = [
+            quote for quote in with_symbol if _at_exchange(quote, aliases, mics)
+        ]
 
         if at_exchange:
             quote_type = _quote_type(with_symbol[0])
