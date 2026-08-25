@@ -16,7 +16,7 @@ class FakeQuoteService:
     def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         self.calls += 1
         return QuoteResponse(
-            isin=isin, symbol="VGWL.DE", currency="EUR", price=200.0,
+            isin=isin, symbol="VGWL.DE", ticker="VGWL", mic="XETR", currency="EUR", price=200.0,
             quote_time="2026-07-12T20:00:00+00:00",
             fetched_at="2026-07-12T20:00:00+00:00", type="etf",
         )
@@ -91,7 +91,7 @@ def test_get_history_by_symbol(repo: QuoteRepository) -> None:
 def test_set_isin_service(repo: QuoteRepository) -> None:
     from app.services.quote_service import InstrumentNotFoundError
     repo.save_quote(
-        QuoteResponse(isin=None, symbol="BRYN.DE", currency="EUR", price=430.0,
+        QuoteResponse(isin=None, symbol="BRYN.DE", ticker="BRYN", mic="XETR", currency="EUR", price=430.0,
                       quote_time="t", fetched_at="t", type="stock")
     )
     service = CachedQuoteService(
@@ -108,11 +108,11 @@ def test_set_isin_service(repo: QuoteRepository) -> None:
 def test_set_isin_konflikt(repo: QuoteRepository) -> None:
     from app.services.quote_cache import IsinConflictError
     repo.save_quote(
-        QuoteResponse(isin="IE00B3RBWM25", symbol="VGWL.DE", currency="EUR", price=1.0,
+        QuoteResponse(isin="IE00B3RBWM25", symbol="VGWL.DE", ticker="VGWL", mic="XETR", currency="EUR", price=1.0,
                       quote_time="t", fetched_at="t", type="etf")
     )
     repo.save_quote(
-        QuoteResponse(isin=None, symbol="BRYN.DE", currency="EUR", price=1.0,
+        QuoteResponse(isin=None, symbol="BRYN.DE", ticker="BRYN", mic="XETR", currency="EUR", price=1.0,
                       quote_time="t", fetched_at="t", type="stock")
     )
     service = CachedQuoteService(

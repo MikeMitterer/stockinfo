@@ -53,16 +53,6 @@ CREATE TABLE IF NOT EXISTS instruments (
     meta_fetched_at TEXT
 );
 
--- Die Eindeutigkeit liegt auf der kanonischen Identität, nicht auf `symbol`:
--- Der frühere globale UNIQUE auf `symbol` hielt Yahoo in der Identität.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_ticker_mic
-    ON instruments (ticker, mic);
-
--- Die `listing_id` ist der Maschinenschlüssel des öffentlichen Vertrags. Ohne
--- Index wäre „opake UUID, einmal erzeugt" eine Absichtserklärung.
-CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_listing_id
-    ON instruments (listing_id);
-
 CREATE TABLE IF NOT EXISTS quotes (
     id            INTEGER PRIMARY KEY AUTOINCREMENT,
     instrument_id INTEGER NOT NULL REFERENCES instruments(id) ON DELETE CASCADE,
@@ -172,6 +162,7 @@ def init_db(database_path: str) -> bool:
     try:
         connection.executescript(_SCHEMA)
         _migrate(connection)
+        _create_identity_indices(connection)
         connection.commit()
         return plan_migration(connection).is_pending
     finally:
@@ -215,7 +206,16 @@ def run_migration(database_path: str, rejected_at: str) -> MigrationPlan:
         connection.close()
 
 
-# Die Indizes müssen **nach** dem Tabellen-Neuaufbau neu entstehen: Ein `DROP
+# Die Indizes der kanonischen Identität.
+#
+# Sie stehen **nicht** im Grundschema, und das ist kein Versehen: Auf einer
+# Alt-Datenbank lässt `CREATE TABLE IF NOT EXISTS` die alte Tabelle stehen,
+# und ein `CREATE INDEX ... (ticker, mic)` bräche dann mit „no such column".
+# Der Start einer noch nicht umgezogenen Installation wäre damit unmöglich —
+# das genaue Gegenteil von „erkennen statt ausführen". Ein Test hat es
+# gezeigt, kein Review.
+#
+# Nach dem Tabellen-Neuaufbau müssen sie ohnehin neu entstehen: Ein `DROP
 # TABLE` nimmt sie mit, und `PRAGMA table_info` kennt `UNIQUE` gar nicht.
 _IDENTITY_INDICES = """
 DROP INDEX IF EXISTS idx_instruments_symbol;
@@ -226,6 +226,23 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_listing_id
 CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_isin
     ON instruments (isin);
 """
+
+
+def _create_identity_indices(connection: sqlite3.Connection) -> None:
+    """Legt die Identitätsindizes an — **nur**, wenn die Spalten da sind.
+
+    Auf einer frischen Installation trägt `instruments` sie vom ersten Moment
+    an; auf einer Alt-Datenbank kommen sie erst mit dem bestätigten Umzug, und
+    bis dahin gibt es nichts zu indizieren.
+
+    Args:
+        connection: Offene Verbindung.
+    """
+    columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(instruments)")
+    }
+    if {"ticker", "mic", "listing_id"} <= columns:
+        connection.executescript(_IDENTITY_INDICES)
 
 
 def _assign_listing_ids(connection: sqlite3.Connection) -> None:

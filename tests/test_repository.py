@@ -6,7 +6,7 @@ import pytest
 
 from app.db import init_db
 from app.models import QuoteResponse
-from app.repository import QuoteRepository
+from app.repository import IncompleteIdentityError, QuoteRepository
 
 
 @pytest.fixture
@@ -21,6 +21,8 @@ def _quote(price: float, quote_time: str, fetched_at: str) -> QuoteResponse:
     return QuoteResponse(
         isin="IE00B3RBWM25",
         symbol="VGWL.DE",
+        ticker="VGWL",
+        mic="XETR",
         exchange="Xetra",
         name="Vanguard FTSE All-World",
         type="etf",
@@ -374,6 +376,8 @@ def test_gescheiterte_anreicherung_loescht_die_gespeicherten_etf_daten_nicht(
     vollstaendig = QuoteResponse(
         isin="IE00B4L5Y983",
         symbol="EUNL.DE",
+        ticker="EUNL",
+        mic="XETR",
         exchange="Xetra",
         name="iShares Core MSCI World",
         type="etf",
@@ -398,6 +402,8 @@ def test_gescheiterte_anreicherung_loescht_die_gespeicherten_etf_daten_nicht(
     ohne_anreicherung = QuoteResponse(
         isin="IE00B4L5Y983",
         symbol="EUNL.DE",
+        ticker="EUNL",
+        mic="XETR",
         exchange="Xetra",
         name="iShares Core MSCI World",
         type="etf",
@@ -436,14 +442,16 @@ def test_erfolgreiche_anreicherung_darf_felder_weiterhin_leeren(
     """
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B4L5Y983", symbol="EUNL.DE", type="etf", price=128.7,
+            isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
+            type="etf", price=128.7,
             quote_time="2026-08-18T10:00:00+00:00", ter=0.2, provider="iShares",
             fetched_at="2026-08-18T10:00:00+00:00",
         )
     )
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B4L5Y983", symbol="EUNL.DE", type="etf", price=129.1,
+            isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
+            type="etf", price=129.1,
             quote_time="2026-08-18T11:00:00+00:00", ter=None, provider="iShares",
             fetched_at="2026-08-18T11:00:00+00:00",
         )
@@ -459,25 +467,62 @@ def test_erster_insert_mit_unvollstaendigen_metadaten(repo: QuoteRepository) -> 
     Spalten. Baute der INSERT seine Spaltenliste weiter aus `_META_FIELDS`,
     zählte er dreizehn Platzhalter gegen vier Werte und brach mit
     `Incorrect number of bindings supplied` ab — ein 500 auf einem schlichten
-    GET. Ausgelöst von jedem Papier, dessen Gattung yfinance nicht kennt
-    (Krypto, Index, Anleihe) oder dessen justETF-Abruf beim ersten Kontakt
+    GET. Ausgelöst von jedem Papier, dessen justETF-Abruf beim ersten Kontakt
     scheitert.
+
+    **Das Beispiel hat gewechselt.** Hier stand `BTC-USD`, weil eine
+    Kryptowährung nie belastbare ETF-Felder mitbringt. Seit T-21 Teil 3 lässt
+    sich ein Symbol ohne Handelsplatz nicht mehr anlegen; ob das so bleiben
+    soll, klärt `T-31-papiere-ohne-mic.md`. Der geprüfte Fehler hing nie an
+    der Gattung, sondern an der Platzhalterzahl — `GOLD.SG` mit leeren
+    Metadaten löst ihn genauso aus.
     """
     repo.save_quote(
         QuoteResponse(
-            isin=None, symbol="BTC-USD", type=None, currency="USD", price=61234.0,
+            isin=None, symbol="GOLD.SG", ticker="GOLD", mic="XSTU", type=None,
+            currency="EUR", price=122.41,
             quote_time="2026-08-19T10:00:00+00:00",
             fetched_at="2026-08-19T10:00:00+00:00",
             metadata_complete=False,
         )
     )
 
-    instrument = repo.get_instrument_by_symbol("BTC-USD")
+    instrument = repo.get_instrument_by_symbol("GOLD.SG")
     assert instrument is not None
-    assert instrument["currency"] == "USD"
+    assert instrument["currency"] == "EUR"
     # Die geschützten Felder bleiben leer statt mit Platzhaltern gefüllt.
     assert instrument["ter"] is None
     assert instrument["provider"] is None
+
+
+def test_ein_papier_ohne_handelsplatz_wird_nicht_angelegt(
+    repo: QuoteRepository,
+) -> None:
+    """Der Zustand nach T-21 Teil 3 — **festgehalten, nicht gutgeheißen**.
+
+    Eine Kryptowährung hat keinen MIC nach ISO 10383; unter der Pflichtregel
+    lässt sie sich deshalb nicht speichern. Ob StockInfo diese Gattung weiter
+    bedienen soll, ist **offen** und liegt als `T-31-papiere-ohne-mic.md` auf
+    dem Board. Dieser Test hält fest, was heute geschieht, damit die spätere
+    Entscheidung eine sichtbare Stelle zum Ändern hat — er ist keine Zusage,
+    dass es so bleibt.
+
+    Abgelehnt wird mit einem eigenen Fehler statt mit einer
+    `NOT NULL`-Verletzung: dieselbe Ablehnung, aber sie sagt, was fehlt.
+    """
+    with pytest.raises(IncompleteIdentityError) as fehler:
+        repo.save_quote(
+            QuoteResponse(
+                isin=None, symbol="BTC-USD", type=None, currency="USD",
+                price=61234.0,
+                quote_time="2026-08-19T10:00:00+00:00",
+                fetched_at="2026-08-19T10:00:00+00:00",
+                metadata_complete=False,
+            )
+        )
+
+    assert fehler.value.symbol == "BTC-USD"
+    assert repo.get_instrument_by_symbol("BTC-USD") is None
 
 
 def test_unvollstaendige_antwort_setzt_den_metadaten_zeitstempel_nicht_hoch(
@@ -492,14 +537,16 @@ def test_unvollstaendige_antwort_setzt_den_metadaten_zeitstempel_nicht_hoch(
     """
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B4L5Y983", symbol="EUNL.DE", type="etf", price=128.7,
+            isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
+            type="etf", price=128.7,
             quote_time="2026-08-01T10:00:00+00:00", ter=0.2, provider="iShares",
             fetched_at="2026-08-01T10:00:00+00:00",
         )
     )
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B4L5Y983", symbol="EUNL.DE", type="etf", price=129.1,
+            isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
+            type="etf", price=129.1,
             quote_time="2026-08-19T11:00:00+00:00",
             fetched_at="2026-08-19T11:00:00+00:00",
             metadata_complete=False,
@@ -517,7 +564,8 @@ def test_erster_insert_ohne_metadaten_gilt_sofort_als_faellig(
     """Kein Zeitstempel heißt „nie geholt" — der nächste Abruf sieht nach."""
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B4L5Y983", symbol="EUNL.DE", type="etf", price=128.7,
+            isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
+            type="etf", price=128.7,
             quote_time="2026-08-19T10:00:00+00:00",
             fetched_at="2026-08-19T10:00:00+00:00",
             metadata_complete=False,

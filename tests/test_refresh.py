@@ -25,6 +25,8 @@ class FakeQuoteService:
         return QuoteResponse(
             isin=isin,
             symbol="SYM.DE",
+            ticker="SYM",
+            mic="XETR",
             currency="EUR",
             price=200.0,
             quote_time="2026-07-12T20:00:00+00:00",

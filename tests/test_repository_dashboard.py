@@ -15,9 +15,16 @@ def repo(tmp_path: Path) -> QuoteRepository:
 
 
 def _save(repo: QuoteRepository, isin: str, symbol: str, price: float, t: str) -> None:
+    """Legt ein Papier an — mit der Identität, die seit T-21 Teil 3 Pflicht ist.
+
+    Der Ticker steht vor dem Punkt, die Börse ist bei allen Papieren dieses
+    Tests Xetra. Ausgeschrieben statt gerechnet: Die Zerlegungsregel gehört
+    ins Produkt, nicht in den Testaufbau.
+    """
     repo.save_quote(
         QuoteResponse(
-            isin=isin, symbol=symbol, currency="EUR", price=price,
+            isin=isin, symbol=symbol, ticker=symbol.split(".")[0], mic="XETR",
+            currency="EUR", price=price,
             quote_time=t, fetched_at=t, type="etf", ter=0.19, provider="Vanguard",
         )
     )
@@ -42,7 +49,7 @@ def test_persists_source(repo: QuoteRepository) -> None:
     """
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B3RBWM25", symbol="VGWL.DE", currency="EUR", price=160.0,
+            isin="IE00B3RBWM25", symbol="VGWL.DE", ticker="VGWL", mic="XETR", currency="EUR", price=160.0,
             quote_time="2026-07-12T10:00:00+00:00", fetched_at="2026-07-12T10:00:00+00:00",
             type="etf", source="yfinance+justetf",
         )
@@ -56,14 +63,14 @@ def test_source_updates_on_refresh(repo: QuoteRepository) -> None:
     """Ein erneutes Speichern aktualisiert `source` — kein Erstwert, der stehen bleibt."""
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B3RBWM25", symbol="VGWL.DE", currency="EUR", price=160.0,
+            isin="IE00B3RBWM25", symbol="VGWL.DE", ticker="VGWL", mic="XETR", currency="EUR", price=160.0,
             quote_time="2026-07-12T10:00:00+00:00", fetched_at="2026-07-12T10:00:00+00:00",
             type="etf", source="yfinance",
         )
     )
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B3RBWM25", symbol="VGWL.DE", currency="EUR", price=161.0,
+            isin="IE00B3RBWM25", symbol="VGWL.DE", ticker="VGWL", mic="XETR", currency="EUR", price=161.0,
             quote_time="2026-07-12T11:00:00+00:00", fetched_at="2026-07-12T11:00:00+00:00",
             type="etf", source="yfinance+justetf",
         )

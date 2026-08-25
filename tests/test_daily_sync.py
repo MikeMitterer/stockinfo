@@ -21,7 +21,7 @@ def repo(tmp_path: Path) -> QuoteRepository:
 def _seed(repo: QuoteRepository) -> dict:
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B3RBWM25", symbol="VGWL.DE", currency="EUR", price=100.0,
+            isin="IE00B3RBWM25", symbol="VGWL.DE", ticker="VGWL", mic="XETR", currency="EUR", price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",
             fetched_at="2026-07-13T10:00:00+00:00", type="etf",
         )

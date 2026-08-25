@@ -53,9 +53,14 @@ class FakeQuoteService:
 
 
 def _response(fetched_at: str, price: float = 160.98) -> QuoteResponse:
+    # `ticker` und `mic` stehen seit T-21 Teil 3 ausgeschrieben da: Sie sind
+    # Pflicht, und sie hier aus dem Symbol zu rechnen hieße, die
+    # Zerlegungsregel im Testaufbau ein zweites Mal zu führen.
     return QuoteResponse(
         isin="IE00B3RBWM25",
         symbol="VGWL.DE",
+        ticker="VGWL",
+        mic="XETR",
         currency="EUR",
         price=price,
         quote_time=fetched_at,

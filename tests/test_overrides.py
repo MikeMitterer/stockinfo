@@ -34,6 +34,8 @@ def _quote(**felder: object) -> QuoteResponse:
     vorgabe: dict = {
         "isin": "DE000EWG0LD1",
         "symbol": "GOLD.SG",
+        "ticker": "GOLD",
+        "mic": "XSTU",
         "exchange": "Stuttgart",
         "name": "EUWAX Gold",
         "type": "etf",

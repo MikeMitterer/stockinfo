@@ -203,7 +203,7 @@ def test_tagespunkt_ohne_jede_waehrung_wird_zum_fehler(repo: QuoteRepository) ->
     """
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B3RBWM25", symbol="VGWL.DE", currency=None, price=100.0,
+            isin="IE00B3RBWM25", symbol="VGWL.DE", ticker="VGWL", mic="XETR", currency=None, price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",
             fetched_at="2026-07-13T10:00:00+00:00", type="etf",
         )
