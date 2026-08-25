@@ -13,6 +13,7 @@ niemanden mehr warnen. Deshalb trennt Teil 2 das Erkennen vom Ausführen, und
 die Vorschau hier ist die Hälfte, die ohne jede Schreiboperation auskommt.
 """
 
+import sqlite3
 from dataclasses import dataclass
 
 import structlog
@@ -182,3 +183,115 @@ def keeps_its_identity(ticker: str | None, mic: str | None) -> bool:
         ``True``, wenn die Zeile so bleiben darf, wie sie ist.
     """
     return bool(ticker) and is_real_mic(mic)
+
+
+def plan_migration(connection: sqlite3.Connection) -> MigrationPlan:
+    """Rechnet vor, was ein Lauf täte — **ohne** eine einzige Schreiboperation.
+
+    Das ist Phase 1 des zweiphasigen Ablaufs. Der Benutzer bekommt die Liste
+    der Zeilen, die den Bestand verlassen, mit Grund und Preis; erst seine
+    Bestätigung löst `apply_migration` aus.
+
+    **Zeilen mit gültiger Identität werden nicht neu bewertet.** Eine von Hand
+    gesetzte Zuordnung wie ``AAPL``/``XNAS`` überlebt den Umzug, obwohl sich
+    ihr Symbol nicht zerlegen lässt — sonst nähme die Migration genau die
+    Arbeit zurück, die jemand vorher hineingesteckt hat.
+
+    Args:
+        connection: Offene Verbindung; wird nur gelesen.
+
+    Returns:
+        Der Plan. `is_pending` sagt, ob überhaupt etwas ansteht.
+    """
+    migrated: list[Migration] = []
+    rejected: list[Rejection] = []
+    unchanged = 0
+
+    # **Die Identitätsspalten müssen es noch gar nicht geben.** Auf einer
+    # Datenbank, die noch nie umgezogen ist, fehlen `ticker` und `mic` — und
+    # sie hier anzulegen wäre bereits eine Schemaänderung. Phase 1 ändert
+    # nichts, also fragt sie erst, was da ist, statt es sich zurechtzulegen.
+    has_identity = _has_identity_columns(connection)
+    columns = "id, symbol, isin" + (", ticker, mic" if has_identity else "")
+
+    for row in connection.execute(
+        f"SELECT {columns} FROM instruments ORDER BY symbol"
+    ).fetchall():
+        if has_identity and keeps_its_identity(row["ticker"], row["mic"]):
+            unchanged += 1
+            continue
+
+        identity = identity_of(row["symbol"])
+        if identity is not None:
+            ticker, mic = identity
+            migrated.append(
+                Migration(
+                    instrument_id=row["id"],
+                    symbol=row["symbol"],
+                    ticker=ticker,
+                    mic=mic,
+                )
+            )
+            continue
+
+        reason = rejection_reason(row["symbol"])
+        assert reason is not None  # `identity_of` hat gerade `None` gesagt.
+        rejected.append(
+            Rejection(
+                instrument_id=row["id"],
+                symbol=row["symbol"],
+                isin=row["isin"],
+                reason=reason,
+                quotes=_count_rows(connection, "quotes", row["id"]),
+                daily_closes=_count_rows(connection, "daily_closes", row["id"]),
+            )
+        )
+
+    return MigrationPlan(
+        migrated=tuple(migrated), rejected=tuple(rejected), unchanged=unchanged
+    )
+
+
+def _has_identity_columns(connection: sqlite3.Connection) -> bool:
+    """Trägt `instruments` die Identitätsspalten schon?
+
+    Auf einer Datenbank, die den Umzug noch vor sich hat, fehlen sie. Die
+    Vorschau darf sie **nicht** anlegen, um sie lesen zu können — sonst hätte
+    Phase 1 die Datenbank angefasst, und die Zusage „es wird nichts verändert"
+    wäre schon gebrochen, bevor der Benutzer die Liste gesehen hat.
+
+    Args:
+        connection: Offene Verbindung; wird nur gelesen.
+
+    Returns:
+        ``True``, wenn `ticker` **und** `mic` existieren.
+    """
+    columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(instruments)")
+    }
+    return {"ticker", "mic"} <= columns
+
+
+def _count_rows(
+    connection: sqlite3.Connection, table: str, instrument_id: int
+) -> int:
+    """Zählt die Kurszeilen eines Instruments in genau einer Tabelle.
+
+    Der Tabellenname wird interpoliert, weil SQLite ihn nicht als Parameter
+    zulässt. Er kommt aus **keiner** Eingabe — die beiden Aufrufstellen oben
+    übergeben Literale —, und genau deshalb steht dieser Satz hier: Sobald
+    jemand den Namen von außen hereinreicht, ist die Zeile eine Injektion.
+
+    Args:
+        connection: Offene Verbindung; wird nur gelesen.
+        table: ``'quotes'`` oder ``'daily_closes'``.
+        instrument_id: Die Zeile, deren Kurspunkte gezählt werden.
+
+    Returns:
+        Die Anzahl.
+    """
+    if table not in {"quotes", "daily_closes"}:
+        raise ValueError(f"unbekannte Kurstabelle: {table}")
+    return connection.execute(
+        f"SELECT COUNT(*) FROM {table} WHERE instrument_id = ?", (instrument_id,)
+    ).fetchone()[0]
