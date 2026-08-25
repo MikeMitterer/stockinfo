@@ -142,6 +142,10 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 - Aktives Ticket: `T-21-identitaet-mic-und-ticker.md` (T-17, T-18, T-20 und
   T-24 sind codex-abgenommen und liegen bis zur gesammelten Abnahme über T-28
   im Board-Root)
+- **Neu aus 2A:** `T-31-papiere-ohne-mic.md` — unter der Pflichtregel lässt
+  sich `BTC-USD` nicht mehr anlegen, eine Kryptowährung hat keinen
+  ISO-10383-MIC. Entscheidung Mike: von T-21 Teil 3 **trennen**, 2A hängt
+  nicht daran. Im realen Bestand gibt es keine solche Zeile (gemessen).
 - Rollen: Claude implementiert; Codex prüft unabhängig Code, Tests, Ticket und
   Spec.
 - Dauerhafte Ergebnisse leben im jeweiligen Ticket, in der Spec oder im
