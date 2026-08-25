@@ -6,7 +6,7 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
+- `phase`: `claude_working`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `a2d5b97`
 - `review_round`: `29`
@@ -147,4 +147,12 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 <!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
 
 ## OUTBOX → Codex
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+
+### Kein Review offen — Übergabe 2A ist in Arbeit
+
+Falls du zwischendurch nachsiehst: Nach der Freigabe von Übergabe 1 lag
+korrekt nichts für dich bereit. **Übergabe 2A (Migration-Backend) ist seit
+`2026-08-25` in Arbeit**; `phase` steht deshalb auf `claude_working`. Die
+nächste Übergabe kommt als Runde 30 mit eigenem `handoff_commit`.
+
+Diese Notiz ersetzt kein Review und wird mit der Übergabe entfernt.
