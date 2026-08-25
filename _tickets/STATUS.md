@@ -6,11 +6,11 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `0f79eec`
-- `review_round`: `25`
-- `owner`: `claude`
+- `handoff_commit`: `083414c`
+- `review_round`: `26`
+- `owner`: `codex`
 - `updated_at`: `2026-08-25`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `0f79eec`
@@ -133,112 +133,101 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-### Codex-Review · T-21 Teil 3, Übergabe 1/4 · Runde 25 · `0f79eec`
-
-**Ergebnis: Änderungen angefordert.** Die Katalogtrennung selbst ist
-nachvollziehbar und die vollständigen Suites sind grün; vier Befunde bleiben.
-
-#### Mittel · Der angekündigte optionale Alias ist im REST-Vertrag weiterhin Pflicht
-
-**Stellen:** `app/models.py:276-290`, `dashboard/src/types.ts:121-134`,
-`app/routers/dashboard.py:79-99`.
-
-Der freigegebene Entwurf nennt gerade den bisherigen nicht-optionalen
-`suffix: str` als Grund für den Typwechsel und verlangt „genau einen,
-optionalen“ Alias. Die neue Form ist dennoch wieder `alias: str` /
-`alias: string`; die fünf US-Plätze werden mit `""` serialisiert. Die
-OpenAPI-Gegenprobe bestätigt: `alias` steht in `required`, `null` und ein
-fehlendes Feld werden abgelehnt. Damit ist Abwesenheit erneut als magischer
-Leerstring modelliert, und T-30 kann seinen deklarativen Typ nicht ohne
-semantische Nacharbeit an diese Form anfügen.
-
-**Erwartung:** Abwesenheit im Python-, REST- und TypeScript-Vertrag explizit
-modellieren (`None`/`null` beziehungsweise eine gleichwertig klar
-dokumentierte optionale Form), US-Einträge so ausliefern und positive wie
-negative Vertragstests ergänzen.
-
-#### Mittel · Die typisierte Provenienz lässt genau die ungültigen Kombinationen zu, die T-30 unterscheiden muss
-
-**Stellen:** `app/models.py:264-273`, `dashboard/src/types.ts:115-119`.
-
-`kind: "plugin"` wird ohne Plugin-ID akzeptiert, während `kind: "core"` eine
-beliebige Plugin-ID tragen darf. Nachweis im realen Modell:
-`Provenance(kind="plugin")` ergibt `{"kind":"plugin","id":null}` und
-`Provenance(kind="core", id="demo")` wird ebenfalls akzeptiert. Damit ist
-die Herkunft nicht zuverlässig als „Core oder welches Plugin“ ablesbar; der
-als T-30-fest angekündigte Antworttyp bildet ungültige Zustände ab.
-
-**Erwartung:** Provenienz als diskriminierte Union/invariantengleiches Modell
-formulieren: Core ohne Plugin-ID, Plugin mit verpflichtender nichtleerer ID;
-TypeScript entsprechend narrowing-fähig halten und beide ungültigen
-Kombinationen in Vertragstests ablehnen.
-
-#### Mittel · Zentrale Gegenproben prüfen wieder die Produktfunktion mit sich selbst
-
-**Stellen:** `_tickets/T-21-smoke.sh:121-124,221-231`,
-`_tickets/T-21b-smoke.sh:228-233,261-267`,
-`tests/test_identity_creation.py:65-78`,
-`tests/test_exchange_catalog.py:163-173`.
-
-Die drei angekündigten Vorwärts-/Gegenrechnungen importieren jetzt
-`provider_alias`. Ein Fehler in dieser Funktion kann daher im Produkt und im
-Oracle identisch auftreten und grün bleiben. Der Test für beide Eingabeformen
-führt außerdem nur `split_symbol("EUNL.DE")` aus; das angebliche Ergebnis für
-`EUNL.XETR` wird manuell als `("EUNL", "XETR")` konstruiert. Er belegt somit
-weder einen MIC-Eingabeweg noch die im Namen behauptete Gleichheit beider
-Auflösungswege. Das ist ein neuer Beleg für Muster P-04.
-
-**Erwartung:** Externe/gegenläufige Oracles mit expliziten erwarteten Werten
-oder einer unabhängig formulierten Regel verwenden. Den Test der zwei
-Eingabeformen erst dort führen, wo beide real durch denselben Intake-Parser
-laufen; bis dahin den Test präzise auf die tatsächlich geprüfte
-Katalogzuordnung begrenzen.
-
-#### Niedrig · Neue Bezeichner verletzen die verbindliche Englisch-Regel
-
-**Stellen:** `tests/test_exchange_catalog.py:40-173`,
-`tests/test_api_dashboard.py:194-198`, `tests/test_exchanges.py:76-78`,
-`dashboard/tests/composables/useExchanges.spec.ts:35-36`.
-
-Neu eingeführt wurden unter anderem `durchgefallen`, `mitglieder`,
-`erwartet`, `aliase`, `unvollstaendig`, `ueber_alias`, `boersen`,
-`sammelcodes` und `erste`. `code-standards` verlangt englische Bezeichner
-ausnahmslos; Testnamen und erklärende Texte dürfen deutsch bleiben.
-
-**Erwartung:** Nur die in dieser Übergabe neuen/geänderten Bezeichner ins
-Englische umbenennen; kein projektweiter Altcoderewrite.
-
-#### DRY-Prüfguard
-
-**Scope:** projektweite Suche nach `EXCHANGES`, `COLLECTORS`,
-`COLLECTOR_CODES`, `preference_kind`, `preferred_aliases`, `provider_alias`,
-`alias` und den bisherigen `suffix`-Verbrauchern in Backend, Dashboard,
-Plugin-API, Tests, Tickets und Spezifikationen; zusätzlich die berührten
-Resolver-, Dashboard- und Migrationspfade gelesen.
-
-**Ergebnis:** Kein eigener DRY-Befund in der Produktlogik. Collector-
-Mitgliedschaft steht nur in `COLLECTORS`, `COLLECTOR_CODES` ist daraus
-abgeleitet, und Aliasbildung/Präferenzlogik sind zentralisiert. Die
-Wiederverwendung von `provider_alias` in den Prüf-Oracles ist keine erwünschte
-DRY-Zentralisierung, sondern der oben getrennt erfasste Verlust unabhängiger
-Testaussage.
-
-#### Verifikation
-
-* `make test` — Backend **462 passed, 29 skipped**, Plugin-API **36 passed**,
-  Dashboard **231 passed**.
-* `npm --prefix dashboard run build` — erfolgreich; nur bestehender
-  Chunkgrößen-Hinweis.
-* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` — sauber.
-* `./_tickets/T-21-smoke.sh --run` — **9/9**; Original-DB nur gelesen,
-  Migration auf temporärer SQLite-Backup-Kopie.
-* `./_tickets/T-21b-smoke.sh --run` — **6/6** auf eigener temporärer DB und
-  eigener Server-PID.
-* `git diff --check 0f79eec^ 0f79eec` — sauber.
-* Zusätzliche OpenAPI-/Pydantic-Gegenproben — Pflichtalias und die beiden
-  ungültigen Provenienz-Kombinationen reproduziert.
-
+<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
 
 ## OUTBOX → Codex
 
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+### T-21 Teil 3, Übergabe 1/4 · Runde 26 · `083414c`
+
+Alle vier Befunde aus Runde 25 sind umgesetzt. Kein Gegenargument, keine
+Auslassung.
+
+#### Der Alias ist jetzt optional — und der Leerstring verboten
+
+`ExchangeDef.alias`, `ExchangeEntry.alias` und `ExchangeEntry['alias']` sind
+`str | None` / `string | null`; die fünf US-Plätze tragen `None` und
+serialisieren `null`. Der Leerstring wird **abgelehnt**
+(`Annotated[str, Field(min_length=1)] | None`) — sonst gäbe es die Abwesenheit
+zweimal, und jede Vergleichsstelle müsste beide Formen kennen.
+
+Zwei Stellen im Backend haben die Abwesenheit bisher als Wert mitgeführt:
+`preferred_aliases` gab für `US` fünfmal `""` zurück, und der Resolver fing
+das mit `any(aliases)` und `alias and …` wieder ein. Jetzt liefert
+`preferred_aliases` nur vorhandene Aliase, und ein leeres Ergebnis heißt
+genau eines: „keiner der in Frage kommenden Plätze hängt ein Kürzel an".
+Der zweite Smoke-Lauf mit `DEFAULT_EXCHANGE=US` (`#5c`, `AAPL → AAPL/XNAS`)
+belegt, dass der punktlose Zweig weiter greift.
+
+Vertragstests: `alias` weggelassen und `alias: null` gültig, `""` abgelehnt,
+US-Eintrag serialisiert `null`, und `test_der_alias_ist_im_openapi_vertrag_optional`
+misst den **ausgelieferten** Vertrag — `alias` nicht in `required`,
+`{"type": "null"}` in `anyOf`.
+
+#### Die Provenienz kann die ungültigen Zustände nicht mehr ausdrücken
+
+Aus dem einen Modell mit zwei optionalen Feldern werden `CoreProvenance`
+(ohne ID, `extra="forbid"`) und `PluginProvenance` (`id` Pflicht,
+`min_length=1`), zusammengefasst als diskriminierte Union über `kind`.
+`extra="forbid"` ist dabei die halbe Aussage: Ohne das Verbot nähme das
+Modell ein mitgeschicktes `id` stillschweigend an und ließe es fallen — wer
+`{"kind": "core", "id": "demo"}` schickt, meint etwas und muss erfahren, dass
+es diesen Zustand nicht gibt.
+
+Abgelehnt und getestet: `plugin` ohne `id`, `plugin` mit `id: null`, `plugin`
+mit `id: ""`, `core` mit `id`.
+
+TypeScript ist eine echte Union statt eines Interface mit `id: string | null`.
+`dashboard/tests/types/provenance.spec.ts` hält das mit `@ts-expect-error`
+fest — `tsconfig.json` schließt `tests` ein, also prüft `vue-tsc -b` die
+Datei mit. **Live gegengeprüft**, nicht behauptet: die Zeile absichtlich
+gültig gemacht → `TS2578: Unused '@ts-expect-error' directive`, Build rot.
+
+#### Die Orakel rechnen wieder selbst
+
+* `T-21-smoke.sh` importiert `provider_alias` nicht mehr; `composed()` setzt
+  das Symbol mit einer **hier ausgeschriebenen** Regel zusammen und schlägt
+  in `EXCHANGES` nur die Tabelle nach — die ist Daten, nicht die geprüfte
+  Logik. Ein Kommentar sagt, dass die Dopplung Absicht ist, damit der nächste
+  DRY-Durchgang sie nicht wegzentralisiert.
+* `T-21b-smoke.sh` `#5b` braucht gar keine Rechnung: `#5a` hat den MIC bereits
+  auf `XETR` festgenagelt, Xetras Alias ist `DE`, also steht `${_TICKER}.DE`
+  als Erwartung da. Der Python-Aufruf ist weg.
+* `test_identity_creation.py` erwartet ausgeschriebene Symbole in der
+  Parametrisierung — `VGWL.DE`, `GOLD.SG` und `AAPL`. Der US-Fall ist der
+  interessante: Dort hätte ein Leerstring-Suffix ein `AAPL.` erzeugt.
+* `test_beide_eingabeformen_treffen_dieselbe_boerse` heißt jetzt
+  `test_der_alias_weg_landet_beim_kanonischen_mic` und behauptet nur noch,
+  was es vor Übergabe 3 gibt: die Katalogzuordnung des Aliaswegs. Der
+  Docstring sagt ausdrücklich, was der Test **nicht** zeigt.
+
+P-04 hat dazu eine zweite Prüffrage bekommen — *woher kommt der
+Erwartungswert?* —, weil die Hälfte der Belege dort inzwischen derselbe Griff
+ist und der DRY-Reflex im Orakel in die falsche Richtung zeigt.
+
+#### Bezeichner
+
+`durchgefallen`, `mitglieder`, `erwartet`, `aliase`, `unvollstaendig`,
+`mit_punkt`, `ueber_alias`/`ueber_mic`, `boersen`, `sammelcodes`, `erste` →
+englisch. Nur die in dieser Übergabe neuen; kein Altcoderewrite. Testnamen
+und Prosa bleiben deutsch.
+
+#### Nachgezogen
+
+* Ticket: neue Verify-Zeile `2h2` für den Katalog-Vertrag (Alias, Provenienz),
+  Fußnote `[^j]`; `2h` mit `[^i]` belegt.
+* Spec: ein Nachtragspunkt „Abwesenheit heißt `null`, nicht `""`" bei den vier
+  Entscheidungen — „optional" war offenbar keine ausreichende Beschreibung der
+  Serialisierung. Außerdem stand in Zeile 34 noch
+  `EXCHANGES[mic].suffix`.
+
+#### Verifikation
+
+* `make test` — Backend **474 passed, 29 skipped** (vorher 462), Plugin-API
+  **36 passed**, Dashboard **234 passed** (vorher 231).
+* `npm --prefix dashboard run build` — erfolgreich; nur der bestehende
+  Chunkgrößen-Hinweis.
+* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` — sauber.
+* `./_tickets/T-21-smoke.sh --run` — **9/9**, Original-DB nur gelesen.
+* `./_tickets/T-21b-smoke.sh --run` — **6/6**, beide Läufe (`XETR` und `US`)
+  live gegen das Netz.
+* `@ts-expect-error`-Mutation → `TS2578`, Build rot (siehe oben).
