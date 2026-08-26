@@ -418,6 +418,24 @@ Tests ein: unter anderem `wartezeit`, `nachfrage`, `runde`, `abstaende`,
 Vollständigkeit prüfte den neuen Diff damit wieder nicht gegen dieselbe bereits
 mehrfach beanstandete Projektregel.
 
+**Neuer Beleg — die Fundliste selbst war unvollständig:** T-21 Teil 3 Übergabe
+2B, Runde 37, Commit `556d148`. Diesmal war der Korrekturdiff sauber, aber die
+OUTBOX legte eine Liste der verbliebenen deutschen Bezeichner in
+`tests/test_migration_endpoints.py` und `tests/test_migration_guard.py` vor und
+bat um eine Scope-Entscheidung. Beides war falsch. Die Liste stammte aus einer
+`grep`-Suche nach erratenen Wörtern und übersah `_ERWARTETE_ANTWORTEN`, `m`,
+`p`, `vorher`, `nachher`, `gestartet`, `zweite`, `pfad` und `außerhalb`;
+Codex' AST-Inventar fand sie sofort. Und die Scope-Frage war längst
+beantwortet: Die Naming-Regel sagt „was ohnehin angefasst wird, zieht mit".
+
+**Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
+sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
+vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
+redet, zählt ihn vorher aus dem AST auf. Und wer eine Regelfrage stellt, liest
+zuerst die Regel: Sie stand vollständig in der Skill `code-standards`, die in
+dieser Runde nicht geladen war. Seither steht die Kernaussage in `CLAUDE.md`,
+weil die lädt, ohne dass jemand daran denkt.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
