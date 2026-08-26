@@ -16,6 +16,7 @@ Fachregel; ein Sonderweg für die Diagnose wäre eine zweite Ausnahmequelle.
 import os
 import threading
 from collections.abc import Callable
+from enum import Enum
 
 import structlog
 
@@ -109,36 +110,95 @@ def static_allowlist(static_dir: str) -> frozenset[str]:
     return frozenset(paths)
 
 
+class GateState(Enum):
+    """Die Lagen des Riegels — **eine** Zustandsgröße, nicht drei Flags.
+
+    Bis Runde 32 hielten `_pending`, `_running` und `_startup_failed` den
+    Zustand gemeinsam, und jede Lage war ihre eigene Kombination. Genau daran
+    sind die beiden Befunde aus Runde 32 gescheitert: Eine Kombination war gar
+    nicht benannt (Umzug durch, Start läuft noch), und zwei Übergänge setzten
+    die Flags **nacheinander** — dazwischen war eine Lage sichtbar, die es
+    fachlich nicht gibt.
+
+    Ein `Enum` kann nicht halb umgeschaltet sein. Jede Lage hat genau einen
+    Wert, jeder Übergang ist genau eine Zuweisung unter derselben Sperre.
+    """
+
+    SERVING = "serving"
+    """Normalbetrieb — Fachwege offen, Scheduler läuft."""
+
+    PENDING = "pending"
+    """Der Umzug wartet auf die Bestätigung; Fachwege gesperrt."""
+
+    MIGRATING = "migrating"
+    """Der Umzug läuft gerade; Fachwege **weiter** gesperrt."""
+
+    STARTING = "starting"
+    """Der Umzug ist festgeschrieben, der Betrieb läuft an."""
+
+    STARTUP_FAILED = "startup_failed"
+    """Der Umzug ist festgeschrieben, der Start ist gescheitert."""
+
+
 class MigrationGate:
-    """Der Zustand „Umzug steht aus" — mit **drei** Lagen, nicht zwei.
+    """Der Zustand „Umzug steht aus" — **fünf** Lagen, eine Zustandsgröße.
 
-    | Lage | `pending` | was gilt |
-    |---|---|---|
-    | wartet auf Bestätigung | ``True`` | Fachwege gesperrt |
-    | **Umzug läuft gerade** | ``True`` | Fachwege **weiter** gesperrt |
-    | freigegeben | ``False`` | Normalbetrieb |
+    | Lage | `pending` | `/ready` | `/operational` |
+    |---|---|---|---|
+    | wartet auf Bestätigung | ``True`` | `503 migration_pending` | `200 migration_pending` |
+    | Umzug läuft gerade | ``True`` | `503 migration_pending` | `200 migration_pending` |
+    | **Betrieb läuft an** | ``False`` | `503 starting` | `200 starting` |
+    | Start gescheitert | ``False`` | `503 degraded` | `503 degraded` |
+    | freigegeben | ``False`` | `200 ok` | `200 serving` |
 
-    **Die mittlere Lage fehlte bis Runde 30**, und das war ein
+    **Die Lage „Umzug läuft" fehlte bis Runde 30**, und das war ein
     betriebsgefährdender Fehler: `confirm()` setzte den Riegel zurück und
     startete den Scheduler, *bevor* der Umzug überhaupt begann. Währenddessen
     meldete `/ready` schon `ok`, normale Requests durften auf den **alten**
-    Bestand, und der Scheduler schrieb hinein. Scheiterte der Umzug danach,
-    lief der bereits gestartete Scheduler weiter; scheiterte der Rückruf,
-    blieb der Riegel sogar dauerhaft offen.
+    Bestand, und der Scheduler schrieb hinein.
 
     Deshalb sind Anspruch und Freigabe getrennt: `claim` nimmt den Umzug an
     sich, **ohne** etwas freizugeben; `release` gibt frei, und zwar erst nach
     einem erfolgreichen Commit. `abandon` gibt den Anspruch zurück, wenn der
     Umzug scheitert — der Riegel bleibt dann geschlossen, ein neuer Versuch
     ist möglich.
+
+    **Die Lage „Betrieb läuft an" fehlte bis Runde 32**, und der Fehler hatte
+    dieselbe Form eine Stufe später: `release` setzte den Riegel auf offen und
+    rief *danach* den Scheduler. Zwischen beidem stand „Umzug nicht mehr
+    ausstehend, Start nicht gescheitert" — also `ok` und `serving`, obwohl
+    `RefreshScheduler.start()` noch gar nicht zurückgekehrt war. Bei einem
+    hängenden Start blieb diese Falschaussage unbegrenzt stehen.
+
+    **Der Wiederholungsweg war nicht verriegelt** — der zweite Befund aus
+    Runde 32. `retry_release` rief den Rückruf ohne Zustandswechsel, also
+    liefen acht gleichzeitige Bestätigungen in acht Scheduler-Starts.
+    Anspruch und Ausführung liegen deshalb jetzt **in derselben** Methode:
+    Wer den Rückruf ausführen darf, entscheidet der Übergang nach `STARTING`,
+    und den gewinnt genau einer.
     """
 
     def __init__(self) -> None:
-        self._pending = False
-        self._running = False
-        self._startup_failed = False
+        self._state = GateState.SERVING
         self._lock = threading.Lock()
         self._on_release: Callable[[], None] | None = None
+
+    @property
+    def starting(self) -> bool:
+        """Läuft der Betrieb gerade an?
+
+        Die Lage zwischen festgeschriebenem Umzug und zurückgekehrtem
+        `RefreshScheduler.start()`. Sie ist kurz und auf dem Papier
+        unscheinbar — bis der Start hängt. Dann ist sie der einzige Zustand,
+        der noch die Wahrheit sagt: Die Daten stimmen, der Dienst arbeitet
+        noch nicht.
+
+        `/ready` antwortet darauf `503`, denn der Fachbetrieb ist nicht
+        freigegeben. `/operational` antwortet `200`, denn der Prozess tut
+        genau das, was er tun soll — dieselbe Unterscheidung wie beim Warten
+        auf die Bestätigung.
+        """
+        return self._state is GateState.STARTING
 
     @property
     def startup_failed(self) -> bool:
@@ -158,7 +218,7 @@ class MigrationGate:
         Lüge — er *ist* geschehen. Also sagt dieser Zustand, was gilt: Migration
         fertig, Betrieb nicht bereit.
         """
-        return self._startup_failed
+        return self._state is GateState.STARTUP_FAILED
 
     @property
     def pending(self) -> bool:
@@ -168,18 +228,17 @@ class MigrationGate:
         der alte, teilweise umgebaute — ihn zu bedienen wäre schlimmer als zu
         warten.
         """
-        return self._pending
+        return self._state in (GateState.PENDING, GateState.MIGRATING)
 
     @property
     def running(self) -> bool:
         """Läuft gerade ein Umzug?"""
-        return self._running
+        return self._state is GateState.MIGRATING
 
     def block(self) -> None:
         """Versetzt den Dienst in den Pending-Zustand."""
         with self._lock:
-            self._pending = True
-            self._running = False
+            self._state = GateState.PENDING
         logger.warning("migration_pending")
 
     def on_release(self, callback: Callable[[], None] | None) -> None:
@@ -194,9 +253,17 @@ class MigrationGate:
         stünde: Der Bestätigungs-Endpunkt müsste `app.main` importieren, das
         ihn selbst einbindet.
 
+        **Einmal heißt einmal gleichzeitig, nicht einmal überhaupt.** Der
+        Rückruf läuft beim ersten erfolgreichen `release` und danach bei
+        jedem `retry_release`, das einen gescheiterten Start wiederholt. Der
+        Riegel sichert zu, dass immer nur **ein** Aufrufer darin ist; dass ein
+        bereits laufender Scheduler nicht ein zweites Mal gestartet wird, ist
+        Sache des Rückrufs selbst.
+
         Args:
-            callback: Wird beim erfolgreichen `confirm` **einmal** gerufen;
-                ``None`` löst die Registrierung.
+            callback: Wird bei jedem Übergang in den Normalbetrieb gerufen,
+                nie nebenläufig zu sich selbst; ``None`` löst die
+                Registrierung.
         """
         with self._lock:
             self._on_release = callback
@@ -206,16 +273,16 @@ class MigrationGate:
 
         Genau ein Aufrufer gewinnt. Ein zweiter, gleichzeitiger bekommt
         ``False``, und zwar auch dann, wenn der erste noch mitten im Umzug
-        steckt: `running` ist der Grund, warum ein einfaches Flag hier nicht
-        genügt.
+        steckt — `MIGRATING` ist eine eigene Lage und nicht die Abwesenheit
+        von `PENDING`.
 
         Returns:
             ``True`` für den einen Aufrufer, der den Umzug ausführen darf.
         """
         with self._lock:
-            if not self._pending or self._running:
+            if self._state is not GateState.PENDING:
                 return False
-            self._running = True
+            self._state = GateState.MIGRATING
             return True
 
     def release(self) -> bool:
@@ -229,47 +296,78 @@ class MigrationGate:
         Scheduler lief. Jetzt sagt sie, ob der Betrieb wirklich angelaufen ist
         — und wer sie ruft, muss die Antwort verwenden.
 
+        **Die Zwischenlage ist der Befund aus Runde 32.** Vorher setzte diese
+        Methode den Riegel auf offen und rief *danach* den Rückruf. Dazwischen
+        war der Zustand „nicht ausstehend, nicht gescheitert" — also `ok` und
+        `serving`, während `RefreshScheduler.start()` noch lief. Jetzt geht
+        der Übergang nach `STARTING`, und erst der Rückruf entscheidet, ob
+        daraus `SERVING` oder `STARTUP_FAILED` wird.
+
         Returns:
             ``True``, wenn auch der Betrieb steht; ``False``, wenn der Umzug
             zwar festgeschrieben ist, der Start aber scheiterte.
         """
         with self._lock:
-            self._pending = False
-            self._running = False
+            self._state = GateState.STARTING
         return self._run_release()
 
-    def retry_release(self) -> bool:
+    def retry_release(self) -> bool | None:
         """Startet den Betrieb erneut — nach einem gescheiterten Anlauf.
 
         Damit ist der Fehlerzustand **anstoßbar** und nicht nur beobachtbar:
         Wer den Grund behoben hat, bestätigt einfach noch einmal. Ohne diesen
         Weg bliebe nur ein Neustart des Dienstes.
 
+        **Anspruch und Ausführung stehen hier zusammen**, und das ist der
+        zweite Befund aus Runde 32. Vorher rief diese Methode den Rückruf ohne
+        jeden Zustandswechsel: Acht gleichzeitige Wiederholungen sahen alle
+        `startup_failed`, liefen alle in denselben Rückruf und starteten acht
+        Scheduler. Ein getrenntes `claim_retry()` hätte dieselbe Falle nur
+        verschoben — wer die Ausführung von der Verriegelung trennen kann,
+        vergisst sie irgendwo.
+
         Returns:
-            ``True``, wenn der Betrieb jetzt steht.
+            ``True``, wenn der Betrieb jetzt steht; ``False``, wenn auch
+            dieser Versuch scheiterte; ``None``, wenn es nichts zu wiederholen
+            gibt — der Start ist nicht gescheitert, oder ein anderer Aufrufer
+            versucht es gerade.
         """
+        with self._lock:
+            if self._state is not GateState.STARTUP_FAILED:
+                return None
+            self._state = GateState.STARTING
         return self._run_release()
 
     def _run_release(self) -> bool:
-        """Führt den Rückruf aus und merkt sich, ob er getragen hat."""
+        """Führt den Rückruf aus und schaltet danach in die Ziel-Lage.
+
+        Aufgerufen wird sie ausschließlich aus `release` und `retry_release`,
+        und beide betreten sie nur über den Übergang nach `STARTING`. Genau
+        das ist die Einmal-Verriegelung: Solange hier jemand arbeitet, findet
+        kein zweiter Aufrufer eine Lage vor, aus der er sie betreten dürfte.
+
+        Der Rückruf läuft **ohne** die Sperre. Er startet den Scheduler und
+        darf beliebig lange brauchen; die Sperre so lange zu halten hieße,
+        dass `pending` und `starting` in dieser Zeit nicht mehr beantwortbar
+        wären — und das sind genau die Fragen, die dann gestellt werden.
+
+        Returns:
+            ``True``, wenn der Betrieb steht.
+        """
         with self._lock:
             callback = self._on_release
 
-        if callback is None:
-            with self._lock:
-                self._startup_failed = False
-            return True
-
-        try:
-            callback()
-        except Exception:
-            with self._lock:
-                self._startup_failed = True
-            logger.exception("migration_release_callback_failed")
-            return False
+        if callback is not None:
+            try:
+                callback()
+            except Exception:
+                with self._lock:
+                    self._state = GateState.STARTUP_FAILED
+                logger.exception("migration_release_callback_failed")
+                return False
 
         with self._lock:
-            self._startup_failed = False
+            self._state = GateState.SERVING
         return True
 
     def abandon(self) -> None:
@@ -280,7 +378,8 @@ class MigrationGate:
         käme mehr an ihn heran.
         """
         with self._lock:
-            self._running = False
+            if self._state is GateState.MIGRATING:
+                self._state = GateState.PENDING
         logger.warning("migration_abandoned")
 
 

@@ -18,6 +18,7 @@ duplizieren.
 - [P-04 · Negativtests prüfen nur die Fehlerbeschriftung](#p-04--negativtests-prüfen-nur-die-fehlerbeschriftung)
 - [P-05 · Ein abgebrochener Prüflauf meldet sich als bestanden](#p-05--ein-abgebrochener-prüflauf-meldet-sich-als-bestanden)
 - [P-06 · Weiterarbeiten, während eine Übergabe offen ist](#p-06--weiterarbeiten-während-eine-übergabe-offen-ist)
+- [P-07 · Eine neue Zwischenlage wird gebaut statt benannt](#p-07--eine-neue-zwischenlage-wird-gebaut-statt-benannt)
 - [Leitplanken für das spätere Skill-Proposal](#leitplanken-für-das-spätere-skill-proposal)
 
 ## Leitplanken für das spätere Skill-Proposal
@@ -579,5 +580,50 @@ Befehl verkürzt), hier eine **Regel zu wörtlich** — „zwischen Übergabe un
 HEAD nur Kommunikation" gelesen als Aussage über den Branch statt über die
 Commit-Linie. Beide Male entscheidet, was die Regel *bezweckt*: Der Prüfer
 soll wissen, was er prüft.
+
+[↑ Übersicht](#übersicht)
+
+## P-07 · Eine neue Zwischenlage wird gebaut statt benannt
+
+**Erkennungsregel:** Ein Zustand wird von mehreren booleschen Feldern
+gemeinsam getragen, und eine Lage ist nicht ein Wert, sondern eine
+*Kombination*. Dann existieren automatisch Kombinationen, die niemand
+entworfen hat — und genau die sind zwischen zwei Zuweisungen sichtbar. Das
+Muster tarnt sich als Reihenfolgefehler („die Flags werden in der falschen
+Reihenfolge gesetzt"); die Ursache ist, dass es für die Zwischenzeit gar
+keinen Namen gibt.
+
+Ein zuverlässiger Geruch: Eine Methode setzt Flags und ruft **danach** etwas
+auf, das dauern oder scheitern kann. Zwischen beidem liegt eine Lage, die
+kein Feld beschreibt.
+
+**Prüffrage:** Jede Lage einzeln benennen und zählen — gibt es mehr
+Kombinationen der Felder als benannte Lagen? Dann für jede Zeile im
+Zustandsübergang fragen: *Was antwortet die Diagnose genau hier?* Ein
+angehaltener Rückruf beantwortet das ausführbar; ein Test, der nur Anfang und
+Ende sieht, kann es nicht.
+
+**Beleg 1:** T-21 2A, Runde 30, Codex: `confirm()` setzte den Riegel zurück
+und startete den Scheduler, **bevor** der Umzug begann. Die Lage „Umzug läuft
+gerade" hatte keinen Namen; sie war „nicht mehr pending, noch nicht fertig".
+Behoben, indem sie einen bekam (`claim`/`release`/`abandon`).
+
+**Beleg 2:** T-21 2A, Runde 32, Codex, Commit `21865c0`: Exakt dieselbe Form
+eine Stufe später. `release()` setzte `pending=False`, `startup_failed` entstand
+erst im `except` — dazwischen lief `RefreshScheduler.start()`, und `/ready`
+meldete `ok`, `/operational` meldete `serving`. Bei einem hängenden Start
+unbegrenzt lange. Behoben, indem die Lage einen Namen bekam (`starting`) und
+alle Lagen zu **einer** `Enum`-Zustandsgröße zusammengezogen wurden: Ein
+`Enum` kann nicht halb umgeschaltet sein.
+
+**Warum die Reparatur aus Beleg 1 den Fall in Beleg 2 nicht verhindert hat:**
+Sie war punktuell. Benannt wurde die eine fehlende Lage, nicht die
+Darstellung. Solange der Zustand aus Flags besteht, entsteht die nächste
+unbenannte Kombination beim nächsten Nachtrag von selbst — und der Nachtrag
+erbt auch die Verriegelung des Originals nicht (in Runde 32 umging der neue
+Wiederholungsweg den `claim` vollständig). Das ist die Verwandtschaft zu
+[P-02](#p-02--punktuelle-korrektur-wird-als-vollständige-regelumsetzung-gemeldet):
+Dort steht, dass die Meldung zu vollständig war; hier steht, woran es
+technisch lag.
 
 [↑ Übersicht](#übersicht)

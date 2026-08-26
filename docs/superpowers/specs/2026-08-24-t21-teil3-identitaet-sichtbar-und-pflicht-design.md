@@ -787,14 +787,27 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 >
 > | Lage | Status | `mode` |
 > |---|---|---|
-> | Migration ausstehend, DB erreichbar | `200` | `migration_pending` |
+> | Migration ausstehend oder läuft, DB erreichbar | `200` | `migration_pending` |
+> | Migration durch, Betrieb läuft an | `200` | `starting` |
 > | normaler Betrieb, DB erreichbar | `200` | `serving` |
+> | Migration durch, Betriebsstart gescheitert | `503` | `degraded` |
 > | DB nicht erreichbar | `503` | `degraded` |
 >
-> **`/ready` bleibt inhaltlich, was es war**, bekommt aber einen zweiten
-> `503`-Grund: bisher nur „DB nicht erreichbar", künftig auch „Migration
-> ausstehend". Beide sind über `status` unterscheidbar, und `status` wird ein
-> **`Literal`**, kein freier `str` — sonst ist der neue Zustand nicht prüfbar.
+> **Die beiden mittleren Zeilen sind in der Umsetzung dazugekommen** (2A,
+> Runden 31 bis 33). Der Entwurf kannte nur „ausstehend" und „normal" und hat
+> damit übersehen, dass der Scheduler-Start **nach** dem Commit liegt: Er kann
+> scheitern, und er kann dauern. Ohne eigene Lagen dafür meldete der Dienst in
+> beiden Fällen Normalbetrieb, während seine Kurse veralteten. `503` heißt
+> hier „kaputt", nicht „noch nicht fertig" — deshalb steht `starting` auf
+> `200`, sonst wäre der `HEALTHCHECK` ausgerechnet auf dem erfolgreichen Weg
+> kurz `unhealthy`.
+>
+> **`/ready` bleibt inhaltlich, was es war**, bekommt aber weitere
+> `503`-Gründe: bisher nur „DB nicht erreichbar", künftig auch „Migration
+> ausstehend" sowie — seit der Umsetzung — „Betrieb läuft an"
+> (`status: "starting"`) und „Betriebsstart gescheitert" (`degraded`). Alle
+> sind über `status` unterscheidbar, und `status` wird ein **`Literal`**, kein
+> freier `str` — sonst ist der neue Zustand nicht prüfbar.
 >
 > #### Was dadurch **doch** angefasst werden muss
 >

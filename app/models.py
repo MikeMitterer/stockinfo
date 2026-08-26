@@ -25,13 +25,27 @@ class ReadinessResponse(BaseModel):
     den Migrationszustand).
 
     **`status` ist ein `Literal`, kein freier `str`** (T-21 Teil 3, `#2b6b`).
-    Seit T-21 Teil 3 gibt es zwei Gründe für ein `503` — die unerreichbare
-    Datenbank und der ausstehende Umzug —, und ein Konsument muss sie
-    auseinanderhalten können. Bei einem freien String wäre der neue Wert nicht
-    im Vertrag sichtbar und ein Tippfehler nicht prüfbar.
+    Ein Konsument muss die Gründe auseinanderhalten können; bei einem freien
+    String wäre ein neuer Wert nicht im Vertrag sichtbar und ein Tippfehler
+    nicht prüfbar.
+
+    | Lage | Status | `status` |
+    |---|---|---|
+    | DB nicht erreichbar | `503` | `degraded` |
+    | Umzug ausstehend oder läuft | `503` | `migration_pending` |
+    | Umzug durch, Betrieb läuft an | `503` | `starting` |
+    | Umzug durch, Start gescheitert | `503` | `degraded` |
+    | Normalbetrieb | `200` | `ok` |
+
+    **`starting` kam in Runde 32 dazu.** Ohne diese Zeile war der Zustand
+    zwischen festgeschriebenem Umzug und zurückgekehrtem Scheduler-Start als
+    `ok` beobachtbar — bei einem hängenden Start unbegrenzt lange. Dass ein
+    gescheiterter Start dieselbe Kennung `degraded` trägt wie die
+    unerreichbare Datenbank, ist Absicht: Beide sagen „hier ist etwas kaputt",
+    und der Unterschied steht in `database`.
     """
 
-    status: Literal["ok", "degraded", "migration_pending"]
+    status: Literal["ok", "degraded", "migration_pending", "starting"]
     version: str
     database: str = Field(description="ok | error")
 
@@ -52,12 +66,20 @@ class OperationalResponse(BaseModel):
 
     | Lage | Status | `mode` |
     |---|---|---|
-    | Umzug ausstehend, DB erreichbar | `200` | `migration_pending` |
+    | Umzug ausstehend oder läuft, DB erreichbar | `200` | `migration_pending` |
+    | Umzug durch, Betrieb läuft an | `200` | `starting` |
     | normaler Betrieb, DB erreichbar | `200` | `serving` |
+    | Umzug durch, Betriebsstart gescheitert | `503` | `degraded` |
     | DB nicht erreichbar | `503` | `degraded` |
+
+    **`503` heißt hier „kaputt", nicht „noch nicht fertig".** `starting` steht
+    deshalb auf `200`: Ein anlaufender Betrieb ist der Normalpfad, und ein
+    `503` machte den `HEALTHCHECK` genau dann kurz `unhealthy`, wenn alles
+    funktioniert. `serving` wäre trotzdem falsch — der Refresh läuft noch
+    nicht, und ein hängender Start bliebe unter diesem Wort unsichtbar.
     """
 
-    mode: Literal["serving", "migration_pending", "degraded"]
+    mode: Literal["serving", "migration_pending", "degraded", "starting"]
     version: str
 
 

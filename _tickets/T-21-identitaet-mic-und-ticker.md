@@ -170,7 +170,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2b5 | Auslieferung von Teil 2 | **zweiphasig:** Phase 1 erkennt die ausstehende Migration und rechnet vor, ohne etwas zu ändern; erst die Bestätigung löst sie aus. Gleichzeitigkeit im Commit genügt **nicht** — `init_db()` läuft im Lifespan, bevor das UI erreichbar ist | ✅ [^o] | |
 | 2b6 | Phase 1, serverseitig verriegelt — **Routentabellen-Test** | jeder Pfad der Allowlist (statische UI, `/health`, Healthcheck-Endpunkt, `/ready`, Vorschau, Bestätigung, Bericht) antwortet; je ein normaler **Lese-** und **Schreibpfad** (`/quote`, `/refresh`, `PUT`, `DELETE`) wird mit stabiler Kennung abgewiesen; DB und Vorschau bleiben unverändert | ✅ [^p] | |
 | 2b6b | `/ready` in Phase 1 | antwortet **`503`** mit `status: "migration_pending"`, unterscheidbar vom `503` bei unerreichbarer DB; `status` ist ein `Literal`, kein freier `str` | ✅ [^q] | |
-| 2b6e | `GET /operational` (neu) | `200`/`migration_pending` in Phase 1, `200`/`serving` im Normalbetrieb, `503`/`degraded` bei unerreichbarer DB. Der Docker-`HEALTHCHECK` zieht hierher um | ✅ [^r] | |
+| 2b6e | `GET /operational` (neu) | `200`/`migration_pending` in Phase 1, `200`/`starting` während der Betrieb anläuft, `200`/`serving` im Normalbetrieb, `503`/`degraded` bei unerreichbarer DB **und** bei gescheitertem Betriebsstart. Der Docker-`HEALTHCHECK` zieht hierher um | ✅ [^r] | |
 | 2b6f | eine Routenquelle | Guard und Routentabellen-Test lesen **dieselbe** Allowlist-Konstante; ein Test vergleicht die `HEALTHCHECK`-URL im `Dockerfile` gegen genau diesen Pfad — sonst driften sie unbemerkt bis zum Deployment | ✅ [^s] | |
 | 2b6h | statische Dateien im Pending-Zustand | der Test **baut das Dashboard** und fordert **`GET /`** (belegt die geladene HTML) sowie *jede* real ausgelieferte Datei **rekursiv** an — insbesondere `/stockinfo-icon.svg` aus `index.html:6` und die Dateien unter `/assets`. Keine handgepflegte Kopie; unbekannte Pfade und Fach-APIs bleiben gesperrt | ⚠️ [^t] | |
 | 2b6j | `/` als URL-Alias | steht **ausdrücklich** in der Allowlist, als exakter Pfad und nie als Präfix, unter der Bedingung `index.html` im begrenzten `static_dir`. Fehlt `static_dir` ganz (lokal: Vorgabe `/app/web`), ist der statische Teil leer | ✅ [^u] | |
@@ -348,6 +348,18 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     Er gehört zum Endpunkt — sonst liefert 2A einen Healthcheck-Endpunkt, den
     niemand benutzt, während `/ready` im Pending-Zustand `503` sagt und den
     Container als unhealthy markiert.
+
+    **`starting` kam in Runde 33 dazu** (Codex-Befund aus Runde 32). Zwischen
+    festgeschriebenem Umzug und zurückgekehrtem `RefreshScheduler.start()`
+    meldeten beide Endpunkte Normalbetrieb; bei einem hängenden Start
+    dauerhaft. `/operational` bleibt dabei bewusst auf `200` — ein `503`
+    machte den `HEALTHCHECK` ausgerechnet auf dem **erfolgreichen** Weg kurz
+    `unhealthy`. `/ready` sagt in derselben Lage `503`, denn dort ist die
+    Frage die Freigabe des Fachbetriebs.
+    `…::test_waehrend_der_start_laeuft_meldet_niemand_normalbetrieb` hält den
+    Rückruf mitten im Scheduler-Start an und fragt **währenddessen**; ohne die
+    Zwischenlage liest der Test `(200, "ok")` statt `(503, "starting")`
+    (mutationsgeprüft).
 [^s]: `tests/test_migration_endpoints.py::test_der_dockerfile_zeigt_auf_denselben_pfad`
     liest die `HEALTHCHECK`-Zeile und vergleicht sie gegen `HEALTHCHECK_PATH`.
     Der Dockerfile kann kein Python importieren, also kann er die Konstante
@@ -397,6 +409,20 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     Endpunkt sonst `app.main` importieren müsste, das ihn selbst einbindet.
     `…::test_die_bestaetigung_startet_den_scheduler` prüft beides — dass er
     anläuft und dass ein zweiter Aufruf ihn nicht noch einmal startet.
+
+    **Der Wiederholungsweg war zuerst unverriegelt** (Codex-Befund aus Runde
+    32). Der erste Umzug war gegen Parallelität geschützt, der in Runde 32
+    nachgezogene Retry umging den Anspruch vollständig: Acht gleichzeitige
+    zweite Bestätigungen liefen alle in denselben Rückruf. Anspruch und
+    Ausführung liegen deshalb jetzt in **derselben** Methode
+    (`MigrationGate.retry_release`), und der Riegel ist eine einzige
+    `Enum`-Zustandsgröße statt dreier Flags — eine halb umgeschaltete Lage
+    kann es damit nicht mehr geben.
+    `…::test_der_wiederholte_start_gewinnt_ebenfalls_genau_ein_aufrufer` und
+    `test_migration_endpoints.py::test_parallele_wiederholungen_starten_genau_einen_scheduler`
+    schicken acht Threads an einer Barriere los; gemessen ohne den Anspruch:
+    acht Rückrufe statt einem, und ohne die zusätzliche Sperre in
+    `app/main.py` auch acht wirklich gestartete Scheduler.
 [^z]: **Teilweise.** Die Reason-Codes sind stabil und stehen an einer Stelle
     (`app/migration.py`), Vorschau und Bericht teilen ein Antwortmodell, und
     `tests/test_migration_plan.py` prüft jeden Code gegen eine ausgeschriebene

@@ -9,6 +9,7 @@ namentlich verankert, weil beide schon einmal gefehlt haben.
 
 import os
 import threading
+import time
 
 import pytest
 
@@ -283,6 +284,86 @@ def test_ein_fehler_im_rueckruf_sperrt_nicht_wieder_zu() -> None:
 
     assert gate.pending is False
     assert gate.running is False
+
+
+def test_der_wiederholte_start_gewinnt_ebenfalls_genau_ein_aufrufer() -> None:
+    """`#2b6d`: Der Wiederholungsweg trägt dieselbe Verriegelung wie der Umzug.
+
+    **Das Loch aus Runde 32.** `retry_release` rief den Rückruf ohne jeden
+    Zustandswechsel — der Anspruch, gegen den der erste Umzug verriegelt ist,
+    wurde schlicht übersprungen. Acht gleichzeitige Wiederholungen sahen alle
+    `startup_failed` und liefen alle hinein.
+
+    Der dritte Rückgabewert ``None`` ist der Grund, warum das jetzt nicht mehr
+    geht: Er unterscheidet „gescheitert" von „nichts zu wiederholen" und macht
+    den Anspruch damit zum Teil derselben Antwort. Wer ihn nicht bekommt, hat
+    nicht gewonnen.
+    """
+    gate = MigrationGate()
+    gate.block()
+    calls: list[str] = []
+    calls_lock = threading.Lock()
+
+    def slow_start() -> None:
+        with calls_lock:
+            calls.append("scheduler")
+        # Das Fenster offen halten, solange die übrigen Aufrufer ankommen.
+        time.sleep(0.05)
+        raise RuntimeError("Scheduler startet nicht")
+
+    gate.on_release(slow_start)
+    assert gate.claim() is True
+    assert gate.release() is False, "der Ausgangszustand: Start gescheitert"
+    assert gate.startup_failed is True
+
+    calls.clear()
+    results: list[bool | None] = []
+    results_lock = threading.Lock()
+    barrier = threading.Barrier(8)
+
+    def retry_it() -> None:
+        barrier.wait(timeout=10)
+        result = gate.retry_release()
+        with results_lock:
+            results.append(result)
+
+    threads = [threading.Thread(target=retry_it) for _ in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=10)
+
+    assert calls == ["scheduler"], f"{len(calls)} Rückrufe statt einem"
+    assert results.count(False) == 1, "genau einer führt aus und scheitert"
+    assert results.count(None) == 7, "die übrigen finden nichts zu beanspruchen"
+
+
+def test_waehrend_der_start_laeuft_ist_der_betrieb_nicht_freigegeben() -> None:
+    """Die Lage, die bis Runde 32 fehlte — sichtbar an der Zustandsgröße.
+
+    `release` gab den Riegel frei und rief *danach* den Rückruf. Dazwischen
+    war weder `pending` noch `startup_failed` gesetzt, und beide
+    Diagnose-Endpunkte lasen daraus Normalbetrieb ab.
+
+    Gemessen wird deshalb **im** Rückruf: Was sieht ein Leser, während der
+    Scheduler startet?
+    """
+    gate = MigrationGate()
+    gate.block()
+    gesehen: list[tuple[bool, bool, bool]] = []
+
+    def beim_start() -> None:
+        gesehen.append((gate.pending, gate.starting, gate.startup_failed))
+
+    gate.on_release(beim_start)
+    assert gate.claim() is True
+
+    assert gate.release() is True
+
+    assert gesehen == [(False, True, False)], (
+        "während des Starts ist genau `starting` wahr — nicht Normalbetrieb"
+    )
+    assert (gate.pending, gate.starting, gate.startup_failed) == (False, False, False)
 
 
 def test_ohne_ausstehenden_umzug_gibt_es_nichts_zu_beanspruchen() -> None:

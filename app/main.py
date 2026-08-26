@@ -4,6 +4,7 @@ Router enthalten nur HTTP-Belange. Fachlogik gehört in die Service-Schicht.
 """
 
 import os
+import threading
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
 
@@ -51,6 +52,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         get_gate().block()
 
     laufende: list[RefreshScheduler] = []
+    scheduler_sperre = threading.Lock()
 
     def scheduler_starten() -> None:
         """Startet den Refresh — **einmal**, sobald der Betrieb freigegeben ist.
@@ -58,14 +60,26 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         Nach einer Bestätigung zur Laufzeit ist der Lifespan längst durch.
         Ohne diesen Weg liefe der Hintergrund-Refresh bis zum nächsten
         Neustart nicht: Der Dienst sähe gesund aus und holte keine Kurse.
+
+        **Die Sperre ist die zweite Verteidigungslinie.** Der Riegel lässt
+        ohnehin nur einen Aufrufer gleichzeitig hier herein — aber „einmal"
+        ist eine Zusage dieses Rückrufs, und sie an eine Invariante des
+        Aufrufers zu hängen hieße, dass ein zweiter Scheduler dort entsteht,
+        wo jemand sie später bricht. Ein zweiter Scheduler wäre still: Er
+        refreshte parallel und fiele niemandem auf.
+
+        Ein gescheiterter Start hinterlässt **keinen** Eintrag in `laufende`.
+        Genau deshalb baut der Wiederholungsweg danach einen neuen Scheduler
+        und läuft nicht in dieses `return`.
         """
-        if laufende:
-            return
-        scheduler = RefreshScheduler(
-            get_cached_quote_service(), settings.refresh_interval_hours
-        )
-        scheduler.start()
-        laufende.append(scheduler)
+        with scheduler_sperre:
+            if laufende:
+                return
+            scheduler = RefreshScheduler(
+                get_cached_quote_service(), settings.refresh_interval_hours
+            )
+            scheduler.start()
+            laufende.append(scheduler)
         logger.info("scheduler_started")
 
     if get_gate().pending:
@@ -214,6 +228,16 @@ async def ready(response: Response) -> ReadinessResponse:
             status="migration_pending", version=__version__, database="ok"
         )
 
+    if get_gate().starting:
+        # Der Umzug ist festgeschrieben, der Betrieb läuft gerade an. Hier
+        # schon `ok` zu melden war der Befund aus Runde 32: Zwischen Commit
+        # und zurückgekehrtem `RefreshScheduler.start()` stand der Riegel
+        # bereits offen — bei einem hängenden Start unbegrenzt lange.
+        response.status_code = status.HTTP_503_SERVICE_UNAVAILABLE
+        return ReadinessResponse(
+            status="starting", version=__version__, database="ok"
+        )
+
     if get_gate().startup_failed:
         # Der Umzug ist durch, der Hintergrund-Refresh läuft nicht. Hier `ok`
         # zu melden wäre die Lüge aus Runde 31: Der Dienst lieferte normal
@@ -255,6 +279,18 @@ async def operational(response: Response) -> OperationalResponse:
 
     if get_gate().pending:
         return OperationalResponse(mode="migration_pending", version=__version__)
+
+    if get_gate().starting:
+        # **`200`, wie beim Warten auf die Bestätigung** — und aus demselben
+        # Grund: Der Prozess tut genau das, was er tun soll. Ein `503` machte
+        # den Docker-`HEALTHCHECK` auf dem **erfolgreichen** Weg kurz
+        # `unhealthy`; das wäre ein Fehlalarm auf dem Normalpfad.
+        #
+        # `serving` wäre trotzdem falsch: Der Refresh läuft noch nicht, und
+        # ein hängender Start bliebe unter diesem Wort unsichtbar. `/ready`
+        # sagt in derselben Lage `503` — dort ist die Frage die Freigabe des
+        # Fachbetriebs, hier die Aufgabe des Prozesses.
+        return OperationalResponse(mode="starting", version=__version__)
 
     if get_gate().startup_failed:
         # **Hier ist `degraded` richtig**, anders als beim Warten auf die

@@ -13,6 +13,8 @@ handgepflegten Liste fehlte.
 
 import os
 import sqlite3
+import threading
+import time
 from collections.abc import Iterator
 from contextlib import contextmanager
 from pathlib import Path
@@ -444,6 +446,169 @@ def test_ein_gescheiterter_scheduler_start_meldet_keinen_normalbetrieb(
         # fände beim Herunterfahren einen Scheduler vor, der nie lief.
         monkeypatch.setattr(RefreshScheduler, "start", real_start)
         assert client.post("/migration/confirm").status_code == 200
+        assert client.get("/ready").json()["status"] == "ok"
+        assert client.get(HEALTHCHECK_PATH).json()["mode"] == "serving"
+
+    get_gate().on_release(None)
+    get_settings.cache_clear()
+    get_cached_quote_service.cache_clear()
+
+
+def test_parallele_wiederholungen_starten_genau_einen_scheduler(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """`#2b6d`: Auch der **Wiederholungsweg** wird atomar beansprucht.
+
+    **Der Befund aus Runde 32.** Der erste Umzug war mit `claim()` gegen
+    Parallelität verriegelt, der neue Wiederholungsweg umging diesen Anspruch
+    vollständig: `retry_release()` rief den Rückruf ohne jeden
+    Zustandswechsel. Acht gleichzeitige zweite Bestätigungen sahen deshalb
+    alle `startup_failed`, liefen alle in denselben Rückruf und starteten acht
+    Scheduler. Ein zweiter Scheduler ist still — er refreshte parallel und
+    fiele niemandem auf.
+
+    **Deterministisch, nicht hoffnungsvoll.** Eine Barriere schickt alle acht
+    Threads gemeinsam los, und der gezählte Start hält das Fenster offen,
+    solange die übrigen ankommen. Die Erwartung hängt danach an keiner
+    Zeitfrage mehr: Genau ein Aufrufer gewinnt den Übergang, die übrigen
+    finden weder einen Umzug noch einen zu wiederholenden Start und bekommen
+    `409` — gleichgültig, ob sie während oder nach dem Start eintreffen.
+
+    Gestartet wird der **echte** Scheduler. Ein Zähler allein belegte nur,
+    dass ein Rückruf lief; hier läuft der Lifespan-Rückruf bis in
+    `RefreshScheduler.start()` durch.
+    """
+    db_path = str(tmp_path / "parallele-wiederholung.db")
+    # `VTI` ohne ISIN ist nicht auflösbar und wird abgelehnt. **Genau das**
+    # macht den Umzug bestätigungspflichtig: Ein rein verlustloser Bestand
+    # wandert schon in `init_db` durch, und der Riegel fiele nie.
+    _legacy_database(db_path, [("EUNL.DE", "IE00B4L5Y983"), ("VTI", None)])
+    _mit_eigener_datenbank(monkeypatch, db_path)
+
+    real_start = RefreshScheduler.start
+
+    def start_fails(self) -> None:
+        raise RuntimeError("Scheduler startet nicht")
+
+    monkeypatch.setattr(RefreshScheduler, "start", start_fails)
+
+    with TestClient(app) as client:
+        assert client.post("/migration/confirm").status_code == 503
+        assert get_gate().startup_failed is True, "der Ausgangszustand des Tests"
+
+        starts: list[str] = []
+        starts_sperre = threading.Lock()
+
+        def start_zaehlt_und_haelt(self) -> None:
+            with starts_sperre:
+                starts.append("scheduler")
+            # Das Fenster offen halten, damit die übrigen Aufrufer wirklich
+            # *währenddessen* ankommen und nicht erst danach.
+            time.sleep(0.05)
+            real_start(self)
+
+        monkeypatch.setattr(RefreshScheduler, "start", start_zaehlt_und_haelt)
+
+        parallel = 8
+        an_der_linie = threading.Barrier(parallel)
+        codes: list[int] = []
+        codes_sperre = threading.Lock()
+
+        def bestaetigen() -> None:
+            an_der_linie.wait(timeout=10)
+            code = client.post("/migration/confirm").status_code
+            with codes_sperre:
+                codes.append(code)
+
+        threads = [threading.Thread(target=bestaetigen) for _ in range(parallel)]
+        for thread in threads:
+            thread.start()
+        for thread in threads:
+            thread.join(timeout=20)
+
+        assert not any(thread.is_alive() for thread in threads), "ein Thread hängt"
+        assert starts == ["scheduler"], f"{len(starts)} Scheduler statt einem"
+        assert sorted(codes) == [200] + [409] * (parallel - 1), (
+            "genau eine Wiederholung führt aus, der Rest bekommt 409"
+        )
+
+        # Und danach steht der Betrieb wirklich.
+        assert client.get("/ready").json()["status"] == "ok"
+        assert client.get(HEALTHCHECK_PATH).json()["mode"] == "serving"
+
+    get_gate().on_release(None)
+    get_settings.cache_clear()
+    get_cached_quote_service.cache_clear()
+
+
+def test_waehrend_der_start_laeuft_meldet_niemand_normalbetrieb(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """`#2b6b`, `#2b6e`: Zwischen Commit und Scheduler gibt es kein `ok`.
+
+    **Der zweite Befund aus Runde 32.** `release()` setzte den Riegel auf
+    offen und rief *danach* den Rückruf; `startup_failed` entstand erst im
+    `except`. Dazwischen existierte die Kombination „nicht ausstehend, nicht
+    gescheitert" — also `200/ok` und `200/serving`, obwohl
+    `RefreshScheduler.start()` noch gar nicht zurückgekehrt war. Bei einem
+    langsamen Start war das ein kurzes Fenster, bei einem hängenden ein
+    dauerhafter Zustand.
+
+    **Der Test hält den Start an.** Der Rückruf blockiert mitten in
+    `RefreshScheduler.start()`, und währenddessen werden beide Diagnosewege
+    gefragt — nicht danach. Das ist der Unterschied zu einem Test, der nur
+    Anfang und Ende sieht: Die Falschaussage lebte ausschließlich in der Mitte.
+    """
+    db_path = str(tmp_path / "haengender-start.db")
+    # Siehe oben: Ohne eine abzulehnende Zeile ist der Umzug verlustlos und
+    # läuft schon in `init_db` durch — dann gäbe es keine Bestätigung.
+    _legacy_database(db_path, [("EUNL.DE", "IE00B4L5Y983"), ("VTI", None)])
+    _mit_eigener_datenbank(monkeypatch, db_path)
+
+    real_start = RefreshScheduler.start
+    im_start = threading.Event()
+    weiter = threading.Event()
+
+    def start_haelt_an(self) -> None:
+        im_start.set()
+        assert weiter.wait(timeout=20), "der Test hat den Start nie freigegeben"
+        real_start(self)
+
+    monkeypatch.setattr(RefreshScheduler, "start", start_haelt_an)
+
+    with TestClient(app) as client:
+        codes: list[int] = []
+        bestaetigung = threading.Thread(
+            target=lambda: codes.append(client.post("/migration/confirm").status_code)
+        )
+        bestaetigung.start()
+
+        assert im_start.wait(timeout=20), "der Start wurde nie erreicht"
+
+        # **Hier** stand die Lüge. Der Umzug ist festgeschrieben, der
+        # Scheduler läuft noch nicht — und genau das sagen jetzt beide.
+        ready = client.get("/ready")
+        operational = client.get(HEALTHCHECK_PATH)
+
+        assert (ready.status_code, ready.json()["status"]) == (503, "starting"), (
+            "der Fachbetrieb ist nicht freigegeben, solange der Start läuft"
+        )
+        assert (operational.status_code, operational.json()["mode"]) == (
+            200,
+            "starting",
+        ), "der Prozess tut, was er soll — aber er liefert noch nicht aus"
+
+        # Der Umzug selbst ist durch, und das darf niemand bestreiten.
+        assert client.get("/migration").json()["pending"] is False
+
+        # Eine zweite Bestätigung greift währenddessen nicht ein.
+        assert client.post("/migration/confirm").status_code == 409
+
+        weiter.set()
+        bestaetigung.join(timeout=20)
+
+        assert not bestaetigung.is_alive(), "die Bestätigung hängt"
+        assert codes == [200]
         assert client.get("/ready").json()["status"] == "ok"
         assert client.get(HEALTHCHECK_PATH).json()["mode"] == "serving"
 

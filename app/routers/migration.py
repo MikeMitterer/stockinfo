@@ -139,20 +139,34 @@ def migration_confirm(settings: SettingsDep) -> MigrationReport:
 
     Ein zweiter, gleichzeitiger Aufruf bekommt `409`; ebenso einer, der nichts
     mehr vorfindet.
+
+    **Das gilt auch für den Wiederholungsweg.** Ist der Umzug festgeschrieben
+    und nur der Betriebsstart gescheitert, stößt eine weitere Bestätigung ihn
+    erneut an — aber genau eine. Die übrigen bekommen `409`, solange der
+    Versuch läuft.
     """
     gate = get_gate()
 
-    if gate.startup_failed:
-        # Der Umzug ist längst durch; was fehlt, ist der Betrieb. Ein zweiter
-        # Aufruf ist deshalb kein Fehler, sondern der Wiederholungsweg.
-        if gate.retry_release():
+    # Der Umzug ist längst durch; was fehlt, ist der Betrieb. Ein zweiter
+    # Aufruf ist dann kein Fehler, sondern der Wiederholungsweg.
+    #
+    # **Gefragt wird durch den Anspruch hindurch, nicht davor.** Ein
+    # vorgeschaltetes `if gate.startup_failed` wäre wieder das Loch aus Runde
+    # 32: Zwischen der Frage und der Ausführung dürfte ein zweiter Aufrufer
+    # dieselbe Antwort bekommen. `retry_release` beansprucht und führt in
+    # einem Zug aus; wer nicht gewinnt, bekommt `None` und läuft unten in
+    # den `409`.
+    retried = gate.retry_release()
+    if retried is not None:
+        if retried:
             return _stored_report(settings.database_path)
         raise HTTPException(status_code=503, detail=REASON_STARTUP_FAILED)
 
     if not gate.claim():
         raise HTTPException(
             status_code=409,
-            detail="Es steht kein Umzug aus, oder er läuft bereits.",
+            detail="Es steht kein Umzug aus, oder Umzug beziehungsweise "
+            "Betriebsstart laufen bereits.",
         )
 
     stamp = datetime.now(timezone.utc).isoformat()
