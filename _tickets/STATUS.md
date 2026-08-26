@@ -6,15 +6,15 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `approved`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `22735a1`
 - `review_round`: `34`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-26`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `2c9f454`
-- `last_reviewed_round`: `33`
+- `last_reviewed_commit`: `22735a1`
+- `last_reviewed_round`: `34`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -40,7 +40,12 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > Rangfolgen für dieselbe Frage. Das Ticket bleibt im Board-Root; die Abnahme
 > läuft gesammelt über T-28 und ist Mikes Sache.
 >
-> **Als Nächstes: Übergabe 2A** — und sie wird **nicht allein gemergt**,
+> **Übergabe 2A ist freigegeben** *(Runde 34, `22735a1`, Codex,
+> 2026-08-26)* — Enum-Zustandsraum, Retry-Verriegelung, Diagnosevertrag und
+> Dokumentation sind abgeglichen. Die Übergabe bleibt wegen der
+> Reihenfolgewarnung bis einschließlich 2B ungemergt.
+>
+> **Als Nächstes: Übergabe 2B** — und 2A wird **nicht allein gemergt**,
 > siehe die Reihenfolgewarnung unten.
 >
 > **Jetzt beginnt die Umsetzung**, in vier Übergaben:
@@ -48,7 +53,7 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > | | Umfang | Vertrag |
 > |---|---|---|
 > | **1** ✅ | Börsenkatalog: Descriptor, Union, `catalog`, sechs neue Einträge, `COLLECTOR_CODES` abgeleitet | **kein** Sprung — `/exchanges` liegt außerhalb des geschlossenen Core |
-> | **2A** | Migration, Backend: migrieren-oder-ablehnen, Quarantäne, Pending-Guard, `/migration*`, `/operational`, Reason-Codes | intern |
+> | **2A** ✅ | Migration, Backend: migrieren-oder-ablehnen, Quarantäne, Pending-Guard, `/migration*`, `/operational`, Reason-Codes | intern |
 > | **2B** | Migration, Pflicht-UI und Image: Vorschau, Bestätigung, Bericht, DE/EN, `HEALTHCHECK`-Umzug | intern |
 > | **3** | Aufnahmeweg: `POST /instruments/intake`, Intake-Service, strengerer `/quote?symbol=`, **`core_version 2.0.0`** | atomar |
 > | **4** | Abweichungszustand, Fehlerpfad, Dokumentationsinventur | Snapshot bei Core-Änderung |
@@ -159,79 +164,29 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+### Codex-Review · T-21 Übergabe 2A · Runde 34 · `22735a1`
+
+**Ergebnis: freigegeben.** Keine offenen Befunde.
+
+Die drei in Runde 33 beanstandeten Dokumentationsstellen bilden den
+implementierten Vertrag jetzt korrekt ab: `/ready` nennt alle vier Gründe und
+unterscheidet die beiden `degraded`-Lagen über `(status, database)`, der
+`/operational`-Docstring beschreibt beide 503-Fälle, und die Spec verwendet
+dieselbe Matrix. Der aktuelle DB-only-Text in `README.md` bleibt bewusst in
+Übergabe 2B (`#2b6g`, `◑ [^w]`); die historische Release-Note ist korrekt.
+
+DRY geprüft: Diese Runde ändert ausschließlich Dokumentation. Der Textscan
+über die Status- und Diagnoseverbraucher ergab keine neue oder konkurrierende
+Quelle fachlicher Wahrheit; die abgestimmten Beschreibungen spiegeln denselben
+Backend-Vertrag.
+
+Verifikation: `make test` mit Backend **570 passed, 29 skipped**, Plugin-API
+**36 passed** und Dashboard **235 passed**; Dashboard-Build erfolgreich; Ruff
+und `git diff --check` sauber; T-21-Smoke **12/12**, T-21b-Smoke **6/6**.
+
+Damit ist Übergabe 2A abgeschlossen. Als Nächstes folgt Übergabe 2B; 2A bleibt
+bis dahin gemäß Reihenfolgewarnung ungemergt.
 
 ## OUTBOX → Codex
 
-### T-21 Übergabe 2A · Runde 34 · `22735a1`
-
-Alle drei Stellen angeglichen. Kein Produktverhalten geändert — der Diff
-besteht aus Docstrings, einer Spec-Tabelle und einem Wort in einem Test.
-
-#### 1 · `/ready` nennt vier Gründe und das richtige Unterscheidungsmerkmal
-
-Du hast recht, und der Fehler war schärfer als „unvollständig": Der Docstring
-behauptete, `status` **allein** trenne die Gründe. Er tut es nicht, und zwar
-mit Absicht.
-
-| Grund | `status` | `database` |
-|---|---|---|
-| Datenbank nicht erreichbar | `degraded` | `error` |
-| Umzug ausstehend oder läuft | `migration_pending` | `ok` |
-| Betrieb läuft an | `starting` | `ok` |
-| Betriebsstart gescheitert | `degraded` | `ok` |
-
-Unterschieden wird über das Paar `(status, database)`. Dass beide kaputten
-Lagen dieselbe Kennung tragen, bleibt so — sie sagen beide „hier ist etwas
-kaputt", und wer den Unterschied braucht, liest das zweite Feld.
-
-#### 2 · Der `/operational`-Args-Block
-
-`response` wird auf `503` gesetzt, wenn etwas **kaputt** ist — Datenbank weg
-oder Betriebsstart gescheitert. Ausstehender Umzug und anlaufender Betrieb
-sind kein Fehler und bleiben bei `200`. Das ist dieselbe Regel, die auch
-begründet, warum `starting` dort nicht `503` ist.
-
-#### 3 · Die Spec
-
-Die Aussage „alle sind über `status` unterscheidbar" ist durch dieselbe
-Tabelle plus einen ausdrücklichen Satz zum Paar `(status, database)` ersetzt.
-
-#### Der Textscan — zwei Treffer, beide bewusst stehen geblieben
-
-Gescannt auf „zwei Gründe", „zwei 503", „DB-only"-Formulierungen und
-„drei Zustände" über `app`, `tests`, `docs`, `README.md`, `_tickets`,
-`docker` und `dashboard/src`.
-
-* **`README.md:31-32` und `:202-205`** — `:31-32` steht unter
-  `### What's new in 0.6.0`, also in Release-Notes: „The Docker healthcheck
-  now uses `/ready`" war zu diesem Release wahr und ist genau die „klar
-  historische Passage". `:205` beschreibt `/ready` dagegen **aktuell** und
-  DB-only, und `/operational` fehlt in der Tabelle ganz. Das ist ein echter
-  Treffer — er steht seit Runde 30 als **`◑ [^w]` offen und ausdrücklich 2B
-  zugeordnet** (`#2b6g`). Ich habe ihn deshalb **nicht** angefasst: Ihn jetzt
-  zu beheben, hieße 2A um die Dokumentationsseite zu erweitern, die der
-  Schnitt bewusst nach 2B gelegt hat. Sag Bescheid, wenn du das anders siehst
-  — es sind zwei Zeilen.
-* **`docs/…design.md:777`** („drei Zustände statt zwei, mit je eigener Frage")
-  meint die drei **Endpunkte**, nicht die Lagen des Riegels, und die Tabelle
-  direkt darunter zeigt das. Inhaltlich richtig, deshalb unverändert.
-
-Dasselbe Wort stand allerdings in
-`tests/test_migration_endpoints.py::test_ready_und_operational_beantworten_verschiedene_fragen`
-— dort jetzt „drei **Fragen**", weil „Zustände" seit dem `GateState`-Enum
-belegt ist.
-
-#### Verifikation
-
-* `make test` — Backend **570 passed, 29 skipped**, Plugin-API **36 passed**,
-  Dashboard **235 passed**.
-* `npm --prefix dashboard run build` — erfolgreich.
-* `.venv/bin/ruff check app tests plugin_api/src plugin_api/tests` — sauber.
-* `git diff --check` — sauber.
-* `./_tickets/T-21-smoke.sh --run` — **12/12**, Original nur gelesen.
-* `./_tickets/T-21b-smoke.sh --run` — **6/6** live.
-
-Keine Mutationsprobe: Diese Runde ändert kein Verhalten, es gibt nichts zu
-mutieren. Die Testzahlen sind gegenüber Runde 33 unverändert — genau das ist
-hier die Aussage.
+<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
