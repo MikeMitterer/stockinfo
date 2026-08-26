@@ -231,3 +231,53 @@ export interface AnalyzeResult {
   total: number
   stages: AnalyzeStage[]
 }
+
+/**
+ * Antwort von `GET /ready` — der Diagnoseweg mit dem vollständigen Zustand.
+ *
+ * `status` **und** `database` zusammen sind die Aussage, nicht `status`
+ * allein: Eine unerreichbare Datenbank und ein gescheiterter Betriebsstart
+ * tragen beide `degraded` und unterscheiden sich erst über das zweite Feld.
+ */
+export interface ReadinessResponse {
+  status: 'ok' | 'degraded' | 'migration_pending' | 'starting'
+  version: string
+  database: string
+}
+
+/**
+ * Ein Papier, das den gültigen Bestand verlässt oder verlassen hat.
+ *
+ * Dasselbe Modell für Vorschau **und** Bericht — was der Benutzer vorher
+ * sieht, muss er hinterher wiedererkennen.
+ *
+ * `reason` ist eine **stabile Kennung**, kein Satz. Der Text dazu steht im
+ * Katalog unter `migration.reason.*`; wer darauf reagiert, prüft diesen Wert.
+ */
+export interface RejectedInstrument {
+  symbol: string
+  isin: string | null
+  name: string | null
+  exchange: string | null
+  type: string | null
+  currency: string | null
+  reason: string
+  quotes: number
+  daily_closes: number
+}
+
+/** Was der bestätigte Umzug tun **würde** — Phase 1, ohne etwas zu ändern. */
+export interface MigrationPreview {
+  pending: boolean
+  migrating: number
+  unchanged: number
+  rejected: RejectedInstrument[]
+  lost_quotes: number
+  lost_daily_closes: number
+}
+
+/** Was tatsächlich geschehen ist — Phase 2, auch lange danach noch abrufbar. */
+export interface MigrationReport {
+  completed: boolean
+  rejected: RejectedInstrument[]
+}

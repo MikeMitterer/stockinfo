@@ -299,4 +299,68 @@ export const de = {
     history: 'Keine Kurspunkte gespeichert. | 1 Kurspunkt geht verloren. | {count} Kurspunkte gehen verloren.',
     irreversible: 'Das lässt sich nicht rückgängig machen.',
   },
+
+  /*
+   * Der Identitäts-Umzug (T-21 Teil 3).
+   *
+   * `reason.*` sind die **stabilen Kennungen** aus `app/migration.py` — der
+   * Server schickt die Kennung, der Satz steht hier. Genau deshalb heißt die
+   * Regel „stabile Reason-Codes statt freier Texte": Ein Satz aus dem Backend
+   * wäre in der zweiten Sprache sofort falsch.
+   */
+  migration: {
+    checking: 'Zustand wird geprüft…',
+    starting: 'Der Betrieb läuft an…',
+
+    title: 'Der Bestand muss umgezogen werden',
+    lead:
+      'Jedes Papier bekommt eine eindeutige Identität aus Ticker und Börsenkürzel. ' +
+      'Wo sich das alte Symbol nicht zweifelsfrei zerlegen lässt, wird geraten oder ' +
+      'ausgelassen — geraten wird nicht.',
+
+    balanceMigrating: 'Werden umgezogen',
+    balanceUnchanged: 'Bleiben unverändert',
+    balanceRejected: 'Verlassen den Bestand',
+
+    removedTitle: 'Diese Papiere verlassen den Bestand',
+    removedNote:
+      'Sie stehen weiterhin im Bericht und lassen sich mit vollständiger Angabe ' +
+      'wieder anlegen.',
+    lossSummary:
+      'Dabei entfallen {quotes} Intraday-Kurspunkte und {daily} Tagesschlusskurse.',
+    rowLoss: '{quotes} Kurspunkte, {daily} Tagesschlusskurse',
+
+    backupTitle: 'Vorher sichern',
+    backupBody:
+      'Der Umzug lässt sich nicht rückgängig machen. Legen Sie eine Kopie der ' +
+      'Datenbankdatei an, bevor Sie bestätigen — danach sind die oben genannten ' +
+      'Zeilen und ihre Kurse nur noch im Bericht vorhanden.',
+
+    confirm: 'Umzug jetzt ausführen',
+    confirming: 'Der Umzug läuft…',
+
+    doneTitle: 'Der Umzug ist durch',
+    doneLead: 'Der Bestand trägt jetzt durchgehend Ticker und Börsenkürzel.',
+    doneNothingLost: 'Es musste kein Papier entfernt werden.',
+    continue: 'Weiter zum Dashboard',
+
+    startupFailedTitle: 'Umzug erledigt, Betrieb nicht angelaufen',
+    startupFailedBody:
+      'Die Daten sind umgezogen — daran ändert sich nichts. Der Hintergrund-Abruf ' +
+      'für neue Kurse ist aber nicht gestartet, die Kurse würden also veralten. ' +
+      'Ein weiterer Versuch startet nur den Betrieb, nicht den Umzug.',
+    retry: 'Betrieb erneut starten',
+
+    downTitle: 'Der Dienst antwortet nicht',
+    downBody: 'Die Datenbank ist nicht erreichbar. Prüfen Sie den Server und laden Sie neu.',
+
+    reason: {
+      symbol_without_exchange_suffix:
+        'Dem Symbol fehlt das Börsenkürzel — aus ihm allein lässt sich der Handelsplatz nicht ableiten.',
+      unknown_exchange_suffix:
+        'Das Börsenkürzel im Symbol ist unbekannt und lässt sich keinem Handelsplatz zuordnen.',
+      non_canonical_ticker:
+        'Der Ticker entspricht nicht der kanonischen Schreibweise des Handelsplatzes.',
+    },
+  },
 }

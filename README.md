@@ -28,8 +28,16 @@ Yahoo Finance, JSON export).
   scraped once per cycle instead of on every quote.
 - **Merging duplicate instruments no longer loses data.** Manual values and the
   daily-sync watermark move to the surviving row instead of being cascaded away.
-- **`/ready`** — a readiness probe that actually touches the database; `/health`
-  stays cheap. The Docker healthcheck now uses `/ready`.
+- **Three probes, three questions.** `/health` stays cheap (is the process
+  alive?), `/ready` actually touches the database (is normal operation
+  released?), and the new `/operational` answers what the Docker healthcheck
+  needs (can the process do its current job?). A pending migration is not a
+  fault — `/ready` says `503`, `/operational` stays `200`.
+- **The identity migration is a mandatory, two-phase flow.** On startup the
+  service works out what a migration would cost, blocks every business route
+  and shows the list; only an explicit confirmation runs it. Instruments whose
+  symbol cannot be split into ticker and exchange leave the portfolio and are
+  named in the report instead of being guessed.
 - **Stricter API contract** — symbols and time ranges are validated (`422`
   instead of a wrong result), and an unresolvable ISIN answers `404` instead of
   `502`.
@@ -202,7 +210,11 @@ forces it).
 | Method & path | Purpose |
 |---|---|
 | `GET /health` | liveness — answers as long as the process is alive |
-| `GET /ready` | readiness — also checks the database; `503` when it is unreachable |
+| `GET /ready` | readiness — is normal operation released? `503` with `status` = `degraded` (database unreachable **or** startup failed, told apart by `database`), `migration_pending` or `starting` |
+| `GET /operational` | can the process do its current job? The Docker healthcheck hangs on this one. `200` while a migration is pending or the service is starting, `503`/`degraded` only when something is broken |
+| `GET /migration` | what a confirmed migration would do — without changing anything |
+| `POST /migration/confirm` | run it, once, on explicit confirmation |
+| `GET /migration/report` | what actually happened, still available long after |
 | `GET /quote/{isin}` | quote by ISIN (prefers Xetra/EUR) |
 | `GET /quote?symbol=VGWL.DE` | quote by full Yahoo symbol (suffix = exchange) |
 | `GET /quote/{isin}/history` | intraday history (collected ticks) |

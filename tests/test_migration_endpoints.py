@@ -28,35 +28,28 @@ from app.main import app, mount_dashboard
 from app.migration_guard import ALLOWED_ROUTES, HEALTHCHECK_PATH
 from app.routers.migration import get_gate
 from app.scheduler import RefreshScheduler
+from tests.legacy_schema import create_legacy_tables
 
 _DIST = "dashboard/dist"
 
 
 def _legacy_database(path: str, rows: list[tuple[str, str | None]]) -> None:
-    """Eine Datenbank im Stand **vor** T-21 — der Fall, der den Riegel auslöst."""
+    """Eine Datenbank im Stand **vor** T-21 — der Fall, der den Riegel auslöst.
+
+    **`quotes` trägt `volume` und `currency`**, weil der echte Bestand sie
+    trägt (nachgesehen mit `PRAGMA table_info` auf `data/stockinfo.db`). Ohne
+    sie war dieses Fixture keine Alt-Datenbank, sondern eine, die es nie gab:
+    Nach dem Umzug endete `GET /instruments` mit `500`
+    (`no such column: q.currency`), weil `_migrate` Spalten nur in
+    `instruments` und `instrument_overrides` nachzieht.
+
+    Aufgefallen ist das erst im Browser — der komplette Ablauf lief grün durch,
+    und der Fehler stand danach als Toast in der Oberfläche. Das Schema steht
+    seither in `tests/legacy_schema.py`, damit es nicht ein viertes Mal
+    abweichen kann.
+    """
     with sqlite3.connect(path) as connection:
-        connection.executescript(
-            """
-            CREATE TABLE instruments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                isin TEXT UNIQUE, symbol TEXT NOT NULL,
-                exchange TEXT, name TEXT, type TEXT, currency TEXT,
-                first_seen TEXT NOT NULL
-            );
-            CREATE TABLE quotes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                instrument_id INTEGER NOT NULL REFERENCES instruments(id),
-                price REAL NOT NULL, quote_time TEXT NOT NULL,
-                fetched_at TEXT NOT NULL, UNIQUE (instrument_id, quote_time)
-            );
-            CREATE TABLE daily_closes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                instrument_id INTEGER NOT NULL REFERENCES instruments(id),
-                date TEXT NOT NULL, close REAL NOT NULL,
-                UNIQUE (instrument_id, date)
-            );
-            """
-        )
+        create_legacy_tables(connection)
         # **Nichtleere, unterschiedliche Werte** für Börse, Gattung und
         # Währung. Bis Runde 31 blieben sie `NULL`, und der Metadatentest
         # verglich Vorschau und Bericht dann als `None == None` — er hätte
@@ -456,6 +449,32 @@ def test_ein_gescheiterter_scheduler_start_meldet_keinen_normalbetrieb(
     get_gate().on_release(None)
     get_settings.cache_clear()
     get_cached_quote_service.cache_clear()
+
+
+def test_nach_dem_umzug_liefert_der_bestand_wieder_aus(pending: TestClient) -> None:
+    """Der Umzug endet nicht mit dem `200` der Bestätigung.
+
+    **Der Fund aus dem Browser (Übergabe 2B).** Der ganze Ablauf lief grün
+    durch — Vorschau, Bestätigung, Bericht, alle Tests —, und danach stand in
+    der Oberfläche „Instrumente konnten nicht geladen werden". Dahinter ein
+    `500` mit `no such column: q.currency`.
+
+    Die Ursache war das Fixture, nicht das Produkt: Es legte eine `quotes`-
+    Tabelle ohne `volume` und `currency` an, die es so nie gegeben hat. Der
+    Fehler konnte trotzdem nur deshalb bis in die Oberfläche laufen, weil
+    **kein Test je den Weg danach ging**. Jede Prüfung endete bei
+    `/migration/report`.
+
+    Der Test schließt genau diese Lücke: Was den Umzug überlebt, muss sich
+    hinterher auch abrufen lassen.
+    """
+    assert pending.post("/migration/confirm").status_code == 200
+
+    response = pending.get("/instruments")
+
+    assert response.status_code == 200, response.text
+    symbols = {row["symbol"] for row in response.json()}
+    assert symbols == {"EUNL.DE"}, "die migrierte Zeile, und nur sie"
 
 
 def test_parallele_wiederholungen_starten_genau_einen_scheduler(

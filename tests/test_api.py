@@ -207,8 +207,13 @@ def test_readiness_meldet_503_wenn_die_datenbank_nicht_erreichbar_ist(
     """Der eigentliche Zweck: eine kaputte Datenbank muss auffallen.
 
     `/health` antwortete immer mit ``ok`` — ein Container mit verschwundener
-    SQLite-Datei galt bis zum ersten echten Request als gesund. Der
-    Docker-Healthcheck hängt daran.
+    SQLite-Datei galt bis zum ersten echten Request als gesund.
+
+    **Der Docker-Healthcheck hängt seit T-21 Teil 3 nicht mehr hier**, sondern
+    an `/operational`: Ein ausstehender Umzug ist kein Fehler, und `/ready`
+    sagt in dieser Lage `503`. Diese Route bleibt trotzdem die Antwort auf
+    „ist der Fachbetrieb freigegeben?" — der Grund für den Test ändert sich
+    dadurch nicht.
     """
     import app.main as main_module
 

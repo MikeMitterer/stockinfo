@@ -285,4 +285,66 @@ export const en = {
     history: 'No price points stored. | 1 price point will be lost. | {count} price points will be lost.',
     irreversible: 'This cannot be undone.',
   },
+
+  /*
+   * The identity migration (T-21 part 3).
+   *
+   * `reason.*` are the **stable codes** from `app/migration.py` — the server
+   * sends the code, the sentence lives here. That is the whole point of
+   * "stable reason codes instead of free text": a sentence coming from the
+   * backend would be wrong in the second language immediately.
+   */
+  migration: {
+    checking: 'Checking status…',
+    starting: 'Service is starting…',
+
+    title: 'The instruments need to be migrated',
+    lead:
+      'Every instrument gets a unique identity made of ticker and exchange code. ' +
+      'Where the old symbol cannot be split beyond doubt, it is left out rather ' +
+      'than guessed.',
+
+    balanceMigrating: 'Will be migrated',
+    balanceUnchanged: 'Stay unchanged',
+    balanceRejected: 'Leave the portfolio',
+
+    removedTitle: 'These instruments leave the portfolio',
+    removedNote:
+      'They remain in the report and can be added again with a complete identity.',
+    lossSummary: 'This drops {quotes} intraday price points and {daily} daily closes.',
+    rowLoss: '{quotes} price points, {daily} daily closes',
+
+    backupTitle: 'Back up first',
+    backupBody:
+      'The migration cannot be undone. Make a copy of the database file before you ' +
+      'confirm — afterwards the rows listed above and their prices exist only in ' +
+      'the report.',
+
+    confirm: 'Run the migration now',
+    confirming: 'Migration running…',
+
+    doneTitle: 'The migration is done',
+    doneLead: 'Every instrument now carries a ticker and an exchange code.',
+    doneNothingLost: 'No instrument had to be removed.',
+    continue: 'Continue to the dashboard',
+
+    startupFailedTitle: 'Migration done, service did not start',
+    startupFailedBody:
+      'The data has been migrated — that does not change. But the background ' +
+      'refresh for new prices did not start, so prices would go stale. Trying ' +
+      'again only starts the service, it does not repeat the migration.',
+    retry: 'Start the service again',
+
+    downTitle: 'The service does not answer',
+    downBody: 'The database is unreachable. Check the server and reload.',
+
+    reason: {
+      symbol_without_exchange_suffix:
+        'The symbol has no exchange suffix — the trading venue cannot be derived from it alone.',
+      unknown_exchange_suffix:
+        'The exchange suffix in the symbol is unknown and matches no trading venue.',
+      non_canonical_ticker:
+        'The ticker does not match the canonical spelling of its trading venue.',
+    },
+  },
 } satisfies typeof de

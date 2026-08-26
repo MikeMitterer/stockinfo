@@ -23,6 +23,7 @@ from app.migration import (
     harden_identity_schema,
     plan_migration,
 )
+from tests.legacy_schema import create_legacy_tables
 
 _STAMP = "2026-08-25T12:00:00+00:00"
 
@@ -35,28 +36,7 @@ def _legacy_database(path: str, rows: list[tuple[str, str | None]]) -> None:
         rows: Paare aus Symbol und ISIN (``None`` erlaubt).
     """
     with sqlite3.connect(path) as connection:
-        connection.executescript(
-            """
-            CREATE TABLE instruments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                isin TEXT UNIQUE, symbol TEXT NOT NULL,
-                exchange TEXT, name TEXT, type TEXT, currency TEXT,
-                first_seen TEXT NOT NULL
-            );
-            CREATE TABLE quotes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                instrument_id INTEGER NOT NULL REFERENCES instruments(id),
-                price REAL NOT NULL, quote_time TEXT NOT NULL,
-                fetched_at TEXT NOT NULL, UNIQUE (instrument_id, quote_time)
-            );
-            CREATE TABLE daily_closes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                instrument_id INTEGER NOT NULL REFERENCES instruments(id),
-                date TEXT NOT NULL, close REAL NOT NULL,
-                UNIQUE (instrument_id, date)
-            );
-            """
-        )
+        create_legacy_tables(connection)
         connection.executemany(
             "INSERT INTO instruments (symbol, isin, name, first_seen) "
             "VALUES (?, ?, ?, ?)",

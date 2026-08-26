@@ -6,7 +6,7 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
+- `phase`: `claude_working`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `22735a1`
 - `review_round`: `34`

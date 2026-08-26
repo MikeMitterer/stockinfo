@@ -2,23 +2,13 @@
 import vue from '@vitejs/plugin-vue'
 import { defineConfig } from 'vite'
 
+// Die Liste steht in `api-prefixes.ts` — sie hat zwei Verbraucher, und der
+// Test kommt an diese Datei hier nicht heran, ohne esbuild in die
+// Testumgebung zu ziehen.
+import { apiPrefixes } from './api-prefixes'
+
 // Ziel-Backend für den Dev-Proxy (überschreibbar per Env).
 const apiTarget = process.env.VITE_DEV_API_TARGET ?? 'http://localhost:8000'
-
-// Nur diese Präfixe sind API-Routen — alles andere serviert das SPA (Hash-Routing).
-const apiPrefixes = [
-  '/quote',
-  '/instruments',
-  '/exchanges',
-  '/fx',
-  '/analyze',
-  '/env',
-  '/health',
-  '/refresh',
-  '/docs',
-  '/redoc',
-  '/openapi.json',
-]
 
 export default defineConfig({
   plugins: [vue()],

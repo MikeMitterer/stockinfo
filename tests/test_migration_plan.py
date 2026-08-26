@@ -21,6 +21,7 @@ from app.migration import (
     plan_migration,
     rejection_reason,
 )
+from tests.legacy_schema import create_legacy_tables
 
 
 def _legacy_database(path: str, rows: list[tuple[str, str | None]]) -> None:
@@ -35,28 +36,7 @@ def _legacy_database(path: str, rows: list[tuple[str, str | None]]) -> None:
         rows: Paare aus Symbol und ISIN (``None`` erlaubt).
     """
     with sqlite3.connect(path) as connection:
-        connection.executescript(
-            """
-            CREATE TABLE instruments (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                isin TEXT UNIQUE, symbol TEXT NOT NULL,
-                exchange TEXT, name TEXT, type TEXT, currency TEXT,
-                first_seen TEXT NOT NULL
-            );
-            CREATE TABLE quotes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                instrument_id INTEGER NOT NULL REFERENCES instruments(id),
-                price REAL NOT NULL, quote_time TEXT NOT NULL,
-                fetched_at TEXT NOT NULL, UNIQUE (instrument_id, quote_time)
-            );
-            CREATE TABLE daily_closes (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                instrument_id INTEGER NOT NULL REFERENCES instruments(id),
-                date TEXT NOT NULL, close REAL NOT NULL,
-                UNIQUE (instrument_id, date)
-            );
-            """
-        )
+        create_legacy_tables(connection)
         connection.executemany(
             "INSERT INTO instruments (symbol, isin, first_seen) VALUES (?, ?, ?)",
             [(symbol, isin, "2026-01-01T00:00:00+00:00") for symbol, isin in rows],

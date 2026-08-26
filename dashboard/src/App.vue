@@ -13,16 +13,20 @@ import {
 } from 'naive-ui'
 import { buildNaiveOverrides, THEMES, UxNotificationProvider } from '@mmit/ux-foundation'
 
-import AppDashboard from './components/AppDashboard.vue'
+import AppGate from './components/AppGate.vue'
 import { useNaiveOverrides } from './composables/useNaiveOverrides'
 import { useTheme } from './composables/useTheme'
 
 /**
  * Der Rahmen: Theme-Brücke, Locale und die Provider von Naive UI.
  *
- * Der Inhalt liegt bewusst eine Ebene tiefer in `AppDashboard.vue` —
- * `useNotifier()` braucht einen `NNotificationProvider` **über** sich, und der
- * wird hier erst im Template aufgespannt.
+ * Der Inhalt liegt bewusst eine Ebene tiefer — `useNotifier()` braucht einen
+ * `NNotificationProvider` **über** sich, und der wird hier erst im Template
+ * aufgespannt.
+ *
+ * Direkt darunter steht `AppGate.vue` und nicht `AppDashboard.vue`: Steht ein
+ * Identitäts-Umzug aus, weist der Server jede Fachanfrage ab, und das
+ * Dashboard lädt beim Einhängen ein Dutzend davon.
  */
 
 const { locale } = useI18n()
@@ -75,7 +79,7 @@ const naiveDateLocale = computed(() => (locale.value === 'de' ? dateDeDE : dateE
     <NMessageProvider>
       <NDialogProvider>
         <UxNotificationProvider>
-          <AppDashboard />
+          <AppGate />
         </UxNotificationProvider>
       </NDialogProvider>
     </NMessageProvider>

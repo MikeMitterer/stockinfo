@@ -174,11 +174,13 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2b6f | eine Routenquelle | Guard und Routentabellen-Test lesen **dieselbe** Allowlist-Konstante; ein Test vergleicht die `HEALTHCHECK`-URL im `Dockerfile` gegen genau diesen Pfad — sonst driften sie unbemerkt bis zum Deployment | ✅ [^s] | |
 | 2b6h | statische Dateien im Pending-Zustand | der Test **baut das Dashboard** und fordert **`GET /`** (belegt die geladene HTML) sowie *jede* real ausgelieferte Datei **rekursiv** an — insbesondere `/stockinfo-icon.svg` aus `index.html:6` und die Dateien unter `/assets`. Keine handgepflegte Kopie; unbekannte Pfade und Fach-APIs bleiben gesperrt | ⚠️ [^t] | |
 | 2b6j | `/` als URL-Alias | steht **ausdrücklich** in der Allowlist, als exakter Pfad und nie als Präfix, unter der Bedingung `index.html` im begrenzten `static_dir`. Fehlt `static_dir` ganz (lokal: Vorgabe `/app/web`), ist der statische Teil leer | ✅ [^u] | |
-| 2b6i | Vite-Dev-Proxy | `/migration`, `/operational` und `/ready` stehen in `apiPrefixes` (`dashboard/vite.config.ts:8-21`); ein Test belegt je Präfix eine **API-Antwort statt `index.html`** — der Fehler ist als `solved/T-04-vite-proxy-fehlende-praefixe.md` schon einmal passiert | ➖ [^v] | |
-| 2b6g | Diagnose-Verbraucher | `README.md:31-32` und `:202-205`, `docker/Dockerfile:71-75`, `app/main.py:70-76` und `tests/test_api.py:204-240` sind auf die **drei** Fragen abgeglichen; die widerlegte Restart-/Traffic-Begründung steht nirgends mehr | ◑ [^w] | |
+| 2b6i | Vite-Dev-Proxy | `/migration`, `/operational` und `/ready` stehen in `apiPrefixes` (`dashboard/api-prefixes.ts`); ein Test hält die Liste gegen **jeden Pfad, den die App wirklich anfordert** — der Fehler ist als `solved/T-04-vite-proxy-fehlende-praefixe.md` schon einmal passiert | ⚠️ [^v] | |
+| 2b6g | Diagnose-Verbraucher | `README.md:31-32` und `:202-205`, `docker/Dockerfile:71-75`, `app/main.py:70-76` und `tests/test_api.py:204-240` sind auf die **drei** Fragen abgeglichen; die widerlegte Restart-/Traffic-Begründung steht nirgends mehr | ✅ [^w] | |
 | 2b6c | Image-Test | Pending-Zustand überdauert `start-period` + 3 × `interval`; Healthcheck-Endpunkt bleibt `200`, `/ready` bleibt `503`, Vorschau und Bestätigung durchgehend erreichbar. **Keine** Restart-/Routing-Zusage — die gälte nur für eine konkrete Orchestrator-Konfiguration | ➖ [^x] | |
 | 2b6d | Bestätigung | gegen parallele und doppelte Aufrufe verriegelt; Scheduler und normale Endpunkte werden **genau einmal** freigegeben | ✅ [^y] | |
-| 2b7 | Vorschau, Bericht und Meldungen | **stabile Reason-Codes** statt freier Texte, DE/EN übersetzt — in Teil 2, nicht erst in Teil 4 | ◑ [^z] | |
+| 2b7 | Vorschau, Bericht und Meldungen | **stabile Reason-Codes** statt freier Texte, DE/EN übersetzt — in Teil 2, nicht erst in Teil 4 | ✅ [^z] | |
+| 2b8 | Pflicht-UI des Umzugs | die Oberfläche zeigt vor der Zustimmung **jedes** Papier, das den Bestand verlässt, mit Grund und Kurspunktzahl, dazu die Bilanz und den Backup-Hinweis; danach denselben Bericht. Die Weiche steht **über** dem Dashboard, damit im Pending-Zustand kein Dutzend `503` vorausläuft | ✅ [^ac] | |
+| 2b9 | Betriebszustände im UI | die Oberfläche liest `/ready` und unterscheidet die vier Lagen; `degraded` mit erreichbarer Datenbank führt in den Wiederholungsweg, nicht in „Server prüfen" | ⚠️ [^ad] | |
 | 2b2 | nach erfolgreichem Start | Invariante `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`; kein Instrument-/Quote-Endpunkt serialisiert eine halbe Identität | ✅ [^aa] | |
 | 2b3 | Reihenfolge Katalog vor Migration | `GOLD.SG` migriert (257 Tageskurse bleiben), wird **nicht** abgelehnt — der Katalog mit `XSTU` steht vorher | ✅ [^ab] | |
 | ~~2c~~ | ~~derselbe Fall, manuelle Zuordnung~~ | **gestrichen** — der Symbolweg verlangt die Kombination künftig im Vertrag, damit entstehen die Fälle nicht mehr. Siehe Kasten „Die Handzuordnung ist gestrichen" | ➖ | |
@@ -382,13 +384,26 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `index.html`, als exakter Pfad und **nie** als Präfix (`/quote/EUNL.DE`
     bleibt gesperrt); ohne Verzeichnis ist die Menge leer; ein Symlink aus dem
     Verzeichnis hinaus wird nicht freigegeben — mutationsgeprüft.
-[^v]: **Nicht in 2A.** Der Vite-Proxy betrifft den Dev-Betrieb der
-    Oberfläche, und die kommt mit 2B. Ohne UI ruft niemand `/migration`
-    relativ auf.
-[^w]: **Teilweise.** `docker/Dockerfile` und die Docstrings in `app/main.py`
-    sind abgeglichen, die widerlegte Restart-/Traffic-Begründung steht dort
-    nicht mehr. **Offen:** `README.md:31-32` und `:202-205` sowie
-    `tests/test_api.py:204-240` — sie gehören zur Dokumentationsseite von 2B.
+[^v]: **Mit Einschränkung.** `dashboard/tests/viteProxy.spec.ts` liest die
+    Pfad-Literale aus dem Quelltext der App und hält **jeden** gegen die
+    Präfixliste — eine abgeschriebene Erwartungsliste hätte nur belegt, dass
+    zwei Listen gleich sind. Gemessen: Ohne `/migration` meldet er drei
+    ungedeckte Pfade.
+
+    **Was er nicht tut:** einen Dev-Server starten und je Präfix eine echte
+    Antwort holen. Er prüft die Konfiguration, nicht den laufenden Proxy, und
+    er findet nur Literale — zur Laufzeit gebaute Pfade (`instrumentPath`)
+    stehen nicht darin. Genau die Literale sind aber die Klasse, die in T-04
+    gefehlt hat.
+[^w]: `docker/Dockerfile` und die Docstrings in `app/main.py` waren schon in
+    2A abgeglichen; `README.md` und `tests/test_api.py:204-240` sind es
+    seit 2B.
+
+    **Ein Fehler von mir dabei:** In Runde 34 hatte ich `README.md:31-32` als
+    „klar historische Passage" eingestuft und liegen gelassen. Die Version
+    **ist** 0.6.0 — das ist der Changelog der laufenden Auslieferung, und der
+    Satz „The Docker healthcheck now uses `/ready`" war darin seit 2A falsch.
+    Jetzt stehen dort die drei Fragen und der zweiphasige Umzug.
 [^x]: **Nicht in 2A.** Der Image-Test braucht ein gebautes Image und gehört
     zu 2B.
 [^y]: Dass die Freigabe genau einmal gewinnt, ist mit acht Threads an einer
@@ -423,10 +438,24 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     schicken acht Threads an einer Barriere los; gemessen ohne den Anspruch:
     acht Rückrufe statt einem, und ohne die zusätzliche Sperre in
     `app/main.py` auch acht wirklich gestartete Scheduler.
-[^z]: **Teilweise.** Die Reason-Codes sind stabil und stehen an einer Stelle
+[^z]: Die Reason-Codes sind stabil und stehen an einer Stelle
     (`app/migration.py`), Vorschau und Bericht teilen ein Antwortmodell, und
     `tests/test_migration_plan.py` prüft jeden Code gegen eine ausgeschriebene
-    Erwartung. **Offen:** die DE/EN-Übersetzung — sie hat ohne UI keinen Ort.
+    Erwartung.
+
+    **Die DE/EN-Übersetzung ist seit 2B da** und liegt unter
+    `migration.reason.*` in beiden Katalogen.
+    `tests/test_migration_reason_catalogue.py` hält sie **über die
+    Sprachgrenze hinweg** gegen `REJECTION_REASONS`: Jede Kennung braucht
+    einen Satz, jeder Satz eine Kennung, und beide Kataloge müssen dieselbe
+    Menge tragen. Ohne diese Prüfung merkte niemand, dass eine neue Kennung im
+    Backend zwei TypeScript-Dateien nicht erreicht — im UI stünde dann die rohe
+    Kennung statt eines Grundes. Mutationsgeprüft: ein entfernter Schlüssel
+    macht den Test rot.
+
+    Ein Grund fällt trotzdem nie ganz weg: Kennt der Katalog eine Kennung
+    nicht, zeigt die Liste sie **roh** an, statt die Zeile ohne Begründung zu
+    lassen.
 [^aa]: `tests/test_migration_apply.py::test_nach_dem_umzug_ist_die_halbe_identitaet_unmoeglich`
     und `./_tickets/T-21-smoke.sh` `#2e`. Beide prüfen nicht nur, dass gerade
     keine halbe Zeile **da** ist, sondern dass keine mehr **entstehen kann**:
@@ -435,6 +464,38 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
     Dass kein Endpunkt eine halbe Identität serialisiert, folgt daraus — es
     gibt keine Zeile mehr, die es könnte.
+[^ac]: **Im Browser durchgefahren**, nicht nur getestet: Alt-Bestand auf
+    eigenem Port, Vorschau mit Bilanz (2 umziehen, 2 gehen) und den echten
+    Verlustzahlen (`VTI`: 14 Kurspunkte, 28 Tagesschlusskurse), Backup-Hinweis,
+    Klick auf „Umzug jetzt ausführen", Bericht mit denselben Zeilen, „Weiter
+    zum Dashboard" — und danach die Tabelle mit den beiden migrierten Papieren,
+    **ohne** Fehlermeldung.
+
+    **Genau dieser Durchgang hat einen Fehler gefunden, den kein Test zeigte.**
+    Nach dem Umzug meldete die Oberfläche „Instrumente konnten nicht geladen
+    werden"; dahinter ein `500` mit `no such column: q.currency`. Ursache war
+    das Test-Fixture: Es legte eine `quotes`-Tabelle ohne `volume` und
+    `currency` an — eine Alt-Datenbank, die es nie gegeben hat (der echte
+    Bestand trägt beide, nachgesehen mit `PRAGMA table_info`). Der Fehler
+    konnte nur deshalb bis in die Oberfläche laufen, weil **jede** Prüfung bei
+    `/migration/report` endete und keine den Weg danach ging. Das Schema steht
+    jetzt einmal in `tests/legacy_schema.py` statt dreimal abgeschrieben, und
+    `…::test_nach_dem_umzug_liefert_der_bestand_wieder_aus` geht den Weg
+    danach. Mutationsgeprüft: ohne die beiden Spalten wird er rot.
+
+    Automatisiert: `dashboard/tests/components/MigrationGate.spec.ts`
+    (9 Fälle) — Liste, Bilanz, Backup-Hinweis, Bestätigung, Bericht und die
+    rohe Kennung als Rückfall.
+[^ad]: **Mit Einschränkung.** Die Abbildung von `/ready` auf die Lage ist in
+    `dashboard/tests/composables/useMigration.spec.ts` geprüft, einschließlich
+    des Falls, der die Trennung überhaupt nötig macht: `degraded` trägt zwei
+    verschiedene Lagen, und erst `database` (`ok` gegen `error`) trennt sie.
+    Mutationsgeprüft: Fällt die Unterscheidung weg, wird der Test rot.
+
+    **Nicht im Browser gesehen** habe ich den Bildschirm „Umzug erledigt,
+    Betrieb nicht angelaufen" — den erzwingt man nur mit einem gescheiterten
+    `RefreshScheduler.start`, also nicht ohne Eingriff in den Produktcode. Er
+    steht als Testfall, nicht als Augenschein.
 [^ab]: `./_tickets/T-21-smoke.sh --run` gegen eine Sicherung des **echten**
     Bestands: `GOLD.SG` migriert zu `GOLD/XSTU` und behält seine **257**
     Tagesschlusskurse, `VGWL.DE` seine 2234. Abgelehnt wird allein `VTI` mit
