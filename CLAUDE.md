@@ -30,13 +30,18 @@ Vollständige Konventionen samt Namensschema je Sprache: Skill `code-standards`.
 
 ## Vor Arbeitsbeginn
 
-- `_tickets/STATUS.md` — die Mailbox zwischen Claude und Codex. Steht dort
-  `owner: codex`, ist die Commit-Linie eingefroren.
-- `_tickets/CLAUDE-REVIEW-PATTERNS.md` — wiederkehrende eigene Fehlermuster.
-  Vor einer Übergabe lesen, nicht erst nach dem Befund.
+- `_tickets/STATUS.md` — die Mailbox zwischen Claude und Codex. `owner` sagt,
+  wer am Zug ist: **Für den, der dort nicht steht, ist die Commit-Linie
+  eingefroren** — außer für Review- und Statusdateien. Claude wartet also bei
+  `owner: codex`, Codex bei `owner: claude`.
+- `_tickets/CLAUDE-REVIEW-PATTERNS.md` — Claudes wiederkehrende Fehlermuster,
+  gepflegt von beiden Seiten. Claude liest sie vor einer Übergabe, Codex vor
+  einem Review — nicht erst nach dem Befund.
+- `_tickets/CODEX-REVIEW-AUTOMATION.md` — Phasen, Validierungen und der
+  Ablauf einer Übergabe.
 
-> **`AGENTS.md` daneben ist die Codex-Entsprechung.** Der Regelteil beider
-> Dateien ist zeichengleich zu halten; nur „Vor Arbeitsbeginn" ist
-> rollenabhängig. Wer sie angleicht, liest den Diff — eine blinde Ersetzung
-> von „Claude" durch „Codex" hat dort schon einmal den `owner`-Riegel
-> invertiert.
+> **Diese Datei gilt für beide Agenten.** Codex ist so konfiguriert, dass er
+> sie ebenfalls liest; eine eigene `AGENTS.md` daneben wäre derselbe Regelsatz
+> ein zweites Mal — und liefe beim ersten Nachtrag auseinander. Wo eine Zeile
+> rollenabhängig ist, nennt sie die Rolle ausdrücklich, statt die Datei zu
+> verdoppeln.
