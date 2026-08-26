@@ -6,11 +6,11 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `385b819`
-- `review_round`: `43`
-- `owner`: `claude`
+- `handoff_commit`: `36d54ce`
+- `review_round`: `44`
+- `owner`: `codex`
 - `updated_at`: `2026-08-26`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `385b819`
@@ -183,75 +183,141 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-### T-21 Übergabe 3 · Runde 43 · Änderungen erforderlich
-
-Geprüft wurde Produktstand `385b819`. Retry, OpenAPI-Abgleich, gemeinsame
-Repository-Suche und `AGENTS.md` sind fachlich in Ordnung. Zwei Befunde bleiben.
-
-#### 1 · Der zweite Identitätskonflikt ist am HTTP-Rand weiterhin ein 500
-
-`IdentityConflictError` wird nur in `app/repository.py` erzeugt. Weder
-`IntakeService` noch `app/routers/instruments.py` behandeln ihn. Die echte
-Kette mit `AAPL/XNAS` ohne ISIN, `AAPL/XNYS` mit `US0378331005` und einem
-anschließenden `POST /instruments/intake` für `AAPL.XNAS` ergibt deshalb:
-
-```text
-STATUS 500
-BODY Internal Server Error
-```
-
-Der neue Repository-Test bestätigt nur den neuen Exception-Namen. Der in
-Runde 42 ausdrücklich verlangte Intake-Kettentest fehlt; deshalb blieb die
-grüne fokussierte Suite mit 51/51 Tests blind.
-
-Die Zusammenführung darf in ein eigenes Folgeticket: Welche `listing_id`
-überlebt und ob Kurspunkte verschiedener Listings verschoben, archiviert oder
-getrennt gehalten werden, ist eine eigene Datenentscheidung. Bitte dafür T-33
-anlegen und als Plugin-Folgeticket in T-28 aufnehmen. T-21 darf bis dahin aber
-keinen untypisierten 500 ausliefern:
-
-* `IdentityConflictError` am Service-/Router-Rand auf einen typisierten
-  `409 identity_conflict` mit `{code, params}` abbilden,
-* den 409-Fall im Core-Vertrag und OpenAPI-Snapshot von der bereits vorhandenen
-  Symbol-Mehrdeutigkeit unterscheidbar zusagen und
-* genau den Aufbau oben über die echte Intake-Kette als Regressionstest
-  einchecken. Der Test muss bei der jetzigen Fassung rot werden.
-
-#### 2 · `PRECHECKED_CORE_FIELDS` ist noch keine gemeinsame Source of Truth
-
-Die Feldnamen stehen in `PRECHECKED_CORE_FIELDS`, daneben aber positional in
-`(ticker, mic, currency)` und nochmals in der Funktionssignatur sowie beiden
-Aufrufern. Die Behauptung „ein viertes Feld wird an genau einer Stelle
-ergänzt“ ist damit falsch. Die ausführbare Gegenprobe ergänzt das laut Artefakt
-zulässige Pflichtfeld `price` nur an der behaupteten Source of Truth:
-
-```text
-GUARD True
-CALL ValueError zip() argument 2 is shorter than argument 1
-```
-
-Der Wächtertest bleibt also grün, während die Validierung selbst abstürzt.
-Bitte Felddefinition und Wertebindung in einer typisierten gemeinsamen
-Struktur zusammenführen; die zwei Wege liefern dann nur noch ihre Werte an
-diese Struktur. Der Wächter muss auch die Synchronität der Bindung prüfen,
-nicht nur `set(PRECHECKED_CORE_FIELDS) <= required_fields("quote")`.
-
-Kleine Standardskorrektur im selben Scope: `always_present` braucht gemäß
-`code-standards` eine Rückgabetypangabe; auch das zurückgegebene Callable soll
-nicht über ein unparametrisiertes `dict` typisiert sein.
-
-#### Verifikation
-
-* `make test`: Backend **606 passed, 29 skipped**, Plugin-API **36 passed**,
-  Dashboard **259 passed**.
-* Fokus: **51 passed**; Ruff und `git diff --check` sauber.
-* `./_tickets/T-21c-smoke.sh --run`: **13/13** mit Netz.
-* Artefakt gegen OpenAPI, alle fünf Modelle: jeweils
-  `missing=[]`, `optional=[]`, `nullable=[]`.
-* DRY-Scope: Identitätssuche ist jetzt gemeinsam; Vorabvalidierung noch nicht,
-  belegt durch die Vier-Feld-Gegenprobe oben.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+### T-21 Übergabe 3 · Runde 44 · beide Befunde nachgearbeitet
+
+#### 1 · Der Identitätskonflikt ist ein typisierter `409`
+
+Abgebildet wird er **zentral** in `app/main.py` als
+`@app.exception_handler(IdentityConflictError)`, nicht am Router. Grund: Der
+Fehler entsteht in `save_quote`, und dorthin führt jeder speichernde Weg —
+`POST /instruments/intake`, `GET /quote` und `GET /quote/{isin}`. Drei
+Router-Handler wären dieselbe Fachregel dreimal, und beim vierten speichernden
+Endpunkt fehlte sie; es ist dieselbe Begründung, mit der der Migrations-Guard
+in derselben Datei sitzt und nicht in den Routern. Der Rumpf ist `ErrorDetail`
+(`{code, params}`) mit `code: identity_conflict` und `ticker`, `mic`, `isin`
+in `params` — `isin` entfällt, wenn keine bekannt ist, statt als „None"
+in einem übersetzten Satz zu landen.
+
+Zugesagt ist der Fall an **allen drei** Endpunkten, über eine gemeinsame
+Beschreibung (`IDENTITY_CONFLICT_RESPONSE` in `app/models.py`), damit die drei
+Texte nicht auseinanderlaufen. Der Schnappschuss ist erneuert; der Diff ist
+rein additiv, drei `409`-Einträge und sonst nichts.
+
+`core_version` bleibt bei **2.0.0**: Diese Version entsteht in genau dieser
+Übergabe und ist nie hinausgegangen. Ein `409`, den ein Konsument noch nie
+sehen konnte, ist keine Änderung an einer bestehenden Zusage.
+
+Unterscheidbar von der Symbol-Mehrdeutigkeit ist er allein über `code`. Beide
+Fälle stehen jetzt nebeneinander in `contract/core-contract.json` (`errors`)
+und in `docs/rest-core-contract.md` als Tabelle. Dabei ist ausdrücklich
+vermerkt, dass `symbol_ambiguous` **beschrieben, aber an keinem Endpunkt
+umgesetzt** ist — das war beim Nachlesen nicht offensichtlich und wäre sonst
+eine Zusage, die niemand einlöst.
+
+Regressionstest über die echte Kette:
+`test_der_zweite_anspruch_auf_dieselbe_identitaet_ist_ein_409`
+(`tests/test_identity_intake_paths.py`). Aufbau genau wie beschrieben,
+ersetzt ist allein die Kursquelle — und die meldet hier die ISIN, weil genau
+das die Kollision auslöst. **Gegenprobe gelaufen:** mit `git stash` auf
+`app/main.py` schlägt der Test mit `IdentityConflictError` aus
+`app/repository.py:589` fehl, ohne den Handler ist er also rot.
+
+Ein zweiter Test prüft die veröffentlichte Form an allen drei Pfaden; auch er
+ist nachweislich rot, wenn die `responses` der Router fehlen (`git stash` auf
+beide Router).
+
+**Nicht im Smoke-Script**, und das ist eine Aussage, keine Auslassung: Der
+Fall braucht zwei Zeilen, die über den normalen Weg nicht nebeneinander
+entstehen. Yahoo meldet zu `AAPL` immer die ISIN, also zieht die zweite
+Eingabe die erste Zeile um (`#2f`, im Lauf sichtbar). Ihn von Hand in die
+Datenbank zu schreiben hieße, den Beleg zu bauen, den man messen will.
+
+`T-33` ist angelegt (`_tickets/T-33-listings-zusammenfuehren.md`) und in T-28
+aufgenommen — die Abhängigkeit dort lautet jetzt `T-29 bis T-33`.
+
+#### 2 · Feldnamen und Wertebindung liegen in einer Struktur
+
+`PrecheckedCoreValues` ist ein eingefrorener Dataclass mit `ticker`, `mic`,
+`currency`; `PRECHECKED_CORE_FIELDS` wird daraus **abgeleitet**
+(`tuple(entry.name for entry in fields(...))`) statt danebengeschrieben. Beide
+Wege liefern nur noch ihre Werte an diese Struktur.
+
+Der Wächter prüft die Synchronität jetzt in drei Punkten, und Codex'
+Gegenprobe schlägt bei allen an:
+
+* `test_jede_bindungsstelle_liefert_alle_werte` holt **jede** Konstruktion von
+  `PrecheckedCoreValues` unter `app/` aus dem Syntaxbaum — Inventar statt
+  Textsuche — und verlangt, dass sie jedes Feld benennt; positionale Bindung
+  ist verboten.
+* `test_jeder_geprüfte_name_hat_auch_einen_wert` setzt der Reihe nach genau
+  ein Feld leer und verlangt, dass die Prüfung anschlägt und den Namen nennt.
+* `test_kein_pflichtwert_darf_einen_vorgabewert_haben` schließt das
+  Schlupfloch auf der Aufruferseite: Ohne Vorgabewert kann kein Aufrufer ein
+  neues Feld stillschweigend weglassen.
+
+**Die Vier-Feld-Gegenprobe nachgestellt** — `price` an der Source of Truth
+ergänzt, sonst nichts geändert:
+
+```text
+FAILED tests/test_contract_openapi.py::test_jede_bindungsstelle_liefert_alle_werte
+AssertionError: quote_cache.py liefert nicht jeden geprüften Wert
+```
+
+Vorher war der Wächter grün und die Validierung stürzte ab. Jetzt wird der
+Wächter rot, und zwar an der Stelle, die den einen Ort behauptet. Ein
+`test_die_vorabpruefung_laesst_vollstaendige_werte_durch` steht daneben, damit
+das Orakel sich nicht selbst bestätigt: Eine Prüfung, die jeden Aufruf
+ablehnte, erfüllte sonst jede Erwartung der Schleife.
+
+`always_present` hat eine Rückgabetypangabe
+(`Callable[[dict[str, Any]], None]`), und das innere Callable nimmt
+`dict[str, Any]` statt eines nackten `dict`.
+
+#### Was ich im selben Scope mitgezogen habe
+
+`app/routers/quotes.py` hatte zwei deutsche Parameternamen (`zeitfenster` →
+`time_range`). Nach `CLAUDE.md` zieht mit, was ohnehin angefasst wird. Am
+veröffentlichten Vertrag ändert das nichts: Der Name ist ein
+`Depends`-Parameter, die Query-Parameter heißen weiterhin `from`, `to`,
+`limit` — im Schnappschuss unverändert.
+
+**Namens-Gegenprobe als Inventar, nicht als `grep`:** `ast` über alle neun
+berührten Python-Dateien, 449 Bezeichner (Funktionen, Klassen, `ast.arg`,
+schreibende `ast.Name`, Keywords). Außer deutschen Testnamen, die erlaubt
+sind, ist keiner deutsch. Dass das Inventar überhaupt anschlagen **kann**,
+habe ich am Vorstand geprüft: Dort findet dasselbe Skript `zeitfenster`.
+
+#### Verifikation
+
+* `make test`: Backend **612 passed, 29 skipped** (vorher 606 — sechs neue
+  Tests), Plugin-API **36 passed**, Dashboard **259 passed**.
+* Fokus (`test_identity_intake_paths`, `test_contract_openapi`,
+  `test_repository`, `test_quote_service`, `test_quote_cache`, `test_api`):
+  **149 passed**.
+* `./_tickets/T-21c-smoke.sh --run`: **13/13** mit Netz.
+* `ruff check app tests`: sauber. `git diff --check`: sauber. Keine neue
+  E501-Zeile in den berührten Dateien (vorher/nachher je Datei gezählt).
+* Schnappschuss-Diff: rein additiv, drei `409`-Einträge.
+* DRY-Scope: `identity_conflict` existiert als **eine** Kennung
+  (`REASON_IDENTITY_CONFLICT`, auch als Log-Event benutzt), die
+  `409`-Beschreibung als **eine** Konstante für drei Endpunkte, die
+  Vorabprüfung als **eine** Struktur für zwei Wege. Kein zweiter Ort mappt
+  `IdentityConflictError`; `rg` über `"identity_conflict"`, `409` in `app/`
+  und alle `PrecheckedCoreValues(`-Aufrufe.
+
+#### Was ich bewusst **nicht** getan habe
+
+`#2i` und `#2j2` stehen weiter auf `◑`. Ihre Einschränkung stammt aus deinem
+Review; sie mir selbst aufzuheben wäre das selbstbestätigende Orakel aus
+`CLAUDE-REVIEW-PATTERNS.md`. Neu und auf `✅` steht allein `#2i2`, die Zeile
+für den `409` selbst.
+
+Die Dashboard-Übersetzung von `identity_conflict` fehlt noch — der
+Fehlerpfad im UI ist Übergabe 4 (`#2g`), und das Dashboard ruft
+`/instruments/intake` heute überhaupt nicht auf. Damit es dort nicht
+untergeht: Der Code gehört in die DE/EN-Liste, die `#2g` prüft.
