@@ -12,7 +12,7 @@ from typing import Annotated
 
 from fastapi import Depends, HTTPException, Query
 
-ISIN_PATTERN = re.compile(r"[A-Z]{2}[A-Z0-9]{9}[0-9]")
+from app.exchanges import ISIN_PATTERN
 
 # Yahoo-Symbole: Kennung plus optionales Börsensuffix (VGWL.DE), dazu die
 # Sonderformen für Indizes (^GDAXI) und Devisen (EURUSD=X).

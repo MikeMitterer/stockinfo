@@ -28,6 +28,34 @@ _MIC_PATTERN = re.compile(r"[A-Z0-9]{4}")
 # Ebenfalls ohne Anker und mit `fullmatch` — aus demselben Grund wie oben.
 _TICKER_PATTERN = re.compile(r"[A-Z0-9]+")
 
+# Stabile Ablehnungsgründe — **Kennungen, keine Sätze.**
+#
+# Der Text gehört ins UI und muss in DE und EN vorliegen; hier steht nur, *was*
+# der Fall ist. Ein freier Text an dieser Stelle wäre nicht übersetzbar, nicht
+# prüfbar und bei der ersten Umformulierung ein stiller Bruch für jeden, der
+# darauf reagiert.
+#
+# Sie standen bis T-21 Übergabe 3 in `app/migration.py`. Seit der Aufnahmeweg
+# dieselben drei Fälle beantwortet, gehören sie zur Regel und nicht zu einem
+# ihrer beiden Aufrufer — `app.migration` reicht sie unverändert weiter, damit
+# Werte, Tests und die i18n-Schlüssel des Dashboards unberührt bleiben.
+REASON_NO_SUFFIX = "symbol_without_exchange_suffix"
+REASON_UNKNOWN_SUFFIX = "unknown_exchange_suffix"
+REASON_NON_CANONICAL_TICKER = "non_canonical_ticker"
+
+REJECTION_REASONS = frozenset(
+    {REASON_NO_SUFFIX, REASON_UNKNOWN_SUFFIX, REASON_NON_CANONICAL_TICKER}
+)
+
+# Eine ISIN nach ISO 6166: Ländercode, neun alphanumerische Stellen, Prüfziffer.
+#
+# Steht **hier** und nicht mehr in `app/routers/validation.py`, seit der
+# Aufnahmeweg dieselbe Frage stellt: Ein Service darf nicht in der
+# Router-Schicht importieren, und eine zweite Kopie liefe beim ersten Sonderfall
+# auseinander. Die Form eines Wertpapierkennzeichens ist Fachwissen, keine
+# HTTP-Prüfung — dass ein `422` daraus wird, entscheidet der Router.
+ISIN_PATTERN = re.compile(r"[A-Z]{2}[A-Z0-9]{9}[0-9]")
+
 
 @dataclass(frozen=True)
 class ExchangeDef:
@@ -364,6 +392,91 @@ def identity_from_symbol(symbol: str) -> tuple[str, str] | None:
     return ticker, mic
 
 
+def identity_from_input(value: str) -> tuple[str, str] | None:
+    """Die kanonische Identität aus einer **Benutzereingabe** — beide Formen.
+
+    Der Unterschied zu `identity_from_symbol` ist kein Zufall und keine
+    Verdopplung, sondern die Trennung zweier Fragen:
+
+    * `identity_from_symbol` zerlegt ein **gespeichertes** Symbol. Die trägt
+      StockInfo selbst zusammen, und zwar immer mit dem Provider-Alias
+      (`EUNL.DE`) — die Form ist bekannt, weil wir sie erzeugen.
+    * Hier steht die **Eingabe** eines Menschen. Sie darf laut
+      Eingabeentscheidung (Mike, 2026-08-24) neben dem Alias auch den echten
+      MIC nennen: `EUNL.XETR` meint dasselbe Listing wie `EUNL.DE`.
+
+    Der Aliasweg läuft deshalb durch `identity_from_symbol` — er wird nicht
+    nachgebaut, sondern benutzt. Nur die MIC-Form kommt hier dazu.
+
+    **Der Alias gewinnt.** Ein vierstelliges Token wird zuerst als Alias
+    gelesen und nicht wegen seiner Länge für einen MIC gehalten. Heute ist das
+    folgenlos — kein Alias ist vierstellig, und kein Token ist zugleich Alias
+    und MIC (`test_kein_token_ist_alias_und_mic_zugleich` hält das fest). Käme
+    über ein Plugin je eines dazu, entschiede diese Zeile, und sie soll
+    dastehen statt sich aus der Reihenfolge zu ergeben.
+
+    **Ein unbekannter MIC zählt nicht.** `is_real_mic` allein genügt nicht: Es
+    prüft die Schreibweise, nicht die Zuständigkeit. `FOO.ZZZZ` wäre formal
+    ein MIC, aber StockInfo könnte das Papier weder abrufen noch einen Alias
+    dafür bilden — die Kursquelle bekäme den nackten Ticker und suchte in den
+    USA. Verlangt wird deshalb ein Eintrag im Katalog.
+
+    Args:
+        value: Der getrimmte, großgeschriebene Rohwert, etwa ``'EUNL.XETR'``.
+
+    Returns:
+        `(ticker, mic)`, oder ``None``. Warum es ``None`` wurde, sagt
+        `input_failure`.
+    """
+    identity = identity_from_symbol(value)
+    if identity is not None:
+        return identity
+
+    if not value or "." not in value:
+        return None
+    ticker, _, suffix = value.partition(".")
+    if not is_canonical_ticker(ticker):
+        return None
+    if suffix in EXCHANGES and is_real_mic(suffix):
+        return ticker, suffix
+    return None
+
+
+def input_failure(value: str) -> str | None:
+    """Warum führt diese Eingabe zu keiner Identität?
+
+    Das Gegenstück zu `identity_from_input` — genau eine der beiden liefert
+    ein Ergebnis. Dieselben drei Kennungen, mit denen der Umzugsbericht
+    ablehnt: Es ist dieselbe Frage an dasselbe Symbol, nur an anderer Stelle
+    gestellt. Zwei Kennungsfamilien für einen Sachverhalt hätten dem Dashboard
+    zwei Übersetzungskataloge beschert.
+
+    Der Unterschied zu `rejection_reason` liegt allein im Suffixtest: Hier
+    gelten **beide** Formen. `EUNL.XETR` ist eine gültige Eingabe, aber kein
+    gültiges gespeichertes Symbol.
+
+    Args:
+        value: Der getrimmte, großgeschriebene Rohwert.
+
+    Returns:
+        Eine der Kennungen, oder ``None`` wenn die Eingabe trägt.
+    """
+    if identity_from_input(value) is not None:
+        return None
+    if not value or "." not in value:
+        return REASON_NO_SUFFIX
+
+    ticker, _, suffix = value.partition(".")
+    if mic_for_alias(suffix) is None and suffix not in EXCHANGES:
+        return REASON_UNKNOWN_SUFFIX
+    if not is_canonical_ticker(ticker):
+        return REASON_NON_CANONICAL_TICKER
+    # Der Suffix steht im Katalog, ist aber kein echter MIC — der Sammelcode
+    # `US`. Er ist kein Handelsplatz, und welcher der fünf gemeint ist, sagt
+    # die Eingabe nicht.
+    return REASON_UNKNOWN_SUFFIX
+
+
 def mic_for_alias(alias: str) -> str | None:
     """Welche Börse hängt diesen Alias an? — die Umkehrung von `ExchangeDef.alias`.
 
@@ -463,6 +576,22 @@ def provider_alias(ticker: str, mic: str) -> str:
     definition = EXCHANGES.get(mic)
     alias = definition.alias if definition else None
     return f"{ticker}.{alias}" if alias else ticker
+
+
+def is_isin(value: str) -> bool:
+    """Trägt dieser Wert die Form einer ISIN?
+
+    Die Frage stellt der Aufnahmeweg, um einen rohen Feldwert einem der beiden
+    Wege zuzuordnen: ISIN oder Symbol. Geprüft wird die **Form**, nicht die
+    Existenz — ob es das Papier gibt, weiß erst die Auflösung.
+
+    Args:
+        value: Der bereits getrimmte und großgeschriebene Rohwert.
+
+    Returns:
+        ``True`` bei ISIN-Form.
+    """
+    return bool(value) and bool(ISIN_PATTERN.fullmatch(value))
 
 
 def home_exchange(isin: str) -> str | None:

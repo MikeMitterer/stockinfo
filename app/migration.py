@@ -18,23 +18,21 @@ from dataclasses import dataclass
 
 import structlog
 
-from app.exchanges import identity_from_symbol, is_real_mic, mic_for_alias
+# Die Ablehnungsgründe stehen seit T-21 Übergabe 3 in `app.exchanges` — bei der
+# Regel, nicht bei einem ihrer Aufrufer, seit der Aufnahmeweg dieselben drei
+# Fälle beantwortet. Werte und Namen sind unverändert, damit Ticket, REST-
+# Bericht und die i18n-Schlüssel des Dashboards nichts merken.
+from app.exchanges import (
+    REASON_NO_SUFFIX,
+    REASON_NON_CANONICAL_TICKER,
+    REASON_UNKNOWN_SUFFIX,
+    REJECTION_REASONS,  # noqa: F401  — weitergereicht an den Katalogtest
+    identity_from_symbol,
+    is_real_mic,
+    mic_for_alias,
+)
 
 logger = structlog.get_logger()
-
-# Stabile Ablehnungsgründe.
-#
-# **Kennungen, keine Sätze.** Der Text gehört ins UI und muss in DE und EN
-# vorliegen; hier steht nur, *was* der Fall ist. Ein freier Text an dieser
-# Stelle wäre nicht übersetzbar, nicht prüfbar und bei der ersten Umformulierung
-# ein stiller Bruch für jeden, der darauf reagiert.
-REASON_NO_SUFFIX = "symbol_without_exchange_suffix"
-REASON_UNKNOWN_SUFFIX = "unknown_exchange_suffix"
-REASON_NON_CANONICAL_TICKER = "non_canonical_ticker"
-
-REJECTION_REASONS = frozenset(
-    {REASON_NO_SUFFIX, REASON_UNKNOWN_SUFFIX, REASON_NON_CANONICAL_TICKER}
-)
 
 
 # Der Berichtsspeicher. **Eine** Tabelle, nicht zwei.

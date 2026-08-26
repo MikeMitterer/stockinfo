@@ -276,10 +276,38 @@ class QuoteRepository:
         gehört in die Fachschicht, nicht in SQL. Sonst stünde die Regel an einer
         Stelle, die niemand liest, wenn er sie sucht.
         """
+        with self._connect() as connection:
+            rows = connection.execute(self._instrument_query()).fetchall()
+            return [dict(row) for row in rows]
+
+    def get_instrument_with_latest(self, instrument_id: int) -> dict | None:
+        """Dieselbe Zeile wie in der Liste, für **ein** Instrument.
+
+        Der Aufnahmeweg liefert nach dem Speichern genau die Zeile aus, die
+        `GET /instruments` auch zeigen würde. Deshalb teilt sie sich die
+        Abfrage mit der Liste: Zwei getrennte `SELECT`s über dieselbe
+        Verknüpfung liefen beim ersten neuen Feld auseinander, und der
+        Aufnahmeweg zeigte dann etwas anderes als die Übersicht.
+
+        Args:
+            instrument_id: Die lokale ID des Instruments.
+
+        Returns:
+            Die Zeile, oder ``None`` wenn es sie nicht (mehr) gibt.
+        """
+        with self._connect() as connection:
+            row = connection.execute(
+                self._instrument_query("WHERE i.id = ?"), (instrument_id,)
+            ).fetchone()
+            return dict(row) if row else None
+
+    @staticmethod
+    def _instrument_query(where: str = "") -> str:
+        """Die **eine** Abfrage hinter Übersicht und Einzelzeile."""
         manual = ",\n                   ".join(
             f"o.{field} AS manual_{field}" for field in OVERRIDE_FIELDS
         )
-        query = f"""
+        return f"""
             SELECT i.*,
                    q.price      AS latest_price,
                    q.quote_time AS latest_quote_time,
@@ -294,11 +322,9 @@ class QuoteRepository:
                 ORDER BY quote_time DESC LIMIT 1
             )
             LEFT JOIN instrument_overrides o ON o.instrument_id = i.id
+            {where}
             ORDER BY i.symbol
         """
-        with self._connect() as connection:
-            rows = connection.execute(query).fetchall()
-            return [dict(row) for row in rows]
 
     def count_instruments(self) -> int:
         """Gibt die Anzahl bekannter Instrumente zurück (günstiger als eine Liste)."""

@@ -39,10 +39,16 @@ class StoredQuote:
 
     `created` ist **falsch**, wenn der Cache die Antwort bedient hat: Dann gab
     es das Papier schon, und geschrieben wurde gar nichts.
+
+    Die `instrument_id` reist mit, weil der Aufnahmeweg danach die gespeicherte
+    Zeile ausliefert. Sie über `isin` oder `symbol` erneut zu suchen wäre eine
+    zweite Abfrage auf eine Zeile, die gerade eben in der Hand lag — und bei
+    einem Papier ohne ISIN sogar eine mehrdeutige.
     """
 
     quote: QuoteResponse
     created: bool
+    instrument_id: int
 
 
 def _as_bool(value: object) -> bool | None:
@@ -444,6 +450,7 @@ class CachedQuoteService:
         return StoredQuote(
             self._with_overrides(self._keep_stored_metadata(fresh, stored)),
             created=saved.created,
+            instrument_id=saved.instrument_id,
         )
 
     @staticmethod
@@ -683,6 +690,7 @@ class CachedQuoteService:
                     self._from_cache(instrument, latest, stale=False), instrument["id"]
                 ),
                 created=False,
+                instrument_id=instrument["id"],
             )
 
         try:
@@ -698,6 +706,7 @@ class CachedQuoteService:
                         instrument["id"],
                     ),
                     created=False,
+                    instrument_id=instrument["id"],
                 )
             raise
 

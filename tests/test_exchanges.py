@@ -58,6 +58,28 @@ def test_kein_suffix_ist_doppelt_vergeben() -> None:
     assert len(aliases) == len(set(aliases))
 
 
+def test_kein_token_ist_alias_und_mic_zugleich() -> None:
+    """Die Voraussetzung der Rangfolge in `identity_from_input` — gemessen.
+
+    Die Eingabe kennt zwei Formen, `EUNL.DE` und `EUNL.XETR`, und liest den
+    Suffix zuerst als Alias. Wäre ein Token zugleich der Alias der einen und
+    der MIC einer **anderen** Börse, entschiede diese Reihenfolge stillschweigend
+    über den Handelsplatz — der Benutzer bekäme ein anderes Listing, als er
+    genannt hat.
+
+    Heute gibt es keinen solchen Fall (gemessen: kein Alias ist vierstellig).
+    Käme über ein Plugin einer dazu, schlägt dieser Test an, statt dass die
+    Aufnahme rät.
+    """
+    ambiguous = {
+        definition.alias: mic
+        for mic, definition in EXCHANGES.items()
+        if definition.alias and definition.alias in EXCHANGES
+    }
+
+    assert ambiguous == {}, f"Token sind Alias und MIC zugleich: {ambiguous}"
+
+
 def test_die_schema_schicht_zieht_kein_yfinance_mit() -> None:
     """`app/db.py` darf für den Umzug nicht den halben Netzstack laden.
 
