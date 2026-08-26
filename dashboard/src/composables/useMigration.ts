@@ -70,7 +70,7 @@ export function useMigration(): UseMigration {
   const error = ref<string | null>(null)
 
   /** Der Abstand bis zur nächsten Nachfrage; wächst, solange `starting` gilt. */
-  let wartezeit = STARTING_RETRY_MS
+  let retryDelay = STARTING_RETRY_MS
 
   /** Übersetzt die Diagnoseantwort in die Lage — **eine** Stelle, ein Mapping. */
   function phaseOf(readiness: ReadinessResponse): MigrationPhase {
@@ -107,10 +107,10 @@ export function useMigration(): UseMigration {
          * der Ausnahmefall kostet danach nicht dauerhaft eine Anfrage pro
          * Sekunde.
          */
-        window.setTimeout(() => void check(), wartezeit)
-        wartezeit = Math.min(wartezeit * 2, STARTING_RETRY_MAX_MS)
+        window.setTimeout(() => void check(), retryDelay)
+        retryDelay = Math.min(retryDelay * 2, STARTING_RETRY_MAX_MS)
       } else {
-        wartezeit = STARTING_RETRY_MS
+        retryDelay = STARTING_RETRY_MS
       }
     } catch (err) {
       error.value = messageOf(err)
@@ -152,9 +152,8 @@ export function useMigration(): UseMigration {
   /**
    * Ein `POST /migration/confirm`, mit der Lage, die dabei sichtbar ist.
    *
-   * Args:
-       busy: Die Lage während des Aufrufs.
-       failed: Die Lage, wenn er aus einem unerwarteten Grund scheitert.
+   * @param busy - Die Lage während des Aufrufs.
+   * @param failed - Die Lage, wenn er aus einem unerwarteten Grund scheitert.
    */
   async function runConfirm(busy: MigrationPhase, failed: MigrationPhase): Promise<void> {
     phase.value = busy

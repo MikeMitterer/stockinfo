@@ -27,10 +27,10 @@ const PROBE_STATUS: readonly number[] = [503]
 /**
  * Der **eine** Transportweg zur API.
  *
- * Args:
- *   path: Pfad hinter `API_BASE_URL`.
- *   init: Methode und Körper.
- *   alsoOk: Statuscodes, die trotz `!ok` als Antwort gelten.
+ * @param path - Pfad hinter `API_BASE_URL`.
+ * @param init - Methode und Körper.
+ * @param alsoOk - Statuscodes, die trotz `!ok` als Antwort gelten.
+ * @returns Der decodierte Körper; `undefined` bei `204`.
  */
 async function request<T>(
   path: string,

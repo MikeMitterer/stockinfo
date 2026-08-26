@@ -29,7 +29,7 @@ _CATALOGUES = (
 
 
 #: Kürzer als das ist kein Satz, sondern ein Platzhalter.
-_MINDESTLAENGE = 25
+_MIN_SENTENCE_LENGTH = 25
 
 
 def _reason_entries(catalogue: Path) -> dict[str, str]:
@@ -78,9 +78,9 @@ def _reason_entries(catalogue: Path) -> dict[str, str]:
 
     entries: dict[str, str] = {}
     for index, match in enumerate(matches):
-        bis = matches[index + 1].start() if index + 1 < len(matches) else len(block)
-        rohwert = block[match.end() : bis]
-        entries[match.group(1)] = "".join(re.findall(r"'((?:[^'\\]|\\.)*)'", rohwert))
+        stop = matches[index + 1].start() if index + 1 < len(matches) else len(block)
+        raw_value = block[match.end() : stop]
+        entries[match.group(1)] = "".join(re.findall(r"'((?:[^'\\]|\\.)*)'", raw_value))
     return entries
 
 
@@ -113,11 +113,13 @@ def test_jede_kennung_hat_einen_brauchbaren_satz(catalogue: Path) -> None:
     noch einmal, und lang genug, um ein Satz zu sein. Der frühere
     Mengenvergleich der Schlüssel ließ ein `''` durch (Codex, Runde 35).
     """
-    for reason, satz in sorted(_reason_entries(catalogue).items()):
-        assert satz.strip(), f"{catalogue.name}: `{reason}` hat keinen Text"
-        assert satz.strip() != reason, f"{catalogue.name}: `{reason}` wiederholt nur sich selbst"
-        assert len(satz.strip()) >= _MINDESTLAENGE, (
-            f"{catalogue.name}: `{reason}` ist mit {len(satz.strip())} Zeichen "
+    for reason, sentence in sorted(_reason_entries(catalogue).items()):
+        assert sentence.strip(), f"{catalogue.name}: `{reason}` hat keinen Text"
+        assert sentence.strip() != reason, (
+            f"{catalogue.name}: `{reason}` wiederholt nur sich selbst"
+        )
+        assert len(sentence.strip()) >= _MIN_SENTENCE_LENGTH, (
+            f"{catalogue.name}: `{reason}` ist mit {len(sentence.strip())} Zeichen "
             f"kein Satz, sondern ein Platzhalter"
         )
 
@@ -144,6 +146,8 @@ def test_die_beiden_sprachen_sagen_nicht_dasselbe() -> None:
     """
     de_entries, en_entries = (_reason_entries(catalogue) for catalogue in _CATALOGUES)
 
-    gleich = [reason for reason, satz in de_entries.items() if en_entries.get(reason) == satz]
+    identical = [
+        reason for reason, sentence in de_entries.items() if en_entries.get(reason) == sentence
+    ]
 
-    assert not gleich, f"in beiden Katalogen wortgleich: {gleich}"
+    assert not identical, f"in beiden Katalogen wortgleich: {identical}"

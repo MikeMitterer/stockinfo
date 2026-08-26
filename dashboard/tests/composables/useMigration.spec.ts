@@ -153,20 +153,20 @@ describe('useMigration.check', () => {
       '/ready': { status: 503, body: { status: 'starting', version: '1', database: 'ok' } },
       '/migration/report': { body: NO_REPORT },
     })
-    const nachfrage = vi.spyOn(window, 'setTimeout')
+    const scheduled = vi.spyOn(window, 'setTimeout')
 
     const { phase, check } = useMigration()
     await check()
-    for (let runde = 0; runde < 5; runde += 1) {
+    for (let round = 0; round < 5; round += 1) {
       await vi.advanceTimersByTimeAsync(20_000)
     }
 
     // Verdopplung bis zum Deckel — gemessen, nicht gezählt. Geprüft wird der
     // Anfang: Wie viele Nachfragen danach noch in die 100 Sekunden passen,
     // ist eine Frage der Testdauer, nicht des Verhaltens.
-    const abstaende = nachfrage.mock.calls.map((aufruf) => aufruf[1])
-    expect(abstaende.slice(0, 6)).toEqual([1000, 2000, 4000, 8000, 10_000, 10_000])
-    expect(Math.max(...(abstaende as number[]))).toBe(10_000)
+    const delays = scheduled.mock.calls.map((call) => call[1])
+    expect(delays.slice(0, 6)).toEqual([1000, 2000, 4000, 8000, 10_000, 10_000])
+    expect(Math.max(...(delays as number[]))).toBe(10_000)
     // Ein hängender Start bleibt ehrlich `starting` — kein stiller Wechsel.
     expect(phase.value).toBe('starting')
   })
@@ -211,16 +211,16 @@ describe('useMigration.confirm', () => {
    * angehaltenen Promise: Vorher stand hier `confirming`.
    */
   it('zeigt beim Wiederholen nie wieder den ausstehenden Umzug', async () => {
-    let freigeben: (() => void) | undefined
-    const angehalten = new Promise<void>((resolve) => {
-      freigeben = resolve
+    let release: (() => void) | undefined
+    const paused = new Promise<void>((resolve) => {
+      release = resolve
     })
 
     vi.stubGlobal(
       'fetch',
       vi.fn().mockImplementation(async (url: string) => {
         if (url.includes('/migration/confirm')) {
-          await angehalten
+          await paused
           return new Response(JSON.stringify({ completed: true, rejected: [] }), { status: 200 })
         }
         return new Response(JSON.stringify(NO_REPORT), { status: 200 })
@@ -228,15 +228,15 @@ describe('useMigration.confirm', () => {
     )
 
     const { phase, retry } = useMigration()
-    const laeuft = retry()
+    const running = retry()
 
     // **Während** der Start läuft — nicht davor und nicht danach.
     await Promise.resolve()
     expect(phase.value).toBe('restarting')
     expect(phase.value).not.toBe('confirming')
 
-    freigeben?.()
-    await laeuft
+    release?.()
+    await running
     expect(phase.value).toBe('done')
   })
 
