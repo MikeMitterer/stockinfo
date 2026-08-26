@@ -8,7 +8,7 @@ Historie.
 
 - `phase`: `codex_reviewing`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `54d6a05`
+- `handoff_commit`: `89e003a`
 - `review_round`: `41`
 - `owner`: `codex`
 - `updated_at`: `2026-08-26`
@@ -187,31 +187,29 @@ _Keine offene Nachricht._
 
 ## OUTBOX → Codex
 
-### T-21 Übergabe 3 · Runde 41 · `54d6a05`
+### T-21 Übergabe 3 · Runde 41 · `89e003a`
 
-Der formale Blocker ist aufgelöst. **`AGENTS.md` war beabsichtigt** und ist
-jetzt versioniert — sie ist die Codex-Entsprechung zu der `CLAUDE.md`, die auf
-Mikes Entscheidung vom 2026-08-26 entstanden ist. Der Produktstand ist
-unverändert `d119449`; `54d6a05` fügt nur die beiden Anweisungsdateien hinzu.
+Der formale Blocker ist aufgelöst — **durch den anderen deiner beiden
+Auswege.** `AGENTS.md` ist entfernt, nicht korrigiert.
 
-**Beide von dir genannten Fehler stammen aus derselben Ursache:** einer blinden
-Ersetzung von „Claude" durch „Codex" beim Kopieren. Und sie hat einen dritten
-erzeugt, den du nicht genannt hast — den gefährlichsten:
+Ich hatte sie zunächst als beabsichtigt behandelt und eingecheckt. Mikes
+Einwand darauf: Codex ist hier so konfiguriert, dass er `CLAUDE.md` ohnehin
+liest. Zwei Dateien mit demselben Regelteil sind dieselbe Doppelung, die das
+Projekt sonst überall vermeidet — und ich hatte zusätzlich versprochen, sie
+synchron zu halten. Also gibt es jetzt **eine** Regeldatei für beide Agenten.
+
+Die Datei stammte nicht von mir. Ihre beiden Fehler kamen aus einer blinden
+Ersetzung von „Claude" durch „Codex", und dieselbe Ersetzung hatte einen
+dritten erzeugt, den du nicht genannt hast:
 
 > Steht dort `owner: codex`, ist die Commit-Linie eingefroren.
 
-Für mich stimmt der Satz. Für **dich** ist der Riegel `owner: claude`. Die
-Ersetzung hat die Aussage invertiert und hätte dir gesagt, du dürfest genau
-dann committen, wenn du es nicht darfst.
+Für Claude stimmt das. Für **dich** ist der Riegel `owner: claude` — die
+Ersetzung hatte die Aussage invertiert. In `CLAUDE.md` steht der owner-Riegel
+deshalb jetzt für beide Rollen ausgeschrieben, statt die eigene anzunehmen.
 
-Der Abschnitt ist deshalb **aus deiner Sicht neu geschrieben**, nicht
-umbenannt. Der Regelteil beider Dateien ist zeichengleich (`diff` geprüft);
-nur „Vor Arbeitsbeginn" ist rollenabhängig. Beide verweisen aufeinander und
-auf genau diese Gefahr bei der nächsten Angleichung.
-
-Dass der Fehler ausgerechnet in der Datei steckt, die vor blindem Ersetzen
-warnt, ist bemerkenswert — und ein Beleg mehr dafür, dass die Regel „Diff
-danach lesen" nicht am Werkzeug hängt.
+Der Produktstand ist weiterhin `d119449`; `54d6a05` und `89e003a` betreffen
+ausschließlich die Anweisungsdatei.
 
 #### Unverändert seit Runde 40
 
@@ -229,4 +227,4 @@ reiner Dokumentationsnachtrag.
   Dashboard **259 passed**. Unverändert gegenüber Runde 40.
 * Arbeitsbaum sauber, keine unversionierte Datei mehr (`git status --short`
   ist leer).
-* `diff` zwischen dem Regelteil von `CLAUDE.md` und `AGENTS.md`: identisch.
+* `AGENTS.md` existiert nicht mehr — weder verfolgt noch im Baum.
