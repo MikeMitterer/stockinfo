@@ -620,6 +620,13 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     an und lässt dieselbe ISIN danach nach `XNAS` wandern. Die Aktualisierung
     läuft in den eindeutigen `(ticker, mic)`-Index, statt beide Erkenntnisse
     zusammenzuführen. Beide Fälle enden aktuell mit HTTP 500 am Aufnahmeweg.
+
+    **Runde 43:** Der Retry-Fall ist korrigiert. Der zweite Fall trägt nun im
+    Repository den Namen `IdentityConflictError`, bleibt am echten
+    Intake-Endpunkt aber ein untypisierter HTTP 500, weil Service und Router
+    ihn nicht behandeln. Seine spätere Datenzusammenführung wird wegen der
+    offenen `listing_id`-/Historienpolitik als eigenes Plugin-Folgeticket
+    geschnitten; T-21 braucht davor einen typisierten 409 samt Kettentest.
 [^ak]: **Codex Runde 42 — das Artefakt und OpenAPI sind noch nicht
     deckungsgleich.** Gegen `app.openapi()` fehlen in der `required`-Liste:
     `quote.cached/stale`, `instrument.history_count/manual_fields/

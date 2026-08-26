@@ -451,6 +451,17 @@ für aliasloses `AAPL/XNAS` ohne ISIN endete deshalb erneut mit HTTP 500 statt
 Dadurch blieben acht im Artefakt verpflichtende Felder im Antwortschema
 optional sowie `daily.currency` und `history.currency` zusätzlich nullable.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Übergabe 3, Runde 43, Commit `385b819`: OUTBOX erklärte alle vier
+Befunde aus Runde 42 für umgesetzt und den zweiten Identitätskonflikt für vom
+HTTP 500 befreit. Geändert war jedoch nur die Exception im Repository; Service
+und Router behandelten sie nicht. Die ausdrücklich verlangte echte
+Intake-Gegenprobe fehlte, und derselbe Aufbau antwortete weiter mit 500. Auch
+die als eine DRY-Quelle bezeichnete `PRECHECKED_CORE_FIELDS`-Liste lief
+parallel zu einem positionalen Wertetupel: Ein viertes, laut Artefakt
+zulässiges Feld ließ den neuen Wächter grün, aber `zip(strict=True)` mit
+`ValueError` abbrechen.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
