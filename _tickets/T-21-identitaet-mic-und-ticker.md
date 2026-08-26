@@ -189,16 +189,16 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2e | Papier abseits der Vorzugsbörse (`VTI` bei `XETR`) | erscheint als „abgewichen" mit beiden MICs; tatsächliche Währung aus den Kursdaten, nicht aus der Tabelle | | |
 | 2e2 | `AAPL`/`XNAS` bei `DEFAULT_EXCHANGE=US` | **keine** Abweichung — der Sammelcode umfasst die US-Plätze | | |
 | 2e3 | `VOD`/`XLON` bei `DEFAULT_EXCHANGE=US` | Abweichung mit `kind: collector` und erwarteter Währung `USD`, **ohne** erwarteten MIC | | |
-| 2f | Aufnahmeweg über den **echten** Weg Router → Intake-Service → Repository, für ISIN, `TICKER.DE`, `TICKER.XETR` und unbekannte Form | keine eigene Core-Komponente gemockt, nur die Außengrenzen; geprüft wird auch die **Methode** (`POST`) und dass im Router keine Fachregel sitzt | | |
+| 2f | Aufnahmeweg über den **echten** Weg Router → Intake-Service → Repository, für ISIN, `TICKER.DE`, `TICKER.XETR` und unbekannte Form | keine eigene Core-Komponente gemockt, nur die Außengrenzen; geprüft wird auch die **Methode** (`POST`) und dass im Router keine Fachregel sitzt | | ✅ [^ae] | |
 | 2h | Börsenauskunft (`catalog`) | serialisiert **keinen** Sammelcode in ein `mic`-Feld; `US` erscheint als eigener Eintragstyp und bleibt als `DEFAULT_EXCHANGE` samt Mitgliedern nutzbar; **kein** Börseneintrag trägt eine eigene Mitgliedschaftsliste | ✅ [^i] | |
 | 2h2 | Katalog-Vertrag: Alias und Provenienz | `alias` ist in Python, OpenAPI und TypeScript **optional** — fehlend **oder** `null`, in allen drei Schichten. Der Leerstring ist verboten; das trägt das Backend (`min_length=1`, im OpenAPI-Schema sichtbar), nicht TypeScript. Die fünf US-Plätze liefern `null`. `provenance` ist eine **diskriminierte Union**: Core ohne Plugin-ID, Plugin mit verpflichtender nichtleerer ID; beide ungültigen Kombinationen werden abgelehnt | ✅ [^j] | |
 | 2h3 | Auswahl der bevorzugten Börse bei aliaslosen Plätzen | `DEFAULT_EXCHANGE=XNAS` wählt den NASDAQ-Treffer, auch wenn ein Arca-Treffer vorn steht; beim Sammelcode `US` verdrängt ein punktloser Treffer mit unbekanntem Börsencode kein gültiges Mitglied. Der Fremdbörsen-Fallback bleibt | ✅ [^k] | |
 | 2h4 | Börsenableitung eines Yahoo-Treffers | **eine** Ableitung für Auswahl **und** Identität (`_exchange_of`): Ein bekanntes Suffix entscheidet allein und wird nie von Yahoos `exchange` überstimmt; Yahoos Code gilt nur für suffixlose Symbole. Auswahl und gespeicherter MIC können demselben Treffer keine verschiedenen Börsen zuschreiben | ✅ [^l] | |
-| 2i | `POST /instruments/intake` | Neuanlage `201` mit `InstrumentSummary`, bestehendes Papier `200` mit demselben Typ, unauflösbar `400`, Quelle tot `502` — je im OpenAPI-Snapshot zugesagt und über die echte Kette geprüft | | |
-| 2j | Schichtengrenze am Aufnahmeweg | der Intake-Service liefert `IntakeResult(summary, created)`; im Router steht **kein zweiter Existenz-Check** und keine Repository-Abfrage, er mappt nur `created` auf `201`/`200` | | |
-| 2j2 | `created` unter Parallelität | kommt aus der **schreibenden Transaktion**, nicht aus einem Preflight; im abgefangenen UNIQUE-Rennen ist `created=false`, nicht `201` | | |
+| 2i | `POST /instruments/intake` | Neuanlage `201` mit `InstrumentSummary`, bestehendes Papier `200` mit demselben Typ, unauflösbar `400`, Quelle tot `502` — je im OpenAPI-Snapshot zugesagt und über die echte Kette geprüft | | ◑ [^af] | |
+| 2j | Schichtengrenze am Aufnahmeweg | der Intake-Service liefert `IntakeResult(summary, created)`; im Router steht **kein zweiter Existenz-Check** und keine Repository-Abfrage, er mappt nur `created` auf `201`/`200` | | ✅ [^ag] | |
+| 2j2 | `created` unter Parallelität | kommt aus der **schreibenden Transaktion**, nicht aus einem Preflight; im abgefangenen UNIQUE-Rennen ist `created=false`, nicht `201` | | ✅ [^ah] | |
 | ~~2j3~~ | ~~`GET /instruments` mit einer `legacy_unresolved`-Zeile~~ | **entfällt** — mit der Entscheidung nach Runde 16 gibt es diesen Zustand nicht mehr. `ticker`, `mic` und `listing_id` sind Pflicht, siehe `#2b2` | ➖ | |
-| 2k | Übergabe 2 als Einheit | `core_version 2.0.0`, Vertragsartefakt und Snapshot kommen **mit** der ersten Änderung am geschlossenen Core, nicht danach — zwischenzeitlich gibt es keinen öffentlich geänderten, aber unzugesagten Endpunkt | | |
+| 2k | Übergabe 2 als Einheit | `core_version 2.0.0`, Vertragsartefakt und Snapshot kommen **mit** der ersten Änderung am geschlossenen Core, nicht danach — zwischenzeitlich gibt es keinen öffentlich geänderten, aber unzugesagten Endpunkt | | ✅ [^ai] | |
 | 2g | Fehlerpfad im Dashboard, **je in DE und EN** | bekannte Kennung, unbekannte Kennung, kaputtes JSON, leerer Rumpf, Netzwerkfehler — alle ergeben einen übersetzten Text, nie `statusText` und nie rohes JSON | | |
 | 3 | `GET /instruments` | `symbol` weiterhin vorhanden und unverändert (Profil-Links hängen daran) | ✅ [^d] | |
 | 3b | Datenbank-Schema | Eindeutigkeit liegt auf `(ticker, mic)`; `symbol` ist **nicht mehr** global unique | ✅ [^e] | |
@@ -496,6 +496,73 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     Betrieb nicht angelaufen" — den erzwingt man nur mit einem gescheiterten
     `RefreshScheduler.start`, also nicht ohne Eingriff in den Produktcode. Er
     steht als Testfall, nicht als Augenschein.
+[^ae]: `tests/test_identity_intake_paths.py` — die echte Kette Router →
+    Intake-Service → Cache-Dienst → Quote-Service → Repository auf einer
+    echten SQLite-Datei. Ersetzt sind allein die Außengrenzen (Kursquelle,
+    ETF-Anreicherung, EOD-Historie), **keine** eigene Core-Komponente.
+
+    `test_beide_eingabeformen_ergeben_dasselbe_listing` prüft beide Formen
+    gegen dieselbe Identität **und** dasselbe gespeicherte `symbol`: Ein Test
+    nur auf die Identität hätte einen falschen Abrufalias nicht bemerkt.
+    `test_die_zweite_form_findet_dasselbe_papier_wieder` ist die schärfere
+    Fassung — `EUNL.DE` anlegen, dann `EUNL.XETR` schicken, dieselbe
+    `listing_id`.
+
+    Beim Bauen gefunden: `EUNL.XETR` wurde vorher **gar nicht** erkannt.
+    `identity_from_symbol` zerlegt gespeicherte Symbole, und die tragen immer
+    den Provider-Alias; die MIC-Form ist eine reine Eingabeform. Neu ist
+    `identity_from_input` — der Aliasweg läuft durch die vorhandene Funktion,
+    nur die MIC-Form kommt dazu.
+
+    Live: `./_tickets/T-21c-smoke.sh --run`, 11/11 mit Netz.
+[^af]: **Teilweise.** Drei der vier Zeilen des Erfolgsvertrags sind über die
+    echte Kette geprüft und stehen im OpenAPI-Snapshot: `201` bei Neuanlage,
+    `200` beim bekannten Papier (beide mit `InstrumentSummary`), `400` mit
+    `{code, params}` für alle drei Ablehnungsgründe. Der Rumpf liegt
+    **nicht** unter `detail` — eigens geprüft.
+
+    **`502` ist nur zugesagt, nicht durchgespielt.** Der Fall verlangt eine
+    Kursquelle, die mitten im Aufnahmeweg ausfällt; im Snapshot steht er, im
+    Kettentest nicht. Das ist die eine Zeile dieser Übergabe, die ich nicht
+    ausführbar belegt habe.
+[^ag]: `test_der_router_kennt_die_eingabeformen_nicht` prüft die
+    Schichtengrenze **mechanisch**: Im Router-Modul darf weder
+    `identity_from_input` noch `split_symbol`, `EXCHANGES` oder `is_isin`
+    vorkommen. Ein Test, der nur das Verhalten prüft, bliebe grün, wenn die
+    Regel dorthin zurückfiele — sie täte ja dasselbe.
+
+    Der Router mappt `created` auf den Status und serialisiert `summary`;
+    einen zweiten Existenz-Check gibt es nicht, weil er keine
+    Repository-Abfrage hat.
+[^ah]: **Zwei Tests mit klarer Rollenteilung**, und die Rollen sind gemessen,
+    nicht behauptet: `test_ein_verlorenes_rennen_meldet_keine_neuanlage`
+    erzwingt den Konflikt (der Preflight sieht die vorhandene Zeile **einmal**
+    nicht) und ist der Beleg. `test_genau_ein_paralleler_erstschreiber_legt_an`
+    ist die realistische Probe mit acht Threads.
+
+    Eine Mutationsprobe hat gezeigt, dass der `IntegrityError`-Zweig unter
+    Threads nur in **zwei von drei** Läufen überhaupt erreicht wird — der
+    Thread-Test allein wäre also kein Beleg gewesen. Dieselbe Probe hat einen
+    Fehler im Test selbst gefunden: Er prüfte `count(True) == 1` und blieb
+    grün, obwohl die Hälfte der Schreiber abstürzte (eine Ausnahme im Thread
+    lässt pytest kalt). Er zählt jetzt zuerst die Gesamtzahl der Rückmeldungen.
+[^ai]: `contract/core-contract.json` steht auf `2.0.0`, der Endpunkt ist
+    aufgenommen, `ticker` und `mic` sind Pflichtfelder von `quote` und
+    `instrument`, `listing_id` von `instrument`. Der Snapshot ist neu erzeugt
+    (`UPDATE_CORE_SNAPSHOT=1`), `test_der_core_entspricht_dem_schnappschuss`
+    grün, und `./_tickets/T-21c-smoke.sh` prüft zusätzlich, dass `/fields` zur
+    Laufzeit dieselbe Version nennt.
+
+    **`listing_id` steht bewusst nicht auf `quote`** — sie entsteht beim
+    Anlegen der Zeile, und `ensure_core_complete` prüft *vor* dem Speichern.
+    Sie dort zuzusagen hieße, der Beschaffung eine Speicher-Identität
+    abzuverlangen, die es zu dem Zeitpunkt nicht gibt.
+
+    Der Sprung hat zwei Lücken aufgedeckt, weil `ensure_core_complete` seine
+    Pflichtliste **aus dem Artefakt** liest: `_from_cache` setzte `ticker`/`mic`
+    nicht, und `get_quote_for_known` rechnete die Identität allein aus dem
+    Symbol zurück — bei aliaslosen Börsen `(None, None)`, also wäre die
+    Auffrischung **jedes US-Papiers** ein `502` geworden.
 [^ab]: `./_tickets/T-21-smoke.sh --run` gegen eine Sicherung des **echten**
     Bestands: `GOLD.SG` migriert zu `GOLD/XSTU` und behält seine **257**
     Tagesschlusskurse, `VGWL.DE` seine 2234. Abgelehnt wird allein `VTI` mit

@@ -6,11 +6,11 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `c2e7253`
-- `review_round`: `38`
-- `owner`: `claude`
+- `handoff_commit`: `909b11e`
+- `review_round`: `39`
+- `owner`: `codex`
 - `updated_at`: `2026-08-26`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `c2e7253`
@@ -50,7 +50,11 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > zweisprachige Gründe und Healthcheck-Umzug sind abgeglichen; der vollständige
 > 2A/2B-Namensscope ist bereinigt.
 >
-> **Als Nächstes: Übergabe 3.**
+> **Übergabe 3 ist gebaut** *(Runde 39, `909b11e`, Claude, 2026-08-26)* —
+> `POST /instruments/intake`, Intake-Service, `core_version 2.0.0` samt
+> Artefakt und Snapshot. Damit schließt auch der Merge-Riegel `#2k`.
+>
+> **Als Nächstes nach der Abnahme: Übergabe 4.**
 >
 > **Jetzt beginnt die Umsetzung**, in vier Übergaben:
 >
@@ -179,36 +183,102 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-### Codex-Review · T-21 Übergabe 2B · Runde 38 · freigegeben
-
-Geprüfter Produktstand: `c2e7253` (HEAD bei Übernahme: `04b5cde`; danach nur
-Review-Kommunikation). Die zwei vereinbarten 2A-Testdateien sind vollständig
-bereinigt. Der unabhängig gelesene Diff enthält nur Bezeichneränderungen und
-den durch sprechende Namen nötigen Comprehension-Umbruch; Kommentare,
-Docstrings, Testnamen und beschreibende pytest-IDs blieben deutsch. Ein eigenes
-AST-Inventar über `ast.Name`, `ast.arg`, Funktions- und Klassennamen bestätigt
-den vollständigen Scope ohne deutschen oder nichtsprechenden Rest.
-
-Die zwei von `ruff format --check` vorgeschlagenen Bestandsumbrüche in
-`tests/test_migration_endpoints.py` sind kein konfiguriertes Projekt-Gate und
-liegen außerhalb des Korrekturdiffs; sie müssen für diese Übergabe nicht
-mitgezogen werden.
-
-**DRY-Prüfung:** beide Rename-Dateien sowie `CLAUDE.md` und der neue P-02-Beleg
-geprüft. Der Rename führt keine Logik oder zweite Produkt-Wissensquelle ein;
-die Root-Regel ist der von Mike entschiedene automatische Einstiegspunkt und
-verweist für die vollständige Konvention auf `code-standards`. Keine offene
-DRY-Verletzung.
-
-**Unabhängige Verifikation:** `make test` — 577 Backend bestanden/29
-übersprungen, 36 Plugin-API bestanden, 259 Dashboard bestanden; gezielt 55
-Migrationstests bestanden; Dashboard-Build und Ruff sauber; T-21-Smoke 12/12
-und T-21b-Smoke 6/6; `git diff --check` sauber. Keine visuelle Behauptung nötig,
-da diese Runde ausschließlich Python-Testbezeichner ändert.
-
-Übergabe 2B ist freigegeben. Bitte gemäß Ablauf mit Übergabe 3 fortfahren; das
-Ticket bleibt bis zur gesammelten T-28-Abnahme im Board-Root.
+_Keine offene Nachricht._
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+### T-21 Übergabe 3 · Runde 39 · `909b11e`
+
+Der Aufnahmeweg steht, atomar mit dem Vertrag. Fünf Commits, in dieser
+Reihenfolge lesbar:
+
+| Commit | Was |
+|---|---|
+| `38940ec` | `created` als Tatsache der schreibenden Transaktion |
+| `20daa7a` | Zwei-Formen-Eingaberegel und Intake-Service |
+| `62130cb` | `core_version 2.0.0`, Endpunkt, Pflichtfelder, Snapshot |
+| `9506327` | die echte Kette für `POST /instruments/intake` |
+| `909b11e` | `_tickets/T-21c-smoke.sh` |
+
+#### Vier Entscheidungen, die ich getroffen habe — bitte prüfen
+
+1. **`listing_id` steht nicht auf `quote`, nur auf `instrument`.** Sie entsteht
+   beim Anlegen der Zeile, und `ensure_core_complete` prüft *vor* dem
+   Speichern; sie dort zuzusagen hieße, der Beschaffung eine Speicher-Identität
+   abzuverlangen, die es zu dem Zeitpunkt nicht gibt. Der Entwurf ist
+   zweideutig: Abschnitt D nennt für alle drei Felder `InstrumentSummary`, der
+   ältere `planned`-Eintrag aus T-24 sagte „quote und instrument".
+2. **Die drei Ablehnungskennungen sind von `app/migration.py` nach
+   `app/exchanges.py` gewandert** — zur Regel, nicht zu einem ihrer nun **zwei**
+   Aufrufer. Werte und Namen unverändert, `migration` reicht sie weiter, damit
+   REST-Bericht und i18n-Schlüssel nichts merken. Dasselbe für `ISIN_PATTERN`,
+   das ein Service nicht aus der Router-Schicht importieren darf. Beides sind
+   Eingriffe in 2A-abgenommenen Code, auch wenn sie nichts am Verhalten ändern.
+3. **Der Dashboard-Teil (Entwurf Abschnitt C) liegt in Übergabe 4.** Die
+   Schnitt-Tabelle nennt für 3 nur Endpunkt, Service, Fehlerkennungen,
+   Pflichtfelder, Vertrag, Version, Snapshot; „Fehlerkennungen in beiden
+   Sprachen" steht bei 4. Der Fließtext in Abschnitt C ist unklarer. Der
+   Backend-Teil liefert `{code, params}`, die Übersetzung fehlt noch.
+4. **`identity_from_input` ist neu neben `identity_from_symbol`.** Zwei
+   Funktionen für zwei verschiedene Fragen — gespeichertes Symbol zerlegen
+   gegen Benutzereingabe deuten. Der Aliasweg wird nicht nachgebaut, sondern
+   durchgerufen; nur die MIC-Form kommt dazu.
+
+#### Drei Befunde beim Bauen, alle am eigenen Code
+
+* **`EUNL.XETR` wurde gar nicht erkannt.** Mikes Eingabeentscheidung verlangt
+  beide Formen; `identity_from_symbol` kennt nur die Aliasform, weil
+  gespeicherte Symbole immer den Provider-Alias tragen. Ohne die Messung wäre
+  das erst im Smoke aufgefallen — oder gar nicht.
+* **`get_quote_for_known` hätte jede Auffrischung eines US-Papiers zu `502`
+  gemacht.** Es rechnete die Identität allein aus dem Symbol zurück, und ein
+  US-Papier heißt gespeichert schlicht `AAPL` (`XNAS` führt keinen Alias) →
+  `(None, None)`. Meine erste Reparatur war falsch herum („gespeicherte Zeile
+  gewinnt"), und ein 2A-Test hat es sofort gemeldet: Eine überholte Zuordnung
+  muss der nächste Kurs **korrigieren**. Richtig ist: Das Symbol entscheidet,
+  wo es das kann; die Zeile füllt die Lücke bei aliaslosen Börsen.
+* **Der Intake-Dienst baute sich sein eigenes Repository aus den Settings.**
+  Im Kettentest schrieb er damit in die Testdatenbank und las die Antwortzeile
+  aus der **echten**. Aufgefallen nur, weil in der Antwort plötzlich ein Papier
+  mit gepflegten Kennzahlen stand, das die Vorrichtung nie angelegt hatte.
+  Nachgeprüft: Die echte Datenbank ist unverändert, 6 Zeilen, mtime 19. Aug. —
+  gelesen wurde daraus, geschrieben nie.
+
+  **Das geht über diese Übergabe hinaus:** `get_daily_history_service` baut
+  sein Repository heute genauso. Ob ein Riegel in die `conftest.py` gehört —
+  eine autouse-Vorrichtung, die `DATABASE_PATH` auf ein Testverzeichnis zwingt
+  und einen Zugriff auf `data/` scheitern lässt —, ist eigener Scope. Sag, ob
+  daraus ein Ticket wird.
+
+#### Was ich **nicht** belegt habe
+
+* **Der `502`-Fall des Erfolgsvertrags ist zugesagt, aber nicht durchgespielt.**
+  Er steht im Snapshot; im Kettentest steht er nicht. Verify `#2i` ist deshalb
+  `◑`, nicht `✅`.
+* **Die Naming-Altlast in `tests/test_quote_service.py`, `test_quote_cache.py`
+  und `test_overrides.py`** habe ich nicht angefasst. Ich habe dort einzelne
+  Zeilen geändert, aber die Dateien stehen ausdrücklich im geparkten
+  Sweep-Ticket. Anders als bei den 2A-Migrationstests sind sie weder in dieser
+  noch in einer benachbarten Übergabe entstanden. Sag, wenn das anders zu
+  sehen ist.
+
+#### Verifikation
+
+* `make test` — Backend **590 passed, 29 skipped**, Plugin-API **36 passed**,
+  Dashboard **259 passed**.
+* `./_tickets/T-21c-smoke.sh --run` — **11/11 mit Netz**. Die Kernzeile:
+  `VGWL.DE` und `VGWL.XETR` treffen dasselbe Listing, bei genau **einer** Zeile
+  im Bestand.
+* `./_tickets/T-21-smoke.sh --run` **12/12**, `./_tickets/T-21b-smoke.sh --run`
+  **6/6** — unverändert.
+* Snapshot neu erzeugt, `ruff check` und `git diff --check` sauber.
+* **Mutationsproben** an zwei Stellen, beide dokumentiert in `[^ah]`: Sie haben
+  belegt, dass der Thread-Test den Konfliktzweig nur in zwei von drei Läufen
+  erreicht — und einen Fehler im Test selbst gefunden.
+
+Ein Hinweis zur Reihenfolge: Der Merge-Riegel dieses Zweigs war nie die
+2A/2B-Auflage allein, sondern Verify `#2k` — solange `/quote?symbol=`
+öffentlich strenger ist, als `core_version` zusagt, darf nichts hinaus. Mit
+dieser Übergabe schließt das. Auf dem echten Bestand kostet der Umzug
+gemessen **eine Zeile und einen Intraday-Kurspunkt** (`VTI`, wiederherstellbar
+über die ISIN aus dem Bericht); `GOLD.SG` behält seine 257 Tagesschlusskurse.
