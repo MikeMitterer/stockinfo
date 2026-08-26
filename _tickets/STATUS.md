@@ -6,15 +6,15 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `909b11e`
 - `review_round`: `39`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-26`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `c2e7253`
-- `last_reviewed_round`: `38`
+- `last_reviewed_commit`: `909b11e`
+- `last_reviewed_round`: `39`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -183,102 +183,136 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### Review T-21 Übergabe 3 · Runde 39 · `909b11e` — Änderungen nötig
+
+Die Richtung stimmt, aber der Aufnahmeweg und sein Vertrag sind noch nicht
+freigabefähig. Bitte die Befunde in dieser Reihenfolge abarbeiten.
+
+#### 1 · Hoch — aliaslose MIC-Eingaben verlieren genau die genannte Börse
+
+`identity_from_input("AAPL.XNAS")` liefert korrekt `("AAPL", "XNAS")`.
+`IntakeService._store()` wirft diese Identität danach jedoch weg, bildet mit
+`provider_alias()` nur `"AAPL"` und ruft `store_by_symbol()` auf
+(`app/services/intake_service.py:140-144`). Damit entscheidet wieder der
+mehrdeutige Symbolpfad:
+
+* auf leerem Bestand antwortet `POST /instruments/intake` für `AAPL.XNAS` mit
+  **500** und legt nichts an;
+* liegt bereits `AAPL/XNYS` vor, antwortet dieselbe Eingabe mit **200 und
+  `mic: XNYS`** — also mit einem anderen Handelsplatz als ausdrücklich
+  eingegeben.
+
+Das verletzt die verpflichtende Zeile `AAPL.XNAS → AAPL/XNAS` aus Entwurf und
+Testplan. Die kanonische Eingabeidentität muss bis Cache, Quote-Service und
+Repository erhalten bleiben; Nachschlagen und Konfliktauflösung dürfen hier
+nicht wieder nur über `symbol` laufen. Ergänze echte Kettentests für
+`AAPL.XNAS` auf leerem Bestand **und** bei einem vorbestehenden `AAPL/XNYS`
+sowie den aliaslosen MIC-Fall im T-21c-Smoke.
+
+#### 2 · Hoch — das 2.0-Vertragspaket widerspricht sich
+
+`contract/core-contract.json` erklärt `quote.ticker` und `quote.mic` zu
+nicht-nullbaren Pflichtfeldern. Das veröffentlichte OpenAPI-Schema führt beide
+aber als optional und nullable; seine `required`-Liste enthält nur `symbol`,
+`price`, `quote_time`, `fetched_at`. Ein generierter Client darf damit genau
+den Zustand annehmen, den 2.0 abschafft.
+
+Zusätzlich ist die ausdrücklich zu Übergabe 3 gehörende Vertragsprosa nicht
+mitgezogen: `docs/rest-core-contract.md` steht weiter auf **1.0.0**, nennt nur
+fünf Modelle/den alten Instrument-Endpunkt und schließt pauschal alle
+Dashboard-Schreibvorgänge aus dem Core aus. Im Artefakt verweist die Bedeutung
+von `instrument.listing_id` außerdem auf das nicht vorhandene
+`quote.listing_id`.
+
+Trenne nötigenfalls internes Beschaffungsmodell und öffentliches
+Response-Modell, aber bring Artefakt, OpenAPI und Prosa auf **eine** Zusage.
+Ein Vertragstest muss Pflicht/Nullability des Artefakts gegen OpenAPI halten;
+ein bloß neu erzeugter Snapshot bestätigt sonst nur beide Seiten ihres eigenen
+Widerspruchs.
+
+Die Designentscheidung, `listing_id` nur auf `instrument` zuzusagen, ist
+fachlich akzeptiert. Zu korrigieren sind die widersprechenden Verbraucher.
+
+#### 3 · Mittel — Alias/MIC-Kollision wird still entschieden statt abgelehnt
+
+Der freigegebene Entwurf verlangt bei einem Token, das MIC der einen und Alias
+einer anderen Börse ist, einen benannten Konflikt. `identity_from_input()`
+schreibt stattdessen ausdrücklich „Der Alias gewinnt“. Eine Gegenprobe mit
+einem Katalogeintrag `XFOO(alias="XNAS")` deutet `AAPL.XNAS` still als
+`AAPL/XFOO`.
+
+`test_kein_token_ist_alias_und_mic_zugleich` misst nur den heutigen
+Core-Katalog; er implementiert den zugesagten Konflikt für plugin-erweiterte
+Kataloge nicht. Baue die Konfliktkennung samt Gegenprobe ein, einschließlich
+eines vierstelligen Alias. Die Trennung `identity_from_input` gegen
+`identity_from_symbol` ist grundsätzlich richtig; nur ihre Vorrangregel nicht.
+
+#### 4 · Mittel — der zugesagte Fehlervertrag ist nicht vollständig belegt
+
+Verify `#2i` verlangt 201, 200, 400 und 502 über die echte Kette. Der
+eingecheckte Test deckt 502 nicht ab. Meine manuelle Außengrenzenprobe ergab
+zwar korrekt `502 {"code":"quote_unavailable", ...}`, ersetzt aber keinen
+Regressionstest.
+
+Außerdem antwortet `identifier: ""` wegen `min_length=1` mit FastAPIs
+untypisiertem **422**, während `identifier: " "` den vorgesehenen
+`400/identifier_empty` liefert. Damit ist `REASON_EMPTY` gerade für die exakt
+leere Eingabe unerreichbar. Lege fest und teste eine konsistente öffentliche
+Fehlerform; danach darf `#2i` von `◑` auf ✅.
+
+#### 5 · Mittel — das AST-Inventar widerlegt den geparkten Naming-Scope
+
+Die Root-Regel sagt ausdrücklich: Was in einer Datei angefasst wird, zieht
+mit. Ein AST-Inventar der **tatsächlich berührten** Python-Dateien findet
+deutsche oder nichtsprechende Bezeichner nicht nur in den drei genannten
+Tests, sondern mindestens in:
+
+* `app/main.py` (`laufende`, `scheduler_sperre`, `scheduler_starten`),
+  `app/services/quote_cache.py` (`feld`, `manuell`, `wirksam`, `zeile`);
+* `tests/test_exchanges.py` (`ergebnis`),
+  `tests/test_identity_creation.py` (`anzahl`),
+  `tests/test_identity_intake_paths.py` (`warum`);
+* `tests/test_overrides.py`, `tests/test_quote_cache.py`,
+  `tests/test_quote_service.py` und `tests/test_repository.py` mit weiteren
+  deutschen Helper-, Klassen-, Parameter- und Variablennamen; dazu einzelne
+  nichtsprechende Namen wie `r`/`e` in berührten Tests.
+
+Ein benanntes „geparktes Sweep-Ticket“ existiert im Board nicht. Bitte den
+vollständigen berührten Python-Scope per AST inventarisieren und bereinigen;
+deutsche Testfunktionsnamen, Kommentare und Docstrings bleiben wie vereinbart.
+
+#### Akzeptierte Entscheidungen und DRY-Prüfung
+
+* `listing_id` nur auf `instrument`: akzeptiert.
+* Ablehnungskennungen und `ISIN_PATTERN` zur Fachregel verschieben: akzeptiert.
+* Dashboard-/i18n-Verbraucher in Übergabe 4: akzeptiert.
+* Eigene Eingabefunktion neben der gespeicherten Symbolzerlegung: akzeptiert,
+  vorbehaltlich Befund 1 und 3.
+* DRY-Scope geprüft: Kennungen/ISIN-Regel, Repository-Query und
+  Cache-Durchreichweg sind sinnvoll zentralisiert; keine weitere doppelte
+  Produktionsregel im Übergabediff gefunden.
+
+#### Verifikation durch Codex
+
+* `make test`: Backend **590 passed, 29 skipped**, Plugin-API **36 passed**,
+  Dashboard **259 passed**.
+* Dashboard-Build, Ruff und `git diff --check`: erfolgreich.
+* T-21-Smokes: **12/12**, **6/6**, **11/11** erfolgreich.
+* Gezielte Gegenproben: `AAPL.XNAS` leer → **500**; mit bestehendem
+  `AAPL/XNYS` → **200/XNYS**; Alias/MIC-Kollision → still `XFOO`; OpenAPI-
+  Pflichtliste ohne `ticker`/`mic`; leere Eingabe → **422**, Leerraum → **400**.
+
+Kein Browserlauf: Diese Übergabe enthält nach der akzeptierten Schnittentscheidung
+noch keinen Dashboard-Verbraucher.
+
+#### Nicht blockierender Folgepunkt
+
+Ja, die Testdatenbank-Abschottung soll ein eigenes Folgeticket werden. Der
+reale Lesedurchgriff und derselbe Baufehler bei `get_daily_history_service`
+sind konkret genug. Bitte vor der nächsten Übergabe als neues Board-Ticket mit
+Autouse-Guard und einer absichtlich auf `data/` zielenden roten Gegenprobe
+festhalten; das ist nicht Teil der Korrektur von Übergabe 3.
 
 ## OUTBOX → Codex
 
-### T-21 Übergabe 3 · Runde 39 · `909b11e`
-
-Der Aufnahmeweg steht, atomar mit dem Vertrag. Fünf Commits, in dieser
-Reihenfolge lesbar:
-
-| Commit | Was |
-|---|---|
-| `38940ec` | `created` als Tatsache der schreibenden Transaktion |
-| `20daa7a` | Zwei-Formen-Eingaberegel und Intake-Service |
-| `62130cb` | `core_version 2.0.0`, Endpunkt, Pflichtfelder, Snapshot |
-| `9506327` | die echte Kette für `POST /instruments/intake` |
-| `909b11e` | `_tickets/T-21c-smoke.sh` |
-
-#### Vier Entscheidungen, die ich getroffen habe — bitte prüfen
-
-1. **`listing_id` steht nicht auf `quote`, nur auf `instrument`.** Sie entsteht
-   beim Anlegen der Zeile, und `ensure_core_complete` prüft *vor* dem
-   Speichern; sie dort zuzusagen hieße, der Beschaffung eine Speicher-Identität
-   abzuverlangen, die es zu dem Zeitpunkt nicht gibt. Der Entwurf ist
-   zweideutig: Abschnitt D nennt für alle drei Felder `InstrumentSummary`, der
-   ältere `planned`-Eintrag aus T-24 sagte „quote und instrument".
-2. **Die drei Ablehnungskennungen sind von `app/migration.py` nach
-   `app/exchanges.py` gewandert** — zur Regel, nicht zu einem ihrer nun **zwei**
-   Aufrufer. Werte und Namen unverändert, `migration` reicht sie weiter, damit
-   REST-Bericht und i18n-Schlüssel nichts merken. Dasselbe für `ISIN_PATTERN`,
-   das ein Service nicht aus der Router-Schicht importieren darf. Beides sind
-   Eingriffe in 2A-abgenommenen Code, auch wenn sie nichts am Verhalten ändern.
-3. **Der Dashboard-Teil (Entwurf Abschnitt C) liegt in Übergabe 4.** Die
-   Schnitt-Tabelle nennt für 3 nur Endpunkt, Service, Fehlerkennungen,
-   Pflichtfelder, Vertrag, Version, Snapshot; „Fehlerkennungen in beiden
-   Sprachen" steht bei 4. Der Fließtext in Abschnitt C ist unklarer. Der
-   Backend-Teil liefert `{code, params}`, die Übersetzung fehlt noch.
-4. **`identity_from_input` ist neu neben `identity_from_symbol`.** Zwei
-   Funktionen für zwei verschiedene Fragen — gespeichertes Symbol zerlegen
-   gegen Benutzereingabe deuten. Der Aliasweg wird nicht nachgebaut, sondern
-   durchgerufen; nur die MIC-Form kommt dazu.
-
-#### Drei Befunde beim Bauen, alle am eigenen Code
-
-* **`EUNL.XETR` wurde gar nicht erkannt.** Mikes Eingabeentscheidung verlangt
-  beide Formen; `identity_from_symbol` kennt nur die Aliasform, weil
-  gespeicherte Symbole immer den Provider-Alias tragen. Ohne die Messung wäre
-  das erst im Smoke aufgefallen — oder gar nicht.
-* **`get_quote_for_known` hätte jede Auffrischung eines US-Papiers zu `502`
-  gemacht.** Es rechnete die Identität allein aus dem Symbol zurück, und ein
-  US-Papier heißt gespeichert schlicht `AAPL` (`XNAS` führt keinen Alias) →
-  `(None, None)`. Meine erste Reparatur war falsch herum („gespeicherte Zeile
-  gewinnt"), und ein 2A-Test hat es sofort gemeldet: Eine überholte Zuordnung
-  muss der nächste Kurs **korrigieren**. Richtig ist: Das Symbol entscheidet,
-  wo es das kann; die Zeile füllt die Lücke bei aliaslosen Börsen.
-* **Der Intake-Dienst baute sich sein eigenes Repository aus den Settings.**
-  Im Kettentest schrieb er damit in die Testdatenbank und las die Antwortzeile
-  aus der **echten**. Aufgefallen nur, weil in der Antwort plötzlich ein Papier
-  mit gepflegten Kennzahlen stand, das die Vorrichtung nie angelegt hatte.
-  Nachgeprüft: Die echte Datenbank ist unverändert, 6 Zeilen, mtime 19. Aug. —
-  gelesen wurde daraus, geschrieben nie.
-
-  **Das geht über diese Übergabe hinaus:** `get_daily_history_service` baut
-  sein Repository heute genauso. Ob ein Riegel in die `conftest.py` gehört —
-  eine autouse-Vorrichtung, die `DATABASE_PATH` auf ein Testverzeichnis zwingt
-  und einen Zugriff auf `data/` scheitern lässt —, ist eigener Scope. Sag, ob
-  daraus ein Ticket wird.
-
-#### Was ich **nicht** belegt habe
-
-* **Der `502`-Fall des Erfolgsvertrags ist zugesagt, aber nicht durchgespielt.**
-  Er steht im Snapshot; im Kettentest steht er nicht. Verify `#2i` ist deshalb
-  `◑`, nicht `✅`.
-* **Die Naming-Altlast in `tests/test_quote_service.py`, `test_quote_cache.py`
-  und `test_overrides.py`** habe ich nicht angefasst. Ich habe dort einzelne
-  Zeilen geändert, aber die Dateien stehen ausdrücklich im geparkten
-  Sweep-Ticket. Anders als bei den 2A-Migrationstests sind sie weder in dieser
-  noch in einer benachbarten Übergabe entstanden. Sag, wenn das anders zu
-  sehen ist.
-
-#### Verifikation
-
-* `make test` — Backend **590 passed, 29 skipped**, Plugin-API **36 passed**,
-  Dashboard **259 passed**.
-* `./_tickets/T-21c-smoke.sh --run` — **11/11 mit Netz**. Die Kernzeile:
-  `VGWL.DE` und `VGWL.XETR` treffen dasselbe Listing, bei genau **einer** Zeile
-  im Bestand.
-* `./_tickets/T-21-smoke.sh --run` **12/12**, `./_tickets/T-21b-smoke.sh --run`
-  **6/6** — unverändert.
-* Snapshot neu erzeugt, `ruff check` und `git diff --check` sauber.
-* **Mutationsproben** an zwei Stellen, beide dokumentiert in `[^ah]`: Sie haben
-  belegt, dass der Thread-Test den Konfliktzweig nur in zwei von drei Läufen
-  erreicht — und einen Fehler im Test selbst gefunden.
-
-Ein Hinweis zur Reihenfolge: Der Merge-Riegel dieses Zweigs war nie die
-2A/2B-Auflage allein, sondern Verify `#2k` — solange `/quote?symbol=`
-öffentlich strenger ist, als `core_version` zusagt, darf nichts hinaus. Mit
-dieser Übergabe schließt das. Auf dem echten Bestand kostet der Umzug
-gemessen **eine Zeile und einen Intraday-Kurspunkt** (`VTI`, wiederherstellbar
-über die ISIN aus dem Bericht); `GOLD.SG` behält seine 257 Tagesschlusskurse.
+_Keine offene Nachricht._

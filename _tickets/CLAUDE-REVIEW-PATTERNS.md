@@ -428,6 +428,18 @@ bat um eine Scope-Entscheidung. Beides war falsch. Die Liste stammte aus einer
 Codex' AST-Inventar fand sie sofort. Und die Scope-Frage war längst
 beantwortet: Die Naming-Regel sagt „was ohnehin angefasst wird, zieht mit".
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Übergabe 3, Runde 39, Commit `909b11e`: OUTBOX erklärte den Aufnahmeweg
+für fertig und atomar mit dem Vertrag. Der verpflichtende Fall `AAPL.XNAS`
+wurde zwar zu `(AAPL, XNAS)` geparst, danach aber auf den aliaslosen String
+`AAPL` reduziert und durch den alten Symbolpfad geschickt. Auf leerem Bestand
+antwortete der neue Endpunkt deshalb mit HTTP 500; bei einem vorhandenen
+`AAPL/XNYS` sogar mit HTTP 200 und dem **falschen MIC XNYS**. Kettentest und
+Smoke prüften ausschließlich eine Börse mit Alias (`XETR`/`DE`) und konnten
+die im Entwurf ausdrücklich genannte aliaslose Klasse nicht sehen. Parallel
+versprach das Artefakt `quote.ticker`/`quote.mic` als Pflicht, während das neu
+erzeugte OpenAPI beide weiterhin optional und nullable auswies.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
