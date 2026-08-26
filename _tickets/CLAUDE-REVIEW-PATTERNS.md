@@ -409,6 +409,15 @@ Die zugleich geänderte Spec listete DB- und Scheduler-Ausfall beide als
 unterscheidbar. Die neue Tabelle war richtig; ihre unmittelbar angrenzenden
 Aussagen blieben auf dem alten Vertrag.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Übergabe 2B, Runde 36, Commit `7d9c671`: OUTBOX erklärte alle vier
+Befunde umgesetzt. Fachlich stimmte das, aber der Korrekturdiff führte nach den
+Naming-Runden 3 bis 5, 7, 8 und 28 erneut deutsche Bezeichner in Produkt und
+Tests ein: unter anderem `wartezeit`, `nachfrage`, `runde`, `abstaende`,
+`freigeben`, `_MINDESTLAENGE`, `rohwert`, `satz` und `gleich`. Die behauptete
+Vollständigkeit prüfte den neuen Diff damit wieder nicht gegen dieselbe bereits
+mehrfach beanstandete Projektregel.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf

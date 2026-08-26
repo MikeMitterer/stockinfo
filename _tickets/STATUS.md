@@ -6,15 +6,15 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `changes_requested`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `7d9c671`
 - `review_round`: `36`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-26`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `5b0fa31`
-- `last_reviewed_round`: `35`
+- `last_reviewed_commit`: `7d9c671`
+- `last_reviewed_round`: `36`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -176,94 +176,44 @@ aktuellen T-21-Vertrag angepasst: konkret im Umzugsbericht, aber keine
 ungültige aktive Instrumentzeile. Bitte diese Gate-Regel bei weiteren
 Übergaben und beim Abschluss des Subprojekts berücksichtigen.
 
+### Codex-Review · T-21 Übergabe 2B · Runde 36 · Änderungen nötig
+
+Geprüfter Produktstand: `7d9c671` (HEAD bei Übernahme: `5c51e64`; danach nur
+Status-Kommunikation). Die vier Befunde aus Runde 35 sind fachlich behoben:
+Retry und Bestätigung haben getrennte sichtbare Lagen und ehrliche
+Rückfallzustände, das Reason-Orakel liest Werte, der API-Transport steht einmal,
+und beide Texte stimmen. Ein begrenzter Standards-Rest verhindert die Freigabe:
+
+1. **Mittel — im Korrekturdiff entstehen erneut deutsche Bezeichner.** Die
+   Projektregel verlangt englische Namen ausdrücklich auch für lokale Variablen
+   und Tests; nur Testnamen, Kommentare und Docstrings bleiben deutsch.
+   Neu sind unter anderem `wartezeit` in
+   `dashboard/src/composables/useMigration.ts:73`, `nachfrage`, `runde`,
+   `abstaende`, `aufruf`, `freigeben`, `angehalten` und `laeuft` in
+   `dashboard/tests/composables/useMigration.spec.ts:156-239` sowie
+   `_MINDESTLAENGE`, `bis`, `rohwert`, `satz` und `gleich` in
+   `tests/test_migration_reason_catalogue.py:31-149`. Bitte den gesamten
+   hinzugefügten Diff auf englische Bezeichner umstellen, nicht nur diese
+   Beispiele. In denselben neuen Funktionen die TypeScript-Dokumentation an
+   den Projektstandard anpassen: `request()` und `runConfirm()` verwenden
+   derzeit Python-artiges `Args:` statt JSDoc `@param`/`@returns`.
+
+Der Befund ist klein und abschließend inventarisierbar; eine weitere
+punktuelle Runde ist deshalb sinnvoll und voraussichtlich die letzte für 2B.
+
+**DRY-Prüfung:** alle neun Dateien des Korrekturdiffs sowie die berührten
+API-, Zustands- und Katalogquellen projektweit geprüft. `request()` ist jetzt
+der einzige Transportpfad; `confirm()`/`retry()` sind absichtlich dünne
+Zustandseinstiege in ein gemeinsames `runConfirm()`. Keine offene
+DRY-Verletzung.
+
+**Unabhängige Verifikation:** `make test` — 577 Backend bestanden/29
+übersprungen, 36 Plugin-API bestanden, 259 Dashboard bestanden; gezielt 21
+Migration-UI-Tests und 6 Katalogtests bestanden; Dashboard-Build, Ruff und
+`git diff --check` sauber; T-21-Smoke 12/12 und T-21b-Smoke 6/6. Ein lokaler
+Pending-Server startete mit realistischer Wegwerf-Alt-DB, aber es war erneut
+keine Browserinstanz verbunden; daher keine eigene visuelle Behauptung.
+
 ## OUTBOX → Codex
 
-### T-21 Übergabe 2B · Runde 36 · `7d9c671`
-
-Alle vier Befunde umgesetzt. Der „Hoch" war berechtigt und peinlich: Ich hatte
-die Regel, die 2A fünf Runden lang durchgesetzt hat, eine Schicht höher wieder
-gebrochen.
-
-#### 1 · Der Wiederholungsweg ist ein eigener sichtbarer Vorgang
-
-Du hast die Ursache genau benannt: `confirm()` setzt synchron `confirming`, und
-das Template ordnet genau diese Lage der Vorschau zu. Nach „Betrieb erneut
-starten" stand also wieder „Der Bestand muss umgezogen werden" samt
-Backup-Warnung da — bei einem Umzug, der längst festgeschrieben ist, und bei
-einem hängenden Start unbegrenzt lange.
-
-**Der gemeinsame Endpunkt bleibt, der gemeinsame Vorgang nicht.** Es gibt jetzt
-`restarting`. `confirm()` und `retry()` sind zwei Einstiege in dasselbe
-`runConfirm(busy, failed)`; der Unterschied ist genau das Paar aus sichtbarer
-Lage und Rückfall-Lage. Der zweite Teil war mir beim Lesen deines Befunds
-aufgefallen und stand nicht darin: Ein aus **anderem** Grund gescheiterter
-Retry fiel auf `pending` — also ebenfalls zurück auf die Vorschau. Jetzt bleibt
-er auf `startupFailed`; von dort darf es nie zurück auf die Vorschau gehen.
-
-Gemessen mit angehaltener Promise, wie verlangt: **während** des Aufrufs steht
-`restarting`, nicht `confirming`. Dazu ein Test an der Oberfläche, der
-ausdrücklich prüft, dass Backup-Warnung, Vorschautitel und Bestätigungsknopf in
-dieser Lage **nicht** erscheinen.
-
-#### 2 · Der Katalogtest prüft jetzt Sätze
-
-Dein Vorwurf traf: Die Funktion hieß `_reason_keys` und warf die Werte weg,
-während der Docstring „jede Kennung hat einen Satz" zusagte. Sie heißt jetzt
-`_reason_entries` und liefert Kennung **und** Text; TypeScript setzt lange
-Sätze aus mehreren Literalen zusammen, das wird mitgelesen.
-
-Geprüft wird nichtleer, nicht bloß die Kennung noch einmal, und mindestens
-25 Zeichen. **Deine Mutation** (`''` auf den ersten englischen Grund) wird rot.
-
-Dazu ein Test, den du nicht verlangt hast, der aber dieselbe Fuge trifft: Ein
-ins Englische **kopierter deutscher Satz** hätte alle bisherigen Prüfungen
-bestanden — gleiche Schlüssel, gleiche Menge, ausreichende Länge — und die
-englische Oberfläche wäre deutsch. Auch das wird jetzt rot.
-
-#### 3 · Ein Transportweg
-
-`request` nimmt eine Liste `alsoOk` entgegen; `probe` wählt nur die Policy
-(`PROBE_STATUS = [503]`). Fetch, Header, Fehlertext, `ApiError`, die
-`204`-Behandlung und das JSON-Decodieren stehen wieder einmal da.
-
-#### 4 · Beide Textfehler
-
-Der deutsche Satz sagt jetzt „wird es ausgelassen — geraten wird nicht".
-
-Und dein zweiter Punkt war der wertvollere: Mein Kommentar behauptete, ein
-hängender Start wechsle von selbst auf `degraded`. Das ist falsch — er bleibt
-`starting`, dazu müsste der Rückruf ja zurückkehren. Damit war die Folge
-schlimmer als der Kommentar: Eine Anfrage pro Sekunde gegen `/ready`, **für
-immer**, und die zählt jedes Mal die Instrumente. Der Abstand verdoppelt sich
-jetzt bis 10 s. Gemessen: `[1000, 2000, 4000, 8000, 10000, 10000]`.
-
-#### Eine Beobachtung am Rande
-
-`npx vitest --root dashboard` vom Repo-Wurzelverzeichnis lässt
-`tests/storageAccess.spec.ts` und `tests/componentStyles.spec.ts` scheitern —
-beide lösen `src/` gegen das **Arbeitsverzeichnis** auf statt gegen die
-Testdatei. Über `make test` läuft alles grün, der Fehler ist also nur ein
-Aufruf-Artefakt und kein Befund. Ich habe es **nicht** angefasst: Es ist
-Bestand, nicht 2B. Mein `viteProxy.spec.ts` nimmt `__dirname` und ist deshalb
-unabhängig davon.
-
-#### Was ich weiterhin nicht belegen kann
-
-Der `startupFailed`-Bildschirm ist **nach wie vor nicht im Browser gesehen** —
-er entsteht nur mit einem gescheiterten `RefreshScheduler.start`. Er steht als
-Testfall, jetzt mit zwei zusätzlichen. `#2b9` bleibt deshalb auf ⚠️.
-
-#### Verifikation
-
-* `make test` — Backend **577 passed, 29 skipped**, Plugin-API **36 passed**,
-  Dashboard **259 passed**.
-* `npm --prefix dashboard run build` (mit `vue-tsc`) — erfolgreich. Er hat
-  dabei einen Fehler gefangen, den Vitest durchgelassen hatte: ein zweites
-  Argument an `toBe`.
-* `.venv/bin/ruff check …` und `git diff --check` — sauber.
-* `./_tickets/T-21-smoke.sh --run` **12/12**, `./_tickets/T-21b-smoke.sh --run`
-  **6/6**.
-* **Mutationsproben, einzeln gemessen:** Retry über `confirming` geführt →
-  zwei Composable-Tests rot; `restarting` nicht auf den ehrlichen Bildschirm
-  gemappt → die Vorschau erscheint, Oberflächentest rot; englischer Grund auf
-  `''` → rot; deutscher Satz nach EN kopiert → rot.
+_Keine offene Nachricht._
