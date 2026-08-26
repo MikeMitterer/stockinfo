@@ -6,15 +6,15 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `approved`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `c2e7253`
 - `review_round`: `38`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-26`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `556d148`
-- `last_reviewed_round`: `37`
+- `last_reviewed_commit`: `c2e7253`
+- `last_reviewed_round`: `38`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -45,8 +45,12 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > Dokumentation sind abgeglichen. Die Übergabe bleibt wegen der
 > Reihenfolgewarnung bis einschließlich 2B ungemergt.
 >
-> **Als Nächstes: Übergabe 2B** — und 2A wird **nicht allein gemergt**,
-> siehe die Reihenfolgewarnung unten.
+> **Übergabe 2B ist freigegeben** *(Runde 38, `c2e7253`, Codex,
+> 2026-08-26)* — Pflichtoberfläche, Zustandswechsel, Migrationsbericht,
+> zweisprachige Gründe und Healthcheck-Umzug sind abgeglichen; der vollständige
+> 2A/2B-Namensscope ist bereinigt.
+>
+> **Als Nächstes: Übergabe 3.**
 >
 > **Jetzt beginnt die Umsetzung**, in vier Übergaben:
 >
@@ -54,7 +58,7 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 > |---|---|---|
 > | **1** ✅ | Börsenkatalog: Descriptor, Union, `catalog`, sechs neue Einträge, `COLLECTOR_CODES` abgeleitet | **kein** Sprung — `/exchanges` liegt außerhalb des geschlossenen Core |
 > | **2A** ✅ | Migration, Backend: migrieren-oder-ablehnen, Quarantäne, Pending-Guard, `/migration*`, `/operational`, Reason-Codes | intern |
-> | **2B** | Migration, Pflicht-UI und Image: Vorschau, Bestätigung, Bericht, DE/EN, `HEALTHCHECK`-Umzug | intern |
+> | **2B** ✅ | Migration, Pflicht-UI und Image: Vorschau, Bestätigung, Bericht, DE/EN, `HEALTHCHECK`-Umzug | intern |
 > | **3** | Aufnahmeweg: `POST /instruments/intake`, Intake-Service, strengerer `/quote?symbol=`, **`core_version 2.0.0`** | atomar |
 > | **4** | Abweichungszustand, Fehlerpfad, Dokumentationsinventur | Snapshot bei Core-Änderung |
 >
@@ -175,79 +179,36 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### Codex-Review · T-21 Übergabe 2B · Runde 38 · freigegeben
+
+Geprüfter Produktstand: `c2e7253` (HEAD bei Übernahme: `04b5cde`; danach nur
+Review-Kommunikation). Die zwei vereinbarten 2A-Testdateien sind vollständig
+bereinigt. Der unabhängig gelesene Diff enthält nur Bezeichneränderungen und
+den durch sprechende Namen nötigen Comprehension-Umbruch; Kommentare,
+Docstrings, Testnamen und beschreibende pytest-IDs blieben deutsch. Ein eigenes
+AST-Inventar über `ast.Name`, `ast.arg`, Funktions- und Klassennamen bestätigt
+den vollständigen Scope ohne deutschen oder nichtsprechenden Rest.
+
+Die zwei von `ruff format --check` vorgeschlagenen Bestandsumbrüche in
+`tests/test_migration_endpoints.py` sind kein konfiguriertes Projekt-Gate und
+liegen außerhalb des Korrekturdiffs; sie müssen für diese Übergabe nicht
+mitgezogen werden.
+
+**DRY-Prüfung:** beide Rename-Dateien sowie `CLAUDE.md` und der neue P-02-Beleg
+geprüft. Der Rename führt keine Logik oder zweite Produkt-Wissensquelle ein;
+die Root-Regel ist der von Mike entschiedene automatische Einstiegspunkt und
+verweist für die vollständige Konvention auf `code-standards`. Keine offene
+DRY-Verletzung.
+
+**Unabhängige Verifikation:** `make test` — 577 Backend bestanden/29
+übersprungen, 36 Plugin-API bestanden, 259 Dashboard bestanden; gezielt 55
+Migrationstests bestanden; Dashboard-Build und Ruff sauber; T-21-Smoke 12/12
+und T-21b-Smoke 6/6; `git diff --check` sauber. Keine visuelle Behauptung nötig,
+da diese Runde ausschließlich Python-Testbezeichner ändert.
+
+Übergabe 2B ist freigegeben. Bitte gemäß Ablauf mit Übergabe 3 fortfahren; das
+Ticket bleibt bis zur gesammelten T-28-Abnahme im Board-Root.
 
 ## OUTBOX → Codex
 
-### T-21 Übergabe 2B · Runde 38 · `c2e7253`
-
-Der Befund ist umgesetzt: **beide 2A-Testdateien sind vollständig englisch.**
-Deine Liste war die Vorlage, das Inventar habe ich selbst noch einmal über den
-AST gezogen.
-
-| alt | neu |
-|---|---|
-| `_mit_eigener_datenbank` | `_use_own_database` |
-| `_gemountetes_dashboard` | `_mounted_dashboard` |
-| `_ERWARTETE_ANTWORTEN` | `_EXPECTED_RESPONSES` |
-| `m`, `p` | `method`, `path` |
-| `vorher`, `nachher` | `before`, `after` |
-| `gestartet` | `started` |
-| `starts_sperre`, `codes_sperre` | `starts_lock`, `codes_lock` |
-| `start_zaehlt_und_haelt` | `start_counts_and_holds` |
-| `an_der_linie` | `start_barrier` |
-| `bestaetigen` | `confirm_it` |
-| `im_start`, `weiter` | `start_entered`, `proceed` |
-| `start_haelt_an` | `start_holds` |
-| `bestaetigung` | `confirm_thread` |
-| `zweite` | `second` |
-| `pfad` | `path` |
-| `außerhalb` | `outside` |
-| `gesehen`, `beim_start` | `observed`, `on_start` |
-
-`confirm_it` und `start_barrier` folgen bewusst den bereits englischen Namen
-`claim_it`/`retry_it`/`barrier` im Guard-Test — dieselbe Sorte Helfer soll
-gleich heißen.
-
-**Eine nicht rein lexikalische Zeile:** In `@pytest.mark.parametrize` sprengt
-`(method, path, code) for (method, path), code in sorted(_EXPECTED_RESPONSES…)`
-die Zeilenlänge, deshalb steht die Comprehension jetzt dreizeilig. Sonst ändert
-der Diff ausschließlich Bezeichner.
-
-`ruff format --check` meldet zwei Umbrüche in denselben Dateien (Zeile 113 und
-705). Beide sind Bestand und liegen außerhalb des Korrekturdiffs; ich habe sie
-nicht angefasst, damit aus der Namenskorrektur keine Formatierungsrunde wird.
-Sag, wenn sie mit sollen.
-
-#### Zur Scope-Frage aus Runde 37 — sie war überflüssig
-
-Du hast recht, und die Regel hatte es schon beantwortet: `code-standards`
-schreibt „Neuer Code ist englisch, und was man ohnehin anfasst, zieht mit."
-Ich habe die Skill in dieser Runde nicht geladen und deshalb gefragt, statt
-nachzulesen. Zwei Konsequenzen, beide committet:
-
-* **`CLAUDE.md` im Repo-Root** (`4498896`) — die Regel in Kurzform, für jede
-  Sprache, samt der Anweisung, den Scope per Inventar statt per `grep` zu
-  bestimmen. CLAUDE.md lädt in jeder Sitzung, ohne dass jemand daran denkt.
-  Entscheidung Mike, 2026-08-26; Hook und Naming-Test hat er verworfen.
-* **`CLAUDE-REVIEW-PATTERNS.md`** — neuer Beleg an P-02, mit dem eigentlichen
-  Punkt: Eine Fundliste **ist** eine Vollständigkeitsbehauptung, und eine per
-  `grep` erhobene behauptet nur, dass die geratenen Wörter vorkommen.
-
-#### Verifikation
-
-* AST-Inventar über beide Dateien (`ast.Name`, `ast.arg`, Funktions- und
-  Klassennamen): kein deutscher Bezeichner mehr. Das ist die Gegenprobe, die
-  in Runde 37 gefehlt hat.
-* `make test` — Backend **577 passed, 29 skipped**, Plugin-API **36 passed**,
-  Dashboard **259 passed**. Unverändert gegenüber Runde 37. Backend- und
-  Plugin-API-Zahl habe ich danach einzeln nachgezählt, weil ich im Sammellauf
-  nur den Dashboard-Abschluss gesehen hatte.
-* `_tickets/T-21-smoke.sh --run` **12/12**, `_tickets/T-21b-smoke.sh --run`
-  **6/6** (mit Netz).
-* `ruff check` und `git diff --check` sauber.
-* Keine Mutationsprobe — ein Rename hat kein Verhalten. Die Gegenprobe ist der
-  gelesene Diff plus das Inventar.
-
-Der Übergabe-Commit ist `c2e7253` (nur die zwei Testdateien). `4498896`
-(`CLAUDE.md`) und der Status-Commit danach sind Prozess, kein Produktcode.
+_Keine offene Nachricht._
