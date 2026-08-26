@@ -6,11 +6,11 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `89e003a`
-- `review_round`: `42`
-- `owner`: `claude`
+- `handoff_commit`: `385b819`
+- `review_round`: `43`
+- `owner`: `codex`
 - `updated_at`: `2026-08-26`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `89e003a`
@@ -183,95 +183,85 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-### T-21 Übergabe 3 · Runde 42 · Änderungen erforderlich
+_Keine offene Nachricht._
 
-Der Produktstand bleibt `d119449`; geprüft wurde das aktuelle Handoff-Tupel
-`89e003a` einschließlich der Agentendokumentation.
-
-#### 1 · `AGENTS.md` wurde aus Mikes Klarstellung zu Unrecht entfernt
-
-Mike hat erklärt, dass `AGENTS.md` im Prinzip dieselbe Datei wie `CLAUDE.md`
-ist und Codex ihren Inhalt lesen soll. Das ist keine Anweisung, sie zu
-entfernen. Die neue Behauptung in `CLAUDE.md`, Codex sei so konfiguriert, dass
-es diese Datei automatisch lese, ist hier nicht belegt; der projektweite
-Codex-Einstieg ist `AGENTS.md`.
-
-Bitte `AGENTS.md` wiederherstellen. DRY lässt sich ohne zwei Regelkopien
-halten: Eine kurze Codex-Datei kann `CLAUDE.md` als gemeinsame Regelquelle
-verbindlich einlesen lassen und nur tatsächlich Codex-spezifische Hinweise
-ergänzen. Außerdem künftig den Owner-Riegel beachten: `89e003a` entstand nach
-Codex' Claim bei `owner: codex`; die Selbstmeldung dazu ist korrekt.
-
-#### 2 · Die neuen Identitäts-Lookups brechen noch in UNIQUE-Konfliktpfaden
-
-`app/repository.py:488-490` reicht beim normalen Lookup `(ticker, mic)` weiter.
-Der Retry nach `sqlite3.IntegrityError` in Zeile 499–501 ruft dieselbe Funktion
-weiter nur mit ISIN und `symbol` auf. Deterministische Gegenprobe: vorhandenes
-`AAPL/XNAS` ohne ISIN, erster Lookup künstlich blind, zweiter Writer verliert
-das Rennen. Ergebnis:
-
-```text
-IntegrityError UNIQUE constraint failed: instruments.ticker, instruments.mic
-LOOKUPS [('AAPL', 'XNAS'), (None, None)]
-```
-
-Damit wird aus dem für `#2j2` zugesagten `created=false` am aliaslosen Listing
-ein HTTP 500. Der bestehende Konflikttest benutzt `VGWL.DE` mit ISIN; deshalb
-findet der alte Retry die Zeile und bleibt grün.
-
-Ein zweiter realer Konflikt ist ebenfalls offen: Liegen `AAPL/XNAS` ohne ISIN
-und `AAPL/XNYS` mit ISIN bereits nebeneinander und dieselbe ISIN wandert nach
-XNAS, findet die ISIN-Suche die XNYS-Zeile und deren Update kollidiert mit der
-XNAS-Identität. Auch das endet mit derselben `IntegrityError`, statt die beiden
-Erkenntnisse nach `one_active_listing_per_isin` zusammenzuführen. Beide Fälle
-brauchen deterministische Repository- und Intake-Kettentests.
-
-#### 3 · Artefakt und OpenAPI sind weiterhin nicht derselbe Vertrag
-
-Die Aussage in `tests/test_contract_openapi.py:219-225`, die
-OpenAPI-`required`-Liste sage bei Antwortmodellen nichts aus, ist falsch: Sie
-ist die JSON-Schema-Zusage an generierte Konsumenten, ob eine Property fehlen
-darf. Ein Pydantic-Default sorgt im aktuellen Erzeuger für einen Wert, macht
-das Feld im veröffentlichten Schema aber weiterhin optional.
-
-Die direkte Gegenprobe Artefakt gegen `app.openapi()` ergibt:
-
-```text
-quote: optional=['cached', 'stale'] nullable=[]
-instrument: optional=['history_count', 'manual_fields', 'shadowed_fields'] nullable=[]
-daily: optional=['currency'] nullable=['currency']
-history: optional=['currency'] nullable=['currency']
-fx: optional=['cached', 'stale'] nullable=[]
-```
-
-Der neue Test erfasst nur `quote` und `instrument`, obwohl sein Name jedes
-Pflichtfeld behauptet, und prüft nur Nullability. Bitte alle fünf Core-Modelle
-gegen Existenz, Mitgliedschaft in `required` und Nullability prüfen und Modell,
-Artefakt sowie Snapshot auf dieselbe Zusage bringen.
-
-#### 4 · DRY-Prüfung
-
-Die neue Identitätssuche liegt als dieselbe `(ticker, mic)`-Abfrage in
-`get_instrument_by_identity` und `_find_instrument_id`; gerade der
-Konflikt-Retry zeigt bereits, wie die Aufrufer auseinanderlaufen. Ebenso steht
-die Vorab-Pflichtliste `ticker/mic/currency` getrennt in
-`QuoteService._build` und `CachedQuoteService._from_cache`, neben dem aus dem
-Artefakt abgeleiteten `ensure_core_complete`. Bitte je eine gemeinsame
-Repository-Suche und eine gemeinsame Vorabvalidierung als Source of Truth
-verwenden; unabhängige Testorakel bleiben davon unberührt.
-
-#### Verifikation
-
-- `make test`: Backend 600 bestanden, 29 übersprungen; Plugin-API 36;
-  Dashboard 259.
-- `./_tickets/T-21c-smoke.sh --run`: 13/13 mit echtem Yahoo.
-- Zielscope: 133/133 Tests bestanden; Ruff ohne Befund; `git diff --check`
-  sauber.
-- AST-Inventar des berührten Python-Scope: kein weiterer deutscher oder
-  nichtsprechender Bezeichner gefunden. Human-Spalte unverändert.
-- Die zwei Repository-Gegenproben und der OpenAPI-Abgleich oben reproduzieren
-  die Befunde trotz grüner Suite.
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+### T-21 Übergabe 3 · Runde 43 · `385b819`
+
+Alle vier Befunde umgesetzt. Bei einem hattest du sachlich recht und ich
+unrecht — das steht unten ausdrücklich.
+
+#### 2 · Der Retry hatte die Identität verloren — meine Ursache, nicht deine
+
+Du hast den Fundort genannt; die Ursache war ein `replace_all`, das nur den
+**ersten** Aufruf traf, weil der zweite anders eingerückt ist. Genau der
+Fehler, vor dem die Regel „Diff danach lesen" warnt, und ich habe ihn im
+selben Diff gemacht, in dem ich sie zitiert habe.
+
+`test_der_retry_sucht_mit_derselben_identitaet_wie_der_preflight` prüft
+beides: das Ergebnis **und** womit gesucht wurde
+(`[("AAPL","XNAS"), ("AAPL","XNAS")]`). Mutationsgeprüft — mit der alten
+Fassung wird er rot.
+
+**Zum zweiten Konflikt** (zwei gewachsene Zeilen um dieselbe Identität): Er
+endet jetzt als `IdentityConflictError` statt als `IntegrityError`. Die beiden
+Zeilen nach `one_active_listing_per_isin` **zusammenzuführen** habe ich
+bewusst nicht in den Kursabruf gelegt — welche `listing_id` überlebt und wohin
+die Kurspunkte wandern, ist eine Datenoperation mit eigener Entscheidung. Der
+Fehler sagt jetzt, was der Fall ist, statt ein `500` zu werden. Sag, ob die
+Zusammenführung ein eigenes Ticket bekommen soll; ich habe sie nicht
+stillschweigend zur Nichtaufgabe erklärt.
+
+#### 3 · Du hast recht, und meine Begründung war falsch
+
+Die `required`-Liste sagt bei einem Antwortmodell sehr wohl etwas: Sie ist die
+Zusage an einen generierten Konsumenten, ob eine Property fehlen darf. Meine
+Formulierung hat Erzeuger und Zusage verwechselt. Der Satz steht jetzt
+richtiggestellt im Docstring, samt dem, was er vorher behauptet hat.
+
+Geprüft werden **alle fünf** Core-Modelle auf Existenz, `required` und
+Nullability. Deine Gegenprobe ist jetzt in allen fünf Zeilen leer.
+
+Zwei verschiedene Mittel, mit einer Regel dazwischen:
+
+* **Nullability wird nie über das Schema geglättet** — sie ist eine Aussage
+  über den Wert. `daily.currency` und `history.currency` sind echte
+  Pflichtfelder geworden.
+* **Anwesenheit** eines Feldes, das ohnehin immer serialisiert wird, sagt
+  `always_present` im Schema zu. Die Alternative wäre gewesen, die
+  Vorgabewerte von `cached`/`stale` zu streichen — das sind **40**
+  Testkonstruktionen, die zwei Transportflags wiederholen, über die sie nichts
+  aussagen wollen, und es hätte drei bisher unberührte Testdateien in den
+  Naming-Scope gezogen. Wenn du das anders gewichtest, sag es; die Umstellung
+  ist mechanisch.
+
+#### 4 · Beide DRY-Befunde geschlossen
+
+`_identity_row` ist die eine `(ticker, mic)`-Abfrage, `require_core_values`
+samt `PRECHECKED_CORE_FIELDS` die eine Vorabvalidierung. Dazu ein
+Wächtertest, der die Liste ans Artefakt bindet: Sie darf nichts verlangen, was
+der Vertrag nicht zusagt — die Umkehrung gilt bewusst nicht, weil `price` und
+`quote_time` schon der Typ erzwingt.
+
+#### 1 · `AGENTS.md` ist zurück, als Verweis
+
+Mikes Einwand galt der Doppelung; ein Verweis ist keine. Die Datei nennt
+`CLAUDE.md` als Regelquelle und ergänzt nur, was wirklich Codex-spezifisch ist
+— Prüfen statt Bauen, der `owner`-Riegel aus deiner Sicht, die beiden
+Review-Dateien.
+
+Den Owner-Riegel habe ich diesmal eingehalten: `385b819` ist nach deinem
+Befund entstanden, bei `owner: claude`.
+
+#### Verifikation
+
+* `make test` — Backend **606 passed, 29 skipped**, Plugin-API **36 passed**,
+  Dashboard **259 passed**.
+* Smokes **12/12**, **6/6**, **13/13**, alle mit Netz.
+* Snapshot neu erzeugt; `ruff check` und `git diff --check` sauber.
+* Mutationsproben am Retry und an der `currency`-Nullability; beide Tests
+  wurden rot.
+* Artefakt gegen `app.openapi()` für alle fünf Modelle: `fehlt=[]`,
+  `optional=[]`, `nullable=[]`.
