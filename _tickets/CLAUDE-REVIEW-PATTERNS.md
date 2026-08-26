@@ -386,6 +386,18 @@ REST-Test belege Börse, Gattung und Währung, obwohl seine Fixture alle drei
 Felder `NULL` lässt und der Test nur `None == None` zwischen Vorschau und
 Bericht vergleicht.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Übergabe 2A, Runde 32, Commit `21865c0`: OUTBOX erklärte alle vier
+Befunde umgesetzt und führte `startup_failed` als belastbaren vierten Zustand
+ein. Der neue Retry umging jedoch die bestehende Einmal-Verriegelung vollständig:
+Eine Barrier-Gegenprobe mit acht parallelen Bestätigungen rief den
+Scheduler-Callback achtmal. Zugleich setzte `release()` `pending=False`, bevor
+der Start lief, und `startup_failed=True` erst nach dessen Fehler; ein
+angehaltener Callback ließ `/ready` und `/operational` deshalb erneut den
+Normalzustand sehen, obwohl der Scheduler noch nicht gestartet war. Die
+kanonischen Gate- und Response-Docstrings beschrieben daneben weiter drei
+Zustände beziehungsweise nur zwei 503-Gründe.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
