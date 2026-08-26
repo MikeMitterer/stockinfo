@@ -194,11 +194,11 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2h2 | Katalog-Vertrag: Alias und Provenienz | `alias` ist in Python, OpenAPI und TypeScript **optional** — fehlend **oder** `null`, in allen drei Schichten. Der Leerstring ist verboten; das trägt das Backend (`min_length=1`, im OpenAPI-Schema sichtbar), nicht TypeScript. Die fünf US-Plätze liefern `null`. `provenance` ist eine **diskriminierte Union**: Core ohne Plugin-ID, Plugin mit verpflichtender nichtleerer ID; beide ungültigen Kombinationen werden abgelehnt | ✅ [^j] | |
 | 2h3 | Auswahl der bevorzugten Börse bei aliaslosen Plätzen | `DEFAULT_EXCHANGE=XNAS` wählt den NASDAQ-Treffer, auch wenn ein Arca-Treffer vorn steht; beim Sammelcode `US` verdrängt ein punktloser Treffer mit unbekanntem Börsencode kein gültiges Mitglied. Der Fremdbörsen-Fallback bleibt | ✅ [^k] | |
 | 2h4 | Börsenableitung eines Yahoo-Treffers | **eine** Ableitung für Auswahl **und** Identität (`_exchange_of`): Ein bekanntes Suffix entscheidet allein und wird nie von Yahoos `exchange` überstimmt; Yahoos Code gilt nur für suffixlose Symbole. Auswahl und gespeicherter MIC können demselben Treffer keine verschiedenen Börsen zuschreiben | ✅ [^l] | |
-| 2i | `POST /instruments/intake` | Neuanlage `201` mit `InstrumentSummary`, bestehendes Papier `200` mit demselben Typ, unauflösbar `400`, Quelle tot `502` — je im OpenAPI-Snapshot zugesagt und über die echte Kette geprüft | ✅ [^af] | |
+| 2i | `POST /instruments/intake` | Neuanlage `201` mit `InstrumentSummary`, bestehendes Papier `200` mit demselben Typ, unauflösbar `400`, Quelle tot `502` — je im OpenAPI-Snapshot zugesagt und über die echte Kette geprüft | ◑ [^af] [^aj] | |
 | 2j | Schichtengrenze am Aufnahmeweg | der Intake-Service liefert `IntakeResult(summary, created)`; im Router steht **kein zweiter Existenz-Check** und keine Repository-Abfrage, er mappt nur `created` auf `201`/`200` | ✅ [^ag] | |
-| 2j2 | `created` unter Parallelität | kommt aus der **schreibenden Transaktion**, nicht aus einem Preflight; im abgefangenen UNIQUE-Rennen ist `created=false`, nicht `201` | ✅ [^ah] | |
+| 2j2 | `created` unter Parallelität | kommt aus der **schreibenden Transaktion**, nicht aus einem Preflight; im abgefangenen UNIQUE-Rennen ist `created=false`, nicht `201` | ◑ [^ah] [^aj] | |
 | ~~2j3~~ | ~~`GET /instruments` mit einer `legacy_unresolved`-Zeile~~ | **entfällt** — mit der Entscheidung nach Runde 16 gibt es diesen Zustand nicht mehr. `ticker`, `mic` und `listing_id` sind Pflicht, siehe `#2b2` | ➖ | |
-| 2k | Übergabe 2 als Einheit | `core_version 2.0.0`, Vertragsartefakt und Snapshot kommen **mit** der ersten Änderung am geschlossenen Core, nicht danach — zwischenzeitlich gibt es keinen öffentlich geänderten, aber unzugesagten Endpunkt | ✅ [^ai] | |
+| 2k | Übergabe 2 als Einheit | `core_version 2.0.0`, Vertragsartefakt und Snapshot kommen **mit** der ersten Änderung am geschlossenen Core, nicht danach — zwischenzeitlich gibt es keinen öffentlich geänderten, aber unzugesagten Endpunkt | ◑ [^ai] [^ak] | |
 | 2g | Fehlerpfad im Dashboard, **je in DE und EN** | bekannte Kennung, unbekannte Kennung, kaputtes JSON, leerer Rumpf, Netzwerkfehler — alle ergeben einen übersetzten Text, nie `statusText` und nie rohes JSON | | |
 | 3 | `GET /instruments` | `symbol` weiterhin vorhanden und unverändert (Profil-Links hängen daran) | ✅ [^d] | |
 | 3b | Datenbank-Schema | Eindeutigkeit liegt auf `(ticker, mic)`; `symbol` ist **nicht mehr** global unique | ✅ [^e] | |
@@ -608,6 +608,28 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `docs/rest-core-contract.md` steht auf `2.0.0` und nennt, was der Sprung
     bricht; der Verweis von `instrument.listing_id` auf das nicht existente
     `quote.listing_id` ist ersetzt.
+[^aj]: **Codex Runde 42 — Parallelitäts- und Kollisionspfade sind noch offen.**
+    Der normale `_find_instrument_id`-Aufruf reicht `(ticker, mic)` weiter;
+    der Retry nach `sqlite3.IntegrityError` ruft dieselbe Funktion weiter nur
+    mit ISIN und `symbol` auf. Eine deterministische Gegenprobe mit
+    `AAPL/XNAS`, ohne ISIN und einem erzwungen verlorenen Rennen endet deshalb
+    mit `IntegrityError` statt `created=false`; die beiden Lookups sahen
+    nacheinander `(AAPL, XNAS)` und `(None, None)`.
+
+    Eine zweite Gegenprobe legt `AAPL/XNAS` ohne ISIN und `AAPL/XNYS` mit ISIN
+    an und lässt dieselbe ISIN danach nach `XNAS` wandern. Die Aktualisierung
+    läuft in den eindeutigen `(ticker, mic)`-Index, statt beide Erkenntnisse
+    zusammenzuführen. Beide Fälle enden aktuell mit HTTP 500 am Aufnahmeweg.
+[^ak]: **Codex Runde 42 — das Artefakt und OpenAPI sind noch nicht
+    deckungsgleich.** Gegen `app.openapi()` fehlen in der `required`-Liste:
+    `quote.cached/stale`, `instrument.history_count/manual_fields/
+    shadowed_fields`, `daily.currency`, `history.currency` und
+    `fx.cached/stale`; `daily.currency` und `history.currency` sind zusätzlich
+    nullable. Die neue Querprüfung erfasst nur `quote` und `instrument` und
+    prüft die `required`-Liste ausdrücklich nicht. In einem Antwortschema ist
+    diese Liste trotzdem die Zusage, ob ein JSON-Feld vorhanden sein muss;
+    ein Pydantic-Default garantiert das nur im aktuellen Erzeuger, nicht im
+    veröffentlichten Schema für Konsumenten.
 [^ab]: `./_tickets/T-21-smoke.sh --run` gegen eine Sicherung des **echten**
     Bestands: `GOLD.SG` migriert zu `GOLD/XSTU` und behält seine **257**
     Tagesschlusskurse, `VGWL.DE` seine 2234. Abgelehnt wird allein `VTI` mit

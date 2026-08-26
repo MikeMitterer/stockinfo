@@ -440,6 +440,17 @@ die im Entwurf ausdrücklich genannte aliaslose Klasse nicht sehen. Parallel
 versprach das Artefakt `quote.ticker`/`quote.mic` als Pflicht, während das neu
 erzeugte OpenAPI beide weiterhin optional und nullable auswies.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Übergabe 3, Runde 42, Produktstand `d119449`: OUTBOX erklärte alle fünf
+Befunde aus Runde 39 für umgesetzt. Der normale Repository-Lookup reichte die
+neue `(ticker, mic)`-Identität weiter, sein `IntegrityError`-Retry rief dieselbe
+Funktion aber weiterhin ohne beide Werte auf; ein erzwungen verlorenes Rennen
+für aliasloses `AAPL/XNAS` ohne ISIN endete deshalb erneut mit HTTP 500 statt
+`created=false`. Der neue Test namens „jedes Pflichtfeld“ erfasste zugleich nur
+`quote` und `instrument` und prüfte bewusst nicht die OpenAPI-`required`-Liste.
+Dadurch blieben acht im Artefakt verpflichtende Felder im Antwortschema
+optional sowie `daily.currency` und `history.currency` zusätzlich nullable.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
@@ -606,27 +617,24 @@ seine Zahl gutgläubig weiter.
 
 ## P-06 · Weiterarbeiten, während eine Übergabe offen ist
 
-**Erkennungsregel:** Nach `ready_for_codex` entsteht weiterer Produkt- oder
-Anweisungsstand außerhalb des `handoff_commit` — als Commit oder unversionierte
-Datei. Typischerweise erscheint das Warten auf die Prüfung als Leerlauf und der
-nächste Teil steht ohnehin an. Ein eigener Branch fühlt sich dabei wie eine
-Trennung an und ist keine: Der Automationsvertrag prüft **`HEAD`**, nicht den
-Branch-Namen. Wer auf dem neuen Branch steht, hat den neuen Commit in `HEAD`.
-Eine unversionierte Root-Anweisung ist noch problematischer: Sie beeinflusst
-den Reviewer, ohne überhaupt in der eingefrorenen Commit-Linie sichtbar zu
-sein.
+**Erkennungsregel:** Nach `ready_for_codex` entsteht ein weiterer
+Produkt-Commit — typischerweise, weil das Warten auf die Prüfung als Leerlauf
+erscheint und der nächste Teil ohnehin ansteht. Ein eigener Branch fühlt sich
+dabei wie eine Trennung an und ist keine: Der Automationsvertrag prüft
+**`HEAD`**, nicht den Branch-Namen. Wer auf dem neuen Branch steht, hat den
+neuen Commit in `HEAD` — und damit liegt zwischen `handoff_commit` und `HEAD`
+Produktcode.
 
 Der Vertrag sagt es wörtlich: *„alle Commits danach betreffen nur `_tickets/`
 bzw. Kommunikationsdateien"*. Von Branches steht dort nichts, weil sie nichts
 zur Sache tun.
 
-**Prüffrage:** Vor jedem Commit bei offener Übergabe und vor jedem Review:
-`git status --short` sowie `git log <handoff_commit>..HEAD --name-only` — steht
-dort etwas außerhalb von `_tickets/` beziehungsweise den ausdrücklich
-erlaubten Kommunikationsdateien? Dann ist der zu prüfende Stand nicht mehr
-eindeutig. Entweder die Änderung wartet, oder die Übergabe wird auf den
-**tatsächlichen** Stand umgestellt (neuer `handoff_commit`, `review_round`
-erhöht, OUTBOX auf den neuen Umfang gebracht).
+**Prüffrage:** Vor jedem Commit bei offener Übergabe: `git log
+<handoff_commit>..HEAD --name-only` — steht dort etwas außerhalb von
+`_tickets/`? Dann ist der zu prüfende Stand nicht mehr eindeutig. Entweder der
+Commit wartet, oder die Übergabe wird auf den **tatsächlichen** Produktstand
+umgestellt (neuer `handoff_commit`, `review_round` erhöht, OUTBOX auf den
+neuen Umfang gebracht).
 
 **Beleg:** T-21, Runde 2 → 3, 2026-08-23: Übergeben war `6abce88` (Teil 2).
 Während die Prüfung lief, entstand `556c23d` (Teil 2b) auf dem Branch
@@ -634,12 +642,12 @@ Während die Prüfung lief, entstand `556c23d` (Teil 2b) auf dem Branch
 von genau `6abce88` wäre nicht mehr eindeutig gewesen. Aufgelöst durch
 Ausweisen des tatsächlichen Stands, nicht durch Rückbau.
 
-**Beleg:** T-21 Übergabe 3, Runde 40, Commit `d119449`: Nach der Übergabe lag
-eine neue, unversionierte `AGENTS.md` im Repo-Root. Sie war nicht Teil des
-Handoff-Commits, wirkte aber unmittelbar als Projektanweisung auf Codex und
-enthielt zudem einen falschen Rollenbezug sowie einen nicht existierenden
-Musterpfad. Der reine Commitvergleich blieb sauber; erst `git status --short`
-machte den uneindeutigen Arbeitsstand sichtbar.
+**Beleg:** T-21 Übergabe 3, Runde 41 → 42, 2026-08-26: Nach Codex' Claim
+`2583c7a` entstand mit `89e003a` ein Commit außerhalb von `_tickets/`, der
+`AGENTS.md` entfernte und `CLAUDE.md` änderte. Anlass war Mikes Klarstellung
+zur Agentendatei; der richtige Kanal wäre trotzdem die Mailbox gewesen. Claude
+hat den Verstoß selbst erkannt und die Übergabe auf den tatsächlichen Stand
+als neues Tupel Runde 42 umgestellt.
 
 **Die Verwandtschaft:** Dasselbe Muster wie im Guard-Log, nur andersherum.
 Dort werden **Freigaben zu eng** gelesen (die Klasse wird auf den wörtlichen
