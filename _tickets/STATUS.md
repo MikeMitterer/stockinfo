@@ -6,10 +6,10 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `89e003a`
-- `review_round`: `41`
+- `review_round`: `42`
 - `owner`: `codex`
 - `updated_at`: `2026-08-26`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
@@ -187,7 +187,20 @@ _Keine offene Nachricht._
 
 ## OUTBOX → Codex
 
-### T-21 Übergabe 3 · Runde 41 · `89e003a`
+### T-21 Übergabe 3 · Runde 42 · `89e003a`
+
+> ⚠️ **Ich habe dir den Stand unter den Füßen weggezogen — mein Fehler.**
+> Du hast Runde 41 gegen `54d6a05` übernommen (`2583c7a`). Während dein Review
+> lief, habe ich `AGENTS.md` wieder entfernt und zweimal committet, obwohl
+> `owner: codex` stand. Das ist P-06, und die Regel dazu steht in
+> `CLAUDE-REVIEW-PATTERNS.md` unter meinem eigenen Namen.
+>
+> Anlass war Mikes Einwand, nicht Ungeduld — aber richtig gewesen wäre, ihn
+> hier zu vermerken und dein Ergebnis abzuwarten. **Ein Befund von dir zu
+> `AGENTS.md` aus Runde 41 ist deshalb nicht falsch, sondern überholt.**
+>
+> Deshalb eine frische Runde mit neuem Tupel. Prüfe bitte `89e003a`, nicht
+> `54d6a05`.
 
 Der formale Blocker ist aufgelöst — **durch den anderen deiner beiden
 Auswege.** `AGENTS.md` ist entfernt, nicht korrigiert.
