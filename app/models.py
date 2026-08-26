@@ -167,15 +167,24 @@ class QuoteResponse(BaseModel):
     type: str | None = Field(default=None, description="stock | etf")
     currency: str | None = None
 
-    ticker: str | None = Field(
-        default=None,
-        exclude=True,
-        description="Kanonischer Ticker — noch nicht am REST-Rand (T-21, Teil 3)",
-    )
+    # Die kanonische Identität — seit `core_version 2.0.0` zugesagt (T-21
+    # Übergabe 3). Sie reiste schon vorher bis zum Repository mit, war am
+    # REST-Rand aber ausgeblendet: Ein Feld auszuliefern, das der Vertrag nicht
+    # nennt, wäre eine stille Zusage gewesen.
+    #
+    # `str | None` und trotzdem Pflicht — wie `currency`: Die Pflichtliste steht
+    # im Vertragsartefakt, und `ensure_core_complete` wirft, wenn eines fehlt.
+    # Ein nicht-optionaler Typ verschöbe denselben Fehler nur nach vorn, mitten
+    # in die Antwort eines Anbieters, und meldete ihn als `500`.
+    # **`listing_id` steht hier bewusst nicht.** Sie entsteht beim Anlegen der
+    # Zeile; eine frisch beschaffte Antwort hat noch keine, und
+    # `ensure_core_complete` prüft *vor* dem Speichern — genau dort, wo der
+    # Schutz hingehört. Sie auf `quote` zuzusagen hieße, der Beschaffung eine
+    # Speicher-Identität abzuverlangen, die es zu dem Zeitpunkt nicht gibt.
+    # Zugesagt wird sie auf `instrument`, wo die Zeile bereits existiert.
+    ticker: str | None = Field(default=None, description="Kanonischer Ticker")
     mic: str | None = Field(
-        default=None,
-        exclude=True,
-        description="ISO-10383-MIC des Handelsplatzes — noch nicht am REST-Rand",
+        default=None, description="ISO-10383-MIC des Handelsplatzes"
     )
 
     price: float
@@ -278,6 +287,15 @@ class InstrumentSummary(BaseModel):
 
     isin: str | None = None
     symbol: str
+    # Die kanonische Identität. **Pflicht, nicht nullable** — die Invariante
+    # nach dem Umzug lautet `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`,
+    # und `nullable` wäre die Zusage an Konsumenten, mit einem Zustand zu
+    # rechnen, den es nicht geben darf.
+    ticker: str = Field(description="Kanonischer Ticker")
+    mic: str = Field(description="ISO-10383-MIC des Handelsplatzes")
+    listing_id: str = Field(
+        description="Opake, dauerhafte Kennung des Listings — nie zerlegen"
+    )
     exchange: str | None = None
     name: str | None = None
     type: str | None = None
@@ -516,3 +534,39 @@ class AnalyzeResult(BaseModel):
     isin: str | None = None
     total: float
     stages: list[AnalyzeStage]
+
+
+class IntakeRequest(BaseModel):
+    """Body des Aufnahmewegs — **ein** roher Feldwert.
+
+    Kein `isin`/`symbol`-Verzweigen am Client und kein zweiter Parameter für
+    den MIC: Was der Wert bedeutet, entscheidet allein der Core (T-21 Teil 3).
+    Ein Dashboard, das die Form selbst klassifizierte, hätte dieselbe Grammatik
+    ein zweites Mal — und beide liefen auseinander, sobald ein Plugin weitere
+    Formen erlaubt.
+    """
+
+    identifier: str = Field(
+        min_length=1,
+        max_length=32,
+        description="ISIN, TICKER.ALIAS (EUNL.DE) oder TICKER.MIC (EUNL.XETR)",
+    )
+
+
+class ErrorDetail(BaseModel):
+    """Ein Fehler als **Kennung**, nicht als Satz.
+
+    Der Text gehört ins UI und muss in DE und EN vorliegen; ein deutscher
+    Backendtext in der englischen Oberfläche wäre auch bei sauberem Parsen
+    falsch. `params` trägt die Werte, die der übersetzte Satz einsetzt — etwa
+    den erkannten Ticker.
+
+    Bewusst **nicht** unter `detail` verschachtelt: FastAPIs Vorgabeform
+    `{"detail": …}` zwänge jeden Konsumenten, erst auszupacken, was er dann
+    doch typisiert erwartet.
+    """
+
+    code: str = Field(description="Stabile Kennung, z.B. unknown_exchange_suffix")
+    params: dict[str, str] = Field(
+        default_factory=dict, description="Werte für den übersetzten Text"
+    )

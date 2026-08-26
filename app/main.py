@@ -26,7 +26,7 @@ from app.migration_guard import (
     static_allowlist,
 )
 from app.models import HealthResponse, OperationalResponse, ReadinessResponse
-from app.routers import dashboard, fields, fx, migration, quotes
+from app.routers import dashboard, fields, fx, instruments, migration, quotes
 from app.routers.migration import get_gate
 from app.scheduler import RefreshScheduler
 
@@ -113,6 +113,7 @@ app = FastAPI(
 )
 register_docs(app)
 app.include_router(quotes.router)
+app.include_router(instruments.router)
 app.include_router(dashboard.router)
 app.include_router(fx.router)
 app.include_router(fields.router)

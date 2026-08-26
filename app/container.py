@@ -19,6 +19,7 @@ from app.services.analyzer import QuoteAnalyzer
 from app.services.daily_history import DailyHistoryService
 from app.services.daily_sync import DailyCloseSync
 from app.services.fx_service import CachedFxService
+from app.services.intake_service import IntakeService
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteService
 
@@ -69,6 +70,20 @@ def get_cached_quote_service() -> CachedQuoteService:
         settings.cache_ttl_hours,
         daily_sync,
         settings.metadata_ttl_days,
+    )
+
+
+@lru_cache
+def get_intake_service() -> IntakeService:
+    """Baut den (gecachten) IntakeService für den Aufnahmeweg.
+
+    Teilt sich den `CachedQuoteService` mit den Kursendpunkten — die Aufnahme
+    ist derselbe Weg zur Quelle, nur mit der zusätzlichen Frage, ob das Papier
+    dabei entstanden ist.
+    """
+    settings = get_settings()
+    return IntakeService(
+        get_cached_quote_service(), QuoteRepository(settings.database_path)
     )
 
 

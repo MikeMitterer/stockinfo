@@ -211,15 +211,20 @@ def test_ein_wechsel_des_handelsplatzes_wird_protokolliert(repo) -> None:
     assert changes and changes[0]["previous_mic"] == "XETR"
 
 
-def test_die_identitaet_steht_nicht_in_der_rest_antwort() -> None:
-    """Noch nicht — der Vertrag ändert sich erst in Teil 3.
+def test_die_identitaet_steht_jetzt_in_der_rest_antwort() -> None:
+    """**Der Test kehrt sich mit dem Vertrag um** (T-21 Übergabe 3).
 
-    `ticker` und `mic` reisen bereits mit, damit die Speicherung sie sieht.
-    Am REST-Rand aufzutauchen hätte den Vertrag aus T-24 gebrochen, ohne dass
-    `core_version` erhöht wurde; der Schnappschuss-Test hätte es gemeldet.
-    Diese Zeile hält fest, dass das Weglassen Absicht ist.
+    Bis `core_version 1.0.0` hielt diese Stelle fest, dass `ticker` und `mic`
+    am REST-Rand *fehlen*: Sie reisten schon mit, damit die Speicherung sie
+    sieht, aber sie auszuliefern wäre eine Zusage gewesen, die der Vertrag
+    nicht trug.
+
+    Mit `2.0.0` ist genau das zugesagt, und dieselbe Zeile hält jetzt das
+    Gegenteil fest. `listing_id` bleibt draußen — sie entsteht erst beim
+    Anlegen der Zeile, eine frisch beschaffte Antwort hat noch keine.
     """
     payload = _response().model_dump()
 
-    assert "ticker" not in payload
-    assert "mic" not in payload
+    assert payload["ticker"] == "VGWL"
+    assert payload["mic"] == "XETR"
+    assert "listing_id" not in payload

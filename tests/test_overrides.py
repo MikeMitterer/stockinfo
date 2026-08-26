@@ -365,6 +365,8 @@ class _Quelle:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
+        ticker: str | None = None,
+        mic: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         return self._liefern(isin or symbol)

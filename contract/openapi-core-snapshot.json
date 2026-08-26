@@ -1,5 +1,5 @@
 {
-  "core_version": "1.0.0",
+  "core_version": "2.0.0",
   "paths": {
     "/fields": {
       "get": {
@@ -51,6 +51,48 @@
                 },
                 "title": "Response List Instruments Instruments Get",
                 "type": "array"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/instruments/intake": {
+      "post": {
+        "parameters": [],
+        "responses": {
+          "200": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstrumentSummary"
+              }
+            }
+          },
+          "201": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstrumentSummary"
+              }
+            }
+          },
+          "400": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
+              }
+            }
+          },
+          "422": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          },
+          "502": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
               }
             }
           }
@@ -275,6 +317,29 @@
         "method"
       ],
       "title": "EndpointSpec",
+      "type": "object"
+    },
+    "ErrorDetail": {
+      "description": "Ein Fehler als **Kennung**, nicht als Satz.\n\nDer Text gehört ins UI und muss in DE und EN vorliegen; ein deutscher\nBackendtext in der englischen Oberfläche wäre auch bei sauberem Parsen\nfalsch. `params` trägt die Werte, die der übersetzte Satz einsetzt — etwa\nden erkannten Ticker.\n\nBewusst **nicht** unter `detail` verschachtelt: FastAPIs Vorgabeform\n`{\"detail\": …}` zwänge jeden Konsumenten, erst auszupacken, was er dann\ndoch typisiert erwartet.",
+      "properties": {
+        "code": {
+          "description": "Stabile Kennung, z.B. unknown_exchange_suffix",
+          "title": "Code",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Werte für den übersetzten Text",
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "code"
+      ],
+      "title": "ErrorDetail",
       "type": "object"
     },
     "FieldSpec": {
@@ -554,6 +619,11 @@
           ],
           "title": "Latest Quote Time"
         },
+        "listing_id": {
+          "description": "Opake, dauerhafte Kennung des Listings — nie zerlegen",
+          "title": "Listing Id",
+          "type": "string"
+        },
         "manual_accumulating": {
           "anyOf": [
             {
@@ -661,6 +731,11 @@
           ],
           "title": "Meta Fetched At"
         },
+        "mic": {
+          "description": "ISO-10383-MIC des Handelsplatzes",
+          "title": "Mic",
+          "type": "string"
+        },
         "name": {
           "anyOf": [
             {
@@ -729,6 +804,11 @@
           ],
           "title": "Ter"
         },
+        "ticker": {
+          "description": "Kanonischer Ticker",
+          "title": "Ticker",
+          "type": "string"
+        },
         "type": {
           "anyOf": [
             {
@@ -753,9 +833,29 @@
         }
       },
       "required": [
-        "symbol"
+        "symbol",
+        "ticker",
+        "mic",
+        "listing_id"
       ],
       "title": "InstrumentSummary",
+      "type": "object"
+    },
+    "IntakeRequest": {
+      "description": "Body des Aufnahmewegs — **ein** roher Feldwert.\n\nKein `isin`/`symbol`-Verzweigen am Client und kein zweiter Parameter für\nden MIC: Was der Wert bedeutet, entscheidet allein der Core (T-21 Teil 3).\nEin Dashboard, das die Form selbst klassifizierte, hätte dieselbe Grammatik\nein zweites Mal — und beide liefen auseinander, sobald ein Plugin weitere\nFormen erlaubt.",
+      "properties": {
+        "identifier": {
+          "description": "ISIN, TICKER.ALIAS (EUNL.DE) oder TICKER.MIC (EUNL.XETR)",
+          "maxLength": 32,
+          "minLength": 1,
+          "title": "Identifier",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identifier"
+      ],
+      "title": "IntakeRequest",
       "type": "object"
     },
     "QuotePoint": {
@@ -895,6 +995,18 @@
           ],
           "title": "Isin"
         },
+        "mic": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ISO-10383-MIC des Handelsplatzes",
+          "title": "Mic"
+        },
         "name": {
           "anyOf": [
             {
@@ -966,6 +1078,18 @@
             }
           ],
           "title": "Ter"
+        },
+        "ticker": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Kanonischer Ticker",
+          "title": "Ticker"
         },
         "type": {
           "anyOf": [

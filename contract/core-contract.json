@@ -1,5 +1,5 @@
 {
-  "core_version": "1.0.0",
+  "core_version": "2.0.0",
   "details_version": 0,
   "generation": {
     "endpoint": "/generation",
@@ -23,7 +23,8 @@
       {"path": "/quote/{isin}", "method": "GET", "query": []}
     ],
     "instrument": [
-      {"path": "/instruments", "method": "GET", "query": []}
+      {"path": "/instruments", "method": "GET", "query": []},
+      {"path": "/instruments/intake", "method": "POST", "query": []}
     ],
     "daily": [
       {"path": "/quote/{isin}/daily", "method": "GET", "query": ["period"]},
@@ -53,6 +54,8 @@
   "core": {
     "quote": [
       {"name": "symbol", "kind": "string", "required": true, "meaning": "Anzeigename des Listings beim Kursanbieter. Nicht garantiert eindeutig."},
+      {"name": "ticker", "kind": "string", "required": true, "meaning": "Kanonischer Ticker des Listings — Großbuchstaben und Ziffern, ohne Börsensuffix und ohne anbieterspezifische Zeichensetzung. Zusammen mit mic die eindeutige Identität."},
+      {"name": "mic", "kind": "string", "required": true, "meaning": "ISO-10383-MIC des Handelsplatzes, z.B. 'XETR'. Nie ein Sammelcode: 'US' ist ein interner Suchcode und erscheint hier nicht."},
       {"name": "price", "kind": "number", "required": true, "meaning": "Letzter bekannter Kurs in der Handelswährung. Nie geraten, nie umgerechnet."},
       {"name": "currency", "kind": "string", "required": true, "meaning": "Handelswährung des Kurses. ISO-4217, mit einer Ausnahme: 'GBp' bezeichnet Pence und wird originalgetreu durchgereicht. Ohne Währung ist ein Preis nicht verwertbar — dann antwortet die API mit einem Fehler statt zu raten."},
       {"name": "quote_time", "kind": "string", "required": true, "meaning": "Zeitpunkt, zu dem der Kurs an der Börse galt. ISO-8601 mit Zeitzone."},
@@ -76,6 +79,9 @@
     ],
     "instrument": [
       {"name": "symbol", "kind": "string", "required": true, "meaning": "Anzeigename des Listings. Siehe quote.symbol."},
+      {"name": "ticker", "kind": "string", "required": true, "meaning": "Kanonischer Ticker des Listings. Siehe quote.ticker."},
+      {"name": "mic", "kind": "string", "required": true, "meaning": "ISO-10383-MIC des Handelsplatzes. Siehe quote.mic."},
+      {"name": "listing_id", "kind": "string", "required": true, "meaning": "Opake, dauerhafte Kennung des Listings. Siehe quote.listing_id."},
       {"name": "history_count", "kind": "integer", "required": true, "meaning": "Anzahl gespeicherter Kurspunkte zu diesem Instrument."},
       {"name": "manual_fields", "kind": "array", "required": true, "meaning": "Kennzahlen, deren angezeigter Wert gerade von Hand stammt. Leer, wenn keine."},
       {"name": "shadowed_fields", "kind": "array", "required": true, "meaning": "Kennzahlen mit manuellem Wert, den die Quelle gerade überstimmt. Der eingetragene Wert steht unter manual_<feld>."},
@@ -151,9 +157,7 @@
     "consumer_rule": "Unbekannte Felder werden ignoriert, nicht als Fehler behandelt. Nur so bleibt eine additive Erweiterung wirklich additiv."
   },
   "planned": {
-    "note": "Entschieden, aber noch nicht zugesagt. Diese Einträge sind nicht Teil von core_version 1.0.0 — sie stehen hier, damit ein Konsument weiß, was kommt, und nicht, damit er sich darauf verlässt.",
-    "listing_id": {"ticket": "T-21", "effect": "wird Pflichtfeld in quote und instrument (Minor)"},
-    "ticker_mic": {"ticket": "T-21", "effect": "kanonische Identität (ticker, mic) neben symbol (Minor)"},
+    "note": "Entschieden, aber noch nicht zugesagt. Diese Einträge sind nicht Teil von core_version 2.0.0 — sie stehen hier, damit ein Konsument weiß, was kommt, und nicht, damit er sich darauf verlässt.",
     "details_container": {"ticket": "T-26", "effect": "die ETF-Kennzahlen ziehen in einen additiven details-Container um (Major)"},
     "generation_runtime": {"ticket": "T-25", "effect": "Route /generation, Header-Middleware, expose_headers, persistierte UUID"}
   }

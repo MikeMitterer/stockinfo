@@ -361,6 +361,8 @@ class CachedQuoteService:
                     isin=instrument.get("isin"),
                     exchange=instrument.get("exchange"),
                     instrument_type=instrument.get("type"),
+                    ticker=instrument.get("ticker"),
+                    mic=instrument.get("mic"),
                     enrich_etf=True,
                 )
             )
@@ -386,6 +388,8 @@ class CachedQuoteService:
                     isin=instrument.get("isin"),
                     exchange=instrument.get("exchange"),
                     instrument_type=instrument.get("type"),
+                    ticker=instrument.get("ticker"),
+                    mic=instrument.get("mic"),
                     # Der Griff zum einzelnen Papier übergeht die Metadaten-TTL
                     # bewusst — siehe `refresh_one`.
                     enrich_etf=True,
@@ -641,6 +645,8 @@ class CachedQuoteService:
                 isin=instrument.get("isin"),
                 exchange=instrument.get("exchange"),
                 instrument_type=instrument.get("type"),
+                ticker=instrument.get("ticker"),
+                mic=instrument.get("mic"),
                 enrich_etf=enrich,
             )
         # Ohne Symbol bleibt nur die Auflösung — das kann nur ein Datensatz
@@ -732,6 +738,12 @@ class CachedQuoteService:
         response = QuoteResponse(
             isin=instrument["isin"],
             symbol=instrument["symbol"],
+            # Seit T-21 Übergabe 3 sind sie zugesagt, und `ensure_core_complete`
+            # liest die Pflichtliste aus dem Vertragsartefakt — ohne diese zwei
+            # Zeilen antwortete ausgerechnet der Cache-Weg mit `502`. Die Werte
+            # stehen in der Zeile: seit 2A sind sie `NOT NULL`.
+            ticker=instrument["ticker"],
+            mic=instrument["mic"],
             exchange=instrument["exchange"],
             name=instrument["name"],
             type=instrument["type"],

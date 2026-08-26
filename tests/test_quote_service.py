@@ -4,6 +4,7 @@ import pytest
 import structlog
 from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
 
+from app.exchanges import split_symbol
 from app.providers.base import EtfDetails, RawQuote, ResolvedInstrument
 from app.services.quote_service import (
     InstrumentNotFoundError,
@@ -57,6 +58,36 @@ class FakeEtfProvider:
         return self._details
 
 
+def _resolved(symbol: str, **fields) -> ResolvedInstrument:
+    """Eine Auflösung, wie der echte Resolver sie liefert — **mit** Identität.
+
+    Bis T-21 Übergabe 3 bauten die Vorrichtungen hier `ResolvedInstrument`
+    ohne `ticker` und `mic`. Das war eine Auflösung, die es nicht gibt: Der
+    Resolver setzt beide seit Teil 1 über `_identity`, und seit `ticker`/`mic`
+    zugesagte Pflichtfelder sind, antwortet der Core auf eine Auflösung ohne
+    Identität mit `502` statt eine halbe Identität zu speichern.
+
+    Die Identität wird deshalb **aus dem Symbol abgeleitet** statt an 16
+    Stellen von Hand eingetragen — dieselbe Rechnung, die der Resolver
+    anstellt. Eine Vorrichtung, die weniger weiß als die Wirklichkeit, prüft
+    einen Fall, den es nicht gibt; genau daran ist in Übergabe 2B die
+    `quotes`-Tabelle ohne `currency` gescheitert.
+
+    Wo die Identität selbst der Prüfgegenstand ist, steht sie weiterhin
+    ausdrücklich im Test — abgeleitet wäre sie dort ein Orakel, das sich selbst
+    bestätigt. Ebenso bei **suffixlosen** Symbolen (`ARKK`): Aus ihnen lässt
+    sich keine Börse rechnen, die Auflösung nimmt sie dort vom Börsencode des
+    Anbieters. Ein ausdrücklich übergebenes `ticker`/`mic` gewinnt deshalb.
+    """
+    ticker, mic = split_symbol(symbol)
+    return ResolvedInstrument(
+        symbol=symbol,
+        ticker=fields.pop("ticker", ticker),
+        mic=fields.pop("mic", mic),
+        **fields,
+    )
+
+
 class FakeResolver:
     """Liefert eine vorgegebene Resolution.
 
@@ -97,7 +128,7 @@ def test_etf_wird_mit_justetf_angereichert() -> None:
         FakeQuoteProvider(_etf_quote()),
         FakeEtfProvider(details),
         FakeResolver(
-            ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
+            _resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")
         ),
     )
 
@@ -122,7 +153,7 @@ def test_aktie_wird_nicht_angereichert() -> None:
         FakeQuoteProvider(stock),
         FakeEtfProvider(EtfDetails(ter=0.99)),  # würde ignoriert
         FakeResolver(
-            ResolvedInstrument(symbol="BRYN.DE", isin="US0846707026", type="stock")
+            _resolved("BRYN.DE", isin="US0846707026", type="stock")
         ),
     )
 
@@ -180,7 +211,7 @@ def test_kein_kurs_wirft_unavailable() -> None:
     service = QuoteService(
         FakeQuoteProvider(None),
         FakeEtfProvider(None),
-        FakeResolver(ResolvedInstrument(symbol="NOPE.DE")),
+        FakeResolver(_resolved("NOPE.DE")),
     )
 
     with pytest.raises(QuoteUnavailableError):
@@ -198,7 +229,7 @@ def test_gbp_pence_wird_originalgetreu_uebernommen() -> None:
     service = QuoteService(
         FakeQuoteProvider(pence),
         FakeEtfProvider(None),
-        FakeResolver(ResolvedInstrument(symbol="EQQQ.L")),
+        FakeResolver(_resolved("EQQQ.L")),
     )
 
     result = service.get_quote_by_symbol("EQQQ.L")
@@ -213,7 +244,7 @@ def test_etf_uebernimmt_volatilitaet_und_thesaurierend_von_justetf() -> None:
         FakeQuoteProvider(_etf_quote()),
         FakeEtfProvider(details),
         FakeResolver(
-            ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
+            _resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")
         ),
     )
 
@@ -241,7 +272,7 @@ def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
         FakeQuoteProvider(euro_kurs),
         FakeEtfProvider(EtfDetails(fund_currency="USD", fund_domicile="Ireland")),
         FakeResolver(
-            ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
+            _resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")
         ),
     )
 
@@ -273,7 +304,7 @@ def test_preis_ohne_waehrung_ist_kein_verwertbarer_kurs() -> None:
         FakeQuoteProvider(ohne_waehrung),
         FakeEtfProvider(None),
         FakeResolver(
-            ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
+            _resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")
         ),
     )
 
@@ -318,7 +349,7 @@ def test_die_aufgeloeste_isin_gewinnt_gegen_die_des_anbieters() -> None:
     service = QuoteService(
         FakeQuoteProvider(_lvmh_quote_mit_fremder_isin()),
         FakeEtfProvider(None),
-        FakeResolver(ResolvedInstrument(symbol="MC.PA", isin="FR0000121014")),
+        FakeResolver(_resolved("MC.PA", isin="FR0000121014")),
     )
 
     result = service.get_quote_by_isin("FR0000121014")
@@ -335,7 +366,7 @@ def test_abweichende_anbieter_isin_wird_protokolliert() -> None:
     service = QuoteService(
         FakeQuoteProvider(_lvmh_quote_mit_fremder_isin()),
         FakeEtfProvider(None),
-        FakeResolver(ResolvedInstrument(symbol="MC.PA", isin="FR0000121014")),
+        FakeResolver(_resolved("MC.PA", isin="FR0000121014")),
     )
 
     with structlog.testing.capture_logs() as logs:
@@ -362,7 +393,7 @@ def test_uebereinstimmende_isin_wird_nicht_protokolliert() -> None:
     service = QuoteService(
         FakeQuoteProvider(matching),
         FakeEtfProvider(None),
-        FakeResolver(ResolvedInstrument(symbol="MC.PA", isin="FR0000121014")),
+        FakeResolver(_resolved("MC.PA", isin="FR0000121014")),
     )
 
     with structlog.testing.capture_logs() as logs:
@@ -402,7 +433,7 @@ def test_gescheiterte_anreicherung_markiert_die_antwort_als_unvollstaendig() -> 
         FakeQuoteProvider(_etf_quote()),
         FakeEtfProvider(None),  # justETF nicht erreichbar
         FakeResolver(
-            ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
+            _resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")
         ),
     )
 
@@ -418,7 +449,7 @@ def test_erfolgreiche_anreicherung_gilt_als_vollstaendig() -> None:
         FakeQuoteProvider(_etf_quote()),
         FakeEtfProvider(EtfDetails(ter=0.19, provider="Vanguard")),
         FakeResolver(
-            ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25", type="etf")
+            _resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")
         ),
     )
 
@@ -442,7 +473,7 @@ def test_eine_aktie_gilt_als_vollstaendig() -> None:
         FakeQuoteProvider(aktie),
         FakeEtfProvider(None),
         FakeResolver(
-            ResolvedInstrument(symbol="APC.DE", isin="US0378331005", type="stock")
+            _resolved("APC.DE", isin="US0378331005", type="stock")
         ),
     )
 
@@ -468,7 +499,7 @@ def test_unbekannte_gattung_gilt_nicht_als_vollstaendig() -> None:
     service = QuoteService(
         FakeQuoteProvider(ohne_typ),
         FakeEtfProvider(EtfDetails(ter=0.19, provider="Vanguard")),
-        FakeResolver(ResolvedInstrument(symbol="VGWL.DE", isin="IE00B3RBWM25")),
+        FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25")),
     )
 
     assert service.get_quote_by_isin("IE00B3RBWM25").metadata_complete is False
@@ -492,7 +523,7 @@ def test_europaeischer_etf_ohne_isin_bleibt_geschuetzt() -> None:
     service = QuoteService(
         FakeQuoteProvider(etf_ohne_isin),
         FakeEtfProvider(None, responsible=True),  # zuständig, liefert nichts
-        FakeResolver(ResolvedInstrument(symbol="VGWL.DE")),
+        FakeResolver(_resolved("VGWL.DE")),
     )
 
     assert service.get_quote_by_symbol("VGWL.DE").metadata_complete is False
@@ -511,7 +542,7 @@ def test_die_zustaendigkeit_bekommt_boerse_und_waehrung_mit() -> None:
     service = QuoteService(
         FakeQuoteProvider(etf),
         enricher,
-        FakeResolver(ResolvedInstrument(symbol="XIC.TO", exchange="Toronto")),
+        FakeResolver(_resolved("XIC.TO", exchange="Toronto")),
     )
 
     service.get_quote_by_symbol("XIC.TO")
@@ -545,8 +576,10 @@ def test_nicht_zustaendige_quelle_liefert_vollstaendige_metadaten() -> None:
         FakeResolver(None),
     )
 
+    # `VTI` liegt an der Arca und trägt kein Suffix — die Identität kommt hier
+    # aus der gespeicherten Zeile, wie im Betrieb auch.
     result = service.get_quote_for_known(
-        "VTI", isin="US9229087690", instrument_type="etf"
+        "VTI", isin="US9229087690", instrument_type="etf", ticker="VTI", mic="ARCX"
     )
 
     assert result.metadata_complete is True
@@ -592,7 +625,12 @@ def test_etf_ohne_isin_aber_mit_waehrung_ist_beantwortbar() -> None:
         FakeResolver(None),
     )
 
-    result = service.get_quote_for_known("ARKK", instrument_type="etf")
+    # Identität ausgeschrieben, wie sie im Betrieb aus der gespeicherten Zeile
+    # kommt: `ARKK` trägt kein Suffix, also lässt sich aus dem Symbol allein
+    # kein Handelsplatz rechnen — bei US-Papieren nie.
+    result = service.get_quote_for_known(
+        "ARKK", instrument_type="etf", ticker="ARKK", mic="ARCX"
+    )
 
     assert result.metadata_complete is True
 
@@ -618,7 +656,9 @@ def test_ohne_waehrung_kommt_die_zustaendigkeitsfrage_gar_nicht_auf() -> None:
 
     # Ohne Währung greift schon die Core-Prüfung — der Vertrag verlangt sie.
     with pytest.raises(QuoteUnavailableError):
-        service.get_quote_for_known("ARKK", instrument_type="etf")
+        service.get_quote_for_known(
+            "ARKK", instrument_type="etf", ticker="ARKK", mic="ARCX"
+        )
 
 
 def test_die_identitaet_der_aufloesung_reist_bis_zur_speicherung_mit() -> None:

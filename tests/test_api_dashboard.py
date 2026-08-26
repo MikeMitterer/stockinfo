@@ -14,6 +14,8 @@ from app.services.quote_service import InstrumentNotFoundError
 class FakeService:
     def list_instruments(self) -> list[dict]:
         return [{"symbol": "VGWL.DE", "isin": "IE00B3RBWM25", "history_count": 2,
+                 "ticker": "VGWL", "mic": "XETR",
+                 "listing_id": "018f3a2c-7b41-7c9e-a3d2-5f1b9c4e2a10",
                  "latest_price": 161.0, "source": "yfinance+justetf"}]
 
     def count_instruments(self) -> int:

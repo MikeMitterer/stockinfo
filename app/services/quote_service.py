@@ -206,6 +206,8 @@ class QuoteService:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
+        ticker: str | None = None,
+        mic: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         """Beschafft den Kurs für ein **bereits aufgelöstes** Instrument.
@@ -233,6 +235,9 @@ class QuoteService:
             isin: Gespeicherte ISIN, für die ETF-Anreicherung.
             exchange: Gespeicherte Börse — sie bleibt, was sie war.
             instrument_type: Gespeicherte Gattung ('etf', 'stock', …).
+            ticker: Gespeicherter kanonischer Ticker. Er greift nur, wenn das
+                Symbol selbst keinen hergibt — bei Börsen **ohne** Alias.
+            mic: Gespeicherter MIC, mit derselben Regel.
             enrich_etf: Ob justETF gefragt wird — siehe `get_quote_by_isin`.
 
         Returns:
@@ -241,22 +246,33 @@ class QuoteService:
         Raises:
             QuoteUnavailableError: Kein Kurs beschaffbar.
         """
-        # Auch hier aus dem Symbol, aus demselben Grund wie oben. Dieser Weg
-        # trägt die Zuordnung bei bereits bekannten Papieren **nach**: Eine
-        # Zeile, die einmal offen war, bliebe es sonst bei jedem weiteren
-        # Kurs — der Scheduler löst nichts auf, er holt nur Kurse.
+        # **Das Symbol entscheidet, wo es das kann — sonst die gespeicherte
+        # Zeile.** Die Reihenfolge trägt zwei Zusagen, und beide sind geprüft:
         #
-        # Überschrieben wird dabei nichts: Das Repository nimmt eine
-        # vollständige Zuordnung nur an, wenn sie vollständig **ist**, und eine
-        # leere ersetzt nie eine gespeicherte.
-        ticker, mic = split_symbol(symbol)
+        # * **Nachtragen und korrigieren.** Ein zerlegbares Symbol *ist* die
+        #   Auskunft über den Handelsplatz: In `EUNL.DE` benennt der Alias
+        #   genau eine Börse. Steht in der Zeile etwas anderes — etwa `XMIL`,
+        #   nachdem jemand die Vorzugsbörse umgestellt hat —, zieht der nächste
+        #   Kurs sie gerade. Gewänne stattdessen der gespeicherte Wert, bliebe
+        #   die überholte Zuordnung für immer stehen.
+        # * **Aliaslose Börsen.** Ein US-Papier heißt gespeichert schlicht
+        #   `AAPL`, und `split_symbol` gibt darauf `(None, None)` — richtig,
+        #   denn dem nackten Symbol sieht niemand an, ob `XNAS` oder `XNYS`
+        #   gemeint ist. Dort weiß es nur die Zeile. Ohne diesen Rückfall wäre
+        #   die Auffrischung jedes US-Papiers ein `502`, seit `ticker` und
+        #   `mic` zugesagte Pflichtfelder sind.
+        #
+        # Überschrieben wird nichts: Das Repository nimmt eine vollständige
+        # Zuordnung nur an, wenn sie vollständig **ist**, und eine leere
+        # ersetzt nie eine gespeicherte.
+        derived_ticker, derived_mic = split_symbol(symbol)
         resolved = ResolvedInstrument(
             symbol=symbol,
             isin=isin,
             exchange=exchange,
             type=instrument_type,
-            ticker=ticker,
-            mic=mic,
+            ticker=derived_ticker or ticker,
+            mic=derived_mic or mic,
         )
         return self._build(resolved, enrich_etf)
 

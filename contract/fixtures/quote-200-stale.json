@@ -17,6 +17,8 @@
     "body": {
       "isin": "IE00B4L5Y983",
       "symbol": "EUNL.DE",
+      "ticker": "EUNL",
+      "mic": "XETR",
       "exchange": "Xetra",
       "name": "iShares Core MSCI World UCITS ETF",
       "type": "etf",

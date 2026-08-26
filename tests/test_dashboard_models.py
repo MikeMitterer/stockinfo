@@ -2,7 +2,15 @@ from app.models import EnvInfo, InstrumentSummary, RefreshResult
 
 
 def test_instrument_summary_defaults() -> None:
-    summary = InstrumentSummary(symbol="VGWL.DE", history_count=3)
+    # Die Identität ist seit T-21 Übergabe 3 Pflicht — sie hat keinen
+    # Vorgabewert, weil es die halbe Identität nicht mehr geben darf.
+    summary = InstrumentSummary(
+        symbol="VGWL.DE",
+        ticker="VGWL",
+        mic="XETR",
+        listing_id="018f3a2c-7b41-7c9e-a3d2-5f1b9c4e2a10",
+        history_count=3,
+    )
     assert summary.symbol == "VGWL.DE"
     assert summary.isin is None
     assert summary.latest_price is None

@@ -47,6 +47,8 @@ class FakeQuoteService:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
+        ticker: str | None = None,
+        mic: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         return self.get_quote_by_isin(isin or symbol)
@@ -206,6 +208,8 @@ class _StockQuoteService:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
+        ticker: str | None = None,
+        mic: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         return self.get_quote_by_isin(isin or symbol, enrich_etf)
@@ -297,6 +301,8 @@ class _MerkendeQuoteService:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
+        ticker: str | None = None,
+        mic: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         self.enrich_calls.append(enrich_etf)
@@ -423,6 +429,8 @@ class _WanderndeAufloesung:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
+        ticker: str | None = None,
+        mic: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         self.known_calls += 1
@@ -516,6 +524,8 @@ class _OhneTyp:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
+        ticker: str | None = None,
+        mic: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         self.gesehener_typ = instrument_type
@@ -638,6 +648,8 @@ class _MerktSichDenAufruf:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
+        ticker: str | None = None,
+        mic: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         self.known_calls += 1
