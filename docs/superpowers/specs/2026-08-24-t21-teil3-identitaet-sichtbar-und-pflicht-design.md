@@ -804,10 +804,21 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 >
 > **`/ready` bleibt inhaltlich, was es war**, bekommt aber weitere
 > `503`-Gründe: bisher nur „DB nicht erreichbar", künftig auch „Migration
-> ausstehend" sowie — seit der Umsetzung — „Betrieb läuft an"
-> (`status: "starting"`) und „Betriebsstart gescheitert" (`degraded`). Alle
-> sind über `status` unterscheidbar, und `status` wird ein **`Literal`**, kein
-> freier `str` — sonst ist der neue Zustand nicht prüfbar.
+> ausstehend" sowie — seit der Umsetzung — „Betrieb läuft an" und
+> „Betriebsstart gescheitert":
+>
+> | Grund | `status` | `database` |
+> |---|---|---|
+> | DB nicht erreichbar | `degraded` | `error` |
+> | Migration ausstehend oder läuft | `migration_pending` | `ok` |
+> | Betrieb läuft an | `starting` | `ok` |
+> | Betriebsstart gescheitert | `degraded` | `ok` |
+>
+> **Unterschieden wird über das Paar `(status, database)`, nicht über `status`
+> allein.** Die beiden `degraded`-Zeilen tragen bewusst dieselbe Kennung —
+> beide sagen „hier ist etwas kaputt" —, und erst `database` trennt „Datenbank
+> weg" von „Datenbank da, Betrieb nicht angelaufen". `status` wird trotzdem ein
+> **`Literal`**, kein freier `str`: sonst ist ein neuer Zustand nicht prüfbar.
 >
 > #### Was dadurch **doch** angefasst werden muss
 >

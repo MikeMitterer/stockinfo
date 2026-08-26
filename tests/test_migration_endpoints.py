@@ -277,7 +277,11 @@ def test_die_gesperrten_wege_lassen_die_datenbank_in_ruhe(pending: TestClient) -
 def test_ready_und_operational_beantworten_verschiedene_fragen(
     pending: TestClient,
 ) -> None:
-    """`#2b6b` und `#2b6e`: drei Zustände, drei Aussagen.
+    """`#2b6b` und `#2b6e`: drei **Fragen**, drei Aussagen.
+
+    „Zustände" hieß es hier bis Runde 34, und das Wort trägt seit dem
+    `GateState`-Enum eine andere Bedeutung. Gemeint sind die drei Endpunkte,
+    nicht die fünf Lagen des Riegels.
 
     `/ready` sagt `503` — der Fachbetrieb ist nicht freigegeben, und das ist
     keine Schätzung, sondern beobachtbar: Der Guard weist die Fachwege ab.

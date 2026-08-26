@@ -197,10 +197,19 @@ async def ready(response: Response) -> ReadinessResponse:
     ersten echten Request als gesund. Diese Route sieht deshalb wirklich nach:
     ein winziger Zugriff auf die Datenbank, mehr nicht.
 
-    **Zwei Gründe für ein `503`**, seit T-21 Teil 3: die unerreichbare
-    Datenbank und der ausstehende Umzug. Beide sind über `status`
-    unterscheidbar, und `status` ist ein `Literal` — sonst wäre der neue Wert
-    nicht im Vertrag sichtbar.
+    **Vier Gründe für ein `503`**, und `status` allein trennt sie nicht:
+
+    | Grund | `status` | `database` |
+    |---|---|---|
+    | Datenbank nicht erreichbar | `degraded` | `error` |
+    | Umzug ausstehend oder läuft | `migration_pending` | `ok` |
+    | Betrieb läuft an | `starting` | `ok` |
+    | Betriebsstart gescheitert | `degraded` | `ok` |
+
+    Die beiden `degraded`-Zeilen unterscheiden sich **erst über `database`**.
+    Das ist Absicht: Beide sagen „hier ist etwas kaputt", und wer den
+    Unterschied braucht, liest das zweite Feld. `status` ist ein `Literal` —
+    sonst wäre ein neuer Wert nicht im Vertrag sichtbar.
 
     Der Pending-Zustand mit `200` zu beantworten wäre eine Lüge an jeden
     Consumer, der Readiness bestimmungsgemäß am Statuscode bewertet: Der Guard
@@ -265,7 +274,10 @@ async def operational(response: Response) -> OperationalResponse:
     Verbraucher, eine Quelle.
 
     Args:
-        response: Wird auf 503 gesetzt, wenn die Datenbank nicht erreichbar ist.
+        response: Wird auf 503 gesetzt, wenn etwas kaputt ist — die Datenbank
+            nicht erreichbar oder der Betriebsstart gescheitert. Ein
+            ausstehender Umzug und ein anlaufender Betrieb sind **kein**
+            Fehler und bleiben bei `200`.
 
     Returns:
         Der Betriebsmodus samt Version.
