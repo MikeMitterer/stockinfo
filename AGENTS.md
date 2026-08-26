@@ -23,20 +23,25 @@ Scope-Frage, die es zu klären gilt — die Regel hat sie schon beantwortet.
 vorher erraten hat. Für Python zählt `ast` alle `ast.Name`, `ast.arg`, Funktions-
 und Klassennamen auf; für TypeScript leistet das ein Lauf über die
 TS-Compiler-API, für Bash die Liste aller Zuweisungen und Funktionsköpfe.
-(`vue-tsc` prüft Typen, kein Inventar — es findet einen deutschen Namen nie.) Genau daran ist die zu kurze Liste in
-T-21 Runde 37 gescheitert.
+(`vue-tsc` prüft Typen, kein Inventar — es findet einen deutschen Namen nie.)
+Genau daran ist die zu kurze Liste in T-21 Runde 37 gescheitert.
 
 Vollständige Konventionen samt Namensschema je Sprache: Skill `code-standards`.
 
 ## Vor Arbeitsbeginn
 
-- `_tickets/STATUS.md` — die Mailbox zwischen Claude und Codex. Steht dort
-  `owner: codex`, ist die Commit-Linie eingefroren.
-- `_tickets/CLAUDE-REVIEW-PATTERNS.md` — wiederkehrende eigene Fehlermuster.
-  Vor einer Übergabe lesen, nicht erst nach dem Befund.
+- `_tickets/STATUS.md` — die Mailbox zwischen **Claude und Codex**. Sie sagt
+  im maschinenlesbaren Zustand, wer am Zug ist. Steht dort `owner: claude`,
+  liegt der Ball bei Claude und die Commit-Linie ist für Codex eingefroren —
+  außer für Review- und Statusdateien.
+- `_tickets/CLAUDE-REVIEW-PATTERNS.md` — Claudes wiederkehrende Fehlermuster,
+  gepflegt von beiden Seiten. Codex liest sie **vor** jedem Review, statt
+  dieselbe Klasse Fehler ein zweites Mal einzeln zu finden.
+- `_tickets/CODEX-REVIEW-AUTOMATION.md` — Phasen, Validierungen und der
+  Ablauf einer Übergabe.
 
-> **`AGENTS.md` daneben ist die Codex-Entsprechung.** Der Regelteil beider
-> Dateien ist zeichengleich zu halten; nur „Vor Arbeitsbeginn" ist
-> rollenabhängig. Wer sie angleicht, liest den Diff — eine blinde Ersetzung
-> von „Claude" durch „Codex" hat dort schon einmal den `owner`-Riegel
-> invertiert.
+> **Diese Datei ist die Codex-Entsprechung zu `CLAUDE.md`.** Die Regeln oben
+> gelten für beide; nur dieser Abschnitt ist rollenabhängig. Wer sie synchron
+> hält, ersetzt nicht bloß „Claude" durch „Codex" — beim ersten Mal wurde
+> daraus „die Mailbox zwischen Codex und Codex" und ein `owner`-Riegel, der
+> das Gegenteil dessen sagte, was er sagen sollte.
