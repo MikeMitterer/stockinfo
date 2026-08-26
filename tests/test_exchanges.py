@@ -143,7 +143,7 @@ def test_die_schema_schicht_zieht_kein_yfinance_mit() -> None:
     import subprocess
     import sys
 
-    ergebnis = subprocess.run(
+    completed = subprocess.run(
         [
             sys.executable,
             "-c",
@@ -155,8 +155,8 @@ def test_die_schema_schicht_zieht_kein_yfinance_mit() -> None:
         check=True,
     )
 
-    assert ergebnis.stdout.strip() == "False", (
-        "app.db zieht den Netzstack mit: " + ergebnis.stdout
+    assert completed.stdout.strip() == "False", (
+        "app.db zieht den Netzstack mit: " + completed.stdout
     )
 
 

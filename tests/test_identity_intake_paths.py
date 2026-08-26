@@ -114,7 +114,7 @@ def test_auch_dieser_weg_vergibt_eine_listing_id(client_and_repo) -> None:
 
 
 @pytest.mark.parametrize(
-    ("symbol", "warum"),
+    ("symbol", "reason"),
     [
         ("AAPL", "nennt keine Börse"),
         ("BRK-B.DE", "trägt Yahoos Schreibweise im Ticker"),
@@ -122,7 +122,7 @@ def test_auch_dieser_weg_vergibt_eine_listing_id(client_and_repo) -> None:
     ids=["suffixlos", "fremde_schreibweise"],
 )
 def test_ein_unzuordenbares_symbol_wird_abgelehnt(
-    client_and_repo, symbol: str, warum: str
+    client_and_repo, symbol: str, reason: str
 ) -> None:
     """**Die Umkehr aus T-21 Teil 3** — hier stand das Gegenteil.
 
@@ -145,7 +145,7 @@ def test_ein_unzuordenbares_symbol_wird_abgelehnt(
 
     response = client.get("/quote", params={"symbol": symbol})
 
-    assert response.status_code == 400, warum
+    assert response.status_code == 400, reason
     assert _row(repository, symbol) == {}, "eine halbe Zeile ist entstanden"
 
 

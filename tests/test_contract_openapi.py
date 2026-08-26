@@ -26,7 +26,7 @@ from app.main import app
 
 SNAPSHOT_FILE = Path(__file__).resolve().parent.parent / "contract" / "openapi-core-snapshot.json"
 
-_HINWEIS_ERNEUERN = (
+_REFRESH_HINT = (
     "Ist die Änderung gewollt? Dann `core_version` im Artefakt erhöhen "
     "(Major bei entferntem oder unverträglich geändertem Pflichtfeld, Minor "
     "bei additiver Erweiterung) und danach\n"
@@ -34,21 +34,21 @@ _HINWEIS_ERNEUERN = (
 )
 
 
-def _schema_namen(knoten: object, gefunden: set[str]) -> set[str]:
+def _schema_names(node: object, found: set[str]) -> set[str]:
     """Sammelt alle `#/components/schemas/…`-Verweise unterhalb eines Knotens."""
-    if isinstance(knoten, dict):
-        verweis = knoten.get("$ref")
-        if isinstance(verweis, str) and verweis.startswith("#/components/schemas/"):
-            gefunden.add(verweis.rsplit("/", 1)[-1])
-        for wert in knoten.values():
-            _schema_namen(wert, gefunden)
-    elif isinstance(knoten, list):
-        for eintrag in knoten:
-            _schema_namen(eintrag, gefunden)
-    return gefunden
+    if isinstance(node, dict):
+        ref = node.get("$ref")
+        if isinstance(ref, str) and ref.startswith("#/components/schemas/"):
+            found.add(ref.rsplit("/", 1)[-1])
+        for value in node.values():
+            _schema_names(value, found)
+    elif isinstance(node, list):
+        for entry in node:
+            _schema_names(entry, found)
+    return found
 
 
-def _zugesagte_pfade() -> set[str]:
+def _promised_paths() -> set[str]:
     """Alle Pfade, für die der Vertrag eine Form zusagt.
 
     Die Core-Endpunkte **und** die, die den Vertrag selbst ausliefern: Ein
@@ -56,52 +56,54 @@ def _zugesagte_pfade() -> set[str]:
     Diagnose- und Schreibendpunkte — ein Schnappschuss über alles wäre
     ständig grundlos rot.
     """
-    vertrag = core_contract()
-    pfade = {
+    contract = core_contract()
+    paths = {
         spec["path"]
-        for spezifikationen in vertrag["endpoints"].values()
-        for spec in spezifikationen
+        for specs in contract["endpoints"].values()
+        for spec in specs
     }
-    return pfade | {spec["path"] for spec in vertrag["contract_endpoints"]}
+    return paths | {spec["path"] for spec in contract["contract_endpoints"]}
 
 
-def _core_ausschnitt() -> dict:
+def _core_excerpt() -> dict:
     """Der Teil der OpenAPI, den der Vertrag zusagt — Pfade und ihre Modelle.
 
     Bewusst ein Ausschnitt: Ein Schnappschuss über das ganze Dokument schlüge
     bei jeder Änderung an einem Diagnoseendpunkt an, und niemand liest einen
     Test, der ständig grundlos rot ist.
     """
-    dokument = app.openapi()
-    vertragspfade = _zugesagte_pfade()
+    document = app.openapi()
+    promised = _promised_paths()
 
-    pfade: dict[str, dict] = {}
+    paths: dict[str, dict] = {}
     schemas: set[str] = set()
-    for pfad, operationen in dokument["paths"].items():
-        if pfad not in vertragspfade:
+    for path, operations in document["paths"].items():
+        if path not in promised:
             continue
-        pfade[pfad] = {}
-        for methode, operation in operationen.items():
-            pfade[pfad][methode] = {
+        paths[path] = {}
+        for method, operation in operations.items():
+            paths[path][method] = {
                 "parameters": sorted(
                     parameter["name"] for parameter in operation.get("parameters", [])
                 ),
                 "responses": {
-                    code: antwort.get("content", {})
-                    for code, antwort in operation.get("responses", {}).items()
+                    code: response.get("content", {})
+                    for code, response in operation.get("responses", {}).items()
                 },
             }
-            _schema_namen(operation, schemas)
+            _schema_names(operation, schemas)
 
-    alle = dokument["components"]["schemas"]
+    available = document["components"]["schemas"]
     return {
         "core_version": core_contract()["core_version"],
-        "paths": pfade,
-        "schemas": {name: alle[name] for name in sorted(_huelle(schemas, alle))},
+        "paths": paths,
+        "schemas": {
+            name: available[name] for name in sorted(_closure(schemas, available))
+        },
     }
 
 
-def _huelle(namen: set[str], alle: dict) -> set[str]:
+def _closure(names: set[str], available: dict) -> set[str]:
     """Erweitert eine Schemamenge um alles, worauf sie verweist.
 
     Ein Modell schützt nichts, wenn seine Bestandteile fehlen: `FieldsResponse`
@@ -110,21 +112,21 @@ def _huelle(namen: set[str], alle: dict) -> set[str]:
     Schnappschuss anschlägt.
 
     Args:
-        namen: Die direkt in den Operationen genannten Schemas.
-        alle: Alle Schemas des OpenAPI-Dokuments.
+        names: Die direkt in den Operationen genannten Schemas.
+        available: Alle Schemas des OpenAPI-Dokuments.
 
     Returns:
         Die transitive Hülle — jedes erreichbare Schema genau einmal.
     """
-    gefunden = set(namen)
-    offen = list(gefunden)
-    while offen:
-        name = offen.pop()
-        for verwiesen in _schema_namen(alle.get(name, {}), set()):
-            if verwiesen not in gefunden:
-                gefunden.add(verwiesen)
-                offen.append(verwiesen)
-    return gefunden
+    found = set(names)
+    pending = list(found)
+    while pending:
+        name = pending.pop()
+        for referenced in _schema_names(available.get(name, {}), set()):
+            if referenced not in found:
+                found.add(referenced)
+                pending.append(referenced)
+    return found
 
 
 def test_der_schnappschuss_folgt_verweisen_bis_zum_ende() -> None:
@@ -136,7 +138,7 @@ def test_der_schnappschuss_folgt_verweisen_bis_zum_ende() -> None:
     Wächter anschlägt — die veröffentlichte Form von `/fields` war damit nur
     eine Ebene tief geschützt (Codex, T-24 Runde 3).
     """
-    schemas = _core_ausschnitt()["schemas"]
+    schemas = _core_excerpt()["schemas"]
 
     assert "FieldsResponse" in schemas
     assert "FieldSpec" in schemas, "verwiesenes Modell fehlt im Schnappschuss"
@@ -145,19 +147,19 @@ def test_der_schnappschuss_folgt_verweisen_bis_zum_ende() -> None:
 
 def test_alle_vertragspfade_existieren_in_der_app() -> None:
     """Ein Vertrag über einen Pfad, den es nicht gibt, ist keiner."""
-    vorhanden = set(app.openapi()["paths"])
-    zugesagt = _zugesagte_pfade()
+    published = set(app.openapi()["paths"])
+    promised = _promised_paths()
 
-    assert zugesagt <= vorhanden, f"fehlende Pfade: {sorted(zugesagt - vorhanden)}"
+    assert promised <= published, f"fehlende Pfade: {sorted(promised - published)}"
 
 
 def test_der_core_entspricht_dem_schnappschuss() -> None:
     """Der eigentliche Wächter: unbemerkte Änderungen am Core gibt es nicht."""
-    aktuell = _core_ausschnitt()
+    current =_core_excerpt()
 
     if os.environ.get("UPDATE_CORE_SNAPSHOT"):
         SNAPSHOT_FILE.write_text(
-            json.dumps(aktuell, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
+            json.dumps(current, indent=2, ensure_ascii=False, sort_keys=True) + "\n",
             encoding="utf-8",
         )
         pytest.skip(f"Schnappschuss erneuert: {SNAPSHOT_FILE.name}")
@@ -166,17 +168,17 @@ def test_der_core_entspricht_dem_schnappschuss() -> None:
         f"{SNAPSHOT_FILE} fehlt. Einmalig anlegen mit\n"
         "    UPDATE_CORE_SNAPSHOT=1 .venv/bin/pytest tests/test_contract_openapi.py -q"
     )
-    gespeichert = json.loads(SNAPSHOT_FILE.read_text(encoding="utf-8"))
+    stored = json.loads(SNAPSHOT_FILE.read_text(encoding="utf-8"))
 
-    assert aktuell["core_version"] == gespeichert["core_version"], (
+    assert current["core_version"] == stored["core_version"], (
         "Die Vertragsversion hat sich geändert, ohne dass der Schnappschuss "
-        f"erneuert wurde.\n{_HINWEIS_ERNEUERN}"
+        f"erneuert wurde.\n{_REFRESH_HINT}"
     )
-    assert aktuell["paths"] == gespeichert["paths"], (
-        f"Die Core-Pfade haben sich geändert.\n{_HINWEIS_ERNEUERN}"
+    assert current["paths"] == stored["paths"], (
+        f"Die Core-Pfade haben sich geändert.\n{_REFRESH_HINT}"
     )
-    assert aktuell["schemas"] == gespeichert["schemas"], (
-        f"Ein Core-Modell hat sich geändert.\n{_HINWEIS_ERNEUERN}"
+    assert current["schemas"] == stored["schemas"], (
+        f"Ein Core-Modell hat sich geändert.\n{_REFRESH_HINT}"
     )
 
 

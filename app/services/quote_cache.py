@@ -89,19 +89,19 @@ def apply_overrides(row: dict) -> dict:
     manual_fields: list[str] = []
     shadowed_fields: list[str] = []
 
-    for feld in OVERRIDE_FIELDS:
-        manuell = result.get(f"manual_{feld}")
-        if feld == "accumulating":
-            manuell = _as_bool(manuell)
-            result["manual_accumulating"] = manuell
-        if manuell is None:
+    for field in OVERRIDE_FIELDS:
+        manual = result.get(f"manual_{field}")
+        if field == "accumulating":
+            manual = _as_bool(manual)
+            result["manual_accumulating"] = manual
+        if manual is None:
             continue
 
-        if result.get(feld) is None:
-            result[feld] = manuell
-            manual_fields.append(feld)
+        if result.get(field) is None:
+            result[field] = manual
+            manual_fields.append(field)
         else:
-            shadowed_fields.append(feld)
+            shadowed_fields.append(field)
 
     result["manual_fields"] = manual_fields
     result["shadowed_fields"] = shadowed_fields
@@ -317,23 +317,23 @@ class CachedQuoteService:
             QuoteUnavailableError: Auch das Instrument kennt keine Währung.
         """
         currency = instrument.get("currency")
-        punkte = []
+        points = []
         for row in rows:
-            wirksam = row["currency"] or currency
-            if wirksam is None:
+            effective = row["currency"] or currency
+            if effective is None:
                 raise QuoteUnavailableError(
                     f"{instrument['symbol']}: Kurspunkt {row['quote_time']} ohne Währung"
                 )
-            punkte.append(
+            points.append(
                 QuotePoint(
                     price=row["price"],
                     quote_time=row["quote_time"],
                     volume=row["volume"],
-                    currency=wirksam,
+                    currency=effective,
                     fetched_at=row["fetched_at"],
                 )
             )
-        return punkte
+        return points
 
     def refresh_all(self) -> int:
         """Aktualisiert alle bekannten Instrumente live und speichert sie.
@@ -474,14 +474,14 @@ class CachedQuoteService:
         if overrides is None:
             return response
 
-        zeile = apply_overrides(
+        row = apply_overrides(
             {
-                **{feld: getattr(response, feld) for feld in OVERRIDE_FIELDS},
-                **{f"manual_{feld}": overrides[feld] for feld in OVERRIDE_FIELDS},
+                **{field: getattr(response, field) for field in OVERRIDE_FIELDS},
+                **{f"manual_{field}": overrides[field] for field in OVERRIDE_FIELDS},
             }
         )
-        for feld in OVERRIDE_FIELDS:
-            setattr(response, feld, zeile[feld])
+        for field in OVERRIDE_FIELDS:
+            setattr(response, field, row[field])
         return response
 
     def _save_fresh(self, fresh: QuoteResponse) -> StoredQuote:

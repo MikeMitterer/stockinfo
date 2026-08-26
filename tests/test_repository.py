@@ -83,8 +83,8 @@ def test_dedup_gleicher_quote_time(repo: QuoteRepository) -> None:
 
 def test_history_limit_und_grenzen(repo: QuoteRepository) -> None:
     for hour in range(10, 15):
-        ts = f"2026-07-12T{hour:02d}:00:00+00:00"
-        repo.save_quote(_quote(100.0 + hour, ts, ts))
+        timestamp = f"2026-07-12T{hour:02d}:00:00+00:00"
+        repo.save_quote(_quote(100.0 + hour, timestamp, timestamp))
 
     instrument = repo.get_instrument_by_isin("IE00B3RBWM25")
     limited = repo.get_history(instrument["id"], limit=2)
@@ -109,9 +109,9 @@ def test_migration_ergaenzt_die_neuen_spalten(tmp_path) -> None:
 
     from app.db import init_db
 
-    pfad = str(tmp_path / "alt.db")
-    with sqlite3.connect(pfad) as verbindung:
-        verbindung.executescript(
+    db_file = str(tmp_path / "alt.db")
+    with sqlite3.connect(db_file) as connection:
+        connection.executescript(
             """
             CREATE TABLE instruments (
                 id INTEGER PRIMARY KEY, isin TEXT, symbol TEXT NOT NULL,
@@ -127,19 +127,23 @@ def test_migration_ergaenzt_die_neuen_spalten(tmp_path) -> None:
             """
         )
 
-    init_db(pfad)
-    init_db(pfad)  # zweimal: die Migration muss idempotent sein
+    init_db(db_file)
+    init_db(db_file)  # zweimal: die Migration muss idempotent sein
 
-    with sqlite3.connect(pfad) as verbindung:
-        verbindung.row_factory = sqlite3.Row
-        instrumente = {r["name"] for r in verbindung.execute("PRAGMA table_info(instruments)")}
+    with sqlite3.connect(db_file) as connection:
+        connection.row_factory = sqlite3.Row
+        instrument_columns = {
+            row["name"]
+            for row in connection.execute("PRAGMA table_info(instruments)")
+        }
         overrides = {
-            r["name"] for r in verbindung.execute("PRAGMA table_info(instrument_overrides)")
+            row["name"]
+            for row in connection.execute("PRAGMA table_info(instrument_overrides)")
         }
 
     # `source` gehört dazu: Der Detailbereich nennt die Quelle, und ohne Nachzug
     # stünde dort auf jeder bestehenden Datenbank dauerhaft nichts.
-    assert {"fund_domicile", "fund_currency", "source"} <= instrumente
+    assert {"fund_domicile", "fund_currency", "source"} <= instrument_columns
     assert {"provider", "replication", "fund_size", "fund_domicile", "fund_currency"} <= overrides
 
 
@@ -158,9 +162,9 @@ def test_duplikate_verlieren_weder_overrides_noch_daily_wasserzeichen(tmp_path) 
 
     from app.db import init_db, run_migration
 
-    pfad = str(tmp_path / "duplikate.db")
-    with sqlite3.connect(pfad) as verbindung:
-        verbindung.executescript(
+    db_file = str(tmp_path / "duplikate.db")
+    with sqlite3.connect(db_file) as connection:
+        connection.executescript(
             """
             CREATE TABLE instruments (
                 id INTEGER PRIMARY KEY, isin TEXT, symbol TEXT NOT NULL,
@@ -207,20 +211,22 @@ def test_duplikate_verlieren_weder_overrides_noch_daily_wasserzeichen(tmp_path) 
 
     # Die Bereinigung läuft seit T-21 Teil 3 im **bestätigten** Umzug, nicht
     # mehr im Start: `init_db` erkennt nur noch, `run_migration` führt aus.
-    init_db(pfad)
-    run_migration(pfad, rejected_at="2026-08-25T12:00:00+00:00")
+    init_db(db_file)
+    run_migration(db_file, rejected_at="2026-08-25T12:00:00+00:00")
 
-    with sqlite3.connect(pfad) as verbindung:
-        verbindung.row_factory = sqlite3.Row
-        instrumente = verbindung.execute("SELECT id FROM instruments").fetchall()
-        override = verbindung.execute(
+    with sqlite3.connect(db_file) as connection:
+        connection.row_factory = sqlite3.Row
+        instrument_rows = connection.execute("SELECT id FROM instruments").fetchall()
+        override = connection.execute(
             "SELECT instrument_id, ter FROM instrument_overrides"
         ).fetchall()
-        meta = verbindung.execute(
+        meta = connection.execute(
             "SELECT instrument_id, fetched_from, fetched_to FROM daily_meta"
         ).fetchall()
 
-    assert [r["id"] for r in instrumente] == [1], "das Duplikat muss verschwinden"
+    assert [row["id"] for row in instrument_rows] == [1], (
+        "das Duplikat muss verschwinden"
+    )
 
     assert len(override) == 1, "der von Hand gepflegte Wert darf nicht verlorengehen"
     assert override[0]["instrument_id"] == 1
@@ -231,17 +237,17 @@ def test_duplikate_verlieren_weder_overrides_noch_daily_wasserzeichen(tmp_path) 
     assert (meta[0]["fetched_from"], meta[0]["fetched_to"]) == ("2025-01-01", "2026-01-02")
 
 
-def _alte_db_mit_duplikat(pfad: str, zusatz_sql: str) -> None:
+def _legacy_db_with_duplicate(db_file: str, extra_sql: str) -> None:
     """Legt eine DB im Vor-Index-Stand an: zwei Zeilen mit demselben Symbol.
 
     Args:
-        pfad: Dateipfad der anzulegenden SQLite-Datei.
-        zusatz_sql: Weitere INSERTs für den jeweiligen Testfall.
+        db_file: Dateipfad der anzulegenden SQLite-Datei.
+        extra_sql: Weitere INSERTs für den jeweiligen Testfall.
     """
     import sqlite3
 
-    with sqlite3.connect(pfad) as verbindung:
-        verbindung.executescript(
+    with sqlite3.connect(db_file) as connection:
+        connection.executescript(
             """
             CREATE TABLE instruments (
                 id INTEGER PRIMARY KEY, isin TEXT, symbol TEXT NOT NULL,
@@ -264,7 +270,7 @@ def _alte_db_mit_duplikat(pfad: str, zusatz_sql: str) -> None:
             INSERT INTO instruments (id, isin, symbol, first_seen)
                  VALUES (2, NULL, 'EUNL.DE', '2026-01-02');
             """
-            + zusatz_sql
+            + extra_sql
         )
 
 
@@ -279,9 +285,9 @@ def test_overrides_werden_feldweise_zusammengefuehrt(tmp_path) -> None:
 
     from app.db import init_db, run_migration
 
-    pfad = str(tmp_path / "konflikt.db")
-    _alte_db_mit_duplikat(
-        pfad,
+    db_file = str(tmp_path / "konflikt.db")
+    _legacy_db_with_duplicate(
+        db_file,
         """
         -- Keeper: TER gepflegt, Volatilität offen
         INSERT INTO instrument_overrides (instrument_id, ter, volatility, updated_at)
@@ -294,17 +300,17 @@ def test_overrides_werden_feldweise_zusammengefuehrt(tmp_path) -> None:
 
     # Die Bereinigung läuft seit T-21 Teil 3 im **bestätigten** Umzug, nicht
     # mehr im Start: `init_db` erkennt nur noch, `run_migration` führt aus.
-    init_db(pfad)
-    run_migration(pfad, rejected_at="2026-08-25T12:00:00+00:00")
+    init_db(db_file)
+    run_migration(db_file, rejected_at="2026-08-25T12:00:00+00:00")
 
-    with sqlite3.connect(pfad) as verbindung:
-        verbindung.row_factory = sqlite3.Row
-        zeilen = verbindung.execute("SELECT * FROM instrument_overrides").fetchall()
+    with sqlite3.connect(db_file) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute("SELECT * FROM instrument_overrides").fetchall()
 
-    assert len(zeilen) == 1
-    assert zeilen[0]["ter"] == 0.20, "der Keeper behält bei Konflikt das letzte Wort"
-    assert zeilen[0]["volatility"] == 12.5, "seine Lücke füllt das Duplikat"
-    assert zeilen[0]["updated_at"] == "2026-02-01", "der jüngere Stand zählt"
+    assert len(rows) == 1
+    assert rows[0]["ter"] == 0.20, "der Keeper behält bei Konflikt das letzte Wort"
+    assert rows[0]["volatility"] == 12.5, "seine Lücke füllt das Duplikat"
+    assert rows[0]["updated_at"] == "2026-02-01", "der jüngere Stand zählt"
 
 
 def test_daily_spannen_mit_luecke_werden_nicht_zusammengezogen(tmp_path) -> None:
@@ -318,9 +324,9 @@ def test_daily_spannen_mit_luecke_werden_nicht_zusammengezogen(tmp_path) -> None
 
     from app.db import init_db, run_migration
 
-    pfad = str(tmp_path / "luecke.db")
-    _alte_db_mit_duplikat(
-        pfad,
+    db_file = str(tmp_path / "luecke.db")
+    _legacy_db_with_duplicate(
+        db_file,
         """
         INSERT INTO daily_meta (instrument_id, fetched_from, fetched_to)
              VALUES (1, '2026-06-01', '2026-08-01');
@@ -332,16 +338,16 @@ def test_daily_spannen_mit_luecke_werden_nicht_zusammengezogen(tmp_path) -> None
 
     # Die Bereinigung läuft seit T-21 Teil 3 im **bestätigten** Umzug, nicht
     # mehr im Start: `init_db` erkennt nur noch, `run_migration` führt aus.
-    init_db(pfad)
-    run_migration(pfad, rejected_at="2026-08-25T12:00:00+00:00")
+    init_db(db_file)
+    run_migration(db_file, rejected_at="2026-08-25T12:00:00+00:00")
 
-    with sqlite3.connect(pfad) as verbindung:
-        verbindung.row_factory = sqlite3.Row
-        zeilen = verbindung.execute("SELECT * FROM daily_meta").fetchall()
+    with sqlite3.connect(db_file) as connection:
+        connection.row_factory = sqlite3.Row
+        rows = connection.execute("SELECT * FROM daily_meta").fetchall()
 
-    assert len(zeilen) == 1
-    assert zeilen[0]["instrument_id"] == 1
-    assert (zeilen[0]["fetched_from"], zeilen[0]["fetched_to"]) == ("2026-06-01", "2026-08-01")
+    assert len(rows) == 1
+    assert rows[0]["instrument_id"] == 1
+    assert (rows[0]["fetched_from"], rows[0]["fetched_to"]) == ("2026-06-01", "2026-08-01")
 
 
 def test_ueberlappende_daily_spannen_werden_geweitet(tmp_path) -> None:
@@ -350,9 +356,9 @@ def test_ueberlappende_daily_spannen_werden_geweitet(tmp_path) -> None:
 
     from app.db import init_db, run_migration
 
-    pfad = str(tmp_path / "ueberlappung.db")
-    _alte_db_mit_duplikat(
-        pfad,
+    db_file = str(tmp_path / "ueberlappung.db")
+    _legacy_db_with_duplicate(
+        db_file,
         """
         INSERT INTO daily_meta (instrument_id, fetched_from, fetched_to)
              VALUES (1, '2026-01-01', '2026-08-01');
@@ -363,14 +369,14 @@ def test_ueberlappende_daily_spannen_werden_geweitet(tmp_path) -> None:
 
     # Die Bereinigung läuft seit T-21 Teil 3 im **bestätigten** Umzug, nicht
     # mehr im Start: `init_db` erkennt nur noch, `run_migration` führt aus.
-    init_db(pfad)
-    run_migration(pfad, rejected_at="2026-08-25T12:00:00+00:00")
+    init_db(db_file)
+    run_migration(db_file, rejected_at="2026-08-25T12:00:00+00:00")
 
-    with sqlite3.connect(pfad) as verbindung:
-        verbindung.row_factory = sqlite3.Row
-        zeile = verbindung.execute("SELECT * FROM daily_meta").fetchone()
+    with sqlite3.connect(db_file) as connection:
+        connection.row_factory = sqlite3.Row
+        row = connection.execute("SELECT * FROM daily_meta").fetchone()
 
-    assert (zeile["fetched_from"], zeile["fetched_to"]) == ("2025-01-01", "2026-08-01")
+    assert (row["fetched_from"], row["fetched_to"]) == ("2025-01-01", "2026-08-01")
 
 
 def test_gescheiterte_anreicherung_loescht_die_gespeicherten_etf_daten_nicht(
@@ -386,7 +392,7 @@ def test_gescheiterte_anreicherung_loescht_die_gespeicherten_etf_daten_nicht(
     `metadata_complete=False` sagt: „Diese Antwort weiß über die ETF-Extras
     nichts." Sie darf den gespeicherten Stand dann nicht ersetzen.
     """
-    vollstaendig = QuoteResponse(
+    complete_response = QuoteResponse(
         isin="IE00B4L5Y983",
         symbol="EUNL.DE",
         ticker="EUNL",
@@ -408,11 +414,11 @@ def test_gescheiterte_anreicherung_loescht_die_gespeicherten_etf_daten_nicht(
         source="yfinance+justetf",
         fetched_at="2026-08-18T10:00:00+00:00",
     )
-    repo.save_quote(vollstaendig)
+    repo.save_quote(complete_response)
 
     # Derselbe Kurs, aber ohne jede ETF-Angabe — so sieht eine Antwort aus,
     # wenn justETF nicht erreichbar war.
-    ohne_anreicherung = QuoteResponse(
+    without_enrichment = QuoteResponse(
         isin="IE00B4L5Y983",
         symbol="EUNL.DE",
         ticker="EUNL",
@@ -427,21 +433,21 @@ def test_gescheiterte_anreicherung_loescht_die_gespeicherten_etf_daten_nicht(
         metadata_complete=False,
         fetched_at="2026-08-18T11:00:00+00:00",
     )
-    repo.save_quote(ohne_anreicherung)
+    repo.save_quote(without_enrichment)
 
-    gespeichert = repo.get_instrument_by_isin("IE00B4L5Y983")
+    stored = repo.get_instrument_by_isin("IE00B4L5Y983")
 
-    assert gespeichert["ter"] == 0.2
-    assert gespeichert["provider"] == "iShares"
-    assert gespeichert["replication"] == "Physical"
-    assert gespeichert["fund_size"] == 129445.0
-    assert gespeichert["fund_domicile"] == "Ireland"
-    assert gespeichert["fund_currency"] == "USD"
-    assert gespeichert["volatility"] == 10.68
-    assert gespeichert["accumulating"] == 1
+    assert stored["ter"] == 0.2
+    assert stored["provider"] == "iShares"
+    assert stored["replication"] == "Physical"
+    assert stored["fund_size"] == 129445.0
+    assert stored["fund_domicile"] == "Ireland"
+    assert stored["fund_currency"] == "USD"
+    assert stored["volatility"] == 10.68
+    assert stored["accumulating"] == 1
     # Die Herkunft gehört zum selben Stand: Sie beschreibt die Werte, die
     # stehengeblieben sind — nicht den Abruf, der nichts geliefert hat.
-    assert gespeichert["source"] == "yfinance+justetf"
+    assert stored["source"] == "yfinance+justetf"
 
 
 def test_erfolgreiche_anreicherung_darf_felder_weiterhin_leeren(

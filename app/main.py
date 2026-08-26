@@ -51,10 +51,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if init_db(settings.database_path):
         get_gate().block()
 
-    laufende: list[RefreshScheduler] = []
-    scheduler_sperre = threading.Lock()
+    running: list[RefreshScheduler] = []
+    scheduler_lock = threading.Lock()
 
-    def scheduler_starten() -> None:
+    def start_scheduler() -> None:
         """Startet den Refresh — **einmal**, sobald der Betrieb freigegeben ist.
 
         Nach einer Bestätigung zur Laufzeit ist der Lifespan längst durch.
@@ -68,24 +68,24 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         wo jemand sie später bricht. Ein zweiter Scheduler wäre still: Er
         refreshte parallel und fiele niemandem auf.
 
-        Ein gescheiterter Start hinterlässt **keinen** Eintrag in `laufende`.
+        Ein gescheiterter Start hinterlässt **keinen** Eintrag in `running`.
         Genau deshalb baut der Wiederholungsweg danach einen neuen Scheduler
         und läuft nicht in dieses `return`.
         """
-        with scheduler_sperre:
-            if laufende:
+        with scheduler_lock:
+            if running:
                 return
             scheduler = RefreshScheduler(
                 get_cached_quote_service(), settings.refresh_interval_hours
             )
             scheduler.start()
-            laufende.append(scheduler)
+            running.append(scheduler)
         logger.info("scheduler_started")
 
     if get_gate().pending:
-        get_gate().on_release(scheduler_starten)
+        get_gate().on_release(start_scheduler)
     else:
-        scheduler_starten()
+        start_scheduler()
 
     logger.info(
         "app_started",
@@ -97,7 +97,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         yield
     finally:
         get_gate().on_release(None)
-        for scheduler in laufende:
+        for scheduler in running:
             scheduler.shutdown()
         logger.info("app_stopped")
 
@@ -277,7 +277,7 @@ async def operational(response: Response) -> OperationalResponse:
     Args:
         response: Wird auf 503 gesetzt, wenn etwas kaputt ist — die Datenbank
             nicht erreichbar oder der Betriebsstart gescheitert. Ein
-            ausstehender Umzug und ein anlaufender Betrieb sind **kein**
+            ausstehender Umzug und ein anrunningr Betrieb sind **kein**
             Fehler und bleiben bei `200`.
 
     Returns:

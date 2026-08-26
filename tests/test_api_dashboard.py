@@ -57,18 +57,18 @@ def client() -> Iterator[TestClient]:
 
 
 def test_instruments(client: TestClient) -> None:
-    r = client.get("/instruments")
-    assert r.status_code == 200
-    assert r.json()[0]["symbol"] == "VGWL.DE"
+    response = client.get("/instruments")
+    assert response.status_code == 200
+    assert response.json()[0]["symbol"] == "VGWL.DE"
     # Fehlt `source` auf `InstrumentSummary`, filtert FastAPI es stillschweigend
     # aus der Antwort — die Repository-Tests merkten davon nichts.
-    assert r.json()[0]["source"] == "yfinance+justetf"
+    assert response.json()[0]["source"] == "yfinance+justetf"
 
 
 def test_env(client: TestClient) -> None:
-    r = client.get("/env")
-    assert r.status_code == 200
-    body = r.json()
+    response = client.get("/env")
+    assert response.status_code == 200
+    body = response.json()
     assert body["default_exchange"] == "XETR"
     assert "openfigi_key_set" in body and "version" in body
 
@@ -80,9 +80,9 @@ def test_env_zeigt_strict_exchange(client: TestClient) -> None:
 
 
 def test_refresh_global(client: TestClient) -> None:
-    r = client.post("/refresh")
-    assert r.status_code == 200
-    assert r.json()["refreshed"] == 3
+    response = client.post("/refresh")
+    assert response.status_code == 200
+    assert response.json()["refreshed"] == 3
 
 
 def test_refresh_one_und_404(client: TestClient) -> None:
@@ -107,27 +107,27 @@ def test_delete_by_symbol(client: TestClient) -> None:
 
 
 def test_set_isin_ok(client: TestClient) -> None:
-    r = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": "US0846707026"})
-    assert r.status_code == 200
-    assert r.json()["isin"] == "US0846707026"
+    response = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": "US0846707026"})
+    assert response.status_code == 200
+    assert response.json()["isin"] == "US0846707026"
 
 
 def test_set_isin_normalisiert_und_validiert(client: TestClient) -> None:
     # klein + Leerzeichen → wird normalisiert
-    r = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": " us0846707026 "})
-    assert r.status_code == 200 and r.json()["isin"] == "US0846707026"
+    response = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": " us0846707026 "})
+    assert response.status_code == 200 and response.json()["isin"] == "US0846707026"
     # ungültiges Format → 422
     assert client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": "nope"}).status_code == 422
 
 
 def test_set_isin_unbekannt_404(client: TestClient) -> None:
-    r = client.put("/instruments/by-symbol/XXNOPE/isin", json={"isin": "US0846707026"})
-    assert r.status_code == 404
+    response = client.put("/instruments/by-symbol/XXNOPE/isin", json={"isin": "US0846707026"})
+    assert response.status_code == 404
 
 
 def test_set_isin_konflikt_409(client: TestClient) -> None:
-    r = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": "IE00B4L5Y983"})
-    assert r.status_code == 409
+    response = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": "IE00B4L5Y983"})
+    assert response.status_code == 409
 
 
 def test_analyze_verlangt_genau_eine_kennung(client: TestClient) -> None:

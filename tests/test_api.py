@@ -20,11 +20,11 @@ class FakeDaily:
     ) -> list[DailyPoint]:
         # Wie bei FakeService steuert das Praefix den Fehlerfall: XX = unbekannt,
         # ZZ = Provider tot. Nur so lassen sich 404 und 502 unterscheiden.
-        kennung = isin or symbol or ""
-        if kennung.startswith("XX"):
-            raise InstrumentNotFoundError(kennung)
-        if kennung.startswith("ZZ"):
-            raise QuoteUnavailableError(kennung)
+        identifier = isin or symbol or ""
+        if identifier.startswith("XX"):
+            raise InstrumentNotFoundError(identifier)
+        if identifier.startswith("ZZ"):
+            raise QuoteUnavailableError(identifier)
         return [
             DailyPoint(date="2026-07-10", close=160.0, currency="EUR"),
             DailyPoint(date="2026-07-13", close=162.0, currency="EUR"),
@@ -221,11 +221,11 @@ def test_readiness_meldet_503_wenn_die_datenbank_nicht_erreichbar_ist(
     """
     import app.main as main_module
 
-    class _KaputterDienst:
+    class _BrokenService:
         def count_instruments(self) -> int:
             raise sqlite3.OperationalError("unable to open database file")
 
-    monkeypatch.setattr(main_module, "get_cached_quote_service", lambda: _KaputterDienst())
+    monkeypatch.setattr(main_module, "get_cached_quote_service", lambda: _BrokenService())
 
     response = client.get("/ready")
 
@@ -247,23 +247,23 @@ def test_liveness_bleibt_billig(client: TestClient, monkeypatch) -> None:
     """
     import app.main as main_module
 
-    def _explodiert() -> None:
+    def _explodes() -> None:
         raise AssertionError("/health darf die Datenbank nicht anfassen")
 
-    monkeypatch.setattr(main_module, "get_cached_quote_service", _explodiert)
+    monkeypatch.setattr(main_module, "get_cached_quote_service", _explodes)
 
     assert client.get("/health").status_code == 200
 
 
-@pytest.mark.parametrize("unfug", ["../etc/passwd", "A" * 30, "AB CD", "A;B", "."])
-def test_unbrauchbare_symbole_werden_abgewiesen(client: TestClient, unfug) -> None:
+@pytest.mark.parametrize("malformed", ["../etc/passwd", "A" * 30, "AB CD", "A;B", "."])
+def test_unbrauchbare_symbole_werden_abgewiesen(client: TestClient, malformed) -> None:
     """Symbole hatten weder Längen- noch Zeichengrenze.
 
     Jede Zeichenkette ging damit an den Provider — und wurde bei Erfolg als
     neues Instrument gespeichert. 422 sagt „das war keine Eingabe", 502 hätte
     einen Ausfall bei Yahoo behauptet.
     """
-    assert client.get("/quote", params={"symbol": unfug}).status_code == 422
+    assert client.get("/quote", params={"symbol": malformed}).status_code == 422
 
 
 def test_symbole_werden_normalisiert(client: TestClient) -> None:
@@ -274,14 +274,14 @@ def test_symbole_werden_normalisiert(client: TestClient) -> None:
     assert response.json()["symbol"] == "VGWL.DE"
 
 
-@pytest.mark.parametrize("kaputt", ["2026-8-1", "01.08.2026", "gestern", "2026-13-01"])
-def test_unbrauchbare_zeitgrenzen_werden_abgewiesen(client: TestClient, kaputt) -> None:
+@pytest.mark.parametrize("invalid_boundary", ["2026-8-1", "01.08.2026", "gestern", "2026-13-01"])
+def test_unbrauchbare_zeitgrenzen_werden_abgewiesen(client: TestClient, invalid_boundary) -> None:
     """Die Abfrage vergleicht Zeitgrenzen lexikografisch gegen ISO-Zeitstempel.
 
     Eine andere Schreibweise liefert dann klaglos einen falschen Bereich,
     statt aufzufallen.
     """
-    response = client.get("/quote/IE00B3RBWM25/history", params={"from": kaputt})
+    response = client.get("/quote/IE00B3RBWM25/history", params={"from": invalid_boundary})
 
     assert response.status_code == 422
 
@@ -340,9 +340,9 @@ def test_ausgefallene_quellen_nennen_sich_im_antwortkoerper(
     Ohne die Namen steht dort nur „ging nicht" — und wer die App betreibt,
     weiß nicht, ob er auf OpenFIGI, Yahoo oder sein eigenes Netz schauen soll.
     """
-    antwort = client.get("/quote/ZZ0000000000")
+    response = client.get("/quote/ZZ0000000000")
 
-    assert antwort.status_code == 502
-    detail = antwort.json()["detail"]
+    assert response.status_code == 502
+    detail = response.json()["detail"]
     assert "ZZ0000000000" in detail
     assert "openfigi" in detail and "yahoo" in detail

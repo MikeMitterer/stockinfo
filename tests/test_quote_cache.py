@@ -186,8 +186,8 @@ class _FakeDailyProvider:
 
     def fetch_daily_closes(self, symbol: str, start: str | None = None):
         return [
-            {"date": f"2026-01-{i + 1:02d}", "close": c, "currency": "EUR"}
-            for i, c in enumerate(self._closes)
+            {"date": f"2026-01-{index + 1:02d}", "close": close, "currency": "EUR"}
+            for index, close in enumerate(self._closes)
         ]
 
 
@@ -281,7 +281,7 @@ def test_refresh_behaelt_letzte_volatilitaet_bei_fehlgeschlagener_neuberechnung(
     assert stored["volatility"] == 12.5
 
 
-class _MerkendeQuoteService:
+class _RecordingQuoteService:
     """Merkt sich, ob justETF gefragt werden sollte."""
 
     def __init__(self, response: QuoteResponse) -> None:
@@ -309,12 +309,12 @@ class _MerkendeQuoteService:
         return self._response
 
 
-def _alter_stand(repo: QuoteRepository, meta_fetched_at: str) -> None:
+def _age_metadata(repo: QuoteRepository, meta_fetched_at: str) -> None:
     """Setzt den Zeitstempel des Metadatenstands direkt in der DB."""
     import sqlite3
 
-    with sqlite3.connect(repo._database_path) as verbindung:  # noqa: SLF001
-        verbindung.execute(
+    with sqlite3.connect(repo._database_path) as connection:  # noqa: SLF001
+        connection.execute(
             "UPDATE instruments SET meta_fetched_at = ?", (meta_fetched_at,)
         )
 
@@ -326,9 +326,9 @@ def test_junge_etf_kennzahlen_loesen_keinen_justetf_abruf_aus(repo) -> None:
     veraltet, ein Fondsdomizil ändert sich in Jahren nicht. Der Sammelrefresh
     kostete dadurch einen Scrape je ETF und Runde.
     """
-    fake = _MerkendeQuoteService(_response(_now()))
+    fake = _RecordingQuoteService(_response(_now()))
     repo.save_quote(_response("2026-01-01T00:00:00+00:00"))
-    _alter_stand(repo, _now())  # Kennzahlen von gerade eben
+    _age_metadata(repo, _now())  # Kennzahlen von gerade eben
 
     service = CachedQuoteService(
         fake, repo, ttl_hours=0, daily_sync=empty_daily_sync(repo), metadata_ttl_days=7
@@ -339,9 +339,9 @@ def test_junge_etf_kennzahlen_loesen_keinen_justetf_abruf_aus(repo) -> None:
 
 
 def test_alte_etf_kennzahlen_loesen_einen_justetf_abruf_aus(repo) -> None:
-    fake = _MerkendeQuoteService(_response(_now()))
+    fake = _RecordingQuoteService(_response(_now()))
     repo.save_quote(_response("2026-01-01T00:00:00+00:00"))
-    _alter_stand(repo, (datetime.now(timezone.utc) - timedelta(days=30)).isoformat())
+    _age_metadata(repo, (datetime.now(timezone.utc) - timedelta(days=30)).isoformat())
 
     service = CachedQuoteService(
         fake, repo, ttl_hours=0, daily_sync=empty_daily_sync(repo), metadata_ttl_days=7
@@ -353,7 +353,7 @@ def test_alte_etf_kennzahlen_loesen_einen_justetf_abruf_aus(repo) -> None:
 
 def test_unbekanntes_papier_wird_immer_angereichert(repo) -> None:
     """Sonst bekäme ein frisch hinzugefügter ETF seine Kennzahlen nie."""
-    fake = _MerkendeQuoteService(_response(_now()))
+    fake = _RecordingQuoteService(_response(_now()))
     service = CachedQuoteService(
         fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo), metadata_ttl_days=7
     )
@@ -369,9 +369,9 @@ def test_handrefresh_uebergeht_die_metadaten_ttl(repo) -> None:
     Der Sammel- und der Hintergrundlauf halten sich an die TTL; der Griff zum
     einzelnen Papier ist die ausdrückliche Ansage, jetzt nachzusehen.
     """
-    fake = _MerkendeQuoteService(_response(_now()))
+    fake = _RecordingQuoteService(_response(_now()))
     repo.save_quote(_response("2026-01-01T00:00:00+00:00"))
-    _alter_stand(repo, _now())  # Kennzahlen taufrisch — die TTL griffe
+    _age_metadata(repo, _now())  # Kennzahlen taufrisch — die TTL griffe
 
     service = CachedQuoteService(
         fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo), metadata_ttl_days=7
@@ -381,7 +381,7 @@ def test_handrefresh_uebergeht_die_metadaten_ttl(repo) -> None:
     assert fake.enrich_calls == [True]
 
 
-class _WanderndeAufloesung:
+class _DriftingResolution:
     """QuoteService, dessen ISIN-Auflösung bei jedem Aufruf eine andere Börse trifft.
 
     Genau das passiert in echt: `CompositeResolver` fragt zuerst OpenFIGI
@@ -395,7 +395,7 @@ class _WanderndeAufloesung:
         self.symbol_calls = 0
         self.known_calls = 0
 
-    def _antwort(self, symbol: str, currency: str, exchange: str) -> QuoteResponse:
+    def _response_for(self, symbol: str, currency: str, exchange: str) -> QuoteResponse:
         return QuoteResponse(
             isin="IE00BCRY6557",
             symbol=symbol,
@@ -416,12 +416,12 @@ class _WanderndeAufloesung:
         self.isin_calls += 1
         # Erster Aufruf trifft Xetra, jeder weitere London.
         if self.isin_calls == 1:
-            return self._antwort("IS3M.DE", "EUR", "Xetra")
-        return self._antwort("IS3M.L", "GBP", "London")
+            return self._response_for("IS3M.DE", "EUR", "Xetra")
+        return self._response_for("IS3M.L", "GBP", "London")
 
     def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
         self.symbol_calls += 1
-        return self._antwort(symbol, "EUR", "Xetra")
+        return self._response_for(symbol, "EUR", "Xetra")
 
     def get_quote_for_known(
         self,
@@ -434,7 +434,7 @@ class _WanderndeAufloesung:
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         self.known_calls += 1
-        return self._antwort(symbol, "EUR", exchange or "Xetra")
+        return self._response_for(symbol, "EUR", exchange or "Xetra")
 
 
 def test_refresh_loest_bekanntes_instrument_nicht_neu_auf(repo: QuoteRepository) -> None:
@@ -444,7 +444,7 @@ def test_refresh_loest_bekanntes_instrument_nicht_neu_auf(repo: QuoteRepository)
     Positionen plötzlich in USD und GBP, fielen damit aus der Währungsrechnung
     des Depots und verfälschten Gesamtwert und Anteile.
     """
-    fake = _WanderndeAufloesung()
+    fake = _DriftingResolution()
     service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     # Erster Kontakt: Das Papier ist unbekannt und wird aufgelöst.
@@ -465,7 +465,7 @@ def test_refresh_loest_bekanntes_instrument_nicht_neu_auf(repo: QuoteRepository)
 
 def test_refresh_all_loest_bekannte_instrumente_nicht_neu_auf(repo: QuoteRepository) -> None:
     """Derselbe Schutz für den Sammellauf — Scheduler und Dashboard gehen hier durch."""
-    fake = _WanderndeAufloesung()
+    fake = _DriftingResolution()
     service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     service.get_by_isin("IE00BCRY6557")
@@ -479,7 +479,7 @@ def test_refresh_all_loest_bekannte_instrumente_nicht_neu_auf(repo: QuoteReposit
 
 def test_refresh_einer_unbekannten_isin_loest_weiterhin_auf(repo: QuoteRepository) -> None:
     """Ohne Auflösung ließe sich nie ein neues Papier aufnehmen."""
-    fake = _WanderndeAufloesung()
+    fake = _DriftingResolution()
     service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     service.refresh_one("IE00BCRY6557")
@@ -487,7 +487,7 @@ def test_refresh_einer_unbekannten_isin_loest_weiterhin_auf(repo: QuoteRepositor
     assert fake.isin_calls == 1
 
 
-class _OhneTyp:
+class _WithoutType:
     """Live-Antwort ohne `type` — yfinance liefert nicht immer einen quote_type.
 
     Der gefährliche Fall: Ohne Typ läuft `_build` am ETF-Zweig vorbei,
@@ -496,9 +496,9 @@ class _OhneTyp:
     """
 
     def __init__(self) -> None:
-        self.gesehener_typ: str | None = "nie aufgerufen"
+        self.seen_type: str | None = "nie aufgerufen"
 
-    def _antwort(self, typ: str | None) -> QuoteResponse:
+    def _response_for(self, instrument_type: str | None) -> QuoteResponse:
         return QuoteResponse(
             isin="IE00B3RBWM25",
             symbol="VGWL.DE",
@@ -509,14 +509,14 @@ class _OhneTyp:
             price=161.0,
             quote_time=_now(),
             fetched_at=_now(),
-            type=typ,
+            type=instrument_type,
         )
 
     def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
-        return self._antwort("etf")
+        return self._response_for("etf")
 
     def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
-        return self._antwort("etf")
+        return self._response_for("etf")
 
     def get_quote_for_known(
         self,
@@ -528,9 +528,9 @@ class _OhneTyp:
         mic: str | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
-        self.gesehener_typ = instrument_type
+        self.seen_type = instrument_type
         # Der Live-Abruf weiß den Typ diesmal nicht — er muss vom Aufrufer kommen.
-        return self._antwort(instrument_type)
+        return self._response_for(instrument_type)
 
 
 def test_refresh_reicht_den_gespeicherten_typ_durch(repo: QuoteRepository) -> None:
@@ -540,7 +540,7 @@ def test_refresh_reicht_den_gespeicherten_typ_durch(repo: QuoteRepository) -> No
     ohne Auflösung auffrischt, muss ihn deshalb aus der gespeicherten Zeile
     mitgeben.
     """
-    fake = _OhneTyp()
+    fake = _WithoutType()
     service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     # Erster Kontakt legt das Instrument als ETF an.
@@ -549,7 +549,7 @@ def test_refresh_reicht_den_gespeicherten_typ_durch(repo: QuoteRepository) -> No
 
     service.refresh_one("IE00B3RBWM25")
 
-    assert fake.gesehener_typ == "etf"
+    assert fake.seen_type == "etf"
     assert repo.get_instrument_by_isin("IE00B3RBWM25")["type"] == "etf"
 
 
@@ -562,7 +562,7 @@ def test_lesepfad_loest_bekanntes_instrument_nicht_neu_auf(repo: QuoteRepository
     Nachschlagen zu `IS3M.L`/GBP werden — genau der Fall, gegen den
     `get_quote_for_known` gebaut wurde.
     """
-    fake = _WanderndeAufloesung()
+    fake = _DriftingResolution()
     # Bekanntes Papier mit abgelaufenem Kurs.
     repo.save_quote(
         QuoteResponse(
@@ -587,7 +587,7 @@ def test_lesepfad_per_symbol_loest_bekanntes_instrument_nicht_neu_auf(
     repo: QuoteRepository,
 ) -> None:
     """`GET /quote/symbol/{symbol}` trägt dasselbe Risiko und braucht denselben Schutz."""
-    fake = _WanderndeAufloesung()
+    fake = _DriftingResolution()
     repo.save_quote(
         QuoteResponse(
             isin="IE00BCRY6557", symbol="IS3M.DE", ticker="IS3M", mic="XETR",
@@ -609,7 +609,7 @@ def test_unbekannte_isin_wird_im_lesepfad_weiterhin_aufgeloest(
     repo: QuoteRepository,
 ) -> None:
     """Ohne Auflösung käme nie ein neues Papier herein — der Fallback bleibt."""
-    fake = _WanderndeAufloesung()
+    fake = _DriftingResolution()
     service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     service.get_by_isin("IE00BCRY6557")
@@ -618,17 +618,17 @@ def test_unbekannte_isin_wird_im_lesepfad_weiterhin_aufgeloest(
     assert fake.known_calls == 0
 
 
-class _MerktSichDenAufruf:
+class _RecordingCall:
     """Hält fest, mit welchen Angaben `get_quote_for_known` gerufen wurde."""
 
     def __init__(self) -> None:
         self.known_calls = 0
         self.symbol_calls = 0
         self.gesehene_isin: str | None = None
-        self.gesehener_typ: str | None = None
+        self.seen_type: str | None = None
         self.gesehene_boerse: str | None = None
 
-    def _antwort(self, symbol: str) -> QuoteResponse:
+    def _response_for(self, symbol: str) -> QuoteResponse:
         return QuoteResponse(
             isin="IE00B4L5Y983", symbol=symbol, ticker=symbol.split(".")[0],
             mic="XETR", currency="EUR", exchange="Xetra",
@@ -636,11 +636,11 @@ class _MerktSichDenAufruf:
         )
 
     def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
-        return self._antwort("EUNL.DE")
+        return self._response_for("EUNL.DE")
 
     def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
         self.symbol_calls += 1
-        return self._antwort(symbol)
+        return self._response_for(symbol)
 
     def get_quote_for_known(
         self,
@@ -654,9 +654,9 @@ class _MerktSichDenAufruf:
     ) -> QuoteResponse:
         self.known_calls += 1
         self.gesehene_isin = isin
-        self.gesehener_typ = instrument_type
+        self.seen_type = instrument_type
         self.gesehene_boerse = exchange
-        return self._antwort(symbol)
+        return self._response_for(symbol)
 
 
 def test_refresh_per_symbol_reicht_die_gespeicherte_zeile_durch(
@@ -670,7 +670,7 @@ def test_refresh_per_symbol_reicht_die_gespeicherte_zeile_durch(
     Domizil bleiben stehen, wo sie sind. Der Knopf an der Zeile tat damit
     nichts von dem, was er verspricht.
     """
-    fake = _MerktSichDenAufruf()
+    fake = _RecordingCall()
     repo.save_quote(
         QuoteResponse(
             isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
@@ -685,7 +685,7 @@ def test_refresh_per_symbol_reicht_die_gespeicherte_zeile_durch(
     assert fake.known_calls == 1
     assert fake.symbol_calls == 0
     assert fake.gesehene_isin == "IE00B4L5Y983"
-    assert fake.gesehener_typ == "etf"
+    assert fake.seen_type == "etf"
     assert fake.gesehene_boerse == "Xetra"
 
 
@@ -693,7 +693,7 @@ def test_refresh_eines_unbekannten_symbols_geht_weiter_ueber_die_suche(
     repo: QuoteRepository,
 ) -> None:
     """Ein Papier ohne gespeicherte Zeile hat nichts durchzureichen."""
-    fake = _MerktSichDenAufruf()
+    fake = _RecordingCall()
     service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
     service.refresh_one_by_symbol("EUNL.DE")
@@ -702,7 +702,7 @@ def test_refresh_eines_unbekannten_symbols_geht_weiter_ueber_die_suche(
     assert fake.known_calls == 0
 
 
-def _entwaehrt(repo: QuoteRepository, isin: str = "IE00B3RBWM25") -> None:
+def _drop_currency(repo: QuoteRepository, isin: str = "IE00B3RBWM25") -> None:
     """Nimmt Kurspunkt **und** Instrument die Währung — ein Altbestand ohne sie."""
     instrument = repo.get_instrument_by_isin(isin)
     with repo._connect() as connection:  # noqa: SLF001 — Altbestand nachstellen
@@ -725,7 +725,7 @@ def test_frischer_cache_ohne_waehrung_liefert_keinen_kurs(
     sie aus dem eigenen Bestand kommt.
     """
     repo.save_quote(_response(_now()))
-    _entwaehrt(repo)
+    _drop_currency(repo)
     fake = FakeQuoteService(_response(_now()))
     service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
 
@@ -743,7 +743,7 @@ def test_stale_cache_ohne_waehrung_liefert_keinen_kurs(repo: QuoteRepository) ->
     Eine Position mit unbekannter Währung fällt aus jeder Depotrechnung.
     """
     repo.save_quote(_response(_hours_ago(10)))
-    _entwaehrt(repo)
+    _drop_currency(repo)
     service = CachedQuoteService(
         FakeQuoteService(None, raises=True), repo, ttl_hours=6,
         daily_sync=empty_daily_sync(repo),
@@ -797,10 +797,10 @@ def test_historienpunkt_ohne_waehrung_erbt_die_des_listings(
         daily_sync=empty_daily_sync(repo),
     )
 
-    punkte = service.get_history("IE00B3RBWM25")
+    points = service.get_history("IE00B3RBWM25")
 
-    assert punkte, "keine Punkte geliefert"
-    assert all(punkt.currency == "EUR" for punkt in punkte)
+    assert points, "keine Punkte geliefert"
+    assert all(point.currency == "EUR" for point in points)
 
 
 def _maintained_etf(fetched_at: str) -> QuoteResponse:

@@ -35,7 +35,7 @@ def _seed(repo: QuoteRepository, isin: str = "IE00B3RBWM25", symbol: str = "VGWL
     return repo.get_instrument_by_isin(isin)
 
 
-def _tag(vor_tagen: int) -> str:
+def _day(days_ago: int) -> str:
     """Ein Handelstag relativ zu heute.
 
     Die gelieferten Kurse **müssen** mitlaufen: Der Dienst rechnet sein Fenster
@@ -44,7 +44,7 @@ def _tag(vor_tagen: int) -> str:
     Kalender darüber hinweggelaufen war — und meldeten danach einen Fehler, den
     es im Code nicht gab.
     """
-    return (date.today() - timedelta(days=vor_tagen)).isoformat()
+    return (date.today() - timedelta(days=days_ago)).isoformat()
 
 
 class FakeDailyProvider:
@@ -56,9 +56,9 @@ class FakeDailyProvider:
     def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict]:
         self.calls.append(start)
         return [
-            {"date": _tag(7), "close": 160.0, "currency": "EUR"},
-            {"date": _tag(6), "close": 161.0, "currency": "EUR"},
-            {"date": _tag(4), "close": 162.0, "currency": "EUR"},
+            {"date": _day(7), "close": 160.0, "currency": "EUR"},
+            {"date": _day(6), "close": 161.0, "currency": "EUR"},
+            {"date": _day(4), "close": 162.0, "currency": "EUR"},
         ]
 
 
@@ -77,20 +77,20 @@ class FakeQuotes:
 
 
 def test_daily_repository_roundtrip(repo: QuoteRepository) -> None:
-    inst = _seed(repo)
+    instrument = _seed(repo)
     repo.upsert_daily_closes(
-        inst["id"],
+        instrument["id"],
         [
             {"date": "2026-07-10", "close": 160.0, "currency": "EUR"},
             {"date": "2026-07-11", "close": 161.0, "currency": "EUR"},
         ],
     )
-    assert repo.daily_closes_range(inst["id"]) == ("2026-07-10", "2026-07-11")
-    assert len(repo.get_daily_closes(inst["id"])) == 2
+    assert repo.daily_closes_range(instrument["id"]) == ("2026-07-10", "2026-07-11")
+    assert len(repo.get_daily_closes(instrument["id"])) == 2
 
     # gleiches Datum → Update (Schlusskurs firmt sich)
-    repo.upsert_daily_closes(inst["id"], [{"date": "2026-07-11", "close": 999.0, "currency": "EUR"}])
-    rows = repo.get_daily_closes(inst["id"], "2026-07-11")
+    repo.upsert_daily_closes(instrument["id"], [{"date": "2026-07-11", "close": 999.0, "currency": "EUR"}])
+    rows = repo.get_daily_closes(instrument["id"], "2026-07-11")
     assert len(rows) == 1 and rows[0]["close"] == 999.0
 
 
@@ -129,56 +129,56 @@ class FlakyDailyProvider:
         self.calls.append(start)
         if len(self.calls) <= self._fail_first:
             return None
-        return [{"date": _tag(4), "close": 162.0, "currency": "EUR"}]
+        return [{"date": _day(4), "close": 162.0, "currency": "EUR"}]
 
 
 def test_fehlgeschlagener_erstabruf_setzt_kein_wasserzeichen(
     repo: QuoteRepository,
 ) -> None:
     """Provider-Fehler beim Erstabruf → Fehler statt dauerhaft leerer Historie."""
-    inst = _seed(repo)
+    instrument = _seed(repo)
     provider = FlakyDailyProvider(fail_first=1)
     service = DailyHistoryService(repo, provider, FakeQuotes(repo))
 
     with pytest.raises(QuoteUnavailableError):
         service.get_daily(isin="IE00B3RBWM25", period="1m")
-    assert repo.get_daily_meta(inst["id"]) is None  # kein Wasserzeichen gesetzt
+    assert repo.get_daily_meta(instrument["id"]) is None  # kein Wasserzeichen gesetzt
 
     # nächster Versuch holt erneut und setzt das Wasserzeichen
     result = service.get_daily(isin="IE00B3RBWM25", period="1m")
     assert len(result) == 1
-    assert repo.get_daily_meta(inst["id"]) is not None
+    assert repo.get_daily_meta(instrument["id"]) is not None
 
 
 def test_fehlgeschlagener_folgeabruf_liefert_cache_ohne_fortschreibung(
     repo: QuoteRepository,
 ) -> None:
     """Provider-Fehler beim Nachladen → Cache liefern, ``fetched_to`` unverändert."""
-    inst = _seed(repo)
+    instrument = _seed(repo)
     today = date.today()
     cached_day = (today - timedelta(days=5)).isoformat()   # innerhalb des 1-Monats-Fensters
     from_day = (today - timedelta(days=40)).isoformat()
     repo.upsert_daily_closes(
-        inst["id"], [{"date": cached_day, "close": 160.0, "currency": "EUR"}]
+        instrument["id"], [{"date": cached_day, "close": 160.0, "currency": "EUR"}]
     )
-    repo.set_daily_meta(inst["id"], from_day, cached_day)
+    repo.set_daily_meta(instrument["id"], from_day, cached_day)
     provider = FlakyDailyProvider(fail_first=99)  # jeder Fetch schlägt fehl
     service = DailyHistoryService(repo, provider, FakeQuotes(repo))
 
     result = service.get_daily(isin="IE00B3RBWM25", period="1m")
 
     assert len(result) == 1  # Cache wird geliefert
-    meta = repo.get_daily_meta(inst["id"])
+    meta = repo.get_daily_meta(instrument["id"])
     assert meta["fetched_to"] == cached_day  # NICHT auf heute fortgeschrieben
 
 
-class _ProviderOhneWaehrung:
+class _ProviderWithoutCurrency:
     """Liefert Tagespunkte, wie eine Quelle sie ohne Währungsangabe schickt."""
 
     def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict]:
         return [
-            {"date": _tag(5), "close": 160.0},
-            {"date": _tag(3), "close": 161.0},
+            {"date": _day(5), "close": 160.0},
+            {"date": _day(3), "close": 161.0},
         ]
 
 
@@ -192,12 +192,12 @@ def test_tagespunkt_ohne_waehrung_erbt_die_des_listings(repo: QuoteRepository) -
     dieselbe Währung.
     """
     _seed(repo)  # Instrument in EUR
-    dienst = DailyHistoryService(repo, _ProviderOhneWaehrung(), FakeQuotes(repo))
+    service = DailyHistoryService(repo, _ProviderWithoutCurrency(), FakeQuotes(repo))
 
-    punkte = dienst.get_daily(isin="IE00B3RBWM25")
+    points = service.get_daily(isin="IE00B3RBWM25")
 
-    assert punkte, "keine Punkte geliefert"
-    assert all(punkt.currency == "EUR" for punkt in punkte)
+    assert points, "keine Punkte geliefert"
+    assert all(point.currency == "EUR" for point in points)
 
 
 def test_tagespunkt_ohne_jede_waehrung_wird_zum_fehler(repo: QuoteRepository) -> None:
@@ -223,7 +223,7 @@ def test_tagespunkt_ohne_jede_waehrung_wird_zum_fehler(repo: QuoteRepository) ->
     with repo._connect() as connection:
         connection.execute("UPDATE instruments SET currency = NULL")
         connection.execute("UPDATE quotes SET currency = NULL")
-    dienst = DailyHistoryService(repo, _ProviderOhneWaehrung(), FakeQuotes(repo))
+    service = DailyHistoryService(repo, _ProviderWithoutCurrency(), FakeQuotes(repo))
 
     with pytest.raises(QuoteUnavailableError):
-        dienst.get_daily(isin="IE00B3RBWM25")
+        service.get_daily(isin="IE00B3RBWM25")

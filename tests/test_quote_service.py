@@ -35,7 +35,7 @@ class FakeEtfProvider:
     def __init__(self, details: EtfDetails | None, responsible: bool = True) -> None:
         self._details = details
         self._responsible = responsible
-        self.gesehene_zustaendigkeit: list[tuple] = []
+        self.seen_responsibility: list[tuple] = []
 
     def is_responsible(
         self,
@@ -44,7 +44,7 @@ class FakeEtfProvider:
         exchange: str | None = None,
         currency: str | None = None,
     ) -> bool:
-        self.gesehene_zustaendigkeit.append((isin, exchange, currency))
+        self.seen_responsibility.append((isin, exchange, currency))
         return self._responsible
 
     def fetch_etf(
@@ -176,12 +176,12 @@ def test_ausgefallene_quellen_werfen_unavailable_statt_not_found() -> None:
         FakeResolver(Unavailable(error="openfigi: HTTP 503; yahoo: timeout")),
     )
 
-    with pytest.raises(QuoteUnavailableError) as fehler:
+    with pytest.raises(QuoteUnavailableError) as unavailable:
         service.get_quote_by_isin("IE00B3RBWM25")
 
     # Der Text landet im Antwortkörper — er muss die Quellen nennen.
-    assert "openfigi" in str(fehler.value)
-    assert "yahoo" in str(fehler.value)
+    assert "openfigi" in str(unavailable.value)
+    assert "yahoo" in str(unavailable.value)
 
 
 def test_keine_zustaendige_quelle_ist_ein_not_found() -> None:
@@ -260,7 +260,7 @@ def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
     Die Fondswährung darf nicht in `currency` rutschen — bei einem Euro-Kurs
     stünde sonst USD daneben.
     """
-    euro_kurs = RawQuote(
+    euro_quote = RawQuote(
         symbol="VGWL.DE",
         price=160.98,
         quote_time="2026-07-12T17:35:00+00:00",
@@ -269,7 +269,7 @@ def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
         type="etf",
     )
     service = QuoteService(
-        FakeQuoteProvider(euro_kurs),
+        FakeQuoteProvider(euro_quote),
         FakeEtfProvider(EtfDetails(fund_currency="USD", fund_domicile="Ireland")),
         FakeResolver(
             _resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")
@@ -292,7 +292,7 @@ def test_preis_ohne_waehrung_ist_kein_verwertbarer_kurs() -> None:
     Fehler; der Router bildet ihn auf 502 ab (`errors.incomplete_core` im
     Vertragsartefakt).
     """
-    ohne_waehrung = RawQuote(
+    without_currency = RawQuote(
         symbol="VGWL.DE",
         price=160.98,
         quote_time="2026-07-12T17:35:00+00:00",
@@ -301,7 +301,7 @@ def test_preis_ohne_waehrung_ist_kein_verwertbarer_kurs() -> None:
         type="etf",
     )
     service = QuoteService(
-        FakeQuoteProvider(ohne_waehrung),
+        FakeQuoteProvider(without_currency),
         FakeEtfProvider(None),
         FakeResolver(
             _resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")
@@ -324,7 +324,7 @@ def test_die_pflichtfelder_kommen_aus_dem_vertragsartefakt() -> None:
     assert "price" in required_fields("quote")
 
 
-def _lvmh_quote_mit_fremder_isin() -> RawQuote:
+def _lvmh_quote_with_foreign_isin() -> RawQuote:
     """Der Pariser Kurs, den yfinance mit der kanadischen Zweitnotierung meldet.
 
     Gemessen am 2026-08-19: `MC.PA` trägt bei yfinance `CA50244Q1037` — ein
@@ -347,7 +347,7 @@ def test_die_aufgeloeste_isin_gewinnt_gegen_die_des_anbieters() -> None:
     Eingabe. Gespeichert wurde damit ein anderes Wertpapier als das gesuchte.
     """
     service = QuoteService(
-        FakeQuoteProvider(_lvmh_quote_mit_fremder_isin()),
+        FakeQuoteProvider(_lvmh_quote_with_foreign_isin()),
         FakeEtfProvider(None),
         FakeResolver(_resolved("MC.PA", isin="FR0000121014")),
     )
@@ -364,7 +364,7 @@ def test_abweichende_anbieter_isin_wird_protokolliert() -> None:
     sie auffällt, statt in der Antwort zu verschwinden.
     """
     service = QuoteService(
-        FakeQuoteProvider(_lvmh_quote_mit_fremder_isin()),
+        FakeQuoteProvider(_lvmh_quote_with_foreign_isin()),
         FakeEtfProvider(None),
         FakeResolver(_resolved("MC.PA", isin="FR0000121014")),
     )
@@ -372,7 +372,7 @@ def test_abweichende_anbieter_isin_wird_protokolliert() -> None:
     with structlog.testing.capture_logs() as logs:
         service.get_quote_by_isin("FR0000121014")
 
-    mismatches = [e for e in logs if e["event"] == "isin_mismatch"]
+    mismatches = [entry for entry in logs if entry["event"] == "isin_mismatch"]
     assert len(mismatches) == 1
     assert mismatches[0]["log_level"] == "warning"
     assert mismatches[0]["requested"] == "FR0000121014"
@@ -399,7 +399,7 @@ def test_uebereinstimmende_isin_wird_nicht_protokolliert() -> None:
     with structlog.testing.capture_logs() as logs:
         service.get_quote_by_isin("FR0000121014")
 
-    assert [e for e in logs if e["event"] == "isin_mismatch"] == []
+    assert [entry for entry in logs if entry["event"] == "isin_mismatch"] == []
 
 
 def test_ohne_aufgeloeste_isin_gilt_weiterhin_die_des_anbieters() -> None:
@@ -408,7 +408,7 @@ def test_ohne_aufgeloeste_isin_gilt_weiterhin_die_des_anbieters() -> None:
     Dort ist die Meldung des Anbieters die einzige Quelle — und bleibt es.
     """
     service = QuoteService(
-        FakeQuoteProvider(_lvmh_quote_mit_fremder_isin()),
+        FakeQuoteProvider(_lvmh_quote_with_foreign_isin()),
         FakeEtfProvider(None),
         FakeResolver(None),
     )
@@ -462,7 +462,7 @@ def test_eine_aktie_gilt_als_vollstaendig() -> None:
     Bliebe sie auf ``False``, würde das Repository ihre Metadatenfelder nie
     mehr aktualisieren.
     """
-    aktie = RawQuote(
+    stock_quote = RawQuote(
         symbol="APC.DE",
         price=262.95,
         quote_time="2026-07-12T17:35:00+00:00",
@@ -470,7 +470,7 @@ def test_eine_aktie_gilt_als_vollstaendig() -> None:
         type="stock",
     )
     service = QuoteService(
-        FakeQuoteProvider(aktie),
+        FakeQuoteProvider(stock_quote),
         FakeEtfProvider(None),
         FakeResolver(
             _resolved("APC.DE", isin="US0378331005", type="stock")
@@ -489,7 +489,7 @@ def test_unbekannte_gattung_gilt_nicht_als_vollstaendig() -> None:
     immer einen ``quote_type``, und der Resolver ist nicht auf jedem Weg dabei
     — dann steht hier ``None``, und „vollständig" wäre eine Behauptung.
     """
-    ohne_typ = RawQuote(
+    without_type = RawQuote(
         symbol="VGWL.DE",
         price=160.98,
         quote_time="2026-07-12T17:35:00+00:00",
@@ -497,7 +497,7 @@ def test_unbekannte_gattung_gilt_nicht_als_vollstaendig() -> None:
         type=None,
     )
     service = QuoteService(
-        FakeQuoteProvider(ohne_typ),
+        FakeQuoteProvider(without_type),
         FakeEtfProvider(EtfDetails(ter=0.19, provider="Vanguard")),
         FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25")),
     )
@@ -513,7 +513,7 @@ def test_europaeischer_etf_ohne_isin_bleibt_geschuetzt() -> None:
     Antwort weiß damit nichts über die ETF-Felder und darf den gespeicherten
     Stand nicht ersetzen.
     """
-    etf_ohne_isin = RawQuote(
+    etf_without_isin = RawQuote(
         symbol="VGWL.DE",
         price=160.98,
         quote_time="2026-07-12T17:35:00+00:00",
@@ -521,7 +521,7 @@ def test_europaeischer_etf_ohne_isin_bleibt_geschuetzt() -> None:
         type="etf",
     )
     service = QuoteService(
-        FakeQuoteProvider(etf_ohne_isin),
+        FakeQuoteProvider(etf_without_isin),
         FakeEtfProvider(None, responsible=True),  # zuständig, liefert nichts
         FakeResolver(_resolved("VGWL.DE")),
     )
@@ -547,7 +547,7 @@ def test_die_zustaendigkeit_bekommt_boerse_und_waehrung_mit() -> None:
 
     service.get_quote_by_symbol("XIC.TO")
 
-    assert enricher.gesehene_zustaendigkeit == [(None, None, "CAD")]
+    assert enricher.seen_responsibility == [(None, None, "CAD")]
 
 
 def _us_etf_quote() -> RawQuote:

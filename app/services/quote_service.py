@@ -44,9 +44,9 @@ def annualized_volatility(closes: list[float]) -> float | None:
     if len(closes) < 5:
         return None
     returns = [
-        closes[i] / closes[i - 1] - 1.0
-        for i in range(1, len(closes))
-        if closes[i - 1]
+        closes[day] / closes[day - 1] - 1.0
+        for day in range(1, len(closes))
+        if closes[day - 1]
     ]
     if len(returns) < 2:
         return None
