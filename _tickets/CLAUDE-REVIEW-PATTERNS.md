@@ -606,30 +606,40 @@ seine Zahl gutgläubig weiter.
 
 ## P-06 · Weiterarbeiten, während eine Übergabe offen ist
 
-**Erkennungsregel:** Nach `ready_for_codex` entsteht ein weiterer
-Produkt-Commit — typischerweise, weil das Warten auf die Prüfung als Leerlauf
-erscheint und der nächste Teil ohnehin ansteht. Ein eigener Branch fühlt sich
-dabei wie eine Trennung an und ist keine: Der Automationsvertrag prüft
-**`HEAD`**, nicht den Branch-Namen. Wer auf dem neuen Branch steht, hat den
-neuen Commit in `HEAD` — und damit liegt zwischen `handoff_commit` und `HEAD`
-Produktcode.
+**Erkennungsregel:** Nach `ready_for_codex` entsteht weiterer Produkt- oder
+Anweisungsstand außerhalb des `handoff_commit` — als Commit oder unversionierte
+Datei. Typischerweise erscheint das Warten auf die Prüfung als Leerlauf und der
+nächste Teil steht ohnehin an. Ein eigener Branch fühlt sich dabei wie eine
+Trennung an und ist keine: Der Automationsvertrag prüft **`HEAD`**, nicht den
+Branch-Namen. Wer auf dem neuen Branch steht, hat den neuen Commit in `HEAD`.
+Eine unversionierte Root-Anweisung ist noch problematischer: Sie beeinflusst
+den Reviewer, ohne überhaupt in der eingefrorenen Commit-Linie sichtbar zu
+sein.
 
 Der Vertrag sagt es wörtlich: *„alle Commits danach betreffen nur `_tickets/`
 bzw. Kommunikationsdateien"*. Von Branches steht dort nichts, weil sie nichts
 zur Sache tun.
 
-**Prüffrage:** Vor jedem Commit bei offener Übergabe: `git log
-<handoff_commit>..HEAD --name-only` — steht dort etwas außerhalb von
-`_tickets/`? Dann ist der zu prüfende Stand nicht mehr eindeutig. Entweder der
-Commit wartet, oder die Übergabe wird auf den **tatsächlichen** Produktstand
-umgestellt (neuer `handoff_commit`, `review_round` erhöht, OUTBOX auf den
-neuen Umfang gebracht).
+**Prüffrage:** Vor jedem Commit bei offener Übergabe und vor jedem Review:
+`git status --short` sowie `git log <handoff_commit>..HEAD --name-only` — steht
+dort etwas außerhalb von `_tickets/` beziehungsweise den ausdrücklich
+erlaubten Kommunikationsdateien? Dann ist der zu prüfende Stand nicht mehr
+eindeutig. Entweder die Änderung wartet, oder die Übergabe wird auf den
+**tatsächlichen** Stand umgestellt (neuer `handoff_commit`, `review_round`
+erhöht, OUTBOX auf den neuen Umfang gebracht).
 
 **Beleg:** T-21, Runde 2 → 3, 2026-08-23: Übergeben war `6abce88` (Teil 2).
 Während die Prüfung lief, entstand `556c23d` (Teil 2b) auf dem Branch
 `t-21c-exchangedef-aufraeumen`. Codex hat vor dem Review geblockt: Ein Review
 von genau `6abce88` wäre nicht mehr eindeutig gewesen. Aufgelöst durch
 Ausweisen des tatsächlichen Stands, nicht durch Rückbau.
+
+**Beleg:** T-21 Übergabe 3, Runde 40, Commit `d119449`: Nach der Übergabe lag
+eine neue, unversionierte `AGENTS.md` im Repo-Root. Sie war nicht Teil des
+Handoff-Commits, wirkte aber unmittelbar als Projektanweisung auf Codex und
+enthielt zudem einen falschen Rollenbezug sowie einen nicht existierenden
+Musterpfad. Der reine Commitvergleich blieb sauber; erst `git status --short`
+machte den uneindeutigen Arbeitsstand sichtbar.
 
 **Die Verwandtschaft:** Dasselbe Muster wie im Guard-Log, nur andersherum.
 Dort werden **Freigaben zu eng** gelesen (die Klasse wird auf den wörtlichen
