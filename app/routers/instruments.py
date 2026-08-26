@@ -10,6 +10,10 @@ verstecken, wo laut Vertrag nichts Zugesagtes liegt.
 Der Router übersetzt **nur** zwischen HTTP und Service: `created` auf `201`
 oder `200`, Domain-Fehler auf `400` und `502`. Kein zweiter Existenz-Check,
 keine Repository-Abfrage, keine Fachregel (Verify `#2j`).
+
+Den `409` sagt er zu, ohne ihn zu erzeugen: Der Identitätskonflikt entsteht
+tief in `save_quote` und wird zentral in `app/main.py` abgebildet — hier steht
+er nur, damit die veröffentlichte Form ihn nennt.
 """
 
 from typing import Annotated
@@ -18,7 +22,12 @@ from fastapi import APIRouter, Depends, Response
 from fastapi.responses import JSONResponse
 
 from app.container import get_intake_service
-from app.models import ErrorDetail, InstrumentSummary, IntakeRequest
+from app.models import (
+    IDENTITY_CONFLICT_RESPONSE,
+    ErrorDetail,
+    InstrumentSummary,
+    IntakeRequest,
+)
 from app.services.intake_service import IntakeRejected, IntakeService
 from app.services.quote_service import QuoteUnavailableError
 
@@ -36,6 +45,7 @@ REASON_QUOTE_UNAVAILABLE = "quote_unavailable"
     responses={
         201: {"model": InstrumentSummary, "description": "Papier neu angelegt"},
         400: {"model": ErrorDetail, "description": "Eingabe nicht auflösbar"},
+        **IDENTITY_CONFLICT_RESPONSE,
         502: {"model": ErrorDetail, "description": "Quelle nicht erreichbar"},
     },
 )

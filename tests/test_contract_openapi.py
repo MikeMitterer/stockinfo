@@ -15,15 +15,22 @@ Erneuern:
     UPDATE_CORE_SNAPSHOT=1 .venv/bin/pytest tests/test_contract_openapi.py -q
 """
 
+import ast
 import json
 import os
+from dataclasses import MISSING, fields
 from pathlib import Path
 
 import pytest
 
 from app.contract import core_contract, required_fields
 from app.main import app
-from app.services.quote_service import PRECHECKED_CORE_FIELDS
+from app.services.quote_service import (
+    PRECHECKED_CORE_FIELDS,
+    PrecheckedCoreValues,
+    QuoteUnavailableError,
+    require_core_values,
+)
 
 SNAPSHOT_FILE = Path(__file__).resolve().parent.parent / "contract" / "openapi-core-snapshot.json"
 
@@ -220,6 +227,123 @@ def test_die_vorabpruefung_deckt_nur_pflichtfelder_ab() -> None:
     assert set(PRECHECKED_CORE_FIELDS) <= set(required_fields("quote")), (
         "die Vorabprüfung verlangt ein Feld, das der Vertrag nicht zusagt"
     )
+
+
+def test_jeder_geprüfte_name_hat_auch_einen_wert() -> None:
+    """**Befund 2 aus Runde 43** — der Wächter prüfte nur die halbe Zusage.
+
+    Bis dahin standen die Feldnamen in einer Tupelkonstante und die Werte
+    positional daneben. Der Test verglich allein die Namen mit dem Artefakt;
+    Codex' Gegenprobe ergänzte das zulässige Pflichtfeld `price` an der
+    behaupteten „einen Stelle" und bekam beides: einen **grünen** Wächter und
+    eine Prüfung, die an `zip(..., strict=True)` abstürzte.
+
+    Geprüft wird deshalb die Bindung selbst, und zwar über die abgeleitete
+    Namensliste statt über eine zweite Aufzählung: Für **jedes** Feld wird
+    genau dieses leer gesetzt und alle anderen gefüllt. Die Prüfung muss
+    anschlagen und den leeren Namen nennen. Ein Name ohne Wert lässt die
+    Konstruktion scheitern, ein Wert ohne Prüfung bleibt unbemerkt — beides
+    ist hier rot.
+
+    Ein neu aufgenommenes Feld wandert automatisch in diesen Test. Genau das
+    war die Zusage, die vorher keine war.
+    """
+    for missing_field in PRECHECKED_CORE_FIELDS:
+        values = PrecheckedCoreValues(
+            **{
+                name: "" if name == missing_field else "gesetzt"
+                for name in PRECHECKED_CORE_FIELDS
+            }
+        )
+
+        assert values.missing() == [missing_field], (
+            f"{missing_field} ist leer, wird aber nicht als fehlend gemeldet"
+        )
+
+        with pytest.raises(QuoteUnavailableError) as rejected:
+            require_core_values("AAPL", values)
+        assert missing_field in str(rejected.value), (
+            "die Meldung muss sagen, welches Feld fehlt"
+        )
+
+
+def test_jede_bindungsstelle_liefert_alle_werte() -> None:
+    """Der Kern des Befunds: Namen **und** Bindung müssen zusammen wachsen.
+
+    Codex' Gegenprobe ergänzte das zulässige Pflichtfeld `price` an der
+    behaupteten Source of Truth. Vorher blieb der Wächter grün, weil er nur
+    Namen mit dem Artefakt verglich — die Bindung sah er nie an.
+
+    Er sieht sie jetzt, und zwar über ein **Inventar statt einer Textsuche**:
+    Jede Konstruktion von `PrecheckedCoreValues` in `app/` wird aus dem
+    Syntaxbaum geholt und muss jedes Feld benennen. Ein Feld mehr in der
+    Struktur macht damit genau hier rot, an der Stelle, die den einen Ort
+    behauptet — und nicht erst irgendwo tief in einem Kursabruf.
+
+    Positionale Bindung ist ausgeschlossen: Sie war die ursprüngliche Ursache.
+    Ein Tupel in der falschen Reihenfolge ist ein Fehler, den keine Prüfung
+    mehr sieht, weil beide Seiten dann ja „vollständig" sind.
+    """
+    app_dir = Path(__file__).resolve().parent.parent / "app"
+    bindings = []
+    for source in sorted(app_dir.rglob("*.py")):
+        tree = ast.parse(source.read_text(encoding="utf-8"))
+        for node in ast.walk(tree):
+            if (
+                isinstance(node, ast.Call)
+                and isinstance(node.func, ast.Name)
+                and node.func.id == PrecheckedCoreValues.__name__
+            ):
+                bindings.append((source.name, node))
+
+    assert len(bindings) >= 2, (
+        "erwartet werden mindestens der frische Weg und der Cache-Weg; "
+        f"gefunden: {[name for name, _ in bindings]}"
+    )
+    for name, call in bindings:
+        assert not call.args, (
+            f"{name} bindet positional — dann sagt die Reihenfolge, was der "
+            "Name sagen soll"
+        )
+        assert {keyword.arg for keyword in call.keywords} == set(
+            PRECHECKED_CORE_FIELDS
+        ), f"{name} liefert nicht jeden geprüften Wert"
+
+
+def test_kein_pflichtwert_darf_einen_vorgabewert_haben() -> None:
+    """Der zweite Teil der Synchronität — die Seite der **Aufrufer**.
+
+    Die Schleife darüber prüft, dass jeder Name geprüft wird. Sie sagt nichts
+    darüber, ob die beiden Wege den Wert auch liefern. Genau da lag der alte
+    Fehler: Ein vierter Name kam ohne vierten Wert durch.
+
+    Ein Feld ohne Vorgabewert kann das nicht. Wächst die Struktur, bricht die
+    Konstruktion in `QuoteService._build` und `CachedQuoteService._from_cache`
+    laut und sofort — ein Vorgabewert wäre wieder das Schlupfloch, durch das
+    ein ungeprüfter Wert lautlos schlüpft.
+    """
+    for entry in fields(PrecheckedCoreValues):
+        assert entry.default is MISSING, (
+            f"{entry.name} hat einen Vorgabewert — ein Aufrufer darf ihn dann "
+            "weglassen, ohne dass es jemand merkt"
+        )
+        assert entry.default_factory is MISSING, (
+            f"{entry.name} hat eine Vorgabefabrik — dieselbe Lücke"
+        )
+
+
+def test_die_vorabpruefung_laesst_vollstaendige_werte_durch() -> None:
+    """Das Gegenstück — sonst bestünde auch ein „wirft immer" den Test oben.
+
+    Ohne diesen Fall wäre das Orakel selbstbestätigend: Eine Prüfung, die
+    jeden Aufruf ablehnt, erfüllte jede einzelne Erwartung der Schleife.
+    """
+    values = PrecheckedCoreValues(
+        **{name: "gesetzt" for name in PRECHECKED_CORE_FIELDS}
+    )
+
+    assert values.missing() == []
+    require_core_values("AAPL", values)
 
 
 @pytest.mark.parametrize("model", sorted(_CONTRACT_MODELS))

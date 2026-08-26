@@ -2,6 +2,11 @@
 
 Der Router übersetzt nur zwischen HTTP und Service; Domain-Exceptions werden
 auf HTTP-Statuscodes abgebildet.
+
+Eine Ausnahme davon ist der `409` an den beiden Kursendpunkten: Der
+Identitätskonflikt entsteht in `save_quote` und wird zentral in `app/main.py`
+abgebildet, weil ihn jeder speichernde Weg auslösen kann. Hier steht er nur in
+den `responses`, damit die veröffentlichte Form ihn zusagt.
 """
 
 from typing import Annotated, Literal
@@ -9,7 +14,12 @@ from typing import Annotated, Literal
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from app.container import get_cached_quote_service, get_daily_history_service
-from app.models import DailyPoint, QuotePoint, QuoteResponse
+from app.models import (
+    IDENTITY_CONFLICT_RESPONSE,
+    DailyPoint,
+    QuotePoint,
+    QuoteResponse,
+)
 from app.routers.validation import IsinPath, SymbolPath, TimeRange, normalize_symbol
 from app.services.daily_history import DailyHistoryService
 from app.services.quote_cache import CachedQuoteService
@@ -27,7 +37,9 @@ DailyDep = Annotated[DailyHistoryService, Depends(get_daily_history_service)]
 Period = Literal["1w", "1m", "3m", "1y", "max"]
 
 
-@router.get("/quote", response_model=QuoteResponse)
+@router.get(
+    "/quote", response_model=QuoteResponse, responses=IDENTITY_CONFLICT_RESPONSE
+)
 def quote_by_symbol(
     service: ServiceDep,
     symbol: Annotated[
@@ -52,7 +64,9 @@ def quote_by_symbol(
         raise HTTPException(status_code=502, detail=f"Kein Kurs für {symbol}") from exc
 
 
-@router.get("/quote/{isin}", response_model=QuoteResponse)
+@router.get(
+    "/quote/{isin}", response_model=QuoteResponse, responses=IDENTITY_CONFLICT_RESPONSE
+)
 def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     """Liefert den Kurs zu einer ISIN (bevorzugt Xetra/EUR)."""
     try:
@@ -116,11 +130,11 @@ def daily_history_by_symbol(
 def quote_history_by_symbol(
     symbol: SymbolPath,
     service: ServiceDep,
-    zeitfenster: TimeRange,
+    time_range: TimeRange,
     limit: Annotated[int, Query(ge=1, le=1000)] = 100,
 ) -> list[QuotePoint]:
     """Liefert die Kurs-Historie zu einem Symbol (für Papiere ohne ISIN)."""
-    date_from, date_to = zeitfenster
+    date_from, date_to = time_range
     try:
         return service.get_history_by_symbol(symbol, date_from, date_to, limit)
     except QuoteUnavailableError as exc:
@@ -131,11 +145,11 @@ def quote_history_by_symbol(
 def quote_history(
     isin: IsinPath,
     service: ServiceDep,
-    zeitfenster: TimeRange,
+    time_range: TimeRange,
     limit: Annotated[int, Query(ge=1, le=1000)] = 100,
 ) -> list[QuotePoint]:
     """Liefert die gespeicherte Kurs-Historie zu einer ISIN (neueste zuerst)."""
-    date_from, date_to = zeitfenster
+    date_from, date_to = time_range
     try:
         return service.get_history(isin, date_from, date_to, limit)
     except InstrumentNotFoundError as exc:

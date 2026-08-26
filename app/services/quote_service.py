@@ -6,6 +6,7 @@ in der Router-Schicht auf HTTP-Statuscodes abgebildet.
 
 import math
 import statistics
+from dataclasses import dataclass, fields
 from datetime import datetime, timezone
 
 import structlog
@@ -80,19 +81,45 @@ class UnresolvableSymbolError(Exception):
         self.symbol = symbol
 
 
-# Die Pflichtfelder, die **erst beim Bauen** zusammenkommen: Sie stammen aus
-# verschiedenen Quellen — Auflösung, Anbieterantwort, gespeicherte Zeile — und
-# können dabei leer bleiben. Die übrigen erzwingt schon der Typ.
-#
-# `test_die_vorabpruefung_deckt_nur_pflichtfelder_ab` hält fest, dass alle drei
-# im Artefakt stehen; wächst dort ein viertes solches Feld nach, ist diese
-# Liste der eine Ort, an dem es ergänzt wird.
-PRECHECKED_CORE_FIELDS = ("ticker", "mic", "currency")
+@dataclass(frozen=True)
+class PrecheckedCoreValues:
+    """Die Pflichtfelder, die **erst beim Bauen** zusammenkommen.
+
+    Sie stammen aus verschiedenen Quellen — Auflösung, Anbieterantwort,
+    gespeicherte Zeile — und können dabei leer bleiben. Die übrigen erzwingt
+    schon der Typ.
+
+    **Name und Wert stehen hier zusammen, und das ist der ganze Zweck.** Bis
+    Runde 43 lagen die Namen in einer Tupelkonstante, die Werte positional
+    daneben und ein drittes Mal in der Signatur der Prüffunktion. Der
+    Kommentar behauptete, ein viertes Feld werde an genau einer Stelle
+    ergänzt; die Gegenprobe von Codex zeigte das Gegenteil: Ein Name mehr in
+    der Konstante ließ den Wächtertest grün und die Prüfung selbst an
+    `zip(..., strict=True)` abstürzen. Ein Feld mehr **hier** wandert dagegen
+    von selbst in die Namensliste, in die Prüfung und — weil kein Feld einen
+    Vorgabewert hat — sichtbar in beide Aufrufer.
+    """
+
+    ticker: str | None
+    mic: str | None
+    currency: str | None
+
+    def missing(self) -> list[str]:
+        """Die Namen der Felder ohne Wert, in Deklarationsreihenfolge.
+
+        Returns:
+            Leere Liste, wenn alles da ist.
+        """
+        return [entry.name for entry in fields(self) if not getattr(self, entry.name)]
 
 
-def require_core_values(
-    symbol: str, ticker: str | None, mic: str | None, currency: str | None
-) -> None:
+# Abgeleitet statt danebengeschrieben — sonst wäre es wieder eine zweite
+# Wahrheit. Die Namen wandern nach außen, weil der Vertragswächter prüft, dass
+# die Vorabprüfung nichts verlangt, was das Artefakt nicht zusagt.
+PRECHECKED_CORE_FIELDS = tuple(entry.name for entry in fields(PrecheckedCoreValues))
+
+
+def require_core_values(symbol: str, values: PrecheckedCoreValues) -> None:
     """Die **eine** Vorabprüfung, bevor eine `QuoteResponse` entsteht.
 
     Das Gegenstück zu `ensure_core_complete`, eine Zeile früher. Seit die
@@ -100,22 +127,19 @@ def require_core_values(
     fehlender Wert dort als `ValidationError` an — ein `500`, der dem Aufrufer
     nichts über die Ursache sagt.
 
-    **Zwei Aufrufer, eine Liste.** Der frische Weg (`QuoteService._build`) und
-    der Cache-Weg (`CachedQuoteService._from_cache`) beschaffen dieselben drei
+    **Zwei Aufrufer, eine Struktur.** Der frische Weg (`QuoteService._build`)
+    und der Cache-Weg (`CachedQuoteService._from_cache`) beschaffen dieselben
     Werte aus verschiedenen Quellen. Bis Runde 42 zählte jeder sie selbst auf;
     ein viertes Pflichtfeld wäre an genau einem von beiden vorbeigegangen.
 
     Args:
         symbol: Für die Meldung.
-        ticker: Kanonischer Ticker aus Auflösung oder Zeile.
-        mic: MIC aus derselben Quelle.
-        currency: Handelswährung aus Anbieterantwort, Kurspunkt oder Zeile.
+        values: Die beschafften Pflichtwerte.
 
     Raises:
         QuoteUnavailableError: Mindestens ein Wert ist leer.
     """
-    values = dict(zip(PRECHECKED_CORE_FIELDS, (ticker, mic, currency), strict=True))
-    missing = [name for name, value in values.items() if not value]
+    missing = values.missing()
     if not missing:
         return
     logger.warning("core_incomplete", symbol=symbol, missing=missing)
@@ -337,9 +361,11 @@ class QuoteService:
 
         require_core_values(
             resolved.symbol,
-            ticker=resolved.ticker,
-            mic=resolved.mic,
-            currency=raw.currency or resolved.currency,
+            PrecheckedCoreValues(
+                ticker=resolved.ticker,
+                mic=resolved.mic,
+                currency=raw.currency or resolved.currency,
+            ),
         )
 
         isin = self._isin_of(resolved, raw)

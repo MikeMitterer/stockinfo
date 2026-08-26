@@ -8,7 +8,7 @@
 Ticket für Ticket. Die `Human`-Spalte der Einzeltickets bleibt bis dahin leer.
 
 **Hängt an:** allen Tickets des Plugin-Subprojekts. Derzeit sind das T-17 bis
-T-27b sowie T-29 bis T-32. T-28 ist bewusst das **letzte Abnahme-Gate**,
+T-27b sowie T-29 bis T-33. T-28 ist bewusst das **letzte Abnahme-Gate**,
 auch wenn seine Nummer kleiner ist: Jedes später entstehende Ticket, das zum
 Plugin-Subprojekt gehört, erweitert diese Abhängigkeit vor der Abnahme.
 
@@ -104,7 +104,7 @@ T-28 ist das letzte Ticket des Plugin-Subprojekts. Codex fordert Mike erst dann
 zur Abnahme auf, wenn
 
 * alle zum Subprojekt gehörenden Tickets — derzeit T-17 bis T-27b sowie T-29
-  bis T-32 — abgeschlossen und von Codex freigegeben sind,
+  bis T-33 — abgeschlossen und von Codex freigegeben sind,
 * später entdeckte Plugin-Folgetickets ebenfalls abgeschlossen oder
   ausdrücklich aus dem Subprojekt herausentschieden wurden und
 * der gemeinsame Stand auf `master` liegt.

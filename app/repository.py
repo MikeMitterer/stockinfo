@@ -36,6 +36,12 @@ class IncompleteIdentityError(ValueError):
         self.symbol = symbol
 
 
+# Der Rumpf des `409`, mit dem der Konflikt am HTTP-Rand austritt. Die Kennung
+# ist die einzige Stelle, an der ein Konsument ihn von der zugesagten
+# Symbol-Mehrdeutigkeit unterscheiden kann — beide tragen denselben Status.
+REASON_IDENTITY_CONFLICT = "identity_conflict"
+
+
 class IdentityConflictError(ValueError):
     """Zwei Zeilen beanspruchen dieselbe kanonische Identität.
 
@@ -49,6 +55,11 @@ class IdentityConflictError(ValueError):
     Entscheidung (welche `listing_id` überlebt, wohin die Kurspunkte wandern)
     und gehört nicht in einen Kursabruf. Bis dahin sagt dieser Fehler, was der
     Fall ist, statt als `IntegrityError` ein `500` zu werden.
+
+    **Bis Runde 43 endete er trotzdem als `500`** — geworfen wurde er hier,
+    behandelt nirgends. Der Weg nach draußen ist jetzt ein zugesagter `409`
+    (`app/main.py`, `identity_conflict`), und er gilt für jeden Endpunkt, der
+    speichert: Kursabruf wie Aufnahmeweg stolpern über dieselbe Zeile.
     """
 
     def __init__(self, ticker: str, mic: str, isin: str | None) -> None:

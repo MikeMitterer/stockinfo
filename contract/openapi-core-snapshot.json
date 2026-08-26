@@ -82,6 +82,13 @@
               }
             }
           },
+          "409": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
+              }
+            }
+          },
           "422": {
             "application/json": {
               "schema": {
@@ -109,6 +116,13 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/QuoteResponse"
+              }
+            }
+          },
+          "409": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
               }
             }
           },
@@ -190,6 +204,13 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/QuoteResponse"
+              }
+            }
+          },
+          "409": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
               }
             }
           },

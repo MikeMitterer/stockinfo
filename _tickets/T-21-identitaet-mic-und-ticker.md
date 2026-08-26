@@ -195,6 +195,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2h3 | Auswahl der bevorzugten Börse bei aliaslosen Plätzen | `DEFAULT_EXCHANGE=XNAS` wählt den NASDAQ-Treffer, auch wenn ein Arca-Treffer vorn steht; beim Sammelcode `US` verdrängt ein punktloser Treffer mit unbekanntem Börsencode kein gültiges Mitglied. Der Fremdbörsen-Fallback bleibt | ✅ [^k] | |
 | 2h4 | Börsenableitung eines Yahoo-Treffers | **eine** Ableitung für Auswahl **und** Identität (`_exchange_of`): Ein bekanntes Suffix entscheidet allein und wird nie von Yahoos `exchange` überstimmt; Yahoos Code gilt nur für suffixlose Symbole. Auswahl und gespeicherter MIC können demselben Treffer keine verschiedenen Börsen zuschreiben | ✅ [^l] | |
 | 2i | `POST /instruments/intake` | Neuanlage `201` mit `InstrumentSummary`, bestehendes Papier `200` mit demselben Typ, unauflösbar `400`, Quelle tot `502` — je im OpenAPI-Snapshot zugesagt und über die echte Kette geprüft | ◑ [^af] [^aj] | |
+| 2i2 | Identitätskonflikt am HTTP-Rand | `AAPL/XNAS` ohne ISIN neben `AAPL/XNYS` mit ihr ergibt einen typisierten `409` mit `code: identity_conflict` und beiden Seiten in `params` — **kein** `500`. Der Fall ist an allen drei speichernden Vertragsendpunkten zugesagt, nicht nur am Aufnahmeweg | ✅ [^al] | |
 | 2j | Schichtengrenze am Aufnahmeweg | der Intake-Service liefert `IntakeResult(summary, created)`; im Router steht **kein zweiter Existenz-Check** und keine Repository-Abfrage, er mappt nur `created` auf `201`/`200` | ✅ [^ag] | |
 | 2j2 | `created` unter Parallelität | kommt aus der **schreibenden Transaktion**, nicht aus einem Preflight; im abgefangenen UNIQUE-Rennen ist `created=false`, nicht `201` | ◑ [^ah] [^aj] | |
 | ~~2j3~~ | ~~`GET /instruments` mit einer `legacy_unresolved`-Zeile~~ | **entfällt** — mit der Entscheidung nach Runde 16 gibt es diesen Zustand nicht mehr. `ticker`, `mic` und `listing_id` sind Pflicht, siehe `#2b2` | ➖ | |
@@ -627,6 +628,14 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     ihn nicht behandeln. Seine spätere Datenzusammenführung wird wegen der
     offenen `listing_id`-/Historienpolitik als eigenes Plugin-Folgeticket
     geschnitten; T-21 braucht davor einen typisierten 409 samt Kettentest.
+
+    **Runde 44:** Beide Fälle sind geschlossen. Der Konflikt wird zentral in
+    `app/main.py` auf `409`/`identity_conflict` abgebildet und über die echte
+    Kette geprüft (`#2i2`, [^al]). Die Zusammenführung selbst bleibt ein
+    eigenes Folgeticket — der `409` sagt, was der Fall ist, er löst ihn nicht.
+    Ob `#2i` und `#2j2` damit von `◑` auf `✅` steigen, entscheidet Codex: Die
+    Einschränkung stammt aus seinem Review, und sie sich selbst aufzuheben
+    wäre genau das selbstbestätigende Orakel aus `CLAUDE-REVIEW-PATTERNS.md`.
 [^ak]: **Codex Runde 42 — das Artefakt und OpenAPI sind noch nicht
     deckungsgleich.** Gegen `app.openapi()` fehlen in der `required`-Liste:
     `quote.cached/stale`, `instrument.history_count/manual_fields/
@@ -637,6 +646,31 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     diese Liste trotzdem die Zusage, ob ein JSON-Feld vorhanden sein muss;
     ein Pydantic-Default garantiert das nur im aktuellen Erzeuger, nicht im
     veröffentlichten Schema für Konsumenten.
+[^al]: **Zwei Tests, zwei verschiedene Fragen** — und beide sind ohne ihre
+    Korrektur nachweislich rot gelaufen, nicht bloß behauptet.
+
+    `test_der_zweite_anspruch_auf_dieselbe_identitaet_ist_ein_409` in
+    `tests/test_identity_intake_paths.py` läuft über die **echte** Kette
+    Router → Intake-Service → Cache-Dienst → Quote-Service → Repository mit
+    echter SQLite-Datei; ersetzt ist allein die Kursquelle, und die meldet
+    hier die ISIN — genau das löst die Kollision aus. Ohne den Handler in
+    `app/main.py` schlägt der Test mit `IdentityConflictError` aus
+    `app/repository.py:589` fehl. Geprüft wird nicht nur der Status, sondern
+    der Rumpf: `{code, params}` mit `ticker`, `mic` und `isin`.
+
+    `test_der_konflikt_steht_auch_in_der_veroeffentlichten_form` fragt die
+    laufende `openapi.json` ab und verlangt den `409` samt `ErrorDetail`-Rumpf
+    an **allen drei** speichernden Vertragsendpunkten — `POST
+    /instruments/intake`, `GET /quote` und `GET /quote/{isin}`. Nur den
+    Aufnahmeweg zu prüfen wäre die punktuelle Bestätigung aus `P-02`; der
+    Konflikt entsteht in `save_quote`, und dorthin führen alle drei.
+
+    **Nicht im Smoke-Script.** Der Fall braucht zwei Zeilen, die über den
+    normalen Weg nicht nebeneinander entstehen: Yahoo meldet zu `AAPL` immer
+    die ISIN, also zieht die zweite Eingabe die erste Zeile um, statt eine
+    zweite anzulegen (`#2f`, live gemessen). Es ist ein Zustand aus
+    gewachsenem Bestand, und ihn im Script von Hand in die Datenbank zu
+    schreiben hieße, den Beleg zu bauen, den man messen will.
 [^ab]: `./_tickets/T-21-smoke.sh --run` gegen eine Sicherung des **echten**
     Bestands: `GOLD.SG` migriert zu `GOLD/XSTU` und behält seine **257**
     Tagesschlusskurse, `VGWL.DE` seine 2234. Abgelehnt wird allein `VTI` mit

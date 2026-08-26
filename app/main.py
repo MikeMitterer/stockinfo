@@ -25,7 +25,13 @@ from app.migration_guard import (
     is_allowed,
     static_allowlist,
 )
-from app.models import HealthResponse, OperationalResponse, ReadinessResponse
+from app.models import (
+    ErrorDetail,
+    HealthResponse,
+    OperationalResponse,
+    ReadinessResponse,
+)
+from app.repository import REASON_IDENTITY_CONFLICT, IdentityConflictError
 from app.routers import dashboard, fields, fx, instruments, migration, quotes
 from app.routers.migration import get_gate
 from app.scheduler import RefreshScheduler
@@ -118,6 +124,44 @@ app.include_router(dashboard.router)
 app.include_router(fx.router)
 app.include_router(fields.router)
 app.include_router(migration.router)
+
+
+@app.exception_handler(IdentityConflictError)
+async def identity_conflict(
+    request: Request, exc: IdentityConflictError
+) -> JSONResponse:
+    """Macht aus dem Identitätskonflikt einen zugesagten `409`.
+
+    **Zentral und nicht in den Routern**, aus demselben Grund wie beim
+    Migrations-Guard darunter: Geworfen wird der Fehler in `save_quote`, und
+    dorthin führt jeder speichernde Weg — `/quote`, `/quote/{isin}` und der
+    Aufnahmeweg. Drei Router-Handler wären dieselbe Fachregel dreimal, und beim
+    vierten speichernden Endpunkt fehlte sie. Bis Runde 43 fehlte sie überall:
+    Der Fall trat als `Internal Server Error` aus.
+
+    Der Status ist bewusst `409` und nicht `400`: Der Aufrufer hat nichts
+    falsch gemacht. Zwei gewachsene Zeilen beanspruchen dieselbe Identität, und
+    ihre Zusammenführung ist eine Datenoperation mit eigener Entscheidung.
+    Unterschieden wird er von der zugesagten Symbol-Mehrdeutigkeit — demselben
+    Status — allein über `code`.
+
+    Args:
+        request: Der auslösende Request; nur für die Signatur nötig.
+        exc: Der Konflikt samt beider Seiten.
+
+    Returns:
+        `409` mit `{code, params}` — dieselbe Form wie jede andere Ablehnung.
+    """
+    # `params` ist `dict[str, str]`: Eine unbekannte ISIN fehlt lieber ganz,
+    # statt als Zeichenkette „None" in einem übersetzten Satz zu landen.
+    params = {"ticker": exc.ticker, "mic": exc.mic}
+    if exc.isin:
+        params["isin"] = exc.isin
+    logger.warning(REASON_IDENTITY_CONFLICT, path=request.url.path, **params)
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content=ErrorDetail(code=REASON_IDENTITY_CONFLICT, params=params).model_dump(),
+    )
 
 
 @app.middleware("http")

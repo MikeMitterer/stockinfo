@@ -1,11 +1,12 @@
 """Pydantic-Response-Modelle der API."""
 
-from typing import Annotated, Literal
+from collections.abc import Callable
+from typing import Annotated, Any, Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 
 
-def always_present(*fields: str):
+def always_present(*fields: str) -> Callable[[dict[str, Any]], None]:
     """Erklärt Felder im **veröffentlichten Schema** für immer vorhanden.
 
     Pydantics `required`-Liste beantwortet die Frage der *Eingabe*: Muss der
@@ -35,7 +36,7 @@ def always_present(*fields: str):
         Ein `json_schema_extra`-Callable für `ConfigDict`.
     """
 
-    def extend_required(schema: dict) -> None:
+    def extend_required(schema: dict[str, Any]) -> None:
         schema["required"] = sorted(set(schema.get("required", ())) | set(fields))
 
     return extend_required
@@ -632,3 +633,19 @@ class ErrorDetail(BaseModel):
     params: dict[str, str] = Field(
         default_factory=dict, description="Werte für den übersetzten Text"
     )
+
+
+# Die veröffentlichte Form des Identitätskonflikts — **eine** Beschreibung für
+# jeden speichernden Endpunkt. Erzeugt wird die Antwort zentral in
+# `app/main.py`, weil sie tief in `save_quote` entsteht; die Router sagen sie
+# nur zu. Ausgeschrieben je Router wären es drei Texte, die auseinanderlaufen,
+# sobald einer davon genauer wird.
+IDENTITY_CONFLICT_RESPONSE: dict[int | str, dict[str, object]] = {
+    409: {
+        "model": ErrorDetail,
+        "description": (
+            "Zwei Zeilen beanspruchen dieselbe kanonische Identität "
+            "(`code: identity_conflict`)"
+        ),
+    }
+}

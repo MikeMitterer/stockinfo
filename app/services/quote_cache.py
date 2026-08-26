@@ -20,6 +20,7 @@ from app.services.daily_sync import DailyCloseSync
 from app.services.freshness import is_fresh
 from app.services.quote_service import (
     InstrumentNotFoundError,
+    PrecheckedCoreValues,
     QuoteService,
     QuoteUnavailableError,
     annualized_volatility,
@@ -799,9 +800,11 @@ class CachedQuoteService:
         # Ausnahme von der Regel.
         require_core_values(
             instrument["symbol"],
-            ticker=instrument["ticker"],
-            mic=instrument["mic"],
-            currency=quote["currency"] or instrument["currency"],
+            PrecheckedCoreValues(
+                ticker=instrument["ticker"],
+                mic=instrument["mic"],
+                currency=quote["currency"] or instrument["currency"],
+            ),
         )
         response = QuoteResponse(
             isin=instrument["isin"],

@@ -24,15 +24,29 @@ from app.container import get_cached_quote_service
 from app.db import init_db
 from app.main import app
 from app.providers.base import RawQuote
-from app.repository import QuoteRepository
+from app.repository import REASON_IDENTITY_CONFLICT, QuoteRepository
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteService
 from stockinfo_plugin.types import NotFound
 from tests.boundaries import EmptyEtfEnricher, empty_daily_sync
 
+# Die echte ISIN von Apple. Sie steht hier als Konstante, weil sie in diesem
+# Modul zwei getrennte Rollen spielt: Sie ist das, was die Kursquelle meldet,
+# **und** das, was in der kollidierenden Zeile steht.
+_APPLE_ISIN = "US0378331005"
+
 
 class _QuoteSource:
-    """Die Außengrenze zur Kursquelle — hier hinge sonst yfinance am Netz."""
+    """Die Außengrenze zur Kursquelle — hier hinge sonst yfinance am Netz.
+
+    `isin` ist optional, weil beides vorkommt: Zu `VGWL.DE` sagt yfinance
+    nichts über die ISIN, zu `AAPL` sehr wohl. Der Unterschied ist keine
+    Kosmetik — eine gemeldete ISIN entscheidet in `save_quote`, welche Zeile
+    gefunden wird.
+    """
+
+    def __init__(self, isin: str | None = None) -> None:
+        self._isin = isin
 
     def fetch_quote(self, symbol: str) -> RawQuote:
         return RawQuote(
@@ -41,6 +55,7 @@ class _QuoteSource:
             quote_time="2026-08-23T17:00:00+00:00",
             currency="EUR",
             type="etf",
+            isin=self._isin,
         )
 
 
@@ -59,20 +74,43 @@ class _NoResolver:
         return NotFound()
 
 
-@pytest.fixture
-def client_and_repo(tmp_path: Path) -> Iterator[tuple[TestClient, QuoteRepository]]:
-    db_path = str(tmp_path / "aufnahme.db")
+def _wire_chain(
+    db_path: str, source: _QuoteSource
+) -> tuple[TestClient, QuoteRepository]:
+    """Baut die echte Kette über einer frischen Datei — nur die Quelle wechselt.
+
+    Args:
+        db_path: Pfad der frisch angelegten SQLite-Datei.
+        source: Die Außengrenze zur Kursquelle.
+
+    Returns:
+        Client und Repository derselben Kette.
+    """
     init_db(db_path)
     repository = QuoteRepository(db_path)
     service = CachedQuoteService(
-        QuoteService(_QuoteSource(), EmptyEtfEnricher(), _NoResolver()),
+        QuoteService(source, EmptyEtfEnricher(), _NoResolver()),
         repository,
         ttl_hours=0,
         daily_sync=empty_daily_sync(repository),
     )
 
     app.dependency_overrides[get_cached_quote_service] = lambda: service
-    yield TestClient(app), repository
+    return TestClient(app), repository
+
+
+@pytest.fixture
+def client_and_repo(tmp_path: Path) -> Iterator[tuple[TestClient, QuoteRepository]]:
+    yield _wire_chain(str(tmp_path / "aufnahme.db"), _QuoteSource())
+    app.dependency_overrides.clear()
+
+
+@pytest.fixture
+def client_and_repo_reporting_isin(
+    tmp_path: Path,
+) -> Iterator[tuple[TestClient, QuoteRepository]]:
+    """Dieselbe Kette, aber die Kursquelle nennt die ISIN von Apple."""
+    yield _wire_chain(str(tmp_path / "aufnahme.db"), _QuoteSource(isin=_APPLE_ISIN))
     app.dependency_overrides.clear()
 
 
@@ -389,6 +427,89 @@ def test_eine_andere_boerse_desselben_tickers_wird_nicht_verwechselt(
             )
         ]
     assert mics == ["XNAS", "XNYS"], "beide Notierungen stehen nebeneinander"
+
+
+def test_der_zweite_anspruch_auf_dieselbe_identitaet_ist_ein_409(
+    client_and_repo_reporting_isin,
+) -> None:
+    """**Befund 1 aus Runde 43** — der Konflikt trat als `500` aus.
+
+    `IdentityConflictError` entstand seit Runde 40 an der richtigen Stelle,
+    wurde aber von niemandem behandelt: weder im `IntakeService` noch im
+    Router. Am HTTP-Rand blieb davon `Internal Server Error` übrig — genau das
+    `500`, das der Fehler abschaffen sollte.
+
+    Der Aufbau ist der gewachsene Bestand aus dem Docstring des Fehlers:
+    `AAPL/XNAS` ohne ISIN, `AAPL/XNYS` mit ihr. Der Aufnahmeweg für
+    `AAPL.XNAS` findet die XNAS-Zeile, holt einen Kurs — und die Quelle nennt
+    dabei die ISIN. Damit sucht `save_quote` über die ISIN, findet die
+    XNYS-Zeile, und deren Aktualisierung kollidiert am `(ticker, mic)`-Index.
+
+    Geprüft wird der **Rumpf**, nicht nur der Status: Ein `409` ohne
+    unterscheidbare Kennung wäre von der zugesagten Symbol-Mehrdeutigkeit
+    nicht zu trennen, und das Dashboard hätte nichts zu übersetzen.
+    """
+    client, repository = client_and_repo_reporting_isin
+    with repository._connect() as connection:
+        connection.executemany(
+            "INSERT INTO instruments (isin, symbol, first_seen, listing_id, "
+            "ticker, mic) VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (None, "AAPL", "2026-08-01T00:00:00+00:00", "nasdaq-1", "AAPL", "XNAS"),
+                (
+                    _APPLE_ISIN,
+                    "AAPL",
+                    "2026-08-01T00:00:00+00:00",
+                    "nyse-1",
+                    "AAPL",
+                    "XNYS",
+                ),
+            ],
+        )
+
+    response = _intake(client, "AAPL.XNAS")
+
+    assert response.status_code == 409, response.text
+    body = response.json()
+    assert set(body) == {"code", "params"}, "der Rumpf ist der Fehler, nicht `detail`"
+    assert body["code"] == REASON_IDENTITY_CONFLICT
+    assert body["params"] == {
+        "ticker": "AAPL",
+        "mic": "XNAS",
+        "isin": _APPLE_ISIN,
+    }, "der übersetzte Satz braucht beide Seiten des Konflikts"
+
+
+def test_der_konflikt_steht_auch_in_der_veroeffentlichten_form(
+    client_and_repo,
+) -> None:
+    """Ein Fehlerfall, den nur der Code kennt, ist nicht zugesagt.
+
+    Der `409` entsteht zentral in `app/main.py` und damit an keinem Router
+    sichtbar. Ohne eine ausdrückliche Zusage in den `responses` stünde er in
+    keinem generierten Client — und der Schnappschuss hätte das Fehlen
+    bestätigt statt bemerkt.
+
+    Geprüft werden **alle drei** speichernden Vertragsendpunkte: Der Konflikt
+    entsteht in `save_quote`, und dorthin führen sie alle. Nur den Aufnahmeweg
+    zu prüfen wäre genau die punktuelle Bestätigung, die schon einmal eine
+    halbe Regelumsetzung durchgehen ließ.
+    """
+    client, _ = client_and_repo
+
+    document = client.get("/openapi.json").json()
+
+    for path, method in (
+        ("/instruments/intake", "post"),
+        ("/quote", "get"),
+        ("/quote/{isin}", "get"),
+    ):
+        responses = document["paths"][path][method]["responses"]
+        assert "409" in responses, f"{method.upper()} {path} sagt den Konflikt nicht zu"
+        schema = responses["409"]["content"]["application/json"]["schema"]
+        assert schema["$ref"].endswith("/ErrorDetail"), (
+            f"{method.upper()} {path} sagt den Konflikt ohne typisierten Rumpf zu"
+        )
 
 
 def test_die_ablehnung_kommt_nicht_unter_detail(client_and_repo) -> None:

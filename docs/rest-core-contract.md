@@ -116,6 +116,25 @@ Zeilen trifft `DELETE /instruments/by-symbol/{symbol}` die ältere. Deshalb:
 Zufall: Ein Profil wählt genau ein Listing. Mehrere gleichzeitige Listings
 derselben ISIN wären eine eigene Schema- und Konsumenten-Erweiterung.
 
+### Zwei Fälle unter einem `409` — unterschieden wird über `code`
+
+Der Status allein sagt seit 2.0.0 nicht mehr, was los ist. Der Rumpf ist in
+beiden Fällen ein `ErrorDetail` (`{code, params}`), und erst die Kennung trennt
+sie:
+
+| `code` | Bedeutung | Stand |
+|---|---|---|
+| `identity_conflict` | Zwei gewachsene Zeilen beanspruchen dieselbe kanonische Identität — `AAPL/XNAS` ohne ISIN neben `AAPL/XNYS` mit ihr, und dieselbe ISIN wandert nach XNAS. `params`: `ticker`, `mic`, `isin` (sofern bekannt). | zugesagt an `/quote`, `/quote/{isin}` und `POST /instruments/intake` |
+| `symbol_ambiguous` | Mehrere Listings tragen dasselbe Symbol; der Rumpf nennt die Kandidaten samt `listing_id`. | beschrieben, noch an keinem Endpunkt umgesetzt |
+
+`identity_conflict` ist kein Eingabefehler: Der Aufrufer hat nichts falsch
+gemacht, zwei Zeilen im Bestand meinen dasselbe Listing. Sie
+zusammenzuführen — welche `listing_id` überlebt, wohin die Kurspunkte
+wandern — ist eine Datenoperation mit eigener Entscheidung und passiert
+deshalb nicht nebenbei in einem Kursabruf. Bis dahin sagt die API, was der
+Fall ist. Bis Runde 43 tat sie das nicht: Der Fehler entstand im Repository,
+wurde nirgends behandelt und trat als `500 Internal Server Error` aus.
+
 ## Die Generation: woran ein Konsument einen Datensatzwechsel erkennt
 
 Wechselt das Quellenprofil oder die Datenbank, sind gespeicherte Kursdaten eines
