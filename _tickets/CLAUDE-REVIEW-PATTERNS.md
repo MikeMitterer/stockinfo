@@ -528,6 +528,14 @@ Vorschau. Werden die Felder in beiden Mappings wieder weggelassen, bleibt
 `None == None` grün. Der Erwartungswert kommt damit aus dem zweiten zu
 prüfenden Pfad statt aus einem ausgeschriebenen, nichtleeren Orakel.
 
+**Neuer Beleg:** T-21 Teil 3 Übergabe 2B, Runde 35, Commit `5b0fa31`:
+`test_jede_kennung_hat_einen_satz` verspricht für jeden Ablehnungsgrund einen
+Satz in beiden Sprachen, `_reason_keys()` liest aber ausschließlich die
+Schlüssel. Eine In-Memory-Mutation des ersten englischen Werts auf `''` ließ
+die Schlüsselmenge unverändert und alle drei Katalogtests grün. Der ergänzende
+Vue-Test prüft nur einen einzigen deutschen Grund; leere Texte der übrigen
+Codes oder der englischen Sprache bleiben unbeobachtet.
+
 [↑ Übersicht](#übersicht)
 
 ## P-05 · Ein abgebrochener Prüflauf meldet sich als bestanden
@@ -625,6 +633,15 @@ meldete `ok`, `/operational` meldete `serving`. Bei einem hängenden Start
 unbegrenzt lange. Behoben, indem die Lage einen Namen bekam (`starting`) und
 alle Lagen zu **einer** `Enum`-Zustandsgröße zusammengezogen wurden: Ein
 `Enum` kann nicht halb umgeschaltet sein.
+
+**Beleg 3:** T-21 2B, Runde 35, Codex, Commit `5b0fa31`: Das UI unterscheidet
+`startupFailed`, führt dessen Retry aber über dieselbe `confirm()`-Funktion wie
+den noch ausstehenden Umzug. Noch bevor der gemeinsame HTTP-Aufruf beginnt,
+setzt sie die Lage auf `confirming`; das Template deutet diese ausschließlich
+als Phase 1 und zeigt wieder Vorschau, Backup-Warnung und „Migration läuft".
+Ein hängender Schedulerstart hält diese falsche Lage unbegrenzt sichtbar. Der
+Server-Endpunkt darf gemeinsam sein; der Browservorgang braucht dennoch eine
+eigene oder die bereits vorhandene benannte Lage `starting`.
 
 **Warum die Reparatur aus Beleg 1 den Fall in Beleg 2 nicht verhindert hat:**
 Sie war punktuell. Benannt wurde die eine fehlende Lage, nicht die
