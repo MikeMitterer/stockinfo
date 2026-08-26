@@ -189,16 +189,16 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2e | Papier abseits der Vorzugsbörse (`VTI` bei `XETR`) | erscheint als „abgewichen" mit beiden MICs; tatsächliche Währung aus den Kursdaten, nicht aus der Tabelle | | |
 | 2e2 | `AAPL`/`XNAS` bei `DEFAULT_EXCHANGE=US` | **keine** Abweichung — der Sammelcode umfasst die US-Plätze | | |
 | 2e3 | `VOD`/`XLON` bei `DEFAULT_EXCHANGE=US` | Abweichung mit `kind: collector` und erwarteter Währung `USD`, **ohne** erwarteten MIC | | |
-| 2f | Aufnahmeweg über den **echten** Weg Router → Intake-Service → Repository, für ISIN, `TICKER.DE`, `TICKER.XETR` und unbekannte Form | keine eigene Core-Komponente gemockt, nur die Außengrenzen; geprüft wird auch die **Methode** (`POST`) und dass im Router keine Fachregel sitzt | | ✅ [^ae] | |
+| 2f | Aufnahmeweg über den **echten** Weg Router → Intake-Service → Repository, für ISIN, `TICKER.DE`, `TICKER.XETR` und unbekannte Form | keine eigene Core-Komponente gemockt, nur die Außengrenzen; geprüft wird auch die **Methode** (`POST`) und dass im Router keine Fachregel sitzt | ✅ [^ae] | |
 | 2h | Börsenauskunft (`catalog`) | serialisiert **keinen** Sammelcode in ein `mic`-Feld; `US` erscheint als eigener Eintragstyp und bleibt als `DEFAULT_EXCHANGE` samt Mitgliedern nutzbar; **kein** Börseneintrag trägt eine eigene Mitgliedschaftsliste | ✅ [^i] | |
 | 2h2 | Katalog-Vertrag: Alias und Provenienz | `alias` ist in Python, OpenAPI und TypeScript **optional** — fehlend **oder** `null`, in allen drei Schichten. Der Leerstring ist verboten; das trägt das Backend (`min_length=1`, im OpenAPI-Schema sichtbar), nicht TypeScript. Die fünf US-Plätze liefern `null`. `provenance` ist eine **diskriminierte Union**: Core ohne Plugin-ID, Plugin mit verpflichtender nichtleerer ID; beide ungültigen Kombinationen werden abgelehnt | ✅ [^j] | |
 | 2h3 | Auswahl der bevorzugten Börse bei aliaslosen Plätzen | `DEFAULT_EXCHANGE=XNAS` wählt den NASDAQ-Treffer, auch wenn ein Arca-Treffer vorn steht; beim Sammelcode `US` verdrängt ein punktloser Treffer mit unbekanntem Börsencode kein gültiges Mitglied. Der Fremdbörsen-Fallback bleibt | ✅ [^k] | |
 | 2h4 | Börsenableitung eines Yahoo-Treffers | **eine** Ableitung für Auswahl **und** Identität (`_exchange_of`): Ein bekanntes Suffix entscheidet allein und wird nie von Yahoos `exchange` überstimmt; Yahoos Code gilt nur für suffixlose Symbole. Auswahl und gespeicherter MIC können demselben Treffer keine verschiedenen Börsen zuschreiben | ✅ [^l] | |
-| 2i | `POST /instruments/intake` | Neuanlage `201` mit `InstrumentSummary`, bestehendes Papier `200` mit demselben Typ, unauflösbar `400`, Quelle tot `502` — je im OpenAPI-Snapshot zugesagt und über die echte Kette geprüft | | ◑ [^af] | |
-| 2j | Schichtengrenze am Aufnahmeweg | der Intake-Service liefert `IntakeResult(summary, created)`; im Router steht **kein zweiter Existenz-Check** und keine Repository-Abfrage, er mappt nur `created` auf `201`/`200` | | ✅ [^ag] | |
-| 2j2 | `created` unter Parallelität | kommt aus der **schreibenden Transaktion**, nicht aus einem Preflight; im abgefangenen UNIQUE-Rennen ist `created=false`, nicht `201` | | ✅ [^ah] | |
+| 2i | `POST /instruments/intake` | Neuanlage `201` mit `InstrumentSummary`, bestehendes Papier `200` mit demselben Typ, unauflösbar `400`, Quelle tot `502` — je im OpenAPI-Snapshot zugesagt und über die echte Kette geprüft | ✅ [^af] | |
+| 2j | Schichtengrenze am Aufnahmeweg | der Intake-Service liefert `IntakeResult(summary, created)`; im Router steht **kein zweiter Existenz-Check** und keine Repository-Abfrage, er mappt nur `created` auf `201`/`200` | ✅ [^ag] | |
+| 2j2 | `created` unter Parallelität | kommt aus der **schreibenden Transaktion**, nicht aus einem Preflight; im abgefangenen UNIQUE-Rennen ist `created=false`, nicht `201` | ✅ [^ah] | |
 | ~~2j3~~ | ~~`GET /instruments` mit einer `legacy_unresolved`-Zeile~~ | **entfällt** — mit der Entscheidung nach Runde 16 gibt es diesen Zustand nicht mehr. `ticker`, `mic` und `listing_id` sind Pflicht, siehe `#2b2` | ➖ | |
-| 2k | Übergabe 2 als Einheit | `core_version 2.0.0`, Vertragsartefakt und Snapshot kommen **mit** der ersten Änderung am geschlossenen Core, nicht danach — zwischenzeitlich gibt es keinen öffentlich geänderten, aber unzugesagten Endpunkt | | ✅ [^ai] | |
+| 2k | Übergabe 2 als Einheit | `core_version 2.0.0`, Vertragsartefakt und Snapshot kommen **mit** der ersten Änderung am geschlossenen Core, nicht danach — zwischenzeitlich gibt es keinen öffentlich geänderten, aber unzugesagten Endpunkt | ✅ [^ai] | |
 | 2g | Fehlerpfad im Dashboard, **je in DE und EN** | bekannte Kennung, unbekannte Kennung, kaputtes JSON, leerer Rumpf, Netzwerkfehler — alle ergeben einen übersetzten Text, nie `statusText` und nie rohes JSON | | |
 | 3 | `GET /instruments` | `symbol` weiterhin vorhanden und unverändert (Profil-Links hängen daran) | ✅ [^d] | |
 | 3b | Datenbank-Schema | Eindeutigkeit liegt auf `(ticker, mic)`; `symbol` ist **nicht mehr** global unique | ✅ [^e] | |
@@ -514,17 +514,40 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `identity_from_input` — der Aliasweg läuft durch die vorhandene Funktion,
     nur die MIC-Form kommt dazu.
 
-    Live: `./_tickets/T-21c-smoke.sh --run`, 11/11 mit Netz.
-[^af]: **Teilweise.** Drei der vier Zeilen des Erfolgsvertrags sind über die
-    echte Kette geprüft und stehen im OpenAPI-Snapshot: `201` bei Neuanlage,
-    `200` beim bekannten Papier (beide mit `InstrumentSummary`), `400` mit
-    `{code, params}` für alle drei Ablehnungsgründe. Der Rumpf liegt
-    **nicht** unter `detail` — eigens geprüft.
+    **Runde 40, Befund 1 von Codex:** Die aliaslosen Börsen fehlten. `AAPL.XNAS`
+    und `AAPL.XNYS` tragen denselben Abrufalias `AAPL` — der Aufnahmeweg bildete
+    ihn und schlug damit nach, womit die genannte Börse verlorenging: auf leerem
+    Bestand ein `500`, bei vorhandenem `AAPL/XNYS` eine Antwort mit der falschen
+    Börse. Der Fehler saß dabei eine Ebene tiefer als sein Fundort, denn auch
+    `_find_instrument_id` suchte über `symbol`. Nachgeschlagen wird jetzt ISIN,
+    dann `(ticker, mic)`, dann Symbol **nur wenn es zerlegbar ist**.
 
-    **`502` ist nur zugesagt, nicht durchgespielt.** Der Fall verlangt eine
-    Kursquelle, die mitten im Aufnahmeweg ausfällt; im Snapshot steht er, im
-    Kettentest nicht. Das ist die eine Zeile dieser Übergabe, die ich nicht
-    ausführbar belegt habe.
+    Zwei Kettentests halten beide Lagen fest, dazu der doppeldeutige Suffix in
+    `test_exchanges.py` — mutationsgeprüft, samt der Gegenprobe, dass ein
+    vierstelliger Alias **derselben** Börse kein Konflikt ist.
+
+    Live: `./_tickets/T-21c-smoke.sh --run`, **13/13** mit Netz. Der Smoke
+    zeigte dabei eine falsche Erwartung von mir: Yahoo liefert für `AAPL` eine
+    ISIN, und `one_active_listing_per_isin` lässt kein zweites Listing zu — die
+    Zeile **wandert** auf die genannte Börse. Ohne ISIN stehen beide
+    Notierungen nebeneinander, so im Kettentest gebaut.
+[^af]: **Alle vier Zeilen des Erfolgsvertrags** sind über die echte Kette
+    geprüft und stehen im OpenAPI-Snapshot: `201` bei Neuanlage, `200` beim
+    bekannten Papier (beide mit `InstrumentSummary`), `400` mit
+    `{code, params}` für alle Ablehnungsgründe, `502` bei toter Quelle. Der
+    Rumpf liegt **nicht** unter `detail` — eigens geprüft.
+
+    In Runde 39 stand hier `◑`: Der `502`-Fall war zugesagt, aber nicht
+    durchgespielt. `test_eine_tote_quelle_ist_ein_502_mit_kennung` schließt
+    das, und zwar über die **Außengrenze** — die Kursquelle liefert nichts,
+    alles andere läuft echt.
+
+    Dabei kam ein zweiter Befund heraus (Codex, Runde 39): `identifier: ""`
+    lief wegen `min_length=1` in FastAPIs untypisiertes `422`, während
+    `identifier: " "` den zugesagten `400 identifier_empty` bekam. Die
+    Kennung war damit ausgerechnet für den häufigeren Fall unerreichbar — ein
+    leeres Feld abzuschicken ist normal, ein Leerzeichen hineinzuschreiben
+    nicht. Die Längenprüfung ist gefallen; die Leere beantwortet der Service.
 [^ag]: `test_der_router_kennt_die_eingabeformen_nicht` prüft die
     Schichtengrenze **mechanisch**: Im Router-Modul darf weder
     `identity_from_input` noch `split_symbol`, `EXCHANGES` oder `is_isin`
@@ -563,6 +586,28 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     nicht, und `get_quote_for_known` rechnete die Identität allein aus dem
     Symbol zurück — bei aliaslosen Börsen `(None, None)`, also wäre die
     Auffrischung **jedes US-Papiers** ein `502` geworden.
+
+    **Runde 40, Befund 2 von Codex:** Das Paket widersprach sich trotzdem noch.
+    Das Artefakt sagte Pflicht, das veröffentlichte OpenAPI-Schema führte
+    `ticker` und `mic` als optional **und** nullable — ein generierter Client
+    durfte also genau den Zustand annehmen, den `2.0.0` abschafft. Ursache war
+    `str | None` im Modell: Die Pflicht stand nur im Artefakt und wurde erst
+    zur Laufzeit geprüft. Beide sind jetzt auch im Modell nicht nullbar, und
+    ein fehlender Wert scheitert **vor** dem Bauen (`require_core_values`)
+    statt als `ValidationError` mit `500`.
+
+    Dasselbe galt seit T-24 unbemerkt für `currency` — mitkorrigiert, weil ein
+    Vertragstest sonst am eigenen Vertrag gescheitert wäre.
+
+    `test_jedes_pflichtfeld_des_artefakts_ist_im_schema_auch_zugesagt` hält
+    beide Quellen gegeneinander. Er prüft **nur** die Nullability, und das ist
+    Absicht: Bei einem Antwortmodell sagt die `required`-Liste nichts, weil ein
+    Feld mit Vorgabewert trotzdem immer serialisiert wird. Eine Prüfung darüber
+    sähe strenger aus, als sie ist.
+
+    `docs/rest-core-contract.md` steht auf `2.0.0` und nennt, was der Sprung
+    bricht; der Verweis von `instrument.listing_id` auf das nicht existente
+    `quote.listing_id` ist ersetzt.
 [^ab]: `./_tickets/T-21-smoke.sh --run` gegen eine Sicherung des **echten**
     Bestands: `GOLD.SG` migriert zu `GOLD/XSTU` und behält seine **257**
     Tagesschlusskurse, `VGWL.DE` seine 2234. Abgelehnt wird allein `VTI` mit
