@@ -9,6 +9,7 @@ import sqlite3
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 
 import structlog
 
@@ -33,6 +34,25 @@ class IncompleteIdentityError(ValueError):
             f"'{symbol}' trägt keine kanonische Identität (ticker und MIC)"
         )
         self.symbol = symbol
+
+
+@dataclass(frozen=True)
+class SavedQuote:
+    """Was das Speichern eines Kurses am Instrument bewirkt hat.
+
+    `created` ist eine **Tatsache der schreibenden Transaktion**, keine
+    Vorabfrage (T-21 Teil 3, `#2j2`). Ein Existenzcheck *vor* dem Schreiben
+    wäre falsch: Ein konkurrierender Insert kann ihn überholen, und der
+    Aufnahmeweg meldete `201` für ein Papier, das jemand anders gerade angelegt
+    hat. Wahr ist `created` deshalb nur, wenn der `INSERT` selbst durchkam —
+    im abgefangenen UNIQUE-Rennen ist er falsch.
+
+    Bis T-21 Teil 3 gab `save_quote` nur die ID zurück und warf diese
+    Information weg, obwohl sie an der Stelle vorlag, an der sie entsteht.
+    """
+
+    instrument_id: int
+    created: bool
 
 # Instrument-Metadatenfelder (ohne id/isin/symbol/first_seen).
 _META_FIELDS = (
@@ -386,28 +406,32 @@ class QuoteRepository:
             )
             return cursor.rowcount > 0
 
-    def save_quote(self, response: QuoteResponse) -> int:
+    def save_quote(self, response: QuoteResponse) -> SavedQuote:
         """Speichert Instrument-Metadaten und hängt den Kurspunkt an.
 
         Args:
             response: Frisch beschaffte Kurs-Antwort.
 
         Returns:
-            Die ID des (angelegten oder aktualisierten) Instruments.
+            Die ID des (angelegten oder aktualisierten) Instruments und ob es
+            in genau diesem Aufruf entstanden ist.
         """
         with self._connect() as connection:
-            instrument_id = self._upsert_instrument(connection, response)
-            self._insert_quote(connection, instrument_id, response)
-            return instrument_id
+            saved = self._upsert_instrument(connection, response)
+            self._insert_quote(connection, saved.instrument_id, response)
+            return saved
 
     def _upsert_instrument(
         self, connection: sqlite3.Connection, response: QuoteResponse
-    ) -> int:
+    ) -> SavedQuote:
         """Legt das Instrument an oder aktualisiert seine Metadaten.
 
         Ein UNIQUE-Konflikt beim Anlegen (paralleler Erst-Request oder
         Scheduler) wird aufgelöst, indem auf das inzwischen existierende
-        Instrument aktualisiert wird.
+        Instrument aktualisiert wird — und **genau dieser Zweig** ist der
+        Grund, warum `created` von hier kommt und nicht aus dem Aufrufer:
+        Der Konflikt ist der einzige Ort, an dem sichtbar wird, dass ein
+        anderer schneller war.
         """
         existing_id = self._find_instrument_id(
             connection, response.isin, response.symbol
@@ -416,7 +440,9 @@ class QuoteRepository:
 
         if existing_id is None:
             try:
-                return self._insert_instrument(connection, response, meta)
+                return SavedQuote(
+                    self._insert_instrument(connection, response, meta), created=True
+                )
             except sqlite3.IntegrityError:
                 existing_id = self._find_instrument_id(
                     connection, response.isin, response.symbol
@@ -440,7 +466,7 @@ class QuoteRepository:
             f"UPDATE instruments SET {assignments} WHERE id = ?",
             [*values, existing_id],
         )
-        return existing_id
+        return SavedQuote(existing_id, created=False)
 
     @staticmethod
     def _identity_update(

@@ -55,7 +55,7 @@ def _row(repo: QuoteRepository, instrument_id: int) -> dict:
 
 def test_ein_neues_papier_wird_mit_ticker_und_mic_angelegt(repo) -> None:
     """Verify `#5`: `ticker`/`mic` werden gefüllt, `symbol` daraus erzeugt."""
-    row = _row(repo, repo.save_quote(_response()))
+    row = _row(repo, repo.save_quote(_response()).instrument_id)
 
     assert (row["ticker"], row["mic"]) == ("VGWL", "XETR")
 
@@ -88,7 +88,10 @@ def test_das_gespeicherte_symbol_passt_zur_identitaet(
     Der US-Fall ist der interessante: Ohne Alias bleibt es beim nackten
     Ticker, und genau dort hätte ein Leerstring-Suffix ein `AAPL.` erzeugt.
     """
-    row = _row(repo, repo.save_quote(_response(ticker=ticker, mic=mic, symbol=symbol)))
+    row = _row(
+        repo,
+        repo.save_quote(_response(ticker=ticker, mic=mic, symbol=symbol)).instrument_id,
+    )
 
     assert row["symbol"] == symbol
     assert (row["ticker"], row["mic"]) == (ticker, mic)
@@ -101,10 +104,12 @@ def test_jedes_neue_papier_bekommt_eine_eigene_listing_id(repo) -> None:
     angelegtes Papier blieb damit ohne — und der eindeutige Index zählt
     `NULL` in SQLite als eigenen Wert, also fiel es nicht einmal auf.
     """
-    first = _row(repo, repo.save_quote(_response()))
+    first = _row(repo, repo.save_quote(_response()).instrument_id)
     second = _row(
         repo,
-        repo.save_quote(_response(isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL")),
+        repo.save_quote(
+            _response(isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL")
+        ).instrument_id,
     )
 
     assert first["listing_id"]
@@ -117,9 +122,9 @@ def test_ein_zweiter_kurs_laesst_die_identitaet_unangetastet(repo) -> None:
     Jeder Kursabruf läuft durch dieselbe Speicherung. Würde sie die Kennung
     neu vergeben, hinge jeder Verweis darauf an einem Zufallswert.
     """
-    before = _row(repo, repo.save_quote(_response()))
+    before = _row(repo, repo.save_quote(_response()).instrument_id)
 
-    after = _row(repo, repo.save_quote(_response(price=130.0)))
+    after = _row(repo, repo.save_quote(_response(price=130.0)).instrument_id)
 
     # Ohne die erste Zeile prüfte der Vergleich `None == None` und wäre auch
     # dann grün, wenn die Kennung nie vergeben würde.
@@ -159,7 +164,7 @@ def test_eine_ueberholte_zuordnung_wird_nachgezogen(repo) -> None:
     """
     instrument_id = repo.save_quote(
         _response(isin="US0378331005", symbol="AAPL", ticker="AAPL", mic="XNYS")
-    )
+    ).instrument_id
 
     repo.save_quote(
         _response(isin="US0378331005", symbol="AAPL", ticker="AAPL", mic="XNAS")
@@ -177,11 +182,11 @@ def test_eine_offene_aufloesung_verwirft_keine_bestehende_zuordnung(repo) -> Non
     Stand stehen. Eine bestehende Zuordnung zu leeren ist Datenverlust — und
     genau der Fehler, den Teil 1 in Runde 1 gemacht hat.
     """
-    created = repo.save_quote(_response())
+    instrument_id = repo.save_quote(_response()).instrument_id
 
     repo.save_quote(_response(price=130.0, ticker=None, mic=None))
 
-    assert _row(repo, created)["ticker"] == "VGWL"
+    assert _row(repo, instrument_id)["ticker"] == "VGWL"
 
 
 def test_ein_wechsel_des_handelsplatzes_wird_protokolliert(repo) -> None:
@@ -194,12 +199,14 @@ def test_ein_wechsel_des_handelsplatzes_wird_protokolliert(repo) -> None:
     """
     import structlog
 
-    created = repo.save_quote(_response(symbol="EQQQ.DE", ticker="EQQQ", mic="XETR"))
+    instrument_id = repo.save_quote(
+        _response(symbol="EQQQ.DE", ticker="EQQQ", mic="XETR")
+    ).instrument_id
 
     with structlog.testing.capture_logs() as logs:
         repo.save_quote(_response(symbol="EQQQ.MI", ticker="EQQQ", mic="XMIL"))
 
-    assert _row(repo, created)["mic"] == "XMIL"
+    assert _row(repo, instrument_id)["mic"] == "XMIL"
     changes = [entry for entry in logs if entry["event"] == "identity_changed"]
     assert changes and changes[0]["previous_mic"] == "XETR"
 

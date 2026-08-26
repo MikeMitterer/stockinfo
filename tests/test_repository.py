@@ -1,12 +1,13 @@
 """Tests für das SQLite-Repository (temporäre DB, kein Netz)."""
 
+import threading
 from pathlib import Path
 
 import pytest
 
 from app.db import init_db
 from app.models import QuoteResponse
-from app.repository import IncompleteIdentityError, QuoteRepository
+from app.repository import IncompleteIdentityError, QuoteRepository, SavedQuote
 
 
 @pytest.fixture
@@ -585,3 +586,89 @@ def test_erster_insert_ohne_metadaten_gilt_sofort_als_faellig(
     )
 
     assert repo.get_instrument_by_isin("IE00B4L5Y983")["meta_fetched_at"] is None
+
+
+def test_ein_verlorenes_rennen_meldet_keine_neuanlage(
+    repo: QuoteRepository, monkeypatch
+) -> None:
+    """`#2j2`: der Konfliktzweig, deterministisch — **das ist der Beleg**.
+
+    Der Thread-Test darunter ist die realistische Probe, aber kein Beweis: Ob
+    zwei Schreiber wirklich kollidieren, entscheidet das Timing, und eine
+    Mutationsprobe hat gezeigt, dass der `IntegrityError`-Zweig dort nur in
+    zwei von drei Läufen überhaupt erreicht wird.
+
+    Hier wird das Rennen deshalb erzwungen: Der Preflight sieht die schon
+    vorhandene Zeile **einmal** nicht — genau die Lage, in der ein
+    konkurrierender Insert ihn überholt hat. Der `INSERT` läuft in den
+    UNIQUE-Index, und die Antwort muss `created=False` lauten, nicht `201`.
+    """
+    stored = _quote(128.4, "2026-08-19T10:00:00+00:00", "2026-08-19T10:00:00+00:00")
+    repo.save_quote(stored)
+
+    real_find = QuoteRepository._find_instrument_id
+    lookups: list[int] = []
+
+    def blind_on_first_call(connection, isin, symbol):
+        lookups.append(1)
+        if len(lookups) == 1:
+            return None
+        return real_find(connection, isin, symbol)
+
+    monkeypatch.setattr(
+        QuoteRepository, "_find_instrument_id", staticmethod(blind_on_first_call)
+    )
+
+    saved = repo.save_quote(
+        _quote(129.9, "2026-08-19T11:00:00+00:00", "2026-08-19T11:00:00+00:00")
+    )
+
+    assert len(lookups) == 2, "der zweite Blick gehört in den Konfliktzweig"
+    assert saved.created is False, "ein verlorenes Rennen ist keine Neuanlage"
+    assert repo.get_instrument_by_isin("IE00B3RBWM25")["symbol"] == "VGWL.DE"
+
+
+def test_genau_ein_paralleler_erstschreiber_legt_an(repo: QuoteRepository) -> None:
+    """`#2j2`: `created` kommt aus der schreibenden Transaktion.
+
+    Acht gleichzeitige Erstanlagen desselben Papiers — nur **eine** darf
+    `created=True` melden. Ein Existenzcheck *vor* dem Schreiben bestünde
+    diesen Test nicht: Alle acht sähen eine leere Tabelle, alle acht meldeten
+    Neuanlage, und der Aufnahmeweg antwortete siebenmal `201` für ein Papier,
+    das ein anderer gerade angelegt hat.
+
+    Geprüft wird deshalb mit echten Threads und einer Barriere, nicht
+    nacheinander — wie schon die Verriegelung des Migrations-Gates.
+    """
+    parallel = 8
+    at_the_line = threading.Barrier(parallel)
+    results: list[SavedQuote] = []
+    results_lock = threading.Lock()
+
+    def save_it() -> None:
+        at_the_line.wait(timeout=10)
+        saved = repo.save_quote(
+            _quote(128.4, "2026-08-19T10:00:00+00:00", "2026-08-19T10:00:00+00:00")
+        )
+        with results_lock:
+            results.append(saved)
+
+    threads = [threading.Thread(target=save_it) for _ in range(parallel)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join(timeout=20)
+
+    assert not any(thread.is_alive() for thread in threads), "ein Thread hängt"
+    # **Die Gesamtzahl zuerst.** Eine Ausnahme in einem Thread lässt pytest
+    # kalt — der Thread hängt dann schlicht nichts an `results`, und eine
+    # Prüfung, die nur `count(True) == 1` fordert, bliebe grün, obwohl die
+    # Hälfte der Schreiber abgestürzt ist. Genau das hat die Mutationsprobe
+    # an diesem Test gezeigt.
+    assert len(results) == parallel, f"{len(results)} von {parallel} Schreibern zurück"
+    assert [saved.created for saved in results].count(True) == 1, (
+        "genau einer legt an, die übrigen finden die Zeile vor"
+    )
+    assert len({saved.instrument_id for saved in results}) == 1, (
+        "alle acht meinen dasselbe Instrument"
+    )

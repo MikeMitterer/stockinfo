@@ -117,7 +117,7 @@ def test_mehrere_kennzahlen_werden_einzeln_entschieden() -> None:
 
 
 def test_werte_ueberleben_das_erneute_lesen(repo: QuoteRepository) -> None:
-    instrument_id = repo.save_quote(_quote())
+    instrument_id = repo.save_quote(_quote()).instrument_id
 
     repo.set_overrides(
         instrument_id,
@@ -147,7 +147,7 @@ def test_werte_lassen_sich_als_schluesselwort_uebergeben(repo: QuoteRepository) 
     reicht ihn heute nur positionell weiter; wer ihn einmal benennt, bekäme
     sonst ein `TypeError`.
     """
-    instrument_id = repo.save_quote(_quote())
+    instrument_id = repo.save_quote(_quote()).instrument_id
 
     repo.set_overrides(
         instrument_id, values={"ter": 0.25}, updated_at="2026-08-17T10:00:00+00:00"
@@ -167,7 +167,7 @@ def test_ein_kurs_update_ruehrt_die_manuellen_werte_nicht_an(
     ETF-Extras, weil die Quelle für dieses Papier keine liefert. Läge der
     manuelle Wert in derselben Zeile, wäre er danach weg.
     """
-    instrument_id = repo.save_quote(_quote())
+    instrument_id = repo.save_quote(_quote()).instrument_id
     repo.set_overrides(instrument_id, {"ter": 0.25}, "2026-08-17T10:00:00+00:00")
 
     repo.save_quote(_quote(price=124.00, quote_time="2026-08-17T09:00:00+00:00"))
@@ -182,7 +182,7 @@ def test_ein_kurs_update_ruehrt_die_manuellen_werte_nicht_an(
 
 def test_alles_leeren_entfernt_die_zeile(repo: QuoteRepository) -> None:
     # Sonst sammeln sich Karteileichen ohne Inhalt.
-    instrument_id = repo.save_quote(_quote())
+    instrument_id = repo.save_quote(_quote()).instrument_id
     repo.set_overrides(instrument_id, {"ter": 0.25}, "2026-08-17T10:00:00+00:00")
 
     repo.set_overrides(instrument_id, {}, "2026-08-17T11:00:00+00:00")
@@ -191,7 +191,7 @@ def test_alles_leeren_entfernt_die_zeile(repo: QuoteRepository) -> None:
 
 
 def test_alle_acht_felder_ueberleben_das_erneute_lesen(repo: QuoteRepository) -> None:
-    instrument_id = repo.save_quote(_quote())
+    instrument_id = repo.save_quote(_quote()).instrument_id
 
     repo.set_overrides(
         instrument_id,
@@ -217,7 +217,7 @@ def test_alle_acht_felder_ueberleben_das_erneute_lesen(repo: QuoteRepository) ->
 
 def test_alles_leeren_entfernt_die_zeile_auch_bei_acht_feldern(repo: QuoteRepository) -> None:
     # Sonst sammeln sich Karteileichen ohne Inhalt.
-    instrument_id = repo.save_quote(_quote())
+    instrument_id = repo.save_quote(_quote()).instrument_id
     repo.set_overrides(instrument_id, {"provider": "iShares"}, "2026-08-17T10:00:00+00:00")
 
     repo.set_overrides(instrument_id, dict.fromkeys(OVERRIDE_FIELDS), "2026-08-17T11:00:00+00:00")
@@ -226,7 +226,7 @@ def test_alles_leeren_entfernt_die_zeile_auch_bei_acht_feldern(repo: QuoteReposi
 
 
 def test_die_liste_bringt_die_manuellen_werte_mit(repo: QuoteRepository) -> None:
-    instrument_id = repo.save_quote(_quote())
+    instrument_id = repo.save_quote(_quote()).instrument_id
     repo.set_overrides(
         instrument_id, {"ter": 0.25, "accumulating": False}, "2026-08-17T10:00:00+00:00"
     )
@@ -240,7 +240,7 @@ def test_die_liste_bringt_die_manuellen_werte_mit(repo: QuoteRepository) -> None
 def test_das_loeschen_eines_instruments_nimmt_die_overrides_mit(
     repo: QuoteRepository,
 ) -> None:
-    instrument_id = repo.save_quote(_quote())
+    instrument_id = repo.save_quote(_quote()).instrument_id
     repo.set_overrides(instrument_id, {"ter": 0.25}, "2026-08-17T10:00:00+00:00")
 
     assert repo.delete_by_symbol("GOLD.SG") is True
@@ -405,7 +405,7 @@ def test_der_kurs_endpoint_kennt_die_manuellen_werte(repo: QuoteRepository) -> N
     über Power Query, jedes Skript — bekam den rohen Wert der Quelle und damit
     ein „nicht gesetzt", obwohl etwas eingetragen war.
     """
-    instrument_id = repo.save_quote(_quote(accumulating=None, ter=None))
+    instrument_id = repo.save_quote(_quote(accumulating=None, ter=None)).instrument_id
     repo.set_overrides(
         instrument_id, {"ter": 0.12, "accumulating": True}, "2026-08-17T10:00:00+00:00"
     )
@@ -418,7 +418,7 @@ def test_der_kurs_endpoint_kennt_die_manuellen_werte(repo: QuoteRepository) -> N
 
 def test_der_kurs_endpoint_laesst_der_quelle_den_vortritt(repo: QuoteRepository) -> None:
     """Dieselbe Vorrang-Regel wie in der Liste — nicht eine zweite daneben."""
-    instrument_id = repo.save_quote(_quote(accumulating=True, ter=0.20))
+    instrument_id = repo.save_quote(_quote(accumulating=True, ter=0.20)).instrument_id
     repo.set_overrides(
         instrument_id, {"ter": 0.99, "accumulating": False}, "2026-08-17T10:00:00+00:00"
     )
@@ -441,7 +441,7 @@ def test_der_kurs_endpoint_ohne_eintrag_bleibt_unveraendert(repo: QuoteRepositor
 
 def test_der_kurs_endpoint_kennt_sie_auch_per_symbol(repo: QuoteRepository) -> None:
     """Papiere ohne ISIN gehen über `/quote?symbol=` — derselbe Anspruch."""
-    instrument_id = repo.save_quote(_quote(accumulating=None))
+    instrument_id = repo.save_quote(_quote(accumulating=None)).instrument_id
     repo.set_overrides(instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00")
 
     assert _dienst(repo).get_by_symbol("GOLD.SG").accumulating is True
@@ -453,7 +453,7 @@ def test_ein_frisch_beschaffter_kurs_kennt_sie_ebenfalls(repo: QuoteRepository) 
     Ohne die Regel an dieser Stelle hinge es am Zufall der TTL, ob eine
     Abfrage den eingetragenen Wert zeigt oder nicht.
     """
-    instrument_id = repo.save_quote(_quote(accumulating=None, ter=None))
+    instrument_id = repo.save_quote(_quote(accumulating=None, ter=None)).instrument_id
     repo.set_overrides(
         instrument_id, {"ter": 0.30, "accumulating": True}, "2026-08-17T10:00:00+00:00"
     )
@@ -468,7 +468,7 @@ def test_ein_frisch_beschaffter_kurs_kennt_sie_ebenfalls(repo: QuoteRepository) 
 
 def test_auch_ein_veralteter_kurs_kennt_sie(repo: QuoteRepository) -> None:
     """Fällt die Quelle aus, kommt der alte Wert — mit den Eingaben darauf."""
-    instrument_id = repo.save_quote(_quote(accumulating=None))
+    instrument_id = repo.save_quote(_quote(accumulating=None)).instrument_id
     repo.set_overrides(instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00")
 
     dienst = _dienst(repo, _Quelle(fehler=True), ttl_hours=0)
@@ -480,7 +480,7 @@ def test_auch_ein_veralteter_kurs_kennt_sie(repo: QuoteRepository) -> None:
 
 def test_refresh_liefert_sie_mit_zurueck(repo: QuoteRepository) -> None:
     """`POST /refresh/{isin}` gibt die neue Antwort direkt an die Oberfläche."""
-    instrument_id = repo.save_quote(_quote(accumulating=None, ter=None))
+    instrument_id = repo.save_quote(_quote(accumulating=None, ter=None)).instrument_id
     repo.set_overrides(
         instrument_id, {"ter": 0.30, "accumulating": True}, "2026-08-17T10:00:00+00:00"
     )
@@ -493,7 +493,7 @@ def test_refresh_liefert_sie_mit_zurueck(repo: QuoteRepository) -> None:
 
 
 def test_refresh_per_symbol_liefert_sie_ebenfalls(repo: QuoteRepository) -> None:
-    instrument_id = repo.save_quote(_quote(accumulating=None))
+    instrument_id = repo.save_quote(_quote(accumulating=None)).instrument_id
     repo.set_overrides(instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00")
 
     dienst = _dienst(repo, _Quelle(_quote(accumulating=None)))
@@ -510,7 +510,7 @@ def test_der_refresh_schreibt_den_manuellen_wert_nicht_in_die_zeile(
     Quelle fände einen Wert vor, den er nicht gesetzt hat, und die Eingabe
     ließe sich nie wieder von der Quelle unterscheiden.
     """
-    instrument_id = repo.save_quote(_quote(accumulating=None))
+    instrument_id = repo.save_quote(_quote(accumulating=None)).instrument_id
     repo.set_overrides(instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00")
 
     _dienst(repo, _Quelle(_quote(accumulating=None))).refresh_one("DE000EWG0LD1")
@@ -572,7 +572,7 @@ def test_die_liste_des_dienstes_wendet_die_regel_an(repo: QuoteRepository) -> No
     verbindet, stand nur im Code. Damit fiele ein entfernter Aufruf niemandem
     auf.
     """
-    instrument_id = repo.save_quote(_quote(accumulating=None, ter=None))
+    instrument_id = repo.save_quote(_quote(accumulating=None, ter=None)).instrument_id
     repo.set_overrides(
         instrument_id, {"ter": 0.30, "accumulating": True}, "2026-08-17T10:00:00+00:00"
     )

@@ -8,6 +8,7 @@ zurückgegeben statt eines Fehlers.
 
 import threading
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 import structlog
@@ -25,6 +26,23 @@ from app.services.quote_service import (
 )
 
 logger = structlog.get_logger()
+
+
+@dataclass(frozen=True)
+class StoredQuote:
+    """Eine Kurs-Antwort und ob das Instrument dabei **entstanden** ist.
+
+    Der Aufnahmeweg (T-21 Teil 3) muss `201` von `200` unterscheiden, und die
+    Antwort darauf entsteht in der schreibenden Transaktion des Repositories —
+    nicht in einer Vorabfrage, die ein konkurrierender Insert überholen kann.
+    Damit sie oben ankommt, reicht dieser Typ sie durch die Cache-Schicht.
+
+    `created` ist **falsch**, wenn der Cache die Antwort bedient hat: Dann gab
+    es das Papier schon, und geschrieben wurde gar nichts.
+    """
+
+    quote: QuoteResponse
+    created: bool
 
 
 def _as_bool(value: object) -> bool | None:
@@ -134,6 +152,16 @@ class CachedQuoteService:
             InstrumentNotFoundError: ISIN nicht auflösbar.
             QuoteUnavailableError: Kein Kurs beschaffbar und kein Cache vorhanden.
         """
+        return self.store_by_isin(isin).quote
+
+    def store_by_isin(self, isin: str) -> StoredQuote:
+        """Wie `get_by_isin`, sagt aber zusätzlich, ob das Papier entstanden ist.
+
+        **Ein Weg, zwei Sichten** — kein Zwilling: `get_by_isin` ist die
+        schmale Antwort für den Kursendpunkt, der die Unterscheidung nicht
+        braucht; der Aufnahmeweg braucht sie, weil `201` und `200`
+        auseinandergehalten werden müssen. Beide laufen durch **diesen** Rumpf.
+        """
         instrument = self._repository.get_instrument_by_isin(isin)
         if instrument:
             return self._get(instrument, lambda: self._fetch_live(instrument))
@@ -149,6 +177,13 @@ class CachedQuoteService:
 
         Raises:
             QuoteUnavailableError: Kein Kurs beschaffbar und kein Cache vorhanden.
+        """
+        return self.store_by_symbol(symbol).quote
+
+    def store_by_symbol(self, symbol: str) -> StoredQuote:
+        """Wie `get_by_symbol`, sagt aber zusätzlich, ob das Papier entstanden ist.
+
+        Die Begründung für das Paar steht bei `store_by_isin`.
         """
         instrument = self._repository.get_instrument_by_symbol(symbol)
         if instrument:
@@ -402,11 +437,14 @@ class CachedQuoteService:
             setattr(response, feld, zeile[feld])
         return response
 
-    def _save_fresh(self, fresh: QuoteResponse) -> QuoteResponse:
+    def _save_fresh(self, fresh: QuoteResponse) -> StoredQuote:
         """Persistiert einen frisch beschafften Kurs und reicht ihn durch."""
         stored = self._stored_metadata(fresh)
-        self._repository.save_quote(fresh)
-        return self._with_overrides(self._keep_stored_metadata(fresh, stored))
+        saved = self._repository.save_quote(fresh)
+        return StoredQuote(
+            self._with_overrides(self._keep_stored_metadata(fresh, stored)),
+            created=saved.created,
+        )
 
     @staticmethod
     def _keep_stored_metadata(
@@ -473,7 +511,7 @@ class CachedQuoteService:
         """
         stored = self._stored_metadata(fresh)
         previous_volatility = stored["volatility"] if stored else None
-        instrument_id = self._repository.save_quote(fresh)
+        instrument_id = self._repository.save_quote(fresh).instrument_id
         if fresh.volatility is None:
             volatility = self._volatility_from_cache(instrument_id, fresh.symbol)
             if volatility is not None:
@@ -623,7 +661,7 @@ class CachedQuoteService:
 
     def _get(
         self, instrument: dict | None, fetch: Callable[[], QuoteResponse]
-    ) -> QuoteResponse:
+    ) -> StoredQuote:
         """Gemeinsame Cache-Logik: frischer Cache → nutzen, sonst neu beschaffen.
 
         Args:
@@ -631,14 +669,20 @@ class CachedQuoteService:
             fetch: Callable, das den Kurs live beschafft.
 
         Returns:
-            Kurs-Antwort (aus Cache, frisch oder stale bei Fehler).
+            Kurs-Antwort (aus Cache, frisch oder stale bei Fehler) samt der
+            Auskunft, ob das Instrument in diesem Aufruf entstanden ist. Beide
+            Cache-Wege beantworten das mit `False` — sie haben nichts
+            geschrieben, und das Papier lag bereits vor.
         """
         latest = (
             self._repository.get_latest_quote(instrument["id"]) if instrument else None
         )
         if instrument and latest and is_fresh(latest["fetched_at"], self._ttl_hours):
-            return self._with_overrides(
-                self._from_cache(instrument, latest, stale=False), instrument["id"]
+            return StoredQuote(
+                self._with_overrides(
+                    self._from_cache(instrument, latest, stale=False), instrument["id"]
+                ),
+                created=False,
             )
 
         try:
@@ -648,8 +692,12 @@ class CachedQuoteService:
             # vorhandenen Cache-Wert nicht in einen Fehler verwandeln.
             if instrument and latest:
                 logger.warning("serving_stale_quote", isin=instrument.get("isin"))
-                return self._with_overrides(
-                    self._from_cache(instrument, latest, stale=True), instrument["id"]
+                return StoredQuote(
+                    self._with_overrides(
+                        self._from_cache(instrument, latest, stale=True),
+                        instrument["id"],
+                    ),
+                    created=False,
                 )
             raise
 
