@@ -7,8 +7,10 @@
 **Löst:** Die Frage „ist das Ganze benutzbar geworden?" — einmal, am Ende, statt
 Ticket für Ticket. Die `Human`-Spalte der Einzeltickets bleibt bis dahin leer.
 
-**Hängt an:** allen Tickets der Plugin-Reihe. Wird abgearbeitet, wenn T-17 bis
-T-27b durch sind.
+**Hängt an:** allen Tickets des Plugin-Subprojekts. Derzeit sind das T-17 bis
+T-27b sowie T-29, T-30 und T-31. T-28 ist bewusst das **letzte Abnahme-Gate**,
+auch wenn seine Nummer kleiner ist: Jedes später entstehende Ticket, das zum
+Plugin-Subprojekt gehört, erweitert diese Abhängigkeit vor der Abnahme.
 
 **Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 
@@ -51,7 +53,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 11 | Netzstecker ziehen (oder WLAN aus), ein bekanntes Papier abrufen | die App sagt „konnte nicht nachsehen" und nennt die Quellen — sie behauptet nicht, das Papier gäbe es nicht | ➖ [^t20] | |
 | 12 | Netz wieder an, dasselbe Papier | kommt normal herein; nichts ist in der Zwischenzeit gelöscht oder überschrieben worden | ➖ [^t20] | |
 | 13 | Nach dem Update einmal die Instrumentenliste durchsehen | alle Papiere sind noch da, mit ihrer Historie — die Umstellung auf die neue Identität hat nichts gekostet | ➖ [^t21] | |
-| 14 | Ein Papier, das die App nicht zuordnen konnte (z.B. `GOLD.SG`, `VTI`) | ist weiter abrufbar und benutzbar, nur eben als offener Fall gekennzeichnet | ➖ [^t21] | |
+| 14 | Umzugsbericht nach dem Update öffnen | jede nicht eindeutig zuordenbare Altzeile ist mit altem Symbol und Grund genannt; keine kaputte Zeile lebt im aktiven Bestand weiter | ➖ [^t21] | |
 
 _(wächst mit jedem abgeschlossenen Ticket — je Ticket ein bis drei Zeilen,
 nicht mehr)_
@@ -73,11 +75,12 @@ nicht mehr)_
     `./_tickets/T-20-smoke.sh --run` (zwei Läufe, Netz einmal offen und einmal
     abgeschnitten). Zeile 11 ist der Fall, der vorher als „gibt es nicht"
     ankam; Zeile 12 die Gegenprobe, dass der Ausfall nichts zerstört hat.
-[^t21]: T-21 Teil 1 — Identität auf `(ticker, mic)`. Maschineller Nachweis:
-    `./_tickets/T-21-smoke.sh --run` gegen eine Sicherung des echten
-    Bestands (neun Checks) und zwanzig Migrationstests. Zeile 14 ist der
-    Punkt, der bei einer Migration am ehesten schiefgeht: Ein Papier, das
-    sich nicht zuordnen ließ, darf dadurch nicht unbrauchbar werden.
+[^t21]: T-21 — Identität auf `(ticker, mic)` und migrieren-oder-ablehnen.
+    Maschineller Nachweis: `./_tickets/T-21-smoke.sh --run`,
+    `./_tickets/T-21b-smoke.sh --run` sowie die Migrations- und
+    Endpunkttests. Zeile 14 prüft die bewusste Grenze: Eine nicht zuordenbare
+    Altzeile bleibt im Bericht nachvollziehbar, aber nicht als ungültiger
+    Instrumentdatensatz aktiv.
 
 ---
 
@@ -97,8 +100,17 @@ fertigen Stand.
 
 ### Wann dieses Ticket dran ist
 
-Wenn die Plugin-Reihe durch ist und der Stand auf `master` liegt. Vorher wächst
-hier nur die Liste.
+T-28 ist das letzte Ticket des Plugin-Subprojekts. Codex fordert Mike erst dann
+zur Abnahme auf, wenn
+
+* alle zum Subprojekt gehörenden Tickets — derzeit T-17 bis T-27b sowie T-29
+  bis T-31 — abgeschlossen und von Codex freigegeben sind,
+* später entdeckte Plugin-Folgetickets ebenfalls abgeschlossen oder
+  ausdrücklich aus dem Subprojekt herausentschieden wurden und
+* der gemeinsame Stand auf `master` liegt.
+
+Vorher wächst hier nur die grobe Prüfliste. Die Ticketnummer bestimmt keine
+Reihenfolge; die vollständige Abhängigkeitsmenge bestimmt den Zeitpunkt.
 
 ---
 

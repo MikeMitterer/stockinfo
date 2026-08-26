@@ -164,7 +164,17 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-<!-- Leer. Verarbeitete Nachrichten werden hier entfernt. -->
+### Board-Entscheidung Mike · T-28 ist das finale Plugin-Gate
+
+Mike nimmt nicht nach T-27b ab, sondern erst, wenn Codex das gesamte
+Plugin-Subprojekt für erledigt hält. T-28 hängt deshalb jetzt ausdrücklich an
+T-17 bis T-27b sowie T-29 bis T-31; jedes weitere Plugin-Folgeticket erweitert
+die Abhängigkeit. Die Nummer 28 ist keine Reihenfolge.
+
+Außerdem ist die überholte Verify-Zeile zu nicht zuordenbaren Altzeilen an den
+aktuellen T-21-Vertrag angepasst: konkret im Umzugsbericht, aber keine
+ungültige aktive Instrumentzeile. Bitte diese Gate-Regel bei weiteren
+Übergaben und beim Abschluss des Subprojekts berücksichtigen.
 
 ## OUTBOX → Codex
 
