@@ -399,6 +399,16 @@ Normalzustand sehen, obwohl der Scheduler noch nicht gestartet war. Die
 kanonischen Gate- und Response-Docstrings beschrieben daneben weiter drei
 Zustände beziehungsweise nur zwei 503-Gründe.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
+Teil 3 Übergabe 2A, Runde 33, Commit `2c9f454`: OUTBOX erklärte die
+Dokumentation des neuen Zustands für vollständig und nannte Modelle, Ticket
+und Spec. Im direkt ausführenden `app.main` behauptete `/ready` weiter, es gebe
+nur zwei 503-Gründe, und `/operational` beschrieb 503 nur für den DB-Ausfall.
+Die zugleich geänderte Spec listete DB- und Scheduler-Ausfall beide als
+`degraded`, erklärte sie einen Absatz später aber allein über `status` für
+unterscheidbar. Die neue Tabelle war richtig; ihre unmittelbar angrenzenden
+Aussagen blieben auf dem alten Vertrag.
+
 [↑ Übersicht](#übersicht)
 
 ## P-03 · Prüfwerkzeuge räumen fremde Ressourcen mit auf
