@@ -81,7 +81,7 @@
       {"name": "symbol", "kind": "string", "required": true, "meaning": "Anzeigename des Listings. Siehe quote.symbol."},
       {"name": "ticker", "kind": "string", "required": true, "meaning": "Kanonischer Ticker des Listings. Siehe quote.ticker."},
       {"name": "mic", "kind": "string", "required": true, "meaning": "ISO-10383-MIC des Handelsplatzes. Siehe quote.mic."},
-      {"name": "listing_id", "kind": "string", "required": true, "meaning": "Opake, dauerhafte Kennung des Listings. Siehe quote.listing_id."},
+      {"name": "listing_id", "kind": "string", "required": true, "meaning": "Opake, dauerhafte Kennung des Listings. Bei der Anlage einmal erzeugt, nicht aus ticker, mic, ISIN oder dem lokalen Schlüssel abgeleitet — Konsumenten behandeln sie als undurchsichtigen String und zerlegen sie nie. Nur hier zugesagt, nicht auf quote: Sie entsteht mit der gespeicherten Zeile, und eine frisch beschaffte Kursantwort hat noch keine."},
       {"name": "history_count", "kind": "integer", "required": true, "meaning": "Anzahl gespeicherter Kurspunkte zu diesem Instrument."},
       {"name": "manual_fields", "kind": "array", "required": true, "meaning": "Kennzahlen, deren angezeigter Wert gerade von Hand stammt. Leer, wenn keine."},
       {"name": "shadowed_fields", "kind": "array", "required": true, "meaning": "Kennzahlen mit manuellem Wert, den die Quelle gerade überstimmt. Der eingetragene Wert steht unter manual_<feld>."},

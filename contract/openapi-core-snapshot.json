@@ -847,7 +847,6 @@
         "identifier": {
           "description": "ISIN, TICKER.ALIAS (EUNL.DE) oder TICKER.MIC (EUNL.XETR)",
           "maxLength": 32,
-          "minLength": 1,
           "title": "Identifier",
           "type": "string"
         }
@@ -925,15 +924,9 @@
           "type": "boolean"
         },
         "currency": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Currency"
+          "description": "Handelswährung, ISO-4217 (oder 'GBp')",
+          "title": "Currency",
+          "type": "string"
         },
         "exchange": {
           "anyOf": [
@@ -996,16 +989,9 @@
           "title": "Isin"
         },
         "mic": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
           "description": "ISO-10383-MIC des Handelsplatzes",
-          "title": "Mic"
+          "title": "Mic",
+          "type": "string"
         },
         "name": {
           "anyOf": [
@@ -1080,16 +1066,9 @@
           "title": "Ter"
         },
         "ticker": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
           "description": "Kanonischer Ticker",
-          "title": "Ticker"
+          "title": "Ticker",
+          "type": "string"
         },
         "type": {
           "anyOf": [
@@ -1129,6 +1108,9 @@
       },
       "required": [
         "symbol",
+        "currency",
+        "ticker",
+        "mic",
         "price",
         "quote_time",
         "fetched_at"

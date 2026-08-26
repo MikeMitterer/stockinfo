@@ -205,14 +205,24 @@ def test_tagespunkt_ohne_jede_waehrung_wird_zum_fehler(repo: QuoteRepository) ->
 
     Dann fehlt die Angabe wirklich, und Raten ist keine Option — genau wie
     beim Kurs selbst.
+
+    **Die währungslose Zeile entsteht seit Runde 40 direkt in der Datenbank.**
+    Über eine `QuoteResponse` geht sie nicht mehr: `currency` ist ein
+    zugesagtes, nicht-nullbares Pflichtfeld. Die Spalte selbst darf weiterhin
+    leer sein — genau darum geht es hier, denn gewachsene Zeilen aus der Zeit
+    davor tragen sie nicht.
     """
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B3RBWM25", symbol="VGWL.DE", ticker="VGWL", mic="XETR", currency=None, price=100.0,
+            isin="IE00B3RBWM25", symbol="VGWL.DE", ticker="VGWL", mic="XETR",
+            currency="EUR", price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",
             fetched_at="2026-07-13T10:00:00+00:00", type="etf",
         )
     )
+    with repo._connect() as connection:
+        connection.execute("UPDATE instruments SET currency = NULL")
+        connection.execute("UPDATE quotes SET currency = NULL")
     dienst = DailyHistoryService(repo, _ProviderOhneWaehrung(), FakeQuotes(repo))
 
     with pytest.raises(QuoteUnavailableError):

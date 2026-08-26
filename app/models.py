@@ -165,27 +165,34 @@ class QuoteResponse(BaseModel):
     exchange: str | None = None
     name: str | None = None
     type: str | None = Field(default=None, description="stock | etf")
-    currency: str | None = None
+    # Ebenfalls Pflicht und nicht nullable — aus demselben Grund wie `ticker`
+    # und `mic` weiter unten. Das Artefakt sagt sie seit T-24 zu, das
+    # veröffentlichte Schema führte sie trotzdem als nullable. Ein Preis ohne
+    # Währung ist für eine Depotrechnung wertlos, und „wird schon Euro sein"
+    # ist bei einem Londoner Listing in Pence falsch.
+    currency: str = Field(description="Handelswährung, ISO-4217 (oder 'GBp')")
 
     # Die kanonische Identität — seit `core_version 2.0.0` zugesagt (T-21
     # Übergabe 3). Sie reiste schon vorher bis zum Repository mit, war am
     # REST-Rand aber ausgeblendet: Ein Feld auszuliefern, das der Vertrag nicht
     # nennt, wäre eine stille Zusage gewesen.
     #
-    # `str | None` und trotzdem Pflicht — wie `currency`: Die Pflichtliste steht
-    # im Vertragsartefakt, und `ensure_core_complete` wirft, wenn eines fehlt.
-    # Ein nicht-optionaler Typ verschöbe denselben Fehler nur nach vorn, mitten
-    # in die Antwort eines Anbieters, und meldete ihn als `500`.
+    # **Pflicht, nicht nullable** — und zwar im Modell, nicht nur im Artefakt.
+    # Bis Runde 39 stand hier `str | None`, weil `ensure_core_complete` die
+    # Pflichtliste ohnehin aus dem Vertrag liest. Das erzeugte aber genau den
+    # Widerspruch, den ein Konsument nicht auflösen kann: Das Artefakt sagte
+    # „Pflicht", das veröffentlichte OpenAPI-Schema sagte „optional, nullable",
+    # und ein generierter Client durfte mit dem Zustand rechnen, den `2.0.0`
+    # gerade abschafft. Fehlt die Identität, scheitert die Antwort jetzt
+    # **vor** dem Bauen, in `QuoteService._build`.
+    #
     # **`listing_id` steht hier bewusst nicht.** Sie entsteht beim Anlegen der
-    # Zeile; eine frisch beschaffte Antwort hat noch keine, und
-    # `ensure_core_complete` prüft *vor* dem Speichern — genau dort, wo der
-    # Schutz hingehört. Sie auf `quote` zuzusagen hieße, der Beschaffung eine
-    # Speicher-Identität abzuverlangen, die es zu dem Zeitpunkt nicht gibt.
-    # Zugesagt wird sie auf `instrument`, wo die Zeile bereits existiert.
-    ticker: str | None = Field(default=None, description="Kanonischer Ticker")
-    mic: str | None = Field(
-        default=None, description="ISO-10383-MIC des Handelsplatzes"
-    )
+    # Zeile; eine frisch beschaffte Antwort hat noch keine. Sie auf `quote`
+    # zuzusagen hieße, der Beschaffung eine Speicher-Identität abzuverlangen,
+    # die es zu dem Zeitpunkt nicht gibt. Zugesagt wird sie auf `instrument`,
+    # wo die Zeile bereits existiert.
+    ticker: str = Field(description="Kanonischer Ticker")
+    mic: str = Field(description="ISO-10383-MIC des Handelsplatzes")
 
     price: float
     quote_time: str
@@ -546,8 +553,13 @@ class IntakeRequest(BaseModel):
     Formen erlaubt.
     """
 
+    # **Keine `min_length`.** Sie schien harmlos, machte aber ausgerechnet die
+    # leere Eingabe zum Sonderfall: `""` lief in FastAPIs untypisiertes `422`,
+    # während `" "` den vorgesehenen `400 identifier_empty` bekam — zwei
+    # Fehlerformen für denselben Fehler, und die zugesagte Kennung war für den
+    # häufigeren der beiden Fälle unerreichbar. Die Leere beantwortet jetzt
+    # allein der Service, und zwar in der Form des Fehlervertrags.
     identifier: str = Field(
-        min_length=1,
         max_length=32,
         description="ISIN, TICKER.ALIAS (EUNL.DE) oder TICKER.MIC (EUNL.XETR)",
     )

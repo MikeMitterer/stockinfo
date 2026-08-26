@@ -47,6 +47,14 @@ REJECTION_REASONS = frozenset(
     {REASON_NO_SUFFIX, REASON_UNKNOWN_SUFFIX, REASON_NON_CANONICAL_TICKER}
 )
 
+# Der Suffix ist der Alias der einen und der MIC einer **anderen** Börse.
+#
+# Nur für die **Eingabe**, nicht für den Umzugsbericht: Ein gespeichertes
+# Symbol trägt immer den Alias, dort stellt sich die Frage nicht. Deshalb steht
+# die Kennung außerhalb von `REJECTION_REASONS` — der Reason-Katalog des
+# Berichts bliebe sonst mit einem Grund stehen, den er nie vergeben kann.
+REASON_AMBIGUOUS_SUFFIX = "ambiguous_exchange_suffix"
+
 # Eine ISIN nach ISO 6166: Ländercode, neun alphanumerische Stellen, Prüfziffer.
 #
 # Steht **hier** und nicht mehr in `app/routers/validation.py`, seit der
@@ -408,12 +416,17 @@ def identity_from_input(value: str) -> tuple[str, str] | None:
     Der Aliasweg läuft deshalb durch `identity_from_symbol` — er wird nicht
     nachgebaut, sondern benutzt. Nur die MIC-Form kommt hier dazu.
 
-    **Der Alias gewinnt.** Ein vierstelliges Token wird zuerst als Alias
-    gelesen und nicht wegen seiner Länge für einen MIC gehalten. Heute ist das
-    folgenlos — kein Alias ist vierstellig, und kein Token ist zugleich Alias
-    und MIC (`test_kein_token_ist_alias_und_mic_zugleich` hält das fest). Käme
-    über ein Plugin je eines dazu, entschiede diese Zeile, und sie soll
-    dastehen statt sich aus der Reihenfolge zu ergeben.
+    **Ein doppeldeutiges Token wird abgelehnt, nicht entschieden.** Zeigt der
+    Suffix als Alias auf die eine und als MIC auf eine **andere** Börse, gibt
+    es keine richtige Wahl — nur zwei falsche. Der frühere Entwurf ließ hier
+    „der Alias gewinnt" stehen; das ist eine stille Entscheidung über den
+    Handelsplatz eines fremden Papiers, und der Benutzer bekäme ein anderes
+    Listing, als er genannt hat. Heute kann der Fall nicht eintreten (kein
+    Alias ist vierstellig), aber ein Plugin darf den Katalog erweitern — und
+    dann entscheidet diese Zeile.
+
+    Die Länge allein entscheidet nichts: Ein vierstelliger Alias, der auf
+    **dieselbe** Börse zeigt wie der gleichnamige MIC, ist kein Konflikt.
 
     **Ein unbekannter MIC zählt nicht.** `is_real_mic` allein genügt nicht: Es
     prüft die Schreibweise, nicht die Zuständigkeit. `FOO.ZZZZ` wäre formal
@@ -428,18 +441,41 @@ def identity_from_input(value: str) -> tuple[str, str] | None:
         `(ticker, mic)`, oder ``None``. Warum es ``None`` wurde, sagt
         `input_failure`.
     """
-    identity = identity_from_symbol(value)
-    if identity is not None:
-        return identity
-
     if not value or "." not in value:
         return None
     ticker, _, suffix = value.partition(".")
     if not is_canonical_ticker(ticker):
         return None
+    if suffix_is_ambiguous(suffix):
+        return None
+
+    identity = identity_from_symbol(value)
+    if identity is not None:
+        return identity
+
     if suffix in EXCHANGES and is_real_mic(suffix):
         return ticker, suffix
     return None
+
+
+def suffix_is_ambiguous(suffix: str) -> bool:
+    """Zeigt dieser Suffix als Alias und als MIC auf **verschiedene** Börsen?
+
+    Die eine Stelle, die den Konflikt feststellt — `identity_from_input` lehnt
+    daraufhin ab, `input_failure` benennt ihn. Getrennt formuliert liefen die
+    beiden beim ersten Plugin-Katalog auseinander.
+
+    Args:
+        suffix: Das nackte Token hinter dem Punkt.
+
+    Returns:
+        ``True``, wenn beide Deutungen existieren und auf verschiedene Börsen
+        zeigen. Zeigen sie auf dieselbe, ist nichts doppeldeutig.
+    """
+    by_alias = mic_for_alias(suffix)
+    if by_alias is None or suffix not in EXCHANGES:
+        return False
+    return by_alias != suffix
 
 
 def input_failure(value: str) -> str | None:
@@ -467,10 +503,14 @@ def input_failure(value: str) -> str | None:
         return REASON_NO_SUFFIX
 
     ticker, _, suffix = value.partition(".")
-    if mic_for_alias(suffix) is None and suffix not in EXCHANGES:
-        return REASON_UNKNOWN_SUFFIX
     if not is_canonical_ticker(ticker):
         return REASON_NON_CANONICAL_TICKER
+    if suffix_is_ambiguous(suffix):
+        # Zwei Deutungen, zwei Börsen — hier wird nicht gewählt, sondern
+        # gesagt, dass die Eingabe nicht entscheidbar ist.
+        return REASON_AMBIGUOUS_SUFFIX
+    if mic_for_alias(suffix) is None and suffix not in EXCHANGES:
+        return REASON_UNKNOWN_SUFFIX
     # Der Suffix steht im Katalog, ist aber kein echter MIC — der Sammelcode
     # `US`. Er ist kein Handelsplatz, und welcher der fünf gemeint ist, sagt
     # die Eingabe nicht.

@@ -2,7 +2,16 @@
 
 import pytest
 
-from app.exchanges import EXCHANGES, is_real_mic, split_symbol
+from dataclasses import replace
+
+from app.exchanges import (
+    EXCHANGES,
+    REASON_AMBIGUOUS_SUFFIX,
+    identity_from_input,
+    input_failure,
+    is_real_mic,
+    split_symbol,
+)
 
 
 @pytest.mark.parametrize(
@@ -59,17 +68,11 @@ def test_kein_suffix_ist_doppelt_vergeben() -> None:
 
 
 def test_kein_token_ist_alias_und_mic_zugleich() -> None:
-    """Die Voraussetzung der Rangfolge in `identity_from_input` — gemessen.
+    """Der **heutige** Katalog trägt keine Doppeldeutigkeit — gemessen.
 
-    Die Eingabe kennt zwei Formen, `EUNL.DE` und `EUNL.XETR`, und liest den
-    Suffix zuerst als Alias. Wäre ein Token zugleich der Alias der einen und
-    der MIC einer **anderen** Börse, entschiede diese Reihenfolge stillschweigend
-    über den Handelsplatz — der Benutzer bekäme ein anderes Listing, als er
-    genannt hat.
-
-    Heute gibt es keinen solchen Fall (gemessen: kein Alias ist vierstellig).
-    Käme über ein Plugin einer dazu, schlägt dieser Test an, statt dass die
-    Aufnahme rät.
+    Diese Zeile misst nur den Bestand; was passiert, *wenn* doch eine
+    entsteht, prüft der Test darunter. Beides wird gebraucht: Der Bestand kann
+    still driften, und ein Plugin darf den Katalog erweitern.
     """
     ambiguous = {
         definition.alias: mic
@@ -78,6 +81,45 @@ def test_kein_token_ist_alias_und_mic_zugleich() -> None:
     }
 
     assert ambiguous == {}, f"Token sind Alias und MIC zugleich: {ambiguous}"
+
+
+def test_ein_doppeldeutiger_suffix_wird_abgelehnt_statt_entschieden(monkeypatch) -> None:
+    """`#2f`: Der benannte Konflikt aus dem Entwurf, mit erweitertem Katalog.
+
+    Ein Plugin trägt eine Börse `XFOO` ein, die ausgerechnet den Alias `XNAS`
+    führt. Damit zeigt dasselbe Token auf zwei Handelsplätze: als MIC auf die
+    NASDAQ, als Alias auf `XFOO`.
+
+    Der frühere Entwurf sagte „der Alias gewinnt" — und hätte `AAPL.XNAS`
+    still als `AAPL/XFOO` gedeutet. Es gibt hier aber keine richtige Wahl, nur
+    zwei falsche; also wird abgelehnt und der Grund benannt.
+
+    Der Alias ist **vierstellig**, und genau das ist der Punkt: Nicht die
+    Länge entscheidet, sondern dass zwei Deutungen auf verschiedene Börsen
+    zeigen.
+    """
+    four_letter_alias = replace(EXCHANGES["XETR"], alias="XNAS")
+    monkeypatch.setitem(EXCHANGES, "XFOO", four_letter_alias)
+
+    assert identity_from_input("AAPL.XNAS") is None
+    assert input_failure("AAPL.XNAS") == REASON_AMBIGUOUS_SUFFIX
+    # Der übrige Katalog bleibt unberührt — die Ablehnung gilt dem einen Token.
+    assert identity_from_input("EUNL.DE") == ("EUNL", "XETR")
+
+
+def test_ein_vierstelliger_alias_derselben_boerse_ist_kein_konflikt(monkeypatch) -> None:
+    """Die Gegenprobe zur Gegenprobe: gleiche Börse, kein Widerspruch.
+
+    Führte eine Börse ihren eigenen MIC zusätzlich als Alias, zeigten beide
+    Deutungen auf **dieselbe** Notierung. Das ist redundant, aber nicht
+    doppeldeutig — und darf deshalb nicht abgelehnt werden. Ohne diese Zeile
+    wäre `suffix_is_ambiguous` auch mit einem simplen „vierstellig heißt
+    Konflikt" grün.
+    """
+    monkeypatch.setitem(EXCHANGES, "XETR", replace(EXCHANGES["XETR"], alias="XETR"))
+
+    assert identity_from_input("EUNL.XETR") == ("EUNL", "XETR")
+    assert input_failure("EUNL.XETR") is None
 
 
 def test_die_schema_schicht_zieht_kein_yfinance_mit() -> None:

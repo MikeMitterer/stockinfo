@@ -456,7 +456,7 @@ def test_erfolgreiche_anreicherung_darf_felder_weiterhin_leeren(
     repo.save_quote(
         QuoteResponse(
             isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
-            type="etf", price=128.7,
+            currency="EUR", type="etf", price=128.7,
             quote_time="2026-08-18T10:00:00+00:00", ter=0.2, provider="iShares",
             fetched_at="2026-08-18T10:00:00+00:00",
         )
@@ -464,7 +464,7 @@ def test_erfolgreiche_anreicherung_darf_felder_weiterhin_leeren(
     repo.save_quote(
         QuoteResponse(
             isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
-            type="etf", price=129.1,
+            currency="EUR", type="etf", price=129.1,
             quote_time="2026-08-18T11:00:00+00:00", ter=None, provider="iShares",
             fetched_at="2026-08-18T11:00:00+00:00",
         )
@@ -523,10 +523,16 @@ def test_ein_papier_ohne_handelsplatz_wird_nicht_angelegt(
     Abgelehnt wird mit einem eigenen Fehler statt mit einer
     `NOT NULL`-Verletzung: dieselbe Ablehnung, aber sie sagt, was fehlt.
     """
-    with pytest.raises(IncompleteIdentityError) as fehler:
+    # Seit Runde 40 mit einem **vorhandenen, aber ungültigen** Wert: `ticker`
+    # und `mic` sind nicht-nullbare Pflichtfelder, „gar keine Identität" lässt
+    # sich am Modell nicht mehr ausdrücken. Für eine Kryptowährung gibt es
+    # keinen ISO-10383-MIC — der Sammelcode ist der nächstbeste Griff, und
+    # genau den lehnt `canonical_identity` ab.
+    with pytest.raises(IncompleteIdentityError) as rejected:
         repo.save_quote(
             QuoteResponse(
-                isin=None, symbol="BTC-USD", type=None, currency="USD",
+                isin=None, symbol="BTC-USD", ticker="BTC", mic="US",
+                type=None, currency="USD",
                 price=61234.0,
                 quote_time="2026-08-19T10:00:00+00:00",
                 fetched_at="2026-08-19T10:00:00+00:00",
@@ -534,7 +540,7 @@ def test_ein_papier_ohne_handelsplatz_wird_nicht_angelegt(
             )
         )
 
-    assert fehler.value.symbol == "BTC-USD"
+    assert rejected.value.symbol == "BTC-USD"
     assert repo.get_instrument_by_symbol("BTC-USD") is None
 
 
@@ -551,7 +557,7 @@ def test_unvollstaendige_antwort_setzt_den_metadaten_zeitstempel_nicht_hoch(
     repo.save_quote(
         QuoteResponse(
             isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
-            type="etf", price=128.7,
+            currency="EUR", type="etf", price=128.7,
             quote_time="2026-08-01T10:00:00+00:00", ter=0.2, provider="iShares",
             fetched_at="2026-08-01T10:00:00+00:00",
         )
@@ -559,7 +565,7 @@ def test_unvollstaendige_antwort_setzt_den_metadaten_zeitstempel_nicht_hoch(
     repo.save_quote(
         QuoteResponse(
             isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
-            type="etf", price=129.1,
+            currency="EUR", type="etf", price=129.1,
             quote_time="2026-08-19T11:00:00+00:00",
             fetched_at="2026-08-19T11:00:00+00:00",
             metadata_complete=False,
@@ -578,7 +584,7 @@ def test_erster_insert_ohne_metadaten_gilt_sofort_als_faellig(
     repo.save_quote(
         QuoteResponse(
             isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
-            type="etf", price=128.7,
+            currency="EUR", type="etf", price=128.7,
             quote_time="2026-08-19T10:00:00+00:00",
             fetched_at="2026-08-19T10:00:00+00:00",
             metadata_complete=False,
@@ -609,11 +615,11 @@ def test_ein_verlorenes_rennen_meldet_keine_neuanlage(
     real_find = QuoteRepository._find_instrument_id
     lookups: list[int] = []
 
-    def blind_on_first_call(connection, isin, symbol):
+    def blind_on_first_call(connection, isin, symbol, ticker=None, mic=None):
         lookups.append(1)
         if len(lookups) == 1:
             return None
-        return real_find(connection, isin, symbol)
+        return real_find(connection, isin, symbol, ticker, mic)
 
     monkeypatch.setattr(
         QuoteRepository, "_find_instrument_id", staticmethod(blind_on_first_call)

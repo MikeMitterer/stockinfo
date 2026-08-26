@@ -334,6 +334,63 @@ def test_eine_unauflösbare_eingabe_wird_mit_kennung_abgelehnt(
     assert _row(repository, identifier) == {}, "eine halbe Zeile ist entstanden"
 
 
+def test_eine_aliaslose_boerse_bleibt_die_genannte(client_and_repo) -> None:
+    """**Befund 1 aus Runde 39** — auf leerem Bestand.
+
+    `AAPL.XNAS` und `AAPL.XNYS` tragen denselben Abrufalias `AAPL`, weil die
+    US-Plätze keinen Suffix führen. Der erste Entwurf bildete genau diesen
+    Alias und schlug damit nach — die genannte Börse war weg, und der
+    mehrdeutige Symbolweg entschied neu. Auf leerem Bestand endete das in
+    einem `500`.
+
+    Geprüft wird deshalb der Wert, den der Benutzer genannt hat: `XNAS`.
+    """
+    client, repository = client_and_repo
+
+    response = _intake(client, "AAPL.XNAS")
+
+    assert response.status_code == 201
+    assert (response.json()["ticker"], response.json()["mic"]) == ("AAPL", "XNAS")
+    assert _row(repository, "AAPL")["mic"] == "XNAS"
+
+
+def test_eine_andere_boerse_desselben_tickers_wird_nicht_verwechselt(
+    client_and_repo,
+) -> None:
+    """**Befund 1 aus Runde 39** — die schärfere Lage.
+
+    Liegt `AAPL/XNYS` bereits im Bestand, fand die alte Fassung über das
+    Symbol `AAPL` genau diese Zeile und antwortete mit `200` und `XNYS` — auf
+    eine Eingabe, die ausdrücklich `XNAS` nannte. Das ist schlimmer als der
+    `500` daneben: Es sieht wie ein Erfolg aus.
+
+    Nachgeschlagen wird jetzt über `(ticker, mic)`, und das Paar ist eindeutig
+    indiziert. `AAPL.XNAS` ist damit ein **anderes** Listing.
+    """
+    client, repository = client_and_repo
+    with repository._connect() as connection:
+        connection.execute(
+            "INSERT INTO instruments (isin, symbol, first_seen, listing_id, "
+            "ticker, mic) VALUES (?, ?, ?, ?, ?, ?)",
+            (None, "AAPL", "2026-08-01T00:00:00+00:00", "nyse-1", "AAPL", "XNYS"),
+        )
+
+    response = _intake(client, "AAPL.XNAS")
+
+    assert response.status_code == 201, "die andere Börse ist ein neues Listing"
+    assert response.json()["mic"] == "XNAS"
+    assert response.json()["listing_id"] != "nyse-1"
+
+    with repository._connect() as connection:
+        mics = [
+            row["mic"]
+            for row in connection.execute(
+                "SELECT mic FROM instruments WHERE ticker = 'AAPL' ORDER BY mic"
+            )
+        ]
+    assert mics == ["XNAS", "XNYS"], "beide Notierungen stehen nebeneinander"
+
+
 def test_die_ablehnung_kommt_nicht_unter_detail(client_and_repo) -> None:
     """Der Rumpf ist der Fehler — nicht FastAPIs Umschlag.
 
@@ -346,6 +403,51 @@ def test_die_ablehnung_kommt_nicht_unter_detail(client_and_repo) -> None:
     body = _intake(client, "AAPL").json()
 
     assert set(body) == {"code", "params"}
+
+
+@pytest.mark.parametrize(
+    "identifier", ["", " ", "   "], ids=["leer", "ein_leerzeichen", "leerraum"]
+)
+def test_eine_leere_eingabe_hat_genau_eine_fehlerform(
+    client_and_repo, identifier: str
+) -> None:
+    """**Befund 4 aus Runde 39** — `""` und `" "` liefen auseinander.
+
+    Ein `min_length=1` am Modell machte die exakt leere Eingabe zum
+    Sonderfall: Sie endete in FastAPIs untypisiertem `422`, während ein
+    Leerzeichen den zugesagten `400 identifier_empty` bekam. Damit war die
+    Kennung ausgerechnet für den häufigeren Fall unerreichbar — ein leeres
+    Feld abzuschicken ist normal, ein Leerzeichen hineinzuschreiben nicht.
+
+    Der Fehlervertrag kennt eine Form, und der Service beantwortet die Leere.
+    """
+    client, _ = client_and_repo
+
+    response = _intake(client, identifier)
+
+    assert response.status_code == 400
+    assert response.json()["code"] == "identifier_empty"
+
+
+def test_eine_tote_quelle_ist_ein_502_mit_kennung(client_and_repo, monkeypatch) -> None:
+    """**Befund 4 aus Runde 39** — die vierte Zeile des Erfolgsvertrags.
+
+    Sie war zugesagt, im Snapshot beschrieben und von Codex von Hand
+    nachgestellt, aber nicht als Regressionstest eingecheckt. Eine Zusage ohne
+    Test hält genau bis zur nächsten Umbauwelle.
+
+    Ausgefallen ist die **Außengrenze**, nicht eine Core-Komponente: Die
+    Kursquelle liefert nichts, alles andere läuft echt. Der Aufrufer hat
+    nichts falsch gemacht — deshalb `502` und nicht `400`.
+    """
+    client, _ = client_and_repo
+    monkeypatch.setattr(_QuoteSource, "fetch_quote", lambda self, symbol: None)
+
+    response = _intake(client, "EUNL.DE")
+
+    assert response.status_code == 502
+    assert response.json()["code"] == "quote_unavailable"
+    assert set(response.json()) == {"code", "params"}
 
 
 def test_der_router_kennt_die_eingabeformen_nicht(client_and_repo) -> None:

@@ -47,6 +47,8 @@ class FakeService:
         return QuoteResponse(
             isin=isin,
             symbol="VGWL.DE",
+            ticker="VGWL",
+            mic="XETR",
             currency="EUR",
             price=160.98,
             quote_time="2026-07-12T17:00:00+00:00",
@@ -63,6 +65,8 @@ class FakeService:
         return QuoteResponse(
             isin=None,
             symbol=symbol,
+            ticker="MC",
+            mic="XPAR",
             currency="EUR",
             price=430.0,
             quote_time="2026-07-12T17:00:00+00:00",

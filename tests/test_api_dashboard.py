@@ -27,11 +27,13 @@ class FakeService:
     def refresh_one(self, isin: str) -> QuoteResponse:
         if isin.startswith("XX"):
             raise InstrumentNotFoundError(isin)
-        return QuoteResponse(isin=isin, symbol="VGWL.DE", currency="EUR",
+        return QuoteResponse(isin=isin, symbol="VGWL.DE", ticker="VGWL", mic="XETR",
+                             currency="EUR",
                              price=161.0, quote_time="t", fetched_at="t", type="etf")
 
     def refresh_one_by_symbol(self, symbol: str) -> QuoteResponse:
-        return QuoteResponse(isin=None, symbol=symbol, currency="EUR",
+        return QuoteResponse(isin=None, symbol=symbol, ticker="MC", mic="XPAR",
+                             currency="EUR",
                              price=430.0, quote_time="t", fetched_at="t", type="stock")
 
     def delete_instrument(self, isin: str) -> bool:

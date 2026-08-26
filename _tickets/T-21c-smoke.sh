@@ -320,6 +320,54 @@ checkBothInputForms() {
     done
 }
 
+# #2f — Eine aliaslose Börse bleibt die genannte.
+#
+# Der Befund aus Runde 39, live: `AAPL.XNAS` und `AAPL.XNYS` tragen denselben
+# Abrufalias `AAPL`, weil die US-Plätze keinen Suffix führen. Wer über das
+# Symbol nachschlägt, verliert genau die Börse, die der Benutzer genannt hat.
+#
+# Geprüft wird gegen das **echte** Yahoo: Der Kurs kommt für `AAPL`, die
+# Identität aus der Eingabe.
+checkAliaslessMic() {
+    local _ANSWER _BODY _STATUS
+    _ANSWER="$(intake "AAPL.XNAS")"
+    _STATUS="${_ANSWER##*$'\n'}"
+    _BODY="${_ANSWER%$'\n'*}"
+
+    local -r _MIC="$(jsonField "${_BODY}" mic)"
+    local -r _TICKER="$(jsonField "${_BODY}" ticker)"
+
+    if [[ "${_STATUS}" == "201" && "${_MIC}" == "XNAS" && "${_TICKER}" == "AAPL" ]]; then
+        report "#2f" "AAPL.XNAS behält die genannte Börse" true "AAPL/XNAS"
+    else
+        report "#2f" "AAPL.XNAS behält die genannte Börse" false \
+            "HTTP ${_STATUS}, ${_TICKER}/${_MIC} statt AAPL/XNAS"
+        return
+    fi
+
+    # Die Gegenprobe: Dieselbe Kennung an einem **anderen** Platz.
+    #
+    # Erwartet wird ein Wechsel, keine zweite Zeile — und das ist kein
+    # Widerspruch zum Test daneben, sondern die ISIN-Regel des Vertrags:
+    # `one_active_listing_per_isin`. Yahoo liefert für `AAPL` eine ISIN, also
+    # gibt es dieses Papier genau einmal, und die Eingabe entscheidet, wo.
+    # Ohne ISIN — im Kettentest so gebaut — stehen die beiden Notierungen
+    # dagegen nebeneinander.
+    _ANSWER="$(intake "AAPL.XNYS")"
+    _STATUS="${_ANSWER##*$'\n'}"
+    _BODY="${_ANSWER%$'\n'*}"
+
+    local -r _ROWS="$(dbQuery "SELECT COUNT(*) FROM instruments WHERE ticker = 'AAPL'")"
+    if [[ "${_STATUS}" == "200" && "$(jsonField "${_BODY}" mic)" == "XNYS" \
+          && "${_ROWS}" == "1" ]]; then
+        report "#2f" "AAPL.XNYS zieht dieselbe ISIN um" true \
+            "200, XNYS, weiterhin eine Zeile"
+    else
+        report "#2f" "AAPL.XNYS zieht dieselbe ISIN um" false \
+            "HTTP ${_STATUS}, mic $(jsonField "${_BODY}" mic), ${_ROWS} Zeilen"
+    fi
+}
+
 # #2i — Unauflösbare Eingaben werden mit Kennung abgelehnt.
 #
 # Die Gegenprobe des ganzen Laufs: Ein Durchgang, in dem alles durchgeht, hat
@@ -417,6 +465,7 @@ runChecks() {
 
     checkKnownPaperIsNotCreated "${FIRST_LISTING_ID}"
     checkBothInputForms "${FIRST_LISTING_ID}"
+    checkAliaslessMic
     checkRejections
     checkNoHalfIdentity
     checkInstrumentListShowsIdentity

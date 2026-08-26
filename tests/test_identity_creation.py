@@ -143,13 +143,21 @@ def test_ohne_eindeutige_zuordnung_entsteht_gar_keine_zeile(repo) -> None:
 
     Abgelehnt wird mit einem eigenen Fehler statt mit einer
     `NOT NULL`-Verletzung: dieselbe Ablehnung, aber sie sagt, was fehlt.
+
+    **Geprüft wird seit Runde 40 mit einem *vorhandenen*, aber ungültigen
+    Wert.** Eine leere Identität lässt sich am Modell nicht mehr ausdrücken —
+    `ticker` und `mic` sind seit `core_version 2.0.0` nicht-nullbare
+    Pflichtfelder. Der Sammelcode `US` ist der Fall, den es weiterhin gibt:
+    Er steht da, ist aber kein Handelsplatz, und `canonical_identity` lehnt
+    ihn ab. Die Verteidigung im Repository greift also unverändert — sie
+    schützt jetzt gegen falsche statt gegen fehlende Werte.
     """
     with pytest.raises(IncompleteIdentityError):
-        repo.save_quote(_response(symbol="BRK-B", ticker=None, mic=None))
+        repo.save_quote(_response(symbol="VTI", ticker="VTI", mic="US"))
 
     with repo._connect() as connection:
-        anzahl = connection.execute("SELECT COUNT(*) FROM instruments").fetchone()[0]
-    assert anzahl == 0
+        count = connection.execute("SELECT COUNT(*) FROM instruments").fetchone()[0]
+    assert count == 0
 
 
 def test_eine_ueberholte_zuordnung_wird_nachgezogen(repo) -> None:
@@ -177,16 +185,22 @@ def test_eine_ueberholte_zuordnung_wird_nachgezogen(repo) -> None:
 def test_eine_offene_aufloesung_verwirft_keine_bestehende_zuordnung(repo) -> None:
     """Rückwärts gilt es **nicht** — sonst wäre die Zuordnung wieder weg.
 
-    Kommt eine Antwort ohne Identität (Yahoo hat nur ein Fremdsymbol, oder die
-    Auflösung lief über einen Weg, der keine liefert), bleibt der gespeicherte
-    Stand stehen. Eine bestehende Zuordnung zu leeren ist Datenverlust — und
-    genau der Fehler, den Teil 1 in Runde 1 gemacht hat.
+    Kommt eine Antwort mit einer Identität, die keine ist, bleibt der
+    gespeicherte Stand stehen. Eine bestehende Zuordnung zu leeren ist
+    Datenverlust — genau der Fehler, den Teil 1 in Runde 1 gemacht hat.
+
+    **Der ungültige Fall hat seit Runde 40 eine andere Gestalt.** „Keine
+    Identität" lässt sich am Modell nicht mehr ausdrücken; was es weiterhin
+    gibt, ist ein Wert, der dasteht und trotzdem nichts bezeichnet — der
+    Sammelcode `US`. `canonical_identity` lehnt ihn ab, und damit greift
+    dieselbe Regel: Was nicht vollständig ist, ersetzt nichts.
     """
     instrument_id = repo.save_quote(_response()).instrument_id
 
-    repo.save_quote(_response(price=130.0, ticker=None, mic=None))
+    repo.save_quote(_response(price=130.0, ticker="VGWL", mic="US"))
 
     assert _row(repo, instrument_id)["ticker"] == "VGWL"
+    assert _row(repo, instrument_id)["mic"] == "XETR", "der Sammelcode ersetzt nichts"
 
 
 def test_ein_wechsel_des_handelsplatzes_wird_protokolliert(repo) -> None:

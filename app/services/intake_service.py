@@ -19,7 +19,7 @@ from dataclasses import dataclass
 
 import structlog
 
-from app.exchanges import identity_from_input, input_failure, is_isin, provider_alias
+from app.exchanges import identity_from_input, input_failure, is_isin
 from app.services.quote_cache import CachedQuoteService, StoredQuote
 from app.services.quote_service import (
     InstrumentNotFoundError,
@@ -138,7 +138,10 @@ class IntakeService:
                 input_failure(value) or REASON_UNKNOWN_FORM, identifier=value
             )
 
-        ticker, mic = identity
-        # **Nicht** der eingegebene Wert: `EUNL.XETR` und `EUNL.DE` meinen
-        # dasselbe Listing, und die Kursquelle kennt nur ihr eigenes Format.
-        return self._quotes.store_by_symbol(provider_alias(ticker, mic))
+        # **Über die Identität, nicht über den Alias.** Der Alias ist für die
+        # US-Plätze mehrdeutig: `AAPL.XNAS` und `AAPL.XNYS` heißen beide
+        # `AAPL`. Ihn hier zu bilden und damit nachzuschlagen warf genau die
+        # Börse weg, die der Benutzer gerade genannt hatte — auf leerem Bestand
+        # ein `500`, bei vorhandenem `AAPL/XNYS` eine Antwort mit der falschen
+        # Börse. Gebildet wird er erst dort, wo die Kursquelle ihn braucht.
+        return self._quotes.store_by_identity(*identity)

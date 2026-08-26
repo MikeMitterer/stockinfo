@@ -1,7 +1,24 @@
 # Der REST-Core von StockInfo — was zugesagt ist
 
-**Vertragsversion 1.0.0** · Stand 2026-08-21 · Ticket
-[T-24](../_tickets/T-24-rest-core-vertrag.md)
+**Vertragsversion 2.0.0** · Stand 2026-08-26 · Tickets
+[T-24](../_tickets/T-24-rest-core-vertrag.md) und
+[T-21](../_tickets/T-21-identitaet-mic-und-ticker.md)
+
+> **Was 2.0.0 gegenüber 1.0.0 ändert** — ein Major-Sprung, weil beides
+> bestehende Konsumenten bricht:
+>
+> * **`ticker` und `mic` sind zugesagte Pflichtfelder** von `quote` und
+>   `instrument`, `listing_id` von `instrument`. Sie sind **nicht nullable**:
+>   Ein Papier ohne kanonische Identität kommt seit T-21 gar nicht mehr in den
+>   Bestand, und `null` zuzulassen wäre die Zusage, mit einem Zustand zu
+>   rechnen, den es nicht geben darf.
+> * **`GET /quote?symbol=` verlangt den Handelsplatz.** Ein suffixloses Symbol
+>   wie `AAPL` wird mit `400` abgelehnt statt mit einer halben Identität
+>   gespeichert. Eine Anfrage, die bisher `200` lieferte, liefert künftig
+>   `400`.
+> * **Neu im Core: `POST /instruments/intake`** — der eine zugesagte
+>   Schreibweg. Er nimmt einen rohen Feldwert entgegen; was er bedeutet,
+>   entscheidet der Core.
 
 Dieses Dokument erklärt den Vertrag. **Verbindlich ist die Datei daneben:**
 [`contract/core-contract.json`](../contract/core-contract.json). Sie ist
@@ -25,13 +42,21 @@ Fünf öffentliche Modelle, jedes mit eigener Pflichtfeldmenge:
 | Modell | Endpunkte |
 |---|---|
 | `quote` | `/quote`, `/quote/{isin}` |
-| `instrument` | `/instruments` |
+| `instrument` | `/instruments`, `POST /instruments/intake` |
 | `daily` | `/quote/{isin}/daily`, `/quote/by-symbol/{symbol}/daily` |
 | `history` | `/quote/{isin}/history`, `/quote/by-symbol/{symbol}/history` |
 | `fx` | `/fx` |
 
 Nicht im Core: die Diagnoseendpunkte (`/env`, `/analyze`, `/ready`), die
 Schreibvorgänge des Dashboards und `/exchanges`. Sie dürfen sich ändern.
+
+**Eine Ausnahme seit 2.0.0:** `POST /instruments/intake` ist ein
+Schreibvorgang und **trotzdem** zugesagt. Er ist der eine Weg, auf dem ein
+Papier in den Bestand kommt, und das Dashboard darf ihn nicht selbst
+nachbauen — täte es das, klassifizierte es Eingaben nach einer zweiten
+Grammatik, die beim ersten Plugin von der des Core abwiche. Die übrigen
+Schreibknöpfe der Oberfläche (`PUT`/`DELETE` an Instrumenten, `/refresh`)
+bleiben außerhalb.
 
 ## Die Begriffe, die sich sonst niemand erschließt
 
@@ -140,10 +165,12 @@ Fehler behandelt. Nur so bleibt eine additive Erweiterung wirklich additiv.
 ## Entschieden, aber noch nicht zugesagt
 
 Der Abschnitt `planned` im Artefakt nennt, was kommt und in welchem Ticket:
-`listing_id` und `(ticker, mic)` mit T-21, der `details`-Container mit T-26, die
-Laufzeitseite der Generation mit T-25. Diese Einträge sind **nicht** Teil von
-`core_version 1.0.0`. Sie stehen da, damit ein Konsument weiß, was kommt — nicht,
-damit er sich darauf verlässt.
+der `details`-Container mit T-26, die Laufzeitseite der Generation mit T-25.
+Diese Einträge sind **nicht** Teil von `core_version 2.0.0`. Sie stehen da,
+damit ein Konsument weiß, was kommt — nicht, damit er sich darauf verlässt.
+
+`listing_id` und `(ticker, mic)` standen bis 1.0.0 hier; mit T-21 sind sie
+zugesagt und deshalb aus `planned` verschwunden.
 
 ## Der Vertrag ist abfragbar, nicht nur dokumentiert
 
@@ -153,7 +180,7 @@ liefert deshalb dieselbe Auskunft im Betrieb:
 
 ```json
 {
-  "core_version": "1.0.0",
+  "core_version": "2.0.0",
   "core": { "quote": [ {"name": "price", "kind": "number", "required": true, "meaning": "…"} ], … },
   "endpoints": { "quote": [ {"path": "/quote/{isin}", "method": "GET", "query": []} ], … },
   "details_version": 0,

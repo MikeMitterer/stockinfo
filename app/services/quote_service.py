@@ -80,6 +80,29 @@ class UnresolvableSymbolError(Exception):
         self.symbol = symbol
 
 
+def require_core_values(symbol: str, **values: object) -> None:
+    """Wirft, wenn einer der übergebenen Werte fehlt — **vor** dem Bauen.
+
+    Das Gegenstück zu `ensure_core_complete`, eine Zeile früher. Seit die
+    zugesagten Pflichtfelder auch im Modell nicht-nullbar sind, käme ein
+    fehlender Wert dort als `ValidationError` an — ein `500`, der dem Aufrufer
+    nichts über die Ursache sagt. Geprüft wird deshalb, bevor die Antwort
+    entsteht, und die Aussage ist dieselbe wie die des späteren Prüfers.
+
+    Args:
+        symbol: Für die Meldung.
+        values: Feldname auf Wert, in der Reihenfolge des Vertrags.
+
+    Raises:
+        QuoteUnavailableError: Mindestens ein Wert ist leer.
+    """
+    missing = [name for name, value in values.items() if not value]
+    if not missing:
+        return
+    logger.warning("core_incomplete", symbol=symbol, missing=missing)
+    raise QuoteUnavailableError(f"{symbol}: Pflichtfelder fehlen — {', '.join(missing)}")
+
+
 def ensure_core_complete(response: QuoteResponse) -> None:
     """Wirft, wenn ein Pflichtfeld des Core-Vertrags leer ist.
 
@@ -293,13 +316,20 @@ class QuoteService:
         if raw is None:
             raise QuoteUnavailableError(resolved.symbol)
 
+        require_core_values(
+            resolved.symbol,
+            ticker=resolved.ticker,
+            mic=resolved.mic,
+            currency=raw.currency or resolved.currency,
+        )
+
         isin = self._isin_of(resolved, raw)
         instrument_type = raw.type or resolved.type
         response = QuoteResponse(
             isin=isin,
             symbol=resolved.symbol,
-            # Die kanonische Identität aus der Auflösung (T-21). Sie reist bis
-            # zum Repository mit; am REST-Rand erscheint sie noch nicht.
+            # Die kanonische Identität aus der Auflösung (T-21) — seit
+            # `core_version 2.0.0` auch am REST-Rand zugesagt.
             ticker=resolved.ticker,
             mic=resolved.mic,
             exchange=resolved.exchange or raw.exchange,

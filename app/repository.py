@@ -14,7 +14,7 @@ from dataclasses import dataclass
 import structlog
 
 from app.db import get_connection
-from app.exchanges import canonical_identity
+from app.exchanges import canonical_identity, identity_from_symbol
 from app.models import OVERRIDE_FIELDS, QuoteResponse
 
 logger = structlog.get_logger()
@@ -134,6 +134,32 @@ class QuoteRepository:
             row = connection.execute(
                 "SELECT * FROM instruments WHERE symbol = ? ORDER BY id LIMIT 1",
                 (symbol,),
+            ).fetchone()
+            return dict(row) if row else None
+
+    def get_instrument_by_identity(self, ticker: str, mic: str) -> dict | None:
+        """Gibt das Instrument zur **kanonischen Identität** zurück.
+
+        Der Aufnahmeweg schlägt hierüber nach, nicht über `symbol` — und das
+        ist der Unterschied, der `AAPL.XNAS` von `AAPL.XNYS` trennt. Beide
+        tragen denselben Abrufalias `AAPL`, weil die US-Plätze keinen Suffix
+        führen; eine Suche über das Symbol fände deshalb die falsche Börse
+        oder, auf leerem Bestand, gar nichts Eindeutiges.
+
+        Die Abfrage ist eindeutig: `idx_instruments_ticker_mic` liegt auf genau
+        diesem Paar.
+
+        Args:
+            ticker: Kanonischer Ticker.
+            mic: ISO-10383-MIC des Handelsplatzes.
+
+        Returns:
+            Die Zeile, oder ``None``.
+        """
+        with self._connect() as connection:
+            row = connection.execute(
+                "SELECT * FROM instruments WHERE ticker = ? AND mic = ?",
+                (ticker, mic),
             ).fetchone()
             return dict(row) if row else None
 
@@ -460,7 +486,7 @@ class QuoteRepository:
         anderer schneller war.
         """
         existing_id = self._find_instrument_id(
-            connection, response.isin, response.symbol
+            connection, response.isin, response.symbol, response.ticker, response.mic
         )
         meta = {field: getattr(response, field) for field in self._writable_fields(response)}
 
@@ -631,15 +657,57 @@ class QuoteRepository:
 
     @staticmethod
     def _find_instrument_id(
-        connection: sqlite3.Connection, isin: str | None, symbol: str
+        connection: sqlite3.Connection,
+        isin: str | None,
+        symbol: str,
+        ticker: str | None = None,
+        mic: str | None = None,
     ) -> int | None:
-        """Sucht ein Instrument per ISIN, sonst per Symbol."""
+        """Sucht ein Instrument — ISIN, dann Identität, dann Symbol.
+
+        Die Reihenfolge trägt drei verschiedene Zusagen:
+
+        1. **Die ISIN zuerst.** Sie ist eindeutig und überdauert einen Wechsel
+           des Handelsplatzes. Nur so zieht der nächste Kurs eine überholte
+           Zuordnung gerade, statt ein zweites Listing anzulegen.
+        2. **Dann `(ticker, mic)`.** Für ein Papier ohne ISIN ist das die
+           kanonische Identität, und der Eindeutigkeitsindex liegt darauf.
+        3. **Das Symbol nur, wenn es eindeutig ist.** Und genau hier lag der
+           Fehler: `AAPL` ist *kein* Bezeichner eines Listings — die US-Plätze
+           führen keinen Suffix, also heißen `AAPL/XNAS` und `AAPL/XNYS` beide
+           so. Eine Suche darüber fand die falsche Notierung und schrieb ihr
+           anschließend die neue Börse in die Zeile. Zerlegbar ist ein Symbol
+           genau dann, wenn `identity_from_symbol` etwas liefert; sonst
+           identifiziert es nichts und wird nicht gefragt.
+
+        Args:
+            connection: Offene Verbindung der laufenden Transaktion.
+            isin: ISIN der Antwort, sofern bekannt.
+            symbol: Das Anbietersymbol.
+            ticker: Kanonischer Ticker der Antwort.
+            mic: MIC der Antwort.
+
+        Returns:
+            Die ID des gefundenen Instruments, oder ``None``.
+        """
         if isin:
             row = connection.execute(
                 "SELECT id FROM instruments WHERE isin = ?", (isin,)
             ).fetchone()
             if row:
                 return int(row["id"])
+
+        if ticker and mic:
+            row = connection.execute(
+                "SELECT id FROM instruments WHERE ticker = ? AND mic = ?",
+                (ticker, mic),
+            ).fetchone()
+            if row:
+                return int(row["id"])
+
+        if identity_from_symbol(symbol) is None:
+            return None
+
         row = connection.execute(
             "SELECT id FROM instruments WHERE symbol = ? ORDER BY id LIMIT 1", (symbol,)
         ).fetchone()

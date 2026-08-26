@@ -21,7 +21,7 @@ from pathlib import Path
 
 import pytest
 
-from app.contract import core_contract
+from app.contract import core_contract, required_fields
 from app.main import app
 
 SNAPSHOT_FILE = Path(__file__).resolve().parent.parent / "contract" / "openapi-core-snapshot.json"
@@ -178,3 +178,55 @@ def test_der_core_entspricht_dem_schnappschuss() -> None:
     assert aktuell["schemas"] == gespeichert["schemas"], (
         f"Ein Core-Modell hat sich geändert.\n{_HINWEIS_ERNEUERN}"
     )
+
+
+# Welches Antwortmodell trägt welchen Vertragstyp. Ausgeschrieben und nicht
+# geraten: Der Name im Artefakt ist eine Vertragsvokabel, der Klassenname eine
+# Implementierungssache, und sie müssen nicht gleich heißen.
+_CONTRACT_MODELS = {
+    "quote": "QuoteResponse",
+    "instrument": "InstrumentSummary",
+}
+
+
+def _is_nullable(schema: dict) -> bool:
+    """Lässt dieses Feldschema ``null`` zu?
+
+    Pydantic schreibt ein optionales Feld als `anyOf` mit einem
+    `{"type": "null"}`-Zweig. Genau der ist die Zusage, um die es geht: Ein
+    generierter Client darf `null` erwarten und dafür einen Zweig bauen.
+    """
+    return any(branch.get("type") == "null" for branch in schema.get("anyOf", ()))
+
+
+@pytest.mark.parametrize("model", sorted(_CONTRACT_MODELS))
+def test_jedes_pflichtfeld_des_artefakts_ist_im_schema_auch_zugesagt(model: str) -> None:
+    """**Der Befund aus Runde 39** — zwei Zusagen, die sich widersprachen.
+
+    Das Artefakt erklärte `quote.ticker` und `quote.mic` zu Pflichtfeldern,
+    während das veröffentlichte OpenAPI-Schema beide als optional **und**
+    nullable führte. Ein generierter Client durfte damit genau den Zustand
+    annehmen, den `core_version 2.0.0` abschafft — und ein bloß neu erzeugter
+    Schnappschuss hätte beide Seiten in ihrem eigenen Widerspruch bestätigt.
+    Dasselbe galt seit T-24 unbemerkt für `currency`.
+
+    Geprüft wird deshalb quer über die beiden Quellen: Das Feld **existiert**
+    im Schema, und es ist **nicht nullable**. Das ist die Zusage, die zählt —
+    sie sagt dem Konsumenten, dass er keinen `null`-Zweig braucht.
+
+    **Die `required`-Liste wird bewusst nicht geprüft**, und das ist keine
+    Bequemlichkeit: Bei einem *Antwort*modell sagt sie nichts aus. Pydantic
+    bindet sie an die Eingabe, und ein Feld mit Vorgabewert — `cached`,
+    `history_count`, das per `default_factory` gefüllte `manual_fields` — steht
+    nicht darin, wird aber in jeder Antwort serialisiert. Eine Prüfung
+    darüber sähe strenger aus, als sie ist, und würde bei jedem Feld mit
+    Vorgabewert falsch anschlagen.
+    """
+    schema = app.openapi()["components"]["schemas"][_CONTRACT_MODELS[model]]
+    properties = schema["properties"]
+
+    for field in required_fields(model):
+        assert field in properties, f"{model}.{field} fehlt im Schema ganz"
+        assert not _is_nullable(properties[field]), (
+            f"{model}.{field} ist laut Artefakt Pflicht, im Schema aber nullable"
+        )

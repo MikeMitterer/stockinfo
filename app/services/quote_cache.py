@@ -13,6 +13,7 @@ from datetime import datetime, timedelta, timezone
 
 import structlog
 
+from app.exchanges import provider_alias
 from app.models import OVERRIDE_FIELDS, QuotePoint, QuoteResponse
 from app.repository import PROTECTED_META_FIELDS, QuoteRepository
 from app.services.daily_sync import DailyCloseSync
@@ -23,6 +24,7 @@ from app.services.quote_service import (
     QuoteUnavailableError,
     annualized_volatility,
     ensure_core_complete,
+    require_core_values,
 )
 
 logger = structlog.get_logger()
@@ -185,6 +187,41 @@ class CachedQuoteService:
             QuoteUnavailableError: Kein Kurs beschaffbar und kein Cache vorhanden.
         """
         return self.store_by_symbol(symbol).quote
+
+    def store_by_identity(self, ticker: str, mic: str) -> StoredQuote:
+        """Der Weg des Aufnahmewegs — über die **kanonische Identität**.
+
+        Nicht über das Symbol, und das ist der ganze Punkt: `AAPL.XNAS` und
+        `AAPL.XNYS` tragen denselben Abrufalias `AAPL`, weil die US-Plätze
+        keinen Suffix führen. Ein Nachschlagen über `symbol` fände deshalb
+        entweder die falsche Börse — dieselbe Eingabe antwortete dann mit dem
+        anderen Handelsplatz, als der Benutzer genannt hat — oder auf leerem
+        Bestand gar nichts, und der mehrdeutige Auflösungsweg übernähme.
+
+        Die genannte Börse bleibt deshalb bis zur Speicherung erhalten: Das
+        Nachschlagen läuft über `(ticker, mic)`, und der frische Abruf über
+        `get_quote_for_known`, dem beide Werte ausdrücklich mitgegeben werden.
+        Der Alias entsteht nur noch dort, wo er hingehört — als Format für die
+        Kursquelle.
+
+        Args:
+            ticker: Kanonischer Ticker aus der Eingabe.
+            mic: MIC aus der Eingabe, in beiden Schreibweisen dieselbe Börse.
+
+        Returns:
+            Kurs und ob das Papier in diesem Aufruf entstanden ist.
+        """
+        instrument = self._repository.get_instrument_by_identity(ticker, mic)
+        if instrument:
+            return self._get(instrument, lambda: self._fetch_live(instrument))
+
+        symbol = provider_alias(ticker, mic)
+        return self._get(
+            None,
+            lambda: self._quote_service.get_quote_for_known(
+                symbol, ticker=ticker, mic=mic, enrich_etf=True
+            ),
+        )
 
     def store_by_symbol(self, symbol: str) -> StoredQuote:
         """Wie `get_by_symbol`, sagt aber zusätzlich, ob das Papier entstanden ist.
@@ -755,6 +792,17 @@ class CachedQuoteService:
                 auch den ``stale``-Fall: Der alte Wert ist der Notnagel, nicht
                 die Ausnahme von der Regel.
         """
+        # Dieselbe Prüfung wie auf dem frischen Weg, und aus demselben Grund:
+        # Seit die zugesagten Felder nicht-nullbar sind, entstünde sonst ein
+        # `ValidationError` statt der Aussage, was fehlt. Der `stale`-Fall ist
+        # ausdrücklich mitgemeint — der alte Wert ist der Notnagel, nicht die
+        # Ausnahme von der Regel.
+        require_core_values(
+            instrument["symbol"],
+            ticker=instrument["ticker"],
+            mic=instrument["mic"],
+            currency=quote["currency"] or instrument["currency"],
+        )
         response = QuoteResponse(
             isin=instrument["isin"],
             symbol=instrument["symbol"],
