@@ -40,8 +40,7 @@ Vollständige Konventionen samt Namensschema je Sprache: Skill `code-standards`.
 - `_tickets/CODEX-REVIEW-AUTOMATION.md` — Phasen, Validierungen und der
   Ablauf einer Übergabe.
 
-> **Diese Datei gilt für beide Agenten.** Codex ist so konfiguriert, dass er
-> sie ebenfalls liest; eine eigene `AGENTS.md` daneben wäre derselbe Regelsatz
-> ein zweites Mal — und liefe beim ersten Nachtrag auseinander. Wo eine Zeile
-> rollenabhängig ist, nennt sie die Rolle ausdrücklich, statt die Datei zu
-> verdoppeln.
+> **Diese Datei gilt für beide Agenten.** `AGENTS.md` daneben ist Codex'
+> üblicher Einstieg und **verweist** hierher, statt die Regeln zu kopieren —
+> zwei Kopien liefen beim ersten Nachtrag auseinander. Wo eine Zeile
+> rollenabhängig ist, nennt sie die Rolle ausdrücklich.

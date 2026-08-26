@@ -271,15 +271,8 @@
           "type": "number"
         },
         "currency": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Currency"
+          "title": "Currency",
+          "type": "string"
         },
         "date": {
           "title": "Date",
@@ -288,7 +281,8 @@
       },
       "required": [
         "date",
-        "close"
+        "close",
+        "currency"
       ],
       "title": "DailyPoint",
       "type": "object"
@@ -469,10 +463,12 @@
       },
       "required": [
         "base",
+        "cached",
+        "fetched_at",
         "quote",
-        "rate",
         "quote_time",
-        "fetched_at"
+        "rate",
+        "stale"
       ],
       "title": "FxRate",
       "type": "object"
@@ -833,10 +829,13 @@
         }
       },
       "required": [
-        "symbol",
-        "ticker",
+        "history_count",
+        "listing_id",
+        "manual_fields",
         "mic",
-        "listing_id"
+        "shadowed_fields",
+        "symbol",
+        "ticker"
       ],
       "title": "InstrumentSummary",
       "type": "object"
@@ -861,15 +860,8 @@
       "description": "Ein einzelner Kurspunkt der Zeitreihe.",
       "properties": {
         "currency": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Currency"
+          "title": "Currency",
+          "type": "string"
         },
         "fetched_at": {
           "title": "Fetched At",
@@ -898,6 +890,7 @@
       "required": [
         "price",
         "quote_time",
+        "currency",
         "fetched_at"
       ],
       "title": "QuotePoint",
@@ -1107,13 +1100,15 @@
         }
       },
       "required": [
-        "symbol",
+        "cached",
         "currency",
-        "ticker",
+        "fetched_at",
         "mic",
         "price",
         "quote_time",
-        "fetched_at"
+        "stale",
+        "symbol",
+        "ticker"
       ],
       "title": "QuoteResponse",
       "type": "object"

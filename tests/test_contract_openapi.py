@@ -23,6 +23,7 @@ import pytest
 
 from app.contract import core_contract, required_fields
 from app.main import app
+from app.services.quote_service import PRECHECKED_CORE_FIELDS
 
 SNAPSHOT_FILE = Path(__file__).resolve().parent.parent / "contract" / "openapi-core-snapshot.json"
 
@@ -188,6 +189,9 @@ def test_der_core_entspricht_dem_schnappschuss() -> None:
 _CONTRACT_MODELS = {
     "quote": "QuoteResponse",
     "instrument": "InstrumentSummary",
+    "daily": "DailyPoint",
+    "history": "QuotePoint",
+    "fx": "FxRate",
 }
 
 
@@ -201,6 +205,23 @@ def _is_nullable(schema: dict) -> bool:
     return any(branch.get("type") == "null" for branch in schema.get("anyOf", ()))
 
 
+def test_die_vorabpruefung_deckt_nur_pflichtfelder_ab() -> None:
+    """Die Vorabprüfung darf nichts verlangen, was der Vertrag nicht zusagt.
+
+    `PRECHECKED_CORE_FIELDS` ist die eine Liste der Werte, die erst beim Bauen
+    zusammenkommen und deshalb vorher geprüft werden. Stünde dort ein Feld,
+    das das Artefakt gar nicht verlangt, wiese der Core Antworten ab, die
+    vertragsgemäß in Ordnung sind — eine Verschärfung, die niemand zugesagt
+    hat und die kein anderer Test bemerkt.
+
+    Umgekehrt gilt der Satz **nicht**: Nicht jedes Pflichtfeld muss hier
+    stehen. `price` oder `quote_time` erzwingt schon der Typ beim Bauen.
+    """
+    assert set(PRECHECKED_CORE_FIELDS) <= set(required_fields("quote")), (
+        "die Vorabprüfung verlangt ein Feld, das der Vertrag nicht zusagt"
+    )
+
+
 @pytest.mark.parametrize("model", sorted(_CONTRACT_MODELS))
 def test_jedes_pflichtfeld_des_artefakts_ist_im_schema_auch_zugesagt(model: str) -> None:
     """**Der Befund aus Runde 39** — zwei Zusagen, die sich widersprachen.
@@ -212,23 +233,37 @@ def test_jedes_pflichtfeld_des_artefakts_ist_im_schema_auch_zugesagt(model: str)
     Schnappschuss hätte beide Seiten in ihrem eigenen Widerspruch bestätigt.
     Dasselbe galt seit T-24 unbemerkt für `currency`.
 
-    Geprüft wird deshalb quer über die beiden Quellen: Das Feld **existiert**
-    im Schema, und es ist **nicht nullable**. Das ist die Zusage, die zählt —
-    sie sagt dem Konsumenten, dass er keinen `null`-Zweig braucht.
+    Geprüft wird deshalb quer über die beiden Quellen, in **drei** Punkten:
+    Das Feld existiert im Schema, es steht in dessen `required`-Liste, und es
+    ist nicht nullable.
 
-    **Die `required`-Liste wird bewusst nicht geprüft**, und das ist keine
-    Bequemlichkeit: Bei einem *Antwort*modell sagt sie nichts aus. Pydantic
-    bindet sie an die Eingabe, und ein Feld mit Vorgabewert — `cached`,
-    `history_count`, das per `default_factory` gefüllte `manual_fields` — steht
-    nicht darin, wird aber in jeder Antwort serialisiert. Eine Prüfung
-    darüber sähe strenger aus, als sie ist, und würde bei jedem Feld mit
-    Vorgabewert falsch anschlagen.
+    **Die erste Fassung ließ `required` aus, mit einer falschen Begründung.**
+    Sie behauptete, die Liste sage bei Antwortmodellen nichts aus, weil ein
+    Feld mit Vorgabewert ohnehin serialisiert werde. Das verwechselt Erzeuger
+    und Zusage: Die Liste ist die JSON-Schema-Aussage an einen **generierten
+    Konsumenten**, ob eine Property fehlen darf. Steht sie nicht drin, muss er
+    einen Zweig für ihr Fehlen bauen — unabhängig davon, was dieser Server
+    gerade schreibt. Codex hat das in Runde 42 richtiggestellt.
+
+    Der Vorgabewert bleibt; das Schema sagt die Anwesenheit trotzdem zu
+    (`always_present` in `app/models.py`). Nullability wird dagegen **nie**
+    über das Schema geglättet — dort ändert sich der Typ.
+
+    Geprüft werden **alle fünf** Core-Modelle. Die erste Fassung nahm nur
+    `quote` und `instrument`, obwohl ihr Name jedes Pflichtfeld behauptete —
+    und `daily.currency` sowie `history.currency` waren genau deshalb bis
+    Runde 42 nullable geblieben.
     """
     schema = app.openapi()["components"]["schemas"][_CONTRACT_MODELS[model]]
     properties = schema["properties"]
+    required = set(schema.get("required", ()))
 
     for field in required_fields(model):
         assert field in properties, f"{model}.{field} fehlt im Schema ganz"
+        assert field in required, (
+            f"{model}.{field} ist laut Artefakt Pflicht, steht im Schema aber "
+            "nicht in `required` — ein Konsument dürfte es für optional halten"
+        )
         assert not _is_nullable(properties[field]), (
             f"{model}.{field} ist laut Artefakt Pflicht, im Schema aber nullable"
         )

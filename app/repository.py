@@ -36,6 +36,31 @@ class IncompleteIdentityError(ValueError):
         self.symbol = symbol
 
 
+class IdentityConflictError(ValueError):
+    """Zwei Zeilen beanspruchen dieselbe kanonische Identität.
+
+    Der Fall entsteht aus einem **gewachsenen** Bestand, nicht aus einem
+    Programmfehler: `AAPL/XNAS` liegt ohne ISIN im Bestand, `AAPL/XNYS` mit
+    ISIN — und dieselbe ISIN wandert nach XNAS. Die ISIN-Suche findet dann die
+    XNYS-Zeile, deren Aktualisierung mit der XNAS-Zeile kollidiert.
+
+    Beide Zeilen beschreiben nach `one_active_listing_per_isin` dasselbe
+    Listing; sie **zusammenzuführen** ist eine Datenoperation mit eigener
+    Entscheidung (welche `listing_id` überlebt, wohin die Kurspunkte wandern)
+    und gehört nicht in einen Kursabruf. Bis dahin sagt dieser Fehler, was der
+    Fall ist, statt als `IntegrityError` ein `500` zu werden.
+    """
+
+    def __init__(self, ticker: str, mic: str, isin: str | None) -> None:
+        super().__init__(
+            f"'{ticker}/{mic}' ist bereits vergeben; ISIN {isin} zeigt auf eine "
+            "andere Zeile"
+        )
+        self.ticker = ticker
+        self.mic = mic
+        self.isin = isin
+
+
 @dataclass(frozen=True)
 class SavedQuote:
     """Was das Speichern eines Kurses am Instrument bewirkt hat.
@@ -157,11 +182,26 @@ class QuoteRepository:
             Die Zeile, oder ``None``.
         """
         with self._connect() as connection:
-            row = connection.execute(
-                "SELECT * FROM instruments WHERE ticker = ? AND mic = ?",
-                (ticker, mic),
-            ).fetchone()
+            row = self._identity_row(connection, ticker, mic)
             return dict(row) if row else None
+
+    @staticmethod
+    def _identity_row(
+        connection: sqlite3.Connection, ticker: str, mic: str, columns: str = "*"
+    ) -> sqlite3.Row | None:
+        """Die **eine** Abfrage über die kanonische Identität.
+
+        Zwei Aufrufer stellen dieselbe Frage aus verschiedenen Lagen:
+        `get_instrument_by_identity` mit eigener Verbindung für den
+        Aufnahmeweg, `_find_instrument_id` innerhalb der laufenden
+        Schreibtransaktion. Getrennt formuliert liefen sie beim ersten
+        Sonderfall auseinander — und genau dort ist der Unterschied teuer, weil
+        er über die Zuordnung eines Papiers entscheidet.
+        """
+        return connection.execute(
+            f"SELECT {columns} FROM instruments WHERE ticker = ? AND mic = ?",
+            (ticker, mic),
+        ).fetchone()
 
     def get_latest_quote(self, instrument_id: int) -> dict | None:
         """Gibt den jüngsten Kurspunkt eines Instruments zurück (oder ``None``)."""
@@ -496,8 +536,18 @@ class QuoteRepository:
                     self._insert_instrument(connection, response, meta), created=True
                 )
             except sqlite3.IntegrityError:
+                # **Mit derselben Auskunft wie oben.** Bis Runde 42 fragte der
+                # Retry nur nach ISIN und Symbol — und fand damit ausgerechnet
+                # das nicht wieder, worüber er gerade gestolpert war: ein
+                # aliasloses Listing ohne ISIN, dessen Konflikt am
+                # `(ticker, mic)`-Index entstand. Aus dem zugesagten
+                # `created=false` wurde so ein `500`.
                 existing_id = self._find_instrument_id(
-                    connection, response.isin, response.symbol
+                    connection,
+                    response.isin,
+                    response.symbol,
+                    response.ticker,
+                    response.mic,
                 )
                 if existing_id is None:
                     raise
@@ -514,10 +564,21 @@ class QuoteRepository:
         if response.metadata_complete:
             assignments += ", meta_fetched_at = ?"
             values.append(response.fetched_at)
-        connection.execute(
-            f"UPDATE instruments SET {assignments} WHERE id = ?",
-            [*values, existing_id],
-        )
+        try:
+            connection.execute(
+                f"UPDATE instruments SET {assignments} WHERE id = ?",
+                [*values, existing_id],
+            )
+        except sqlite3.IntegrityError as exc:
+            # Die Zeile, die über die ISIN gefunden wurde, soll eine Identität
+            # annehmen, die eine **andere** Zeile schon trägt. Das ist kein
+            # Rennen und keine Verletzung des Aufrufers, sondern ein gewachsener
+            # Bestand, in dem zwei Zeilen dasselbe Listing meinen.
+            if response.ticker and response.mic:
+                raise IdentityConflictError(
+                    response.ticker, response.mic, response.isin
+                ) from exc
+            raise
         return SavedQuote(existing_id, created=False)
 
     @staticmethod
@@ -698,10 +759,7 @@ class QuoteRepository:
                 return int(row["id"])
 
         if ticker and mic:
-            row = connection.execute(
-                "SELECT id FROM instruments WHERE ticker = ? AND mic = ?",
-                (ticker, mic),
-            ).fetchone()
+            row = QuoteRepository._identity_row(connection, ticker, mic, columns="id")
             if row:
                 return int(row["id"])
 

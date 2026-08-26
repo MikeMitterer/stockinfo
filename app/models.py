@@ -5,6 +5,42 @@ from typing import Annotated, Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 
+def always_present(*fields: str):
+    """Erklärt Felder im **veröffentlichten Schema** für immer vorhanden.
+
+    Pydantics `required`-Liste beantwortet die Frage der *Eingabe*: Muss der
+    Aufrufer das Feld mitgeben? FastAPI veröffentlicht dieselbe Liste aber als
+    Zusage über die **Antwort** — und dort heißt „nicht required", ein
+    generierter Konsument müsse mit einem fehlenden Feld rechnen.
+
+    Für ein Feld mit Vorgabewert ist das falsch: Es wird **immer**
+    serialisiert. Genau diese Lücke hat Codex in Runde 42 gefunden, und meine
+    erste Antwort darauf — „die `required`-Liste sagt bei Antwortmodellen
+    nichts aus" — war sachlich verkehrt. Sie sagt etwas; sie sagte nur das
+    Falsche.
+
+    Der Vorgabewert bleibt trotzdem stehen: Er erspart vierzig
+    Testkonstruktionen die Wiederholung zweier Transportflags, über die sie
+    nichts aussagen wollen. Was der Konsument sieht, ist damit richtig, und was
+    der Erzeuger schreibt, bleibt knapp.
+
+    **Nicht für Nullability.** Ob ein Wert `null` sein darf, ist eine Aussage
+    über die Daten und wird nie über das Schema geglättet — dort ändert sich
+    der Typ, nicht die Beschreibung.
+
+    Args:
+        fields: Die Feldnamen, die in `required` gehören.
+
+    Returns:
+        Ein `json_schema_extra`-Callable für `ConfigDict`.
+    """
+
+    def extend_required(schema: dict) -> None:
+        schema["required"] = sorted(set(schema.get("required", ())) | set(fields))
+
+    return extend_required
+
+
 class HealthResponse(BaseModel):
     """Antwort des Liveness-Endpoints — „läuft der Prozess?", mehr nicht.
 
@@ -142,7 +178,10 @@ class QuotePoint(BaseModel):
     price: float
     quote_time: str
     volume: int | None = None
-    currency: str | None = None
+    # Pflicht und nicht nullable — das Artefakt sagt sie seit T-24 zu, und ein
+    # Kurspunkt ohne Währung ist nicht verwertbar. `_to_points` wirft dafür
+    # bereits; das Schema sagt es jetzt auch.
+    currency: str
     fetched_at: str
 
 
@@ -151,7 +190,8 @@ class DailyPoint(BaseModel):
 
     date: str
     close: float
-    currency: str | None = None
+    # Siehe `QuotePoint.currency` — dieselbe Zusage, derselbe Grund.
+    currency: str
 
 
 class QuoteResponse(BaseModel):
@@ -159,6 +199,8 @@ class QuoteResponse(BaseModel):
 
     Nicht ermittelbare Felder bleiben ``None`` (z.B. ``ter`` bei Einzelaktien).
     """
+
+    model_config = ConfigDict(json_schema_extra=always_present("cached", "stale"))
 
     isin: str | None = None
     symbol: str
@@ -291,6 +333,12 @@ class InstrumentSummary(BaseModel):
     die Oberfläche das erklären kann, kommen die manuellen Werte zusätzlich roh
     mit — und zwei Listen sagen, wo sie gerade greifen und wo sie verdeckt sind.
     """
+
+    model_config = ConfigDict(
+        json_schema_extra=always_present(
+            "history_count", "manual_fields", "shadowed_fields"
+        )
+    )
 
     isin: str | None = None
     symbol: str
@@ -483,6 +531,8 @@ CatalogEntry = Annotated[ExchangeEntry | CollectorEntry, Field(discriminator="ki
 
 class FxRate(BaseModel):
     """Ein Wechselkurs: 1 ``base`` = ``rate`` ``quote`` (base=von, quote=nach)."""
+
+    model_config = ConfigDict(json_schema_extra=always_present("cached", "stale"))
 
     base: str
     quote: str

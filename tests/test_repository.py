@@ -7,7 +7,12 @@ import pytest
 
 from app.db import init_db
 from app.models import QuoteResponse
-from app.repository import IncompleteIdentityError, QuoteRepository, SavedQuote
+from app.repository import (
+    IdentityConflictError,
+    IncompleteIdentityError,
+    QuoteRepository,
+    SavedQuote,
+)
 
 
 @pytest.fixture
@@ -638,6 +643,111 @@ def test_ein_verlorenes_rennen_meldet_keine_neuanlage(
     assert len(lookups) == 2, "der zweite Blick gehört in den Konfliktzweig"
     assert saved.created is False, "ein verlorenes Rennen ist keine Neuanlage"
     assert repo.get_instrument_by_isin("IE00B3RBWM25")["symbol"] == "VGWL.DE"
+
+
+def _blind_first_lookup(monkeypatch) -> list[tuple]:
+    """Macht den Preflight **einmal** blind und protokolliert die Suchen.
+
+    Die Lage, die im Betrieb ein konkurrierender Insert erzeugt: Der erste
+    Blick sieht die vorhandene Zeile nicht, der `INSERT` läuft in den
+    Eindeutigkeitsindex, und der Retry muss sie wiederfinden.
+
+    Returns:
+        Die Liste der `(ticker, mic)`, mit denen gesucht wurde — daran hängt
+        die eigentliche Aussage des Tests darunter.
+    """
+    real_find = QuoteRepository._find_instrument_id
+    lookups: list[tuple] = []
+
+    def recording(connection, isin, symbol, ticker=None, mic=None):
+        lookups.append((ticker, mic))
+        if len(lookups) == 1:
+            return None
+        return real_find(connection, isin, symbol, ticker, mic)
+
+    monkeypatch.setattr(
+        QuoteRepository, "_find_instrument_id", staticmethod(recording)
+    )
+    return lookups
+
+
+def test_der_retry_sucht_mit_derselben_identitaet_wie_der_preflight(
+    repo: QuoteRepository, monkeypatch
+) -> None:
+    """**Befund 2 aus Runde 40** — am aliaslosen Listing ohne ISIN.
+
+    Der Retry nach `IntegrityError` fragte nur nach ISIN und Symbol. Bei
+    `AAPL/XNAS` gibt es keine ISIN, und `AAPL` bezeichnet kein Listing — also
+    fand er nichts, reichte den `IntegrityError` durch, und aus dem für `#2j2`
+    zugesagten `created=false` wurde ein `500`.
+
+    Der bestehende Rennen-Test blieb grün, weil sein Papier `VGWL.DE` eine ISIN
+    trägt: Dort findet auch die alte Suche die Zeile wieder. Erst ein Papier
+    **ohne** ISIN und **ohne** Suffix trennt die beiden Fassungen.
+
+    Geprüft wird deshalb beides: das Ergebnis **und** womit gesucht wurde.
+    """
+    us_paper = _quote(
+        189.5, "2026-08-19T10:00:00+00:00", "2026-08-19T10:00:00+00:00"
+    ).model_copy(update={"isin": None, "symbol": "AAPL", "ticker": "AAPL", "mic": "XNAS"})
+    repo.save_quote(us_paper)
+
+    lookups = _blind_first_lookup(monkeypatch)
+    saved = repo.save_quote(us_paper.model_copy(update={"price": 191.0}))
+
+    assert saved.created is False, "ein verlorenes Rennen ist keine Neuanlage"
+    assert lookups == [("AAPL", "XNAS"), ("AAPL", "XNAS")], (
+        "der Retry muss dieselbe Identität kennen wie der Preflight"
+    )
+
+
+def test_zwei_zeilen_um_dieselbe_identitaet_melden_einen_konflikt(
+    repo: QuoteRepository,
+) -> None:
+    """**Befund 2 aus Runde 40**, zweiter Teil — ein gewachsener Bestand.
+
+    `AAPL/XNAS` liegt ohne ISIN im Bestand, `AAPL/XNYS` mit ISIN. Wandert
+    dieselbe ISIN nach XNAS, findet die ISIN-Suche die XNYS-Zeile, und deren
+    Aktualisierung kollidiert mit der XNAS-Zeile.
+
+    Das ist kein Programmfehler und kein Rennen: Beide Zeilen beschreiben nach
+    `one_active_listing_per_isin` dasselbe Listing. Sie **zusammenzuführen** ist
+    eine Datenoperation mit eigener Entscheidung — welche `listing_id`
+    überlebt, wohin die Kurspunkte wandern — und gehört nicht in einen
+    Kursabruf. Bis dahin muss der Fall sagen, was er ist, statt als
+    `IntegrityError` ein `500` zu werden.
+    """
+    base = _quote(189.5, "2026-08-19T10:00:00+00:00", "2026-08-19T10:00:00+00:00")
+    repo.save_quote(
+        base.model_copy(
+            update={"isin": None, "symbol": "AAPL", "ticker": "AAPL", "mic": "XNAS"}
+        )
+    )
+    repo.save_quote(
+        base.model_copy(
+            update={
+                "isin": "US0378331005",
+                "symbol": "AAPL",
+                "ticker": "AAPL",
+                "mic": "XNYS",
+            }
+        )
+    )
+
+    with pytest.raises(IdentityConflictError) as conflict:
+        repo.save_quote(
+            base.model_copy(
+                update={
+                    "isin": "US0378331005",
+                    "symbol": "AAPL",
+                    "ticker": "AAPL",
+                    "mic": "XNAS",
+                }
+            )
+        )
+
+    assert (conflict.value.ticker, conflict.value.mic) == ("AAPL", "XNAS")
+    assert conflict.value.isin == "US0378331005"
 
 
 def test_genau_ein_paralleler_erstschreiber_legt_an(repo: QuoteRepository) -> None:

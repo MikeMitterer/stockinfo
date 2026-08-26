@@ -84,8 +84,8 @@ class FakeService:
         if isin.startswith("XX"):
             raise InstrumentNotFoundError(isin)
         return [
-            QuotePoint(price=160.0, quote_time="t1", fetched_at="t1"),
-            QuotePoint(price=161.0, quote_time="t2", fetched_at="t2"),
+            QuotePoint(price=160.0, quote_time="t1", fetched_at="t1", currency="EUR"),
+            QuotePoint(price=161.0, quote_time="t2", fetched_at="t2", currency="EUR"),
         ]
 
     def get_history_by_symbol(
@@ -95,7 +95,9 @@ class FakeService:
         date_to: str | None = None,
         limit: int = 100,
     ) -> list[QuotePoint]:
-        return [QuotePoint(price=430.0, quote_time="t1", fetched_at="t1")]
+        return [
+            QuotePoint(price=430.0, quote_time="t1", fetched_at="t1", currency="EUR")
+        ]
 
 
 @pytest.fixture

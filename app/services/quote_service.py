@@ -80,22 +80,41 @@ class UnresolvableSymbolError(Exception):
         self.symbol = symbol
 
 
-def require_core_values(symbol: str, **values: object) -> None:
-    """Wirft, wenn einer der übergebenen Werte fehlt — **vor** dem Bauen.
+# Die Pflichtfelder, die **erst beim Bauen** zusammenkommen: Sie stammen aus
+# verschiedenen Quellen — Auflösung, Anbieterantwort, gespeicherte Zeile — und
+# können dabei leer bleiben. Die übrigen erzwingt schon der Typ.
+#
+# `test_die_vorabpruefung_deckt_nur_pflichtfelder_ab` hält fest, dass alle drei
+# im Artefakt stehen; wächst dort ein viertes solches Feld nach, ist diese
+# Liste der eine Ort, an dem es ergänzt wird.
+PRECHECKED_CORE_FIELDS = ("ticker", "mic", "currency")
+
+
+def require_core_values(
+    symbol: str, ticker: str | None, mic: str | None, currency: str | None
+) -> None:
+    """Die **eine** Vorabprüfung, bevor eine `QuoteResponse` entsteht.
 
     Das Gegenstück zu `ensure_core_complete`, eine Zeile früher. Seit die
     zugesagten Pflichtfelder auch im Modell nicht-nullbar sind, käme ein
     fehlender Wert dort als `ValidationError` an — ein `500`, der dem Aufrufer
-    nichts über die Ursache sagt. Geprüft wird deshalb, bevor die Antwort
-    entsteht, und die Aussage ist dieselbe wie die des späteren Prüfers.
+    nichts über die Ursache sagt.
+
+    **Zwei Aufrufer, eine Liste.** Der frische Weg (`QuoteService._build`) und
+    der Cache-Weg (`CachedQuoteService._from_cache`) beschaffen dieselben drei
+    Werte aus verschiedenen Quellen. Bis Runde 42 zählte jeder sie selbst auf;
+    ein viertes Pflichtfeld wäre an genau einem von beiden vorbeigegangen.
 
     Args:
         symbol: Für die Meldung.
-        values: Feldname auf Wert, in der Reihenfolge des Vertrags.
+        ticker: Kanonischer Ticker aus Auflösung oder Zeile.
+        mic: MIC aus derselben Quelle.
+        currency: Handelswährung aus Anbieterantwort, Kurspunkt oder Zeile.
 
     Raises:
         QuoteUnavailableError: Mindestens ein Wert ist leer.
     """
+    values = dict(zip(PRECHECKED_CORE_FIELDS, (ticker, mic, currency), strict=True))
     missing = [name for name, value in values.items() if not value]
     if not missing:
         return
