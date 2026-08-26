@@ -73,7 +73,7 @@ def _legacy_database(path: str, rows: list[tuple[str, str | None]]) -> None:
         )
 
 
-def _mit_eigener_datenbank(monkeypatch, db_path: str) -> None:
+def _use_own_database(monkeypatch, db_path: str) -> None:
     """Richtet die App auf eine **eigene** Datenbank aus — auch im Lifespan.
 
     **`dependency_overrides` genügt hier nicht.** Es greift nur für
@@ -96,7 +96,7 @@ def _mit_eigener_datenbank(monkeypatch, db_path: str) -> None:
 
 
 @contextmanager
-def _gemountetes_dashboard() -> Iterator[None]:
+def _mounted_dashboard() -> Iterator[None]:
     """Hängt das gebaute Dashboard an ``/`` — wie im Image.
 
     `app/main.py` mountet beim **Import**, und die Vorgabe zeigt auf den
@@ -131,9 +131,9 @@ def pending(tmp_path: Path, monkeypatch) -> Iterator[TestClient]:
         db_path,
         [("EUNL.DE", "IE00B4L5Y983"), ("VTI", "US9229087690")],
     )
-    _mit_eigener_datenbank(monkeypatch, db_path)
+    _use_own_database(monkeypatch, db_path)
 
-    with _gemountetes_dashboard(), TestClient(app) as client:
+    with _mounted_dashboard(), TestClient(app) as client:
         assert client.get("/migration").json()["pending"] is True
         yield client
 
@@ -150,7 +150,7 @@ def pending(tmp_path: Path, monkeypatch) -> Iterator[TestClient]:
 def serving(tmp_path: Path, monkeypatch) -> Iterator[TestClient]:
     """Eine App im Normalbetrieb — frische Datenbank, nichts steht aus."""
     db_path = str(tmp_path / "serving.db")
-    _mit_eigener_datenbank(monkeypatch, db_path)
+    _use_own_database(monkeypatch, db_path)
 
     with TestClient(app) as client:
         yield client
@@ -187,7 +187,7 @@ def test_der_start_erkennt_den_ausstehenden_umzug(pending: TestClient) -> None:
 # `/migration/confirm` fehlt hier bewusst: Er **führt aus**. Ein Test, der ihn
 # nebenbei aufriefe, zöge dem Rest der Datei den Boden weg — er hat weiter
 # unten einen eigenen, echten Integrationstest.
-_ERWARTETE_ANTWORTEN = {
+_EXPECTED_RESPONSES = {
     ("GET", "/health"): 200,
     ("GET", HEALTHCHECK_PATH): 200,
     ("GET", "/ready"): 503,  # ehrlich: der Fachbetrieb ist gesperrt
@@ -203,14 +203,17 @@ def test_die_erwartungstabelle_deckt_die_allowlist_ab() -> None:
     nächsten neuen Pfad zurückbleibt — und die Lücke fiele niemandem auf,
     weil ein nicht aufgezählter Pfad einfach nicht geprüft würde.
     """
-    covered = set(_ERWARTETE_ANTWORTEN) | {("POST", "/migration/confirm")}
+    covered = set(_EXPECTED_RESPONSES) | {("POST", "/migration/confirm")}
 
     assert covered == set(ALLOWED_ROUTES)
 
 
 @pytest.mark.parametrize(
     ("method", "path", "expected"),
-    [(m, p, code) for (m, p), code in sorted(_ERWARTETE_ANTWORTEN.items())],
+    [
+        (method, path, code)
+        for (method, path), code in sorted(_EXPECTED_RESPONSES.items())
+    ],
 )
 def test_jeder_erlaubte_pfad_antwortet_auch_wirklich(
     pending: TestClient, method: str, path: str, expected: int
@@ -259,12 +262,12 @@ def test_die_gesperrten_wege_lassen_die_datenbank_in_ruhe(pending: TestClient) -
     Die Vorschau vorher und nachher muss dieselbe sein, sonst hätte der
     gesperrte Request doch etwas verändert.
     """
-    vorher = pending.get("/migration").json()
+    before = pending.get("/migration").json()
 
     pending.get("/quote", params={"symbol": "NEU.DE"})
     pending.post("/refresh")
 
-    assert pending.get("/migration").json() == vorher
+    assert pending.get("/migration").json() == before
 
 
 def test_ready_und_operational_beantworten_verschiedene_fragen(
@@ -315,9 +318,9 @@ def test_die_bestaetigung_fuehrt_aus_und_gibt_frei(pending: TestClient) -> None:
     assert pending.get(HEALTHCHECK_PATH).json()["mode"] == "serving"
     assert pending.get("/exchanges").status_code == 200
 
-    nachher = pending.get("/migration/report").json()
-    assert nachher["completed"] is True
-    assert nachher["rejected"][0]["reason"] == "symbol_without_exchange_suffix"
+    after = pending.get("/migration/report").json()
+    assert after["completed"] is True
+    assert after["rejected"][0]["reason"] == "symbol_without_exchange_suffix"
 
 
 def test_vorschau_und_bericht_nennen_genug_zur_neuerfassung(
@@ -372,16 +375,16 @@ def test_die_bestaetigung_startet_den_scheduler(pending: TestClient) -> None:
     Geprüft wird der Rückruf, nicht nur die Endpunktfreigabe — sonst bliebe
     die Hälfte der Zusage ungeprüft.
     """
-    gestartet: list[str] = []
-    get_gate().on_release(lambda: gestartet.append("scheduler"))
+    started: list[str] = []
+    get_gate().on_release(lambda: started.append("scheduler"))
 
     assert pending.post("/migration/confirm").status_code == 200
 
-    assert gestartet == ["scheduler"]
+    assert started == ["scheduler"]
 
     # Und **nicht** ein zweites Mal.
     pending.post("/migration/confirm")
-    assert gestartet == ["scheduler"]
+    assert started == ["scheduler"]
 
 
 def test_ein_gescheiterter_scheduler_start_meldet_keinen_normalbetrieb(
@@ -405,7 +408,7 @@ def test_ein_gescheiterter_scheduler_start_meldet_keinen_normalbetrieb(
     """
     db_path = str(tmp_path / "kaputter-start.db")
     _legacy_database(db_path, [("EUNL.DE", "IE00B4L5Y983"), ("VTI", None)])
-    _mit_eigener_datenbank(monkeypatch, db_path)
+    _use_own_database(monkeypatch, db_path)
 
     attempts: list[int] = []
     real_start = RefreshScheduler.start
@@ -506,7 +509,7 @@ def test_parallele_wiederholungen_starten_genau_einen_scheduler(
     # macht den Umzug bestätigungspflichtig: Ein rein verlustloser Bestand
     # wandert schon in `init_db` durch, und der Riegel fiele nie.
     _legacy_database(db_path, [("EUNL.DE", "IE00B4L5Y983"), ("VTI", None)])
-    _mit_eigener_datenbank(monkeypatch, db_path)
+    _use_own_database(monkeypatch, db_path)
 
     real_start = RefreshScheduler.start
 
@@ -520,30 +523,30 @@ def test_parallele_wiederholungen_starten_genau_einen_scheduler(
         assert get_gate().startup_failed is True, "der Ausgangszustand des Tests"
 
         starts: list[str] = []
-        starts_sperre = threading.Lock()
+        starts_lock = threading.Lock()
 
-        def start_zaehlt_und_haelt(self) -> None:
-            with starts_sperre:
+        def start_counts_and_holds(self) -> None:
+            with starts_lock:
                 starts.append("scheduler")
             # Das Fenster offen halten, damit die übrigen Aufrufer wirklich
             # *währenddessen* ankommen und nicht erst danach.
             time.sleep(0.05)
             real_start(self)
 
-        monkeypatch.setattr(RefreshScheduler, "start", start_zaehlt_und_haelt)
+        monkeypatch.setattr(RefreshScheduler, "start", start_counts_and_holds)
 
         parallel = 8
-        an_der_linie = threading.Barrier(parallel)
+        start_barrier = threading.Barrier(parallel)
         codes: list[int] = []
-        codes_sperre = threading.Lock()
+        codes_lock = threading.Lock()
 
-        def bestaetigen() -> None:
-            an_der_linie.wait(timeout=10)
+        def confirm_it() -> None:
+            start_barrier.wait(timeout=10)
             code = client.post("/migration/confirm").status_code
-            with codes_sperre:
+            with codes_lock:
                 codes.append(code)
 
-        threads = [threading.Thread(target=bestaetigen) for _ in range(parallel)]
+        threads = [threading.Thread(target=confirm_it) for _ in range(parallel)]
         for thread in threads:
             thread.start()
         for thread in threads:
@@ -586,27 +589,27 @@ def test_waehrend_der_start_laeuft_meldet_niemand_normalbetrieb(
     # Siehe oben: Ohne eine abzulehnende Zeile ist der Umzug verlustlos und
     # läuft schon in `init_db` durch — dann gäbe es keine Bestätigung.
     _legacy_database(db_path, [("EUNL.DE", "IE00B4L5Y983"), ("VTI", None)])
-    _mit_eigener_datenbank(monkeypatch, db_path)
+    _use_own_database(monkeypatch, db_path)
 
     real_start = RefreshScheduler.start
-    im_start = threading.Event()
-    weiter = threading.Event()
+    start_entered = threading.Event()
+    proceed = threading.Event()
 
-    def start_haelt_an(self) -> None:
-        im_start.set()
-        assert weiter.wait(timeout=20), "der Test hat den Start nie freigegeben"
+    def start_holds(self) -> None:
+        start_entered.set()
+        assert proceed.wait(timeout=20), "der Test hat den Start nie freigegeben"
         real_start(self)
 
-    monkeypatch.setattr(RefreshScheduler, "start", start_haelt_an)
+    monkeypatch.setattr(RefreshScheduler, "start", start_holds)
 
     with TestClient(app) as client:
         codes: list[int] = []
-        bestaetigung = threading.Thread(
+        confirm_thread = threading.Thread(
             target=lambda: codes.append(client.post("/migration/confirm").status_code)
         )
-        bestaetigung.start()
+        confirm_thread.start()
 
-        assert im_start.wait(timeout=20), "der Start wurde nie erreicht"
+        assert start_entered.wait(timeout=20), "der Start wurde nie erreicht"
 
         # **Hier** stand die Lüge. Der Umzug ist festgeschrieben, der
         # Scheduler läuft noch nicht — und genau das sagen jetzt beide.
@@ -627,10 +630,10 @@ def test_waehrend_der_start_laeuft_meldet_niemand_normalbetrieb(
         # Eine zweite Bestätigung greift währenddessen nicht ein.
         assert client.post("/migration/confirm").status_code == 409
 
-        weiter.set()
-        bestaetigung.join(timeout=20)
+        proceed.set()
+        confirm_thread.join(timeout=20)
 
-        assert not bestaetigung.is_alive(), "die Bestätigung hängt"
+        assert not confirm_thread.is_alive(), "die Bestätigung hängt"
         assert codes == [200]
         assert client.get("/ready").json()["status"] == "ok"
         assert client.get(HEALTHCHECK_PATH).json()["mode"] == "serving"
@@ -648,9 +651,9 @@ def test_eine_zweite_bestaetigung_laeuft_ins_leere(pending: TestClient) -> None:
     """
     assert pending.post("/migration/confirm").status_code == 200
 
-    zweite = pending.post("/migration/confirm")
+    second = pending.post("/migration/confirm")
 
-    assert zweite.status_code == 409
+    assert second.status_code == 409
     assert len(pending.get("/migration/report").json()["rejected"]) == 1
 
 
@@ -678,9 +681,9 @@ def test_die_oberflaeche_bleibt_im_pending_zustand_erreichbar(
     blocked = []
     for directory, _, filenames in os.walk(_DIST):
         for filename in filenames:
-            pfad = "/" + os.path.relpath(os.path.join(directory, filename), _DIST)
-            if pending.get(pfad).status_code == 503:
-                blocked.append(pfad)
+            path = "/" + os.path.relpath(os.path.join(directory, filename), _DIST)
+            if pending.get(path).status_code == 503:
+                blocked.append(path)
 
     assert blocked == []
     assert pending.get("/stockinfo-icon.svg").status_code == 200

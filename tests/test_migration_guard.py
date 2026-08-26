@@ -117,12 +117,12 @@ def test_ein_symlink_aus_dem_verzeichnis_hinaus_ist_gesperrt(tmp_path) -> None:
     Oberfläche. Gäbe der Guard ihn frei, wäre die Allowlist ein Leseweg in
     beliebige Dateien des Containers.
     """
-    außerhalb = tmp_path / "geheim.txt"
-    außerhalb.write_text("nicht ausliefern", encoding="utf-8")
+    outside = tmp_path / "geheim.txt"
+    outside.write_text("nicht ausliefern", encoding="utf-8")
     web = tmp_path / "web"
     web.mkdir()
     (web / "index.html").write_text("<html></html>", encoding="utf-8")
-    os.symlink(außerhalb, web / "leak.txt")
+    os.symlink(outside, web / "leak.txt")
 
     allowed = static_allowlist(str(web))
 
@@ -350,17 +350,17 @@ def test_waehrend_der_start_laeuft_ist_der_betrieb_nicht_freigegeben() -> None:
     """
     gate = MigrationGate()
     gate.block()
-    gesehen: list[tuple[bool, bool, bool]] = []
+    observed: list[tuple[bool, bool, bool]] = []
 
-    def beim_start() -> None:
-        gesehen.append((gate.pending, gate.starting, gate.startup_failed))
+    def on_start() -> None:
+        observed.append((gate.pending, gate.starting, gate.startup_failed))
 
-    gate.on_release(beim_start)
+    gate.on_release(on_start)
     assert gate.claim() is True
 
     assert gate.release() is True
 
-    assert gesehen == [(False, True, False)], (
+    assert observed == [(False, True, False)], (
         "während des Starts ist genau `starting` wahr — nicht Normalbetrieb"
     )
     assert (gate.pending, gate.starting, gate.startup_failed) == (False, False, False)
