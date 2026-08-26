@@ -551,6 +551,26 @@ class CachedQuoteService:
         """Gibt alle Instrumente inkl. letztem Kurs und wirksamer Kennzahlen zurück."""
         return [apply_overrides(row) for row in self._repository.list_instruments_with_latest()]
 
+    def get_instrument_summary(self, instrument_id: int) -> dict | None:
+        """Eine einzelne Zeile der Übersicht — für den Aufnahmeweg.
+
+        **Warum der Aufnahmedienst sie hier holt und nicht aus einem eigenen
+        Repository:** Zwei Repositories in einem Request sind zwei Wahrheiten.
+        Der erste Entwurf baute im `IntakeService` eines aus den Settings —
+        und im Test schrieb der Aufnahmeweg in die Testdatenbank, während er
+        die Antwortzeile aus der **echten** las. Aufgefallen ist es nur, weil
+        in der Antwort plötzlich ein Papier mit gepflegten Kennzahlen stand,
+        das die Vorrichtung nie angelegt hatte.
+
+        Args:
+            instrument_id: Die lokale ID aus der Speicherung.
+
+        Returns:
+            Die Zeile mit wirksamen Kennzahlen, oder ``None``.
+        """
+        row = self._repository.get_instrument_with_latest(instrument_id)
+        return apply_overrides(row) if row else None
+
     def get_overrides(self, symbol: str) -> dict:
         """Gibt die von Hand gepflegten Kennzahlen eines Instruments zurück.
 

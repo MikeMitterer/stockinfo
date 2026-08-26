@@ -20,8 +20,7 @@ from dataclasses import dataclass
 import structlog
 
 from app.exchanges import identity_from_input, input_failure, is_isin, provider_alias
-from app.repository import QuoteRepository
-from app.services.quote_cache import CachedQuoteService, StoredQuote, apply_overrides
+from app.services.quote_cache import CachedQuoteService, StoredQuote
 from app.services.quote_service import (
     InstrumentNotFoundError,
     QuoteUnavailableError,
@@ -70,11 +69,8 @@ class IntakeRejected(Exception):
 class IntakeService:
     """Nimmt einen rohen Feldwert entgegen und macht daraus ein Instrument."""
 
-    def __init__(
-        self, quotes: CachedQuoteService, repository: QuoteRepository
-    ) -> None:
+    def __init__(self, quotes: CachedQuoteService) -> None:
         self._quotes = quotes
-        self._repository = repository
 
     def add(self, identifier: str) -> IntakeResult:
         """Löst den Rohwert auf, beschafft den Kurs und speichert das Papier.
@@ -108,7 +104,7 @@ class IntakeService:
         except InstrumentNotFoundError as exc:
             raise IntakeRejected(REASON_NOT_FOUND, identifier=value) from exc
 
-        summary = self._repository.get_instrument_with_latest(stored.instrument_id)
+        summary = self._quotes.get_instrument_summary(stored.instrument_id)
         if summary is None:
             # Unerreichbar, solange die Speicherung ihre eigene Zeile findet —
             # aber ein `None` hier stillschweigend als leere Summary
@@ -123,7 +119,7 @@ class IntakeService:
             mic=summary.get("mic"),
             created=stored.created,
         )
-        return IntakeResult(apply_overrides(summary), created=stored.created)
+        return IntakeResult(summary, created=stored.created)
 
     def _store(self, value: str) -> StoredQuote:
         """Wählt den Weg — ISIN oder Symbol — und beschafft über ihn.

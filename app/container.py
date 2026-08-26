@@ -5,6 +5,9 @@ Dependency-Injection an die Router gereicht.
 """
 
 from functools import lru_cache
+from typing import Annotated
+
+from fastapi import Depends
 
 from app.config import Settings, get_settings
 from app.providers.base import EtfEnricher, InstrumentResolver
@@ -73,18 +76,28 @@ def get_cached_quote_service() -> CachedQuoteService:
     )
 
 
-@lru_cache
-def get_intake_service() -> IntakeService:
-    """Baut den (gecachten) IntakeService für den Aufnahmeweg.
+def get_intake_service(
+    quotes: Annotated[CachedQuoteService, Depends(get_cached_quote_service)],
+) -> IntakeService:
+    """Baut den IntakeService für den Aufnahmeweg.
 
     Teilt sich den `CachedQuoteService` mit den Kursendpunkten — die Aufnahme
     ist derselbe Weg zur Quelle, nur mit der zusätzlichen Frage, ob das Papier
     dabei entstanden ist.
+
+    **Über `Depends`, nicht per direktem Aufruf**, und ohne `lru_cache`: Nur so
+    greift ein `dependency_overrides[get_cached_quote_service]` auch hier. Rief
+    diese Funktion `get_cached_quote_service()` selbst auf, bekäme der
+    Aufnahmeweg im Test den echten Dienst samt Netz und echter Datenbank,
+    während die Kursendpunkte am Ersatz hingen — und der Kettentest liefe an
+    der Verdrahtung vorbei, die er belegen soll.
+
+    **Und genau ein Mitspieler**, kein eigenes Repository: Zwei Repositories in
+    einem Request sind zwei Wahrheiten. Der erste Entwurf gab dem Dienst eines
+    aus den Settings mit; im Test schrieb er damit in die Testdatenbank und las
+    die Antwortzeile aus der echten.
     """
-    settings = get_settings()
-    return IntakeService(
-        get_cached_quote_service(), QuoteRepository(settings.database_path)
-    )
+    return IntakeService(quotes)
 
 
 @lru_cache

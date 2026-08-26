@@ -218,3 +218,145 @@ def test_der_resolver_ist_auf_diesem_weg_wirklich_stumm(client_and_repo) -> None
 
     assert _row(repository, "VGWL.DE")["ticker"] == "VGWL"
     assert isinstance(_NoResolver().resolve_isin("IE00B3RBWM25"), NotFound)
+
+
+# ---------------------------------------------------------------------------
+# `POST /instruments/intake` — der zugesagte Aufnahmeweg (T-21 Übergabe 3).
+#
+# Dieselbe Kette, derselbe Aufbau: Nur die Außengrenzen sind ersetzt, keine
+# eigene Core-Komponente. Der Endpunkt hängt über `Depends` am selben
+# `CachedQuoteService`, den die Vorrichtung oben austauscht — genau deshalb
+# belegen diese Zeilen die Verdrahtung und nicht bloß den Service.
+# ---------------------------------------------------------------------------
+
+
+def _intake(client: TestClient, identifier: str):
+    """Ein Aufnahmeversuch über den echten Endpunkt."""
+    return client.post("/instruments/intake", json={"identifier": identifier})
+
+
+@pytest.mark.parametrize(
+    ("identifier", "expected_symbol"),
+    [
+        ("EUNL.DE", "EUNL.DE"),
+        ("EUNL.XETR", "EUNL.DE"),
+    ],
+    ids=["provider_suffix", "echter_mic"],
+)
+def test_beide_eingabeformen_ergeben_dasselbe_listing(
+    client_and_repo, identifier: str, expected_symbol: str
+) -> None:
+    """`#2f`: Mikes Eingabeentscheidung, an der echten Kette geprüft.
+
+    Ein Feld, zwei Formen — und **eine** Identität. Der Alias entsteht dabei
+    ausschließlich im Core: Wer `EUNL.XETR` eingibt, bekommt trotzdem das
+    Listing, das bei der Kursquelle `EUNL.DE` heißt.
+
+    Beide Zeilen prüfen zusätzlich das gespeicherte `symbol`. Ein Test, der
+    nur die Identität vergliche, hätte einen falschen Abrufalias nicht bemerkt
+    — genau die Lücke, die in Teil 2 einen eigenen Befund kostete.
+    """
+    client, repository = client_and_repo
+
+    response = _intake(client, identifier)
+
+    assert response.status_code == 201
+    body = response.json()
+    assert (body["ticker"], body["mic"]) == ("EUNL", "XETR")
+    assert body["symbol"] == expected_symbol
+    assert _row(repository, expected_symbol)["ticker"] == "EUNL"
+
+
+def test_ein_bekanntes_papier_antwortet_mit_200_statt_201(client_and_repo) -> None:
+    """`#2i`: „war schon da" darf nicht als Neuanlage erscheinen.
+
+    Beide Erfolgsfälle tragen denselben Rumpf; unterschieden wird allein der
+    Status. Die zweite Aufnahme derselben Eingabe ist der Regelfall — jemand
+    trägt ein Papier ein, das längst im Bestand steht.
+    """
+    client, _ = client_and_repo
+
+    first = _intake(client, "EUNL.DE")
+    second = _intake(client, "EUNL.DE")
+
+    assert first.status_code == 201
+    assert second.status_code == 200
+    assert second.json()["listing_id"] == first.json()["listing_id"]
+
+
+def test_die_zweite_form_findet_dasselbe_papier_wieder(client_and_repo) -> None:
+    """Die schärfere Fassung des Falls darüber.
+
+    `EUNL.DE` anlegen und danach `EUNL.XETR` schicken muss **dieselbe** Zeile
+    treffen. Liefen die beiden Formen auseinander, entstünde ein zweites
+    Listing desselben Papiers — und der Eindeutigkeitsindex auf `(ticker, mic)`
+    hielte es nicht auf, weil er dieselbe Identität zweimal gar nicht sähe.
+    """
+    client, _ = client_and_repo
+
+    created = _intake(client, "EUNL.DE")
+    again = _intake(client, "EUNL.XETR")
+
+    assert (created.status_code, again.status_code) == (201, 200)
+    assert again.json()["listing_id"] == created.json()["listing_id"]
+
+
+@pytest.mark.parametrize(
+    ("identifier", "code"),
+    [
+        ("AAPL", "symbol_without_exchange_suffix"),
+        ("AAPL.US", "unknown_exchange_suffix"),
+        ("FOO.ZZ", "unknown_exchange_suffix"),
+        ("BRK-B.XNYS", "non_canonical_ticker"),
+    ],
+    ids=["suffixlos", "sammelcode", "unbekannter_suffix", "fremde_schreibweise"],
+)
+def test_eine_unauflösbare_eingabe_wird_mit_kennung_abgelehnt(
+    client_and_repo, identifier: str, code: str
+) -> None:
+    """`#2i`: `400` mit `{code, params}` — und **kein** halber Datensatz.
+
+    Die Kennung ist maschinenlesbar; der Satz dazu steht im Dashboard, in DE
+    und EN. Geprüft wird deshalb die Kennung, nicht ein Text — ein Test auf
+    Prosa wäre bei der ersten Umformulierung rot, ohne dass sich etwas
+    Fachliches geändert hätte.
+
+    `AAPL.US` ist der Fall, den der Sammelcode kostet: `US` ist ein interner
+    Suchcode, kein Handelsplatz.
+    """
+    client, repository = client_and_repo
+
+    response = _intake(client, identifier)
+
+    assert response.status_code == 400
+    assert response.json()["code"] == code
+    assert response.json()["params"]["identifier"] == identifier
+    assert _row(repository, identifier) == {}, "eine halbe Zeile ist entstanden"
+
+
+def test_die_ablehnung_kommt_nicht_unter_detail(client_and_repo) -> None:
+    """Der Rumpf ist der Fehler — nicht FastAPIs Umschlag.
+
+    `{"detail": {...}}` zwänge jeden Konsumenten, erst auszupacken, was er dann
+    doch typisiert erwartet. Das Dashboard liest heute `response.text()` und
+    zeigte rohes JSON; genau deshalb steht die Form hier fest.
+    """
+    client, _ = client_and_repo
+
+    body = _intake(client, "AAPL").json()
+
+    assert set(body) == {"code", "params"}
+
+
+def test_der_router_kennt_die_eingabeformen_nicht(client_and_repo) -> None:
+    """`#2j`: Die Fachregel liegt im Service, nicht im Transport.
+
+    Die Gegenprobe ist mechanisch: Im Router-Modul darf keine der Grammatiken
+    vorkommen — kein Punkt-Zerlegen, kein Katalog, keine ISIN-Form. Fiele die
+    Regel dorthin zurück, stünde sie in der Schicht, die HTTP prüft, und das
+    Dashboard bekäme über kurz oder lang seine eigene Kopie.
+    """
+    source = Path("app/routers/instruments.py").read_text(encoding="utf-8")
+
+    for forbidden in ("identity_from_input", "split_symbol", "EXCHANGES", "is_isin"):
+        assert forbidden not in source, f"{forbidden} gehört nicht in den Router"
