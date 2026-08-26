@@ -45,7 +45,19 @@ const rejected = computed<RejectedInstrument[]>(() =>
     : (props.report?.rejected ?? []),
 )
 
-const busy = computed(() => props.phase === 'confirming')
+/**
+ * Läuft gerade ein `POST /migration/confirm`?
+ *
+ * Beide Vorgänge sperren ihren Knopf — aber sie zeigen **verschiedene**
+ * Bildschirme. Das war der Befund aus Runde 35: Solange der Retry über
+ * `confirming` lief, sprang die Oberfläche dabei auf die Vorschau zurück.
+ */
+const busy = computed(() => props.phase === 'confirming' || props.phase === 'restarting')
+
+/** Der Umzug ist durch, der Betrieb nicht — inklusive laufender Wiederholung. */
+const startupFailed = computed(
+  () => props.phase === 'startupFailed' || props.phase === 'restarting',
+)
 </script>
 
 <template>
@@ -64,7 +76,7 @@ const busy = computed(() => props.phase === 'confirming')
         <NAlert type="error" :bordered="false">{{ error ?? t('migration.downBody') }}</NAlert>
       </template>
 
-      <template v-else-if="phase === 'startupFailed'">
+      <template v-else-if="startupFailed">
         <h1 class="gate__title">{{ t('migration.startupFailedTitle') }}</h1>
         <NAlert type="warning" :bordered="false" class="gate__alert">
           {{ t('migration.startupFailedBody') }}
@@ -82,7 +94,7 @@ const busy = computed(() => props.phase === 'confirming')
 
         <div class="gate__actions">
           <NButton type="primary" :loading="busy" @click="emit('retry')">
-            {{ t('migration.retry') }}
+            {{ busy ? t('migration.retrying') : t('migration.retry') }}
           </NButton>
         </div>
       </template>

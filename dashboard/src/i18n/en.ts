@@ -334,6 +334,7 @@ export const en = {
       'refresh for new prices did not start, so prices would go stale. Trying ' +
       'again only starts the service, it does not repeat the migration.',
     retry: 'Start the service again',
+    retrying: 'Starting the service…',
 
     downTitle: 'The service does not answer',
     downBody: 'The database is unreachable. Check the server and reload.',

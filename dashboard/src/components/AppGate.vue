@@ -19,7 +19,7 @@ import { useMigration } from '../composables/useMigration'
  * und der Inhalt liegt bewusst eine Ebene tiefer, weil `useNotifier()` einen
  * Provider *über* sich braucht. Diese Weiche ist Inhalt.
  */
-const { phase, preview, report, error, check, confirm } = useMigration()
+const { phase, preview, report, error, check, confirm, retry } = useMigration()
 
 onMounted(() => void check())
 </script>
@@ -28,10 +28,12 @@ onMounted(() => void check())
   <AppDashboard v-if="phase === 'serving'" />
 
   <!--
-    `retry` geht auf dieselbe Handlung wie `confirm`, und das ist keine
-    Bequemlichkeit: Im Backend *ist* der Wiederholungsweg ein weiteres
-    `POST /migration/confirm` (`app/routers/migration.py`). Zwei Aufrufe hier
-    hieße, dieselbe Fachregel ein zweites Mal auszulegen.
+    **`retry` ist nicht `confirm`**, obwohl beide denselben Endpunkt rufen.
+    Bis Runde 35 stand hier `@retry="confirm"`, und das war ein Fehler: Die
+    Bestätigung schaltet sichtbar auf `confirming`, also zurück auf die
+    Vorschau samt Backup-Warnung — bei einem Umzug, der längst festgeschrieben
+    ist. Der gemeinsame HTTP-Weg ist richtig, der gemeinsame *sichtbare*
+    Vorgang war es nicht.
 
     `continue` fragt neu nach, statt die Lage selbst auf „läuft" zu setzen —
     ob der Betrieb wirklich freigegeben ist, weiß der Server, nicht das UI.
@@ -43,7 +45,7 @@ onMounted(() => void check())
     :report="report"
     :error="error"
     @confirm="confirm"
-    @retry="confirm"
+    @retry="retry"
     @continue="check"
   />
 </template>

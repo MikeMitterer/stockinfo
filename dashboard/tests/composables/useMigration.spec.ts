@@ -140,6 +140,36 @@ describe('useMigration.check', () => {
 
     expect(phase.value).toBe('serving')
   })
+
+  /*
+   * Ein hängender Start bleibt serverseitig **dauerhaft** `starting` — er
+   * wechselt nicht von selbst auf `degraded`, dazu müsste der Rückruf ja
+   * zurückkehren. Ohne wachsenden Abstand liefe also für immer eine Anfrage
+   * pro Sekunde gegen `/ready`, und die zählt jedes Mal die Instrumente.
+   */
+  it('fragt einen hängenden Start mit wachsendem Abstand nach', async () => {
+    vi.useFakeTimers()
+    stubApi({
+      '/ready': { status: 503, body: { status: 'starting', version: '1', database: 'ok' } },
+      '/migration/report': { body: NO_REPORT },
+    })
+    const nachfrage = vi.spyOn(window, 'setTimeout')
+
+    const { phase, check } = useMigration()
+    await check()
+    for (let runde = 0; runde < 5; runde += 1) {
+      await vi.advanceTimersByTimeAsync(20_000)
+    }
+
+    // Verdopplung bis zum Deckel — gemessen, nicht gezählt. Geprüft wird der
+    // Anfang: Wie viele Nachfragen danach noch in die 100 Sekunden passen,
+    // ist eine Frage der Testdauer, nicht des Verhaltens.
+    const abstaende = nachfrage.mock.calls.map((aufruf) => aufruf[1])
+    expect(abstaende.slice(0, 6)).toEqual([1000, 2000, 4000, 8000, 10_000, 10_000])
+    expect(Math.max(...(abstaende as number[]))).toBe(10_000)
+    // Ein hängender Start bleibt ehrlich `starting` — kein stiller Wechsel.
+    expect(phase.value).toBe('starting')
+  })
 })
 
 describe('useMigration.confirm', () => {
@@ -171,6 +201,53 @@ describe('useMigration.confirm', () => {
 
     expect(phase.value).toBe('startupFailed')
     expect(report.value?.rejected).toHaveLength(1)
+  })
+
+  /*
+   * **Der Hoch-Befund aus Runde 35.** Der Wiederholungsweg lief über
+   * `confirm()` und setzte damit sichtbar `confirming` — die Lage, die im
+   * Bildschirm die Vorschau samt Backup-Warnung zeigt. Der Umzug ist da längst
+   * festgeschrieben. Gemessen wird deshalb **während** des Aufrufs, an einer
+   * angehaltenen Promise: Vorher stand hier `confirming`.
+   */
+  it('zeigt beim Wiederholen nie wieder den ausstehenden Umzug', async () => {
+    let freigeben: (() => void) | undefined
+    const angehalten = new Promise<void>((resolve) => {
+      freigeben = resolve
+    })
+
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockImplementation(async (url: string) => {
+        if (url.includes('/migration/confirm')) {
+          await angehalten
+          return new Response(JSON.stringify({ completed: true, rejected: [] }), { status: 200 })
+        }
+        return new Response(JSON.stringify(NO_REPORT), { status: 200 })
+      }),
+    )
+
+    const { phase, retry } = useMigration()
+    const laeuft = retry()
+
+    // **Während** der Start läuft — nicht davor und nicht danach.
+    await Promise.resolve()
+    expect(phase.value).toBe('restarting')
+    expect(phase.value).not.toBe('confirming')
+
+    freigeben?.()
+    await laeuft
+    expect(phase.value).toBe('done')
+  })
+
+  it('fällt beim gescheiterten Wiederholen nicht auf die Vorschau zurück', async () => {
+    stubApi({ '/migration/confirm': { status: 500, body: 'kaputt' } })
+
+    const { phase, retry } = useMigration()
+    await retry()
+
+    // `pending` hieße: „der Umzug steht noch aus". Er steht nicht mehr aus.
+    expect(phase.value).toBe('startupFailed')
   })
 
   it('fragt bei 409 neu nach, statt zu raten', async () => {

@@ -315,7 +315,7 @@ export const de = {
     title: 'Der Bestand muss umgezogen werden',
     lead:
       'Jedes Papier bekommt eine eindeutige Identität aus Ticker und Börsenkürzel. ' +
-      'Wo sich das alte Symbol nicht zweifelsfrei zerlegen lässt, wird geraten oder ' +
+      'Wo sich das alte Symbol nicht zweifelsfrei zerlegen lässt, wird es ' +
       'ausgelassen — geraten wird nicht.',
 
     balanceMigrating: 'Werden umgezogen',
@@ -350,6 +350,7 @@ export const de = {
       'für neue Kurse ist aber nicht gestartet, die Kurse würden also veralten. ' +
       'Ein weiterer Versuch startet nur den Betrieb, nicht den Umzug.',
     retry: 'Betrieb erneut starten',
+    retrying: 'Der Betrieb wird gestartet…',
 
     downTitle: 'Der Dienst antwortet nicht',
     downBody: 'Die Datenbank ist nicht erreichbar. Prüfen Sie den Server und laden Sie neu.',

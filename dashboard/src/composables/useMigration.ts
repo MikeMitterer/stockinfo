@@ -21,13 +21,24 @@ export type MigrationPhase =
   | 'pending'
   | 'confirming'
   | 'starting'
+  | 'restarting'
   | 'done'
   | 'startupFailed'
   | 'databaseDown'
   | 'serving'
 
-/** Wie lange gewartet wird, bis ein anlaufender Betrieb erneut gefragt wird. */
+/** Der erste Abstand, bis ein anlaufender Betrieb erneut gefragt wird. */
 const STARTING_RETRY_MS = 1000
+
+/**
+ * Der längste Abstand zwischen zwei Nachfragen.
+ *
+ * Der Abstand verdoppelt sich bis hierher. Ein hängender Start bleibt
+ * serverseitig **dauerhaft** `starting` — ohne Deckel liefe also für immer
+ * eine Anfrage pro Sekunde gegen `/ready`, und die zählt jedes Mal die
+ * Instrumente in der Datenbank.
+ */
+const STARTING_RETRY_MAX_MS = 10_000
 
 export interface UseMigration {
   phase: Ref<MigrationPhase>
@@ -36,6 +47,7 @@ export interface UseMigration {
   error: Ref<string | null>
   check: () => Promise<void>
   confirm: () => Promise<void>
+  retry: () => Promise<void>
 }
 
 /**
@@ -56,6 +68,9 @@ export function useMigration(): UseMigration {
   const preview = ref<MigrationPreview | null>(null)
   const report = ref<MigrationReport | null>(null)
   const error = ref<string | null>(null)
+
+  /** Der Abstand bis zur nächsten Nachfrage; wächst, solange `starting` gilt. */
+  let wartezeit = STARTING_RETRY_MS
 
   /** Übersetzt die Diagnoseantwort in die Lage — **eine** Stelle, ein Mapping. */
   function phaseOf(readiness: ReadinessResponse): MigrationPhase {
@@ -84,9 +99,18 @@ export function useMigration(): UseMigration {
       error.value = null
 
       if (next === 'starting') {
-        // Kein Dauerpoll: Der Start dauert normalerweise Millisekunden. Bleibt
-        // er hängen, wechselt der Server von selbst auf `degraded`.
-        window.setTimeout(() => void check(), STARTING_RETRY_MS)
+        /*
+         * **Ein hängender Start bleibt `starting`, für immer.** Der Server
+         * wechselt von sich aus *nicht* auf `degraded` — dazu müsste der
+         * Rückruf ja zurückkehren. Genau deshalb wächst der Abstand: Der
+         * Normalfall ist nach Millisekunden durch und wird sofort bemerkt,
+         * der Ausnahmefall kostet danach nicht dauerhaft eine Anfrage pro
+         * Sekunde.
+         */
+        window.setTimeout(() => void check(), wartezeit)
+        wartezeit = Math.min(wartezeit * 2, STARTING_RETRY_MAX_MS)
+      } else {
+        wartezeit = STARTING_RETRY_MS
       }
     } catch (err) {
       error.value = messageOf(err)
@@ -95,8 +119,45 @@ export function useMigration(): UseMigration {
     }
   }
 
+  /**
+   * Der Umzug, auf ausdrückliche Bestätigung.
+   *
+   * Sichtbarer Vorgang: `confirming`. Scheitert er aus einem anderen Grund als
+   * einem gescheiterten Betriebsstart, steht wieder die Vorschau da — der
+   * Umzug hat dann nicht stattgefunden.
+   */
   async function confirm(): Promise<void> {
-    phase.value = 'confirming'
+    await runConfirm('confirming', 'pending')
+  }
+
+  /**
+   * Der Wiederholungsweg — **nur** der Betriebsstart, nicht der Umzug.
+   *
+   * Derselbe HTTP-Endpunkt wie `confirm`, weil er es im Backend auch ist. Der
+   * **sichtbare Vorgang** ist aber ein anderer, und das war der Befund aus
+   * Runde 35: Über `confirm()` geführt, sprang die Oberfläche beim
+   * Wiederholen auf `confirming` — also zurück auf die Vorschau samt
+   * Backup-Warnung und „Migration läuft …". Der Umzug ist da längst
+   * festgeschrieben; ihn erneut als bevorstehend zu zeigen, ist dieselbe
+   * Unehrlichkeit, die Übergabe 2A im Backend abgestellt hat, nur eine Schicht
+   * höher. Bei einem hängenden Start stand sie unbegrenzt.
+   *
+   * Scheitert der Versuch, bleibt es bei `startupFailed` — zurück auf die
+   * Vorschau darf es von hier aus **nie** gehen.
+   */
+  async function retry(): Promise<void> {
+    await runConfirm('restarting', 'startupFailed')
+  }
+
+  /**
+   * Ein `POST /migration/confirm`, mit der Lage, die dabei sichtbar ist.
+   *
+   * Args:
+       busy: Die Lage während des Aufrufs.
+       failed: Die Lage, wenn er aus einem unerwarteten Grund scheitert.
+   */
+  async function runConfirm(busy: MigrationPhase, failed: MigrationPhase): Promise<void> {
+    phase.value = busy
     error.value = null
     try {
       report.value = await apiClient.post<MigrationReport>('/migration/confirm')
@@ -116,12 +177,12 @@ export function useMigration(): UseMigration {
         return
       }
       error.value = messageOf(err)
-      phase.value = 'pending'
+      phase.value = failed
       consola.error('useMigration.confirm', err)
     }
   }
 
-  return { phase, preview, report, error, check, confirm }
+  return { phase, preview, report, error, check, confirm, retry }
 }
 
 /** Der gespeicherte Bericht, oder `null` wenn nie ein Umzug gelaufen ist. */

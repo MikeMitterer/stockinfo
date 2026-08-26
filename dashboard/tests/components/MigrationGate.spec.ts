@@ -141,6 +141,28 @@ describe('MigrationGate · nach dem Umzug', () => {
     await gate.find('button').trigger('click')
     expect(gate.emitted('retry')).toHaveLength(1)
   })
+
+  /*
+   * **Der Hoch-Befund aus Runde 35, an der Oberfläche gemessen.** Während der
+   * Wiederholung darf weder die Vorschau noch die Backup-Warnung erscheinen —
+   * der Umzug ist festgeschrieben, es geht nur noch um den Betriebsstart.
+   */
+  it('zeigt während der Wiederholung weder Vorschau noch Backup-Warnung', () => {
+    const gate = mountGate({
+      phase: 'restarting',
+      preview: PREVIEW,
+      report: { completed: true, rejected: [makeRejected()] },
+    })
+    const text = gate.text()
+
+    expect(text).toContain(i18n.global.t('migration.startupFailedTitle'))
+    expect(text).toContain(i18n.global.t('migration.retrying'))
+
+    expect(text).not.toContain(i18n.global.t('migration.backupTitle'))
+    expect(text).not.toContain(i18n.global.t('migration.title'))
+    expect(text).not.toContain(i18n.global.t('migration.confirm'))
+    expect(text).not.toContain(i18n.global.t('migration.confirming'))
+  })
 })
 
 describe('MigrationGate · unbekannte Kennung', () => {
