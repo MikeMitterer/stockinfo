@@ -35,8 +35,13 @@ from app.models import (
     IsinUpdate,
     QuoteResponse,
     RefreshResult,
+    SourceEntry,
+    SourcesResponse,
 )
 from app.exchanges import COLLECTORS, EXCHANGES, preference_kind
+from app.container import sources_path
+from app.sources_config import ROLES, load_sources_config
+from app.sources_registry import is_configured, specs_by_name
 from app.routers.validation import (
     IsinPath,
     SymbolPath,
@@ -112,6 +117,40 @@ def exchanges(settings: SettingsDep) -> ExchangesResponse:
                 for code, collector in COLLECTORS.items()
             ),
         ],
+    )
+
+
+@router.get("/sources", response_model=SourcesResponse)
+def sources(settings: SettingsDep) -> SourcesResponse:
+    """Welche Quellen in welcher Reihenfolge greifen — und welche ausfallen.
+
+    **Der Beleg, dass die Konfiguration wirkt.** Bis T-22 stand die Kette als
+    `if`-Kaskade im Code; wer wissen wollte, welche Quelle zuerst gefragt wird,
+    musste ihn lesen. Jetzt beantwortet der Dienst die Frage selbst.
+
+    Gelistet wird **auch**, was nicht einsatzbereit ist. Eine Quelle
+    stillschweigend wegzulassen hieße, dem Betreiber die Erklärung für ihr
+    Fehlen vorzuenthalten — und die ist der eigentliche Zweck dieses Wegs.
+    """
+    config = load_sources_config(sources_path(settings), settings.strict_exchange)
+    known = specs_by_name()
+    entries = [
+        SourceEntry(
+            name=name,
+            role=role,
+            position=position,
+            configured=(
+                name in known and is_configured(known[name], config.config_for(name))
+            ),
+            cost=known[name].cost if name in known else "unknown",
+        )
+        for role in ROLES
+        for position, name in enumerate(config.chain(role), start=1)
+    ]
+    return SourcesResponse(
+        config_path=str(config.path) if config.path else None,
+        profile=config.profile,
+        sources=entries,
     )
 
 

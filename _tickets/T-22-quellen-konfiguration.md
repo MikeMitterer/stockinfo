@@ -26,18 +26,53 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 0 | **Profilpaket** eintragen (eine Zeile + Schlüssel), Neustart | `GET /sources` zeigt **alle** Rollen besetzt — keine Kette von Hand geschrieben | | |
-| 1 | `data/sources.yaml` mit vertauschter Resolver-Reihenfolge, Neustart | `GET /sources` zeigt die neue Reihenfolge | | |
-| 2 | OpenFIGI-Key entfernen, Neustart | Quelle bleibt **aktiv** — der Key ist optional und hebt nur das Limit an | | |
-| 2b | Quelle mit **pflichtigem** Key ohne Key, Neustart | meldet `configured: false` und fällt aus der Kette — **kein Fehler** | | |
-| 3 | `sources.yaml` gelöscht | App startet mit sinnvollen Vorgaben, statt abzubrechen | | |
-| 4 | `sources.yaml` mit Tippfehler im Quellennamen | Meldung nennt den unbekannten Namen und die verfügbaren | | |
-| 5 | dieselbe Datei in ein Issue kopieren | enthält **keinen** Schlüssel, nur Verweise | | |
-| 6 | `make test` | Backend grün | | |
+| 0 | **Profilpaket** eintragen (eine Zeile + Schlüssel), Neustart | `GET /sources` zeigt **alle** Rollen besetzt — keine Kette von Hand geschrieben | ➖ [^profil] | |
+| 1 | `data/sources.yaml` mit vertauschter Resolver-Reihenfolge, Neustart | `GET /sources` zeigt die neue Reihenfolge | ✅ [^t22] | |
+| 2 | OpenFIGI-Key entfernen, Neustart | Quelle bleibt **aktiv** — der Key ist optional und hebt nur das Limit an | ✅ [^t22] | |
+| 2b | Quelle mit **pflichtigem** Key ohne Key, Neustart | meldet `configured: false` und fällt aus der Kette — **kein Fehler** | ⚠️ [^t22b] | |
+| 3 | `sources.yaml` gelöscht | App startet mit sinnvollen Vorgaben, statt abzubrechen | ✅ [^t22] | |
+| 4 | `sources.yaml` mit Tippfehler im Quellennamen | Meldung nennt den unbekannten Namen und die verfügbaren | ✅ [^t22] | |
+| 5 | dieselbe Datei in ein Issue kopieren | enthält **keinen** Schlüssel, nur Verweise | ✅ [^t22] | |
+| 6 | `make test` | Backend grün | ✅ [^t22] | |
 
 ```bash
 curl -s "http://localhost:8000/sources" | python3 -m json.tool     # #1/#2
 ```
+
+
+[^t22]: **`./_tickets/T-22-smoke.sh --run`: 5/5 über echte Neustarts.** Das ist
+    der Kern dieser Matrix — jede Zeile sagt „…, Neustart", und eine
+    Konfiguration, die erst danach gilt, muss auch darüber geprüft werden. Das
+    Script startet den Server mehrfach über demselben Volume, mit je einer
+    anderen `sources.yaml`; es braucht **kein** Netz, weil geprüft wird, welche
+    Kette entsteht, nicht was die Quellen liefern.
+
+    Dazu `tests/test_sources_config.py` (zwölf Tests) und die umgeschriebenen
+    `tests/test_container.py` (vier). **Gegenproben gelaufen:** Kette umdrehen →
+    der Verdrahtungstest fällt; `is_configured` immer `True` → der
+    Pflichtschlüssel-Test fällt.
+
+    Zwei eigene Testfehler haben die Mutanten dabei aufgedeckt und sie stehen
+    korrigiert im Docstring: Die erste Fassung prüfte mit **einer** Quelle —
+    eine umgedrehte Einerliste ist dieselbe Liste — und rief `_chain()` statt
+    `_build_resolver()`, also eine Ebene **unter** der Verdrahtung.
+[^t22b]: **Als Einheit belegt, nicht über HTTP.** Es gibt heute keine
+    eingebaute Quelle mit pflichtigem Schlüssel; der Test stellt eine
+    `SourceSpec` mit `needs=("api_key",)` her und prüft alle drei Lagen —
+    fehlend, leer, gesetzt. Über den echten Endpunkt ist die Zeile erst
+    belegbar, wenn eine solche Quelle existiert; das wird mit dem ersten
+    Plugin der Fall sein, das einen Schlüssel verlangt.
+[^profil]: **Nicht gebaut — und das ist ein Zuschnittsbefund, keine
+    Auslassung.** Ein Profilpaket (`profile: stockinfo-profile-canada==1.0.2`)
+    ist ein **installiertes Paket**, aus dem Ketten gelesen werden. Es zu laden
+    heißt, einen Lader für Pakete zu haben — und genau der ist T-23
+    („Registry, zwei Ladewege"). In T-22 gebaut, entstünde ein zweiter Ladeweg
+    neben dem, den T-23 danach anlegt.
+
+    Gelesen wird das Feld bereits: `SourcesConfig.profile` trägt den Wert, und
+    `GET /sources` gibt ihn aus. Damit ist die Zeile in der Konfiguration
+    vorhanden und wirkungslos, statt unbekannt — und T-23 muss sie nur noch
+    auflösen.
 
 ---
 

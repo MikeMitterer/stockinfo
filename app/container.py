@@ -5,19 +5,20 @@ Dependency-Injection an die Router gereicht.
 """
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Annotated
 
+import structlog
 from fastapi import Depends
 
-from app.config import Settings, get_settings
+from app.config import get_settings
 from app.providers.base import EtfEnricher, InstrumentResolver
 from app.providers.composite_etf import CompositeEtfEnricher
 from app.providers.justetf_provider import JustEtfProvider
-from app.providers.openfigi_provider import OpenFigiClient
-from app.providers.yfinance_etf_provider import YFinanceEtfEnricher
-from app.providers.yfinance_provider import YFinanceProvider
 from app.repository import QuoteRepository
-from app.resolver import CompositeResolver, OpenFigiResolver, YFinanceResolver
+from app.resolver import CompositeResolver
+from app.sources_config import SourcesConfig, load_sources_config
+from app.sources_registry import build_chain
 from app.services.analyzer import QuoteAnalyzer
 from app.services.daily_history import DailyHistoryService
 from app.services.daily_sync import DailyCloseSync
@@ -26,47 +27,115 @@ from app.services.intake_service import IntakeService
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteService
 
+logger = structlog.get_logger()
 
-def _build_resolver(settings: Settings) -> InstrumentResolver:
-    """Baut den Resolver: strikt nur OpenFIGI, sonst mit Kaskade und Fallback.
 
-    `strict_exchange` schaltet **beides** ab, was von der Vorgabebörse
-    wegführen könnte: den Yahoo-Fallback und die Heimatbörsen-Kaskade. Wer die
-    Einstellung wählt, will diese Börse oder gar nichts — eine Kaskade wäre
-    genau die Überraschung in fremder Währung, die er ausgeschlossen hat.
+def sources_path(settings) -> Path:
+    """Wo `sources.yaml` liegt — abgeleitet, nicht zusätzlich konfiguriert.
+
+    Ketten und Bestand gehören in dasselbe Volume. Ein eigener Pfad in den
+    Einstellungen wäre eine zweite Stelle, an der jemand den falschen Ort
+    erwischt — und die Datei läge dann irgendwo, wo sie beim Sichern des
+    Volumes fehlt.
+
+    **Eine Funktion, zwei Aufrufer.** Die Verdrahtung fragt beim Start, der
+    Leseweg `/sources` bei jedem Request mit den **injizierten** Einstellungen.
+    Ohne den gemeinsamen Helfer läse der eine aus der echten Konfiguration,
+    während der andere im Test auf eine Ersatzdatei zeigt — der Endpunkt hätte
+    dann etwas anderes gemeldet, als die App tatsächlich benutzt.
     """
-    figi_resolver = OpenFigiResolver(
-        OpenFigiClient(settings.openfigi_api_key),
+    return Path(settings.database_path).parent / "sources.yaml"
+
+
+@lru_cache
+def get_sources_config() -> SourcesConfig:
+    """Die Quellen-Konfiguration der laufenden App — einmal gelesen."""
+    settings = get_settings()
+    return load_sources_config(sources_path(settings), settings.strict_exchange)
+
+
+def _chain(role: str) -> list:
+    """Die einsatzbereiten Quellen einer Rolle, in konfigurierter Rangfolge."""
+    settings = get_settings()
+    return build_chain(
+        role,
+        get_sources_config().chain(role),
+        get_sources_config(),
         settings.default_exchange,
-        home_fallback=not settings.strict_exchange,
+        settings.strict_exchange,
     )
-    if settings.strict_exchange:
-        return figi_resolver
-    # Dieselbe Börse für beide: Sonst sucht der Fallback in eine andere
-    # Richtung als der Hauptweg und liefert je nach Tagesform ein anderes
-    # Listing — mit anderer Währung.
-    return CompositeResolver(figi_resolver, YFinanceResolver(settings.default_exchange))
+
+
+def _build_resolver() -> InstrumentResolver:
+    """Baut den Resolver aus der konfigurierten Kette.
+
+    **Die `if`-Kaskade ist weg.** Bis T-22 entschied `strict_exchange` hier
+    über zwei Dinge zugleich: den Yahoo-Fallback und die Heimatbörsen-Kaskade.
+    Das erste ist jetzt eine Frage der Kette — wer nur OpenFIGI will, trägt nur
+    OpenFIGI ein —, das zweite bleibt ein Schalter der Quelle und wird ihr beim
+    Bauen mitgegeben.
+
+    Die Rangfolge kommt aus `sources.yaml` und wird nicht umsortiert: Sie ist
+    die Aussage des Betreibers darüber, wem er zuerst glaubt.
+    """
+    resolvers = _chain("resolvers")
+    if not resolvers:
+        # Keine einsatzbereite Quelle ist ein Betriebszustand, kein Absturz:
+        # Der Composite antwortet dann durchgehend `NotResponsible`, und der
+        # Aufrufer sieht „keine Quelle war zuständig" statt eines Stacktrace.
+        logger.warning("resolver_chain_empty")
+    return CompositeResolver(*resolvers)
 
 
 def _build_etf_enricher() -> EtfEnricher:
-    """Baut die ETF-Metadatenquelle: justETF für Europa, Yahoo für den Rest.
+    """Baut die ETF-Metadatenkette aus der Konfiguration.
 
-    Die Reihenfolge ist die Rangfolge. justETF steht vorn, weil es für
-    europäische UCITS-Papiere ungleich mehr liefert (TER, Replikationsart,
-    Domizil, Thesaurierung); Yahoo springt nur dort ein, wo justETF nichts
-    führt — und steuert dann bewusst nur den Anbieter bei.
+    Die Reihenfolge ist die Rangfolge — justETF steht in der Vorgabe vorn, weil
+    es für europäische UCITS-Papiere ungleich mehr liefert. **Wer außerhalb
+    Europas sitzt, dreht sie jetzt in einer Datei um**, statt den Quelltext zu
+    ändern; das war der Anlass des ganzen Vorhabens.
     """
-    return CompositeEtfEnricher(JustEtfProvider(), YFinanceEtfEnricher())
+    return CompositeEtfEnricher(*_chain("etf_meta"))
+
+
+def _first(role: str) -> object:
+    """Die erste einsatzbereite Quelle einer Rolle.
+
+    **Eine, nicht eine Kette:** Für Kurse, Tagesreihen und Wechselkurse gibt es
+    keinen Composite, und einen zu erfinden hieße, eine Rangfolge zu bauen, die
+    niemand angefordert hat. Die Konfiguration darf mehrere nennen; genommen
+    wird die erste, die arbeiten kann.
+
+    Args:
+        role: `quotes`, `daily` oder `fx`.
+
+    Returns:
+        Die Quelle.
+
+    Raises:
+        RuntimeError: Keine Quelle dieser Rolle ist einsatzbereit. Das ist
+            ausdrücklich ein Startfehler und kein stiller Rückfall: Ohne
+            Kursquelle kann die App ihre Hauptaufgabe nicht erfüllen, und ein
+            eingebauter Ersatz würde die Konfiguration hinter dem Rücken des
+            Betreibers überstimmen.
+    """
+    sources = _chain(role)
+    if not sources:
+        raise RuntimeError(
+            f"Keine einsatzbereite Quelle für '{role}' konfiguriert — "
+            f"`{role}:` in sources.yaml prüfen"
+        )
+    return sources[0]
 
 
 @lru_cache
 def get_cached_quote_service() -> CachedQuoteService:
     """Baut den (gecachten) CachedQuoteService aus der aktuellen Konfiguration."""
     settings = get_settings()
-    resolver = _build_resolver(settings)
-    quote_service = QuoteService(YFinanceProvider(), _build_etf_enricher(), resolver)
+    resolver = _build_resolver()
+    quote_service = QuoteService(_first("quotes"), _build_etf_enricher(), resolver)
     repository = QuoteRepository(settings.database_path)
-    daily_sync = DailyCloseSync(repository, YFinanceProvider())
+    daily_sync = DailyCloseSync(repository, _first("daily"))
     return CachedQuoteService(
         quote_service,
         repository,
@@ -106,7 +175,7 @@ def get_daily_history_service() -> DailyHistoryService:
     settings = get_settings()
     return DailyHistoryService(
         QuoteRepository(settings.database_path),
-        YFinanceProvider(),
+        _first("daily"),
         get_cached_quote_service(),
     )
 
@@ -121,8 +190,7 @@ def get_quote_analyzer() -> QuoteAnalyzer:
     beschriftet. Der teure Schritt, den diese Seite sichtbar machen soll, ist
     der Scrape.
     """
-    settings = get_settings()
-    resolver = _build_resolver(settings)
+    resolver = _build_resolver()
     return QuoteAnalyzer(resolver, JustEtfProvider())
 
 
@@ -131,7 +199,7 @@ def get_fx_service() -> CachedFxService:
     """Baut den (gecachten) CachedFxService aus der aktuellen Konfiguration."""
     settings = get_settings()
     return CachedFxService(
-        YFinanceProvider(),
+        _first("fx"),
         QuoteRepository(settings.database_path),
         settings.fx_ttl_hours,
     )

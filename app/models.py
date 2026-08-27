@@ -545,6 +545,49 @@ class FxRate(BaseModel):
     fetched_at: str
 
 
+class SourceEntry(BaseModel):
+    """Eine Quelle in einer Rolle — mit dem, was der Betreiber wissen muss.
+
+    `configured` ist die Antwort von `is_configured()`: „kann ich arbeiten",
+    nicht „ist alles gesetzt". Eine Quelle mit `false` ist **kein Fehler** —
+    sie fällt aus der Kette, und genau das soll sichtbar sein, statt dass
+    jemand rätselt, warum eine eingetragene Quelle nichts liefert.
+
+    `cost` ist ausdrücklich **Information, keine Sortierregel**. Die Reihenfolge
+    bestimmt allein `sources.yaml`; dieser Wert dient der Warnung, damit eine
+    kostenpflichtige Quelle nicht unbemerkt vor einer kostenlosen steht.
+    """
+
+    name: str = Field(description="Kurzname aus der Konfiguration")
+    role: str = Field(description="resolvers, etf_meta, quotes, daily oder fx")
+    position: int = Field(description="Rang in der Kette, 1-basiert")
+    configured: bool = Field(description="Kann diese Quelle arbeiten?")
+    cost: str = Field(description="free | metered | paid — Anzeige, keine Sortierung")
+
+
+class SourcesResponse(BaseModel):
+    """Welche Quellen in welcher Reihenfolge greifen.
+
+    **Der Beleg dafür, dass die Konfiguration wirkt.** Ohne diesen Weg müsste
+    ein Betreiber die Kette aus dem Log oder dem Quelltext erschließen — und
+    genau das war der Zustand, den T-22 abschafft.
+
+    `config_path` ist `null`, wenn keine Datei da ist und die Vorgaben gelten.
+    Das ist kein Mangel: Eine frische Installation ohne `sources.yaml` ist der
+    Normalfall.
+    """
+
+    config_path: str | None = Field(
+        default=None, description="Gelesene Datei, oder null bei Vorgaben"
+    )
+    profile: str | None = Field(
+        default=None, description="Eingetragenes Profilpaket, sofern eines gilt"
+    )
+    sources: list[SourceEntry]
+
+    model_config = ConfigDict(json_schema_extra=always_present("config_path", "profile"))
+
+
 class ExchangesResponse(BaseModel):
     """Der Börsenkatalog + die konfigurierte Vorgabe der Instanz.
 

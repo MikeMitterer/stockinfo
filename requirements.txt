@@ -12,5 +12,9 @@ yfinance==1.5.1
 justetf-scraping @ git+https://github.com/druzsan/justetf-scraping.git@b52934a3b19d218b7e0f4f272deb0bd47bc89519
 apscheduler==3.11.3
 pydantic-settings==2.14.2
+# Seit T-22 liest die App `data/sources.yaml`. Bis dahin war PyYAML nur
+# transitiv da — eine Abhängigkeit, die man nicht deklariert, verschwindet
+# beim nächsten Upgrade eines anderen Pakets.
+pyyaml==6.0.3
 httpx==0.28.1
 structlog==26.1.0

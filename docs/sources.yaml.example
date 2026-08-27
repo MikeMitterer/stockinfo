@@ -1,0 +1,26 @@
+# StockInfo — welche Quelle wann greift (T-22)
+#
+# Diese Datei liegt neben der Datenbank im Daten-Volume. Sie enthält
+# **keine Schlüssel**, nur Verweise auf Umgebungsvariablen — deshalb kann man
+# sie unverändert in ein Issue kopieren, wenn man eine funktionierende Kette
+# gefunden hat und sie weitergeben will.
+#
+# Ohne diese Datei gelten sinnvolle Vorgaben; sie zu löschen ist kein Fehler.
+# Zum Ausprobieren: nach `data/sources.yaml` kopieren und neu starten.
+# (Diese Vorlage liegt in `docs/`, weil `data/` das Laufzeit-Volume ist und
+#  nicht versioniert wird.)
+# `GET /sources` zeigt danach, was tatsächlich gilt.
+
+# Die Rangfolge je Rolle. Die Reihenfolge ist die Aussage — sie wird nicht
+# umsortiert, und `cost` einer Quelle ist Information, keine Sortierregel.
+resolvers: [openfigi, yahoo-search]
+etf_meta:  [justetf, yfinance]
+quotes:    [yfinance]
+daily:     [yfinance]
+fx:        [yfinance]
+
+providers:
+  openfigi:
+    # Verweist, enthält nicht. Fehlt die Variable, arbeitet OpenFIGI anonym
+    # weiter — der Schlüssel hebt nur das Limit an und ist nicht pflichtig.
+    api_key: ${OPENFIGI_API_KEY}

@@ -117,6 +117,36 @@ class QuoteProvider(Protocol):
     def fetch_quote(self, symbol: str) -> RawQuote | None: ...
 
 
+class DailyCloseProvider(Protocol):
+    """Liefert echte Tages-Schlusskurse zu einem Symbol.
+
+    **Bis T-22 stand dieser Vertrag nirgends.** `YFinanceProvider` liefert
+    `fetch_quote`, `fetch_daily_closes` **und** `fetch_fx_rate`, während allein
+    das erste als Protokoll deklariert war. Wer die Quelle ersetzen wollte,
+    musste drei Verträge erfüllen, von denen zwei nur im Code standen — man
+    erfuhr sie beim Scheitern, nicht beim Lesen.
+
+    ``None`` heißt „konnte nicht nachsehen", die leere Liste „nachgesehen, nichts
+    da". Der Unterschied ist derselbe wie zwischen `Unavailable` und `NotFound`
+    im Plugin-Vertrag, und er entscheidet, ob ein gespeicherter Stand
+    überschrieben werden darf.
+    """
+
+    def fetch_daily_closes(
+        self, symbol: str, start: str | None = None
+    ) -> list[dict] | None: ...
+
+
+class FxProvider(Protocol):
+    """Liefert einen Wechselkurs zwischen zwei Währungen.
+
+    Der dritte der drei Verträge, die `YFinanceProvider` heute erfüllt, ohne
+    dass sie irgendwo standen — siehe `DailyCloseProvider`.
+    """
+
+    def fetch_fx_rate(self, base: str, quote: str) -> float | None: ...
+
+
 class EtfEnricher(Protocol):
     """Liefert ETF-Zusatzdaten zu einer ISIN.
 
