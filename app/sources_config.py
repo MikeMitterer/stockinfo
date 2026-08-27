@@ -81,6 +81,7 @@ class SourcesConfig:
 
     chains: dict[str, tuple[str, ...]] = field(default_factory=dict)
     providers: dict[str, dict] = field(default_factory=dict)
+    environment: dict[str, str] = field(default_factory=dict)
     profile: str | None = None
     path: Path | None = None
 
@@ -105,8 +106,40 @@ class SourcesConfig:
         return self.providers.get(name, {})
 
 
-def _resolve(value: object) -> object:
-    """Ersetzt `${NAME}` durch die Umgebungsvariable — rekursiv.
+def environment_from(settings) -> dict[str, str]:
+    """Woher ein `${NAME}`-Verweis seinen Wert nimmt.
+
+    **Aus `Settings`, nicht aus `os.environ` allein.** Das ist der Kern des
+    Befunds aus Runde 1: `Settings` ist die kanonische Umgebungskonfiguration
+    der App — `pydantic-settings` liest dafür Umgebung **und** Projektdatei mit
+    einer festgelegten Rangfolge. Löst die Quellen-Konfiguration nur gegen
+    `os.environ` auf, gibt es zwei Auffassungen davon, was „die Umgebung" ist,
+    und `${OPENFIGI_API_KEY}` bleibt leer, obwohl derselbe Schlüssel für den
+    Rest der App gesetzt ist.
+
+    Die Abbildung ist die von pydantic: Ein Feld `openfigi_api_key` entspricht
+    dem Verweis `${OPENFIGI_API_KEY}`. Nachgelesen wird also **die
+    Konfiguration**, nicht die Datei — diese Funktion öffnet nichts.
+
+    Args:
+        settings: Die geladenen Einstellungen.
+
+    Returns:
+        Die auflösbaren Namen mit ihren Werten.
+    """
+    values = {
+        name.upper(): value
+        for name, value in settings.model_dump().items()
+        if isinstance(value, str) and value
+    }
+    # Ein echter Umgebungseintrag gewinnt — dieselbe Rangfolge, die pydantic
+    # innerhalb von `Settings` anwendet. Namen ohne Feld (ein Plugin bringt
+    # eigene mit) sind damit weiterhin auflösbar.
+    return {**values, **os.environ}
+
+
+def _resolve(value: object, env: dict[str, str]) -> object:
+    """Ersetzt `${NAME}` durch den Umgebungswert — rekursiv.
 
     Fehlt die Variable, steht dort `None` und **nicht** der Verweis als Text.
     Sonst bekäme eine Quelle die Zeichenkette `"${OPENFIGI_API_KEY}"` als
@@ -115,11 +148,11 @@ def _resolve(value: object) -> object:
     """
     if isinstance(value, str):
         match = _ENV_REFERENCE.fullmatch(value.strip())
-        return os.environ.get(match.group(1)) if match else value
+        return env.get(match.group(1)) if match else value
     if isinstance(value, dict):
-        return {key: _resolve(inner) for key, inner in value.items()}
+        return {key: _resolve(inner, env) for key, inner in value.items()}
     if isinstance(value, list):
-        return [_resolve(inner) for inner in value]
+        return [_resolve(inner, env) for inner in value]
     return value
 
 
@@ -149,12 +182,13 @@ def default_chains(strict_exchange: bool) -> dict[str, tuple[str, ...]]:
     return {**DEFAULT_CHAINS, "resolvers": ("openfigi",)}
 
 
-def load_sources_config(path: str | Path, strict_exchange: bool = False) -> SourcesConfig:
+def load_sources_config(path: str | Path, settings) -> SourcesConfig:
     """Liest `sources.yaml` — oder liefert die Vorgaben.
 
     Args:
         path: Pfad der Datei, üblicherweise neben der Datenbank.
-        strict_exchange: Formt die Vorgaben; eine vorhandene Datei gewinnt.
+        settings: Die geladenen Einstellungen — sie formen die Vorgaben über
+            `strict_exchange` und lösen die `${NAME}`-Verweise auf.
 
     Returns:
         Die gelesene Konfiguration; bei fehlender Datei eine mit den Vorgaben.
@@ -164,18 +198,23 @@ def load_sources_config(path: str | Path, strict_exchange: bool = False) -> Sour
             stiller Rückfall auf die Vorgaben: Wer eine Datei hinlegt, will,
             dass sie gilt — sie zu ignorieren wäre die schlimmere Überraschung.
     """
-    defaults = default_chains(strict_exchange)
+    defaults = default_chains(settings.strict_exchange)
+    env = environment_from(settings)
     source = Path(path)
     if not source.is_file():
-        logger.info("sources_config_default", path=str(source), strict=strict_exchange)
-        return SourcesConfig(chains=defaults, path=None)
+        logger.info(
+            "sources_config_default",
+            path=str(source),
+            strict=settings.strict_exchange,
+        )
+        return SourcesConfig(chains=defaults, environment=env, path=None)
 
     raw = yaml.safe_load(source.read_text(encoding="utf-8")) or {}
     chains = {
         role: tuple(raw[role]) for role in ROLES if isinstance(raw.get(role), list)
     }
     providers = {
-        name: _resolve(section) if isinstance(section, dict) else {}
+        name: _resolve(section, env) if isinstance(section, dict) else {}
         for name, section in (raw.get("providers") or {}).items()
     }
     logger.info(
@@ -188,6 +227,7 @@ def load_sources_config(path: str | Path, strict_exchange: bool = False) -> Sour
     return SourcesConfig(
         chains={**defaults, **chains},
         providers=providers,
+        environment=env,
         profile=raw.get("profile"),
         path=source,
     )

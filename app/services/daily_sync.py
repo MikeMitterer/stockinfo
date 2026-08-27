@@ -7,25 +7,13 @@ speichert sie im akkumulierenden ``daily_closes``-Cache. Wird sowohl vom
 """
 
 from datetime import date
-from typing import Protocol
 
 import structlog
 
+from app.providers.base import DailyCloseProvider
 from app.repository import QuoteRepository
 
 logger = structlog.get_logger()
-
-
-class DailyCloseProvider(Protocol):
-    """Liefert echte Tages-Schlusskurse zu einem Symbol.
-
-    ``None`` signalisiert einen Fehler (Netz, Rate-Limit); eine leere Liste
-    bedeutet 'erfolgreich abgefragt, aber keine Daten vorhanden'.
-    """
-
-    def fetch_daily_closes(
-        self, symbol: str, start: str | None = None
-    ) -> list[dict] | None: ...
 
 
 class DailyCloseSync:

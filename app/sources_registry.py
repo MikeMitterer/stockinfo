@@ -42,7 +42,7 @@ class SourceSpec:
 
     name: str
     roles: frozenset[str]
-    build: Callable[[str, dict, str, bool], object]
+    build: Callable[[str, dict, object], object]
     cost: str = "free"
     needs: tuple[str, ...] = ()
     """Pflichtige Schlüssel im eigenen Abschnitt.
@@ -54,19 +54,30 @@ class SourceSpec:
     """
 
 
-def _openfigi(role: str, config: dict, default_exchange: str, strict: bool) -> object:
+def _openfigi(role: str, config: dict, settings) -> object:
+    """OpenFIGI — der Schlüssel kommt aus der Datei **oder** aus den Einstellungen.
+
+    **Der Rückfall ist der Befund aus Runde 1.** Ohne `sources.yaml` gibt es
+    keinen Providerabschnitt, und die erste Fassung baute deshalb
+    `OpenFigiClient(None)` — obwohl `OPENFIGI_API_KEY` gesetzt war und vorher
+    gewirkt hatte. Ein Betreiber hätte sein Kontingent verloren, ohne etwas
+    geändert zu haben.
+
+    Die Datei gewinnt, wenn sie etwas sagt: Wer einen Abschnitt schreibt, meint
+    ihn. Sagt sie nichts, gilt weiter, was schon galt.
+    """
     return OpenFigiResolver(
-        OpenFigiClient(config.get("api_key")),
-        default_exchange,
-        home_fallback=not strict,
+        OpenFigiClient(config.get("api_key") or settings.openfigi_api_key),
+        settings.default_exchange,
+        home_fallback=not settings.strict_exchange,
     )
 
 
-def _yahoo_search(role: str, config: dict, default_exchange: str, strict: bool) -> object:
-    return YFinanceResolver(default_exchange)
+def _yahoo_search(role: str, config: dict, settings) -> object:
+    return YFinanceResolver(settings.default_exchange)
 
 
-def _yfinance(role: str, config: dict, default_exchange: str, strict: bool) -> object:
+def _yfinance(role: str, config: dict, settings) -> object:
     """Dieselbe Quelle, je Rolle ein anderer Typ.
 
     **Die Rolle gehört in den Bauplan, nicht nur in die Rollenmenge.** yfinance
@@ -78,7 +89,7 @@ def _yfinance(role: str, config: dict, default_exchange: str, strict: bool) -> o
     return YFinanceEtfEnricher() if role == "etf_meta" else YFinanceProvider()
 
 
-def _justetf(role: str, config: dict, default_exchange: str, strict: bool) -> object:
+def _justetf(role: str, config: dict, settings) -> object:
     return JustEtfProvider()
 
 
@@ -124,27 +135,77 @@ def is_configured(spec: SourceSpec, config: dict) -> bool:
     return all(config.get(key) for key in spec.needs)
 
 
-def build_chain(
-    role: str,
-    names: tuple[str, ...],
-    config,
-    default_exchange: str,
-    strict: bool,
-) -> list[object]:
+@dataclass(frozen=True)
+class ChainEntry:
+    """Was aus einem konfigurierten Namen wird — die **eine** Entscheidung.
+
+    `usable` ist genau die Bedingung, unter der `build_chain` die Quelle
+    tatsächlich baut: bekannt **und** in dieser Rolle zulässig **und**
+    einsatzbereit. Ein Leseweg, der nur `is_configured()` meldet, sagt
+    `configured: true` für eine Quelle, die aus der Kette fällt, weil sie in
+    der falschen Rolle steht — genau der Befund aus Runde 1.
+    """
+
+    name: str
+    role: str
+    position: int
+    known: bool
+    role_ok: bool
+    configured: bool
+    cost: str
+
+    @property
+    def usable(self) -> bool:
+        return self.known and self.role_ok and self.configured
+
+
+def describe_chain(role: str, config) -> list[ChainEntry]:
+    """Was mit jedem konfigurierten Namen dieser Rolle geschieht.
+
+    **Die gemeinsame Quelle für Laufzeit und Diagnose.** `build_chain` baut
+    daraus die Objekte, `/sources` zeigt sie an — beide sehen dieselben
+    Entscheidungen. Zwei getrennte Auswertungen hätten sich beim ersten
+    Sonderfall unterschieden, und ausgerechnet die Diagnose hätte dann das
+    Falsche gemeldet.
+
+    Args:
+        role: Die Rolle.
+        config: Die gelesene `SourcesConfig`.
+
+    Returns:
+        Je konfiguriertem Namen ein Eintrag, in Rangfolge.
+    """
+    known = specs_by_name()
+    entries = []
+    for position, name in enumerate(config.chain(role), start=1):
+        spec = known.get(name)
+        entries.append(
+            ChainEntry(
+                name=name,
+                role=role,
+                position=position,
+                known=spec is not None,
+                role_ok=spec is not None and role in spec.roles,
+                configured=spec is not None
+                and is_configured(spec, config.config_for(name)),
+                cost=spec.cost if spec else "unknown",
+            )
+        )
+    return entries
+
+
+def build_chain(role: str, config, settings) -> list[object]:
     """Baut die Kette einer Rolle aus den konfigurierten Namen.
 
     Die Reihenfolge ist die der Konfiguration und wird **nicht** umsortiert:
     Sie ist die Rangfolge, und `cost` ist ausdrücklich Information statt
-    Sortierregel. Bei Gleichstand — zwei Quellen ohne ausdrückliche Ordnung —
-    entscheidet der Name, damit ein Fehlerbericht nachstellbar bleibt und das
-    Ergebnis nicht an der Ladereihenfolge des Dateisystems hängt.
+    Sortierregel.
 
     Args:
         role: Die Rolle, für die gebaut wird.
-        names: Die konfigurierten Namen in Rangfolge.
         config: Die gelesene `SourcesConfig`.
-        default_exchange: Die eingestellte Vorzugsbörse.
-        strict: Ob `strict_exchange` gilt.
+        settings: Die Einstellungen — die Quellen holen sich daraus, was sie
+            brauchen.
 
     Returns:
         Die einsatzbereiten Quellen; nicht konfigurierte fehlen darin.
@@ -156,16 +217,15 @@ def build_chain(
 
     known = specs_by_name()
     built: list[object] = []
-    for name in names:
-        spec = known.get(name)
-        if spec is None:
-            raise UnknownSourceError(name, role, tuple(known))
-        if role not in spec.roles:
-            logger.warning("source_role_mismatch", source=name, role=role)
+    for entry in describe_chain(role, config):
+        if not entry.known:
+            raise UnknownSourceError(entry.name, role, tuple(known))
+        if not entry.role_ok:
+            logger.warning("source_role_mismatch", source=entry.name, role=role)
             continue
-        section = config.config_for(name)
-        if not is_configured(spec, section):
-            logger.info("source_not_configured", source=name, role=role)
+        if not entry.configured:
+            logger.info("source_not_configured", source=entry.name, role=role)
             continue
-        built.append(spec.build(role, section, default_exchange, strict))
+        spec = known[entry.name]
+        built.append(spec.build(role, config.config_for(entry.name), settings))
     return built

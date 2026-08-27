@@ -51,19 +51,12 @@ def sources_path(settings) -> Path:
 def get_sources_config() -> SourcesConfig:
     """Die Quellen-Konfiguration der laufenden App — einmal gelesen."""
     settings = get_settings()
-    return load_sources_config(sources_path(settings), settings.strict_exchange)
+    return load_sources_config(sources_path(settings), settings)
 
 
 def _chain(role: str) -> list:
     """Die einsatzbereiten Quellen einer Rolle, in konfigurierter Rangfolge."""
-    settings = get_settings()
-    return build_chain(
-        role,
-        get_sources_config().chain(role),
-        get_sources_config(),
-        settings.default_exchange,
-        settings.strict_exchange,
-    )
+    return build_chain(role, get_sources_config(), get_settings())
 
 
 def _build_resolver() -> InstrumentResolver:

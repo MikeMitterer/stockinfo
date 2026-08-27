@@ -11,15 +11,10 @@ from typing import Protocol
 import structlog
 
 from app.models import FxRate
+from app.providers.base import FxRateProvider
 from app.services.freshness import is_fresh
 
 logger = structlog.get_logger()
-
-
-class FxRateProvider(Protocol):
-    """Liefert einen Wechselkurs (1 base = ? quote)."""
-
-    def fetch_fx_rate(self, base: str, quote: str) -> float | None: ...
 
 
 class FxUnavailableError(Exception):

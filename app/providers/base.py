@@ -120,16 +120,16 @@ class QuoteProvider(Protocol):
 class DailyCloseProvider(Protocol):
     """Liefert echte Tages-Schlusskurse zu einem Symbol.
 
-    **Bis T-22 stand dieser Vertrag nirgends.** `YFinanceProvider` liefert
-    `fetch_quote`, `fetch_daily_closes` **und** `fetch_fx_rate`, während allein
-    das erste als Protokoll deklariert war. Wer die Quelle ersetzen wollte,
-    musste drei Verträge erfüllen, von denen zwei nur im Code standen — man
-    erfuhr sie beim Scheitern, nicht beim Lesen.
+    **Hierher gezogen, nicht neu erfunden.** Der Vertrag stand seit jeher in
+    `app/services/daily_sync.py` — also bei einem *Verbraucher* statt bei den
+    Quellen. Meine erste T-22-Fassung hat ihn deshalb übersehen und daneben
+    einen zweiten mit demselben Namen angelegt: zwei Wahrheiten über denselben
+    Vertrag, und die Verbraucher hingen weiter an der alten. Jetzt steht er
+    einmal hier, neben `QuoteProvider`, und `daily_sync` importiert ihn.
 
-    ``None`` heißt „konnte nicht nachsehen", die leere Liste „nachgesehen, nichts
-    da". Der Unterschied ist derselbe wie zwischen `Unavailable` und `NotFound`
-    im Plugin-Vertrag, und er entscheidet, ob ein gespeicherter Stand
-    überschrieben werden darf.
+    ``None`` heißt „konnte nicht nachsehen" (Netz, Rate-Limit), die leere Liste
+    „nachgesehen, nichts da". Der Unterschied entscheidet, ob ein gespeicherter
+    Stand überschrieben werden darf.
     """
 
     def fetch_daily_closes(
@@ -137,11 +137,13 @@ class DailyCloseProvider(Protocol):
     ) -> list[dict] | None: ...
 
 
-class FxProvider(Protocol):
-    """Liefert einen Wechselkurs zwischen zwei Währungen.
+class FxRateProvider(Protocol):
+    """Liefert einen Wechselkurs (1 base = ? quote).
 
-    Der dritte der drei Verträge, die `YFinanceProvider` heute erfüllt, ohne
-    dass sie irgendwo standen — siehe `DailyCloseProvider`.
+    Wie `DailyCloseProvider` hierher gezogen — der Vertrag stand in
+    `app/services/fx_service.py`. Der Name bleibt `FxRateProvider` und wird
+    nicht zu `FxProvider` verkürzt: Ihn beim Umzug umzubenennen hieße, jede
+    bestehende Fundstelle anzufassen, ohne dass die Aussage genauer würde.
     """
 
     def fetch_fx_rate(self, base: str, quote: str) -> float | None: ...

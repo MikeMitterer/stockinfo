@@ -12,7 +12,7 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
-from app.config import Settings, get_settings
+from app.config import Settings
 from app.container import _build_resolver, get_sources_config
 from app.main import app
 from app.sources_config import (
@@ -36,12 +36,12 @@ def test_eine_vertauschte_reihenfolge_gilt(tmp_path: Path) -> None:
     Konfigurationsdatei Zierde — dieser Test wäre dann rot.
     """
     config = load_sources_config(
-        _write(tmp_path, {"resolvers": ["yahoo-search", "openfigi"]})
+        _write(tmp_path, {"resolvers": ["yahoo-search", "openfigi"]}), Settings()
     )
 
     assert config.chain("resolvers") == ("yahoo-search", "openfigi")
 
-    built = build_chain("resolvers", config.chain("resolvers"), config, "XETR", False)
+    built = build_chain("resolvers", config, Settings())
     assert [type(source).__name__ for source in built] == [
         "YFinanceResolver",
         "OpenFigiResolver",
@@ -55,9 +55,9 @@ def test_ein_optionaler_schluessel_schaltet_nichts_ab(tmp_path: Path) -> None:
     Wächter, der jeden fehlenden Schlüssel als Ausfall wertet, nähme dem
     Betreiber genau die Quelle, die auch ohne Anmeldung liefert.
     """
-    config = load_sources_config(_write(tmp_path, {"resolvers": ["openfigi"]}))
+    config = load_sources_config(_write(tmp_path, {"resolvers": ["openfigi"]}), Settings())
 
-    built = build_chain("resolvers", ("openfigi",), config, "XETR", False)
+    built = build_chain("resolvers", config, Settings())
 
     assert [type(source).__name__ for source in built] == ["OpenFigiResolver"]
 
@@ -80,7 +80,7 @@ def test_ein_pflichtiger_schluessel_nimmt_die_quelle_aus_der_kette() -> None:
 
 def test_ohne_datei_gelten_die_vorgaben(tmp_path: Path) -> None:
     """`#3`: Eine frische Installation ist der Normalfall, nicht der Fehlerfall."""
-    config = load_sources_config(tmp_path / "gibt-es-nicht.yaml")
+    config = load_sources_config(tmp_path / "gibt-es-nicht.yaml", Settings())
 
     assert config.path is None
     assert config.chain("resolvers") == DEFAULT_CHAINS["resolvers"]
@@ -92,10 +92,10 @@ def test_ein_tippfehler_nennt_den_namen_und_die_verfuegbaren(tmp_path: Path) -> 
     Er muss wissen, **ob er sich vertippt hat oder ein Paket fehlt** — und
     dafür braucht er beides: seinen Namen und die Liste der bekannten.
     """
-    config = load_sources_config(_write(tmp_path, {"resolvers": ["openfgi"]}))
+    config = load_sources_config(_write(tmp_path, {"resolvers": ["openfgi"]}), Settings())
 
     with pytest.raises(UnknownSourceError) as rejected:
-        build_chain("resolvers", config.chain("resolvers"), config, "XETR", False)
+        build_chain("resolvers", config, Settings())
 
     message = str(rejected.value)
     assert "openfgi" in message, "der eigene Tippfehler muss dastehen"
@@ -129,7 +129,7 @@ def test_ein_verweis_wird_aus_der_umgebung_aufgeloest(
     """
     monkeypatch.setenv("FIGI_X", "geheim")
     config = load_sources_config(
-        _write(tmp_path, {"providers": {"openfigi": {"api_key": "${FIGI_X}"}}})
+        _write(tmp_path, {"providers": {"openfigi": {"api_key": "${FIGI_X}"}}}), Settings()
     )
 
     assert config.config_for("openfigi") == {"api_key": "geheim"}
@@ -138,7 +138,7 @@ def test_ein_verweis_wird_aus_der_umgebung_aufgeloest(
 def test_ein_fehlender_verweis_wird_none_und_nicht_text(tmp_path: Path) -> None:
     """Die Gegenrichtung — sonst reist der Platzhalter als Schlüssel weiter."""
     config = load_sources_config(
-        _write(tmp_path, {"providers": {"openfigi": {"api_key": "${GIBT_ES_NICHT}"}}})
+        _write(tmp_path, {"providers": {"openfigi": {"api_key": "${GIBT_ES_NICHT}"}}}), Settings()
     )
 
     assert config.config_for("openfigi")["api_key"] is None
@@ -152,10 +152,12 @@ def test_dieselbe_quelle_baut_je_rolle_einen_anderen_typ(tmp_path: Path) -> None
     ETF-Kette ein Objekt ohne `is_responsible` gegeben — und der Fehler wäre
     erst beim ersten ETF-Abruf aufgefallen.
     """
-    config = load_sources_config(tmp_path / "keine.yaml")
+    config = load_sources_config(
+        _write(tmp_path, {"etf_meta": ["yfinance"], "quotes": ["yfinance"]}), Settings()
+    )
 
-    etf = build_chain("etf_meta", ("yfinance",), config, "XETR", False)
-    quotes = build_chain("quotes", ("yfinance",), config, "XETR", False)
+    etf = build_chain("etf_meta", config, Settings())
+    quotes = build_chain("quotes", config, Settings())
 
     assert type(etf[0]).__name__ == "YFinanceEtfEnricher"
     assert type(quotes[0]).__name__ == "YFinanceProvider"
@@ -167,33 +169,130 @@ def test_eine_rolle_nimmt_keine_fremde_quelle_auf(tmp_path: Path) -> None:
     Die Quelle wird übersprungen und protokolliert. Sie zu bauen hieße, ein
     Objekt in eine Kette zu setzen, dessen Vertrag dort nicht gilt.
     """
-    config = load_sources_config(tmp_path / "keine.yaml")
+    config = load_sources_config(_write(tmp_path, {"quotes": ["justetf"]}), Settings())
 
-    assert build_chain("quotes", ("justetf",), config, "XETR", False) == []
+    assert build_chain("quotes", config, Settings()) == []
 
 
-def test_der_leseweg_zeigt_die_kette(tmp_path: Path, monkeypatch) -> None:
-    """`#1`/`#2` über HTTP: Was der Betreiber tatsächlich zu sehen bekommt.
+def test_der_leseweg_zeigt_die_laufende_kette(tmp_path: Path, monkeypatch) -> None:
+    """`#1`/`#2` über HTTP — und zwar **denselben Stand**, den die Dienste haben.
 
-    Ohne diesen Weg müsste er die Kette aus dem Log oder dem Quelltext
-    erschließen — genau der Zustand, den T-22 abschafft.
+    Der Endpunkt liest bewusst `get_sources_config()`, nicht die Datei von
+    jetzt. Läse er sie bei jedem Request neu, meldete er nach einer Änderung
+    ohne Neustart eine Kette, die gar nicht läuft — und die Diagnose wäre
+    ausgerechnet dann falsch, wenn man sie braucht.
+
+    Der Test setzt deshalb die Einstellungen des **Prozesses** und leert den
+    Cache; ein `dependency_overrides` griffe hier nicht, und das ist keine
+    Testschwäche, sondern die Eigenschaft, um die es geht.
     """
     _write(tmp_path, {"resolvers": ["yahoo-search", "openfigi"]})
-    (tmp_path / "stockinfo.db").touch()
-    app.dependency_overrides[get_settings] = lambda: Settings(
-        database_path=str(tmp_path / "stockinfo.db")
+    monkeypatch.setattr(
+        "app.container.get_settings",
+        lambda: Settings(database_path=str(tmp_path / "stockinfo.db")),
     )
     get_sources_config.cache_clear()
 
     body = TestClient(app).get("/sources").json()
-
-    app.dependency_overrides.clear()
     get_sources_config.cache_clear()
 
     resolvers = [row for row in body["sources"] if row["role"] == "resolvers"]
     assert [row["name"] for row in resolvers] == ["yahoo-search", "openfigi"]
     assert all(row["configured"] for row in resolvers)
     assert body["config_path"].endswith("sources.yaml")
+
+
+def test_eine_quelle_in_falscher_rolle_gilt_nicht_als_einsatzbereit(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """**Befund 2 aus Runde 1**, zweiter Teil.
+
+    `quotes: [justetf]` meldete `configured: true`, obwohl `build_chain` die
+    Quelle wegen der falschen Rolle verwirft und **keine** Kursquelle baut. Der
+    Leseweg sagte damit „einsatzbereit" über etwas, das gar nicht in der Kette
+    steht — die Diagnose widersprach der Laufzeit.
+
+    Beide entscheiden jetzt über `describe_chain`; `configured` ist die
+    vollständige Bedingung `usable`, nicht nur `is_configured()`.
+    """
+    _write(tmp_path, {"quotes": ["justetf"]})
+    monkeypatch.setattr(
+        "app.container.get_settings",
+        lambda: Settings(database_path=str(tmp_path / "stockinfo.db")),
+    )
+    get_sources_config.cache_clear()
+
+    body = TestClient(app).get("/sources").json()
+    get_sources_config.cache_clear()
+
+    quotes = [row for row in body["sources"] if row["role"] == "quotes"]
+    assert [row["name"] for row in quotes] == ["justetf"]
+    assert quotes[0]["configured"] is False, (
+        "eine Quelle in der falschen Rolle ist nicht einsatzbereit"
+    )
+
+
+def test_ein_bestehender_key_ueberlebt_ohne_datei(tmp_path: Path, monkeypatch) -> None:
+    """**Befund 1 aus Runde 1.** Ohne `sources.yaml` ging der Key verloren.
+
+    `Settings.openfigi_api_key` war gesetzt, die erste Fassung baute trotzdem
+    `OpenFigiClient(None)` — ein Betreiber hätte sein Kontingent verloren, ohne
+    etwas geändert zu haben. Gemessen war: `settings_key='expected-key'`, aber
+    `resolver._client._api_key is None`.
+    """
+    monkeypatch.setattr(
+        "app.container.get_settings",
+        lambda: Settings(
+            database_path=str(tmp_path / "stockinfo.db"),
+            openfigi_api_key="expected-key",
+        ),
+    )
+    get_sources_config.cache_clear()
+
+    resolver = _build_resolver()
+    get_sources_config.cache_clear()
+
+    assert resolver._resolvers[0]._client._api_key == "expected-key"
+
+
+def test_die_datei_gewinnt_gegen_den_key_aus_den_einstellungen(
+    tmp_path: Path, monkeypatch
+) -> None:
+    """Die Gegenrichtung — sonst wäre der Rückfall eine Übersteuerung.
+
+    Wer einen Providerabschnitt schreibt, meint ihn. Ein Rückfall, der die
+    Datei überstimmt, machte die Konfiguration wirkungslos.
+    """
+    _write(tmp_path, {"providers": {"openfigi": {"api_key": "aus-der-datei"}}})
+    monkeypatch.setattr(
+        "app.container.get_settings",
+        lambda: Settings(
+            database_path=str(tmp_path / "stockinfo.db"),
+            openfigi_api_key="aus-den-einstellungen",
+        ),
+    )
+    get_sources_config.cache_clear()
+
+    resolver = _build_resolver()
+    get_sources_config.cache_clear()
+
+    assert resolver._resolvers[0]._client._api_key == "aus-der-datei"
+
+
+def test_ein_verweis_findet_den_wert_aus_den_einstellungen(tmp_path: Path) -> None:
+    """`${NAME}` löst gegen dieselbe Quelle auf wie `Settings`.
+
+    Nur gegen `os.environ` aufzulösen wäre eine **zweite** Auffassung davon,
+    was „die Umgebung" ist: `pydantic-settings` liest zusätzlich die
+    Projektkonfiguration, und der Verweis bliebe dann leer, obwohl derselbe
+    Schlüssel für den Rest der App gesetzt ist.
+    """
+    config = load_sources_config(
+        _write(tmp_path, {"providers": {"openfigi": {"api_key": "${OPENFIGI_API_KEY}"}}}),
+        Settings(openfigi_api_key="aus-den-einstellungen"),
+    )
+
+    assert config.config_for("openfigi") == {"api_key": "aus-den-einstellungen"}
 
 
 def test_die_verdrahtung_liest_die_konfiguration(tmp_path: Path, monkeypatch) -> None:

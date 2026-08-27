@@ -43,6 +43,12 @@ readonly PORT="${PORT:-8774}"
 readonly BASE_URL="http://127.0.0.1:${PORT}"
 readonly VENV_PY="${PROJECT_ROOT}/.venv/bin/python"
 
+# Wie viele Checks dieser Lauf **erwartet**. Ohne diese Zahl kann ein Lauf,
+# der unterwegs abbricht, mit zwei Ergebnissen und `COUNT_FAIL=0` grün enden —
+# genau das P-05, das die Schlussmarke verhindern soll. Sie tut es nur, wenn
+# sie auch die Vollständigkeit prüft.
+readonly EXPECTED_CHECKS=5
+
 COUNT_OK=0
 COUNT_FAIL=0
 SERVER_PID=""
@@ -283,19 +289,31 @@ runChecks() {
 
     prepareVolume || return 1
 
-    checkOrder
-    checkOptionalKey
-    checkDefaults
-    checkTypo
-    checkNoSecrets
+    # **Ein abgebrochener Check ist ein Fehler, kein übersprungener Schritt.**
+    # Die Prüffunktionen kehren mit 1 zurück, wenn der Server nicht startet —
+    # ohne diese Auswertung liefe die Schleife weiter, `COUNT_FAIL` bliebe 0,
+    # und der Lauf meldete sich als bestanden.
+    local _CHECK
+    for _CHECK in checkOrder checkOptionalKey checkDefaults checkTypo checkNoSecrets; do
+        if ! "${_CHECK}"; then
+            COUNT_FAIL=$((COUNT_FAIL + 1))
+            echo -e "  ${RED}✗${NC} ${_CHECK} abgebrochen — der Lauf gilt als nicht bestanden"
+        fi
+    done
 
     echo
     # **Die Schlussmarke.** Ein Lauf, der unterwegs abbricht, erreicht sie nicht
     # und sieht deshalb nie wie ein bestandener aus (P-05).
-    if [[ "${COUNT_FAIL}" -eq 0 ]]; then
+    if [[ "${COUNT_FAIL}" -eq 0 && "${COUNT_OK}" -eq "${EXPECTED_CHECKS}" ]]; then
         echo -e "  ${GREEN}✓ ${COUNT_OK} Checks bestanden, keine Fehler${NC}"
         echo
         return 0
+    fi
+    if [[ "${COUNT_FAIL}" -eq 0 ]]; then
+        echo -e "  ${RED}✗ nur ${COUNT_OK} von ${EXPECTED_CHECKS} Checks gelaufen${NC}"
+        echo -e "      Der Lauf ist unvollständig — das ist kein bestandener Lauf."
+        echo
+        return 1
     fi
     echo -e "  ${RED}✗ ${COUNT_FAIL} von $((COUNT_OK + COUNT_FAIL)) Checks fehlgeschlagen${NC}"
     echo
