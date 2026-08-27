@@ -17,6 +17,7 @@ Zwei Entwurfsentscheidungen prägen die Typen:
 """
 
 from dataclasses import dataclass
+from datetime import date, datetime
 from enum import Enum
 from typing import Literal
 
@@ -103,6 +104,164 @@ class Unavailable:
 
 Resolution = Resolved | NotResponsible | NotFound | Unavailable
 """Was ein Resolver antworten kann."""
+
+
+# ─── Kurs, Historie, Devisen ──────────────────────────────────────────────────
+#
+# Die drei Rollen, die bis T-27a fehlten. Sie teilen sich drei Entscheidungen,
+# und jede hat einen gemessenen Anlass in dieser App:
+#
+# * **Die Anfrage nennt Ticker und MIC, nicht ein fertiges Symbol.** Wie daraus
+#   `EUNL.DE` oder `EUNL.XETRA` wird, weiß nur die Quelle selbst — sie kennt
+#   ihre eigene Konvention, und keine andere muss sie kennen.
+# * **Die Währung ist Pflicht, nicht optional.** Ein Kurs ohne Währung ist eine
+#   Zahl; als solche wurde er in dieser App schon einmal mit einem Betrag in
+#   einer anderen Währung verrechnet.
+# * **Zeitpunkte tragen eine Zone.** `17:30` ist in Toronto ein anderer
+#   Augenblick als in Frankfurt, und hinterher ist die Angabe nicht mehr
+#   rekonstruierbar.
+
+
+@dataclass(frozen=True)
+class QuoteRequest:
+    """Die Frage an eine Kursquelle: Was kostet dieses Listing gerade?
+
+    Attributes:
+        ticker: Kanonischer Ticker, ohne Börsensuffix.
+        mic: Börse als MIC (ISO 10383). Ohne sie ist der Ticker mehrdeutig —
+            ``RY`` gibt es in Toronto und in New York, zu verschiedenen Kursen
+            in verschiedenen Währungen.
+        isin: Falls bekannt. Manche Anbieter fragen lieber danach.
+    """
+
+    ticker: str
+    mic: str
+    isin: str | None = None
+
+
+@dataclass(frozen=True)
+class Quote:
+    """Ein Kurs — mit Währung und Zeitpunkt, beides Pflicht.
+
+    Attributes:
+        price: Der Kurs. Positiv und endlich; ``0`` ist keine Angabe, sondern
+            eine fehlende Angabe, die sich als Zahl ausgibt.
+        currency: ISO-4217-Code. Wer in Untereinheiten notiert (London in
+            Pence), **rechnet vorher um** — siehe `invariants.MINOR_UNIT_CODES`.
+        as_of: Wann dieser Kurs galt, mit Zeitzone.
+        volume: Tagesvolumen, falls der Anbieter es kennt.
+    """
+
+    price: float
+    currency: str
+    as_of: datetime
+    volume: int | None = None
+
+
+QuoteResult = Quote | NotResponsible | NotFound | Unavailable
+"""Was eine Kursquelle antworten kann."""
+
+
+@dataclass(frozen=True)
+class DailyRequest:
+    """Die Frage an eine Historienquelle: Wie liefen die Schlusskurse?
+
+    Attributes:
+        ticker: Kanonischer Ticker.
+        mic: Börse als MIC.
+        start: Frühester gewünschter Tag, einschließlich. ``None`` heißt „so
+            weit zurück, wie du hast".
+        end: Spätester gewünschter Tag, einschließlich. ``None`` heißt „bis
+            heute".
+    """
+
+    ticker: str
+    mic: str
+    start: date | None = None
+    end: date | None = None
+
+
+@dataclass(frozen=True)
+class DailyBar:
+    """Ein Handelstag: Datum und Schlusskurs.
+
+    Bewusst nur diese zwei Werte. Eröffnung, Hoch und Tief braucht diese App
+    nicht, und ein Vertrag, der sie verlangt, schlösse jede Quelle aus, die nur
+    Schlusskurse führt — das sind gerade die einfachen, kostenlosen.
+    """
+
+    day: date
+    close: float
+
+
+@dataclass(frozen=True)
+class DailySeries:
+    """Eine Reihe von Handelstagen, mit Währung und Bereinigungsstand.
+
+    ``currency`` und ``adjusted`` stehen an der **Reihe**, nicht am einzelnen
+    Tag: Beides gilt für alle Punkte gemeinsam, und sie an jedem Tag zu
+    wiederholen lüde dazu ein, sie innerhalb einer Reihe wechseln zu lassen.
+
+    Attributes:
+        bars: Die Tage, **streng aufsteigend** und ohne Duplikate. Zwei
+            Einträge für denselben Tag entstehen still, wenn ein Anbieter zwei
+            sich überlappende Seiten liefert.
+        currency: ISO-4217-Code der Schlusskurse.
+        adjusted: Ob die Kurse um Splits und Ausschüttungen bereinigt sind.
+            **Deklariert, nicht geraten** — dieselbe Reihe unterscheidet sich
+            je nach Antwort um zweistellige Prozentwerte, und welche Variante
+            ein Anbieter liefert, steht nirgends im Zahlenmaterial.
+    """
+
+    bars: tuple[DailyBar, ...]
+    currency: str
+    adjusted: bool
+
+
+DailyResult = DailySeries | NotResponsible | NotFound | Unavailable
+"""Was eine Historienquelle antworten kann."""
+
+
+@dataclass(frozen=True)
+class FxRequest:
+    """Die Frage an eine Devisenquelle: Was ist eine Einheit ``base`` in ``quote``?
+
+    Attributes:
+        base: Ausgangswährung (ISO 4217).
+        quote: Zielwährung (ISO 4217).
+    """
+
+    base: str
+    quote: str
+
+
+@dataclass(frozen=True)
+class FxRate:
+    """Ein Wechselkurs: eine Einheit ``base`` kostet ``rate`` in ``quote``.
+
+    ``base`` und ``quote`` stehen **auch in der Antwort**, obwohl sie schon in
+    der Anfrage stehen. Der Grund ist praktisch: Ein gespeicherter oder
+    weitergereichter Kurs ohne sein Paar ist eine Zahl ohne Bedeutung, und die
+    Richtung zu verwechseln ist der häufigste Fehler mit Devisenkursen
+    überhaupt — ``0.92`` und ``1.087`` sehen beide plausibel aus.
+
+    Attributes:
+        base: Ausgangswährung.
+        quote: Zielwährung.
+        rate: Der Kurs, positiv und endlich. Bei ``base == quote`` **genau**
+            ``1.0``: Eine Quelle, die für EUR→EUR ``0.9998`` meldet, rechnet
+            über einen Umweg und ist an dieser Stelle nicht vertrauenswürdig.
+        as_of: Wann dieser Kurs galt, mit Zeitzone.
+    """
+
+    base: str
+    quote: str
+    rate: float
+    as_of: datetime
+
+
+FxResult = FxRate | NotResponsible | NotFound | Unavailable
+"""Was eine Devisenquelle antworten kann."""
 
 
 # ─── Einheiten (für Metadaten-Quellen) ────────────────────────────────────────

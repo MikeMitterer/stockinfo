@@ -22,7 +22,14 @@ class TestCanadaFile(ResolverContract):
 
     responsible = ResolveRequest(isin="CA78012H5675")
     not_responsible = ResolveRequest(isin="IE00B4L5Y983")
-    unknown = ResolveRequest(isin="CA00000000000")
+    # Barrick Gold — eine **gültige** kanadische ISIN, die in der Tabelle nicht
+    # steht. Hier stand bis T-27a `CA00000000000`: dreizehn Zeichen, falsche
+    # Prüfziffer, also gar keine ISIN. Der Test maß damit die Formprüfung des
+    # Plugins statt seines Verhaltens bei einem echten, aber nicht geführten
+    # Papier — zwei verschiedene Fälle, und nur der zweite war gemeint.
+    # Gefunden hat das nicht ein Mensch, sondern die neue Vertragsregel
+    # `test_die_eigenen_pruefdaten_sind_gueltige_isins`.
+    unknown = ResolveRequest(isin="CA0679011084")
 
     def make_source(self) -> CanadaFileResolver:
         return CanadaFileResolver({"path": str(FIXTURE)})
@@ -35,11 +42,11 @@ def test_liefert_ticker_und_boerse_getrennt() -> None:
     """Kein Yahoo-Suffix im Ticker — das Zusammensetzen ist Sache der Kurs-Quelle."""
     resolver = CanadaFileResolver({"path": str(FIXTURE)})
 
-    treffer = resolver.resolve(ResolveRequest(isin="CA78012H5675"))
+    hit = resolver.resolve(ResolveRequest(isin="CA78012H5675"))
 
-    assert treffer.ticker == "RY"
-    assert treffer.mic == "XTSE"
-    assert treffer.name == "Royal Bank of Canada"
+    assert hit.ticker == "RY"
+    assert hit.mic == "XTSE"
+    assert hit.name == "Royal Bank of Canada"
 
 
 def test_fehlende_datei_ist_nicht_konfiguriert() -> None:
@@ -56,9 +63,9 @@ def test_verschwundene_datei_meldet_unavailable_statt_notfound() -> None:
     """
     resolver = CanadaFileResolver({"path": "/gibt/es/nicht.csv"})
 
-    antwort = resolver.resolve(ResolveRequest(isin="CA78012H5675"))
+    answer = resolver.resolve(ResolveRequest(isin="CA78012H5675"))
 
-    assert type(antwort).__name__ == "Unavailable"
+    assert type(answer).__name__ == "Unavailable"
 
 
 @pytest.mark.parametrize("prefixes", [("JP",), ("US", "CA")])

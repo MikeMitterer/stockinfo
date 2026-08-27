@@ -12,16 +12,10 @@ import re
 from dataclasses import dataclass
 
 import structlog
+from stockinfo_plugin.invariants import ISIN_PATTERN as _PLUGIN_ISIN_PATTERN
+from stockinfo_plugin.invariants import mic_is_wellformed
 
 logger = structlog.get_logger()
-
-# Ein MIC nach ISO 10383: genau vier Zeichen, Großbuchstaben oder Ziffern.
-#
-# Ohne Anker, weil er mit `fullmatch` benutzt wird: `$` würde in Python auch
-# **vor** einem abschließenden Zeilenumbruch matchen, und `"XNAS\n"` käme
-# durch — ein Wert, den der Eindeutigkeits-Index sogar von `XNAS`
-# unterscheidet.
-_MIC_PATTERN = re.compile(r"[A-Z0-9]{4}")
 
 # Ein kanonischer Ticker: Großbuchstaben und Ziffern, sonst nichts.
 #
@@ -57,12 +51,17 @@ REASON_AMBIGUOUS_SUFFIX = "ambiguous_exchange_suffix"
 
 # Eine ISIN nach ISO 6166: Ländercode, neun alphanumerische Stellen, Prüfziffer.
 #
-# Steht **hier** und nicht mehr in `app/routers/validation.py`, seit der
-# Aufnahmeweg dieselbe Frage stellt: Ein Service darf nicht in der
-# Router-Schicht importieren, und eine zweite Kopie liefe beim ersten Sonderfall
-# auseinander. Die Form eines Wertpapierkennzeichens ist Fachwissen, keine
-# HTTP-Prüfung — dass ein `422` daraus wird, entscheidet der Router.
-ISIN_PATTERN = re.compile(r"[A-Z]{2}[A-Z0-9]{9}[0-9]")
+# **Seit T-27a aus `stockinfo_plugin.invariants`, nicht mehr hier gebildet.**
+# Die Form eines Wertpapierkennzeichens ist eine Aussage über ISO 6166 und
+# nicht über StockInfo — ein Plugin-Autor muss sie anwenden können, ohne diese
+# App zu installieren. Sie an beiden Orten zu führen, hieße denselben Vertrag
+# zweimal zu behaupten.
+#
+# Der Name bleibt hier stehen, weil `app/routers/validation.py` ihn von hier
+# importiert: Ein Service darf nicht in der Router-Schicht importieren, und die
+# Form ist Fachwissen, keine HTTP-Prüfung — dass ein `422` daraus wird,
+# entscheidet der Router.
+ISIN_PATTERN = _PLUGIN_ISIN_PATTERN
 
 
 @dataclass(frozen=True)
@@ -244,16 +243,24 @@ def is_real_mic(mic: str | None) -> bool:
 
     Geprüft wird **beides**:
 
-    1. **Die Schreibweise.** Ein MIC nach ISO 10383 hat genau vier Zeichen,
-       Großbuchstaben oder Ziffern. „Der Tabelle unbekannt" ist kein
-       Gütesiegel — meine erste Fassung ließ jeden nichtleeren String durch,
-       und damit hätte auch `NOT-A-MIC`, `xnAs` oder `XNAS ` im kanonischen
-       Feld stehen können. Geprüft wird mit `fullmatch`: `$` matcht in Python
-       auch vor einem abschließenden Zeilenumbruch, und `"XNAS\n"` wäre
-       durchgegangen.
+    1. **Die Schreibweise** — seit T-27a durch
+       `stockinfo_plugin.invariants.mic_is_wellformed`, nicht mehr hier. Ein
+       MIC nach ISO 10383 hat genau vier Zeichen, Großbuchstaben oder Ziffern.
+       „Der Tabelle unbekannt" ist kein Gütesiegel — meine erste Fassung ließ
+       jeden nichtleeren String durch, und damit hätte auch `NOT-A-MIC`,
+       `xnAs` oder `XNAS ` im kanonischen Feld stehen können. Dort wird mit
+       `fullmatch` geprüft: `$` matcht in Python auch vor einem abschließenden
+       Zeilenumbruch, und `"XNAS\n"` wäre durchgegangen.
     2. **Kein Sammelcode.** Geprüft gegen `COLLECTOR_CODES`. Die Längenregel
        fängt das heutige `US` schon ab; die Prüfung bleibt trotzdem, weil ein
        künftiger vierstelliger Sammelcode sonst durchginge.
+
+    **Warum die Regel geteilt ist.** Die Schreibweise ist eine Aussage über
+    ISO 10383 und gehört in den öffentlichen Vertrag — ein Plugin-Autor muss
+    sie anwenden können, ohne diese App zu installieren. *Welche* Sammelcodes
+    es gibt, hängt dagegen daran, welche Quellen jemand einsetzt, und das weiß
+    nur die App. Deshalb liegt die Form drüben und die Liste hier; diese
+    Funktion ist die Stelle, an der beides zusammenkommt.
 
     Ein MIC, den die Tabelle nicht kennt, aber richtig geschrieben ist, gilt
     als echt: `XNAS` steht dort nicht und ist genau der Wert, den eine
@@ -266,9 +273,7 @@ def is_real_mic(mic: str | None) -> bool:
     Returns:
         ``True`` wenn der Wert als kanonischer MIC taugt.
     """
-    if not mic or not _MIC_PATTERN.fullmatch(mic):
-        return False
-    return mic not in COLLECTOR_CODES
+    return mic_is_wellformed(mic) and mic not in COLLECTOR_CODES
 
 
 def canonical_identity(

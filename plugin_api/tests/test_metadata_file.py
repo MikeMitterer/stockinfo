@@ -36,18 +36,18 @@ def test_leere_zellen_werden_nicht_geliefert() -> None:
     ``None`` zurück, dürfte das Repository einen gepflegten Stand damit
     überschreiben — genau der Fehler, gegen den `metadata_complete` gebaut ist.
     """
-    felder = _readings("CA9861913023")
+    readings = _readings("CA9861913023")
 
-    assert "provider" in felder
-    assert "ter" not in felder
-    assert "fund_domicile" not in felder
+    assert "provider" in readings
+    assert "ter" not in readings
+    assert "fund_domicile" not in readings
 
 
 def test_volle_zeile_liefert_alle_drei_felder() -> None:
-    felder = _readings("CA78012H5675")
+    readings = _readings("CA78012H5675")
 
-    assert set(felder) == {"ter", "provider", "fund_domicile"}
-    assert felder["provider"] == "BlackRock Asset Management Canada"
+    assert set(readings) == {"ter", "provider", "fund_domicile"}
+    assert readings["provider"] == "BlackRock Asset Management Canada"
 
 
 def test_basispunkte_werden_zu_prozent() -> None:
@@ -56,10 +56,10 @@ def test_basispunkte_werden_zu_prozent() -> None:
     Die Quelle führt 6 Basispunkte. Ohne Umrechnung stünde in der Tabelle ein
     TER von 6 % statt 0,06 % — Faktor 100, und niemand sieht es der Zahl an.
     """
-    roh = _readings("CA78012H5675")["ter"]
+    raw = _readings("CA78012H5675")["ter"]
 
-    assert roh == 6.0
-    assert convert(roh, Unit.BASIS_POINTS, Unit.PERCENT) == 0.06
+    assert raw == 6.0
+    assert convert(raw, Unit.BASIS_POINTS, Unit.PERCENT) == 0.06
 
 
 def test_unplausible_werte_gelten_als_kein_wert() -> None:

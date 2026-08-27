@@ -19,6 +19,7 @@ Format (Semikolon, Kopfzeile erforderlich, leere Zellen erlaubt)::
 
 import csv
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 from stockinfo_plugin import (
@@ -53,7 +54,16 @@ class MetadataFileSource(MetadataSource):
 
     # Spalte in der Datei → Feldname im Vertrag. Die Namen unterscheiden sich
     # bewusst: `ter_bps` sagt in der Datei, in welcher Einheit die Zahl steht.
-    _COLUMNS = {"ter_bps": "ter", "provider": "provider", "fund_domicile": "fund_domicile"}
+    #
+    # `MappingProxyType` und kein rohes Dict: Ein Dict an der Klasse gehört
+    # allen Instanzen gemeinsam, und ein einziges `self._COLUMNS[...] = ...`
+    # irgendwo änderte still das Verhalten jeder anderen. Dass hier niemand
+    # schreibt, ist heute wahr und morgen eine Annahme —
+    # `SourceContract.test_kein_veraenderlicher_zustand_an_der_klasse` hat
+    # genau diese Zeile gefunden, und sie hatte recht.
+    _COLUMNS = MappingProxyType(
+        {"ter_bps": "ter", "provider": "provider", "fund_domicile": "fund_domicile"}
+    )
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         """

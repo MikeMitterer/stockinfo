@@ -15,7 +15,13 @@ from typing import Any
 from stockinfo_plugin.types import (
     API_VERSION,
     Cost,
+    DailyRequest,
+    DailyResult,
     FieldSpec,
+    FxRequest,
+    FxResult,
+    QuoteRequest,
+    QuoteResult,
     Reading,
     ResolveRequest,
     Resolution,
@@ -179,10 +185,93 @@ class MetadataSource(Source):
         return next((spec for spec in self.FIELDS if spec.name == name), None)
 
 
-# Weitere Rollen folgen demselben Muster und sind hier bewusst noch nicht
-# ausformuliert — erst soll sich der Resolver-Vertrag an einem echten Plugin
-# bewähren:
-#
-#   QuoteSource        — aktueller Kurs zu Ticker + MIC
-#   DailyCloseSource   — Tages-Schlusskurse
-#   FxSource           — Devisenkurse
+class QuoteSource(Source):
+    """Rolle: liefert den aktuellen Kurs zu einem Listing.
+
+    Die Anfrage nennt **Ticker und MIC**, nicht ein fertiges Anbieter-Symbol.
+    Wie daraus ``EUNL.DE`` oder ``EUNL.XETRA`` wird, weiß nur diese Quelle —
+    und muss keine andere wissen.
+    """
+
+    def handles(self, request: QuoteRequest) -> bool:
+        """Führt diese Quelle dieses Listing? Siehe `Resolver.handles`.
+
+        Der übliche Zuständigkeitsbereich ist eine Menge von Börsen: Ein
+        Anbieter für den nordamerikanischen Markt hat zu ``XWBO`` nichts — und
+        das ist eine andere Aussage als „gerade nicht erreichbar".
+        """
+        return True
+
+    def fetch_quote(self, request: QuoteRequest) -> QuoteResult:
+        """Holt den aktuellen Kurs.
+
+        **Wirft nicht.** Jeder Fehler wird zu `Unavailable`.
+
+        **Und rät nicht.** Wo der Anbieter keine Währung mitliefert, ist die
+        Antwort `Unavailable`, nicht ein Kurs mit geratener Währung. Ein Kurs
+        ohne Währung ist eine Zahl, und als solche wurde er in dieser App schon
+        einmal mit einem Betrag in einer anderen Währung verrechnet.
+
+        Args:
+            request: Ticker, MIC und optional die ISIN.
+
+        Returns:
+            `Quote` bei Treffer, sonst `NotResponsible`, `NotFound` oder
+            `Unavailable`.
+        """
+        raise NotImplementedError
+
+
+class DailyCloseSource(Source):
+    """Rolle: liefert Tages-Schlusskurse zu einem Listing."""
+
+    def handles(self, request: DailyRequest) -> bool:
+        """Führt diese Quelle die Historie dieses Listings?"""
+        return True
+
+    def fetch_daily(self, request: DailyRequest) -> DailyResult:
+        """Holt die Schlusskurse im angefragten Zeitraum.
+
+        **Wirft nicht.** Jeder Fehler wird zu `Unavailable`.
+
+        Eine `DailySeries` mit **leerer** ``bars``-Folge ist eine gültige
+        Antwort: „nachgesehen, in diesem Zeitraum lag nichts". Sie ist etwas
+        anderes als `NotFound` („dieses Papier kenne ich nicht") und etwas
+        anderes als `Unavailable` („konnte nicht nachsehen"). Der Unterschied
+        entscheidet, ob ein gespeicherter Stand überschrieben werden darf.
+
+        Args:
+            request: Ticker, MIC und der gewünschte Zeitraum.
+
+        Returns:
+            `DailySeries` mit streng aufsteigenden, doppelfreien Tagen, sonst
+            `NotResponsible`, `NotFound` oder `Unavailable`.
+        """
+        raise NotImplementedError
+
+
+class FxSource(Source):
+    """Rolle: liefert Wechselkurse zwischen zwei Währungen."""
+
+    def handles(self, request: FxRequest) -> bool:
+        """Kennt diese Quelle dieses Währungspaar?"""
+        return True
+
+    def fetch_rate(self, request: FxRequest) -> FxResult:
+        """Holt den Wechselkurs.
+
+        **Wirft nicht.** Jeder Fehler wird zu `Unavailable`.
+
+        Bei ``base == quote`` ist die Antwort **genau** ``1.0``. Das ist keine
+        Formalie: Eine Quelle, die dafür ``0.9998`` meldet, rechnet über einen
+        Umweg — und derselbe Umweg verfälscht dann jedes andere Paar auch, nur
+        unsichtbar.
+
+        Args:
+            request: Ausgangs- und Zielwährung.
+
+        Returns:
+            `FxRate` bei Treffer, sonst `NotResponsible`, `NotFound` oder
+            `Unavailable`.
+        """
+        raise NotImplementedError
