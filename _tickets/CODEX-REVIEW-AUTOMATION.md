@@ -161,6 +161,16 @@ Schritt 3 ist der Riegel: Vorher gibt es nichts zu claimen. **Nach dem Claim
 schreibt Claude bis zum Review-Ergebnis nicht mehr in `STATUS.md`** — auch nicht
 „nur schnell" einen Tippfehler.
 
+**Eng begrenzte Selbstheilung bei ausgebliebenem Status-Commit:** Findet Codex
+einen vollständigen `ready_for_codex`-Zustand nur uncommitted im Worktree, wartet
+er kurz auf Claudes unmittelbar folgenden Commit. Bleibt er aus, darf Codex die
+Übergabe nur dann atomar claimen und mitsichern, wenn ausschließlich
+`_tickets/STATUS.md` verändert ist, die OUTBOX vollständig ist und der genannte
+Produkt-Commit existiert. Bei weiteren Dirty-Dateien, unvollständiger OUTBOX
+oder widersprüchlichem Handoff wird nicht geraten: formaler Handoff-Fehler.
+Diese Ausnahme heilt nur den Transport; sie ersetzt nicht Claudes Pflicht,
+jede Übergabe sofort zu committen.
+
 ## Ausführungs-Guard für Ticket-Prüfskripte
 
 Mike hat die Ausführung aller versionierten Prüfskripte nach dem Muster

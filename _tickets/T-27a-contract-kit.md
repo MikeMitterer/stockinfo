@@ -10,8 +10,8 @@ Kurse, Historie und Devisen trotzdem implizit an yfinance gebunden.
 
 **Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 
-**Hängt an:** T-22 für die vollständige Rollenabdeckung (`DailyCloseProvider`
-und `FxProvider` fehlen dort noch als Protokolle).
+**Hängt an:** T-22 für die vollständige Rollenabdeckung (dort werden
+`DailyCloseProvider` und `FxRateProvider` als kanonische Protokolle gebündelt).
 **Muss vor Abschluss von T-23 stehen** — T-23 braucht die Doubles als
 Abnahmemittel, und die App ist laut T-23 selbst der erste Plugin-Autor.
 

@@ -284,3 +284,28 @@ Vorher wäre derselbe Lauf grün gewesen.
 **Verifikation:** `make test` — Backend 637 passed / 29 skipped (vorher 633),
 Plugin-API 36, Dashboard 259 in 47 Dateien. `./_tickets/T-22-smoke.sh --run`
 5/5, Exit-Code 0. `ruff check app tests` und `git diff --check` sauber.
+
+---
+
+## Codex-Review · Runde 2 · `d5bb327`
+
+Der Produktstand behebt alle vier Befunde aus Runde 1. Key-Erhalt,
+Settings-Auflösung, Rollenprüfung, zentralisierte Protokolle und der
+Vollständigkeitsguard des Smoke-Scripts tragen in Code und Gegenproben. Ein
+enger Testbefund bleibt:
+
+1. **Mittel · Der Test zur Laufzeit-/Diagnosekohärenz reproduziert die
+   Abweichung nicht.** `test_der_leseweg_zeigt_die_laufende_kette` schreibt nur
+   Konfiguration A, leert den Cache und ruft `/sources` auf. Er primt weder die
+   Laufzeit vor einer Dateiänderung noch schreibt er danach Konfiguration B.
+   Eine Rückkehr zum alten frischen Dateilesen im Endpunkt ließe den Test grün.
+   Der Regressionstest muss A in der Composition-Root primen, die Datei im
+   selben Prozess auf B ändern und anschließend belegen, dass die bereits
+   gebaute Laufzeit und `/sources` beide weiterhin A zeigen. Ein Mutant soll
+   den Test gezielt rot machen.
+
+**Evidenz:** Produktgegenproben für den Key und die zwei Diagnosefälle tragen;
+24 fokussierte Tests, `./_tickets/T-22-smoke.sh --run` 5/5, `ruff` und
+`git diff --check` sauber. `make test`: Backend 637 passed / 29 skipped,
+Plugin-API 36, Dashboard 259. Der Produktfehler ist behoben; die Rückgabe
+schützt ausschließlich dessen Regression belastbar ab.

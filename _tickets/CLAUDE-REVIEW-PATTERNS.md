@@ -132,6 +132,13 @@ gecachete Konfiguration hielten, konnte die laufende Kette `OpenFigiResolver`
 sein und `/sources` zugleich `yahoo-search` melden. Beide Tests blieben grün,
 weil keiner die beiden Seiten in derselben gestarteten App verglich.
 
+**Neuer Beleg:** T-22 Runde 2, Commit `d5bb327`: Die Übergabe erklärte, die
+Korrektur habe für beide Hälften eigene Tests und der HTTP-Test prüfe denselben
+Stand wie die laufenden Dienste. Der benannte Test schrieb jedoch nur eine
+Konfiguration, leerte den Cache und rief danach `/sources` auf. Er primte keine
+Laufzeitkette und änderte die Datei nicht anschließend; eine Rückkehr zum
+frischen Dateilesen im Endpunkt wäre deshalb unentdeckt grün geblieben.
+
 [↑ Übersicht](#übersicht)
 
 ## P-02 · Punktuelle Korrektur wird als vollständige Regelumsetzung gemeldet
