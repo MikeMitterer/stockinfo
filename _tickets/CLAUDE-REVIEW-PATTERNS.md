@@ -685,6 +685,13 @@ Check-Funktion mit 1 zurück; `runChecks()` läuft ohne `set -e` weiter,
 von fünf Checks. Ein später vollständig laufender Rest kann deshalb mit vier
 Checks und „keine Fehler" grün enden.
 
+**Neuer Beleg:** T-27a Runde 1, Commit `6121a94`: Der öffentliche
+Szenario-Runner liefert bei `only_real=True` und null mit `real_ok`
+freigegebenen Fällen eine leere Finding-Liste — dieselbe Erfolgsform wie nach
+einem vollständigen grünen Lauf. Der Test schreibt dieses Verhalten sogar als
+Erwartung fest. T-27b könnte damit „Real" melden, ohne einen Anbieter gefragt
+zu haben.
+
 **Nachbarschaft zu P-01:** Dort wird die Testtiefe in der Übergabe
 überzeichnet. Hier überzeichnet sich das **Werkzeug** — die Übergabe gäbe
 seine Zahl gutgläubig weiter.
@@ -815,5 +822,14 @@ Konfigurationsstand und rief danach `/sources` auf. Frisches Dateilesen und
 gecacheter Laufzeitstand lieferten in diesem Aufbau dasselbe. Runde 3,
 Commit `490314a`, erzeugt zuerst Laufzeit A, ändert danach die Datei auf B und
 weist mit einem Frischlese-Mutanten nach, dass der Test nun unterscheidet.
+
+**Beleg 4:** T-27a Runde 1, Commit `6121a94`: `DailyContract` prüfte
+Sortierung, Schlusskurse und Zeitraum ausschließlich in Schleifen über
+`answer.bars`; eine leere `DailySeries` bestand deshalb die vollständige Suite.
+`MetadataContract` verwendete parallel `fetch(...) or []`, sodass selbst
+`None` beim als bekannt deklarierten verantwortlichen Fall alle Feld-, Typ-,
+Einheiten-, Plausibilitäts- und Herkunftsprüfungen übersprang. Die Testdaten
+erzeugten keinen einzigen Wert, an dem die zugesagten Regeln hätten
+unterscheiden können.
 
 [↑ Übersicht](#übersicht)

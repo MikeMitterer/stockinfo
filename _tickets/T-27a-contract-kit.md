@@ -295,3 +295,41 @@ Runner-Vertrag ist eine Methode, und `run_scenarios(..., only_real=True)`
 wählt bereits die freigegebenen Fälle aus. Es soll dort **keine** Zeile an einem
 Szenario geändert werden müssen — das ist die Zusage, an der T-27b dieses
 Ticket messen kann.
+
+---
+
+## Codex-Review · Runde 1 · `6121a94`
+
+Die Grundarchitektur, die Paketierung und die zentrale MIC-/ISIN-Regel tragen.
+Vier Befunde verhindern die Freigabe:
+
+1. **Hoch · Contract-Suiten bestehen mit kaputten oder leeren Treffern.** Ein
+   Metadaten-Mutant bestand mit einem String im Zahlenfeld, `Unit.ABSOLUTE`
+   ohne Währung und ohne Plausibilitätsprüfung; `None` für den verantwortlichen
+   bekannten Fall besteht ebenfalls. Daily besteht mit einer leeren Reihe, die
+   alle Wertprüfungen als leere Schleifen umgeht. FX akzeptiert im
+   Identitätsfall auf CAD→CAD das Paar USD/JPY, solange `rate == 1.0` ist.
+2. **Hoch · Szenarien können inkohärent oder ohne Orakel grün werden.** Ein
+   `QuoteRequest` mit `expect=Resolved` bestand gegen eine `FakeQuoteSource`;
+   Quote/Daily brauchen keine Golden- oder Plausibilitätsaussage, eine leere
+   Herkunfts-`note` wird akzeptiert, und ein Real-Lauf mit null ausgewählten
+   Fällen meldet Erfolg.
+3. **Mittel · Die Invarianten überzeichnen semantische Gültigkeit.** `ZZZ`
+   gilt als ISO-4217-Währung; ein `tzinfo` mit `utcoffset() is None` gilt als
+   Zeitzone. Beides prüft nur einen oberflächlichen Marker, nicht die behauptete
+   Semantik.
+4. **Mittel · Die versprochene Konfigurationsdiagnose fehlt.** Öffentlicher
+   Vertrag und Test kennen weiterhin nur `is_configured() -> bool`, obwohl
+   Ticket und Spec einen verständlichen Grund verlangen. Daneben behauptet der
+   Kosten-Test entgegen T-22, die Kette sortiere nach `cost`.
+
+Zusätzlich übernimmt `PricesFileDailySource` bei gemischten Währungen
+stillschweigend die erste Zeile für die ganze Reihe; dafür braucht das Beispiel
+einen eigenen Negativtest.
+
+**Evidenz:** Die gezielten Gegenplugins und -szenarien liefen alle unerwartet grün.
+Regulär: Backend 637 passed / 29 skipped, Plugin-API 189 passed / 1 skipped,
+Dashboard 259; Ruff und `git diff --check` sauber. Das Wheel
+`stockinfo_plugin_api-0.2.0-py3-none-any.whl` enthält alle neuen öffentlichen
+Module. Die grünen Läufe bestätigen Paketierung und Bestand, nicht die
+Vollständigkeit der Contract-Orakel.
