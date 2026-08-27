@@ -56,6 +56,37 @@ erzwingen und klare Grenzen setzen:
 7. **Reviewer-Verantwortung:** Der Reviewer bewertet auch den Prozess. Er muss
    eine nicht konvergierende Schleife stoppen, selbst wenn jedes einzelne
    Finding sachlich korrekt ist.
+8. **Skelett-Grenze:** Nennt ein Vorhaben einen Erfolgsweg, muss dieser Weg
+   **einmal durchgelaufen** sein, bevor die Vorarbeiten weiterlaufen — als
+   dünnstes lauffähiges Skelett, hartverdrahtet und hässlich erlaubt. Ein
+   Maßstab, an dem erst am Ende gemessen wird, ist ein Wunsch.
+9. **Budget-Grenze:** Überschreitet ein Ticket seine Time-Box um ein
+   Vielfaches, ist das ein Anlass für eine ausdrückliche Zuschnittsprüfung —
+   nicht für weitere Runden. Der Implementierer stellt die Frage, bevor der
+   Mensch sie stellen muss.
+
+**Beleg für Leitplanke 8 — und der Anlass, sie aufzuschreiben** *(Mike,
+2026-08-27, nach Runde 52)*: Der Plugin-Entwurf vom 2026-08-19 nennt als
+Maßstab ausdrücklich, „dass jemand in Toronto tatsächlich ein Plugin einsetzen
+kann". Dieselbe Datei stellt den Lader (T-22, T-23) an Position sechs und
+sieben. Nach 52 Runden war der Stand: **880 Zeilen zugesagter Plugin-Vertrag,
+und der Core führt davon genau drei Namen aus** — `NotFound`,
+`NotResponsible`, `Unavailable`. `sources.py`, `testing.py` und beide
+Beispiel-Plugins hat StockInfo nie geladen.
+
+Dass das gefährlich ist, belegen die teuersten Befunde derselben Runden. Sie
+sind **alle vom selben Typ: geschrieben, nie ausgeführt.**
+
+* Der `409` bei mehrdeutigem Symbol stand seit T-24 im **abgenommenen**
+  Vertrag und war an keinem Endpunkt gebaut — über zwanzig Runden unbemerkt.
+* Zwei Wächterregeln (Runden 48 und 49) passten nicht einmal auf den
+  unveränderten Bestand.
+* Die Pluralformen standen in beiden Katalogen verkehrt herum — sichtbar in
+  einer Sekunde, sobald man sie einmal laufen lässt.
+
+**Reviewqualität ersetzt keine Ausführung.** Ein Review findet Widersprüche
+zwischen Artefakten; dass ein Vertrag der Wirklichkeit nie begegnet ist, findet
+es nicht.
 
 **Auslöser für das Skill-Proposal:** T-21 Teil 3 endete nach 17
 Entwurfsrunden bei einer 936-zeiligen Spec. Die Runden 8, 9, 10, 13 und 17 bis
