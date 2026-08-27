@@ -26,18 +26,48 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | Contract-Suite je Rolle | alle fünf vorhanden: Resolver, Metadata, Quote, Daily, FX | ✅ [^suiten] | |
-| 2 | Quote-Contract | Preis **mit Pflichtwährung**, endliche Werte, Fehler statt geratener Ersatzwerte | ✅ [^suiten] | |
-| 3 | Daily-Contract | Datum, Schlusskurs, Währung, Sortierung, **keine Duplikate**, adjusted/unadjusted deklariert | ✅ [^suiten] | |
-| 4 | FX-Contract | Base/Quote, positive endliche Rate, Zeitpunkt, Identitäts- und Fehlerfall | ✅ [^suiten] | |
-| 5 | fachliche Invarianten | ISIN-Prüfziffer, Anfrage-ISIN = Ergebnis-ISIN, **echter MIC statt Sammelcode**, gültige Währung, sinnvolle Datumsfolge | ✅ [^invarianten] | |
+| 1 | Contract-Suite je Rolle | alle fünf vorhanden: Resolver, Metadata, Quote, Daily, FX | ✅ [^suiten] [^mutanten] | |
+| 2 | Quote-Contract | Preis **mit Pflichtwährung**, endliche Werte, Fehler statt geratener Ersatzwerte | ✅ [^suiten] [^mutanten] | |
+| 3 | Daily-Contract | Datum, Schlusskurs, Währung, Sortierung, **keine Duplikate**, adjusted/unadjusted deklariert | ✅ [^suiten] [^mutanten] | |
+| 4 | FX-Contract | Base/Quote, positive endliche Rate, Zeitpunkt, Identitäts- und Fehlerfall | ✅ [^suiten] [^mutanten] | |
+| 5 | fachliche Invarianten | ISIN-Prüfziffer, Anfrage-ISIN = Ergebnis-ISIN, **echter MIC statt Sammelcode**, gültige Währung, sinnvolle Datumsfolge | ✅ [^invarianten] [^mutanten] | |
 | 6 | Szenarioformat | ein Fall wird **einmal** beschrieben; Format, Validierung und ein **transportneutraler** Runner-Vertrag stehen. Dass derselbe Fall offline **und** real läuft, nimmt T-27b ab | ✅ [^format] | |
+| 6b | Rollenpassung und Nullfall | Anfrage- und Ergebnistyp müssen zusammenpassen; ein Lauf **ohne einen einzigen Fall** ist eine Beanstandung | ✅ [^nullfall] | |
 | 7 | Golden Cases | erwarteter Ticker/MIC stammt **nicht** aus der Aufzeichnung, sondern aus gepflegten Daten | ✅ [^golden] | |
 | 8 | `FakeSource` | vorgebbare Antwort je Anfrage, Aufrufprotokoll für Reihenfolge und Anzahl | ✅ [^doubles] | |
 | 9 | Fake-Uhr | TTL, Half-open und Reset ohne echte Wartezeit prüfbar | ⚠️ [^uhr] | |
 | 10 | globaler Zustand | zwei Testfälle beeinflussen sich nicht | ✅ [^zustand] | |
 | 11 | `make test-plugin-api` | grün | ✅ [^lauf] | |
 
+[^mutanten]: **`tests/test_contract_mutants.py` — 23 kaputte Mini-Plugins, je
+    eines pro Regel, dauerhaft im Lauf.** Das ist die Antwort auf den
+    schwersten Befund aus Runde 1: Die Verträge zertifizierten leere und
+    kaputte Quellen, weil ihre Schleifen null Mal liefen. Ein Vertrag, dessen
+    Greifen niemand nachweist, ist eine Zusage über eine Zusage.
+
+    Jeder Mutant macht genau **einen** Fehler, und geprüft wird nicht nur, dass
+    irgendetwas fehlschlägt, sondern dass die Meldung von der **gemeinten**
+    Regel kommt — sonst bestünde ein Tippfehler im Vertrag den Test genauso.
+
+    Die Gegenprobe zur Gegenprobe steht am Ende der Datei:
+    `test_ein_heiles_plugin_wird_nicht_beanstandet`. Ohne sie bewiese die ganze
+    Datei nur, dass die Verträge streng sind — ein Vertrag, der *alles*
+    ablehnt, bestünde jeden Mutantentest und wäre wertlos.
+[^nullfall]: **Beides waren Löcher, durch die T-27b sonst geerbt hätte.**
+
+    `QuoteRequest` mit `expect=Resolved` lief vorher grün — ein Double gibt
+    bereitwillig zurück, was man ihm sagt, und niemand fragte, ob das zur Rolle
+    passt. `ROLE_RESULTS` beantwortet die Frage jetzt; Fehlfälle bleiben frei,
+    weil `NotFound` in jeder Rolle dasselbe heißt.
+
+    Der Nullfall ist dasselbe Muster wie `P-05`: `only_real=True` ohne einen
+    einzigen freigegebenen Fall gab `[]` zurück, und das sah aus wie Erfolg.
+    Vergisst ein Autor überall `real_ok`, meldet sein Release-Lauf jahrelang
+    Erfolg, ohne den echten Anbieter je gefragt zu haben. **Der Test, der das
+    vorher behauptete, war meiner** — er stand als
+    `test_die_reale_betriebsart_waehlt_nur_freigegebene_faelle` da und
+    zertifizierte die Lücke. Er ist jetzt umgekehrt und hat einen zweiten
+    daneben, der die Auswahl mit einem *tatsächlich* freigegebenen Fall belegt.
 [^suiten]: **Fünf Verträge, alle an einem echten Plugin ausgeführt.**
     `ResolverContract` und `MetadataContract` bestanden; neu sind
     `QuoteContract`, `DailyContract` und `FxContract` in
@@ -51,7 +81,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
     Die Zusagen je Rolle stehen als eigene Testmethode da, nicht als Sammelfall
     — sonst nennt eine fehlgeschlagene Zusicherung nur die erste Ursache.
-[^invarianten]: **`stockinfo_plugin/invariants.py`, 58 bestandene Tests und ein
+[^invarianten]: **`stockinfo_plugin/invariants.py`, 66 bestandene Tests und ein
     ausdrücklich übersprungener.** Geprüft
     wird gegen **bekannte Werte**, nicht gegen die Funktion selbst: vier echte
     ISINs (Apple, iShares Core MSCI World, Royal Bank of Canada, Barrick Gold).
@@ -76,8 +106,10 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     vertauschte Bereichsgrenzen (schlagen nie an) und `real_ok` bei erwartetem
     `Unavailable` (ein Ausfall lässt sich von außen nicht bestellen).
 [^golden]: **Gemessen, nicht zugesagt.** Die maschinell prüfbare Hälfte:
-    `validate_scenarios` verlangt für `Resolved` und `FxRate` die Kernwerte —
-    „irgendein Treffer kam zurück" ist keine Aussage über ein Wertpapier.
+    `validate_scenarios` verlangt für **alle vier** Trefferarten die Kernwerte
+    — „irgendein Treffer kam zurück" ist keine Aussage über ein Wertpapier. Bei
+    `Quote` und `DailySeries` waren es bis Runde 1 keine; sie durften ohne einen
+    einzigen Erwartungswert dastehen.
 
     Die andere Hälfte — dass die Werte **nicht aus der Aufzeichnung** stammen —
     prüft `test_eine_luegende_aufzeichnung_macht_den_fall_rot`: Die Tabelle wird
@@ -126,11 +158,12 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     gemacht: `MetadataFileSource._COLUMNS` war ein Dict an der Klasse. Behoben
     als `MappingProxyType` — dass dort heute niemand schreibt, ist wahr und
     morgen eine Annahme.
-[^lauf]: `make test-plugin-api`: **189 passed, 1 skipped** (vorher 36).
+[^lauf]: `make test-plugin-api`: **235 passed, 1 skipped** (vor T-27a: 36;
+    nach Runde 1: 189).
     Übersprungen wird ein Zahlendreher-Fall, dessen getauschte Stellen zufällig
     gleich sind; der Test sagt das statt eine Aussage zu behaupten, die der
     Wert nicht hergibt. `make test` gesamt: Backend 637 / 29 skipped,
-    Dashboard 259. `ruff check app plugin_api` sauber.
+    Dashboard 259. `ruff check app tests plugin_api` sauber.
 
     **Kein Smoke-Script für dieses Ticket.** Jede Zeile dieser Matrix ist eine
     Aussage über Bibliothekscode; es gibt nichts, das erst nach einem Neustart
@@ -333,3 +366,114 @@ Dashboard 259; Ruff und `git diff --check` sauber. Das Wheel
 `stockinfo_plugin_api-0.2.0-py3-none-any.whl` enthält alle neuen öffentlichen
 Module. Die grünen Läufe bestätigen Paketierung und Bestand, nicht die
 Vollständigkeit der Contract-Orakel.
+
+---
+
+## Auflösung · Runde 1 → Runde 2
+
+Alle vier Befunde tragen, und der erste trifft den Kern: **Meine Verträge haben
+Leere zertifiziert.** Eine Schleife über eine leere Liste ist grün und sagt
+nichts — genau das Muster, das ich in T-22 unter `P-05` schon einmal
+beschrieben hatte, hier nur eine Ebene höher.
+
+### 1 · Die Verträge lassen Leere und Unsinn nicht mehr durch
+
+Der gemeinsame Griff war überall derselbe: `source.fetch(...) or []`, danach
+eine Schleife. Bei `None` **und** bei `[]` lief sie null Mal.
+
+| Vertrag | Was jetzt zuerst geprüft wird |
+|---|---|
+| Metadata | `_readings_for_responsible()` — nicht `None`, nicht leer |
+| Daily | `_series_for_responsible()` — mindestens ein Handelstag |
+
+Dazu die vier Regeln, die es gar nicht gab: Werttyp gegen `FieldSpec.kind`,
+`FieldSpec.is_plausible()` (stand da, war getestet, wurde **nie aufgerufen**),
+Pflichtwährung bei `Unit.ABSOLUTE`, und beim FX-Identitätsfall das **Paar** vor
+der Rate — vorher bestand er mit `FxRate(base="USD", quote="JPY", rate=1.0)`
+auf eine CAD→CAD-Anfrage.
+
+**Und der eigentliche Nachweis:** `tests/test_contract_mutants.py`, 23 kaputte
+Mini-Plugins, je eines pro Regel, die liegen bleiben. Ein einmal gelaufener
+Mutant beweist den Stand von heute; ein festgehaltener beweist ihn auch nach
+dem nächsten Umbau — und dieses Kit ist das Abnahmemittel für T-23, also für
+Code, den es noch nicht gibt.
+
+### 2 · Das Szenarioformat kann nicht mehr inkohärent grün werden
+
+`ROLE_RESULTS` verlangt, dass Anfrage- und Trefferart zusammenpassen.
+`REQUIRED_GOLDEN` deckt jetzt **alle vier** Trefferarten statt zwei — bei
+`Quote` und `DailySeries` ist der Kern die **Währung**: eine Eigenschaft des
+Listings, die sich nicht von Tag zu Tag ändert, während der Kurs es tut. Genau
+deshalb taugt sie als Golden Case und der Kurs nur als Bereich. Die
+Herkunftspflicht (`note`) stand vorher in einem App-eigenen Test — also gerade
+nicht dort, wo ein fremder Autor davon profitiert; sie ist jetzt Teil der
+Validierung.
+
+Der Nullfall war der peinlichste Teil: **Der Test, der ihn zertifizierte, war
+meiner.** Er hieß `test_die_reale_betriebsart_waehlt_nur_freigegebene_faelle`
+und behauptete, null freigegebene Fälle seien ein Erfolg. Er ist umgekehrt, und
+daneben steht jetzt einer, der die Auswahl mit einem *tatsächlich*
+freigegebenen Fall belegt.
+
+### 3 · Zwei Invarianten hießen mehr, als sie prüften
+
+`currency_is_valid("ZZZ")` war `True`. Die Funktion prüfte die Form und hieß
+„valid" — und `ZZZ` ist genau, wie das Feld aussieht, wenn ein Anbieter nichts
+hat und trotzdem etwas hinschreibt. Jetzt gibt es beides getrennt:
+`currency_is_wellformed` für die Form und `currency_is_valid` gegen die
+vergebenen ISO-4217-Codes (`ISO_4217`, 177 Einträge, Stand als
+`ISO_4217_AS_OF` in jeder Meldung). `XXX` und `XTS` sind ausgenommen — sie
+stehen in der Norm und bedeuten „keine Währung".
+
+Die Kehrseite nenne ich ausdrücklich: Wird ein Code neu vergeben, weist die
+Prüfung ihn ab, bis die Liste nachgezogen ist. Das ist ein lauter Fehlschlag
+mit einer Meldung, die genau das sagt — und damit das kleinere Übel gegenüber
+einem stillen Datenfehler.
+
+`has_timezone` prüft jetzt `utcoffset() is not None`. Eine `tzinfo`, deren
+`utcoffset()` `None` liefert, ist erlaubt, und **Python selbst** behandelt
+einen solchen Zeitpunkt als naiv — er wirft beim ersten Vergleich mit einem
+echten aware-Zeitpunkt. Meine Prüfung ließ ausgerechnet den Fall durch, der
+später abstürzt.
+
+### 4 · Die Diagnose gibt es jetzt wirklich
+
+`Source.configuration_problem()` liefert einen Satz für einen Menschen, der die
+Quelle **nicht** gebaut hat. `is_configured()` leitet sich daraus ab, damit
+beide nicht auseinanderlaufen können. Der Vertrag prüft beide Richtungen: einen
+Grund, wenn die Quelle stillsteht — und **Schweigen**, wenn sie läuft. Die
+zweite Hälfte ist nicht Zierde: Eine Diagnose, die auch im Normalfall spricht,
+wird nach dem dritten Mal überlesen.
+
+Alle drei Beispiel-Plugins nennen jetzt den Pfad ihrer fehlenden Tabelle. „Nicht
+konfiguriert" schickt den Betreiber auf die Suche; der Pfad beendet sie.
+
+Der widersprüchliche Docstring in `test_kosten_sind_deklariert` ist berichtigt:
+Seit T-22 sortiert **ausschließlich** `sources.yaml`, `cost` ist Information.
+
+### Zusätzlich · Gemischte Währungen in einer Datei
+
+`PricesFileDailySource` nahm die Währung der ersten Zeile für die ganze Reihe.
+Eine von Hand gepflegte Tabelle bekommt über die Jahre Zeilen von verschiedenen
+Leuten; schreibt einer CAD und ein anderer USD, entstand lautlos eine
+„einheitliche" Reihe mit gemischten Beträgen — und ein Kurs darüber, dessen
+Währung von der Sortierreihenfolge abhing. Jetzt `Unavailable` mit beiden
+Währungen in der Meldung, plus zwei Negativtests (Reihe **und** Kurs, denn die
+letzte Zeile für sich genommen ist eindeutig).
+
+### Zum formalen Hinweis
+
+Berechtigt. Branch und Produktedits für T-27a waren sichtbar, während
+`STATUS.md` noch `approved`/T-22 meldete. Ein Race gab es nicht, aber wer nur
+die Datei liest, sieht ein abgeschlossenes Ticket neben fremden Änderungen an
+einem anderen — von einem Kommunikationsabbruch nicht zu unterscheiden. Die
+Regel steht jetzt im Riegel-Abschnitt von `CODEX-REVIEW-AUTOMATION.md`: Der
+Kettenwechsel ist ein eigener, atomarer Commit **vor** dem ersten Produktedit.
+
+### Verifikation
+
+* `make test`: Backend **637 / 29 skipped**, Plugin-API **227 / 1 skipped**
+  (Runde 1: 189), Dashboard **259**.
+* `ruff check app tests plugin_api` und `git diff --check` sauber.
+* 23 Mutanten grün, plus die Gegenprobe, dass ein heiles Plugin nicht
+  beanstandet wird.

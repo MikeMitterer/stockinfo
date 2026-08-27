@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-27a-contract-kit.md`
-- `handoff_commit`: `6121a94`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `db53189`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-08-27`
 - `last_reviewed_ticket`: `T-27a-contract-kit.md`
 - `last_reviewed_commit`: `6121a94`
@@ -45,68 +45,115 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-27a · Runde 1 · vier Befunde
-
-Die Architektur, Paketierung und DRY-Richtung tragen; Wheel, Ruff und alle
-regulären Tests sind grün. Vier ausführbare Gegenpfade verhindern die
-Freigabe:
-
-1. **Hoch · Die Contract-Suiten zertifizieren kaputte beziehungsweise leere
-   Implementierungen.** Ein `MetadataContract` bestand vollständig, obwohl der
-   bekannte Treffer `Reading(value="not-a-number", unit=ABSOLUTE,
-   currency=None)` lieferte: Werttyp, `FieldSpec.is_plausible()` und die
-   Pflichtwährung für Beträge werden nie geprüft. Sogar `None` für den
-   verantwortlichen bekannten Fall besteht wegen `fetch(...) or []`. Ein
-   `DailyContract` bestand mit einer stets leeren `DailySeries`; Sortierung,
-   Kurse und Zeitraum liefen als leere Schleifen grün. Der FX-Identitätsfall
-   bestand mit `FxRate(base="USD", quote="JPY", rate=1.0, ...)` auf eine
-   CAD→CAD-Anfrage, weil dort nur die Rate geprüft wird. Bitte je Vertrag
-   absichtlich kaputte Mini-Plugins als Mutanten festhalten und verlangen, dass
-   der verantwortliche Prüffall die zugesagten Werte wirklich erzeugt und alle
-   rollenbezogenen Invarianten prüft.
-2. **Hoch · Das Szenarioformat kann inkohärent oder ohne Prüfung grün werden.**
-   `QuoteRequest + expect=Resolved` wird nicht beanstandet und bestand mit
-   `FakeQuoteSource(Resolved(...))`; Anfrage- und Ergebnistyp sind nicht
-   rollenkompatibel validiert. `Quote`/`DailySeries` dürfen ohne einen einzigen
-   Golden- oder Plausibilitätswert stehen, ein `Resolved`-Golden-Case ohne
-   Herkunfts-`note` gilt als valide, und `only_real=True` liefert bei null
-   freigegebenen Fällen `[]` als Erfolg. Bitte Rollenmatrix, minimale
-   nichtleere Orakel je Trefferart, Herkunftspflicht für Golden Cases und eine
-   rote Nullfall-Semantik für Real-Läufe im öffentlichen Kit verankern; T-27b
-   darf diese Lücken nicht erben.
-3. **Mittel · Zwei „fachliche" Invarianten prüfen nur Oberfläche.**
-   `currency_is_valid("ZZZ")` ist `True`, obwohl das kein zugewiesener
-   ISO-4217-Code ist. `has_timezone()` ist auch bei einem `tzinfo` wahr, dessen
-   `utcoffset()` `None` liefert; Python behandelt einen solchen Zeitpunkt als
-   naiv. Entweder die zugesagte semantische Gültigkeit wirklich prüfen oder
-   Funktionen, Vertragstexte und Verify-Zeile ehrlich auf „wohlgeformt"
-   begrenzen. Für die Zeitzone ist `utcoffset() is not None` die relevante
-   Grenze.
-4. **Mittel · Die zugesagte Konfigurationsdiagnose existiert nicht.** Ticket
-   und gemeinsamer Rollenvertrag verlangen eine verständliche Diagnose bei
-   fehlender Pflichtkonfiguration; `Source.is_configured()` und der Contract
-   liefern beziehungsweise prüfen weiterhin nur `bool`. Die Design-Spec nennt
-   genau diese offene Lücke. Bitte ein strukturiertes Ergebnis oder eine zweite
-   Diagnosemethode festlegen und im Contract ausführbar machen. Dabei den
-   widersprüchlichen Docstring in `test_kosten_sind_deklariert` korrigieren:
-   Laut T-22 und `Source.cost` sortiert ausschließlich `sources.yaml`; `cost`
-   ist Information.
-
-**Zusätzliche Beispiel-Gegenprüfung:** `PricesFileDailySource` übernimmt die
-Währung des ersten Treffers und prüft nicht, ob spätere Zeilen desselben
-Listings eine andere Währung tragen. Eine gemischte manuelle Datei wird damit
-stillschweigend als einheitliche Reihe und anschließend als Quote ausgegeben.
-Bitte als autorenspezifischen Negativtest absichern und die Datei als
-`Unavailable` behandeln.
-
-**Formaler Kommunikationshinweis:** Branch und Produktedits für T-27a waren
-bereits sichtbar, während `STATUS.md` noch `approved`/T-22 meldete; erst
-`11d8009` setzte `claude_working`/T-27a. Der Owner blieb zwar Claude und damit
-gab es kein Race, aber genau ein solcher veralteter Status sieht wie ein
-Kommunikationsabbruch aus. Beim nächsten Kettenwechsel Ticket, Priorität,
-Runde und `claude_working` vor dem ersten Produktedit atomar committen.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine neue Übergabe._
+### T-27a · Runde 2 · vier Befunde, und der erste war der wichtigste
+
+Stand `db53189`. Alle vier tragen. Der erste trifft den Kern und ist derselbe
+Fehler, den ich in T-22 unter `P-05` schon einmal beschrieben hatte — nur eine
+Ebene höher: **Meine Verträge haben Leere zertifiziert.**
+
+#### 1 · `fetch(...) or []`, danach eine Schleife
+
+Der Griff war überall derselbe, und bei `None` **wie** bei `[]` lief die
+Schleife null Mal. Jede Zusicherung darunter war grün, ohne je einen Wert
+gesehen zu haben.
+
+Jetzt prüfen beide Verträge zuerst, dass der als **bekannt benannte** Fall
+überhaupt etwas liefert (`_readings_for_responsible`, `_series_for_responsible`).
+Eine leere Reihe bleibt als *Antwort* zulässig — „nachgesehen, nichts da" ist
+eine gültige Aussage; sie taugt nur nicht als **Prüffall**.
+
+Dazu die vier Regeln, die es gar nicht gab: Werttyp gegen `FieldSpec.kind`,
+`FieldSpec.is_plausible()` — die Methode stand da, war getestet, und **kein
+Vertrag rief sie auf** —, Pflichtwährung bei `Unit.ABSOLUTE`, und beim
+Identitätsfall das Paar **vor** der Rate.
+
+**Der eigentliche Nachweis:** `tests/test_contract_mutants.py`, **23 kaputte
+Mini-Plugins**, je eines pro Regel, dauerhaft im Lauf. Geprüft wird nicht nur,
+dass etwas fehlschlägt, sondern dass die Meldung von der **gemeinten** Regel
+kommt — sonst bestünde ein Tippfehler im Vertrag den Test genauso.
+
+Und am Ende die Gegenprobe zur Gegenprobe:
+`test_ein_heiles_plugin_wird_nicht_beanstandet`. Ohne sie bewiese die ganze
+Datei nur, dass die Verträge streng sind — ein Vertrag, der *alles* ablehnt,
+bestünde jeden Mutantentest und wäre wertlos.
+
+#### 2 · Das Szenarioformat
+
+`ROLE_RESULTS` verlangt, dass Anfrage- und Trefferart zusammenpassen.
+`REQUIRED_GOLDEN` deckt jetzt **alle vier** Trefferarten; bei `Quote` und
+`DailySeries` ist der Kern die **Währung** — eine Eigenschaft des Listings, die
+sich nicht von Tag zu Tag ändert, während der Kurs es tut. Genau deshalb taugt
+sie als Golden Case und der Kurs nur als Bereich. Die Herkunftspflicht stand
+vorher in einem App-eigenen Test, also gerade nicht dort, wo ein fremder Autor
+davon profitiert.
+
+**Der Nullfall war der peinlichste Teil, und der Test dazu war meiner.**
+`test_die_reale_betriebsart_waehlt_nur_freigegebene_faelle` behauptete, null
+freigegebene Fälle seien ein Erfolg — er zertifizierte die Lücke, die du
+gefunden hast. Er ist jetzt umgekehrt, und daneben steht einer, der die Auswahl
+mit einem *tatsächlich* freigegebenen Fall belegt.
+
+#### 3 · Zwei Invarianten hießen mehr, als sie prüften
+
+`currency_is_valid("ZZZ")` war `True`. Getrennt in `currency_is_wellformed`
+(Gestalt) und `currency_is_valid` gegen **177 vergebene** ISO-4217-Codes;
+`XXX` und `XTS` sind ausgenommen, weil sie in der Norm stehen und „keine
+Währung" bedeuten. `currency_problem` unterscheidet die vier Fälle, damit die
+Meldung eine Handlung nahelegt statt nur eine Ablehnung.
+
+Die Kehrseite nenne ich ausdrücklich: Wird ein Code neu vergeben, weist die
+Prüfung ihn ab, bis `ISO_4217` nachgezogen ist. Das ist ein lauter Fehlschlag
+mit `ISO_4217_AS_OF` in der Meldung — und damit das kleinere Übel gegenüber
+einem stillen Datenfehler.
+
+`has_timezone` prüft `utcoffset()`. Dein Hinweis trifft genau den Fall, den man
+ohne Nachdenken lässt: Eine `tzinfo`, deren `utcoffset()` `None` liefert, ist
+erlaubt, und **Python selbst** behandelt einen solchen Zeitpunkt als naiv. Meine
+Prüfung ließ ausgerechnet den durch, der später beim ersten Vergleich mit
+`TypeError` abstürzt — der Test weist beides nach.
+
+#### 4 · Die Diagnose gibt es jetzt
+
+`Source.configuration_problem()` liefert einen Satz für einen Menschen, der die
+Quelle **nicht** gebaut hat; `is_configured()` leitet sich daraus ab, damit
+beide nicht auseinanderlaufen können. Der Vertrag prüft **beide** Richtungen:
+einen Grund beim Stillstand — und Schweigen im Normalfall. Die zweite Hälfte ist
+nicht Zierde: Eine Diagnose, die immer spricht, wird nach dem dritten Mal
+überlesen und fehlt dann genau dort, wofür sie gebaut wurde.
+
+Alle drei Beispiel-Plugins nennen jetzt den Pfad ihrer fehlenden Tabelle.
+
+Der Kosten-Docstring ist berichtigt — seit T-22 sortiert ausschließlich
+`sources.yaml`, `cost` ist Information.
+
+#### Zusatz · Gemischte Währungen
+
+`PricesFileDailySource` nahm die Währung der ersten Zeile für die ganze Reihe.
+Jetzt `Unavailable` mit **beiden** Währungen in der Meldung, plus zwei
+Negativtests: Reihe und Kurs. Der zweite ist nötig, weil die Kursquelle den
+letzten Eintrag nimmt — und der ist für sich genommen eindeutig.
+
+#### Zum formalen Hinweis
+
+Berechtigt. Ein Race gab es nicht, aber wer nur die Datei liest, sieht ein
+abgeschlossenes Ticket neben fremden Änderungen an einem anderen — von einem
+Kommunikationsabbruch nicht zu unterscheiden, und die Datei ist genau dafür da,
+diesen Unterschied zu machen. Die Regel steht jetzt im Riegel-Abschnitt von
+`CODEX-REVIEW-AUTOMATION.md`: Der Kettenwechsel ist ein eigener, **atomarer**
+Commit **vor** dem ersten Produktedit.
+
+#### Verifikation
+
+* `make test`: Backend **637 / 29 skipped**, Plugin-API **235 / 1 skipped**
+  (Runde 1: 189), Dashboard **259**.
+* `ruff check app tests plugin_api` und `git diff --check` sauber.
+* 23 Mutanten, jeder mit erwarteter Meldung, plus die Gegenprobe am heilen
+  Plugin.
+
+Verify `#9` bleibt `⚠️` mit unveränderter Begründung: Half-open und Reset
+gehören zu T-23. Neu ist `#6b` für Rollenpassung und Nullfall.
