@@ -52,6 +52,56 @@ Das ist Arbeit für den, der die Quelle kennt, und nicht für jeden Verbraucher
 danach.
 """
 
+_NON_CURRENCY_CODES = frozenset({"XXX", "XTS"})
+"""Codes, die ISO 4217 vergibt, um **keine** Währung zu bezeichnen.
+
+``XXX`` heißt wörtlich „keine Währung", ``XTS`` ist für Tests reserviert. Beide
+stehen in der Norm und müssen trotzdem abgewiesen werden — sie sind genau der
+Platzhalter, den ein Anbieter einsetzt, wenn er nichts weiß. Sie durchzulassen
+hieße, den Zweck der Prüfung an ihrer formal korrektesten Stelle aufzugeben.
+"""
+
+ISO_4217_AS_OF = "2026-08"
+"""Stand der Liste unten. Steht in jeder Meldung über einen unbekannten Code —
+sonst weiß der Autor nicht, ob sein Code neu ist oder falsch."""
+
+ISO_4217 = frozenset(
+    """
+    AED AFN ALL AMD ANG AOA ARS AUD AWG AZN
+    BAM BBD BDT BGN BHD BIF BMD BND BOB BOV BRL BSD BTN BWP BYN BZD
+    CAD CDF CHE CHF CHW CLF CLP CNY COP COU CRC CUP CVE CZK
+    DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP
+    GBP GEL GHS GIP GMD GNF GTQ GYD HKD HNL HTG HUF
+    IDR ILS INR IQD IRR ISK JMD JOD JPY
+    KES KGS KHR KMF KPW KRW KWD KYD KZT
+    LAK LBP LKR LRD LSL LYD
+    MAD MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MXV MYR MZN
+    NAD NGN NIO NOK NPR NZD OMR
+    PAB PEN PGK PHP PKR PLN PYG QAR RON RSD RUB RWF
+    SAR SBD SCR SDG SEK SGD SHP SLE SOS SRD SSP STN SVC SYP SZL
+    THB TJS TMT TND TOP TRY TTD TWD TZS
+    UAH UGX USD USN UYI UYU UYW UZS
+    VED VES VND VUV WST
+    XAF XAG XAU XBA XBB XBC XBD XCD XCG XDR XOF XPD XPF XPT XSU XUA
+    YER ZAR ZMW ZWG
+    """.split()
+)
+"""Die vergebenen alphabetischen Codes nach ISO 4217.
+
+**Warum eine Liste und nicht nur eine Formprüfung.** ``ZZZ`` hat die Gestalt
+eines Codes und ist keiner; genau so sieht das Feld aus, wenn ein Anbieter
+nichts hat und trotzdem etwas hinschreibt. Ohne Liste wäre die zugesagte
+„gültige Währung" eine reine Formaussage — der Befund aus Runde 1.
+
+`XXX` und `XTS` fehlen mit Absicht (siehe `_NON_CURRENCY_CODES`), die
+Metallcodes `XAU`/`XAG`/`XPT`/`XPD` stehen drin: Sie sind vergeben, und einen
+vergebenen Code abzuweisen ist der schlimmere Fehler.
+
+Die Liste veraltet — langsam, aber sie tut es. Neue Vergaben sind selten (zuletzt
+`SLE` 2022, `ZWG` 2024); wenn eine kommt, meldet `currency_problem` sie mit
+`ISO_4217_AS_OF`, statt sie stumm abzulehnen.
+"""
+
 
 def isin_is_wellformed(isin: str | None) -> bool:
     """Hat der Wert die **Gestalt** einer ISIN?
@@ -143,22 +193,73 @@ def is_real_mic(mic: str | None, collectors: frozenset[str] = frozenset()) -> bo
     return mic_is_wellformed(mic) and mic not in collectors
 
 
-def currency_is_valid(code: str | None) -> bool:
-    """Ist das ein Währungscode nach ISO 4217 — und keine Untereinheit?
+def currency_is_wellformed(code: str | None) -> bool:
+    """Hat der Wert die **Gestalt** eines ISO-4217-Codes?
 
-    Siehe `MINOR_UNIT_CODES`: ``GBX`` besteht die Formprüfung und ist trotzdem
-    keine Währung. Der Fehler kostet den Faktor 100 und sieht dabei völlig
-    harmlos aus.
+    Drei Großbuchstaben, mehr nicht. Das ist ausdrücklich **keine** Aussage
+    darüber, ob der Code vergeben ist — dafür `currency_is_valid`. Die Trennung
+    steht hier, weil die schwächere Prüfung eine ehrliche Verwendung hat: Wer
+    einen Code nur weiterreicht, statt mit ihm zu rechnen, braucht die
+    Vergabeliste nicht.
+    """
+    return bool(code) and bool(CURRENCY_PATTERN.fullmatch(code))
+
+
+def currency_problem(code: str | None) -> str:
+    """Was mit diesem Währungscode nicht stimmt — leer, wenn er taugt.
+
+    Eine Funktion und nicht drei Prüfungen in jedem Vertrag: Die Unterscheidung
+    zwischen „sieht nicht aus wie ein Code", „ist eine Untereinheit" und „ist
+    nicht vergeben" ist genau das, was der Meldung ihren Wert gibt. In drei
+    Verträgen nachgebaut liefe sie beim ersten Sonderfall auseinander.
 
     Args:
         code: Der zu prüfende Code, oder ``None``.
 
     Returns:
-        ``True`` bei drei Großbuchstaben, die keine Untereinheit bezeichnen.
+        Die Beanstandung als Satz, oder ``""``.
     """
-    if not code or not CURRENCY_PATTERN.fullmatch(code):
-        return False
-    return code not in MINOR_UNIT_CODES
+    if not currency_is_wellformed(code):
+        return f"{code!r} hat nicht die Gestalt eines ISO-4217-Codes (drei Großbuchstaben)"
+    if code in MINOR_UNIT_CODES:
+        return (
+            f"{code!r} bezeichnet eine Untereinheit, keine Währung — wer in "
+            "Pence oder Cent notiert, rechnet vor der Antwort um"
+        )
+    if code in _NON_CURRENCY_CODES:
+        return (
+            f"{code!r} ist nach ISO 4217 ausdrücklich keine Währung, sondern "
+            "ein Platzhalter beziehungsweise ein Testcode"
+        )
+    if code not in ISO_4217:
+        return (
+            f"{code!r} ist kein vergebener ISO-4217-Code. Falls er neu vergeben "
+            f"wurde, gehört er in ISO_4217 ({ISO_4217_AS_OF})"
+        )
+    return ""
+
+
+def currency_is_valid(code: str | None) -> bool:
+    """Ist das ein **vergebener** Währungscode nach ISO 4217?
+
+    **Verschärft nach Runde 1.** Vorher prüfte diese Funktion nur die Gestalt,
+    hieß aber „valid" — und ``ZZZ`` kam durch. Das ist der Fehler, den sie
+    verhindern soll: Ein Anbieter, der Unsinn in das Währungsfeld schreibt,
+    sieht mit einer reinen Formprüfung genauso aus wie einer, der es richtig
+    macht.
+
+    Die Kehrseite ist ehrlich zu nennen: Wird ein Code **neu** vergeben, weist
+    diese Funktion ihn ab, bis `ISO_4217` nachgezogen ist. Das ist ein lauter
+    Fehlschlag in einem Test mit einer Meldung, die genau das sagt — und damit
+    das kleinere Übel gegenüber einem stillen Datenfehler in der Datenbank.
+
+    Args:
+        code: Der zu prüfende Code, oder ``None``.
+
+    Returns:
+        ``True``, wenn der Code vergeben und keine Untereinheit ist.
+    """
+    return currency_problem(code) == ""
 
 
 def is_finite_price(value: object) -> bool:
@@ -180,14 +281,22 @@ def is_finite_price(value: object) -> bool:
 
 
 def has_timezone(moment: datetime | None) -> bool:
-    """Trägt der Zeitpunkt eine Zeitzone?
+    """Trägt der Zeitpunkt einen **wirksamen** Zeitzonenbezug?
 
     Ein Kurszeitpunkt ohne Zone ist unbrauchbar, sobald zwei Börsen im Spiel
     sind: ``17:30`` ist in Toronto ein anderer Augenblick als in Frankfurt, und
     welcher gemeint war, weiß danach niemand mehr. Die Angabe kostet den
     Anbieter nichts und ist hinterher nicht rekonstruierbar.
+
+    **Geprüft wird `utcoffset()`, nicht `tzinfo`** — das war ein Befund aus
+    Runde 1 und er trifft genau die Lücke, die man ohne Nachdenken lässt: Eine
+    `tzinfo`-Instanz, deren `utcoffset()` ``None`` liefert, ist erlaubt, und
+    Python selbst behandelt einen solchen Zeitpunkt als **naiv** — er lässt
+    sich nicht mit einem echten aware-Zeitpunkt vergleichen und wirft dabei
+    `TypeError`. Ein Test auf `tzinfo is not None` hätte also gerade den Fall
+    durchgelassen, der später beim ersten Vergleich abstürzt.
     """
-    return moment is not None and moment.tzinfo is not None
+    return moment is not None and moment.utcoffset() is not None
 
 
 def days_are_ordered(days: tuple[date, ...] | list[date]) -> bool:

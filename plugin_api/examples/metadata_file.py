@@ -75,8 +75,11 @@ class MetadataFileSource(MetadataSource):
         self._path = Path(self._config.get("path", "/data/manual-metadata.csv"))
         self._prefixes = tuple(self._config.get("prefixes", ("CA",)))
 
-    def is_configured(self) -> bool:
-        return self._path.is_file()
+    def configuration_problem(self) -> str:
+        """Ohne Datei gibt es nichts nachzuschlagen. Siehe `CanadaFileResolver`."""
+        if self._path.is_file():
+            return ""
+        return f"Tabelle {self._path} nicht gefunden — Pfad in der Konfiguration prüfen"
 
     def handles(self, request: ResolveRequest) -> bool:
         return bool(request.isin) and request.isin.upper().startswith(self._prefixes)

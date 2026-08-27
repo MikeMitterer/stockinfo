@@ -90,9 +90,11 @@ class _FileBacked:
         super().__init__(config)
         self._path = Path(self._config.get("path", self.default_path))
 
-    def is_configured(self) -> bool:
-        """Ohne Datei gibt es nichts nachzuschlagen."""
-        return self._path.is_file()
+    def configuration_problem(self) -> str:
+        """Ohne Datei gibt es nichts nachzuschlagen — mit Pfad in der Meldung."""
+        if self._path.is_file():
+            return ""
+        return f"Tabelle {self._path} nicht gefunden — Pfad in der Konfiguration prüfen"
 
 
 class PricesFileDailySource(_FileBacked, DailyCloseSource):
@@ -153,6 +155,24 @@ class PricesFileDailySource(_FileBacked, DailyCloseSource):
             # der Betreiber suchte an der falschen Stelle.
             return Unavailable(f"{self._path} enthält eine unlesbare Zeile: {exc}")
 
+        # **Eine Reihe hat genau eine Währung** — die erste Zeile zu nehmen war
+        # ein Befund aus Runde 1. Eine von Hand gepflegte Tabelle bekommt über
+        # die Jahre Zeilen von verschiedenen Leuten; schreibt einer CAD und ein
+        # anderer USD für dasselbe Listing, entstand vorher stillschweigend eine
+        # „einheitliche" Reihe mit gemischten Beträgen — und daraus danach ein
+        # Kurs, dessen Währung von der Sortierreihenfolge abhing.
+        #
+        # `Unavailable` und nicht die abweichenden Zeilen wegwerfen: Das ist ein
+        # Fehler der Datei, den ein Mensch beheben kann. Eine Teilmenge still zu
+        # liefern hieße, ihn zu verstecken.
+        currencies = {(row.get("currency") or "").upper() for row in hits}
+        if len(currencies) > 1:
+            return Unavailable(
+                f"{self._path} führt {request.ticker}/{request.mic} in mehreren "
+                f"Währungen ({', '.join(sorted(currencies))}) — eine Reihe hat "
+                "genau eine; bitte die Tabelle bereinigen"
+            )
+
         # Sortiert und doppelfrei, statt sich auf die Reihenfolge in der Datei
         # zu verlassen. Wer von Hand pflegt, hängt neue Zeilen unten an — auch
         # rückwirkende. Der Vertrag verlangt streng aufsteigend, und das ist
@@ -160,7 +180,7 @@ class PricesFileDailySource(_FileBacked, DailyCloseSource):
         unique_days = {bar.day: bar for bar in bars}
         return DailySeries(
             bars=tuple(unique_days[day] for day in sorted(unique_days)),
-            currency=(hits[0].get("currency") or "").upper(),
+            currency=currencies.pop(),
             adjusted=self._adjusted,
         )
 

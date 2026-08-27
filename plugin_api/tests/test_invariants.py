@@ -9,13 +9,16 @@ Die ISINs unten sind deshalb echte, öffentlich nachschlagbare Kennzeichen:
 Apple, iShares Core MSCI World, Royal Bank of Canada, Barrick Gold.
 """
 
-from datetime import date, datetime, timezone
+from datetime import date, datetime, timezone, tzinfo
 
 import pytest
 
 from stockinfo_plugin.invariants import (
+    ISO_4217_AS_OF,
     MINOR_UNIT_CODES,
     currency_is_valid,
+    currency_is_wellformed,
+    currency_problem,
     days_are_ordered,
     has_timezone,
     is_finite_price,
@@ -117,6 +120,60 @@ def test_was_keine_waehrung_ist_faellt_durch(code: str | None) -> None:
     assert not currency_is_valid(code)
 
 
+@pytest.mark.parametrize("code", ["ZZZ", "ABC", "QQQ"])
+def test_ein_erfundener_code_faellt_durch(code: str) -> None:
+    """**Befund aus Runde 1: `currency_is_valid("ZZZ")` war `True`.**
+
+    Die Funktion prüfte die Form und hieß „valid". ``ZZZ`` ist aber genau, wie
+    das Feld aussieht, wenn ein Anbieter nichts hat und trotzdem etwas
+    hinschreibt — drei Großbuchstaben, tadellose Gestalt, keine Währung.
+
+    Die Form allein ist weiterhin abfragbar, nur heißt sie jetzt so.
+    """
+    assert currency_is_wellformed(code), "die Gestalt stimmt — darum ging es nie"
+    assert not currency_is_valid(code)
+    assert "kein vergebener ISO-4217-Code" in currency_problem(code)
+
+
+@pytest.mark.parametrize("code", ["XXX", "XTS"])
+def test_die_platzhalter_der_norm_sind_keine_waehrungen(code: str) -> None:
+    """``XXX`` heißt wörtlich „keine Währung", ``XTS`` ist für Tests reserviert.
+
+    Beide stehen **in** ISO 4217 — und sind genau der Platzhalter, den ein
+    Anbieter einsetzt, wenn er nichts weiß. Sie durchzulassen hieße, den Zweck
+    der Prüfung an ihrer formal korrektesten Stelle aufzugeben.
+    """
+    assert not currency_is_valid(code)
+    assert "keine Währung" in currency_problem(code)
+
+
+def test_die_meldung_nennt_den_stand_der_liste() -> None:
+    """Sonst weiß der Autor nicht, ob sein Code neu ist oder falsch.
+
+    Die Liste veraltet — langsam, aber sie tut es. Wird ein Code neu vergeben,
+    weist die Prüfung ihn ab; dann muss die Meldung sagen, gegen welchen Stand
+    geprüft wurde, sonst sucht der Autor den Fehler bei sich.
+    """
+    assert ISO_4217_AS_OF in currency_problem("ZZZ")
+
+
+def test_die_drei_beanstandungen_sind_unterscheidbar() -> None:
+    """Der Wert von `currency_problem` liegt in der Unterscheidung.
+
+    „Ungültig" schickt den Autor auf die Suche. „Untereinheit — rechne um",
+    „Platzhalter" und „nicht vergeben" verlangen drei verschiedene Handlungen.
+    """
+    reasons = {
+        currency_problem("gbx"),  # Gestalt
+        currency_problem("GBX"),  # Untereinheit
+        currency_problem("XXX"),  # Platzhalter
+        currency_problem("ZZZ"),  # nicht vergeben
+    }
+
+    assert len(reasons) == 4, f"zwei Fälle melden dasselbe: {reasons}"
+    assert currency_problem("EUR") == ""
+
+
 @pytest.mark.parametrize("code", sorted(MINOR_UNIT_CODES))
 def test_untereinheiten_sind_keine_waehrungen(code: str) -> None:
     """Der Faktor-100-Fehler, und er sieht völlig harmlos aus.
@@ -168,6 +225,36 @@ def test_ein_zeitpunkt_ohne_zone_zaehlt_nicht() -> None:
     assert has_timezone(datetime(2026, 1, 2, 17, 30, tzinfo=timezone.utc))
     assert not has_timezone(datetime(2026, 1, 2, 17, 30))
     assert not has_timezone(None)
+
+
+def test_eine_wirkungslose_zone_zaehlt_ebenfalls_nicht() -> None:
+    """**Befund aus Runde 1**, und es ist der Fall, den man ohne Nachdenken lässt.
+
+    Eine `tzinfo`, deren `utcoffset()` ``None`` liefert, ist erlaubt — und
+    **Python selbst** behandelt einen damit versehenen Zeitpunkt als naiv. Ein
+    Test auf `tzinfo is not None` ließ also gerade den Fall durch, der später
+    beim ersten Vergleich mit `TypeError` abstürzt.
+
+    Der Test weist beides nach: dass die alte Bedingung getäuscht worden wäre,
+    und dass der Absturz real ist.
+    """
+
+    class HalfHearted(tzinfo):
+        def utcoffset(self, moment):
+            return None
+
+        def dst(self, moment):
+            return None
+
+        def tzname(self, moment):
+            return "halbherzig"
+
+    moment = datetime(2026, 1, 2, 17, 30, tzinfo=HalfHearted())
+
+    assert moment.tzinfo is not None, "die alte Bedingung wäre erfüllt gewesen"
+    assert not has_timezone(moment)
+    with pytest.raises(TypeError):
+        _ = moment < datetime(2026, 1, 2, 18, 0, tzinfo=timezone.utc)
 
 
 def test_streng_aufsteigend_erschlaegt_sortierung_und_duplikate() -> None:

@@ -167,6 +167,63 @@ def test_eine_kaputte_zeile_ist_unavailable_und_nicht_notfound() -> None:
     assert "unlesbare Zeile" in answer.error
 
 
+def test_eine_gemischte_waehrung_wird_nicht_stillschweigend_vereinheitlicht(
+    tmp_path: Path,
+) -> None:
+    """**Gegenprüfung von Codex aus Runde 1.**
+
+    Vorher übernahm die Quelle die Währung der **ersten** gefundenen Zeile und
+    fragte nicht, ob die späteren dieselbe tragen. Eine von Hand gepflegte
+    Tabelle bekommt über die Jahre Zeilen von verschiedenen Leuten — schreibt
+    einer CAD und ein anderer USD für dasselbe Listing, entstand eine
+    „einheitliche" Reihe mit gemischten Beträgen. Der Kurs darüber trug dann
+    eine Währung, die von der Sortierreihenfolge abhing.
+
+    Das schlimme daran ist die Lautlosigkeit: Beide Zahlen sind plausibel, die
+    Reihe ist sortiert, der Vertrag ist grün.
+    """
+    mixed = tmp_path / "closes.csv"
+    mixed.write_text(
+        "ticker;mic;day;close;currency\n"
+        "RY;XTSE;2025-12-30;140.10;CAD\n"
+        "RY;XTSE;2025-12-31;103.90;USD\n",
+        encoding="utf-8",
+    )
+
+    answer = PricesFileDailySource({"path": str(mixed)}).fetch_daily(
+        DailyRequest(ticker="RY", mic="XTSE")
+    )
+
+    assert isinstance(answer, Unavailable), (
+        "gemischte Währungen wurden stillschweigend zu einer Reihe vereinheitlicht"
+    )
+    assert "CAD" in answer.error and "USD" in answer.error, (
+        "die Meldung nennt beide Währungen — sonst muss der Betreiber suchen"
+    )
+
+
+def test_der_kurs_erbt_den_ausfall_der_reihe(tmp_path: Path) -> None:
+    """Die Kursquelle liest über die Historienquelle — also erbt sie deren Urteil.
+
+    Ohne diese Zeile bliebe offen, ob die Kursquelle die gemischte Datei
+    trotzdem beantwortet: Sie nimmt den **letzten** Eintrag, und der hat für
+    sich genommen eine eindeutige Währung.
+    """
+    mixed = tmp_path / "closes.csv"
+    mixed.write_text(
+        "ticker;mic;day;close;currency\n"
+        "RY;XTSE;2025-12-30;140.10;CAD\n"
+        "RY;XTSE;2025-12-31;103.90;USD\n",
+        encoding="utf-8",
+    )
+
+    answer = PricesFileQuoteSource({"path": str(mixed)}).fetch_quote(
+        QuoteRequest(ticker="RY", mic="XTSE")
+    )
+
+    assert isinstance(answer, Unavailable)
+
+
 def test_ein_nicht_gefuehrtes_papier_ist_notfound() -> None:
     """Nicht `Unavailable`: Es wurde nachgesehen, und die Tabelle führt es nicht."""
     answer = PricesFileDailySource({"path": str(CLOSES)}).fetch_daily(

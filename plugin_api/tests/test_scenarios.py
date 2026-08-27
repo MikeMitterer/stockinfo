@@ -231,7 +231,9 @@ def test_der_runner_waehlt_die_methode_nach_dem_anfragetyp() -> None:
         case_id="kurs",
         request=QuoteRequest(ticker="RY", mic="XTSE"),
         expect=Quote,
+        golden={"currency": "CAD"},
         plausible={"price": (1.0, 1000.0)},
+        note="Die TSX notiert in kanadischen Dollar — eine Eigenschaft des Listings.",
     )
 
     assert run_scenarios(DirectRunner(source), [scenario]) == []
@@ -262,8 +264,39 @@ def test_beschreibungsfehler_stehen_vor_den_laufergebnissen() -> None:
 
     findings = run_scenarios(DirectRunner(FakeResolver(NotResponsible())), [broken])
 
-    assert len(findings) == 1, "der Lauf hat gar nicht erst stattgefunden"
-    assert "ticker" in findings[0]
+    assert any("ticker" in line for line in findings)
+    assert not any("NotResponsible" in line for line in findings), (
+        "der Lauf hat stattgefunden, obwohl die Beschreibung nicht taugt"
+    )
+
+
+def test_ein_lauf_ohne_einen_einzigen_fall_ist_kein_erfolg() -> None:
+    """**Befund aus Runde 1**, und es ist dasselbe Muster wie `P-05`.
+
+    Vorher stand hier ein Test, der genau das Gegenteil behauptete: Null
+    freigegebene Fälle galten als bestanden. Die leere Liste sah aus wie „alles
+    in Ordnung" und hieß „nichts geprüft".
+
+    Bei ``only_real`` ist das besonders heimtückisch. Vergisst ein Autor
+    überall `real_ok`, meldet sein Release-Lauf jahrelang Erfolg, ohne den
+    echten Anbieter je gefragt zu haben — und niemand sucht nach einem Test,
+    der grün ist.
+    """
+    source = FakeResolver(keyed={GOOD.request: Resolved(ticker="RY", mic="XTSE")})
+
+    findings = run_scenarios(DirectRunner(source), [GOOD], only_real=True)
+
+    assert len(findings) == 1
+    assert "kein einziger Fall gelaufen" in findings[0]
+    assert "real_ok" in findings[0], "die Meldung nennt die Ursache, nicht nur die Zahl"
+
+
+def test_eine_leere_fallliste_ist_ebenfalls_kein_erfolg() -> None:
+    """Dieselbe Aussage ohne `only_real` — die Liste war schlicht leer."""
+    findings = run_scenarios(DirectRunner(FakeResolver()), [])
+
+    assert len(findings) == 1
+    assert "kein einziger Fall gelaufen" in findings[0]
 
 
 def test_die_reale_betriebsart_waehlt_nur_freigegebene_faelle() -> None:
@@ -271,14 +304,31 @@ def test_die_reale_betriebsart_waehlt_nur_freigegebene_faelle() -> None:
 
     Welcher Runner hinter `only_real` steht, weiß dieses Modul nicht; T-27b
     stellt den HTTP-Runner daneben, ohne dass ein Fall neu geschrieben wird.
+
+    Der offline-Fall unten würde **scheitern**, wenn er mitliefe: Die Quelle
+    antwortet auf jede Anfrage mit demselben Treffer. Dass der Lauf trotzdem
+    sauber ist, beweist die Auswahl — vorher konnte das auch heißen, dass gar
+    nichts lief.
     """
+    released = Scenario(
+        case_id="rbc-real",
+        request=ResolveRequest(isin="CA78012H5675"),
+        expect=Resolved,
+        golden={"ticker": "RY", "mic": "XTSE"},
+        real_ok=True,
+        note="TMX-Listing der Royal Bank of Canada, von Hand nachgeschlagen",
+    )
     offline_only = Scenario(
-        case_id="nur-offline",
+        case_id="barrick-unbekannt",
         request=ResolveRequest(isin="CA0679011084"),
         expect=NotFound,
     )
-    source = FakeResolver(keyed={GOOD.request: Resolved(ticker="RX", mic="XTSE")})
+    source = FakeResolver(Resolved(ticker="RY", mic="XTSE"))
 
-    findings = run_scenarios(DirectRunner(source), [GOOD, offline_only], only_real=True)
+    real_run = run_scenarios(DirectRunner(source), [released, offline_only], only_real=True)
+    full_run = run_scenarios(DirectRunner(source), [released, offline_only])
 
-    assert findings == [], "kein Fall ist für den Realbetrieb freigegeben"
+    assert real_run == [], "nur der freigegebene Fall lief, und er trägt"
+    assert any("barrick-unbekannt" in line for line in full_run), (
+        "ohne only_real läuft auch der offline-Fall — und scheitert hier"
+    )

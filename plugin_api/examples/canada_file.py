@@ -45,9 +45,17 @@ class CanadaFileResolver(Resolver):
         self._path = Path(self._config.get("path", "/data/manual-isins.csv"))
         self._prefixes = tuple(self._config.get("prefixes", ("CA",)))
 
-    def is_configured(self) -> bool:
-        """Ohne Datei gibt es nichts nachzuschlagen."""
-        return self._path.is_file()
+    def configuration_problem(self) -> str:
+        """Ohne Datei gibt es nichts nachzuschlagen — und der Pfad gehört dazu.
+
+        `is_configured()` leitet sich daraus ab. Den Pfad zu nennen ist der
+        ganze Punkt: „nicht konfiguriert" schickt den Betreiber auf die Suche,
+        der Pfad beendet sie — meistens ist ein Mount weggefallen oder die
+        Datei liegt eine Ebene daneben.
+        """
+        if self._path.is_file():
+            return ""
+        return f"Tabelle {self._path} nicht gefunden — Pfad in der Konfiguration prüfen"
 
     def handles(self, request: ResolveRequest) -> bool:
         """Zuständig für die konfigurierten Länderpräfixe."""

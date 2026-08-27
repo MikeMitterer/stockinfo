@@ -186,7 +186,23 @@ fast immer in der Message, nicht im Inhalt —, oder Schritt 3 wird
 zurückgenommen, bis der Commit steht. Still im Ready zu verharren überlässt die
 Übergabe dem Zufall, ob der Prüfer gerade nachsieht.
 
-## Ausführungs-Guard für Ticket-Prüfskripte
+### Der Wechsel zum nächsten Kettenglied kommt **vor** dem ersten Produktedit
+
+*(Ergänzt 2026-08-27, nach T-27a Runde 1.)* Nach einer Freigabe zieht Claude
+zum nächsten Ticket der `priority_chain` weiter. Dabei entstand ein Fenster, in
+dem Branch und Produktänderungen für T-27a schon sichtbar waren, während
+`STATUS.md` noch `approved` und T-22 meldete.
+
+Ein Race gab es nicht — der Owner blieb Claude. Trotzdem ist der Zustand
+schädlich: **Wer nur die Datei liest, sieht ein abgeschlossenes Ticket und
+gleichzeitig fremde Änderungen an einem anderen.** Das ist von einem
+Kommunikationsabbruch nicht zu unterscheiden, und die Datei ist genau dafür da,
+diesen Unterschied zu machen.
+
+Deshalb ist der Wechsel ein eigener, **atomarer** Schritt vor dem ersten
+Produktedit: `ticket`, `priority_ticket`, `review_round: 0` und
+`phase: claude_working` in einem Commit. Erst danach der Branch, erst danach
+die erste Zeile Code.
 
 Mike hat die Ausführung aller versionierten Prüfskripte nach dem Muster
 `./_tickets/T-*.sh` ausdrücklich und dauerhaft freigegeben. Codex darf diese

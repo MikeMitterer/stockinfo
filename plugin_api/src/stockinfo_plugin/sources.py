@@ -67,6 +67,28 @@ class Source:
         """
         self._config = config or {}
 
+    def configuration_problem(self) -> str:
+        """Warum diese Quelle **nicht** arbeiten kann — leer, wenn sie es kann.
+
+        **Der Vertrag verlangt seit jeher eine verständliche Diagnose bei
+        fehlender Pflichtkonfiguration, und `is_configured()` allein konnte sie
+        nicht geben.** Ein `False` sagt dem Betreiber, dass die Quelle
+        stillsteht, aber nicht, ob ein Schlüssel fehlt, eine Datei nicht da ist
+        oder ein Kontingent aufgebraucht wurde. Er sieht in `GET /sources` eine
+        Quelle als nicht einsatzbereit und hat keine einzige Handlung, die
+        daraus folgt.
+
+        Der Satz richtet sich an einen Menschen, der die Quelle **nicht**
+        gebaut hat. „Nicht konfiguriert" beantwortet nichts; „api_key fehlt —
+        Umgebungsvariable EODHD_API_KEY setzen" beantwortet alles.
+
+        Returns:
+            Die Beanstandung als Satz, oder ``""`` wenn die Quelle arbeiten
+            kann. Die Vorgabe ist ``""``: Eine Quelle ohne Pflichtkonfiguration
+            hat nichts zu melden.
+        """
+        return ""
+
     def is_configured(self) -> bool:
         """Ist diese Quelle einsatzbereit?
 
@@ -75,10 +97,16 @@ class Source:
         Kette aufgenommen — damit erübrigt sich jede Fallunterscheidung in der
         Verdrahtung der App.
 
+        **Die Vorgabe leitet sich aus `configuration_problem` ab**, damit beide
+        nicht auseinanderlaufen können: Wer nur die Diagnose überschreibt,
+        bekommt die Bedingung geschenkt. Wer umgekehrt nur diese Methode
+        überschreibt, meldet ein `False` ohne Grund — und genau das beanstandet
+        `SourceContract.test_wer_stillsteht_sagt_warum`.
+
         Returns:
             ``True``, wenn die Quelle arbeiten kann.
         """
-        return True
+        return self.configuration_problem() == ""
 
     def close(self) -> None:
         """Aufräumen beim Herunterfahren. Vorgabe: nichts zu tun."""

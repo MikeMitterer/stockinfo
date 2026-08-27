@@ -44,9 +44,28 @@ MISS_TYPES: tuple[type, ...] = (NotResponsible, NotFound, Unavailable)
 
 # Welche Kernwerte einen Treffer eindeutig machen. Ohne sie beweist ein Fall
 # nichts: „irgendein Resolved kam zurück" ist keine Aussage über das Papier.
+#
+# **Alle vier Trefferarten, nicht nur zwei** — Befund aus Runde 1. `Quote` und
+# `DailySeries` durften vorher ohne einen einzigen Erwartungswert dastehen und
+# prüften damit nur, dass überhaupt geantwortet wurde. Der Kern ist bei ihnen
+# die **Währung**: Sie ist eine Eigenschaft des Listings und ändert sich nicht
+# von Tag zu Tag, während der Kurs es tut. Genau deshalb taugt sie als Golden
+# Case und der Kurs nur als Bereich.
 REQUIRED_GOLDEN: dict[type, tuple[str, ...]] = {
     Resolved: ("ticker", "mic"),
+    Quote: ("currency",),
+    DailySeries: ("currency",),
     FxRate: ("base", "quote"),
+}
+
+# Welche Trefferart zu welcher Anfrage gehört. Eine `QuoteRequest`, die ein
+# `Resolved` erwartet, ist keine Erwartung, sondern ein Denkfehler — und er lief
+# vorher grün, weil ein Double bereitwillig alles zurückgibt, was man ihm sagt.
+ROLE_RESULTS: dict[type, type] = {
+    ResolveRequest: Resolved,
+    QuoteRequest: Quote,
+    DailyRequest: DailySeries,
+    FxRequest: FxRate,
 }
 
 
@@ -213,12 +232,64 @@ def validate_scenarios(scenarios: list[Scenario] | tuple[Scenario, ...]) -> list
                 "des Anbieters lässt sich von außen nicht herstellen"
             )
 
+        problems.extend(_check_role_match(scenario))
         problems.extend(_check_field_names(scenario))
         problems.extend(_check_ranges(scenario))
         if is_hit:
             problems.extend(_check_required_golden(scenario))
+            problems.extend(_check_provenance(scenario))
 
     return problems
+
+
+def _check_role_match(scenario: Scenario) -> list[str]:
+    """Passt die erwartete Trefferart zur Rolle der Anfrage?
+
+    **Befund aus Runde 1.** ``QuoteRequest`` mit ``expect=Resolved`` lief grün
+    — ein Double gibt bereitwillig zurück, was man ihm sagt, und niemand hat
+    gefragt, ob das überhaupt zusammenpasst. Der Fall prüfte danach eine
+    Zusage, die es in dieser Rolle gar nicht gibt.
+
+    Die Fehlfälle bleiben frei: `NotFound` und `Unavailable` sind für jede
+    Rolle dieselbe Aussage.
+    """
+    if scenario.expect not in HIT_TYPES:
+        return []
+    expected = ROLE_RESULTS.get(type(scenario.request))
+    if expected is None:
+        return [
+            f"{scenario.case_id}: {type(scenario.request).__name__} gehört zu "
+            "keiner bekannten Rolle"
+        ]
+    if scenario.expect is expected:
+        return []
+    return [
+        f"{scenario.case_id}: {type(scenario.request).__name__} kann nur "
+        f"{expected.__name__} liefern, erwartet wird aber "
+        f"{scenario.expect.__name__} — die Rollen passen nicht zusammen"
+    ]
+
+
+def _check_provenance(scenario: Scenario) -> list[str]:
+    """Trägt der Golden Case seine Herkunft?
+
+    **Befund aus Runde 1: Das stand als Zusage im Ticket und wurde nur in einem
+    App-eigenen Test geprüft** — also gerade nicht dort, wo ein fremder
+    Plugin-Autor davon profitiert.
+
+    In zwei Jahren ist ``RY/XTSE`` ohne Herkunft nicht mehr überprüfbar. Wer
+    den Wert dann anzweifelt, hat nur die Aufzeichnung — also genau die Quelle,
+    die es nicht sein durfte. Die Länge ist eine Untergrenze gegen ``"ok"``:
+    kein Beweis für eine gute Begründung, aber die Grenze, unterhalb derer
+    keine stehen kann.
+    """
+    if len(scenario.note.strip()) >= 20:
+        return []
+    return [
+        f"{scenario.case_id}: note ist {scenario.note.strip()!r} — ein Golden "
+        "Case ohne Herkunft ist in zwei Jahren nicht mehr überprüfbar, und "
+        "nachschlagen ließe er sich dann nur in der Aufzeichnung"
+    ]
 
 
 def _known_fields(result_type: type) -> set[str]:
@@ -348,11 +419,27 @@ def run_scenarios(
         Erst die Beanstandungen an den Beschreibungen, dann die Abweichungen der
         Läufe. Beschreibungsfehler stehen zuerst, weil ein falsch beschriebener
         Fall jede Abweichung darunter unglaubwürdig macht.
+
+        **Ein Lauf ohne einen einzigen Fall ist eine Beanstandung, kein
+        Erfolg.** Das war ein Befund aus Runde 1 und es ist dasselbe Muster wie
+        `P-05`: Die leere Liste sah aus wie „alles in Ordnung" und hieß in
+        Wahrheit „nichts geprüft". Bei ``only_real`` ist der Fall besonders
+        heimtückisch — vergisst ein Autor überall `real_ok`, meldet sein
+        Release-Lauf jahrelang Erfolg, ohne je den echten Anbieter zu fragen.
     """
     findings = validate_scenarios(scenarios)
     if findings:
         return findings
     selected = [s for s in scenarios if s.real_ok] if only_real else list(scenarios)
+    if not selected:
+        return [
+            "kein einziger Fall gelaufen — bei only_real=True heißt das, dass "
+            "keiner real_ok trägt; sonst, dass die Liste leer war. Ein leeres "
+            "Ergebnis sieht wie Erfolg aus und ist keiner."
+            if only_real
+            else "kein einziger Fall gelaufen — die Liste war leer. Ein leeres "
+            "Ergebnis sieht wie Erfolg aus und ist keiner."
+        ]
     for scenario in selected:
         findings.extend(check_scenario(scenario, runner.run(scenario)))
     return findings

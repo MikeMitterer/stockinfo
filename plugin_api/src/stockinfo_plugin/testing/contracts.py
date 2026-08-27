@@ -38,7 +38,7 @@ from datetime import date
 import pytest
 
 from stockinfo_plugin.invariants import (
-    currency_is_valid,
+    currency_problem,
     days_are_ordered,
     has_timezone,
     is_finite_price,
@@ -58,6 +58,7 @@ from stockinfo_plugin.types import (
     Resolved,
     ResolveRequest,
     Unavailable,
+    Unit,
 )
 
 # Antworten, die eine Quelle statt eines Treffers geben darf. Als Tupel und
@@ -136,12 +137,63 @@ class SourceContract:
         )
 
     def test_kosten_sind_deklariert(self) -> None:
-        """Die Kette sortiert danach — ein falscher Wert kostet echtes Geld."""
+        """Was eine Anfrage kostet — **Information, keine Sortierregel**.
+
+        Der Docstring hier behauptete bis Runde 1, die Kette sortiere danach.
+        Das war falsch und widersprach dem eigenen Vertrag: Seit T-22 bestimmt
+        **ausschließlich** `sources.yaml` die Reihenfolge, und `Source.cost`
+        sagt das auch. Der Wert dient der Anzeige und der Warnung („diese Kette
+        fragt eine kostenpflichtige Quelle zuerst") — damit eine teure Quelle
+        nicht unbemerkt vor einer kostenlosen steht.
+
+        Ein falscher Wert kostet trotzdem Geld, nur anders: Er unterdrückt die
+        Warnung, statt die Reihenfolge zu ändern.
+        """
         assert self.make_source().cost in ("free", "metered", "paid")
 
     def test_konfigurationsstand_ist_beantwortbar(self) -> None:
         """`is_configured` darf nicht werfen — sie wird vor allem anderen gefragt."""
         assert isinstance(self.make_source().is_configured(), bool)
+
+    def test_wer_stillsteht_sagt_warum(self) -> None:
+        """Eine Quelle, die nicht arbeiten kann, nennt den Grund.
+
+        **Befund aus Runde 1: Der Vertrag verlangte eine verständliche Diagnose
+        und prüfte nur ein `bool`.** Ein Betreiber sah in `GET /sources` eine
+        Quelle als nicht einsatzbereit und hatte keine einzige Handlung, die
+        daraus folgte — fehlt ein Schlüssel, eine Datei, ein Kontingent?
+
+        Geprüft wird deshalb beides zusammen: dass `configuration_problem`
+        nicht wirft, dass sie einen Satz liefert, wenn die Quelle stillsteht,
+        und dass sie **schweigt**, wenn die Quelle läuft. Die letzte Hälfte ist
+        nicht Zierde: Eine Quelle, die arbeitet und trotzdem eine Beanstandung
+        meldet, füllt die Diagnose mit Rauschen, bis niemand mehr hinsieht.
+
+        Die Länge ist eine Untergrenze gegen `"nein"` und `"error"` — kein
+        Beweis für Verständlichkeit, aber die Grenze, unterhalb derer keine
+        stehen kann.
+        """
+        source = self.make_source()
+        try:
+            problem = source.configuration_problem()
+        except Exception as exc:  # noqa: BLE001 — genau das ist der Prüfgegenstand
+            pytest.fail(f"configuration_problem() warf {type(exc).__name__}: {exc}")
+
+        assert isinstance(problem, str), (
+            f"configuration_problem() gab {type(problem).__name__} zurück, "
+            "erwartet wird ein Satz für einen Menschen"
+        )
+        if source.is_configured():
+            assert problem == "", (
+                f"die Quelle arbeitet, meldet aber {problem!r} — eine Diagnose, "
+                "die auch im Normalfall spricht, wird nicht mehr gelesen"
+            )
+        else:
+            assert len(problem.strip()) >= 10, (
+                f"die Quelle steht still und begründet es mit {problem!r}. Der "
+                "Satz richtet sich an jemanden, der die Quelle nicht gebaut "
+                "hat: Was fehlt, und was soll er tun?"
+            )
 
 
 class ResolverContract(SourceContract):
@@ -342,6 +394,37 @@ class MetadataContract(SourceContract):
         assert source.handles(self.responsible) is True
         assert source.handles(self.not_responsible) is False
 
+    def _readings_for_responsible(self) -> list:
+        """Die Werte des bekannten Falls — und der Nachweis, dass es welche gibt.
+
+        **Der Kern des Runde-1-Befunds.** Vorher stand in jedem Test
+        ``source.fetch(self.responsible) or []``, und danach lief eine Schleife.
+        Bei ``None`` und bei ``[]`` lief sie **null Mal** — jede Zusicherung
+        darunter war grün, ohne je einen Wert gesehen zu haben. Eine Quelle,
+        die für ihr eigenes bekanntes Papier nichts liefert, bestand damit den
+        ganzen Vertrag.
+
+        ``None`` ist hier besonders falsch: Es heißt „konnte nicht nachsehen".
+        Der Autor hat diesen Fall als **bekannt** benannt; kann seine Quelle
+        ihn im Test nicht beantworten, prüft der ganze Vertrag nichts.
+        """
+        source = self.make_source()
+        readings = source.fetch(self.responsible)
+        assert readings is not None, (
+            "fetch() gab None für den als bekannt benannten Fall — None heißt "
+            "konnte nicht nachsehen, und damit prüft der Vertrag nichts"
+        )
+        assert readings, (
+            "fetch() gab eine leere Liste für den als bekannt benannten Fall. "
+            "Jede Prüfung darunter liefe als leere Schleife grün durch; bitte "
+            "einen Fall als `responsible` nennen, den die Quelle wirklich führt"
+        )
+        return readings
+
+    def test_der_bekannte_fall_liefert_ueberhaupt_werte(self) -> None:
+        """Ohne diese Zeile prüft der ganze Metadaten-Vertrag nichts. Siehe oben."""
+        self._readings_for_responsible()
+
     def test_liefert_nur_deklarierte_felder(self) -> None:
         """Was nicht deklariert ist, kann die App weder umrechnen noch anzeigen.
 
@@ -350,8 +433,7 @@ class MetadataContract(SourceContract):
         fällt erst auf, wenn ein Wert stumm verschwindet.
         """
         source = self.make_source()
-        readings = source.fetch(self.responsible) or []
-        for reading in readings:
+        for reading in self._readings_for_responsible():
             assert source.declared(reading.field) is not None, (
                 f"Feld '{reading.field}' geliefert, aber nicht in FIELDS deklariert"
             )
@@ -359,7 +441,7 @@ class MetadataContract(SourceContract):
     def test_einheiten_stimmen_mit_der_deklaration_ueberein(self) -> None:
         """Sonst rechnet die App mit dem falschen Faktor — und zwar unbemerkt."""
         source = self.make_source()
-        for reading in source.fetch(self.responsible) or []:
+        for reading in self._readings_for_responsible():
             spec = source.declared(reading.field)
             if spec is not None and spec.unit is not None:
                 assert reading.unit is spec.unit, (
@@ -367,10 +449,84 @@ class MetadataContract(SourceContract):
                     f"deklariert als {spec.unit}"
                 )
 
+    def test_der_werttyp_passt_zur_deklarierten_bedienart(self) -> None:
+        """``kind="number"`` und dann ``"not-a-number"`` — genau das ging durch.
+
+        **Befund aus Runde 1.** Die App entscheidet anhand von `FieldSpec.kind`,
+        womit sie das Feld anzeigt und ob sie damit rechnet. Kommt dort eine
+        Zeichenkette an, wo eine Zahl deklariert ist, scheitert nicht die
+        Quelle, sondern der Verbraucher — irgendwann später, an einer Stelle,
+        die mit der Quelle nichts zu tun hat.
+
+        ``None`` bleibt erlaubt: „das Feld führe ich, habe aber diesmal keinen
+        Wert" ist eine gültige Aussage und etwas anderes als ein falscher Typ.
+        """
+        source = self.make_source()
+        expected_types = {"number": (int, float), "boolean": (bool,), "text": (str,)}
+        for reading in self._readings_for_responsible():
+            spec = source.declared(reading.field)
+            if spec is None or reading.value is None:
+                continue
+            allowed = expected_types.get(spec.kind)
+            if allowed is None:
+                continue
+            # `bool` ist in Python ein `int` — ein Wahrheitswert in einem
+            # Zahlenfeld ist trotzdem ein Fehler und wird hier nicht als Zahl
+            # durchgewinkt.
+            is_bool = isinstance(reading.value, bool)
+            fits = isinstance(reading.value, allowed) and (
+                spec.kind == "boolean" or not is_bool
+            )
+            assert fits, (
+                f"Feld '{reading.field}' ist als {spec.kind} deklariert, "
+                f"geliefert wurde {reading.value!r} "
+                f"({type(reading.value).__name__})"
+            )
+
+    def test_werte_liegen_im_deklarierten_bereich(self) -> None:
+        """Die Quelle deklariert ihren eigenen Wertebereich — und hält ihn ein.
+
+        **Befund aus Runde 1: `FieldSpec.is_plausible()` wurde nie aufgerufen.**
+        Die Methode stand da, war getestet, und kein Vertrag benutzte sie — die
+        Deklaration war damit eine Absichtserklärung.
+
+        Der Anlass ist gemessen: Eine Quelle meldete ``0.0000`` als Kostenquote
+        für einen Fonds, der real rund 0,06 % kostet. Eine stille Null tarnt
+        sich als gültiger Wert, und niemand sieht sie sich an.
+        """
+        source = self.make_source()
+        for reading in self._readings_for_responsible():
+            spec = source.declared(reading.field)
+            if spec is None or spec.plausible is None:
+                continue
+            assert spec.is_plausible(reading.value), (
+                f"Feld '{reading.field}': {reading.value!r} liegt außerhalb des "
+                f"selbst deklarierten Bereichs {spec.plausible}"
+            )
+
+    def test_ein_betrag_ohne_waehrung_ist_bedeutungslos(self) -> None:
+        """``Unit.ABSOLUTE`` verlangt eine Währung — sonst ist es nur eine Zahl.
+
+        **Befund aus Runde 1.** `Reading.currency` trug den Hinweis im
+        Docstring und niemand prüfte ihn. Ein Fondsvolumen von
+        2.289.978.572.800 sagt nichts, solange nicht dabeisteht, ob es USD oder
+        CAD sind — und es sind, gemessen, oft nicht die, die man annimmt.
+        """
+        source = self.make_source()
+        for reading in self._readings_for_responsible():
+            spec = source.declared(reading.field)
+            unit = reading.unit or (spec.unit if spec else None)
+            if unit is not Unit.ABSOLUTE or reading.value is None:
+                continue
+            problem = currency_problem(reading.currency)
+            assert not problem, (
+                f"Feld '{reading.field}' ist ein absoluter Betrag ohne "
+                f"brauchbare Währung: {problem}"
+            )
+
     def test_werte_tragen_ihre_herkunft(self) -> None:
         """Bei mehreren Quellen je Feld ist „wer war das" die erste Frage."""
-        source = self.make_source()
-        for reading in source.fetch(self.responsible) or []:
+        for reading in self._readings_for_responsible():
             assert reading.source, f"Feld '{reading.field}' nennt keine Herkunft"
 
     def test_unzustaendig_liefert_eine_leere_liste(self) -> None:
@@ -434,11 +590,8 @@ class QuoteContract(SourceContract):
         """
         answer = self.make_source().fetch_quote(self.responsible)
         assert isinstance(answer, Quote), _lacks_hit(answer, Quote)
-        assert currency_is_valid(answer.currency), (
-            f"currency {answer.currency!r} ist kein ISO-4217-Code — drei "
-            "Großbuchstaben, und keine Untereinheit wie GBX. Wer in Pence "
-            "notiert, rechnet vorher um."
-        )
+        problem = currency_problem(answer.currency)
+        assert not problem, f"currency: {problem}"
 
     def test_der_preis_ist_eine_brauchbare_zahl(self) -> None:
         """``NaN``, ``inf`` und ``0`` sind keine Kurse — und überleben jeden Typtest.
@@ -506,6 +659,34 @@ class DailyContract(SourceContract):
         answer = self.make_source().fetch_daily(self.not_responsible)
         assert isinstance(answer, NotResponsible), _lacks_hit(answer, NotResponsible)
 
+    def _series_for_responsible(self) -> DailySeries:
+        """Die Reihe des bekannten Listings — und der Nachweis, dass sie Tage hat.
+
+        **Der Kern des Runde-1-Befunds für diesen Vertrag.** Eine stets leere
+        `DailySeries` bestand ihn vollständig: Sortierung, Schlusskurse und
+        Zeitraum liefen als **leere Schleifen** grün durch, und `currency` und
+        `adjusted` prüfte niemand gegen Inhalt.
+
+        Eine leere Reihe ist als *Antwort* völlig zulässig — „nachgesehen, in
+        diesem Zeitraum lag nichts" ist eine gültige Aussage. Sie taugt nur
+        nicht als **Prüffall**: Der Autor hat dieses Listing als bekannt
+        benannt, und wenn seine Quelle dafür nichts liefert, prüft der Vertrag
+        nichts.
+        """
+        answer = self.make_source().fetch_daily(self.responsible)
+        assert isinstance(answer, DailySeries), _lacks_hit(answer, DailySeries)
+        assert answer.bars, (
+            "die Reihe für das als bekannt benannte Listing ist leer. Als "
+            "Antwort wäre das zulässig, als Prüffall nicht: Sortierung, Kurse "
+            "und Zeitraum liefen darunter als leere Schleifen grün durch. "
+            "Bitte einen Zeitraum wählen, in dem die Quelle wirklich Tage hat."
+        )
+        return answer
+
+    def test_die_reihe_hat_ueberhaupt_tage(self) -> None:
+        """Ohne diese Zeile prüft der ganze Historien-Vertrag nichts. Siehe oben."""
+        self._series_for_responsible()
+
     def test_die_reihe_ist_sortiert_und_doppelfrei(self) -> None:
         """Zwei Einträge für denselben Tag entstehen still — und zählen doppelt.
 
@@ -517,8 +698,7 @@ class DailyContract(SourceContract):
         Geprüft wird **streng** aufsteigend: Das erschlägt Sortierung und
         Duplikate in einer Aussage.
         """
-        answer = self.make_source().fetch_daily(self.responsible)
-        assert isinstance(answer, DailySeries), _lacks_hit(answer, DailySeries)
+        answer = self._series_for_responsible()
         days = [bar.day for bar in answer.bars]
         assert days_are_ordered(days), (
             "die Tage sind nicht streng aufsteigend — unsortiert oder doppelt: "
@@ -526,8 +706,7 @@ class DailyContract(SourceContract):
         )
 
     def test_jeder_schlusskurs_ist_eine_brauchbare_zahl(self) -> None:
-        answer = self.make_source().fetch_daily(self.responsible)
-        assert isinstance(answer, DailySeries), _lacks_hit(answer, DailySeries)
+        answer = self._series_for_responsible()
         for bar in answer.bars:
             assert is_finite_price(bar.close), (
                 f"Schlusskurs am {bar.day} ist {bar.close!r} — endlich und "
@@ -541,11 +720,9 @@ class DailyContract(SourceContract):
         um zweistellige Prozentwerte, und beide sehen für sich völlig plausibel
         aus. Wer sie mischt, sieht einen Kurssprung, wo eine Ausschüttung war.
         """
-        answer = self.make_source().fetch_daily(self.responsible)
-        assert isinstance(answer, DailySeries), _lacks_hit(answer, DailySeries)
-        assert currency_is_valid(answer.currency), (
-            f"currency {answer.currency!r} ist kein ISO-4217-Code"
-        )
+        answer = self._series_for_responsible()
+        problem = currency_problem(answer.currency)
+        assert not problem, f"currency der Reihe: {problem}"
         assert isinstance(answer.adjusted, bool), (
             f"adjusted ist {type(answer.adjusted).__name__} statt bool — der "
             "Bereinigungsstand muss deklariert sein, nicht erschlossen"
@@ -559,8 +736,7 @@ class DailyContract(SourceContract):
         Ränder sich überlappen. Dann steht wieder derselbe Tag zweimal da, und
         diesmal hat ihn keine einzelne Antwort verletzt.
         """
-        answer = self.make_source().fetch_daily(self.responsible)
-        assert isinstance(answer, DailySeries), _lacks_hit(answer, DailySeries)
+        answer = self._series_for_responsible()
         for bar in answer.bars:
             if self.responsible.start is not None:
                 assert bar.day >= self.responsible.start, (
@@ -635,9 +811,10 @@ class FxContract(SourceContract):
             f"gefragt nach {self.responsible.base}→{self.responsible.quote}, "
             f"geantwortet zu {answer.base}→{answer.quote}"
         )
-        assert currency_is_valid(answer.base) and currency_is_valid(answer.quote), (
-            f"{answer.base!r}/{answer.quote!r} sind keine ISO-4217-Codes"
-        )
+        problems = [
+            currency_problem(code) for code in (answer.base, answer.quote)
+        ]
+        assert not any(problems), f"das Paar taugt nicht: {'; '.join(filter(None, problems))}"
 
     def test_die_rate_ist_eine_brauchbare_zahl(self) -> None:
         answer = self.make_source().fetch_rate(self.responsible)
@@ -666,6 +843,16 @@ class FxContract(SourceContract):
         answer = self.make_source().fetch_rate(identity)
 
         assert isinstance(answer, FxRate), _lacks_hit(answer, FxRate)
+        # **Erst das Paar, dann die Rate** — Befund aus Runde 1. Hier stand nur
+        # die Ratenprüfung, und deshalb bestand eine Quelle den Identitätsfall
+        # mit `FxRate(base="USD", quote="JPY", rate=1.0)` auf eine
+        # CAD→CAD-Anfrage. Eine `1.0` ohne ihr Paar ist keine Aussage: Sie ist
+        # für irgendein Paar fast immer falsch und für dieses immer richtig.
+        assert (answer.base, answer.quote) == (identity.base, identity.quote), (
+            f"gefragt nach {identity.base}→{identity.quote}, geantwortet zu "
+            f"{answer.base}→{answer.quote} — die Rate 1.0 gilt dann für ein "
+            "anderes Paar und ist dort mit hoher Wahrscheinlichkeit falsch"
+        )
         assert answer.rate == 1.0, (
             f"{identity.base}→{identity.base} ergab {answer.rate!r} statt 1.0 — "
             "die Quelle rechnet über einen Umweg"
