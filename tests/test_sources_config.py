@@ -185,6 +185,13 @@ def test_der_leseweg_zeigt_die_laufende_kette(tmp_path: Path, monkeypatch) -> No
     Der Test setzt deshalb die Einstellungen des **Prozesses** und leert den
     Cache; ein `dependency_overrides` griffe hier nicht, und das ist keine
     Testschwäche, sondern die Eigenschaft, um die es geht.
+
+    **Nachgeschärft nach Runde 2 — die erste Fassung war wertlos.** Sie schrieb
+    eine Datei, leerte den Cache und rief den Endpunkt auf. Damit prüfte sie
+    nur, dass er *irgendwie* zur Datei passt: Läse er sie bei jedem Request
+    frisch, wäre sie genauso grün gewesen. Der Gegenpfad braucht **zwei
+    Stände in einem Prozess** — erst die Laufzeit bauen, dann die Datei ändern
+    und verlangen, dass beide beim alten bleiben.
     """
     _write(tmp_path, {"resolvers": ["yahoo-search", "openfigi"]})
     monkeypatch.setattr(
@@ -193,13 +200,35 @@ def test_der_leseweg_zeigt_die_laufende_kette(tmp_path: Path, monkeypatch) -> No
     )
     get_sources_config.cache_clear()
 
+    # Die Laufzeit entsteht — wie beim Start der App, aus Stand A.
+    runtime = _build_resolver()
+    assert [type(inner).__name__ for inner in runtime._resolvers] == [
+        "YFinanceResolver",
+        "OpenFigiResolver",
+    ]
+
+    # Jetzt ändert jemand die Datei, ohne neu zu starten. Die laufenden Dienste
+    # bemerken das nicht — sie halten Stand A in der Hand.
+    _write(tmp_path, {"resolvers": ["openfigi"]})
+
     body = TestClient(app).get("/sources").json()
     get_sources_config.cache_clear()
 
     resolvers = [row for row in body["sources"] if row["role"] == "resolvers"]
-    assert [row["name"] for row in resolvers] == ["yahoo-search", "openfigi"]
+    assert [row["name"] for row in resolvers] == ["yahoo-search", "openfigi"], (
+        "der Endpunkt meldet Stand B, während die Dienste auf A laufen"
+    )
     assert all(row["configured"] for row in resolvers)
     assert body["config_path"].endswith("sources.yaml")
+
+    # Und die Gegenrichtung derselben Aussage: Die gebaute Kette hat sich durch
+    # die Dateiänderung nicht bewegt. Ohne diese Zeile bliebe offen, ob der
+    # Endpunkt bei A geblieben ist, weil die Laufzeit es ist — oder ob beide
+    # unabhängig voneinander irren.
+    assert [type(inner).__name__ for inner in runtime._resolvers] == [
+        "YFinanceResolver",
+        "OpenFigiResolver",
+    ]
 
 
 def test_eine_quelle_in_falscher_rolle_gilt_nicht_als_einsatzbereit(
