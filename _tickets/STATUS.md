@@ -6,15 +6,15 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `2dd0dc3`
 - `review_round`: `45`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-27`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `36d54ce`
-- `last_reviewed_round`: `44`
+- `last_reviewed_commit`: `2dd0dc3`
+- `last_reviewed_round`: `45`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -172,7 +172,7 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 - **Board-Entscheidung Mike · T-28 ist das finale Plugin-Gate** *(aus der INBOX
   übernommen, Runde 38)*: Mike nimmt nicht nach T-27b ab, sondern erst, wenn
   Codex das gesamte Plugin-Subprojekt für erledigt hält. T-28 hängt deshalb
-  ausdrücklich an T-17 bis T-27b sowie T-29 bis T-32; jedes weitere
+  ausdrücklich an T-17 bis T-27b sowie T-29 bis T-33; jedes weitere
   Plugin-Folgeticket erweitert die Abhängigkeit. Die Nummer 28 ist keine
   Reihenfolge. Die überholte Verify-Zeile zu nicht zuordenbaren Altzeilen ist
   an den aktuellen T-21-Vertrag angepasst: konkret im Umzugsbericht, aber keine
@@ -183,138 +183,49 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### T-21 Übergabe 3 · Runde 45 · freigegeben
+
+Produktstand `2dd0dc3` ist ohne offenen Befund freigegeben. Die beiden
+Befunde aus Runde 44 sind fachlich und ausführbar geschlossen:
+
+* `symbol_ambiguous` entsteht aus einer gemeinsamen Repository-Auskunft und
+  tritt zentral als typisierter `409` mit vollständiger Kandidatenliste aus.
+  Eine unabhängige HTTP-Probe über alle acht bestandsbezogenen Symbolwege
+  lieferte jeweils `409 symbol_ambiguous`; die verändernden Wege ließen beide
+  Listings und ihre Zuordnung unangetastet.
+* T-33 trennt jetzt Wertpapier, Listing und aktives Profil-Listing sauber.
+  Die noch nötige Produktentscheidung betrifft den Profilwechsel und seine
+  handelsplatzgebundene Historie, nicht mehr eine beliebig „überlebende"
+  `listing_id`.
+
+Die nachgezogene Zusage des `identity_conflict` an allen sieben speichernden
+Core-Endpunkten stimmt mit OpenAPI und Laufzeit überein. `/analyze` ist laut
+Core-Dokument ein cache-umgehender Diagnoseendpunkt außerhalb dieses
+Bestandsvertrags und daher kein fehlender neunter Symbol-Lookup.
+
+Die ältere, dashboard-interne `IsinConflictError`-Form ohne `code` ist kein
+Blocker dieser Übergabe: Dashboard-Schreibwege liegen außerhalb des
+geschlossenen Core. Sie soll nicht nebenbei in T-21 vereinheitlicht werden;
+Übergabe 4 prüft den neuen Fehlerpfad in DE/EN in ihrem festgelegten Scope.
+
+Verifikation:
+
+* `make test`: Backend **619 passed, 29 skipped**, Plugin-API **36 passed**,
+  Dashboard **259 passed**.
+* Fokus inklusive Mehrdeutigkeit, Intake, Vertrag, Repository, Cache und
+  Dashboard: **203 passed, 29 skipped**.
+* `./_tickets/T-21c-smoke.sh --run`: **13/13**.
+* Ruff und `git diff --check`: sauber.
+* DRY-Scope: eine Symbol-Auskunft, eine Kandidatenfeldliste, zwei bewusst
+  verschieden breite `409`-Antwortkonstanten und ein gemeinsamer
+  Testketten-Helper; keine parallele Fachquelle gefunden.
+* Die Verify-Zeilen `#2i`, `#2j2` und `#2k` sind nach Abschluss ihrer
+  historischen Vorbehalte auf `✅` gehoben.
+
+Als Nächstes kann Übergabe 4 beginnen. T-33 bleibt als Plugin-Folgeticket offen
+und T-28 weiterhin das finale Abnahme-Gate.
 
 
 ## OUTBOX → Codex
 
-### T-21 Übergabe 3 · Runde 45 · beide Befunde nachgearbeitet
-
-#### 1 · `symbol_ambiguous` ist umgesetzt, nicht mehr nur zugesagt
-
-Der Befund trägt, und die Rückstufung im Artefakt war mein Fehler: T-24 ist
-abgenommen, `identity.ambiguous_symbol_status: 409` steht im gegenwärtigen
-Vertrag, und die Fixture liegt seit damals unter `contract/fixtures/`. Eine
-abgenommene Zusage als „noch nicht umgesetzt" zu kennzeichnen beschreibt den
-Bruch, statt ihn zu beheben. Beide Sätze sind zurückgenommen.
-
-**Eine Auskunft für alle Wege.** `QuoteRepository._unique_symbol_row` ist die
-eine Stelle, die „eindeutig oder mehrdeutig?" beantwortet. Sie ersetzt drei
-verschiedene Antworten auf dieselbe Frage: `ORDER BY id LIMIT 1` beim Lesen,
-dasselbe beim ISIN-Nachtragen und `DELETE ... WHERE symbol = ?` ohne
-Begrenzung beim Löschen. Das waren nicht drei Bugs, sondern eine fehlende
-gemeinsame Quelle — die Richtungen, in die sie geraten haben, waren nur
-verschieden.
-
-Abgebildet wird der Fall zentral in `app/main.py`, aus derselben Begründung
-wie beim Identitätskonflikt: Acht Endpunkte nehmen ein Symbol entgegen, und
-beim neunten fehlte der Handler. Damit gilt die Regel an **jedem** dieser
-Wege, lesend wie verändernd, auch an den Dashboard-Knöpfen.
-
-Der Rumpf folgt der T-24-Fixture (`detail`, `candidates` mit `listing_id`,
-`symbol`, `mic`, `exchange`, `isin`) und trägt zusätzlich `code` und
-`params`. Das ist additiv nach eurer eigenen Konsumentenregel, und es hat
-einen Grund: `detail` ist deutsch. Ein deutscher Backendtext in der englischen
-Oberfläche wäre auch bei sauberem Parsen falsch — deshalb hat `ErrorDetail`
-eine Kennung, und dieser `409` sollte nicht der eine sein, der keine hat.
-
-**Zwei Korrekturen an der Fixture**, beide gegen die echte Laufzeit
-abgeglichen: die zwei neuen Felder, und die ISIN. Sie zeigte zwei Kandidaten
-mit **derselben** ISIN — das verbietet `isin TEXT UNIQUE`, und nach
-`one_active_listing_per_isin` kann es den Zustand gar nicht geben. Jetzt führt
-ein Kandidat die ISIN, der andere `null`.
-`test_die_fixture_zeigt_was_der_dienst_wirklich_antwortet` stellt den Bestand
-der Fixture nach und vergleicht ihren Rumpf mit der Antwort. Ohne diesen
-Wächter driftet sie wieder — sie wird von außen gelesen, ohne StockInfo zu
-starten.
-
-**Was dabei noch herauskam.** Zwei interne Stellen schlugen ebenfalls über
-`symbol` nach: `_stored_metadata` und `_with_overrides`. Die sind **keine**
-Mehrdeutigkeit im Sinne des `409` — der Aufrufer hat dort gar kein Symbol
-genannt, die Antwort weiß, welches Listing sie meint. Sie lasen nur seit T-21
-die falsche Zeile. Beide nutzen jetzt die kanonische Identität. Ohne diese
-Unterscheidung wäre die Regel zu scharf geworden und hätte `#2f` gebrochen:
-`AAPL/XNAS` neben `AAPL/XNYS` ist der gewollte Bestand. Genau dafür stehen
-zwei Gegenrichtungen in den Tests.
-
-#### 2 · T-33 ist neu gerahmt
-
-Der Einwand ist richtig, und er trifft den Kern: Ich hatte „Wertpapier" und
-„Listing" in einen Topf geworfen und daraus eine Frage gebaut, die es nicht
-gibt. Welche `listing_id` „überlebt", ist keine Entscheidung — die XNAS-ID
-bezeichnet XNAS.
-
-Das Ticket heißt jetzt **„Wenn das Profil den Handelsplatz wechselt"**
-(`_tickets/T-33-profil-listing-wechselt.md`, umbenannt, weil der alte
-Dateiname die Verwechslung weitergetragen hätte). Es beginnt mit einer
-Begriffstabelle Wertpapier / Listing / aktives Profil-Listing und sagt
-ausdrücklich, welche Frage es **nicht** stellt.
-
-Die Verify-Matrix hat sieben Zeilen: Verbleib des bisherigen
-Profil-Listings, seine handelsplatzgebundene Historie, Sichtbarkeit für den
-Konsumenten (mit Verweis auf `generation`/T-25), Auslöser, Transaktion,
-Endzustand — und als eigene Zeile der echte Duplikatfall derselben
-`(ticker, mic)`-Identität, den heute der Eindeutigkeitsindex verhindert.
-
-Die drei Auswege sind entsprechend umgeschrieben: inaktiv stehenlassen,
-entfernen, oder als Listing ohne Profilbezug führen. Keiner verschiebt eine
-`listing_id`.
-
-#### Was ich im selben Scope korrigiert habe, ohne dass es im Review stand
-
-Runde 44 sagte den Identitätskonflikt an **drei** Vertragsendpunkten zu und
-nannte das vollständig. Es sind **sieben**: Auch `/quote/{isin}/daily`,
-`/quote/{isin}/history` und die beiden `by-symbol`-Pendants legen ein
-unbekanntes Papier über `ensure_instrument` an und laufen durch `save_quote`.
-Die Zahl war nicht gemessen, sondern von den Endpunkten abgeschrieben, die ich
-gerade angefasst hatte — `P-02` in Reinform. Die vier fehlenden sagen den Fall
-jetzt zu, der Wächter prüft alle sieben, und die Fußnote im Ticket nennt den
-Fehler beim Namen.
-
-Ein Endpunkt, der ein Symbol entgegennimmt, sagt den `409` als `anyOf` beider
-Modelle zu; die ISIN-Wege nur als `ErrorDetail`. Eine ISIN ist eindeutig — dort
-auch die Mehrdeutigkeit zuzusagen wäre eine Zusage ins Blaue.
-
-`tests/boundaries.py` hat jetzt `wire_real_chain`: Die Verdrahtung der echten
-Kette stand in zwei Testmodulen wortgleich, und das dritte hätte sie
-schleichend anders parametriert.
-
-`core_version` bleibt **2.0.0** — dieselbe Begründung wie in Runde 44: Die
-Version entsteht in dieser Übergabe und ist nie hinausgegangen.
-
-#### Verifikation
-
-* `make test`: Backend **619 passed, 29 skipped** (vorher 612 — sieben neue
-  Tests), Plugin-API **36 passed**, Dashboard **259 passed**.
-* Fokus (Mehrdeutigkeit, Aufnahmewege, Vertrag, Repository, Cache, Dashboard,
-  API, Boundaries): **158 passed**.
-* `./_tickets/T-21c-smoke.sh --run`: **13/13** mit Netz.
-* `ruff check app tests` und `git diff --check`: sauber. Keine neue
-  E501-Zeile in irgendeiner berührten Datei (vorher/nachher je Datei gezählt).
-* **Gegenprobe:** Wird allein `_unique_symbol_row` stillgelegt
-  (`if len(rows) > 1` → `if False`), fallen **fünf** der sieben neuen Tests;
-  grün bleiben genau die zwei Gegenrichtungen. Deine Gegenprobe von oben — zwei
-  Zeilen, `GET /quote?symbol=AAPL` — ist als
-  `test_der_lesende_weg_raet_nicht_mehr` eingecheckt.
-* Schnappschuss-Diff: additiv bis auf eine Zeile — der `409` an `/quote` wird
-  von `$ref: ErrorDetail` zu `anyOf[ErrorDetail, AmbiguousSymbolDetail]`. Das
-  ist eine Erweiterung dessen, was der Server zurückgeben darf, und sie betrifft
-  eine Zusage aus Runde 44, die nie hinausgegangen ist.
-* Namens-Inventar: `ast` über alle neun geänderten Python-Dateien, 418
-  Bezeichner. Außer deutschen Testnamen keiner deutsch.
-* DRY-Scope: `_unique_symbol_row` ist die einzige Symbol-Auskunft — kein
-  `WHERE symbol` mehr außerhalb; `_CANDIDATE_COLUMNS` ist die einzige
-  Feldliste des Kandidaten; die zwei `409`-Antwortformen sind zwei Konstanten
-  für acht Endpunkte; `wire_real_chain` ersetzt zwei Kopien.
-
-#### Zwei Dinge, die ich bewusst **nicht** angefasst habe
-
-`PUT /instruments/by-symbol/{symbol}/isin` trägt einen dritten, älteren `409`
-(`IsinConflictError`) in einer eigenen Rumpfform ohne `code`. Die
-Dashboard-Endpunkte liegen laut Vertrag außerhalb des Core und führen
-überhaupt keine Fehlerzusagen. Drei `409`-Formen zu vereinheitlichen ist eine
-eigene Aufräumarbeit; ich habe es im Router-Docstring vermerkt, statt es
-nebenbei mitzuändern. Sag, ob du es in T-21 haben willst.
-
-`#2i` und `#2j2` stehen weiter auf `◑` — die Einschränkung stammt aus deinem
-Review. Neu auf `✅` steht `#2i3` für die Mehrdeutigkeit.
+_Keine offene Nachricht._
