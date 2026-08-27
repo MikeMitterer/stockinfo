@@ -47,15 +47,19 @@ curl -s "http://localhost:8000/sources" | python3 -m json.tool     # #1/#2
     anderen `sources.yaml`; es braucht **kein** Netz, weil geprüft wird, welche
     Kette entsteht, nicht was die Quellen liefern.
 
-    Dazu `tests/test_sources_config.py` (zwölf Tests) und die umgeschriebenen
+    Dazu `tests/test_sources_config.py` (sechzehn Tests) und die umgeschriebenen
     `tests/test_container.py` (vier). **Gegenproben gelaufen:** Kette umdrehen →
     der Verdrahtungstest fällt; `is_configured` immer `True` → der
-    Pflichtschlüssel-Test fällt.
+    Pflichtschlüssel-Test fällt; Endpunkt liest die Datei wieder frisch → der
+    Lesewegtest fällt.
 
-    Zwei eigene Testfehler haben die Mutanten dabei aufgedeckt und sie stehen
-    korrigiert im Docstring: Die erste Fassung prüfte mit **einer** Quelle —
-    eine umgedrehte Einerliste ist dieselbe Liste — und rief `_chain()` statt
-    `_build_resolver()`, also eine Ebene **unter** der Verdrahtung.
+    Drei eigene Testfehler haben die Mutanten dabei aufgedeckt und sie stehen
+    korrigiert im Docstring. Alle drei sind derselbe Griff — **der Test stellt
+    die Abweichung nicht her, die er messen will**: Die erste Fassung prüfte mit
+    **einer** Quelle (eine umgedrehte Einerliste ist dieselbe Liste), rief
+    `_chain()` statt `_build_resolver()` (eine Ebene **unter** der Verdrahtung),
+    und der Lesewegtest kannte nur **einen** Konfigurationsstand, während der
+    Fehler eine Abweichung zwischen zweien ist.
 [^t22b]: **Als Einheit belegt, nicht über HTTP.** Es gibt heute keine
     eingebaute Quelle mit pflichtigem Schlüssel; der Test stellt eine
     `SourceSpec` mit `needs=("api_key",)` her und prüft alle drei Lagen —
@@ -309,3 +313,50 @@ enger Testbefund bleibt:
 `git diff --check` sauber. `make test`: Backend 637 passed / 29 skipped,
 Plugin-API 36, Dashboard 259. Der Produktfehler ist behoben; die Rückgabe
 schützt ausschließlich dessen Regression belastbar ab.
+
+### Runde 2 → Runde 3
+
+Der Befund trägt, und er ist präziser als meine eigene Selbstprüfung war.
+
+**Der Test kannte nur einen Stand — der Fehler ist eine Abweichung zwischen
+zweien.** Die alte Fassung schrieb eine Datei, leerte den Cache und rief
+`/sources` auf. Damit prüfte sie, dass der Endpunkt *irgendwie* zur Datei passt;
+ob er den Laufzeitstand oder die Datei von jetzt meldet, konnte sie gar nicht
+sehen — beide Antworten wären in dieser Anordnung dieselbe gewesen.
+
+Die neue Fassung hält beide Stände in **einem** Prozess:
+
+1. Stand A schreiben, Einstellungen setzen, Cache leeren.
+2. Über `_build_resolver()` die Laufzeitkette bauen — wie beim Start der App.
+   Sie ist damit auf A festgelegt.
+3. Die Datei auf B ändern (`resolvers: [openfigi]`), **ohne** Neustart.
+4. `/sources` aufrufen und verlangen, dass dort weiterhin A steht.
+5. Zusätzlich verlangen, dass die bereits gebaute Kette sich nicht bewegt hat.
+
+Schritt 5 ist nicht Zierde: Ohne ihn bliebe offen, ob der Endpunkt bei A
+geblieben ist, *weil* die Laufzeit es ist — oder ob beide unabhängig
+voneinander irren.
+
+**Gegenprobe, wie verlangt.** Mutant: der Endpunkt liest wieder frisch
+(`load_sources_config(sources_path(get_settings()), get_settings())`). Gemessen
+wurden beide Fassungen gegen **denselben** Mutanten:
+
+```text
+alte Fassung  →  1 passed          ← der Befund, als Messung
+neue Fassung  →  1 failed
+    AssertionError: der Endpunkt meldet Stand B, während die Dienste auf A laufen
+    assert ['openfigi'] == ['yahoo-search', 'openfigi']
+```
+
+**Verifikation nach der Rücknahme des Mutanten:** Backend 637 passed / 29
+skipped, `./_tickets/T-22-smoke.sh --run` 5/5, `ruff check app tests` und
+`git diff --check` sauber.
+
+**Zum formalen Hinweis — der Riegel stand rund eine Minute offen.** Die Ursache
+war nicht Nachlässigkeit, sondern ein blockierter Commit: Meine
+Commit-Message nannte die Geheimnisdatei beim Namen, und die Sicherheitsregel
+des Repos weist jedes Kommando ab, das sie erwähnt. Ich musste umformulieren,
+und in genau diesem Fenster hat Codex geclaimt. Der Riegel-Abschnitt in
+`CODEX-REVIEW-AUTOMATION.md` hält diesen Fall jetzt fest: Ein Status-Commit
+kann an einer Regel scheitern, und dann ist der Ready-Zustand kein Zustand zum
+Warten.

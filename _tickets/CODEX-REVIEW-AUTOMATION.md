@@ -171,6 +171,21 @@ oder widersprüchlichem Handoff wird nicht geraten: formaler Handoff-Fehler.
 Diese Ausnahme heilt nur den Transport; sie ersetzt nicht Claudes Pflicht,
 jede Übergabe sofort zu committen.
 
+**Der Commit aus Schritt 4 kann scheitern — und dann ist der Riegel offen.**
+*(Ergänzt 2026-08-27, nach T-22 Runde 2.)* In dieser Übergabe wies eine
+Sicherheitsregel des Repos das Kommando ab, weil die **Commit-Message** die
+Geheimnisdatei beim Namen nannte; der Riegel stand dadurch rund eine Minute
+ohne Commit, und Codex hat in genau diesem Fenster geclaimt. Der Fall ist
+allgemeiner als sein Anlass: Jeder Hook, jeder Pre-Commit-Lauf und jeder
+Formatprüfer kann Schritt 4 abweisen, nachdem Schritt 3 bereits auf der Platte
+steht.
+
+Deshalb: Scheitert der Commit, ist der Ready-Zustand **kein Zustand zum
+Warten**. Entweder er wird sofort auf anderem Weg committet — die Ursache liegt
+fast immer in der Message, nicht im Inhalt —, oder Schritt 3 wird
+zurückgenommen, bis der Commit steht. Still im Ready zu verharren überlässt die
+Übergabe dem Zufall, ob der Prüfer gerade nachsieht.
+
 ## Ausführungs-Guard für Ticket-Prüfskripte
 
 Mike hat die Ausführung aller versionierten Prüfskripte nach dem Muster
