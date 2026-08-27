@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend) | aktiv · Plugin-MVP 1/4 | 4 h | Konfigurationsdatei, `is_configured()`, Protokolle | — |
+| StockInfo (Backend) | **freigegeben** (Codex, Runde 3, `490314a`) · Plugin-MVP 1/4 | 4 h | Konfigurationsdatei, `is_configured()`, Protokolle | — |
 
 **Löst:** Welche Quelle wann greift, steht heute als `if`-Kaskade in der
 Composition-Root (`app/container.py:24-34`), und jeder API-Key ist ein eigenes

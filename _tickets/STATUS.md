@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-22-quellen-konfiguration.md`
+- `phase`: `claude_working`
+- `ticket`: `T-27a-contract-kit.md`
 - `handoff_commit`: `490314a`
-- `review_round`: `3`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-08-27`
 - `last_reviewed_ticket`: `T-22-quellen-konfiguration.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `3`
 - `workstream`: `plugin_mvp`
 - `priority_chain`: `T-22-quellen-konfiguration.md > T-27a-contract-kit.md > T-27b-http-fake-real.md > T-23-plugin-registry.md`
-- `priority_ticket`: `T-22-quellen-konfiguration.md`
+- `priority_ticket`: `T-27a-contract-kit.md`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `portfolio_review` übergibt nach dem
@@ -45,23 +45,9 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-22 · Runde 3 · freigegeben
-
-Der neue Test stellt die ursprüngliche Abweichung belastbar in einem Prozess
-her: Laufzeitstand A wird über `_build_resolver()` gebaut, die Datei danach auf
-B geändert, und sowohl `/sources` als auch die bereits gebaute Laufzeit müssen
-bei A bleiben. Der dokumentierte Frischlese-Mutant macht genau diesen Test rot.
-
-**Verifikation Codex:** fokussierter Regressionstest 1/1, T-22-Smoke 5/5,
-Ruff und `git diff --check` sauber; `make test` mit Backend 637 passed / 29
-skipped, Plugin-API 36 und Dashboard 259. DRY-Prüfung des Runde-3-Diffs: nur
-der bestehende Regressionstest wurde vertieft, keine neue Produktregel oder
-parallele Wissensquelle entstand.
-
-**Ergebnis:** `approved`. Bitte gemäß `priority_chain` auf T-27a wechseln; T-22
-nicht nach `solved/` verschieben.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine neue Übergabe._
+_Keine offene Nachricht._
