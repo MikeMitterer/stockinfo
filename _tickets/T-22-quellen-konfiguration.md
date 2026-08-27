@@ -161,6 +161,52 @@ bei Gleichstand nach Name.
 
 ---
 
+## Codex-Review · Runde 1 · `20af8fa`
+
+Die Grundrichtung trägt, und die vorgesehenen Läufe sind grün. Vier Befunde
+verhindern die Freigabe:
+
+1. **Hoch · Bestehender OpenFIGI-Key geht verloren.** Ohne `sources.yaml`
+   liefert `SourcesConfig` einen leeren Providerabschnitt; `_openfigi()` baut
+   deshalb `OpenFigiClient(None)`, obwohl `Settings.openfigi_api_key` gesetzt
+   ist. Reproduktion: `settings_key='expected-key'`, aber
+   `resolver._client._api_key is None`. Zusätzlich löst `_resolve()` nur gegen
+   `os.environ` auf; ein wie bisher über Pydantic aus der Projektkonfiguration
+   gelesener Wert ist damit nicht dieselbe Secret-Quelle. Die neue
+   Konfiguration muss den bestehenden Key ohne Datei bewahren und Verweise
+   über die kanonische Umgebungskonfiguration auflösen.
+2. **Hoch · `/sources` beschreibt nicht zuverlässig die laufende Kette.** Die
+   Services verwenden das gecachte `get_sources_config()`, der Endpunkt liest
+   die Datei bei jedem Request neu. Nach einer Dateiänderung ohne Neustart war
+   die Laufzeitkette `OpenFigiResolver`, während `/sources`
+   `yahoo-search` meldete. Außerdem meldet `quotes: [justetf]`
+   `configured: true`, obwohl `build_chain()` die Quelle wegen der falschen
+   Rolle verwirft und keine Kursquelle baut. Der Endpunkt muss denselben
+   Laufzeitstand und dieselbe Rollen-/Konfigurationsentscheidung verwenden wie
+   die Composition-Root.
+3. **Mittel · Die beiden neuen Protokolle sind tote Duplikate.** In
+   `app/providers/base.py` entstehen `DailyCloseProvider` und `FxProvider`,
+   aber die Verbraucher verwenden weiterhin die bereits vorhandenen
+   `app.services.daily_sync.DailyCloseProvider` und
+   `app.services.fx_service.FxRateProvider`. Damit stehen die zugesagten
+   Verträge nun zweimal da, und die neuen Typen schützen keinen Aufruf. Je
+   Rolle braucht es eine einzige importierte Vertragsquelle.
+4. **Mittel · Das Smoke-Script kann einen unvollständigen Lauf als grün
+   melden.** Scheitert `startServer()` vor `report()`, kehrt der einzelne Check
+   mit 1 zurück; `runChecks()` läuft ohne `set -e` weiter, erhöht
+   `COUNT_FAIL` nicht und prüft am Ende keine erwartete Checkzahl. Die
+   behauptete Schlussmarke verhindert damit genau P-05 nicht. Ein
+   kontrollierter früher Abbruch muss den Lauf rot machen; der Erfolg muss
+   exakt alle fünf Checks verlangen.
+
+**Evidenz:** `./_tickets/T-22-smoke.sh --run` 5/5,
+`make test` 633 Backend + 36 Plugin-API + 259 Dashboard,
+`ruff` sauber. Die grünen Läufe widersprechen den Befunden nicht: Die drei
+Produktreproduktionen betreffen nicht abgedeckte Gegenpfade; der Scriptbefund
+liegt im Fehlerpfad des Prüfwerkzeugs.
+
+---
+
 ## Auflösung
 
 _(offen)_

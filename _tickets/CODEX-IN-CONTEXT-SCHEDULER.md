@@ -56,6 +56,19 @@ des bestehenden Codex-Review-Chats. Das fachliche Review-Verfahren steht in
 
 ## Gesundheits- und Wiederanlaufregeln
 
+- **Der steuernde Codex-Turn bleibt offen.** `notify(...)` und
+  `yield_control()` geben nur innerhalb eines noch aktiven Turns wieder
+  Kontrolle an Codex. Nach einer Final-Antwort startet ein späterer
+  `review_handoff` keinen neuen Assistenten-Turn; er wird erst mit der nächsten
+  Benutzernachricht zugestellt. Wer den Scheduler als laufende Überwachung
+  startet, wartet deshalb nach dem Yield mit `functions.wait` auf derselben
+  Cell-ID weiter und sendet bis zum Ende der Überwachung **keine**
+  Final-Antwort.
+- `scheduler_started` belegt nur den Start. Erst ein regulärer Heartbeat und
+  anschließend das fortgesetzte Warten der steuernden Unterhaltung belegen
+  die funktionsfähige Überwachung. Eine nach dem Start beendete Unterhaltung
+  ist kein laufender Scheduler, auch wenn die Zelle später noch als
+  `Script running` erscheint.
 - Ein Scheduler ist gesund, wenn seit höchstens fünf Minuten und einer kleinen
   Laufzeittoleranz ein `scheduler_heartbeat` eingetroffen ist. `Script running`
   ohne Heartbeat ist ausdrücklich ein Defekt.

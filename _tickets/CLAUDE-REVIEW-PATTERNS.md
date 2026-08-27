@@ -124,6 +124,14 @@ durch `lambda: gestartet.append("scheduler")`; weder `RefreshScheduler` noch
 sein `start()` laufen. Geprüft ist nur, dass irgendein Callback aufgerufen
 wird — und auch das vor statt nach der Migration.
 
+**Neuer Beleg:** T-22 Runde 1, Commit `20af8fa`: Smoke und Übergabe erklärten,
+über echte Neustarts werde geprüft, „welche Kette entsteht“. Der Smoke las
+jedoch ausschließlich `/sources`; die Verdrahtung lief nur in einem getrennten
+Unit-Test. Weil der Endpunkt die Datei frisch las, die Services aber eine
+gecachete Konfiguration hielten, konnte die laufende Kette `OpenFigiResolver`
+sein und `/sources` zugleich `yahoo-search` melden. Beide Tests blieben grün,
+weil keiner die beiden Seiten in derselben gestarteten App verglich.
+
 [↑ Übersicht](#übersicht)
 
 ## P-02 · Punktuelle Korrektur wird als vollständige Regelumsetzung gemeldet
@@ -493,6 +501,16 @@ parallel zu einem positionalen Wertetupel: Ein viertes, laut Artefakt
 zulässiges Feld ließ den neuen Wächter grün, aber `zip(strict=True)` mit
 `ValueError` abbrechen.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-22
+Runde 1, Commit `20af8fa`: Übergabe und Ticket erklärten
+`DailyCloseProvider` und `FxProvider` zu den zwei Verträgen, die „nirgends
+standen“. Tatsächlich existierten bereits
+`app.services.daily_sync.DailyCloseProvider` und
+`app.services.fx_service.FxRateProvider`, und alle Verbraucher importierten
+weiter diese alten Protokolle. Die neu in `app.providers.base` angelegten
+Typen waren daher unbenutzt; statt zwei fehlender Verträge gab es nun je zwei
+Sources of Truth.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
@@ -650,6 +668,14 @@ Orakel noch las. Das Script stürzte nach vier von neun Prüfungen mit einer
 `AttributeError` ab, die Fehlerausgabe blieb verborgen — und es meldete
 „4 Checks bestanden, keine Fehler". Die vier Zeilen davor waren echt; die fünf
 fehlenden fielen nur auf, weil die Ticketfußnote neun nannte.
+
+**Neuer Beleg:** T-22 Runde 1, Commit `20af8fa`: Das neue Smoke-Script
+kommentierte ausdrücklich, seine Schlussmarke verhindere einen grünen
+Teil-Lauf. Scheitert `startServer()` jedoch vor `report()`, kehrt nur die
+Check-Funktion mit 1 zurück; `runChecks()` läuft ohne `set -e` weiter,
+`COUNT_FAIL` bleibt unverändert und der Erfolg verlangt keine erwartete Anzahl
+von fünf Checks. Ein später vollständig laufender Rest kann deshalb mit vier
+Checks und „keine Fehler" grün enden.
 
 **Nachbarschaft zu P-01:** Dort wird die Testtiefe in der Übergabe
 überzeichnet. Hier überzeichnet sich das **Werkzeug** — die Übergabe gäbe
