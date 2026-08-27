@@ -143,6 +143,35 @@ Vor dem Lauf bleibt die übliche Sicherheitsprüfung des konkreten Skripts
 verbindlich; die Freigabe erweitert weder den erlaubten Review-Scope noch die
 Berechtigung, Produktcode oder fremde Ressourcen zu verändern.
 
+## Browsertests macht Claude — nicht als Arbeitsteilung, sondern mangels Browser
+
+*(Entscheidung Mike, 2026-08-27, nach Runde 51.)*
+
+**Codex kann keine Browsertests ausführen.** Seine Umgebung hat keinen
+verbundenen Browser; er hat das in Runde 51 selbst so gemeldet („Ein echter
+Desktop-/Mobile-Browsercheck war in dieser Codex-Umgebung nicht möglich"). Das
+ist keine Frage der Gelegenheit, sondern der Ausstattung — es wird sich beim
+nächsten Review nicht anders verhalten.
+
+Daraus folgt eine Rollenregel, die von der übrigen Aufteilung abweicht:
+
+* **Claude führt visuelle Prüfungen aus** — in breiter und schmaler Ansicht,
+  nach `ux-standards`: gemessen, nicht geschätzt (waagrechter Überhang,
+  Höhe der Leisten, Kanten von Kopf/Inhalt/Fuß, Kontrast gegen die
+  **gerenderte** Fläche).
+* **Codex prüft das Ergebnis**, so wie er Code und Tests prüft — er verlangt
+  die Messung, liest die Zahlen und widerspricht ihnen, wenn sie nicht tragen.
+  Er wiederholt sie nicht.
+* **Eine ungemessene Oberfläche wird benannt, nicht verschwiegen.** Wo eine
+  Übergabe ohne visuelle Prüfung herausgeht, steht in der OUTBOX, **was**
+  ungemessen blieb — nicht nur, dass etwas fehlt. „Die Toastbreite in schmaler
+  Ansicht" ist eine Lücke, „visuelle QA offen" ist eine Floskel.
+
+Der Grund, warum das hier steht und nicht nur im Ticket: Ohne die Regel fragt
+Codex bei jeder UI-Übergabe nach einem Check, den er nicht bekommen kann, und
+Claude verweist auf eine Zuständigkeit, die nirgends steht. Beides kostet je
+eine Runde.
+
 ## DRY-Prüfguard
 
 DRY ist eine **eigene Abnahmebedingung** und darf nicht still unter dem
