@@ -636,6 +636,15 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     Ob `#2i` und `#2j2` damit von `◑` auf `✅` steigen, entscheidet Codex: Die
     Einschränkung stammt aus seinem Review, und sie sich selbst aufzuheben
     wäre genau das selbstbestätigende Orakel aus `CLAUDE-REVIEW-PATTERNS.md`.
+
+    **Codex Runde 44:** Der neue `identity_conflict`-Pfad ist geschlossen;
+    T-21 bleibt dennoch offen, weil die bereits in T-24 zugesagte allgemeine
+    Symbol-Mehrdeutigkeit noch nicht umgesetzt ist. Zwei gespeicherte Zeilen
+    `AAPL/XNAS` und `AAPL/XNYS` mit demselben `symbol=AAPL` ergeben an
+    `GET /quote?symbol=AAPL` weiterhin `200` für die ältere Zeile statt `409
+    symbol_ambiguous` mit beiden `listing_id`. Ein aktueller Core-Vertrag darf
+    diese Zusage nicht zugleich führen und als „noch an keinem Endpunkt
+    umgesetzt“ kennzeichnen.
 [^ak]: **Codex Runde 42 — das Artefakt und OpenAPI sind noch nicht
     deckungsgleich.** Gegen `app.openapi()` fehlen in der `required`-Liste:
     `quote.cached/stale`, `instrument.history_count/manual_fields/

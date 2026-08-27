@@ -73,3 +73,19 @@ zu treffen.
    nicht gibt, und der Bestand ist danach nicht mehr selbsterklärend.
 
 Keiner der drei ist offensichtlich richtig. Die Entscheidung gehört Mike.
+
+## Codex-Review Runde 44 · begrifflich neu zu schneiden
+
+Der Fall ist in dieser Form noch keine entscheidbare Vorlage: `AAPL/XNAS` und
+`AAPL/XNYS` sind zwei **Listings** desselben Wertpapiers, nicht zwei Zeilen
+desselben Listings. `listing_id` ist laut Core-Vertrag eine Kennung je Listing;
+`one_active_listing_per_isin` bedeutet nur, dass das Profil genau eines davon
+aktiv führt.
+
+Damit ist „welche `listing_id` überlebt“ keine freie Auswahl. XNAS- und XNYS-ID
+bezeichnen verschiedene Handelsplätze. Neu zu entscheiden sind der Wechsel des
+aktiven Profil-Listings, die Deaktivierung/Entfernung des alten Listings, die
+Behandlung seiner handelsplatzgebundenen Historie und das Generationssignal.
+Ein echter Duplikatfall derselben `(ticker, mic)`-Identität ist davon getrennt
+zu beschreiben. Titel, Verify-Matrix und Auswege werden vor Mikes Entscheidung
+an dieser Grenze ausgerichtet.

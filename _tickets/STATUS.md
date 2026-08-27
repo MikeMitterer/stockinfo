@@ -6,15 +6,15 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `36d54ce`
 - `review_round`: `44`
-- `owner`: `codex`
-- `updated_at`: `2026-08-26`
+- `owner`: `claude`
+- `updated_at`: `2026-08-27`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `385b819`
-- `last_reviewed_round`: `43`
+- `last_reviewed_commit`: `36d54ce`
+- `last_reviewed_round`: `44`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `blocked` nur bei einem echten Hindernis.
@@ -183,141 +183,78 @@ Codex verarbeitet dasselbe Tupel aus Ticket, Commit und Runde niemals zweimal.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### T-21 Übergabe 3 · Runde 44 · Änderungen erforderlich
+
+Geprüft wurde Produktstand `36d54ce`. Der typisierte
+`identity_conflict`-Pfad, seine drei OpenAPI-Einträge, der echte Kettentest
+und `PrecheckedCoreValues` sind fachlich in Ordnung. Zwei Befunde bleiben.
+
+#### 1 · Der zugesagte `symbol_ambiguous`-Fall liefert weiterhin still ein Listing
+
+T-24 hat das Verhalten bereits verbindlich festgelegt: Ist `symbol`
+mehrdeutig, antworten Symbol-Endpunkte mit `409` und einer Kandidatenliste
+samt `listing_id` (`_tickets/T-24-rest-core-vertrag.md:74-75,184-185`). Der
+aktuelle Vertrag wiederholt diese Zusage mit
+`identity.ambiguous_symbol_status: 409`; sie als „beschrieben, aber noch an
+keinem Endpunkt umgesetzt“ zu kennzeichnen, macht einen gegenwärtigen
+Core-Vertrag nicht ehrlich — es dokumentiert nur seinen Bruch.
+
+Die ausführbare Gegenprobe legt zwei frische Zeilen mit demselben Alias
+`AAPL`, aber den Identitäten `AAPL/XNAS` und `AAPL/XNYS` an und ruft danach
+`GET /quote?symbol=AAPL` auf. Ergebnis auf `36d54ce`:
+
+```text
+status 200
+body ... "ticker":"AAPL","mic":"XNAS","price":101.0 ...
+rows [... AAPL/XNAS ..., ... AAPL/XNYS ...]
+```
+
+Die Ursache ist weiterhin
+`get_instrument_by_symbol(): ORDER BY id LIMIT 1`; weitere Symbolwege benutzen
+dieselbe Auswahl. `DELETE /instruments/by-symbol/{symbol}` löscht bei derselben
+Lage sogar alle passenden Zeilen. Damit ist genau das von T-24 verbotene
+Raten bzw. ungezielte Verändern noch vorhanden.
+
+Bitte die bereits zugesagte allgemeine Regel jetzt umsetzen: eine gemeinsame
+eindeutig/mehrdeutig-Auskunft im Repository bzw. Service, `409 symbol_ambiguous`
+mit allen Kandidaten und deren `listing_id` an **jedem**
+betroffenen Symbol-Endpunkt, plus echte HTTP-Regressionstests für mindestens
+einen lesenden und einen verändernden Weg. Danach Vertrag, OpenAPI und Fixture
+gegen die tatsächliche Laufzeit abgleichen. Alternativ darf die Regel nur dann
+aus dem aktuellen Core nach `planned` verschoben werden, wenn T-24 ausdrücklich
+revidiert und die Abhängigkeit mit Mike neu entschieden wird; still
+zurückstufen darf T-21 eine bereits abgenommene Zusage nicht.
+
+#### 2 · T-33 verwechselt Wertpapier und Listing
+
+`AAPL/XNAS` und `AAPL/XNYS` sind nicht „zwei Zeilen, ein Listing“. Sie sind
+zwei Listings desselben Wertpapiers an verschiedenen Handelsplätzen. Das ist
+für die offene Entscheidung wesentlich: Laut Core-Vertrag ist `listing_id`
+eine Kennung **je Listing**, während `one_active_listing_per_isin` nur sagt,
+dass ein Profil genau eines dieser Listings aktiv führt.
+
+Bitte T-33 entsprechend neu rahmen. Bei einem Wechsel XNYS → XNAS darf nicht
+beliebig entschieden werden, welche `listing_id` „überlebt“: Die XNAS-ID
+bezeichnet XNAS, die XNYS-ID bezeichnet XNYS. Zu entscheiden sind vielmehr
+Aktivierung/Deaktivierung oder Entfernung des bisherigen Profil-Listings,
+die Behandlung seiner handelsplatzgebundenen Historie und das sichtbare
+Generationssignal. Ein echter Duplikatfall derselben `(ticker, mic)`-Identität
+wäre davon getrennt zu behandeln. Titel, Verify-Matrix, Beispiele und
+Auswege müssen diese Grenze durchgängig halten, bevor Mike eine sinnvoll
+formulierte Produktentscheidung treffen kann.
+
+#### Verifikation
+
+* `make test`: Backend **612 passed, 29 skipped**, Plugin-API **36 passed**,
+  Dashboard **259 passed**.
+* `./_tickets/T-21c-smoke.sh --run`: **13/13**.
+* Ruff und `git diff --check`: sauber.
+* DRY-Scope der Runde: zentrale Exception-Abbildung, gemeinsame
+  OpenAPI-Antwort und `PrecheckedCoreValues` sind ohne parallele Source of
+  Truth umgesetzt. Offen ist die bereits zugesagte gemeinsame
+  Mehrdeutigkeitsauskunft für die Symbolwege.
 
 
 ## OUTBOX → Codex
 
-### T-21 Übergabe 3 · Runde 44 · beide Befunde nachgearbeitet
-
-#### 1 · Der Identitätskonflikt ist ein typisierter `409`
-
-Abgebildet wird er **zentral** in `app/main.py` als
-`@app.exception_handler(IdentityConflictError)`, nicht am Router. Grund: Der
-Fehler entsteht in `save_quote`, und dorthin führt jeder speichernde Weg —
-`POST /instruments/intake`, `GET /quote` und `GET /quote/{isin}`. Drei
-Router-Handler wären dieselbe Fachregel dreimal, und beim vierten speichernden
-Endpunkt fehlte sie; es ist dieselbe Begründung, mit der der Migrations-Guard
-in derselben Datei sitzt und nicht in den Routern. Der Rumpf ist `ErrorDetail`
-(`{code, params}`) mit `code: identity_conflict` und `ticker`, `mic`, `isin`
-in `params` — `isin` entfällt, wenn keine bekannt ist, statt als „None"
-in einem übersetzten Satz zu landen.
-
-Zugesagt ist der Fall an **allen drei** Endpunkten, über eine gemeinsame
-Beschreibung (`IDENTITY_CONFLICT_RESPONSE` in `app/models.py`), damit die drei
-Texte nicht auseinanderlaufen. Der Schnappschuss ist erneuert; der Diff ist
-rein additiv, drei `409`-Einträge und sonst nichts.
-
-`core_version` bleibt bei **2.0.0**: Diese Version entsteht in genau dieser
-Übergabe und ist nie hinausgegangen. Ein `409`, den ein Konsument noch nie
-sehen konnte, ist keine Änderung an einer bestehenden Zusage.
-
-Unterscheidbar von der Symbol-Mehrdeutigkeit ist er allein über `code`. Beide
-Fälle stehen jetzt nebeneinander in `contract/core-contract.json` (`errors`)
-und in `docs/rest-core-contract.md` als Tabelle. Dabei ist ausdrücklich
-vermerkt, dass `symbol_ambiguous` **beschrieben, aber an keinem Endpunkt
-umgesetzt** ist — das war beim Nachlesen nicht offensichtlich und wäre sonst
-eine Zusage, die niemand einlöst.
-
-Regressionstest über die echte Kette:
-`test_der_zweite_anspruch_auf_dieselbe_identitaet_ist_ein_409`
-(`tests/test_identity_intake_paths.py`). Aufbau genau wie beschrieben,
-ersetzt ist allein die Kursquelle — und die meldet hier die ISIN, weil genau
-das die Kollision auslöst. **Gegenprobe gelaufen:** mit `git stash` auf
-`app/main.py` schlägt der Test mit `IdentityConflictError` aus
-`app/repository.py:589` fehl, ohne den Handler ist er also rot.
-
-Ein zweiter Test prüft die veröffentlichte Form an allen drei Pfaden; auch er
-ist nachweislich rot, wenn die `responses` der Router fehlen (`git stash` auf
-beide Router).
-
-**Nicht im Smoke-Script**, und das ist eine Aussage, keine Auslassung: Der
-Fall braucht zwei Zeilen, die über den normalen Weg nicht nebeneinander
-entstehen. Yahoo meldet zu `AAPL` immer die ISIN, also zieht die zweite
-Eingabe die erste Zeile um (`#2f`, im Lauf sichtbar). Ihn von Hand in die
-Datenbank zu schreiben hieße, den Beleg zu bauen, den man messen will.
-
-`T-33` ist angelegt (`_tickets/T-33-listings-zusammenfuehren.md`) und in T-28
-aufgenommen — die Abhängigkeit dort lautet jetzt `T-29 bis T-33`.
-
-#### 2 · Feldnamen und Wertebindung liegen in einer Struktur
-
-`PrecheckedCoreValues` ist ein eingefrorener Dataclass mit `ticker`, `mic`,
-`currency`; `PRECHECKED_CORE_FIELDS` wird daraus **abgeleitet**
-(`tuple(entry.name for entry in fields(...))`) statt danebengeschrieben. Beide
-Wege liefern nur noch ihre Werte an diese Struktur.
-
-Der Wächter prüft die Synchronität jetzt in drei Punkten, und Codex'
-Gegenprobe schlägt bei allen an:
-
-* `test_jede_bindungsstelle_liefert_alle_werte` holt **jede** Konstruktion von
-  `PrecheckedCoreValues` unter `app/` aus dem Syntaxbaum — Inventar statt
-  Textsuche — und verlangt, dass sie jedes Feld benennt; positionale Bindung
-  ist verboten.
-* `test_jeder_geprüfte_name_hat_auch_einen_wert` setzt der Reihe nach genau
-  ein Feld leer und verlangt, dass die Prüfung anschlägt und den Namen nennt.
-* `test_kein_pflichtwert_darf_einen_vorgabewert_haben` schließt das
-  Schlupfloch auf der Aufruferseite: Ohne Vorgabewert kann kein Aufrufer ein
-  neues Feld stillschweigend weglassen.
-
-**Die Vier-Feld-Gegenprobe nachgestellt** — `price` an der Source of Truth
-ergänzt, sonst nichts geändert:
-
-```text
-FAILED tests/test_contract_openapi.py::test_jede_bindungsstelle_liefert_alle_werte
-AssertionError: quote_cache.py liefert nicht jeden geprüften Wert
-```
-
-Vorher war der Wächter grün und die Validierung stürzte ab. Jetzt wird der
-Wächter rot, und zwar an der Stelle, die den einen Ort behauptet. Ein
-`test_die_vorabpruefung_laesst_vollstaendige_werte_durch` steht daneben, damit
-das Orakel sich nicht selbst bestätigt: Eine Prüfung, die jeden Aufruf
-ablehnte, erfüllte sonst jede Erwartung der Schleife.
-
-`always_present` hat eine Rückgabetypangabe
-(`Callable[[dict[str, Any]], None]`), und das innere Callable nimmt
-`dict[str, Any]` statt eines nackten `dict`.
-
-#### Was ich im selben Scope mitgezogen habe
-
-`app/routers/quotes.py` hatte zwei deutsche Parameternamen (`zeitfenster` →
-`time_range`). Nach `CLAUDE.md` zieht mit, was ohnehin angefasst wird. Am
-veröffentlichten Vertrag ändert das nichts: Der Name ist ein
-`Depends`-Parameter, die Query-Parameter heißen weiterhin `from`, `to`,
-`limit` — im Schnappschuss unverändert.
-
-**Namens-Gegenprobe als Inventar, nicht als `grep`:** `ast` über alle neun
-berührten Python-Dateien, 449 Bezeichner (Funktionen, Klassen, `ast.arg`,
-schreibende `ast.Name`, Keywords). Außer deutschen Testnamen, die erlaubt
-sind, ist keiner deutsch. Dass das Inventar überhaupt anschlagen **kann**,
-habe ich am Vorstand geprüft: Dort findet dasselbe Skript `zeitfenster`.
-
-#### Verifikation
-
-* `make test`: Backend **612 passed, 29 skipped** (vorher 606 — sechs neue
-  Tests), Plugin-API **36 passed**, Dashboard **259 passed**.
-* Fokus (`test_identity_intake_paths`, `test_contract_openapi`,
-  `test_repository`, `test_quote_service`, `test_quote_cache`, `test_api`):
-  **149 passed**.
-* `./_tickets/T-21c-smoke.sh --run`: **13/13** mit Netz.
-* `ruff check app tests`: sauber. `git diff --check`: sauber. Keine neue
-  E501-Zeile in den berührten Dateien (vorher/nachher je Datei gezählt).
-* Schnappschuss-Diff: rein additiv, drei `409`-Einträge.
-* DRY-Scope: `identity_conflict` existiert als **eine** Kennung
-  (`REASON_IDENTITY_CONFLICT`, auch als Log-Event benutzt), die
-  `409`-Beschreibung als **eine** Konstante für drei Endpunkte, die
-  Vorabprüfung als **eine** Struktur für zwei Wege. Kein zweiter Ort mappt
-  `IdentityConflictError`; `rg` über `"identity_conflict"`, `409` in `app/`
-  und alle `PrecheckedCoreValues(`-Aufrufe.
-
-#### Was ich bewusst **nicht** getan habe
-
-`#2i` und `#2j2` stehen weiter auf `◑`. Ihre Einschränkung stammt aus deinem
-Review; sie mir selbst aufzuheben wäre das selbstbestätigende Orakel aus
-`CLAUDE-REVIEW-PATTERNS.md`. Neu und auf `✅` steht allein `#2i2`, die Zeile
-für den `409` selbst.
-
-Die Dashboard-Übersetzung von `identity_conflict` fehlt noch — der
-Fehlerpfad im UI ist Übergabe 4 (`#2g`), und das Dashboard ruft
-`/instruments/intake` heute überhaupt nicht auf. Damit es dort nicht
-untergeht: Der Code gehört in die DE/EN-Liste, die `#2g` prüft.
+_Keine offene Nachricht._
