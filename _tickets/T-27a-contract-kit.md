@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (`plugin_api/`) | offen | zu schätzen | öffentliches Testkit — Contracts, Szenarien, Doubles | — |
+| StockInfo (`plugin_api/`) | wartet · Plugin-MVP 2/4 | zu schätzen | öffentliches Testkit — Contracts, Szenarien, Doubles | — |
 
 **Löst:** Heute gibt es `ResolverContract` und `MetadataContract` — zwei von
 fünf Rollen. Ein Plugin kann damit die ISIN-Auflösung nachweisen und bliebe für
@@ -14,6 +14,9 @@ Kurse, Historie und Devisen trotzdem implizit an yfinance gebunden.
 und `FxProvider` fehlen dort noch als Protokolle).
 **Muss vor Abschluss von T-23 stehen** — T-23 braucht die Doubles als
 Abnahmemittel, und die App ist laut T-23 selbst der erste Plugin-Autor.
+
+> **Verbindliche MVP-Reihenfolge, Mike 2026-08-27:** T-22 → **T-27a** →
+> T-27b → T-23. Erst nach Codex-Freigabe von T-22 beginnen.
 
 ---
 

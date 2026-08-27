@@ -7,10 +7,15 @@
 **Löst:** Die Frage „ist das Ganze benutzbar geworden?" — einmal, am Ende, statt
 Ticket für Ticket. Die `Human`-Spalte der Einzeltickets bleibt bis dahin leer.
 
-**Hängt an:** allen Tickets des Plugin-Subprojekts. Derzeit sind das T-17 bis
-T-27b sowie T-29 bis T-33. T-28 ist bewusst das **letzte Abnahme-Gate**,
-auch wenn seine Nummer kleiner ist: Jedes später entstehende Ticket, das zum
-Plugin-Subprojekt gehört, erweitert diese Abhängigkeit vor der Abnahme.
+**Hängt zunächst an:** dem nachweisbaren Plugin-MVP aus den bereits
+freigegebenen Sockeln T-17, T-18, T-20, T-24 und T-21 bis Übergabe 3 sowie der
+verbindlichen Kette **T-22 → T-27a → T-27b → T-23**.
+
+T-28 bleibt das **letzte menschliche Abnahme-Gate**, aber seine Abhängigkeiten
+wachsen nicht mehr automatisch. Nach T-23 werden T-19, die eingefrorenen
+T-21-Übergaben 4A/4B, T-25, T-26 und T-29 bis T-34 einzeln eingeordnet:
+**vor T-28 erforderlich** oder **ausdrückliches Follow-up**. Erst diese
+dokumentierte Entscheidung bestimmt den endgültigen Abnahmeumfang.
 
 **Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 
@@ -54,9 +59,14 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 12 | Netz wieder an, dasselbe Papier | kommt normal herein; nichts ist in der Zwischenzeit gelöscht oder überschrieben worden | ➖ [^t20] | |
 | 13 | Nach dem Update einmal die Instrumentenliste durchsehen | alle Papiere sind noch da, mit ihrer Historie — die Umstellung auf die neue Identität hat nichts gekostet | ➖ [^t21] | |
 | 14 | Umzugsbericht nach dem Update öffnen | jede nicht eindeutig zuordenbare Altzeile ist mit altem Symbol und Grund genannt; keine kaputte Zeile lebt im aktiven Bestand weiter | ➖ [^t21] | |
+| 15 | Datei-Plugin nach `data/plugins/` legen und neu starten | die Quelle erscheint in `/sources` und kann über den normalen REST-Weg ein Papier liefern | ➖ [^plugin_mvp] | |
+| 16 | dasselbe Plugin als installiertes Entry-Point-Paket verwenden | es erscheint und arbeitet gleichwertig, ohne Datei im Daten-Volume | ➖ [^plugin_mvp] | |
+| 17 | ein Papier über das Datei-Plugin aufnehmen | die Antwort durchläuft sichtbar Registry → Core → REST; kein separater Plugin-Endpunkt umgeht den Core | ➖ [^plugin_mvp] | |
+| 18 | `/sources` ansehen | Reihenfolge und Konfigurationszustand stimmen; yfinance und justETF erscheinen als normale Registry-Quellen | ➖ [^plugin_mvp] | |
+| 19 | Quellenreihenfolge in `sources.yaml` ändern und neu starten | `/sources` und der tatsächlich verwendete Provider folgen der neuen Reihenfolge | ➖ [^plugin_mvp] | |
 
-_(wächst mit jedem abgeschlossenen Ticket — je Ticket ein bis drei Zeilen,
-nicht mehr)_
+_(wächst nur nach einer ausdrücklichen Scope-Entscheidung — je aufgenommenem
+Ticket ein bis drei Zeilen, nicht mehr)_
 
 [^t17]: T-17 — Fehler im Antwortpfad. Maschineller Nachweis:
     `./_tickets/T-17-smoke.sh --run` (acht Checks) und
@@ -81,6 +91,10 @@ nicht mehr)_
     Endpunkttests. Zeile 14 prüft die bewusste Grenze: Eine nicht zuordenbare
     Altzeile bleibt im Bericht nachvollziehbar, aber nicht als ungültiger
     Instrumentdatensatz aktiv.
+[^plugin_mvp]: T-22, T-27a, T-27b und T-23 — Konfiguration, vollständiges
+    Contract-Kit, strikt offline prüfbarer HTTP-Referenzweg und Registry mit
+    Datei- sowie Entry-Point-Lader. Der Host-Harness von T-23 muss denselben
+    Weg in-process vollständig durchlaufen.
 
 ---
 
@@ -100,17 +114,20 @@ fertigen Stand.
 
 ### Wann dieses Ticket dran ist
 
-T-28 ist das letzte Ticket des Plugin-Subprojekts. Codex fordert Mike erst dann
-zur Abnahme auf, wenn
+T-28 wird in zwei Schritten erreicht:
 
-* alle zum Subprojekt gehörenden Tickets — derzeit T-17 bis T-27b sowie T-29
-  bis T-33 — abgeschlossen und von Codex freigegeben sind,
-* später entdeckte Plugin-Folgetickets ebenfalls abgeschlossen oder
-  ausdrücklich aus dem Subprojekt herausentschieden wurden und
-* der gemeinsame Stand auf `master` liegt.
+1. Der Plugin-MVP T-22 → T-27a → T-27b → T-23 ist implementiert, von Codex
+   freigegeben und beweist einen realen Weg Registry → Core → REST.
+2. Danach werden alle offenen Plugin-Tickets inventarisiert. Für jedes wird
+   festgehalten, ob es vor der Abnahme zwingend ist oder als Follow-up nach
+   T-28 bleibt. Diese Einordnung entscheidet Mike auf Basis von Codex'
+   Empfehlung; weder Ticketnummer noch bloße Zugehörigkeit zum Subprojekt
+   reichen als automatischer Blocker.
 
-Vorher wächst hier nur die grobe Prüfliste. Die Ticketnummer bestimmt keine
-Reihenfolge; die vollständige Abhängigkeitsmenge bestimmt den Zeitpunkt.
+Codex fordert Mike erst zur Abnahme auf, wenn diese Einordnung vollständig ist,
+alle als zwingend eingestuften Tickets freigegeben sind und der gemeinsame
+Stand auf `master` liegt. Neue Tickets erweitern T-28 nur durch eine ebenso
+ausdrückliche Entscheidung.
 
 ---
 

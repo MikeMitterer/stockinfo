@@ -460,12 +460,17 @@ Vollständigkeit der Vorarbeiten.
 | T-20 | ohne die vier Antwortarten kann eine Kette nicht weiterschalten |
 | T-21 | Identität stabilisieren — **additiv**, ohne den REST-Vertrag zu brechen |
 | T-22 | Ketten und Schlüssel gehören in Konfiguration, nicht in die Composition-Root |
-| T-23 | Schlussstein — hängt an T-20, T-21, T-22 |
+| T-27a | Contract-Kit für alle Rollen — ausführbares Abnahmewerkzeug für den Host |
+| T-27b | HTTP offline prüfbar (Fake→Real) — baut auf T-27a auf |
+| T-23 | Schlussstein — Registry, zwei Ladewege und Registry → Core → REST |
 | T-19 | **nachrangig** — beschädigt nichts von selbst, siehe unten |
 | T-26 | offene Details durchreichen — vor dem ersten Plugin mit neuen Feldern |
-| T-27a | Contract-Kit für alle Rollen — **vor Abschluss von T-23** |
-| T-27b | HTTP offline prüfbar (Fake→Real) — **vor Abschluss von T-23** |
 | T-25 | Profilwechsel — braucht T-22 und T-24, unabhängig von T-19 |
+
+**Portfolio-Rebaseline Mike, 2026-08-27:** Nach dem freigegebenen T-21-Stand
+bis Übergabe 3 ist die nächste verbindliche Kette **T-22 → T-27a → T-27b →
+T-23**. Noch offene T-21-Folgeteile und die nachrangigen Tickets werden erst
+nach diesem ersten ausführbaren Plugin-MVP wieder eingeordnet.
 
 **Warum T-19 nach hinten rückt.** Mein ursprüngliches Argument war, dass ein
 Quellenwechsel ohne verlustfreie Korrektur nicht ausprobierbar ist. Das trägt

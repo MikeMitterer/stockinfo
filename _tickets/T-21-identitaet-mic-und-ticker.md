@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend + Dashboard) | Teil 1 abgenommen | 1 Tag | Schema-Migration, Symbolerzeugung | — |
+| StockInfo (Backend + Dashboard) | eingefroren nach Übergabe 3 | 1 Tag | Schema-Migration, Symbolerzeugung | — |
 
 **Löst:** Der Identifikator eines Papiers ist heute das **Yahoo-Symbol**
 (`EUNL.DE`) — in der Datenbank, in der API, im Dashboard. Damit ist yfinance
@@ -20,6 +20,14 @@ adressiert wird. **Blockiert:** T-23 (ein Plugin, das Yahoo-Symbole erwarten
 muss, ist kein Plugin).
 
 **Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+
+> **Portfolio-Rebaseline Mike, 2026-08-27.** T-21 wird nach der bereits
+> freigegebenen Übergabe 3 eingefroren: Produktstand `2dd0dc3`, Freigabe
+> `d3fecb8`, anschließender Statusstand `ce55202`. Die 4A-Änderungen
+> `7a14d79`/`48fff52` sind **nicht** Teil dieses freigegebenen Sockels; Runde
+> 52 wurde bewusst nicht mehr geprüft. 4A und 4B werden nach dem ersten
+> funktionsfähigen Plugin-MVP wieder aufgenommen. Bis dahin blockieren sie
+> T-22, T-27a, T-27b und T-23 nicht.
 
 > **Drei Übergaben statt einer** *(Claude, 2026-08-22)* — ein Tag Arbeit ist für
 > einen Diff-Review zu viel am Stück. Die Schnitte liegen dort, wo das Ticket

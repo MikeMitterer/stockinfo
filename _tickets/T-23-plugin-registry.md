@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend) | offen | 1 Tag | Registry, zwei Ladewege, Isolation | — |
+| StockInfo (Backend) | wartet · Plugin-MVP 4/4 | 1 Tag | Registry, zwei Ladewege, Isolation | — |
 
 **Löst:** Der Schlussstein. Die App soll weltweit funktionieren, lässt sich hier
 aber nur für wenige Märkte prüfen — allein die Auflösung eines kanadischen
@@ -16,6 +16,12 @@ Plugin müsste Yahoo-Symbole verstehen, Yahoos Gattungsnamen kennen und mit `Non
 drei Zustände ausdrücken.
 
 **Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+
+> **Verbindliche MVP-Reihenfolge, Mike 2026-08-27:** T-22 → T-27a →
+> T-27b → **T-23**. T-23 ist erst fertig, wenn mindestens ein Datei-Plugin
+> und ein Entry-Point-Plugin wirklich über **Registry → Core → REST** laufen,
+> in `GET /sources` erscheinen und die eingebauten Quellen denselben
+> Registry-Weg verwenden.
 
 ---
 

@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (`plugin_api/`) | offen | zu schätzen | Referenztransport, Record/Replay, Scrubbing, Freshness | — |
+| StockInfo (`plugin_api/`) | wartet · Plugin-MVP 3/4 | zu schätzen | Referenztransport, Record/Replay, Scrubbing, Freshness | — |
 
 **Löst:** Das Beispiel-Plugin liest eine lokale CSV — bequem gewählt. Ein
 EODHD- oder Twelve-Data-Plugin machte bei jedem Contract-Lauf echte Requests:
@@ -13,6 +13,9 @@ Fall, um den es eigentlich geht, noch nicht.
 
 **Hängt an:** T-27a (das Szenarioformat kommt von dort).
 **Muss vor Abschluss von T-23 stehen.**
+
+> **Verbindliche MVP-Reihenfolge, Mike 2026-08-27:** T-22 → T-27a →
+> **T-27b** → T-23. Erst nach Codex-Freigabe von T-27a beginnen.
 
 ---
 

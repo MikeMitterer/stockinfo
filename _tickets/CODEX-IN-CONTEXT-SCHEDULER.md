@@ -23,6 +23,8 @@ des bestehenden Codex-Review-Chats. Das fachliche Review-Verfahren steht in
   noch eine Folge sofortiger Nachhol-Ticks.
 - Projekt: aktueller lokaler Checkout von StockInfo; kein anderer Worktree.
 - Pro Tick: ausschließlich den maschinenlesbaren Zustand in `STATUS.md` lesen.
+  Neben dem Review-Tupel sind `workstream`, `priority_chain` und
+  `priority_ticket` Teil dieses Zustands.
 - **Jeder** Tick sendet unabhängig von der Phase einen knappen internen
   `scheduler_heartbeat` mit Zeitstempel, Phase und Zustands-Tupel über
   `notify(...)` und ruft danach `yield_control()` auf. Erst dieses Signal
@@ -30,10 +32,19 @@ des bestehenden Codex-Review-Chats. Das fachliche Review-Verfahren steht in
   keine Nachricht an Mike und keine Dateiänderung.
 - Ist `phase` nicht `ready_for_codex`, endet die fachliche Verarbeitung nach
   dem Heartbeat still.
-- Ist `phase` `ready_for_codex` und unterscheidet sich das Tupel aus `ticket`,
-  `handoff_commit` und `review_round` vom letzten Review, wird derselbe Chat
-  zusätzlich mit einem eindeutigen `review_handoff` per `notify(...)` geweckt
-  und führt `CODEX-REVIEW-AUTOMATION.md` aus.
+- Ist `phase` `ready_for_codex`, müssen vor einem Review **alle** folgenden
+  Bedingungen gelten: `owner` ist `codex`, `handoff_commit` ist gesetzt,
+  `ticket` entspricht exakt `priority_ticket`, und `priority_ticket` kommt in
+  `priority_chain` vor. Erst wenn sich zusätzlich das Tupel aus `ticket`,
+  `handoff_commit` und `review_round` vom letzten Review unterscheidet, wird
+  derselbe Chat mit einem eindeutigen `review_handoff` per `notify(...)`
+  geweckt und führt `CODEX-REVIEW-AUTOMATION.md` aus.
+- Verletzt ein `ready_for_codex`-Zustand diesen Prioritätsriegel, findet
+  **kein Review** statt. Die Zelle sendet einmalig `portfolio_mismatch` mit
+  Ticket, erwartetem `priority_ticket` und Kette. Derselbe unveränderte
+  Fehlzustand wird nicht alle fünf Minuten erneut gemeldet. So kann ein
+  technisch lebender Scheduler nicht mehr dauerhaft das falsche Arbeitspaket
+  optimieren.
 - Die Deduplizierung darf nicht nur im Arbeitsspeicher der Zelle leben. Beim
   Start und nach jedem Wiederanlauf werden `last_reviewed_ticket`,
   `last_reviewed_commit` und `last_reviewed_round` aus `STATUS.md` als
@@ -57,6 +68,11 @@ des bestehenden Codex-Review-Chats. Das fachliche Review-Verfahren steht in
 - Ein Heartbeat oder Wiederanlauf darf niemals selbst ein Review auslösen.
   Ausschlaggebend bleibt ausschließlich ein neues, valides
   `ready_for_codex`-Tupel.
+- Ein neues Ticket darf nicht aus der Nummernfolge oder aus einer während des
+  Reviews entdeckten Nebenarbeit abgeleitet werden. Maßgeblich ist allein
+  `priority_ticket`. Nach dem letzten Element einer Kette bleibt der Scheduler
+  still, bis die Portfolio-Einordnung in `STATUS.md` ausdrücklich geändert
+  wurde.
 - Bevor eine Ersatz-Zelle gestartet wird, wird eine noch bekannte alte Zelle
   beendet. Es dürfen nicht zwei Scheduler gleichzeitig dasselbe Tupel
   verarbeiten.

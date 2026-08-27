@@ -18,7 +18,7 @@ sitzungsfeste Lernschicht sowie die Datenbasis für den späteren Skill.
 `STATUS.md` enthält unter **Maschinenlesbarer Zustand** genau diese Felder:
 
 - `phase`: `claude_working`, `ready_for_codex`, `codex_reviewing`,
-  `changes_requested`, `approved` oder `blocked`
+  `changes_requested`, `approved`, `portfolio_review` oder `blocked`
 - `ticket`: Ticketdatei im Board-Root
 - `handoff_commit`: exakt zu prüfender Produkt-Commit
 - `review_round`: bei jeder neuen Übergabe hochzählen
@@ -26,6 +26,9 @@ sitzungsfeste Lernschicht sowie die Datenbasis für den späteren Skill.
 - `updated_at`: lokales Datum im Format `YYYY-MM-DD`
 - `last_reviewed_ticket`, `last_reviewed_commit`, `last_reviewed_round`:
   zuletzt abgeschlossenes Review-Tupel zur dauerhaften Duplikatsperre
+- `workstream`: aktuell priorisierter Arbeitsstrom
+- `priority_chain`: ausdrücklich freigegebene Ticketreihenfolge
+- `priority_ticket`: genau das Ticket, das jetzt bearbeitet werden darf
 
 Der eindeutige Schlüssel eines Reviews ist
 `(ticket, handoff_commit, review_round)`. Derselbe Schlüssel wird nie zweimal
@@ -43,6 +46,31 @@ Human-Spalte und verschiebt kein Ticket nach `solved/`. Das Ergebnis kommt in
 die Phase `approved` oder `changes_requested`, **beide mit `owner: claude`**.
 Bei einem echten, nicht sicher lösbaren Hindernis gilt `blocked` mit
 `owner: mike`.
+
+## Portfolio-Riegel — das richtige Ergebnis vor lokaler Perfektion
+
+*(Ergänzt 2026-08-27 nach 52 T-21-Runden ohne lauffähigen Plugin-Host.)*
+
+Ein korrektes Review-Tupel genügt nicht, wenn das falsche Ticket bearbeitet
+wird. `priority_chain` ist deshalb eine Produktentscheidung, keine
+unverbindliche Empfehlung:
+
+- `ticket` muss bei Arbeit und Übergabe exakt `priority_ticket` entsprechen.
+- Ein Review-Finding erzeugt keine neue Priorität. Folgearbeiten kommen ins
+  Board und werden erst durch eine ausdrückliche Portfolio-Entscheidung in die
+  Kette aufgenommen.
+- Nach einer Freigabe wird nur auf das **nächste Element derselben Kette**
+  weitergeschaltet. Es gibt kein automatisches „nächstes Teilstück“ und keine
+  Sortierung nach Ticketnummer.
+- Nach dem letzten Element wechselt der Zustand auf `portfolio_review` mit
+  `owner: mike`. Erst die Einordnung der übrigen Tickets in Gate oder Follow-up
+  setzt eine neue Kette.
+- Der Scheduler lehnt ein `ready_for_codex` außerhalb der Priorität mit
+  `portfolio_mismatch` ab. Codex reviewt diesen Handoff nicht.
+
+Aktuell lautet die von Mike bestätigte MVP-Kette **T-22 → T-27a → T-27b →
+T-23**. Ihr Ziel ist nicht mehr Vorarbeit, sondern ein belegter Lauf
+**Registry → Core → REST** über beide Ladewege.
 
 **Warum eine Freigabe nicht bei Mike landet** *(Entscheidung Mike,
 2026-08-22)*: Als dieser Vertrag entstand, hieß `approved` „Codex ist durch,
@@ -227,12 +255,12 @@ Ausstieg wird der Loop gelöscht; dieser Abschnitt hält ihn wiederherstellbar.
 ```text
 /loop 5m Du bist Claude, der Implementierer im StockInfo-Board. Beachte CLAUDE.md und die Skills task-verification-workflow, code-standards, git-conventions.
 
-1. Lies _tickets/STATUS.md, _tickets/CODEX-REVIEW-AUTOMATION.md und _tickets/CLAUDE-REVIEW-PATTERNS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis.
+1. Lies _tickets/STATUS.md, _tickets/CODEX-REVIEW-AUTOMATION.md und _tickets/CLAUDE-REVIEW-PATTERNS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis. Pruefe vor jeder Arbeit: ticket muss exakt priority_ticket entsprechen und in priority_chain stehen. Bei Abweichung nichts implementieren, portfolio_mismatch melden und Schluss.
 2. Ist `owner` nicht `claude`: veraendere keine Datei, antworte in einer Zeile mit Phase und Owner, Schluss.
 3. Bei `phase: changes_requested`: Arbeite die Findings aus INBOX -> Claude der Reihe nach ab, schwerste zuerst. Jedes Finding einzeln verifizieren statt der Zusammenfassung glauben; behauptete Vollstaendigkeit mit rg belegen. Bei wiederholter Entwurfsnacharbeit gilt die Konvergenzpruefung dieses Dokuments: ungefaehr drei erfolglose Runden sind ein Richtwert, keine harte Grenze. Ist eine weitere punktuelle Runde konkret und voraussichtlich abschliessend, begruende das mit dem vollstaendigen Restumfang in der OUTBOX. Verlangt das Review Rebaseline oder Scope-Verkleinerung, korrigiere nicht weiter lokal, sondern konsolidiere beziehungsweise schneide neu. Vor dem ersten Edit auf einem Feature-Branch `t-NN-<slug>` sein. Danach relevante Pytests, das Ticket-Smoke-Script `./_tickets/T-*.sh --run` und `make test` laufen lassen und die Ergebnisse mit Zahlen nennen. Dann genau EIN Uebergabe-Commit, INBOX leeren, Ergebnis nach OUTBOX -> Codex, `review_round` +1, `phase: ready_for_codex`, `owner: codex`, `updated_at` auf heute. Danach keinen Produktcode mehr anfassen.
-4. Bei `phase: approved`: Ticket NICHT nach solved/ verschieben, das macht Mike. Naechsten Teil des Tickets beginnen, eigener Branch vor dem ersten Edit, `phase: claude_working`.
+4. Bei `phase: approved`: Ticket NICHT nach solved/ verschieben, das macht Mike. Nur zum naechsten Element aus priority_chain wechseln, priority_ticket und ticket gemeinsam setzen, review_round fuer das neue Ticket auf 1 setzen, eigener Branch vor dem ersten Edit, phase: claude_working. War das freigegebene Ticket das letzte Element, nichts Neues beginnen: phase: portfolio_review, owner: mike; Mike braucht die Gate-vs-Follow-up-Einordnung.
 5. Bei `phase: claude_working`: die begonnene Arbeit fortsetzen, sonst wie Punkt 3 uebergeben.
-6. Bei `phase: blocked` oder wenn eine Entscheidung von Mike noetig ist: nichts weiterschreiben, in einer Zeile melden, `owner: mike` lassen und den Loop stoppen.
+6. Bei `phase: blocked`, `phase: portfolio_review` oder wenn eine Entscheidung von Mike noetig ist: nichts weiterschreiben, in einer Zeile melden, `owner: mike` lassen und den Loop stoppen.
 7. Melde nur Uebergabe, Blocker oder Entscheidungsbedarf. Leerdurchlaeufe bleiben einzeilig.
 ```
 

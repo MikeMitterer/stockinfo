@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend) | offen | 4 h | Konfigurationsdatei, `is_configured()`, Protokolle | — |
+| StockInfo (Backend) | aktiv · Plugin-MVP 1/4 | 4 h | Konfigurationsdatei, `is_configured()`, Protokolle | — |
 
 **Löst:** Welche Quelle wann greift, steht heute als `if`-Kaskade in der
 Composition-Root (`app/container.py:24-34`), und jeder API-Key ist ein eigenes
@@ -12,6 +12,11 @@ Feld in `Settings`. Mit zwei Quellen tragbar, mit vier nicht.
 nicht sinnvoll steuerbar). **Blockiert:** T-23.
 
 **Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+
+> **Verbindliche MVP-Reihenfolge, Mike 2026-08-27:** **T-22 → T-27a →
+> T-27b → T-23.** Dieses Ticket baut auf dem freigegebenen T-21-Stand bis
+> Übergabe 3 auf; die eingefrorenen T-21-Übergaben 4A/4B sind keine
+> Voraussetzung.
 
 ---
 
