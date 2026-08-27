@@ -19,6 +19,7 @@ duplizieren.
 - [P-05 · Ein abgebrochener Prüflauf meldet sich als bestanden](#p-05--ein-abgebrochener-prüflauf-meldet-sich-als-bestanden)
 - [P-06 · Weiterarbeiten, während eine Übergabe offen ist](#p-06--weiterarbeiten-während-eine-übergabe-offen-ist)
 - [P-07 · Eine neue Zwischenlage wird gebaut statt benannt](#p-07--eine-neue-zwischenlage-wird-gebaut-statt-benannt)
+- [P-08 · Der Test erzeugt den entscheidenden Unterschied nicht](#p-08--der-test-erzeugt-den-entscheidenden-unterschied-nicht)
 - [Leitplanken für das spätere Skill-Proposal](#leitplanken-für-das-spätere-skill-proposal)
 
 ## Leitplanken für das spätere Skill-Proposal
@@ -784,5 +785,35 @@ Wiederholungsweg den `claim` vollständig). Das ist die Verwandtschaft zu
 [P-02](#p-02--punktuelle-korrektur-wird-als-vollständige-regelumsetzung-gemeldet):
 Dort steht, dass die Meldung zu vollständig war; hier steht, woran es
 technisch lag.
+
+[↑ Übersicht](#übersicht)
+
+## P-08 · Der Test erzeugt den entscheidenden Unterschied nicht
+
+**Erkennungsregel:** Der Test soll zwei Implementierungen oder Zustände
+unterscheiden, baut aber Eingaben auf, bei denen beide dieselbe Antwort geben.
+Typische Formen sind eine Einerliste für eine Sortierregel, ein Aufruf unterhalb
+der zu prüfenden Verdrahtung oder nur ein Zustand bei einem Cache-/Reload-Fehler.
+Die Assertion kann dabei vollkommen richtig sein; wertlos ist der Aufbau.
+
+**Prüffrage:** Welche zwei Zustände oder Implementierungen soll der Test
+unterscheiden? Erzeugt sein Arrange-Schritt einen Fall, in dem deren Antworten
+wirklich verschieden sind? Bei Zweifel denselben Test gegen einen minimalen
+Mutanten der alten oder falschen Implementierung laufen lassen.
+
+**Beleg 1:** T-22, erste Umsetzung von Verify #1: Der Reihenfolgetest verwendete
+nur eine Quelle. Eine umgedrehte Einerliste ist dieselbe Liste; der Test konnte
+eine ignorierte Reihenfolge nicht erkennen.
+
+**Beleg 2:** T-22, nachgeschärfter Verdrahtungstest: Die erste Fassung rief
+`_chain()` statt `_build_resolver()` auf. Sie prüfte damit eine Ebene unter der
+Composition-Root und konnte eine dort verbliebene Verdrahtungsentscheidung
+nicht erkennen.
+
+**Beleg 3:** T-22 Runde 2, Commit `d5bb327`: Der HTTP-Test schrieb nur einen
+Konfigurationsstand und rief danach `/sources` auf. Frisches Dateilesen und
+gecacheter Laufzeitstand lieferten in diesem Aufbau dasselbe. Runde 3,
+Commit `490314a`, erzeugt zuerst Laufzeit A, ändert danach die Datei auf B und
+weist mit einem Frischlese-Mutanten nach, dass der Test nun unterscheidet.
 
 [↑ Übersicht](#übersicht)

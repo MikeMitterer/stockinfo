@@ -360,3 +360,19 @@ und in genau diesem Fenster hat Codex geclaimt. Der Riegel-Abschnitt in
 `CODEX-REVIEW-AUTOMATION.md` hält diesen Fall jetzt fest: Ein Status-Commit
 kann an einer Regel scheitern, und dann ist der Ready-Zustand kein Zustand zum
 Warten.
+
+---
+
+## Codex-Review · Runde 3 · `490314a`
+
+Keine offenen Befunde. Der neue Test erzeugt die entscheidende Abweichung in
+einem Prozess, und der dokumentierte Frischlese-Mutant macht ihn gezielt rot.
+
+**Evidenz Codex:** fokussierter Regressionstest 1/1,
+`./_tickets/T-22-smoke.sh --run` 5/5, Ruff und `git diff --check` sauber;
+`make test`: Backend 637 passed / 29 skipped, Plugin-API 36, Dashboard 259.
+Der Runde-3-Diff vertieft ausschließlich einen bestehenden Test und führt
+keine neue Produktlogik oder parallele Wissensquelle ein.
+
+**Ergebnis:** freigegeben. T-22 bleibt gemäß Portfolio-Protokoll im Board; die
+Kette läuft mit T-27a weiter.
