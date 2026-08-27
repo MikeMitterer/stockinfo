@@ -462,10 +462,18 @@ class CachedQuoteService:
             Dieselbe Antwort, in deren Lücken die manuellen Werte stehen.
         """
         if instrument_id is None:
+            # **Über die Identität, nicht über das Symbol.** Die Antwort weiß,
+            # welches Listing sie meint; `symbol` ist seit T-21 nur der
+            # Anzeigename und trifft bei `AAPL/XNAS` neben `AAPL/XNYS` die
+            # ältere Zeile. Das ist keine Mehrdeutigkeit, die den Aufrufer
+            # etwas anginge — er hat kein Symbol genannt —, sondern eine
+            # Buchführung, die schlicht die falsche Zeile las.
             instrument = (
                 self._repository.get_instrument_by_isin(response.isin)
                 if response.isin
-                else self._repository.get_instrument_by_symbol(response.symbol)
+                else self._repository.get_instrument_by_identity(
+                    response.ticker, response.mic
+                )
             )
             if instrument is None:
                 return response
@@ -542,10 +550,15 @@ class CachedQuoteService:
         return fresh
 
     def _stored_metadata(self, fresh: QuoteResponse) -> dict | None:
-        """Liest die Instrumentenzeile, bevor ``save_quote`` sie fortschreibt."""
+        """Liest die Instrumentenzeile, bevor ``save_quote`` sie fortschreibt.
+
+        Ohne ISIN über die **kanonische Identität** — dieselbe Begründung wie
+        in `_with_overrides`: Die frische Antwort weiß, welches Listing sie
+        meint, und `symbol` weiß es seit T-21 nicht mehr.
+        """
         if fresh.isin:
             return self._repository.get_instrument_by_isin(fresh.isin)
-        return self._repository.get_instrument_by_symbol(fresh.symbol)
+        return self._repository.get_instrument_by_identity(fresh.ticker, fresh.mic)
 
     def _save_fresh_with_volatility(self, fresh: QuoteResponse) -> QuoteResponse:
         """Persistiert einen frischen Kurs und ergänzt die Volatilität aus dem Cache.

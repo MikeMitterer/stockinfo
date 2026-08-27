@@ -26,12 +26,19 @@ from app.migration_guard import (
     static_allowlist,
 )
 from app.models import (
+    AmbiguousSymbolDetail,
     ErrorDetail,
     HealthResponse,
+    ListingCandidate,
     OperationalResponse,
     ReadinessResponse,
 )
-from app.repository import REASON_IDENTITY_CONFLICT, IdentityConflictError
+from app.repository import (
+    REASON_IDENTITY_CONFLICT,
+    REASON_SYMBOL_AMBIGUOUS,
+    AmbiguousSymbolError,
+    IdentityConflictError,
+)
 from app.routers import dashboard, fields, fx, instruments, migration, quotes
 from app.routers.migration import get_gate
 from app.scheduler import RefreshScheduler
@@ -161,6 +168,48 @@ async def identity_conflict(
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content=ErrorDetail(code=REASON_IDENTITY_CONFLICT, params=params).model_dump(),
+    )
+
+
+@app.exception_handler(AmbiguousSymbolError)
+async def ambiguous_symbol(
+    request: Request, exc: AmbiguousSymbolError
+) -> JSONResponse:
+    """Macht aus dem mehrdeutigen Symbol den seit T-24 zugesagten `409`.
+
+    **Zentral, aus demselben Grund wie beim Identitätskonflikt darüber:** Die
+    Mehrdeutigkeit stellt das Repository fest, und dorthin führt jeder Weg,
+    der ein Symbol entgegennimmt — lesend (`/quote?symbol=`, Historie,
+    Tageskurse) wie verändernd (`/refresh/by-symbol`, ISIN setzen, Overrides,
+    Löschen). Acht Router-Handler wären dieselbe Fachregel achtmal.
+
+    Der Rumpf folgt `contract/fixtures/quote-409-ambiguous-symbol.json` und
+    trägt zusätzlich `code` und `params`. Die Kandidaten sind der eigentliche
+    Inhalt: Ohne sie bekäme der Aufrufer ein „geht nicht" und keinen Weg
+    heraus — mit ihnen hat er je Kandidat eine `listing_id`, und die ist
+    eindeutig.
+
+    Args:
+        request: Der auslösende Request; nur für die Signatur nötig.
+        exc: Das mehrdeutige Symbol samt aller Kandidaten.
+
+    Returns:
+        `409` mit `detail`, `code`, `params` und `candidates`.
+    """
+    logger.warning(
+        REASON_SYMBOL_AMBIGUOUS,
+        path=request.url.path,
+        symbol=exc.symbol,
+        candidates=len(exc.candidates),
+    )
+    return JSONResponse(
+        status_code=status.HTTP_409_CONFLICT,
+        content=AmbiguousSymbolDetail(
+            detail=str(exc),
+            code=REASON_SYMBOL_AMBIGUOUS,
+            params={"symbol": exc.symbol},
+            candidates=[ListingCandidate(**row) for row in exc.candidates],
+        ).model_dump(),
     )
 
 

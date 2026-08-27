@@ -36,10 +36,33 @@ class IncompleteIdentityError(ValueError):
         self.symbol = symbol
 
 
-# Der Rumpf des `409`, mit dem der Konflikt am HTTP-Rand austritt. Die Kennung
-# ist die einzige Stelle, an der ein Konsument ihn von der zugesagten
-# Symbol-Mehrdeutigkeit unterscheiden kann — beide tragen denselben Status.
+# Die beiden Kennungen des `409`. Sie sind die einzige Stelle, an der ein
+# Konsument die zwei Fälle auseinanderhalten kann — beide tragen denselben
+# Status, und der Status allein sagt nicht, was zu tun ist.
 REASON_IDENTITY_CONFLICT = "identity_conflict"
+REASON_SYMBOL_AMBIGUOUS = "symbol_ambiguous"
+
+
+class AmbiguousSymbolError(ValueError):
+    """Mehrere Listings tragen dieses Symbol — die API rät nicht.
+
+    **Seit T-24 zugesagt** (`identity.ambiguous_symbol_status`), bis Runde 45
+    aber nirgends erzeugt: `symbol` ist Anzeigename und nicht garantiert
+    eindeutig, seit `US` in `XNYS` und `XNAS` zerfällt. Der Lookup lautete
+    `ORDER BY id LIMIT 1` und traf damit **definiert das Falsche** — die
+    ältere Zeile, unabhängig davon, welche gemeint war. Auf dem
+    verändernden Weg war es schlimmer: `DELETE /instruments/by-symbol/{symbol}`
+    löschte alle passenden Zeilen auf einmal.
+
+    Der Fehler trägt die Kandidaten mit, weil ein `409` ohne sie den Aufrufer
+    ratlos zurückließe: Er hat nur das mehrdeutige Symbol und bekäme keinen
+    Weg, es aufzulösen. Mit `listing_id` je Kandidat hat er einen.
+    """
+
+    def __init__(self, symbol: str, candidates: list[dict]) -> None:
+        super().__init__(f"Symbol ist mehrdeutig: {symbol}")
+        self.symbol = symbol
+        self.candidates = candidates
 
 
 class IdentityConflictError(ValueError):
@@ -165,12 +188,13 @@ class QuoteRepository:
             return dict(row) if row else None
 
     def get_instrument_by_symbol(self, symbol: str) -> dict | None:
-        """Gibt das erste Instrument zum Symbol zurück (oder ``None``)."""
+        """Gibt das **eindeutige** Instrument zum Symbol zurück (oder ``None``).
+
+        Raises:
+            AmbiguousSymbolError: Mehrere Listings tragen dieses Symbol.
+        """
         with self._connect() as connection:
-            row = connection.execute(
-                "SELECT * FROM instruments WHERE symbol = ? ORDER BY id LIMIT 1",
-                (symbol,),
-            ).fetchone()
+            row = self._unique_symbol_row(connection, symbol)
             return dict(row) if row else None
 
     def get_instrument_by_identity(self, ticker: str, mic: str) -> dict | None:
@@ -213,6 +237,46 @@ class QuoteRepository:
             f"SELECT {columns} FROM instruments WHERE ticker = ? AND mic = ?",
             (ticker, mic),
         ).fetchone()
+
+    # Was ein Kandidat im `409` über sich verrät. Genau die Felder der Fixture
+    # `contract/fixtures/quote-409-ambiguous-symbol.json` — der Rumpf ist seit
+    # T-24 zugesagt und wird hier nicht neu erfunden.
+    _CANDIDATE_COLUMNS = ("listing_id", "symbol", "mic", "exchange", "isin")
+
+    @staticmethod
+    def _unique_symbol_row(
+        connection: sqlite3.Connection, symbol: str
+    ) -> sqlite3.Row | None:
+        """Die **eine** Auskunft „eindeutig oder mehrdeutig?" über ein Symbol.
+
+        Jeder Weg, der ein Symbol als Eingabe nimmt, fragt hierüber — lesend
+        wie verändernd. Getrennt formuliert lief jede Stelle für sich, und sie
+        liefen auseinander: Das Lesen nahm die älteste Zeile
+        (`ORDER BY id LIMIT 1`), das Löschen nahm **alle**. Beides ist das von
+        T-24 verbotene stille Raten, nur in verschiedene Richtungen.
+
+        Args:
+            connection: Offene Verbindung der laufenden Abfrage.
+            symbol: Der Anzeigename, der kein Bezeichner ist.
+
+        Returns:
+            Die eine Zeile, oder ``None`` wenn es keine gibt.
+
+        Raises:
+            AmbiguousSymbolError: Mehr als eine Zeile trägt dieses Symbol.
+        """
+        rows = connection.execute(
+            "SELECT * FROM instruments WHERE symbol = ? ORDER BY id", (symbol,)
+        ).fetchall()
+        if len(rows) > 1:
+            raise AmbiguousSymbolError(
+                symbol,
+                [
+                    {name: row[name] for name in QuoteRepository._CANDIDATE_COLUMNS}
+                    for row in rows
+                ],
+            )
+        return rows[0] if rows else None
 
     def get_latest_quote(self, instrument_id: int) -> dict | None:
         """Gibt den jüngsten Kurspunkt eines Instruments zurück (oder ``None``)."""
@@ -426,14 +490,20 @@ class QuoteRepository:
     def set_isin(self, symbol: str, isin: str) -> None:
         """Trägt die ISIN eines Instruments nachträglich ein (per Symbol).
 
-        Aktualisiert gezielt nur das erste Instrument zum Symbol — nie mehrere
-        Zeilen (würde den UNIQUE-Constraint auf ``isin`` verletzen).
+        Aktualisiert die **eindeutige** Zeile zum Symbol. Bis Runde 45 nahm sie
+        die älteste — bei zwei gleichnamigen Listings hätte der Benutzer damit
+        die ISIN an einen Handelsplatz geschrieben, den er nicht gemeint hat,
+        und es nicht gemerkt.
+
+        Raises:
+            AmbiguousSymbolError: Mehrere Listings tragen dieses Symbol.
         """
         with self._connect() as connection:
+            row = self._unique_symbol_row(connection, symbol)
+            if row is None:
+                return
             connection.execute(
-                "UPDATE instruments SET isin = ? WHERE id = ("
-                "SELECT id FROM instruments WHERE symbol = ? ORDER BY id LIMIT 1)",
-                (isin, symbol),
+                "UPDATE instruments SET isin = ? WHERE id = ?", (isin, row["id"])
             )
 
     def get_overrides(self, instrument_id: int) -> dict | None:
@@ -496,16 +566,28 @@ class QuoteRepository:
             )
 
     def delete_by_symbol(self, symbol: str) -> bool:
-        """Löscht ein Instrument (und seine Quotes via Cascade) anhand des Symbols.
+        """Löscht **ein** Instrument (und seine Quotes via Cascade) per Symbol.
 
         Für Wertpapiere ohne ISIN (nur per Symbol erfasst).
 
+        **Der schärfste der drei Symbolwege.** Bis Runde 45 lautete die Abfrage
+        `DELETE FROM instruments WHERE symbol = ?` — bei zwei gleichnamigen
+        Listings verschwanden beide samt Kurshistorie, auf einen Klick, ohne
+        Rückfrage. Genau dieser Endpunkt ist das Beispiel, mit dem T-24 die
+        `409`-Regel begründet hat.
+
         Returns:
             True, wenn ein Instrument gelöscht wurde, sonst False.
+
+        Raises:
+            AmbiguousSymbolError: Mehrere Listings tragen dieses Symbol.
         """
         with self._connect() as connection:
+            row = self._unique_symbol_row(connection, symbol)
+            if row is None:
+                return False
             cursor = connection.execute(
-                "DELETE FROM instruments WHERE symbol = ?", (symbol,)
+                "DELETE FROM instruments WHERE id = ?", (row["id"],)
             )
             return cursor.rowcount > 0
 
@@ -777,9 +859,13 @@ class QuoteRepository:
         if identity_from_symbol(symbol) is None:
             return None
 
-        row = connection.execute(
-            "SELECT id FROM instruments WHERE symbol = ? ORDER BY id LIMIT 1", (symbol,)
-        ).fetchone()
+        # **Dieselbe Auskunft wie die Leseseite**, und nicht noch ein
+        # `ORDER BY id LIMIT 1`: Ein Symbol, das zwei Listings trifft, darf
+        # auch hier nicht still eines davon fortschreiben. Erreichbar ist der
+        # Zweig heute nicht — er greift nur ohne `ticker`/`mic`, und die sind
+        # seit Übergabe 2A Pflicht. Wird er es je wieder, ist die Antwort
+        # dieselbe wie überall sonst.
+        row = QuoteRepository._unique_symbol_row(connection, symbol)
         return int(row["id"]) if row else None
 
     @staticmethod

@@ -20,9 +20,12 @@ Szenariospezifisches Verhalten gehört **nicht** hierher: Was ein Test an einer
 Grenze konkret zurückgeben lassen will, bleibt bei ihm.
 """
 
+from app.db import init_db
 from app.providers.base import EtfDetails
 from app.repository import QuoteRepository
 from app.services.daily_sync import DailyCloseSync
+from app.services.quote_cache import CachedQuoteService
+from app.services.quote_service import QuoteService
 
 
 class EmptyDailyCloseProvider:
@@ -81,3 +84,36 @@ class EmptyEtfEnricher:
         currency: str | None = None,
     ) -> EtfDetails | None:
         return None
+
+
+def wire_real_chain(
+    db_path: str, quote_source: object, resolver: object
+) -> tuple[CachedQuoteService, QuoteRepository]:
+    """Verdrahtet die echte Kette über einer frischen Datei.
+
+    Die Zusammensetzung selbst ist keine Szenariofrage: Es ist immer dasselbe
+    Bauwerk aus echtem Repository, echtem Quote-Service und echtem Cache-Dienst,
+    an dem nur die beiden Außengrenzen austauschbar sind. Sie stand in zwei
+    Testmodulen wortgleich; die dritte Fassung hätte sie schleichend anders
+    parametriert.
+
+    `ttl_hours=0` gehört dazu und ist kein Detail: Sonst antwortete der Cache,
+    und geprüft wäre nicht die Kette, sondern ihr Gedächtnis.
+
+    Args:
+        db_path: Pfad der Datei; das Schema wird hier angelegt.
+        quote_source: Die Außengrenze zur Kursquelle.
+        resolver: Die Außengrenze zur ISIN-Auflösung.
+
+    Returns:
+        Der fertige Dienst und das Repository darunter — beide echt.
+    """
+    init_db(db_path)
+    repository = QuoteRepository(db_path)
+    service = CachedQuoteService(
+        QuoteService(quote_source, EmptyEtfEnricher(), resolver),
+        repository,
+        ttl_hours=0,
+        daily_sync=empty_daily_sync(repository),
+    )
+    return service, repository

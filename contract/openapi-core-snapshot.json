@@ -122,7 +122,15 @@
           "409": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ErrorDetail"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ErrorDetail"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AmbiguousSymbolDetail"
+                  }
+                ],
+                "title": "Response 409 Quote By Symbol Quote Get"
               }
             }
           },
@@ -154,6 +162,21 @@
               }
             }
           },
+          "409": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ErrorDetail"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AmbiguousSymbolDetail"
+                  }
+                ],
+                "title": "Response 409 Daily History By Symbol Quote By Symbol  Symbol  Daily Get"
+              }
+            }
+          },
           "422": {
             "application/json": {
               "schema": {
@@ -181,6 +204,21 @@
                 },
                 "title": "Response Quote History By Symbol Quote By Symbol  Symbol  History Get",
                 "type": "array"
+              }
+            }
+          },
+          "409": {
+            "application/json": {
+              "schema": {
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ErrorDetail"
+                  },
+                  {
+                    "$ref": "#/components/schemas/AmbiguousSymbolDetail"
+                  }
+                ],
+                "title": "Response 409 Quote History By Symbol Quote By Symbol  Symbol  History Get"
               }
             }
           },
@@ -242,6 +280,13 @@
               }
             }
           },
+          "409": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
+              }
+            }
+          },
           "422": {
             "application/json": {
               "schema": {
@@ -272,6 +317,13 @@
               }
             }
           },
+          "409": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
+              }
+            }
+          },
           "422": {
             "application/json": {
               "schema": {
@@ -284,6 +336,44 @@
     }
   },
   "schemas": {
+    "AmbiguousSymbolDetail": {
+      "description": "Der `409`, wenn mehrere Listings dasselbe Symbol tragen.\n\n**Die Form kommt aus T-24**, nicht aus diesem Ticket:\n`contract/fixtures/quote-409-ambiguous-symbol.json` zeigt `detail` und\n`candidates`, und die Fixture ist von außen benutzbar — StockPortfolio\nliest sie, ohne StockInfo zu starten.\n\n`code` und `params` kommen additiv dazu, damit dieser `409` dieselbe\nmaschinenlesbare Kennung trägt wie jede andere Ablehnung: Ein deutscher\nBackendtext in der englischen Oberfläche wäre auch bei sauberem Parsen\nfalsch, und `detail` ist genau so einer. Nach der Konsumentenregel des\nVertrags ignoriert ein bestehender Leser die zwei neuen Felder; ein neuer\nliest `code` und lässt `detail` liegen.",
+      "properties": {
+        "candidates": {
+          "description": "Alle Listings, die dieses Symbol tragen",
+          "items": {
+            "$ref": "#/components/schemas/ListingCandidate"
+          },
+          "title": "Candidates",
+          "type": "array"
+        },
+        "code": {
+          "description": "Stabile Kennung: symbol_ambiguous",
+          "title": "Code",
+          "type": "string"
+        },
+        "detail": {
+          "description": "Meldung aus dem T-24-Vertrag",
+          "title": "Detail",
+          "type": "string"
+        },
+        "params": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "Werte für den übersetzten Text",
+          "title": "Params",
+          "type": "object"
+        }
+      },
+      "required": [
+        "detail",
+        "code",
+        "candidates"
+      ],
+      "title": "AmbiguousSymbolDetail",
+      "type": "object"
+    },
     "DailyPoint": {
       "description": "Ein Tages-Schlusskurs (EOD) der Langfrist-Historie.",
       "properties": {
@@ -875,6 +965,59 @@
         "identifier"
       ],
       "title": "IntakeRequest",
+      "type": "object"
+    },
+    "ListingCandidate": {
+      "description": "Ein Listing, das für ein mehrdeutiges Symbol in Frage kommt.\n\nDer Aufrufer bekommt genug, um selbst zu entscheiden — vor allem die\n`listing_id`, die als einzige eindeutig ist. `symbol` steht bewusst mit\ndabei, obwohl es bei allen Kandidaten gleich ist: Der Rumpf soll auch\ndann lesbar sein, wenn er ohne die Anfrage weitergereicht wird.",
+      "properties": {
+        "exchange": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Anzeigename der Börse",
+          "title": "Exchange"
+        },
+        "isin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ISIN, sofern bekannt",
+          "title": "Isin"
+        },
+        "listing_id": {
+          "description": "Opake UUID des Listings",
+          "title": "Listing Id",
+          "type": "string"
+        },
+        "mic": {
+          "description": "Echter MIC nach ISO 10383",
+          "title": "Mic",
+          "type": "string"
+        },
+        "symbol": {
+          "description": "Der mehrdeutige Anzeigename",
+          "title": "Symbol",
+          "type": "string"
+        }
+      },
+      "required": [
+        "exchange",
+        "isin",
+        "listing_id",
+        "mic",
+        "symbol"
+      ],
+      "title": "ListingCandidate",
       "type": "object"
     },
     "QuotePoint": {

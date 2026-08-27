@@ -195,7 +195,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 2h3 | Auswahl der bevorzugten Börse bei aliaslosen Plätzen | `DEFAULT_EXCHANGE=XNAS` wählt den NASDAQ-Treffer, auch wenn ein Arca-Treffer vorn steht; beim Sammelcode `US` verdrängt ein punktloser Treffer mit unbekanntem Börsencode kein gültiges Mitglied. Der Fremdbörsen-Fallback bleibt | ✅ [^k] | |
 | 2h4 | Börsenableitung eines Yahoo-Treffers | **eine** Ableitung für Auswahl **und** Identität (`_exchange_of`): Ein bekanntes Suffix entscheidet allein und wird nie von Yahoos `exchange` überstimmt; Yahoos Code gilt nur für suffixlose Symbole. Auswahl und gespeicherter MIC können demselben Treffer keine verschiedenen Börsen zuschreiben | ✅ [^l] | |
 | 2i | `POST /instruments/intake` | Neuanlage `201` mit `InstrumentSummary`, bestehendes Papier `200` mit demselben Typ, unauflösbar `400`, Quelle tot `502` — je im OpenAPI-Snapshot zugesagt und über die echte Kette geprüft | ◑ [^af] [^aj] | |
-| 2i2 | Identitätskonflikt am HTTP-Rand | `AAPL/XNAS` ohne ISIN neben `AAPL/XNYS` mit ihr ergibt einen typisierten `409` mit `code: identity_conflict` und beiden Seiten in `params` — **kein** `500`. Der Fall ist an allen drei speichernden Vertragsendpunkten zugesagt, nicht nur am Aufnahmeweg | ✅ [^al] | |
+| 2i2 | Identitätskonflikt am HTTP-Rand | `AAPL/XNAS` ohne ISIN neben `AAPL/XNYS` mit ihr ergibt einen typisierten `409` mit `code: identity_conflict` und beiden Seiten in `params` — **kein** `500`. Der Fall ist an **jedem** speichernden Vertragsendpunkt zugesagt, nicht nur am Aufnahmeweg | ✅ [^al] | |
+| 2i3 | mehrdeutiges Symbol, lesend **und** verändernd | zwei Listings mit dem Alias `AAPL`: `GET /quote?symbol=AAPL` antwortet `409`/`symbol_ambiguous` mit beiden Kandidaten samt `listing_id` statt still der älteren Notierung; `DELETE /instruments/by-symbol/AAPL` löscht **nichts** statt beide Zeilen samt Historie; `PUT .../isin` schreibt nichts. Ein eindeutiges Symbol und der Aufnahmeweg bleiben unberührt | ✅ [^am] | |
 | 2j | Schichtengrenze am Aufnahmeweg | der Intake-Service liefert `IntakeResult(summary, created)`; im Router steht **kein zweiter Existenz-Check** und keine Repository-Abfrage, er mappt nur `created` auf `201`/`200` | ✅ [^ag] | |
 | 2j2 | `created` unter Parallelität | kommt aus der **schreibenden Transaktion**, nicht aus einem Preflight; im abgefangenen UNIQUE-Rennen ist `created=false`, nicht `201` | ◑ [^ah] [^aj] | |
 | ~~2j3~~ | ~~`GET /instruments` mit einer `legacy_unresolved`-Zeile~~ | **entfällt** — mit der Entscheidung nach Runde 16 gibt es diesen Zustand nicht mehr. `ticker`, `mic` und `listing_id` sind Pflicht, siehe `#2b2` | ➖ | |
@@ -669,10 +670,16 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
     `test_der_konflikt_steht_auch_in_der_veroeffentlichten_form` fragt die
     laufende `openapi.json` ab und verlangt den `409` samt `ErrorDetail`-Rumpf
-    an **allen drei** speichernden Vertragsendpunkten — `POST
-    /instruments/intake`, `GET /quote` und `GET /quote/{isin}`. Nur den
-    Aufnahmeweg zu prüfen wäre die punktuelle Bestätigung aus `P-02`; der
-    Konflikt entsteht in `save_quote`, und dorthin führen alle drei.
+    an jedem speichernden Vertragsendpunkt.
+
+    **Korrektur aus Runde 45:** In Runde 44 stand hier „alle drei", und die
+    Liste im Test hatte drei Einträge — `POST /instruments/intake`,
+    `GET /quote`, `GET /quote/{isin}`. Es sind **sieben**: Auch die vier
+    Historien- und Tageskurs-Wege legen ein unbekanntes Papier über
+    `ensure_instrument` an und laufen damit durch `save_quote`. Die Zahl war
+    nicht gemessen, sondern von den Endpunkten abgeschrieben, die ich gerade
+    angefasst hatte — `P-02` in Reinform. Die vier fehlenden sagen den Fall
+    jetzt zu und stehen im Test.
 
     **Nicht im Smoke-Script.** Der Fall braucht zwei Zeilen, die über den
     normalen Weg nicht nebeneinander entstehen: Yahoo meldet zu `AAPL` immer
@@ -680,6 +687,35 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     zweite anzulegen (`#2f`, live gemessen). Es ist ein Zustand aus
     gewachsenem Bestand, und ihn im Script von Hand in die Datenbank zu
     schreiben hieße, den Beleg zu bauen, den man messen will.
+[^am]: **`tests/test_symbol_ambiguity.py`, sieben Tests über die echte Kette.**
+    Der Aufbau ist kein Sonderfall: Zwei Listings mit dem Alias `AAPL` sind
+    genau der Bestand, den `#2f` verlangt. Mehrdeutig ist nicht der Bestand,
+    sondern die **Frage** nach dem Alias.
+
+    Geprüft sind ein lesender Weg (`GET /quote?symbol=`) und **zwei**
+    verändernde (`DELETE /instruments/by-symbol/`, `PUT .../isin`). Der
+    Löschweg ist der schärfere Fall und wird deshalb doppelt geprüft — Status
+    **und** Bestand danach: `DELETE FROM instruments WHERE symbol = ?` entfernte
+    bei zwei gleichnamigen Listings beide samt Kurshistorie über den Cascade.
+    Ein Test nur auf den Status wäre grün geblieben, hätte der `409` nach dem
+    Löschen gegriffen.
+
+    Zwei Gegenrichtungen stehen daneben, damit das Orakel sich nicht selbst
+    bestätigt: Ein **eindeutiges** Symbol muss weiterhin `200` liefern, und der
+    Aufnahmeweg muss `AAPL.XNAS` neben `AAPL.XNYS` weiterhin anlegen dürfen.
+    Ohne sie wäre auch die zu scharfe Fassung „jedes doppelte Symbol ist ein
+    Fehler" grün gelaufen — sie hätte `#2f` gebrochen.
+
+    Ein siebter Test hält die Fixture gegen die Laufzeit:
+    `contract/fixtures/quote-409-ambiguous-symbol.json` wird von außen gelesen,
+    ohne StockInfo zu starten. Ihre erste Fassung zeigte zwei Kandidaten mit
+    **derselben** ISIN — einen Zustand, den `isin TEXT UNIQUE` verbietet.
+
+    **Gegenprobe gelaufen:** Wird allein die Mehrdeutigkeitserkennung in
+    `_unique_symbol_row` stillgelegt, fallen **fünf** der sieben Tests — die
+    drei Endpunktwege, die Rumpfprüfung und der Fixture-Wächter. Grün bleiben
+    genau die zwei Gegenrichtungen, und das ist die Aussage: Sie prüfen den
+    Normalfall, der von der Regel unberührt bleiben muss.
 [^ab]: `./_tickets/T-21-smoke.sh --run` gegen eine Sicherung des **echten**
     Bestands: `GOLD.SG` migriert zu `GOLD/XSTU` und behält seine **257**
     Tagesschlusskurse, `VGWL.DE` seine 2234. Abgelehnt wird allein `VTI` mit

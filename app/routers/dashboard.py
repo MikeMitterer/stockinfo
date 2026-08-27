@@ -1,6 +1,20 @@
 """Dashboard-Endpoints — DB-Übersicht, Environment, Refresh, Löschen.
 
 Nur HTTP-Belange; Fachlogik liegt im CachedQuoteService.
+
+**Die `by-symbol`-Wege antworten bei einem mehrdeutigen Symbol mit `409`**,
+ohne dass hier etwas davon steht: Die Mehrdeutigkeit stellt das Repository
+fest, abgebildet wird sie zentral in `app/main.py`. Das gilt gerade für
+`DELETE /instruments/by-symbol/{symbol}` — bis Runde 45 löschte der Endpunkt
+bei zwei gleichnamigen Listings beide samt Historie, und genau er ist das
+Beispiel, mit dem T-24 die Regel begründet hat.
+
+`responses` stehen an diesen Endpunkten bewusst **nicht**: Sie liegen laut
+`docs/rest-core-contract.md` außerhalb des geschlossenen Core, führen heute
+keinerlei Fehlerzusagen — und `PUT .../isin` trägt zusätzlich einen dritten,
+älteren `409` (`IsinConflictError`) in einer anderen Rumpfform. Diese drei
+Formen zu vereinheitlichen ist eine eigene Aufräumarbeit und keine
+Nebenwirkung dieses Tickets.
 """
 
 from typing import Annotated

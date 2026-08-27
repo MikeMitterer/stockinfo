@@ -1,7 +1,7 @@
 """Pydantic-Response-Modelle der API."""
 
 from collections.abc import Callable
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, Literal, Union
 
 from pydantic import BaseModel, ConfigDict, Field
 
@@ -635,17 +635,77 @@ class ErrorDetail(BaseModel):
     )
 
 
-# Die veröffentlichte Form des Identitätskonflikts — **eine** Beschreibung für
-# jeden speichernden Endpunkt. Erzeugt wird die Antwort zentral in
-# `app/main.py`, weil sie tief in `save_quote` entsteht; die Router sagen sie
-# nur zu. Ausgeschrieben je Router wären es drei Texte, die auseinanderlaufen,
-# sobald einer davon genauer wird.
+class ListingCandidate(BaseModel):
+    """Ein Listing, das für ein mehrdeutiges Symbol in Frage kommt.
+
+    Der Aufrufer bekommt genug, um selbst zu entscheiden — vor allem die
+    `listing_id`, die als einzige eindeutig ist. `symbol` steht bewusst mit
+    dabei, obwohl es bei allen Kandidaten gleich ist: Der Rumpf soll auch
+    dann lesbar sein, wenn er ohne die Anfrage weitergereicht wird.
+    """
+
+    listing_id: str = Field(description="Opake UUID des Listings")
+    symbol: str = Field(description="Der mehrdeutige Anzeigename")
+    mic: str = Field(description="Echter MIC nach ISO 10383")
+    exchange: str | None = Field(default=None, description="Anzeigename der Börse")
+    isin: str | None = Field(default=None, description="ISIN, sofern bekannt")
+
+    model_config = ConfigDict(json_schema_extra=always_present("exchange", "isin"))
+
+
+class AmbiguousSymbolDetail(BaseModel):
+    """Der `409`, wenn mehrere Listings dasselbe Symbol tragen.
+
+    **Die Form kommt aus T-24**, nicht aus diesem Ticket:
+    `contract/fixtures/quote-409-ambiguous-symbol.json` zeigt `detail` und
+    `candidates`, und die Fixture ist von außen benutzbar — StockPortfolio
+    liest sie, ohne StockInfo zu starten.
+
+    `code` und `params` kommen additiv dazu, damit dieser `409` dieselbe
+    maschinenlesbare Kennung trägt wie jede andere Ablehnung: Ein deutscher
+    Backendtext in der englischen Oberfläche wäre auch bei sauberem Parsen
+    falsch, und `detail` ist genau so einer. Nach der Konsumentenregel des
+    Vertrags ignoriert ein bestehender Leser die zwei neuen Felder; ein neuer
+    liest `code` und lässt `detail` liegen.
+    """
+
+    detail: str = Field(description="Meldung aus dem T-24-Vertrag")
+    code: str = Field(description="Stabile Kennung: symbol_ambiguous")
+    params: dict[str, str] = Field(
+        default_factory=dict, description="Werte für den übersetzten Text"
+    )
+    candidates: list[ListingCandidate] = Field(
+        description="Alle Listings, die dieses Symbol tragen"
+    )
+
+
+# Die veröffentlichte Form der beiden `409`-Fälle. Erzeugt werden sie zentral
+# in `app/main.py`, weil sie tief in Repository und Speicherweg entstehen; die
+# Router sagen sie nur zu. Ausgeschrieben je Router wären es acht Texte, die
+# auseinanderlaufen, sobald einer davon genauer wird.
+#
+# **Zwei Konstanten, weil nicht jeder Endpunkt beide Fälle kennt.** Ein
+# Endpunkt, der kein Symbol entgegennimmt, kann nicht mehrdeutig werden; ihm
+# den Fall trotzdem zuzusagen wäre eine Zusage ins Blaue.
 IDENTITY_CONFLICT_RESPONSE: dict[int | str, dict[str, object]] = {
     409: {
         "model": ErrorDetail,
         "description": (
             "Zwei Zeilen beanspruchen dieselbe kanonische Identität "
             "(`code: identity_conflict`)"
+        ),
+    }
+}
+
+SYMBOL_CONFLICT_RESPONSE: dict[int | str, dict[str, object]] = {
+    409: {
+        "model": Union[ErrorDetail, AmbiguousSymbolDetail],
+        "description": (
+            "Zwei Fälle unter einem Status, unterschieden über `code`: "
+            "`symbol_ambiguous` — mehrere Listings tragen dieses Symbol, der "
+            "Rumpf nennt die Kandidaten samt `listing_id`; "
+            "`identity_conflict` — zwei Zeilen beanspruchen dieselbe "
+            "kanonische Identität"
         ),
     }
 }

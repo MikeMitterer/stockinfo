@@ -130,9 +130,9 @@
   },
   "errors": {
     "404": "Kein zuständiger Anbieter kennt das Papier. Der Bestand bleibt unverändert.",
-    "409": "Ein Konflikt, den der Aufrufer nicht verschuldet hat. Welcher es ist, sagt allein die Kennung im Rumpf ({code, params}) — der Status trägt zwei verschiedene Fälle, und die API rät in keinem von beiden.",
-    "identity_conflict": "409 auf jedem speichernden Endpunkt (/quote, /quote/{isin}, POST /instruments/intake): Zwei gewachsene Zeilen beanspruchen dieselbe kanonische Identität, etwa AAPL/XNAS ohne ISIN neben AAPL/XNYS mit ihr. params nennt ticker, mic und — sofern bekannt — isin. Sie zusammenzuführen ist eine Datenoperation mit eigener Entscheidung und passiert nicht nebenbei in einem Kursabruf.",
-    "symbol_ambiguous": "Der zweite 409-Fall: Mehrere Listings tragen dasselbe Symbol, der Rumpf nennt die Kandidaten samt listing_id. Beschrieben in docs/rest-core-contract.md, aber noch an keinem Endpunkt umgesetzt — bis dahin ist identity_conflict die einzige Kennung, die dieser Status tatsächlich trägt.",
+    "409": "Ein Konflikt, den der Aufrufer nicht verschuldet hat. Welcher es ist, sagt allein die Kennung im Rumpf — der Status trägt zwei verschiedene Fälle, und die API rät in keinem von beiden.",
+    "identity_conflict": "409 auf jedem speichernden Endpunkt: Zwei gewachsene Zeilen beanspruchen dieselbe kanonische Identität, etwa AAPL/XNAS ohne ISIN neben AAPL/XNYS mit ihr. Rumpf {code, params} mit ticker, mic und — sofern bekannt — isin. Sie zusammenzuführen ist eine Datenoperation mit eigener Entscheidung und passiert nicht nebenbei in einem Kursabruf.",
+    "symbol_ambiguous": "409 auf jedem Endpunkt, der ein symbol entgegennimmt — lesend wie verändernd: Mehrere Listings tragen diesen Anzeigenamen. Rumpf {detail, code, params, candidates}; jeder Kandidat nennt listing_id, symbol, mic, exchange und isin. Der Aufrufer entscheidet über die listing_id, die API rät nicht und verändert nichts.",
     "422": "Die Anfrage ist formal falsch, z.B. eine ISIN mit falscher Prüfziffer.",
     "502": "Mindestens ein zuständiger Anbieter war nicht erreichbar. Ein 404 wäre hier falsch: 'nicht gefunden' und 'nicht erreichbar' sind verschiedene Aussagen.",
     "incomplete_core": "Fehlt einem Preis die Währung oder ein anderes Pflichtfeld, antwortet die API mit 502 statt mit einem geratenen Wert."

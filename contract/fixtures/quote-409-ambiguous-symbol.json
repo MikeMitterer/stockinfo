@@ -3,7 +3,7 @@
   "model": null,
   "contract_compliant": true,
   "violates": null,
-  "note": "Zwei Listings tragen dasselbe Symbol — die API rät nicht, sondern nennt die Kandidaten samt listing_id. Der heutige Lookup nähme still das ältere; das ist nicht undefiniert, sondern definiert falsch.",
+  "note": "Zwei Listings tragen dasselbe Symbol — die API rät nicht, sondern nennt die Kandidaten samt listing_id. Der frühere Lookup nahm still das ältere; das war nicht undefiniert, sondern definiert falsch. Seit Runde 45 gilt der Fall an jedem Endpunkt, der ein symbol entgegennimmt, lesend wie verändernd. Zwei Korrekturen gegenüber der ersten Fassung, beide an der echten Laufzeit abgeglichen: code und params kommen additiv dazu, damit der Rumpf dieselbe maschinenlesbare Kennung trägt wie jede andere Ablehnung — detail ist deutsch und taugt nicht für eine englische Oberfläche. Und nur ein Kandidat führt die ISIN: isin ist UNIQUE, zwei Zeilen mit derselben ISIN kann es nach one_active_listing_per_isin gar nicht geben. Die erste Fassung zeigte genau das und war damit ein Zustand, den das Schema verbietet.",
   "request": {
     "method": "GET",
     "path": "/quote?symbol=RY"
@@ -16,6 +16,10 @@
     },
     "body": {
       "detail": "Symbol ist mehrdeutig: RY",
+      "code": "symbol_ambiguous",
+      "params": {
+        "symbol": "RY"
+      },
       "candidates": [
         {
           "listing_id": "9f1c2d5e-4a67-4f21-9c3b-1e5a7b8d0c11",
@@ -29,7 +33,7 @@
           "symbol": "RY",
           "mic": "XTSE",
           "exchange": "Toronto",
-          "isin": "CA7800871021"
+          "isin": null
         }
       ]
     }

@@ -21,14 +21,11 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.container import get_cached_quote_service
-from app.db import init_db
 from app.main import app
 from app.providers.base import RawQuote
 from app.repository import REASON_IDENTITY_CONFLICT, QuoteRepository
-from app.services.quote_cache import CachedQuoteService
-from app.services.quote_service import QuoteService
 from stockinfo_plugin.types import NotFound
-from tests.boundaries import EmptyEtfEnricher, empty_daily_sync
+from tests.boundaries import wire_real_chain
 
 # Die echte ISIN von Apple. Sie steht hier als Konstante, weil sie in diesem
 # Modul zwei getrennte Rollen spielt: Sie ist das, was die Kursquelle meldet,
@@ -86,15 +83,7 @@ def _wire_chain(
     Returns:
         Client und Repository derselben Kette.
     """
-    init_db(db_path)
-    repository = QuoteRepository(db_path)
-    service = CachedQuoteService(
-        QuoteService(source, EmptyEtfEnricher(), _NoResolver()),
-        repository,
-        ttl_hours=0,
-        daily_sync=empty_daily_sync(repository),
-    )
-
+    service, repository = wire_real_chain(db_path, source, _NoResolver())
     app.dependency_overrides[get_cached_quote_service] = lambda: service
     return TestClient(app), repository
 
@@ -490,26 +479,38 @@ def test_der_konflikt_steht_auch_in_der_veroeffentlichten_form(
     keinem generierten Client — und der Schnappschuss hätte das Fehlen
     bestätigt statt bemerkt.
 
-    Geprüft werden **alle drei** speichernden Vertragsendpunkte: Der Konflikt
-    entsteht in `save_quote`, und dorthin führen sie alle. Nur den Aufnahmeweg
-    zu prüfen wäre genau die punktuelle Bestätigung, die schon einmal eine
-    halbe Regelumsetzung durchgehen ließ.
+    Geprüft wird **jeder** Vertragsendpunkt, der speichern kann — und das sind
+    mehr, als Runde 44 zugesagt hat: Auch die vier Historien- und
+    Tageskurs-Wege legen ein unbekanntes Papier über `ensure_instrument` an und
+    laufen damit durch `save_quote`. Die Liste stand dort bei dreien; das war
+    genau die punktuelle Bestätigung aus `P-02`.
+
+    Ein Endpunkt, der ein **Symbol** entgegennimmt, sagt den Konflikt in einer
+    `anyOf`-Form zu: Unter demselben `409` liegt dort auch
+    `symbol_ambiguous`. Geprüft wird deshalb, dass `ErrorDetail` in der
+    zugesagten Form **vorkommt**, nicht dass sie allein dasteht.
     """
     client, _ = client_and_repo
 
     document = client.get("/openapi.json").json()
 
-    for path, method in (
+    saving_paths = (
         ("/instruments/intake", "post"),
         ("/quote", "get"),
         ("/quote/{isin}", "get"),
-    ):
+        ("/quote/{isin}/daily", "get"),
+        ("/quote/{isin}/history", "get"),
+        ("/quote/by-symbol/{symbol}/daily", "get"),
+        ("/quote/by-symbol/{symbol}/history", "get"),
+    )
+    for path, method in saving_paths:
         responses = document["paths"][path][method]["responses"]
         assert "409" in responses, f"{method.upper()} {path} sagt den Konflikt nicht zu"
         schema = responses["409"]["content"]["application/json"]["schema"]
-        assert schema["$ref"].endswith("/ErrorDetail"), (
-            f"{method.upper()} {path} sagt den Konflikt ohne typisierten Rumpf zu"
-        )
+        branches = schema.get("anyOf", [schema])
+        assert any(
+            branch.get("$ref", "").endswith("/ErrorDetail") for branch in branches
+        ), f"{method.upper()} {path} sagt den Konflikt ohne typisierten Rumpf zu"
 
 
 def test_die_ablehnung_kommt_nicht_unter_detail(client_and_repo) -> None:

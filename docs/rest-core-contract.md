@@ -122,18 +122,29 @@ Der Status allein sagt seit 2.0.0 nicht mehr, was los ist. Der Rumpf ist in
 beiden Fällen ein `ErrorDetail` (`{code, params}`), und erst die Kennung trennt
 sie:
 
-| `code` | Bedeutung | Stand |
+| `code` | Bedeutung | Gilt an |
 |---|---|---|
-| `identity_conflict` | Zwei gewachsene Zeilen beanspruchen dieselbe kanonische Identität — `AAPL/XNAS` ohne ISIN neben `AAPL/XNYS` mit ihr, und dieselbe ISIN wandert nach XNAS. `params`: `ticker`, `mic`, `isin` (sofern bekannt). | zugesagt an `/quote`, `/quote/{isin}` und `POST /instruments/intake` |
-| `symbol_ambiguous` | Mehrere Listings tragen dasselbe Symbol; der Rumpf nennt die Kandidaten samt `listing_id`. | beschrieben, noch an keinem Endpunkt umgesetzt |
+| `symbol_ambiguous` | Mehrere Listings tragen diesen Anzeigenamen. Rumpf: `detail`, `code`, `params`, `candidates` — jeder Kandidat mit `listing_id`, `symbol`, `mic`, `exchange`, `isin`. | jedem Endpunkt, der ein `symbol` entgegennimmt — lesend wie verändernd |
+| `identity_conflict` | Zwei gewachsene Zeilen beanspruchen dieselbe kanonische Identität — `AAPL/XNAS` ohne ISIN neben `AAPL/XNYS` mit ihr, und dieselbe ISIN wandert nach XNAS. Rumpf: `code`, `params` mit `ticker`, `mic`, `isin` (sofern bekannt). | jedem Endpunkt, der speichert |
 
-`identity_conflict` ist kein Eingabefehler: Der Aufrufer hat nichts falsch
-gemacht, zwei Zeilen im Bestand meinen dasselbe Listing. Sie
-zusammenzuführen — welche `listing_id` überlebt, wohin die Kurspunkte
-wandern — ist eine Datenoperation mit eigener Entscheidung und passiert
-deshalb nicht nebenbei in einem Kursabruf. Bis dahin sagt die API, was der
-Fall ist. Bis Runde 43 tat sie das nicht: Der Fehler entstand im Repository,
-wurde nirgends behandelt und trat als `500 Internal Server Error` aus.
+**Keiner der beiden ist ein Eingabefehler**, und deshalb ist keiner ein `400`:
+Der Aufrufer hat nichts falsch gemacht. Beim mehrdeutigen Symbol hat er einen
+Namen genannt, der seit T-21 keiner mehr ist; beim Identitätskonflikt meinen
+zwei gewachsene Zeilen dasselbe Listing.
+
+`symbol_ambiguous` trägt die Kandidaten mit, weil ein `409` ohne sie eine
+Sackgasse wäre — mit ihnen hat der Aufrufer je Kandidat eine `listing_id`, und
+die ist eindeutig. **Verändert wird dabei nichts.** Das ist der Punkt: Der
+Löschweg per Symbol entfernte bei zwei gleichnamigen Listings beide samt
+Historie, der Kursweg gab still die ältere Notierung aus, und das Nachtragen
+einer ISIN schrieb sie an den Handelsplatz, den niemand gemeint hatte. Alle
+drei sind seit Runde 45 dieser `409`.
+
+`identity_conflict` sagt, was der Fall ist — er löst ihn nicht. Die
+Zusammenführung zweier Zeilen ist eine Datenoperation mit eigener
+Entscheidung und liegt in `T-33`. Bis Runde 43 sagte die API gar nichts: Der
+Fehler entstand im Repository, wurde nirgends behandelt und trat als
+`500 Internal Server Error` aus.
 
 ## Die Generation: woran ein Konsument einen Datensatzwechsel erkennt
 

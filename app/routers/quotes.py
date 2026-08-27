@@ -3,10 +3,17 @@
 Der Router übersetzt nur zwischen HTTP und Service; Domain-Exceptions werden
 auf HTTP-Statuscodes abgebildet.
 
-Eine Ausnahme davon ist der `409` an den beiden Kursendpunkten: Der
-Identitätskonflikt entsteht in `save_quote` und wird zentral in `app/main.py`
-abgebildet, weil ihn jeder speichernde Weg auslösen kann. Hier steht er nur in
-den `responses`, damit die veröffentlichte Form ihn zusagt.
+Eine Ausnahme davon sind die beiden `409`-Fälle: Der Identitätskonflikt
+entsteht in `save_quote`, die Symbol-Mehrdeutigkeit im Repository, und beide
+werden zentral in `app/main.py` abgebildet — jeder speichernde und jeder
+symbolnehmende Weg kann sie auslösen. Hier stehen sie nur in den `responses`,
+damit die veröffentlichte Form sie zusagt.
+
+**Welcher Endpunkt welchen Fall zusagt, ist nicht pauschal.** Wer ein Symbol
+entgegennimmt, kann mehrdeutig werden und trägt `SYMBOL_CONFLICT_RESPONSE` mit
+beiden Kennungen; die ISIN-Wege können es nicht — eine ISIN ist eindeutig — und
+tragen nur den Identitätskonflikt. Ihnen die Mehrdeutigkeit trotzdem
+zuzusagen wäre eine Zusage ins Blaue.
 """
 
 from typing import Annotated, Literal
@@ -16,6 +23,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from app.container import get_cached_quote_service, get_daily_history_service
 from app.models import (
     IDENTITY_CONFLICT_RESPONSE,
+    SYMBOL_CONFLICT_RESPONSE,
     DailyPoint,
     QuotePoint,
     QuoteResponse,
@@ -38,7 +46,7 @@ Period = Literal["1w", "1m", "3m", "1y", "max"]
 
 
 @router.get(
-    "/quote", response_model=QuoteResponse, responses=IDENTITY_CONFLICT_RESPONSE
+    "/quote", response_model=QuoteResponse, responses=SYMBOL_CONFLICT_RESPONSE
 )
 def quote_by_symbol(
     service: ServiceDep,
@@ -83,7 +91,11 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
         raise HTTPException(status_code=502, detail=str(exc)) from exc
 
 
-@router.get("/quote/{isin}/daily", response_model=list[DailyPoint])
+@router.get(
+    "/quote/{isin}/daily",
+    response_model=list[DailyPoint],
+    responses=IDENTITY_CONFLICT_RESPONSE,
+)
 def daily_history(
     isin: IsinPath,
     service: DailyDep,
@@ -105,7 +117,11 @@ def daily_history(
         ) from exc
 
 
-@router.get("/quote/by-symbol/{symbol}/daily", response_model=list[DailyPoint])
+@router.get(
+    "/quote/by-symbol/{symbol}/daily",
+    response_model=list[DailyPoint],
+    responses=SYMBOL_CONFLICT_RESPONSE,
+)
 def daily_history_by_symbol(
     symbol: SymbolPath,
     service: DailyDep,
@@ -126,7 +142,11 @@ def daily_history_by_symbol(
         ) from exc
 
 
-@router.get("/quote/by-symbol/{symbol}/history", response_model=list[QuotePoint])
+@router.get(
+    "/quote/by-symbol/{symbol}/history",
+    response_model=list[QuotePoint],
+    responses=SYMBOL_CONFLICT_RESPONSE,
+)
 def quote_history_by_symbol(
     symbol: SymbolPath,
     service: ServiceDep,
@@ -141,7 +161,11 @@ def quote_history_by_symbol(
         raise HTTPException(status_code=502, detail=f"Kein Kurs für {symbol}") from exc
 
 
-@router.get("/quote/{isin}/history", response_model=list[QuotePoint])
+@router.get(
+    "/quote/{isin}/history",
+    response_model=list[QuotePoint],
+    responses=IDENTITY_CONFLICT_RESPONSE,
+)
 def quote_history(
     isin: IsinPath,
     service: ServiceDep,
