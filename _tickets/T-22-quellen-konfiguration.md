@@ -118,14 +118,27 @@ Verdrahtungspunkte, an denen konkrete Klassen genannt werden.
 Der Vertrag dafür steht schon: `Source.is_configured()` in
 `stockinfo-plugin-api` (Commit `840121c`).
 
-### Die zwei fehlenden Verträge
+### Die zwei verstreuten Verträge
+
+> **Korrektur nach Runde 1.** Die Überschrift hieß „die zwei **fehlenden**
+> Verträge", und genau das war falsch: Beide existierten längst. Ich habe sie
+> nicht gesucht, sie in `providers/base.py` neu geschrieben und damit zwei
+> Wahrheiten über denselben Vertrag angelegt — während die Verbraucher weiter
+> an den alten hingen. Die Aufgabe war nie „schreiben", sondern „an einen Ort
+> ziehen".
 
 `YFinanceProvider` liefert `fetch_quote`, `fetch_daily_closes` **und**
-`fetch_fx_rate` — das Protokoll `QuoteProvider` deklariert nur das erste. Wer
-ersetzen will, muss drei Verträge erfüllen, von denen zwei nirgends stehen.
+`fetch_fx_rate` — das Protokoll `QuoteProvider` deklariert nur das erste. Die
+beiden anderen Verträge standen zwar geschrieben, aber je bei einem
+**Verbraucher**: `DailyCloseProvider` in `app/services/daily_sync.py`,
+`FxRateProvider` in `app/services/fx_service.py`. Wer eine Quelle ersetzen will,
+findet dort nichts — er sieht bei den Quellen einen Vertrag und erfüllt in
+Wahrheit drei.
 
-**Weg:** `DailyCloseProvider` und `FxProvider` als eigene Protokolle. Klein, und
-danach ist die Abhängigkeit ablesbar statt nur erfahrbar.
+**Weg:** Beide ziehen nach `app/providers/base.py`, neben `QuoteProvider`; die
+Verbraucher importieren sie von dort. `FxRateProvider` behält seinen Namen —
+ihn beim Umzug zu `FxProvider` zu verkürzen hieße, jede Fundstelle anzufassen,
+ohne dass die Aussage genauer würde.
 
 ### Der Normalfall ist eine Profilreferenz, nicht eine handgebaute Kette
 
@@ -209,4 +222,65 @@ liegt im Fehlerpfad des Prüfwerkzeugs.
 
 ## Auflösung
 
-_(offen)_
+### Runde 1 → Runde 2 · `d5bb327`
+
+Alle vier Befunde tragen. Drei habe ich vor der Korrektur nachgestellt, den
+vierten als Mutant.
+
+**1 · Der bestehende Key ging verloren.** Ohne Datei war der Providerabschnitt
+leer, und `OpenFigiClient(None)` bekam nichts — ein Betreiber hätte sein
+Kontingent verloren, ohne etwas geändert zu haben.
+
+```text
+vorher:  settings.openfigi_api_key = 'expected-key' → Client-Key = None
+nachher: settings.openfigi_api_key = 'expected-key' → Client-Key = 'expected-key'
+```
+
+Der Abschnitt fällt jetzt auf die Einstellungen zurück; **die Datei gewinnt
+weiterhin**, wenn sie etwas sagt — ein Rückfall, der die Konfiguration
+überstimmt, machte sie wirkungslos. Beide Richtungen stehen als Test da
+(`test_ein_bestehender_key_ueberlebt_ohne_datei`,
+`test_die_datei_gewinnt_gegen_den_key_aus_den_einstellungen`).
+
+Die zweite Hälfte war der interessantere Teil: `${NAME}` löste nur gegen
+`os.environ` auf, während `Settings` zusätzlich die Projektkonfiguration liest —
+**zwei Auffassungen davon, was „die Umgebung" ist.** Derselbe Schlüssel wäre für
+den Rest der App gesetzt und im Verweis leer gewesen. `environment_from(settings)`
+löst jetzt gegen `Settings` auf, Feldname zu `${FELDNAME}`; echte
+Umgebungseinträge gewinnen, wie bei pydantic.
+
+> **Wie der Weg dorthin zustande kam.** Mein erster Griff war
+> `dotenv_values(…)` auf die Geheimnisdatei. Das hat die Sicherheitsregel des
+> Repos blockiert. Der Umweg über `Settings` ist nicht nur erlaubt, sondern
+> besser: Er ist genau die kanonische Umgebungskonfiguration, die der Befund
+> verlangt, und er öffnet keine Datei.
+
+**2 · Laufzeit und Diagnose entscheiden jetzt gemeinsam.** `describe_chain(role,
+config)` ist die eine Auswertung; `build_chain` baut daraus die Objekte,
+`GET /sources` zeigt sie an. `ChainEntry.usable` ist die vollständige Bedingung
+— bekannt **und** rollenzulässig **und** einsatzbereit —, und genau die meldet
+der Endpunkt als `configured`. Er liest außerdem `get_sources_config()`, also
+denselben gecachten Stand wie die Dienste, nicht die Datei von jetzt.
+
+Das hat einen sichtbaren Nebeneffekt: Ein `dependency_overrides[get_settings]`
+greift im Test nicht mehr, es braucht `monkeypatch` plus `cache_clear`. Das ist
+keine Testschwäche, sondern die Eigenschaft, um die es geht.
+
+**3 · Die Duplikate.** Siehe die Korrektur unter *Die zwei verstreuten
+Verträge*. Beide stehen jetzt einmal in `app/providers/base.py`, die Verbraucher
+importieren sie; ein Lauf über `app/` findet je Rolle genau eine Klasse.
+
+**4 · Die Schlussmarke des Smoke-Scripts.** Ihr Kommentar berief sich wörtlich
+auf `P-05`, während ein Abbruch vor `report()` mit `COUNT_FAIL=0` durchging.
+Jetzt zählt ein abgebrochener Check als Fehler, und der Erfolg verlangt genau
+`EXPECTED_CHECKS=5`. Mutant gelaufen — dritter Check bricht vor `report()` ab:
+
+```text
+✗ 1 von 5 Checks fehlgeschlagen        Exit-Code: 1
+```
+
+Vorher wäre derselbe Lauf grün gewesen.
+
+**Verifikation:** `make test` — Backend 637 passed / 29 skipped (vorher 633),
+Plugin-API 36, Dashboard 259 in 47 Dateien. `./_tickets/T-22-smoke.sh --run`
+5/5, Exit-Code 0. `ruff check app tests` und `git diff --check` sauber.
