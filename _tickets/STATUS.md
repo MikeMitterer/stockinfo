@@ -6,7 +6,7 @@ Historie.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `36d54ce`
 - `review_round`: `44`
