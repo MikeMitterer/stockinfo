@@ -27,7 +27,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 |---|---|---|:--:|---|
 | 1 | HTTP-Beispielplugin, `make test-plugin-api` | läuft **strikt offline** gegen Aufzeichnungen | | |
 | 2 | derselbe Lauf, fehlende Aufzeichnung | **Fehler** über den Audit-Kanal — auch dann, wenn das Szenario `Unavailable` erwartet und der Lauf fachlich grün wäre | | |
-| 2b | Ledger nach dem Lauf | eine **unbenutzte** Aufzeichnung schlägt fehl; Ausnahme nur mit `only: real` in der Datei | | |
+| 2b | Ledger nach dem Lauf | eine **unbenutzte** Aufzeichnung schlägt fehl — ohne Ausnahme | | |
 | 3 | derselbe Lauf, Socket-Zugriff | technisch **gesperrt**, nicht nur unerwünscht | | |
 | 3b | Test **ohne** Opt-in | `socket.socket` bleibt unangetastet — die Sperre greift nicht ins fremde Projekt | | |
 | 4 | Aufzeichnungsdatei | kein Schlüssel, kein Token, kein Cookie — in Kopf, Query, Rumpf und Antwort | | |
@@ -98,11 +98,15 @@ deutlich einfacher und sicherer als ein selbstgebauter Mock-Aufbau.
 
 ## Auflösung
 
-**Entwurf, Runde 2 — noch immer keine Zeile Produktcode.** Runde 1 hat sechs
-Korrekturen bekommen; alle sechs treffen zu, und zwei davon hätten die
-Umsetzung erst nach dem Bauen widerlegt. Die Grundrichtung — Transport und Uhr
-hereingereicht, zwei getrennte Tore, Signatur nach der Bereinigung,
-Frankfurter/EZB als geklärter Referenzweg — bleibt.
+**Entwurf, Runde 3 — noch immer keine Zeile Produktcode.** Zehn Korrekturen
+über zwei Runden; die Grundrichtung — Transport und Uhr hereingereicht, zwei
+getrennte Tore, Signatur nach der Bereinigung, Frankfurter/EZB als geklärter
+Referenzweg — hat alle überstanden.
+
+Runde 2 hat vier Zustandskanten getroffen, und zwei davon waren Aussagen von
+mir, die schlicht nicht stimmten: Die Szenario-Signatur ließ die Anfrage selbst
+weg, und ein Flag `only: real` hätte etwas geregelt, das es im Modell von
+T-27a gar nicht gibt.
 
 ### Vier Module, und warum nicht eins
 
@@ -138,9 +142,19 @@ fachlichen Ergebnis** und schlägt hart fehl bei
   Anfrage nicht mehr stellt; die Aufnahme ist stehengebliebener Ballast, der
   eine Abdeckung vortäuscht.
 
-Eine unbenutzte Aufnahme darf ausdrücklich `only: real` tragen, wenn sie zu
-einem Fall gehört, der offline nicht läuft. Das ist die einzige Ausnahme, und
-sie steht in der Datei, nicht in einem Schalter.
+**Unbenutzt ist immer ein Fehler — ohne Ausnahme.** Runde 2 sah hier ein Flag
+`only: real` vor. Das war schlicht falsch, und zwar nachprüfbar:
+`run_scenarios` wählt `[s for s in scenarios if s.real_ok] if only_real else
+list(scenarios)` — der Offline-Lauf führt **alle** Fälle aus, `real_ok`
+beschränkt nur den Real-Lauf, und im Real-Modus wird gar keine Aufnahme
+abgespielt. Eine „nur real benutzte" Replay-Datei kann es in diesem Modell
+nicht geben.
+
+Das Flag wäre also eine **zweite Szenarioauswahl** neben `real_ok` gewesen —
+und die einzige Wirkung, die es je gehabt hätte, wäre gewesen, verwaiste
+Dateien zu legitimieren. Ist ein Fall nicht abspielbar, verletzt er das Ziel
+des Tickets („derselbe Fall offline und real") und wird nicht in Metadaten
+versteckt.
 
 ### Zwei Signaturen, nicht eine — und beide nach dem Bereinigen
 
@@ -153,7 +167,7 @@ hätte genau das zertifiziert, wogegen sie gebaut war.
 | Signatur | Über was | Wer bildet sie | Wofür |
 |---|---|---|---|
 | `request_signature` | Schema, normalisierter Host **mit Port**, Pfad, sortierte bereinigte Query, ausgewählte bereinigte Header, kanonischer Rumpf-Hash | `recordings.py` | Zuordnung Anfrage → Aufnahme |
-| `scenario_signature` | `case_id`, `expect.__name__`, sortiertes `golden`, sortiertes `plausible`, `real_ok` | der Szenario-Harness | Erkennung, dass sich die **Frage** geändert hat |
+| `scenario_signature` | `case_id`, **qualifizierter Typ und alle Felder von `request`**, qualifizierter Name von `expect`, sortiertes `golden`, sortiertes `plausible`, `real_ok` | der Szenario-Harness | Erkennung, dass sich die **Frage** geändert hat |
 
 Die Aufnahme bindet beide: `request_signature` je Interaktion,
 `scenario_signature` einmal je Datei. Läuft eine Suite gegen eine Aufzeichnung
@@ -163,6 +177,34 @@ Aufforderung, neu aufzuzeichnen.
 `note` geht **nicht** in die Signatur ein. Die Herkunftsangabe ist Prosa; sie
 soll sich verbessern lassen, ohne eine Neuaufzeichnung zu erzwingen — sonst
 wird die Signatur zum Grund, Dokumentation nicht anzufassen.
+
+**Die Anfrage gehört hinein — Befund 1 aus Runde 2.** Runde 2 hatte sie
+weggelassen, und die Lücke ist genau der Fall, für den beide Signaturen gebaut
+sind: Ändert jemand die ISIN im Szenario, während ein **fehlerhaftes** Plugin
+weiterhin dieselbe HTTP-Anfrage sendet, bleibt `request_signature` gleich —
+und die alte Aufnahme bestätigt einen Fall, den sie nie gesehen hat. Die
+Gegenprobe dazu ändert deshalb **ausschließlich** ein Request-Feld und hält die
+emittierte HTTP-Anfrage absichtlich konstant; ohne diese Konstanz prüfte der
+Test nur den Transport.
+
+#### Wie kanonisch serialisiert wird
+
+Ein Signaturbestandteil ohne festgelegte Darstellung ist eine Signatur, die auf
+einem anderen Rechner anders ausfällt.
+
+| Wert | Darstellung |
+|---|---|
+| Typen (`request`, `expect`) | **qualifiziert**: `modul.QualName`, nicht `__name__` — zwei gleichnamige Klassen aus verschiedenen Modulen sind nicht derselbe Fall |
+| `date` / `datetime` | ISO 8601; ein `datetime` **muss** einen Zeitzonenbezug tragen (`invariants.has_timezone`), sonst ist es kein Zeitpunkt |
+| `Enum` | `EnumKlasse.NAME` — nicht der Wert, der sich ändern darf |
+| Dataclass, verschachtelt | Feld für Feld, nach Feldnamen sortiert |
+| `float` | `repr()`; es rundtrippt in Python exakt und ist damit stabiler als jede Formatierung |
+| `None` | `null`, ausdrücklich unterschieden von einem fehlenden Feld |
+
+Serialisiert wird als JSON mit `sort_keys=True`, gehasht mit SHA-256. Ein Typ
+ohne Regel in dieser Tabelle ist ein **Fehler**, keine stille Zeichenkette —
+sonst entstehen zwei verschiedene Fälle mit derselben Signatur, und der
+Fehlschlag käme erst Jahre später als unerklärlicher Treffer.
 
 **Bereinigen kommt vor Signieren**, bei beiden und über denselben Code. Steckt
 der Schlüssel als Query-Parameter in der Anfrage und bildet man die Signatur
@@ -209,13 +251,46 @@ alte Entscheidung, er trifft keine neue.
 „Release-Check" allein ist keine Schnittstelle. Konkret:
 
 ```
-python -m stockinfo_plugin.testing.freshness <aufnahme>...   # Exit 0 / 1
+python -m stockinfo_plugin.testing.freshness <verzeichnis>   # Exit 0 / 1
+        [--max-age-days N]                                   # Ad-hoc-Übersteuerung
 make check-recordings                                        # ruft ihn auf
 ```
 
 Die Arbeit steckt in `check_release_readiness(policy, recordings) -> list[str]`
 — eine reine Funktion, direkt testbar, ohne pytest und ohne Netz. Das `__main__`
 darüber ist nur Ausgabe und Exit-Code.
+
+**Woher die Policy kommt — Befund 4 aus Runde 2.** Runde 2 legte sie in die
+pytest-Fixture, und der CLI-Befehl bekommt keine Fixture; die Angabe hatte im
+Release-Check schlicht keine Quelle. Sie steht deshalb **deklarativ neben den
+Aufzeichnungen**:
+
+```
+recordings/
+  recordings-policy.toml        # max_age_days = 90
+  frankfurter_fx.recording.json
+```
+
+`RecordingPolicy.from_file()` lesen **beide** — die Fixture im Test und das
+`__main__` im Release-Check. Eine Quelle, zwei Leser. `--max-age-days`
+übersteuert für einen einzelnen Lauf und wird in der Ausgabe als Übersteuerung
+benannt, damit niemand ein grünes Ergebnis für die Policy hält. Fehlt die
+Datei, ist das ein Fehler und kein Standardwert: Eine stillschweigend
+angenommene Frist ist genau die Angabe, die niemand je bewusst gesetzt hat.
+
+#### Die Versionen, die Verify `#5` verlangt
+
+| Feld | Woher | Bei Abweichung |
+|---|---|---|
+| `schema_version` | Format dieser Datei, ganze Zahl | **Fehler** — die Datei wird nicht geraten, sondern neu aufgezeichnet |
+| `plugin_api_version` | `stockinfo_plugin.API_VERSION` | Major → **Fehler**, Minor → Warnung |
+| `recorder_version` | Version des aufzeichnenden Plugin- beziehungsweise Beispielpakets | Release-Check: **Fehler**; offline: Warnung |
+| `provider_api_version` | Pfadsegment beziehungsweise Versionsheader des Anbieters (bei Frankfurter `v2`) | **Fehler** — der Anbieter hat sich unter uns geändert |
+
+Jede dieser vier Regeln bekommt eine **mutative** Gegenprobe: Feld verfälschen,
+erwarteten Ausgang und erwartete Meldung prüfen — nach dem Muster der 23
+Mutanten aus T-27a. Ohne sie belegte die Tabelle nur, dass die Felder da sind,
+nicht dass sie gelesen werden.
 
 `last_real_ok` schreibt ausschließlich ein **vollständig** erfolgreicher Lauf
 zurück; die Änderung steht danach im Diff und wird mitcommittet. So ist im
@@ -232,12 +307,22 @@ Netz getrennt — ein Paket, das Verträge anbietet, hätte fremde Testläufe
 umgebaut.
 
 Deshalb liefert das Plugin nur **Optionen, Marker und Fixtures**. Die Sperre
-wird ausdrücklich angefordert:
+wird ausdrücklich angefordert — und zwar auf **einem** Weg, nicht wahlweise:
 
 ```python
-@pytest.mark.offline_http          # oder: die Fixture direkt anfordern
-def test_die_szenarien_laufen_aus_der_aufzeichnung(replayed_source): ...
+def test_die_szenarien_laufen_aus_der_aufzeichnung(replay_runner): ...
 ```
+
+`replay_runner` **hängt zwingend** an der Guard-Fixture; wer den Replay-Betrieb
+anfordert, bekommt die Sperre mit, ohne sie zu erwähnen. Der Marker
+`@pytest.mark.offline_http` löst denselben Weg nur deklarativ aus, er ist kein
+zweiter.
+
+Der Unterschied ist nicht kosmetisch: „Marker **oder** Fixture" hieße, dass die
+Referenzsuite die Sperre vergessen kann, ohne dass etwas auffällt — der Lauf
+bliebe grün, nur eben aus der Aufzeichnung *und* potenziell aus dem Netz. Eine
+Sperre, deren Anwendung optional ist, prüft am Ende die Disziplin des Autors
+statt der Eigenschaft.
 
 Der Nachweis hat zwei Hälften, und die zweite ist die wichtigere:
 
@@ -273,6 +358,42 @@ hat den Rest nicht bestätigt. `last_real_ok` würde trotzdem behaupten, der
 Anbieter sei vollständig gefragt worden — dieselbe stille Überzeichnung wie
 `P-01`. Deshalb: Wurde deselektiert, bleibt `last_real_ok` unverändert und der
 Lauf sagt es ausdrücklich.
+
+#### `--real` bestätigt nur, was offline auch belegt ist
+
+`--real` schreibt `last_real_ok` **ausschließlich** an eine vorhandene Aufnahme
+mit passender `scenario_signature`. Fehlt sie oder driftet sie, wird nichts
+gestempelt, und die Meldung verweist auf `--record`.
+
+Der Grund: `last_real_ok` ist eine Aussage über *diese* Aufzeichnung — „was
+hier steht, hat der Anbieter bestätigt". Ohne Aufnahme gäbe es nichts zu
+bestätigen; bei abweichender Signatur bestätigte der Real-Lauf eine andere
+Frage als die, die in der Datei steht. Beides wäre eine Freshness-Angabe ohne
+Gegenstand, und der Release-Check baut auf ihr auf.
+
+#### `os.replace` ist pro **Datei** atomar — und die Suite ist die Datei
+
+Das ist die ehrliche Grenze: Ersetzt ein Lauf mehrere Dateien und stirbt der
+Prozess dazwischen, bleibt ein gemischter Stand. Ein Manifest darüber würde das
+Problem nur verschieben — dann sind Manifest und Dateien nicht gemeinsam
+atomar.
+
+Deshalb zwei Festlegungen statt einer Beteuerung:
+
+1. **Die Aufzeichnung einer Szenariosuite ist genau eine Datei.** Damit ist die
+   Einheit, die zusammen stimmen muss, auch die Einheit, die `os.replace`
+   atomar ersetzt. Innerhalb einer Suite gibt es keinen gemischten Stand.
+2. **Über mehrere Suiten hinweg ist der Commit die Generation.** Jeder
+   veröffentlichende Lauf schreibt dieselbe `run_id` in jede Datei, die er
+   anfasst. Ein abgebrochener Lauf hinterlässt damit **unterschiedliche**
+   `run_id`s — sichtbar im Diff vor dem Commit, und der Release-Check weist
+   einen Stand mit uneinheitlicher `run_id` ab. Wir behaupten keine
+   dateiübergreifende Atomarität; wir machen ihr Fehlen **erkennbar**.
+
+Beide Gegenrichtungen gehören in die Tests: ein Suite-Fehlschlag (nichts
+geschrieben, keine halbe Datei) **und** ein Abbruch mitten in der
+Veröffentlichung (erste Datei vollständig und gültig, uneinheitliche `run_id`,
+Release-Check rot).
 
 `MissingRecording` ist aus demselben Grund ein **Fehler** und kein Rückfall:
 Ein Transport, der bei fehlender Aufzeichnung ins Netz greift, macht die
