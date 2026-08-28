@@ -31,10 +31,10 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 3 | Daily-Contract | Datum, Schlusskurs, Währung, Sortierung, **keine Duplikate**, adjusted/unadjusted deklariert | ✅ [^suiten] [^mutanten] | |
 | 4 | FX-Contract | Base/Quote, positive endliche Rate, Zeitpunkt, Identitäts- und Fehlerfall | ✅ [^suiten] [^mutanten] | |
 | 5 | fachliche Invarianten | ISIN-Prüfziffer, Anfrage-ISIN = Ergebnis-ISIN, **echter MIC statt Sammelcode**, gültige Währung, sinnvolle Datumsfolge | ✅ [^invarianten] [^mutanten] | |
-| 6 | Szenarioformat | ein Fall wird **einmal** beschrieben; Format, Validierung und ein **transportneutraler** Runner-Vertrag stehen. Dass derselbe Fall offline **und** real läuft, nimmt T-27b ab | ✅ [^format] | |
+| 6 | Szenarioformat | ein Fall wird **einmal** beschrieben; Format, Validierung und Ausführung über `DirectRunner` stehen | ✅ [^format] | |
 | 6b | Rollenpassung und Nullfall | Anfrage- und Ergebnistyp müssen zusammenpassen — **auch wenn ein Fehlfall erwartet wird**; ein Lauf **ohne einen einzigen Fall** ist eine Beanstandung | ✅ [^nullfall] | |
 | 6c | Beschreibungsfehler beenden den Lauf nicht | eine kaputte Fallbeschreibung kommt als Befund zurück, statt die übrigen Fälle mitzureißen | ✅ [^format] | |
-| 7 | Golden Cases | erwarteter Ticker/MIC stammt **nicht** aus der Aufzeichnung, sondern aus gepflegten Daten | ✅ [^golden] | |
+| 7 | Golden Cases | erwarteter Ticker/MIC stammt **nicht** aus der geprüften Eingabedatei, sondern aus gepflegten Daten | ✅ [^golden] | |
 | 8 | `FakeSource` | vorgebbare Antwort je Anfrage, Aufrufprotokoll für Reihenfolge und Anzahl | ✅ [^doubles] | |
 | 9 | Fake-Uhr | TTL, Half-open und Reset ohne echte Wartezeit prüfbar | ⚠️ [^uhr] | |
 | 10 | globaler Zustand | zwei Testfälle beeinflussen sich nicht | ✅ [^zustand] | |
@@ -54,7 +54,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `test_ein_heiles_plugin_wird_nicht_beanstandet`. Ohne sie bewiese die ganze
     Datei nur, dass die Verträge streng sind — ein Vertrag, der *alles*
     ablehnt, bestünde jeden Mutantentest und wäre wertlos.
-[^nullfall]: **Beides waren Löcher, durch die T-27b sonst geerbt hätte.**
+[^nullfall]: **Zwei Löcher, durch die jeder spätere Nutzer geerbt hätte.**
 
     `QuoteRequest` mit `expect=Resolved` lief vorher grün — ein Double gibt
     bereitwillig zurück, was man ihm sagt, und niemand fragte, ob das zur Rolle
@@ -64,8 +64,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     Der Nullfall ist dasselbe Muster wie `P-05`: Ein Lauf ohne einen einzigen
     Fall gab `[]` zurück, und das sah aus wie Erfolg. **Der Test, der das
     vorher behauptete, war meiner** und zertifizierte die Lücke. Er ist jetzt
-    umgekehrt und hat einen zweiten
-    daneben, der die Auswahl mit einem *tatsächlich* freigegebenen Fall belegt.
+    umgekehrt.
 
     **Runde 3 — die Rollenprüfung hatte dieselbe Lücke eine Ebene tiefer.** Sie
     stieg bei Fehlfällen aus, *bevor* sie den Anfragetyp ansah. Ein Fall mit
@@ -113,10 +112,14 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `test_der_gemeldete_stand_und_die_liste_gehoeren_zusammen` verknüpft beide
     Angaben, damit sie nicht wieder getrennt gepflegt werden.
 [^format]: **`Scenario` + `validate_scenarios` + `ScenarioRunner` +
-    `DirectRunner`.** Der Runner-Vertrag ist eine einzige Methode und weiß
-    nicht, ob die Antwort aus dem Prozess, einer Aufzeichnung oder dem Netz
-    kommt. `DirectRunner` ist seine erste Umsetzung — ohne sie wäre der Vertrag
-    eine Behauptung; T-27b stellt den HTTP-Runner daneben.
+    `DirectRunner`.** Der Runner-Vertrag ist eine einzige Methode; wie er zu
+    seiner Antwort kommt, weiß das Modul nicht. `DirectRunner` ist die
+    mitgelieferte Umsetzung und ruft eine Quelle im selben Prozess auf — ohne
+    sie wäre der Vertrag eine Behauptung.
+
+    *(Bis 2026-08-28 stand hier zusätzlich ein HTTP-Runner aus T-27b samt
+    Aufzeichnung. Er ist mit der Produktentscheidung gegen den Offline-Lauf
+    entfallen; die Geschichte steht in T-27b, nicht mehr hier.)*
 
     Die Validierung ist der eigentliche Wert: Ein falsch beschriebener Fall
     läuft sonst grün, **weil** er nichts prüft. `golden={"tikcer": "RY"}` nennt
@@ -139,14 +142,16 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `Quote` und `DailySeries` waren es bis Runde 1 keine; sie durften ohne einen
     einzigen Erwartungswert dastehen.
 
-    Die andere Hälfte — dass die Werte **nicht aus der Aufzeichnung** stammen —
-    prüft `test_eine_luegende_aufzeichnung_macht_den_fall_rot`: Die Tabelle wird
-    so verfälscht, dass die Royal Bank angeblich in Euro notiert. Käme die
-    Erwartung aus der Datei, zöge sie mit und der Fall bliebe grün. Er wird rot.
+    Die andere Hälfte — dass die Werte **nicht aus der geprüften Datei**
+    stammen — prüft `test_eine_luegende_eingabedatei_macht_den_fall_rot`: Die
+    Tabelle wird so verfälscht, dass die Royal Bank angeblich in Euro notiert.
+    Käme die Erwartung aus der Datei, zöge sie mit und der Fall bliebe grün. Er
+    wird rot.
 
     Dazu trägt jeder Golden Case eine `note` mit der Herkunft seines Werts, und
     ein Test verlangt sie. In zwei Jahren ist „RY/XTSE" ohne Herkunft nicht mehr
-    überprüfbar — wer es dann anzweifelt, hätte nur die Aufzeichnung.
+    überprüfbar — wer es dann anzweifelt, hätte nur noch die geprüfte Quelle
+    selbst.
 [^doubles]: **`FakeSource` samt fünf rollenscharfen Ableitungen.** Antworten in
     Reihenfolge (die letzte wiederholt sich), `keyed` je Anfrage,
     Aufrufprotokoll mit Reihenfolge und Anzahl, `CallLog` über **mehrere**

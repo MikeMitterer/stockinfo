@@ -4,19 +4,12 @@ Ein `Scenario` sagt, was gefragt wird und was herauskommen soll. `ScenarioRunner
 ist genau eine Methode; was er mit der Anfrage macht, weiß dieses Modul nicht.
 `DirectRunner` ruft die Quelle im selben Prozess auf.
 
-**Was dieses Modul einmal war und nicht mehr ist.** Bis T-27b trug es eine
-zweite Betriebsart mit: Ein Fall konnte als „darf gegen den echten Anbieter
-laufen" markiert werden, und `run_scenarios` wählte danach aus. Dahinter stand
-die Absicht, denselben Fall offline aus einer Aufzeichnung **und** real laufen
-zu lassen.
+Der Wert steckt in der **Validierung**: Ein falsch beschriebener Fall läuft
+sonst grün, weil er nichts prüft. Ein Tippfehler im Feldnamen vergleicht ein
+Feld, das es nicht gibt, und jede naive Prüfschleife übergeht ihn.
 
-Diese Absicht ist eine Produktentscheidung von Mike (2026-08-28) gewesen — und
-zwar dagegen: *„Wir brauchen keine extrem aufwändige Offline-Variante des
-Tests."* Wo eine echte API zu prüfen ist, tut das ein Integrationstest gegen
-die echte API. Damit hatte die Auswahl keinen zweiten Betriebsmodus mehr, auf
-den sie hätte zeigen können; sie ist entfernt statt als unbenutzte Option
-stehen zu bleiben. Eine Zusage, die niemand mehr einlöst, ist schlimmer als
-keine — sie sieht aus wie eine Möglichkeit.
+Wo eine echte API zu prüfen ist, tut das ein Integrationstest gegen die echte
+API — nicht dieses Modul.
 
 Der wichtigste Fallstrick steht in `Scenario.golden`.
 """
@@ -74,12 +67,13 @@ ROLE_RESULTS: dict[type, type] = {
 
 @dataclass(frozen=True)
 class Scenario:
-    """Ein Prüffall — einmal beschrieben, in jeder Betriebsart derselbe.
+    """Ein Prüffall: was gefragt wird, und was herauskommen soll.
 
     Attributes:
-        case_id: Stabile Kennung. Sie taucht in jeder Meldung auf und darf sich
-            **nicht** ändern, wenn der Fall umformuliert wird — sonst verliert
-            eine Aufzeichnung ihren Fall, und niemand merkt es.
+        case_id: Stabile Kennung. Sie taucht in jeder Meldung auf und sollte
+            sich **nicht** ändern, wenn der Fall nur umformuliert wird — sonst
+            zeigt ein rot gewordener Fall unter neuem Namen auf nichts, was
+            jemand wiedererkennt.
         request: Die Anfrage, im Typ ihrer Rolle.
         expect: Die erwartete **Ergebnisart** als Klasse, nicht als Zeichenkette.
             ``expect=NotFound`` statt ``expect="not_found"``: Ein Katalog von
@@ -89,17 +83,16 @@ class Scenario:
         golden: Erwartete Kernwerte, Feld für Feld.
 
             **Der wichtigste Fallstrick des ganzen Kits.** Diese Werte dürfen
-            nicht aus der Aufzeichnung erzeugt werden. Wer sie aus dem
-            mitgeschnittenen Anbieter-Antwortpaket ableitet, prüft nur noch, ob
-            ein möglicherweise falscher Treffer *reproduzierbar* falsch ist —
-            und je länger der Test grün bleibt, desto sicherer fühlt sich der
-            Irrtum an.
+            nicht aus der Antwort stammen, die geprüft wird — und auch nicht
+            aus der Eingabedatei, die die Quelle liest. Wer sie von dort
+            ableitet, prüft nur noch, ob ein möglicherweise falscher Treffer
+            *reproduzierbar* falsch ist, und je länger der Test grün bleibt,
+            desto sicherer fühlt sich der Irrtum an.
 
             Golden-Erwartungen sind kleine, bewusst geprüfte Daten: Jemand hat
             nachgesehen, dass die Royal Bank of Canada an der TSX als ``RY``
-            läuft, und hat es hingeschrieben. Sie werden getrennt von den
-            Aufzeichnungen gepflegt, und `validate_scenarios` verlangt sie für
-            jede Ergebnisart, bei der ein Treffer ohne sie nichts aussagt.
+            läuft, und hat es hingeschrieben. `validate_scenarios` verlangt sie
+            für jede Ergebnisart, bei der ein Treffer ohne sie nichts aussagt.
         plausible: Bereiche für Werte, die sich ändern — je Feld
             ``(untere, obere)`` Grenze, beide einschließlich. Ein Kurs lässt
             sich nicht festnageln, aber „zwischen 1 und 10000" schlägt an, wenn
@@ -122,14 +115,14 @@ class Scenario:
 class ScenarioRunner(Protocol):
     """Wie ein Szenario zu einer Antwort kommt — **eine** Methode.
 
-    Transportneutral heißt wörtlich: Dieses Modul weiß nicht, ob die Antwort
-    aus dem Prozess, aus einer Aufzeichnung oder aus dem Netz kommt. Alles, was
-    ein Runner verspricht, ist eine Antwort auf ein Szenario.
+    Wie ein Runner zu seiner Antwort kommt, weiß dieses Modul nicht — alles,
+    was er verspricht, ist eine Antwort auf ein Szenario. `DirectRunner` ist
+    die mitgelieferte Umsetzung; er ruft eine Quelle im selben Prozess auf.
 
     Der Vertrag hat eine einzige harte Regel, und sie ist dieselbe wie bei den
-    Quellen: **Er wirft nicht.** Ein Runner, der bei Netzfehlern eine Ausnahme
-    durchlässt, macht aus einem Anbieterausfall einen Testabbruch — und dann
-    laufen die restlichen Fälle nicht mehr, obwohl sie es könnten.
+    Quellen: **Er wirft nicht.** Ein Runner, der eine Ausnahme durchlässt,
+    macht aus dem Fehlschlag eines Falles einen Testabbruch — und dann laufen
+    die restlichen nicht mehr, obwohl sie es könnten.
     """
 
     def run(self, scenario: Scenario) -> object:
@@ -210,7 +203,8 @@ def validate_scenarios(scenarios: list[Scenario] | tuple[Scenario, ...]) -> list
         if case_id in seen:
             problems.append(
                 f"{case_id}: doppelte case_id — zwei Fälle mit derselben "
-                "Kennung, und eine Aufzeichnung trifft danach den falschen"
+                "Kennung, und eine Meldung nennt danach nicht mehr eindeutig, "
+                "welcher von beiden gemeint ist"
             )
         seen.add(case_id)
 
@@ -285,17 +279,17 @@ def _check_provenance(scenario: Scenario) -> list[str]:
     Plugin-Autor davon profitiert.
 
     In zwei Jahren ist ``RY/XTSE`` ohne Herkunft nicht mehr überprüfbar. Wer
-    den Wert dann anzweifelt, hat nur die Aufzeichnung — also genau die Quelle,
-    die es nicht sein durfte. Die Länge ist eine Untergrenze gegen ``"ok"``:
-    kein Beweis für eine gute Begründung, aber die Grenze, unterhalb derer
-    keine stehen kann.
+    den Wert dann anzweifelt, hat nur noch die geprüfte Quelle selbst — also
+    genau die, aus der die Erwartung nicht stammen durfte. Die Länge ist eine
+    Untergrenze gegen ``"ok"``: kein Beweis für eine gute Begründung, aber die
+    Grenze, unterhalb derer keine stehen kann.
     """
     if len(scenario.note.strip()) >= 20:
         return []
     return [
         f"{scenario.case_id}: note ist {scenario.note.strip()!r} — ein Golden "
         "Case ohne Herkunft ist in zwei Jahren nicht mehr überprüfbar, und "
-        "nachschlagen ließe er sich dann nur in der Aufzeichnung"
+        "nachschlagen ließe er sich dann nur dort, wo er nicht herkommen darf"
     ]
 
 

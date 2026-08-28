@@ -237,7 +237,7 @@ def test_ein_nicht_gefuehrtes_papier_ist_notfound() -> None:
 #
 # Die Werte hier sind **nicht** aus der Fixture abgelesen. Sie stehen in der
 # `note` je Fall mit ihrer Herkunft, und die Gegenprobe darunter beweist die
-# Trennung: Wenn die Aufzeichnung lügt, wird der Fall rot.
+# Trennung: Wenn die Eingabedatei lügt, wird der Fall rot.
 
 GOLDEN = (
     Scenario(
@@ -268,10 +268,10 @@ GOLDEN = (
 
 
 def test_die_golden_cases_laufen_durch_den_runner() -> None:
-    """Format, Validierung und Vergleich in einem Durchgang — transportneutral.
+    """Format, Validierung und Vergleich in einem Durchgang.
 
-    Derselbe Satz Fälle läuft mit T-27b gegen den echten Anbieter, ohne dass
-    hier eine Zeile geändert wird. Das ist die Zusage, die dieses Ticket macht.
+    `DirectRunner` ruft die Quelle im selben Prozess auf; der Fall beschreibt,
+    *was* gefragt wird, nicht *wie* die Quelle heißt.
     """
     quotes = DirectRunner(PricesFileQuoteSource({"path": str(CLOSES)}))
     rates = DirectRunner(FxFileSource({"path": str(FX)}))
@@ -280,11 +280,11 @@ def test_die_golden_cases_laufen_durch_den_runner() -> None:
     assert run_scenarios(rates, [GOLDEN[1]]) == []
 
 
-def test_eine_luegende_aufzeichnung_macht_den_fall_rot(tmp_path: Path) -> None:
+def test_eine_luegende_eingabedatei_macht_den_fall_rot(tmp_path: Path) -> None:
     """**Die Gegenprobe zum wichtigsten Fallstrick des Kits.**
 
-    Golden-Werte dürfen nicht aus der Aufzeichnung erzeugt werden — sonst
-    prüft der Fall nur noch, ob ein möglicherweise falscher Treffer
+    Golden-Werte dürfen nicht aus der Datei stammen, die die Quelle liest —
+    sonst prüft der Fall nur noch, ob ein möglicherweise falscher Treffer
     *reproduzierbar* falsch ist. Behaupten lässt sich das leicht; hier wird es
     gemessen.
 
@@ -304,7 +304,7 @@ def test_eine_luegende_aufzeichnung_macht_den_fall_rot(tmp_path: Path) -> None:
 
     assert len(findings) == 1
     assert "'EUR'" in findings[0] and "'CAD'" in findings[0], (
-        "die Erwartung ist mitgezogen — dann stammt sie aus der Aufzeichnung"
+        "die Erwartung ist mitgezogen — dann stammt sie aus der Eingabedatei"
     )
 
 
@@ -312,7 +312,8 @@ def test_eine_luegende_aufzeichnung_macht_den_fall_rot(tmp_path: Path) -> None:
 def test_jeder_golden_case_nennt_seine_herkunft(scenario: Scenario) -> None:
     """In zwei Jahren ist „RY/XTSE" ohne Herkunft nicht mehr überprüfbar.
 
-    Wer den Wert dann anzweifelt, hätte nur die Aufzeichnung — also genau die
-    Quelle, die es nicht sein durfte. Die `note` ist deshalb keine Zierde.
+    Wer den Wert dann anzweifelt, hätte nur noch die geprüfte Quelle selbst —
+    also genau die, aus der er nicht stammen durfte. Die `note` ist deshalb
+    keine Zierde.
     """
     assert len(scenario.note) > 40, f"{scenario.case_id} nennt keine Herkunft"

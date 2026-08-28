@@ -1,9 +1,14 @@
 """Das OpenFIGI-Plugin gegen die **echte** API.
 
-Hier steht ausschließlich, was ein Netz braucht. Alles, was sich ohne fremden
-Dienst entscheiden lässt — Zuständigkeit, Übersetzung, der geerbte
-`ResolverContract` —, steht in `test_plugin_openfigi.py` und läuft auch dann,
-wenn diese Datei abgewählt ist.
+Hier stehen **drei** Fälle, und jeder von ihnen fasst den Dienst wirklich an.
+Alles, was sich ohne fremden Dienst entscheiden lässt — Zuständigkeit,
+Übersetzung, der geerbte `ResolverContract`, der Sammelcode-Fall —, steht in
+`test_plugin_openfigi.py` und läuft auch dann, wenn diese Datei abgewählt ist.
+
+Der Sammelcode-Fall gehörte ausdrücklich **nicht** hierher: Der Kern-Resolver
+bricht bei `US` ab, bevor der Client an der Reihe ist. Ein Test unter dem
+Marker `integration`, der gar nichts fragt, macht die Angabe „drei echte
+Netzfälle" zu einer Behauptung.
 
     pytest tests/test_plugin_openfigi_integration.py   # fragt OpenFIGI
     pytest -m "not integration"                        # ohne fremde Dienste
@@ -67,22 +72,6 @@ def test_die_kaskade_auf_die_heimatboerse(plugin: OpenFigiResolverPlugin) -> Non
 
     assert isinstance(answer, Resolved), answer
     assert (answer.ticker, answer.mic) == ("RY", "XTSE")
-
-
-def test_ein_sammelcode_liefert_keinen_treffer(plugin: OpenFigiResolverPlugin) -> None:
-    """`US` ist kein MIC — und der Dienst wird deshalb gar nicht erst gefragt.
-
-    Am echten Dienst gemessen: `US0378331005` über ``exchCode=US`` **liefert**
-    `AAPL`. Der Kern-Resolver fragt trotzdem nicht, weil die Antwort ohne
-    echten Handelsplatz keine Identität trägt.
-
-    Dieser Test steht hier und nicht nur bei den Unit-Tests, weil er die
-    Versuchung festhält: Es wäre ein Treffer zu holen, und er wäre unbrauchbar.
-    Auflösen kann den Fall der Yahoo-Fallback, der den Handelsplatz benennt.
-    """
-    answer = plugin.resolve(ResolveRequest(isin="US0378331005", preferred_mic="US"))
-
-    assert isinstance(answer, NotFound), answer
 
 
 def test_ein_papier_das_keine_der_gefragten_boersen_fuehrt(

@@ -9,7 +9,7 @@ Paket. Der Importweg bleibt derselbe::
 
 ===================== =========================================================
 `contracts`           Was eine Quelle je Rolle erfüllen muss
-`scenarios`           Ein Fall, einmal beschrieben, in zwei Betriebsarten
+`scenarios`           Prüffälle beschreiben, validieren und ausführen
 `doubles`             Quellen auf Ansage, mit Aufrufprotokoll und Fake-Uhr
 ===================== =========================================================
 """

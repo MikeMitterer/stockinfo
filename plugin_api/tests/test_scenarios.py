@@ -70,7 +70,7 @@ def test_ein_tippfehler_im_feldnamen_faellt_auf() -> None:
 
 
 def test_zwei_faelle_mit_derselben_kennung() -> None:
-    """Danach trifft eine Aufzeichnung den falschen Fall — und niemand merkt es."""
+    """Danach nennt eine Meldung nicht mehr eindeutig, welcher Fall gemeint ist."""
     problems = validate_scenarios([GOOD, GOOD])
 
     assert any("doppelte case_id" in line for line in problems)
@@ -373,9 +373,6 @@ def test_eine_leere_fallliste_ist_kein_erfolg() -> None:
     Eine leere Liste sieht aus wie „alles in Ordnung" und heißt „nichts
     geprüft". Vorher stand hier ein Test, der genau das Gegenteil behauptete.
 
-    Bis T-27b gab es diese Aussage zweimal — einmal für die leere Liste und
-    einmal für eine Auswahl, die nichts übrig ließ. Die Auswahl ist mit der
-    zweiten Betriebsart entfallen; die Aussage bleibt.
     """
     findings = run_scenarios(DirectRunner(FakeResolver()), [])
 

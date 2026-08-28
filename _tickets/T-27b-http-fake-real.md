@@ -55,57 +55,78 @@ Abschnitt „Überholt" am Ende.
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | 1 | `app/plugins/openfigi_resolver.py` | erfüllt die **Resolver**-Rolle des Vertrags aus `plugin_api` | ✅ [^rolle] | |
-| 2 | dasselbe Plugin | benutzt `OpenFigiClient`, **schreibt keinen HTTP-Aufruf neu** | ✅ [^dry] | |
-| 3 | `tests/test_plugin_openfigi_integration.py` | fragt die **echte** OpenFIGI-API, kein Mock | ✅ [^echt] | |
-| 4 | derselbe Test | zwei Papiere über **zwei** Anfragewege (`micCode` und `exchCode`) | ✅ [^echt] | |
-| 5 | Papier, das die Börse nicht führt | `NotFound`, **nicht** `Unavailable` | ✅ [^echt] | |
-| 6 | ISIN mit falscher Prüfziffer | `NotResponsible`, **ohne** den Dienst zu fragen | ✅ [^ratenlimit] | |
-| 7 | `pytest -m "not integration"` | wählt die fremden Dienste ab, der Rest bleibt grün | ✅ [^marker] | |
-| 8 | `make test` | grün, inklusive Integrationstests | ✅ [^lauf] | |
-| 9 | Yahoo und justETF | als Rolle **noch offen** — sie sprechen nicht direkt HTTP | ➖ [^kette] | |
+| 2 | dasselbe Plugin | **delegiert** an `app.resolver.OpenFigiResolver`; keine zweite Fachlogik | ✅ [^dry] | |
+| 3 | `tests/test_plugin_openfigi.py` | Zuständigkeit und Ergebnisübersetzung **ohne Netz**, mit testlokalen Doubles | ✅ [^unit] | |
+| 4 | dieselbe Datei | erbt `ResolverContract` — der vollständige Vertrag, nicht nachgeschrieben | ✅ [^unit] | |
+| 5 | `tests/test_plugin_openfigi_integration.py` | **drei** Fälle, jeder fasst den echten Dienst an | ✅ [^echt] | |
+| 6 | darunter die Kaskade aus T-18 | bevorzugte Börse leer → Heimatbörse aus dem ISIN-Präfix | ✅ [^echt] | |
+| 7 | Sammelcode `US` | **kein** Treffer mit erfundenem MIC — und der Client wird nicht gefragt | ✅ [^sammelcode] | |
+| 8 | `pytest -m "not integration"` | wählt die fremden Dienste ab, der Rest bleibt grün | ✅ [^marker] | |
+| 9 | `make test` | grün, inklusive Integrationstests | ✅ [^lauf] | |
+| 10 | Yahoo und justETF | als Rolle **noch offen** — sie sprechen nicht direkt HTTP | ➖ [^kette] | |
 
 [^rolle]: `OpenFigiResolver` erbt `Resolver` aus `stockinfo_plugin` und
     beantwortet `ResolveRequest` mit `Resolved`, `NotFound`, `NotResponsible`
     oder `Unavailable`. Damit erfüllt die App zum ersten Mal selbst einen der
     fünf Verträge aus T-27a — ein Vertrag, den niemand erfüllt hat, ist eine
     Behauptung.
-[^dry]: Das Plugin ist **Übersetzung, keine zweite Implementierung.** Der
-    HTTP-Aufruf, das Anfrageformat, die Auswertung der Antwort und die Regel
-    für brauchbare Yahoo-Symbole bleiben in `app/providers/openfigi_provider.py`.
-    Übersetzt wird nur `map_isin() → Resolved | NotFound` und
-    `SourceUnavailableError → Unavailable`.
+[^dry]: **Das Plugin entscheidet nichts.** Es delegiert an
+    `app.resolver.OpenFigiResolver` und übersetzt nur dessen Antwort. Der
+    HTTP-Aufruf, die Yahoo-Symbolregel, die Kaskade aus T-18 und die Weigerung,
+    mit einem Sammelcode zu fragen (T-21), stehen dort.
 
-    Die zweite Zeile ist die wichtigere: Dieser Client hat den Umbau hinter
-    sich, bei dem ein Ausfall als „kenne ich nicht" zurückkam und damit aus
-    einem 502 ein 404 wurde. Diese Unterscheidung ein zweites Mal zu
-    formulieren hieße, sie ein zweites Mal falsch zu machen.
-[^echt]: **Gegen den echten Dienst gelaufen, nicht gegen eine Annahme** — und
-    genau das hat einen Fehler in meiner ersten Fassung aufgedeckt:
+    Die erste Fassung hat das nicht getan, und der Fehler war kein Duplikat,
+    sondern ein **Rückschritt**: Sie baute `figi_lookup → map_isin` nach, hatte
+    die Kaskade gar nicht und umging die Sammelcode-Sperre. Zwei Fassungen
+    derselben Fachregel laufen beim ersten Sonderfall auseinander — hier war
+    die zweite von Anfang an die ältere.
+[^unit]: **`tests/test_plugin_openfigi.py`, 25 Fälle ohne Netz.** Darunter der
+    vollständige `ResolverContract`, geerbt statt nachgeschrieben.
 
-        US0378331005 @ XNAS (micCode=XNAS) -> None
-        US0378331005 @ US   (exchCode=US)  -> 'AAPL'
-        IE00B3RBWM25 @ XETR (micCode=XETR) -> 'VGWL'
-        CA78012H5675 @ XETR (micCode=XETR) -> None
+    Das Double ist zwölf Zeilen in der Testdatei selbst — keine
+    wiederverwendbare Fake-Schicht. Genau deren Aufbau war der Fehler, den
+    `P-09` beschreibt.
 
-    `handles()` prüfte zuerst mit `mic_is_wellformed` — und hätte damit
-    ausgerechnet `US` abgewiesen, den Sammelcode, über den OpenFIGI US-Papiere
-    überhaupt kennt. Welche Codes das sind, weiß der Dienst und nicht der
-    Vertrag.
+    Der Vertrag hat dabei die Prüfdaten korrigiert:
+    `test_die_eigenen_pruefdaten_sind_gueltige_isins` wies
+    `not_responsible = ResolveRequest(isin="US0378331006")` ab — eine kaputte
+    Prüfziffer misst die Formprüfung statt der Zuständigkeit. Da OpenFIGI für
+    **jede** gültige ISIN zuständig ist, ist der echte Fall eine Anfrage
+    **ohne** ISIN.
+[^echt]: **Drei Fälle, und jeder fasst den Dienst wirklich an.** Regelfall über
+    einen echten MIC, die Kaskade auf die Heimatbörse, und ein Papier, das
+    keine der gefragten Börsen führt (`NotFound`, nicht `Unavailable` — der
+    Anlass für T-20).
 
-    Die Golden-Werte stammen **nicht** aus dem Dienst: `AAPL` und `VGWL` sind
-    nachgeschlagen und hingeschrieben. Käme der Erwartungswert aus derselben
-    Antwort, die geprüft wird, prüfte der Test nur, ob der Dienst mit sich
-    selbst übereinstimmt.
-[^ratenlimit]: Der Test reicht einen Client herein, dessen **Benutzung ein
-    Fehler ist**. Ohne ihn bewiese er nur, dass `NotResponsible` herauskommt —
-    nicht, dass unterwegs niemand gefragt wurde. Und darum geht es: Ein
-    Ratenlimit, das für eine unmögliche Frage draufgeht, fehlt später bei einer
-    echten.
-[^marker]: `pytest -m "not integration"`: **638 passed, 29 skipped, 4
-    deselected**. Der Marker ist eine Möglichkeit, kein Vorschlag, ihn zu
-    überspringen — im normalen Lauf laufen die vier mit.
-[^lauf]: `make test`: Backend **642 passed / 29 skipped** (vorher 638),
-    Plugin-API **260 passed / 1 skipped**, Dashboard **259 passed**.
+    Die Kaskade braucht die **Stammaktie** `CA7800871021`. Mit der
+    Vorzugsaktie `CA78012H5675` schlug der Test zunächst fehl: OpenFIGI liefert
+    dort `RY V3.65 PERP BB`, und `_is_yahoo_compatible_symbol` verwirft das zu
+    Recht — genau der Fall, für den es `examples/canada_file.py` gibt. Der Test
+    hätte den Symbolfilter gemessen statt der Kaskade.
+
+    Die Golden-Werte stammen **nicht** aus dem Dienst: `VGWL` an `XETR` und
+    `RY` an `XTSE` sind nachgeschlagen und hingeschrieben.
+[^sammelcode]: **Der Befund, der die Runde-4-Nacharbeit ausgelöst hat.** `US`
+    fasst sechs Handelsplätze zusammen; OpenFIGI beantwortet darauf „welcher
+    Ticker", nicht „welche Börse". Der Kern-Resolver fragt deshalb **gar nicht
+    erst**:
+
+        _try_exchange(): if not is_real_mic(mic): return None
+
+    Meine erste Fassung umging das, fragte, bekam `AAPL` und lieferte
+    `Resolved(mic="US")` — einen Treffer, dessen MIC keiner ist.
+    `ResolverContract` verbietet das, und `is_real_mic("US")` ist `False`.
+
+    Der Test steht bei den **Unit**-Tests und nicht unter `integration`: Der
+    Client wird nicht gefragt, also gibt es hier keinen Dienstkontakt. Ein Test
+    unter dem Marker, der nichts fragt, machte die Angabe „drei echte
+    Netzfälle" zu einer Behauptung.
+[^marker]: `pytest -m "not integration"`: **663 passed, 29 skipped, 3
+    deselected**. `pytest -m integration`: **3 passed, 692 deselected**. Der
+    Marker ist eine Möglichkeit, kein Vorschlag, ihn zu überspringen — im
+    normalen Lauf laufen die drei mit.
+[^lauf]: `make test`: Backend **666 passed / 29 skipped**, Plugin-API
+    **257 passed / 1 skipped**, Dashboard **259 passed**.
     `ruff check app tests plugin_api` und `git diff --check` sauber.
 [^kette]: **Gemessen, und es ist der Grund für den Zuschnitt.** Von den drei
     Anbietern der ursprünglichen Kette spricht nur OpenFIGI direkt HTTP
@@ -734,61 +755,67 @@ weitere Übergabegrundlage.
 
 ## Auflösung · Neufassung nach der Produktentscheidung
 
-Maßgeblich ist dieser Abschnitt; alles oberhalb der Verify-Matrix bis hierher
-beschreibt den aufgehobenen Offline-Ansatz.
+Maßgeblich ist dieser Abschnitt; alles zwischen der Verify-Matrix und den
+Review-Runden beschreibt den aufgehobenen Offline-Ansatz. Die Review-Abschnitte
+darunter sind Geschichte und stehen bewusst **unterhalb** dieser Auflösung.
 
 ### Was gebaut wurde
 
-`app/plugins/openfigi_resolver.py` — eine **Rollen-Schale** um den vorhandenen
-`OpenFigiClient`. Sie enthält keinen HTTP-Aufruf, kein Anfrageformat, keine
-Antwortauswertung; das alles bleibt in `app/providers/openfigi_provider.py`.
-Übersetzt wird ausschließlich in die Sprache des Vertrags:
+`app/plugins/openfigi_resolver.py` — eine **Rollen-Schale** um
+`app.resolver.OpenFigiResolver`. Sie enthält keinen HTTP-Aufruf, kein
+Anfrageformat, keine Antwortauswertung und keine Börsenlogik. Übersetzt wird
+ausschließlich in die Sprache des Vertrags:
 
-    map_isin() liefert einen Ticker      →  Resolved
-    map_isin() liefert None              →  NotFound
-    SourceUnavailableError               →  Unavailable
-    ISIN ohne gültige Prüfziffer         →  NotResponsible
+    ResolvedInstrument mit ticker und mic   →  Resolved
+    ResolvedInstrument ohne Identität       →  NotFound
+    NotFound / Unavailable / NotResponsible →  unverändert durchgereicht
 
-`tests/test_plugin_openfigi_integration.py` fragt den echten Dienst. Vier
-Fälle: zwei Auflösungen über **zwei verschiedene** Anfragewege, ein Papier, das
-die Börse nicht führt, und eine ISIN mit falscher Prüfziffer, die gar nicht
-erst gefragt wird.
+Die letzte Zeile ist wörtlich zu nehmen: `app.providers.base.Resolution`
+benutzt für die Fehlfälle bereits `stockinfo_plugin.types`. Der Vertrag ist an
+dieser Stelle schon gemeinsam.
 
-### Warum der Test gegen die echte API läuft
+`tests/test_plugin_openfigi.py` prüft ohne Netz, was sich ohne Netz entscheiden
+lässt — samt geerbtem `ResolverContract`.
+`tests/test_plugin_openfigi_integration.py` enthält **drei** Fälle, und jeder
+fasst den echten Dienst an.
 
-Weil er dann etwas belegt, was kein Double belegen kann: dass das
-Anfrageformat noch stimmt, dass die Antwort noch so aussieht wie gedacht, und
-dass die Übersetzung in die Rollen trägt. Der Preis ist die Abhängigkeit von
-einem fremden Dienst und seinem Ratenlimit — deshalb der Marker `integration`
-und `-m "not integration"` als Ausweg, wenn kein Netz da ist.
+### Der Umweg, den dieses Ticket genommen hat
 
-**Und der Test hat sich sofort bezahlt gemacht.** Meine erste Fassung von
-`handles()` prüfte das Börsenmerkmal mit `mic_is_wellformed`. Am echten Dienst
-gemessen:
+Zwei Fehler, beide von mir, beide erst durch fremde Prüfung gefunden:
 
-    US0378331005 @ XNAS (micCode=XNAS) -> None
-    US0378331005 @ US   (exchCode=US)  -> 'AAPL'
+**Der Entwurf wuchs zum Subsystem.** Aus „Integrationstest muss laufen" wurden
+über drei Entwurfsrunden ein Aufzeichnungsformat, zwei Signaturen, ein Ledger,
+eine Socket-Sperre und ein Release-Befehl. Aufgehoben durch Mikes
+Produktentscheidung; das Muster steht als `P-09` in
+`CLAUDE-REVIEW-PATTERNS.md`, der Riegel in `CODEX-REVIEW-AUTOMATION.md`.
 
-`US` ist der Sammelcode der eigenen Tabelle und kein MIC — die Formprüfung
-hätte genau den Weg abgewiesen, über den OpenFIGI US-Papiere kennt. Gegen ein
-Double wäre das nie aufgefallen, weil das Double geantwortet hätte, was ich
-ihm gesagt hätte.
+**Das erste Plugin baute die Fachkette nach.** Es umging damit eine
+Entscheidung, die seit T-21 im Kern-Resolver steht:
+
+    _try_exchange(): if not is_real_mic(mic): return None
+
+`US` ist ein Sammelcode, kein MIC — ohne echten Handelsplatz ist die Identität
+unvollständig, also wird gar nicht erst gefragt. Mein Nachbau fragte, bekam
+`AAPL` und lieferte `Resolved(mic="US")`. Ich hatte den Fall sogar **gemessen**
+und daraus geschlossen, meine Prüfung zu lockern, statt nachzusehen, warum die
+vorhandene strenger ist. Eine Messung ersetzt nicht die Frage, ob das schon
+jemand entschieden hat.
 
 ### Was offen bleibt und wohin es gehört
 
 Yahoo und justETF sprechen nicht direkt HTTP, sondern über `yfinance` und
 `justetf_scraping`. Für ihre Rollen (`QuoteSource`, `MetadataSource`) ist das
 kein Hindernis, aber ein eigener Schritt — er gehört zu **T-23**, wo die App
-ohnehin als Plugin-Autor auftritt und die Registry die Quellen lädt.
+ohnehin als Plugin-Autor auftritt.
 
 ### Verifikation
 
-* `make test`: Backend **642 passed / 29 skipped** (vorher 638), Plugin-API
-  **260 passed / 1 skipped**, Dashboard **259 passed**.
-* `pytest -m "not integration"`: **638 passed, 29 skipped, 4 deselected**.
+* `make test`: Backend **666 passed / 29 skipped**, Plugin-API
+  **257 passed / 1 skipped**, Dashboard **259 passed**.
+* `pytest -m "not integration"`: **663 passed, 29 skipped, 3 deselected**.
+* `pytest -m integration`: **3 passed, 692 deselected**.
 * `ruff check app tests plugin_api` und `git diff --check` sauber.
-
----
+* Wheel neu gebaut; `build/lib` frei von `real_ok`/`only_real`.
 
 ## Codex-Review · Runde 4 · `8698aa0` · Nacharbeit
 
