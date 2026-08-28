@@ -36,6 +36,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+from importlib import metadata
 from collections.abc import Callable, Sequence
 from pathlib import Path
 
@@ -74,29 +75,61 @@ def environment_hash(packages: Sequence[str]) -> str:
     return hashlib.sha256(payload).hexdigest()[:HASH_LENGTH]
 
 
+def _contract_constraint(target: Path) -> Path:
+    """Schreibt die Constraint-Datei für das Vertragspaket.
+
+    **Warum das Design sie verlangt:** Ein beigesteuertes Paket hängt von
+    `stockinfo-plugin-api` ab. Ohne Schranke zöge pip dabei eine **andere**
+    Fassung des Vertrags in den Zielordner — und weil der Ordner vorn im
+    Suchpfad steht, gewänne sie gegen die der App. Ein Plugin könnte damit
+    still den Vertrag austauschen, gegen den die App selbst gebaut ist.
+    """
+    from stockinfo_plugin import __name__ as _  # noqa: F401 — nur die Version zählt
+
+    version = metadata.version("stockinfo-plugin-api")
+    path = target.parent / f".constraint-{target.name}.txt"
+    path.write_text(f"stockinfo-plugin-api=={version}\n", encoding="utf-8")
+    return path
+
+
 def _pip_install(packages: Sequence[str], target: Path) -> None:
     """Installiert die Pakete nach `target` — der echte Weg.
 
     `--target` statt einer virtuellen Umgebung: Wir brauchen nur ein
     Verzeichnis im Suchpfad, keinen zweiten Interpreter. Das ist weniger, und
     weniger ist hier richtig.
+
+    Zwei Schranken kommen aus dem Design und sind keine Vorsicht auf Verdacht:
+
+    * ``--only-binary=:all:`` — **nur Wheels.** Sonst müssten Build-Werkzeuge
+      ins Image, und ein `setup.py` liefe beim Start als Code.
+    * eine **Constraint** auf die installierte Version von
+      `stockinfo-plugin-api`, damit kein Plugin den Vertrag austauscht, gegen
+      den die App gebaut ist.
     """
-    subprocess.run(  # noqa: S603 — Argumente stammen aus sources.yaml, nicht von außen
-        [
-            sys.executable,
-            "-m",
-            "pip",
-            "install",
-            "--quiet",
-            "--disable-pip-version-check",
-            "--target",
-            str(target),
-            *packages,
-        ],
-        check=True,
-        timeout=INSTALL_TIMEOUT,
-        capture_output=True,
-    )
+    constraint = _contract_constraint(target)
+    try:
+        subprocess.run(  # noqa: S603 — die Liste ist auf `name==version` geprüft
+            [
+                sys.executable,
+                "-m",
+                "pip",
+                "install",
+                "--quiet",
+                "--disable-pip-version-check",
+                "--only-binary=:all:",
+                "--constraint",
+                str(constraint),
+                "--target",
+                str(target),
+                *packages,
+            ],
+            check=True,
+            timeout=INSTALL_TIMEOUT,
+            capture_output=True,
+        )
+    finally:
+        constraint.unlink(missing_ok=True)
 
 
 def ensure(

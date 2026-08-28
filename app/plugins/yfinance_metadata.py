@@ -8,18 +8,19 @@ die Sonderbehandlung, die T-23 auflösen soll.
 Wie bei justETF steht hier **keine** Fachlogik: Welche Papiere Yahoo für ETFs
 führt und wann es sich heraushält, entscheidet `YFinanceEtfEnricher`.
 
-**Und wie bei justETF stößt der Vertrag hier an eine Grenze.** Die
-Zuständigkeitsregel braucht Börse und Währung — `ResolveRequest` kennt beides
-nicht. Die vollständige Regel steht deshalb in `is_responsible` neben
-`handles`; der Adapter benutzt sie, wenn der Core die Angaben hat. Ob
-`ResolveRequest` dafür wächst, ist eine Entscheidung am Vertrag und gehört
-nicht in dieses Ticket.
+**Der Vertrag hat für die Zuständigkeitsregel wachsen müssen**, und das ist
+das Ergebnis dieses Tickets: Sie braucht Handelswährung und Börse.
+`ResolveRequest` trägt die Währung seit T-23; der Börsenname folgt aus
+`preferred_mic`. Vorher stand die volle Regel in einem `is_responsible` neben
+`handles` — ein Sondervertrag, den nur die eingebauten Quellen hatten, und
+damit war die einheitliche Schnittstelle eine Behauptung.
 """
 
 from typing import Any
 
 from stockinfo_plugin import FieldSpec, MetadataSource, Reading, ResolveRequest
 
+from app.exchanges import EXCHANGES
 from app.providers.yfinance_etf_provider import YFinanceEtfEnricher
 
 FIELDS: tuple[FieldSpec, ...] = (
@@ -61,19 +62,16 @@ class YFinanceMetadataPlugin(MetadataSource):
         self._enricher = enricher or YFinanceEtfEnricher()
 
     def handles(self, request: ResolveRequest) -> bool:
-        """Die gröbere Auskunft — ohne Börse und Währung (siehe Modul-Docstring)."""
-        return self.is_responsible(request.isin)
+        """Wo justETF führt, hält Yahoo sich heraus — die Regel steht dort.
 
-    def is_responsible(
-        self,
-        isin: str | None,
-        *,
-        exchange: str | None = None,
-        currency: str | None = None,
-    ) -> bool:
-        """Die **vollständige** Regel — geholt, nicht nachgebaut."""
+        Wie bei justETF über den Vertrag ausgedrückt: Währung aus der Anfrage,
+        Börsenname aus `EXCHANGES` zum `preferred_mic`.
+        """
+        definition = EXCHANGES.get(request.preferred_mic)
         return self._enricher.is_responsible(
-            isin, exchange=exchange, currency=currency
+            request.isin,
+            exchange=definition.name if definition else None,
+            currency=request.currency,
         )
 
     def fetch(self, request: ResolveRequest) -> list[Reading] | None:
@@ -84,7 +82,7 @@ class YFinanceMetadataPlugin(MetadataSource):
             sonst die Messwerte. Die drei Ausgänge bedeuten Verschiedenes —
             siehe `JustEtfMetadataPlugin.fetch`.
         """
-        if not self.is_responsible(request.isin):
+        if not self.handles(request):
             return []
 
         details = self._enricher.fetch_etf(request.isin, request.symbol)

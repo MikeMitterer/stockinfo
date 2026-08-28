@@ -196,6 +196,7 @@ class GuardedSource:
             "declared",
             "configuration_problem",
             "is_configured",
+            "close",
         }
     )
     """Methoden, die **auskunft geben** statt zu arbeiten.

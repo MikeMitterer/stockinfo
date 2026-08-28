@@ -66,6 +66,46 @@ einmal, und ein Feld ohne Eintrag geht unverändert durch.
 """
 
 
+class _Adapter:
+    """Was alle Adapter teilen: die gekapselte Quelle und ihr Lebenszyklus.
+
+    **`close` gehört hierher und nicht in jede Unterklasse.** Runde 4 hat es
+    nirgends durchgereicht: `close_all()` suchte die Methode am Adapter, fand
+    sie nicht, und keine einzige Quelle wurde geschlossen — die öffentliche
+    Zusage `Source.close()` blieb wirkungslos, obwohl sie inzwischen gerufen
+    wurde. Vier Kopien derselben Weiterleitung wären die Antwort gewesen, bei
+    der die vergessene die eine ist, auf die es ankommt.
+    """
+
+    def __init__(self, source: object, default_exchange: str) -> None:
+        """
+        Args:
+            source: Das gekapselte Plugin.
+            default_exchange: Die bevorzugte Börse aus den Einstellungen.
+                Nicht jede Rolle braucht sie — die Signatur ist trotzdem für
+                alle dieselbe, damit `build_chain` sie ohne Fallunterscheidung
+                aufrufen kann.
+        """
+        self._source = source
+        self._default_exchange = default_exchange
+
+    @property
+    def source(self) -> object:
+        """Das gekapselte Plugin — für Diagnose und Tests."""
+        return self._source
+
+    @property
+    def name(self) -> str:
+        """Der Name des Plugins, für Protokoll und Anzeige."""
+        return getattr(self._source, "name", type(self._source).__name__)
+
+    def close(self) -> None:
+        """Reicht das Herunterfahren an die Quelle durch."""
+        close = getattr(self._source, "close", None)
+        if callable(close):
+            close()
+
+
 def unwrap(source: object) -> object:
     """Die Quelle unter Adapter und Kapsel — **eine** Stelle, die hindurchsieht.
 
@@ -85,7 +125,7 @@ def unwrap(source: object) -> object:
         seen = inner
 
 
-class QuoteAdapter:
+class QuoteAdapter(_Adapter):
     """Ein Plugin der Kursrolle, in der Sprache des Core.
 
     **Der Core reicht seit T-23 die aufgelöste Identität herein, nicht mehr nur
@@ -100,27 +140,6 @@ class QuoteAdapter:
     schlechtere Wahl gewesen als eine Zeile im Aufrufer. Der Aufrufer **hat**
     die Identität; sie wegzuwerfen und danach zu erraten ist der Umweg.
     """
-
-    def __init__(self, source: object, default_exchange: str) -> None:
-        """
-        Args:
-            source: Das Plugin der Rolle `quotes`.
-            default_exchange: Unbenutzt — die Signatur ist für alle Adapter
-                dieselbe, damit `build_chain` sie ohne Fallunterscheidung
-                aufrufen kann. Eine Kursanfrage trägt ihre Börse selbst.
-        """
-        self._source = source
-        self._default_exchange = default_exchange
-
-    @property
-    def source(self) -> object:
-        """Das gekapselte Plugin — für Diagnose und Tests."""
-        return self._source
-
-    @property
-    def name(self) -> str:
-        """Der Name des Plugins, für Protokoll und Anzeige."""
-        return getattr(self._source, "name", type(self._source).__name__)
 
     def fetch_quote(self, instrument: ResolvedInstrument) -> RawQuote | None:
         """Holt den Kurs zu einer aufgelösten Identität.
@@ -167,7 +186,7 @@ class QuoteAdapter:
         return None
 
 
-class DailyAdapter:
+class DailyAdapter(_Adapter):
     """Ein Plugin der Historienrolle, in der Sprache des Core.
 
     **Diese Klasse fehlte, und das war kein Schönheitsfehler.** Runde 2 setzte
@@ -177,15 +196,6 @@ class DailyAdapter:
     und kein Test hat ihn gesehen, weil keiner diese beiden Rollen durch den
     Container geführt hat.
     """
-
-    def __init__(self, source: object, default_exchange: str) -> None:
-        self._source = source
-        self._default_exchange = default_exchange
-
-    @property
-    def source(self) -> object:
-        """Das gekapselte Plugin — für Diagnose und Tests."""
-        return self._source
 
     def fetch_daily_closes(
         self,
@@ -239,17 +249,8 @@ class DailyAdapter:
         return None
 
 
-class FxAdapter:
+class FxAdapter(_Adapter):
     """Ein Plugin der Devisenrolle, in der Sprache des Core."""
-
-    def __init__(self, source: object, default_exchange: str) -> None:
-        self._source = source
-        self._default_exchange = default_exchange
-
-    @property
-    def source(self) -> object:
-        """Das gekapselte Plugin — für Diagnose und Tests."""
-        return self._source
 
     def fetch_fx_rate(self, base: str, quote: str) -> float | None:
         """Der Kurs als nackte Zahl — mehr liest der Core hier nicht."""
@@ -257,7 +258,7 @@ class FxAdapter:
         return answer.rate if isinstance(answer, FxRate) else None
 
 
-class MetadataAdapter:
+class MetadataAdapter(_Adapter):
     """Ein Plugin der Metadatenrolle, in der Sprache des Core.
 
     Hier ist die Übersetzung am größten, und das ist kein Zufall: Die beiden
@@ -271,15 +272,6 @@ class MetadataAdapter:
     T-26, nicht dieses Ticket.
     """
 
-    def __init__(self, source: object, default_exchange: str) -> None:
-        self._source = source
-        self._default_exchange = default_exchange
-
-    @property
-    def source(self) -> object:
-        """Das gekapselte Plugin — für Diagnose und Tests."""
-        return self._source
-
     def is_responsible(
         self,
         isin: str | None = None,
@@ -289,30 +281,53 @@ class MetadataAdapter:
     ) -> bool:
         """Fühlt sich diese Quelle für das Papier zuständig?
 
-        **Zwei Wege, und der erste ist der genauere.** Der Core weiß hier mehr,
-        als `ResolveRequest` ausdrücken kann: Ohne ISIN entscheiden bei justETF
-        Börse und Währung. Bringt die Quelle eine eigene `is_responsible` mit,
-        bekommt sie beides; sonst bleibt nur `handles`, und die Antwort ist
-        entsprechend gröber.
+        **Über `handles` und sonst nichts.** Runde 4 erkannte hier per
+        `getattr` ein zusätzliches `is_responsible` am Plugin — ein
+        eingebauter Sondervertrag, den ein fremdes Plugin nicht hat. Damit war
+        die behauptete einheitliche Schnittstelle keine.
 
-        Das ist eine **Grenze des Vertrags**, offen benannt: Ein fremdes Plugin
-        kann diese Regel heute nicht formulieren. Ob `ResolveRequest` dafür
-        wächst, ist eine Entscheidung am Vertrag.
+        Der Kontext des Core geht stattdessen **in die Anfrage**: `currency`
+        trägt `ResolveRequest` seit T-23, und der Anzeigename der Börse wird zu
+        ihrem MIC.
         """
-        richer = getattr(self._source, "is_responsible", None)
-        if callable(richer):
-            return bool(richer(isin, exchange=exchange, currency=currency))
-        return bool(self._source.handles(ResolveRequest(isin=isin)))
+        return bool(self._source.handles(self._request(isin, None, exchange, currency)))
 
-    def fetch_etf(self, isin: str) -> EtfDetails | None:
+    def _request(
+        self,
+        isin: str | None,
+        symbol: str | None,
+        exchange: str | None,
+        currency: str | None,
+    ) -> ResolveRequest:
+        """Der volle Kontext des Core als Anfrage des Vertrags.
+
+        Der Core kennt die Börse als **Anzeigename** (``'Xetra'``), der Vertrag
+        als MIC. Die Übersetzung steht hier, weil `EXCHANGES` sie hat — sie im
+        Plugin zu wiederholen hieße, dieselbe Tabelle zweimal zu lesen.
+        """
+        mic = _mic_for_exchange(exchange) or self._default_exchange
+        return ResolveRequest(
+            isin=isin, symbol=symbol, preferred_mic=mic, currency=currency
+        )
+
+    def fetch_etf(
+        self,
+        isin: str | None,
+        symbol: str | None = None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> EtfDetails | None:
         """Die Messwerte als Datensatz — **mit Umrechnung und Herkunft**.
 
-        Runde 3 kopierte `Reading.value` roh in `EtfDetails` und warf Einheit,
-        Währung und Herkunft weg. Ein vertragskonformes Plugin mit
-        ``ter=0.0019, unit=RATIO`` kam damit als ``0.0019`` an, wo `0.19`
-        gemeint war — ein Faktor 100, und nichts hätte gewarnt. Genau dagegen
-        gibt es `Unit` überhaupt: *„Dieselbe Kostenquote kommt bei zwei Quellen
-        als 0.19 und als 0.0003 an — beide nennen es TER."*
+        **Die Signatur ist die des Core, vollständig.** Runde 4 nahm nur
+        `isin` an; jeder zuständige Pfad endete deshalb mit
+        ``TypeError: unexpected keyword argument 'symbol'`` — die ETF-
+        Anreicherung war im Betrieb abgeschaltet, und kein Test lief durch
+        `CompositeEtfEnricher`.
+
+        Das Symbol ist dabei nicht Beiwerk: Die Yahoo-Quelle braucht es für den
+        Abruf. Ohne es kam dort ``None`` zurück, auch wenn sie zuständig war.
 
         Returns:
             `EtfDetails` mit den Feldern, die die App kennt, in **ihren**
@@ -326,7 +341,9 @@ class MetadataAdapter:
             **Unbekannte Felder gehen hier verloren** — sie aufzuheben ist
             T-26. Das ist der ehrliche Stand und keine Zusage.
         """
-        readings = self._source.fetch(ResolveRequest(isin=isin))
+        readings = self._source.fetch(
+            self._request(isin, symbol, exchange, currency)
+        )
         if not readings:
             return None
 
@@ -367,7 +384,22 @@ class MetadataAdapter:
         return EtfDetails(**values)
 
 
-class ResolverAdapter:
+def _mic_for_exchange(exchange: str | None) -> str | None:
+    """Anzeigename einer Börse → MIC, oder ``None``.
+
+    Die Gegenrichtung zu `EXCHANGES[mic].name`. Sie ist eindeutig, weil die
+    Tabelle je Börse genau einen Namen führt — anders als beim Symbol, wo die
+    Umkehrung nicht eindeutig ist.
+    """
+    if not exchange:
+        return None
+    for mic, definition in EXCHANGES.items():
+        if definition.name == exchange:
+            return mic
+    return None
+
+
+class ResolverAdapter(_Adapter):
     """Ein Plugin der Resolver-Rolle, in der Sprache des Core.
 
     Die Übersetzung ist hier verlustfrei, und das ist der Grund, warum diese
@@ -380,28 +412,6 @@ class ResolverAdapter:
     die der Core-Resolver benutzt. Sie hier nachzubauen hieße, dieselbe Regel
     zweimal zu pflegen.
     """
-
-    def __init__(self, source: object, default_exchange: str) -> None:
-        """
-        Args:
-            source: Das Plugin — alles, was `handles` und `resolve` nach dem
-                Vertrag beantwortet.
-            default_exchange: Die bevorzugte Börse aus den Einstellungen. Der
-                Core fragt nur mit einer ISIN; welche Börse gemeint ist, weiß
-                die App und nicht der Anrufer.
-        """
-        self._source = source
-        self._default_exchange = default_exchange
-
-    @property
-    def source(self) -> object:
-        """Das gekapselte Plugin — für Diagnose und Tests."""
-        return self._source
-
-    @property
-    def name(self) -> str:
-        """Der Name des Plugins, für Protokoll und Anzeige."""
-        return getattr(self._source, "name", type(self._source).__name__)
 
     def _request(self, isin: str) -> ResolveRequest:
         """Die ISIN als Anfrage des Vertrags."""

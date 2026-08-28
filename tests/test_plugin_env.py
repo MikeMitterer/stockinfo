@@ -137,3 +137,153 @@ def test_ein_installiertes_paket_ist_danach_importierbar(
     import frisch_geliefert  # noqa: PLC0415 — genau das ist der Test
 
     assert frisch_geliefert.VALUE == 1
+
+
+def _build_wheel(directory: Path) -> Path:
+    """Baut ein winziges, gültiges Wheel — ohne Netz und ohne Build-Werkzeug.
+
+    Ein Wheel **ist** ein ZIP mit festgelegter Struktur. Es hier von Hand zu
+    schreiben ist ehrlicher als ein Mock: Der Test benutzt danach den echten
+    `pip`-Aufruf samt `--only-binary=:all:` und Constraint, und genau der ist
+    die Zusage.
+    """
+    import zipfile
+
+    name, version = "demo_plugin", "1.0.0"
+    dist = f"{name}-{version}.dist-info"
+    wheel = directory / f"{name}-{version}-py3-none-any.whl"
+
+    with zipfile.ZipFile(wheel, "w") as archive:
+        archive.writestr(
+            f"{name}/__init__.py", "MARKER = 'aus dem Zielordner'\n"
+        )
+        archive.writestr(
+            f"{name}/quelle.py",
+            "from stockinfo_plugin.sources import Resolver\n"
+            "class DemoResolver(Resolver):\n"
+            "    name = 'demo-installiert'\n",
+        )
+        archive.writestr(
+            f"{dist}/METADATA",
+            f"Metadata-Version: 2.1\nName: {name}\nVersion: {version}\n",
+        )
+        archive.writestr(
+            f"{dist}/WHEEL",
+            "Wheel-Version: 1.0\nGenerator: handarbeit\nRoot-Is-Purelib: true\n"
+            "Tag: py3-none-any\n",
+        )
+        archive.writestr(
+            f"{dist}/entry_points.txt",
+            "[stockinfo.sources]\n"
+            f"demo-installiert = {name}.quelle:DemoResolver\n",
+        )
+        archive.writestr(f"{dist}/RECORD", "")
+    return wheel
+
+
+def test_ein_ueber_den_zielordner_installiertes_paket_wird_entdeckt(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**Der Beleg für den Installer selbst — nicht für die Entwicklungsumgebung.**
+
+    Der mitgelieferte Beispiel-Entry-Point ist ohnehin installiert; er beweist
+    den Ladeweg, aber nichts über diesen Installer. Hier wird ein Paket
+    wirklich über `ensure()` in den hash-benannten Ordner gelegt und danach in
+    `importlib.metadata` gesucht.
+
+    Ohne Netz: `PIP_NO_INDEX` und `PIP_FIND_LINKS` sind pips eigene
+    Einstellungen — dafür braucht der Produktionscode keinen Testhaken.
+    """
+    import sys
+    from importlib import metadata
+
+    from app.plugin_loader import ENTRY_POINT_GROUP
+
+    lager = tmp_path / "wheels"
+    lager.mkdir()
+    _build_wheel(lager)
+
+    monkeypatch.setenv("PIP_NO_INDEX", "1")
+    monkeypatch.setenv("PIP_FIND_LINKS", str(lager))
+    monkeypatch.setattr(sys, "path", list(sys.path))
+
+    ziel = ensure(["demo-plugin==1.0.0"], tmp_path)
+
+    assert ziel is not None, "die Installation ist fehlgeschlagen"
+    assert (ziel / "demo_plugin").is_dir(), "das Paket liegt im Zielordner"
+
+    activate(ziel)
+    metadata.MetadataPathFinder.invalidate_caches()
+
+    gefunden = {point.name for point in metadata.entry_points(group=ENTRY_POINT_GROUP)}
+    assert "demo-installiert" in gefunden, (
+        f"der Entry-Point aus {ziel} wurde nicht entdeckt: {sorted(gefunden)}"
+    )
+
+
+# ─── Das dokumentierte Format, und was es abweist ─────────────────────────────
+
+
+def _config(tmp_path: Path, body: str):
+    """Liest eine `sources.yaml` mit dem angegebenen Rumpf."""
+    from app.config import Settings
+    from app.sources_config import load_sources_config
+
+    path = tmp_path / "sources.yaml"
+    path.write_text(body, encoding="utf-8")
+    return load_sources_config(path, Settings())
+
+
+def test_die_paketliste_steht_unter_plugins(tmp_path: Path) -> None:
+    """**Ein Parserpfad, der dokumentierte.**
+
+    Ticket und Design zeigen `plugins.packages`. Bis Runde 4 las die App ein
+    undokumentiertes Feld auf oberster Ebene — wer dem Design folgte, bekam
+    eine leere Liste und keinen Hinweis darauf.
+    """
+    config = _config(
+        tmp_path,
+        "plugins:\n  packages:\n    - stockinfo-source-eodhd==1.2.3\n",
+    )
+
+    assert config.packages == ("stockinfo-source-eodhd==1.2.3",)
+
+
+@pytest.mark.parametrize(
+    ("eintrag", "warum"),
+    [
+        ("demo", "ohne Version wäre derselbe Hash morgen ein anderes Paket"),
+        ("demo>=1.0", "eine Spanne ist keine feste Version"),
+        ("git+https://example.test/x.git", "eine URL ist keine Anforderung"),
+        ("--index-url=https://example.test", "eine pip-Option ist kein Paket"),
+    ],
+)
+def test_was_nicht_fest_gepinnt_ist_wird_abgewiesen(
+    tmp_path: Path, eintrag: str, warum: str
+) -> None:
+    """Feste `==`-Versionen sind Pflicht — die Regel steht im Design.
+
+    Der Ordnername ist eine Prüfsumme über diese Liste. Ohne feste Version
+    zeigte derselbe Hash morgen auf ein anderes Paket, und niemand sähe es.
+    Eine URL oder eine Option wäre zusätzlich ein Weg, dem Installer etwas
+    unterzuschieben.
+    """
+    config = _config(tmp_path, f"plugins:\n  packages:\n    - {eintrag!r}\n")
+
+    assert config.packages == (), warum
+
+
+def test_ein_gueltiger_eintrag_ueberlebt_neben_einem_abgewiesenen(
+    tmp_path: Path,
+) -> None:
+    """Die zweite Hälfte: Ein schlechter Eintrag kostet nicht die guten.
+
+    Dieselbe Regel wie bei jedem Plugin-Defekt — und ohne diesen Test bewiese
+    die Prüfung nur, dass sie streng ist.
+    """
+    config = _config(
+        tmp_path,
+        "plugins:\n  packages:\n    - demo\n    - stockinfo-source-eodhd==1.2.3\n",
+    )
+
+    assert config.packages == ("stockinfo-source-eodhd==1.2.3",)

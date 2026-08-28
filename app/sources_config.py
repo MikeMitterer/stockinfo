@@ -195,6 +195,46 @@ def default_chains(strict_exchange: bool) -> dict[str, tuple[str, ...]]:
     return {**DEFAULT_CHAINS, "resolvers": ("openfigi",)}
 
 
+_PIN = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*(\[[A-Za-z0-9,._-]+\])?==[A-Za-z0-9][A-Za-z0-9.\-+!]*$")
+"""Eine gewöhnliche Anforderung mit **fester** Version.
+
+Kein `>=`, kein nackter Name, keine Git-URL, keine pip-Option. Der Ordnername
+der Umgebung ist eine Prüfsumme über diese Liste — ohne feste Version wäre
+derselbe Hash morgen ein anderes Paket, und niemand sähe es. Eine URL oder ein
+`--index-url` hier wäre zudem ein Weg, dem Installer Anweisungen unterzuschieben.
+"""
+
+
+def _packages_from(raw: dict) -> tuple[str, ...]:
+    """Die Paketliste aus `plugins.packages` — und nur von dort.
+
+    **Ein Parserpfad, der dokumentierte.** Runde 4 las ein undokumentiertes
+    Top-Level-Feld `packages`; wer das Design befolgte, bekam eine leere Liste
+    und keinen Hinweis.
+
+    Was nicht der Form `name==version` entspricht, wird **abgewiesen und
+    benannt** — nicht stillschweigend an pip weitergereicht.
+    """
+    section = raw.get("plugins") or {}
+    if not isinstance(section, dict):
+        logger.warning("plugins_section_invalid", got=type(section).__name__)
+        return ()
+
+    entries = section.get("packages") or ()
+    if isinstance(entries, str) or not isinstance(entries, (list, tuple)):
+        logger.warning("plugins_packages_invalid", got=type(entries).__name__)
+        return ()
+
+    taugliche = []
+    for entry in entries:
+        text = str(entry).strip()
+        if _PIN.fullmatch(text):
+            taugliche.append(text)
+        else:
+            logger.warning("plugin_package_rejected", entry=text)
+    return tuple(taugliche)
+
+
 def load_sources_config(path: str | Path, settings) -> SourcesConfig:
     """Liest `sources.yaml` — oder liefert die Vorgaben.
 
@@ -242,6 +282,6 @@ def load_sources_config(path: str | Path, settings) -> SourcesConfig:
         providers=providers,
         environment=env,
         profile=raw.get("profile"),
-        packages=tuple(raw.get("packages") or ()),
+        packages=_packages_from(raw),
         path=source,
     )

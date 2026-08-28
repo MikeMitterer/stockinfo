@@ -673,11 +673,17 @@ def test_eine_verworfene_quelle_erscheint_nicht_als_brauchbar() -> None:
     )
     config = SourcesConfig(chains={"resolvers": ("ohne-datei",)})
 
+    # **Erst bauen, dann lesen** — wie beim Start. Seit Runde 4 konstruiert ein
+    # reiner Lesezugriff nichts mehr: `/sources` zeigt die laufende Kette,
+    # nicht eine frisch erzeugte. Eine Selbstauskunft, die erst beim Bauen
+    # entsteht, kann er deshalb auch erst danach kennen.
+    assert build_chain("resolvers", config, Settings()) == []
+
     entry = describe_chain("resolvers", config, Settings())[0]
 
     assert entry.configured is False
     assert entry.usable is False
-    assert build_chain("resolvers", config, Settings()) == []
+    assert "Datei fehlt" in entry.reason
 
 
 def test_eine_fx_quelle_wird_ebenso_gekapselt() -> None:

@@ -156,8 +156,19 @@ _LOADED: dict[str, SourceSpec] = {}
 _LAST_REASON: dict[str, str] = {}
 """Der zuletzt gemeldete Grund je Quelle — damit `/sources` ihn nennen kann."""
 
-_SNAPSHOT: dict[str, list['ChainEntry']] = {}
-_BUILT: dict[str, list[object]] = {}
+_CHAINS: dict[str, tuple[object, list[object], list["ChainEntry"]]] = {}
+"""Je Rolle **eine** Kette: die Konfiguration, die Objekte, ihre Beschreibung.
+
+Bis Runde 4 baute jeder Aufruf neu. Das reale Composition-Root fragt `daily`
+zweimal — einmal für den Quote-Cache, einmal für die Historie — und `resolvers`
+später noch einmal für den Analyzer. Es liefen also **zwei verschiedene**
+Ketten, während Schnappschuss und Lifecycle nur die zuletzt gebaute kannten:
+vier Konstruktionen, zwei laufende Stände, null geschlossene Quellen.
+
+Verglichen wird die Konfiguration über **Identität**, nicht über Gleichheit:
+Im Betrieb ist sie zwischengespeichert und damit dasselbe Objekt; im Test
+bedeutet eine neue Konfiguration eine neue Kette, und genau das ist gemeint.
+"""
 
 
 
@@ -173,8 +184,7 @@ def register_loaded(specs: tuple[SourceSpec, ...]) -> None:
     # **Die Momentaufnahme wird ungültig, sobald sich die Registry ändert.**
     # Sie zeigte sonst Ketten aus Quellen, die es nicht mehr gibt — und das
     # wäre wieder die zweite Wahrheit, gegen die es sie gibt.
-    _SNAPSHOT.clear()
-    _BUILT.clear()
+    _CHAINS.clear()
     _LAST_REASON.clear()
 
 
@@ -273,8 +283,15 @@ def close_all() -> None:
     Fehler beim Schließen werden gemeldet, nicht geworfen: Beim
     Herunterfahren ist ein Stacktrace das Letzte, was jemandem hilft.
     """
-    for role, sources in _BUILT.items():
+    # **Genau einmal je Objekt.** Dieselbe Quelle kann in mehreren Rollen
+    # stehen; sie zweimal zu schließen wäre für ein Plugin, das eine Datei
+    # schließt, ein Fehler zweiter Ordnung.
+    gesehen: set[int] = set()
+    for role, (_, sources, _entries) in _CHAINS.items():
         for source in sources:
+            if id(source) in gesehen:
+                continue
+            gesehen.add(id(source))
             close = getattr(source, "close", None)
             if not callable(close):
                 continue
@@ -287,8 +304,7 @@ def close_all() -> None:
                     source=getattr(source, "name", type(source).__name__),
                     error=f"{type(error).__name__}: {error}",
                 )
-    _BUILT.clear()
-    _SNAPSHOT.clear()
+    _CHAINS.clear()
 
 
 def describe_chain(role: str, config, settings=None) -> list[ChainEntry]:
@@ -307,12 +323,17 @@ def describe_chain(role: str, config, settings=None) -> list[ChainEntry]:
     Returns:
         Je konfiguriertem Namen ein Eintrag, in Rangfolge.
     """
-    if role in _SNAPSHOT:
+    cached = _CHAINS.get(role)
+    if cached is not None and cached[0] is config:
         # Die laufende Kette. Neu zu bauen hieße, einen **anderen** Zustand zu
-        # zeigen als den, der gerade arbeitet — und bei jedem GET Instanzen zu
-        # erzeugen, die sofort weggeworfen werden.
-        return _SNAPSHOT[role]
-    return [entry for entry, _ in _evaluate(role, config, settings)]
+        # zeigen als den, der gerade arbeitet.
+        return cached[2]
+
+    # **Ein reiner Lesezugriff baut nichts.** Ohne `settings` beschreibt
+    # `_evaluate` nur, was sich ohne Konstruktion sagen lässt — vorher erzeugte
+    # jedes `GET /sources` für noch ungebaute Rollen Wegwerf-Instanzen samt
+    # ihrer Seiteneffekte.
+    return [entry for entry, _ in _evaluate(role, config, None)]
 
 
 def _evaluate(role: str, config, settings=None) -> list[tuple[ChainEntry, object | None]]:
@@ -332,9 +353,9 @@ def _evaluate(role: str, config, settings=None) -> list[tuple[ChainEntry, object
         role: Die Rolle.
         config: Die gelesene `SourcesConfig`.
         settings: Die Einstellungen. **Ohne sie wird nicht gebaut** — dann
-            beschreibt der Eintrag nur, was sich ohne Konstruktion sagen lässt.
-            Der Leseweg reicht sie herein; ein Aufrufer, der es nicht tut,
-            bekommt die schwächere, aber ehrliche Auskunft.
+            beschreibt der Eintrag nur, was sich ohne Konstruktion sagen lässt:
+            bekannter Name, passende Rolle, Pflichtangaben. Was eine Quelle
+            über sich selbst sagt, weiß erst der Bau.
     """
     known = specs_by_name()
     result: list[tuple[ChainEntry, object | None]] = []
@@ -400,6 +421,13 @@ def build_chain(role: str, config, settings) -> list[object]:
     """
     from app.sources_config import UnknownSourceError
 
+    cached = _CHAINS.get(role)
+    if cached is not None and cached[0] is config:
+        # **Dieselbe Kette, nicht eine zweite.** Wer eine Rolle zweimal
+        # anfordert, bekommt dieselben Objekte — sonst liefen zwei Ketten
+        # nebeneinander, und `close()` erreichte nur eine davon.
+        return cached[1]
+
     known = specs_by_name()
     bewertet = _evaluate(role, config, settings)
 
@@ -408,7 +436,11 @@ def build_chain(role: str, config, settings) -> list[object]:
     # zeigte `/sources` danach die **vorige** Kette, also gerade nicht den
     # Zustand, der den Betreiber interessiert. Der Fall, für den er die
     # Auskunft aufruft, wäre der einzige, in dem sie ihn anlügt.
-    _SNAPSHOT[role] = [entry for entry, _ in bewertet]
+    entries = [entry for entry, _ in bewertet]
+    # Die Beschreibung steht, **bevor** irgendetwas werfen kann: Ein unbekannter
+    # Name bricht den Bau ab, und ohne diese Zeile zeigte `/sources` danach die
+    # vorige Kette — ausgerechnet im Fall, für den man sie aufruft.
+    _CHAINS[role] = (config, [], entries)
 
     built: list[object] = []
     for entry, source in bewertet:
@@ -422,7 +454,7 @@ def build_chain(role: str, config, settings) -> list[object]:
             continue
         built.append(source)
 
-    _BUILT[role] = built
+    _CHAINS[role] = (config, built, entries)
     return built
 
 

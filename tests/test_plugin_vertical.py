@@ -246,7 +246,8 @@ def test_beide_namen_erscheinen_in_sources(client: TestClient, volume: Path) -> 
     Geprüft werden beide Ladewege im selben Lauf: `canada-file` kommt aus dem
     installierten Paket, `local-file` aus der kopierten Datei im Volume.
     """
-    _sources_yaml(volume, "local-file")
+    # **Beide** in derselben Kette — sonst prüft der Test nur einen Ladeweg.
+    _sources_yaml(volume, "local-file, canada-file")
     get_sources_config.cache_clear()
     _restart_chains()
 
@@ -254,11 +255,13 @@ def test_beide_namen_erscheinen_in_sources(client: TestClient, volume: Path) -> 
 
     assert antwort.status_code == 200, antwort.text
     namen = {eintrag["name"] for eintrag in antwort.json()["sources"]}
-    assert "local-file" in namen, "die Datei im Volume"
-    assert "canada-file" in namen or "canada-file" in specs_by_name(), (
-        "der Entry-Point ist geladen, steht hier aber nur, wenn er in einer "
-        "Kette konfiguriert ist"
-    )
+
+    # **Ausschließlich in der HTTP-Antwort.** Bis Runde 4 stand hier ein
+    # `oder in specs_by_name()` — damit wäre der Test grün geblieben, wenn der
+    # Entry-Point im öffentlichen Endpunkt gefehlt hätte, also genau bei dem
+    # Fehler, den seine Überschrift ausschließt.
+    assert "local-file" in namen, f"die Datei im Volume fehlt: {sorted(namen)}"
+    assert "canada-file" in namen, f"der Entry-Point fehlt: {sorted(namen)}"
 
 
 def test_eine_unbrauchbare_quelle_nennt_ihren_grund(client: TestClient, volume: Path) -> None:

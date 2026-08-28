@@ -23,6 +23,7 @@ from typing import Any
 from stockinfo_plugin import FieldSpec, MetadataSource, Reading, ResolveRequest, Unit
 
 from app.providers.base import EtfDetails
+from app.exchanges import EXCHANGES
 from app.providers.justetf_provider import JustEtfProvider
 
 FUND_SIZE_CURRENCY = "EUR"
@@ -123,40 +124,22 @@ class JustEtfMetadataPlugin(MetadataSource):
     def handles(self, request: ResolveRequest) -> bool:
         """justETF kennt europäische Fonds.
 
-        **Diese Fassung ist unvollständig, und das ist eine Grenze des
-        Vertrags, kein Versehen.** `JustEtfProvider.is_responsible` entscheidet
-        ohne ISIN anhand von **Börse und Währung** — für `XIC.TO` in CAD
-        beantwortet allein das Listing die Frage. `ResolveRequest` trägt weder
-        die Handelswährung noch den Anzeigenamen der Börse, also lässt sich die
-        Regel hier nicht ausdrücken.
+        **Die vollständige Regel, ausgedrückt im Vertrag.** Ohne ISIN
+        entscheidet das Listing: `JustEtfProvider.is_responsible` nimmt dafür
+        Handelswährung und Börsenname. Die Währung trägt `ResolveRequest` seit
+        T-23; den Börsennamen holt diese Methode aus `EXCHANGES` zum
+        `preferred_mic`.
 
-        Meine erste Fassung hat sie deshalb still **verengt**: ohne ISIN immer
-        `False`. Das ist genau der Fehler, den dieses Ticket aufdecken soll —
-        „wo der Vertrag zwickt, fällt es uns auf und nicht zuerst einem
-        Fremden".
-
-        Die vollständige Regel steht deshalb in `is_responsible` daneben; der
-        Adapter benutzt sie, wenn er Börse und Währung hat. Ob `ResolveRequest`
-        dafür wächst, ist eine Entscheidung am Vertrag und gehört nicht in
-        dieses Ticket.
+        Bis Runde 4 stand hier ein zusätzliches `is_responsible` neben
+        `handles` — ein Sondervertrag, den nur die eingebauten Quellen hatten.
+        Ein fremdes Plugin konnte die Regel damit gar nicht formulieren, und
+        die „einheitliche Schnittstelle" war eine Behauptung.
         """
-        return self.is_responsible(request.isin)
-
-    def is_responsible(
-        self,
-        isin: str | None,
-        *,
-        exchange: str | None = None,
-        currency: str | None = None,
-    ) -> bool:
-        """Die **vollständige** Regel — geholt, nicht nachgebaut.
-
-        Über den Vertrag hinaus, weil `ResolveRequest` Börse und Währung nicht
-        kennt (siehe `handles`). Der Adapter reicht beides herein, wenn der
-        Core es hat.
-        """
+        definition = EXCHANGES.get(request.preferred_mic)
         return self._provider.is_responsible(
-            isin, exchange=exchange, currency=currency
+            request.isin,
+            exchange=definition.name if definition else None,
+            currency=request.currency,
         )
 
     def fetch(self, request: ResolveRequest) -> list[Reading] | None:

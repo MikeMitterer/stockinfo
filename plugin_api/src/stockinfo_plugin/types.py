@@ -42,11 +42,24 @@ class ResolveRequest:
         preferred_mic: Bevorzugte Börse als MIC (ISO 10383), z.B. ``XETR``.
             Ein Resolver darf davon abweichen, wenn er dort nichts findet —
             er sollte es dann im Ergebnis kenntlich machen.
+        currency: Handelswährung, falls sie schon bekannt ist.
+
+            **Neu mit T-23, und der Anlass ist gemessen.** Eine Metadatenquelle
+            entscheidet ihre Zuständigkeit ohne ISIN anhand des Listings: Ein
+            Papier in CAD an einer kanadischen Börse steht nicht bei einem
+            europäischen Fondsanbieter. Ohne dieses Feld ließ sich die Regel im
+            Vertrag nicht ausdrücken — die App hatte sie, ein fremdes Plugin
+            nicht.
+
+            Ein Feld mit Vorgabewert bricht kein bestehendes Plugin; die
+            `api_version` bleibt deshalb unverändert. Wer es nicht braucht,
+            merkt nichts davon.
     """
 
     isin: str | None = None
     symbol: str | None = None
     preferred_mic: str = "XETR"
+    currency: str | None = None
 
 
 # ─── Antworten ────────────────────────────────────────────────────────────────

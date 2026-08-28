@@ -45,15 +45,37 @@ Ein Paket meldet seine Quellen als Entry-Point an:
 meine-quelle = "meinpaket.quellen:MeinResolver"
 ```
 
-Installiert wird es **wie jedes andere Python-Paket** in die Umgebung, in der
-StockInfo läuft:
+Eingetragen wird es in `data/sources.yaml`, mit **fester Version**:
 
-```
-pip install stockinfo-plugin-meinemarkt
+```yaml
+plugins:
+  packages:
+    - stockinfo-plugin-meinemarkt==1.2.3
 ```
 
-Mehr ist es nicht. Die App sucht beim Start mit `importlib.metadata` nach der
-Gruppe `stockinfo.sources` und findet, was installiert ist.
+Beim Start installiert die App die Liste nach `data/plugin-env/<hash>` und hängt
+das Verzeichnis in den Suchpfad; danach findet `importlib.metadata` die Gruppe
+`stockinfo.sources`.
+
+**Warum nicht einfach `pip install`?** Beim offiziellen Container liegt
+`site-packages` im **Image** und ist nach dem nächsten `docker pull` wieder
+weg. `/data` ist das Volume und überlebt das Update.
+
+Drei Regeln gelten dabei:
+
+* **Feste Version.** Der Ordnername ist eine Prüfsumme über die Liste — ohne
+  `==` zeigte derselbe Hash morgen auf ein anderes Paket. Alles andere
+  (`>=`, ein nackter Name, eine Git-URL, eine pip-Option) wird abgewiesen und
+  benannt.
+* **Nur Wheels.** Sonst müssten Build-Werkzeuge ins Image, und ein `setup.py`
+  liefe beim Start als Code.
+* **Der Vertrag bleibt der der App.** Eine Constraint verhindert, dass ein
+  Plugin eine andere Fassung von `stockinfo-plugin-api` in den Ordner zieht —
+  sie stünde vorn im Suchpfad und gewänne.
+
+Dieselbe Liste ⇒ derselbe Ordner ⇒ **keine Installation** beim nächsten Start.
+Eine geänderte Liste ergibt einen neuen Ordner; der alte bleibt liegen, und ein
+Zurückrollen ist damit ein Zeileneditat.
 
 > **Es gibt bewusst keine Automatik, die etwas nachlädt.** Ein Plugin läuft mit
 > den Rechten der App; was installiert wird, entscheidet der Betreiber

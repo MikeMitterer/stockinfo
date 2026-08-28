@@ -16,6 +16,14 @@
 # Gruppe `stockinfo.sources`. Beide erscheinen danach hier unter ihrem Namen
 # und lassen sich in jede Kette eintragen. Siehe `docs/plugins.md`.
 
+# Beigesteuerte Pakete — feste Versionen, sonst wird der Eintrag abgewiesen.
+# Sie werden beim Start nach `data/plugin-env/<hash>` installiert und
+# überleben damit ein Image-Update. Siehe `docs/plugins.md`.
+#
+# plugins:
+#   packages:
+#     - stockinfo-source-eodhd==1.2.3
+
 # Die Rangfolge je Rolle. Die Reihenfolge ist die Aussage — sie wird nicht
 # umsortiert, und `cost` einer Quelle ist Information, keine Sortierregel.
 resolvers: [openfigi, yahoo-search]
