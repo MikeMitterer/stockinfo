@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (`plugin_api/`) | wartet · Plugin-MVP 3/4 | zu schätzen | Referenztransport, Record/Replay, Scrubbing, Freshness | — |
+| StockInfo (`plugin_api/`) | aktiv · Plugin-MVP 3/4 | ~7 h | Referenztransport, Record/Replay, Scrubbing, Freshness | — |
 
 **Löst:** Das Beispiel-Plugin liest eine lokale CSV — bequem gewählt. Ein
 EODHD- oder Twelve-Data-Plugin machte bei jedem Contract-Lauf echte Requests:
@@ -26,8 +26,10 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | 1 | HTTP-Beispielplugin, `make test-plugin-api` | läuft **strikt offline** gegen Aufzeichnungen | | |
-| 2 | derselbe Lauf, fehlende Aufzeichnung | **Fehler** — fällt niemals still ins Netz zurück | | |
+| 2 | derselbe Lauf, fehlende Aufzeichnung | **Fehler** über den Audit-Kanal — auch dann, wenn das Szenario `Unavailable` erwartet und der Lauf fachlich grün wäre | | |
+| 2b | Ledger nach dem Lauf | eine **unbenutzte** Aufzeichnung schlägt fehl; Ausnahme nur mit `only: real` in der Datei | | |
 | 3 | derselbe Lauf, Socket-Zugriff | technisch **gesperrt**, nicht nur unerwünscht | | |
+| 3b | Test **ohne** Opt-in | `socket.socket` bleibt unangetastet — die Sperre greift nicht ins fremde Projekt | | |
 | 4 | Aufzeichnungsdatei | kein Schlüssel, kein Token, kein Cookie — in Kopf, Query, Rumpf und Antwort | | |
 | 5 | Aufzeichnungsdatei | trägt `recorded_at`, letzten erfolgreichen Real-Lauf, Versionen, Szenario-Signatur | | |
 | 6 | **überalterte** Aufzeichnung, Offline-Lauf | bleibt **grün**, gibt nur einen Hinweis | | |
@@ -96,59 +98,181 @@ deutlich einfacher und sicherer als ein selbstgebauter Mock-Aufbau.
 
 ## Auflösung
 
-**Entwurf, Runde 1 — noch keine Zeile Produktcode.** Der Zuschnitt hat mehrere
-Entscheidungen, die sich billiger widerlegen als umsetzen lassen; deshalb geht
-er nach der Entwurfsregel aus `CODEX-REVIEW-AUTOMATION.md` vor der Umsetzung in
-die Prüfung.
+**Entwurf, Runde 2 — noch immer keine Zeile Produktcode.** Runde 1 hat sechs
+Korrekturen bekommen; alle sechs treffen zu, und zwei davon hätten die
+Umsetzung erst nach dem Bauen widerlegt. Die Grundrichtung — Transport und Uhr
+hereingereicht, zwei getrennte Tore, Signatur nach der Bereinigung,
+Frankfurter/EZB als geklärter Referenzweg — bleibt.
 
-### Drei Module, und warum nicht eins
+### Vier Module, und warum nicht eins
 
 | Modul | Inhalt | Warum getrennt |
 |---|---|---|
-| `testing/http.py` | `HttpRequest`, `HttpResponse`, `Transport` (Protocol), `ReplayTransport`, `RecordingTransport`, `MissingRecording` | Der Transport ist das, was Plugin-Autoren **anfassen**; er darf nicht mit dem Dateiformat verheiratet sein |
-| `testing/recordings.py` | Dateiformat, Metadaten, Signatur, Bereinigung, Frist­prüfung | Das Format überlebt einen Bibliothekswechsel; der Transport nicht unbedingt |
-| `testing/pytest_plugin.py` | `--real`, `--record`, die Socket-Sperre als autouse-Fixture | Ein `pytest11`-Entry-Point gehört nicht in einen Modulimport — sonst hängt jeder Import an pytest |
+| `testing/http.py` | `HttpRequest`, `HttpResponse`, `Transport` (Protocol), `ReplayTransport`, `RecordingTransport`, `MissingRecording`, `ReplayLedger` | Der Transport ist das, was Plugin-Autoren **anfassen**; er darf nicht mit dem Dateiformat verheiratet sein |
+| `testing/recordings.py` | Dateiformat, Metadaten, `request_signature`, Kanonisierung, Bereinigung | Das Format überlebt einen Bibliothekswechsel; der Transport nicht unbedingt |
+| `testing/freshness.py` | `RecordingPolicy`, `check_release_readiness()`, `python -m …` | Der Release-Check läuft **ohne** pytest und ohne Transport; er darf nicht an beiden hängen |
+| `testing/pytest_plugin.py` | `--real`, `--record`, Marker und Fixtures — **keine** autouse-Wirkung | Ein `pytest11`-Entry-Point gehört nicht in einen Modulimport, darf aber auch nichts an sich reißen (siehe unten) |
 
 `Transport` ist wie `ScenarioRunner` **eine** Methode. Real- und Replay-Betrieb
 tauschen nur dieses Objekt; das Plugin bekommt es samt Uhr per Konstruktor.
 
-### Die Signatur wird **nach** dem Bereinigen gebildet
+### Der Audit-Kanal — Befund 1 aus Runde 1, und der schwerste
 
-Das ist die Entscheidung, an der ein naiver Entwurf scheitert. Steckt der
-Schlüssel als Query-Parameter in der Anfrage und bildet man die Signatur über
-die rohe URL, dann trägt jede Aufzeichnung den Schlüssel im Schlüsselfeld —
-also genau dort, wo Bereinigung nicht mehr hinkommt, ohne die Zuordnung zu
+Der Entwurf hatte denselben Fehler wie T-27a Runde 2, eine Ebene weiter außen:
+`ReplayTransport` wirft `MissingRecording`, ein **korrektes** Plugin übersetzt
+Transportfehler pflichtgemäß in `Unavailable`, und `DirectRunner` fängt fremde
+Ausnahmen ebenfalls als `Unavailable` ab. Ein Szenario mit
+``expect=Unavailable`` wäre also **grün geworden, gerade weil die Aufzeichnung
+fehlte**. Jedes Glied der Kette verhält sich richtig; das Ergebnis ist wertlos.
+
+Ein Befund, der durch das fachliche Ergebnis läuft, kann von einer Erwartung
+aufgesogen werden. Deshalb läuft er nicht dort:
+
+`ReplayTransport` führt ein `ReplayLedger` mit `hits`, `misses` und
+`unused`. Nach der Suite prüft `assert_replay_clean(ledger)` **unabhängig vom
+fachlichen Ergebnis** und schlägt hart fehl bei
+
+* jedem **Miss** — eine Anfrage ohne Aufzeichnung, mit Signatur und
+  bereinigter URL in der Meldung,
+* jeder **unbenutzten** Aufzeichnung — sie bedeutet, dass das Plugin diese
+  Anfrage nicht mehr stellt; die Aufnahme ist stehengebliebener Ballast, der
+  eine Abdeckung vortäuscht.
+
+Eine unbenutzte Aufnahme darf ausdrücklich `only: real` tragen, wenn sie zu
+einem Fall gehört, der offline nicht läuft. Das ist die einzige Ausnahme, und
+sie steht in der Datei, nicht in einem Schalter.
+
+### Zwei Signaturen, nicht eine — und beide nach dem Bereinigen
+
+Runde 1 hatte hier eine Behauptung: Eine Signatur aus Methode, URL und Rumpf
+sollte auch **Szenario-Drift** bemerken. Sie kann es nicht. Ändert jemand
+`expect` von `NotFound` auf `Unavailable` oder verschiebt eine Grenze in
+`plausible`, bleibt die HTTP-Anfrage Zeichen für Zeichen dieselbe. Die Signatur
+hätte genau das zertifiziert, wogegen sie gebaut war.
+
+| Signatur | Über was | Wer bildet sie | Wofür |
+|---|---|---|---|
+| `request_signature` | Schema, normalisierter Host **mit Port**, Pfad, sortierte bereinigte Query, ausgewählte bereinigte Header, kanonischer Rumpf-Hash | `recordings.py` | Zuordnung Anfrage → Aufnahme |
+| `scenario_signature` | `case_id`, `expect.__name__`, sortiertes `golden`, sortiertes `plausible`, `real_ok` | der Szenario-Harness | Erkennung, dass sich die **Frage** geändert hat |
+
+Die Aufnahme bindet beide: `request_signature` je Interaktion,
+`scenario_signature` einmal je Datei. Läuft eine Suite gegen eine Aufzeichnung
+mit abweichender `scenario_signature`, ist das ein Fehlschlag mit der
+Aufforderung, neu aufzuzeichnen.
+
+`note` geht **nicht** in die Signatur ein. Die Herkunftsangabe ist Prosa; sie
+soll sich verbessern lassen, ohne eine Neuaufzeichnung zu erzwingen — sonst
+wird die Signatur zum Grund, Dokumentation nicht anzufassen.
+
+**Bereinigen kommt vor Signieren**, bei beiden und über denselben Code. Steckt
+der Schlüssel als Query-Parameter in der Anfrage und bildet man die Signatur
+über die rohe URL, dann trägt jede Aufzeichnung den Schlüssel im Schlüsselfeld
+— also genau dort, wo Bereinigung nicht mehr hinkommt, ohne die Zuordnung zu
 zerstören. Und ein Beiträger mit einem *anderen* Schlüssel fände seine
 Aufzeichnung nie wieder.
 
-Deshalb: **Bereinigen, dann signieren** — beim Aufzeichnen wie beim Abspielen,
-über denselben Code. Signaturbestandteile sind Methode, Host, Pfad, sortierte
-und bereinigte Query, sowie ein Hash des bereinigten Rumpfs.
+#### Kanonisierung, damit zwei verschiedene Anfragen nicht dieselbe werden
+
+* **Host** kleingeschrieben, Port nur wenn er vom Standard des Schemas abweicht
+* **Query** paarweise sortiert, nach der Bereinigung, Prozentkodierung
+  normalisiert
+* **Header** nur eine benannte Auswahl — `accept`, `content-type` und die
+  API-Version des Anbieters. Alle Header aufzunehmen machte die Signatur von
+  der HTTP-Bibliothek abhängig; gar keine ließe eine JSON- und eine
+  CSV-Anfrage an denselben Pfad zusammenfallen
+* **Rumpf** bei JSON über sortierte Schlüssel kanonisiert, sonst über die rohen
+  Bytes
 
 ### Zwei Tore, und was jedes von beiden liest
 
 | Tor | Liest | Grün, wenn |
 |---|---|---|
-| `make test-plugin-api` (offline) | `recorded_at`, `scenario_signature` | jede Anfrage getroffen, Metadaten vollständig, Aufzeichnung bereinigt. Alter → **Warnung** über `warnings.warn`, kein Fehlschlag |
-| Release-Check | `last_real_ok`, `max_age_days` | ein Real-Lauf hat bestätigt und liegt innerhalb der Frist |
+| `make test-plugin-api` (offline) | `recorded_at`, `scenario_signature`, Ledger | jede Anfrage getroffen, keine unbenutzte Aufnahme, Metadaten vollständig, Datei bereinigt. Alter → **Warnung**, kein Fehlschlag |
+| `make check-recordings` (Release) | `last_real_ok` gegen die **Policy** | ein vollständiger Real-Lauf hat bestätigt und liegt innerhalb der Frist |
 
-`max_age_days` steht **in der Aufzeichnung**, nicht in einer zentralen Tabelle:
-Sie ist eine Eigenschaft dieses Anbieters, und eine zentrale Liste liefe beim
-ersten fremden Plugin auseinander. `last_real_ok` schreibt ausschließlich ein
-erfolgreicher `--real`-Lauf zurück; die Änderung steht danach im Diff und wird
-mitcommittet. Das ist Absicht — so ist im Repository sichtbar, wann zuletzt
-wirklich jemand den Anbieter gefragt hat.
+#### Die Frist gehört einmal je Plugin, nicht in jede Datei
 
-**`scenario_signature`** fängt den Fall ab, den sonst niemand bemerkt: Ein
-Szenario wird umgeschrieben, die Aufzeichnung bleibt die alte, und der Lauf ist
-grün gegen eine Frage, die so nicht mehr gestellt wird.
+Runde 1 legte `max_age_days` in jede Aufzeichnung. Das war falsch, und zwar
+nicht theoretisch: Zwei Dateien desselben Plugins können auseinanderdriften,
+und dann gilt für dieselbe Quelle je nach Datei eine andere Frist — ohne dass
+irgendwo steht, welche die gemeinte ist. Genau das Muster, das der DRY-Guard
+„parallele Sources of Truth" nennt.
 
-### Die Socket-Sperre ist eine Sperre, keine Bitte
+Deshalb: Die **Policy** (`RecordingPolicy(max_age_days=…)`) steht einmal in der
+Testkonfiguration des Plugins. Der Release-Check liest ausschließlich sie. Die
+Aufzeichnung trägt den beim Aufnehmen wirksamen Wert weiterhin als
+`max_age_days_at_record` — aber ausdrücklich als **Auditwert**: Er erklärt eine
+alte Entscheidung, er trifft keine neue.
 
-Eine autouse-Fixture ersetzt `socket.socket` und `socket.create_connection`
-durch etwas, das wirft — außer unter `--real`. Der Nachweis ist ein eigener
-Test, der einen Verbindungsversuch unternimmt und den Fehler erwartet; ohne ihn
-belegt die Sperre nur, dass sie existiert, nicht dass sie greift.
+#### Der Release-Check ist ein Befehl, kein Vorhaben
+
+„Release-Check" allein ist keine Schnittstelle. Konkret:
+
+```
+python -m stockinfo_plugin.testing.freshness <aufnahme>...   # Exit 0 / 1
+make check-recordings                                        # ruft ihn auf
+```
+
+Die Arbeit steckt in `check_release_readiness(policy, recordings) -> list[str]`
+— eine reine Funktion, direkt testbar, ohne pytest und ohne Netz. Das `__main__`
+darüber ist nur Ausgabe und Exit-Code.
+
+`last_real_ok` schreibt ausschließlich ein **vollständig** erfolgreicher Lauf
+zurück; die Änderung steht danach im Diff und wird mitcommittet. So ist im
+Repository sichtbar, wann zuletzt wirklich jemand den Anbieter gefragt hat.
+
+### Die Socket-Sperre ist eine Sperre — aber sie gehört nicht dem ganzen Projekt
+
+Runde 1 hatte sie als autouse-Fixture in einem `pytest11`-Plugin. Das ist zu
+weit gegriffen, und der Grund ist ein Mechanismus, den man leicht übersieht:
+**pytest lädt installierte `pytest11`-Plugins automatisch**, und eine
+autouse-Fixture daraus wirkt auf *alle* Tests des fremden Projekts. Wer unser
+Kit installiert, hätte damit still auch seine eigenen Integrationstests vom
+Netz getrennt — ein Paket, das Verträge anbietet, hätte fremde Testläufe
+umgebaut.
+
+Deshalb liefert das Plugin nur **Optionen, Marker und Fixtures**. Die Sperre
+wird ausdrücklich angefordert:
+
+```python
+@pytest.mark.offline_http          # oder: die Fixture direkt anfordern
+def test_die_szenarien_laufen_aus_der_aufzeichnung(replayed_source): ...
+```
+
+Der Nachweis hat zwei Hälften, und die zweite ist die wichtigere:
+
+1. **Mit** Opt-in schlägt ein Verbindungsversuch fehl — sonst ist die Sperre
+   eine Behauptung.
+2. **Ohne** Opt-in bleibt `socket.socket` unangetastet — sonst wüsste niemand,
+   dass sie begrenzt ist, und der Befund aus dieser Runde käme über eine andere
+   Tür zurück.
+
+### Die Betriebsarten, vollständig
+
+| Betriebsart | Transport | Sockets | Aufnahmen | Metadaten |
+|---|---|---|:--:|---|
+| Standard (offline) | `ReplayTransport` | gesperrt, wo angefordert | nur gelesen | nur gelesen; Alter → Warnung |
+| `--real` | echter Transport | offen | **nicht** geschrieben | `last_real_ok` nach vollständig grünem Lauf |
+| `--record` | echter Transport, mitschreibend | offen | neu geschrieben | `recorded_at` **und** `last_real_ok` |
+| `make check-recordings` | keiner | irrelevant | nur gelesen | liest `last_real_ok` gegen die Policy |
+
+`--record` braucht Netz und ist deshalb ein Real-Betrieb; `--real --record`
+gemeinsam ist zulässig und bedeutet dasselbe wie `--record` allein. Der
+Release-Check ist ein eigener Befehl und lässt sich mit keinem der Schalter
+kombinieren.
+
+**Geschrieben wird erst am Ende, und nur ganz.** Ein Lauf, der bei Fall sieben
+von zehn scheitert, darf weder die sieben Aufnahmen davor noch `recorded_at`
+zurücklassen: Danach stünde eine halbe Wahrheit in der Datei, und der nächste
+Lauf hielte sie für vollständig. Also Sammeln im Speicher, Schreiben über eine
+temporäre Datei und `os.replace` — atomar, nachdem die **gesamte ausgewählte**
+Suite grün war.
+
+**Und „ausgewählt" ist die Falle dahinter:** Wer mit `-k` einen Teil auswählt,
+hat den Rest nicht bestätigt. `last_real_ok` würde trotzdem behaupten, der
+Anbieter sei vollständig gefragt worden — dieselbe stille Überzeichnung wie
+`P-01`. Deshalb: Wurde deselektiert, bleibt `last_real_ok` unverändert und der
+Lauf sagt es ausdrücklich.
 
 `MissingRecording` ist aus demselben Grund ein **Fehler** und kein Rückfall:
 Ein Transport, der bei fehlender Aufzeichnung ins Netz greift, macht die
@@ -171,6 +295,31 @@ jede Aufzeichnungsdatei zwei Pflichtfelder `source` und `notice`, in denen
 Quelle und Eingriff genannt werden. Das ist keine Förmlichkeit, sondern die
 Bedingung, unter der die Datei überhaupt im Repository liegen darf.
 
+**Und die Quelle wird festgenagelt, nicht angenommen.** Frankfurter kann
+mehrere Anbieter ausliefern; geklärt haben wir die Bedingungen genau eines.
+Jede Anfrage pinnt deshalb `providers=ECB`, und die **Antwort wird darauf
+geprüft** — liefert sie einen anderen Anbieter, ist das ein Fehlschlag und
+keine Aufzeichnung. Sonst läge irgendwann eine Datei im Repository, deren
+Rechtelage wir nie geprüft haben, und niemandem fiele es auf.
+
+### Wo die Bereinigung endet — und dass sie endet
+
+Bereinigt werden konfigurierte Geheimwerte **und** sensible Schlüsselnamen
+(`authorization`, `api_key`, `token`, `cookie`, `set-cookie`, …), rekursiv in
+Query, Kopf, Rumpf und Antwort, danach ein Blick auf die **serialisierte**
+Datei: Steht ein bekannter Geheimwert noch im Text, wird nicht geschrieben.
+
+Die Grenze steht ausdrücklich in der Dokumentation, weil eine verschwiegene
+Grenze schlimmer ist als eine bekannte:
+
+* Ein Geheimnis, das uns niemand genannt hat, wird nicht gefunden. Die Prüfung
+  kennt Werte und Namen — sie kennt keine Bedeutung.
+* Ein Geheimnis **in** einem undurchsichtigen Feld (signierte URL, JWT-Nutzlast,
+  Opaque-Token) überlebt, weil es nicht als eigener Wert vorkommt.
+* Deshalb bleibt der Blick eines Menschen in den Diff vor dem Commit einer
+  Aufzeichnung Teil des Verfahrens. Das Werkzeug macht ihn billiger, nicht
+  überflüssig.
+
 Fachlich passt es: Ein `FxSource` ist eine der fünf Rollen aus T-27a, und
 Wechselkurse sind der Fall, bei dem „dieselben Tests, andere Zahlen" natürlich
 auftritt — der Kurs ändert sich täglich, `base`/`quote` nie.
@@ -192,13 +341,25 @@ ohne sein Angebot zu nutzen.
   Frage, für die T-27b das Werkzeug baut — beantworten wird sie das erste
   Plugin, das ihn wirklich anspricht.
 
-### Offene Frage an den Reviewer
+### Verify `#10` hat zwei Hälften — beantwortet in Runde 1
 
-Verify `#10` — „Anbieter nicht erreichbar, der normale Build bleibt grün" — ist
-im Offline-Betrieb **trivial wahr**, weil dort ohnehin kein Netz existiert. Ein
-belastbarer Nachweis prüft die Gegenrichtung: dass der `--real`-Lauf bei einem
-nicht erreichbaren Host mit einer deutbaren Meldung fehlschlägt statt mit einem
-Stacktrace. Ist das die richtige Lesart der Zeile, oder verlangt sie mehr?
+Meine Lesart war zu eng. Der Nachweis besteht aus beiden Richtungen:
+
+1. **Offline grün mit einem vergifteten Live-Transport.** Der Suite wird ein
+   echter Transport untergeschoben, der bei jedem Aufruf wirft — und der Lauf
+   bleibt grün. Das beweist, was die Zeile eigentlich meint: dass der
+   Offline-Weg den Live-Weg **nie berührt**. Ohne diese Hälfte prüft man nur,
+   dass gerade kein Netz da war.
+2. **Real rot bei unerreichbarem Host**, mit einer deutbaren und
+   **geheimnisfreien** Meldung statt eines Stacktrace — die URL in der Meldung
+   läuft durch dieselbe Bereinigung wie die Aufzeichnung.
+
+### Der Schnitt bleibt ein beobachtbares Ergebnis
+
+Vier Module, ein Beispielplugin, ein Befehl — aber eine einzige Aussage, an der
+das Ticket gemessen wird: **Dieselben Szenarien laufen offline aus der
+Aufzeichnung und real über HTTP, ohne geheimen und ohne stillen Netzpfad.**
+Time-box `~7 h`.
 
 ---
 
