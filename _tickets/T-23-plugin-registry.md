@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend) | wartet · Plugin-MVP 4/4 | 1 Tag | Registry, zwei Ladewege, Isolation | — |
+| StockInfo (Backend) | Codex-freigegeben · Plugin-MVP 4/4 | 1 Tag | Registry, zwei Ladewege, Isolation | — |
 
 **Löst:** Der Schlussstein. Die App soll weltweit funktionieren, lässt sich hier
 aber nur für wenige Märkte prüfen — allein die Auflösung eines kanadischen
@@ -31,17 +31,17 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | `examples/canada_file.py` nach `data/plugins/`, Neustart | erscheint in `GET /sources`, löst `CA…` auf | | |
+| 1 | `examples/canada_file.py` nach `data/plugins/`, Neustart | erscheint in `GET /sources`, löst `CA…` auf | ✅ | |
 | 2 | dasselbe als installiertes Paket (Entry-Point) | erscheint gleichwertig, ohne Datei im Volume | ✅ | |
-| 2b | **Installationsweg** — Paketliste in `sources.yaml`, hash-benannte Umgebung unter `/data`, überlebt Image-Updates | ✅ | |
-| 3 | Plugin mit falscher `api_version` | wird abgelehnt, mit Meldung — App startet trotzdem | | |
-| 4 | Plugin, das bei jedem Aufruf wirft | wird nach wiederholtem Fehler stillgelegt; App bleibt bedienbar | | |
-| 5 | Quelle liefert wiederholt `Unavailable` | Schutzschalter öffnet; weitere Aufrufe werden unterdrückt. Half-open und Reset mit **eingespeister Uhr** geprüft, ohne echte Wartezeit | | |
-| 5b | Plugin, das endlos hängt | **kein Test** — die Grenze ist dokumentiert, nicht behauptet (siehe unten) | | |
-| 6 | `yfinance` und `justetf` in `GET /sources` | erscheinen als **normale Quellen**, nicht als Sonderfall | | |
-| 6b | **Host-Harness, Stufe 1**: temporäres Verzeichnis, leere DB, Plugin laden, Papier über REST aufnehmen | **Core-Antwort** kommt vollständig an. `generation_id` → T-25, Details/Herkunft → T-26 | | |
+| 2b | **Installationsweg** — Paketliste in `sources.yaml`, hash-benannte Umgebung unter `/data`, überlebt Image-Updates | ⚠️ | |
+| 3 | Plugin mit falscher `api_version` | wird abgelehnt, mit Meldung — App startet trotzdem | ✅ | |
+| 4 | Plugin, das bei jedem Aufruf wirft | wird nach wiederholtem Fehler stillgelegt; App bleibt bedienbar | ✅ | |
+| 5 | Quelle liefert wiederholt `Unavailable` | Schutzschalter öffnet; weitere Aufrufe werden unterdrückt. Half-open und Reset mit **eingespeister Uhr** geprüft, ohne echte Wartezeit | ✅ | |
+| 5b | Plugin, das endlos hängt | **kein Test** — die Grenze ist dokumentiert, nicht behauptet (siehe unten) | ➖ | |
+| 6 | `yfinance` und `justetf` in `GET /sources` | erscheinen als **normale Quellen**, nicht als Sonderfall | ✅ | |
+| 6b | **Host-Harness, Stufe 1**: temporäres Verzeichnis, leere DB, Plugin laden, Papier über REST aufnehmen | **Core-Antwort** kommt vollständig an. `generation_id` → T-25, Details/Herkunft → T-26 | ✅ | |
 | ~~6c~~ | ~~`stockinfo plugin check <paket>`~~ | **gestrichen** — siehe „Scope-Riegel" unten | ➖ | |
-| 7 | `make test` | Backend grün | | |
+| 7 | `make test` | Backend grün | ✅ | |
 
 ---
 
@@ -592,3 +592,37 @@ yfinance **3**, alle grün und mit Dienstkontakt. Unabhängige Erfolgsskripte
 belegen drei Metadatenfälle sowie eine Konstruktion/einen Close-Aufruf; die
 beiden negativen Skripte belegen den Lifespan-Abbruch und den wechselnden
 Diagnosestatus. Keine Offline-/Replay-Infrastruktur gefunden oder benötigt.
+
+---
+
+## Codex-Review · Runde 6 · `a9e49f9` · freigegeben
+
+Die Reststrecke ist geschlossen. Ein fehlgeschlagenes, exakt gepinntes Paket
+wird nicht geladen; sein Kettenname erscheint in `/sources` als unbrauchbar
+mit eigenem und verfügbaren Namen. Ein gesunder Fallback arbeitet weiter. Ohne
+jede Kursquelle starten Prozess und Diagnose ebenfalls, `/health` antwortet
+mit 200 und `/operational` ehrlich mit 503. Alle fünf Rollen werden vor dem
+ersten Request einmal operationalisiert und danach als dieselben Objekte
+wiederverwendet; reines Lesen baut nichts, Shutdown schließt einmal.
+
+Die Plugin-Schnittstelle bleibt relativ knapp und ist durch ihre öffentlichen
+Einstiege prüfbar: gemeinsamer Konstruktor/Lifecycle, `handles` und je Rolle
+genau eine Arbeitsoperation; Metadaten deklarieren zusätzlich ihre Felder.
+EU-, US- und ISIN-loser Kanada-Fall laufen dauerhaft durch
+`CompositeEtfEnricher → MetadataAdapter → Plugin`. Eingebaute und externe
+Quellen nehmen denselben Registry-/Adapterweg. Im Produkt- und Testbestand
+gibt es keine Cassette-, Record-/Replay-, Datenverkehrsmitschnitt- oder
+Offline-Testschicht.
+
+**Abschlussevidenz:** fokussierte Regression **175 passed**; `make test`
+Backend **803 passed / 29 skipped**, Plugin-API **257 passed / 1 skipped**,
+Dashboard **259 passed**; Ruff und `git diff --check` sauber. Echte
+Online-Läufe: justETF **2**, OpenFIGI **3**, yfinance **3**, alle grün und mit
+Dienstkontakt. Zwei zusätzliche Lifespan-Gegenproben belegen den Paketfehler
+mit gesundem Fallback sowie ohne verbleibende Kursquelle.
+
+**Einschränkung zu Verify #2b:** Der echte lokale Wheel-/pip-/Entry-Point-Weg
+und das persistente Ziel unter dem Datenverzeichnis sind ausgeführt. Ein
+tatsächliches Container-Image-Update mit demselben `/data`-Volume wurde in
+diesem Review nicht gefahren; deshalb steht dort ehrlich ⚠️ statt ✅. Das ist
+kein Codeblocker für T-23, sondern die ausstehende Betriebsabnahme.
