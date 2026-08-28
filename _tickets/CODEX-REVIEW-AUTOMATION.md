@@ -248,6 +248,58 @@ Codex bei jeder UI-Übergabe nach einem Check, den er nicht bekommen kann, und
 Claude verweist auf eine Zuständigkeit, die nirgends steht. Beides kostet je
 eine Runde.
 
+## Testinfrastruktur-Riegel — schlank und online ist der Standard
+
+*(Produktentscheidung Mike, 2026-08-28, nach dem verworfenen T-27b-
+Offline-Subsystem.)*
+
+Ohne eine ausdrückliche Ausnahme gilt für jedes Ticket:
+
+- **Unit-Tests** benutzen die normalen Mittel des vorhandenen Testframeworks
+  und die von Sprache oder Bibliothek angebotenen Fakes, Mocks und
+  Transport-Hooks. Kleine testlokale Fixtures und Helper sind erlaubt.
+- **Integrationstests** laufen gegen den echten Online-Dienst und benutzen die
+  bereits vorhandene Anbieterbibliothek beziehungsweise den vorhandenen
+  Produktclient. Ein Marker zum gezielten Auswählen oder Abwählen ist erlaubt;
+  er macht aus dem Integrationstest keinen Offline-Test.
+- Ein Plugin oder Adapter benutzt die vorhandene API-Anbindung. Es schreibt
+  HTTP-Aufruf, Anfrageformat, Antwortauswertung oder Fehlersemantik nicht für
+  den Testweg ein zweites Mal.
+
+Folgendes gilt als **eigenes Test-Subsystem** und ist standardmäßig nicht im
+Scope: Record/Replay und Cassettes, persistierte Datenverkehrsmitschnitte,
+eigene Transport- oder Proxy-Schichten, globale Socket-Sperren, neue
+Bereinigungs-, Signatur- oder Serialisierungsformate, Freshness- und
+Veröffentlichungstore, eigene Test-CLIs sowie Testframework-Plugins oder
+Entry-Points. Die Liste ist eine Erkennungshilfe, keine Einladung, dieselbe
+Architektur unter einem anderen Namen zu bauen.
+
+Eine Ausnahme ist nur gültig, wenn das aktive Ticket **vor dem ersten Entwurf
+und vor dem ersten Produktedit** diesen Block enthält:
+
+```markdown
+> **Ausnahme Testinfrastruktur — ausdrücklich freigegeben von Mike, YYYY-MM-DD:**
+> <konkret begrenzter Umfang und Grund>
+```
+
+Eine allgemeine Forderung nach Robustheit, CI-Tauglichkeit, Reproduzierbarkeit
+oder „Integrationstests“ ist keine solche Freigabe. Claude und Codex dürfen sie
+nicht aus vermuteten Bedürfnissen ableiten.
+
+**Riegel beim Implementierer:** Reicht der schlanke Standard aus, wird er ohne
+Rückfrage verwendet. Hält Claude ein Test-Subsystem dennoch für notwendig,
+stoppt er vor Entwurf und Code mit `phase: blocked`, `owner: mike`, nennt die
+minimale Standardlösung, den konkreten Mehrwert und den begrenzten Umfang der
+gewünschten Ausnahme. Bis zur ausdrücklichen Entscheidung entsteht dafür kein
+Code und kein Detailentwurf.
+
+**Riegel beim Reviewer:** Codex inventarisiert in jedem Handoff neue
+Test-Helfer, persistierte Testdaten, Plugins, Entry-Points, CLIs und
+Transportpfade. Findet er ein Test-Subsystem ohne den Freigabeblock, ist das
+unabhängig von grünen Tests ein `changes_requested`: entfernen und auf den
+schlanken Standard zurückführen. Nur wenn der Standard nachweislich unmöglich
+ist und dafür eine Produktentscheidung fehlt, wird an Mike blockiert.
+
 ## DRY-Prüfguard
 
 DRY ist eine **eigene Abnahmebedingung** und darf nicht still unter dem
@@ -303,7 +355,7 @@ Ausstieg wird der Loop gelöscht; dieser Abschnitt hält ihn wiederherstellbar.
 ```text
 /loop 5m Du bist Claude, der Implementierer im StockInfo-Board. Beachte CLAUDE.md und die Skills task-verification-workflow, code-standards, git-conventions.
 
-1. Lies _tickets/STATUS.md, _tickets/CODEX-REVIEW-AUTOMATION.md und _tickets/CLAUDE-REVIEW-PATTERNS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis. Pruefe vor jeder Arbeit: ticket muss exakt priority_ticket entsprechen und in priority_chain stehen. Bei Abweichung nichts implementieren, portfolio_mismatch melden und Schluss.
+1. Lies _tickets/STATUS.md, _tickets/CODEX-REVIEW-AUTOMATION.md und _tickets/CLAUDE-REVIEW-PATTERNS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis. Pruefe vor jeder Arbeit: ticket muss exakt priority_ticket entsprechen und in priority_chain stehen. Bei Abweichung nichts implementieren, portfolio_mismatch melden und Schluss. Pruefe vor jedem Entwurf und vor dem ersten Produktedit ausserdem den Testinfrastruktur-Riegel: Standard sind normale Unit-Tests plus echte Online-Integrationstests ueber vorhandene Sprach-, Bibliotheks- und Produkt-APIs. Record/Replay, Cassettes oder Mitschnitte, eigene Transport-/Socket-/Freshness-/CLI-/Testplugin-Infrastruktur sind ohne den datierten Ausnahmeblock von Mike im aktiven Ticket verboten. Ist eine Ausnahme wirklich noetig, vor Entwurf und Code mit phase: blocked und owner: mike stoppen; sie niemals aus Robustheit, CI oder Reproduzierbarkeit ableiten.
 2. Ist `owner` nicht `claude`: veraendere keine Datei, antworte in einer Zeile mit Phase und Owner, Schluss.
 3. Bei `phase: changes_requested`: Arbeite die Findings aus INBOX -> Claude der Reihe nach ab, schwerste zuerst. Jedes Finding einzeln verifizieren statt der Zusammenfassung glauben; behauptete Vollstaendigkeit mit rg belegen. Bei wiederholter Entwurfsnacharbeit gilt die Konvergenzpruefung dieses Dokuments: ungefaehr drei erfolglose Runden sind ein Richtwert, keine harte Grenze. Ist eine weitere punktuelle Runde konkret und voraussichtlich abschliessend, begruende das mit dem vollstaendigen Restumfang in der OUTBOX. Verlangt das Review Rebaseline oder Scope-Verkleinerung, korrigiere nicht weiter lokal, sondern konsolidiere beziehungsweise schneide neu. Vor dem ersten Edit auf einem Feature-Branch `t-NN-<slug>` sein. Danach relevante Pytests, das Ticket-Smoke-Script `./_tickets/T-*.sh --run` und `make test` laufen lassen und die Ergebnisse mit Zahlen nennen. Dann genau EIN Uebergabe-Commit, INBOX leeren, Ergebnis nach OUTBOX -> Codex, `review_round` +1, `phase: ready_for_codex`, `owner: codex`, `updated_at` auf heute. Danach keinen Produktcode mehr anfassen.
 4. Bei `phase: approved`: Ticket NICHT nach solved/ verschieben, das macht Mike. Nur zum naechsten Element aus priority_chain wechseln, priority_ticket und ticket gemeinsam setzen, review_round fuer das neue Ticket auf 0 setzen — die 1 entsteht erst beim Hochzaehlen in Schritt 3, wenn die erste Uebergabe tatsaechlich herausgeht —, eigener Branch vor dem ersten Edit, phase: claude_working. War das freigegebene Ticket das letzte Element, nichts Neues beginnen: phase: portfolio_review, owner: mike; Mike braucht die Gate-vs-Follow-up-Einordnung.

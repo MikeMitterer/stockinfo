@@ -20,6 +20,7 @@ duplizieren.
 - [P-06 · Weiterarbeiten, während eine Übergabe offen ist](#p-06--weiterarbeiten-während-eine-übergabe-offen-ist)
 - [P-07 · Eine neue Zwischenlage wird gebaut statt benannt](#p-07--eine-neue-zwischenlage-wird-gebaut-statt-benannt)
 - [P-08 · Der Test erzeugt den entscheidenden Unterschied nicht](#p-08--der-test-erzeugt-den-entscheidenden-unterschied-nicht)
+- [P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem](#p-09--eine-testanforderung-wächst-zum-unbeauftragten-subsystem)
 - [Leitplanken für das spätere Skill-Proposal](#leitplanken-für-das-spätere-skill-proposal)
 
 ## Leitplanken für das spätere Skill-Proposal
@@ -65,6 +66,10 @@ erzwingen und klare Grenzen setzen:
    Vielfaches, ist das ein Anlass für eine ausdrückliche Zuschnittsprüfung —
    nicht für weitere Runden. Der Implementierer stellt die Frage, bevor der
    Mensch sie stellen muss.
+10. **Testinfrastruktur-Grenze:** Unit-Tests und echte Online-
+    Integrationstests über die vorhandenen Bibliotheks- und Sprach-APIs sind
+    der Standard. Ein eigenes Test-Subsystem braucht vor Entwurf und Code eine
+    ausdrückliche, im Ticket dokumentierte Freigabe von Mike.
 
 **Beleg für Leitplanke 8 — und der Anlass, sie aufzuschreiben** *(Mike,
 2026-08-27, nach Runde 52)*: Der Plugin-Entwurf vom 2026-08-19 nennt als
@@ -840,5 +845,44 @@ Request-Prüfung zurück. Ein völlig unbekannter `object()`-Request mit
 `DirectRunner` erzeugte für den unbekannten Request genau das erwartete
 `Unavailable`. Der neue Test unterschied die konkret besprochene Hit-Kombination,
 nicht die behauptete allgemeine Rollenpassung.
+
+[↑ Übersicht](#übersicht)
+
+## P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem
+
+**Erkennungsregel:** Eine einfache Forderung nach Unit- und Integrationstests
+wird ohne Produktentscheidung um dauerhafte Test-Infrastruktur erweitert —
+etwa Record/Replay, Cassettes oder vollständige Datenverkehrsmitschnitte,
+eigene Transportabstraktionen, Socket-Sperren, Bereinigungs- und
+Serialisierungsformate, Freshness-Tore, CLIs oder pytest-Plugins. Die einzelnen
+Bausteine können technisch begründbar sein; zusammen lösen sie eine neue
+Anforderung, die niemand gestellt hat.
+
+**Prüffrage:** Welcher wörtliche Auftrag verlangt das zusätzliche Subsystem?
+Wenn die Antwort nur „offline wäre robuster“, „für CI wäre es bequemer“ oder
+eine Ableitung aus einer allgemeinen Qualitätsregel ist, gilt die schlanke
+Variante: normale Unit-Tests und echte Online-Integrationstests über die
+bereits vorhandenen APIs. Eine Ausnahme darf weder Claude noch Codex aus
+vermuteten Betriebsbedingungen ableiten; sie braucht Mikes ausdrückliche,
+datierte Freigabe im Ticket.
+
+**Beleg und ausdrückliche Produktkorrektur:** T-27b, Entwurfsstände
+`a1ac605` bis `af72b5a`, 2026-08-28. Aus dem Ziel, ein echtes API-Plugin zu
+prüfen, entstanden über drei Reviewrunden vier neue Testkit-Module,
+Aufzeichnungsformat und Signaturen, Scrubbing, Socket-Guard, pytest-Entry-Point,
+Freshness-Policy und Release-CLI. Unmittelbar vor Mikes Eingriff lag davon
+bereits ein uncommitteter Produktstand mit `testing/http.py`,
+`testing/recordings.py`, `testing/freshness.py` und `testing/pytest_plugin.py`
+vor. Mike strich die Grundannahme ausdrücklich: Unit-Tests plus
+Integrationstests gegen den echten Dienst, unter Verwendung der APIs, die für
+die jeweilige Programmiersprache beziehungsweise Bibliothek bereits zur
+Verfügung stehen. Claude verwarf den begonnenen Offline-Code in `ebf8a14`;
+die Neufassung steht in `8698aa0`.
+
+**Reviewer-Mitverantwortung:** Codex hat den Ausbau drei Runden lang
+detailgenau verbessert und schließlich zur Umsetzung freigegeben. Das ist
+nicht nur ein Implementiererfehler, sondern ein fehlender YAGNI-Riegel im
+Review: Lokale technische Korrektheit darf die unbeauftragte Grundannahme nicht
+legitimieren.
 
 [↑ Übersicht](#übersicht)
