@@ -329,6 +329,64 @@ def test_die_tagesreihe_erreicht_den_anbieter_auch_ohne_alias() -> None:
     assert ohne_alias and mit_alias
 
 
+def test_jede_eingebaute_quelle_spricht_in_jeder_rolle_den_vertrag() -> None:
+    """**Der Wächter über die Zusage „Jede Quelle spricht den Vertrag".**
+
+    `_build_one` adaptiert seit Runde 3 **jede** Quelle — der Adapter ruft
+    also die Vertragsmethoden. Eine eingebaute Quelle, die noch die
+    Core-Signaturen trägt, wird damit nicht etwa nicht adaptiert, sondern
+    **falsch**: Der Adapter ruft `resolve()`, die Quelle hat nur
+    `resolve_isin()`, und der `AttributeError` fliegt erst im Betrieb.
+
+    Genau so lag `yahoo-search` bis T-35 in der Kette. `handles()` bekam ein
+    `ResolveRequest` statt einer Zeichenkette und sagte trotzdem `True` — die
+    Quelle nahm die Anfrage an und fiel danach um. Weil `CompositeResolver` in
+    seiner Kaskade nichts abfängt, endete **jede** von OpenFIGI nicht
+    auflösbare ISIN in einem `500`.
+
+    Der Test prüft deshalb die Struktur, nicht einen Aufruf: Jede eingebaute
+    Quelle muss in **jeder** Rolle, die sie führt, von der Vertragsklasse
+    dieser Rolle abstammen. Das ist offline prüfbar und hätte den Fall
+    gefunden, während ein Aufruftest ihn nur bei genau der richtigen ISIN
+    gesehen hätte.
+    """
+    from stockinfo_plugin import (
+        DailyCloseSource,
+        FxSource,
+        MetadataSource,
+        QuoteSource,
+        Resolver,
+    )
+
+    from app.config import Settings
+    from app.plugin_adapters import unwrap
+    from app.sources_registry import BUILTIN_SOURCES
+
+    contracts = {
+        "resolvers": Resolver,
+        "etf_meta": MetadataSource,
+        "quotes": QuoteSource,
+        "daily": DailyCloseSource,
+        "fx": FxSource,
+    }
+    settings = Settings()
+    fehler: list[str] = []
+
+    for spec in BUILTIN_SOURCES:
+        for role in sorted(spec.roles):
+            quelle = unwrap(spec.build(role, {}, settings))
+            erwartet = contracts[role]
+            if not isinstance(quelle, erwartet):
+                fehler.append(
+                    f"{spec.name!r} in der Rolle {role!r} ist ein "
+                    f"{type(quelle).__name__} und kein {erwartet.__name__}"
+                )
+
+    assert not fehler, "diese Quellen sprechen den Vertrag nicht:\n  " + "\n  ".join(
+        fehler
+    )
+
+
 # ─── Lebenszyklus: bauen, wiederverwenden, schließen ──────────────────────────
 
 

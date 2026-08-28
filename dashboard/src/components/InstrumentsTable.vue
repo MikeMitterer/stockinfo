@@ -539,6 +539,17 @@ tbody tr {
 .row-toggle {
   display: inline;
   max-width: 100%;
+  /*
+   * **Caret und Ticker sind ein Wort.** Ohne das bricht die Zeile genau
+   * zwischen beiden um, sobald die Spalte schmal wird: Das Dreieck steht dann
+   * allein über `EUNL.DE` und sieht aus wie ein Aufzählungszeichen, nicht wie
+   * ein Aufklapper.
+   *
+   * Dieselbe Entscheidung wie bei den Zahlenspalten weiter oben: Was
+   * zusammengehört, wird nicht zerlegt — passt die Tabelle nicht mehr, rollt
+   * sie waagrecht.
+   */
+  white-space: nowrap;
   border: none;
   background: none;
   padding: 0;
@@ -598,7 +609,30 @@ tbody tr {
   &.stock { color: $color-stock; background: token(--asset-stocks, 0.16); }
 }
 
-.actions { display: flex; gap: 0.3rem; justify-content: flex-end; align-items: center; }
+/*
+ * **Die Zelle bleibt eine Tabellenzelle.** Hier stand `display: flex`, und das
+ * ist bei einem `<td>` teurer, als es aussieht: Die Zelle verlässt damit das
+ * Tabellenlayout. Sie zählt nicht mehr zur berechneten Tabellenbreite, und ihr
+ * `border-bottom` wird um eine eigene Box gezeichnet statt über die Zeile —
+ * sichtbar als Trennstrich, der vor den Aktionsknöpfen **abbricht**, während
+ * die Knöpfe daneben ins Leere ragen. Bei breitem Fenster fiel es nicht auf,
+ * weil die Zelle zufällig passte.
+ *
+ * Rechtsbündig und ohne Umbruch erreicht dasselbe, ohne das Layout zu
+ * verlassen; den Abstand macht der Zwischenraum der Geschwister.
+ */
+.actions {
+  text-align: right;
+  white-space: nowrap;
+
+  > * {
+    vertical-align: middle;
+  }
+
+  > * + * {
+    margin-inline-start: 0.3rem;
+  }
+}
 
 @keyframes spin { to { transform: rotate(360deg); } }
 </style>

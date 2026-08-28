@@ -14,6 +14,7 @@ import structlog
 
 from app.exchanges import is_real_mic, split_symbol
 from app.resolver import YAHOO_EXCHANGE_MICS, OpenFigiResolver, YFinanceResolver
+from app.providers.openfigi_provider import FigiMatch
 from stockinfo_plugin.types import Unavailable
 
 
@@ -49,8 +50,11 @@ class _FigiClient:
     def __init__(self, by_exchange: dict[str, str]) -> None:
         self._by_exchange = by_exchange
 
-    def map_isin(self, isin: str, id_value: str, id_type: str = "micCode") -> str | None:
-        return self._by_exchange.get(id_value)
+    def map_isin(
+        self, isin: str, id_value: str, id_type: str = "micCode"
+    ) -> FigiMatch | None:
+        treffer = self._by_exchange.get(id_value)
+        return FigiMatch(treffer) if treffer else None
 
 
 # --- Yahoo: der Börsencode schließt die Lücke, die das Suffix offen lässt ---

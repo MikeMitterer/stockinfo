@@ -30,6 +30,7 @@ from stockinfo_plugin.testing import ResolverContract
 
 from app.plugins.openfigi_resolver import OpenFigiResolverPlugin
 from app.providers.base import SourceUnavailableError
+from app.providers.openfigi_provider import FigiMatch
 
 
 class FakeFigiClient:
@@ -51,18 +52,21 @@ class FakeFigiClient:
         self._error = error
         self.calls: list[tuple[str, str, str]] = []
 
-    def map_isin(self, isin: str, id_value: str, id_type: str = "micCode") -> str | None:
+    def map_isin(
+        self, isin: str, id_value: str, id_type: str = "micCode"
+    ) -> FigiMatch | None:
         """Antwortet nach Tabelle und merkt sich, dass gefragt wurde."""
         self.calls.append((isin, id_value, id_type))
         if self._error is not None:
             raise self._error
-        return self._answers.get((isin, id_value))
+        treffer = self._answers.get((isin, id_value))
+        return FigiMatch(treffer) if treffer else None
 
 
 class PoisonedFigiClient:
     """Ein Client, dessen Benutzung ein Fehler ist."""
 
-    def map_isin(self, *args: Any, **kwargs: Any) -> str:
+    def map_isin(self, *args: Any, **kwargs: Any) -> FigiMatch:
         raise AssertionError("es wurde gefragt, obwohl das nicht passieren darf")
 
 

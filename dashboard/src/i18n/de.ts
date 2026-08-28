@@ -241,6 +241,27 @@ export const de = {
     analysis: 'Analyse fehlgeschlagen',
     fx: 'Wechselkurs konnte nicht geladen werden',
     overrides: 'Kennzahlen konnten nicht gespeichert werden',
+
+    /*
+     * Der **Grund** hinter der Kategorie darüber, je Kennung aus
+     * `ErrorDetail.code`. Das Backend schickt die Kennung und ihre Werte, den
+     * Satz bildet das UI — so steht es in `app/models.py` zugesagt.
+     *
+     * Bis T-35 gab es diesen Katalog nicht: Jeder Fehlschlag zeigte nur seine
+     * Kategorie, der Grund stand in der Browserkonsole. Eine unauflösbare ISIN
+     * war damit von einem Netzausfall nicht zu unterscheiden.
+     */
+    reason: {
+      instrument_not_found:
+        'Zu {identifier} ließ sich kein Wertpapier finden — weder über OpenFIGI ' +
+        'noch über die Yahoo-Suche.',
+      identifier_empty: 'Es wurde nichts eingegeben.',
+      identifier_unknown_form:
+        '{identifier} ist weder eine ISIN noch ein Symbol mit Börsenkürzel.',
+      quote_unavailable:
+        'Die Kursquelle war nicht erreichbar: {identifier}. Das Papier gibt es — ' +
+        'nur konnte gerade niemand nachsehen.',
+    },
   },
   /*
    * Kurzerklärungen am Begriff — zwei, drei Sätze dort, wo die Frage entsteht.

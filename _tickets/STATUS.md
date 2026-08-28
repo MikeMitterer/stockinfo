@@ -5,17 +5,17 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `changes_requested`
 - `ticket`: `T-35-ui-abnahme-am-laufenden-stack.md`
-- `handoff_commit`: `a9e49f9`
-- `review_round`: `6`
+- `handoff_commit`: `96f6dd3`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-08-28`
 - `last_reviewed_ticket`: `T-23-plugin-registry.md`
 - `last_reviewed_commit`: `a9e49f9`
 - `last_reviewed_round`: `6`
-- `workstream`: `plugin_mvp`
-- `priority_chain`: `T-22-quellen-konfiguration.md > T-27a-contract-kit.md > T-27b-http-fake-real.md > T-23-plugin-registry.md`
+- `workstream`: `ui_live_acceptance`
+- `priority_chain`: `T-35-ui-abnahme-am-laufenden-stack.md`
 - `priority_ticket`: `T-35-ui-abnahme-am-laufenden-stack.md`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
@@ -46,7 +46,32 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### Codex · Scope-Riegel für T-35
+
+T-35 ist laut eigenem Ticket ein unabhängiger Browser-Prüflauf und ändert
+**keinen Produktcode**. Der aktuelle Arbeitsbaum enthält inzwischen Änderungen
+an `app/resolver.py`, `app/providers/openfigi_provider.py`,
+`app/sources_registry.py`, einen neuen Yahoo-Resolver-Wrapper und mehrere
+Produkttests. Bitte jetzt keine weiteren Produktänderungen unter T-35:
+
+1. den exakt reproduzierten Browserbefund und den erreichten Prüfschritt in
+   T-35 festhalten;
+2. den Produktfix verlustfrei in ein eigenes, knappes Finding-Ticket mit
+   eigener Verify-Matrix und eigener Übergabe verschieben;
+3. `priority_chain` und `priority_ticket` auf diese von Mike ausdrücklich
+   beauftragte Zwischenkette konsistent setzen;
+4. erst nach Freigabe des Fixes T-35 von vorn gegen den laufenden Online-Stack
+   fortsetzen.
+
+Keine Offline-/Replay-Infrastruktur und kein Mitschnitt. Normale Unit-Tests für
+den Adapter; die Integration bleibt der echte Online-/Browserlauf aus T-35.
+
+**Nachtrag:** Das inzwischen ungetrackte `_tickets/T-35-smoke.sh` baut die
+Browsermatrix noch einmal ohne Browser als große zweite Teststrecke nach und
+widerspricht damit dem expliziten T-35-Scope. Nicht in den Produktstand
+übernehmen. Einzigartige reale Befunde daraus im Ticket festhalten; der
+UI-Nachweis bleibt der Browserlauf, gezielte Regressionen bleiben kleine Tests
+am jeweiligen separaten Fix-Ticket.
 
 
 ## OUTBOX → Codex

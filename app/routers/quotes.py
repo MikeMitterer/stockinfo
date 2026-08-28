@@ -19,15 +19,18 @@ zuzusagen wäre eine Zusage ins Blaue.
 from typing import Annotated, Literal
 
 from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import JSONResponse
 
 from app.container import get_cached_quote_service, get_daily_history_service
 from app.models import (
     IDENTITY_CONFLICT_RESPONSE,
     SYMBOL_CONFLICT_RESPONSE,
     DailyPoint,
+    ErrorDetail,
     QuotePoint,
     QuoteResponse,
 )
+from app.services.intake_service import REASON_NOT_FOUND
 from app.routers.validation import IsinPath, SymbolPath, TimeRange, normalize_symbol
 from app.services.daily_history import DailyHistoryService
 from app.services.quote_cache import CachedQuoteService
@@ -38,6 +41,33 @@ from app.services.quote_service import (
 )
 
 router = APIRouter(tags=["quotes"])
+
+
+def _not_found(isin: str) -> JSONResponse:
+    """„Dieses Papier gibt es nicht" — als **Kennung**, nicht als deutscher Satz.
+
+    Bis T-35 stand hier ``detail=f"Keine Auflösung für ISIN {isin}"``. Das
+    verletzte die eigene Zusage aus `ErrorDetail`: *„Der Text gehört ins UI und
+    muss in DE und EN vorliegen; ein deutscher Backendtext in der englischen
+    Oberfläche wäre auch bei sauberem Parsen falsch."*
+
+    Aufgefallen ist es im UI-Lauf, und zwar doppelt: Die Oberfläche zeigte nur
+    „Hinzufügen fehlgeschlagen", weil sie mit einem Fließtext nichts anfangen
+    kann — den eigentlichen Grund fand man erst in der Browserkonsole. Und der
+    **Anlegeweg des Dashboards** läuft über `GET /quote/…`, nicht über
+    `POST /instruments/intake`; die typisierte Auskunft, die dort längst
+    existiert, kam beim Benutzer deshalb nie an.
+
+    Die Kennung ist bewusst dieselbe wie beim Aufnahmeweg
+    (`REASON_NOT_FOUND`): Derselbe Sachverhalt bekommt denselben Namen, sonst
+    braucht die Oberfläche zwei Katalogeinträge für eine Lage.
+    """
+    return JSONResponse(
+        status_code=404,
+        content=ErrorDetail(
+            code=REASON_NOT_FOUND, params={"identifier": isin}
+        ).model_dump(),
+    )
 
 ServiceDep = Annotated[CachedQuoteService, Depends(get_cached_quote_service)]
 DailyDep = Annotated[DailyHistoryService, Depends(get_daily_history_service)]
@@ -79,10 +109,8 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     """Liefert den Kurs zu einer ISIN (bevorzugt Xetra/EUR)."""
     try:
         return service.get_by_isin(isin)
-    except InstrumentNotFoundError as exc:
-        raise HTTPException(
-            status_code=404, detail=f"Keine Auflösung für ISIN {isin}"
-        ) from exc
+    except InstrumentNotFoundError:
+        return _not_found(isin)
     except QuoteUnavailableError as exc:
         # Der Text der Ausnahme nennt die ausgefallenen Quellen (T-20 `#3`).
         # Ohne ihn stünde im Körper nur „ging nicht", und wer die App
@@ -104,13 +132,11 @@ def daily_history(
     """Liefert echte Tages-Schlusskurse (EOD) zu einer ISIN, inkrementell gecacht."""
     try:
         return service.get_daily(isin=isin, period=period)
-    except InstrumentNotFoundError as exc:
+    except InstrumentNotFoundError:
         # Nicht 502: Ein unbekanntes Papier ist ein Eingabefehler, kein
         # Ausfall bei Yahoo. Beides auf denselben Code zu legen nimmt jedem
         # Client die Möglichkeit, sie auseinanderzuhalten.
-        raise HTTPException(
-            status_code=404, detail=f"Keine Auflösung für ISIN {isin}"
-        ) from exc
+        return _not_found(isin)
     except QuoteUnavailableError as exc:
         raise HTTPException(
             status_code=502, detail=f"Keine Historie für {isin}"
@@ -176,10 +202,8 @@ def quote_history(
     date_from, date_to = time_range
     try:
         return service.get_history(isin, date_from, date_to, limit)
-    except InstrumentNotFoundError as exc:
-        raise HTTPException(
-            status_code=404, detail=f"Keine Auflösung für ISIN {isin}"
-        ) from exc
+    except InstrumentNotFoundError:
+        return _not_found(isin)
     except QuoteUnavailableError as exc:
         raise HTTPException(
             status_code=502, detail=f"Kein Kurs für ISIN {isin}"

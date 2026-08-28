@@ -47,7 +47,7 @@ def test_eine_vertauschte_reihenfolge_gilt(tmp_path: Path) -> None:
 
     built = build_chain("resolvers", config, Settings())
     assert [type(unwrap(source)).__name__ for source in built] == [
-        "YFinanceResolver",
+        "YahooSearchResolverPlugin",
         "OpenFigiResolverPlugin",
     ]
 
@@ -211,7 +211,7 @@ def test_der_leseweg_zeigt_die_laufende_kette(tmp_path: Path, monkeypatch) -> No
     # Die Laufzeit entsteht — wie beim Start der App, aus Stand A.
     runtime = _build_resolver()
     assert [type(unwrap(inner)).__name__ for inner in runtime._resolvers] == [
-        "YFinanceResolver",
+        "YahooSearchResolverPlugin",
         "OpenFigiResolverPlugin",
     ]
 
@@ -234,7 +234,7 @@ def test_der_leseweg_zeigt_die_laufende_kette(tmp_path: Path, monkeypatch) -> No
     # Endpunkt bei A geblieben ist, weil die Laufzeit es ist — oder ob beide
     # unabhängig voneinander irren.
     assert [type(unwrap(inner)).__name__ for inner in runtime._resolvers] == [
-        "YFinanceResolver",
+        "YahooSearchResolverPlugin",
         "OpenFigiResolverPlugin",
     ]
 
@@ -356,6 +356,6 @@ def test_die_verdrahtung_liest_die_konfiguration(tmp_path: Path, monkeypatch) ->
     get_sources_config.cache_clear()
 
     assert [type(unwrap(inner)).__name__ for inner in resolver._resolvers] == [
-        "YFinanceResolver",
+        "YahooSearchResolverPlugin",
         "OpenFigiResolverPlugin",
     ]

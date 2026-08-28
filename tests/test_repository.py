@@ -794,3 +794,65 @@ def test_genau_ein_paralleler_erstschreiber_legt_an(repo: QuoteRepository) -> No
     assert len({saved.instrument_id for saved in results}) == 1, (
         "alle acht meinen dasselbe Instrument"
     )
+
+
+def test_ein_refresh_loescht_den_namen_nicht(repo: QuoteRepository) -> None:
+    """**Der Befund aus dem UI-Lauf T-35 — sichtbar nach genau einem Klick.**
+
+    Der Geschwistertest darüber schützt die ETF-Extras. Diesen Fall deckte er
+    nicht ab, und der Unterschied ist der Anlass, nicht die Absicht: Dort
+    entscheidet die **Herkunft** der Antwort (`metadata_complete`), hier ihr
+    **Wert**.
+
+    Name und Gattung beschreiben das *Papier*, nicht den *Kurs*. Der
+    Plugin-Vertrag trennt das richtig: `Resolved` trägt beide, `Quote` trägt
+    Preis, Währung, Zeitpunkt und Volumen. Ein Kurs ist ein Preis zu einer
+    Zeit und weiß nichts über die Gattung seines Papiers.
+
+    Nur schrieb der Kurs-Weg diese Spalten trotzdem mit — aus der Zeit vor
+    T-23, als der Anbieter beides mitlieferte. Nach `POST /refresh/{isin}`
+    stand der Name auf ``NULL``, bei **jedem** Papier, ohne Fehlermeldung.
+
+    Geprüft werden beide Richtungen; nur zusammen sind sie die Regel.
+    """
+
+    def antwort(
+        name: str | None, typ: str | None, price: float, stunde: int
+    ) -> QuoteResponse:
+        return QuoteResponse(
+            isin="IE00B4L5Y983",
+            symbol="EUNL.DE",
+            ticker="EUNL",
+            mic="XETR",
+            exchange="Xetra",
+            name=name,
+            type=typ,
+            currency="EUR",
+            price=price,
+            quote_time=f"2026-08-28T{stunde:02d}:00:00+00:00",
+            fetched_at=f"2026-08-28T{stunde:02d}:00:00+00:00",
+        )
+
+    repo.save_quote(antwort("ISHARES CORE MSCI WORLD", "etf", 128.2, 10))
+
+    # Ein Kurs-Refresh: Er kennt weder Namen noch Gattung, weil der Vertrag
+    # sie im Kurs gar nicht vorsieht.
+    repo.save_quote(antwort(None, None, 129.0, 11))
+
+    gespeichert = repo.get_instrument_by_isin("IE00B4L5Y983")
+    assert gespeichert is not None
+    assert gespeichert["name"] == "ISHARES CORE MSCI WORLD", (
+        "der Refresh hat den Namen gelöscht"
+    )
+    assert gespeichert["type"] == "etf", "und die Gattung gleich mit"
+    kurs = repo.get_latest_quote(gespeichert["id"])
+    assert kurs is not None and kurs["price"] == 129.0, (
+        "der Kurs selbst muss sehr wohl neu sein — geschützt ist die Beschreibung"
+    )
+
+    # Die Gegenrichtung: Eine echte neue Auskunft gewinnt weiterhin — sonst
+    # wäre aus dem Schutz ein Einfrieren geworden.
+    repo.save_quote(antwort("ISHARES CORE MSCI WORLD UCITS ETF", "etf", 129.5, 12))
+    aktualisiert = repo.get_instrument_by_isin("IE00B4L5Y983")
+    assert aktualisiert is not None
+    assert aktualisiert["name"] == "ISHARES CORE MSCI WORLD UCITS ETF"

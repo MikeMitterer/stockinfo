@@ -56,7 +56,20 @@ def _reason_entries(catalogue: Path) -> dict[str, str]:
         Kennung → zusammengesetzter Satz.
     """
     text = catalogue.read_text(encoding="utf-8")
-    start = text.index("reason: {") + len("reason: {")
+    # **Ab welcher Stelle gesucht wird, ist seit T-35 eine Aussage.**
+    #
+    # Vorher stand hier `text.index("reason: {")` — der **erste** Block der
+    # Datei. Das ging gut, solange es nur einen gab. Als der UI-Lauf einen
+    # zweiten Katalog nötig machte (`errors.reason` für die Kennungen aus
+    # `ErrorDetail`), fand der Wächter plötzlich diesen und meldete die
+    # Migrationsgründe als „fehlend" — er prüfte einen Katalog, den er gar
+    # nicht meint.
+    #
+    # Dieser Test gilt `REJECTION_REASONS` aus `app/migration.py`, also dem
+    # Block unter `migration`. Die Kennungen aus `ErrorDetail` brauchen einen
+    # eigenen Wächter; das ist Wächter `#3` aus T-34.
+    scope = text.index("  migration: {")
+    start = text.index("reason: {", scope) + len("reason: {")
 
     depth = 1
     end = start

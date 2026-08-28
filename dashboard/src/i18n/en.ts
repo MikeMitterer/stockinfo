@@ -235,6 +235,19 @@ export const en = {
     analysis: 'Analysis failed',
     fx: 'Exchange rate could not be loaded',
     overrides: 'Could not save the metrics',
+
+    /* The reason behind the category above, keyed by `ErrorDetail.code`. */
+    reason: {
+      instrument_not_found:
+        'No security could be found for {identifier} — neither through OpenFIGI ' +
+        'nor through the Yahoo search.',
+      identifier_empty: 'Nothing was entered.',
+      identifier_unknown_form:
+        '{identifier} is neither an ISIN nor a symbol with an exchange suffix.',
+      quote_unavailable:
+        'The quote source could not be reached: {identifier}. The security ' +
+        'exists — nobody could look it up right now.',
+    },
   },
   hints: {
     more: 'More about this →',

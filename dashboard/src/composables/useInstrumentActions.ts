@@ -2,6 +2,7 @@ import { consola } from 'consola'
 import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
+import { describeFailure } from '../api/reason'
 import { instrumentPath, isIsin, quotePath } from '../api/paths'
 import { translate } from '../i18n'
 import type { InstrumentRef } from '../types'
@@ -26,7 +27,11 @@ export function useInstrumentActions(): {
     try {
       await action()
     } catch (err) {
-      error.value = message
+      // **Die Kategorie allein genügt nicht.** Bis T-35 stand hier nur
+      // `message`, und der eigentliche Grund landete ausschließlich in der
+      // Konsole: Wer eine unauflösbare ISIN eintippte, las „Hinzufügen
+      // fehlgeschlagen" und erfuhr nie, dass es das Papier nicht gibt.
+      error.value = describeFailure(message, err)
       consola.error('useInstrumentActions', message, err)
     } finally {
       busy.value = false

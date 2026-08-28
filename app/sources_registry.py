@@ -31,9 +31,9 @@ from app.plugin_adapters import (
 from app.plugin_guard import GuardedSource
 from app.plugins.justetf_metadata import JustEtfMetadataPlugin
 from app.plugins.openfigi_resolver import OpenFigiResolverPlugin
+from app.plugins.yahoo_search_resolver import YahooSearchResolverPlugin
 from app.plugins.yfinance_metadata import YFinanceMetadataPlugin
 from app.plugins.yfinance_quotes import YFinancePlugin
-from app.resolver import YFinanceResolver
 
 logger = structlog.get_logger()
 
@@ -100,7 +100,15 @@ def _openfigi(role: str, config: dict, settings) -> object:
 
 
 def _yahoo_search(role: str, config: dict, settings) -> object:
-    return YFinanceResolver(settings.default_exchange)
+    """Die Yahoo-Suche — **seit T-35 ebenfalls über den Vertrag.**
+
+    Sie war die letzte eingebaute Quelle, die hier noch als Core-Objekt
+    entstand. Weil `_build_one` jede Quelle adaptiert, bekam sie trotzdem den
+    `ResolverAdapter` — und der ruft `resolve()`, das es dort nicht gibt. Der
+    Fallback für US-Titel warf deshalb `AttributeError` statt zu antworten;
+    siehe den Kopf von `app/plugins/yahoo_search_resolver.py`.
+    """
+    return YahooSearchResolverPlugin(config, default_exchange=settings.default_exchange)
 
 
 def _yfinance(role: str, config: dict, settings) -> object:

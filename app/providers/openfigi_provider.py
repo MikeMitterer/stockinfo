@@ -5,6 +5,7 @@ Yahoos eigene ISIN-Suche liefert diese Notiz nicht — daher OpenFIGI davor.
 """
 
 import re
+from dataclasses import dataclass
 from typing import Any
 
 import httpx
@@ -46,6 +47,52 @@ def figi_lookup(mic: str) -> tuple[str, str]:
 # Zeichen, die ein Yahoo-Symbol tragen kann: Buchstaben, Ziffern, Punkt,
 # Bindestrich, Zirkumflex (Indizes) und Gleichheitszeichen (Devisen/Futures).
 _YAHOO_SYMBOL_PATTERN = re.compile(r"^[A-Za-z0-9.^=-]+$")
+
+
+@dataclass(frozen=True)
+class FigiMatch:
+    """Ein OpenFIGI-Treffer, so weit die App ihn braucht.
+
+    Warum ein Datensatz und keine drei Rückgabewerte: `map_isin` wird an einer
+    Stelle gerufen und in fünf Tests nachgestellt. Ein Tupel hätte dort überall
+    eine Stellenordnung eingeführt, die niemand liest.
+    """
+
+    ticker: str
+    name: str | None = None
+    instrument_type: str | None = None
+    """``"etf"``, ``"stock"`` oder ``None`` — das Vokabular der App."""
+
+
+# OpenFIGIs Gattungen in die zwei Begriffe der App. Die Liste ist bewusst
+# **kurz und wörtlich**: Was hier nicht steht, wird zu ``None`` und nicht
+# geraten. Ein falsch geratenes „stock" wäre schlimmer als kein Wert — es
+# schaltete die ETF-Anreicherung stillschweigend ab, und genau dieser Fehler
+# ist der Anlass des Tickets.
+#
+# Gemessen: `IE00B4L5Y983` liefert `securityType: "ETP"`, `securityType2:
+# "Mutual Fund"`. Beide Felder werden geprüft, weil OpenFIGI die Gattung je
+# nach Papier im einen oder anderen führt.
+_FIGI_TYPES: dict[str, str] = {
+    "ETP": "etf",
+    "MUTUAL FUND": "etf",
+    "OPEN-END FUND": "etf",
+    "COMMON STOCK": "stock",
+    "EQUITY": "stock",
+    "DEPOSITARY RECEIPT": "stock",
+    "REIT": "stock",
+}
+
+
+def _instrument_type(entry: dict[str, Any]) -> str | None:
+    """Die Gattung eines Treffers, oder ``None`` wenn OpenFIGI keine nennt."""
+    for field in ("securityType", "securityType2"):
+        value = entry.get(field)
+        if isinstance(value, str):
+            mapped = _FIGI_TYPES.get(value.strip().upper())
+            if mapped:
+                return mapped
+    return None
 
 
 def _is_yahoo_compatible_symbol(ticker: str) -> bool:
@@ -103,8 +150,8 @@ class OpenFigiClient:
 
     def map_isin(
         self, isin: str, id_value: str, id_type: str = "micCode"
-    ) -> str | None:
-        """Liefert den Ticker einer ISIN an einer Börse.
+    ) -> FigiMatch | None:
+        """Liefert den Treffer zu einer ISIN an einer Börse.
 
         Args:
             isin: ISIN des Wertpapiers.
@@ -114,8 +161,10 @@ class OpenFigiClient:
                 (z.B. das US-Composite).
 
         Returns:
-            Ticker (z.B. 'VGWL') oder ``None``, wenn OpenFIGI das Papier an
-            dieser Börse **nicht kennt**.
+            `FigiMatch` mit Ticker (z.B. 'VGWL'), Name und Gattung — oder
+            ``None``, wenn OpenFIGI das Papier an dieser Börse **nicht
+            kennt**. Bis T-35 kam hier nur der Ticker zurück; Name und
+            Gattung standen in derselben Antwort und wurden verworfen.
 
         Raises:
             SourceUnavailableError: Der Dienst war nicht erreichbar oder hat
@@ -142,7 +191,7 @@ class OpenFigiClient:
                 error=str(exc),
             )
             raise SourceUnavailableError(f"openfigi: {exc}") from exc
-        return self._extract_ticker(data)
+        return self._extract_match(data)
 
     @staticmethod
     def _extract_ticker(data: Any) -> str | None:
@@ -152,14 +201,40 @@ class OpenFigiClient:
             Der Ticker, oder ``None`` wenn die Antwort keinen enthält oder er
             als Yahoo-Symbol nicht taugt (siehe `_is_yahoo_compatible_symbol`).
         """
+        match = OpenFigiClient._extract_match(data)
+        return match.ticker if match else None
+
+    @staticmethod
+    def _extract_match(data: Any) -> FigiMatch | None:
+        """Der erste brauchbare Treffer — Ticker **samt Name und Gattung**.
+
+        **Bis T-35 hat diese Antwort nur den Ticker überlebt.** OpenFIGI
+        schickt in derselben Antwort auch `name` und `securityType`; sie
+        wurden hier weggeworfen. Gemessen am 2026-08-28 für `IE00B4L5Y983`:
+
+            {"ticker": "EUNL", "name": "ISHARES CORE MSCI WORLD",
+             "securityType": "ETP", "securityType2": "Mutual Fund", …}
+
+        Die Folge war doppelt sichtbar: Die Oberfläche zeigte keinen Namen,
+        und weil `type` leer blieb, hielt sie den ETF für eine Aktie — womit
+        justETF **gar nicht erst gefragt** wurde. TER, Anbieter, Domizil und
+        Fondsvolumen blieben für jedes Papier dauerhaft leer.
+        """
         if not isinstance(data, list) or not data:
             return None
         entry = data[0]
         results = entry.get("data") if isinstance(entry, dict) else None
         if not results:
             return None
-        ticker = results[0].get("ticker")
+        first = results[0]
+        ticker = first.get("ticker")
         if ticker and not _is_yahoo_compatible_symbol(ticker):
             logger.info("openfigi_ticker_unusable", ticker=ticker)
             return None
-        return ticker
+        if not ticker:
+            return None
+        return FigiMatch(
+            ticker=ticker,
+            name=first.get("name") or None,
+            instrument_type=_instrument_type(first),
+        )

@@ -158,6 +158,30 @@ PROTECTED_META_FIELDS = frozenset(
     }
 )
 
+KEEP_IF_UNKNOWN = frozenset({"name", "type"})
+"""Felder, die eine **leere** Antwort nicht überschreiben darf.
+
+Der Unterschied zu `PROTECTED_META_FIELDS` ist der Anlass, nicht die Absicht:
+Dort entscheidet die *Herkunft* der Antwort (`metadata_complete`), hier der
+*Wert*. Ein `NULL` heißt „ich weiß es nicht" und ist nie mehr wert als das,
+was schon dasteht — ein echter neuer Name dagegen schon, und der wird
+geschrieben.
+
+**Warum das überhaupt nötig ist.** Name und Gattung beschreiben das *Papier*,
+nicht den *Kurs*. Der Plugin-Vertrag trennt das sauber: `Resolved` trägt
+`name` und `instrument_type`, `Quote` trägt Preis, Währung, Zeitpunkt und
+Volumen — und kein Namensfeld. Das ist richtig so; ein Kurs ist ein Preis zu
+einer Zeit und weiß nichts über die Gattung seines Papiers.
+
+Nur schrieb der Kurs-Weg diese Spalten trotzdem mit, aus der Zeit, als der
+Anbieter beides mitlieferte. Im UI-Lauf von T-35 dauerte es genau einen
+Klick: Nach `POST /refresh/{isin}` war der Name **weg**, bei jedem Papier.
+
+**Nur beim Aktualisieren.** Beim Anlegen muss der Wert geschrieben werden,
+sonst entstünde die Zeile ohne Namen — der erste Anlauf dieser Änderung tat
+genau das und ließ die beiden Plugin-Durchstiche auffliegen.
+"""
+
 
 class QuoteRepository:
     """Liest und schreibt Instrumente und Kurs-Zeitreihen in SQLite."""
@@ -646,6 +670,13 @@ class QuoteRepository:
                     raise
 
         meta = {**meta, **self._identity_update(connection, existing_id, response)}
+        # Ab hier wird **aktualisiert**, nicht angelegt: Was die Antwort nicht
+        # weiß, bleibt stehen. Siehe `KEEP_IF_UNKNOWN`.
+        meta = {
+            field: value
+            for field, value in meta.items()
+            if value is not None or field not in KEEP_IF_UNKNOWN
+        }
 
         assignments = ", ".join(f"{field} = ?" for field in meta)
         values = list(meta.values())

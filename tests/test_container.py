@@ -67,7 +67,7 @@ def test_nicht_strict_hat_den_fallback(monkeypatch, tmp_path: Path) -> None:
     """Die Gegenrichtung — ohne die Einstellung bleibt die Kaskade."""
     resolver = _wire(monkeypatch, tmp_path, strict=False)
 
-    assert _names(resolver) == ["OpenFigiResolverPlugin", "YFinanceResolver"]
+    assert _names(resolver) == ["OpenFigiResolverPlugin", "YahooSearchResolverPlugin"]
 
 
 def test_eine_datei_gewinnt_gegen_strict(monkeypatch, tmp_path: Path) -> None:
@@ -83,7 +83,7 @@ def test_eine_datei_gewinnt_gegen_strict(monkeypatch, tmp_path: Path) -> None:
 
     resolver = _wire(monkeypatch, tmp_path, strict=True)
 
-    assert _names(resolver) == ["OpenFigiResolverPlugin", "YFinanceResolver"]
+    assert _names(resolver) == ["OpenFigiResolverPlugin", "YahooSearchResolverPlugin"]
 
 
 def test_die_vorgaben_unterscheiden_sich_nur_an_den_resolvern() -> None:

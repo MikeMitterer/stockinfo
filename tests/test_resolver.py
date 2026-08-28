@@ -4,7 +4,7 @@ import pytest
 from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
 
 from app.providers.base import ResolvedInstrument, SourceUnavailableError
-from app.providers.openfigi_provider import OpenFigiClient
+from app.providers.openfigi_provider import FigiMatch, OpenFigiClient
 from app.resolver import (
     EXCHANGES,
     CompositeResolver,
@@ -23,10 +23,10 @@ class FakeFigiClient:
 
     def map_isin(
         self, isin: str, id_value: str, id_type: str = "micCode"
-    ) -> str | None:
+    ) -> FigiMatch | None:
         self.last_id_value = id_value
         self.last_id_type = id_type
-        return self._ticker
+        return FigiMatch(self._ticker) if self._ticker else None
 
 
 def test_openfigi_baut_xetra_symbol() -> None:
@@ -70,9 +70,9 @@ class _FakeFigi:
 
     def map_isin(
         self, isin: str, id_value: str, id_type: str = "micCode"
-    ) -> str | None:
+    ) -> FigiMatch | None:
         self.calls.append((isin, id_value, id_type))
-        return self.ticker
+        return FigiMatch(self.ticker) if self.ticker else None
 
 
 def test_tsx_bildet_punkt_to_symbol() -> None:
@@ -130,7 +130,7 @@ class _FigiFails:
 
     def map_isin(
         self, isin: str, id_value: str, id_type: str = "micCode"
-    ) -> str | None:
+    ) -> FigiMatch | None:
         raise SourceUnavailableError("openfigi: HTTP 503")
 
 
@@ -170,9 +170,10 @@ class _FigiByExchange:
 
     def map_isin(
         self, isin: str, id_value: str, id_type: str = "micCode"
-    ) -> str | None:
+    ) -> FigiMatch | None:
         self.calls.append(id_value)
-        return self._tickers.get(id_value)
+        treffer = self._tickers.get(id_value)
+        return FigiMatch(treffer) if treffer else None
 
 
 def test_kaskade_weicht_auf_die_heimatboerse_aus() -> None:
@@ -778,3 +779,74 @@ def test_yahoo_nimmt_die_boerse_auch_bei_abweichender_gattung(monkeypatch) -> No
 
     assert resolved is not None
     assert resolved.symbol == "IS3M.DE"
+
+
+def test_name_und_gattung_ueberleben_die_aufloesung() -> None:
+    """**Der Befund aus dem UI-Lauf T-35 — und der teuerste bisher.**
+
+    OpenFIGI schickt Name und Gattung in derselben Antwort wie den Ticker;
+    gemessen am 2026-08-28 für `IE00B4L5Y983`:
+
+        {"ticker": "EUNL", "name": "ISHARES CORE MSCI WORLD",
+         "securityType": "ETP", "securityType2": "Mutual Fund", …}
+
+    Der Client warf beides weg und lieferte nur den Ticker. Sichtbar wurde das
+    an zwei Stellen, und die zweite war die schlimmere:
+
+    1. Die Oberfläche zeigte **keinen Namen** — nur Symbol und ISIN.
+    2. Weil `type` leer blieb, hielt das Dashboard jeden ETF für eine Aktie
+       (`skipReason === 'notEtf'`) und **fragte justETF gar nicht erst**. TER,
+       Anbieter, Domizil, Fondsvolumen und Replikationsart blieben für jedes
+       Papier dauerhaft leer — ohne Fehlermeldung, ohne Protokolleintrag.
+
+    Kein Unit-Test hat das gesehen: Jede Schicht war für sich richtig. Erst
+    der Weg durch die Oberfläche hat es gezeigt.
+    """
+    figi = _FakeFigi("EUNL")
+    figi.ticker = "EUNL"
+
+    class _MitNameUndGattung(_FakeFigi):
+        def map_isin(self, isin, id_value, id_type="micCode"):
+            self.calls.append((isin, id_value, id_type))
+            return FigiMatch(
+                "EUNL", name="ISHARES CORE MSCI WORLD", instrument_type="etf"
+            )
+
+    resolved = OpenFigiResolver(_MitNameUndGattung("EUNL"), "XETR").resolve_isin(
+        "IE00B4L5Y983"
+    )
+
+    assert isinstance(resolved, ResolvedInstrument)
+    assert resolved.name == "ISHARES CORE MSCI WORLD", "der Name geht verloren"
+    assert resolved.type == "etf", (
+        "ohne die Gattung wird justETF nie gefragt — die ETF-Kennzahlen "
+        "bleiben dann für immer leer"
+    )
+
+
+@pytest.mark.parametrize(
+    ("figi_type", "erwartet"),
+    [
+        ("ETP", "etf"),
+        ("Mutual Fund", "etf"),
+        ("Common Stock", "stock"),
+        ("Irgendwas Neues", None),
+    ],
+    ids=["etp", "fonds", "aktie", "unbekannt"],
+)
+def test_die_gattung_wird_uebersetzt_und_nicht_geraten(
+    figi_type: str, erwartet: str | None
+) -> None:
+    """Was nicht in der Tabelle steht, bleibt ``None``.
+
+    Ein geratenes ``"stock"`` wäre schlimmer als kein Wert: Es schaltete die
+    ETF-Anreicherung stillschweigend ab — genau der Fehler, der diesen Test
+    veranlasst hat, nur mit einer falschen Antwort statt gar keiner.
+    """
+    from app.providers.openfigi_provider import OpenFigiClient
+
+    antwort = [{"data": [{"ticker": "EUNL", "securityType": figi_type}]}]
+    match = OpenFigiClient._extract_match(antwort)
+
+    assert match is not None
+    assert match.instrument_type == erwartet

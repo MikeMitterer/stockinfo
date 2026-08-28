@@ -241,9 +241,10 @@ class OpenFigiResolver:
 
         exch = EXCHANGES[mic]
         id_type, id_value = figi_lookup(mic)
-        ticker = self._client.map_isin(isin, id_value, id_type=id_type)
-        if not ticker:
+        match = self._client.map_isin(isin, id_value, id_type=id_type)
+        if not match:
             return None
+        ticker = match.ticker
         if not is_canonical_ticker(ticker):
             # OpenFIGI schreibt Anteilsklassen mit Schrägstrich (`BRK/B`) —
             # das ist die Schreibweise des Anbieters, nicht die der Börse.
@@ -259,6 +260,12 @@ class OpenFigiResolver:
             symbol=provider_alias(ticker, mic),
             isin=isin,
             exchange=exch.name,
+            # **Name und Gattung kommen aus derselben Antwort** und wurden bis
+            # T-35 verworfen. Ohne die Gattung hielt die App jeden ETF für eine
+            # Aktie und fragte justETF nie — TER, Anbieter und Domizil blieben
+            # dauerhaft leer, ohne dass irgendwo ein Fehler stand.
+            name=match.name,
+            type=match.instrument_type,
             ticker=ticker,
             mic=mic,
         )
