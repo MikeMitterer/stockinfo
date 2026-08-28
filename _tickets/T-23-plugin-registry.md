@@ -458,3 +458,75 @@ Registry/Contract/Vertical/Config **124 passed**. Die echten Online-Läufe sind
 justETF **2**, OpenFIGI **3**, yfinance **3** — alle grün und alle mit
 Dienstkontakt. Diese guten Ergebnisse bleiben erhalten; die Nacharbeit braucht
 keine neue Testinfrastruktur.
+
+---
+
+## Codex-Review · Runde 4 · `adcb505` · Nacharbeit
+
+Daily reicht die kanonische Identität jetzt bis zum Anbieter durch, Ratio-TER
+und Herkunft werden korrekt übersetzt, die Dateivariante kopiert die echten
+Beispiele, und im Produkt-Diff ist keine Offline-/Replay-Infrastruktur mehr
+vorhanden. Die acht Online-Fälle berühren weiterhin ihre echten Dienste. Die
+Übergabe ist dennoch nicht abnahmefähig: Drei öffentliche Produktpfade sind
+funktional gebrochen oder noch nicht der vereinbarte Weg; ein Test behauptet
+weiter mehr als er prüft.
+
+1. **Blocker · Der neue Metadatenadapter verletzt das vorhandene
+   `EtfEnricher`-Protokoll und schaltet die ETF-Anreicherung ab.** Der Core ruft
+   `fetch_etf(isin, symbol=…, exchange=…, currency=…)` auf. Der Adapter nimmt
+   nur `isin` an; die Gegenprobe endet deshalb bereits bei jedem zuständigen
+   justETF- oder Yahoo-Pfad mit `TypeError: unexpected keyword argument
+   'symbol'`. Selbst der direkte Aufruf ohne diese Argumente hilft Yahoo
+   nicht: `MetadataAdapter` baut nur `ResolveRequest(isin=…)`, während
+   `YFinanceMetadataPlugin` für den Abruf das Symbol benötigt; gemessen wurden
+   `ENRICHER_CONTEXT US9229087690 None None None` und Ergebnis `None`. Den
+   vollständigen vorhandenen Core-Kontext über die **öffentliche knappe
+   Plugin-Schnittstelle** tragen und über `CompositeEtfEnricher → Adapter →
+   Plugin` für einen europäischen sowie einen Yahoo-Fall ausführen. Das neu
+   erfundene, per `getattr` erkannte `is_responsible` neben `handles` ist
+   derzeit ein eingebauter Sondervertrag, den ein fremdes Plugin nicht hat;
+   damit ist die behauptete einheitliche Schnittstelle noch nicht erreicht.
+2. **Hoch · Snapshot und Lifecycle sind weiterhin keine Abbildung der
+   laufenden Instanzen.** Für eine noch nicht gebaute Rolle ruft
+   `describe_chain` weiterhin `_evaluate(..., settings)` auf und konstruiert
+   bei jedem `GET /sources` Wegwerf-Instanzen. Wird eine Rolle zweimal gebaut
+   — im realen Composition-Root etwa `daily` für Quote-Cache und Historie oder
+   `resolvers` später für den Analyzer — überschreiben `_SNAPSHOT[role]` und
+   `_BUILT[role]` die ältere, weiterhin verwendete Kette. Schließlich sucht
+   `close_all()` `close` am Adapter; die Adapter reichen den öffentlichen
+   Lifecycle nicht durch. Die ausführbare Gegenprobe ergab vier
+   Konstruktionen, zwei verschiedene laufende Builds und **null** Close-
+   Aufrufe. Je Rolle eine tatsächlich verwendete Kette besitzen und
+   wiederverwenden, Diagnose daraus lesen und jede gebaute öffentliche
+   `Source` genau einmal schließen; ein reiner Lesezugriff baut nichts.
+3. **Blocker · Der Installationsweg liest nicht das dokumentierte Format und
+   erzwingt seine eigenen Regeln nicht.** Ticket und Design zeigen
+   `plugins.packages`; `load_sources_config` liest stattdessen nur das
+   undokumentierte Top-Level-Feld `packages`. Die Gegenprobe mit dem
+   dokumentierten YAML ergab `packages == ()`. Umgekehrt werden dort
+   `demo`, eine Git-URL und auch pip-Optionen ungeprüft akzeptiert, obwohl
+   feste `==`-Versionen Pflicht sind. Außerdem fehlen die im verbindlich
+   referenzierten Design genannten `--only-binary=:all:`-Regel und der
+   Constraint für die Version von `stockinfo-plugin-api`. Den dokumentierten
+   einen Parserpfad verwenden, ausschließlich normale exakt gepinnte
+   Paketanforderungen zulassen und den echten pip-Aufruf entsprechend
+   begrenzen. Danach mindestens einmal belegen, dass eine über **diesen**
+   Zielordner installierte Distribution per Entry-Point entdeckt wird; der
+   schon mit der Entwicklungsumgebung installierte Beispiel-Entry-Point prüft
+   den neuen Installer nicht.
+4. **Mittel · Der neue `/sources`-Test verlangt den angekündigten zweiten Namen
+   ausdrücklich nicht.** Konfiguriert wird nur `local-file`; für
+   `canada-file` lautet die Assertion `name in endpoint_names OR name in
+   specs_by_name()`. Damit bleibt der Test grün, wenn der Entry-Point im
+   öffentlichen Endpunkt fehlt — genau die zweite Hälfte seines Namens und
+   Docstrings. Beide Plugins in derselben diagnostizierten Kette konfigurieren
+   und beide ausschließlich in der HTTP-Antwort verlangen. Keine alternative
+   Registry-Assertion als Ersatz für die REST-Zusage.
+
+**Evidenz:** fokussierte Registry-/Vertical-/Config-/Adapter-Suite **220
+passed**; `make test` Backend **789 passed / 29 skipped**, Plugin-API **257
+passed / 1 skipped**, Dashboard **259 passed**; Ruff und `git diff --check`
+sauber. Echte Online-Läufe: justETF **2**, OpenFIGI **3**, yfinance **3**, alle
+grün und mit Dienstkontakt. Die vier kleinen Gegenproben oben treffen Übergänge,
+die in diesen grünen Suites nicht ausgeführt werden. Es ist keine neue
+Testinfrastruktur erforderlich.

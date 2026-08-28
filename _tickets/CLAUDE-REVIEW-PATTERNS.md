@@ -162,6 +162,12 @@ dem Provider mit `None`, und der Metadatenaufruf übernahm eine Ratio-TER ohne
 Umrechnung und verlor ihre Herkunft. Vorhandensein einer Methode war keine
 Ausführung der behaupteten Core-Grenze.
 
+**Neuer Beleg:** T-23 Runde 4, Commit `adcb505`: OUTBOX und Test-Docstring
+erklärten, beide Loader-Namen würden in `GET /sources` geprüft. Der Test
+konfigurierte dort jedoch nur `local-file`; für `canada-file` akzeptierte die
+Assertion alternativ dessen bloßes Vorkommen in `specs_by_name()`. Damit war
+der Test grün, obwohl der zweite Name in der HTTP-Antwort fehlen durfte.
+
 [↑ Übersicht](#übersicht)
 
 ## P-02 · Punktuelle Korrektur wird als vollständige Regelumsetzung gemeldet
@@ -577,6 +583,18 @@ warf, lief daher produktiv und wurde gleichzeitig als unbrauchbar gemeldet.
 Die gemeinsame Funktion beseitigte duplizierten Code, nicht die zwei
 unterschiedlichen Laufzeitzustände.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-23
+Runde 4, Commit `adcb505`: OUTBOX meldete einen Laufzeit-Snapshot,
+wirklich aufgerufenen `Source.close()` und den entschiedenen festen
+Installationsweg. Tatsächlich erzeugte `describe_chain` für jede noch nicht
+gebaute Rolle weiter Wegwerf-Instanzen; ein erneuter Rollenbau überschrieb die
+Close-Liste der noch laufenden alten Kette, und `close_all()` fragte den
+Adapter statt der darunterliegenden `Source`, sodass die Gegenprobe keinen
+einzigen Close-Aufruf sah. Parallel ignorierte der Parser das dokumentierte
+`plugins.packages`, akzeptierte im abweichenden Top-Level-Feld unversionierte
+Namen und Git-URLs und gab sie an pip weiter. Die konkret ergänzten
+Mechanismen waren vorhanden, ihre behaupteten End-to-End-Regeln nicht.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
@@ -904,6 +922,13 @@ Core was er ruft“ prüfte nur `hasattr` auf fünf gebauten Objekten. Er erzeug
 weder einen aliaslosen US-Daily-Request noch eine Metadatenantwort mit einer
 vom Core-Zielformat abweichenden Einheit. Beide Adapterfehler bestanden den
 Test, weil der entscheidende Unterschied erst beim Methodenaufruf entsteht.
+
+**Beleg 7:** T-23 Runde 4, Commit `adcb505`: Der Test „beide Namen erscheinen
+in `/sources`“ konfigurierte nur `local-file`. Die zweite Assertion durfte
+`canada-file` statt in der HTTP-Antwort alternativ in der internen Registry
+finden. Der Arrange-Schritt erzeugte nie den behaupteten Zustand „beide Namen
+im Endpunkt“, und die Assertion wechselte für den zweiten Namen die
+Systemgrenze.
 
 [↑ Übersicht](#übersicht)
 
