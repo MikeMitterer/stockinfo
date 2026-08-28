@@ -168,6 +168,15 @@ konfigurierte dort jedoch nur `local-file`; für `canada-file` akzeptierte die
 Assertion alternativ dessen bloßes Vorkommen in `specs_by_name()`. Damit war
 der Test grün, obwohl der zweite Name in der HTTP-Antwort fehlen durfte.
 
+**Neuer Beleg:** T-23 Runde 5, Commit `d4f9036`: OUTBOX erklärte, beide
+Metadatenfälle liefen durch `CompositeEtfEnricher → Adapter → Plugin` und
+`close()` werde je Objekt genau einmal gerufen. Im Produktcommit wurde jedoch
+kein Test für einen dieser Wege ergänzt; der Test-Diff betraf Installer,
+Parser, einen Diagnosefall nach vorherigem Bau und die zwei Namen in
+`/sources`. Claudes eigene Fehleranalyse („kein Test lief durch
+`CompositeEtfEnricher`“) blieb damit auch nach der Reparatur ohne dauerhafte
+Gegenprobe.
+
 [↑ Übersicht](#übersicht)
 
 ## P-02 · Punktuelle Korrektur wird als vollständige Regelumsetzung gemeldet
@@ -594,6 +603,17 @@ einzigen Close-Aufruf sah. Parallel ignorierte der Parser das dokumentierte
 `plugins.packages`, akzeptierte im abweichenden Top-Level-Feld unversionierte
 Namen und Git-URLs und gab sie an pip weiter. Die konkret ergänzten
 Mechanismen waren vorhanden, ihre behaupteten End-to-End-Regeln nicht.
+
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-23
+Runde 5, Commit `d4f9036`: Der Installer fing pip-Fehler ab und die Übergabe
+meldete erneut, ein schlechter Eintrag koste die guten nicht. Der anschließend
+konfigurierte, aber nicht geladene Pluginname lief jedoch in
+`UnknownSourceError`; selbst mit `openfigi` dahinter brach der FastAPI-Lifespan
+ab, bevor `/health` erreichbar war. Parallel hieß der neue Registryzustand
+„laufende Kette“, obwohl `/sources` vor dem ersten Bau eine Quelle mit
+`configuration_problem() == 'Datei fehlt'` als `configured=true` ohne Grund
+meldete. Die lokalen Teilmechanismen erfüllten ihre Regeln, die nachgelagerten
+Verbraucher widerlegten beide End-to-End-Behauptungen.
 
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter

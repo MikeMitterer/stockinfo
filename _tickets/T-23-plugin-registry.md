@@ -530,3 +530,65 @@ sauber. Echte Online-Läufe: justETF **2**, OpenFIGI **3**, yfinance **3**, alle
 grün und mit Dienstkontakt. Die vier kleinen Gegenproben oben treffen Übergänge,
 die in diesen grünen Suites nicht ausgeführt werden. Es ist keine neue
 Testinfrastruktur erforderlich.
+
+---
+
+## Codex-Review · Runde 5 · `d4f9036` · Nacharbeit
+
+Die vier Komponentenbefunde aus Runde 4 sind technisch korrigiert: Der
+öffentliche Request trägt den Metadatenkontext, europäischer, US- und
+ISIN-loser Kanada-Fall laufen durch `CompositeEtfEnricher → Adapter → Plugin`,
+ein zweiter Rollenbau liefert dasselbe Objekt und `close()` erreicht es genau
+einmal, der lokale Wheel-Lauf wird aus dem hash-benannten Ziel entdeckt, und
+beide Loader-Namen werden im HTTP-Ergebnis verlangt. Zwei Betriebsgrenzen und
+die dazugehörige dauerhafte Testevidenz fehlen noch.
+
+1. **Blocker · Ein Installationsfehler beendet weiterhin die App, statt nur das
+   Plugin zu kosten.** `plugin_env.ensure` isoliert zwar pip und liefert bei
+   einem Fehler `None`; der konfigurierte Pluginname bleibt danach aber in der
+   Kette. `build_chain` wirft für ihn `UnknownSourceError`, und der Lifespan
+   ruft diesen Weg beim Schedulerbau auf. Die Gegenprobe ersetzte nur den
+   Installer durch einen Fehlschlag und konfigurierte
+   `resolvers: [missing-plugin, openfigi]`. Trotz des gesunden Fallbacks endete
+   der Start mit `START_ERROR UnknownSourceError 'missing-plugin' …`; nicht
+   einmal `/health` war erreichbar. Ein fehlendes oder abgewiesenes Paket als
+   unbrauchbaren Ketteneintrag mit Grund behandeln, nachfolgende Quellen
+   weiterverwenden und mindestens Health sowie `/sources` erreichbar halten.
+   Wenn in einer zwingenden Rolle gar keine Quelle übrigbleibt, darf der
+   Fachbetrieb entsprechend nicht operational sein — der Prozess und seine
+   Diagnose müssen laut Ticket trotzdem starten.
+2. **Hoch · `/sources` zeigt vor dem ersten Rollenbau weiterhin nicht den
+   operationalen Zustand.** Ein reiner Lesezugriff konstruiert jetzt korrekt
+   nichts. Für eine geladene Quelle, deren `configuration_problem()` sicher
+   „Datei fehlt“ liefert, meldet er vor dem Bau aber
+   `usable=True, reason=''`; erst nach einem Produktbau wird daraus
+   `usable=False, reason='Datei fehlt'`. Im normalen Start baut der Scheduler
+   vier Rollen, `fx` bleibt bis zum ersten Aufruf ungeprüft; bei ausstehender
+   Migration startet der Scheduler nicht und **alle** Rollen bleiben
+   spekulativ. Die Kettenzustände einmal unabhängig vom ersten Fachrequest
+   operationalisieren oder einen noch nicht gebauten Zustand ehrlich als
+   solchen ausgeben. Der Endpunkt darf nicht `configured=true` als „kann
+   arbeiten“ melden, wenn die öffentliche Diagnose noch gar nicht gefragt
+   wurde, und seine Antwort darf nicht erst durch den ersten Fachrequest die
+   Wahrheit wechseln.
+3. **Mittel · Die zwei wichtigsten Reparaturen haben keine committed
+   Regressionstests.** Der Produktcommit ändert für Metadaten und Lifecycle
+   ausschließlich Produktdateien; der Test-Diff ergänzt nur Installer,
+   Parser, den bestehenden Diagnose-Test **nach** dem Bau und den vertikalen
+   Namenscheck. Claudes eigene Feststellung lautet, dass zuvor kein Test durch
+   `CompositeEtfEnricher` lief — und auch Runde 5 fügt keinen solchen Test
+   hinzu. Ebenso fehlen Tests für „zweimal bauen = dasselbe Objekt“, „reines
+   Lesen baut null Objekte“ und „Shutdown schließt genau einmal“. Die
+   unabhängigen Gegenproben sind aktuell grün, schützen aber keinen späteren
+   Commit. Diese kleinen Fälle in den vorhandenen Testdateien festhalten,
+   einschließlich der fehlgeschlagenen Installation über einen
+   `TestClient`-Lifespan mit gesundem Fallback. Keine neue Testschicht bauen.
+
+**Evidenz:** fokussierte Installer-/Registry-/Vertical-/Provider-/Quote-Suite
+**212 passed**; `make test` Backend **796 passed / 29 skipped**, Plugin-API
+**257 passed / 1 skipped**, Dashboard **259 passed**; Ruff und
+`git diff --check` sauber. Echte Online-Läufe: justETF **2**, OpenFIGI **3**,
+yfinance **3**, alle grün und mit Dienstkontakt. Unabhängige Erfolgsskripte
+belegen drei Metadatenfälle sowie eine Konstruktion/einen Close-Aufruf; die
+beiden negativen Skripte belegen den Lifespan-Abbruch und den wechselnden
+Diagnosestatus. Keine Offline-/Replay-Infrastruktur gefunden oder benötigt.
