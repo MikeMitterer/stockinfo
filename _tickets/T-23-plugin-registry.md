@@ -378,3 +378,83 @@ Backend **772 passed / 29 skipped**, Plugin-API **257 passed / 1 skipped**,
 Dashboard **259 passed**. Die grünen Gesamtläufe enthalten keine Core-Aufrufe
 für Daily/FX, prüfen die falsche `fund_size`-Währung nur auf syntaktische
 Gültigkeit und zählen zwei netzfreie Fälle als Integration.
+
+---
+
+## Codex-Review · Runde 3 · `4e23cde` · Nacharbeit
+
+Vier Befunde aus Runde 2 sind jetzt belastbar erledigt: Der Schutzschalter
+überlebt `handles → resolve`, justETF bezeichnet `fund_size_eur` als EUR, die
+Quote-Signatur ist im Core-Scope nachgezogen, und die Online-Suite besteht aus
+acht tatsächlichen Dienstaufrufen. Die öffentliche Plugin-API selbst ist
+grundsätzlich knapp und gut testbar: Konstruktor, `configuration_problem`,
+`handles` und je eine Rollenoperation; Contract- und Online-Tests benutzen
+diese öffentlichen Einstiege. Freigabefähig ist der Hostpfad noch nicht.
+
+1. **Blocker · Der neue Daily-Adapter schaltet alle aliaslosen Börsen ab.**
+   `DailyCloseSync` reicht weiterhin nur das Anbieter-Symbol weiter.
+   `DailyAdapter` versucht daraus `(ticker, mic)` zurückzurechnen und gibt bei
+   einem Symbol ohne Punkt sofort `None` zurück. Genau die fünf US-Börsen haben
+   laut `EXCHANGES` absichtlich keinen Alias; `AAPL/XNAS` wird als `AAPL`
+   gespeichert. Die Gegenprobe am durch `build_chain("daily", …)` gebauten
+   Objekt ergab `DAILY_AAPL_RESULT None` und **null Provider-Aufrufe**;
+   `EUNL.DE/XETR` erreichte denselben Double dagegen. Die Identität darf nicht
+   erst verworfen und danach geraten werden. Wie beim Quote-Pfad muss der echte
+   Core-Verbraucher Ticker und MIC bis zum `DailyRequest` tragen; danach ein
+   Test über `DailyCloseSync` oder `DailyHistoryService` für mindestens
+   `AAPL/XNAS` und `EUNL/XETR`, nicht nur `hasattr`.
+2. **Blocker · Der Metadatenadapter verletzt die Semantik der knappen
+   Schnittstelle.** Er kopiert `Reading.value` direkt in `EtfDetails` und
+   ignoriert `Reading.unit`, `currency` und `source`. Ein vollständig
+   vertragskonformes Plugin mit `ter=0.0019, unit=RATIO, source='ratio-meta'`
+   kommt deshalb im Core als `ter=0.0019` statt `0.19 %` und mit
+   `source=None` an. Auch der eingebaute justETF-Pfad verliert so seine
+   Herkunft. Bekannte Core-Felder gegen ihre kanonischen Einheiten übersetzen,
+   inkompatible Beträge nicht still übernehmen und die Herkunft erhalten;
+   unbekannte Felder bleiben wie vereinbart T-26. Der Adapter wird über einen
+   echten Core-Verbraucher geprüft. Das Übergangsfeld `contract_roles` und der
+   native yfinance-Metadaten-Sonderweg dürfen nicht kommentiert als Endzustand
+   von T-23 stehen bleiben: entweder jetzt auf den Vertrag führen oder den
+   verbleibenden, konkret abgegrenzten Schritt einem bereits beschlossenen
+   Folgeticket zuordnen.
+3. **Hoch · `/sources` berichtet weiterhin nicht den Laufzeitstand und erzeugt
+   dabei weggeworfene Plugin-Instanzen.** `build_chain` und `describe_chain`
+   rufen zwar dieselbe Funktion `_evaluate` auf, aber zu verschiedenen Zeiten
+   und mit jeweils neuer Konstruktion. Eine testlokale Quelle, deren erste
+   Konstruktion gelingt und deren zweite wirft, blieb in der laufenden Kette,
+   während `describe_chain` sie als `configured=false/usable=false` meldete
+   (`RUNTIME_SOURCES 1`, `CONSTRUCTOR_CALLS 2`). Das ist derselbe Widerspruch
+   in neuer Form und kann bei jedem GET Konstruktor-Seiteneffekte oder
+   Ressourcen erzeugen. Einen beim Bau erfassten operationalen Snapshot
+   anzeigen; nicht beim Lesen neu bauen. Der öffentliche `Source.close()`-
+   Lifecycle wird aktuell ebenfalls nirgends aufgerufen. Ihn für tatsächlich
+   gebaute Instanzen beim Shutdown verdrahten oder aus der knappen öffentlichen
+   API entfernen; nicht als unbenutzte Zusage stehen lassen. Die dokumentierte
+   Diagnose muss außerdem im Endpunkt sichtbar sein oder die gegenteilige
+   Dokumentationsbehauptung muss entfallen.
+4. **Blocker · Der Installationsweg ist jetzt ausdrücklich entschieden und
+   fehlt im Produkt.** Der nach der Übergabe hinzugekommene Entscheidungscommit
+   `87c953c` legt den schlanken Umfang fest: feste Paketversionen in
+   `sources.yaml`, Installation nach `data/plugin-env/<hash>`, idempotenter
+   Wiederanlauf, Einhängen in `sys.path`, Fehler isolieren. Genau das umsetzen.
+   Keine Kandidatenumgebung, kein Aktivierungszeiger, kein Preflight, keine
+   Netzsperre und kein Offline-/Replay-System ergänzen. Die bisherige Anleitung
+   `pip install …` genügt beim offiziellen Container nicht: dessen
+   `site-packages` liegt im Image und überlebt ein Image-Update nicht.
+5. **Mittel · Die Abnahmetests beweisen die noch offenen Aussagen nicht.** Der
+   neue Fünf-Rollen-Test prüft ausschließlich, ob ein Attribut existiert; die
+   obigen Daily- und Metadata-Gegenproben bleiben damit grün. Der vertikale
+   Dateipfad kopiert nicht wie Verify `#1` das vorhandene
+   `examples/canada_file.py`, sondern importiert dieselbe installierte
+   `stockinfo_plugin_examples`-Distribution wie der Entry-Point-Weg. Und beide
+   REST-Fälle prüfen `POST /instruments/intake`, aber nicht das in Verify `#1`,
+   `#2` und der MVP-Entscheidung verlangte Erscheinen in `GET /sources`.
+   Bestehende Tests schlank vertiefen: tatsächliche Core-Aufrufe, das vorhandene
+   Einzeldatei-Beispiel und beide Namen am öffentlichen Diagnose-Endpunkt.
+
+**Evidenz:** `make test` unabhängig grün mit Backend **779 passed / 29
+skipped**, Plugin-API **257 passed / 1 skipped**, Dashboard **259 passed**;
+Registry/Contract/Vertical/Config **124 passed**. Die echten Online-Läufe sind
+justETF **2**, OpenFIGI **3**, yfinance **3** — alle grün und alle mit
+Dienstkontakt. Diese guten Ergebnisse bleiben erhalten; die Nacharbeit braucht
+keine neue Testinfrastruktur.

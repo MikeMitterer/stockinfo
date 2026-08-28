@@ -154,6 +154,14 @@ alten nativen `YFinanceProvider`. Das Datei-Plugin wurde nur direkt unterhalb
 des Core aufgerufen; Registry → Core → REST blieb ungetestet und laut OUTBOX
 noch offen.
 
+**Neuer Beleg:** T-23 Runde 3, Commit `4e23cde`: Der neue Rollentest wurde als
+Nachweis beschrieben, dass alle fünf Rollen dem Core nun das von ihm
+aufgerufene Objekt liefern. Er prüfte jedoch ausschließlich `hasattr` auf dem
+Ergebnis von `build_chain`. Der echte Daily-Aufruf mit `AAPL/XNAS` endete vor
+dem Provider mit `None`, und der Metadatenaufruf übernahm eine Ratio-TER ohne
+Umrechnung und verlor ihre Herkunft. Vorhandensein einer Methode war keine
+Ausführung der behaupteten Core-Grenze.
+
 [↑ Übersicht](#übersicht)
 
 ## P-02 · Punktuelle Korrektur wird als vollständige Regelumsetzung gemeldet
@@ -560,6 +568,15 @@ meldete ein wegen fehlender Datei verworfenes Plugin weiterhin als
 `configured` und `usable`. Die punktuellen Resolver-/Quote-Erfolgswege wurden
 als vollständige Rollen-, Diagnose- und Testumstellung berichtet.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-23
+Runde 3, Commit `4e23cde`: Übergabe und Docstrings erklärten den Widerspruch
+zwischen `/sources` und Bauweg durch „eine Auswertung“ beseitigt. Beide Wege
+riefen `_evaluate` aber weiterhin getrennt auf und konstruierten je eine neue
+Plugin-Instanz. Eine Quelle, deren erste Konstruktion gelang und deren zweite
+warf, lief daher produktiv und wurde gleichzeitig als unbrauchbar gemeldet.
+Die gemeinsame Funktion beseitigte duplizierten Code, nicht die zwei
+unterschiedlichen Laufzeitzustände.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
@@ -881,6 +898,12 @@ Request-Prüfung zurück. Ein völlig unbekannter `object()`-Request mit
 `DirectRunner` erzeugte für den unbekannten Request genau das erwartete
 `Unavailable`. Der neue Test unterschied die konkret besprochene Hit-Kombination,
 nicht die behauptete allgemeine Rollenpassung.
+
+**Beleg 6:** T-23 Runde 3, Commit `4e23cde`: Der Test „jede Rolle liefert dem
+Core was er ruft“ prüfte nur `hasattr` auf fünf gebauten Objekten. Er erzeugte
+weder einen aliaslosen US-Daily-Request noch eine Metadatenantwort mit einer
+vom Core-Zielformat abweichenden Einheit. Beide Adapterfehler bestanden den
+Test, weil der entscheidende Unterschied erst beim Methodenaufruf entsteht.
 
 [↑ Übersicht](#übersicht)
 
