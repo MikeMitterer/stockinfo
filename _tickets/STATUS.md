@@ -15,7 +15,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_commit`: `a9e49f9`
 - `last_reviewed_round`: `6`
 - `workstream`: `ui_live_acceptance`
-- `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-35-ui-abnahme-am-laufenden-stack.md`
+- `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-35-ui-abnahme-am-laufenden-stack.md`
 - `priority_ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
@@ -37,6 +37,13 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 > **T-28:** Nach T-23 werden T-19, T-21 4A/4B, T-25, T-26 und T-29 bis T-34
 > einzeln als Gate oder Follow-up klassifiziert. Sie blockieren den ersten
 > Plugin-MVP nicht automatisch.
+
+> **Portfolio-Entscheidung Mike, 2026-08-28:** T-31 (Identitäts-Union für
+> Krypto und Anleihen — entschieden, siehe Ticket) und T-38 (Pflichtfelder im
+> Vertrag) sind **nach T-36** in die Kette aufgenommen; die
+> T-35-Wiederholung rückt ans Kettenende und misst damit den Stand **nach**
+> beiden Vertragsänderungen. T-31 ist aus der T-28-Sammelklassifizierung
+> herausgelöst.
 
 - Rollen: Claude implementiert; Codex prüft unabhängig Code, Tests, Ticket und
   Spec.
