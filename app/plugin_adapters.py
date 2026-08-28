@@ -43,12 +43,27 @@ from stockinfo_plugin.types import (
     Resolved,
     ResolveRequest,
     Unavailable,
+    Unit,
+    convert,
 )
+
 
 from app.exchanges import EXCHANGES, provider_alias
 from app.providers.base import EtfDetails, RawQuote, Resolution, ResolvedInstrument
 
 logger = structlog.get_logger()
+
+CORE_UNITS: dict[str, Unit] = {
+    "ter": Unit.PERCENT,
+    "volatility": Unit.PERCENT,
+    "fund_size": Unit.ABSOLUTE,
+}
+"""Die Einheit, in der der Core ein Feld **erwartet**.
+
+`EtfDetails.ter` ist Prozent, `volatility` ebenso, `fund_size` ein absoluter
+Betrag. Ein Plugin darf liefern, was es will — die Umrechnung passiert hier,
+einmal, und ein Feld ohne Eintrag geht unverändert durch.
+"""
 
 
 def unwrap(source: object) -> object:
@@ -173,27 +188,35 @@ class DailyAdapter:
         return self._source
 
     def fetch_daily_closes(
-        self, symbol: str, start: str | None = None
+        self,
+        symbol: str,
+        start: str | None = None,
+        *,
+        ticker: str | None = None,
+        mic: str | None = None,
     ) -> list[dict] | None:
         """Die Tagesreihe in der Form, die der Core liest.
 
+        **Ticker und MIC kommen herein, sie werden nicht zurückgerechnet.**
+        Runde 3 versuchte genau das und schaltete damit alle aliaslosen Börsen
+        ab: Die fünf US-Plätze führen absichtlich keinen Alias, `AAPL/XNAS`
+        wird als ``AAPL`` gespeichert — und ein Symbol ohne Punkt ergab
+        sofort `None`, ohne den Anbieter je zu fragen. Gemessen: null Aufrufe.
+
         Args:
-            symbol: Das Anbieter-Symbol. Der Vertrag fragt mit `ticker` und
-                `mic`; hier ist die Rückwärtsrichtung nötig und **eindeutig
-                lösbar**, weil `EXCHANGES` die Aliase kennt. Wo sie es nicht
-                ist, gibt es keine Antwort statt einer geratenen.
+            symbol: Das Anbieter-Symbol; nur noch für Meldungen.
             start: Frühester Tag als ISO-Datum.
+            ticker: Kanonischer Ticker.
+            mic: Börse als MIC.
 
         Returns:
             Zeilen mit ``date``, ``close`` und ``currency``; ``None`` bei einer
             Störung, ``[]`` wenn es nichts gibt. Die Unterscheidung stammt aus
             dem Vertrag und wird hier nicht eingeebnet.
         """
-        identity = _identity_from(symbol)
-        if identity is None:
-            logger.info("daily_symbol_not_resolvable", symbol=symbol)
+        if not ticker or not mic:
+            logger.info("daily_without_identity", symbol=symbol)
             return None
-        ticker, mic = identity
 
         answer = self._source.fetch_daily(
             DailyRequest(
@@ -257,52 +280,91 @@ class MetadataAdapter:
         """Das gekapselte Plugin — für Diagnose und Tests."""
         return self._source
 
-    def is_responsible(self, isin: str | None = None, **_: object) -> bool:
-        """Fühlt sich diese Quelle für das Papier zuständig?"""
+    def is_responsible(
+        self,
+        isin: str | None = None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> bool:
+        """Fühlt sich diese Quelle für das Papier zuständig?
+
+        **Zwei Wege, und der erste ist der genauere.** Der Core weiß hier mehr,
+        als `ResolveRequest` ausdrücken kann: Ohne ISIN entscheiden bei justETF
+        Börse und Währung. Bringt die Quelle eine eigene `is_responsible` mit,
+        bekommt sie beides; sonst bleibt nur `handles`, und die Antwort ist
+        entsprechend gröber.
+
+        Das ist eine **Grenze des Vertrags**, offen benannt: Ein fremdes Plugin
+        kann diese Regel heute nicht formulieren. Ob `ResolveRequest` dafür
+        wächst, ist eine Entscheidung am Vertrag.
+        """
+        richer = getattr(self._source, "is_responsible", None)
+        if callable(richer):
+            return bool(richer(isin, exchange=exchange, currency=currency))
         return bool(self._source.handles(ResolveRequest(isin=isin)))
 
     def fetch_etf(self, isin: str) -> EtfDetails | None:
-        """Die Messwerte als Datensatz.
+        """Die Messwerte als Datensatz — **mit Umrechnung und Herkunft**.
+
+        Runde 3 kopierte `Reading.value` roh in `EtfDetails` und warf Einheit,
+        Währung und Herkunft weg. Ein vertragskonformes Plugin mit
+        ``ter=0.0019, unit=RATIO`` kam damit als ``0.0019`` an, wo `0.19`
+        gemeint war — ein Faktor 100, und nichts hätte gewarnt. Genau dagegen
+        gibt es `Unit` überhaupt: *„Dieselbe Kostenquote kommt bei zwei Quellen
+        als 0.19 und als 0.0003 an — beide nennen es TER."*
 
         Returns:
-            `EtfDetails` mit den Feldern, die die App kennt. ``None``, wenn die
-            Quelle nichts liefert **oder** nicht zuständig ist — der Core
-            unterscheidet an dieser Stelle nicht, und ihm eine Unterscheidung
-            vorzuspielen, die er nicht auswertet, wäre eine leere Zusage.
+            `EtfDetails` mit den Feldern, die die App kennt, in **ihren**
+            Einheiten. ``None``, wenn die Quelle nichts liefert oder nicht
+            zuständig ist — der Core unterscheidet hier nicht.
+
+            Ein Wert, dessen Einheit sich nicht umrechnen lässt (ein Betrag in
+            Prozent), wird **nicht still übernommen**: Er fehlt, und der Grund
+            steht im Protokoll. Eine falsche Zahl ist schlimmer als keine.
+
+            **Unbekannte Felder gehen hier verloren** — sie aufzuheben ist
+            T-26. Das ist der ehrliche Stand und keine Zusage.
         """
         readings = self._source.fetch(ResolveRequest(isin=isin))
         if not readings:
             return None
 
         known = {field.name for field in fields(EtfDetails)}
-        values = {
-            reading.field: reading.value
-            for reading in readings
-            if reading.field in known
-        }
-        return EtfDetails(**values) if values else None
+        values: dict[str, object] = {}
+        herkunft: set[str] = set()
 
+        for reading in readings:
+            if reading.field not in known or reading.field == "source":
+                continue
+            if reading.source:
+                herkunft.add(reading.source)
 
-def _identity_from(symbol: str) -> tuple[str, str] | None:
-    """Aus dem Anbieter-Symbol wieder Ticker und MIC — oder ``None``.
+            wanted = CORE_UNITS.get(reading.field)
+            if wanted is None or not isinstance(reading.value, (int, float)):
+                values[reading.field] = reading.value
+                continue
 
-    **Die Gegenrichtung von `provider_alias`, und sie ist nur teilweise
-    eindeutig.** ``EUNL.DE`` → `('EUNL', 'XETR')` geht, weil genau eine Börse
-    den Alias ``DE`` führt. Ein Symbol **ohne** Suffix kann dagegen jeder
-    US-Handelsplatz sein; dort gibt es keine Antwort statt einer geratenen.
+            declared = getattr(self._source, "declared", lambda _: None)(reading.field)
+            given = reading.unit or getattr(declared, "unit", None)
+            converted = convert(float(reading.value), given, wanted)
+            if converted is None:
+                logger.warning(
+                    "metadata_unit_mismatch",
+                    field=reading.field,
+                    given=given.value if given else None,
+                    wanted=wanted.value,
+                )
+                continue
+            values[reading.field] = converted
 
-    Genau deshalb bekommt `QuoteAdapter.fetch_quote` die Identität vom Core
-    hereingereicht, statt sie hier zu rekonstruieren. Bei der Tagesreihe ist
-    das (noch) nicht so — der Core reicht dort ein Symbol —, und das ist der
-    Grund, warum diese Funktion überhaupt existiert.
-    """
-    if "." not in symbol:
-        return None
-    ticker, _, alias = symbol.rpartition(".")
-    for mic, definition in EXCHANGES.items():
-        if getattr(definition, "alias", None) == alias:
-            return ticker, mic
-    return None
+        if not values:
+            return None
+        # Die Quelle beschriftet sich selbst — der Service soll sie nicht raten
+        # müssen. Mehrere Herkünfte in einer Antwort werden benannt, nicht auf
+        # eine reduziert.
+        values["source"] = "+".join(sorted(herkunft)) or None
+        return EtfDetails(**values)
 
 
 class ResolverAdapter:

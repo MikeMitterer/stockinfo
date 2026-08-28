@@ -37,7 +37,12 @@ class EmptyDailyCloseProvider:
     """
 
     def fetch_daily_closes(
-        self, symbol: str, start: str | None = None
+        self,
+        symbol: str,
+        start: str | None = None,
+        *,
+        ticker: str | None = None,
+        mic: str | None = None,
     ) -> list[dict] | None:
         return []
 

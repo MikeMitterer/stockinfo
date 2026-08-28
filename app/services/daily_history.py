@@ -51,7 +51,13 @@ class DailyHistoryService:
         """
         instrument = self._quotes.ensure_instrument(isin=isin, symbol=symbol)
         desired_start = self._period_start(period)
-        if not self._sync.sync(instrument["id"], instrument["symbol"], desired_start):
+        if not self._sync.sync(
+            instrument["id"],
+            instrument["symbol"],
+            desired_start,
+            ticker=instrument.get("ticker"),
+            mic=instrument.get("mic"),
+        ):
             raise QuoteUnavailableError(instrument["symbol"])
         rows = self._repository.get_daily_closes(instrument["id"], desired_start)
         return [self._to_point(row, instrument) for row in rows]

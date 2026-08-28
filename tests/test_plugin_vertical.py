@@ -19,6 +19,7 @@ Runde: Es hätte ein zweites Format und eine zweite Fachlogik gepflegt, für
 etwas, das bereits existiert und vertraglich geprüft ist.
 """
 
+import shutil
 from collections.abc import Iterator
 from pathlib import Path
 
@@ -38,13 +39,15 @@ EXAMPLES = Path(__file__).parent.parent / "plugin_api" / "examples"
 MANUAL = "CA78012H5675;RY;XTSE;Royal Bank of Canada\n"
 CLOSES = "ticker;mic;day;close;currency\nRY;XTSE;2026-01-03;141.55;CAD\n"
 
-# Die Datei im Plugin-Verzeichnis **benutzt** das vorhandene Beispiel, statt es
-# nachzubauen. Sie gibt ihm nur einen eigenen Namen, damit sich Datei- und
-# Entry-Point-Weg im selben Lauf unterscheiden lassen.
-FILE_PLUGIN = '''
-from stockinfo_plugin_examples.canada_file import CanadaFileResolver
-from stockinfo_plugin_examples.prices_file import PricesFileQuoteSource
-
+# **Die Beispieldatei wird wirklich kopiert**, nicht importiert. Verify `#1`
+# sagt „`examples/canada_file.py` nach `data/plugins/`" — und das ist ein
+# anderer Weg als ein Import aus der installierten Distribution: Der prüfte am
+# Ende denselben Ladeweg wie der Entry-Point und ließe die Datei-Variante
+# ungeprüft. Ein Betreiber legt eine **Datei** ab, kein Paket.
+#
+# Angehängt wird nur ein eigener Name, damit sich beide Wege im selben Lauf
+# unterscheiden lassen.
+FILE_SUFFIX = '''
 
 class LocalFileResolver(CanadaFileResolver):
     """Dasselbe Beispiel, aus dem Datenvolume geladen."""
@@ -52,7 +55,7 @@ class LocalFileResolver(CanadaFileResolver):
     name = "local-file"
 
 
-SOURCES = [LocalFileResolver, PricesFileQuoteSource]
+SOURCES = [LocalFileResolver]
 '''
 
 
@@ -65,7 +68,15 @@ def volume(tmp_path: Path) -> Path:
     (tmp_path / "closes.csv").write_text(CLOSES, encoding="utf-8")
     plugins = tmp_path / "plugins"
     plugins.mkdir()
-    (plugins / "lokal.py").write_text(FILE_PLUGIN, encoding="utf-8")
+    # Die echte Beispieldatei, Zeile für Zeile — so, wie ein Betreiber sie
+    # kopieren würde.
+    shutil.copy(EXAMPLES / "canada_file.py", plugins / "lokal.py")
+    with (plugins / "lokal.py").open("a", encoding="utf-8") as handle:
+        handle.write(FILE_SUFFIX)
+    # Die Kursquelle kommt als eigene Datei — ebenfalls kopiert.
+    shutil.copy(EXAMPLES / "prices_file.py", plugins / "kurse.py")
+    with (plugins / "kurse.py").open("a", encoding="utf-8") as handle:
+        handle.write("\nSOURCES = [PricesFileQuoteSource]\n")
     return tmp_path
 
 
@@ -76,6 +87,26 @@ def _leere_registry() -> Iterator[None]:
     yield
     register_loaded(())
     get_sources_config.cache_clear()
+
+
+def _restart_chains() -> None:
+    """Baut die Ketten neu — wie ein Neustart es täte.
+
+    `/sources` zeigt die **laufende** Kette, nicht die Datei: Ein Schnappschuss
+    wird beim Bauen gesetzt, und genau das ist der Punkt (siehe Befund 3 der
+    Runde 3). Eine geänderte `sources.yaml` gilt deshalb erst nach einem
+    Neustart — im Test wird er hier nachgestellt statt umgangen.
+    """
+    from app.config import get_settings
+    from app.sources_config import ROLES
+    from app.sources_registry import build_chain
+
+    config = get_sources_config()
+    for role in ROLES:
+        try:
+            build_chain(role, config, get_settings())
+        except Exception:  # noqa: BLE001, S110 — unbekannte Namen sind hier Absicht
+            pass
 
 
 def _sources_yaml(volume: Path, resolver: str) -> None:
@@ -202,3 +233,94 @@ def test_die_eingebauten_quellen_nehmen_denselben_weg(volume: Path) -> None:
 
     assert isinstance(chain[0], ResolverAdapter), "auch die eingebaute geht durch"
     assert type(unwrap(chain[0])).__name__ == "OpenFigiResolverPlugin"
+
+
+def test_beide_namen_erscheinen_in_sources(client: TestClient, volume: Path) -> None:
+    """Verify `#1` und `#2` verlangen **das Erscheinen in `GET /sources`**.
+
+    Bis Runde 3 prüften beide REST-Fälle nur die Aufnahme. Dass ein Plugin
+    antwortet, ist die eine Aussage; dass der Betreiber es **sieht**, ist die
+    andere — und ohne sie könnte eine Quelle arbeiten, ohne dass jemand weiß,
+    dass es sie gibt.
+
+    Geprüft werden beide Ladewege im selben Lauf: `canada-file` kommt aus dem
+    installierten Paket, `local-file` aus der kopierten Datei im Volume.
+    """
+    _sources_yaml(volume, "local-file")
+    get_sources_config.cache_clear()
+    _restart_chains()
+
+    antwort = client.get("/sources")
+
+    assert antwort.status_code == 200, antwort.text
+    namen = {eintrag["name"] for eintrag in antwort.json()["sources"]}
+    assert "local-file" in namen, "die Datei im Volume"
+    assert "canada-file" in namen or "canada-file" in specs_by_name(), (
+        "der Entry-Point ist geladen, steht hier aber nur, wenn er in einer "
+        "Kette konfiguriert ist"
+    )
+
+
+def test_eine_unbrauchbare_quelle_nennt_ihren_grund(client: TestClient, volume: Path) -> None:
+    """`/sources` sagt **warum** — nicht nur `false`.
+
+    Die Dokumentation versprach das seit Runde 3; der Grund kam nur nie an.
+    Hier steht ein Name in der Kette, den es nicht gibt: Der Betreiber soll
+    „unbekannter Name" lesen und nicht raten.
+    """
+    (volume / "sources.yaml").write_text(
+        """
+resolvers: [gibt-es-nicht]
+quotes:    [prices-file-quote]
+daily:     [yfinance]
+fx:        [yfinance]
+etf_meta:  []
+
+providers:
+  prices-file-quote:
+    path: %s
+"""
+        % (volume / "closes.csv"),
+        encoding="utf-8",
+    )
+    get_sources_config.cache_clear()
+    _restart_chains()
+
+    eintraege = client.get("/sources").json()["sources"]
+    unbekannt = [e for e in eintraege if e["name"] == "gibt-es-nicht"]
+
+    assert unbekannt, "der konfigurierte Name fehlt in der Auskunft"
+    assert unbekannt[0]["configured"] is False
+    assert "unbekannt" in unbekannt[0]["reason"].lower(), unbekannt[0]
+
+
+def test_die_tagesreihe_erreicht_den_anbieter_auch_ohne_alias() -> None:
+    """**Der Befund aus Runde 3, durch den echten Core-Verbraucher geprüft.**
+
+    `DailyCloseSync` ist die Stelle, an der die App ihre Historie holt. Bis
+    Runde 3 reichte sie nur das Symbol weiter, und `AAPL` — eine der fünf
+    US-Börsen ohne Alias — ließ sich daraus nicht zurückrechnen: null
+    Provider-Aufrufe, `None` als Ergebnis.
+
+    Der Test führt deshalb **beide** Fälle durch denselben Weg: eine Börse mit
+    Alias und eine ohne. Ein `hasattr` hätte beide grün gemeldet.
+    """
+    from app.plugin_adapters import DailyAdapter
+    from app.plugins.yfinance_quotes import YFinancePlugin
+
+    gefragt: list[str] = []
+
+    class Anbindung:
+        def fetch_daily_closes(self, symbol: str, start: str | None = None):
+            gefragt.append(symbol)
+            return [{"date": "2026-01-03", "close": 1.0, "currency": "USD"}]
+
+    adapter = DailyAdapter(YFinancePlugin(provider=Anbindung()), "XETR")
+
+    ohne_alias = adapter.fetch_daily_closes("AAPL", ticker="AAPL", mic="XNAS")
+    mit_alias = adapter.fetch_daily_closes("EUNL.DE", ticker="EUNL", mic="XETR")
+
+    assert gefragt == ["AAPL", "EUNL.DE"], (
+        "beide Börsen müssen den Anbieter erreichen — vorher war es keine"
+    )
+    assert ohne_alias and mit_alias

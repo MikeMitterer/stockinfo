@@ -562,6 +562,13 @@ class SourceEntry(BaseModel):
     role: str = Field(description="resolvers, etf_meta, quotes, daily oder fx")
     position: int = Field(description="Rang in der Kette, 1-basiert")
     configured: bool = Field(description="Kann diese Quelle arbeiten?")
+    reason: str = Field(
+        default="",
+        description=(
+            "Warum sie es nicht kann — leer, wenn sie arbeitet. Ohne diesen "
+            "Grund bliebe nur ein `false`, und der Betreiber müsste raten."
+        ),
+    )
     cost: str = Field(description="free | metered | paid — Anzeige, keine Sortierung")
 
 

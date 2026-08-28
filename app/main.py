@@ -40,11 +40,13 @@ from app.repository import (
     AmbiguousSymbolError,
     IdentityConflictError,
 )
+from app import plugin_env
+from app.container import get_sources_config
 from app.plugin_loader import load_all
 from app.routers import dashboard, fields, fx, instruments, migration, quotes
 from app.routers.migration import get_gate
 from app.scheduler import RefreshScheduler
-from app.sources_registry import register_loaded
+from app.sources_registry import close_all, register_loaded
 
 logger = structlog.get_logger()
 
@@ -70,7 +72,15 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # `/sources` je nach Zeitpunkt verschieden. Ein Fehler beim Laden bricht
     # den Start ausdrücklich **nicht** ab: Wer eine Quelle kaputt macht,
     # verliert diese Quelle, nicht seine Installation.
-    register_loaded(load_all(Path(settings.database_path).parent).specs)
+    data_dir = Path(settings.database_path).parent
+    # **Erst die beigesteuerten Pakete, dann suchen.** Sie liegen unter `/data`
+    # und überleben damit ein Image-Update; `site-packages` im Image tut das
+    # nicht. Schlägt die Installation fehl, fehlen diese Quellen — der Start
+    # läuft weiter.
+    plugin_env.activate(
+        plugin_env.ensure(get_sources_config().packages, data_dir)
+    )
+    register_loaded(load_all(data_dir).specs)
 
     if init_db(settings.database_path):
         get_gate().block()
@@ -123,6 +133,11 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         get_gate().on_release(None)
         for scheduler in running:
             scheduler.shutdown()
+        # **`Source.close()` wird jetzt wirklich gerufen.** Es steht seit
+        # T-27a im Vertrag und war bis T-23 Runde 3 eine öffentliche Zusage
+        # ohne Einlösung: Eine Quelle mit offener Datei oder Verbindung hätte
+        # sie bis zum Prozessende gehalten.
+        close_all()
         logger.info("app_stopped")
 
 

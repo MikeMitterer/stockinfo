@@ -34,7 +34,14 @@ class FakeProvider:
         self.calls: list[str | None] = []
         self._rows = rows
 
-    def fetch_daily_closes(self, symbol: str, start: str | None = None):
+    def fetch_daily_closes(
+        self,
+        symbol: str,
+        start: str | None = None,
+        *,
+        ticker: str | None = None,
+        mic: str | None = None,
+    ):
         self.calls.append(start)
         return self._rows
 

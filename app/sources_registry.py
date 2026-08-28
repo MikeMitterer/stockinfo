@@ -30,8 +30,8 @@ from app.plugin_adapters import (
 )
 from app.plugin_guard import GuardedSource
 from app.plugins.justetf_metadata import JustEtfMetadataPlugin
-from app.providers.yfinance_etf_provider import YFinanceEtfEnricher
 from app.plugins.openfigi_resolver import OpenFigiResolverPlugin
+from app.plugins.yfinance_metadata import YFinanceMetadataPlugin
 from app.plugins.yfinance_quotes import YFinancePlugin
 from app.resolver import YFinanceResolver
 
@@ -52,23 +52,6 @@ class SourceSpec:
     roles: frozenset[str]
     build: Callable[[str, dict, object], object]
     cost: str = "free"
-    contract_roles: frozenset[str] = frozenset()
-    """In welchen Rollen spricht diese Quelle den **Plugin-Vertrag**?
-
-    Der Unterschied entscheidet, ob `build_chain` einen Adapter davorsetzt.
-
-    **Je Rolle und nicht je Quelle** — das war ein Befund. `yfinance` spricht
-    den Vertrag für Kurse, Historie und Devisen, für `etf_meta` aber noch die
-    Core-Schnittstelle: Dort ist die Antwort ein anderer Typ
-    (`YFinanceEtfEnricher`), und ein Ja/Nein an der Quelle hätte die ETF-Kette
-    ein Objekt ohne `fetch` bekommen lassen. Genau dieser Fehler ist beim
-    Umbau entstanden und vom vorhandenen Rollentest gefangen worden.
-
-    **Das Feld verschwindet wieder**, sobald alle Rollen aller eingebauten
-    Quellen den Vertrag sprechen. Es beschreibt einen Übergang, keinen
-    Dauerzustand — und steht hier, damit er sichtbar ist statt geraten.
-    """
-
     loaded: bool = False
     """Kam diese Quelle von außen — Entry-Point oder Plugin-Verzeichnis?
 
@@ -132,9 +115,8 @@ def _yfinance(role: str, config: dict, settings) -> object:
     # Seit T-23 spricht die Kursrolle den Vertrag; `etf_meta` folgt in einem
     # eigenen Schritt, weil dort die Antwort eine andere Form hat (`Reading`
     # statt eines Datensatzes) und der Core-Enricher noch anders fragt.
-    # `etf_meta` bleibt vorerst der native Enricher — siehe `contract_roles`.
     if role == "etf_meta":
-        return YFinanceEtfEnricher()
+        return YFinanceMetadataPlugin(config)
     return YFinancePlugin(config)
 
 
@@ -150,20 +132,17 @@ BUILTIN_SOURCES: tuple[SourceSpec, ...] = (
         "openfigi",
         frozenset({"resolvers"}),
         _openfigi,
-        contract_roles=frozenset({"resolvers"}),
     ),
     SourceSpec("yahoo-search", frozenset({"resolvers"}), _yahoo_search),
     SourceSpec(
         "justetf",
         frozenset({"etf_meta"}),
         _justetf,
-        contract_roles=frozenset({"etf_meta"}),
     ),
     SourceSpec(
         "yfinance",
         frozenset({"etf_meta", "quotes", "daily", "fx"}),
         _yfinance,
-        contract_roles=frozenset({"quotes", "daily", "fx"}),
     ),
 )
 
@@ -174,6 +153,14 @@ BUILTIN_SOURCES: tuple[SourceSpec, ...] = (
 # Antwort der App ändert, während sie läuft. Geladen wird beim Start, einmal.
 _LOADED: dict[str, SourceSpec] = {}
 
+_LAST_REASON: dict[str, str] = {}
+"""Der zuletzt gemeldete Grund je Quelle — damit `/sources` ihn nennen kann."""
+
+_SNAPSHOT: dict[str, list['ChainEntry']] = {}
+_BUILT: dict[str, list[object]] = {}
+
+
+
 
 def register_loaded(specs: tuple[SourceSpec, ...]) -> None:
     """Übernimmt die beim Start geladenen Quellen in die Registry.
@@ -183,6 +170,12 @@ def register_loaded(specs: tuple[SourceSpec, ...]) -> None:
     """
     _LOADED.clear()
     _LOADED.update({spec.name: spec for spec in specs})
+    # **Die Momentaufnahme wird ungültig, sobald sich die Registry ändert.**
+    # Sie zeigte sonst Ketten aus Quellen, die es nicht mehr gibt — und das
+    # wäre wieder die zweite Wahrheit, gegen die es sie gibt.
+    _SNAPSHOT.clear()
+    _BUILT.clear()
+    _LAST_REASON.clear()
 
 
 def specs_by_name() -> dict[str, SourceSpec]:
@@ -248,10 +241,54 @@ class ChainEntry:
     role_ok: bool
     configured: bool
     cost: str
+    reason: str = ""
+    """Warum diese Quelle **nicht** arbeitet — leer, wenn sie es tut.
+
+    Ohne ihn nennt `/sources` nur ein `false`, und der Betreiber rät: fehlender
+    Schlüssel? falsche Rolle? Konstruktor kaputt? Die Dokumentation versprach
+    seit Runde 3 „einschließlich der Quellen, die nicht arbeiten können und
+    **warum**" — der Grund kam nur nie an.
+    """
 
     @property
     def usable(self) -> bool:
         return self.known and self.role_ok and self.configured
+
+
+# Was zuletzt **wirklich gebaut** wurde, je Rolle. `/sources` liest hier und
+# baut nicht neu.
+#
+# **Der Unterschied ist nicht theoretisch.** Eine Quelle, deren erste
+# Konstruktion gelingt und deren zweite wirft, blieb in der laufenden Kette,
+# während der Leseweg sie als unbrauchbar meldete — zwei Wahrheiten, und die
+# Diagnose war die falsche. Dazu erzeugte jedes `GET /sources` neue Instanzen
+# samt ihrer Seiteneffekte.
+def close_all() -> None:
+    """Schließt alle gebauten Quellen — beim Herunterfahren.
+
+    `Source.close()` steht seit T-27a im Vertrag und wurde bis Runde 3 **nie
+    gerufen**: eine öffentliche Zusage ohne Einlösung. Eine Quelle mit offener
+    Datei oder Verbindung hätte sie bis zum Prozessende gehalten.
+
+    Fehler beim Schließen werden gemeldet, nicht geworfen: Beim
+    Herunterfahren ist ein Stacktrace das Letzte, was jemandem hilft.
+    """
+    for role, sources in _BUILT.items():
+        for source in sources:
+            close = getattr(source, "close", None)
+            if not callable(close):
+                continue
+            try:
+                close()
+            except Exception as error:  # noqa: BLE001 — fremder Code
+                logger.warning(
+                    "source_close_failed",
+                    role=role,
+                    source=getattr(source, "name", type(source).__name__),
+                    error=f"{type(error).__name__}: {error}",
+                )
+    _BUILT.clear()
+    _SNAPSHOT.clear()
 
 
 def describe_chain(role: str, config, settings=None) -> list[ChainEntry]:
@@ -270,6 +307,11 @@ def describe_chain(role: str, config, settings=None) -> list[ChainEntry]:
     Returns:
         Je konfiguriertem Namen ein Eintrag, in Rangfolge.
     """
+    if role in _SNAPSHOT:
+        # Die laufende Kette. Neu zu bauen hieße, einen **anderen** Zustand zu
+        # zeigen als den, der gerade arbeitet — und bei jedem GET Instanzen zu
+        # erzeugen, die sofort weggeworfen werden.
+        return _SNAPSHOT[role]
     return [entry for entry, _ in _evaluate(role, config, settings)]
 
 
@@ -301,6 +343,13 @@ def _evaluate(role: str, config, settings=None) -> list[tuple[ChainEntry, object
         spec = known.get(name)
         role_ok = spec is not None and role in spec.roles
         configured = spec is not None and is_configured(spec, config.config_for(name))
+        reason = ""
+        if spec is None:
+            reason = "unbekannter Name"
+        elif not role_ok:
+            reason = f"kennt die Rolle '{role}' nicht"
+        elif not configured:
+            reason = "Pflichtangaben fehlen"
 
         source = None
         if spec is not None and role_ok and configured and settings is not None:
@@ -308,8 +357,9 @@ def _evaluate(role: str, config, settings=None) -> list[tuple[ChainEntry, object
             if source is None:
                 # Konstruktion gescheitert oder Selbstauskunft negativ. Beides
                 # heißt für den Betreiber dasselbe: Diese Quelle arbeitet
-                # nicht — und `/sources` sagt es jetzt auch.
+                # nicht — und `/sources` sagt es jetzt auch, samt Grund.
                 configured = False
+                reason = _LAST_REASON.get(spec.name, "nicht einsatzbereit")
 
         result.append(
             (
@@ -321,6 +371,7 @@ def _evaluate(role: str, config, settings=None) -> list[tuple[ChainEntry, object
                     role_ok=role_ok,
                     configured=configured,
                     cost=spec.cost if spec else "unknown",
+                    reason=reason,
                 ),
                 source,
             )
@@ -350,8 +401,17 @@ def build_chain(role: str, config, settings) -> list[object]:
     from app.sources_config import UnknownSourceError
 
     known = specs_by_name()
+    bewertet = _evaluate(role, config, settings)
+
+    # **Die Momentaufnahme steht, bevor irgendetwas werfen kann.** Ein
+    # unbekannter Name in der Kette bricht den Bau ab — und ohne diese Zeile
+    # zeigte `/sources` danach die **vorige** Kette, also gerade nicht den
+    # Zustand, der den Betreiber interessiert. Der Fall, für den er die
+    # Auskunft aufruft, wäre der einzige, in dem sie ihn anlügt.
+    _SNAPSHOT[role] = [entry for entry, _ in bewertet]
+
     built: list[object] = []
-    for entry, source in _evaluate(role, config, settings):
+    for entry, source in bewertet:
         if not entry.known:
             raise UnknownSourceError(entry.name, role, tuple(known))
         if not entry.role_ok:
@@ -361,6 +421,8 @@ def build_chain(role: str, config, settings) -> list[object]:
             logger.info("source_not_usable", source=entry.name, role=role)
             continue
         built.append(source)
+
+    _BUILT[role] = built
     return built
 
 
@@ -407,6 +469,7 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | 
     try:
         source = spec.build(role, config, settings)
     except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
+        _LAST_REASON[spec.name] = f"Konstruktor: {type(error).__name__}: {error}"
         logger.warning(
             "source_construction_failed",
             source=spec.name,
@@ -417,13 +480,20 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | 
 
     problem = _diagnosis(spec, source)
     if problem:
+        _LAST_REASON[spec.name] = problem
         logger.warning("source_not_operational", source=spec.name, reason=problem)
         return None
 
+    _LAST_REASON.pop(spec.name, None)
+
     if spec.loaded:
         source = GuardedSource(source)
-    adapter = ROLE_ADAPTERS.get(role) if role in spec.contract_roles else None
-    return adapter(source, settings.default_exchange) if adapter else source
+    # **Jede** Quelle spricht den Vertrag; jede Rolle hat ihren Adapter. Bis
+    # Runde 3 stand hier ein Übergangsfeld `contract_roles` — es beschrieb, wer
+    # schon umgestellt war. Ein Übergang, der bleibt, ist keiner mehr: Er wird
+    # zur zweiten Wahrheit, die beim nächsten Umbau niemand mitpflegt.
+    adapter = ROLE_ADAPTERS[role]
+    return adapter(source, settings.default_exchange)
 
 
 def _diagnosis(spec: SourceSpec, source: object) -> str:

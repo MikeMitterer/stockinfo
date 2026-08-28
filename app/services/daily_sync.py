@@ -28,7 +28,15 @@ class DailyCloseSync:
         self._repository = repository
         self._provider = provider
 
-    def sync(self, instrument_id: int, symbol: str, desired_start: str | None) -> bool:
+    def sync(
+        self,
+        instrument_id: int,
+        symbol: str,
+        desired_start: str | None,
+        *,
+        ticker: str | None = None,
+        mic: str | None = None,
+    ) -> bool:
         """Lädt nur fehlende Tage nach — anhand der Fetch-Wasserzeichen.
 
         ``fetched_to`` = bis wann bereits abgefragt, ``fetched_from`` = ab wann
@@ -44,7 +52,7 @@ class DailyCloseSync:
         meta = self._repository.get_daily_meta(instrument_id)
 
         if meta is None:  # noch nie abgefragt → gesamten Zeitraum holen
-            if not self._fetch_and_store(instrument_id, symbol, desired_start):
+            if not self._fetch_and_store(instrument_id, symbol, desired_start, ticker, mic):
                 return False
             self._repository.set_daily_meta(instrument_id, desired_start, today)
             return True
@@ -53,22 +61,27 @@ class DailyCloseSync:
         fetched_to = meta["fetched_to"]
 
         if fetched_to is None or fetched_to < today:  # neue Tage seither
-            if self._fetch_and_store(instrument_id, symbol, fetched_to):
+            if self._fetch_and_store(instrument_id, symbol, fetched_to, ticker, mic):
                 fetched_to = today
 
         if fetched_from is not None:  # gesamte Historie noch nicht geholt
             if desired_start is None:  # 'max' verlangt → alles holen
-                if self._fetch_and_store(instrument_id, symbol, None):
+                if self._fetch_and_store(instrument_id, symbol, None, ticker, mic):
                     fetched_from = None
             elif desired_start < fetched_from:  # weiter zurück verlangt
-                if self._fetch_and_store(instrument_id, symbol, desired_start):
+                if self._fetch_and_store(instrument_id, symbol, desired_start, ticker, mic):
                     fetched_from = desired_start
 
         self._repository.set_daily_meta(instrument_id, fetched_from, fetched_to)
         return True
 
     def _fetch_and_store(
-        self, instrument_id: int, symbol: str, start: str | None
+        self,
+        instrument_id: int,
+        symbol: str,
+        start: str | None,
+        ticker: str | None = None,
+        mic: str | None = None,
     ) -> bool:
         """Holt EOD-Kurse ab ``start`` und schreibt sie in den Cache.
 
@@ -76,7 +89,14 @@ class DailyCloseSync:
             True bei erfolgreichem Fetch (auch ohne neue Zeilen), False wenn
             der Provider einen Fehler signalisiert.
         """
-        rows = self._provider.fetch_daily_closes(symbol, start=start)
+        # **Ticker und MIC werden durchgereicht, nicht zurückgerechnet.** Ein
+        # Symbol ohne Suffix — `AAPL` — gehört zu einer der fünf US-Börsen, die
+        # absichtlich keinen Alias führen; aus ihm die Börse zu erraten ginge
+        # nicht, und der Versuch hat in Runde 3 alle aliaslosen Plätze still
+        # abgeschaltet: null Provider-Aufrufe, `None` als Ergebnis.
+        rows = self._provider.fetch_daily_closes(
+            symbol, start=start, ticker=ticker, mic=mic
+        )
         if rows is None:
             logger.warning("daily_sync_failed", symbol=symbol, start=start)
             return False

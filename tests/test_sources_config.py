@@ -148,10 +148,10 @@ def test_ein_fehlender_verweis_wird_none_und_nicht_text(tmp_path: Path) -> None:
 def test_dieselbe_quelle_baut_je_rolle_einen_anderen_typ(tmp_path: Path) -> None:
     """yfinance beantwortet vier Fragen — mit zwei verschiedenen Klassen.
 
-    Für `etf_meta` ist die Antwort ein `YFinanceEtfEnricher`, für `quotes` ein
-    `YFinanceProvider`. Ein Bauplan, der die Rolle nicht kennt, hätte der
-    ETF-Kette ein Objekt ohne `is_responsible` gegeben — und der Fehler wäre
-    erst beim ersten ETF-Abruf aufgefallen.
+    Für `etf_meta` ist die Antwort ein `YFinanceMetadataPlugin`, für `quotes`
+    ein `YFinancePlugin`. Ein Bauplan, der die Rolle nicht kennt, hätte der
+    ETF-Kette ein Objekt ohne `fetch` gegeben — und der Fehler wäre erst beim
+    ersten ETF-Abruf aufgefallen.
     """
     config = load_sources_config(
         _write(tmp_path, {"etf_meta": ["yfinance"], "quotes": ["yfinance"]}), Settings()
@@ -160,7 +160,7 @@ def test_dieselbe_quelle_baut_je_rolle_einen_anderen_typ(tmp_path: Path) -> None
     etf = build_chain("etf_meta", config, Settings())
     quotes = build_chain("quotes", config, Settings())
 
-    assert type(unwrap(etf[0])).__name__ == "YFinanceEtfEnricher"
+    assert type(unwrap(etf[0])).__name__ == "YFinanceMetadataPlugin"
     assert type(unwrap(quotes[0])).__name__ == "YFinancePlugin"
 
 

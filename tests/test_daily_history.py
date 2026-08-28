@@ -53,7 +53,14 @@ class FakeDailyProvider:
     def __init__(self) -> None:
         self.calls: list[str | None] = []
 
-    def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict]:
+    def fetch_daily_closes(
+        self,
+        symbol: str,
+        start: str | None = None,
+        *,
+        ticker: str | None = None,
+        mic: str | None = None,
+    ) -> list[dict]:
         self.calls.append(start)
         return [
             {"date": _day(7), "close": 160.0, "currency": "EUR"},
@@ -124,7 +131,12 @@ class FlakyDailyProvider:
         self._fail_first = fail_first
 
     def fetch_daily_closes(
-        self, symbol: str, start: str | None = None
+        self,
+        symbol: str,
+        start: str | None = None,
+        *,
+        ticker: str | None = None,
+        mic: str | None = None,
     ) -> list[dict] | None:
         self.calls.append(start)
         if len(self.calls) <= self._fail_first:
@@ -175,7 +187,14 @@ def test_fehlgeschlagener_folgeabruf_liefert_cache_ohne_fortschreibung(
 class _ProviderWithoutCurrency:
     """Liefert Tagespunkte, wie eine Quelle sie ohne Währungsangabe schickt."""
 
-    def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict]:
+    def fetch_daily_closes(
+        self,
+        symbol: str,
+        start: str | None = None,
+        *,
+        ticker: str | None = None,
+        mic: str | None = None,
+    ) -> list[dict]:
         return [
             {"date": _day(5), "close": 160.0},
             {"date": _day(3), "close": 161.0},

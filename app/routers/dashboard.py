@@ -144,6 +144,7 @@ def sources() -> SourcesResponse:
             role=entry.role,
             position=entry.position,
             configured=entry.usable,
+            reason=entry.reason,
             cost=entry.cost,
         )
         for role in ROLES

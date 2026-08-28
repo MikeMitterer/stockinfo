@@ -23,7 +23,7 @@ from typing import Any
 from stockinfo_plugin import FieldSpec, MetadataSource, Reading, ResolveRequest, Unit
 
 from app.providers.base import EtfDetails
-from app.providers.justetf_provider import JustEtfProvider, is_european_isin
+from app.providers.justetf_provider import JustEtfProvider
 
 FUND_SIZE_CURRENCY = "EUR"
 """Die Währung des Fondsvolumens — **fest, weil die Anbindung es so liest.**
@@ -123,12 +123,41 @@ class JustEtfMetadataPlugin(MetadataSource):
     def handles(self, request: ResolveRequest) -> bool:
         """justETF kennt europäische Fonds.
 
-        Die Regel steht in `is_european_isin` und wird von dort geholt. Sie hier
-        noch einmal zu formulieren hieße, sie beim ersten Sonderfall zweimal zu
-        pflegen — und der Sonderfall wäre dann in genau einer der beiden
-        Fassungen berücksichtigt.
+        **Diese Fassung ist unvollständig, und das ist eine Grenze des
+        Vertrags, kein Versehen.** `JustEtfProvider.is_responsible` entscheidet
+        ohne ISIN anhand von **Börse und Währung** — für `XIC.TO` in CAD
+        beantwortet allein das Listing die Frage. `ResolveRequest` trägt weder
+        die Handelswährung noch den Anzeigenamen der Börse, also lässt sich die
+        Regel hier nicht ausdrücken.
+
+        Meine erste Fassung hat sie deshalb still **verengt**: ohne ISIN immer
+        `False`. Das ist genau der Fehler, den dieses Ticket aufdecken soll —
+        „wo der Vertrag zwickt, fällt es uns auf und nicht zuerst einem
+        Fremden".
+
+        Die vollständige Regel steht deshalb in `is_responsible` daneben; der
+        Adapter benutzt sie, wenn er Börse und Währung hat. Ob `ResolveRequest`
+        dafür wächst, ist eine Entscheidung am Vertrag und gehört nicht in
+        dieses Ticket.
         """
-        return bool(request.isin) and is_european_isin(request.isin)
+        return self.is_responsible(request.isin)
+
+    def is_responsible(
+        self,
+        isin: str | None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> bool:
+        """Die **vollständige** Regel — geholt, nicht nachgebaut.
+
+        Über den Vertrag hinaus, weil `ResolveRequest` Börse und Währung nicht
+        kennt (siehe `handles`). Der Adapter reicht beides herein, wenn der
+        Core es hat.
+        """
+        return self._provider.is_responsible(
+            isin, exchange=exchange, currency=currency
+        )
 
     def fetch(self, request: ResolveRequest) -> list[Reading] | None:
         """Holt die Kennzahlen und macht daraus Messwerte.

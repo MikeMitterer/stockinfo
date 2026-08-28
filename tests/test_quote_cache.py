@@ -184,7 +184,14 @@ class _FakeDailyProvider:
     def __init__(self, closes: list[float]) -> None:
         self._closes = closes
 
-    def fetch_daily_closes(self, symbol: str, start: str | None = None):
+    def fetch_daily_closes(
+        self,
+        symbol: str,
+        start: str | None = None,
+        *,
+        ticker: str | None = None,
+        mic: str | None = None,
+    ):
         return [
             {"date": f"2026-01-{index + 1:02d}", "close": close, "currency": "EUR"}
             for index, close in enumerate(self._closes)
@@ -261,7 +268,14 @@ def test_refresh_behaelt_letzte_volatilitaet_bei_fehlgeschlagener_neuberechnung(
     class _FailingDailyProvider:
         """Liefert nie Kurse (leerer EOD-Cache, Delta-Fetch schlägt fehl)."""
 
-        def fetch_daily_closes(self, symbol: str, start: str | None = None):
+        def fetch_daily_closes(
+        self,
+        symbol: str,
+        start: str | None = None,
+        *,
+        ticker: str | None = None,
+        mic: str | None = None,
+    ):
             return None
 
     db_path = str(tmp_path / "vola3.db")

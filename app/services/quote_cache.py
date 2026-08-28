@@ -575,7 +575,7 @@ class CachedQuoteService:
         previous_volatility = stored["volatility"] if stored else None
         instrument_id = self._repository.save_quote(fresh).instrument_id
         if fresh.volatility is None:
-            volatility = self._volatility_from_cache(instrument_id, fresh.symbol)
+            volatility = self._volatility_from_cache(instrument_id, fresh)
             if volatility is not None:
                 fresh.volatility = volatility
                 self._repository.set_volatility(instrument_id, volatility)
@@ -586,14 +586,20 @@ class CachedQuoteService:
             self._keep_stored_metadata(fresh, stored), instrument_id
         )
 
-    def _volatility_from_cache(self, instrument_id: int, symbol: str) -> float | None:
+    def _volatility_from_cache(self, instrument_id: int, quote) -> float | None:
         """Berechnet die 1-Jahres-Volatilität aus dem akkumulierenden EOD-Cache.
 
         Zieht zunächst das Delta nach (nur fehlende Tage) und rechnet dann über
         die letzten ~370 Tage. Best-effort: fehlende/zu wenige Daten → ``None``.
         """
         start = (datetime.now(timezone.utc).date() - timedelta(days=370)).isoformat()
-        self._daily_sync.sync(instrument_id, symbol, start)
+        self._daily_sync.sync(
+            instrument_id,
+            quote.symbol,
+            start,
+            ticker=quote.ticker,
+            mic=quote.mic,
+        )
         rows = self._repository.get_daily_closes(instrument_id, start)
         closes = [row["close"] for row in rows if row.get("close") is not None]
         return annualized_volatility(closes)

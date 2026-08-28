@@ -131,9 +131,6 @@ def spec_from_class(source_class: type) -> SourceSpec:
         roles=roles_of(source_class),
         build=build,
         cost=getattr(source_class, "cost", "free"),
-        # Ein geladenes Plugin spricht den Vertrag in **allen** seinen Rollen —
-        # etwas anderes kann es gar nicht.
-        contract_roles=roles_of(source_class),
         loaded=True,
     )
 

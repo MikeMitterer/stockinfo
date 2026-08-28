@@ -385,7 +385,15 @@ class _LiveSource:
 class _SilentSync:
     """EOD-Sync, der nichts nachzieht — die Volatilität bleibt damit leer."""
 
-    def sync(self, instrument_id: int, symbol: str, start: str) -> None:
+    def sync(
+        self,
+        instrument_id: int,
+        symbol: str,
+        start: str,
+        *,
+        ticker: str | None = None,
+        mic: str | None = None,
+    ) -> None:
         return None
 
 

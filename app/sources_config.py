@@ -83,6 +83,19 @@ class SourcesConfig:
     providers: dict[str, dict] = field(default_factory=dict)
     environment: dict[str, str] = field(default_factory=dict)
     profile: str | None = None
+    packages: tuple[str, ...] = ()
+    """Beigesteuerte Pakete mit **fester Version**.
+
+    Sie werden beim Start nach `data/plugin-env/<hash>` installiert und in den
+    Suchpfad gehängt; danach findet die Registry ihre Entry-Points. Der Grund
+    für das eigene Verzeichnis: Beim offiziellen Container liegt
+    `site-packages` im Image und überlebt kein Update — `/data` schon.
+
+    **Feste Versionen sind keine Förmlichkeit.** Der Ordnername ist eine
+    Prüfsumme über diese Liste; ohne Version wäre derselbe Hash morgen ein
+    anderes Paket, und niemand sähe es.
+    """
+
     path: Path | None = None
 
     def chain(self, role: str) -> tuple[str, ...]:
@@ -229,5 +242,6 @@ def load_sources_config(path: str | Path, settings) -> SourcesConfig:
         providers=providers,
         environment=env,
         profile=raw.get("profile"),
+        packages=tuple(raw.get("packages") or ()),
         path=source,
     )

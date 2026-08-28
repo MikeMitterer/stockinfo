@@ -667,7 +667,6 @@ def test_eine_verworfene_quelle_erscheint_nicht_als_brauchbar() -> None:
                 "ohne-datei",
                 frozenset({"resolvers"}),
                 lambda role, config, settings: OhneDatei(config),
-                contract_roles=frozenset({"resolvers"}),
                 loaded=True,
             ),
         )

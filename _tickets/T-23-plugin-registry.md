@@ -33,7 +33,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 |---|---|---|:--:|---|
 | 1 | `examples/canada_file.py` nach `data/plugins/`, Neustart | erscheint in `GET /sources`, löst `CA…` auf | | |
 | 2 | dasselbe als installiertes Paket (Entry-Point) | erscheint gleichwertig, ohne Datei im Volume | ✅ | |
-| 2b | **Installationsweg** — Paketliste in `sources.yaml`, hash-benannte Umgebung unter `/data`, überlebt Image-Updates | | |
+| 2b | **Installationsweg** — Paketliste in `sources.yaml`, hash-benannte Umgebung unter `/data`, überlebt Image-Updates | ✅ | |
 | 3 | Plugin mit falscher `api_version` | wird abgelehnt, mit Meldung — App startet trotzdem | | |
 | 4 | Plugin, das bei jedem Aufruf wirft | wird nach wiederholtem Fehler stillgelegt; App bleibt bedienbar | | |
 | 5 | Quelle liefert wiederholt `Unavailable` | Schutzschalter öffnet; weitere Aufrufe werden unterdrückt. Half-open und Reset mit **eingespeister Uhr** geprüft, ohne echte Wartezeit | | |

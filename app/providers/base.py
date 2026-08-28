@@ -133,8 +133,25 @@ class DailyCloseProvider(Protocol):
     """
 
     def fetch_daily_closes(
-        self, symbol: str, start: str | None = None
-    ) -> list[dict] | None: ...
+        self,
+        symbol: str,
+        start: str | None = None,
+        *,
+        ticker: str | None = None,
+        mic: str | None = None,
+    ) -> list[dict] | None:
+        """Holt Tagesschlusskurse.
+
+        **`ticker` und `mic` kommen seit T-23 mit, und das ist kein Beiwerk.**
+        Das Anbieter-Symbol allein genügt nicht: Die fünf US-Börsen führen
+        absichtlich keinen Alias, `AAPL/XNAS` wird als ``AAPL`` gespeichert.
+        Wer daraus die Börse zurückrechnen will, rät — und der Versuch hat in
+        T-23 Runde 3 alle aliaslosen Plätze still abgeschaltet.
+
+        Der Aufrufer **hat** die Identität; sie wegzuwerfen und danach zu
+        erraten ist der Umweg. Dieselbe Entscheidung wie beim Kurs.
+        """
+        ...
 
 
 class FxRateProvider(Protocol):

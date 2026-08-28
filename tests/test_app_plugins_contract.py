@@ -36,7 +36,21 @@ from app.providers.base import EtfDetails, RawQuote
 
 
 class FakeJustEtf:
-    """Antwortet für **ein** Papier — der Rest ist unbekannt."""
+    """Antwortet für **ein** Papier — der Rest ist unbekannt.
+
+    Sie trägt `is_responsible` mit, weil die echte Anbindung sie hat: Ohne ISIN
+    entscheiden dort Börse und Währung, und ein Double, das diese Methode
+    weglässt, prüfte eine Schale gegen eine Anbindung, die es so nicht gibt.
+    """
+
+    def is_responsible(
+        self,
+        isin: str | None,
+        *,
+        exchange: str | None = None,
+        currency: str | None = None,
+    ) -> bool:
+        return bool(isin and isin.startswith(("IE", "LU", "DE", "FR")))
 
     def fetch_etf(self, isin: str) -> EtfDetails | None:
         if isin != "IE00B4L5Y983":
@@ -176,6 +190,11 @@ def test_ein_us_papier_ist_fuer_justetf_nicht_zustaendig() -> None:
     """
 
     class VerbotenerProvider:
+        """Beantwortet die Zuständigkeit — und **nur** die."""
+
+        def is_responsible(self, isin: str | None, **_: object) -> bool:
+            return bool(isin and isin.startswith(("IE", "LU", "DE", "FR")))
+
         def fetch_etf(self, isin: str) -> EtfDetails:
             raise AssertionError(f"es wurde nach {isin!r} gefragt")
 
