@@ -10,3 +10,9 @@ requires-python = ">=3.11"
 # bricht beim Import ab, weil `stockinfo_plugin` hier nicht installiert ist.
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = [
+    # Fragt einen fremden Dienst wirklich. Läuft im normalen Lauf mit — das
+    # ist der Zweck —, lässt sich aber mit `-m "not integration"` abwählen,
+    # wenn gerade kein Netz da ist.
+    "integration: fragt eine echte, fremde API",
+]
