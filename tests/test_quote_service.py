@@ -20,7 +20,9 @@ class FakeQuoteProvider:
     def __init__(self, raw: RawQuote | None) -> None:
         self._raw = raw
 
-    def fetch_quote(self, symbol: str) -> RawQuote | None:
+    def fetch_quote(self, instrument: ResolvedInstrument) -> RawQuote | None:
+        # Seit T-23 die aufgelöste Identität statt des Symbols — siehe
+        # `app.plugin_adapters.QuoteAdapter`.
         return self._raw
 
 

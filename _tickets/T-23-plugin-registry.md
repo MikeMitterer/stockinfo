@@ -32,7 +32,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | 1 | `examples/canada_file.py` nach `data/plugins/`, Neustart | erscheint in `GET /sources`, löst `CA…` auf | | |
-| 2 | dasselbe als installiertes Paket (Entry-Point) | erscheint gleichwertig, ohne Datei im Volume | | |
+| 2 | dasselbe als installiertes Paket (Entry-Point) | erscheint gleichwertig, ohne Datei im Volume | ✅ | |
+| 2b | **Installationsweg** — Launcher, Paketliste, hash-benannte Umgebung | ⏸ **offen, wartet auf Mikes Entscheidung** — siehe unten | ➖ | |
 | 3 | Plugin mit falscher `api_version` | wird abgelehnt, mit Meldung — App startet trotzdem | | |
 | 4 | Plugin, das bei jedem Aufruf wirft | wird nach wiederholtem Fehler stillgelegt; App bleibt bedienbar | | |
 | 5 | Quelle liefert wiederholt `Unavailable` | Schutzschalter öffnet; weitere Aufrufe werden unterdrückt. Half-open und Reset mit **eingespeister Uhr** geprüft, ohne echte Wartezeit | | |
@@ -45,6 +46,28 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 ---
 
 ## Details
+
+> ## ⏸ Offen: der Installationsweg (Verify `#2b`)
+>
+> Das Ticket beschreibt unten einen **Launcher**, der Pakete aus einer
+> Paketliste in `sources.yaml` in eine hash-benannte Umgebung unter `/data`
+> installiert und in den Suchpfad hängt. Der ist **nicht gebaut**, und ich
+> baue ihn nicht ohne ausdrückliche Entscheidung — es ist dieselbe Bauart, die
+> mit Verify `#6c` gerade gestrichen wurde.
+>
+> **Was ohne ihn schon geht:** Der Entry-Point-Weg funktioniert für **jedes**
+> Paket, das in der Umgebung der App installiert ist — `pip install
+> mein-plugin` genügt, den Rest macht `importlib.metadata`. Ein fremdes Paket
+> nimmt exakt denselben Weg wie das mitgelieferte Beispiel; daran ist nichts
+> besonders. Dokumentiert ist er seit Runde 3 in `docs/plugins.md`.
+>
+> **Was der Launcher zusätzlich brächte:** dass der Betreiber die Paketliste in
+> `sources.yaml` pflegt statt selbst `pip install` zu rufen, und dass die
+> Installation ein Image-Update überlebt, weil sie unter `/data` liegt. Das ist
+> Bequemlichkeit und Betriebsfrage, keine Voraussetzung für das Plugin-System.
+>
+> **Mike entscheidet:** eigenes Ticket, oder in T-23 nachziehen. Bis dahin
+> steht `#2b` als offen und nicht als erfüllt.
 
 ### Zwei Ladewege, eine Registry
 

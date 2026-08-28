@@ -7,6 +7,10 @@ bei der zuerst niemand merkt, dass sich die Gegenseite geändert hat.
     pytest tests/test_plugin_justetf_integration.py   # fragt justETF
     pytest -m "not integration"                       # ohne fremde Dienste
 
+**Nur Netzfälle.** Der US-Abbruch stand hier bis Runde 2: `handles` lehnt ab,
+bevor irgendjemand gefragt wird — also kein Dienstkontakt. Er steht jetzt bei
+den Unit-Tests, wo er auch ohne Netz läuft.
+
 **Keine festgenagelten Kennzahlen.** Ein Fondsvolumen ändert sich täglich, eine
 Kostenquote gelegentlich. Festgenagelt wird, was sich nicht ändert: dass die
 Antwort überhaupt Felder trägt, dass jedes davon **deklariert** ist, und dass
@@ -73,13 +77,3 @@ def test_ein_absoluter_betrag_traegt_seine_waehrung(
             f"'{reading.field}' = {reading.value!r} ohne brauchbare Währung "
             f"({reading.currency!r})"
         )
-
-
-def test_ein_us_papier_ist_nicht_zustaendig(plugin: JustEtfMetadataPlugin) -> None:
-    """justETF führt europäische Fonds — und sagt das, statt zu raten.
-
-    Die leere Liste ist die Aussage „nicht zuständig"; sie unterscheidet sich
-    von ``None`` („zuständig, nichts gefunden"). Der Unterschied entscheidet,
-    ob die Kette weiterfragt.
-    """
-    assert plugin.fetch(ResolveRequest(isin="US0378331005")) == []

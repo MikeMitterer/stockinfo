@@ -30,7 +30,7 @@ from stockinfo_plugin.testing import (
     QuoteContract,
 )
 
-from app.plugins.justetf_metadata import JustEtfMetadataPlugin
+from app.plugins.justetf_metadata import JustEtfMetadataPlugin, as_readings
 from app.plugins.yfinance_quotes import YFinancePlugin
 from app.providers.base import EtfDetails, RawQuote
 
@@ -159,6 +159,48 @@ def test_der_identitaetsfall_braucht_keinen_anbieter() -> None:
 
     assert answer.rate == 1.0
     assert (answer.base, answer.quote) == ("EUR", "EUR")
+
+
+def test_ein_us_papier_ist_fuer_justetf_nicht_zustaendig() -> None:
+    """justETF führt europäische Fonds — und fragt bei US-Papieren gar nicht erst.
+
+    **Auch dieser Test stand bis Runde 2 unter dem `integration`-Marker**,
+    obwohl er keinen Dienst berührt: `handles` lehnt ab, bevor irgendjemand
+    gefragt wird. Der Anbieter ist hier deshalb einer, dessen Benutzung ein
+    Fehler wäre — ohne ihn bewiese der Test nur das Ergebnis, nicht den
+    ausbleibenden Zugriff.
+
+    Die **leere Liste** ist die Aussage „nicht zuständig"; sie unterscheidet
+    sich von ``None`` („zuständig, nichts gefunden"). Der Unterschied
+    entscheidet, ob die Kette weiterfragt.
+    """
+
+    class VerbotenerProvider:
+        def fetch_etf(self, isin: str) -> EtfDetails:
+            raise AssertionError(f"es wurde nach {isin!r} gefragt")
+
+    plugin = JustEtfMetadataPlugin(provider=VerbotenerProvider())
+
+    assert plugin.fetch(ResolveRequest(isin="US0378331005")) == []
+
+
+def test_das_fondsvolumen_traegt_euro_und_nicht_die_fondswaehrung() -> None:
+    """**Befund aus Runde 2 — der Wert stimmte, seine Bedeutung nicht.**
+
+    `JustEtfProvider` liest `overview["fund_size_eur"]`; das Volumen ist also
+    bereits umgerechnet. `fund_currency` ist die Währung des **Fonds** — bei
+    `IE00B4L5Y983` USD. Den EUR-Betrag damit zu beschriften hätte ihn um den
+    Wechselkurs verfälscht, ohne dass irgendwo ein Fehler entstünde.
+
+    Der Test nimmt deshalb bewusst einen Fonds, dessen Fondswährung **nicht**
+    EUR ist: Mit einem EUR-Fonds wäre er grün gewesen, ohne etwas zu prüfen.
+    """
+    details = EtfDetails(fund_size=1_200_000_000.0, fund_currency="USD")
+
+    readings = {reading.field: reading for reading in as_readings(details)}
+
+    assert readings["fund_size"].currency == "EUR"
+    assert readings["fund_currency"].value == "USD", "die Angabe selbst bleibt"
 
 
 def test_eine_reihe_meldet_sich_als_bereinigt() -> None:

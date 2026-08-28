@@ -25,6 +25,21 @@ from stockinfo_plugin import FieldSpec, MetadataSource, Reading, ResolveRequest,
 from app.providers.base import EtfDetails
 from app.providers.justetf_provider import JustEtfProvider, is_european_isin
 
+FUND_SIZE_CURRENCY = "EUR"
+"""Die Währung des Fondsvolumens — **fest, weil die Anbindung es so liest.**
+
+`JustEtfProvider` nimmt `overview["fund_size_eur"]`. Der Wert ist also schon
+umgerechnet, und `fund_currency` beschreibt etwas anderes: die Währung des
+Fonds selbst. Beides zu verwechseln verfälscht den Betrag um den Wechselkurs.
+
+Sollte die Anbindung eines Tages den Originalbetrag lesen, gehört diese
+Konstante mit ihr zusammen geändert — deshalb steht sie hier und nicht als
+Zeichenkette mitten im Code.
+"""
+
+FUND_SIZE_LABEL_SUFFIX = " (EUR)"
+"""Der Zusatz in der Beschriftung — damit auch die Anzeige es sagt."""
+
 # Was justETF liefert, in der Form des Vertrags. Die Deklaration ist **nicht**
 # Zierde: Sie sagt der App, wie ein Wert zu lesen ist (Prozent, Betrag, Text)
 # und wie er heißt, wenn sie ihn anzeigt.
@@ -43,8 +58,8 @@ FIELDS: tuple[FieldSpec, ...] = (
         "fund_size",
         kind="number",
         unit=Unit.ABSOLUTE,
-        label_en="Fund size",
-        label_de="Fondsvolumen",
+        label_en="Fund size" + FUND_SIZE_LABEL_SUFFIX,
+        label_de="Fondsvolumen" + FUND_SIZE_LABEL_SUFFIX,
     ),
     FieldSpec(
         "fund_currency",
@@ -170,10 +185,16 @@ def as_readings(details: EtfDetails, source: str = "justetf") -> list[Reading]:
             unit=spec.unit,
             source=source,
             # **Ein absoluter Betrag ohne Währung ist bedeutungslos** — dieselbe
-            # Regel, die für Kurse gilt, und ein Befund des Vertrags. Das
-            # Fondsvolumen steht in der Fondswährung, nicht in der des
-            # Listings; genau deshalb führt justETF beide getrennt.
-            currency=details.fund_currency if spec.unit is Unit.ABSOLUTE else None,
+            # Regel, die für Kurse gilt, und ein Befund des Vertrags.
+            #
+            # Die Währung ist **EUR und nicht `fund_currency`.** Der Provider
+            # liest `overview["fund_size_eur"]`; das Volumen ist also bereits
+            # umgerechnet. `fund_currency` ist die Währung des **Fonds** — bei
+            # `IE00B4L5Y983` USD —, und den EUR-Betrag damit zu beschriften
+            # hätte ihn um den Wechselkurs verfälscht, ohne dass irgendwo ein
+            # Fehler entstünde. Zweiter Befund derselben Sorte in diesem
+            # Ticket: Der Wert stimmte, seine Bedeutung nicht.
+            currency=FUND_SIZE_CURRENCY if spec.unit is Unit.ABSOLUTE else None,
         )
         for spec in FIELDS
         if getattr(details, spec.name, None) is not None

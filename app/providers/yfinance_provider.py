@@ -23,6 +23,13 @@ class YFinanceProvider:
     def fetch_quote(self, symbol: str) -> RawQuote | None:
         """Fragt den aktuellen Kurs eines Symbols ab.
 
+        **Seit T-23 erfüllt diese Methode nicht mehr das
+        `QuoteProvider`-Protokoll des Core.** Sie ist die Anbindung darunter
+        und wird von `app.plugins.yfinance_quotes.YFinancePlugin` mit einem
+        Symbol gerufen; der Core spricht nur noch mit dem Adapter, und der
+        bekommt die aufgelöste Identität statt eines Symbols — aus
+        ``EUNL.DE`` ließe sich die Börse nicht eindeutig zurückgewinnen.
+
         Args:
             symbol: Yahoo-Symbol, z.B. 'SAP.DE' oder 'AAPL'.
 

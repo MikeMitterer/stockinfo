@@ -570,6 +570,117 @@ def test_im_halb_offenen_zustand_kommt_genau_einer_durch() -> None:
     assert breaker.is_open is True, "der Probeversuch scheiterte — wieder zu"
 
 
+@pytest.mark.parametrize(
+    ("role", "quelle", "methode"),
+    [
+        ("resolvers", "openfigi", "resolve_isin"),
+        ("quotes", "yfinance", "fetch_quote"),
+        ("daily", "yfinance", "fetch_daily_closes"),
+        ("fx", "yfinance", "fetch_fx_rate"),
+        ("etf_meta", "justetf", "fetch_etf"),
+    ],
+)
+def test_jede_rolle_liefert_dem_core_was_er_ruft(
+    role: str, quelle: str, methode: str
+) -> None:
+    """**Der Befund aus Runde 2, und der Grund für diesen Test.**
+
+    Dort war `contract` an der Quelle gesetzt, aber die Adaptertabelle hatte
+    nur zwei Einträge. Für `daily` und `fx` bekam der Core damit das nackte
+    Plugin und rief darauf Methoden, die es nicht hat — ein `AttributeError`
+    im Betrieb.
+
+    **Kein einziger Test hat das gesehen**, weil keiner diese Rollen durch den
+    Container geführt hat. Dieser hier tut es, für alle fünf: Er fragt nicht,
+    was gebaut wurde, sondern ob das Gebaute die Methode **hat**, die der Core
+    aufruft.
+    """
+    from app.config import Settings
+    from app.sources_config import SourcesConfig
+    from app.sources_registry import build_chain
+
+    chain = build_chain(role, SourcesConfig(chains={role: (quelle,)}), Settings())
+
+    assert chain, f"{quelle} ist für {role} nicht einsatzbereit"
+    assert hasattr(chain[0], methode), (
+        f"{type(chain[0]).__name__} hat kein {methode} — der Core ruft es"
+    )
+
+
+def test_eine_auskunft_bewegt_den_schutzschalter_nicht() -> None:
+    """**Befund aus Runde 2 — und er machte den Schalter wirkungslos.**
+
+    `CompositeResolver` ruft vor jedem `resolve` erst `handles`. Solange auch
+    diese Auskunft als Erfolg zählte, setzte sie den Zähler **vor jedem**
+    Fehlschlag zurück: Eine Quelle, die dauerhaft ausfällt, aber brav ihre
+    Zuständigkeit meldet, erreichte die Schwelle nie.
+
+    Der Test ruft `handles` deshalb genau so, wie die Kette es tut.
+    """
+
+    class Ausfaller(Resolver):
+        name = "ausfaller"
+
+        def handles(self, request: ResolveRequest) -> bool:
+            return True
+
+        def resolve(self, request: ResolveRequest) -> Resolution:
+            return Unavailable(error="weg")
+
+    guarded = GuardedSource(Ausfaller())
+    request = ResolveRequest(isin="US0378331005")
+
+    for _ in range(3):
+        guarded.handles(request)
+        guarded.resolve(request)
+
+    assert guarded.breaker.failures == 3, "die Auskunft hat nichts zurückgesetzt"
+    assert guarded.breaker.is_open is True
+
+
+def test_eine_verworfene_quelle_erscheint_nicht_als_brauchbar() -> None:
+    """**Befund aus Runde 2:** `/sources` und der Bauweg widersprachen sich.
+
+    Eine Quelle, deren `configuration_problem()` spricht, wird beim Bauen
+    verworfen — der Leseweg meldete sie trotzdem als `configured: true` und
+    `usable: true`. Zwei getrennte Auswertungen unterscheiden sich beim ersten
+    Sonderfall, und ausgerechnet die Diagnose meldet dann das Falsche.
+    """
+    from app.config import Settings
+    from app.sources_config import SourcesConfig
+    from app.sources_registry import (
+        SourceSpec,
+        build_chain,
+        describe_chain,
+        register_loaded,
+    )
+
+    class OhneDatei(Resolver):
+        name = "ohne-datei"
+
+        def configuration_problem(self) -> str:
+            return "Datei fehlt"
+
+    register_loaded(
+        (
+            SourceSpec(
+                "ohne-datei",
+                frozenset({"resolvers"}),
+                lambda role, config, settings: OhneDatei(config),
+                contract_roles=frozenset({"resolvers"}),
+                loaded=True,
+            ),
+        )
+    )
+    config = SourcesConfig(chains={"resolvers": ("ohne-datei",)})
+
+    entry = describe_chain("resolvers", config, Settings())[0]
+
+    assert entry.configured is False
+    assert entry.usable is False
+    assert build_chain("resolvers", config, Settings()) == []
+
+
 def test_eine_fx_quelle_wird_ebenso_gekapselt() -> None:
     """Die Kapsel hängt an der Methode, nicht an der Rolle.
 

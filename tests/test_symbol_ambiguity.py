@@ -27,7 +27,7 @@ from fastapi.testclient import TestClient
 
 from app.container import get_cached_quote_service
 from app.main import app
-from app.providers.base import RawQuote
+from app.providers.base import RawQuote, ResolvedInstrument
 from app.repository import REASON_SYMBOL_AMBIGUOUS, QuoteRepository
 from stockinfo_plugin.types import NotFound
 from tests.boundaries import wire_real_chain
@@ -40,9 +40,13 @@ _SEEN = "2026-08-01T00:00:00+00:00"
 class _QuoteSource:
     """Die Außengrenze zur Kursquelle."""
 
-    def fetch_quote(self, symbol: str) -> RawQuote:
+    def fetch_quote(self, instrument: ResolvedInstrument) -> RawQuote:
+        # Seit T-23 bekommt eine Kursquelle die **aufgelöste Identität**, nicht
+        # nur das Symbol: Der Plugin-Vertrag fragt mit `ticker` und `mic`, und
+        # aus einem Symbol ohne Suffix ließe sich die Börse nicht eindeutig
+        # zurückgewinnen.
         return RawQuote(
-            symbol=symbol,
+            symbol=instrument.symbol,
             price=101.0,
             quote_time="2026-08-27T17:00:00+00:00",
             currency="USD",

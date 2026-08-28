@@ -11,6 +11,11 @@ Was ein Integrationstest belegt und kein Double belegen kann: dass die
 Symbolbildung noch trifft, dass Yahoo weiterhin Währung und Zeitstempel
 liefert, und dass die Übersetzung in `Quote` und `FxRate` trägt.
 
+**Nur Netzfälle.** Der Identitätsfall `EUR→EUR` stand hier bis Runde 2 und
+berührte keinen Anbieter — er fiel damit unter `-m "not integration"` heraus,
+obwohl er ohne Netz läuft. Derselbe Fehler war kurz zuvor in T-27b korrigiert
+worden; er steht jetzt in `test_app_plugins_contract.py`.
+
 **Kein Golden-Kurs.** Ein Kurs ändert sich täglich; ihn festzunageln hieße,
 einen Test zu schreiben, der morgen rot ist, ohne dass etwas kaputt wäre.
 Festgenagelt wird, was sich **nicht** ändert: Währung und Handelsplatz. Der
@@ -89,16 +94,3 @@ def test_ein_wechselkurs(plugin: YFinancePlugin) -> None:
     assert isinstance(answer, FxRate), answer
     assert (answer.base, answer.quote) == ("EUR", "CHF")
     assert 0.5 < answer.rate < 2.0
-
-
-def test_der_identitaetsfall_braucht_keinen_anbieter(plugin: YFinancePlugin) -> None:
-    """Eine Einheit einer Währung kostet **genau** eine Einheit derselben.
-
-    Über einen Anbieter gerechnet käme 0,9999… heraus. Der Test steht hier und
-    nicht bei den Unit-Tests, weil er belegt, dass der Abkürzungsweg auch dann
-    greift, wenn eine echte Anbindung daneben steht.
-    """
-    answer = plugin.fetch_rate(FxRequest(base="EUR", quote="EUR"))
-
-    assert isinstance(answer, FxRate), answer
-    assert answer.rate == 1.0

@@ -189,6 +189,28 @@ class GuardedSource:
         """Der Schalter dieser Quelle."""
         return self._breaker
 
+    NON_RECORDING = frozenset(
+        {
+            "handles",
+            "is_responsible",
+            "declared",
+            "configuration_problem",
+            "is_configured",
+        }
+    )
+    """Methoden, die **auskunft geben** statt zu arbeiten.
+
+    Sie werden gekapselt — eine `handles`, die wirft, darf die App nicht
+    umwerfen —, aber sie verbuchen **weder Erfolg noch Fehlschlag**.
+
+    **Das war ein Befund, und ein böser.** `CompositeResolver` ruft vor jedem
+    `resolve` erst `handles`. Solange auch diese Auskunft als Erfolg zählte,
+    setzte sie den Zähler **vor jedem** Fehlschlag wieder auf null: Eine Quelle,
+    die dauerhaft ausfällt, aber brav ihre Zuständigkeit meldet, erreichte die
+    Schwelle nie. Der Schutzschalter war damit an genau der Stelle wirkungslos,
+    für die er gebaut wurde.
+    """
+
     def __getattr__(self, name: str) -> Any:
         """Reicht Attribute durch und kapselt Methoden.
 
@@ -200,9 +222,11 @@ class GuardedSource:
         if not callable(attribute):
             return attribute
 
+        records = name not in self.NON_RECORDING
+
         def guarded(*args: object, **kwargs: object) -> object:
             source_name = getattr(self._source, "name", type(self._source).__name__)
-            if not self._breaker.try_enter():
+            if records and not self._breaker.try_enter():
                 logger.info("source_suppressed", source=source_name, method=name)
                 return Unavailable(
                     f"{source_name} ist nach wiederholtem Fehlschlag vorübergehend "
@@ -211,7 +235,8 @@ class GuardedSource:
             try:
                 answer = attribute(*args, **kwargs)
             except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
-                self._breaker.record_failure()
+                if records:
+                    self._breaker.record_failure()
                 logger.warning(
                     "source_raised",
                     source=source_name,
@@ -221,6 +246,10 @@ class GuardedSource:
                 )
                 return Unavailable(f"{source_name}: {type(error).__name__}: {error}")
 
+            if not records:
+                # Eine Auskunft ist kein Arbeitsergebnis. Sie hier zu verbuchen
+                # machte den Schutzschalter wirkungslos — siehe NON_RECORDING.
+                return answer
             if isinstance(answer, Unavailable):
                 self._breaker.record_failure()
             else:

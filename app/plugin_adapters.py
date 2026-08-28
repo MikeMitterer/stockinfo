@@ -26,9 +26,16 @@ uns.
 
 from __future__ import annotations
 
+from dataclasses import fields
+from datetime import date
+
 import structlog
 
 from stockinfo_plugin.types import (
+    DailyRequest,
+    DailySeries,
+    FxRate,
+    FxRequest,
     NotFound,
     NotResponsible,
     Quote,
@@ -39,7 +46,7 @@ from stockinfo_plugin.types import (
 )
 
 from app.exchanges import EXCHANGES, provider_alias
-from app.providers.base import RawQuote, Resolution, ResolvedInstrument
+from app.providers.base import EtfDetails, RawQuote, Resolution, ResolvedInstrument
 
 logger = structlog.get_logger()
 
@@ -143,6 +150,159 @@ class QuoteAdapter:
             outcome=type(answer).__name__,
         )
         return None
+
+
+class DailyAdapter:
+    """Ein Plugin der Historienrolle, in der Sprache des Core.
+
+    **Diese Klasse fehlte, und das war kein Schönheitsfehler.** Runde 2 setzte
+    `contract=True` an der yfinance-Quelle, ohne für `daily` und `fx` einen
+    Adapter zu haben — der Core bekam damit das nackte Plugin und rief darauf
+    `fetch_daily_closes`, das es nicht gibt. Ein `AttributeError` im Betrieb,
+    und kein Test hat ihn gesehen, weil keiner diese beiden Rollen durch den
+    Container geführt hat.
+    """
+
+    def __init__(self, source: object, default_exchange: str) -> None:
+        self._source = source
+        self._default_exchange = default_exchange
+
+    @property
+    def source(self) -> object:
+        """Das gekapselte Plugin — für Diagnose und Tests."""
+        return self._source
+
+    def fetch_daily_closes(
+        self, symbol: str, start: str | None = None
+    ) -> list[dict] | None:
+        """Die Tagesreihe in der Form, die der Core liest.
+
+        Args:
+            symbol: Das Anbieter-Symbol. Der Vertrag fragt mit `ticker` und
+                `mic`; hier ist die Rückwärtsrichtung nötig und **eindeutig
+                lösbar**, weil `EXCHANGES` die Aliase kennt. Wo sie es nicht
+                ist, gibt es keine Antwort statt einer geratenen.
+            start: Frühester Tag als ISO-Datum.
+
+        Returns:
+            Zeilen mit ``date``, ``close`` und ``currency``; ``None`` bei einer
+            Störung, ``[]`` wenn es nichts gibt. Die Unterscheidung stammt aus
+            dem Vertrag und wird hier nicht eingeebnet.
+        """
+        identity = _identity_from(symbol)
+        if identity is None:
+            logger.info("daily_symbol_not_resolvable", symbol=symbol)
+            return None
+        ticker, mic = identity
+
+        answer = self._source.fetch_daily(
+            DailyRequest(
+                ticker=ticker,
+                mic=mic,
+                start=date.fromisoformat(start) if start else None,
+            )
+        )
+        if isinstance(answer, DailySeries):
+            return [
+                {
+                    "date": bar.day.isoformat(),
+                    "close": bar.close,
+                    "currency": answer.currency,
+                }
+                for bar in answer.bars
+            ]
+        if isinstance(answer, NotFound):
+            return []
+        return None
+
+
+class FxAdapter:
+    """Ein Plugin der Devisenrolle, in der Sprache des Core."""
+
+    def __init__(self, source: object, default_exchange: str) -> None:
+        self._source = source
+        self._default_exchange = default_exchange
+
+    @property
+    def source(self) -> object:
+        """Das gekapselte Plugin — für Diagnose und Tests."""
+        return self._source
+
+    def fetch_fx_rate(self, base: str, quote: str) -> float | None:
+        """Der Kurs als nackte Zahl — mehr liest der Core hier nicht."""
+        answer = self._source.fetch_rate(FxRequest(base=base, quote=quote))
+        return answer.rate if isinstance(answer, FxRate) else None
+
+
+class MetadataAdapter:
+    """Ein Plugin der Metadatenrolle, in der Sprache des Core.
+
+    Hier ist die Übersetzung am größten, und das ist kein Zufall: Die beiden
+    Seiten schneiden die Daten verschieden. Der Core kennt einen Datensatz mit
+    festen Feldern (`EtfDetails`), der Vertrag eine Liste von Messwerten
+    (`Reading`) — Letzteres, damit ein Feld ankommen kann, das die App noch
+    nicht kennt.
+
+    Der Adapter füllt deshalb nur, was `EtfDetails` hat. **Ein unbekanntes Feld
+    geht hier verloren**, und das ist der ehrliche Stand: Es aufzuheben ist
+    T-26, nicht dieses Ticket.
+    """
+
+    def __init__(self, source: object, default_exchange: str) -> None:
+        self._source = source
+        self._default_exchange = default_exchange
+
+    @property
+    def source(self) -> object:
+        """Das gekapselte Plugin — für Diagnose und Tests."""
+        return self._source
+
+    def is_responsible(self, isin: str | None = None, **_: object) -> bool:
+        """Fühlt sich diese Quelle für das Papier zuständig?"""
+        return bool(self._source.handles(ResolveRequest(isin=isin)))
+
+    def fetch_etf(self, isin: str) -> EtfDetails | None:
+        """Die Messwerte als Datensatz.
+
+        Returns:
+            `EtfDetails` mit den Feldern, die die App kennt. ``None``, wenn die
+            Quelle nichts liefert **oder** nicht zuständig ist — der Core
+            unterscheidet an dieser Stelle nicht, und ihm eine Unterscheidung
+            vorzuspielen, die er nicht auswertet, wäre eine leere Zusage.
+        """
+        readings = self._source.fetch(ResolveRequest(isin=isin))
+        if not readings:
+            return None
+
+        known = {field.name for field in fields(EtfDetails)}
+        values = {
+            reading.field: reading.value
+            for reading in readings
+            if reading.field in known
+        }
+        return EtfDetails(**values) if values else None
+
+
+def _identity_from(symbol: str) -> tuple[str, str] | None:
+    """Aus dem Anbieter-Symbol wieder Ticker und MIC — oder ``None``.
+
+    **Die Gegenrichtung von `provider_alias`, und sie ist nur teilweise
+    eindeutig.** ``EUNL.DE`` → `('EUNL', 'XETR')` geht, weil genau eine Börse
+    den Alias ``DE`` führt. Ein Symbol **ohne** Suffix kann dagegen jeder
+    US-Handelsplatz sein; dort gibt es keine Antwort statt einer geratenen.
+
+    Genau deshalb bekommt `QuoteAdapter.fetch_quote` die Identität vom Core
+    hereingereicht, statt sie hier zu rekonstruieren. Bei der Tagesreihe ist
+    das (noch) nicht so — der Core reicht dort ein Symbol —, und das ist der
+    Grund, warum diese Funktion überhaupt existiert.
+    """
+    if "." not in symbol:
+        return None
+    ticker, _, alias = symbol.rpartition(".")
+    for mic, definition in EXCHANGES.items():
+        if getattr(definition, "alias", None) == alias:
+            return ticker, mic
+    return None
 
 
 class ResolverAdapter:

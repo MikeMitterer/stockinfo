@@ -147,7 +147,7 @@ def sources() -> SourcesResponse:
             cost=entry.cost,
         )
         for role in ROLES
-        for entry in describe_chain(role, config)
+        for entry in describe_chain(role, config, get_settings())
     ]
     return SourcesResponse(
         config_path=str(config.path) if config.path else None,

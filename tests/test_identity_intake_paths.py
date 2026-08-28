@@ -22,7 +22,7 @@ from fastapi.testclient import TestClient
 
 from app.container import get_cached_quote_service
 from app.main import app
-from app.providers.base import RawQuote
+from app.providers.base import RawQuote, ResolvedInstrument
 from app.repository import REASON_IDENTITY_CONFLICT, QuoteRepository
 from stockinfo_plugin.types import NotFound
 from tests.boundaries import wire_real_chain
@@ -45,9 +45,11 @@ class _QuoteSource:
     def __init__(self, isin: str | None = None) -> None:
         self._isin = isin
 
-    def fetch_quote(self, symbol: str) -> RawQuote:
+    def fetch_quote(self, instrument: ResolvedInstrument) -> RawQuote:
+        # Seit T-23 die aufgelöste Identität statt des Symbols — siehe
+        # `app.plugin_adapters.QuoteAdapter`.
         return RawQuote(
-            symbol=symbol,
+            symbol=instrument.symbol,
             price=123.45,
             quote_time="2026-08-23T17:00:00+00:00",
             currency="EUR",

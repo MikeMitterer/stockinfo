@@ -21,12 +21,18 @@ from dataclasses import dataclass
 
 import structlog
 
-from app.plugin_adapters import QuoteAdapter, ResolverAdapter
+from app.plugin_adapters import (
+    DailyAdapter,
+    FxAdapter,
+    MetadataAdapter,
+    QuoteAdapter,
+    ResolverAdapter,
+)
 from app.plugin_guard import GuardedSource
+from app.plugins.justetf_metadata import JustEtfMetadataPlugin
+from app.providers.yfinance_etf_provider import YFinanceEtfEnricher
 from app.plugins.openfigi_resolver import OpenFigiResolverPlugin
 from app.plugins.yfinance_quotes import YFinancePlugin
-from app.providers.justetf_provider import JustEtfProvider
-from app.providers.yfinance_etf_provider import YFinanceEtfEnricher
 from app.resolver import YFinanceResolver
 
 logger = structlog.get_logger()
@@ -46,17 +52,21 @@ class SourceSpec:
     roles: frozenset[str]
     build: Callable[[str, dict, object], object]
     cost: str = "free"
-    contract: bool = False
-    """Spricht diese Quelle den **Plugin-Vertrag** statt der Core-Schnittstelle?
+    contract_roles: frozenset[str] = frozenset()
+    """In welchen Rollen spricht diese Quelle den **Plugin-Vertrag**?
 
     Der Unterschied entscheidet, ob `build_chain` einen Adapter davorsetzt.
-    Geladene Quellen sprechen ihn immer; von den eingebauten wandern sie
-    schrittweise dorthin — `openfigi` als erste. Eine Quelle, die noch die
-    Core-Schnittstelle spricht, geht unverändert durch.
 
-    **Das Feld verschwindet wieder**, sobald alle eingebauten Quellen den
-    Vertrag sprechen. Es beschreibt einen Übergang, keinen Dauerzustand — und
-    steht hier, damit der Übergang sichtbar ist statt geraten.
+    **Je Rolle und nicht je Quelle** — das war ein Befund. `yfinance` spricht
+    den Vertrag für Kurse, Historie und Devisen, für `etf_meta` aber noch die
+    Core-Schnittstelle: Dort ist die Antwort ein anderer Typ
+    (`YFinanceEtfEnricher`), und ein Ja/Nein an der Quelle hätte die ETF-Kette
+    ein Objekt ohne `fetch` bekommen lassen. Genau dieser Fehler ist beim
+    Umbau entstanden und vom vorhandenen Rollentest gefangen worden.
+
+    **Das Feld verschwindet wieder**, sobald alle Rollen aller eingebauten
+    Quellen den Vertrag sprechen. Es beschreibt einen Übergang, keinen
+    Dauerzustand — und steht hier, damit er sichtbar ist statt geraten.
     """
 
     loaded: bool = False
@@ -122,27 +132,38 @@ def _yfinance(role: str, config: dict, settings) -> object:
     # Seit T-23 spricht die Kursrolle den Vertrag; `etf_meta` folgt in einem
     # eigenen Schritt, weil dort die Antwort eine andere Form hat (`Reading`
     # statt eines Datensatzes) und der Core-Enricher noch anders fragt.
+    # `etf_meta` bleibt vorerst der native Enricher — siehe `contract_roles`.
     if role == "etf_meta":
         return YFinanceEtfEnricher()
     return YFinancePlugin(config)
 
 
 def _justetf(role: str, config: dict, settings) -> object:
-    return JustEtfProvider()
+    return JustEtfMetadataPlugin(config)
 
 
 # Die eingebauten Quellen. Ein Plugin tritt ab T-23 über denselben Weg dazu —
 # diese Tabelle ist dann nicht mehr die einzige Quelle von Namen, aber
 # weiterhin ihre Form.
 BUILTIN_SOURCES: tuple[SourceSpec, ...] = (
-    SourceSpec("openfigi", frozenset({"resolvers"}), _openfigi, contract=True),
+    SourceSpec(
+        "openfigi",
+        frozenset({"resolvers"}),
+        _openfigi,
+        contract_roles=frozenset({"resolvers"}),
+    ),
     SourceSpec("yahoo-search", frozenset({"resolvers"}), _yahoo_search),
-    SourceSpec("justetf", frozenset({"etf_meta"}), _justetf),
+    SourceSpec(
+        "justetf",
+        frozenset({"etf_meta"}),
+        _justetf,
+        contract_roles=frozenset({"etf_meta"}),
+    ),
     SourceSpec(
         "yfinance",
         frozenset({"etf_meta", "quotes", "daily", "fx"}),
         _yfinance,
-        contract=True,
+        contract_roles=frozenset({"quotes", "daily", "fx"}),
     ),
 )
 
@@ -233,7 +254,7 @@ class ChainEntry:
         return self.known and self.role_ok and self.configured
 
 
-def describe_chain(role: str, config) -> list[ChainEntry]:
+def describe_chain(role: str, config, settings=None) -> list[ChainEntry]:
     """Was mit jedem konfigurierten Namen dieser Rolle geschieht.
 
     **Die gemeinsame Quelle für Laufzeit und Diagnose.** `build_chain` baut
@@ -249,23 +270,62 @@ def describe_chain(role: str, config) -> list[ChainEntry]:
     Returns:
         Je konfiguriertem Namen ein Eintrag, in Rangfolge.
     """
+    return [entry for entry, _ in _evaluate(role, config, settings)]
+
+
+def _evaluate(role: str, config, settings=None) -> list[tuple[ChainEntry, object | None]]:
+    """Was mit jedem Namen geschieht — **einmal** ausgewertet, zweifach gelesen.
+
+    `build_chain` nimmt die Objekte, `describe_chain` die Beschreibungen. Das
+    war schon vorher die Zusage; sie stimmte nur nicht mehr: Seit die
+    Konstruktion und `configuration_problem()` am Bau-Rand geprüft werden,
+    konnte eine Quelle dort **verworfen** werden, während `/sources` sie
+    weiterhin als `configured: true` und `usable: true` meldete.
+
+    Zwei Auswertungen unterscheiden sich beim ersten Sonderfall, und
+    ausgerechnet die Diagnose meldet dann das Falsche — genau der Befund aus
+    T-22 Runde 1, hier eine Ebene später noch einmal.
+
+    Args:
+        role: Die Rolle.
+        config: Die gelesene `SourcesConfig`.
+        settings: Die Einstellungen. **Ohne sie wird nicht gebaut** — dann
+            beschreibt der Eintrag nur, was sich ohne Konstruktion sagen lässt.
+            Der Leseweg reicht sie herein; ein Aufrufer, der es nicht tut,
+            bekommt die schwächere, aber ehrliche Auskunft.
+    """
     known = specs_by_name()
-    entries = []
+    result: list[tuple[ChainEntry, object | None]] = []
+
     for position, name in enumerate(config.chain(role), start=1):
         spec = known.get(name)
-        entries.append(
-            ChainEntry(
-                name=name,
-                role=role,
-                position=position,
-                known=spec is not None,
-                role_ok=spec is not None and role in spec.roles,
-                configured=spec is not None
-                and is_configured(spec, config.config_for(name)),
-                cost=spec.cost if spec else "unknown",
+        role_ok = spec is not None and role in spec.roles
+        configured = spec is not None and is_configured(spec, config.config_for(name))
+
+        source = None
+        if spec is not None and role_ok and configured and settings is not None:
+            source = _build_one(spec, role, config.config_for(name), settings)
+            if source is None:
+                # Konstruktion gescheitert oder Selbstauskunft negativ. Beides
+                # heißt für den Betreiber dasselbe: Diese Quelle arbeitet
+                # nicht — und `/sources` sagt es jetzt auch.
+                configured = False
+
+        result.append(
+            (
+                ChainEntry(
+                    name=name,
+                    role=role,
+                    position=position,
+                    known=spec is not None,
+                    role_ok=role_ok,
+                    configured=configured,
+                    cost=spec.cost if spec else "unknown",
+                ),
+                source,
             )
         )
-    return entries
+    return result
 
 
 def build_chain(role: str, config, settings) -> list[object]:
@@ -291,25 +351,35 @@ def build_chain(role: str, config, settings) -> list[object]:
 
     known = specs_by_name()
     built: list[object] = []
-    for entry in describe_chain(role, config):
+    for entry, source in _evaluate(role, config, settings):
         if not entry.known:
             raise UnknownSourceError(entry.name, role, tuple(known))
         if not entry.role_ok:
             logger.warning("source_role_mismatch", source=entry.name, role=role)
             continue
-        if not entry.configured:
-            logger.info("source_not_configured", source=entry.name, role=role)
+        if source is None:
+            logger.info("source_not_usable", source=entry.name, role=role)
             continue
-        spec = known[entry.name]
-        source = _build_one(spec, role, config.config_for(entry.name), settings)
-        if source is not None:
-            built.append(source)
+        built.append(source)
     return built
 
 
 # Welche Rolle über welchen Adapter in die Sprache des Core kommt. Rollen ohne
 # Eintrag sprechen sie noch direkt — der Übergang ist absichtlich sichtbar.
-ROLE_ADAPTERS = {"resolvers": ResolverAdapter, "quotes": QuoteAdapter}
+ROLE_ADAPTERS = {
+    "resolvers": ResolverAdapter,
+    "quotes": QuoteAdapter,
+    "daily": DailyAdapter,
+    "fx": FxAdapter,
+    "etf_meta": MetadataAdapter,
+}
+"""Alle fünf Rollen — **vollständig, und das war der Befund aus Runde 2.**
+
+Zwei zu haben und `contract=True` trotzdem zu setzen hieß: Der Core bekam für
+`daily` und `fx` das nackte Plugin und rief darauf Methoden, die es nicht hat.
+Eine Tabelle mit Lücken ist gefährlicher als gar keine — sie sieht vollständig
+aus.
+"""
 
 
 def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | None:
@@ -352,7 +422,7 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | 
 
     if spec.loaded:
         source = GuardedSource(source)
-    adapter = ROLE_ADAPTERS.get(role) if spec.contract else None
+    adapter = ROLE_ADAPTERS.get(role) if role in spec.contract_roles else None
     return adapter(source, settings.default_exchange) if adapter else source
 
 

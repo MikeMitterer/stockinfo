@@ -282,7 +282,7 @@ def test_ein_bestehender_key_ueberlebt_ohne_datei(tmp_path: Path, monkeypatch) -
     resolver = _build_resolver()
     get_sources_config.cache_clear()
 
-    assert unwrap(resolver._resolvers[0])._client._api_key == "expected-key"
+    assert unwrap(resolver._resolvers[0]).api_key == "expected-key"
 
 
 def test_die_datei_gewinnt_gegen_den_key_aus_den_einstellungen(
@@ -306,7 +306,7 @@ def test_die_datei_gewinnt_gegen_den_key_aus_den_einstellungen(
     resolver = _build_resolver()
     get_sources_config.cache_clear()
 
-    assert unwrap(resolver._resolvers[0])._client._api_key == "aus-der-datei"
+    assert unwrap(resolver._resolvers[0]).api_key == "aus-der-datei"
 
 
 def test_ein_verweis_findet_den_wert_aus_den_einstellungen(tmp_path: Path) -> None:

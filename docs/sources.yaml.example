@@ -10,6 +10,11 @@
 # (Diese Vorlage liegt in `docs/`, weil `data/` das Laufzeit-Volume ist und
 #  nicht versioniert wird.)
 # `GET /sources` zeigt danach, was tatsächlich gilt.
+#
+# **Eigene Quellen** kommen über zwei Wege dazu — eine Datei in
+# `data/plugins/*.py` oder ein installiertes Paket mit einem Entry-Point der
+# Gruppe `stockinfo.sources`. Beide erscheinen danach hier unter ihrem Namen
+# und lassen sich in jede Kette eintragen. Siehe `docs/plugins.md`.
 
 # Die Rangfolge je Rolle. Die Reihenfolge ist die Aussage — sie wird nicht
 # umsortiert, und `cost` einer Quelle ist Information, keine Sortierregel.
