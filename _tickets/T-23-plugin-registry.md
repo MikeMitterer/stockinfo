@@ -266,3 +266,90 @@ passed**. Die grünen Zahlen widerlegen die Befunde nicht: Der Auswahltest
 bleibt unterhalb des Core, einer der vier angeblichen Online-Fälle ruft kein
 Netz auf, und die bestehenden Contract-Suiten werden auf die neuen Klassen
 nicht gesammelt.
+
+---
+
+## Codex-Review · Runde 2 · `e35d190` · Nacharbeit
+
+Der vertikale Resolver-/Quote-Lauf ist jetzt echt: Beide Loader erreichen über
+Adapter, Core und `POST /instruments/intake` den REST-Rand. Die geerbten
+Contract-Suiten laufen ebenfalls. Der übergebene Stand ist trotzdem kein
+fertiges Plugin-MVP; mehrere grüne Tests umgehen erneut die produktiven
+Bruchstellen.
+
+1. **Blocker · Zwei produktive Rollen sind nach der Umschaltung kaputt, zwei
+   weitere bleiben native Sonderwege.** `SourceSpec("yfinance", ...,
+   contract=True)` gilt für `quotes`, `daily`, `fx` und `etf_meta`, aber
+   `ROLE_ADAPTERS` enthält nur `resolvers` und `quotes`. Daher gibt
+   `build_chain("daily", …)` beziehungsweise `build_chain("fx", …)` ein
+   `YFinancePlugin` an Core-Dienste zurück, die `fetch_daily_closes` und
+   `fetch_fx_rate` aufrufen. Beide enden reproduzierbar mit `AttributeError`.
+   Zugleich bauen `justetf` und `yfinance/etf_meta` weiterhin
+   `JustEtfProvider` und `YFinanceEtfEnricher`; `JustEtfMetadataPlugin` läuft
+   im Produkt nirgends. Das Übergangs-Flag `contract` darf nicht der Endstand
+   von T-23 sein: alle fünf Rollen adaptieren und über ihre echten Core-
+   Verbraucher prüfen; die eingebauten Quellen nehmen danach denselben Weg
+   ohne parallele Sonderverdrahtung.
+2. **Hoch · Der Schutzschalter öffnet im realen Resolver-Ablauf nie.** Er
+   kapselt jede aufrufbare Methode. `CompositeResolver` ruft zuerst
+   `handles()` auf; dessen normales `True` wird als Erfolg gewertet und setzt
+   den Fehlerzähler zurück. Danach liefert `resolve()` `Unavailable` und zählt
+   auf eins. Nach fünf vollständigen Durchläufen stand der Zähler weiterhin
+   bei eins und `is_open` blieb `False`. Nur die eigentlichen Arbeitsmethoden
+   zählen Erfolg oder Ausfall; `handles`, Diagnose, Deklaration und Lifecycle
+   dürfen einen Ausfallverlauf nicht heilen. Die Gegenprobe läuft über
+   `handles → resolve`, nicht direkt fünfmal über `resolve`.
+3. **Hoch · `/sources` und Laufzeit widersprechen sich bei
+   Plugin-Konfiguration.** `_build_one` fragt nun korrekt
+   `configuration_problem()` und verwirft eine unbrauchbare Quelle.
+   `describe_chain`, die Grundlage von `GET /sources`, prüft weiterhin nur
+   das leere `SourceSpec.needs`. Eine `CanadaFileResolver` mit fehlender Datei
+   erscheint dadurch als `configured: true` und `usable: true`, während
+   `build_chain` null Quellen baut. Dieselbe eine operationalisierte
+   Registry-Entscheidung muss Diagnose und Bauweg speisen; kein zweites
+   Importieren und keine Preflight-Umgebung ergänzen.
+4. **Hoch · Das justETF-Fondsvolumen trägt die falsche Währung.** Der native
+   Client liest den Betrag ausdrücklich aus `fund_size_eur`, der Adapter setzt
+   jedoch `Reading.currency = details.fund_currency`. Der echte Fall
+   `IE00B4L5Y983` belegt den Fehler: Rohwerte
+   `fund_size_eur=127160.0`, `fund_currency='USD'`; geliefert wird derzeit
+   `fund_size=127160.0, currency='USD'`. Der Betrag ist EUR. Die Golden-
+   Erwartung kommt aus dem Feldnamen/Clientvertrag, nicht aus derselben
+   Adapterantwort.
+5. **Hoch · Der installierbare Entry-Point-Weg ist nur halb umgesetzt.** Das
+   immer benötigte Vertragspaket `stockinfo-plugin-api` exportiert nun selbst
+   `canada-file`; damit ist Discovery über `importlib.metadata` real, aber
+   kein beigesteuertes Plugin installierbar. Der weiterhin aktive
+   Ticketabschnitt verlangt eine fest versionierte Paketliste in
+   `sources.yaml` und einen Start-Launcher unter `/data/plugin-envs/<hash>`;
+   dafür gibt es weder Parser noch Launcher. Der Dateitest importiert zudem
+   dieselben bereits installierten Beispielmodule, statt die vorhandene
+   `canada_file.py` als eigenständige Datei ins Volume zu kopieren. Den
+   vereinbarten schlanken Installationsweg umsetzen oder eine ausdrückliche
+   datierte Produktentscheidung von Mike zur Verschiebung eintragen; ein
+   automatisch mit dem Host ausgeliefertes Beispiel beweist ihn nicht.
+6. **Mittel · Die angekündigte Testbereinigung ist erneut unvollständig.** Der
+   EUR→EUR-Fall wurde als Unit-Test **kopiert**, blieb aber unverändert in
+   `test_plugin_yfinance_integration.py`. Zusätzlich steht der neue
+   justETF-US-Fall unter dem modulweiten Integrationsmarker und beendet sich
+   absichtlich vor dem Provider. Damit berühren nur acht der zehn gesammelten
+   Integrationstests einen Dienst, nicht zehn. Beide Fälle ausschließlich in
+   die Unit-/Contract-Suite verschieben. Außerdem greifen die geänderten
+   Konfigurationstests mit `._client._api_key` wieder in Plugin-Interna;
+   Mikes Schnittstellenanforderung verlangt hier die vorhandene öffentliche
+   `api_key`-Sicht.
+
+**Signaturinventar:** Die Änderung von `QuoteProvider.fetch_quote(str)` auf
+`fetch_quote(ResolvedInstrument)` ist fachlich begründet, aber nicht an allen
+Implementierern und Doubles nachgezogen. `YFinanceProvider` und mehrere
+Testquellen deklarieren/verwenden weiterhin `str`. Den vollständigen
+Protokollscope aktualisieren und mindestens eine Gegenprobe die übergebene
+Identität tatsächlich lesen lassen; ein Double, das sein Argument ignoriert,
+beweist die neue Schnittstelle nicht.
+
+**Evidenz:** Contract/Registry/Vertical lokal **99 passed**, Ruff und
+`git diff --check` sauber; echter justETF-Lauf **3 passed**; `make test`
+Backend **772 passed / 29 skipped**, Plugin-API **257 passed / 1 skipped**,
+Dashboard **259 passed**. Die grünen Gesamtläufe enthalten keine Core-Aufrufe
+für Daily/FX, prüfen die falsche `fund_size`-Währung nur auf syntaktische
+Gültigkeit und zählen zwei netzfreie Fälle als Integration.

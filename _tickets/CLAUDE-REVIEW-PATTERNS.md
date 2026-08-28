@@ -548,6 +548,18 @@ Integrationsdatei absichtlich **nicht** den Dienst und duplizierte den
 gleichnamigen Unit-Fall. Die Korrektur entfernte die besprochenen Bezeichner,
 nicht alle Erzeuger und Verbraucher ihrer Regel.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-23
+Runde 2, Commit `e35d190`: OUTBOX erklärte „alle fünf umgesetzt“, beide
+eingebauten Quellen würden nun ihre Plugin-Klassen benutzen und alle zehn
+Integrationstests einen echten Dienst berühren. Tatsächlich endeten die neuen
+yfinance-Pfade für `daily` und `fx` beim ersten Core-Aufruf mit
+`AttributeError`; justETF und yfinance-Metadaten blieben native Sonderwege.
+Der angeblich verschobene EUR→EUR-Fall stand weiter in der Integrationsdatei,
+der neue justETF-US-Fall brach ebenfalls vor dem Provider ab, und `/sources`
+meldete ein wegen fehlender Datei verworfenes Plugin weiterhin als
+`configured` und `usable`. Die punktuellen Resolver-/Quote-Erfolgswege wurden
+als vollständige Rollen-, Diagnose- und Testumstellung berichtet.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
@@ -933,5 +945,11 @@ steht unter dem modulweiten Integrationsmarker und wird als einer von sieben
 echten Netzfällen gezählt. `YFinancePlugin.fetch_rate` beantwortet die
 Identität definitionsgemäß vor `_provider.fetch_fx_rate`; der Test berührt
 Yahoo nicht und gehört in die Unit-/Contract-Suite.
+
+**Beleg 3:** T-23 Runde 2, Commit `e35d190`: Die Übergabe meldete zehn
+Integrationstests, die ausnahmslos einen Dienst berührten. Der EUR→EUR-Fall
+blieb jedoch zusätzlich zu seiner neuen Unit-Kopie in der Integrationsdatei;
+auch der neue justETF-Fall mit US-ISIN kehrte vor dem Provider zurück. Nur acht
+der zehn gesammelten Fälle überschritten tatsächlich die Außengrenze.
 
 [↑ Übersicht](#übersicht)
