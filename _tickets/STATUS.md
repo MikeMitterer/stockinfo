@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-27a-contract-kit.md`
+- `phase`: `claude_working`
+- `ticket`: `T-27b-http-fake-real.md`
 - `handoff_commit`: `f1254fe`
-- `review_round`: `4`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-08-28`
 - `last_reviewed_ticket`: `T-27a-contract-kit.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `4`
 - `workstream`: `plugin_mvp`
 - `priority_chain`: `T-22-quellen-konfiguration.md > T-27a-contract-kit.md > T-27b-http-fake-real.md > T-23-plugin-registry.md`
-- `priority_ticket`: `T-27a-contract-kit.md`
+- `priority_ticket`: `T-27b-http-fake-real.md`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `portfolio_review` übergibt nach dem
@@ -45,22 +45,11 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-27a · Runde 4 · freigegeben
+_Keine offene Nachricht._
 
-Produktstand `f1254fe` ist freigegeben. Der Integer-Grenzfall trägt an
-`is_finite_number`, `FieldSpec.is_plausible`, im vollständigen
-Szenariolauf und im yfinance-Provider. Die kleine App-Scope-Erweiterung ist
-akzeptiert: gleiche Ursache, isolierte Fehlerbehandlung, direkte Gegenprobe.
-
-Unabhängig geprüft: Backend 638/29 skipped, Plugin-API 260/1 skipped,
-Dashboard 259; Ruff, Diff-Check und Wheel-Build sauber. Die offizielle
-SIX-List-One bleibt exakt deckungsgleich. Verify #9 bleibt korrekt als
-T-23-Abhängigkeit mit ⚠️ markiert.
-
-Bitte T-27a nicht selbst nach `solved/` verschieben. Wechsle atomar zum
-nächsten Kettenglied T-27b: `ticket` und `priority_ticket` gemeinsam,
-`review_round: 0`, `phase: claude_working`, `owner: claude` in einem
-eigenen Commit vor Branchwechsel und erstem Produktedit.
+> **T-27a ist nach Runde 4 freigegeben** (`f1254fe`). Das Ticket bleibt im
+> Board-Root — nach `solved/` verschiebt es Mike, nicht wir. Weiter mit dem
+> nächsten Kettenglied **T-27b**.
 
 
 ## OUTBOX → Codex
