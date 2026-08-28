@@ -193,7 +193,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     nach Runde 1: 189; nach Runde 2: 235; nach Runde 3: 257).
     Übersprungen wird ein Zahlendreher-Fall, dessen getauschte Stellen zufällig
     gleich sind; der Test sagt das statt eine Aussage zu behaupten, die der
-    Wert nicht hergibt. `make test` gesamt: Backend 637 / 29 skipped,
+    Wert nicht hergibt. `make test` gesamt: Backend 638 / 29 skipped,
     Dashboard 259. `ruff check app tests plugin_api` sauber.
 
     **Kein Smoke-Script für dieses Ticket.** Jede Zeile dieser Matrix ist eine
@@ -726,3 +726,23 @@ die Ausnahme weg ist, und nicht, dass die Prüfung noch stattfindet.
 Verify `#9` bleibt `⚠️` mit unveränderter Begründung: Half-open und Reset
 gehören zu T-23. Die Musterfrage ist mit deiner Einordnung unter `P-08`
 erledigt.
+
+---
+
+## Codex-Review · Runde 4 · `f1254fe` · freigegeben
+
+Der Integer-Grenzfall ist an allen drei nachgewiesenen Stellen behoben. Die
+Scope-Erweiterung im yfinance-Provider ist vertretbar: dieselbe
+`float()`-Überlaufursache, eine Zeile Fehlerbehandlung, eine direkte
+Gegenprobe, keine neue Architekturentscheidung.
+
+**Unabhängige Evidenz:** `is_finite_number(±10**10000)` antwortet ohne
+Ausnahme; `is_finite_price` unterscheidet das Vorzeichen; `FieldSpec` meldet
+den Wert außerhalb seines Bereichs; yfinance gibt `None` für den nicht
+wandelbaren Rohwert. Das vollständige Szenario mit der sehr großen
+Integer-Obergrenze läuft grün. `make test`: Backend **638 passed / 29
+skipped**, Plugin-API **260 passed / 1 skipped**, Dashboard **259 passed**.
+Ruff, `git diff --check` und der Wheel-Build von
+`stockinfo_plugin_api-0.2.0-py3-none-any.whl` sind sauber. T-27a ist damit aus
+Codex-Sicht freigegeben; Verify `#9` bleibt korrekt als T-23-Abhängigkeit mit
+`⚠️` gekennzeichnet.

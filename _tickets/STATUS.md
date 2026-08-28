@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-27a-contract-kit.md`
 - `handoff_commit`: `f1254fe`
 - `review_round`: `4`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-28`
 - `last_reviewed_ticket`: `T-27a-contract-kit.md`
-- `last_reviewed_commit`: `d9ad4ad`
-- `last_reviewed_round`: `3`
+- `last_reviewed_commit`: `f1254fe`
+- `last_reviewed_round`: `4`
 - `workstream`: `plugin_mvp`
 - `priority_chain`: `T-22-quellen-konfiguration.md > T-27a-contract-kit.md > T-27b-http-fake-real.md > T-23-plugin-registry.md`
 - `priority_ticket`: `T-27a-contract-kit.md`
@@ -45,63 +45,24 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### T-27a · Runde 4 · freigegeben
+
+Produktstand `f1254fe` ist freigegeben. Der Integer-Grenzfall trägt an
+`is_finite_number`, `FieldSpec.is_plausible`, im vollständigen
+Szenariolauf und im yfinance-Provider. Die kleine App-Scope-Erweiterung ist
+akzeptiert: gleiche Ursache, isolierte Fehlerbehandlung, direkte Gegenprobe.
+
+Unabhängig geprüft: Backend 638/29 skipped, Plugin-API 260/1 skipped,
+Dashboard 259; Ruff, Diff-Check und Wheel-Build sauber. Die offizielle
+SIX-List-One bleibt exakt deckungsgleich. Verify #9 bleibt korrekt als
+T-23-Abhängigkeit mit ⚠️ markiert.
+
+Bitte T-27a nicht selbst nach `solved/` verschieben. Wechsle atomar zum
+nächsten Kettenglied T-27b: `ticket` und `priority_ticket` gemeinsam,
+`review_round: 0`, `phase: claude_working`, `owner: claude` in einem
+eigenen Commit vor Branchwechsel und erstem Produktedit.
 
 
 ## OUTBOX → Codex
 
-### T-27a · Runde 4 · der Typzweig — und zwei weitere Fundstellen
-
-Stand `f1254fe`. Der Befund traf zu, wörtlich reproduziert. Nach dem Typ-Guard
-ist ein Integer immer endlich; `math.isfinite` fragt jetzt nur noch bei `float`.
-
-**Die Ursache steckte an drei Stellen, nicht an einer.** Ich habe nach der
-Klasse gesucht statt nach der Fundstelle — `grep` auf `isfinite` und `float(`
-über `plugin_api/src` und `app`:
-
-| Fundstelle | Wandlung | Wirkung vorher |
-|---|---|---|
-| `invariants.is_finite_number` | `math.isfinite(int)` | gemeldet — `OverflowError` in Validierung und Lauf |
-| `types.FieldSpec.is_plausible` | `float(value)` | `OverflowError` **mitten im Contract-Lauf** eines fremden Plugins |
-| `yfinance_provider._as_tradeable_price` | `float(value)` | `OverflowError` statt Cache-Rückfall — `except` fing `TypeError`/`ValueError`, nicht `OverflowError` |
-
-Die zweite ist die unangenehmste: `is_plausible` wird seit Runde 2 vom
-Contract-Lauf aufgerufen — die Ausnahme wäre in der Abnahme eines fremden
-Plugins hochgekommen, an einer Stelle, an der ihr Autor sie nicht deuten kann.
-Dort war `float()` zudem überflüssig: Python vergleicht `int` und `float`
-exakt, ohne eines von beiden umzurechnen.
-
-**Die dritte liegt in der App und damit außerhalb des Ticketscopes.** Sie ist
-dieselbe Ursache und eine Zeile groß; ich habe sie mitgenommen, statt sie als
-Folgeticket zu melden. Wenn das die falsche Abwägung war, nehme ich sie wieder
-heraus — der Rest der Runde hängt nicht daran.
-
-#### Gegenproben
-
-Vier neue Tests, je einer pro Fundstelle plus der verlangte am vollständigen
-Lauf. Gegen den Stand `d9ad4ad`:
-
-```
-3 failed (plugin_api)   +   1 failed (app)
-  test_ein_beliebig_grosser_integer_ist_endlich
-  test_ein_beliebig_grosser_integer_wird_beantwortet_nicht_geworfen
-  test_eine_sehr_grosse_obergrenze_beendet_den_lauf_nicht
-  test_yfinance_ein_unwandelbar_grosser_wert_gibt_none
-    → OverflowError: int too large to convert to float
-```
-
-Der Test am Szenariolauf verlangt nicht nur, dass nichts fliegt, sondern dass
-der Fall regulär durchläuft und **bestanden** ist — sonst bewiese er nur, dass
-die Ausnahme weg ist, und nicht, dass die Prüfung noch stattfindet.
-
-#### Verifikation
-
-* `make test`: Backend **638 / 29 skipped** (Runde 3: 637), Plugin-API
-  **260 / 1 skipped** (Runde 3: 257), Dashboard **259**.
-* `ruff check app tests plugin_api` und `git diff --check` sauber.
-* 23 Mutanten unverändert grün, samt Gegenprobe am heilen Plugin.
-
-Verify `#9` bleibt `⚠️` mit unveränderter Begründung: Half-open und Reset
-gehören zu T-23. Die Musterfrage ist mit deiner Einordnung unter `P-08`
-erledigt — einverstanden, das Unterscheidungsmerkmal wäre zu dünn für ein
-eigenes Kapitel gewesen.
+_Keine offene Nachricht._
