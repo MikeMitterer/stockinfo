@@ -64,6 +64,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 17 | ein Papier über das Datei-Plugin aufnehmen | die Antwort durchläuft sichtbar Registry → Core → REST; kein separater Plugin-Endpunkt umgeht den Core | ➖ [^plugin_mvp] | |
 | 18 | `/sources` ansehen | Reihenfolge und Konfigurationszustand stimmen; yfinance und justETF erscheinen als normale Registry-Quellen | ➖ [^plugin_mvp] | |
 | 19 | Quellenreihenfolge in `sources.yaml` ändern und neu starten | `/sources` und der tatsächlich verwendete Provider folgen der neuen Reihenfolge | ➖ [^plugin_mvp] | |
+| 20 | Container-Image bei unverändertem Daten-Volume aktualisieren und neu starten | das fest gepinnte Entry-Point-Plugin wird aus `data/plugin-env/<hash>` wiederverwendet oder idempotent hergestellt und arbeitet danach weiter | ➖ [^plugin_mvp] | |
 
 _(wächst nur nach einer ausdrücklichen Scope-Entscheidung — je aufgenommenem
 Ticket ein bis drei Zeilen, nicht mehr)_
@@ -143,24 +144,35 @@ nichts. Er liefert das **Inventar** darunter: welche Tickets es wirklich gibt,
 woran jedes hängt und was es für die Abnahme bedeutet. Mikes Spalte bleibt
 leer, bis er sie füllt.
 
-**Der Bereich stimmt nicht.** Oben steht „T-29 bis T-34". Ein Ticket **T-34
-existiert nicht** — weder im Board-Root noch unter `solved/`; die Zahl kommt
-nur in dieser Aufzählung und in `STATUS.md` vor. Real offen sind T-29, T-30,
-T-31, T-32 und T-33. Entweder ist die Obergrenze ein Vertipper, oder ein
-geplantes Ticket wurde nie angelegt — das zu klären ist Teil der Einordnung,
-weil ein Gate auf ein nicht existierendes Ticket nie erfüllbar wäre.
+**T-34 war gestrandet, nicht verloren** *(geklärt 2026-08-28)*. Die Datei fehlte
+in dieser Commit-Linie, obwohl der Verweis „T-29 bis T-34" hier steht. Der
+Grund ist nachvollziehbar und kein Datenverlust:
+
+`T-34-zusage-gegen-laufzeit.md` entstand am 2026-08-27 in Commit `3175fb2` auf
+dem Branch `t-21d-offene-zuordnungen` — demselben Branch, der T-21 Übergabe
+4A/4B trägt und den die Portfolio-Rebaseline am selben Tag **eingefroren** hat.
+Die Board-Änderung „Plugin-MVP vor Folgearbeiten priorisieren" wurde danach
+**zweimal** gemacht: `20adfce` auf dem eingefrorenen Branch und `c3f72f5` auf
+der weiterlaufenden Linie. Mitgekommen ist damit der **Verweis**, nicht die
+**Datei**. Sie ist zurückgeholt und steht wieder im Board-Root; auf dem
+eingefrorenen Branch bleibt nur noch `T-21d-smoke.sh`, das zur dortigen Arbeit
+gehört.
+
+Damit sind es **zehn** offene Positionen, nicht neun — T-34 ist unten
+eingeordnet.
 
 | Ticket | Hängt an | Was die Abnahme davon merkt | Vorschlag |
 |---|---|---|:--:|
-| **T-26** Detailfelder durchreichen | — | Ein Plugin darf neue Felder deklarieren; sie gehen in Persistenz, API, Override-Modell und Dashboard **verloren**. Der Vertrag sagt Erweiterbarkeit zu, die eine Schicht später endet — genau das, was T-28 aus Nutzersicht prüfen soll. | **Gate** |
+| **T-26** Detailfelder durchreichen | T-23; vollständiger Harness nach T-25 | Ein Plugin darf neue Felder deklarieren; sie gehen in Persistenz, API, Override-Modell und Dashboard **verloren**. Der Vertrag sagt Erweiterbarkeit zu, die eine Schicht später endet — genau das, was T-28 aus Nutzersicht prüfen soll. | **Gate** |
 | **T-32** Testdatenbank abschotten | — | Ein Dienst, der sich sein Repository selbst aus den Settings baut, landet im Test an der **Arbeitsdatenbank**. Bei einer Abnahme am laufenden Stack ist das ein Risiko für Mikes echte Daten, und es ist unabhängig und klein. | **Gate** |
-| **T-33** Profil wechselt den Handelsplatz | T-21 Teil 3 | Das Ticket weist sich selbst T-28 zu („Gehört in: T-28, das finale Plugin-Gate"). Der `409` ist gebaut, die **Auflösung** nicht — und ein Profilwechsel ist der Normalfall, sobald es zwei Plugins gibt. Braucht **zuerst eine Entscheidung von Mike**, dann Arbeit. | **Gate**, nach Entscheidung |
+| **T-33** Profil wechselt den Handelsplatz | T-21 Teil 3, T-25, T-29 | Der `409` schützt heute ehrlich vor einem stillen Datenfehler, löst den legitimen Wechsel des aktiven Listings aber nicht. Sobald Profil- und Providerwechsel Teil des fertigen Subprojekts sind, gehört auch dieser Abschluss davor. Braucht **zuerst eine Entscheidung von Mike**, dann Arbeit. | **Gate**, nach Entscheidung |
 | **T-19** Neu auflösen ohne Datenverlust | — | Eine falsche Auflösung ist heute nur per `DELETE` zu korrigieren, das Historie und Handpflege kostet. Schmerzhaft, aber ein Weg existiert; das Plugin-Versprechen hängt nicht daran. | Follow-up |
-| **T-21 4A/4B** | eingefroren | Von Mike am 2026-08-27 ausdrücklich bis nach dem MVP zurückgestellt. Diese Zeile hält das nur fest. | Follow-up |
-| **T-25** Quellenprofil wechseln | Design | Sicherung, Rotation und Wiederherstellung beim Profiltausch. Ein zweites Profil zu **haben** ist MVP, es sicher zu **tauschen** ist der Schritt danach — überschneidet sich fachlich mit T-33. | Follow-up |
-| **T-29** Alias-Lebenszyklus | — | `symbol` ist abrufrelevant, steht aber in einer providerlosen Spalte. Mit **einer** aktiven Kursquelle trägt das; mit wechselnden Quellen wird es falsch. Erster Kandidat, falls Mike doch ein Gate ergänzen will. | Follow-up |
-| **T-30** Plugin-deklarierte Börsenauskunft | — | Ein regionales Plugin kann seine MICs nicht mitbringen; der Katalog bleibt Core-Wissen. Begrenzt, was ein Plugin kann — nicht, ob der MVP läuft. | Follow-up |
-| **T-31** Papiere ohne MIC | T-21 Teil 3 | Krypto, Index, Anleihe. Steht auf „Entscheidung ausstehend" und ist ohne Mikes Antwort nicht umsetzbar. | Follow-up, Entscheidung offen |
+| **T-21 4A/4B** | eingefroren | Die Teile wurden ausdrücklich nur **bis nach dem MVP** zurückgestellt, nicht dauerhaft aus dem Subprojekt genommen. 4A macht Abweichungen von der Vorzugsbörse sichtbar; 4B schließt Fehlerpfad und Inventur. Ein halb offenes Voraussetzungsticket passt nicht zu „SubProject erledigt". | **Gate** |
+| **T-25** Quellenprofil wechseln | T-22, T-24, T-23 | Sicherung, Rotation und Wiederherstellung beim Profiltausch sind eine von Mike bereits bestätigte Plugin-Anforderung. Ein Quellenprofil nur konfigurieren, aber nicht nach der festgelegten Semantik sicher ersetzen zu können, beendet lediglich das MVP. | **Gate**, zusammen mit T-29 neu zuschneiden |
+| **T-29** Alias-Lebenszyklus | T-21, T-22, T-25 | `symbol` ist abrufrelevant, steht aber in einer providerlosen Spalte. Mit wechselnden Kursquellen wird es ohne Eigentümer- und Wechselregel fachlich falsch. T-29 revidiert T-25; beide getrennt und in beliebiger Reihenfolge umzusetzen würde zwei widersprüchliche Verträge riskieren. | **Gate**, zusammen mit T-25 neu zuschneiden |
+| **T-30** Plugin-deklarierte Börsenauskunft | T-21 Teil 3, T-23 | Ein regionales Plugin kann seine MICs nicht mitbringen; der Katalog bleibt Core-Wissen. Damit endet das Ziel „weltweit durch lokale Plugins erweiterbar" genau an der Stelle, die ein regionaler Beiträger ergänzen können muss. | **Gate** |
+| **T-31** Papiere ohne MIC | T-21 Teil 3 | Krypto, Index und Teile der Anleihen erweitern den vereinbarten Aktien-/ETF-Identitätsraum. Der aktuelle Zustand lehnt sie ausdrücklich und getestet ab; das ist eine ehrliche Grenze, kein halbfertiger Plugin-Pfad. | **Follow-up**; bis dahin bewusst streng |
+| **T-34** Zusage gegen Laufzeit | nichts | Drei Wächter zwischen `contract/core-contract.json`, den zwölf Fixtures und dem **laufenden** Dienst. Das Ticket weist sich selbst T-28 zu und ist von Mike am 2026-08-27 **ausdrücklich beauftragt**, nachdem die Runden 39–49 dreimal denselben Befundtyp brachten — jedes Mal gefunden von Codex, kein einziges Mal von einem Test. Ohne diese Wächter bleibt genau die Prüfung am Menschen hängen, die T-28 beenden soll. | **Gate** |
 
 **Die eine Einschränkung aus Codex' Runde 6** gehört in dieselbe Abwägung: Der
 Installationsweg nach `data/plugin-env/<hash>` ist maschinell belegt, aber es
@@ -168,6 +180,52 @@ gab **keinen echten Container-Image-Update-Lauf auf demselben Volume**. Genau
 das ist der Grund, warum der Ordner unter `/data` liegt — die Zusage ist
 begründet und getestet, aber nicht am echten `docker pull` gemessen. Eine Zeile
 dafür in der Verify-Matrix unten wäre in zwei Minuten zu prüfen.
+
+### Codex-Empfehlung für die Restkette — 2026-08-28
+
+Der MVP und das **fertige Plugin-Subprojekt** sind zwei verschiedene Marken.
+Für Mikes Vorgabe „T-28 erst, wenn Codex das Subprojekt für erledigt hält"
+empfehle ich diese Restkette:
+
+1. **T-32** zuerst als kleiner Sicherheitsriegel, bevor weitere Tests laufen.
+2. **T-21 4A/4B** abschließen; die Zurückstellung endete ausdrücklich mit dem
+   Plugin-MVP.
+3. **T-34** schließen. Einer seiner drei Wächter entsteht bereits in T-21 4B;
+   die beiden übrigen laufen als normale Tests im bestehenden Testziel und
+   schützen die folgenden Vertragsänderungen.
+4. **T-30** schließen, damit regionale Plugins ihren Börsenkatalog tatsächlich
+   über den Core ergänzen können.
+5. **T-25 und T-29 vor dem ersten Produktedit gemeinsam neu zuschneiden.** Sie
+   beschreiben einen Vorgang und widersprechen sich heute beim Restore. Danach
+   in kleine, prüfbare Übergaben teilen; keine zusätzliche Betriebs- oder
+   Testinfrastruktur daraus ableiten.
+6. **T-26** nach der Generation aus T-25 vollständig bis Harness-Stufe 3
+   schließen.
+7. **T-33** mit der unten empfohlenen Fachentscheidung abschließen.
+8. Erst dann **T-28** als letzte menschliche Abnahme.
+
+**T-19** und **T-31** bleiben ausdrückliche Follow-ups.
+
+> **Korrektur zu T-34** *(Claude, 2026-08-28)*: Die Empfehlung schloss mit
+> „`T-34` ist ein Vertipper; der reale Bereich endet bei T-33." Das ist
+> widerlegt. `T-34-zusage-gegen-laufzeit.md` existiert, angelegt am 2026-08-27
+> in Commit `3175fb2` auf dem eingefrorenen Branch `t-21d-offene-zuordnungen`
+> und dort bis heute vollständig samt Verify-Matrix. Sie war in dieser
+> Commit-Linie nur nicht sichtbar, weil die Board-Änderung zweimal gemacht
+> wurde und dabei der Verweis mitkam, die Datei aber nicht. Sie steht wieder
+> im Board-Root und ist oben als Gate eingeordnet.
+>
+> Codex ordnet T-34 nach T-21 4A/4B und vor den weiteren Vertragsänderungen ein:
+> Einer der drei Wächter entsteht bereits in 4B; die übrigen schützen danach
+> T-30, T-25 und T-26.
+
+Für **T-33** empfehle ich die datenbewahrende Variante: Das bisher aktive
+Listing bleibt mit seiner handelsplatzgebundenen Historie als gewöhnliches
+Listing bestehen, verliert aber den Profilbezug. Das neue Listing wird in einer
+Transaktion aktiv. Der Wechsel erhöht die Generation und wird nur durch eine
+ausdrückliche Wartungs-/Benutzeraktion ausgelöst, niemals nebenbei beim
+Kursabruf. Zwei Zeilen mit derselben `(ticker, mic)`-Identität bleiben dagegen
+ein harter Datenfehler.
 
 ---
 

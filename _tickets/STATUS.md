@@ -5,18 +5,18 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `portfolio_review`
-- `ticket`: `T-28-abnahme-durch-mike.md`
+- `phase`: `claude_working`
+- `ticket`: `T-35-ui-abnahme-am-laufenden-stack.md`
 - `handoff_commit`: `a9e49f9`
 - `review_round`: `6`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-08-28`
 - `last_reviewed_ticket`: `T-23-plugin-registry.md`
 - `last_reviewed_commit`: `a9e49f9`
 - `last_reviewed_round`: `6`
 - `workstream`: `plugin_mvp`
 - `priority_chain`: `T-22-quellen-konfiguration.md > T-27a-contract-kit.md > T-27b-http-fake-real.md > T-23-plugin-registry.md`
-- `priority_ticket`: `T-23-plugin-registry.md`
+- `priority_ticket`: `T-35-ui-abnahme-am-laufenden-stack.md`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `portfolio_review` übergibt nach dem
@@ -54,36 +54,18 @@ _Keine offene Nachricht._
 _Keine offene Nachricht._
 
 
-## An Mike · Portfolio-Riegel
+## An Mike · Zwischenstand
 
-**Der Plugin-MVP steht.** T-22 → T-27a → T-27b → T-23 ist vollständig
-freigegeben, letzter Produktstand `a9e49f9`. Der Lauf Registry → Core → REST
-ist über **beide** Ladewege belegt: eine `*.py` im Datenvolume und ein echter
-Entry-Point aus einer installierten Distribution. `795 passed, 29 skipped`
-ohne Netz, dazu 8 Integrationstests gegen Yahoo, justETF und OpenFIGI.
+**T-34 ist nicht verloren, sie war gestrandet.** Angelegt am 2026-08-27 in
+`3175fb2` auf dem eingefrorenen Branch `t-21d-offene-zuordnungen` — dem
+Branch mit T-21 Übergabe 4A/4B. Die Board-Änderung wurde danach zweimal
+gemacht: einmal dort, einmal auf der laufenden Linie. Mitgekommen ist der
+**Verweis**, nicht die **Datei**. Zurückgeholt, wieder im Board-Root, in T-28
+als Gate eingeordnet; Codex' Satz „T-34 ist ein Vertipper" ist dort mit
+Beleg korrigiert.
 
-Nach dem letzten Kettenglied wird nichts Neues begonnen — deshalb steht hier
-jetzt `portfolio_review` und `owner: mike`. Es fehlt **eine Entscheidung von
-dir**, keine Arbeit von uns.
-
-**Was zu entscheiden ist:** Welche der neun offenen Positionen sind Gate (vor
-T-28 erforderlich) und welche Follow-up? Das Inventar dazu steht in
-`T-28-abnahme-durch-mike.md` unter „Inventar der offenen Tickets" — mit dem,
-was jede Position für die Abnahme bedeutet. Die Empfehlung ist laut T-28
-Codex' Aufgabe; die Spalte dort ist ein Vorschlag, kein Beschluss.
-
-Drei Punkte brauchen dich unabhängig von der Einordnung:
-
-1. **T-34 gibt es nicht.** Der Bereich „T-29 bis T-34" nennt ein Ticket, das
-   weder im Board-Root noch unter `solved/` existiert. Vertipper oder nie
-   angelegt?
-2. **T-31 und T-33** stehen selbst auf „Entscheidung ausstehend" und sind
-   ohne deine Antwort nicht umsetzbar — unabhängig davon, wie sie eingeordnet
-   werden.
-3. **Die ⚠️-Einschränkung aus Codex' Runde 6:** Der Installationsweg nach
-   `data/plugin-env/<hash>` ist maschinell belegt, aber nie an einem echten
-   `docker pull` auf demselben Volume gemessen. Genau dafür liegt der Ordner
-   unter `/data`. Eine Verify-Zeile in T-28 wäre in zwei Minuten geprüft.
-
-Das Verschieben nach `solved/` und die `Human`-Spalte bleiben wie immer bei
-dir.
+**Der Portfolio-Riegel ist ausgesetzt**, auf deine Anweisung: erst die
+UI-Tests. `T-35-ui-abnahme-am-laufenden-stack.md` steht mit dem Prüfplan
+bereit; der Lauf läuft gegen die yfinance/justETF/OpenFIGI-Kette und eine
+**eigene** Datenbank — nicht gegen `data/stockinfo.db` mit deinen echten
+Papieren.
