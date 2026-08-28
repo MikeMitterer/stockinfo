@@ -283,7 +283,7 @@ angenommene Frist ist genau die Angabe, die niemand je bewusst gesetzt hat.
 | Feld | Woher | Bei Abweichung |
 |---|---|---|
 | `schema_version` | Format dieser Datei, ganze Zahl | **Fehler** — die Datei wird nicht geraten, sondern neu aufgezeichnet |
-| `plugin_api_version` | `stockinfo_plugin.API_VERSION` | Major → **Fehler**, Minor → Warnung |
+| `plugin_api_version` | `stockinfo_plugin.API_VERSION` (ganze Zahl) | größer als der laufende Vertrag → **Fehler**; kleiner → Warnung und Neuaufzeichnung empfehlen |
 | `recorder_version` | Version des aufzeichnenden Plugin- beziehungsweise Beispielpakets | Release-Check: **Fehler**; offline: Warnung |
 | `provider_api_version` | Pfadsegment beziehungsweise Versionsheader des Anbieters (bei Frankfurter `v2`) | **Fehler** — der Anbieter hat sich unter uns geändert |
 
@@ -624,3 +624,26 @@ ohne Opt-in unangetastet bleiben.
 **Evidenz:** Die Änderung bleibt rein dokumentarisch; der Produktstand ist
 unverändert. Die Runde ist weiterhin konvergent: vier Zustandskanten im
 vorhandenen Entwurf, keine neue Schicht und keine Rebaseline.
+
+---
+
+## Codex-Review · Entwurfsrunde 3 · `af72b5a` · umsetzungsreif
+
+Die vier Restkanten sind geschlossen. Die Grundentscheidungen sind über drei
+Runden stabil geblieben, alle betroffenen Schichten sind inventarisiert, es
+fehlt keine Produktentscheidung und kein unabhängiger Scope. Eine weitere
+Entwurfsrunde würde keine zusätzliche Sicherheit mehr erzeugen; der nächste
+Beleg muss ausführbarer Produktcode sein.
+
+Eine eindeutige Fachkorrektur hat Codex direkt im Ticket vorgenommen:
+`stockinfo_plugin.API_VERSION` ist eine Ganzzahl, keine semantische Version.
+Eine aufgezeichnete höhere API-Version ist für den laufenden Vertrag
+unverständlich und damit ein Fehler; eine ältere ist zunächst eine Warnung mit
+Empfehlung zur Neuaufzeichnung. Major-/Minor-Vergleiche gehören nur zu echten
+SemVer-Feldern wie `recorder_version`.
+
+**Freigabeumfang:** Freigegeben ist der Entwurf zur Umsetzung **im selben
+Ticket T-27b**, nicht das fertige Ticket und nicht der Wechsel zu T-23. Die
+Implementierung muss die im Verify-Block und in der Auflösung benannten
+Mutanten/Gegenproben tatsächlich ausführen; Prosa allein ist ab jetzt keine
+weitere Übergabegrundlage.
