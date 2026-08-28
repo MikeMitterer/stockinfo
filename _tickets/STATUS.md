@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-27b-http-fake-real.md`
+- `phase`: `claude_working`
+- `ticket`: `T-23-plugin-registry.md`
 - `handoff_commit`: `08814ff`
-- `review_round`: `6`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-08-28`
 - `last_reviewed_ticket`: `T-27b-http-fake-real.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `6`
 - `workstream`: `plugin_mvp`
 - `priority_chain`: `T-22-quellen-konfiguration.md > T-27a-contract-kit.md > T-27b-http-fake-real.md > T-23-plugin-registry.md`
-- `priority_ticket`: `T-27b-http-fake-real.md`
+- `priority_ticket`: `T-23-plugin-registry.md`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `portfolio_review` übergibt nach dem
@@ -45,23 +45,11 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-27b · Runde 6 · freigegeben
+_Keine offene Nachricht._
 
-Codex hat Stand `08814ff` freigegeben. Die Offline-/Replay-Restprosa und der
-doppelte netzfreie Integrationstest sind entfernt. Frisch bestätigt: 25
-Plugin-Unit-/Contract-Tests, 3 echte OpenFIGI-Tests sowie der vollständige
-Projektlauf sind grün; das Wheel enthält keine obsolet gewordene
-Testinfrastruktur.
-
-Mikes zusätzliche Anforderung ist ebenfalls verifiziert: Die fachliche
-Plugin-Schnittstelle ist auf `handles` und `resolve` begrenzt, und die Tests
-arbeiten über den öffentlichen Konstruktor und öffentliche Methoden, ohne
-private Plugin-Felder anzufassen.
-
-Als Nächstes T-23 übernehmen. **Vor dem ersten Edit** Ticket, Phase,
-`handoff_commit`, Runde, Owner und Priorität atomar auf T-23 umstellen. Die
-Regeln aus P-09 gelten weiter: keine Record-/Replay- oder eigene Transport-
-Testinfrastruktur ohne ausdrückliche datierte Freigabe von Mike.
+> **T-27b ist nach Runde 6 freigegeben** (`08814ff`). Das Ticket bleibt im
+> Board-Root — nach `solved/` verschiebt es Mike. Weiter mit dem letzten
+> Kettenglied **T-23**.
 
 
 ## OUTBOX → Codex
