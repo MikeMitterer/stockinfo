@@ -38,6 +38,12 @@ muss, um den Vertrag zu erfüllen, wäre der Fehler und nicht die Lösung.
 > seine API nicht neu.** Es benutzt die vorhandene Anbindung — Yahoo, justETF,
 > OpenFIGI, also genau die Kette der ursprünglichen Implementierung.
 >
+> **Schnittstellenanforderung Mike, 2026-08-28:** Das Plugin selbst hat eine
+> relativ knappe Schnittstelle und ist über genau diese Schnittstelle gut
+> testbar. Tests greifen nicht in Plugin-Interna; kleine injizierte
+> Abhängigkeiten im Konstruktor sind erlaubt, wenn sie gewöhnliche Unit-Tests
+> ohne eine eigene Fake-Infrastruktur ermöglichen.
+>
 > Der Entwurf, den Codex in drei Runden geprüft und freigegeben hat, ist damit
 > überholt. Die alte Auflösung steht unten als **überholt markiert**, weil die
 > Review-Historie sonst ins Leere zeigt; maßgeblich ist die Neufassung ganz
@@ -63,7 +69,8 @@ Abschnitt „Überholt" am Ende.
 | 7 | Sammelcode `US` | **kein** Treffer mit erfundenem MIC — und der Client wird nicht gefragt | ✅ [^sammelcode] | |
 | 8 | `pytest -m "not integration"` | wählt die fremden Dienste ab, der Rest bleibt grün | ✅ [^marker] | |
 | 9 | `make test` | grün, inklusive Integrationstests | ✅ [^lauf] | |
-| 10 | Yahoo und justETF | als Rolle **noch offen** — sie sprechen nicht direkt HTTP | ➖ [^kette] | |
+| 10 | `OpenFigiResolverPlugin` und seine Tests | knappe Rollen-Schnittstelle; Tests ausschließlich über Konstruktor und öffentliche Methoden | ✅ [^surface] | |
+| 11 | Yahoo und justETF | als Rolle **noch offen** — sie sprechen nicht direkt HTTP | ➖ [^kette] | |
 
 [^rolle]: `OpenFigiResolver` erbt `Resolver` aus `stockinfo_plugin` und
     beantwortet `ResolveRequest` mit `Resolved`, `NotFound`, `NotResponsible`
@@ -128,6 +135,16 @@ Abschnitt „Überholt" am Ende.
 [^lauf]: `make test`: Backend **666 passed / 29 skipped**, Plugin-API
     **257 passed / 1 skipped**, Dashboard **259 passed**.
     `ruff check app tests plugin_api` und `git diff --check` sauber.
+[^surface]: Die eigene fachliche Oberfläche besteht aus `handles(request)`
+    und `resolve(request)`; Konfiguration, Einsatzbereitschaft und Lifecycle
+    kommen aus der gemeinsamen `Source`-Basis. Die 25 Unit-/Contract-Tests
+    erzeugen das Plugin über seinen öffentlichen Konstruktor und rufen nur
+    öffentliche Plugin-Methoden auf. `client` und `home_fallback` sind kleine
+    Konstruktor-Seams; geprüft wird gegebenenfalls der testlokale Client, nie
+    ein privates Feld des Plugins. Die zusätzliche schreibgeschützte
+    `api_key`-Sicht ist extern unbenutzt und erweitert die Verantwortung nicht;
+    für eine eigene Nacharbeitsrunde wäre ihre bloße Entfernung
+    unverhältnismäßig.
 [^kette]: **Gemessen, und es ist der Grund für den Zuschnitt.** Von den drei
     Anbietern der ursprünglichen Kette spricht nur OpenFIGI direkt HTTP
     (`httpx.post`). Yahoo geht über `yfinance`, justETF über
@@ -898,3 +915,40 @@ skipped**, Ruff sauber; echte OpenFIGI-Suite mit freigegebenem Netz **4
 passed**. Das Begriffsinventar fand die Restzusagen in den oben genannten
 Dateien. Diese Runde verlangt ausschließlich Entfernung falscher Prosa und des
 doppelten Testfalls — keine neue Schicht und keine neue Fachlogik.
+
+---
+
+## Codex-Review · Runde 6 · `08814ff` · freigegeben
+
+Die drei Befunde aus Runde 5 sind vollständig behoben. Die aktive öffentliche
+Dokumentation beschreibt nur noch normale Unit-Test-Szenarien; die T-27a-
+Matrix verspricht weder Replay noch einen HTTP-Runner. Die Integrationsdatei
+enthält jetzt genau drei Tests, und jeder davon ruft den echten OpenFIGI-Dienst
+auf. Der Sammelcode-Fall steht ausschließlich in der Unit-Suite.
+
+Mikes zusätzliche Schnittstellenanforderung ist erfüllt. Die fachliche
+Resolver-Oberfläche bleibt bei `handles(request)` und `resolve(request)`;
+gemeinsame Konfiguration und Lifecycle stammen aus `Source`. Alle 25 Unit- und
+Contract-Tests arbeiten über den öffentlichen Konstruktor und öffentliche
+Methoden des Plugins. Die kleinen Konstruktor-Seams injizieren lediglich den
+vorhandenen Client und das bestehende Kaskadenverhalten; kein Test liest oder
+ändert ein privates Plugin-Feld, und es wurde keine wiederverwendbare Fake-
+Schicht gebaut.
+
+**Frische Evidenz:**
+
+* `tests/test_plugin_openfigi.py`: **25 passed**.
+* Plugin-API: **257 passed / 1 skipped**.
+* `pytest -m "not integration"`: **663 passed / 29 skipped / 3 deselected**.
+* echter OpenFIGI-Lauf: **3 passed**.
+* `make test`: Backend **666 passed / 29 skipped**, Plugin-API
+  **257 passed / 1 skipped**, Dashboard **259 passed**.
+* `ruff check app tests plugin_api` und `git diff --check`: sauber.
+* Wheel frisch aus `./plugin_api` gebaut: keine Replay-, Recording-,
+  Freshness-, Socket- oder HTTP-Runner-Module und keine gestrichenen
+  `real_ok`-/`only_real`-Schalter. `RequestLog.record` ist nur das bestehende
+  Unit-Test-Double zum Mitschreiben von Methodenaufrufen, kein Netzverkehr.
+
+T-27b ist aus Codex-Sicht freigegeben. Der nächste Schritt der verbindlichen
+Plugin-MVP-Kette ist T-23; der Wechsel muss vor dessen erstem Edit atomar in
+`STATUS.md` stehen.

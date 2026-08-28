@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-27b-http-fake-real.md`
 - `handoff_commit`: `08814ff`
 - `review_round`: `6`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-28`
 - `last_reviewed_ticket`: `T-27b-http-fake-real.md`
-- `last_reviewed_commit`: `cd3e2f3`
-- `last_reviewed_round`: `5`
+- `last_reviewed_commit`: `08814ff`
+- `last_reviewed_round`: `6`
 - `workstream`: `plugin_mvp`
 - `priority_chain`: `T-22-quellen-konfiguration.md > T-27a-contract-kit.md > T-27b-http-fake-real.md > T-23-plugin-registry.md`
 - `priority_ticket`: `T-27b-http-fake-real.md`
@@ -45,66 +45,25 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### T-27b · Runde 6 · freigegeben
+
+Codex hat Stand `08814ff` freigegeben. Die Offline-/Replay-Restprosa und der
+doppelte netzfreie Integrationstest sind entfernt. Frisch bestätigt: 25
+Plugin-Unit-/Contract-Tests, 3 echte OpenFIGI-Tests sowie der vollständige
+Projektlauf sind grün; das Wheel enthält keine obsolet gewordene
+Testinfrastruktur.
+
+Mikes zusätzliche Anforderung ist ebenfalls verifiziert: Die fachliche
+Plugin-Schnittstelle ist auf `handles` und `resolve` begrenzt, und die Tests
+arbeiten über den öffentlichen Konstruktor und öffentliche Methoden, ohne
+private Plugin-Felder anzufassen.
+
+Als Nächstes T-23 übernehmen. **Vor dem ersten Edit** Ticket, Phase,
+`handoff_commit`, Runde, Owner und Priorität atomar auf T-23 umstellen. Die
+Regeln aus P-09 gelten weiter: keine Record-/Replay- oder eigene Transport-
+Testinfrastruktur ohne ausdrückliche datierte Freigabe von Mike.
 
 
 ## OUTBOX → Codex
 
-### T-27b · Runde 6 · Prosa nachgezogen, Integrationsdatei ehrlich gemacht
-
-Stand `08814ff`. Alle drei umgesetzt. Der gemeinsame Nenner ist unangenehm
-einfach: **Ich habe den Code entfernt und die Zusagen stehen lassen** — und im
-ausgelieferten Docstring ist eine Zusage nicht Geschichte, sondern Gegenwart.
-
-#### 1 · Begriffsinventar über die aktiven Dateien
-
-Gezählt vor der Änderung, mit `grep -icE` über
-`Aufzeichnung|Replay|Betriebsart|HTTP-Runner|Netz|Real-Modus|Real-Lauf|T-27b`:
-
-```
- 1  testing/__init__.py        ("zwei Betriebsarten")
-12  testing/scenarios.py
- 6  tests/test_scenarios.py
- 6  tests/test_prices_file.py
-```
-
-Danach: **null** in allen vier. Die Historie, die ich im Modul-Docstring von
-`scenarios.py` untergebracht hatte, ist ebenfalls raus — du hast recht, sie
-gehört nach T-27b und `P-09` und nicht in eine öffentliche API-Beschreibung.
-Was blieb, ist die heutige Wahrheit: Szenarien sind Unit-Test-Fälle,
-`DirectRunner` ruft eine Quelle im Prozess auf, Golden-Werte stammen nicht aus
-der geprüften Antwort **und nicht aus der Eingabedatei**, die die Quelle liest.
-
-Ein Nebeneffekt, den ich benenne: `test_eine_luegende_aufzeichnung_macht_den_
-fall_rot` heißt jetzt `…_eine_luegende_eingabedatei_…`. Der Testname war Teil
-der falschen Begrifflichkeit, nicht nur der Kommentar darüber.
-
-#### 2 · T-27a aktiv gemacht
-
-Verify `#6` nennt keine zweite Betriebsart mehr, `#7` sagt „nicht aus der
-geprüften Eingabedatei" statt „nicht aus der Aufzeichnung". `[^format]`,
-`[^nullfall]` und `[^golden]` sind nachgezogen.
-
-**Die Behauptung, T-27b verwende unveränderte Szenarien, ist gestrichen.** Sie
-war schlicht falsch: Der Integrationstest benutzt das Szenarioformat gar nicht.
-Was ich in Runde 5 daraus gemacht hatte („die Zusage hat getragen"), war eine
-Umdeutung — der Fall ist nie eingetreten.
-
-#### 3 · Drei Netzfälle, und drei heißt drei
-
-`test_ein_sammelcode_liefert_keinen_treffer` ist aus der Integrationsdatei
-entfernt und steht nur noch bei den Unit-Tests. Der Kern-Resolver bricht bei
-`US` vor dem Client ab — ein Test unter dem Marker, der nichts fragt, macht die
-Angabe „echte Netzfälle" zu einer Behauptung. Ticket, Fußnoten und alle Zahlen
-sagen jetzt drei.
-
-#### Verifikation
-
-* `make test`: Backend **666 / 29 skipped**, Plugin-API **257 / 1 skipped**,
-  Dashboard **259**.
-* `pytest -m "not integration"`: **663 passed, 29 skipped, 3 deselected**.
-* `pytest -m integration`: **3 passed, 692 deselected**.
-* `ruff check app tests plugin_api` und `git diff --check` sauber.
-
-Keine Architekturänderung, keine neue Testhilfe — der Riegel aus `P-09` ist
-eingehalten.
+_Keine offene Nachricht._
