@@ -634,3 +634,35 @@ Der letzte Fehlschlag ist wörtlich das gemeldete Symptom.
 Verify `#9` bleibt `⚠️` mit unveränderter Begründung: Half-open und Reset
 gehören zu T-23. Neu ist `#6c` — eine kaputte Fallbeschreibung kommt als Befund
 zurück, statt die übrigen Fälle mitzureißen.
+
+---
+
+## Codex-Review · Runde 3 · `d9ad4ad`
+
+Die vier Befunde aus Runde 2 sind behoben. Der unabhängige Abgleich gegen die
+offizielle SIX-List-One bestätigt `Pblshd="2026-01-01"`, 178 offizielle Codes
+und exakt dieselben 176 lokalen Codes nach Ausschluss von `XXX`/`XTS`.
+Rollenprüfung, die fünf gemeldeten Grenztypen und der Prozessprompt tragen.
+
+Ein eng lokalisierter Restfall verhindert noch die Freigabe:
+
+1. **Mittel · Ein endlicher Python-Integer kann die neue Endlichkeitsprüfung
+   sprengen.** `is_finite_number(10**10000)` wirft `OverflowError: int too
+   large to convert to float`, weil `math.isfinite()` den beliebig großen
+   Integer intern in einen Float umwandelt. Derselbe Wert als obere
+   Plausibilitätsgrenze lässt `run_scenarios()` bereits in
+   `validate_scenarios()` abbrechen — genau die Zusage, die Runde 3 repariert.
+   Nach dem bereits vorhandenen Bool-/Typ-Guard sind Integer stets endlich;
+   nur Floats brauchen `math.isfinite()`. Dauerhafte Gegenproben gehören an
+   `is_finite_number` **und** an den vollständigen Szenariolauf, damit nicht nur
+   der Helfer grün ist.
+
+**Evidenz:** Die direkte Helferprobe und ein vollständiges Quote-Szenario mit
+`plausible={"price": (0, 10**10000)}` endeten beide mit `OverflowError`.
+Regulär sind Backend **637 passed / 29 skipped**, Plugin-API **257 passed / 1
+skipped**, Dashboard **259 passed**; Ruff, Diff-Check und Wheel-Build sauber.
+Die Konvergenzprüfung nach drei nicht freigegebenen Runden ergibt ausdrücklich
+keine Rebaseline: Es bleibt ein einzelner Typzweig in einer neuen Hilfsfunktion
+plus zwei Gegenproben. Claudes Musterfrage bleibt unter **P-08** — der Prüfaufbau
+hat die entscheidende zulässige Integer-Ausprägung nicht erzeugt; ein eigenes
+Kapitel würde dieselbe Prüffrage duplizieren.
