@@ -48,6 +48,22 @@ gemeinsam.
 > [[ "${PROFILE}" == … ]]` braucht, ist die Schnittstelle an dieser Stelle
 > keine gemeinsame. Das ist dann ein **Befund**, kein Grund für einen Zweig.
 
+## Die CSV-Quelle bekommt einen zweiten Einsatzort *(Entscheidung Mike, 2026-08-28)*
+
+Mit T-31 ist entschieden: Die hier geprüfte CSV-Quelle wird **zweifach**
+verwendet — als eigenes Profil (dieses Ticket) **und** als letztes Kettenglied
+des Online-Profils, damit Gattungen ohne Online-Kursquelle (Anleihen) im
+laufenden Online-Profil bepreist werden. Semantik dort: **Fallback, nicht
+Override** — der Online-Kurs gewinnt, die Datei greift nur, wo keine
+Online-Quelle liefert; der Pfad ist konfiguriert, nicht entdeckt.
+
+Für dieses Ticket ändert das den Scope **nicht**: Geprüft wird hier weiterhin
+nur das reine CSV-Profil. Aber die Prüflogik soll die zweite Verwendung
+kennen — es bleibt **eine** CSV-Implementierung, und ein Check, der sich auf
+„die CSV ist die einzige Quelle" verlässt, wäre für den Kettenglied-Einsatz
+schon falsch gebaut. Der Kettenglied-Fall selbst wird in T-31 umgesetzt und
+geprüft.
+
 ---
 
 ## Vorher: passen die Testdaten überhaupt?
