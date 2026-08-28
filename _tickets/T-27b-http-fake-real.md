@@ -96,4 +96,106 @@ deutlich einfacher und sicherer als ein selbstgebauter Mock-Aufbau.
 
 ## Auflösung
 
-_(offen)_
+**Entwurf, Runde 1 — noch keine Zeile Produktcode.** Der Zuschnitt hat mehrere
+Entscheidungen, die sich billiger widerlegen als umsetzen lassen; deshalb geht
+er nach der Entwurfsregel aus `CODEX-REVIEW-AUTOMATION.md` vor der Umsetzung in
+die Prüfung.
+
+### Drei Module, und warum nicht eins
+
+| Modul | Inhalt | Warum getrennt |
+|---|---|---|
+| `testing/http.py` | `HttpRequest`, `HttpResponse`, `Transport` (Protocol), `ReplayTransport`, `RecordingTransport`, `MissingRecording` | Der Transport ist das, was Plugin-Autoren **anfassen**; er darf nicht mit dem Dateiformat verheiratet sein |
+| `testing/recordings.py` | Dateiformat, Metadaten, Signatur, Bereinigung, Frist­prüfung | Das Format überlebt einen Bibliothekswechsel; der Transport nicht unbedingt |
+| `testing/pytest_plugin.py` | `--real`, `--record`, die Socket-Sperre als autouse-Fixture | Ein `pytest11`-Entry-Point gehört nicht in einen Modulimport — sonst hängt jeder Import an pytest |
+
+`Transport` ist wie `ScenarioRunner` **eine** Methode. Real- und Replay-Betrieb
+tauschen nur dieses Objekt; das Plugin bekommt es samt Uhr per Konstruktor.
+
+### Die Signatur wird **nach** dem Bereinigen gebildet
+
+Das ist die Entscheidung, an der ein naiver Entwurf scheitert. Steckt der
+Schlüssel als Query-Parameter in der Anfrage und bildet man die Signatur über
+die rohe URL, dann trägt jede Aufzeichnung den Schlüssel im Schlüsselfeld —
+also genau dort, wo Bereinigung nicht mehr hinkommt, ohne die Zuordnung zu
+zerstören. Und ein Beiträger mit einem *anderen* Schlüssel fände seine
+Aufzeichnung nie wieder.
+
+Deshalb: **Bereinigen, dann signieren** — beim Aufzeichnen wie beim Abspielen,
+über denselben Code. Signaturbestandteile sind Methode, Host, Pfad, sortierte
+und bereinigte Query, sowie ein Hash des bereinigten Rumpfs.
+
+### Zwei Tore, und was jedes von beiden liest
+
+| Tor | Liest | Grün, wenn |
+|---|---|---|
+| `make test-plugin-api` (offline) | `recorded_at`, `scenario_signature` | jede Anfrage getroffen, Metadaten vollständig, Aufzeichnung bereinigt. Alter → **Warnung** über `warnings.warn`, kein Fehlschlag |
+| Release-Check | `last_real_ok`, `max_age_days` | ein Real-Lauf hat bestätigt und liegt innerhalb der Frist |
+
+`max_age_days` steht **in der Aufzeichnung**, nicht in einer zentralen Tabelle:
+Sie ist eine Eigenschaft dieses Anbieters, und eine zentrale Liste liefe beim
+ersten fremden Plugin auseinander. `last_real_ok` schreibt ausschließlich ein
+erfolgreicher `--real`-Lauf zurück; die Änderung steht danach im Diff und wird
+mitcommittet. Das ist Absicht — so ist im Repository sichtbar, wann zuletzt
+wirklich jemand den Anbieter gefragt hat.
+
+**`scenario_signature`** fängt den Fall ab, den sonst niemand bemerkt: Ein
+Szenario wird umgeschrieben, die Aufzeichnung bleibt die alte, und der Lauf ist
+grün gegen eine Frage, die so nicht mehr gestellt wird.
+
+### Die Socket-Sperre ist eine Sperre, keine Bitte
+
+Eine autouse-Fixture ersetzt `socket.socket` und `socket.create_connection`
+durch etwas, das wirft — außer unter `--real`. Der Nachweis ist ein eigener
+Test, der einen Verbindungsversuch unternimmt und den Fehler erwartet; ohne ihn
+belegt die Sperre nur, dass sie existiert, nicht dass sie greift.
+
+`MissingRecording` ist aus demselben Grund ein **Fehler** und kein Rückfall:
+Ein Transport, der bei fehlender Aufzeichnung ins Netz greift, macht die
+gesamte Offline-Zusage zu einer Vermutung.
+
+### Das Beispielplugin: Frankfurter/EZB — und warum ausgerechnet das
+
+Das Ticket verlangt die Klärung der Nutzungsbedingungen **vor** dem ersten
+Commit einer Aufzeichnung. Sie ist geklärt:
+
+* [api.frankfurter.dev](https://frankfurter.dev/) — frei, quelloffen, **ohne
+  Schlüssel und ohne Kontingent**, Daten von der EZB.
+* Die EZB erlaubt die Wiedergabe ausdrücklich: *„When such information is
+  distributed or reproduced, it must appear accurately and the ECB must be
+  cited as the source"* — und, für uns der entscheidende Satz: *„If the
+  information is modified by the user … this must be stated explicitly."*
+
+Eine bereinigte, gekürzte Aufzeichnung **ist** eine Änderung. Deshalb trägt
+jede Aufzeichnungsdatei zwei Pflichtfelder `source` und `notice`, in denen
+Quelle und Eingriff genannt werden. Das ist keine Förmlichkeit, sondern die
+Bedingung, unter der die Datei überhaupt im Repository liegen darf.
+
+Fachlich passt es: Ein `FxSource` ist eine der fünf Rollen aus T-27a, und
+Wechselkurse sind der Fall, bei dem „dieselben Tests, andere Zahlen" natürlich
+auftritt — der Kurs ändert sich täglich, `base`/`quote` nie.
+
+**Die Kehrseite nenne ich, statt sie zu umgehen:** Ein schlüsselloser Anbieter
+hat nichts zu bereinigen. Verify `#4` wäre an diesem Beispiel trivial erfüllt
+und damit nichts wert. Die Bereinigung wird deshalb an anderer Stelle
+nachgewiesen — an synthetischen Aufzeichnungen mit Schlüssel, Token und Cookie
+in Kopf, Query, Rumpf und Antwort, plus einer Prüfung über **alle** committeten
+Aufzeichnungen. Einen echten Anbieter mit Schlüssel nur zu Vorführzwecken zu
+befragen, wäre die schlechtere Wahl: Wir hätten seine Bedingungen zu klären,
+ohne sein Angebot zu nutzen.
+
+### Was diese Runde ausdrücklich **nicht** entscheidet
+
+* Welche HTTP-Bibliothek ein fremdes Plugin verwendet. Der Vertrag erzwingt
+  keine; das Kit liefert einen Adapter für `httpx` als gangbaren Weg mit.
+* Wie ein kommerzieller Anbieter mit Kontingent eingebunden wird. Das ist die
+  Frage, für die T-27b das Werkzeug baut — beantworten wird sie das erste
+  Plugin, das ihn wirklich anspricht.
+
+### Offene Frage an den Reviewer
+
+Verify `#10` — „Anbieter nicht erreichbar, der normale Build bleibt grün" — ist
+im Offline-Betrieb **trivial wahr**, weil dort ohnehin kein Netz existiert. Ein
+belastbarer Nachweis prüft die Gegenrichtung: dass der `--real`-Lauf bei einem
+nicht erreichbaren Host mit einer deutbaren Meldung fehlschlägt statt mit einem
+Stacktrace. Ist das die richtige Lesart der Zeile, oder verlangt sie mehr?
