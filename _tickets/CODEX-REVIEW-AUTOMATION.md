@@ -204,6 +204,13 @@ Produktedit: `ticket`, `priority_ticket`, `review_round: 0` und
 `phase: claude_working` in einem Commit. Erst danach der Branch, erst danach
 die erste Zeile Code.
 
+`review_round: 0` heißt wörtlich „noch keine Runde geprüft". Die `1` entsteht
+beim Hochzählen der ersten Übergabe, nicht beim Arbeitsbeginn — sonst gäbe es
+zwei verschiedene Runden mit derselben Nummer, und der Schlüssel
+`(ticket, handoff_commit, review_round)` verlöre seine Eindeutigkeit genau
+dort, wo die Duplikatsperre auf ihn baut. *(Der Loop-Prompt unten sagte hier
+bis 2026-08-28 fälschlich `1`; Befund aus T-27a Runde 2.)*
+
 Mike hat die Ausführung aller versionierten Prüfskripte nach dem Muster
 `./_tickets/T-*.sh` ausdrücklich und dauerhaft freigegeben. Codex darf diese
 Skripte im Review ohne erneute fachliche Rückfrage ausführen, einschließlich
@@ -299,7 +306,7 @@ Ausstieg wird der Loop gelöscht; dieser Abschnitt hält ihn wiederherstellbar.
 1. Lies _tickets/STATUS.md, _tickets/CODEX-REVIEW-AUTOMATION.md und _tickets/CLAUDE-REVIEW-PATTERNS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis. Pruefe vor jeder Arbeit: ticket muss exakt priority_ticket entsprechen und in priority_chain stehen. Bei Abweichung nichts implementieren, portfolio_mismatch melden und Schluss.
 2. Ist `owner` nicht `claude`: veraendere keine Datei, antworte in einer Zeile mit Phase und Owner, Schluss.
 3. Bei `phase: changes_requested`: Arbeite die Findings aus INBOX -> Claude der Reihe nach ab, schwerste zuerst. Jedes Finding einzeln verifizieren statt der Zusammenfassung glauben; behauptete Vollstaendigkeit mit rg belegen. Bei wiederholter Entwurfsnacharbeit gilt die Konvergenzpruefung dieses Dokuments: ungefaehr drei erfolglose Runden sind ein Richtwert, keine harte Grenze. Ist eine weitere punktuelle Runde konkret und voraussichtlich abschliessend, begruende das mit dem vollstaendigen Restumfang in der OUTBOX. Verlangt das Review Rebaseline oder Scope-Verkleinerung, korrigiere nicht weiter lokal, sondern konsolidiere beziehungsweise schneide neu. Vor dem ersten Edit auf einem Feature-Branch `t-NN-<slug>` sein. Danach relevante Pytests, das Ticket-Smoke-Script `./_tickets/T-*.sh --run` und `make test` laufen lassen und die Ergebnisse mit Zahlen nennen. Dann genau EIN Uebergabe-Commit, INBOX leeren, Ergebnis nach OUTBOX -> Codex, `review_round` +1, `phase: ready_for_codex`, `owner: codex`, `updated_at` auf heute. Danach keinen Produktcode mehr anfassen.
-4. Bei `phase: approved`: Ticket NICHT nach solved/ verschieben, das macht Mike. Nur zum naechsten Element aus priority_chain wechseln, priority_ticket und ticket gemeinsam setzen, review_round fuer das neue Ticket auf 1 setzen, eigener Branch vor dem ersten Edit, phase: claude_working. War das freigegebene Ticket das letzte Element, nichts Neues beginnen: phase: portfolio_review, owner: mike; Mike braucht die Gate-vs-Follow-up-Einordnung.
+4. Bei `phase: approved`: Ticket NICHT nach solved/ verschieben, das macht Mike. Nur zum naechsten Element aus priority_chain wechseln, priority_ticket und ticket gemeinsam setzen, review_round fuer das neue Ticket auf 0 setzen — die 1 entsteht erst beim Hochzaehlen in Schritt 3, wenn die erste Uebergabe tatsaechlich herausgeht —, eigener Branch vor dem ersten Edit, phase: claude_working. War das freigegebene Ticket das letzte Element, nichts Neues beginnen: phase: portfolio_review, owner: mike; Mike braucht die Gate-vs-Follow-up-Einordnung.
 5. Bei `phase: claude_working`: die begonnene Arbeit fortsetzen, sonst wie Punkt 3 uebergeben.
 6. Bei `phase: blocked`, `phase: portfolio_review` oder wenn eine Entscheidung von Mike noetig ist: nichts weiterschreiben, in einer Zeile melden, `owner: mike` lassen und den Loop stoppen.
 7. Melde nur Uebergabe, Blocker oder Entscheidungsbedarf. Leerdurchlaeufe bleiben einzeilig.

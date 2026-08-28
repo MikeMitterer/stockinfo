@@ -61,14 +61,23 @@ Platzhalter, den ein Anbieter einsetzt, wenn er nichts weiß. Sie durchzulassen
 hieße, den Zweck der Prüfung an ihrer formal korrektesten Stelle aufzugeben.
 """
 
-ISO_4217_AS_OF = "2026-08"
-"""Stand der Liste unten. Steht in jeder Meldung über einen unbekannten Code —
-sonst weiß der Autor nicht, ob sein Code neu ist oder falsch."""
+ISO_4217_AS_OF = "2026-01-01"
+"""Stand der Liste unten — das `Pblshd`-Datum der offiziellen List One.
+
+Steht in jeder Meldung über einen unbekannten Code, sonst weiß der Autor nicht,
+ob sein Code neu ist oder falsch.
+
+**Es ist ausdrücklich das Datum der Quelle, nicht das der letzten Durchsicht.**
+Vorher stand hier ein selbstgesetztes ``"2026-08"``, während die Liste zwei
+zurückgezogene Codes enthielt — die Angabe behauptete eine Aktualität, die
+niemand hergestellt hatte, und genau deshalb hat sie niemandem gefehlt. Ein
+Datum, das von der Quelle stammt, lässt sich gegen sie prüfen.
+"""
 
 ISO_4217 = frozenset(
     """
-    AED AFN ALL AMD ANG AOA ARS AUD AWG AZN
-    BAM BBD BDT BGN BHD BIF BMD BND BOB BOV BRL BSD BTN BWP BYN BZD
+    AED AFN ALL AMD AOA ARS AUD AWG AZN
+    BAM BBD BDT BHD BIF BMD BND BOB BOV BRL BSD BTN BWP BYN BZD
     CAD CDF CHE CHF CHW CLF CLP CNY COP COU CRC CUP CVE CZK
     DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP
     GBP GEL GHS GIP GMD GNF GTQ GYD HKD HNL HTG HUF
@@ -82,7 +91,7 @@ ISO_4217 = frozenset(
     THB TJS TMT TND TOP TRY TTD TWD TZS
     UAH UGX USD USN UYI UYU UYW UZS
     VED VES VND VUV WST
-    XAF XAG XAU XBA XBB XBC XBD XCD XCG XDR XOF XPD XPF XPT XSU XUA
+    XAD XAF XAG XAU XBA XBB XBC XBD XCD XCG XDR XOF XPD XPF XPT XSU XUA
     YER ZAR ZMW ZWG
     """.split()
 )
@@ -97,9 +106,26 @@ nichts hat und trotzdem etwas hinschreibt. Ohne Liste wäre die zugesagte
 Metallcodes `XAU`/`XAG`/`XPT`/`XPD` stehen drin: Sie sind vergeben, und einen
 vergebenen Code abzuweisen ist der schlimmere Fehler.
 
-Die Liste veraltet — langsam, aber sie tut es. Neue Vergaben sind selten (zuletzt
-`SLE` 2022, `ZWG` 2024); wenn eine kommt, meldet `currency_problem` sie mit
-`ISO_4217_AS_OF`, statt sie stumm abzulehnen.
+**Sie ist die Kopie einer fremden Liste, und Kopien veralten.** Runde 2 hat das
+belegt: Bei behauptetem Stand ``2026-08`` enthielt sie noch `BGN`, obwohl
+Bulgarien zum 1. Januar 2026 den Euro eingeführt hat. Der Abgleich gegen die
+offizielle List One hat danach zwei weitere Abweichungen derselben Art
+gezeigt — `ANG` war seit dem 30. Juni 2025 zurückgezogen (abgelöst durch
+`XCG`), und `XAD` fehlte, obwohl es vergeben ist. Genannt worden war nur `BGN`;
+gefunden hat die anderen beiden erst der vollständige Vergleich.
+
+Daraus die Pflege-Regel: **Ein neuer Stand wird gegen die List One als Ganzes
+abgeglichen, nicht am einzelnen gemeldeten Code repariert.**
+
+    curl -s https://www.six-group.com/dam/download/financial-information/\\
+    data-center/iso-currrency/lists/list-one.xml
+
+`ISO_4217_AS_OF` übernimmt danach das `Pblshd`-Datum der Datei, und
+`test_der_gemeldete_stand_und_die_liste_gehoeren_zusammen` schlägt an, wenn nur
+eines von beidem angefasst wurde.
+
+Bleibt die Liste trotzdem zurück, meldet `currency_problem` einen neu
+vergebenen Code mit `ISO_4217_AS_OF`, statt ihn stumm abzulehnen.
 """
 
 
@@ -262,22 +288,36 @@ def currency_is_valid(code: str | None) -> bool:
     return currency_problem(code) == ""
 
 
-def is_finite_price(value: object) -> bool:
-    """Ist das eine brauchbare Kurszahl — endlich und positiv?
+def is_finite_number(value: object) -> bool:
+    """Ist das überhaupt eine Zahl, mit der sich rechnen und vergleichen lässt?
 
     ``NaN`` und ``inf`` entstehen still: eine Division durch ein fehlendes
     Volumen, ein leeres Feld, das als ``float("nan")`` durchgereicht wird. Sie
-    überleben jede Typprüfung, jeden Vergleich und landen in der Datenbank, wo
-    sie jede spätere Rechnung anstecken. Ein Preis von ``0`` ist ebenfalls kein
-    Kurs, sondern eine fehlende Angabe, die sich als Zahl ausgibt.
+    überleben jede Typprüfung und jeden Vergleich — ``NaN`` ist sogar mit sich
+    selbst nicht gleich — und stecken danach jede Rechnung an.
 
     ``bool`` wird ausgeschlossen, weil ``True`` in Python eine Zahl ist und
-    ``isinstance(True, int)`` gilt — ein Wahrheitswert als Preis ist immer ein
-    Fehler des Anbieters, nie eine Absicht.
+    ``isinstance(True, int)`` gilt. Ein Wahrheitswert an einer Zahlenstelle ist
+    immer ein Fehler, nie eine Absicht.
+
+    **Warum das eine eigene Funktion ist und nicht in `is_finite_price`
+    steckt:** Ein Kurs muss zusätzlich positiv sein, eine Bereichsgrenze nicht
+    — ``(-10, 10)`` ist ein völlig richtiger Bereich für eine Tagesveränderung.
+    Die gemeinsame Hälfte steht hier, damit die beiden Aufrufer sie nicht
+    getrennt pflegen und beim ersten Sonderfall auseinanderlaufen.
     """
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return False
-    return math.isfinite(value) and value > 0
+    return math.isfinite(value)
+
+
+def is_finite_price(value: object) -> bool:
+    """Ist das eine brauchbare Kurszahl — endlich und positiv?
+
+    Zur Endlichkeit siehe `is_finite_number`. Ein Preis von ``0`` ist darüber
+    hinaus kein Kurs, sondern eine fehlende Angabe, die sich als Zahl ausgibt.
+    """
+    return is_finite_number(value) and value > 0  # type: ignore[operator]
 
 
 def has_timezone(moment: datetime | None) -> bool:

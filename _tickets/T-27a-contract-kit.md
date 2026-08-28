@@ -32,7 +32,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 4 | FX-Contract | Base/Quote, positive endliche Rate, Zeitpunkt, Identitäts- und Fehlerfall | ✅ [^suiten] [^mutanten] | |
 | 5 | fachliche Invarianten | ISIN-Prüfziffer, Anfrage-ISIN = Ergebnis-ISIN, **echter MIC statt Sammelcode**, gültige Währung, sinnvolle Datumsfolge | ✅ [^invarianten] [^mutanten] | |
 | 6 | Szenarioformat | ein Fall wird **einmal** beschrieben; Format, Validierung und ein **transportneutraler** Runner-Vertrag stehen. Dass derselbe Fall offline **und** real läuft, nimmt T-27b ab | ✅ [^format] | |
-| 6b | Rollenpassung und Nullfall | Anfrage- und Ergebnistyp müssen zusammenpassen; ein Lauf **ohne einen einzigen Fall** ist eine Beanstandung | ✅ [^nullfall] | |
+| 6b | Rollenpassung und Nullfall | Anfrage- und Ergebnistyp müssen zusammenpassen — **auch wenn ein Fehlfall erwartet wird**; ein Lauf **ohne einen einzigen Fall** ist eine Beanstandung | ✅ [^nullfall] | |
+| 6c | Beschreibungsfehler beenden den Lauf nicht | eine kaputte Fallbeschreibung kommt als Befund zurück, statt die übrigen Fälle mitzureißen | ✅ [^format] | |
 | 7 | Golden Cases | erwarteter Ticker/MIC stammt **nicht** aus der Aufzeichnung, sondern aus gepflegten Daten | ✅ [^golden] | |
 | 8 | `FakeSource` | vorgebbare Antwort je Anfrage, Aufrufprotokoll für Reihenfolge und Anzahl | ✅ [^doubles] | |
 | 9 | Fake-Uhr | TTL, Half-open und Reset ohne echte Wartezeit prüfbar | ⚠️ [^uhr] | |
@@ -68,6 +69,15 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `test_die_reale_betriebsart_waehlt_nur_freigegebene_faelle` da und
     zertifizierte die Lücke. Er ist jetzt umgekehrt und hat einen zweiten
     daneben, der die Auswahl mit einem *tatsächlich* freigegebenen Fall belegt.
+
+    **Runde 3 — die Rollenprüfung hatte dieselbe Lücke eine Ebene tiefer.** Sie
+    stieg bei Fehlfällen aus, *bevor* sie den Anfragetyp ansah. Ein Fall mit
+    einem unbekannten Request und `expect=Unavailable` kam deshalb zweimal
+    durch: Die Beschreibung wurde nicht beanstandet, und `DirectRunner`
+    **erfindet** für einen unbekannten Anfragetyp genau das `Unavailable`, das
+    der Fall erwartet — die Quelle wurde nie gefragt, der Prüfstand hat sich
+    selbst bestätigt. Jetzt wird der Anfragetyp immer geprüft, die Trefferart
+    nur dort, wo es eine gibt.
 [^suiten]: **Fünf Verträge, alle an einem echten Plugin ausgeführt.**
     `ResolverContract` und `MetadataContract` bestanden; neu sind
     `QuoteContract`, `DailyContract` und `FxContract` in
@@ -81,7 +91,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
     Die Zusagen je Rolle stehen als eigene Testmethode da, nicht als Sammelfall
     — sonst nennt eine fehlgeschlagene Zusicherung nur die erste Ursache.
-[^invarianten]: **`stockinfo_plugin/invariants.py`, 66 bestandene Tests und ein
+[^invarianten]: **`stockinfo_plugin/invariants.py`, 82 bestandene Tests und ein
     ausdrücklich übersprungener.** Geprüft
     wird gegen **bekannte Werte**, nicht gegen die Funktion selbst: vier echte
     ISINs (Apple, iShares Core MSCI World, Royal Bank of Canada, Barrick Gold).
@@ -93,6 +103,18 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     dort, statt sie ein zweites Mal zu formulieren. Gegenprobe gelaufen:
     `mic_is_wellformed` verstümmelt → **10 Backend-Tests und 5 Plugin-Tests**
     fallen. Es gibt wirklich nur eine Regel.
+
+    **Runde 3 — eine kopierte Liste veraltet, und zwar still.** `ISO_4217`
+    behauptete den Stand `2026-08` und enthielt `BGN`, obwohl Bulgarien zum
+    1. Januar 2026 den Euro eingeführt hat. Der Abgleich gegen die offizielle
+    List One (`Pblshd="2026-01-01"`) hat zwei weitere Abweichungen derselben
+    Art gezeigt, die im Review nicht standen: `ANG` war seit dem 30. Juni 2025
+    zurückgezogen, `XAD` fehlte, obwohl vergeben. Liste und Quelle sind jetzt
+    deckungsgleich (176 Codes = 178 vergebene minus `XXX`/`XTS`),
+    `ISO_4217_AS_OF` trägt das `Pblshd`-Datum der Quelle statt eines
+    selbstgesetzten Monats, und
+    `test_der_gemeldete_stand_und_die_liste_gehoeren_zusammen` verknüpft beide
+    Angaben, damit sie nicht wieder getrennt gepflegt werden.
 [^format]: **`Scenario` + `validate_scenarios` + `ScenarioRunner` +
     `DirectRunner`.** Der Runner-Vertrag ist eine einzige Methode und weiß
     nicht, ob die Antwort aus dem Prozess, einer Aufzeichnung oder dem Netz
@@ -105,6 +127,15 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     übergeht das. Acht Beschreibungsfehler haben eigene Tests, darunter
     vertauschte Bereichsgrenzen (schlagen nie an) und `real_ok` bei erwartetem
     `Unavailable` (ein Ausfall lässt sich von außen nicht bestellen).
+
+    **Runde 3 — die Validierung durfte den Lauf nicht abbrechen, tat es aber.**
+    `plausible={"price": ("a", "z")}` galt als gültige Beschreibung; erst
+    `check_scenario` verglich Zeichenkette gegen Zahl und warf `TypeError` —
+    und riss alle übrigen Fälle mit, die noch gelaufen wären. Grenzen werden
+    jetzt als **endliche Zahlen** geprüft (`is_finite_number`, geteilt mit
+    `is_finite_price`), `NaN` und `inf` eingeschlossen; fünf parametrisierte
+    Gegenproben belegen beides: Die Beschreibung wird beanstandet, **und**
+    `run_scenarios` kommt bis zum Ende.
 [^golden]: **Gemessen, nicht zugesagt.** Die maschinell prüfbare Hälfte:
     `validate_scenarios` verlangt für **alle vier** Trefferarten die Kernwerte
     — „irgendein Treffer kam zurück" ist keine Aussage über ein Wertpapier. Bei
@@ -158,8 +189,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     gemacht: `MetadataFileSource._COLUMNS` war ein Dict an der Klasse. Behoben
     als `MappingProxyType` — dass dort heute niemand schreibt, ist wahr und
     morgen eine Annahme.
-[^lauf]: `make test-plugin-api`: **235 passed, 1 skipped** (vor T-27a: 36;
-    nach Runde 1: 189).
+[^lauf]: `make test-plugin-api`: **257 passed, 1 skipped** (vor T-27a: 36;
+    nach Runde 1: 189; nach Runde 2: 235).
     Übersprungen wird ein Zahlendreher-Fall, dessen getauschte Stellen zufällig
     gleich sind; der Test sagt das statt eine Aussage zu behaupten, die der
     Wert nicht hergibt. `make test` gesamt: Backend 637 / 29 skipped,
@@ -421,9 +452,11 @@ freigegebenen Fall belegt.
 „valid" — und `ZZZ` ist genau, wie das Feld aussieht, wenn ein Anbieter nichts
 hat und trotzdem etwas hinschreibt. Jetzt gibt es beides getrennt:
 `currency_is_wellformed` für die Form und `currency_is_valid` gegen die
-vergebenen ISO-4217-Codes (`ISO_4217`, 177 Einträge, Stand als
-`ISO_4217_AS_OF` in jeder Meldung). `XXX` und `XTS` sind ausgenommen — sie
-stehen in der Norm und bedeuten „keine Währung".
+vergebenen ISO-4217-Codes (`ISO_4217`, Stand als `ISO_4217_AS_OF` in jeder
+Meldung). `XXX` und `XTS` sind ausgenommen — sie stehen in der Norm und
+bedeuten „keine Währung". *(Der Umfang der Liste stand hier mit 177 Einträgen;
+er gehört nicht in die Prosa, sondern in den Test, der ihn mit dem gemeldeten
+Stand verknüpft — siehe Runde 3.)*
 
 Die Kehrseite nenne ich ausdrücklich: Wird ein Code neu vergeben, weist die
 Prüfung ihn ab, bis die Liste nachgezogen ist. Das ist ein lauter Fehlschlag
@@ -472,7 +505,7 @@ Kettenwechsel ist ein eigener, atomarer Commit **vor** dem ersten Produktedit.
 
 ### Verifikation
 
-* `make test`: Backend **637 / 29 skipped**, Plugin-API **227 / 1 skipped**
+* `make test`: Backend **637 / 29 skipped**, Plugin-API **235 / 1 skipped**
   (Runde 1: 189), Dashboard **259**.
 * `ruff check app tests plugin_api` und `git diff --check` sauber.
 * 23 Mutanten grün, plus die Gegenprobe, dass ein heiles Plugin nicht
@@ -525,3 +558,79 @@ Ruff, `git diff --check` und der Wheel-Build für
 punktuell und voraussichtlich abschließend: Der verbleibende Umfang besteht aus
 drei klar reproduzierten Validierungsfällen und einer widersprüchlichen
 Prozesszeile; eine Rebaseline ist nicht nötig.
+
+---
+
+## Runde 3 · Nacharbeit zu den vier Befunden
+
+Alle vier sind umgesetzt. Zwei Anmerkungen vorweg, weil sie mehr sagen als die
+Einzelkorrekturen.
+
+**Die ersten beiden Befunde sind derselbe Fehler.** In beiden Fällen stand eine
+Abkürzung *vor* der Prüfung, die es zu tun gab: Die Rollenprüfung stieg bei
+Fehlfällen aus, bevor sie den Anfragetyp ansah; die Bereichsprüfung sah die
+Anzahl der Grenzen an, aber nicht ihre Art. Beide Male lief danach etwas grün,
+das nie gefragt worden war. Das ist `P-08` — der Test erzeugt den
+entscheidenden Unterschied nicht — und diesmal in der Prüfschicht selbst.
+
+Beim ersten kommt eine Bosheit dazu, die ich festhalten will: `DirectRunner`
+**erfindet** für einen unbekannten Anfragetyp ein `Unavailable`. Ein Fall, der
+`Unavailable` erwartet, bekommt damit vom Prüfstand genau die Antwort, die er
+hören will, ohne dass die Quelle je gefragt wurde. Der Runner tut nichts
+Falsches — sicher macht es erst die Validierung davor.
+
+**Beim dritten Befund war der genannte Code nicht der einzige.** `BGN` stimmte.
+Statt ihn zu streichen, habe ich die Liste als Ganzes gegen die offizielle
+List One gestellt:
+
+```
+curl -s .../iso-currrency/lists/list-one.xml   →  Pblshd="2026-01-01", 178 Codes
+bei uns, offiziell nicht mehr:  ANG, BGN
+offiziell, bei uns nicht:       XAD
+```
+
+`ANG` ist seit dem 30. Juni 2025 zurückgezogen (abgelöst durch `XCG`), `XAD`
+(Arab Accounting Dinar) ist vergeben und wurde von uns abgewiesen — laut
+Docstring der Liste „der schlimmere Fehler". Beide hätte eine Punktkorrektur an
+`BGN` stehen lassen; das ist `P-02`, und der Weg dorthin war der Abgleich, nicht
+die Suche nach dem gemeldeten Symptom.
+
+Liste und Quelle sind jetzt deckungsgleich: **176** = 178 vergebene minus
+`XXX`/`XTS`. `ISO_4217_AS_OF` trägt das `Pblshd`-Datum der Datei statt eines
+selbstgesetzten Monats — ein Datum, das von der Quelle stammt, lässt sich gegen
+sie prüfen. `test_der_gemeldete_stand_und_die_liste_gehoeren_zusammen` bindet
+Anzahl und Stand aneinander, damit sie nicht wieder getrennt altern. Ein
+Netzabruf im Test wäre der falsche Weg: Er wäre rot, wenn jemand im Zug sitzt,
+und das hat mit der Sache nichts zu tun.
+
+**Vierter Befund.** `review_round: 0` beim Arbeitsbeginn, Hochzählen auf `1` bei
+der ersten Übergabe — an beiden Stellen. Der Riegel-Abschnitt nennt jetzt auch
+den Grund: Zwei verschiedene Runden mit derselben Nummer nähmen dem Schlüssel
+`(ticket, handoff_commit, review_round)` genau dort die Eindeutigkeit, wo die
+Duplikatsperre auf ihn baut. Die Zahl `227` ist auf die belegten `235`
+berichtigt.
+
+### Gegenprobe
+
+Der Nachweis, dass die neuen Tests den Unterschied wirklich erzeugen: `src` auf
+den Stand `db53189` zurückgesetzt, dieselben Tests laufen lassen.
+
+```
+6 failed, 20 deselected
+  test_ein_unbekannter_anfragetyp_faellt_auch_bei_einem_fehlfall_auf
+  test_unbrauchbare_grenzen_sind_ein_beschreibungsfehler [5 Parameter]
+    → TypeError: object of type 'float' has no len()
+```
+
+Der letzte Fehlschlag ist wörtlich das gemeldete Symptom.
+
+### Verifikation
+
+* `make test`: Backend **637 passed / 29 skipped**, Plugin-API **257 passed /
+  1 skipped** (Runde 2: 235), Dashboard **259 passed**.
+* `ruff check app tests plugin_api` und `git diff --check` sauber.
+* 23 Mutanten unverändert grün, samt Gegenprobe am heilen Plugin.
+
+Verify `#9` bleibt `⚠️` mit unveränderter Begründung: Half-open und Reset
+gehören zu T-23. Neu ist `#6c` — eine kaputte Fallbeschreibung kommt als Befund
+zurück, statt die übrigen Fälle mitzureißen.

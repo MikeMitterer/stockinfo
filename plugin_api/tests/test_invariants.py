@@ -14,6 +14,7 @@ from datetime import date, datetime, timezone, tzinfo
 import pytest
 
 from stockinfo_plugin.invariants import (
+    ISO_4217,
     ISO_4217_AS_OF,
     MINOR_UNIT_CODES,
     currency_is_valid,
@@ -21,6 +22,7 @@ from stockinfo_plugin.invariants import (
     currency_problem,
     days_are_ordered,
     has_timezone,
+    is_finite_number,
     is_finite_price,
     is_real_mic,
     isin_check_digit_is_valid,
@@ -147,6 +149,59 @@ def test_die_platzhalter_der_norm_sind_keine_waehrungen(code: str) -> None:
     assert "keine Währung" in currency_problem(code)
 
 
+@pytest.mark.parametrize(
+    ("code", "withdrawn"),
+    [("BGN", "2026-01-01, Euro-Einführung in Bulgarien"), ("ANG", "2025-06-30, abgelöst durch XCG")],
+)
+def test_zurueckgezogene_codes_gelten_nicht(code: str, withdrawn: str) -> None:
+    """**Befund aus Runde 2 — und der zweite Code stand nicht im Review.**
+
+    Ein zurückgezogener Code ist der heimtückischere Fall: Er war einmal
+    richtig, steht in alten Aufzeichnungen und sieht in keiner Meldung falsch
+    aus. Ein Anbieter, der nach der Umstellung weiter in `BGN` liefert, meldet
+    keinen Fehler — er meldet einen Kurs in einer Währung, die es nicht mehr
+    gibt.
+
+    Gefunden wurde `ANG` erst beim vollständigen Abgleich gegen die List One.
+    Deshalb steht dieser Test parametrisiert da und nicht als Einzelfall: Der
+    nächste zurückgezogene Code bekommt hier seine Zeile.
+    """
+    assert currency_is_wellformed(code), "die Gestalt bleibt tadellos — darum geht es"
+    assert not currency_is_valid(code), f"{code} ist zurückgezogen ({withdrawn})"
+
+
+def test_ein_vergebener_code_wird_nicht_abgewiesen() -> None:
+    """Die Gegenprobe: Der schlimmere Fehler ist die zu kurze Liste.
+
+    ``XAD`` — Arab Accounting Dinar — fehlte, obwohl es vergeben ist. Ohne
+    diese Richtung prüfte die Liste nur, dass sie streng ist; eine leere Liste
+    wäre am strengsten und wertlos.
+    """
+    assert currency_is_valid("XAD")
+
+
+def test_der_gemeldete_stand_und_die_liste_gehoeren_zusammen() -> None:
+    """Der Stolperdraht gegen genau den Fehler aus Runde 2.
+
+    Dort behauptete `ISO_4217_AS_OF` einen Stand, den die Liste nicht hatte —
+    und nichts schlug an, weil beide Angaben unabhängig voneinander gepflegt
+    wurden. Dieser Test verknüpft sie: Wer die Liste ändert, muss die Anzahl
+    hier nachziehen, und wer die Anzahl nachzieht, hat den Abgleich gegen die
+    List One gemacht — anders kommt er nicht an die Zahl.
+
+    Ein Netzabruf gehört **nicht** hierher. Ein Test, der von der Erreichbarkeit
+    von six-group.com abhängt, ist rot, wenn jemand im Zug sitzt, und das hat
+    mit der Sache nichts zu tun. Der Abgleich ist Handarbeit bei der Pflege;
+    dieser Test erzwingt nur, dass sie stattgefunden hat.
+    """
+    assert ISO_4217_AS_OF == "2026-01-01"
+    assert len(ISO_4217) == 176, (
+        "Liste und gemeldeter Stand sind auseinandergelaufen — gegen die "
+        "offizielle List One abgleichen (siehe Docstring von ISO_4217), dann "
+        "Anzahl und ISO_4217_AS_OF gemeinsam setzen"
+    )
+
+
 def test_die_meldung_nennt_den_stand_der_liste() -> None:
     """Sonst weiß der Autor nicht, ob sein Code neu ist oder falsch.
 
@@ -218,6 +273,27 @@ def test_brauchbare_kurse(value: float) -> None:
 def test_unbrauchbare_kurse(value: object) -> None:
     """``NaN`` und ``True`` sind die beiden, die jede Typprüfung überleben."""
     assert not is_finite_price(value)
+
+
+@pytest.mark.parametrize("value", [0, -10, -0.5, 1, 141.55, 1e9])
+def test_endliche_zahlen_duerfen_null_und_negativ_sein(value: float) -> None:
+    """Der Unterschied zu `is_finite_price` — und der Grund für die Trennung.
+
+    Eine Bereichsgrenze ist keine Kurszahl: ``(-10, 10)`` ist ein völlig
+    richtiger Bereich für eine Tagesveränderung in Prozent, und ``0`` ist eine
+    gültige Untergrenze. Wäre die Prüfung dieselbe wie beim Preis, müsste jeder
+    solche Bereich als Beschreibungsfehler gemeldet werden.
+    """
+    assert is_finite_number(value)
+    if value <= 0:
+        assert not is_finite_price(value), "der Preis bleibt strenger"
+
+
+@pytest.mark.parametrize(
+    "value", [None, "10", float("nan"), float("inf"), float("-inf"), True]
+)
+def test_was_keine_endliche_zahl_ist(value: object) -> None:
+    assert not is_finite_number(value)
 
 
 def test_ein_zeitpunkt_ohne_zone_zaehlt_nicht() -> None:

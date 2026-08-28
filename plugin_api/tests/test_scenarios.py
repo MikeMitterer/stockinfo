@@ -9,6 +9,8 @@ Beschreibungen und erst danach die Antworten.
 
 from datetime import datetime, timezone
 
+import pytest
+
 from stockinfo_plugin import (
     FxRate,
     FxRequest,
@@ -130,6 +132,84 @@ def test_vertauschte_grenzen_schlagen_nie_an() -> None:
     )
 
     assert any("vertauschte Grenzen" in line for line in validate_scenarios([swapped]))
+
+
+def test_ein_unbekannter_anfragetyp_faellt_auch_bei_einem_fehlfall_auf() -> None:
+    """**Befund aus Runde 2 — der Fall, der sich selbst bestätigt hat.**
+
+    Ein Fall mit einem Request, den keine Rolle kennt, und ``expect=Unavailable``
+    kam zweimal durch: Die Rollenprüfung stieg bei Fehlfällen aus, bevor sie den
+    Anfragetyp überhaupt ansah, und `DirectRunner` **erfindet** für einen
+    unbekannten Anfragetyp genau das `Unavailable`, das der Fall erwartet. Die
+    Quelle wurde nie befragt — beide Stufen meldeten Erfolg.
+
+    Der zweite Teil des Tests hält genau diese Falle fest: Der Runner antwortet
+    weiterhin mit `Unavailable`, und das ist richtig so. Sicher macht es erst
+    die Validierung davor.
+    """
+    alien = Scenario(
+        case_id="fremder-anfragetyp",
+        request=object(),  # type: ignore[arg-type]
+        expect=Unavailable,
+    )
+
+    problems = validate_scenarios([alien])
+    assert any("keiner bekannten Rolle" in line for line in problems), problems
+
+    source = FakeResolver(Resolved(ticker="RY", mic="XTSE"))
+    assert run_scenarios(DirectRunner(source), [alien]) == problems, (
+        "der vollständige Lauf muss dieselbe Beanstandung melden — vorher war "
+        "auch er leer und damit grün"
+    )
+    assert isinstance(DirectRunner(source).run(alien), Unavailable), (
+        "hier lag die Falle: Der Runner liefert das erwartete Unavailable, "
+        "ohne die Quelle je gefragt zu haben"
+    )
+
+
+@pytest.mark.parametrize(
+    ("bounds", "why"),
+    [
+        (("a", "z"), "Zeichenketten"),
+        ((float("nan"), 10.0), "NaN als untere Grenze"),
+        ((1.0, float("inf")), "inf als obere Grenze"),
+        ((1.0, None), "eine fehlende Grenze"),
+        (5.0, "gar kein Paar"),
+    ],
+)
+def test_unbrauchbare_grenzen_sind_ein_beschreibungsfehler(
+    bounds: object, why: str
+) -> None:
+    """**Befund aus Runde 2: Der Lauf brach ab, statt den Fehler zu melden.**
+
+    ``("a", "z")`` galt als gültige Beschreibung, weil nur die Anzahl der
+    Grenzen und ihre Reihenfolge geprüft wurden. Erst `check_scenario` verglich
+    danach Zeichenkette gegen Zahl und warf `TypeError` — und riss damit alle
+    übrigen Fälle mit, die noch gelaufen wären.
+
+    Beides ist hier festgehalten: Die Beschreibung wird beanstandet, **und**
+    `run_scenarios` kommt bis zum Ende, statt zu fliegen.
+    """
+    broken = Scenario(
+        case_id=f"grenzen-{why}",
+        request=QuoteRequest(ticker="RY", mic="XTSE"),
+        expect=Quote,
+        golden={"currency": "CAD"},
+        note="Grenzen bewusst kaputt, um die Beschreibungsprüfung zu belegen",
+        plausible={"price": bounds},  # type: ignore[dict-item]
+    )
+
+    problems = validate_scenarios([broken])
+    assert any("'price'" in line for line in problems), problems
+
+    source = FakeQuoteSource(
+        Quote(
+            price=141.55,
+            currency="CAD",
+            as_of=datetime(2026, 1, 2, tzinfo=timezone.utc),
+        )
+    )
+    assert run_scenarios(DirectRunner(source), [broken]) == problems
 
 
 def test_ein_ausfall_laesst_sich_von_aussen_nicht_bestellen() -> None:

@@ -22,6 +22,7 @@ Der wichtigste Fallstrick steht in `Scenario.golden`.
 from dataclasses import dataclass, field, fields, is_dataclass
 from typing import Protocol, runtime_checkable
 
+from stockinfo_plugin.invariants import is_finite_number
 from stockinfo_plugin.types import (
     DailyRequest,
     DailySeries,
@@ -252,15 +253,27 @@ def _check_role_match(scenario: Scenario) -> list[str]:
 
     Die Fehlfälle bleiben frei: `NotFound` und `Unavailable` sind für jede
     Rolle dieselbe Aussage.
+
+    **Befund aus Runde 2 — an der Reihenfolge dieser beiden Prüfungen hängt
+    alles.** Der Ausstieg für Fehlfälle stand vorher **vor** der Frage, ob der
+    Anfragetyp überhaupt zu einer Rolle gehört. Ein Fall mit einem unbekannten
+    Request und ``expect=Unavailable`` kam dadurch zweimal durch: Die
+    Beschreibung wurde nicht beanstandet, und `DirectRunner` erfindet für einen
+    unbekannten Anfragetyp genau das `Unavailable`, das der Fall erwartet. Die
+    Quelle wurde nie gefragt — der Prüfstand hat sich selbst bestätigt.
+
+    Deshalb gilt jetzt: Der **Anfragetyp** wird immer geprüft, die
+    **Trefferart** nur dort, wo es überhaupt eine gibt.
     """
-    if scenario.expect not in HIT_TYPES:
-        return []
     expected = ROLE_RESULTS.get(type(scenario.request))
     if expected is None:
+        known = ", ".join(sorted(role.__name__ for role in ROLE_RESULTS))
         return [
             f"{scenario.case_id}: {type(scenario.request).__name__} gehört zu "
-            "keiner bekannten Rolle"
+            f"keiner bekannten Rolle — bekannt sind {known}"
         ]
+    if scenario.expect not in HIT_TYPES:
+        return []
     if scenario.expect is expected:
         return []
     return [
@@ -313,13 +326,43 @@ def _check_field_names(scenario: Scenario) -> list[str]:
 
 
 def _check_ranges(scenario: Scenario) -> list[str]:
-    """Ein Bereich mit vertauschten Grenzen trifft nie zu — und meldet nie."""
+    """Taugen die Bereichsgrenzen — und schließen sie überhaupt etwas ein?
+
+    **Befund aus Runde 2.** Geprüft wurde nur die Anzahl der Grenzen und ihre
+    Reihenfolge, nicht ihre Art. ``plausible={"price": ("a", "z")}`` galt
+    damit als gültige Beschreibung; erst `check_scenario` verglich später
+    Zeichenkette gegen Zahl und warf `TypeError`. Das verletzt gleich zwei
+    Zusagen dieses Moduls: `validate_scenarios` **sammelt** Beschreibungsfehler,
+    statt beim ersten auszusteigen, und `run_scenarios` bricht nicht ab,
+    solange noch Fälle laufen könnten. Ein falsch beschriebener Fall riss so
+    alle übrigen mit.
+
+    ``NaN`` und ``inf`` gehören zur selben Klasse: Sie sind formal Zahlen, und
+    ein Vergleich gegen sie ist entweder immer wahr oder nie — beides schweigt
+    genauso wie ein leerer Bereich.
+    """
     problems = []
     for name, bounds in scenario.plausible.items():
-        if len(bounds) != 2:
-            problems.append(f"{scenario.case_id}: '{name}' braucht zwei Grenzen")
+        if not isinstance(bounds, (tuple, list)) or len(bounds) != 2:
+            problems.append(
+                f"{scenario.case_id}: '{name}' braucht zwei Grenzen als "
+                f"(untere, obere), bekommen: {bounds!r}"
+            )
             continue
         low, high = bounds
+        unusable = [
+            f"{edge} Grenze {value!r}"
+            for edge, value in (("untere", low), ("obere", high))
+            if not is_finite_number(value)
+        ]
+        if unusable:
+            problems.append(
+                f"{scenario.case_id}: '{name}' hat {' und '.join(unusable)} — "
+                "eine Grenze muss eine endliche Zahl sein, sonst wirft der "
+                "Vergleich später TypeError oder trifft immer beziehungsweise "
+                "nie zu"
+            )
+            continue
         if low > high:
             problems.append(
                 f"{scenario.case_id}: '{name}' hat vertauschte Grenzen "
