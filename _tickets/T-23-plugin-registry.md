@@ -33,7 +33,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 |---|---|---|:--:|---|
 | 1 | `examples/canada_file.py` nach `data/plugins/`, Neustart | erscheint in `GET /sources`, löst `CA…` auf | | |
 | 2 | dasselbe als installiertes Paket (Entry-Point) | erscheint gleichwertig, ohne Datei im Volume | ✅ | |
-| 2b | **Installationsweg** — Launcher, Paketliste, hash-benannte Umgebung | ⏸ **offen, wartet auf Mikes Entscheidung** — siehe unten | ➖ | |
+| 2b | **Installationsweg** — Paketliste in `sources.yaml`, hash-benannte Umgebung unter `/data`, überlebt Image-Updates | | |
 | 3 | Plugin mit falscher `api_version` | wird abgelehnt, mit Meldung — App startet trotzdem | | |
 | 4 | Plugin, das bei jedem Aufruf wirft | wird nach wiederholtem Fehler stillgelegt; App bleibt bedienbar | | |
 | 5 | Quelle liefert wiederholt `Unavailable` | Schutzschalter öffnet; weitere Aufrufe werden unterdrückt. Half-open und Reset mit **eingespeister Uhr** geprüft, ohne echte Wartezeit | | |
@@ -47,27 +47,29 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 ## Details
 
-> ## ⏸ Offen: der Installationsweg (Verify `#2b`)
+> ## ⚠ Entscheidung Mike, 2026-08-28: Installationsweg **in T-23 nachziehen**
 >
-> Das Ticket beschreibt unten einen **Launcher**, der Pakete aus einer
-> Paketliste in `sources.yaml` in eine hash-benannte Umgebung unter `/data`
-> installiert und in den Suchpfad hängt. Der ist **nicht gebaut**, und ich
-> baue ihn nicht ohne ausdrückliche Entscheidung — es ist dieselbe Bauart, die
-> mit Verify `#6c` gerade gestrichen wurde.
+> Wörtlich: *„Bei T-23 nachziehen — dieser Teil muss endlich fertig werden."*
+> Damit ist Verify `#2b` Teil dieses Tickets und kein Folgeticket.
 >
-> **Was ohne ihn schon geht:** Der Entry-Point-Weg funktioniert für **jedes**
-> Paket, das in der Umgebung der App installiert ist — `pip install
-> mein-plugin` genügt, den Rest macht `importlib.metadata`. Ein fremdes Paket
-> nimmt exakt denselben Weg wie das mitgelieferte Beispiel; daran ist nichts
-> besonders. Dokumentiert ist er seit Runde 3 in `docs/plugins.md`.
+> **Der Zuschnitt ist trotzdem schlank**, und das ist keine Abschwächung,
+> sondern die Lehre aus `#6c` und `P-09`: Gebaut wird der Weg, den der Betrieb
+> braucht — **nicht** die Absicherung gegen ein Paket, dem man nicht traut.
 >
-> **Was der Launcher zusätzlich brächte:** dass der Betreiber die Paketliste in
-> `sources.yaml` pflegt statt selbst `pip install` zu rufen, und dass die
-> Installation ein Image-Update überlebt, weil sie unter `/data` liegt. Das ist
-> Bequemlichkeit und Betriebsfrage, keine Voraussetzung für das Plugin-System.
+> | gebaut | nicht gebaut |
+> |---|---|
+> | Paketliste mit fester Version in `sources.yaml` | Kandidatenumgebung |
+> | Installation nach `data/plugin-env/<hash>` | Aktivierungszeiger, last-known-good |
+> | Hash über die sortierte Paketliste → Wiederanlauf ohne Neuinstallation | Netzsperre, Offline-Selbsttest |
+> | Verzeichnis in `sys.path`, danach greifen die Entry-Points | `stockinfo plugin check` (bleibt gestrichen) |
+> | Fehlschlag wird gemeldet, die App startet ohne diese Pakete | |
 >
-> **Mike entscheidet:** eigenes Ticket, oder in T-23 nachziehen. Bis dahin
-> steht `#2b` als offen und nicht als erfüllt.
+> Der Hash ist der Kern: Er macht den Start **idempotent** — dieselbe Liste,
+> dieselbe Umgebung, keine Installation. Und weil sie unter `/data` liegt,
+> überlebt sie ein Image-Update, ohne dass jemand etwas nachinstalliert.
+>
+> Ein Fehlschlag beim Installieren ist wie jeder andere Plugin-Defekt: Er
+> kostet die betroffenen Quellen, nicht den Start.
 
 ### Zwei Ladewege, eine Registry
 
