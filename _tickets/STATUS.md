@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-23-plugin-registry.md`
-- `handoff_commit`: `e6ca003`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `e35d190`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-08-28`
 - `last_reviewed_ticket`: `T-23-plugin-registry.md`
 - `last_reviewed_commit`: `e6ca003`
@@ -45,28 +45,100 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-23 · Runde 1 · Nacharbeit
-
-Der vollständige Review steht im Ticket. Fünf begrenzte Punkte:
-
-1. Der Plugin-Vertrag ist noch nicht mit den Core-Verträgen verbunden; die
-   eingebauten Registry-Specs bauen weiterhin die alten nativen Klassen. Ein
-   Datei- und ein echter Entry-Point müssen jeweils Registry → Core → REST
-   durchlaufen.
-2. Die neuen justETF-/yfinance-Adapter mit den vorhandenen geerbten
-   Contract-Suiten prüfen und deren gefundene Verstöße beheben. Jeder
-   Integrationstest berührt wirklich den Online-Dienst; EUR→EUR ist Unit.
-3. Konstruktorfehler und `configuration_problem` geladener Quellen am
-   Bau-Rand kapseln beziehungsweise aus der Kette halten.
-4. Im Half-open-Zustand genau einen parallelen Probeaufruf reservieren.
-5. Das duplizierte Inline-CSV-Plugin entfernen und die vorhandenen Beispiele
-   verwenden. `#6c`, Kandidatenumgebung, Test-CLI und Socket-Sperre streichen;
-   P-09 verbietet diesen Ausbau ohne Mikes ausdrückliche Ausnahme.
-
-Keine neue Testschicht und keine neue Anbieterlogik. Der nächste Handoff zeigt
-den vertikalen Lauf statt weiterer Vorarbeit.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+### T-23 · Runde 2 · der vertikale Lauf steht
+
+Stand `e35d190`. Alle fünf umgesetzt. **Befund 1 war der schwerste und du hast
+ihn genau richtig benannt:** Mein „Auswahltest" verlangte ausdrücklich, dass
+`quotes: [yfinance]` **kein** Plugin baut — er hat die Lücke als Eigenschaft
+festgeschrieben, statt sie zu zeigen. Das ist dieselbe Klasse wie `P-08`, nur
+eine Ebene höher: Der Test war grün, weil er das Falsche zusicherte.
+
+#### 1 · Die Brücke, und was sie den Core gekostet hat
+
+`app/plugin_adapters.py`. Der `ResolverAdapter` ist verlustfrei — der Core
+fragt mit einer ISIN, der Vertrag mit einer `ResolveRequest`, die dieselbe ISIN
+plus die Vorgabebörse trägt.
+
+Beim Kurs ging das **nicht** ohne eine Änderung am Core, und ich nenne sie
+ausdrücklich, weil sie die einzige ist: `fetch_quote` bekommt jetzt die
+aufgelöste Identität statt nur des Symbols. Der Grund ist zwingend — aus
+``EUNL.DE`` wieder `('EUNL', 'XETR')` zu machen ginge nur über eine
+Rückwärtssuche in der Alias-Tabelle, und die ist nicht eindeutig: Ein Symbol
+ohne Suffix kann jeder US-Handelsplatz sein. Eine Umkehrung zu bauen, die in
+einem von sechs Fällen rät, wäre schlechter gewesen als eine Zeile im Aufrufer,
+der die Identität ohnehin hat.
+
+`openfigi` und `yfinance` bauen jetzt ihre Plugin-Klassen und gehen durch
+denselben Adapter — die App ist damit wirklich ihr eigener erster Plugin-Autor.
+Dazu `unwrap()` als die eine Stelle, die durch Kapsel und Adapter hindurchsieht;
+vorher schälten zwei Testdateien selbst, jeweils leicht verschieden.
+
+#### 2 · Der Entry-Point ist echt, nicht nachgestellt
+
+`plugin_api` meldet `canada-file` unter der Gruppe `stockinfo.sources` an; die
+Beispiele werden als `stockinfo_plugin_examples` mitinstalliert. Ein eigener
+Test sieht in `importlib.metadata` nach, statt es zu behaupten — ohne ihn
+bewiese der Rest nur, dass ein Monkeypatch funktioniert.
+
+`tests/test_plugin_vertical.py` läuft **zweimal**, einmal je Ladeweg: Beide
+beantworten ein echtes `POST /instruments/intake`. Die Antwort trägt `ticker`,
+`mic` und den Namen — alle drei stehen nur in der CSV des Plugins, und OpenFIGI
+kennt dieses Papier an der Vorgabebörse nicht.
+
+#### 3 · Die Verträge haben vier Verstöße gefunden
+
+Keinen davon hätte ich selbst gesehen:
+
+* `FIELDS` war leer — die Quelle sagte nicht, was sie liefert.
+* Bei Unzuständigkeit kam `None` statt `[]`. Der Unterschied entscheidet, ob
+  die Kette weiterfragt.
+* `fund_size` trägt `Unit.ABSOLUTE` und kam **ohne Währung**.
+* `fetch_rate` fragte den Anbieter auch dann, wenn `handles` abgelehnt hatte —
+  und ließ dessen Ausnahme durch.
+
+Das ist das Argument für deinen Befund 2, und es ist nicht meins: Eigene
+Teilprüfungen hätte ich mir ausgesucht, und ausgerechnet diese vier Fragen
+hätte ich nicht gestellt.
+
+#### 4 · Isolation und Half-open
+
+Konstruktion und `configuration_problem()` sind am Bau-Rand gekapselt: Ein
+Plugin, dessen `__init__` wirft, verliert seine Quelle und nicht den Start.
+`try_enter()` reserviert den Probeplatz **unter einer Sperre**; die Gegenprobe
+sind zwei Threads an einer `Barrier`. Ohne die Barriere liefen sie nacheinander
+und der Test wäre grün gewesen, ohne etwas zu prüfen.
+
+#### 5 · Testfundament
+
+Das inline nachgebaute CSV-Plugin ist weg; der vertikale Test benutzt die
+vorhandenen Beispiele. Der `EUR→EUR`-Identitätsfall stand fälschlich unter
+`integration` — derselbe Fehler wie in T-27b, jetzt Unit. Der fehlende
+justETF-Online-Fall ist ergänzt; alle zehn Netzfälle fassen wirklich einen
+Dienst an.
+
+#### Zwei Dinge, die ich dir zur Prüfung gebe
+
+* **Die Core-Änderung an `fetch_quote`.** Sie ist die einzige, und ich halte
+  sie für die kleinere von zwei Übeln — aber sie ist eine Entscheidung, keine
+  Selbstverständlichkeit.
+* **`SourceSpec.contract`.** Das Feld beschreibt einen Übergang: `etf_meta`
+  spricht noch die Core-Schnittstelle, weil dort die Antwort eine andere Form
+  hat (`Reading` statt eines Datensatzes). Es soll wieder verschwinden, wenn
+  alle Rollen den Vertrag sprechen — steht aber bis dahin sichtbar da, statt
+  geraten zu werden.
+
+#### Verifikation
+
+* `make test`: Backend **772 / 29 skipped** (vorher 704), Plugin-API
+  **257 / 1 skipped**, Dashboard **259**.
+* `pytest -m "not integration"`: **762 passed, 10 deselected**.
+* `pytest -m integration`: **10 passed**.
+* `ruff check app tests plugin_api` und `git diff --check` sauber.
+
+Verify `#6c` und die Kandidatenumgebung sind im Ticket als gestrichen markiert,
+mit Mikes Wortlaut als Begründung.
