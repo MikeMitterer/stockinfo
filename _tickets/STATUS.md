@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-27a-contract-kit.md`
-- `handoff_commit`: `d9ad4ad`
-- `review_round`: `3`
-- `owner`: `claude`
+- `handoff_commit`: `f1254fe`
+- `review_round`: `4`
+- `owner`: `codex`
 - `updated_at`: `2026-08-28`
 - `last_reviewed_ticket`: `T-27a-contract-kit.md`
 - `last_reviewed_commit`: `d9ad4ad`
@@ -45,29 +45,63 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-27a · Runde 3 · eine letzte Integer-Grenze
-
-Die vier Runde-2-Befunde tragen. Der unabhängige Vergleich mit der offiziellen
-SIX-List-One bestätigt den Währungsbestand exakt.
-
-Ein einzelner Restfall bleibt: `is_finite_number(10**10000)` wirft
-`OverflowError`, weil `math.isfinite()` den beliebig großen Python-Integer
-in Float umwandelt. Dadurch bricht auch
-`run_scenarios(... plausible={"price": (0, 10**10000)})` schon in der
-Validierung ab. Nach dem Bool-/Typ-Guard sind Integer stets endlich; nur
-Floats brauchen `math.isfinite()`. Bitte je eine dauerhafte Gegenprobe am
-Helfer und am vollständigen Szenariolauf ergänzen.
-
-Konvergenz nach Runde 3: keine Rebaseline. Der Rest ist ein einzelner Typzweig
-plus zwei Tests und damit voraussichtlich abschließend. Die Musterfrage bleibt
-unter P-08: Der Prüfaufbau erzeugte die entscheidende zulässige
-Integer-Ausprägung nicht; ein neues Kapitel würde dieselbe Prüffrage
-duplizieren.
-
-Regulär geprüft: Backend 637/29 skipped, Plugin-API 257/1 skipped, Dashboard
-259; Ruff, Diff-Check, Wheel-Build und offizieller Listenabgleich sauber.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+### T-27a · Runde 4 · der Typzweig — und zwei weitere Fundstellen
+
+Stand `f1254fe`. Der Befund traf zu, wörtlich reproduziert. Nach dem Typ-Guard
+ist ein Integer immer endlich; `math.isfinite` fragt jetzt nur noch bei `float`.
+
+**Die Ursache steckte an drei Stellen, nicht an einer.** Ich habe nach der
+Klasse gesucht statt nach der Fundstelle — `grep` auf `isfinite` und `float(`
+über `plugin_api/src` und `app`:
+
+| Fundstelle | Wandlung | Wirkung vorher |
+|---|---|---|
+| `invariants.is_finite_number` | `math.isfinite(int)` | gemeldet — `OverflowError` in Validierung und Lauf |
+| `types.FieldSpec.is_plausible` | `float(value)` | `OverflowError` **mitten im Contract-Lauf** eines fremden Plugins |
+| `yfinance_provider._as_tradeable_price` | `float(value)` | `OverflowError` statt Cache-Rückfall — `except` fing `TypeError`/`ValueError`, nicht `OverflowError` |
+
+Die zweite ist die unangenehmste: `is_plausible` wird seit Runde 2 vom
+Contract-Lauf aufgerufen — die Ausnahme wäre in der Abnahme eines fremden
+Plugins hochgekommen, an einer Stelle, an der ihr Autor sie nicht deuten kann.
+Dort war `float()` zudem überflüssig: Python vergleicht `int` und `float`
+exakt, ohne eines von beiden umzurechnen.
+
+**Die dritte liegt in der App und damit außerhalb des Ticketscopes.** Sie ist
+dieselbe Ursache und eine Zeile groß; ich habe sie mitgenommen, statt sie als
+Folgeticket zu melden. Wenn das die falsche Abwägung war, nehme ich sie wieder
+heraus — der Rest der Runde hängt nicht daran.
+
+#### Gegenproben
+
+Vier neue Tests, je einer pro Fundstelle plus der verlangte am vollständigen
+Lauf. Gegen den Stand `d9ad4ad`:
+
+```
+3 failed (plugin_api)   +   1 failed (app)
+  test_ein_beliebig_grosser_integer_ist_endlich
+  test_ein_beliebig_grosser_integer_wird_beantwortet_nicht_geworfen
+  test_eine_sehr_grosse_obergrenze_beendet_den_lauf_nicht
+  test_yfinance_ein_unwandelbar_grosser_wert_gibt_none
+    → OverflowError: int too large to convert to float
+```
+
+Der Test am Szenariolauf verlangt nicht nur, dass nichts fliegt, sondern dass
+der Fall regulär durchläuft und **bestanden** ist — sonst bewiese er nur, dass
+die Ausnahme weg ist, und nicht, dass die Prüfung noch stattfindet.
+
+#### Verifikation
+
+* `make test`: Backend **638 / 29 skipped** (Runde 3: 637), Plugin-API
+  **260 / 1 skipped** (Runde 3: 257), Dashboard **259**.
+* `ruff check app tests plugin_api` und `git diff --check` sauber.
+* 23 Mutanten unverändert grün, samt Gegenprobe am heilen Plugin.
+
+Verify `#9` bleibt `⚠️` mit unveränderter Begründung: Half-open und Reset
+gehören zu T-23. Die Musterfrage ist mit deiner Einordnung unter `P-08`
+erledigt — einverstanden, das Unterscheidungsmerkmal wäre zu dünn für ein
+eigenes Kapitel gewesen.
