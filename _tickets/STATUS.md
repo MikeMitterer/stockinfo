@@ -7,7 +7,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
-- `handoff_commit`: `27ffe81`
+- `handoff_commit`: `d313318`
 - `review_round`: `2`
 - `owner`: `codex`
 - `updated_at`: `2026-08-28`
@@ -57,6 +57,86 @@ _Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
+
+### Sammelrunde · mehrere Uebergaben ohne Review
+
+**Codex war ab dem 2026-08-28 nicht verfuegbar; Mike hat angeordnet
+weiterzuarbeiten und die offenen Punkte hier zu sammeln, damit sie spaeter
+**gemeinsam** geprueft werden koennen.** Diese Liste ist deshalb kumulativ
+und nicht nach der ueblichen Ein-Ticket-Regel geschnitten. Letzter
+Produktstand: `d313318`.
+
+Reihenfolge der Uebergaben, alle unbestaetigt:
+
+| Runde | Commit | Ticket | Was drinsteht |
+|---|---|---|---|
+| 2 | `27ffe81` | T-36 | Deine vier Befunde aus Runde 1, gearbeitet |
+| — | `d313318` | T-37 | CSV-Profil mit derselben Pruefstrecke |
+
+**Zu T-36 Runde 2 (`27ffe81`)** steht die ausfuehrliche Antwort weiter unten
+unter „Frueher: T-36 Runde 2"; sie ist unveraendert offen. Kurz: alle vier
+Punkte gearbeitet, `core_version` auf `2.1.0` (Minor — begruendet, und wenn
+du die Koerper-Aenderung als Bruch liest, ist es eine Zeile bis `3.0.0`).
+
+**Zu T-37 (`d313318`)** — die Punkte, die ich fuer pruefwuerdig halte:
+
+1. **Der Schalter statt der Kopie.** `PROFILE=online|csv` entscheidet nur
+   ueber `sources.yaml`, die Dateien daneben und **einen** Erwartungswert
+   (`EXPECTED_SOURCES`). Gegenprobe: `PROFILE` kommt in keiner
+   Check-Funktion vor. Beide Profile 17/17 mit denselben Checks. Bitte
+   nachsehen, ob mir eine verkappte Fallunterscheidung durchgerutscht ist.
+
+2. **Ein neuer Befund, den erst das CSV-Profil sichtbar gemacht hat:** Die
+   Herkunft war fest verdrahtet. `quote_service.py` und `fx_service.py`
+   stempelten jeden Datensatz mit `source="yfinance"`, egal wer geantwortet
+   hat — im CSV-Profil trug damit eine Zeile, deren Kurs aus einer Datei kam,
+   den Namen eines Anbieters, der nie gefragt wurde. Derselbe Fehlertyp wie
+   dein Finding 2 aus Runde 1. Beide Dienste fragen die Quelle jetzt nach
+   ihrem Namen; der Rueckfall ist `"unbekannt"` und bewusst kein
+   Anbietername. **Drei bestehende Tests haben die Konstante festgeschrieben**
+   — ich habe die Doubles benannt statt die Pruefung zu lockern; bitte
+   gegenlesen, ob das die richtige Richtung war.
+
+3. **Mikes Grundregel als Waechter:** „Das REST-Api (`/fields`) darf nicht
+   driften in Bezug auf die Pflichtfelder." Der vorhandene Test deckte nur
+   `Artefakt sagt Pflicht → Schema muss zustimmen` ab. Die Gegenrichtung
+   fehlte: Zieht jemand ein Modell an, sagt `/fields` weiter `optional`. Der
+   neue Test verlangt, dass jedes artefakt-optionale Feld auch **nullbar**
+   ist. Erster Anlauf pruefte „nicht-nullbar **und** in `required`" und ging
+   an der Negativkontrolle vorbei — ein Feld mit Vorgabewert ist
+   nicht-nullbar und trotzdem nicht in `required`. Jetzt entscheidet allein
+   die Nullbarkeit; gemessen kostet die Regel heute nichts.
+
+4. **`type` im Resolver-Beispiel**, additiv. Tabellen ohne die Spalte bleiben
+   gueltig, eine leere Zelle wird `None` und nicht `""`.
+
+**Offene Entscheidungen, die kein Code beantwortet:**
+
+- **T-38** (Pflichtfelder). Mike hat inzwischen ausdruecklich entschieden:
+  `Resolved.name` **und** `instrument_type` sind Pflicht, ebenso Kurs und
+  Waehrung — letztere sind im Plugin-Vertrag bereits erfuellt. Ausserdem
+  verlangt er, dass die Pflicht-/Optionalfelder **ueber REST abfragbar**
+  sind. Befund dazu: `GET /fields` gibt es, es nennt `required` je Feld —
+  aber es sagt heute `name: false` und `type: false`, und es deckt **nur die
+  REST-Modelle** ab, nicht den Plugin-Vertrag. Beides steht in T-38.
+- **T-31** ist entschieden (getaggte Union `listed`/`pair`/`isin_only`,
+  Katalog `stock/etf/etc/crypto/bond`), aber **nicht** begonnen. Das Ticket
+  verbietet sich selbst den Alleingang: „**ein** gemeinsamer
+  `API_VERSION`-Sprung statt zwei" zusammen mit T-38. Wer zuerst anfaengt,
+  erzeugt den zweiten Sprung.
+- **Das Smoke-Script** — du hieltest es fuer eine zweite Teststrecke
+  ausserhalb des Scopes, Mike hat es beauftragt. Unveraendert offen; die
+  Entscheidung gehoert ihm.
+- **Welcher Weg legt ein Papier an?** Das Dashboard nutzt `GET /quote/…`,
+  nicht `POST /instruments/intake`.
+
+**Zahlen zum Sammelstand:** 813 Backend gruen / 29 skipped, 8 echte
+Integrationstests, 259 Plugin-Vertrag, 271 Dashboard, `vue-tsc` und Ruff
+sauber, `PROFILE=online` 17/17 und `PROFILE=csv` 17/17.
+
+
+### Frueher: T-36 Runde 2 · alle vier Punkte gearbeitet
+
 
 ### T-36 · Runde 2 · alle vier Punkte gearbeitet
 
