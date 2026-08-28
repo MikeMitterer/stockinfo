@@ -461,3 +461,60 @@ def test_der_echte_koerper_des_vierhundertvier_passt_zur_zusage(
     assert body["params"]["identifier"] == "XX0000000000", (
         "die Kennung nennt die Eingabe nicht — dann kann das UI keinen Satz bilden"
     )
+
+
+@pytest.mark.parametrize("model", sorted(_CONTRACT_MODELS))
+def test_kein_optionales_feld_ist_im_schema_heimlich_pflicht(model: str) -> None:
+    """**Die Gegenrichtung — und die Regel, die Mike ausgesprochen hat:**
+    *„Das REST-Api (`/fields`) darf nicht driften in Bezug auf die
+    Pflichtfelder."*
+
+    Der Test darüber prüft `Pflicht laut Artefakt → auch im Schema Pflicht`.
+    Diese Richtung allein lässt eine Drift offen, und es ist die
+    unangenehmere: Zieht jemand ein Modell an — macht `name` nicht mehr
+    nullable, weil die Quelle es inzwischen immer liefert —, dann sagt
+    `/fields` weiterhin `required: false`. Der Server hält mehr, als er zusagt.
+
+    Das klingt harmlos und ist es nicht. `/fields` ist die Auskunft, an der
+    ein Konsument sein Modell baut; sie ist **die** Antwort auf „worauf darf
+    ich mich verlassen". Eine Zusage, die hinter der Wirklichkeit
+    zurückbleibt, führt dazu, dass sich niemand auf etwas verlässt, das
+    längst gilt — und beim nächsten Umbau fällt es niemandem auf, weil kein
+    Test die beiden Seiten aneinander hält.
+
+    Ab T-38 wird das akut: Dort werden `name` und `instrument_type` zu
+    Pflichtfeldern. Wer dann nur die Modelle anfasst und das Artefakt
+    vergisst, bekommt hier einen roten Test statt einer stillen Lüge in
+    `/fields`.
+    """
+    schema = app.openapi()["components"]["schemas"][_CONTRACT_MODELS[model]]
+    properties = schema["properties"]
+    pflicht_laut_artefakt = set(required_fields(model))
+
+    optional_laut_artefakt = [
+        feld["name"]
+        for feld in core_contract()["core"][model]
+        if not feld["required"]
+    ]
+
+    for field in optional_laut_artefakt:
+        assert field not in pflicht_laut_artefakt, "Artefakt widerspricht sich selbst"
+        if field not in properties:
+            # Ein optionales Feld, das das Schema gar nicht führt, ist ein
+            # anderer Befund — ihn deckt `test_jeder_geprüfte_name_hat_auch
+            # _einen_wert` ab. Hier geht es nur um die Pflicht-Aussage.
+            continue
+        # **Nullbarkeit ist das Merkmal, nicht die `required`-Liste.** Der
+        # erste Anlauf prüfte „nicht-nullbar **und** in `required`" — und ging
+        # an der Negativkontrolle vorbei: Ein Feld mit Vorgabewert ist
+        # nicht-nullbar, steht aber nicht in `required`. Genau diese Form
+        # sagt einem Konsumenten „hier steht immer ein echter Wert", während
+        # `/fields` weiter `optional` meldet. Gemessen: Heute ist jedes
+        # artefakt-optionale Feld auch wirklich nullbar, die Regel kostet
+        # also nichts.
+        assert _is_nullable(properties[field]), (
+            f"{model}.{field} ist im Schema nicht nullbar, laut Artefakt aber "
+            f"optional — `/fields` sagt dann weniger zu, als der Server "
+            f"tatsächlich hält. Entweder das Artefakt nachziehen (und "
+            f"`core_version` anheben) oder das Modell wieder lockern."
+        )

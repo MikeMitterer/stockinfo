@@ -44,6 +44,17 @@ class CachedFxService:
         self._repository = repository
         self._ttl_hours = ttl_hours
 
+    @property
+    def _fx_source(self) -> str:
+        """Wer den Wechselkurs geliefert hat — dieselbe Regel wie beim Kurs.
+
+        Hier stand ebenfalls ``"yfinance"`` fest. Im CSV-Profil beantwortet
+        `fx-file` diese Frage, und der gespeicherte Datensatz behauptete
+        trotzdem yfinance. Ausführlich begründet bei
+        `QuoteService._quote_source`.
+        """
+        return getattr(self._provider, "name", "") or "unbekannt"
+
     def get_rate(self, base: str, quote: str) -> FxRate:
         """Liefert den Wechselkurs 1 base = ? quote (aus Cache oder frisch).
 
@@ -80,7 +91,8 @@ class CachedFxService:
         now = datetime.now(timezone.utc).isoformat()
         self._repository.save_fx_rate(base, quote, rate, now, now)
         return FxRate(
-            base=base, quote=quote, rate=rate, quote_time=now, source="yfinance",
+            base=base, quote=quote, rate=rate, quote_time=now,
+            source=self._fx_source,
             cached=False, stale=False, fetched_at=now,
         )
 

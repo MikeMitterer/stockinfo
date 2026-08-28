@@ -40,6 +40,20 @@ readonly PORT="${PORT:-8795}"
 readonly BASE_URL="http://127.0.0.1:${PORT}"
 readonly VENV_PY="${PROJECT_ROOT}/.venv/bin/python"
 
+# Welches Quellenprofil geprüft wird — **ein Schalter, keine zweite
+# Prüfstrecke** (T-37).
+#
+# Das Profil entscheidet genau zwei Dinge: welche `sources.yaml` geschrieben
+# wird und welche Dateien danebenliegen. **Die Checks darunter kennen es
+# nicht.** Sie fragen nach dem Ergebnis — „kommt das Papier an dieser Börse in
+# dieser Währung herein", „ist der Name gefüllt" —, und das Ergebnis muss
+# dasselbe sein, egal wer geantwortet hat.
+#
+# Sobald ein Check ein `if [[ "${PROFILE}" == … ]]` braucht, ist die
+# Schnittstelle an dieser Stelle keine gemeinsame. Das wäre ein **Befund**,
+# kein Grund für einen Zweig.
+readonly PROFILE="${PROFILE:-online}"
+
 # Ein europäischer ETF, ein US-Papier und eines, das die Vorzugsbörse nicht
 # führt. Zusammen decken sie alle drei Auflösungswege ab.
 readonly ETF_ISIN="IE00B4L5Y983"
@@ -49,7 +63,7 @@ readonly NONSENSE_ISIN="XX0000000000"
 
 # Wie viele Checks dieser Lauf erwartet. Ohne die Zahl könnte ein Lauf, der
 # unterwegs abbricht, mit COUNT_FAIL=0 grün enden (P-05).
-readonly EXPECTED_CHECKS=16
+readonly EXPECTED_CHECKS=17
 
 COUNT_OK=0
 COUNT_FAIL=0
@@ -59,6 +73,11 @@ LOGFILE=""
 DB_PATH=""
 KEEP_LOG=false
 
+# Welche Quellen dieses Profil erwartet — gesetzt beim Schreiben der Kette,
+# gelesen von `checkChain`. Der **einzige** Erwartungswert, der sich zwischen
+# den Profilen unterscheidet.
+EXPECTED_SOURCES=""
+
 usage() {
     echo
     echo "Usage: ${APPNAME} [ options ]"
@@ -66,6 +85,8 @@ usage() {
     usageLine "-r | --run       " "Checks ausführen (eigener Server, temporäres Volume)"
     usageLine "-k | --keep-log  " "Server-Log und Volume stehen lassen"
     usageLine "-i | --info      " "Einstellungen anzeigen"
+    echo
+    echo -e "    ${YELLOW}PROFILE${NC}=online|csv  — dieselben Checks, andere Quellen (T-37)"
     usageLine "-h | --help      " "Diese Hilfe anzeigen"
     echo
     echo -e "${LIGHT_BLUE}Hints:${NC}"
@@ -117,12 +138,9 @@ cleanup() {
     fi
 }
 
-# Legt Volume und die Kette an, die Mike für T-35 vorgegeben hat.
-prepareVolume() {
-    WORKDIR="$(mktemp -d)"
-    LOGFILE="${WORKDIR}/server.log"
-    DB_PATH="${WORKDIR}/stockinfo.db"
-
+# Schreibt die Kette des Online-Profils: OpenFIGI, Yahoo, justETF.
+writeOnlineProfile() {
+    EXPECTED_SOURCES="justetf,openfigi,yahoo-search,yfinance"
     cat > "${WORKDIR}/sources.yaml" <<'YAML'
 resolvers: [openfigi, yahoo-search]
 etf_meta:  [justetf, yfinance]
@@ -134,12 +152,103 @@ providers:
   openfigi:
     api_key: ${OPENFIGI_API_KEY}
 YAML
+}
+
+# Schreibt die Kette des CSV-Profils samt ihrer Dateien.
+#
+# **Dieselben drei Papiere wie online, mit denselben Werten** — nur so bleiben
+# die Checks darunter identisch. Weicht ein Wert ab, prüft der Lauf nicht mehr
+# dieselbe Aussage, sondern eine ähnliche.
+writeCsvProfile() {
+    EXPECTED_SOURCES="canada-file,fx-file,metadata-file,prices-file-daily,prices-file-quote"
+    local -r _PLUGINS="${WORKDIR}/plugins"
+    mkdir -p "${_PLUGINS}"
+
+    # Die Beispiele werden als **Dateien** ins Volume gelegt — der Ladeweg,
+    # den ein Betreiber nimmt. `canada-file` liegt zwar auch als Entry-Point
+    # vor; die anderen vier gibt es nur so, und zwei Ladewege im selben Lauf
+    # zu mischen machte die Aussage unschärfer.
+    cp "${PROJECT_ROOT}/plugin_api/examples/canada_file.py"   "${_PLUGINS}/aufloesung.py"
+    cp "${PROJECT_ROOT}/plugin_api/examples/metadata_file.py" "${_PLUGINS}/kennzahlen.py"
+    cp "${PROJECT_ROOT}/plugin_api/examples/prices_file.py"   "${_PLUGINS}/kurse.py"
+    printf '\nSOURCES = [CanadaFileResolver]\n'   >> "${_PLUGINS}/aufloesung.py"
+    printf '\nSOURCES = [MetadataFileSource]\n'   >> "${_PLUGINS}/kennzahlen.py"
+    printf '\nSOURCES = [PricesFileQuoteSource, PricesFileDailySource, FxFileSource]\n' \
+        >> "${_PLUGINS}/kurse.py"
+
+    cat > "${WORKDIR}/isins.csv" <<'CSV'
+isin;ticker;mic;name;type
+IE00B4L5Y983;EUNL;XETR;iShares Core MSCI World UCITS ETF;etf
+US0378331005;APC;XETR;Apple Inc.;stock
+CA7800871021;RY;XTSE;Royal Bank of Canada;stock
+CSV
+
+    cat > "${WORKDIR}/closes.csv" <<'CSV'
+ticker;mic;day;close;currency
+EUNL;XETR;2026-08-27;128.21;EUR
+APC;XETR;2026-08-27;277.40;EUR
+RY;XTSE;2026-08-27;283.40;CAD
+CSV
+
+    # Die TER steht hier in **Basispunkten** — `20` sind `0,20 %`, derselbe
+    # Wert, den justETF online liefert. Dass beide Profile dasselbe anzeigen,
+    # obwohl die Quellen in verschiedenen Einheiten liefern, ist der schärfste
+    # Einzelbeweis dafür, dass die Einheitendeklaration des Vertrags trägt.
+    cat > "${WORKDIR}/meta.csv" <<'CSV'
+isin;ter_bps;provider;fund_domicile
+IE00B4L5Y983;20;iShares;Ireland
+CSV
+
+    cat > "${WORKDIR}/fx.csv" <<'CSV'
+base;quote;day;rate
+CAD;EUR;2026-08-27;0.6412
+CSV
+
+    # `prefixes` ist der Grund, warum das Beispiel hier ohne Änderung taugt:
+    # Es ist auf `CA` voreingestellt, aber konfigurierbar.
+    cat > "${WORKDIR}/sources.yaml" <<YAML
+resolvers: [canada-file]
+etf_meta:  [metadata-file]
+quotes:    [prices-file-quote]
+daily:     [prices-file-daily]
+fx:        [fx-file]
+
+providers:
+  canada-file:
+    path: ${WORKDIR}/isins.csv
+    prefixes: [IE, US, CA]
+  metadata-file:
+    path: ${WORKDIR}/meta.csv
+    prefixes: [IE, US, CA]
+  prices-file-quote:
+    path: ${WORKDIR}/closes.csv
+  prices-file-daily:
+    path: ${WORKDIR}/closes.csv
+  fx-file:
+    path: ${WORKDIR}/fx.csv
+YAML
+}
+
+# Legt das Volume und die Kette des gewählten Profils an.
+prepareVolume() {
+    WORKDIR="$(mktemp -d)"
+    LOGFILE="${WORKDIR}/server.log"
+    DB_PATH="${WORKDIR}/stockinfo.db"
+
+    case "${PROFILE}" in
+        online) writeOnlineProfile ;;
+        csv)    writeCsvProfile ;;
+        *)
+            echo -e "  ${RED}✗${NC} Unbekanntes Profil '${PROFILE}' — erlaubt: online, csv"
+            return 1
+            ;;
+    esac
 
     (
         cd "${PROJECT_ROOT}" || exit 1
         "${VENV_PY}" -c "from app.db import init_db; init_db('${DB_PATH}')"
     ) || { echo -e "  ${RED}✗${NC} Schema konnte nicht angelegt werden"; return 1; }
-    echo -e "  ${GREEN}✓${NC} Volume und Kette angelegt"
+    echo -e "  ${GREEN}✓${NC} Volume und Kette angelegt (Profil ${PROFILE})"
     return 0
 }
 
@@ -252,6 +361,116 @@ print(f'{row[0]} Zeilen, zuletzt {row[1]}')
 
 # ─── Die Checks ───────────────────────────────────────────────────────────────
 
+# **Vor allen anderen: Taugen die Erwartungswerte selbst?**
+#
+# Mike ausdrücklich: „Stelle natürlich vorher fest, dass die Testdaten im CSV
+# passen." Ohne diesen Check misst ein grüner Lauf womöglich nur, dass beide
+# Seiten denselben Tippfehler teilen.
+#
+# Geprüft wird gegen `stockinfo_plugin.invariants` — **dieselben** Funktionen,
+# an denen auch die Quellen gemessen werden. Eigene Prüfungen zu schreiben
+# wäre eine zweite Wahrheit über dasselbe.
+#
+# Der Check läuft in **beiden** Profilen und ist damit kein Sonderweg: Online
+# prüft er die Erwartungen, gegen die die echten Quellen gehalten werden; im
+# CSV-Profil zusätzlich die Werte, die in den Dateien stehen. Ein falsch
+# erwarteter MIC fiele online genauso auf.
+checkTestData() {
+    local _BEFUND
+    _BEFUND="$("${VENV_PY}" - "${WORKDIR}" "${PROFILE}" <<'PY'
+import csv
+import sys
+from pathlib import Path
+
+from stockinfo_plugin.invariants import (
+    currency_problem,
+    is_finite_price,
+    is_real_mic,
+    isin_check_digit_is_valid,
+)
+
+workdir, profile = Path(sys.argv[1]), sys.argv[2]
+fehler: list[str] = []
+
+# Die Erwartungen, gegen die die Checks unten messen — in beiden Profilen
+# dieselben. Sie stehen hier und nicht in den Checks, damit die Prüflogik
+# darunter profilfrei bleibt.
+erwartet = [
+    ("IE00B4L5Y983", "EUNL", "XETR", "EUR"),
+    ("US0378331005", "APC", "XETR", "EUR"),
+    ("CA7800871021", "RY", "XTSE", "CAD"),
+]
+for isin, ticker, mic, currency in erwartet:
+    if not isin_check_digit_is_valid(isin):
+        fehler.append(f"erwartete ISIN mit falscher Pruefziffer: {isin}")
+    if not is_real_mic(mic):
+        fehler.append(f"erwarteter MIC ist kein echter Handelsplatz: {mic}")
+    problem = currency_problem(currency)
+    if problem:
+        fehler.append(f"erwartete Waehrung {currency}: {problem}")
+
+# Die Gegenprobe: Eine Pruefung, die nichts abweisen kann, belegt nur, dass
+# sie durchgelaufen ist.
+if isin_check_digit_is_valid("XX0000000000"):
+    fehler.append("die Pruefziffer-Pruefung greift nicht")
+if is_real_mic("US"):
+    fehler.append("der Sammelcode US wird nicht abgewiesen")
+if not currency_problem("GBX"):
+    fehler.append("Pence werden nicht als Untereinheit erkannt")
+
+# Im CSV-Profil zusaetzlich die Dateien selbst.
+def rows(name: str) -> list[dict]:
+    pfad = workdir / name
+    if not pfad.is_file():
+        return []
+    with pfad.open(encoding="utf-8", newline="") as handle:
+        return list(csv.DictReader(handle, delimiter=";"))
+
+for row in rows("isins.csv"):
+    if not isin_check_digit_is_valid(row["isin"]):
+        fehler.append(f"isins.csv: falsche Pruefziffer {row['isin']}")
+    if not is_real_mic(row["mic"]):
+        fehler.append(f"isins.csv: kein echter MIC {row['mic']}")
+    if not (row.get("name") or "").strip():
+        fehler.append(f"isins.csv: Name fehlt bei {row['isin']}")
+    # Der Katalog aus T-31, Entscheidung 2. Ein Tippfehler in der Gattung
+    # waere sonst genau der Fall, den der UI-Lauf teuer gemacht hat.
+    if (row.get("type") or "").strip() not in ("stock", "etf", "etc", "crypto", "bond"):
+        fehler.append(f"isins.csv: unbekannte Gattung {row.get('type')!r} bei {row['isin']}")
+
+for row in rows("closes.csv"):
+    if not is_real_mic(row["mic"]):
+        fehler.append(f"closes.csv: kein echter MIC {row['mic']}")
+    problem = currency_problem(row["currency"])
+    if problem:
+        fehler.append(f"closes.csv: {row['currency']} — {problem}")
+    if not is_finite_price(float(row["close"])):
+        fehler.append(f"closes.csv: unbrauchbarer Kurs {row['close']}")
+
+for row in rows("meta.csv"):
+    if not isin_check_digit_is_valid(row["isin"]):
+        fehler.append(f"meta.csv: falsche Pruefziffer {row['isin']}")
+    bps = (row.get("ter_bps") or "").strip()
+    if bps and not 0 <= float(bps) <= 500:
+        fehler.append(f"meta.csv: TER {bps} bps ausserhalb des Wertebereichs")
+
+for row in rows("fx.csv"):
+    for spalte in ("base", "quote"):
+        problem = currency_problem(row[spalte])
+        if problem:
+            fehler.append(f"fx.csv: {row[spalte]} — {problem}")
+    if not is_finite_price(float(row["rate"])):
+        fehler.append(f"fx.csv: unbrauchbarer Kurs {row['rate']}")
+
+print("; ".join(fehler))
+PY
+)"
+    [[ -z "${_BEFUND}" ]] \
+        && report "#0 " "die Testdaten halten die Vertragsinvarianten" true \
+            "Pruefziffer, echter MIC, Waehrung ohne Untereinheit, endliche Kurse" \
+        || report "#0 " "die Testdaten halten die Vertragsinvarianten" false "${_BEFUND}"
+}
+
 checkChain() {
     local _BODY _NAMES
     _BODY="$(curl -s "${BASE_URL}/sources")"
@@ -262,9 +481,14 @@ unkonfiguriert = [s['name'] for s in d['sources'] if not s.get('configured')]
 print(','.join(sorted({s['name'] for s in d['sources']})), '|', ','.join(unkonfiguriert))
 " "${_BODY}" 2>/dev/null)"
 
-    local _WANTED="justetf,openfigi,yahoo-search,yfinance"
-    if [[ "${_NAMES}" == "${_WANTED} | " ]]; then
-        report "#1 " "die vorgegebene Kette steht und ist einsatzbereit" true "${_WANTED}"
+    # **Der einzige Erwartungswert, der sich je Profil unterscheidet** — und
+    # er steht deshalb dort, wo die Kette geschrieben wird, nicht hier. Ein
+    # `if [[ "${PROFILE}" == … ]]` an dieser Stelle waere der Anfang einer
+    # zweiten Pruefstrecke; die Frage „stehen genau die erwarteten Quellen da
+    # und sind alle einsatzbereit" ist in beiden Profilen dieselbe.
+    if [[ "${_NAMES}" == "${EXPECTED_SOURCES} | " ]]; then
+        report "#1 " "die vorgegebene Kette steht und ist einsatzbereit" true \
+            "${EXPECTED_SOURCES}"
     else
         report "#1 " "die vorgegebene Kette steht und ist einsatzbereit" false "${_NAMES}"
     fi
@@ -305,22 +529,22 @@ checkChainProvesItself() {
     # OpenFIGI, der Kurs von yfinance, TER und Anbieter von justETF. Drei
     # Quellen in einer Antwort — fehlt eine, ist es keine Kette.
     [[ -n "${_NAME}" ]] \
-        && report "#3a" "der Name ist gefüllt (OpenFIGI)" true "${_NAME}" \
-        || report "#3a" "der Name ist gefüllt (OpenFIGI)" false "leer"
+        && report "#3a" "der Name ist gefüllt (Auflösung)" true "${_NAME}" \
+        || report "#3a" "der Name ist gefüllt (Auflösung)" false "leer"
 
     [[ "${_TYPE}" == "etf" ]] \
-        && report "#3b" "die Gattung ist erkannt (OpenFIGI)" true "etf" \
-        || report "#3b" "die Gattung ist erkannt (OpenFIGI)" false "'${_TYPE}'"
+        && report "#3b" "die Gattung ist erkannt (Auflösung)" true "etf" \
+        || report "#3b" "die Gattung ist erkannt (Auflösung)" false "'${_TYPE}'"
 
     [[ "${_CURRENCY}" == "EUR" ]] \
-        && report "#3c" "der Kurs trägt seine Währung (yfinance)" true "EUR" \
-        || report "#3c" "der Kurs trägt seine Währung (yfinance)" false "'${_CURRENCY}'"
+        && report "#3c" "der Kurs trägt seine Währung (Kursquelle)" true "EUR" \
+        || report "#3c" "der Kurs trägt seine Währung (Kursquelle)" false "'${_CURRENCY}'"
 
     if [[ -n "${_TER}" && -n "${_PROVIDER}" ]]; then
-        report "#3d" "TER und Anbieter kommen an (justETF)" true "TER ${_TER} · ${_PROVIDER}"
+        report "#3d" "TER und Anbieter kommen an (Metadatenquelle)" true "TER ${_TER} · ${_PROVIDER}"
     else
-        report "#3d" "TER und Anbieter kommen an (justETF)" false \
-            "TER '${_TER}', Anbieter '${_PROVIDER}' — wird justETF überhaupt gefragt?"
+        report "#3d" "TER und Anbieter kommen an (Metadatenquelle)" false \
+            "TER '${_TER}', Anbieter '${_PROVIDER}' — wird die Metadatenquelle überhaupt gefragt?"
     fi
 }
 
@@ -464,13 +688,14 @@ runChecks() {
     trap cleanup EXIT INT TERM
 
     echo
-    echo -e "${LIGHT_BLUE}T-35 — die Verify-Matrix über die REST-Schnittstelle${NC}"
+    echo -e "${LIGHT_BLUE}T-35 — die Verify-Matrix über die REST-Schnittstelle${NC}  (Profil ${PROFILE})"
     echo
 
     prepareVolume || return 1
     startServer || return 1
     echo
 
+    checkTestData
     checkChain
     checkIntake
     checkChainProvesItself

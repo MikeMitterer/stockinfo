@@ -17,6 +17,17 @@ from app.services.quote_service import (
 class FakeQuoteProvider:
     """Liefert einen vorgegebenen RawQuote (oder None)."""
 
+    #: **Wie jede echte Kettenquelle nennt auch das Double seinen Namen.**
+    #:
+    #: Seit T-37 stempelt `QuoteService` die Herkunft nicht mehr als Konstante
+    #: `"yfinance"`, sondern fragt die Quelle. Ein Double ohne Namen hätte
+    #: danach `"unbekannt"` geliefert — und drei Tests, die vorher die
+    #: Konstante festschrieben, hätten das als Fehler gemeldet, obwohl der
+    #: Dienst richtig gearbeitet hat. In der Kette trägt jede Quelle einen
+    #: Namen (`app.plugin_adapters` reicht ihn durch); das Double bildet das
+    #: nach, statt die Prüfung zu lockern.
+    name = "yfinance"
+
     def __init__(self, raw: RawQuote | None) -> None:
         self._raw = raw
 
@@ -687,3 +698,54 @@ def test_die_identitaet_der_aufloesung_reist_bis_zur_speicherung_mit() -> None:
     result = service.get_quote_by_isin("IE00B3RBWM25")
 
     assert (result.ticker, result.mic) == ("VGWL", "XETR")
+
+
+def test_die_herkunft_nennt_die_quelle_die_geantwortet_hat() -> None:
+    """**Der Befund aus dem CSV-Lauf T-37.**
+
+    `source` stand als Konstante ``"yfinance"`` im Code. Im Online-Profil fiel
+    das nie auf — dort *ist* yfinance die Kursquelle. Im CSV-Profil trug eine
+    Zeile, deren Kurs aus einer Datei kam, trotzdem `source: yfinance`.
+
+    Das ist keine Kosmetik: `source` ist das Feld, an dem ein Benutzer abliest,
+    woher ein Wert stammt — die Oberfläche zeigt es im Aufklappbereich als
+    „Quelle". Derselbe Fehlertyp wie die Fehlermeldungen, die bis T-36
+    OpenFIGI und Yahoo namentlich nannten, obwohl das Profil andere Quellen
+    führte.
+
+    Geprüft wird mit einem **anderen** Namen als dem eingebauten; sonst
+    bestünde der Test auch dann, wenn die Konstante zurückkäme.
+    """
+
+    class AusEinerDatei(FakeQuoteProvider):
+        name = "prices-file-quote"
+
+    service = QuoteService(
+        AusEinerDatei(_etf_quote()),
+        FakeEtfProvider(None),
+        FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25", type="stock")),
+    )
+
+    result = service.get_quote_by_isin("IE00B3RBWM25")
+
+    assert result.source == "prices-file-quote"
+
+
+def test_eine_namenlose_quelle_heisst_unbekannt_und_nicht_yfinance() -> None:
+    """Der Rückfall ist bewusst **kein** Anbietername.
+
+    Eine Quelle, die ihren Namen nicht nennt, ist unbekannt — und genau das
+    soll dastehen. Auf einen eingebauten Namen zurückzufallen wäre dieselbe
+    Behauptung wie vorher, nur seltener.
+    """
+
+    class OhneNamen(FakeQuoteProvider):
+        name = ""
+
+    service = QuoteService(
+        OhneNamen(_etf_quote()),
+        FakeEtfProvider(None),
+        FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25", type="stock")),
+    )
+
+    assert service.get_quote_by_isin("IE00B3RBWM25").source == "unbekannt"

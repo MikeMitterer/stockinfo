@@ -10,8 +10,13 @@ Dasselbe Prinzip wie bei den manuell gepflegten Kennzahlen, eine Ebene höher:
 
 Format der Datei (Semikolon, Kopfzeile erforderlich)::
 
-    isin;ticker;mic;name
-    CA78012H5675;RY;XTSE;Royal Bank of Canada
+    isin;ticker;mic;name;type
+    CA78012H5675;RY;XTSE;Royal Bank of Canada;stock
+
+``type`` ist seit T-37 dabei und **optional** — Tabellen ohne die Spalte
+bleiben gültig. Sie fehlte, und der UI-Lauf hat gezeigt, was das kostet: Ohne
+Gattung hält die App jedes Papier für eine Aktie und fragt die
+Metadatenquelle gar nicht erst. Mit T-38 wird die Angabe zur Pflicht.
 """
 
 import csv
@@ -78,6 +83,17 @@ class CanadaFileResolver(Resolver):
             mic=entry["mic"],
             isin=request.isin.upper(),
             name=entry.get("name") or None,
+            # **Die Gattung kommt aus der Tabelle, seit T-37.** Sie fehlte,
+            # und der UI-Lauf hat gezeigt, was das kostet: Ohne `type` hält
+            # die App das Papier für eine Aktie und fragt die Metadatenquelle
+            # **gar nicht erst** — TER und Anbieter bleiben dann dauerhaft
+            # leer, ohne Fehlermeldung.
+            #
+            # Die Spalte ist optional: Alte Tabellen ohne sie bleiben gültig
+            # und liefern wie bisher `None`. Mit T-38 wird `instrument_type`
+            # zum Pflichtfeld; dann ist die Spalte nicht mehr freiwillig, und
+            # diese Zeile ist der Ort, an dem das auffällt.
+            instrument_type=entry.get("type") or None,
         )
 
     def _lookup(self, isin: str) -> dict[str, str] | None:

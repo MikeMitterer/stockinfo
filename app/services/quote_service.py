@@ -200,6 +200,28 @@ class QuoteService:
         self._etf_provider = etf_provider
         self._resolver = resolver
 
+    @property
+    def _quote_source(self) -> str:
+        """Wer den Kurs geliefert hat — **gefragt, nicht angenommen**.
+
+        Hier stand ``"yfinance"`` als Konstante, und im Online-Profil fiel das
+        nie auf: Dort *ist* yfinance die Kursquelle. Der CSV-Lauf aus T-37 hat
+        es sichtbar gemacht — eine Zeile, deren Kurs aus einer Datei kam, trug
+        `source: yfinance`.
+
+        Das ist keine Kosmetik. `source` ist das Feld, an dem ein Benutzer
+        abliest, woher ein Wert stammt; die Oberfläche zeigt es im
+        Aufklappbereich als „Quelle". Ein fest verdrahteter Anbietername macht
+        daraus eine Behauptung über etwas, das der Dienst gar nicht geprüft
+        hat — derselbe Fehlertyp wie die Fehlermeldungen, die bis T-36
+        OpenFIGI und Yahoo namentlich nannten, obwohl das Profil andere
+        Quellen führte.
+
+        Der Rückfall ist bewusst **nicht** ein Anbietername: Eine Quelle, die
+        ihren Namen nicht nennt, ist unbekannt, und genau das soll dastehen.
+        """
+        return getattr(self._quote_provider, "name", "") or "unbekannt"
+
     def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         """Beschafft den Kurs zu einer ISIN.
 
@@ -384,7 +406,7 @@ class QuoteService:
             price=raw.price,
             quote_time=raw.quote_time,
             volume=raw.volume,
-            source="yfinance",
+            source=self._quote_source,
             cached=False,
             stale=False,
             fetched_at=datetime.now(timezone.utc).isoformat(),

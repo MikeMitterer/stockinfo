@@ -74,3 +74,47 @@ def test_zustaendigkeit_ist_konfigurierbar(prefixes: tuple[str, ...]) -> None:
     resolver = CanadaFileResolver({"path": str(FIXTURE), "prefixes": list(prefixes)})
 
     assert resolver.handles(ResolveRequest(isin=f"{prefixes[0]}0000000000"))
+
+
+def test_die_gattung_kommt_aus_der_tabelle() -> None:
+    """**Die Spalte, deren Fehlen T-35 im Browser sichtbar gemacht hat.**
+
+    Ohne `instrument_type` hält die App das Papier für eine Aktie und fragt
+    die Metadatenquelle **gar nicht erst** — TER, Anbieter und Domizil bleiben
+    dauerhaft leer, ohne Fehlermeldung und ohne Protokolleintrag. Genau dieser
+    Weg lief monatelang so, bis der erste Browserlauf ihn zeigte.
+    """
+    resolver = CanadaFileResolver({"path": str(FIXTURE)})
+
+    hit = resolver.resolve(ResolveRequest(isin="CA78012H5675"))
+
+    assert hit.instrument_type == "stock"
+
+
+def test_eine_tabelle_ohne_gattungsspalte_bleibt_gueltig(tmp_path: Path) -> None:
+    """Die Spalte ist **additiv** — alte Dateien dürfen nicht kaputtgehen.
+
+    Ein Betreiber pflegt seine Tabelle von Hand. Ein Format, das nach einem
+    Update eine neue Pflichtspalte verlangt, kostet ihn seine Quelle, während
+    er nichts geändert hat.
+
+    Geprüft werden **beide** Formen der Abwesenheit: die Spalte fehlt ganz,
+    und sie ist da, aber leer. Eine leere Zelle wird zu ``None`` und nicht zu
+    ``""`` — ein Leerstring wäre eine Gattung, die es nicht gibt.
+    """
+    alt = tmp_path / "ohne-spalte.csv"
+    alt.write_text(
+        "isin;ticker;mic;name\nCA78012H5675;RY;XTSE;Royal Bank of Canada\n",
+        encoding="utf-8",
+    )
+
+    ohne_spalte = CanadaFileResolver({"path": str(alt)}).resolve(
+        ResolveRequest(isin="CA78012H5675")
+    )
+    assert ohne_spalte.ticker == "RY", "die Zeile muss trotzdem auflösen"
+    assert ohne_spalte.instrument_type is None
+
+    leere_zelle = CanadaFileResolver({"path": str(FIXTURE)}).resolve(
+        ResolveRequest(isin="CA9861913023")
+    )
+    assert leere_zelle.instrument_type is None, "eine leere Zelle ist keine Gattung"

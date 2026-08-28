@@ -166,17 +166,17 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | `PROFILE=csv`, Vorlauf | die Testdaten werden gegen `stockinfo_plugin.invariants` geprüft — Prüfziffer, echter MIC, Währung ohne Untereinheit, endliche Kurse. Ein Tippfehler in der CSV fällt **vor** dem ersten Check auf | | |
-| **2** | `GET /sources` mit `PROFILE=csv` | in allen fünf Rollen stehen die Datei-Quellen, jede `configured: true`. Keine yfinance-, justETF- oder OpenFIGI-Quelle ist beteiligt | | |
-| **3** | `./_tickets/T-35-smoke.sh --run` mit **beiden** Profilen | dieselben Checks, beide grün. **Kein Check enthält eine Fallunterscheidung nach Profil** — die Gegenprobe ist ein `grep` über das Script | | |
-| **4** | die Diff des Scripts | die Prüflogik ist **einmal** da. Zwei Profil-Tabellen mit Erwartungswerten sind erlaubt, zwei Prüfstrecken nicht | | |
-| **5** | Dashboard mit `PROFILE=csv` | Papier per ISIN anlegen: Zeile erscheint mit Name, Börse, Währung — genau wie beim Online-Profil, nur ohne Netz | | |
-| **5b** | dasselbe Papier aufklappen | Gattung als Badge, TER und Anbieter gefüllt. **Die TER steht in der Datei in Basispunkten** und muss in Prozent ankommen — die Einheitendeklaration des Vertrags, sichtbar in der Oberfläche | | |
-| **6** | eine ISIN, die **nicht** in der Tabelle steht | dieselbe verständliche Meldung wie beim Online-Profil, dieselbe Kennung `instrument_not_found`, keine neue Zeile in der Datenbank | | |
-| **7** | Handpflege setzen, Refresh auslösen | überlebt — wie beim Online-Profil. Der Kurs kommt danach weiterhin aus der Datei | | |
-| **8** | Papier löschen | verschwindet aus Liste und Datenbank, keine Waisen | | |
-| **9** | `data/plugins/` und `sources.yaml` tauschen, Neustart | **derselbe Bestand**, andere Quelle. Die Datenbank bleibt; nur wer antwortet, ändert sich. Das ist die eigentliche Aussage des Plugin-Systems | | |
-| **10** | Browser-Konsole über den ganzen CSV-Lauf | keine Fehler, keine fehlgeschlagenen Requests | | |
+| **1** | `PROFILE=csv`, Vorlauf | die Testdaten werden gegen `stockinfo_plugin.invariants` geprüft — Prüfziffer, echter MIC, Währung ohne Untereinheit, endliche Kurse. Ein Tippfehler in der CSV fällt **vor** dem ersten Check auf | ✅ | |
+| **2** | `GET /sources` mit `PROFILE=csv` | in allen fünf Rollen stehen die Datei-Quellen, jede `configured: true`. Keine yfinance-, justETF- oder OpenFIGI-Quelle ist beteiligt | ✅ | |
+| **3** | `./_tickets/T-35-smoke.sh --run` mit **beiden** Profilen | dieselben Checks, beide grün. **Kein Check enthält eine Fallunterscheidung nach Profil** — die Gegenprobe ist ein `grep` über das Script | ✅ | |
+| **4** | die Diff des Scripts | die Prüflogik ist **einmal** da. Zwei Profil-Tabellen mit Erwartungswerten sind erlaubt, zwei Prüfstrecken nicht | ✅ | |
+| **5** | Dashboard mit `PROFILE=csv` | Papier per ISIN anlegen: Zeile erscheint mit Name, Börse, Währung — genau wie beim Online-Profil, nur ohne Netz | ✅ | |
+| **5b** | dasselbe Papier aufklappen | Gattung als Badge, TER und Anbieter gefüllt. **Die TER steht in der Datei in Basispunkten** und muss in Prozent ankommen — die Einheitendeklaration des Vertrags, sichtbar in der Oberfläche | ✅ | |
+| **6** | eine ISIN, die **nicht** in der Tabelle steht | dieselbe verständliche Meldung wie beim Online-Profil, dieselbe Kennung `instrument_not_found`, keine neue Zeile in der Datenbank | ✅ | |
+| **7** | Handpflege setzen, Refresh auslösen | überlebt — wie beim Online-Profil. Der Kurs kommt danach weiterhin aus der Datei | ✅ | |
+| **8** | Papier löschen | verschwindet aus Liste und Datenbank, keine Waisen | ✅ | |
+| **9** | `data/plugins/` und `sources.yaml` tauschen, Neustart | **derselbe Bestand**, andere Quelle. Die Datenbank bleibt; nur wer antwortet, ändert sich. Das ist die eigentliche Aussage des Plugin-Systems | ✅ | |
+| **10** | Browser-Konsole über den ganzen CSV-Lauf | keine Fehler, keine fehlgeschlagenen Requests | ✅ | |
 
 ---
 
@@ -209,4 +209,72 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 ## Auflösung
 
-_(offen)_
+**Beide Profile laufen mit derselben Prüfstrecke: 17/17 und 17/17.**
+Ausgeführt am 2026-08-28, Produktstand siehe Commit.
+
+### Was die Umsetzung gebraucht hat
+
+1. **`type` als Spalte im Resolver-Beispiel** (`canada_file.py`), additiv.
+   Tabellen ohne die Spalte bleiben gültig; eine leere Zelle wird zu `None`
+   und nicht zu `""`. Zwei Vertragstests halten beides fest.
+2. **`PROFILE=online|csv` im vorhandenen Script.** Das Profil schreibt die
+   `sources.yaml`, legt beim CSV-Profil die Beispieldateien als *Dateien* ins
+   Volume und setzt **einen** Erwartungswert: `EXPECTED_SOURCES`. Sonst kennt
+   kein Check das Profil — die Gegenprobe ist ein `grep`, und `PROFILE`
+   kommt in keiner Check-Funktion vor.
+3. **Ein Vorlauf-Check `#0`**, der die Testdaten gegen
+   `stockinfo_plugin.invariants` hält — samt Gegenprobe auf XX-ISIN,
+   Sammelcode `US` und Pence. Er läuft in **beiden** Profilen.
+
+### Der Befund, den erst das CSV-Profil sichtbar gemacht hat
+
+**Die Herkunft war fest verdrahtet.** `app/services/quote_service.py` und
+`app/services/fx_service.py` stempelten jeden Datensatz mit
+`source="yfinance"` — unabhängig davon, wer geantwortet hat. Im Online-Profil
+fällt das nie auf, dort *ist* yfinance die Quelle. Im CSV-Profil stand in der
+Datenbank:
+
+```
+('CA7800871021', …, 'stock', 'yfinance')     ← der Kurs kam aus einer Datei
+```
+
+`source` ist das Feld, an dem ein Benutzer abliest, woher ein Wert stammt —
+die Oberfläche zeigt es im Aufklappbereich als „Quelle". Es ist **derselbe
+Fehlertyp** wie die Fehlermeldungen, die bis T-36 OpenFIGI und Yahoo
+namentlich nannten, obwohl das Profil andere Quellen führte: eine Behauptung
+über etwas, das der Dienst gar nicht geprüft hat.
+
+Behoben: Beide Dienste fragen die Quelle nach ihrem Namen. Der Rückfall ist
+bewusst **kein** Anbietername, sondern `"unbekannt"` — auf einen eingebauten
+Namen zurückzufallen wäre dieselbe Behauptung, nur seltener. Gemessen
+nachher:
+
+```
+('CA7800871021', …, 'prices-file-quote')
+('IE00B4L5Y983', …, 'metadata-file')
+fx: {'base': 'CAD', 'quote': 'EUR', 'rate': 0.6412, 'source': 'fx-file'}
+```
+
+### Der Profilwechsel auf demselben Bestand (`#9`)
+
+Die stärkste Einzelmessung des Tickets. Dieselbe Datenbank, nur
+`sources.yaml` getauscht und neu gestartet:
+
+| | vorher (CSV) | nachher (online) |
+|---|---|---|
+| Kurs | aus `closes.csv` | 128,2149… von yfinance |
+| `source` | `metadata-file` | `justetf` |
+| Name, Gattung | erhalten | **unverändert erhalten** |
+| TER | 0,20 % (aus 20 bps) | 0,20 % (von justETF) |
+
+Dass Name und Gattung den Wechsel überleben, ist kein Zufall, sondern
+`KEEP_IF_UNKNOWN` aus T-36 — ohne diesen Fix hätte der erste Refresh nach dem
+Wechsel beide gelöscht.
+
+### Was im Browser zu sehen war
+
+Name, ETF-Badge, Kurs in EUR, **TER 0,20 % aus 20 Basispunkten**, Anbieter
+iShares, Domizil Ireland — und die Oberfläche nennt `Quelle: metadata-file`.
+Die unauflösbare ISIN meldet „Zu DE0007164600 hat keine der eingerichteten
+Quellen ein Wertpapier gefunden" — provider-neutral und im CSV-Profil wahr.
+Konsole sauber.
