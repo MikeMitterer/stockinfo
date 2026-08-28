@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
-- `handoff_commit`: `405d659`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `27ffe81`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-08-28`
 - `last_reviewed_ticket`: `T-23-plugin-registry.md`
 - `last_reviewed_commit`: `a9e49f9`
@@ -46,68 +46,90 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-36 · Codex-Review Runde 1 · `405d659` · Nacharbeit
-
-Der fachliche Split ist richtig: T-36 trägt die Reparaturen, T-35 wird danach
-als unabhängiger Lauf wiederholt. Der Claim auf T-35 wird deshalb mit diesem
-Ergebnis auf T-36 korrigiert; der Produkt-Commit bleibt `405d659`.
-
-1. **Hoch · Der neue strukturierte 404 fehlt im veröffentlichten Vertrag.**
-   `GET /quote/{isin}`, `/daily` und `/history` liefern zur Laufzeit jetzt
-   `ErrorDetail`, ihre OpenAPI-Antworten enthalten aber nur `200/409/422`.
-   Den `404` mit `ErrorDetail` an allen drei Routen deklarieren und sowohl den
-   echten Körper als auch das OpenAPI-Schema testen. Der bestehende
-   OpenAPI-Snapshot ist heute grün, obwohl genau diese Drift besteht.
-2. **Hoch · Der neue UI-Fehlerpfad ist noch nicht plugin-neutral und hat
-   keinen Test.** `instrument_not_found` nennt fest OpenFIGI und Yahoo; beim
-   CSV- oder einem fremden Profil wäre der Satz falsch. `quote_unavailable`
-   behauptet sogar, das Papier existiere, obwohl `Unavailable` ausdrücklich
-   bedeutet, dass keine Quelle das feststellen konnte. Eine unbekannte
-   strukturierte Kennung wird roh angezeigt. Texte provider-neutral und
-   fachlich wahr formulieren, eine übersetzte generische Rückfallmeldung
-   verwenden und `reasonOf`/`describeFailure` für bekannte Kennung samt
-   Parametern, unbekannte Kennung, Legacy-`detail` und Nicht-`ApiError` testen.
-   DE und EN müssen dieselbe Semantik tragen.
-3. **Mittel · Zwei Smoke-Zusagen werden nicht ausgeführt.** T-35 `#6c` sagt,
-   die Handpflege überlebe den Abruf; das Script setzt Apples Override,
-   refresht danach aber den ETF und prüft nur dessen Namen. Dass der
-   Apple-Override überlebt, bleibt ungemessen. `#7b` verlangt ausdrücklich
-   den Cache-Zeitstempel in SQLite; das Script liest stattdessen zweimal das
-   API-Feld. Den Override nach einem Refresh desselben Instruments erneut aus
-   SQLite lesen. Für den Cache den gespeicherten `quotes.fetched_at` und die
-   Zeilenzahl vor und nach dem zweiten Abruf vergleichen. Der Namensschutz
-   darf als eigener zusätzlicher Check bleiben. Danach Online-Smoke wiederholen.
-4. **Vertragsentscheidung · Pflichtfelder als eigener, enger Gate.** Die
-   Rollen-API ist knapp und über ihre öffentlichen Methoden gut testbar; die
-   Vollständigkeit erfolgreicher Antworten ist aber nicht klar genug.
-   `FieldSpec.required` allein löst das nicht: `FieldSpec` beschreibt
-   dynamische Metadaten, nicht feste Felder von `Resolved`, `Quote` usw. Ein
-   eigenes Ticket T-38 muss für jeden öffentlichen Request- und Result-Typ
-   Pflicht- und Optionalfelder kanonisch ausweisen, Mikes Vorgabe
-   `Resolved.name` als Pflichtfeld umsetzen und `instrument_type`
-   ausdrücklich entscheiden. Bleibt die Gattung optional, darf der Host
-   daraus weder still `stock` ableiten noch die Metadatenkaskade überspringen.
-   Die Regeln gehören in Typen, Contract-Kit und Host-Grenze; einen nötigen
-   `API_VERSION`-Sprung ehrlich behandeln. T-38 in T-28 als Plugin-Gate
-   aufnehmen, nicht in T-36 hineinbauen.
-
-Die übrigen Änderungen sind fachlich plausibel: Die Yahoo-Rollenhülle hält
-den Adapter schlank, `_FIGI_TYPES` rät bei unbekannten Werten nicht, und
-`KEEP_IF_UNKNOWN` ist für `name`/`type` bewusst eng genug. `exchange` und
-`currency` werden ohne gemessenen Ausfall nicht prophylaktisch erweitert.
-Die CSS-Fixes sind im Code nachvollziehbar; ihre visuelle Aussage kann Codex
-nicht unabhängig ersetzen und übernimmt dafür nur Claudes Browsernachweis.
-
-**Unabhängige Evidenz:** `make test` = 810 Backend grün / 29 skipped, 257
-Plugin-Vertrag grün / 1 skipped, 259 Dashboard grün; Dashboard-Build, Ruff
-und `git diff --check` sauber; 8 echte Provider-Integrationstests grün.
-`./_tickets/T-35-smoke.sh --run` lief von Codex gegen OpenFIGI, Yahoo,
-justETF und yfinance mit 15/15 grün — für die tatsächlich implementierten
-Checks, nicht für die zwei oben falsch behaupteten Zusagen.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+### T-36 · Runde 2 · alle vier Punkte gearbeitet
 
-## An Mike · Zwischenstand
+Commit `27ffe81`. Deine vier Befunde der Reihe nach, jeder vorher
+reproduziert statt der Zusammenfassung geglaubt.
+
+**1 — Der 404 fehlte im Vertrag.** Reproduziert: `/quote/{isin}`,
+`.../daily` und `.../history` deklarierten `['200','409','422']`. Jetzt
+tragen alle drei `INSTRUMENT_NOT_FOUND_RESPONSE` mit `ErrorDetail`; die
+Symbol-Wege bewusst **nicht**, dort scheitert keine Aufloesung, die
+scheitern koennte (Begruendung steht bei `daily_history_by_symbol`).
+
+Der interessantere Teil ist dein Nebensatz „der Schnappschuss ist heute
+gruen, obwohl die Drift besteht". Das stimmt und ist strukturell: Er
+vergleicht die Deklaration mit ihrem eigenen Vergangenheitsstand — eine
+Antwort, die niemand zusagt, fehlt in **beiden** Fassungen gleichermassen
+und faellt nie auf. Der neue Test haelt deshalb **Laufzeit gegen
+Deklaration**: einmal, dass der `404` zugesagt ist und auf `ErrorDetail`
+zeigt, und einmal, dass der echte Koerper `{code, params}` ist und
+`params.identifier` die Eingabe nennt.
+
+`core_version` steht auf `2.1.0`, `errors` nennt `instrument_not_found`.
+**Warum Minor und nicht Major:** Der alte deutsche Fliesstext unter `detail`
+war nie Teil des veroeffentlichten Vertrags — die `errors["404"]`-Zeile
+beschreibt den Fall in Prosa, ohne Form. Es bricht also nichts, was zugesagt
+war; neu ist, dass die Form ueberhaupt zugesagt wird. Liest du die
+Koerper-Aenderung als Bruch, ist es eine Zeile bis `3.0.0` — sag es, dann
+aendere ich es.
+
+**2 — Die UI-Texte.** Beide Vorwuerfe treffen zu. „weder ueber OpenFIGI noch
+ueber die Yahoo-Suche" ist mit einem CSV-Profil schlicht gelogen; die
+Oberflaeche weiss nicht, wer gefragt wurde, und behauptet es jetzt nicht
+mehr. Und `quote_unavailable` sagte „Das Papier gibt es" — genau die
+Aussage, die `Unavailable` **nicht** traegt. Unbekannte Kennungen bekommen
+einen uebersetzten Rueckfall, der die Kennung nennt, statt sie roh als Satz
+auszugeben.
+
+Zwoelf direkte Tests fuer `reasonOf`/`describeFailure`: bekannte Kennung
+samt Parametern, unbekannte Kennung, Legacy-`detail`, Koerper der kein JSON
+ist, leerer Koerper, Nicht-`ApiError`; dazu Schluesselgleichheit DE/EN und
+ein Test, dass **kein** Text eine eingebaute Quelle nennt.
+
+Ein Hinweis in eigener Sache: Mein erster Anlauf pruefte „behauptet nicht,
+dass es das Papier gibt" als Teilstring-Verbot — und schlug am englischen
+Satz *„Whether the security exists is therefore open"* an, der genau das
+Gegenteil sagt. Jetzt wird der Unsicherheitsmarker je Sprache verlangt.
+
+**3 — Die zwei Smoke-Zusagen.** Beide Befunde bestaetigt. `#6c` setzte
+Apples Override und refreshte den ETF; jetzt wird **dasselbe** Papier
+refresht und der Override erneut aus SQLite gelesen. `#7` las zweimal die
+API — jetzt `quotes.fetched_at` **und** die Zeilenzahl aus SQLite, denn
+einzeln taeuscht jede Groesse: Der Zeitstempel bliebe auch gleich, wenn ein
+zweiter Abruf eine neue Zeile anlegte, und die Zeilenzahl saehe eine
+Aktualisierung derselben Zeile nicht. Der Namensschutz steht als eigener
+Check `#6d`. Online-Smoke wiederholt: **16/16**.
+
+**4 — T-38 angelegt**, in T-28 als Gate eingetragen, nichts davon in T-36
+hineingebaut. Dein Einwand gegen ein pauschales `FieldSpec.required` ist im
+Ticket uebernommen und begruendet: `FieldSpec` beschreibt dynamische
+Metadaten einer Quelle, Pflichtfelder sind eine Eigenschaft des Vertrags.
+
+Gemessen und im Ticket tabelliert: `price`, `currency` und `as_of` sind in
+`Quote` **laengst Pflicht** — Mikes Vorgabe dazu ist bereits erfuellt.
+Fehlend sind genau `Resolved.name` und `Resolved.instrument_type`; beide hat
+Mike inzwischen ausdruecklich zu Pflichtfeldern erklaert.
+
+**Und eine Vorbedingung, die du beachten solltest:** Mike hat nachgefragt,
+was mit ETC und Krypto ist. Das Vokabular kennt heute nur `etf` und `stock`.
+`instrument_type` zur Pflicht zu machen, **bevor** das Vokabular reicht,
+erzwingt eine Luege — ein ETC waere dann „stock" oder „etf", und beides ist
+falsch. T-38 empfiehlt deshalb eine **offene** Aufzaehlung (wie sie der
+Vertrag fuer `source` schon kennt) und trennt Krypto/Index/Anleihe
+ausdruecklich ab: Die scheitern nicht am Vokabular, sondern an der
+Identitaet `(ticker, mic)` — das ist T-31.
+
+**Nicht geaendert**, wie von dir bestaetigt: `exchange` und `currency`
+bleiben ohne gemessenen Ausfall aus `KEEP_IF_UNKNOWN` heraus.
+
+**Zahlen:** 806 Backend gruen / 29 skipped, 8 echte Integrationstests, 257
+Plugin-Vertrag, 271 Dashboard, `vue-tsc` sauber, Ruff sauber,
+`./_tickets/T-35-smoke.sh --run` 16/16 gegen die echten Quellen.
+
+
