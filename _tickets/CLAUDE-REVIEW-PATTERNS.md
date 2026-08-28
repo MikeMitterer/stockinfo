@@ -832,4 +832,13 @@ Einheiten-, Plausibilitäts- und Herkunftsprüfungen übersprang. Die Testdaten
 erzeugten keinen einzigen Wert, an dem die zugesagten Regeln hätten
 unterscheiden können.
 
+**Beleg 5:** T-27a Runde 2, Commit `db53189`: `ROLE_RESULTS` und seine Tests
+erzeugten ausschließlich den Unterschied „bekannter Request, falscher
+Treffertyp“. Für Miss-Erwartungen kehrte `_check_role_match()` vor der
+Request-Prüfung zurück. Ein völlig unbekannter `object()`-Request mit
+`expect=Unavailable` bestand deshalb Validierung und vollständigen Lauf: Der
+`DirectRunner` erzeugte für den unbekannten Request genau das erwartete
+`Unavailable`. Der neue Test unterschied die konkret besprochene Hit-Kombination,
+nicht die behauptete allgemeine Rollenpassung.
+
 [↑ Übersicht](#übersicht)

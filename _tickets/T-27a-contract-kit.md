@@ -477,3 +477,51 @@ Kettenwechsel ist ein eigener, atomarer Commit **vor** dem ersten Produktedit.
 * `ruff check app tests plugin_api` und `git diff --check` sauber.
 * 23 Mutanten grün, plus die Gegenprobe, dass ein heiles Plugin nicht
   beanstandet wird.
+
+---
+
+## Codex-Review · Runde 2 · `db53189`
+
+Die vier Befunde aus Runde 1 sind in ihrer jeweils geprüften Form behoben; die
+Mutanten sind eine deutliche Verbesserung des Kits. Drei inhaltliche Restlücken
+und ein Prozesswiderspruch verhindern noch die Freigabe:
+
+1. **Hoch · Ein unbekannter Request-Typ kann als Szenario grün werden.**
+   `_check_role_match()` beendet sich für alle Miss-Typen, bevor es den
+   Request prüft. Dadurch liefern `validate_scenarios([Scenario(request=object(),
+   expect=Unavailable, ...)])` und anschließend der vollständige Lauf beide
+   `[]`: `DirectRunner` erfindet für den unbekannten Typ genau das erwartete
+   `Unavailable`. `ROLE_RESULTS` muss den Request-Typ unabhängig davon
+   validieren, ob ein Hit oder Miss erwartet wird; ein bleibender Negativtest
+   muss genau diesen Fall ausführen.
+2. **Mittel · Fehlerhafte Plausibilitätsgrenzen umgehen die Validierung und
+   brechen den Lauf ab.** `plausible={"price": ("a", "z")}` gilt in
+   `_check_ranges()` als gültig. `check_scenario()` vergleicht danach String
+   und Float und wirft `TypeError`, obwohl `validate_scenarios()` laut Vertrag
+   Beschreibungsfehler sammeln und der Runner nicht abbrechen soll. Grenzen
+   müssen als endliche Zahlen validiert werden; Gegenproben brauchen falsche
+   Typen sowie `NaN`/`inf`.
+3. **Mittel · Die angeblich aktuelle ISO-4217-Liste enthält einen historischen
+   Code.** `ISO_4217_AS_OF = "2026-08"`, zugleich ist `BGN` enthalten und
+   `currency_is_valid("BGN")` liefert `True`. Die offizielle Maintenance
+   Agency hat BGN mit Wirkung vom **1. Januar 2026** aus List One nach List
+   Three verschoben: [ISO-4217 Amendment 180](https://www.six-group.com/dam/download/financial-information/data-center/iso-currrency/amendments/dl-currency-iso-amendment-180.pdf).
+   Liste, Anzahl, Tests und Dokumentation müssen denselben tatsächlichen Stand
+   belegen.
+4. **Mittel · Die neue atomare Kettenwechsel-Regel widerspricht dem
+   Scheduler-Prompt.** Der neue Riegel verlangt für ein begonnenes Ticket
+   `review_round: 0`; Punkt 4 des Claude-Loops verlangt weiterhin `1`.
+   Festzulegen ist `0` beim Arbeitsbeginn und das Hochzählen auf `1` bei der
+   ersten Übergabe. Beide Stellen müssen dieselbe Regel sagen. Im Zuge dessen
+   die veraltete Verifikationszahl oben (`227` statt tatsächlich `235`) auf den
+   belegten Stand bringen.
+
+**Adversariale Evidenz:** Unbekannter Request plus erwartetes `Unavailable`
+lief in Validierung und Ausführung grün; String-Grenzen endeten mit `TypeError`;
+`currency_is_valid("BGN")` war `True`. Regulär sind Backend **637 passed / 29
+skipped**, Plugin-API **235 passed / 1 skipped**, Dashboard **259 passed**;
+Ruff, `git diff --check` und der Wheel-Build für
+`stockinfo_plugin_api-0.2.0-py3-none-any.whl` sind sauber. Diese Runde ist
+punktuell und voraussichtlich abschließend: Der verbleibende Umfang besteht aus
+drei klar reproduzierten Validierungsfällen und einer widersprüchlichen
+Prozesszeile; eine Rebaseline ist nicht nötig.
