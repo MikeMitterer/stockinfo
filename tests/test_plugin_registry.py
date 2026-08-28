@@ -1,0 +1,538 @@
+"""Zwei Ladewege, eine Registry — und was passiert, wenn ein Plugin kaputt ist.
+
+Die Leitregel dieses Moduls steht in jedem zweiten Test: **Ein Fehler in einem
+Plugin darf die App nicht am Starten hindern.** Wer eine Quelle kaputt macht,
+verliert diese Quelle, nicht seine Installation. Deshalb prüfen die Tests unten
+nicht nur, dass etwas fehlschlägt, sondern dass die **übrigen** Quellen
+trotzdem ankommen.
+"""
+
+from datetime import datetime, timedelta, timezone
+from pathlib import Path
+
+import pytest
+
+from stockinfo_plugin import NotFound, Resolution, Resolved, ResolveRequest, Unavailable
+from stockinfo_plugin.sources import FxSource, QuoteSource, Resolver
+
+from app.plugin_guard import CircuitBreaker, GuardedSource
+from app.plugin_loader import (
+    ENTRY_POINT_GROUP,
+    load_all,
+    load_directory_sources,
+    load_entry_point_sources,
+    roles_of,
+    spec_from_class,
+)
+from app.sources_registry import BUILTIN_SOURCES, register_loaded, specs_by_name
+
+
+class DemoResolver(Resolver):
+    """Eine minimale Quelle, wie ein Beiträger sie schriebe."""
+
+    name = "demo"
+
+    def handles(self, request: ResolveRequest) -> bool:
+        return bool(request.isin)
+
+    def resolve(self, request: ResolveRequest) -> Resolution:
+        return Resolved(ticker="DEMO", mic="XTSE", isin=request.isin)
+
+
+class TwoRoleSource(Resolver, QuoteSource):
+    """Eine Quelle, die zwei Fragen beantwortet."""
+
+    name = "zweirollig"
+
+
+class WrongVersion(Resolver):
+    """Gegen einen anderen Vertrag gebaut."""
+
+    name = "veraltet"
+    api_version = 99
+
+
+class Nameless(Resolver):
+    """Ohne Namen — unter welchem Schlüssel sollte sie in `sources.yaml` stehen?"""
+
+
+class NoRole(Resolver):
+    """Erbt zwar `Resolver`, aber der Test unten prüft die Ableitung selbst."""
+
+    name = "rollenlos"
+
+
+@pytest.fixture(autouse=True)
+def _leere_registry():
+    """Jeder Test beginnt ohne geladene Plugins — und hinterlässt keine.
+
+    Ohne diese Fixture beeinflussten sich die Tests über den Modulzustand der
+    Registry, und die Reihenfolge entschiede mit. Das ist genau die Klasse von
+    Fehler, die man erst bemerkt, wenn jemand einen einzelnen Test laufen lässt.
+    """
+    register_loaded(())
+    yield
+    register_loaded(())
+
+
+# ─── Rollen ───────────────────────────────────────────────────────────────────
+
+
+def test_die_rollen_kommen_aus_den_protokollen() -> None:
+    """Abgeleitet, nicht deklariert.
+
+    Eine Quelle, die `QuoteSource` erbt, kann Kurse. Das noch einmal
+    hinzuschreiben wäre eine zweite Wahrheit, die beim ersten Umbau
+    auseinanderläuft.
+    """
+    assert roles_of(DemoResolver) == frozenset({"resolvers"})
+    assert roles_of(TwoRoleSource) == frozenset({"resolvers", "quotes"})
+
+
+def test_ein_bauplan_sieht_aus_wie_ein_eingebauter() -> None:
+    """Genau das ist der Punkt: In der Registry ist ein Plugin nichts Besonderes."""
+    spec = spec_from_class(DemoResolver)
+
+    assert spec.name == "demo"
+    assert spec.roles == frozenset({"resolvers"})
+    assert spec.loaded is True
+
+    built = spec.build("resolvers", {"a": 1}, object())
+    assert isinstance(built, DemoResolver)
+
+
+# ─── Verzeichnisweg ───────────────────────────────────────────────────────────
+
+
+def _write_plugin(directory: Path, name: str, body: str) -> Path:
+    """Legt eine Plugin-Datei an, wie ein Betreiber sie in `data/plugins/` legt."""
+    directory.mkdir(parents=True, exist_ok=True)
+    path = directory / f"{name}.py"
+    path.write_text(body, encoding="utf-8")
+    return path
+
+
+def test_eine_datei_wird_geladen(tmp_path: Path) -> None:
+    """Der Weg zum Ausprobieren: eine Datei, ein `SOURCES`."""
+    _write_plugin(
+        tmp_path,
+        "meins",
+        "from stockinfo_plugin.sources import Resolver\n"
+        "class Meins(Resolver):\n"
+        "    name = 'meins'\n"
+        "SOURCES = [Meins]\n",
+    )
+
+    result = load_directory_sources(tmp_path)
+
+    assert [spec.name for spec in result.specs] == ["meins"]
+    assert result.problems == ()
+
+
+def test_ein_fehlendes_verzeichnis_ist_kein_fehler(tmp_path: Path) -> None:
+    """Die meisten Installationen haben keine eigenen Plugins.
+
+    Eine Warnung bei jedem Start wäre nach dem dritten Mal Rauschen — und
+    Rauschen verdeckt die Meldung, auf die es ankommt.
+    """
+    result = load_directory_sources(tmp_path / "gibt-es-nicht")
+
+    assert result.specs == ()
+    assert result.problems == ()
+
+
+def test_eine_datei_die_beim_import_wirft_reisst_die_anderen_nicht_mit(
+    tmp_path: Path,
+) -> None:
+    """**Die Leitregel dieses Moduls, als Test.**
+
+    Die zweite Hälfte ist die wichtigere: Dass die kaputte Datei gemeldet wird,
+    ist die halbe Aussage — dass die **gesunde daneben trotzdem ankommt**, ist
+    die andere.
+    """
+    _write_plugin(tmp_path, "kaputt", "raise RuntimeError('ich bin kaputt')\n")
+    _write_plugin(
+        tmp_path,
+        "heil",
+        "from stockinfo_plugin.sources import Resolver\n"
+        "class Heil(Resolver):\n"
+        "    name = 'heil'\n"
+        "SOURCES = [Heil]\n",
+    )
+
+    result = load_directory_sources(tmp_path)
+
+    assert [spec.name for spec in result.specs] == ["heil"]
+    assert any("ich bin kaputt" in problem.reason for problem in result.problems)
+
+
+def test_eine_datei_ohne_sources_wird_benannt(tmp_path: Path) -> None:
+    """Der häufigste Anfängerfehler — und die Meldung nennt ihn beim Namen."""
+    _write_plugin(tmp_path, "leer", "GIBT_ES_NICHT = 1\n")
+
+    result = load_directory_sources(tmp_path)
+
+    assert result.specs == ()
+    assert any("kein SOURCES" in problem.reason for problem in result.problems)
+
+
+def test_hilfsmodule_gelten_nicht_als_plugin(tmp_path: Path) -> None:
+    """Ein führender Unterstrich hält Hilfsmodule und Editor-Reste heraus."""
+    _write_plugin(tmp_path, "_helfer", "raise RuntimeError('darf nie laufen')\n")
+
+    result = load_directory_sources(tmp_path)
+
+    assert result.specs == ()
+    assert result.problems == ()
+
+
+def test_eine_plugin_datei_verdraengt_kein_standardmodul(tmp_path: Path) -> None:
+    """`json.py` im Plugin-Verzeichnis darf nicht das Standardmodul ersetzen.
+
+    Ohne den Namensraum vor dem Modulnamen wäre der Fehler an einer ganz
+    anderen Stelle aufgetaucht — irgendwo, wo jemand `json.loads` ruft.
+    """
+    import json as standard_json
+
+    _write_plugin(
+        tmp_path,
+        "json",
+        "from stockinfo_plugin.sources import Resolver\n"
+        "class Fremd(Resolver):\n"
+        "    name = 'fremd'\n"
+        "SOURCES = [Fremd]\n",
+    )
+
+    result = load_directory_sources(tmp_path)
+
+    assert [spec.name for spec in result.specs] == ["fremd"]
+    assert standard_json.loads("{}") == {}, "das echte json ist unangetastet"
+
+
+# ─── Prüfungen an der Klasse ──────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("klasse", "erwartet"),
+    [
+        (WrongVersion, "api_version"),
+        (Nameless, "hat keinen name"),
+        (object, "keine Source-Unterklasse"),
+    ],
+)
+def test_was_nicht_als_quelle_taugt_wird_abgelehnt(
+    tmp_path: Path, klasse: type, erwartet: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Drei Ablehnungsgründe, jeder mit einer Meldung, die ihn nennt.
+
+    Die App startet in allen drei Fällen — geprüft wird hier die **Meldung**,
+    denn eine Ablehnung ohne Grund schickt den Autor auf die Suche.
+    """
+
+    class FakePoint:
+        name = "kandidat"
+
+        def load(self):
+            return klasse
+
+    monkeypatch.setattr(
+        "app.plugin_loader.entry_points", lambda group=None: [FakePoint()]
+    )
+
+    result = load_entry_point_sources()
+
+    assert result.specs == ()
+    assert any(erwartet in problem.reason for problem in result.problems)
+
+
+def test_ein_entry_point_der_beim_import_wirft(monkeypatch: pytest.MonkeyPatch) -> None:
+    """Ein kaputtes Paket darf die übrigen Entry-Points nicht mitreißen."""
+
+    class Broken:
+        name = "kaputt"
+
+        def load(self):
+            raise ImportError("Abhängigkeit fehlt")
+
+    class Good:
+        name = "gut"
+
+        def load(self):
+            return DemoResolver
+
+    monkeypatch.setattr(
+        "app.plugin_loader.entry_points", lambda group=None: [Broken(), Good()]
+    )
+
+    result = load_entry_point_sources()
+
+    assert [spec.name for spec in result.specs] == ["demo"]
+    assert any("Abhängigkeit fehlt" in problem.reason for problem in result.problems)
+
+
+def test_die_entry_point_gruppe_heisst_wie_dokumentiert() -> None:
+    """Der Name ist eine öffentliche Schnittstelle — Plugin-Autoren tippen ihn ab."""
+    assert ENTRY_POINT_GROUP == "stockinfo.sources"
+
+
+# ─── Beide Wege zusammen ──────────────────────────────────────────────────────
+
+
+def test_eine_datei_schlaegt_einen_gleichnamigen_entry_point(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Wer eine Datei hinlegt, hat es getan, um genau das zu erreichen.
+
+    Gemeldet wird es trotzdem: Ein stiller Vorrang wäre der Fall, in dem jemand
+    stundenlang das installierte Paket debuggt, das gar nicht läuft.
+    """
+
+    class Point:
+        name = "demo"
+
+        def load(self):
+            return DemoResolver
+
+    monkeypatch.setattr("app.plugin_loader.entry_points", lambda group=None: [Point()])
+    _write_plugin(
+        tmp_path / "plugins",
+        "demo",
+        "from stockinfo_plugin.sources import Resolver\n"
+        "class AusDerDatei(Resolver):\n"
+        "    name = 'demo'\n"
+        "SOURCES = [AusDerDatei]\n",
+    )
+
+    result = load_all(tmp_path)
+
+    assert [spec.name for spec in result.specs] == ["demo"]
+    assert result.specs[0].build("resolvers", {}, object()).__class__.__name__ == (
+        "AusDerDatei"
+    )
+    assert any("mehrfach geladen" in problem.reason for problem in result.problems)
+
+
+def test_ein_plugin_kann_keine_eingebaute_quelle_verdraengen() -> None:
+    """Sonst ließen sich die Kurse der App still umleiten.
+
+    Der Betreiber sähe in `/sources` weiterhin `yfinance` und bekäme die Daten
+    von woanders. Das ist kein Randfall, sondern der Grund für die Regel.
+    """
+
+    class Angreifer(Resolver):
+        name = "yfinance"
+
+    register_loaded((spec_from_class(Angreifer),))
+
+    known = specs_by_name()
+
+    assert known["yfinance"] in BUILTIN_SOURCES
+
+
+def test_geladene_quellen_stehen_neben_den_eingebauten() -> None:
+    """Gleichwertig in derselben Tabelle — das ist die Zusage von T-23."""
+    register_loaded((spec_from_class(DemoResolver),))
+
+    known = specs_by_name()
+
+    assert "demo" in known
+    assert {spec.name for spec in BUILTIN_SOURCES} <= set(known)
+
+
+# ─── Isolation ────────────────────────────────────────────────────────────────
+
+
+class Werfer(Resolver):
+    """Eine Quelle, die den Vertrag bricht und wirft."""
+
+    name = "werfer"
+
+    def resolve(self, request: ResolveRequest) -> Resolution:
+        raise RuntimeError("boom")
+
+
+class Ausfaller(Resolver):
+    """Eine Quelle, die sich korrekt verhält und trotzdem nicht arbeiten kann."""
+
+    name = "ausfaller"
+
+    def resolve(self, request: ResolveRequest) -> Resolution:
+        return Unavailable(error="Anbieter weg")
+
+
+def test_eine_werfende_quelle_wird_zur_antwort() -> None:
+    """Ein Vertragsbruch wird zu `Unavailable` — nicht zu einem Absturz der App."""
+    guarded = GuardedSource(Werfer())
+
+    answer = guarded.resolve(ResolveRequest(isin="US0378331005"))
+
+    assert isinstance(answer, Unavailable)
+    assert "RuntimeError" in answer.error and "boom" in answer.error
+
+
+def test_angaben_ueber_die_quelle_werden_durchgereicht() -> None:
+    """`name` und `cost` sind Auskünfte, keine Aufrufe — sie gehen unverändert durch."""
+    guarded = GuardedSource(DemoResolver())
+
+    assert guarded.name == "demo"
+    assert guarded.cost == "free"
+
+
+def test_der_schalter_oeffnet_erst_nach_wiederholtem_fehlschlag() -> None:
+    """Drei und nicht einer.
+
+    Ein einzelner Ausfall ist Alltag — ein Zeitfehler, ein 502, ein
+    Ratenlimit. Wer danach sofort stilllegt, schaltet eine gesunde Quelle wegen
+    eines Schluckaufs ab.
+    """
+    guarded = GuardedSource(Ausfaller())
+    request = ResolveRequest(isin="US0378331005")
+
+    for _ in range(2):
+        guarded.resolve(request)
+    assert guarded.breaker.is_open is False, "zwei Fehlschläge sind noch ein Muster"
+
+    guarded.resolve(request)
+    assert guarded.breaker.is_open is True
+
+
+def test_ein_erfolg_setzt_den_zaehler_zurueck() -> None:
+    """Sonst summierten sich Fehlschläge über Stunden zu einer Stilllegung."""
+
+    class Wackelig(Resolver):
+        name = "wackelig"
+
+        def __init__(self):
+            super().__init__()
+            self.calls = 0
+
+        def resolve(self, request: ResolveRequest) -> Resolution:
+            self.calls += 1
+            if self.calls == 3:
+                return Resolved(ticker="OK", mic="XTSE")
+            return Unavailable(error="später nochmal")
+
+    guarded = GuardedSource(Wackelig())
+    request = ResolveRequest(isin="US0378331005")
+
+    for _ in range(4):
+        guarded.resolve(request)
+
+    assert guarded.breaker.failures == 1, "nach dem Erfolg wurde neu gezählt"
+    assert guarded.breaker.is_open is False
+
+
+def test_halb_offen_und_reset_ohne_echte_wartezeit() -> None:
+    """**Verify `#5` — und der Grund für die eingespeiste Uhr.**
+
+    Ohne sie dauerte dieser Test fünf Minuten und liefe deshalb nie. Die Uhr
+    wird hereingereicht, nicht gestellt: Ein Test, der `time.sleep` benutzt,
+    prüft die Geduld der Testsuite.
+    """
+    jetzt = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
+    breaker = CircuitBreaker(clock=lambda: jetzt)
+    quelle = Ausfaller()
+    guarded = GuardedSource(quelle, breaker)
+    request = ResolveRequest(isin="US0378331005")
+
+    for _ in range(3):
+        guarded.resolve(request)
+    assert breaker.is_open is True
+
+    # Solange der Schalter offen ist, wird die Quelle **gar nicht** gefragt.
+    class Verboten(Ausfaller):
+        def resolve(self, request: ResolveRequest) -> Resolution:
+            raise AssertionError("die Quelle wurde trotz offenem Schalter gefragt")
+
+    unterdrueckt = GuardedSource(Verboten(), breaker).resolve(request)
+    assert isinstance(unterdrueckt, Unavailable)
+    assert "stillgelegt" in unterdrueckt.error
+
+    # Die Uhr weiterdrehen — jetzt darf **ein** Versuch durch.
+    jetzt += timedelta(minutes=6)
+    assert breaker.is_open is False, "halb offen, ohne dass jemand gewartet hätte"
+
+    class Geheilt(Resolver):
+        name = "geheilt"
+
+        def resolve(self, request: ResolveRequest) -> Resolution:
+            return Resolved(ticker="OK", mic="XTSE")
+
+    antwort = GuardedSource(Geheilt(), breaker).resolve(request)
+
+    assert isinstance(antwort, Resolved)
+    assert breaker.failures == 0 and breaker.opened_at is None, "vollständig geschlossen"
+
+
+def test_ein_fehlschlag_im_halb_offenen_zustand_oeffnet_wieder() -> None:
+    """Sonst liefe die App nach jeder Frist erneut in denselben Fehler."""
+    jetzt = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
+    breaker = CircuitBreaker(threshold=1, clock=lambda: jetzt)
+    guarded = GuardedSource(Ausfaller(), breaker)
+    request = ResolveRequest(isin="US0378331005")
+
+    guarded.resolve(request)
+    assert breaker.is_open is True
+
+    jetzt += timedelta(minutes=6)
+    assert breaker.is_open is False
+
+    guarded.resolve(request)
+    assert breaker.is_open is True, "der Versuch ist gescheitert — wieder zu"
+
+
+def test_ein_nicht_gefundenes_papier_ist_kein_fehlschlag() -> None:
+    """`NotFound` heißt „gibt es hier nicht" — die Quelle hat gearbeitet.
+
+    Würde der Schalter das mitzählen, legte er eine gesunde Quelle still, nur
+    weil jemand dreimal nach einem unbekannten Papier gefragt hat.
+    """
+
+    class Unbekannt(Resolver):
+        name = "unbekannt"
+
+        def resolve(self, request: ResolveRequest) -> Resolution:
+            return NotFound()
+
+    guarded = GuardedSource(Unbekannt())
+    request = ResolveRequest(isin="US0378331005")
+
+    for _ in range(5):
+        guarded.resolve(request)
+
+    assert guarded.breaker.is_open is False
+    assert guarded.breaker.failures == 0
+
+
+def test_jede_quelle_hat_ihren_eigenen_schalter() -> None:
+    """Ein geteilter legte eine gesunde Quelle still, weil eine andere ausfiel."""
+    kaputt = GuardedSource(Ausfaller())
+    gesund = GuardedSource(DemoResolver())
+    request = ResolveRequest(isin="US0378331005")
+
+    for _ in range(3):
+        kaputt.resolve(request)
+
+    assert kaputt.breaker.is_open is True
+    assert gesund.breaker.is_open is False
+
+
+def test_eine_fx_quelle_wird_ebenso_gekapselt() -> None:
+    """Die Kapsel hängt an der Methode, nicht an der Rolle.
+
+    Ohne diesen Test bewiese die Suite nur, dass Resolver gekapselt sind — und
+    genau die anderen vier Rollen wären die Lücke.
+    """
+
+    class KaputteFx(FxSource):
+        name = "fx-kaputt"
+
+        def fetch_rate(self, request: object) -> object:
+            raise ValueError("keine Kurse")
+
+    guarded = GuardedSource(KaputteFx())
+
+    answer = guarded.fetch_rate(object())
+
+    assert isinstance(answer, Unavailable)
+    assert "ValueError" in answer.error

@@ -7,6 +7,7 @@ import os
 import threading
 from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 import structlog
 from fastapi import FastAPI, Request, Response, status
@@ -39,9 +40,11 @@ from app.repository import (
     AmbiguousSymbolError,
     IdentityConflictError,
 )
+from app.plugin_loader import load_all
 from app.routers import dashboard, fields, fx, instruments, migration, quotes
 from app.routers.migration import get_gate
 from app.scheduler import RefreshScheduler
+from app.sources_registry import register_loaded
 
 logger = structlog.get_logger()
 
@@ -61,6 +64,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     Auswirkung stimmte bei der Bestätigung dann nicht mehr.
     """
     settings: Settings = get_settings()
+
+    # **Zuerst die Plugins, dann alles andere.** Die Registry muss vollständig
+    # sein, bevor der erste Aufrufer eine Kette baut — sonst antwortet
+    # `/sources` je nach Zeitpunkt verschieden. Ein Fehler beim Laden bricht
+    # den Start ausdrücklich **nicht** ab: Wer eine Quelle kaputt macht,
+    # verliert diese Quelle, nicht seine Installation.
+    register_loaded(load_all(Path(settings.database_path).parent).specs)
+
     if init_db(settings.database_path):
         get_gate().block()
 

@@ -21,6 +21,7 @@ from dataclasses import dataclass
 
 import structlog
 
+from app.plugin_guard import GuardedSource
 from app.providers.justetf_provider import JustEtfProvider
 from app.providers.openfigi_provider import OpenFigiClient
 from app.providers.yfinance_etf_provider import YFinanceEtfEnricher
@@ -44,6 +45,21 @@ class SourceSpec:
     roles: frozenset[str]
     build: Callable[[str, dict, object], object]
     cost: str = "free"
+    loaded: bool = False
+    """Kam diese Quelle von außen — Entry-Point oder Plugin-Verzeichnis?
+
+    Die Unterscheidung dient **einem** Zweck: Fremder Code wird gekapselt
+    (`GuardedSource`), eigener nicht. Das ist keine Bevorzugung der eingebauten
+    Quellen — sie nehmen denselben Bauweg, stehen in derselben Tabelle und
+    erscheinen gleichwertig in `/sources`. Es ist die Grenze aus dem Ticket:
+    „die eine Stelle, an der **fremdem** Code misstraut wird".
+
+    Die eingebauten Quellen zusätzlich zu kapseln wäre nicht sicherer, sondern
+    unehrlich: Ihre Ausnahmen sind Fehler **dieser** App, und sie zu
+    `Unavailable` zu machen hieße, den eigenen Fehler als Anbieterausfall
+    auszugeben.
+    """
+
     needs: tuple[str, ...] = ()
     """Pflichtige Schlüssel im eigenen Abschnitt.
 
@@ -108,9 +124,44 @@ BUILTIN_SOURCES: tuple[SourceSpec, ...] = (
 )
 
 
+# Was beim Start geladen wurde. **Ein Modulzustand, und zwar mit Absicht:**
+# `describe_chain` läuft bei jeder `/sources`-Anfrage, und Plugins bei jedem
+# Aufruf neu zu importieren wäre nicht nur langsam — es hieße, dass sich die
+# Antwort der App ändert, während sie läuft. Geladen wird beim Start, einmal.
+_LOADED: dict[str, SourceSpec] = {}
+
+
+def register_loaded(specs: tuple[SourceSpec, ...]) -> None:
+    """Übernimmt die beim Start geladenen Quellen in die Registry.
+
+    Args:
+        specs: Was `app.plugin_loader.load_all` gefunden hat.
+    """
+    _LOADED.clear()
+    _LOADED.update({spec.name: spec for spec in specs})
+
+
 def specs_by_name() -> dict[str, SourceSpec]:
-    """Alle bekannten Quellen, nach Namen."""
-    return {spec.name: spec for spec in BUILTIN_SOURCES}
+    """Alle bekannten Quellen, nach Namen — eingebaute **und** geladene.
+
+    Die eingebauten stehen zuerst und lassen sich von einem Plugin **nicht**
+    verdrängen: Wer `yfinance` überschreiben könnte, könnte die Kurse der App
+    still umleiten, und der Betreiber sähe in `/sources` weiterhin den
+    vertrauten Namen. Ein Plugin, das so heißen will, bekommt stattdessen eine
+    Meldung beim Laden.
+
+    Dass eingebaute Quellen **denselben** Bauweg nehmen wie geladene, ist die
+    eigentliche Zusage von T-23: Eine eingebaute Quelle, die an der Registry
+    vorbei verdrahtet bliebe, wäre genau die Sonderbehandlung, die das Ticket
+    auflösen soll.
+    """
+    known = {spec.name: spec for spec in BUILTIN_SOURCES}
+    for name, spec in _LOADED.items():
+        if name in known:
+            logger.warning("plugin_name_is_builtin", source=name)
+            continue
+        known[name] = spec
+    return known
 
 
 def is_configured(spec: SourceSpec, config: dict) -> bool:
@@ -227,5 +278,6 @@ def build_chain(role: str, config, settings) -> list[object]:
             logger.info("source_not_configured", source=entry.name, role=role)
             continue
         spec = known[entry.name]
-        built.append(spec.build(role, config.config_for(entry.name), settings))
+        source = spec.build(role, config.config_for(entry.name), settings)
+        built.append(GuardedSource(source) if spec.loaded else source)
     return built
