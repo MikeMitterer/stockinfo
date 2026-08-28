@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-27b-http-fake-real.md`
 - `handoff_commit`: `a1ac605`
 - `review_round`: `1`
