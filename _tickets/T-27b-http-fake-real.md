@@ -787,3 +787,51 @@ ohnehin als Plugin-Autor auftritt und die Registry die Quellen lädt.
   **260 passed / 1 skipped**, Dashboard **259 passed**.
 * `pytest -m "not integration"`: **638 passed, 29 skipped, 4 deselected**.
 * `ruff check app tests plugin_api` und `git diff --check` sauber.
+
+---
+
+## Codex-Review · Runde 4 · `8698aa0` · Nacharbeit
+
+Die Produktkorrektur geht in die richtige Richtung, ist aber noch nicht
+vollständig. Das Inventar bestätigt zunächst die wichtige Hälfte: Von den
+begonnenen T-27b-Modulen `testing/http.py`, `testing/recordings.py`,
+`testing/freshness.py`, `testing/pytest_plugin.py` sowie Frankfurter-Beispiel
+und -Test ist nichts im Quellbaum oder in Paketmetadaten verblieben. Es gibt
+keinen Record-/Replay-Entry-Point, keine Cassette und keinen Mitschnitt. Der
+echte OpenFIGI-Lauf bestand unabhängig mit **4 passed**.
+
+Drei Befunde verhindern die Freigabe:
+
+1. Der Online-Erfolgsfall gibt `Resolved(ticker="AAPL", mic="US", ...)`
+   zurück. `US` ist nach den eigenen Invarianten ein Sammelcode statt eines
+   MIC; `is_real_mic("US")` ist `False`. Damit widerspricht das erste echte
+   Plugin unmittelbar `ResolverContract`. Zugleich wiederholt der Adapter die
+   bereits in `app.resolver.OpenFigiResolver` vorhandene Kette aus
+   `figi_lookup`, Client-Aufruf und Ergebnis-/Fehlerübersetzung. Er muss diese
+   vorhandene Resolver-API delegieren und darf nur deren Ergebnis in den
+   Plugin-Typ übersetzen. Ein echter Online-Erfolgsfall verwendet einen echten
+   MIC.
+2. Der abgebrochene Offline-Ansatz steckt noch in der öffentlichen
+   T-27a-Szenario-API: `Scenario.real_ok`, `only_real`, die dazugehörige
+   Validierungsregel und mehrere Docstrings/Tests existieren ausschließlich für
+   die nun gestrichenen zwei Betriebsarten. Entfernen; die normalen
+   Unit-Test-Bausteine (`Scenario`, Validierung, `DirectRunner`, vollständiger
+   Lauf) bleiben bestehen.
+3. Der vermeintliche Unit-Test mit `PoisonedClient` steht unter dem
+   modulweiten `integration`-Marker und wird im netzfreien Lauf abgewählt.
+   Normale Unit-Tests prüfen Zuständigkeit und alle Übersetzungsrichtungen mit
+   kleinen testlokalen Doubles und wenden den vorhandenen `ResolverContract`
+   auf den Adapter an. Die Integrationsdatei enthält nur echte Netzfälle.
+
+**Evidenz:** `pytest -q tests/test_plugin_openfigi_integration.py` scheiterte
+in der Netzwerksandbox erwartungsgemäß mit drei `Unavailable`-Antworten und
+bestand mit freigegebenem Netz anschließend **4/4**. `pytest -q -m "not
+integration"` bestand mit **638 passed / 29 skipped / 4 deselected** und
+belegt zugleich, dass der Poisoned-Client-Test dort fehlt. Die direkte
+Vertragsgegenprobe erzeugte `Resolved(..., mic='US')` und
+`contract_mic_valid=False`.
+
+Der neue Prozessriegel aus Commit `e5f86fa` hält diese Fehlerklasse dauerhaft
+fest: ohne datierte Ausnahme von Mike keine Record-/Replay-, Transport-,
+Socket-, Freshness-, CLI- oder Testplugin-Infrastruktur; Standard sind normale
+Unit-Tests und echte Online-Integrationstests über vorhandene APIs.
