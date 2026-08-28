@@ -199,3 +199,86 @@ im Offline-Betrieb **trivial wahr**, weil dort ohnehin kein Netz existiert. Ein
 belastbarer Nachweis prüft die Gegenrichtung: dass der `--real`-Lauf bei einem
 nicht erreichbaren Host mit einer deutbaren Meldung fehlschlägt statt mit einem
 Stacktrace. Ist das die richtige Lesart der Zeile, oder verlangt sie mehr?
+
+---
+
+## Codex-Review · Entwurfsrunde 1 · `a1ac605`
+
+Die Grundrichtung trägt: Transport und Uhr werden injiziert, Offline- und
+Release-Gate bleiben getrennt, die Signatur entsteht erst nach der
+Bereinigung, und Frankfurter/EZB ist als rechtlich geklärter Referenzweg
+geeignet. Vor Produktcode braucht der Entwurf sechs Korrekturen:
+
+1. **Hoch · Eine fehlende Aufzeichnung darf nicht zum erwarteten Fachfehler
+   werden.** `ReplayTransport` wirft `MissingRecording`; ein korrektes Plugin
+   muss Transportfehler aber in `Unavailable` übersetzen, und `DirectRunner`
+   fängt fremde Ausnahmen ebenfalls als `Unavailable`. Ein Szenario mit
+   `expect=Unavailable` könnte deshalb trotz fehlender Aufnahme grün werden —
+   derselbe Selbstbestätigungsfehler wie T-27a Runde 2. Der Replay-Harness
+   braucht einen **separaten Audit-Kanal**: jeden Miss protokollieren und nach
+   dem Lauf unabhängig vom fachlichen Ergebnis hart fehlschlagen. Ebenso
+   festlegen, wie unerwartete und unbenutzte Aufzeichnungen behandelt werden.
+2. **Hoch · Request-Signatur und Szenario-Signatur sind zwei verschiedene
+   Dinge.** Die beschriebene Signatur aus Methode/URL/Body findet eine
+   HTTP-Aufnahme; sie bemerkt keine Änderung an `expect`, `golden` oder
+   `plausible`. Damit erfüllt sie die behauptete Szenario-Drift-Erkennung
+   nicht. Benötigt werden `request_signature` für Replay-Lookup und eine
+   getrennte `scenario_signature` über die urteilsrelevanten kanonischen
+   Scenario-Felder. Die Aufnahme bindet beide; der Scenario-Harness, nicht der
+   HTTP-Transport, berechnet die zweite.
+3. **Hoch · Ein `pytest11`-Entry-Point mit globaler Autouse-Socket-Sperre ist
+   zu invasiv.** Pytest lädt installierte `pytest11`-Plugins automatisch, und
+   eine Plugin-Autouse-Fixture wirkt auf alle Tests des fremden Projekts. Das
+   Contract-Kit würde damit nach bloßer Installation auch unabhängige
+   Integrationstests vom Netz trennen. Siehe [offizielle pytest-Dokumentation
+   zur Plugin-Autoload-Reihenfolge](https://docs.pytest.org/en/latest/how-to/writing_plugins.html).
+   Das Plugin darf Optionen/Marker/Fixtures bereitstellen, die Sperre muss aber
+   ausdrücklich für die HTTP-Szenariosuite aktiviert werden — etwa über das
+   Root-`conftest.py` des Plugin-Autors oder einen Marker mit kontrollierter
+   Fixture — und genau dieser Opt-in-Weg braucht eine Gegenprobe.
+4. **Hoch · Die Betriebsarten sind noch widersprüchlich.** Die Sperre ist nur
+   unter `--real` offen, aber `--record` braucht ebenfalls Netz. Eine
+   verbindliche Matrix muss Default/`--real`/`--record`/Freshness-Check,
+   zulässige Kombinationen, Transportwahl, Socket-Regel und Dateischreibrechte
+   festlegen. `recorded_at` ändert nur ein erfolgreicher Record-Lauf;
+   `last_real_ok` erst ein **vollständig** erfolgreicher Real-/Record-Lauf,
+   atomar nach der gesamten ausgewählten Suite — nie schon nach der ersten
+   grünen Anfrage. Teilfehler dürfen weder Metadaten noch Aufnahmen halb
+   aktualisieren.
+5. **Mittel · „Je Plugin" darf nicht „in jeder Aufnahme dupliziert" heißen.**
+   `max_age_days` in jeder Datei kann innerhalb desselben Plugins driften. Die
+   aktuelle Policy gehört einmal in die Plugin-Testkonfiguration beziehungsweise
+   Fixture; eine Aufnahme darf den beim Erstellen wirksamen Wert als Auditwert
+   tragen, aber der Release-Check liest die eine aktuelle Policy. Dazu einen
+   konkreten, automatisierbaren Release-Befehl benennen und testen —
+   „Release-Check“ allein ist noch keine ausführbare Schnittstelle.
+6. **Mittel · Kanonisierung, Bereinigungsgrenze und Referenzquelle müssen
+   präziser sein.** Die Request-Signatur braucht neben Methode und Pfad auch
+   Schema/normalisierten Host samt Port, sortierte bereinigte Query,
+   relevante bereinigte Header (zum Beispiel `Accept`, `Content-Type` und
+   Anbieter-API-Version) und einen kanonischen Body-Hash; sonst kollidieren
+   fachlich verschiedene Requests. Scrubbing muss konfigurierte Secret-Werte
+   **und** sensible Schlüsselnamen rekursiv in Request und Response behandeln,
+   danach die serialisierte Datei prüfen und seine unvermeidliche Grenze offen
+   dokumentieren. Beim Beispiel muss jede Anfrage `providers=ECB` festpinnen
+   und die Provider-Angabe der Antwort prüfen; Frankfurter kann sonst Quellen
+   mischen. Die [Frankfurter-Dokumentation](https://frankfurter.dev/) verweist
+   je Provider auf dessen Bedingungen, während die
+   [EZB-Bedingungen](https://www.ecb.europa.eu/services/using-our-site/disclaimer/html/index.en.html)
+   Quellenangabe und Kennzeichnung von Änderungen verlangen.
+
+**Antwort auf Verify `#10`:** Die vorgeschlagene Gegenrichtung gehört dazu,
+reicht allein aber nicht. Der Nachweis hat zwei Hälften: Der Offline-Lauf läuft
+mit einem absichtlich unerreichbaren/„poisoned“ Live-Transport grün und beweist
+damit, dass er ihn nie berührt; der Real-Lauf gegen einen unerreichbaren Host
+schlägt rot mit einer deutbaren, geheimnisfreien Meldung statt Stacktrace fehl.
+
+**Prozess:** Vor Umsetzung die Time-box aus „zu schätzen“ in eine konkrete
+Größe ändern. Der Schnitt darf mehrere Module berühren, bleibt aber ein
+beobachtbares Ergebnis: dieselben Szenarien laufen offline aus Aufnahme und
+real über HTTP, ohne geheimen oder stillen Netzpfad.
+
+**Evidenz:** Seit `f1254fe` änderte sich ausschließlich das Ticket; der
+Produktstand blieb mit Backend 638/29 skipped, Plugin-API 260/1 skipped und
+Dashboard 259 unverändert. Die Quellen- und Rechteaussagen wurden an den oben
+verlinkten Primärseiten geprüft.
