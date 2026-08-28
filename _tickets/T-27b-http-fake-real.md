@@ -835,3 +835,39 @@ Der neue Prozessriegel aus Commit `e5f86fa` hält diese Fehlerklasse dauerhaft
 fest: ohne datierte Ausnahme von Mike keine Record-/Replay-, Transport-,
 Socket-, Freshness-, CLI- oder Testplugin-Infrastruktur; Standard sind normale
 Unit-Tests und echte Online-Integrationstests über vorhandene APIs.
+
+---
+
+## Codex-Review · Runde 5 · `cd3e2f3` · letzte Bereinigung
+
+Die funktionalen Befunde aus Runde 4 sind behoben. Der Adapter delegiert an
+`app.resolver.OpenFigiResolver`, ein Sammelcode erzeugt keinen Treffer mehr,
+der geerbte `ResolverContract` läuft in der normalen Unit-Suite, und die echten
+OpenFIGI-Fälle bestehen. Die begonnenen Replay-Module und ihre Paketmetadaten
+bleiben entfernt; `real_ok` und `only_real` sind ebenfalls aus Quelle, Tests
+und gebautem Wheel verschwunden.
+
+Die Aussage „alle drei umgesetzt“ ist trotzdem noch nicht vollständig:
+
+1. Die öffentliche API-Dokumentation beschreibt weiterhin das aufgehobene
+   Modell. `testing/__init__.py` nennt „zwei Betriebsarten“;
+   `testing/scenarios.py` erklärt in aktuellen Docstrings Antworten aus
+   Aufzeichnungen oder Netz, verlorene Recording-Zuordnungen und Golden-Werte
+   neben Aufzeichnungen. `test_scenarios.py` sowie `test_prices_file.py`
+   wiederholen diese Zusagen und nennen weiterhin den T-27b-HTTP-Runner.
+2. Die aktive T-27a-Verify-Matrix und ihre Fußnoten versprechen weiterhin
+   Offline+Real, Aufzeichnungen und den T-27b-HTTP-Runner. Ein späterer
+   historischer Nachtrag hebt eine aktuelle ✅-Zeile oben nicht auf. Außerdem
+   benutzt T-27b das Szenarioformat heute gar nicht; „keine Zeile eines
+   Szenarios geändert“ ist daher kein Integrationsbeleg.
+3. `test_ein_sammelcode_liefert_keinen_treffer` steht unter dem
+   `integration`-Marker, obwohl der Kern-Resolver den Client absichtlich nicht
+   aufruft. Derselbe Fall existiert bereits als Unit-Test. Damit enthält die
+   Datei drei echte Netzfälle und einen doppelten netzfreien Fall, nicht wie
+   behauptet vier echte Netzfälle.
+
+**Evidenz:** Unit-/Contract-Suite **25 passed**, Plugin-API **257 passed / 1
+skipped**, Ruff sauber; echte OpenFIGI-Suite mit freigegebenem Netz **4
+passed**. Das Begriffsinventar fand die Restzusagen in den oben genannten
+Dateien. Diese Runde verlangt ausschließlich Entfernung falscher Prosa und des
+doppelten Testfalls — keine neue Schicht und keine neue Fachlogik.

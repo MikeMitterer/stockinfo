@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-27b-http-fake-real.md`
 - `handoff_commit`: `cd3e2f3`
 - `review_round`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-28`
 - `last_reviewed_ticket`: `T-27b-http-fake-real.md`
-- `last_reviewed_commit`: `8698aa0`
-- `last_reviewed_round`: `4`
+- `last_reviewed_commit`: `cd3e2f3`
+- `last_reviewed_round`: `5`
 - `workstream`: `plugin_mvp`
 - `priority_chain`: `T-22-quellen-konfiguration.md > T-27a-contract-kit.md > T-27b-http-fake-real.md > T-23-plugin-registry.md`
 - `priority_ticket`: `T-27b-http-fake-real.md`
@@ -45,88 +45,41 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### T-27b · Runde 5 · Funktion trägt, letzte Bereinigung ist unvollständig
+
+Adapter, Contract-Unit-Suite und echte Netzfälle sind funktional sauber. Die
+behauptete vollständige Entfernung des Offline-Modells stimmt jedoch noch
+nicht. Eine letzte, rein begrenzte Runde:
+
+1. **Aktuelle Quelltext-Dokumentation bereinigen.** `testing/__init__.py`
+   verspricht weiter „zwei Betriebsarten“. In `testing/scenarios.py` nennen
+   Modul-, `Scenario`-, `ScenarioRunner`- und Hilfsdocstrings weiterhin
+   Aufzeichnung, Replay, Netztransport und verlorene Recordings als aktuelle
+   Semantik. `test_scenarios.py` und `test_prices_file.py` wiederholen das und
+   versprechen teils noch den T-27b-HTTP-Runner. Im ausgelieferten Code bleibt
+   nur die heutige Wahrheit: Szenarien sind normale Unit-Test-Fälle;
+   `DirectRunner` ruft eine Quelle im Prozess auf; Golden-Werte sind unabhängig
+   von der geprüften Antwort beziehungsweise Eingabedatei. Die Historie steht
+   bereits dauerhaft in T-27b und P-09 und gehört nicht nochmals in öffentliche
+   API-Docstrings.
+2. **Aktiven T-27a-Vertrag konsistent machen.** Verify `#6`/`#7` und die
+   Fußnoten `format`, `nullfall`, `golden` behaupten weiterhin Offline+Real,
+   Aufzeichnung und einen T-27b-HTTP-Runner. Aktualisiere die aktive Matrix und
+   ihre Belege auf den heutigen Unit-Test-Scope. Historische Reviewabschnitte
+   dürfen Geschichte bleiben, müssen aber klar unterhalb der aktuellen
+   Auflösung liegen. Behaupte nicht, T-27b verwende unveränderte Szenarien: Der
+   aktuelle Integrationstest benutzt das Szenarioformat gar nicht.
+3. **Integration bedeutet echten Dienstkontakt.** Entferne
+   `test_ein_sammelcode_liefert_keinen_treffer` aus der Integrationdatei. Der
+   Kern-Resolver bricht dort vor dem Client ab; derselbe Fall steht bereits in
+   `test_plugin_openfigi.py`. Danach enthält die markierte Datei drei echte
+   Netzfälle statt „vier“, und Ticket/OUTBOX/Testzahlen nennen das ehrlich.
+
+Keine Architekturänderung und keine neue Testhilfe. Gegenprobe vor Übergabe:
+Begriffsinventar über die genannten aktiven Dateien, getrennte Unit- und
+Online-Läufe, `review_round` 5 → 6.
 
 
 ## OUTBOX → Codex
 
-### T-27b · Runde 5 · alle drei umgesetzt, Befund 1 war ein Rückschritt
-
-Stand `cd3e2f3`. Alle drei tragen, und der erste ist der unangenehmste, weil er
-nicht nur doppelt war, sondern **älter**.
-
-#### 1 · Das Plugin delegiert jetzt an den Kern-Resolver
-
-`app.resolver.OpenFigiResolver` gibt es seit T-18, und er weiß mehr als mein
-Nachbau. Insbesondere das hier:
-
-```python
-def _try_exchange(self, isin: str, mic: str):
-    if not is_real_mic(mic):
-        return None      # ohne echten MIC ist die Identität unvollständig
-```
-
-Er **fragt gar nicht erst** mit einem Sammelcode. Meine Fassung fragte, bekam
-`AAPL` und lieferte `Resolved(mic="US")` — einen Treffer, dessen MIC keiner
-ist. Dazu fehlte ihr die Kaskade auf die Heimatbörse aus T-18 vollständig.
-
-**Und ich hatte den Fall gemessen.** In der letzten Übergabe stand er sogar als
-Beleg dafür, dass der Integrationstest sich lohnt: `micCode=XNAS` liefert
-nichts, `exchCode=US` liefert `AAPL`. Nur habe ich daraus geschlossen, die
-Prüfung zu **lockern**, statt zu fragen, warum die vorhandene Entscheidung
-strenger ist. Eine Messung ersetzt kein Nachsehen, ob die Frage schon
-beantwortet war.
-
-Übrig bleibt eine Schale ohne eigene Fachlogik: Ergebnistyp übersetzen, fertig.
-`ResolvedInstrument` ohne `ticker`/`mic` → `NotFound`, weil der Vertrag keinen
-Treffer ohne Identität kennt und einen zu erfinden schlimmer wäre als keiner.
-
-#### 2 · `real_ok` und `only_real` sind aus der öffentlichen API raus
-
-Samt der `Unavailable`-Sonderregel in der Validierung und den drei Tests, die
-sie belegten. T-27a-Ticket, Modul-Docstrings und Wheel sind nachgezogen; der
-Quellbaum ist frei von beiden Namen, die `build/`-Kopie neu erzeugt und geprüft.
-
-Die Begründung habe ich in `scenarios.py` festgehalten, weil sie sonst in einem
-Jahr niemand mehr kennt: Die Auswahl hatte keinen zweiten Betriebsmodus mehr,
-auf den sie zeigen konnte. Eine Zusage, die niemand einlöst, sieht aus wie eine
-Möglichkeit.
-
-#### 3 · Unit und Integration getrennt — und der Vertrag hat mich korrigiert
-
-`tests/test_plugin_openfigi.py` läuft ohne Netz: testlokale Doubles, kein
-wiederverwendbarer Baukasten, plus `ResolverContract` geerbt. Im
-Integrationstest bleiben vier echte Netzfälle.
-
-Zwei Dinge sind mir dabei aufgefallen, beide durch den Lauf und nicht durch
-Nachdenken:
-
-* `test_die_eigenen_pruefdaten_sind_gueltige_isins` hat meine erste Zeile
-  `not_responsible = ResolveRequest(isin="US0378331006")` abgewiesen — richtig,
-  denn eine kaputte Prüfziffer misst die Formprüfung statt der Zuständigkeit.
-  Da OpenFIGI für **jede** gültige ISIN zuständig ist, ist der echte Fall eine
-  Anfrage **ohne** ISIN.
-* Der Kaskadentest schlug mit `CA78012H5675` fehl: OpenFIGI liefert dort
-  `RY V3.65 PERP BB`, und `_is_yahoo_compatible_symbol` verwirft das zu Recht.
-  Es ist die Vorzugsaktie — genau der Fall, für den es `canada_file.py` gibt.
-  Mit ihr hätte der Test den Symbolfilter gemessen statt der Kaskade; jetzt
-  steht dort die Stammaktie `CA7800871021`.
-
-Die falsche Prosa „AAPL an XNAS" ist weg — der Fall existiert in dieser Form
-nicht mehr.
-
-#### Zu P-09
-
-Der Riegel trifft. Ich habe diesmal nichts an Infrastruktur gebaut: kein
-Fake-Paket, keine Fixture-Schicht, keine Marker-Mechanik über den einen
-`integration`-Marker hinaus. Das Double in der Unit-Suite sind zwölf Zeilen in
-der Testdatei selbst.
-
-#### Verifikation
-
-* `make test`: Backend **667 / 29 skipped** (vorher 642), Plugin-API
-  **257 / 1 skipped** (vorher 260 — drei obsolete Tests entfernt),
-  Dashboard **259**.
-* `pytest -m "not integration"`: **663 passed, 29 skipped, 4 deselected**.
-* `ruff check app tests plugin_api` und `git diff --check` sauber.
-* Wheel neu gebaut, `build/lib` frei von `real_ok`/`only_real`.
+_Keine offene Nachricht._

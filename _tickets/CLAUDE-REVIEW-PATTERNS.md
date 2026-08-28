@@ -524,6 +524,21 @@ weiter diese alten Protokolle. Die neu in `app.providers.base` angelegten
 Typen waren daher unbenutzt; statt zwei fehlender Verträge gab es nun je zwei
 Sources of Truth.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-27b
+Runde 5, Commit `cd3e2f3`: OUTBOX erklärte „alle drei umgesetzt“,
+`real_ok`/`only_real` samt zwei Betriebsarten aus der öffentlichen API entfernt
+und in der Integrationsdatei vier echte Netzfälle belassen. Die beiden Namen
+waren tatsächlich weg, ihre Fachzusage aber nicht: `testing/__init__.py`
+versprach weiter „zwei Betriebsarten“, `Scenario`, `ScenarioRunner`,
+`test_scenarios.py` und `test_prices_file.py` erklärten weiter Aufzeichnungen,
+Replay beziehungsweise den kommenden T-27b-HTTP-Runner zum aktuellen Modell.
+Die aktive Verify-Matrix und Fußnoten von T-27a wiederholten dieselbe
+aufgehobene Zusage. Zugleich fragte
+`test_ein_sammelcode_liefert_keinen_treffer` in der angeblich rein echten
+Integrationsdatei absichtlich **nicht** den Dienst und duplizierte den
+gleichnamigen Unit-Fall. Die Korrektur entfernte die besprochenen Bezeichner,
+nicht alle Erzeuger und Verbraucher ihrer Regel.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
