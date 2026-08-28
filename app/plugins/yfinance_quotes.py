@@ -202,6 +202,17 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
         kostet genau eine Einheit derselben. Über einen Anbieter gerechnet käme
         0,9999… heraus, und der Vertrag verlangt **genau** 1.0.
         """
+        if not self.handles(request):
+            # **Befund des Vertrags.** Vorher fragte diese Methode den Anbieter
+            # auch dann, wenn `handles` abgelehnt hatte — und ließ dessen
+            # Ausnahme durch. Eine Quelle, die bei Unzuständigkeit trotzdem
+            # zugreift, verbraucht Kontingent für eine Frage, die sie gar nicht
+            # beantworten will; und `NotFound` statt `NotResponsible` ließe die
+            # Kette zu früh abbrechen.
+            return NotResponsible(
+                f"{request.base}/{request.quote} ist kein gültiges Währungspaar"
+            )
+
         if request.base == request.quote:
             return FxRate(
                 base=request.base,

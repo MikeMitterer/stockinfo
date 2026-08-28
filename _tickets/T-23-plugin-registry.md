@@ -39,7 +39,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 5b | Plugin, das endlos hängt | **kein Test** — die Grenze ist dokumentiert, nicht behauptet (siehe unten) | | |
 | 6 | `yfinance` und `justetf` in `GET /sources` | erscheinen als **normale Quellen**, nicht als Sonderfall | | |
 | 6b | **Host-Harness, Stufe 1**: temporäres Verzeichnis, leere DB, Plugin laden, Papier über REST aufnehmen | **Core-Antwort** kommt vollständig an. `generation_id` → T-25, Details/Herkunft → T-26 | | |
-| 6c | `stockinfo plugin check <paket>` | prüft Import, `api_version`, Namen, Felddeklarationen, Pflichtkonfiguration und Rollenabdeckung — in einer **Kandidatenumgebung**, nicht gegen die aktive Instanz | | |
+| ~~6c~~ | ~~`stockinfo plugin check <paket>`~~ | **gestrichen** — siehe „Scope-Riegel" unten | ➖ | |
 | 7 | `make test` | Backend grün | | |
 
 ---
@@ -97,7 +97,24 @@ Das ist eine dokumentierte Grenze, keine Lücke im Entwurf — echte
 Abbruchgarantien bräuchten eigene Worker-Prozesse samt IPC, und das ist für
 eine selbstgehostete App mit wenigen Quellen unverhältnismäßig.
 
-### Ein Preflight für beide Seiten
+### ~~Ein Preflight für beide Seiten~~ — gestrichen
+
+> **Scope-Riegel, Mike und Codex, 2026-08-28.** Dieser Abschnitt und Verify
+> `#6c` sind aufgehoben. Die Kandidatenumgebung beantwortet die Frage „ein
+> **fremdes, unbekanntes** Paket in eine laufende Instanz installieren" — die
+> es hier nicht gibt. Mikes Wortlaut: *„Weshalb sollte ein Plugin-Test die
+> laufende Instanz verändern?"* Er tut es nicht: Ein Plugin-Test ist ein Test.
+>
+> Ohne ausdrückliche, datierte Ausnahme entstehen weder `stockinfo plugin
+> check`, ein Test-CLI, eine Socket-Sperre noch eine eigene
+> Installations- oder Preflight-Umgebung. Der schlanke, **tatsächliche**
+> Entry-Point-Lauf ist Teil des Produktwegs und braucht dieses Subsystem
+> nicht — er läuft seit Runde 2 (`tests/test_plugin_vertical.py`).
+>
+> Der ursprüngliche Text bleibt darunter stehen, damit die Review-Historie
+> nicht ins Leere zeigt.
+
+### ~~Der ursprüngliche Preflight-Entwurf~~
 
 `stockinfo plugin check <paket-oder-datei>` prüft ohne dauerhafte Änderung an
 der laufenden Instanz: Import und Entry-Point, unterstützte `api_version`,

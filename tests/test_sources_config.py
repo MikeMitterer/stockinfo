@@ -12,6 +12,7 @@ import pytest
 import yaml
 from fastapi.testclient import TestClient
 
+from app.plugin_adapters import unwrap
 from app.config import Settings
 from app.container import _build_resolver, get_sources_config
 from app.main import app
@@ -42,9 +43,9 @@ def test_eine_vertauschte_reihenfolge_gilt(tmp_path: Path) -> None:
     assert config.chain("resolvers") == ("yahoo-search", "openfigi")
 
     built = build_chain("resolvers", config, Settings())
-    assert [type(source).__name__ for source in built] == [
+    assert [type(unwrap(source)).__name__ for source in built] == [
         "YFinanceResolver",
-        "OpenFigiResolver",
+        "OpenFigiResolverPlugin",
     ]
 
 
@@ -59,7 +60,7 @@ def test_ein_optionaler_schluessel_schaltet_nichts_ab(tmp_path: Path) -> None:
 
     built = build_chain("resolvers", config, Settings())
 
-    assert [type(source).__name__ for source in built] == ["OpenFigiResolver"]
+    assert [type(unwrap(source)).__name__ for source in built] == ["OpenFigiResolverPlugin"]
 
 
 def test_ein_pflichtiger_schluessel_nimmt_die_quelle_aus_der_kette() -> None:
@@ -159,8 +160,8 @@ def test_dieselbe_quelle_baut_je_rolle_einen_anderen_typ(tmp_path: Path) -> None
     etf = build_chain("etf_meta", config, Settings())
     quotes = build_chain("quotes", config, Settings())
 
-    assert type(etf[0]).__name__ == "YFinanceEtfEnricher"
-    assert type(quotes[0]).__name__ == "YFinanceProvider"
+    assert type(unwrap(etf[0])).__name__ == "YFinanceEtfEnricher"
+    assert type(unwrap(quotes[0])).__name__ == "YFinancePlugin"
 
 
 def test_eine_rolle_nimmt_keine_fremde_quelle_auf(tmp_path: Path) -> None:
@@ -202,9 +203,9 @@ def test_der_leseweg_zeigt_die_laufende_kette(tmp_path: Path, monkeypatch) -> No
 
     # Die Laufzeit entsteht — wie beim Start der App, aus Stand A.
     runtime = _build_resolver()
-    assert [type(inner).__name__ for inner in runtime._resolvers] == [
+    assert [type(unwrap(inner)).__name__ for inner in runtime._resolvers] == [
         "YFinanceResolver",
-        "OpenFigiResolver",
+        "OpenFigiResolverPlugin",
     ]
 
     # Jetzt ändert jemand die Datei, ohne neu zu starten. Die laufenden Dienste
@@ -225,9 +226,9 @@ def test_der_leseweg_zeigt_die_laufende_kette(tmp_path: Path, monkeypatch) -> No
     # die Dateiänderung nicht bewegt. Ohne diese Zeile bliebe offen, ob der
     # Endpunkt bei A geblieben ist, weil die Laufzeit es ist — oder ob beide
     # unabhängig voneinander irren.
-    assert [type(inner).__name__ for inner in runtime._resolvers] == [
+    assert [type(unwrap(inner)).__name__ for inner in runtime._resolvers] == [
         "YFinanceResolver",
-        "OpenFigiResolver",
+        "OpenFigiResolverPlugin",
     ]
 
 
@@ -281,7 +282,7 @@ def test_ein_bestehender_key_ueberlebt_ohne_datei(tmp_path: Path, monkeypatch) -
     resolver = _build_resolver()
     get_sources_config.cache_clear()
 
-    assert resolver._resolvers[0]._client._api_key == "expected-key"
+    assert unwrap(resolver._resolvers[0])._client._api_key == "expected-key"
 
 
 def test_die_datei_gewinnt_gegen_den_key_aus_den_einstellungen(
@@ -305,7 +306,7 @@ def test_die_datei_gewinnt_gegen_den_key_aus_den_einstellungen(
     resolver = _build_resolver()
     get_sources_config.cache_clear()
 
-    assert resolver._resolvers[0]._client._api_key == "aus-der-datei"
+    assert unwrap(resolver._resolvers[0])._client._api_key == "aus-der-datei"
 
 
 def test_ein_verweis_findet_den_wert_aus_den_einstellungen(tmp_path: Path) -> None:
@@ -347,7 +348,7 @@ def test_die_verdrahtung_liest_die_konfiguration(tmp_path: Path, monkeypatch) ->
     resolver = _build_resolver()
     get_sources_config.cache_clear()
 
-    assert [type(inner).__name__ for inner in resolver._resolvers] == [
+    assert [type(unwrap(inner)).__name__ for inner in resolver._resolvers] == [
         "YFinanceResolver",
-        "OpenFigiResolver",
+        "OpenFigiResolverPlugin",
     ]

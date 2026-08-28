@@ -131,6 +131,7 @@ def spec_from_class(source_class: type) -> SourceSpec:
         roles=roles_of(source_class),
         build=build,
         cost=getattr(source_class, "cost", "free"),
+        contract=True,
         loaded=True,
     )
 

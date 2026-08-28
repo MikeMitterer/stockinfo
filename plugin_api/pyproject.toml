@@ -20,5 +20,24 @@ dependencies = []
 [project.optional-dependencies]
 testing = ["pytest>=8"]
 
-[tool.setuptools.packages.find]
-where = ["src"]
+# Der **echte**, installierte Ladeweg. Die App findet diesen Resolver über
+# `importlib.metadata`, ohne dass jemand eine Datei ins Datenvolume legt — und
+# ohne dass dieses Repository ihn kennt. Ein Ladeweg, den man nur im Test
+# nachstellt, ist keiner.
+[project.entry-points."stockinfo.sources"]
+canada-file = "stockinfo_plugin_examples.canada_file:CanadaFileResolver"
+
+# Die Beispiele werden **mitinstalliert**, unter eigenem Paketnamen. Ohne das
+# gäbe es keinen echten Entry-Point zum Vorführen: Ein Ladeweg, den man nur im
+# Test nachstellt, ist keiner.
+[tool.setuptools]
+packages = [
+    "stockinfo_plugin",
+    "stockinfo_plugin.testing",
+    "stockinfo_plugin_examples",
+]
+
+[tool.setuptools.package-dir]
+stockinfo_plugin = "src/stockinfo_plugin"
+"stockinfo_plugin.testing" = "src/stockinfo_plugin/testing"
+stockinfo_plugin_examples = "examples"

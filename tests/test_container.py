@@ -17,6 +17,7 @@ import yaml
 
 from app.config import Settings
 from app.container import _build_resolver, get_sources_config
+from app.plugin_adapters import unwrap
 from app.resolver import CompositeResolver
 from app.sources_config import default_chains
 
@@ -36,7 +37,13 @@ def _wire(monkeypatch, tmp_path: Path, strict: bool) -> CompositeResolver:
 
 
 def _names(resolver: CompositeResolver) -> list[str]:
-    return [type(inner).__name__ for inner in resolver._resolvers]
+    """Die Klassennamen der Kette — **unter** Adapter und Kapsel.
+
+    Seit T-23 trägt eine gebaute Quelle bis zu zwei Schichten. Ohne `unwrap`
+    stünde hier `ResolverAdapter` und der Test sagte nichts mehr darüber, wen
+    die Konfiguration ausgewählt hat — also über genau das, was er prüft.
+    """
+    return [type(unwrap(inner)).__name__ for inner in resolver._resolvers]
 
 
 def test_strict_hat_keinen_yahoo_fallback(monkeypatch, tmp_path: Path) -> None:
@@ -53,14 +60,14 @@ def test_strict_hat_keinen_yahoo_fallback(monkeypatch, tmp_path: Path) -> None:
     """
     resolver = _wire(monkeypatch, tmp_path, strict=True)
 
-    assert _names(resolver) == ["OpenFigiResolver"]
+    assert _names(resolver) == ["OpenFigiResolverPlugin"]
 
 
 def test_nicht_strict_hat_den_fallback(monkeypatch, tmp_path: Path) -> None:
     """Die Gegenrichtung — ohne die Einstellung bleibt die Kaskade."""
     resolver = _wire(monkeypatch, tmp_path, strict=False)
 
-    assert _names(resolver) == ["OpenFigiResolver", "YFinanceResolver"]
+    assert _names(resolver) == ["OpenFigiResolverPlugin", "YFinanceResolver"]
 
 
 def test_eine_datei_gewinnt_gegen_strict(monkeypatch, tmp_path: Path) -> None:
@@ -76,7 +83,7 @@ def test_eine_datei_gewinnt_gegen_strict(monkeypatch, tmp_path: Path) -> None:
 
     resolver = _wire(monkeypatch, tmp_path, strict=True)
 
-    assert _names(resolver) == ["OpenFigiResolver", "YFinanceResolver"]
+    assert _names(resolver) == ["OpenFigiResolverPlugin", "YFinanceResolver"]
 
 
 def test_die_vorgaben_unterscheiden_sich_nur_an_den_resolvern() -> None:

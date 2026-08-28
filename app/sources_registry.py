@@ -21,12 +21,13 @@ from dataclasses import dataclass
 
 import structlog
 
+from app.plugin_adapters import QuoteAdapter, ResolverAdapter
 from app.plugin_guard import GuardedSource
+from app.plugins.openfigi_resolver import OpenFigiResolverPlugin
+from app.plugins.yfinance_quotes import YFinancePlugin
 from app.providers.justetf_provider import JustEtfProvider
-from app.providers.openfigi_provider import OpenFigiClient
 from app.providers.yfinance_etf_provider import YFinanceEtfEnricher
-from app.providers.yfinance_provider import YFinanceProvider
-from app.resolver import OpenFigiResolver, YFinanceResolver
+from app.resolver import YFinanceResolver
 
 logger = structlog.get_logger()
 
@@ -45,6 +46,19 @@ class SourceSpec:
     roles: frozenset[str]
     build: Callable[[str, dict, object], object]
     cost: str = "free"
+    contract: bool = False
+    """Spricht diese Quelle den **Plugin-Vertrag** statt der Core-Schnittstelle?
+
+    Der Unterschied entscheidet, ob `build_chain` einen Adapter davorsetzt.
+    Geladene Quellen sprechen ihn immer; von den eingebauten wandern sie
+    schrittweise dorthin — `openfigi` als erste. Eine Quelle, die noch die
+    Core-Schnittstelle spricht, geht unverändert durch.
+
+    **Das Feld verschwindet wieder**, sobald alle eingebauten Quellen den
+    Vertrag sprechen. Es beschreibt einen Übergang, keinen Dauerzustand — und
+    steht hier, damit der Übergang sichtbar ist statt geraten.
+    """
+
     loaded: bool = False
     """Kam diese Quelle von außen — Entry-Point oder Plugin-Verzeichnis?
 
@@ -82,9 +96,12 @@ def _openfigi(role: str, config: dict, settings) -> object:
     Die Datei gewinnt, wenn sie etwas sagt: Wer einen Abschnitt schreibt, meint
     ihn. Sagt sie nichts, gilt weiter, was schon galt.
     """
-    return OpenFigiResolver(
-        OpenFigiClient(config.get("api_key") or settings.openfigi_api_key),
-        settings.default_exchange,
+    # **Seit T-23 das Plugin, nicht mehr der Kern-Resolver direkt.** Die App
+    # ist damit ihr eigener erster Plugin-Autor: Wo der Vertrag zwickt, fällt
+    # es uns auf und nicht zuerst einem Fremden. Die Fachlogik ist dieselbe —
+    # `OpenFigiResolverPlugin` delegiert an `app.resolver.OpenFigiResolver`.
+    return OpenFigiResolverPlugin(
+        {"api_key": config.get("api_key") or settings.openfigi_api_key},
         home_fallback=not settings.strict_exchange,
     )
 
@@ -102,7 +119,12 @@ def _yfinance(role: str, config: dict, settings) -> object:
     `YFinanceProvider` bekommen — ein Objekt, das `is_responsible` gar nicht
     kennt, und der Fehler wäre erst beim ersten ETF-Abruf sichtbar geworden.
     """
-    return YFinanceEtfEnricher() if role == "etf_meta" else YFinanceProvider()
+    # Seit T-23 spricht die Kursrolle den Vertrag; `etf_meta` folgt in einem
+    # eigenen Schritt, weil dort die Antwort eine andere Form hat (`Reading`
+    # statt eines Datensatzes) und der Core-Enricher noch anders fragt.
+    if role == "etf_meta":
+        return YFinanceEtfEnricher()
+    return YFinancePlugin(config)
 
 
 def _justetf(role: str, config: dict, settings) -> object:
@@ -113,13 +135,14 @@ def _justetf(role: str, config: dict, settings) -> object:
 # diese Tabelle ist dann nicht mehr die einzige Quelle von Namen, aber
 # weiterhin ihre Form.
 BUILTIN_SOURCES: tuple[SourceSpec, ...] = (
-    SourceSpec("openfigi", frozenset({"resolvers"}), _openfigi),
+    SourceSpec("openfigi", frozenset({"resolvers"}), _openfigi, contract=True),
     SourceSpec("yahoo-search", frozenset({"resolvers"}), _yahoo_search),
     SourceSpec("justetf", frozenset({"etf_meta"}), _justetf),
     SourceSpec(
         "yfinance",
         frozenset({"etf_meta", "quotes", "daily", "fx"}),
         _yfinance,
+        contract=True,
     ),
 )
 
@@ -278,6 +301,71 @@ def build_chain(role: str, config, settings) -> list[object]:
             logger.info("source_not_configured", source=entry.name, role=role)
             continue
         spec = known[entry.name]
-        source = spec.build(role, config.config_for(entry.name), settings)
-        built.append(GuardedSource(source) if spec.loaded else source)
+        source = _build_one(spec, role, config.config_for(entry.name), settings)
+        if source is not None:
+            built.append(source)
     return built
+
+
+# Welche Rolle über welchen Adapter in die Sprache des Core kommt. Rollen ohne
+# Eintrag sprechen sie noch direkt — der Übergang ist absichtlich sichtbar.
+ROLE_ADAPTERS = {"resolvers": ResolverAdapter, "quotes": QuoteAdapter}
+
+
+def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | None:
+    """Baut **eine** Quelle — gekapselt, adaptiert, und mit Diagnose geprüft.
+
+    Die Reihenfolge ist der Punkt:
+
+    1. **Bauen, und zwar geschützt.** Ein Konstruktor, der wirft, darf nicht
+       den Start umwerfen. In Runde 1 stand die Kapsel erst *danach* — ein
+       Plugin mit fehlerhaftem ``__init__`` riss deshalb die ganze Kette mit,
+       obwohl `GuardedSource` genau dafür gebaut war.
+    2. **Diagnose fragen.** Eine Quelle, die selbst sagt, dass sie nicht
+       arbeiten kann, gehört nicht in die Kette. `SourceSpec.needs` ist bei
+       geladenen Quellen leer, also hätte `is_configured` sie durchgelassen;
+       `configuration_problem()` ist die Auskunft, die der Vertrag dafür
+       vorsieht.
+    3. **Kapseln**, wenn sie fremd ist.
+    4. **Adaptieren**, wenn sie den Vertrag spricht und die Rolle einen Adapter
+       hat.
+
+    Returns:
+        Die einsatzbereite Quelle, oder ``None`` — dann steht der Grund im
+        Protokoll und die Kette geht ohne sie weiter.
+    """
+    try:
+        source = spec.build(role, config, settings)
+    except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
+        logger.warning(
+            "source_construction_failed",
+            source=spec.name,
+            role=role,
+            error=f"{type(error).__name__}: {error}",
+        )
+        return None
+
+    problem = _diagnosis(spec, source)
+    if problem:
+        logger.warning("source_not_operational", source=spec.name, reason=problem)
+        return None
+
+    if spec.loaded:
+        source = GuardedSource(source)
+    adapter = ROLE_ADAPTERS.get(role) if spec.contract else None
+    return adapter(source, settings.default_exchange) if adapter else source
+
+
+def _diagnosis(spec: SourceSpec, source: object) -> str:
+    """Was die Quelle selbst über ihre Arbeitsfähigkeit sagt.
+
+    Auch das Fragen ist gekapselt: Eine Diagnose, die wirft, ist selbst ein
+    Grund, die Quelle nicht zu nehmen — aber kein Grund, die App zu beenden.
+    """
+    ask = getattr(source, "configuration_problem", None)
+    if not callable(ask):
+        return ""
+    try:
+        return str(ask() or "")
+    except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
+        return f"configuration_problem() wirft: {type(error).__name__}: {error}"

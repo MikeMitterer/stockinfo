@@ -27,6 +27,7 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
+from threading import Lock
 from datetime import datetime, timedelta, timezone
 from typing import Any
 
@@ -81,29 +82,71 @@ class CircuitBreaker:
     clock: Callable[[], datetime] = _now
     failures: int = 0
     opened_at: datetime | None = field(default=None)
+    probing: bool = False
+    """Läuft gerade der **eine** Probeaufruf des halb offenen Zustands?
+
+    Ohne dieses Feld war „genau ein Versuch" eine Zusage der Prosa und nicht
+    des Codes: Nach Ablauf der Frist meldete `is_open` schlicht ``False``, und
+    zwei gleichzeitige Aufrufer gingen beide durch. Eine Gegenprobe mit zwei
+    Threads an einer Barriere hat genau das gezeigt.
+    """
+
+    _lock: Lock = field(default_factory=Lock, repr=False, compare=False)
+
+    def try_enter(self) -> bool:
+        """Darf dieser Aufruf durch? Reserviert dabei den Probeplatz.
+
+        **Fragen und Reservieren in einem Schritt, unter einer Sperre.** Eine
+        getrennte Abfrage („ist offen?") und ein späteres Durchgehen wären
+        genau das Rennen, das der halb offene Zustand vermeiden soll: Zwischen
+        beiden Schritten kommt der zweite Thread durch.
+
+        Returns:
+            ``True``, wenn die Quelle gefragt werden darf.
+        """
+        with self._lock:
+            if self.opened_at is None:
+                return True
+            if self.clock() - self.opened_at < self.open_for:
+                return False
+            if self.probing:
+                # Ein anderer Aufrufer ist bereits der Probeversuch. Für alle
+                # weiteren bleibt der Schalter zu — sonst liefe die Quelle in
+                # genau den Sturm, vor dem sie geschützt werden soll.
+                return False
+            self.probing = True
+            return True
 
     @property
     def is_open(self) -> bool:
-        """Wird gerade unterdrückt?
+        """Wird gerade unterdrückt? — **Auskunft, keine Reservierung.**
 
-        Nach Ablauf von `open_for` meldet die Eigenschaft ``False``: Das ist
-        der halb offene Zustand — der nächste Aufruf darf es versuchen, und
-        `record_failure` würde ihn sofort wieder öffnen.
+        Für Diagnose und Tests. Wer entscheiden will, ob er durchdarf, nimmt
+        `try_enter`: Diese Eigenschaft fragt nur nach und hält nichts fest.
         """
-        if self.opened_at is None:
-            return False
-        return self.clock() - self.opened_at < self.open_for
+        with self._lock:
+            if self.opened_at is None:
+                return False
+            return self.clock() - self.opened_at < self.open_for
 
     def record_success(self) -> None:
         """Ein Aufruf hat funktioniert — der Schalter schließt vollständig."""
-        self.failures = 0
-        self.opened_at = None
+        with self._lock:
+            self.failures = 0
+            self.opened_at = None
+            self.probing = False
 
     def record_failure(self) -> None:
-        """Ein Aufruf ist fehlgeschlagen; ab der Schwelle öffnet der Schalter."""
-        self.failures += 1
-        if self.failures >= self.threshold:
-            self.opened_at = self.clock()
+        """Ein Aufruf ist fehlgeschlagen; ab der Schwelle öffnet der Schalter.
+
+        Ein gescheiterter **Probeversuch** öffnet sofort wieder: Die Frist
+        beginnt von vorn, und der reservierte Platz wird freigegeben.
+        """
+        with self._lock:
+            self.failures += 1
+            if self.probing or self.failures >= self.threshold:
+                self.opened_at = self.clock()
+            self.probing = False
 
 
 class GuardedSource:
@@ -159,7 +202,7 @@ class GuardedSource:
 
         def guarded(*args: object, **kwargs: object) -> object:
             source_name = getattr(self._source, "name", type(self._source).__name__)
-            if self._breaker.is_open:
+            if not self._breaker.try_enter():
                 logger.info("source_suppressed", source=source_name, method=name)
                 return Unavailable(
                     f"{source_name} ist nach wiederholtem Fehlschlag vorübergehend "

@@ -114,7 +114,7 @@ class InstrumentResolver(Protocol):
 class QuoteProvider(Protocol):
     """Liefert den aktuellen Kurs zu einem Symbol."""
 
-    def fetch_quote(self, symbol: str) -> RawQuote | None: ...
+    def fetch_quote(self, instrument: ResolvedInstrument) -> RawQuote | None: ...
 
 
 class DailyCloseProvider(Protocol):

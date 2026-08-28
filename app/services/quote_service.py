@@ -355,7 +355,7 @@ class QuoteService:
             Kurs-Antwort; ``metadata_complete`` sagt, ob ihre ETF-Felder
             belastbar sind.
         """
-        raw = self._quote_provider.fetch_quote(resolved.symbol)
+        raw = self._quote_provider.fetch_quote(resolved)
         if raw is None:
             raise QuoteUnavailableError(resolved.symbol)
 

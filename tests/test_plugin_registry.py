@@ -7,6 +7,7 @@ nicht nur, dass etwas fehlschlägt, sondern dass die **übrigen** Quellen
 trotzdem ankommen.
 """
 
+import threading
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -515,6 +516,58 @@ def test_jede_quelle_hat_ihren_eigenen_schalter() -> None:
 
     assert kaputt.breaker.is_open is True
     assert gesund.breaker.is_open is False
+
+
+def test_im_halb_offenen_zustand_kommt_genau_einer_durch() -> None:
+    """**Befund aus Runde 1: „genau ein Versuch" stand nur in der Prosa.**
+
+    Nach Ablauf der Frist meldete `is_open` schlicht ``False``. Zwei
+    gleichzeitige Aufrufer fragten daraufhin **beide** die Quelle — also genau
+    der Sturm, vor dem der halb offene Zustand schützen soll.
+
+    Die Barriere ist der Kern des Tests: Ohne sie starteten die Threads
+    nacheinander, der erste wäre fertig, bevor der zweite beginnt, und das
+    Rennen fände gar nicht statt. Der Test wäre grün gewesen, ohne etwas zu
+    prüfen.
+    """
+    jetzt = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
+    breaker = CircuitBreaker(threshold=1, clock=lambda: jetzt)
+    versuche: list[int] = []
+    schranke = threading.Barrier(2)
+    zaehler_sperre = threading.Lock()
+
+    class Langsam(Resolver):
+        name = "langsam"
+
+        def resolve(self, request: ResolveRequest) -> Resolution:
+            with zaehler_sperre:
+                versuche.append(1)
+            return Unavailable(error="immer noch weg")
+
+    guarded = GuardedSource(Langsam(), breaker)
+    request = ResolveRequest(isin="US0378331005")
+
+    guarded.resolve(request)  # öffnet den Schalter
+    assert breaker.is_open is True
+    versuche.clear()
+
+    jetzt += timedelta(minutes=6)  # halb offen
+
+    def gleichzeitig() -> None:
+        schranke.wait()
+        guarded.resolve(request)
+
+    threads = [threading.Thread(target=gleichzeitig) for _ in range(2)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+
+    assert len(versuche) == 1, (
+        f"{len(versuche)} Aufrufe kamen durch — der halb offene Zustand "
+        "reserviert genau einen"
+    )
+    assert breaker.is_open is True, "der Probeversuch scheiterte — wieder zu"
 
 
 def test_eine_fx_quelle_wird_ebenso_gekapselt() -> None:

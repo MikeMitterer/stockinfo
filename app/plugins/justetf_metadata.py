@@ -28,7 +28,7 @@ from app.providers.justetf_provider import JustEtfProvider, is_european_isin
 # Was justETF liefert, in der Form des Vertrags. Die Deklaration ist **nicht**
 # Zierde: Sie sagt der App, wie ein Wert zu lesen ist (Prozent, Betrag, Text)
 # und wie er heißt, wenn sie ihn anzeigt.
-DECLARED: tuple[FieldSpec, ...] = (
+FIELDS: tuple[FieldSpec, ...] = (
     FieldSpec(
         "ter",
         kind="number",
@@ -71,7 +71,7 @@ DECLARED: tuple[FieldSpec, ...] = (
     ),
 )
 
-_BY_NAME = {spec.name: spec for spec in DECLARED}
+_BY_NAME = {spec.name: spec for spec in FIELDS}
 
 
 class JustEtfMetadataPlugin(MetadataSource):
@@ -79,6 +79,15 @@ class JustEtfMetadataPlugin(MetadataSource):
 
     name = "justetf"
     cost = "free"
+
+    FIELDS = FIELDS
+    """Was diese Quelle liefert — **der Vertrag fragt danach.**
+
+    Ohne diese Deklaration weiß die App nicht, wie sie einen Wert behandeln
+    soll: ob er Prozent ist, ein Betrag oder Text, und wie er heißt, wenn er
+    angezeigt wird. `MetadataContract.test_felder_sind_deklariert` hat genau
+    das gefunden — die erste Fassung ließ die Angabe leer.
+    """
 
     def __init__(
         self,
@@ -110,13 +119,23 @@ class JustEtfMetadataPlugin(MetadataSource):
         """Holt die Kennzahlen und macht daraus Messwerte.
 
         Returns:
-            Je gefülltem Feld ein `Reading`. ``None``, wenn justETF nichts
-            liefert — **nicht** eine leere Liste: „nichts gefunden" und „ein
-            Fonds ohne jede Kennzahl" sind zwei verschiedene Aussagen, und nur
-            die zweite ist ein Ergebnis.
+            Je gefülltem Feld ein `Reading`. **Drei Ausgänge, drei Bedeutungen:**
+
+            * ``[]`` — nicht zuständig. Der Aufrufer fragt die nächste Quelle.
+            * ``None`` — zuständig, aber justETF kennt das Papier nicht. Der
+              Aufrufer hört auf zu suchen.
+            * eine gefüllte Liste — Kennzahlen.
+
+            Die ersten beiden zu vertauschen ist der Fehler, den der Vertrag
+            gefunden hat: Er sieht von außen gleich aus und ändert, wie weit die
+            Kette läuft.
         """
         if not self.handles(request):
-            return None
+            # **Leere Liste, nicht `None`** — Befund des Vertrags. „Nicht
+            # zuständig" und „zuständig, nichts gefunden" sind zwei Aussagen,
+            # und der Aufrufer darf sie nicht verwechseln: Beim ersten fragt er
+            # die nächste Quelle, beim zweiten hört er auf.
+            return []
 
         details = self._provider.fetch_etf(request.isin or "")
         if details is None:
@@ -150,7 +169,12 @@ def as_readings(details: EtfDetails, source: str = "justetf") -> list[Reading]:
             value=getattr(details, spec.name),
             unit=spec.unit,
             source=source,
+            # **Ein absoluter Betrag ohne Währung ist bedeutungslos** — dieselbe
+            # Regel, die für Kurse gilt, und ein Befund des Vertrags. Das
+            # Fondsvolumen steht in der Fondswährung, nicht in der des
+            # Listings; genau deshalb führt justETF beide getrennt.
+            currency=details.fund_currency if spec.unit is Unit.ABSOLUTE else None,
         )
-        for spec in DECLARED
+        for spec in FIELDS
         if getattr(details, spec.name, None) is not None
     ]
