@@ -75,6 +75,22 @@ def test_unplausible_werte_gelten_als_kein_wert() -> None:
     assert spec.is_plausible(9999.0) is False    # vermutlich falsche Einheit
 
 
+def test_ein_beliebig_grosser_integer_wird_beantwortet_nicht_geworfen() -> None:
+    """**Befund aus Runde 3, zweite Fundstelle derselben Ursache.**
+
+    `is_plausible` wandelte den Wert mit `float()` um, bevor es verglich. Die
+    Umwandlung war überflüssig — Python vergleicht `int` und `float` exakt —
+    und bei ``10**10000`` scheitert sie mit `OverflowError`. Seit Runde 2 ruft
+    der Contract-Lauf `is_plausible` auf; die Ausnahme wäre also mitten in der
+    Abnahme eines fremden Plugins hochgekommen.
+
+    Erwartet wird eine **Antwort**: außerhalb des Bereichs, also `False`.
+    """
+    spec = MetadataFileSource().declared("ter")
+
+    assert spec.is_plausible(10**10000) is False
+
+
 def test_beschriftungen_liegen_zweisprachig_vor() -> None:
     """Ein Feld ohne Beschriftung erscheint als roher Feldname."""
     spec = MetadataFileSource().declared("fund_domicile")

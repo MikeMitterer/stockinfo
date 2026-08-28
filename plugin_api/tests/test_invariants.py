@@ -296,6 +296,28 @@ def test_was_keine_endliche_zahl_ist(value: object) -> None:
     assert not is_finite_number(value)
 
 
+def test_ein_beliebig_grosser_integer_ist_endlich() -> None:
+    """**Befund aus Runde 3 — die Prüfung flog bei einer gültigen Zahl.**
+
+    Ein Python-Integer ist beliebig groß; `math.isfinite` erwartet einen
+    `float` und wandelt vorher um. Bei ``10**10000`` scheitert genau diese
+    Umwandlung mit `OverflowError` — ausgerechnet die Funktion, die
+    unbrauchbare Zahlen abfangen soll, riss damit den Lauf mit, den sie
+    schützen sollte.
+
+    ``10**10000`` ist kein Kurs, den je jemand meldet. Der Punkt ist auch nicht
+    die Zahl, sondern dass eine Prüfung **wirft**, statt zu antworten: Ein
+    Aufrufer, der `False` erwartet und `OverflowError` bekommt, hat keine
+    Handhabe.
+    """
+    huge = 10**10000
+
+    assert is_finite_number(huge) is True
+    assert is_finite_price(huge) is True, "endlich und positiv — mehr sagt sie nicht"
+    assert is_finite_number(-huge) is True
+    assert is_finite_price(-huge) is False
+
+
 def test_ein_zeitpunkt_ohne_zone_zaehlt_nicht() -> None:
     """``17:30`` ist in Toronto ein anderer Augenblick als in Frankfurt."""
     assert has_timezone(datetime(2026, 1, 2, 17, 30, tzinfo=timezone.utc))

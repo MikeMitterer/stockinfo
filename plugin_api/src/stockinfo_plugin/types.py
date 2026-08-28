@@ -362,11 +362,19 @@ class FieldSpec:
         Returns:
             ``True``, wenn kein Bereich gesetzt ist, der Wert keine Zahl ist
             (dann greift die Prüfung nicht) oder er innerhalb liegt.
+
+        **Ohne `float()` — Befund aus Runde 3, zweite Fundstelle.** Die
+        Umwandlung war überflüssig: Python vergleicht `int` und `float` exakt,
+        ohne eines von beiden umzurechnen. Sie war zugleich gefährlich, denn
+        ein beliebig großer Integer wie ``10**10000`` lässt sich gar nicht in
+        einen `float` wandeln und beendete die Prüfung mit `OverflowError` —
+        mitten im Contract-Lauf, für den `is_plausible` seit Runde 2 aufgerufen
+        wird.
         """
         if self.plausible is None or not isinstance(value, (int, float)):
             return True
         low, high = self.plausible
-        return low <= float(value) <= high
+        return low <= value <= high
 
 
 def convert(value: float, from_unit: Unit | None, to_unit: Unit | None) -> float | None:

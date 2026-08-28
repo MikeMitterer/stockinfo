@@ -305,9 +305,19 @@ def is_finite_number(value: object) -> bool:
     — ``(-10, 10)`` ist ein völlig richtiger Bereich für eine Tagesveränderung.
     Die gemeinsame Hälfte steht hier, damit die beiden Aufrufer sie nicht
     getrennt pflegen und beim ersten Sonderfall auseinanderlaufen.
+
+    **Integer werden nicht durch `math.isfinite` geschickt** — Befund aus
+    Runde 3. Ein Python-Integer ist beliebig groß, `math.isfinite` erwartet
+    aber einen `float` und wandelt vorher um; bei ``10**10000`` scheitert
+    genau diese Umwandlung mit `OverflowError`. Ausgerechnet die Prüfung, die
+    unbrauchbare Zahlen abfangen soll, flog also bei einer **gültigen** Zahl —
+    und riss den Lauf mit, den sie schützen sollte. Nach dem Typ-Guard oben ist
+    ein Integer immer endlich; die Frage stellt sich nur bei `float`.
     """
     if isinstance(value, bool) or not isinstance(value, (int, float)):
         return False
+    if isinstance(value, int):
+        return True
     return math.isfinite(value)
 
 

@@ -91,7 +91,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
     Die Zusagen je Rolle stehen als eigene Testmethode da, nicht als Sammelfall
     — sonst nennt eine fehlgeschlagene Zusicherung nur die erste Ursache.
-[^invarianten]: **`stockinfo_plugin/invariants.py`, 82 bestandene Tests und ein
+[^invarianten]: **`stockinfo_plugin/invariants.py`, 83 bestandene Tests und ein
     ausdrücklich übersprungener.** Geprüft
     wird gegen **bekannte Werte**, nicht gegen die Funktion selbst: vier echte
     ISINs (Apple, iShares Core MSCI World, Royal Bank of Canada, Barrick Gold).
@@ -189,8 +189,8 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     gemacht: `MetadataFileSource._COLUMNS` war ein Dict an der Klasse. Behoben
     als `MappingProxyType` — dass dort heute niemand schreibt, ist wahr und
     morgen eine Annahme.
-[^lauf]: `make test-plugin-api`: **257 passed, 1 skipped** (vor T-27a: 36;
-    nach Runde 1: 189; nach Runde 2: 235).
+[^lauf]: `make test-plugin-api`: **260 passed, 1 skipped** (vor T-27a: 36;
+    nach Runde 1: 189; nach Runde 2: 235; nach Runde 3: 257).
     Übersprungen wird ein Zahlendreher-Fall, dessen getauschte Stellen zufällig
     gleich sind; der Test sagt das statt eine Aussage zu behaupten, die der
     Wert nicht hergibt. `make test` gesamt: Backend 637 / 29 skipped,
@@ -666,3 +666,63 @@ keine Rebaseline: Es bleibt ein einzelner Typzweig in einer neuen Hilfsfunktion
 plus zwei Gegenproben. Claudes Musterfrage bleibt unter **P-08** — der Prüfaufbau
 hat die entscheidende zulässige Integer-Ausprägung nicht erzeugt; ein eigenes
 Kapitel würde dieselbe Prüffrage duplizieren.
+
+---
+
+## Runde 4 · Der Typzweig — und zwei weitere Fundstellen
+
+Der Befund traf zu, wörtlich reproduziert. `math.isfinite` erwartet einen
+`float` und wandelt vorher um; ein Python-Integer ist beliebig groß, und bei
+``10**10000`` scheitert genau diese Umwandlung. Ausgerechnet die Prüfung, die
+unbrauchbare Zahlen abfangen soll, flog also bei einer **gültigen** Zahl und
+riss den Lauf mit, den sie schützen sollte. Nach dem Typ-Guard ist ein Integer
+immer endlich; `math.isfinite` fragt jetzt nur noch bei `float`.
+
+**Die Ursache steckte an drei Stellen, nicht an einer.** Die Suche nach der
+Klasse statt nach der Fundstelle hat zwei weitere ergeben:
+
+| Fundstelle | Wandlung | Wirkung vorher |
+|---|---|---|
+| `invariants.is_finite_number` | `math.isfinite(int)` | gemeldet — `OverflowError` in Validierung und Lauf |
+| `types.FieldSpec.is_plausible` | `float(value)` | `OverflowError` **mitten im Contract-Lauf** eines fremden Plugins |
+| `app/providers/yfinance_provider._as_tradeable_price` | `float(value)` | `OverflowError` statt Cache-Rückfall — `except` fing `TypeError`/`ValueError`, nicht `OverflowError` |
+
+Die zweite ist die unangenehmste: `is_plausible` wird seit Runde 2 vom
+Contract-Lauf aufgerufen — die Ausnahme wäre in der Abnahme eines fremden
+Plugins hochgekommen, an einer Stelle, an der ihr Autor sie nicht deuten kann.
+Dort war `float()` zudem **überflüssig**: Python vergleicht `int` und `float`
+exakt, ohne eines von beiden umzurechnen.
+
+Die dritte liegt in der App und damit außerhalb des Ticketscopes. Sie ist
+dieselbe Ursache und eine Zeile groß; ich habe sie mitgenommen, statt sie als
+Folgeticket zu melden — wenn das die falsche Abwägung war, nehme ich sie wieder
+heraus.
+
+### Gegenproben
+
+Vier neue Tests, je einer pro Fundstelle plus der verlangte am vollständigen
+Lauf. Gegen den Stand `d9ad4ad`:
+
+```
+3 failed (plugin_api)   +   1 failed (app)
+  test_ein_beliebig_grosser_integer_ist_endlich
+  test_ein_beliebig_grosser_integer_wird_beantwortet_nicht_geworfen
+  test_eine_sehr_grosse_obergrenze_beendet_den_lauf_nicht
+  test_yfinance_ein_unwandelbar_grosser_wert_gibt_none
+    → OverflowError: int too large to convert to float
+```
+
+Der Test am Szenariolauf verlangt nicht nur, dass nichts fliegt, sondern dass
+der Fall regulär durchläuft und **bestanden** ist — sonst bewiese er nur, dass
+die Ausnahme weg ist, und nicht, dass die Prüfung noch stattfindet.
+
+### Verifikation
+
+* `make test`: Backend **638 passed / 29 skipped** (Runde 3: 637), Plugin-API
+  **260 passed / 1 skipped** (Runde 3: 257), Dashboard **259 passed**.
+* `ruff check app tests plugin_api` und `git diff --check` sauber.
+* 23 Mutanten unverändert grün, samt Gegenprobe am heilen Plugin.
+
+Verify `#9` bleibt `⚠️` mit unveränderter Begründung: Half-open und Reset
+gehören zu T-23. Die Musterfrage ist mit deiner Einordnung unter `P-08`
+erledigt.

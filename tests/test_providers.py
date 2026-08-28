@@ -263,6 +263,18 @@ def test_yfinance_fetch_quote(monkeypatch) -> None:
     assert quote.isin == "IE00B3RBWM25"
 
 
+def test_yfinance_ein_unwandelbar_grosser_wert_gibt_none() -> None:
+    """**Dritte Fundstelle des Befunds aus T-27a Runde 3.**
+
+    `float(10**10000)` wirft `OverflowError`, und der stand nicht in der
+    aufgefangenen Liste — ein solcher Rohwert hätte den ganzen Abruf beendet,
+    statt den Weg jedes anderen unbrauchbaren Werts zu nehmen. Fachlich ist er
+    kein Kurs; die Antwort darauf heißt `None` und damit Cache-Rückfall.
+    """
+    assert YFinanceProvider()._as_tradeable_price(10**10000) is None
+    assert YFinanceProvider()._as_tradeable_price(141.55) == 141.55
+
+
 def test_yfinance_ohne_preis_gibt_none(monkeypatch) -> None:
     class NoPrice(FakeTicker):
         fast_info = type("F", (), {"last_price": None})()

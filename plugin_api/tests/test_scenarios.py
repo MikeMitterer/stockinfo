@@ -212,6 +212,35 @@ def test_unbrauchbare_grenzen_sind_ein_beschreibungsfehler(
     assert run_scenarios(DirectRunner(source), [broken]) == problems
 
 
+def test_eine_sehr_grosse_obergrenze_beendet_den_lauf_nicht() -> None:
+    """**Befund aus Runde 3 — die Gegenprobe am vollständigen Lauf.**
+
+    Der Helfer allein zu prüfen genügt hier nicht: Der Schaden entstand nicht
+    in `is_finite_number`, sondern eine Ebene höher, wo sein `OverflowError`
+    die Validierung und damit **alle** Fälle mitriss. Dieser Test geht deshalb
+    durch `run_scenarios` und verlangt nicht nur, dass nichts fliegt, sondern
+    dass der Fall regulär durchläuft und bestanden ist.
+    """
+    generous = Scenario(
+        case_id="grosszuegige-obergrenze",
+        request=QuoteRequest(ticker="RY", mic="XTSE"),
+        expect=Quote,
+        golden={"currency": "CAD"},
+        note="Obergrenze als beliebig großer Integer, Herkunft: Befund Runde 3",
+        plausible={"price": (0, 10**10000)},
+    )
+    source = FakeQuoteSource(
+        Quote(
+            price=141.55,
+            currency="CAD",
+            as_of=datetime(2026, 1, 2, tzinfo=timezone.utc),
+        )
+    )
+
+    assert validate_scenarios([generous]) == []
+    assert run_scenarios(DirectRunner(source), [generous]) == []
+
+
 def test_ein_ausfall_laesst_sich_von_aussen_nicht_bestellen() -> None:
     """`real_ok` bei erwartetem `Unavailable` ist eine Erwartung an das Wetter."""
     impossible = Scenario(

@@ -142,7 +142,12 @@ class YFinanceProvider:
             return None
         try:
             price = float(value)
-        except (TypeError, ValueError):
+        except (TypeError, ValueError, OverflowError):
+            # OverflowError: ein beliebig grosser Python-Integer laesst sich
+            # nicht in float wandeln. Fachlich ist er kein Kurs — er darf aber
+            # den Abruf nicht abbrechen, sondern nimmt den Weg jedes anderen
+            # unbrauchbaren Werts. Dritte Fundstelle desselben Befunds aus
+            # T-27a Runde 3.
             return None
         if not math.isfinite(price) or price <= 0:
             return None
