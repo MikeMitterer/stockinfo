@@ -21,6 +21,7 @@ duplizieren.
 - [P-07 · Eine neue Zwischenlage wird gebaut statt benannt](#p-07--eine-neue-zwischenlage-wird-gebaut-statt-benannt)
 - [P-08 · Der Test erzeugt den entscheidenden Unterschied nicht](#p-08--der-test-erzeugt-den-entscheidenden-unterschied-nicht)
 - [P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem](#p-09--eine-testanforderung-wächst-zum-unbeauftragten-subsystem)
+- [P-10 · Ein Integrationstest berührt seine Außengrenze nicht](#p-10--ein-integrationstest-berührt-seine-außengrenze-nicht)
 - [Leitplanken für das spätere Skill-Proposal](#leitplanken-für-das-spätere-skill-proposal)
 
 ## Leitplanken für das spätere Skill-Proposal
@@ -144,6 +145,14 @@ Stand wie die laufenden Dienste. Der benannte Test schrieb jedoch nur eine
 Konfiguration, leerte den Cache und rief danach `/sources` auf. Er primte keine
 Laufzeitkette und änderte die Datei nicht anschließend; eine Rückkehr zum
 frischen Dateilesen im Endpunkt wäre deshalb unentdeckt grün geblieben.
+
+**Neuer Beleg:** T-23 Runde 1, Commit `e6ca003`: Die Übergabe erklärte, zwei
+Plugins beantworteten dieselbe Rolle und ausschließlich `sources.yaml` wähle
+zwischen ihnen. Der benannte Test verlangte jedoch ausdrücklich
+`not isinstance(chain[0], YFinancePlugin)` und baute für `yfinance` weiter den
+alten nativen `YFinanceProvider`. Das Datei-Plugin wurde nur direkt unterhalb
+des Core aufgerufen; Registry → Core → REST blieb ungetestet und laut OUTBOX
+noch offen.
 
 [↑ Übersicht](#übersicht)
 
@@ -899,5 +908,30 @@ detailgenau verbessert und schließlich zur Umsetzung freigegeben. Das ist
 nicht nur ein Implementiererfehler, sondern ein fehlender YAGNI-Riegel im
 Review: Lokale technische Korrektheit darf die unbeauftragte Grundannahme nicht
 legitimieren.
+
+[↑ Übersicht](#übersicht)
+
+## P-10 · Ein Integrationstest berührt seine Außengrenze nicht
+
+**Erkennungsregel:** Eine Datei oder ein ganzer Test trägt den Marker
+`integration` beziehungsweise wird als echter Online-Fall gezählt, obwohl der
+geprüfte Pfad absichtlich vor Client, Bibliothek oder Netz abbricht. Die Suite
+wirkt tiefer als sie ist und der Fall verschwindet zugleich aus dem normalen
+Unit-Lauf.
+
+**Prüffrage:** Für jeden einzelnen Integrationstest: Welcher konkrete Aufruf
+verlässt den Prozess? Eine testlokal vergiftete Außengrenze muss den Test rot
+machen. Bleibt er grün, ist es ein Unit-Test und wird dorthin verschoben.
+
+**Beleg 1:** T-27b Runde 5, Commit `cd3e2f3`: Der Sammelcode-Test stand unter
+dem modulweiten OpenFIGI-Integrationsmarker. Der Kern-Resolver musste bei `US`
+aber gerade **vor** dem Client abbrechen; derselbe Fall existierte bereits als
+Unit-Test. Runde 6 entfernte ihn aus der Integrationsdatei.
+
+**Beleg 2:** T-23 Runde 1, Commit `e6ca003`: Der yfinance-Test für EUR→EUR
+steht unter dem modulweiten Integrationsmarker und wird als einer von sieben
+echten Netzfällen gezählt. `YFinancePlugin.fetch_rate` beantwortet die
+Identität definitionsgemäß vor `_provider.fetch_fx_rate`; der Test berührt
+Yahoo nicht und gehört in die Unit-/Contract-Suite.
 
 [↑ Übersicht](#übersicht)

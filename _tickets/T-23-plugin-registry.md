@@ -171,3 +171,81 @@ gestrichen (siehe Design). Damit gilt diese Ansage für **jedes** Plugin.
 ## Auflösung
 
 _(offen)_
+
+---
+
+## Codex-Review · Runde 1 · `e6ca003` · Nacharbeit
+
+Der Teilstand enthält brauchbare Bausteine: Beide Ladewege werden gefunden,
+Import- und Versionsfehler reißen die übrigen Kandidaten nicht mit, und der
+Schutzschalter lässt sich über eine eingespeiste Uhr ohne Wartezeit prüfen.
+Freigabefähig ist die Runde noch nicht. Der ausdrücklich verlangte
+Erfolgsweg endet vor dem Core, und die vorhandenen T-27a-Verträge wurden auf
+die neuen App-Plugins nicht angewandt.
+
+1. **Hoch · Registry und Core sprechen noch verschiedene Schnittstellen.**
+   Der Core erwartet beispielsweise `fetch_quote(symbol: str) -> RawQuote`
+   und `resolve_isin(isin: str) -> ResolvedInstrument`; die Plugin-Rollen
+   erwarten `fetch_quote(QuoteRequest) -> QuoteResult` und
+   `resolve(ResolveRequest) -> Resolution`. Es gibt noch keine Brücke zwischen
+   beiden. Entsprechend bauen die `BUILTIN_SOURCES` weiterhin
+   `YFinanceProvider`, `JustEtfProvider`, `YFinanceEtfEnricher` und den
+   Core-`OpenFigiResolver`; keine der drei Klassen unter `app/plugins/` wird im
+   Produktweg benutzt. Besonders deutlich ist die Gegenprobe im angeblichen
+   Auswahltest: Sie verlangt ausdrücklich, dass `quotes: [yfinance]` **kein**
+   `YFinancePlugin` baut. Damit wählen nicht „zwei Plugins dieselbe Rolle".
+   Runde 2 muss das dünnste vollständige Skelett liefern: ein vorhandenes
+   Datei-Plugin und ein echter Entry-Point laufen jeweils über Registry → Core
+   → öffentlichen REST-Endpunkt; die eingebauten Quellen benutzen denselben
+   Rollen-/Adapterweg. Welche Seite übersetzt wird, ist eine
+   Implementierungsentscheidung, aber die Fachlogik wird nicht dupliziert.
+2. **Hoch · Die neuen App-Plugins bestehen den vorhandenen Vertrag nicht.**
+   Es gibt weder `MetadataContract` für `JustEtfMetadataPlugin` noch
+   `QuoteContract`, `DailyContract` und `FxContract` für `YFinancePlugin`.
+   Direkte Gegenproben zeigen bereits die Folgen: justETF lässt `FIELDS` leer,
+   liefert bei Unzuständigkeit `None` statt `[]` und versieht
+   `fund_size` (`Unit.ABSOLUTE`) nicht mit einer Währung. yfinance meldet einen
+   ungültigen FX-Request korrekt als unzuständig, fragt in `fetch_rate`
+   trotzdem den Provider und lässt dessen Ausnahme durch. Die geerbten
+   Contract-Suiten mit kleinen testlokalen Doubles sind hier das
+   Abnahmewerkzeug, nicht neue handgeschriebene Teilprüfungen.
+3. **Hoch · Isolation beginnt zu spät und Konfiguration wird ignoriert.** Ein
+   geladenes Plugin, dessen Konstruktor wirft, lässt `build_chain` mit dieser
+   Ausnahme abbrechen; `GuardedSource` entsteht erst danach. Ebenso gilt ein
+   Plugin mit nichtleerem `configuration_problem()` heute als
+   `configured: true`, weil `SourceSpec.needs` bei geladenen Quellen leer ist;
+   es wird gebaut und in die Kette aufgenommen. Konstruktion und
+   `is_configured`/`configuration_problem` müssen am einen Lade-/Bau-Rand
+   sicher ausgewertet werden. Ein Defekt verliert seine Quelle und wird
+   benannt, nicht den App-Start.
+4. **Mittel · Half-open ist nicht thread-sicher.** Nach Ablauf der Öffnungszeit
+   meldet `is_open` nur `False`; es gibt keinen reservierten Probeaufruf. Eine
+   Barrier-Gegenprobe mit zwei Threads ließ beide gleichzeitig in die Quelle
+   (`HALF_OPEN_CALLS 2`), obwohl Klasse und Ticket genau **einen** Versuch
+   zusagen. Den Zustand unter einer Sperre reservieren und Erfolg/Fehler
+   atomar zurückführen; keine Wartezeit und kein Executor-Subsystem ergänzen.
+5. **Mittel · Die Tests beginnen erneut neben dem vorhandenen Testfundament zu
+   wachsen.** `test_plugin_selection.py` enthält ein rund 90-zeiliges zweites
+   CSV-Plugin samt zwei erneut definierten Formaten, obwohl
+   `plugin_api/examples/canada_file.py` und `prices_file.py` genau dafür
+   existieren und bereits Contract-getestet sind. Die vorhandenen Beispiele
+   über die echten Ladewege verwenden; eine kleine Testkonfiguration genügt.
+   Der yfinance-Identitätsfall berührt absichtlich keinen Anbieter und gehört
+   daher in die Unit-Suite, nicht unter den `integration`-Marker—derselbe
+   Fehler wurde gerade in T-27b korrigiert. Online-Integrationstests berühren
+   ausnahmslos den echten Dienst; für den justETF-Adapter fehlt ein solcher
+   Fall noch.
+
+**Scope-Riegel:** Verify `#6c` und der Abschnitt zur Kandidatenumgebung werden
+gestrichen. Ohne ausdrückliche datierte Ausnahme von Mike entstehen weder
+`stockinfo plugin check`, ein Test-CLI, eine Socket-Sperre noch eine eigene
+Installations-/Preflight-Umgebung. Ein schlanker tatsächlicher Entry-Point-
+Lauf ist Teil des Produktwegs und braucht dieses Subsystem nicht.
+
+**Evidenz:** Die lokalen Registry-/Auswahltests bestehen mit **34 passed**,
+der echte yfinance-Lauf mit **4 passed** und `make test` mit Backend **704
+passed / 29 skipped**, Plugin-API **257 passed / 1 skipped**, Dashboard **259
+passed**. Die grünen Zahlen widerlegen die Befunde nicht: Der Auswahltest
+bleibt unterhalb des Core, einer der vier angeblichen Online-Fälle ruft kein
+Netz auf, und die bestehenden Contract-Suiten werden auf die neuen Klassen
+nicht gesammelt.
