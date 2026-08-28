@@ -294,7 +294,7 @@ providers:
 
     assert unbekannt, "der konfigurierte Name fehlt in der Auskunft"
     assert unbekannt[0]["configured"] is False
-    assert "unbekannt" in unbekannt[0]["reason"].lower(), unbekannt[0]
+    assert "keine bekannte Quelle" in unbekannt[0]["reason"], unbekannt[0]
 
 
 def test_die_tagesreihe_erreicht_den_anbieter_auch_ohne_alias() -> None:
@@ -327,3 +327,203 @@ def test_die_tagesreihe_erreicht_den_anbieter_auch_ohne_alias() -> None:
         "beide Börsen müssen den Anbieter erreichen — vorher war es keine"
     )
     assert ohne_alias and mit_alias
+
+
+# ─── Lebenszyklus: bauen, wiederverwenden, schließen ──────────────────────────
+
+
+def _zaehlende_quelle(zaehler: list[int]):
+    """Ein Bauplan, der jede Konstruktion und jedes Schließen mitschreibt."""
+    from stockinfo_plugin import QuoteSource
+
+    class Gezaehlt(QuoteSource):
+        name = "gezaehlt"
+        cost = "free"
+
+        def __init__(self, config=None) -> None:
+            super().__init__(config)
+            zaehler.append(1)
+            self.closed = 0
+
+        def handles(self, request) -> bool:
+            return True
+
+        def fetch(self, request):
+            return None
+
+        def close(self) -> None:
+            self.closed += 1
+
+    return Gezaehlt
+
+
+@pytest.fixture
+def gezaehlte_kette(tmp_path: Path):
+    """Eine Kette aus genau einer mitzählenden Quelle."""
+    from app.config import Settings
+    from app.sources_config import load_sources_config
+    from app.sources_registry import SourceSpec
+
+    gebaut: list[int] = []
+    klasse = _zaehlende_quelle(gebaut)
+    instanzen: list[object] = []
+
+    def build(role, config, settings):
+        quelle = klasse(config)
+        instanzen.append(quelle)
+        return quelle
+
+    register_loaded(
+        (SourceSpec("gezaehlt", frozenset({"quotes"}), build, loaded=True),)
+    )
+    (tmp_path / "sources.yaml").write_text("quotes: [gezaehlt]\n", encoding="utf-8")
+    config = load_sources_config(tmp_path / "sources.yaml", Settings())
+    return config, gebaut, instanzen
+
+
+def test_ein_lesezugriff_baut_keine_einzige_quelle(gezaehlte_kette) -> None:
+    """**`GET /sources` ist eine Auskunft, kein Eingriff.**
+
+    Bis Runde 3 rief der Endpunkt denselben Bauweg wie der Fachbetrieb und
+    erzeugte für jede noch ungebaute Rolle Wegwerf-Instanzen — samt allem, was
+    ein fremder Konstruktor tut: Datei öffnen, Verbindung aufbauen, Schlüssel
+    prüfen. Ein Blick auf die Diagnoseseite hatte damit Seiteneffekte, und ein
+    Monitoring, das sie im Minutentakt abruft, hätte sie im Minutentakt gehabt.
+
+    Die zweite Hälfte ist Runde 5: Der ungebaute Zustand darf nicht
+    `configured=true` behaupten. Er weiß es nicht — und sagt das jetzt.
+    """
+    from app.config import Settings
+    from app.sources_registry import NOT_BUILT, describe_chain
+
+    config, gebaut, _ = gezaehlte_kette
+
+    eintraege = describe_chain("quotes", config, Settings())
+
+    assert gebaut == [], "das Lesen hat eine Quelle konstruiert"
+    assert [e.name for e in eintraege] == ["gezaehlt"]
+    assert eintraege[0].configured is False, (
+        "ungebaut heißt ungeprüft — vorher stand hier ein spekulatives true"
+    )
+    assert eintraege[0].reason == NOT_BUILT
+
+
+def test_zweimal_bauen_liefert_dieselben_objekte(gezaehlte_kette) -> None:
+    """Eine Kette wird **einmal** gebaut und danach wiederverwendet.
+
+    Sonst entstünde bei jedem Request ein neuer Satz Quellen: neue
+    Verbindungen, neue Dateihandles, ein wirkungsloser Circuit-Breaker — der
+    zählt Fehlschläge pro Instanz, und eine frische Instanz hätte nie drei.
+    """
+    from app.config import Settings
+    from app.sources_registry import build_chain
+
+    config, gebaut, _ = gezaehlte_kette
+
+    erste = build_chain("quotes", config, Settings())
+    zweite = build_chain("quotes", config, Settings())
+
+    assert gebaut == [1], f"zweimal gebaut: {len(gebaut)} Konstruktionen"
+    assert [id(x) for x in erste] == [id(x) for x in zweite]
+
+
+def test_das_herunterfahren_schliesst_jede_quelle_genau_einmal(
+    gezaehlte_kette,
+) -> None:
+    """`close()` steht seit T-27a im Vertrag — und wurde bis Runde 3 nie gerufen.
+
+    **Genau einmal** ist die eigentliche Aussage: Dieselbe Quelle darf in
+    mehreren Rollen stehen. Sie zweimal zu schließen wäre für ein Plugin, das
+    eine Datei schließt, ein Fehler zweiter Ordnung — und einer, der erst beim
+    Herunterfahren aufträte, wo ihn niemand mehr sieht.
+    """
+    from app.config import Settings
+    from app.sources_registry import build_chain, close_all
+    from app.plugin_adapters import unwrap
+
+    config, _, instanzen = gezaehlte_kette
+    build_chain("quotes", config, Settings())
+
+    close_all()
+
+    assert instanzen, "es wurde gar nichts gebaut"
+    for quelle in instanzen:
+        assert unwrap(quelle).closed == 1, "nicht oder mehrfach geschlossen"
+
+
+def test_ein_gescheitertes_paket_kostet_nicht_die_gesunde_kette(
+    volume: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**Der Fall, für den die ganze Fehlertoleranz gebaut ist.**
+
+    In `sources.yaml` steht ein Paket, das sich nicht installieren lässt.
+    Daneben steht eine gesunde Kette aus einem Datei-Plugin. Erwartet wird:
+    Der Start läuft durch, `/health` antwortet, `/sources` zeigt die gesunde
+    Quelle — und der Betreiber sieht im Protokoll, was gefehlt hat.
+
+    Bis Runde 5 endete das anders: Der fehlgeschlagene Installationslauf ließ
+    den Kettennamen unbekannt werden, `build_chain` warf, und der Lifespan riss
+    den ganzen Prozess mit. Wer ein Plugin eintrug, dessen Index gerade nicht
+    erreichbar war, verlor seine Installation — statt dieses einen Plugins.
+
+    Ohne Netz: `PIP_NO_INDEX` ist pips eigene Einstellung, kein Testhaken.
+    """
+    # `aus-dem-paket` **gäbe es nur**, wenn die Installation gelänge. Genau das
+    # ist die Lage, die den Start bisher riss: Der Name steht in der Kette, die
+    # Registry kennt ihn nicht, und der Bau warf.
+    (volume / "sources.yaml").write_text(
+        f"""
+resolvers: [local-file]
+quotes:    [aus-dem-paket, prices-file-quote]
+etf_meta:  []
+daily:     []
+fx:        []
+
+plugins:
+  packages:
+    - gibt-es-nicht==9.9.9
+
+providers:
+  local-file:
+    path: {volume / "manual-isins.csv"}
+  prices-file-quote:
+    path: {volume / "closes.csv"}
+""",
+        encoding="utf-8",
+    )
+
+    monkeypatch.setenv("PIP_NO_INDEX", "1")
+    monkeypatch.setenv("DATABASE_PATH", str(volume / "stockinfo.db"))
+    from app.config import get_settings
+    from app.container import get_cached_quote_service
+
+    get_settings.cache_clear()
+    get_sources_config.cache_clear()
+    get_cached_quote_service.cache_clear()
+
+    try:
+        with TestClient(app) as client:
+            assert client.get("/health").status_code == 200, (
+                "die App ist wegen eines fremden Pakets nicht hochgekommen"
+            )
+            quellen = client.get("/sources").json()
+    finally:
+        get_settings.cache_clear()
+
+    eintraege = {
+        eintrag["name"]: eintrag
+        for rolle in quellen.values()
+        if isinstance(rolle, list)
+        for eintrag in rolle
+    }
+
+    assert "local-file" in eintraege, f"die gesunde Quelle fehlt: {sorted(eintraege)}"
+    assert "prices-file-quote" in eintraege, "der gesunde Fallback fehlt"
+
+    fehlend = eintraege.get("aus-dem-paket")
+    assert fehlend is not None, (
+        "der Name aus dem gescheiterten Paket wird verschwiegen — "
+        f"gemeldet wurden: {sorted(eintraege)}"
+    )
+    assert fehlend["configured"] is False
+    assert "keine bekannte Quelle" in fehlend["reason"], fehlend["reason"]

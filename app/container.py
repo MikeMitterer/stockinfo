@@ -54,6 +54,33 @@ def get_sources_config() -> SourcesConfig:
     return load_sources_config(sources_path(settings), settings)
 
 
+def warm_all_chains() -> None:
+    """Baut jede Rolle **einmal**, unabhängig vom ersten Fachrequest.
+
+    Ohne das blieb `fx` bis zum ersten Aufruf ungeprüft — und bei ausstehender
+    Migration startet der Scheduler gar nicht, dann waren **alle** Rollen
+    spekulativ. `GET /sources` zeigte in dieser Lage eine Auskunft, die sich
+    nach dem ersten Fachrequest still änderte.
+
+    Ein Fehlschlag in einer Rolle kostet **diese** Rolle. Der Prozess, `/health`
+    und die Diagnose bleiben erreichbar — auch wenn danach keine einzige
+    Kursquelle übrig ist. Der Fachbetrieb ist dann nicht arbeitsfähig, und
+    genau das soll man in `/sources` sehen, statt es aus einem abgestürzten
+    Start zu erschließen.
+    """
+    from app.sources_config import ROLES
+
+    for role in ROLES:
+        try:
+            _chain(role)
+        except Exception as error:  # noqa: BLE001 — fremder Code in jeder Rolle
+            logger.warning(
+                "chain_warmup_failed",
+                role=role,
+                error=f"{type(error).__name__}: {error}",
+            )
+
+
 def _chain(role: str) -> list:
     """Die einsatzbereiten Quellen einer Rolle, in konfigurierter Rangfolge."""
     return build_chain(role, get_sources_config(), get_settings())

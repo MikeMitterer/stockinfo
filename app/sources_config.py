@@ -47,25 +47,6 @@ DEFAULT_CHAINS: dict[str, tuple[str, ...]] = {
 }
 
 
-class UnknownSourceError(ValueError):
-    """Die Konfiguration nennt eine Quelle, die es nicht gibt.
-
-    Die Meldung nennt **beides** — den unbekannten Namen und die verfügbaren.
-    Ein Tippfehler in einer Konfigurationsdatei ist der häufigste Fehler
-    überhaupt, und „unbekannte Quelle" allein lässt den Benutzer raten, ob er
-    sich vertippt hat oder ein Paket fehlt.
-    """
-
-    def __init__(self, name: str, role: str, available: tuple[str, ...]) -> None:
-        super().__init__(
-            f"'{name}' in der Rolle '{role}' ist keine bekannte Quelle. "
-            f"Verfügbar: {', '.join(sorted(available))}"
-        )
-        self.name = name
-        self.role = role
-        self.available = available
-
-
 @dataclass(frozen=True)
 class SourcesConfig:
     """Die gelesene Quellen-Konfiguration.

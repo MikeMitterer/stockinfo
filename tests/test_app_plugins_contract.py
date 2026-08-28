@@ -17,6 +17,8 @@ Fake-Infrastruktur. Deren Aufbau war der Fehler, den `P-09` beschreibt.
 from datetime import date, datetime, timezone
 from typing import Any
 
+import pytest
+
 from stockinfo_plugin import (
     DailyRequest,
     FxRequest,
@@ -31,6 +33,7 @@ from stockinfo_plugin.testing import (
 )
 
 from app.plugins.justetf_metadata import JustEtfMetadataPlugin, as_readings
+from app.plugins.yfinance_metadata import YFinanceMetadataPlugin
 from app.plugins.yfinance_quotes import YFinancePlugin
 from app.providers.base import EtfDetails, RawQuote
 
@@ -234,3 +237,67 @@ def test_eine_reihe_meldet_sich_als_bereinigt() -> None:
     series: Any = plugin.fetch_daily(DailyRequest(ticker="EUNL", mic="XETR"))
 
     assert series.adjusted is True
+
+
+# ─── Durch den echten Core-Verbraucher ────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("isin", "symbol", "exchange", "currency", "erwartet"),
+    [
+        ("IE00B4L5Y983", "EUNL.DE", "Xetra", "EUR", "justetf"),
+        ("US9229087690", "VTI", "NASDAQ", "USD", "yfinance"),
+        (None, "XIC.TO", "Toronto", "CAD", "yfinance"),
+    ],
+    ids=["europäisch", "us-papier", "kanada-ohne-isin"],
+)
+def test_die_kette_laeuft_durch_composite_adapter_plugin(
+    isin: str | None,
+    symbol: str,
+    exchange: str,
+    currency: str,
+    erwartet: str,
+) -> None:
+    """**Der Weg, durch den bis Runde 5 kein einziger Test lief.**
+
+    Genau deshalb blieb unbemerkt, dass `MetadataAdapter.fetch_etf` die
+    Core-Signatur nicht annahm: Jeder zuständige Abruf endete mit
+    ``TypeError: unexpected keyword argument 'symbol'`` — die ETF-Anreicherung
+    war im Betrieb abgeschaltet, und die Contract-Suiten sprachen den Adapter
+    nie an.
+
+    Der dritte Fall ist der wichtigste: **ohne ISIN**. Dort entscheidet allein
+    das Listing, und diese Regel ließ sich vor T-23 im Vertrag gar nicht
+    ausdrücken — `ResolveRequest` kennt die Handelswährung erst seitdem.
+    """
+    from app.plugin_adapters import MetadataAdapter
+    from app.providers.composite_etf import CompositeEtfEnricher
+
+    class FesteAntwort:
+        """Eine Anbindung, die genau sagt, wer geantwortet hat."""
+
+        def __init__(self, quelle: str, europaeisch: bool) -> None:
+            self._quelle = quelle
+            self._europaeisch = europaeisch
+
+        def is_responsible(self, isin, *, exchange=None, currency=None) -> bool:
+            if isin:
+                return isin.startswith(("IE", "LU", "DE")) is self._europaeisch
+            return (currency == "EUR") is self._europaeisch
+
+        def fetch_etf(self, isin, symbol=None, *, exchange=None, currency=None):
+            return EtfDetails(provider=self._quelle, name="egal")
+
+    kette = CompositeEtfEnricher(
+        MetadataAdapter(
+            JustEtfMetadataPlugin(provider=FesteAntwort("justetf", True)), "XETR"
+        ),
+        MetadataAdapter(
+            YFinanceMetadataPlugin(enricher=FesteAntwort("yfinance", False)), "XETR"
+        ),
+    )
+
+    details = kette.fetch_etf(isin, symbol=symbol, exchange=exchange, currency=currency)
+
+    assert details is not None, "die Kette hat gar nicht geantwortet"
+    assert details.provider == erwartet

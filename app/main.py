@@ -41,7 +41,7 @@ from app.repository import (
     IdentityConflictError,
 )
 from app import plugin_env
-from app.container import get_sources_config
+from app.container import get_sources_config, warm_all_chains
 from app.plugin_loader import load_all
 from app.routers import dashboard, fields, fx, instruments, migration, quotes
 from app.routers.migration import get_gate
@@ -82,6 +82,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     register_loaded(load_all(data_dir).specs)
 
+    # **Jede Rolle einmal bauen, bevor jemand fragt.** Sonst zeigt `/sources`
+    # einen spekulativen Zustand, der sich nach dem ersten Fachrequest ändert.
+    warm_all_chains()
+
     if init_db(settings.database_path):
         get_gate().block()
 
@@ -109,9 +113,22 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         with scheduler_lock:
             if running:
                 return
-            scheduler = RefreshScheduler(
-                get_cached_quote_service(), settings.refresh_interval_hours
-            )
+            try:
+                scheduler = RefreshScheduler(
+                    get_cached_quote_service(), settings.refresh_interval_hours
+                )
+            except Exception as error:  # noqa: BLE001 — eine Rolle kann leer sein
+                # **Ohne Kursquelle gibt es nichts zu aktualisieren — aber der
+                # Prozess bleibt stehen.** Bis T-23 Runde 5 riss dieser Aufruf
+                # den Start mit: Ein Plugin, dessen Installation fehlschlug,
+                # kostete die ganze App, obwohl eine gesunde Ersatzquelle in
+                # der Kette stand. `/health` und `/sources` sind gerade dann am
+                # nötigsten.
+                logger.error(
+                    "scheduler_unavailable",
+                    error=f"{type(error).__name__}: {error}",
+                )
+                return
             scheduler.start()
             running.append(scheduler)
         logger.info("scheduler_started")

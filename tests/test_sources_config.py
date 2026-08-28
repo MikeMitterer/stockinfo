@@ -8,7 +8,6 @@ verlangen, dass sich das Ergebnis danach richtet.
 
 from pathlib import Path
 
-import pytest
 import yaml
 from fastapi.testclient import TestClient
 
@@ -18,10 +17,14 @@ from app.container import _build_resolver, get_sources_config
 from app.main import app
 from app.sources_config import (
     DEFAULT_CHAINS,
-    UnknownSourceError,
     load_sources_config,
 )
-from app.sources_registry import SourceSpec, build_chain, is_configured
+from app.sources_registry import (
+    SourceSpec,
+    build_chain,
+    describe_chain,
+    is_configured,
+)
 
 
 def _write(path: Path, content: dict) -> Path:
@@ -95,12 +98,16 @@ def test_ein_tippfehler_nennt_den_namen_und_die_verfuegbaren(tmp_path: Path) -> 
     """
     config = load_sources_config(_write(tmp_path, {"resolvers": ["openfgi"]}), Settings())
 
-    with pytest.raises(UnknownSourceError) as rejected:
-        build_chain("resolvers", config, Settings())
+    # **Laut heißt Meldung, nicht Prozessende.** Bis T-23 Runde 5 warf der Bau
+    # hier; ein Paket, dessen Installation fehlschlägt, nahm damit die ganze
+    # App mit — obwohl eine gesunde Ersatzquelle daneben stand. Die Auskunft
+    # selbst ist geblieben und steht jetzt dort, wo der Betreiber sie liest.
+    assert build_chain("resolvers", config, Settings()) == []
 
-    message = str(rejected.value)
-    assert "openfgi" in message, "der eigene Tippfehler muss dastehen"
-    assert "openfigi" in message, "und die richtige Schreibweise daneben"
+    grund = describe_chain("resolvers", config, Settings())[0].reason
+
+    assert "openfgi" in grund, "der eigene Tippfehler muss dastehen"
+    assert "openfigi" in grund, "und die richtige Schreibweise daneben"
 
 
 def test_die_datei_traegt_verweise_statt_schluessel(tmp_path: Path) -> None:

@@ -17,7 +17,7 @@ Sonderbehandlung, die T-23 danach wieder auseinandernehmen müsste.
 """
 
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 import structlog
 
@@ -152,6 +152,14 @@ BUILTIN_SOURCES: tuple[SourceSpec, ...] = (
 # Aufruf neu zu importieren wäre nicht nur langsam — es hieße, dass sich die
 # Antwort der App ändert, während sie läuft. Geladen wird beim Start, einmal.
 _LOADED: dict[str, SourceSpec] = {}
+
+NOT_BUILT = "noch nicht gebaut — die Quelle wurde nicht befragt"
+"""Der Zustand einer Rolle, die noch niemand gebaut hat.
+
+Im Normalfall kurzlebig: Der Start operationalisiert alle Rollen einmal. Er
+bleibt für den Fall, dass jemand vor dem Start liest — dann ist „ich weiß es
+nicht" die einzige ehrliche Antwort.
+"""
 
 _LAST_REASON: dict[str, str] = {}
 """Der zuletzt gemeldete Grund je Quelle — damit `/sources` ihn nennen kann."""
@@ -329,11 +337,21 @@ def describe_chain(role: str, config, settings=None) -> list[ChainEntry]:
         # zeigen als den, der gerade arbeitet.
         return cached[2]
 
-    # **Ein reiner Lesezugriff baut nichts.** Ohne `settings` beschreibt
-    # `_evaluate` nur, was sich ohne Konstruktion sagen lässt — vorher erzeugte
-    # jedes `GET /sources` für noch ungebaute Rollen Wegwerf-Instanzen samt
-    # ihrer Seiteneffekte.
-    return [entry for entry, _ in _evaluate(role, config, None)]
+    # **Ein reiner Lesezugriff baut nichts** — und sagt das auch.
+    #
+    # Ohne Bau lässt sich nur beurteilen, was in der Konfiguration steht:
+    # bekannter Name, passende Rolle, Pflichtangaben. Was eine Quelle über
+    # **sich selbst** sagt (`configuration_problem`), weiß erst der Bau.
+    #
+    # Bis Runde 5 meldete dieser Zustand `configured=true` — und wurde nach dem
+    # ersten Fachrequest still zu `false`. Eine Auskunft, die ihre Wahrheit
+    # wechselt, ohne dass jemand etwas geändert hat, ist schlimmer als eine
+    # zurückhaltende. Deshalb heißt „noch nicht gebaut" hier ausdrücklich das
+    # und nicht „arbeitet".
+    return [
+        replace(entry, configured=False, reason=entry.reason or NOT_BUILT)
+        for entry, _ in _evaluate(role, config, None)
+    ]
 
 
 def _evaluate(role: str, config, settings=None) -> list[tuple[ChainEntry, object | None]]:
@@ -366,7 +384,16 @@ def _evaluate(role: str, config, settings=None) -> list[tuple[ChainEntry, object
         configured = spec is not None and is_configured(spec, config.config_for(name))
         reason = ""
         if spec is None:
-            reason = "unbekannter Name"
+            # **Der Tippfehler bleibt laut — aber laut heißt Meldung, nicht
+            # Prozessende.** Bis Runde 5 warf `build_chain` hier; ein Paket,
+            # dessen Installation fehlschlug, nahm damit die ganze App mit,
+            # obwohl eine gesunde Ersatzquelle daneben stand. Die Auskunft, die
+            # T-22 zugesagt hat — eigener Name **und** die bekannten daneben —,
+            # steht jetzt im Grund und damit in `/sources`.
+            reason = (
+                f"{name!r} ist keine bekannte Quelle — bekannt sind: "
+                f"{', '.join(sorted(known))}"
+            )
         elif not role_ok:
             reason = f"kennt die Rolle '{role}' nicht"
         elif not configured:
@@ -416,11 +443,12 @@ def build_chain(role: str, config, settings) -> list[object]:
     Returns:
         Die einsatzbereiten Quellen; nicht konfigurierte fehlen darin.
 
-    Raises:
-        UnknownSourceError: Ein Name steht in keiner Tabelle.
+    **Diese Funktion wirft nicht.** Ein unbekannter Name, ein gescheiterter
+    Konstruktor, eine Quelle ohne Arbeitsfähigkeit — jeder dieser Fälle kostet
+    **diese** Quelle und nicht den Start. Der Grund steht im Protokoll und in
+    `/sources`; wer eine Kette leer zurückbekommt, entscheidet selbst, was das
+    für ihn heißt.
     """
-    from app.sources_config import UnknownSourceError
-
     cached = _CHAINS.get(role)
     if cached is not None and cached[0] is config:
         # **Dieselbe Kette, nicht eine zweite.** Wer eine Rolle zweimal
@@ -428,7 +456,6 @@ def build_chain(role: str, config, settings) -> list[object]:
         # nebeneinander, und `close()` erreichte nur eine davon.
         return cached[1]
 
-    known = specs_by_name()
     bewertet = _evaluate(role, config, settings)
 
     # **Die Momentaufnahme steht, bevor irgendetwas werfen kann.** Ein
@@ -445,7 +472,8 @@ def build_chain(role: str, config, settings) -> list[object]:
     built: list[object] = []
     for entry, source in bewertet:
         if not entry.known:
-            raise UnknownSourceError(entry.name, role, tuple(known))
+            logger.warning("source_unknown", source=entry.name, role=role)
+            continue
         if not entry.role_ok:
             logger.warning("source_role_mismatch", source=entry.name, role=role)
             continue
