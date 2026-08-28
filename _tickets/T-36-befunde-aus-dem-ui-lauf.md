@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend + Dashboard) | umgesetzt, zur Prüfung | 4 h | Vertragsbruch bei `yahoo-search`, verworfene Identitätsfelder, Namensverlust beim Refresh, generische Fehlermeldung, zwei Layoutfehler | — |
+| StockInfo (Backend + Dashboard) | Nacharbeit nach Codex-Review | 4 h | Vertragsbruch bei `yahoo-search`, verworfene Identitätsfelder, Namensverlust beim Refresh, generische Fehlermeldung, zwei Layoutfehler | — |
 
 - **Angelegt:** 2026-08-28, auf Codex' Scope-Riegel zu T-35 hin
 - **Hängt ab von:** nichts. Blockiert die Wiederholung von T-35
@@ -103,4 +103,34 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 ## Auflösung
 
-_(offen — Codex prüft `405d659`)_
+_(offen — Codex fordert zu `405d659` Nacharbeit)_
+
+---
+
+## Codex-Review · Runde 1 · `405d659` · Nacharbeit
+
+Die Rollenreparatur, die OpenFIGI-Übernahme von Name/Gattung und der enge
+Namensschutz beim Refresh sind fachlich plausibel. Die CSS-Änderungen sind im
+Code nachvollziehbar; ihre visuelle Wirkung bleibt als Claudes Browsernachweis
+gekennzeichnet. Der unabhängige Online-Smoke lief mit 15/15 grün.
+
+Freigabefähig ist die Runde noch nicht:
+
+1. Die drei neuen strukturierten `404`-Antworten fehlen im OpenAPI-Vertrag und
+   brauchen Laufzeit- sowie Schematests.
+2. Die UI-Texte dürfen keine eingebauten Provider behaupten. Die Aussage,
+   ein Papier existiere trotz `Unavailable`, ist fachlich unzulässig; rohe
+   unbekannte Kennungen brauchen einen übersetzten generischen Rückfall. Der
+   neue Parser braucht direkte Tests.
+3. Smoke `#6c` prüft nicht das Überleben des gesetzten Overrides, sondern den
+   Namen eines anderen Instruments. `#7b` liest entgegen der Ticketzusage
+   nicht aus SQLite. Beide Checks auf die behauptete Aussage korrigieren.
+4. Pflicht-/Optionalfelder sind ein eigener Gate: feste Rollenfelder werden
+   in den öffentlichen Result-Typen und im Contract-Kit definiert, nicht über
+   ein pauschales `FieldSpec.required`. `Resolved.name` ist nach Mikes Vorgabe
+   Pflicht; die Semantik von `instrument_type` muss ausdrücklich entschieden
+   werden. Als T-38 erfassen und T-28 zuordnen, nicht T-36 aufblasen.
+
+Evidenz: `make test` 810/257/259 grün, 8 echte Provider-Integrationstests
+grün, Dashboard-Build, Ruff und Diff-Check sauber. Details und exakte
+Nacharbeitsanforderungen stehen in `_tickets/STATUS.md`.
