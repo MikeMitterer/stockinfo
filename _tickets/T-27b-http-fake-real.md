@@ -443,3 +443,63 @@ real über HTTP, ohne geheimen oder stillen Netzpfad.
 Produktstand blieb mit Backend 638/29 skipped, Plugin-API 260/1 skipped und
 Dashboard 259 unverändert. Die Quellen- und Rechteaussagen wurden an den oben
 verlinkten Primärseiten geprüft.
+
+---
+
+## Codex-Review · Entwurfsrunde 2 · `617b407`
+
+Die sechs Befunde aus Runde 1 sind im Grundsatz aufgelöst. Audit-Kanal,
+Signaturtrennung, Opt-in-Grenze, Modusmatrix, zentrale Policy und
+Kanonisierung bilden jetzt einen implementierbaren Kern. Vor Produktcode
+bleiben vier präzise Restpunkte:
+
+1. **Hoch · Die Szenario-Signatur lässt die eigentliche Anfrage weg.** Sie
+   enthält `case_id`, `expect`, `golden`, `plausible` und `real_ok`, aber nicht
+   Typ und Felder von `Scenario.request`. Ändert jemand etwa die ISIN im
+   Szenario, während ein fehlerhaftes Plugin weiterhin die alte HTTP-Anfrage
+   sendet, bleiben `request_signature` **und** die heutige
+   `scenario_signature` gleich; die alte Aufnahme kann den neuen Fall
+   bestätigen. In die Signatur gehören der qualifizierte Request-Typ und alle
+   kanonisch serialisierten Request-Felder. Für `expect` ebenfalls den
+   qualifizierten statt nur den kurzen Klassennamen verwenden; Datumswerte,
+   Enums und verschachtelte Strukturen brauchen eine festgelegte kanonische
+   Darstellung. Eine Gegenprobe ändert ausschließlich das Request-Feld und
+   hält die emittierte HTTP-Anfrage absichtlich gleich.
+2. **Hoch · `only: real` an einer unbenutzten Aufnahme widerspricht T-27a.**
+   Der normale Lauf führt dort **alle** Szenarien offline aus; `real_ok`
+   beschränkt nur den Real-Lauf. Im Real-Modus wird gerade keine Aufnahme
+   abgespielt. Eine „nur real“ benutzte Replay-Datei kann es in diesem Modell
+   daher nicht geben; das neue Flag wäre eine zweite Szenarioauswahl und könnte
+   verwaiste Dateien legitimieren. Unbenutzt muss immer fehlschlagen. Falls ein
+   Fall nicht replaybar ist, verletzt er das Ziel „derselbe Fall offline und
+   real“ und wird nicht über Metadaten versteckt.
+3. **Mittel · Schreib- und Bestätigungs-Lifecycle braucht noch die letzte
+   Zustandskante.** `--real` darf `last_real_ok` nur an einer vorhandenen
+   Aufnahme mit passender `scenario_signature` aktualisieren; bei fehlender
+   oder driftender Aufnahme muss es auf `--record` verweisen, sonst ist die
+   Real-Bestätigung nicht an den Offline-Beleg gebunden. Außerdem ist
+   `os.replace` nur **pro Datei** atomar. Wenn eine Suite mehrere Dateien
+   ersetzt und der Prozess dazwischen stirbt, bleibt ein gemischter Stand.
+   Entweder ein Plugin-Bundle/Manifest wird mit einem Replace veröffentlicht,
+   oder der Entwurf nennt ehrlich einen generationsgebundenen Commit-Schritt,
+   durch den der Release-Check nur eine vollständig publizierte Generation
+   akzeptiert. Tests brauchen Suite-Fehler **und** Abbruch während der
+   Veröffentlichung als Gegenrichtungen.
+4. **Mittel · CLI-Policy und die versprochenen „Versionen“ sind noch
+   undefiniert.** `python -m …freshness <aufnahme>...` bekommt in der gezeigten
+   Signatur keine `RecordingPolicy`; festlegen, ob sie aus einem Manifest,
+   einem expliziten `--max-age-days` oder einer importierbaren Plugin-
+   Konfiguration stammt. Verify `#5` verlangt Versionen, der Entwurf benennt
+   aber keine Felder. Mindestens Format-/Schema-Version, Plugin-API-Version und
+   Version des aufzeichnenden Plugins beziehungsweise Beispielpakets mit
+   Vergleichsregel festschreiben und mutativ testen.
+
+Beim Socket-Opt-in bitte einen **kanonischen** Weg wählen statt „Marker oder
+Fixture“: Die bereitgestellte Replay-/Scenario-Fixture hängt zwingend am
+Socket-Guard; der Marker darf diesen Weg nur deklarativ auslösen. So kann die
+Referenzsuite den Guard nicht versehentlich vergessen, während fremde Tests
+ohne Opt-in unangetastet bleiben.
+
+**Evidenz:** Die Änderung bleibt rein dokumentarisch; der Produktstand ist
+unverändert. Die Runde ist weiterhin konvergent: vier Zustandskanten im
+vorhandenen Entwurf, keine neue Schicht und keine Rebaseline.
