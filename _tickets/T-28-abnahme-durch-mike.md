@@ -131,6 +131,46 @@ ausdrückliche Entscheidung.
 
 ---
 
+## Inventar der offenen Tickets — Stand nach dem Plugin-MVP
+
+*Angelegt Claude, 2026-08-28, nach der Freigabe von T-23 (`a9e49f9`). Schritt 1
+oben ist damit erfüllt: Die Kette T-22 → T-27a → T-27b → T-23 ist freigegeben
+und belegt den Lauf Registry → Core → REST über beide Ladewege.*
+
+**Was das hier ist und was nicht.** Die Einordnung entscheidet Mike auf Basis
+von **Codex'** Empfehlung — so steht es oben, und daran ändert dieser Abschnitt
+nichts. Er liefert das **Inventar** darunter: welche Tickets es wirklich gibt,
+woran jedes hängt und was es für die Abnahme bedeutet. Mikes Spalte bleibt
+leer, bis er sie füllt.
+
+**Der Bereich stimmt nicht.** Oben steht „T-29 bis T-34". Ein Ticket **T-34
+existiert nicht** — weder im Board-Root noch unter `solved/`; die Zahl kommt
+nur in dieser Aufzählung und in `STATUS.md` vor. Real offen sind T-29, T-30,
+T-31, T-32 und T-33. Entweder ist die Obergrenze ein Vertipper, oder ein
+geplantes Ticket wurde nie angelegt — das zu klären ist Teil der Einordnung,
+weil ein Gate auf ein nicht existierendes Ticket nie erfüllbar wäre.
+
+| Ticket | Hängt an | Was die Abnahme davon merkt | Vorschlag |
+|---|---|---|:--:|
+| **T-26** Detailfelder durchreichen | — | Ein Plugin darf neue Felder deklarieren; sie gehen in Persistenz, API, Override-Modell und Dashboard **verloren**. Der Vertrag sagt Erweiterbarkeit zu, die eine Schicht später endet — genau das, was T-28 aus Nutzersicht prüfen soll. | **Gate** |
+| **T-32** Testdatenbank abschotten | — | Ein Dienst, der sich sein Repository selbst aus den Settings baut, landet im Test an der **Arbeitsdatenbank**. Bei einer Abnahme am laufenden Stack ist das ein Risiko für Mikes echte Daten, und es ist unabhängig und klein. | **Gate** |
+| **T-33** Profil wechselt den Handelsplatz | T-21 Teil 3 | Das Ticket weist sich selbst T-28 zu („Gehört in: T-28, das finale Plugin-Gate"). Der `409` ist gebaut, die **Auflösung** nicht — und ein Profilwechsel ist der Normalfall, sobald es zwei Plugins gibt. Braucht **zuerst eine Entscheidung von Mike**, dann Arbeit. | **Gate**, nach Entscheidung |
+| **T-19** Neu auflösen ohne Datenverlust | — | Eine falsche Auflösung ist heute nur per `DELETE` zu korrigieren, das Historie und Handpflege kostet. Schmerzhaft, aber ein Weg existiert; das Plugin-Versprechen hängt nicht daran. | Follow-up |
+| **T-21 4A/4B** | eingefroren | Von Mike am 2026-08-27 ausdrücklich bis nach dem MVP zurückgestellt. Diese Zeile hält das nur fest. | Follow-up |
+| **T-25** Quellenprofil wechseln | Design | Sicherung, Rotation und Wiederherstellung beim Profiltausch. Ein zweites Profil zu **haben** ist MVP, es sicher zu **tauschen** ist der Schritt danach — überschneidet sich fachlich mit T-33. | Follow-up |
+| **T-29** Alias-Lebenszyklus | — | `symbol` ist abrufrelevant, steht aber in einer providerlosen Spalte. Mit **einer** aktiven Kursquelle trägt das; mit wechselnden Quellen wird es falsch. Erster Kandidat, falls Mike doch ein Gate ergänzen will. | Follow-up |
+| **T-30** Plugin-deklarierte Börsenauskunft | — | Ein regionales Plugin kann seine MICs nicht mitbringen; der Katalog bleibt Core-Wissen. Begrenzt, was ein Plugin kann — nicht, ob der MVP läuft. | Follow-up |
+| **T-31** Papiere ohne MIC | T-21 Teil 3 | Krypto, Index, Anleihe. Steht auf „Entscheidung ausstehend" und ist ohne Mikes Antwort nicht umsetzbar. | Follow-up, Entscheidung offen |
+
+**Die eine Einschränkung aus Codex' Runde 6** gehört in dieselbe Abwägung: Der
+Installationsweg nach `data/plugin-env/<hash>` ist maschinell belegt, aber es
+gab **keinen echten Container-Image-Update-Lauf auf demselben Volume**. Genau
+das ist der Grund, warum der Ordner unter `/data` liegt — die Zusage ist
+begründet und getestet, aber nicht am echten `docker pull` gemessen. Eine Zeile
+dafür in der Verify-Matrix unten wäre in zwei Minuten zu prüfen.
+
+---
+
 ## Auflösung
 
 _(offen)_

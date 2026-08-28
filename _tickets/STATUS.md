@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-23-plugin-registry.md`
+- `phase`: `portfolio_review`
+- `ticket`: `T-28-abnahme-durch-mike.md`
 - `handoff_commit`: `a9e49f9`
 - `review_round`: `6`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-08-28`
 - `last_reviewed_ticket`: `T-23-plugin-registry.md`
 - `last_reviewed_commit`: `a9e49f9`
@@ -46,20 +46,44 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-23 · Runde 6 · freigegeben
-
-`a9e49f9` ist unabhängig geprüft und freigegeben. T-23 ist das letzte Element
-der bestätigten MVP-Kette. Bitte gemäß Portfolio-Riegel **nichts Neues
-implementieren**: Zustand auf `portfolio_review`, `owner: mike` umstellen.
-T-19, T-21 4A/4B, T-25, T-26 und T-29 bis T-34 müssen vor T-28 einzeln als
-Gate oder Follow-up eingeordnet werden; die Human-Spalte und das Verschieben
-nach `solved/` bleiben bei Mike.
-
-Abschlussevidenz und die einzige ⚠️-Einschränkung (kein tatsächlicher
-Container-Image-Update-Lauf mit demselben Volume) stehen im Ticket unter
-Codex-Review Runde 6.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
 _Keine offene Nachricht._
+
+
+## An Mike · Portfolio-Riegel
+
+**Der Plugin-MVP steht.** T-22 → T-27a → T-27b → T-23 ist vollständig
+freigegeben, letzter Produktstand `a9e49f9`. Der Lauf Registry → Core → REST
+ist über **beide** Ladewege belegt: eine `*.py` im Datenvolume und ein echter
+Entry-Point aus einer installierten Distribution. `795 passed, 29 skipped`
+ohne Netz, dazu 8 Integrationstests gegen Yahoo, justETF und OpenFIGI.
+
+Nach dem letzten Kettenglied wird nichts Neues begonnen — deshalb steht hier
+jetzt `portfolio_review` und `owner: mike`. Es fehlt **eine Entscheidung von
+dir**, keine Arbeit von uns.
+
+**Was zu entscheiden ist:** Welche der neun offenen Positionen sind Gate (vor
+T-28 erforderlich) und welche Follow-up? Das Inventar dazu steht in
+`T-28-abnahme-durch-mike.md` unter „Inventar der offenen Tickets" — mit dem,
+was jede Position für die Abnahme bedeutet. Die Empfehlung ist laut T-28
+Codex' Aufgabe; die Spalte dort ist ein Vorschlag, kein Beschluss.
+
+Drei Punkte brauchen dich unabhängig von der Einordnung:
+
+1. **T-34 gibt es nicht.** Der Bereich „T-29 bis T-34" nennt ein Ticket, das
+   weder im Board-Root noch unter `solved/` existiert. Vertipper oder nie
+   angelegt?
+2. **T-31 und T-33** stehen selbst auf „Entscheidung ausstehend" und sind
+   ohne deine Antwort nicht umsetzbar — unabhängig davon, wie sie eingeordnet
+   werden.
+3. **Die ⚠️-Einschränkung aus Codex' Runde 6:** Der Installationsweg nach
+   `data/plugin-env/<hash>` ist maschinell belegt, aber nie an einem echten
+   `docker pull` auf demselben Volume gemessen. Genau dafür liegt der Ordner
+   unter `/data`. Eine Verify-Zeile in T-28 wäre in zwei Minuten geprüft.
+
+Das Verschieben nach `solved/` und die `Human`-Spalte bleiben wie immer bei
+dir.
