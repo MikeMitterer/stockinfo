@@ -49,7 +49,7 @@ readonly NONSENSE_ISIN="XX0000000000"
 
 # Wie viele Checks dieser Lauf erwartet. Ohne die Zahl könnte ein Lauf, der
 # unterwegs abbricht, mit COUNT_FAIL=0 grün enden (P-05).
-readonly EXPECTED_CHECKS=15
+readonly EXPECTED_CHECKS=16
 
 COUNT_OK=0
 COUNT_FAIL=0
@@ -219,6 +219,37 @@ print('' if row is None or row[0] is None else row[0])
 " "${DB_PATH}" "$2" "$1" 2>/dev/null
 }
 
+# Die von Hand gepflegte TER eines Papiers — **aus der Datenbank**.
+overrideTer() {
+    "${VENV_PY}" -c "
+import sqlite3, sys
+c = sqlite3.connect(sys.argv[1])
+sql = (
+    'select o.ter from instrument_overrides o '
+    'join instruments i on i.id = o.instrument_id where i.isin = ?'
+)
+row = c.execute(sql, (sys.argv[2],)).fetchone()
+print('' if row is None or row[0] is None else row[0])
+" "${DB_PATH}" "$1" 2>/dev/null
+}
+
+# Der gespeicherte Cache-Zustand: Zeilenzahl **und** juengster `fetched_at`.
+#
+# Beides zusammen, weil einzeln jede Groesse taeuscht — die Begruendung steht
+# in `checkOverrideAndCache`.
+quoteState() {
+    "${VENV_PY}" -c "
+import sqlite3, sys
+c = sqlite3.connect(sys.argv[1])
+sql = (
+    \"select count(*), coalesce(max(q.fetched_at), '') from quotes q \"
+    'join instruments i on i.id = q.instrument_id where i.isin = ?'
+)
+row = c.execute(sql, (sys.argv[2],)).fetchone()
+print(f'{row[0]} Zeilen, zuletzt {row[1]}')
+" "${DB_PATH}" "$1" 2>/dev/null
+}
+
 # ─── Die Checks ───────────────────────────────────────────────────────────────
 
 checkChain() {
@@ -346,47 +377,66 @@ print(c.execute('select count(*) from instruments where isin = ?', (sys.argv[2],
 }
 
 checkOverrideAndCache() {
-    # Handpflege setzen …
+    # **Beide Checks hier haben in Runde 1 etwas anderes geprueft, als sie
+    # sagten** — von Codex aufgegriffen, und der Befund ist lehrreich: Ein
+    # gruener Check, dessen Zusage nicht seine Messung ist, ist schlimmer als
+    # gar keiner. Er belegt eine Eigenschaft, die niemand angesehen hat.
+    #
+    #   `#6c` sagte „die Handpflege ueberlebt den Abruf", setzte Apples
+    #         Override, refreshte danach aber den **ETF** und pruefte dessen
+    #         **Namen**. Ob der Override ueberlebt, blieb ungemessen.
+    #   `#7`  sagte „aus dem Cache", las den Zeitstempel aber zweimal aus der
+    #         **API-Antwort** — also aus genau der Quelle, die er pruefen soll.
+
     curl -s -o /dev/null -X PUT \
         "${BASE_URL}/instruments/by-symbol/APC.DE/overrides" \
         -H 'Content-Type: application/json' -d '{"ter": 1.25}'
 
     local _MANUAL
-    _MANUAL="$("${VENV_PY}" -c "
-import sqlite3, sys
-c = sqlite3.connect(sys.argv[1])
-row = c.execute('''
-  select o.ter from instrument_overrides o
-  join instruments i on i.id = o.instrument_id
-  where i.isin = ?''', (sys.argv[2],)).fetchone()
-print('' if row is None or row[0] is None else row[0])
-" "${DB_PATH}" "${US_ISIN}")"
+    _MANUAL="$(overrideTer "${US_ISIN}")"
     [[ "${_MANUAL}" == "1.25" ]] \
         && report "#6 " "die Handpflege liegt in der Override-Tabelle" true "TER ${_MANUAL}" \
         || report "#6 " "die Handpflege liegt in der Override-Tabelle" false "'${_MANUAL}'"
 
-    # … und einen Refresh überstehen. **Der Befund aus dem UI-Lauf**: Hier
-    # löschte der Kurs-Weg den Namen, weil er Spalten schrieb, die er gar
-    # nicht kennen kann.
+    # **Dasselbe** Papier refreshen, dessen Override gerade gesetzt wurde, und
+    # danach erneut aus SQLite lesen. Das ist die Zusage von T-35 `#6c`.
+    curl -s -o /dev/null -X POST "${BASE_URL}/refresh/${US_ISIN}"
+    local _NACH_REFRESH
+    _NACH_REFRESH="$(overrideTer "${US_ISIN}")"
+    [[ "${_NACH_REFRESH}" == "1.25" ]] \
+        && report "#6c" "die Handpflege ueberlebt den Refresh desselben Papiers" true \
+            "TER ${_NACH_REFRESH} nach POST /refresh/${US_ISIN}" \
+        || report "#6c" "die Handpflege ueberlebt den Refresh desselben Papiers" false \
+            "vorher 1.25, nachher '${_NACH_REFRESH}'"
+
+    # Der Namensschutz bleibt als **eigener** Check — er gehoert zu demselben
+    # Vorgang und ist der Befund aus dem UI-Lauf.
     local _NAME_VORHER _NAME_NACHHER
     _NAME_VORHER="$(column "${ETF_ISIN}" name)"
     curl -s -o /dev/null -X POST "${BASE_URL}/refresh/${ETF_ISIN}"
     _NAME_NACHHER="$(column "${ETF_ISIN}" name)"
-
     [[ -n "${_NAME_NACHHER}" && "${_NAME_VORHER}" == "${_NAME_NACHHER}" ]] \
-        && report "#6c" "ein Refresh löscht den Namen nicht" true "${_NAME_NACHHER}" \
-        || report "#6c" "ein Refresh löscht den Namen nicht" false \
+        && report "#6d" "ein Refresh loescht den Namen nicht" true "${_NAME_NACHHER}" \
+        || report "#6d" "ein Refresh loescht den Namen nicht" false \
             "vorher '${_NAME_VORHER}', nachher '${_NAME_NACHHER}'"
 
-    # Zweimal derselbe Abruf: Der zweite kommt aus dem Cache. Gemessen wird der
-    # **Zeitstempel**, nicht die Antwortzeit — die kann täuschen.
-    local _ERSTER _ZWEITER
-    _ERSTER="$(field "$(curl -s "${BASE_URL}/quote/${ETF_ISIN}")" fetched_at)"
-    _ZWEITER="$(field "$(curl -s "${BASE_URL}/quote/${ETF_ISIN}")" fetched_at)"
-    [[ -n "${_ERSTER}" && "${_ERSTER}" == "${_ZWEITER}" ]] \
-        && report "#7 " "der zweite Abruf kommt aus dem Cache" true "${_ZWEITER}" \
-        || report "#7 " "der zweite Abruf kommt aus dem Cache" false \
-            "'${_ERSTER}' vs '${_ZWEITER}'"
+    # **Der Cache wird in der Datenbank gemessen, nicht in der Antwort.**
+    # Zwei Groessen zusammen, denn einzeln taeuscht jede: Der gespeicherte
+    # `fetched_at` bliebe auch dann gleich, wenn ein zweiter Abruf eine neue
+    # Zeile **anlegte**; und die Zeilenzahl allein saehe eine Aktualisierung
+    # derselben Zeile nicht.
+    local _VORHER _NACHHER
+    _VORHER="$(quoteState "${ETF_ISIN}")"
+    curl -s -o /dev/null "${BASE_URL}/quote/${ETF_ISIN}"
+    _NACHHER="$(quoteState "${ETF_ISIN}")"
+
+    if [[ -n "${_VORHER}" && "${_VORHER}" == "${_NACHHER}" ]]; then
+        report "#7 " "der zweite Abruf hat nichts geholt (SQLite unveraendert)" true \
+            "${_NACHHER}"
+    else
+        report "#7 " "der zweite Abruf hat nichts geholt (SQLite unveraendert)" false \
+            "vorher '${_VORHER}', nachher '${_NACHHER}'"
+    fi
 }
 
 checkDelete() {

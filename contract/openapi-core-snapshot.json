@@ -1,5 +1,5 @@
 {
-  "core_version": "2.0.0",
+  "core_version": "2.1.0",
   "paths": {
     "/fields": {
       "get": {
@@ -245,6 +245,13 @@
               }
             }
           },
+          "404": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
+              }
+            }
+          },
           "409": {
             "application/json": {
               "schema": {
@@ -277,6 +284,13 @@
                 },
                 "title": "Response Daily History Quote  Isin  Daily Get",
                 "type": "array"
+              }
+            }
+          },
+          "404": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
               }
             }
           },
@@ -314,6 +328,13 @@
                 },
                 "title": "Response Quote History Quote  Isin  History Get",
                 "type": "array"
+              }
+            }
+          },
+          "404": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
               }
             }
           },

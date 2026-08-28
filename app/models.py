@@ -747,6 +747,33 @@ IDENTITY_CONFLICT_RESPONSE: dict[int | str, dict[str, object]] = {
     }
 }
 
+INSTRUMENT_NOT_FOUND_RESPONSE: dict[int | str, dict[str, object]] = {
+    404: {
+        "model": ErrorDetail,
+        "description": (
+            "Keine Quelle konnte dieses Papier auflösen "
+            "(`code: instrument_not_found`, `params.identifier` nennt die "
+            "Eingabe). **Nicht** dasselbe wie `502`: Dort haben die Quellen "
+            "nicht geantwortet, hier haben sie geantwortet und kennen es nicht"
+        ),
+    }
+}
+"""Die `404`-Zusage der ISIN-Wege.
+
+**Bis T-36 fehlte sie im veröffentlichten Vertrag**, obwohl die Routen den
+Status zur Laufzeit lieferten — erst als deutschen Fließtext, seit T-35 als
+`ErrorDetail`. Der OpenAPI-Schnappschuss blieb dabei grün: Er vergleicht, was
+deklariert ist, mit sich selbst, und eine Antwort, die niemand deklariert,
+fällt ihm nicht auf. Ein Konsument, der sich auf die veröffentlichte Form
+verlässt, hätte den Fall nie behandelt.
+
+Die Symbol-Wege bekommen sie **nicht**: Dort scheitert keine Auflösung, die
+scheitern könnte — `fetch_quote` liefert `None`, ob der Anbieter das Symbol
+nicht kennt oder gerade nicht antwortet. Beides als `404` auszugeben wäre
+geraten; deshalb steht dort `502`. Die Begründung steht ausführlich bei
+`daily_history_by_symbol`.
+"""
+
 SYMBOL_CONFLICT_RESPONSE: dict[int | str, dict[str, object]] = {
     409: {
         "model": Union[ErrorDetail, AmbiguousSymbolDetail],

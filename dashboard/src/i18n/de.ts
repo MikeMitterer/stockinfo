@@ -252,15 +252,36 @@ export const de = {
      * war damit von einem Netzausfall nicht zu unterscheiden.
      */
     reason: {
+      /*
+       * **Kein Text nennt eine Quelle beim Namen.** Welche Quellen antworten,
+       * entscheidet `sources.yaml`; mit einem CSV-Profil oder einem fremden
+       * Plugin wäre „über OpenFIGI und Yahoo" schlicht gelogen. Die
+       * Oberfläche weiß es nicht und behauptet es deshalb nicht — wer wissen
+       * will, wer gefragt wurde, findet es in `GET /sources`.
+       */
       instrument_not_found:
-        'Zu {identifier} ließ sich kein Wertpapier finden — weder über OpenFIGI ' +
-        'noch über die Yahoo-Suche.',
+        'Zu {identifier} hat keine der eingerichteten Quellen ein Wertpapier ' +
+        'gefunden.',
       identifier_empty: 'Es wurde nichts eingegeben.',
       identifier_unknown_form:
         '{identifier} ist weder eine ISIN noch ein Symbol mit Börsenkürzel.',
+      /*
+       * **Und keiner behauptet mehr, als er weiß.** Hier stand „Das Papier
+       * gibt es — nur konnte gerade niemand nachsehen." Das ist genau die
+       * Aussage, die `Unavailable` **nicht** trägt: Wenn keine Quelle
+       * geantwortet hat, ist offen, ob es das Papier gibt. Der Unterschied zu
+       * `instrument_not_found` ist der ganze Sinn der beiden Kennungen.
+       */
       quote_unavailable:
-        'Die Kursquelle war nicht erreichbar: {identifier}. Das Papier gibt es — ' +
-        'nur konnte gerade niemand nachsehen.',
+        'Keine Quelle konnte nachsehen: {identifier}. Ob es das Papier gibt, ' +
+        'ist damit offen.',
+      /*
+       * Der Rückfall für eine Kennung, die diese Oberfläche nicht kennt —
+       * etwa aus einem neueren Backend oder einem Plugin. Vorher stand die
+       * rohe Kennung im Toast; `instrument_not_found` als Satz zu lesen ist
+       * schlechter als ein ehrliches „unbekannt" mit der Kennung dahinter.
+       */
+      unknown: 'Die Quelle meldet einen Fehler, den diese Oberfläche nicht kennt: {code}.',
     },
   },
   /*

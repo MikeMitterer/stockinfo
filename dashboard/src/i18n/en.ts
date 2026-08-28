@@ -238,15 +238,18 @@ export const en = {
 
     /* The reason behind the category above, keyed by `ErrorDetail.code`. */
     reason: {
+      /* No text names a source: which ones answer is up to `sources.yaml`. */
       instrument_not_found:
-        'No security could be found for {identifier} — neither through OpenFIGI ' +
-        'nor through the Yahoo search.',
+        'None of the configured sources found a security for {identifier}.',
       identifier_empty: 'Nothing was entered.',
       identifier_unknown_form:
         '{identifier} is neither an ISIN nor a symbol with an exchange suffix.',
+      /* `Unavailable` does not say the security exists — nobody could check. */
       quote_unavailable:
-        'The quote source could not be reached: {identifier}. The security ' +
-        'exists — nobody could look it up right now.',
+        'No source could look it up: {identifier}. Whether the security exists ' +
+        'is therefore open.',
+      /* Fallback for a code this UI does not know — from a newer backend or a plugin. */
+      unknown: 'The source reports an error this interface does not know: {code}.',
     },
   },
   hints: {

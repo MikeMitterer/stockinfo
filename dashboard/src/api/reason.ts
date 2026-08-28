@@ -37,7 +37,12 @@ export function reasonOf(error: unknown): string | null {
     // vue-i18n den Schlüssel selbst zurück — der Benutzer läse dann
     // `errors.reason.instrument_not_found`, was schlimmer ist als nichts.
     if (i18n.global.te(key)) return i18n.global.t(key, params)
-    return body.code
+    // **Auch das Unbekannte wird übersetzt.** Die rohe Kennung stehen zu
+    // lassen war der erste Anlauf; sie ist ein Bezeichner für Maschinen und in
+    // keiner Sprache ein Satz. Der Rückfall sagt ehrlich, dass die Oberfläche
+    // sie nicht kennt, und nennt sie — damit sie in einer Fehlermeldung
+    // trotzdem weiterhilft.
+    return i18n.global.t('errors.reason.unknown', { code: body.code })
   }
 
   return typeof body.detail === 'string' ? trimmed(body.detail) : null

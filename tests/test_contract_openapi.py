@@ -391,3 +391,73 @@ def test_jedes_pflichtfeld_des_artefakts_ist_im_schema_auch_zugesagt(model: str)
         assert not _is_nullable(properties[field]), (
             f"{model}.{field} ist laut Artefakt Pflicht, im Schema aber nullable"
         )
+
+
+# ─── Laufzeit gegen Deklaration ───────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    "path",
+    ["/quote/{isin}", "/quote/{isin}/daily", "/quote/{isin}/history"],
+)
+def test_der_vierhundertvier_ist_zugesagt_und_traegt_eine_kennung(path: str) -> None:
+    """**Die Lücke, die der Schnappschuss nicht sehen konnte.**
+
+    Er vergleicht die Deklaration mit ihrem eigenen Vergangenheitsstand. Eine
+    Antwort, die die App *liefert* aber nie *zusagt*, ist darin gar nicht
+    vorhanden — und fehlt in beiden Fassungen gleichermaßen. Genau so blieb er
+    grün, während `GET /quote/{isin}` zur Laufzeit einen `404` schickte, den
+    kein Konsument im veröffentlichten Vertrag finden konnte.
+
+    Geprüft wird deshalb **beides zugleich**: dass die Zusage existiert und
+    dass sie auf `ErrorDetail` zeigt.
+    """
+    responses = app.openapi()["paths"][path]["get"]["responses"]
+
+    assert "404" in responses, (
+        f"{path} liefert zur Laufzeit 404, sagt ihn aber nicht zu"
+    )
+    schema = responses["404"]["content"]["application/json"]["schema"]
+    assert schema.get("$ref", "").endswith("/ErrorDetail"), (
+        f"{path}: der 404 verweist auf {schema!r} statt auf ErrorDetail"
+    )
+
+
+def test_der_echte_koerper_des_vierhundertvier_passt_zur_zusage(
+    tmp_path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Und die andere Richtung: Was wirklich herauskommt, hält die Zusage.
+
+    Ein deklarierter Statuscode, dessen Rumpf anders aussieht als das Modell,
+    wäre die teurere Hälfte desselben Fehlers — der Konsument liest den
+    Vertrag, baut danach, und bekommt etwas anderes.
+    """
+    from fastapi.testclient import TestClient
+
+    from app.config import get_settings
+    from app.container import get_cached_quote_service, get_sources_config
+
+    # Eigenes Volume: Auf der Arbeitsdatenbank stünde womöglich ein Umzug aus,
+    # und der Riegel antwortete mit 503 statt mit dem geprüften Fall.
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "vertrag.db"))
+    get_settings.cache_clear()
+    get_sources_config.cache_clear()
+    get_cached_quote_service.cache_clear()
+
+    try:
+        with TestClient(app) as client:
+            response = client.get("/quote/XX0000000000")
+    finally:
+        get_settings.cache_clear()
+        get_sources_config.cache_clear()
+        get_cached_quote_service.cache_clear()
+
+    assert response.status_code == 404
+    body = response.json()
+    assert set(body) == {"code", "params"}, (
+        f"der Rumpf ist kein ErrorDetail: {body!r}"
+    )
+    assert body["code"] == "instrument_not_found"
+    assert body["params"]["identifier"] == "XX0000000000", (
+        "die Kennung nennt die Eingabe nicht — dann kann das UI keinen Satz bilden"
+    )

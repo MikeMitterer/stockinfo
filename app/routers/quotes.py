@@ -24,6 +24,7 @@ from fastapi.responses import JSONResponse
 from app.container import get_cached_quote_service, get_daily_history_service
 from app.models import (
     IDENTITY_CONFLICT_RESPONSE,
+    INSTRUMENT_NOT_FOUND_RESPONSE,
     SYMBOL_CONFLICT_RESPONSE,
     DailyPoint,
     ErrorDetail,
@@ -103,7 +104,9 @@ def quote_by_symbol(
 
 
 @router.get(
-    "/quote/{isin}", response_model=QuoteResponse, responses=IDENTITY_CONFLICT_RESPONSE
+    "/quote/{isin}",
+    response_model=QuoteResponse,
+    responses={**IDENTITY_CONFLICT_RESPONSE, **INSTRUMENT_NOT_FOUND_RESPONSE},
 )
 def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     """Liefert den Kurs zu einer ISIN (bevorzugt Xetra/EUR)."""
@@ -122,7 +125,7 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
 @router.get(
     "/quote/{isin}/daily",
     response_model=list[DailyPoint],
-    responses=IDENTITY_CONFLICT_RESPONSE,
+    responses={**IDENTITY_CONFLICT_RESPONSE, **INSTRUMENT_NOT_FOUND_RESPONSE},
 )
 def daily_history(
     isin: IsinPath,
@@ -190,7 +193,7 @@ def quote_history_by_symbol(
 @router.get(
     "/quote/{isin}/history",
     response_model=list[QuotePoint],
-    responses=IDENTITY_CONFLICT_RESPONSE,
+    responses={**IDENTITY_CONFLICT_RESPONSE, **INSTRUMENT_NOT_FOUND_RESPONSE},
 )
 def quote_history(
     isin: IsinPath,
