@@ -1,104 +1,106 @@
 """Das OpenFIGI-Plugin gegen die **echte** API.
 
-Kein Mock, keine Aufzeichnung: Der Test fragt den Dienst, den die App auch im
-Betrieb fragt. Was er damit belegt, kann kein Double belegen — dass das
+Hier steht ausschließlich, was ein Netz braucht. Alles, was sich ohne fremden
+Dienst entscheiden lässt — Zuständigkeit, Übersetzung, der geerbte
+`ResolverContract` —, steht in `test_plugin_openfigi.py` und läuft auch dann,
+wenn diese Datei abgewählt ist.
+
+    pytest tests/test_plugin_openfigi_integration.py   # fragt OpenFIGI
+    pytest -m "not integration"                        # ohne fremde Dienste
+
+Was ein Integrationstest belegt und kein Double belegen kann: dass das
 Anfrageformat noch stimmt, dass die Antwort noch so aussieht wie gedacht, und
-dass die Übersetzung in die Rollen des Vertrags trägt.
+dass die Übersetzung in die Rollen trägt. Der Preis ist die Abhängigkeit vom
+Dienst und seinem Ratenlimit — deshalb der Marker.
 
-Der Preis dafür ist ehrlich zu nennen: Der Test hängt an einem fremden Dienst
-und an dessen Ratenlimit. Er trägt deshalb den Marker `integration` und lässt
-sich mit ``-m "not integration"`` abwählen — der Marker ist eine Möglichkeit,
-kein Vorschlag, ihn zu überspringen.
-
-    pytest tests/test_plugin_openfigi_integration.py     # fragt OpenFIGI
-    pytest -m "not integration"                          # ohne fremde Dienste
-
-**Die Golden-Werte stammen nicht aus dem Dienst.** ``AAPL`` an ``XNAS`` und
-``VGWL`` an ``XETR`` sind nachgeschlagen und hier hingeschrieben. Käme der
-Erwartungswert aus derselben Antwort, die geprüft wird, prüfte der Test nur,
-ob der Dienst mit sich selbst übereinstimmt.
+**Die Golden-Werte stammen nicht aus dem Dienst.** `VGWL` an `XETR` und `RY` an
+`XTSE` sind nachgeschlagen und hier hingeschrieben. Käme der Erwartungswert aus
+derselben Antwort, die geprüft wird, prüfte der Test nur, ob der Dienst mit
+sich selbst übereinstimmt.
 """
 
 import pytest
 
-from stockinfo_plugin import NotFound, NotResponsible, Resolved, ResolveRequest
+from stockinfo_plugin import NotFound, Resolved, ResolveRequest
 
-from app.plugins.openfigi_resolver import OpenFigiResolver
+from app.plugins.openfigi_resolver import OpenFigiResolverPlugin
 
 pytestmark = pytest.mark.integration
 
 
 @pytest.fixture(scope="module")
-def resolver() -> OpenFigiResolver:
-    """Ein Resolver ohne Schlüssel — so, wie ihn ein Beiträger auch hat."""
-    return OpenFigiResolver()
+def plugin() -> OpenFigiResolverPlugin:
+    """Ein Plugin ohne Schlüssel — so, wie ein Beiträger es auch hat."""
+    return OpenFigiResolverPlugin()
 
 
-@pytest.mark.parametrize(
-    ("isin", "mic", "ticker"),
-    [
-        # `US` ist der Sammelcode der eigenen Tabelle und **kein** MIC —
-        # gemessen: Apple ist über `micCode=XNAS` bei OpenFIGI nicht zu
-        # finden, über `exchCode=US` schon.
-        ("US0378331005", "US", "AAPL"),
-        ("IE00B3RBWM25", "XETR", "VGWL"),
-    ],
-)
-def test_ein_bekanntes_papier_wird_aufgeloest(
-    resolver: OpenFigiResolver, isin: str, mic: str, ticker: str
-) -> None:
-    """Zwei Papiere über zwei verschiedene Anfragewege.
+def test_ein_papier_an_der_bevorzugten_boerse(plugin: OpenFigiResolverPlugin) -> None:
+    """Der Regelfall über einen echten MIC.
 
-    Mit nur einem Fall bliebe offen, ob die Börse überhaupt in die Anfrage
-    eingeht: Ein Plugin, das ``preferred_mic`` verwirft und irgendein Listing
-    zurückgibt, bestünde einen Einzelfall mühelos. Und die beiden Fälle nehmen
-    **verschiedene** Wege — `micCode` und `exchCode` —, was ein Plugin, das
-    `figi_lookup` umgeht, sofort auffliegen ließe.
+    `XETR` ist eine einzelne Börse, und OpenFIGI beantwortet die Frage
+    vollständig: Ticker **und** Handelsplatz. Genau darauf besteht der Vertrag.
     """
-    answer = resolver.resolve(ResolveRequest(isin=isin, preferred_mic=mic))
+    answer = plugin.resolve(ResolveRequest(isin="IE00B3RBWM25", preferred_mic="XETR"))
 
     assert isinstance(answer, Resolved), answer
-    assert answer.ticker == ticker
-    assert answer.mic == mic
-    assert answer.isin == isin
+    assert (answer.ticker, answer.mic) == ("VGWL", "XETR")
+    assert answer.isin == "IE00B3RBWM25"
 
 
-def test_ein_papier_das_die_boerse_nicht_fuehrt_ist_not_found(
-    resolver: OpenFigiResolver,
-) -> None:
-    """Der gemessene Anlass für `examples/canada_file.py`.
+def test_die_kaskade_auf_die_heimatboerse(plugin: OpenFigiResolverPlugin) -> None:
+    """Die Kaskade aus T-18, am echten Dienst.
 
-    Die Royal Bank of Canada ist an Xetra über OpenFIGI nicht zu finden — genau
-    deshalb gibt es die von Hand gepflegte Tabelle als zweiten Weg. Der Test
-    hält fest, dass daraus `NotFound` wird und **nicht** `Unavailable`: An
-    dieser Unterscheidung hängt, ob die App eine andere Quelle fragt oder es
-    später noch einmal versucht.
+    Die Royal Bank of Canada hat an Xetra kein Listing, an Toronto schon. Das
+    Emissionsland steckt im ISIN-Präfix — niemand muss es konfigurieren. Der
+    Test belegt, dass diese Kaskade **über das Plugin hinweg** noch wirkt und
+    nicht unterwegs verloren geht.
+
+    **Die Stammaktie `CA7800871021`, nicht die Vorzugsaktie `CA78012H5675`.**
+    Der Unterschied ist gemessen: Für die Vorzugsaktie liefert OpenFIGI an
+    Toronto den Bloomberg-Bezeichner ``RY V3.65 PERP BB``, den
+    `_is_yahoo_compatible_symbol` zu Recht verwirft — daraus wird `NotFound`,
+    und genau dafür gibt es die von Hand gepflegte Tabelle in
+    `examples/canada_file.py`. Mit ihr hätte dieser Test die Kaskade nie
+    erreicht, sondern den Symbolfilter gemessen.
     """
-    answer = resolver.resolve(
-        ResolveRequest(isin="CA78012H5675", preferred_mic="XETR")
-    )
+    answer = plugin.resolve(ResolveRequest(isin="CA7800871021", preferred_mic="XETR"))
+
+    assert isinstance(answer, Resolved), answer
+    assert (answer.ticker, answer.mic) == ("RY", "XTSE")
+
+
+def test_ein_sammelcode_liefert_keinen_treffer(plugin: OpenFigiResolverPlugin) -> None:
+    """`US` ist kein MIC — und der Dienst wird deshalb gar nicht erst gefragt.
+
+    Am echten Dienst gemessen: `US0378331005` über ``exchCode=US`` **liefert**
+    `AAPL`. Der Kern-Resolver fragt trotzdem nicht, weil die Antwort ohne
+    echten Handelsplatz keine Identität trägt.
+
+    Dieser Test steht hier und nicht nur bei den Unit-Tests, weil er die
+    Versuchung festhält: Es wäre ein Treffer zu holen, und er wäre unbrauchbar.
+    Auflösen kann den Fall der Yahoo-Fallback, der den Handelsplatz benennt.
+    """
+    answer = plugin.resolve(ResolveRequest(isin="US0378331005", preferred_mic="US"))
 
     assert isinstance(answer, NotFound), answer
 
 
-def test_eine_falsche_pruefziffer_kostet_kein_ratenlimit() -> None:
-    """`handles` weist ab, bevor überhaupt jemand gefragt wird.
+def test_ein_papier_das_keine_der_gefragten_boersen_fuehrt(
+    plugin: OpenFigiResolverPlugin,
+) -> None:
+    """`NotFound`, **nicht** `Unavailable`.
 
-    Der Client ist hier einer, dessen Benutzung ein Fehler ist. Ohne ihn bewiese
-    der Test nur, dass `NotResponsible` herauskommt — nicht, dass unterwegs
-    niemand gefragt wurde. Und das ist die Aussage, um die es geht: Ein
-    Ratenlimit, das für eine unmögliche Frage draufgeht, fehlt später bei einer
-    echten.
+    Barrick Gold ist eine gültige kanadische ISIN, die OpenFIGI an Xetra nicht
+    führt. An dieser Unterscheidung hängt, ob die App eine andere Quelle fragt
+    oder es später noch einmal versucht — sie war der Anlass für T-20.
+
+    Die Zusage ist **fest**: `NotFound`. Ein Test, der sich an jede Antwort
+    anpasst — „entweder Treffer oder nicht" —, prüft nichts. Führt OpenFIGI
+    das Papier eines Tages doch, soll er laut fehlschlagen; dann ist die
+    Erwartung nachzuziehen, und das ist eine Information.
     """
+    answer = plugin.resolve(
+        ResolveRequest(isin="CA0679011084", preferred_mic="XETR")
+    )
 
-    class PoisonedClient:
-        """Ein Client, der nicht gefragt werden darf."""
-
-        def map_isin(self, *args: object, **kwargs: object) -> str:
-            raise AssertionError("es wurde gefragt, obwohl handles() ablehnt")
-
-    resolver = OpenFigiResolver(client=PoisonedClient())
-    request = ResolveRequest(isin="US0378331006", preferred_mic="XNAS")
-
-    assert resolver.handles(request) is False
-    assert isinstance(resolver.resolve(request), NotResponsible)
+    assert isinstance(answer, NotFound), answer

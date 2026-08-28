@@ -61,13 +61,10 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     passt. `ROLE_RESULTS` beantwortet die Frage jetzt; Fehlfälle bleiben frei,
     weil `NotFound` in jeder Rolle dasselbe heißt.
 
-    Der Nullfall ist dasselbe Muster wie `P-05`: `only_real=True` ohne einen
-    einzigen freigegebenen Fall gab `[]` zurück, und das sah aus wie Erfolg.
-    Vergisst ein Autor überall `real_ok`, meldet sein Release-Lauf jahrelang
-    Erfolg, ohne den echten Anbieter je gefragt zu haben. **Der Test, der das
-    vorher behauptete, war meiner** — er stand als
-    `test_die_reale_betriebsart_waehlt_nur_freigegebene_faelle` da und
-    zertifizierte die Lücke. Er ist jetzt umgekehrt und hat einen zweiten
+    Der Nullfall ist dasselbe Muster wie `P-05`: Ein Lauf ohne einen einzigen
+    Fall gab `[]` zurück, und das sah aus wie Erfolg. **Der Test, der das
+    vorher behauptete, war meiner** und zertifizierte die Lücke. Er ist jetzt
+    umgekehrt und hat einen zweiten
     daneben, der die Auswahl mit einem *tatsächlich* freigegebenen Fall belegt.
 
     **Runde 3 — die Rollenprüfung hatte dieselbe Lücke eine Ebene tiefer.** Sie
@@ -124,9 +121,9 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     Die Validierung ist der eigentliche Wert: Ein falsch beschriebener Fall
     läuft sonst grün, **weil** er nichts prüft. `golden={"tikcer": "RY"}` nennt
     ein Feld, das es an `Resolved` nicht gibt, und jede naive Prüfschleife
-    übergeht das. Acht Beschreibungsfehler haben eigene Tests, darunter
-    vertauschte Bereichsgrenzen (schlagen nie an) und `real_ok` bei erwartetem
-    `Unavailable` (ein Ausfall lässt sich von außen nicht bestellen).
+    übergeht das. Sieben Beschreibungsfehler haben eigene Tests, darunter
+    vertauschte Bereichsgrenzen (schlagen nie an) und unbrauchbare Grenzen
+    (`NaN`, `inf`, Zeichenketten).
 
     **Runde 3 — die Validierung durfte den Lauf nicht abbrechen, tat es aber.**
     `plausible={"price": ("a", "z")}` galt als gültige Beschreibung; erst
@@ -236,27 +233,28 @@ fachlich das falsche Listing sein. Golden Cases erhöhen die Sicherheit
 erheblich, ersetzen aber niemanden, der den Markt kennt — und genau so gehört es
 in die Plugin-Dokumentation.
 
-### Ein Szenario, zwei Betriebsarten
+### Ein Szenario, einmal beschrieben
 
 Ein Autor beschreibt seine Fälle **einmal**: stabile Fall-ID, Anfrage, erwartete
-Ergebnisart, bei bekannten Papieren die unabhängig festgelegten Kernwerte,
-optionale Plausibilitätsregeln für dynamische Werte, und ob der Fall im
-Real-Modus laufen darf.
+Ergebnisart, bei bekannten Papieren die unabhängig festgelegten Kernwerte und
+optionale Plausibilitätsregeln für dynamische Werte.
 
-Derselbe Fall läuft dann als **Replay** (deterministisch, ohne Netz, bei jedem
-Commit) und als **Real** (gegen den echten Anbieter, vor einem Release).
+> **Nachtrag nach der Produktentscheidung Mike, 2026-08-28.** Hier stand
+> ursprünglich „ein Szenario, **zwei** Betriebsarten": Derselbe Fall sollte als
+> Replay ohne Netz und als Real-Lauf gegen den Anbieter laufen, und `Scenario`
+> trug dafür ein `real_ok`, `run_scenarios` ein `only_real`.
+>
+> Diese zweite Betriebsart ist gestrichen — eine echte API prüft ein
+> Integrationstest gegen die echte API, nicht eine nachgebaute Offline-Variante.
+> Damit zeigte die Auswahl auf nichts mehr, und sie ist mit T-27b entfernt statt
+> als unbenutzte Option stehen zu bleiben. Eine Zusage, die niemand mehr
+> einlöst, ist schlimmer als keine: Sie sieht aus wie eine Möglichkeit.
 
-**Die Abnahme dieser beiden Betriebsarten liegt bei T-27b**, nicht hier: Der
-HTTP-Runner, der sie umsetzt, gehört dorthin — und T-27b hängt an T-27a. Hier
-wird nur das gemeinsame Format samt Validierung und ein transportneutraler
-Runner-Vertrag abgenommen, damit T-27a fertig sein kann, bevor T-27b darauf
-aufbaut.
-
-**Der wichtigste Fallstrick:** Der erwartete Ticker und MIC dürfen **nicht** aus
-der Aufzeichnung erzeugt werden. Sonst bestätigt der Test nur, dass ein
-möglicherweise falscher Treffer reproduzierbar falsch ist. Golden-Erwartungen
-sind kleine, bewusst geprüfte Daten und werden getrennt von den
-Anbieter-Aufzeichnungen gepflegt.
+**Der wichtigste Fallstrick bleibt:** Der erwartete Ticker und MIC dürfen
+**nicht** aus der Antwort erzeugt werden, die geprüft wird. Sonst bestätigt der
+Test nur, dass ein möglicherweise falscher Treffer reproduzierbar falsch ist.
+Golden-Erwartungen sind kleine, bewusst geprüfte Daten und werden getrennt
+gepflegt.
 
 ### Doubles — Werkzeug hier, Verantwortung beim Host
 
@@ -352,13 +350,18 @@ mit der vollen Zeile als Anker.
 Docstrings sind unverändert deutsch; sie sind laut CLAUDE.md die Sprache der
 Erklärung.
 
-### Was T-27b übernimmt
+### Was T-27b übernommen hat
 
-Der HTTP-Runner samt Aufzeichnung und Realbetrieb. Das Format steht, der
-Runner-Vertrag ist eine Methode, und `run_scenarios(..., only_real=True)`
-wählt bereits die freigegebenen Fälle aus. Es soll dort **keine** Zeile an einem
-Szenario geändert werden müssen — das ist die Zusage, an der T-27b dieses
-Ticket messen kann.
+*(Nachgetragen 2026-08-28.)* Ursprünglich stand hier der HTTP-Runner samt
+Aufzeichnung und Realbetrieb. Daraus ist nach Mikes Produktentscheidung etwas
+anderes geworden: Die vorhandene Anbindung der App tritt als Plugin in einer
+Rolle dieses Vertrags an, geprüft von einem Integrationstest gegen den echten
+Dienst.
+
+Die Zusage von hier hat trotzdem getragen — und zwar in der harten Richtung:
+Am Plugin musste **keine** Zeile eines Szenarios geändert werden, weil das
+Format ohne die zweite Betriebsart auskommt. Was gestrichen wurde, war die
+Auswahl, nicht die Beschreibung.
 
 ---
 

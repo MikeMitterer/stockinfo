@@ -1,23 +1,39 @@
-"""Die vorhandene OpenFIGI-Anbindung in der Resolver-Rolle des Plugin-Vertrags.
+"""Die vorhandene OpenFIGI-Auflösung in der Resolver-Rolle des Plugin-Vertrags.
 
-Der Punkt dieses Plugins ist, was **nicht** darin steht: der HTTP-Aufruf, das
-Anfrageformat, die Auswertung der Antwort, die Regel für brauchbare
-Yahoo-Symbole. Das alles steht in `app/providers/openfigi_provider.py` und wird
+**Dieses Modul entscheidet nichts.** Es delegiert an
+`app.resolver.OpenFigiResolver` und übersetzt dessen Antwort in die Typen des
+Vertrags. Der HTTP-Aufruf, das Anfrageformat, die Yahoo-Symbolregel, die
+Kaskade „bevorzugte Börse, dann Heimatbörse aus dem ISIN-Präfix" (T-18) und die
+Weigerung, mit einem Sammelcode zu fragen (T-21) — all das steht dort und wird
 von hier benutzt.
 
-Ein Plugin, das seine API neu schreiben muss, um den Vertrag zu erfüllen, wäre
-der Fehler und nicht die Lösung. Übersetzt wird nur, was die Rolle verlangt:
+**Der erste Anlauf hat genau das nicht getan, und der Fehler ist lehrreich.**
+Er baute die Kette `figi_lookup → map_isin → NotFound/Unavailable` ein zweites
+Mal nach. Dabei ging verloren, was der Kern-Resolver längst weiß:
 
-    OpenFigiClient.map_isin()                    →  Resolved | NotFound
-    SourceUnavailableError                       →  Unavailable
-    ISIN ohne Prüfziffer, MIC ohne Form          →  NotResponsible
+    _try_exchange(): if not is_real_mic(mic): return None
 
-Die mittlere Zeile ist die wichtigste. Der Client unterscheidet „kenne ich
-nicht" von „konnte nicht fragen", und diese Unterscheidung kostete ihn einmal
-einen Umbau: Solange beides als ``None`` zurückkam, wurde aus einem Ausfall ein
-404, und die App hörte auf zu fragen, statt es später erneut zu versuchen. Der
-Vertrag hat für beides einen eigenen Typ — hier treffen die beiden Sichten
-aufeinander, und deshalb wird hier übersetzt und nicht neu entschieden.
+Der Sammelcode `US` fasst sechs Handelsplätze zusammen. OpenFIGI beantwortet
+darauf „welcher Ticker", nicht „welche Börse" — ohne echten MIC ist die
+Identität unvollständig, und deshalb wird **gar nicht erst gefragt**. Mein
+Nachbau fragte trotzdem, bekam `AAPL` und lieferte `Resolved(mic="US")`: einen
+Treffer, dessen MIC keiner ist. `ResolverContract` verbietet genau das, und
+`is_real_mic("US")` ist `False`.
+
+Ich hatte das sogar gemessen — und aus der Messung den falschen Schluss
+gezogen, nämlich die Prüfung zu lockern statt der vorhandenen Entscheidung zu
+folgen. Eine zweite Fassung derselben Fachlogik ist nicht nur doppelt, sie ist
+die **ältere**.
+
+Übersetzt wird deshalb nur noch:
+
+    ResolvedInstrument mit ticker und mic  →  Resolved
+    ResolvedInstrument ohne Identität      →  NotFound
+    NotFound / Unavailable / NotResponsible →  unverändert durchgereicht
+
+Die letzte Zeile ist wörtlich zu nehmen: `app.providers.base.Resolution`
+benutzt für die Fehlfälle bereits `stockinfo_plugin.types`. Der Vertrag ist an
+dieser Stelle schon gemeinsam — hier bleibt nur der Treffer zu übersetzen.
 """
 
 from typing import Any
@@ -29,16 +45,21 @@ from stockinfo_plugin import (
     Resolved,
     ResolveRequest,
     Resolver,
-    Unavailable,
 )
 from stockinfo_plugin.invariants import isin_check_digit_is_valid
 
-from app.providers.base import SourceUnavailableError
-from app.providers.openfigi_provider import OpenFigiClient, figi_lookup
+from app.providers.base import ResolvedInstrument
+from app.providers.openfigi_provider import OpenFigiClient
+from app.resolver import OpenFigiResolver as CoreOpenFigiResolver
 
 
-class OpenFigiResolver(Resolver):
-    """ISIN + MIC → Ticker, über den vorhandenen `OpenFigiClient`."""
+class OpenFigiResolverPlugin(Resolver):
+    """ISIN → Ticker + MIC, über den Kern-Resolver der App.
+
+    Der Name trägt das ``Plugin`` mit Absicht: `app.resolver.OpenFigiResolver`
+    gibt es bereits, und zwei gleichnamige Klassen mit verschiedener Aufgabe
+    sind der kürzeste Weg zu einer Verwechslung, die niemand bemerkt.
+    """
 
     name = "openfigi"
     cost = "free"
@@ -48,16 +69,20 @@ class OpenFigiResolver(Resolver):
         config: dict[str, Any] | None = None,
         *,
         client: OpenFigiClient | None = None,
+        home_fallback: bool = True,
     ) -> None:
         """
         Args:
             config: Der eigene Abschnitt aus der Quellen-Konfiguration.
                 ``api_key`` ist optional und hebt nur das Ratenlimit.
-            client: Ein vorbereiteter Client. Ohne Angabe wird einer aus der
+            client: Der OpenFIGI-Client. Ohne Angabe wird einer aus der
                 Konfiguration gebaut.
+            home_fallback: Ob bei erfolglosem Versuch die Heimatbörse aus dem
+                ISIN-Präfix gefragt wird — die Kaskade aus T-18.
         """
         super().__init__(config)
         self._client = client or OpenFigiClient(api_key=self.api_key)
+        self._home_fallback = home_fallback
 
     @property
     def api_key(self) -> str:
@@ -65,54 +90,57 @@ class OpenFigiResolver(Resolver):
         return str(self._config.get("api_key", ""))
 
     def handles(self, request: ResolveRequest) -> bool:
-        """Diese Quelle braucht eine **gültige** ISIN und ein Börsenmerkmal.
+        """Diese Quelle braucht eine ISIN mit **gültiger Prüfziffer**.
 
-        Bei der ISIN wird die Prüfziffer geprüft und nicht nur die Gestalt: Ein
-        Tippfehler in einer von Hand gepflegten Tabelle erzeugt fast immer eine
-        ISIN mit falscher Prüfziffer. OpenFIGI danach zu fragen verbraucht
+        Ein Tippfehler in einer von Hand gepflegten Tabelle erzeugt fast immer
+        eine ISIN mit falscher Prüfziffer. Danach zu fragen verbraucht ein
         Ratenlimit für eine Frage, die nicht stimmen kann.
 
-        **Beim Börsenmerkmal wird ausdrücklich *nicht* auf einen MIC geprüft**,
-        und das ist gemessen: Apple ist über ``micCode=XNAS`` bei OpenFIGI
-        nicht zu finden, über ``exchCode=US`` schon. ``US`` ist Sammelcode und
-        kein MIC — eine Prüfung mit `mic_is_wellformed` würde also genau den
-        Weg abweisen, auf dem der Dienst US-Papiere überhaupt kennt.
-
-        Was hier zählt, ist deshalb: Kann `figi_lookup` daraus ein
-        Anfragemerkmal machen? Welche Codes das sind, weiß OpenFIGI und nicht
-        dieser Vertrag.
+        Über die Börse wird hier **nicht** geurteilt: Ob ein Merkmal taugt,
+        entscheidet der Kern-Resolver — und er tut es strenger, als eine
+        Formprüfung es könnte.
         """
-        return isin_check_digit_is_valid(request.isin) and bool(
-            request.preferred_mic and request.preferred_mic.strip()
-        )
+        return isin_check_digit_is_valid(request.isin)
 
     def resolve(self, request: ResolveRequest) -> Resolution:
-        """Fragt OpenFIGI nach dem Listing.
+        """Fragt den Kern-Resolver und übersetzt seine Antwort.
 
         Returns:
-            `Resolved` mit Ticker und MIC, `NotResponsible` bei einer Anfrage,
-            die nicht hierher gehört, `NotFound`, wenn OpenFIGI das Papier an
-            dieser Börse nicht kennt, und `Unavailable` bei einer Störung.
+            `Resolved` nur mit **vollständiger** Identität — Ticker und echter
+            MIC. Fehlt sie, ist das `NotFound`: Der Vertrag kennt keinen
+            Treffer ohne Identität, und einen zu erfinden wäre schlimmer als
+            keiner.
         """
         if not self.handles(request):
             return NotResponsible(
-                "OpenFIGI braucht eine ISIN mit gültiger Prüfziffer und einen MIC"
+                "OpenFIGI braucht eine ISIN mit gültiger Prüfziffer"
             )
 
-        id_type, id_value = figi_lookup(request.preferred_mic)
-        try:
-            ticker = self._client.map_isin(
-                request.isin or "", id_value=id_value, id_type=id_type
-            )
-        except SourceUnavailableError as error:
-            return Unavailable(str(error))
+        core = CoreOpenFigiResolver(
+            self._client,
+            default_exchange=request.preferred_mic,
+            home_fallback=self._home_fallback,
+        )
+        answer = core.resolve_isin(request.isin or "")
 
-        if not ticker:
-            # `NotFound` trägt bewusst keinen Grund: „gibt es hier nicht" ist
-            # die ganze Aussage. Ein Freitext daneben lüde dazu ein, ihn
-            # auszuwerten — und dann hinge Verhalten an einer Formulierung.
+        if not isinstance(answer, ResolvedInstrument):
+            # NotFound, Unavailable und NotResponsible kommen bereits aus
+            # `stockinfo_plugin.types` — der Vertrag ist hier schon gemeinsam.
+            return answer
+
+        if not answer.ticker or not answer.mic:
+            # Der Kern-Resolver setzt beide Felder nur, wenn die Zuordnung
+            # eindeutig ist; er rät nichts. Ein `Resolved` ohne sie bestünde
+            # `ResolverContract` nicht — und zwar zu Recht.
             return NotFound()
-        return Resolved(ticker=ticker, mic=request.preferred_mic, isin=request.isin)
+
+        return Resolved(
+            ticker=answer.ticker,
+            mic=answer.mic,
+            isin=answer.isin or request.isin,
+            name=answer.name,
+            instrument_type=answer.type,
+        )
 
     def configuration_problem(self) -> str:
         """Diese Quelle läuft auch ohne Schlüssel — und sagt das.

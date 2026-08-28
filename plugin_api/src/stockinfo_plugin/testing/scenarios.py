@@ -1,20 +1,22 @@
-"""Ein Fall wird **einmal** beschrieben — und läuft in zwei Betriebsarten.
+"""Ein Prüffall, einmal beschrieben — Format, Validierung, Ausführung.
 
-Ein Plugin-Autor hat zwei Bedürfnisse, die sich widersprechen. Er will bei
-jedem Commit prüfen, ob sein Plugin noch tut, was es soll — schnell, ohne Netz,
-reproduzierbar. Und er will vor einem Release wissen, ob der echte Anbieter
-noch dasselbe liefert. Wer beides getrennt beschreibt, pflegt zwei Wahrheiten,
-und die auseinanderlaufende ist immer die, die seltener läuft.
+Ein `Scenario` sagt, was gefragt wird und was herauskommen soll. `ScenarioRunner`
+ist genau eine Methode; was er mit der Anfrage macht, weiß dieses Modul nicht.
+`DirectRunner` ruft die Quelle im selben Prozess auf.
 
-Deshalb: **ein** `Scenario` je Fall, zwei Runner. Was der Runner mit der
-Anfrage macht, weiß dieses Modul nicht — es kennt weder HTTP noch Aufzeichnung.
-`ScenarioRunner` ist genau eine Methode.
+**Was dieses Modul einmal war und nicht mehr ist.** Bis T-27b trug es eine
+zweite Betriebsart mit: Ein Fall konnte als „darf gegen den echten Anbieter
+laufen" markiert werden, und `run_scenarios` wählte danach aus. Dahinter stand
+die Absicht, denselben Fall offline aus einer Aufzeichnung **und** real laufen
+zu lassen.
 
-**Was hier abgenommen wird und was nicht.** Format, Validierung, Prüfung und
-der transportneutrale Runner-Vertrag stehen hier, ausgeführt vom `DirectRunner`
-gegen eine Quelle im selben Prozess. Dass derselbe Fall auch als Aufzeichnung
-und gegen den echten Anbieter läuft, baut **T-27b** — dort gehört der
-HTTP-Runner hin, und er hängt an diesem Format.
+Diese Absicht ist eine Produktentscheidung von Mike (2026-08-28) gewesen — und
+zwar dagegen: *„Wir brauchen keine extrem aufwändige Offline-Variante des
+Tests."* Wo eine echte API zu prüfen ist, tut das ein Integrationstest gegen
+die echte API. Damit hatte die Auswahl keinen zweiten Betriebsmodus mehr, auf
+den sie hätte zeigen können; sie ist entfernt statt als unbenutzte Option
+stehen zu bleiben. Eine Zusage, die niemand mehr einlöst, ist schlimmer als
+keine — sie sieht aus wie eine Möglichkeit.
 
 Der wichtigste Fallstrick steht in `Scenario.golden`.
 """
@@ -102,12 +104,10 @@ class Scenario:
             ``(untere, obere)`` Grenze, beide einschließlich. Ein Kurs lässt
             sich nicht festnageln, aber „zwischen 1 und 10000" schlägt an, wenn
             eine Quelle Pence für Pfund hält.
-        real_ok: Ob der Fall gegen den echten Anbieter laufen darf. ``False``
-            für alles, was von außen nicht herstellbar ist.
         note: Woher die Golden-Werte stammen. Freitext, aber nicht Zierde: In
             zwei Jahren ist „RY/XTSE" ohne Herkunft nicht mehr überprüfbar,
-            und wer es dann anzweifelt, hat nur die Aufzeichnung — also genau
-            die Quelle, die es nicht sein durfte.
+            und wer es dann anzweifelt, hat nur noch die Quelle selbst — also
+            genau die, die es nicht sein durfte.
     """
 
     case_id: str
@@ -115,7 +115,6 @@ class Scenario:
     expect: type
     golden: dict[str, object] = field(default_factory=dict)
     plausible: dict[str, tuple[float, float]] = field(default_factory=dict)
-    real_ok: bool = False
     note: str = ""
 
 
@@ -226,11 +225,6 @@ def validate_scenarios(scenarios: list[Scenario] | tuple[Scenario, ...]) -> list
             problems.append(
                 f"{case_id}: erwartet {scenario.expect.__name__}, nennt aber "
                 "Werte — eine Antwort ohne Ergebnis trägt keine Felder"
-            )
-        if not is_hit and scenario.real_ok and scenario.expect is Unavailable:
-            problems.append(
-                f"{case_id}: real_ok bei erwartetem Unavailable — ein Ausfall "
-                "des Anbieters lässt sich von außen nicht herstellen"
             )
 
         problems.extend(_check_role_match(scenario))
@@ -443,8 +437,6 @@ def check_scenario(scenario: Scenario, result: object) -> list[str]:
 def run_scenarios(
     runner: ScenarioRunner,
     scenarios: list[Scenario] | tuple[Scenario, ...],
-    *,
-    only_real: bool = False,
 ) -> list[str]:
     """Lässt alle Fälle laufen und sammelt, was nicht stimmt.
 
@@ -455,8 +447,6 @@ def run_scenarios(
     Args:
         runner: Wie die Antworten beschafft werden.
         scenarios: Die Fälle.
-        only_real: Nur Fälle mit ``real_ok``. Das ist die Betriebsart „gegen den
-            echten Anbieter" — welcher Runner dahintersteht, bleibt offen.
 
     Returns:
         Erst die Beanstandungen an den Beschreibungen, dann die Abweichungen der
@@ -466,23 +456,16 @@ def run_scenarios(
         **Ein Lauf ohne einen einzigen Fall ist eine Beanstandung, kein
         Erfolg.** Das war ein Befund aus Runde 1 und es ist dasselbe Muster wie
         `P-05`: Die leere Liste sah aus wie „alles in Ordnung" und hieß in
-        Wahrheit „nichts geprüft". Bei ``only_real`` ist der Fall besonders
-        heimtückisch — vergisst ein Autor überall `real_ok`, meldet sein
-        Release-Lauf jahrelang Erfolg, ohne je den echten Anbieter zu fragen.
+        Wahrheit „nichts geprüft".
     """
     findings = validate_scenarios(scenarios)
     if findings:
         return findings
-    selected = [s for s in scenarios if s.real_ok] if only_real else list(scenarios)
-    if not selected:
+    if not scenarios:
         return [
-            "kein einziger Fall gelaufen — bei only_real=True heißt das, dass "
-            "keiner real_ok trägt; sonst, dass die Liste leer war. Ein leeres "
-            "Ergebnis sieht wie Erfolg aus und ist keiner."
-            if only_real
-            else "kein einziger Fall gelaufen — die Liste war leer. Ein leeres "
+            "kein einziger Fall gelaufen — die Liste war leer. Ein leeres "
             "Ergebnis sieht wie Erfolg aus und ist keiner."
         ]
-    for scenario in selected:
+    for scenario in scenarios:
         findings.extend(check_scenario(scenario, runner.run(scenario)))
     return findings
