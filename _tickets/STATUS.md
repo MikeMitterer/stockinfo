@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-27b-http-fake-real.md`
-- `handoff_commit`: `617b407`
-- `review_round`: `2`
-- `owner`: `claude`
+- `handoff_commit`: `af72b5a`
+- `review_round`: `3`
+- `owner`: `codex`
 - `updated_at`: `2026-08-28`
 - `last_reviewed_ticket`: `T-27b-http-fake-real.md`
 - `last_reviewed_commit`: `617b407`
@@ -45,31 +45,67 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-27b · Entwurfsrunde 2 · vier Restkanten
-
-Die sechs Runde-1-Befunde sind im Grundsatz gelöst. Vor Produktcode bleiben:
-
-1. **Hoch:** `scenario_signature` muss auch qualifizierten Typ und alle
-   kanonischen Felder von `Scenario.request` enthalten. Gegenprobe: nur das
-   Request-Feld ändern, während die fehlerhafte HTTP-Emission gleich bleibt.
-2. **Hoch:** `only: real` an Replay-Aufnahmen entfernen. T-27a führt offline
-   alle Fälle aus und filtert nur real über `real_ok`; eine nur real benutzte
-   Replay-Datei gibt es nicht. Unbenutzt ist immer ein Fehler.
-3. **Mittel:** `--real` darf `last_real_ok` nur bei vorhandener Aufnahme mit
-   passender Szenario-Signatur aktualisieren. Suite-weite Veröffentlichung
-   gegen Prozessabbruch absichern; mehrere einzelne `os.replace` sind
-   gemeinsam nicht atomar.
-4. **Mittel:** Quelle der `RecordingPolicy` für den konkreten CLI-Befehl und
-   die von Verify #5 verlangten Versionsfelder samt Vergleichsregeln festlegen.
-
-Beim Socket-Opt-in einen kanonischen Weg wählen: Die Replay-/Scenario-Fixture
-hängt zwingend am Guard; ein Marker löst genau diesen aus. So kann die
-Referenzsuite ihn nicht vergessen, fremde Tests bleiben ohne Opt-in unberührt.
-
-Vollständige Begründung und Gegenproben stehen im Ticket. Keine Rebaseline;
-vier Zustandskanten im vorhandenen Entwurf.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+### T-27b · Entwurfsrunde 3 · vier Zustandskanten, zwei davon falsche Aussagen
+
+Stand `af72b5a`. Zu prüfen ist der **Dateistand** von
+`_tickets/T-27b-http-fake-real.md`, Abschnitt „Auflösung". Weiterhin **kein
+Produktcode**: Backend **638 / 29 skipped**, Plugin-API **260 / 1 skipped**,
+Dashboard **259**; `ruff` und `git diff --check` sauber, alle Commits seit
+`f1254fe` betreffen ausschließlich `_tickets/`.
+
+**Befund 2 habe ich am Code nachgeprüft, bevor ich ihn übernommen habe — und du
+hast recht.** `run_scenarios` wählt
+`[s for s in scenarios if s.real_ok] if only_real else list(scenarios)`: Der
+Offline-Lauf führt **alle** Fälle aus, `real_ok` beschränkt nur den Real-Lauf,
+und im Real-Modus wird gar keine Aufnahme abgespielt. Eine „nur real benutzte"
+Replay-Datei kann es nicht geben. Mein Flag wäre eine zweite Szenarioauswahl
+neben `real_ok` gewesen, und die einzige Wirkung, die es je gehabt hätte, wäre
+gewesen, verwaiste Dateien zu legitimieren. Unbenutzt ist jetzt **immer** ein
+Fehler, ohne Ausnahme.
+
+**Befund 1 hat die Lücke getroffen, gegen die die zwei Signaturen überhaupt
+gebaut sind.** Ändert jemand die ISIN im Szenario, während ein fehlerhaftes
+Plugin weiterhin dieselbe HTTP-Anfrage sendet, bleiben `request_signature` und
+meine Fassung von `scenario_signature` gleich — die alte Aufnahme bestätigt
+einen Fall, den sie nie gesehen hat. Jetzt gehen qualifizierter Request-Typ und
+alle Request-Felder ein, `expect` ebenfalls qualifiziert. Dazu eine Tabelle mit
+festgelegter kanonischer Darstellung je Typ (Datum, Enum, verschachtelte
+Dataclass, `float`, `None`); ein Typ ohne Regel ist ein Fehler, keine stille
+Zeichenkette. Die Gegenprobe ändert **ausschließlich** ein Request-Feld und
+hält die emittierte HTTP-Anfrage konstant — ohne diese Konstanz prüfte sie nur
+den Transport.
+
+Die beiden mittleren:
+
+* **Lebenszyklus.** `--real` stempelt `last_real_ok` nur an eine vorhandene
+  Aufnahme mit passender `scenario_signature`; sonst Verweis auf `--record`.
+  Zur Atomarität behaupte ich nichts, was nicht stimmt: `os.replace` ist **pro
+  Datei** atomar, also ist die Aufzeichnung einer Suite genau **eine** Datei —
+  damit fällt die Einheit, die zusammen stimmen muss, mit der zusammen, die
+  atomar ersetzt wird. Über mehrere Suiten hinweg schreibt jeder Lauf dieselbe
+  `run_id`; ein Abbruch hinterlässt uneinheitliche `run_id`s, sichtbar im Diff,
+  und der Release-Check weist so einen Stand ab. Wir machen das Fehlen
+  dateiübergreifender Atomarität **erkennbar**, statt sie zu versprechen. Beide
+  Gegenrichtungen — Suite-Fehlschlag und Abbruch mitten in der Veröffentlichung
+  — stehen als Testauftrag im Ticket.
+* **Policy und Versionen.** Die Policy hatte im CLI-Befehl tatsächlich keine
+  Quelle; sie steht jetzt deklarativ als `recordings-policy.toml` **neben** den
+  Aufnahmen, gelesen von der Fixture *und* vom `__main__`. Fehlt sie, ist das
+  ein Fehler und kein Standardwert — eine stillschweigend angenommene Frist ist
+  genau die, die niemand bewusst gesetzt hat. Vier Versionsfelder mit
+  Vergleichsregel (`schema_version`, `plugin_api_version`, `recorder_version`,
+  `provider_api_version`), jedes mit mutativer Gegenprobe nach dem Muster der
+  23 Mutanten aus T-27a.
+
+Das Socket-Opt-in ist jetzt **ein** Weg statt zweier: `replay_runner` hängt
+zwingend am Guard, der Marker löst denselben Weg nur deklarativ aus. „Marker
+oder Fixture" hätte geprüft, ob der Autor daran denkt, statt ob die Eigenschaft
+gilt.
+
+Aus meiner Sicht ist der Entwurf damit umsetzungsreif — wenn du das auch so
+siehst, fange ich mit dem Produktcode an.
