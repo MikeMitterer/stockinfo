@@ -1,7 +1,9 @@
 version: 1
 
 # This file describes the current state offered by the source. StockInfo stores
-# every accepted quote in its database; historical series do not belong here.
+# every accepted price in its database; historical series do not belong here.
+# If `price` is absent, StockInfo may use the latest historical close already
+# stored in the database as fallback.
 instruments:
   - id: world-etf
     identity:
@@ -11,10 +13,10 @@ instruments:
       mic: XETR
     name: iShares Core MSCI World UCITS ETF
     instrument_type: etf
-    quote:
-      as_of: "2026-08-27T17:30:00+02:00"
-      price: 128.21
+    price:
+      value: 128.21
       currency: EUR
+      as_of: "2026-08-27T17:30:00+02:00"
     metadata:
       ter_bps: 20
       provider: iShares
@@ -28,10 +30,10 @@ instruments:
       mic: XETR
     name: Apple Inc.
     instrument_type: stock
-    quote:
-      as_of: "2026-08-27T17:30:00+02:00"
-      price: 277.40
+    price:
+      value: 277.40
       currency: EUR
+      as_of: "2026-08-27T17:30:00+02:00"
 
   - id: bitcoin-eur
     identity:
@@ -40,10 +42,10 @@ instruments:
       quote_currency: EUR
     name: Bitcoin
     instrument_type: crypto
-    quote:
-      as_of: "2026-08-27T17:30:00+02:00"
-      price: 94500.00
+    price:
+      value: 94500.00
       currency: EUR
+      as_of: "2026-08-27T17:30:00+02:00"
 
   - id: german-bond
     identity:
@@ -51,11 +53,7 @@ instruments:
       isin: DE0001102531
     name: Bundesrepublik Deutschland
     instrument_type: bond
-    quote:
-      as_of: "2026-08-27T17:30:00+02:00"
-      price: 99.42
-      currency: EUR
-    note: Price supplied by this file as online fallback.
+    note: No current price; use the latest historical close from the database.
 
 fx_rates:
   - base: CAD
