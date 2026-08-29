@@ -60,6 +60,7 @@ from stockinfo_plugin.types import (
     ResolveRequest,
     Unavailable,
     Unit,
+    Unsupported,
     isin_of,
 )
 
@@ -227,6 +228,16 @@ class ResolverContract(SourceContract):
     not_responsible: ResolveRequest
     unknown: ResolveRequest
 
+    unsupported: ResolveRequest | None = None
+    """Ein Papier, das die Quelle **erkennt, aber nicht führt** — etwa ein Index.
+
+    Optional, weil nicht jede Quelle so einen Fall hat: Wer nur eine
+    Wertpapierdatei liest, erkennt außerhalb seiner Datei gar nichts und hat
+    zwischen `NotFound` und `Unsupported` nichts zu unterscheiden. Wer den Fall
+    aber hat, setzt ihn hier — sonst bliebe die einzige Antwortart ungeprüft,
+    deren Sinn gerade darin besteht, nicht mit `NotFound` verwechselt zu werden.
+    """
+
     collector_codes: frozenset[str] = frozenset()
     """Sammelcodes des Hosts, die **kein** MIC sind — etwa StockInfos ``US``.
 
@@ -317,6 +328,38 @@ class ResolverContract(SourceContract):
                 f"liefert die Gattung {answer.instrument_type!r}, deklariert "
                 f"aber nur {sorted(source.SUPPORTED_TYPES)}"
             )
+
+    def test_erkannt_und_nicht_gefuehrt_heisst_nicht_unbekannt(self) -> None:
+        """`Unsupported` statt `NotFound` — und die Gattung muss dabeistehen.
+
+        Der Fall wird nur geprüft, wenn die Suite ihn gesetzt hat; ohne
+        `unsupported` gibt es nichts zu behaupten.
+
+        Geprüft wird beides, was diese Antwort ausmacht:
+
+        1. **Sie ist nicht `NotFound`.** Wer ein Papier erkannt hat, darf nicht
+           „kenne ich nicht" sagen — der Host baut daraus ein 404 und der
+           Benutzer sucht den Fehler in seiner Eingabe.
+        2. **Die genannte Gattung steht nicht in der eigenen Zusage.** Sonst
+           widerspricht die Quelle sich selbst: Sie hat `bond` deklariert und
+           lehnt eine Anleihe als nicht geführt ab. Der Host hätte seine Kette
+           dann auf eine Fähigkeit eingerichtet, die es nicht gibt — dieselbe
+           Verwechslung wie in `test_wer_eine_form_liefert_hat_sie_deklariert`,
+           nur aus der anderen Richtung.
+        """
+        if self.unsupported is None:
+            return
+        source = self.make_source()
+        answer = source.resolve(self.unsupported)
+        assert isinstance(answer, Unsupported), (
+            "ein erkanntes, aber nicht geführtes Papier beantwortet mit "
+            f"{type(answer).__name__} — der Host kann daraus keinen Grund nennen"
+        )
+        assert answer.instrument_type, "Unsupported ohne Gattung ist ein NotFound"
+        assert answer.instrument_type not in source.SUPPORTED_TYPES, (
+            f"lehnt die Gattung {answer.instrument_type!r} als nicht geführt ab, "
+            f"deklariert sie aber in {sorted(source.SUPPORTED_TYPES)}"
+        )
 
     def test_die_antwort_gehoert_zur_frage(self) -> None:
         """Die Ergebnis-ISIN ist die Anfrage-ISIN — oder es gibt keine.

@@ -30,9 +30,11 @@ from stockinfo_plugin import (
     ListedIdentity,
     MetadataSource,
     PairIdentity,
+    NotResponsible,
     Resolved,
     Resolver,
     Unavailable,
+    Unsupported,
 )
 
 from app.container import get_sources_config
@@ -664,6 +666,60 @@ def test_dieselbe_quelle_mit_deklarierter_gattung_kommt_durch() -> None:
 
     assert answer.kind == "pair"
     assert answer.type == "crypto"
+
+
+# ─── Wessen Ablehnung ist es? (T-31, Matrix #6) ───────────────────────────────
+
+
+class _Declines(Resolver):
+    """Eine Quelle, die ein Papier erkennt und nicht führt."""
+
+    name = "lehnt-ab"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed"})
+    SUPPORTED_TYPES = frozenset({"stock"})
+
+    def __init__(self, instrument_type: str) -> None:
+        super().__init__(None)
+        self._type = instrument_type
+
+    def handles(self, request) -> bool:
+        return True
+
+    def resolve(self, request):
+        return Unsupported(instrument_type=self._type)
+
+
+def test_eine_gattung_aus_dem_katalog_bleibt_eine_frage_an_die_naechste_quelle() -> None:
+    """**Ein Plugin spricht nur über sich selbst.**
+
+    „Ich führe keine Anleihen" ist eine Aussage über *diese* Quelle. Würde der
+    Host sie unverändert weiterreichen, läse der Benutzer „Anleihen werden
+    nicht unterstützt" — über eine Gattung, die seit T-31 im Katalog steht und
+    die OpenFIGI im selben Lauf liefern kann.
+
+    Deshalb `NotResponsible`: Die Kette geht weiter, und bleibt sie leer, ist
+    das ein 404 über *dieses Papier* und keine Grundsatzaussage über Anleihen.
+    """
+    answer = ResolverAdapter(_Declines("bond"), "XETR").resolve_symbol("DE0001102531")
+
+    assert isinstance(answer, NotResponsible), (
+        "die Ablehnung einer einzelnen Quelle wird zur Aussage der ganzen App"
+    )
+    assert "bond" in answer.reason
+
+
+def test_eine_gattung_ausserhalb_des_katalogs_bleibt_eine_ablehnung() -> None:
+    """Die Gegenprobe — sonst schwächte der Fall darüber jede Ablehnung ab.
+
+    Ein Index steht in keinem Katalog dieser App, und daran ändert auch die
+    nächste Quelle nichts. Diese Antwort muss durchkommen, sonst ist Matrix
+    `#6` wieder dort, wo sie war: beim Zufallsbefund „kein Börsensuffix".
+    """
+    answer = ResolverAdapter(_Declines("index"), "XETR").resolve_symbol("^GDAXI")
+
+    assert isinstance(answer, Unsupported)
+    assert answer.instrument_type == "index"
 
 
 def test_eine_nicht_deklarierte_gattung_erreicht_die_metadatenquelle_nicht() -> None:

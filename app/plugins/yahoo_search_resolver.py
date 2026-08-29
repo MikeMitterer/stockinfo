@@ -42,6 +42,7 @@ from stockinfo_plugin import (
     Resolved,
     Resolver,
     ResolveRequest,
+    Unsupported,
 )
 
 from app.providers.base import ResolvedInstrument
@@ -136,11 +137,24 @@ class YahooSearchResolverPlugin(Resolver):
             )
 
         if not answer.ticker or not answer.mic:
-            # **Die Gattung reist mit, auch wenn die Identität fehlt.** Ohne
-            # sie könnte der Aufrufer nicht unterscheiden, ob er ein Papier
-            # ablehnt, dessen Gattung er nicht führt, oder eines, dessen
-            # Symbol seine Börse nicht nennt — und Matrix `#6` verlangt genau
-            # diese Unterscheidung.
+            # **Hier stand `NotFound` — über ein Papier, das gerade erkannt
+            # wurde.** Der Kommentar daneben behauptete, die Gattung reise
+            # mit; die Zeile darunter warf sie weg, weil `Resolved` eine
+            # Identität verlangt und ein Index keine der drei Formen trägt.
+            # Der Benutzer las am Ende „das Symbol nennt keinen
+            # Handelsplatz" — richtig beobachtet und am Grund vorbei.
+            #
+            # Seit `API_VERSION` 2 gibt es die Antwort dafür. Unterschieden
+            # werden **zwei** Fälle, und der Unterschied ist genau Matrix `#6`:
+            #
+            # * Eine Gattung, die diese Quelle **nicht zusagt** (`index`,
+            #   `currency`, `future`): `Unsupported`. Sie sagt damit nichts
+            #   über StockInfo — was der Host führt, entscheidet er selbst.
+            # * Eine zugesagte Gattung ohne Handelsplatz (`AAPL` ohne
+            #   auflösbare Börse): weiterhin `NotFound`. Das Papier gäbe es,
+            #   nur ist es hier nicht identifizierbar.
+            if answer.type and answer.type not in self.SUPPORTED_TYPES:
+                return Unsupported(instrument_type=answer.type)
             return NotFound()
 
         return Resolved(

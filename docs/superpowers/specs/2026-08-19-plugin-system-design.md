@@ -106,9 +106,19 @@ Drei Entwurfsentscheidungen, alle bereits in `plugin_api/` umgesetzt:
 ohne eine fremde Signatur zu brechen. Bei `resolve_isin(isin: str)` wäre jede
 Erweiterung ein Bruch — und fremde Plugins kann man nicht nachziehen.
 
-**Antworten sind vier Dinge, kein `None`.** `Resolved`, `NotResponsible`,
-`NotFound`, `Unavailable`. Daraus folgt, ob die Kette weitersucht, ob 404 oder
-502 richtig ist, und ob ein gespeicherter Stand überschrieben werden darf.
+**Antworten sind fünf Dinge, kein `None`.** `Resolved`, `NotResponsible`,
+`NotFound`, `Unavailable` — und seit `API_VERSION` 2 `Unsupported`. Daraus
+folgt, ob die Kette weitersucht, ob 404, 400 oder 502 richtig ist, und ob ein
+gespeicherter Stand überschrieben werden darf.
+
+`Unsupported` ist die einzige davon, die etwas über das **Papier** sagt statt
+über die Quelle: erkannt, von dieser Gattung, und diese Gattung wird hier nicht
+geführt. Ohne sie musste eine Quelle, die `^GDAXI` als Index erkannt hatte,
+`NotFound` melden — „kenne ich nicht" über etwas, das sie gerade erkannt hatte,
+und der Benutzer las am Ende eine Begründung über Börsensuffixe. Der Host hält
+die Ablehnung gegen den eigenen Gattungskatalog: Was er führt, wird zu
+`NotResponsible` und bleibt eine Frage an die nächste Quelle; was er nicht
+führt, bleibt eine Ablehnung.
 
 **Werte tragen Einheit und Herkunft.** Gemessen: dieselbe Kostenquote kommt bei
 yfinance als `0.03` und `0.0003` an, bei justETF als `0.19`. `FieldSpec.plausible`

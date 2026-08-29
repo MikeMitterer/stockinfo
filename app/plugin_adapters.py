@@ -47,6 +47,7 @@ from stockinfo_plugin.types import (
     Resolved,
     ResolveRequest,
     Unavailable,
+    Unsupported,
     Unit,
     convert,
 )
@@ -614,6 +615,40 @@ class ResolverAdapter(_Adapter):
             self._source.resolve(self._request(isin)), fallback_isin=isin
         )
 
+    def _against_the_catalogue(self, answer: Unsupported) -> Resolution:
+        """Eine Ablehnung der Quelle gegen den Katalog des Hosts halten.
+
+        **Ein Plugin spricht nur über sich selbst.** „Ich führe keine
+        Anleihen" ist eine Aussage über die Quelle, nicht über StockInfo — und
+        wer sie unbesehen durchreicht, sagt dem Benutzer „Anleihen werden
+        nicht unterstützt" über eine Gattung, die seit T-31 im Katalog steht
+        und die eine andere Quelle liefern kann.
+
+        Deshalb zwei Ausgänge, und die Grenze ist `INSTRUMENT_TYPES`:
+
+        * **Gattung im Katalog** → `NotResponsible`. Die Quelle hat sich
+          ehrlich für unzuständig erklärt; die Kette geht weiter, und bleibt
+          sie leer, ist das ein 404 und keine Grundsatzaussage.
+        * **Gattung außerhalb** → unverändert weiterreichen. Ein Index wird
+          hier nicht geführt, und daran ändert keine weitere Quelle etwas.
+
+        Args:
+            answer: Die Ablehnung des Plugins.
+
+        Returns:
+            Die Ablehnung selbst oder ihre abgeschwächte Form.
+        """
+        if answer.instrument_type in INSTRUMENT_TYPES:
+            logger.debug(
+                "source_declines_known_type",
+                source=self.name,
+                instrument_type=answer.instrument_type,
+            )
+            return NotResponsible(
+                reason=f"{self.name} führt {answer.instrument_type} nicht"
+            )
+        return answer
+
     def _translate(self, answer: object, *, fallback_isin: str) -> Resolution:
         """Die Antwort des Plugins prüfen und in die Sprache des Core bringen.
 
@@ -642,6 +677,8 @@ class ResolverAdapter(_Adapter):
             `ResolvedInstrument` bei brauchbarem Treffer, sonst der passende
             Fehlfall.
         """
+        if isinstance(answer, Unsupported):
+            return self._against_the_catalogue(answer)
         if isinstance(answer, (NotResponsible, NotFound, Unavailable)):
             return answer
         if not isinstance(answer, Resolved):
@@ -663,14 +700,21 @@ class ResolverAdapter(_Adapter):
         # einen Index finden; sie behauptet nur nicht, ihn zu bedienen. Die
         # Deklarationsprüfung unten würde daraus `Unavailable` machen und
         # damit einen Ausfall melden, den es nicht gibt.
+        #
+        # **Seit `Unsupported` im Vertrag steht, ist das Ergebnis hier dasselbe
+        # wie oben** — und zwar aus einem Grund, nicht aus Bequemlichkeit: Ob
+        # das Plugin selbst ablehnt („ich führe keine Indizes") oder ob der
+        # Host die Gattung nicht kennt, ist für den Benutzer dieselbe Auskunft.
+        # Vorher entstand hier ein `ResolvedInstrument` **ohne Identität**, das
+        # nur deshalb funktionierte, weil `quote_service` es zwei Ebenen später
+        # noch einmal gegen denselben Katalog hielt. Zwei Stellen, eine Regel.
         if (
             answer.instrument_type is not None
             and answer.instrument_type not in INSTRUMENT_TYPES
         ):
-            return ResolvedInstrument(
-                symbol=_symbol_of(answer, fallback_isin),
-                type=answer.instrument_type,
-                name=answer.name,
+            return Unsupported(
+                instrument_type=answer.instrument_type,
+                detail=f"{self.name}: {_symbol_of(answer, fallback_isin)}",
             )
 
         problem = identity_problem(answer.identity, COLLECTOR_CODES)

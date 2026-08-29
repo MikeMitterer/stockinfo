@@ -1,7 +1,12 @@
 """Tests für die ISIN-Auflösung (OpenFIGI-Client gemockt)."""
 
 import pytest
-from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
+from stockinfo_plugin.types import (
+    NotFound,
+    NotResponsible,
+    Unavailable,
+    Unsupported,
+)
 
 from app.providers.base import ResolvedInstrument, SourceUnavailableError
 from app.providers.openfigi_provider import FigiMatch, OpenFigiClient
@@ -356,6 +361,64 @@ def test_nur_unzustaendige_quellen_melden_das_auch_so() -> None:
     )
 
     assert isinstance(resolver.resolve_isin("XX0000000000"), NotResponsible)
+
+
+# ─── `Unsupported` in der Kette (T-31, Matrix #6) ─────────────────────────────
+
+
+def test_ein_befund_ueber_das_papier_schlaegt_einen_ausfall() -> None:
+    """Die **Umkehrung** der Regel darüber — und sie hat einen anderen Grund.
+
+    „Ein Ausfall schlägt ein ‚kenne ich nicht'" gilt, weil eine Abwesenheit
+    nichts beweist, solange jemand nicht nachsehen konnte. `Unsupported` ist
+    aber keine Abwesenheit: Eine Quelle hat das Papier **erkannt** und seine
+    Gattung genannt. Daran ändert der Ausfall daneben nichts — ein 502 hieße
+    „versuch es später nochmal" über eine Antwort, die morgen dieselbe ist.
+    """
+    resolver = CompositeResolver(
+        StubResolver(Unsupported(instrument_type="index")),
+        StubResolver(Unavailable(error="yahoo: timeout")),
+    )
+
+    outcome = resolver.resolve_isin("XX0000000000")
+
+    assert isinstance(outcome, Unsupported)
+    assert outcome.instrument_type == "index"
+
+
+def test_ein_treffer_schlaegt_eine_ablehnung() -> None:
+    """„Ich führe das nicht" heißt nicht „niemand führt das".
+
+    Die Kette bricht bei einer Ablehnung deshalb nicht ab. Ohne diesen Test
+    wäre die Reihenfolge der Quellen plötzlich entscheidend: Eine
+    spezialisierte Quelle hinter einer allgemeinen käme nie mehr zum Zug.
+    """
+    declines = StubResolver(Unsupported(instrument_type="bond"))
+    delivers = StubResolver(ResolvedInstrument(symbol="DE0001102531"))
+    resolver = CompositeResolver(declines, delivers)
+
+    outcome = resolver.resolve_isin("DE0001102531")
+
+    assert isinstance(outcome, ResolvedInstrument)
+    assert delivers.asked == 1
+
+
+def test_die_erste_ablehnung_gewinnt() -> None:
+    """Zwei Quellen, zwei Gattungen — das ist ein Fall fürs Protokoll.
+
+    Eine Mehrheitsentscheidung wäre hier die falsche Antwort: Zwei Quellen,
+    die dasselbe Papier verschieden einordnen, widersprechen sich, und der
+    Widerspruch verschwände hinter einer Zahl.
+    """
+    resolver = CompositeResolver(
+        StubResolver(Unsupported(instrument_type="index")),
+        StubResolver(Unsupported(instrument_type="currency")),
+    )
+
+    outcome = resolver.resolve_isin("XX0000000000")
+
+    assert isinstance(outcome, Unsupported)
+    assert outcome.instrument_type == "index"
 
 
 class _FakeResponse:

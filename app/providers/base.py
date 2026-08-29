@@ -16,6 +16,7 @@ from stockinfo_plugin.types import (
     NotResponsible,
     PairIdentity,
     Unavailable,
+    Unsupported,
 )
 
 # Der kanonische Gattungskatalog (T-31, Entscheidung 2 · T-38 kanonisiert ihn).
@@ -162,12 +163,18 @@ class SourceUnavailableError(Exception):
     """
 
 
-Resolution = ResolvedInstrument | NotResponsible | NotFound | Unavailable
+Resolution = (
+    ResolvedInstrument | NotResponsible | NotFound | Unavailable | Unsupported
+)
 """Was ein Resolver antworten kann.
 
-Die drei Fehlfälle kommen aus `stockinfo_plugin.types`, dem Vertrag für
+Die vier Fehlfälle kommen aus `stockinfo_plugin.types`, dem Vertrag für
 Plugins — sie hier ein zweites Mal zu definieren hieße, zwei Wahrheiten über
 denselben Vertrag zu führen.
+
+`Unsupported` ist der jüngste davon (T-31, Matrix `#6`) und der einzige, der
+etwas über das **Papier** sagt statt über die Quelle: erkannt, von dieser Art,
+und diese Art wird hier nicht geführt.
 
 Der Erfolgsfall ist noch `ResolvedInstrument` und nicht das `Resolved` des
 Plugin-Vertrags: Jenes trägt `ticker` und `mic` getrennt statt eines fertigen

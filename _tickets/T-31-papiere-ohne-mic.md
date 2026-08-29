@@ -491,6 +491,49 @@ Registry-/Adapter-/Resolver-Kette nicht durch ein Test-Doppel ersetzt.
    Zusage ohne Deckung wäre — und eine Zahl, die etwas anderes vorgibt zu
    sein, ist genau das, was dieses Ticket austreibt.
 
+### Entscheidung Mike, 2026-08-29 · `Unsupported` kommt in den Vertrag
+
+**Der Anlass ist eine Lücke, die das Orakel zu Matrix `#6` sichtbar gemacht
+hat — nicht ein Wunsch nach mehr Vertrag.** Der Test war zuerst da und blieb
+rot, weil sich die geforderte Aussage nicht formulieren ließ:
+
+`Resolved.identity` ist Pflicht und kennt genau drei Formen. Ein `^GDAXI` hat
+keine davon — kein kanonisches Listing, kein Paar, keine ISIN. Die Quelle
+*wusste* das Richtige: Yahoo meldet sauber `quoteType: INDEX`. Sagen konnte
+sie es nicht. Übrig blieb `NotFound`, also „kenne ich nicht" über ein Papier,
+das gerade erkannt worden war, und der Benutzer las am Ende
+`symbol_without_exchange_suffix` — genau der Zufallsbefund, den Matrix `#6`
+verbietet.
+
+Im Code stand die Lücke schwarz auf weiß: `yahoo_search_resolver.py` trug
+einen Kommentar, die Gattung reise mit, und darunter die Zeile, die sie
+wegwarf. Ein Kommentar, der eine Absicht beschreibt, die der Vertrag nicht
+zulässt, ist kein Kommentar mehr, sondern eine offene Rechnung.
+
+| | Weg | Preis |
+|---|---|---|
+| **a — gewählt** | `Unsupported(instrument_type, detail)` als fünfte Antwort im Vertrag | Ein Typ, ein Contract-Riegel, zwei Mutanten. Kein zweiter Versionssprung: `API_VERSION` 2 ist in diesem Ticket ohnehin schon der Bruch |
+| **b — verworfen** | Matrix `#6` fällt bis T-38 auf „wird abgelehnt", ohne Aussage über den Grund | Die Begründungslücke bliebe im Produkt sichtbar, und der Riegel prüfte weniger, als das Ticket zusagt |
+| **c — verworfen** | Matrix `#6` wandert ganz nach T-38 | Sauberste Ticketgrenze, aber bis dahin prüft den Fall niemand |
+
+**Die Antwort ist bewusst schwach formuliert.** Sie sagt „*ich* führe das
+nicht", nicht „das wird nicht unterstützt" — ein Plugin kennt den Katalog des
+Hosts nicht und soll ihn nicht kennen. Die zweite Hälfte der Entscheidung
+liegt deshalb im Adapter: Er hält die Ablehnung gegen `INSTRUMENT_TYPES`.
+Steht die Gattung dort, wird daraus `NotResponsible` und die Kette fragt
+weiter; steht sie nicht dort, bleibt es die Ablehnung. Ohne diese zweite
+Hälfte hätte eine Quelle ohne `bond` in ihrer Zusage dem Benutzer erklärt,
+StockInfo führe keine Anleihen — über eine Gattung, die im selben Ticket
+aufgenommen wurde.
+
+**In der Kette rangiert sie über dem Ausfall**, und das kehrt die bisherige
+Regel um. „Ein Ausfall schlägt ein ‚kenne ich nicht'" gilt, weil eine
+Abwesenheit nichts beweist, solange jemand nicht nachsehen konnte.
+`Unsupported` ist keine Abwesenheit, sondern ein Befund über das Papier; eine
+ausgefallene Quelle daneben hätte ihn allenfalls bestritten, nicht ergänzt.
+Ein 502 hieße hier „versuch es später nochmal" über eine Antwort, die morgen
+dieselbe ist.
+
 ### Naming-Mitzieher — gemessen, nicht geraten
 
 AST-Inventar über die Dateien, die dieses Ticket ohnehin anfasst. Vier

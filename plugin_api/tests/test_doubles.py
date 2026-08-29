@@ -18,6 +18,7 @@ from stockinfo_plugin import (
     Resolved,
     ResolveRequest,
     Unavailable,
+    Unsupported,
 )
 from stockinfo_plugin.testing import (
     EPOCH,
@@ -27,6 +28,7 @@ from stockinfo_plugin.testing import (
     FakeFxSource,
     FakeQuoteSource,
     FakeResolver,
+    ResolverContract,
     SourceContract,
 )
 from stockinfo_plugin.sources import (
@@ -320,3 +322,118 @@ def test_dieselbe_quelle_mit_eigener_deklaration_besteht() -> None:
             return DeclaresItsVersion()
 
     _Contract().test_vertragsversion_ist_bekannt()
+
+
+# ─── Der Riegel um `Unsupported` (T-31, Matrix #6) ────────────────────────────
+#
+# Zwei Mutanten, weil die Antwortart zwei Dinge zugleich behauptet: dass das
+# Papier **erkannt** wurde, und dass die genannte Gattung **nicht** zu den
+# zugesagten gehört. Jede Hälfte bekommt ihren eigenen Fehlschlag; ein Mutant
+# für beide zusammen ließe offen, welche der beiden Regeln überhaupt greift.
+
+INDEX_REQUEST = ResolveRequest(symbol="^GDAXI")
+"""Ein Index — erkennbar, aber von niemandem in diesem Projekt geführt."""
+
+
+def _resolver_contract(source_factory, *, unsupported=INDEX_REQUEST):
+    """Eine Vertragssuite um eine einzelne Quelle, nur für diese Prüfung."""
+
+    class _Contract(ResolverContract):
+        responsible = REQUEST
+        not_responsible = ResolveRequest(isin="XX0000000000")
+        unknown = ResolveRequest(isin="CA0000000000")
+
+        def make_source(self):
+            return source_factory()
+
+    _Contract.unsupported = unsupported
+    return _Contract()
+
+
+def test_wer_ein_erkanntes_papier_als_unbekannt_meldet_faellt_durch() -> None:
+    """Der **negative Mutant**: `NotFound` für etwas, das die Quelle erkannt hat.
+
+    Genau dieser Fehler stand bis heute im Yahoo-Plugin — nicht aus
+    Nachlässigkeit, sondern weil der Vertrag keine andere Antwort hatte. Der
+    Kommentar daneben behauptete, die Gattung reise mit; die Zeile darunter
+    warf sie weg. Der Benutzer las am Ende „kein Börsensuffix" über einen
+    Index.
+
+    Ohne diesen Mutanten wäre der neue Riegel eine Zusicherung, die nie
+    fehlschlägt: Eine Quelle, die den Fall gar nicht kennt, besteht ihn
+    ebenfalls.
+    """
+
+    class CallsAnIndexUnknown(FakeResolver):
+        SUPPORTED_KINDS = frozenset({"listed"})
+        SUPPORTED_TYPES = frozenset({"stock"})
+
+        def resolve(self, request):
+            if request.symbol == "^GDAXI":
+                return NotFound()
+            return Resolved(identity=ListedIdentity(ticker="RY", mic="XTSE"))
+
+    with pytest.raises(AssertionError, match="beantwortet mit NotFound"):
+        contract = _resolver_contract(CallsAnIndexUnknown)
+        contract.test_erkannt_und_nicht_gefuehrt_heisst_nicht_unbekannt()
+
+
+def test_wer_eine_zugesagte_gattung_ablehnt_faellt_durch() -> None:
+    """Der zweite Mutant: `Unsupported` über eine **deklarierte** Gattung.
+
+    Die Quelle widerspricht sich selbst — sie sagt Indizes zu und lehnt einen
+    Index als nicht geführt ab. Für den Host ist das teurer als es aussieht:
+    Er richtet seine Kette nach den Zusagen ein und schickt Anfragen an eine
+    Fähigkeit, die es nicht gibt.
+    """
+
+    class RefusesWhatItPromised(FakeResolver):
+        SUPPORTED_KINDS = frozenset({"listed"})
+        SUPPORTED_TYPES = frozenset({"stock", "index"})
+
+        def resolve(self, request):
+            if request.symbol == "^GDAXI":
+                return Unsupported(instrument_type="index")
+            return Resolved(identity=ListedIdentity(ticker="RY", mic="XTSE"))
+
+    with pytest.raises(AssertionError, match="deklariert sie aber"):
+        contract = _resolver_contract(RefusesWhatItPromised)
+        contract.test_erkannt_und_nicht_gefuehrt_heisst_nicht_unbekannt()
+
+
+def test_dieselbe_quelle_mit_ehrlicher_ablehnung_besteht() -> None:
+    """Die Gegenprobe zu beiden Mutanten.
+
+    Ohne sie prüften die beiden Fälle darüber nur, dass *irgendetwas* bricht —
+    und wären auch grün, wenn der Riegel jede Quelle abwiese.
+    """
+
+    class SaysWhatItFound(FakeResolver):
+        SUPPORTED_KINDS = frozenset({"listed"})
+        SUPPORTED_TYPES = frozenset({"stock"})
+
+        def resolve(self, request):
+            if request.symbol == "^GDAXI":
+                return Unsupported(instrument_type="index")
+            return Resolved(identity=ListedIdentity(ticker="RY", mic="XTSE"))
+
+    _resolver_contract(
+        SaysWhatItFound
+    ).test_erkannt_und_nicht_gefuehrt_heisst_nicht_unbekannt()
+
+
+def test_ohne_gesetzten_fall_wird_nichts_behauptet() -> None:
+    """Eine Quelle ohne diesen Fall besteht — und zwar ohne Ausrede.
+
+    Das ist die Absicht hinter dem optionalen Slot: Wer nur eine Datei liest,
+    erkennt außerhalb davon nichts und hat zwischen `NotFound` und
+    `Unsupported` nichts zu unterscheiden. Der Test soll ihn nicht zwingen,
+    einen Fall zu erfinden, den es bei ihm nicht gibt.
+    """
+
+    class ReadsOnlyItsFile(FakeResolver):
+        SUPPORTED_KINDS = frozenset({"listed"})
+        SUPPORTED_TYPES = frozenset({"stock"})
+
+    contract = _resolver_contract(ReadsOnlyItsFile, unsupported=None)
+    contract.test_erkannt_und_nicht_gefuehrt_heisst_nicht_unbekannt()

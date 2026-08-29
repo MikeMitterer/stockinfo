@@ -55,6 +55,7 @@ from stockinfo_plugin.types import (
     ResolveRequest,
     Unavailable,
     Unit,
+    Unsupported,
     convert,
     isin_of,
 )
@@ -92,6 +93,7 @@ __all__ = [
     "Source",
     "Unavailable",
     "Unit",
+    "Unsupported",
     "convert",
     "isin_of",
 ]

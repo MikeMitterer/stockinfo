@@ -11,7 +11,12 @@ sondern stammt immer aus dem Live-Quote (siehe yfinance_provider).
 import structlog
 import yfinance as yf
 
-from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
+from stockinfo_plugin.types import (
+    NotFound,
+    NotResponsible,
+    Unavailable,
+    Unsupported,
+)
 
 from app.exchanges import (
     DEFAULT_EXCHANGE,
@@ -598,9 +603,25 @@ class CompositeResolver:
         | Unterwegs gesehen | Gesamtantwort | HTTP |
         |---|---|---|
         | ein Treffer | `ResolvedInstrument` | 200 |
-        | mindestens ein Ausfall | `Unavailable` | **502** |
+        | sonst „erkannt, nicht geführt" | `Unsupported` | **400** |
+        | sonst mindestens ein Ausfall | `Unavailable` | **502** |
         | sonst mindestens ein „kenne ich nicht" | `NotFound` | 404 |
         | nur Unzuständige | `NotResponsible` | 404 |
+
+        **Warum `Unsupported` über dem Ausfall steht** (T-31, Matrix `#6`).
+        Die bisherige Reihenfolge hatte einen Grund: „Ein Ausfall schlägt ein
+        ‚kenne ich nicht'", weil eine Abwesenheit nichts beweist, solange
+        jemand gar nicht nachsehen konnte. `Unsupported` ist aber keine
+        Abwesenheit, sondern ein **Befund über das Papier**: Eine Quelle hat
+        ``^GDAXI`` erkannt und die Gattung genannt. Dass eine andere Quelle
+        währenddessen ausfiel, ändert daran nichts — sie hätte dasselbe Papier
+        allenfalls als etwas anderes erkannt, und das wäre ein Widerspruch,
+        keine Ergänzung. Ein 502 hieße hier „versuch es später nochmal" über
+        eine Antwort, die auch morgen dieselbe ist.
+
+        **Die Kette bricht trotzdem nicht ab.** „Ich führe keine Anleihen"
+        heißt nicht „niemand führt Anleihen"; eine spätere Quelle darf
+        dasselbe Papier auflösen und gewinnt mit ihrem Treffer.
 
         Args:
             ask: Was die einzelne Quelle gefragt wird.
@@ -613,6 +634,7 @@ class CompositeResolver:
         """
         failures: list[str] = []
         someone_looked = False
+        unsupported: Unsupported | None = None
 
         for resolver in self._resolvers:
             if skip(resolver):
@@ -620,11 +642,23 @@ class CompositeResolver:
             result = ask(resolver)
             if isinstance(result, ResolvedInstrument):
                 return result
-            if isinstance(result, Unavailable):
+            if isinstance(result, Unsupported):
+                # Die **erste** Ablehnung gewinnt. Zwei Quellen, die dasselbe
+                # Papier verschieden einordnen, sind ein Fall für das
+                # Protokoll und nicht für eine Mehrheitsentscheidung.
+                unsupported = unsupported or result
+            elif isinstance(result, Unavailable):
                 failures.append(result.error)
             elif isinstance(result, NotFound):
                 someone_looked = True
 
+        if unsupported is not None:
+            logger.info(
+                "resolve_chain_unsupported",
+                subject=subject,
+                instrument_type=unsupported.instrument_type,
+            )
+            return unsupported
         if failures:
             logger.warning(
                 "resolve_chain_unavailable", subject=subject, sources=failures

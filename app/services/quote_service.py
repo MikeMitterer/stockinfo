@@ -11,7 +11,7 @@ from datetime import datetime, timezone
 
 import structlog
 
-from stockinfo_plugin.types import Unavailable
+from stockinfo_plugin.types import Unavailable, Unsupported
 
 from app.contract import required_fields
 from app.exchanges import split_symbol
@@ -423,6 +423,14 @@ class QuoteService:
         # eigene Ablehnung statt des Zufallsbefunds „kein Börsensuffix" —
         # genau daran ist die Ableitung aus der Symbolform gescheitert.
         resolution = self._resolver.resolve_symbol(symbol)
+        if isinstance(resolution, Unsupported):
+            # **Der eigentliche Ausgang für Matrix `#6`.** Die Quelle hat das
+            # Papier erkannt und seine Gattung genannt; abgelehnt wird es
+            # wegen dieser Gattung und nicht wegen seiner Schreibweise. Dass
+            # die Prüfung unten dieselbe Ausnahme wirft, ist kein doppelter
+            # Weg: Dort ist die Gattung an einem *Treffer* aufgefallen, hier
+            # ist sie die ganze Antwort.
+            raise UnsupportedInstrumentTypeError(symbol, resolution.instrument_type)
         if isinstance(resolution, Unavailable):
             # **Ein Ausfall ist kein Eingabefehler** (Codex, Runde 5). Vorher
             # wurde daraus `UnresolvableSymbolError` und damit ein 400 mit dem

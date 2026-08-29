@@ -230,7 +230,42 @@ class Unavailable:
     error: str = ""
 
 
-Resolution = Resolved | NotResponsible | NotFound | Unavailable
+@dataclass(frozen=True)
+class Unsupported:
+    """Erkannt — aber nicht von dieser Quelle geführt.
+
+    **Die vierte Antwort, und sie hat einen gemessenen Anlass** (T-31, Matrix
+    `#6`). Yahoo kennt ``^GDAXI`` und meldet ``INDEX``. Ohne diesen Typ konnte
+    die Quelle diesen Befund nicht aussprechen: `Resolved` verlangt eine
+    Identität, und ein Index trägt keine der drei Formen — kein kanonisches
+    Listing, kein Paar, keine ISIN. Übrig blieb `NotFound`, also „kenne ich
+    nicht" über ein Papier, das die Quelle gerade erkannt hatte. Der Benutzer
+    las am Ende „das Symbol nennt keinen Handelsplatz": richtig beobachtet und
+    am Grund vorbei.
+
+    **Der Unterschied zu den drei anderen** ist die Richtung der Aussage.
+    `NotResponsible`, `NotFound` und `Unavailable` sagen etwas über die
+    *Quelle* — sie ist nicht gefragt, hat nichts gefunden, konnte nicht
+    nachsehen. `Unsupported` sagt etwas über das *Papier*: Es gibt es, es ist
+    von dieser Art, und diese Art bedient die Quelle nicht.
+
+    **Die Kette geht trotzdem weiter.** „Ich führe keine Anleihen" heißt nicht
+    „niemand führt Anleihen"; eine spätere Quelle darf dasselbe Papier
+    auflösen und gewinnt. Bleibt es bei der Ablehnung, ist die Gesamtantwort
+    aber diese hier und nicht `NotFound` — der Host kann dem Benutzer damit
+    den wirklichen Grund nennen.
+
+    Attributes:
+        instrument_type: Die erkannte Gattung, kleingeschrieben. Pflicht: Ohne
+            sie wäre die Antwort nur ein `NotFound` mit anderem Namen.
+        detail: Optionaler Zusatz für Protokoll und Fehlermeldung.
+    """
+
+    instrument_type: str
+    detail: str = ""
+
+
+Resolution = Resolved | NotResponsible | NotFound | Unavailable | Unsupported
 """Was ein Resolver antworten kann."""
 
 
