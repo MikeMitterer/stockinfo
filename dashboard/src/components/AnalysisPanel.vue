@@ -24,7 +24,9 @@ const target = computed<InstrumentRef | null>(() => {
       ? { isin: raw.toUpperCase(), symbol: raw }
       : { isin: null, symbol: raw }
   }
-  const found = props.instruments.find((i) => i.symbol === selectedSymbol.value)
+  const found = props.instruments.find(
+    (instrument) => instrument.symbol === selectedSymbol.value,
+  )
   return found ? refOf(found) : null
 })
 
