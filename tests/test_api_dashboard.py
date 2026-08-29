@@ -50,8 +50,7 @@ class FakeService:
         if isin.startswith("XX"):
             raise InstrumentNotFoundError(isin)
         return QuoteResponse(
-            isin=isin,
-            identity=ListedIdentityOut(ticker="VGWL", mic="XETR"),
+            identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin=isin),
             symbol="VGWL.DE",
             currency="EUR",
             price=161.0,

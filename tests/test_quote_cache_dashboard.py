@@ -16,8 +16,7 @@ class FakeQuoteService:
     def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         self.calls += 1
         return QuoteResponse(
-            isin=isin,
-            identity=ListedIdentityOut(ticker="VGWL", mic="XETR"),
+            identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin=isin),
             symbol="VGWL.DE",
             currency="EUR",
             price=200.0,

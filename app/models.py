@@ -359,7 +359,18 @@ class QuoteResponse(BaseModel):
     Nicht ermittelbare Felder bleiben ``None`` (z.B. ``ter`` bei Einzelaktien).
     """
 
-    model_config = ConfigDict(json_schema_extra=always_present("cached", "stale"))
+    # **`extra="forbid"`, und der Anlass ist gemessen.** Beim Umbau auf die
+    # Identitäts-Union blieb an fünf Stellen ein `isin=` neben dem neuen
+    # `identity=` stehen. Pydantic verwarf es kommentarlos — die Zeile ging
+    # ohne ISIN in die Datenbank, und der Fehler fiel erst zwei Schichten
+    # später auf, als ein `get_instrument_by_isin` nichts mehr fand.
+    #
+    # Das ist genau das Muster, gegen das T-38 geschrieben wird: Ein Wert
+    # fehlte, und nichts hat gefragt. Ein unbekannter Feldname ist fast immer
+    # ein Tippfehler oder ein Rest aus einem Umbau; beides gehört gemeldet.
+    model_config = ConfigDict(
+        extra="forbid", json_schema_extra=always_present("cached", "stale")
+    )
 
     symbol: str
     exchange: str | None = None

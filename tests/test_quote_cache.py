@@ -217,8 +217,7 @@ class _StockQuoteService:
 
     def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         return QuoteResponse(
-            isin=isin,
-            identity=ListedIdentityOut(ticker="AAPL", mic="XETR"),
+            identity=ListedIdentityOut(ticker="AAPL", mic="XETR", isin=isin),
             symbol="AAPL.DE",
             currency="EUR",
             price=100.0,
@@ -265,8 +264,7 @@ def test_refresh_behaelt_justetf_volatilitaet(tmp_path) -> None:
             self, isin: str, enrich_etf: bool = True
         ) -> QuoteResponse:
             return QuoteResponse(
-                isin=isin,
-                identity=ListedIdentityOut(ticker="VGWL", mic="XETR"),
+                identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin=isin),
                 symbol="VGWL.DE",
                 currency="EUR",
                 price=160.0,
