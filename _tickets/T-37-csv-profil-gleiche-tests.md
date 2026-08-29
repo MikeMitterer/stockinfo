@@ -12,8 +12,8 @@
   CSV-Daten verwendet **nicht unterscheiden**. Selbe Schnittstelle - nur
   anderes Plugin. Implementiere die Tests nicht doppelt, wenn möglich verwende
   eine Code-Base."
-- **Hängt ab von:** T-36 (die dort behobenen Befunde sind die Grundlage — ohne
-  sie prüft dieser Lauf einen kaputten Stand)
+- **Hängt ab von:** T-31 und T-38 (Identitäts-Union, Pflichtfelder und der
+  gemeinsame Vertragsbruch); T-36 ist bereits freigegebene Grundlage
 - **Blockiert:** nichts
 
 **Löst:** Der Plugin-MVP behauptet, die Quelle sei austauschbar. Bewiesen ist
@@ -62,6 +62,37 @@ Ein menschliches Verify-Ticket wird bewusst **noch nicht** daraus abgeleitet.
 Mike legt es erst nach der technischen Abnahme des MVP an, wenn Online-Plugin
 und YAML-Fallback beide sauber laufen. So prüft es den dann gültigen Stand
 statt eine heute schon veraltende Zwischenarchitektur.
+
+### Verbindliche technische Abnahme der Neuimplementierung
+
+Der vorhandene Smoke läuft mit `PROFILE=online` und `PROFILE=yaml`; die
+Prüflogik bleibt gemeinsam. `PROFILE=yaml` verwendet genau das eine YAML-Plugin
+und genau eine Datendatei. `PROFILE=online` verwendet die normalen Quellen
+(YFinance, OpenFIGI, justETF usw.) **und dasselbe YAML-Plugin als letztes
+Fallback-Kettenglied**. CSV ist in keinem Profil mehr aktiv.
+
+Claude prüft **beide Profile zusätzlich im Browser**:
+
+1. **Reines YAML-Profil:** Mindestens `BTC-EUR` als `pair` und eine Anleihe als
+   `isin_only` anlegen; Tabellenzeile, Drilldown, aktueller Preis und manueller
+   History-Fallback kommen aus YAML. Browser-Konsole und fehlgeschlagene
+   Requests bleiben sauber.
+2. **Online-Profil mit YAML-Fallback:** `BTC-EUR` wird online über YFinance
+   aufgelöst und bepreist; die Anleihe ohne Online-Kurs kommt aus YAML. Steht
+   ein Instrument in beiden Quellen, gewinnt online — YAML ist Fallback, kein
+   Override. Auch hier werden Tabellenzeile, Drilldown, Quellenanzeige,
+   Konsole und fehlgeschlagene Requests geprüft.
+
+Die Browserläufe werden in der AI-Spalte mit den tatsächlich beobachteten
+Quellen und Ergebnissen belegt. Sie dürfen dieselben Bedienwege verwenden;
+dafür entsteht keine zweite Browser-Test-Infrastruktur.
+
+| # | Neue Verify-Zeile | AI | Human |
+|---|---|:--:|---|
+| **Y1** | `PROFILE=yaml`: gemeinsamer Smoke grün; `GET /sources` zeigt ein konfiguriertes YAML-Plugin für alle fünf Rollen und nur eine Datendatei | | |
+| **Y2** | Browser mit `PROFILE=yaml`: `BTC-EUR` (`pair`) und eine Anleihe (`isin_only`) anlegen; Liste, Drilldown, Preis und manueller History-Fallback aus YAML sichtbar; Konsole/Requests sauber | | |
+| **Y3** | `PROFILE=online`: gemeinsamer Smoke grün; Online-Quellen plus dasselbe YAML-Plugin als letztes Fallback-Kettenglied | | |
+| **Y4** | Browser mit `PROFILE=online`: `BTC-EUR` kommt über YFinance, die Anleihe über YAML; Online-Kurs gewinnt bei Überschneidung, Quellenanzeige stimmt, Konsole/Requests sauber | | |
 
 ---
 

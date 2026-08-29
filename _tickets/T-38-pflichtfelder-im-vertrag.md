@@ -7,7 +7,7 @@
 - **Angelegt:** 2026-08-28, aus T-36 Runde 1 (Codex) und Mikes Entscheidungen
 - **Hängt ab von:** T-36 (die dort behobenen Befunde sind die Symptome)
 - **Blockiert:** nichts
-- **Berührt:** T-31 (Papiere ohne MIC), T-34 (Wächter), T-37 (CSV-Profil)
+- **Berührt:** T-31 (Papiere ohne MIC), T-34 (Wächter), T-37 (YAML-Fallback)
 
 **Löst:** Drei der fünf Befunde aus dem UI-Lauf waren **derselbe** Fehler: Ein
 Wert fehlte, und nichts hat gefragt. Der Name war leer, die Gattung war leer,
@@ -133,7 +133,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | **6b** | dieselbe Auskunft | `name` und `type` stehen dort als **Pflicht**. Heute sagt sie `required: false` — das widerspricht der Entscheidung, sobald sie umgesetzt ist | | |
 | **7** | `contract/core-contract.json` | `core_version` steigt, weil ein optionales Feld zum Pflichtfeld wird. Das ist laut eigener Regel **breaking** → Major | | |
 | **8** | die vier eingebauten Plugins | jedes liefert die Pflichtfelder oder antwortet ehrlich mit `NotFound` | | |
-| **9** | die CSV-Beispiele | `canada_file` bekommt die Spalte `type`; ohne sie könnte es den Vertrag nicht mehr erfüllen. Siehe T-37 | | |
+| **9** | das YAML-Beispiel | jeder `instrument`-Eintrag trägt `name` und `type`; ohne sie könnte das Fallback den Vertrag nicht erfüllen. Siehe T-37 | | |
 | **10** | `docs/plugins.md` | ein Plugin-Autor liest, welche Felder er liefern **muss** | | |
 
 ---

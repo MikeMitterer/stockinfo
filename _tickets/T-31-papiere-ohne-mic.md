@@ -6,7 +6,7 @@
 - **Repo:** StockInfo
 - **Abhängt von:** T-21 Teil 3 (Entscheidung 2)
 - **Verzahnt mit:** T-38 (Pflichtfelder/`instrument_type` — **ein** gemeinsamer
-  `API_VERSION`-Sprung statt zwei) und T-37 (die CSV-Quelle bekommt einen
+  `API_VERSION`-Sprung statt zwei) und T-37 (der YAML-Fallback bekommt einen
   zweiten Einsatzort, siehe dort)
 
 ## Verify-Matrix
@@ -35,8 +35,8 @@
 2. **Jede Gattung bekommt einen eigenen Typ.** Kanonischer Katalog:
    `stock`, `etf`, `etc`, `crypto`, `bond`. ETC ist als gängiger Typ bestätigt;
    ETN kann später ergänzt werden, wenn gebraucht.
-3. **Kein Migrationspfad.** Kryptos waren nie unterstützt, es gibt keine
-   Altzeile. Bestandszeilen bekommen lediglich `kind = 'listed'` backfilled.
+3. **Kein Migrationspfad.** Die bestehende Entwicklungsdatenbank wird verworfen;
+   das neue Schema wird direkt angelegt.
 4. **Indizes bleiben draußen** — sie waren Teil des Fundes, sind aber nicht
    Teil der Entscheidung. Sie werden ehrlich abgelehnt
    (`unsupported_instrument_type`), bis eine eigene Entscheidung sie aufnimmt.
@@ -44,8 +44,8 @@
    (`instrument_overrides`) bleibt Metadaten — ein Preis ist ein Messpunkt mit
    Herkunft (`price NOT NULL`, `quote_time`, `fetched_at`), kein pflegbares
    Attribut. Kein Preis heißt kein Quote-Datensatz, nicht ein Quote mit Lücke.
-6. **Die CSV-Quelle wird zum Kettenglied des Online-Profils** (Mikes
-   Vorschlag): Das Online-Profil hängt die ohnehin in T-37 gebaute CSV-Quelle
+6. **Der YAML-Fallback wird zum Kettenglied des Online-Profils** (Mikes
+   Vorschlag): Das Online-Profil hängt das ohnehin in T-37 gebaute YAML-Plugin
    ans **Ende** seiner Kette. Eine Anleihe fällt durch die Online-Quellen
    durch und landet bei der Datei — im laufenden Online-Profil, ohne
    Profilwechsel. Die Profil-Exklusivität (genau ein Plugin aktiv) bleibt
@@ -55,7 +55,7 @@
 Eingabeweg im Dashboard, der einen vollwertigen Quote schreibt (`price`,
 `quote_time`, `provider: manual`). Wenn gewollt, ist das ein eigenes kleines
 Feature und **keine** Override-Spalte. Für den MVP zurückgestellt; die
-CSV-Quelle deckt den Bedarf.
+YAML-Fallback deckt den Bedarf.
 
 ## Der Entwurf: Identität als getaggte Union
 
@@ -78,7 +78,7 @@ kind = 'isin_only'  → isin                  (OTC-Anleihe: die ISIN ist die Ide
 - **Fähigkeitsdeklaration:** ein Plugin deklariert, welche `kind`s und
   Typen es bedient. Der Host überspringt Quellen, die eine Gattung nicht
   bedienen, und antwortet für den Rest ehrlich mit `quote_unavailable` —
-  statt dass ein CSV-Plugin OpenFIGI-Fragen bekommt oder Yahoo eine
+  statt dass ein YAML-Plugin OpenFIGI-Fragen bekommt oder Yahoo eine
   `isin_only`-Anleihe. **Ort:** T-38, wo Pflichtfelder und `instrument_type`
   ohnehin kanonisiert werden; zusammen ergibt das einen einzigen
   `API_VERSION`-Sprung.
@@ -116,7 +116,7 @@ wie zwei Listings derselben Aktie.
    `type='crypto'` läuft die Kaskade gar nicht erst los (Matrix `#8`).
 
 Krypto ist damit in **beiden** Profilen zu Hause: online über yfinance, im
-CSV-Profil über eine Dateizeile. Anders als die Anleihe braucht es keinen
+YAML-Profil über einen Dateieintrag. Anders als die Anleihe braucht es keinen
 Fallback — es ist die Gattung mit der besten Quellenlage.
 
 ## Anleihe: erfassbar sofort, bepreist über Quellen
@@ -128,24 +128,24 @@ Fallback — es ist die Gattung mit der besten Quellenlage.
    `quote_unavailable`-Zustand — die wahre Aussage „keine Quelle konnte einen
    Preis feststellen". Die provider-neutralen Fehlertexte aus T-36 Finding 2
    tragen genau diesen Fall.
-3. **Der Weg zum Preis ist die CSV-Quelle** — als Kettenende des
-   Online-Profils (Entscheidung 6) oder im reinen CSV-Profil. Sie *ist* die
+3. **Der Weg zum Preis ist der YAML-Fallback** — als Kettenende des
+   Online-Profils (Entscheidung 6) oder im reinen YAML-Profil. Er *ist* die
    Handpflege für Preise, nur in ehrlicher Form: jede Zeile mit Zeitpunkt und
    Herkunft, wiederholbarer Refresh, keine zweite Preis-Wahrheit neben
    `quotes`.
 
-## Die CSV-Quelle als Kettenglied — drei Bedingungen
+## Der YAML-Fallback als Kettenglied — drei Bedingungen
 
 Damit Entscheidung 6 sauber bleibt:
 
 1. **Eigene Quelle, kein Seitenblick im Adapter.** Die Yahoo-Hülle bleibt
-   schlank; die CSV-Quelle steht als eigenes Kettenglied in der
+   schlank; das YAML-Plugin steht als eigenes Kettenglied in der
    Profilkonfiguration.
 2. **Konfiguriert, nicht entdeckt.** Das Profil nennt den Dateipfad; fehlt
    die Datei, meldet die Quelle das dreiwertige „konnte nicht feststellen"
    (T-20) und die Kette läuft weiter. Kein Verzeichnis-Scannen.
-3. **Fallback, nicht Override.** CSV steht **zuletzt**: Ein Papier, das
-   online und in der Datei steht, bekommt den Online-Kurs; die CSV greift
+3. **Fallback, nicht Override.** YAML steht **zuletzt**: Ein Papier, das
+   online und in der Datei steht, bekommt den Online-Kurs; YAML greift
    nur, wo keine Online-Quelle liefert. Die umgekehrte Semantik wäre ein
    eigenes Feature — nicht im MVP.
 

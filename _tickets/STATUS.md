@@ -15,7 +15,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_commit`: `f257ee1`
 - `last_reviewed_round`: `6`
 - `workstream`: `ui_live_acceptance`
-- `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-35-ui-abnahme-am-laufenden-stack.md`
+- `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-csv-profil-gleiche-tests.md` → `T-35-ui-abnahme-am-laufenden-stack.md`
 - `priority_ticket`: `T-31-papiere-ohne-mic.md`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
@@ -49,6 +49,11 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 > Fallback-Plugin sauber laufen und der MVP technisch abgenommen sein. Danach
 > entsteht ein frisches, kurzes Verify-Ticket für Mike aus dem dann gültigen
 > Produktstand.
+
+> **T-37 Browser-Abnahme Mike, 2026-08-29:** Claude prüft sowohl das reine
+> YAML-Profil als auch das normale Online-/YFinance-Profil mit demselben
+> YAML-Plugin als letztem Fallback im Browser. Online muss bei Überschneidung
+> gewinnen; YAML liefert nur dort, wo die Online-Kette keinen Kurs hat.
 
 - Rollen: Claude implementiert; Codex prüft unabhängig Code, Tests, Ticket und
   Spec.
