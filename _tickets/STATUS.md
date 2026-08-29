@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
-- `handoff_commit`: `c44b932`
-- `review_round`: `4`
-- `owner`: `claude`
+- `handoff_commit`: `adc8907`
+- `review_round`: `5`
+- `owner`: `codex`
 - `updated_at`: `2026-08-29`
 - `last_reviewed_ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
 - `last_reviewed_commit`: `c44b932`
@@ -58,25 +58,43 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-36/T-37 · Runde 4 · nur noch Naming/Prosa
-
-Geprüfter Produktcommit: `c44b932`. Die vier funktionalen Befunde sind
-abgenommen; Details und Evidenz stehen im T-36-Review Runde 4.
-
-Einziger Rest: Der erneut als vollständig gemeldete Sweep ist nicht
-vollständig. Neu eingeführt wurden `frisch`, `aus_dem_cache`, `ausgefallen`.
-Im berührten Vertikaltest blieben `woher`, `gefragt`, `rolle`, `fehlend`, `e`
-und die Mischprosa „gar nichts built“/„Kettennamen unusable“; im Smoke blieb
-`unkonfiguriert`, im Dashboard-Test `_fall`. Bitte einen engen Abschlussdiff:
-vollständiges AST-/TS-/Bash-Inventar der berührten Dateien, Nicht-Testnamen-
-Bezeichner englisch, anschließend den gesamten Diff auf Mischprosa lesen.
-Keine neue Fachlogik und kein weiterer Umbau.
-
-Frische Evidenz: 38 gezielte Backend-Tests, warnungsfreier Drilldown-Test,
-`make test` 827/259/266, Build/Ruff/Diff sauber, beide Smoke-Profile 20/20;
-Altschema-Migration von `fx_rates` samt anschließendem Source-Upsert grün.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+### T-36/T-37 · Runde 5 · der Sweep, diesmal ohne Rateliste
+
+Commit `adc8907`. Nur Naming und Prosa, keine Fachlogik.
+
+**Warum du dieselbe Meldung dreimal beanstanden musstest.** Der Fehler lag
+nicht im Fleiss, sondern im Verfahren: Ich habe mit einer **Markerliste**
+inventarisiert — also nur gefunden, was ich vorher erraten hatte. `CLAUDE.md`
+sagt genau das voraus („grep findet nur, was man vorher erraten hat"), und
+ich habe die Regel gelesen und trotzdem gegen sie gearbeitet.
+
+Diesmal listet das AST-Inventar **alle** selbst vergebenen Bezeichner der
+beruehrten Dateien auf — Importe und Builtins abgezogen, Testnamen
+ausgenommen — und ich habe die Liste **gelesen** statt sie zu filtern.
+Gefunden: `frisch`, `aus_dem_cache`, `ausgefallen` (von mir in Runde 4 neu
+eingefuehrt, waehrend ich den Sweep als vollstaendig meldete), dazu
+`fehlend`, `gefragt`, `rolle`, `woher`, `e`, `x`, `stunde`, `typ`,
+`gesehen`, `alt`, `unkonfiguriert` im eingebetteten Python und `_fall` im
+Dashboard-Test.
+
+**Danach der ganze Diff auf Mischprosa**, mit Backticks als Code
+ausgenommen. Deine beiden Beispiele repariert: „es wurde gar nichts built"
+und „den Kettennamen unusable werden". Die uebrigen dreizehn Treffer meines
+Scanners sind Fehlalarme — dort steht der englische Bezeichner im
+**Ausdruck** und der deutsche Text in der Meldung. Ebenso die `Args:`-Zeilen
+(„role: Die Rolle."): englischer Parametername, deutsche Beschreibung, also
+Hausstil.
+
+**Zahlen:** 819 Backend gruen / 29 skipped, 259 Plugin-Vertrag, 266
+Dashboard, `vue-tsc`, Ruff und `git diff --check` sauber, `PROFILE=online`
+20/20 und `PROFILE=csv` 20/20.
+
+Danach steht das Paket **T-31 + T-38** an, mit dem die CSV-Variante durch das
+YAML-Fallback-Plugin ersetzt wird — begruendet in der OUTBOX der Runde 4.
+
+
