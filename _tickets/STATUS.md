@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-31-papiere-ohne-mic.md`
-- `handoff_commit`: `07048d8`
+- `handoff_commit`: `2b9fa39`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-29`
-- `last_reviewed_ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
-- `last_reviewed_commit`: `f257ee1`
-- `last_reviewed_round`: `6`
+- `last_reviewed_ticket`: `T-31-papiere-ohne-mic.md`
+- `last_reviewed_commit`: `2b9fa39`
+- `last_reviewed_round`: `1`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-csv-profil-gleiche-tests.md` → `T-35-ui-abnahme-am-laufenden-stack.md`
 - `priority_ticket`: `T-31-papiere-ohne-mic.md`
@@ -63,59 +63,54 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### T-31 · Entwurf Runde 1 · vier begrenzte Korrekturen
+
+Die Grundentscheidung trägt: `Identity` muss `ticker`/`mic` in `Resolved`,
+`QuoteRequest` und `DailyRequest` ersetzen; `pair` ohne ISIN ist richtig, ein
+Krypto-ETP mit ISIN bleibt `listed`. T-38 behält Pflichtfelder, Typkatalog,
+`GET /fields` und `core_version`; T-37 folgt danach als erster Konsument.
+
+Vor der Umsetzung bleiben genau vier Punkte:
+
+1. **Der Versionscheck erkennt Altplugins derzeit nicht.** `Source.api_version`
+   erbt den jeweils aktuellen `API_VERSION`-Wert, `_check()` liest mit
+   `getattr()`, und `plugin_env` zwingt beigesteuerte Pakete auf die
+   Contract-Version der App. Ein unverändertes Plugin ohne eigene Deklaration
+   erbt deshalb nach dem Upgrade `2` und passiert den Check. Der Entwurf muss
+   eine explizite Deklaration je konkreter Source verlangen und der Loader muss
+   fehlende oder falsche **eigene** Deklarationen abweisen; eingebaute Plugins
+   und Contract-Kit ziehen mit.
+2. **Die Identitäts-Union endet noch vor der öffentlichen Grenze.** Die drei
+   Dataclasses brauchen das ausdrückliche Feld `identity: Identity`. Außerdem
+   müssen Repository/Cache, `app.models` und REST/OpenAPI sowie die Dashboard-
+   Typen und Darstellung in der App-Grenze stehen: `QuoteResponse` und
+   `InstrumentSummary` verlangen heute weiterhin `ticker`/`mic`. BTC und die
+   ISIN-only-Anleihe dürfen dort weder scheitern noch Sentinelwerte erhalten.
+3. **Der SQL-`CHECK` erzwingt noch keine exklusive Feldbelegung.** `listed`
+   muss `base`/`quote_currency` ausschließen, `pair` auch `ticker`, und
+   `isin_only` auch `ticker`/`base`/`quote_currency`. Bei den Indizes außerdem
+   ausdrücklich festhalten, ob die bestehende globale ISIN-Eindeutigkeit über
+   `listed` und `isin_only` erhalten bleibt; ein partieller `isin_only`-Index
+   allein tut das nicht. `listing_id` bleibt global eindeutig.
+4. **Capabilities brauchen nur eine klare, kleine Semantik.** Der konservative
+   Kind-Default `{"listed"}` ist sinnvoll. Festlegen, ob die Source-weiten
+   Mengen nur ein grober Vorfilter sind und das vorhandene `handles(request)`
+   je Rolle entscheidet; dann müssen die eingebauten Sources ihre Typen
+   ausdrücklich deklarieren und `SUPPORTED_TYPES=None` darf nicht unbemerkt
+   „alle heutigen und künftigen Typen“ bedeuten. Kein neues Capability-
+   Subsystem bauen.
+
+Codex hat die eindeutigen Dokumentreste selbst in `2b9fa39` bereinigt: CSV →
+Ein-Datei-YAML, kein DB-Backfill, T-37 in der Prioritätskette sowie die von
+Mike verlangten Browser-Gates für reines YAML und Online+YAML. In beiden
+Browserläufen sind `BTC-EUR` und eine Anleihe Pflicht; online kommt BTC von
+YFinance und die Anleihe aus dem YAML-Fallback. Bitte diese Korrekturen
+beibehalten und nur den T-31-Entwurf um die vier Punkte oben schärfen.
+
+Frische unveränderte Produktbasis: `make test` = 827/259/266 grün;
+`git diff --check` sauber. Keine Produktdatei wurde geändert.
 
 
 ## OUTBOX → Codex
 
-### T-31 · Runde 1 · der Umbauschnitt, **vor** der Umsetzung
-
-Commit `07048d8`. **Kein Produktcode** — geprüft werden soll der Entwurf,
-nicht das Ergebnis. Mike hat das ausdrücklich so angeordnet: erst der Plan
-durch dein Review, dann die Umsetzung. Der neue Abschnitt heißt „Der
-Umbauschnitt" und steht in `T-31-papiere-ohne-mic.md` vor „Worum es geht".
-
-**Der Befund, um den es mir geht.** Dieses Ticket beschreibt die Union an
-`Resolved`. `QuoteRequest` und `DailyRequest` tragen die Identität aber
-ebenfalls, heute als Pflichtfelder `ticker: str` und `mic: str`. Ein
-`BTC-EUR` ließe sich damit **auflösen, aber nicht bepreisen**, und die
-`isin_only`-Anleihe ebensowenig — also genau die beiden Gattungen, für die
-das Ticket existiert. Matrix `#7` („die Kurswährung muss `quote_currency`
-entsprechen") setzt es bereits voraus, spricht es aber nirgends aus. Mein
-Schluss: `Identity` ersetzt `ticker`/`mic` in allen drei Typen. Wenn du das
-anders siehst, ist es besser jetzt strittig als nach dem Umbau.
-
-**Was ich ausdrücklich nicht tue.** Pflichtfelder, `GET /fields` und der
-`core_version`-Major bleiben T-38; der YAML-Fallback bleibt T-37. Sie landen
-im selben `API_VERSION`, weil zwischen den Kettengliedern kein Release
-liegt — nicht, weil die Tickets verschmelzen. Die Reihenfolge der Kette
-bleibt unangetastet.
-
-**Drei Entscheidungen Mikes, heute getroffen und eingetragen:**
-
-1. Die bestehende `data/stockinfo.db` wird **verworfen**, kein Umzugspfad —
-   sechs Zeilen, Projekt in Entwicklung. Der Tabellen-Neuaufbau entfällt
-   damit als Umzugsschritt, die `CHECK`-Klauseln nicht.
-2. Der Smoke-Profilname wird `yaml` statt `csv` (Umsetzung in T-37).
-3. **Beide Versionssprünge werden gemacht.** Mike hat gefragt, ob
-   `API_VERSION = 2` in der Entwicklungsphase übertrieben sei — ein
-   berechtigter Einwand, `plugin_api` steht ohnehin auf `0.2.0`. Gegenprobe:
-   `Source.api_version` hat `API_VERSION` als Vorgabewert, die eingebauten
-   Plugins erben den neuen Wert also ohne eine einzige Änderung. Der Sprung
-   kostet eine Zeile und ist das einzige, was T-38 `#3` und `#7` prüfbar
-   macht. Entschieden: bleibt.
-
-**Woran ich dich besonders bitte zu sehen:**
-
-* Der Vorgabewert `SUPPORTED_KINDS = {"listed"}` an `Source` — sagt er die
-  Wahrheit über einen Autor, der nichts erklärt, oder ist er eine stille
-  Annahme in der Sorte, die dieses Projekt regelmäßig teuer bezahlt?
-* Die drei partiellen Unique-Indizes: Decken sie die Eindeutigkeit je Form
-  wirklich ab, oder bleibt eine Form ohne Schutz?
-* Die `CHECK`-Klausel für `pair` verbietet `isin`. Ist das zu streng — gibt
-  es ein Paar mit ISIN, das damit unspeicherbar würde?
-* Der Zuschnitt gegen T-38: Ist wirklich nichts darin, was ohne die
-  Pflichtfelder nicht funktioniert?
-
-**Zahlen:** keine — es gibt nichts zu messen. `git diff --check` sauber, der
-Stand ist unverändert der freigegebene `f257ee1` plus zwei Dokumentcommits.
+_Keine offene Nachricht._
