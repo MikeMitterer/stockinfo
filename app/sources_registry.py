@@ -464,21 +464,21 @@ def build_chain(role: str, config, settings) -> list[object]:
         # nebeneinander, und `close()` erreichte nur eine davon.
         return cached[1]
 
-    bewertet = _evaluate(role, config, settings)
+    evaluated = _evaluate(role, config, settings)
 
     # **Die Momentaufnahme steht, bevor irgendetwas werfen kann.** Ein
     # unbekannter Name in der Kette bricht den Bau ab — und ohne diese Zeile
     # zeigte `/sources` danach die **vorige** Kette, also gerade nicht den
     # Zustand, der den Betreiber interessiert. Der Fall, für den er die
     # Auskunft aufruft, wäre der einzige, in dem sie ihn anlügt.
-    entries = [entry for entry, _ in bewertet]
+    entries = [entry for entry, _ in evaluated]
     # Die Beschreibung steht, **bevor** irgendetwas werfen kann: Ein unbekannter
     # Name bricht den Bau ab, und ohne diese Zeile zeigte `/sources` danach die
     # vorige Kette — ausgerechnet im Fall, für den man sie aufruft.
     _CHAINS[role] = (config, [], entries)
 
     built: list[object] = []
-    for entry, source in bewertet:
+    for entry, source in evaluated:
         if not entry.known:
             logger.warning("source_unknown", source=entry.name, role=role)
             continue

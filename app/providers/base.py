@@ -111,8 +111,33 @@ class InstrumentResolver(Protocol):
     def resolve_isin(self, isin: str) -> Resolution: ...
 
 
+def declared_name(source: object) -> str | None:
+    """Wie sich eine Quelle selbst nennt — oder ``None``, wenn sie es nicht tut.
+
+    **Die eine Stelle, an der die Regel steht.** In T-37 stand sie zweimal, in
+    `QuoteService` und `CachedFxService`, mit demselben Rückfall — zwei
+    Kopien einer Entscheidung, die beim nächsten Umbau auseinanderlaufen.
+
+    Der Rückfall ist bewusst ``None`` und **kein Ersatzname**. Der erste
+    Anlauf setzte hier ``"unbekannt"``; das ist ein deutsches Wort in einem
+    Datenfeld, das die Oberfläche unübersetzt anzeigt — in der englischen
+    Fassung stünde es genauso da. Eine Quelle ohne Namen ist keine Herkunft,
+    und ein fehlender Wert sagt das besser als ein erfundener.
+    """
+    name = getattr(source, "name", None)
+    return name if isinstance(name, str) and name else None
+
+
 class QuoteProvider(Protocol):
     """Liefert den aktuellen Kurs zu einem Symbol."""
+
+    name: str
+    """Wie diese Quelle heißt — für die Herkunftsangabe.
+
+    Seit T-37 Teil des Protokolls und nicht mehr nur eine Eigenschaft, die
+    zufällig alle Kettenglieder haben: Wer die Herkunft aufschreiben will,
+    muss sie verlangen dürfen.
+    """
 
     def fetch_quote(self, instrument: ResolvedInstrument) -> RawQuote | None: ...
 
@@ -161,6 +186,14 @@ class FxRateProvider(Protocol):
     `app/services/fx_service.py`. Der Name bleibt `FxRateProvider` und wird
     nicht zu `FxProvider` verkürzt: Ihn beim Umzug umzubenennen hieße, jede
     bestehende Fundstelle anzufassen, ohne dass die Aussage genauer würde.
+    """
+
+    name: str
+    """Wie diese Quelle heißt — für die Herkunftsangabe.
+
+    Bei `fx.source` ist das wirklich der Kurslieferant; der Vertrag sagt dort
+    „Woher der Kurs stammt". Siehe `declared_name` und
+    `CachedFxService._fx_source`.
     """
 
     def fetch_fx_rate(self, base: str, quote: str) -> float | None: ...

@@ -700,52 +700,103 @@ def test_die_identitaet_der_aufloesung_reist_bis_zur_speicherung_mit() -> None:
     assert (result.ticker, result.mic) == ("VGWL", "XETR")
 
 
-def test_die_herkunft_nennt_die_quelle_die_geantwortet_hat() -> None:
-    """**Der Befund aus dem CSV-Lauf T-37.**
+def test_die_herkunft_nennt_die_metadatenquelle_und_nicht_die_kursquelle() -> None:
+    """**Der Befund aus Codex-Runde 2 — und zwei Anläufe davor.**
 
-    `source` stand als Konstante ``"yfinance"`` im Code. Im Online-Profil fiel
-    das nie auf — dort *ist* yfinance die Kursquelle. Im CSV-Profil trug eine
-    Zeile, deren Kurs aus einer Datei kam, trotzdem `source: yfinance`.
+    `source` ist laut Vertrag die Herkunft der **Metadaten**
+    (`quote.source`: „Woher der jüngste Metadatenstand kommt"), nicht die des
+    Kurses. Zweimal stand hier trotzdem eine NamedQuoteSource:
 
-    Das ist keine Kosmetik: `source` ist das Feld, an dem ein Benutzer abliest,
-    woher ein Wert stammt — die Oberfläche zeigt es im Aufklappbereich als
-    „Quelle". Derselbe Fehlertyp wie die Fehlermeldungen, die bis T-36
-    OpenFIGI und Yahoo namentlich nannten, obwohl das Profil andere Quellen
-    führte.
+    * bis T-37 fest ``"yfinance"`` — im Online-Profil unauffällig, weil
+      yfinance dort beides liefert;
+    * in T-37 der Name der tatsächlichen NamedQuoteSource — im CSV-Profil plausibel
+      aussehend und trotzdem falsch: `prices-file-quote` liefert keine
+      Metadaten.
 
-    Geprüft wird mit einem **anderen** Namen als dem eingebauten; sonst
-    bestünde der Test auch dann, wenn die Konstante zurückkäme.
+    Mein damaliger Test hat es nicht gesehen, weil er **ohne Anreicherung**
+    lief. Dieser hier führt beide zusammen: Die NamedQuoteSource heißt anders als
+    die Metadatenquelle, und gewinnen muss die zweite.
     """
 
-    class AusEinerDatei(FakeQuoteProvider):
+    class FileQuoteSource(FakeQuoteProvider):
         name = "prices-file-quote"
 
     service = QuoteService(
-        AusEinerDatei(_etf_quote()),
-        FakeEtfProvider(None),
-        FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25", type="stock")),
+        FileQuoteSource(_etf_quote()),
+        FakeEtfProvider(EtfDetails(ter=0.2, source="metadata-file")),
+        FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")),
     )
 
     result = service.get_quote_by_isin("IE00B3RBWM25")
 
-    assert result.source == "prices-file-quote"
+    assert result.source == "metadata-file", (
+        "die NamedQuoteSource hat keine Metadaten beigesteuert und darf hier nicht stehen"
+    )
 
 
-def test_eine_namenlose_quelle_heisst_unbekannt_und_nicht_yfinance() -> None:
-    """Der Rückfall ist bewusst **kein** Anbietername.
+def test_ohne_metadatenbeitrag_bleibt_die_herkunft_leer() -> None:
+    """Seit T-23 trägt der Kursweg **nie** Metadaten — dann gibt es keine Herkunft.
 
-    Eine Quelle, die ihren Namen nicht nennt, ist unbekannt — und genau das
-    soll dastehen. Auf einen eingebauten Namen zurückzufallen wäre dieselbe
-    Behauptung wie vorher, nur seltener.
+    `QuoteAdapter` setzt auf der `RawQuote` weder `name` noch `type` noch
+    `exchange`; der Vertragstyp `Quote` hat diese Felder gar nicht. Eine
+    NamedQuoteSource zu nennen wäre deshalb immer falsch, nicht nur manchmal — und
+    ein erfundener Ersatzname erst recht.
+    """
+    without_metadata = RawQuote(
+        symbol="RY.TO",
+        price=283.4,
+        quote_time="2026-08-27T21:00:00+00:00",
+        currency="CAD",
+    )
+
+    class FileQuoteSource(FakeQuoteProvider):
+        name = "prices-file-quote"
+
+    service = QuoteService(
+        FileQuoteSource(without_metadata),
+        FakeEtfProvider(None),
+        FakeResolver(_resolved("RY.TO", isin="CA7800871021", type="stock")),
+    )
+
+    assert service.get_quote_by_isin("CA7800871021").source is None
+
+
+def test_eine_kursquelle_mit_metadaten_wird_sehr_wohl_genannt() -> None:
+    """Die Gegenrichtung — sonst wäre aus der Regel ein „immer ``None``".
+
+    Liefert eine Anbindung Name oder Gattung mit dem Kurs, **ist** sie die
+    Herkunft dieses Metadatenstands. Die Regel prüft den Beitrag, nicht den
+    Rollennamen; so folgt die Herkunft von selbst, wenn ein Plugin wieder
+    welche mitschickt.
     """
 
-    class OhneNamen(FakeQuoteProvider):
+    class NamedQuoteSource(FakeQuoteProvider):
+        name = "yfinance"
+
+    service = QuoteService(
+        NamedQuoteSource(_etf_quote()),  # trägt `type="etf"`
+        FakeEtfProvider(None),
+        FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")),
+    )
+
+    assert service.get_quote_by_isin("IE00B3RBWM25").source == "yfinance"
+
+
+def test_eine_namenlose_quelle_erfindet_keinen_namen() -> None:
+    """Der Rückfall ist ``None`` und **kein Wort**.
+
+    Der erste Anlauf setzte hier ``"unbekannt"`` — ein deutsches Wort in einem
+    Datenfeld, das die Oberfläche unübersetzt anzeigt. In der englischen
+    Fassung stünde es genauso da; Codex hat das in Runde 2 aufgegriffen.
+    """
+
+    class NamelessSource(FakeQuoteProvider):
         name = ""
 
     service = QuoteService(
-        OhneNamen(_etf_quote()),
+        NamelessSource(_etf_quote()),
         FakeEtfProvider(None),
-        FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25", type="stock")),
+        FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")),
     )
 
-    assert service.get_quote_by_isin("IE00B3RBWM25").source == "unbekannt"
+    assert service.get_quote_by_isin("IE00B3RBWM25").source is None

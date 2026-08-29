@@ -805,14 +805,14 @@ def test_name_und_gattung_ueberleben_die_aufloesung() -> None:
     figi = _FakeFigi("EUNL")
     figi.ticker = "EUNL"
 
-    class _MitNameUndGattung(_FakeFigi):
+    class _WithNameAndType(_FakeFigi):
         def map_isin(self, isin, id_value, id_type="micCode"):
             self.calls.append((isin, id_value, id_type))
             return FigiMatch(
                 "EUNL", name="ISHARES CORE MSCI WORLD", instrument_type="etf"
             )
 
-    resolved = OpenFigiResolver(_MitNameUndGattung("EUNL"), "XETR").resolve_isin(
+    resolved = OpenFigiResolver(_WithNameAndType("EUNL"), "XETR").resolve_isin(
         "IE00B4L5Y983"
     )
 
@@ -825,7 +825,7 @@ def test_name_und_gattung_ueberleben_die_aufloesung() -> None:
 
 
 @pytest.mark.parametrize(
-    ("figi_type", "erwartet"),
+    ("figi_type", "expected"),
     [
         ("ETP", "etf"),
         ("Mutual Fund", "etf"),
@@ -835,7 +835,7 @@ def test_name_und_gattung_ueberleben_die_aufloesung() -> None:
     ids=["etp", "fonds", "aktie", "unbekannt"],
 )
 def test_die_gattung_wird_uebersetzt_und_nicht_geraten(
-    figi_type: str, erwartet: str | None
+    figi_type: str, expected: str | None
 ) -> None:
     """Was nicht in der Tabelle steht, bleibt ``None``.
 
@@ -849,4 +849,4 @@ def test_die_gattung_wird_uebersetzt_und_nicht_geraten(
     match = OpenFigiClient._extract_match(antwort)
 
     assert match is not None
-    assert match.instrument_type == erwartet
+    assert match.instrument_type == expected

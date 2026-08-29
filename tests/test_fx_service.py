@@ -17,6 +17,10 @@ def repo(tmp_path: Path) -> QuoteRepository:
 
 
 class _FakeFx:
+    #: Wie jede Kettenquelle nennt auch dieses Double seinen Namen — seit
+    #: T-37 steht `name` im `FxRateProvider`-Protokoll.
+    name = "yfinance"
+
     def __init__(self, rate: float | None) -> None:
         self.rate = rate
         self.calls = 0
@@ -60,3 +64,43 @@ def test_fetch_fehler_ohne_cache_wirft(repo: QuoteRepository) -> None:
     service = CachedFxService(_FakeFx(None), repo, ttl_hours=1)
     with pytest.raises(FxUnavailableError):
         service.get_rate("EUR", "USD")
+
+
+def test_die_devisenherkunft_nennt_die_quelle_die_geliefert_hat(
+    repo: QuoteRepository,
+) -> None:
+    """**Die FX-Gegenprobe, die Codex in Runde 2 verlangt hat.**
+
+    Bei `fx.source` sagt der Vertrag ausdrücklich „Woher der **Kurs** stammt"
+    — anders als bei `quote.source`, wo es die Metadaten sind. Zwei Felder mit
+    demselben Namen und verschiedener Bedeutung; genau daran ist der erste
+    Anlauf gescheitert, der beide über einen Kamm schor.
+
+    Hier steht deshalb wirklich der Lieferant. Geprüft mit einem **anderen**
+    Namen als dem eingebauten, sonst bestünde der Test auch dann, wenn die
+    Konstante `"yfinance"` zurückkäme.
+    """
+
+    class FileFxSource(_FakeFx):
+        name = "fx-file"
+
+    service = CachedFxService(FileFxSource(0.6412), repo, ttl_hours=6)
+
+    assert service.get_rate("CAD", "EUR").source == "fx-file"
+
+
+def test_eine_namenlose_devisenquelle_erfindet_keinen_namen(
+    repo: QuoteRepository,
+) -> None:
+    """Derselbe Rückfall wie beim Kurs: ``None``, kein deutsches Ersatzwort.
+
+    ``"unbekannt"`` stand hier im ersten Anlauf und wäre in der englischen
+    Oberfläche unübersetzt erschienen — `source` wird roh angezeigt.
+    """
+
+    class NamelessFxSource(_FakeFx):
+        name = ""
+
+    service = CachedFxService(NamelessFxSource(0.6412), repo, ttl_hours=6)
+
+    assert service.get_rate("CAD", "EUR").source is None

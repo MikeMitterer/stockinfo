@@ -63,7 +63,7 @@ readonly NONSENSE_ISIN="XX0000000000"
 
 # Wie viele Checks dieser Lauf erwartet. Ohne die Zahl könnte ein Lauf, der
 # unterwegs abbricht, mit COUNT_FAIL=0 grün enden (P-05).
-readonly EXPECTED_CHECKS=17
+readonly EXPECTED_CHECKS=20
 
 COUNT_OK=0
 COUNT_FAIL=0
@@ -77,6 +77,10 @@ KEEP_LOG=false
 # gelesen von `checkChain`. Der **einzige** Erwartungswert, der sich zwischen
 # den Profilen unterscheidet.
 EXPECTED_SOURCES=""
+
+# Welche Quelle die Devisenrolle dieses Profils liefert — der zweite und
+# letzte Erwartungswert, der sich zwischen den Profilen unterscheidet.
+EXPECTED_FX_SOURCE=""
 
 usage() {
     echo
@@ -141,6 +145,7 @@ cleanup() {
 # Schreibt die Kette des Online-Profils: OpenFIGI, Yahoo, justETF.
 writeOnlineProfile() {
     EXPECTED_SOURCES="justetf,openfigi,yahoo-search,yfinance"
+    EXPECTED_FX_SOURCE="yfinance"
     cat > "${WORKDIR}/sources.yaml" <<'YAML'
 resolvers: [openfigi, yahoo-search]
 etf_meta:  [justetf, yfinance]
@@ -161,6 +166,7 @@ YAML
 # dieselbe Aussage, sondern eine ähnliche.
 writeCsvProfile() {
     EXPECTED_SOURCES="canada-file,fx-file,metadata-file,prices-file-daily,prices-file-quote"
+    EXPECTED_FX_SOURCE="fx-file"
     local -r _PLUGINS="${WORKDIR}/plugins"
     mkdir -p "${_PLUGINS}"
 
@@ -375,9 +381,19 @@ print(f'{row[0]} Zeilen, zuletzt {row[1]}')
 # prüft er die Erwartungen, gegen die die echten Quellen gehalten werden; im
 # CSV-Profil zusätzlich die Werte, die in den Dateien stehen. Ein falsch
 # erwarteter MIC fiele online genauso auf.
-checkTestData() {
-    local _BEFUND
-    _BEFUND="$("${VENV_PY}" - "${WORKDIR}" "${PROFILE}" <<'PY'
+# Prueft die Daten **eines** Verzeichnisses gegen die Vertragsinvarianten.
+#
+# Herausgezogen, damit die Negativprobe weiter unten **denselben** Parser
+# benutzt und keine Kopie davon — zwei Pruefer waeren zwei Wahrheiten, und
+# genau die Sorte Doppelung faellt in diesem Projekt regelmaessig auf.
+#
+# Params:
+#   $1 - Verzeichnis mit den CSV-Dateien
+#
+# Returns:
+#   Exitstatus des Parsers; die Befunde stehen auf stdout.
+checkDataIn() {
+    "${VENV_PY}" - "$1" <<'PY'
 import csv
 import sys
 from pathlib import Path
@@ -389,86 +405,141 @@ from stockinfo_plugin.invariants import (
     isin_check_digit_is_valid,
 )
 
-workdir, profile = Path(sys.argv[1]), sys.argv[2]
-fehler: list[str] = []
+workdir = Path(sys.argv[1])
+findings: list[str] = []
 
 # Die Erwartungen, gegen die die Checks unten messen — in beiden Profilen
 # dieselben. Sie stehen hier und nicht in den Checks, damit die Prüflogik
 # darunter profilfrei bleibt.
-erwartet = [
+expected = [
     ("IE00B4L5Y983", "EUNL", "XETR", "EUR"),
     ("US0378331005", "APC", "XETR", "EUR"),
     ("CA7800871021", "RY", "XTSE", "CAD"),
 ]
-for isin, ticker, mic, currency in erwartet:
+for isin, ticker, mic, currency in expected:
     if not isin_check_digit_is_valid(isin):
-        fehler.append(f"erwartete ISIN mit falscher Pruefziffer: {isin}")
+        findings.append(f"erwartete ISIN mit falscher Pruefziffer: {isin}")
     if not is_real_mic(mic):
-        fehler.append(f"erwarteter MIC ist kein echter Handelsplatz: {mic}")
+        findings.append(f"erwarteter MIC ist kein echter Handelsplatz: {mic}")
     problem = currency_problem(currency)
     if problem:
-        fehler.append(f"erwartete Waehrung {currency}: {problem}")
+        findings.append(f"erwartete Waehrung {currency}: {problem}")
 
 # Die Gegenprobe: Eine Pruefung, die nichts abweisen kann, belegt nur, dass
 # sie durchgelaufen ist.
 if isin_check_digit_is_valid("XX0000000000"):
-    fehler.append("die Pruefziffer-Pruefung greift nicht")
+    findings.append("die Pruefziffer-Pruefung greift nicht")
 if is_real_mic("US"):
-    fehler.append("der Sammelcode US wird nicht abgewiesen")
+    findings.append("der Sammelcode US wird nicht abgewiesen")
 if not currency_problem("GBX"):
-    fehler.append("Pence werden nicht als Untereinheit erkannt")
+    findings.append("Pence werden nicht als Untereinheit erkannt")
 
 # Im CSV-Profil zusaetzlich die Dateien selbst.
 def rows(name: str) -> list[dict]:
-    pfad = workdir / name
-    if not pfad.is_file():
+    path = workdir / name
+    if not path.is_file():
         return []
-    with pfad.open(encoding="utf-8", newline="") as handle:
+    with path.open(encoding="utf-8", newline="") as handle:
         return list(csv.DictReader(handle, delimiter=";"))
 
 for row in rows("isins.csv"):
     if not isin_check_digit_is_valid(row["isin"]):
-        fehler.append(f"isins.csv: falsche Pruefziffer {row['isin']}")
+        findings.append(f"isins.csv: falsche Pruefziffer {row['isin']}")
     if not is_real_mic(row["mic"]):
-        fehler.append(f"isins.csv: kein echter MIC {row['mic']}")
+        findings.append(f"isins.csv: kein echter MIC {row['mic']}")
     if not (row.get("name") or "").strip():
-        fehler.append(f"isins.csv: Name fehlt bei {row['isin']}")
+        findings.append(f"isins.csv: Name fehlt bei {row['isin']}")
     # Der Katalog aus T-31, Entscheidung 2. Ein Tippfehler in der Gattung
     # waere sonst genau der Fall, den der UI-Lauf teuer gemacht hat.
     if (row.get("type") or "").strip() not in ("stock", "etf", "etc", "crypto", "bond"):
-        fehler.append(f"isins.csv: unbekannte Gattung {row.get('type')!r} bei {row['isin']}")
+        findings.append(f"isins.csv: unbekannte Gattung {row.get('type')!r} bei {row['isin']}")
 
 for row in rows("closes.csv"):
     if not is_real_mic(row["mic"]):
-        fehler.append(f"closes.csv: kein echter MIC {row['mic']}")
+        findings.append(f"closes.csv: kein echter MIC {row['mic']}")
     problem = currency_problem(row["currency"])
     if problem:
-        fehler.append(f"closes.csv: {row['currency']} — {problem}")
+        findings.append(f"closes.csv: {row['currency']} — {problem}")
     if not is_finite_price(float(row["close"])):
-        fehler.append(f"closes.csv: unbrauchbarer Kurs {row['close']}")
+        findings.append(f"closes.csv: unbrauchbarer Kurs {row['close']}")
 
 for row in rows("meta.csv"):
     if not isin_check_digit_is_valid(row["isin"]):
-        fehler.append(f"meta.csv: falsche Pruefziffer {row['isin']}")
+        findings.append(f"meta.csv: falsche Pruefziffer {row['isin']}")
     bps = (row.get("ter_bps") or "").strip()
     if bps and not 0 <= float(bps) <= 500:
-        fehler.append(f"meta.csv: TER {bps} bps ausserhalb des Wertebereichs")
+        findings.append(f"meta.csv: TER {bps} bps ausserhalb des Wertebereichs")
 
 for row in rows("fx.csv"):
-    for spalte in ("base", "quote"):
-        problem = currency_problem(row[spalte])
+    for field in ("base", "quote"):
+        problem = currency_problem(row[field])
         if problem:
-            fehler.append(f"fx.csv: {row[spalte]} — {problem}")
+            findings.append(f"fx.csv: {row[field]} — {problem}")
     if not is_finite_price(float(row["rate"])):
-        fehler.append(f"fx.csv: unbrauchbarer Kurs {row['rate']}")
+        findings.append(f"fx.csv: unbrauchbarer Kurs {row['rate']}")
 
-print("; ".join(fehler))
+print("; ".join(findings))
 PY
-)"
-    [[ -z "${_BEFUND}" ]] \
+}
+
+# **Vor allen anderen: Taugen die Erwartungswerte selbst?**
+checkTestData() {
+    local _FINDINGS _STATUS
+    _FINDINGS="$(checkDataIn "${WORKDIR}")"
+    _STATUS=$?
+
+    # **Ein abgestuerzter Pruefer ist kein bestandener Check.** Bricht der
+    # Parser ab — etwa an `float("keine-zahl")` —, ist seine Ausgabe leer, und
+    # eine Pruefung auf „leer heisst sauber" meldet Erfolg. Gemessen:
+    # Exitstatus 1, Ausgabe leer, Check gruen. Von Codex in Runde 2 gefunden.
+    if [[ "${_STATUS}" -ne 0 ]]; then
+        report "#0 " "die Testdaten halten die Vertragsinvarianten" false \
+            "die Pruefung selbst ist abgebrochen (Exitstatus ${_STATUS})"
+        return 0
+    fi
+
+    [[ -z "${_FINDINGS}" ]] \
         && report "#0 " "die Testdaten halten die Vertragsinvarianten" true \
             "Pruefziffer, echter MIC, Waehrung ohne Untereinheit, endliche Kurse" \
-        || report "#0 " "die Testdaten halten die Vertragsinvarianten" false "${_BEFUND}"
+        || report "#0 " "die Testdaten halten die Vertragsinvarianten" false "${_FINDINGS}"
+}
+
+# **Die Negativprobe zum Check darueber — dauerhaft, nicht einmalig.**
+#
+# Eine Pruefung, die nichts abweisen kann, belegt nur, dass sie durchgelaufen
+# ist. `checkTestData` prueft die echten Daten und ist deshalb per Definition
+# immer gruen; ob er einen Fehler *finden* wuerde, sagt er nicht.
+#
+# Hier bekommt er deshalb eine Datei mit drei eingebauten Fehlern: falsche
+# Pruefziffer, Sammelcode statt MIC, unbrauchbarer Kurs. Findet er sie nicht
+# — oder bricht er dabei ab, ohne es zu melden —, ist der Check oben wertlos.
+checkTestDataCatchesErrors() {
+    local -r _BROKEN="${WORKDIR}/negativprobe"
+    mkdir -p "${_BROKEN}"
+
+    cat > "${_BROKEN}/isins.csv" <<'CSV'
+isin;ticker;mic;name;type
+XX0000000000;EUNL;US;Falsche Pruefziffer und Sammelcode;etf
+CSV
+    cat > "${_BROKEN}/closes.csv" <<'CSV'
+ticker;mic;day;close;currency
+EUNL;XETR;2026-08-27;keine-zahl;EUR
+CSV
+
+    local _OUTPUT _STATUS
+    _OUTPUT="$(checkDataIn "${_BROKEN}" 2>&1)"
+    _STATUS=$?
+
+    # Zwei Ausgaenge zaehlen als „erkannt": Befunde gemeldet, oder der Parser
+    # bricht an dem unbrauchbaren Kurs ab. Beides ist ein Nein — still gruen
+    # waere das Versagen.
+    if [[ "${_STATUS}" -ne 0 || -n "${_OUTPUT}" ]]; then
+        report "#0b" "die Datenpruefung findet eingebaute Fehler" true \
+            "Pruefziffer, Sammelcode und unbrauchbarer Kurs erkannt"
+    else
+        report "#0b" "die Datenpruefung findet eingebaute Fehler" false \
+            "drei eingebaute Fehler blieben unbemerkt — der Check oben ist wertlos"
+    fi
 }
 
 checkChain() {
@@ -625,49 +696,100 @@ checkOverrideAndCache() {
     # **Dasselbe** Papier refreshen, dessen Override gerade gesetzt wurde, und
     # danach erneut aus SQLite lesen. Das ist die Zusage von T-35 `#6c`.
     curl -s -o /dev/null -X POST "${BASE_URL}/refresh/${US_ISIN}"
-    local _NACH_REFRESH
-    _NACH_REFRESH="$(overrideTer "${US_ISIN}")"
-    [[ "${_NACH_REFRESH}" == "1.25" ]] \
+    local _AFTER_REFRESH
+    _AFTER_REFRESH="$(overrideTer "${US_ISIN}")"
+    [[ "${_AFTER_REFRESH}" == "1.25" ]] \
         && report "#6c" "die Handpflege ueberlebt den Refresh desselben Papiers" true \
-            "TER ${_NACH_REFRESH} nach POST /refresh/${US_ISIN}" \
+            "TER ${_AFTER_REFRESH} nach POST /refresh/${US_ISIN}" \
         || report "#6c" "die Handpflege ueberlebt den Refresh desselben Papiers" false \
-            "vorher 1.25, nachher '${_NACH_REFRESH}'"
+            "vorher 1.25, nachher '${_AFTER_REFRESH}'"
 
     # Der Namensschutz bleibt als **eigener** Check — er gehoert zu demselben
     # Vorgang und ist der Befund aus dem UI-Lauf.
-    local _NAME_VORHER _NAME_NACHHER
-    _NAME_VORHER="$(column "${ETF_ISIN}" name)"
+    local _NAME_BEFORE _NAME_AFTER
+    _NAME_BEFORE="$(column "${ETF_ISIN}" name)"
     curl -s -o /dev/null -X POST "${BASE_URL}/refresh/${ETF_ISIN}"
-    _NAME_NACHHER="$(column "${ETF_ISIN}" name)"
-    [[ -n "${_NAME_NACHHER}" && "${_NAME_VORHER}" == "${_NAME_NACHHER}" ]] \
-        && report "#6d" "ein Refresh loescht den Namen nicht" true "${_NAME_NACHHER}" \
+    _NAME_AFTER="$(column "${ETF_ISIN}" name)"
+    [[ -n "${_NAME_AFTER}" && "${_NAME_BEFORE}" == "${_NAME_AFTER}" ]] \
+        && report "#6d" "ein Refresh loescht den Namen nicht" true "${_NAME_AFTER}" \
         || report "#6d" "ein Refresh loescht den Namen nicht" false \
-            "vorher '${_NAME_VORHER}', nachher '${_NAME_NACHHER}'"
+            "vorher '${_NAME_BEFORE}', nachher '${_NAME_AFTER}'"
 
     # **Der Cache wird in der Datenbank gemessen, nicht in der Antwort.**
     # Zwei Groessen zusammen, denn einzeln taeuscht jede: Der gespeicherte
     # `fetched_at` bliebe auch dann gleich, wenn ein zweiter Abruf eine neue
     # Zeile **anlegte**; und die Zeilenzahl allein saehe eine Aktualisierung
     # derselben Zeile nicht.
-    local _VORHER _NACHHER
-    _VORHER="$(quoteState "${ETF_ISIN}")"
+    local _BEFORE _AFTER
+    _BEFORE="$(quoteState "${ETF_ISIN}")"
     curl -s -o /dev/null "${BASE_URL}/quote/${ETF_ISIN}"
-    _NACHHER="$(quoteState "${ETF_ISIN}")"
+    _AFTER="$(quoteState "${ETF_ISIN}")"
 
-    if [[ -n "${_VORHER}" && "${_VORHER}" == "${_NACHHER}" ]]; then
+    if [[ -n "${_BEFORE}" && "${_BEFORE}" == "${_AFTER}" ]]; then
         report "#7 " "der zweite Abruf hat nichts geholt (SQLite unveraendert)" true \
-            "${_NACHHER}"
+            "${_AFTER}"
     else
         report "#7 " "der zweite Abruf hat nichts geholt (SQLite unveraendert)" false \
-            "vorher '${_VORHER}', nachher '${_NACHHER}'"
+            "vorher '${_BEFORE}', nachher '${_AFTER}'"
+    fi
+}
+
+# **Tagesreihe und Devisen wirklich abrufen — nicht nur ihre Konfiguration.**
+#
+# Bis Runde 2 belegte `/sources` nur, dass beide Rollen eingerichtet sind. Ob
+# sie **antworten**, stand nirgends; zwei der fuenf Rollen liefen in keinem
+# Check. Codex hat das aufgegriffen, und der Einwand traegt: Eine Rolle, die
+# nur in der Konfiguration vorkommt, ist nicht geprueft.
+#
+# Die Checks selbst bleiben profilfrei — gefragt wird nach dem Ergebnis. Nur
+# der erwartete Devisen-Lieferant steht in der Profiltabelle, wie
+# `EXPECTED_SOURCES` auch.
+checkDailyAndFx() {
+    local _DAILY _POINTS _CURRENCIES
+    _DAILY="$(curl -s "${BASE_URL}/quote/${ETF_ISIN}/daily?period=1m")"
+    _POINTS="$("${VENV_PY}" -c "
+import json, sys
+try:
+    rows = json.loads(sys.argv[1])
+except Exception:
+    print('0 |')
+    raise SystemExit
+currencies = sorted({r.get('currency') for r in rows})
+print(len(rows), '|', ','.join(c for c in currencies if c))
+" "${_DAILY}" 2>/dev/null)"
+    _CURRENCIES="${_POINTS#*| }"
+    _POINTS="${_POINTS%% |*}"
+
+    if [[ "${_POINTS}" -gt 0 && "${_CURRENCIES}" == "EUR" ]]; then
+        report "#9 " "die Tagesreihe liefert Werte mit Waehrung" true \
+            "${_POINTS} Punkte, alle in ${_CURRENCIES}"
+    else
+        report "#9 " "die Tagesreihe liefert Werte mit Waehrung" false \
+            "${_POINTS} Punkte, Waehrungen '${_CURRENCIES}'"
+    fi
+
+    local _FX _RATE _FX_SOURCE
+    _FX="$(curl -s "${BASE_URL}/fx?base=CAD&quote=EUR")"
+    _RATE="$(field "${_FX}" rate)"
+    _FX_SOURCE="$(field "${_FX}" source)"
+
+    # Der Kurs muss brauchbar sein **und** die Herkunft muss die Quelle
+    # nennen, die tatsaechlich geantwortet hat — genau das war bis Runde 2
+    # eine Konstante.
+    if [[ -n "${_RATE}" && "${_FX_SOURCE}" == "${EXPECTED_FX_SOURCE}" ]]; then
+        report "#10" "die Devisenrolle antwortet und nennt ihre Quelle" true \
+            "1 CAD = ${_RATE} EUR aus ${_FX_SOURCE}"
+    else
+        report "#10" "die Devisenrolle antwortet und nennt ihre Quelle" false \
+            "Kurs '${_RATE}', Quelle '${_FX_SOURCE}' statt '${EXPECTED_FX_SOURCE}'"
     fi
 }
 
 checkDelete() {
     curl -s -o /dev/null -X DELETE "${BASE_URL}/instruments/${HOME_ISIN}"
-    local _REST _WAISEN
+    local _REST _ORPHANS
     _REST="$(column "${HOME_ISIN}" isin)"
-    _WAISEN="$("${VENV_PY}" -c "
+    _ORPHANS="$("${VENV_PY}" -c "
 import sqlite3, sys
 c = sqlite3.connect(sys.argv[1])
 print(c.execute('''
@@ -676,11 +798,11 @@ print(c.execute('''
 ''').fetchone()[0])
 " "${DB_PATH}")"
 
-    if [[ -z "${_REST}" && "${_WAISEN}" == "0" ]]; then
+    if [[ -z "${_REST}" && "${_ORPHANS}" == "0" ]]; then
         report "#8 " "gelöscht — ohne Waisen zu hinterlassen" true ""
     else
         report "#8 " "gelöscht — ohne Waisen zu hinterlassen" false \
-            "Zeile '${_REST}', ${_WAISEN} verwaiste Kurse"
+            "Zeile '${_REST}', ${_ORPHANS} verwaiste Kurse"
     fi
 }
 
@@ -696,12 +818,14 @@ runChecks() {
     echo
 
     checkTestData
+    checkTestDataCatchesErrors
     checkChain
     checkIntake
     checkChainProvesItself
     checkHomeExchange
     checkUnresolvable
     checkOverrideAndCache
+    checkDailyAndFx
     checkDelete
 
     echo

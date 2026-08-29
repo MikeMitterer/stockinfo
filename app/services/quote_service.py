@@ -22,6 +22,7 @@ from app.providers.base import (
     QuoteProvider,
     RawQuote,
     ResolvedInstrument,
+    declared_name,
 )
 
 logger = structlog.get_logger()
@@ -200,27 +201,44 @@ class QuoteService:
         self._etf_provider = etf_provider
         self._resolver = resolver
 
-    @property
-    def _quote_source(self) -> str:
-        """Wer den Kurs geliefert hat — **gefragt, nicht angenommen**.
+    def _metadata_source(self, raw: RawQuote) -> str | None:
+        """Woher der Metadatenstand dieser Antwort kommt — oder ``None``.
 
-        Hier stand ``"yfinance"`` als Konstante, und im Online-Profil fiel das
-        nie auf: Dort *ist* yfinance die Kursquelle. Der CSV-Lauf aus T-37 hat
-        es sichtbar gemacht — eine Zeile, deren Kurs aus einer Datei kam, trug
-        `source: yfinance`.
+        **`source` ist die Herkunft der Metadaten, nicht die des Kurses.** So
+        sagt es der Vertrag (`contract/core-contract.json`, `quote.source`:
+        „Woher der jüngste Metadatenstand kommt"), und genau daran sind zwei
+        Anläufe nacheinander gescheitert:
 
-        Das ist keine Kosmetik. `source` ist das Feld, an dem ein Benutzer
-        abliest, woher ein Wert stammt; die Oberfläche zeigt es im
-        Aufklappbereich als „Quelle". Ein fest verdrahteter Anbietername macht
-        daraus eine Behauptung über etwas, das der Dienst gar nicht geprüft
-        hat — derselbe Fehlertyp wie die Fehlermeldungen, die bis T-36
-        OpenFIGI und Yahoo namentlich nannten, obwohl das Profil andere
-        Quellen führte.
+        * Bis T-37 stand hier fest ``"yfinance"``. Im Online-Profil fiel das
+          nicht auf — dort lieferte yfinance beides.
+        * In T-37 habe ich es durch den Namen der **Kursquelle** ersetzt. Das
+          machte die Zeile im CSV-Profil zwar plausibel, war aber dasselbe
+          Missverständnis: `prices-file-quote` ist eine reine Kursquelle und
+          liefert überhaupt keine Metadaten. Codex hat es in Runde 2 gefunden.
 
-        Der Rückfall ist bewusst **nicht** ein Anbietername: Eine Quelle, die
-        ihren Namen nicht nennt, ist unbekannt, und genau das soll dastehen.
+        **Gemessen, und es entscheidet die Sache:** Seit T-23 setzt
+        `QuoteAdapter` auf der `RawQuote` weder `name` noch `type` noch
+        `exchange` — der Vertragstyp `Quote` hat diese Felder nicht. Der
+        Kursweg trägt also in **keinem** Profil etwas zum Metadatenstand bei.
+        Ihn hier zu nennen wäre immer falsch, nicht nur manchmal.
+
+        Deshalb steht hier eine **Bedingung** und keine Konstante: Die
+        Kursquelle wird genannt, *wenn* ihre Antwort Metadaten trug — und sonst
+        nicht. Heute trägt sie keine, die Antwort ist also ``None`` und die
+        Metadatenquelle setzt sie in `_enrich`. Liefert eine Anbindung später
+        wieder Name oder Gattung, folgt die Herkunft von selbst, ohne dass
+        jemand daran denken muss.
+
+        Args:
+            raw: Die Antwort der Kursquelle.
+
+        Returns:
+            Der Name der Kursquelle, falls sie Metadaten beigesteuert hat;
+            sonst ``None``.
         """
-        return getattr(self._quote_provider, "name", "") or "unbekannt"
+        contributed = any((raw.name, raw.type, raw.exchange))
+        return declared_name(self._quote_provider) if contributed else None
+
 
     def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         """Beschafft den Kurs zu einer ISIN.
@@ -406,7 +424,7 @@ class QuoteService:
             price=raw.price,
             quote_time=raw.quote_time,
             volume=raw.volume,
-            source=self._quote_source,
+            source=self._metadata_source(raw),
             cached=False,
             stale=False,
             fetched_at=datetime.now(timezone.utc).isoformat(),

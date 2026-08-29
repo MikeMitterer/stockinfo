@@ -69,36 +69,52 @@ das andere eine des Vertrags.
 
 ---
 
-## Die offene Frage, die zuerst beantwortet werden muss
+## Die Vorbedingung — **entschieden**, nicht mehr offen
 
 > **Mike, 2026-08-28:** *„Bei den Typen gibt es aktuell ETF und STOCK - was
 > ist mit ETC, was ist mit Kryptos?"*
+>
+> **Beantwortet in T-31, Entscheidung 2 (Mike, 2026-08-28):** Kanonischer
+> Katalog `stock`, `etf`, `etc`, `crypto`, `bond`. ETC ist als gängiger Typ
+> bestätigt, ETN kann später ergänzt werden. **Indizes bleiben draußen** und
+> werden mit `unsupported_instrument_type` ehrlich abgelehnt.
+>
+> Damit ist dieses Ticket nicht mehr blockiert. Die Abwägung unten bleibt
+> stehen, weil sie erklärt, **warum** der Katalog gebraucht wird — nicht als
+> offene Frage, sondern als Begründung der getroffenen Entscheidung.
 
-**Das ist kein Nebenpunkt, sondern die Vorbedingung.** Heute kennt die App
+**Der Katalog war die Vorbedingung, und das gilt weiterhin.** Heute kennt die App
 genau zwei Gattungen (`app/providers/base.py`: `QUOTE_TYPE_MAP = {"ETF":
 "etf", "MUTUALFUND": "etf", "EQUITY": "stock"}`). `instrument_type` zur
 Pflicht zu machen, **bevor** das Vokabular reicht, erzwingt eine Lüge: Ein ETC
 wäre dann „stock" oder „etf", und beides ist falsch.
 
-Zu entscheiden ist also **zuerst** das Vokabular. Zur Diskussion:
+Der entschiedene Katalog, mit dem Grund je Eintrag:
 
-| Kandidat | Warum er dazugehören könnte | Was daran hängt |
+| Gattung | Warum sie dazugehört | Was daran hängt |
 |---|---|---|
-| `etc` / `etn` | Rohstoff- und Schuldverschreibungs-Tracker sind formal **keine** Fonds. justETF führt sie getrennt, OpenFIGI ebenfalls | Die ETF-Anreicherung müsste entscheiden, ob sie für ETCs greift |
-| `crypto` | Mikes ausdrückliche Frage | **Hängt an T-31**: Krypto hat keinen MIC, und die Identität der App ist `(ticker, mic)`. Ohne diese Entscheidung ist die Gattung wertlos |
-| `index` | Referenzwerte, die man ansehen aber nicht kaufen kann | dito T-31 |
-| `bond` | Anleihen | dito T-31 |
-| `fund` | Nicht börsengehandelte Fonds | heute auf `etf` abgebildet — vermutlich falsch |
+| `stock` | vorhanden | — |
+| `etf` | vorhanden | — |
+| `etc` | Rohstoff-Tracker sind formal **keine** Fonds. justETF führt sie getrennt, OpenFIGI ebenfalls | Die ETF-Anreicherung muss entscheiden, ob sie für ETCs greift. `etn` kann später folgen |
+| `crypto` | Mikes ausdrückliche Frage | Braucht die Paar-Identität aus T-31 — eine Coin hat keinen MIC |
+| `bond` | Anleihen | Braucht die `isin_only`-Identität aus T-31 |
 
-**Die Empfehlung:** Das Vokabular als **offene** Aufzählung führen, wie es der
-Vertrag für `source` schon tut („Ein neuer Wert in einer offenen Aufzählung"
-gilt dort ausdrücklich als additiv). Dann ist `etc` ein Nachtrag und kein
-Bruch. Was die App nicht kennt, zeigt sie als das, was die Quelle sagt, statt
-es auf `stock` zu runden — **das Runden war der Fehler**, den dieses Ticket
-verhindert.
+**Nicht aufgenommen:** `index` — ehrlich abgelehnt mit
+`unsupported_instrument_type`, bis eine eigene Entscheidung ihn aufnimmt.
+`fund` steht nicht im Katalog; nicht börsengehandelte Fonds werden heute auf
+`etf` abgebildet, und ob das bleibt, ist offen — es ist kein Blocker.
 
-Krypto, Index und Anleihe bleiben davon getrennt: Sie scheitern nicht am
-Vokabular, sondern an der Identität. Das ist T-31.
+**Die Aufzählung bleibt offen**, wie es der Vertrag für `source` schon hält
+(„Ein neuer Wert in einer offenen Aufzählung" gilt dort ausdrücklich als
+additiv). Dann ist `etn` ein Nachtrag und kein Bruch. Was die App nicht kennt,
+zeigt sie als das, was die Quelle sagt, statt es auf `stock` zu runden — **das
+Runden war der Fehler**, den dieses Ticket verhindert.
+
+**Zwei Gattungen hängen an T-31, und das ist der Grund für das Paket.** Krypto
+und Anleihe scheitern nicht am Vokabular, sondern an der Identität `(ticker,
+mic)`. T-31 löst das mit der getaggten Union und verlangt ausdrücklich **einen
+gemeinsamen `API_VERSION`-Sprung** mit diesem Ticket. Wer zuerst anfängt,
+erzeugt den zweiten Sprung.
 
 ---
 
@@ -108,7 +124,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Entscheidung Mike | das Gattungs-Vokabular steht fest — welche Werte es gibt, ob es offen ist, und was mit `etc` geschieht | ➖ | |
+| **1** | Entscheidung Mike | das Gattungs-Vokabular steht fest: `stock`, `etf`, `etc`, `crypto`, `bond`; Indizes bleiben draußen (T-31, Entscheidung 2) | ✅ | |
 | **2** | `stockinfo_plugin.types` | `Resolved.name` und `Resolved.instrument_type` sind Pflichtfelder. Kein Vorgabewert, und die Zusage steht im Docstring | | |
 | **3** | `API_VERSION` | der Sprung ist **ehrlich** gemacht: Ein optionales Feld zur Pflicht zu erheben ist laut eigener Kompatibilitätsregel ein **Bruch**. Ein Plugin nach altem Vertrag wird abgewiesen und nicht stillschweigend geduldet | | |
 | **4** | Contract-Kit | die Rollen-Suiten prüfen die Pflichtfelder. Ein Plugin-Autor merkt es **beim Bauen**, nicht ein Benutzer im Betrieb | | |
@@ -138,4 +154,5 @@ diese Frage mit Nein — und zwar erst beim Benutzer.
 
 ## Auflösung
 
-_(offen — wartet auf Mikes Entscheidung zu `#1`)_
+_(offen — die Vorbedingung `#1` ist seit T-31 entschieden, die Umsetzung
+beginnt gemeinsam mit T-31: **ein** `API_VERSION`-Sprung statt zwei.)_

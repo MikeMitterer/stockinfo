@@ -11,7 +11,7 @@ from typing import Protocol
 import structlog
 
 from app.models import FxRate
-from app.providers.base import FxRateProvider
+from app.providers.base import FxRateProvider, declared_name
 from app.services.freshness import is_fresh
 
 logger = structlog.get_logger()
@@ -45,15 +45,21 @@ class CachedFxService:
         self._ttl_hours = ttl_hours
 
     @property
-    def _fx_source(self) -> str:
+    def _fx_source(self) -> str | None:
         """Wer den Wechselkurs geliefert hat — dieselbe Regel wie beim Kurs.
 
-        Hier stand ebenfalls ``"yfinance"`` fest. Im CSV-Profil beantwortet
-        `fx-file` diese Frage, und der gespeicherte Datensatz behauptete
-        trotzdem yfinance. Ausführlich begründet bei
-        `QuoteService._quote_source`.
+        **Anders als beim Kurs ist das hier wirklich der Kurslieferant.** Der
+        Vertrag sagt für `fx.source` ausdrücklich „Woher der Kurs stammt" —
+        nicht „woher die Metadaten kommen" wie bei `quote.source`. Die beiden
+        Felder heißen gleich und bedeuten Verschiedenes; genau daran ist der
+        erste Anlauf in T-37 gescheitert, der sie über einen Kamm schor.
+
+        Hier stand ebenfalls ``"yfinance"`` fest, und im CSV-Profil antwortet
+        `fx-file`. Der Rückfall kommt aus `declared_name` und ist ``None``:
+        ein deutsches Ersatzwort stünde unübersetzt in der englischen
+        Oberfläche.
         """
-        return getattr(self._provider, "name", "") or "unbekannt"
+        return declared_name(self._provider)
 
     def get_rate(self, base: str, quote: str) -> FxRate:
         """Liefert den Wechselkurs 1 base = ? quote (aus Cache oder frisch).

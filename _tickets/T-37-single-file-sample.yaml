@@ -1,0 +1,64 @@
+version: 1
+
+# This file describes the current state offered by the source. StockInfo stores
+# every accepted quote in its database; historical series do not belong here.
+instruments:
+  - id: world-etf
+    identity:
+      kind: listed
+      isin: IE00B4L5Y983
+      ticker: EUNL
+      mic: XETR
+    name: iShares Core MSCI World UCITS ETF
+    instrument_type: etf
+    quote:
+      as_of: "2026-08-27T17:30:00+02:00"
+      price: 128.21
+      currency: EUR
+    metadata:
+      ter_bps: 20
+      provider: iShares
+      fund_domicile: Ireland
+
+  - id: apple-xetra
+    identity:
+      kind: listed
+      isin: US0378331005
+      ticker: APC
+      mic: XETR
+    name: Apple Inc.
+    instrument_type: stock
+    quote:
+      as_of: "2026-08-27T17:30:00+02:00"
+      price: 277.40
+      currency: EUR
+
+  - id: bitcoin-eur
+    identity:
+      kind: pair
+      base: BTC
+      quote_currency: EUR
+    name: Bitcoin
+    instrument_type: crypto
+    quote:
+      as_of: "2026-08-27T17:30:00+02:00"
+      price: 94500.00
+      currency: EUR
+
+  - id: german-bond
+    identity:
+      kind: isin_only
+      isin: DE0001102531
+    name: Bundesrepublik Deutschland
+    instrument_type: bond
+    quote:
+      as_of: "2026-08-27T17:30:00+02:00"
+      price: 99.42
+      currency: EUR
+    note: Price supplied by this file as online fallback.
+
+fx_rates:
+  - base: CAD
+    quote: EUR
+    as_of: "2026-08-27T17:30:00+02:00"
+    rate: 0.6412

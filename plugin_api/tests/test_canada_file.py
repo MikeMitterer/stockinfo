@@ -108,13 +108,13 @@ def test_eine_tabelle_ohne_gattungsspalte_bleibt_gueltig(tmp_path: Path) -> None
         encoding="utf-8",
     )
 
-    ohne_spalte = CanadaFileResolver({"path": str(alt)}).resolve(
+    without_column = CanadaFileResolver({"path": str(alt)}).resolve(
         ResolveRequest(isin="CA78012H5675")
     )
-    assert ohne_spalte.ticker == "RY", "die Zeile muss trotzdem auflösen"
-    assert ohne_spalte.instrument_type is None
+    assert without_column.ticker == "RY", "die Zeile muss trotzdem auflösen"
+    assert without_column.instrument_type is None
 
-    leere_zelle = CanadaFileResolver({"path": str(FIXTURE)}).resolve(
+    empty_cell = CanadaFileResolver({"path": str(FIXTURE)}).resolve(
         ResolveRequest(isin="CA9861913023")
     )
-    assert leere_zelle.instrument_type is None, "eine leere Zelle ist keine Gattung"
+    assert empty_cell.instrument_type is None, "eine leere Zelle ist keine Gattung"

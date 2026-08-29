@@ -816,7 +816,7 @@ def test_ein_refresh_loescht_den_namen_nicht(repo: QuoteRepository) -> None:
     Geprüft werden beide Richtungen; nur zusammen sind sie die Regel.
     """
 
-    def antwort(
+    def response_for(
         name: str | None, typ: str | None, price: float, stunde: int
     ) -> QuoteResponse:
         return QuoteResponse(
@@ -833,26 +833,26 @@ def test_ein_refresh_loescht_den_namen_nicht(repo: QuoteRepository) -> None:
             fetched_at=f"2026-08-28T{stunde:02d}:00:00+00:00",
         )
 
-    repo.save_quote(antwort("ISHARES CORE MSCI WORLD", "etf", 128.2, 10))
+    repo.save_quote(response_for("ISHARES CORE MSCI WORLD", "etf", 128.2, 10))
 
     # Ein Kurs-Refresh: Er kennt weder Namen noch Gattung, weil der Vertrag
     # sie im Kurs gar nicht vorsieht.
-    repo.save_quote(antwort(None, None, 129.0, 11))
+    repo.save_quote(response_for(None, None, 129.0, 11))
 
-    gespeichert = repo.get_instrument_by_isin("IE00B4L5Y983")
-    assert gespeichert is not None
-    assert gespeichert["name"] == "ISHARES CORE MSCI WORLD", (
+    stored = repo.get_instrument_by_isin("IE00B4L5Y983")
+    assert stored is not None
+    assert stored["name"] == "ISHARES CORE MSCI WORLD", (
         "der Refresh hat den Namen gelöscht"
     )
-    assert gespeichert["type"] == "etf", "und die Gattung gleich mit"
-    kurs = repo.get_latest_quote(gespeichert["id"])
-    assert kurs is not None and kurs["price"] == 129.0, (
+    assert stored["type"] == "etf", "und die Gattung gleich mit"
+    quote_row = repo.get_latest_quote(stored["id"])
+    assert quote_row is not None and quote_row["price"] == 129.0, (
         "der Kurs selbst muss sehr wohl neu sein — geschützt ist die Beschreibung"
     )
 
     # Die Gegenrichtung: Eine echte neue Auskunft gewinnt weiterhin — sonst
     # wäre aus dem Schutz ein Einfrieren geworden.
-    repo.save_quote(antwort("ISHARES CORE MSCI WORLD UCITS ETF", "etf", 129.5, 12))
-    aktualisiert = repo.get_instrument_by_isin("IE00B4L5Y983")
-    assert aktualisiert is not None
-    assert aktualisiert["name"] == "ISHARES CORE MSCI WORLD UCITS ETF"
+    repo.save_quote(response_for("ISHARES CORE MSCI WORLD UCITS ETF", "etf", 129.5, 12))
+    updated = repo.get_instrument_by_isin("IE00B4L5Y983")
+    assert updated is not None
+    assert updated["name"] == "ISHARES CORE MSCI WORLD UCITS ETF"

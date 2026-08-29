@@ -81,7 +81,7 @@ def volume(tmp_path: Path) -> Path:
 
 
 @pytest.fixture(autouse=True)
-def _leere_registry() -> Iterator[None]:
+def _empty_registry() -> Iterator[None]:
     """Kein Test erbt die geladenen Plugins eines anderen."""
     register_loaded(())
     yield
@@ -254,14 +254,14 @@ def test_beide_namen_erscheinen_in_sources(client: TestClient, volume: Path) -> 
     antwort = client.get("/sources")
 
     assert antwort.status_code == 200, antwort.text
-    namen = {eintrag["name"] for eintrag in antwort.json()["sources"]}
+    names = {eintrag["name"] for eintrag in antwort.json()["sources"]}
 
     # **Ausschließlich in der HTTP-Antwort.** Bis Runde 4 stand hier ein
     # `oder in specs_by_name()` — damit wäre der Test grün geblieben, wenn der
     # Entry-Point im öffentlichen Endpunkt gefehlt hätte, also genau bei dem
     # Fehler, den seine Überschrift ausschließt.
-    assert "local-file" in namen, f"die Datei im Volume fehlt: {sorted(namen)}"
-    assert "canada-file" in namen, f"der Entry-Point fehlt: {sorted(namen)}"
+    assert "local-file" in names, f"die Datei im Volume fehlt: {sorted(names)}"
+    assert "canada-file" in names, f"der Entry-Point fehlt: {sorted(names)}"
 
 
 def test_eine_unbrauchbare_quelle_nennt_ihren_grund(client: TestClient, volume: Path) -> None:
@@ -289,12 +289,12 @@ providers:
     get_sources_config.cache_clear()
     _restart_chains()
 
-    eintraege = client.get("/sources").json()["sources"]
-    unbekannt = [e for e in eintraege if e["name"] == "gibt-es-nicht"]
+    entries = client.get("/sources").json()["sources"]
+    unusable = [e for e in entries if e["name"] == "gibt-es-nicht"]
 
-    assert unbekannt, "der konfigurierte Name fehlt in der Auskunft"
-    assert unbekannt[0]["configured"] is False
-    assert "keine bekannte Quelle" in unbekannt[0]["reason"], unbekannt[0]
+    assert unusable, "der konfigurierte Name fehlt in der Auskunft"
+    assert unusable[0]["configured"] is False
+    assert "keine bekannte Quelle" in unusable[0]["reason"], unusable[0]
 
 
 def test_die_tagesreihe_erreicht_den_anbieter_auch_ohne_alias() -> None:
@@ -313,20 +313,20 @@ def test_die_tagesreihe_erreicht_den_anbieter_auch_ohne_alias() -> None:
 
     gefragt: list[str] = []
 
-    class Anbindung:
+    class Binding:
         def fetch_daily_closes(self, symbol: str, start: str | None = None):
             gefragt.append(symbol)
             return [{"date": "2026-01-03", "close": 1.0, "currency": "USD"}]
 
-    adapter = DailyAdapter(YFinancePlugin(provider=Anbindung()), "XETR")
+    adapter = DailyAdapter(YFinancePlugin(provider=Binding()), "XETR")
 
-    ohne_alias = adapter.fetch_daily_closes("AAPL", ticker="AAPL", mic="XNAS")
-    mit_alias = adapter.fetch_daily_closes("EUNL.DE", ticker="EUNL", mic="XETR")
+    without_alias = adapter.fetch_daily_closes("AAPL", ticker="AAPL", mic="XNAS")
+    with_alias = adapter.fetch_daily_closes("EUNL.DE", ticker="EUNL", mic="XETR")
 
     assert gefragt == ["AAPL", "EUNL.DE"], (
         "beide Börsen müssen den Anbieter erreichen — vorher war es keine"
     )
-    assert ohne_alias and mit_alias
+    assert without_alias and with_alias
 
 
 def test_jede_eingebaute_quelle_spricht_in_jeder_rolle_den_vertrag() -> None:
@@ -370,37 +370,37 @@ def test_jede_eingebaute_quelle_spricht_in_jeder_rolle_den_vertrag() -> None:
         "fx": FxSource,
     }
     settings = Settings()
-    fehler: list[str] = []
+    problems: list[str] = []
 
     for spec in BUILTIN_SOURCES:
         for role in sorted(spec.roles):
-            quelle = unwrap(spec.build(role, {}, settings))
-            erwartet = contracts[role]
-            if not isinstance(quelle, erwartet):
-                fehler.append(
+            source = unwrap(spec.build(role, {}, settings))
+            expected = contracts[role]
+            if not isinstance(source, expected):
+                problems.append(
                     f"{spec.name!r} in der Rolle {role!r} ist ein "
-                    f"{type(quelle).__name__} und kein {erwartet.__name__}"
+                    f"{type(source).__name__} und kein {expected.__name__}"
                 )
 
-    assert not fehler, "diese Quellen sprechen den Vertrag nicht:\n  " + "\n  ".join(
-        fehler
+    assert not problems, "diese Quellen sprechen den Vertrag nicht:\n  " + "\n  ".join(
+        problems
     )
 
 
 # ─── Lebenszyklus: bauen, wiederverwenden, schließen ──────────────────────────
 
 
-def _zaehlende_quelle(zaehler: list[int]):
+def _counting_source(counter: list[int]):
     """Ein Bauplan, der jede Konstruktion und jedes Schließen mitschreibt."""
     from stockinfo_plugin import QuoteSource
 
-    class Gezaehlt(QuoteSource):
+    class Counted(QuoteSource):
         name = "gezaehlt"
         cost = "free"
 
         def __init__(self, config=None) -> None:
             super().__init__(config)
-            zaehler.append(1)
+            counter.append(1)
             self.closed = 0
 
         def handles(self, request) -> bool:
@@ -412,34 +412,34 @@ def _zaehlende_quelle(zaehler: list[int]):
         def close(self) -> None:
             self.closed += 1
 
-    return Gezaehlt
+    return Counted
 
 
 @pytest.fixture
-def gezaehlte_kette(tmp_path: Path):
+def counted_chain(tmp_path: Path):
     """Eine Kette aus genau einer mitzählenden Quelle."""
     from app.config import Settings
     from app.sources_config import load_sources_config
     from app.sources_registry import SourceSpec
 
-    gebaut: list[int] = []
-    klasse = _zaehlende_quelle(gebaut)
-    instanzen: list[object] = []
+    built: list[int] = []
+    source_class = _counting_source(built)
+    instances: list[object] = []
 
     def build(role, config, settings):
-        quelle = klasse(config)
-        instanzen.append(quelle)
-        return quelle
+        source = source_class(config)
+        instances.append(source)
+        return source
 
     register_loaded(
         (SourceSpec("gezaehlt", frozenset({"quotes"}), build, loaded=True),)
     )
     (tmp_path / "sources.yaml").write_text("quotes: [gezaehlt]\n", encoding="utf-8")
     config = load_sources_config(tmp_path / "sources.yaml", Settings())
-    return config, gebaut, instanzen
+    return config, built, instances
 
 
-def test_ein_lesezugriff_baut_keine_einzige_quelle(gezaehlte_kette) -> None:
+def test_ein_lesezugriff_baut_keine_einzige_quelle(counted_chain) -> None:
     """**`GET /sources` ist eine Auskunft, kein Eingriff.**
 
     Bis Runde 3 rief der Endpunkt denselben Bauweg wie der Fachbetrieb und
@@ -454,19 +454,19 @@ def test_ein_lesezugriff_baut_keine_einzige_quelle(gezaehlte_kette) -> None:
     from app.config import Settings
     from app.sources_registry import NOT_BUILT, describe_chain
 
-    config, gebaut, _ = gezaehlte_kette
+    config, built, _ = counted_chain
 
-    eintraege = describe_chain("quotes", config, Settings())
+    entries = describe_chain("quotes", config, Settings())
 
-    assert gebaut == [], "das Lesen hat eine Quelle konstruiert"
-    assert [e.name for e in eintraege] == ["gezaehlt"]
-    assert eintraege[0].configured is False, (
+    assert built == [], "das Lesen hat eine Quelle konstruiert"
+    assert [e.name for e in entries] == ["gezaehlt"]
+    assert entries[0].configured is False, (
         "ungebaut heißt ungeprüft — vorher stand hier ein spekulatives true"
     )
-    assert eintraege[0].reason == NOT_BUILT
+    assert entries[0].reason == NOT_BUILT
 
 
-def test_zweimal_bauen_liefert_dieselben_objekte(gezaehlte_kette) -> None:
+def test_zweimal_bauen_liefert_dieselben_objekte(counted_chain) -> None:
     """Eine Kette wird **einmal** gebaut und danach wiederverwendet.
 
     Sonst entstünde bei jedem Request ein neuer Satz Quellen: neue
@@ -476,17 +476,17 @@ def test_zweimal_bauen_liefert_dieselben_objekte(gezaehlte_kette) -> None:
     from app.config import Settings
     from app.sources_registry import build_chain
 
-    config, gebaut, _ = gezaehlte_kette
+    config, built, _ = counted_chain
 
-    erste = build_chain("quotes", config, Settings())
-    zweite = build_chain("quotes", config, Settings())
+    first = build_chain("quotes", config, Settings())
+    second = build_chain("quotes", config, Settings())
 
-    assert gebaut == [1], f"zweimal gebaut: {len(gebaut)} Konstruktionen"
-    assert [id(x) for x in erste] == [id(x) for x in zweite]
+    assert built == [1], f"zweimal built: {len(built)} Konstruktionen"
+    assert [id(x) for x in first] == [id(x) for x in second]
 
 
 def test_das_herunterfahren_schliesst_jede_quelle_genau_einmal(
-    gezaehlte_kette,
+    counted_chain,
 ) -> None:
     """`close()` steht seit T-27a im Vertrag — und wurde bis Runde 3 nie gerufen.
 
@@ -499,14 +499,14 @@ def test_das_herunterfahren_schliesst_jede_quelle_genau_einmal(
     from app.sources_registry import build_chain, close_all
     from app.plugin_adapters import unwrap
 
-    config, _, instanzen = gezaehlte_kette
+    config, _, instances = counted_chain
     build_chain("quotes", config, Settings())
 
     close_all()
 
-    assert instanzen, "es wurde gar nichts gebaut"
-    for quelle in instanzen:
-        assert unwrap(quelle).closed == 1, "nicht oder mehrfach geschlossen"
+    assert instances, "es wurde gar nichts built"
+    for source in instances:
+        assert unwrap(source).closed == 1, "nicht oder mehrfach geschlossen"
 
 
 def test_ein_gescheitertes_paket_kostet_nicht_die_gesunde_kette(
@@ -520,7 +520,7 @@ def test_ein_gescheitertes_paket_kostet_nicht_die_gesunde_kette(
     Quelle — und der Betreiber sieht im Protokoll, was gefehlt hat.
 
     Bis Runde 5 endete das anders: Der fehlgeschlagene Installationslauf ließ
-    den Kettennamen unbekannt werden, `build_chain` warf, und der Lifespan riss
+    den Kettennamen unusable werden, `build_chain` warf, und der Lifespan riss
     den ganzen Prozess mit. Wer ein Plugin eintrug, dessen Index gerade nicht
     erreichbar war, verlor seine Installation — statt dieses einen Plugins.
 
@@ -564,24 +564,24 @@ providers:
             assert client.get("/health").status_code == 200, (
                 "die App ist wegen eines fremden Pakets nicht hochgekommen"
             )
-            quellen = client.get("/sources").json()
+            sources = client.get("/sources").json()
     finally:
         get_settings.cache_clear()
 
-    eintraege = {
+    entries = {
         eintrag["name"]: eintrag
-        for rolle in quellen.values()
+        for rolle in sources.values()
         if isinstance(rolle, list)
         for eintrag in rolle
     }
 
-    assert "local-file" in eintraege, f"die gesunde Quelle fehlt: {sorted(eintraege)}"
-    assert "prices-file-quote" in eintraege, "der gesunde Fallback fehlt"
+    assert "local-file" in entries, f"die gesunde Quelle fehlt: {sorted(entries)}"
+    assert "prices-file-quote" in entries, "der gesunde Fallback fehlt"
 
-    fehlend = eintraege.get("aus-dem-paket")
+    fehlend = entries.get("aus-dem-paket")
     assert fehlend is not None, (
         "der Name aus dem gescheiterten Paket wird verschwiegen — "
-        f"gemeldet wurden: {sorted(eintraege)}"
+        f"gemeldet wurden: {sorted(entries)}"
     )
     assert fehlend["configured"] is False
     assert "keine bekannte Quelle" in fehlend["reason"], fehlend["reason"]

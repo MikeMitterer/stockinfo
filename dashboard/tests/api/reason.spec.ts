@@ -5,6 +5,18 @@ import { describeFailure, reasonOf } from '../../src/api/reason'
 import { i18n, LOCALES } from '../../src/i18n'
 
 /**
+ * Nur so viel vom Katalog, wie diese Tests anfassen.
+ *
+ * `Record<string, any>` stand hier zweimal und machte jeden Tippfehler im
+ * Pfad zu einem Laufzeitfehler statt zu einem Typfehler — `any` schaltet
+ * genau die Pruefung ab, für die der Compiler da ist.
+ */
+type LocaleMessages = {
+  errors: { reason: Record<string, string> }
+  drilldown: Record<string, string>
+}
+
+/**
  * Der Übersetzer zwischen `ErrorDetail` und dem, was ein Mensch liest.
  *
  * Bis T-36 gab es ihn ohne Test — und der UI-Lauf hat gezeigt, wie teuer das
@@ -48,7 +60,7 @@ describe('reasonOf', () => {
     // behauptet trotzdem das Gegenteil. Ein Teilstring-Verbot haette hier
     // falsch angeschlagen — der erste Anlauf dieses Tests tat genau das.
     // Verlangt wird deshalb der Unsicherheitsmarker in jeder Sprache.
-    const ungewiss: Record<string, RegExp> = { de: /\boffen\b/i, en: /\bwhether\b/i }
+    const uncertain: Record<string, RegExp> = { de: /\boffen\b/i, en: /\bwhether\b/i }
 
     for (const locale of LOCALES) {
       i18n.global.locale.value = locale
@@ -56,7 +68,7 @@ describe('reasonOf', () => {
         new ApiError(502, JSON.stringify({ code: 'quote_unavailable', params: { identifier: 'yfinance' } })),
       )
       expect(reason, `${locale}: die Existenz wird als offen dargestellt`).toMatch(
-        ungewiss[locale],
+        uncertain[locale],
       )
     }
     i18n.global.locale.value = 'de'
@@ -120,7 +132,7 @@ describe('Sprachkataloge', () => {
     // Oberflaeche eine rohe Kennung — genau das, was `ErrorDetail` verhindern
     // soll.
     const keys = (locale: string): string[] => {
-      const messages = i18n.global.getLocaleMessage(locale) as Record<string, any>
+      const messages = i18n.global.getLocaleMessage(locale) as LocaleMessages
       return Object.keys(messages.errors.reason).sort()
     }
 
@@ -129,7 +141,7 @@ describe('Sprachkataloge', () => {
 
   it('haben fuer jede Kennung einen echten Satz', () => {
     for (const locale of LOCALES) {
-      const messages = i18n.global.getLocaleMessage(locale) as Record<string, any>
+      const messages = i18n.global.getLocaleMessage(locale) as LocaleMessages
       for (const [code, sentence] of Object.entries(messages.errors.reason)) {
         expect(String(sentence).trim().length, `${locale}.${code}`).toBeGreaterThan(15)
         expect(String(sentence), `${locale}.${code}`).not.toBe(code)
@@ -146,12 +158,12 @@ describe('Erklaertexte im Aufklappbereich', () => {
     // Drilldown standen nicht darin und nannten weiter viermal justETF. Im
     // CSV-Profil heisst die Kennzahlen-Quelle `metadata-file` — und die
     // Oberflaeche zeigt das eine Zeile darueber sogar korrekt an.
-    const verboten = [/justetf/i, /yfinance/i, /openfigi/i, /\byahoo\b/i]
+    const forbidden = [/justetf/i, /yfinance/i, /openfigi/i, /\byahoo\b/i]
 
     for (const locale of LOCALES) {
-      const messages = i18n.global.getLocaleMessage(locale) as Record<string, any>
+      const messages = i18n.global.getLocaleMessage(locale) as LocaleMessages
       for (const [key, text] of Object.entries(messages.drilldown)) {
-        for (const name of verboten) {
+        for (const name of forbidden) {
           expect(String(text), `${locale}.drilldown.${key}`).not.toMatch(name)
         }
       }
@@ -160,9 +172,9 @@ describe('Erklaertexte im Aufklappbereich', () => {
 
   it('haben fuer jeden Fall einen echten Satz', () => {
     for (const locale of LOCALES) {
-      const messages = i18n.global.getLocaleMessage(locale) as Record<string, any>
-      for (const fall of ['explain', 'notEtf', 'noIsin', 'nothingProvided']) {
-        expect(String(messages.drilldown[fall]).trim().length, `${locale}.${fall}`)
+      const messages = i18n.global.getLocaleMessage(locale) as LocaleMessages
+      for (const key of ['explain', 'notEtf', 'noIsin', 'nothingProvided']) {
+        expect(String(messages.drilldown[key]).trim().length, `${locale}.${key}`)
           .toBeGreaterThan(25)
       }
     }

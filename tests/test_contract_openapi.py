@@ -424,30 +424,50 @@ def test_der_vierhundertvier_ist_zugesagt_und_traegt_eine_kennung(path: str) -> 
 
 
 def test_der_echte_koerper_des_vierhundertvier_passt_zur_zusage(
-    tmp_path, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Und die andere Richtung: Was wirklich herauskommt, hält die Zusage.
 
     Ein deklarierter Statuscode, dessen Rumpf anders aussieht als das Modell,
     wäre die teurere Hälfte desselben Fehlers — der Konsument liest den
     Vertrag, baut danach, und bekommt etwas anderes.
+
+    **Der Dienst wird ersetzt, und das ist der Punkt.** Der erste Anlauf ließ
+    die echte Kette laufen: `XX0000000000` fiel durch OpenFIGI hindurch auf
+    `yahoo-search`, und was dann herauskam, hing am Netz — mit DNS ein `404`,
+    ohne DNS ein `502`. Im vollen Lauf war er grün, weil ein anderer Test
+    vorher Netz hatte; isoliert war er rot. Codex hat das in Runde 2 gemessen.
+
+    Geprüft werden soll hier aber gar nicht die Auflösung, sondern **die
+    Abbildung einer Domain-Ausnahme auf Status und Rumpf**. Genau die wird
+    jetzt isoliert: Der Dienst wirft `InstrumentNotFoundError`, sonst ist
+    nichts im Spiel.
     """
     from fastapi.testclient import TestClient
 
     from app.config import get_settings
     from app.container import get_cached_quote_service, get_sources_config
+    from app.services.quote_service import InstrumentNotFoundError
 
-    # Eigenes Volume: Auf der Arbeitsdatenbank stünde womöglich ein Umzug aus,
-    # und der Riegel antwortete mit 503 statt mit dem geprüften Fall.
+    # Eigene Datenbank: Auf der Arbeitsdatenbank stünde womöglich ein Umzug
+    # aus, und der Riegel antwortete mit `503`, bevor der Endpunkt drankommt.
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "vertrag.db"))
     get_settings.cache_clear()
     get_sources_config.cache_clear()
     get_cached_quote_service.cache_clear()
 
+    class KenntNichts:
+        """Ein Kursdienst, der genau diese eine Ausnahme wirft."""
+
+        def get_by_isin(self, isin: str):
+            raise InstrumentNotFoundError(isin)
+
+    app.dependency_overrides[get_cached_quote_service] = KenntNichts
     try:
         with TestClient(app) as client:
             response = client.get("/quote/XX0000000000")
     finally:
+        app.dependency_overrides.pop(get_cached_quote_service, None)
         get_settings.cache_clear()
         get_sources_config.cache_clear()
         get_cached_quote_service.cache_clear()
@@ -489,16 +509,16 @@ def test_kein_optionales_feld_ist_im_schema_heimlich_pflicht(model: str) -> None
     """
     schema = app.openapi()["components"]["schemas"][_CONTRACT_MODELS[model]]
     properties = schema["properties"]
-    pflicht_laut_artefakt = set(required_fields(model))
+    required_by_artefact = set(required_fields(model))
 
-    optional_laut_artefakt = [
-        feld["name"]
-        for feld in core_contract()["core"][model]
-        if not feld["required"]
+    optional_by_artefact = [
+        entry["name"]
+        for entry in core_contract()["core"][model]
+        if not entry["required"]
     ]
 
-    for field in optional_laut_artefakt:
-        assert field not in pflicht_laut_artefakt, "Artefakt widerspricht sich selbst"
+    for field in optional_by_artefact:
+        assert field not in required_by_artefact, "Artefakt widerspricht sich selbst"
         if field not in properties:
             # Ein optionales Feld, das das Schema gar nicht führt, ist ein
             # anderer Befund — ihn deckt `test_jeder_geprüfte_name_hat_auch
