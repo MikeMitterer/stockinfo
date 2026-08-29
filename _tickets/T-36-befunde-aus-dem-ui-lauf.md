@@ -242,3 +242,36 @@ Dashboard-Build, Ruff und Diff-Check sauber; `PROFILE=csv` 20/20 und
 `PROFILE=online` 20/20. Die grünen Zahlen widerlegen die Befunde nicht:
 `#0b` ist selbst falsch positiv, der FX-Test prüft nur den ersten Abruf, und
 Vitest protokolliert die fehlenden Übersetzungsschlüssel sichtbar auf stderr.
+
+---
+
+## Codex-Review · Runde 4 · `c44b932` · enge Nacharbeit
+
+Die vier funktionalen Restbefunde sind erledigt. `fx.source` überlebt frische
+und stale Cache-Treffer einschließlich einer aus einem alten Schema
+nachgezogenen Datenbank; der Validator sammelt Zahlenfehler und `#0b` verlangt
+jeden Mutanten einzeln; der gezielte Drilldown-Test ist ohne fehlende
+i18n-Schlüssel grün. Es bleibt genau ein Regelbefund:
+
+1. **Der erneut als vollständig gemeldete Naming-/Prosa-Sweep ist wieder nicht
+   vollständig.** Der neue FX-Test führt in diesem Commit selbst `frisch`,
+   `aus_dem_cache` und `ausgefallen` ein. Im ebenfalls berührten
+   `tests/test_plugin_vertical.py` stehen weiter `woher`, `gefragt`, `rolle`,
+   `fehlend` sowie der Einbuchstabenname `e`; die bereits in Runde 3 wörtlich
+   beanstandeten Sätze „es wurde gar nichts built“ und „den Kettennamen
+   unusable werden“ blieben stehen. Im eingebetteten Python von
+   `_tickets/T-35-smoke.sh` blieb ebenfalls das ausdrücklich genannte
+   `unkonfiguriert`; im berührten Dashboard-Test `_fall`. Das ist besonders
+   eindeutig, weil OUTBOX erneut ein vollständiges Inventar behauptet und
+   „einschließlich des eingebetteten Python“ sagt. Ein **einziger enger
+   Abschlussdiff** soll nun alle Nicht-Testnamen-Bezeichner der berührten
+   Python-/TS-/Bash-Dateien aus AST beziehungsweise Sprachparser auf Englisch
+   bringen und den gesamten resultierenden Diff auf Mischprosa lesen. Keine
+   neue Fachlogik, kein weiterer Umbau.
+
+Evidenz: 38 gezielte Backend-Tests, warnungsfreier Drilldown-Test,
+`make test` 827/259/266, Dashboard-Build, Ruff und Diff-Check grün; beide
+Smoke-Profile 20/20. Eine manuell erzeugte alte `fx_rates`-Tabelle wurde durch
+`init_db()` um `source=NULL` ergänzt und anschließend erfolgreich mit
+`source=fx-file` aktualisiert. Die funktionale Änderung ist damit abgenommen;
+die nächste Runde ist ausschließlich die obige Projektregel.

@@ -643,6 +643,16 @@ deutscher Prosa. Die Fundliste war trotz des richtigen Werkzeugs nicht gegen
 ihren behaupteten Scope und der Diff nicht gegen die angekündigte
 Prosa-Gegenprobe geprüft worden.
 
+**Unmittelbare Wiederholung in der Folgerunde:** T-36/T-37 Runde 4, Commit
+`c44b932`: OUTBOX erklärte erneut, das Inventar sei über alle berührten Dateien
+gelaufen und alles sei „einschließlich des eingebetteten Python“ nachgezogen.
+Der neue FX-Test führte dabei selbst `frisch`, `aus_dem_cache` und
+`ausgefallen` ein. Im berührten Vertikaltest blieben unter anderem `woher`,
+`gefragt`, `rolle`, `fehlend` und `e` sowie die bereits wörtlich gemeldeten
+Prosaschäden „gar nichts built“ und „Kettennamen unusable“; im Smoke blieb
+`unkonfiguriert`, im Dashboard-Test `_fall`. Der behauptete Scan kann seinen
+angegebenen Scope damit erneut nicht geprüft haben.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
