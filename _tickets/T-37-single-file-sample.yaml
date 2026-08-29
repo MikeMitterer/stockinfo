@@ -1,9 +1,10 @@
 version: 1
 
-# This file describes the current state offered by the source. StockInfo stores
-# every accepted price in its database; historical series do not belong here.
-# If `price` is absent, StockInfo may use the latest historical close already
-# stored in the database as fallback.
+# This file describes values offered by the source. StockInfo persists every
+# accepted price and historical point in its database. `history` is optional
+# and intended only as a manually maintained fallback for an asset that no
+# configured source can query. If `price` is absent, its newest close may also
+# serve as the current-price fallback.
 instruments:
   - id: world-etf
     identity:
@@ -53,7 +54,16 @@ instruments:
       isin: DE0001102531
     name: Bundesrepublik Deutschland
     instrument_type: bond
-    note: No current price; use the latest historical close from the database.
+    history:
+      currency: EUR
+      closes:
+        - date: "2026-08-25"
+          value: 99.18
+        - date: "2026-08-26"
+          value: 99.31
+        - date: "2026-08-27"
+          value: 99.42
+    note: No query source is available; the manually maintained history is the fallback.
 
 fx_rates:
   - base: CAD
