@@ -27,10 +27,28 @@ def repo(tmp_path: Path) -> QuoteRepository:
 
 
 def _response(**overrides) -> QuoteResponse:
-    """Eine Kurs-Antwort, wie der Quote-Service sie nach der Auflösung baut."""
+    """Eine Kurs-Antwort, wie der Quote-Service sie nach der Auflösung baut.
+
+    ``ticker``, ``mic`` und ``isin`` dürfen einzeln überschrieben werden und
+    werden hier zur Identität zusammengesetzt. Das ist bequemer als in jedem
+    Aufruf eine ganze `ListedIdentityOut` zu nennen — **und es ist die
+    schärfere Variante**: Ein unbekannter Schlüssel im Override würde von
+    Pydantic stillschweigend verworfen, der Fall liefe grün und prüfte nichts
+    mehr. Hier fällt er auf.
+    """
+    identity_fields = {
+        field: overrides.pop(field)
+        for field in ("ticker", "mic", "isin")
+        if field in overrides
+    }
     defaults = {
         "identity": ListedIdentityOut(
-            ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"
+            **{
+                "ticker": "VGWL",
+                "mic": "XETR",
+                "isin": "IE00B3RBWM25",
+                **identity_fields,
+            }
         ),
         "symbol": "VGWL.DE",
         "exchange": "Xetra",
@@ -222,7 +240,7 @@ def test_ein_wechsel_des_handelsplatzes_wird_protokolliert(repo) -> None:
 
     assert _row(repo, instrument_id)["mic"] == "XMIL"
     changes = [entry for entry in logs if entry["event"] == "identity_changed"]
-    assert changes and changes[0]["previous_mic"] == "XETR"
+    assert changes and "XETR" in changes[0]["previous"]
 
 
 def test_die_identitaet_steht_jetzt_in_der_rest_antwort() -> None:
@@ -234,11 +252,19 @@ def test_die_identitaet_steht_jetzt_in_der_rest_antwort() -> None:
     nicht trug.
 
     Mit `2.0.0` ist genau das zugesagt, und dieselbe Zeile hält jetzt das
-    Gegenteil fest. `listing_id` bleibt draußen — sie entsteht erst beim
-    Anlegen der Zeile, eine frisch beschaffte Antwort hat noch keine.
+    Gegenteil fest. Seit T-31 steht sie in **einem** Feld und nennt ihre Form
+    mit: Ein Konsument liest `kind` und weiß danach, welche Felder es gibt.
+
+    `listing_id` bleibt draußen — sie entsteht erst beim Anlegen der Zeile,
+    eine frisch beschaffte Antwort hat noch keine.
     """
     payload = _response().model_dump()
 
-    assert payload["ticker"] == "VGWL"
-    assert payload["mic"] == "XETR"
+    assert payload["identity"] == {
+        "kind": "listed",
+        "ticker": "VGWL",
+        "mic": "XETR",
+        "isin": "IE00B3RBWM25",
+    }
+    assert "ticker" not in payload, "die flachen Felder sind mit T-31 entfallen"
     assert "listing_id" not in payload
