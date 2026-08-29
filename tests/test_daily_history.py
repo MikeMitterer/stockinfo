@@ -66,6 +66,7 @@ class FakeDailyProvider:
         start: str | None = None,
         *,
         identity: object | None = None,
+        instrument_type: str | None = None,
     ) -> list[dict]:
         self.calls.append(start)
         return [
@@ -144,6 +145,7 @@ class FlakyDailyProvider:
         start: str | None = None,
         *,
         identity: object | None = None,
+        instrument_type: str | None = None,
     ) -> list[dict] | None:
         self.calls.append(start)
         if len(self.calls) <= self._fail_first:
@@ -202,6 +204,7 @@ class _ProviderWithoutCurrency:
         start: str | None = None,
         *,
         identity: object | None = None,
+        instrument_type: str | None = None,
     ) -> list[dict]:
         return [
             {"date": _day(5), "close": 160.0},

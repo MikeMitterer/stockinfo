@@ -43,6 +43,7 @@ from stockinfo_plugin.invariants import currency_problem, is_finite_price
 from stockinfo_plugin.sources import DailyCloseSource, FxSource, QuoteSource
 
 from app.exchanges import EXCHANGES, provider_alias
+from app.providers.base import INSTRUMENT_TYPES
 from app.providers.yfinance_provider import YFinanceProvider
 
 
@@ -53,6 +54,11 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
     cost = "free"
     api_version = 2
     SUPPORTED_KINDS = frozenset({"listed", "pair"})
+    # **Ausgeschrieben, seit eine leere Menge „nichts zugesagt" heisst.** Sie
+    # stand hier gar nicht, und der Vorfilter las das als „alles" — die Zusage
+    # im Vertrag war damit folgenlos. yfinance bepreist tatsaechlich jede
+    # Gattung des Katalogs; das steht jetzt da, statt es zu unterstellen.
+    SUPPORTED_TYPES = frozenset(INSTRUMENT_TYPES)
 
     def __init__(
         self,

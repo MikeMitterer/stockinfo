@@ -205,6 +205,7 @@ class _FakeDailyProvider:
         start: str | None = None,
         *,
         identity: object | None = None,
+        instrument_type: str | None = None,
     ):
         return [
             {"date": f"2026-01-{index + 1:02d}", "close": close, "currency": "EUR"}
@@ -303,6 +304,7 @@ def test_refresh_behaelt_letzte_volatilitaet_bei_fehlgeschlagener_neuberechnung(
             start: str | None = None,
             *,
             identity: object | None = None,
+            instrument_type: str | None = None,
         ):
             return None
 

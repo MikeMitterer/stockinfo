@@ -138,13 +138,20 @@ class _Adapter:
             )
             return False
 
-        # Eine **unbekannte** Gattung filtert nicht: Solange niemand sie
+        # **Eine unbekannte Gattung filtert nicht.** Solange niemand sie
         # festgestellt hat, wäre das Überspringen eine Entscheidung auf der
-        # Grundlage einer Nichtangabe. Gefiltert wird nur gegen eine
-        # ausgesprochene Deklaration.
+        # Grundlage einer Nichtangabe. Bis T-38 die Gattung zur Pflicht macht,
+        # ist das der Normalfall und keine Nachlässigkeit.
         types = getattr(source, "SUPPORTED_TYPES", frozenset())
-        if instrument_type is None or not types:
+        if instrument_type is None:
             return True
+
+        # **Eine leere Deklaration heißt „nichts zugesagt", nicht „alles"**
+        # (Codex P1 `#3`). Das las sich bis Runde 4 als Durchlass, und
+        # `YFinancePlugin` deklarierte deshalb gar keine Typen — die Zusage im
+        # Vertrag war damit folgenlos, und wer sie las, wurde in die Irre
+        # geführt. Eine Quelle, die eine bekannte Gattung bedienen will, sagt
+        # es jetzt.
         if instrument_type not in types:
             logger.debug(
                 "source_skipped_type",
@@ -310,6 +317,7 @@ class DailyAdapter(_Adapter):
         start: str | None = None,
         *,
         identity: Identity | None = None,
+        instrument_type: str | None = None,
     ) -> list[dict] | None:
         """Die Tagesreihe in der Form, die der Core liest.
 
@@ -323,6 +331,10 @@ class DailyAdapter(_Adapter):
             symbol: Das Anbieter-Symbol; nur noch für Meldungen.
             start: Frühester Tag als ISO-Datum.
             identity: Die Identität des Papiers, in ihrer Form.
+            instrument_type: Die Gattung, falls bekannt. **Sie kommt mit, seit
+                der Vorfilter sie prüft**: Bis Runde 4 reichte diese Stelle
+                stets `None` weiter und warf damit eine Angabe weg, die der
+                Aufrufer bereits hatte.
 
         Returns:
             Zeilen mit ``date``, ``close`` und ``currency``; ``None`` bei einer
@@ -332,7 +344,7 @@ class DailyAdapter(_Adapter):
         if identity is None:
             logger.info("daily_without_identity", symbol=symbol)
             return None
-        if not self._serves(identity, None):
+        if not self._serves(identity, instrument_type):
             return None
 
         answer = self._source.fetch_daily(

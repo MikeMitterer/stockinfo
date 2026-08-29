@@ -44,6 +44,7 @@ class FakeProvider:
         start: str | None = None,
         *,
         identity: object | None = None,
+        instrument_type: str | None = None,
     ):
         self.calls.append(start)
         return self._rows

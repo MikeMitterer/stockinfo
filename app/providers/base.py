@@ -260,6 +260,7 @@ class DailyCloseProvider(Protocol):
         start: str | None = None,
         *,
         identity: Identity | None = None,
+        instrument_type: str | None = None,
     ) -> list[dict] | None:
         """Holt Tagesschlusskurse.
 

@@ -57,6 +57,7 @@ class DailyHistoryService:
             instrument["symbol"],
             desired_start,
             identity=identity_from_row(instrument),
+            instrument_type=instrument.get("type"),
         ):
             raise QuoteUnavailableError(instrument["symbol"])
         rows = self._repository.get_daily_closes(instrument["id"], desired_start)

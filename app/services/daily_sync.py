@@ -37,6 +37,7 @@ class DailyCloseSync:
         desired_start: str | None,
         *,
         identity: Identity | None = None,
+        instrument_type: str | None = None,
     ) -> bool:
         """Lädt nur fehlende Tage nach — anhand der Fetch-Wasserzeichen.
 
@@ -53,7 +54,7 @@ class DailyCloseSync:
         meta = self._repository.get_daily_meta(instrument_id)
 
         if meta is None:  # noch nie abgefragt → gesamten Zeitraum holen
-            if not self._fetch_and_store(instrument_id, symbol, desired_start, identity):
+            if not self._fetch_and_store(instrument_id, symbol, desired_start, identity, instrument_type):
                 return False
             self._repository.set_daily_meta(instrument_id, desired_start, today)
             return True
@@ -62,15 +63,15 @@ class DailyCloseSync:
         fetched_to = meta["fetched_to"]
 
         if fetched_to is None or fetched_to < today:  # neue Tage seither
-            if self._fetch_and_store(instrument_id, symbol, fetched_to, identity):
+            if self._fetch_and_store(instrument_id, symbol, fetched_to, identity, instrument_type):
                 fetched_to = today
 
         if fetched_from is not None:  # gesamte Historie noch nicht geholt
             if desired_start is None:  # 'max' verlangt → alles holen
-                if self._fetch_and_store(instrument_id, symbol, None, identity):
+                if self._fetch_and_store(instrument_id, symbol, None, identity, instrument_type):
                     fetched_from = None
             elif desired_start < fetched_from:  # weiter zurück verlangt
-                if self._fetch_and_store(instrument_id, symbol, desired_start, identity):
+                if self._fetch_and_store(instrument_id, symbol, desired_start, identity, instrument_type):
                     fetched_from = desired_start
 
         self._repository.set_daily_meta(instrument_id, fetched_from, fetched_to)
@@ -82,6 +83,7 @@ class DailyCloseSync:
         symbol: str,
         start: str | None,
         identity: Identity | None = None,
+        instrument_type: str | None = None,
     ) -> bool:
         """Holt EOD-Kurse ab ``start`` und schreibt sie in den Cache.
 
@@ -95,7 +97,7 @@ class DailyCloseSync:
         # nicht, und der Versuch hat in Runde 3 alle aliaslosen Plätze still
         # abgeschaltet: null Provider-Aufrufe, `None` als Ergebnis.
         rows = self._provider.fetch_daily_closes(
-            symbol, start=start, identity=identity
+            symbol, start=start, identity=identity, instrument_type=instrument_type
         )
         if rows is None:
             logger.warning("daily_sync_failed", symbol=symbol, start=start)

@@ -615,6 +615,7 @@ class CachedQuoteService:
             # ueber die Spaltenbelegung benutzt beide vorhandenen
             # Umrechnungen, statt eine dritte zu erfinden.
             identity=identity_from_row(identity_columns(quote.identity)),
+            instrument_type=quote.type,
         )
         rows = self._repository.get_daily_closes(instrument_id, start)
         closes = [row["close"] for row in rows if row.get("close") is not None]

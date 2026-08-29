@@ -403,6 +403,7 @@ class _SilentSync:
         start: str,
         *,
         identity: object | None = None,
+        instrument_type: str | None = None,
     ) -> None:
         return None
 
