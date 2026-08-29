@@ -10,7 +10,7 @@ import InstrumentCard from './InstrumentCard.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
 import MetricValue from './MetricValue.vue'
-import { isinOf } from '../types'
+import { acceptsIsin, isinOf } from '../types'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 const props = defineProps<{
@@ -316,7 +316,12 @@ function price(value: number | null): string {
               </td>
               <td class="mono dim isin-cell">
                 <span v-if="isinOf(item.identity)">{{ isinOf(item.identity) }}</span>
-                <IsinEditor v-else :symbol="item.symbol" @save="emit('set-isin', $event)" />
+                <IsinEditor
+                  v-else-if="acceptsIsin(item.identity)"
+                  :symbol="item.symbol"
+                  @save="emit('set-isin', $event)"
+                />
+                <span v-else class="dim">{{ t('table.noIsinByForm') }}</span>
               </td>
               <td class="name">
                 <button

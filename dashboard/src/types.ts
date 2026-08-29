@@ -97,6 +97,21 @@ export function isinOf(identity: Identity): string | null {
 }
 
 /**
+ * Lässt sich für dieses Papier überhaupt eine ISIN nachtragen?
+ *
+ * **Bei einem Währungspaar nicht** (T-31). Eine Coin hat keine ISIN — das ist
+ * keine Lücke, die jemand füllen könnte, sondern eine Eigenschaft der Form.
+ * Der Editor dort anzubieten wäre eine Einladung in einen Fehler: Der
+ * Speicherversuch liefe gegen den `CHECK` der Datenbank, der für `pair`
+ * ausdrücklich `isin IS NULL` verlangt.
+ *
+ * Ein fehlendes Feld darf nicht wie ein Bearbeitungsfehler aussehen.
+ */
+export function acceptsIsin(identity: Identity): boolean {
+  return identity.kind !== 'pair'
+}
+
+/**
  * Ein Instrument als `InstrumentRef` — die schmale Form für die Pfadbildung.
  *
  * `InstrumentRef` bleibt bewusst flach: Sie beantwortet nur „womit spreche ich

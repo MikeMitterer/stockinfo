@@ -31,6 +31,7 @@ export const de = {
     empty: 'Noch keine Wertpapiere gecacht — oben per ISIN oder Symbol hinzufügen.',
     colSymbol: 'Symbol',
     colIsin: 'ISIN',
+    noIsinByForm: 'hat keine — Währungspaar',
     colName: 'Name',
     colType: 'Typ',
     colPrice: 'Kurs',

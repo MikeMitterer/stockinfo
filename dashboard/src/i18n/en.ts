@@ -33,6 +33,7 @@ export const en = {
     empty: 'No securities cached yet — add one above by ISIN or symbol.',
     colSymbol: 'Symbol',
     colIsin: 'ISIN',
+    noIsinByForm: 'none — currency pair',
     colName: 'Name',
     colType: 'Type',
     colPrice: 'Price',

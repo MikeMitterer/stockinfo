@@ -198,6 +198,8 @@ class DailyPoint(BaseModel):
 class ListedIdentityOut(BaseModel):
     """Ein Listing an einem echten Handelsplatz — Ticker und MIC."""
 
+    model_config = ConfigDict(extra="forbid")
+
     kind: Literal["listed"] = "listed"
     ticker: str = Field(description="Kanonischer Ticker")
     mic: str = Field(description="ISO-10383-MIC des Handelsplatzes")
@@ -207,6 +209,8 @@ class ListedIdentityOut(BaseModel):
 class PairIdentityOut(BaseModel):
     """Ein Währungspaar — die Form für natives Krypto."""
 
+    model_config = ConfigDict(extra="forbid")
+
     kind: Literal["pair"] = "pair"
     base: str = Field(description="Basiswert, z.B. BTC")
     quote_currency: str = Field(description="Quote-Währung, ISO 4217")
@@ -214,6 +218,8 @@ class PairIdentityOut(BaseModel):
 
 class IsinOnlyIdentityOut(BaseModel):
     """Nur eine ISIN — die Form für OTC-Anleihen ohne Handelsplatz."""
+
+    model_config = ConfigDict(extra="forbid")
 
     kind: Literal["isin_only"] = "isin_only"
     isin: str = Field(description="Die ISIN; hier ist sie die ganze Identität")
