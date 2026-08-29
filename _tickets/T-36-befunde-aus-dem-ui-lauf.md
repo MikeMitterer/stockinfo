@@ -314,3 +314,24 @@ SQL-Blöcke gelesen wird. Keine Fachlogik und kein weiterer Umbau.
 Evidenz: `make test` 827/259/266 grün; gezielter Drilldown-Test 13/13,
 Dashboard-Build, Ruff und Diff-Check grün; `PROFILE=csv` und
 `PROFILE=online` jeweils 20/20.
+
+---
+
+## Codex-Review · Runde 6 · `f257ee1` · freigegeben
+
+Der eng begrenzte Naming-Rest ist abgeschlossen. Das unabhängige Inventar
+findet in allen elf ausführbaren Python-Blöcken des Smoke-Scripts keinen
+Einbuchstaben-Bezeichner mehr; die SQL-Aliase sind sprechend. Die
+TypeScript-Compiler-Inventare für `InstrumentsTable.vue` und
+`InstrumentDrilldown.spec.ts` enthalten weder deutsche lokale Namen noch die
+beanstandeten Kurznamen. Der zusätzliche Fund `listeWarOffen → wasOpen` ist
+rein mechanisch und hält die bestehende Escape-Logik unverändert.
+
+Evidenz: `make test` 827/259/266 grün; gezielte Drilldown- und Tabellen-Tests
+39/39; Dashboard-Build, Ruff, Bash-Syntax und Diff-Check grün;
+`PROFILE=csv` und `PROFILE=online` jeweils 20/20.
+
+Der Scheduler sah kurz einen unvollständigen, noch uncommitteten
+`ready_for_codex`-Zwischenstand. Das Review begann erst, nachdem INBOX und
+OUTBOX vollständig waren und der Status-Commit `f1b4179` vorlag. Der
+Produktstand selbst ist davon nicht betroffen.
