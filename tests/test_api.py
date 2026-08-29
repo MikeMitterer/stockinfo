@@ -352,6 +352,13 @@ def test_ausgefallene_quellen_nennen_sich_im_antwortkoerper(
     response = client.get("/quote/ZZ0000000000")
 
     assert response.status_code == 502
-    detail = response.json()["detail"]
+    # **Seit T-31 als `{code, params}`.** Die Anleihe braucht den
+    # `quote_unavailable`-Zustand strukturiert — sie ist der Normalfall ohne
+    # Kursquelle, keine Störung —, und zwei Rumpfformen an einem Endpunkt
+    # wären schlimmer als der alte Freitext. Die Namen reisen als Diagnose in
+    # `params.detail` mit; die geprüfte Aussage bleibt Wort für Wort dieselbe.
+    body = response.json()
+    assert body["code"] == "quote_unavailable"
+    detail = body["params"]["detail"]
     assert "ZZ0000000000" in detail
     assert "openfigi" in detail and "yahoo" in detail

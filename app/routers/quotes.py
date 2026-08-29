@@ -32,6 +32,7 @@ from app.models import (
     QuoteResponse,
 )
 from app.exchanges import REASON_NO_SUFFIX
+from app.routers.instruments import REASON_QUOTE_UNAVAILABLE
 from app.services.intake_service import REASON_NOT_FOUND
 from app.routers.validation import IsinPath, SymbolPath, TimeRange, normalize_symbol
 from app.services.daily_history import DailyHistoryService
@@ -160,11 +161,25 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     except InstrumentNotFoundError:
         return _not_found(isin)
     except QuoteUnavailableError as exc:
-        # Der Text der Ausnahme nennt die ausgefallenen Quellen (T-20 `#3`).
-        # Ohne ihn stünde im Körper nur „ging nicht", und wer die App
-        # betreibt, wüsste nicht, ob er auf OpenFIGI, Yahoo oder sein eigenes
-        # Netz schauen soll.
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+        # **Der strukturierte Zustand, den T-31 fuer die Anleihe braucht.**
+        # „Keine Quelle konnte einen Preis feststellen" ist eine eigene
+        # Aussage — nicht „gibt es nicht" (404) und nicht ein Quote mit
+        # Luecke. Fuer ein Papier ohne Kursquelle ist sie der Normalfall und
+        # keine Stoerung, und die Oberflaeche muss sie als solche zeigen
+        # koennen.
+        #
+        # Der Ausnahmetext nennt die ausgefallenen Quellen (T-20 `#3`) und
+        # reist als Parameter mit: Ohne ihn stuende im Koerper nur „ging
+        # nicht", und wer die App betreibt, wuesste nicht, wohin er schauen
+        # soll. Er ist Diagnose, nicht Anzeigetext — die Kennung traegt den
+        # Satz.
+        return JSONResponse(
+            status_code=502,
+            content=ErrorDetail(
+                code=REASON_QUOTE_UNAVAILABLE,
+                params={"identifier": isin, "detail": str(exc)},
+            ).model_dump(),
+        )
 
 
 @router.get(

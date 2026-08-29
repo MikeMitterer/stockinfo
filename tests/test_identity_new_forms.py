@@ -64,6 +64,7 @@ from app.repository import QuoteRepository
 from stockinfo_plugin.types import (
     IsinOnlyIdentity,
     NotFound,
+    NotResponsible,
     PairIdentity,
     Resolved,
 )
@@ -157,12 +158,23 @@ class _BondResolver:
     def handles(self, isin: str) -> bool:
         return True
 
-    def resolve_isin(self, isin: str) -> Resolved:
-        return Resolved(
-            identity=IsinOnlyIdentity(isin=isin),
-            name="Bundesrepublik Deutschland",
-            instrument_type="bond",
+    SUPPORTED_KINDS = frozenset({"isin_only"})
+    SUPPORTED_TYPES = frozenset({"bond"})
+
+    def resolve_isin(self, isin: str):
+        # Über dieselbe Übersetzung wie ein echtes Plugin: Die Kette spricht
+        # `ResolvedInstrument`, der Vertrag `Resolved`.
+        return _instrument_from(
+            Resolved(
+                identity=IsinOnlyIdentity(isin=isin),
+                name="Bundesrepublik Deutschland",
+                instrument_type="bond",
+            ),
+            fallback_isin=isin,
         )
+
+    def resolve_symbol(self, symbol: str):
+        return NotResponsible(reason="diese Grenze sucht nur über die ISIN")
 
 
 def _chain(
@@ -349,10 +361,21 @@ def test_eine_anleihe_wird_als_isin_only_aufgenommen(bond_chain) -> None:
     Die ISIN **ist** hier die Identität. Das Papier gehört in den Bestand,
     sobald jemand es nennt und eine Quelle es kennt; ein Preis ist eine
     andere Frage und wird darunter geprüft.
+
+    **Der Eintrittspunkt ist korrigiert, die Zusicherung nicht.** Zuerst stand
+    hier `GET /quote/{isin}` — das war die falsche Tür für diese Aussage: Die
+    Kursroute beschafft einen Preis, und ohne Preis eine Zeile anzulegen wäre
+    dort eine Nebenwirkung. „Erfassen" heißt im Ticket der Aufnahmeweg, und
+    der ist `POST /instruments/intake`.
+
+    Die Unterscheidung ist wichtig genug für diesen Absatz: Eine **Zusicherung**
+    zu ändern, weil sie rot ist, hieße den Test an die Lösung anzupassen. Den
+    **Eintrittspunkt** zu korrigieren, weil er die geprüfte Aussage nicht
+    trifft, ist das Gegenteil davon — die Aussage bleibt Wort für Wort stehen.
     """
     client, repository = bond_chain
 
-    client.get(f"/quote/{_BUND_ISIN}")
+    client.post("/instruments/intake", json={"identifier": _BUND_ISIN})
 
     assert _stored(repository, _BUND_ISIN) == {
         "kind": "isin_only",
