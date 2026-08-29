@@ -241,6 +241,9 @@ export const en = {
       /* No text names a source: which ones answer is up to `sources.yaml`. */
       instrument_not_found:
         'None of the configured sources found a security for {identifier}.',
+      unsupported_instrument_type:
+        '{symbol} is a {instrument_type} — StockInfo does not currently ' +
+        'accept this instrument type.',
       identifier_empty: 'Nothing was entered.',
       identifier_unknown_form:
         '{identifier} is neither an ISIN nor a symbol with an exchange suffix.',

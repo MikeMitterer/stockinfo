@@ -262,6 +262,9 @@ export const de = {
       instrument_not_found:
         'Zu {identifier} hat keine der eingerichteten Quellen ein Wertpapier ' +
         'gefunden.',
+      unsupported_instrument_type:
+        '{symbol} ist ein {instrument_type} — diese Gattung nimmt StockInfo ' +
+        'derzeit nicht auf.',
       identifier_empty: 'Es wurde nichts eingegeben.',
       identifier_unknown_form:
         '{identifier} ist weder eine ISIN noch ein Symbol mit Börsenkürzel.',

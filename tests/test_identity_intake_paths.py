@@ -72,6 +72,16 @@ class _NoResolver:
     def resolve_isin(self, isin: str):
         return NotFound()
 
+    def resolve_symbol(self, symbol: str):
+        """Auch per Symbol wird hier nichts gefunden.
+
+        Seit T-31 fragt der By-Symbol-Weg die Kette, bevor er ablehnt: Ein
+        Symbol ohne Börsensuffix kann ein Papier ohne Handelsplatz sein. Diese
+        Grenze kennt keins — und **genau das** hält die Ablehnung darunter
+        fest, die es weiterhin geben muss.
+        """
+        return NotFound()
+
 
 def _wire_chain(
     db_path: str, source: _QuoteSource
@@ -181,17 +191,26 @@ def test_ein_unzuordenbares_symbol_wird_abgelehnt(
 def test_die_ablehnung_nennt_beide_auswege(client_and_repo) -> None:
     """Ein `400`, das nur „geht nicht" sagt, ist eine Sackgasse.
 
-    Der Benutzer hat zwei Möglichkeiten, und beide gehören in den Text: das
-    Provider-Suffix und den echten MIC. Die ISIN wird als zuverlässigster Weg
-    genannt, weil sie ohne Kenntnis der Schreibweise auskommt.
+    Der Benutzer hat zwei Möglichkeiten, und beide gehören in die Auskunft:
+    das Provider-Suffix und den echten MIC.
+
+    **Seit T-31 als Kennung statt als deutscher Satz.** Der Rumpf trug hier
+    einen `detail`-Fließtext — genau das, was `_not_found` weiter oben schon
+    als Verstoß gegen die eigene Zusage von `ErrorDetail` beschreibt: Der Text
+    gehört ins UI und muss in DE und EN vorliegen. Der Anlass, es jetzt
+    nachzuziehen, ist Matrix `#6`: Der neue Ablehnungsgrund braucht ohnehin
+    eine Kennung, und zwei Rumpfformen an **einem** Endpunkt wären schlimmer
+    als der alte Zustand.
+
+    Der Katalog trägt den Schlüssel längst (`errors.reason.*` im Dashboard);
+    geprüft wird deshalb hier die Kennung und dort der Text.
     """
     client, _ = client_and_repo
 
-    detail = client.get("/quote", params={"symbol": "AAPL"}).json()["detail"]
+    body = client.get("/quote", params={"symbol": "AAPL"}).json()
 
-    assert "EUNL.DE" in detail
-    assert "EUNL.XETR" in detail
-    assert "ISIN" in detail
+    assert body["code"] == "symbol_without_exchange_suffix"
+    assert body["params"]["symbol"] == "AAPL"
 
 
 def test_ein_bekanntes_papier_wird_beim_naechsten_kurs_nachgetragen(
