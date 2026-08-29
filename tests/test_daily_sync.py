@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from app.db import init_db
-from app.models import QuoteResponse
+from app.models import ListedIdentityOut, QuoteResponse
 from app.repository import QuoteRepository
 from app.services.daily_sync import DailyCloseSync
 
@@ -21,9 +21,13 @@ def repo(tmp_path: Path) -> QuoteRepository:
 def _seed(repo: QuoteRepository) -> dict:
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B3RBWM25", symbol="VGWL.DE", ticker="VGWL", mic="XETR", currency="EUR", price=100.0,
+            identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
+            symbol="VGWL.DE",
+            currency="EUR",
+            price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",
-            fetched_at="2026-07-13T10:00:00+00:00", type="etf",
+            fetched_at="2026-07-13T10:00:00+00:00",
+            type="etf",
         )
     )
     return repo.get_instrument_by_isin("IE00B3RBWM25")
@@ -46,7 +50,9 @@ class FakeProvider:
         return self._rows
 
 
-def test_sync_holt_bei_leerem_cache_und_setzt_wasserzeichen(repo: QuoteRepository) -> None:
+def test_sync_holt_bei_leerem_cache_und_setzt_wasserzeichen(
+    repo: QuoteRepository,
+) -> None:
     inst = _seed(repo)
     provider = FakeProvider([{"date": "2026-07-11", "close": 161.0, "currency": "EUR"}])
     sync = DailyCloseSync(repo, provider)
@@ -57,7 +63,9 @@ def test_sync_holt_bei_leerem_cache_und_setzt_wasserzeichen(repo: QuoteRepositor
     assert len(repo.get_daily_closes(inst["id"])) == 1
 
 
-def test_sync_meldet_false_bei_fehlgeschlagenem_erstabruf(repo: QuoteRepository) -> None:
+def test_sync_meldet_false_bei_fehlgeschlagenem_erstabruf(
+    repo: QuoteRepository,
+) -> None:
     inst = _seed(repo)
     sync = DailyCloseSync(repo, FakeProvider(None))  # Provider-Fehler
     assert sync.sync(inst["id"], inst["symbol"], None) is False
@@ -72,7 +80,9 @@ def test_sync_holt_beim_zweiten_lauf_nur_das_delta(repo: QuoteRepository) -> Non
 
     sync.sync(inst["id"], inst["symbol"], start)
     provider.calls.clear()
-    sync.sync(inst["id"], inst["symbol"], start)  # gleicher Zeitraum, Cache aktuell genug
+    sync.sync(
+        inst["id"], inst["symbol"], start
+    )  # gleicher Zeitraum, Cache aktuell genug
 
     # Cache bereits vollständig für heute und den gewünschten Zeitraum → kein Fetch
     assert provider.calls == []

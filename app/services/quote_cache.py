@@ -20,6 +20,7 @@ from app.models import (
     QuotePoint,
     QuoteResponse,
     identity_columns,
+    with_identity,
 )
 from app.providers.base import identity_from_row
 from app.repository import PROTECTED_META_FIELDS, QuoteRepository
@@ -621,7 +622,10 @@ class CachedQuoteService:
 
     def list_instruments(self) -> list[dict]:
         """Gibt alle Instrumente inkl. letztem Kurs und wirksamer Kennzahlen zurück."""
-        return [apply_overrides(row) for row in self._repository.list_instruments_with_latest()]
+        return [
+            with_identity(apply_overrides(row))
+            for row in self._repository.list_instruments_with_latest()
+        ]
 
     def get_instrument_summary(self, instrument_id: int) -> dict | None:
         """Eine einzelne Zeile der Übersicht — für den Aufnahmeweg.
@@ -641,7 +645,7 @@ class CachedQuoteService:
             Die Zeile mit wirksamen Kennzahlen, oder ``None``.
         """
         row = self._repository.get_instrument_with_latest(instrument_id)
-        return apply_overrides(row) if row else None
+        return with_identity(apply_overrides(row)) if row else None
 
     def get_overrides(self, symbol: str) -> dict:
         """Gibt die von Hand gepflegten Kennzahlen eines Instruments zurück.

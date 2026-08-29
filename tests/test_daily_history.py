@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from app.db import init_db
-from app.models import QuoteResponse
+from app.models import ListedIdentityOut, QuoteResponse
 from app.repository import QuoteRepository
 from app.services.daily_history import DailyHistoryService
 from app.services.quote_service import QuoteUnavailableError
@@ -19,17 +19,24 @@ def repo(tmp_path: Path) -> QuoteRepository:
     return QuoteRepository(db_path)
 
 
-def _seed(repo: QuoteRepository, isin: str = "IE00B3RBWM25", symbol: str = "VGWL.DE") -> dict:
+def _seed(
+    repo: QuoteRepository, isin: str = "IE00B3RBWM25", symbol: str = "VGWL.DE"
+) -> dict:
     """Legt ein Papier an — mit der Identität, die seit T-21 Teil 3 Pflicht ist.
 
     Alle Symbole dieses Tests liegen an Xetra; der Ticker steht vor dem Punkt.
     """
     repo.save_quote(
         QuoteResponse(
-            isin=isin, symbol=symbol, ticker=symbol.split(".")[0], mic="XETR",
-            currency="EUR", price=100.0,
+            isin=isin,
+            symbol=symbol,
+            ticker=symbol.split(".")[0],
+            mic="XETR",
+            currency="EUR",
+            price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",
-            fetched_at="2026-07-13T10:00:00+00:00", type="etf",
+            fetched_at="2026-07-13T10:00:00+00:00",
+            type="etf",
         )
     )
     return repo.get_instrument_by_isin(isin)
@@ -96,7 +103,9 @@ def test_daily_repository_roundtrip(repo: QuoteRepository) -> None:
     assert len(repo.get_daily_closes(instrument["id"])) == 2
 
     # gleiches Datum → Update (Schlusskurs firmt sich)
-    repo.upsert_daily_closes(instrument["id"], [{"date": "2026-07-11", "close": 999.0, "currency": "EUR"}])
+    repo.upsert_daily_closes(
+        instrument["id"], [{"date": "2026-07-11", "close": 999.0, "currency": "EUR"}]
+    )
     rows = repo.get_daily_closes(instrument["id"], "2026-07-11")
     assert len(rows) == 1 and rows[0]["close"] == 999.0
 
@@ -168,7 +177,9 @@ def test_fehlgeschlagener_folgeabruf_liefert_cache_ohne_fortschreibung(
     """Provider-Fehler beim Nachladen → Cache liefern, ``fetched_to`` unverändert."""
     instrument = _seed(repo)
     today = date.today()
-    cached_day = (today - timedelta(days=5)).isoformat()   # innerhalb des 1-Monats-Fensters
+    cached_day = (
+        today - timedelta(days=5)
+    ).isoformat()  # innerhalb des 1-Monats-Fensters
     from_day = (today - timedelta(days=40)).isoformat()
     repo.upsert_daily_closes(
         instrument["id"], [{"date": cached_day, "close": 160.0, "currency": "EUR"}]
@@ -233,10 +244,13 @@ def test_tagespunkt_ohne_jede_waehrung_wird_zum_fehler(repo: QuoteRepository) ->
     """
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B3RBWM25", symbol="VGWL.DE", ticker="VGWL", mic="XETR",
-            currency="EUR", price=100.0,
+            identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
+            symbol="VGWL.DE",
+            currency="EUR",
+            price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",
-            fetched_at="2026-07-13T10:00:00+00:00", type="etf",
+            fetched_at="2026-07-13T10:00:00+00:00",
+            type="etf",
         )
     )
     with repo._connect() as connection:

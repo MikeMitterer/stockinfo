@@ -8,7 +8,7 @@ from fastapi.testclient import TestClient
 
 from app.container import get_cached_quote_service, get_daily_history_service
 from app.main import app
-from app.models import DailyPoint, QuotePoint, QuoteResponse
+from app.models import DailyPoint, ListedIdentityOut, QuotePoint, QuoteResponse
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
 
 
@@ -45,10 +45,8 @@ class FakeService:
                 "openfigi: HTTP 503; yahoo: timeout"
             )
         return QuoteResponse(
-            isin=isin,
             symbol="VGWL.DE",
-            ticker="VGWL",
-            mic="XETR",
+            identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin=isin),
             currency="EUR",
             price=160.98,
             quote_time="2026-07-12T17:00:00+00:00",
@@ -63,10 +61,8 @@ class FakeService:
         if symbol == "NOPE":
             raise QuoteUnavailableError(symbol)
         return QuoteResponse(
-            isin=None,
             symbol=symbol,
-            ticker="MC",
-            mic="XPAR",
+            identity=ListedIdentityOut(ticker="MC", mic="XPAR", isin=None),
             currency="EUR",
             price=430.0,
             quote_time="2026-07-12T17:00:00+00:00",
@@ -194,7 +190,10 @@ def test_daily_by_symbol(client: TestClient) -> None:
 
 
 def test_daily_ungueltiger_zeitraum_422(client: TestClient) -> None:
-    assert client.get("/quote/IE00B3RBWM25/daily", params={"period": "5x"}).status_code == 422
+    assert (
+        client.get("/quote/IE00B3RBWM25/daily", params={"period": "5x"}).status_code
+        == 422
+    )
 
 
 def test_readiness_meldet_die_datenbank(client: TestClient) -> None:
@@ -227,7 +226,9 @@ def test_readiness_meldet_503_wenn_die_datenbank_nicht_erreichbar_ist(
         def count_instruments(self) -> int:
             raise sqlite3.OperationalError("unable to open database file")
 
-    monkeypatch.setattr(main_module, "get_cached_quote_service", lambda: _BrokenService())
+    monkeypatch.setattr(
+        main_module, "get_cached_quote_service", lambda: _BrokenService()
+    )
 
     response = client.get("/ready")
 
@@ -276,14 +277,20 @@ def test_symbole_werden_normalisiert(client: TestClient) -> None:
     assert response.json()["symbol"] == "VGWL.DE"
 
 
-@pytest.mark.parametrize("invalid_boundary", ["2026-8-1", "01.08.2026", "gestern", "2026-13-01"])
-def test_unbrauchbare_zeitgrenzen_werden_abgewiesen(client: TestClient, invalid_boundary) -> None:
+@pytest.mark.parametrize(
+    "invalid_boundary", ["2026-8-1", "01.08.2026", "gestern", "2026-13-01"]
+)
+def test_unbrauchbare_zeitgrenzen_werden_abgewiesen(
+    client: TestClient, invalid_boundary
+) -> None:
     """Die Abfrage vergleicht Zeitgrenzen lexikografisch gegen ISO-Zeitstempel.
 
     Eine andere Schreibweise liefert dann klaglos einen falschen Bereich,
     statt aufzufallen.
     """
-    response = client.get("/quote/IE00B3RBWM25/history", params={"from": invalid_boundary})
+    response = client.get(
+        "/quote/IE00B3RBWM25/history", params={"from": invalid_boundary}
+    )
 
     assert response.status_code == 422
 

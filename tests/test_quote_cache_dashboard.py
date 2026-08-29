@@ -3,7 +3,7 @@ from pathlib import Path
 import pytest
 
 from app.db import init_db
-from app.models import QuoteResponse
+from app.models import ListedIdentityOut, QuoteResponse
 from app.repository import QuoteRepository
 from app.services.quote_cache import CachedQuoteService
 from tests.boundaries import empty_daily_sync
@@ -16,12 +16,19 @@ class FakeQuoteService:
     def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         self.calls += 1
         return QuoteResponse(
-            isin=isin, symbol="VGWL.DE", ticker="VGWL", mic="XETR", currency="EUR", price=200.0,
+            isin=isin,
+            identity=ListedIdentityOut(ticker="VGWL", mic="XETR"),
+            symbol="VGWL.DE",
+            currency="EUR",
+            price=200.0,
             quote_time="2026-07-12T20:00:00+00:00",
-            fetched_at="2026-07-12T20:00:00+00:00", type="etf",
+            fetched_at="2026-07-12T20:00:00+00:00",
+            type="etf",
         )
 
-    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:  # pragma: no cover
+    def get_quote_by_symbol(
+        self, symbol: str, enrich_etf: bool = True
+    ) -> QuoteResponse:  # pragma: no cover
         return self.get_quote_by_isin(symbol)
 
 
@@ -34,7 +41,9 @@ def repo(tmp_path: Path) -> QuoteRepository:
 
 def test_refresh_one_forciert_und_speichert(repo: QuoteRepository) -> None:
     fake = FakeQuoteService()
-    service = CachedQuoteService(fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo))
+    service = CachedQuoteService(
+        fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)
+    )
 
     result = service.refresh_one("IE00B3RBWM25")
 
@@ -90,9 +99,17 @@ def test_get_history_by_symbol(repo: QuoteRepository) -> None:
 
 def test_set_isin_service(repo: QuoteRepository) -> None:
     from app.services.quote_service import InstrumentNotFoundError
+
     repo.save_quote(
-        QuoteResponse(isin=None, symbol="BRYN.DE", ticker="BRYN", mic="XETR", currency="EUR", price=430.0,
-                      quote_time="t", fetched_at="t", type="stock")
+        QuoteResponse(
+            identity=ListedIdentityOut(ticker="BRYN", mic="XETR", isin=None),
+            symbol="BRYN.DE",
+            currency="EUR",
+            price=430.0,
+            quote_time="t",
+            fetched_at="t",
+            type="stock",
+        )
     )
     service = CachedQuoteService(
         FakeQuoteService(), repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)
@@ -107,13 +124,28 @@ def test_set_isin_service(repo: QuoteRepository) -> None:
 
 def test_set_isin_konflikt(repo: QuoteRepository) -> None:
     from app.services.quote_cache import IsinConflictError
+
     repo.save_quote(
-        QuoteResponse(isin="IE00B3RBWM25", symbol="VGWL.DE", ticker="VGWL", mic="XETR", currency="EUR", price=1.0,
-                      quote_time="t", fetched_at="t", type="etf")
+        QuoteResponse(
+            identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
+            symbol="VGWL.DE",
+            currency="EUR",
+            price=1.0,
+            quote_time="t",
+            fetched_at="t",
+            type="etf",
+        )
     )
     repo.save_quote(
-        QuoteResponse(isin=None, symbol="BRYN.DE", ticker="BRYN", mic="XETR", currency="EUR", price=1.0,
-                      quote_time="t", fetched_at="t", type="stock")
+        QuoteResponse(
+            identity=ListedIdentityOut(ticker="BRYN", mic="XETR", isin=None),
+            symbol="BRYN.DE",
+            currency="EUR",
+            price=1.0,
+            quote_time="t",
+            fetched_at="t",
+            type="stock",
+        )
     )
     service = CachedQuoteService(
         FakeQuoteService(), repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)

@@ -300,6 +300,32 @@ def identity_from_columns(row: object) -> IdentityOut | None:
     return None
 
 
+def with_identity(row: dict) -> dict:
+    """Faltet die Identitätsspalten einer Zeile zu einem `identity`-Feld.
+
+    Die Datenbank führt die Union flach, die öffentliche Form führt **ein**
+    Feld. Diese Funktion ist die Naht dazwischen, und sie steht neben den
+    Modellen und nicht in jedem Router: Sonst entstünde die Faltung an jeder
+    Ausgabestelle neu und ließe beim ersten Zusatzfeld eine davon zurück.
+
+    Die sechs flachen Spalten werden dabei **entfernt**. Sie daneben stehen zu
+    lassen wäre die zweite Wahrheit, die T-31 gerade beseitigt.
+
+    Args:
+        row: Eine Instrumentenzeile mit den flachen Identitätsspalten.
+
+    Returns:
+        Dieselbe Zeile mit `identity` statt der sechs Spalten. Trägt die Zeile
+        keine vollständige Form, fehlt `identity` — die Modellprüfung meldet
+        das dann als das, was es ist, statt eine halbe Identität auszuliefern.
+    """
+    folded = {key: value for key, value in row.items() if key not in IDENTITY_COLUMNS}
+    identity = identity_from_columns(row)
+    if identity is not None:
+        folded["identity"] = identity
+    return folded
+
+
 def identity_where(identity: IdentityOut) -> tuple[str, tuple]:
     """Die `WHERE`-Bedingung, die genau diese Identität trifft.
 

@@ -6,7 +6,7 @@ from pathlib import Path
 import pytest
 
 from app.db import init_db
-from app.models import QuoteResponse
+from app.models import ListedIdentityOut, QuoteResponse
 from app.repository import (
     IdentityConflictError,
     IncompleteIdentityError,
@@ -25,10 +25,8 @@ def repo(tmp_path: Path) -> QuoteRepository:
 
 def _quote(price: float, quote_time: str, fetched_at: str) -> QuoteResponse:
     return QuoteResponse(
-        isin="IE00B3RBWM25",
         symbol="VGWL.DE",
-        ticker="VGWL",
-        mic="XETR",
+        identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
         exchange="Xetra",
         name="Vanguard FTSE All-World",
         type="etf",
@@ -138,8 +136,7 @@ def test_migration_ergaenzt_die_neuen_spalten(tmp_path) -> None:
     with sqlite3.connect(db_file) as connection:
         connection.row_factory = sqlite3.Row
         instrument_columns = {
-            row["name"]
-            for row in connection.execute("PRAGMA table_info(instruments)")
+            row["name"] for row in connection.execute("PRAGMA table_info(instruments)")
         }
         overrides = {
             row["name"]
@@ -149,7 +146,13 @@ def test_migration_ergaenzt_die_neuen_spalten(tmp_path) -> None:
     # `source` gehört dazu: Der Detailbereich nennt die Quelle, und ohne Nachzug
     # stünde dort auf jeder bestehenden Datenbank dauerhaft nichts.
     assert {"fund_domicile", "fund_currency", "source"} <= instrument_columns
-    assert {"provider", "replication", "fund_size", "fund_domicile", "fund_currency"} <= overrides
+    assert {
+        "provider",
+        "replication",
+        "fund_size",
+        "fund_domicile",
+        "fund_currency",
+    } <= overrides
 
 
 def test_duplikate_verlieren_weder_overrides_noch_daily_wasserzeichen(tmp_path) -> None:
@@ -239,7 +242,10 @@ def test_duplikate_verlieren_weder_overrides_noch_daily_wasserzeichen(tmp_path) 
 
     assert len(meta) == 1, "das Daily-Wasserzeichen darf nicht verlorengehen"
     assert meta[0]["instrument_id"] == 1
-    assert (meta[0]["fetched_from"], meta[0]["fetched_to"]) == ("2025-01-01", "2026-01-02")
+    assert (meta[0]["fetched_from"], meta[0]["fetched_to"]) == (
+        "2025-01-01",
+        "2026-01-02",
+    )
 
 
 def _legacy_db_with_duplicate(db_file: str, extra_sql: str) -> None:
@@ -352,7 +358,10 @@ def test_daily_spannen_mit_luecke_werden_nicht_zusammengezogen(tmp_path) -> None
 
     assert len(rows) == 1
     assert rows[0]["instrument_id"] == 1
-    assert (rows[0]["fetched_from"], rows[0]["fetched_to"]) == ("2026-06-01", "2026-08-01")
+    assert (rows[0]["fetched_from"], rows[0]["fetched_to"]) == (
+        "2026-06-01",
+        "2026-08-01",
+    )
 
 
 def test_ueberlappende_daily_spannen_werden_geweitet(tmp_path) -> None:
@@ -398,10 +407,8 @@ def test_gescheiterte_anreicherung_loescht_die_gespeicherten_etf_daten_nicht(
     nichts." Sie darf den gespeicherten Stand dann nicht ersetzen.
     """
     complete_response = QuoteResponse(
-        isin="IE00B4L5Y983",
         symbol="EUNL.DE",
-        ticker="EUNL",
-        mic="XETR",
+        identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
         exchange="Xetra",
         name="iShares Core MSCI World",
         type="etf",
@@ -424,10 +431,8 @@ def test_gescheiterte_anreicherung_loescht_die_gespeicherten_etf_daten_nicht(
     # Derselbe Kurs, aber ohne jede ETF-Angabe — so sieht eine Antwort aus,
     # wenn justETF nicht erreichbar war.
     without_enrichment = QuoteResponse(
-        isin="IE00B4L5Y983",
         symbol="EUNL.DE",
-        ticker="EUNL",
-        mic="XETR",
+        identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
         exchange="Xetra",
         name="iShares Core MSCI World",
         type="etf",
@@ -466,17 +471,27 @@ def test_erfolgreiche_anreicherung_darf_felder_weiterhin_leeren(
     """
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
-            currency="EUR", type="etf", price=128.7,
-            quote_time="2026-08-18T10:00:00+00:00", ter=0.2, provider="iShares",
+            identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
+            symbol="EUNL.DE",
+            currency="EUR",
+            type="etf",
+            price=128.7,
+            quote_time="2026-08-18T10:00:00+00:00",
+            ter=0.2,
+            provider="iShares",
             fetched_at="2026-08-18T10:00:00+00:00",
         )
     )
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
-            currency="EUR", type="etf", price=129.1,
-            quote_time="2026-08-18T11:00:00+00:00", ter=None, provider="iShares",
+            identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
+            symbol="EUNL.DE",
+            currency="EUR",
+            type="etf",
+            price=129.1,
+            quote_time="2026-08-18T11:00:00+00:00",
+            ter=None,
+            provider="iShares",
             fetched_at="2026-08-18T11:00:00+00:00",
         )
     )
@@ -503,8 +518,11 @@ def test_erster_insert_mit_unvollstaendigen_metadaten(repo: QuoteRepository) -> 
     """
     repo.save_quote(
         QuoteResponse(
-            isin=None, symbol="GOLD.SG", ticker="GOLD", mic="XSTU", type=None,
-            currency="EUR", price=122.41,
+            identity=ListedIdentityOut(ticker="GOLD", mic="XSTU", isin=None),
+            symbol="GOLD.SG",
+            type=None,
+            currency="EUR",
+            price=122.41,
             quote_time="2026-08-19T10:00:00+00:00",
             fetched_at="2026-08-19T10:00:00+00:00",
             metadata_complete=False,
@@ -542,8 +560,10 @@ def test_ein_papier_ohne_handelsplatz_wird_nicht_angelegt(
     with pytest.raises(IncompleteIdentityError) as rejected:
         repo.save_quote(
             QuoteResponse(
-                isin=None, symbol="BTC-USD", ticker="BTC", mic="US",
-                type=None, currency="USD",
+                identity=ListedIdentityOut(ticker="BTC", mic="US", isin=None),
+                symbol="BTC-USD",
+                type=None,
+                currency="USD",
                 price=61234.0,
                 quote_time="2026-08-19T10:00:00+00:00",
                 fetched_at="2026-08-19T10:00:00+00:00",
@@ -567,16 +587,24 @@ def test_unvollstaendige_antwort_setzt_den_metadaten_zeitstempel_nicht_hoch(
     """
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
-            currency="EUR", type="etf", price=128.7,
-            quote_time="2026-08-01T10:00:00+00:00", ter=0.2, provider="iShares",
+            identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
+            symbol="EUNL.DE",
+            currency="EUR",
+            type="etf",
+            price=128.7,
+            quote_time="2026-08-01T10:00:00+00:00",
+            ter=0.2,
+            provider="iShares",
             fetched_at="2026-08-01T10:00:00+00:00",
         )
     )
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
-            currency="EUR", type="etf", price=129.1,
+            identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
+            symbol="EUNL.DE",
+            currency="EUR",
+            type="etf",
+            price=129.1,
             quote_time="2026-08-19T11:00:00+00:00",
             fetched_at="2026-08-19T11:00:00+00:00",
             metadata_complete=False,
@@ -594,8 +622,11 @@ def test_erster_insert_ohne_metadaten_gilt_sofort_als_faellig(
     """Kein Zeitstempel heißt „nie geholt" — der nächste Abruf sieht nach."""
     repo.save_quote(
         QuoteResponse(
-            isin="IE00B4L5Y983", symbol="EUNL.DE", ticker="EUNL", mic="XETR",
-            currency="EUR", type="etf", price=128.7,
+            identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
+            symbol="EUNL.DE",
+            currency="EUR",
+            type="etf",
+            price=128.7,
             quote_time="2026-08-19T10:00:00+00:00",
             fetched_at="2026-08-19T10:00:00+00:00",
             metadata_complete=False,
@@ -665,9 +696,7 @@ def _blind_first_lookup(monkeypatch) -> list[tuple]:
             return None
         return real_find(connection, isin, symbol, ticker, mic)
 
-    monkeypatch.setattr(
-        QuoteRepository, "_find_instrument_id", staticmethod(recording)
-    )
+    monkeypatch.setattr(QuoteRepository, "_find_instrument_id", staticmethod(recording))
     return lookups
 
 
@@ -689,7 +718,9 @@ def test_der_retry_sucht_mit_derselben_identitaet_wie_der_preflight(
     """
     us_paper = _quote(
         189.5, "2026-08-19T10:00:00+00:00", "2026-08-19T10:00:00+00:00"
-    ).model_copy(update={"isin": None, "symbol": "AAPL", "ticker": "AAPL", "mic": "XNAS"})
+    ).model_copy(
+        update={"isin": None, "symbol": "AAPL", "ticker": "AAPL", "mic": "XNAS"}
+    )
     repo.save_quote(us_paper)
 
     lookups = _blind_first_lookup(monkeypatch)
@@ -820,10 +851,8 @@ def test_ein_refresh_loescht_den_namen_nicht(repo: QuoteRepository) -> None:
         name: str | None, instrument_type: str | None, price: float, hour_of_day: int
     ) -> QuoteResponse:
         return QuoteResponse(
-            isin="IE00B4L5Y983",
             symbol="EUNL.DE",
-            ticker="EUNL",
-            mic="XETR",
+            identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
             exchange="Xetra",
             name=name,
             type=instrument_type,

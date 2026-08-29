@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 
 from app.db import init_db
-from app.models import QuoteResponse
+from app.models import ListedIdentityOut, QuoteResponse
 from app.repository import QuoteRepository
 from app.scheduler import RefreshScheduler
 from app.services.quote_cache import CachedQuoteService
@@ -23,10 +23,8 @@ class FakeQuoteService:
         if isin == self._failing_isin:
             raise QuoteUnavailableError(isin)
         return QuoteResponse(
-            isin=isin,
             symbol="SYM.DE",
-            ticker="SYM",
-            mic="XETR",
+            identity=ListedIdentityOut(ticker="SYM", mic="XETR", isin=isin),
             currency="EUR",
             price=200.0,
             quote_time="2026-07-12T20:00:00+00:00",
@@ -34,12 +32,14 @@ class FakeQuoteService:
             type="etf",
         )
 
-    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
+    def get_quote_by_symbol(
+        self, symbol: str, enrich_etf: bool = True
+    ) -> QuoteResponse:
         return QuoteResponse(
-            isin=None,
             symbol=symbol,
-            ticker=symbol.split(".")[0],
-            mic="XETR",
+            identity=ListedIdentityOut(
+                ticker=symbol.split(".")[0], mic="XETR", isin=None
+            ),
             currency="USD",
             price=210.0,
             quote_time="2026-07-12T20:00:00+00:00",
@@ -73,10 +73,10 @@ def repo(tmp_path: Path) -> QuoteRepository:
 def _seed(repo: QuoteRepository, isin: str | None, symbol: str) -> None:
     repo.save_quote(
         QuoteResponse(
-            isin=isin,
             symbol=symbol,
-            ticker=symbol.split(".")[0],
-            mic="XETR",
+            identity=ListedIdentityOut(
+                ticker=symbol.split(".")[0], mic="XETR", isin=isin
+            ),
             currency="EUR",
             price=100.0,
             quote_time="2026-07-12T10:00:00+00:00",
@@ -104,7 +104,9 @@ def test_refresh_all_isoliert_fehler(repo: QuoteRepository) -> None:
     _seed(repo, "IE00B3RBWM25", "VGWL.DE")  # wird fehlschlagen
     _seed(repo, None, "AAPL")  # bleibt erfolgreich
     service = CachedQuoteService(
-        FakeQuoteService(failing_isin="IE00B3RBWM25"), repo, ttl_hours=6,
+        FakeQuoteService(failing_isin="IE00B3RBWM25"),
+        repo,
+        ttl_hours=6,
         daily_sync=empty_daily_sync(repo),
     )
 

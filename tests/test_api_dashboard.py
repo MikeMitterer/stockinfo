@@ -6,17 +6,25 @@ from fastapi.testclient import TestClient
 from app.config import Settings, get_settings
 from app.container import get_cached_quote_service, get_quote_analyzer
 from app.main import app
-from app.models import AnalyzeResult, AnalyzeStage, QuoteResponse
+from app.models import AnalyzeResult, AnalyzeStage, ListedIdentityOut, QuoteResponse
 from app.services.quote_cache import IsinConflictError
 from app.services.quote_service import InstrumentNotFoundError
 
 
 class FakeService:
     def list_instruments(self) -> list[dict]:
-        return [{"symbol": "VGWL.DE", "isin": "IE00B3RBWM25", "history_count": 2,
-                 "ticker": "VGWL", "mic": "XETR",
-                 "listing_id": "018f3a2c-7b41-7c9e-a3d2-5f1b9c4e2a10",
-                 "latest_price": 161.0, "source": "yfinance+justetf"}]
+        return [
+            {
+                "symbol": "VGWL.DE",
+                "isin": "IE00B3RBWM25",
+                "history_count": 2,
+                "ticker": "VGWL",
+                "mic": "XETR",
+                "listing_id": "018f3a2c-7b41-7c9e-a3d2-5f1b9c4e2a10",
+                "latest_price": 161.0,
+                "source": "yfinance+justetf",
+            }
+        ]
 
     def count_instruments(self) -> int:
         return 1
@@ -27,14 +35,27 @@ class FakeService:
     def refresh_one(self, isin: str) -> QuoteResponse:
         if isin.startswith("XX"):
             raise InstrumentNotFoundError(isin)
-        return QuoteResponse(isin=isin, symbol="VGWL.DE", ticker="VGWL", mic="XETR",
-                             currency="EUR",
-                             price=161.0, quote_time="t", fetched_at="t", type="etf")
+        return QuoteResponse(
+            isin=isin,
+            identity=ListedIdentityOut(ticker="VGWL", mic="XETR"),
+            symbol="VGWL.DE",
+            currency="EUR",
+            price=161.0,
+            quote_time="t",
+            fetched_at="t",
+            type="etf",
+        )
 
     def refresh_one_by_symbol(self, symbol: str) -> QuoteResponse:
-        return QuoteResponse(isin=None, symbol=symbol, ticker="MC", mic="XPAR",
-                             currency="EUR",
-                             price=430.0, quote_time="t", fetched_at="t", type="stock")
+        return QuoteResponse(
+            identity=ListedIdentityOut(ticker="MC", mic="XPAR", isin=None),
+            symbol=symbol,
+            currency="EUR",
+            price=430.0,
+            quote_time="t",
+            fetched_at="t",
+            type="stock",
+        )
 
     def delete_instrument(self, isin: str) -> bool:
         return not isin.startswith("XX")
@@ -107,26 +128,39 @@ def test_delete_by_symbol(client: TestClient) -> None:
 
 
 def test_set_isin_ok(client: TestClient) -> None:
-    response = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": "US0846707026"})
+    response = client.put(
+        "/instruments/by-symbol/BRYN.DE/isin", json={"isin": "US0846707026"}
+    )
     assert response.status_code == 200
     assert response.json()["isin"] == "US0846707026"
 
 
 def test_set_isin_normalisiert_und_validiert(client: TestClient) -> None:
     # klein + Leerzeichen → wird normalisiert
-    response = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": " us0846707026 "})
+    response = client.put(
+        "/instruments/by-symbol/BRYN.DE/isin", json={"isin": " us0846707026 "}
+    )
     assert response.status_code == 200 and response.json()["isin"] == "US0846707026"
     # ungültiges Format → 422
-    assert client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": "nope"}).status_code == 422
+    assert (
+        client.put(
+            "/instruments/by-symbol/BRYN.DE/isin", json={"isin": "nope"}
+        ).status_code
+        == 422
+    )
 
 
 def test_set_isin_unbekannt_404(client: TestClient) -> None:
-    response = client.put("/instruments/by-symbol/XXNOPE/isin", json={"isin": "US0846707026"})
+    response = client.put(
+        "/instruments/by-symbol/XXNOPE/isin", json={"isin": "US0846707026"}
+    )
     assert response.status_code == 404
 
 
 def test_set_isin_konflikt_409(client: TestClient) -> None:
-    response = client.put("/instruments/by-symbol/BRYN.DE/isin", json={"isin": "IE00B4L5Y983"})
+    response = client.put(
+        "/instruments/by-symbol/BRYN.DE/isin", json={"isin": "IE00B4L5Y983"}
+    )
     assert response.status_code == 409
 
 
@@ -147,9 +181,7 @@ def test_exchanges_liefert_den_katalog_und_die_vorgabe(client: TestClient) -> No
     assert body["default_exchange_kind"] == "exchange"
 
     exchanges = {
-        entry["mic"]: entry
-        for entry in body["catalog"]
-        if entry["kind"] == "exchange"
+        entry["mic"]: entry for entry in body["catalog"] if entry["kind"] == "exchange"
     }
     assert exchanges["XTSE"]["alias"] == "TO"
     assert exchanges["XSTU"]["alias"] == "SG"
@@ -172,7 +204,9 @@ def test_kein_katalogeintrag_serialisiert_einen_sammelcode_als_mic(
     assert [entry["code"] for entry in collectors] == ["US"]
     assert set(collectors[0]["members"]) == {"XNAS", "XNYS", "ARCX", "XASE", "BATS"}
     assert all("mic" not in entry for entry in collectors)
-    assert all(entry["mic"] != "US" for entry in body["catalog"] if entry["kind"] == "exchange")
+    assert all(
+        entry["mic"] != "US" for entry in body["catalog"] if entry["kind"] == "exchange"
+    )
 
 
 def test_der_alias_ist_im_openapi_vertrag_optional(client: TestClient) -> None:
@@ -183,7 +217,9 @@ def test_der_alias_ist_im_openapi_vertrag_optional(client: TestClient) -> None:
     gebaut, und T-30 müsste seinen deklarativ gemeldeten Alias an eine Form
     anfügen, die „keiner" nicht ausdrücken kann.
     """
-    schema = client.get("/openapi.json").json()["components"]["schemas"]["ExchangeEntry"]
+    schema = client.get("/openapi.json").json()["components"]["schemas"][
+        "ExchangeEntry"
+    ]
 
     assert "alias" not in schema.get("required", [])
     assert {"type": "null"} in schema["properties"]["alias"]["anyOf"]
@@ -210,7 +246,9 @@ def test_analyze_liefert_stages(client: TestClient) -> None:
     class _StubAnalyzer:
         def analyze(self, *, isin=None, symbol=None) -> AnalyzeResult:
             return AnalyzeResult(
-                symbol="EUNL.DE", isin=isin, total=1.23,
+                symbol="EUNL.DE",
+                isin=isin,
+                total=1.23,
                 stages=[AnalyzeStage(stage="openfigi", seconds=0.5, status="ok")],
             )
 

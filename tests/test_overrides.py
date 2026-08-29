@@ -219,12 +219,18 @@ def test_alle_acht_felder_ueberleben_das_erneute_lesen(repo: QuoteRepository) ->
     assert stored["accumulating"] == 1
 
 
-def test_alles_leeren_entfernt_die_zeile_auch_bei_acht_feldern(repo: QuoteRepository) -> None:
+def test_alles_leeren_entfernt_die_zeile_auch_bei_acht_feldern(
+    repo: QuoteRepository,
+) -> None:
     # Sonst sammeln sich Karteileichen ohne Inhalt.
     instrument_id = repo.save_quote(_quote()).instrument_id
-    repo.set_overrides(instrument_id, {"provider": "iShares"}, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(
+        instrument_id, {"provider": "iShares"}, "2026-08-17T10:00:00+00:00"
+    )
 
-    repo.set_overrides(instrument_id, dict.fromkeys(OVERRIDE_FIELDS), "2026-08-17T11:00:00+00:00")
+    repo.set_overrides(
+        instrument_id, dict.fromkeys(OVERRIDE_FIELDS), "2026-08-17T11:00:00+00:00"
+    )
 
     assert repo.get_overrides(instrument_id) is None
 
@@ -307,7 +313,9 @@ def test_endpoint_leert_weggelassene_felder(client: TestClient) -> None:
         json={"ter": 0.25, "volatility": 30.0, "accumulating": True},
     )
 
-    response = client.put("/instruments/by-symbol/GOLD.SG/overrides", json={"ter": 0.25})
+    response = client.put(
+        "/instruments/by-symbol/GOLD.SG/overrides", json={"ter": 0.25}
+    )
 
     # Feldweise statt volle Dict-Gleichheit (s.o.) — aber weiterhin ein
     # echter Nachweis des Löschens: `volatility`/`accumulating` waren gesetzt
@@ -321,12 +329,12 @@ def test_endpoint_leert_weggelassene_felder(client: TestClient) -> None:
 @pytest.mark.parametrize(
     "payload",
     [
-        {"ter": -1},          # unter der Grenze
-        {"ter": 50},          # ein Vertipper, keine TER — kein Produkt liegt dort
-        {"ter": 5.1},         # knapp über der Grenze
+        {"ter": -1},  # unter der Grenze
+        {"ter": 50},  # ein Vertipper, keine TER — kein Produkt liegt dort
+        {"ter": 5.1},  # knapp über der Grenze
         {"volatility": -0.1},
         {"volatility": 501},
-        {"ter": "viel"},      # gar keine Zahl
+        {"ter": "viel"},  # gar keine Zahl
     ],
 )
 def test_endpoint_weist_unsinn_ab(client: TestClient, payload: dict) -> None:
@@ -336,7 +344,9 @@ def test_endpoint_weist_unsinn_ab(client: TestClient, payload: dict) -> None:
 
 
 def test_endpoint_meldet_unbekanntes_symbol(client: TestClient) -> None:
-    assert client.put("/instruments/by-symbol/XXX/overrides", json={}).status_code == 404
+    assert (
+        client.put("/instruments/by-symbol/XXX/overrides", json={}).status_code == 404
+    )
     assert client.get("/instruments/by-symbol/XXX/overrides").status_code == 404
 
 
@@ -366,7 +376,9 @@ class _LiveSource:
     def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
         return self._deliver(isin)
 
-    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
+    def get_quote_by_symbol(
+        self, symbol: str, enrich_etf: bool = True
+    ) -> QuoteResponse:
         return self._deliver(symbol)
 
     def get_quote_for_known(
@@ -436,7 +448,9 @@ def test_der_kurs_endpoint_kennt_die_manuellen_werte(repo: QuoteRepository) -> N
     assert response.ter == 0.12
 
 
-def test_der_kurs_endpoint_laesst_der_quelle_den_vortritt(repo: QuoteRepository) -> None:
+def test_der_kurs_endpoint_laesst_der_quelle_den_vortritt(
+    repo: QuoteRepository,
+) -> None:
     """Dieselbe Vorrang-Regel wie in der Liste — nicht eine zweite daneben."""
     instrument_id = repo.save_quote(_quote(accumulating=True, ter=0.20)).instrument_id
     repo.set_overrides(
@@ -449,7 +463,9 @@ def test_der_kurs_endpoint_laesst_der_quelle_den_vortritt(repo: QuoteRepository)
     assert response.accumulating is True
 
 
-def test_der_kurs_endpoint_ohne_eintrag_bleibt_unveraendert(repo: QuoteRepository) -> None:
+def test_der_kurs_endpoint_ohne_eintrag_bleibt_unveraendert(
+    repo: QuoteRepository,
+) -> None:
     # Ohne Eintrag darf nichts passieren — auch keine leere Zeile dazuerfinden.
     repo.save_quote(_quote(accumulating=None, ter=None))
 
@@ -462,7 +478,9 @@ def test_der_kurs_endpoint_ohne_eintrag_bleibt_unveraendert(repo: QuoteRepositor
 def test_der_kurs_endpoint_kennt_sie_auch_per_symbol(repo: QuoteRepository) -> None:
     """Papiere ohne ISIN gehen über `/quote?symbol=` — derselbe Anspruch."""
     instrument_id = repo.save_quote(_quote(accumulating=None)).instrument_id
-    repo.set_overrides(instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(
+        instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00"
+    )
 
     assert _service(repo).get_by_symbol("GOLD.SG").accumulating is True
 
@@ -479,7 +497,9 @@ def test_ein_frisch_beschaffter_kurs_kennt_sie_ebenfalls(repo: QuoteRepository) 
     )
 
     # TTL 0 ⇒ der gespeicherte Kurs gilt als alt, die Quelle wird gefragt.
-    service = _service(repo, _LiveSource(_quote(accumulating=None, ter=None)), ttl_hours=0)
+    service = _service(
+        repo, _LiveSource(_quote(accumulating=None, ter=None)), ttl_hours=0
+    )
     response = service.get_by_isin("DE000EWG0LD1")
 
     assert response.accumulating is True
@@ -489,7 +509,9 @@ def test_ein_frisch_beschaffter_kurs_kennt_sie_ebenfalls(repo: QuoteRepository) 
 def test_auch_ein_veralteter_kurs_kennt_sie(repo: QuoteRepository) -> None:
     """Fällt die Quelle aus, kommt der alte Wert — mit den Eingaben darauf."""
     instrument_id = repo.save_quote(_quote(accumulating=None)).instrument_id
-    repo.set_overrides(instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(
+        instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00"
+    )
 
     service = _service(repo, _LiveSource(unavailable=True), ttl_hours=0)
     response = service.get_by_isin("DE000EWG0LD1")
@@ -514,7 +536,9 @@ def test_refresh_liefert_sie_mit_zurueck(repo: QuoteRepository) -> None:
 
 def test_refresh_per_symbol_liefert_sie_ebenfalls(repo: QuoteRepository) -> None:
     instrument_id = repo.save_quote(_quote(accumulating=None)).instrument_id
-    repo.set_overrides(instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(
+        instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00"
+    )
 
     service = _service(repo, _LiveSource(_quote(accumulating=None)))
 
@@ -531,7 +555,9 @@ def test_der_refresh_schreibt_den_manuellen_wert_nicht_in_die_zeile(
     ließe sich nie wieder von der Quelle unterscheiden.
     """
     instrument_id = repo.save_quote(_quote(accumulating=None)).instrument_id
-    repo.set_overrides(instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00")
+    repo.set_overrides(
+        instrument_id, {"accumulating": True}, "2026-08-17T10:00:00+00:00"
+    )
 
     _service(repo, _LiveSource(_quote(accumulating=None))).refresh_one("DE000EWG0LD1")
 
@@ -614,9 +640,7 @@ def test_die_ter_grenze_laesst_reale_werte_durch(client: TestClient) -> None:
     Der Wert fängt Vertipper ab (50 statt 0,50) und lässt jeden handelbaren
     Fall zu: ETFs liegen bei 0,03–1 %, aktive Fonds bis rund 3 %.
     """
-    response = client.put(
-        "/instruments/by-symbol/GOLD.SG/overrides", json={"ter": 5}
-    )
+    response = client.put("/instruments/by-symbol/GOLD.SG/overrides", json={"ter": 5})
 
     assert response.status_code == 200
     assert response.json()["ter"] == 5
@@ -641,11 +665,11 @@ def test_die_neuen_felder_kommen_durch_die_validierung(client: TestClient) -> No
 @pytest.mark.parametrize(
     "payload",
     [
-        {"fund_currency": "Euro"},          # kein ISO-Code
-        {"fund_currency": "usd"},           # klein geschrieben
-        {"fund_size": -1},                  # negativ
-        {"fund_size": 2_000_001},           # groesser als der ETF-Markt
-        {"provider": "x" * 101},            # laenger als erlaubt
+        {"fund_currency": "Euro"},  # kein ISO-Code
+        {"fund_currency": "usd"},  # klein geschrieben
+        {"fund_size": -1},  # negativ
+        {"fund_size": 2_000_001},  # groesser als der ETF-Markt
+        {"provider": "x" * 101},  # laenger als erlaubt
     ],
 )
 def test_die_neuen_felder_weisen_unsinn_ab(client: TestClient, payload: dict) -> None:
