@@ -141,6 +141,31 @@ Parser, Indexierung und Invarianten werden nicht fünfmal implementiert. Eine
 gemeinsame interne Datenhaltung bedient die Rollen; der öffentliche
 Plugin-Vertrag bleibt unverändert.
 
+### Was `yaml-file` deklarieren muss — und ein Befund, der es begründet
+
+*(Aus T-31 Runde 5, 2026-08-29. Der Grund gehört hierher, weil der Code, an
+dem er auffiel, mit diesem Ticket verschwindet.)*
+
+Seit T-31 heißt eine **leere** `SUPPORTED_TYPES` „nichts zugesagt" und nicht
+„alles"; der Host überspringt eine solche Quelle für jede *bekannte* Gattung.
+`yaml-file` muss seine Gattungen deshalb ausschreiben — es liest eine
+Dateizeile und ist für jede Gattung des Katalogs zuständig. Dasselbe gilt für
+`SUPPORTED_KINDS`: Die YAML-Datei führt alle drei Identitätsformen, also
+`{"listed", "pair", "isin_only"}`.
+
+**Der Befund dahinter ist wichtiger als die Regel.** Aufgefallen ist das nicht
+in den 834 Unit-Tests, sondern erst im Smoke-Lauf: `PROFILE=csv` fiel mit 12
+von 20 aus, während `PROFILE=online` grün blieb. **Kein einziger Unit-Test
+schickt eine Dateiquelle mit bekannter Gattung durch den Vorfilter** — die
+Fakes der Kettentests sind Kursquellen ohne Deklaration, und die
+Beispiel-Plugins werden nur in ihren eigenen Contract-Tests gefragt, wo es
+keinen Host und damit keinen Vorfilter gibt.
+
+Diese Lücke überlebt die Löschung der CSV-Beispiele, wenn niemand sie
+schließt. Für `yaml-file` heißt das: **ein Kettentest, der die Quelle über
+den Host mit einer bekannten Gattung anspricht** — nicht nur die
+Rollen-Suiten des Contract-Kits.
+
 ---
 
 ## Ein Smoke, zwei Profile
