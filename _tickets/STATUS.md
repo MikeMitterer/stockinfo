@@ -68,13 +68,7 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-31/T-38 · Entscheidung während der begonnenen Umsetzung
-
-Mike hat `fund` als eigenen Typ bestätigt. Bitte in der laufenden Umsetzung
-berücksichtigen: Katalog `stock`/`etf`/`etc`/`fund`/`crypto`/`bond`, bestehendes
-`MUTUALFUND → etf` wird `MUTUALFUND → fund`. Keine neue Identitätsform und
-kein neuer Teilscope. Die kanonischen Ticketstellen, der YAML-Sample und der
-T-37-Browserfall sind im unmittelbar folgenden Doku-Commit aktualisiert.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
