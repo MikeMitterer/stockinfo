@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
 - `handoff_commit`: `c44b932`
 - `review_round`: `4`
@@ -111,5 +111,4 @@ YAML-Validator, statt hier weiter gepflegt zu werden.
 **Zahlen:** 819 Backend gruen / 29 skipped, 8 echte Integrationstests, 259
 Plugin-Vertrag, 266 Dashboard, `vue-tsc`, Ruff und `git diff --check` sauber,
 `PROFILE=online` 20/20 und `PROFILE=csv` 20/20.
-
 
