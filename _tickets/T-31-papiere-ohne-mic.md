@@ -151,6 +151,148 @@ Damit Entscheidung 6 sauber bleibt:
 
 Eine Implementierung, zwei Verwendungen — siehe die Notiz in T-37.
 
+## Der Umbauschnitt *(Entwurf, 2026-08-29 — noch nicht umgesetzt)*
+
+Ausgewiesen, nicht vorweggenommen: T-38 bleibt das eigene, unmittelbar
+folgende Kettenglied. Was hier steht, ist der Schnitt durch **dieses** Ticket
+und die Stelle, an der er den Vertrag mit T-38 und T-37 teilt — damit der
+`API_VERSION`-Sprung einer bleibt und nicht dreimal passiert.
+
+### Der Fund, der in keinem der drei Tickets steht
+
+Dieses Ticket beschreibt die Union an `Resolved`. Der Vertrag hat aber fünf
+Rollen, und die beiden Kursrollen tragen die Identität ebenfalls — heute als
+Pflichtfelder:
+
+```python
+class QuoteRequest:  ticker: str; mic: str; isin: str | None = None
+class DailyRequest:  ticker: str; mic: str; start: ...; end: ...
+```
+
+Ein `BTC-EUR` ließe sich damit **auflösen, aber nicht bepreisen**. Eine Coin
+hat keinen MIC — der Grund, aus dem dieses Ticket existiert —, und für die
+`isin_only`-Anleihe gilt dasselbe. Wer die Union nur an `Resolved` einbaut,
+nimmt die Gattung auf und schneidet ihr den Weg zum Kurs ab. Der
+YAML-Fallback aus T-37 wäre die erste Quelle, die daran scheitert, und die
+Anleihe ist der Fall, für den er gebaut wird.
+
+Es ist keine Ausweitung, sondern der Umfang, den Matrix `#7` bereits
+voraussetzt: Die Prüfung „Kurswährung muss `quote_currency` entsprechen" kann
+es nur geben, wenn die Kursanfrage weiß, dass sie ein Paar betrifft.
+
+**`Identity` ersetzt darum `ticker`/`mic` in `Resolved`, `QuoteRequest` und
+`DailyRequest`.** `FxRequest` und die Metadatentypen bleiben unberührt.
+
+### Stufe 1 · Der Vertrag — hier und nur hier springt `API_VERSION`
+
+```python
+API_VERSION = 2
+
+@dataclass(frozen=True)
+class ListedIdentity:    kind: Literal["listed"];    ticker: str; mic: str; isin: str | None = None
+@dataclass(frozen=True)
+class PairIdentity:      kind: Literal["pair"];      base: str;   quote_currency: str
+@dataclass(frozen=True)
+class IsinOnlyIdentity:  kind: Literal["isin_only"]; isin: str
+
+Identity = ListedIdentity | PairIdentity | IsinOnlyIdentity
+```
+
+**Keine `ticker`/`mic`-Properties als Bequemlichkeit.** Sie müssten für ein
+Paar etwas erfinden, und das ist genau der Sentinel-Wert, den T-21 ausgetrieben
+hat. Aufrufer verzweigen über `kind`.
+
+Die Fähigkeitsdeklaration steht an `Source`, wo dieses Ticket sie vorsieht:
+
+```python
+SUPPORTED_KINDS: frozenset[str] = frozenset({"listed"})
+SUPPORTED_TYPES: frozenset[str] | None = None   # None = keine Einschränkung
+```
+
+Die Vorgabe ist `{"listed"}` und nicht „alles". Ein Plugin, das gegen Vertrag
+1 gebaut wurde, konnte nur Listings; die Vorgabe sagt damit die Wahrheit über
+einen Autor, der nichts erklärt — und der Host überspringt die Quelle, statt
+ihr eine Coin vorzulegen.
+
+`app/plugin_loader.py` vergleicht bereits hart (`if version != API_VERSION`).
+Ein Plugin nach Vertrag 1 wird also abgewiesen, sobald die Zahl steigt; nur
+die Meldung braucht einen Satz, der sagt, *was* sich geändert hat.
+
+### Stufe 2 · Datenbank
+
+```sql
+kind           TEXT NOT NULL DEFAULT 'listed',
+base           TEXT,
+quote_currency TEXT,
+ticker         TEXT,          -- wieder nullable
+mic            TEXT,          -- wieder nullable
+CHECK (
+  (kind = 'listed'    AND ticker IS NOT NULL AND mic IS NOT NULL) OR
+  (kind = 'pair'      AND base IS NOT NULL AND quote_currency IS NOT NULL
+                      AND mic IS NULL AND isin IS NULL) OR
+  (kind = 'isin_only' AND isin IS NOT NULL AND mic IS NULL)
+)
+```
+
+Die Eindeutigkeit liegt heute auf `UNIQUE(ticker, mic)` und liefe damit für
+zwei der drei Formen leer. Sie wird zu drei **partiellen** Indizes — je Form
+einer, `WHERE kind = …`.
+
+### Stufe 3 · Die App-Grenze
+
+| Ort | Änderung |
+|---|---|
+| `app/providers/base.py` | `ResolvedInstrument` bekommt `kind`, `base`, `quote_currency`; `QUOTE_TYPE_MAP` += `CRYPTOCURRENCY → crypto`, `BOND → bond` (Matrix `#4`) |
+| `app/exchanges.py` | `canonical_identity` wird Weiche über die Union; `is_real_mic` und `is_canonical_ticker` bleiben unverändert die `listed`-Hälfte (Matrix `#3`) |
+| `app/exchanges.py` | `REASON_UNSUPPORTED_INSTRUMENT_TYPE` samt Eintrag in `REJECTION_REASONS` (Matrix `#6`) |
+| `dashboard/src/i18n/{de,en}.ts` | derselbe Schlüssel in beiden Sprachen |
+| `app/plugin_adapters.py` | `ResolverAdapter` übersetzt über `kind` (Matrix `#5`) |
+| `app/services/quote_service.py` | für `kind='pair'`: Kurswährung ≠ `quote_currency` ⇒ Ablehnung, keine stille Umrechnung (Matrix `#7`) |
+| Metadatenkaskade | läuft nur für `etf`/`etc` — kein justETF für eine Coin, keine TER-Frage an eine Anleihe (Matrix `#8`) |
+
+`app/resolver.py` und die eingebauten Plugins ziehen mit.
+
+### Was dieses Ticket **nicht** tut
+
+Die Pflichtfelder (`Resolved.name`, `Resolved.instrument_type`), die
+Auskunft in `GET /fields` und der `core_version`-Major sind **T-38** und
+bleiben dort. Sie landen im selben `API_VERSION`, weil zwischen beiden
+Kettengliedern kein Release liegt — nicht, weil die Tickets verschmelzen.
+
+Der YAML-Fallback ist **T-37**. Er steht hinter beiden, weil das abgestimmte
+Beispiel `_tickets/T-37-single-file-sample.yaml` `kind:` und die Gattungen
+`crypto`/`bond` bereits ausspricht — er ist der erste Konsument dieses
+Vertrags, nicht seine Vorbedingung.
+
+### Entscheidungen Mike, 2026-08-29
+
+1. **Die bestehende `data/stockinfo.db` wird verworfen.** Kein Umzugspfad für
+   die Union; das Projekt ist in Entwicklung, die sechs Zeilen sind
+   Wegwerfdaten. Das neue Schema wird direkt angelegt. Die `CHECK`-Klauseln
+   entfallen dadurch nicht — nur der Umzugsschritt.
+2. **Der Smoke-Profilname wird `yaml`** statt `csv` (Umsetzung in T-37).
+3. **Beide Versionssprünge werden gemacht**, `API_VERSION` 1→2 und
+   `core_version` 2.1.0→3.0.0. Abgewogen gegen „wir sind in der
+   Entwicklungsphase, und `plugin_api` steht ohnehin auf `0.2.0`": Der Sprung
+   kostet je eine Zeile — `Source.api_version` hat `API_VERSION` als
+   Vorgabewert, die eingebauten Plugins erben ihn also —, und er ist das
+   einzige, was T-38 `#3` und `#7` überhaupt prüfbar macht.
+
+### Naming-Mitzieher — gemessen, nicht geraten
+
+AST-Inventar über die Dateien, die dieses Ticket ohnehin anfasst. Vier
+deutsche Bezeichner, jeder an der Fundstelle bestätigt:
+
+| Datei | heute | wird |
+|---|---|---|
+| `app/contract.py:68` | `feld` | `field` |
+| `app/routers/fields.py:35-46` | `vertrag` | `contract` |
+| `app/plugin_adapters.py:352` | `herkunft` | `provenance` |
+| `app/sources_config.py:209` | `taugliche` | `usable` |
+
+Die TypeScript- und Bash-Seite wird bei der Umsetzung neu inventarisiert —
+welche Dateien dort fallen, steht erst dann fest.
+
 ## Worum es geht *(Fundlage, 2026-08-25)*
 
 T-21 Teil 3 verlangt seit Entscheidung 2 eine **vollständige kanonische
