@@ -20,6 +20,8 @@ Szenariospezifisches Verhalten gehört **nicht** hierher: Was ein Test an einer
 Grenze konkret zurückgeben lassen will, bleibt bei ihm.
 """
 
+from stockinfo_plugin.types import Identity
+
 from app.db import init_db
 from app.providers.base import EtfDetails
 from app.repository import QuoteRepository
@@ -41,7 +43,7 @@ class EmptyDailyCloseProvider:
         symbol: str,
         start: str | None = None,
         *,
-        identity: object | None = None,
+        identity: Identity | None = None,
     ) -> list[dict] | None:
         return []
 

@@ -26,6 +26,8 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
+from stockinfo_plugin import ListedIdentity
+
 from app.container import get_sources_config
 from app.main import app
 from app.plugin_loader import ENTRY_POINT_GROUP, load_all
@@ -53,6 +55,10 @@ class LocalFileResolver(CanadaFileResolver):
     """Dasselbe Beispiel, aus dem Datenvolume geladen."""
 
     name = "local-file"
+    # Geerbt genuegt nicht: Der Loader verlangt die Deklaration an der
+    # konkreten Klasse, sonst reichte eine Basisklasse sie fuer beliebige
+    # Ableitungen weiter — und die Schranke praefte wieder nichts.
+    api_version = 2
 
 
 SOURCES = [LocalFileResolver]
@@ -210,8 +216,8 @@ def test_ein_plugin_beantwortet_eine_echte_rest_anfrage(
 
     assert answer.status_code in (200, 201), f"{load_path}: {answer.text}"
     body = answer.json()
-    assert body["ticker"] == "RY", load_path
-    assert body["mic"] == "XTSE", load_path
+    assert body["identity"]["ticker"] == "RY", load_path
+    assert body["identity"]["mic"] == "XTSE", load_path
     assert body["name"] == "Royal Bank of Canada", load_path
 
 
@@ -320,8 +326,13 @@ def test_die_tagesreihe_erreicht_den_anbieter_auch_ohne_alias() -> None:
 
     adapter = DailyAdapter(YFinancePlugin(provider=Binding()), "XETR")
 
-    without_alias = adapter.fetch_daily_closes("AAPL", ticker="AAPL", mic="XNAS")
-    with_alias = adapter.fetch_daily_closes("EUNL.DE", ticker="EUNL", mic="XETR")
+    without_alias = adapter.fetch_daily_closes(
+        "AAPL", identity=ListedIdentity(ticker="AAPL", mic="XNAS")
+    )
+    with_alias = adapter.fetch_daily_closes(
+            "EUNL.DE",
+            identity=ListedIdentity(ticker="EUNL", mic="XETR"),
+        )
 
     assert asked == ["AAPL", "EUNL.DE"], (
         "beide Börsen müssen den Anbieter erreichen — vorher war es keine"
