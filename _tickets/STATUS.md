@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
 - `handoff_commit`: `d313318`
 - `review_round`: `2`
@@ -218,5 +218,4 @@ bleiben ohne gemessenen Ausfall aus `KEEP_IF_UNKNOWN` heraus.
 **Zahlen:** 806 Backend gruen / 29 skipped, 8 echte Integrationstests, 257
 Plugin-Vertrag, 271 Dashboard, `vue-tsc` sauber, Ruff sauber,
 `./_tickets/T-35-smoke.sh --run` 16/16 gegen die echten Quellen.
-
 
