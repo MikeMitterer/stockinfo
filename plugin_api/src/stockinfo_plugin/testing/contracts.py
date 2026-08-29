@@ -41,8 +41,8 @@ from stockinfo_plugin.invariants import (
     currency_problem,
     days_are_ordered,
     has_timezone,
+    identity_problem,
     is_finite_price,
-    is_real_mic,
     isin_check_digit_is_valid,
 )
 from stockinfo_plugin.types import (
@@ -51,6 +51,7 @@ from stockinfo_plugin.types import (
     DailySeries,
     FxRate,
     FxRequest,
+    ListedIdentity,
     NotFound,
     NotResponsible,
     Quote,
@@ -59,6 +60,7 @@ from stockinfo_plugin.types import (
     ResolveRequest,
     Unavailable,
     Unit,
+    isin_of,
 )
 
 # Antworten, die eine Quelle statt eines Treffers geben darf. Als Tupel und
@@ -256,7 +258,12 @@ class ResolverContract(SourceContract):
         )
 
     def test_bekanntes_papier_wird_aufgeloest(self) -> None:
-        """Ticker und MIC sind getrennt und tragen Inhalt.
+        """Die gelieferte Identität ist in ihrer Form vollständig.
+
+        Was „vollständig" heißt, hängt an der Form und steht in
+        `invariants.identity_problem`: Ticker und echter MIC bei `listed`,
+        Basiswert und Quote-Währung bei `pair`, eine ISIN mit gültiger
+        Prüfziffer bei `isin_only`.
 
         Hier stand einmal ``"." not in ticker`` als Prüfung darauf, dass kein
         Börsensuffix mitkommt. Das war falsch: Ein Punkt gehört bei
@@ -266,15 +273,32 @@ class ResolverContract(SourceContract):
         """
         answer = self.make_source().resolve(self.responsible)
         assert isinstance(answer, Resolved), _lacks_hit(answer, Resolved)
-        assert answer.ticker and answer.ticker.strip() == answer.ticker, (
-            f"ticker fehlt oder trägt Leerzeichen: {answer.ticker!r}"
+        problem = identity_problem(answer.identity, self.collector_codes)
+        assert not problem, f"gelieferte Identität ist unbrauchbar: {problem}"
+
+    def test_wer_eine_form_liefert_hat_sie_deklariert(self) -> None:
+        """Die Antwort bleibt innerhalb der zugesagten Fähigkeiten.
+
+        **Beim Resolver kann der Host nicht vorher filtern.** Eine
+        `ResolveRequest` trägt ISIN, Symbol, Vorzugsbörse und Währung — weder
+        die Identitätsform noch die Gattung, denn beide sind das *Ergebnis*
+        der Auflösung. Die Zusage lässt sich deshalb nur an der Antwort
+        prüfen, und genau das tut dieser Test: Wer eine `pair`-Identität
+        liefert, ohne `pair` zu deklarieren, hat etwas zugesagt, worauf der
+        Host seine Kette nicht einrichten konnte.
+        """
+        source = self.make_source()
+        answer = source.resolve(self.responsible)
+        assert isinstance(answer, Resolved), _lacks_hit(answer, Resolved)
+        assert answer.identity.kind in source.SUPPORTED_KINDS, (
+            f"liefert eine Identität der Form {answer.identity.kind!r}, "
+            f"deklariert aber nur {sorted(source.SUPPORTED_KINDS)}"
         )
-        assert is_real_mic(answer.mic, self.collector_codes), (
-            f"mic {answer.mic!r} ist kein MIC nach ISO 10383 — vier Zeichen, "
-            "Großbuchstaben oder Ziffern, und kein interner Sammelcode. Ohne "
-            "echte Börse ist der Ticker mehrdeutig, und die nächste Quelle "
-            "kann mit dem Wert nichts anfangen."
-        )
+        if answer.instrument_type is not None:
+            assert answer.instrument_type in source.SUPPORTED_TYPES, (
+                f"liefert die Gattung {answer.instrument_type!r}, deklariert "
+                f"aber nur {sorted(source.SUPPORTED_TYPES)}"
+            )
 
     def test_die_antwort_gehoert_zur_frage(self) -> None:
         """Die Ergebnis-ISIN ist die Anfrage-ISIN — oder es gibt keine.
@@ -290,14 +314,15 @@ class ResolverContract(SourceContract):
         """
         answer = self.make_source().resolve(self.responsible)
         assert isinstance(answer, Resolved), _lacks_hit(answer, Resolved)
-        if answer.isin is None or self.responsible.isin is None:
+        delivered = isin_of(answer.identity)
+        if delivered is None or self.responsible.isin is None:
             return
-        assert answer.isin.upper() == self.responsible.isin.upper(), (
+        assert delivered.upper() == self.responsible.isin.upper(), (
             f"gefragt nach {self.responsible.isin}, geantwortet zu "
-            f"{answer.isin} — das ist ein anderes Wertpapier"
+            f"{delivered} — das ist ein anderes Wertpapier"
         )
-        assert isin_check_digit_is_valid(answer.isin.upper()), (
-            f"gelieferte ISIN {answer.isin!r} hat eine falsche Prüfziffer"
+        assert isin_check_digit_is_valid(delivered.upper()), (
+            f"gelieferte ISIN {delivered!r} hat eine falsche Prüfziffer"
         )
 
     def test_dieselbe_frage_zweimal_gibt_dieselbe_antwort(self) -> None:
@@ -627,9 +652,9 @@ class QuoteContract(SourceContract):
     @pytest.mark.parametrize(
         "broken",
         [
-            QuoteRequest(ticker="", mic=""),
-            QuoteRequest(ticker="X" * 500, mic="XXXX"),
-            QuoteRequest(ticker="RY", mic="nicht-wirklich-ein-mic"),
+            QuoteRequest(ListedIdentity(ticker="", mic="")),
+            QuoteRequest(ListedIdentity(ticker="X" * 500, mic="XXXX")),
+            QuoteRequest(ListedIdentity(ticker="RY", mic="nicht-wirklich-ein-mic")),
         ],
     )
     def test_wirft_niemals(self, broken: QuoteRequest) -> None:
@@ -758,9 +783,11 @@ class DailyContract(SourceContract):
     @pytest.mark.parametrize(
         "broken",
         [
-            DailyRequest(ticker="", mic=""),
-            DailyRequest(ticker="X" * 500, mic="XXXX"),
-            DailyRequest(ticker="RY", mic="XTSE", start=date(2030, 1, 1)),
+            DailyRequest(ListedIdentity(ticker="", mic="")),
+            DailyRequest(ListedIdentity(ticker="X" * 500, mic="XXXX")),
+            DailyRequest(
+                ListedIdentity(ticker="RY", mic="XTSE"), start=date(2030, 1, 1)
+            ),
         ],
     )
     def test_wirft_niemals(self, broken: DailyRequest) -> None:

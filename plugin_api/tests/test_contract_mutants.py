@@ -28,6 +28,7 @@ from stockinfo_plugin import (
     FieldSpec,
     FxRate,
     FxRequest,
+    ListedIdentity,
     MetadataSource,
     Quote,
     QuoteRequest,
@@ -156,7 +157,7 @@ def test_ein_sammelcode_gilt_nicht_als_boerse() -> None:
     assert_contract_rejects(
         ResolverContract,
         "test_bekanntes_papier_wird_aufgeloest",
-        lambda: FakeResolver(Resolved(ticker="RY", mic="US")),
+        lambda: FakeResolver(Resolved(ListedIdentity(ticker="RY", mic="US"))),
         "ist kein MIC nach ISO 10383",
         **RESOLVER_REQUESTS,
     )
@@ -173,7 +174,7 @@ def test_eine_antwort_zu_einem_anderen_papier_faellt_auf() -> None:
         ResolverContract,
         "test_die_antwort_gehoert_zur_frage",
         lambda: FakeResolver(
-            Resolved(ticker="ABX", mic="XTSE", isin="CA0679011084")
+            Resolved(ListedIdentity(ticker="ABX", mic="XTSE", isin="CA0679011084"))
         ),
         "das ist ein anderes Wertpapier",
         **RESOLVER_REQUESTS,
@@ -185,7 +186,7 @@ def test_eine_ungueltige_pruef_isin_faellt_auf() -> None:
     assert_contract_rejects(
         ResolverContract,
         "test_die_eigenen_pruefdaten_sind_gueltige_isins",
-        lambda: FakeResolver(Resolved(ticker="RY", mic="XTSE")),
+        lambda: FakeResolver(Resolved(ListedIdentity(ticker="RY", mic="XTSE"))),
         "ist keine gültige ISIN",
         **{**RESOLVER_REQUESTS, "unknown": ResolveRequest(isin="CA00000000000")},
     )
@@ -316,9 +317,9 @@ def test_ein_absoluter_betrag_ohne_waehrung_faellt_auf() -> None:
 # ─── Kurs ─────────────────────────────────────────────────────────────────────
 
 QUOTE_REQUESTS = {
-    "responsible": QuoteRequest(ticker="RY", mic="XTSE"),
-    "not_responsible": QuoteRequest(ticker="", mic=""),
-    "unknown": QuoteRequest(ticker="ZZZZ", mic="XTSE"),
+    "responsible": QuoteRequest(ListedIdentity(ticker="RY", mic="XTSE")),
+    "not_responsible": QuoteRequest(ListedIdentity(ticker="", mic="")),
+    "unknown": QuoteRequest(ListedIdentity(ticker="ZZZZ", mic="XTSE")),
 }
 
 
@@ -400,9 +401,9 @@ def test_ein_zeitpunkt_ohne_wirksame_zone_faellt_auf(label: str, moment: datetim
 # ─── Historie ─────────────────────────────────────────────────────────────────
 
 DAILY_REQUESTS = {
-    "responsible": DailyRequest(ticker="RY", mic="XTSE", start=date(2025, 12, 30)),
-    "not_responsible": DailyRequest(ticker="", mic=""),
-    "unknown": DailyRequest(ticker="ZZZZ", mic="XTSE"),
+    "responsible": DailyRequest(ListedIdentity(ticker="RY", mic="XTSE"), start=date(2025, 12, 30)),
+    "not_responsible": DailyRequest(ListedIdentity(ticker="", mic="")),
+    "unknown": DailyRequest(ListedIdentity(ticker="ZZZZ", mic="XTSE")),
 }
 
 

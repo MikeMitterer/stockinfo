@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from stockinfo_plugin import ResolveRequest
+from stockinfo_plugin import ListedIdentity, ResolveRequest
 from stockinfo_plugin.testing import ResolverContract
 
 from examples.canada_file import CanadaFileResolver
@@ -44,8 +44,9 @@ def test_liefert_ticker_und_boerse_getrennt() -> None:
 
     hit = resolver.resolve(ResolveRequest(isin="CA78012H5675"))
 
-    assert hit.ticker == "RY"
-    assert hit.mic == "XTSE"
+    assert hit.identity == ListedIdentity(
+        ticker="RY", mic="XTSE", isin="CA78012H5675"
+    )
     assert hit.name == "Royal Bank of Canada"
 
 
@@ -111,7 +112,7 @@ def test_eine_tabelle_ohne_gattungsspalte_bleibt_gueltig(tmp_path: Path) -> None
     without_column = CanadaFileResolver({"path": str(legacy_file)}).resolve(
         ResolveRequest(isin="CA78012H5675")
     )
-    assert without_column.ticker == "RY", "die Zeile muss trotzdem auflösen"
+    assert without_column.identity.ticker == "RY", "die Zeile muss trotzdem auflösen"
     assert without_column.instrument_type is None
 
     empty_cell = CanadaFileResolver({"path": str(FIXTURE)}).resolve(

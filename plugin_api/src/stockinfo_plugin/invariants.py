@@ -358,3 +358,68 @@ def days_are_ordered(days: tuple[date, ...] | list[date]) -> bool:
     danach einen Tag doppelt, ohne dass irgendetwas auffällt.
     """
     return all(earlier < later for earlier, later in zip(days, days[1:]))
+
+
+def identity_problem(
+    identity: object, collectors: frozenset[str] = frozenset()
+) -> str:
+    """Was mit dieser Identität nicht stimmt — leer, wenn sie taugt.
+
+    Je Form etwas anderes, und genau darum steht es hier und nicht in jedem
+    Vertrag noch einmal: Ein Ticker gehört zur `listed`-Form und sagt bei einem
+    Währungspaar nichts; eine `pair`-Identität braucht statt der Börse eine
+    Quote-Währung, weil *sie* die Frage „wo gilt dieser Preis?" beantwortet.
+
+    Die Prüfung ist bewusst **strukturell**. Ob ``XTSE`` das *gewünschte*
+    Listing ist oder ``BTC`` als Basiswert existiert, weiß sie nicht — dafür
+    braucht es Marktwissen, und das steht nicht im Vertrag.
+
+    Args:
+        identity: Eine `ListedIdentity`, `PairIdentity` oder
+            `IsinOnlyIdentity`.
+        collectors: Interne Sammelcodes, die kein echter Handelsplatz sind.
+
+    Returns:
+        Die Beanstandung als Satz, oder ``""``.
+    """
+    # Lokaler Import: `types` bezieht seine Regeln von hier, und ein
+    # Modulimport in die andere Richtung schlösse den Kreis.
+    from stockinfo_plugin.types import (
+        IsinOnlyIdentity,
+        ListedIdentity,
+        PairIdentity,
+    )
+
+    if isinstance(identity, ListedIdentity):
+        if not identity.ticker or identity.ticker.strip() != identity.ticker:
+            return f"ticker fehlt oder trägt Leerzeichen: {identity.ticker!r}"
+        if not is_real_mic(identity.mic, collectors):
+            return (
+                f"mic {identity.mic!r} ist kein MIC nach ISO 10383 — vier "
+                "Zeichen, Großbuchstaben oder Ziffern, und kein interner "
+                "Sammelcode. Ohne echte Börse ist der Ticker mehrdeutig"
+            )
+        if identity.isin is not None and not isin_check_digit_is_valid(identity.isin):
+            return f"isin {identity.isin!r} hat keine gültige Prüfziffer"
+        return ""
+
+    if isinstance(identity, PairIdentity):
+        if not identity.base or identity.base.strip() != identity.base:
+            return f"base fehlt oder trägt Leerzeichen: {identity.base!r}"
+        problem = currency_problem(identity.quote_currency)
+        if problem:
+            return f"quote_currency {problem}"
+        return ""
+
+    if isinstance(identity, IsinOnlyIdentity):
+        if not isin_check_digit_is_valid(identity.isin):
+            return (
+                f"isin {identity.isin!r} hat keine gültige Prüfziffer — bei "
+                "dieser Form ist sie die ganze Identität"
+            )
+        return ""
+
+    return (
+        f"{type(identity).__name__} ist keine Identitätsform des Vertrags "
+        "(listed, pair, isin_only)"
+    )

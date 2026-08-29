@@ -21,11 +21,119 @@ from datetime import date, datetime
 from enum import Enum
 from typing import Literal
 
-API_VERSION = 1
-"""Version des Vertrags. Ein Plugin nennt die Version, gegen die es gebaut ist."""
+API_VERSION = 2
+"""Version des Vertrags. Ein Plugin nennt die Version, gegen die es gebaut ist.
+
+**2 seit T-31:** Die Identität ist eine getaggte Union, und `Resolved`,
+`QuoteRequest` und `DailyRequest` tragen sie als Feld `identity` statt als
+`ticker`/`mic`. Das bricht jedes Plugin nach Vertrag 1 — deshalb die neue Zahl
+und nicht ein zusätzliches Feld mit Vorgabewert.
+"""
 
 Cost = Literal["free", "metered", "paid"]
 """Was eine Anfrage kostet — steuert die Reihenfolge in der Kette."""
+
+
+# ─── Identität ────────────────────────────────────────────────────────────────
+#
+# Nicht jedes Papier wird an einer Börse gehandelt. Eine Kryptowährung hat
+# keinen MIC nach ISO 10383, und eine OTC-Anleihe hat keinen Ticker — für beide
+# wäre jeder Wert in diesen Feldern erfunden.
+#
+# Die Union macht die Form **ausdrücklich**, statt sie aus der Feldbelegung
+# raten zu lassen: Ein Plugin sagt, welche Identität es liefert, und der Host
+# verzweigt über `kind`. Das ist die T-21-Lehre in ihrer allgemeinen Form —
+# kein Wert, der etwas anderes vorgibt zu sein.
+
+
+@dataclass(frozen=True)
+class ListedIdentity:
+    """Ein Listing an einem echten Handelsplatz: Ticker **und** MIC.
+
+    Die Form für Aktien, ETFs, ETCs und börsengehandelte Anleihen. Beide Werte
+    zusammen — ein Ticker ohne Handelsplatz ist mehrdeutig (`RY` gibt es in
+    Toronto und in New York, zu verschiedenen Kursen in verschiedenen
+    Währungen), ein Handelsplatz ohne Ticker sagt gar nichts.
+
+    Attributes:
+        ticker: Kanonischer Ticker, ohne Börsensuffix.
+        mic: Börse als MIC (ISO 10383), z.B. ``XETR``.
+        isin: Falls bekannt. Nicht jeder Markt vergibt eine.
+    """
+
+    ticker: str
+    mic: str
+    isin: str | None = None
+    kind: Literal["listed"] = "listed"
+
+
+@dataclass(frozen=True)
+class PairIdentity:
+    """Ein Währungspaar: Basiswert und Quote-Währung.
+
+    Die Form für natives Krypto. ``BTC`` allein hat keinen Preis — einen Preis
+    gibt es nur relativ zu einer Währung, und ``BTC-EUR`` ist ein anderes
+    Instrument als ``BTC-USD``. Die Rolle, die bei der Aktie der Handelsplatz
+    spielt (*wo gilt dieser Preis?*), spielt hier die Quote-Währung.
+
+    Ein Krypto-**ETP** gehört nicht hierher: Es hat ISIN und MIC und ist
+    `ListedIdentity`.
+
+    Attributes:
+        base: Basiswert, z.B. ``BTC``.
+        quote_currency: Quote-Währung als ISO-4217-Code, z.B. ``EUR``.
+    """
+
+    base: str
+    quote_currency: str
+    kind: Literal["pair"] = "pair"
+
+
+@dataclass(frozen=True)
+class IsinOnlyIdentity:
+    """Nur eine ISIN — die Form für OTC-Anleihen.
+
+    Es gibt keinen Handelsplatz und keinen Ticker; die ISIN *ist* die
+    Identität. Ein Preis kommt für diese Form nicht von jeder Quelle, und wo
+    keine liefert, ist die ehrliche Antwort `NotFound` und kein geschätzter
+    Kurs.
+
+    Attributes:
+        isin: Die ISIN, mit gültiger Prüfziffer.
+    """
+
+    isin: str
+    kind: Literal["isin_only"] = "isin_only"
+
+
+Identity = ListedIdentity | PairIdentity | IsinOnlyIdentity
+"""Welche Identitätsformen es gibt — unterschieden über ``kind``.
+
+**Bewusst ohne `ticker`/`mic`-Properties auf der Union.** Sie müssten für ein
+Paar etwas erfinden, und ein erfundener Wert, der wie ein echter aussieht, ist
+genau der Fehler, den diese Union beseitigt. Wer Ticker und MIC braucht, prüft
+vorher die Form.
+"""
+
+
+def isin_of(identity: Identity) -> str | None:
+    """Die ISIN dieser Identität, falls die Form eine hat.
+
+    Der Unterschied zu einer `isin`-Property auf der Union: Hier wird nichts
+    erfunden. Ein Währungspaar **hat** keine ISIN, und ``None`` sagt genau
+    das — anders als ein Ticker, den man für ein Paar nur erfinden könnte.
+
+    Args:
+        identity: Die Identität.
+
+    Returns:
+        Die ISIN, oder ``None`` bei einem Paar und bei einem Listing ohne.
+    """
+    if isinstance(identity, ListedIdentity):
+        return identity.isin
+    if isinstance(identity, IsinOnlyIdentity):
+        return identity.isin
+    return None
 
 
 # ─── Anfrage ──────────────────────────────────────────────────────────────────
@@ -67,22 +175,29 @@ class ResolveRequest:
 
 @dataclass(frozen=True)
 class Resolved:
-    """Treffer: So heißt das Papier an dieser Börse.
+    """Treffer: So ist das Papier identifiziert.
 
-    Bewusst **kein** fertiges Anbieter-Symbol, sondern Ticker und MIC getrennt.
-    Wie daraus ``EUNL.DE`` (Yahoo) oder ``EUNL.XETRA`` (EODHD) wird, ist Sache
-    dessen, der die Kurse holt — ein Resolver muss keine fremden
+    Bewusst **kein** fertiges Anbieter-Symbol, sondern die Identität in ihrer
+    Form. Wie daraus ``EUNL.DE`` (Yahoo) oder ``EUNL.XETRA`` (EODHD) wird, ist
+    Sache dessen, der die Kurse holt — ein Resolver muss keine fremden
     Symbol-Konventionen kennen.
 
     ``currency`` fehlt mit Absicht: Die Handelswährung stammt immer aus dem
-    Live-Kurs, nie aus der Auflösung.
+    Live-Kurs, nie aus der Auflösung. Bei `PairIdentity` ist ``quote_currency``
+    etwas anderes — sie gehört zur Identität und sagt, *worin* der Preis
+    notiert, nicht *wieviel* er ist.
+
+    Attributes:
+        identity: Die Identität in ihrer Form. **Seit `API_VERSION` 2** statt
+            der Felder ``ticker``/``mic``, die nur die `listed`-Form abdeckten.
+        name: Anzeigename, falls die Quelle ihn kennt.
+        instrument_type: Gattung, falls die Quelle sie kennt — der Katalog
+            steht in T-38.
     """
 
-    ticker: str
-    mic: str
-    isin: str | None = None
+    identity: Identity
     name: str | None = None
-    instrument_type: str | None = None  # "etf" | "stock" | None
+    instrument_type: str | None = None
 
 
 @dataclass(frozen=True)
@@ -137,19 +252,22 @@ Resolution = Resolved | NotResponsible | NotFound | Unavailable
 
 @dataclass(frozen=True)
 class QuoteRequest:
-    """Die Frage an eine Kursquelle: Was kostet dieses Listing gerade?
+    """Die Frage an eine Kursquelle: Was kostet dieses Papier gerade?
+
+    **Seit `API_VERSION` 2 trägt die Anfrage die Identität als Union.** Vorher
+    standen hier `ticker` und `mic` als Pflichtfelder, und damit ließ sich ein
+    Papier ohne Handelsplatz zwar auflösen, aber nicht bepreisen — für eine
+    Coin und eine OTC-Anleihe war die Kursfrage schlicht nicht formulierbar.
+
+    Ein eigenes `isin`-Feld gibt es nicht mehr: Die ISIN steckt in
+    `ListedIdentity` und `IsinOnlyIdentity`, und ein zweites Feld daneben wäre
+    eine zweite Wahrheit über dieselbe Sache.
 
     Attributes:
-        ticker: Kanonischer Ticker, ohne Börsensuffix.
-        mic: Börse als MIC (ISO 10383). Ohne sie ist der Ticker mehrdeutig —
-            ``RY`` gibt es in Toronto und in New York, zu verschiedenen Kursen
-            in verschiedenen Währungen.
-        isin: Falls bekannt. Manche Anbieter fragen lieber danach.
+        identity: Das Papier, in seiner Identitätsform.
     """
 
-    ticker: str
-    mic: str
-    isin: str | None = None
+    identity: Identity
 
 
 @dataclass(frozen=True)
@@ -180,16 +298,16 @@ class DailyRequest:
     """Die Frage an eine Historienquelle: Wie liefen die Schlusskurse?
 
     Attributes:
-        ticker: Kanonischer Ticker.
-        mic: Börse als MIC.
+        identity: Das Papier, in seiner Identitätsform. **Seit `API_VERSION`
+            2** statt ``ticker``/``mic`` — aus demselben Grund wie bei
+            `QuoteRequest`.
         start: Frühester gewünschter Tag, einschließlich. ``None`` heißt „so
             weit zurück, wie du hast".
         end: Spätester gewünschter Tag, einschließlich. ``None`` heißt „bis
             heute".
     """
 
-    ticker: str
-    mic: str
+    identity: Identity
     start: date | None = None
     end: date | None = None
 

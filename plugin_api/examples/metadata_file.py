@@ -36,6 +36,9 @@ class MetadataFileSource(MetadataSource):
 
     name = "metadata-file"
     cost = "free"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed"})
+    SUPPORTED_TYPES = frozenset({"etf", "etc", "fund"})
 
     FIELDS = (
         FieldSpec(

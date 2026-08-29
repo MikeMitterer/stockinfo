@@ -24,6 +24,7 @@ from pathlib import Path
 from typing import Any
 
 from stockinfo_plugin import (
+    ListedIdentity,
     NotFound,
     NotResponsible,
     Resolution,
@@ -39,6 +40,9 @@ class CanadaFileResolver(Resolver):
 
     name = "canada-file"
     cost = "free"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed"})
+    SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "bond"})
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
@@ -79,9 +83,11 @@ class CanadaFileResolver(Resolver):
         if entry is None:
             return NotFound()
         return Resolved(
-            ticker=entry["ticker"],
-            mic=entry["mic"],
-            isin=request.isin.upper(),
+            identity=ListedIdentity(
+                ticker=entry["ticker"],
+                mic=entry["mic"],
+                isin=request.isin.upper(),
+            ),
             name=entry.get("name") or None,
             # **Die Gattung kommt aus der Tabelle, seit T-37.** Sie fehlte,
             # und der UI-Lauf hat gezeigt, was das kostet: Ohne `type` hält

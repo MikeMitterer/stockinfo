@@ -39,7 +39,40 @@ class Source:
     """Eindeutiger Kurzname, taucht in Konfiguration und Protokoll auf."""
 
     api_version: int = API_VERSION
-    """Vertragsversion, gegen die dieses Plugin gebaut wurde."""
+    """Vertragsversion, gegen die dieses Plugin gebaut wurde.
+
+    **Jede konkrete Quelle muss diesen Wert selbst setzen.** Der Vorgabewert
+    hier ist nur die Typangabe; der Loader weist eine Klasse ab, die ihn nicht
+    in ihrem *eigenen* ``__dict__`` trägt.
+
+    Der Grund ist gemessen, nicht theoretisch: Solange der Wert geerbt werden
+    durfte, prüfte der Versionsvergleich nichts. Ein Plugin nach altem Vertrag
+    erbte beim Upgrade automatisch die neue Zahl — und weil
+    `plugin_env` beigesteuerte Pakete ohnehin auf das Contract-Paket der App
+    zwingt, gab es auch keinen zweiten Weg, den Unterschied zu bemerken. Eine
+    Schranke, die jeden durchlässt, ist keine.
+    """
+
+    SUPPORTED_KINDS: frozenset[str] = frozenset({"listed"})
+    """Welche Identitätsformen diese Quelle bedient — ``listed``, ``pair``,
+    ``isin_only``.
+
+    **Ein grober Vorfilter, keine zweite Zuständigkeitsprüfung.** Die
+    eigentliche Entscheidung bleibt `handles`; diese Menge erspart der Kette
+    nur die Frage an eine Quelle, die die Form gar nicht kennt.
+
+    Die Vorgabe ist ``{"listed"}`` und nicht „alles": Wer nichts erklärt, hat
+    nichts über Paare und ISIN-Only zugesagt, und ein Vertrag-1-Plugin konnte
+    beides gar nicht liefern.
+    """
+
+    SUPPORTED_TYPES: frozenset[str] = frozenset()
+    """Welche Gattungen diese Quelle bedient — leer heißt **nichts zugesagt**.
+
+    Bewusst kein ``None`` für „alle": Das hieße auch „alle künftigen", und der
+    Katalog wächst. Eine Quelle, die heute Aktien und ETFs liefert, hätte damit
+    stillschweigend für Anleihen mitgebürgt, sobald die Gattung dazukommt.
+    """
 
     cost: Cost = "free"
     """Was eine Anfrage kostet — **Information, keine Sortierregel**.

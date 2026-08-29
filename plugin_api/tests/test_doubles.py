@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from stockinfo_plugin import (
+    ListedIdentity,
     NotFound,
     NotResponsible,
     Resolved,
@@ -88,7 +89,7 @@ def test_eine_uhr_ohne_zone_wird_abgelehnt() -> None:
 
 def test_antworten_werden_der_reihe_nach_verbraucht() -> None:
     """Erst der Ausfall, dann der Treffer — der übliche Wiederholungsfall."""
-    source = FakeResolver([Unavailable("Netz"), Resolved(ticker="RY", mic="XTSE")])
+    source = FakeResolver([Unavailable("Netz"), Resolved(ListedIdentity(ticker="RY", mic="XTSE"))])
 
     assert isinstance(source.resolve(REQUEST), Unavailable)
     assert isinstance(source.resolve(REQUEST), Resolved)
@@ -101,7 +102,7 @@ def test_die_letzte_antwort_wiederholt_sich() -> None:
     Test vorher zählen, wie oft die Kette fragt — und genau diese Zahl ist oft
     das, was der Test herausfinden soll.
     """
-    source = FakeResolver([Resolved(ticker="RY", mic="XTSE"), Unavailable("weg")])
+    source = FakeResolver([Resolved(ListedIdentity(ticker="RY", mic="XTSE")), Unavailable("weg")])
 
     source.resolve(REQUEST)
     for _ in range(5):
@@ -116,7 +117,7 @@ def test_ohne_vorgabe_kommt_notfound() -> None:
 def test_eine_antwort_je_anfrage() -> None:
     """`keyed` für den Fall, dass zwei Papiere verschieden beantwortet werden."""
     source = FakeResolver(
-        keyed={REQUEST: Resolved(ticker="RY", mic="XTSE"), OTHER: NotResponsible()}
+        keyed={REQUEST: Resolved(ListedIdentity(ticker="RY", mic="XTSE")), OTHER: NotResponsible()}
     )
 
     assert isinstance(source.resolve(REQUEST), Resolved)
@@ -182,7 +183,7 @@ def test_zwei_doubles_teilen_sich_ein_protokoll() -> None:
     """
     log = CallLog()
     first = FakeResolver(NotResponsible(), name="erste-quelle", log=log)
-    second = FakeResolver(Resolved(ticker="RY", mic="XTSE"), name="zweite-quelle", log=log)
+    second = FakeResolver(Resolved(ListedIdentity(ticker="RY", mic="XTSE")), name="zweite-quelle", log=log)
 
     first.resolve(REQUEST)
     second.resolve(REQUEST)

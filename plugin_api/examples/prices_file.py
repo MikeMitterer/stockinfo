@@ -41,6 +41,7 @@ from stockinfo_plugin import (
     FxRequest,
     FxResult,
     FxSource,
+    ListedIdentity,
     NotFound,
     NotResponsible,
     Quote,
@@ -102,6 +103,8 @@ class PricesFileDailySource(_FileBacked, DailyCloseSource):
 
     name = "prices-file-daily"
     cost = "free"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed"})
     default_path = "/data/closes.csv"
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
@@ -122,23 +125,31 @@ class PricesFileDailySource(_FileBacked, DailyCloseSource):
         in `fetch_daily` mit `NotFound` beantwortet. Zuständigkeit hier an der
         Dateizeile festzumachen hieße, für jede Prüfung die Datei zu lesen, und
         `handles` soll nach dem Vertrag nichts kosten.
+
+        Die Tabelle führt Ticker und MIC als Spalten; ein Paar und eine
+        ISIN-only-Anleihe sind darin gar nicht adressierbar.
         """
-        return bool(request.ticker and request.mic)
+        return isinstance(request.identity, ListedIdentity) and bool(
+            request.identity.ticker and request.identity.mic
+        )
 
     def fetch_daily(self, request: DailyRequest) -> DailyResult:
         """Liest die Zeilen des Listings und schneidet den Zeitraum zu."""
         if not self.handles(request):
-            return NotResponsible("ohne Ticker und MIC ist die Zeile nicht auffindbar")
+            return NotResponsible(
+                "die Tabelle findet nur Listings über Ticker und MIC"
+            )
         try:
             rows = _read_rows(self._path)
         except OSError as exc:
             return Unavailable(f"{self._path} nicht lesbar: {exc}")
 
+        identity = request.identity
         hits = [
             row
             for row in rows
-            if row.get("ticker", "").upper() == request.ticker.upper()
-            and row.get("mic", "").upper() == request.mic.upper()
+            if row.get("ticker", "").upper() == identity.ticker.upper()
+            and row.get("mic", "").upper() == identity.mic.upper()
         ]
         if not hits:
             return NotFound()
@@ -168,7 +179,7 @@ class PricesFileDailySource(_FileBacked, DailyCloseSource):
         currencies = {(row.get("currency") or "").upper() for row in hits}
         if len(currencies) > 1:
             return Unavailable(
-                f"{self._path} führt {request.ticker}/{request.mic} in mehreren "
+                f"{self._path} führt {identity.ticker}/{identity.mic} in mehreren "
                 f"Währungen ({', '.join(sorted(currencies))}) — eine Reihe hat "
                 "genau eine; bitte die Tabelle bereinigen"
             )
@@ -190,11 +201,15 @@ class PricesFileQuoteSource(_FileBacked, QuoteSource):
 
     name = "prices-file-quote"
     cost = "free"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed"})
     default_path = "/data/closes.csv"
 
     def handles(self, request: QuoteRequest) -> bool:
-        """Zuständig, sobald Ticker und MIC gesetzt sind."""
-        return bool(request.ticker and request.mic)
+        """Zuständig, sobald eine `listed`-Identität vollständig ist."""
+        return isinstance(request.identity, ListedIdentity) and bool(
+            request.identity.ticker and request.identity.mic
+        )
 
     def fetch_quote(self, request: QuoteRequest) -> QuoteResult:
         """Nimmt den letzten Schlusskurs als aktuellen Kurs.
@@ -204,9 +219,11 @@ class PricesFileQuoteSource(_FileBacked, QuoteSource):
         beim ersten Sonderfall liefen sie auseinander.
         """
         if not self.handles(request):
-            return NotResponsible("ohne Ticker und MIC ist die Zeile nicht auffindbar")
+            return NotResponsible(
+                "die Tabelle findet nur Listings über Ticker und MIC"
+            )
         series = PricesFileDailySource(self._config).fetch_daily(
-            DailyRequest(ticker=request.ticker, mic=request.mic)
+            DailyRequest(identity=request.identity)
         )
         if not isinstance(series, DailySeries):
             return series
@@ -225,6 +242,7 @@ class FxFileSource(_FileBacked, FxSource):
 
     name = "fx-file"
     cost = "free"
+    api_version = 2
     default_path = "/data/fx.csv"
 
     def handles(self, request: FxRequest) -> bool:

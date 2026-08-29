@@ -40,8 +40,12 @@ from stockinfo_plugin.types import (
     FxRate,
     FxRequest,
     FxResult,
+    Identity,
+    IsinOnlyIdentity,
+    ListedIdentity,
     NotFound,
     NotResponsible,
+    PairIdentity,
     Quote,
     QuoteRequest,
     QuoteResult,
@@ -52,6 +56,7 @@ from stockinfo_plugin.types import (
     Unavailable,
     Unit,
     convert,
+    isin_of,
 )
 
 __all__ = [
@@ -68,9 +73,13 @@ __all__ = [
     "FxRequest",
     "FxResult",
     "FxSource",
+    "Identity",
+    "IsinOnlyIdentity",
+    "ListedIdentity",
     "MetadataSource",
     "NotFound",
     "NotResponsible",
+    "PairIdentity",
     "Quote",
     "QuoteRequest",
     "QuoteResult",
@@ -84,4 +93,5 @@ __all__ = [
     "Unavailable",
     "Unit",
     "convert",
+    "isin_of",
 ]

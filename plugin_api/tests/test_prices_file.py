@@ -16,6 +16,7 @@ from stockinfo_plugin import (
     DailyRequest,
     FxRate,
     FxRequest,
+    ListedIdentity,
     NotFound,
     Quote,
     QuoteRequest,
@@ -47,9 +48,9 @@ FX = FIXTURES / "fx.csv"
 class TestPricesFileQuote(QuoteContract):
     """Der Kursvertrag — geerbt, nicht geschrieben."""
 
-    responsible = QuoteRequest(ticker="RY", mic="XTSE")
-    not_responsible = QuoteRequest(ticker="", mic="")
-    unknown = QuoteRequest(ticker="ZZZZ", mic="XTSE")
+    responsible = QuoteRequest(ListedIdentity(ticker="RY", mic="XTSE"))
+    not_responsible = QuoteRequest(ListedIdentity(ticker="", mic=""))
+    unknown = QuoteRequest(ListedIdentity(ticker="ZZZZ", mic="XTSE"))
 
     def make_source(self) -> PricesFileQuoteSource:
         return PricesFileQuoteSource({"path": str(CLOSES)})
@@ -64,9 +65,9 @@ class TestPricesFileDaily(DailyContract):
     Aussage zu treffen.
     """
 
-    responsible = DailyRequest(ticker="RY", mic="XTSE", start=date(2025, 12, 30))
-    not_responsible = DailyRequest(ticker="", mic="")
-    unknown = DailyRequest(ticker="ZZZZ", mic="XTSE")
+    responsible = DailyRequest(ListedIdentity(ticker="RY", mic="XTSE"), start=date(2025, 12, 30))
+    not_responsible = DailyRequest(ListedIdentity(ticker="", mic=""))
+    unknown = DailyRequest(ListedIdentity(ticker="ZZZZ", mic="XTSE"))
 
     def make_source(self) -> PricesFileDailySource:
         return PricesFileDailySource({"path": str(CLOSES)})
@@ -93,7 +94,7 @@ def test_die_reihe_wird_sortiert_obwohl_die_datei_es_nicht_ist() -> None:
     die Datei zu verlassen.
     """
     series = PricesFileDailySource({"path": str(CLOSES)}).fetch_daily(
-        DailyRequest(ticker="RY", mic="XTSE")
+        DailyRequest(ListedIdentity(ticker="RY", mic="XTSE"))
     )
 
     assert [bar.day for bar in series.bars] == [
@@ -106,7 +107,7 @@ def test_die_reihe_wird_sortiert_obwohl_die_datei_es_nicht_ist() -> None:
 def test_der_aktuelle_kurs_ist_der_juengste_eintrag() -> None:
     """Eine Datei kennt keinen Intraday-Stand — einen zu behaupten wäre schlimmer."""
     quote = PricesFileQuoteSource({"path": str(CLOSES)}).fetch_quote(
-        QuoteRequest(ticker="RY", mic="XTSE")
+        QuoteRequest(ListedIdentity(ticker="RY", mic="XTSE"))
     )
 
     assert isinstance(quote, Quote)
@@ -123,7 +124,7 @@ def test_der_bereinigungsstand_wird_deklariert_nicht_geraten() -> None:
     """
     default = PricesFileDailySource({"path": str(CLOSES)})
     declared = PricesFileDailySource({"path": str(CLOSES), "adjusted": True})
-    request = DailyRequest(ticker="RY", mic="XTSE")
+    request = DailyRequest(ListedIdentity(ticker="RY", mic="XTSE"))
 
     assert default.fetch_daily(request).adjusted is False
     assert declared.fetch_daily(request).adjusted is True
@@ -158,7 +159,7 @@ def test_eine_kaputte_zeile_ist_unavailable_und_nicht_notfound() -> None:
     )
     try:
         answer = PricesFileDailySource({"path": str(broken)}).fetch_daily(
-            DailyRequest(ticker="RY", mic="XTSE")
+            DailyRequest(ListedIdentity(ticker="RY", mic="XTSE"))
         )
     finally:
         broken.unlink()
@@ -191,7 +192,7 @@ def test_eine_gemischte_waehrung_wird_nicht_stillschweigend_vereinheitlicht(
     )
 
     answer = PricesFileDailySource({"path": str(mixed)}).fetch_daily(
-        DailyRequest(ticker="RY", mic="XTSE")
+        DailyRequest(ListedIdentity(ticker="RY", mic="XTSE"))
     )
 
     assert isinstance(answer, Unavailable), (
@@ -218,7 +219,7 @@ def test_der_kurs_erbt_den_ausfall_der_reihe(tmp_path: Path) -> None:
     )
 
     answer = PricesFileQuoteSource({"path": str(mixed)}).fetch_quote(
-        QuoteRequest(ticker="RY", mic="XTSE")
+        QuoteRequest(ListedIdentity(ticker="RY", mic="XTSE"))
     )
 
     assert isinstance(answer, Unavailable)
@@ -227,7 +228,7 @@ def test_der_kurs_erbt_den_ausfall_der_reihe(tmp_path: Path) -> None:
 def test_ein_nicht_gefuehrtes_papier_ist_notfound() -> None:
     """Nicht `Unavailable`: Es wurde nachgesehen, und die Tabelle führt es nicht."""
     answer = PricesFileDailySource({"path": str(CLOSES)}).fetch_daily(
-        DailyRequest(ticker="ZZZZ", mic="XTSE")
+        DailyRequest(ListedIdentity(ticker="ZZZZ", mic="XTSE"))
     )
 
     assert isinstance(answer, NotFound)
@@ -242,7 +243,7 @@ def test_ein_nicht_gefuehrtes_papier_ist_notfound() -> None:
 GOLDEN = (
     Scenario(
         case_id="rbc-tsx-quote",
-        request=QuoteRequest(ticker="RY", mic="XTSE"),
+        request=QuoteRequest(ListedIdentity(ticker="RY", mic="XTSE")),
         expect=Quote,
         golden={"currency": "CAD"},
         plausible={"price": (20.0, 500.0)},

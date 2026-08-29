@@ -48,7 +48,12 @@ MISS_TYPES: tuple[type, ...] = (NotResponsible, NotFound, Unavailable)
 # von Tag zu Tag, während der Kurs es tut. Genau deshalb taugt sie als Golden
 # Case und der Kurs nur als Bereich.
 REQUIRED_GOLDEN: dict[type, tuple[str, ...]] = {
-    Resolved: ("ticker", "mic"),
+    # **Die ganze Identität, nicht ihre Teile** — seit `API_VERSION` 2. Ein
+    # Golden Case nennt damit auch die **Form**: `ListedIdentity("RY", "XTSE")`
+    # und `PairIdentity("BTC", "EUR")` sind verschiedene Erwartungen, und ein
+    # Feldvergleich auf `ticker` hätte für ein Paar gar nichts zu vergleichen
+    # gehabt. Dataclasses vergleichen nach Wert, der Vergleich bleibt exakt.
+    Resolved: ("identity",),
     Quote: ("currency",),
     DailySeries: ("currency",),
     FxRate: ("base", "quote"),

@@ -146,7 +146,20 @@ def _check(source_class: Any, origin: str) -> LoadProblem | None:
         return LoadProblem(origin, f"{source_class!r} ist keine Source-Unterklasse")
     if not getattr(source_class, "name", ""):
         return LoadProblem(origin, f"{source_class.__name__} hat keinen name")
-    version = getattr(source_class, "api_version", None)
+    # **Die eigene Deklaration, nicht die geerbte.** `api_version` hat auf
+    # `Source` einen Vorgabewert, und `getattr` hätte ihn zurückgegeben — die
+    # Prüfung hätte damit jedes Plugin durchgelassen, auch das gegen den alten
+    # Vertrag gebaute. Ein Blick in `__dict__` der konkreten Klasse, keine
+    # Suche entlang der MRO: Sonst deklarierte eine gemeinsame Basisklasse für
+    # alle ihre Ableitungen mit, und die Vererbung wäre zurück.
+    if "api_version" not in source_class.__dict__:
+        return LoadProblem(
+            origin,
+            f"{source_class.name} deklariert keine api_version. Jede Quelle "
+            f"nennt die Vertragsversion selbst, gegen die sie gebaut ist "
+            f"(diese App spricht {API_VERSION})",
+        )
+    version = source_class.__dict__["api_version"]
     if version != API_VERSION:
         return LoadProblem(
             origin,

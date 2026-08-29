@@ -122,10 +122,12 @@ class FakeSource(Source):
 
     Beispiel::
 
-        quelle = FakeResolver([Unavailable("Netz"), Resolved("RY", "XTSE")])
-        assert isinstance(quelle.resolve(request), Unavailable)   # erster Aufruf
-        assert isinstance(quelle.resolve(request), Resolved)      # zweiter
-        assert len(quelle.calls) == 2
+        source = FakeResolver(
+            [Unavailable("Netz"), Resolved(ListedIdentity("RY", "XTSE"))]
+        )
+        assert isinstance(source.resolve(request), Unavailable)   # erster Aufruf
+        assert isinstance(source.resolve(request), Resolved)      # zweiter
+        assert len(source.calls) == 2
     """
 
     name = "fake"

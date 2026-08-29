@@ -14,6 +14,7 @@ import pytest
 from stockinfo_plugin import (
     FxRate,
     FxRequest,
+    ListedIdentity,
     NotFound,
     NotResponsible,
     Quote,
@@ -37,7 +38,7 @@ GOOD = Scenario(
     case_id="rbc-tsx",
     request=ResolveRequest(isin="CA78012H5675"),
     expect=Resolved,
-    golden={"ticker": "RY", "mic": "XTSE"},
+    golden={"identity": ListedIdentity("RY", "XTSE")},
     note="TMX-Listing der Royal Bank of Canada, von Hand nachgeschlagen",
 )
 
@@ -52,21 +53,23 @@ def test_ein_sauberer_fall_wird_nicht_beanstandet() -> None:
 def test_ein_tippfehler_im_feldnamen_faellt_auf() -> None:
     """Der Fehler, der sonst nie auffällt — weil er grün ist.
 
-    ``golden={"tikcer": "RY"}`` vergleicht ein Feld, das es an `Resolved` nicht
-    gibt. Ohne diese Prüfung liefe der Fall durch, und der Autor glaubte, sein
-    Ticker sei abgesichert.
+    ``golden={"identitiy": …}`` vergleicht ein Feld, das es an `Resolved`
+    nicht gibt. Ohne diese Prüfung liefe der Fall durch, und der Autor
+    glaubte, seine Identität sei abgesichert.
     """
     broken = Scenario(
         case_id="tippfehler",
         request=ResolveRequest(isin="CA78012H5675"),
         expect=Resolved,
-        golden={"tikcer": "RY", "mic": "XTSE"},
+        golden={"identitiy": ListedIdentity("RY", "XTSE")},
     )
 
     problems = validate_scenarios([broken])
 
-    assert any("tikcer" in line for line in problems)
-    assert any("ticker" in line for line in problems), "die Meldung nennt die echten"
+    assert any("identitiy" in line for line in problems)
+    assert any("bekannt: identity" in line for line in problems), (
+        "die Meldung nennt die echten Feldnamen"
+    )
 
 
 def test_zwei_faelle_mit_derselben_kennung() -> None:
@@ -91,16 +94,16 @@ def test_ein_treffer_ohne_kernwerte_beweist_nichts() -> None:
 
     problems = validate_scenarios([hollow])
 
-    assert any("ticker" in line and "mic" in line for line in problems)
+    assert any("ohne identity" in line for line in problems)
 
 
 def test_ein_leerer_kernwert_ist_keine_erwartung() -> None:
-    """``golden={"ticker": ""}`` sieht aus wie eine Zusage und ist eine Auslassung."""
+    """``golden={"identity": None}`` sieht aus wie eine Zusage und ist keine."""
     hollow = Scenario(
         case_id="leerer-kern",
         request=ResolveRequest(isin="CA78012H5675"),
         expect=Resolved,
-        golden={"ticker": "", "mic": "XTSE"},
+        golden={"identity": None},
     )
 
     assert any("ist leer" in line for line in validate_scenarios([hollow]))
@@ -112,7 +115,7 @@ def test_eine_antwort_ohne_ergebnis_traegt_keine_werte() -> None:
         case_id="verwirrt",
         request=ResolveRequest(isin="CA0679011084"),
         expect=NotFound,
-        golden={"ticker": "RY"},
+        golden={"identity": ListedIdentity("RY", "XTSE")},
     )
 
     assert any("trägt keine Felder" in line for line in validate_scenarios([confused]))
@@ -126,7 +129,7 @@ def test_vertauschte_grenzen_schlagen_nie_an() -> None:
     """
     swapped = Scenario(
         case_id="vertauscht",
-        request=QuoteRequest(ticker="RY", mic="XTSE"),
+        request=QuoteRequest(ListedIdentity(ticker="RY", mic="XTSE")),
         expect=Quote,
         plausible={"price": (10000.0, 1.0)},
     )
@@ -156,7 +159,7 @@ def test_ein_unbekannter_anfragetyp_faellt_auch_bei_einem_fehlfall_auf() -> None
     problems = validate_scenarios([alien])
     assert any("keiner bekannten Rolle" in line for line in problems), problems
 
-    source = FakeResolver(Resolved(ticker="RY", mic="XTSE"))
+    source = FakeResolver(Resolved(ListedIdentity(ticker="RY", mic="XTSE")))
     assert run_scenarios(DirectRunner(source), [alien]) == problems, (
         "der vollständige Lauf muss dieselbe Beanstandung melden — vorher war "
         "auch er leer und damit grün"
@@ -192,7 +195,7 @@ def test_unbrauchbare_grenzen_sind_ein_beschreibungsfehler(
     """
     broken = Scenario(
         case_id=f"grenzen-{why}",
-        request=QuoteRequest(ticker="RY", mic="XTSE"),
+        request=QuoteRequest(ListedIdentity(ticker="RY", mic="XTSE")),
         expect=Quote,
         golden={"currency": "CAD"},
         note="Grenzen bewusst kaputt, um die Beschreibungsprüfung zu belegen",
@@ -223,7 +226,7 @@ def test_eine_sehr_grosse_obergrenze_beendet_den_lauf_nicht() -> None:
     """
     generous = Scenario(
         case_id="grosszuegige-obergrenze",
-        request=QuoteRequest(ticker="RY", mic="XTSE"),
+        request=QuoteRequest(ListedIdentity(ticker="RY", mic="XTSE")),
         expect=Quote,
         golden={"currency": "CAD"},
         note="Obergrenze als beliebig großer Integer, Herkunft: Befund Runde 3",
@@ -272,7 +275,7 @@ def test_die_falsche_ergebnisart_wird_benannt() -> None:
 
 
 def test_ein_abweichender_kernwert_wird_gemeldet() -> None:
-    deviations = check_scenario(GOOD, Resolved(ticker="RX", mic="XTSE"))
+    deviations = check_scenario(GOOD, Resolved(ListedIdentity(ticker="RX", mic="XTSE")))
 
     assert len(deviations) == 1
     assert "'RX'" in deviations[0] and "'RY'" in deviations[0]
@@ -282,7 +285,7 @@ def test_ein_wert_ausserhalb_des_bereichs() -> None:
     """Der Pence-Fehler, wie ihn eine Plausibilitätsregel sieht."""
     scenario = Scenario(
         case_id="kurs",
-        request=QuoteRequest(ticker="RY", mic="XTSE"),
+        request=QuoteRequest(ListedIdentity(ticker="RY", mic="XTSE")),
         expect=Quote,
         plausible={"price": (1.0, 1000.0)},
     )
@@ -326,7 +329,7 @@ def test_der_runner_waehlt_die_methode_nach_dem_anfragetyp() -> None:
     )
     scenario = Scenario(
         case_id="kurs",
-        request=QuoteRequest(ticker="RY", mic="XTSE"),
+        request=QuoteRequest(ListedIdentity(ticker="RY", mic="XTSE")),
         expect=Quote,
         golden={"currency": "CAD"},
         plausible={"price": (1.0, 1000.0)},
@@ -361,7 +364,7 @@ def test_beschreibungsfehler_stehen_vor_den_laufergebnissen() -> None:
 
     findings = run_scenarios(DirectRunner(FakeResolver(NotResponsible())), [broken])
 
-    assert any("ticker" in line for line in findings)
+    assert any("ohne identity" in line for line in findings)
     assert not any("NotResponsible" in line for line in findings), (
         "der Lauf hat stattgefunden, obwohl die Beschreibung nicht taugt"
     )
