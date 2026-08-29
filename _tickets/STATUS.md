@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
 - `handoff_commit`: `cc0f028`
 - `review_round`: `3`
@@ -132,5 +132,4 @@ nicht gefragt oder gefragt und leer. `utils/isin.ts` entfaellt samt Test.
 **Zahlen:** 817 Backend gruen / 29 skipped, 8 echte Integrationstests, 259
 Plugin-Vertrag, 266 Dashboard, `vue-tsc`, Ruff und `git diff --check` sauber,
 `PROFILE=online` 20/20 und `PROFILE=csv` 20/20, isolierter 404-Test gruen.
-
 
