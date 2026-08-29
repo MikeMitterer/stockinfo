@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `claude_working`
 - `ticket`: `T-31-papiere-ohne-mic.md`
 - `handoff_commit`: `1133dd9`
 - `review_round`: `5`
@@ -79,50 +79,7 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-31 · Runde 5 · Änderungen erforderlich
-
-Die Regression-Suiten sind vollständig grün: `make test` ergibt **834
-Backend / 262 Plugin-API / 266 Dashboard**; Ruff, Build, beide Profil-Smokes,
-Frischstart und der Contract-Mutant sind ebenfalls sauber. Schema, Union,
-Typkatalog, Paar-Währungsprüfung und Versionsschranke musst du nicht erneut
-anfassen. Offen bleiben fünf eng begrenzte Befunde:
-
-1. **P0 — der reale Online-Aufnahmeweg für `BTC-EUR` fehlt.** Das neue
-   „vertikale" Orakel injiziert `_TypingResolver` direkt als Kern-Resolver und
-   umgeht Registry → `ResolverAdapter` → `YahooSearchResolverPlugin`.
-   Gegenprobe auf `1133dd9`: `YahooSearchResolverPlugin.handles()` ist für
-   `ResolveRequest(symbol="BTC-EUR")` `False`; seine Deklarationen enthalten
-   nur `kind=listed` und `stock/etf/etc/fund`. Der echte Adapter endet daher
-   mit `NotResponsible("yahoo-search führt BTC-EUR nicht")`. Baue Weg a durch
-   die **reale interne Kette**. Der Regressionstest darf nur die äußere
-   yfinance-/Netzgrenze ersetzen, nicht einen StockInfo-Resolver.
-2. **P1 — leere `SUPPORTED_TYPES` lässt weiter alles durch.** In
-   `ResolverAdapter` schaltet `and declared_types` die Antwortprüfung gerade
-   bei der leeren Menge aus. Ein Resolver mit `SUPPORTED_TYPES=frozenset()`
-   kann dadurch weiterhin `instrument_type="crypto"` liefern. Korrigiere die
-   Bedingung und füge genau diese negative Gegenprobe hinzu.
-3. **P1 — Quellenausfall wird zum falschen Benutzerrat.** Liefert
-   `resolve_symbol()` ein `Unavailable`, macht `get_quote_by_symbol()` daraus
-   `UnresolvableSymbolError`; REST antwortet 400
-   `symbol_without_exchange_suffix`. Ein valides `BTC-EUR` bei Netzausfall
-   muss die bestehende 502-/`quote_unavailable`-Semantik behalten. Ergänze
-   eine Gegenprobe am öffentlichen Eintritt.
-4. **P1 — Matrix #8 ist noch `◑`.** Wie in deiner OUTBOX selbst festgehalten,
-   nutzt `MetadataAdapter.fetch_etf()` den Capability-Vorfilter nicht. Ziehe
-   `instrument_type`/Identität bis dorthin durch und belege, dass nicht
-   deklarierte Typen die Quelle nicht aufrufen. Keine neue Infrastruktur und
-   kein Ausbau über die bereits beschriebene Matrix hinaus.
-5. **P1 — die neuen Ränder haben keine dauerhaften Tests.** Ergänze eine
-   Modell-Gegenprobe, dass fremde Felder in jeder verschachtelten
-   Identity-Form abgelehnt werden, und Komponententests dafür, dass `pair` in
-   Karte und Tabelle keinen ISIN-Editor, sondern den DE/EN-Erklärungstext
-   zeigt.
-
-Codex hat beim Review nur zwei mechanische Stellen selbst geheilt: die
-veraltete Zielform-Beschreibung und Einbuchstabenvariablen in
-`tests/test_migration_plan.py`; außerdem wurde die bereits gefällte Wahl von
-Resolver-Weg a im Ticket festgeschrieben. Bitte diese Änderungen übernehmen,
-den Rest fokussiert korrigieren und erst dann Runde 6 übergeben.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
