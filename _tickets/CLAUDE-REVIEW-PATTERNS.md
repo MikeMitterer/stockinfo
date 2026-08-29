@@ -22,6 +22,7 @@ duplizieren.
 - [P-08 · Der Test erzeugt den entscheidenden Unterschied nicht](#p-08--der-test-erzeugt-den-entscheidenden-unterschied-nicht)
 - [P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem](#p-09--eine-testanforderung-wächst-zum-unbeauftragten-subsystem)
 - [P-10 · Ein Integrationstest berührt seine Außengrenze nicht](#p-10--ein-integrationstest-berührt-seine-außengrenze-nicht)
+- [P-11 · Die Übergabe steht in der Mailbox, bevor es sie gibt](#p-11--die-übergabe-steht-in-der-mailbox-bevor-es-sie-gibt)
 - [Leitplanken für das spätere Skill-Proposal](#leitplanken-für-das-spätere-skill-proposal)
 
 ## Leitplanken für das spätere Skill-Proposal
@@ -1106,5 +1107,56 @@ Integrationstests, die ausnahmslos einen Dienst berührten. Der EUR→EUR-Fall
 blieb jedoch zusätzlich zu seiner neuen Unit-Kopie in der Integrationsdatei;
 auch der neue justETF-Fall mit US-ISIN kehrte vor dem Provider zurück. Nur acht
 der zehn gesammelten Fälle überschritten tatsächlich die Außengrenze.
+
+[↑ Übersicht](#übersicht)
+
+## P-11 · Die Übergabe steht in der Mailbox, bevor es sie gibt
+
+**Erkennungsregel:** `phase: ready_for_codex` und `owner: codex` stehen in
+`STATUS.md`, während die Datei **uncommitted** im Arbeitsverzeichnis liegt
+oder ein `handoff_commit` nennt, hinter dem noch Produktcommits folgen. Die
+Mailbox ist damit für einen Zeitraum in einem Zustand, den sie nicht halten
+kann: Sie sagt „übergeben" über einen Stand, den es im Repository so nicht
+gibt.
+
+**Der Unterschied zu P-06** ist die Richtung. Dort entsteht Produktcode
+**nach** einer gültigen Übergabe. Hier ist die Übergabe von Anfang an
+ungültig — sie wurde ausgesprochen, bevor der Stand fertig war, und der
+Nachtrag kam später. Beide Male ist das Ergebnis dasselbe: Der Prüfer weiß
+nicht, was er prüfen soll. Nur ist es hier kein Verstoß gegen den Riegel,
+sondern eine Reihenfolge, die ihn gar nicht erst herstellt.
+
+**Warum es so leicht passiert:** Die Mailbox wird beim Schreiben der Übergabe
+gefüllt — Befundtabelle, Matrixzuordnung, Läufe —, und `phase`/`owner` sind
+zwei Zeilen im selben Dokument. Es fühlt sich wie *ein* Vorgang an. Der
+Zeitpunkt der Wirkung ist aber ein anderer als der des Schreibens: Wirksam
+wird die Übergabe, sobald ein anderer Agent die Datei liest, und der wartet
+nicht darauf, dass man fertig wird.
+
+**Prüffrage — die Übergabe ist genau ein Commit, und er ist der letzte.** Vor
+dem Setzen von `phase`/`owner`:
+
+1. `git status --short` — ist alles außer `STATUS.md` committed?
+2. `git log <handoff_commit>..HEAD --name-only` — steht dort noch Produktcode?
+3. Zeigt `handoff_commit` auf **den letzten** Produktcommit, nicht auf einen
+   Zwischenstand?
+
+Erst wenn alle drei stimmen, werden `phase` und `owner` gesetzt — und
+unmittelbar danach als **eigener** Commit gesichert, ohne etwas anderes
+darin.
+
+**Beleg:** T-31 Runde 6, 2026-08-29: Ich schrieb die vollständige OUTBOX samt
+`phase: ready_for_codex`, `owner: codex` und `handoff_commit: 5b3c406` in die
+Datei — und committete sie nicht. Beim Zusammenstellen der Matrixzuordnung
+fand ich anschließend eine Testlücke bei `identity_form`, schloss sie mit
+`6635c0e` und zog `handoff_commit` erst danach nach. Codex hat in genau dieses
+Fenster gesehen: eine angekündigte Übergabe, uncommitted, auf einen Stand
+zeigend, hinter dem noch ein Produktcommit lag. Zurückgewiesen ohne Review —
+richtigerweise, denn der Riegel verbietet, den gemeinten Stand zu raten.
+
+**Die Lehre steckt in der Ursache, nicht in der Regel:** Das Schreiben der
+Übergabe ist selbst noch Arbeit, die Befunde erzeugt. Wer die Mailbox
+umschaltet, *während* er sie schreibt, hat die Übergabe für die Dauer dieser
+Arbeit versprochen.
 
 [↑ Übersicht](#übersicht)
