@@ -424,6 +424,20 @@ class YFinanceResolver:
         return with_symbol[0]
 
 
+def _resolve_symbol_of(resolver: object, symbol: str) -> Resolution:
+    """Fragt eine Quelle über das Symbol — oder stellt fest, dass sie es nicht kann.
+
+    Nicht jede Quelle beantwortet die Frage. Eine, die den Einstieg nicht
+    hat, ist für dieses Symbol **unzuständig** — das ist eine ehrliche
+    Aussage und etwas anderes als „kenne ich nicht". Der Unterschied
+    entscheidet in der Kette über 404 gegen 502.
+    """
+    ask = getattr(resolver, "resolve_symbol", None)
+    if ask is None:
+        return NotResponsible(reason=f"{type(resolver).__name__} sucht nicht per Symbol")
+    return ask(symbol)
+
+
 class CompositeResolver:
     """Probiert mehrere Resolver der Reihe nach — erster Treffer gewinnt."""
 
@@ -444,12 +458,7 @@ class CompositeResolver:
         Die Zusammenfassung ist der Kern von T-20 — sie entscheidet, ob am
         Ende ein 404 oder ein 502 steht:
 
-        | Unterwegs gesehen | Gesamtantwort | HTTP |
-        |---|---|---|
-        | ein Treffer | `ResolvedInstrument` | 200 |
-        | mindestens ein Ausfall | `Unavailable` | **502** |
-        | sonst mindestens ein „kenne ich nicht" | `NotFound` | 404 |
-        | nur Unzuständige | `NotResponsible` | 404 |
+        Die Tabelle steht bei `_ask`, wo die Regel liegt.
 
         **Ein Ausfall schlägt ein „kenne ich nicht".** Hat eine Quelle gar
         nicht nachsehen können, ist „gibt es nicht" keine belegte Aussage —
@@ -466,13 +475,69 @@ class CompositeResolver:
         Returns:
             Die zusammengefasste Antwort der Kette.
         """
+        return self._ask(
+            lambda resolver: resolver.resolve_isin(isin),
+            skip=lambda resolver: not resolver.handles(isin),
+            subject=isin,
+        )
+
+    def resolve_symbol(self, symbol: str) -> Resolution:
+        """Dasselbe über das Symbol — der Einstieg für Papiere ohne ISIN.
+
+        **Warum es ihn braucht** (T-31, Matrix `#5`/`#6`): Die Identitätsform
+        und die Gattung sind der *Befund der Quelle*, nicht eine Ableitung aus
+        dem Symbol. Über den By-Symbol-Weg gab es bisher niemanden zu fragen —
+        `QuoteRequest` verlangt eine fertige Identität, also genau das, was
+        erst entstehen soll.
+
+        **Ohne Vorfilter.** `handles` beantwortet die Zuständigkeit für eine
+        *ISIN*; auf ein Symbol lässt sie sich nicht anwenden. Gefragt werden
+        deshalb alle, und wer nichts damit anfangen kann, sagt
+        `NotResponsible` — das kostet keine Anfrage nach außen, weil eine
+        Quelle ohne Symbolsuche gar nicht erst hinausgeht.
+
+        Args:
+            symbol: Das vom Nutzer genannte Symbol.
+
+        Returns:
+            Die zusammengefasste Antwort der Kette, nach denselben Regeln wie
+            bei `resolve_isin`.
+        """
+        return self._ask(
+            lambda resolver: _resolve_symbol_of(resolver, symbol),
+            skip=lambda resolver: False,
+            subject=symbol,
+        )
+
+    def _ask(self, ask, skip, subject: str) -> Resolution:
+        """Die Kettenregel aus T-20 — **einmal**, für beide Einstiege.
+
+        Sie entscheidet, ob am Ende ein 404 oder ein 502 steht, und das ist
+        zu viel Bedeutung für zwei Fassungen:
+
+        | Unterwegs gesehen | Gesamtantwort | HTTP |
+        |---|---|---|
+        | ein Treffer | `ResolvedInstrument` | 200 |
+        | mindestens ein Ausfall | `Unavailable` | **502** |
+        | sonst mindestens ein „kenne ich nicht" | `NotFound` | 404 |
+        | nur Unzuständige | `NotResponsible` | 404 |
+
+        Args:
+            ask: Was die einzelne Quelle gefragt wird.
+            skip: Ob sie vorab übersprungen wird — beim ISIN-Weg die
+                Zuständigkeitsfrage, beim Symbolweg nie.
+            subject: ISIN oder Symbol, nur für das Protokoll.
+
+        Returns:
+            Die zusammengefasste Antwort.
+        """
         failures: list[str] = []
         someone_looked = False
 
         for resolver in self._resolvers:
-            if not resolver.handles(isin):
+            if skip(resolver):
                 continue
-            result = resolver.resolve_isin(isin)
+            result = ask(resolver)
             if isinstance(result, ResolvedInstrument):
                 return result
             if isinstance(result, Unavailable):
@@ -481,7 +546,9 @@ class CompositeResolver:
                 someone_looked = True
 
         if failures:
-            logger.warning("resolve_chain_unavailable", isin=isin, sources=failures)
+            logger.warning(
+                "resolve_chain_unavailable", subject=subject, sources=failures
+            )
             return Unavailable(error="; ".join(failures))
         if someone_looked:
             return NotFound()

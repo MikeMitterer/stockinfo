@@ -177,17 +177,35 @@ Sie hier vorwegzunehmen hieße, zwei Umbauten in einem Diff zu vermischen.
 
 
 class InstrumentResolver(Protocol):
-    """Löst eine ISIN zu einem handelbaren Symbol auf.
+    """Löst ein Papier zu einer Identität auf — über ISIN **oder** Symbol.
 
     `handles` beantwortet die Frage **vor** der Anfrage: Eine Quelle, die für
     ein Papier gar nicht zuständig ist, soll nichts kosten — kein Netz, kein
     Kontingent. Erst danach entscheidet `resolve_isin`, ob sie das Papier
     kennt (`NotFound`) oder gerade nicht nachsehen kann (`Unavailable`).
+
+    **`resolve_symbol` kam mit T-31 dazu, und der Anlass ist ein Orakel.**
+    Matrix `#5` verlangt die Identitätsform aus dem *Gattungs-Befund der
+    Quelle*, `#6` eine eigene Kennung für eine nicht aufgenommene Gattung.
+    Beides setzt voraus, dass überhaupt jemand gefragt wird — und über den
+    By-Symbol-Weg gab es dafür keinen Einstieg: `QuoteRequest` verlangt eine
+    fertige Identität, also genau das, was noch fehlt.
+
+    Aus dem Symbol zu raten schied aus. Ein `^GDAXI` trägt kein Merkmal, an
+    dem sich eine Gattung ablesen ließe; jede Ableitung aus der Symbolform
+    endete beim Zufallsbefund „kein Börsensuffix", den `#6` ausdrücklich
+    verbietet. Der Vertrag hatte die Antwort längst — `ResolveRequest.symbol`
+    steht seit T-27a darin und wurde von niemandem gelesen.
+
+    Eine Quelle, die nur ISINs kennt, gibt `NotResponsible` zurück; die
+    Vorgabe in `CompositeResolver` tut das für sie.
     """
 
     def handles(self, isin: str) -> bool: ...
 
     def resolve_isin(self, isin: str) -> Resolution: ...
+
+    def resolve_symbol(self, symbol: str) -> Resolution: ...
 
 
 def declared_name(source: object) -> str | None:

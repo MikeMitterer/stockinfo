@@ -23,6 +23,7 @@ from app.models import (
     identity_from_columns,
 )
 from app.providers.base import (
+    INSTRUMENT_TYPES,
     EtfEnricher,
     InstrumentResolver,
     QuoteProvider,
@@ -68,6 +69,30 @@ class InstrumentNotFoundError(Exception):
 
 class QuoteUnavailableError(Exception):
     """Es konnte kein aktueller Kurs beschafft werden."""
+
+
+class UnsupportedInstrumentTypeError(Exception):
+    """Diese Gattung nimmt die App **bewusst** nicht auf (T-31, Matrix `#6`).
+
+    Der Unterschied zu `UnresolvableSymbolError` ist der ganze Punkt. Ein
+    Index scheitert nicht daran, dass sein Symbol keinen Handelsplatz nennt —
+    er scheitert daran, dass Indizes nicht im Gattungskatalog stehen. Fiele er
+    in die Symbolform-Ablehnung, läse der Benutzer eine Begründung, die mit
+    dem Grund nichts zu tun hat, und probierte Schreibweisen durch, die nie
+    helfen können.
+
+    Die Kennung sagt außerdem, dass es eine **Entscheidung** war und keine
+    Grenze der Technik: Eine spätere Aufnahme des Typs ändert genau hier
+    etwas.
+    """
+
+    def __init__(self, symbol: str, instrument_type: str) -> None:
+        super().__init__(
+            f"'{symbol}' ist ein {instrument_type!r} — diese Gattung nimmt "
+            "StockInfo derzeit nicht auf"
+        )
+        self.symbol = symbol
+        self.instrument_type = instrument_type
 
 
 class UnresolvableSymbolError(Exception):
@@ -340,11 +365,25 @@ class QuoteService:
         #
         # Geraten wird weiterhin nicht: `AAPL` bekommt keinen erfundenen MIC.
         ticker, mic = split_symbol(symbol)
-        if not ticker or not mic:
-            raise UnresolvableSymbolError(symbol)
+        if ticker and mic:
+            resolved = ResolvedInstrument(symbol=symbol, ticker=ticker, mic=mic)
+            return self._build(resolved, enrich_etf)
 
-        resolved = ResolvedInstrument(symbol=symbol, ticker=ticker, mic=mic)
-        return self._build(resolved, enrich_etf)
+        # **Erst jetzt wird gefragt** (T-31, Matrix `#5`). Ein Symbol ohne
+        # Börsensuffix ist nicht zwangsläufig unbrauchbar — es kann ein Papier
+        # sein, das gar keinen Handelsplatz hat. Welche Form und welche Gattung
+        # dahintersteckt, weiß nur eine Quelle; abgeleitet wird sie **nicht**.
+        #
+        # Der Bindestrich in `BTC-EUR` ist dabei kein Argument. Ein `^GDAXI`
+        # trägt gar keins, und trotzdem verlangt Matrix `#6` für ihn eine
+        # eigene Ablehnung statt des Zufallsbefunds „kein Börsensuffix" —
+        # genau daran ist die Ableitung aus der Symbolform gescheitert.
+        resolution = self._resolver.resolve_symbol(symbol)
+        if not isinstance(resolution, ResolvedInstrument):
+            raise UnresolvableSymbolError(symbol)
+        if resolution.type is not None and resolution.type not in INSTRUMENT_TYPES:
+            raise UnsupportedInstrumentTypeError(symbol, resolution.type)
+        return self._build(resolution, enrich_etf)
 
     def get_quote_for_known(
         self,

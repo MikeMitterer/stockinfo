@@ -58,9 +58,15 @@ from fastapi.testclient import TestClient
 
 from app.container import get_cached_quote_service
 from app.main import app
-from app.providers.base import RawQuote, ResolvedInstrument
+from app.plugin_adapters import _instrument_from
+from app.providers.base import INSTRUMENT_TYPES, RawQuote, ResolvedInstrument
 from app.repository import QuoteRepository
-from stockinfo_plugin.types import IsinOnlyIdentity, NotFound, Resolved
+from stockinfo_plugin.types import (
+    IsinOnlyIdentity,
+    NotFound,
+    PairIdentity,
+    Resolved,
+)
 from tests.boundaries import wire_real_chain
 
 # Eine echte Bundesanleihe — Prüfziffer gültig, damit die Aufnahme nicht schon
@@ -104,14 +110,41 @@ class _TypedQuoteSource:
         )
 
 
-class _NoResolver:
-    """Keine Auflösung — der Symbolweg hat keine ISIN zu fragen."""
+class _TypingResolver:
+    """Die Außengrenze, die zu einem **Symbol** sagt, was es ist.
+
+    Das ist der „Gattungs-Befund der Quelle" aus Matrix `#5`. Dass die App ihn
+    über die Resolver-Rolle einholt, ist Entwurf und damit Verdrahtung — das
+    Orakel darunter prüft nur, was am Ende herauskommt.
+
+    Args:
+        instrument_type: Was die Quelle über die Gattung sagt.
+        identity: Welche Identität sie dazu meldet. ``None`` heißt „kenne ich
+            nicht" und führt zur Ablehnung.
+    """
+
+    SUPPORTED_KINDS = frozenset({"listed", "pair", "isin_only"})
+    SUPPORTED_TYPES = frozenset(INSTRUMENT_TYPES) | {"index"}
+
+    def __init__(
+        self, instrument_type: str | None = None, identity: object = None
+    ) -> None:
+        self._type = instrument_type
+        self._identity = identity
 
     def handles(self, isin: str) -> bool:
         return True
 
     def resolve_isin(self, isin: str):
         return NotFound()
+
+    def resolve_symbol(self, symbol: str):
+        if self._identity is None:
+            return NotFound()
+        return _instrument_from(
+            Resolved(identity=self._identity, instrument_type=self._type),
+            fallback_isin="",
+        )
 
 
 class _BondResolver:
@@ -156,7 +189,9 @@ def _stored(repository: QuoteRepository, symbol: str) -> dict:
 def crypto_chain(tmp_path: Path) -> Iterator[tuple[TestClient, QuoteRepository]]:
     """Eine Kette, deren Quelle `BTC-EUR` als Krypto in EUR meldet."""
     yield _chain(
-        str(tmp_path / "crypto.db"), _TypedQuoteSource("crypto"), _NoResolver()
+        str(tmp_path / "crypto.db"),
+        _TypedQuoteSource("crypto"),
+        _TypingResolver("crypto", PairIdentity(base="BTC", quote_currency="EUR")),
     )
     app.dependency_overrides.clear()
 
@@ -226,7 +261,11 @@ def test_die_gattung_entscheidet_die_quelle_und_nicht_der_bindestrich(
     Sorte hat Runde 4 durchgelassen.
     """
     client, repository = _chain(
-        str(tmp_path / "kein-paar.db"), _TypedQuoteSource("stock"), _NoResolver()
+        str(tmp_path / "kein-paar.db"),
+        _TypedQuoteSource("stock"),
+        # Die Quelle kennt das Symbol **nicht** — damit gibt es keinen
+        # Gattungs-Befund, und der Bindestrich allein darf nichts bewirken.
+        _TypingResolver(),
     )
     try:
         response = client.get("/quote", params={"symbol": "BTC-EUR"})
@@ -260,7 +299,7 @@ def test_ein_kurs_in_fremder_waehrung_wird_abgelehnt(tmp_path: Path) -> None:
     client, repository = _chain(
         str(tmp_path / "waehrung.db"),
         _TypedQuoteSource("crypto", currency="USD"),
-        _NoResolver(),
+        _TypingResolver("crypto", PairIdentity(base="BTC", quote_currency="EUR")),
     )
     try:
         response = client.get("/quote", params={"symbol": "BTC-EUR"})
@@ -287,7 +326,9 @@ def test_ein_index_wird_mit_eigener_kennung_abgelehnt(tmp_path: Path) -> None:
     zugleich, dass eine spätere Entscheidung es ändern kann.
     """
     client, repository = _chain(
-        str(tmp_path / "index.db"), _TypedQuoteSource("index"), _NoResolver()
+        str(tmp_path / "index.db"),
+        _TypedQuoteSource("index"),
+        _TypingResolver("index", IsinOnlyIdentity(isin="DE0008469008")),
     )
     try:
         response = client.get("/quote", params={"symbol": "^GDAXI"})

@@ -31,6 +31,7 @@ from app.models import (
     QuotePoint,
     QuoteResponse,
 )
+from app.exchanges import REASON_NO_SUFFIX
 from app.services.intake_service import REASON_NOT_FOUND
 from app.routers.validation import IsinPath, SymbolPath, TimeRange, normalize_symbol
 from app.services.daily_history import DailyHistoryService
@@ -39,9 +40,17 @@ from app.services.quote_service import (
     InstrumentNotFoundError,
     QuoteUnavailableError,
     UnresolvableSymbolError,
+    UnsupportedInstrumentTypeError,
 )
 
 router = APIRouter(tags=["quotes"])
+
+
+# Die Kennung der bewusst nicht aufgenommenen Gattung (T-31, Matrix `#6`).
+# Sie steht hier und nicht bei den Symbolform-Gründen in `app.exchanges`: Jene
+# beschreiben, was mit der **Eingabe** nicht stimmt; diese sagt, dass die
+# Eingabe verstanden wurde und die Antwort trotzdem Nein lautet.
+REASON_UNSUPPORTED_TYPE = "unsupported_instrument_type"
 
 
 def _not_found(isin: str) -> JSONResponse:
@@ -95,10 +104,28 @@ def quote_by_symbol(
     symbol = normalize_symbol(symbol)
     try:
         return service.get_by_symbol(symbol)
-    except UnresolvableSymbolError as exc:
+    except UnsupportedInstrumentTypeError as exc:
+        # **Eine eigene Kennung, kein Zufallsbefund** (T-31, Matrix `#6`).
+        # Ohne sie fiele ein Index in die Symbolform-Ablehnung darunter, und
+        # der Benutzer läse „nennt keinen Handelsplatz" — richtig beobachtet
+        # und am Grund vorbei. Die Kennung ist stabil und übersetzbar; der
+        # Katalog liegt unter `errors.*` im Dashboard.
+        return JSONResponse(
+            status_code=400,
+            content=ErrorDetail(
+                code=REASON_UNSUPPORTED_TYPE,
+                params={"symbol": exc.symbol, "instrument_type": exc.instrument_type},
+            ).model_dump(),
+        )
+    except UnresolvableSymbolError:
         # 400 und nicht 502: Der Aufrufer kann es besser machen, und der Text
         # sagt ihm wie. Ein 502 behauptete einen Ausfall, den es nicht gab.
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
+        return JSONResponse(
+            status_code=400,
+            content=ErrorDetail(
+                code=REASON_NO_SUFFIX, params={"symbol": symbol}
+            ).model_dump(),
+        )
     except QuoteUnavailableError as exc:
         raise HTTPException(status_code=502, detail=f"Kein Kurs für {symbol}") from exc
 

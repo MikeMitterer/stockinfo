@@ -527,6 +527,28 @@ class ResolverAdapter(_Adapter):
         """Fühlt sich dieses Plugin für die ISIN zuständig?"""
         return bool(self._source.handles(self._request(isin)))
 
+    def resolve_symbol(self, symbol: str) -> Resolution:
+        """Löst über das **Symbol** auf — der Einstieg für Papiere ohne ISIN.
+
+        `ResolveRequest` trägt `symbol` seit T-27a; gelesen hat es bis T-31
+        niemand. Genau dieses Feld ist die Antwort auf Matrix `#5`: Ein Papier
+        ohne ISIN — eine Coin — kann seine Gattung nur von einer Quelle
+        erfahren, und ohne diesen Einstieg gab es keine Frage, die man ihr
+        stellen konnte.
+
+        Args:
+            symbol: Das vom Nutzer genannte Symbol.
+
+        Returns:
+            Wie `resolve_isin`, nur mit dem Symbol als Frage.
+        """
+        request = ResolveRequest(
+            symbol=symbol, preferred_mic=self._default_exchange
+        )
+        if not self._source.handles(request):
+            return NotResponsible(reason=f"{self.name} führt {symbol} nicht")
+        return self._translate(self._source.resolve(request), fallback_isin="")
+
     def resolve_isin(self, isin: str) -> Resolution:
         """Löst auf und übersetzt die Antwort.
 
@@ -541,14 +563,41 @@ class ResolverAdapter(_Adapter):
         holt; fehlt eines von beiden, entstünde ein Symbol, das auf ein anderes
         Listing zeigt. Lieber keine Antwort als die falsche.
         """
-        answer = self._source.resolve(self._request(isin))
+        return self._translate(
+            self._source.resolve(self._request(isin)), fallback_isin=isin
+        )
 
+    def _translate(self, answer: object, *, fallback_isin: str) -> Resolution:
+        """Die Antwort des Plugins prüfen und in die Sprache des Core bringen.
+
+        **Eine Fassung für beide Einstiege.** ISIN- und Symbolweg stellen
+        verschiedene Fragen, aber sie bewerten dieselbe Antwort — und ein
+        zweiter Prüfblock wäre die Stelle, an der eine der beiden Regeln beim
+        nächsten Umbau fehlt.
+
+        Geprüft wird dreierlei, jedes mit eigener Folge:
+
+        1. **Ist es überhaupt eine Vertragsantwort?** Sonst ein Befund im
+           Protokoll und `Unavailable` — die Kette geht weiter, aber es steht
+           fest, wer sich nicht daran hält.
+        2. **Trägt die Identität ihre Form vollständig?** Sonst `NotFound`:
+           Lieber keine Antwort als eine halbe.
+        3. **Hält die Antwort die Zusage der Quelle?** Beim Resolver ist das
+           der einzig mögliche Ort — eine `ResolveRequest` trägt weder `kind`
+           noch Gattung, beide sind das *Ergebnis*. Ein Vorfilter davor hätte
+           nichts zu filtern gehabt.
+
+        Args:
+            answer: Was das Plugin geantwortet hat.
+            fallback_isin: Die angefragte ISIN, falls die Antwort keine trägt.
+
+        Returns:
+            `ResolvedInstrument` bei brauchbarem Treffer, sonst der passende
+            Fehlfall.
+        """
         if isinstance(answer, (NotResponsible, NotFound, Unavailable)):
             return answer
         if not isinstance(answer, Resolved):
-            # Ein Plugin, das etwas anderes zurückgibt, verletzt den Vertrag.
-            # Das ist ein Befund und kein Absturz: Die Kette geht zur nächsten
-            # Quelle, und im Protokoll steht, wer sich nicht daran hält.
             logger.warning(
                 "plugin_returned_unknown_type",
                 source=self.name,
@@ -559,32 +608,43 @@ class ResolverAdapter(_Adapter):
         problem = identity_problem(answer.identity, COLLECTOR_CODES)
         if problem:
             logger.info(
-                "resolve_without_identity",
-                isin=isin,
-                source=self.name,
-                problem=problem,
+                "resolve_without_identity", source=self.name, problem=problem
             )
             return NotFound()
 
-        # **Die Antwort gegen die Deklaration halten** (T-31). Beim Resolver
-        # ist das der einzig mögliche Ort: Eine `ResolveRequest` trägt weder
-        # `kind` noch Gattung, denn beide sind das Ergebnis der Auflösung — ein
-        # Vorfilter davor hätte nichts zu filtern gehabt.
-        #
-        # Ein Verstoß ist ein **Befund**, kein stiller Treffer: Der Host hat
-        # seine Kette auf die Zusage eingerichtet, und wer sie bricht, macht
-        # das Einrichten wertlos.
-        declared = getattr(unwrap(self._source), "SUPPORTED_KINDS", frozenset())
-        if answer.identity.kind not in declared:
+        source = unwrap(self._source)
+        declared_kinds = getattr(source, "SUPPORTED_KINDS", frozenset())
+        if answer.identity.kind not in declared_kinds:
             logger.warning(
                 "plugin_delivered_undeclared_kind",
                 source=self.name,
                 kind=answer.identity.kind,
-                declared=sorted(declared),
+                declared=sorted(declared_kinds),
             )
             return Unavailable(
                 error=f"{self.name}: liefert {answer.identity.kind}, "
-                f"deklariert {sorted(declared)}"
+                f"deklariert {sorted(declared_kinds)}"
             )
 
-        return _instrument_from(answer, fallback_isin=isin)
+        # **Auch die Gattung gegen die Zusage halten** — Codex' P1 `#3` aus
+        # Runde 4. Ein `stock`-only-Resolver, der eine Anleihe liefert, kam
+        # vorher als `bond` durch, und der Host hatte seine Kette auf etwas
+        # anderes eingerichtet.
+        declared_types = getattr(source, "SUPPORTED_TYPES", frozenset())
+        if (
+            answer.instrument_type is not None
+            and declared_types
+            and answer.instrument_type not in declared_types
+        ):
+            logger.warning(
+                "plugin_delivered_undeclared_type",
+                source=self.name,
+                instrument_type=answer.instrument_type,
+                declared=sorted(declared_types),
+            )
+            return Unavailable(
+                error=f"{self.name}: liefert {answer.instrument_type}, "
+                f"deklariert {sorted(declared_types)}"
+            )
+
+        return _instrument_from(answer, fallback_isin=fallback_isin)
