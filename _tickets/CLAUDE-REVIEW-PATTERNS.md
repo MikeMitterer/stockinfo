@@ -631,6 +631,18 @@ FX-Dienst bekam gar keinen neuen Test und wurde vom Smoke nicht aufgerufen.
 Die lokale Konstante war entfernt, die fachliche Herkunft über alle Verbraucher
 aber nicht vollständig verfolgt.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-36/
+T-37 Runde 3, Commit `cc0f028`: OUTBOX erklärte, ein AST-/Bash-/TS-Inventar
+habe alle Bezeichner in den berührten Dateien erfasst und der Massen-Rename
+habe sämtliche Prosaschäden repariert. Das frische AST-Inventar fand weiterhin
+unter anderem `KenntNichts`, `antwort`, `eintrag`, `rolle`, `fehlend`,
+`gefragt`, `woher`, `typ`, `stunde` und `gesehen`; im eingebetteten Python
+blieb `unkonfiguriert`. Zugleich standen neue Mischsätze wie „zweimal built",
+„gar nichts built“, „Kettennamen unusable“ und `NamedQuoteSource` mitten in
+deutscher Prosa. Die Fundliste war trotz des richtigen Werkzeugs nicht gegen
+ihren behaupteten Scope und der Diff nicht gegen die angekündigte
+Prosa-Gegenprobe geprüft worden.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
@@ -766,6 +778,16 @@ die Schlüsselmenge unverändert und alle drei Katalogtests grün. Der ergänzen
 Vue-Test prüft nur einen einzigen deutschen Grund; leere Texte der übrigen
 Codes oder der englischen Sprache bleiben unbeobachtet.
 
+**Neuer Beleg:** T-36/T-37 Runde 3, Commit `cc0f028`: Smoke `#0b` speist drei
+Fehler ein, verlangt danach aber nur `status != 0 || output != leer`. Der
+nichtnumerische Kurs lässt `float(...)` vor der Ausgabe aller gesammelten
+Befunde abbrechen; allein der Traceback genügt trotzdem für die Erfolgsmeldung
+„Prüfziffer, Sammelcode und unbrauchbarer Kurs erkannt“. Keiner der drei
+behaupteten Befunde wird einzeln verlangt. Ebenso fragen vier
+Drilldown-Assertions gelöschte i18n-Schlüssel ab; vue-i18n liefert die Kennung
+unter Warnung zurück und `not.toContain(...)` bleibt ohne existierenden
+Vergleichstext grün.
+
 [↑ Übersicht](#übersicht)
 
 ## P-05 · Ein abgebrochener Prüflauf meldet sich als bestanden
@@ -810,6 +832,13 @@ an leerem Standardoutput über Erfolg. Wirft der eingebettete Parser etwa bei
 Shell ignoriert den Status und meldet Check `#0` grün. Die erwartete Gesamtzahl
 17 schützt hier nicht, weil der fehlerhaft als Erfolg gezählte Check vorhanden
 ist.
+
+**Neuer Beleg:** T-36/T-37 Runde 3, Commit `cc0f028`: Die Korrektur prüft den
+Exitstatus beim positiven Check, erklärt im neuen Negativcheck `#0b` aber
+ausdrücklich jeden von Null verschiedenen Parserstatus zum Erfolg. Genau der
+bekannte Abbruch an `float("keine-zahl")` ergibt damit 20/20 und die erfundene
+Aussage, alle drei Mutanten seien erkannt worden. Die Abbrucherkennung wurde
+vom Prüfling in die Gegenprobe verschoben, nicht in einen roten Lauf verwandelt.
 
 **Nachbarschaft zu P-01:** Dort wird die Testtiefe in der Übergabe
 überzeichnet. Hier überzeichnet sich das **Werkzeug** — die Übergabe gäbe

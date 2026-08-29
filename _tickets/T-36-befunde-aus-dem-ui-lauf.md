@@ -129,7 +129,8 @@ Freigabefähig ist die Runde noch nicht:
    in den öffentlichen Result-Typen und im Contract-Kit definiert, nicht über
    ein pauschales `FieldSpec.required`. `Resolved.name` ist nach Mikes Vorgabe
    Pflicht; die Semantik von `instrument_type` muss ausdrücklich entschieden
-   werden. Als T-38 erfassen und T-28 zuordnen, nicht T-36 aufblasen.
+   werden. Als T-38 erfassen, nicht T-36 aufblasen. Die damalige Zuordnung zum
+   später verworfenen Sammel-Ticket T-28 ist nicht mehr aktiv.
 
 Evidenz: `make test` 810/257/259 grün, 8 echte Provider-Integrationstests
 grün, Dashboard-Build, Ruff und Diff-Check sauber. Details und exakte
@@ -188,3 +189,56 @@ Evidenz: `make test` 821/259/271 grün; isolierter 404-Test reproduzierbar rot
 Ruff, Bash-Syntax und Diff-Check sauber. Der Parser-Gegenversuch ergab
 `parser_status=1 smoke_branch=success`; die Provenienz-Gegenprobe ergab
 `expected_price_source=prices-file-quote`, `reported_source=metadata-file`.
+
+---
+
+## Codex-Review · Runde 3 · `cc0f028` · Nacharbeit
+
+Vier der sieben Runde-2-Befunde sind belastbar erledigt: Der isolierte
+404-Vertragstest ist hermetisch grün, Daily und FX werden in beiden Profilen
+wirklich aufgerufen, T-38 steht auf dem entschiedenen Typkatalog, und die
+providerfesten Drilldown-Texte sind aus beiden Sprachkatalogen entfernt.
+Freigabefähig ist die Übergabe dennoch nicht:
+
+1. **`fx.source` verliert beim ersten Cache-Hit den tatsächlichen Lieferanten.**
+   Der frische Abruf meldet korrekt `fx-file`; `_from_cache()` setzt danach
+   jedoch fest `source="cache"`. Die Tabelle `fx_rates` und
+   `save_fx_rate()` speichern den Lieferanten gar nicht. Reproduziert mit
+   zwei Aufrufen: `first_source=fx-file`, `second_source=cache`, nur ein
+   Provider-Aufruf. Der Vertrag fragt, *woher der Kurs stammt*; Cache ist der
+   Speicherweg, nicht die Herkunft. Quelle mitspeichern und für frische sowie
+   stale Cache-Antworten erhalten; direkte Gegenproben für beide Wege.
+2. **Smoke `#0b` wertet weiterhin einen Parserabbruch als Erfolg.**
+   `float(row["close"])` wirft bei `keine-zahl`, bevor `findings` ausgegeben
+   wird. Die neue Bedingung `status != 0 || output != leer` erklärt genau
+   diesen beliebigen Abbruch für grün und behauptet anschließend ohne Beleg,
+   Prüfziffer, Sammelcode *und* Kurs seien erkannt worden. Beide frischen
+   Smoke-Profile zeigen 20/20. Der Validator muss numerische Parsefehler als
+   Befunde sammeln; die Gegenprobe muss Status 0 **und jede der drei konkreten
+   Meldungen** verlangen. Ein beliebiger Traceback ist rot. Wird das CSV-Profil
+   gemäß Mikes neuer Entscheidung durch YAML ersetzt, gilt dieselbe
+   Anforderung für dessen Validator statt für wegfallenden CSV-Code.
+3. **Die ausdrücklich als vollständig gemeldete Naming-/Prosa-Bereinigung ist
+   unvollständig.** Das AST-Inventar der berührten Dateien enthält unter
+   anderem `KenntNichts`, `antwort`, `eintrag`, `rolle`, `fehlend`, `gefragt`,
+   `woher`, `typ`, `stunde` und `gesehen`; im eingebetteten Python blieb
+   `unkonfiguriert`. Der Massen-Rename beschädigte weiterhin Sätze wie
+   „zweimal built“, „gar nichts built“, „Kettennamen unusable“ und fügte
+   `NamedQuoteSource` mitten in deutsche Prosa ein. Auch der FX-Modultext nennt
+   den provider-neutralen Dienst weiter fest „yfinance“. Vollständiges
+   AST-/Bash-/TS-Inventar wiederholen und anschließend den gesamten Diff
+   manuell auf Prosaschäden lesen.
+4. **Die Drilldown-Tests enthalten vier bedeutungslose Assertions gegen
+   gelöschte Übersetzungsschlüssel.** `noEuropeanSource` und `sourceEmpty`
+   existieren nicht mehr; vue-i18n warnt viermal, gibt aber die Kennung zurück,
+   sodass `not.toContain(...)` grün bleibt, ohne einen vorhandenen Text zu
+   prüfen. Die alten Assertions und justETF-bezogenen Kommentare entfernen
+   oder durch Assertions gegen existierende provider-neutrale Texte ersetzen;
+   der gezielte Vitest-Lauf darf keine `Not found ... locale messages`-Warnung
+   mehr ausgeben.
+
+Evidenz: `make test` 825/259/266 grün; gezielte Backend-Tests 92 grün;
+Dashboard-Build, Ruff und Diff-Check sauber; `PROFILE=csv` 20/20 und
+`PROFILE=online` 20/20. Die grünen Zahlen widerlegen die Befunde nicht:
+`#0b` ist selbst falsch positiv, der FX-Test prüft nur den ersten Abruf, und
+Vitest protokolliert die fehlenden Übersetzungsschlüssel sichtbar auf stderr.
