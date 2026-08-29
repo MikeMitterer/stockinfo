@@ -22,6 +22,7 @@ from stockinfo_plugin import (
     Resolved,
     ResolveRequest,
     Unavailable,
+    Unsupported,
 )
 from stockinfo_plugin.testing import (
     DirectRunner,
@@ -381,3 +382,71 @@ def test_eine_leere_fallliste_ist_kein_erfolg() -> None:
 
     assert len(findings) == 1
     assert "kein einziger Fall gelaufen" in findings[0]
+
+
+# ─── `Unsupported` gehört genau einer Rolle (T-31, Matrix #6) ─────────────────
+
+
+def test_ein_resolver_darf_erkannt_aber_nicht_gefuehrt_erwarten() -> None:
+    """Der positive Fall — und der Grund, warum er nötig wurde.
+
+    Die fünfte Antwortart kam mit `API_VERSION` 2 in den Vertrag, das Kit
+    kannte sie nicht: Ein Fall, der sie erwartete, wurde als *„keine
+    Ergebnisart"* abgewiesen. Wer die Antwort also im eigenen Plugin
+    umsetzte, konnte sie mit dem mitgelieferten Werkzeug nicht beschreiben —
+    die Zusage stand im Vertrag und war nicht prüfbar.
+    """
+    index = Scenario(
+        case_id="index-nicht-gefuehrt",
+        request=ResolveRequest(symbol="^GDAXI"),
+        expect=Unsupported,
+        note="Yahoo meldet für ^GDAXI quoteType INDEX, von Hand nachgesehen",
+    )
+
+    assert validate_scenarios([index]) == []
+
+
+def test_eine_kursquelle_darf_das_nicht_erwarten() -> None:
+    """Die **rollenspezifische** Gegenprobe — ohne sie wäre die Zulassung roh.
+
+    Eine Kursquelle bekommt eine bereits identifizierte `QuoteRequest`. Dürfte
+    sie „erkannt, aber nicht geführt" antworten, urteilte sie über eine
+    Gattung, die vor ihr längst feststand. Genau solche Rollenverwechslungen
+    fängt das Kit seit Runde 1 ab; die neue Antwortart wäre sonst das eine
+    Loch in dieser Prüfung.
+    """
+    confused = Scenario(
+        case_id="kurs-lehnt-gattung-ab",
+        request=QuoteRequest(identity=ListedIdentity("RY", "XTSE")),
+        expect=Unsupported,
+    )
+
+    findings = validate_scenarios([confused])
+
+    assert any("nur in der Rolle ResolveRequest" in line for line in findings), findings
+
+
+def test_ein_erfundener_typ_bleibt_ein_anderer_fehler() -> None:
+    """Zwei Fehler, zwei Meldungen — sonst sucht der Autor an der falschen Stelle.
+
+    Eine Ergebnisart, die es *gibt* — nur nicht in dieser Rolle —, ist etwas
+    anderes als ein Tippfehler. Läsen beide dieselbe Zeile, hieße die Meldung
+    für den einen „du hast dich verschrieben" und für den anderen „du hast
+    die Rolle verwechselt", und nur eine der beiden Lesarten stimmt je.
+    """
+
+    class Erfunden:
+        pass
+
+    findings = validate_scenarios(
+        [
+            Scenario(
+                case_id="gibt-es-nicht",
+                request=ResolveRequest(isin="CA78012H5675"),
+                expect=Erfunden,
+            )
+        ]
+    )
+
+    assert any("ist keine Ergebnisart" in line for line in findings), findings
+    assert not any("nur in der Rolle" in line for line in findings), findings

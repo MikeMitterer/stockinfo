@@ -373,6 +373,13 @@ class QuoteService:
                 weg war.
         """
         resolution = self._resolver.resolve_isin(isin)
+        if isinstance(resolution, Unsupported):
+            # **Derselbe Grund wie im Symbolweg** (T-31, Matrix `#6`). Hier
+            # fiel er bis Runde 6 in das `InstrumentNotFoundError` darunter,
+            # und ein erkannter Index wurde am ISIN-Eingang zu einem 404. Für
+            # den Benutzer war das dieselbe Auskunft wie bei einer erfundenen
+            # ISIN — er hätte die Kennung nachgeschlagen, die längst stimmte.
+            raise UnsupportedInstrumentTypeError(isin, resolution.instrument_type)
         if isinstance(resolution, Unavailable):
             raise QuoteUnavailableError(
                 f"{isin}: keine Quelle konnte nachsehen — {resolution.error}"

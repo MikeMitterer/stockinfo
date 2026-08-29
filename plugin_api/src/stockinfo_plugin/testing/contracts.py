@@ -439,7 +439,15 @@ class ResolverContract(SourceContract):
         # Auf den Typ prüfen, nicht auf `is not None`: Sonst käme auch ein
         # zurückgegebener String oder ein leeres Dict durch, und der Vertrag
         # wäre nur scheinbar erfüllt.
-        assert isinstance(answer, (Resolved, NotResponsible, NotFound, Unavailable)), (
+        #
+        # **`Unsupported` steht hier und nur hier** (T-31). Die Liste ist
+        # `NON_HITS` plus diese eine Antwort — die anderen Rollen benutzen
+        # `NON_HITS` unverändert weiter. Das ist Absicht und keine
+        # Vergesslichkeit: „erkannt, aber nicht geführt" ist ein Befund der
+        # *Auflösung*. Eine Kursquelle, die ihn zurückgäbe, hätte über die
+        # Gattung eines Papiers geurteilt, das ihr bereits identifiziert
+        # gereicht wurde — die Entscheidung war da längst gefallen.
+        assert isinstance(answer, (Resolved, *NON_HITS, Unsupported)), (
             f"resolve() gab {type(answer).__name__} zurück, keine Resolution"
         )
 

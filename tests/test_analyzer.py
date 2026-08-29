@@ -1,6 +1,11 @@
 """Tests für den QuoteAnalyzer (externe Calls über Fakes)."""
 
-from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
+from stockinfo_plugin.types import (
+    NotFound,
+    NotResponsible,
+    Unavailable,
+    Unsupported,
+)
 
 from app.providers.base import EtfDetails, ResolvedInstrument
 from app.services.analyzer import QuoteAnalyzer
@@ -148,3 +153,25 @@ def test_analyse_meldet_eine_unzustaendige_kette_als_leer() -> None:
     stages = {s.stage: s for s in analyzer.analyze(isin="XX0000000000").stages}
 
     assert stages["openfigi"].status == "empty"
+
+
+def test_analyse_nennt_die_nicht_gefuehrte_gattung() -> None:
+    """Die fünfte Antwortart, in dem Endpunkt, dessen Zweck der Grund ist.
+
+    **Zwei Aussagen, und beide sind nötig.** `empty` und nicht `error`: Die
+    Kette hat einwandfrei gearbeitet, sie hat das Papier sogar erkannt — ein
+    `error` schickte den Betreiber auf die Suche nach einer Störung, die es
+    nicht gibt. Und das Detail nennt die **Gattung**: Ohne eigene Zeile fiele
+    der Fall in das leere `empty` ganz unten, richtig in der Farbe und stumm
+    im Grund.
+    """
+    analyzer = QuoteAnalyzer(
+        _FakeResolver(Unsupported(instrument_type="index")), _FakeEtf(None)
+    )
+
+    stages = {s.stage: s for s in analyzer.analyze(isin="DE0008469008").stages}
+
+    assert stages["openfigi"].status == "empty", "kein Ausfall — die Kette lief"
+    assert "index" in (stages["openfigi"].detail or ""), (
+        "ohne die Gattung im Detail ist die Diagnose an dieser Stelle stumm"
+    )

@@ -63,10 +63,13 @@ from app.plugins.yahoo_search_resolver import YahooSearchResolverPlugin
 from app.providers.base import RawQuote, ResolvedInstrument
 from app.resolver import CompositeResolver
 from app.repository import QuoteRepository
+from stockinfo_plugin.sources import Resolver
 from stockinfo_plugin.types import (
     IsinOnlyIdentity,
+    NotFound,
     NotResponsible,
     Resolved,
+    Unsupported,
 )
 from tests.boundaries import wire_real_chain
 
@@ -372,6 +375,91 @@ def test_ein_index_wird_mit_eigener_kennung_abgelehnt(
         assert _stored(repository, "^GDAXI") == {}
     finally:
         app.dependency_overrides.clear()
+
+
+class _IndexByIsin(Resolver):
+    """Ein Plugin, das eine ISIN erkennt und ihre Gattung nicht führt.
+
+    **Warum hier ein Plugin steht und nicht Yahoo.** Der ISIN-Weg des
+    Core-Resolvers liest gar keinen `quoteType` — er kann diese Antwort
+    heute nicht erzeugen. Ein Plugin kann es, und ab T-37 wird es das auch
+    tun: Das YAML-Plugin löst über die ISIN auf und kennt die Gattung jeder
+    Zeile seiner Datei.
+
+    Die Quelle ist also nicht als Bequemlichkeit gewählt, sondern weil sie
+    der einzige reale Erzeuger dieses Falls ist. Adapter, Kette, Service und
+    Router darunter sind die echten.
+    """
+
+    name = "index-kenner"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed"})
+    SUPPORTED_TYPES = frozenset({"stock"})
+
+    def handles(self, request) -> bool:
+        return True
+
+    def resolve(self, request):
+        return Unsupported(instrument_type="index")
+
+
+def test_ein_index_wird_auch_ueber_die_isin_mit_seinem_grund_abgelehnt(
+    tmp_path: Path,
+) -> None:
+    """Dieselbe Auskunft an der **anderen** Tür (Codex, Runde 6).
+
+    Der Symbolweg hatte die eigene Kennung seit Runde 6, der ISIN-Weg nicht:
+    Dort fiel `Unsupported` in das `InstrumentNotFoundError` und wurde zu
+    einem 404. Für den Benutzer war das nicht von einer erfundenen ISIN zu
+    unterscheiden — er hätte eine Kennung nachgeschlagen, die längst stimmt.
+
+    Zwei Türen, ein Sachverhalt, eine Kennung.
+    """
+    client, repository = _chain(
+        str(tmp_path / "index-isin.db"),
+        _TypedQuoteSource("index"),
+        CompositeResolver(ResolverAdapter(_IndexByIsin(), "XETR")),
+    )
+    try:
+        response = client.get("/quote/DE0008469008")
+
+        assert response.status_code == 400, response.text
+        assert response.json()["code"] == "unsupported_instrument_type", response.text
+        assert _stored(repository, "DE0008469008") == {}
+    finally:
+        app.dependency_overrides.clear()
+
+
+def test_eine_unbekannte_isin_bleibt_ein_vierhundertvier(tmp_path: Path) -> None:
+    """Die Gegenprobe zum Fall darüber.
+
+    Ohne sie prüfte er nur, dass der ISIN-Weg *irgendwann* 400 sagt — und
+    wäre auch grün, wenn die neue Verzweigung das „kenne ich nicht" darunter
+    mitverschluckt hätte. Genau das ist der Fehler, den eine zusätzliche
+    Bedingung vor einer bestehenden Kaskade machen kann.
+    """
+    client, _ = _chain(
+        str(tmp_path / "unbekannt.db"),
+        _TypedQuoteSource("stock"),
+        CompositeResolver(_NotFoundResolver()),
+    )
+    try:
+        response = client.get("/quote/DE0008469008")
+
+        assert response.status_code == 404, response.text
+        assert response.json()["code"] == "instrument_not_found", response.text
+    finally:
+        app.dependency_overrides.clear()
+
+
+class _NotFoundResolver:
+    """Hat nachgesehen und kennt das Papier nicht — der Core-Weg, nicht der Vertrag."""
+
+    def handles(self, isin: str) -> bool:
+        return True
+
+    def resolve_isin(self, isin: str):
+        return NotFound()
 
 
 # ─── Matrix #9 · die Anleihe ──────────────────────────────────────────────────

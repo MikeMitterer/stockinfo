@@ -130,8 +130,10 @@ der real rund 0,06 % kostet.
 Ein Autor erbt von `ResolverContract` oder `MetadataContract`, nennt zwei bis
 drei Anfragen und bekommt den Vertrag maschinell geprüft. Gegenprobe mit
 absichtlich fehlerhaften Plugins: gefangen werden `NotFound` statt
-`NotResponsible`, nicht deklarierte Felder, falsch deklarierte Einheiten,
-`None` statt `[]` bei Unzuständigkeit und durchgereichte Ausnahmen.
+`NotResponsible`, `NotFound` über ein erkanntes Papier statt `Unsupported`,
+eine Ablehnung der eigenen **zugesagten** Gattung, nicht deklarierte Felder,
+falsch deklarierte Einheiten, `None` statt `[]` bei Unzuständigkeit und
+durchgereichte Ausnahmen.
 
 **Nicht** gefangen wird ein Börsensuffix im Ticker: Ob `BRK.A` ein Suffix trägt
 oder einen Punkt im Namen führt, lässt sich nur gegen die Börsentabelle
@@ -467,7 +469,7 @@ Vollständigkeit der Vorarbeiten.
 | T-17 | verfälscht heute Daten — unabhängig vom Vorhaben, deshalb zuerst |
 | T-24 | erst wissen, was die API zusagt und wie eindeutig adressiert wird |
 | T-18 | behebt den Kanada-Fall, der das Vorhaben ausgelöst hat |
-| T-20 | ohne die vier Antwortarten kann eine Kette nicht weiterschalten |
+| T-20 | ohne die differenzierten Antwortarten kann eine Kette nicht weiterschalten |
 | T-21 | Identität stabilisieren — **additiv**, ohne den REST-Vertrag zu brechen |
 | T-22 | Ketten und Schlüssel gehören in Konfiguration, nicht in die Composition-Root |
 | T-27a | Contract-Kit für alle Rollen — ausführbares Abnahmewerkzeug für den Host |
@@ -510,7 +512,7 @@ Die Empfehlung ist meine; die Entscheidung nicht.
 | 3 | Verträge für Quote, Daily, FX | vor T-22 ausformulieren; solange bleibt `0.x` |
 | 4 | Eigener `MetadataRequest` | ja — `ResolveRequest` kennt nur `preferred_mic`, nicht das aufgelöste Listing |
 | 5 | Herkunft und Stand je Metadatenfeld | **entschieden (Mike):** Herkunft **je Detail**, Core geschlossen, Details offen und additiv |
-| 6 | Aggregationsregeln der Ergebnisarten | `Unavailable` von irgendeiner zuständigen Quelle schlägt `NotFound` → 502. Sonst 404 |
+| 6 | Aggregationsregeln der Ergebnisarten | Ein Treffer gewinnt. Sonst `Unsupported` → **400** (ein Befund über das Papier ist keine Abwesenheit, siehe T-31). Sonst `Unavailable` von irgendeiner zuständigen Quelle → 502. Sonst 404 |
 | 7 | Timeout-Modell für fremden Code | **kooperativ**, keine harte Garantie. Siehe unten |
 | 8 | Registry-Regeln (Entry-Point-Gruppe, Namen, Lifecycle, Versionsvergleich, Thread-Sicherheit) | mit T-23 festlegen, nicht vorher raten |
 | 9 | Installationsmodell für Docker/Unraid | **Paketliste in `sources.yaml`**, Installation nach `/data`, Neustart — siehe unten. Das abgeleitete Image ist verworfen |

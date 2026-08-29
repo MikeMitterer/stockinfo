@@ -12,7 +12,7 @@ from typing import Any
 
 import yfinance as yf
 
-from stockinfo_plugin.types import NotResponsible, Unavailable
+from stockinfo_plugin.types import NotResponsible, Unavailable, Unsupported
 
 from app.models import AnalyzeResult, AnalyzeStage
 from app.providers.base import EtfEnricher, InstrumentResolver, ResolvedInstrument
@@ -101,7 +101,7 @@ class QuoteAnalyzer:
         )
 
     def _measure_resolve(self, isin: str) -> tuple[Any, AnalyzeStage]:
-        """Misst die Auflösung und bildet alle vier Antwortarten ab.
+        """Misst die Auflösung und bildet alle fünf Antwortarten ab.
 
         Seit T-20 antwortet der Resolver differenziert, und die Diagnose ist
         genau der Ort, an dem der Unterschied etwas nützt:
@@ -109,6 +109,7 @@ class QuoteAnalyzer:
         | Antwort | Stage |
         |---|---|
         | `ResolvedInstrument` | `ok`, Detail ist das Symbol |
+        | `Unsupported` | `empty`, Detail nennt die **Gattung** |
         | `NotFound` | `empty` — nachgesehen, nichts da |
         | `NotResponsible` | `empty`, Detail nennt den Grund |
         | `Unavailable` | **`error`**, Detail nennt die Quelle |
@@ -116,6 +117,14 @@ class QuoteAnalyzer:
         Die Unterscheidung zwischen `empty` und `error` ist der Zweck des
         Endpunkts: „nichts gefunden" und „Quelle nicht erreichbar" führen zu
         verschiedenen nächsten Schritten.
+
+        **`Unsupported` ist `empty` und nicht `error`** (T-31, Matrix `#6`).
+        Die Kette hat einwandfrei gearbeitet — sie hat das Papier sogar
+        erkannt. Ein `error` schickte den Betreiber auf die Suche nach einer
+        Störung, die es nicht gibt. Ohne eigene Zeile wäre es das leere
+        `empty` ganz unten geworden: richtig in der Farbe, stumm im Grund,
+        und die Diagnose ist der eine Endpunkt, dessen ganzer Zweck der Grund
+        ist.
         """
         start = time.perf_counter()
         try:
@@ -130,6 +139,11 @@ class QuoteAnalyzer:
             return resolution, AnalyzeStage(
                 stage="openfigi", seconds=_elapsed(start), status="ok",
                 detail=resolution.symbol,
+            )
+        if isinstance(resolution, Unsupported):
+            return None, AnalyzeStage(
+                stage="openfigi", seconds=_elapsed(start), status="empty",
+                detail=f"Gattung {resolution.instrument_type} wird nicht geführt",
             )
         if isinstance(resolution, Unavailable):
             return None, AnalyzeStage(

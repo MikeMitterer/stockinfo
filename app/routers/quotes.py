@@ -86,6 +86,36 @@ def _not_found(isin: str) -> JSONResponse:
         ).model_dump(),
     )
 
+
+def _unsupported_type(exc: UnsupportedInstrumentTypeError) -> JSONResponse:
+    """„Diese Gattung führen wir nicht" — an **beiden** Türen gleich.
+
+    **Eine eigene Kennung, kein Zufallsbefund** (T-31, Matrix `#6`). Ohne sie
+    fällt ein Index in die Ablehnung daneben: auf dem Symbolweg in
+    „nennt keinen Handelsplatz", auf dem ISIN-Weg in ein 404. Beides ist
+    richtig beobachtet und am Grund vorbei — der Benutzer probierte
+    Schreibweisen durch oder schlüge eine Kennung nach, die längst stimmt.
+
+    **Warum eine gemeinsame Funktion und keine zweite Fassung.** Der Symbolweg
+    hatte diese Antwort seit Runde 6, der ISIN-Weg nicht; genau diese
+    Ungleichheit war Codex' Restbefund. Zwei Kopien wären die Stelle, an der
+    das beim nächsten Mal wieder auseinanderläuft.
+
+    Der Parameter heißt weiterhin `symbol`, obwohl hier auch eine ISIN
+    stehen kann: Es ist das, wonach der Benutzer gefragt hat, und der Katalog
+    im Dashboard führt den Namen bereits. Ihn hier umzubenennen hieße, einen
+    stabilen Kennungsvertrag für eine Genauigkeit zu brechen, die im
+    angezeigten Satz nicht vorkommt.
+    """
+    return JSONResponse(
+        status_code=400,
+        content=ErrorDetail(
+            code=REASON_UNSUPPORTED_TYPE,
+            params={"symbol": exc.symbol, "instrument_type": exc.instrument_type},
+        ).model_dump(),
+    )
+
+
 ServiceDep = Annotated[CachedQuoteService, Depends(get_cached_quote_service)]
 DailyDep = Annotated[DailyHistoryService, Depends(get_daily_history_service)]
 
@@ -124,18 +154,7 @@ def quote_by_symbol(
             ).model_dump(),
         )
     except UnsupportedInstrumentTypeError as exc:
-        # **Eine eigene Kennung, kein Zufallsbefund** (T-31, Matrix `#6`).
-        # Ohne sie fiele ein Index in die Symbolform-Ablehnung darunter, und
-        # der Benutzer läse „nennt keinen Handelsplatz" — richtig beobachtet
-        # und am Grund vorbei. Die Kennung ist stabil und übersetzbar; der
-        # Katalog liegt unter `errors.*` im Dashboard.
-        return JSONResponse(
-            status_code=400,
-            content=ErrorDetail(
-                code=REASON_UNSUPPORTED_TYPE,
-                params={"symbol": exc.symbol, "instrument_type": exc.instrument_type},
-            ).model_dump(),
-        )
+        return _unsupported_type(exc)
     except UnresolvableSymbolError:
         # 400 und nicht 502: Der Aufrufer kann es besser machen, und der Text
         # sagt ihm wie. Ein 502 behauptete einen Ausfall, den es nicht gab.
@@ -168,6 +187,11 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     """Liefert den Kurs zu einer ISIN (bevorzugt Xetra/EUR)."""
     try:
         return service.get_by_isin(isin)
+    except UnsupportedInstrumentTypeError as exc:
+        # Dieselbe Auskunft wie am Symboleingang. Bis Runde 6 fiel ein
+        # erkannter Index hier in das 404 darunter — für den Benutzer nicht
+        # zu unterscheiden von einer erfundenen ISIN.
+        return _unsupported_type(exc)
     except InstrumentNotFoundError:
         return _not_found(isin)
     except QuoteUnavailableError as exc:

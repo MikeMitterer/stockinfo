@@ -30,13 +30,34 @@ from stockinfo_plugin.types import (
     Resolved,
     ResolveRequest,
     Unavailable,
+    Unsupported,
 )
 
 HIT_TYPES: tuple[type, ...] = (Resolved, Quote, DailySeries, FxRate)
 """Die Ergebnisarten, bei denen es überhaupt etwas zu vergleichen gibt."""
 
 MISS_TYPES: tuple[type, ...] = (NotResponsible, NotFound, Unavailable)
-"""Die Ergebnisarten, die kein Ergebnis tragen."""
+"""Die Ergebnisarten, die kein Ergebnis tragen — **in jeder Rolle dieselbe
+Aussage**. „Nicht zuständig", „kenne ich nicht" und „konnte nicht nachsehen"
+gelten für einen Resolver wie für eine Kursquelle."""
+
+ROLE_ONLY_MISS_TYPES: dict[type, tuple[type, ...]] = {
+    ResolveRequest: (Unsupported,),
+}
+"""Fehlfälle, die es nur in **einer** Rolle gibt (T-31, `API_VERSION` 2).
+
+`Unsupported` — „erkannt, aber nicht geführt" — ist ein Befund der
+**Auflösung**. Nur dort wird entschieden, *was* ein Papier ist; danach steht
+die Gattung fest.
+
+**Warum das nicht einfach in `MISS_TYPES` durfte.** Eine Kursquelle bekommt
+eine bereits identifizierte `QuoteRequest`. Dürfte sie `Unsupported`
+antworten, urteilte sie über eine Gattung, die vor ihr längst feststand — und
+der Host bekäme an der Kursstelle einen Grund geliefert, den er dort nicht
+mehr auflösen kann. Ein Prüffall, der das erwartet, beschreibt eine Zusage,
+die es in dieser Rolle nicht gibt; genau solche Fälle fängt das Kit seit
+Runde 1 ab.
+"""
 
 # Welche Kernwerte einen Treffer eindeutig machen. Ohne sie beweist ein Fall
 # nichts: „irgendein Resolved kam zurück" ist keine Aussage über das Papier.
@@ -181,6 +202,26 @@ class DirectRunner:
             return Unavailable(f"{type(exc).__name__}: {exc}")
 
 
+def _wrong_result_type(scenario: "Scenario") -> str:
+    """Die Meldung zu einer Erwartung, die es so nicht gibt.
+
+    **Sie unterscheidet zwei Fälle, weil der Autor sie unterscheiden muss.**
+    Ein erfundener Typ ist ein anderer Fehler als eine Ergebnisart, die es
+    gibt — nur nicht in dieser Rolle. Ohne den Unterschied läse jemand, der
+    einer Kursquelle ein `Unsupported` zugedacht hat, dieselbe Meldung wie bei
+    einem Tippfehler und suchte an der falschen Stelle.
+    """
+    name = getattr(scenario.expect, "__name__", repr(scenario.expect))
+    for request_type, only_here in ROLE_ONLY_MISS_TYPES.items():
+        if scenario.expect in only_here:
+            return (
+                f"{scenario.case_id}: {name} gibt es nur in der Rolle "
+                f"{request_type.__name__}, gefragt wurde aber mit "
+                f"{type(scenario.request).__name__}"
+            )
+    return f"{scenario.case_id}: expect={scenario.expect!r} ist keine Ergebnisart"
+
+
 def validate_scenarios(scenarios: list[Scenario] | tuple[Scenario, ...]) -> list[str]:
     """Prüft die **Fallbeschreibungen**, bevor irgendetwas läuft.
 
@@ -213,10 +254,9 @@ def validate_scenarios(scenarios: list[Scenario] | tuple[Scenario, ...]) -> list
             )
         seen.add(case_id)
 
-        if scenario.expect not in (*HIT_TYPES, *MISS_TYPES):
-            problems.append(
-                f"{case_id}: expect={scenario.expect!r} ist keine Ergebnisart"
-            )
+        allowed_here = ROLE_ONLY_MISS_TYPES.get(type(scenario.request), ())
+        if scenario.expect not in (*HIT_TYPES, *MISS_TYPES, *allowed_here):
+            problems.append(_wrong_result_type(scenario))
             continue
 
         is_hit = scenario.expect in HIT_TYPES
