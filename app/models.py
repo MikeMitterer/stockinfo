@@ -274,12 +274,20 @@ def identity_from_columns(row: object) -> IdentityOut | None:
     ehrliches ``None`` besser als eine halb gefüllte Form.
 
     Args:
-        row: Eine Instrumentenzeile als Mapping.
+        row: Eine Instrumentenzeile als Mapping — oder ein Objekt mit
+            denselben Feldnamen, etwa ein `ResolvedInstrument`. Beide führen
+            dieselben sechs Spalten, und zwei Fassungen derselben Umrechnung
+            liefen beim ersten Zusatzfeld auseinander.
 
     Returns:
         Die passende Identität, oder ``None``.
     """
-    get = row.get if hasattr(row, "get") else lambda key: row[key]  # type: ignore[union-attr]
+    if hasattr(row, "get"):
+        get = row.get  # type: ignore[union-attr]
+    elif hasattr(row, "keys"):
+        get = lambda key: row[key]  # noqa: E731 — sqlite3.Row kennt kein `get`
+    else:
+        get = lambda key: getattr(row, key, None)  # noqa: E731
     kind = get("kind") or "listed"
     if kind == "pair" and get("base") and get("quote_currency"):
         return PairIdentityOut(base=get("base"), quote_currency=get("quote_currency"))

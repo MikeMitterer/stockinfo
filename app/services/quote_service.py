@@ -15,7 +15,13 @@ from stockinfo_plugin.types import Unavailable
 
 from app.contract import required_fields
 from app.exchanges import split_symbol
-from app.models import QuoteResponse
+from app.models import (
+    IdentityOut,
+    ListedIdentityOut,
+    PairIdentityOut,
+    QuoteResponse,
+    identity_from_columns,
+)
 from app.providers.base import (
     EtfEnricher,
     InstrumentResolver,
@@ -82,6 +88,36 @@ class UnresolvableSymbolError(Exception):
         self.symbol = symbol
 
 
+def _resolved_from(
+    identity: IdentityOut,
+    symbol: str,
+    exchange: str | None,
+    instrument_type: str | None,
+) -> ResolvedInstrument:
+    """Ein `ResolvedInstrument` aus einer Identität, die nicht `listed` ist.
+
+    Für ein Paar und eine ISIN-only-Anleihe gibt es aus dem Symbol nichts
+    abzuleiten — die Identität *ist* die Angabe, und sie kommt aus der
+    gespeicherten Zeile.
+    """
+    if isinstance(identity, PairIdentityOut):
+        return ResolvedInstrument(
+            symbol=symbol,
+            exchange=exchange,
+            type=instrument_type,
+            kind="pair",
+            base=identity.base,
+            quote_currency=identity.quote_currency,
+        )
+    return ResolvedInstrument(
+        symbol=symbol,
+        isin=identity.isin,
+        exchange=exchange,
+        type=instrument_type,
+        kind="isin_only",
+    )
+
+
 @dataclass(frozen=True)
 class PrecheckedCoreValues:
     """Die Pflichtfelder, die **erst beim Bauen** zusammenkommen.
@@ -89,6 +125,11 @@ class PrecheckedCoreValues:
     Sie stammen aus verschiedenen Quellen — Auflösung, Anbieterantwort,
     gespeicherte Zeile — und können dabei leer bleiben. Die übrigen erzwingt
     schon der Typ.
+
+    **`identity` ist seit T-31 ein Feld statt zweier.** Sie ist entweder
+    vollständig in ihrer Form oder ``None``; ein halb gefülltes Paar aus
+    Ticker und MIC, wie es hier bis T-31 stand, gibt es nicht mehr — die
+    Zusammensetzung passiert eine Ebene früher und kennt die Form.
 
     **Name und Wert stehen hier zusammen, und das ist der ganze Zweck.** Bis
     Runde 43 lagen die Namen in einer Tupelkonstante, die Werte positional
@@ -101,8 +142,7 @@ class PrecheckedCoreValues:
     Vorgabewert hat — sichtbar in beide Aufrufer.
     """
 
-    ticker: str | None
-    mic: str | None
+    identity: IdentityOut | None
     currency: str | None
 
     def missing(self) -> list[str]:
@@ -312,8 +352,7 @@ class QuoteService:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: IdentityOut | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         """Beschafft den Kurs für ein **bereits aufgelöstes** Instrument.
@@ -371,15 +410,26 @@ class QuoteService:
         # Überschrieben wird nichts: Das Repository nimmt eine vollständige
         # Zuordnung nur an, wenn sie vollständig **ist**, und eine leere
         # ersetzt nie eine gespeicherte.
+        # **Die gespeicherte Identität hat Vorrang vor der aus dem Symbol
+        # abgeleiteten** — nur umgekehrt bei `listed`, wo das Symbol den
+        # aktuellen Handelsplatz trägt und die Zeile einen überholten tragen
+        # könnte. Für ein Paar und eine ISIN-only-Anleihe gibt es aus dem
+        # Symbol ohnehin nichts abzuleiten.
         derived_ticker, derived_mic = split_symbol(symbol)
-        resolved = ResolvedInstrument(
-            symbol=symbol,
-            isin=isin,
-            exchange=exchange,
-            type=instrument_type,
-            ticker=derived_ticker or ticker,
-            mic=derived_mic or mic,
-        )
+        if identity is not None and not isinstance(identity, ListedIdentityOut):
+            resolved = _resolved_from(identity, symbol, exchange, instrument_type)
+        else:
+            resolved = ResolvedInstrument(
+                symbol=symbol,
+                isin=isin,
+                exchange=exchange,
+                type=instrument_type,
+                kind="listed",
+                ticker=derived_ticker
+                or (identity.ticker if isinstance(identity, ListedIdentityOut) else None),
+                mic=derived_mic
+                or (identity.mic if isinstance(identity, ListedIdentityOut) else None),
+            )
         return self._build(resolved, enrich_etf)
 
     def _build(
@@ -399,24 +449,31 @@ class QuoteService:
         if raw is None:
             raise QuoteUnavailableError(resolved.symbol)
 
+        isin = self._isin_of(resolved, raw)
+        identity = identity_from_columns(
+            {
+                "kind": resolved.kind,
+                "ticker": resolved.ticker,
+                "mic": resolved.mic,
+                "base": resolved.base,
+                "quote_currency": resolved.quote_currency,
+                "isin": isin,
+            }
+        )
         require_core_values(
             resolved.symbol,
             PrecheckedCoreValues(
-                ticker=resolved.ticker,
-                mic=resolved.mic,
+                identity=identity,
                 currency=raw.currency or resolved.currency,
             ),
         )
 
-        isin = self._isin_of(resolved, raw)
         instrument_type = raw.type or resolved.type
         response = QuoteResponse(
-            isin=isin,
             symbol=resolved.symbol,
-            # Die kanonische Identität aus der Auflösung (T-21) — seit
-            # `core_version 2.0.0` auch am REST-Rand zugesagt.
-            ticker=resolved.ticker,
-            mic=resolved.mic,
+            # Die kanonische Identität aus der Auflösung (T-21), seit T-31 in
+            # ihrer Form — am REST-Rand seit `core_version 2.0.0` zugesagt.
+            identity=identity,
             exchange=resolved.exchange or raw.exchange,
             name=raw.name or resolved.name,
             type=instrument_type,

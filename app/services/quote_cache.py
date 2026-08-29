@@ -14,7 +14,14 @@ from datetime import datetime, timedelta, timezone
 import structlog
 
 from app.exchanges import provider_alias
-from app.models import OVERRIDE_FIELDS, QuotePoint, QuoteResponse
+from app.models import (
+    OVERRIDE_FIELDS,
+    ListedIdentityOut,
+    QuotePoint,
+    QuoteResponse,
+    identity_columns,
+)
+from app.providers.base import identity_from_row
 from app.repository import PROTECTED_META_FIELDS, QuoteRepository
 from app.services.daily_sync import DailyCloseSync
 from app.services.freshness import is_fresh
@@ -212,7 +219,9 @@ class CachedQuoteService:
         Returns:
             Kurs und ob das Papier in diesem Aufruf entstanden ist.
         """
-        instrument = self._repository.get_instrument_by_identity(ticker, mic)
+        instrument = self._repository.get_instrument_by_identity(
+            ListedIdentityOut(ticker=ticker, mic=mic)
+        )
         if instrument:
             return self._get(instrument, lambda: self._fetch_live(instrument))
 
@@ -220,7 +229,9 @@ class CachedQuoteService:
         return self._get(
             None,
             lambda: self._quote_service.get_quote_for_known(
-                symbol, ticker=ticker, mic=mic, enrich_etf=True
+                symbol,
+                identity=ListedIdentityOut(ticker=ticker, mic=mic),
+                enrich_etf=True,
             ),
         )
 
@@ -472,7 +483,7 @@ class CachedQuoteService:
                 self._repository.get_instrument_by_isin(response.isin)
                 if response.isin
                 else self._repository.get_instrument_by_identity(
-                    response.ticker, response.mic
+                    response.identity
                 )
             )
             if instrument is None:
@@ -556,9 +567,10 @@ class CachedQuoteService:
         in `_with_overrides`: Die frische Antwort weiß, welches Listing sie
         meint, und `symbol` weiß es seit T-21 nicht mehr.
         """
-        if fresh.isin:
-            return self._repository.get_instrument_by_isin(fresh.isin)
-        return self._repository.get_instrument_by_identity(fresh.ticker, fresh.mic)
+        isin = getattr(fresh.identity, "isin", None)
+        if isin:
+            return self._repository.get_instrument_by_isin(isin)
+        return self._repository.get_instrument_by_identity(fresh.identity)
 
     def _save_fresh_with_volatility(self, fresh: QuoteResponse) -> QuoteResponse:
         """Persistiert einen frischen Kurs und ergänzt die Volatilität aus dem Cache.
@@ -597,8 +609,11 @@ class CachedQuoteService:
             instrument_id,
             quote.symbol,
             start,
-            ticker=quote.ticker,
-            mic=quote.mic,
+            # Zwei Darstellungen derselben Sache: `QuoteResponse.identity`
+            # ist die REST-Form, der Vertrag will seine eigene. Der Weg
+            # ueber die Spaltenbelegung benutzt beide vorhandenen
+            # Umrechnungen, statt eine dritte zu erfinden.
+            identity=identity_from_row(identity_columns(quote.identity)),
         )
         rows = self._repository.get_daily_closes(instrument_id, start)
         closes = [row["close"] for row in rows if row.get("close") is not None]

@@ -15,23 +15,59 @@ import structlog
 
 from app.db import get_connection
 from app.exchanges import canonical_identity, identity_from_symbol
-from app.models import OVERRIDE_FIELDS, QuoteResponse
+from app.models import (
+    IDENTITY_COLUMNS,
+    OVERRIDE_FIELDS,
+    IdentityOut,
+    ListedIdentityOut,
+    PairIdentityOut,
+    QuoteResponse,
+    identity_columns,
+    identity_from_columns,
+    identity_where,
+)
 
 logger = structlog.get_logger()
+
+
+def _identity_label(identity: IdentityOut) -> str:
+    """Wie eine Identität in einer Meldung erscheint.
+
+    Je Form die Felder, die sie ausmachen — und nicht ein Format, das für die
+    anderen beiden erfundene Werte bräuchte. Die Meldung liest ein Mensch, der
+    danach in der Datenbank nachsieht; sie muss ihn dorthin führen.
+    """
+    if isinstance(identity, PairIdentityOut):
+        return f"'{identity.base}/{identity.quote_currency}'"
+    if isinstance(identity, ListedIdentityOut):
+        return f"'{identity.ticker}/{identity.mic}'"
+    return f"'{identity.isin}'"
+
+
+def _isin_of(identity: IdentityOut) -> str | None:
+    """Die ISIN dieser Identität, falls die Form eine trägt.
+
+    Ein Währungspaar **hat** keine — ``None`` erfindet hier nichts, anders als
+    ein Ticker, den man für ein Paar nur ausdenken könnte.
+    """
+    return getattr(identity, "isin", None)
 
 
 class IncompleteIdentityError(ValueError):
     """Ein Papier soll angelegt werden, ohne dass seine Identität feststeht.
 
-    Seit T-21 Teil 3 gibt es dafür keinen Zustand mehr: `ticker` und `mic`
-    sind Pflicht, und zwar im Schema. Ohne diesen Fehler liefe der Aufrufer in
-    eine `NOT NULL`-Verletzung — dieselbe Ablehnung, nur als `500` und ohne zu
-    sagen, was fehlt.
+    Seit T-21 Teil 3 gibt es dafür keinen Zustand mehr, und seit T-31 ist
+    „vollständig" je **Form** definiert: Ticker und MIC bei `listed`, Basiswert
+    und Quote-Währung bei `pair`, die ISIN bei `isin_only`. Der `CHECK` im
+    Schema erzwingt es; ohne diesen Fehler liefe der Aufrufer in eine
+    `CHECK`-Verletzung — dieselbe Ablehnung, nur als `500` und ohne zu sagen,
+    was fehlt.
     """
 
     def __init__(self, symbol: str) -> None:
         super().__init__(
-            f"'{symbol}' trägt keine kanonische Identität (ticker und MIC)"
+            f"'{symbol}' trägt keine vollständige Identität in einer der drei "
+            "Formen (listed, pair, isin_only)"
         )
         self.symbol = symbol
 
@@ -85,13 +121,12 @@ class IdentityConflictError(ValueError):
     speichert: Kursabruf wie Aufnahmeweg stolpern über dieselbe Zeile.
     """
 
-    def __init__(self, ticker: str, mic: str, isin: str | None) -> None:
+    def __init__(self, identity: IdentityOut, isin: str | None) -> None:
         super().__init__(
-            f"'{ticker}/{mic}' ist bereits vergeben; ISIN {isin} zeigt auf eine "
-            "andere Zeile"
+            f"{_identity_label(identity)} ist bereits vergeben; ISIN {isin} "
+            "zeigt auf eine andere Zeile"
         )
-        self.ticker = ticker
-        self.mic = mic
+        self.identity = identity
         self.isin = isin
 
 
@@ -221,7 +256,7 @@ class QuoteRepository:
             row = self._unique_symbol_row(connection, symbol)
             return dict(row) if row else None
 
-    def get_instrument_by_identity(self, ticker: str, mic: str) -> dict | None:
+    def get_instrument_by_identity(self, identity: IdentityOut) -> dict | None:
         """Gibt das Instrument zur **kanonischen Identität** zurück.
 
         Der Aufnahmeweg schlägt hierüber nach, nicht über `symbol` — und das
@@ -230,23 +265,22 @@ class QuoteRepository:
         führen; eine Suche über das Symbol fände deshalb die falsche Börse
         oder, auf leerem Bestand, gar nichts Eindeutiges.
 
-        Die Abfrage ist eindeutig: `idx_instruments_ticker_mic` liegt auf genau
-        diesem Paar.
+        Die Abfrage ist eindeutig: Auf der Bedingung jeder Form liegt ein
+        partieller Unique-Index.
 
         Args:
-            ticker: Kanonischer Ticker.
-            mic: ISO-10383-MIC des Handelsplatzes.
+            identity: Die gesuchte Identität, in ihrer Form.
 
         Returns:
             Die Zeile, oder ``None``.
         """
         with self._connect() as connection:
-            row = self._identity_row(connection, ticker, mic)
+            row = self._identity_row(connection, identity)
             return dict(row) if row else None
 
     @staticmethod
     def _identity_row(
-        connection: sqlite3.Connection, ticker: str, mic: str, columns: str = "*"
+        connection: sqlite3.Connection, identity: IdentityOut, columns: str = "*"
     ) -> sqlite3.Row | None:
         """Die **eine** Abfrage über die kanonische Identität.
 
@@ -257,9 +291,9 @@ class QuoteRepository:
         Sonderfall auseinander — und genau dort ist der Unterschied teuer, weil
         er über die Zuordnung eines Papiers entscheidet.
         """
+        where, params = identity_where(identity)
         return connection.execute(
-            f"SELECT {columns} FROM instruments WHERE ticker = ? AND mic = ?",
-            (ticker, mic),
+            f"SELECT {columns} FROM instruments WHERE {where}", params
         ).fetchone()
 
     # Was ein Kandidat im `409` über sich verrät. Genau die Felder der Fixture
@@ -643,7 +677,7 @@ class QuoteRepository:
         anderer schneller war.
         """
         existing_id = self._find_instrument_id(
-            connection, response.isin, response.symbol, response.ticker, response.mic
+            connection, response.symbol, response.identity
         )
         meta = {field: getattr(response, field) for field in self._writable_fields(response)}
 
@@ -660,11 +694,7 @@ class QuoteRepository:
                 # `(ticker, mic)`-Index entstand. Aus dem zugesagten
                 # `created=false` wurde so ein `500`.
                 existing_id = self._find_instrument_id(
-                    connection,
-                    response.isin,
-                    response.symbol,
-                    response.ticker,
-                    response.mic,
+                    connection, response.symbol, response.identity
                 )
                 if existing_id is None:
                     raise
@@ -698,11 +728,9 @@ class QuoteRepository:
             # annehmen, die eine **andere** Zeile schon trägt. Das ist kein
             # Rennen und keine Verletzung des Aufrufers, sondern ein gewachsener
             # Bestand, in dem zwei Zeilen dasselbe Listing meinen.
-            if response.ticker and response.mic:
-                raise IdentityConflictError(
-                    response.ticker, response.mic, response.isin
-                ) from exc
-            raise
+            raise IdentityConflictError(
+                response.identity, _isin_of(response.identity)
+            ) from exc
         return SavedQuote(existing_id, created=False)
 
     @staticmethod
@@ -745,28 +773,36 @@ class QuoteRepository:
         Returns:
             Die zu schreibenden Identitätsfelder — leer, wenn nichts zu tun ist.
         """
-        identity = canonical_identity(response.ticker, response.mic)
-        if identity is None:
+        identity = response.identity
+        if isinstance(identity, ListedIdentityOut) and not canonical_identity(
+            identity.ticker, identity.mic
+        ):
+            # **Die `listed`-Hälfte bleibt streng** (T-31, Matrix `#3`): Ein
+            # Ticker ohne echten MIC war noch nie eine Identität, und die Union
+            # ändert daran nichts. Die beiden anderen Formen prüft der Vertrag
+            # bereits an der Quelle, und der `CHECK` fängt den Rest.
             return {}
-        ticker, mic = identity
 
+        columns = ", ".join(IDENTITY_COLUMNS)
         row = connection.execute(
-            "SELECT ticker, mic FROM instruments WHERE id = ?", (instrument_id,)
+            f"SELECT {columns} FROM instruments WHERE id = ?", (instrument_id,)
         ).fetchone()
-        if row and (row["ticker"], row["mic"]) == (ticker, mic):
+        stored = identity_from_columns(row) if row else None
+        if stored == identity:
             return {}
 
-        if row and row["ticker"] and row["mic"]:
+        if stored is not None:
             logger.info(
                 "identity_changed",
                 instrument_id=instrument_id,
                 symbol=response.symbol,
-                previous_ticker=row["ticker"],
-                previous_mic=row["mic"],
-                ticker=ticker,
-                mic=mic,
+                previous=_identity_label(stored),
+                current=_identity_label(identity),
             )
-        return {"ticker": ticker, "mic": mic}
+        # **Alle sechs Spalten**, nicht nur die der neuen Form: Wechselt eine
+        # Zeile die Form, blieben die Felder der alten sonst stehen und der
+        # `CHECK` schlüge zu.
+        return identity_columns(identity)
 
     @staticmethod
     def _writable_fields(response: QuoteResponse) -> tuple[str, ...]:
@@ -803,36 +839,42 @@ class QuoteRepository:
         Platzhalter als Werte — SQLite bricht mit `Incorrect number of
         bindings supplied` ab, mitten im ersten Anlegen eines Papiers.
         """
-        identity = canonical_identity(response.ticker, response.mic)
-        if identity is None:
+        identity = response.identity
+        if isinstance(identity, ListedIdentityOut) and not canonical_identity(
+            identity.ticker, identity.mic
+        ):
             # **Kein Anlegen ohne Identität** (T-21 Teil 3, `#2b2`). Vorher
             # entstand hier eine Zeile mit `identity_status =
             # legacy_unresolved`; seit die halbe Identität nirgends mehr
             # weiterleben darf, ist das kein Zustand mehr, sondern ein Fehler
             # des Aufrufers — und er gehört dort beantwortet, wo er entsteht.
+            #
+            # Geprüft wird nur die `listed`-Form: Sie ist die einzige, für die
+            # „echter MIC" überhaupt eine Frage ist. Die beiden anderen bindet
+            # der `CHECK` im Schema.
             raise IncompleteIdentityError(response.symbol)
-        ticker, mic = identity
 
+        written = identity_columns(identity)
         columns = (
-            "isin, symbol, first_seen, meta_fetched_at, "
-            "ticker, mic, listing_id, " + ", ".join(meta)
+            "symbol, first_seen, meta_fetched_at, listing_id, "
+            + ", ".join(written)
+            + ", "
+            + ", ".join(meta)
         )
-        placeholders = ", ".join(["?"] * (7 + len(meta)))
+        placeholders = ", ".join(["?"] * (4 + len(written) + len(meta)))
         values = [
-            response.isin,
             response.symbol,
             response.fetched_at,
             # Kein Zeitstempel ohne belastbare Metadaten — `None` heißt „nie
             # geholt" und macht den Stand beim nächsten Abruf sofort fällig.
             response.fetched_at if response.metadata_complete else None,
-            ticker,
-            mic,
             # Die dauerhafte Kennung entsteht **hier**, nicht erst beim
             # nächsten Start. Sie allein in der Migration zu vergeben ließ jede
             # zur Laufzeit angelegte Zeile ohne — und weil SQLite `NULL` im
             # Eindeutigkeits-Index als eigenen Wert zählt, fiel das nicht
             # einmal auf.
             str(uuid.uuid4()),
+            *written.values(),
             *meta.values(),
         ]
         cursor = connection.execute(
@@ -843,10 +885,8 @@ class QuoteRepository:
     @staticmethod
     def _find_instrument_id(
         connection: sqlite3.Connection,
-        isin: str | None,
         symbol: str,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: IdentityOut,
     ) -> int | None:
         """Sucht ein Instrument — ISIN, dann Identität, dann Symbol.
 
@@ -855,8 +895,9 @@ class QuoteRepository:
         1. **Die ISIN zuerst.** Sie ist eindeutig und überdauert einen Wechsel
            des Handelsplatzes. Nur so zieht der nächste Kurs eine überholte
            Zuordnung gerade, statt ein zweites Listing anzulegen.
-        2. **Dann `(ticker, mic)`.** Für ein Papier ohne ISIN ist das die
-           kanonische Identität, und der Eindeutigkeitsindex liegt darauf.
+        2. **Dann die Identität in ihrer Form.** Für ein Papier ohne ISIN —
+           ein Währungspaar etwa — ist sie das einzige, was es bezeichnet, und
+           auf der Bedingung jeder Form liegt ein partieller Unique-Index.
         3. **Das Symbol nur, wenn es eindeutig ist.** Und genau hier lag der
            Fehler: `AAPL` ist *kein* Bezeichner eines Listings — die US-Plätze
            führen keinen Suffix, also heißen `AAPL/XNAS` und `AAPL/XNYS` beide
@@ -867,14 +908,13 @@ class QuoteRepository:
 
         Args:
             connection: Offene Verbindung der laufenden Transaktion.
-            isin: ISIN der Antwort, sofern bekannt.
             symbol: Das Anbietersymbol.
-            ticker: Kanonischer Ticker der Antwort.
-            mic: MIC der Antwort.
+            identity: Die Identität der Antwort, in ihrer Form.
 
         Returns:
             Die ID des gefundenen Instruments, oder ``None``.
         """
+        isin = _isin_of(identity)
         if isin:
             row = connection.execute(
                 "SELECT id FROM instruments WHERE isin = ?", (isin,)
@@ -882,10 +922,9 @@ class QuoteRepository:
             if row:
                 return int(row["id"])
 
-        if ticker and mic:
-            row = QuoteRepository._identity_row(connection, ticker, mic, columns="id")
-            if row:
-                return int(row["id"])
+        row = QuoteRepository._identity_row(connection, identity, columns="id")
+        if row:
+            return int(row["id"])
 
         if identity_from_symbol(symbol) is None:
             return None
