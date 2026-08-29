@@ -22,6 +22,7 @@ import pytest
 from stockinfo_plugin import (
     DailyRequest,
     FxRequest,
+    ListedIdentity,
     QuoteRequest,
     ResolveRequest,
 )
@@ -121,9 +122,9 @@ class TestJustEtfMetadata(MetadataContract):
 class TestYFinanceQuotes(QuoteContract):
     """Der Kursvertrag am yfinance-Plugin."""
 
-    responsible = QuoteRequest(ticker="EUNL", mic="XETR")
-    not_responsible = QuoteRequest(ticker="EUNL", mic="ZZZZ")
-    unknown = QuoteRequest(ticker="GIBTESNICHT", mic="XETR")
+    responsible = QuoteRequest(ListedIdentity(ticker="EUNL", mic="XETR"))
+    not_responsible = QuoteRequest(ListedIdentity(ticker="EUNL", mic="ZZZZ"))
+    unknown = QuoteRequest(ListedIdentity(ticker="GIBTESNICHT", mic="XETR"))
 
     def make_source(self) -> YFinancePlugin:
         return YFinancePlugin(provider=FakeYFinance())
@@ -132,9 +133,9 @@ class TestYFinanceQuotes(QuoteContract):
 class TestYFinanceDaily(DailyContract):
     """Der Historienvertrag am yfinance-Plugin."""
 
-    responsible = DailyRequest(ticker="EUNL", mic="XETR", start=date(2026, 1, 1))
-    not_responsible = DailyRequest(ticker="EUNL", mic="ZZZZ")
-    unknown = DailyRequest(ticker="GIBTESNICHT", mic="XETR")
+    responsible = DailyRequest(ListedIdentity(ticker="EUNL", mic="XETR"), start=date(2026, 1, 1))
+    not_responsible = DailyRequest(ListedIdentity(ticker="EUNL", mic="ZZZZ"))
+    unknown = DailyRequest(ListedIdentity(ticker="GIBTESNICHT", mic="XETR"))
 
     def make_source(self) -> YFinancePlugin:
         return YFinancePlugin(provider=FakeYFinance())
@@ -234,7 +235,7 @@ def test_eine_reihe_meldet_sich_als_bereinigt() -> None:
     """
     plugin = YFinancePlugin(provider=FakeYFinance())
 
-    series: Any = plugin.fetch_daily(DailyRequest(ticker="EUNL", mic="XETR"))
+    series: Any = plugin.fetch_daily(DailyRequest(ListedIdentity(ticker="EUNL", mic="XETR")))
 
     assert series.adjusted is True
 

@@ -30,8 +30,10 @@ from stockinfo_plugin import (
     FxRate,
     FxRequest,
     FxResult,
+    ListedIdentity,
     NotFound,
     NotResponsible,
+    PairIdentity,
     Quote,
     QuoteRequest,
     QuoteResult,
@@ -49,6 +51,8 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
 
     name = "yfinance"
     cost = "free"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed", "pair"})
 
     def __init__(
         self,
@@ -64,10 +68,24 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
         super().__init__(config)
         self._provider = provider or YFinanceProvider()
 
-    def _symbol(self, ticker: str, mic: str) -> str | None:
-        """Ticker und MIC zum yfinance-Symbol — oder ``None`` bei fremder Börse.
+    def _symbol(self, identity: object) -> str | None:
+        """Die Identität als yfinance-Symbol — oder ``None``, wenn keins passt.
 
-        `provider_alias` weiß, dass Toronto ``.TO`` heißt und Xetra ``.DE``.
+        Zwei Formen, zwei Schreibweisen, und die Weiche läuft über ``kind`` und
+        **nie** über die Gestalt des Symbols:
+
+        * `listed` → `provider_alias`, das weiß, dass Toronto ``.TO`` heißt und
+          Xetra ``.DE``.
+        * `pair` → ``{base}-{quote_currency}``, also ``BTC-EUR``. yfinance
+          kennt diese Schreibweise nativ.
+
+        Der Bindestrich ist damit **Trennzeichen der Paarform** und kein
+        Erkennungsmerkmal: Aus ``BTC-EUR`` zu schließen, es handle sich um ein
+        Paar, wäre genau das Raten aus der Symbolform, das T-31 Matrix `#5`
+        verbietet. Die Form steht schon fest, wenn diese Methode gerufen wird.
+
+        Eine `isin_only`-Anleihe hat hier keine Schreibweise — sie wird vom
+        Vorfilter gar nicht erst hergeschickt, und `handles` sagt ``False``.
 
         **Die Prüfung auf `EXCHANGES` davor ist nicht Zierde, sie ist gemessen.**
         `provider_alias` liefert bei einer unbekannten Börse den **nackten
@@ -83,9 +101,13 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
         OpenFIGI-Sammelcode: Eine Antwort, die man nicht richtig geben kann,
         gibt man nicht.
         """
-        if mic not in EXCHANGES:
+        if isinstance(identity, PairIdentity):
+            return f"{identity.base}-{identity.quote_currency}"
+        if not isinstance(identity, ListedIdentity):
             return None
-        return provider_alias(ticker, mic)
+        if identity.mic not in EXCHANGES:
+            return None
+        return provider_alias(identity.ticker, identity.mic)
 
     # ─── Kurs ────────────────────────────────────────────────────────────────
 
@@ -100,9 +122,8 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
             return not currency_problem(request.base) and not currency_problem(
                 request.quote
             )
-        ticker = getattr(request, "ticker", "")
-        mic = getattr(request, "mic", "")
-        return bool(ticker and mic and self._symbol(ticker, mic))
+        identity = getattr(request, "identity", None)
+        return identity is not None and self._symbol(identity) is not None
 
     def fetch_quote(self, request: QuoteRequest) -> QuoteResult:
         """Holt einen Kurs.
@@ -112,9 +133,11 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
             sich kein Symbol bilden lässt; `NotFound`, wenn yfinance nichts
             liefert; `Unavailable`, wenn die Antwort unbrauchbar ist.
         """
-        symbol = self._symbol(request.ticker, request.mic)
+        symbol = self._symbol(request.identity)
         if not symbol:
-            return NotResponsible(f"keine yfinance-Schreibweise für {request.mic}")
+            return NotResponsible(
+                f"keine yfinance-Schreibweise für {request.identity}"
+            )
 
         raw = self._provider.fetch_quote(symbol)
         if raw is None:
@@ -159,9 +182,11 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
             richtige Ort dafür — hier sie noch einmal herzustellen hieße, einen
             Fehler zu verdecken, statt ihn zu melden.
         """
-        symbol = self._symbol(request.ticker, request.mic)
+        symbol = self._symbol(request.identity)
         if not symbol:
-            return NotResponsible(f"keine yfinance-Schreibweise für {request.mic}")
+            return NotResponsible(
+                f"keine yfinance-Schreibweise für {request.identity}"
+            )
 
         closes = self._provider.fetch_daily_closes(
             symbol, request.start.isoformat() if request.start else None

@@ -43,6 +43,9 @@ class YFinanceMetadataPlugin(MetadataSource):
 
     name = "yfinance"
     cost = "free"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed"})
+    SUPPORTED_TYPES = frozenset({"etf", "etc", "fund"})
 
     FIELDS = FIELDS
 

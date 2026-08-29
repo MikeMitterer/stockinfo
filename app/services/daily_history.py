@@ -8,6 +8,7 @@ fehlende Tage) nach — nicht jede Anfrage landet bei yfinance.
 from datetime import date, timedelta
 
 from app.models import DailyPoint
+from app.providers.base import identity_from_row
 from app.repository import QuoteRepository
 from app.services.daily_sync import DailyCloseProvider, DailyCloseSync
 from app.services.quote_cache import CachedQuoteService
@@ -55,8 +56,7 @@ class DailyHistoryService:
             instrument["id"],
             instrument["symbol"],
             desired_start,
-            ticker=instrument.get("ticker"),
-            mic=instrument.get("mic"),
+            identity=identity_from_row(instrument),
         ):
             raise QuoteUnavailableError(instrument["symbol"])
         rows = self._repository.get_daily_closes(instrument["id"], desired_start)

@@ -27,13 +27,21 @@ CREATE TABLE IF NOT EXISTS instruments (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     isin            TEXT UNIQUE,
     symbol          TEXT NOT NULL,
-    -- Die kanonische Identität ist **Pflicht** (T-21 Teil 3, `#2b2`). Bei
-    -- einer frischen Installation steht sie damit von Anfang an im Schema;
-    -- ein gewachsener Bestand bekommt sie beim bestätigten Umzug, siehe
-    -- `app/migration.py`. `CREATE TABLE IF NOT EXISTS` fasst ihn hier nicht
-    -- an — er behält seine alte Tabelle, bis der Benutzer zustimmt.
-    ticker          TEXT NOT NULL,
-    mic             TEXT NOT NULL,
+    -- Die kanonische Identität ist **Pflicht** (T-21 Teil 3, `#2b2`) — seit
+    -- T-31 aber je **Form** verschieden, weil nicht jedes Papier an einer
+    -- Börse gehandelt wird: Eine Coin hat keinen MIC, eine OTC-Anleihe keinen
+    -- Ticker. Was „vollständig" heißt, sagt darum der `CHECK` am Tabellenende;
+    -- er verlangt je `kind` die Felder dieser Form **und schließt die der
+    -- beiden anderen aus**. Halbe wie doppelte Identitäten bleiben unmöglich.
+    --
+    -- `NOT NULL` an den Spalten wäre dafür das falsche Werkzeug: Es gälte für
+    -- alle Formen zugleich und verböte gerade die, für die dieses Ticket da
+    -- ist.
+    kind            TEXT NOT NULL DEFAULT 'listed',
+    ticker          TEXT,
+    mic             TEXT,
+    base            TEXT,
+    quote_currency  TEXT,
     -- Opake UUID, bei Anlage einmal erzeugt und nicht aus ticker, mic, ISIN
     -- oder dem lokalen Schlüssel abgeleitet (Vertrag in T-24).
     listing_id      TEXT,
@@ -51,7 +59,23 @@ CREATE TABLE IF NOT EXISTS instruments (
     fund_currency   TEXT,
     source          TEXT,
     first_seen      TEXT NOT NULL,
-    meta_fetched_at TEXT
+    meta_fetched_at TEXT,
+    -- **Je Form verlangen und ausschließen, nicht nur verlangen.** Ein `CHECK`,
+    -- der bloß die Pflichtfelder der eigenen Form fordert, ließe eine
+    -- `listed`-Zeile mit zusätzlichem `base` zu — eine Zeile mit zwei
+    -- Identitäten, und genau die soll es nicht geben.
+    CHECK (
+        (kind = 'listed'
+            AND ticker IS NOT NULL AND mic IS NOT NULL
+            AND base IS NULL AND quote_currency IS NULL)
+     OR (kind = 'pair'
+            AND base IS NOT NULL AND quote_currency IS NOT NULL
+            AND ticker IS NULL AND mic IS NULL AND isin IS NULL)
+     OR (kind = 'isin_only'
+            AND isin IS NOT NULL
+            AND ticker IS NULL AND mic IS NULL
+            AND base IS NULL AND quote_currency IS NULL)
+    )
 );
 
 CREATE TABLE IF NOT EXISTS quotes (
@@ -257,10 +281,25 @@ def run_migration(database_path: str, rejected_at: str) -> MigrationPlan:
 # Derselbe Fehler war in `app/migration.py` bereits gefunden, behoben und im
 # Kommentar festgehalten — und hier zwei Stunden später wieder eingebaut
 # (Codex, Runde 30). Eine Liste statt eines Scripts macht ihn unmöglich.
+#
+# **Je Form ein partieller Index — und zwei globale daneben** (T-31). Der
+# `(ticker, mic)`-Index liefe für zwei der drei Formen leer, weil beide Spalten
+# dort `NULL` sind und SQLite `NULL` nie als gleich ansieht. Je Form einer
+# schließt die Lücke.
+#
+# Die beiden globalen Zusagen bleiben trotzdem stehen, und das ist kein
+# Versehen:
+#
+# * `isin` ist über **alle** Formen eindeutig. Ein partieller Index nur für
+#   `isin_only` ließe dieselbe ISIN einmal als `listed` und einmal als
+#   `isin_only` zu — zwei Zeilen für dasselbe Papier, in zwei Identitätsformen.
+# * `listing_id` ist die opake Kennung der Zeile und von `kind` unabhängig.
 _IDENTITY_INDICES = (
     "DROP INDEX IF EXISTS idx_instruments_symbol",
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_ticker_mic "
-    "ON instruments (ticker, mic)",
+    "ON instruments (ticker, mic) WHERE kind = 'listed'",
+    "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_pair "
+    "ON instruments (base, quote_currency) WHERE kind = 'pair'",
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_listing_id "
     "ON instruments (listing_id)",
     "CREATE UNIQUE INDEX IF NOT EXISTS idx_instruments_isin "
@@ -281,7 +320,7 @@ def _create_identity_indices(connection: sqlite3.Connection) -> None:
     columns = {
         row["name"] for row in connection.execute("PRAGMA table_info(instruments)")
     }
-    if {"ticker", "mic", "listing_id"} <= columns:
+    if {"kind", "ticker", "mic", "base", "quote_currency", "listing_id"} <= columns:
         for statement in _IDENTITY_INDICES:
             connection.execute(statement)
 
@@ -315,6 +354,15 @@ def _migrate(connection: sqlite3.Connection) -> None:
             # Der Detailbereich nennt das; ohne Nachzug bliebe die Angabe auf jeder
             # bestehenden Datenbank für immer leer.
             ("source", "TEXT"),
+            # Die Identitaetsform und ihre Felder (T-31). Der `CHECK` steht nur
+            # im frischen Schema — eine Alt-Datenbank bekaeme ihn erst beim
+            # Tabellen-Neuaufbau, und den gibt es hier nicht: Mikes Entscheidung
+            # vom 2026-08-29 verwirft die Entwicklungsdatenbank, statt sie
+            # umzuziehen. Die Spalten kommen trotzdem mit, damit eine solche
+            # Datenbank lesbar bleibt statt beim ersten SELECT zu brechen.
+            ("kind", "TEXT NOT NULL DEFAULT 'listed'"),
+            ("base", "TEXT"),
+            ("quote_currency", "TEXT"),
         ),
     )
     # Die Herkunft eines Wechselkurses. Bestehende Datenbanken haben die

@@ -35,11 +35,12 @@ kennt, wie die Suche fragt und was ein Treffer ist, entscheidet
 from typing import Any
 
 from stockinfo_plugin import (
+    ListedIdentity,
     NotFound,
     Resolution,
     Resolved,
-    ResolveRequest,
     Resolver,
+    ResolveRequest,
 )
 
 from app.providers.base import ResolvedInstrument
@@ -51,6 +52,9 @@ class YahooSearchResolverPlugin(Resolver):
 
     name = "yahoo-search"
     cost = "free"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed"})
+    SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund"})
 
     def __init__(
         self,
@@ -112,9 +116,11 @@ class YahooSearchResolverPlugin(Resolver):
             return NotFound()
 
         return Resolved(
-            ticker=answer.ticker,
-            mic=answer.mic,
-            isin=answer.isin or request.isin,
+            identity=ListedIdentity(
+                ticker=answer.ticker,
+                mic=answer.mic,
+                isin=answer.isin or request.isin,
+            ),
             name=answer.name,
             instrument_type=answer.type,
         )

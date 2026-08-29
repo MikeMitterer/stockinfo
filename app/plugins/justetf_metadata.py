@@ -95,6 +95,9 @@ class JustEtfMetadataPlugin(MetadataSource):
 
     name = "justetf"
     cost = "free"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed"})
+    SUPPORTED_TYPES = frozenset({"etf", "etc"})
 
     FIELDS = FIELDS
     """Was diese Quelle liefert — **der Vertrag fragt danach.**

@@ -32,6 +32,7 @@ from stockinfo_plugin import (
     DailySeries,
     FxRate,
     FxRequest,
+    ListedIdentity,
     Quote,
     QuoteRequest,
 )
@@ -54,7 +55,7 @@ def test_ein_kurs_kommt_mit_waehrung_und_zeitpunkt(plugin: YFinancePlugin) -> No
     Geprüft wird die **Währung** als feste Zusage: Sie ist eine Eigenschaft des
     Listings und ändert sich nicht von Tag zu Tag, während der Kurs es tut.
     """
-    answer = plugin.fetch_quote(QuoteRequest(ticker="EUNL", mic="XETR"))
+    answer = plugin.fetch_quote(QuoteRequest(ListedIdentity(ticker="EUNL", mic="XETR")))
 
     assert isinstance(answer, Quote), answer
     assert answer.currency == "EUR"
@@ -75,7 +76,7 @@ def test_eine_tagesreihe_ist_aufsteigend_und_traegt_ihre_waehrung(
     """
     ende = date.today()
     antwort = plugin.fetch_daily(
-        DailyRequest(ticker="EUNL", mic="XETR", start=ende - timedelta(days=30), end=ende)
+        DailyRequest(ListedIdentity(ticker="EUNL", mic="XETR"), start=ende - timedelta(days=30), end=ende)
     )
 
     assert isinstance(antwort, DailySeries), antwort

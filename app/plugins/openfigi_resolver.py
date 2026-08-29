@@ -39,12 +39,13 @@ dieser Stelle schon gemeinsam — hier bleibt nur der Treffer zu übersetzen.
 from typing import Any
 
 from stockinfo_plugin import (
+    ListedIdentity,
     NotFound,
     NotResponsible,
     Resolution,
     Resolved,
-    ResolveRequest,
     Resolver,
+    ResolveRequest,
 )
 from stockinfo_plugin.invariants import isin_check_digit_is_valid
 
@@ -63,6 +64,9 @@ class OpenFigiResolverPlugin(Resolver):
 
     name = "openfigi"
     cost = "free"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed"})
+    SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "bond"})
 
     def __init__(
         self,
@@ -135,9 +139,11 @@ class OpenFigiResolverPlugin(Resolver):
             return NotFound()
 
         return Resolved(
-            ticker=answer.ticker,
-            mic=answer.mic,
-            isin=answer.isin or request.isin,
+            identity=ListedIdentity(
+                ticker=answer.ticker,
+                mic=answer.mic,
+                isin=answer.isin or request.isin,
+            ),
             name=answer.name,
             instrument_type=answer.type,
         )

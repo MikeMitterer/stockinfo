@@ -8,11 +8,35 @@ API-Antwort zusammen. Protokolle ermöglichen austauschbare Implementierungen
 from dataclasses import dataclass
 from typing import Protocol
 
-from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
+from stockinfo_plugin.types import (
+    Identity,
+    IsinOnlyIdentity,
+    ListedIdentity,
+    NotFound,
+    NotResponsible,
+    PairIdentity,
+    Unavailable,
+)
 
-# Yahoo quoteType → interner Typ ("etf" | "stock") — gemeinsame Konstante für
-# Resolver und Provider.
-QUOTE_TYPE_MAP = {"ETF": "etf", "MUTUALFUND": "etf", "EQUITY": "stock"}
+# Der kanonische Gattungskatalog (T-31, Entscheidung 2 · T-38 kanonisiert ihn).
+# **Offen, nicht abschließend**: Ein neuer Wert ist ein Nachtrag und kein Bruch,
+# und was die App nicht kennt, zeigt sie als das, was die Quelle sagt — statt es
+# auf `stock` zu runden. Das Runden war der Fehler.
+INSTRUMENT_TYPES = ("stock", "etf", "etc", "fund", "crypto", "bond")
+
+# Yahoo quoteType → interner Typ. **Erkennen, nicht Raten** (T-31, Matrix `#4`).
+#
+# `MUTUALFUND` bildete bis T-31 auf `etf` ab, und das war eine Unwahrheit mit
+# Folgen: Ein nicht börsengehandelter Fonds bekam die ETF-Anreicherung samt
+# TER-Frage an justETF, wo er nicht geführt wird. Seit Mikes Entscheidung vom
+# 2026-08-29 gibt es `fund` als eigene Gattung.
+QUOTE_TYPE_MAP = {
+    "ETF": "etf",
+    "MUTUALFUND": "fund",
+    "EQUITY": "stock",
+    "CRYPTOCURRENCY": "crypto",
+    "BOND": "bond",
+}
 
 
 @dataclass
@@ -23,16 +47,66 @@ class ResolvedInstrument:
     isin: str | None = None
     exchange: str | None = None
     name: str | None = None
-    type: str | None = None  # "stock" | "etf"
+    type: str | None = None
     currency: str | None = None
 
-    # Die kanonische Identität (T-21). `symbol` bleibt daneben stehen: Es ist
-    # der **Anbieter-Alias**, mit dem yfinance den Kurs holt und an dem die
-    # Profil-Links hängen — `ticker` + `mic` sind das, was jede andere Quelle
-    # versteht. Beide sind `None`, solange die Zuordnung nicht eindeutig ist;
-    # geraten wird nichts.
+    # Die kanonische Identität (T-21), seit T-31 in **drei Formen**. `symbol`
+    # bleibt daneben stehen: Es ist der **Anbieter-Alias**, mit dem yfinance den
+    # Kurs holt und an dem die Profil-Links hängen — die Identität ist das, was
+    # jede andere Quelle versteht.
+    #
+    # Flach gehalten und nicht als verschachteltes Objekt: Die Datenbank führt
+    # dieselben Spalten, und der `CHECK` je `kind` bindet sie dort. Die Union
+    # entsteht daraus über `identity()` — an **einer** Stelle, damit die Regel
+    # nicht an jeder Verwendung neu formuliert wird.
+    kind: str = "listed"
     ticker: str | None = None
     mic: str | None = None
+    base: str | None = None
+    quote_currency: str | None = None
+
+    def identity(self) -> Identity | None:
+        """Die Identität in der Form, die `kind` nennt.
+
+        Returns:
+            Die passende `Identity`, oder ``None``, wenn die Felder der Form
+            nicht vollständig sind. ``None`` heißt „noch keine Identität" und
+            ist etwas anderes als eine erfundene — geraten wird nichts.
+        """
+        if self.kind == "listed" and self.ticker and self.mic:
+            return ListedIdentity(ticker=self.ticker, mic=self.mic, isin=self.isin)
+        if self.kind == "pair" and self.base and self.quote_currency:
+            return PairIdentity(base=self.base, quote_currency=self.quote_currency)
+        if self.kind == "isin_only" and self.isin:
+            return IsinOnlyIdentity(isin=self.isin)
+        return None
+
+
+def identity_from_row(row: object) -> Identity | None:
+    """Die Identität einer gespeicherten Instrumentenzeile.
+
+    Die Datenbank führt die Union flach, gebunden durch den `CHECK` je `kind`.
+    Diese Funktion setzt sie wieder zusammen — **an einer Stelle**, damit die
+    Regel nicht bei jedem Leser neu entsteht und beim ersten Sonderfall
+    auseinanderläuft.
+
+    Args:
+        row: Eine Instrumentenzeile als Mapping (``sqlite3.Row`` oder ``dict``).
+
+    Returns:
+        Die Identität, oder ``None``, wenn die Zeile die Felder ihrer Form
+        nicht vollständig trägt.
+    """
+    get = row.get if hasattr(row, "get") else lambda key: row[key]  # type: ignore[union-attr]
+    return ResolvedInstrument(
+        symbol=get("symbol") or "",
+        isin=get("isin"),
+        kind=get("kind") or "listed",
+        ticker=get("ticker"),
+        mic=get("mic"),
+        base=get("base"),
+        quote_currency=get("quote_currency"),
+    ).identity()
 
 
 @dataclass
@@ -162,12 +236,11 @@ class DailyCloseProvider(Protocol):
         symbol: str,
         start: str | None = None,
         *,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: Identity | None = None,
     ) -> list[dict] | None:
         """Holt Tagesschlusskurse.
 
-        **`ticker` und `mic` kommen seit T-23 mit, und das ist kein Beiwerk.**
+        **Die Identität kommt seit T-23 mit, und das ist kein Beiwerk.**
         Das Anbieter-Symbol allein genügt nicht: Die fünf US-Börsen führen
         absichtlich keinen Alias, `AAPL/XNAS` wird als ``AAPL`` gespeichert.
         Wer daraus die Börse zurückrechnen will, rät — und der Versuch hat in
@@ -175,6 +248,9 @@ class DailyCloseProvider(Protocol):
 
         Der Aufrufer **hat** die Identität; sie wegzuwerfen und danach zu
         erraten ist der Umweg. Dieselbe Entscheidung wie beim Kurs.
+
+        **Seit T-31 ist es die Union statt `ticker`/`mic`.** Ein Paar und eine
+        ISIN-only-Anleihe waren mit zwei Feldern gar nicht adressierbar.
         """
         ...
 

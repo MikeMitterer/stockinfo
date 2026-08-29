@@ -13,7 +13,14 @@ from pathlib import Path
 
 import pytest
 
-from stockinfo_plugin import NotFound, Resolution, Resolved, ResolveRequest, Unavailable
+from stockinfo_plugin import (
+    ListedIdentity,
+    NotFound,
+    Resolution,
+    Resolved,
+    ResolveRequest,
+    Unavailable,
+)
 from stockinfo_plugin.sources import FxSource, QuoteSource, Resolver
 
 from app.plugin_guard import CircuitBreaker, GuardedSource
@@ -37,7 +44,7 @@ class DemoResolver(Resolver):
         return bool(request.isin)
 
     def resolve(self, request: ResolveRequest) -> Resolution:
-        return Resolved(ticker="DEMO", mic="XTSE", isin=request.isin)
+        return Resolved(ListedIdentity(ticker="DEMO", mic="XTSE"), isin=request.isin)
 
 
 class TwoRoleSource(Resolver, QuoteSource):
@@ -410,7 +417,7 @@ def test_ein_erfolg_setzt_den_zaehler_zurueck() -> None:
         def resolve(self, request: ResolveRequest) -> Resolution:
             self.calls += 1
             if self.calls == 3:
-                return Resolved(ticker="OK", mic="XTSE")
+                return Resolved(ListedIdentity(ticker="OK", mic="XTSE"))
             return Unavailable(error="später nochmal")
 
     guarded = GuardedSource(Wackelig())
@@ -457,7 +464,7 @@ def test_halb_offen_und_reset_ohne_echte_wartezeit() -> None:
         name = "geheilt"
 
         def resolve(self, request: ResolveRequest) -> Resolution:
-            return Resolved(ticker="OK", mic="XTSE")
+            return Resolved(ListedIdentity(ticker="OK", mic="XTSE"))
 
     antwort = GuardedSource(Geheilt(), breaker).resolve(request)
 

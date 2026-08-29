@@ -31,13 +31,17 @@ from datetime import date
 
 import structlog
 
+from stockinfo_plugin.invariants import identity_problem
 from stockinfo_plugin.types import (
     DailyRequest,
     DailySeries,
     FxRate,
     FxRequest,
+    Identity,
+    IsinOnlyIdentity,
     NotFound,
     NotResponsible,
+    PairIdentity,
     Quote,
     QuoteRequest,
     Resolved,
@@ -47,8 +51,7 @@ from stockinfo_plugin.types import (
     convert,
 )
 
-
-from app.exchanges import EXCHANGES, provider_alias
+from app.exchanges import COLLECTOR_CODES, EXCHANGES, provider_alias
 from app.providers.base import EtfDetails, RawQuote, Resolution, ResolvedInstrument
 
 logger = structlog.get_logger()
@@ -105,6 +108,106 @@ class _Adapter:
         if callable(close):
             close()
 
+    def _serves(self, identity: Identity, instrument_type: str | None) -> bool:
+        """Bedient die Quelle diese Identitätsform und diese Gattung?
+
+        **Ein grober Vorfilter, keine zweite Zuständigkeitsprüfung** (T-31).
+        Er erspart der Kette die Frage an eine Quelle, die die Form gar nicht
+        kennt — die eigentliche Entscheidung bleibt `handles` am Plugin.
+
+        Der Ort ist bewusst *hier* und nicht vor dem Resolver: Eine
+        `ResolveRequest` trägt weder `kind` noch Gattung, denn beide sind das
+        **Ergebnis** der Auflösung. Für die Resolver-Rolle prüft der Vertrag
+        stattdessen die Antwort gegen die Deklaration.
+
+        Args:
+            identity: Die Identität des Papiers.
+            instrument_type: Die Gattung, falls bekannt.
+
+        Returns:
+            ``True``, wenn die Quelle gefragt werden darf.
+        """
+        source = unwrap(self._source)
+        kinds = getattr(source, "SUPPORTED_KINDS", frozenset({"listed"}))
+        if identity.kind not in kinds:
+            logger.debug(
+                "source_skipped_kind",
+                source=self.name,
+                kind=identity.kind,
+                supported=sorted(kinds),
+            )
+            return False
+
+        # Eine **unbekannte** Gattung filtert nicht: Solange niemand sie
+        # festgestellt hat, wäre das Überspringen eine Entscheidung auf der
+        # Grundlage einer Nichtangabe. Gefiltert wird nur gegen eine
+        # ausgesprochene Deklaration.
+        types = getattr(source, "SUPPORTED_TYPES", frozenset())
+        if instrument_type is None or not types:
+            return True
+        if instrument_type not in types:
+            logger.debug(
+                "source_skipped_type",
+                source=self.name,
+                instrument_type=instrument_type,
+                supported=sorted(types),
+            )
+            return False
+        return True
+
+
+def _instrument_from(answer: Resolved, *, fallback_isin: str) -> ResolvedInstrument:
+    """Die Vertragsantwort in der Sprache des Core — je Identitätsform.
+
+    **Das Anbieter-Symbol entsteht je Form verschieden**, und darum steht die
+    Weiche hier statt an jeder Verwendung:
+
+    * `listed` → `provider_alias`, die Alias-Tabelle der App.
+    * `pair` → ``{base}-{quote_currency}``; dieselbe Schreibweise, die yfinance
+      führt, und die einzige, die für ein Paar überhaupt eine ist.
+    * `isin_only` → die ISIN selbst. Ein Papier ohne Handelsplatz und ohne
+      Ticker hat kein Anbieter-Symbol; die ISIN ist das, woran es hängt.
+
+    Args:
+        answer: Die Antwort des Plugins, mit geprüfter Identität.
+        fallback_isin: Die angefragte ISIN, falls die Antwort keine trägt.
+
+    Returns:
+        Das Instrument in der Form, die der Core und die Datenbank führen.
+    """
+    identity = answer.identity
+
+    if isinstance(identity, PairIdentity):
+        return ResolvedInstrument(
+            symbol=f"{identity.base}-{identity.quote_currency}",
+            name=answer.name,
+            type=answer.instrument_type,
+            kind="pair",
+            base=identity.base,
+            quote_currency=identity.quote_currency,
+        )
+
+    if isinstance(identity, IsinOnlyIdentity):
+        return ResolvedInstrument(
+            symbol=identity.isin,
+            isin=identity.isin,
+            name=answer.name,
+            type=answer.instrument_type,
+            kind="isin_only",
+        )
+
+    definition = EXCHANGES.get(identity.mic)
+    return ResolvedInstrument(
+        symbol=provider_alias(identity.ticker, identity.mic),
+        isin=identity.isin or fallback_isin,
+        exchange=definition.name if definition else None,
+        name=answer.name,
+        type=answer.instrument_type,
+        kind="listed",
+        ticker=identity.ticker,
+        mic=identity.mic,
+    )
+
 
 def unwrap(source: object) -> object:
     """Die Quelle unter Adapter und Kapsel — **eine** Stelle, die hindurchsieht.
@@ -157,15 +260,19 @@ class QuoteAdapter(_Adapter):
             zusätzlich zu füllen hieße, dieselbe Angabe an zwei Stellen zu
             behaupten.
         """
-        if not instrument.ticker or not instrument.mic:
+        identity = instrument.identity()
+        if identity is None:
             logger.info("quote_without_identity", symbol=instrument.symbol)
             return None
 
-        answer = self._source.fetch_quote(
-            QuoteRequest(
-                ticker=instrument.ticker, mic=instrument.mic, isin=instrument.isin
-            )
-        )
+        # **Der Vorfilter — hier, nach der Auflösung.** Erst jetzt sind Form
+        # und Gattung bekannt; vor dem Resolver wären sie es nicht gewesen. Eine
+        # Quelle, die diese Form gar nicht bedient, kostet damit keine Anfrage
+        # und kein Kontingent.
+        if not self._serves(identity, instrument.type):
+            return None
+
+        answer = self._source.fetch_quote(QuoteRequest(identity=identity))
 
         if isinstance(answer, Quote):
             return RawQuote(
@@ -202,12 +309,11 @@ class DailyAdapter(_Adapter):
         symbol: str,
         start: str | None = None,
         *,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: Identity | None = None,
     ) -> list[dict] | None:
         """Die Tagesreihe in der Form, die der Core liest.
 
-        **Ticker und MIC kommen herein, sie werden nicht zurückgerechnet.**
+        **Die Identität kommt herein, sie wird nicht zurückgerechnet.**
         Runde 3 versuchte genau das und schaltete damit alle aliaslosen Börsen
         ab: Die fünf US-Plätze führen absichtlich keinen Alias, `AAPL/XNAS`
         wird als ``AAPL`` gespeichert — und ein Symbol ohne Punkt ergab
@@ -216,22 +322,22 @@ class DailyAdapter(_Adapter):
         Args:
             symbol: Das Anbieter-Symbol; nur noch für Meldungen.
             start: Frühester Tag als ISO-Datum.
-            ticker: Kanonischer Ticker.
-            mic: Börse als MIC.
+            identity: Die Identität des Papiers, in ihrer Form.
 
         Returns:
             Zeilen mit ``date``, ``close`` und ``currency``; ``None`` bei einer
             Störung, ``[]`` wenn es nichts gibt. Die Unterscheidung stammt aus
             dem Vertrag und wird hier nicht eingeebnet.
         """
-        if not ticker or not mic:
+        if identity is None:
             logger.info("daily_without_identity", symbol=symbol)
+            return None
+        if not self._serves(identity, None):
             return None
 
         answer = self._source.fetch_daily(
             DailyRequest(
-                ticker=ticker,
-                mic=mic,
+                identity=identity,
                 start=date.fromisoformat(start) if start else None,
             )
         )
@@ -450,17 +556,35 @@ class ResolverAdapter(_Adapter):
             )
             return Unavailable(error=f"{self.name}: unerwartete Antwort")
 
-        if not answer.ticker or not answer.mic:
-            logger.info("resolve_without_identity", isin=isin, source=self.name)
+        problem = identity_problem(answer.identity, COLLECTOR_CODES)
+        if problem:
+            logger.info(
+                "resolve_without_identity",
+                isin=isin,
+                source=self.name,
+                problem=problem,
+            )
             return NotFound()
 
-        definition = EXCHANGES.get(answer.mic)
-        return ResolvedInstrument(
-            symbol=provider_alias(answer.ticker, answer.mic),
-            isin=answer.isin or isin,
-            exchange=definition.name if definition else None,
-            name=answer.name,
-            type=answer.instrument_type,
-            ticker=answer.ticker,
-            mic=answer.mic,
-        )
+        # **Die Antwort gegen die Deklaration halten** (T-31). Beim Resolver
+        # ist das der einzig mögliche Ort: Eine `ResolveRequest` trägt weder
+        # `kind` noch Gattung, denn beide sind das Ergebnis der Auflösung — ein
+        # Vorfilter davor hätte nichts zu filtern gehabt.
+        #
+        # Ein Verstoß ist ein **Befund**, kein stiller Treffer: Der Host hat
+        # seine Kette auf die Zusage eingerichtet, und wer sie bricht, macht
+        # das Einrichten wertlos.
+        declared = getattr(unwrap(self._source), "SUPPORTED_KINDS", frozenset())
+        if answer.identity.kind not in declared:
+            logger.warning(
+                "plugin_delivered_undeclared_kind",
+                source=self.name,
+                kind=answer.identity.kind,
+                declared=sorted(declared),
+            )
+            return Unavailable(
+                error=f"{self.name}: liefert {answer.identity.kind}, "
+                f"deklariert {sorted(declared)}"
+            )
+
+        return _instrument_from(answer, fallback_isin=isin)
