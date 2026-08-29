@@ -177,6 +177,11 @@ Freigabefähig ist der Sammelstand trotzdem noch nicht:
    `➖` und wartet in der Auflösung auf Mike. T-31 und STATUS dokumentieren die
    Entscheidung bereits als `stock/etf/etc/crypto/bond`, ohne Index. T-38 vor
    Arbeitsbeginn auf diese Basis stellen.
+7. Der während des Reviews nachgereichte zweite Browserlauf bestätigt einen
+   weiteren Rest aus Runde 1: Vier `skipReason`-Texte je Sprache nennen
+   `justETF` fest, obwohl im CSV-Profil `metadata-file` konfiguriert ist.
+   Provider-neutral formulieren und den vollständigen Drilldown-Katalog mit
+   einer direkten DE/EN-Gegenprobe gegen eingebaute Quellennamen schützen.
 
 Evidenz: `make test` 821/259/271 grün; isolierter 404-Test reproduzierbar rot
 (`502`); CSV-Smoke 17/17 grün, aber ohne Daily-/FX-Aufruf; Dashboard-Build,

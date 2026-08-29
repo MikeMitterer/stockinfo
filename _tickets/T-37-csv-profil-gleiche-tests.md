@@ -332,6 +332,11 @@ werden falsch positiv:
    deutsche Bezeichner in den berührten Dateien und zwei neue
    `Record<string, any>`; die vollständige Liste steht im T-36-Review und in
    STATUS.md.
+5. Der nachgereichte Browserbefund ist bestätigt: Die acht lokalisierten
+   `skipReason`-Texte nennen `justETF` fest und widersprechen damit im
+   CSV-Profil der sichtbaren Quelle `metadata-file`. Die Texte müssen
+   provider-neutral werden; ein Katalogtest soll beide Sprachen vollständig
+   gegen eingebaute Quellennamen halten.
 
 Der Browsernachweis wird nicht angezweifelt; er ersetzt aber keine dauerhafte
 Ausführung der zwei fehlenden Rollen und keine Negativprobe des Validators.
