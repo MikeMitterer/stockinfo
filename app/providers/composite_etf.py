@@ -56,6 +56,8 @@ class CompositeEtfEnricher:
         *,
         exchange: str | None = None,
         currency: str | None = None,
+        identity: object | None = None,
+        instrument_type: str | None = None,
     ) -> EtfDetails | None:
         """Holt die ETF-Details von der ersten zuständigen Quelle, die liefert.
 
@@ -84,7 +86,12 @@ class CompositeEtfEnricher:
             # Symbol, justETF über die ISIN —, aber „fällt gerade nicht auf"
             # ist keine Zusage. Mit T-23 kommen weitere Quellen dahinter.
             details = enricher.fetch_etf(
-                isin, symbol=symbol, exchange=exchange, currency=currency
+                isin,
+                symbol=symbol,
+                exchange=exchange,
+                currency=currency,
+                identity=identity,
+                instrument_type=instrument_type,
             )
             if details is not None:
                 return details

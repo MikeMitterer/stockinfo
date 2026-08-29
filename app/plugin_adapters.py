@@ -455,8 +455,17 @@ class MetadataAdapter(_Adapter):
         *,
         exchange: str | None = None,
         currency: str | None = None,
+        identity: Identity | None = None,
+        instrument_type: str | None = None,
     ) -> EtfDetails | None:
         """Die Messwerte als Datensatz — **mit Umrechnung und Herkunft**.
+
+        **`identity` und `instrument_type` seit T-31** (Codex `#4`, Runde 5).
+        Ohne sie lief die Metadatenkaskade an der Fähigkeitsdeklaration
+        vorbei: Eine Coin bekam justETF-Fragen, obwohl justETF `crypto` nie
+        deklariert hat. Dass es fachlich nicht auffiel, lag an einer zweiten
+        Prüfung im Service (`instrument_type == "etf"`) — eine Regel an zwei
+        Orten, von denen nur eine die Zusage der Quelle liest.
 
         **Die Signatur ist die des Core, vollständig.** Runde 4 nahm nur
         `isin` an; jeder zuständige Pfad endete deshalb mit
@@ -479,6 +488,12 @@ class MetadataAdapter(_Adapter):
             **Unbekannte Felder gehen hier verloren** — sie aufzuheben ist
             T-26. Das ist der ehrliche Stand und keine Zusage.
         """
+        # **Der Vorfilter, jetzt auch hier** (Codex `#4`). Eine Quelle, die
+        # diese Gattung nicht deklariert hat, wird gar nicht erst gefragt —
+        # keine Anfrage, kein Kontingent, keine TER-Frage an eine Anleihe.
+        if identity is not None and not self._serves(identity, instrument_type):
+            return None
+
         readings = self._source.fetch(
             self._request(isin, symbol, exchange, currency)
         )

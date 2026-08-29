@@ -82,6 +82,8 @@ class YFinanceEtfEnricher:
         *,
         exchange: str | None = None,
         currency: str | None = None,
+        identity: object | None = None,
+        instrument_type: str | None = None,
     ) -> EtfDetails | None:
         """Holt den Fondsanbieter zu einem Papier.
 

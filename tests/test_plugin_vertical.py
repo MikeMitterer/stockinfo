@@ -28,6 +28,7 @@ from fastapi.testclient import TestClient
 
 from stockinfo_plugin import (
     ListedIdentity,
+    MetadataSource,
     PairIdentity,
     Resolved,
     Resolver,
@@ -36,7 +37,7 @@ from stockinfo_plugin import (
 
 from app.container import get_sources_config
 from app.main import app
-from app.plugin_adapters import ResolverAdapter
+from app.plugin_adapters import MetadataAdapter, ResolverAdapter
 from app.plugin_loader import ENTRY_POINT_GROUP, load_all
 from app.sources_registry import register_loaded, specs_by_name
 
@@ -663,3 +664,47 @@ def test_dieselbe_quelle_mit_deklarierter_gattung_kommt_durch() -> None:
 
     assert answer.kind == "pair"
     assert answer.type == "crypto"
+
+
+def test_eine_nicht_deklarierte_gattung_erreicht_die_metadatenquelle_nicht() -> None:
+    """**Codex `#4` aus Runde 5, als Beleg statt als Zusage.**
+
+    Die Metadatenkaskade lief bis dahin an der Fähigkeitsdeklaration vorbei:
+    `MetadataAdapter.fetch_etf` rief den Vorfilter gar nicht. Dass es fachlich
+    nicht auffiel, lag an einer **zweiten** Prüfung im Service
+    (`instrument_type == "etf"`) — eine Regel an zwei Orten, von denen nur
+    eine die Zusage der Quelle liest. Fällt die eine weg, fragt die App eine
+    Anleihe nach ihrer TER.
+
+    Geprüft wird deshalb nicht das Ergebnis, sondern **ob überhaupt gefragt
+    wurde**: Der Vorfilter soll die Anfrage sparen, nicht ihre Antwort
+    verwerfen.
+    """
+
+    class CountingEtfSource(MetadataSource):
+        name = "nur-etf"
+        api_version = 2
+        SUPPORTED_KINDS = frozenset({"listed"})
+        SUPPORTED_TYPES = frozenset({"etf"})
+
+        def __init__(self) -> None:
+            super().__init__()
+            self.asked = 0
+
+        def fetch(self, request):
+            self.asked += 1
+            return []
+
+    source = CountingEtfSource()
+    adapter = MetadataAdapter(source, "XETR")
+    listing = ListedIdentity(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983")
+
+    adapter.fetch_etf(
+        "IE00B4L5Y983", "EUNL.DE", identity=listing, instrument_type="bond"
+    )
+    assert source.asked == 0, "eine Anleihe darf die ETF-Quelle nicht kosten"
+
+    adapter.fetch_etf(
+        "IE00B4L5Y983", "EUNL.DE", identity=listing, instrument_type="etf"
+    )
+    assert source.asked == 1, "die deklarierte Gattung wird sehr wohl gefragt"

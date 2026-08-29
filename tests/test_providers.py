@@ -540,6 +540,8 @@ class _KontextabhaengigerEnricher:
         *,
         exchange: str | None = None,
         currency: str | None = None,
+        identity: object | None = None,
+        instrument_type: str | None = None,
     ) -> EtfDetails | None:
         self.fetch_kontext = (exchange, currency)
         if not exchange or not currency:
@@ -592,6 +594,8 @@ class _StubEnricher:
         *,
         exchange: str | None = None,
         currency: str | None = None,
+        identity: object | None = None,
+        instrument_type: str | None = None,
     ) -> EtfDetails | None:
         self.gefragt += 1
         return self._details

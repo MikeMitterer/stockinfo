@@ -16,6 +16,7 @@ from stockinfo_plugin.types import Unavailable
 from app.contract import required_fields
 from app.exchanges import split_symbol
 from app.models import (
+    identity_columns,
     IdentityOut,
     ListedIdentityOut,
     PairIdentityOut,
@@ -30,6 +31,7 @@ from app.providers.base import (
     RawQuote,
     ResolvedInstrument,
     declared_name,
+    identity_from_row,
 )
 
 logger = structlog.get_logger()
@@ -692,6 +694,8 @@ class QuoteService:
             symbol=response.symbol,
             exchange=response.exchange,
             currency=response.currency,
+            identity=identity_from_row(identity_columns(response.identity)),
+            instrument_type=response.type,
         )
         if details is None:
             logger.debug("etf_enrichment_skipped", isin=isin)
