@@ -119,8 +119,8 @@ def test_ein_treffer_wird_mit_ticker_und_mic_uebersetzt() -> None:
     answer = plugin.resolve(ResolveRequest(isin="IE00B3RBWM25", preferred_mic="XETR"))
 
     assert isinstance(answer, Resolved), answer
-    assert (answer.ticker, answer.mic) == ("VGWL", "XETR")
-    assert answer.isin == "IE00B3RBWM25"
+    assert (answer.identity.ticker, answer.identity.mic) == ("VGWL", "XETR")
+    assert answer.identity.isin == "IE00B3RBWM25"
 
 
 def test_ein_sammelcode_erzeugt_keinen_treffer_mit_erfundenem_mic() -> None:
@@ -184,7 +184,7 @@ def test_die_heimatboerse_wird_gefragt_wenn_die_bevorzugte_nichts_hat() -> None:
     answer = plugin.resolve(ResolveRequest(isin="CA78012H5675", preferred_mic="XETR"))
 
     assert isinstance(answer, Resolved), answer
-    assert (answer.ticker, answer.mic) == ("RY", "XTSE")
+    assert (answer.identity.ticker, answer.identity.mic) == ("RY", "XTSE")
     assert [call[1] for call in client.calls] == ["XETR", "XTSE"], (
         "erst die bevorzugte Börse, dann die Heimatbörse aus dem ISIN-Präfix"
     )

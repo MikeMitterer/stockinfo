@@ -402,8 +402,7 @@ class _SilentSync:
         symbol: str,
         start: str,
         *,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
     ) -> None:
         return None
 

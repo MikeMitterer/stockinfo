@@ -48,8 +48,8 @@ def test_ein_papier_an_der_bevorzugten_boerse(plugin: OpenFigiResolverPlugin) ->
     answer = plugin.resolve(ResolveRequest(isin="IE00B3RBWM25", preferred_mic="XETR"))
 
     assert isinstance(answer, Resolved), answer
-    assert (answer.ticker, answer.mic) == ("VGWL", "XETR")
-    assert answer.isin == "IE00B3RBWM25"
+    assert (answer.identity.ticker, answer.identity.mic) == ("VGWL", "XETR")
+    assert answer.identity.isin == "IE00B3RBWM25"
 
 
 def test_die_kaskade_auf_die_heimatboerse(plugin: OpenFigiResolverPlugin) -> None:
@@ -71,7 +71,7 @@ def test_die_kaskade_auf_die_heimatboerse(plugin: OpenFigiResolverPlugin) -> Non
     answer = plugin.resolve(ResolveRequest(isin="CA7800871021", preferred_mic="XETR"))
 
     assert isinstance(answer, Resolved), answer
-    assert (answer.ticker, answer.mic) == ("RY", "XTSE")
+    assert (answer.identity.ticker, answer.identity.mic) == ("RY", "XTSE")
 
 
 def test_ein_papier_das_keine_der_gefragten_boersen_fuehrt(

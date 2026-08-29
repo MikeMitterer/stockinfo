@@ -4,6 +4,7 @@ import pytest
 import structlog
 from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
 
+from app.models import ListedIdentityOut
 from app.exchanges import split_symbol
 from app.providers.base import EtfDetails, RawQuote, ResolvedInstrument
 from app.services.quote_service import (
@@ -367,7 +368,7 @@ def test_die_aufgeloeste_isin_gewinnt_gegen_die_des_anbieters() -> None:
 
     result = service.get_quote_by_isin("FR0000121014")
 
-    assert result.isin == "FR0000121014"
+    assert result.identity.isin == "FR0000121014"
 
 
 def test_abweichende_anbieter_isin_wird_protokolliert() -> None:
@@ -428,7 +429,7 @@ def test_ohne_aufgeloeste_isin_gilt_weiterhin_die_des_anbieters() -> None:
 
     result = service.get_quote_by_symbol("MC.PA")
 
-    assert result.isin == "CA50244Q1037"
+    assert result.identity.isin == "CA50244Q1037"
 
 
 def test_annualized_volatility_zu_wenig_daten_ist_none() -> None:
@@ -592,7 +593,9 @@ def test_nicht_zustaendige_quelle_liefert_vollstaendige_metadaten() -> None:
     # `VTI` liegt an der Arca und trägt kein Suffix — die Identität kommt hier
     # aus der gespeicherten Zeile, wie im Betrieb auch.
     result = service.get_quote_for_known(
-        "VTI", isin="US9229087690", instrument_type="etf", ticker="VTI", mic="ARCX"
+            "VTI",
+            instrument_type="etf",
+            identity=ListedIdentityOut(ticker="VTI", mic="ARCX", isin="US9229087690"),
     )
 
     assert result.metadata_complete is True
@@ -642,7 +645,9 @@ def test_etf_ohne_isin_aber_mit_waehrung_ist_beantwortbar() -> None:
     # kommt: `ARKK` trägt kein Suffix, also lässt sich aus dem Symbol allein
     # kein Handelsplatz rechnen — bei US-Papieren nie.
     result = service.get_quote_for_known(
-        "ARKK", instrument_type="etf", ticker="ARKK", mic="ARCX"
+            "ARKK",
+            instrument_type="etf",
+            identity=ListedIdentityOut(ticker="ARKK", mic="ARCX"),
     )
 
     assert result.metadata_complete is True
@@ -670,7 +675,9 @@ def test_ohne_waehrung_kommt_die_zustaendigkeitsfrage_gar_nicht_auf() -> None:
     # Ohne Währung greift schon die Core-Prüfung — der Vertrag verlangt sie.
     with pytest.raises(QuoteUnavailableError):
         service.get_quote_for_known(
-            "ARKK", instrument_type="etf", ticker="ARKK", mic="ARCX"
+            "ARKK",
+            instrument_type="etf",
+            identity=ListedIdentityOut(ticker="ARKK", mic="ARCX"),
         )
 
 
@@ -697,7 +704,7 @@ def test_die_identitaet_der_aufloesung_reist_bis_zur_speicherung_mit() -> None:
 
     result = service.get_quote_by_isin("IE00B3RBWM25")
 
-    assert (result.ticker, result.mic) == ("VGWL", "XETR")
+    assert (result.identity.ticker, result.identity.mic) == ("VGWL", "XETR")
 
 
 def test_die_herkunft_nennt_die_metadatenquelle_und_nicht_die_kursquelle() -> None:
