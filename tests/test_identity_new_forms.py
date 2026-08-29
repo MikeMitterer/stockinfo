@@ -424,3 +424,35 @@ def test_ohne_liefernde_quelle_sagt_die_anleihe_quote_unavailable(bond_chain) ->
 
     assert response.status_code == 502, response.text
     assert response.json()["code"] == "quote_unavailable", response.text
+
+
+def test_ein_quellenausfall_ist_kein_eingabefehler(tmp_path: Path, monkeypatch) -> None:
+    """**Gegenprobe zu Codex' Befund aus Runde 5.**
+
+    `BTC-EUR` ist gültig; wenn Yahoo gerade nicht antwortet, liegt das nicht
+    am Benutzer. Vorher wurde jedes nicht-`Resolved` zu einem
+    `UnresolvableSymbolError` und damit zu einem `400` mit dem Rat, das Symbol
+    anders zu schreiben — ein Rat, der bei einem Netzausfall nicht helfen kann
+    und den Benutzer an der falschen Stelle suchen lässt.
+
+    Der Unterschied ist der zwischen „du hast dich vertippt" und „wir konnten
+    gerade nicht nachsehen", und er entscheidet über 400 gegen 502.
+    """
+
+    class _DeadSearch:
+        def __call__(self, term: str):
+            raise RuntimeError("Netz weg")
+
+    client, repository = _chain(
+        str(tmp_path / "ausfall.db"),
+        _TypedQuoteSource("crypto"),
+        _real_resolver_chain(monkeypatch, _DeadSearch()),
+    )
+    try:
+        response = client.get("/quote", params={"symbol": "BTC-EUR"})
+
+        assert response.status_code == 502, response.text
+        assert response.json()["code"] == "quote_unavailable", response.text
+        assert _stored(repository, "BTC-EUR") == {}
+    finally:
+        app.dependency_overrides.clear()

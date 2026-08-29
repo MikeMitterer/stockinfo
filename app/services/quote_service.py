@@ -421,6 +421,14 @@ class QuoteService:
         # eigene Ablehnung statt des Zufallsbefunds „kein Börsensuffix" —
         # genau daran ist die Ableitung aus der Symbolform gescheitert.
         resolution = self._resolver.resolve_symbol(symbol)
+        if isinstance(resolution, Unavailable):
+            # **Ein Ausfall ist kein Eingabefehler** (Codex, Runde 5). Vorher
+            # wurde daraus `UnresolvableSymbolError` und damit ein 400 mit dem
+            # Rat, das Symbol anders zu schreiben — bei einem Netzausfall ein
+            # Rat, der nicht helfen kann und den Benutzer an der falschen
+            # Stelle suchen lässt. `BTC-EUR` ist gültig; die Quelle war es
+            # gerade nicht.
+            raise QuoteUnavailableError(f"{symbol}: {resolution.error}")
         if not isinstance(resolution, ResolvedInstrument):
             raise UnresolvableSymbolError(symbol)
         if resolution.type is not None and resolution.type not in INSTRUMENT_TYPES:

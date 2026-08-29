@@ -26,10 +26,17 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from stockinfo_plugin import ListedIdentity
+from stockinfo_plugin import (
+    ListedIdentity,
+    PairIdentity,
+    Resolved,
+    Resolver,
+    Unavailable,
+)
 
 from app.container import get_sources_config
 from app.main import app
+from app.plugin_adapters import ResolverAdapter
 from app.plugin_loader import ENTRY_POINT_GROUP, load_all
 from app.sources_registry import register_loaded, specs_by_name
 
@@ -597,3 +604,62 @@ providers:
     )
     assert missing["configured"] is False
     assert "keine bekannte Quelle" in missing["reason"], missing["reason"]
+
+
+def test_ein_resolver_ohne_typdeklaration_darf_keine_gattung_liefern() -> None:
+    """**Negative Gegenprobe zu Codex' Befund aus Runde 5.**
+
+    `ResolverAdapter._translate` schaltete die Antwortprüfung mit
+    ``and declared_types`` ausgerechnet bei der **leeren** Menge ab. Eine
+    Quelle ohne jede Deklaration durfte damit `crypto` liefern — genau das
+    Gegenteil dessen, was „nichts zugesagt" heißt.
+
+    Der Mutant ist minimal falsch: Er deklariert eine Form, aber keine
+    Gattung, und liefert eine. Alles andere an ihm stimmt.
+    """
+
+    class DeclaresNoTypes(Resolver):
+        name = "ohne-typen"
+        api_version = 2
+        SUPPORTED_KINDS = frozenset({"pair"})
+        SUPPORTED_TYPES = frozenset()
+
+        def handles(self, request) -> bool:
+            return True
+
+        def resolve(self, request):
+            return Resolved(
+                identity=PairIdentity(base="BTC", quote_currency="EUR"),
+                instrument_type="crypto",
+            )
+
+    answer = ResolverAdapter(DeclaresNoTypes(), "XETR").resolve_symbol("BTC-EUR")
+
+    assert isinstance(answer, Unavailable), (
+        "eine nicht deklarierte Gattung ist ein Befund, kein stiller Treffer"
+    )
+    assert "crypto" in answer.error
+
+
+def test_dieselbe_quelle_mit_deklarierter_gattung_kommt_durch() -> None:
+    """Die Gegenprobe zum Mutanten — sonst prüfte er nur, dass irgendetwas bricht."""
+
+    class DeclaresItsType(Resolver):
+        name = "mit-typ"
+        api_version = 2
+        SUPPORTED_KINDS = frozenset({"pair"})
+        SUPPORTED_TYPES = frozenset({"crypto"})
+
+        def handles(self, request) -> bool:
+            return True
+
+        def resolve(self, request):
+            return Resolved(
+                identity=PairIdentity(base="BTC", quote_currency="EUR"),
+                instrument_type="crypto",
+            )
+
+    answer = ResolverAdapter(DeclaresItsType(), "XETR").resolve_symbol("BTC-EUR")
+
+    assert answer.kind == "pair"
+    assert answer.type == "crypto"

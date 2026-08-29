@@ -683,10 +683,15 @@ class ResolverAdapter(_Adapter):
         # Runde 4. Ein `stock`-only-Resolver, der eine Anleihe liefert, kam
         # vorher als `bond` durch, und der Host hatte seine Kette auf etwas
         # anderes eingerichtet.
+        # **`and declared_types` stand hier und schaltete die Prüfung
+        # ausgerechnet bei der leeren Menge ab** (Codex, Runde 5). Eine Quelle
+        # ohne jede Deklaration durfte damit alles liefern — genau das
+        # Gegenteil dessen, was „nichts zugesagt" bedeutet, und dieselbe
+        # Verwechslung von *leer* und *unbekannt*, die der Vorfilter eine
+        # Ebene tiefer schon einmal gemacht hat.
         declared_types = getattr(source, "SUPPORTED_TYPES", frozenset())
         if (
             answer.instrument_type is not None
-            and declared_types
             and answer.instrument_type not in declared_types
         ):
             logger.warning(

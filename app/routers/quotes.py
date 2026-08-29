@@ -146,7 +146,17 @@ def quote_by_symbol(
             ).model_dump(),
         )
     except QuoteUnavailableError as exc:
-        raise HTTPException(status_code=502, detail=f"Kein Kurs für {symbol}") from exc
+        # Dieselbe Kennung wie auf dem ISIN-Weg: "keine Quelle konnte einen
+        # Preis feststellen" ist derselbe Sachverhalt, gleich über welche Tür
+        # gefragt wurde. Zwei Rumpfformen für eine Aussage waren schon einmal
+        # der Grund, warum die Oberfläche nur "fehlgeschlagen" zeigen konnte.
+        return JSONResponse(
+            status_code=502,
+            content=ErrorDetail(
+                code=REASON_QUOTE_UNAVAILABLE,
+                params={"identifier": symbol, "detail": str(exc)},
+            ).model_dump(),
+        )
 
 
 @router.get(
