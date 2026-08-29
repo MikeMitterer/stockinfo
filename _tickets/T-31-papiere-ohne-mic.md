@@ -198,27 +198,93 @@ class IsinOnlyIdentity:  kind: Literal["isin_only"]; isin: str
 Identity = ListedIdentity | PairIdentity | IsinOnlyIdentity
 ```
 
+Die drei Dataclasses tragen sie als **ausdrückliches Feld**, nicht als
+aufgelöste Einzelfelder:
+
+```python
+class Resolved:      identity: Identity; name: ...; instrument_type: ...
+class QuoteRequest:  identity: Identity
+class DailyRequest:  identity: Identity; start: ...; end: ...
+```
+
+`QuoteRequest.isin` entfällt damit: Die ISIN steckt in `ListedIdentity` und
+`IsinOnlyIdentity`, und ein zweites Feld daneben wäre eine zweite Wahrheit
+über dieselbe Sache.
+
 **Keine `ticker`/`mic`-Properties als Bequemlichkeit.** Sie müssten für ein
 Paar etwas erfinden, und das ist genau der Sentinel-Wert, den T-21 ausgetrieben
 hat. Aufrufer verzweigen über `kind`.
 
-Die Fähigkeitsdeklaration steht an `Source`, wo dieses Ticket sie vorsieht:
+#### Der Versionscheck greift heute nicht — und das ist derselbe Mechanismus
+
+*(Befund Codex, Runde 1. Er korrigiert eine Begründung, die ich selbst
+gegeben habe, und der Widerspruch ist lehrreich genug für einen Absatz.)*
+
+`app/plugin_loader.py` vergleicht hart (`if version != API_VERSION`), und das
+sah nach einer wirksamen Schranke aus. Sie ist keine. Drei Dinge greifen
+ineinander:
+
+1. `Source.api_version: int = API_VERSION` ist ein **Klassenattribut mit
+   Vorgabewert**. Wer nicht deklariert, erbt den jeweils aktuellen Wert.
+2. `_check()` liest ihn mit `getattr()` — der geerbte Wert ist von einem
+   selbst gesetzten nicht zu unterscheiden.
+3. `app/plugin_env.py` schreibt beim Installieren eine Schranke
+   `stockinfo-plugin-api==<Version der App>` (`_contract_constraint`). Ein
+   beigesteuertes Plugin bekommt damit **zwangsweise** das Contract-Paket der
+   App, nicht das, gegen das es gebaut wurde.
+
+Ein unverändertes Altplugin ohne eigene Deklaration erbt nach dem Upgrade
+also `2` und passiert den Check. Die Schranke prüft nichts.
+
+**Genau das war mein Argument für den Sprung — und es war falsch herum.** Ich
+habe „die eingebauten Plugins erben den neuen Wert, kostet also nichts" als
+Vorteil verkauft. Dieselbe Vererbung ist der Grund, warum die Prüfung
+danebengreift. Billig und wirkungslos waren hier eine Sache.
+
+**Die Korrektur:** Eine konkrete `Source` muss `api_version` **selbst**
+deklarieren. Der Loader weist eine fehlende oder falsche **eigene**
+Deklaration ab — geprüft wird `"api_version" in cls.__dict__` entlang der
+MRO bis unterhalb von `Source`, nicht das geerbte Attribut. Die eingebauten
+Plugins, die Beispiele, die Test-Doubles und das Contract-Kit ziehen mit und
+deklarieren ausdrücklich.
+
+Damit kostet der Sprung nicht mehr eine Zeile, sondern eine je Quelle. Er ist
+dafür das, was er zu sein vorgab.
+
+#### Die Fähigkeitsdeklaration — grober Vorfilter, mehr nicht
 
 ```python
 SUPPORTED_KINDS: frozenset[str] = frozenset({"listed"})
-SUPPORTED_TYPES: frozenset[str] | None = None   # None = keine Einschränkung
+SUPPORTED_TYPES: frozenset[str] = frozenset()   # leer = nichts zugesagt
 ```
 
-Die Vorgabe ist `{"listed"}` und nicht „alles". Ein Plugin, das gegen Vertrag
-1 gebaut wurde, konnte nur Listings; die Vorgabe sagt damit die Wahrheit über
-einen Autor, der nichts erklärt — und der Host überspringt die Quelle, statt
-ihr eine Coin vorzulegen.
+Die Vorgabe `{"listed"}` bleibt: Ein Plugin, das gegen Vertrag 1 gebaut
+wurde, konnte nur Listings, und die Vorgabe sagt damit die Wahrheit über
+einen Autor, der nichts erklärt.
 
-`app/plugin_loader.py` vergleicht bereits hart (`if version != API_VERSION`).
-Ein Plugin nach Vertrag 1 wird also abgewiesen, sobald die Zahl steigt; nur
-die Meldung braucht einen Satz, der sagt, *was* sich geändert hat.
+**Kein neues Subsystem.** Die beiden Mengen sind ein *grober Vorfilter* an
+der Quelle: Der Host überspringt eine Quelle, die die `kind` der Anfrage gar
+nicht bedient, bevor er sie überhaupt fragt. Die eigentliche Entscheidung
+bleibt das vorhandene `handles(request)` **je Rolle** — es kennt die konkrete
+Anfrage, der Vorfilter nur die Gattung. Zwei Ebenen, jede dort, wo das Wissen
+sitzt; die untere ist bereits gebaut und wird nicht ersetzt.
+
+**`SUPPORTED_TYPES` bekommt keinen `None`-Wert mehr.** `None` hätte „alle
+heutigen und künftigen Typen" bedeutet — eine Zusage, die ein Autor nie
+gegeben hat und die bei jedem neuen Katalogeintrag stillschweigend wächst.
+Das ist dieselbe stille Annahme, gegen die T-38 geschrieben wurde. Eine leere
+Menge sagt stattdessen „nichts zugesagt", und die eingebauten Quellen
+deklarieren ihre Typen ausdrücklich.
 
 ### Stufe 2 · Datenbank
+
+**Die `CHECK`-Klausel muss die Belegung ausschließen, nicht nur verlangen.**
+*(Befund Codex, Runde 1.)* Mein erster Entwurf prüfte je Form nur, was da
+sein **muss**. Eine `listed`-Zeile hätte dann zusätzlich `base` und
+`quote_currency` tragen dürfen, eine `pair`-Zeile obendrein einen `ticker` —
+und genau eine solche halbe Doppelidentität ist der Zustand, den dieses
+Ticket unmöglich machen soll. Jede Form nennt darum auch, was sie **nicht**
+haben darf:
 
 ```sql
 kind           TEXT NOT NULL DEFAULT 'listed',
@@ -227,16 +293,29 @@ quote_currency TEXT,
 ticker         TEXT,          -- wieder nullable
 mic            TEXT,          -- wieder nullable
 CHECK (
-  (kind = 'listed'    AND ticker IS NOT NULL AND mic IS NOT NULL) OR
+  (kind = 'listed'    AND ticker IS NOT NULL AND mic IS NOT NULL
+                      AND base IS NULL AND quote_currency IS NULL) OR
   (kind = 'pair'      AND base IS NOT NULL AND quote_currency IS NOT NULL
-                      AND mic IS NULL AND isin IS NULL) OR
-  (kind = 'isin_only' AND isin IS NOT NULL AND mic IS NULL)
+                      AND ticker IS NULL AND mic IS NULL AND isin IS NULL) OR
+  (kind = 'isin_only' AND isin IS NOT NULL
+                      AND ticker IS NULL AND mic IS NULL
+                      AND base IS NULL AND quote_currency IS NULL)
 )
 ```
 
-Die Eindeutigkeit liegt heute auf `UNIQUE(ticker, mic)` und liefe damit für
-zwei der drei Formen leer. Sie wird zu drei **partiellen** Indizes — je Form
-einer, `WHERE kind = …`.
+**Die Eindeutigkeit — drei partielle Indizes reichen nicht.** Sie liegt heute
+auf `UNIQUE(ticker, mic)`, das für zwei der drei Formen leerliefe. Je Form
+kommt darum ein partieller Index (`WHERE kind = …`). Das ersetzt aber zwei
+bestehende Zusagen **nicht**, und beide bleiben ausdrücklich erhalten:
+
+- **`isin` bleibt global eindeutig**, über alle `kind` hinweg. Heute steht das
+  als Spalten-`UNIQUE` plus `idx_instruments_isin` im Schema. Ein partieller
+  Index nur für `isin_only` ließe dieselbe ISIN einmal als `listed` und einmal
+  als `isin_only` zu — zwei Zeilen für dasselbe Papier, in zwei
+  Identitätsformen. Beim Tabellen-Neuaufbau muss die globale Zusage
+  mitgeschrieben werden; sie fällt sonst still weg.
+- **`listing_id` bleibt global eindeutig** (`idx_instruments_listing_id`). Sie
+  ist die opake Kennung eines Listings und von `kind` unabhängig.
 
 ### Stufe 3 · Die App-Grenze
 
@@ -251,6 +330,39 @@ einer, `WHERE kind = …`.
 | Metadatenkaskade | läuft nur für `etf`/`etc` — kein justETF für eine Coin, keine TER-Frage an eine Anleihe (Matrix `#8`) |
 
 `app/resolver.py` und die eingebauten Plugins ziehen mit.
+
+#### Die Union endet nicht am Repository — sie muss bis nach draußen
+
+*(Befund Codex, Runde 1.)* Mein erster Entwurf hörte bei Vertrag, Datenbank
+und Adapter auf. Das hätte ein System ergeben, das eine Anleihe **speichern**
+und nicht **ausliefern** kann. Gemessen an `app/models.py`:
+
+```python
+class QuoteResponse:      ticker: str;  mic: str          # Pflicht, nicht nullable
+class InstrumentSummary:  ticker: str;  mic: str;  listing_id: str
+```
+
+Beide sind seit `core_version 2.0.0` ausdrücklich als Pflicht **zugesagt**,
+und `QuoteService._build` lässt eine Antwort ohne Identität schon vorher
+scheitern. Ein `BTC-EUR` und eine `isin_only`-Anleihe fielen dort also um —
+und der einzige Weg, sie doch durchzubekommen, wäre ein erfundener Ticker
+oder MIC. Das ist der Sentinel-Wert, den T-21 ausgetrieben hat, nur am
+anderen Ende der App.
+
+Die Union muss darum durch die ganze Kette getragen werden:
+
+| Schicht | was zu tun ist |
+|---|---|
+| `app/repository.py`, Quote-Cache | lesen und schreiben über `kind`; die Identitätsspalten je Form, keine Sammelabfrage auf `(ticker, mic)` |
+| `app/models.py` | `QuoteResponse` und `InstrumentSummary` tragen die Identität als Union. `ticker`/`mic` bleiben, wo sie wahr sind (`listed`), und sind für die anderen Formen nicht gesetzt — **nicht** mit einem Ersatzwert gefüllt |
+| REST/OpenAPI | `contract/openapi-core-snapshot.json` und die Fixtures ziehen nach; die Änderung ist am veröffentlichten Schema sichtbar, nicht nur im Artefakt |
+| `dashboard/src/types.ts` und Darstellung | dieselbe Union; eine Coin zeigt Paar statt Börse, eine `isin_only`-Anleihe ihre ISIN. Kein leeres Feld, das wie ein Fehler aussieht |
+
+**Die Nahtstelle zu T-38 ist hier und sie ist scharf:** Dass `QuoteResponse`
+die Identität *als Union* führt, ist T-31. Dass `name` und `type` darin
+**Pflicht** werden und `GET /fields` das ausweist, ist T-38. Die
+`core_version` steigt einmal, in T-38 — hier wird sie vorbereitet, nicht
+gesetzt.
 
 ### Was dieses Ticket **nicht** tut
 
@@ -272,11 +384,22 @@ Vertrags, nicht seine Vorbedingung.
    entfallen dadurch nicht — nur der Umzugsschritt.
 2. **Der Smoke-Profilname wird `yaml`** statt `csv` (Umsetzung in T-37).
 3. **Beide Versionssprünge werden gemacht**, `API_VERSION` 1→2 und
-   `core_version` 2.1.0→3.0.0. Abgewogen gegen „wir sind in der
-   Entwicklungsphase, und `plugin_api` steht ohnehin auf `0.2.0`": Der Sprung
-   kostet je eine Zeile — `Source.api_version` hat `API_VERSION` als
-   Vorgabewert, die eingebauten Plugins erben ihn also —, und er ist das
-   einzige, was T-38 `#3` und `#7` überhaupt prüfbar macht.
+   `core_version` 2.1.0→3.0.0. Abgewogen gegen Mikes Einwand „wir sind in der
+   Entwicklungsphase, und `plugin_api` steht ohnehin auf `0.2.0`" — ein
+   berechtigter Einwand, denn `0.x` sagt die Unreife bereits. Der Unterschied:
+   `0.2.0` sagt *„rechne mit Brüchen"*, `API_VERSION` sagt *„dieses Plugin
+   kann hier nicht laufen"*. Das ist kein Reifegrad, sondern ein
+   Dialekt-Token, und nur das zweite lässt sich prüfen.
+
+   **Die Begründung, die ich dabei gegeben habe, war falsch.** Ich habe
+   argumentiert, der Sprung koste eine Zeile, weil die eingebauten Plugins
+   `api_version` erben. Codex hat in Runde 1 gezeigt, dass genau diese
+   Vererbung die Prüfung wirkungslos macht (siehe *Der Versionscheck greift
+   heute nicht*). Der Sprung kostet mit der Korrektur **eine Deklaration je
+   Quelle** statt einer Zeile insgesamt. Die Entscheidung bleibt trotzdem
+   stehen: Nicht weil er billig ist, sondern weil er ohne die Korrektur eine
+   Zusage ohne Deckung wäre — und eine Zahl, die etwas anderes vorgibt zu
+   sein, ist genau das, was dieses Ticket austreibt.
 
 ### Naming-Mitzieher — gemessen, nicht geraten
 
