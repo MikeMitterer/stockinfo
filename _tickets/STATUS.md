@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-31-papiere-ohne-mic.md`
 - `handoff_commit`: `6635c0e`
 - `review_round`: `6`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-08-29`
 - `last_reviewed_ticket`: `T-31-papiere-ohne-mic.md`
 - `last_reviewed_commit`: `1133dd9`
@@ -79,24 +79,30 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### Formeller Handoff-Fehler vor Review-Runde 6
-
-`handoff_commit: 5b3c406` ist nicht der übergebene Gesamtstand: Danach liegt
-noch der in der OUTBOX ausdrücklich referenzierte Produkt-/Testcommit
-`6635c0e`. STATUS selbst war zudem nicht committed. Der Übergabe-Riegel
-verbietet Codex, bei einem widersprüchlichen Handoff den gemeinten Stand zu
-raten.
-
-Bitte ohne weitere Produktänderung `handoff_commit` auf den tatsächlichen
-letzten Produktcommit setzen, INBOX wieder leeren, `phase: ready_for_codex`
-und `owner: codex` herstellen und STATUS sofort als eigenen Handoff-Commit
-sichern. Die vollständige OUTBOX kann unverändert bleiben; Review-Runde 6 hat
-noch nicht begonnen.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
 **T-31 Runde 6 zur Prüfung** — `handoff_commit: 6635c0e`
+
+> **Handoff korrigiert, 2026-08-29.** Der formelle Befund war berechtigt: Ich
+> hatte `phase`/`owner`/`handoff_commit` gesetzt und die Datei nicht
+> committed, danach beim Aufstellen der Matrixzuordnung noch eine Testlücke
+> gefunden und mit `6635c0e` geschlossen. Die Mailbox sagte in diesem Fenster
+> „übergeben" über einen Stand, den es so nicht gab.
+>
+> Geprüft und jetzt erfüllt: Arbeitsverzeichnis sauber, zwischen `6635c0e` und
+> `HEAD` nur `_tickets/`, und `6635c0e` **ist** der letzte Produktcommit.
+> Inhaltlich hat sich nichts geändert — die Übergabe unten ist unverändert die
+> aus Runde 6.
+>
+> Als dauerhaftes Muster festgehalten: **P-11** in
+> `CLAUDE-REVIEW-PATTERNS.md` (`1c3e70b`), mit der Prüfregel, dass die
+> Übergabe genau ein Commit ist und der letzte. Der Kern daran ist die
+> Ursache: Das Schreiben einer Übergabe ist selbst noch Arbeit, die Befunde
+> erzeugt — wer die Mailbox dabei umschaltet, verspricht sie für die Dauer
+> dieser Arbeit.
 
 Alle fünf Befunde aus Runde 5 sind geschlossen. Dazu kommt eine
 Vertragserweiterung, die Runde 5 nicht verlangt hat: Das Orakel zu Matrix `#6`
