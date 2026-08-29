@@ -39,6 +39,14 @@ Claude commitet vor der Übergabe die Produktänderungen, beschreibt sie in
 danach keinen Produktcode mehr. Ein nachfolgender Commit darf ausschließlich
 Kommunikations- oder Ticketdateien enthalten.
 
+`ready_for_codex` ist **keine Zwischenfrage**. Ist der Sachverhalt im aktiven
+Ticket bereits entschieden, leitet Claude die Implementierung daraus ab und
+bleibt bei `claude_working`, `owner: claude`. Fehlt tatsächlich eine
+Produktentscheidung, gilt `blocked`, `owner: mike`. Ein unfertiger
+Produktzwischenstand wird weder durch einen vorläufigen Commit noch durch eine
+Frage an Codex zu einer Review-Übergabe; `handoff_commit` und `review_round`
+bleiben bis zur vollständigen Übergabe auf dem zuletzt abgeschlossenen Stand.
+
 Codex prüft nur `ready_for_codex`. Nach den Vorbedingungen setzt Codex
 `codex_reviewing`. Codex verändert im Review grundsätzlich keinen Produktcode;
 die eng begrenzte Selbstheilung unten ist die einzige Ausnahme. Die
@@ -335,6 +343,67 @@ unabhängig von grünen Tests ein `changes_requested`: entfernen und auf den
 schlanken Standard zurückführen. Nur wenn der Standard nachweislich unmöglich
 ist und dafür eine Produktentscheidung fehlt, wird an Mike blockiert.
 
+## Vertical-Acceptance-Riegel — erst der Nutzerweg, dann die Fläche
+
+*(Produktentscheidung Mike, 2026-08-29, nach T-31 Runde 4.)*
+
+Der Riegel gilt, sobald ein Ticket eine neue oder geänderte Fachregel durch
+mehr als eine Produktschicht trägt — etwa Eingang, Service, Persistenz und UI.
+Er ergänzt TDD und die Verify-Matrix; er baut kein eigenes Test-Subsystem.
+
+### Vor dem ersten Produktedit
+
+1. Das Ticket nennt die **kleinste Zahl entscheidender Akzeptanzfälle** am
+   öffentlichen Eintrittspunkt. Jeder Fall beschreibt Eingabe, beobachtbares
+   Ergebnis und den fachlich falschen Gegenfall. Ein Test, der ein bereits
+   fertig gebautes Domainobjekt hinter der zu prüfenden Erkennung einspeist,
+   gilt nicht als Beleg für den Eintrittsweg.
+2. Für jeden neuen Unterschied läuft mindestens ein Akzeptanztest zuerst
+   **rot**. Die OUTBOX nennt den Test und den beobachteten roten Grund. Der
+   Test darf klein und mit normalen Fakes gebaut sein; entscheidend ist, dass
+   er die echte Produktkette bis zur behaupteten Grenze aufruft.
+3. Danach entsteht zuerst **ein dünner vertikaler Pfad** vom öffentlichen
+   Eingang bis zum Ergebnis. Horizontale Verbreiterung auf weitere Rollen,
+   Adapter, Artefakte oder UI-Varianten beginnt erst, wenn dieser Pfad grün ist.
+
+### Während der Umsetzung
+
+4. Ändert das Ticket Schema, Konfiguration, Installation, Loader oder
+   Startzustand, gehört ein Lauf auf **frischem Zustand** zum Pflicht-Gate:
+   leere Datenbank beziehungsweise neues Volume, normaler Produktstart und
+   mindestens eine echte Operation mit der neuen Form. Isoliertes SQL oder
+   ein direkt konstruierter Repository-Wert genügt nicht.
+5. Jede neue Schranke oder Invariante bekommt einen **negativen Mutanten**:
+   eine minimal falsche Implementierung oder Quelle, die ausschließlich die
+   neue Regel verletzt. Der benannte Test muss daran rot werden. Das ist ein
+   normaler Testfall, kein Mutationstest-Framework.
+6. Berührt der geplante Diff mehr als drei Produktschichten oder ungefähr
+   25–30 Produktdateien, ist das ein **Breitenalarm**, keine starre Grenze.
+   Claude stoppt vor weiterer Flächenarbeit und hält fest, welcher dünne Pfad
+   bereits grün ist. Fehlt er, wird der Rest neu geschnitten; Dateizahl oder
+   grüne Gesamttestzahl ersetzen diese Begründung nicht.
+
+### Vor der Übergabe
+
+7. Die OUTBOX ordnet jede offene Verify-Zeile einem konkreten Orakel zu:
+   `Matrix # → Test/Browser-Szenario → Ergebnis`. Eine Gesamtsumme wie „800
+   Tests grün" ist nur Zusatzinformation. Fehlt der konkrete Beleg, bleibt die
+   AI-Zelle `⚠️`, `◑` oder `➖`.
+8. Kommentare, Docstrings, Typen und Snapshots sind Mitzieher, kein
+   Verhaltensbeleg. Eine Behauptung „gebaut" braucht zuerst den ausführbaren
+   Pfad und sein Orakel.
+
+**Riegel beim Reviewer:** Codex sucht die entscheidenden Akzeptanzfälle zuerst
+und prüft mit einem kleinen Gegenlauf oder Mutanten, ob sie den alten/falschen
+Zustand wirklich unterscheiden. Fehlen öffentlicher Eintritt, Frischstart,
+negativer Mutant oder Matrix-Zuordnung, ist das unabhängig von grünen
+Gesamtsuiten `changes_requested`.
+
+Wird dieser Riegel während einer bereits laufenden Runde eingeführt, muss
+Claude keinen Produktstand künstlich zurückdrehen. Vor der nächsten Übergabe
+müssen die entscheidenden Tests jedoch nachweislich am alten beziehungsweise
+minimal falschen Pfad rot und am neuen Pfad grün gewesen sein.
+
 ## DRY-Prüfguard
 
 DRY ist eine **eigene Abnahmebedingung** und darf nicht still unter dem
@@ -390,7 +459,7 @@ Ausstieg wird der Loop gelöscht; dieser Abschnitt hält ihn wiederherstellbar.
 ```text
 /loop 5m Du bist Claude, der Implementierer im StockInfo-Board. Beachte CLAUDE.md und die Skills task-verification-workflow, code-standards, git-conventions.
 
-1. Lies _tickets/STATUS.md, _tickets/CODEX-REVIEW-AUTOMATION.md und _tickets/CLAUDE-REVIEW-PATTERNS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis. Pruefe vor jeder Arbeit: ticket muss exakt priority_ticket entsprechen und in priority_chain stehen. Bei Abweichung nichts implementieren, portfolio_mismatch melden und Schluss. Pruefe vor jedem Entwurf und vor dem ersten Produktedit ausserdem den Testinfrastruktur-Riegel: Standard sind normale Unit-Tests plus echte Online-Integrationstests ueber vorhandene Sprach-, Bibliotheks- und Produkt-APIs. Record/Replay, Cassettes oder Mitschnitte, eigene Transport-/Socket-/Freshness-/CLI-/Testplugin-Infrastruktur sind ohne den datierten Ausnahmeblock von Mike im aktiven Ticket verboten. Ist eine Ausnahme wirklich noetig, vor Entwurf und Code mit phase: blocked und owner: mike stoppen; sie niemals aus Robustheit, CI oder Reproduzierbarkeit ableiten.
+1. Lies _tickets/STATUS.md, _tickets/CODEX-REVIEW-AUTOMATION.md und _tickets/CLAUDE-REVIEW-PATTERNS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis. Pruefe vor jeder Arbeit: ticket muss exakt priority_ticket entsprechen und in priority_chain stehen. Bei Abweichung nichts implementieren, portfolio_mismatch melden und Schluss. Pruefe vor jedem Entwurf und vor dem ersten Produktedit ausserdem den Testinfrastruktur-Riegel und den Vertical-Acceptance-Riegel. Standard sind normale Unit-Tests plus echte Online-Integrationstests ueber vorhandene Sprach-, Bibliotheks- und Produkt-APIs. Record/Replay, Cassettes oder Mitschnitte, eigene Transport-/Socket-/Freshness-/CLI-/Testplugin-Infrastruktur sind ohne den datierten Ausnahmeblock von Mike im aktiven Ticket verboten. Ist eine Ausnahme wirklich noetig, vor Entwurf und Code mit phase: blocked und owner: mike stoppen; sie niemals aus Robustheit, CI oder Reproduzierbarkeit ableiten. Bei einem mehrschichtigen Fachumbau zuerst die entscheidenden oeffentlichen Akzeptanzfaelle rot belegen, danach einen duennen vertikalen Pfad gruen bauen; Frischstart, negativer Mutant und Matrix-zu-Orakel-Zuordnung sind vor der Uebergabe Pflicht.
 2. Ist `owner` nicht `claude`: veraendere keine Datei, antworte in einer Zeile mit Phase und Owner, Schluss.
 3. Bei `phase: changes_requested`: Arbeite die Findings aus INBOX -> Claude der Reihe nach ab, schwerste zuerst. Jedes Finding einzeln verifizieren statt der Zusammenfassung glauben; behauptete Vollstaendigkeit mit rg belegen. Bei wiederholter Entwurfsnacharbeit gilt die Konvergenzpruefung dieses Dokuments: ungefaehr drei erfolglose Runden sind ein Richtwert, keine harte Grenze. Ist eine weitere punktuelle Runde konkret und voraussichtlich abschliessend, begruende das mit dem vollstaendigen Restumfang in der OUTBOX. Verlangt das Review Rebaseline oder Scope-Verkleinerung, korrigiere nicht weiter lokal, sondern konsolidiere beziehungsweise schneide neu. Vor dem ersten Edit auf einem Feature-Branch `t-NN-<slug>` sein. Danach relevante Pytests, das Ticket-Smoke-Script `./_tickets/T-*.sh --run` und `make test` laufen lassen und die Ergebnisse mit Zahlen nennen. Dann genau EIN Uebergabe-Commit, INBOX leeren, Ergebnis nach OUTBOX -> Codex, `review_round` +1, `phase: ready_for_codex`, `owner: codex`, `updated_at` auf heute. Danach keinen Produktcode mehr anfassen.
 4. Bei `phase: approved`: Ticket NICHT nach solved/ verschieben, das macht Mike. Nur zum naechsten Element aus priority_chain wechseln, priority_ticket und ticket gemeinsam setzen, review_round fuer das neue Ticket auf 0 setzen — die 1 entsteht erst beim Hochzaehlen in Schritt 3, wenn die erste Uebergabe tatsaechlich herausgeht —, eigener Branch vor dem ersten Edit, phase: claude_working. War das freigegebene Ticket das letzte Element, nichts Neues beginnen: phase: portfolio_review, owner: mike; Mike braucht die Gate-vs-Follow-up-Einordnung.

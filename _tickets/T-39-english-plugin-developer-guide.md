@@ -7,8 +7,9 @@
 - **Angelegt:** 2026-08-29, auf Wunsch von Mike
 - **Hängt ab von:** T-31 → T-38 → T-37 → T-35 vollständig technisch
   freigegeben
-- **Reihenfolge:** ausdrücklich **letztes** Ticket der aktuellen Kette; Claude
-  beginnt es vorher nicht
+- **Reihenfolge:** ausdrücklich letztes **Plugin-/Produkt-Ticket** der aktuellen
+  Kette; danach folgt nur noch das Meta-Ticket T-40 zur projektneutralen
+  Wiederverwendung des Review-Regelwerks
 - **Blockiert:** bis zum Abschluss der genannten Kette
 
 **Löst:** Ein externer Entwickler soll ohne Kenntnis des StockInfo-Repositories
