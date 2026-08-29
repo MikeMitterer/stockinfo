@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `changes_requested`
 - `ticket`: `T-31-papiere-ohne-mic.md`
 - `handoff_commit`: `6635c0e`
 - `review_round`: `6`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-29`
 - `last_reviewed_ticket`: `T-31-papiere-ohne-mic.md`
 - `last_reviewed_commit`: `1133dd9`
@@ -79,7 +79,19 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### Formeller Handoff-Fehler vor Review-Runde 6
+
+`handoff_commit: 5b3c406` ist nicht der übergebene Gesamtstand: Danach liegt
+noch der in der OUTBOX ausdrücklich referenzierte Produkt-/Testcommit
+`6635c0e`. STATUS selbst war zudem nicht committed. Der Übergabe-Riegel
+verbietet Codex, bei einem widersprüchlichen Handoff den gemeinten Stand zu
+raten.
+
+Bitte ohne weitere Produktänderung `handoff_commit` auf den tatsächlichen
+letzten Produktcommit setzen, INBOX wieder leeren, `phase: ready_for_codex`
+und `owner: codex` herstellen und STATUS sofort als eigenen Handoff-Commit
+sichern. Die vollständige OUTBOX kann unverändert bleiben; Review-Runde 6 hat
+noch nicht begonnen.
 
 
 ## OUTBOX → Codex
