@@ -182,11 +182,11 @@ def test_beide_ladewege_landen_in_derselben_registry(volume: Path) -> None:
 
 
 @pytest.mark.parametrize(
-    ("resolver", "woher"),
+    ("resolver", "load_path"),
     [("canada-file", "Entry-Point"), ("local-file", "Datei im Volume")],
 )
 def test_ein_plugin_beantwortet_eine_echte_rest_anfrage(
-    client: TestClient, volume: Path, resolver: str, woher: str
+    client: TestClient, volume: Path, resolver: str, load_path: str
 ) -> None:
     """**Der vertikale Lauf** — und er läuft zweimal, einmal je Ladeweg.
 
@@ -208,11 +208,11 @@ def test_ein_plugin_beantwortet_eine_echte_rest_anfrage(
 
     answer = client.post("/instruments/intake", json={"identifier": "CA78012H5675"})
 
-    assert answer.status_code in (200, 201), f"{woher}: {answer.text}"
+    assert answer.status_code in (200, 201), f"{load_path}: {answer.text}"
     body = answer.json()
-    assert body["ticker"] == "RY", woher
-    assert body["mic"] == "XTSE", woher
-    assert body["name"] == "Royal Bank of Canada", woher
+    assert body["ticker"] == "RY", load_path
+    assert body["mic"] == "XTSE", load_path
+    assert body["name"] == "Royal Bank of Canada", load_path
 
 
 def test_die_eingebauten_quellen_nehmen_denselben_weg(volume: Path) -> None:
@@ -290,7 +290,7 @@ providers:
     _restart_chains()
 
     entries = client.get("/sources").json()["sources"]
-    unusable = [e for e in entries if e["name"] == "gibt-es-nicht"]
+    unusable = [entry for entry in entries if entry["name"] == "gibt-es-nicht"]
 
     assert unusable, "der konfigurierte Name fehlt in der Auskunft"
     assert unusable[0]["configured"] is False
@@ -311,11 +311,11 @@ def test_die_tagesreihe_erreicht_den_anbieter_auch_ohne_alias() -> None:
     from app.plugin_adapters import DailyAdapter
     from app.plugins.yfinance_quotes import YFinancePlugin
 
-    gefragt: list[str] = []
+    asked: list[str] = []
 
     class Binding:
         def fetch_daily_closes(self, symbol: str, start: str | None = None):
-            gefragt.append(symbol)
+            asked.append(symbol)
             return [{"date": "2026-01-03", "close": 1.0, "currency": "USD"}]
 
     adapter = DailyAdapter(YFinancePlugin(provider=Binding()), "XETR")
@@ -323,7 +323,7 @@ def test_die_tagesreihe_erreicht_den_anbieter_auch_ohne_alias() -> None:
     without_alias = adapter.fetch_daily_closes("AAPL", ticker="AAPL", mic="XNAS")
     with_alias = adapter.fetch_daily_closes("EUNL.DE", ticker="EUNL", mic="XETR")
 
-    assert gefragt == ["AAPL", "EUNL.DE"], (
+    assert asked == ["AAPL", "EUNL.DE"], (
         "beide Börsen müssen den Anbieter erreichen — vorher war es keine"
     )
     assert without_alias and with_alias
@@ -459,7 +459,7 @@ def test_ein_lesezugriff_baut_keine_einzige_quelle(counted_chain) -> None:
     entries = describe_chain("quotes", config, Settings())
 
     assert built == [], "das Lesen hat eine Quelle konstruiert"
-    assert [e.name for e in entries] == ["gezaehlt"]
+    assert [entry.name for entry in entries] == ["gezaehlt"]
     assert entries[0].configured is False, (
         "ungebaut heißt ungeprüft — vorher stand hier ein spekulatives true"
     )
@@ -482,7 +482,7 @@ def test_zweimal_bauen_liefert_dieselben_objekte(counted_chain) -> None:
     second = build_chain("quotes", config, Settings())
 
     assert built == [1], f"zweimal gebaut: {len(built)} Konstruktionen"
-    assert [id(x) for x in first] == [id(x) for x in second]
+    assert [id(source) for source in first] == [id(source) for source in second]
 
 
 def test_das_herunterfahren_schliesst_jede_quelle_genau_einmal(
@@ -504,7 +504,7 @@ def test_das_herunterfahren_schliesst_jede_quelle_genau_einmal(
 
     close_all()
 
-    assert instances, "es wurde gar nichts built"
+    assert instances, "es wurde gar nichts gebaut"
     for source in instances:
         assert unwrap(source).closed == 1, "nicht oder mehrfach geschlossen"
 
@@ -520,7 +520,7 @@ def test_ein_gescheitertes_paket_kostet_nicht_die_gesunde_kette(
     Quelle — und der Betreiber sieht im Protokoll, was gefehlt hat.
 
     Bis Runde 5 endete das anders: Der fehlgeschlagene Installationslauf ließ
-    den Kettennamen unusable werden, `build_chain` warf, und der Lifespan riss
+    den Kettennamen unbrauchbar werden, `build_chain` warf, und der Lifespan riss
     den ganzen Prozess mit. Wer ein Plugin eintrug, dessen Index gerade nicht
     erreichbar war, verlor seine Installation — statt dieses einen Plugins.
 
@@ -570,18 +570,18 @@ providers:
 
     entries = {
         entry["name"]: entry
-        for rolle in sources.values()
-        if isinstance(rolle, list)
-        for entry in rolle
+        for role in sources.values()
+        if isinstance(role, list)
+        for entry in role
     }
 
     assert "local-file" in entries, f"die gesunde Quelle fehlt: {sorted(entries)}"
     assert "prices-file-quote" in entries, "der gesunde Fallback fehlt"
 
-    fehlend = entries.get("aus-dem-paket")
-    assert fehlend is not None, (
+    missing = entries.get("aus-dem-paket")
+    assert missing is not None, (
         "der Name aus dem gescheiterten Paket wird verschwiegen — "
         f"gemeldet wurden: {sorted(entries)}"
     )
-    assert fehlend["configured"] is False
-    assert "keine bekannte Quelle" in fehlend["reason"], fehlend["reason"]
+    assert missing["configured"] is False
+    assert "keine bekannte Quelle" in missing["reason"], missing["reason"]

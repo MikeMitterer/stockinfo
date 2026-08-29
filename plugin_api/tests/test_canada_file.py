@@ -102,13 +102,13 @@ def test_eine_tabelle_ohne_gattungsspalte_bleibt_gueltig(tmp_path: Path) -> None
     und sie ist da, aber leer. Eine leere Zelle wird zu ``None`` und nicht zu
     ``""`` — ein Leerstring wäre eine Gattung, die es nicht gibt.
     """
-    alt = tmp_path / "ohne-spalte.csv"
-    alt.write_text(
+    legacy_file = tmp_path / "ohne-spalte.csv"
+    legacy_file.write_text(
         "isin;ticker;mic;name\nCA78012H5675;RY;XTSE;Royal Bank of Canada\n",
         encoding="utf-8",
     )
 
-    without_column = CanadaFileResolver({"path": str(alt)}).resolve(
+    without_column = CanadaFileResolver({"path": str(legacy_file)}).resolve(
         ResolveRequest(isin="CA78012H5675")
     )
     assert without_column.ticker == "RY", "die Zeile muss trotzdem auflösen"

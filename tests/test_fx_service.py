@@ -53,7 +53,7 @@ def test_miss_holt_live_und_speichert(repo: QuoteRepository) -> None:
 
 def test_fetch_fehler_mit_cache_liefert_stale(repo: QuoteRepository) -> None:
     repo.save_fx_rate("EUR", "USD", 1.10, "2020-01-01T00:00:00+00:00",
-                      "2020-01-01T00:00:00+00:00")  # uralt → nicht frisch
+                      "2020-01-01T00:00:00+00:00")  # uralt → nicht fresh
     provider = _FakeFx(None)  # Fetch schlägt fehl
     service = CachedFxService(provider, repo, ttl_hours=1)
     result = service.get_rate("EUR", "USD")
@@ -126,15 +126,15 @@ def test_die_herkunft_ueberlebt_den_cache(repo: QuoteRepository) -> None:
     provider = FileFxSource(0.6412)
     service = CachedFxService(provider, repo, ttl_hours=6)
 
-    frisch = service.get_rate("CAD", "EUR")
-    assert frisch.source == "fx-file"
-    assert frisch.cached is False
+    fresh = service.get_rate("CAD", "EUR")
+    assert fresh.source == "fx-file"
+    assert fresh.cached is False
 
     # Zweiter Aufruf: aus dem frischen Cache — und **derselbe** Lieferant.
-    aus_dem_cache = service.get_rate("CAD", "EUR")
-    assert aus_dem_cache.cached is True, "der zweite Aufruf holt nicht neu"
+    from_cache = service.get_rate("CAD", "EUR")
+    assert from_cache.cached is True, "der zweite Aufruf holt nicht neu"
     assert provider.calls == 1, "es wurde doch neu geholt"
-    assert aus_dem_cache.source == "fx-file", (
+    assert from_cache.source == "fx-file", (
         "die Herkunft ist beim Cachen verloren gegangen"
     )
 
@@ -156,8 +156,8 @@ def test_die_herkunft_ueberlebt_auch_einen_stale_treffer(
     service.get_rate("CAD", "EUR")
 
     # TTL 0 macht den gespeicherten Wert alt; die Quelle liefert nichts mehr.
-    ausgefallen = CachedFxService(FileFxSource(None), repo, ttl_hours=0)
-    stale = ausgefallen.get_rate("CAD", "EUR")
+    failing_service = CachedFxService(FileFxSource(None), repo, ttl_hours=0)
+    stale = failing_service.get_rate("CAD", "EUR")
 
     assert stale.stale is True
     assert stale.source == "fx-file"

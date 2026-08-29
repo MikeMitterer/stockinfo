@@ -302,12 +302,12 @@ def close_all() -> None:
     # **Genau einmal je Objekt.** Dieselbe Quelle kann in mehreren Rollen
     # stehen; sie zweimal zu schließen wäre für ein Plugin, das eine Datei
     # schließt, ein Fehler zweiter Ordnung.
-    gesehen: set[int] = set()
+    seen: set[int] = set()
     for role, (_, sources, _entries) in _CHAINS.items():
         for source in sources:
-            if id(source) in gesehen:
+            if id(source) in seen:
                 continue
-            gesehen.add(id(source))
+            seen.add(id(source))
             close = getattr(source, "close", None)
             if not callable(close):
                 continue

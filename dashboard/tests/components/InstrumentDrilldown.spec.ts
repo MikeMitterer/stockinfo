@@ -138,7 +138,7 @@ describe('InstrumentDrilldown', () => {
   it.each([
     ['nicht-europäische ISIN', 'US0378331005'],
     ['europäische ISIN', 'IE00B4L5Y983'],
-  ])('sagt bei %s dasselbe, weil mehr niemand weiß', (_fall, isin) => {
+  ])('sagt bei %s dasselbe, weil mehr niemand weiß', (_scenario, isin) => {
     const wrapper = mount(InstrumentDrilldown, {
       global: { plugins: [i18n] },
       props: {

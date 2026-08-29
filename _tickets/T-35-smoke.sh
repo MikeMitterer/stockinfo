@@ -588,8 +588,8 @@ checkChain() {
     _NAMES="$("${VENV_PY}" -c "
 import json, sys
 d = json.loads(sys.argv[1])
-unkonfiguriert = [s['name'] for s in d['sources'] if not s.get('configured')]
-print(','.join(sorted({s['name'] for s in d['sources']})), '|', ','.join(unkonfiguriert))
+unconfigured = [s['name'] for s in d['sources'] if not s.get('configured')]
+print(','.join(sorted({s['name'] for s in d['sources']})), '|', ','.join(unconfigured))
 " "${_BODY}" 2>/dev/null)"
 
     # **Der einzige Erwartungswert, der sich je Profil unterscheidet** — und

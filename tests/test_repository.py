@@ -817,7 +817,7 @@ def test_ein_refresh_loescht_den_namen_nicht(repo: QuoteRepository) -> None:
     """
 
     def response_for(
-        name: str | None, typ: str | None, price: float, stunde: int
+        name: str | None, instrument_type: str | None, price: float, hour_of_day: int
     ) -> QuoteResponse:
         return QuoteResponse(
             isin="IE00B4L5Y983",
@@ -826,11 +826,11 @@ def test_ein_refresh_loescht_den_namen_nicht(repo: QuoteRepository) -> None:
             mic="XETR",
             exchange="Xetra",
             name=name,
-            type=typ,
+            type=instrument_type,
             currency="EUR",
             price=price,
-            quote_time=f"2026-08-28T{stunde:02d}:00:00+00:00",
-            fetched_at=f"2026-08-28T{stunde:02d}:00:00+00:00",
+            quote_time=f"2026-08-28T{hour_of_day:02d}:00:00+00:00",
+            fetched_at=f"2026-08-28T{hour_of_day:02d}:00:00+00:00",
         )
 
     repo.save_quote(response_for("ISHARES CORE MSCI WORLD", "etf", 128.2, 10))
