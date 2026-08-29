@@ -172,8 +172,8 @@ class _FigiByExchange:
         self, isin: str, id_value: str, id_type: str = "micCode"
     ) -> FigiMatch | None:
         self.calls.append(id_value)
-        treffer = self._tickers.get(id_value)
-        return FigiMatch(treffer) if treffer else None
+        hit = self._tickers.get(id_value)
+        return FigiMatch(hit) if hit else None
 
 
 def test_kaskade_weicht_auf_die_heimatboerse_aus() -> None:
@@ -845,8 +845,8 @@ def test_die_gattung_wird_uebersetzt_und_nicht_geraten(
     """
     from app.providers.openfigi_provider import OpenFigiClient
 
-    antwort = [{"data": [{"ticker": "EUNL", "securityType": figi_type}]}]
-    match = OpenFigiClient._extract_match(antwort)
+    answer = [{"data": [{"ticker": "EUNL", "securityType": figi_type}]}]
+    match = OpenFigiClient._extract_match(answer)
 
     assert match is not None
     assert match.instrument_type == expected

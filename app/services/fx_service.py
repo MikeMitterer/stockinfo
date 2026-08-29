@@ -1,4 +1,4 @@
-"""Cachende Devisenkurs-Beschaffung — Lazy-TTL über yfinance.
+"""Cachende Devisenkurs-Beschaffung — Lazy-TTL vor der Devisenquelle.
 
 Analog zu CachedQuoteService: frischer Cache → nutzen; sonst frisch holen und
 speichern; schlägt das Holen fehl, aber ein alter Wert liegt vor, wird dieser
@@ -24,7 +24,13 @@ class FxUnavailableError(Exception):
 class FxRepository(Protocol):
     def get_fx_rate(self, base: str, quote: str) -> dict | None: ...
     def save_fx_rate(
-        self, base: str, quote: str, rate: float, quote_time: str, fetched_at: str
+        self,
+        base: str,
+        quote: str,
+        rate: float,
+        quote_time: str,
+        fetched_at: str,
+        source: str | None = None,
     ) -> None: ...
 
 
@@ -36,7 +42,9 @@ class CachedFxService:
     ) -> None:
         """
         Args:
-            provider: Live-Beschaffung eines Wechselkurses (yfinance).
+            provider: Live-Beschaffung eines Wechselkurses. Wer das ist,
+                entscheidet `sources.yaml` — im Online-Profil yfinance, im
+                Dateiprofil eine gepflegte Tabelle.
             repository: SQLite-Persistenz für den FX-Cache.
             ttl_hours: Maximales Alter eines Kurses, bevor neu beschafft wird.
         """
@@ -95,7 +103,7 @@ class CachedFxService:
             raise FxUnavailableError(f"{base}{quote}")
 
         now = datetime.now(timezone.utc).isoformat()
-        self._repository.save_fx_rate(base, quote, rate, now, now)
+        self._repository.save_fx_rate(base, quote, rate, now, now, self._fx_source)
         return FxRate(
             base=base, quote=quote, rate=rate, quote_time=now,
             source=self._fx_source,
@@ -113,9 +121,19 @@ class CachedFxService:
 
     @staticmethod
     def _from_cache(row: dict, stale: bool) -> FxRate:
-        """Baut eine FxRate aus einer gespeicherten Zeile."""
+        """Baut eine FxRate aus einer gespeicherten Zeile.
+
+        **Die Herkunft kommt aus der Zeile, nicht aus einer Konstante.** Hier
+        stand ``source="cache"``, und damit war der Lieferant nach dem ersten
+        Treffer verloren: Jeder gecachte Kurs behauptete, aus „cache" zu
+        stammen. Das sagt `cached: true` ohnehin — und `fx.source` beantwortet
+        laut Vertrag die andere Frage, nämlich *woher der Kurs stammt*.
+
+        Zeilen aus der Zeit vor der Spalte tragen ``None``; das ist ehrlicher
+        als ein Wort, das keine Quelle benennt.
+        """
         return FxRate(
             base=row["base"], quote=row["quote"], rate=row["rate"],
-            quote_time=row["quote_time"], source="cache", cached=True, stale=stale,
-            fetched_at=row["fetched_at"],
+            quote_time=row["quote_time"], source=row.get("source"),
+            cached=True, stale=stale, fetched_at=row["fetched_at"],
         )

@@ -251,10 +251,10 @@ def test_beide_namen_erscheinen_in_sources(client: TestClient, volume: Path) -> 
     get_sources_config.cache_clear()
     _restart_chains()
 
-    antwort = client.get("/sources")
+    answer = client.get("/sources")
 
-    assert antwort.status_code == 200, antwort.text
-    names = {eintrag["name"] for eintrag in antwort.json()["sources"]}
+    assert answer.status_code == 200, answer.text
+    names = {entry["name"] for entry in answer.json()["sources"]}
 
     # **Ausschließlich in der HTTP-Antwort.** Bis Runde 4 stand hier ein
     # `oder in specs_by_name()` — damit wäre der Test grün geblieben, wenn der
@@ -481,7 +481,7 @@ def test_zweimal_bauen_liefert_dieselben_objekte(counted_chain) -> None:
     first = build_chain("quotes", config, Settings())
     second = build_chain("quotes", config, Settings())
 
-    assert built == [1], f"zweimal built: {len(built)} Konstruktionen"
+    assert built == [1], f"zweimal gebaut: {len(built)} Konstruktionen"
     assert [id(x) for x in first] == [id(x) for x in second]
 
 
@@ -569,10 +569,10 @@ providers:
         get_settings.cache_clear()
 
     entries = {
-        eintrag["name"]: eintrag
+        entry["name"]: entry
         for rolle in sources.values()
         if isinstance(rolle, list)
-        for eintrag in rolle
+        for entry in rolle
     }
 
     assert "local-file" in entries, f"die gesunde Quelle fehlt: {sorted(entries)}"

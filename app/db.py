@@ -113,6 +113,11 @@ CREATE TABLE IF NOT EXISTS fx_rates (
     rate       REAL NOT NULL,
     quote_time TEXT NOT NULL,
     fetched_at TEXT NOT NULL,
+    -- Wer den Kurs geliefert hat. Ohne diese Spalte war die Herkunft nach dem
+    -- ersten Cache-Treffer verloren, und `_from_cache` setzte ersatzweise
+    -- `"cache"` ein — eine Angabe, die `cached: true` schon macht, und die
+    -- den eigentlichen Lieferanten verschwieg (Codex, T-36 Runde 3).
+    source     TEXT,
     PRIMARY KEY (base, quote)
 );
 """
@@ -312,6 +317,9 @@ def _migrate(connection: sqlite3.Connection) -> None:
             ("source", "TEXT"),
         ),
     )
+    # Die Herkunft eines Wechselkurses. Bestehende Datenbanken haben die
+    # Spalte nicht; ohne Nachzug bliebe die Angabe dort für immer leer.
+    _add_missing_columns(connection, "fx_rates", (("source", "TEXT"),))
     # Die Override-Tabelle wuchs mit: Nachgetragen wird jetzt alles, was
     # justETF beisteuert — nicht mehr nur die drei aus T-09.
     _add_missing_columns(

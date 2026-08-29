@@ -83,29 +83,30 @@ describe('InstrumentDrilldown', () => {
      * (i) eine Auskunft.
      */
     expect(wrapper.getComponent(InfoHint).props('icon')).toBe('info')
-    // Keiner der vier Sonderfälle greift hier — ETF, europäisch, Quelle voll.
+    // Keiner der drei Sonderfälle greift hier — ETF, mit ISIN, Quelle voll.
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.notEtf'))
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.noIsin'))
-    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.noEuropeanSource'))
-    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.sourceEmpty'))
+    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.nothingProvided'))
   })
 
   /*
-   * Nacharbeit Sichtprüfung, I2 (Gesamtprüfung): Das Backend überspringt
-   * justETF aus drei Gründen (`app/services/quote_service.py:137`:
-   * `if instrument_type == "etf" and isin:`) — kein ETF, keine ISIN, oder
-   * nicht-europäische ISIN. Der Detailbereich kannte bisher nur den dritten.
-   * Eine Aktie mit deutscher (europäischer) ISIN bekam fälschlich „Die Quelle
-   * wurde abgefragt, hat aber nichts geliefert" — sie wurde nie abgefragt.
+   * Das Backend überspringt die Metadatenquelle aus zwei Gründen
+   * (`app/services/quote_service.py`: `if instrument_type == "etf":` und die
+   * ISIN daneben) — kein ETF, oder keine ISIN. Eine Aktie bekam vorher
+   * fälschlich „hat nichts geliefert"; sie wurde nie abgefragt.
+   *
+   * Ein dritter Grund ist seit T-37 weg: Er prüfte über `isEuropeanIsin`
+   * justETFs Zuständigkeitsregel, im Frontend nachgebaut — im CSV-Profil
+   * schlicht falsch.
    */
-  it('erklärt, dass eine Aktie gar nicht bei justETF abgefragt wird', () => {
+  it('erklärt, dass eine Aktie gar nicht abgefragt wird', () => {
     const wrapper = mount(InstrumentDrilldown, {
       global: { plugins: [i18n] },
       props: { item: makeInstrument({ type: 'stock', isin: 'DE0007164600', ter: null }) },
     })
 
     expect(wrapper.text()).toContain(i18n.global.t('drilldown.notEtf'))
-    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.sourceEmpty'))
+    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.nothingProvided'))
   })
 
   // Ein Papier ohne ISIN bekam fälschlich „Diese ISIN liegt außerhalb" — es
@@ -117,7 +118,7 @@ describe('InstrumentDrilldown', () => {
     })
 
     expect(wrapper.text()).toContain(i18n.global.t('drilldown.noIsin'))
-    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.noEuropeanSource'))
+    expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.nothingProvided'))
   })
 
   /*

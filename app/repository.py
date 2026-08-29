@@ -927,15 +927,27 @@ class QuoteRepository:
             return dict(row) if row else None
 
     def save_fx_rate(
-        self, base: str, quote: str, rate: float, quote_time: str, fetched_at: str
+        self,
+        base: str,
+        quote: str,
+        rate: float,
+        quote_time: str,
+        fetched_at: str,
+        source: str | None = None,
     ) -> None:
-        """Speichert/aktualisiert einen Wechselkurs (Upsert auf (base, quote))."""
+        """Speichert/aktualisiert einen Wechselkurs (Upsert auf (base, quote)).
+
+        **`source` wird mitgespeichert**, seit T-36 Runde 3. Vorher ging die
+        Herkunft beim ersten Cache-Treffer verloren, und der Leseweg setzte
+        ersatzweise `"cache"` ein — eine Angabe, die `cached: true` ohnehin
+        macht, und die den eigentlichen Lieferanten verschwieg.
+        """
         with self._connect() as connection:
             connection.execute(
-                "INSERT INTO fx_rates (base, quote, rate, quote_time, fetched_at) "
-                "VALUES (?, ?, ?, ?, ?) "
+                "INSERT INTO fx_rates (base, quote, rate, quote_time, fetched_at, source) "
+                "VALUES (?, ?, ?, ?, ?, ?) "
                 "ON CONFLICT (base, quote) DO UPDATE SET "
                 "rate = excluded.rate, quote_time = excluded.quote_time, "
-                "fetched_at = excluded.fetched_at",
-                (base, quote, rate, quote_time, fetched_at),
+                "fetched_at = excluded.fetched_at, source = excluded.source",
+                (base, quote, rate, quote_time, fetched_at, source),
             )

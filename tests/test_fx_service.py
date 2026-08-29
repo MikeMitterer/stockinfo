@@ -104,3 +104,60 @@ def test_eine_namenlose_devisenquelle_erfindet_keinen_namen(
     service = CachedFxService(NamelessFxSource(0.6412), repo, ttl_hours=6)
 
     assert service.get_rate("CAD", "EUR").source is None
+
+
+def test_die_herkunft_ueberlebt_den_cache(repo: QuoteRepository) -> None:
+    """**Der Befund aus Codex-Runde 3 — die Herkunft ging beim Cachen verloren.**
+
+    `fx_rates` speicherte sie gar nicht, und der Leseweg setzte ersatzweise
+    ``"cache"`` ein. Das ist doppelt falsch: `cached: true` sagt bereits, dass
+    der Wert aus dem Cache kommt, und `fx.source` beantwortet laut Vertrag die
+    **andere** Frage — woher der Kurs stammt. Nach genau einem Treffer war der
+    Lieferant nicht mehr feststellbar.
+
+    Geprüft werden alle drei Wege mit einem **nicht eingebauten** Namen; mit
+    `"yfinance"` bestünde der Test auch dann, wenn die alte Konstante
+    zurückkäme.
+    """
+
+    class FileFxSource(_FakeFx):
+        name = "fx-file"
+
+    provider = FileFxSource(0.6412)
+    service = CachedFxService(provider, repo, ttl_hours=6)
+
+    frisch = service.get_rate("CAD", "EUR")
+    assert frisch.source == "fx-file"
+    assert frisch.cached is False
+
+    # Zweiter Aufruf: aus dem frischen Cache — und **derselbe** Lieferant.
+    aus_dem_cache = service.get_rate("CAD", "EUR")
+    assert aus_dem_cache.cached is True, "der zweite Aufruf holt nicht neu"
+    assert provider.calls == 1, "es wurde doch neu geholt"
+    assert aus_dem_cache.source == "fx-file", (
+        "die Herkunft ist beim Cachen verloren gegangen"
+    )
+
+
+def test_die_herkunft_ueberlebt_auch_einen_stale_treffer(
+    repo: QuoteRepository,
+) -> None:
+    """Der dritte Weg: abgelaufener Cache, Quelle antwortet nicht mehr.
+
+    Dann wird der alte Wert als `stale` geliefert — und auch er muss sagen,
+    **wer** ihn geliefert hat. Gerade hier zählt es: Ein veralteter Kurs ohne
+    Herkunft lässt sich nicht einordnen.
+    """
+
+    class FileFxSource(_FakeFx):
+        name = "fx-file"
+
+    service = CachedFxService(FileFxSource(0.6412), repo, ttl_hours=6)
+    service.get_rate("CAD", "EUR")
+
+    # TTL 0 macht den gespeicherten Wert alt; die Quelle liefert nichts mehr.
+    ausgefallen = CachedFxService(FileFxSource(None), repo, ttl_hours=0)
+    stale = ausgefallen.get_rate("CAD", "EUR")
+
+    assert stale.stale is True
+    assert stale.source == "fx-file"

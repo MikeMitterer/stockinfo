@@ -435,6 +435,21 @@ if not currency_problem("GBX"):
     findings.append("Pence werden nicht als Untereinheit erkannt")
 
 # Im CSV-Profil zusaetzlich die Dateien selbst.
+def as_number(raw: str, where: str) -> float | None:
+    """Eine Zahl aus der Datei — oder ein Befund statt eines Abbruchs.
+
+    Hier stand blankes `float(...)`. Ein unbrauchbarer Wert liess den Pruefer
+    mit einem Traceback abbrechen, und der Aufrufer las eine leere Ausgabe —
+    also „keine Befunde". Ein Pruefer, der beim Finden eines Fehlers stirbt,
+    meldet ihn nicht.
+    """
+    try:
+        return float(raw)
+    except (TypeError, ValueError):
+        findings.append(f"{where}: {raw!r} ist keine Zahl")
+        return None
+
+
 def rows(name: str) -> list[dict]:
     path = workdir / name
     if not path.is_file():
@@ -460,22 +475,25 @@ for row in rows("closes.csv"):
     problem = currency_problem(row["currency"])
     if problem:
         findings.append(f"closes.csv: {row['currency']} — {problem}")
-    if not is_finite_price(float(row["close"])):
+    close = as_number(row["close"], "closes.csv")
+    if close is not None and not is_finite_price(close):
         findings.append(f"closes.csv: unbrauchbarer Kurs {row['close']}")
 
 for row in rows("meta.csv"):
     if not isin_check_digit_is_valid(row["isin"]):
         findings.append(f"meta.csv: falsche Pruefziffer {row['isin']}")
-    bps = (row.get("ter_bps") or "").strip()
-    if bps and not 0 <= float(bps) <= 500:
-        findings.append(f"meta.csv: TER {bps} bps ausserhalb des Wertebereichs")
+    raw_bps = (row.get("ter_bps") or "").strip()
+    bps = as_number(raw_bps, "meta.csv") if raw_bps else None
+    if bps is not None and not 0 <= bps <= 500:
+        findings.append(f"meta.csv: TER {raw_bps} bps ausserhalb des Wertebereichs")
 
 for row in rows("fx.csv"):
     for field in ("base", "quote"):
         problem = currency_problem(row[field])
         if problem:
             findings.append(f"fx.csv: {row[field]} — {problem}")
-    if not is_finite_price(float(row["rate"])):
+    rate = as_number(row["rate"], "fx.csv")
+    if rate is not None and not is_finite_price(rate):
         findings.append(f"fx.csv: unbrauchbarer Kurs {row['rate']}")
 
 print("; ".join(findings))
@@ -530,15 +548,37 @@ CSV
     _OUTPUT="$(checkDataIn "${_BROKEN}" 2>&1)"
     _STATUS=$?
 
-    # Zwei Ausgaenge zaehlen als „erkannt": Befunde gemeldet, oder der Parser
-    # bricht an dem unbrauchbaren Kurs ab. Beides ist ein Nein — still gruen
-    # waere das Versagen.
-    if [[ "${_STATUS}" -ne 0 || -n "${_OUTPUT}" ]]; then
+    # **Ein Abbruch ist kein Erfolg.** Der erste Anlauf akzeptierte jeden
+    # Exitstatus ungleich 0 als „erkannt" — auch einen Tippfehler im Pruefer
+    # selbst — und behauptete danach, alle drei Mutanten seien gefunden
+    # worden. Codex hat das in Runde 3 aufgegriffen: Die Meldung war eine
+    # Behauptung ueber etwas, das der Check nicht gemessen hatte.
+    #
+    # Verlangt wird deshalb ein **sauberer** Lauf, der **jeden** eingebauten
+    # Fehler beim Namen nennt. Ein Traceback ist rot.
+    if [[ "${_STATUS}" -ne 0 ]]; then
+        report "#0b" "die Datenpruefung findet eingebaute Fehler" false \
+            "der Pruefer ist abgebrochen (Exitstatus ${_STATUS}) statt zu melden: ${_OUTPUT}"
+        return 0
+    fi
+
+    local -ar _WANTED=(
+        "falsche Pruefziffer"
+        "kein echter MIC"
+        "ist keine Zahl"
+    )
+    local _MISSING=""
+    local _WANT
+    for _WANT in "${_WANTED[@]}"; do
+        [[ "${_OUTPUT}" == *"${_WANT}"* ]] || _MISSING+="${_WANT}; "
+    done
+
+    if [[ -z "${_MISSING}" ]]; then
         report "#0b" "die Datenpruefung findet eingebaute Fehler" true \
-            "Pruefziffer, Sammelcode und unbrauchbarer Kurs erkannt"
+            "Pruefziffer, Sammelcode und unbrauchbarer Kurs — jeder einzeln benannt"
     else
         report "#0b" "die Datenpruefung findet eingebaute Fehler" false \
-            "drei eingebaute Fehler blieben unbemerkt — der Check oben ist wertlos"
+            "unbemerkt geblieben: ${_MISSING%; } — gemeldet wurde: ${_OUTPUT:-nichts}"
     fi
 }
 
