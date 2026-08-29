@@ -1,0 +1,21 @@
+# data/sources.yaml — normales Online-Profil mit YAML als letztem Fallback
+#
+# Diese Datei konfiguriert nur die Quellenketten. Die eigentlichen, vom User
+# gepflegten Instrumente stehen gesammelt in genau einer Datei:
+# /data/assets.yaml
+#
+# Die Reihenfolge ist verbindlich: Online-Quellen werden zuerst gefragt.
+# `yaml-file` antwortet nur, wenn davor keine Quelle ein Ergebnis liefert.
+
+resolvers: [openfigi, yahoo-search, yaml-file]
+etf_meta:  [justetf, yfinance, yaml-file]
+quotes:    [yfinance, yaml-file]
+daily:     [yfinance, yaml-file]
+fx:        [yfinance, yaml-file]
+
+providers:
+  openfigi:
+    api_key: ${OPENFIGI_API_KEY}
+
+  yaml-file:
+    path: /data/assets.yaml

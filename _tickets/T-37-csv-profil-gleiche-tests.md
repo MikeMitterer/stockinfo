@@ -55,6 +55,13 @@ das Projekt ist in Entwicklung. Der Feldname für den aktuellen Preis lautet
 liegende CSV-Datei ist nur die verworfene Vergleichsvariante, kein zu
 unterstützendes Format.
 
+Wie das YAML-Plugin in das normale Online-Profil eingebunden wird, zeigt
+[`T-37-sources-online-with-yaml-fallback.yaml`](T-37-sources-online-with-yaml-fallback.yaml).
+`sources.yaml` enthält nur Auswahl, Reihenfolge und Pfad der Quellen; die eine
+vom Benutzer gepflegte Fachdaten-Datei bleibt `/data/assets.yaml`. Für ein
+reines YAML-Profil bestehen alle fünf Ketten entsprechend nur aus
+`[yaml-file]`.
+
 Alle folgenden CSV-Abschnitte dokumentieren den bereits geprüften
 Ausgangsstand. Sie sind **keine Vorgabe für die Neuimplementierung**.
 
