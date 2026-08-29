@@ -201,4 +201,3 @@ Anleihen oder andere Assets ohne Online-Kurs, ist aber nie ein Override.
 ## Auflösung
 
 _(offen — Umsetzung beginnt nach Freigabe von T-31 und T-38)_
-

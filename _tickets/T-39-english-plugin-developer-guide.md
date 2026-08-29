@@ -133,4 +133,3 @@ Stand aus T-31/T-38/T-37, nicht nach einem Zwischenstand dieses Tickets.
 
 _(wartend — erst nach der vollständigen technischen Freigabe von
 T-31 → T-38 → T-37 → T-35)_
-

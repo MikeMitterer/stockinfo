@@ -14,18 +14,24 @@
 | # | Where | Look for | AI | Human |
 |---|---|---|---|---|
 | 1 | Entscheidung | Mike hat entschieden: Krypto und Anleihen kommen in den MVP, mit eigener Identitätsform und eigenem Typ; Indizes bleiben draußen | ✅ [^a] | |
-| 2 | `app/db.py` | die Identität ist eine getaggte Union: `kind` ∈ `listed`/`pair`/`isin_only`, ein `CHECK` je `kind` erzwingt genau die passende Feldbelegung — halbe Identitäten bleiben unmöglich | | |
-| 3 | `app/exchanges.py`, Contract-Kit | `canonical_identity` wird zur Weiche über die Union; `is_real_mic` und `is_canonical_ticker` bleiben unverändert die `listed`-Hälfte. Im Vertrag: discriminated union über `kind` | | |
-| 4 | Typ-Katalog | `stock`/`etf`/`etc`/`fund`/`crypto`/`bond` kanonisch (Ort: T-38); `QUOTE_TYPE_MAP` bildet `MUTUALFUND → fund`, `CRYPTOCURRENCY → crypto`, `BOND → bond` — Erkennen, nicht Raten | | |
-| 5 | Aufnahmeweg | die Paar-Identität entsteht aus dem **Gattungs-Befund der Quelle**, nie aus der Symbolform; Eintritt per Symbol (`isin = NULL`), die By-Symbol-Routen tragen ihn | | |
-| 6 | Aufnahmeweg | eine **nicht** aufgenommene Gattung (Index) wird mit eigener Kennung `unsupported_instrument_type` abgelehnt — nicht mit dem Zufallsbefund der Symbolform; i18n DE/EN | | |
-| 7 | Kursweg | für ein Paar muss die Währung des gelieferten Kurses `quote_currency` entsprechen; eine Abweichung ist ein Datenfehler und wird abgelehnt, nicht still konvertiert | | |
-| 8 | Metadatenkaskade | sie läuft nur für Typen, deren Metadaten es geben kann — kein justETF-Abruf für eine Coin, keine TER-Frage an eine Anleihe | | |
-| 9 | Tests | `BTC-EUR` prüft das **entschiedene** Verhalten (Annahme als `pair`), ein Index den Ablehnungsgrund, eine Anleihe die `isin_only`-Form samt `quote_unavailable` ohne liefernde Quelle | | |
+| 2 | `app/db.py` | die Identität ist eine getaggte Union: `kind` ∈ `listed`/`pair`/`isin_only`, ein `CHECK` je `kind` erzwingt genau die passende Feldbelegung — halbe Identitäten bleiben unmöglich | ⚠️ [^r4] | |
+| 3 | `app/exchanges.py`, Contract-Kit | `canonical_identity` wird zur Weiche über die Union; `is_real_mic` und `is_canonical_ticker` bleiben unverändert die `listed`-Hälfte. Im Vertrag: discriminated union über `kind` | ⚠️ [^r4] | |
+| 4 | Typ-Katalog | `stock`/`etf`/`etc`/`fund`/`crypto`/`bond` kanonisch (Ort: T-38); `QUOTE_TYPE_MAP` bildet `MUTUALFUND → fund`, `CRYPTOCURRENCY → crypto`, `BOND → bond` — Erkennen, nicht Raten | ✅ [^r4] | |
+| 5 | Aufnahmeweg | die Paar-Identität entsteht aus dem **Gattungs-Befund der Quelle**, nie aus der Symbolform; Eintritt per Symbol (`isin = NULL`), die By-Symbol-Routen tragen ihn | ⚠️ [^r4] | |
+| 6 | Aufnahmeweg | eine **nicht** aufgenommene Gattung (Index) wird mit eigener Kennung `unsupported_instrument_type` abgelehnt — nicht mit dem Zufallsbefund der Symbolform; i18n DE/EN | ⚠️ [^r4] | |
+| 7 | Kursweg | für ein Paar muss die Währung des gelieferten Kurses `quote_currency` entsprechen; eine Abweichung ist ein Datenfehler und wird abgelehnt, nicht still konvertiert | ⚠️ [^r4] | |
+| 8 | Metadatenkaskade | sie läuft nur für Typen, deren Metadaten es geben kann — kein justETF-Abruf für eine Coin, keine TER-Frage an eine Anleihe | ◑ [^r4] | |
+| 9 | Tests | `BTC-EUR` prüft das **entschiedene** Verhalten (Annahme als `pair`), ein Index den Ablehnungsgrund, eine Anleihe die `isin_only`-Form samt `quote_unavailable` ohne liefernde Quelle | ⚠️ [^r4] | |
 
 [^a]: Entschieden am 2026-08-28; die einzelnen Punkte stehen unter
     **Die Entscheidung**. Die Human-Spalte bleibt für Mikes Bestätigung des
     fortgeschriebenen Tickets.
+[^r4]: Codex-Review Runde 4 gegen `2c6f512`: Typkatalog und Union-Typen sind
+    vorhanden. Der echte Frischstart härtet das Schema jedoch wieder auf
+    `ticker`/`mic NOT NULL`; Pair-Aufnahme, Index-Ablehnung und
+    Pair-Währungsprüfung fehlen. Die Capability-Kaskade ist nur teilweise
+    verdrahtet, und die Tests erzeugen keinen der drei entscheidenden neuen
+    Asset-Fälle. Details stehen in `_tickets/STATUS.md`.
 
 ## Die Entscheidung (Mike, 2026-08-28)
 
