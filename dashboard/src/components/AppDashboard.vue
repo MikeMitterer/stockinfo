@@ -25,6 +25,7 @@ import { useInstrumentActions } from '../composables/useInstrumentActions'
 import { useInstruments } from '../composables/useInstruments'
 import { useOverrides } from '../composables/useOverrides'
 import { useRefresh } from '../composables/useRefresh'
+import { refOf } from '../types'
 import type { InstrumentOverrides, InstrumentSummary, RangeKey } from '../types'
 import { currenciesFromExchanges } from '../utils/currencies'
 import { buildFieldOptions } from '../utils/fieldOptions'
@@ -140,9 +141,9 @@ async function loadChart(): Promise<void> {
   if (!item) return
   const range = selectedRange.value
   if (range === 'intraday') {
-    await loadHistory(item)
+    await loadHistory(refOf(item))
   } else {
-    await loadDaily(item, range)
+    await loadDaily(refOf(item), range)
   }
 }
 
@@ -189,7 +190,7 @@ async function onSetIsin(payload: { symbol: string; isin: string }): Promise<voi
 async function onRefreshOne(item: InstrumentSummary): Promise<void> {
   refreshingSymbol.value = item.symbol
   try {
-    await refreshOne(item)
+    await refreshOne(refOf(item))
     await loadInstruments()
     if (selectedItem.value?.symbol === item.symbol) await loadChart()
   } finally {
@@ -207,7 +208,7 @@ async function confirmRemoval(): Promise<void> {
   const item = pendingRemoval.value
   if (!item) return
   pendingRemoval.value = null
-  await remove(item)
+  await remove(refOf(item))
   if (selectedItem.value?.symbol === item.symbol) closeChart()
   await loadInstruments()
 }

@@ -2,6 +2,7 @@ import { ref, type Ref } from 'vue'
 import { safeStorage } from '@mmit/ux-foundation'
 
 import { i18n } from '../i18n'
+import { isinOf } from '../types'
 import type { InstrumentSummary } from '../types'
 
 /** Sortierbare Spalten der Assets-Tabelle (Datenspalten, keine Aktionen). */
@@ -37,14 +38,26 @@ function persist(): void {
 }
 
 /**
+ * Der Wert, nach dem eine Spalte sortiert.
+ *
+ * Die ISIN liegt seit T-31 in der Identität und nicht mehr flach an der Zeile;
+ * ein Währungspaar hat gar keine. Die Sortierspalte heißt trotzdem weiter
+ * `isin` — sie ist eine Spalte der Tabelle, keine Eigenschaft des Modells.
+ * Diese Weiche ist die eine Stelle, an der beides zusammenkommt.
+ */
+function sortValue(item: InstrumentSummary, key: SortKey): unknown {
+  return key === 'isin' ? isinOf(item.identity) : item[key]
+}
+
+/**
  * Vergleicht zwei Instrumente in einer Spalte — null/undefined immer ans Ende,
  * Strings locale-korrekt (aktive i18n-Sprache), Zahlen/Booleans numerisch.
  * Liefert 0/±1 für null-Fälle unabhängig von der Richtung (Aufrufer dreht nur
  * den Nicht-null-Vergleich).
  */
 function compareValues(a: InstrumentSummary, b: InstrumentSummary, key: SortKey): number | null {
-  const aValue = a[key]
-  const bValue = b[key]
+  const aValue = sortValue(a, key)
+  const bValue = sortValue(b, key)
   if (aValue === null || aValue === undefined) {
     return bValue === null || bValue === undefined ? 0 : null
   }
@@ -121,7 +134,8 @@ export function useTableSort(): {
       const base = compareValues(a, b, key)
       if (base === null) {
         // genau ein Wert ist null → dieser ans Ende, richtungsunabhängig
-        return a[key] === null || a[key] === undefined ? 1 : -1
+        const left = sortValue(a, key)
+        return left === null || left === undefined ? 1 : -1
       }
       return factor * base
     })

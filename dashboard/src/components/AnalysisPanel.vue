@@ -5,6 +5,7 @@ import { NButton, NInput, NSelect } from 'naive-ui'
 
 import { isIsin } from '../api/paths'
 import { useAnalysis } from '../composables/useAnalysis'
+import { isinOf, refOf } from '../types'
 import type { InstrumentRef, InstrumentSummary } from '../types'
 
 const props = defineProps<{ instruments: InstrumentSummary[] }>()
@@ -24,7 +25,7 @@ const target = computed<InstrumentRef | null>(() => {
       : { isin: null, symbol: raw }
   }
   const found = props.instruments.find((i) => i.symbol === selectedSymbol.value)
-  return found ? { isin: found.isin, symbol: found.symbol } : null
+  return found ? refOf(found) : null
 })
 
 async function run(): Promise<void> {
@@ -35,7 +36,7 @@ async function run(): Promise<void> {
 const instrumentOptions = computed(() =>
   props.instruments.map((instrument) => ({
     value: instrument.symbol,
-    label: `${instrument.symbol} — ${instrument.name ?? instrument.isin}`,
+    label: `${instrument.symbol} — ${instrument.name ?? isinOf(instrument.identity)}`,
   })),
 )
 </script>

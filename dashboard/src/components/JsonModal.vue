@@ -5,6 +5,7 @@ import { useI18n } from 'vue-i18n'
 import { NButton, NModal } from 'naive-ui'
 
 import { useRawQuote } from '../composables/useRawQuote'
+import { refOf } from '../types'
 import type { InstrumentSummary } from '../types'
 import { copyText } from '../utils/clipboard'
 
@@ -32,7 +33,7 @@ watch(
   (item) => {
     if (!item) return
     shown.value = item
-    void load(item)
+    void load(refOf(item))
   },
   { immediate: true },
 )

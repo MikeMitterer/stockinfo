@@ -6,7 +6,7 @@ import { i18n } from '../../src/i18n'
 import type { InstrumentSummary } from '../../src/types'
 import { makeInstrument } from '../fixtures/instrument'
 
-function mountCard(overrides: Partial<InstrumentSummary> = {}) {
+function mountCard(overrides: Partial<InstrumentSummary> & { isin?: string | null } = {}) {
   return mount(InstrumentCard, {
     props: {
       item: makeInstrument(overrides),

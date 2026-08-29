@@ -5,7 +5,7 @@ import { useI18n } from 'vue-i18n'
 import InfoHint from './InfoHint.vue'
 import MetricEditor from './MetricEditor.vue'
 import { sourceProvides } from '../composables/useOverrides'
-import { OVERRIDE_FIELDS } from '../types'
+import { OVERRIDE_FIELDS, isinOf } from '../types'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 import { formatDateTime } from '../utils/datetime'
 import { FIELD_LABEL_KEY } from '../utils/fieldLabels'
@@ -87,7 +87,7 @@ const sourceEmpty = computed(() => OVERRIDE_FIELDS.every((field) => !sourceProvi
  */
 const skipReason = computed<'notEtf' | 'noIsin' | 'nothing' | null>(() => {
   if (props.item.type !== 'etf') return 'notEtf'
-  if (!props.item.isin) return 'noIsin'
+  if (!isinOf(props.item.identity)) return 'noIsin'
   return sourceEmpty.value ? 'nothing' : null
 })
 

@@ -53,8 +53,62 @@ export type InstrumentOverrides = {
   [Field in OverrideField]: InstrumentSummary[`manual_${Field}`]
 }
 
-export interface InstrumentSummary {
+/** Ein Listing an einem echten Handelsplatz — Ticker und MIC. */
+export interface ListedIdentity {
+  kind: 'listed'
+  ticker: string
+  mic: string
   isin: string | null
+}
+
+/** Ein Währungspaar — die Form für natives Krypto, das nirgends notiert. */
+export interface PairIdentity {
+  kind: 'pair'
+  base: string
+  quote_currency: string
+}
+
+/** Nur eine ISIN — die Form der OTC-Anleihe ohne Handelsplatz. */
+export interface IsinOnlyIdentity {
+  kind: 'isin_only'
+  isin: string
+}
+
+/**
+ * Die Identität eines Papiers, unterschieden über `kind` (T-31).
+ *
+ * **Warum die Oberfläche das sehen muss.** Nicht jedes Papier hat einen
+ * Handelsplatz: Eine Coin hat keinen MIC, eine OTC-Anleihe keinen Ticker. Ein
+ * flaches `mic: string | null` konnte den Unterschied nicht ausdrücken — ein
+ * leeres Feld hieß dort wahlweise „gibt es nicht" oder „wurde nicht
+ * ermittelt", und die Anzeige musste raten. Über `kind` weiß sie es.
+ */
+export type Identity = ListedIdentity | PairIdentity | IsinOnlyIdentity
+
+/**
+ * Die ISIN dieser Identität — oder `null`, wenn die Form keine trägt.
+ *
+ * Ein Währungspaar **hat** keine; `null` erfindet hier nichts. Die Funktion
+ * steht neben dem Typ, damit die Fallunterscheidung nicht in jeder Komponente
+ * neu entsteht.
+ */
+export function isinOf(identity: Identity): string | null {
+  return identity.kind === 'pair' ? null : identity.isin
+}
+
+/**
+ * Ein Instrument als `InstrumentRef` — die schmale Form für die Pfadbildung.
+ *
+ * `InstrumentRef` bleibt bewusst flach: Sie beantwortet nur „womit spreche ich
+ * den Endpunkt an", und dort zählt allein, ob eine ISIN da ist. Diese Funktion
+ * ist die eine Stelle, an der aus der Identität die Antwort darauf wird.
+ */
+export function refOf(instrument: { identity: Identity; symbol: string }): InstrumentRef {
+  return { isin: isinOf(instrument.identity), symbol: instrument.symbol }
+}
+
+export interface InstrumentSummary {
+  identity: Identity
   symbol: string
   exchange: string | null
   name: string | null

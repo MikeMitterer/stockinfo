@@ -8,11 +8,24 @@ import type { InstrumentSummary } from '../../src/types'
  * davon etwas mit Overrides zu tun hat. Genau das soll hier nicht wieder
  * passieren: Ein neues Feld kommt hier hinein, und die Tests laufen weiter.
  *
+ * `isin` darf einzeln überschrieben werden und wandert hier in die Identität —
+ * bequemer als in jedem Test die ganze Form zu nennen, und die Tests, denen die
+ * Form egal ist, müssen sie nicht kennen. Wer eine **andere** Form braucht,
+ * übergibt `identity` ausdrücklich; das gewinnt.
+ *
  * @param overrides Felder, auf die es im jeweiligen Test ankommt.
  */
-export function makeInstrument(overrides: Partial<InstrumentSummary> = {}): InstrumentSummary {
+export function makeInstrument(
+  overrides: Partial<InstrumentSummary> & { isin?: string | null } = {},
+): InstrumentSummary {
+  const { isin, ...rest } = overrides
+  // **`in` statt `??`**: `isin: null` ist die Aussage „dieses Papier hat keine",
+  // und genau darauf prüft der ISIN-Editor. Ein `??` hätte sie als „nicht
+  // angegeben" gelesen und den Vorgabewert eingesetzt — der Test wäre grün
+  // geworden, ohne den Fall je zu erzeugen.
+  const identityIsin = 'isin' in overrides ? (isin ?? null) : 'US0378331005'
   return {
-    isin: 'US0378331005',
+    identity: { kind: 'listed', ticker: 'APC', mic: 'XETR', isin: identityIsin },
     symbol: 'APC.DE',
     exchange: 'XETR',
     name: 'Apple Inc.',
@@ -43,6 +56,6 @@ export function makeInstrument(overrides: Partial<InstrumentSummary> = {}): Inst
     manual_fund_currency: null,
     manual_fields: [],
     shadowed_fields: [],
-    ...overrides,
+    ...rest,
   }
 }

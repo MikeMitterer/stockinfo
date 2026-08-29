@@ -10,6 +10,7 @@ import InstrumentCard from './InstrumentCard.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
 import MetricValue from './MetricValue.vue'
+import { isinOf } from '../types'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 const props = defineProps<{
@@ -184,9 +185,10 @@ function onEscape(event: KeyboardEvent): void {
 
 /** Baut den extraETF-Profil-Link (ISIN-basiert, ETF/Stock unterschieden). */
 function extraetfLink(item: InstrumentSummary): string {
-  if (!item.isin) return ''
+  const isin = isinOf(item.identity)
+  if (!isin) return ''
   const template = item.type === 'etf' ? props.extraetfEtfUrl : props.extraetfStockUrl
-  return template ? template.replace('{isin}', item.isin) : ''
+  return template ? template.replace('{isin}', isin) : ''
 }
 
 /** Baut den Yahoo-Finance-Link (Symbol-basiert). */
@@ -313,7 +315,7 @@ function price(value: number | null): string {
                 </button>
               </td>
               <td class="mono dim isin-cell">
-                <span v-if="item.isin">{{ item.isin }}</span>
+                <span v-if="isinOf(item.identity)">{{ isinOf(item.identity) }}</span>
                 <IsinEditor v-else :symbol="item.symbol" @save="emit('set-isin', $event)" />
               </td>
               <td class="name">

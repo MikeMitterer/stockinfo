@@ -6,6 +6,7 @@ import { UxCaret } from '@mmit/ux-foundation'
 
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
+import { isinOf } from '../types'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 const props = defineProps<{
@@ -146,7 +147,7 @@ function price(value: number | null): string {
       <dl class="icard__details" :aria-label="t('table.details')">
         <dt>{{ t('table.colIsin') }}</dt>
         <dd>
-          <span v-if="item.isin" class="mono">{{ item.isin }}</span>
+          <span v-if="isinOf(item.identity)" class="mono">{{ isinOf(item.identity) }}</span>
           <IsinEditor v-else :symbol="item.symbol" @save="emit('set-isin', $event)" />
         </dd>
         <dt>{{ t('table.colPoints') }}</dt>
