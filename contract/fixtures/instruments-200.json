@@ -16,10 +16,13 @@
     },
     "body": [
       {
-        "isin": "IE00B4L5Y983",
+        "identity": {
+          "kind": "listed",
+          "ticker": "EUNL",
+          "mic": "XETR",
+          "isin": "IE00B4L5Y983"
+        },
         "symbol": "EUNL.DE",
-        "ticker": "EUNL",
-        "mic": "XETR",
         "listing_id": "018f3a2c-7b41-7c9e-a3d2-5f1b9c4e2a10",
         "exchange": "Xetra",
         "name": "iShares Core MSCI World UCITS ETF",
@@ -52,10 +55,13 @@
         "shadowed_fields": []
       },
       {
-        "isin": "US9229087690",
+        "identity": {
+          "kind": "listed",
+          "ticker": "VTI",
+          "mic": "ARCX",
+          "isin": "US9229087690"
+        },
         "symbol": "VTI",
-        "ticker": "VTI",
-        "mic": "ARCX",
         "listing_id": "018f3a2c-7b41-7c9e-a3d2-5f1b9c4e2a11",
         "exchange": "NYSEArca",
         "name": "Vanguard Total Stock Market ETF",
@@ -84,8 +90,12 @@
         "manual_fund_size": null,
         "manual_fund_domicile": "USA",
         "manual_fund_currency": null,
-        "manual_fields": ["fund_domicile"],
-        "shadowed_fields": ["ter"]
+        "manual_fields": [
+          "fund_domicile"
+        ],
+        "shadowed_fields": [
+          "ter"
+        ]
       }
     ]
   }

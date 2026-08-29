@@ -15,10 +15,13 @@
       "StockInfo-Generation": "550e8400-e29b-41d4-a716-446655440000"
     },
     "body": {
-      "isin": "IE00B4L5Y983",
+      "identity": {
+        "kind": "listed",
+        "ticker": "EUNL",
+        "mic": "XETR",
+        "isin": "IE00B4L5Y983"
+      },
       "symbol": "EUNL.DE",
-      "ticker": "EUNL",
-      "mic": "XETR",
       "exchange": "Xetra",
       "name": "iShares Core MSCI World UCITS ETF",
       "type": "etf",
