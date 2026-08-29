@@ -1,8 +1,8 @@
-# T-37 · Dasselbe prüfen, mit dem CSV-Plugin statt mit Yahoo
+# T-37 · Dasselbe prüfen, mit einem YAML-Fallback statt mit Online-Quellen
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Plugin-Beispiele + Prüfmittel) | offen | 4 h | zweites Quellenprofil aus CSV, **dieselben** Tests, UI- und Smoke-Lauf | — |
+| StockInfo (Plugin-Beispiel + Prüfmittel) | Neuplanung · YAML entschieden | neu schätzen | ein YAML-Fallback für fünf Rollen, **dieselben** Tests, UI- und Smoke-Lauf | — |
 
 - **Angelegt:** 2026-08-28, während Codex `405d659` prüft
 - **Beauftragt von Mike, 2026-08-28:** „schalte das Plugin um auf die
@@ -19,7 +19,44 @@
 **Löst:** Der Plugin-MVP behauptet, die Quelle sei austauschbar. Bewiesen ist
 das bisher nur an einer Kette. **Der Beweis ist nicht, dass beide Ketten
 laufen — sondern dass sie sich mit demselben Prüfmittel prüfen lassen.**
-Braucht das CSV-Profil eigene Tests, war die Schnittstelle keine.
+Braucht das Fallback-Profil eigene Tests, war die Schnittstelle keine.
+
+---
+
+## Architekturentscheidung Mike · 2026-08-29
+
+Der umgesetzte CSV-Entwurf mit vier fachlichen Dateien wird **verworfen**. Er
+ist für einen Benutzer unnötig schwer wartbar. An seine Stelle tritt **ein
+YAML-Fallback-Plugin mit genau einer Datendatei**. Es ersetzt die CSV-Variante
+sowohl als vollständiges Offline-Profil als auch als letztes Kettenglied des
+Online-Profils; beide Implementierungen laufen nicht parallel weiter.
+
+Das eine Plugin darf aus derselben YAML-Datei alle fünf Rollen bedienen:
+
+| Rolle | Daten im YAML |
+|---|---|
+| `resolvers` | Identität, Name und Gattung |
+| `quotes` | optionaler aktueller `price` |
+| `daily` | optionale manuelle `history` |
+| `etf_meta` | optionale Metadaten |
+| `fx` | optionale Devisenkurse |
+
+Für die History gilt eine enge Regel: Normalerweise bilden die jeweiligen
+Abfragen die History eines Assets in der Datenbank. `history` im YAML ist nur
+der manuell gepflegte Fallback für ein Asset, für das keine Kursabfrage
+möglich ist. Die gelesenen Punkte werden ebenfalls in der Datenbank
+gespeichert. Fehlt zusätzlich `price`, darf der jüngste History-Schlusskurs
+als aktueller Preis-Fallback dienen.
+
+Es gibt **keinen Migrations- oder Kompatibilitätsweg** für die vier CSV-Dateien;
+das Projekt ist in Entwicklung. Der Feldname für den aktuellen Preis lautet
+`price`, nicht `quote`. Das abgestimmte Beispiel steht in
+[`T-37-single-file-sample.yaml`](T-37-single-file-sample.yaml). Die daneben
+liegende CSV-Datei ist nur die verworfene Vergleichsvariante, kein zu
+unterstützendes Format.
+
+Alle folgenden CSV-Abschnitte dokumentieren den bereits geprüften
+Ausgangsstand. Sie sind **keine Vorgabe für die Neuimplementierung**.
 
 ---
 
