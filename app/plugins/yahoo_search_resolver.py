@@ -127,6 +127,28 @@ class YahooSearchResolverPlugin(Resolver):
             # `stockinfo_plugin.types`.
             return answer
 
+        # **Die nicht geführte Gattung wird zuerst entschieden** (T-31, Matrix
+        # `#6`) — und zwar vor der Pflichtfeldprüfung darunter, nicht danach.
+        #
+        # `Unsupported` braucht keinen Namen; es trägt nur die Gattung. Stünde
+        # die Pflichtprüfung davor, käme ein Index **ohne** Namen als
+        # `NotFound` heraus, und der Benutzer läse wieder den Zufallsbefund,
+        # den T-31 gerade abgeschafft hat. Die Reihenfolge ist hier also keine
+        # Stilfrage, sondern die Zusicherung selbst.
+        if answer.type and answer.type not in self.SUPPORTED_TYPES:
+            return Unsupported(instrument_type=answer.type)
+
+        # **Pflichtfelder vor der Formweiche** (T-38). Fehlt Name oder
+        # Gattung, ist die Antwort für jede Identitätsform unbrauchbar — die
+        # Prüfung hinter die Weiche zu schreiben hieße, sie beim nächsten
+        # Formzuwachs einmal zu vergessen.
+        #
+        # Genau diese Quelle hat den Befund ausgelöst: Im UI-Lauf vom
+        # 2026-08-28 lieferte die Yahoo-Suche eine vollständige Identität mit
+        # leerem Namen und leerer Gattung, und die App nahm es an.
+        if not answer.name or not answer.type:
+            return NotFound()
+
         if answer.kind == "pair":
             return Resolved(
                 identity=PairIdentity(
@@ -150,11 +172,12 @@ class YahooSearchResolverPlugin(Resolver):
             # * Eine Gattung, die diese Quelle **nicht zusagt** (`index`,
             #   `currency`, `future`): `Unsupported`. Sie sagt damit nichts
             #   über StockInfo — was der Host führt, entscheidet er selbst.
+            #   Diese Weiche steht seit T-38 **weiter oben**, weil sie ohne
+            #   Namen auskommt und die Pflichtfeldprüfung sie sonst
+            #   überholt hätte.
             # * Eine zugesagte Gattung ohne Handelsplatz (`AAPL` ohne
             #   auflösbare Börse): weiterhin `NotFound`. Das Papier gäbe es,
             #   nur ist es hier nicht identifizierbar.
-            if answer.type and answer.type not in self.SUPPORTED_TYPES:
-                return Unsupported(instrument_type=answer.type)
             return NotFound()
 
         return Resolved(

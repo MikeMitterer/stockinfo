@@ -82,24 +82,34 @@ class CanadaFileResolver(Resolver):
             return Unavailable(f"{self._path} nicht lesbar: {exc}")
         if entry is None:
             return NotFound()
+        # **Die Gattung kommt aus der Tabelle, seit T-37.** Sie fehlte, und
+        # der UI-Lauf hat gezeigt, was das kostet: Ohne `type` hält die App das
+        # Papier für eine Aktie und fragt die Metadatenquelle **gar nicht
+        # erst** — TER und Anbieter bleiben dauerhaft leer, ohne Meldung.
+        #
+        # **Die Spalte war optional, und diese Zeile hat vorhergesagt, wann
+        # sie es nicht mehr ist.** Mit T-38 sind `name` und `instrument_type`
+        # Pflichtfelder. Eine Tabellenzeile ohne sie ist damit kein Treffer
+        # mehr, sondern `NotFound`: Die Datei kennt die ISIN, aber nicht
+        # genug, um sie zu beantworten.
+        #
+        # Für einen Plugin-Autor ist **das** der lehrreiche Teil dieses
+        # Beispiels: Wer ein Pflichtfeld nicht füllen kann, antwortet ehrlich
+        # nichts, statt eine halbe Zeile zu liefern. Die nächste Quelle in der
+        # Kette darf es besser wissen.
+        name = (entry.get("name") or "").strip()
+        instrument_type = (entry.get("type") or "").strip()
+        if not name or not instrument_type:
+            return NotFound()
+
         return Resolved(
             identity=ListedIdentity(
                 ticker=entry["ticker"],
                 mic=entry["mic"],
                 isin=request.isin.upper(),
             ),
-            name=entry.get("name") or None,
-            # **Die Gattung kommt aus der Tabelle, seit T-37.** Sie fehlte,
-            # und der UI-Lauf hat gezeigt, was das kostet: Ohne `type` hält
-            # die App das Papier für eine Aktie und fragt die Metadatenquelle
-            # **gar nicht erst** — TER und Anbieter bleiben dann dauerhaft
-            # leer, ohne Fehlermeldung.
-            #
-            # Die Spalte ist optional: Alte Tabellen ohne sie bleiben gültig
-            # und liefern wie bisher `None`. Mit T-38 wird `instrument_type`
-            # zum Pflichtfeld; dann ist die Spalte nicht mehr freiwillig, und
-            # diese Zeile ist der Ort, an dem das auffällt.
-            instrument_type=entry.get("type") or None,
+            name=name,
+            instrument_type=instrument_type,
         )
 
     def _lookup(self, isin: str) -> dict[str, str] | None:

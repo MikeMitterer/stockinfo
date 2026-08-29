@@ -1,5 +1,5 @@
 {
-  "core_version": "3.0.0",
+  "core_version": "3.1.0",
   "paths": {
     "/fields": {
       "get": {
@@ -536,6 +536,17 @@
             "type": "array"
           },
           "title": "Endpoints",
+          "type": "object"
+        },
+        "plugin_contract": {
+          "additionalProperties": {
+            "items": {
+              "$ref": "#/components/schemas/FieldSpec"
+            },
+            "type": "array"
+          },
+          "description": "Die Pflicht- und Optionalfelder des **Plugin**-Vertrags (T-38). Ein Plugin-Autor liest hier, was er liefern muss, statt den Quelltext zu lesen — und die Angabe ist aus den Typen abgeleitet, nicht danebengepflegt.",
+          "title": "Plugin Contract",
           "type": "object"
         }
       },

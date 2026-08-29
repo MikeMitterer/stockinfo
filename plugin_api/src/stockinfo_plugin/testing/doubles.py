@@ -123,7 +123,7 @@ class FakeSource(Source):
     Beispiel::
 
         source = FakeResolver(
-            [Unavailable("Netz"), Resolved(ListedIdentity("RY", "XTSE"))]
+            [Unavailable("Netz"), Resolved(ListedIdentity("RY", "XTSE"), "RBC", "stock")]
         )
         assert isinstance(source.resolve(request), Unavailable)   # erster Aufruf
         assert isinstance(source.resolve(request), Resolved)      # zweiter

@@ -187,17 +187,43 @@ class Resolved:
     etwas anderes — sie gehört zur Identität und sagt, *worin* der Preis
     notiert, nicht *wieviel* er ist.
 
+    **Drei Pflichtfelder, keine optionalen** (T-38). Bis `API_VERSION` 2 waren
+    ``name`` und ``instrument_type`` optional, und das war kein Versehen,
+    sondern eine Zusage, die niemand geprüft hat: Drei der fünf Befunde aus dem
+    UI-Lauf vom 2026-08-28 waren derselbe Fehler — ein Wert fehlte, und nichts
+    hat gefragt. Der Name blieb leer, die Gattung blieb leer, und **weil** die
+    Gattung leer war, wurde die Metadatenquelle nie befragt. Ohne Meldung, ohne
+    Protokolleintrag, monatelang.
+
+    **Ein Vorgabewert ist an dieser Stelle eine Erlaubnis.** ``= None`` sagt
+    einer Quelle: „Du darfst es weglassen." Genau das haben Quellen getan.
+
+    **Was der Typ nicht kann, und wo es deshalb weitergeht.** Pflicht im Typ
+    verhindert das *Weglassen*, nicht das Füllen mit nichts —
+    ``name=""`` bleibt konstruierbar. Die Prüfung auf einen *belegten* Wert
+    steht darum zusätzlich im Contract-Kit und an der Host-Grenze. Wer nur
+    diese Zeilen liest, hält die Regel für strenger, als sie an dieser Stelle
+    ist.
+
+    **Wer ein Feld nicht kennt, antwortet `NotFound`.** Das ist die andere
+    Hälfte der Regel und keine Härte: „Ich habe einen Ticker, aber weiß nicht,
+    was das Papier ist" ist keine brauchbare Auflösung. Eine spätere Quelle in
+    der Kette darf es besser wissen.
+
     Attributes:
         identity: Die Identität in ihrer Form. **Seit `API_VERSION` 2** statt
             der Felder ``ticker``/``mic``, die nur die `listed`-Form abdeckten.
-        name: Anzeigename, falls die Quelle ihn kennt.
-        instrument_type: Gattung, falls die Quelle sie kennt — der Katalog
-            steht in T-38.
+        name: Anzeigename des Papiers. Pflicht seit T-38.
+        instrument_type: Gattung aus dem kanonischen Katalog — ``stock``,
+            ``etf``, ``etc``, ``fund``, ``crypto``, ``bond``. Die Aufzählung
+            ist **offen**: Ein neuer Wert ist ein Nachtrag und kein Bruch, und
+            was der Host nicht kennt, zeigt er als das, was die Quelle sagt,
+            statt es auf ``stock`` zu runden. Das Runden war der Fehler.
     """
 
     identity: Identity
-    name: str | None = None
-    instrument_type: str | None = None
+    name: str
+    instrument_type: str
 
 
 @dataclass(frozen=True)

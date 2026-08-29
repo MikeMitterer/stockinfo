@@ -632,6 +632,15 @@ class FieldsResponse(BaseModel):
     endpoints: dict[str, list[EndpointSpec]]
     details_version: int = Field(description="Zähler der offenen Detailmenge")
     details: list[FieldSpec] = Field(default_factory=list)
+    plugin_contract: dict[str, list[FieldSpec]] = Field(
+        default_factory=dict,
+        description=(
+            "Die Pflicht- und Optionalfelder des **Plugin**-Vertrags (T-38). "
+            "Ein Plugin-Autor liest hier, was er liefern muss, statt den "
+            "Quelltext zu lesen — und die Angabe ist aus den Typen abgeleitet, "
+            "nicht danebengepflegt."
+        ),
+    )
 
 
 class EnvInfo(BaseModel):

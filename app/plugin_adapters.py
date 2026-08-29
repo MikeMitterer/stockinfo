@@ -31,7 +31,7 @@ from datetime import date
 
 import structlog
 
-from stockinfo_plugin.invariants import identity_problem
+from stockinfo_plugin.invariants import identity_problem, resolution_problem
 from stockinfo_plugin.types import (
     DailyRequest,
     DailySeries,
@@ -723,6 +723,28 @@ class ResolverAdapter(_Adapter):
                 "resolve_without_identity", source=self.name, problem=problem
             )
             return NotFound()
+
+        # **Die zweite Hälfte der Vollständigkeit** (T-38). Die Identität sagt,
+        # *welches* Papier gemeint ist; Name und Gattung sagen, *was* es ist.
+        # Bis T-38 prüfte der Host nur die erste Hälfte, und eine Antwort mit
+        # leerem Namen kam durch — genau der stille Verlust aus dem UI-Lauf.
+        #
+        # **Ein Befund, kein Schweigen.** `Unavailable` und nicht `NotFound`:
+        # Die Quelle hat das Papier gefunden und hält den Vertrag nicht ein.
+        # Das ist ihr Fehler und keine Aussage über das Papier — dieselbe
+        # Einordnung wie bei einer nicht deklarierten Form darunter. Die Kette
+        # geht weiter, und eine vollständigere Quelle gewinnt.
+        #
+        # Der Eintrag nennt **Quelle und Feld**: „nicht angenommen" allein
+        # hilft dem Betreiber nicht, wenn vier Quellen in der Kette stehen.
+        incomplete = resolution_problem(answer)
+        if incomplete:
+            logger.warning(
+                "plugin_answer_incomplete",
+                source=self.name,
+                problem=incomplete,
+            )
+            return Unavailable(error=f"{self.name}: {incomplete}")
 
         source = unwrap(self._source)
         declared_kinds = getattr(source, "SUPPORTED_KINDS", frozenset())

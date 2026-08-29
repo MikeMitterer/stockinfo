@@ -60,7 +60,15 @@ class FakeFigiClient:
         if self._error is not None:
             raise self._error
         hit = self._answers.get((isin, id_value))
-        return FigiMatch(hit) if hit else None
+        if not hit:
+            return None
+        # **Name und Gattung reisen mit, seit T-38 sie zu Pflichtfeldern
+        # gemacht hat.** Ein Double, das sie wegließe, prüfte nicht mehr die
+        # Übersetzung, sondern nur noch, dass die neue Vollständigkeitsregel
+        # anschlägt — und die hat ihre eigenen Tests. Echte OpenFIGI-Treffer
+        # tragen beides; ein Treffer *ohne* sie ist der Sonderfall und steht
+        # in `test_contract_required_fields.py`.
+        return FigiMatch(hit, name=f"{hit} Testpapier", instrument_type="etf")
 
 
 class PoisonedFigiClient:

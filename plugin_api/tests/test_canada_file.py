@@ -9,7 +9,7 @@ from pathlib import Path
 
 import pytest
 
-from stockinfo_plugin import ListedIdentity, ResolveRequest
+from stockinfo_plugin import ListedIdentity, NotFound, ResolveRequest
 from stockinfo_plugin.testing import ResolverContract
 
 from examples.canada_file import CanadaFileResolver
@@ -92,16 +92,28 @@ def test_die_gattung_kommt_aus_der_tabelle() -> None:
     assert hit.instrument_type == "stock"
 
 
-def test_eine_tabelle_ohne_gattungsspalte_bleibt_gueltig(tmp_path: Path) -> None:
-    """Die Spalte ist **additiv** — alte Dateien dürfen nicht kaputtgehen.
+def test_eine_tabelle_ohne_gattungsspalte_loest_nicht_mehr_auf(tmp_path: Path) -> None:
+    """**Diese Zusage hat sich mit T-38 umgedreht — und das gehört hierher.**
 
-    Ein Betreiber pflegt seine Tabelle von Hand. Ein Format, das nach einem
+    Bis T-38 stand hier das Gegenteil: *„Die Spalte ist additiv — alte Dateien
+    dürfen nicht kaputtgehen."* Das Argument war gut und ist es noch: Ein
+    Betreiber pflegt seine Tabelle von Hand, und ein Format, das nach einem
     Update eine neue Pflichtspalte verlangt, kostet ihn seine Quelle, während
     er nichts geändert hat.
 
-    Geprüft werden **beide** Formen der Abwesenheit: die Spalte fehlt ganz,
-    und sie ist da, aber leer. Eine leere Zelle wird zu ``None`` und nicht zu
-    ``""`` — ein Leerstring wäre eine Gattung, die es nicht gibt.
+    **Es hat trotzdem verloren, und zwar gegen eine Messung.** Im UI-Lauf vom
+    2026-08-28 kam genau so eine Zeile durch: Identität vollständig, Gattung
+    leer. Die App hat sie angenommen, gespeichert, angezeigt — und die
+    Metadatenkaskade nie angeworfen, weil die Gattung fehlte. Ohne Meldung,
+    ohne Protokolleintrag, monatelang. Der Betreiber hat seine Quelle also
+    auch vorher verloren, nur ohne es zu erfahren.
+
+    Der Unterschied ist damit nicht „streng gegen tolerant", sondern
+    **„sichtbar gegen still"**. Die alte Zeile fällt jetzt als `NotFound` auf,
+    und der Betreiber kann eine Spalte ergänzen.
+
+    Geprüft werden weiterhin **beide** Formen der Abwesenheit: die Spalte fehlt
+    ganz, und sie ist da, aber leer.
     """
     legacy_file = tmp_path / "ohne-spalte.csv"
     legacy_file.write_text(
@@ -112,10 +124,14 @@ def test_eine_tabelle_ohne_gattungsspalte_bleibt_gueltig(tmp_path: Path) -> None
     without_column = CanadaFileResolver({"path": str(legacy_file)}).resolve(
         ResolveRequest(isin="CA78012H5675")
     )
-    assert without_column.identity.ticker == "RY", "die Zeile muss trotzdem auflösen"
-    assert without_column.instrument_type is None
+    assert isinstance(without_column, NotFound), (
+        "eine Zeile ohne Gattung ist kein Treffer mehr — sie war es vorher, "
+        f"und genau das war der Fehler. Bekommen: {without_column}"
+    )
 
     empty_cell = CanadaFileResolver({"path": str(FIXTURE)}).resolve(
         ResolveRequest(isin="CA9861913023")
     )
-    assert empty_cell.instrument_type is None, "eine leere Zelle ist keine Gattung"
+    assert isinstance(empty_cell, NotFound), (
+        "eine leere Zelle ist keine Gattung — und seit T-38 auch kein Treffer"
+    )

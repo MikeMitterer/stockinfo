@@ -322,9 +322,7 @@ def test_openfigi_sagt_lieber_nichts_als_die_haelfte(
         def map_isin(self, isin: str, id_value: str, id_type: str = "micCode"):
             return FigiMatch("EUNL", name=figi_name, instrument_type=figi_type)
 
-    from app.resolver import OpenFigiResolver
-
-    plugin = OpenFigiResolverPlugin(resolver=OpenFigiResolver(_Figi(), "XETR"))
+    plugin = OpenFigiResolverPlugin(client=_Figi())
 
     answer = plugin.resolve(ResolveRequest(isin=_ISIN, preferred_mic="XETR"))
 

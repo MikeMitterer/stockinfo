@@ -92,7 +92,7 @@ def test_eine_uhr_ohne_zone_wird_abgelehnt() -> None:
 
 def test_antworten_werden_der_reihe_nach_verbraucht() -> None:
     """Erst der Ausfall, dann der Treffer — der übliche Wiederholungsfall."""
-    source = FakeResolver([Unavailable("Netz"), Resolved(ListedIdentity(ticker="RY", mic="XTSE"))])
+    source = FakeResolver([Unavailable("Netz"), Resolved(ListedIdentity(ticker="RY", mic="XTSE"), "Royal Bank", "stock")])
 
     assert isinstance(source.resolve(REQUEST), Unavailable)
     assert isinstance(source.resolve(REQUEST), Resolved)
@@ -105,7 +105,7 @@ def test_die_letzte_antwort_wiederholt_sich() -> None:
     Test vorher zählen, wie oft die Kette fragt — und genau diese Zahl ist oft
     das, was der Test herausfinden soll.
     """
-    source = FakeResolver([Resolved(ListedIdentity(ticker="RY", mic="XTSE")), Unavailable("weg")])
+    source = FakeResolver([Resolved(ListedIdentity(ticker="RY", mic="XTSE"), "Royal Bank", "stock"), Unavailable("weg")])
 
     source.resolve(REQUEST)
     for _ in range(5):
@@ -120,7 +120,7 @@ def test_ohne_vorgabe_kommt_notfound() -> None:
 def test_eine_antwort_je_anfrage() -> None:
     """`keyed` für den Fall, dass zwei Papiere verschieden beantwortet werden."""
     source = FakeResolver(
-        keyed={REQUEST: Resolved(ListedIdentity(ticker="RY", mic="XTSE")), OTHER: NotResponsible()}
+        keyed={REQUEST: Resolved(ListedIdentity(ticker="RY", mic="XTSE"), "Royal Bank", "stock"), OTHER: NotResponsible()}
     )
 
     assert isinstance(source.resolve(REQUEST), Resolved)
@@ -186,7 +186,7 @@ def test_zwei_doubles_teilen_sich_ein_protokoll() -> None:
     """
     log = CallLog()
     first = FakeResolver(NotResponsible(), name="erste-quelle", log=log)
-    second = FakeResolver(Resolved(ListedIdentity(ticker="RY", mic="XTSE")), name="zweite-quelle", log=log)
+    second = FakeResolver(Resolved(ListedIdentity(ticker="RY", mic="XTSE"), "Royal Bank", "stock"), name="zweite-quelle", log=log)
 
     first.resolve(REQUEST)
     second.resolve(REQUEST)
@@ -371,7 +371,11 @@ def test_wer_ein_erkanntes_papier_als_unbekannt_meldet_faellt_durch() -> None:
         def resolve(self, request):
             if request.symbol == "^GDAXI":
                 return NotFound()
-            return Resolved(identity=ListedIdentity(ticker="RY", mic="XTSE"))
+            return Resolved(
+                identity=ListedIdentity(ticker="RY", mic="XTSE"),
+                name="Royal Bank",
+                instrument_type="stock",
+            )
 
     with pytest.raises(AssertionError, match="beantwortet mit NotFound"):
         contract = _resolver_contract(CallsAnIndexUnknown)
@@ -394,7 +398,11 @@ def test_wer_eine_zugesagte_gattung_ablehnt_faellt_durch() -> None:
         def resolve(self, request):
             if request.symbol == "^GDAXI":
                 return Unsupported(instrument_type="index")
-            return Resolved(identity=ListedIdentity(ticker="RY", mic="XTSE"))
+            return Resolved(
+                identity=ListedIdentity(ticker="RY", mic="XTSE"),
+                name="Royal Bank",
+                instrument_type="stock",
+            )
 
     with pytest.raises(AssertionError, match="deklariert sie aber"):
         contract = _resolver_contract(RefusesWhatItPromised)
@@ -415,7 +423,11 @@ def test_dieselbe_quelle_mit_ehrlicher_ablehnung_besteht() -> None:
         def resolve(self, request):
             if request.symbol == "^GDAXI":
                 return Unsupported(instrument_type="index")
-            return Resolved(identity=ListedIdentity(ticker="RY", mic="XTSE"))
+            return Resolved(
+                identity=ListedIdentity(ticker="RY", mic="XTSE"),
+                name="Royal Bank",
+                instrument_type="stock",
+            )
 
     _resolver_contract(
         SaysWhatItFound

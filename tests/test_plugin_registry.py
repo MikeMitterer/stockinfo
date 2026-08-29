@@ -45,7 +45,11 @@ class DemoResolver(Resolver):
         return bool(request.isin)
 
     def resolve(self, request: ResolveRequest) -> Resolution:
-        return Resolved(ListedIdentity(ticker="DEMO", mic="XTSE"), isin=request.isin)
+        return Resolved(
+            ListedIdentity(ticker="DEMO", mic="XTSE", isin=request.isin),
+            name="Demo",
+            instrument_type="stock",
+        )
 
 
 class TwoRoleSource(Resolver, QuoteSource):
@@ -429,7 +433,7 @@ def test_ein_erfolg_setzt_den_zaehler_zurueck() -> None:
         def resolve(self, request: ResolveRequest) -> Resolution:
             self.calls += 1
             if self.calls == 3:
-                return Resolved(ListedIdentity(ticker="OK", mic="XTSE"))
+                return Resolved(ListedIdentity(ticker="OK", mic="XTSE"), "Okay", "stock")
             return Unavailable(error="später nochmal")
 
     guarded = GuardedSource(Flaky())
@@ -477,7 +481,7 @@ def test_halb_offen_und_reset_ohne_echte_wartezeit() -> None:
         name = "geheilt"
 
         def resolve(self, request: ResolveRequest) -> Resolution:
-            return Resolved(ListedIdentity(ticker="OK", mic="XTSE"))
+            return Resolved(ListedIdentity(ticker="OK", mic="XTSE"), "Okay", "stock")
 
     answer = GuardedSource(Recovered(), breaker).resolve(request)
 

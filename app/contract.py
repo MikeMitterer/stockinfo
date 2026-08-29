@@ -69,3 +69,91 @@ def required_fields(model: str) -> tuple[str, ...]:
         for field in core_contract()["core"][model]
         if field["required"]
     )
+
+
+# ─── Der Plugin-Vertrag, aus den Typen abgeleitet (T-38) ──────────────────────
+
+_PLUGIN_FIELD_MEANINGS: dict[tuple[str, str], str] = {
+    ("resolved", "identity"): (
+        "Die Identität in ihrer Form — 'listed' (ticker + mic), 'pair' "
+        "(base + quote_currency) oder 'isin_only' (isin). Welche Form gilt, "
+        "sagt das Feld 'kind'."
+    ),
+    ("resolved", "name"): (
+        "Anzeigename des Papiers. Pflicht: Eine Auflösung ohne Namen erzeugt "
+        "eine Zeile, die der Benutzer nicht wiedererkennt."
+    ),
+    ("resolved", "instrument_type"): (
+        "Gattung aus dem offenen Katalog — stock, etf, etc, fund, crypto, "
+        "bond. Pflicht: An ihr hängt, welche Metadatenquellen überhaupt "
+        "gefragt werden. Fehlt sie, läuft die Kaskade stillschweigend nicht."
+    ),
+    ("quote", "price"): "Der Kurs. Positiv und endlich; 0 ist keine Angabe.",
+    ("quote", "currency"): (
+        "ISO-4217-Code. Wer in Untereinheiten notiert (London in Pence), "
+        "rechnet vorher um."
+    ),
+    ("quote", "as_of"): "Wann dieser Kurs galt, mit Zeitzone.",
+    ("quote", "volume"): "Tagesvolumen, falls der Anbieter es kennt.",
+}
+"""Die Bedeutung je Feld — der einzige Teil, den kein Typ hergibt.
+
+Alles andere (Name, Art, Pflicht) wird aus der Dataclass **gelesen**. Eine
+zweite, von Hand gepflegte Liste wäre genau die Kopie, die in diesem Projekt
+schon einmal auseinandergelaufen ist: Der Vertrag stünde dann im Typ und in
+der Auskunft, und die Auskunft veraltete zuerst.
+"""
+
+
+def _field_kind(annotation: object) -> str:
+    """Die Art eines Feldes, wie `FieldSpec` sie benennt."""
+    text = str(annotation)
+    if "str" in text:
+        return "string"
+    if "float" in text:
+        return "number"
+    if "int" in text:
+        return "integer"
+    if "datetime" in text or "date" in text:
+        return "string"
+    return "object"
+
+
+def plugin_contract() -> dict[str, list[dict]]:
+    """Die Pflicht- und Optionalfelder des **Plugin**-Vertrags (T-38, `#6`).
+
+    **Abgeleitet, nicht gepflegt.** `required` kommt daher, ob die Dataclass
+    einen Vorgabewert führt — dieselbe Tatsache, die den Vertrag ausmacht.
+    Eine gepflegte Liste könnte behaupten, `name` sei Pflicht, während der Typ
+    ihn optional lässt; genau dieser Widerspruch stand vor T-38 im Produkt, nur
+    andersherum: Die Auskunft sagte `required: false` über ein Feld, das Mike
+    längst als Pflicht entschieden hatte.
+
+    Warum das hier steht und nicht im JSON-Artefakt: Das Artefakt beschreibt
+    den **REST**-Vertrag gegenüber einem Konsumenten. Der Plugin-Vertrag
+    richtet sich an einen Autor und lebt in `stockinfo_plugin.types`. Zwei
+    Verträge, zwei Quellen — aber jeder nur eine.
+
+    Returns:
+        Je Antworttyp die Felder mit Art, Pflicht und Bedeutung.
+    """
+    from dataclasses import MISSING, fields as dataclass_fields
+
+    from stockinfo_plugin.types import Quote, Resolved
+
+    described: dict[str, list[dict]] = {}
+    for label, dataclass_type in (("resolved", Resolved), ("quote", Quote)):
+        described[label] = [
+            {
+                "name": field.name,
+                "kind": _field_kind(field.type),
+                "required": (
+                    field.default is MISSING and field.default_factory is MISSING
+                ),
+                "meaning": _PLUGIN_FIELD_MEANINGS.get(
+                    (label, field.name), "—"
+                ),
+            }
+            for field in dataclass_fields(dataclass_type)
+        ]
+    return described

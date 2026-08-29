@@ -160,7 +160,7 @@ def test_ein_unbekannter_anfragetyp_faellt_auch_bei_einem_fehlfall_auf() -> None
     problems = validate_scenarios([alien])
     assert any("keiner bekannten Rolle" in line for line in problems), problems
 
-    source = FakeResolver(Resolved(ListedIdentity(ticker="RY", mic="XTSE")))
+    source = FakeResolver(Resolved(ListedIdentity(ticker="RY", mic="XTSE"), "Royal Bank", "stock"))
     assert run_scenarios(DirectRunner(source), [alien]) == problems, (
         "der vollständige Lauf muss dieselbe Beanstandung melden — vorher war "
         "auch er leer und damit grün"
@@ -276,7 +276,7 @@ def test_die_falsche_ergebnisart_wird_benannt() -> None:
 
 
 def test_ein_abweichender_kernwert_wird_gemeldet() -> None:
-    deviations = check_scenario(GOOD, Resolved(ListedIdentity(ticker="RX", mic="XTSE")))
+    deviations = check_scenario(GOOD, Resolved(ListedIdentity(ticker="RX", mic="XTSE"), "Royal Bank", "stock"))
 
     assert len(deviations) == 1
     assert "'RX'" in deviations[0] and "'RY'" in deviations[0]

@@ -38,6 +38,8 @@ dieser Stelle schon gemeinsam — hier bleibt nur der Treffer zu übersetzen.
 
 from typing import Any
 
+import structlog
+
 from stockinfo_plugin import (
     ListedIdentity,
     NotFound,
@@ -52,6 +54,8 @@ from stockinfo_plugin.invariants import isin_check_digit_is_valid
 from app.providers.base import ResolvedInstrument
 from app.providers.openfigi_provider import OpenFigiClient
 from app.resolver import OpenFigiResolver as CoreOpenFigiResolver
+
+logger = structlog.get_logger()
 
 
 class OpenFigiResolverPlugin(Resolver):
@@ -136,6 +140,25 @@ class OpenFigiResolverPlugin(Resolver):
             # Der Kern-Resolver setzt beide Felder nur, wenn die Zuordnung
             # eindeutig ist; er rät nichts. Ein `Resolved` ohne sie bestünde
             # `ResolverContract` nicht — und zwar zu Recht.
+            return NotFound()
+
+        # **Dieselbe Regel für Name und Gattung** (T-38). `FigiMatch` führt
+        # beide als ``| None``: OpenFIGI kann eine ISIN einem Ticker zuordnen,
+        # ohne zu wissen, *was* das Papier ist. Bis T-38 kam so ein Treffer
+        # durch und erzeugte die halbe Zeile, wegen der dieses Ticket
+        # existiert.
+        #
+        # `NotFound` und nicht `Unavailable`: Der Dienst war erreichbar und hat
+        # geantwortet — seine Antwort trägt nur nicht, was der Vertrag
+        # verlangt. Das Papier fällt damit an den Yahoo-Fallback dahinter, und
+        # genau dafür gibt es ihn.
+        if not answer.name or not answer.type:
+            logger.info(
+                "openfigi_incomplete",
+                isin=request.isin,
+                has_name=bool(answer.name),
+                has_type=bool(answer.type),
+            )
             return NotFound()
 
         return Resolved(

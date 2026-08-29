@@ -157,7 +157,7 @@ def test_ein_sammelcode_gilt_nicht_als_boerse() -> None:
     assert_contract_rejects(
         ResolverContract,
         "test_bekanntes_papier_wird_aufgeloest",
-        lambda: FakeResolver(Resolved(ListedIdentity(ticker="RY", mic="US"))),
+        lambda: FakeResolver(Resolved(ListedIdentity(ticker="RY", mic="US"), "Royal Bank", "stock")),
         "ist kein MIC nach ISO 10383",
         **RESOLVER_REQUESTS,
     )
@@ -174,7 +174,11 @@ def test_eine_antwort_zu_einem_anderen_papier_faellt_auf() -> None:
         ResolverContract,
         "test_die_antwort_gehoert_zur_frage",
         lambda: FakeResolver(
-            Resolved(ListedIdentity(ticker="ABX", mic="XTSE", isin="CA0679011084"))
+            Resolved(
+                ListedIdentity(ticker="ABX", mic="XTSE", isin="CA0679011084"),
+                "Barrick Gold",
+                "stock",
+            )
         ),
         "das ist ein anderes Wertpapier",
         **RESOLVER_REQUESTS,
@@ -186,7 +190,7 @@ def test_eine_ungueltige_pruef_isin_faellt_auf() -> None:
     assert_contract_rejects(
         ResolverContract,
         "test_die_eigenen_pruefdaten_sind_gueltige_isins",
-        lambda: FakeResolver(Resolved(ListedIdentity(ticker="RY", mic="XTSE"))),
+        lambda: FakeResolver(Resolved(ListedIdentity(ticker="RY", mic="XTSE"), "Royal Bank", "stock")),
         "ist keine gültige ISIN",
         **{**RESOLVER_REQUESTS, "unknown": ResolveRequest(isin="CA00000000000")},
     )

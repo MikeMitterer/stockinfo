@@ -423,3 +423,48 @@ def identity_problem(
         f"{type(identity).__name__} ist keine Identitätsform des Vertrags "
         "(listed, pair, isin_only)"
     )
+
+
+def resolution_problem(resolved: object) -> str:
+    """Was einer Auflösung zu einer **brauchbaren** Antwort fehlt (T-38).
+
+    `identity_problem` beantwortet, ob das Papier *identifiziert* ist. Diese
+    Funktion beantwortet die zweite Hälfte: ob die Antwort auch **trägt**, was
+    ein Host von ihr braucht.
+
+    **Warum das nicht der Typ allein erledigt.** Seit T-38 haben ``name`` und
+    ``instrument_type`` keinen Vorgabewert mehr — damit lassen sie sich nicht
+    mehr weglassen. Füllen mit nichts geht weiter: ``name=""`` und
+    ``name="   "`` sind gültige Zeichenketten und genau so nützlich wie
+    ``None``. Der Anlass ist gemessen: Im UI-Lauf vom 2026-08-28 kamen leere
+    Werte durch, wurden gespeichert und angezeigt, und die Metadatenkaskade
+    lief nie an — ohne eine einzige Meldung.
+
+    **Eine Funktion für drei Verwender**, und das ist der Zweck: Das
+    Contract-Kit prüft damit die Antwort eines Plugins, die Host-Grenze prüft
+    dieselbe Antwort noch einmal, und ein Plugin-Autor kann sie selbst rufen,
+    bevor er antwortet. Drei Fassungen dieser Regel liefen genau so
+    auseinander wie die drei Identitätsrekonstruktionen vor T-31.
+
+    Der Gattungskatalog wird hier **nicht** geprüft. Er ist offen, und was
+    darin steht, entscheidet der Host — der Vertrag verlangt nur, dass
+    überhaupt etwas gesagt wird.
+
+    Args:
+        resolved: Eine `types.Resolved`-Antwort.
+
+    Returns:
+        Die Beanstandung als Satz, oder ``""`` wenn die Antwort trägt.
+    """
+    for field_name in ("name", "instrument_type"):
+        value = getattr(resolved, field_name, None)
+        if value is None:
+            return f"{field_name} fehlt — seit T-38 ein Pflichtfeld"
+        if not isinstance(value, str):
+            return f"{field_name} ist {type(value).__name__}, keine Zeichenkette"
+        if not value.strip():
+            return (
+                f"{field_name} ist leer — ein Pflichtfeld mit nichts darin ist "
+                "dasselbe wie ein fehlendes, nur schwerer zu finden"
+            )
+    return ""

@@ -8,7 +8,7 @@ Antwort Pflicht sind.
 
 from fastapi import APIRouter, HTTPException
 
-from app.contract import ContractUnavailableError, core_contract
+from app.contract import ContractUnavailableError, core_contract, plugin_contract
 from app.models import FieldsResponse
 
 router = APIRouter(tags=["contract"])
@@ -44,4 +44,5 @@ def fields() -> FieldsResponse:
         endpoints=contract["endpoints"],
         details_version=contract["details_version"],
         details=contract.get("details", []),
+        plugin_contract=plugin_contract(),
     )

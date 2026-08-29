@@ -48,7 +48,11 @@ EXAMPLES = Path(__file__).parent.parent / "plugin_api" / "examples"
 # Ein Papier, das OpenFIGI an der Vorgabebörse **nicht** kennt — genau der
 # gemessene Anlass für die Handtabelle. Der Wert steht in der CSV unten und
 # nirgends sonst; er ist der Beweis, dass die Antwort von dort kommt.
-MANUAL = "CA78012H5675;RY;XTSE;Royal Bank of Canada\n"
+#
+# **Die `type`-Spalte ist seit T-38 keine Kür mehr.** Ohne sie antwortet das
+# Beispiel-Plugin `NotFound`, und der vertikale Lauf hätte nichts mehr zu
+# zeigen — genau die Wirkung, die das Ticket beabsichtigt.
+MANUAL = "CA78012H5675;RY;XTSE;Royal Bank of Canada;stock\n"
 CLOSES = "ticker;mic;day;close;currency\nRY;XTSE;2026-01-03;141.55;CAD\n"
 
 # **Die Beispieldatei wird wirklich kopiert**, nicht importiert. Verify `#1`
@@ -79,7 +83,7 @@ SOURCES = [LocalFileResolver]
 def volume(tmp_path: Path) -> Path:
     """Ein Datenvolume, wie es beim Betreiber aussieht."""
     (tmp_path / "manual-isins.csv").write_text(
-        "isin;ticker;mic;name\n" + MANUAL, encoding="utf-8"
+        "isin;ticker;mic;name;type\n" + MANUAL, encoding="utf-8"
     )
     (tmp_path / "closes.csv").write_text(CLOSES, encoding="utf-8")
     plugins = tmp_path / "plugins"
@@ -633,6 +637,7 @@ def test_ein_resolver_ohne_typdeklaration_darf_keine_gattung_liefern() -> None:
         def resolve(self, request):
             return Resolved(
                 identity=PairIdentity(base="BTC", quote_currency="EUR"),
+                name="Bitcoin",
                 instrument_type="crypto",
             )
 
@@ -659,6 +664,7 @@ def test_dieselbe_quelle_mit_deklarierter_gattung_kommt_durch() -> None:
         def resolve(self, request):
             return Resolved(
                 identity=PairIdentity(base="BTC", quote_currency="EUR"),
+                name="Bitcoin",
                 instrument_type="crypto",
             )
 
