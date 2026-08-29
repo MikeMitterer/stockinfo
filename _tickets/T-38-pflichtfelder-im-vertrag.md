@@ -75,8 +75,9 @@ das andere eine des Vertrags.
 > ist mit ETC, was ist mit Kryptos?"*
 >
 > **Beantwortet in T-31, Entscheidung 2 (Mike, 2026-08-28):** Kanonischer
-> Katalog `stock`, `etf`, `etc`, `crypto`, `bond`. ETC ist als gängiger Typ
-> bestätigt, ETN kann später ergänzt werden. **Indizes bleiben draußen** und
+> Katalog `stock`, `etf`, `etc`, `fund`, `crypto`, `bond`. `fund` bezeichnet
+> nicht börsengehandelte Fonds; ETC ist als gängiger Typ bestätigt, ETN kann
+> später ergänzt werden. **Indizes bleiben draußen** und
 > werden mit `unsupported_instrument_type` ehrlich abgelehnt.
 >
 > Damit ist dieses Ticket nicht mehr blockiert. Die Abwägung unten bleibt
@@ -96,13 +97,15 @@ Der entschiedene Katalog, mit dem Grund je Eintrag:
 | `stock` | vorhanden | — |
 | `etf` | vorhanden | — |
 | `etc` | Rohstoff-Tracker sind formal **keine** Fonds. justETF führt sie getrennt, OpenFIGI ebenfalls | Die ETF-Anreicherung muss entscheiden, ob sie für ETCs greift. `etn` kann später folgen |
+| `fund` | nicht börsengehandelter Fonds; `MUTUALFUND → etf` ist fachlich falsch | nutzt `listed`, wenn ein echter Handelsplatz vorliegt, sonst `isin_only`; Quellen deklarieren die Gattung ausdrücklich |
 | `crypto` | Mikes ausdrückliche Frage | Braucht die Paar-Identität aus T-31 — eine Coin hat keinen MIC |
 | `bond` | Anleihen | Braucht die `isin_only`-Identität aus T-31 |
 
 **Nicht aufgenommen:** `index` — ehrlich abgelehnt mit
 `unsupported_instrument_type`, bis eine eigene Entscheidung ihn aufnimmt.
-`fund` steht nicht im Katalog; nicht börsengehandelte Fonds werden heute auf
-`etf` abgebildet, und ob das bleibt, ist offen — es ist kein Blocker.
+`fund` ist mit Mikes Entscheidung vom 2026-08-29 aufgenommen. Die bestehende
+Abbildung `MUTUALFUND → etf` wird durch `MUTUALFUND → fund` ersetzt. Ein Fonds
+ohne kanonische `listed`- oder `isin_only`-Identität wird nicht geraten.
 
 **Die Aufzählung bleibt offen**, wie es der Vertrag für `source` schon hält
 („Ein neuer Wert in einer offenen Aufzählung" gilt dort ausdrücklich als
@@ -124,7 +127,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Entscheidung Mike | das Gattungs-Vokabular steht fest: `stock`, `etf`, `etc`, `crypto`, `bond`; Indizes bleiben draußen (T-31, Entscheidung 2) | ✅ | |
+| **1** | Entscheidung Mike | das Gattungs-Vokabular steht fest: `stock`, `etf`, `etc`, `fund`, `crypto`, `bond`; Indizes bleiben draußen (T-31, Entscheidung 2) | ✅ | |
 | **2** | `stockinfo_plugin.types` | `Resolved.name` und `Resolved.instrument_type` sind Pflichtfelder. Kein Vorgabewert, und die Zusage steht im Docstring | | |
 | **3** | `API_VERSION` | der Sprung ist **ehrlich** gemacht: Ein optionales Feld zur Pflicht zu erheben ist laut eigener Kompatibilitätsregel ein **Bruch**. Ein Plugin nach altem Vertrag wird abgewiesen und nicht stillschweigend geduldet | | |
 | **4** | Contract-Kit | die Rollen-Suiten prüfen die Pflichtfelder. Ein Plugin-Autor merkt es **beim Bauen**, nicht ein Benutzer im Betrieb | | |
@@ -133,7 +136,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | **6b** | dieselbe Auskunft | `name` und `type` stehen dort als **Pflicht**. Heute sagt sie `required: false` — das widerspricht der Entscheidung, sobald sie umgesetzt ist | | |
 | **7** | `contract/core-contract.json` | `core_version` steigt, weil ein optionales Feld zum Pflichtfeld wird. Das ist laut eigener Regel **breaking** → Major | | |
 | **8** | die vier eingebauten Plugins | jedes liefert die Pflichtfelder oder antwortet ehrlich mit `NotFound` | | |
-| **9** | das YAML-Beispiel | jeder `instrument`-Eintrag trägt `name` und `type`; ohne sie könnte das Fallback den Vertrag nicht erfüllen. Siehe T-37 | | |
+| **9** | das YAML-Beispiel | jeder `instrument`-Eintrag trägt `name` und `type`; ein nicht börsengehandelter Fonds kommt als `fund`, nicht `etf`. Siehe T-37 | | |
 | **10** | `docs/plugins.md` | ein Plugin-Autor liest, welche Felder er liefern **muss** | | |
 
 ---

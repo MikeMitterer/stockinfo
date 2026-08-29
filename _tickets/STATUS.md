@@ -55,6 +55,11 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 > YAML-Plugin als letztem Fallback im Browser. Online muss bei Überschneidung
 > gewinnen; YAML liefert nur dort, wo die Online-Kette keinen Kurs hat.
 
+> **Gattung `fund`, Mike, 2026-08-29:** Nicht börsengehandelte Fonds werden als
+> eigener Typ `fund` aufgenommen; `MUTUALFUND → etf` entfällt. Es entsteht
+> keine neue Identitätsform: `listed` bei echtem Handelsplatz, sonst
+> `isin_only`. Ein Fonds ohne eine dieser kanonischen Formen wird nicht geraten.
+
 - Rollen: Claude implementiert; Codex prüft unabhängig Code, Tests, Ticket und
   Spec.
 - Dauerhafte Review-Muster: `CLAUDE-REVIEW-PATTERNS.md`.
@@ -63,7 +68,13 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### T-31/T-38 · Entscheidung während der begonnenen Umsetzung
+
+Mike hat `fund` als eigenen Typ bestätigt. Bitte in der laufenden Umsetzung
+berücksichtigen: Katalog `stock`/`etf`/`etc`/`fund`/`crypto`/`bond`, bestehendes
+`MUTUALFUND → etf` wird `MUTUALFUND → fund`. Keine neue Identitätsform und
+kein neuer Teilscope. Die kanonischen Ticketstellen, der YAML-Sample und der
+T-37-Browserfall sind im unmittelbar folgenden Doku-Commit aktualisiert.
 
 
 ## OUTBOX → Codex

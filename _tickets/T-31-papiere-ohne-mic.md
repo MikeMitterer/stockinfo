@@ -16,7 +16,7 @@
 | 1 | Entscheidung | Mike hat entschieden: Krypto und Anleihen kommen in den MVP, mit eigener Identitätsform und eigenem Typ; Indizes bleiben draußen | ✅ [^a] | |
 | 2 | `app/db.py` | die Identität ist eine getaggte Union: `kind` ∈ `listed`/`pair`/`isin_only`, ein `CHECK` je `kind` erzwingt genau die passende Feldbelegung — halbe Identitäten bleiben unmöglich | | |
 | 3 | `app/exchanges.py`, Contract-Kit | `canonical_identity` wird zur Weiche über die Union; `is_real_mic` und `is_canonical_ticker` bleiben unverändert die `listed`-Hälfte. Im Vertrag: discriminated union über `kind` | | |
-| 4 | Typ-Katalog | `stock`/`etf`/`etc`/`crypto`/`bond` kanonisch (Ort: T-38); `QUOTE_TYPE_MAP` erweitert um `CRYPTOCURRENCY → crypto`, `BOND → bond` — Erkennen, nicht Raten | | |
+| 4 | Typ-Katalog | `stock`/`etf`/`etc`/`fund`/`crypto`/`bond` kanonisch (Ort: T-38); `QUOTE_TYPE_MAP` bildet `MUTUALFUND → fund`, `CRYPTOCURRENCY → crypto`, `BOND → bond` — Erkennen, nicht Raten | | |
 | 5 | Aufnahmeweg | die Paar-Identität entsteht aus dem **Gattungs-Befund der Quelle**, nie aus der Symbolform; Eintritt per Symbol (`isin = NULL`), die By-Symbol-Routen tragen ihn | | |
 | 6 | Aufnahmeweg | eine **nicht** aufgenommene Gattung (Index) wird mit eigener Kennung `unsupported_instrument_type` abgelehnt — nicht mit dem Zufallsbefund der Symbolform; i18n DE/EN | | |
 | 7 | Kursweg | für ein Paar muss die Währung des gelieferten Kurses `quote_currency` entsprechen; eine Abweichung ist ein Datenfehler und wird abgelehnt, nicht still konvertiert | | |
@@ -33,8 +33,9 @@
    ohne Handelsplatz. Krypto und Anleihen sollen **schon im MVP** erfassbar
    sein.
 2. **Jede Gattung bekommt einen eigenen Typ.** Kanonischer Katalog:
-   `stock`, `etf`, `etc`, `crypto`, `bond`. ETC ist als gängiger Typ bestätigt;
-   ETN kann später ergänzt werden, wenn gebraucht.
+   `stock`, `etf`, `etc`, `fund`, `crypto`, `bond`. `fund` bezeichnet den
+   nicht börsengehandelten Fonds und wird nicht länger als ETF ausgegeben.
+   ETC ist als gängiger Typ bestätigt; ETN kann später ergänzt werden.
 3. **Kein Migrationspfad.** Die bestehende Entwicklungsdatenbank wird verworfen;
    das neue Schema wird direkt angelegt.
 4. **Indizes bleiben draußen** — sie waren Teil des Fundes, sind aber nicht
@@ -341,13 +342,13 @@ bestehende Zusagen **nicht**, und beide bleiben ausdrücklich erhalten:
 
 | Ort | Änderung |
 |---|---|
-| `app/providers/base.py` | `ResolvedInstrument` bekommt `kind`, `base`, `quote_currency`; `QUOTE_TYPE_MAP` += `CRYPTOCURRENCY → crypto`, `BOND → bond` (Matrix `#4`) |
+| `app/providers/base.py` | `ResolvedInstrument` bekommt `kind`, `base`, `quote_currency`; `QUOTE_TYPE_MAP` bildet `MUTUALFUND → fund`, `CRYPTOCURRENCY → crypto`, `BOND → bond` (Matrix `#4`) |
 | `app/exchanges.py` | `canonical_identity` wird Weiche über die Union; `is_real_mic` und `is_canonical_ticker` bleiben unverändert die `listed`-Hälfte (Matrix `#3`) |
 | `app/exchanges.py` | `REASON_UNSUPPORTED_INSTRUMENT_TYPE` samt Eintrag in `REJECTION_REASONS` (Matrix `#6`) |
 | `dashboard/src/i18n/{de,en}.ts` | derselbe Schlüssel in beiden Sprachen |
 | `app/plugin_adapters.py` | `ResolverAdapter` übersetzt über `kind` (Matrix `#5`) |
 | `app/services/quote_service.py` | für `kind='pair'`: Kurswährung ≠ `quote_currency` ⇒ Ablehnung, keine stille Umrechnung (Matrix `#7`) |
-| Metadatenkaskade | läuft nur für `etf`/`etc` — kein justETF für eine Coin, keine TER-Frage an eine Anleihe (Matrix `#8`) |
+| Metadatenkaskade | fragt nur Quellen, die den konkreten Typ deklarieren: justETF etwa für `etf`/`etc`, YAML auch für `fund`; kein justETF für Coin, Fonds oder Anleihe (Matrix `#8`) |
 
 `app/resolver.py` und die eingebauten Plugins ziehen mit.
 

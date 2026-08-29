@@ -65,6 +65,17 @@ instruments:
           value: 99.42
     note: No query source is available; the manually maintained history is the fallback.
 
+  - id: active-fund
+    identity:
+      kind: isin_only
+      isin: DE0009848119
+    name: DWS Top Dividende LD
+    instrument_type: fund
+    price:
+      value: 142.50
+      currency: EUR
+      as_of: "2026-08-27T17:30:00+02:00"
+
 fx_rates:
   - base: CAD
     quote: EUR
