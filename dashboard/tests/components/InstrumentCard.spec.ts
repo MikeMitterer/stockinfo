@@ -117,4 +117,23 @@ describe('InstrumentCard', () => {
     await wrapper.find('.icard__toggle').trigger('click')
     expect(wrapper.find('.isin__add').exists()).toBe(true)
   })
+
+  it('bietet dem Waehrungspaar keinen ISIN-Editor, sondern eine Erklaerung', async () => {
+    // **Codex `#5` aus Runde 5.** Eine Coin hat keine ISIN — das ist keine
+    // Luecke, die jemand fuellen koennte, sondern eine Eigenschaft der Form.
+    // Der Editor dort waere eine Einladung in einen Fehler: Der
+    // Speicherversuch liefe gegen den `CHECK`, der fuer `pair` ausdruecklich
+    // `isin IS NULL` verlangt.
+    //
+    // Geprueft wird beides — dass der Editor **weg** ist und dass an seiner
+    // Stelle etwas steht. Ein leeres Feld saehe aus wie ein
+    // Bearbeitungsfehler.
+    const wrapper = mountCard({
+      identity: { kind: 'pair', base: 'BTC', quote_currency: 'EUR' },
+    })
+    await wrapper.find('.icard__toggle').trigger('click')
+
+    expect(wrapper.find('.isin__add').exists()).toBe(false)
+    expect(wrapper.text()).toContain(i18n.global.t('table.noIsinByForm'))
+  })
 })

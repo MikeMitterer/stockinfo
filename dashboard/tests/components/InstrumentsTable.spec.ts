@@ -7,6 +7,7 @@ import InstrumentsTable from '../../src/components/InstrumentsTable.vue'
 import { useTableSort } from '../../src/composables/useTableSort'
 import { i18n } from '../../src/i18n'
 import { makeInstrument } from '../fixtures/instrument'
+import type { InstrumentSummary } from '../../src/types'
 
 const base = makeInstrument()
 const instruments = [base, makeInstrument({ symbol: 'VGWL.DE', name: 'Vanguard FTSE All-World' })]
@@ -19,10 +20,10 @@ function stubMatchMedia(compact: boolean) {
   }))
 }
 
-function mountTable() {
+function mountTable(rows: InstrumentSummary[] = instruments) {
   return mount(InstrumentsTable, {
     props: {
-      instruments, selectedSymbol: null, refreshingSymbol: null, savingSymbol: null,
+      instruments: rows, selectedSymbol: null, refreshingSymbol: null, savingSymbol: null,
       extraetfEtfUrl: '', extraetfStockUrl: '', yahooUrl: '',
     },
     global: { plugins: [i18n] },
@@ -382,5 +383,35 @@ describe('InstrumentsTable — Detailbereich', () => {
     const controlsId = toggle.attributes('aria-controls')
     expect(controlsId).toBeTruthy()
     expect(wrapper.find(`[id="${controlsId}"]`).classes()).toContain('details-row')
+  })
+})
+
+describe('InstrumentsTable · Identitätsformen', () => {
+  it('bietet dem Währungspaar keinen ISIN-Editor, sondern eine Erklärung', () => {
+    // **Codex `#5` aus Runde 5**, dasselbe wie in der Karte: Eine Coin hat
+    // keine ISIN, und ein Editor dort liefe gegen den `CHECK` der Datenbank.
+    // Beide Ansichten zeigen dieselbe Spalte — geprüft werden deshalb beide,
+    // sonst deckt die eine den Fehler der anderen zu.
+    stubMatchMedia(false)
+    const pair = makeInstrument({
+      symbol: 'BTC-EUR',
+      identity: { kind: 'pair', base: 'BTC', quote_currency: 'EUR' },
+    })
+
+    const wrapper = mountTable([pair])
+
+    expect(wrapper.find('.isin__add').exists()).toBe(false)
+    expect(wrapper.text()).toContain(i18n.global.t('table.noIsinByForm'))
+  })
+
+  it('bietet dem Listing ohne ISIN weiterhin den Editor', () => {
+    // Die Gegenprobe: Ohne sie prüfte der Fall darüber nur, dass irgendwo
+    // kein Editor steht — und wäre auch grün, wenn es ihn nirgends mehr gäbe.
+    stubMatchMedia(false)
+    const listing = makeInstrument({ isin: null })
+
+    const wrapper = mountTable([listing])
+
+    expect(wrapper.find('.isin__add').exists()).toBe(true)
   })
 })

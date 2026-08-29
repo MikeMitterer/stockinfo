@@ -1,4 +1,9 @@
+import pytest
+from pydantic import ValidationError
+
 from app.models import (
+    IsinOnlyIdentityOut,
+    PairIdentityOut,
     EnvInfo,
     InstrumentSummary,
     ListedIdentityOut,
@@ -36,3 +41,31 @@ def test_env_info_und_refresh_result() -> None:
     )
     assert env.openfigi_key_set is True
     assert RefreshResult(total=5, refreshed=4).refreshed == 4
+
+
+@pytest.mark.parametrize(
+    ("form", "extra"),
+    [
+        (PairIdentityOut(base="BTC", quote_currency="EUR"), {"isin": "DE0001102531"}),
+        (PairIdentityOut(base="BTC", quote_currency="EUR"), {"ticker": "BTC"}),
+        (IsinOnlyIdentityOut(isin="DE0001102531"), {"mic": "XETR"}),
+        (ListedIdentityOut(ticker="EUNL", mic="XETR"), {"base": "EUNL"}),
+    ],
+    ids=["pair_mit_isin", "pair_mit_ticker", "isin_only_mit_mic", "listed_mit_base"],
+)
+def test_eine_identitaetsform_nimmt_keine_fremden_felder(form, extra: dict) -> None:
+    """**Die Gegenprobe zu `extra="forbid"`** (Codex `#5`, Runde 5).
+
+    Ohne sie wären die fremden Felder still verworfen worden — und genau
+    dieser stille Verlust hat den Umbau in Runde 4 zwei Schichten später zum
+    Absturz gebracht: Ein übriggebliebenes `isin=` verschwand kommentarlos,
+    die Zeile ging ohne ISIN in die Datenbank, und der Fehler tauchte an einer
+    Stelle ohne Bezug zur Ursache auf.
+
+    Jede Kombination hier ist fachlich unmöglich: Ein Paar hat keine ISIN und
+    keinen Ticker, eine ISIN-only-Form keinen Handelsplatz, ein Listing keinen
+    Basiswert. Wer sie trotzdem schickt, hat einen Rest aus einem Umbau — und
+    das gehört gemeldet, nicht weggeworfen.
+    """
+    with pytest.raises(ValidationError):
+        type(form)(**{**form.model_dump(), **extra})
