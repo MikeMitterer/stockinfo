@@ -58,6 +58,11 @@ unterstützendes Format.
 Alle folgenden CSV-Abschnitte dokumentieren den bereits geprüften
 Ausgangsstand. Sie sind **keine Vorgabe für die Neuimplementierung**.
 
+Ein menschliches Verify-Ticket wird bewusst **noch nicht** daraus abgeleitet.
+Mike legt es erst nach der technischen Abnahme des MVP an, wenn Online-Plugin
+und YAML-Fallback beide sauber laufen. So prüft es den dann gültigen Stand
+statt eine heute schon veraltende Zwischenarchitektur.
+
 ---
 
 ## Der Kern: eine Prüfstrecke, zwei Profile

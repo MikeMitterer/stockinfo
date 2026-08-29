@@ -6,7 +6,7 @@
   verwechselte Wertpapier und Listing
 - **Repo:** StockInfo
 - **Hängt an:** T-21 Teil 3 (der `409` ist dort gebaut, die Auflösung nicht)
-- **Gehört in:** T-28, das finale Plugin-Gate
+- **Einordnung:** eigenständiges offenes Ticket; keine Gate-Beziehung
 
 ## Die Grenze, an der dieses Ticket liegt
 

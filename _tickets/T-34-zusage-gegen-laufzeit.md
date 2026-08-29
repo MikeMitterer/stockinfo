@@ -7,7 +7,7 @@
 - **Angelegt:** 2026-08-27, aus T-21 Übergabe 3 und 4 (Runden 39–49)
 - **Hängt ab von:** nichts. Übergabe 4B baut den dritten der drei Wächter
   ohnehin; die anderen beiden sind unabhängig
-- **Gehört in:** T-28, das finale Plugin-Gate
+- **Einordnung:** eigenständiges, von Mike beauftragtes Ticket
 - **Entscheidung Mike, 2026-08-27:** ausdrücklich beauftragt, nachdem die
   Runden 39–49 dreimal denselben Befundtyp gebracht haben
 

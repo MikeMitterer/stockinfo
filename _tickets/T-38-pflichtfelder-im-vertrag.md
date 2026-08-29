@@ -2,11 +2,11 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Plugin-Vertrag + Core + REST) | offen · **Gate für T-28** | 1 Tag | Pflicht/Optional je Result-Typ, Gattungs-Vokabular, Durchsetzung, REST-Auskunft | — |
+| StockInfo (Plugin-Vertrag + Core + REST) | offen | 1 Tag | Pflicht/Optional je Result-Typ, Gattungs-Vokabular, Durchsetzung, REST-Auskunft | — |
 
 - **Angelegt:** 2026-08-28, aus T-36 Runde 1 (Codex) und Mikes Entscheidungen
 - **Hängt ab von:** T-36 (die dort behobenen Befunde sind die Symptome)
-- **Blockiert:** T-28 — als Plugin-Gate aufgenommen
+- **Blockiert:** nichts
 - **Berührt:** T-31 (Papiere ohne MIC), T-34 (Wächter), T-37 (CSV-Profil)
 
 **Löst:** Drei der fünf Befunde aus dem UI-Lauf waren **derselbe** Fehler: Ein
@@ -146,9 +146,8 @@ von ihr erwarten darf. Heute weiß sie es nicht — sie hat es dreimal
 stillschweigend nicht bekommen und drei Symptome gezeigt, die niemand
 miteinander in Verbindung gebracht hätte.
 
-T-28 fragt „ist das Ganze benutzbar geworden?". Eine Oberfläche, die bei einer
-unvollständigen Quelle leere Felder zeigt statt eines Hinweises, beantwortet
-diese Frage mit Nein — und zwar erst beim Benutzer.
+Eine Oberfläche, die bei einer unvollständigen Quelle leere Felder zeigt statt
+eines Hinweises, verlagert den Vertragsfehler bis zum Benutzer.
 
 ---
 

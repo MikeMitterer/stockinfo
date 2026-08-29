@@ -1,7 +1,6 @@
 # T-31 · Papiere ohne echten MIC — Krypto, Index, Anleihe
 
-- **Status:** offen (entschieden 2026-08-28 — Umsetzung wartet auf die
-  Portfolio-Einordnung über T-28)
+- **Status:** offen (entschieden 2026-08-28)
 - **Angelegt:** 2026-08-25, beim Bau von T-21 Teil 3, Übergabe 2A
 - **Entschieden:** 2026-08-28, Mike im Gespräch mit Claude — Details unten
 - **Repo:** StockInfo

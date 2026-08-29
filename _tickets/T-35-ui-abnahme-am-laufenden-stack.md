@@ -15,11 +15,10 @@
 
 **Löst:** 795 grüne Tests sagen nichts darüber, ob die Oberfläche trägt. Sie
 prüfen Funktionen, nicht den Weg, den ein Mensch tatsächlich geht — und genau
-dort ist bisher **kein einziges Mal** gemessen worden. Die `AI`-Spalte in T-28
-steht durchgehend auf ➖: „keine Live-Verifikation".
+dort ist bisher **kein einziges Mal** gemessen worden.
 
-Dieses Ticket schließt die Lücke nicht für T-28 — die Abnahme bleibt Mikes.
-Es beantwortet die Vorfrage: **Hält der Stand einer Bedienung überhaupt
+Dieses Ticket ersetzt keine menschliche Abnahme durch Mike. Es beantwortet
+die Vorfrage: **Hält der Stand einer Bedienung überhaupt
 stand, bevor ein Mensch seine Zeit investiert?**
 
 ---
@@ -60,7 +59,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | **5** | eine ISIN, die nirgends auflösbar ist (`XX0000000000`) | die Oberfläche sagt es verständlich, und in `instruments` steht danach **keine** neue Zeile. Eine kaputte Zeile ist teurer als eine abgelehnte Eingabe | ✅ | |
 | **6** | ein benutzerpflegbares Feld ändern (z.B. TER von Hand) | der neue Wert steht sofort in der Ansicht | ✅ | |
 | **6b** | dasselbe Feld, SQLite | der Wert steht in der Override-/Detailtabelle — **nicht** in der Quellenspalte. Der Unterschied ist der Kern: Handpflege darf beim nächsten Abruf nicht überschrieben werden | ✅ | |
-| **6c** | nach `#6b` erneut abrufen | die Handpflege **überlebt** den Abruf. Genau das ist der Fall, den T-28 Zeile 2 als „nichts ist über Nacht leer geworden" beschreibt | ✅ | |
+| **6c** | nach `#6b` erneut abrufen | die Handpflege **überlebt** den Abruf — nichts ist nach einer erneuten Quellenabfrage leer geworden | ✅ | |
 | **7** | denselben Kurs zweimal hintereinander abrufen | der zweite Abruf kommt **aus dem Cache**: messbar schneller, und im Protokoll steht kein zweiter Netzaufruf | ✅ | |
 | **7b** | Cache-Zeitstempel in SQLite | `fetched_at` o. ä. ist beim zweiten Abruf **unverändert** — der sichere Beleg. Antwortzeit allein kann täuschen, ein unveränderter Zeitstempel nicht | ✅ | |
 | **8** | Papier löschen | verschwindet aus der Liste **und** aus `instruments`; die zugehörigen Kurszeilen bleiben nicht als Waisen zurück | ✅ | |
@@ -77,8 +76,8 @@ _(Die `Human`-Spalte bleibt leer — sie gehört Mike.)_
   schon mal falsch") kam von ihm, während der Lauf noch lief; danach war
   Reparieren beauftragt, nicht Notieren. Die Änderungen stehen unten
   vollständig, damit Codex sie **als Änderungen** prüft und nicht als Befunde.
-- **Es ersetzt T-28 nicht.** Ob sich das Ergebnis richtig *anfühlt*, kann
-  niemand außer Mike beantworten.
+- **Es ersetzt keine menschliche Abnahme.** Ob sich das Ergebnis richtig
+  *anfühlt*, kann niemand außer Mike beantworten.
 - **Es baut keine Testinfrastruktur.** Kein Playwright, kein Selenium, keine
   Fixtures — ein Browser, der laufende Stack und die echten Quellen. Der
   Testinfrastruktur-Riegel gilt.

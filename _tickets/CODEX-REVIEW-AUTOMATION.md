@@ -75,10 +75,12 @@ T-23**. Ihr Ziel ist nicht mehr Vorarbeit, sondern ein belegter Lauf
 **Warum eine Freigabe nicht bei Mike landet** *(Entscheidung Mike,
 2026-08-22)*: Als dieser Vertrag entstand, hieß `approved` „Codex ist durch,
 jetzt kommt Mikes Abnahme" — pro Ticket. Wenige Stunden später ist entschieden
-worden, dass die Abnahme **gesammelt am Ende über T-28** läuft. Damit stand
-hinter `owner: mike` keine Arbeit mehr; die Reihe blieb nach jeder Freigabe
-stehen, bis Mike sie von Hand weiterschob. Bei `blocked` bleibt er Eigentümer
-— dort braucht es ihn wirklich.
+worden, dass keine menschliche Abnahme nach jedem Einzelticket läuft. Damit
+stand hinter `owner: mike` keine Arbeit mehr; die Reihe blieb nach jeder
+Freigabe stehen, bis Mike sie von Hand weiterschob. Bei `blocked` bleibt er
+Eigentümer — dort braucht es ihn wirklich. Das spätere Sammel-Ticket T-28
+wurde am 2026-08-29 als veraltet verworfen; an der Owner-Regel ändert das
+nichts.
 
 ## Entwurfsrunden — wenn noch kein Produktcode existiert
 

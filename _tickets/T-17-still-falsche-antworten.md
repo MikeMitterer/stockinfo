@@ -220,11 +220,8 @@ dort mitbehoben.
 Ohne sachliche Findings, auf Commit `1a2f2bd`. Codex hat unabhängig
 nachgerechnet: die drei Zieltests (67 bestanden), Ruff über die berührten
 Dateien, `bash -n` für beide Prüf-Scripts, `make test` (256 + 36 + 230) und
-`./_tickets/T-17-smoke.sh --run` (8/8). Offen bleibt allein die Abnahme durch
-Mike — gesammelt über **T-28**, nicht hier.
-
-Die `Human`-Spalte bleibt bis zum Projektabschluss leer; die Abnahme durch
-Mike läuft gesammelt über **T-28**, nicht Ticket für Ticket.
+`./_tickets/T-17-smoke.sh --run` (8/8). Die `Human`-Spalte bleibt für eine
+spätere, von Mike ausdrücklich gewünschte menschliche Abnahme leer.
 
 Branch `t-17-still-falsche-antworten`.
 

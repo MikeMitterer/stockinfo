@@ -422,7 +422,7 @@ Modellen.
 
 Vier Runden, vier Befunde, alle von Codex gefunden und keiner bestritten. Zwei
 davon waren dasselbe Muster: eine Regel dort umgesetzt, wo sie mir auffiel, und
-für allgemein gehalten. Die Abnahme durch Mike läuft gesammelt über **T-28**.
+für allgemein gehalten. Die `Human`-Spalte bleibt Mikes Abnahme vorbehalten.
 
 **Neu im Repo:** `contract/core-contract.json` (verbindlich),
 `contract/openapi-core-snapshot.json` (Wächter), dreizehn Fixtures,
