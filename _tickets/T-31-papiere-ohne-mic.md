@@ -243,8 +243,14 @@ danebengreift. Billig und wirkungslos waren hier eine Sache.
 
 **Die Korrektur:** Eine konkrete `Source` muss `api_version` **selbst**
 deklarieren. Der Loader weist eine fehlende oder falsche **eigene**
-Deklaration ab — geprüft wird `"api_version" in cls.__dict__` entlang der
-MRO bis unterhalb von `Source`, nicht das geerbte Attribut. Die eingebauten
+Deklaration ab: Die **konkrete**, als Entry-Point oder Datei geladene
+`source_class` muss `api_version` in ihrem **eigenen** `__dict__` tragen.
+Geerbt genügt nicht — auch nicht von einer Zwischenklasse. *(Präzisierung
+Codex, Runde 2: Mein erster Text verlangte „selbst deklarieren", beschrieb
+den Check dann aber als Lauf entlang der MRO. Das hätte die Deklaration
+einer gemeinsamen Basisklasse durchgehen lassen und damit dieselbe Vererbung
+wieder eingeführt, die der Check ausschließen soll. Ein Blick, keine Suche.)*
+Der Test prüft genau das. Die eingebauten
 Plugins, die Beispiele, die Test-Doubles und das Contract-Kit ziehen mit und
 deklarieren ausdrücklich.
 
@@ -262,12 +268,26 @@ Die Vorgabe `{"listed"}` bleibt: Ein Plugin, das gegen Vertrag 1 gebaut
 wurde, konnte nur Listings, und die Vorgabe sagt damit die Wahrheit über
 einen Autor, der nichts erklärt.
 
-**Kein neues Subsystem.** Die beiden Mengen sind ein *grober Vorfilter* an
-der Quelle: Der Host überspringt eine Quelle, die die `kind` der Anfrage gar
-nicht bedient, bevor er sie überhaupt fragt. Die eigentliche Entscheidung
-bleibt das vorhandene `handles(request)` **je Rolle** — es kennt die konkrete
-Anfrage, der Vorfilter nur die Gattung. Zwei Ebenen, jede dort, wo das Wissen
-sitzt; die untere ist bereits gebaut und wird nicht ersetzt.
+**Kein neues Subsystem.** Die beiden Mengen sind ein *grober Vorfilter*; die
+eigentliche Entscheidung bleibt das vorhandene `handles(request)` **je
+Rolle**. Zwei Ebenen, jede dort, wo das Wissen sitzt; die untere ist bereits
+gebaut und wird nicht ersetzt.
+
+**Die Aufrufstelle ist je Rolle verschieden, und beim Resolver gibt es sie
+gar nicht.** *(Präzisierung Codex, Runde 2 — mein erster Text beschrieb den
+Vorfilter, als kenne der Host die Gattung schon vor der Frage.)* Er kennt sie
+nicht: `ResolveRequest` trägt ISIN, Symbol, Vorzugsbörse und Währung — weder
+`kind` noch `instrument_type`. Beides ist das **Ergebnis** der Auflösung.
+
+| Rolle | wann der Host filtert |
+|---|---|
+| `resolvers` | **gar nicht vorher.** Es bleibt bei `handles(request)`. Die **Antwort** wird gegen die deklarierten Fähigkeiten geprüft: Liefert eine Quelle eine `kind` oder Gattung, die sie nicht deklariert hat, ist das ein Befund und kein stiller Treffer |
+| `quotes`, `daily`, `etf_meta` | **nach** der Auflösung. Dort sind Identität und Gattung bekannt und stehen in der gespeicherten Zeile; der Vorfilter überspringt eine Quelle, bevor sie eine Anfrage kostet |
+
+**Nie aus der Symbolform geraten.** Der Bindestrich in `BTC-EUR` ist kein
+Beleg für ein Paar, und eine ISIN mit `DE` ist kein Beleg für eine Anleihe.
+Die Gattung stammt aus dem Befund der Quelle — das ist Matrix `#5`, und die
+Vorfilter-Regel darf sie nicht hintenherum aushebeln.
 
 **`SUPPORTED_TYPES` bekommt keinen `None`-Wert mehr.** `None` hätte „alle
 heutigen und künftigen Typen" bedeutet — eine Zusage, die ein Autor nie
@@ -354,9 +374,31 @@ Die Union muss darum durch die ganze Kette getragen werden:
 | Schicht | was zu tun ist |
 |---|---|
 | `app/repository.py`, Quote-Cache | lesen und schreiben über `kind`; die Identitätsspalten je Form, keine Sammelabfrage auf `(ticker, mic)` |
-| `app/models.py` | `QuoteResponse` und `InstrumentSummary` tragen die Identität als Union. `ticker`/`mic` bleiben, wo sie wahr sind (`listed`), und sind für die anderen Formen nicht gesetzt — **nicht** mit einem Ersatzwert gefüllt |
+| `app/models.py` | `QuoteResponse` und `InstrumentSummary` tragen **genau ein** Feld `identity` mit der diskriminierten Union — siehe unten |
 | REST/OpenAPI | `contract/openapi-core-snapshot.json` und die Fixtures ziehen nach; die Änderung ist am veröffentlichten Schema sichtbar, nicht nur im Artefakt |
 | `dashboard/src/types.ts` und Darstellung | dieselbe Union; eine Coin zeigt Paar statt Börse, eine `isin_only`-Anleihe ihre ISIN. Kein leeres Feld, das wie ein Fehler aussieht |
+
+**Ein Feld, nicht drei danebengelegte.** *(Präzisierung Codex, Runde 2.)*
+Mein erster Text ließ `ticker`/`mic` als Top-Level-Felder stehen, „wo sie
+wahr sind", und für die anderen Formen ungesetzt. Das ist dieselbe zweite
+Wahrheit, die ich bei `QuoteRequest.isin` gerade entferne — nur an der
+öffentlichen Grenze, wo sie mehr kostet: Ein Konsument müsste raten, ob ein
+leeres `mic` „gibt es nicht" oder „wurde nicht ermittelt" heißt, und genau
+diese Unterscheidung ist der Grund für die Union.
+
+`QuoteResponse` und `InstrumentSummary` tragen darum **ein** Feld `identity`
+und **keine** parallelen optionalen `ticker`/`mic`/`isin` daneben. Die
+Datenbank behält ihre flachen Spalten — dort sind sie durch den `CHECK`
+gebunden und nicht mehrdeutig; die öffentliche Form behält sie nicht.
+
+`listing_id` bleibt Top-Level auf `InstrumentSummary`: Sie ist nicht Teil
+der Identität, sondern der opake Schlüssel der gespeicherten Zeile.
+
+**Der Preis, ehrlich benannt:** `isin` wandert damit aus der Wurzel von
+`QuoteResponse` in `identity`. Das bricht jeden Konsumenten, der heute
+`response.isin` liest — das Dashboard eingeschlossen. Es ist der Grund, aus
+dem `core_version` ohnehin auf Major geht, und es ist besser jetzt als nach
+dem ersten fremden Konsumenten.
 
 **Die Nahtstelle zu T-38 ist hier und sie ist scharf:** Dass `QuoteResponse`
 die Identität *als Union* führt, ist T-31. Dass `name` und `type` darin
