@@ -13,6 +13,7 @@ import structlog
 
 from app.models import OVERRIDE_FIELDS
 from app.migration import (
+    IDENTITY_CHECK,
     MigrationPlan,
     apply_migration,
     harden_identity_schema,
@@ -22,7 +23,7 @@ from app.migration import (
 logger = structlog.get_logger()
 
 # Schema — instruments (langsam veränderliche Metadaten) + quotes (Zeitreihe).
-_SCHEMA = """
+_SCHEMA = f"""
 CREATE TABLE IF NOT EXISTS instruments (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
     isin            TEXT UNIQUE,
@@ -60,22 +61,7 @@ CREATE TABLE IF NOT EXISTS instruments (
     source          TEXT,
     first_seen      TEXT NOT NULL,
     meta_fetched_at TEXT,
-    -- **Je Form verlangen und ausschließen, nicht nur verlangen.** Ein `CHECK`,
-    -- der bloß die Pflichtfelder der eigenen Form fordert, ließe eine
-    -- `listed`-Zeile mit zusätzlichem `base` zu — eine Zeile mit zwei
-    -- Identitäten, und genau die soll es nicht geben.
-    CHECK (
-        (kind = 'listed'
-            AND ticker IS NOT NULL AND mic IS NOT NULL
-            AND base IS NULL AND quote_currency IS NULL)
-     OR (kind = 'pair'
-            AND base IS NOT NULL AND quote_currency IS NOT NULL
-            AND ticker IS NULL AND mic IS NULL AND isin IS NULL)
-     OR (kind = 'isin_only'
-            AND isin IS NOT NULL
-            AND ticker IS NULL AND mic IS NULL
-            AND base IS NULL AND quote_currency IS NULL)
-    )
+    {IDENTITY_CHECK}
 );
 
 CREATE TABLE IF NOT EXISTS quotes (

@@ -34,6 +34,32 @@ from app.exchanges import (
 
 logger = structlog.get_logger()
 
+IDENTITY_CHECK = """CHECK (
+        (kind = 'listed'
+            AND ticker IS NOT NULL AND mic IS NOT NULL
+            AND base IS NULL AND quote_currency IS NULL)
+     OR (kind = 'pair'
+            AND base IS NOT NULL AND quote_currency IS NOT NULL
+            AND ticker IS NULL AND mic IS NULL AND isin IS NULL)
+     OR (kind = 'isin_only'
+            AND isin IS NOT NULL
+            AND ticker IS NULL AND mic IS NULL
+            AND base IS NULL AND quote_currency IS NULL)
+    )"""
+"""Die Formregel der Identität — **eine** Fassung, zwei Verwender.
+
+Sie steht im frischen Schema und im Tabellen-Neuaufbau des Umzugs. Zwei
+abgeschriebene Fassungen liefen beim ersten Zusatzfeld auseinander, und die
+Folge waere ein Bestand, dessen Zusage davon abhinge, auf welchem Weg er
+entstanden ist.
+
+Je Form verlangend **und** ausschliessend: Ein `CHECK`, der bloss die
+Pflichtfelder der eigenen Form fordert, liesse eine `listed`-Zeile mit
+zusaetzlichem `base` zu — eine Zeile mit zwei Identitaeten.
+"""
+
+
+
 
 # Der Berichtsspeicher. **Eine** Tabelle, nicht zwei.
 #
@@ -311,10 +337,22 @@ def schema_outdated(connection: sqlite3.Connection) -> bool:
     Drei Dinge machen die Zielform aus, und jedes einzelne fehlt für sich
     genommen:
 
-    * die Spalten `ticker`, `mic`, `listing_id`,
-    * `NOT NULL` auf `ticker` und `mic` — die Invariante aus `#2b2` steht im
-      Schema, nicht in einer Prüfung,
+    * die Spalten der Identität — seit T-31 auch `kind`, `base` und
+      `quote_currency`, dazu `listing_id`,
+    * der `CHECK` je `kind`, der die Belegung je Form erzwingt,
     * das **Fehlen** von `identity_status`.
+
+    **`NOT NULL` auf `ticker`/`mic` stand hier bis T-31 und ist der Grund für
+    einen P0.** Es war die richtige Invariante, solange es nur Listings gab;
+    seit die Identität drei Formen hat, ist es die falsche — eine Coin hat
+    keinen Ticker. Ein Frischstart auf dem neuen `_SCHEMA` galt damit als
+    „veraltet", und der anschließende Umbau härtete die Spalten zurück und
+    warf den `CHECK` weg. Ergebnis: Eine frische Datenbank konnte keine
+    Paar-Zeile aufnehmen, und keiner der 828 Tests merkte es, weil alle nur
+    Listings anlegten.
+
+    Was die Form heute ausmacht, steht deshalb im `CHECK` und wird auch dort
+    abgefragt.
 
     Gefragt wird `PRAGMA table_info`, nicht der Zeilenbestand: Eine leere
     Datenbank hat keine Zeile, die etwas verrät, und genau sie war der Fall,
@@ -329,11 +367,30 @@ def schema_outdated(connection: sqlite3.Connection) -> bool:
     columns = {
         row["name"]: row for row in connection.execute("PRAGMA table_info(instruments)")
     }
-    if not {"ticker", "mic", "listing_id"} <= set(columns):
+    if not IDENTITY_COLUMNS <= set(columns):
         return True
     if "identity_status" in columns:
         return True
-    return not all(columns[name]["notnull"] for name in ("ticker", "mic"))
+    return not _has_identity_check(connection)
+
+
+# Die Spalten, die die Identität in ihren drei Formen ausmacht (T-31).
+IDENTITY_COLUMNS = frozenset(
+    {"kind", "ticker", "mic", "base", "quote_currency", "listing_id"}
+)
+
+
+def _has_identity_check(connection: sqlite3.Connection) -> bool:
+    """Trägt die Tabelle den `CHECK`, der die Form erzwingt?
+
+    Am Tabellen-DDL abgelesen und nicht an einer Spaltenliste: `PRAGMA
+    table_info` kennt `CHECK` nicht, und ein `PRAGMA integrity_check` sagt
+    etwas über die Daten, nicht über die Zusage.
+    """
+    row = connection.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'instruments'"
+    ).fetchone()
+    return bool(row) and "kind = 'listed'" in (row["sql"] or "")
 
 
 def _has_identity_columns(connection: sqlite3.Connection) -> bool:
@@ -499,10 +556,18 @@ def _delete_instrument(connection: sqlite3.Connection, instrument_id: int) -> No
 
 
 def _ensure_identity_columns(connection: sqlite3.Connection) -> None:
-    """Legt `ticker`, `mic` und `listing_id` an, falls sie fehlen.
+    """Legt die Identitätsspalten an, falls sie fehlen.
 
     Erst hier und nicht in der Vorschau: Eine Spalte anzulegen ist bereits
     eine Änderung, und Phase 1 verspricht, keine zu machen.
+
+    **`kind`, `base` und `quote_currency` kommen seit T-31 dazu**, und zwar
+    vor dem Tabellen-Neuaufbau: Der `IDENTITY_CHECK` nennt sie, und eine
+    Tabelle, die auf eine fehlende Spalte prüft, lässt sich nicht anlegen.
+
+    `kind` bekommt `'listed'` als Vorgabewert — jede Altzeile **ist** ein
+    Listing, denn die beiden anderen Formen gab es vor T-31 nicht. Das ist
+    kein Raten, sondern die einzige Möglichkeit.
 
     Args:
         connection: Offene Verbindung innerhalb der Transaktion.
@@ -510,18 +575,26 @@ def _ensure_identity_columns(connection: sqlite3.Connection) -> None:
     existing = {
         row["name"] for row in connection.execute("PRAGMA table_info(instruments)")
     }
-    for column in ("ticker", "mic", "listing_id"):
+    for column in ("ticker", "mic", "listing_id", "base", "quote_currency"):
         if column not in existing:
             connection.execute(f"ALTER TABLE instruments ADD COLUMN {column} TEXT")
+    if "kind" not in existing:
+        connection.execute(
+            "ALTER TABLE instruments ADD COLUMN kind TEXT NOT NULL DEFAULT 'listed'"
+        )
 
 
 def harden_identity_schema(connection: sqlite3.Connection) -> None:
-    """Macht `ticker` und `mic` zu Pflichtspalten und entfernt `identity_status`.
+    """Setzt die Formregel ins Schema und entfernt `identity_status`.
 
     **Der Punkt ohne Wiederkehr.** Danach kann keine halbe Identität mehr
     entstehen — nicht durch einen Programmierfehler, nicht durch einen
     Endpunkt, den jemand übersehen hat. Die Invariante aus `#2b2` steht damit
     im Schema und nicht in einer Prüfung, die man vergessen kann.
+
+    **Seit T-31 ist die Invariante der `CHECK` je `kind`, nicht `NOT NULL`.**
+    Eine Coin hat keinen Ticker; die alte Fassung machte die neuen Formen
+    unspeicherbar und war der P0 aus Runde 4.
 
     SQLite kann eine Spalte nicht nachträglich auf `NOT NULL` setzen; die
     Tabelle wird deshalb neu gebaut und umkopiert. Die Spaltenliste entsteht
@@ -547,6 +620,10 @@ def harden_identity_schema(connection: sqlite3.Connection) -> None:
 
     definitions = ", ".join(_column_definition(column) for column in columns)
     names = ", ".join(column["name"] for column in columns)
+    # **Die Formregel kommt mit, sonst faellt sie beim Umbau weg.** Genau das
+    # war der P0 aus Runde 4: Die neue Tabelle entstand ohne `CHECK`, und eine
+    # frische Installation konnte danach keine Paar-Zeile mehr aufnehmen.
+    definitions += f", {IDENTITY_CHECK}"
 
     connection.execute("DROP TABLE IF EXISTS instruments_hardened")
     connection.execute(f"CREATE TABLE instruments_hardened ({definitions})")
@@ -560,8 +637,10 @@ def harden_identity_schema(connection: sqlite3.Connection) -> None:
 def _column_definition(column: sqlite3.Row) -> str:
     """Baut die DDL einer Spalte für die gehärtete Tabelle nach.
 
-    `ticker` und `mic` bekommen ihr `NOT NULL` — darum geht das Ganze. Alles
-    andere behält, was es hatte: Typ, `NOT NULL`, `PRIMARY KEY` und
+    **`ticker` und `mic` bekommen ihr `NOT NULL` seit T-31 nicht mehr.** Es war
+    die richtige Invariante, solange es nur Listings gab; eine Coin hat keinen
+    Ticker. Was „vollstaendig" heisst, sagt jetzt `IDENTITY_CHECK` je Form.
+    Alles andere behaelt, was es hatte: Typ, `NOT NULL`, `PRIMARY KEY` und
     Vorgabewert.
 
     ``UNIQUE`` steht **nicht** hier: SQLite führt es als eigenen Index, nicht
@@ -578,7 +657,7 @@ def _column_definition(column: sqlite3.Row) -> str:
     parts = [column["name"], column["type"] or "TEXT"]
     if column["pk"]:
         parts.append("PRIMARY KEY AUTOINCREMENT")
-    elif column["name"] in ("ticker", "mic") or column["notnull"]:
+    elif column["notnull"]:
         parts.append("NOT NULL")
     if column["dflt_value"] is not None:
         parts.append(f"DEFAULT {column['dflt_value']}")

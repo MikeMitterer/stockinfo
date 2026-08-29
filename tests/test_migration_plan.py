@@ -276,7 +276,19 @@ def test_ein_fertiger_bestand_hat_nichts_mehr_zu_tun(tmp_path) -> None:
     assert plan.needs_migration is False
     assert plan.schema_outdated is False
     assert "identity_status" not in columns
-    assert all(columns[name]["notnull"] for name in ("ticker", "mic"))
+    # **Bis T-31 stand hier `NOT NULL` auf `ticker`/`mic`** — die richtige
+    # Invariante, solange es nur Listings gab. Genau diese Zeile hat den P0 aus
+    # Runde 4 gedeckt: Der Frischstart härtete zurück und warf den `CHECK` weg,
+    # und der Test nannte das die Zielform.
+    assert not any(columns[name]["notnull"] for name in ("ticker", "mic")), (
+        "ticker/mic sind seit T-31 nullable — der CHECK bindet sie je Form"
+    )
+    assert {"kind", "base", "quote_currency"} <= set(columns)
+    with _connect(path) as connection:
+        ddl = connection.execute(
+            "SELECT sql FROM sqlite_master WHERE name = 'instruments'"
+        ).fetchone()["sql"]
+    assert "kind = 'listed'" in ddl, "die Formregel steht im Schema"
 
 
 def test_ein_verlustloser_altbestand_wird_beim_start_gehaertet(tmp_path) -> None:
