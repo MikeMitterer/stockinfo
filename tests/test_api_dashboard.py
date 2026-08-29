@@ -6,24 +6,38 @@ from fastapi.testclient import TestClient
 from app.config import Settings, get_settings
 from app.container import get_cached_quote_service, get_quote_analyzer
 from app.main import app
-from app.models import AnalyzeResult, AnalyzeStage, ListedIdentityOut, QuoteResponse
+from app.models import (
+    AnalyzeResult,
+    AnalyzeStage,
+    ListedIdentityOut,
+    QuoteResponse,
+    with_identity,
+)
 from app.services.quote_cache import IsinConflictError
 from app.services.quote_service import InstrumentNotFoundError
 
 
 class FakeService:
     def list_instruments(self) -> list[dict]:
+        # **Über `with_identity`, nicht mit einem handgeschriebenen
+        # `identity`-Block.** Der echte Dienst faltet die flachen Spalten der
+        # gespeicherten Zeile genau so; eine zweite Fassung hier liefe beim
+        # ersten Zusatzfeld auseinander, und der Test prüfte dann eine Form,
+        # die es im Betrieb nicht gibt.
         return [
-            {
-                "symbol": "VGWL.DE",
-                "isin": "IE00B3RBWM25",
-                "history_count": 2,
-                "ticker": "VGWL",
-                "mic": "XETR",
-                "listing_id": "018f3a2c-7b41-7c9e-a3d2-5f1b9c4e2a10",
-                "latest_price": 161.0,
-                "source": "yfinance+justetf",
-            }
+            with_identity(
+                {
+                    "symbol": "VGWL.DE",
+                    "isin": "IE00B3RBWM25",
+                    "history_count": 2,
+                    "kind": "listed",
+                    "ticker": "VGWL",
+                    "mic": "XETR",
+                    "listing_id": "018f3a2c-7b41-7c9e-a3d2-5f1b9c4e2a10",
+                    "latest_price": 161.0,
+                    "source": "yfinance+justetf",
+                }
+            )
         ]
 
     def count_instruments(self) -> int:

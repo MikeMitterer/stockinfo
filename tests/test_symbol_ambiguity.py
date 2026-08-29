@@ -253,7 +253,7 @@ def test_ein_eindeutiges_symbol_bleibt_unberuehrt(client_and_repo) -> None:
     response = client.get("/quote", params={"symbol": _ALIAS})
 
     assert response.status_code == 200, response.text
-    assert response.json()["mic"] == "XNAS"
+    assert response.json()["identity"]["mic"] == "XNAS"
 
 
 def test_zwei_listings_duerfen_weiterhin_nebeneinander_entstehen(
