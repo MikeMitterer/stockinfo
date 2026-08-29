@@ -412,8 +412,7 @@ class CachedQuoteService:
                     isin=instrument.get("isin"),
                     exchange=instrument.get("exchange"),
                     instrument_type=instrument.get("type"),
-                    ticker=instrument.get("ticker"),
-                    mic=instrument.get("mic"),
+                    identity=identity_from_columns(instrument),
                     enrich_etf=True,
                 )
             )
@@ -439,8 +438,7 @@ class CachedQuoteService:
                     isin=instrument.get("isin"),
                     exchange=instrument.get("exchange"),
                     instrument_type=instrument.get("type"),
-                    ticker=instrument.get("ticker"),
-                    mic=instrument.get("mic"),
+                    identity=identity_from_columns(instrument),
                     # Der Griff zum einzelnen Papier übergeht die Metadaten-TTL
                     # bewusst — siehe `refresh_one`.
                     enrich_etf=True,
@@ -743,8 +741,7 @@ class CachedQuoteService:
                 isin=instrument.get("isin"),
                 exchange=instrument.get("exchange"),
                 instrument_type=instrument.get("type"),
-                ticker=instrument.get("ticker"),
-                mic=instrument.get("mic"),
+                identity=identity_from_columns(instrument),
                 enrich_etf=enrich,
             )
         # Ohne Symbol bleibt nur die Auflösung — das kann nur ein Datensatz

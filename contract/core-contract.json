@@ -117,16 +117,10 @@
         "meaning": "Anzeigename des Listings beim Kursanbieter. Nicht garantiert eindeutig."
       },
       {
-        "name": "ticker",
-        "kind": "string",
+        "name": "identity",
+        "kind": "object",
         "required": true,
-        "meaning": "Kanonischer Ticker des Listings — Großbuchstaben und Ziffern, ohne Börsensuffix und ohne anbieterspezifische Zeichensetzung. Zusammen mit mic die eindeutige Identität."
-      },
-      {
-        "name": "mic",
-        "kind": "string",
-        "required": true,
-        "meaning": "ISO-10383-MIC des Handelsplatzes, z.B. 'XETR'. Nie ein Sammelcode: 'US' ist ein interner Suchcode und erscheint hier nicht."
+        "meaning": "Die Identität des Papiers, als diskriminierte Union über 'kind'. kind='listed' trägt ticker und mic (ISO 10383, nie ein Sammelcode) und optional isin; kind='pair' trägt base und quote_currency — die Form für natives Krypto, das an keinem Handelsplatz notiert; kind='isin_only' trägt isin und ist die Form der OTC-Anleihe. Ein Konsument liest zuerst kind und weiß danach, welche Felder es gibt."
       },
       {
         "name": "price",
@@ -163,12 +157,6 @@
         "kind": "boolean",
         "required": true,
         "meaning": "true = die frische Beschaffung ist fehlgeschlagen und der zuletzt bekannte Wert wird ausgeliefert. Der Wert ist damit älter als die TTL. stale=true impliziert cached=true."
-      },
-      {
-        "name": "isin",
-        "kind": "string",
-        "required": false,
-        "meaning": "ISIN des Wertpapiers, sofern bekannt. Ein über das Symbol aufgenommenes Papier kann keine haben."
       },
       {
         "name": "exchange",
@@ -257,16 +245,10 @@
         "meaning": "Anzeigename des Listings. Siehe quote.symbol."
       },
       {
-        "name": "ticker",
-        "kind": "string",
+        "name": "identity",
+        "kind": "object",
         "required": true,
-        "meaning": "Kanonischer Ticker des Listings. Siehe quote.ticker."
-      },
-      {
-        "name": "mic",
-        "kind": "string",
-        "required": true,
-        "meaning": "ISO-10383-MIC des Handelsplatzes. Siehe quote.mic."
+        "meaning": "Die Identität des Papiers, als diskriminierte Union über 'kind'. kind='listed' trägt ticker und mic (ISO 10383, nie ein Sammelcode) und optional isin; kind='pair' trägt base und quote_currency — die Form für natives Krypto, das an keinem Handelsplatz notiert; kind='isin_only' trägt isin und ist die Form der OTC-Anleihe. Ein Konsument liest zuerst kind und weiß danach, welche Felder es gibt."
       },
       {
         "name": "listing_id",
@@ -291,12 +273,6 @@
         "kind": "array",
         "required": true,
         "meaning": "Kennzahlen mit manuellem Wert, den die Quelle gerade überstimmt. Der eingetragene Wert steht unter manual_<feld>."
-      },
-      {
-        "name": "isin",
-        "kind": "string",
-        "required": false,
-        "meaning": "ISIN, sofern bekannt."
       },
       {
         "name": "exchange",
