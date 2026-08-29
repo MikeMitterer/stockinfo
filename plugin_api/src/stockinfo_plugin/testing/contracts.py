@@ -125,14 +125,32 @@ class SourceContract:
         assert " " not in source.name, "name darf kein Leerzeichen enthalten"
 
     def test_vertragsversion_ist_bekannt(self) -> None:
-        """Ein Plugin gegen eine spätere Version würde stillschweigend brechen.
+        """Die Quelle nennt ihre Vertragsversion **selbst**.
 
         Die untere Grenze ist nicht überflüssig: ``api_version = 0`` oder ein
         negativer Wert kämen sonst durch, und beides heißt in der Praxis „nicht
         gesetzt" — der Vorgabewert der Basisklasse wurde überschrieben, ohne
         eine gültige Version zu nennen.
+
+        **Geprüft wird die eigene Deklaration, nicht der geerbte Wert.** Bis
+        T-31 stand hier `self.make_source().api_version`, und das las den
+        Vorgabewert von `Source` mit. Ein Plugin ohne eigene Deklaration
+        bestand damit diesen Vertragstest und wurde vom Loader unmittelbar
+        danach abgewiesen — die beiden Schranken widersprachen sich, und der
+        Autor erfuhr es erst im Betrieb.
+
+        Der Blick geht in `__dict__` der **konkreten** Klasse und nicht die
+        Klassenhierarchie entlang: Sonst deklarierte eine gemeinsame
+        Basisklasse für alle ihre Ableitungen mit, und die Vererbung wäre
+        zurück, die diese Regel gerade ausschließt.
         """
-        version = self.make_source().api_version
+        source_class = type(self.make_source())
+        assert "api_version" in source_class.__dict__, (
+            f"{source_class.__name__} erbt api_version nur. Jede Quelle nennt "
+            f"die Vertragsversion selbst — der Loader weist sie sonst ab, und "
+            f"zwar erst im Betrieb."
+        )
+        version = source_class.__dict__["api_version"]
         assert isinstance(version, int), f"api_version ist {type(version).__name__}"
         assert 1 <= version <= API_VERSION, (
             f"api_version {version} liegt außerhalb von 1..{API_VERSION}"

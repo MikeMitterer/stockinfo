@@ -28,7 +28,7 @@ from stockinfo_plugin.sources import (
     Resolver,
     Source,
 )
-from stockinfo_plugin.types import NotFound
+from stockinfo_plugin.types import API_VERSION, NotFound
 
 EPOCH = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
 """Der Vorgabe-Startpunkt der Fake-Uhr — ein Freitagmittag in UTC.
@@ -131,6 +131,7 @@ class FakeSource(Source):
     """
 
     name = "fake"
+    api_version = API_VERSION
 
     def __init__(
         self,
@@ -245,6 +246,7 @@ class FakeResolver(FakeSource, Resolver):
     """Ein `Resolver` auf Ansage."""
 
     name = "fake-resolver"
+    api_version = API_VERSION
 
 
 class FakeMetadataSource(FakeSource, MetadataSource):
@@ -256,24 +258,28 @@ class FakeMetadataSource(FakeSource, MetadataSource):
     """
 
     name = "fake-metadata"
+    api_version = API_VERSION
 
 
 class FakeQuoteSource(FakeSource, QuoteSource):
     """Eine `QuoteSource` auf Ansage."""
 
     name = "fake-quote"
+    api_version = API_VERSION
 
 
 class FakeDailySource(FakeSource, DailyCloseSource):
     """Eine `DailyCloseSource` auf Ansage."""
 
     name = "fake-daily"
+    api_version = API_VERSION
 
 
 class FakeFxSource(FakeSource, FxSource):
     """Eine `FxSource` auf Ansage."""
 
     name = "fake-fx"
+    api_version = API_VERSION
 
 
 @dataclass

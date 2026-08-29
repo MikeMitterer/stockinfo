@@ -11,6 +11,7 @@ from datetime import datetime, timedelta
 import pytest
 
 from stockinfo_plugin import (
+    API_VERSION,
     ListedIdentity,
     NotFound,
     NotResponsible,
@@ -272,3 +273,50 @@ class TestDasDoubleHaeltDenEigenenVertrag(SourceContract):
 
     def make_source(self) -> FakeResolver:
         return FakeResolver()
+
+
+def test_eine_geerbte_vertragsversion_faellt_durch() -> None:
+    """Der **negative Mutant** zur Versionsschranke (T-31, Runde 5).
+
+    Eine Zusicherung, die nie fehlschlägt, sichert nichts. Diese Quelle ist
+    minimal falsch — sie erbt `api_version`, statt sie zu nennen, und
+    verletzt **ausschließlich** diese eine Regel: Der Wert stimmt, der Name
+    stimmt, die Rolle stimmt.
+
+    Der Anlass ist gemessen. Bis T-31 las der Vertragstest den geerbten Wert
+    mit; ein Plugin ohne eigene Deklaration bestand ihn und wurde vom Loader
+    unmittelbar danach abgewiesen. Der Autor erfuhr vom Widerspruch erst im
+    Betrieb — und die beiden Schranken hätten sich beliebig lange
+    widersprechen können, weil keine Seite die andere prüft.
+    """
+
+    class InheritsItsVersion(FakeResolver):
+        """Erbt alles, deklariert nichts — sonst tadellos."""
+
+        name = "erbt-nur"
+
+    class _Contract(SourceContract):
+        def make_source(self):
+            return InheritsItsVersion()
+
+    with pytest.raises(AssertionError, match="erbt api_version nur"):
+        _Contract().test_vertragsversion_ist_bekannt()
+
+
+def test_dieselbe_quelle_mit_eigener_deklaration_besteht() -> None:
+    """Die Gegenprobe zum Mutanten — sonst prüfte er nur, dass irgendetwas bricht.
+
+    Ein Mutant beweist erst zusammen mit diesem Fall etwas: Die Regel greift
+    **genau** an der geänderten Zeile und nicht an einer Nebenwirkung des
+    Aufbaus.
+    """
+
+    class DeclaresItsVersion(FakeResolver):
+        name = "deklariert"
+        api_version = API_VERSION
+
+    class _Contract(SourceContract):
+        def make_source(self):
+            return DeclaresItsVersion()
+
+    _Contract().test_vertragsversion_ist_bekannt()
