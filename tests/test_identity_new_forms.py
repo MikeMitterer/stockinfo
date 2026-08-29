@@ -32,6 +32,22 @@ wird deshalb nur, was **hinten herauskommt**: die gespeicherte Zeile und die
 
 Gelaufen wird über den echten Eintrittspfad mit echter SQLite-Datei;
 ersetzt sind allein die Außengrenzen, an denen sonst das Netz hinge.
+
+**Orakel und Verdrahtung sind zweierlei, und die Grenze ist scharf.** Die
+`assert`-Zeilen sind das Orakel; sie stehen fest und werden beim Bauen nicht
+angefasst. Die Fakes darüber sind Verdrahtung: An welcher Rolle die App
+nachfragt, entscheidet der Entwurf, und die Doubles folgen ihm. Wer beim
+Grünmachen eine Zusicherung ändert, hat den Test an die Lösung angepasst
+statt umgekehrt.
+
+**Was diese Datei schon vor der ersten Produktzeile entschieden hat.** Der
+Index-Fall hat einen der drei erwogenen Wege ausgeschlossen: `^GDAXI` trägt
+keinen Bindestrich, also lässt sich daraus keine Paar-Identität vorschlagen,
+also wird niemand gefragt — und ohne Frage gibt es keinen Gattungs-Befund
+und damit kein `unsupported_instrument_type`, sondern nur den Zufallsbefund
+der Symbolform, den Matrix `#6` ausdrücklich verbietet. Der „vorschlagen und
+bestätigen lassen"-Weg, zu dem ich neigte, kann `#6` nicht erfüllen. Das
+wäre nach der Implementierung teuer aufgefallen.
 """
 
 from collections.abc import Iterator
