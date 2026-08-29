@@ -990,6 +990,7 @@
       "type": "object"
     },
     "IsinOnlyIdentityOut": {
+      "additionalProperties": false,
       "description": "Nur eine ISIN — die Form für OTC-Anleihen ohne Handelsplatz.",
       "properties": {
         "isin": {
@@ -1011,6 +1012,7 @@
       "type": "object"
     },
     "ListedIdentityOut": {
+      "additionalProperties": false,
       "description": "Ein Listing an einem echten Handelsplatz — Ticker und MIC.",
       "properties": {
         "isin": {
@@ -1103,6 +1105,7 @@
       "type": "object"
     },
     "PairIdentityOut": {
+      "additionalProperties": false,
       "description": "Ein Währungspaar — die Form für natives Krypto.",
       "properties": {
         "base": {
