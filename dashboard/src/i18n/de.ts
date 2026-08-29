@@ -321,20 +321,48 @@ export const de = {
   drilldown: {
     fetchedAt: 'Stand der Quelle',
     source: 'Quelle',
+    /*
+     * **Kein Text nennt eine Quelle beim Namen** — dieselbe Regel wie bei den
+     * Fehlermeldungen unter `errors.reason`, nur eine Textgruppe weiter.
+     *
+     * Hier stand viermal „justETF". Im CSV-Profil heißt die Kennzahlen-Quelle
+     * `metadata-file`, und die Zeile darüber zeigt das sogar korrekt an —
+     * derselbe Aufklappbereich behauptete daneben justETF. Gesehen im
+     * zweiten Browserlauf zu T-37.
+     *
+     * Bei drei der vier Texte war **nur der Name** falsch: Dass Kennzahlen
+     * ausschließlich für ETFs und nur mit ISIN geholt werden, entscheidet die
+     * **App** (`app/services/quote_service.py`: `if instrument_type ==
+     * "etf":`), nicht der Anbieter. Ohne den Namen sind sie deshalb nicht
+     * vager, sondern richtiger.
+     */
     explain:
-      'Die Kennzahlen stammen, wo verfügbar, automatisch von justETF. Von Hand ' +
-      'lässt sich nur ergänzen, was die Quelle nicht liefert — sie hat immer Vorrang.',
+      'Die Kennzahlen holt die eingerichtete Quelle, wo sie welche hat. Von Hand ' +
+      'lässt sich nur ergänzen, was sie nicht liefert — sie hat immer Vorrang.',
     notEtf:
-      'justETF liefert nur Kennzahlen zu ETFs — dieses Papier ist eine Aktie. Die ' +
+      'Kennzahlen werden nur für ETFs geholt — dieses Papier ist eine Aktie. Die ' +
       'Quelle wird deshalb gar nicht erst abgefragt, alle Felder lassen sich von Hand nachtragen.',
     noIsin:
-      'Ohne ISIN lässt sich justETF nicht abfragen. Sobald eine ISIN eingetragen ist ' +
-      '(Kennung in der Zeile), greift die Quelle wieder; bis dahin lassen sich alle Felder von Hand nachtragen.',
-    noEuropeanSource:
-      'justETF deckt nur europäische UCITS-ETFs ab (Fondsdomizil EU, EWR, Schweiz oder ' +
-      'UK). Diese ISIN liegt außerhalb — die Quelle wird deshalb gar nicht erst ' +
-      'abgefragt, alle Felder lassen sich von Hand nachtragen.',
-    sourceEmpty: 'Die Quelle wurde abgefragt, hat aber nichts geliefert — alle Felder lassen sich von Hand nachtragen.',
+      'Ohne ISIN wird keine Kennzahlen-Quelle abgefragt. Sobald eine ISIN eingetragen ' +
+      'ist (Kennung in der Zeile), greift die Quelle wieder; bis dahin lassen sich alle ' +
+      'Felder von Hand nachtragen.',
+    /*
+     * **Ein Text für zwei Fälle, und das ist die ehrliche Fassung.**
+     *
+     * Vorher gab es hier zwei: „justETF deckt nur europäische UCITS-ETFs ab"
+     * und „Die Quelle wurde abgefragt, hat aber nichts geliefert". Der erste
+     * war justETFs Zuständigkeitsregel, im Frontend nachgebaut — eine zweite
+     * Wahrheit über die Interna eines fremden Plugins. Der zweite behauptete
+     * „wurde abgefragt", obwohl die Oberfläche genau das nicht weiß.
+     *
+     * Ob eine Quelle nicht gefragt wurde oder gefragt wurde und nichts hatte,
+     * weiß nur das Backend — es ruft `is_responsible()`. Bis diese Auskunft
+     * im Vertrag steht (Fähigkeitsdeklaration, T-31/T-38), sagt die
+     * Oberfläche das, was in beiden Fällen stimmt.
+     */
+    nothingProvided:
+      'Die eingerichtete Kennzahlen-Quelle hat für dieses Papier nichts geliefert — ' +
+      'alle Felder lassen sich von Hand nachtragen.',
   },
   confirmDelete: {
     title: 'Asset löschen?',

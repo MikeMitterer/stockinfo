@@ -120,26 +120,32 @@ describe('InstrumentDrilldown', () => {
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.noEuropeanSource'))
   })
 
-  it('erklärt, warum die Quelle nichts beigesteuert hat', () => {
-    // Nicht-europäisches Domizil wird bewusst übersprungen — genau diese
-    // Erklärung fehlte dem Nutzer vor Task 8.
-    const wrapper = mount(InstrumentDrilldown, {
-      global: { plugins: [i18n] },
-      props: { item: makeInstrument({ type: 'etf', isin: 'US0378331005', ter: null }) },
-    })
-
-    expect(wrapper.text()).toContain(i18n.global.t('drilldown.noEuropeanSource'))
-  })
-
-  it('erklärt eine leere Quelle bei europäischem Domizil', () => {
+  /*
+   * **Zwei Fälle, eine Aussage — und das ist seit T-37 Absicht.**
+   *
+   * Vorher bekam die US-ISIN „justETF deckt nur europäische UCITS-ETFs ab"
+   * und die europäische „Die Quelle wurde abgefragt, hat aber nichts
+   * geliefert". Der erste Satz war justETFs Zuständigkeitsregel, im Frontend
+   * nachgebaut — im CSV-Profil schlicht falsch, denn `metadata-file` kennt
+   * keine solche Grenze und **hätte** geantwortet. Der zweite behauptete
+   * „wurde abgefragt", was die Oberfläche gar nicht weiß.
+   *
+   * Beide Papiere prüfen deshalb denselben Text. Dass sie es tun, ist der
+   * Beleg für die Verschmelzung; eine der beiden Zeilen zu streichen hätte
+   * genau das verloren.
+   */
+  it.each([
+    ['nicht-europäische ISIN', 'US0378331005'],
+    ['europäische ISIN', 'IE00B4L5Y983'],
+  ])('sagt bei %s dasselbe, weil mehr niemand weiß', (_fall, isin) => {
     const wrapper = mount(InstrumentDrilldown, {
       global: { plugins: [i18n] },
       props: {
-        item: makeInstrument({ type: 'etf', isin: 'IE00B4L5Y983', ter: null, volatility: null }),
+        item: makeInstrument({ type: 'etf', isin, ter: null, volatility: null }),
       },
     })
 
-    expect(wrapper.text()).toContain(i18n.global.t('drilldown.sourceEmpty'))
+    expect(wrapper.text()).toContain(i18n.global.t('drilldown.nothingProvided'))
   })
 
   it('zeigt den Zeitpunkt der letzten Metadaten-Abfrage', () => {

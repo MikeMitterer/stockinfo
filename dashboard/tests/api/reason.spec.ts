@@ -137,3 +137,34 @@ describe('Sprachkataloge', () => {
     }
   })
 })
+
+describe('Erklaertexte im Aufklappbereich', () => {
+  it('nennen keine eingebaute Quelle beim Namen', () => {
+    // **Derselbe Waechter wie fuer `errors.reason`, eine Textgruppe weiter.**
+    //
+    // Codex' Finding 2 aus T-36 galt den Fehlermeldungen; die Erklaerungen im
+    // Drilldown standen nicht darin und nannten weiter viermal justETF. Im
+    // CSV-Profil heisst die Kennzahlen-Quelle `metadata-file` — und die
+    // Oberflaeche zeigt das eine Zeile darueber sogar korrekt an.
+    const verboten = [/justetf/i, /yfinance/i, /openfigi/i, /\byahoo\b/i]
+
+    for (const locale of LOCALES) {
+      const messages = i18n.global.getLocaleMessage(locale) as Record<string, any>
+      for (const [key, text] of Object.entries(messages.drilldown)) {
+        for (const name of verboten) {
+          expect(String(text), `${locale}.drilldown.${key}`).not.toMatch(name)
+        }
+      }
+    }
+  })
+
+  it('haben fuer jeden Fall einen echten Satz', () => {
+    for (const locale of LOCALES) {
+      const messages = i18n.global.getLocaleMessage(locale) as Record<string, any>
+      for (const fall of ['explain', 'notEtf', 'noIsin', 'nothingProvided']) {
+        expect(String(messages.drilldown[fall]).trim().length, `${locale}.${fall}`)
+          .toBeGreaterThan(25)
+      }
+    }
+  })
+})

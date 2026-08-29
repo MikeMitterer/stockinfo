@@ -9,7 +9,6 @@ import { OVERRIDE_FIELDS } from '../types'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 import { formatDateTime } from '../utils/datetime'
 import { FIELD_LABEL_KEY } from '../utils/fieldLabels'
-import { isEuropeanIsin } from '../utils/isin'
 
 /**
  * Die aufklappbare Zeile (Task 8) — Pflege aller acht ETF-Kennzahlen an einer
@@ -28,10 +27,7 @@ import { isEuropeanIsin } from '../utils/isin'
  * Kennzahlen darüber. Sie sitzt im Fragezeichen hinter dem Zeitstempel.
  *
  * Die Sonderfälle dagegen **stehen** da, denn sie sind keine Erklärung, sondern
- * ein Befund über genau dieses Papier — sie kommen dazu, wenn sie zutreffen:
- * für nicht-europäische ISINs überspringt das Backend die Quelle bewusst
- * (`is_european_isin` in `app/providers/justetf_provider.py`), und wenn die
- * Quelle abgefragt wurde, aber nichts geliefert hat.
+ * ein Befund über genau dieses Papier — sie kommen dazu, wenn sie zutreffen.
  */
 const props = defineProps<{
   item: InstrumentSummary
@@ -69,23 +65,30 @@ function onCommit(patch: Partial<InstrumentOverrides>): void {
 const sourceEmpty = computed(() => OVERRIDE_FIELDS.every((field) => !sourceProvides(props.item, field)))
 
 /**
- * Warum justETF nichts beigesteuert hat — vier sich gegenseitig ausschließende
- * Gründe (Nacharbeit Sichtprüfung, I2).
+ * Warum die Kennzahlen-Quelle nichts beigesteuert hat — drei sich gegenseitig
+ * ausschließende Gründe.
  *
- * Die Reihenfolge ist **kein** Stilmittel, sondern gehört dorthin: Sie spiegelt
- * die Prüfung des Backends (`app/services/quote_service.py:137`,
- * `if instrument_type == "etf" and isin:`, dahinter `is_european_isin()` in
- * `justetf_provider.py`). Vertauscht man sie, behauptet die Erklärung einen
- * Grund, der nicht der tatsächliche ist — genau der Fehler, den diese
- * Nacharbeit behebt: Eine Aktie mit europäischer ISIN bekam „Quelle wurde
- * abgefragt, hat nichts geliefert" (sie wurde nie abgefragt), ein Papier ohne
- * ISIN bekam „Diese ISIN liegt außerhalb" (es gibt keine).
+ * Die Reihenfolge ist **kein** Stilmittel: Sie spiegelt die Prüfung des
+ * Backends (`app/services/quote_service.py`, `if instrument_type == "etf":`
+ * und die ISIN daneben). Vertauscht man sie, behauptet die Erklärung einen
+ * Grund, der nicht der tatsächliche ist — eine Aktie bekäme „hat nichts
+ * geliefert", obwohl nie gefragt wurde.
+ *
+ * **Es waren vier Gründe, bis T-37.** Der vierte prüfte über `isEuropeanIsin`,
+ * ob die ISIN in justETFs Abdeckung liegt — die Zuständigkeitsregel eines
+ * *Plugins*, hier im Frontend nachgebaut. Im CSV-Profil ist sie schlicht
+ * falsch: `metadata-file` kennt keine solche Grenze und **hätte** geantwortet.
+ *
+ * Der Fall ist deshalb mit „hat nichts geliefert" verschmolzen. Ob eine Quelle
+ * gar nicht gefragt wurde oder gefragt wurde und nichts hatte, weiß allein das
+ * Backend — es ruft `is_responsible()`. Bis diese Auskunft im Vertrag steht
+ * (Fähigkeitsdeklaration, T-31/T-38), sagt die Oberfläche das, was in beiden
+ * Fällen stimmt, statt den wahrscheinlicheren Grund zu raten.
  */
-const skipReason = computed<'notEtf' | 'noIsin' | 'notEuropean' | 'empty' | null>(() => {
+const skipReason = computed<'notEtf' | 'noIsin' | 'nothing' | null>(() => {
   if (props.item.type !== 'etf') return 'notEtf'
   if (!props.item.isin) return 'noIsin'
-  if (!isEuropeanIsin(props.item.isin)) return 'notEuropean'
-  return sourceEmpty.value ? 'empty' : null
+  return sourceEmpty.value ? 'nothing' : null
 })
 
 const fetchedAt = computed(() =>
@@ -123,8 +126,10 @@ const fetchedAt = computed(() =>
     <div class="drilldown__source">
       <!--
         Zuerst wer, dann wann: Ohne Absender ist der Zeitstempel eine Zahl ohne
-        Aussage. `yfinance` allein heißt „justETF war nicht dabei",
-        `yfinance+justetf` heißt „die ETF-Extras kommen von dort".
+        Aussage. Der Name kommt aus der Antwort und nennt die Quelle, die
+        tatsächlich geliefert hat — im Online-Profil etwa `justetf`, im
+        CSV-Profil `metadata-file`. Er wird hier **nicht** gedeutet: Welche
+        Namen es gibt, entscheidet `sources.yaml`.
       -->
       <p v-if="item.source" class="drilldown__fetched">
         {{ t('drilldown.source') }}: <span class="mono">{{ item.source }}</span>
@@ -143,8 +148,7 @@ const fetchedAt = computed(() =>
       </p>
       <p v-if="skipReason === 'notEtf'" class="drilldown__explain">{{ t('drilldown.notEtf') }}</p>
       <p v-else-if="skipReason === 'noIsin'" class="drilldown__explain">{{ t('drilldown.noIsin') }}</p>
-      <p v-else-if="skipReason === 'notEuropean'" class="drilldown__explain">{{ t('drilldown.noEuropeanSource') }}</p>
-      <p v-else-if="skipReason === 'empty'" class="drilldown__explain">{{ t('drilldown.sourceEmpty') }}</p>
+      <p v-else-if="skipReason === 'nothing'" class="drilldown__explain">{{ t('drilldown.nothingProvided') }}</p>
     </div>
   </div>
 </template>
