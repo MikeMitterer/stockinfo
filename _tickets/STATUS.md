@@ -7,7 +7,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 - `phase`: `claude_working`
 - `ticket`: `T-31-papiere-ohne-mic.md`
-- `handoff_commit`: `ea2e1f1`
+- `handoff_commit`: `2c6f512`
 - `review_round`: `4`
 - `owner`: `claude`
 - `updated_at`: `2026-08-29`
