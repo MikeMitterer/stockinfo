@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-31-papiere-ohne-mic.md`
-- `handoff_commit`: `f257ee1`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `07048d8`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-08-29`
 - `last_reviewed_ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
 - `last_reviewed_commit`: `f257ee1`
@@ -63,4 +63,54 @@ _Keine offene Nachricht._
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+### T-31 · Runde 1 · der Umbauschnitt, **vor** der Umsetzung
+
+Commit `07048d8`. **Kein Produktcode** — geprüft werden soll der Entwurf,
+nicht das Ergebnis. Mike hat das ausdrücklich so angeordnet: erst der Plan
+durch dein Review, dann die Umsetzung. Der neue Abschnitt heißt „Der
+Umbauschnitt" und steht in `T-31-papiere-ohne-mic.md` vor „Worum es geht".
+
+**Der Befund, um den es mir geht.** Dieses Ticket beschreibt die Union an
+`Resolved`. `QuoteRequest` und `DailyRequest` tragen die Identität aber
+ebenfalls, heute als Pflichtfelder `ticker: str` und `mic: str`. Ein
+`BTC-EUR` ließe sich damit **auflösen, aber nicht bepreisen**, und die
+`isin_only`-Anleihe ebensowenig — also genau die beiden Gattungen, für die
+das Ticket existiert. Matrix `#7` („die Kurswährung muss `quote_currency`
+entsprechen") setzt es bereits voraus, spricht es aber nirgends aus. Mein
+Schluss: `Identity` ersetzt `ticker`/`mic` in allen drei Typen. Wenn du das
+anders siehst, ist es besser jetzt strittig als nach dem Umbau.
+
+**Was ich ausdrücklich nicht tue.** Pflichtfelder, `GET /fields` und der
+`core_version`-Major bleiben T-38; der YAML-Fallback bleibt T-37. Sie landen
+im selben `API_VERSION`, weil zwischen den Kettengliedern kein Release
+liegt — nicht, weil die Tickets verschmelzen. Die Reihenfolge der Kette
+bleibt unangetastet.
+
+**Drei Entscheidungen Mikes, heute getroffen und eingetragen:**
+
+1. Die bestehende `data/stockinfo.db` wird **verworfen**, kein Umzugspfad —
+   sechs Zeilen, Projekt in Entwicklung. Der Tabellen-Neuaufbau entfällt
+   damit als Umzugsschritt, die `CHECK`-Klauseln nicht.
+2. Der Smoke-Profilname wird `yaml` statt `csv` (Umsetzung in T-37).
+3. **Beide Versionssprünge werden gemacht.** Mike hat gefragt, ob
+   `API_VERSION = 2` in der Entwicklungsphase übertrieben sei — ein
+   berechtigter Einwand, `plugin_api` steht ohnehin auf `0.2.0`. Gegenprobe:
+   `Source.api_version` hat `API_VERSION` als Vorgabewert, die eingebauten
+   Plugins erben den neuen Wert also ohne eine einzige Änderung. Der Sprung
+   kostet eine Zeile und ist das einzige, was T-38 `#3` und `#7` prüfbar
+   macht. Entschieden: bleibt.
+
+**Woran ich dich besonders bitte zu sehen:**
+
+* Der Vorgabewert `SUPPORTED_KINDS = {"listed"}` an `Source` — sagt er die
+  Wahrheit über einen Autor, der nichts erklärt, oder ist er eine stille
+  Annahme in der Sorte, die dieses Projekt regelmäßig teuer bezahlt?
+* Die drei partiellen Unique-Indizes: Decken sie die Eindeutigkeit je Form
+  wirklich ab, oder bleibt eine Form ohne Schutz?
+* Die `CHECK`-Klausel für `pair` verbietet `isin`. Ist das zu streng — gibt
+  es ein Paar mit ISIN, das damit unspeicherbar würde?
+* Der Zuschnitt gegen T-38: Ist wirklich nichts darin, was ohne die
+  Pflichtfelder nicht funktioniert?
+
+**Zahlen:** keine — es gibt nichts zu messen. `git diff --check` sauber, der
+Stand ist unverändert der freigegebene `f257ee1` plus zwei Dokumentcommits.
