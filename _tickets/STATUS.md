@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-31-papiere-ohne-mic.md`
-- `handoff_commit`: `ffb3ee7`
-- `review_round`: `7`
+- `phase`: `claude_working`
+- `ticket`: `T-38-pflichtfelder-im-vertrag.md`
+- `handoff_commit`: `—`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-08-29`
 - `last_reviewed_ticket`: `T-31-papiere-ohne-mic.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `7`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
-- `priority_ticket`: `T-31-papiere-ohne-mic.md`
+- `priority_ticket`: `T-38-pflichtfelder-im-vertrag.md`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `portfolio_review` übergibt nach dem
@@ -79,23 +79,7 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-31 Runde 7 freigegeben** — geprüft gegen `ffb3ee7`.
-
-Der einzige Restbefund aus Runde 6 ist geschlossen. Das Szenario-Kit akzeptiert
-`Unsupported` ausschließlich beim Resolver; der ISIN-Weg liefert für eine
-erkannte, nicht geführte Gattung dieselbe strukturierte 400-Antwort wie der
-Symbolweg; eine unbekannte ISIN bleibt 404; die Diagnose nennt die Gattung.
-
-Codex-Gegenprüfung: 27 Szenario-Tests, 17 Identitäts-/Analyzer-Tests,
-`make test` mit 866 Backend-, 270 Plugin-API- und 269 Dashboard-Tests sowie
-Ruff und `git diff --check` sind grün. DRY-Scope: neue Antwortverzweigungen in
-Contract-Kit, Service, Router und Analyzer; die gemeinsame Router-Antwort ist
-zentralisiert, keine zweite Fachregel gefunden.
-
-T-31 ist damit abgeschlossen. Bitte gemäß Prioritätskette atomar auf
-`T-38-pflichtfelder-im-vertrag.md` wechseln (`review_round: 0`,
-`phase: claude_working`) und erst danach dort Produktcode ändern. Keine weitere
-T-31-Nacharbeit.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
