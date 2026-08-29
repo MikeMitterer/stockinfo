@@ -1,5 +1,5 @@
 {
-  "core_version": "2.1.0",
+  "core_version": "3.0.0",
   "paths": {
     "/fields": {
       "get": {
@@ -692,16 +692,28 @@
           "title": "History Count",
           "type": "integer"
         },
-        "isin": {
-          "anyOf": [
+        "identity": {
+          "description": "Die Identität in ihrer Form — listed, pair oder isin_only",
+          "discriminator": {
+            "mapping": {
+              "isin_only": "#/components/schemas/IsinOnlyIdentityOut",
+              "listed": "#/components/schemas/ListedIdentityOut",
+              "pair": "#/components/schemas/PairIdentityOut"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
             {
-              "type": "string"
+              "$ref": "#/components/schemas/ListedIdentityOut"
             },
             {
-              "type": "null"
+              "$ref": "#/components/schemas/PairIdentityOut"
+            },
+            {
+              "$ref": "#/components/schemas/IsinOnlyIdentityOut"
             }
           ],
-          "title": "Isin"
+          "title": "Identity"
         },
         "latest_currency": {
           "anyOf": [
@@ -859,11 +871,6 @@
           ],
           "title": "Meta Fetched At"
         },
-        "mic": {
-          "description": "ISO-10383-MIC des Handelsplatzes",
-          "title": "Mic",
-          "type": "string"
-        },
         "name": {
           "anyOf": [
             {
@@ -932,11 +939,6 @@
           ],
           "title": "Ter"
         },
-        "ticker": {
-          "description": "Kanonischer Ticker",
-          "title": "Ticker",
-          "type": "string"
-        },
         "type": {
           "anyOf": [
             {
@@ -962,12 +964,11 @@
       },
       "required": [
         "history_count",
+        "identity",
         "listing_id",
         "manual_fields",
-        "mic",
         "shadowed_fields",
-        "symbol",
-        "ticker"
+        "symbol"
       ],
       "title": "InstrumentSummary",
       "type": "object"
@@ -986,6 +987,66 @@
         "identifier"
       ],
       "title": "IntakeRequest",
+      "type": "object"
+    },
+    "IsinOnlyIdentityOut": {
+      "description": "Nur eine ISIN — die Form für OTC-Anleihen ohne Handelsplatz.",
+      "properties": {
+        "isin": {
+          "description": "Die ISIN; hier ist sie die ganze Identität",
+          "title": "Isin",
+          "type": "string"
+        },
+        "kind": {
+          "const": "isin_only",
+          "default": "isin_only",
+          "title": "Kind",
+          "type": "string"
+        }
+      },
+      "required": [
+        "isin"
+      ],
+      "title": "IsinOnlyIdentityOut",
+      "type": "object"
+    },
+    "ListedIdentityOut": {
+      "description": "Ein Listing an einem echten Handelsplatz — Ticker und MIC.",
+      "properties": {
+        "isin": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "ISIN, falls bekannt",
+          "title": "Isin"
+        },
+        "kind": {
+          "const": "listed",
+          "default": "listed",
+          "title": "Kind",
+          "type": "string"
+        },
+        "mic": {
+          "description": "ISO-10383-MIC des Handelsplatzes",
+          "title": "Mic",
+          "type": "string"
+        },
+        "ticker": {
+          "description": "Kanonischer Ticker",
+          "title": "Ticker",
+          "type": "string"
+        }
+      },
+      "required": [
+        "ticker",
+        "mic"
+      ],
+      "title": "ListedIdentityOut",
       "type": "object"
     },
     "ListingCandidate": {
@@ -1041,6 +1102,33 @@
       "title": "ListingCandidate",
       "type": "object"
     },
+    "PairIdentityOut": {
+      "description": "Ein Währungspaar — die Form für natives Krypto.",
+      "properties": {
+        "base": {
+          "description": "Basiswert, z.B. BTC",
+          "title": "Base",
+          "type": "string"
+        },
+        "kind": {
+          "const": "pair",
+          "default": "pair",
+          "title": "Kind",
+          "type": "string"
+        },
+        "quote_currency": {
+          "description": "Quote-Währung, ISO 4217",
+          "title": "Quote Currency",
+          "type": "string"
+        }
+      },
+      "required": [
+        "base",
+        "quote_currency"
+      ],
+      "title": "PairIdentityOut",
+      "type": "object"
+    },
     "QuotePoint": {
       "description": "Ein einzelner Kurspunkt der Zeitreihe.",
       "properties": {
@@ -1082,6 +1170,7 @@
       "type": "object"
     },
     "QuoteResponse": {
+      "additionalProperties": false,
       "description": "Vollständige Kurs- und Metadaten-Antwort für ein Wertpapier.\n\nNicht ermittelbare Felder bleiben ``None`` (z.B. ``ter`` bei Einzelaktien).",
       "properties": {
         "accumulating": {
@@ -1155,21 +1244,28 @@
           ],
           "title": "Fund Size"
         },
-        "isin": {
-          "anyOf": [
+        "identity": {
+          "description": "Die Identität in ihrer Form — listed, pair oder isin_only",
+          "discriminator": {
+            "mapping": {
+              "isin_only": "#/components/schemas/IsinOnlyIdentityOut",
+              "listed": "#/components/schemas/ListedIdentityOut",
+              "pair": "#/components/schemas/PairIdentityOut"
+            },
+            "propertyName": "kind"
+          },
+          "oneOf": [
             {
-              "type": "string"
+              "$ref": "#/components/schemas/ListedIdentityOut"
             },
             {
-              "type": "null"
+              "$ref": "#/components/schemas/PairIdentityOut"
+            },
+            {
+              "$ref": "#/components/schemas/IsinOnlyIdentityOut"
             }
           ],
-          "title": "Isin"
-        },
-        "mic": {
-          "description": "ISO-10383-MIC des Handelsplatzes",
-          "title": "Mic",
-          "type": "string"
+          "title": "Identity"
         },
         "name": {
           "anyOf": [
@@ -1243,11 +1339,6 @@
           ],
           "title": "Ter"
         },
-        "ticker": {
-          "description": "Kanonischer Ticker",
-          "title": "Ticker",
-          "type": "string"
-        },
         "type": {
           "anyOf": [
             {
@@ -1288,12 +1379,11 @@
         "cached",
         "currency",
         "fetched_at",
-        "mic",
+        "identity",
         "price",
         "quote_time",
         "stale",
-        "symbol",
-        "ticker"
+        "symbol"
       ],
       "title": "QuoteResponse",
       "type": "object"

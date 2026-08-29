@@ -465,6 +465,10 @@ def test_der_zweite_anspruch_auf_dieselbe_identitaet_ist_ein_409(
     assert set(body) == {"code", "params"}, "der Rumpf ist der Fehler, nicht `detail`"
     assert body["code"] == REASON_IDENTITY_CONFLICT
     assert body["params"] == {
+        # `kind` steht seit T-31 dabei: Die Oberfläche muss die Form kennen,
+        # bevor sie einen Satz daraus bildet — ein Währungspaar hat kein `mic`,
+        # und ein Satz mit leerer Börse wäre schlechter als gar keiner.
+        "kind": "listed",
         "ticker": "AAPL",
         "mic": "XNAS",
         "isin": _APPLE_ISIN,
