@@ -71,6 +71,31 @@ class QuoteUnavailableError(Exception):
     """Es konnte kein aktueller Kurs beschafft werden."""
 
 
+class QuoteCurrencyMismatchError(Exception):
+    """Der gelieferte Kurs steht in einer anderen Währung als das Paar (`#7`).
+
+    **Bei einem Paar gehört die Währung zur Identität.** Sie beantwortet die
+    Frage, die bei einer Aktie der Handelsplatz beantwortet: *wo gilt dieser
+    Preis?* `BTC-EUR` und `BTC-USD` sind zwei Instrumente, so verschieden wie
+    zwei Listings derselben Aktie.
+
+    Ein Kurs in fremder Währung gehört damit zu einem **anderen** Papier. Ihn
+    still umzurechnen wäre die gefährlichere von zwei falschen Antworten: Der
+    Wert sähe richtig aus und wäre es nicht, und niemand hätte einen Anlass
+    nachzusehen. Ein Umrechnen bräuchte außerdem einen Stichtagskurs — eine
+    zweite Quelle für eine Zahl, die niemand angefordert hat.
+    """
+
+    def __init__(self, symbol: str, expected: str, delivered: str) -> None:
+        super().__init__(
+            f"'{symbol}' notiert in {expected}, die Quelle lieferte "
+            f"{delivered} — das ist ein anderes Instrument"
+        )
+        self.symbol = symbol
+        self.expected = expected
+        self.delivered = delivered
+
+
 class UnsupportedInstrumentTypeError(Exception):
     """Diese Gattung nimmt die App **bewusst** nicht auf (T-31, Matrix `#6`).
 
@@ -499,13 +524,24 @@ class QuoteService:
                 "isin": isin,
             }
         )
+        currency = raw.currency or resolved.currency
         require_core_values(
             resolved.symbol,
-            PrecheckedCoreValues(
-                identity=identity,
-                currency=raw.currency or resolved.currency,
-            ),
+            PrecheckedCoreValues(identity=identity, currency=currency),
         )
+
+        # **Matrix `#7`.** Bei einem Paar ist die Quote-Währung Teil der
+        # Identität; ein Kurs in einer anderen gehört zu einem anderen
+        # Instrument. Geprüft wird hier und nicht im Adapter: Erst hier stehen
+        # Identität und gelieferte Währung nebeneinander.
+        #
+        # **Nach** der Vollständigkeitsprüfung: Ohne Währung ist „passt nicht"
+        # keine belastbare Aussage, und der Aufrufer braucht dann die andere
+        # Meldung.
+        if isinstance(identity, PairIdentityOut) and currency != identity.quote_currency:
+            raise QuoteCurrencyMismatchError(
+                resolved.symbol, identity.quote_currency, str(currency)
+            )
 
         instrument_type = raw.type or resolved.type
         response = QuoteResponse(
@@ -516,7 +552,7 @@ class QuoteService:
             exchange=resolved.exchange or raw.exchange,
             name=raw.name or resolved.name,
             type=instrument_type,
-            currency=raw.currency or resolved.currency,
+            currency=currency,
             price=raw.price,
             quote_time=raw.quote_time,
             volume=raw.volume,

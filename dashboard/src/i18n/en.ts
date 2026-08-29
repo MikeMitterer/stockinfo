@@ -244,6 +244,9 @@ export const en = {
       unsupported_instrument_type:
         '{symbol} is a {instrument_type} — StockInfo does not currently ' +
         'accept this instrument type.',
+      quote_currency_mismatch:
+        '{symbol} is quoted in {expected} but the source delivered ' +
+        '{delivered} — that is a different instrument.',
       identifier_empty: 'Nothing was entered.',
       identifier_unknown_form:
         '{identifier} is neither an ISIN nor a symbol with an exchange suffix.',

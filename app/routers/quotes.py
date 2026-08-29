@@ -39,6 +39,7 @@ from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import (
     InstrumentNotFoundError,
     QuoteUnavailableError,
+    QuoteCurrencyMismatchError,
     UnresolvableSymbolError,
     UnsupportedInstrumentTypeError,
 )
@@ -51,6 +52,11 @@ router = APIRouter(tags=["quotes"])
 # beschreiben, was mit der **Eingabe** nicht stimmt; diese sagt, dass die
 # Eingabe verstanden wurde und die Antwort trotzdem Nein lautet.
 REASON_UNSUPPORTED_TYPE = "unsupported_instrument_type"
+
+# Der gelieferte Kurs steht in einer anderen Waehrung als das Paar (`#7`).
+# Ein **Datenfehler der Quelle**, deshalb 502 und nicht 400: Der Aufrufer
+# hat nichts falsch gemacht und kann nichts besser machen.
+REASON_CURRENCY_MISMATCH = "quote_currency_mismatch"
 
 
 def _not_found(isin: str) -> JSONResponse:
@@ -104,6 +110,18 @@ def quote_by_symbol(
     symbol = normalize_symbol(symbol)
     try:
         return service.get_by_symbol(symbol)
+    except QuoteCurrencyMismatchError as exc:
+        return JSONResponse(
+            status_code=502,
+            content=ErrorDetail(
+                code=REASON_CURRENCY_MISMATCH,
+                params={
+                    "symbol": exc.symbol,
+                    "expected": exc.expected,
+                    "delivered": exc.delivered,
+                },
+            ).model_dump(),
+        )
     except UnsupportedInstrumentTypeError as exc:
         # **Eine eigene Kennung, kein Zufallsbefund** (T-31, Matrix `#6`).
         # Ohne sie fiele ein Index in die Symbolform-Ablehnung darunter, und

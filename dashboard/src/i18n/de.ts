@@ -265,6 +265,9 @@ export const de = {
       unsupported_instrument_type:
         '{symbol} ist ein {instrument_type} — diese Gattung nimmt StockInfo ' +
         'derzeit nicht auf.',
+      quote_currency_mismatch:
+        '{symbol} notiert in {expected}, die Quelle lieferte {delivered} — ' +
+        'das ist ein anderes Instrument.',
       identifier_empty: 'Es wurde nichts eingegeben.',
       identifier_unknown_form:
         '{identifier} ist weder eine ISIN noch ein Symbol mit Börsenkürzel.',
