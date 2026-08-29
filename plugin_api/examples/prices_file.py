@@ -105,6 +105,13 @@ class PricesFileDailySource(_FileBacked, DailyCloseSource):
     cost = "free"
     api_version = 2
     SUPPORTED_KINDS = frozenset({"listed"})
+    # **Ausgeschrieben, weil eine leere Menge "nichts zugesagt" heisst.**
+    # Die Tabelle fuehrt Kurse, gleich welcher Gattung — sie liest eine
+    # Zeile, keine Fondsdaten. Das steht jetzt da, statt es der leeren
+    # Menge zu ueberlassen, die der Host zu Recht als Nichtzusage liest.
+    SUPPORTED_TYPES = frozenset(
+        {"stock", "etf", "etc", "fund", "crypto", "bond"}
+    )
     default_path = "/data/closes.csv"
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
@@ -203,6 +210,13 @@ class PricesFileQuoteSource(_FileBacked, QuoteSource):
     cost = "free"
     api_version = 2
     SUPPORTED_KINDS = frozenset({"listed"})
+    # **Ausgeschrieben, weil eine leere Menge "nichts zugesagt" heisst.**
+    # Die Tabelle fuehrt Kurse, gleich welcher Gattung — sie liest eine
+    # Zeile, keine Fondsdaten. Das steht jetzt da, statt es der leeren
+    # Menge zu ueberlassen, die der Host zu Recht als Nichtzusage liest.
+    SUPPORTED_TYPES = frozenset(
+        {"stock", "etf", "etc", "fund", "crypto", "bond"}
+    )
     default_path = "/data/closes.csv"
 
     def handles(self, request: QuoteRequest) -> bool:
