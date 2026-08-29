@@ -32,16 +32,16 @@ def fields() -> FieldsResponse:
             eine Zusage aus.
     """
     try:
-        vertrag = core_contract()
+        contract = core_contract()
     except ContractUnavailableError as exc:
         raise HTTPException(
             status_code=503, detail="Vertragsartefakt nicht lesbar"
         ) from exc
 
     return FieldsResponse(
-        core_version=vertrag["core_version"],
-        core=vertrag["core"],
-        endpoints=vertrag["endpoints"],
-        details_version=vertrag["details_version"],
-        details=vertrag.get("details", []),
+        core_version=contract["core_version"],
+        core=contract["core"],
+        endpoints=contract["endpoints"],
+        details_version=contract["details_version"],
+        details=contract.get("details", []),
     )

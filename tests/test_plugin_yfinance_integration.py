@@ -74,15 +74,15 @@ def test_eine_tagesreihe_ist_aufsteigend_und_traegt_ihre_waehrung(
     sortieren hieße, einen Fehler des Anbieters zu verdecken, statt ihn zu
     melden.
     """
-    ende = date.today()
-    antwort = plugin.fetch_daily(
-        DailyRequest(ListedIdentity(ticker="EUNL", mic="XETR"), start=ende - timedelta(days=30), end=ende)
+    end = date.today()
+    answer = plugin.fetch_daily(
+        DailyRequest(ListedIdentity(ticker="EUNL", mic="XETR"), start=end - timedelta(days=30), end=end)
     )
 
-    assert isinstance(antwort, DailySeries), antwort
-    assert antwort.currency == "EUR"
-    assert antwort.bars, "eine leere Reihe ist kein Ergebnis"
-    assert days_are_ordered([bar.day for bar in antwort.bars]), (
+    assert isinstance(answer, DailySeries), answer
+    assert answer.currency == "EUR"
+    assert answer.bars, "eine leere Reihe ist kein Ergebnis"
+    assert days_are_ordered([bar.day for bar in answer.bars]), (
         "streng aufsteigend — zwei Einträge für denselben Tag zählt der "
         "Verbraucher doppelt"
     )

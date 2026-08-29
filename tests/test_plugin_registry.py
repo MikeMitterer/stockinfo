@@ -75,7 +75,7 @@ class NoRole(Resolver):
 
 
 @pytest.fixture(autouse=True)
-def _leere_registry():
+def _empty_registry():
     """Jeder Test beginnt ohne geladene Plugins — und hinterlässt keine.
 
     Ohne diese Fixture beeinflussten sich die Tests über den Modulzustand der
@@ -228,7 +228,7 @@ def test_eine_plugin_datei_verdraengt_kein_standardmodul(tmp_path: Path) -> None
 
 
 @pytest.mark.parametrize(
-    ("klasse", "erwartet"),
+    ("source_class", "expected"),
     [
         (WrongVersion, "api_version"),
         (Nameless, "hat keinen name"),
@@ -236,7 +236,7 @@ def test_eine_plugin_datei_verdraengt_kein_standardmodul(tmp_path: Path) -> None
     ],
 )
 def test_was_nicht_als_quelle_taugt_wird_abgelehnt(
-    tmp_path: Path, klasse: type, erwartet: str, monkeypatch: pytest.MonkeyPatch
+    tmp_path: Path, source_class: type, expected: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Drei Ablehnungsgründe, jeder mit einer Meldung, die ihn nennt.
 
@@ -248,7 +248,7 @@ def test_was_nicht_als_quelle_taugt_wird_abgelehnt(
         name = "kandidat"
 
         def load(self):
-            return klasse
+            return source_class
 
     monkeypatch.setattr(
         "app.plugin_loader.entry_points", lambda group=None: [FakePoint()]
@@ -257,7 +257,7 @@ def test_was_nicht_als_quelle_taugt_wird_abgelehnt(
     result = load_entry_point_sources()
 
     assert result.specs == ()
-    assert any(erwartet in problem.reason for problem in result.problems)
+    assert any(expected in problem.reason for problem in result.problems)
 
 
 def test_ein_entry_point_der_beim_import_wirft(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -335,11 +335,11 @@ def test_ein_plugin_kann_keine_eingebaute_quelle_verdraengen() -> None:
     von woanders. Das ist kein Randfall, sondern der Grund für die Regel.
     """
 
-    class Angreifer(Resolver):
+    class Attacker(Resolver):
         api_version = 2
         name = "yfinance"
 
-    register_loaded((spec_from_class(Angreifer),))
+    register_loaded((spec_from_class(Attacker),))
 
     known = specs_by_name()
 
@@ -359,7 +359,7 @@ def test_geladene_quellen_stehen_neben_den_eingebauten() -> None:
 # ─── Isolation ────────────────────────────────────────────────────────────────
 
 
-class Werfer(Resolver):
+class Thrower(Resolver):
     """Eine Quelle, die den Vertrag bricht und wirft."""
     api_version = 2
 
@@ -369,7 +369,7 @@ class Werfer(Resolver):
         raise RuntimeError("boom")
 
 
-class Ausfaller(Resolver):
+class Failing(Resolver):
     """Eine Quelle, die sich korrekt verhält und trotzdem nicht arbeiten kann."""
     api_version = 2
 
@@ -381,7 +381,7 @@ class Ausfaller(Resolver):
 
 def test_eine_werfende_quelle_wird_zur_antwort() -> None:
     """Ein Vertragsbruch wird zu `Unavailable` — nicht zu einem Absturz der App."""
-    guarded = GuardedSource(Werfer())
+    guarded = GuardedSource(Thrower())
 
     answer = guarded.resolve(ResolveRequest(isin="US0378331005"))
 
@@ -404,7 +404,7 @@ def test_der_schalter_oeffnet_erst_nach_wiederholtem_fehlschlag() -> None:
     Ratenlimit. Wer danach sofort stilllegt, schaltet eine gesunde Quelle wegen
     eines Schluckaufs ab.
     """
-    guarded = GuardedSource(Ausfaller())
+    guarded = GuardedSource(Failing())
     request = ResolveRequest(isin="US0378331005")
 
     for _ in range(2):
@@ -418,7 +418,7 @@ def test_der_schalter_oeffnet_erst_nach_wiederholtem_fehlschlag() -> None:
 def test_ein_erfolg_setzt_den_zaehler_zurueck() -> None:
     """Sonst summierten sich Fehlschläge über Stunden zu einer Stilllegung."""
 
-    class Wackelig(Resolver):
+    class Flaky(Resolver):
         api_version = 2
         name = "wackelig"
 
@@ -432,7 +432,7 @@ def test_ein_erfolg_setzt_den_zaehler_zurueck() -> None:
                 return Resolved(ListedIdentity(ticker="OK", mic="XTSE"))
             return Unavailable(error="später nochmal")
 
-    guarded = GuardedSource(Wackelig())
+    guarded = GuardedSource(Flaky())
     request = ResolveRequest(isin="US0378331005")
 
     for _ in range(4):
@@ -449,10 +449,10 @@ def test_halb_offen_und_reset_ohne_echte_wartezeit() -> None:
     wird hereingereicht, nicht gestellt: Ein Test, der `time.sleep` benutzt,
     prüft die Geduld der Testsuite.
     """
-    jetzt = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
-    breaker = CircuitBreaker(clock=lambda: jetzt)
-    quelle = Ausfaller()
-    guarded = GuardedSource(quelle, breaker)
+    now = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
+    breaker = CircuitBreaker(clock=lambda: now)
+    source = Failing()
+    guarded = GuardedSource(source, breaker)
     request = ResolveRequest(isin="US0378331005")
 
     for _ in range(3):
@@ -460,42 +460,42 @@ def test_halb_offen_und_reset_ohne_echte_wartezeit() -> None:
     assert breaker.is_open is True
 
     # Solange der Schalter offen ist, wird die Quelle **gar nicht** gefragt.
-    class Verboten(Ausfaller):
+    class Forbidden(Failing):
         def resolve(self, request: ResolveRequest) -> Resolution:
             raise AssertionError("die Quelle wurde trotz offenem Schalter gefragt")
 
-    unterdrueckt = GuardedSource(Verboten(), breaker).resolve(request)
-    assert isinstance(unterdrueckt, Unavailable)
-    assert "stillgelegt" in unterdrueckt.error
+    suppressed = GuardedSource(Forbidden(), breaker).resolve(request)
+    assert isinstance(suppressed, Unavailable)
+    assert "stillgelegt" in suppressed.error
 
     # Die Uhr weiterdrehen — jetzt darf **ein** Versuch durch.
-    jetzt += timedelta(minutes=6)
+    now += timedelta(minutes=6)
     assert breaker.is_open is False, "halb offen, ohne dass jemand gewartet hätte"
 
-    class Geheilt(Resolver):
+    class Recovered(Resolver):
         api_version = 2
         name = "geheilt"
 
         def resolve(self, request: ResolveRequest) -> Resolution:
             return Resolved(ListedIdentity(ticker="OK", mic="XTSE"))
 
-    antwort = GuardedSource(Geheilt(), breaker).resolve(request)
+    answer = GuardedSource(Recovered(), breaker).resolve(request)
 
-    assert isinstance(antwort, Resolved)
+    assert isinstance(answer, Resolved)
     assert breaker.failures == 0 and breaker.opened_at is None, "vollständig geschlossen"
 
 
 def test_ein_fehlschlag_im_halb_offenen_zustand_oeffnet_wieder() -> None:
     """Sonst liefe die App nach jeder Frist erneut in denselben Fehler."""
-    jetzt = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
-    breaker = CircuitBreaker(threshold=1, clock=lambda: jetzt)
-    guarded = GuardedSource(Ausfaller(), breaker)
+    now = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
+    breaker = CircuitBreaker(threshold=1, clock=lambda: now)
+    guarded = GuardedSource(Failing(), breaker)
     request = ResolveRequest(isin="US0378331005")
 
     guarded.resolve(request)
     assert breaker.is_open is True
 
-    jetzt += timedelta(minutes=6)
+    now += timedelta(minutes=6)
     assert breaker.is_open is False
 
     guarded.resolve(request)
@@ -509,14 +509,14 @@ def test_ein_nicht_gefundenes_papier_ist_kein_fehlschlag() -> None:
     weil jemand dreimal nach einem unbekannten Papier gefragt hat.
     """
 
-    class Unbekannt(Resolver):
+    class Unknown(Resolver):
         api_version = 2
         name = "unbekannt"
 
         def resolve(self, request: ResolveRequest) -> Resolution:
             return NotFound()
 
-    guarded = GuardedSource(Unbekannt())
+    guarded = GuardedSource(Unknown())
     request = ResolveRequest(isin="US0378331005")
 
     for _ in range(5):
@@ -528,15 +528,15 @@ def test_ein_nicht_gefundenes_papier_ist_kein_fehlschlag() -> None:
 
 def test_jede_quelle_hat_ihren_eigenen_schalter() -> None:
     """Ein geteilter legte eine gesunde Quelle still, weil eine andere ausfiel."""
-    kaputt = GuardedSource(Ausfaller())
-    gesund = GuardedSource(DemoResolver())
+    broken = GuardedSource(Failing())
+    healthy = GuardedSource(DemoResolver())
     request = ResolveRequest(isin="US0378331005")
 
     for _ in range(3):
-        kaputt.resolve(request)
+        broken.resolve(request)
 
-    assert kaputt.breaker.is_open is True
-    assert gesund.breaker.is_open is False
+    assert broken.breaker.is_open is True
+    assert healthy.breaker.is_open is False
 
 
 def test_im_halb_offenen_zustand_kommt_genau_einer_durch() -> None:
@@ -551,49 +551,49 @@ def test_im_halb_offenen_zustand_kommt_genau_einer_durch() -> None:
     Rennen fände gar nicht statt. Der Test wäre grün gewesen, ohne etwas zu
     prüfen.
     """
-    jetzt = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
-    breaker = CircuitBreaker(threshold=1, clock=lambda: jetzt)
-    versuche: list[int] = []
-    schranke = threading.Barrier(2)
-    zaehler_sperre = threading.Lock()
+    now = datetime(2026, 1, 2, 12, 0, tzinfo=timezone.utc)
+    breaker = CircuitBreaker(threshold=1, clock=lambda: now)
+    attempts: list[int] = []
+    guard = threading.Barrier(2)
+    counter_lock = threading.Lock()
 
-    class Langsam(Resolver):
+    class Slow(Resolver):
         api_version = 2
         name = "langsam"
 
         def resolve(self, request: ResolveRequest) -> Resolution:
-            with zaehler_sperre:
-                versuche.append(1)
+            with counter_lock:
+                attempts.append(1)
             return Unavailable(error="immer noch weg")
 
-    guarded = GuardedSource(Langsam(), breaker)
+    guarded = GuardedSource(Slow(), breaker)
     request = ResolveRequest(isin="US0378331005")
 
     guarded.resolve(request)  # öffnet den Schalter
     assert breaker.is_open is True
-    versuche.clear()
+    attempts.clear()
 
-    jetzt += timedelta(minutes=6)  # halb offen
+    now += timedelta(minutes=6)  # halb offen
 
-    def gleichzeitig() -> None:
-        schranke.wait()
+    def concurrently() -> None:
+        guard.wait()
         guarded.resolve(request)
 
-    threads = [threading.Thread(target=gleichzeitig) for _ in range(2)]
+    threads = [threading.Thread(target=concurrently) for _ in range(2)]
     for thread in threads:
         thread.start()
     for thread in threads:
         thread.join()
 
-    assert len(versuche) == 1, (
-        f"{len(versuche)} Aufrufe kamen durch — der halb offene Zustand "
+    assert len(attempts) == 1, (
+        f"{len(attempts)} Aufrufe kamen durch — der halb offene Zustand "
         "reserviert genau einen"
     )
     assert breaker.is_open is True, "der Probeversuch scheiterte — wieder zu"
 
 
 @pytest.mark.parametrize(
-    ("role", "quelle", "methode"),
+    ("role", "source", "method"),
     [
         ("resolvers", "openfigi", "resolve_isin"),
         ("quotes", "yfinance", "fetch_quote"),
@@ -603,7 +603,7 @@ def test_im_halb_offenen_zustand_kommt_genau_einer_durch() -> None:
     ],
 )
 def test_jede_rolle_liefert_dem_core_was_er_ruft(
-    role: str, quelle: str, methode: str
+    role: str, source: str, method: str
 ) -> None:
     """**Der Befund aus Runde 2, und der Grund für diesen Test.**
 
@@ -621,11 +621,11 @@ def test_jede_rolle_liefert_dem_core_was_er_ruft(
     from app.sources_config import SourcesConfig
     from app.sources_registry import build_chain
 
-    chain = build_chain(role, SourcesConfig(chains={role: (quelle,)}), Settings())
+    chain = build_chain(role, SourcesConfig(chains={role: (source,)}), Settings())
 
-    assert chain, f"{quelle} ist für {role} nicht einsatzbereit"
-    assert hasattr(chain[0], methode), (
-        f"{type(chain[0]).__name__} hat kein {methode} — der Core ruft es"
+    assert chain, f"{source} ist für {role} nicht einsatzbereit"
+    assert hasattr(chain[0], method), (
+        f"{type(chain[0]).__name__} hat kein {method} — der Core ruft es"
     )
 
 
@@ -640,7 +640,7 @@ def test_eine_auskunft_bewegt_den_schutzschalter_nicht() -> None:
     Der Test ruft `handles` deshalb genau so, wie die Kette es tut.
     """
 
-    class Ausfaller(Resolver):
+    class Failing(Resolver):
         api_version = 2
         name = "ausfaller"
 
@@ -650,7 +650,7 @@ def test_eine_auskunft_bewegt_den_schutzschalter_nicht() -> None:
         def resolve(self, request: ResolveRequest) -> Resolution:
             return Unavailable(error="weg")
 
-    guarded = GuardedSource(Ausfaller())
+    guarded = GuardedSource(Failing())
     request = ResolveRequest(isin="US0378331005")
 
     for _ in range(3):
@@ -678,7 +678,7 @@ def test_eine_verworfene_quelle_erscheint_nicht_als_brauchbar() -> None:
         register_loaded,
     )
 
-    class OhneDatei(Resolver):
+    class WithoutFile(Resolver):
         api_version = 2
         name = "ohne-datei"
 
@@ -690,7 +690,7 @@ def test_eine_verworfene_quelle_erscheint_nicht_als_brauchbar() -> None:
             SourceSpec(
                 "ohne-datei",
                 frozenset({"resolvers"}),
-                lambda role, config, settings: OhneDatei(config),
+                lambda role, config, settings: WithoutFile(config),
                 loaded=True,
             ),
         )
@@ -717,14 +717,14 @@ def test_eine_fx_quelle_wird_ebenso_gekapselt() -> None:
     genau die anderen vier Rollen wären die Lücke.
     """
 
-    class KaputteFx(FxSource):
+    class BrokenFx(FxSource):
         api_version = 2
         name = "fx-kaputt"
 
         def fetch_rate(self, request: object) -> object:
             raise ValueError("keine Kurse")
 
-    guarded = GuardedSource(KaputteFx())
+    guarded = GuardedSource(BrokenFx())
 
     answer = guarded.fetch_rate(object())
 

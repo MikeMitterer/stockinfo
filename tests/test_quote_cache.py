@@ -703,9 +703,9 @@ class _RecordingCall:
     def __init__(self) -> None:
         self.known_calls = 0
         self.symbol_calls = 0
-        self.gesehene_isin: str | None = None
+        self.seen_isin: str | None = None
         self.seen_type: str | None = None
-        self.gesehene_boerse: str | None = None
+        self.seen_exchange: str | None = None
 
     def _response_for(self, symbol: str) -> QuoteResponse:
         return QuoteResponse(
@@ -740,9 +740,9 @@ class _RecordingCall:
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         self.known_calls += 1
-        self.gesehene_isin = isin
+        self.seen_isin = isin
         self.seen_type = instrument_type
-        self.gesehene_boerse = exchange
+        self.seen_exchange = exchange
         return self._response_for(symbol)
 
 
@@ -778,9 +778,9 @@ def test_refresh_per_symbol_reicht_die_gespeicherte_zeile_durch(
 
     assert fake.known_calls == 1
     assert fake.symbol_calls == 0
-    assert fake.gesehene_isin == "IE00B4L5Y983"
+    assert fake.seen_isin == "IE00B4L5Y983"
     assert fake.seen_type == "etf"
-    assert fake.gesehene_boerse == "Xetra"
+    assert fake.seen_exchange == "Xetra"
 
 
 def test_refresh_eines_unbekannten_symbols_geht_weiter_ueber_die_suche(

@@ -65,5 +65,7 @@ def required_fields(model: str) -> tuple[str, ...]:
         Die Namen der Pflichtfelder in der Reihenfolge des Artefakts.
     """
     return tuple(
-        feld["name"] for feld in core_contract()["core"][model] if feld["required"]
+        field["name"]
+        for field in core_contract()["core"][model]
+        if field["required"]
     )

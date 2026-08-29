@@ -167,11 +167,11 @@ def test_der_identitaetsfall_braucht_keinen_anbieter() -> None:
     jetzt richtig, mit einem Anbieter, dessen Benutzung ein Fehler wäre.
     """
 
-    class VerbotenerProvider:
+    class ForbiddenProvider:
         def fetch_fx_rate(self, base: str, quote: str) -> float:
             raise AssertionError("der Identitätsfall darf nicht fragen")
 
-    plugin = YFinancePlugin(provider=VerbotenerProvider())
+    plugin = YFinancePlugin(provider=ForbiddenProvider())
 
     answer = plugin.fetch_rate(FxRequest(base="EUR", quote="EUR"))
 
@@ -193,7 +193,7 @@ def test_ein_us_papier_ist_fuer_justetf_nicht_zustaendig() -> None:
     entscheidet, ob die Kette weiterfragt.
     """
 
-    class VerbotenerProvider:
+    class ForbiddenProvider:
         """Beantwortet die Zuständigkeit — und **nur** die."""
 
         def is_responsible(self, isin: str | None, **_: object) -> bool:
@@ -202,7 +202,7 @@ def test_ein_us_papier_ist_fuer_justetf_nicht_zustaendig() -> None:
         def fetch_etf(self, isin: str) -> EtfDetails:
             raise AssertionError(f"es wurde nach {isin!r} gefragt")
 
-    plugin = JustEtfMetadataPlugin(provider=VerbotenerProvider())
+    plugin = JustEtfMetadataPlugin(provider=ForbiddenProvider())
 
     assert plugin.fetch(ResolveRequest(isin="US0378331005")) == []
 
@@ -244,7 +244,7 @@ def test_eine_reihe_meldet_sich_als_bereinigt() -> None:
 
 
 @pytest.mark.parametrize(
-    ("isin", "symbol", "exchange", "currency", "erwartet"),
+    ("isin", "symbol", "exchange", "currency", "expected"),
     [
         ("IE00B4L5Y983", "EUNL.DE", "Xetra", "EUR", "justetf"),
         ("US9229087690", "VTI", "NASDAQ", "USD", "yfinance"),
@@ -257,7 +257,7 @@ def test_die_kette_laeuft_durch_composite_adapter_plugin(
     symbol: str,
     exchange: str,
     currency: str,
-    erwartet: str,
+    expected: str,
 ) -> None:
     """**Der Weg, durch den bis Runde 5 kein einziger Test lief.**
 
@@ -274,12 +274,12 @@ def test_die_kette_laeuft_durch_composite_adapter_plugin(
     from app.plugin_adapters import MetadataAdapter
     from app.providers.composite_etf import CompositeEtfEnricher
 
-    class FesteAntwort:
+    class FixedAnswer:
         """Eine Anbindung, die genau sagt, wer geantwortet hat."""
 
-        def __init__(self, quelle: str, europaeisch: bool) -> None:
-            self._quelle = quelle
-            self._europaeisch = europaeisch
+        def __init__(self, source: str, european: bool) -> None:
+            self._quelle = source
+            self._europaeisch = european
 
         def is_responsible(self, isin, *, exchange=None, currency=None) -> bool:
             if isin:
@@ -289,16 +289,16 @@ def test_die_kette_laeuft_durch_composite_adapter_plugin(
         def fetch_etf(self, isin, symbol=None, *, exchange=None, currency=None):
             return EtfDetails(provider=self._quelle, name="egal")
 
-    kette = CompositeEtfEnricher(
+    chain = CompositeEtfEnricher(
         MetadataAdapter(
-            JustEtfMetadataPlugin(provider=FesteAntwort("justetf", True)), "XETR"
+            JustEtfMetadataPlugin(provider=FixedAnswer("justetf", True)), "XETR"
         ),
         MetadataAdapter(
-            YFinanceMetadataPlugin(enricher=FesteAntwort("yfinance", False)), "XETR"
+            YFinanceMetadataPlugin(enricher=FixedAnswer("yfinance", False)), "XETR"
         ),
     )
 
-    details = kette.fetch_etf(isin, symbol=symbol, exchange=exchange, currency=currency)
+    details = chain.fetch_etf(isin, symbol=symbol, exchange=exchange, currency=currency)
 
     assert details is not None, "die Kette hat gar nicht geantwortet"
-    assert details.provider == erwartet
+    assert details.provider == expected

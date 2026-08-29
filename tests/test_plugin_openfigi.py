@@ -59,8 +59,8 @@ class FakeFigiClient:
         self.calls.append((isin, id_value, id_type))
         if self._error is not None:
             raise self._error
-        treffer = self._answers.get((isin, id_value))
-        return FigiMatch(treffer) if treffer else None
+        hit = self._answers.get((isin, id_value))
+        return FigiMatch(hit) if hit else None
 
 
 class PoisonedFigiClient:

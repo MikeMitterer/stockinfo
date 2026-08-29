@@ -455,13 +455,13 @@ class MetadataAdapter(_Adapter):
 
         known = {field.name for field in fields(EtfDetails)}
         values: dict[str, object] = {}
-        herkunft: set[str] = set()
+        provenance: set[str] = set()
 
         for reading in readings:
             if reading.field not in known or reading.field == "source":
                 continue
             if reading.source:
-                herkunft.add(reading.source)
+                provenance.add(reading.source)
 
             wanted = CORE_UNITS.get(reading.field)
             if wanted is None or not isinstance(reading.value, (int, float)):
@@ -486,7 +486,7 @@ class MetadataAdapter(_Adapter):
         # Die Quelle beschriftet sich selbst — der Service soll sie nicht raten
         # müssen. Mehrere Herkünfte in einer Antwort werden benannt, nicht auf
         # eine reduziert.
-        values["source"] = "+".join(sorted(herkunft)) or None
+        values["source"] = "+".join(sorted(provenance)) or None
         return EtfDetails(**values)
 
 

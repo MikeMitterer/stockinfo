@@ -206,14 +206,14 @@ def _packages_from(raw: dict) -> tuple[str, ...]:
         logger.warning("plugins_packages_invalid", got=type(entries).__name__)
         return ()
 
-    taugliche = []
+    usable = []
     for entry in entries:
         text = str(entry).strip()
         if _PIN.fullmatch(text):
-            taugliche.append(text)
+            usable.append(text)
         else:
             logger.warning("plugin_package_rejected", entry=text)
-    return tuple(taugliche)
+    return tuple(usable)
 
 
 def load_sources_config(path: str | Path, settings) -> SourcesConfig:
