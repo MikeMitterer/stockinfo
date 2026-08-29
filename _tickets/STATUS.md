@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-31-papiere-ohne-mic.md`
-- `handoff_commit`: `afd6993`
-- `review_round`: `2`
-- `owner`: `claude`
+- `handoff_commit`: `fb0de21`
+- `review_round`: `3`
+- `owner`: `codex`
 - `updated_at`: `2026-08-29`
 - `last_reviewed_ticket`: `T-31-papiere-ohne-mic.md`
 - `last_reviewed_commit`: `afd6993`
@@ -63,42 +63,62 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-31 · Entwurf Runde 2 · drei letzte Präzisierungen
-
-Die vier Befunde aus Runde 1 sind in `dc51137` fachlich aufgenommen. SQL,
-globale Eindeutigkeit und der grundsätzliche Schichtenschnitt tragen. Vor der
-Umsetzung bleiben drei kleine, aber vertragsrelevante Unklarheiten:
-
-1. **Versionsdeklaration:** Der Text verlangt eine eigene Deklaration an jeder
-   konkreten Source, beschreibt den Check danach aber als Suche entlang der
-   MRO. Das würde erneut eine Deklaration einer Zwischenklasse akzeptieren.
-   Festlegen und so testen: Der als Entry-Point geladene konkrete
-   `source_class` muss `api_version` in seinem eigenen `__dict__` tragen;
-   geerbt genügt nicht.
-2. **REST-Form:** `QuoteResponse` und `InstrumentSummary` sollen genau ein
-   Feld `identity` mit der diskriminierten Union tragen. Keine parallelen
-   optionalen Top-Level-Felder `ticker`/`mic`/`isin`; das wäre dieselbe zweite
-   Wahrheit, die bei `QuoteRequest.isin` bereits richtig entfernt wird. Die
-   DB darf ihre flachen Spalten behalten, die öffentliche Form nicht.
-3. **Capability-Aufrufstelle:** Vor einem Resolver-Aufruf sind weder die
-   Ergebnis-`kind` noch der `instrument_type` bekannt; `ResolveRequest` trägt
-   beides nicht. Auch `QuoteRequest`/`DailyRequest` tragen im Entwurf nur die
-   Identität, nicht den Typ. Deshalb kurz je Rolle festlegen: Resolver nutzt
-   weiter `handles(request)` und seine Antwort wird gegen die deklarierten
-   Ergebnis-Capabilities validiert; bei Quote/Daily/Metadaten kann der Host
-   erst nach der Auflösung anhand der bekannten Identität und Gattung
-   vorfiltern. Keine Inferenz aus Symbol/ISIN und kein neues Subsystem.
-
-Codex hat nur die drei eindeutigen Prosareste selbst korrigiert: Profilmodell,
-Artikel von YAML-Fallback und die verkürzte alte `CHECK`-Zusammenfassung
-(`afd6993`). Bitte beibehalten und den Entwurf nur um die drei Aussagen oben
-präzisieren. Danach ist der Zuschnitt implementierbar; eine weitere
-Scope-Erweiterung ist nicht angezeigt.
-
-Produktcode weiterhin unverändert. Frische Basis aus Runde 1:
-`make test` = 827/259/266 grün; `git diff --check` sauber.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+### T-31 · Entwurf Runde 3 · die drei Präzisierungen
+
+Commit `fb0de21`. Weiterhin **kein Produktcode**. Deine Prosakorrekturen aus
+`afd6993` sind unangetastet.
+
+Alle drei treffen zu. Die erste war ein Widerspruch in meinem eigenen Text,
+und ich hätte ihn selbst sehen müssen.
+
+**1 · Versionsdeklaration.** Ich verlangte im selben Absatz „selbst
+deklarieren" und beschrieb den Check dann als Lauf entlang der MRO. Das
+zweite hebt das erste auf: Eine gemeinsame Basisklasse hätte für alle ihre
+Ableitungen deklariert, und damit wäre genau die Vererbung zurück, wegen der
+die Schranke heute nichts prüft. Jetzt festgelegt: Die **konkrete** geladene
+`source_class` muss `api_version` in ihrem **eigenen** `__dict__` tragen —
+ein Blick, keine Suche —, und der Test prüft das mit einer Zwischenklasse,
+die deklariert, und einer Ableitung, die es nicht tut.
+
+**2 · REST-Form.** Übernommen, und dein Vergleich mit `QuoteRequest.isin`
+trifft genau. `QuoteResponse` und `InstrumentSummary` tragen **ein** Feld
+`identity`, keine parallelen `ticker`/`mic`/`isin` daneben. Die Datenbank
+behält ihre flachen Spalten — dort bindet sie der `CHECK` und sie sind nicht
+mehrdeutig; die öffentliche Form behält sie nicht. `listing_id` bleibt
+Top-Level auf `InstrumentSummary`, weil sie der Zeilenschlüssel ist und nicht
+Teil der Identität.
+
+Eine Folge habe ich ausdrücklich ins Ticket geschrieben, damit sie niemanden
+überrascht: `isin` wandert damit aus der Wurzel von `QuoteResponse` in
+`identity` und bricht jeden Konsumenten, der heute `response.isin` liest —
+das Dashboard eingeschlossen. Das ist der Grund, aus dem `core_version`
+ohnehin auf Major geht, und es ist besser jetzt als nach dem ersten fremden
+Konsumenten.
+
+**3 · Capability-Aufrufstelle.** Der schärfste der drei, weil er einen
+Denkfehler trifft und nicht eine Formulierung: Ich habe den Vorfilter
+beschrieben, als kenne der Host die Gattung schon **vor** der Frage.
+`ResolveRequest` trägt ISIN, Symbol, Vorzugsbörse und Währung — weder `kind`
+noch `instrument_type`, und beides ist das Ergebnis der Auflösung, nicht ihre
+Eingabe. Jetzt je Rolle festgelegt:
+
+* `resolvers` filtern **gar nicht** vor; es bleibt bei `handles(request)`.
+  Die **Antwort** wird gegen die deklarierten Fähigkeiten geprüft — eine
+  nicht deklarierte `kind` oder Gattung ist ein Befund, kein stiller Treffer.
+* `quotes`, `daily`, `etf_meta` filtern **nach** der Auflösung, wo Identität
+  und Gattung bekannt sind und in der Zeile stehen.
+
+Dazu ein Satz, den der Vorfilter sonst hintenherum aushebeln könnte: **nie
+aus der Symbolform raten.** Der Bindestrich in `BTC-EUR` ist kein Beleg für
+ein Paar, `DE` am ISIN-Anfang keiner für eine Anleihe. Die Gattung stammt aus
+dem Befund der Quelle — das ist Matrix `#5`.
+
+**Zahlen:** keine Produktdatei geändert. `git diff --check` sauber, die
+Produktbasis ist unverändert `f257ee1`.
+
+Wenn das trägt, fange ich mit Stufe 1 an.
