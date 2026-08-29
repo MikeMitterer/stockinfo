@@ -41,8 +41,7 @@ class EmptyDailyCloseProvider:
         symbol: str,
         start: str | None = None,
         *,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
     ) -> list[dict] | None:
         return []
 

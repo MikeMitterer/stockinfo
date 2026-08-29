@@ -1,0 +1,204 @@
+# T-37 · Ein YAML-Plugin, eine Datendatei, dieselbe Prüfstrecke
+
+| Repo | Status | Time-box | Scope | GH-Issue |
+|---|---|---|---|---|
+| StockInfo (Plugin-Beispiel + Prüfmittel) | bereit nach T-31/T-38 | 1 Tag | ein YAML-Plugin, eine Fachdaten-Datei, zwei Profile, gemeinsamer Smoke und Browser-Abnahme | — |
+
+- **Angelegt:** 2026-08-28; auf YAML neu ausgerichtet am 2026-08-29
+- **Hängt ab von:** T-31 und T-38
+- **Danach:** T-35 wiederholen
+- **Entscheidung Mike:** Das frühere CSV-Plugin wird vollständig ersetzt. Es
+  gibt keinen Migrations- oder Kompatibilitätsweg, weil das Projekt noch in
+  Entwicklung ist.
+
+**Löst:** Ein Benutzer pflegt alle manuellen Fallback-Daten in genau einer
+übersichtlichen YAML-Datei. Dasselbe Plugin arbeitet als vollständiges
+Offline-Profil und als letztes Fallback des normalen Online-Profils, ohne eine
+zweite Prüfstrecke zu erzeugen.
+
+---
+
+## Verify
+
+Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) ·
+◑ teilweise (Fußnote) · ➖ keine Live-Verifikation (nur Unit/Review).
+`AI` = nur KI · `Human` = nur Mensch (nie überschreiben).
+
+| # | Where | Look for | AI | Human |
+|---|---|---|:--:|---|
+| **1** | `T-37-single-file-sample.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | | |
+| **2** | `PROFILE=yaml ./_tickets/T-35-smoke.sh --run` | der gemeinsame Smoke ist grün; `GET /sources` zeigt `yaml-file` in allen fünf Rollen und genau einen Pfad auf die Fachdaten-Datei | | |
+| **3** | `PROFILE=online ./_tickets/T-35-smoke.sh --run` | derselbe Smoke ist grün; normale Online-Quellen stehen zuerst und dasselbe `yaml-file` jeweils zuletzt | | |
+| **4** | Überschneidungs-Test im Online-Profil | liefert eine Online-Quelle einen gültigen Wert, gewinnt sie; YAML überschreibt ihn nicht. Nur bei fehlendem Ergebnis wird YAML gefragt | | |
+| **5** | Kurs-/History-Persistenz | Online- und YAML-Ergebnisse landen in der Datenbank. Manuelle `history` wird nur für Assets ohne abfragbare History verwendet; fehlt `price`, darf der jüngste Schlusskurs als aktueller Fallback dienen | | |
+| **6** | Browser, `PROFILE=yaml` | `BTC-EUR` (`pair`), eine Anleihe (`isin_only`) und ein nicht börsengehandelter Fonds (`fund`) lassen sich anlegen; Liste, Drilldown, Preis und manueller History-Fallback stimmen; Konsole und fehlgeschlagene Requests sind sauber | | |
+| **7** | Browser, `PROFILE=online` | BTC kommt über YFinance, die Anleihe ohne Online-Kurs über YAML; bei einem überlappenden Asset gewinnt online. Liste, Drilldown und Quellenanzeige stimmen; Konsole und Requests sind sauber | | |
+| **8** | Plugin-/Profil-Inventur | kein CSV-Profil und keine vier Datei-Quellen bleiben aktiv oder dokumentiert; `PROFILE=yaml` ist der einzige dateibasierte Prüfpfad | | |
+| **9** | Reload-/Fehlerfälle | fehlende Datei, ungültiges YAML, doppelte IDs und unzulässige Werte werden verständlich gemeldet; ein Neustart liest eine gültig geänderte Datei erneut ein | | |
+
+Die Browserzeilen werden von Claude mit den tatsächlich beobachteten Assets,
+Quellen und Ergebnissen belegt. Eine rein automatisierte Aussage ersetzt diese
+Abnahme nicht.
+
+---
+
+## Zwei YAML-Dateien mit klar getrennten Aufgaben
+
+`data/sources.yaml` ist **Konfiguration**. Es wählt Quellen, bestimmt ihre
+Reihenfolge und zeigt dem Plugin den Pfad:
+
+```yaml
+resolvers: [openfigi, yahoo-search, yaml-file]
+etf_meta:  [justetf, yfinance, yaml-file]
+quotes:    [yfinance, yaml-file]
+daily:     [yfinance, yaml-file]
+fx:        [yfinance, yaml-file]
+
+providers:
+  openfigi:
+    api_key: ${OPENFIGI_API_KEY}
+  yaml-file:
+    path: /data/assets.yaml
+```
+
+Das vollständige Online-Beispiel liegt in
+[`T-37-sources-online-with-yaml-fallback.yaml`](T-37-sources-online-with-yaml-fallback.yaml).
+
+`/data/assets.yaml` ist die **eine vom Benutzer gepflegte Fachdaten-Datei**.
+Sie enthält Instrumente, optionale aktuelle Preise, optionale manuelle History,
+Metadaten und Devisenkurse. Das abgestimmte Beispiel liegt in
+[`T-37-single-file-sample.yaml`](T-37-single-file-sample.yaml).
+
+`sources.yaml` zählt nicht als zweite Fachdaten-Datei: Sie existiert ohnehin
+für jedes Profil und enthält keine Instrumentendaten.
+
+---
+
+## Verbindliches Datenmodell
+
+```yaml
+version: 1
+
+instruments:
+  - id: german-bond
+    identity:
+      kind: isin_only
+      isin: DE0001102531
+    name: Bundesrepublik Deutschland
+    instrument_type: bond
+    history:
+      currency: EUR
+      closes:
+        - date: "2026-08-27"
+          value: 99.42
+
+  - id: bitcoin-eur
+    identity:
+      kind: pair
+      base: BTC
+      quote_currency: EUR
+    name: Bitcoin
+    instrument_type: crypto
+    price:
+      value: 94500.00
+      currency: EUR
+      as_of: "2026-08-27T17:30:00+02:00"
+```
+
+Verbindliche Regeln:
+
+- aktueller Kurs heißt `price`, nicht `quote`;
+- jede Identität folgt der Union aus T-31: `listed`, `pair` oder `isin_only`;
+- jede erfolgreiche Auflösung trägt `name` und `instrument_type` gemäß T-38;
+- der Typkatalog lautet `stock`, `etf`, `etc`, `fund`, `crypto`, `bond`;
+- `fund` ist ein eigener Typ und wird nicht auf `etf` gerundet;
+- normale History entsteht durch die jeweiligen Abfragen und wird in der
+  Datenbank gespeichert;
+- `history` im YAML ist ausschließlich der manuell gepflegte Fallback, wenn
+  keine konfigurierte Quelle die History dieses Assets abfragen kann;
+- auch YAML-Kurse und -History werden in die Datenbank übernommen;
+- fehlt `price`, darf der jüngste Eintrag aus `history.closes` als aktueller
+  Preis-Fallback dienen;
+- ein Instrument darf Metadaten und Preis ohne History tragen; leere
+  Platzhalterblöcke sind unnötig.
+
+---
+
+## Eine Implementierung, fünf Rollen
+
+Das Plugin `yaml-file` liest und validiert die Datei **einmal** und stellt
+denselben Stand für alle Rollen bereit:
+
+| Rolle | Antwort aus `/data/assets.yaml` |
+|---|---|
+| `resolvers` | Identität, Name und Instrumenttyp |
+| `quotes` | optionaler aktueller `price` oder jüngster manueller Schlusskurs |
+| `daily` | optionale manuelle `history` |
+| `etf_meta` | optionale Metadaten |
+| `fx` | optionale Einträge aus `fx_rates` |
+
+Parser, Indexierung und Invarianten werden nicht fünfmal implementiert. Eine
+gemeinsame interne Datenhaltung bedient die Rollen; der öffentliche
+Plugin-Vertrag bleibt unverändert.
+
+---
+
+## Ein Smoke, zwei Profile
+
+`_tickets/T-35-smoke.sh` bekommt zwei Profile, aber nur eine Prüfimplementierung:
+
+```bash
+PROFILE=online ./_tickets/T-35-smoke.sh --run
+PROFILE=yaml   ./_tickets/T-35-smoke.sh --run
+```
+
+Das Profil darf nur Testdaten und `sources.yaml` vorbereiten. Die fachlichen
+Checks darunter fragen nach denselben Ergebnissen und enthalten keine
+profilabhängigen Sonderpfade. Wo einzelne Assets verschiedene Erwartungswerte
+brauchen, stehen diese in einer kleinen Profiltabelle; die Prüfmechanik bleibt
+gemeinsam.
+
+### Reines YAML-Profil
+
+Alle fünf Ketten bestehen nur aus `[yaml-file]`. Es arbeitet ohne Netz und
+beweist, dass ein fremdes Plugin den gesamten MVP-Vertrag bedienen kann.
+
+### Online-Profil mit YAML-Fallback
+
+OpenFIGI, Yahoo Search, YFinance und justETF bleiben die normalen Quellen.
+`yaml-file` steht in jeder unterstützten Kette zuletzt. Es ergänzt insbesondere
+Anleihen oder andere Assets ohne Online-Kurs, ist aber nie ein Override.
+
+---
+
+## Fehler- und Reload-Semantik
+
+- Der Pfad kommt ausschließlich aus `providers.yaml-file.path`; es gibt keine
+  Dateisuche und keinen zweiten Vorgabepfad.
+- Eine fehlende oder ungültige Datei macht die Quelle sichtbar nicht
+  einsatzbereit; die App nennt einen handlungsfähigen Grund in `/sources` und
+  im Log.
+- Doppelte `id` oder doppelte kanonische Identitäten sind Fehler, keine
+  Last-write-wins-Regel.
+- Werte werden gegen die Invarianten des Plugin-Vertrags geprüft. Ungültige
+  ISIN, Identitätsform, Währung, Zeitangabe oder nichtpositive/nichtendliche
+  Zahlen werden benannt und nicht teilweise geladen.
+- Plugins werden beim App-Start geladen. Eine Änderung der Datei wird deshalb
+  nach Neustart wirksam; Hot Reload ist nicht Teil dieses Tickets.
+
+---
+
+## Side-Effects
+
+- Das bisherige CSV-Profil und seine vier Quellen werden entfernt statt
+  parallel unterstützt.
+- Keine Datenmigration und keine Rückwärtskompatibilität.
+- Keine zweite Smoke- oder Browser-Testinfrastruktur.
+- Keine neue Asset-Klasse außerhalb des in T-31/T-38 entschiedenen Katalogs.
+
+---
+
+## Auflösung
+
+_(offen — Umsetzung beginnt nach Freigabe von T-31 und T-38)_
+

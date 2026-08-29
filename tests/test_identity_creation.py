@@ -15,7 +15,7 @@ from pathlib import Path
 import pytest
 
 from app.db import init_db
-from app.models import QuoteResponse
+from app.models import ListedIdentityOut, QuoteResponse
 from app.repository import IncompleteIdentityError, QuoteRepository
 
 
@@ -29,10 +29,10 @@ def repo(tmp_path: Path) -> QuoteRepository:
 def _response(**overrides) -> QuoteResponse:
     """Eine Kurs-Antwort, wie der Quote-Service sie nach der Auflösung baut."""
     defaults = {
-        "isin": "IE00B3RBWM25",
+        "identity": ListedIdentityOut(
+            ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"
+        ),
         "symbol": "VGWL.DE",
-        "ticker": "VGWL",
-        "mic": "XETR",
         "exchange": "Xetra",
         "name": "Vanguard FTSE All-World",
         "type": "etf",

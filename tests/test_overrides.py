@@ -15,7 +15,7 @@ from fastapi.testclient import TestClient
 from app.container import get_cached_quote_service
 from app.db import init_db
 from app.main import app
-from app.models import OVERRIDE_FIELDS, InstrumentOverrides, QuoteResponse
+from app.models import InstrumentOverrides, ListedIdentityOut, OVERRIDE_FIELDS, QuoteResponse
 from app.repository import QuoteRepository
 from app.services.quote_cache import CachedQuoteService, apply_overrides
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
@@ -32,10 +32,10 @@ def repo(tmp_path: Path) -> QuoteRepository:
 def _quote(**fields: object) -> QuoteResponse:
     """Ein Kurs mit leeren ETF-Extras — der Fall, für den T-09 gedacht ist."""
     defaults: dict = {
-        "isin": "DE000EWG0LD1",
+        "identity": ListedIdentityOut(
+            ticker="GOLD", mic="XSTU", isin="DE000EWG0LD1"
+        ),
         "symbol": "GOLD.SG",
-        "ticker": "GOLD",
-        "mic": "XSTU",
         "exchange": "Stuttgart",
         "name": "EUWAX Gold",
         "type": "etf",
@@ -387,8 +387,7 @@ class _LiveSource:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         return self._deliver(isin or symbol)

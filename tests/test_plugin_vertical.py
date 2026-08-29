@@ -314,7 +314,7 @@ def test_die_tagesreihe_erreicht_den_anbieter_auch_ohne_alias() -> None:
     asked: list[str] = []
 
     class Binding:
-        def fetch_daily_closes(self, symbol: str, start: str | None = None):
+        def fetch_daily_closes(self, symbol: str, start: str | None = None, **_: object):
             asked.append(symbol)
             return [{"date": "2026-01-03", "close": 1.0, "currency": "USD"}]
 

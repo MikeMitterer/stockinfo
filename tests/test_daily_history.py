@@ -65,8 +65,7 @@ class FakeDailyProvider:
         symbol: str,
         start: str | None = None,
         *,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
     ) -> list[dict]:
         self.calls.append(start)
         return [
@@ -144,8 +143,7 @@ class FlakyDailyProvider:
         symbol: str,
         start: str | None = None,
         *,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
     ) -> list[dict] | None:
         self.calls.append(start)
         if len(self.calls) <= self._fail_first:
@@ -203,8 +201,7 @@ class _ProviderWithoutCurrency:
         symbol: str,
         start: str | None = None,
         *,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
     ) -> list[dict]:
         return [
             {"date": _day(5), "close": 160.0},

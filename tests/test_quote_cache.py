@@ -49,8 +49,7 @@ class FakeQuoteService:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         return self.get_quote_by_isin(isin or symbol)
@@ -205,8 +204,7 @@ class _FakeDailyProvider:
         symbol: str,
         start: str | None = None,
         *,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
     ):
         return [
             {"date": f"2026-01-{index + 1:02d}", "close": close, "currency": "EUR"}
@@ -236,8 +234,7 @@ class _StockQuoteService:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         return self.get_quote_by_isin(isin or symbol, enrich_etf)
@@ -307,8 +304,7 @@ def test_refresh_behaelt_letzte_volatilitaet_bei_fehlgeschlagener_neuberechnung(
             symbol: str,
             start: str | None = None,
             *,
-            ticker: str | None = None,
-            mic: str | None = None,
+            identity: object | None = None,
         ):
             return None
 
@@ -355,8 +351,7 @@ class _RecordingQuoteService:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         self.enrich_calls.append(enrich_etf)
@@ -487,8 +482,7 @@ class _DriftingResolution:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         self.known_calls += 1
@@ -594,8 +588,7 @@ class _WithoutType:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         self.seen_type = instrument_type
@@ -745,8 +738,7 @@ class _RecordingCall:
         isin: str | None = None,
         exchange: str | None = None,
         instrument_type: str | None = None,
-        ticker: str | None = None,
-        mic: str | None = None,
+        identity: object | None = None,
         enrich_etf: bool = True,
     ) -> QuoteResponse:
         self.known_calls += 1

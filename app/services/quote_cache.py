@@ -20,6 +20,7 @@ from app.models import (
     QuotePoint,
     QuoteResponse,
     identity_columns,
+    identity_from_columns,
     with_identity,
 )
 from app.providers.base import identity_from_row
@@ -480,9 +481,10 @@ class CachedQuoteService:
             # ältere Zeile. Das ist keine Mehrdeutigkeit, die den Aufrufer
             # etwas anginge — er hat kein Symbol genannt —, sondern eine
             # Buchführung, die schlicht die falsche Zeile las.
+            isin = getattr(response.identity, "isin", None)
             instrument = (
-                self._repository.get_instrument_by_isin(response.isin)
-                if response.isin
+                self._repository.get_instrument_by_isin(isin)
+                if isin
                 else self._repository.get_instrument_by_identity(
                     response.identity
                 )
@@ -836,23 +838,21 @@ class CachedQuoteService:
         # `ValidationError` statt der Aussage, was fehlt. Der `stale`-Fall ist
         # ausdrücklich mitgemeint — der alte Wert ist der Notnagel, nicht die
         # Ausnahme von der Regel.
+        identity = identity_from_columns(instrument)
         require_core_values(
             instrument["symbol"],
             PrecheckedCoreValues(
-                ticker=instrument["ticker"],
-                mic=instrument["mic"],
+                identity=identity,
                 currency=quote["currency"] or instrument["currency"],
             ),
         )
         response = QuoteResponse(
-            isin=instrument["isin"],
             symbol=instrument["symbol"],
-            # Seit T-21 Übergabe 3 sind sie zugesagt, und `ensure_core_complete`
-            # liest die Pflichtliste aus dem Vertragsartefakt — ohne diese zwei
-            # Zeilen antwortete ausgerechnet der Cache-Weg mit `502`. Die Werte
-            # stehen in der Zeile: seit 2A sind sie `NOT NULL`.
-            ticker=instrument["ticker"],
-            mic=instrument["mic"],
+            # Seit T-21 Übergabe 3 zugesagt, und `ensure_core_complete` liest
+            # die Pflichtliste aus dem Vertragsartefakt — ohne diese Zeile
+            # antwortete ausgerechnet der Cache-Weg mit `502`. Der Wert steht
+            # in der Zeile: seit T-31 bindet ihn dort der `CHECK`.
+            identity=identity,
             exchange=instrument["exchange"],
             name=instrument["name"],
             type=instrument["type"],

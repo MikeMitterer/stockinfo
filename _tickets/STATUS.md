@@ -15,7 +15,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_commit`: `fb0de21`
 - `last_reviewed_round`: `3`
 - `workstream`: `ui_live_acceptance`
-- `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-csv-profil-gleiche-tests.md` → `T-35-ui-abnahme-am-laufenden-stack.md`
+- `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md`
 - `priority_ticket`: `T-31-papiere-ohne-mic.md`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
@@ -59,6 +59,11 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 > eigener Typ `fund` aufgenommen; `MUTUALFUND → etf` entfällt. Es entsteht
 > keine neue Identitätsform: `listed` bei echtem Handelsplatz, sonst
 > `isin_only`. Ein Fonds ohne eine dieser kanonischen Formen wird nicht geraten.
+
+> **T-39 Reihenfolge Mike, 2026-08-29:** Die englische Plugin-
+> Entwicklerdokumentation samt Sample kommt ausdrücklich **ganz am Ende**.
+> Claude schließt zuerst T-31 → T-38 → T-37 → T-35 vollständig ab; T-39 darf
+> diese Kette weder unterbrechen noch blockieren.
 
 - Rollen: Claude implementiert; Codex prüft unabhängig Code, Tests, Ticket und
   Spec.
