@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
 - `handoff_commit`: `adc8907`
 - `review_round`: `5`
@@ -96,5 +96,4 @@ Dashboard, `vue-tsc`, Ruff und `git diff --check` sauber, `PROFILE=online`
 
 Danach steht das Paket **T-31 + T-38** an, mit dem die CSV-Variante durch das
 YAML-Fallback-Plugin ersetzt wird — begruendet in der OUTBOX der Runde 4.
-
 
