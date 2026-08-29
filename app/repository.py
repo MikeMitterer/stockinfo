@@ -131,6 +131,22 @@ class IdentityConflictError(ValueError):
 
 
 @dataclass(frozen=True)
+class _InstrumentFacts:
+    """Was `_insert_instrument` von seiner Vorlage wirklich liest.
+
+    Eine `QuoteResponse` erfüllt diese Form von selbst; ein Papier ohne Kurs
+    kann sie nicht bilden, weil ihm der Preis fehlt. Diese vier Felder sind
+    der gemeinsame Nenner — und dass es nur vier sind, ist der Grund, warum
+    beide Wege dieselbe Einfügung benutzen können.
+    """
+
+    identity: object
+    symbol: str
+    fetched_at: str
+    metadata_complete: bool = False
+
+
+@dataclass(frozen=True)
 class SavedQuote:
     """Was das Speichern eines Kurses am Instrument bewirkt hat.
 
@@ -648,6 +664,53 @@ class QuoteRepository:
                 "DELETE FROM instruments WHERE id = ?", (row["id"],)
             )
             return cursor.rowcount > 0
+
+    def save_instrument(self, resolved: object, fetched_at: str) -> SavedQuote:
+        """Legt ein Papier **ohne Kurs** an — der Fall der OTC-Anleihe (T-31).
+
+        `save_quote` speichert Instrument und Kurspunkt zusammen, weil beides
+        üblicherweise zusammen ankommt. Für ein Papier, das keine Kursquelle
+        hat, ist das die falsche Klammer: Die Auflösung war erfolgreich,
+        Identität, Name und Gattung stehen fest — nur einen Preis gibt es
+        nicht, und den zu erfinden verbietet das Ticket ausdrücklich („Kein
+        Preis heißt kein Quote-Datensatz, nicht ein Quote mit Lücke").
+
+        Benutzt wird dieselbe Einfügung wie beim Kursweg. `_insert_instrument`
+        liest von seiner Vorlage ohnehin nur vier Dinge — Identität, Symbol,
+        Zeitstempel und ob die Metadaten belastbar sind —, und ein zweiter
+        Einfügepfad wäre die Stelle, an der `listing_id` oder der `CHECK` beim
+        nächsten Umbau nur auf einer Seite nachgezogen würde.
+
+        Args:
+            resolved: Das aufgelöste Papier.
+            fetched_at: Wann die Auflösung stattfand.
+
+        Returns:
+            Die ID und ob die Zeile in diesem Aufruf entstanden ist.
+        """
+        facts = _InstrumentFacts(
+            identity=identity_from_columns(resolved),
+            symbol=resolved.symbol,
+            fetched_at=fetched_at,
+        )
+        if facts.identity is None:
+            raise IncompleteIdentityError(resolved.symbol)
+
+        meta = {
+            "name": resolved.name,
+            "type": resolved.type,
+            "exchange": resolved.exchange,
+            "currency": resolved.currency,
+        }
+        with self._connect() as connection:
+            existing_id = self._find_instrument_id(
+                connection, facts.symbol, facts.identity
+            )
+            if existing_id is not None:
+                return SavedQuote(existing_id, created=False)
+            return SavedQuote(
+                self._insert_instrument(connection, facts, meta), created=True
+            )
 
     def save_quote(self, response: QuoteResponse) -> SavedQuote:
         """Speichert Instrument-Metadaten und hängt den Kurspunkt an.

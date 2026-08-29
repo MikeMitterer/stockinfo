@@ -68,7 +68,24 @@ class InstrumentNotFoundError(Exception):
 
 
 class QuoteUnavailableError(Exception):
-    """Es konnte kein aktueller Kurs beschafft werden."""
+    """Es konnte kein aktueller Kurs beschafft werden.
+
+    **`resolved` reist mit, seit es Papiere ohne Kursquelle gibt** (T-31).
+    Eine OTC-Anleihe wird von OpenFIGI erkannt — Name, Gattung und Identität
+    stehen fest —, und trotzdem liefert keine Quelle einen Preis. Das ist
+    kein Fehlschlag der Aufnahme, sondern ihr Normalfall: Das Papier gehört
+    in den Bestand, sein Preis ist eine andere Frage.
+
+    Ohne dieses Feld ginge die Auflösung verloren, und der Aufnahmeweg müsste
+    sie ein zweites Mal beschaffen — dieselbe Frage an dieselben Quellen, nur
+    teurer.
+
+    ``None`` heißt, dass es gar nicht bis zur Auflösung kam.
+    """
+
+    def __init__(self, *args: object, resolved: object = None) -> None:
+        super().__init__(*args)
+        self.resolved = resolved
 
 
 class QuoteCurrencyMismatchError(Exception):
@@ -511,7 +528,9 @@ class QuoteService:
         """
         raw = self._quote_provider.fetch_quote(resolved)
         if raw is None:
-            raise QuoteUnavailableError(resolved.symbol)
+            # Die Auflösung reist mit: Wer sie hat, kann das Papier aufnehmen,
+            # auch wenn niemand einen Preis kennt.
+            raise QuoteUnavailableError(resolved.symbol, resolved=resolved)
 
         isin = self._isin_of(resolved, raw)
         identity = identity_from_columns(

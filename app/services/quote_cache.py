@@ -58,7 +58,7 @@ class StoredQuote:
     einem Papier ohne ISIN sogar eine mehrdeutige.
     """
 
-    quote: QuoteResponse
+    quote: QuoteResponse | None
     created: bool
     instrument_id: int
 
@@ -626,6 +626,26 @@ class CachedQuoteService:
             with_identity(apply_overrides(row))
             for row in self._repository.list_instruments_with_latest()
         ]
+
+    def store_resolved(self, resolved: object) -> StoredQuote:
+        """Speichert ein aufgelöstes Papier **ohne Kurs**.
+
+        Der Weg für Gattungen, die keine Kursquelle haben (T-31). Er läuft
+        bewusst nicht über `_get`: Dort ginge es um Cache und TTL, und beides
+        setzt einen Kurs voraus, den es hier nicht gibt.
+
+        Args:
+            resolved: Das aufgelöste Papier.
+
+        Returns:
+            Dasselbe Paar wie die Kurswege — nur ohne Kurs in der Antwort.
+        """
+        saved = self._repository.save_instrument(
+            resolved, datetime.now(timezone.utc).isoformat()
+        )
+        return StoredQuote(
+            quote=None, created=saved.created, instrument_id=saved.instrument_id
+        )
 
     def get_instrument_summary(self, instrument_id: int) -> dict | None:
         """Eine einzelne Zeile der Übersicht — für den Aufnahmeweg.

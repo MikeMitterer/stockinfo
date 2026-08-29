@@ -103,6 +103,30 @@ class IntakeService:
             stored = self._store(value)
         except InstrumentNotFoundError as exc:
             raise IntakeRejected(REASON_NOT_FOUND, identifier=value) from exc
+        except QuoteUnavailableError as exc:
+            # **Aufgenommen ist nicht bepreist** (T-31, Matrix `#9`). Eine
+            # OTC-Anleihe wird erkannt — Identität, Name und Gattung stehen
+            # fest —, und trotzdem liefert keine Quelle einen Preis. Das
+            # Papier gehört damit in den Bestand; sein Kurs ist eine andere
+            # Frage, die `GET /quote/{isin}` mit `quote_unavailable`
+            # beantwortet.
+            #
+            # **Nur `isin_only`, und das ist der Unterschied zwischen einer
+            # kaputten Quelle und einem Papier ohne Quelle.** Ein Listing hat
+            # einen Handelsplatz und damit definitionsgemäß jemanden, der es
+            # bepreist; liefert niemand, ist etwas ausgefallen — und eine Zeile
+            # anzulegen verstellte den Blick darauf. Eine OTC-Anleihe hat
+            # dagegen von vornherein keine Kursquelle, und ihr Fehlen ist der
+            # Normalfall, nicht die Störung.
+            #
+            # Genau das sagt das Ticket: „Erfassen funktioniert mit
+            # `isin_only` sofort", und der Preis kommt getrennt über die
+            # Datei-Quelle. Weiter zu fassen hieße, einen Ausfall als Erfolg
+            # zu verbuchen — der bestehende Test `test_eine_tote_quelle_ist_
+            # ein_502_mit_kennung` hält genau diese Grenze fest.
+            if exc.resolved is None or exc.resolved.kind != "isin_only":
+                raise
+            stored = self._quotes.store_resolved(exc.resolved)
 
         summary = self._quotes.get_instrument_summary(stored.instrument_id)
         if summary is None:
