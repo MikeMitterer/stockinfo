@@ -425,6 +425,39 @@ Beispiel `_tickets/T-37-single-file-sample.yaml` `kind:` und die Gattungen
 `crypto`/`bond` bereits ausspricht — er ist der erste Konsument dieses
 Vertrags, nicht seine Vorbedingung.
 
+### Offen: wie `BTC-EUR` über den By-Symbol-Weg hereinkommt
+
+*(Aufgeworfen beim Bauen, 2026-08-29. **Blockiert nicht** — siehe unten.)*
+
+Matrix `#5` verlangt die Paar-Identität aus dem **Gattungs-Befund der
+Quelle**, nie aus der Symbolform. Der Eintritt läuft per Symbol. Dazwischen
+liegt eine Henne-Ei-Lage, die im Entwurf fehlte:
+
+* `get_quote_by_symbol()` hat nur das Symbol; für eine Gattung muss jemand
+  gefragt werden.
+* Die Kursquelle fragen ginge — aber `QuoteRequest` verlangt eine fertige
+  `Identity`, und genau die fehlt noch.
+* Der Vertrag hat `ResolveRequest.symbol` für diesen Fall. **Gemessen: kein
+  Resolver liest es**, und `InstrumentResolver` kennt nur
+  `resolve_isin(isin)`.
+
+| | Weg | Preis |
+|---|---|---|
+| **a** | By-Symbol geht durch die Resolver-Kette (`ResolveRequest(symbol=…)`) | Vertragsgemäß, aber `InstrumentResolver` bekommt einen zweiten Einstieg — berührt T-24 |
+| **b** | Vorschlagen und bestätigen: Paar aus dem Bindestrich bilden, Quelle fragen, **nur behalten**, wenn sie `crypto` meldet | Klein, erfüllt `#5` dem Wortlaut nach; braucht eine klare Begründung im Code, weil es nach Symbolform-Ableitung aussieht |
+| **c** | By-Symbol bleibt Listings vorbehalten; Paare nur über einen Resolver mit `pair`-Deklaration | `BTC-EUR` wäre bis T-37 nicht aufnehmbar, Matrix `#9` in T-31 nicht erfüllbar |
+
+**Warum das die Arbeit nicht aufhält.** Das Orakel zu Matrix `#9` lautet:
+*Ein `BTC-EUR` kommt über den öffentlichen Eintrittspfad herein und liegt
+danach als `kind='pair'`, `type='crypto'` mit Kurs in EUR im Bestand.* Diese
+Aussage ist für **alle drei** Wege dieselbe. Ließe sie sich ohne die
+Entscheidung nicht formulieren, prüfte sie den Mechanismus statt der
+Anforderung — und genau das ist der Fehler, den Runde 4 offengelegt hat.
+
+Die Orakel entstehen deshalb **zuerst**, die Entscheidung fällt danach am
+laufenden Test. Sie bleibt eine Frage an Codex, aber eine, die er an der
+fertigen Umsetzung besser beurteilen kann als am Entwurf.
+
 ### Entscheidungen Mike, 2026-08-29
 
 1. **Die bestehende `data/stockinfo.db` wird verworfen.** Kein Umzugspfad für
