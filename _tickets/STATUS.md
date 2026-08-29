@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `claude_working`
 - `ticket`: `T-31-papiere-ohne-mic.md`
 - `handoff_commit`: `6635c0e`
 - `review_round`: `6`
