@@ -40,12 +40,45 @@ danach keinen Produktcode mehr. Ein nachfolgender Commit darf ausschließlich
 Kommunikations- oder Ticketdateien enthalten.
 
 Codex prüft nur `ready_for_codex`. Nach den Vorbedingungen setzt Codex
-`codex_reviewing`. Codex verändert im Review keinen Produktcode, keine
-Human-Spalte und verschiebt kein Ticket nach `solved/`. Das Ergebnis kommt in
-`INBOX → Claude`; die verarbeitete OUTBOX-Nachricht wird entfernt. Danach ist
-die Phase `approved` oder `changes_requested`, **beide mit `owner: claude`**.
-Bei einem echten, nicht sicher lösbaren Hindernis gilt `blocked` mit
-`owner: mike`.
+`codex_reviewing`. Codex verändert im Review grundsätzlich keinen Produktcode;
+die eng begrenzte Selbstheilung unten ist die einzige Ausnahme. Die
+Human-Spalte bleibt immer unverändert, und Codex verschiebt kein Ticket nach
+`solved/`. Das Ergebnis kommt in `INBOX → Claude`; die verarbeitete
+OUTBOX-Nachricht wird entfernt. Danach ist die Phase `approved` oder
+`changes_requested`, **beide mit `owner: claude`**. Bei einem echten, nicht
+sicher lösbaren Hindernis gilt `blocked` mit `owner: mike`.
+
+## Codex-Selbstheilung — mechanische Kleinigkeiten ohne Zusatzrunde
+
+*(Entscheidung Mike, 2026-08-29.)*
+
+Codex darf einen beim Review gefundenen Rest in derselben Runde selbst
+korrigieren, wenn **alle** folgenden Bedingungen erfüllt sind:
+
+- Die Korrektur ist rein mechanisch, eindeutig und verhaltensneutral, zum
+  Beispiel eine vollständige Bezeichner-Umbenennung, Formatierung oder eine
+  Korrektur in Kommentar, Docstring oder technischer Prosa.
+- Die Änderung lässt sich als abschließende, deterministische Ersetzung
+  angeben. Sie eröffnet keinen neuen Scope und braucht keine fachliche oder
+  gestalterische Entscheidung.
+- Unverändert bleiben insbesondere Fachlogik, API und Plugin-Vertrag,
+  Datenmodell und Migration, Konfiguration, Abhängigkeiten, Security,
+  UI-Verhalten, i18n-Texte sowie Fixtures, Assertions und Erwartungswerte von
+  Tests.
+- Der Worktree enthält keinen parallelen Produktedit von Claude oder Mike.
+  Bei fremden oder unklaren Änderungen gilt die Ausnahme nicht.
+
+Die Selbstheilung erhält genau einen eigenen Produkt-Commit mit Präfix
+`fix(review):` oder `style(review):`. Codex prüft dessen vollständigen Diff
+noch einmal mit dem zur Sprache passenden Inventar, führt mindestens die
+direkt betroffenen Tests und statischen Checks aus und wiederholt jeden durch
+den Fix berührten Smoke. Danach setzt Codex `handoff_commit` auf diesen
+finalen Produkt-Commit, behält `review_round` bei und dokumentiert im Ticket
+sowohl den ursprünglich übergebenen als auch den selbst geheilten Stand.
+Besteht die Gegenprüfung, darf dieselbe Runde unmittelbar `approved` werden;
+andernfalls geht sie mit dem vollständigen Rest als `changes_requested` an
+Claude. Diese Ausnahme ist kein Weg, einen strittigen Reviewbefund selbst zur
+richtigen Lösung zu erklären.
 
 ## Portfolio-Riegel — das richtige Ergebnis vor lokaler Perfektion
 
