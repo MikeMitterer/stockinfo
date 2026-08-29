@@ -49,11 +49,13 @@ describe('InstrumentDrilldown', () => {
       },
     })
 
-    const felder = wrapper.findAll('.drilldown__field')
-    const hervorgehoben = felder.filter((f) => f.classes().includes('drilldown__field--editable'))
+    const fields = wrapper.findAll('.drilldown__field')
+    const editableFields = fields.filter((field) =>
+      field.classes().includes('drilldown__field--editable'),
+    )
 
-    expect(felder).toHaveLength(8)
-    expect(hervorgehoben).toHaveLength(6)
+    expect(fields).toHaveLength(8)
+    expect(editableFields).toHaveLength(6)
   })
 
   it('hält die allgemeine Erklärung im Hinweis statt im Dauertext', () => {

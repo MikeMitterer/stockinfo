@@ -328,8 +328,10 @@ except Exception:
 column() {
     "${VENV_PY}" -c "
 import sqlite3, sys
-c = sqlite3.connect(sys.argv[1])
-row = c.execute(f'select {sys.argv[2]} from instruments where isin = ?', (sys.argv[3],)).fetchone()
+connection = sqlite3.connect(sys.argv[1])
+row = connection.execute(
+    f'select {sys.argv[2]} from instruments where isin = ?', (sys.argv[3],)
+).fetchone()
 print('' if row is None or row[0] is None else row[0])
 " "${DB_PATH}" "$2" "$1" 2>/dev/null
 }
@@ -338,12 +340,13 @@ print('' if row is None or row[0] is None else row[0])
 overrideTer() {
     "${VENV_PY}" -c "
 import sqlite3, sys
-c = sqlite3.connect(sys.argv[1])
+connection = sqlite3.connect(sys.argv[1])
 sql = (
-    'select o.ter from instrument_overrides o '
-    'join instruments i on i.id = o.instrument_id where i.isin = ?'
+    'select overrides.ter from instrument_overrides overrides '
+    'join instruments instrument on instrument.id = overrides.instrument_id '
+    'where instrument.isin = ?'
 )
-row = c.execute(sql, (sys.argv[2],)).fetchone()
+row = connection.execute(sql, (sys.argv[2],)).fetchone()
 print('' if row is None or row[0] is None else row[0])
 " "${DB_PATH}" "$1" 2>/dev/null
 }
@@ -355,12 +358,13 @@ print('' if row is None or row[0] is None else row[0])
 quoteState() {
     "${VENV_PY}" -c "
 import sqlite3, sys
-c = sqlite3.connect(sys.argv[1])
+connection = sqlite3.connect(sys.argv[1])
 sql = (
-    \"select count(*), coalesce(max(q.fetched_at), '') from quotes q \"
-    'join instruments i on i.id = q.instrument_id where i.isin = ?'
+    \"select count(*), coalesce(max(quote.fetched_at), '') from quotes quote \"
+    'join instruments instrument on instrument.id = quote.instrument_id '
+    'where instrument.isin = ?'
 )
-row = c.execute(sql, (sys.argv[2],)).fetchone()
+row = connection.execute(sql, (sys.argv[2],)).fetchone()
 print(f'{row[0]} Zeilen, zuletzt {row[1]}')
 " "${DB_PATH}" "$1" 2>/dev/null
 }
@@ -587,9 +591,10 @@ checkChain() {
     _BODY="$(curl -s "${BASE_URL}/sources")"
     _NAMES="$("${VENV_PY}" -c "
 import json, sys
-d = json.loads(sys.argv[1])
-unconfigured = [s['name'] for s in d['sources'] if not s.get('configured')]
-print(','.join(sorted({s['name'] for s in d['sources']})), '|', ','.join(unconfigured))
+payload = json.loads(sys.argv[1])
+sources = payload['sources']
+unconfigured = [source['name'] for source in sources if not source.get('configured')]
+print(','.join(sorted({source['name'] for source in sources})), '|', ','.join(unconfigured))
 " "${_BODY}" 2>/dev/null)"
 
     # **Der einzige Erwartungswert, der sich je Profil unterscheidet** — und
@@ -619,8 +624,10 @@ checkIntake() {
     local _COUNT
     _COUNT="$("${VENV_PY}" -c "
 import sqlite3, sys
-c = sqlite3.connect(sys.argv[1])
-print(c.execute('select count(*) from instruments where isin = ?', (sys.argv[2],)).fetchone()[0])
+connection = sqlite3.connect(sys.argv[1])
+print(connection.execute(
+    'select count(*) from instruments where isin = ?', (sys.argv[2],)
+).fetchone()[0])
 " "${DB_PATH}" "${ETF_ISIN}")"
     [[ "${_COUNT}" == "1" ]] \
         && report "#2b" "genau eine Zeile in der Datenbank" true "" \
@@ -703,8 +710,10 @@ checkUnresolvable() {
     local _COUNT
     _COUNT="$("${VENV_PY}" -c "
 import sqlite3, sys
-c = sqlite3.connect(sys.argv[1])
-print(c.execute('select count(*) from instruments where isin = ?', (sys.argv[2],)).fetchone()[0])
+connection = sqlite3.connect(sys.argv[1])
+print(connection.execute(
+    'select count(*) from instruments where isin = ?', (sys.argv[2],)
+).fetchone()[0])
 " "${DB_PATH}" "${NONSENSE_ISIN}")"
     [[ "${_COUNT}" == "0" ]] \
         && report "#5b" "und legt keine kaputte Zeile an" true "" \
@@ -794,8 +803,8 @@ try:
 except Exception:
     print('0 |')
     raise SystemExit
-currencies = sorted({r.get('currency') for r in rows})
-print(len(rows), '|', ','.join(c for c in currencies if c))
+currencies = sorted({row.get('currency') for row in rows})
+print(len(rows), '|', ','.join(currency for currency in currencies if currency))
 " "${_DAILY}" 2>/dev/null)"
     _CURRENCIES="${_POINTS#*| }"
     _POINTS="${_POINTS%% |*}"
@@ -831,10 +840,12 @@ checkDelete() {
     _REST="$(column "${HOME_ISIN}" isin)"
     _ORPHANS="$("${VENV_PY}" -c "
 import sqlite3, sys
-c = sqlite3.connect(sys.argv[1])
-print(c.execute('''
-  select count(*) from quotes q
-  where not exists (select 1 from instruments i where i.id = q.instrument_id)
+connection = sqlite3.connect(sys.argv[1])
+print(connection.execute('''
+  select count(*) from quotes quote
+  where not exists (
+    select 1 from instruments instrument where instrument.id = quote.instrument_id
+  )
 ''').fetchone()[0])
 " "${DB_PATH}")"
 

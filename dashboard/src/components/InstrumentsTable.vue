@@ -174,11 +174,11 @@ function onEscapeCapture(event: KeyboardEvent): void {
  * mit dem Fokus im Feld per Tastatur nicht mehr heraus.
  */
 function onEscape(event: KeyboardEvent): void {
-  const listeWarOffen = selectWasOpen
+  const wasOpen = selectWasOpen
   selectWasOpen = false
 
   if (event.defaultPrevented) return
-  if (listeWarOffen) return
+  if (wasOpen) return
   openSymbol.value = null
 }
 
