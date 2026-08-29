@@ -149,11 +149,22 @@ def test_die_vorschau_trennt_migration_von_ablehnung(tmp_path) -> None:
         plan = plan_migration(connection)
 
     assert plan.needs_migration
-    assert [(m.symbol, m.ticker, m.mic) for m in plan.migrated] == [
+    assert [
+        (migration.symbol, migration.ticker, migration.mic)
+        for migration in plan.migrated
+    ] == [
         ("EUNL.DE", "EUNL", "XETR"),
         ("GOLD.SG", "GOLD", "XSTU"),
     ]
-    assert [(r.symbol, r.reason, r.quotes, r.daily_closes) for r in plan.rejected] == [
+    assert [
+        (
+            rejection.symbol,
+            rejection.reason,
+            rejection.quotes,
+            rejection.daily_closes,
+        )
+        for rejection in plan.rejected
+    ] == [
         ("BRK-B.DE", REASON_NON_CANONICAL_TICKER, 4, 9),
         ("VTI", REASON_NO_SUFFIX, 1, 0),
     ]
@@ -176,7 +187,9 @@ def test_stuttgart_rettet_die_tagesschlusskurse(tmp_path) -> None:
 
     assert plan.rejected == ()
     assert (plan.lost_daily_closes, plan.lost_quotes) == (0, 0)
-    assert [(m.ticker, m.mic) for m in plan.migrated] == [("GOLD", "XSTU")]
+    assert [(migration.ticker, migration.mic) for migration in plan.migrated] == [
+        ("GOLD", "XSTU")
+    ]
 
 
 def test_die_vorschau_schreibt_nicht(tmp_path) -> None:
@@ -260,8 +273,8 @@ def test_ein_vollstaendig_zugeordneter_altbestand_braucht_die_haertung(
 def test_ein_fertiger_bestand_hat_nichts_mehr_zu_tun(tmp_path) -> None:
     """Die Gegenprobe — sonst wäre `schema_outdated` immer wahr.
 
-    Nach `init_db` auf einer frischen Datei steht die Zielform: Spalten da,
-    `NOT NULL` gesetzt, `identity_status` weg.
+    Nach `init_db` auf einer frischen Datei steht die Zielform: nullable
+    `ticker`/`mic`, getaggte Identität mit `CHECK`, `identity_status` weg.
     """
     path = str(tmp_path / "fertig.db")
     assert init_db(path) is False

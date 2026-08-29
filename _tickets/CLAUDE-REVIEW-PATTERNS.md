@@ -184,6 +184,13 @@ riefen Resolver, Quote und Metadaten auf, aber weder `/quote/{isin}/daily`
 noch `/fx`. Konfiguration war damit für Ausführung eingetreten, obwohl die
 beiden Rollen den Core in diesem Lauf nie berührten.
 
+**Neuer Beleg:** T-31 Runde 5, Commit `1133dd9`: Übergabe und Test-Docstring
+meldeten für `BTC-EUR` die „echte Kette; nur Außengrenzen ersetzt". Der Test
+injizierte mit `_TypingResolver` jedoch direkt einen eigenen Kern-Resolver und
+umging damit Registry, `ResolverAdapter` und `YahooSearchResolverPlugin`. Die
+reale Online-Quelle akzeptierte weder Symbol-Requests noch `crypto`; der
+behauptete Produktweg blieb trotz grünem Orakel unberührt.
+
 [↑ Übersicht](#übersicht)
 
 ## P-02 · Punktuelle Korrektur wird als vollständige Regelumsetzung gemeldet
@@ -662,6 +669,14 @@ berührten Smoke-Scripts blieben `c`, `d`, `r` und `s` sowie die
 Einbuchstaben-SQL-Aliase `i`, `o` und `q`. Das Python-Inventar der `.py`-
 Dateien war diesmal sauber, aber die behauptete Vollständigkeit wurde nicht
 für jede genannte Sprachschicht mit dem passenden Parser eingelöst.
+
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-31
+Runde 5, Commit `1133dd9`: OUTBOX meldete die Capability-Regel „durch alle
+Rollen" und erklärte ausdrücklich, eine leere `SUPPORTED_TYPES`-Menge bedeute
+„nichts zugesagt". `ResolverAdapter` prüfte die Antwort aber nur unter
+`and declared_types`; gerade die leere Menge schaltete den Riegel daher aus
+und ließ einen nicht deklarierten `crypto`-Treffer passieren. Für genau diesen
+Randfall gab es keine Gegenprobe.
 
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter

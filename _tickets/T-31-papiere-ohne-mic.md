@@ -14,14 +14,14 @@
 | # | Where | Look for | AI | Human |
 |---|---|---|---|---|
 | 1 | Entscheidung | Mike hat entschieden: Krypto und Anleihen kommen in den MVP, mit eigener Identitätsform und eigenem Typ; Indizes bleiben draußen | ✅ [^a] | |
-| 2 | `app/db.py` | die Identität ist eine getaggte Union: `kind` ∈ `listed`/`pair`/`isin_only`, ein `CHECK` je `kind` erzwingt genau die passende Feldbelegung — halbe Identitäten bleiben unmöglich | ⚠️ [^r4] | |
-| 3 | `app/exchanges.py`, Contract-Kit | `canonical_identity` wird zur Weiche über die Union; `is_real_mic` und `is_canonical_ticker` bleiben unverändert die `listed`-Hälfte. Im Vertrag: discriminated union über `kind` | ⚠️ [^r4] | |
+| 2 | `app/db.py` | die Identität ist eine getaggte Union: `kind` ∈ `listed`/`pair`/`isin_only`, ein `CHECK` je `kind` erzwingt genau die passende Feldbelegung — halbe Identitäten bleiben unmöglich | ✅ [^r5] | |
+| 3 | `app/exchanges.py`, Contract-Kit | `canonical_identity` wird zur Weiche über die Union; `is_real_mic` und `is_canonical_ticker` bleiben unverändert die `listed`-Hälfte. Im Vertrag: discriminated union über `kind` | ✅ [^r5] | |
 | 4 | Typ-Katalog | `stock`/`etf`/`etc`/`fund`/`crypto`/`bond` kanonisch (Ort: T-38); `QUOTE_TYPE_MAP` bildet `MUTUALFUND → fund`, `CRYPTOCURRENCY → crypto`, `BOND → bond` — Erkennen, nicht Raten | ✅ [^r4] | |
-| 5 | Aufnahmeweg | die Paar-Identität entsteht aus dem **Gattungs-Befund der Quelle**, nie aus der Symbolform; Eintritt per Symbol (`isin = NULL`), die By-Symbol-Routen tragen ihn | ⚠️ [^r4] | |
-| 6 | Aufnahmeweg | eine **nicht** aufgenommene Gattung (Index) wird mit eigener Kennung `unsupported_instrument_type` abgelehnt — nicht mit dem Zufallsbefund der Symbolform; i18n DE/EN | ⚠️ [^r4] | |
-| 7 | Kursweg | für ein Paar muss die Währung des gelieferten Kurses `quote_currency` entsprechen; eine Abweichung ist ein Datenfehler und wird abgelehnt, nicht still konvertiert | ⚠️ [^r4] | |
-| 8 | Metadatenkaskade | sie läuft nur für Typen, deren Metadaten es geben kann — kein justETF-Abruf für eine Coin, keine TER-Frage an eine Anleihe | ◑ [^r4] | |
-| 9 | Tests | `BTC-EUR` prüft das **entschiedene** Verhalten (Annahme als `pair`), ein Index den Ablehnungsgrund, eine Anleihe die `isin_only`-Form samt `quote_unavailable` ohne liefernde Quelle | ⚠️ [^r4] | |
+| 5 | Aufnahmeweg | die Paar-Identität entsteht aus dem **Gattungs-Befund der Quelle**, nie aus der Symbolform; Eintritt per Symbol (`isin = NULL`), die By-Symbol-Routen tragen ihn | ⚠️ [^r5] | |
+| 6 | Aufnahmeweg | eine **nicht** aufgenommene Gattung (Index) wird mit eigener Kennung `unsupported_instrument_type` abgelehnt — nicht mit dem Zufallsbefund der Symbolform; i18n DE/EN | ⚠️ [^r5] | |
+| 7 | Kursweg | für ein Paar muss die Währung des gelieferten Kurses `quote_currency` entsprechen; eine Abweichung ist ein Datenfehler und wird abgelehnt, nicht still konvertiert | ✅ [^r5] | |
+| 8 | Metadatenkaskade | sie läuft nur für Typen, deren Metadaten es geben kann — kein justETF-Abruf für eine Coin, keine TER-Frage an eine Anleihe | ◑ [^r5] | |
+| 9 | Tests | `BTC-EUR` prüft das **entschiedene** Verhalten (Annahme als `pair`), ein Index den Ablehnungsgrund, eine Anleihe die `isin_only`-Form samt `quote_unavailable` ohne liefernde Quelle | ⚠️ [^r5] | |
 
 [^a]: Entschieden am 2026-08-28; die einzelnen Punkte stehen unter
     **Die Entscheidung**. Die Human-Spalte bleibt für Mikes Bestätigung des
@@ -32,6 +32,14 @@
     Pair-Währungsprüfung fehlen. Die Capability-Kaskade ist nur teilweise
     verdrahtet, und die Tests erzeugen keinen der drei entscheidenden neuen
     Asset-Fälle. Details stehen in `_tickets/STATUS.md`.
+[^r5]: Codex-Review Runde 5 gegen `1133dd9`: Schema, Union und
+    Währungsprüfung sind ausführbar belegt. Der angeblich vertikale
+    BTC-/Index-Test ersetzt jedoch die interne Resolver-Kette; die reale
+    Online-Quelle nimmt Symbol-Requests und `crypto` weiterhin nicht an.
+    Leere Typ-Capabilities werden bei Resolver-Antworten noch als Freigabe
+    behandelt, Quellenausfälle im Symbolweg als Eingabefehler ausgegeben und
+    der Metadaten-Vorfilter ist laut Übergabe selbst nur teilweise umgesetzt.
+    Details und reproduzierbare Gegenproben stehen in `_tickets/STATUS.md`.
 
 ## Die Entscheidung (Mike, 2026-08-28)
 
@@ -425,9 +433,9 @@ Beispiel `_tickets/T-37-single-file-sample.yaml` `kind:` und die Gattungen
 `crypto`/`bond` bereits ausspricht — er ist der erste Konsument dieses
 Vertrags, nicht seine Vorbedingung.
 
-### Offen: wie `BTC-EUR` über den By-Symbol-Weg hereinkommt
+### Entschieden: `BTC-EUR` kommt über die Resolver-Kette herein
 
-*(Aufgeworfen beim Bauen, 2026-08-29. **Blockiert nicht** — siehe unten.)*
+*(Aufgeworfen und entschieden beim Bauen, 2026-08-29.)*
 
 Matrix `#5` verlangt die Paar-Identität aus dem **Gattungs-Befund der
 Quelle**, nie aus der Symbolform. Der Eintritt läuft per Symbol. Dazwischen
@@ -443,20 +451,20 @@ liegt eine Henne-Ei-Lage, die im Entwurf fehlte:
 
 | | Weg | Preis |
 |---|---|---|
-| **a** | By-Symbol geht durch die Resolver-Kette (`ResolveRequest(symbol=…)`) | Vertragsgemäß, aber `InstrumentResolver` bekommt einen zweiten Einstieg — berührt T-24 |
-| **b** | Vorschlagen und bestätigen: Paar aus dem Bindestrich bilden, Quelle fragen, **nur behalten**, wenn sie `crypto` meldet | Klein, erfüllt `#5` dem Wortlaut nach; braucht eine klare Begründung im Code, weil es nach Symbolform-Ableitung aussieht |
-| **c** | By-Symbol bleibt Listings vorbehalten; Paare nur über einen Resolver mit `pair`-Deklaration | `BTC-EUR` wäre bis T-37 nicht aufnehmbar, Matrix `#9` in T-31 nicht erfüllbar |
+| **a — gewählt** | By-Symbol geht durch die Resolver-Kette (`ResolveRequest(symbol=…)`) | Vertragsgemäß; `InstrumentResolver` bekommt einen zweiten Einstieg |
+| **b — verworfen** | Vorschlagen und bestätigen: Paar aus dem Bindestrich bilden, Quelle fragen, **nur behalten**, wenn sie `crypto` meldet | Der Index-Fall ohne Bindestrich beweist, dass die Symbolform kein belastbarer Eintritt ist |
+| **c — verworfen** | By-Symbol bleibt Listings vorbehalten; Paare nur über einen Resolver mit `pair`-Deklaration | `BTC-EUR` wäre bis T-37 nicht aufnehmbar, Matrix `#9` in T-31 nicht erfüllbar |
 
-**Warum das die Arbeit nicht aufhält.** Das Orakel zu Matrix `#9` lautet:
+**Das Orakel zur Entscheidung.** Matrix `#9` lautet:
 *Ein `BTC-EUR` kommt über den öffentlichen Eintrittspfad herein und liegt
 danach als `kind='pair'`, `type='crypto'` mit Kurs in EUR im Bestand.* Diese
 Aussage ist für **alle drei** Wege dieselbe. Ließe sie sich ohne die
 Entscheidung nicht formulieren, prüfte sie den Mechanismus statt der
 Anforderung — und genau das ist der Fehler, den Runde 4 offengelegt hat.
 
-Die Orakel entstehen deshalb **zuerst**, die Entscheidung fällt danach am
-laufenden Test. Sie bleibt eine Frage an Codex, aber eine, die er an der
-fertigen Umsetzung besser beurteilen kann als am Entwurf.
+Die Orakel entstanden deshalb **zuerst**. Der Index-Fall verwarf Weg b; gebaut
+wird Weg a. Ein Test belegt ihn nur dann vertikal, wenn er die reale interne
+Registry-/Adapter-/Resolver-Kette nicht durch ein Test-Doppel ersetzt.
 
 ### Entscheidungen Mike, 2026-08-29
 
