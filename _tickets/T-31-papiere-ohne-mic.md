@@ -17,11 +17,11 @@
 | 2 | `app/db.py` | die Identität ist eine getaggte Union: `kind` ∈ `listed`/`pair`/`isin_only`, ein `CHECK` je `kind` erzwingt genau die passende Feldbelegung — halbe Identitäten bleiben unmöglich | ✅ [^r5] | |
 | 3 | `app/exchanges.py`, Contract-Kit | `canonical_identity` wird zur Weiche über die Union; `is_real_mic` und `is_canonical_ticker` bleiben unverändert die `listed`-Hälfte. Im Vertrag: discriminated union über `kind` | ✅ [^r5] | |
 | 4 | Typ-Katalog | `stock`/`etf`/`etc`/`fund`/`crypto`/`bond` kanonisch (Ort: T-38); `QUOTE_TYPE_MAP` bildet `MUTUALFUND → fund`, `CRYPTOCURRENCY → crypto`, `BOND → bond` — Erkennen, nicht Raten | ✅ [^r4] | |
-| 5 | Aufnahmeweg | die Paar-Identität entsteht aus dem **Gattungs-Befund der Quelle**, nie aus der Symbolform; Eintritt per Symbol (`isin = NULL`), die By-Symbol-Routen tragen ihn | ⚠️ [^r5] | |
-| 6 | Aufnahmeweg | eine **nicht** aufgenommene Gattung (Index) wird mit eigener Kennung `unsupported_instrument_type` abgelehnt — nicht mit dem Zufallsbefund der Symbolform; i18n DE/EN | ⚠️ [^r5] | |
+| 5 | Aufnahmeweg | die Paar-Identität entsteht aus dem **Gattungs-Befund der Quelle**, nie aus der Symbolform; Eintritt per Symbol (`isin = NULL`), die By-Symbol-Routen tragen ihn | ✅ [^r6] | |
+| 6 | Aufnahmeweg | eine **nicht** aufgenommene Gattung (Index) wird mit eigener Kennung `unsupported_instrument_type` abgelehnt — nicht mit dem Zufallsbefund der Symbolform; i18n DE/EN | ◑ [^r6] | |
 | 7 | Kursweg | für ein Paar muss die Währung des gelieferten Kurses `quote_currency` entsprechen; eine Abweichung ist ein Datenfehler und wird abgelehnt, nicht still konvertiert | ✅ [^r5] | |
-| 8 | Metadatenkaskade | sie läuft nur für Typen, deren Metadaten es geben kann — kein justETF-Abruf für eine Coin, keine TER-Frage an eine Anleihe | ◑ [^r5] | |
-| 9 | Tests | `BTC-EUR` prüft das **entschiedene** Verhalten (Annahme als `pair`), ein Index den Ablehnungsgrund, eine Anleihe die `isin_only`-Form samt `quote_unavailable` ohne liefernde Quelle | ⚠️ [^r5] | |
+| 8 | Metadatenkaskade | sie läuft nur für Typen, deren Metadaten es geben kann — kein justETF-Abruf für eine Coin, keine TER-Frage an eine Anleihe | ✅ [^r6] | |
+| 9 | Tests | `BTC-EUR` prüft das **entschiedene** Verhalten (Annahme als `pair`), ein Index den Ablehnungsgrund, eine Anleihe die `isin_only`-Form samt `quote_unavailable` ohne liefernde Quelle | ✅ [^r6] | |
 
 [^a]: Entschieden am 2026-08-28; die einzelnen Punkte stehen unter
     **Die Entscheidung**. Die Human-Spalte bleibt für Mikes Bestätigung des
@@ -40,6 +40,13 @@
     behandelt, Quellenausfälle im Symbolweg als Eingabefehler ausgegeben und
     der Metadaten-Vorfilter ist laut Übergabe selbst nur teilweise umgesetzt.
     Details und reproduzierbare Gegenproben stehen in `_tickets/STATUS.md`.
+[^r6]: Codex-Review Runde 6 gegen `6635c0e`: Die fünf Befunde aus Runde 5
+    sind geschlossen; `make test` läuft mit 863 Backend-, 267 Plugin-API- und
+    269 Dashboard-Tests grün. Offen bleibt nur die vollständige Ausbreitung
+    der neu entschiedenen fünften Resolver-Antwort `Unsupported`: Das
+    öffentliche Szenario-Kit lehnt sie noch als unbekannte Ergebnisart ab,
+    und bestehende Core-Verbraucher bilden sie teils weiter auf 404/„leer“ ab.
+    Das ist ein konsolidierter Restbefund zu Matrix `#6`, kein neuer Scope.
 
 ## Die Entscheidung (Mike, 2026-08-28)
 

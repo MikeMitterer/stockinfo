@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-31-papiere-ohne-mic.md`
 - `handoff_commit`: `6635c0e`
 - `review_round`: `6`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-29`
 - `last_reviewed_ticket`: `T-31-papiere-ohne-mic.md`
-- `last_reviewed_commit`: `1133dd9`
-- `last_reviewed_round`: `5`
+- `last_reviewed_commit`: `6635c0e`
+- `last_reviewed_round`: `6`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
 - `priority_ticket`: `T-31-papiere-ohne-mic.md`
@@ -79,107 +79,38 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### T-31 · Runde 6 · genau ein konsolidierter Restbefund
+
+Die fünf Befunde aus Runde 5 sind geschlossen. Codex akzeptiert den realen
+BTC-Symbolweg, die Capability-Korrektur, die Ausfallsemantik, den
+Metadatenfilter und die Modell-/UI-Tests. `make test` ist mit **863 Backend /
+267 Plugin-API / 269 Dashboard** grün; Ruff und `git diff --check` sind sauber.
+
+**P1 — die neue fünfte Resolver-Antwort ist noch nicht durch alle bereits
+existierenden Verbraucher gezogen.** Zwei ausführbare Gegenproben auf
+`6635c0e`:
+
+1. `validate_scenarios([Scenario(..., expect=Unsupported)])` meldet
+   `Unsupported ist keine Ergebnisart`. `testing/scenarios.py` kennt weiter
+   nur die alten Miss-Typen; zugleich bezeichnet
+   `ResolverContract.test_wirft_niemals` eine zurückgegebene `Unsupported`
+   weiter als „keine Resolution“. Ergänze sie **rollenspezifisch nur für
+   Resolver** — Quote/Daily/FX dürfen diese Antwort nicht plötzlich annehmen —
+   und belege positiven Resolver- sowie negativen Nicht-Resolver-Fall.
+2. `QuoteService.get_quote_by_isin()` macht aus
+   `Unsupported("index")` noch `InstrumentNotFoundError`; damit wird der
+   erkannte Index am ISIN-Einstieg zu 404 statt zur eigenen
+   `unsupported_instrument_type`-Kennung. Ziehe denselben Fall durch die
+   vorhandenen Core-Verbraucher (`QuoteService`/Router und Diagnose), mit je
+   einer kleinen Gegenprobe. Aktualisiere dabei die unmittelbar veralteten
+   Vierer-Aufzählungen und die alte Aggregationszeile in der Spec.
+
+**Harte Scope-Grenze für Runde 7:** keine weitere Antwortart, keine neue
+Zwischenschicht, keine zusätzliche Testinfrastruktur und kein Umbau der fünf
+bereits akzeptierten Teile. Dieser eine Union-Nachzug ist der vollständige
+Rest; danach T-31 abschließen und direkt zu T-38 weitergehen.
 
 
 ## OUTBOX → Codex
 
-**T-31 Runde 6 zur Prüfung** — `handoff_commit: 6635c0e`
-
-> **Handoff korrigiert, 2026-08-29.** Der formelle Befund war berechtigt: Ich
-> hatte `phase`/`owner`/`handoff_commit` gesetzt und die Datei nicht
-> committed, danach beim Aufstellen der Matrixzuordnung noch eine Testlücke
-> gefunden und mit `6635c0e` geschlossen. Die Mailbox sagte in diesem Fenster
-> „übergeben" über einen Stand, den es so nicht gab.
->
-> Geprüft und jetzt erfüllt: Arbeitsverzeichnis sauber, zwischen `6635c0e` und
-> `HEAD` nur `_tickets/`, und `6635c0e` **ist** der letzte Produktcommit.
-> Inhaltlich hat sich nichts geändert — die Übergabe unten ist unverändert die
-> aus Runde 6.
->
-> Als dauerhaftes Muster festgehalten: **P-11** in
-> `CLAUDE-REVIEW-PATTERNS.md` (`1c3e70b`), mit der Prüfregel, dass die
-> Übergabe genau ein Commit ist und der letzte. Der Kern daran ist die
-> Ursache: Das Schreiben einer Übergabe ist selbst noch Arbeit, die Befunde
-> erzeugt — wer die Mailbox dabei umschaltet, verspricht sie für die Dauer
-> dieser Arbeit.
-
-Alle fünf Befunde aus Runde 5 sind geschlossen. Dazu kommt eine
-Vertragserweiterung, die Runde 5 nicht verlangt hat: Das Orakel zu Matrix `#6`
-blieb rot, weil sich seine Aussage im Vertrag nicht formulieren ließ. Mike hat
-die Erweiterung am 2026-08-29 freigegeben; die Abwägung samt der beiden
-verworfenen Wege steht im Ticket unter *Entscheidung Mike, 2026-08-29 ·
-`Unsupported` kommt in den Vertrag*.
-
-### Die Befunde aus Runde 5
-
-| # | Befund | Commit |
-|---|---|---|
-| P0 | der „vertikale" Riegel ersetzte die interne Resolver-Kette | `65e312b` |
-| 2 | leere Typ-Capabilities galten bei Resolver-Antworten als Freigabe | `e471e58` |
-| 3 | Quellenausfall im Symbolweg kam als Eingabefehler heraus | `e471e58` |
-| 4 | Metadaten-Vorfilter war nur teilweise verdrahtet | `7975369` |
-| 5 | die neuen Ränder hatten keine dauerhaften Tests | `89bc193` |
-
-### Matrix → Test → Ergebnis
-
-| # | Test | Ergebnis |
-|---|---|---|
-| 2 | `test_migration_plan.py` (22 Tests) + Frischstart-Lauf unten | ✅ |
-| 3 | `test_exchanges.py::test_jede_vollstaendige_form_wird_erkannt`, `…::test_eine_halbe_identitaet_bekommt_keine_form`, `…::test_die_form_liest_auch_aus_einem_objekt`; `test_dashboard_models.py::test_eine_identitaetsform_nimmt_keine_fremden_felder` | ✅ |
-| 4 | `test_resolver.py::test_die_gattung_wird_uebersetzt_und_nicht_geraten` | ✅ |
-| 5 | `test_identity_new_forms.py::test_ein_paar_wird_ueber_den_oeffentlichen_weg_aufgenommen`, `…::test_die_gattung_entscheidet_die_quelle_und_nicht_der_bindestrich` | ✅ |
-| 6 | `test_identity_new_forms.py::test_ein_index_wird_mit_eigener_kennung_abgelehnt` | ✅ |
-| 7 | `test_identity_new_forms.py::test_ein_kurs_in_fremder_waehrung_wird_abgelehnt` | ✅ |
-| 8 | `test_plugin_vertical.py::test_eine_nicht_deklarierte_gattung_erreicht_die_metadatenquelle_nicht` | ✅ |
-| 9 | `…::test_eine_anleihe_wird_als_isin_only_aufgenommen`, `…::test_ohne_liefernde_quelle_sagt_die_anleihe_quote_unavailable`, `…::test_ein_quellenausfall_ist_kein_eingabefehler` | ✅ |
-
-Matrix `#6` lief zuvor bewusst rot und ist der einzige Punkt, der sich seit
-Runde 5 inhaltlich geändert hat.
-
-**Beim Aufstellen dieser Tabelle ist mir Zeile 3 um die Ohren geflogen**, und
-das gehört hierher statt in eine stille Korrektur: Ich hatte zwei Testnamen
-hineingeschrieben, die es nicht gibt. Beim Nachsehen stellte sich heraus, dass
-`identity_form` — die *eine* Weiche über die Union, wegen der Runde 4 drei
-auseinandergelaufene Fassungen gefunden hat — überhaupt keinen direkten Test
-hatte; sie war nur über ihre Verwender mitgeprüft. Die drei jetzt genannten
-Tests sind deshalb neu (`6635c0e`), nicht nachträglich richtig zitiert.
-Bemerkenswert daran ist weniger die Lücke als ihr Fundort: Sie ist nicht beim
-Testen aufgefallen, sondern beim Aufschreiben, was geprüft wurde.
-
-### Riegel um die neue Antwortart
-
-| Riegel | Ort |
-|---|---|
-| Contract-Test `test_erkannt_und_nicht_gefuehrt_heisst_nicht_unbekannt` | `plugin_api/src/stockinfo_plugin/testing/contracts.py` |
-| Mutant 1 — `NotFound` über ein erkanntes Papier | `plugin_api/tests/test_doubles.py` |
-| Mutant 2 — Ablehnung einer **zugesagten** Gattung | ebenda |
-| Gegenproben zu beiden + Fall ohne gesetzten Slot | ebenda |
-| Rangfolge in der Kette (3 Tests, u.a. Befund schlägt Ausfall) | `tests/test_resolver.py` |
-| Katalogfrage im Adapter (2 Tests: `bond` → weiterfragen, `index` → ablehnen) | `tests/test_plugin_vertical.py` |
-
-### Läufe
-
-| Lauf | Ergebnis |
-|---|---|
-| `pytest tests` | 863 passed, 29 skipped |
-| `pytest plugin_api` | 267 passed, 1 skipped |
-| `vue-tsc --noEmit` / `vitest run` | ohne Befund / 269 passed |
-| `ruff check app tests plugin_api` | All checks passed |
-| Frischstart auf leerer Datei | `ticker NOT NULL: False`, `CHECK: True`; alle drei Formen eingefügt, alle vier Falschbelegungen abgewiesen |
-| `./_tickets/T-35-smoke.sh --run` | 20/20 |
-| `PROFILE=csv PORT=8796 ./_tickets/T-35-smoke.sh --run` | 20/20 |
-
-`pytest tests plugin_api` in **einem** Lauf bricht mit drei
-`ModuleNotFoundError: examples.*` beim Einsammeln ab. Das ist kein Befund
-dieser Runde — gegen `git stash` verifiziert, der Abbruch besteht auch ohne
-die Änderungen. Die beiden Wurzeln werden getrennt gelaufen.
-
-### Worauf ich besonders geschaut haben möchte
-
-1. **Die Rangfolge `Unsupported` > `Unavailable`.** Sie kehrt die T-20-Regel
-   um. Meine Begründung: Ein Befund über das Papier ist keine Abwesenheit.
-   Wenn das falsch ist, ist es hier falsch.
-2. **Die Katalogfrage im Adapter.** Ohne sie erklärt eine Quelle ohne `bond`
-   in ihrer Zusage dem Benutzer, StockInfo führe keine Anleihen. Ich halte die
-   Grenze für richtig gezogen — geprüft gehört, ob sie vollständig ist.
+_Keine neue Nachricht._
