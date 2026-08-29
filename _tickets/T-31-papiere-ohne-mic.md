@@ -48,13 +48,13 @@
    Vorschlag): Das Online-Profil hängt das ohnehin in T-37 gebaute YAML-Plugin
    ans **Ende** seiner Kette. Eine Anleihe fällt durch die Online-Quellen
    durch und landet bei der Datei — im laufenden Online-Profil, ohne
-   Profilwechsel. Die Profil-Exklusivität (genau ein Plugin aktiv) bleibt
-   unangetastet.
+   Profilwechsel. Es bleiben zwei Profile: reines YAML oder die Online-Kette
+   mit demselben YAML-Plugin an letzter Stelle.
 
 **Offen als eigene Entscheidungszeile:** eine *manuelle Quelle* — ein
 Eingabeweg im Dashboard, der einen vollwertigen Quote schreibt (`price`,
 `quote_time`, `provider: manual`). Wenn gewollt, ist das ein eigenes kleines
-Feature und **keine** Override-Spalte. Für den MVP zurückgestellt; die
+Feature und **keine** Override-Spalte. Für den MVP zurückgestellt; der
 YAML-Fallback deckt den Bedarf.
 
 ## Der Entwurf: Identität als getaggte Union
@@ -68,10 +68,10 @@ kind = 'pair'       → base + quote_currency (natives Krypto: BTC/EUR)
 kind = 'isin_only'  → isin                  (OTC-Anleihe: die ISIN ist die Identität)
 ```
 
-- **SQLite:** `ticker`/`mic` werden wieder nullable; ein `CHECK` je `kind`
-  erzwingt genau die passende Belegung (`pair` → `base` und `quote_currency`
-  gesetzt, `mic IS NULL`; `isin_only` → `isin IS NOT NULL`). „Vollständig"
-  ist damit je Gattung definiert, halbe Identitäten bleiben unmöglich.
+- **SQLite:** `ticker`/`mic` werden wieder nullable; der `CHECK` verlangt je
+  `kind` die Identitätsfelder dieser Form und schließt alle Identitätsfelder
+  der beiden anderen Formen aus. „Vollständig" ist damit je Gattung
+  definiert, halbe oder doppelte Identitäten bleiben unmöglich.
 - **Pydantic/Contract-Kit:** discriminated union über `kind`. Ein Plugin sagt
   ausdrücklich, welche Identitätsform es liefert, statt dass der Host aus
   Feldkombinationen rät.
