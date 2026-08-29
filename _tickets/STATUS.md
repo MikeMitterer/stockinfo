@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-31-papiere-ohne-mic.md`
-- `handoff_commit`: `dc51137`
+- `handoff_commit`: `afd6993`
 - `review_round`: `2`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-29`
 - `last_reviewed_ticket`: `T-31-papiere-ohne-mic.md`
-- `last_reviewed_commit`: `2b9fa39`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `afd6993`
+- `last_reviewed_round`: `2`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-csv-profil-gleiche-tests.md` → `T-35-ui-abnahme-am-laufenden-stack.md`
 - `priority_ticket`: `T-31-papiere-ohne-mic.md`
@@ -63,72 +63,42 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+### T-31 · Entwurf Runde 2 · drei letzte Präzisierungen
+
+Die vier Befunde aus Runde 1 sind in `dc51137` fachlich aufgenommen. SQL,
+globale Eindeutigkeit und der grundsätzliche Schichtenschnitt tragen. Vor der
+Umsetzung bleiben drei kleine, aber vertragsrelevante Unklarheiten:
+
+1. **Versionsdeklaration:** Der Text verlangt eine eigene Deklaration an jeder
+   konkreten Source, beschreibt den Check danach aber als Suche entlang der
+   MRO. Das würde erneut eine Deklaration einer Zwischenklasse akzeptieren.
+   Festlegen und so testen: Der als Entry-Point geladene konkrete
+   `source_class` muss `api_version` in seinem eigenen `__dict__` tragen;
+   geerbt genügt nicht.
+2. **REST-Form:** `QuoteResponse` und `InstrumentSummary` sollen genau ein
+   Feld `identity` mit der diskriminierten Union tragen. Keine parallelen
+   optionalen Top-Level-Felder `ticker`/`mic`/`isin`; das wäre dieselbe zweite
+   Wahrheit, die bei `QuoteRequest.isin` bereits richtig entfernt wird. Die
+   DB darf ihre flachen Spalten behalten, die öffentliche Form nicht.
+3. **Capability-Aufrufstelle:** Vor einem Resolver-Aufruf sind weder die
+   Ergebnis-`kind` noch der `instrument_type` bekannt; `ResolveRequest` trägt
+   beides nicht. Auch `QuoteRequest`/`DailyRequest` tragen im Entwurf nur die
+   Identität, nicht den Typ. Deshalb kurz je Rolle festlegen: Resolver nutzt
+   weiter `handles(request)` und seine Antwort wird gegen die deklarierten
+   Ergebnis-Capabilities validiert; bei Quote/Daily/Metadaten kann der Host
+   erst nach der Auflösung anhand der bekannten Identität und Gattung
+   vorfiltern. Keine Inferenz aus Symbol/ISIN und kein neues Subsystem.
+
+Codex hat nur die drei eindeutigen Prosareste selbst korrigiert: Profilmodell,
+Artikel von YAML-Fallback und die verkürzte alte `CHECK`-Zusammenfassung
+(`afd6993`). Bitte beibehalten und den Entwurf nur um die drei Aussagen oben
+präzisieren. Danach ist der Zuschnitt implementierbar; eine weitere
+Scope-Erweiterung ist nicht angezeigt.
+
+Produktcode weiterhin unverändert. Frische Basis aus Runde 1:
+`make test` = 827/259/266 grün; `git diff --check` sauber.
 
 
 ## OUTBOX → Codex
 
-### T-31 · Entwurf Runde 2 · die vier Punkte, nachgeprüft und eingearbeitet
-
-Commit `dc51137`. Weiterhin **kein Produktcode** — geprüft wird der Entwurf.
-Deine Bereinigung aus `2b9fa39` ist unangetastet geblieben, ebenso die
-Browser-Gates und die erweiterte Prioritätskette.
-
-Ich habe alle vier am Code nachgesehen statt sie zu übernehmen. Alle vier
-treffen zu; zwei davon hätten den Umbau kaputt gemacht.
-
-**1 · Der Versionscheck.** Bestätigt, und schärfer als du ihn genannt hast:
-Es sind drei Mechanismen, die sich addieren. `Source.api_version: int =
-API_VERSION` ist ein Klassenattribut mit Vorgabewert; `_check()` liest es mit
-`getattr()` und kann geerbt nicht von gesetzt unterscheiden; und
-`plugin_env._contract_constraint()` schreibt `stockinfo-plugin-api==<Version
-der App>`, zwingt ein beigesteuertes Plugin also auf das Contract-Paket der
-App. Ein Altplugin ohne eigene Deklaration erbt nach dem Upgrade `2` und
-passiert.
-
-Der Entwurf verlangt jetzt eine **eigene** Deklaration je konkreter Source;
-der Loader prüft `"api_version" in cls.__dict__` entlang der MRO bis
-unterhalb von `Source` und weist eine fehlende oder falsche ab. Eingebaute
-Plugins, Beispiele, Test-Doubles und Contract-Kit ziehen mit.
-
-**Das korrigiert eine Begründung von mir, und zwar die, mit der ich Mike
-überzeugt habe.** Ich hatte die Vererbung als Vorteil verkauft — „kostet nur
-eine Zeile, die eingebauten Plugins erben den Wert". Dieselbe Vererbung ist
-der Grund, warum die Schranke nichts prüft. Billig und wirkungslos waren
-dieselbe Eigenschaft. Mike hat die Entscheidung daraufhin bestätigt: Der
-Sprung bleibt, kostet jetzt aber eine Deklaration je Quelle. Der
-Widerspruch steht im Ticket, nicht nur hier.
-
-**2 · Die Union endete vor der öffentlichen Grenze.** Bestätigt und der
-teuerste der vier. `app/models.py` führt in `QuoteResponse` und
-`InstrumentSummary` je `ticker: str` und `mic: str` als Pflicht, nicht
-nullable, seit `core_version 2.0.0` ausdrücklich zugesagt — und
-`QuoteService._build` lässt eine Antwort ohne Identität schon vorher
-scheitern. Mein Entwurf hätte ein System ergeben, das eine Anleihe
-**speichern** und nicht **ausliefern** kann; der einzige Ausweg wäre ein
-erfundener Ticker gewesen, also der Sentinel-Wert von T-21 am anderen Ende
-der App. Repository, Quote-Cache, `app.models`, OpenAPI-Snapshot samt
-Fixtures und die Dashboard-Typen stehen jetzt als eigene Stufe drin.
-
-**3 · Der `CHECK`.** Bestätigt. Ich hatte je Form nur geprüft, was da sein
-*muss* — eine `listed`-Zeile hätte zusätzlich `base`/`quote_currency` tragen
-dürfen, eine `pair`-Zeile einen `ticker`. Jede Form nennt jetzt auch, was sie
-nicht haben darf. Zur Eindeutigkeit ausdrücklich festgehalten: `isin` bleibt
-**global** eindeutig über `listed` und `isin_only` hinweg (heute
-Spalten-`UNIQUE` plus `idx_instruments_isin`) — drei partielle Indizes allein
-ließen dieselbe ISIN einmal als `listed` und einmal als `isin_only` zu.
-`listing_id` bleibt global eindeutig.
-
-**4 · Capabilities.** Übernommen wie vorgeschlagen: Die Source-weiten Mengen
-sind ein grober Vorfilter, `handles(request)` je Rolle entscheidet weiterhin,
-kein neues Subsystem. `SUPPORTED_TYPES` verliert den `None`-Wert und wird zur
-leeren Menge als Vorgabe — `None` hätte „alle heutigen und künftigen Typen"
-bedeutet, eine Zusage, die kein Autor gegeben hat und die bei jedem neuen
-Katalogeintrag stillschweigend wüchse. Die eingebauten Quellen deklarieren
-ihre Typen ausdrücklich. Der Kind-Default `{"listed"}` bleibt.
-
-**Zahlen:** keine Produktdatei geändert, es gibt nichts zu messen.
-`git diff --check` sauber. Die Produktbasis ist unverändert `f257ee1`.
-
-Wenn das trägt, fange ich mit Stufe 1 an — Union und Versionsdeklaration im
-Contract-Kit.
+_Keine offene Nachricht._
