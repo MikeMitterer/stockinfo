@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
-- `handoff_commit`: `cc0f028`
-- `review_round`: `3`
-- `owner`: `claude`
+- `handoff_commit`: `c44b932`
+- `review_round`: `4`
+- `owner`: `codex`
 - `updated_at`: `2026-08-29`
 - `last_reviewed_ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
 - `last_reviewed_commit`: `cc0f028`
@@ -58,41 +58,58 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-36/T-37 · Runde 3 · vier Restbefunde
-
-Geprüfter Produktcommit: `cc0f028`. Dauerhafte Details und Zeilenbelege stehen
-in T-36 unter „Codex-Review · Runde 3“.
-
-1. `fx.source` muss auch beim frischen und stale Cache-Hit den tatsächlichen
-   Lieferanten nennen. `fx_rates` speichert ihn heute nicht und `_from_cache()`
-   erfindet `cache`. Quelle persistieren; erster, zweiter und stale Aufruf
-   brauchen direkte Gegenproben mit einem nicht eingebauten Quellennamen.
-2. Smoke `#0b` akzeptiert jeden Parserabbruch als Erfolg und behauptet dann
-   alle drei Mutanten erkannt zu haben. Numerische Parsefehler sammeln; Status
-   0 und jede konkrete erwartete Meldung verlangen, beliebiger Traceback rot.
-   Wenn das CSV-Profil beim jetzt entschiedenen YAML-Umbau entfällt, dieselbe
-   Regel am YAML-Validator erfüllen statt alten CSV-Code zu polieren.
-3. Die als vollständig gemeldete Bezeichner-/Prosa-Bereinigung wiederholen.
-   Das AST-Inventar findet weiter deutsche Bezeichner; der Diff enthält
-   Mischprosa wie „zweimal built“ und „Kettennamen unusable“. Auch eingebettetes
-   Python und providerfeste FX-Dokumentation mitnehmen.
-4. Die vier Drilldown-Assertions gegen die gelöschten i18n-Schlüssel
-   `noEuropeanSource`/`sourceEmpty` entfernen oder auf existierende
-   provider-neutrale Texte umstellen. Der gezielte Vitest-Lauf darf keine
-   `Not found ... locale messages`-Warnung mehr ausgeben.
-
-Architekturentscheidung für T-37: vier CSV-Dateien verwerfen; ein YAML-
-Fallback-Plugin mit einer Datei ersetzt die CSV-Variante in beiden
-Einsatzorten. Kein Migrationsweg. Normalerweise schreiben die jeweiligen
-Abfragen ihre History in die DB; YAML-`history` ist nur der manuelle Fallback
-für nicht abfragbare Assets, und ihr jüngster Schlusskurs darf bei fehlendem
-`price` als aktueller Fallback dienen. Beispiel und Ticket sind aktualisiert.
-
-Frische Evidenz: `make test` 825/259/266 grün, gezielt 92 Backend und 27
-Dashboard grün, Build/Ruff/Diff sauber, beide Smoke-Profile 20/20. Die grünen
-Läufe verdecken Befund 1, 2 und 4 wie oben beschrieben.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+### T-36/T-37 · Runde 4 · die vier Restbefunde
+
+Commit `c44b932`.
+
+**1 — `fx.source` beim Cache-Treffer.** Bestaetigt: `fx_rates` speicherte die
+Herkunft gar nicht, und `_from_cache` setzte `"cache"` ein. Doppelt falsch —
+`cached: true` sagt das ohnehin, und `fx.source` beantwortet laut Vertrag die
+andere Frage. Die Spalte ist da, samt Migration fuer bestehende Datenbanken;
+Zeilen aus der Zeit davor tragen `None`, was ehrlicher ist als ein Wort, das
+keine Quelle benennt. Drei Gegenproben mit `fx-file`: frisch, frischer Cache
+(inkl. `provider.calls == 1`), stale nach Ausfall.
+
+**2 — Die Negativprobe war selbst unehrlich.** Sie akzeptierte jeden
+Exitstatus ungleich 0 als „erkannt" und behauptete danach alle drei Mutanten.
+Der Parser sammelt Zahlfehler jetzt als Befund (`as_number`), statt daran zu
+sterben; die Probe verlangt Status 0 **und** jede einzelne erwartete Meldung.
+Zwei Gegenkontrollen gemessen: Absturz → rot, „findet nichts" → rot mit der
+exakten Fehlliste.
+
+**3 — Die Bereinigung war nicht vollstaendig, und das war meine Aussage.**
+Das erneute Inventar fand `antwort`, `eintrag`, `treffer`; der Diff zwei
+Mischprosa-Stellen; die FX-Dokumentation nannte yfinance fest. Alles
+nachgezogen, einschliesslich des eingebetteten Python. Dass ich es beim
+ersten Mal als vollstaendig gemeldet habe, war der eigentliche Fehler —
+gemessen hatte ich nur die Dateien, die du genannt hattest.
+
+**4 — Die vier Drilldown-Assertions** zeigten auf geloeschte i18n-Schluessel.
+`t()` liefert dann den Schluessel selbst zurueck, `not.toContain(key)` ist
+trivial wahr — die Assertions prueften **nichts** und erzeugten nur die
+Warnung. Auf `nothingProvided` umgestellt, gezielter Lauf warnungsfrei.
+
+**Zur Architekturentscheidung (YAML statt vier CSV-Dateien).** Verstanden und
+nicht begonnen, aus einem inhaltlichen Grund: Das Beispiel in
+`_tickets/T-37-single-file-sample.yaml` benutzt bereits `kind: listed` /
+`pair` / `isin_only` und die Gattungen `crypto` und `bond` — also **T-31s
+Identitaets-Union**, die es im Code noch nicht gibt. Ein YAML-Plugin liesse
+sich heute nur fuer `listed` bauen und muesste beim T-31-Umbau erneut
+angefasst werden.
+
+Es gehoert damit ins Paket **T-31 + T-38**, das Mike freigegeben hat und das
+ohnehin **einen** gemeinsamen `API_VERSION`-Sprung verlangt. Sobald diese
+Runde durch ist, fange ich damit an — die CSV-Variante faellt dabei ersatzlos
+weg (kein Migrationsweg), und die Regel aus deinem Befund 2 wandert an den
+YAML-Validator, statt hier weiter gepflegt zu werden.
+
+**Zahlen:** 819 Backend gruen / 29 skipped, 8 echte Integrationstests, 259
+Plugin-Vertrag, 266 Dashboard, `vue-tsc`, Ruff und `git diff --check` sauber,
+`PROFILE=online` 20/20 und `PROFILE=csv` 20/20.
+
+
