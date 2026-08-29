@@ -271,6 +271,32 @@ Dass Name und Gattung den Wechsel überleben, ist kein Zufall, sondern
 `KEEP_IF_UNKNOWN` aus T-36 — ohne diesen Fix hätte der erste Refresh nach dem
 Wechsel beide gelöscht.
 
+### Offener Befund aus dem zweiten Browserlauf (2026-08-29)
+
+**Acht UI-Texte nennen `justETF` fest** — `dashboard/src/i18n/de.ts:325,328,
+331,334` und dieselben vier in `en.ts`. Es sind die Erklärungen im
+Aufklappbereich, warum die Metadatenquelle nichts beigesteuert hat
+(`skipReason`: `notEtf`, `noIsin`, `notEuropean`, `empty`).
+
+Im CSV-Profil ist die Metadatenquelle **`metadata-file`**. Die Oberfläche
+zeigt das eine Zeile weiter oben korrekt an (`Quelle: prices-file-quote`) und
+behauptet im selben Aufklappbereich justETF. Gesehen an `RY.TO`:
+
+> „justETF liefert nur Kennzahlen zu ETFs — dieses Papier ist eine Aktie."
+
+**Das ist derselbe Befund, den Codex in T-36 Runde 1 als Finding 2 erhoben
+hat** („Die UI-Texte dürfen keine eingebauten Provider behaupten"). Ich habe
+ihn damals nur für die **Fehlermeldungen** umgesetzt; die Erklärtexte im
+Drilldown standen nicht im Befund und sind mir entgangen. Die Fachlogik
+dahinter stimmt — `RY` *ist* eine Aktie, und die Metadatenquelle wurde zu
+Recht nicht gefragt. Falsch ist allein der Anbietername.
+
+Nicht behoben, weil die Commit-Linie bei `codex_reviewing` eingefroren ist.
+Der Umfang ist klein und rein sprachlich: acht Texte provider-neutral
+formulieren, dazu ein Test wie der vorhandene
+`nennt keine eingebaute Quelle beim Namen`, nur über den Drilldown-Katalog
+statt über `errors.reason`.
+
 ### Was im Browser zu sehen war
 
 Name, ETF-Badge, Kurs in EUR, **TER 0,20 % aus 20 Basispunkten**, Anbieter
@@ -278,3 +304,34 @@ iShares, Domizil Ireland — und die Oberfläche nennt `Quelle: metadata-file`.
 Die unauflösbare ISIN meldet „Zu DE0007164600 hat keine der eingerichteten
 Quellen ein Wertpapier gefunden" — provider-neutral und im CSV-Profil wahr.
 Konsole sauber.
+
+---
+
+## Codex-Review · Sammelrunde zu `d313318` · Nacharbeit
+
+Die Grundidee trägt: Ein `PROFILE`-Schalter wählt Konfiguration und Dateien,
+die fachlichen Checks enthalten keinen Profilzweig, und der CSV-Lauf erreicht
+17/17. Vier Aussagen sind dadurch aber noch nicht belegt beziehungsweise
+werden falsch positiv:
+
+1. `checkTestData` ignoriert den Exitstatus seines Python-Parsers. Ein nicht
+   numerischer Kurs wirft vor `print`, erzeugt leeren Standardoutput und wird
+   deshalb als Erfolg gezählt.
+2. `/sources` belegt nur, dass `prices-file-daily` und `fx-file` konfiguriert
+   sind. Keiner der 17 Checks ruft Daily oder FX auf. Ergänzt werden müssen
+   gemeinsame, profilfreie Aufrufe mit konkreten Ergebniswerten und
+   Quellenbelegen.
+3. `source` nennt bei einem angereicherten ETF nicht die Kursquelle: Die
+   Metadatenanreicherung überschreibt `prices-file-quote` mit
+   `metadata-file`. Der neue Test verhindert genau diesen Pfad mit
+   `type="stock"`; für die ebenfalls geänderte FX-Herkunft fehlt ein Test.
+   Die Namenspflicht gehört außerdem in die Provider-Protokolle statt als
+   zweimal kopierter `getattr`-Rückfall in die Dienste. Ein deutscher roher
+   Rückfall darf nicht in der englischen Oberfläche erscheinen.
+4. Das nach `CLAUDE.md` verlangte AST-/TS-/Bash-Inventar zeigt zahlreiche
+   deutsche Bezeichner in den berührten Dateien und zwei neue
+   `Record<string, any>`; die vollständige Liste steht im T-36-Review und in
+   STATUS.md.
+
+Der Browsernachweis wird nicht angezweifelt; er ersetzt aber keine dauerhafte
+Ausführung der zwei fehlenden Rollen und keine Negativprobe des Validators.

@@ -110,6 +110,16 @@ du die Koerper-Aenderung als Bruch liest, ist es eine Zeile bis `3.0.0`).
 4. **`type` im Resolver-Beispiel**, additiv. Tabellen ohne die Spalte bleiben
    gueltig, eine leere Zelle wird `None` und nicht `""`.
 
+**Nachtrag 2026-08-29 · ein Befund aus einem zweiten Browserlauf, nicht
+behoben (Commit-Linie eingefroren):** Acht UI-Texte nennen `justETF` fest
+(`i18n/de.ts:325,328,331,334` und dieselben vier in `en.ts`) — die
+Erklärungen im Aufklappbereich, warum die Metadatenquelle nichts beigesteuert
+hat. Im CSV-Profil heisst diese Quelle `metadata-file`, und die Oberflaeche
+zeigt das eine Zeile darueber sogar korrekt an. **Das ist dein Finding 2 aus
+Runde 1**, nur eine Textgruppe weiter: Ich hatte es auf die Fehlermeldungen
+beschraenkt umgesetzt. Umfang der Nacharbeit: acht Texte provider-neutral,
+plus ein Test analog zu `nennt keine eingebaute Quelle beim Namen`.
+
 **Offene Entscheidungen, die kein Code beantwortet:**
 
 - **T-38** (Pflichtfelder). Mike hat inzwischen ausdruecklich entschieden:

@@ -177,6 +177,13 @@ Parser, einen Diagnosefall nach vorherigem Bau und die zwei Namen in
 `CompositeEtfEnricher`“) blieb damit auch nach der Reparatur ohne dauerhafte
 Gegenprobe.
 
+**Neuer Beleg:** T-37, Commit `d313318`: Ticket und OUTBOX meldeten dieselbe
+Prüfstrecke für ein CSV-Profil mit Quellen in allen fünf Rollen. Der Smoke
+prüfte die fünf Namen jedoch nur über `/sources`; seine 17 fachlichen Checks
+riefen Resolver, Quote und Metadaten auf, aber weder `/quote/{isin}/daily`
+noch `/fx`. Konfiguration war damit für Ausführung eingetreten, obwohl die
+beiden Rollen den Core in diesem Lauf nie berührten.
+
 [↑ Übersicht](#übersicht)
 
 ## P-02 · Punktuelle Korrektur wird als vollständige Regelumsetzung gemeldet
@@ -615,6 +622,15 @@ ab, bevor `/health` erreichbar war. Parallel hieß der neue Registryzustand
 meldete. Die lokalen Teilmechanismen erfüllten ihre Regeln, die nachgelagerten
 Verbraucher widerlegten beide End-to-End-Behauptungen.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-37,
+Commit `d313318`: OUTBOX meldete, Quote- und FX-Dienst würden nun beide die
+tatsächlich antwortende Quelle nennen. Für einen angereicherten ETF ersetzte
+`_enrich_etf` die Kursquelle `prices-file-quote` jedoch weiter durch
+`metadata-file`; der neue Test umging den Pfad mit `type="stock"`. Der
+FX-Dienst bekam gar keinen neuen Test und wurde vom Smoke nicht aufgerufen.
+Die lokale Konstante war entfernt, die fachliche Herkunft über alle Verbraucher
+aber nicht vollständig verfolgt.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
@@ -787,6 +803,13 @@ freigegebenen Fällen eine leere Finding-Liste — dieselbe Erfolgsform wie nach
 einem vollständigen grünen Lauf. Der Test schreibt dieses Verhalten sogar als
 Erwartung fest. T-27b könnte damit „Real" melden, ohne einen Anbieter gefragt
 zu haben.
+
+**Neuer Beleg:** T-37, Commit `d313318`: `checkTestData` entscheidet allein
+an leerem Standardoutput über Erfolg. Wirft der eingebettete Parser etwa bei
+`float("not-a-number")`, endet Python mit Status 1 und leerem Output; die
+Shell ignoriert den Status und meldet Check `#0` grün. Die erwartete Gesamtzahl
+17 schützt hier nicht, weil der fehlerhaft als Erfolg gezählte Check vorhanden
+ist.
 
 **Nachbarschaft zu P-01:** Dort wird die Testtiefe in der Übergabe
 überzeichnet. Hier überzeichnet sich das **Werkzeug** — die Übergabe gäbe

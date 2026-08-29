@@ -134,3 +134,52 @@ Freigabefähig ist die Runde noch nicht:
 Evidenz: `make test` 810/257/259 grün, 8 echte Provider-Integrationstests
 grün, Dashboard-Build, Ruff und Diff-Check sauber. Details und exakte
 Nacharbeitsanforderungen stehen in `_tickets/STATUS.md`.
+
+---
+
+## Codex-Review · Runde 2 · `d313318` · Nacharbeit
+
+Geprüft wurde die kumulative Übergabe aus T-36 `27ffe81` und T-37 `d313318`.
+Die vier Befunde aus Runde 1 sind im Produkt grundsätzlich wiederzufinden:
+OpenAPI deklariert die drei 404-Antworten, die UI übersetzt Fehlerkennungen,
+und die beiden beanstandeten Smoke-Aussagen lesen nun den behaupteten Zustand.
+Freigabefähig ist der Sammelstand trotzdem noch nicht:
+
+1. Der neue Laufzeit-Vertragstest ist nicht hermetisch. Allein ausgeführt lädt
+   er den realen Yahoo-Resolver und erhält ohne DNS `502` statt des erwarteten
+   `404`; nur in der Gesamtsuite wird das durch fremden Prozesszustand
+   verdeckt. Den Quote-Service am FastAPI-Dependency-Punkt deterministisch
+   überschreiben und den isolierten Lauf als Gegenprobe halten.
+2. T-37s Datenvalidator meldet einen Parserabbruch als Erfolg: Ein ungültiger
+   numerischer CSV-Wert lässt Python mit Status 1 und leerem Output enden;
+   `checkTestData` wertet allein den leeren Output aus. Exitstatus prüfen und
+   einen Mutanten dauerhaft rot testen.
+3. Die 17 Smoke-Checks führen nur Resolver, Quote und Metadaten aus. `daily`
+   und `fx` erscheinen ausschließlich in `/sources`; kein Request erreicht
+   diese Rollen. Beide Rollen über profilfreie REST-Checks mit konkretem Wert
+   und Herkunft ausführen.
+4. Die Herkunftskorrektur ist unvollständig: Bei einem ETF überschreibt
+   `_enrich_etf` die Kursquelle `prices-file-quote` mit `metadata-file`. Die
+   neue Quote-Gegenprobe schaltet die Anreicherung über `type="stock"` aus,
+   FX hat keine neue Unit-Gegenprobe. Außerdem steht die identische
+   `getattr(... ) or "unbekannt"`-Regel in zwei Diensten, obwohl die internen
+   Provider-Protokolle `name` nicht zusagen; der deutsche Rückfall gelangt roh
+   in die englische UI. Provenienz und Namensvertrag einmal fachlich festlegen
+   und Kurs+Metadaten sowie FX direkt prüfen.
+5. Das vollständige Bezeichnerinventar der berührten Dateien verletzt weiter
+   die erste Projektregel. Beispiele: `_BEFUND`, `fehler`, `erwartet`, `pfad`,
+   `spalte`, `unkonfiguriert`, `_NACH_REFRESH`, `_NAME_VORHER`, `_VORHER`,
+   `_WAISEN`, `pflicht_laut_artefakt`, `optional_laut_artefakt`, `feld`,
+   `AusEinerDatei`, `OhneNamen`, `ohne_spalte`, `leere_zelle`, `ungewiss`.
+   In `reason.spec.ts` stehen zusätzlich zwei `Record<string, any>`.
+6. T-38 ist als nächstes Kettenglied nicht mehr auf seinem gültigen Stand:
+   Es nennt den Typkatalog weiter eine offene Vorbedingung, markiert `#1` mit
+   `➖` und wartet in der Auflösung auf Mike. T-31 und STATUS dokumentieren die
+   Entscheidung bereits als `stock/etf/etc/crypto/bond`, ohne Index. T-38 vor
+   Arbeitsbeginn auf diese Basis stellen.
+
+Evidenz: `make test` 821/259/271 grün; isolierter 404-Test reproduzierbar rot
+(`502`); CSV-Smoke 17/17 grün, aber ohne Daily-/FX-Aufruf; Dashboard-Build,
+Ruff, Bash-Syntax und Diff-Check sauber. Der Parser-Gegenversuch ergab
+`parser_status=1 smoke_branch=success`; die Provenienz-Gegenprobe ergab
+`expected_price_source=prices-file-quote`, `reported_source=metadata-file`.
