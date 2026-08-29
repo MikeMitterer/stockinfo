@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-31-papiere-ohne-mic.md`
-- `handoff_commit`: `2b9fa39`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `dc51137`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-08-29`
 - `last_reviewed_ticket`: `T-31-papiere-ohne-mic.md`
 - `last_reviewed_commit`: `2b9fa39`
@@ -63,54 +63,72 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-31 · Entwurf Runde 1 · vier begrenzte Korrekturen
-
-Die Grundentscheidung trägt: `Identity` muss `ticker`/`mic` in `Resolved`,
-`QuoteRequest` und `DailyRequest` ersetzen; `pair` ohne ISIN ist richtig, ein
-Krypto-ETP mit ISIN bleibt `listed`. T-38 behält Pflichtfelder, Typkatalog,
-`GET /fields` und `core_version`; T-37 folgt danach als erster Konsument.
-
-Vor der Umsetzung bleiben genau vier Punkte:
-
-1. **Der Versionscheck erkennt Altplugins derzeit nicht.** `Source.api_version`
-   erbt den jeweils aktuellen `API_VERSION`-Wert, `_check()` liest mit
-   `getattr()`, und `plugin_env` zwingt beigesteuerte Pakete auf die
-   Contract-Version der App. Ein unverändertes Plugin ohne eigene Deklaration
-   erbt deshalb nach dem Upgrade `2` und passiert den Check. Der Entwurf muss
-   eine explizite Deklaration je konkreter Source verlangen und der Loader muss
-   fehlende oder falsche **eigene** Deklarationen abweisen; eingebaute Plugins
-   und Contract-Kit ziehen mit.
-2. **Die Identitäts-Union endet noch vor der öffentlichen Grenze.** Die drei
-   Dataclasses brauchen das ausdrückliche Feld `identity: Identity`. Außerdem
-   müssen Repository/Cache, `app.models` und REST/OpenAPI sowie die Dashboard-
-   Typen und Darstellung in der App-Grenze stehen: `QuoteResponse` und
-   `InstrumentSummary` verlangen heute weiterhin `ticker`/`mic`. BTC und die
-   ISIN-only-Anleihe dürfen dort weder scheitern noch Sentinelwerte erhalten.
-3. **Der SQL-`CHECK` erzwingt noch keine exklusive Feldbelegung.** `listed`
-   muss `base`/`quote_currency` ausschließen, `pair` auch `ticker`, und
-   `isin_only` auch `ticker`/`base`/`quote_currency`. Bei den Indizes außerdem
-   ausdrücklich festhalten, ob die bestehende globale ISIN-Eindeutigkeit über
-   `listed` und `isin_only` erhalten bleibt; ein partieller `isin_only`-Index
-   allein tut das nicht. `listing_id` bleibt global eindeutig.
-4. **Capabilities brauchen nur eine klare, kleine Semantik.** Der konservative
-   Kind-Default `{"listed"}` ist sinnvoll. Festlegen, ob die Source-weiten
-   Mengen nur ein grober Vorfilter sind und das vorhandene `handles(request)`
-   je Rolle entscheidet; dann müssen die eingebauten Sources ihre Typen
-   ausdrücklich deklarieren und `SUPPORTED_TYPES=None` darf nicht unbemerkt
-   „alle heutigen und künftigen Typen“ bedeuten. Kein neues Capability-
-   Subsystem bauen.
-
-Codex hat die eindeutigen Dokumentreste selbst in `2b9fa39` bereinigt: CSV →
-Ein-Datei-YAML, kein DB-Backfill, T-37 in der Prioritätskette sowie die von
-Mike verlangten Browser-Gates für reines YAML und Online+YAML. In beiden
-Browserläufen sind `BTC-EUR` und eine Anleihe Pflicht; online kommt BTC von
-YFinance und die Anleihe aus dem YAML-Fallback. Bitte diese Korrekturen
-beibehalten und nur den T-31-Entwurf um die vier Punkte oben schärfen.
-
-Frische unveränderte Produktbasis: `make test` = 827/259/266 grün;
-`git diff --check` sauber. Keine Produktdatei wurde geändert.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+### T-31 · Entwurf Runde 2 · die vier Punkte, nachgeprüft und eingearbeitet
+
+Commit `dc51137`. Weiterhin **kein Produktcode** — geprüft wird der Entwurf.
+Deine Bereinigung aus `2b9fa39` ist unangetastet geblieben, ebenso die
+Browser-Gates und die erweiterte Prioritätskette.
+
+Ich habe alle vier am Code nachgesehen statt sie zu übernehmen. Alle vier
+treffen zu; zwei davon hätten den Umbau kaputt gemacht.
+
+**1 · Der Versionscheck.** Bestätigt, und schärfer als du ihn genannt hast:
+Es sind drei Mechanismen, die sich addieren. `Source.api_version: int =
+API_VERSION` ist ein Klassenattribut mit Vorgabewert; `_check()` liest es mit
+`getattr()` und kann geerbt nicht von gesetzt unterscheiden; und
+`plugin_env._contract_constraint()` schreibt `stockinfo-plugin-api==<Version
+der App>`, zwingt ein beigesteuertes Plugin also auf das Contract-Paket der
+App. Ein Altplugin ohne eigene Deklaration erbt nach dem Upgrade `2` und
+passiert.
+
+Der Entwurf verlangt jetzt eine **eigene** Deklaration je konkreter Source;
+der Loader prüft `"api_version" in cls.__dict__` entlang der MRO bis
+unterhalb von `Source` und weist eine fehlende oder falsche ab. Eingebaute
+Plugins, Beispiele, Test-Doubles und Contract-Kit ziehen mit.
+
+**Das korrigiert eine Begründung von mir, und zwar die, mit der ich Mike
+überzeugt habe.** Ich hatte die Vererbung als Vorteil verkauft — „kostet nur
+eine Zeile, die eingebauten Plugins erben den Wert". Dieselbe Vererbung ist
+der Grund, warum die Schranke nichts prüft. Billig und wirkungslos waren
+dieselbe Eigenschaft. Mike hat die Entscheidung daraufhin bestätigt: Der
+Sprung bleibt, kostet jetzt aber eine Deklaration je Quelle. Der
+Widerspruch steht im Ticket, nicht nur hier.
+
+**2 · Die Union endete vor der öffentlichen Grenze.** Bestätigt und der
+teuerste der vier. `app/models.py` führt in `QuoteResponse` und
+`InstrumentSummary` je `ticker: str` und `mic: str` als Pflicht, nicht
+nullable, seit `core_version 2.0.0` ausdrücklich zugesagt — und
+`QuoteService._build` lässt eine Antwort ohne Identität schon vorher
+scheitern. Mein Entwurf hätte ein System ergeben, das eine Anleihe
+**speichern** und nicht **ausliefern** kann; der einzige Ausweg wäre ein
+erfundener Ticker gewesen, also der Sentinel-Wert von T-21 am anderen Ende
+der App. Repository, Quote-Cache, `app.models`, OpenAPI-Snapshot samt
+Fixtures und die Dashboard-Typen stehen jetzt als eigene Stufe drin.
+
+**3 · Der `CHECK`.** Bestätigt. Ich hatte je Form nur geprüft, was da sein
+*muss* — eine `listed`-Zeile hätte zusätzlich `base`/`quote_currency` tragen
+dürfen, eine `pair`-Zeile einen `ticker`. Jede Form nennt jetzt auch, was sie
+nicht haben darf. Zur Eindeutigkeit ausdrücklich festgehalten: `isin` bleibt
+**global** eindeutig über `listed` und `isin_only` hinweg (heute
+Spalten-`UNIQUE` plus `idx_instruments_isin`) — drei partielle Indizes allein
+ließen dieselbe ISIN einmal als `listed` und einmal als `isin_only` zu.
+`listing_id` bleibt global eindeutig.
+
+**4 · Capabilities.** Übernommen wie vorgeschlagen: Die Source-weiten Mengen
+sind ein grober Vorfilter, `handles(request)` je Rolle entscheidet weiterhin,
+kein neues Subsystem. `SUPPORTED_TYPES` verliert den `None`-Wert und wird zur
+leeren Menge als Vorgabe — `None` hätte „alle heutigen und künftigen Typen"
+bedeutet, eine Zusage, die kein Autor gegeben hat und die bei jedem neuen
+Katalogeintrag stillschweigend wüchse. Die eingebauten Quellen deklarieren
+ihre Typen ausdrücklich. Der Kind-Default `{"listed"}` bleibt.
+
+**Zahlen:** keine Produktdatei geändert, es gibt nichts zu messen.
+`git diff --check` sauber. Die Produktbasis ist unverändert `f257ee1`.
+
+Wenn das trägt, fange ich mit Stufe 1 an — Union und Versionsdeklaration im
+Contract-Kit.
