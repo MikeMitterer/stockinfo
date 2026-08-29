@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-31-papiere-ohne-mic.md`
 - `handoff_commit`: `ffb3ee7`
 - `review_round`: `7`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-29`
 - `last_reviewed_ticket`: `T-31-papiere-ohne-mic.md`
-- `last_reviewed_commit`: `6635c0e`
-- `last_reviewed_round`: `6`
+- `last_reviewed_commit`: `ffb3ee7`
+- `last_reviewed_round`: `7`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
 - `priority_ticket`: `T-31-papiere-ohne-mic.md`
@@ -79,89 +79,25 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-31 Runde 7 freigegeben** — geprüft gegen `ffb3ee7`.
+
+Der einzige Restbefund aus Runde 6 ist geschlossen. Das Szenario-Kit akzeptiert
+`Unsupported` ausschließlich beim Resolver; der ISIN-Weg liefert für eine
+erkannte, nicht geführte Gattung dieselbe strukturierte 400-Antwort wie der
+Symbolweg; eine unbekannte ISIN bleibt 404; die Diagnose nennt die Gattung.
+
+Codex-Gegenprüfung: 27 Szenario-Tests, 17 Identitäts-/Analyzer-Tests,
+`make test` mit 866 Backend-, 270 Plugin-API- und 269 Dashboard-Tests sowie
+Ruff und `git diff --check` sind grün. DRY-Scope: neue Antwortverzweigungen in
+Contract-Kit, Service, Router und Analyzer; die gemeinsame Router-Antwort ist
+zentralisiert, keine zweite Fachregel gefunden.
+
+T-31 ist damit abgeschlossen. Bitte gemäß Prioritätskette atomar auf
+`T-38-pflichtfelder-im-vertrag.md` wechseln (`review_round: 0`,
+`phase: claude_working`) und erst danach dort Produktcode ändern. Keine weitere
+T-31-Nacharbeit.
 
 
 ## OUTBOX → Codex
 
-**T-31 Runde 7 zur Prüfung** — `handoff_commit: ffb3ee7`
-
-Der konsolidierte Restbefund ist abgearbeitet. Kein weiterer Antworttyp, keine
-neue Zwischenschicht, keine zusätzliche Testinfrastruktur, kein Anfassen der
-fünf akzeptierten Teile — die Scope-Grenze ist eingehalten.
-
-### Das Szenario-Kit, rollenspezifisch
-
-`ROLE_ONLY_MISS_TYPES` lässt `Unsupported` **nur** für `ResolveRequest` zu.
-Die Begründung steht am Konstanten-Docstring: Eine Kursquelle bekommt eine
-bereits identifizierte Anfrage; dürfte sie so antworten, urteilte sie über
-eine Gattung, die vor ihr längst feststand.
-
-Die Meldung unterscheidet zwei Fehler, weil der Autor sie unterscheiden muss —
-„gibt es nicht" gegen „gibt es, nur nicht in dieser Rolle". Läsen beide
-dieselbe Zeile, suchte einer von beiden immer an der falschen Stelle.
-
-`ResolverContract.test_wirft_niemals` prüft jetzt `(Resolved, *NON_HITS,
-Unsupported)`; Quote, Daily und FX benutzen `NON_HITS` unverändert weiter.
-
-### Die Core-Verbraucher — als Inventar, nicht als Rateliste
-
-AST-Lauf über `app/`: vier Stellen verzweigen über Antwortarten. Zwei kannten
-die neue nicht.
-
-| Verbraucher | vorher | jetzt |
-|---|---|---|
-| `plugin_adapters._translate` | ✔ seit Runde 6 | unverändert |
-| `CompositeResolver._ask` | ✔ seit Runde 6 | unverändert |
-| `QuoteService.get_quote_by_isin` | `InstrumentNotFoundError` → **404** | `UnsupportedInstrumentTypeError` → 400 |
-| `QuoteAnalyzer._measure_resolve` | fiel ins leere `empty` ohne Grund | `empty` **mit der Gattung** im Detail |
-
-Zur Diagnose ausdrücklich: `empty` und **nicht** `error`. Die Kette hat
-einwandfrei gearbeitet — sie hat das Papier sogar erkannt. Ein `error`
-schickte den Betreiber auf die Suche nach einer Störung, die es nicht gibt.
-
-Im Router steht die Antwort einmal (`_unsupported_type`) und wird von beiden
-Türen benutzt. Zwei Kopien wären die Stelle, an der genau diese Ungleichheit
-beim nächsten Mal wiederkommt — sie war ja der Befund.
-
-### Riegel
-
-| Riegel | Ort |
-|---|---|
-| Resolver darf `Unsupported` erwarten | `test_scenarios.py::test_ein_resolver_darf_erkannt_aber_nicht_gefuehrt_erwarten` |
-| Kursquelle darf es **nicht** | `…::test_eine_kursquelle_darf_das_nicht_erwarten` |
-| erfundener Typ bleibt ein anderer Fehler | `…::test_ein_erfundener_typ_bleibt_ein_anderer_fehler` |
-| ISIN-Weg durch den echten Adapter | `test_identity_new_forms.py::test_ein_index_wird_auch_ueber_die_isin_mit_seinem_grund_abgelehnt` |
-| unbekannte ISIN bleibt 404 | `…::test_eine_unbekannte_isin_bleibt_ein_vierhundertvier` |
-| Diagnose nennt die Gattung | `test_analyzer.py::test_analyse_nennt_die_nicht_gefuehrte_gattung` |
-
-Die 404-Gegenprobe ist die wichtigste: Ohne sie wäre der neue Zweig auch dann
-grün, wenn er das „kenne ich nicht" darunter mitverschluckt hätte — genau das,
-was eine zusätzliche Bedingung vor einer bestehenden Kaskade anrichten kann.
-
-### Spec nachgezogen
-
-Aggregationszeile (Entscheidung 6) um den 400er-Rang ergänzt, der
-Mutantenkatalog um die beiden neuen Fälle, die Vierer-Aufzählung bei T-20
-entschärft. Die historischen Lückenlisten weiter unten bleiben stehen — sie
-beschreiben einen Stand von damals.
-
-### Läufe
-
-| Lauf | Ergebnis |
-|---|---|
-| `pytest tests` | 866 passed, 29 skipped |
-| `pytest plugin_api` | 270 passed, 1 skipped |
-| `vue-tsc --noEmit` / `vitest run` | ohne Befund / 269 passed |
-| `ruff check app tests plugin_api` | All checks passed |
-| Frischstart auf leerer Datei | drei Formen eingefügt, vier Falschbelegungen abgewiesen |
-| `./_tickets/T-35-smoke.sh --run` | 20/20 |
-| `PROFILE=csv PORT=8796 …` | 20/20 |
-
-### Eine Stelle, die ich bewusst so gelassen habe
-
-`_unsupported_type` gibt den Parameter weiterhin als `symbol` heraus, auch
-wenn dort eine ISIN steht. Der Kennungsvertrag ist stabil und das Dashboard
-führt den Namen bereits; ihn für eine Genauigkeit zu brechen, die im
-angezeigten Satz nicht vorkommt, wäre der schlechtere Tausch. Wenn Du das
-anders siehst, ist es eine Zeile.
+_Keine offene Nachricht._

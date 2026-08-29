@@ -18,7 +18,7 @@
 | 3 | `app/exchanges.py`, Contract-Kit | `canonical_identity` wird zur Weiche über die Union; `is_real_mic` und `is_canonical_ticker` bleiben unverändert die `listed`-Hälfte. Im Vertrag: discriminated union über `kind` | ✅ [^r5] | |
 | 4 | Typ-Katalog | `stock`/`etf`/`etc`/`fund`/`crypto`/`bond` kanonisch (Ort: T-38); `QUOTE_TYPE_MAP` bildet `MUTUALFUND → fund`, `CRYPTOCURRENCY → crypto`, `BOND → bond` — Erkennen, nicht Raten | ✅ [^r4] | |
 | 5 | Aufnahmeweg | die Paar-Identität entsteht aus dem **Gattungs-Befund der Quelle**, nie aus der Symbolform; Eintritt per Symbol (`isin = NULL`), die By-Symbol-Routen tragen ihn | ✅ [^r6] | |
-| 6 | Aufnahmeweg | eine **nicht** aufgenommene Gattung (Index) wird mit eigener Kennung `unsupported_instrument_type` abgelehnt — nicht mit dem Zufallsbefund der Symbolform; i18n DE/EN | ◑ [^r6] | |
+| 6 | Aufnahmeweg | eine **nicht** aufgenommene Gattung (Index) wird mit eigener Kennung `unsupported_instrument_type` abgelehnt — nicht mit dem Zufallsbefund der Symbolform; i18n DE/EN | ✅ [^r7] | |
 | 7 | Kursweg | für ein Paar muss die Währung des gelieferten Kurses `quote_currency` entsprechen; eine Abweichung ist ein Datenfehler und wird abgelehnt, nicht still konvertiert | ✅ [^r5] | |
 | 8 | Metadatenkaskade | sie läuft nur für Typen, deren Metadaten es geben kann — kein justETF-Abruf für eine Coin, keine TER-Frage an eine Anleihe | ✅ [^r6] | |
 | 9 | Tests | `BTC-EUR` prüft das **entschiedene** Verhalten (Annahme als `pair`), ein Index den Ablehnungsgrund, eine Anleihe die `isin_only`-Form samt `quote_unavailable` ohne liefernde Quelle | ✅ [^r6] | |
@@ -47,6 +47,13 @@
     öffentliche Szenario-Kit lehnt sie noch als unbekannte Ergebnisart ab,
     und bestehende Core-Verbraucher bilden sie teils weiter auf 404/„leer“ ab.
     Das ist ein konsolidierter Restbefund zu Matrix `#6`, kein neuer Scope.
+[^r7]: Codex-Review Runde 7 gegen `ffb3ee7`: Der einzige Restbefund ist
+    geschlossen. Das öffentliche Szenario-Kit akzeptiert `Unsupported` nur
+    für Resolver; Symbol- und ISIN-Eingang liefern dafür dieselbe strukturierte
+    400-Antwort, während eine unbekannte ISIN 404 bleibt. Analyzer und
+    Resolver-Vertrag bilden die fünfte Antwort ebenfalls ausdrücklich ab.
+    Gegenprüfung: 27 Szenario-, 17 Identitäts-/Analyzer-, 866 Backend-, 270
+    Plugin-API- und 269 Dashboard-Tests; Ruff und `git diff --check` grün.
 
 ## Die Entscheidung (Mike, 2026-08-28)
 
