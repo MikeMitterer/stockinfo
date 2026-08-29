@@ -266,36 +266,44 @@ def identity_columns(identity: IdentityOut) -> dict[str, str | None]:
 
 
 def identity_from_columns(row: object) -> IdentityOut | None:
-    """Die Identität aus einer gespeicherten Zeile — oder ``None``.
+    """Die Identität aus flachen Spalten — oder ``None``.
 
-    ``None`` heißt „diese Zeile trägt keine vollständige Identität". Seit dem
-    `CHECK` kann das im laufenden Bestand nicht mehr vorkommen; eine
-    Alt-Datenbank vor dem Umzug bringt es trotzdem mit, und dort ist ein
-    ehrliches ``None`` besser als eine halb gefüllte Form.
+    **Welche Form** entscheidet `app.exchanges.identity_form`; hier wird nur
+    noch gebaut. Bis Runde 4 stand die Fallunterscheidung dreimal im Code —
+    hier, an `ResolvedInstrument.identity()` und in `identity_from_row()`.
+    Drei Fassungen derselben Regel laufen beim ersten Sonderfall auseinander,
+    und Codex hat sie zu Recht beanstandet.
+
+    ``None`` heißt „diese Zeile trägt keine vollständige Identität".
 
     Args:
         row: Eine Instrumentenzeile als Mapping — oder ein Objekt mit
-            denselben Feldnamen, etwa ein `ResolvedInstrument`. Beide führen
-            dieselben sechs Spalten, und zwei Fassungen derselben Umrechnung
-            liefen beim ersten Zusatzfeld auseinander.
+            denselben Feldnamen, etwa ein `ResolvedInstrument`.
 
     Returns:
         Die passende Identität, oder ``None``.
     """
-    if hasattr(row, "get"):
-        get = row.get  # type: ignore[union-attr]
-    elif hasattr(row, "keys"):
-        get = lambda key: row[key]  # noqa: E731 — sqlite3.Row kennt kein `get`
-    else:
-        get = lambda key: getattr(row, key, None)  # noqa: E731
-    kind = get("kind") or "listed"
-    if kind == "pair" and get("base") and get("quote_currency"):
-        return PairIdentityOut(base=get("base"), quote_currency=get("quote_currency"))
-    if kind == "isin_only" and get("isin"):
-        return IsinOnlyIdentityOut(isin=get("isin"))
-    if kind == "listed" and get("ticker") and get("mic"):
+    # Lokal, weil `app.exchanges` seinerseits nichts aus den Modellen braucht
+    # und ein Modulimport in beide Richtungen den Kreis schlösse.
+    from app.exchanges import identity_form
+
+    read = (
+        row.get
+        if hasattr(row, "get")
+        else (
+            (lambda key: row[key])
+            if hasattr(row, "keys")
+            else (lambda key: getattr(row, key, None))
+        )
+    )
+    form = identity_form(row)
+    if form == "pair":
+        return PairIdentityOut(base=read("base"), quote_currency=read("quote_currency"))
+    if form == "isin_only":
+        return IsinOnlyIdentityOut(isin=read("isin"))
+    if form == "listed":
         return ListedIdentityOut(
-            ticker=get("ticker"), mic=get("mic"), isin=get("isin")
+            ticker=read("ticker"), mic=read("mic"), isin=read("isin")
         )
     return None
 
@@ -425,7 +433,9 @@ class QuoteResponse(BaseModel):
     fund_currency: str | None = Field(
         default=None, description="Währung des Fonds — nicht die des Handelsplatzes"
     )
-    volatility: float | None = Field(default=None, description="1-Jahres-Volatilität in %")
+    volatility: float | None = Field(
+        default=None, description="1-Jahres-Volatilität in %"
+    )
     accumulating: bool | None = Field(
         default=None, description="Thesaurierend (true) vs. ausschüttend (false)"
     )
@@ -488,13 +498,19 @@ class InstrumentOverrides(BaseModel):
     accumulating: bool | None = Field(
         default=None, description="Thesaurierend (true) vs. ausschüttend (false)"
     )
-    provider: str | None = Field(default=None, max_length=100, description="Fondsanbieter")
-    replication: str | None = Field(default=None, max_length=100, description="Replikationsart")
+    provider: str | None = Field(
+        default=None, max_length=100, description="Fondsanbieter"
+    )
+    replication: str | None = Field(
+        default=None, max_length=100, description="Replikationsart"
+    )
     # Obergrenze in Mio. EUR: 2 Bio. — der größte Fonds der Welt liegt bei rund 1,5.
     fund_size: float | None = Field(
         default=None, ge=0, le=2_000_000, description="Fondsvolumen in Mio. EUR"
     )
-    fund_domicile: str | None = Field(default=None, max_length=100, description="Fondsdomizil")
+    fund_domicile: str | None = Field(
+        default=None, max_length=100, description="Fondsdomizil"
+    )
     fund_currency: str | None = Field(
         default=None,
         pattern=r"^[A-Z]{3}$",
@@ -577,7 +593,9 @@ class FieldSpec(BaseModel):
     """Ein Feld des Core-Vertrags samt Art, Pflicht und Bedeutung."""
 
     name: str
-    kind: str = Field(description="string | number | integer | boolean | array | object")
+    kind: str = Field(
+        description="string | number | integer | boolean | array | object"
+    )
     required: bool
     meaning: str
 
@@ -655,9 +673,7 @@ class PluginProvenance(BaseModel):
     id: str = Field(min_length=1)
 
 
-Provenance = Annotated[
-    CoreProvenance | PluginProvenance, Field(discriminator="kind")
-]
+Provenance = Annotated[CoreProvenance | PluginProvenance, Field(discriminator="kind")]
 """Woher ein Katalogeintrag stammt — Core **oder** ein benanntes Plugin.
 
 Eine diskriminierte Union statt eines Modells mit zwei optionalen Feldern:
@@ -774,7 +790,9 @@ class SourcesResponse(BaseModel):
     )
     sources: list[SourceEntry]
 
-    model_config = ConfigDict(json_schema_extra=always_present("config_path", "profile"))
+    model_config = ConfigDict(
+        json_schema_extra=always_present("config_path", "profile")
+    )
 
 
 class ExchangesResponse(BaseModel):
@@ -811,7 +829,9 @@ class IsinUpdate(BaseModel):
 class AnalyzeStage(BaseModel):
     """Eine gemessene Stage des Live-Fetch (Diagnose)."""
 
-    stage: str = Field(description="openfigi | fast_info | get_info | isin | history | justetf")
+    stage: str = Field(
+        description="openfigi | fast_info | get_info | isin | history | justetf"
+    )
     seconds: float
     status: str = Field(description="ok | error | empty | skipped")
     detail: str | None = None

@@ -73,22 +73,16 @@ class ResolvedInstrument:
             nicht vollständig sind. ``None`` heißt „noch keine Identität" und
             ist etwas anderes als eine erfundene — geraten wird nichts.
         """
-        if self.kind == "listed" and self.ticker and self.mic:
-            return ListedIdentity(ticker=self.ticker, mic=self.mic, isin=self.isin)
-        if self.kind == "pair" and self.base and self.quote_currency:
-            return PairIdentity(base=self.base, quote_currency=self.quote_currency)
-        if self.kind == "isin_only" and self.isin:
-            return IsinOnlyIdentity(isin=self.isin)
-        return None
+        return identity_from_row(self)
 
 
 def identity_from_row(row: object) -> Identity | None:
     """Die Identität einer gespeicherten Instrumentenzeile.
 
     Die Datenbank führt die Union flach, gebunden durch den `CHECK` je `kind`.
-    Diese Funktion setzt sie wieder zusammen — **an einer Stelle**, damit die
-    Regel nicht bei jedem Leser neu entsteht und beim ersten Sonderfall
-    auseinanderläuft.
+    Diese Funktion setzt sie wieder zusammen; **welche Form** vollständig ist,
+    entscheidet `app.exchanges.identity_form` — dieselbe Weiche, die auch die
+    REST-Seite benutzt. `ResolvedInstrument.identity()` ruft hierher durch.
 
     Args:
         row: Eine Instrumentenzeile als Mapping (``sqlite3.Row`` oder ``dict``).
@@ -97,16 +91,27 @@ def identity_from_row(row: object) -> Identity | None:
         Die Identität, oder ``None``, wenn die Zeile die Felder ihrer Form
         nicht vollständig trägt.
     """
-    get = row.get if hasattr(row, "get") else lambda key: row[key]  # type: ignore[union-attr]
-    return ResolvedInstrument(
-        symbol=get("symbol") or "",
-        isin=get("isin"),
-        kind=get("kind") or "listed",
-        ticker=get("ticker"),
-        mic=get("mic"),
-        base=get("base"),
-        quote_currency=get("quote_currency"),
-    ).identity()
+    # Lokal: `app.exchanges` bezieht seine Regeln aus dem Vertrag, und ein
+    # Modulimport von hier dorthin und zurück schlösse den Kreis.
+    from app.exchanges import identity_form
+
+    read = (
+        row.get
+        if hasattr(row, "get")
+        else (
+            (lambda key: row[key])
+            if hasattr(row, "keys")
+            else (lambda key: getattr(row, key, None))
+        )
+    )
+    form = identity_form(row)
+    if form == "pair":
+        return PairIdentity(base=read("base"), quote_currency=read("quote_currency"))
+    if form == "isin_only":
+        return IsinOnlyIdentity(isin=read("isin"))
+    if form == "listed":
+        return ListedIdentity(ticker=read("ticker"), mic=read("mic"), isin=read("isin"))
+    return None
 
 
 @dataclass

@@ -13,7 +13,7 @@ from dataclasses import dataclass
 
 import structlog
 from stockinfo_plugin.invariants import ISIN_PATTERN as _PLUGIN_ISIN_PATTERN
-from stockinfo_plugin.invariants import mic_is_wellformed
+from stockinfo_plugin.invariants import isin_check_digit_is_valid, mic_is_wellformed
 
 logger = structlog.get_logger()
 
@@ -276,23 +276,77 @@ def is_real_mic(mic: str | None) -> bool:
     return mic_is_wellformed(mic) and mic not in COLLECTOR_CODES
 
 
-def canonical_identity(
-    ticker: str | None, mic: str | None
-) -> tuple[str, str] | None:
-    """Die eine Stelle, die eine **neue** Identität für gültig erklärt.
+def identity_form(columns: object) -> str | None:
+    """Welche Identitätsform beschreiben diese Spalten — **vollständig**?
+
+    **Die eine Weiche über die Union.** Vor T-31 stand die Frage „ist diese
+    Identität vollständig" nur für Listings, und `canonical_identity`
+    beantwortete sie allein. Seither gibt es drei Formen, und die Antwort
+    hängt davon ab, welche gemeint ist.
+
+    Rekonstruiert wird aus den **flachen Spalten**, weil beide Seiten sie so
+    führen: die Datenbank in `instruments`, der Core in `ResolvedInstrument`.
+    Die drei Verwender — REST-Modell, Core-Typ und Repository — bauen daraus
+    ihren jeweiligen Typ, aber die Entscheidung *welche Form* fällt hier und
+    nur hier. Codex hat in Runde 4 zu Recht drei Fassungen davon gefunden.
+
+    Streng bleibt allein die `listed`-Hälfte: Sie verlangt kanonischen Ticker
+    und echten MIC, wie seit T-21. Für `pair` und `isin_only` gibt es kein
+    Gegenstück dazu — ein Basiswert ist kein Ticker, und die ISIN prüft ihre
+    eigene Prüfziffer.
+
+    Args:
+        columns: Ein Mapping oder Objekt mit den Feldern ``kind``, ``ticker``,
+            ``mic``, ``base``, ``quote_currency`` und ``isin``.
+
+    Returns:
+        ``'listed'``, ``'pair'``, ``'isin_only'`` — oder ``None``, wenn keine
+        Form vollständig belegt ist. ``None`` heißt „noch keine Identität" und
+        ist etwas anderes als eine erfundene.
+    """
+    read = _reader(columns)
+    kind = read("kind") or "listed"
+
+    if kind == "pair":
+        return "pair" if read("base") and read("quote_currency") else None
+    if kind == "isin_only":
+        return "isin_only" if isin_check_digit_is_valid(read("isin")) else None
+    if kind == "listed" and canonical_identity(read("ticker"), read("mic")):
+        return "listed"
+    return None
+
+
+def _reader(columns: object):
+    """Ein einheitlicher Feldzugriff für Mapping, `sqlite3.Row` und Objekt.
+
+    Die drei Verwender reichen dasselbe in drei Verpackungen herein. Die
+    Unterscheidung hier zu treffen ist billiger, als sie an jeder
+    Aufrufstelle zu wiederholen.
+    """
+    if hasattr(columns, "get"):
+        return columns.get
+    if hasattr(columns, "keys"):
+        return lambda key: columns[key]
+    return lambda key: getattr(columns, key, None)
+
+
+def canonical_identity(ticker: str | None, mic: str | None) -> tuple[str, str] | None:
+    """Die eine Stelle, die eine neue **Listing**-Identität für gültig erklärt.
 
     Vollständig ist sie nur zu zweit: kanonischer Ticker **und** echter MIC.
     Eine halbe Zuordnung wird nicht gespeichert — ein Ticker ohne Handelsplatz
     ist bei jeder Quelle mehrdeutig, und ein Handelsplatz ohne Ticker sagt gar
     nichts.
 
+    **Seit T-31 ist sie ausdrücklich die `listed`-Hälfte** und nicht mehr die
+    ganze Frage; die Weiche über die Union ist `identity_form`. Der Zuschnitt
+    ist Absicht: „echter MIC" ist eine Frage, die es nur für ein Listing gibt.
+
     **Der Status ist mit T-21 Teil 3 entfallen.** Die Funktion gab früher
     `(ticker, mic, status)` zurück und schrieb das Ergebnis als
     `identity_status` in die Zeile. Seit eine halbe Identität nirgends mehr
     weiterleben darf, hätte die Spalte nur noch einen einzigen Wert — und die
     beste Zahl an Quellen für einen Wert, den es nicht mehr gibt, ist null.
-    Geblieben ist die Vollständigkeitsaussage; sie führt jetzt zu **Annahme
-    oder Ablehnung** statt zu einer Beschriftung.
 
     **Strenger als das, was der Bestand tragen darf.** `keeps_its_identity` in
     `app/migration.py` beurteilt *gespeicherte* Zeilen milder — eine von Hand
