@@ -7,6 +7,7 @@ from dataclasses import replace
 from app.exchanges import (
     EXCHANGES,
     REASON_AMBIGUOUS_SUFFIX,
+    identity_form,
     identity_from_input,
     input_failure,
     is_real_mic,
@@ -201,3 +202,76 @@ def test_ungueltige_mics_werden_abgelehnt(mic: str | None, reason: str) -> None:
     `XNAS` unterscheidet.
     """
     assert is_real_mic(mic) is False, reason
+
+
+# ─── Die eine Weiche über die Union (T-31, Matrix #3) ─────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("columns", "expected"),
+    [
+        ({"kind": "listed", "ticker": "EUNL", "mic": "XETR"}, "listed"),
+        ({"kind": "pair", "base": "BTC", "quote_currency": "EUR"}, "pair"),
+        ({"kind": "isin_only", "isin": "DE0001102531"}, "isin_only"),
+        # Ohne `kind` ist die Form `listed` — so stehen die Zeilen da, die
+        # vor T-31 angelegt wurden, und so kommen sie aus `ResolvedInstrument`.
+        ({"ticker": "EUNL", "mic": "XETR"}, "listed"),
+    ],
+    ids=["listed", "pair", "isin_only", "kind_fehlt_heisst_listed"],
+)
+def test_jede_vollstaendige_form_wird_erkannt(columns: dict, expected: str) -> None:
+    """Die drei Formen, jede in ihrer vollständigen Belegung.
+
+    Diese Funktion ist die **einzige** Stelle, die entscheidet, welche Form
+    vorliegt — REST-Modell, Core-Typ und Repository bauen ihren Typ daraus.
+    Codex hat in Runde 4 drei auseinandergelaufene Fassungen davon gefunden;
+    seither gibt es eine, und ohne diesen Test hätte ausgerechnet sie keinen
+    eigenen.
+    """
+    assert identity_form(columns) == expected
+
+
+@pytest.mark.parametrize(
+    ("columns", "reason"),
+    [
+        ({"kind": "pair", "base": "BTC"}, "Paar ohne Quote-Währung"),
+        ({"kind": "pair", "quote_currency": "EUR"}, "Paar ohne Basiswert"),
+        ({"kind": "isin_only", "isin": "DE0001102532"}, "ISIN mit falscher Prüfziffer"),
+        ({"kind": "isin_only", "isin": None}, "ISIN-only ohne ISIN"),
+        ({"kind": "listed", "ticker": "EUNL"}, "Listing ohne MIC"),
+        ({"kind": "listed", "mic": "XETR"}, "Listing ohne Ticker"),
+        ({"kind": "listed", "ticker": "EUNL", "mic": "US"}, "Sammelcode ist kein MIC"),
+        ({"kind": "listed", "ticker": "BRK-B", "mic": "XNAS"}, "fremde Schreibweise"),
+        ({"kind": "erfunden", "ticker": "EUNL", "mic": "XETR"}, "unbekannte Form"),
+        ({}, "gar nichts"),
+    ],
+)
+def test_eine_halbe_identitaet_bekommt_keine_form(columns: dict, reason: str) -> None:
+    """``None`` heißt „noch keine Identität" — und nie „nimm die naheliegende".
+
+    Der letzte Fall ist der wichtigste: Eine **unbekannte** `kind` fällt
+    durch, statt auf `listed` zurückzufallen. Ein Rückfall wäre hier
+    besonders teuer, weil er genau dann greift, wenn eine spätere Version
+    eine vierte Form einführt — die alte Fassung deutete sie dann still zu
+    einem Listing um.
+    """
+    assert identity_form(columns) is None, reason
+
+
+def test_die_form_liest_auch_aus_einem_objekt() -> None:
+    """Mapping, `sqlite3.Row` und Objekt — dieselbe Antwort.
+
+    Die drei Verwender reichen dasselbe in drei Verpackungen herein. Liefe
+    der Feldzugriff auseinander, fiele es zuerst dort auf, wo am wenigsten
+    hingesehen wird: beim Objektweg aus dem Core.
+    """
+    from app.providers.base import ResolvedInstrument
+
+    pair = ResolvedInstrument(
+        symbol="BTC-EUR", kind="pair", base="BTC", quote_currency="EUR"
+    )
+
+    assert identity_form(pair) == "pair"
+    assert identity_form({"kind": "pair", "base": "BTC", "quote_currency": "EUR"}) == (
+        "pair"
+    )
