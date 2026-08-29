@@ -291,7 +291,7 @@ def test_beide_eingabeformen_ergeben_dasselbe_listing(
 
     assert response.status_code == 201
     body = response.json()
-    assert (body["ticker"], body["mic"]) == ("EUNL", "XETR")
+    assert (body["identity"]["ticker"], body["identity"]["mic"]) == ("EUNL", "XETR")
     assert body["symbol"] == expected_symbol
     assert _row(repository, expected_symbol)["ticker"] == "EUNL"
 
@@ -379,7 +379,7 @@ def test_eine_aliaslose_boerse_bleibt_die_genannte(client_and_repo) -> None:
     response = _intake(client, "AAPL.XNAS")
 
     assert response.status_code == 201
-    assert (response.json()["ticker"], response.json()["mic"]) == ("AAPL", "XNAS")
+    assert (response.json()["identity"]["ticker"], response.json()["identity"]["mic"]) == ("AAPL", "XNAS")
     assert _row(repository, "AAPL")["mic"] == "XNAS"
 
 
@@ -407,7 +407,7 @@ def test_eine_andere_boerse_desselben_tickers_wird_nicht_verwechselt(
     response = _intake(client, "AAPL.XNAS")
 
     assert response.status_code == 201, "die andere Börse ist ein neues Listing"
-    assert response.json()["mic"] == "XNAS"
+    assert response.json()["identity"]["mic"] == "XNAS"
     assert response.json()["listing_id"] != "nyse-1"
 
     with repository._connect() as connection:

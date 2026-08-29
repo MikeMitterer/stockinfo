@@ -202,9 +202,16 @@ async def identity_conflict(
     Returns:
         `409` mit `{code, params}` — dieselbe Form wie jede andere Ablehnung.
     """
-    # `params` ist `dict[str, str]`: Eine unbekannte ISIN fehlt lieber ganz,
-    # statt als Zeichenkette „None" in einem übersetzten Satz zu landen.
-    params = {"ticker": exc.ticker, "mic": exc.mic}
+    # `params` ist `dict[str, str]`: Ein Wert, den diese Identitätsform nicht
+    # trägt, fehlt lieber ganz, statt als Zeichenkette „None" in einem
+    # übersetzten Satz zu landen. Genannt wird deshalb je Form, was sie
+    # ausmacht — und `kind` immer, damit die Oberfläche weiß, welchen Satz sie
+    # bilden kann.
+    params = {"kind": exc.identity.kind}
+    for field in ("ticker", "mic", "base", "quote_currency"):
+        value = getattr(exc.identity, field, None)
+        if value:
+            params[field] = value
     if exc.isin:
         params["isin"] = exc.isin
     logger.warning(REASON_IDENTITY_CONFLICT, path=request.url.path, **params)

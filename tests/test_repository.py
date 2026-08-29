@@ -657,11 +657,11 @@ def test_ein_verlorenes_rennen_meldet_keine_neuanlage(
     real_find = QuoteRepository._find_instrument_id
     lookups: list[int] = []
 
-    def blind_on_first_call(connection, isin, symbol, ticker=None, mic=None):
+    def blind_on_first_call(connection, symbol, identity):
         lookups.append(1)
         if len(lookups) == 1:
             return None
-        return real_find(connection, isin, symbol, ticker, mic)
+        return real_find(connection, symbol, identity)
 
     monkeypatch.setattr(
         QuoteRepository, "_find_instrument_id", staticmethod(blind_on_first_call)
@@ -684,17 +684,17 @@ def _blind_first_lookup(monkeypatch) -> list[tuple]:
     Eindeutigkeitsindex, und der Retry muss sie wiederfinden.
 
     Returns:
-        Die Liste der `(ticker, mic)`, mit denen gesucht wurde — daran hängt
-        die eigentliche Aussage des Tests darunter.
+        Die Liste der Identitäten, mit denen gesucht wurde — daran hängt die
+        eigentliche Aussage des Tests darunter.
     """
     real_find = QuoteRepository._find_instrument_id
     lookups: list[tuple] = []
 
-    def recording(connection, isin, symbol, ticker=None, mic=None):
-        lookups.append((ticker, mic))
+    def recording(connection, symbol, identity):
+        lookups.append((identity.ticker, identity.mic))
         if len(lookups) == 1:
             return None
-        return real_find(connection, isin, symbol, ticker, mic)
+        return real_find(connection, symbol, identity)
 
     monkeypatch.setattr(QuoteRepository, "_find_instrument_id", staticmethod(recording))
     return lookups
@@ -719,7 +719,10 @@ def test_der_retry_sucht_mit_derselben_identitaet_wie_der_preflight(
     us_paper = _quote(
         189.5, "2026-08-19T10:00:00+00:00", "2026-08-19T10:00:00+00:00"
     ).model_copy(
-        update={"isin": None, "symbol": "AAPL", "ticker": "AAPL", "mic": "XNAS"}
+        update={
+            "symbol": "AAPL",
+            "identity": ListedIdentityOut(ticker="AAPL", mic="XNAS"),
+        }
     )
     repo.save_quote(us_paper)
 
@@ -751,16 +754,19 @@ def test_zwei_zeilen_um_dieselbe_identitaet_melden_einen_konflikt(
     base = _quote(189.5, "2026-08-19T10:00:00+00:00", "2026-08-19T10:00:00+00:00")
     repo.save_quote(
         base.model_copy(
-            update={"isin": None, "symbol": "AAPL", "ticker": "AAPL", "mic": "XNAS"}
+            update={
+                "symbol": "AAPL",
+                "identity": ListedIdentityOut(ticker="AAPL", mic="XNAS"),
+            }
         )
     )
     repo.save_quote(
         base.model_copy(
             update={
-                "isin": "US0378331005",
                 "symbol": "AAPL",
-                "ticker": "AAPL",
-                "mic": "XNYS",
+                "identity": ListedIdentityOut(
+                    ticker="AAPL", mic="XNYS", isin="US0378331005"
+                ),
             }
         )
     )
@@ -769,15 +775,17 @@ def test_zwei_zeilen_um_dieselbe_identitaet_melden_einen_konflikt(
         repo.save_quote(
             base.model_copy(
                 update={
-                    "isin": "US0378331005",
                     "symbol": "AAPL",
-                    "ticker": "AAPL",
-                    "mic": "XNAS",
+                    "identity": ListedIdentityOut(
+                        ticker="AAPL", mic="XNAS", isin="US0378331005"
+                    ),
                 }
             )
         )
 
-    assert (conflict.value.ticker, conflict.value.mic) == ("AAPL", "XNAS")
+    assert conflict.value.identity == ListedIdentityOut(
+        ticker="AAPL", mic="XNAS", isin="US0378331005"
+    )
     assert conflict.value.isin == "US0378331005"
 
 
