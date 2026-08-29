@@ -207,6 +207,7 @@ class _MetadataMutant(MetadataSource):
     `test_kein_veraenderlicher_zustand_an_der_klasse` an, und der Mutant
     bewiese etwas anderes als das Gemeinte.
     """
+    api_version = 2
 
     name = "metadata-mutant"
     FIELDS = (

@@ -395,6 +395,7 @@ def _counting_source(counter: list[int]):
     from stockinfo_plugin import QuoteSource
 
     class Counted(QuoteSource):
+        api_version = 2
         name = "gezaehlt"
         cost = "free"
 

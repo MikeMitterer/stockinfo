@@ -37,6 +37,7 @@ from app.sources_registry import BUILTIN_SOURCES, register_loaded, specs_by_name
 
 class DemoResolver(Resolver):
     """Eine minimale Quelle, wie ein Beiträger sie schriebe."""
+    api_version = 2
 
     name = "demo"
 
@@ -49,6 +50,7 @@ class DemoResolver(Resolver):
 
 class TwoRoleSource(Resolver, QuoteSource):
     """Eine Quelle, die zwei Fragen beantwortet."""
+    api_version = 2
 
     name = "zweirollig"
 
@@ -62,10 +64,12 @@ class WrongVersion(Resolver):
 
 class Nameless(Resolver):
     """Ohne Namen — unter welchem Schlüssel sollte sie in `sources.yaml` stehen?"""
+    api_version = 2
 
 
 class NoRole(Resolver):
     """Erbt zwar `Resolver`, aber der Test unten prüft die Ableitung selbst."""
+    api_version = 2
 
     name = "rollenlos"
 
@@ -126,9 +130,10 @@ def test_eine_datei_wird_geladen(tmp_path: Path) -> None:
         tmp_path,
         "meins",
         "from stockinfo_plugin.sources import Resolver\n"
-        "class Meins(Resolver):\n"
+        "class MineFromFile(Resolver):\n"
         "    name = 'meins'\n"
-        "SOURCES = [Meins]\n",
+        "    api_version = 2\n"
+        "SOURCES = [MineFromFile]\n",
     )
 
     result = load_directory_sources(tmp_path)
@@ -163,9 +168,10 @@ def test_eine_datei_die_beim_import_wirft_reisst_die_anderen_nicht_mit(
         tmp_path,
         "heil",
         "from stockinfo_plugin.sources import Resolver\n"
-        "class Heil(Resolver):\n"
+        "class Intact(Resolver):\n"
         "    name = 'heil'\n"
-        "SOURCES = [Heil]\n",
+        "    api_version = 2\n"
+        "SOURCES = [Intact]\n",
     )
 
     result = load_directory_sources(tmp_path)
@@ -206,9 +212,10 @@ def test_eine_plugin_datei_verdraengt_kein_standardmodul(tmp_path: Path) -> None
         tmp_path,
         "json",
         "from stockinfo_plugin.sources import Resolver\n"
-        "class Fremd(Resolver):\n"
+        "class Foreign(Resolver):\n"
         "    name = 'fremd'\n"
-        "SOURCES = [Fremd]\n",
+        "    api_version = 2\n"
+        "SOURCES = [Foreign]\n",
     )
 
     result = load_directory_sources(tmp_path)
@@ -306,16 +313,17 @@ def test_eine_datei_schlaegt_einen_gleichnamigen_entry_point(
         tmp_path / "plugins",
         "demo",
         "from stockinfo_plugin.sources import Resolver\n"
-        "class AusDerDatei(Resolver):\n"
+        "class FromFile(Resolver):\n"
         "    name = 'demo'\n"
-        "SOURCES = [AusDerDatei]\n",
+        "    api_version = 2\n"
+        "SOURCES = [FromFile]\n",
     )
 
     result = load_all(tmp_path)
 
     assert [spec.name for spec in result.specs] == ["demo"]
     assert result.specs[0].build("resolvers", {}, object()).__class__.__name__ == (
-        "AusDerDatei"
+        "FromFile"
     )
     assert any("mehrfach geladen" in problem.reason for problem in result.problems)
 
@@ -328,6 +336,7 @@ def test_ein_plugin_kann_keine_eingebaute_quelle_verdraengen() -> None:
     """
 
     class Angreifer(Resolver):
+        api_version = 2
         name = "yfinance"
 
     register_loaded((spec_from_class(Angreifer),))
@@ -352,6 +361,7 @@ def test_geladene_quellen_stehen_neben_den_eingebauten() -> None:
 
 class Werfer(Resolver):
     """Eine Quelle, die den Vertrag bricht und wirft."""
+    api_version = 2
 
     name = "werfer"
 
@@ -361,6 +371,7 @@ class Werfer(Resolver):
 
 class Ausfaller(Resolver):
     """Eine Quelle, die sich korrekt verhält und trotzdem nicht arbeiten kann."""
+    api_version = 2
 
     name = "ausfaller"
 
@@ -408,6 +419,7 @@ def test_ein_erfolg_setzt_den_zaehler_zurueck() -> None:
     """Sonst summierten sich Fehlschläge über Stunden zu einer Stilllegung."""
 
     class Wackelig(Resolver):
+        api_version = 2
         name = "wackelig"
 
         def __init__(self):
@@ -461,6 +473,7 @@ def test_halb_offen_und_reset_ohne_echte_wartezeit() -> None:
     assert breaker.is_open is False, "halb offen, ohne dass jemand gewartet hätte"
 
     class Geheilt(Resolver):
+        api_version = 2
         name = "geheilt"
 
         def resolve(self, request: ResolveRequest) -> Resolution:
@@ -497,6 +510,7 @@ def test_ein_nicht_gefundenes_papier_ist_kein_fehlschlag() -> None:
     """
 
     class Unbekannt(Resolver):
+        api_version = 2
         name = "unbekannt"
 
         def resolve(self, request: ResolveRequest) -> Resolution:
@@ -544,6 +558,7 @@ def test_im_halb_offenen_zustand_kommt_genau_einer_durch() -> None:
     zaehler_sperre = threading.Lock()
 
     class Langsam(Resolver):
+        api_version = 2
         name = "langsam"
 
         def resolve(self, request: ResolveRequest) -> Resolution:
@@ -626,6 +641,7 @@ def test_eine_auskunft_bewegt_den_schutzschalter_nicht() -> None:
     """
 
     class Ausfaller(Resolver):
+        api_version = 2
         name = "ausfaller"
 
         def handles(self, request: ResolveRequest) -> bool:
@@ -663,6 +679,7 @@ def test_eine_verworfene_quelle_erscheint_nicht_als_brauchbar() -> None:
     )
 
     class OhneDatei(Resolver):
+        api_version = 2
         name = "ohne-datei"
 
         def configuration_problem(self) -> str:
@@ -701,6 +718,7 @@ def test_eine_fx_quelle_wird_ebenso_gekapselt() -> None:
     """
 
     class KaputteFx(FxSource):
+        api_version = 2
         name = "fx-kaputt"
 
         def fetch_rate(self, request: object) -> object:
