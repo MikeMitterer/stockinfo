@@ -36,6 +36,7 @@ from typing import Any
 
 from stockinfo_plugin import (
     ListedIdentity,
+    PairIdentity,
     NotFound,
     Resolution,
     Resolved,
@@ -53,8 +54,13 @@ class YahooSearchResolverPlugin(Resolver):
     name = "yahoo-search"
     cost = "free"
     api_version = 2
-    SUPPORTED_KINDS = frozenset({"listed"})
-    SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund"})
+    # **`pair` und `crypto` seit T-31.** Yahoo führt `BTC-EUR` nativ und
+    # meldet `quoteType: CRYPTOCURRENCY`; ohne diese beiden Zeilen wies der
+    # Vorfilter die Quelle ab, die als einzige antworten konnte — und die
+    # Aufnahme einer Coin scheiterte an einer Deklaration statt an einer
+    # fehlenden Fähigkeit.
+    SUPPORTED_KINDS = frozenset({"listed", "pair"})
+    SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "crypto"})
 
     def __init__(
         self,
@@ -94,10 +100,14 @@ class YahooSearchResolverPlugin(Resolver):
         selbst für unzuständig. Die Kaskade fragt sie ohnehin erst, wenn die
         Quellen davor nichts geliefert haben.
         """
-        return bool(request.isin)
+        return bool(request.isin or request.symbol)
 
     def resolve(self, request: ResolveRequest) -> Resolution:
         """Fragt die Yahoo-Suche und übersetzt ihre Antwort.
+
+        **Zwei Einstiege, eine Quelle.** Liegt eine ISIN vor, wird über sie
+        gesucht; sonst über das Symbol. Der Symbolweg ist der einzige, über
+        den ein Papier ohne ISIN — eine Coin — überhaupt hereinkommt.
 
         Returns:
             `Resolved` nur mit **vollständiger** Identität. Ein Treffer ohne
@@ -105,14 +115,32 @@ class YahooSearchResolverPlugin(Resolver):
             OpenFIGI, und aus demselben Grund: Der Core baut aus beiden das
             Symbol, mit dem er später den Kurs holt.
         """
-        answer = self._core(request).resolve_isin(request.isin or "")
+        core = self._core(request)
+        if request.isin:
+            answer = core.resolve_isin(request.isin)
+        else:
+            answer = core.resolve_symbol(request.symbol or "")
 
         if not isinstance(answer, ResolvedInstrument):
             # NotFound, Unavailable und NotResponsible kommen bereits aus
             # `stockinfo_plugin.types`.
             return answer
 
+        if answer.kind == "pair":
+            return Resolved(
+                identity=PairIdentity(
+                    base=answer.base or "", quote_currency=answer.quote_currency or ""
+                ),
+                name=answer.name,
+                instrument_type=answer.type,
+            )
+
         if not answer.ticker or not answer.mic:
+            # **Die Gattung reist mit, auch wenn die Identität fehlt.** Ohne
+            # sie könnte der Aufrufer nicht unterscheiden, ob er ein Papier
+            # ablehnt, dessen Gattung er nicht führt, oder eines, dessen
+            # Symbol seine Börse nicht nennt — und Matrix `#6` verlangt genau
+            # diese Unterscheidung.
             return NotFound()
 
         return Resolved(

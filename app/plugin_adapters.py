@@ -52,7 +52,13 @@ from stockinfo_plugin.types import (
 )
 
 from app.exchanges import COLLECTOR_CODES, EXCHANGES, provider_alias
-from app.providers.base import EtfDetails, RawQuote, Resolution, ResolvedInstrument
+from app.providers.base import (
+    INSTRUMENT_TYPES,
+    EtfDetails,
+    RawQuote,
+    Resolution,
+    ResolvedInstrument,
+)
 
 logger = structlog.get_logger()
 
@@ -161,6 +167,20 @@ class _Adapter:
             )
             return False
         return True
+
+
+def _symbol_of(answer: Resolved, fallback_isin: str) -> str:
+    """Das Anzeigesymbol einer Antwort, deren Gattung StockInfo nicht führt.
+
+    Sie wird nicht gespeichert — es geht allein darum, dass die Ablehnung das
+    Papier beim Namen nennt, nach dem gefragt wurde.
+    """
+    identity = answer.identity
+    if isinstance(identity, PairIdentity):
+        return f"{identity.base}-{identity.quote_currency}"
+    if isinstance(identity, IsinOnlyIdentity):
+        return identity.isin
+    return identity.ticker or fallback_isin
 
 
 def _instrument_from(answer: Resolved, *, fallback_isin: str) -> ResolvedInstrument:
@@ -616,6 +636,27 @@ class ResolverAdapter(_Adapter):
                 got=type(answer).__name__,
             )
             return Unavailable(error=f"{self.name}: unerwartete Antwort")
+
+        # **Zuerst der Katalog, dann die Form** (T-31, Matrix `#6`). Eine
+        # Gattung, die StockInfo gar nicht führt, scheitert nicht an ihrer
+        # Identität — sie scheitert an einer Entscheidung. Stünde die
+        # Formprüfung davor, käme ein Index als `NotFound` heraus, und der
+        # Benutzer läse „Symbol nennt keinen Handelsplatz": richtig beobachtet
+        # und am Grund vorbei.
+        #
+        # Ebenso wenig ist es ein **Vertragsverstoß** der Quelle. Yahoo *darf*
+        # einen Index finden; sie behauptet nur nicht, ihn zu bedienen. Die
+        # Deklarationsprüfung unten würde daraus `Unavailable` machen und
+        # damit einen Ausfall melden, den es nicht gibt.
+        if (
+            answer.instrument_type is not None
+            and answer.instrument_type not in INSTRUMENT_TYPES
+        ):
+            return ResolvedInstrument(
+                symbol=_symbol_of(answer, fallback_isin),
+                type=answer.instrument_type,
+                name=answer.name,
+            )
 
         problem = identity_problem(answer.identity, COLLECTOR_CODES)
         if problem:

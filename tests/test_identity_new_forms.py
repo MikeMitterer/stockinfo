@@ -58,14 +58,14 @@ from fastapi.testclient import TestClient
 
 from app.container import get_cached_quote_service
 from app.main import app
-from app.plugin_adapters import _instrument_from
-from app.providers.base import INSTRUMENT_TYPES, RawQuote, ResolvedInstrument
+from app.plugin_adapters import ResolverAdapter, _instrument_from
+from app.plugins.yahoo_search_resolver import YahooSearchResolverPlugin
+from app.providers.base import RawQuote, ResolvedInstrument
+from app.resolver import CompositeResolver
 from app.repository import QuoteRepository
 from stockinfo_plugin.types import (
     IsinOnlyIdentity,
-    NotFound,
     NotResponsible,
-    PairIdentity,
     Resolved,
 )
 from tests.boundaries import wire_real_chain
@@ -111,41 +111,45 @@ class _TypedQuoteSource:
         )
 
 
-class _TypingResolver:
-    """Die Außengrenze, die zu einem **Symbol** sagt, was es ist.
+class _YahooSearch:
+    """**Die** Außengrenze des Symbolwegs — hier hinge sonst `yf.Search`.
 
-    Das ist der „Gattungs-Befund der Quelle" aus Matrix `#5`. Dass die App ihn
-    über die Resolver-Rolle einholt, ist Entwurf und damit Verdrahtung — das
-    Orakel darunter prüft nur, was am Ende herauskommt.
+    Ersetzt wird genau das Netz, nicht ein StockInfo-Resolver. Genau daran ist
+    Runde 5 gescheitert: Das damalige Double hing sich an die Stelle des
+    Kern-Resolvers und umging Registry, `ResolverAdapter` und
+    `YahooSearchResolverPlugin` — also alles, was die Fähigkeit ausmacht. Der
+    Test war grün, und `BTC-EUR` kam im Produkt trotzdem nicht herein.
+
+    Geliefert wird, was Yahoo liefert: eine Trefferliste mit `symbol`,
+    `quoteType` und `exchange`. Was daraus wird, entscheidet die echte Kette.
 
     Args:
-        instrument_type: Was die Quelle über die Gattung sagt.
-        identity: Welche Identität sie dazu meldet. ``None`` heißt „kenne ich
-            nicht" und führt zur Ablehnung.
+        quote_type: Yahoos Gattungskennung, etwa ``CRYPTOCURRENCY``.
+        exchange: Yahoos Börsencode; ``None`` für Papiere ohne Handelsplatz.
+        known: Ob Yahoo das Symbol überhaupt kennt.
     """
 
-    SUPPORTED_KINDS = frozenset({"listed", "pair", "isin_only"})
-    SUPPORTED_TYPES = frozenset(INSTRUMENT_TYPES) | {"index"}
-
     def __init__(
-        self, instrument_type: str | None = None, identity: object = None
+        self, quote_type: str, exchange: str | None = None, known: bool = True
     ) -> None:
-        self._type = instrument_type
-        self._identity = identity
+        self._quote_type = quote_type
+        self._exchange = exchange
+        self._known = known
 
-    def handles(self, isin: str) -> bool:
-        return True
-
-    def resolve_isin(self, isin: str):
-        return NotFound()
-
-    def resolve_symbol(self, symbol: str):
-        if self._identity is None:
-            return NotFound()
-        return _instrument_from(
-            Resolved(identity=self._identity, instrument_type=self._type),
-            fallback_isin="",
+    def __call__(self, term: str) -> object:
+        quotes = (
+            [
+                {
+                    "symbol": term,
+                    "quoteType": self._quote_type,
+                    "exchange": self._exchange,
+                    "shortname": f"{term} aus der Suche",
+                }
+            ]
+            if self._known
+            else []
         )
+        return type("SearchResult", (), {"quotes": quotes})()
 
 
 class _BondResolver:
@@ -177,6 +181,18 @@ class _BondResolver:
         return NotResponsible(reason="diese Grenze sucht nur über die ISIN")
 
 
+def _real_resolver_chain(monkeypatch, search: _YahooSearch) -> object:
+    """Der **echte** Resolver-Stapel, mit ersetzter Netzgrenze.
+
+    `YahooSearchResolverPlugin` → `ResolverAdapter` → `CompositeResolver` —
+    dieselbe Verkettung, die `app.container` im Betrieb baut. Ausgetauscht ist
+    allein `yf.Search`; alles darüber ist Produktcode, und nur deshalb sagt
+    ein grüner Lauf hier etwas über das Produkt aus.
+    """
+    monkeypatch.setattr("app.resolver.yf.Search", search)
+    return CompositeResolver(ResolverAdapter(YahooSearchResolverPlugin(), "XETR"))
+
+
 def _chain(
     db_path: str, source: object, resolver: object
 ) -> tuple[TestClient, QuoteRepository]:
@@ -198,12 +214,14 @@ def _stored(repository: QuoteRepository, symbol: str) -> dict:
 
 
 @pytest.fixture
-def crypto_chain(tmp_path: Path) -> Iterator[tuple[TestClient, QuoteRepository]]:
-    """Eine Kette, deren Quelle `BTC-EUR` als Krypto in EUR meldet."""
+def crypto_chain(
+    tmp_path: Path, monkeypatch
+) -> Iterator[tuple[TestClient, QuoteRepository]]:
+    """Die echte Kette; Yahoo meldet für `BTC-EUR` `CRYPTOCURRENCY`."""
     yield _chain(
         str(tmp_path / "crypto.db"),
         _TypedQuoteSource("crypto"),
-        _TypingResolver("crypto", PairIdentity(base="BTC", quote_currency="EUR")),
+        _real_resolver_chain(monkeypatch, _YahooSearch("CRYPTOCURRENCY")),
     )
     app.dependency_overrides.clear()
 
@@ -255,7 +273,7 @@ def test_ein_paar_wird_ueber_den_oeffentlichen_weg_aufgenommen(crypto_chain) -> 
 
 
 def test_die_gattung_entscheidet_die_quelle_und_nicht_der_bindestrich(
-    tmp_path: Path,
+    tmp_path: Path, monkeypatch
 ) -> None:
     """Matrix `#5` wörtlich: Der Bindestrich allein macht kein Paar.
 
@@ -275,9 +293,9 @@ def test_die_gattung_entscheidet_die_quelle_und_nicht_der_bindestrich(
     client, repository = _chain(
         str(tmp_path / "kein-paar.db"),
         _TypedQuoteSource("stock"),
-        # Die Quelle kennt das Symbol **nicht** — damit gibt es keinen
+        # Yahoo kennt das Symbol **nicht** — damit gibt es keinen
         # Gattungs-Befund, und der Bindestrich allein darf nichts bewirken.
-        _TypingResolver(),
+        _real_resolver_chain(monkeypatch, _YahooSearch("EQUITY", known=False)),
     )
     try:
         response = client.get("/quote", params={"symbol": "BTC-EUR"})
@@ -294,7 +312,7 @@ def test_die_gattung_entscheidet_die_quelle_und_nicht_der_bindestrich(
 # ─── Matrix #7 · die Währung des Paars ────────────────────────────────────────
 
 
-def test_ein_kurs_in_fremder_waehrung_wird_abgelehnt(tmp_path: Path) -> None:
+def test_ein_kurs_in_fremder_waehrung_wird_abgelehnt(tmp_path: Path, monkeypatch) -> None:
     """Für `BTC-EUR` ist ein Kurs in USD ein **Datenfehler**, keine Umrechnung.
 
     Die Quote-Währung gehört bei einem Paar zur Identität — sie beantwortet
@@ -311,7 +329,7 @@ def test_ein_kurs_in_fremder_waehrung_wird_abgelehnt(tmp_path: Path) -> None:
     client, repository = _chain(
         str(tmp_path / "waehrung.db"),
         _TypedQuoteSource("crypto", currency="USD"),
-        _TypingResolver("crypto", PairIdentity(base="BTC", quote_currency="EUR")),
+        _real_resolver_chain(monkeypatch, _YahooSearch("CRYPTOCURRENCY")),
     )
     try:
         response = client.get("/quote", params={"symbol": "BTC-EUR"})
@@ -328,7 +346,9 @@ def test_ein_kurs_in_fremder_waehrung_wird_abgelehnt(tmp_path: Path) -> None:
 # ─── Matrix #6 · die nicht aufgenommene Gattung ───────────────────────────────
 
 
-def test_ein_index_wird_mit_eigener_kennung_abgelehnt(tmp_path: Path) -> None:
+def test_ein_index_wird_mit_eigener_kennung_abgelehnt(
+    tmp_path: Path, monkeypatch
+) -> None:
     """Indizes bleiben draußen — aber sie werden **ehrlich** abgelehnt.
 
     Der Unterschied ist der ganze Punkt von Matrix `#6`: Ohne eigene Kennung
@@ -340,7 +360,9 @@ def test_ein_index_wird_mit_eigener_kennung_abgelehnt(tmp_path: Path) -> None:
     client, repository = _chain(
         str(tmp_path / "index.db"),
         _TypedQuoteSource("index"),
-        _TypingResolver("index", IsinOnlyIdentity(isin="DE0008469008")),
+        # Yahoo kennt `^GDAXI` und meldet `INDEX` — die Gattung steht damit
+        # fest, und die App lehnt sie mit **ihrem** Grund ab.
+        _real_resolver_chain(monkeypatch, _YahooSearch("INDEX")),
     )
     try:
         response = client.get("/quote", params={"symbol": "^GDAXI"})

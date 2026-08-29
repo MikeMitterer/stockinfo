@@ -287,6 +287,86 @@ class YFinanceResolver:
         """Yahoos Suche kennt keine Marktgrenze — hier gibt es nichts abzulehnen."""
         return True
 
+    def resolve_symbol(self, symbol: str) -> Resolution:
+        """Fragt Yahoo, **was** dieses Symbol ist (T-31, Matrix `#5`).
+
+        Der Einstieg für Papiere ohne ISIN. Yahoo führt `BTC-EUR` nativ und
+        meldet `quoteType: CRYPTOCURRENCY`; aus diesem **Befund** entsteht die
+        Paar-Identität — nicht aus dem Bindestrich im Symbol.
+
+        Der Unterschied ist nicht akademisch. Ein `^GDAXI` trägt kein Merkmal,
+        an dem sich eine Gattung ablesen ließe, und ein `BRK-B.DE` trägt einen
+        Bindestrich, ohne ein Paar zu sein. Wer aus der Symbolform schließt,
+        bekommt bei beiden die falsche Antwort; wer fragt, bekommt bei beiden
+        die richtige.
+
+        Args:
+            symbol: Das vom Nutzer genannte Symbol.
+
+        Returns:
+            `ResolvedInstrument` mit der Form, die zur gemeldeten Gattung
+            passt. `NotFound`, wenn Yahoo das Symbol nicht kennt;
+            `Unavailable`, wenn die Suche nicht antwortet — ein Netzfehler ist
+            kein „gibt es nicht".
+        """
+        try:
+            quotes = yf.Search(symbol).quotes
+        except Exception as exc:
+            logger.warning("resolve_symbol_failed", symbol=symbol, error=str(exc))
+            return Unavailable(error=f"yahoo: {exc}")
+
+        exact = next(
+            (quote for quote in quotes if quote.get("symbol") == symbol), None
+        )
+        if exact is None:
+            logger.info("resolve_symbol_unknown", symbol=symbol)
+            return NotFound()
+
+        # **Ein unbekannter `quoteType` wird durchgereicht, nicht zu `None`.**
+        # Der Unterschied trägt Matrix `#6`: `None` heißt „die Quelle hat
+        # nichts gesagt", `index` heißt „sie hat etwas gesagt, das wir nicht
+        # führen". Nur im zweiten Fall gibt es einen Grund, der den Benutzer
+        # weiterbringt — und das Ticket verlangt ihn ausdrücklich, statt auf
+        # `stock` zu runden.
+        reported = _quote_type(exact)
+        instrument_type = QUOTE_TYPE_MAP.get(reported) or (reported.lower() or None)
+        if instrument_type == "crypto":
+            # `{base}-{quote}` ist Yahoos Schreibweise für ein Paar. Zerlegt
+            # wird sie **erst jetzt** — nachdem die Gattung feststeht.
+            base, _, quote_currency = symbol.partition("-")
+            if not base or not quote_currency:
+                return NotFound()
+            return ResolvedInstrument(
+                symbol=symbol,
+                name=exact.get("shortname") or exact.get("longname"),
+                type=instrument_type,
+                kind="pair",
+                base=base.upper(),
+                quote_currency=quote_currency.upper(),
+            )
+
+        ticker, mic = _identity(symbol, exact.get("exchange"))
+        if not ticker or not mic:
+            # Kein erfundener Handelsplatz — dieselbe Regel wie im ISIN-Weg.
+            # Die Gattung reist trotzdem mit: Der Aufrufer entscheidet damit,
+            # ob er ablehnt, weil er die Gattung nicht führt, oder weil das
+            # Symbol seine Börse nicht nennt. Zwei verschiedene Antworten.
+            logger.info(
+                "resolve_symbol_without_venue",
+                symbol=symbol,
+                instrument_type=instrument_type,
+            )
+            return ResolvedInstrument(symbol=symbol, type=instrument_type)
+
+        return ResolvedInstrument(
+            symbol=symbol,
+            name=exact.get("shortname") or exact.get("longname"),
+            type=instrument_type,
+            kind="listed",
+            ticker=ticker,
+            mic=mic,
+        )
+
     def resolve_isin(self, isin: str) -> Resolution:
         """Sucht das Listing der bevorzugten Börse zu einer ISIN über Yahoo.
 
