@@ -195,6 +195,130 @@ class DailyPoint(BaseModel):
     currency: str
 
 
+class ListedIdentityOut(BaseModel):
+    """Ein Listing an einem echten Handelsplatz — Ticker und MIC."""
+
+    kind: Literal["listed"] = "listed"
+    ticker: str = Field(description="Kanonischer Ticker")
+    mic: str = Field(description="ISO-10383-MIC des Handelsplatzes")
+    isin: str | None = Field(default=None, description="ISIN, falls bekannt")
+
+
+class PairIdentityOut(BaseModel):
+    """Ein Währungspaar — die Form für natives Krypto."""
+
+    kind: Literal["pair"] = "pair"
+    base: str = Field(description="Basiswert, z.B. BTC")
+    quote_currency: str = Field(description="Quote-Währung, ISO 4217")
+
+
+class IsinOnlyIdentityOut(BaseModel):
+    """Nur eine ISIN — die Form für OTC-Anleihen ohne Handelsplatz."""
+
+    kind: Literal["isin_only"] = "isin_only"
+    isin: str = Field(description="Die ISIN; hier ist sie die ganze Identität")
+
+
+IdentityOut = Annotated[
+    ListedIdentityOut | PairIdentityOut | IsinOnlyIdentityOut,
+    Field(discriminator="kind"),
+]
+"""Die Identität am REST-Rand — diskriminiert über ``kind``.
+
+Ein Konsument liest zuerst `kind` und weiß danach, welche Felder es gibt.
+Ohne den Diskriminator müsste er aus der Feldbelegung schließen, und genau
+dieses Raten ist der Zustand, den T-31 beendet.
+"""
+
+# Die Identitätsspalten der Instrumententabelle, in einer Aufzählung. Sie steht
+# hier und nicht im Repository, weil beide Richtungen — hinein und heraus —
+# dieselbe Menge meinen; zwei Listen liefen beim ersten Zusatzfeld auseinander.
+IDENTITY_COLUMNS = ("kind", "ticker", "mic", "base", "quote_currency", "isin")
+
+
+def identity_columns(identity: IdentityOut) -> dict[str, str | None]:
+    """Die Identität als **vollständige** Spaltenbelegung.
+
+    Vollständig heißt: Jede der sechs Spalten kommt vor, die nicht zur Form
+    gehörenden mit ``None``. Das ist keine Umständlichkeit, sondern die
+    Bedingung des `CHECK` — er verlangt je Form ihre Felder *und schließt die
+    der anderen aus*. Eine Belegung, die nur die eigenen Felder setzt, ließe
+    beim Wechsel der Form die alten stehen und verletzte ihn.
+
+    Args:
+        identity: Die Identität in ihrer Form.
+
+    Returns:
+        Spaltenname → Wert, für alle sechs Identitätsspalten.
+    """
+    columns: dict[str, str | None] = dict.fromkeys(IDENTITY_COLUMNS)
+    columns["kind"] = identity.kind
+    if isinstance(identity, ListedIdentityOut):
+        columns["ticker"] = identity.ticker
+        columns["mic"] = identity.mic
+        columns["isin"] = identity.isin
+    elif isinstance(identity, PairIdentityOut):
+        columns["base"] = identity.base
+        columns["quote_currency"] = identity.quote_currency
+    else:
+        columns["isin"] = identity.isin
+    return columns
+
+
+def identity_from_columns(row: object) -> IdentityOut | None:
+    """Die Identität aus einer gespeicherten Zeile — oder ``None``.
+
+    ``None`` heißt „diese Zeile trägt keine vollständige Identität". Seit dem
+    `CHECK` kann das im laufenden Bestand nicht mehr vorkommen; eine
+    Alt-Datenbank vor dem Umzug bringt es trotzdem mit, und dort ist ein
+    ehrliches ``None`` besser als eine halb gefüllte Form.
+
+    Args:
+        row: Eine Instrumentenzeile als Mapping.
+
+    Returns:
+        Die passende Identität, oder ``None``.
+    """
+    get = row.get if hasattr(row, "get") else lambda key: row[key]  # type: ignore[union-attr]
+    kind = get("kind") or "listed"
+    if kind == "pair" and get("base") and get("quote_currency"):
+        return PairIdentityOut(base=get("base"), quote_currency=get("quote_currency"))
+    if kind == "isin_only" and get("isin"):
+        return IsinOnlyIdentityOut(isin=get("isin"))
+    if kind == "listed" and get("ticker") and get("mic"):
+        return ListedIdentityOut(
+            ticker=get("ticker"), mic=get("mic"), isin=get("isin")
+        )
+    return None
+
+
+def identity_where(identity: IdentityOut) -> tuple[str, tuple]:
+    """Die `WHERE`-Bedingung, die genau diese Identität trifft.
+
+    Je Form eine andere, und je Form liegt ein eigener partieller Unique-Index
+    darauf. Eine gemeinsame Bedingung über alle sechs Spalten gäbe es zwar,
+    aber sie könnte keinen Index nutzen und träfe bei ``NULL`` ohnehin nichts —
+    SQLite hält zwei ``NULL`` nie für gleich.
+
+    Args:
+        identity: Die gesuchte Identität.
+
+    Returns:
+        Die Bedingung und ihre Parameter, für ein ``SELECT … WHERE``.
+    """
+    if isinstance(identity, PairIdentityOut):
+        return (
+            "kind = 'pair' AND base = ? AND quote_currency = ?",
+            (identity.base, identity.quote_currency),
+        )
+    if isinstance(identity, IsinOnlyIdentityOut):
+        return ("kind = 'isin_only' AND isin = ?", (identity.isin,))
+    return (
+        "kind = 'listed' AND ticker = ? AND mic = ?",
+        (identity.ticker, identity.mic),
+    )
+
+
 class QuoteResponse(BaseModel):
     """Vollständige Kurs- und Metadaten-Antwort für ein Wertpapier.
 
@@ -203,7 +327,6 @@ class QuoteResponse(BaseModel):
 
     model_config = ConfigDict(json_schema_extra=always_present("cached", "stale"))
 
-    isin: str | None = None
     symbol: str
     exchange: str | None = None
     name: str | None = None
@@ -234,8 +357,16 @@ class QuoteResponse(BaseModel):
     # zuzusagen hieße, der Beschaffung eine Speicher-Identität abzuverlangen,
     # die es zu dem Zeitpunkt nicht gibt. Zugesagt wird sie auf `instrument`,
     # wo die Zeile bereits existiert.
-    ticker: str = Field(description="Kanonischer Ticker")
-    mic: str = Field(description="ISO-10383-MIC des Handelsplatzes")
+    #
+    # **Seit T-31 ein Feld statt zweier** — und `isin` ist mit hineingewandert.
+    # `ticker`/`mic` daneben stehen zu lassen „wo sie wahr sind" wäre dieselbe
+    # zweite Wahrheit, die der Vertrag bei `QuoteRequest.isin` gerade
+    # beseitigt, nur an der teureren Stelle: Ein Konsument müsste raten, ob ein
+    # leeres `mic` „gibt es nicht" oder „wurde nicht ermittelt" heißt — und
+    # genau diese Unterscheidung ist der Grund für die Union.
+    identity: IdentityOut = Field(
+        description="Die Identität in ihrer Form — listed, pair oder isin_only"
+    )
 
     price: float
     quote_time: str
@@ -341,14 +472,20 @@ class InstrumentSummary(BaseModel):
         )
     )
 
-    isin: str | None = None
     symbol: str
-    # Die kanonische Identität. **Pflicht, nicht nullable** — die Invariante
-    # nach dem Umzug lautet `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`,
+    # Die kanonische Identität. **Pflicht, nicht nullable** — eine gespeicherte
+    # Zeile ohne vollständige Identität kann es seit dem `CHECK` nicht geben,
     # und `nullable` wäre die Zusage an Konsumenten, mit einem Zustand zu
-    # rechnen, den es nicht geben darf.
-    ticker: str = Field(description="Kanonischer Ticker")
-    mic: str = Field(description="ISO-10383-MIC des Handelsplatzes")
+    # rechnen, den es nicht gibt.
+    #
+    # **Seit T-31 ein Feld statt dreier.** Welche Felder darin stehen, sagt
+    # `kind`; siehe `QuoteResponse.identity` für die Begründung.
+    identity: IdentityOut = Field(
+        description="Die Identität in ihrer Form — listed, pair oder isin_only"
+    )
+    # **Kein Teil der Identität**, sondern der Schlüssel der gespeicherten
+    # Zeile: opak, dauerhaft, unabhängig von der Form. Deshalb steht sie
+    # daneben und nicht darin.
     listing_id: str = Field(
         description="Opake, dauerhafte Kennung des Listings — nie zerlegen"
     )
