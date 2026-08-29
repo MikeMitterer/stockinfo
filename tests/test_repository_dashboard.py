@@ -23,10 +23,10 @@ def _save(repo: QuoteRepository, isin: str, symbol: str, price: float, t: str) -
     """
     repo.save_quote(
         QuoteResponse(
-            isin=isin,
             symbol=symbol,
-            ticker=symbol.split(".")[0],
-            mic="XETR",
+            identity=ListedIdentityOut(
+                ticker=symbol.split(".")[0], mic="XETR", isin=isin
+            ),
             currency="EUR",
             price=price,
             quote_time=t,

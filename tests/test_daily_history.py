@@ -28,10 +28,10 @@ def _seed(
     """
     repo.save_quote(
         QuoteResponse(
-            isin=isin,
             symbol=symbol,
-            ticker=symbol.split(".")[0],
-            mic="XETR",
+            identity=ListedIdentityOut(
+                ticker=symbol.split(".")[0], mic="XETR", isin=isin
+            ),
             currency="EUR",
             price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",

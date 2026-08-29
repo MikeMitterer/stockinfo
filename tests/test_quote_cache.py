@@ -711,10 +711,10 @@ class _RecordingCall:
 
     def _response_for(self, symbol: str) -> QuoteResponse:
         return QuoteResponse(
-            isin="IE00B4L5Y983",
             symbol=symbol,
-            ticker=symbol.split(".")[0],
-            mic="XETR",
+            identity=ListedIdentityOut(
+                ticker=symbol.split(".")[0], mic="XETR", isin="IE00B4L5Y983"
+            ),
             currency="EUR",
             exchange="Xetra",
             price=129.1,
