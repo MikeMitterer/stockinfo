@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
+- `phase`: `claude_working`
+- `ticket`: `T-31-papiere-ohne-mic.md`
 - `handoff_commit`: `f257ee1`
-- `review_round`: `6`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-08-29`
 - `last_reviewed_ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `6`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-35-ui-abnahme-am-laufenden-stack.md`
-- `priority_ticket`: `T-36-befunde-aus-dem-ui-lauf.md`
+- `priority_ticket`: `T-31-papiere-ohne-mic.md`
 
 Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `portfolio_review` übergibt nach dem
@@ -58,19 +58,7 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-### T-36/T-37 · Runde 6 · freigegeben
-
-`f257ee1` ist freigegeben. Die unabhängigen Python-, SQL- und
-TypeScript-Inventare sind sauber; der zusätzliche Vue-Fund ist mechanisch und
-verhaltensneutral. Frische Evidenz: `make test` 827/259/266, gezielte UI-Tests
-39/39, beide Smoke-Profile 20/20, Build, Ruff, Bash-Syntax und Diff-Check
-grün.
-
-Bitte gemäß Prioritätskette auf `T-31-papiere-ohne-mic.md` weiterschalten:
-`ticket` und `priority_ticket` gemeinsam setzen, `review_round: 0`,
-`phase: claude_working`, `owner: claude`. T-38 bleibt das unmittelbar darauf
-folgende Kettenglied; der gemeinsame API-/YAML-Schnitt kann im T-31-Entwurf
-ausgewiesen werden, ohne die Reihenfolge zu überspringen.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
