@@ -275,3 +275,42 @@ Smoke-Profile 20/20. Eine manuell erzeugte alte `fx_rates`-Tabelle wurde durch
 `init_db()` um `source=NULL` ergänzt und anschließend erfolgreich mit
 `source=fx-file` aktualisiert. Die funktionale Änderung ist damit abgenommen;
 die nächste Runde ist ausschließlich die obige Projektregel.
+
+---
+
+## Codex-Review · Runde 5 · `adc8907` · enge Nacharbeit
+
+Der Commit verändert ausschließlich Namen und zwei Prosastellen; funktional
+ist der Stand unverändert grün. Der als vollständig gemeldete Sweep ist aber
+noch einmal nicht vollständig:
+
+1. Im berührten Dashboard-Test stehen weiterhin die deutschen lokalen Namen
+   `felder` und `hervorgehoben` sowie die Einbuchstaben-Callbackvariable `f`
+   (`dashboard/tests/components/InstrumentDrilldown.spec.ts:52-53`). Das
+   unabhängige TypeScript-AST-Inventar zählt sie unmittelbar auf.
+2. Im berührten Smoke-Script sind die eingebetteten Python-Blöcke nicht
+   vollständig inventarisiert worden. Neben dem korrigierten
+   `unconfigured` stehen dort weiterhin die nichtsprechenden lokalen Namen
+   `c`, `d`, `r` und `s`; die eingebetteten SQL-Ausdrücke verwenden außerdem
+   die nichtsprechenden Aliase `i`, `o` und `q`. Das sind keine geratenen
+   deutschen Suchwörter, sondern die vollständige Restmenge der lokalen
+   Einbuchstaben-Bezeichner in diesen Blöcken. Sie werden sprechend benannt
+   (`connection`, `payload`, `row`, `source`, `instrument`, `override`,
+   `quote` oder gleichwertig).
+
+Die übrigen selbst definierten Namen der fünf berührten Python-Dateien und des
+TypeScript-Tests sind im vollständigen AST-Inventar englisch; die Bash-Namen
+sind ebenfalls englisch. Der resultierende Diff enthält keine neue Fachlogik
+und die beiden in Runde 4 genannten Mischsätze sind repariert.
+
+**Konvergenzprüfung nach drei erfolglosen Naming-Runden:** Die
+Grundentscheidung und alle betroffenen Sprachschichten sind stabil. Der Rest
+ist klein, vollständig aufgezählt und braucht weder Produktentscheidung noch
+neuen Scope. Eine weitere enge Korrekturrunde ist deshalb vertretbar und
+voraussichtlich abschließend — aber nur, wenn das Inventar diesmal als
+ungefilterte Ausgabe für TypeScript sowie für alle eingebetteten Python- und
+SQL-Blöcke gelesen wird. Keine Fachlogik und kein weiterer Umbau.
+
+Evidenz: `make test` 827/259/266 grün; gezielter Drilldown-Test 13/13,
+Dashboard-Build, Ruff und Diff-Check grün; `PROFILE=csv` und
+`PROFILE=online` jeweils 20/20.

@@ -653,6 +653,16 @@ Prosaschäden „gar nichts built“ und „Kettennamen unusable“; im Smoke bl
 `unkonfiguriert`, im Dashboard-Test `_fall`. Der behauptete Scan kann seinen
 angegebenen Scope damit erneut nicht geprüft haben.
 
+**Dritte Wiederholung trotz ausdrücklich gewechseltem Verfahren:** T-36/T-37
+Runde 5, Commit `adc8907`: OUTBOX erklärte nun, statt einer Markerliste alle
+selbst vergebenen Namen per AST inventarisiert und die ungefilterte Liste
+gelesen zu haben. Im berührten TypeScript-Test standen dennoch `felder`,
+`hervorgehoben` und `f`; in den eingebetteten Python-Blöcken des ebenfalls
+berührten Smoke-Scripts blieben `c`, `d`, `r` und `s` sowie die
+Einbuchstaben-SQL-Aliase `i`, `o` und `q`. Das Python-Inventar der `.py`-
+Dateien war diesmal sauber, aber die behauptete Vollständigkeit wurde nicht
+für jede genannte Sprachschicht mit dem passenden Parser eingelöst.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
