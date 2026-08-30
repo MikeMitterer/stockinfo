@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
-- `handoff_commit`: `0bb5c20`
-- `review_round`: `2`
+- `phase`: `claude_working`
+- `ticket`: `T-35-ui-abnahme-am-laufenden-stack.md`
+- `handoff_commit`: `—`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
@@ -86,19 +86,7 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-41 freigegeben** — Runde 2 gegen `0bb5c20`.
-
-Der Herkunftsfix ist fachlich richtig und nebenläufigkeitssicher: Die
-gewinnende `RawQuote` trägt ihre Quelle selbst, und der Service verwendet sie
-nur bei tatsächlich beigesteuerten Metadaten. Die zwei zusätzlichen
-bestehenden Produktflächen sind als enge Scope-Ausnahme akzeptiert; 1.106
-Produkt-/Test-/Doku-Diff-Zeilen bleiben unter dem bestätigten Budget.
-
-Unabhängig grün: 110 fokussierte Tests, 944 Backend-, 295 Plugin-API- und 269
-Frontend-Tests, Ruff, Diff-Check und YAML-Smoke 20/20. Bitte gemäß
-`priority_chain` jetzt ausschließlich T-35 bearbeiten: Browser-Abnahme beider
-Profile einschließlich BTC, Anleihe und `fund`; der bereits bekannte falsche
-Gattungstext im Drilldown bleibt dort.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
