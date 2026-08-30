@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-38-pflichtfelder-im-vertrag.md`
-- `handoff_commit`: `96b3184`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `34930da`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-38-pflichtfelder-im-vertrag.md`
 - `last_reviewed_commit`: `96b3184`
@@ -80,35 +80,75 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-38 Runde 1 — zwei begrenzte Korrekturen gegen `96b3184`**
-
-1. **Die Vertragsauskunft muss vollständig und widerspruchsfrei sein.**
-   `/fields` liefert derzeit nur `resolved` und `quote`. Nenne dort alle sechs
-   vorhandenen Plugin-Ergebnistypen (`Resolved`, `Quote`, `DailyBar`,
-   `DailySeries`, `FxRate`, `Reading`) mit ihren Pflicht- und Optionalfeldern
-   und sichere die exakte Menge plus repräsentative Felder im Test. Korrigiere
-   außerdem die zwei veralteten Gattungsbeschreibungen in
-   `contract/core-contract.json`: offener kanonischer Katalog `stock`, `etf`,
-   `etc`, `fund`, `crypto`, `bond`; keine `null`-Zusage bei einem Pflichtfeld.
-   Kein neuer Endpunkt, kein neues Modell, keine neue Abstraktion.
-2. **Leerraum ist kein Pflichtwert.** Nur aus Leerzeichen bestehende Werte für
-   `name` oder `type` dürfen den öffentlichen Quote-/REST-Weg nicht als
-   erfolgreiche Antwort verlassen. Nutze einen vorhandenen gültigen
-   Fallbackwert oder lehne strukturiert ab; ergänze einen direkten Test über
-   den öffentlichen Eintrittspfad. Bleibe in den vorhandenen
-   Precheck-/Modellgrenzen, ohne neuen Helper oder neue Abstraktion.
-
-Akzeptierte Teile sind eingefroren; es gibt keine weiteren Befunde. Vor dem
-nächsten Produkt-Edit den neuen Scope-Vertrag im Ticket ergänzen. T-38 wird
-nicht rückwirkend um Kommentarbereinigung oder andere Architekturarbeit
-erweitert.
-
-Belege: 69 gezielte Tests bestanden; vollständig 885 Backend-, 270
-Plugin-API- und 269 Dashboard-Tests bestanden, Ruff ohne Befund. Direkte
-Gegenproben ergaben `plugin_contract_keys == ['quote', 'resolved']` und eine
-erfolgreiche REST-Antwort mit `name == '   '`.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**T-38 Runde 2 zur Prüfung** — `handoff_commit: 34930da`
+
+Beide Befunde abgearbeitet, nichts darüber hinaus. Der Scope-Vertrag steht seit
+`ec852ff` im Ticket, vor dem ersten Produktedit dieser Runde.
+
+### Befund 1 — die Auskunft war unvollständig
+
+`/fields` nennt jetzt alle sechs Ergebnistypen mit Art, Pflicht und Bedeutung
+je Feld; weiterhin **aus den Dataclasses abgeleitet**, nicht danebengepflegt.
+Die Artbestimmung musste dafür genauer werden: `tuple[DailyBar, ...]` enthält
+den Text `bar` und wäre sonst keine Liste, `bool` wird gern für `int` gehalten,
+und ein Feld mit mehreren möglichen Skalartypen heißt `object` — eine davon zu
+nennen wäre eine Zusage, auf die sich jemand verlässt.
+
+Die zwei Gattungsbeschreibungen im Artefakt sind erneuert: offener Katalog,
+keine `null`-Zusage bei einem Pflichtfeld.
+
+Riegel: die **exakte** Typmenge (nicht ein Enthaltensein — sonst bliebe ein
+siebter Typ unbemerkt), sechs Stichproben quer über Pflicht und Art, und ein
+Test auf beide Gattungstexte.
+
+### Befund 2 — Leerraum, und ein Riegel, der zuerst nichts geprüft hat
+
+`_has_content` behandelt einen Wert aus reinem Leerraum in der Vorabprüfung als
+fehlend. Das ist die Stelle, die T-38 in Runde 1 nur zur Hälfte geschlossen
+hatte: im Plugin-Vertrag und im Repository, nicht im REST-Weg.
+
+**Der erste Riegel dazu war grün, ohne etwas zu prüfen.** Er lief über den
+ISIN-Weg, und dort weist schon die Host-Grenze Leerraum ab — er wäre auch dann
+grün geblieben, wenn die Vorabprüfung ihn durchließe. Aufgefallen ist das nur,
+weil ich die Regel testweise ausgeschaltet habe; der Test blieb grün. Er läuft
+jetzt über den **By-Symbol-Eintritt**, wo nicht aufgelöst wird und die Antwort
+der Kursquelle die Vorabprüfung ungefiltert erreicht.
+
+Gegenprobe belegt: mit Mutant `2 failed`, ohne `2 passed`.
+
+### Soll/Ist
+
+| Wert | geplant | tatsächlich |
+|---|---:|---:|
+| fachliche Änderungen | 2 | 2 |
+| Produktdateien | 3 | 3 |
+| Test-/Dokumentationsdateien | 2 | 1 |
+| Diff-Zeilen | ~150 | 274 |
+
+**Zur Zeilenabweichung:** Zwei Drittel davon sind die zwanzig
+Bedeutungstexte für die vier neu beschriebenen Ergebnistypen — ohne sie stünde
+in der Auskunft ein Feldname ohne Aussage. Der Rest ist die Neufassung des
+Leerraum-Tests nach der Gegenprobe. Kein Scope-Auslöser: Dateizahl innerhalb
+des Budgets, keine neue Schicht, kein neuer Typ, weit unter 800 Zeilen.
+
+### Läufe
+
+| Lauf | Ergebnis |
+|---|---|
+| `pytest tests` | 895 passed, 29 skipped |
+| `pytest plugin_api` | 270 passed, 1 skipped |
+| `vue-tsc --noEmit` / `vitest run` | ohne Befund / 269 passed |
+| `ruff check app tests plugin_api` | All checks passed |
+| `./_tickets/T-35-smoke.sh --run` | 20/20 |
+
+### Worauf ich besonders geschaut haben möchte
+
+**Ob noch mehr Riegel aus dieser Runde und aus Runde 1 aus dem falschen Grund
+grün sind.** Der Leerraum-Fall war einer, und ich habe ihn nur gefunden, weil
+ich zufällig die Gegenprobe gemacht habe. Die übrigen T-38-Tests habe ich
+nicht einzeln mutiert.
