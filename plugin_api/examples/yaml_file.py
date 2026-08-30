@@ -65,7 +65,6 @@ from stockinfo_plugin.invariants import (
     is_finite_number,
     has_timezone,
     identity_problem,
-    is_finite_price,
 )
 from stockinfo_plugin import (
     DailyBar,
@@ -225,33 +224,98 @@ def _require_currency(value: object, where: str) -> str:
     return code
 
 
+def _require_number(
+    value: object,
+    where: str,
+    *,
+    positive: bool = False,
+    bounds: tuple[float, float] | None = None,
+) -> float:
+    """Eine Zahl aus der Datei — geprüft am **rohen** Wert, nicht am Ergebnis.
+
+    Args:
+        value: Der Wert, wie YAML ihn geliefert hat.
+        where: Fundort für die Meldung.
+        positive: Ob nur echte positive Werte zählen — Kurse und Raten.
+        bounds: Zulässiger Bereich, falls die Quelle einen deklariert.
+
+    Returns:
+        Der Wert als `float`.
+
+    Raises:
+        FileProblem: Der Wert ist keine Zahl, ist ``True``/``False``, ist eine
+            Zeichenkette, ist nicht endlich, liegt außerhalb oder lässt sich
+            nicht als Gleitkommazahl darstellen.
+
+    Drei Fälle sehen wie Zahlen aus und sind keine. ``True`` ist in Python eine
+    Ganzzahl und käme sonst als ``1.0`` durch. ``"20"`` ist Text; ihn
+    umzuwandeln hieße zu raten, was der Benutzer meinte. Und eine Ganzzahl mit
+    tausend Stellen ist zwar eine Zahl, aber keine, die sich als
+    Gleitkommazahl ausdrücken lässt — sie warf bisher erst beim Abruf.
+    """
+    if isinstance(value, bool) or not isinstance(value, (int, float)):
+        raise FileProblem(
+            f"{where} ist {value!r} ({type(value).__name__}) statt einer Zahl"
+        )
+    try:
+        number = float(value)
+    except (OverflowError, ValueError) as error:
+        raise FileProblem(
+            f"{where} ist zu groß für eine Gleitkommazahl"
+        ) from error
+    if not is_finite_number(number):
+        raise FileProblem(f"{where} ist {value!r} und damit nicht endlich")
+    if positive and number <= 0:
+        raise FileProblem(
+            f"{where} ist {value!r} — verlangt ist ein positiver Kurs. "
+            "Ein negativer ist keiner, und 0 ist keine Angabe, sondern eine "
+            "fehlende, die sich als Zahl ausgibt"
+        )
+    if bounds is not None:
+        low, high = bounds
+        if not low <= number <= high:
+            raise FileProblem(
+                f"{where} = {number} liegt außerhalb des deklarierten "
+                f"Bereichs {low}..{high}"
+            )
+    return number
+
+
 def _identity_of(entry: dict) -> object:
     """Baut die Identität eines Eintrags in ihrer Form.
 
+    Jedes Feld läuft durch `_require_text`, **bevor** `identity_problem` es
+    sieht: Eine Zahl in `ticker` warf sonst aus dem Konstruktor, weil dort
+    jemand `.strip()` ruft.
+
     Raises:
-        FileProblem: Die Form fehlt oder ist unbekannt. Zu raten wäre hier
-            besonders teuer: Aus einem `pair` ohne `kind` würde ein Listing
-            ohne Handelsplatz, und das Papier landete unter falscher Identität
-            im Bestand.
+        FileProblem: Die Form fehlt, ist unbekannt, oder ein Feld trägt keinen
+            Text. Zu raten wäre hier besonders teuer: Aus einem `pair` ohne
+            `kind` würde ein Listing ohne Handelsplatz, und das Papier landete
+            unter falscher Identität im Bestand.
     """
     identity = entry.get("identity") or {}
-    kind = identity.get("kind")
+    where = f"Eintrag {entry.get('id')!r}.identity"
+    kind = _require_text(identity.get("kind"), f"{where}.kind")
+
     if kind == "listed":
+        isin = identity.get("isin")
         return ListedIdentity(
-            ticker=identity.get("ticker") or "",
-            mic=identity.get("mic") or "",
-            isin=identity.get("isin"),
+            ticker=_require_text(identity.get("ticker"), f"{where}.ticker"),
+            mic=_require_text(identity.get("mic"), f"{where}.mic"),
+            isin=_require_text(isin, f"{where}.isin") if isin is not None else None,
         )
     if kind == "pair":
         return PairIdentity(
-            base=identity.get("base") or "",
-            quote_currency=identity.get("quote_currency") or "",
+            base=_require_text(identity.get("base"), f"{where}.base"),
+            quote_currency=_require_text(
+                identity.get("quote_currency"), f"{where}.quote_currency"
+            ),
         )
     if kind == "isin_only":
-        return IsinOnlyIdentity(isin=identity.get("isin") or "")
+        return IsinOnlyIdentity(isin=_require_text(identity.get("isin"), f"{where}.isin"))
     raise FileProblem(
-        f"Eintrag {entry.get('id')!r}: identity.kind ist {kind!r} — "
-        "erlaubt sind listed, pair und isin_only"
+        f"{where}.kind ist {kind!r} — erlaubt sind listed, pair und isin_only"
     )
 
 
@@ -289,8 +353,17 @@ class _Catalogue:
             raw = yaml.safe_load(path.read_text(encoding="utf-8"))
         except OSError as error:
             raise FileProblem(f"{path} nicht lesbar: {error}") from error
+        except UnicodeError as error:
+            raise FileProblem(
+                f"{path} ist nicht als UTF-8 lesbar: {error}"
+            ) from error
         except yaml.YAMLError as error:
             raise FileProblem(f"{path} ist kein gültiges YAML: {error}") from error
+        except ValueError as error:
+            # Python bricht das Umwandeln sehr langer Ganzzahlen ab (Grenze
+            # 4300 Stellen). Das ist ein Wert in der Datei, kein Fehler der
+            # App — und gehört deshalb in dieselbe Meldung wie ein Syntaxfehler.
+            raise FileProblem(f"{path} enthält einen unlesbaren Wert: {error}") from error
 
         if not isinstance(raw, dict):
             raise FileProblem(f"{path} enthält kein Objekt auf oberster Ebene")
@@ -413,11 +486,7 @@ class _Catalogue:
                 sondern eine fehlende Angabe, die sich als Zahl ausgibt.
         """
         _require_currency(amount.get("currency"), where)
-        if not is_finite_price(amount.get("value")):
-            raise FileProblem(
-                f"{where}.value {amount.get('value')!r} ist kein brauchbarer "
-                "Betrag — verlangt ist eine positive, endliche Zahl"
-            )
+        _require_number(amount.get("value"), f"{where}.value", positive=True)
         _as_moment(amount.get("as_of"), where)
 
     @staticmethod
@@ -441,29 +510,11 @@ class _Catalogue:
             if spec.kind != "number":
                 _require_text(metadata[key], f"{where}.metadata.{key}")
                 continue
-            try:
-                number = float(metadata[key])
-            except (TypeError, ValueError) as error:
-                raise FileProblem(
-                    f"{where}: metadata.{key} ist {metadata[key]!r} und damit "
-                    "keine Zahl"
-                ) from error
-            if not is_finite_number(number):
-                raise FileProblem(
-                    f"{where}: metadata.{key} ist {metadata[key]!r} — verlangt "
-                    "ist eine endliche Zahl"
-                )
-            # **Der deklarierte Bereich ist die Zusage der Quelle an sich
-            # selbst.** Eine TER von 5000 Basispunkten ist keine TER, sondern
-            # ein Tippfehler; sie durchzulassen hieße, den eigenen `FieldSpec`
-            # für Zierde zu halten.
-            if spec.plausible:
-                low, high = spec.plausible
-                if not low <= number <= high:
-                    raise FileProblem(
-                        f"{where}: metadata.{key} = {number} liegt außerhalb "
-                        f"des deklarierten Bereichs {low}..{high}"
-                    )
+            _require_number(
+                metadata[key],
+                f"{where}.metadata.{key}",
+                bounds=spec.plausible or None,
+            )
 
     @staticmethod
     def _check_closes(closes: list[dict], where: str) -> None:
@@ -484,11 +535,11 @@ class _Catalogue:
                     "History — zwei Werte für einen Tag sind kein Verlauf"
                 )
             seen.add(day)
-            if not is_finite_price(close.get("value")):
-                raise FileProblem(
-                    f"{where}: Schlusskurs {close.get('value')!r} am "
-                    f"{day.isoformat()} ist kein brauchbarer Betrag"
-                )
+            _require_number(
+                close.get("value"),
+                f"{where}.history[{day.isoformat()}].value",
+                positive=True,
+            )
 
     def _add_rate(self, rate: dict) -> None:
         """Prüft einen Wechselkurs und legt ihn ab."""
@@ -499,10 +550,7 @@ class _Catalogue:
             problem = currency_problem(value)
             if problem:
                 raise FileProblem(f"{where}: {field} {problem}")
-        if not is_finite_price(rate.get("rate")):
-            raise FileProblem(
-                f"{where}: rate {rate.get('rate')!r} ist kein brauchbarer Kurs"
-            )
+        _require_number(rate.get("rate"), f"{where}.rate", positive=True)
         _as_moment(rate.get("as_of"), where)
         if (base, quote) in self.fx:
             raise FileProblem(f"{where}: das Paar steht doppelt in der Datei")

@@ -307,3 +307,120 @@ def test_jede_grenze_meldet_ihre_form(
 
     assert problem, "die Quelle meldet keinen Grund"
     assert expected in problem.lower(), problem
+
+
+# ─── Die inneren Werte: Identitätsfelder und Zahlen ───────────────────────────
+
+_HUGE = "9" * 1000
+"""Eine Ganzzahl, die keine Gleitkommazahl mehr ist.
+
+`float(10**1000)` wirft `OverflowError`. Bis hierher warf sie bei Metadaten im
+Konstruktor und bei Kurs, Historie und Devisen erst **beim Abruf** — also dort,
+wo niemand mehr an die Datei denkt.
+"""
+
+
+@pytest.mark.parametrize(
+    ("field", "line"),
+    [
+        ("kind", "identity: {kind: 7, isin: DE0001102531}"),
+        ("ticker", "identity: {kind: listed, ticker: 7, mic: XETR}"),
+        ("mic", "identity: {kind: listed, ticker: EUNL, mic: 7}"),
+        ("isin", "identity: {kind: listed, ticker: EUNL, mic: XETR, isin: 7}"),
+        ("base", "identity: {kind: pair, base: 7, quote_currency: EUR}"),
+        ("quote_currency", "identity: {kind: pair, base: BTC, quote_currency: 7}"),
+        ("isin_only", "identity: {kind: isin_only, isin: 7}"),
+    ],
+)
+def test_ein_identitaetsfeld_ist_text(tmp_path: Path, field: str, line: str) -> None:
+    """Jedes Identitätsfeld läuft durch die Textprüfung.
+
+    Eine Zahl in `ticker` warf aus dem Konstruktor, weil dort jemand `.strip()`
+    ruft — der Betreiber las einen `AttributeError` statt der Zeile, die er
+    ändern muss. Die Prüfung steht deshalb **vor** `identity_problem` und nicht
+    daneben.
+    """
+    path = tmp_path / "kaputt.yaml"
+    path.write_text(
+        f"""version: 1
+instruments:
+  - id: a
+    {line}
+    name: Papier
+    instrument_type: bond
+""",
+        encoding="utf-8",
+    )
+
+    problem = YamlFileSource({"path": str(path)}).configuration_problem()
+
+    assert "zeichenkette" in problem.lower(), problem
+
+
+@pytest.mark.parametrize(
+    ("where", "document"),
+    [
+        pytest.param(
+            "price",
+            _SHELL + '    price: {value: VALUE, currency: EUR,'
+            ' as_of: "2026-08-27T17:30:00+02:00"}\n',
+            id="price",
+        ),
+        pytest.param(
+            "close",
+            _SHELL + '    history: {currency: EUR, closes: [{date: "2026-08-27",'
+            " value: VALUE}]}\n",
+            id="close",
+        ),
+        pytest.param(
+            "metadata",
+            _SHELL + "    metadata: {ter_bps: VALUE}\n",
+            id="metadata",
+        ),
+        pytest.param(
+            "fx",
+            "version: 1\ninstruments: []\nfx_rates:\n  - {base: CAD, quote: EUR,"
+            ' rate: VALUE, as_of: "2026-08-27T17:30:00+02:00"}\n',
+            id="fx-rate",
+        ),
+    ],
+)
+@pytest.mark.parametrize(
+    "value", [_HUGE, "true", '"20"'], ids=["riesig", "wahrheitswert", "text"]
+)
+def test_jeder_zahlenverbraucher_prueft_den_rohen_wert(
+    tmp_path: Path, where: str, document: str, value: str
+) -> None:
+    """**Vier Verbraucher, drei Sorten Nichtzahl** — und alle beim Laden.
+
+    ``true`` ist in Python eine Ganzzahl und käme sonst als ``1.0`` durch.
+    ``"20"`` ist Text; ihn umzuwandeln hieße zu raten, was der Benutzer
+    meinte. Und eine tausendstellige Ganzzahl ist zwar eine Zahl, aber keine,
+    die sich als Gleitkommazahl ausdrücken lässt.
+
+    Geprüft wird je **Verbraucher**, nicht nur am Helfer: Ein Helfer, den nur
+    drei von vier Stellen benutzen, ist an der vierten wirkungslos.
+    """
+    path = tmp_path / "kaputt.yaml"
+    path.write_text(document.replace("VALUE", value), encoding="utf-8")
+
+    problem = YamlFileSource({"path": str(path)}).configuration_problem()
+
+    assert problem, f"{where} nimmt {value} an"
+    assert "zahl" in problem.lower() or "groß" in problem.lower(), problem
+
+
+def test_ein_unlesbarer_wert_beim_lesen_ist_ein_befund(tmp_path: Path) -> None:
+    """Auch der Leseschritt endet in einem Grund, nicht in einem Stacktrace.
+
+    Python bricht das Umwandeln sehr langer Ganzzahlen ab — Grenze 4300
+    Stellen. Das ist ein Wert in der Datei und kein Fehler der App; er gehört
+    in dieselbe Meldung wie ein Syntaxfehler.
+    """
+    path = tmp_path / "riesig.yaml"
+    path.write_text(f"version: 1\ninstruments: []\nx: {'9' * 5000}\n", encoding="utf-8")
+
+    problem = YamlFileSource({"path": str(path)}).configuration_problem()
+
+    assert problem, "der Lesefehler kommt als Ausnahme statt als Grund"
+    assert "unlesbar" in problem.lower() or "wert" in problem.lower(), problem

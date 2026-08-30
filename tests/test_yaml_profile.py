@@ -434,7 +434,7 @@ instruments:
     instrument_type: etf
     price: {value: 0, currency: EUR, as_of: "2026-08-27T17:30:00+02:00"}
 """,
-            "betrag",
+            "positiver kurs",
             id="nullkurs",
         ),
         pytest.param(
@@ -459,7 +459,7 @@ instruments: []
 fx_rates:
   - {base: CAD, quote: EUR, rate: -1.0, as_of: "2026-08-27T17:30:00+02:00"}
 """,
-            "kurs",
+            "positiver kurs",
             id="negativer-wechselkurs",
         ),
     ],
