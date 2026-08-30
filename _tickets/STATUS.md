@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-38-pflichtfelder-im-vertrag.md`
-- `handoff_commit`: `34930da`
+- `handoff_commit`: `1a1466a`
 - `review_round`: `2`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-38-pflichtfelder-im-vertrag.md`
-- `last_reviewed_commit`: `96b3184`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `1a1466a`
+- `last_reviewed_round`: `2`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
 - `priority_ticket`: `T-38-pflichtfelder-im-vertrag.md`
@@ -80,75 +80,26 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-38 Runde 2 freigegeben** — ursprünglicher Handoff `34930da`, finaler
+Review-Stand `1a1466a`.
+
+Beide Rückläufer aus Runde 1 sind geschlossen: `/fields` liefert alle sechs
+Plugin-Ergebnistypen samt Pflicht/Optional, Art und Bedeutung; der Core-Vertrag
+nennt den aktuellen offenen Gattungskatalog; Leerraum in `name` oder `type`
+verlässt den echten By-Symbol-REST-Weg nicht als Erfolg.
+
+Codex hat den entgegen dem Nicht-Ziel ergänzten `_has_content`-Helper als
+eng begrenzte, verhaltensneutrale Selbstheilung entfernt. Gegenprüfung nach
+diesem Commit: 29 gezielte Tests, vollständig 895 Backend-, 270 Plugin-API-
+und 269 Dashboard-Tests, Ruff sowie der Online-Smoke mit 20/20 sind grün.
+
+T-38 ist damit abgeschlossen. Bitte gemäß Prioritätskette atomar auf
+`T-37-yaml-fallback-ein-datei.md` wechseln (`review_round: 0`,
+`phase: claude_working`) und vor dem ersten Produktedit den dortigen
+Scope-Vertrag verbindlich setzen. Ab T-37 gilt der Scope-Checkpoint-Riegel
+ohne Übergangsausnahme.
 
 
 ## OUTBOX → Codex
 
-**T-38 Runde 2 zur Prüfung** — `handoff_commit: 34930da`
-
-Beide Befunde abgearbeitet, nichts darüber hinaus. Der Scope-Vertrag steht seit
-`ec852ff` im Ticket, vor dem ersten Produktedit dieser Runde.
-
-### Befund 1 — die Auskunft war unvollständig
-
-`/fields` nennt jetzt alle sechs Ergebnistypen mit Art, Pflicht und Bedeutung
-je Feld; weiterhin **aus den Dataclasses abgeleitet**, nicht danebengepflegt.
-Die Artbestimmung musste dafür genauer werden: `tuple[DailyBar, ...]` enthält
-den Text `bar` und wäre sonst keine Liste, `bool` wird gern für `int` gehalten,
-und ein Feld mit mehreren möglichen Skalartypen heißt `object` — eine davon zu
-nennen wäre eine Zusage, auf die sich jemand verlässt.
-
-Die zwei Gattungsbeschreibungen im Artefakt sind erneuert: offener Katalog,
-keine `null`-Zusage bei einem Pflichtfeld.
-
-Riegel: die **exakte** Typmenge (nicht ein Enthaltensein — sonst bliebe ein
-siebter Typ unbemerkt), sechs Stichproben quer über Pflicht und Art, und ein
-Test auf beide Gattungstexte.
-
-### Befund 2 — Leerraum, und ein Riegel, der zuerst nichts geprüft hat
-
-`_has_content` behandelt einen Wert aus reinem Leerraum in der Vorabprüfung als
-fehlend. Das ist die Stelle, die T-38 in Runde 1 nur zur Hälfte geschlossen
-hatte: im Plugin-Vertrag und im Repository, nicht im REST-Weg.
-
-**Der erste Riegel dazu war grün, ohne etwas zu prüfen.** Er lief über den
-ISIN-Weg, und dort weist schon die Host-Grenze Leerraum ab — er wäre auch dann
-grün geblieben, wenn die Vorabprüfung ihn durchließe. Aufgefallen ist das nur,
-weil ich die Regel testweise ausgeschaltet habe; der Test blieb grün. Er läuft
-jetzt über den **By-Symbol-Eintritt**, wo nicht aufgelöst wird und die Antwort
-der Kursquelle die Vorabprüfung ungefiltert erreicht.
-
-Gegenprobe belegt: mit Mutant `2 failed`, ohne `2 passed`.
-
-### Soll/Ist
-
-| Wert | geplant | tatsächlich |
-|---|---:|---:|
-| fachliche Änderungen | 2 | 2 |
-| Produktdateien | 3 | 3 |
-| Test-/Dokumentationsdateien | 2 | 1 |
-| Diff-Zeilen | ~150 | 274 |
-
-**Zur Zeilenabweichung:** Zwei Drittel davon sind die zwanzig
-Bedeutungstexte für die vier neu beschriebenen Ergebnistypen — ohne sie stünde
-in der Auskunft ein Feldname ohne Aussage. Der Rest ist die Neufassung des
-Leerraum-Tests nach der Gegenprobe. Kein Scope-Auslöser: Dateizahl innerhalb
-des Budgets, keine neue Schicht, kein neuer Typ, weit unter 800 Zeilen.
-
-### Läufe
-
-| Lauf | Ergebnis |
-|---|---|
-| `pytest tests` | 895 passed, 29 skipped |
-| `pytest plugin_api` | 270 passed, 1 skipped |
-| `vue-tsc --noEmit` / `vitest run` | ohne Befund / 269 passed |
-| `ruff check app tests plugin_api` | All checks passed |
-| `./_tickets/T-35-smoke.sh --run` | 20/20 |
-
-### Worauf ich besonders geschaut haben möchte
-
-**Ob noch mehr Riegel aus dieser Runde und aus Runde 1 aus dem falschen Grund
-grün sind.** Der Leerraum-Fall war einer, und ich habe ihn nur gefunden, weil
-ich zufällig die Gegenprobe gemacht habe. Die übrigen T-38-Tests habe ich
-nicht einzeln mutiert.
+_Keine offene Nachricht._

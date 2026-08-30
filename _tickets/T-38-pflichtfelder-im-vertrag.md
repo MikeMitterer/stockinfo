@@ -156,13 +156,13 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | **2** | `stockinfo_plugin.types` | `Resolved.name` und `Resolved.instrument_type` sind Pflichtfelder. Kein Vorgabewert, und die Zusage steht im Docstring | ✅ [^r1] | |
 | **3** | `API_VERSION` | der Sprung ist **ehrlich** gemacht: Ein optionales Feld zur Pflicht zu erheben ist laut eigener Kompatibilitätsregel ein **Bruch**. Ein Plugin nach altem Vertrag wird abgewiesen und nicht stillschweigend geduldet | ✅ [^v] | |
 | **4** | Contract-Kit | die Rollen-Suiten prüfen die Pflichtfelder. Ein Plugin-Autor merkt es **beim Bauen**, nicht ein Benutzer im Betrieb | ✅ [^r1] | |
-| **5** | Host-Grenze | eine Antwort ohne Pflichtfeld ist ein **Befund**: sichtbar in `/sources` oder im Protokoll, nie still. Die App leitet daraus **nichts** ab — insbesondere nicht `stock`, und sie überspringt die Metadatenkaskade nicht | ◑ [^c1] | |
-| **6** | `GET /fields` | die Auskunft nennt Pflicht- und Optionalfelder **auch für den Plugin-Vertrag**, nicht nur für die REST-Modelle. Heute gibt es sie nur für letztere | ◑ [^c1] | |
+| **5** | Host-Grenze | eine Antwort ohne Pflichtfeld ist ein **Befund**: sichtbar in `/sources` oder im Protokoll, nie still. Die App leitet daraus **nichts** ab — insbesondere nicht `stock`, und sie überspringt die Metadatenkaskade nicht | ✅ [^r2] | |
+| **6** | `GET /fields` | die Auskunft nennt Pflicht- und Optionalfelder **auch für den Plugin-Vertrag**, nicht nur für die REST-Modelle. Heute gibt es sie nur für letztere | ✅ [^r2] | |
 | **6b** | dieselbe Auskunft | `name` und `type` stehen dort als **Pflicht**. Heute sagt sie `required: false` — das widerspricht der Entscheidung, sobald sie umgesetzt ist | ✅ [^r1] | |
 | **7** | `contract/core-contract.json` | `core_version` steigt, weil ein optionales Feld zum Pflichtfeld wird. Das ist laut eigener Regel **breaking** → Major | ✅ [^m] | |
 | **8** | die vier eingebauten Plugins | jedes liefert die Pflichtfelder oder antwortet ehrlich mit `NotFound` | ✅ [^r1] | |
 | **9** | das YAML-Beispiel | jeder `instrument`-Eintrag trägt `name` und `type`; ein nicht börsengehandelter Fonds kommt als `fund`, nicht `etf`. Siehe T-37 | ➖ [^t37] | |
-| **10** | `docs/plugins.md` | ein Plugin-Autor liest, welche Felder er liefern **muss** | ◑ [^c1] | |
+| **10** | `docs/plugins.md` | ein Plugin-Autor liest, welche Felder er liefern **muss** | ✅ [^r2] | |
 
 [^r1]: Umsetzung Runde 1 gegen `96b3184`. Die Orakel entstanden **vor** dem
     Code (`20be6d6`, zehn von dreizehn rot) und stammen aus dieser Matrix.
@@ -172,6 +172,14 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     Gattungsvokabular beschreibt. Außerdem können nur aus Leerzeichen
     bestehende Pflichtwerte für `name`/`type` den öffentlichen REST-Weg
     erreichen. Keine weiteren Befunde und keine Scope-Erweiterung.
+[^r2]: Codex-Review Runde 2: ursprünglicher Claude-Handoff `34930da`, finaler
+    Stand nach eng begrenzter Codex-Selbstheilung `1a1466a`. `/fields` liefert
+    alle sechs Plugin-Ergebnistypen mit Pflicht/Optional und Bedeutung; beide
+    Core-Gattungsbeschreibungen sind aktuell; Leerraum in `name` oder `type`
+    endet am echten By-Symbol-REST-Weg strukturiert mit 502. Der im
+    Scope-Vertrag ausgeschlossene zusätzliche Helper wurde verhaltensneutral
+    entfernt. `make test`: 895 Backend-, 270 Plugin-API- und 269
+    Dashboard-Tests; Ruff sauber; Online-Smoke 20/20.
 [^v]: **Kein zweiter Sprung.** Das Ticket verlangt einen gemeinsamen
     `API_VERSION`-Sprung mit T-31 („Wer zuerst anfängt, erzeugt den zweiten
     Sprung"). T-31 hat ihn auf `2` gemacht; veröffentlicht ist nichts,
