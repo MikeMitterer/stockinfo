@@ -5,6 +5,7 @@ speichern; schlägt das Holen fehl, aber ein alter Wert liegt vor, wird dieser
 als ``stale`` geliefert statt eines Fehlers.
 """
 
+from collections.abc import Sequence
 from datetime import datetime, timezone
 from typing import Protocol
 
@@ -38,17 +39,29 @@ class CachedFxService:
     """Legt einen TTL-Cache (SQLite) vor die Live-FX-Beschaffung."""
 
     def __init__(
-        self, provider: FxRateProvider, repository: FxRepository, ttl_hours: int
+        self,
+        provider: FxRateProvider | Sequence[FxRateProvider],
+        repository: FxRepository,
+        ttl_hours: int,
     ) -> None:
         """
         Args:
-            provider: Live-Beschaffung eines Wechselkurses. Wer das ist,
-                entscheidet `sources.yaml` — im Online-Profil yfinance, im
-                Dateiprofil eine gepflegte Tabelle.
+            provider: Die Live-Beschaffung — eine Quelle oder die konfigurierte
+                Reihenfolge. Wer das ist, entscheidet `sources.yaml`.
+
+                **Beide Formen, und das ist kein Übergangszustand.** Eine
+                einzelne Quelle ist der Normalfall vieler Aufrufer und liest
+                sich als Liste schlechter; die Reihenfolge ist der Fall, den
+                das Ticket braucht. Der Konstruktor macht daraus einmal ein
+                Tupel, und alles darunter kennt nur noch die eine Form.
             repository: SQLite-Persistenz für den FX-Cache.
             ttl_hours: Maximales Alter eines Kurses, bevor neu beschafft wird.
         """
-        self._provider = provider
+        self._providers = (
+            tuple(provider)
+            if isinstance(provider, (list, tuple))
+            else (provider,)
+        )
         self._repository = repository
         self._ttl_hours = ttl_hours
 
@@ -62,12 +75,19 @@ class CachedFxService:
         Felder heißen gleich und bedeuten Verschiedenes; genau daran ist der
         erste Anlauf in T-37 gescheitert, der sie über einen Kamm schor.
 
-        Hier stand ebenfalls ``"yfinance"`` fest, und im CSV-Profil antwortet
+        Hier stand ebenfalls ``"yfinance"`` fest, und im Dateiprofil antwortet
         `yaml-file`. Der Rückfall kommt aus `declared_name` und ist ``None``:
         ein deutsches Ersatzwort stünde unübersetzt in der englischen
         Oberfläche.
+
+        **Seit T-41 sagt der Name der ersten Quelle nichts mehr über den
+        Lieferanten** — deshalb steht die Herkunft im Fetch als lokale
+        Variable neben dem Kurs und nicht in einem Feld. Ein „letzter
+        Lieferant" am Dienst wäre veränderlicher Zustand: Zwei gleichzeitige
+        Anfragen schrieben sich gegenseitig die Herkunft um, und der Fehler
+        fiele erst bei Last auf.
         """
-        return declared_name(self._provider)
+        return declared_name(self._providers[0])
 
     def get_rate(self, base: str, quote: str) -> FxRate:
         """Liefert den Wechselkurs 1 base = ? quote (aus Cache oder frisch).
@@ -95,18 +115,35 @@ class CachedFxService:
 
     def _fetch_or_fallback(self, base: str, quote: str, cached: dict | None) -> FxRate:
         """Beschafft live; liefert bei Fehlschlag den Cache stale oder wirft."""
-        rate = self._provider.fetch_fx_rate(base, quote)
+        # **Die Reihenfolge aus `sources.yaml` wird wirklich abgefragt.** Bis
+        # T-41 fragte der Dienst genau eine Quelle; eine dahinter
+        # konfigurierte Datei kam nie an die Reihe.
+        #
+        # Der Lieferant steht **hier**, neben dem Kurs, und nicht in einem
+        # Feld am Dienst: Zwei gleichzeitige Anfragen schrieben sich sonst
+        # gegenseitig die Herkunft um, und ein Kurs trüge den Namen einer
+        # Quelle, die ihn nicht geliefert hat.
+        rate: float | None = None
+        source: str | None = None
+        for provider in self._providers:
+            rate = provider.fetch_fx_rate(base, quote)
+            if rate is not None:
+                source = declared_name(provider)
+                break
+
         if rate is None:
+            # Erst nach dem **Gesamtausfall**: Solange irgendeine Quelle
+            # antwortet, ist ein veralteter Wert die schlechtere Auskunft.
             if cached:
                 logger.warning("serving_stale_fx", base=base, quote=quote)
                 return self._from_cache(cached, stale=True)
             raise FxUnavailableError(f"{base}{quote}")
 
         now = datetime.now(timezone.utc).isoformat()
-        self._repository.save_fx_rate(base, quote, rate, now, now, self._fx_source)
+        self._repository.save_fx_rate(base, quote, rate, now, now, source)
         return FxRate(
             base=base, quote=quote, rate=rate, quote_time=now,
-            source=self._fx_source,
+            source=source,
             cached=False, stale=False, fetched_at=now,
         )
 

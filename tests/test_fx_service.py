@@ -161,3 +161,120 @@ def test_die_herkunft_ueberlebt_auch_einen_stale_treffer(
 
     assert stale.stale is True
     assert stale.source == "fx-file"
+
+
+# ─── Die konfigurierte Reihenfolge wird abgefragt (T-41) ──────────────────────
+
+
+class _NamedFx(_FakeFx):
+    """Eine Devisenquelle mit eigenem Namen — für die Herkunftsprüfung."""
+
+    def __init__(self, name: str, rate: float | None) -> None:
+        super().__init__(rate)
+        self.name = name
+
+
+def test_der_erste_kurs_gewinnt(repo: QuoteRepository) -> None:
+    """Wer zuerst liefert, gewinnt — und danach wird niemand mehr gefragt.
+
+    Ein Wechselkurs kostet bei jedem Anbieter ein Ratenlimit. Alle zu fragen
+    und dann auszuwählen wäre teurer und würde nichts besser machen: Die
+    Reihenfolge in `sources.yaml` *ist* die Auswahl.
+    """
+    first = _NamedFx("yfinance", 0.9)
+    second = _NamedFx("yaml-file", 0.6412)
+
+    result = CachedFxService([first, second], repo, ttl_hours=1).get_rate("CAD", "EUR")
+
+    assert result.rate == 0.9
+    assert result.source == "yfinance"
+    assert second.calls == 0, "die zweite Quelle wurde trotz Treffer gefragt"
+
+
+def test_ein_fehlschlag_faellt_zur_naechsten_quelle(repo: QuoteRepository) -> None:
+    """**Die Zusage, an der es hing** — und die Herkunft muss mitwandern.
+
+    Der gespeicherte `source` muss die Quelle nennen, die den Kurs *wirklich*
+    geliefert hat. Stünde dort die erste, läse ein Betreiber „yfinance" über
+    einem Wert, den seine Datei beigesteuert hat — und suchte den Fehler bei
+    einem Anbieter, der gar nicht geantwortet hat.
+    """
+    first = _NamedFx("yfinance", None)
+    second = _NamedFx("yaml-file", 0.6412)
+
+    result = CachedFxService([first, second], repo, ttl_hours=1).get_rate("CAD", "EUR")
+
+    assert result.rate == 0.6412
+    assert result.source == "yaml-file", "die Herkunft nennt die falsche Quelle"
+    assert first.calls == 1 and second.calls == 1
+
+
+def test_die_herkunft_der_zweiten_quelle_ueberlebt_den_cache(
+    repo: QuoteRepository,
+) -> None:
+    """Wie der Fall weiter oben, aber für die Quelle **hinter** der ersten.
+
+    Der Unterschied ist der Prüfgegenstand: Dort steht die Herkunft schon beim
+    Speichern fest, hier entsteht sie erst in der Schleife. Eine Fassung, die
+    den Namen aus `self._provider` nimmt statt aus dem Schleifenlauf, bestünde
+    den Test darüber und fiele hier durch.
+    """
+    first = _NamedFx("yfinance", None)
+    second = _NamedFx("yaml-file", 0.6412)
+    service = CachedFxService([first, second], repo, ttl_hours=1)
+
+    service.get_rate("CAD", "EUR")
+    from_cache = service.get_rate("CAD", "EUR")
+
+    assert from_cache.cached is True
+    assert from_cache.source == "yaml-file"
+    assert second.calls == 1, "trotz frischem Cache wurde erneut beschafft"
+
+
+def test_erst_nach_dem_gesamtausfall_greift_der_stale_cache(
+    repo: QuoteRepository,
+) -> None:
+    """Der gespeicherte Stand ist der **letzte** Ausweg, nicht der zweite.
+
+    Solange irgendeine konfigurierte Quelle antwortet, ist ein veralteter Wert
+    die schlechtere Auskunft. Erst wenn alle geschwiegen haben, ist er besser
+    als nichts.
+    """
+    working = _NamedFx("yaml-file", 0.6412)
+    CachedFxService([working], repo, ttl_hours=0).get_rate("CAD", "EUR")
+
+    dead = [_NamedFx("yfinance", None), _NamedFx("yaml-file", None)]
+    stale = CachedFxService(dead, repo, ttl_hours=0).get_rate("CAD", "EUR")
+
+    assert stale.stale is True
+    assert stale.source == "yaml-file", "die gespeicherte Herkunft ging verloren"
+    assert [source.calls for source in dead] == [1, 1], (
+        "nicht jede Quelle wurde gefragt, bevor der alte Wert herhalten musste"
+    )
+
+
+def test_ohne_cache_bleibt_der_typisierte_fehler(repo: QuoteRepository) -> None:
+    """Alle Quellen stumm und nichts gespeichert — dann der bekannte Fehler.
+
+    Das Verhalten ändert sich durch die Kaskade **nicht**; es tritt nur später
+    ein. Der Aufrufer sieht denselben Fall wie bisher.
+    """
+    sources = [_NamedFx("yfinance", None), _NamedFx("yaml-file", None)]
+
+    with pytest.raises(FxUnavailableError):
+        CachedFxService(sources, repo, ttl_hours=1).get_rate("CAD", "EUR")
+
+    assert [source.calls for source in sources] == [1, 1]
+
+
+def test_eine_einzelne_quelle_bleibt_zulaessig(repo: QuoteRepository) -> None:
+    """Die alte Aufrufform bleibt gültig — sie steht in jedem bisherigen Test.
+
+    Eine Signaturänderung, die jeden Aufrufer bricht, wäre für dieselbe
+    Wirkung teurer; die Kaskade ist eine Erweiterung, kein Umbau.
+    """
+    provider = _NamedFx("yfinance", 0.9)
+
+    result = CachedFxService(provider, repo, ttl_hours=1).get_rate("CAD", "EUR")
+
+    assert result.rate == 0.9 and result.source == "yfinance"
