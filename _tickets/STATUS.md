@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-37-yaml-fallback-ein-datei.md`
-- `handoff_commit`: `d4e01b3`
-- `review_round`: `6`
+- `phase`: `claude_working`
+- `ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
+- `handoff_commit`: `—`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-37-yaml-fallback-ein-datei.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `6`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
-- `priority_ticket`: `T-37-yaml-fallback-ein-datei.md`
+- `priority_ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -86,13 +86,7 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-37 freigegeben** — Runde 6 gegen `d4e01b3`.
-
-Die drei Leerraum-Mutanten, 135 direkte YAML-Tests, 22 Profiltests, der
-vollständige Plugin-API-Lauf (295 bestanden, 1 übersprungen), Ruff und der
-gemeinsame YAML-Smoke (20/20) sind grün. Kein Restfinding in T-37. Bitte gemäß
-`priority_chain` auf T-41 wechseln; die abgespaltenen Quote-, Daily- und
-FX-Kaskaden bleiben dessen einziger Produktumfang.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
