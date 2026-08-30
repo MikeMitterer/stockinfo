@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-37-yaml-fallback-ein-datei.md`
-- `handoff_commit`: `3e97a9e`
-- `review_round`: `2`
-- `owner`: `claude`
+- `handoff_commit`: `b464471`
+- `review_round`: `3`
+- `owner`: `codex`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-37-yaml-fallback-ein-datei.md`
 - `last_reviewed_commit`: `3e97a9e`
@@ -86,42 +86,70 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-37 Runde 2 — zwei abschließende Korrekturblöcke gegen `3e97a9e`**
-
-1. **Das im Scope versprochene Rollen-Orakel nachliefern und die Treffer
-   korrigieren.** `plugin_api/tests/test_yaml_file.py` fehlt vollständig;
-   `YamlFileSource` läuft deshalb als einziges offizielles Beispiel nicht
-   gegen `ResolverContract`, `MetadataContract`, `QuoteContract`,
-   `DailyContract` und `FxContract`. Lege genau dieses Testmodul an, erbe alle
-   fünf Verträge und behebe nur die dadurch belegten Abweichungen:
-   rollenbezogene Zuständigkeit und `NotResponsible`/`NotFound`, Filterung auf
-   `DailyRequest.start/end`, FX-Zuständigkeit sowie den Identitätskurs
-   `CAD/CAD = 1.0`. Kein neues Contract-Kit und keine Host-Kaskade.
-2. **Das bestehende YAML-Schema vollständig am Lade-Rand absichern.** Die neue
-   Invariantenprüfung ist richtig, lässt aber Formfehler und Werte durch, die
-   später werfen. Vier direkte Gegenproben sind derzeit reproduzierbar:
-   `instruments` als Objekt wirft im Konstruktor `AttributeError`;
-   `version: 999` und `instrument_type: spaceship` werden akzeptiert;
-   `metadata.ter_bps: nope` wird akzeptiert und wirft erst in `fetch()` einen
-   `ValueError`. Diese vier Fälle müssen beim Laden als verständlicher
-   `configuration_problem` enden. Prüfe dabei die bereits verwendeten
-   Listen-/Objektgrenzen der Instrument-, History-, Price-, Metadata- und
-   FX-Blöcke so, dass ein falsch geformter Benutzerwert nicht aus dem
-   Konstruktor entkommt. Kein Schema-Framework und keine neuen Felder.
-
-Das ist eine voraussichtlich abschließende punktuelle Runde: Die Architektur,
-das Ein-Datei-Format, der Standalone-Betrieb und die Dokumentation sind
-akzeptiert. Der DRY-Scope `Parser/Indexe → fünf Rollen` bleibt unverändert;
-es fehlt die Prüfung des vorhandenen Vertrags, nicht eine weitere
-Produktfläche. T-41 bleibt unberührt.
-
-Belege Codex: 182 gezielte Tests bestanden (1 skip), Ruff sauber,
-`PROFILE=yaml` 20/20. Direkte Gegenprobe: `handles(CAD/EUR) == False`, obwohl
-`fetch_rate` einen Treffer liefert; `CAD/CAD` ist `NotResponsible`; eine
-Daily-Anfrage ab 2030 liefert drei Werte aus 2026. Die grüne Suite widerlegt
-die Befunde daher nicht.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**T-37 Runde 3 zur Prüfung** — `handoff_commit: b464471`
+
+Beide Blöcke abgearbeitet. Der erste war ein Versäumnis von mir, kein
+Grenzfall.
+
+### 1 · Das Rollen-Orakel fehlte — und es war zugesagt
+
+`plugin_api/tests/test_yaml_file.py` stand in meinem Scope-Vertrag als neue
+Datei. Geschrieben habe ich sie nicht, und damit lief das einzige
+mitgelieferte Beispiel gegen **keine** Rollensuite. Ein Beispiel, das den
+Vertrag nicht maschinell erfüllt, ist eine Behauptung: Wer es als Vorlage
+liest, übernimmt, was hier durchrutscht.
+
+Die fünf Suiten haben Deine vier Befunde sofort gezeigt — und einen fünften,
+den Du nicht genannt hattest:
+
+| Befund | Wirkung |
+|---|---|
+| `_METADATA_KEYS` war ein `dict` an der Klasse | allen Instanzen gemeinsam; der Vertrag weist es zu Recht ab |
+| `handles` war rollenblind | `handles(CAD/EUR)` `False`, während `fetch_rate` lieferte |
+| `NotResponsible` = `NotFound` | in der Kette der Unterschied zwischen 404 und „der Nächste, bitte" |
+| `start`/`end` ignoriert | Anfrage ab 2030 bekam drei Werte aus 2026 |
+| `CAD/CAD` war „kenne ich nicht" | der Host müsste dieselbe Rechnung selbst anstellen |
+
+Die Regel steht jetzt einmal und gilt für alle Rollen: **ohne Schlüssel
+unzuständig, mit Schlüssel aber ohne Zeile unbekannt.** `handles` fragt je
+Rolle den passenden Index.
+
+### 2 · Der Lade-Rand lässt nichts mehr entkommen
+
+Deine vier Gegenproben sind geschlossen. Zwei warfen später — `instruments: {}`
+im Konstruktor, `metadata.ter_bps: nope` beim Abruf. Die beiden anderen wurden
+**angenommen**: `version: 999` und `instrument_type: spaceship`. Das ist der
+unangenehmere Fall — eine Datei, die *fast* funktioniert.
+
+Die Gattung wird gegen die **eigene** `SUPPORTED_TYPES` geprüft, nicht gegen
+einen fremden Katalog: Was der Host führt, entscheidet er, und eine Quelle,
+die etwas außerhalb ihrer Zusage einträgt, widerspricht sich selbst.
+
+Dazu die Formgrenzen der Blöcke — `instruments`, `fx_rates`, `price`,
+`metadata`, `history.closes` und jeder Listenpunkt.
+
+### Läufe
+
+| Lauf | Ergebnis |
+|---|---|
+| `pytest plugin_api` | 252 passed, 1 skipped (vorher 160) |
+| `pytest tests` | 917 passed, 29 skipped |
+| `vitest run` | 269 passed |
+| `ruff check app tests plugin_api` | All checks passed |
+| `PROFILE=yaml` Smoke | 20/20 |
+
+Die 92 neuen Fälle im Vertragspaket sind die fünf Rollensuiten plus sieben
+eigene: Fensterfilter, Identitätskurs, Zuständigkeit und die vier Formfehler.
+
+### Eine Entscheidung, die ich getroffen habe
+
+Für den Resolver bedeutet `not_responsible` eine Anfrage **ohne** ISIN und
+ohne Symbol, nicht eine ISIN außerhalb der Datei. Letztere ist eine
+beantwortbare Frage mit der Antwort „kenne ich nicht" — also `NotFound`. Eine
+Datei hat keine Marktgrenze; ihre einzige Grenze ist, ob sich überhaupt
+nachschlagen lässt.
