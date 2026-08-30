@@ -78,15 +78,25 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | `T-37-single-file-sample.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | | |
-| **2** | `PROFILE=yaml ./_tickets/T-35-smoke.sh --run` | der gemeinsame Smoke ist grün; `GET /sources` zeigt `yaml-file` in allen fünf Rollen und genau einen Pfad auf die Fachdaten-Datei | | |
-| **3** | `PROFILE=online ./_tickets/T-35-smoke.sh --run` | derselbe Smoke ist grün; normale Online-Quellen stehen zuerst und dasselbe `yaml-file` jeweils zuletzt | | |
-| **4** | Überschneidungs-Test im Online-Profil | liefert eine Online-Quelle einen gültigen Wert, gewinnt sie; YAML überschreibt ihn nicht. Nur bei fehlendem Ergebnis wird YAML gefragt | | |
-| **5** | Kurs-/History-Persistenz | Online- und YAML-Ergebnisse landen in der Datenbank. Manuelle `history` wird nur für Assets ohne abfragbare History verwendet; fehlt `price`, darf der jüngste Schlusskurs als aktueller Fallback dienen | | |
-| **6** | Browser, `PROFILE=yaml` | `BTC-EUR` (`pair`), eine Anleihe (`isin_only`) und ein nicht börsengehandelter Fonds (`fund`) lassen sich anlegen; Liste, Drilldown, Preis und manueller History-Fallback stimmen; Konsole und fehlgeschlagene Requests sind sauber | | |
-| **7** | Browser, `PROFILE=online` | BTC kommt über YFinance, die Anleihe ohne Online-Kurs über YAML; bei einem überlappenden Asset gewinnt online. Liste, Drilldown und Quellenanzeige stimmen; Konsole und Requests sind sauber | | |
-| **8** | Plugin-/Profil-Inventur | kein CSV-Profil und keine vier Datei-Quellen bleiben aktiv oder dokumentiert; `PROFILE=yaml` ist der einzige dateibasierte Prüfpfad | | |
-| **9** | Reload-/Fehlerfälle | fehlende Datei, ungültiges YAML, doppelte IDs und unzulässige Werte werden verständlich gemeldet; ein Neustart liest eine gültig geänderte Datei erneut ein | | |
+| **1** | `T-37-single-file-sample.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | ✅ [^r1] | |
+| **2** | `PROFILE=yaml ./_tickets/T-35-smoke.sh --run` | der gemeinsame Smoke ist grün; `GET /sources` zeigt `yaml-file` in allen fünf Rollen und genau einen Pfad auf die Fachdaten-Datei | ✅ [^r1] | |
+| **3** | `PROFILE=online ./_tickets/T-35-smoke.sh --run` | derselbe Smoke ist grün; normale Online-Quellen stehen zuerst und dasselbe `yaml-file` jeweils zuletzt | ✅ [^r1] | |
+| **4** | Überschneidungs-Test im Online-Profil | liefert eine Online-Quelle einen gültigen Wert, gewinnt sie; YAML überschreibt ihn nicht. Nur bei fehlendem Ergebnis wird YAML gefragt | ✅ [^r1] | |
+| **5** | Kurs-/History-Persistenz | Online- und YAML-Ergebnisse landen in der Datenbank. Manuelle `history` wird nur für Assets ohne abfragbare History verwendet; fehlt `price`, darf der jüngste Schlusskurs als aktueller Fallback dienen | ✅ [^r1] | |
+| **6** | Browser, `PROFILE=yaml` | `BTC-EUR` (`pair`), eine Anleihe (`isin_only`) und ein nicht börsengehandelter Fonds (`fund`) lassen sich anlegen; Liste, Drilldown, Preis und manueller History-Fallback stimmen; Konsole und fehlgeschlagene Requests sind sauber | ➖ [^browser] | |
+| **7** | Browser, `PROFILE=online` | BTC kommt über YFinance, die Anleihe ohne Online-Kurs über YAML; bei einem überlappenden Asset gewinnt online. Liste, Drilldown und Quellenanzeige stimmen; Konsole und Requests sind sauber | ➖ [^browser] | |
+| **8** | Plugin-/Profil-Inventur | kein CSV-Profil und keine vier Datei-Quellen bleiben aktiv oder dokumentiert; `PROFILE=yaml` ist der einzige dateibasierte Prüfpfad | ✅ [^r1] | |
+| **9** | Reload-/Fehlerfälle | fehlende Datei, ungültiges YAML, doppelte IDs und unzulässige Werte werden verständlich gemeldet; ein Neustart liest eine gültig geänderte Datei erneut ein | ✅ [^r1] | |
+
+[^r1]: Umsetzung Runde 1. Die Orakel entstanden **vor** dem Code (dreizehn
+    Fälle, alle rot) und stammen aus dieser Matrix. Belege: `PROFILE=yaml`
+    und `PROFILE=online` je 20/20, `tests/test_yaml_profile.py` 13/13, der
+    vertikale T-23-Lauf auf der neuen Quelle 18/18.
+[^browser]: **Offen, und zwar bei Claude.** Mikes Vorgabe vom 2026-08-29
+    weist die Browser-Abnahme ausdrücklich Claude zu — beide Profile, mit dem
+    YAML-Plugin als letztem Fallback im Online-Profil. Ein grüner Test ersetzt
+    sie nicht: Der letzte UI-Lauf hat drei Befunde gefunden, die keine Suite
+    sah. Der Code steht; diese Zeilen fehlen noch.
 
 Die Browserzeilen werden von Claude mit den tatsächlich beobachteten Assets,
 Quellen und Ergebnissen belegt. Eine rein automatisierte Aussage ersetzt diese
@@ -277,4 +287,28 @@ Anleihen oder andere Assets ohne Online-Kurs, ist aber nie ein Override.
 
 ## Auflösung
 
-_(offen — Umsetzung beginnt nach Freigabe von T-31 und T-38)_
+_(Code umgesetzt am 2026-08-30, Runde 1. Die Browserzeilen `#6` und `#7`
+stehen noch aus — sie sind laut Mikes Vorgabe **Claudes** Aufgabe, nicht
+seine.)_
+
+Vier Dateiquellen sind eine geworden. `yaml-file` liest eine Datei und bedient
+daraus jede Rolle; die Rollen unterscheiden sich darin, **was** sie aus
+demselben Eintrag lesen, nicht darin, wie sie ihn finden.
+
+**Der Befund aus T-31 ist geschlossen.** Bis hierher schickte kein einziger
+Test eine Dateiquelle mit bekannter Gattung durch den Vorfilter des Hosts —
+aufgefallen war das nicht in den Unit-Tests, sondern erst im Smoke-Lauf. Der
+vertikale T-23-Lauf tut es jetzt, und `yaml-file` deklariert alle drei
+Identitätsformen und alle sechs Gattungen.
+
+**Zwei Testbefunde aus dem Bau, beide von derselben Art.** Die Orakel waren
+zwischenzeitlich grün, ohne etwas zu prüfen: Eine unbekannte Quelle in
+`sources.yaml` lässt die Kette leer, die App fällt auf ihre eingebauten
+Online-Quellen zurück, und für ein bekanntes Papier antwortet das Netz. Und
+zwei Zusicherungen im vertikalen Lauf blieben nach der Löschung grün, weil
+`/sources` konfigurierte Namen auch dann listet, wenn es die Quelle nicht
+gibt.
+
+Beide zeigen dasselbe: Ein Test, der nur „es kam eine Antwort" verlangt, misst
+die Verkabelung seines Aufbaus. Die Orakel prüfen deshalb den **Wert aus der
+Datei**.
