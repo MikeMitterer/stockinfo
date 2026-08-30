@@ -349,3 +349,55 @@ def test_nur_eine_vollstaendige_zuordnung_bleibt_unangetastet(
     genau der Wert den Umzug, den T-21 austreibt.
     """
     assert keeps_its_identity(ticker, mic) is expected
+
+
+@pytest.mark.parametrize(
+    ("kind", "values"),
+    [
+        ("pair", {"symbol": "BTC-EUR", "base": "BTC", "quote_currency": "EUR"}),
+        ("isin_only", {"symbol": "DE0001102531", "isin": "DE0001102531"}),
+    ],
+    ids=["waehrungspaar", "nur-isin"],
+)
+def test_die_anderen_identitaetsformen_ueberleben_die_vorschau(
+    tmp_path, kind: str, values: dict
+) -> None:
+    """**Gemessen im UI-Lauf zu T-35, und der teuerste Befund dieses Laufs.**
+
+    Ein Krypto-Papier, in der laufenden App regulär aufgenommen, stand danach
+    in `GET /migration` unter `rejected` — mit dem Grund
+    `symbol_without_exchange_suffix` und dem Preis „1 Kurspunkt geht
+    verloren". Beim nächsten Start hätte die App im Migrations-Riegel
+    gestanden und angeboten, das Papier zu **löschen**.
+
+    Die Ursache ist die dritte ihrer Art an einem Tag: `keeps_its_identity`
+    prüfte nur die `listed`-Form (Ticker **und** MIC). Eine `pair`-Zeile hat
+    keinen Ticker, eine `isin_only`-Zeile keinen MIC — beide sind seit T-31
+    vollständige, im Schema per `CHECK` erzwungene Identitäten und keine
+    Altlast.
+
+    Geprüft werden **beide** neuen Formen, nicht nur die gemessene: Die
+    Anleihe wäre derselbe Fehler eine Form weiter, nur ohne Browserlauf, der
+    ihn zeigt.
+    """
+    path = str(tmp_path / "heute.db")
+    assert init_db(path) is False
+
+    columns = ", ".join(["kind", *values])
+    placeholders = ", ".join("?" * (len(values) + 1))
+    with sqlite3.connect(path) as connection:
+        connection.execute(
+            f"INSERT INTO instruments ({columns}, first_seen) "
+            f"VALUES ({placeholders}, '2026-08-31T00:00:00+00:00')",
+            (kind, *values.values()),
+        )
+
+    with _connect(path) as connection:
+        plan = plan_migration(connection)
+
+    assert plan.rejected == (), (
+        f"eine {kind}-Identität soll den Umzug überleben, nicht ihn auslösen: "
+        f"{[rejection.reason for rejection in plan.rejected]}"
+    )
+    assert plan.needs_migration is False
+    assert plan.unchanged == 1

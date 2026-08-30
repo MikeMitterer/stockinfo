@@ -111,6 +111,35 @@ describe('InstrumentDrilldown', () => {
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.nothingProvided'))
   })
 
+  /*
+   * **Der Hinweis darf die Gattung nicht raten.**
+   *
+   * Gemessen im Browser: Unter einer Bundesanleihe stand „dieses Papier ist
+   * eine Aktie". Der Satz stimmte, solange es zwei Gattungen gab; seit T-31
+   * und T-38 sind es sechs, und er ist die einzige Stelle, an der ein
+   * Benutzer die Gattung seines Papiers erklärt bekommt.
+   *
+   * Geprüft wird über **alle** Nicht-ETF-Gattungen, nicht an einem Beispiel:
+   * Ein Text, der für `bond` stimmt und für `crypto` nicht, wäre derselbe
+   * Fehler eine Gattung weiter.
+   */
+  it.each(['stock', 'bond', 'crypto', 'etc', 'fund'])(
+    'erklärt bei %s, ohne die Gattung zu behaupten',
+    (type) => {
+      const wrapper = mount(InstrumentDrilldown, {
+        global: { plugins: [i18n] },
+        props: { item: makeInstrument({ type, isin: 'DE0001102531', ter: null }) },
+      })
+
+      expect(wrapper.text()).toContain(i18n.global.t('drilldown.notEtf'))
+      for (const locale of ['de', 'en'] as const) {
+        expect(i18n.global.t('drilldown.notEtf', {}, { locale })).not.toMatch(
+          /Aktie|stock/i,
+        )
+      }
+    },
+  )
+
   // Ein Papier ohne ISIN bekam fälschlich „Diese ISIN liegt außerhalb" — es
   // gibt gar keine ISIN, die außerhalb liegen könnte.
   it('erklärt, dass ein ETF ohne ISIN gar nicht abgefragt wird', () => {

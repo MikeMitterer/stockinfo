@@ -231,21 +231,47 @@ def rejection_reason(symbol: str) -> str | None:
 identity_of = identity_from_symbol
 
 
-def keeps_its_identity(ticker: str | None, mic: str | None) -> bool:
+def keeps_its_identity(
+    ticker: str | None,
+    mic: str | None,
+    *,
+    kind: str | None = None,
+    base: str | None = None,
+    quote_currency: str | None = None,
+    isin: str | None = None,
+) -> bool:
     """Trägt diese Zeile bereits eine **vollständige** kanonische Identität?
 
-    Entschieden wird nach den Daten. Vollständig heißt: ein Ticker **und** ein
-    echter MIC. Der Sammelcode `US` zählt nicht — er ist ein interner
-    Suchcode und darf im kanonischen Feld nie stehen; eine Zeile, die ihn
-    trägt, wird deshalb neu bewertet statt durchgewunken.
+    Entschieden wird nach den Daten, und **je Form**: Was vollständig heißt,
+    sagt `IDENTITY_CHECK` weiter oben — ein Währungspaar hat keinen Ticker,
+    eine OTC-Anleihe keinen MIC. Nur für `listed` gilt Ticker **und** echter
+    MIC; der Sammelcode `US` zählt dort nicht, weil er ein interner Suchcode
+    ist und im kanonischen Feld nie stehen darf.
+
+    **Bis T-35 kannte diese Funktion nur die `listed`-Form**, und die Folge
+    war im Browserlauf zu sehen: Ein regulär aufgenommenes Krypto-Papier
+    stand danach in `GET /migration` unter „abgelehnt" — die App hätte beim
+    nächsten Start angeboten, es samt Kurspunkten zu löschen. Der Umzug von
+    T-21 ist für Zeilen ohne Identität da, nicht für die beiden Formen, die
+    T-31 eingeführt hat.
 
     Args:
         ticker: Der gespeicherte Ticker.
         mic: Der gespeicherte MIC.
+        kind: Die Identitätsform, falls die Spalte existiert. ``None`` heißt
+            „alte Datenbank" — dort gibt es nur Listings, und die Prüfung
+            bleibt die alte.
+        base: Der Basiswert eines Währungspaars.
+        quote_currency: Die Gegenwährung eines Währungspaars.
+        isin: Die ISIN einer Zeile, die nur über sie identifiziert ist.
 
     Returns:
         ``True``, wenn die Zeile so bleiben darf, wie sie ist.
     """
+    if kind == "pair":
+        return bool(base) and bool(quote_currency)
+    if kind == "isin_only":
+        return bool(isin)
     return bool(ticker) and is_real_mic(mic)
 
 
@@ -281,15 +307,27 @@ def plan_migration(connection: sqlite3.Connection) -> MigrationPlan:
     # erfassen muss — und ein Symbol allein sagt ihm das nicht. Bis Runde 30
     # holte der Plan sie nicht, und der Bericht bekam sie deshalb nur aus der
     # Tabelle; über REST kamen sie nie an.
+    # `kind`, `base` und `quote_currency` kommen erst mit T-31 dazu; eine
+    # Datenbank, die den Umzug noch vor sich hat, kennt sie nicht. Deshalb
+    # dieselbe Vorsicht wie bei `ticker`/`mic`: fragen, was da ist.
+    has_forms = _has_form_columns(connection)
     columns = (
         "id, symbol, isin, name, exchange, type, currency"
         + (", ticker, mic" if has_identity else "")
+        + (", kind, base, quote_currency" if has_forms else "")
     )
 
     for row in connection.execute(
         f"SELECT {columns} FROM instruments ORDER BY symbol"
     ).fetchall():
-        if has_identity and keeps_its_identity(row["ticker"], row["mic"]):
+        if has_identity and keeps_its_identity(
+            row["ticker"],
+            row["mic"],
+            kind=row["kind"] if has_forms else None,
+            base=row["base"] if has_forms else None,
+            quote_currency=row["quote_currency"] if has_forms else None,
+            isin=row["isin"],
+        ):
             unchanged += 1
             continue
 
@@ -411,6 +449,26 @@ def _has_identity_columns(connection: sqlite3.Connection) -> bool:
         row["name"] for row in connection.execute("PRAGMA table_info(instruments)")
     }
     return {"ticker", "mic"} <= columns
+
+
+def _has_form_columns(connection: sqlite3.Connection) -> bool:
+    """Trägt `instruments` die Formspalten aus T-31 schon?
+
+    Getrennt von `_has_identity_columns` gefragt, weil die beiden Umzüge
+    getrennt sind: Ein Bestand kann `ticker`/`mic` haben und `kind` noch
+    nicht. Dort ist jede Zeile ein Listing, und die alte Prüfung ist die
+    richtige.
+
+    Args:
+        connection: Offene Verbindung; wird nur gelesen.
+
+    Returns:
+        ``True``, wenn `kind`, `base` **und** `quote_currency` existieren.
+    """
+    columns = {
+        row["name"] for row in connection.execute("PRAGMA table_info(instruments)")
+    }
+    return {"kind", "base", "quote_currency"} <= columns
 
 
 def _count_rows(

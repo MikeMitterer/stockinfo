@@ -69,6 +69,147 @@ _(Die `Human`-Spalte bleibt leer — sie gehört Mike.)_
 
 ---
 
+---
+
+## Zweiter Lauf, 2026-08-31 — nach T-31, T-38, T-37 und T-41
+
+Der erste Lauf maß den Stand vom 28. August. Seither haben vier Tickets die
+Verträge geändert: sechs Gattungen statt zwei, drei Identitätsformen statt
+einer, Pflichtfelder, echte Rollen-Kaskaden. Dieser Lauf misst **denselben
+Weg noch einmal** — in **beiden** Profilen, mit Krypto, Anleihe und Fonds.
+
+Wieder ein eigenes Volume je Profil; `data/stockinfo.db` blieb unberührt
+(Zeitstempel weiterhin 19. August, 638.976 Bytes).
+
+### Die Matrix im Online-Profil
+
+| # | Gemessen | Ergebnis |
+|---|---|---|
+| **1** | `GET /sources` | sieben Einträge, alle `configured: true`, keine Rolle „noch nicht gebaut" |
+| **2** | `IE00B4L5Y983` aufnehmen | Zeile ohne Reload: `EUNL.DE`, ISHARES CORE MSCI WORLD, ETF, 128,22 EUR |
+| **2b** | SQLite | eine Zeile, `kind=listed`, `ticker=EUNL`, `mic=XETR`, kein Platzhalter |
+| **3** | Drilldown | Kurs 128,22 (yfinance) **und** TER 0,20 / iShares / Ireland (justETF) |
+| **4** | `CA7800871021` | `RY.TO`, 284,17 **CAD** — Heimatbörse, weil Xetra sie nicht führt |
+| **4b** | `US0378331005` | `APC.DE`, 277,40 **EUR** — Vorzugsbörse gewinnt |
+| **5** | `XX0000000000` | „Zu XX0000000000 hat keine der eingerichteten Quellen ein Wertpapier gefunden"; keine neue Zeile |
+| **6** | TER von Hand auf 1,25 % | steht sofort in Zeile und Drilldown, mit Handpflege-Punkt |
+| **6b** | SQLite | `instrument_overrides.ter = 1.25`; `instruments.ter` bleibt leer |
+| **6c** | danach „Aktualisieren" | 1,25 % überlebt; Vola kommt neu von der Quelle dazu; der Name bleibt |
+| **7** | zweimal derselbe Kurs | 2,32 s → 0,01 s |
+| **7b** | `fetched_at` | unverändert, genau **eine** Zeile in `quotes` |
+| **8** | `RY.TO` löschen | weg aus Liste und `instruments`; null verwaiste Kurse, Tagesreihen, Overrides |
+| **9** | Konsole | siehe unten — sauber gemessen, ein Fehlversuch = ein Request = eine Meldung |
+
+Zusätzlich, weil die Gattungen neu sind: `BTC-EUR` kam als **crypto** mit
+`kind=pair`, `base=BTC`, `quote_currency=EUR` herein (67.683,26 EUR);
+`DE0009848119` als `HJUA.F` (175,61 EUR).
+
+**`DE0001102531` lässt sich im reinen Online-Profil nicht aufnehmen** —
+keine Online-Quelle führt die Anleihe. Das ist kein Fehler, sondern der
+Grund, warum es das YAML-Fallback gibt; die Oberfläche sagt es verständlich.
+
+### Die Matrix im YAML-Profil
+
+Eine Datei in allen fünf Rollen. Alle vier Gattungen kamen herein:
+
+| Papier | Typ | Kurs |
+|---|---|---|
+| `BTC-EUR` | CRYPTO | 94.500,00 EUR |
+| `DE0001102531` | BOND | 99,42 EUR (jüngster gepflegter Schlusskurs) |
+| `DE0009848119` | **FUND** | 142,50 EUR |
+| `IE00B4L5Y983` | ETF | 128,21 EUR |
+
+Konsole leer, alle zwölf Requests 200. `GET /fx` CAD→EUR: 0,6412 aus
+`yaml-file`.
+
+---
+
+## Befunde des zweiten Laufs
+
+### Befund A · Ein Krypto-Papier setzte die App in den Migrationszustand
+
+**Der schwerste Fund, und er kostet Daten.** Nach der Aufnahme von `BTC-EUR`
+meldete `GET /migration`:
+
+```json
+{"pending": true,
+ "rejected": [{"symbol": "BTC-EUR", "reason": "symbol_without_exchange_suffix",
+               "quotes": 1}],
+ "lost_quotes": 1}
+```
+
+Beim nächsten Start stand die App damit im Migrations-Riegel: `GET /sources`
+antwortete `503 migration_pending`, und die Oberfläche bot an, das Papier
+samt Kurspunkt zu **löschen**. Genau das ist im Browserlauf zu T-41 schon
+einmal passiert; dort hielt ich es für eine Eigenheit des Testvolumes.
+
+Ursache: `keeps_its_identity(ticker, mic)` kannte nur die `listed`-Form. Eine
+`pair`-Zeile hat keinen Ticker, eine `isin_only`-Zeile keinen MIC — beide
+sind seit T-31 vollständige Identitäten, im Schema per `CHECK` erzwungen.
+Der Umzug von T-21 hielt sie für Altlast ohne Identität.
+
+*Behoben:* `keeps_its_identity` entscheidet je Form; `plan_migration` liest
+`kind`, `base` und `quote_currency` mit — mit derselben Vorsicht wie bei
+`ticker`/`mic`, weil eine Datenbank vor T-31 diese Spalten nicht hat.
+
+*Orakel:* `test_die_anderen_identitaetsformen_ueberleben_die_vorschau`, über
+**beide** neuen Formen parametrisiert. Vorher rot für beide.
+
+*Gegengeprüft am laufenden System:* Nach dem Neustart auf derselben Datenbank
+`pending: false`, fünf Papiere `unchanged`, `/sources` wieder 200.
+
+### Befund B · Die zweite Gattungstabelle kannte `fund` nicht
+
+`QUOTE_TYPE_MAP` (Yahoo) bildet `MUTUALFUND` seit Mikes Entscheidung vom
+2026-08-29 auf `fund` ab. `_FIGI_TYPES` (OpenFIGI) stand weiterhin auf `etf`
+— zwei Tabellen für dieselbe Frage, eine gepflegt und eine nicht, und die
+ungepflegte gewinnt, weil OpenFIGI vorn in der Auflösungskette steht.
+
+Ein Test schrieb die überholte Abbildung fest (`("Mutual Fund", "etf")`); er
+war am 28. August richtig und einen Tag später falsch.
+
+*Behoben:* `MUTUAL FUND` und `OPEN-END FUND` bilden auf `fund` ab. `ETP`
+bleibt `etf` — Exchange Traded Product umfasst ETF und ETC, und ohne feinere
+Auskunft ist das die Näherung, nicht das Raten.
+
+**Nicht die Ursache des UI-Befunds.** `DE0009848119` erscheint im
+Online-Profil als ETF, weil **Yahoo selbst** `quoteType = ETF` für die
+Frankfurter Notiz meldet. Gemessen, nicht vermutet. Der Fonds ist einer, aber
+die Quelle sagt etwas anderes, und ihr zu widersprechen wäre Raten. Im
+YAML-Profil, wo die Datei `fund` sagt, steht `FUND` in der Oberfläche.
+
+### Befund C · Der Drilldown nannte jedes Nicht-ETF eine Aktie
+
+Der mitgebrachte Befund aus T-37, unten beschrieben. Behoben: Der Satz nennt
+die Gattung nicht mehr („dieses Papier ist **keiner**"). Sie zu interpolieren
+wäre die größere Änderung gewesen — sechs Übersetzungen je Sprache samt
+Artikel — und sie steht ohnehin als Kennzeichen in derselben Zeile.
+
+*Gemessen im Browser* unter der Bundesanleihe und unter `BTC-EUR`.
+*Orakel:* über alle fünf Nicht-ETF-Gattungen parametrisiert, DE und EN.
+
+### Was **kein** Befund war
+
+- **`DELETE` mit 503.** Die Browser-Erweiterung zeigte für das Löschen einen
+  503; das Serverprotokoll sagt `204 No Content`, und die Zeile ist samt
+  Kurspunkten weg. Die Anzeige war falsch, nicht die App.
+- **Zwölf Konsolenmeldungen für drei Fehlversuche.** Ein sauber isolierter
+  Versuch ergab **einen** Request und **eine** Meldung; die Häufung war ein
+  Artefakt der Puffererfassung.
+- **`/quote/BTC-EUR` → „Ungültiges ISIN-Format".** Mein Messfehler: Das ist
+  die ISIN-Route. Das Dashboard nimmt für Symbole `/quote?symbol=…`, und dort
+  antwortet die Datei mit 94.500,00.
+
+### Offen, nicht behoben
+
+`normalize_isin` lehnt mit deutschem Fließtext ab
+(`detail: "Ungültiges ISIN-Format: …"`) statt mit einer Kennung — dieselbe
+Sorte Zusagenbruch, die Befund 4 des ersten Laufs behoben hat, eine Ebene
+tiefer. Das Dashboard erreicht diese Stelle nicht, weil es ISIN und Symbol
+selbst unterscheidet; deshalb hier nur notiert und nicht mitrepariert.
+
+---
+
 ## Mitgebrachter Befund aus T-37 (2026-08-30)
 
 **Der Drilldown nennt jede Nicht-ETF-Gattung „Aktie".**

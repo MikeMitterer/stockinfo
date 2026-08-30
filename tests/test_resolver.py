@@ -891,11 +891,12 @@ def test_name_und_gattung_ueberleben_die_aufloesung() -> None:
     ("figi_type", "expected"),
     [
         ("ETP", "etf"),
-        ("Mutual Fund", "etf"),
+        ("Mutual Fund", "fund"),
+        ("Open-End Fund", "fund"),
         ("Common Stock", "stock"),
         ("Irgendwas Neues", None),
     ],
-    ids=["etp", "fonds", "aktie", "unbekannt"],
+    ids=["etp", "fonds", "offener-fonds", "aktie", "unbekannt"],
 )
 def test_die_gattung_wird_uebersetzt_und_nicht_geraten(
     figi_type: str, expected: str | None
@@ -905,6 +906,12 @@ def test_die_gattung_wird_uebersetzt_und_nicht_geraten(
     Ein geratenes ``"stock"`` wäre schlimmer als kein Wert: Es schaltete die
     ETF-Anreicherung stillschweigend ab — genau der Fehler, der diesen Test
     veranlasst hat, nur mit einer falschen Antwort statt gar keiner.
+
+    **Die Fondszeile stand hier bis T-35 auf ``etf``.** Sie war am 2026-08-28
+    richtig aufgeschrieben und einen Tag später überholt: Mikes Entscheidung
+    machte `fund` zur eigenen Gattung, und `QUOTE_TYPE_MAP` zog nach — diese
+    Tabelle nicht. Ein Test, der eine überholte Abbildung festhält, verteidigt
+    sie.
     """
     from app.providers.openfigi_provider import OpenFigiClient
 

@@ -73,10 +73,22 @@ class FigiMatch:
 # Gemessen: `IE00B4L5Y983` liefert `securityType: "ETP"`, `securityType2:
 # "Mutual Fund"`. Beide Felder werden geprüft, weil OpenFIGI die Gattung je
 # nach Papier im einen oder anderen führt.
+# **Die zweite Tabelle, die bei T-31 vergessen wurde.** `QUOTE_TYPE_MAP` in
+# `app/providers/base.py` bildet Yahoos `MUTUALFUND` seit Mikes Entscheidung
+# vom 2026-08-29 auf `fund` ab; hier stand weiterhin `etf`. Zwei Tabellen für
+# dieselbe Frage, eine gepflegt und eine nicht — und diese hier gewinnt, weil
+# OpenFIGI vorn in der Auflösungskette steht.
+#
+# Die Folge wäre dieselbe, die `fund` überhaupt veranlasst hat: Ein nicht
+# börsengehandelter Fonds bekäme die ETF-Anreicherung samt TER-Frage an
+# justETF, wo er nicht geführt wird.
+#
+# `ETP` bleibt `etf`: Exchange Traded Product umfasst ETF und ETC, und ohne
+# feinere Auskunft ist `etf` hier die Näherung und nicht das Raten.
 _FIGI_TYPES: dict[str, str] = {
     "ETP": "etf",
-    "MUTUAL FUND": "etf",
-    "OPEN-END FUND": "etf",
+    "MUTUAL FUND": "fund",
+    "OPEN-END FUND": "fund",
     "COMMON STOCK": "stock",
     "EQUITY": "stock",
     "DEPOSITARY RECEIPT": "stock",
