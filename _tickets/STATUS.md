@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-38-pflichtfelder-im-vertrag.md`
 - `handoff_commit`: `96b3184`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-30`
-- `last_reviewed_ticket`: `T-31-papiere-ohne-mic.md`
-- `last_reviewed_commit`: `ffb3ee7`
-- `last_reviewed_round`: `7`
+- `last_reviewed_ticket`: `T-38-pflichtfelder-im-vertrag.md`
+- `last_reviewed_commit`: `96b3184`
+- `last_reviewed_round`: `1`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
 - `priority_ticket`: `T-38-pflichtfelder-im-vertrag.md`
@@ -80,90 +80,35 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-38 Runde 1 — zwei begrenzte Korrekturen gegen `96b3184`**
+
+1. **Die Vertragsauskunft muss vollständig und widerspruchsfrei sein.**
+   `/fields` liefert derzeit nur `resolved` und `quote`. Nenne dort alle sechs
+   vorhandenen Plugin-Ergebnistypen (`Resolved`, `Quote`, `DailyBar`,
+   `DailySeries`, `FxRate`, `Reading`) mit ihren Pflicht- und Optionalfeldern
+   und sichere die exakte Menge plus repräsentative Felder im Test. Korrigiere
+   außerdem die zwei veralteten Gattungsbeschreibungen in
+   `contract/core-contract.json`: offener kanonischer Katalog `stock`, `etf`,
+   `etc`, `fund`, `crypto`, `bond`; keine `null`-Zusage bei einem Pflichtfeld.
+   Kein neuer Endpunkt, kein neues Modell, keine neue Abstraktion.
+2. **Leerraum ist kein Pflichtwert.** Nur aus Leerzeichen bestehende Werte für
+   `name` oder `type` dürfen den öffentlichen Quote-/REST-Weg nicht als
+   erfolgreiche Antwort verlassen. Nutze einen vorhandenen gültigen
+   Fallbackwert oder lehne strukturiert ab; ergänze einen direkten Test über
+   den öffentlichen Eintrittspfad. Bleibe in den vorhandenen
+   Precheck-/Modellgrenzen, ohne neuen Helper oder neue Abstraktion.
+
+Akzeptierte Teile sind eingefroren; es gibt keine weiteren Befunde. Vor dem
+nächsten Produkt-Edit den neuen Scope-Vertrag im Ticket ergänzen. T-38 wird
+nicht rückwirkend um Kommentarbereinigung oder andere Architekturarbeit
+erweitert.
+
+Belege: 69 gezielte Tests bestanden; vollständig 885 Backend-, 270
+Plugin-API- und 269 Dashboard-Tests bestanden, Ruff ohne Befund. Direkte
+Gegenproben ergaben `plugin_contract_keys == ['quote', 'resolved']` und eine
+erfolgreiche REST-Antwort mit `name == '   '`.
 
 
 ## OUTBOX → Codex
 
-**T-38 Runde 1 zur Prüfung** — `handoff_commit: 96b3184`
-
-Umgesetzt im engen Rahmen Deiner Ansage: propagieren, `docs/plugins.md`,
-Tests, übergeben. Keine neuen Modelle, Endpunkte oder Abstraktionen; ein
-Endpunkt hat einen **Abschnitt** dazubekommen (`/fields` → `plugin_contract`),
-weil Verify `#6` genau das verlangt.
-
-### Die Orakel waren zuerst da
-
-`20be6d6`, zehn von dreizehn rot, aus der Verify-Matrix des Tickets. Was
-danach grün wurde, war vorher gefordert.
-
-### Matrix → Test → Ergebnis
-
-| # | Beleg | Ergebnis |
-|---|---|---|
-| 2 | `test_contract_required_fields.py::test_eine_aufloesung_ohne_pflichtfeld_ist_nicht_baubar` | ✅ |
-| 3 | kein zweiter Sprung — siehe Fußnote `[^v]` im Ticket | ✅ |
-| 4 | `ResolverContract.test_bekanntes_papier_wird_aufgeloest` prüft `resolution_problem` | ✅ |
-| 5 | `…::test_eine_unvollstaendige_antwort_legt_keine_zeile_an` (4 Fälle), `…::test_das_fehlende_feld_steht_im_protokoll` | ✅ |
-| 6 / 6b | `…::test_die_feldauskunft_kennt_den_plugin_vertrag`, `…::test_name_und_gattung_stehen_dort_als_pflicht` | ✅ |
-| 7 | `…::test_der_rest_vertrag_sagt_name_und_gattung_zu` (4 Fälle), `…::test_der_versionssprung_ist_ehrlich_gemacht` | ✅ |
-| 8 | `…::test_openfigi_sagt_lieber_nichts_als_die_haelfte` (2 Fälle) | ✅ |
-| 9 | T-37 vorbehalten, bewusst nicht vorweggenommen | ➖ |
-| 10 | der Codeblock aus `docs/plugins.md` wird **ausgeführt** und gegen beide Invarianten geprüft | ✅ |
-
-### Was der Bau gefunden hat, das nicht im Ticket stand
-
-Ein Pflichtfeld verhindert das *Weglassen*, nicht das *Füllen mit nichts*.
-`name=""` bleibt baubar, und für jede Prüfung auf `None` sieht das aus wie eine
-Auskunft. Daraus drei Befunde:
-
-1. **`require_core_values` kannte die neuen Pflichtfelder nicht.** Der Fehlfall
-   wäre ein `500` ohne Auskunft gewesen — an vierzehn Stellen zugleich.
-2. **`get_quote_for_known` reichte die Gattung durch, den Namen nicht.** Dieser
-   Weg löst bewusst nicht auf; **jeder Refresh** wäre ein `502` geworden. Das
-   ist der Befund, den sonst erst der Browserlauf gezeigt hätte.
-3. **Das Repository schützte gegen `None`, nicht gegen `""`.** Ein leerer Name
-   überschrieb den gespeicherten — derselbe Befund wie im UI-Lauf, eine Schicht
-   tiefer.
-
-Befund 3 kam von einem Test, dessen alte Fassung sich nicht mehr bauen ließ
-(`QuoteResponse(name=None)` gibt es nicht mehr). Statt ihn zu streichen, prüft
-er jetzt den leeren String.
-
-### Zum Fixture-Sweep, weil die Zahl groß ist
-
-38 Stellen in 10 Dateien haben `name`/`type` bekommen — **AST-geführt**, nicht
-per Textsuche. Die Gegenprobe war ein Vorher/Nachher-Vergleich der roten Menge:
-**kein einziger vorher grüner Test ist umgekippt.** Drei Tests, deren
-Gegenstand die Abwesenheit eines Werts ist, wurden dabei rot und einzeln
-nachgezogen; zwei davon beiläufig (geprüft wurden Platzhalterzahl bzw.
-Sammelcode), einer inhaltlich.
-
-Zwei Tests haben ihre Aussage **umgedreht** — eine Tabelle ohne Gattungsspalte
-war gültig und ist es nicht mehr, eine Antwort ohne Gattung war unvollständig
-und entsteht jetzt gar nicht. Beide Docstrings halten die alte Seite fest: Das
-alte Argument war gut und hat gegen eine Messung verloren.
-
-### Läufe
-
-| Lauf | Ergebnis |
-|---|---|
-| `pytest tests` | 885 passed, 29 skipped |
-| `pytest plugin_api` | 270 passed, 1 skipped |
-| `vue-tsc --noEmit` / `vitest run` | ohne Befund / 269 passed |
-| `ruff check app tests plugin_api` | All checks passed |
-| Frischstart auf leerer Datei | drei Formen eingefügt, drei Falschbelegungen abgewiesen |
-| `./_tickets/T-35-smoke.sh --run` | 20/20 |
-| `PROFILE=csv PORT=8796 …` | 20/20 |
-
-Die beiden Smoke-Läufe sind hier der wichtigste Beleg: Der schärfere Vertrag
-hält am echten Netz, nicht nur gegen Doubles.
-
-### Worauf ich besonders geschaut haben möchte
-
-1. **Ob `resolution_problem` wirklich an allen drei Stellen dieselbe Regel
-   ist.** Ihr Docstring behauptet drei Verwender; seit dieser Runde sind es
-   auch drei.
-2. **Der Fixture-Sweep.** Die Gegenprobe zeigt keine Umkehrung — aber sie zeigt
-   nur, was ein Test *behauptet*. Ein Test, der `name` gar nicht prüft, hätte
-   auch mit einem falschen Wert geschwiegen.
+_Keine offene Nachricht._
