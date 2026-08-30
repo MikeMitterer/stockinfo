@@ -128,16 +128,30 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | **1** | Entscheidung Mike | das Gattungs-Vokabular steht fest: `stock`, `etf`, `etc`, `fund`, `crypto`, `bond`; Indizes bleiben draußen (T-31, Entscheidung 2) | ✅ | |
-| **2** | `stockinfo_plugin.types` | `Resolved.name` und `Resolved.instrument_type` sind Pflichtfelder. Kein Vorgabewert, und die Zusage steht im Docstring | | |
-| **3** | `API_VERSION` | der Sprung ist **ehrlich** gemacht: Ein optionales Feld zur Pflicht zu erheben ist laut eigener Kompatibilitätsregel ein **Bruch**. Ein Plugin nach altem Vertrag wird abgewiesen und nicht stillschweigend geduldet | | |
-| **4** | Contract-Kit | die Rollen-Suiten prüfen die Pflichtfelder. Ein Plugin-Autor merkt es **beim Bauen**, nicht ein Benutzer im Betrieb | | |
-| **5** | Host-Grenze | eine Antwort ohne Pflichtfeld ist ein **Befund**: sichtbar in `/sources` oder im Protokoll, nie still. Die App leitet daraus **nichts** ab — insbesondere nicht `stock`, und sie überspringt die Metadatenkaskade nicht | | |
-| **6** | `GET /fields` | die Auskunft nennt Pflicht- und Optionalfelder **auch für den Plugin-Vertrag**, nicht nur für die REST-Modelle. Heute gibt es sie nur für letztere | | |
-| **6b** | dieselbe Auskunft | `name` und `type` stehen dort als **Pflicht**. Heute sagt sie `required: false` — das widerspricht der Entscheidung, sobald sie umgesetzt ist | | |
-| **7** | `contract/core-contract.json` | `core_version` steigt, weil ein optionales Feld zum Pflichtfeld wird. Das ist laut eigener Regel **breaking** → Major | | |
-| **8** | die vier eingebauten Plugins | jedes liefert die Pflichtfelder oder antwortet ehrlich mit `NotFound` | | |
-| **9** | das YAML-Beispiel | jeder `instrument`-Eintrag trägt `name` und `type`; ein nicht börsengehandelter Fonds kommt als `fund`, nicht `etf`. Siehe T-37 | | |
-| **10** | `docs/plugins.md` | ein Plugin-Autor liest, welche Felder er liefern **muss** | | |
+| **2** | `stockinfo_plugin.types` | `Resolved.name` und `Resolved.instrument_type` sind Pflichtfelder. Kein Vorgabewert, und die Zusage steht im Docstring | ✅ [^r1] | |
+| **3** | `API_VERSION` | der Sprung ist **ehrlich** gemacht: Ein optionales Feld zur Pflicht zu erheben ist laut eigener Kompatibilitätsregel ein **Bruch**. Ein Plugin nach altem Vertrag wird abgewiesen und nicht stillschweigend geduldet | ✅ [^v] | |
+| **4** | Contract-Kit | die Rollen-Suiten prüfen die Pflichtfelder. Ein Plugin-Autor merkt es **beim Bauen**, nicht ein Benutzer im Betrieb | ✅ [^r1] | |
+| **5** | Host-Grenze | eine Antwort ohne Pflichtfeld ist ein **Befund**: sichtbar in `/sources` oder im Protokoll, nie still. Die App leitet daraus **nichts** ab — insbesondere nicht `stock`, und sie überspringt die Metadatenkaskade nicht | ✅ [^r1] | |
+| **6** | `GET /fields` | die Auskunft nennt Pflicht- und Optionalfelder **auch für den Plugin-Vertrag**, nicht nur für die REST-Modelle. Heute gibt es sie nur für letztere | ✅ [^r1] | |
+| **6b** | dieselbe Auskunft | `name` und `type` stehen dort als **Pflicht**. Heute sagt sie `required: false` — das widerspricht der Entscheidung, sobald sie umgesetzt ist | ✅ [^r1] | |
+| **7** | `contract/core-contract.json` | `core_version` steigt, weil ein optionales Feld zum Pflichtfeld wird. Das ist laut eigener Regel **breaking** → Major | ✅ [^m] | |
+| **8** | die vier eingebauten Plugins | jedes liefert die Pflichtfelder oder antwortet ehrlich mit `NotFound` | ✅ [^r1] | |
+| **9** | das YAML-Beispiel | jeder `instrument`-Eintrag trägt `name` und `type`; ein nicht börsengehandelter Fonds kommt als `fund`, nicht `etf`. Siehe T-37 | ➖ [^t37] | |
+| **10** | `docs/plugins.md` | ein Plugin-Autor liest, welche Felder er liefern **muss** | ✅ [^r1] | |
+
+[^r1]: Umsetzung Runde 1 gegen `96b3184`. Die Orakel entstanden **vor** dem
+    Code (`20be6d6`, zehn von dreizehn rot) und stammen aus dieser Matrix.
+[^v]: **Kein zweiter Sprung.** Das Ticket verlangt einen gemeinsamen
+    `API_VERSION`-Sprung mit T-31 („Wer zuerst anfängt, erzeugt den zweiten
+    Sprung"). T-31 hat ihn auf `2` gemacht; veröffentlicht ist nichts,
+    `plugin_api` steht auf `0.2.0`. Die Pflichtfelder fahren deshalb auf
+    dieser Zahl — genau der eine Sprung, den das Paket wollte.
+[^m]: Entscheidung Mike, 2026-08-30: Die REST-Zusage zieht mit.
+    `core_version` 3.0.0 → 4.0.0, weil ein optionales Feld zum Pflichtfeld
+    wird. Betroffen sind `quote.name`, `quote.type`, `instrument.name`,
+    `instrument.type`.
+[^t37]: Gehört zum YAML-Plugin und wird dort erfüllt — T-37 ist das nächste
+    Kettenglied. Hier bewusst offen gelassen statt vorweggenommen.
 
 ---
 
@@ -156,5 +170,29 @@ eines Hinweises, verlagert den Vertragsfehler bis zum Benutzer.
 
 ## Auflösung
 
-_(offen — die Vorbedingung `#1` ist seit T-31 entschieden, die Umsetzung
-beginnt gemeinsam mit T-31: **ein** `API_VERSION`-Sprung statt zwei.)_
+_(umgesetzt am 2026-08-30, Runde 1 gegen `96b3184`; Verify `#9` bleibt T-37
+vorbehalten.)_
+
+`Resolved.name` und `Resolved.instrument_type` haben keinen Vorgabewert mehr.
+Das ist die Hälfte, die im Ticket stand — und die kleinere.
+
+**Die andere Hälfte hat der Bau selbst gefunden.** Ein Pflichtfeld verhindert
+das *Weglassen*, nicht das *Füllen mit nichts*: `name=""` bleibt baubar, und
+für jede Prüfung, die auf `None` schaut, sieht das aus wie eine Auskunft. Die
+eigentliche Durchsetzung liegt deshalb in `invariants.resolution_problem` —
+einer Funktion, die Contract-Kit, Host-Grenze und Plugin-Autor gemeinsam
+benutzen.
+
+Drei Fehler wurden dabei sichtbar, die vorher kein Test sah:
+
+1. `require_core_values` kannte die neuen Pflichtfelder nicht — der Fehlfall
+   wäre ein `500` ohne Auskunft gewesen, an vierzehn Stellen zugleich.
+2. `get_quote_for_known` reichte die Gattung durch, den Namen nicht. Dieser Weg
+   löst bewusst nicht auf; **jeder Refresh** wäre damit ein `502` geworden.
+3. Das Repository schützte gegen `None`, nicht gegen `""` — ein leerer Name
+   überschrieb den gespeicherten. Derselbe Befund wie im UI-Lauf, eine Schicht
+   tiefer.
+
+Befund 3 kam von einem Test, dessen alte Fassung sich nicht mehr bauen ließ.
+Statt ihn zu streichen, wurde er auf den leeren String umgestellt — auf die
+Lücke, die ein Pflichtfeld offen lässt.
