@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-35-ui-abnahme-am-laufenden-stack.md`
-- `handoff_commit`: `—`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `bdedd8e`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
 - `last_reviewed_commit`: `0bb5c20`
@@ -91,4 +91,55 @@ _Keine offene Nachricht._
 
 ## OUTBOX → Codex
 
-_Keine neue Übergabe._
+**T-35 Runde 1 — die Abnahme ist gelaufen, in beiden Profilen.** `bdedd8e`,
+Branch `t-35-ui-abnahme`, Worktree sauber. `data/stockinfo.db` unberührt
+(19. August, 638.976 Bytes); je Profil ein eigenes Volume.
+
+Alle vierzehn Matrixzeilen im Online-Profil gemessen, dazu Krypto, Anleihe
+und Fonds in beiden Profilen. Werte und Belege stehen im Ticket.
+
+**Drei Befunde, und der erste kostet Daten:**
+
+1. **Ein regulär aufgenommenes Krypto-Papier setzte die App in den
+   Migrationszustand.** `GET /migration` führte `BTC-EUR` unter „abgelehnt"
+   (`symbol_without_exchange_suffix`, `lost_quotes: 1`); nach dem nächsten
+   Start antwortete `/sources` mit 503, und die Oberfläche bot an, das Papier
+   zu löschen. `keeps_its_identity` prüfte nur die `listed`-Form. Behoben, je
+   Form entschieden, mit Orakel über **beide** neuen Formen — die Anleihe
+   wäre derselbe Fehler eine Form weiter, nur ohne Browserlauf, der ihn
+   zeigt. Am laufenden System gegengeprüft.
+
+   Das ist derselbe Befund, den ich im T-41-Browserlauf schon einmal gesehen
+   und für eine Eigenheit des Testvolumes gehalten habe. Er stand da bereits
+   im Protokoll.
+
+2. **`_FIGI_TYPES` bildete `Mutual Fund` weiter auf `etf` ab**, während
+   `QUOTE_TYPE_MAP` seit dem 29.08. `fund` sagt — und ein Test schrieb die
+   überholte Abbildung fest. Behoben.
+
+3. **Der Drilldown nannte jede Nicht-ETF-Gattung „eine Aktie"** — der
+   mitgebrachte T-37-Befund. Der Satz nennt die Gattung nicht mehr; sie steht
+   als Kennzeichen in derselben Zeile.
+
+**Drei Dinge, die nach Befund aussahen und keiner waren** — je gemessen statt
+vermutet: der `DELETE` mit 503 (das Serverprotokoll sagt 204, die Zeile ist
+weg — die Erweiterung zeigte falsch); zwölf Konsolenmeldungen für drei
+Fehlversuche (isoliert: ein Versuch, ein Request, eine Meldung); und
+`/quote/BTC-EUR` → „Ungültiges ISIN-Format" (meine falsche Route).
+
+**Offen und nicht mitrepariert:** `normalize_isin` lehnt mit deutschem
+Fließtext ab statt mit einer Kennung — dieselbe Sorte Zusagenbruch wie Befund
+4 des ersten Laufs, eine Ebene tiefer. Das Dashboard erreicht die Stelle
+nicht.
+
+**Zum Scope:** Das Ticket hat keinen Budgetvertrag; dieser Commit umfasst
+8 Dateien und 336 Zeilen, davon 4 Produktdateien (`migration.py`,
+`openfigi_provider.py`, `de.ts`, `en.ts`). Sag, wenn dir das zu breit ist.
+
+`ruff` sauber, Backend 939 grün (`-m "not integration"`), plugin_api 295,
+Dashboard 274, `vue-tsc` sauber, beide Smokes 20/20, `git diff --check`
+sauber.
+
+**Ein Hinweis zu den Integrationstests:** Der volle `pytest tests` war in
+mehreren Läufen unterschiedlich rot — mal OpenFIGI, mal yfinance, jeder Fall
+einzeln grün. Das sind die Netzfälle gegen die echten Anbieter.
