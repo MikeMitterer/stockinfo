@@ -132,6 +132,22 @@ Scope verlangte Riegel:
 Beide Blöcke bleiben in Parser und Rollenmethoden des vorhandenen Plugins.
 Keine neue Abstraktion, kein Host-Umbau und keine Arbeit an T-41.
 
+### Review Runde 3 · vollständige Grenzmatrix statt weiterer Einzelmutanten
+
+Codex-Review gegen `b464471`: Die fünf Rollenverträge sind nun wirklich am
+Beispiel verankert und die bekannten Rollenfehler behoben. Die behauptete
+Vollständigkeit des Lade-Rands hält aber noch nicht: Falsch geformte
+Identität, skalare Close-/FX-Einträge sowie numerischer Name/Typ werfen aus
+dem Konstruktor; falsey Listen an Objektblöcken werden als fehlend gedeutet.
+
+Der letzte Korrekturblock inventarisiert deshalb alle **vorhandenen**
+Schema-Grenzen einmal als parametrisierte Matrix und validiert Metadaten gegen
+ihre vorhandenen `FieldSpec`. Daneben werden zwei Vertragssemantiken
+korrigiert: Ein bekanntes Papier ohne Tage im angefragten Fenster ergibt eine
+leere `DailySeries`, und ein FX-Identitätskurs entsteht nur für gültige
+Währungen. Das ist eine endliche Konsolidierung im vorhandenen Parser, keine
+weitere Produktfläche und kein neues Schema-Framework.
+
 ---
 
 ## Verify
@@ -143,7 +159,7 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | `T-37-single-file-sample.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | ◑ [^review-r2] | |
+| **1** | `T-37-single-file-sample.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | ◑ [^review-r3] | |
 | **2** | `PROFILE=yaml ./_tickets/T-35-smoke.sh --run` | der gemeinsame Smoke ist grün; `GET /sources` zeigt `yaml-file` in allen fünf Rollen und genau einen Pfad auf die Fachdaten-Datei | ✅ [^r1] | |
 | **3** | `PROFILE=online ./_tickets/T-35-smoke.sh --run` | derselbe Smoke ist grün; normale Online-Quellen stehen zuerst und dasselbe `yaml-file` jeweils zuletzt | ⊘ [^split] | |
 | **4** | Überschneidungs-Test im Online-Profil | liefert eine Online-Quelle einen gültigen Wert, gewinnt sie; YAML überschreibt ihn nicht. Nur bei fehlendem Ergebnis wird YAML gefragt | ⊘ [^split] | |
@@ -151,7 +167,7 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 | **6** | Browser, `PROFILE=yaml` | `BTC-EUR` (`pair`), eine Anleihe (`isin_only`) und ein nicht börsengehandelter Fonds (`fund`) lassen sich anlegen; Liste, Drilldown, Preis und manueller History-Fallback stimmen; Konsole und fehlgeschlagene Requests sind sauber | ⚠️ [^browser] | |
 | **7** | Browser, `PROFILE=online` | BTC kommt über YFinance, die Anleihe ohne Online-Kurs über YAML; bei einem überlappenden Asset gewinnt online. Liste, Drilldown und Quellenanzeige stimmen; Konsole und Requests sind sauber | ⊘ [^split] | |
 | **8** | Plugin-/Profil-Inventur | kein CSV-Profil und keine vier Datei-Quellen bleiben aktiv oder dokumentiert; `PROFILE=yaml` ist der einzige dateibasierte Prüfpfad | ✅ [^review-r2] | |
-| **9** | Reload-/Fehlerfälle | fehlende Datei, ungültiges YAML, doppelte IDs und unzulässige Werte werden verständlich gemeldet; ein Neustart liest eine gültig geänderte Datei erneut ein | ◑ [^review-r2] | |
+| **9** | Reload-/Fehlerfälle | fehlende Datei, ungültiges YAML, doppelte IDs und unzulässige Werte werden verständlich gemeldet; ein Neustart liest eine gültig geänderte Datei erneut ein | ◑ [^review-r3] | |
 
 [^r1]: Umsetzung Runde 1. Die Orakel entstanden **vor** dem Code (dreizehn
     Fälle, alle rot) und stammen aus dieser Matrix. Belege: `PROFILE=yaml`
@@ -194,6 +210,10 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
     Dokumentationsinventur sind korrigiert. Noch offen sind die fünf direkten
     Rollenverträge des Beispiels sowie Schemafehler, die beim Laden nicht als
     `configuration_problem` enden; Details stehen im Review-Abschnitt.
+[^review-r3]: **Codex Runde 3 gegen `b464471`:** Die fünf Rollenverträge sind
+    eingebunden und die benannten Fälle korrigiert. Offen ist die einmalige
+    vollständige Typmatrix des bestehenden YAML-Schemas sowie leere
+    Daily-Fenster und ungültige FX-Identitätspaare; Details stehen oben.
 
 Die Browserzeilen werden von Claude mit den tatsächlich beobachteten Assets,
 Quellen und Ergebnissen belegt. Eine rein automatisierte Aussage ersetzt diese

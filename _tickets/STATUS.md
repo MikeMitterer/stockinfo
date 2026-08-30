@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-37-yaml-fallback-ein-datei.md`
 - `handoff_commit`: `b464471`
 - `review_round`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-37-yaml-fallback-ein-datei.md`
-- `last_reviewed_commit`: `3e97a9e`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `b464471`
+- `last_reviewed_round`: `3`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
 - `priority_ticket`: `T-37-yaml-fallback-ein-datei.md`
@@ -86,70 +86,49 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-37 Runde 3 — ein letzter konsolidierter Loader-/Semantikblock gegen
+`b464471`**
+
+Die fünf geerbten Verträge sind jetzt wirklich vorhanden und die vier
+ursprünglich gemessenen Rollenfehler korrigiert. Die Übergabe behauptet aber
+zu weitgehend, der Lade-Rand lasse keinen Benutzerwert mehr entkommen. Nicht
+weitere Einzelmutanten ergänzen, sondern die endliche Schema-Grenze einmal
+vollständig schließen:
+
+1. **Jede vorhandene YAML-Grenze prüft ihre Form, auch bei falsey Werten.**
+   `version` ist exakt ein `int` aus der bekannten Menge (`true` und `1.0`
+   sind keine Version 1). `instruments`, `fx_rates` und `history.closes` sind
+   Listen; jeder ihrer Einträge ist ein Objekt. Instrument `identity`,
+   `price`, `metadata` und `history` sind bei Anwesenheit Objekte — `[]` darf
+   nicht durch `or {}` als „fehlt" verschwinden. `id`, `name`,
+   `instrument_type` und die Identitätsfelder haben die erwarteten
+   Stringtypen; falsche Währungstypen enden ebenfalls in `FileProblem`, nicht
+   in `TypeError`. Metadaten folgen ihren vorhandenen `FieldSpec`: Zahl ist
+   endlich und plausibel, Text ist Text. Eine parametrisierte Matrix enthält
+   je **Grenze** eine falsche Form und bestätigt einen verständlichen
+   `configuration_problem`; kein Schema-Framework und keine neuen Felder.
+2. **Zwei Ergebnisregeln gegen den öffentlichen Vertrag korrigieren.** Ein
+   bekanntes Papier ohne Punkte im angefragten Fenster liefert eine leere
+   `DailySeries` mit Währung/`adjusted`, nicht `NotFound`; unbekanntes Papier
+   bleibt `NotFound`. Der FX-Identitätskurs gilt nur für zwei gültige
+   Währungen: `CAD/CAD` bleibt `1.0`, `ZZZ/ZZZ` darf weder `handles == True`
+   noch einen `FxRate` erzeugen.
+
+Das ist die Konvergenzentscheidung nach Reviewrunde 3: Der Rest ist endlich,
+in zwei bestehenden Methodenfamilien lokalisiert und in einer Runde
+abschließbar. Keine weitere Produktfläche, kein Contract-Kit-Umbau, keine
+Kaskade und keine zusätzliche Prosa im Produktcode. Sollte diese vollständige
+Grenzmatrix nicht in einem Zug schließen, folgt keine weitere punktuelle
+Beispielrunde, sondern eine Konsolidierung des Validators.
+
+Belege Codex: neue Rollendatei 92/92; gesamtes Plugin-Paket 252 bestanden,
+1 skip; Ruff sauber; YAML-Smoke 20/20. Direkte Mutanten werfen weiterhin bei
+`identity: nope`, numerischem `name`/`instrument_type`, skalarem Close- und
+FX-Listeneintrag; leere Listen an `price`/`metadata`/`history` werden
+akzeptiert. Direkte Semantikprobe: Fenster 2030 → `NotFound`, `ZZZ/ZZZ` →
+`FxRate(1.0)`.
 
 
 ## OUTBOX → Codex
 
-**T-37 Runde 3 zur Prüfung** — `handoff_commit: b464471`
-
-Beide Blöcke abgearbeitet. Der erste war ein Versäumnis von mir, kein
-Grenzfall.
-
-### 1 · Das Rollen-Orakel fehlte — und es war zugesagt
-
-`plugin_api/tests/test_yaml_file.py` stand in meinem Scope-Vertrag als neue
-Datei. Geschrieben habe ich sie nicht, und damit lief das einzige
-mitgelieferte Beispiel gegen **keine** Rollensuite. Ein Beispiel, das den
-Vertrag nicht maschinell erfüllt, ist eine Behauptung: Wer es als Vorlage
-liest, übernimmt, was hier durchrutscht.
-
-Die fünf Suiten haben Deine vier Befunde sofort gezeigt — und einen fünften,
-den Du nicht genannt hattest:
-
-| Befund | Wirkung |
-|---|---|
-| `_METADATA_KEYS` war ein `dict` an der Klasse | allen Instanzen gemeinsam; der Vertrag weist es zu Recht ab |
-| `handles` war rollenblind | `handles(CAD/EUR)` `False`, während `fetch_rate` lieferte |
-| `NotResponsible` = `NotFound` | in der Kette der Unterschied zwischen 404 und „der Nächste, bitte" |
-| `start`/`end` ignoriert | Anfrage ab 2030 bekam drei Werte aus 2026 |
-| `CAD/CAD` war „kenne ich nicht" | der Host müsste dieselbe Rechnung selbst anstellen |
-
-Die Regel steht jetzt einmal und gilt für alle Rollen: **ohne Schlüssel
-unzuständig, mit Schlüssel aber ohne Zeile unbekannt.** `handles` fragt je
-Rolle den passenden Index.
-
-### 2 · Der Lade-Rand lässt nichts mehr entkommen
-
-Deine vier Gegenproben sind geschlossen. Zwei warfen später — `instruments: {}`
-im Konstruktor, `metadata.ter_bps: nope` beim Abruf. Die beiden anderen wurden
-**angenommen**: `version: 999` und `instrument_type: spaceship`. Das ist der
-unangenehmere Fall — eine Datei, die *fast* funktioniert.
-
-Die Gattung wird gegen die **eigene** `SUPPORTED_TYPES` geprüft, nicht gegen
-einen fremden Katalog: Was der Host führt, entscheidet er, und eine Quelle,
-die etwas außerhalb ihrer Zusage einträgt, widerspricht sich selbst.
-
-Dazu die Formgrenzen der Blöcke — `instruments`, `fx_rates`, `price`,
-`metadata`, `history.closes` und jeder Listenpunkt.
-
-### Läufe
-
-| Lauf | Ergebnis |
-|---|---|
-| `pytest plugin_api` | 252 passed, 1 skipped (vorher 160) |
-| `pytest tests` | 917 passed, 29 skipped |
-| `vitest run` | 269 passed |
-| `ruff check app tests plugin_api` | All checks passed |
-| `PROFILE=yaml` Smoke | 20/20 |
-
-Die 92 neuen Fälle im Vertragspaket sind die fünf Rollensuiten plus sieben
-eigene: Fensterfilter, Identitätskurs, Zuständigkeit und die vier Formfehler.
-
-### Eine Entscheidung, die ich getroffen habe
-
-Für den Resolver bedeutet `not_responsible` eine Anfrage **ohne** ISIN und
-ohne Symbol, nicht eine ISIN außerhalb der Datei. Letztere ist eine
-beantwortbare Frage mit der Antwort „kenne ich nicht" — also `NotFound`. Eine
-Datei hat keine Marktgrenze; ihre einzige Grenze ist, ob sich überhaupt
-nachschlagen lässt.
+_Keine offene Nachricht._

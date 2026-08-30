@@ -679,6 +679,15 @@ Rollen" und erklärte ausdrücklich, eine leere `SUPPORTED_TYPES`-Menge bedeute
 und ließ einen nicht deklarierten `crypto`-Treffer passieren. Für genau diesen
 Randfall gab es keine Gegenprobe.
 
+**Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-37
+Runde 3, Commit `b464471`: OUTBOX und Commit erklärten, der Lade-Rand lasse
+keinen Benutzerwert mehr entkommen und prüfe jeden Listenpunkt. Geprüft waren
+die vier wörtlich genannten Mutanten. Daneben warfen `identity: nope`, ein
+numerischer Name/Typ und skalare Einträge in `history.closes` oder `fx_rates`
+weiter aus dem Konstruktor; falsey Listen an Objektblöcken verschwanden durch
+`value or {}`. Die Beispiele waren geschlossen, die behauptete Schema-Regel
+nicht inventarisiert.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
@@ -823,6 +832,14 @@ behaupteten Befunde wird einzeln verlangt. Ebenso fragen vier
 Drilldown-Assertions gelöschte i18n-Schlüssel ab; vue-i18n liefert die Kennung
 unter Warnung zurück und `not.toContain(...)` bleibt ohne existierenden
 Vergleichstext grün.
+
+**Neuer Beleg:** T-37 Runde 3, Commit `b464471`: Der neue Test
+`test_die_history_wird_auf_das_fenster_beschnitten` erzeugte das richtige
+leere Zeitfenster, schrieb aber `NotFound` als Erwartung fest. Der öffentliche
+`DailyCloseSource`-Vertrag sagt ausdrücklich, dass ein bekanntes Papier ohne
+Punkte im Fenster eine leere `DailySeries` liefert; `NotFound` bedeutet
+hingegen unbekanntes Papier. Der Test unterschied die Tage, bestätigte aber
+die falsche Ergebnisart.
 
 [↑ Übersicht](#übersicht)
 
