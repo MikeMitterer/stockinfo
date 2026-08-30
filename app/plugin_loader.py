@@ -194,7 +194,7 @@ def load_entry_point_sources() -> LoadResult:
     Ein Paket meldet sie in seiner `pyproject.toml` an::
 
         [project.entry-points."stockinfo.sources"]
-        canada = "meinplugin:CanadaFileResolver"
+        meine-quelle = "meinplugin:MeineQuelle"
 
     Ein Entry-Point, dessen Import wirft, wird gemeldet und übersprungen — er
     darf den Start nicht verhindern und auch die übrigen Punkte nicht mitreißen.

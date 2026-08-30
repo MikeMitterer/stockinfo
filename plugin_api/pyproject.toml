@@ -13,7 +13,10 @@ version = "0.2.0"
 description = "Vertrag für StockInfo-Datenquellen-Plugins"
 license = "MIT"
 requires-python = ">=3.11"
-dependencies = []
+# PyYAML traegt das Beispiel-Plugin `yaml-file`. Ein Paket, das eine
+# Bibliothek benutzt und nicht nennt, ist bei einer Fremdinstallation
+# kaputt — und zwar erst beim ersten Laden, nicht beim Installieren.
+dependencies = ["PyYAML>=6"]
 
 # pytest ist nur für `stockinfo_plugin.testing` nötig — wer bloß ein Plugin
 # schreibt und es nicht prüft, soll es nicht mitinstallieren müssen.
@@ -25,7 +28,7 @@ testing = ["pytest>=8"]
 # ohne dass dieses Repository ihn kennt. Ein Ladeweg, den man nur im Test
 # nachstellt, ist keiner.
 [project.entry-points."stockinfo.sources"]
-canada-file = "stockinfo_plugin_examples.canada_file:CanadaFileResolver"
+yaml-file = "stockinfo_plugin_examples.yaml_file:YamlFileSource"
 
 # Die Beispiele werden **mitinstalliert**, unter eigenem Paketnamen. Ohne das
 # gäbe es keinen echten Entry-Point zum Vorführen: Ein Ladeweg, den man nur im

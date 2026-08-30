@@ -345,8 +345,8 @@ class QuoteService:
           nicht auf — dort lieferte yfinance beides.
         * In T-37 habe ich es durch den Namen der **Kursquelle** ersetzt. Das
           machte die Zeile im CSV-Profil zwar plausibel, war aber dasselbe
-          Missverständnis: `prices-file-quote` ist eine reine Kursquelle und
-          liefert überhaupt keine Metadaten. Codex hat es in Runde 2 gefunden.
+          Missverständnis: Eine reine Kursquelle liefert überhaupt keine
+          Metadaten, und ihr Name gehört deshalb nicht in dieses Feld.
 
         **Gemessen, und es entscheidet die Sache:** Seit T-23 setzt
         `QuoteAdapter` auf der `RawQuote` weder `name` noch `type` noch

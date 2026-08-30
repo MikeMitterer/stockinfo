@@ -36,6 +36,36 @@ from app.main import app
 
 SAMPLE = Path(__file__).parent.parent / "_tickets" / "T-37-single-file-sample.yaml"
 
+# Eine Kursquelle, die **vor** der Datei steht und immer einen erkennbaren Wert
+# liefert. Sie belegt Matrix `#4`: Wer zuerst antwortet, gewinnt.
+_ALWAYS_ANSWERS = '''
+from datetime import datetime, timezone
+
+from stockinfo_plugin import Quote, QuoteSource
+
+
+class AlwaysAnswers(QuoteSource):
+    """Steht vor der Datei und antwortet auf alles."""
+
+    name = "always-answers"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed", "pair", "isin_only"})
+    SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "crypto", "bond"})
+
+    def handles(self, request) -> bool:
+        return True
+
+    def fetch_quote(self, request):
+        return Quote(
+            price=999.0,
+            currency="EUR",
+            as_of=datetime(2026, 8, 30, 12, 0, tzinfo=timezone.utc),
+        )
+
+
+SOURCES = [AlwaysAnswers]
+'''
+
 # Die Papiere aus der Beispieldatei, mit dem, was an ihnen geprüft wird.
 _ETF = "IE00B4L5Y983"
 _BOND = "DE0001102531"
@@ -52,12 +82,49 @@ def _profile(volume: Path, chains: dict[str, list[str]]) -> None:
     lines = [f"{role}: [{', '.join(sources)}]" for role, sources in chains.items()]
     lines += ["", "providers:", "  yaml-file:", f"    path: {SAMPLE}"]
     (volume / "sources.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _restart_chains()
+
+
+def _restart_chains() -> None:
+    """Baut die Ketten neu — wie ein Neustart es täte.
+
+    `/sources` zeigt die **laufende** Kette, nicht die Datei: Der Schnappschuss
+    entsteht beim Bauen. Eine Konfiguration, die erst danach geschrieben wird,
+    erreicht ihn nicht — ein Test ohne diesen Schritt misst die Vorgabekette
+    und damit das Netz.
+    """
+    from app.config import get_settings
+    from app.container import get_cached_quote_service
+    from app.sources_config import ROLES
+    from app.sources_registry import build_chain
+
+    get_sources_config.cache_clear()
+    config = get_sources_config()
+    for role in ROLES:
+        try:
+            build_chain(role, config, get_settings())
+        except Exception:  # noqa: BLE001, S110 — unbekannte Namen sind hier Absicht
+            pass
+    # **Der Dienst hält seine Quellen fest.** Die Ketten neu zu bauen genügt
+    # nicht: `get_cached_quote_service` hat beim Start eine Instanz erzeugt und
+    # zwischengespeichert, und die trägt die alten Anbieter weiter. Ohne diese
+    # Zeile zeigte `/sources` das neue Profil und `/quote` antwortete aus dem
+    # Netz — die Auskunft und das Verhalten wären auseinandergelaufen.
+    get_cached_quote_service.cache_clear()
 
 
 @pytest.fixture
 def volume(tmp_path: Path) -> Path:
-    """Ein Datenvolume, wie es beim Betreiber aussieht."""
-    (tmp_path / "plugins").mkdir()
+    """Ein Datenvolume, wie es beim Betreiber aussieht.
+
+    Die zusätzliche Kursquelle liegt **hier** und nicht im Test, der sie
+    braucht: Plugins werden beim Start geladen, und eine Datei, die danach
+    entsteht, findet niemand mehr. Geladen zu sein heißt nicht, in einer Kette
+    zu stehen — das entscheidet allein `sources.yaml`.
+    """
+    plugins = tmp_path / "plugins"
+    plugins.mkdir()
+    (plugins / "vorne.py").write_text(_ALWAYS_ANSWERS, encoding="utf-8")
     return tmp_path
 
 
@@ -102,10 +169,10 @@ def test_eine_quelle_steht_in_allen_fuenf_rollen(volume: Path, client) -> None:
         },
     )
 
-    sources = client.get("/sources").json()
+    listed = client.get("/sources").json()["sources"]
 
     for role in ("resolvers", "etf_meta", "quotes", "daily", "fx"):
-        names = [entry["name"] for entry in sources[role]]
+        names = [entry["name"] for entry in listed if entry["role"] == role]
         assert names == ["yaml-file"], f"Rolle {role}: {names}"
 
 
@@ -205,47 +272,12 @@ def test_die_online_quelle_gewinnt_bei_ueberschneidung(volume: Path, client) -> 
             "fx": ["yaml-file"],
         },
     )
-    _install_always_answering_quote_source(volume)
 
     price = client.get(f"/quote/{_ETF}").json()["price"]
 
     assert price == 999.0, (
         "die Datei hat die vorgelagerte Quelle überschrieben — sie ist der "
         "Rückfall und nicht die Wahrheit"
-    )
-
-
-def _install_always_answering_quote_source(volume: Path) -> None:
-    """Eine Kursquelle vor der Datei, die immer einen erkennbaren Wert liefert."""
-    (volume / "plugins" / "vorne.py").write_text(
-        '''
-from datetime import datetime, timezone
-
-from stockinfo_plugin import Quote, QuoteSource
-
-
-class AlwaysAnswers(QuoteSource):
-    """Steht vor der Datei und antwortet auf alles."""
-
-    name = "always-answers"
-    api_version = 2
-    SUPPORTED_KINDS = frozenset({"listed", "pair", "isin_only"})
-    SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "crypto", "bond"})
-
-    def handles(self, request) -> bool:
-        return True
-
-    def fetch_quote(self, request):
-        return Quote(
-            price=999.0,
-            currency="EUR",
-            as_of=datetime(2026, 8, 30, 12, 0, tzinfo=timezone.utc),
-        )
-
-
-SOURCES = [AlwaysAnswers]
-''',
-        encoding="utf-8",
     )
 
 
@@ -329,11 +361,12 @@ def test_eine_kaputte_datei_nennt_ihren_grund(
         f"    path: {broken}\n",
         encoding="utf-8",
     )
+    _restart_chains()
 
     entry = next(
         source
-        for source in client.get("/sources").json()["resolvers"]
-        if source["name"] == "yaml-file"
+        for source in client.get("/sources").json()["sources"]
+        if source["name"] == "yaml-file" and source["role"] == "resolvers"
     )
 
     assert entry["configured"] is False
@@ -347,11 +380,12 @@ def test_eine_fehlende_datei_ist_nicht_einsatzbereit(volume: Path, client) -> No
         "providers:\n  yaml-file:\n    path: /gibt/es/nicht.yaml\n",
         encoding="utf-8",
     )
+    _restart_chains()
 
     entry = next(
         source
-        for source in client.get("/sources").json()["resolvers"]
-        if source["name"] == "yaml-file"
+        for source in client.get("/sources").json()["sources"]
+        if source["name"] == "yaml-file" and source["role"] == "resolvers"
     )
 
     assert entry["configured"] is False

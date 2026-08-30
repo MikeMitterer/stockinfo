@@ -63,7 +63,7 @@ class CachedFxService:
         erste Anlauf in T-37 gescheitert, der sie über einen Kamm schor.
 
         Hier stand ebenfalls ``"yfinance"`` fest, und im CSV-Profil antwortet
-        `fx-file`. Der Rückfall kommt aus `declared_name` und ist ``None``:
+        `yaml-file`. Der Rückfall kommt aus `declared_name` und ist ``None``:
         ein deutsches Ersatzwort stünde unübersetzt in der englischen
         Oberfläche.
         """

@@ -65,7 +65,7 @@ def test_die_kaskade_auf_die_heimatboerse(plugin: OpenFigiResolverPlugin) -> Non
     Toronto den Bloomberg-Bezeichner ``RY V3.65 PERP BB``, den
     `_is_yahoo_compatible_symbol` zu Recht verwirft — daraus wird `NotFound`,
     und genau dafür gibt es die von Hand gepflegte Tabelle in
-    `examples/canada_file.py`. Mit ihr hätte dieser Test die Kaskade nie
+    `examples/yaml_file.py`. Mit ihr hätte dieser Test die Kaskade nie
     erreicht, sondern den Symbolfilter gemessen.
     """
     answer = plugin.resolve(ResolveRequest(isin="CA7800871021", preferred_mic="XETR"))

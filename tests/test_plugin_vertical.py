@@ -8,15 +8,15 @@ Eigenschaft festgeschrieben.
 
 Hier läuft es andersherum. Zwei Ladewege, beide echt:
 
-* **Entry-Point** — `canada-file` ist in `plugin_api/pyproject.toml` unter der
+* **Entry-Point** — `yaml-file` ist in `plugin_api/pyproject.toml` unter der
   Gruppe `stockinfo.sources` angemeldet und im Environment installiert. Kein
   Nachstellen: `importlib.metadata` findet ihn, weil er wirklich da ist.
 * **Datei** — eine `*.py` im Plugin-Verzeichnis des Datenvolumes.
 
-Beide benutzen die **vorhandenen** Beispiel-Plugins aus `plugin_api/examples/`.
-Ein zweites CSV-Plugin für den Test zu schreiben war der Fehler der letzten
-Runde: Es hätte ein zweites Format und eine zweite Fachlogik gepflegt, für
-etwas, das bereits existiert und vertraglich geprüft ist.
+Beide benutzen das **vorhandene** Beispiel-Plugin aus `plugin_api/examples/`.
+Ein zweites Plugin für den Test zu schreiben hieße, ein zweites Format und
+eine zweite Fachlogik zu pflegen — für etwas, das bereits existiert und
+vertraglich geprüft ist.
 """
 
 import shutil
@@ -46,26 +46,34 @@ from app.sources_registry import register_loaded, specs_by_name
 EXAMPLES = Path(__file__).parent.parent / "plugin_api" / "examples"
 
 # Ein Papier, das OpenFIGI an der Vorgabebörse **nicht** kennt — genau der
-# gemessene Anlass für die Handtabelle. Der Wert steht in der CSV unten und
+# gemessene Anlass für die Handpflege. Der Kurs steht in der Datei unten und
 # nirgends sonst; er ist der Beweis, dass die Antwort von dort kommt.
-#
-# **Die `type`-Spalte ist seit T-38 keine Kür mehr.** Ohne sie antwortet das
-# Beispiel-Plugin `NotFound`, und der vertikale Lauf hätte nichts mehr zu
-# zeigen — genau die Wirkung, die das Ticket beabsichtigt.
-MANUAL = "CA78012H5675;RY;XTSE;Royal Bank of Canada;stock\n"
-CLOSES = "ticker;mic;day;close;currency\nRY;XTSE;2026-01-03;141.55;CAD\n"
+ASSETS = """version: 1
+instruments:
+  - id: rbc
+    identity:
+      kind: listed
+      isin: CA78012H5675
+      ticker: RY
+      mic: XTSE
+    name: Royal Bank of Canada
+    instrument_type: stock
+    price:
+      value: 141.55
+      currency: CAD
+      as_of: "2026-01-03T21:00:00+00:00"
+"""
 
-# **Die Beispieldatei wird wirklich kopiert**, nicht importiert. Verify `#1`
-# sagt „`examples/canada_file.py` nach `data/plugins/`" — und das ist ein
-# anderer Weg als ein Import aus der installierten Distribution: Der prüfte am
-# Ende denselben Ladeweg wie der Entry-Point und ließe die Datei-Variante
-# ungeprüft. Ein Betreiber legt eine **Datei** ab, kein Paket.
+# **Die Beispieldatei wird wirklich kopiert**, nicht importiert. Ein Import aus
+# der installierten Distribution prüfte am Ende denselben Ladeweg wie der
+# Entry-Point und ließe die Datei-Variante ungeprüft. Ein Betreiber legt eine
+# **Datei** ab, kein Paket.
 #
 # Angehängt wird nur ein eigener Name, damit sich beide Wege im selben Lauf
 # unterscheiden lassen.
 FILE_SUFFIX = '''
 
-class LocalFileResolver(CanadaFileResolver):
+class LocalFileSource(YamlFileSource):
     """Dasselbe Beispiel, aus dem Datenvolume geladen."""
 
     name = "local-file"
@@ -75,28 +83,21 @@ class LocalFileResolver(CanadaFileResolver):
     api_version = 2
 
 
-SOURCES = [LocalFileResolver]
+SOURCES = [LocalFileSource]
 '''
 
 
 @pytest.fixture
 def volume(tmp_path: Path) -> Path:
     """Ein Datenvolume, wie es beim Betreiber aussieht."""
-    (tmp_path / "manual-isins.csv").write_text(
-        "isin;ticker;mic;name;type\n" + MANUAL, encoding="utf-8"
-    )
-    (tmp_path / "closes.csv").write_text(CLOSES, encoding="utf-8")
+    (tmp_path / "assets.yaml").write_text(ASSETS, encoding="utf-8")
     plugins = tmp_path / "plugins"
     plugins.mkdir()
     # Die echte Beispieldatei, Zeile für Zeile — so, wie ein Betreiber sie
     # kopieren würde.
-    shutil.copy(EXAMPLES / "canada_file.py", plugins / "lokal.py")
+    shutil.copy(EXAMPLES / "yaml_file.py", plugins / "lokal.py")
     with (plugins / "lokal.py").open("a", encoding="utf-8") as handle:
         handle.write(FILE_SUFFIX)
-    # Die Kursquelle kommt als eigene Datei — ebenfalls kopiert.
-    shutil.copy(EXAMPLES / "prices_file.py", plugins / "kurse.py")
-    with (plugins / "kurse.py").open("a", encoding="utf-8") as handle:
-        handle.write("\nSOURCES = [PricesFileQuoteSource]\n")
     return tmp_path
 
 
@@ -131,19 +132,19 @@ def _restart_chains() -> None:
 
 def _sources_yaml(volume: Path, resolver: str) -> None:
     """Schreibt die Konfiguration, die den Ladeweg auswählt."""
+    # **Dieselbe Quelle in zwei Rollen** — das ist seit T-37 der Normalfall und
+    # nicht die Ausnahme: Ein Plugin, eine Datei, mehrere Rollen.
     (volume / "sources.yaml").write_text(
         f"""
 resolvers: [{resolver}]
-quotes:    [prices-file-quote]
+quotes:    [{resolver}]
 etf_meta:  []
 daily:     [yfinance]
 fx:        [yfinance]
 
 providers:
   {resolver}:
-    path: {volume / "manual-isins.csv"}
-  prices-file-quote:
-    path: {volume / "closes.csv"}
+    path: {volume / "assets.yaml"}
 """,
         encoding="utf-8",
     )
@@ -184,7 +185,7 @@ def test_der_entry_point_ist_wirklich_installiert() -> None:
 
     names = {point.name for point in entry_points(group=ENTRY_POINT_GROUP)}
 
-    assert "canada-file" in names, (
+    assert "yaml-file" in names, (
         "der Entry-Point fehlt — plugin_api neu installieren: "
         "pip install -e plugin_api"
     )
@@ -196,14 +197,14 @@ def test_beide_ladewege_landen_in_derselben_registry(volume: Path) -> None:
 
     known = specs_by_name()
 
-    assert "canada-file" in known, "aus dem installierten Paket"
+    assert "yaml-file" in known, "aus dem installierten Paket"
     assert "local-file" in known, "aus dem Datenvolume"
     assert "openfigi" in known, "und die eingebauten sind weiterhin da"
 
 
 @pytest.mark.parametrize(
     ("resolver", "load_path"),
-    [("canada-file", "Entry-Point"), ("local-file", "Datei im Volume")],
+    [("yaml-file", "Entry-Point"), ("local-file", "Datei im Volume")],
 )
 def test_ein_plugin_beantwortet_eine_echte_rest_anfrage(
     client: TestClient, volume: Path, resolver: str, load_path: str
@@ -263,11 +264,11 @@ def test_beide_namen_erscheinen_in_sources(client: TestClient, volume: Path) -> 
     andere — und ohne sie könnte eine Quelle arbeiten, ohne dass jemand weiß,
     dass es sie gibt.
 
-    Geprüft werden beide Ladewege im selben Lauf: `canada-file` kommt aus dem
+    Geprüft werden beide Ladewege im selben Lauf: `yaml-file` kommt aus dem
     installierten Paket, `local-file` aus der kopierten Datei im Volume.
     """
     # **Beide** in derselben Kette — sonst prüft der Test nur einen Ladeweg.
-    _sources_yaml(volume, "local-file, canada-file")
+    _sources_yaml(volume, "local-file, yaml-file")
     get_sources_config.cache_clear()
     _restart_chains()
 
@@ -281,7 +282,7 @@ def test_beide_namen_erscheinen_in_sources(client: TestClient, volume: Path) -> 
     # Entry-Point im öffentlichen Endpunkt gefehlt hätte, also genau bei dem
     # Fehler, den seine Überschrift ausschließt.
     assert "local-file" in names, f"die Datei im Volume fehlt: {sorted(names)}"
-    assert "canada-file" in names, f"der Entry-Point fehlt: {sorted(names)}"
+    assert "yaml-file" in names, f"der Entry-Point fehlt: {sorted(names)}"
 
 
 def test_eine_unbrauchbare_quelle_nennt_ihren_grund(client: TestClient, volume: Path) -> None:
@@ -558,7 +559,7 @@ def test_ein_gescheitertes_paket_kostet_nicht_die_gesunde_kette(
     (volume / "sources.yaml").write_text(
         f"""
 resolvers: [local-file]
-quotes:    [aus-dem-paket, prices-file-quote]
+quotes:    [aus-dem-paket, yaml-file]
 etf_meta:  []
 daily:     []
 fx:        []
@@ -569,9 +570,9 @@ plugins:
 
 providers:
   local-file:
-    path: {volume / "manual-isins.csv"}
-  prices-file-quote:
-    path: {volume / "closes.csv"}
+    path: {volume / "assets.yaml"}
+  yaml-file:
+    path: {volume / "assets.yaml"}
 """,
         encoding="utf-8",
     )
@@ -602,7 +603,7 @@ providers:
     }
 
     assert "local-file" in entries, f"die gesunde Quelle fehlt: {sorted(entries)}"
-    assert "prices-file-quote" in entries, "der gesunde Fallback fehlt"
+    assert "yaml-file" in entries, "der gesunde Fallback fehlt"
 
     missing = entries.get("aus-dem-paket")
     assert missing is not None, (
