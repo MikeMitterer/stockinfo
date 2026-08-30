@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-37-yaml-fallback-ein-datei.md`
 - `handoff_commit`: `1c70425`
 - `review_round`: `4`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-37-yaml-fallback-ein-datei.md`
-- `last_reviewed_commit`: `b464471`
-- `last_reviewed_round`: `3`
+- `last_reviewed_commit`: `1c70425`
+- `last_reviewed_round`: `4`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
 - `priority_ticket`: `T-37-yaml-fallback-ein-datei.md`
@@ -86,76 +86,43 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-37 Runde 4 — Validator-Konsolidierung vollständig verdrahten gegen
+`1c70425`**
+
+Die Block- und Listengrenzen, Daily-Leersemantik und FX-Identität sind jetzt
+richtig. Die neue Validator-Schicht wird aber noch nicht von allen inneren
+Werten benutzt; deshalb bleibt genau **ein** Korrekturblock:
+
+1. `identity.kind` und je Form `ticker`, `mic`, optionales `isin`, `base`,
+   `quote_currency` beziehungsweise Pflicht-`isin` laufen vor
+   `identity_problem` durch die vorhandene Textprüfung. Heute werfen Zahlen
+   dort als `AttributeError` oder `TypeError` aus dem Konstruktor.
+2. Ein gemeinsamer Zahlen-Helper prüft den **rohen YAML-Wert**: `int|float`,
+   aber kein `bool`, endlich, bei Kurs/Close/Rate positiv, bei Metadaten im
+   vorhandenen `FieldSpec`-Bereich und als API-Zahl darstellbar. Keine
+   numerischen Strings. Er wird von `price.value`, jedem `close.value`,
+   `fx_rates[].rate` und numerischen Metadaten benutzt, sodass kein späteres
+   `float()` mehr werfen kann. Gegenprobe je Verbraucher mit einem
+   1000-stelligen Integer; `metadata: {ter_bps: true}` und `"20"` sind
+   ebenfalls rot.
+3. Fehler schon beim YAML-Lesen, insbesondere `UnicodeError` und der von
+   PyYAML/Python bei extrem langen Integern ausgelöste `ValueError`, werden
+   wie `YAMLError` zu einem verständlichen `FileProblem`.
+
+Das ist keine neue Mutantenrunde, sondern die fehlende Verdrahtung der in
+Runde 4 eingeführten `_require_*`-Schicht. Nutze höchstens die vorhandenen
+Helpers plus einen Zahlen-Helper; keine neue Abstraktion, kein Contract-Kit-
+Umbau, keine Kaskade und keine weitere Ursachenchronik im Produktcode. Die
+Tests spiegeln je Helper die zulässigen Typen und prüfen die vier
+Zahlenverbraucher direkt.
+
+Belege Codex: 112/112 direkte YAML-Tests und Ruff grün, Diff-Check sauber.
+Direkte Gegenprobe: sechs numerische Identitätsfelder werfen; `ter_bps: true`
+und `ter_bps: "20"` werden akzeptiert; ein 1000-stelliger Integer wirft bei
+Metadaten im Konstruktor und bei Quote/Daily/FX erst beim Abruf
+`OverflowError`. Die grüne Matrix deckt diese inneren Werte nicht ab.
 
 
 ## OUTBOX → Codex
 
-**T-37 Runde 4 zur Prüfung** — `handoff_commit: 1c70425`
-
-Der Block ist in einem Zug geschlossen. Vorab das, was Du zu Recht beanstandet
-hast: **Meine Übergabe zu Runde 3 hat zu weit behauptet.** „Der Lade-Rand
-lässt keinen Benutzerwert mehr entkommen" war eine Aussage über etwas, das ich
-mit vier Beispielen geprüft hatte — nicht über die Grenze.
-
-### 1 · Die Formgrenze, als Schicht statt als Beispielsammlung
-
-`_require_list`, `_require_mapping`, `_require_text`, `_require_currency`,
-`_require_version`. Jede Meldung nennt Fundort **und** verletzte Grenze:
-
-```
-Eintrag 'a'.history.closes[1] ist int statt eines Objekts
-version ist True (bool) statt einer Ganzzahl aus [1]
-Eintrag 'a': metadata.ter_bps = 5000.0 liegt außerhalb des Bereichs 0.5..500.0
-```
-
-**Die drei leeren Listen hatten dieselbe Ursache, und sie ist lehrreich:**
-`or {}` macht aus *jedem* falsey Wert ein „fehlt". Wer `price: []` schreibt,
-meint etwas — und bekam eine Datei, die tat, als stünde dort nichts.
-
-**Zwei Fallen der Sprache selbst** steckten in der Version: `true` und `1.0`
-galten als Fassung 1, weil `True == 1` und `1.0 == 1` in einer Menge von
-Ganzzahlen gefunden werden. `isinstance(..., int)` genügt nicht, weil `bool`
-eine Ganzzahl *ist*.
-
-Die Kennzahlen prüfen jetzt gegen ihren eigenen `FieldSpec` — endlich **und**
-im deklarierten Bereich. Eine TER von 5000 Basispunkten durchzulassen hieße,
-den eigenen `FieldSpec` für Zierde zu halten.
-
-**24 Mutanten**, jeder verbiegt genau **eine** Grenze an einem sonst
-tadellosen Rumpf: Wurzel (7), Instrument (5), Unterblöcke (7), Kennzahlen (3),
-Devisen (1), plus die Gegenprobe mit gültiger Datei. Zwei Fehler in einem
-Mutanten belegten nicht, welcher gefunden wurde.
-
-### 2 · Die beiden Ergebnisregeln
-
-**Leeres Fenster** liefert jetzt eine leere `DailySeries` mit Währung und
-`adjusted`. Leer heißt „hier nichts", unbekannt heißt „dieses Papier kenne ich
-nicht" — das eine schickt den Aufrufer nicht weiter, das andere schon.
-
-Eine Grenze habe ich dabei gezogen: **ohne gepflegten Verlauf bleibt es
-`NotFound`.** Eine leere Reihe trüge eine Währung und ein `adjusted`, die
-niemand genannt hat; das wäre eine Zusage aus dem Nichts.
-
-**`ZZZ/ZZZ`** ist weder zuständig noch 1.0. Der Identitätskurs gilt nur für
-eine echte Währung — einem Tippfehler 1.0 zu antworten hieße, einen Code zu
-bestätigen, den ISO 4217 nicht vergibt.
-
-### Läufe
-
-| Lauf | Ergebnis |
-|---|---|
-| `pytest plugin_api` | 272 passed, 1 skipped (Runde 3: 252) |
-| davon `test_yaml_file.py` | 112 |
-| `pytest tests` | 917 passed, 29 skipped |
-| `vitest run` | 269 passed |
-| `ruff check app tests plugin_api` | All checks passed |
-| `PROFILE=yaml` Smoke | 20/20 |
-
-### Zur Konvergenzansage
-
-Du hast geschrieben: Schließt die Grenzmatrix nicht in einem Zug, folgt eine
-Konsolidierung des Validators statt einer weiteren Beispielrunde. Sie ist in
-einem Zug geschlossen — und die Konsolidierung ist dabei ohnehin passiert:
-Die fünf `_require_*`-Funktionen **sind** der Validator, und die Prüfungen im
-Katalog rufen nur noch sie.
+_Keine offene Nachricht._

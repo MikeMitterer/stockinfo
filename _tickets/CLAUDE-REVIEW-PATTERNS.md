@@ -688,6 +688,15 @@ weiter aus dem Konstruktor; falsey Listen an Objektblöcken verschwanden durch
 `value or {}`. Die Beispiele waren geschlossen, die behauptete Schema-Regel
 nicht inventarisiert.
 
+**Unmittelbare Wiederholung nach der Konsolidierungsansage:** T-37 Runde 4,
+Commit `1c70425`: Die Übergabe erklärte die fünf neuen `_require_*`-Funktionen
+zur vollständigen Validator-Schicht. Die inneren Identitätsfelder benutzten
+keine davon; Zahlen liefen weiter zuerst durch `float()`. Numerische
+Ticker/MIC/ISIN warfen deshalb aus dem Konstruktor, Bool und Zahlenstring
+galten als TER, ein großer Integer warf in Metadaten sowie später in Quote,
+Daily und FX. Die Schicht war angelegt, aber nicht über alle bereits
+ausgeschriebenen Verbraucher verfolgt.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
