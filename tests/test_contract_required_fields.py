@@ -190,6 +190,84 @@ def test_eine_unvollstaendige_antwort_legt_keine_zeile_an(
         app.dependency_overrides.clear()
 
 
+class _WhitespaceQuoteSource:
+    """Eine Kursquelle, die Name und Gattung als reinen Leerraum liefert.
+
+    Args:
+        name: Was die Quelle als Namen meldet.
+        instrument_type: Was sie als Gattung meldet.
+    """
+
+    def __init__(self, name: str, instrument_type: str) -> None:
+        self._name = name
+        self._type = instrument_type
+
+    def fetch_quote(self, instrument: ResolvedInstrument):
+        from app.providers.base import RawQuote
+
+        return RawQuote(
+            symbol=instrument.symbol,
+            name=self._name,
+            price=98.5,
+            quote_time="2026-08-30T10:00:00+00:00",
+            currency="EUR",
+            type=self._type,
+        )
+
+
+class _SilentResolver:
+    """Löst nichts auf — der By-Symbol-Weg fragt ihn ohnehin nicht."""
+
+    def handles(self, isin: str) -> bool:
+        return True
+
+    def resolve_isin(self, isin: str):
+        return NotFound()
+
+
+@pytest.mark.parametrize(
+    ("name", "instrument_type", "missing"),
+    [("   ", "etf", "name"), ("iShares Core MSCI World", "  ", "type")],
+    ids=["name-aus-leerzeichen", "gattung-aus-leerzeichen"],
+)
+def test_leerraum_verlaesst_den_kursweg_nicht_als_erfolg(
+    tmp_path: Path, name: str, instrument_type: str, missing: str
+) -> None:
+    """Ein Wert aus reinem Leerraum ist keiner.
+
+    `"   "` ist eine nichtleere Zeichenkette und damit wahr. Jede Prüfung, die
+    auf Anwesenheit statt auf Inhalt schaut, lässt sie durch; die Antwort
+    verlässt den Kursweg als Erfolg, und in der Oberfläche steht ein leeres
+    Feld mit einem Häkchen davor.
+
+    **Der Weg ist mit Absicht der By-Symbol-Eintritt.** Ein zerlegbares Symbol
+    wird nicht aufgelöst — die Kursquelle ist dann die einzige, die etwas über
+    das Papier sagt, und ihre Antwort erreicht die Vorabprüfung ungefiltert.
+    Über die ISIN käme der Fall gar nicht so weit: Dort weist ihn schon die
+    Host-Grenze ab, und ein Test über diesen Weg wäre auch dann grün, wenn die
+    Vorabprüfung Leerraum durchließe — er misst dann die falsche Schicht.
+    """
+    service, _ = wire_real_chain(
+        str(tmp_path / f"leerraum-{missing}.db"),
+        _WhitespaceQuoteSource(name, instrument_type),
+        _SilentResolver(),
+    )
+    from app.container import get_cached_quote_service
+
+    app.dependency_overrides[get_cached_quote_service] = lambda: service
+    try:
+        response = TestClient(app).get("/quote", params={"symbol": "VGWL.DE"})
+
+        assert response.status_code == 502, (
+            f"Leerraum kam als Erfolg durch: {response.text}"
+        )
+        assert missing in response.json()["params"]["detail"], (
+            f"die Ablehnung nennt das leere Feld nicht: {response.text}"
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+
 def test_die_app_leitet_keine_gattung_ab(tmp_path: Path) -> None:
     """Nichts wird geraten — insbesondere nicht `stock`.
 
@@ -270,6 +348,91 @@ def test_die_feldauskunft_kennt_den_plugin_vertrag() -> None:
         "die Auskunft kennt den Plugin-Vertrag nicht — ein Autor findet die "
         f"Pflichtfelder nur im Quelltext. Vorhanden: {sorted(answer)}"
     )
+
+
+def test_die_auskunft_kennt_alle_ergebnistypen() -> None:
+    """Die Auskunft beschreibt den **ganzen** Vertrag, nicht die halbe Auswahl.
+
+    Eine Auskunft, die nur zwei von sechs Ergebnistypen nennt, ist für einen
+    Plugin-Autor schlimmer als keine: Er sieht `resolved` und `quote`, schließt
+    daraus, dass es für seine Rolle nichts zu wissen gibt, und liefert eine
+    Tagesreihe ohne `adjusted`.
+
+    Geprüft wird die **exakte Menge**, nicht ein Enthaltensein. Sonst bliebe
+    ein siebter Typ unbemerkt, und ein weggefallener ebenso.
+    """
+    from app.contract import plugin_contract
+
+    assert set(plugin_contract()) == {
+        "resolved",
+        "quote",
+        "daily_bar",
+        "daily_series",
+        "fx_rate",
+        "reading",
+    }
+
+
+@pytest.mark.parametrize(
+    ("result_type", "field_name", "required", "kind"),
+    [
+        ("daily_series", "adjusted", True, "boolean"),
+        ("daily_series", "bars", True, "array"),
+        ("daily_bar", "close", True, "number"),
+        ("fx_rate", "rate", True, "number"),
+        ("reading", "value", True, "object"),
+        ("reading", "unit", False, "string"),
+    ],
+)
+def test_jeder_ergebnistyp_nennt_pflicht_und_art(
+    result_type: str, field_name: str, required: bool, kind: str
+) -> None:
+    """Stichproben quer durch die neuen Typen — Pflicht **und** Art.
+
+    `adjusted` ist der lehrreichste Fall: Ein Wahrheitswert ohne Vorgabe, und
+    er ist Pflicht, weil sich bereinigte und unbereinigte Reihen nicht
+    vergleichen lassen und man es ihnen nicht ansieht. Stünde er hier als
+    optional, läse ein Autor genau das Gegenteil.
+
+    `reading.value` prüft die Artbestimmung an ihrer schwierigsten Stelle: Das
+    Feld trägt Zahl, Text oder Wahrheitswert. Eine davon zu nennen wäre eine
+    Zusage, auf die sich jemand verlässt.
+    """
+    from app.contract import plugin_contract
+
+    declared = {
+        entry["name"]: entry for entry in plugin_contract()[result_type]
+    }
+
+    assert declared[field_name]["required"] is required
+    assert declared[field_name]["kind"] == kind
+    assert declared[field_name]["meaning"] != "—", (
+        f"{result_type}.{field_name} hat keine Bedeutung — die Auskunft nennt "
+        "das Feld, sagt aber nicht, was es bedeutet"
+    )
+
+
+def test_die_gattungsbeschreibung_nennt_den_ganzen_katalog() -> None:
+    """Das Artefakt beschrieb zwei Gattungen und sagte `null` zu.
+
+    Beides war überholt: Der Katalog hat sechs Einträge, und seit `type`
+    Pflichtfeld ist, gibt es kein `null` mehr. Eine Beschreibung, die einem
+    Konsumenten `null` in Aussicht stellt, ist keine veraltete Nebensache —
+    sie ist eine Zusage, die die App nicht mehr einlöst.
+    """
+    from app.contract import core_contract
+
+    for model in ("quote", "instrument"):
+        meaning = next(
+            entry["meaning"]
+            for entry in core_contract()["core"][model]
+            if entry["name"] == "type"
+        )
+        for genus in ("stock", "etf", "etc", "fund", "crypto", "bond"):
+            assert genus in meaning, f"{model}.type nennt {genus} nicht"
+        assert "null" not in meaning, (
+            f"{model}.type stellt `null` in Aussicht, obwohl es Pflichtfeld ist"
+        )
 
 
 def test_name_und_gattung_stehen_dort_als_pflicht() -> None:

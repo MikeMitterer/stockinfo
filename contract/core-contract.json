@@ -174,7 +174,7 @@
         "name": "type",
         "kind": "string",
         "required": true,
-        "meaning": "Gattung: 'stock' oder 'etf'. null heißt 'unbekannt', nicht 'keine'."
+        "meaning": "Gattung aus dem offenen kanonischen Katalog: 'stock', 'etf', 'etc', 'fund', 'crypto', 'bond'. Die Aufzählung ist offen — ein neuer Wert ist ein Nachtrag und kein Bruch. Was die App nicht kennt, zeigt sie als das, was die Quelle sagt, statt es zu runden."
       },
       {
         "name": "volume",
@@ -290,7 +290,7 @@
         "name": "type",
         "kind": "string",
         "required": true,
-        "meaning": "Gattung: 'stock' oder 'etf'."
+        "meaning": "Gattung aus dem offenen kanonischen Katalog: 'stock', 'etf', 'etc', 'fund', 'crypto', 'bond'. Die Aufzählung ist offen — ein neuer Wert ist ein Nachtrag und kein Bruch. Was die App nicht kennt, zeigt sie als das, was die Quelle sagt, statt es zu runden."
       },
       {
         "name": "currency",

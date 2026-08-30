@@ -95,6 +95,34 @@ _PLUGIN_FIELD_MEANINGS: dict[tuple[str, str], str] = {
     ),
     ("quote", "as_of"): "Wann dieser Kurs galt, mit Zeitzone.",
     ("quote", "volume"): "Tagesvolumen, falls der Anbieter es kennt.",
+    ("daily_bar", "day"): "Handelstag des Schlusskurses.",
+    ("daily_bar", "close"): "Schlusskurs dieses Tages. Positiv und endlich.",
+    ("daily_series", "bars"): (
+        "Die Tagesbalken, aufsteigend nach Datum und ohne Duplikate."
+    ),
+    ("daily_series", "currency"): (
+        "ISO-4217-Code der ganzen Reihe. Eine Reihe mit wechselnder Währung "
+        "ist keine Reihe."
+    ),
+    ("daily_series", "adjusted"): (
+        "Ob die Kurse um Splits und Ausschüttungen bereinigt sind. Pflicht, "
+        "weil sich bereinigte und unbereinigte Reihen nicht vergleichen "
+        "lassen und man es ihnen nicht ansieht."
+    ),
+    ("fx_rate", "base"): "Ausgangswährung als ISO-4217-Code.",
+    ("fx_rate", "quote"): "Zielwährung als ISO-4217-Code.",
+    ("fx_rate", "rate"): "Wieviel Zielwährung eine Einheit Ausgangswährung kostet.",
+    ("fx_rate", "as_of"): "Wann dieser Kurs galt, mit Zeitzone.",
+    ("reading", "field"): "Name der Kennzahl, wie die Quelle sie deklariert.",
+    ("reading", "value"): (
+        "Der Wert. Zahl, Text oder Wahrheitswert — was die Kennzahl hergibt."
+    ),
+    ("reading", "unit"): (
+        "Die Einheit, in der der Wert steht. Ohne sie ist eine Kostenquote "
+        "von 0.19 nicht von einer von 0.0019 zu unterscheiden."
+    ),
+    ("reading", "source"): "Woher der Wert stammt.",
+    ("reading", "currency"): "Währung, falls der Wert ein Betrag ist.",
 }
 """Die Bedeutung je Feld — der einzige Teil, den kein Typ hergibt.
 
@@ -106,16 +134,37 @@ der Auskunft, und die Auskunft veraltete zuerst.
 
 
 def _field_kind(annotation: object) -> str:
-    """Die Art eines Feldes, wie `FieldSpec` sie benennt."""
+    """Die Art eines Feldes, wie `FieldSpec` sie benennt.
+
+    Die Reihenfolge der Prüfungen ist die Aussage: Ein zusammengesetzter Typ
+    wird als solcher erkannt, bevor der Name eines seiner Bestandteile
+    zuschlägt. ``tuple[DailyBar, ...]`` enthält den Text ``bar`` und wäre sonst
+    keine Liste, und ``bool`` enthält kein ``int``, wird aber gern dafür
+    gehalten.
+
+    Ein Wert mit mehreren möglichen Skalartypen — `Reading.value` trägt Zahl,
+    Text oder Wahrheitswert — heißt ``object``: Es ist die einzige Angabe, die
+    stimmt, und eine willkürlich gewählte davon wäre eine Zusage, auf die sich
+    jemand verlässt.
+    """
     text = str(annotation)
-    if "str" in text:
-        return "string"
-    if "float" in text:
+    if text.startswith(("tuple", "list")):
+        return "array"
+    scalars = {
+        "boolean": "bool" in text,
+        "string": "str" in text or "date" in text or "Unit" in text,
+        "number": "float" in text,
+        "integer": "int" in text and "bool" not in text,
+    }
+    named = [kind for kind, present in scalars.items() if present]
+    if len(named) == 1:
+        return named[0]
+    if not named:
+        return "object"
+    # Mehrere Skalartypen in einem Feld: `int` neben `float` ist dabei kein
+    # echter Widerspruch — eine Zahl bleibt eine Zahl.
+    if set(named) == {"number", "integer"}:
         return "number"
-    if "int" in text:
-        return "integer"
-    if "datetime" in text or "date" in text:
-        return "string"
     return "object"
 
 
@@ -139,10 +188,24 @@ def plugin_contract() -> dict[str, list[dict]]:
     """
     from dataclasses import MISSING, fields as dataclass_fields
 
-    from stockinfo_plugin.types import Quote, Resolved
+    from stockinfo_plugin.types import (
+        DailyBar,
+        DailySeries,
+        FxRate,
+        Quote,
+        Reading,
+        Resolved,
+    )
 
     described: dict[str, list[dict]] = {}
-    for label, dataclass_type in (("resolved", Resolved), ("quote", Quote)):
+    for label, dataclass_type in (
+        ("resolved", Resolved),
+        ("quote", Quote),
+        ("daily_bar", DailyBar),
+        ("daily_series", DailySeries),
+        ("fx_rate", FxRate),
+        ("reading", Reading),
+    ):
         described[label] = [
             {
                 "name": field.name,

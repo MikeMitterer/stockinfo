@@ -187,6 +187,18 @@ def _resolved_from(
     )
 
 
+def _has_content(value: object) -> bool:
+    """Trägt dieser Wert etwas, oder sieht er nur so aus?
+
+    Für eine Zeichenkette heißt „trägt etwas" **nicht leer nach dem Trimmen**;
+    für alles andere gilt die gewöhnliche Wahrheitsprüfung. Eine Identität ist
+    ein Objekt und wird nicht getrimmt.
+    """
+    if isinstance(value, str):
+        return bool(value.strip())
+    return bool(value)
+
+
 @dataclass(frozen=True)
 class PrecheckedCoreValues:
     """Die Pflichtfelder, die **erst beim Bauen** zusammenkommen.
@@ -229,10 +241,20 @@ class PrecheckedCoreValues:
     def missing(self) -> list[str]:
         """Die Namen der Felder ohne Wert, in Deklarationsreihenfolge.
 
+        **Reiner Leerraum zählt als fehlend.** Ein Pflichtfeld verhindert, dass
+        ein Wert weggelassen wird — nicht, dass er nichts enthält. ``"   "`` ist
+        eine nichtleere Zeichenkette und damit wahr; ohne diese Regel verließe
+        ein Name aus drei Leerzeichen den Kursweg als gültige Antwort und
+        stünde danach in der Oberfläche.
+
         Returns:
             Leere Liste, wenn alles da ist.
         """
-        return [entry.name for entry in fields(self) if not getattr(self, entry.name)]
+        return [
+            entry.name
+            for entry in fields(self)
+            if not _has_content(getattr(self, entry.name))
+        ]
 
 
 # Abgeleitet statt danebengeschrieben — sonst wäre es wieder eine zweite
