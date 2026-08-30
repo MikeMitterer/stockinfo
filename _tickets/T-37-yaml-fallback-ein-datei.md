@@ -18,6 +18,44 @@ zweite Prüfstrecke zu erzeugen.
 
 ---
 
+## Scope-Vertrag
+
+- **Ergebnis:** Ein Plugin `yaml-file` bedient alle fünf Rollen aus **einer**
+  YAML-Datei; die vier CSV-Beispiele sind entfernt, und derselbe Smoke läuft
+  mit `PROFILE=yaml` wie mit `PROFILE=online` grün.
+- **Fachliche Änderungen:** drei.
+  1. Eine Datei wird **einmal** gelesen und validiert; alle fünf Rollen
+     bedienen sich aus derselben internen Haltung.
+  2. Das Plugin deklariert alle drei Identitätsformen und alle sechs
+     Gattungen — eine leere Deklaration hieße „nichts zugesagt", und der Host
+     überspränge die Quelle für jede bekannte Gattung.
+  3. Ein Kettentest spricht die Dateiquelle **über den Host** mit bekannter
+     Gattung an. Diese Lücke überlebt sonst die Löschung der CSV-Beispiele:
+     Heute schickt kein einziger Test eine Dateiquelle durch den Vorfilter.
+- **Produktflächen/-dateien:** neu `plugin_api/examples/yaml_file.py`;
+  entfernt `canada_file.py`, `metadata_file.py`, `prices_file.py`;
+  `plugin_api/pyproject.toml` (Entry-Point und PyYAML als Abhängigkeit);
+  `_tickets/T-35-smoke.sh` (Profilname und Vorbereitung).
+- **Tests/Dokumentation:** neu `plugin_api/tests/test_yaml_file.py`; entfernt
+  die drei CSV-Testdateien und die vier CSV-Fixtures;
+  `tests/test_plugin_vertical.py` (benutzt heute `canada_file`);
+  `docs/plugins.md` und `docs/sources.yaml.example`.
+- **Nicht-Ziele:** kein Migrationsweg von CSV, keine Rückwärtskompatibilität,
+  kein Hot Reload, keine zweite Smoke- oder Browser-Infrastruktur, keine neue
+  Asset-Klasse außerhalb des Katalogs aus T-31/T-38.
+- **Budget:** 5 Produktdateien, 8 Test-/Dokudateien, etwa 700 Diff-Zeilen.
+
+**Zur Abhängigkeit:** `plugin_api` deklariert heute `dependencies = []`. PyYAML
+kommt hinzu und steht deshalb ausdrücklich im Vertrag — im Environment liegt es
+bereits, aber ein Paket, das eine Bibliothek benutzt und nicht nennt, ist bei
+einer Fremdinstallation kaputt.
+
+**Zur Diff-Schätzung:** Sie ist hoch, weil das Ticket vier Quellen durch eine
+ersetzt. Der größere Teil ist Löschung; die 700 Zeilen sind Summe aus Zu- und
+Abgang.
+
+---
+
 ## Verify
 
 Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) ·
