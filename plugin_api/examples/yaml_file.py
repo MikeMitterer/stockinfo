@@ -169,9 +169,18 @@ def _require_text(value: object, name: str) -> str:
     """Ein Feld, das Text sein muss, ist Text — und nicht leer.
 
     Raises:
-        FileProblem: Der Wert fehlt, ist leer oder ist keine Zeichenkette. Eine
-            Zahl in `name` sieht in der Datei harmlos aus und wirft erst dort,
-            wo jemand sie zu strippen versucht.
+        FileProblem: Der Wert fehlt, ist leer, ist keine Zeichenkette oder
+            trägt umgebenden Leerraum.
+
+    **Der Leerraum ist der unauffällige Teil.** Diese Funktion gab bis hierher
+    den getrimmten Wert zurück, während die Aufrufer den rohen speichern:
+    ``currency: " EUR "`` bestand die Prüfung und wurde anschließend als
+    Währung ausgeliefert. Zwei Wahrheiten über denselben Wert, und die
+    geprüfte war nicht die gespeicherte.
+
+    Abgewiesen statt stillschweigend getrimmt — dieselbe Regel, die
+    `identity_problem` für `base` schon führt. Trimmen hieße zu entscheiden,
+    dass der Leerraum nicht gemeint war; abweisen fragt den Benutzer.
     """
     if not isinstance(value, str):
         raise FileProblem(
@@ -179,7 +188,11 @@ def _require_text(value: object, name: str) -> str:
         )
     if not value.strip():
         raise FileProblem(f"{name} ist leer")
-    return value.strip()
+    if value != value.strip():
+        raise FileProblem(
+            f"{name} ist {value!r} — umgebender Leerraum gehört nicht zum Wert"
+        )
+    return value
 
 
 def _require_version(value: object) -> None:

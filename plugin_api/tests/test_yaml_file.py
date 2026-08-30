@@ -424,3 +424,67 @@ def test_ein_unlesbarer_wert_beim_lesen_ist_ein_befund(tmp_path: Path) -> None:
 
     assert problem, "der Lesefehler kommt als Ausnahme statt als Grund"
     assert "unlesbar" in problem.lower() or "wert" in problem.lower(), problem
+
+
+# ─── Leerraum am Rand eines Werts ─────────────────────────────────────────────
+
+
+@pytest.mark.parametrize(
+    ("document", "asked"),
+    [
+        pytest.param(
+            _SHELL + '    price: {value: 1.0, currency: " EUR ",'
+            ' as_of: "2026-08-27T17:30:00+02:00"}\n',
+            "quote",
+            id="price-waehrung",
+        ),
+        pytest.param(
+            _SHELL + '    history: {currency: " EUR ", closes: [{date: "2026-08-27",'
+            " value: 1.0}]}\n",
+            "daily",
+            id="history-waehrung",
+        ),
+        pytest.param(
+            _SHELL.replace("instrument_type: bond", 'instrument_type: " bond "'),
+            "resolve",
+            id="gattung",
+        ),
+    ],
+)
+def test_leerraum_am_rand_wird_abgewiesen_und_nie_ausgeliefert(
+    tmp_path: Path, document: str, asked: str
+) -> None:
+    """**Der geprüfte Wert und der gespeicherte waren nicht derselbe.**
+
+    `_require_text` gab den getrimmten Wert zurück, die Aufrufer speicherten
+    den rohen: ``currency: " EUR "`` bestand die Prüfung und wurde anschließend
+    als Währung ausgeliefert. Zwei Wahrheiten über denselben Wert, und die
+    geprüfte war nicht die gespeicherte.
+
+    Belegt wird deshalb **beides**: dass die Datei nicht lädt, und dass keine
+    Rolle den ungültigen Text trotzdem herausgibt. Der erste Teil allein ließe
+    offen, ob der Wert auf einem anderen Weg doch noch entkommt.
+    """
+    path = tmp_path / "leerraum.yaml"
+    path.write_text(document, encoding="utf-8")
+    source = YamlFileSource({"path": str(path)})
+
+    problem = source.configuration_problem()
+    assert problem, "der Leerraum kam ohne Beanstandung durch"
+    assert "leerraum" in problem.lower(), problem
+
+    # Eine Quelle, die sich abschaltet, antwortet auf **keinem** Weg mit einem
+    # Treffer — sonst hinge die Gültigkeit daran, ob jemand `is_configured`
+    # vorher gefragt hat.
+    bond = IsinOnlyIdentity(isin=_BOND)
+    answers = (
+        source.resolve(ResolveRequest(isin=_BOND)),
+        source.fetch_quote(QuoteRequest(identity=bond)),
+        source.fetch_daily(
+            DailyRequest(identity=bond, start=date(2026, 8, 1), end=date(2026, 8, 31))
+        ),
+    )
+    for answer in answers:
+        assert type(answer).__name__ == "Unavailable", (
+            f"{asked}: die abgeschaltete Quelle liefert {answer}"
+        )
