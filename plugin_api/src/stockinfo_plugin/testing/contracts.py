@@ -24,9 +24,9 @@ Verwendung::
 
     from stockinfo_plugin.testing import ResolverContract
 
-    class TestCanadaFile(ResolverContract):
+    class TestMeineQuelle(ResolverContract):
         def make_source(self):
-            return CanadaFileResolver({"path": "tests/fixtures/canada.csv"})
+            return MeineQuelle({"path": "tests/fixtures/assets.yaml"})
 
         responsible = ResolveRequest(isin="CA78012H5675")
         not_responsible = ResolveRequest(isin="IE00B4L5Y983")

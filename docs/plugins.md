@@ -120,9 +120,17 @@ arbeiten können und warum.
 
 **Eine Quelle darf in mehreren Rollen stehen.** Das mitgelieferte `yaml-file`
 tut genau das: Es liest eine Datei und bedient daraus Auflösung, Kurs,
-Historie, Metadaten und Devisen. Wer handgepflegte Werte als **letzten**
-Rückfall will, trägt es in jeder Kette ans Ende — dann gewinnt jede
-Online-Quelle, die etwas liefert, und die Datei ergänzt nur die Lücken.
+Historie, Metadaten und Devisen.
+
+**Eine Rangfolge gibt es aber nur für zwei Rollen.** `resolvers` und
+`etf_meta` fragen die Kette der Reihe nach; für `quotes`, `daily` und `fx`
+nimmt die App die **erste** einsatzbereite Quelle und fragt keine weitere.
+
+Der Unterschied ist keine Feinheit: Ein Eintrag wie
+`quotes: [yfinance, yaml-file]` sieht aus wie ein Rückfall und ist keiner —
+`yaml-file` wird dort nie gefragt. Wer handgepflegte Kurse braucht, betreibt
+die Datei heute als eigenständiges Profil. Die Kaskade für diese drei Rollen
+ist ein eigenes Vorhaben.
 
 ## Was die App mit einem fremden Plugin macht
 

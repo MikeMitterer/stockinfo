@@ -5,7 +5,7 @@ niemand erfüllt, ist eine Behauptung. Deshalb werden sie mitinstalliert — unt
 dem Namen `stockinfo_plugin_examples`, damit ein so allgemeines Wort wie
 `examples` nicht im Suchpfad jedes Projekts landet, das dieses Paket benutzt.
 
-`canada_file` ist zusätzlich als Entry-Point der Gruppe `stockinfo.sources`
+`yaml_file` ist zusätzlich als Entry-Point der Gruppe `stockinfo.sources`
 angemeldet. Damit gibt es einen **echten** installierten Ladeweg, den die App
 findet, ohne dass jemand eine Datei ins Volume legt.
 """

@@ -15,7 +15,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_commit`: `472a5e9`
 - `last_reviewed_round`: `1`
 - `workstream`: `ui_live_acceptance`
-- `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
+- `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
 - `priority_ticket`: `T-37-yaml-fallback-ein-datei.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
@@ -71,6 +71,12 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 > Regelwerk projektneutral formuliert und als wiederverwendbarer Workflow für
 > andere Projekte bereitgestellt. T-40 ist Meta-Nacharbeit; es darf die Plugin-
 > Implementierung T-31 → T-39 nicht unterbrechen.
+
+> **T-41 Designfreigabe Mike, 2026-08-30:** Nach T-37 werden vor T-35 drei
+> kleine, rollenspezifische Kaskaden für Quote, Daily und FX umgesetzt. Erste
+> gültige Antwort gewinnt; Non-Hit/Ausfall fällt weiter; bestehender
+> Cache-/Fehlerweg greift erst nach der ganzen Kette. Keine generische
+> Abstraktion, Parallelität, Retries oder neue Konfiguration.
 
 - Rollen: Claude implementiert; Codex prüft unabhängig Code, Tests, Ticket und
   Spec.

@@ -292,19 +292,21 @@ def test_eine_unbrauchbare_quelle_nennt_ihren_grund(client: TestClient, volume: 
     Hier steht ein Name in der Kette, den es nicht gibt: Der Betreiber soll
     „unbekannter Name" lesen und nicht raten.
     """
+    # Die Kursrolle trägt hier die **vorhandene** Dateiquelle, nicht mehr die
+    # gelöschte CSV-Fassung: Der Prüfgegenstand ist der unbekannte Name in
+    # `resolvers`, und alles daneben soll bauen können.
     (volume / "sources.yaml").write_text(
-        """
+        f"""
 resolvers: [gibt-es-nicht]
-quotes:    [prices-file-quote]
+quotes:    [local-file]
 daily:     [yfinance]
 fx:        [yfinance]
 etf_meta:  []
 
 providers:
-  prices-file-quote:
-    path: %s
-"""
-        % (volume / "closes.csv"),
+  local-file:
+    path: {volume / "assets.yaml"}
+""",
         encoding="utf-8",
     )
     get_sources_config.cache_clear()

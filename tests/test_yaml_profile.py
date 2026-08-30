@@ -157,9 +157,11 @@ def test_jede_identitaetsform_kommt_aus_der_datei(
 ) -> None:
     """Listing, Anleihe und Fonds — aus derselben Datei, über den echten Weg.
 
-    Geprüft wird die öffentliche Antwort, nicht der Parser: Ob das Plugin die
-    Datei einmal oder fünfmal liest, ist seine Sache; dass ein Papier jeder
-    Form herauskommt, ist die Anforderung.
+    Geprüft wird die öffentliche Antwort, nicht der Parser. Wie oft die Datei
+    dabei gelesen wird, ist **keine** Zusage dieses Tickets: Der Host baut je
+    Rolle eine Instanz, gemessen sind das fünf Lesevorgänge. Zugesagt ist eine
+    Datei, ein Parser, ein Schema — dass ein Papier jeder Form herauskommt,
+    ist die Anforderung.
 
     **Der Preis steht in der Zusicherung, und er ist dort kein Beiwerk.** Er
     ist der Beleg, dass die Antwort wirklich aus der Datei kommt. Ohne ihn war
@@ -345,6 +347,195 @@ def test_eine_fehlende_datei_ist_nicht_einsatzbereit(volume: Path, client) -> No
 
     assert entry["configured"] is False
     assert entry["reason"], "abgeschaltet ohne Begründung ist der halbe Fehler"
+
+
+# ─── Matrix #9 · jede Invariante hat ihre Gegenprobe ──────────────────────────
+
+_GOOD_ENTRY = """version: 1
+instruments:
+  - id: gut
+    identity: {kind: listed, isin: IE00B4L5Y983, ticker: EUNL, mic: XETR}
+    name: iShares Core MSCI World
+    instrument_type: etf
+    price: {value: 128.21, currency: EUR, as_of: "2026-08-27T17:30:00+02:00"}
+"""
+
+
+@pytest.mark.parametrize(
+    ("broken", "expected"),
+    [
+        pytest.param(
+            """version: 1
+instruments:
+  - id: a
+    identity: {kind: listed, isin: IE00B4L5Y983, ticker: EUNL, mic: XETR}
+    name: Erster
+    instrument_type: etf
+  - id: b
+    identity: {kind: listed, isin: IE00B4L5Y983, ticker: EUNL, mic: XETR}
+    name: Zweiter
+    instrument_type: etf
+""",
+            "schon vergeben",
+            id="doppelte-identitaet",
+        ),
+        pytest.param(
+            """version: 1
+instruments:
+  - id: a
+    identity: {kind: listed, isin: XX0000000000, ticker: EUNL, mic: XETR}
+    name: Falsche Pruefziffer
+    instrument_type: etf
+""",
+            "isin",
+            id="ungueltige-isin",
+        ),
+        pytest.param(
+            """version: 1
+instruments:
+  - id: a
+    identity: {kind: listed, isin: IE00B4L5Y983, ticker: EUNL, mic: US}
+    name: Sammelcode statt MIC
+    instrument_type: etf
+""",
+            "mic",
+            id="sammelcode-statt-mic",
+        ),
+        pytest.param(
+            """version: 1
+instruments:
+  - id: a
+    identity: {kind: listed, isin: IE00B4L5Y983, ticker: EUNL, mic: XETR}
+    name: Pence
+    instrument_type: etf
+    price: {value: 1.0, currency: GBX, as_of: "2026-08-27T17:30:00+02:00"}
+""",
+            "currency",
+            id="untereinheit-als-waehrung",
+        ),
+        pytest.param(
+            """version: 1
+instruments:
+  - id: a
+    identity: {kind: listed, isin: IE00B4L5Y983, ticker: EUNL, mic: XETR}
+    name: Ohne Zone
+    instrument_type: etf
+    price: {value: 1.0, currency: EUR, as_of: "2026-08-27T17:30:00"}
+""",
+            "zeitzone",
+            id="zeitpunkt-ohne-zone",
+        ),
+        pytest.param(
+            """version: 1
+instruments:
+  - id: a
+    identity: {kind: listed, isin: IE00B4L5Y983, ticker: EUNL, mic: XETR}
+    name: Nullkurs
+    instrument_type: etf
+    price: {value: 0, currency: EUR, as_of: "2026-08-27T17:30:00+02:00"}
+""",
+            "betrag",
+            id="nullkurs",
+        ),
+        pytest.param(
+            """version: 1
+instruments:
+  - id: a
+    identity: {kind: isin_only, isin: DE0001102531}
+    name: Doppelter Tag
+    instrument_type: bond
+    history:
+      currency: EUR
+      closes:
+        - {date: "2026-08-27", value: 99.42}
+        - {date: "2026-08-27", value: 99.50}
+""",
+            "zweimal",
+            id="doppelter-history-tag",
+        ),
+        pytest.param(
+            """version: 1
+instruments: []
+fx_rates:
+  - {base: CAD, quote: EUR, rate: -1.0, as_of: "2026-08-27T17:30:00+02:00"}
+""",
+            "kurs",
+            id="negativer-wechselkurs",
+        ),
+    ],
+)
+def test_jede_invariante_wird_beim_laden_geprueft(
+    tmp_path: Path, broken: str, expected: str
+) -> None:
+    """**Acht Mutanten, jeder mit genau einem Fehler.**
+
+    Eine Prüfung, die nichts abweisen kann, belegt nur, dass sie durchgelaufen
+    ist. Jeder Fall hier verletzt **eine** Regel und ist sonst tadellos; die
+    Meldung muss sie beim Namen nennen, sonst sucht der Betreiber in einer
+    Datei mit hundert Zeilen.
+
+    Der wichtigste ist die doppelte Identität. Sie war der stillste Fehler des
+    Formats: Zwei Einträge mit derselben ISIN widersprechen sich, und bis hier
+    gewann der zweite, weil eine Zuweisung den ersten überschrieb. Die Datei
+    sah gültig aus, und welcher Eintrag galt, hing an der Zeilenreihenfolge.
+    """
+    from stockinfo_plugin_examples.yaml_file import YamlFileSource
+
+    path = tmp_path / "kaputt.yaml"
+    path.write_text(broken, encoding="utf-8")
+
+    problem = YamlFileSource({"path": str(path)}).configuration_problem()
+
+    assert problem, "die Quelle meldet keinen Grund und tut so, als sei alles gut"
+    assert expected in problem.lower(), (
+        f"die Meldung nennt die verletzte Regel nicht: {problem!r}"
+    )
+
+
+def test_eine_gueltige_datei_wird_nicht_beanstandet(tmp_path: Path) -> None:
+    """Die Gegenprobe zu den acht Mutanten.
+
+    Ohne sie prüften sie nur, dass *irgendetwas* abgewiesen wird — und wären
+    auch grün, wenn der Parser jede Datei ablehnte.
+    """
+    from stockinfo_plugin_examples.yaml_file import YamlFileSource
+
+    path = tmp_path / "gut.yaml"
+    path.write_text(_GOOD_ENTRY, encoding="utf-8")
+
+    assert YamlFileSource({"path": str(path)}).configuration_problem() == ""
+
+
+def test_ein_neustart_liest_die_geaenderte_datei(tmp_path: Path) -> None:
+    """Der zugesagte Reload — **gemessen**, nicht behauptet.
+
+    Das Ticket sagt zu: „ein Neustart liest eine gültig geänderte Datei erneut
+    ein". Hot Reload ist ausdrücklich nicht Teil davon; geprüft wird deshalb
+    genau das, was zugesagt ist — eine **neue** Instanz, wie sie beim Start
+    entsteht.
+    """
+    from stockinfo_plugin.types import ResolveRequest
+    from stockinfo_plugin_examples.yaml_file import YamlFileSource
+
+    path = tmp_path / "wandelbar.yaml"
+    path.write_text(_GOOD_ENTRY, encoding="utf-8")
+    before = YamlFileSource({"path": str(path)}).resolve(
+        ResolveRequest(isin="IE00B4L5Y983")
+    )
+    assert before.name == "iShares Core MSCI World"
+
+    path.write_text(
+        _GOOD_ENTRY.replace("iShares Core MSCI World", "Umbenannt"), encoding="utf-8"
+    )
+
+    after = YamlFileSource({"path": str(path)}).resolve(
+        ResolveRequest(isin="IE00B4L5Y983")
+    )
+
+    assert after.name == "Umbenannt", (
+        "der Neustart hat den alten Stand behalten — dann wäre eine Änderung "
+        "an der Datei folgenlos"
+    )
 
 
 # ─── Matrix #8 · die vier Dateiquellen sind weg ───────────────────────────────

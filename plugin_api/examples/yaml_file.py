@@ -15,10 +15,21 @@ Diese Quelle liest **eine** YAML-Datei und bedient daraus jede Rolle:
 `fx`          die Einträge aus `fx_rates`
 ============= ===============================================================
 
-**Ein Parser, nicht fünf.** Die Rollen unterscheiden sich in dem, was sie aus
-demselben Eintrag lesen, nicht darin, wie sie ihn finden. Fünf Implementierungen
-liefen beim ersten Formatnachtrag auseinander, und der Benutzer merkte es an
-einer Rolle, die stumm nichts mehr lieferte.
+**Eine Datei, ein Parser, ein Schema — und das ist die ganze Zusage.** Die
+Rollen unterscheiden sich in dem, was sie aus demselben Eintrag lesen, nicht
+darin, wie sie ihn finden. Fünf Implementierungen liefen beim ersten
+Formatnachtrag auseinander, und der Benutzer merkte es an einer Rolle, die
+stumm nichts mehr lieferte.
+
+**Was hier ausdrücklich *nicht* zugesagt wird: genau ein Lesevorgang.** Der
+Host baut je Rolle eine Instanz; gemessen wird die Datei damit fünfmal
+gelesen. Das ist eine Eigenschaft des Hosts, keine dieser Quelle, und eine
+rollenübergreifende Zwischenspeicherung wäre eine Lifecycle-Architektur für
+ein Problem, das niemand hat: Die Datei ist klein und wird beim Start gelesen.
+
+Der Unterschied ist keine Wortklauberei. „Einmal gelesen" wäre eine Zusage
+über den Host, die diese Datei nicht halten kann; „ein Parser, ein Schema" ist
+eine über sie selbst, und sie hält.
 
 **Die manuelle History ist ein Rückfall, kein Vorrang.** Sie gilt für ein
 Papier, dessen History keine konfigurierte Quelle abfragen kann — eine
@@ -49,6 +60,12 @@ from typing import Any
 
 import yaml
 
+from stockinfo_plugin.invariants import (
+    currency_problem,
+    has_timezone,
+    identity_problem,
+    is_finite_price,
+)
 from stockinfo_plugin import (
     DailyBar,
     DailyCloseSource,
@@ -129,7 +146,7 @@ def _symbol_of(identity: object) -> str:
 
 
 class _Catalogue:
-    """Der gelesene Stand der Datei — einmal geprüft, danach nur noch gelesen.
+    """Der gelesene Stand der Datei — beim Bau geprüft, danach nur gelesen.
 
     Die Indexe sind der Grund für diese Klasse: Jede Rolle sucht denselben
     Eintrag, nur über einen anderen Schlüssel. Sie je Rolle neu aufzubauen
@@ -161,32 +178,148 @@ class _Catalogue:
         seen_ids: set[str] = set()
 
         for entry in raw.get("instruments") or []:
-            entry_id = entry.get("id")
-            if entry_id in seen_ids:
-                raise FileProblem(
-                    f"die Kennung {entry_id!r} steht doppelt in der Datei — "
-                    "welcher der beiden Einträge gälte, wäre Zufall"
-                )
-            seen_ids.add(entry_id)
-
-            identity = _identity_of(entry)
-            if not entry.get("name") or not entry.get("instrument_type"):
-                raise FileProblem(
-                    f"Eintrag {entry_id!r}: name und instrument_type sind "
-                    "Pflicht — ohne sie ist die Auflösung unbrauchbar"
-                )
-
-            record = {**entry, "identity": identity}
-            symbol = _symbol_of(identity)
-            if symbol:
-                self.by_symbol[symbol.upper()] = record
-            isin = isin_of(identity)
-            if isin:
-                self.by_isin[isin.upper()] = record
+            self._add_instrument(entry, seen_ids)
 
         for rate in raw.get("fx_rates") or []:
-            key = (str(rate.get("base", "")).upper(), str(rate.get("quote", "")).upper())
-            self.fx[key] = rate
+            self._add_rate(rate)
+
+    def _add_instrument(self, entry: dict, seen_ids: set[str]) -> None:
+        """Prüft einen Eintrag und legt ihn in die Indexe.
+
+        **Geprüft wird beim Laden, nicht beim Abruf.** Eine Datei mit einem
+        kaputten Eintrag soll die Quelle abschalten und den Grund nennen —
+        nicht Monate später eine einzelne Anfrage scheitern lassen, wenn
+        niemand mehr weiß, dass jemand die Datei bearbeitet hat.
+
+        Geprüft wird mit `stockinfo_plugin.invariants`, also denselben
+        Funktionen, an denen der Host jede Antwort misst. Eigene Prüfungen
+        wären eine zweite Wahrheit über dieselbe Sache.
+
+        Raises:
+            FileProblem: Der Eintrag verletzt eine Invariante. Die Meldung
+                nennt die Kennung und die verletzte Regel — ohne beides sucht
+                der Betreiber in einer Datei mit hundert Zeilen.
+        """
+        entry_id = entry.get("id")
+        where = f"Eintrag {entry_id!r}"
+        if entry_id in seen_ids:
+            raise FileProblem(
+                f"die Kennung {entry_id!r} steht doppelt in der Datei — "
+                "welcher der beiden Einträge gälte, wäre Zufall"
+            )
+        seen_ids.add(entry_id)
+
+        identity = _identity_of(entry)
+        problem = identity_problem(identity)
+        if problem:
+            raise FileProblem(f"{where}: {problem}")
+
+        if not (entry.get("name") or "").strip():
+            raise FileProblem(f"{where}: name fehlt — Pflichtfeld seit T-38")
+        if not (entry.get("instrument_type") or "").strip():
+            raise FileProblem(
+                f"{where}: instrument_type fehlt — an ihm hängt, welche "
+                "Metadatenquellen überhaupt gefragt werden"
+            )
+
+        price = entry.get("price") or {}
+        if price:
+            self._check_amount(price, f"{where}, price")
+
+        history = entry.get("history") or {}
+        if history:
+            problem = currency_problem(history.get("currency"))
+            if problem:
+                raise FileProblem(f"{where}: history.currency {problem}")
+            self._check_closes(history.get("closes") or [], where)
+
+        record = {**entry, "identity": identity}
+        symbol = _symbol_of(identity)
+        if symbol:
+            self._claim(self.by_symbol, symbol.upper(), record, where, "Symbol")
+        isin = isin_of(identity)
+        if isin:
+            self._claim(self.by_isin, isin.upper(), record, where, "ISIN")
+
+    @staticmethod
+    def _claim(index: dict, key: str, record: dict, where: str, label: str) -> None:
+        """Trägt einen Eintrag ein — und weist einen zweiten Anspruch ab.
+
+        **Der stillste Fehler des ganzen Formats.** Zwei Einträge mit
+        derselben ISIN sind keine Verdopplung, sondern ein Widerspruch: Beide
+        behaupten, dasselbe Papier zu beschreiben. Bis hierher gewann der
+        zweite, weil eine Zuweisung den ersten überschrieb — die Datei sah
+        gültig aus, und welcher Eintrag galt, hing an der Zeilenreihenfolge.
+        """
+        if key in index:
+            raise FileProblem(
+                f"{where}: {label} {key} ist schon vergeben — zwei Einträge "
+                "können nicht dasselbe Papier beschreiben"
+            )
+        index[key] = record
+
+    @staticmethod
+    def _check_amount(amount: dict, where: str) -> None:
+        """Währung, Zeitpunkt und Betrag eines Kurses.
+
+        Raises:
+            FileProblem: Eine der drei Angaben taugt nicht. Ein Betrag ohne
+                Währung ist eine Zahl, ein Zeitpunkt ohne Zone ist in Toronto
+                ein anderer als in Frankfurt, und ``0`` ist keine Angabe,
+                sondern eine fehlende Angabe, die sich als Zahl ausgibt.
+        """
+        problem = currency_problem(amount.get("currency"))
+        if problem:
+            raise FileProblem(f"{where}.currency {problem}")
+        if not is_finite_price(amount.get("value")):
+            raise FileProblem(
+                f"{where}.value {amount.get('value')!r} ist kein brauchbarer "
+                "Betrag — verlangt ist eine positive, endliche Zahl"
+            )
+        _as_moment(amount.get("as_of"), where)
+
+    @staticmethod
+    def _check_closes(closes: list[dict], where: str) -> None:
+        """Die gepflegten Schlusskurse — Datum, Betrag, keine Dubletten.
+
+        Raises:
+            FileProblem: Ein Datum ist unlesbar, ein Betrag unbrauchbar, oder
+                derselbe Tag steht zweimal. Zwei Werte für einen Tag sind
+                keine Reihe, sondern ein Widerspruch; welcher gälte, entschiede
+                die Sortierung.
+        """
+        seen: set[date] = set()
+        for close in closes:
+            day = _as_date(close.get("date"), where)
+            if day in seen:
+                raise FileProblem(
+                    f"{where}: der {day.isoformat()} steht zweimal in der "
+                    "History — zwei Werte für einen Tag sind kein Verlauf"
+                )
+            seen.add(day)
+            if not is_finite_price(close.get("value")):
+                raise FileProblem(
+                    f"{where}: Schlusskurs {close.get('value')!r} am "
+                    f"{day.isoformat()} ist kein brauchbarer Betrag"
+                )
+
+    def _add_rate(self, rate: dict) -> None:
+        """Prüft einen Wechselkurs und legt ihn ab."""
+        base = str(rate.get("base", "")).upper()
+        quote = str(rate.get("quote", "")).upper()
+        where = f"fx_rates {base}/{quote}"
+        for field, value in (("base", base), ("quote", quote)):
+            problem = currency_problem(value)
+            if problem:
+                raise FileProblem(f"{where}: {field} {problem}")
+        if not is_finite_price(rate.get("rate")):
+            raise FileProblem(
+                f"{where}: rate {rate.get('rate')!r} ist kein brauchbarer Kurs"
+            )
+        _as_moment(rate.get("as_of"), where)
+        if (base, quote) in self.fx:
+            raise FileProblem(f"{where}: das Paar steht doppelt in der Datei")
+        self.fx[(base, quote)] = rate
 
     def find(self, request: object) -> dict | None:
         """Den Eintrag zu einer Anfrage — über ISIN oder Symbol.
@@ -215,23 +348,48 @@ def _closes(entry: dict) -> list[dict]:
     return sorted(history.get("closes") or [], key=lambda close: str(close["date"]))
 
 
-def _as_date(value: object) -> date:
-    """Ein Datum aus der Datei — YAML liefert je nach Schreibweise beides."""
-    if isinstance(value, date) and not isinstance(value, datetime):
-        return value
-    return date.fromisoformat(str(value))
+def _as_date(value: object, where: str = "") -> date:
+    """Ein Datum aus der Datei — YAML liefert je nach Schreibweise beides.
 
-
-def _as_moment(value: object) -> datetime:
-    """Ein Zeitpunkt aus der Datei, mit Zone.
+    Args:
+        value: Der Wert aus der Datei.
+        where: Fundort für die Meldung.
 
     Raises:
-        FileProblem: Ohne Zone ist der Augenblick nicht rekonstruierbar —
-            17:30 ist in Toronto ein anderer als in Frankfurt.
+        FileProblem: Der Wert ist kein Datum. Ohne diese Prüfung stürbe der
+            Parser hier mit einem `ValueError`, und der Betreiber läse einen
+            Stacktrace statt der Zeile, die er ändern muss.
     """
-    moment = value if isinstance(value, datetime) else datetime.fromisoformat(str(value))
-    if moment.tzinfo is None:
-        raise FileProblem(f"Zeitangabe {value!r} trägt keine Zeitzone")
+    if isinstance(value, date) and not isinstance(value, datetime):
+        return value
+    try:
+        return date.fromisoformat(str(value))
+    except (TypeError, ValueError) as error:
+        raise FileProblem(f"{where}: {value!r} ist kein Datum") from error
+
+
+def _as_moment(value: object, where: str = "") -> datetime:
+    """Ein Zeitpunkt aus der Datei, mit Zone.
+
+    Args:
+        value: Der Wert aus der Datei.
+        where: Fundort für die Meldung.
+
+    Raises:
+        FileProblem: Kein lesbarer Zeitpunkt, oder einer **ohne Zone**. Ohne
+            Zone ist der Augenblick nicht rekonstruierbar — 17:30 ist in
+            Toronto ein anderer als in Frankfurt, und hinterher sieht man es
+            der Angabe nicht mehr an.
+    """
+    if isinstance(value, datetime):
+        moment = value
+    else:
+        try:
+            moment = datetime.fromisoformat(str(value))
+        except (TypeError, ValueError) as error:
+            raise FileProblem(f"{where}: {value!r} ist kein Zeitpunkt") from error
+    if not has_timezone(moment):
+        raise FileProblem(f"{where}: {value!r} trägt keine Zeitzone")
     return moment
 
 

@@ -1,3 +1,19 @@
+# ╔════════════════════════════════════════════════════════════════════════════╗
+# ║  NOCH NICHT UNTERSTUETZT — dieses Profil tut nicht, was es beschreibt.     ║
+# ╚════════════════════════════════════════════════════════════════════════════╝
+#
+# Fuer `quotes`, `daily` und `fx` fragt die App nur die **erste** einsatzbereite
+# Quelle; eine Kaskade gibt es fuer diese drei Rollen nicht. `yaml-file` steht
+# hier zwar am Ende jeder Kette und wird dort **nie gefragt**.
+#
+# Im Browserlauf zu T-37 hat das eine Anleihe ohne Kurs gekostet: Die Datei
+# fuehrte den Wert, die Kette holte ihn nicht. Die Kaskade ist als eigenes
+# Vorhaben abgespalten; bis dahin ist das eigenstaendige YAML-Profil der
+# einzige unterstuetzte Weg fuer handgepflegte Werte.
+#
+# Diese Datei bleibt als **Entwurf** liegen, weil sie beschreibt, wie es nach
+# der Umsetzung aussehen soll.
+#
 # data/sources.yaml — normales Online-Profil mit YAML als letztem Fallback
 #
 # Diese Datei konfiguriert nur die Quellenketten. Die eigentlichen, vom User

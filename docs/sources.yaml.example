@@ -38,23 +38,21 @@ providers:
     # weiter — der Schlüssel hebt nur das Limit an und ist nicht pflichtig.
     api_key: ${OPENFIGI_API_KEY}
 
-# ─── Handgepflegte Werte als letzter Rückfall ─────────────────────────────────
+# ─── Handgepflegte Werte aus einer Datei ──────────────────────────────────────
 #
 # `yaml-file` liest **eine** Datei und bedient daraus jede Rolle. Es ist die
 # Antwort auf die Fälle, für die es keine Online-Quelle gibt: eine OTC-Anleihe
 # ohne Kursquelle, ein nicht börsengehandelter Fonds, ein Papier, das keine
 # Suche kennt.
 #
-# **Ans Ende der Kette, nicht an den Anfang.** So gewinnt jede Online-Quelle,
-# die etwas liefert, und die Datei ergänzt nur, wo die Kette leer bleibt. Steht
-# sie vorn, überschreibt ein gepflegter Stand von gestern die frischen Kurse —
-# ohne dass es jemandem auffällt.
+# **Heute nur als eigenständiges Profil.** Alle fünf Ketten bestehen dann aus
+# genau dieser einen Quelle:
 #
-# resolvers: [openfigi, yahoo-search, yaml-file]
-# etf_meta:  [justetf, yfinance, yaml-file]
-# quotes:    [yfinance, yaml-file]
-# daily:     [yfinance, yaml-file]
-# fx:        [yfinance, yaml-file]
+# resolvers: [yaml-file]
+# etf_meta:  [yaml-file]
+# quotes:    [yaml-file]
+# daily:     [yaml-file]
+# fx:        [yaml-file]
 #
 # providers:
 #   yaml-file:
@@ -62,6 +60,15 @@ providers:
 #     # keinen zweiten Vorgabepfad. Zwei Orte, an denen eine Datei liegen darf,
 #     # sind ein Ort, an dem sie fehlt.
 #     path: /data/assets.yaml
+#
+# **Noch nicht möglich: die Datei hinter die Online-Quellen hängen.** Für
+# `quotes`, `daily` und `fx` fragt die App nur die **erste** einsatzbereite
+# Quelle — eine Kaskade gibt es für diese drei Rollen nicht. Ein Eintrag wie
+# `quotes: [yfinance, yaml-file]` sieht deshalb aus wie ein Rückfall und ist
+# keiner: `yaml-file` wird dort nie gefragt.
+#
+# Das ist als eigenes Vorhaben abgespalten. Bis dahin ist das eigenständige
+# Profil oben der einzige unterstützte Weg.
 #
 # Das Format der Datei steht in `docs/plugins.md`; ein vollständiges Beispiel
 # liegt in `_tickets/T-37-single-file-sample.yaml`.

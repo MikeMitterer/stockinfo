@@ -24,8 +24,11 @@ zweite Prüfstrecke zu erzeugen.
   YAML-Datei; die vier CSV-Beispiele sind entfernt, und derselbe Smoke läuft
   mit `PROFILE=yaml` wie mit `PROFILE=online` grün.
 - **Fachliche Änderungen:** drei.
-  1. Eine Datei wird **einmal** gelesen und validiert; alle fünf Rollen
-     bedienen sich aus derselben internen Haltung.
+  1. **Eine** vom Benutzer gepflegte Datei, **ein** Parser, **ein** Schema —
+     alle fünf Rollen lesen denselben Eintrag, nur je einen anderen Teil
+     davon. Nicht zugesagt ist genau ein Lesevorgang: Der Host baut je Rolle
+     eine Instanz, und das zu ändern wäre eine Lifecycle-Architektur für ein
+     Problem, das niemand hat.
   2. Das Plugin deklariert alle drei Identitätsformen und alle sechs
      Gattungen — eine leere Deklaration hieße „nichts zugesagt", und der Host
      überspränge die Quelle für jede bekannte Gattung.
@@ -133,7 +136,13 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
     Fälle, alle rot) und stammen aus dieser Matrix. Belege: `PROFILE=yaml`
     und `PROFILE=online` je 20/20, `tests/test_yaml_profile.py` 13/13, der
     vertikale T-23-Lauf auf der neuen Quelle 18/18.
-[^browser]: **Live bestätigt am 2026-08-30**, YAML-Profil im Browser. Drei
+[^browser]: **Live gelaufen am 2026-08-30**, YAML-Profil im Browser — mit
+    einer Einschränkung, die den Haken kostet: Der Drilldown nennt jede
+    Nicht-ETF-Gattung „Aktie" und stand so unter einer Anleihe. Der Befund ist
+    in T-35 festgehalten; solange er offen ist, stimmt „Drilldown … stimmen"
+    aus dieser Zeile nicht vollständig.
+
+    Beobachtet wurde: Drei
     Identitätsformen über die Oberfläche angelegt, jede mit dem Wert aus der
     Datei: `BTC-EUR` als `pair`/crypto mit 94.500,00 EUR, `DE0001102531` als
     `isin_only`/bond mit 99,42 EUR — dem **jüngsten Schlusskurs**, weil kein
@@ -251,8 +260,8 @@ Verbindliche Regeln:
 
 ## Eine Implementierung, fünf Rollen
 
-Das Plugin `yaml-file` liest und validiert die Datei **einmal** und stellt
-denselben Stand für alle Rollen bereit:
+Das Plugin `yaml-file` liest und validiert die Datei mit **einem** Parser
+gegen **ein** Schema und stellt denselben Stand für alle Rollen bereit:
 
 | Rolle | Antwort aus `/data/assets.yaml` |
 |---|---|
@@ -262,9 +271,12 @@ denselben Stand für alle Rollen bereit:
 | `etf_meta` | optionale Metadaten |
 | `fx` | optionale Einträge aus `fx_rates` |
 
-Parser, Indexierung und Invarianten werden nicht fünfmal implementiert. Eine
-gemeinsame interne Datenhaltung bedient die Rollen; der öffentliche
-Plugin-Vertrag bleibt unverändert.
+Parser, Indexierung und Invarianten werden nicht fünfmal **implementiert** —
+darum geht es. Ausgeführt werden sie je Rolle einmal, weil der Host je Rolle
+eine Instanz baut; gemessen liest die Quelle die Datei damit fünfmal. Das ist
+gewollt hingenommen und nicht Gegenstand dieses Tickets: Eine
+rollenübergreifende Zwischenspeicherung wäre eine Host-Architektur, und die
+Datei ist klein und wird beim Start gelesen.
 
 ### Was `yaml-file` deklarieren muss — und ein Befund, der es begründet
 

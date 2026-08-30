@@ -1,6 +1,0 @@
-record_type;instrument_id;identity_kind;isin;ticker;mic;base;quote_currency;name;instrument_type;as_of;price;currency;ter_bps;provider;fund_domicile;fx_base;fx_quote;fx_rate;note
-instrument;world-etf;listed;IE00B4L5Y983;EUNL;XETR;;;iShares Core MSCI World UCITS ETF;etf;2026-08-27T17:30:00+02:00;128.21;EUR;20;iShares;Ireland;;;;current source state - history belongs to the database
-instrument;apple-xetra;listed;US0378331005;APC;XETR;;;Apple Inc.;stock;2026-08-27T17:30:00+02:00;277.40;EUR;;;;;;
-instrument;bitcoin-eur;pair;;;;BTC;EUR;Bitcoin;crypto;2026-08-27T17:30:00+02:00;94500.00;EUR;;;;;;
-instrument;german-bond;isin_only;DE0001102531;;;;;Bundesrepublik Deutschland;bond;2026-08-27T17:30:00+02:00;99.42;EUR;;;;;;;price supplied by this file as online fallback
-fx;;;;;;;;;;2026-08-27T17:30:00+02:00;;;;;;CAD;EUR;0.6412;one CAD equals 0.6412 EUR

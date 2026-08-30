@@ -70,7 +70,7 @@ Dokumentationen, zwei Fehlerbilder — und bei jeder Vertragsänderung beides
 nachziehen.
 
 **Die Einstiegshürde ist gesunken.** Ein Plugin ist rund 60 Zeilen (siehe
-`plugin_api/examples/canada_file.py`), und der Contract-Test gibt die Zielvorgabe
+`plugin_api/examples/yaml_file.py`), und der Contract-Test gibt die Zielvorgabe
 maschinell vor. Mit KI-Unterstützung ist das kein Hindernis mehr für jemanden,
 der seine API kennt.
 
