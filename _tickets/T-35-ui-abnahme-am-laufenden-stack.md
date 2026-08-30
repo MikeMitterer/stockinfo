@@ -69,6 +69,31 @@ _(Die `Human`-Spalte bleibt leer — sie gehört Mike.)_
 
 ---
 
+## Mitgebrachter Befund aus T-37 (2026-08-30)
+
+**Der Drilldown nennt jede Nicht-ETF-Gattung „Aktie".**
+
+`dashboard/src/i18n/de.ts:350`:
+
+> „Kennzahlen werden nur für ETFs geholt — dieses Papier ist **eine Aktie**.
+> Die Quelle wird deshalb gar nicht erst abgefragt, alle Felder lassen sich von
+> Hand nachtragen."
+
+Gemessen im Browserlauf zu T-37, YAML-Profil: Der Satz stand unter einer
+**Bundesanleihe** (`instrument_type: bond`). Er stimmte, solange es zwei
+Gattungen gab; seit T-31 und T-38 sind es sechs, und für `bond`, `crypto` und
+`fund` ist er schlicht falsch.
+
+Die Aussage dahinter bleibt richtig — die Metadatenquelle wird für diese
+Papiere nicht gefragt. Falsch ist nur die Begründung, und sie ist die einzige
+Stelle, an der ein Benutzer die Gattung seines Papiers erklärt bekommt.
+
+Nicht in T-37 behoben: Es wäre eine weitere Produktfläche gewesen, und das
+Ticket stand bereits unter einem Scope-Checkpoint. Hier ist der Ort, weil T-35
+die Oberfläche am laufenden Stack abnimmt.
+
+---
+
 ## Was dieses Ticket ausdrücklich nicht tut
 
 - ~~**Es ändert keinen Produktcode.**~~ **Diese Zeile hat nicht gehalten, und

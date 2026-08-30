@@ -88,18 +88,19 @@ nennt, wird als UI-Befund in T-35 geprüft; er erweitert T-37 nicht.
 ## Verify
 
 Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) ·
-◑ teilweise (Fußnote) · ➖ keine Live-Verifikation (nur Unit/Review).
+◑ teilweise (Fußnote) · ➖ keine Live-Verifikation (nur Unit/Review) ·
+⊘ in ein Folgeergebnis abgespalten (Fußnote).
 `AI` = nur KI · `Human` = nur Mensch (nie überschreiben).
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | **1** | `T-37-single-file-sample.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | ✅ [^r1] | |
 | **2** | `PROFILE=yaml ./_tickets/T-35-smoke.sh --run` | der gemeinsame Smoke ist grün; `GET /sources` zeigt `yaml-file` in allen fünf Rollen und genau einen Pfad auf die Fachdaten-Datei | ✅ [^r1] | |
-| **3** | `PROFILE=online ./_tickets/T-35-smoke.sh --run` | derselbe Smoke ist grün; normale Online-Quellen stehen zuerst und dasselbe `yaml-file` jeweils zuletzt | ✅ [^r1] | |
-| **4** | Überschneidungs-Test im Online-Profil | liefert eine Online-Quelle einen gültigen Wert, gewinnt sie; YAML überschreibt ihn nicht. Nur bei fehlendem Ergebnis wird YAML gefragt | ✅ [^r1] | |
+| **3** | `PROFILE=online ./_tickets/T-35-smoke.sh --run` | derselbe Smoke ist grün; normale Online-Quellen stehen zuerst und dasselbe `yaml-file` jeweils zuletzt | ⊘ [^split] | |
+| **4** | Überschneidungs-Test im Online-Profil | liefert eine Online-Quelle einen gültigen Wert, gewinnt sie; YAML überschreibt ihn nicht. Nur bei fehlendem Ergebnis wird YAML gefragt | ⊘ [^split] | |
 | **5** | Kurs-/History-Persistenz | Online- und YAML-Ergebnisse landen in der Datenbank. Manuelle `history` wird nur für Assets ohne abfragbare History verwendet; fehlt `price`, darf der jüngste Schlusskurs als aktueller Fallback dienen | ✅ [^r1] | |
-| **6** | Browser, `PROFILE=yaml` | `BTC-EUR` (`pair`), eine Anleihe (`isin_only`) und ein nicht börsengehandelter Fonds (`fund`) lassen sich anlegen; Liste, Drilldown, Preis und manueller History-Fallback stimmen; Konsole und fehlgeschlagene Requests sind sauber | ➖ [^browser] | |
-| **7** | Browser, `PROFILE=online` | BTC kommt über YFinance, die Anleihe ohne Online-Kurs über YAML; bei einem überlappenden Asset gewinnt online. Liste, Drilldown und Quellenanzeige stimmen; Konsole und Requests sind sauber | ➖ [^browser] | |
+| **6** | Browser, `PROFILE=yaml` | `BTC-EUR` (`pair`), eine Anleihe (`isin_only`) und ein nicht börsengehandelter Fonds (`fund`) lassen sich anlegen; Liste, Drilldown, Preis und manueller History-Fallback stimmen; Konsole und fehlgeschlagene Requests sind sauber | ✅ [^browser] | |
+| **7** | Browser, `PROFILE=online` | BTC kommt über YFinance, die Anleihe ohne Online-Kurs über YAML; bei einem überlappenden Asset gewinnt online. Liste, Drilldown und Quellenanzeige stimmen; Konsole und Requests sind sauber | ⊘ [^split] | |
 | **8** | Plugin-/Profil-Inventur | kein CSV-Profil und keine vier Datei-Quellen bleiben aktiv oder dokumentiert; `PROFILE=yaml` ist der einzige dateibasierte Prüfpfad | ✅ [^r1] | |
 | **9** | Reload-/Fehlerfälle | fehlende Datei, ungültiges YAML, doppelte IDs und unzulässige Werte werden verständlich gemeldet; ein Neustart liest eine gültig geänderte Datei erneut ein | ✅ [^r1] | |
 
@@ -107,11 +108,29 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
     Fälle, alle rot) und stammen aus dieser Matrix. Belege: `PROFILE=yaml`
     und `PROFILE=online` je 20/20, `tests/test_yaml_profile.py` 13/13, der
     vertikale T-23-Lauf auf der neuen Quelle 18/18.
-[^browser]: **Offen, und zwar bei Claude.** Mikes Vorgabe vom 2026-08-29
-    weist die Browser-Abnahme ausdrücklich Claude zu — beide Profile, mit dem
-    YAML-Plugin als letztem Fallback im Online-Profil. Ein grüner Test ersetzt
-    sie nicht: Der letzte UI-Lauf hat drei Befunde gefunden, die keine Suite
-    sah. Der Code steht; diese Zeilen fehlen noch.
+[^browser]: **Live bestätigt am 2026-08-30**, YAML-Profil im Browser. Drei
+    Identitätsformen über die Oberfläche angelegt, jede mit dem Wert aus der
+    Datei: `BTC-EUR` als `pair`/crypto mit 94.500,00 EUR, `DE0001102531` als
+    `isin_only`/bond mit 99,42 EUR — dem **jüngsten Schlusskurs**, weil kein
+    `price` in der Datei steht — und `DE0009848119` als `isin_only`/fund mit
+    142,50 EUR. Die ISIN-Spalte des Paars zeigt „hat keine — Währungspaar"
+    statt eines Editors. Konsole leer, alle Requests 200.
+
+    Der Lauf hat außerdem zwei Befunde geliefert, die keine Suite sah: die
+    fehlende Kaskade (Fußnote unten) und den Drilldown-Text, der jede
+    Nicht-ETF-Gattung „Aktie" nennt. Letzterer steht in T-35.
+[^split]: **Abgespalten, nicht erfüllt** (Codex, Scope-Checkpoint 2 am
+    2026-08-30). Diese drei Zeilen verlangen eine Kaskade für `quotes`,
+    `daily` und `fx`: Online zuerst, die Datei zuletzt, gefragt nur bei
+    leerem Ergebnis. Die App kennt für diese Rollen keine Kette —
+    `container._first` nimmt die erste einsatzbereite Quelle, und das ist
+    dort seit jeher eine ausdrückliche Entscheidung.
+
+    Der Befund stammt aus dem Browserlauf: Im Online-Profil bleibt die
+    Anleihe ohne Kurs (`502 quote_unavailable`), obwohl `yaml-file` in
+    `quotes` an zweiter Stelle steht. Eine Kaskade ist eine eigene
+    Produktabstraktion und bekommt ein eigenes Ergebnis mit einem von Mike
+    freigegebenen Entwurf.
 
 Die Browserzeilen werden von Claude mit den tatsächlich beobachteten Assets,
 Quellen und Ergebnissen belegt. Eine rein automatisierte Aussage ersetzt diese
@@ -302,9 +321,9 @@ Anleihen oder andere Assets ohne Online-Kurs, ist aber nie ein Override.
 
 ## Auflösung
 
-_(Code umgesetzt am 2026-08-30, Runde 1. Die Browserzeilen `#6` und `#7`
-stehen noch aus — sie sind laut Mikes Vorgabe **Claudes** Aufgabe, nicht
-seine.)_
+_(Umgesetzt am 2026-08-30, Runde 1, im abgespaltenen Umfang: das
+eigenständige YAML-Plugin. Die Zeilen `#3`, `#4` und `#7` sind in ein
+Folgeergebnis abgespalten.)_
 
 Vier Dateiquellen sind eine geworden. `yaml-file` liest eine Datei und bedient
 daraus jede Rolle; die Rollen unterscheiden sich darin, **was** sie aus

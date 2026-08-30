@@ -6,8 +6,6 @@ Code, der sie erfüllen soll:
 ============ ================================================================
 Matrix `#2`  Alle fünf Rollen werden aus **einer** Datei bedient; `/sources`
              zeigt `yaml-file` in allen fünf und genau einen Pfad
-Matrix `#4`  Liefert eine Online-Quelle einen Wert, gewinnt sie. YAML
-             ergänzt nur, wo die Kette nichts hat
 Matrix `#5`  Manuelle History gilt nur, wo keine Quelle sie abfragen kann;
              fehlt `price`, darf der jüngste Schlusskurs einspringen
 Matrix `#8`  Kein CSV-Profil und keine vier Dateiquellen bleiben übrig
@@ -20,9 +18,14 @@ wird hier nicht nachgebaut, sondern benutzt. Eine Kopie im Testordner wäre
 bequemer und würde beim ersten Nachtrag auseinanderlaufen — dann beschriebe das
 Ticket ein Format, das niemand mehr prüft.
 
-**Was diese Datei bewusst nicht prüft.** Die Browserzeilen `#6` und `#7` der
-Matrix verlangen einen Lauf mit Augen; ein grüner Test hier ersetzt ihn nicht
-und behauptet es auch nicht.
+**Was diese Datei bewusst nicht prüft.** Die Browserzeile `#6` verlangt einen
+Lauf mit Augen; ein grüner Test hier ersetzt ihn nicht und behauptet es auch
+nicht.
+
+Die Zeilen `#3`, `#4` und `#7` fehlen hier ebenfalls, und zwar als
+**Entscheidung**: Sie verlangen eine Kaskade für `quotes`, `daily` und `fx`,
+die es in der App nicht gibt. Sie sind als eigenes Ergebnis abgespalten; der
+Abschnitt weiter unten sagt, warum ein Test dazu hier nichts belegen würde.
 """
 
 from collections.abc import Iterator
@@ -35,61 +38,6 @@ from app.container import get_sources_config
 from app.main import app
 
 SAMPLE = Path(__file__).parent.parent / "_tickets" / "T-37-single-file-sample.yaml"
-
-# Eine Kursquelle, die **vor** der Datei steht und immer einen erkennbaren Wert
-# liefert. Sie belegt Matrix `#4`: Wer zuerst antwortet, gewinnt.
-_ALWAYS_ANSWERS = '''
-from datetime import datetime, timezone
-
-from stockinfo_plugin import Quote, QuoteSource
-
-
-class AlwaysAnswers(QuoteSource):
-    """Steht vor der Datei und antwortet auf alles."""
-
-    name = "always-answers"
-    api_version = 2
-    SUPPORTED_KINDS = frozenset({"listed", "pair", "isin_only"})
-    SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "crypto", "bond"})
-
-    def handles(self, request) -> bool:
-        return True
-
-    def fetch_quote(self, request):
-        return Quote(
-            price=999.0,
-            currency="EUR",
-            as_of=datetime(2026, 8, 30, 12, 0, tzinfo=timezone.utc),
-        )
-
-
-SOURCES = [AlwaysAnswers]
-'''
-
-# Die Gegenfigur: eine Quelle, die zustaendig ist und nichts liefert. Sie
-# belegt die andere Haelfte von Matrix `#4` — der Rueckfall dahinter muss
-# gefragt werden.
-_ANSWERS_NEVER = '''
-from stockinfo_plugin import NotFound, QuoteSource
-
-
-class AnswersNever(QuoteSource):
-    """Zustaendig, hat aber nie einen Kurs."""
-
-    name = "answers-never"
-    api_version = 2
-    SUPPORTED_KINDS = frozenset({"listed", "pair", "isin_only"})
-    SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "crypto", "bond"})
-
-    def handles(self, request) -> bool:
-        return True
-
-    def fetch_quote(self, request):
-        return NotFound()
-
-
-SOURCES = [AnswersNever]
-'''
 
 # Die Papiere aus der Beispieldatei, mit dem, was an ihnen geprüft wird.
 _ETF = "IE00B4L5Y983"
@@ -149,8 +97,6 @@ def volume(tmp_path: Path) -> Path:
     """
     plugins = tmp_path / "plugins"
     plugins.mkdir()
-    (plugins / "vorne.py").write_text(_ALWAYS_ANSWERS, encoding="utf-8")
-    (plugins / "stumm.py").write_text(_ANSWERS_NEVER, encoding="utf-8")
     return tmp_path
 
 
@@ -277,72 +223,18 @@ def test_das_paar_kommt_ueber_sein_symbol(volume: Path, client) -> None:
     )
 
 
-# ─── Matrix #4 · Online gewinnt, YAML ergänzt ─────────────────────────────────
-
-
-def test_die_online_quelle_gewinnt_bei_ueberschneidung(volume: Path, client) -> None:
-    """YAML ist der letzte Rückfall, kein Override.
-
-    Der Fall ist der ganze Zweck des Online-Profils: Dieselbe ISIN steht in der
-    Datei **und** wird von einer Quelle davor beantwortet. Gewönne die Datei,
-    hätte ein Betreiber seine Online-Kurse mit einem gepflegten Stand von
-    gestern überschrieben, ohne es zu bemerken.
-    """
-    _profile(
-        volume,
-        {
-            "resolvers": ["yaml-file"],
-            "etf_meta": [],
-            "quotes": ["always-answers", "yaml-file"],
-            "daily": ["yaml-file"],
-            "fx": ["yaml-file"],
-        },
-    )
-
-    price = client.get(f"/quote/{_ETF}").json()["price"]
-
-    assert price == 999.0, (
-        "die Datei hat die vorgelagerte Quelle überschrieben — sie ist der "
-        "Rückfall und nicht die Wahrheit"
-    )
-
-
-def test_die_datei_antwortet_wenn_die_quelle_davor_nichts_hat(
-    volume: Path, client
-) -> None:
-    """**Die andere Hälfte von Matrix `#4`** — und die teurere.
-
-    Der Fall darüber prüft, dass eine vorgelagerte Quelle gewinnt. Das allein
-    ist nur die halbe Zusage: Ein Rückfall, der nie gefragt wird, gewinnt
-    ebenfalls nie — und beide Tests wären grün.
-
-    Hier antwortet die vordere Quelle **nicht**. Dann muss die Datei
-    einspringen; genau dafür steht sie im Online-Profil am Ende jeder Kette.
-
-    Gefunden hat die Lücke nicht dieser Test, sondern der Browserlauf: Im
-    Online-Profil blieb die Anleihe ohne Kurs, weil `container._first` für
-    Kurse, Tagesreihen und Devisen **nur die erste** Quelle nimmt. Für diese
-    drei Rollen gibt es keine Kette.
-    """
-    _profile(
-        volume,
-        {
-            "resolvers": ["yaml-file"],
-            "etf_meta": [],
-            "quotes": ["answers-never", "yaml-file"],
-            "daily": ["yaml-file"],
-            "fx": ["yaml-file"],
-        },
-    )
-
-    response = client.get(f"/quote/{_ETF}")
-
-    assert response.status_code == 200, (
-        "die Datei hinter der stummen Quelle wurde nicht gefragt — "
-        f"{response.text}"
-    )
-    assert response.json()["price"] == 128.21
-
+# ─── Matrix #4 · abgespalten ──────────────────────────────────────────────────
+#
+# Die Zeilen `#3`, `#4` und `#7` verlangen eine **Kaskade** für `quotes`,
+# `daily` und `fx`: Online zuerst, die Datei zuletzt, und gefragt wird sie nur,
+# wenn die Kette davor nichts hat. Die App kennt für diese drei Rollen keine
+# Kette — `container._first` nimmt die erste einsatzbereite Quelle.
+#
+# Das ist eine eigene Produktabstraktion und wurde als eigenes Ergebnis
+# abgespalten. Hier stehen deshalb **keine** Fälle dazu: Ein Test, der die
+# Überschneidung prüft, während nur die erste Quelle gefragt wird, wäre grün,
+# ohne etwas zu belegen — genau die Sorte Zusicherung, die dieses Ticket
+# zweimal gefunden hat.
 
 # ─── Matrix #5 · die manuelle History als Rückfall ────────────────────────────
 
