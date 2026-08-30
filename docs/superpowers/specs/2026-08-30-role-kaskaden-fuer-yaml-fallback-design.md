@@ -91,4 +91,3 @@ Claude's browser acceptance must cover at least:
 - `DE0009848119`: the `fund` identity and price remain usable;
 - list and drilldown source/identity/price display, clean console, and no
   failed requests other than deliberately exercised non-hits.
-

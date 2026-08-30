@@ -52,4 +52,3 @@ T-41 beginnt erst nach der Freigabe von T-37. Danach wird es vor T-35
 implementiert und unabhängig von Codex geprüft. T-39 bleibt gemäß Mikes
 Reihenfolge am Ende der Produktkette; T-40 bleibt die anschließende
 Universalisierung des Regelwerks.
-

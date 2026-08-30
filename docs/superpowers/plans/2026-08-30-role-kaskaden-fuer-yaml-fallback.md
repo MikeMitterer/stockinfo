@@ -190,4 +190,3 @@
 
   Handoff only after the worktree is clean and the ticket contains the
   automated and browser evidence.
-
