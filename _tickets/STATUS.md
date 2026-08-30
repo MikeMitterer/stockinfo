@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-37-yaml-fallback-ein-datei.md`
 - `handoff_commit`: `3e97a9e`
 - `review_round`: `2`
