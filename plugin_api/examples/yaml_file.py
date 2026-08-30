@@ -102,6 +102,40 @@ class FileProblem(Exception):
     """Die Datei ist nicht benutzbar — mit einem Grund, den ein Mensch liest."""
 
 
+_KNOWN_VERSIONS = frozenset({1})
+"""Die Formatfassungen, die diese Fassung des Plugins lesen kann.
+
+Eine höhere Zahl still zu lesen hieße, ein Format zu verstehen, das es noch
+nicht gab — und der Benutzer bekäme eine Datei, die *fast* funktioniert.
+"""
+
+
+def _require_list(value: object, name: str, path: object) -> None:
+    """Ein Block, der eine Liste sein muss, ist eine.
+
+    Raises:
+        FileProblem: Der Block trägt etwas anderes. Ohne diese Prüfung stirbt
+            die Schleife darüber mit einem `AttributeError`, und der Betreiber
+            liest einen Stacktrace statt der Zeile, die er ändern muss.
+    """
+    if value is None or isinstance(value, list):
+        return
+    where = f"{path}: {name}" if path else name
+    raise FileProblem(
+        f"{where} ist {type(value).__name__} statt einer Liste"
+    )
+
+
+def _require_mapping(value: object, name: str) -> None:
+    """Ein Block, der ein Objekt sein muss, ist eines.
+
+    Raises:
+        FileProblem: Der Block trägt etwas anderes.
+    """
+    if not isinstance(value, dict):
+        raise FileProblem(f"{name} ist {type(value).__name__} statt eines Objekts")
+
+
 def _identity_of(entry: dict) -> object:
     """Baut die Identität eines Eintrags in ihrer Form.
 
@@ -172,6 +206,21 @@ class _Catalogue:
         if not isinstance(raw, dict):
             raise FileProblem(f"{path} enthält kein Objekt auf oberster Ebene")
 
+        # **Die Formprüfung steht vor der Inhaltsprüfung**, und der Grund ist
+        # gemessen: `instruments: {}` ließ den Konstruktor mit einem
+        # `AttributeError` sterben. Der Betreiber las einen Stacktrace statt
+        # der Zeile, die er ändern muss.
+        version = raw.get("version")
+        if version not in _KNOWN_VERSIONS:
+            raise FileProblem(
+                f"{path}: version {version!r} ist unbekannt — diese Fassung "
+                f"liest {sorted(_KNOWN_VERSIONS)}. Eine höhere Zahl bedeutet "
+                "ein Format, das hier niemand kennt; sie stillschweigend zu "
+                "lesen hieße, etwas anderes zu verstehen als gemeint"
+            )
+        _require_list(raw.get("instruments"), "instruments", path)
+        _require_list(raw.get("fx_rates"), "fx_rates", path)
+
         self.by_isin: dict[str, dict] = {}
         self.by_symbol: dict[str, dict] = {}
         self.fx: dict[tuple[str, str], dict] = {}
@@ -200,6 +249,12 @@ class _Catalogue:
                 nennt die Kennung und die verletzte Regel — ohne beides sucht
                 der Betreiber in einer Datei mit hundert Zeilen.
         """
+        if not isinstance(entry, dict):
+            raise FileProblem(
+                f"instruments enthält {type(entry).__name__} statt eines "
+                "Eintrags — jeder Listenpunkt ist ein Objekt mit id, identity, "
+                "name und instrument_type"
+            )
         entry_id = entry.get("id")
         where = f"Eintrag {entry_id!r}"
         if entry_id in seen_ids:
@@ -216,21 +271,40 @@ class _Catalogue:
 
         if not (entry.get("name") or "").strip():
             raise FileProblem(f"{where}: name fehlt — Pflichtfeld seit T-38")
-        if not (entry.get("instrument_type") or "").strip():
+        instrument_type = (entry.get("instrument_type") or "").strip()
+        if not instrument_type:
             raise FileProblem(
                 f"{where}: instrument_type fehlt — an ihm hängt, welche "
                 "Metadatenquellen überhaupt gefragt werden"
             )
+        # **Gegen die eigene Zusage geprüft, nicht gegen einen fremden
+        # Katalog.** Was der Host führt, entscheidet er; was *diese* Quelle
+        # zusagt, steht in `SUPPORTED_TYPES`. Eine Gattung daneben wäre eine
+        # Zeile, die der Host nach seiner Deklaration gar nicht erst erfragt —
+        # die Quelle behauptete etwas, das sie selbst nicht bedient.
+        if instrument_type not in YamlFileSource.SUPPORTED_TYPES:
+            raise FileProblem(
+                f"{where}: instrument_type {instrument_type!r} steht nicht im "
+                f"Katalog {sorted(YamlFileSource.SUPPORTED_TYPES)}"
+            )
 
         price = entry.get("price") or {}
         if price:
+            _require_mapping(price, f"{where}.price")
             self._check_amount(price, f"{where}, price")
+
+        metadata = entry.get("metadata") or {}
+        if metadata:
+            _require_mapping(metadata, f"{where}.metadata")
+            self._check_metadata(metadata, where)
 
         history = entry.get("history") or {}
         if history:
+            _require_mapping(history, f"{where}.history")
             problem = currency_problem(history.get("currency"))
             if problem:
                 raise FileProblem(f"{where}: history.currency {problem}")
+            _require_list(history.get("closes"), f"{where}.history.closes", None)
             self._check_closes(history.get("closes") or [], where)
 
         record = {**entry, "identity": identity}
@@ -277,6 +351,32 @@ class _Catalogue:
                 "Betrag — verlangt ist eine positive, endliche Zahl"
             )
         _as_moment(amount.get("as_of"), where)
+
+    @staticmethod
+    def _check_metadata(metadata: dict, where: str) -> None:
+        """Die optionalen Kennzahlen — Zahlen müssen Zahlen sein.
+
+        Raises:
+            FileProblem: Ein als Zahl deklariertes Feld trägt etwas anderes.
+                Bis hierher fiel das erst beim Abruf auf, als `float("nope")`
+                warf — mitten in einer Metadatenanfrage, lange nachdem jemand
+                die Datei bearbeitet hatte.
+        """
+        for key, field in YamlFileSource._METADATA_KEYS:
+            if key not in metadata:
+                continue
+            spec = next(
+                (item for item in YamlFileSource.FIELDS if item.name == field), None
+            )
+            if spec is None or spec.kind != "number":
+                continue
+            try:
+                float(metadata[key])
+            except (TypeError, ValueError) as error:
+                raise FileProblem(
+                    f"{where}: metadata.{key} ist {metadata[key]!r} und damit "
+                    "keine Zahl"
+                ) from error
 
     @staticmethod
     def _check_closes(closes: list[dict], where: str) -> None:
@@ -340,6 +440,20 @@ class _Catalogue:
         if symbol and symbol.upper() in self.by_symbol:
             return self.by_symbol[symbol.upper()]
         return None
+
+
+def _lookup_key(identity: object) -> str:
+    """Woran sich dieses Papier in der Datei finden lässt — oder ``""``.
+
+    Eine Identität ohne Ticker, ohne Basiswert und ohne ISIN ist keine Frage,
+    die diese Quelle beantworten könnte. Sie zu verneinen heißt `NotResponsible`
+    und nicht `NotFound`: Der Unterschied entscheidet in der Kette, ob am Ende
+    ein 404 oder ein „der Nächste, bitte" steht.
+    """
+    isin = isin_of(identity)
+    if isin:
+        return isin
+    return _symbol_of(identity) or ""
 
 
 def _closes(entry: dict) -> list[dict]:
@@ -434,11 +548,13 @@ class YamlFileSource(
     # Schlüssel in der Datei → Feldname im Vertrag. Die Namen unterscheiden sich
     # dort, wo die Datei die Einheit mitträgt: `ter_bps` sagt dem Benutzer, in
     # welcher Einheit die Zahl steht.
-    _METADATA_KEYS = {
-        "ter_bps": "ter",
-        "provider": "provider",
-        "fund_domicile": "fund_domicile",
-    }
+    # Ein **Tupel** und kein dict: Ein veränderliches Klassenattribut gehört
+    # allen Instanzen gemeinsam, und der Vertrag weist es zu Recht ab.
+    _METADATA_KEYS = (
+        ("ter_bps", "ter"),
+        ("provider", "provider"),
+        ("fund_domicile", "fund_domicile"),
+    )
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
@@ -468,13 +584,37 @@ class YamlFileSource(
         return self._problem
 
     def handles(self, request: object) -> bool:
-        """Zuständig, wenn die Datei den Eintrag führt.
+        """Führt die Datei etwas zu dieser Anfrage?
 
-        Diese Quelle hat keine Marktgrenze und kein Länderpräfix — sie kennt
-        genau das, was der Benutzer eingetragen hat. Die Datei ist die Antwort
-        auf die Zuständigkeitsfrage.
+        **Die Frage ist je Rolle eine andere Zeile.** Eine `FxRequest` sucht in
+        `fx_rates`, alles übrige unter den Instrumenten. Bis hierher fragte
+        jede Rolle denselben Instrumentenindex — die Devisenrolle fand dort
+        nie etwas und verneinte ihre Zuständigkeit, während `fetch_rate`
+        denselben Kurs lieferte. Eine Quelle, die sich für unzuständig erklärt
+        und dann doch antwortet, macht den Vorfilter des Hosts wertlos.
+
+        Diese Quelle hat keine Marktgrenze und kein Länderpräfix: Die Datei
+        ist die Antwort auf die Zuständigkeitsfrage.
         """
-        return self._catalogue is not None and self._catalogue.find(request) is not None
+        if self._catalogue is None:
+            return False
+        if isinstance(request, FxRequest):
+            return self._rate_for(request) is not None
+        return self._catalogue.find(request) is not None
+
+    def _rate_for(self, request: FxRequest) -> dict | None:
+        """Der Eintrag zu einem Währungspaar — oder der Identitätskurs.
+
+        `CAD/CAD` steht in keiner Datei, weil ihn niemand pflegt. Ihn als
+        „kenne ich nicht" abzuweisen zwänge den Host, dieselbe Rechnung selbst
+        anzustellen — für eine Zahl, die feststeht.
+        """
+        if self._catalogue is None:
+            return None
+        base, quote = request.base.upper(), request.quote.upper()
+        if base and base == quote:
+            return {"base": base, "quote": quote, "rate": 1.0, "as_of": None}
+        return self._catalogue.fx.get((base, quote))
 
     # ─── Auflösen ─────────────────────────────────────────────────────────────
 
@@ -482,6 +622,11 @@ class YamlFileSource(
         """Identität, Name und Gattung aus der Datei."""
         if self._catalogue is None:
             return Unavailable(self._problem)
+        if not (request.isin or request.symbol):
+            return NotResponsible(
+                f"{self.name} schlägt über ISIN oder Symbol nach — die "
+                "Anfrage nennt beides nicht"
+            )
         entry = self._catalogue.find(request)
         if entry is None:
             return NotFound()
@@ -503,6 +648,10 @@ class YamlFileSource(
         """
         if self._catalogue is None:
             return Unavailable(self._problem)
+        if not _lookup_key(request.identity):
+            return NotResponsible(
+                f"{self.name}: die Identität trägt weder ISIN noch Symbol"
+            )
         entry = self._catalogue.find(request)
         if entry is None:
             return NotFound()
@@ -538,17 +687,30 @@ class YamlFileSource(
         """Die manuell gepflegte Reihe, aufsteigend und ohne Duplikate."""
         if self._catalogue is None:
             return Unavailable(self._problem)
+        if not _lookup_key(request.identity):
+            return NotResponsible(
+                f"{self.name}: die Identität trägt weder ISIN noch Symbol"
+            )
         entry = self._catalogue.find(request)
         if entry is None:
             return NotFound()
-        closes = _closes(entry)
-        if not closes:
+
+        # **Das angefragte Fenster, nicht die ganze Datei.** Wer `start` und
+        # `end` ignoriert, liefert auf jede Frage dieselbe Reihe: Für den
+        # Aufrufer sieht das aus wie eine Antwort auf seine Frage und ist die
+        # Antwort auf eine andere. Gemessen lieferte eine Anfrage ab 2030 drei
+        # Werte aus 2026.
+        bars = [
+            DailyBar(day=day, close=float(close["value"]))
+            for close in _closes(entry)
+            for day in (_as_date(close["date"]),)
+            if (request.start is None or day >= request.start)
+            and (request.end is None or day <= request.end)
+        ]
+        if not bars:
             return NotFound()
         return DailySeries(
-            bars=tuple(
-                DailyBar(day=_as_date(close["date"]), close=float(close["value"]))
-                for close in closes
-            ),
+            bars=tuple(bars),
             currency=str((entry.get("history") or {})["currency"]),
             # Von Hand gepflegte Kurse sind, was der Benutzer eingetragen hat.
             # `True` zu behaupten wäre eine Aussage über eine Bereinigung, die
@@ -573,7 +735,7 @@ class YamlFileSource(
 
         metadata = entry.get("metadata") or {}
         readings: list[Reading] = []
-        for key, field in self._METADATA_KEYS.items():
+        for key, field in self._METADATA_KEYS:
             if key not in metadata:
                 continue
             value = metadata[key]
@@ -594,15 +756,19 @@ class YamlFileSource(
         """Ein Wechselkurs aus `fx_rates`."""
         if self._catalogue is None:
             return Unavailable(self._problem)
-        key = (request.base.upper(), request.quote.upper())
-        rate = self._catalogue.fx.get(key)
+        base, quote = request.base.upper(), request.quote.upper()
+        rate = self._rate_for(request)
         if rate is None:
-            return NotResponsible(f"{self.name} führt {key[0]}/{key[1]} nicht")
+            return NotResponsible(f"{self.name} führt {base}/{quote} nicht")
+        moment = rate["as_of"]
         return FxRate(
-            base=key[0],
-            quote=key[1],
+            base=base,
+            quote=quote,
             rate=float(rate["rate"]),
-            as_of=_as_moment(rate["as_of"]),
+            # Der Identitätskurs trägt keinen Zeitpunkt aus der Datei — er gilt
+            # immer. `now` ist hier die ehrlichste Angabe: Der Wert ist gerade
+            # entstanden, nicht gepflegt worden.
+            as_of=_as_moment(moment) if moment else datetime.now(timezone.utc),
         )
 
 
