@@ -54,6 +54,20 @@ einer Fremdinstallation kaputt.
 ersetzt. Der größere Teil ist Löschung; die 700 Zeilen sind Summe aus Zu- und
 Abgang.
 
+### Scope-Checkpoint 1 · `continue`
+
+Codex-Entscheidung am 2026-08-30 gegen `f34cc3f`: Der Umfang bleibt **ein**
+Ergebnis. 1.146 Diff-Zeilen sind der reine Abgang der ersetzten CSV-Beispiele,
+Tests und Fixtures; die drei ungeplanten Produktdateien korrigieren zusammen
+nur vier Zeilen mit Namen der gelöschten Beispiele. Ein eigenständig
+lieferbares Teilstück oder eine neue Produktentscheidung ist nicht entstanden.
+
+Das Budget wird einmalig auf **8 Produktdateien, 13 Test-/Dokudateien und
+2.700 gesamte Diff-Zeilen** erweitert. Offen und erlaubt sind ausschließlich
+`_tickets/T-35-smoke.sh`, `docs/plugins.md` und
+`docs/sources.yaml.example`. Keine weitere Produktfläche. Eine zweite
+Überschreitung führt gemäß Regelwerk grundsätzlich zu `reduce` oder `split`.
+
 ---
 
 ## Verify
