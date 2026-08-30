@@ -83,6 +83,31 @@ Browser-Abnahme bleibt als Beleg im Ticket, ohne neue Browser-Infrastruktur.
 Der falsche Dashboard-Text, der `bond`, `crypto` und `fund` pauschal „Aktie“
 nennt, wird als UI-Befund in T-35 geprüft; er erweitert T-37 nicht.
 
+### Review Runde 1 · drei begrenzte Korrekturen
+
+Codex-Review gegen `472a5e9`: Die vorhandenen Tests und der reine YAML-Smoke
+sind grün, belegen aber drei Zusagen des Tickets noch nicht vollständig.
+
+1. Der Parser muss die hier zugesagten Vertragsinvarianten beim Laden prüfen
+   und Fehler als handlungsfähigen `configuration_problem` melden. Dazu
+   gehören insbesondere doppelte kanonische Identitäten, ungültige
+   Identitäten/Währungen/Zeitpunkte, nichtpositive oder nichtendliche Zahlen
+   und doppelte History-Tage. Direkte negative Gegenproben müssen jeweils die
+   verletzte Regel benennen; Reload nach Neustart wird ebenfalls wirklich
+   gemessen.
+2. „Eine Datei“ bedeutet die **eine vom Benutzer gepflegte Datei** und einen
+   Parser/ein Schema. Der Host baut Quellen heute je Rolle; im gemessenen Lauf
+   wurde dieselbe Datei deshalb fünfmal gelesen. T-37 bekommt dafür keine neue
+   Host- oder Cache-Architektur. Die Zusage „einmal gelesen/gemeinsame Instanz“
+   wird auf das tatsächlich benötigte Wartbarkeitsziel korrigiert.
+3. Aktive Beispiele und Entwicklerdokumentation dürfen die abgespaltene
+   Online-Kaskade nicht als vorhanden darstellen. Das Standalone-YAML-Profil
+   bleibt; Online-Fallback wird klar als noch nicht implementiert bezeichnet.
+   Veraltete CSV-Beispiele in aktiver Doku/Testhilfe werden in diesem Zug
+   entfernt oder auf YAML umgestellt. Historische Befundtexte werden nicht
+   flächig umgeschrieben. Matrix `#6` bleibt wegen des bereits festgehaltenen
+   falschen Drilldown-Gattungstexts eingeschränkt statt vollständig grün.
+
 ---
 
 ## Verify
@@ -99,10 +124,10 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 | **3** | `PROFILE=online ./_tickets/T-35-smoke.sh --run` | derselbe Smoke ist grün; normale Online-Quellen stehen zuerst und dasselbe `yaml-file` jeweils zuletzt | ⊘ [^split] | |
 | **4** | Überschneidungs-Test im Online-Profil | liefert eine Online-Quelle einen gültigen Wert, gewinnt sie; YAML überschreibt ihn nicht. Nur bei fehlendem Ergebnis wird YAML gefragt | ⊘ [^split] | |
 | **5** | Kurs-/History-Persistenz | Online- und YAML-Ergebnisse landen in der Datenbank. Manuelle `history` wird nur für Assets ohne abfragbare History verwendet; fehlt `price`, darf der jüngste Schlusskurs als aktueller Fallback dienen | ✅ [^r1] | |
-| **6** | Browser, `PROFILE=yaml` | `BTC-EUR` (`pair`), eine Anleihe (`isin_only`) und ein nicht börsengehandelter Fonds (`fund`) lassen sich anlegen; Liste, Drilldown, Preis und manueller History-Fallback stimmen; Konsole und fehlgeschlagene Requests sind sauber | ✅ [^browser] | |
+| **6** | Browser, `PROFILE=yaml` | `BTC-EUR` (`pair`), eine Anleihe (`isin_only`) und ein nicht börsengehandelter Fonds (`fund`) lassen sich anlegen; Liste, Drilldown, Preis und manueller History-Fallback stimmen; Konsole und fehlgeschlagene Requests sind sauber | ⚠️ [^browser] | |
 | **7** | Browser, `PROFILE=online` | BTC kommt über YFinance, die Anleihe ohne Online-Kurs über YAML; bei einem überlappenden Asset gewinnt online. Liste, Drilldown und Quellenanzeige stimmen; Konsole und Requests sind sauber | ⊘ [^split] | |
-| **8** | Plugin-/Profil-Inventur | kein CSV-Profil und keine vier Datei-Quellen bleiben aktiv oder dokumentiert; `PROFILE=yaml` ist der einzige dateibasierte Prüfpfad | ✅ [^r1] | |
-| **9** | Reload-/Fehlerfälle | fehlende Datei, ungültiges YAML, doppelte IDs und unzulässige Werte werden verständlich gemeldet; ein Neustart liest eine gültig geänderte Datei erneut ein | ✅ [^r1] | |
+| **8** | Plugin-/Profil-Inventur | kein CSV-Profil und keine vier Datei-Quellen bleiben aktiv oder dokumentiert; `PROFILE=yaml` ist der einzige dateibasierte Prüfpfad | ◑ [^review-r1] | |
+| **9** | Reload-/Fehlerfälle | fehlende Datei, ungültiges YAML, doppelte IDs und unzulässige Werte werden verständlich gemeldet; ein Neustart liest eine gültig geänderte Datei erneut ein | ◑ [^review-r1] | |
 
 [^r1]: Umsetzung Runde 1. Die Orakel entstanden **vor** dem Code (dreizehn
     Fälle, alle rot) und stammen aus dieser Matrix. Belege: `PROFILE=yaml`
@@ -131,6 +156,10 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
     `quotes` an zweiter Stelle steht. Eine Kaskade ist eine eigene
     Produktabstraktion und bekommt ein eigenes Ergebnis mit einem von Mike
     freigegebenen Entwurf.
+[^review-r1]: **Codex Runde 1 gegen `472a5e9`:** Die positiven Standalone-
+    Pfade sind grün. Offen sind die beim Laden zugesagte Vollvalidierung samt
+    Reload-Gegenprobe sowie die aktive CSV-/Fallback-Dokumentationsinventur;
+    Details stehen im Review-Abschnitt oberhalb der Matrix.
 
 Die Browserzeilen werden von Claude mit den tatsächlich beobachteten Assets,
 Quellen und Ergebnissen belegt. Eine rein automatisierte Aussage ersetzt diese
