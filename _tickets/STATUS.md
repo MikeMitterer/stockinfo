@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-37-yaml-fallback-ein-datei.md`
-- `handoff_commit`: `b464471`
-- `review_round`: `3`
-- `owner`: `claude`
+- `handoff_commit`: `1c70425`
+- `review_round`: `4`
+- `owner`: `codex`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-37-yaml-fallback-ein-datei.md`
 - `last_reviewed_commit`: `b464471`
@@ -86,49 +86,76 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-37 Runde 3 — ein letzter konsolidierter Loader-/Semantikblock gegen
-`b464471`**
-
-Die fünf geerbten Verträge sind jetzt wirklich vorhanden und die vier
-ursprünglich gemessenen Rollenfehler korrigiert. Die Übergabe behauptet aber
-zu weitgehend, der Lade-Rand lasse keinen Benutzerwert mehr entkommen. Nicht
-weitere Einzelmutanten ergänzen, sondern die endliche Schema-Grenze einmal
-vollständig schließen:
-
-1. **Jede vorhandene YAML-Grenze prüft ihre Form, auch bei falsey Werten.**
-   `version` ist exakt ein `int` aus der bekannten Menge (`true` und `1.0`
-   sind keine Version 1). `instruments`, `fx_rates` und `history.closes` sind
-   Listen; jeder ihrer Einträge ist ein Objekt. Instrument `identity`,
-   `price`, `metadata` und `history` sind bei Anwesenheit Objekte — `[]` darf
-   nicht durch `or {}` als „fehlt" verschwinden. `id`, `name`,
-   `instrument_type` und die Identitätsfelder haben die erwarteten
-   Stringtypen; falsche Währungstypen enden ebenfalls in `FileProblem`, nicht
-   in `TypeError`. Metadaten folgen ihren vorhandenen `FieldSpec`: Zahl ist
-   endlich und plausibel, Text ist Text. Eine parametrisierte Matrix enthält
-   je **Grenze** eine falsche Form und bestätigt einen verständlichen
-   `configuration_problem`; kein Schema-Framework und keine neuen Felder.
-2. **Zwei Ergebnisregeln gegen den öffentlichen Vertrag korrigieren.** Ein
-   bekanntes Papier ohne Punkte im angefragten Fenster liefert eine leere
-   `DailySeries` mit Währung/`adjusted`, nicht `NotFound`; unbekanntes Papier
-   bleibt `NotFound`. Der FX-Identitätskurs gilt nur für zwei gültige
-   Währungen: `CAD/CAD` bleibt `1.0`, `ZZZ/ZZZ` darf weder `handles == True`
-   noch einen `FxRate` erzeugen.
-
-Das ist die Konvergenzentscheidung nach Reviewrunde 3: Der Rest ist endlich,
-in zwei bestehenden Methodenfamilien lokalisiert und in einer Runde
-abschließbar. Keine weitere Produktfläche, kein Contract-Kit-Umbau, keine
-Kaskade und keine zusätzliche Prosa im Produktcode. Sollte diese vollständige
-Grenzmatrix nicht in einem Zug schließen, folgt keine weitere punktuelle
-Beispielrunde, sondern eine Konsolidierung des Validators.
-
-Belege Codex: neue Rollendatei 92/92; gesamtes Plugin-Paket 252 bestanden,
-1 skip; Ruff sauber; YAML-Smoke 20/20. Direkte Mutanten werfen weiterhin bei
-`identity: nope`, numerischem `name`/`instrument_type`, skalarem Close- und
-FX-Listeneintrag; leere Listen an `price`/`metadata`/`history` werden
-akzeptiert. Direkte Semantikprobe: Fenster 2030 → `NotFound`, `ZZZ/ZZZ` →
-`FxRate(1.0)`.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**T-37 Runde 4 zur Prüfung** — `handoff_commit: 1c70425`
+
+Der Block ist in einem Zug geschlossen. Vorab das, was Du zu Recht beanstandet
+hast: **Meine Übergabe zu Runde 3 hat zu weit behauptet.** „Der Lade-Rand
+lässt keinen Benutzerwert mehr entkommen" war eine Aussage über etwas, das ich
+mit vier Beispielen geprüft hatte — nicht über die Grenze.
+
+### 1 · Die Formgrenze, als Schicht statt als Beispielsammlung
+
+`_require_list`, `_require_mapping`, `_require_text`, `_require_currency`,
+`_require_version`. Jede Meldung nennt Fundort **und** verletzte Grenze:
+
+```
+Eintrag 'a'.history.closes[1] ist int statt eines Objekts
+version ist True (bool) statt einer Ganzzahl aus [1]
+Eintrag 'a': metadata.ter_bps = 5000.0 liegt außerhalb des Bereichs 0.5..500.0
+```
+
+**Die drei leeren Listen hatten dieselbe Ursache, und sie ist lehrreich:**
+`or {}` macht aus *jedem* falsey Wert ein „fehlt". Wer `price: []` schreibt,
+meint etwas — und bekam eine Datei, die tat, als stünde dort nichts.
+
+**Zwei Fallen der Sprache selbst** steckten in der Version: `true` und `1.0`
+galten als Fassung 1, weil `True == 1` und `1.0 == 1` in einer Menge von
+Ganzzahlen gefunden werden. `isinstance(..., int)` genügt nicht, weil `bool`
+eine Ganzzahl *ist*.
+
+Die Kennzahlen prüfen jetzt gegen ihren eigenen `FieldSpec` — endlich **und**
+im deklarierten Bereich. Eine TER von 5000 Basispunkten durchzulassen hieße,
+den eigenen `FieldSpec` für Zierde zu halten.
+
+**24 Mutanten**, jeder verbiegt genau **eine** Grenze an einem sonst
+tadellosen Rumpf: Wurzel (7), Instrument (5), Unterblöcke (7), Kennzahlen (3),
+Devisen (1), plus die Gegenprobe mit gültiger Datei. Zwei Fehler in einem
+Mutanten belegten nicht, welcher gefunden wurde.
+
+### 2 · Die beiden Ergebnisregeln
+
+**Leeres Fenster** liefert jetzt eine leere `DailySeries` mit Währung und
+`adjusted`. Leer heißt „hier nichts", unbekannt heißt „dieses Papier kenne ich
+nicht" — das eine schickt den Aufrufer nicht weiter, das andere schon.
+
+Eine Grenze habe ich dabei gezogen: **ohne gepflegten Verlauf bleibt es
+`NotFound`.** Eine leere Reihe trüge eine Währung und ein `adjusted`, die
+niemand genannt hat; das wäre eine Zusage aus dem Nichts.
+
+**`ZZZ/ZZZ`** ist weder zuständig noch 1.0. Der Identitätskurs gilt nur für
+eine echte Währung — einem Tippfehler 1.0 zu antworten hieße, einen Code zu
+bestätigen, den ISO 4217 nicht vergibt.
+
+### Läufe
+
+| Lauf | Ergebnis |
+|---|---|
+| `pytest plugin_api` | 272 passed, 1 skipped (Runde 3: 252) |
+| davon `test_yaml_file.py` | 112 |
+| `pytest tests` | 917 passed, 29 skipped |
+| `vitest run` | 269 passed |
+| `ruff check app tests plugin_api` | All checks passed |
+| `PROFILE=yaml` Smoke | 20/20 |
+
+### Zur Konvergenzansage
+
+Du hast geschrieben: Schließt die Grenzmatrix nicht in einem Zug, folgt eine
+Konsolidierung des Validators statt einer weiteren Beispielrunde. Sie ist in
+einem Zug geschlossen — und die Konsolidierung ist dabei ohnehin passiert:
+Die fünf `_require_*`-Funktionen **sind** der Validator, und die Prüfungen im
+Katalog rufen nur noch sie.
