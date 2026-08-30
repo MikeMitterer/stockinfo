@@ -13,17 +13,34 @@ Lege eine `*.py` in `data/plugins/` und exportiere `SOURCES`:
 
 ```python
 # data/plugins/meine_quelle.py
-from stockinfo_plugin import NotFound, Resolved, ResolveRequest, Resolver
+from stockinfo_plugin import (
+    ListedIdentity,
+    NotFound,
+    Resolved,
+    ResolveRequest,
+    Resolver,
+)
 
 
 class MeinResolver(Resolver):
     name = "meine-quelle"
+    # Jede Quelle nennt die Vertragsversion **selbst**. Erben genügt nicht:
+    # Der Loader weist eine Quelle ohne eigene Deklaration ab.
+    api_version = 2
+    # Was die Quelle bedient. Eine **leere** Menge heißt „nichts zugesagt",
+    # nicht „alles" — der Host überspringt sie dann für jede bekannte Gattung.
+    SUPPORTED_KINDS = frozenset({"listed"})
+    SUPPORTED_TYPES = frozenset({"stock"})
 
     def handles(self, request: ResolveRequest) -> bool:
         return bool(request.isin and request.isin.startswith("CA"))
 
     def resolve(self, request: ResolveRequest):
-        return Resolved(ticker="RY", mic="XTSE", isin=request.isin)
+        return Resolved(
+            identity=ListedIdentity(ticker="RY", mic="XTSE", isin=request.isin),
+            name="Royal Bank of Canada",
+            instrument_type="stock",
+        )
 
 
 SOURCES = [MeinResolver]
@@ -117,6 +134,38 @@ synchronen Python-Code im selben Prozess gibt es keine harte Zeitgrenze; ein
 Timeout ließe den Aufrufer zurückkehren, der Thread liefe weiter. Zeitgrenzen
 setzt deshalb das Plugin bei seinen eigenen I/O-Aufrufen — der Vertrag verlangt
 es, erzwingen kann er es nicht.
+
+## Was eine Auflösung tragen muss
+
+Drei Felder, alle Pflicht — und keines hat einen Vorgabewert:
+
+| Feld | Bedeutung |
+|---|---|
+| `identity` | Die Identität in ihrer Form: `ListedIdentity` (Ticker + MIC), `PairIdentity` (Basiswert + Quote-Währung, für natives Krypto) oder `IsinOnlyIdentity` (die ISIN selbst, für OTC-Anleihen). |
+| `name` | Der Anzeigename des Papiers. |
+| `instrument_type` | Die Gattung: `stock`, `etf`, `etc`, `fund`, `crypto`, `bond`. Die Aufzählung ist **offen** — ein neuer Wert ist ein Nachtrag und kein Bruch. |
+
+**Wer eines davon nicht kennt, antwortet `NotFound`.** Das ist keine Härte,
+sondern die einzige ehrliche Antwort: „Ich habe einen Ticker, weiß aber nicht,
+was das Papier ist" ist keine brauchbare Auflösung. Eine spätere Quelle in der
+Kette darf es besser wissen — eine halbe Antwort nimmt ihr diese Gelegenheit,
+weil die Kette beim ersten Treffer aufhört.
+
+Der Anlass ist gemessen und nicht theoretisch: Bis August 2026 waren `name` und
+`instrument_type` optional. Quellen ließen sie leer, die App nahm es an,
+speicherte es und zeigte leere Felder — und weil die Gattung fehlte, wurde die
+Metadatenquelle **gar nicht erst** befragt. Ohne Meldung, ohne
+Protokolleintrag, monatelang.
+
+Ein leerer String zählt dabei nicht als Wert. Der Host prüft nicht nur, ob das
+Feld da ist, sondern ob etwas darin steht; `stockinfo_plugin.invariants.
+resolution_problem` ist dieselbe Funktion, die auch das Testkit benutzt — wer
+mag, ruft sie vor dem Antworten selbst.
+
+Für die anderen Rollen gilt dasselbe Prinzip an anderen Feldern: Ein `Quote`
+trägt Preis, Währung und Zeitpunkt mit Zone, alle drei ohne Vorgabewert. Was
+eine Rolle verlangt, steht maschinenlesbar unter `GET /fields` im Abschnitt
+`plugin_contract`.
 
 ## Den Vertrag selbst
 

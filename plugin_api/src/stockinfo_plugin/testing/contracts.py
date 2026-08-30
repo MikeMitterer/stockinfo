@@ -44,6 +44,7 @@ from stockinfo_plugin.invariants import (
     identity_problem,
     is_finite_price,
     isin_check_digit_is_valid,
+    resolution_problem,
 )
 from stockinfo_plugin.types import (
     API_VERSION,
@@ -304,6 +305,17 @@ class ResolverContract(SourceContract):
         assert isinstance(answer, Resolved), _lacks_hit(answer, Resolved)
         problem = identity_problem(answer.identity, self.collector_codes)
         assert not problem, f"gelieferte Identität ist unbrauchbar: {problem}"
+
+        # **Dieselbe Prüfung, die auch die Host-Grenze anstellt** (T-38). Sie
+        # steht hier, damit ein Plugin-Autor sie **beim Bauen** sieht statt ein
+        # Benutzer im Betrieb — das ist der ganze Zweck des Contract-Kits.
+        #
+        # `resolution_problem` und nicht eine eigene Fassung: Der Vertrag
+        # verlangt an drei Stellen dasselbe (Kit, Host, Plugin), und drei
+        # Fassungen liefen genau so auseinander wie die drei
+        # Identitätsrekonstruktionen vor T-31.
+        incomplete = resolution_problem(answer)
+        assert not incomplete, f"gelieferte Auflösung ist unbrauchbar: {incomplete}"
 
     def test_wer_eine_form_liefert_hat_sie_deklariert(self) -> None:
         """Die Antwort bleibt innerhalb der zugesagten Fähigkeiten.
