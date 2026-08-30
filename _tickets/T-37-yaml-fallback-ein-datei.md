@@ -162,6 +162,23 @@ sondern vollständig verdrahtet: Identitätsfelder nutzen die Textprüfung, alle
 Zahlenpfade einen gemeinsamen rohen Zahlen-Helper, und Parserfehler enden als
 `FileProblem`. Kein neuer Vertrag und keine neue Produktfläche.
 
+### Review Runde 5 · Textprüfung und gespeicherter Wert müssen übereinstimmen
+
+Codex-Review gegen `7a3e90b`: Die Korrekturen aus Runde 4 greifen; die
+Identitäts-, Zahlen- und Parser-Mutanten enden kontrolliert als
+`configuration_problem`. Eine gemeinsame Ursache bleibt im vorhandenen
+Text-Helper: `_require_text` prüft `value.strip()` und gibt diesen Wert zurück,
+mehrere Aufrufer speichern danach aber weiterhin den rohen YAML-Wert. Dadurch
+werden etwa `" EUR "` als Kurs-/History-Währung und `" bond "` als Gattung
+akzeptiert und später in einer erfolgreichen Antwort ausgeliefert.
+
+Der begrenzte Abschluss ist eine einheitliche Regel für umgebenden Leerraum;
+bevorzugt weist `_require_text` ihn wie die vorhandenen Identitätsinvarianten
+zurück. Drei direkte Mutanten für `price.currency`, `history.currency` und
+`instrument_type` belegen sowohl den Ladefehler als auch, dass keine fachlich
+ungültige Erfolgsantwort entsteht. Keine neue Abstraktion und keine weitere
+Schemafläche.
+
 ---
 
 ## Verify
@@ -173,7 +190,7 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | `T-37-single-file-sample.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | ◑ [^review-r4] | |
+| **1** | `T-37-single-file-sample.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | ◑ [^review-r5] | |
 | **2** | `PROFILE=yaml ./_tickets/T-35-smoke.sh --run` | der gemeinsame Smoke ist grün; `GET /sources` zeigt `yaml-file` in allen fünf Rollen und genau einen Pfad auf die Fachdaten-Datei | ✅ [^r1] | |
 | **3** | `PROFILE=online ./_tickets/T-35-smoke.sh --run` | derselbe Smoke ist grün; normale Online-Quellen stehen zuerst und dasselbe `yaml-file` jeweils zuletzt | ⊘ [^split] | |
 | **4** | Überschneidungs-Test im Online-Profil | liefert eine Online-Quelle einen gültigen Wert, gewinnt sie; YAML überschreibt ihn nicht. Nur bei fehlendem Ergebnis wird YAML gefragt | ⊘ [^split] | |
@@ -181,7 +198,7 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 | **6** | Browser, `PROFILE=yaml` | `BTC-EUR` (`pair`), eine Anleihe (`isin_only`) und ein nicht börsengehandelter Fonds (`fund`) lassen sich anlegen; Liste, Drilldown, Preis und manueller History-Fallback stimmen; Konsole und fehlgeschlagene Requests sind sauber | ⚠️ [^browser] | |
 | **7** | Browser, `PROFILE=online` | BTC kommt über YFinance, die Anleihe ohne Online-Kurs über YAML; bei einem überlappenden Asset gewinnt online. Liste, Drilldown und Quellenanzeige stimmen; Konsole und Requests sind sauber | ⊘ [^split] | |
 | **8** | Plugin-/Profil-Inventur | kein CSV-Profil und keine vier Datei-Quellen bleiben aktiv oder dokumentiert; `PROFILE=yaml` ist der einzige dateibasierte Prüfpfad | ✅ [^review-r2] | |
-| **9** | Reload-/Fehlerfälle | fehlende Datei, ungültiges YAML, doppelte IDs und unzulässige Werte werden verständlich gemeldet; ein Neustart liest eine gültig geänderte Datei erneut ein | ◑ [^review-r4] | |
+| **9** | Reload-/Fehlerfälle | fehlende Datei, ungültiges YAML, doppelte IDs und unzulässige Werte werden verständlich gemeldet; ein Neustart liest eine gültig geänderte Datei erneut ein | ◑ [^review-r5] | |
 
 [^r1]: Umsetzung Runde 1. Die Orakel entstanden **vor** dem Code (dreizehn
     Fälle, alle rot) und stammen aus dieser Matrix. Belege: `PROFILE=yaml`
@@ -232,6 +249,10 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
     zwei Ergebnisregeln sind korrigiert. Offen ist die vollständige Nutzung
     der Validator-Schicht durch Identitätsfelder, Zahlenwerte und den YAML-
     Leser; Details stehen oben.
+[^review-r5]: **Codex Runde 5 gegen `7a3e90b`:** Die Validator-Schicht ist nun
+    durchgängig verdrahtet. Offen bleibt eine einzige Inkonsistenz zwischen
+    getrimmter Textprüfung und den danach gespeicherten Rohwerten; Details
+    stehen oben.
 
 Die Browserzeilen werden von Claude mit den tatsächlich beobachteten Assets,
 Quellen und Ergebnissen belegt. Eine rein automatisierte Aussage ersetzt diese

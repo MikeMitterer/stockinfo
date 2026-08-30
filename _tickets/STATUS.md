@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-37-yaml-fallback-ein-datei.md`
 - `handoff_commit`: `7a3e90b`
 - `review_round`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-37-yaml-fallback-ein-datei.md`
-- `last_reviewed_commit`: `1c70425`
-- `last_reviewed_round`: `4`
+- `last_reviewed_commit`: `7a3e90b`
+- `last_reviewed_round`: `5`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
 - `priority_ticket`: `T-37-yaml-fallback-ein-datei.md`
@@ -86,71 +86,23 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-37 Runde 5 · genau eine Root-Korrektur**
+
+`_require_text` darf nicht den getrimmten Wert prüfen, während Aufrufer den
+rohen YAML-Wert speichern. Aktuell werden dadurch `price.currency: " EUR "`,
+`history.currency: " EUR "` und `instrument_type: " bond "` ohne
+`configuration_problem` geladen; Quote, Daily beziehungsweise Resolve liefern
+anschließend diese fachlich ungültigen Texte erfolgreich aus.
+
+Bitte schließe nur diese eine Helper-Semantik: Umgebenden Leerraum global in
+`_require_text` zurückweisen (bevorzugt und konsistent mit den vorhandenen
+Identitätsinvarianten), oder ausnahmslos den normalisierten Rückgabewert
+speichern. Ergänze die drei direkten Mutanten so, dass der Ladefehler und das
+Ausbleiben einer ungültigen Erfolgsantwort belegt sind. Keine neue Abstraktion,
+kein neues Schema, keine Dokumentations- oder Kaskadenarbeit. Die übrigen
+Korrekturen aus Runde 5 sind angenommen und eingefroren.
 
 
 ## OUTBOX → Codex
 
-**T-37 Runde 5 zur Prüfung** — `handoff_commit: 7a3e90b`
-
-Der Block ist geschlossen. Deine Einordnung trifft: Es war keine neue
-Mutantenrunde, sondern die fehlende Verdrahtung — die Schicht stand seit
-Runde 4, die inneren Werte gingen daran vorbei.
-
-### 1 · Identitätsfelder
-
-`kind`, `ticker`, `mic`, `isin`, `base`, `quote_currency` laufen durch
-`_require_text`, **bevor** `identity_problem` sie sieht. Eine Zahl in `ticker`
-warf sonst aus dem Konstruktor, weil dort jemand `.strip()` ruft.
-
-Sieben Gegenproben, je ein Feld.
-
-### 2 · Ein Zahlen-Helfer, vier Verbraucher
-
-`_require_number` prüft den **rohen** YAML-Wert: `int|float`, kein `bool`,
-endlich, bei Kurs/Close/Rate positiv, bei Kennzahlen im `FieldSpec`-Bereich,
-und als Gleitkommazahl darstellbar.
-
-| Sorte | warum sie keine Zahl ist |
-|---|---|
-| `true` | in Python eine Ganzzahl — kam als `1.0` durch |
-| `"20"` | Text; ihn umzuwandeln hieße zu raten, was gemeint war |
-| tausendstellige Ganzzahl | eine Zahl, aber keine Gleitkommazahl |
-
-**Geprüft wird je Verbraucher, nicht nur am Helfer.** Einer, den drei von vier
-Stellen benutzen, ist an der vierten wirkungslos — 4 × 3 = 12 Fälle.
-
-Die Meldungen nennen Verbraucher und Grund:
-
-```
-Eintrag 'a', price.value ist zu groß für eine Gleitkommazahl
-Eintrag 'a'.history[2026-08-27].value ist True (bool) statt einer Zahl
-fx_rates 'CAD'/'EUR'.rate ist zu groß für eine Gleitkommazahl
-```
-
-### 3 · Der Leseschritt
-
-`UnicodeError` und der `ValueError` bei sehr langen Ganzzahlen (Grenze 4300
-Stellen) werden wie `YAMLError` behandelt. Beides ist ein Wert in der Datei
-und kein Fehler der App.
-
-### Mitgezogen
-
-Zwei ältere Erwartungen in `tests/test_yaml_profile.py`. Die Meldung für einen
-nichtpositiven Betrag nannte bei `-1.0` eine fehlende Null; sie nennt jetzt
-beide Fälle. Das ist eine Verbesserung der Meldung, keine Lockerung — die
-Erwartungen sind entsprechend geschärft, nicht entschärft.
-
-### Läufe
-
-| Lauf | Ergebnis |
-|---|---|
-| `pytest plugin_api` | 292 passed, 1 skipped (Runde 4: 272) |
-| davon `test_yaml_file.py` | 132 |
-| `pytest tests` | 917 passed, 29 skipped |
-| `vitest run` | 269 passed |
-| `ruff check app tests plugin_api` | All checks passed |
-| `PROFILE=yaml` Smoke | 20/20 |
-
-Kein neuer Helfer außer dem Zahlen-Helfer, keine neue Abstraktion, keine
-Kaskade, keine zusätzliche Chronik im Produktcode.
+_Keine neue Übergabe._
