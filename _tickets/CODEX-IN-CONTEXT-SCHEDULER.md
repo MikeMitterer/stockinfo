@@ -30,8 +30,14 @@ des bestehenden Codex-Review-Chats. Das fachliche Review-Verfahren steht in
   `notify(...)` und ruft danach `yield_control()` auf. Erst dieses Signal
   beweist, dass die Zelle den Chat weiterhin wecken kann. Der Heartbeat erzeugt
   keine Nachricht an Mike und keine Dateiänderung.
-- Ist `phase` nicht `ready_for_codex`, endet die fachliche Verarbeitung nach
-  dem Heartbeat still.
+- Ist `phase` weder `ready_for_codex` noch `scope_checkpoint`, endet die
+  fachliche Verarbeitung nach dem Heartbeat still.
+- Ist `phase` `scope_checkpoint`, müssen `owner: codex`, ein gesetzter
+  `handoff_commit`, `ticket == priority_ticket` und die Mitgliedschaft in
+  `priority_chain` gelten. Ein neues Tupel aus `phase`, `ticket`,
+  `handoff_commit` und `review_round` weckt denselben Chat mit
+  `scope_handoff`. Codex führt dann ausschließlich den Scope-Checkpoint aus
+  `CODEX-REVIEW-AUTOMATION.md` aus — kein vollständiges Review.
 - Ist `phase` `ready_for_codex`, müssen vor einem Review **alle** folgenden
   Bedingungen gelten: `owner` ist `codex`, `handoff_commit` ist gesetzt,
   `ticket` entspricht exakt `priority_ticket`, und `priority_ticket` kommt in
@@ -78,9 +84,10 @@ des bestehenden Codex-Review-Chats. Das fachliche Review-Verfahren steht in
 - Bleibt der erwartete Heartbeat aus und der Chat erhält wieder Kontrolle, wird
   die alte Zelle beendet und einmal neu gestartet. Mike wird nur informiert,
   wenn auch dieser Wiederanlauf kein `scheduler_started` liefert.
-- Ein Heartbeat oder Wiederanlauf darf niemals selbst ein Review auslösen.
-  Ausschlaggebend bleibt ausschließlich ein neues, valides
-  `ready_for_codex`-Tupel.
+- Ein Heartbeat oder Wiederanlauf darf niemals selbst ein Review oder einen
+  Scope-Entscheid auslösen. Ausschlaggebend bleibt ausschließlich ein neues,
+  valides `ready_for_codex`- beziehungsweise `scope_checkpoint`-Tupel; ein
+  vollständiges Review startet weiterhin nur bei `ready_for_codex`.
 - Ein neues Ticket darf nicht aus der Nummernfolge oder aus einer während des
   Reviews entdeckten Nebenarbeit abgeleitet werden. Maßgeblich ist allein
   `priority_ticket`. Nach dem letzten Element einer Kette bleibt der Scheduler

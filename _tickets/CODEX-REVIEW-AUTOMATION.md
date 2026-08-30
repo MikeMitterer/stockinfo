@@ -17,8 +17,9 @@ sitzungsfeste Lernschicht sowie die Datenbasis für den späteren Skill.
 
 `STATUS.md` enthält unter **Maschinenlesbarer Zustand** genau diese Felder:
 
-- `phase`: `claude_working`, `ready_for_codex`, `codex_reviewing`,
-  `changes_requested`, `approved`, `portfolio_review` oder `blocked`
+- `phase`: `claude_working`, `scope_checkpoint`, `ready_for_codex`,
+  `codex_reviewing`, `changes_requested`, `approved`, `portfolio_review` oder
+  `blocked`
 - `ticket`: Ticketdatei im Board-Root
 - `handoff_commit`: exakt zu prüfender Produkt-Commit
 - `review_round`: bei jeder neuen Übergabe hochzählen
@@ -47,7 +48,7 @@ Produktzwischenstand wird weder durch einen vorläufigen Commit noch durch eine
 Frage an Codex zu einer Review-Übergabe; `handoff_commit` und `review_round`
 bleiben bis zur vollständigen Übergabe auf dem zuletzt abgeschlossenen Stand.
 
-Codex prüft nur `ready_for_codex`. Nach den Vorbedingungen setzt Codex
+Codex führt ein vollständiges Review nur bei `ready_for_codex` aus. Nach den Vorbedingungen setzt Codex
 `codex_reviewing`. Codex verändert im Review grundsätzlich keinen Produktcode;
 die eng begrenzte Selbstheilung unten ist die einzige Ausnahme. Die
 Human-Spalte bleibt immer unverändert, und Codex verschiebt kein Ticket nach
@@ -55,6 +56,54 @@ Human-Spalte bleibt immer unverändert, und Codex verschiebt kein Ticket nach
 OUTBOX-Nachricht wird entfernt. Danach ist die Phase `approved` oder
 `changes_requested`, **beide mit `owner: claude`**. Bei einem echten, nicht
 sicher lösbaren Hindernis gilt `blocked` mit `owner: mike`.
+
+## Scope-Checkpoint — Breite entscheiden, bevor sie zum Review-Diff wird
+
+*(Entscheidung Mike, 2026-08-30.)*
+
+Vor dem ersten Produktedit trägt jedes Implementierungsticket einen
+`Scope-Vertrag`: ein beobachtbares Ergebnis, höchstens drei fachliche
+Änderungen, erwartete Produktflächen/-dateien, erwartete Test- und
+Dokumentationsanpassungen, Nicht-Ziele sowie ein Budget für Produktdateien,
+Test-/Dokudateien und gesamte Diff-Zeilen.
+
+Claude stoppt **vor weiterer Produktarbeit**, sobald mindestens eines gilt:
+
+- Eine nicht angekündigte Produktschicht wird berührt.
+- Ein neuer öffentlicher Typ, Endpunkt, Vertrag, ein Schema, eine Abhängigkeit
+  oder eine Abstraktion wird benötigt, ohne im Scope-Vertrag zu stehen.
+- Die geschätzte Dateizahl wird um mehr als **25 Prozent** überschritten.
+- Der gesamte Ticket-Diff wächst ohne Vorabfreigabe über **800 Zeilen**.
+- Produktkommentare oder Test-Docstrings tragen Prozesshistorie statt der
+  aktuellen Invariante und ihres fachlichen Grundes. Review-Runden,
+  Commit-IDs, Gesprächszitate, Datumsfolgen und Implementierungschroniken
+  gehören in Ticket, Spec und Git, nicht in den Code.
+
+Claude friert einen stabilen Commit ein, beschreibt geplanten und tatsächlichen
+Umfang samt Auslöser in der OUTBOX und setzt `phase: scope_checkpoint`,
+`owner: codex` sowie `handoff_commit` auf diesen Stand. Das ist **kein
+Code-Review**: Codex prüft nur Ticketziel, Diff-Statistik und neu berührte
+Flächen und erfindet keine zusätzlichen Qualitätsanforderungen.
+
+Codex antwortet mit genau einer Entscheidung:
+
+- `continue`: rein mechanische Ausbreitung innerhalb des vereinbarten
+  Ergebnisses;
+- `reduce`: unnötige Änderungen entfernen;
+- `split`: ein unabhängig lieferbares Ergebnis wird ein eigenes Ticket;
+- `mike`: eine neue Produktentscheidung ist erforderlich.
+
+Bei `continue`, `reduce` oder `split` setzt Codex `phase: claude_working` und
+`owner: claude`; bei `mike` gilt `blocked`, `owner: mike`. Codex darf das
+Budget eines Tickets einmal erweitern. Eine zweite Überschreitung führt
+standardmäßig zu `reduce` oder `split`; nur eine eindeutig mechanische
+Restanpassung darf nochmals weiterlaufen.
+
+Die normale OUTBOX-Übergabe nennt anschließend geplant/tatsächlich für
+fachliche Änderungen, Produktdateien, Test-/Dokudateien und Diff-Zeilen. Jede
+Abweichung erhält einen Satz Begründung; eine grüne Gesamtsuite ersetzt diese
+Umfangskontrolle nicht. T-38 wird nicht rückwirkend unterbrochen, der Riegel
+gilt ab T-37.
 
 ## Codex-Selbstheilung — mechanische Kleinigkeiten ohne Zusatzrunde
 
@@ -459,13 +508,14 @@ Ausstieg wird der Loop gelöscht; dieser Abschnitt hält ihn wiederherstellbar.
 ```text
 /loop 5m Du bist Claude, der Implementierer im StockInfo-Board. Beachte CLAUDE.md und die Skills task-verification-workflow, code-standards, git-conventions.
 
-1. Lies _tickets/STATUS.md, _tickets/CODEX-REVIEW-AUTOMATION.md und _tickets/CLAUDE-REVIEW-PATTERNS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis. Pruefe vor jeder Arbeit: ticket muss exakt priority_ticket entsprechen und in priority_chain stehen. Bei Abweichung nichts implementieren, portfolio_mismatch melden und Schluss. Pruefe vor jedem Entwurf und vor dem ersten Produktedit ausserdem den Testinfrastruktur-Riegel und den Vertical-Acceptance-Riegel. Standard sind normale Unit-Tests plus echte Online-Integrationstests ueber vorhandene Sprach-, Bibliotheks- und Produkt-APIs. Record/Replay, Cassettes oder Mitschnitte, eigene Transport-/Socket-/Freshness-/CLI-/Testplugin-Infrastruktur sind ohne den datierten Ausnahmeblock von Mike im aktiven Ticket verboten. Ist eine Ausnahme wirklich noetig, vor Entwurf und Code mit phase: blocked und owner: mike stoppen; sie niemals aus Robustheit, CI oder Reproduzierbarkeit ableiten. Bei einem mehrschichtigen Fachumbau zuerst die entscheidenden oeffentlichen Akzeptanzfaelle rot belegen, danach einen duennen vertikalen Pfad gruen bauen; Frischstart, negativer Mutant und Matrix-zu-Orakel-Zuordnung sind vor der Uebergabe Pflicht.
+1. Lies _tickets/STATUS.md, _tickets/CODEX-REVIEW-AUTOMATION.md und _tickets/CLAUDE-REVIEW-PATTERNS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis. Pruefe vor jeder Arbeit: ticket muss exakt priority_ticket entsprechen und in priority_chain stehen. Bei Abweichung nichts implementieren, portfolio_mismatch melden und Schluss. Pruefe vor jedem Entwurf und vor dem ersten Produktedit ausserdem den Testinfrastruktur-Riegel, den Vertical-Acceptance-Riegel und den Scope-Checkpoint-Riegel. Vor dem ersten Produktedit muss im aktiven Ticket ein Scope-Vertrag mit Ergebnis, hoechstens drei fachlichen Aenderungen, erwartetem Datei-Inventar, Nicht-Zielen und Budget stehen. Standard sind normale Unit-Tests plus echte Online-Integrationstests ueber vorhandene Sprach-, Bibliotheks- und Produkt-APIs. Record/Replay, Cassettes oder Mitschnitte, eigene Transport-/Socket-/Freshness-/CLI-/Testplugin-Infrastruktur sind ohne den datierten Ausnahmeblock von Mike im aktiven Ticket verboten. Ist eine Ausnahme wirklich noetig, vor Entwurf und Code mit phase: blocked und owner: mike stoppen; sie niemals aus Robustheit, CI oder Reproduzierbarkeit ableiten. Bei einem mehrschichtigen Fachumbau zuerst die entscheidenden oeffentlichen Akzeptanzfaelle rot belegen, danach einen duennen vertikalen Pfad gruen bauen; Frischstart, negativer Mutant und Matrix-zu-Orakel-Zuordnung sind vor der Uebergabe Pflicht.
 2. Ist `owner` nicht `claude`: veraendere keine Datei, antworte in einer Zeile mit Phase und Owner, Schluss.
-3. Bei `phase: changes_requested`: Arbeite die Findings aus INBOX -> Claude der Reihe nach ab, schwerste zuerst. Jedes Finding einzeln verifizieren statt der Zusammenfassung glauben; behauptete Vollstaendigkeit mit rg belegen. Bei wiederholter Entwurfsnacharbeit gilt die Konvergenzpruefung dieses Dokuments: ungefaehr drei erfolglose Runden sind ein Richtwert, keine harte Grenze. Ist eine weitere punktuelle Runde konkret und voraussichtlich abschliessend, begruende das mit dem vollstaendigen Restumfang in der OUTBOX. Verlangt das Review Rebaseline oder Scope-Verkleinerung, korrigiere nicht weiter lokal, sondern konsolidiere beziehungsweise schneide neu. Vor dem ersten Edit auf einem Feature-Branch `t-NN-<slug>` sein. Danach relevante Pytests, das Ticket-Smoke-Script `./_tickets/T-*.sh --run` und `make test` laufen lassen und die Ergebnisse mit Zahlen nennen. Dann genau EIN Uebergabe-Commit, INBOX leeren, Ergebnis nach OUTBOX -> Codex, `review_round` +1, `phase: ready_for_codex`, `owner: codex`, `updated_at` auf heute. Danach keinen Produktcode mehr anfassen.
-4. Bei `phase: approved`: Ticket NICHT nach solved/ verschieben, das macht Mike. Nur zum naechsten Element aus priority_chain wechseln, priority_ticket und ticket gemeinsam setzen, review_round fuer das neue Ticket auf 0 setzen — die 1 entsteht erst beim Hochzaehlen in Schritt 3, wenn die erste Uebergabe tatsaechlich herausgeht —, eigener Branch vor dem ersten Edit, phase: claude_working. War das freigegebene Ticket das letzte Element, nichts Neues beginnen: phase: portfolio_review, owner: mike; Mike braucht die Gate-vs-Follow-up-Einordnung.
-5. Bei `phase: claude_working`: die begonnene Arbeit fortsetzen, sonst wie Punkt 3 uebergeben.
-6. Bei `phase: blocked`, `phase: portfolio_review` oder wenn eine Entscheidung von Mike noetig ist: nichts weiterschreiben, in einer Zeile melden, `owner: mike` lassen und den Loop stoppen.
-7. Melde nur Uebergabe, Blocker oder Entscheidungsbedarf. Leerdurchlaeufe bleiben einzeilig.
+3. Vergleiche vor jeder weiteren Produktflaeche den laufenden Diff mit dem Scope-Vertrag. Bei einer nicht geplanten Schicht, einem nicht geplanten oeffentlichen Vertrag/Schema/Typ/einer Abhaengigkeit/Abstraktion, mehr als 25 Prozent Dateivarianz, mehr als 800 Diff-Zeilen oder Prozesschronik in Codekommentaren: stabilen Stand committen, Plan/Ist und Ausloeser in OUTBOX schreiben, `phase: scope_checkpoint`, `owner: codex`, `handoff_commit` auf den Stand setzen, Status committen und Schluss. Das ist keine Review-Uebergabe; `review_round` bleibt unveraendert.
+4. Bei `phase: changes_requested`: Arbeite die Findings aus INBOX -> Claude der Reihe nach ab, schwerste zuerst. Jedes Finding einzeln verifizieren statt der Zusammenfassung glauben; behauptete Vollstaendigkeit mit rg belegen. Bei wiederholter Entwurfsnacharbeit gilt die Konvergenzpruefung dieses Dokuments: ungefaehr drei erfolglose Runden sind ein Richtwert, keine harte Grenze. Ist eine weitere punktuelle Runde konkret und voraussichtlich abschliessend, begruende das mit dem vollstaendigen Restumfang in der OUTBOX. Verlangt das Review Rebaseline oder Scope-Verkleinerung, korrigiere nicht weiter lokal, sondern konsolidiere beziehungsweise schneide neu. Vor dem ersten Edit auf einem Feature-Branch `t-NN-<slug>` sein. Danach relevante Pytests, das Ticket-Smoke-Script `./_tickets/T-*.sh --run` und `make test` laufen lassen und die Ergebnisse mit Zahlen nennen. Dann genau EIN Uebergabe-Commit, INBOX leeren, Ergebnis nach OUTBOX -> Codex, `review_round` +1, `phase: ready_for_codex`, `owner: codex`, `updated_at` auf heute. Die OUTBOX nennt geplant/tatsaechlich fuer fachliche Aenderungen, Produktdateien, Test-/Dokudateien und Diff-Zeilen. Danach keinen Produktcode mehr anfassen.
+5. Bei `phase: approved`: Ticket NICHT nach solved/ verschieben, das macht Mike. Nur zum naechsten Element aus priority_chain wechseln, priority_ticket und ticket gemeinsam setzen, review_round fuer das neue Ticket auf 0 setzen — die 1 entsteht erst beim Hochzaehlen in Schritt 4, wenn die erste Uebergabe tatsaechlich herausgeht —, eigener Branch vor dem ersten Edit, phase: claude_working. War das freigegebene Ticket das letzte Element, nichts Neues beginnen: phase: portfolio_review, owner: mike; Mike braucht die Gate-vs-Follow-up-Einordnung.
+6. Bei `phase: claude_working`: die begonnene Arbeit fortsetzen, sonst wie Punkt 4 uebergeben.
+7. Bei `phase: blocked`, `phase: portfolio_review` oder wenn eine Entscheidung von Mike noetig ist: nichts weiterschreiben, in einer Zeile melden, `owner: mike` lassen und den Loop stoppen.
+8. Melde nur Uebergabe, Scope-Checkpoint, Blocker oder Entscheidungsbedarf. Leerdurchlaeufe bleiben einzeilig.
 ```
 
 Beide Loops teilen sich denselben Zustandsfilter: Genau einer von beiden ist

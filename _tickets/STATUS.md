@@ -18,7 +18,8 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
 - `priority_ticket`: `T-38-pflichtfelder-im-vertrag.md`
 
-Erlaubte Phasen: `claude_working` → `ready_for_codex` → `codex_reviewing` →
+Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
+`scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
 `changes_requested` oder `approved`; `portfolio_review` übergibt nach dem
 letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
