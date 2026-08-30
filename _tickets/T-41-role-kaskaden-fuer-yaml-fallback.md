@@ -49,6 +49,29 @@ Test-/Dokudateien und 1.200 gesamte Diff-Zeilen** korrigiert. Der Produktstand
 ist eingefroren; erlaubt ist nur noch die formale Neuübergabe desselben
 Commits. Eine weitere Überschreitung führt zu `reduce` oder `split`.
 
+### Review Runde 1 · Gewinner und Metadatenherkunft müssen dieselbe Quelle sein
+
+Codex-Review gegen `115ac6c`, mit rein textueller Selbstheilung in `f742c9c`:
+Reihenfolge, Fallthrough, Daily-Leerwert, FX-Herkunft und die REST-Kette sind
+grün. Ein bestehender Quote-Vertrag bleibt jedoch offen. Liefert die erste
+Kursquelle nichts und die zweite eine `RawQuote` mit Name, Gattung und Börse,
+übernimmt der Core diese Metadaten, meldet in `quote.source` aber den Namen der
+ersten Quelle. Die direkte Gegenprobe ergab Inhalt von `second` bei
+`source="first"`.
+
+Der Abschluss bleibt in den vorhandenen Quote-Composite-Dateien: Die Herkunft
+des Gewinners muss für genau die verarbeitete Antwort kontextlokal und damit
+nebenläufigkeitssicher sichtbar sein; eine gemeinsame veränderliche
+„letzte Quelle" ist weiterhin verboten. Das bestehende Orakel „Composite-Name
+ist immer die erste Quelle" wird durch einen öffentlichen `QuoteService`-Fall
+ersetzt: erste Quelle `None`, zweite Quelle liefert Metadaten, Antwort nennt
+die zweite. Keine neue Produktdatei, kein neuer öffentlicher Vertrag und keine
+weitere Doku- oder Browserarbeit.
+
+Codex hat außerdem die neu eingeführte Prozesschronik aus Codekommentaren,
+Test-Docstrings und aktiver Versionsprosa mechanisch entfernt. 79 fokussierte
+Tests, Ruff und Diff-Check blieben danach grün.
+
 ## Verify
 
 Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teilweise ·
@@ -56,12 +79,16 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teil
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Quote-Composite | erster gültiger Kurs gewinnt; Miss/Ausfall fällt weiter; nach Treffer kein weiterer Aufruf | ✅ | |
+| **1** | Quote-Composite | erster gültiger Kurs gewinnt; Miss/Ausfall fällt weiter; nach Treffer kein weiterer Aufruf | ◑ [^review-r1] | |
 | **2** | Daily-Composite + Adapter | Non-Hit fällt weiter; gültige leere `DailySeries` stoppt als `[]`; nach Gesamtausfall kein Wasserzeichen | ✅ | |
 | **3** | FX-Service | erster Kurs gewinnt; tatsächlicher Lieferant wird gespeichert und bleibt im Cache; stale erst nach Gesamtausfall | ✅ | |
-| **4** | Container/REST | alle konfigurierten Quellen bleiben in Reihenfolge erhalten; Online-Überlappung gewinnt, YAML-Bond schließt die Lücke | ✅ | |
+| **4** | Container/REST | alle konfigurierten Quellen bleiben in Reihenfolge erhalten; Online-Überlappung gewinnt, YAML-Bond schließt die Lücke | ◑ [^review-r1] | |
 | **5** | Regression | gezielte Tests, vollständiges `make test`, Ruff, Diff-Check und YAML-Smoke 20/20 | ✅ | |
 | **6** | Browser durch Claude | `BTC-EUR` online, Anleihe über YAML-History, `fund` nutzbar; Liste/Drilldown/Quelle korrekt; Konsole und Requests sauber | ✅ | |
+
+[^review-r1]: Reihenfolge und Werte sind belegt. Offen ist die Herkunft einer
+    zweiten Kursquelle, wenn gerade ihre `RawQuote` Metadaten zum Ergebnis
+    beiträgt; Details stehen im Review-Abschnitt oberhalb der Matrix.
 
 ### Was gelaufen ist
 

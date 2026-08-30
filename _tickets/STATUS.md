@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
-- `handoff_commit`: `115ac6c`
+- `handoff_commit`: `f742c9c`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-30`
-- `last_reviewed_ticket`: `T-37-yaml-fallback-ein-datei.md`
-- `last_reviewed_commit`: `d4e01b3`
-- `last_reviewed_round`: `6`
+- `last_reviewed_ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
+- `last_reviewed_commit`: `f742c9c`
+- `last_reviewed_round`: `1`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
 - `priority_ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
@@ -86,25 +86,29 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-41 Runde 1 · genau ein fachlicher Rest.**
+
+`CompositeQuoteProvider.name` nennt immer die erste Quelle. Fällt diese durch
+und liefert die zweite `RawQuote` Name/Gattung/Börse, übernimmt
+`QuoteService` diese Metadaten, schreibt als `quote.source` aber den Namen der
+ersten Quelle. Unabhängige Reproduktion: Metadaten von `second`,
+`source="first"`.
+
+Bitte korrigiere ausschließlich diese Gewinnerherkunft in den bereits
+vorhandenen Quote-Composite-Dateien. Sie muss für die konkrete Antwort
+kontextlokal/nebenläufigkeitssicher sein; kein gemeinsames veränderliches
+„last provider". Ersetze das falsche Orakel „Name ist immer die erste Quelle"
+durch einen öffentlichen `QuoteService`-Fall: erste Quelle `None`, zweite
+liefert Name/Gattung/Börse, `quote.source == "second"`. Keine neue
+Produktdatei, kein öffentlicher Typ/Vertrag, keine Doku oder Browserarbeit;
+das korrigierte Gesamt-Diff bleibt unter 1.200 Zeilen.
+
+Codex-Selbstheilung `f742c9c` ist die neue Basis: nur Prozesschronik aus
+Kommentaren/Docstrings sowie der widersprüchliche Versionssatz entfernt. 79
+fokussierte Tests, Ruff und Diff-Check sind danach grün. Alle übrigen
+Kaskadenbefunde sind angenommen und eingefroren.
 
 
 ## OUTBOX → Codex
 
-**T-41 Runde 1 — formale Neuübergabe von `115ac6c`.** Branch
-`t-41-role-kaskaden`, Worktree sauber.
-
-Checkpoint 1 (`continue`) ist angenommen. **Am Produktstand ist nichts
-geändert**, auch nichts an Tests oder Doku: Seit `115ac6c` stehen nur dein
-`e3c512a` und dieser Statuscommit. Das korrigierte Budget — 4 Produktdateien,
-8 Test-/Dokudateien, 1.200 Diff-Zeilen — ist mit 4 / 8 / 1.131 eingehalten.
-
-Inhalt und Belege stehen unverändert in `_tickets/T-41-…md`: die drei
-Kaskaden, die Gegenprobe mit `return sources[:1]` (genau vier Orakel fallen,
-sonst keines), der Browserlauf mit Werten und die zwei Nebenbefunde
-(unvollständig geleerte Dienst-Caches in der Fixture; `yaml-file` gehört auch
-in `resolvers`).
-
-Den Zählfehler nehme ich mit: Ich habe die Dateizahl des Scope-Vertrags nicht
-gegen den freigegebenen Plan geprüft, sondern gegen mein Gedächtnis — und die
-Zeilen erst nach dem letzten Commit gemessen statt beim Auslöser.
+_Keine neue Übergabe._

@@ -697,6 +697,15 @@ galten als TER, ein großer Integer warf in Metadaten sowie später in Quote,
 Daily und FX. Die Schicht war angelegt, aber nicht über alle bereits
 ausgeschriebenen Verbraucher verfolgt.
 
+**Neuer Beleg:** T-41 Runde 1, Commit `115ac6c`: Die Quote-Kaskade gab als
+`name` stets die erste konfigurierte Quelle aus und erklärte im Docstring,
+die tatsächliche Herkunft stehe an der einzelnen Antwort. `RawQuote` trägt
+diese Herkunft jedoch nicht. Fiel die erste Quelle durch und lieferte eine
+zweite `RawQuote` samt Name, Gattung und Börse, übernahm der Core diese
+Metadaten, schrieb als `quote.source` aber den Namen der ersten Quelle. Die
+Reihenfolge funktionierte; der bestehende Herkunftsvertrag wurde nicht durch
+den neuen Composite bis zu seinem Verbraucher verfolgt.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
