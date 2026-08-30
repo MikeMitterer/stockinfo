@@ -24,13 +24,30 @@ nicht. T-41 macht genau diese drei Reihenfolgen ausführbar.
   `app/plugin_adapters.py`, `app/services/fx_service.py`, `app/container.py`.
 - **Tests/Doku:** fokussierte Composite-/FX-/Container-Tests, Erweiterung der
   bestehenden YAML-Vertikale, aktive Plugin-/Quellen-Doku und dieses Ticket.
-- **Budget:** höchstens 4 Produktdateien, 5 Test-/Dokudateien und 650 gesamte
-  Diff-Zeilen. Browserbeleg steht im Ticket; kein neues Browser-Script.
+- **Budget:** nach Scope-Checkpoint 1 höchstens 4 Produktdateien, 8
+  Test-/Dokudateien und 1.200 gesamte Diff-Zeilen. Browserbeleg steht im
+  Ticket; kein neues Browser-Script.
 - **Nicht-Ziele:** keine generische Kettenabstraktion, keine neue
   Konfiguration, keine Parallelität, Retries, Timeouts, Health-Scores,
   Cachetabellen oder Änderungen an Resolver-/Metadatenkaskaden und YAML-Schema.
 
 Bei Überschreitung greift der bestehende Scope-Checkpoint-Riegel.
+
+### Scope-Checkpoint 1 · `continue`
+
+Codex-Entscheidung am 2026-08-30 gegen `115ac6c`: Das Produktinventar hält
+mit vier Dateien exakt den bestätigten Entwurf. Die acht tatsächlichen
+Test-/Dokudateien waren im freigegebenen Implementierungsplan bereits einzeln
+genannt; der Scope-Vertrag hatte sie mit fünf lediglich falsch
+zusammengezählt. Der Aufwuchs auf 1.131 gesamte Diff-Zeilen steckt überwiegend
+in den vorab verlangten Rollen-, Container- und REST-Orakeln. Es ist keine
+neue Schicht, Konfiguration oder unabhängig lieferbare Fachänderung
+entstanden.
+
+Das Budget wird deshalb einmalig auf **4 Produktdateien, 8
+Test-/Dokudateien und 1.200 gesamte Diff-Zeilen** korrigiert. Der Produktstand
+ist eingefroren; erlaubt ist nur noch die formale Neuübergabe desselben
+Commits. Eine weitere Überschreitung führt zu `reduce` oder `split`.
 
 ## Verify
 

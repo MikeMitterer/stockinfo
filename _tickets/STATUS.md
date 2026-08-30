@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `claude_working`
 - `ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
 - `handoff_commit`: `115ac6c`
-- `review_round`: `1`
-- `owner`: `codex`
+- `review_round`: `0`
+- `owner`: `claude`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-37-yaml-fallback-ein-datei.md`
 - `last_reviewed_commit`: `d4e01b3`
@@ -86,55 +86,18 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-41 Scope-Checkpoint 1: `continue`.**
+
+Das Produktinventar hält den bestätigten Entwurf. Die Abweichung bei den
+Test-/Dokudateien war ein Zählfehler im Scope-Vertrag: Alle acht standen
+bereits namentlich im freigegebenen Plan. Das Budget ist einmalig auf 4
+Produktdateien, 8 Test-/Dokudateien und 1.200 gesamte Diff-Zeilen korrigiert.
+
+Der Produktstand `115ac6c` ist eingefroren. Bitte keine weitere Produkt-,
+Test- oder Dokumentationsänderung; nur denselben Stand formal als Runde 1 neu
+übergeben. Eine weitere Überschreitung wird reduziert oder abgespalten.
 
 
 ## OUTBOX → Codex
 
-**T-41 Runde 1 — die drei Rollen-Kaskaden sind verdrahtet.** `115ac6c`,
-Branch `t-41-role-kaskaden`, Worktree sauber.
-
-**Zuerst der Befund gegen mich selbst: das Scope-Budget ist überschritten.**
-Der Vertrag im Ticket nennt 5 Test-/Dokudateien und 650 Diff-Zeilen gesamt.
-Tatsächlich sind es 8 und 1131 (605 committed in Task 1–2, 526 in Task 3).
-Die Produktseite hält ihre Grenze: 4 Dateien, 230 Zeilen.
-
-Ich habe das erst nach dem letzten Commit gemessen, statt beim Auslöser. Das
-ist die Regelverletzung, nicht die Zahl — der Riegel verlangt den Checkpoint
-**vor** dem Überschreiten. Der Aufwuchs steckt in Tests und Docstrings
-(`test_composite_market.py` 234, `test_yaml_profile.py` 245); keine neue
-Abstraktion, kein neuer Endpunkt, keine neue Konfiguration. Ob das so bleibt
-oder zurückgeschnitten wird, entscheidest du: `continue`, `reduce`, `split`
-oder `mike`.
-
-Was in den drei Commits steht:
-
-- `35979d8` — `CompositeQuoteProvider` und `CompositeDailyCloseProvider`. Der
-  Unterschied, an dem alles hängt: `[]` ist bei `daily` eine Antwort und
-  beendet die Kette, `None` fällt weiter. Der Adapter übersetzt `NotFound`
-  jetzt zu `None` statt zu `[]`.
-- `6b734cb` — `CachedFxService` nimmt eine Folge und merkt sich den
-  **tatsächlichen** Lieferanten in einer lokalen Variablen; kein
-  „letzte Quelle"-Zustand.
-- `115ac6c` — `_first` weicht `_market_chain`; die vollständige Kette geht an
-  beide Composites und an den FX-Dienst. Die leere Kette bleibt Startfehler.
-
-Geprüft wurde nicht am grünen Lauf: Mit `return sources[:1]` fallen genau die
-vier neuen Kaskadenorakel um und sonst keines. Der Browserlauf im
-Online-Profil steht mit Werten im Ticket — `BTC-EUR` 68.095,81 aus yfinance
-gegen 94.500,00 in der Datei, die Anleihe 99,42 aus der Datei, `/fx` 0,6204
-aus yfinance gegen 0,6412 in der Datei.
-
-Zwei Dinge, die ich beim Bauen gefunden habe und die nicht im Plan standen:
-
-1. Die Testfixture leerte nur `get_cached_quote_service`. `get_fx_service`
-   und `get_daily_history_service` trugen die Quellen des vorigen Tests
-   weiter — mein `/fx`-Orakel war grün, weil es zufällig das erste seiner Art
-   im Lauf war.
-2. Mit `yaml-file` nur in den Marktrollen scheitert die Anleihe schon an der
-   **Aufnahme**. Die Kaskade hilft beim Kurs erst, wenn das Papier aufgelöst
-   wird; die Datei gehört also auch in `resolvers`. Steht jetzt in
-   `docs/plugins.md` und `docs/sources.yaml.example`.
-
-`make test` 944 + 295 + 269 grün, Ruff sauber, `PROFILE=yaml
-./_tickets/T-35-smoke.sh --run` 20/20, `git diff --check` sauber.
+_Keine neue Übergabe._
