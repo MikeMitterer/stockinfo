@@ -27,7 +27,10 @@ import pytest
 from fastapi.testclient import TestClient
 
 from stockinfo_plugin import (
+    DailyCloseSource,
+    DailySeries,
     ListedIdentity,
+    NotFound,
     MetadataSource,
     PairIdentity,
     NotResponsible,
@@ -39,7 +42,7 @@ from stockinfo_plugin import (
 
 from app.container import get_sources_config
 from app.main import app
-from app.plugin_adapters import MetadataAdapter, ResolverAdapter
+from app.plugin_adapters import DailyAdapter, MetadataAdapter, ResolverAdapter
 from app.plugin_loader import ENTRY_POINT_GROUP, load_all
 from app.sources_registry import register_loaded, specs_by_name
 
@@ -773,3 +776,60 @@ def test_eine_nicht_deklarierte_gattung_erreicht_die_metadatenquelle_nicht() -> 
         "IE00B4L5Y983", "EUNL.DE", identity=listing, instrument_type="etf"
     )
     assert source.asked == 1, "die deklarierte Gattung wird sehr wohl gefragt"
+
+
+# ─── Die Vertragsunterscheidung der Historienrolle (T-41) ─────────────────────
+
+
+@pytest.mark.parametrize(
+    ("answer", "expected", "why"),
+    [
+        pytest.param(
+            DailySeries(bars=(), currency="EUR", adjusted=False),
+            [],
+            "nachgesehen, in diesem Zeitraum nichts",
+            id="leere-reihe",
+        ),
+        pytest.param(NotFound(), None, "dieses Papier führe ich nicht", id="notfound"),
+        pytest.param(
+            NotResponsible(reason="ohne Schlüssel"), None, "gar nicht gefragt",
+            id="notresponsible",
+        ),
+        pytest.param(
+            Unavailable(error="Netz"), None, "konnte nicht nachsehen", id="unavailable"
+        ),
+    ],
+)
+def test_nur_eine_reihe_ist_eine_auskunft(answer, expected, why: str) -> None:
+    """**`NotFound` ergab hier bis T-41 ebenfalls `[]`.**
+
+    Die Verwechslung hatte zwei Folgen, und beide fielen bei einer einzelnen
+    Quelle nicht auf. In einer Kette stoppte sie die Suche bei der ersten
+    Quelle, die das Papier nicht kennt. Und `DailyCloseSync` rückte sein
+    Wasserzeichen vor, ohne dass jemand etwas geholt hatte — danach galt ein
+    Zeitraum als abgefragt, den nie jemand gesehen hat.
+
+    Die leere Reihe bleibt `[]`: Sie ist eine Auskunft, nur eine leere.
+    """
+
+    class _Source(DailyCloseSource):
+        name = "prueflich"
+        api_version = 2
+        SUPPORTED_KINDS = frozenset({"listed"})
+        SUPPORTED_TYPES = frozenset({"etf"})
+
+        def handles(self, request) -> bool:
+            return True
+
+        def fetch_daily(self, request):
+            return answer
+
+    adapter = DailyAdapter(_Source(), "XETR")
+
+    result = adapter.fetch_daily_closes(
+        "EUNL.DE",
+        identity=ListedIdentity(ticker="EUNL", mic="XETR"),
+        instrument_type="etf",
+    )
+
+    assert result == expected, why

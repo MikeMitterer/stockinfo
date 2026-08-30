@@ -374,6 +374,9 @@ class DailyAdapter(_Adapter):
                 start=date.fromisoformat(start) if start else None,
             )
         )
+        # **Nur eine `DailySeries` ist eine Auskunft** — auch die leere. Sie
+        # heißt „nachgesehen, in diesem Zeitraum nichts", und der Core drückt
+        # das als `[]` aus.
         if isinstance(answer, DailySeries):
             return [
                 {
@@ -383,8 +386,14 @@ class DailyAdapter(_Adapter):
                 }
                 for bar in answer.bars
             ]
-        if isinstance(answer, NotFound):
-            return []
+        # **`NotFound` ergab hier bis T-41 ebenfalls `[]`**, und das war eine
+        # Verwechslung mit Folgen: „dieses Papier führe ich nicht" wurde zu
+        # „dieses Papier hat keine Kurse". Für eine einzelne Quelle sah das
+        # gleich aus; in einer Kette stoppte es die Suche bei der ersten
+        # Quelle, die das Papier nicht kennt — und `DailyCloseSync` rückte
+        # sein Wasserzeichen vor, ohne dass jemand etwas geholt hatte.
+        #
+        # Jeder Nicht-Treffer ist deshalb `None`: die nächste Quelle ist dran.
         return None
 
 
