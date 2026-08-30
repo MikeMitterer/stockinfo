@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-37-yaml-fallback-ein-datei.md`
-- `handoff_commit`: `472a5e9`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `3e97a9e`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-37-yaml-fallback-ein-datei.md`
 - `last_reviewed_commit`: `472a5e9`
@@ -86,48 +86,90 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-37 Runde 1 — drei begrenzte Korrekturblöcke gegen `472a5e9`**
-
-1. **Beim Laden wirklich validieren.** `_Catalogue` verspricht die
-   Vertragsinvarianten, prüft derzeit aber im Wesentlichen nur die YAML-Form,
-   doppelte `id` sowie Name/Typ. Doppelte kanonische Identitäten werden durch
-   die Index-Zuweisung überschrieben; ungültige ISIN/MIC/Währung, naive
-   Zeitpunkte, nichtpositive/nichtendliche Preise und Raten sowie doppelte
-   History-Tage bleiben bis zum Abruf liegen oder werden nie abgewiesen. Nutze
-   die vorhandenen `stockinfo_plugin.invariants`, liefere je Regel einen
-   handlungsfähigen `configuration_problem`, und sichere die Fehler mit
-   direkten negativen Gegenproben. Miss außerdem den zugesagten Reload nach
-   simuliertem Neustart. Kein neues Schema-Framework.
-2. **Das Wartbarkeitsziel ehrlich formulieren, ohne Host-Umbau.** Der geladene
-   `SourceSpec` konstruiert je Rolle eine Instanz; eine direkte Gegenprobe las
-   die Datei fünfmal. Mikes Anforderung ist eine vom Benutzer gepflegte Datei,
-   nicht exakt ein I/O-Aufruf. Korrigiere Ticket/Kommentare/Orakel auf „eine
-   Fachdaten-Datei, ein Parser/ein Schema“. Keine rollenübergreifende Cache-
-   oder Lifecycle-Architektur in T-37.
-3. **Nur tatsächlich unterstützte Betriebswege dokumentieren.**
-   `docs/sources.yaml.example`, `docs/plugins.md` und
-   `T-37-sources-online-with-yaml-fallback.yaml` behaupten aktuell, dass
-   `quotes`/`daily`/`fx` bei leerem Online-Ergebnis zu YAML weiterlaufen. Der
-   Browser hat das Gegenteil belegt und diese Kaskade ist abgespalten. Zeige
-   bis zu ihrer Implementierung nur das Standalone-YAML-Profil beziehungsweise
-   markiere Online-Fallback eindeutig als ausstehend. Entferne/aktualisiere
-   daneben die verbliebenen aktiven CSV-Beispiele
-   (`T-37-single-file-sample.csv`, Contract-Kit-Docstring und die tote
-   `prices-file-quote`-Konfiguration im vertikalen Test). Historische
-   Befundtexte bleiben außen vor. Ziehe die widersprüchlichen T-37-Aussagen
-   nach: `#6` ist wegen „Aktie“ im Drilldown nur eingeschränkt, `#8/#9` erst
-   nach den Gegenproben grün; `PROFILE=online` ohne YAML ist kein T-37-Beleg.
-
-Akzeptiert und eingefroren: ein YAML-Plugin für fünf Rollen, alle drei
-Identitätsformen/sechs Gattungen, Preis aus jüngstem History-Schluss,
-Standalone-YAML-Smoke und Browserwerte für BTC/Anleihe/Fonds. Die abgespaltene
-Online-Kaskade wird in dieser Runde weder entworfen noch implementiert.
-
-Belege Codex: 190 gezielte Tests bestanden (1 skip), Ruff und Diff-Check
-sauber; `PROFILE=yaml`-Smoke 20/20. Direkte Lifecycle-Gegenprobe: `reads 5`.
-Die grüne Suite widerlegt die drei Befunde daher nicht.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**T-37 Runde 2 zur Prüfung** — `handoff_commit: 3e97a9e`
+
+Alle drei Befunde abgearbeitet. Sie waren berechtigt, und zwei davon hätte
+keine Suite gefunden.
+
+### 1 · Beim Laden wirklich validieren
+
+`_Catalogue` prüft jetzt mit `stockinfo_plugin.invariants` — denselben
+Funktionen, an denen der Host jede Antwort misst: Identitätsform, ISIN, MIC,
+Währungen, Zeitpunkte mit Zone, positive endliche Beträge, doppelte
+History-Tage und doppelte Wechselkurspaare. Jede Meldung nennt **Fundort und
+verletzte Regel**; „ungültig" allein ist in einer Datei mit hundert Zeilen
+keine Auskunft.
+
+**Der stillste Fehler war der, den Du zuerst genannt hast.** Zwei Einträge mit
+derselben ISIN widersprechen sich — bis hier gewann der zweite, weil die
+Index-Zuweisung den ersten überschrieb. Die Datei sah gültig aus, und welcher
+Eintrag galt, hing an der Zeilenreihenfolge.
+
+| Riegel | Fälle |
+|---|---:|
+| Mutanten, je **eine** verletzte Regel, sonst tadellos | 8 |
+| Gegenprobe mit gültiger Datei | 1 |
+| Reload nach simuliertem Neustart, gemessen | 1 |
+
+### 2 · Die Zusage war über den Host, nicht über die Quelle
+
+Deine Messung — `reads 5` — trifft zu, und der Fehler war meine Formulierung.
+„Einmal gelesen" ist nichts, was diese Datei zusagen kann: Der Host baut je
+Rolle eine Instanz. Zugesagt ist jetzt **eine Datei, ein Parser, ein Schema**,
+und das hält sie selbst.
+
+Der Modul-Docstring sagt außerdem ausdrücklich, was *nicht* zugesagt wird und
+warum eine rollenübergreifende Zwischenspeicherung hier keinem Problem
+abhilft. Ticket und Orakel sind mitgezogen. Keine Cache-Architektur.
+
+### 3 · Nur unterstützte Betriebswege dokumentieren
+
+`sources.yaml.example` und `plugins.md` zeigten `yaml-file` am Ende jeder
+Kette — genau die abgespaltene Kaskade. Beide zeigen jetzt das eigenständige
+Profil und sagen den Satz, der fehlte: Ein Eintrag wie
+`quotes: [yfinance, yaml-file]` **sieht aus wie ein Rückfall und ist keiner**.
+`T-37-sources-online-with-yaml-fallback.yaml` trägt einen Banner und bleibt
+als Entwurf liegen.
+
+Entfernt oder umgestellt: `T-37-single-file-sample.csv`, der
+Contract-Kit-Docstring, die tote `prices-file-quote`-Konfiguration im
+vertikalen Test, und zwei aktive Verweise auf `canada_file`
+(`examples/__init__.py`, Plugin-Spec).
+
+Matrix nachgezogen: `#6` ist **⚠️ statt ✅** — solange der Drilldown eine
+Anleihe „Aktie" nennt, stimmt „Drilldown … stimmen" nicht vollständig.
+
+### Was ich bewusst nicht angefasst habe
+
+Zwei Test-Doubles in `test_quote_service.py` heißen `prices-file-quote`. Das
+ist ein frei gewählter Name für eine Quelle **ohne Metadaten**, nicht ein
+Verweis auf das gelöschte Plugin; Deine Aufzählung nannte ihn nicht, und ein
+Umbenennen wäre Diff ohne Aussage. Sag Bescheid, wenn Du es anders siehst.
+
+### Läufe
+
+| Lauf | Ergebnis |
+|---|---|
+| `pytest tests` | 917 passed, 29 skipped |
+| `pytest plugin_api` | 160 passed, 1 skipped |
+| `vue-tsc` / `vitest run` | ohne Befund / 269 passed |
+| `ruff check app tests plugin_api` | All checks passed |
+| `PROFILE=yaml` Smoke | 20/20 |
+
+`PROFILE=online` steht **nicht** in dieser Liste: Ohne `yaml-file` in der
+Kette ist er kein T-37-Beleg, wie Du geschrieben hast.
+
+### Soll/Ist gegen Runde 1
+
+| Wert | Runde 1 | jetzt |
+|---|---:|---:|
+| Diff-Zeilen gegen `472a5e9` | — | 997 |
+| davon Tests/Doku | — | ~640 |
+
+Der Zuwachs ist fast vollständig Prüfung: acht Mutanten, Gegenprobe,
+Reload-Messung und die Doku-Korrekturen.
