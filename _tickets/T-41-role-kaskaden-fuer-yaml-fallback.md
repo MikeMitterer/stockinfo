@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo | wartet auf T-37 | 0,5–1 Tag | Quote, Daily und FX fragen ihre konfigurierte Reihenfolge wirklich ab | — |
+| StockInfo | freigegeben (Codex, Runde 2) | 0,5–1 Tag | Quote, Daily und FX fragen ihre konfigurierte Reihenfolge wirklich ab | — |
 
 - **Angelegt:** 2026-08-30
 - **Hängt ab von:** T-37
@@ -72,6 +72,31 @@ Codex hat außerdem die neu eingeführte Prozesschronik aus Codekommentaren,
 Test-Docstrings und aktiver Versionsprosa mechanisch entfernt. 79 fokussierte
 Tests, Ruff und Diff-Check blieben danach grün.
 
+### Scope-Checkpoint 2 · `continue` und Abschluss
+
+Codex-Entscheidung am 2026-08-31 gegen `0bb5c20`: Die Korrektur berührt mit
+`app/providers/base.py` und `app/services/quote_service.py` zwei bestehende
+Produktdateien außerhalb der vier ursprünglich gezählten Flächen. Das ist
+eine Abweichung, aber keine zweite Fachänderung: Das neue Herkunftsfeld reist
+unveränderlich an genau der gewonnenen `RawQuote`; der vorhandene Consumer
+liest es nur dann, wenn diese Antwort Metadaten beigesteuert hat. Gemeinsamer
+Zustand, öffentlicher Plugin-/REST-Vertrag und neue Abstraktionen bleiben aus.
+
+Die Ausnahme ist damit enger als ein Split und bleibt unter dem bestätigten
+Zeilenbudget: 1.106 Diff-Zeilen in Produkt, Tests und aktiver Doku, ohne
+Ticketchronik und Mailbox. Sie erweitert den Scope auf diese zwei bestehenden
+Dateien und ausschließlich auf den in Runde 1 verlangten Herkunftstransport.
+Eine selbst beschriftete Antwort behält ihre Quelle; die unabhängige
+Gegenprobe ergab `source="inner"` trotz Anbietername `outer`.
+
+### Freigabe Runde 2
+
+Der öffentliche Gegenfall ist geschlossen: Fällt `first` durch und liefert
+`second` die Metadaten, nennt die fertige Antwort `source="second"`. Die
+Herkunft sitzt auf der einzelnen Antwort und ist deshalb auch bei parallelen
+Anfragen eindeutig. Quote-, Daily- und FX-Reihenfolge, REST-Vertikale und der
+bereits dokumentierte Browserlauf bleiben grün.
+
 ## Verify
 
 Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teilweise ·
@@ -79,16 +104,12 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teil
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Quote-Composite | erster gültiger Kurs gewinnt; Miss/Ausfall fällt weiter; nach Treffer kein weiterer Aufruf | ◑ [^review-r1] | |
+| **1** | Quote-Composite | erster gültiger Kurs gewinnt; Miss/Ausfall fällt weiter; nach Treffer kein weiterer Aufruf | ✅ | |
 | **2** | Daily-Composite + Adapter | Non-Hit fällt weiter; gültige leere `DailySeries` stoppt als `[]`; nach Gesamtausfall kein Wasserzeichen | ✅ | |
 | **3** | FX-Service | erster Kurs gewinnt; tatsächlicher Lieferant wird gespeichert und bleibt im Cache; stale erst nach Gesamtausfall | ✅ | |
-| **4** | Container/REST | alle konfigurierten Quellen bleiben in Reihenfolge erhalten; Online-Überlappung gewinnt, YAML-Bond schließt die Lücke | ◑ [^review-r1] | |
+| **4** | Container/REST | alle konfigurierten Quellen bleiben in Reihenfolge erhalten; Online-Überlappung gewinnt, YAML-Bond schließt die Lücke | ✅ | |
 | **5** | Regression | gezielte Tests, vollständiges `make test`, Ruff, Diff-Check und YAML-Smoke 20/20 | ✅ | |
 | **6** | Browser durch Claude | `BTC-EUR` online, Anleihe über YAML-History, `fund` nutzbar; Liste/Drilldown/Quelle korrekt; Konsole und Requests sauber | ✅ | |
-
-[^review-r1]: Reihenfolge und Werte sind belegt. Offen ist die Herkunft einer
-    zweiten Kursquelle, wenn gerade ihre `RawQuote` Metadaten zum Ergebnis
-    beiträgt; Details stehen im Review-Abschnitt oberhalb der Matrix.
 
 ### Was gelaufen ist
 
@@ -116,6 +137,10 @@ make test        → 944 Backend + 295 plugin_api + 269 Frontend, alle grün
 PROFILE=yaml ./_tickets/T-35-smoke.sh --run                                          → 20/20
 git diff --check → sauber
 ```
+
+Codex hat in Runde 2 zusätzlich 110 fokussierte Kaskaden-/Service-/REST-Tests,
+den vollständigen Lauf mit 944 Backend-, 295 Plugin-API- und 269
+Frontend-Tests sowie den YAML-Smoke mit 20/20 Checks unabhängig bestätigt.
 
 **Zeile 6 — der Browserlauf**, Online-Profil mit `yaml-file` als letztem Glied
 in `resolvers`, `quotes`, `daily` und `fx`:
