@@ -46,6 +46,7 @@ class FakeService:
             )
         return QuoteResponse(
             symbol="VGWL.DE",
+            name="VGWL.DE Testpapier",
             identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin=isin),
             currency="EUR",
             price=160.98,
@@ -62,6 +63,7 @@ class FakeService:
             raise QuoteUnavailableError(symbol)
         return QuoteResponse(
             symbol=symbol,
+            name="Testpapier",
             identity=ListedIdentityOut(ticker="MC", mic="XPAR", isin=None),
             currency="EUR",
             price=430.0,

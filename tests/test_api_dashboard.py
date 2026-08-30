@@ -29,6 +29,10 @@ class FakeService:
                 {
                     "symbol": "VGWL.DE",
                     "isin": "IE00B3RBWM25",
+                    # Pflicht seit T-38 — eine Bestandszeile sagt, **was** sie
+                    # ist. Die gespeicherte Zeile fuehrt beide Spalten.
+                    "name": "Vanguard FTSE All-World",
+                    "type": "etf",
                     "history_count": 2,
                     "kind": "listed",
                     "ticker": "VGWL",
@@ -52,6 +56,7 @@ class FakeService:
         return QuoteResponse(
             identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin=isin),
             symbol="VGWL.DE",
+            name="VGWL.DE Testpapier",
             currency="EUR",
             price=161.0,
             quote_time="t",
@@ -63,6 +68,7 @@ class FakeService:
         return QuoteResponse(
             identity=ListedIdentityOut(ticker="MC", mic="XPAR", isin=None),
             symbol=symbol,
+            name="Testpapier",
             currency="EUR",
             price=430.0,
             quote_time="t",

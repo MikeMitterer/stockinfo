@@ -1,5 +1,5 @@
 {
-  "core_version": "3.1.0",
+  "core_version": "4.0.0",
   "paths": {
     "/fields": {
       "get": {
@@ -883,15 +883,8 @@
           "title": "Meta Fetched At"
         },
         "name": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Name"
+          "title": "Name",
+          "type": "string"
         },
         "provider": {
           "anyOf": [
@@ -951,15 +944,8 @@
           "title": "Ter"
         },
         "type": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Type"
+          "title": "Type",
+          "type": "string"
         },
         "volatility": {
           "anyOf": [
@@ -978,8 +964,10 @@
         "identity",
         "listing_id",
         "manual_fields",
+        "name",
         "shadowed_fields",
-        "symbol"
+        "symbol",
+        "type"
       ],
       "title": "InstrumentSummary",
       "type": "object"
@@ -1282,15 +1270,8 @@
           "title": "Identity"
         },
         "name": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "title": "Name"
+          "title": "Name",
+          "type": "string"
         },
         "price": {
           "title": "Price",
@@ -1354,16 +1335,9 @@
           "title": "Ter"
         },
         "type": {
-          "anyOf": [
-            {
-              "type": "string"
-            },
-            {
-              "type": "null"
-            }
-          ],
-          "description": "stock | etf",
-          "title": "Type"
+          "description": "stock | etf | etc | fund | crypto | bond",
+          "title": "Type",
+          "type": "string"
         },
         "volatility": {
           "anyOf": [
@@ -1394,10 +1368,12 @@
         "currency",
         "fetched_at",
         "identity",
+        "name",
         "price",
         "quote_time",
         "stale",
-        "symbol"
+        "symbol",
+        "type"
       ],
       "title": "QuoteResponse",
       "type": "object"

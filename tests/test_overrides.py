@@ -389,6 +389,7 @@ class _LiveSource:
         instrument_type: str | None = None,
         identity: object | None = None,
         enrich_etf: bool = True,
+        name: str | None = None,
     ) -> QuoteResponse:
         return self._deliver(isin or symbol)
 

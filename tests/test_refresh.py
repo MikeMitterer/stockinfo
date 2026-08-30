@@ -24,6 +24,7 @@ class FakeQuoteService:
             raise QuoteUnavailableError(isin)
         return QuoteResponse(
             symbol="SYM.DE",
+            name="SYM.DE Testpapier",
             identity=ListedIdentityOut(ticker="SYM", mic="XETR", isin=isin),
             currency="EUR",
             price=200.0,
@@ -37,6 +38,7 @@ class FakeQuoteService:
     ) -> QuoteResponse:
         return QuoteResponse(
             symbol=symbol,
+            name="Testpapier",
             identity=ListedIdentityOut(
                 ticker=symbol.split(".")[0], mic="XETR", isin=None
             ),
@@ -55,6 +57,7 @@ class FakeQuoteService:
         instrument_type: str | None = None,
         identity: object | None = None,
         enrich_etf: bool = True,
+        name: str | None = None,
     ) -> QuoteResponse:
         """Der Weg des Sammelrefresh: bekanntes Listing, keine neue Auflösung."""
         if isin:
@@ -73,6 +76,7 @@ def _seed(repo: QuoteRepository, isin: str | None, symbol: str) -> None:
     repo.save_quote(
         QuoteResponse(
             symbol=symbol,
+            name="Testpapier",
             identity=ListedIdentityOut(
                 ticker=symbol.split(".")[0], mic="XETR", isin=isin
             ),

@@ -23,6 +23,7 @@ def _seed(repo: QuoteRepository) -> dict:
         QuoteResponse(
             identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
             symbol="VGWL.DE",
+            name="VGWL.DE Testpapier",
             currency="EUR",
             price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",

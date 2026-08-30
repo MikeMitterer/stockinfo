@@ -6,7 +6,7 @@ in der Router-Schicht auf HTTP-Statuscodes abgebildet.
 
 import math
 import statistics
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, replace
 from datetime import datetime, timezone
 
 import structlog
@@ -213,6 +213,18 @@ class PrecheckedCoreValues:
 
     identity: IdentityOut | None
     currency: str | None
+    # **Seit T-38, und der Weg hierher war der Beweis für den Absatz darüber.**
+    # `quote.name` und `quote.type` wurden im Artefakt zu Pflichtfeldern, das
+    # Modell wurde nicht-nullbar — und diese Vorabprüfung kannte beide nicht.
+    # Ergebnis: Pydantic warf zwei Zeilen später einen `ValidationError`, also
+    # ein 500 ohne Auskunft, an vierzehn Stellen zugleich.
+    #
+    # Genau das sollte die Struktur hier verhindern: Ein Feld mehr **in dieser
+    # Klasse** wandert von selbst in `missing()`, in `PRECHECKED_CORE_FIELDS`
+    # und — weil kein Feld einen Vorgabewert hat — sichtbar in beide Aufrufer.
+    # Sie hat gehalten, was sie verspricht; nur hatte niemand sie ergänzt.
+    name: str | None
+    type: str | None
 
     def missing(self) -> list[str]:
         """Die Namen der Felder ohne Wert, in Deklarationsreihenfolge.
@@ -460,6 +472,7 @@ class QuoteService:
         instrument_type: str | None = None,
         identity: IdentityOut | None = None,
         enrich_etf: bool = True,
+        name: str | None = None,
     ) -> QuoteResponse:
         """Beschafft den Kurs für ein **bereits aufgelöstes** Instrument.
 
@@ -522,13 +535,24 @@ class QuoteService:
         # könnte. Für ein Paar und eine ISIN-only-Anleihe gibt es aus dem
         # Symbol ohnehin nichts abzuleiten.
         derived_ticker, derived_mic = split_symbol(symbol)
+        # **Der Name reist seit T-38 mit, und ohne ihn wäre jeder Refresh ein
+        # 502.** Dieser Weg löst bewusst *nicht* auf — er kennt das Papier ja
+        # schon. Damit gibt es hier niemanden mehr, der einen Namen liefern
+        # könnte: Die Kursquelle trägt ihn nach dem Vertrag nicht, und
+        # `require_core_values` verlangt ihn seit T-38.
+        #
+        # Er kommt deshalb von dort, wo er steht: aus der gespeicherten Zeile,
+        # genau wie `instrument_type` daneben. Das ist keine neue Quelle,
+        # sondern dieselbe, die die Gattung schon immer geliefert hat.
         if identity is not None and not isinstance(identity, ListedIdentityOut):
             resolved = _resolved_from(identity, symbol, exchange, instrument_type)
+            resolved = replace(resolved, name=name)
         else:
             resolved = ResolvedInstrument(
                 symbol=symbol,
                 isin=isin,
                 exchange=exchange,
+                name=name,
                 type=instrument_type,
                 kind="listed",
                 ticker=derived_ticker
@@ -571,7 +595,12 @@ class QuoteService:
         currency = raw.currency or resolved.currency
         require_core_values(
             resolved.symbol,
-            PrecheckedCoreValues(identity=identity, currency=currency),
+            PrecheckedCoreValues(
+                identity=identity,
+                currency=currency,
+                name=raw.name or resolved.name,
+                type=raw.type or resolved.type,
+            ),
         )
 
         # **Matrix `#7`.** Bei einem Paar ist die Quote-Währung Teil der

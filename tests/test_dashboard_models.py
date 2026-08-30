@@ -14,8 +14,12 @@ from app.models import (
 def test_instrument_summary_defaults() -> None:
     # Die Identität ist seit T-21 Übergabe 3 Pflicht — sie hat keinen
     # Vorgabewert, weil es die halbe Identität nicht mehr geben darf.
+    # Name und Gattung sind seit T-38 dazugekommen, aus demselben Grund:
+    # eine Zeile, die nicht sagt, *was* sie ist, ist eine halbe Zeile.
     summary = InstrumentSummary(
         symbol="VGWL.DE",
+        name="VGWL.DE Testpapier",
+        type="etf",
         identity=ListedIdentityOut(ticker="VGWL", mic="XETR"),
         listing_id="018f3a2c-7b41-7c9e-a3d2-5f1b9c4e2a10",
         history_count=3,

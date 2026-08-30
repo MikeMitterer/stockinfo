@@ -24,6 +24,7 @@ def _save(repo: QuoteRepository, isin: str, symbol: str, price: float, t: str) -
     repo.save_quote(
         QuoteResponse(
             symbol=symbol,
+            name="Testpapier",
             identity=ListedIdentityOut(
                 ticker=symbol.split(".")[0], mic="XETR", isin=isin
             ),
@@ -59,6 +60,7 @@ def test_persists_source(repo: QuoteRepository) -> None:
         QuoteResponse(
             identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
             symbol="VGWL.DE",
+            name="VGWL.DE Testpapier",
             currency="EUR",
             price=160.0,
             quote_time="2026-07-12T10:00:00+00:00",
@@ -78,6 +80,7 @@ def test_source_updates_on_refresh(repo: QuoteRepository) -> None:
         QuoteResponse(
             identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
             symbol="VGWL.DE",
+            name="VGWL.DE Testpapier",
             currency="EUR",
             price=160.0,
             quote_time="2026-07-12T10:00:00+00:00",
@@ -90,6 +93,7 @@ def test_source_updates_on_refresh(repo: QuoteRepository) -> None:
         QuoteResponse(
             identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
             symbol="VGWL.DE",
+            name="VGWL.DE Testpapier",
             currency="EUR",
             price=161.0,
             quote_time="2026-07-12T11:00:00+00:00",

@@ -388,8 +388,17 @@ class QuoteResponse(BaseModel):
 
     symbol: str
     exchange: str | None = None
-    name: str | None = None
-    type: str | None = Field(default=None, description="stock | etf")
+    # **Pflicht seit T-38** (Mike, 2026-08-30). Bis dahin war beides
+    # optional, und drei Befunde aus dem UI-Lauf waren dieselbe Folge davon:
+    # ein leeres Feld, das niemand gemeldet hat. Die Zusage gilt jetzt
+    # gegenüber dem Konsumenten — jede Antwort trägt Name und Gattung, oder
+    # es gibt keine Antwort.
+    #
+    # Die Vorabprüfung `require_core_values` fängt das Fehlen eine Ebene
+    # früher ab und macht daraus eine typisierte 502 mit Grund. Ohne sie käme
+    # hier ein `ValidationError` an — ein 500, der dem Aufrufer nichts sagt.
+    name: str
+    type: str = Field(description="stock | etf | etc | fund | crypto | bond")
     # Ebenfalls Pflicht und nicht nullable — aus demselben Grund wie `ticker`
     # und `mic` weiter unten. Das Artefakt sagt sie seit T-24 zu, das
     # veröffentlichte Schema führte sie trotzdem als nullable. Ein Preis ohne
@@ -557,8 +566,18 @@ class InstrumentSummary(BaseModel):
         description="Opake, dauerhafte Kennung des Listings — nie zerlegen"
     )
     exchange: str | None = None
-    name: str | None = None
-    type: str | None = None
+    # **Dieselbe Zusage wie in `QuoteResponse`** (Mike, 2026-08-30). Eine
+    # Bestandsliste, in der Zeilen namenlos sind, war der sichtbarste Teil des
+    # Befunds aus dem UI-Lauf — und der Grund, warum dieses Ticket existiert.
+    #
+    # **Ein Unterschied bleibt und ist bekannt:** Für den Kursweg fängt
+    # `require_core_values` ein fehlendes Feld ab und macht daraus eine 502 mit
+    # Grund. Für die Liste gibt es dieses Gegenstück nicht. Neu entstehende
+    # Zeilen tragen beide Felder, weil keine Auflösung mehr ohne sie
+    # durchkommt; für Altbestand gilt Mikes Entscheidung aus T-31, die
+    # Entwicklungsdatenbank zu verwerfen.
+    name: str
+    type: str
     currency: str | None = None
     provider: str | None = None
     ter: float | None = None

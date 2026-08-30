@@ -50,6 +50,11 @@ class _QuoteSource:
         # `app.plugin_adapters.QuoteAdapter`.
         return RawQuote(
             symbol=instrument.symbol,
+            # **Der Name kommt seit T-38 von hier.** Auf dem Symbolweg wird
+            # nicht aufgeloest — die Kursquelle ist die einzige, die etwas
+            # ueber das Papier sagen kann. Sagt sie nichts, gibt es keine
+            # Antwort mehr, und genau das ist die Absicht des Tickets.
+            name=f"{instrument.symbol} Testpapier",
             price=123.45,
             quote_time="2026-08-23T17:00:00+00:00",
             currency="EUR",

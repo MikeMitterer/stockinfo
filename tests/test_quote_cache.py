@@ -51,6 +51,7 @@ class FakeQuoteService:
         instrument_type: str | None = None,
         identity: object | None = None,
         enrich_etf: bool = True,
+        name: str | None = None,
     ) -> QuoteResponse:
         return self.get_quote_by_isin(isin or symbol)
 
@@ -61,6 +62,7 @@ def _response(fetched_at: str, price: float = 160.98) -> QuoteResponse:
     # Zerlegungsregel im Testaufbau ein zweites Mal zu führen.
     return QuoteResponse(
         symbol="VGWL.DE",
+        name="VGWL.DE Testpapier",
         identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
         currency="EUR",
         price=price,
@@ -220,6 +222,7 @@ class _StockQuoteService:
         return QuoteResponse(
             identity=ListedIdentityOut(ticker="AAPL", mic="XETR", isin=isin),
             symbol="AAPL.DE",
+            name="AAPL.DE Testpapier",
             currency="EUR",
             price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",
@@ -236,6 +239,7 @@ class _StockQuoteService:
         instrument_type: str | None = None,
         identity: object | None = None,
         enrich_etf: bool = True,
+        name: str | None = None,
     ) -> QuoteResponse:
         return self.get_quote_by_isin(isin or symbol, enrich_etf)
 
@@ -267,6 +271,7 @@ def test_refresh_behaelt_justetf_volatilitaet(tmp_path) -> None:
             return QuoteResponse(
                 identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin=isin),
                 symbol="VGWL.DE",
+                name="VGWL.DE Testpapier",
                 currency="EUR",
                 price=160.0,
                 quote_time="2026-07-13T10:00:00+00:00",
@@ -353,6 +358,7 @@ class _RecordingQuoteService:
         instrument_type: str | None = None,
         identity: object | None = None,
         enrich_etf: bool = True,
+        name: str | None = None,
     ) -> QuoteResponse:
         self.enrich_calls.append(enrich_etf)
         return self._response
@@ -447,6 +453,7 @@ class _DriftingResolution:
     def _response_for(self, symbol: str, currency: str, exchange: str) -> QuoteResponse:
         return QuoteResponse(
             symbol=symbol,
+            name="Testpapier",
             identity=ListedIdentityOut(
                 ticker=symbol.split(".")[0],
                 mic={"DE": "XETR", "L": "XLON", "MI": "XMIL"}[symbol.split(".")[1]],
@@ -484,6 +491,7 @@ class _DriftingResolution:
         instrument_type: str | None = None,
         identity: object | None = None,
         enrich_etf: bool = True,
+        name: str | None = None,
     ) -> QuoteResponse:
         self.known_calls += 1
         return self._response_for(symbol, "EUR", exchange or "Xetra")
@@ -565,6 +573,7 @@ class _WithoutType:
     def _response_for(self, instrument_type: str | None) -> QuoteResponse:
         return QuoteResponse(
             symbol="VGWL.DE",
+            name="VGWL.DE Testpapier",
             identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
             currency="EUR",
             exchange="Xetra",
@@ -590,6 +599,7 @@ class _WithoutType:
         instrument_type: str | None = None,
         identity: object | None = None,
         enrich_etf: bool = True,
+        name: str | None = None,
     ) -> QuoteResponse:
         self.seen_type = instrument_type
         # Der Live-Abruf weiß den Typ diesmal nicht — er muss vom Aufrufer kommen.
@@ -635,6 +645,7 @@ def test_lesepfad_loest_bekanntes_instrument_nicht_neu_auf(
         QuoteResponse(
             identity=ListedIdentityOut(ticker="IS3M", mic="XETR", isin="IE00BCRY6557"),
             symbol="IS3M.DE",
+            name="IS3M.DE Testpapier",
             currency="EUR",
             exchange="Xetra",
             price=100.0,
@@ -665,6 +676,7 @@ def test_lesepfad_per_symbol_loest_bekanntes_instrument_nicht_neu_auf(
         QuoteResponse(
             identity=ListedIdentityOut(ticker="IS3M", mic="XETR", isin="IE00BCRY6557"),
             symbol="IS3M.DE",
+            name="IS3M.DE Testpapier",
             currency="EUR",
             exchange="Xetra",
             price=100.0,
@@ -712,6 +724,7 @@ class _RecordingCall:
     def _response_for(self, symbol: str) -> QuoteResponse:
         return QuoteResponse(
             symbol=symbol,
+            name="Testpapier",
             identity=ListedIdentityOut(
                 ticker=symbol.split(".")[0], mic="XETR", isin="IE00B4L5Y983"
             ),
@@ -740,6 +753,7 @@ class _RecordingCall:
         instrument_type: str | None = None,
         identity: object | None = None,
         enrich_etf: bool = True,
+        name: str | None = None,
     ) -> QuoteResponse:
         self.known_calls += 1
         self.seen_isin = isin
@@ -764,6 +778,7 @@ def test_refresh_per_symbol_reicht_die_gespeicherte_zeile_durch(
         QuoteResponse(
             identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
             symbol="EUNL.DE",
+            name="EUNL.DE Testpapier",
             currency="EUR",
             exchange="Xetra",
             price=128.7,
@@ -915,6 +930,7 @@ def _maintained_etf(fetched_at: str) -> QuoteResponse:
     """Ein ETF mit vollständigem, aus der Quelle stammendem Metadatenstand."""
     return QuoteResponse(
         symbol="VGWL.DE",
+        name="VGWL.DE Testpapier",
         identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
         currency="EUR",
         price=160.98,
@@ -933,6 +949,7 @@ def _incomplete_response(fetched_at: str, price: float) -> QuoteResponse:
     """Frischer Kurs ohne ETF-Extras — justETF wurde nicht gefragt."""
     return QuoteResponse(
         symbol="VGWL.DE",
+        name="VGWL.DE Testpapier",
         identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
         currency="EUR",
         price=price,

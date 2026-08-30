@@ -18,6 +18,7 @@ class FakeQuoteService:
         return QuoteResponse(
             identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin=isin),
             symbol="VGWL.DE",
+            name="VGWL.DE Testpapier",
             currency="EUR",
             price=200.0,
             quote_time="2026-07-12T20:00:00+00:00",
@@ -103,6 +104,7 @@ def test_set_isin_service(repo: QuoteRepository) -> None:
         QuoteResponse(
             identity=ListedIdentityOut(ticker="BRYN", mic="XETR", isin=None),
             symbol="BRYN.DE",
+            name="BRYN.DE Testpapier",
             currency="EUR",
             price=430.0,
             quote_time="t",
@@ -128,6 +130,7 @@ def test_set_isin_konflikt(repo: QuoteRepository) -> None:
         QuoteResponse(
             identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
             symbol="VGWL.DE",
+            name="VGWL.DE Testpapier",
             currency="EUR",
             price=1.0,
             quote_time="t",
@@ -139,6 +142,7 @@ def test_set_isin_konflikt(repo: QuoteRepository) -> None:
         QuoteResponse(
             identity=ListedIdentityOut(ticker="BRYN", mic="XETR", isin=None),
             symbol="BRYN.DE",
+            name="BRYN.DE Testpapier",
             currency="EUR",
             price=1.0,
             quote_time="t",

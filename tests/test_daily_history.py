@@ -29,6 +29,7 @@ def _seed(
     repo.save_quote(
         QuoteResponse(
             symbol=symbol,
+            name="Testpapier",
             identity=ListedIdentityOut(
                 ticker=symbol.split(".")[0], mic="XETR", isin=isin
             ),
@@ -246,6 +247,7 @@ def test_tagespunkt_ohne_jede_waehrung_wird_zum_fehler(repo: QuoteRepository) ->
         QuoteResponse(
             identity=ListedIdentityOut(ticker="VGWL", mic="XETR", isin="IE00B3RBWM25"),
             symbol="VGWL.DE",
+            name="VGWL.DE Testpapier",
             currency="EUR",
             price=100.0,
             quote_time="2026-07-13T10:00:00+00:00",

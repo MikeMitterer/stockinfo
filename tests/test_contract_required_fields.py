@@ -288,6 +288,102 @@ def test_name_und_gattung_stehen_dort_als_pflicht() -> None:
     assert resolved.get("instrument_type", {}).get("required") is True, resolved
 
 
+# ─── Matrix #7 · die REST-Zusage zieht mit (Mike, 2026-08-30) ─────────────────
+
+
+@pytest.mark.parametrize(
+    ("model", "field_name"),
+    [
+        ("quote", "name"),
+        ("quote", "type"),
+        ("instrument", "name"),
+        ("instrument", "type"),
+    ],
+)
+def test_der_rest_vertrag_sagt_name_und_gattung_zu(model: str, field_name: str) -> None:
+    """**Die sichtbare Hälfte von T-38** — entschieden von Mike am 2026-08-30.
+
+    Der Plugin-Vertrag verlangt beide Felder von einer Quelle. Diese Zeile
+    verlangt sie von der **App gegenüber ihrem Konsumenten**: Jede Antwort
+    trägt Name und Gattung, oder es gibt keine Antwort.
+
+    Der Unterschied ist keine Formsache. Ein Konsument, der `name` als
+    optional liest, baut eine Oberfläche, die mit dem leeren Fall umgehen
+    muss — und zeigt dann genau das leere Feld, wegen dem dieses Ticket
+    existiert. Eine Zusage, die immer gilt, nimmt ihm diesen Fall ab.
+    """
+    from app.contract import core_contract
+
+    declared = {
+        entry["name"]: entry for entry in core_contract()["core"][model]
+    }
+
+    assert declared[field_name]["required"] is True, (
+        f"{model}.{field_name} steht im Artefakt weiter als optional — "
+        "GET /fields verspräche dann etwas anderes als die App liefert"
+    )
+
+
+def test_der_versionssprung_ist_ehrlich_gemacht() -> None:
+    """Optional → Pflicht ist laut eigener Regel **breaking**, also Major.
+
+    Die Regel steht im Vertragsartefakt und im Schnappschuss-Wächter. Sie hier
+    noch einmal zu prüfen ist keine Doppelung: Der Wächter merkt, *dass* sich
+    etwas geändert hat, und verlangt eine Entscheidung. Dieser Test hält fest,
+    **welche** getroffen wurde — sonst stünde die Begründung nur in einer
+    Commit-Nachricht, die niemand beim Lesen des Vertrags sieht.
+    """
+    from app.contract import core_version
+
+    major = core_version().split(".")[0]
+
+    assert int(major) >= 4, (
+        f"core_version steht auf {core_version()}. Mit `quote.name` und "
+        "`quote.type` wird ein optionales Feld zum Pflichtfeld — nach der "
+        "eigenen Regel ein Bruch und damit ein Major-Sprung"
+    )
+
+
+def test_eine_zeile_ohne_namen_liefert_einen_grund_statt_eines_absturzes(
+    tmp_path: Path,
+) -> None:
+    """Der Preis der Zusage — und dass er bezahlbar bleibt.
+
+    **Eine strengere Zusage kann eine Antwort unmöglich machen**, und das ist
+    hier ausdrücklich in Kauf genommen (Mike, 2026-08-30). Der Unterschied
+    zwischen „in Kauf genommen" und „kaputt" liegt darin, was der Aufrufer
+    sieht: eine typisierte Auskunft mit Grund, oder ein 500 aus einem
+    Validierungsfehler zwei Schichten tiefer.
+
+    Die Vorabprüfung `require_core_values` gibt es genau dafür seit T-21; sie
+    liest ihre Feldliste aus dem Artefakt. Dieser Test belegt, dass sie auch
+    für die **neuen** Pflichtfelder greift — ohne dass jemand sie dort
+    nachträgt.
+    """
+    client, _ = _chain(
+        str(tmp_path / "namenlos.db"), _SilentlyIncomplete(None, "etf")
+    )
+    try:
+        response = client.get(f"/quote/{_ISIN}")
+
+        # **Hier stand zuerst `< 500`, und das war zu grob formuliert.** Gemeint
+        # war „kein Absturz"; geschrieben stand „kein Serverfehler". Der
+        # Unterschied zählt: `502` ist die **richtige** Antwort — die Quelle war
+        # unbrauchbar, nicht die Anfrage falsch —, und sie liegt nun einmal über
+        # 500. Ein Orakel, das die richtige Antwort verbietet, misst seine
+        # eigene Formulierung.
+        #
+        # Die Zusicherung lautet deshalb genau: **eine typisierte Ablehnung mit
+        # Kennung**, nicht ein `500` aus einem Validierungsfehler zwei
+        # Schichten tiefer.
+        assert response.status_code == 502, response.text
+        assert response.json().get("code"), (
+            f"die Ablehnung trägt keine Kennung: {response.text}"
+        )
+    finally:
+        app.dependency_overrides.clear()
+
+
 # ─── Matrix #8 · die eingebauten Quellen ──────────────────────────────────────
 
 

@@ -47,6 +47,7 @@ class _QuoteSource:
         # zurückgewinnen.
         return RawQuote(
             symbol=instrument.symbol,
+            name=f"{instrument.symbol} Testpapier",
             price=101.0,
             quote_time="2026-08-27T17:00:00+00:00",
             currency="USD",

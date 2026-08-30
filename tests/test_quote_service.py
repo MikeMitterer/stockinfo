@@ -100,6 +100,16 @@ def _resolved(symbol: str, **fields) -> ResolvedInstrument:
         symbol=symbol,
         ticker=fields.pop("ticker", ticker),
         mic=fields.pop("mic", mic),
+        # **Name und Gattung ebenso, seit T-38** — und aus demselben Grund wie
+        # `ticker`/`mic` oben. Eine Auflösung ohne sie gibt es seither nicht
+        # mehr: Der Resolver liefert beide oder antwortet `NotFound`, und eine
+        # Vorrichtung, die weniger weiß als die Wirklichkeit, prüft einen Fall,
+        # den es nicht gibt.
+        #
+        # Wo das Fehlen selbst der Prüfgegenstand ist, steht es weiterhin
+        # ausdrücklich im Test — ein ausdrücklich übergebener Wert gewinnt.
+        name=fields.pop("name", f"{ticker or symbol} Testpapier"),
+        type=fields.pop("type", "etf"),
         **fields,
     )
 
@@ -125,6 +135,7 @@ class FakeResolver:
 def _etf_quote() -> RawQuote:
     return RawQuote(
         symbol="VGWL.DE",
+        name="VGWL.DE Testpapier",
         price=160.98,
         quote_time="2026-07-12T17:35:00+00:00",
         currency="EUR",
@@ -160,6 +171,7 @@ def test_etf_wird_mit_justetf_angereichert() -> None:
 def test_aktie_wird_nicht_angereichert() -> None:
     stock = RawQuote(
         symbol="BRYN.DE",
+        name="BRYN.DE Testpapier",
         price=430.05,
         quote_time="2026-07-12T17:35:00+00:00",
         currency="EUR",
@@ -237,6 +249,7 @@ def test_kein_kurs_wirft_unavailable() -> None:
 def test_gbp_pence_wird_originalgetreu_uebernommen() -> None:
     pence = RawQuote(
         symbol="EQQQ.L",
+        name="EQQQ.L Testpapier",
         price=54211.0,
         quote_time="2026-07-12T17:35:00+00:00",
         currency="GBp",
@@ -278,6 +291,7 @@ def test_die_fondswaehrung_blutet_nicht_in_die_handelswaehrung() -> None:
     """
     euro_quote = RawQuote(
         symbol="VGWL.DE",
+        name="VGWL.DE Testpapier",
         price=160.98,
         quote_time="2026-07-12T17:35:00+00:00",
         currency="EUR",
@@ -310,6 +324,7 @@ def test_preis_ohne_waehrung_ist_kein_verwertbarer_kurs() -> None:
     """
     without_currency = RawQuote(
         symbol="VGWL.DE",
+        name="VGWL.DE Testpapier",
         price=160.98,
         quote_time="2026-07-12T17:35:00+00:00",
         currency=None,
@@ -348,6 +363,7 @@ def _lvmh_quote_with_foreign_isin() -> RawQuote:
     """
     return RawQuote(
         symbol="MC.PA",
+        name="MC.PA Testpapier",
         price=487.5,
         quote_time="2026-08-19T17:35:00+00:00",
         currency="EUR",
@@ -400,6 +416,7 @@ def test_uebereinstimmende_isin_wird_nicht_protokolliert() -> None:
     """Der Normalfall bleibt still — sonst warnt das Log bei jedem Abruf."""
     matching = RawQuote(
         symbol="MC.PA",
+        name="MC.PA Testpapier",
         price=487.5,
         quote_time="2026-08-19T17:35:00+00:00",
         currency="EUR",
@@ -480,6 +497,7 @@ def test_eine_aktie_gilt_als_vollstaendig() -> None:
     """
     stock_quote = RawQuote(
         symbol="APC.DE",
+        name="APC.DE Testpapier",
         price=262.95,
         quote_time="2026-07-12T17:35:00+00:00",
         currency="EUR",
@@ -496,17 +514,30 @@ def test_eine_aktie_gilt_als_vollstaendig() -> None:
     assert service.get_quote_by_isin("US0378331005").metadata_complete is True
 
 
-def test_unbekannte_gattung_gilt_nicht_als_vollstaendig() -> None:
-    """Ohne Gattung weiß die Antwort nichts über die ETF-Felder — und sagt das.
+def test_ohne_gattung_gibt_es_gar_keine_antwort() -> None:
+    """**Auch diese Zusage hat T-38 umgedreht, und zwar verschärfend.**
 
-    Der ETF-Zweig entscheidet über `metadata_complete`; wird er übersprungen,
-    blieb das Feld auf seiner Vorgabe ``True``, und das Repository durfte den
-    gepflegten justETF-Stand mit nichts überschreiben. Yahoo liefert nicht
-    immer einen ``quote_type``, und der Resolver ist nicht auf jedem Weg dabei
-    — dann steht hier ``None``, und „vollständig" wäre eine Behauptung.
+    Vorher hieß der Test `…gilt_nicht_als_vollstaendig` und prüfte, dass eine
+    Antwort **ohne** Gattung wenigstens ehrlich `metadata_complete=False`
+    trägt. Das war die beste erreichbare Aussage, solange `type` optional war:
+    Der ETF-Zweig wird ohne Gattung übersprungen, und das Feld blieb sonst auf
+    seiner Vorgabe ``True`` stehen — das Repository durfte dann einen
+    gepflegten justETF-Stand mit nichts überschreiben.
+
+    Seit Mikes Entscheidung vom 2026-08-30 ist `type` im REST-Vertrag Pflicht.
+    Damit gibt es diese Lage nicht mehr: Eine Antwort ohne Gattung entsteht
+    gar nicht erst, sondern wird als unvollständig abgewiesen — mit Grund, und
+    bevor irgendetwas gespeichert wird.
+
+    **Die alte Zusicherung ist damit nicht gelöscht, sondern überholt.** Sie
+    schützte den gespeicherten Stand vor einer halben Antwort; jetzt kommt die
+    halbe Antwort nicht mehr bis dorthin. `metadata_complete` bleibt für den
+    Fall zuständig, dass die Gattung *bekannt* ist und die Metadatenquelle
+    nichts geliefert hat — der Test darüber deckt ihn ab.
     """
     without_type = RawQuote(
         symbol="VGWL.DE",
+        name="VGWL.DE Testpapier",
         price=160.98,
         quote_time="2026-07-12T17:35:00+00:00",
         currency="EUR",
@@ -515,10 +546,19 @@ def test_unbekannte_gattung_gilt_nicht_als_vollstaendig() -> None:
     service = QuoteService(
         FakeQuoteProvider(without_type),
         FakeEtfProvider(EtfDetails(ter=0.19, provider="Vanguard")),
-        FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25")),
+        # **`type=None` steht hier ausdrücklich.** Seit T-38 bringt `_resolved`
+        # eine Gattung mit — richtig für den Normalfall und falsch für diesen:
+        # Der Prüfgegenstand *ist* ihre Abwesenheit.
+        FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25", type=None)),
     )
 
-    assert service.get_quote_by_isin("IE00B3RBWM25").metadata_complete is False
+    with pytest.raises(QuoteUnavailableError) as refused:
+        service.get_quote_by_isin("IE00B3RBWM25")
+
+    assert "type" in str(refused.value), (
+        "die Ablehnung nennt das fehlende Feld nicht — dann weiß der Betreiber "
+        f"nicht, welche Quelle er ansehen muss: {refused.value}"
+    )
 
 
 def test_europaeischer_etf_ohne_isin_bleibt_geschuetzt() -> None:
@@ -531,6 +571,7 @@ def test_europaeischer_etf_ohne_isin_bleibt_geschuetzt() -> None:
     """
     etf_without_isin = RawQuote(
         symbol="VGWL.DE",
+        name="VGWL.DE Testpapier",
         price=160.98,
         quote_time="2026-07-12T17:35:00+00:00",
         currency="EUR",
@@ -549,6 +590,7 @@ def test_die_zustaendigkeit_bekommt_boerse_und_waehrung_mit() -> None:
     """Ohne die beiden Angaben kann die Quelle ohne ISIN nichts entscheiden."""
     etf = RawQuote(
         symbol="XIC.TO",
+        name="XIC.TO Testpapier",
         price=41.2,
         quote_time="2026-08-21T20:00:00+00:00",
         currency="CAD",
@@ -569,6 +611,7 @@ def test_die_zustaendigkeit_bekommt_boerse_und_waehrung_mit() -> None:
 def _us_etf_quote() -> RawQuote:
     return RawQuote(
         symbol="VTI",
+        name="VTI Testpapier",
         price=291.4,
         quote_time="2026-08-19T20:00:00+00:00",
         currency="USD",
@@ -636,6 +679,7 @@ def test_etf_ohne_isin_aber_mit_waehrung_ist_beantwortbar() -> None:
         FakeQuoteProvider(
             RawQuote(
                 symbol="ARKK", price=61.2, quote_time="2026-08-19T20:00:00+00:00",
+                name="ARKK Testpapier",
                 currency="USD", type="etf",
             )
         ),
@@ -667,6 +711,7 @@ def test_ohne_waehrung_kommt_die_zustaendigkeitsfrage_gar_nicht_auf() -> None:
         FakeQuoteProvider(
             RawQuote(
                 symbol="ARKK", price=61.2, quote_time="2026-08-19T20:00:00+00:00",
+                name="ARKK Testpapier",
                 currency=None, type="etf",
             )
         ),
@@ -753,6 +798,10 @@ def test_ohne_metadatenbeitrag_bleibt_die_herkunft_leer() -> None:
     """
     without_metadata = RawQuote(
         symbol="RY.TO",
+        # **Ohne `name`, und das ist der Prüfgegenstand.** Ein Name wäre bereits
+        # ein Metadatenbeitrag; der Sammellauf, der die übrigen Fixtures seit
+        # T-38 mit Namen versorgt hat, hätte diesen Test hier stillschweigend
+        # umgedreht.
         price=283.4,
         quote_time="2026-08-27T21:00:00+00:00",
         currency="CAD",

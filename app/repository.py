@@ -765,10 +765,22 @@ class QuoteRepository:
         meta = {**meta, **self._identity_update(connection, existing_id, response)}
         # Ab hier wird **aktualisiert**, nicht angelegt: Was die Antwort nicht
         # weiß, bleibt stehen. Siehe `KEEP_IF_UNKNOWN`.
+        #
+        # **`not value` statt `value is not None`, seit T-38** — und der
+        # Unterschied ist gemessen, nicht vorsorglich. Solange `name` nullbar
+        # war, hieß „weiß ich nicht" immer ``None``, und die Prüfung stimmte.
+        # Mit dem Pflichtfeld gibt es diesen Wert nicht mehr; was bleibt, ist
+        # der **leere String** — konstruierbar, für das Repository von einer
+        # Auskunft nicht zu unterscheiden, und er hat den gespeicherten Namen
+        # überschrieben. Genau der Befund aus dem UI-Lauf, nur eine Schicht
+        # tiefer und mit anderem Vorzeichen.
+        #
+        # Ein Pflichtfeld verhindert das Weglassen, nicht das Füllen mit
+        # nichts. Diese Zeile schließt die zweite Hälfte.
         meta = {
             field: value
             for field, value in meta.items()
-            if value is not None or field not in KEEP_IF_UNKNOWN
+            if value or field not in KEEP_IF_UNKNOWN
         }
 
         assignments = ", ".join(f"{field} = ?" for field in meta)

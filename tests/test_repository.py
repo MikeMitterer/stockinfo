@@ -473,6 +473,7 @@ def test_erfolgreiche_anreicherung_darf_felder_weiterhin_leeren(
         QuoteResponse(
             identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
             symbol="EUNL.DE",
+            name="EUNL.DE Testpapier",
             currency="EUR",
             type="etf",
             price=128.7,
@@ -486,6 +487,7 @@ def test_erfolgreiche_anreicherung_darf_felder_weiterhin_leeren(
         QuoteResponse(
             identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
             symbol="EUNL.DE",
+            name="EUNL.DE Testpapier",
             currency="EUR",
             type="etf",
             price=129.1,
@@ -520,7 +522,12 @@ def test_erster_insert_mit_unvollstaendigen_metadaten(repo: QuoteRepository) -> 
         QuoteResponse(
             identity=ListedIdentityOut(ticker="GOLD", mic="XSTU", isin=None),
             symbol="GOLD.SG",
-            type=None,
+            name="GOLD.SG Testpapier",
+            # **Die Gattung war hier nur beiläufig leer.** Geprüft wird die
+            # Platzhalterzahl des INSERT bei `metadata_complete=False`, nicht
+            # das Fehlen des Typs; seit T-38 ist er Pflicht, und ein Stuttgarter
+            # Gold-Tracker ist ohnehin ein `etc`.
+            type="etc",
             currency="EUR",
             price=122.41,
             quote_time="2026-08-19T10:00:00+00:00",
@@ -562,7 +569,10 @@ def test_ein_papier_ohne_handelsplatz_wird_nicht_angelegt(
             QuoteResponse(
                 identity=ListedIdentityOut(ticker="BTC", mic="US", isin=None),
                 symbol="BTC-USD",
-                type=None,
+                name="BTC-USD Testpapier",
+                # Ebenfalls beiläufig: Abgelehnt wird wegen des Sammelcodes
+                # `US` als MIC, nicht wegen der Gattung.
+                type="crypto",
                 currency="USD",
                 price=61234.0,
                 quote_time="2026-08-19T10:00:00+00:00",
@@ -589,6 +599,7 @@ def test_unvollstaendige_antwort_setzt_den_metadaten_zeitstempel_nicht_hoch(
         QuoteResponse(
             identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
             symbol="EUNL.DE",
+            name="EUNL.DE Testpapier",
             currency="EUR",
             type="etf",
             price=128.7,
@@ -602,6 +613,7 @@ def test_unvollstaendige_antwort_setzt_den_metadaten_zeitstempel_nicht_hoch(
         QuoteResponse(
             identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
             symbol="EUNL.DE",
+            name="EUNL.DE Testpapier",
             currency="EUR",
             type="etf",
             price=129.1,
@@ -624,6 +636,7 @@ def test_erster_insert_ohne_metadaten_gilt_sofort_als_faellig(
         QuoteResponse(
             identity=ListedIdentityOut(ticker="EUNL", mic="XETR", isin="IE00B4L5Y983"),
             symbol="EUNL.DE",
+            name="EUNL.DE Testpapier",
             currency="EUR",
             type="etf",
             price=128.7,
@@ -856,7 +869,7 @@ def test_ein_refresh_loescht_den_namen_nicht(repo: QuoteRepository) -> None:
     """
 
     def response_for(
-        name: str | None, instrument_type: str | None, price: float, hour_of_day: int
+        name: str, instrument_type: str, price: float, hour_of_day: int
     ) -> QuoteResponse:
         return QuoteResponse(
             symbol="EUNL.DE",
@@ -874,7 +887,14 @@ def test_ein_refresh_loescht_den_namen_nicht(repo: QuoteRepository) -> None:
 
     # Ein Kurs-Refresh: Er kennt weder Namen noch Gattung, weil der Vertrag
     # sie im Kurs gar nicht vorsieht.
-    repo.save_quote(response_for(None, None, 129.0, 11))
+    #
+    # **Der leere String statt `None`, und das ist seit T-38 die schärfere
+    # Fassung.** `name` ist im Modell nicht mehr nullbar — der alte Fall lässt
+    # sich gar nicht mehr bauen. Das ist aber kein Grund, diese Zusicherung zu
+    # streichen: `""` bleibt konstruierbar und ist genau die Lücke, die ein
+    # Pflichtfeld **nicht** schließt. Ein Wert, der nichts enthält, sieht dem
+    # Repository gegenüber aus wie eine Auskunft und ist keine.
+    repo.save_quote(response_for("", "", 129.0, 11))
 
     stored = repo.get_instrument_by_isin("IE00B4L5Y983")
     assert stored is not None

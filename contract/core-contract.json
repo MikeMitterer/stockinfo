@@ -1,5 +1,5 @@
 {
-  "core_version": "3.1.0",
+  "core_version": "4.0.0",
   "details_version": 0,
   "generation": {
     "endpoint": "/generation",
@@ -167,13 +167,13 @@
       {
         "name": "name",
         "kind": "string",
-        "required": false,
+        "required": true,
         "meaning": "Name des Wertpapiers."
       },
       {
         "name": "type",
         "kind": "string",
-        "required": false,
+        "required": true,
         "meaning": "Gattung: 'stock' oder 'etf'. null heißt 'unbekannt', nicht 'keine'."
       },
       {
@@ -283,13 +283,13 @@
       {
         "name": "name",
         "kind": "string",
-        "required": false,
+        "required": true,
         "meaning": "Name des Wertpapiers."
       },
       {
         "name": "type",
         "kind": "string",
-        "required": false,
+        "required": true,
         "meaning": "Gattung: 'stock' oder 'etf'."
       },
       {

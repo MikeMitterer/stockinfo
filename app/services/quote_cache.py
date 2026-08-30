@@ -412,6 +412,7 @@ class CachedQuoteService:
                     isin=instrument.get("isin"),
                     exchange=instrument.get("exchange"),
                     instrument_type=instrument.get("type"),
+                    name=instrument.get("name"),
                     identity=identity_from_columns(instrument),
                     enrich_etf=True,
                 )
@@ -438,6 +439,7 @@ class CachedQuoteService:
                     isin=instrument.get("isin"),
                     exchange=instrument.get("exchange"),
                     instrument_type=instrument.get("type"),
+                    name=instrument.get("name"),
                     identity=identity_from_columns(instrument),
                     # Der Griff zum einzelnen Papier übergeht die Metadaten-TTL
                     # bewusst — siehe `refresh_one`.
@@ -762,6 +764,7 @@ class CachedQuoteService:
                 isin=instrument.get("isin"),
                 exchange=instrument.get("exchange"),
                 instrument_type=instrument.get("type"),
+                name=instrument.get("name"),
                 identity=identity_from_columns(instrument),
                 enrich_etf=enrich,
             )
@@ -862,6 +865,8 @@ class CachedQuoteService:
             PrecheckedCoreValues(
                 identity=identity,
                 currency=quote["currency"] or instrument["currency"],
+                name=instrument["name"],
+                type=instrument["type"],
             ),
         )
         response = QuoteResponse(
