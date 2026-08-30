@@ -386,14 +386,8 @@ class DailyAdapter(_Adapter):
                 }
                 for bar in answer.bars
             ]
-        # **`NotFound` ergab hier bis T-41 ebenfalls `[]`**, und das war eine
-        # Verwechslung mit Folgen: „dieses Papier führe ich nicht" wurde zu
-        # „dieses Papier hat keine Kurse". Für eine einzelne Quelle sah das
-        # gleich aus; in einer Kette stoppte es die Suche bei der ersten
-        # Quelle, die das Papier nicht kennt — und `DailyCloseSync` rückte
-        # sein Wasserzeichen vor, ohne dass jemand etwas geholt hatte.
-        #
-        # Jeder Nicht-Treffer ist deshalb `None`: die nächste Quelle ist dran.
+        # Jeder Nicht-Treffer ist `None`: Die nächste Quelle ist dran, und das
+        # Wasserzeichen bleibt stehen, solange keine Quelle Auskunft gab.
         return None
 
 

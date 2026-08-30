@@ -106,7 +106,7 @@ def test_die_vorgaben_unterscheiden_sich_nur_an_den_resolvern() -> None:
     }
 
 
-# ─── Die Kaskaden erreichen ihre Verbraucher (T-41) ───────────────────────────
+# ─── Die Kaskaden erreichen ihre Verbraucher ──────────────────────────────────
 
 
 class _Placeholder(QuoteSource):
@@ -167,10 +167,9 @@ def test_alle_konfigurierten_kursquellen_erreichen_den_dienst(
 ) -> None:
     """**Die Zusage des Tickets, an der Wurzel gemessen.**
 
-    `sources.yaml` erlaubt für `quotes` seit T-22 mehrere Quellen; die
-    Composition-Root nahm bis T-41 nur die erste. Ein Test, der den Typ des
-    Ergebnisses prüft, sagt darüber nichts — geprüft wird deshalb, **wer** in
-    der Kette steht und in welcher Reihenfolge.
+    Ein Test, der nur den Typ des Ergebnisses prüft, sagt über die Verdrahtung
+    nichts — geprüft wird deshalb, **wer** in der Kette steht und in welcher
+    Reihenfolge.
     """
     from app.container import _market_chain
 
@@ -200,9 +199,8 @@ def test_alle_konfigurierten_kursquellen_erreichen_den_dienst(
 def test_eine_leere_kette_bleibt_ein_startfehler(monkeypatch, tmp_path: Path) -> None:
     """Ohne Quelle kann die App ihre Hauptaufgabe nicht erfüllen — und sagt das.
 
-    Der Fehler bestand vor T-41 und bleibt: Ein eingebauter Ersatz würde die
-    Konfiguration hinter dem Rücken des Betreibers überstimmen. Nur die
-    Meldung spricht jetzt von einer Kette statt von einer ersten Quelle.
+    Ein eingebauter Ersatz würde die Konfiguration hinter dem Rücken des
+    Betreibers überstimmen.
     """
     from app.container import _market_chain
 

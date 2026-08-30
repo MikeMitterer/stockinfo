@@ -163,7 +163,7 @@ def test_die_herkunft_ueberlebt_auch_einen_stale_treffer(
     assert stale.source == "fx-file"
 
 
-# ─── Die konfigurierte Reihenfolge wird abgefragt (T-41) ──────────────────────
+# ─── Die konfigurierte Reihenfolge wird abgefragt ─────────────────────────────
 
 
 class _NamedFx(_FakeFx):
@@ -268,7 +268,7 @@ def test_ohne_cache_bleibt_der_typisierte_fehler(repo: QuoteRepository) -> None:
 
 
 def test_eine_einzelne_quelle_bleibt_zulaessig(repo: QuoteRepository) -> None:
-    """Die alte Aufrufform bleibt gültig — sie steht in jedem bisherigen Test.
+    """Eine einzelne Quelle bleibt als direkte Aufrufform gültig.
 
     Eine Signaturänderung, die jeden Aufrufer bricht, wäre für dieselbe
     Wirkung teurer; die Kaskade ist eine Erweiterung, kein Umbau.

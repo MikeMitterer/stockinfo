@@ -72,17 +72,13 @@ class CachedFxService:
         **Anders als beim Kurs ist das hier wirklich der Kurslieferant.** Der
         Vertrag sagt für `fx.source` ausdrücklich „Woher der Kurs stammt" —
         nicht „woher die Metadaten kommen" wie bei `quote.source`. Die beiden
-        Felder heißen gleich und bedeuten Verschiedenes; genau daran ist der
-        erste Anlauf in T-37 gescheitert, der sie über einen Kamm schor.
+        Felder heißen gleich und bedeuten Verschiedenes. Der Rückfall aus
+        `declared_name` ist bewusst ``None``: Ein Ersatzwort wäre keine
+        belastbare Herkunft und stünde unübersetzt in der Oberfläche.
 
-        Hier stand ebenfalls ``"yfinance"`` fest, und im Dateiprofil antwortet
-        `yaml-file`. Der Rückfall kommt aus `declared_name` und ist ``None``:
-        ein deutsches Ersatzwort stünde unübersetzt in der englischen
-        Oberfläche.
-
-        **Seit T-41 sagt der Name der ersten Quelle nichts mehr über den
-        Lieferanten** — deshalb steht die Herkunft im Fetch als lokale
-        Variable neben dem Kurs und nicht in einem Feld. Ein „letzter
+        **Der Name der ersten Quelle sagt nichts über den Lieferanten** —
+        deshalb steht die Herkunft im Fetch als lokale Variable neben dem
+        Kurs und nicht in einem Feld. Ein „letzter
         Lieferant" am Dienst wäre veränderlicher Zustand: Zwei gleichzeitige
         Anfragen schrieben sich gegenseitig die Herkunft um, und der Fehler
         fiele erst bei Last auf.
@@ -115,10 +111,7 @@ class CachedFxService:
 
     def _fetch_or_fallback(self, base: str, quote: str, cached: dict | None) -> FxRate:
         """Beschafft live; liefert bei Fehlschlag den Cache stale oder wirft."""
-        # **Die Reihenfolge aus `sources.yaml` wird wirklich abgefragt.** Bis
-        # T-41 fragte der Dienst genau eine Quelle; eine dahinter
-        # konfigurierte Datei kam nie an die Reihe.
-        #
+        # **Die Reihenfolge aus `sources.yaml` wird wirklich abgefragt.**
         # Der Lieferant steht **hier**, neben dem Kurs, und nicht in einem
         # Feld am Dienst: Zwei gleichzeitige Anfragen schrieben sich sonst
         # gegenseitig die Herkunft um, und ein Kurs trüge den Namen einer

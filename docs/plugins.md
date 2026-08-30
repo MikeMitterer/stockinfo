@@ -131,10 +131,7 @@ quotes: [yfinance, yaml-file]
 
 Das ist ein Rückfall und liest sich auch so: Online gewinnt, wo es einen Kurs
 gibt; die gepflegte Datei springt nur dort ein, wo keiner kommt — bei einer
-Anleihe etwa, die online kein Papier mit Kurs ist. **Bis Version 0.6 stimmte
-das nicht:** Für `quotes`, `daily` und `fx` nahm die App die erste
-einsatzbereite Quelle und fragte keine weitere; die Zeile oben sah aus wie ein
-Rückfall und war keiner.
+Anleihe etwa, die online kein Papier mit Kurs ist.
 
 Drei Feinheiten, die man beim Eintragen kennen sollte:
 

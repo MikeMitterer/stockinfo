@@ -778,7 +778,7 @@ def test_eine_nicht_deklarierte_gattung_erreicht_die_metadatenquelle_nicht() -> 
     assert source.asked == 1, "die deklarierte Gattung wird sehr wohl gefragt"
 
 
-# ─── Die Vertragsunterscheidung der Historienrolle (T-41) ─────────────────────
+# ─── Die Vertragsunterscheidung der Historienrolle ────────────────────────────
 
 
 @pytest.mark.parametrize(
@@ -801,15 +801,10 @@ def test_eine_nicht_deklarierte_gattung_erreicht_die_metadatenquelle_nicht() -> 
     ],
 )
 def test_nur_eine_reihe_ist_eine_auskunft(answer, expected, why: str) -> None:
-    """**`NotFound` ergab hier bis T-41 ebenfalls `[]`.**
+    """Nur `DailySeries` ist eine Auskunft, einschließlich der leeren Reihe.
 
-    Die Verwechslung hatte zwei Folgen, und beide fielen bei einer einzelnen
-    Quelle nicht auf. In einer Kette stoppte sie die Suche bei der ersten
-    Quelle, die das Papier nicht kennt. Und `DailyCloseSync` rückte sein
-    Wasserzeichen vor, ohne dass jemand etwas geholt hatte — danach galt ein
-    Zeitraum als abgefragt, den nie jemand gesehen hat.
-
-    Die leere Reihe bleibt `[]`: Sie ist eine Auskunft, nur eine leere.
+    Nicht-Treffer fallen weiter und dürfen das Wasserzeichen nicht vorrücken.
+    Eine leere Reihe bleibt `[]`: Sie ist eine Auskunft, nur eine leere.
     """
 
     class _Source(DailyCloseSource):

@@ -61,8 +61,8 @@ providers:
 #     # sind ein Ort, an dem sie fehlt.
 #     path: /data/assets.yaml
 #
-# **Oder die Datei hinter die Online-Quellen hängen** — seit 0.6 fragt jede
-# Rolle ihre Kette der Reihe nach:
+# **Oder die Datei hinter die Online-Quellen hängen** — jede Rolle fragt ihre
+# Kette der Reihe nach:
 #
 # resolvers: [openfigi, yahoo-search, yaml-file]
 # quotes:    [yfinance, yaml-file]

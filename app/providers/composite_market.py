@@ -1,9 +1,8 @@
 """Kurs- und Historienquellen der Reihe nach fragen.
 
-`sources.yaml` erlaubt für `quotes` und `daily` seit T-22 mehrere Quellen.
-Ausgeführt wurde davon nur die erste: Eine Anleihe ohne Online-Kurs erreichte
-das dahinter konfigurierte `yaml-file` nie, und der Benutzer sah ein Papier
-ohne Preis, obwohl der Wert in seiner Datei stand.
+`sources.yaml` legt für `quotes` und `daily` mehrere Quellen in verbindlicher
+Reihenfolge fest. Eine Anleihe ohne Online-Kurs kann so das dahinter
+konfigurierte `yaml-file` erreichen.
 
 **Zwei schmale Klassen statt einer allgemeinen Kette.** Die beiden Rollen
 sehen sich ähnlich und unterscheiden sich an genau der Stelle, auf die es
@@ -49,11 +48,9 @@ class _Chain:
     def name(self) -> str:
         """Der Name der **ersten** Quelle.
 
-        Das Protokoll verlangt einen Namen seit T-37. „composite" zu nennen
-        hülfe niemandem: Wo der Name auftaucht, soll ein Betreiber eine Quelle
-        wiedererkennen, die er selbst eingetragen hat. Welche Quelle eine
-        einzelne Antwort geliefert hat, steht an der Antwort — nicht an der
-        Kette.
+        Das Protokoll verlangt einen Namen. „composite" zu nennen hülfe
+        niemandem: Wo der Name auftaucht, soll ein Betreiber eine Quelle
+        wiedererkennen, die er selbst eingetragen hat.
         """
         return getattr(self._providers[0], "name", "unbekannt")
 
@@ -106,8 +103,8 @@ class CompositeDailyCloseProvider(_Chain):
         Args:
             symbol: Das Anbieter-Symbol.
             start: Untere Grenze, falls gesetzt.
-            identity: Die Identität des Papiers — seit T-23 nötig, weil das
-                Symbol allein die Börse nicht eindeutig nennt.
+            identity: Die Identität des Papiers; das Symbol allein nennt die
+                Börse nicht immer eindeutig.
             instrument_type: Die Gattung, falls bekannt.
 
         Returns:

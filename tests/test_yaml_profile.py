@@ -22,10 +22,9 @@ Ticket ein Format, das niemand mehr prüft.
 Lauf mit Augen; ein grüner Test hier ersetzt ihn nicht und behauptet es auch
 nicht.
 
-Die Zeilen `#3`, `#4` und `#7` verlangten eine Kaskade für `quotes`, `daily`
-und `fx`, die es in der App nicht gab; sie waren als T-41 abgespalten. Seit
-dieser Kaskade stehen sie unten im eigenen Abschnitt — durch den öffentlichen
-Weg geprüft, mit unterscheidbaren Werten statt Typprüfungen.
+Die Zeilen `#3`, `#4` und `#7` prüfen die Kaskaden für `quotes`, `daily` und
+`fx` unten durch den öffentlichen Weg, mit unterscheidbaren Werten statt
+Typprüfungen.
 """
 
 from collections.abc import Iterator
@@ -314,11 +313,7 @@ def test_das_paar_kommt_ueber_sein_symbol(volume: Path, client) -> None:
     )
 
 
-# ─── Die Datei hinter den Online-Quellen (T-41) ───────────────────────────────
-#
-# Bis T-41 fragte die App für `quotes`, `daily` und `fx` nur die **erste**
-# einsatzbereite Quelle. Ein Eintrag wie `quotes: [yfinance, yaml-file]` sah
-# aus wie ein Rückfall und war keiner.
+# ─── Die Datei hinter den Online-Quellen ──────────────────────────────────────
 #
 # Geprüft wird durch den öffentlichen Eintritt, mit **unterscheidbaren Werten**
 # und **Aufrufzählern**: Ohne beides wäre „die erste gewinnt" auch dann grün,
@@ -354,10 +349,7 @@ def test_die_vordere_quelle_gewinnt_bei_ueberschneidung(volume: Path, client) ->
 def test_die_datei_schliesst_die_luecke_der_vorderen_quelle(
     volume: Path, client
 ) -> None:
-    """**Der Fall, den der Browserlauf gefunden hat.**
-
-    Die vordere Quelle schweigt, und die Anleihe hat online keinen Kurs. Erst
-    dahinter steht die gepflegte Datei — und sie muss gefragt werden.
+    """Die vordere Quelle schweigt, die gepflegte Datei muss antworten.
     """
     _profile(
         volume,

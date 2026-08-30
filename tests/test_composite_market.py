@@ -1,9 +1,7 @@
-"""Die konfigurierte Reihenfolge wird wirklich abgefragt (T-41).
+"""Die konfigurierte Reihenfolge wird wirklich abgefragt.
 
-`sources.yaml` erlaubt für `quotes`, `daily` und `fx` seit T-22 mehrere
-Quellen. Ausgeführt wurde davon nur die erste — eine Anleihe ohne Online-Kurs
-erreichte das dahinter konfigurierte `yaml-file` nie. Gefunden hat das nicht
-die Suite, sondern der Browserlauf zu T-37.
+`sources.yaml` erlaubt für `quotes`, `daily` und `fx` mehrere Quellen. Eine
+Anleihe ohne Online-Kurs muss das dahinter konfigurierte `yaml-file` erreichen.
 
 **Zwei Aussagen, und die zweite ist die schwerere.** Dass ein Treffer gewinnt,
 ist leicht zu prüfen und war nie das Problem: Bei nur einer gefragten Quelle
@@ -121,7 +119,7 @@ def test_ohne_jeden_treffer_bleibt_es_beim_fehlschlag() -> None:
 
 
 def test_die_kaskade_traegt_den_namen_der_ersten_quelle() -> None:
-    """Ein Name muss sein — das Protokoll verlangt ihn seit T-37.
+    """Ein Name muss sein — das Protokoll verlangt ihn.
 
     Der Name der Kaskade ist der der ersten Quelle und nicht etwa „composite":
     Wo er auftaucht, soll ein Betreiber eine Quelle wiedererkennen, die er
@@ -192,8 +190,8 @@ def test_die_anfrage_reist_unveraendert_weiter() -> None:
     """Jede Quelle bekommt dieselbe Frage — samt Identität und Gattung.
 
     Ohne sie fragte die zweite Quelle etwas anderes als die erste: Das
-    Anbieter-Symbol allein genügt seit T-23 nicht, weil die fünf US-Börsen
-    dieselbe Schreibweise führen.
+    Das Anbieter-Symbol allein genügt nicht, weil die fünf US-Börsen dieselbe
+    Schreibweise führen.
     """
     seen: list[tuple] = []
 

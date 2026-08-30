@@ -125,12 +125,6 @@ def _build_etf_enricher() -> EtfEnricher:
 def _market_chain(role: str) -> list:
     """Die **vollständige** Kette einer Marktrolle, in konfigurierter Rangfolge.
 
-    Bis T-41 stand hier `_first`, und die Begründung dafür war, es gebe für
-    Kurse, Tagesreihen und Wechselkurse keinen Composite. Das stimmte — und
-    war die Ursache: Ein Eintrag wie `quotes: [yfinance, yaml-file]` sah aus
-    wie ein Rückfall, war aber keiner. Die Anleihe ohne Online-Kurs erreichte
-    die gepflegte Datei nie.
-
     Args:
         role: `quotes`, `daily` oder `fx`.
 
