@@ -22,10 +22,10 @@ Ticket ein Format, das niemand mehr prüft.
 Lauf mit Augen; ein grüner Test hier ersetzt ihn nicht und behauptet es auch
 nicht.
 
-Die Zeilen `#3`, `#4` und `#7` fehlen hier ebenfalls, und zwar als
-**Entscheidung**: Sie verlangen eine Kaskade für `quotes`, `daily` und `fx`,
-die es in der App nicht gibt. Sie sind als eigenes Ergebnis abgespalten; der
-Abschnitt weiter unten sagt, warum ein Test dazu hier nichts belegen würde.
+Die Zeilen `#3`, `#4` und `#7` verlangten eine Kaskade für `quotes`, `daily`
+und `fx`, die es in der App nicht gab; sie waren als T-41 abgespalten. Seit
+dieser Kaskade stehen sie unten im eigenen Abschnitt — durch den öffentlichen
+Weg geprüft, mit unterscheidbaren Werten statt Typprüfungen.
 """
 
 from collections.abc import Iterator
@@ -34,10 +34,91 @@ from pathlib import Path
 import pytest
 from fastapi.testclient import TestClient
 
-from app.container import get_sources_config
+from app.config import get_settings
+from app.container import (
+    get_cached_quote_service,
+    get_daily_history_service,
+    get_fx_service,
+    get_sources_config,
+)
 from app.main import app
 
+_SERVICE_CACHES = (
+    get_cached_quote_service,
+    get_daily_history_service,
+    get_fx_service,
+)
+"""Jeder gecachte Dienst, der Quellen festhält — **vollständig**, nicht auf Zuruf.
+
+Ein Dienst, der hier fehlt, überlebt den Profilwechsel mit den Quellen des
+vorigen Tests. Das fällt nicht auf, solange sein Test der erste seiner Art im
+Lauf ist.
+
+**Die Konfiguration steht bewusst nicht dabei.** Sie wird beim Profilwechsel
+einmal neu gelesen, und die Ketten hängen daran über die **Identität** des
+Objekts. Sie danach noch einmal zu verwerfen hieße, `/sources` eine dritte
+Konfiguration unterzuschieben — die Rollen meldeten dann „noch nicht gebaut".
+"""
+
 SAMPLE = Path(__file__).parent.parent / "_tickets" / "T-37-single-file-sample.yaml"
+
+# Zwei Kursquellen, die **vor** der Datei stehen. Sie belegen die beiden
+# Hälften der Kaskade: Wer liefert, gewinnt; wer schweigt, reicht weiter.
+_ALWAYS_ANSWERS = '''
+from datetime import datetime, timezone
+
+from stockinfo_plugin import Quote, QuoteSource
+
+
+class AlwaysAnswers(QuoteSource):
+    """Steht vor der Datei und antwortet auf alles."""
+
+    name = "always-answers"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed", "pair", "isin_only"})
+    SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "crypto", "bond"})
+
+    def handles(self, request) -> bool:
+        return True
+
+    def fetch_quote(self, request):
+        return Quote(
+            price=999.0,
+            currency="EUR",
+            as_of=datetime(2026, 8, 30, 12, 0, tzinfo=timezone.utc),
+        )
+
+
+SOURCES = [AlwaysAnswers]
+'''
+
+_ANSWERS_NEVER = '''
+from stockinfo_plugin import DailyCloseSource, FxSource, NotFound, QuoteSource
+
+
+class AnswersNever(QuoteSource, DailyCloseSource, FxSource):
+    """Zustaendig, hat aber nie eine Antwort — in allen drei Rollen."""
+
+    name = "answers-never"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed", "pair", "isin_only"})
+    SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "crypto", "bond"})
+
+    def handles(self, request) -> bool:
+        return True
+
+    def fetch_quote(self, request):
+        return NotFound()
+
+    def fetch_daily(self, request):
+        return NotFound()
+
+    def fetch_rate(self, request):
+        return NotFound()
+
+
+SOURCES = [AnswersNever]
+'''
 
 # Die Papiere aus der Beispieldatei, mit dem, was an ihnen geprüft wird.
 _ETF = "IE00B4L5Y983"
@@ -67,7 +148,6 @@ def _restart_chains() -> None:
     und damit das Netz.
     """
     from app.config import get_settings
-    from app.container import get_cached_quote_service
     from app.sources_config import ROLES
     from app.sources_registry import build_chain
 
@@ -78,12 +158,18 @@ def _restart_chains() -> None:
             build_chain(role, config, get_settings())
         except Exception:  # noqa: BLE001, S110 — unbekannte Namen sind hier Absicht
             pass
-    # **Der Dienst hält seine Quellen fest.** Die Ketten neu zu bauen genügt
-    # nicht: `get_cached_quote_service` hat beim Start eine Instanz erzeugt und
-    # zwischengespeichert, und die trägt die alten Anbieter weiter. Ohne diese
-    # Zeile zeigte `/sources` das neue Profil und `/quote` antwortete aus dem
-    # Netz — die Auskunft und das Verhalten wären auseinandergelaufen.
-    get_cached_quote_service.cache_clear()
+    # **Die Dienste halten ihre Quellen fest.** Die Ketten neu zu bauen genügt
+    # nicht: Jeder gecachte Dienst hat beim Start eine Instanz erzeugt, und die
+    # trägt die alten Anbieter weiter. Ohne diese Zeilen zeigte `/sources` das
+    # neue Profil und `/quote` antwortete aus dem Netz — die Auskunft und das
+    # Verhalten wären auseinandergelaufen.
+    #
+    # **Alle drei, nicht nur der Kursdienst.** `/fx` und die Historie hängen an
+    # eigenen Caches; ein Test dafür wäre grün gewesen, solange er zufällig der
+    # erste seiner Art im Lauf war — und beim nächsten hinzugefügten Test still
+    # umgekippt.
+    for cache in _SERVICE_CACHES:
+        cache.cache_clear()
 
 
 @pytest.fixture
@@ -97,6 +183,11 @@ def volume(tmp_path: Path) -> Path:
     """
     plugins = tmp_path / "plugins"
     plugins.mkdir()
+    # **Vor dem Start**, nicht im Test: Plugins werden beim Lifespan geladen,
+    # und eine Datei, die danach entsteht, findet niemand mehr. Geladen zu sein
+    # heißt nicht, in einer Kette zu stehen — das entscheidet `sources.yaml`.
+    (plugins / "vorne.py").write_text(_ALWAYS_ANSWERS, encoding="utf-8")
+    (plugins / "stumm.py").write_text(_ANSWERS_NEVER, encoding="utf-8")
     return tmp_path
 
 
@@ -109,14 +200,12 @@ def client(volume: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient
     ausgeführt hat.
     """
     monkeypatch.setenv("DATABASE_PATH", str(volume / "stockinfo.db"))
-    from app.config import get_settings
-    from app.container import get_cached_quote_service
 
-    for cache in (get_settings, get_sources_config, get_cached_quote_service):
+    for cache in (get_settings, get_sources_config, *_SERVICE_CACHES):
         cache.cache_clear()
     with TestClient(app) as opened:
         yield opened
-    for cache in (get_settings, get_sources_config, get_cached_quote_service):
+    for cache in (get_settings, get_sources_config, *_SERVICE_CACHES):
         cache.cache_clear()
 
 
@@ -225,18 +314,122 @@ def test_das_paar_kommt_ueber_sein_symbol(volume: Path, client) -> None:
     )
 
 
-# ─── Matrix #4 · abgespalten ──────────────────────────────────────────────────
+# ─── Die Datei hinter den Online-Quellen (T-41) ───────────────────────────────
 #
-# Die Zeilen `#3`, `#4` und `#7` verlangen eine **Kaskade** für `quotes`,
-# `daily` und `fx`: Online zuerst, die Datei zuletzt, und gefragt wird sie nur,
-# wenn die Kette davor nichts hat. Die App kennt für diese drei Rollen keine
-# Kette — `container._first` nimmt die erste einsatzbereite Quelle.
+# Bis T-41 fragte die App für `quotes`, `daily` und `fx` nur die **erste**
+# einsatzbereite Quelle. Ein Eintrag wie `quotes: [yfinance, yaml-file]` sah
+# aus wie ein Rückfall und war keiner.
 #
-# Das ist eine eigene Produktabstraktion und wurde als eigenes Ergebnis
-# abgespalten. Hier stehen deshalb **keine** Fälle dazu: Ein Test, der die
-# Überschneidung prüft, während nur die erste Quelle gefragt wird, wäre grün,
-# ohne etwas zu belegen — genau die Sorte Zusicherung, die dieses Ticket
-# zweimal gefunden hat.
+# Geprüft wird durch den öffentlichen Eintritt, mit **unterscheidbaren Werten**
+# und **Aufrufzählern**: Ohne beides wäre „die erste gewinnt" auch dann grün,
+# wenn die zweite gar nicht existierte — und genau diese Zusage war die
+# fehlende.
+
+
+def test_die_vordere_quelle_gewinnt_bei_ueberschneidung(volume: Path, client) -> None:
+    """Online schlägt die Datei — sie ist Rückfall, nicht Wahrheit.
+
+    Gewönne die Datei, hätte ein Betreiber seine frischen Kurse mit einem
+    gepflegten Stand von gestern überschrieben, ohne es zu bemerken.
+    """
+    _profile(
+        volume,
+        {
+            "resolvers": ["yaml-file"],
+            "etf_meta": [],
+            "quotes": ["always-answers", "yaml-file"],
+            "daily": ["yaml-file"],
+            "fx": ["yaml-file"],
+        },
+    )
+
+    body = client.get(f"/quote/{_ETF}").json()
+
+    assert body["price"] == 999.0, (
+        "die Datei hat die vorgelagerte Quelle überschrieben: "
+        f"{body.get('price')}"
+    )
+
+
+def test_die_datei_schliesst_die_luecke_der_vorderen_quelle(
+    volume: Path, client
+) -> None:
+    """**Der Fall, den der Browserlauf gefunden hat.**
+
+    Die vordere Quelle schweigt, und die Anleihe hat online keinen Kurs. Erst
+    dahinter steht die gepflegte Datei — und sie muss gefragt werden.
+    """
+    _profile(
+        volume,
+        {
+            "resolvers": ["yaml-file"],
+            "etf_meta": [],
+            "quotes": ["answers-never", "yaml-file"],
+            "daily": ["yaml-file"],
+            "fx": ["yaml-file"],
+        },
+    )
+
+    body = client.get(f"/quote/{_BOND}").json()
+
+    assert body["price"] == 99.42, (
+        f"die Datei hinter der stummen Quelle kam nicht dran: {body}"
+    )
+
+
+def test_die_tagesreihe_faellt_auf_die_datei_durch(volume: Path, client) -> None:
+    """Auch die Historie ist eine Kette — und ihr Ausfall fällt weiter.
+
+    Der Unterschied zwischen „nachgesehen, nichts" (leere Reihe, die Kette
+    endet) und „konnte nicht nachsehen" (die nächste ist dran) ist am
+    Composite direkt geprüft; hier steht nur, dass die Wurzel die Kette
+    überhaupt bis zur Datei durchreicht.
+    """
+    _profile(
+        volume,
+        {
+            "resolvers": ["yaml-file"],
+            "etf_meta": [],
+            "quotes": ["yaml-file"],
+            "daily": ["answers-never", "yaml-file"],
+            "fx": ["yaml-file"],
+        },
+    )
+
+    points = client.get(f"/quote/{_BOND}/daily", params={"period": "1m"}).json()
+
+    assert [point["close"] for point in points] == [99.18, 99.31, 99.42], (
+        f"die gepflegte Reihe hinter der stummen Quelle kam nicht dran: {points}"
+    )
+
+
+def test_die_devisenrolle_nennt_den_wirklichen_lieferanten(
+    volume: Path, client
+) -> None:
+    """`/fx` sagt, **wer** geliefert hat — nicht, wer zuerst stand.
+
+    Stünde dort die erste Quelle, läse ein Betreiber „always-answers" über
+    einem Wert, den seine Datei beigesteuert hat, und suchte den Fehler bei
+    einer Quelle, die gar nicht geantwortet hat.
+    """
+    _profile(
+        volume,
+        {
+            "resolvers": ["yaml-file"],
+            "etf_meta": [],
+            "quotes": ["yaml-file"],
+            "daily": ["yaml-file"],
+            "fx": ["answers-never", "yaml-file"],
+        },
+    )
+
+    body = client.get("/fx", params={"base": "CAD", "quote": "EUR"}).json()
+
+    assert body["rate"] == 0.6412
+    assert body["source"] == "yaml-file", (
+        f"die Herkunft nennt nicht den Lieferanten: {body}"
+    )
+
 
 # ─── Matrix #5 · die manuelle History als Rückfall ────────────────────────────
 

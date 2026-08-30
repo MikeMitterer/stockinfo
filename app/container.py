@@ -14,6 +14,10 @@ from fastapi import Depends
 from app.config import get_settings
 from app.providers.base import EtfEnricher, InstrumentResolver
 from app.providers.composite_etf import CompositeEtfEnricher
+from app.providers.composite_market import (
+    CompositeDailyCloseProvider,
+    CompositeQuoteProvider,
+)
 from app.providers.justetf_provider import JustEtfProvider
 from app.repository import QuoteRepository
 from app.resolver import CompositeResolver
@@ -118,19 +122,23 @@ def _build_etf_enricher() -> EtfEnricher:
     return CompositeEtfEnricher(*_chain("etf_meta"))
 
 
-def _first(role: str) -> object:
-    """Die erste einsatzbereite Quelle einer Rolle.
+def _market_chain(role: str) -> list:
+    """Die **vollständige** Kette einer Marktrolle, in konfigurierter Rangfolge.
 
-    **Eine, nicht eine Kette:** Für Kurse, Tagesreihen und Wechselkurse gibt es
-    keinen Composite, und einen zu erfinden hieße, eine Rangfolge zu bauen, die
-    niemand angefordert hat. Die Konfiguration darf mehrere nennen; genommen
-    wird die erste, die arbeiten kann.
+    Bis T-41 stand hier `_first`, und die Begründung dafür war, es gebe für
+    Kurse, Tagesreihen und Wechselkurse keinen Composite. Das stimmte — und
+    war die Ursache: Ein Eintrag wie `quotes: [yfinance, yaml-file]` sah aus
+    wie ein Rückfall, war aber keiner. Die Anleihe ohne Online-Kurs erreichte
+    die gepflegte Datei nie.
 
     Args:
         role: `quotes`, `daily` oder `fx`.
 
     Returns:
-        Die Quelle.
+        Alle einsatzbereiten Quellen der Rolle. `build_chain` gibt für dieselbe
+        Konfiguration **dieselben Objekte** zurück; zwei Aufrufer teilen sich
+        die Quellen also, auch wenn jeder seine eigene (zustandslose) Kaskade
+        darum legt.
 
     Raises:
         RuntimeError: Keine Quelle dieser Rolle ist einsatzbereit. Das ist
@@ -145,7 +153,7 @@ def _first(role: str) -> object:
             f"Keine einsatzbereite Quelle für '{role}' konfiguriert — "
             f"`{role}:` in sources.yaml prüfen"
         )
-    return sources[0]
+    return sources
 
 
 @lru_cache
@@ -153,9 +161,15 @@ def get_cached_quote_service() -> CachedQuoteService:
     """Baut den (gecachten) CachedQuoteService aus der aktuellen Konfiguration."""
     settings = get_settings()
     resolver = _build_resolver()
-    quote_service = QuoteService(_first("quotes"), _build_etf_enricher(), resolver)
+    quote_service = QuoteService(
+        CompositeQuoteProvider(*_market_chain("quotes")),
+        _build_etf_enricher(),
+        resolver,
+    )
     repository = QuoteRepository(settings.database_path)
-    daily_sync = DailyCloseSync(repository, _first("daily"))
+    daily_sync = DailyCloseSync(
+        repository, CompositeDailyCloseProvider(*_market_chain("daily"))
+    )
     return CachedQuoteService(
         quote_service,
         repository,
@@ -195,7 +209,7 @@ def get_daily_history_service() -> DailyHistoryService:
     settings = get_settings()
     return DailyHistoryService(
         QuoteRepository(settings.database_path),
-        _first("daily"),
+        CompositeDailyCloseProvider(*_market_chain("daily")),
         get_cached_quote_service(),
     )
 
@@ -219,7 +233,7 @@ def get_fx_service() -> CachedFxService:
     """Baut den (gecachten) CachedFxService aus der aktuellen Konfiguration."""
     settings = get_settings()
     return CachedFxService(
-        _first("fx"),
+        _market_chain("fx"),
         QuoteRepository(settings.database_path),
         settings.fx_ttl_hours,
     )

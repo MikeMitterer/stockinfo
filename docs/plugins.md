@@ -122,15 +122,33 @@ arbeiten können und warum.
 tut genau das: Es liest eine Datei und bedient daraus Auflösung, Kurs,
 Historie, Metadaten und Devisen.
 
-**Eine Rangfolge gibt es aber nur für zwei Rollen.** `resolvers` und
-`etf_meta` fragen die Kette der Reihe nach; für `quotes`, `daily` und `fx`
-nimmt die App die **erste** einsatzbereite Quelle und fragt keine weitere.
+**Jede Rolle hat eine Rangfolge.** Alle fünf fragen die Kette der Reihe nach,
+und die erste belastbare Antwort gilt. Wer keine hat, reicht weiter:
 
-Der Unterschied ist keine Feinheit: Ein Eintrag wie
-`quotes: [yfinance, yaml-file]` sieht aus wie ein Rückfall und ist keiner —
-`yaml-file` wird dort nie gefragt. Wer handgepflegte Kurse braucht, betreibt
-die Datei heute als eigenständiges Profil. Die Kaskade für diese drei Rollen
-ist ein eigenes Vorhaben.
+```yaml
+quotes: [yfinance, yaml-file]
+```
+
+Das ist ein Rückfall und liest sich auch so: Online gewinnt, wo es einen Kurs
+gibt; die gepflegte Datei springt nur dort ein, wo keiner kommt — bei einer
+Anleihe etwa, die online kein Papier mit Kurs ist. **Bis Version 0.6 stimmte
+das nicht:** Für `quotes`, `daily` und `fx` nahm die App die erste
+einsatzbereite Quelle und fragte keine weitere; die Zeile oben sah aus wie ein
+Rückfall und war keiner.
+
+Drei Feinheiten, die man beim Eintragen kennen sollte:
+
+- **Die Datei gehört auch in `resolvers`**, sonst hilft sie beim Kurs nicht.
+  Ein Papier, das keine Online-Quelle kennt, lässt sich ohne sie gar nicht
+  erst aufnehmen — die Aufnahme scheitert an der Auflösung, lange bevor
+  jemand nach einem Kurs fragt. Für eine Anleihe, die nur in der eigenen
+  Datei steht, lautet die Kette also `resolvers: [openfigi, yahoo-search,
+  yaml-file]`.
+- Bei `daily` ist eine **leere** Tagesreihe eine Antwort — „nachgesehen, in
+  diesem Zeitraum nichts" — und beendet die Kette. Nur „konnte nicht
+  nachsehen" fällt weiter.
+- `GET /fx` nennt die Quelle, die den Kurs **geliefert** hat, nicht die, die
+  vorne steht.
 
 ## Was die App mit einem fremden Plugin macht
 

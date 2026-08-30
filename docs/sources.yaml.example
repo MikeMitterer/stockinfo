@@ -61,14 +61,21 @@ providers:
 #     # sind ein Ort, an dem sie fehlt.
 #     path: /data/assets.yaml
 #
-# **Noch nicht möglich: die Datei hinter die Online-Quellen hängen.** Für
-# `quotes`, `daily` und `fx` fragt die App nur die **erste** einsatzbereite
-# Quelle — eine Kaskade gibt es für diese drei Rollen nicht. Ein Eintrag wie
-# `quotes: [yfinance, yaml-file]` sieht deshalb aus wie ein Rückfall und ist
-# keiner: `yaml-file` wird dort nie gefragt.
+# **Oder die Datei hinter die Online-Quellen hängen** — seit 0.6 fragt jede
+# Rolle ihre Kette der Reihe nach:
 #
-# Das ist als eigenes Vorhaben abgespalten. Bis dahin ist das eigenständige
-# Profil oben der einzige unterstützte Weg.
+# resolvers: [openfigi, yahoo-search, yaml-file]
+# quotes:    [yfinance, yaml-file]
+# daily:     [yfinance, yaml-file]
+# fx:        [yfinance, yaml-file]
+#
+# **Die Datei muss auch in `resolvers` stehen.** Ein Papier, das keine
+# Online-Quelle kennt, lässt sich sonst gar nicht aufnehmen — die Aufnahme
+# scheitert an der Auflösung, bevor jemand nach einem Kurs fragt.
+#
+# Online gewinnt, wo es einen Kurs gibt; die gepflegte Datei springt dort ein,
+# wo keiner kommt — bei einer Anleihe etwa. Bei `daily` gilt eine **leere**
+# Reihe als Antwort und beendet die Kette; nur ein Ausfall fällt weiter.
 #
 # Das Format der Datei steht in `docs/plugins.md`; ein vollständiges Beispiel
 # liegt in `_tickets/T-37-single-file-sample.yaml`.

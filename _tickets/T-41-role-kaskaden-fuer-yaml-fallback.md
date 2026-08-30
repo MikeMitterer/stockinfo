@@ -39,12 +39,63 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teil
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Quote-Composite | erster gültiger Kurs gewinnt; Miss/Ausfall fällt weiter; nach Treffer kein weiterer Aufruf | | |
-| **2** | Daily-Composite + Adapter | Non-Hit fällt weiter; gültige leere `DailySeries` stoppt als `[]`; nach Gesamtausfall kein Wasserzeichen | | |
-| **3** | FX-Service | erster Kurs gewinnt; tatsächlicher Lieferant wird gespeichert und bleibt im Cache; stale erst nach Gesamtausfall | | |
-| **4** | Container/REST | alle konfigurierten Quellen bleiben in Reihenfolge erhalten; Online-Überlappung gewinnt, YAML-Bond schließt die Lücke | | |
-| **5** | Regression | gezielte Tests, vollständiges `make test`, Ruff, Diff-Check und YAML-Smoke 20/20 | | |
-| **6** | Browser durch Claude | `BTC-EUR` online, Anleihe über YAML-History, `fund` nutzbar; Liste/Drilldown/Quelle korrekt; Konsole und Requests sauber | | |
+| **1** | Quote-Composite | erster gültiger Kurs gewinnt; Miss/Ausfall fällt weiter; nach Treffer kein weiterer Aufruf | ✅ | |
+| **2** | Daily-Composite + Adapter | Non-Hit fällt weiter; gültige leere `DailySeries` stoppt als `[]`; nach Gesamtausfall kein Wasserzeichen | ✅ | |
+| **3** | FX-Service | erster Kurs gewinnt; tatsächlicher Lieferant wird gespeichert und bleibt im Cache; stale erst nach Gesamtausfall | ✅ | |
+| **4** | Container/REST | alle konfigurierten Quellen bleiben in Reihenfolge erhalten; Online-Überlappung gewinnt, YAML-Bond schließt die Lücke | ✅ | |
+| **5** | Regression | gezielte Tests, vollständiges `make test`, Ruff, Diff-Check und YAML-Smoke 20/20 | ✅ | |
+| **6** | Browser durch Claude | `BTC-EUR` online, Anleihe über YAML-History, `fund` nutzbar; Liste/Drilldown/Quelle korrekt; Konsole und Requests sauber | ✅ | |
+
+### Was gelaufen ist
+
+**Zeilen 1–3** — `tests/test_composite_market.py` (11 Orakel, Aufrufzähler an
+jedem Double) und `tests/test_fx_service.py` (6 neue Kaskadenfälle, darunter
+`test_die_herkunft_der_zweiten_quelle_ueberlebt_den_cache`).
+
+**Zeile 4** — `tests/test_container.py` misst die Kette an der Wurzel
+(`_market_chain("quotes")` gibt beide Namen in Reihenfolge), und
+`tests/test_yaml_profile.py` prüft dieselbe Zusage durch den REST-Eintritt:
+Überlappung an die vordere Quelle (999,0 statt 128,21), Lücke an die Datei
+(99,42), Tagesreihe an die Datei (99,18 / 99,31 / 99,42), `/fx` nennt
+`yaml-file` als Lieferanten.
+
+**Gegenprobe statt grünem Lauf.** Mit `return sources[:1]` — also der alten
+`_first`-Verdrahtung — fallen genau diese vier Orakel um und sonst keines.
+Ohne diese Probe wäre nicht belegt, dass sie die Kaskade prüfen und nicht
+bloß den Normalfall.
+
+**Zeile 5** —
+
+```
+.venv/bin/ruff check app tests plugin_api/src plugin_api/tests plugin_api/examples   → All checks passed
+make test        → 944 Backend + 295 plugin_api + 269 Frontend, alle grün
+PROFILE=yaml ./_tickets/T-35-smoke.sh --run                                          → 20/20
+git diff --check → sauber
+```
+
+**Zeile 6 — der Browserlauf**, Online-Profil mit `yaml-file` als letztem Glied
+in `resolvers`, `quotes`, `daily` und `fx`:
+
+| Papier | Kurs | Wer hat geliefert |
+|---|---|---|
+| `BTC-EUR` | 68.095,81 EUR | yfinance — die Datei nennt 94.500,00 und hat verloren |
+| `DE0001102531` | 99,42 EUR | die Datei (jüngster Schlusskurs), online kennt kein Papier mit Kurs |
+| `DE0009848119` → `HJUA.F` | 175,61 EUR | yfinance — die Datei nennt 142,50 und hat verloren |
+| `/fx` CAD→EUR | 0,6204 | yfinance — die Datei nennt 0,6412 und hat verloren |
+
+Die Tagesreihe der Anleihe kam mit allen drei gepflegten Punkten. Konsole
+leer, alle 21 Requests 200.
+
+**Ein Befund aus dem Lauf, der in die Doku gewandert ist.** Mit `yaml-file`
+nur in den Marktrollen scheitert die Anleihe schon an der **Aufnahme**: „Zu
+DE0001102531 hat keine der eingerichteten Quellen ein Wertpapier gefunden."
+Die Kaskade hilft beim Kurs erst, wenn das Papier überhaupt aufgelöst wird —
+die Datei gehört also auch in `resolvers`. `docs/plugins.md` und
+`docs/sources.yaml.example` sagen das jetzt.
+
+**Nicht in T-41 geändert:** Der Drilldown nennt die Anleihe weiterhin „eine
+Aktie" (`dashboard/src/i18n/de.ts`). Der Befund steht seit T-35 dort und
+gehört nicht in dieses Ticket.
 
 ## Übergaberegel
 
