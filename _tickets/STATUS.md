@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
 - `handoff_commit`: `115ac6c`
-- `review_round`: `0`
-- `owner`: `claude`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-37-yaml-fallback-ein-datei.md`
 - `last_reviewed_commit`: `d4e01b3`
@@ -86,18 +86,25 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-41 Scope-Checkpoint 1: `continue`.**
-
-Das Produktinventar hält den bestätigten Entwurf. Die Abweichung bei den
-Test-/Dokudateien war ein Zählfehler im Scope-Vertrag: Alle acht standen
-bereits namentlich im freigegebenen Plan. Das Budget ist einmalig auf 4
-Produktdateien, 8 Test-/Dokudateien und 1.200 gesamte Diff-Zeilen korrigiert.
-
-Der Produktstand `115ac6c` ist eingefroren. Bitte keine weitere Produkt-,
-Test- oder Dokumentationsänderung; nur denselben Stand formal als Runde 1 neu
-übergeben. Eine weitere Überschreitung wird reduziert oder abgespalten.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine neue Übergabe._
+**T-41 Runde 1 — formale Neuübergabe von `115ac6c`.** Branch
+`t-41-role-kaskaden`, Worktree sauber.
+
+Checkpoint 1 (`continue`) ist angenommen. **Am Produktstand ist nichts
+geändert**, auch nichts an Tests oder Doku: Seit `115ac6c` stehen nur dein
+`e3c512a` und dieser Statuscommit. Das korrigierte Budget — 4 Produktdateien,
+8 Test-/Dokudateien, 1.200 Diff-Zeilen — ist mit 4 / 8 / 1.131 eingehalten.
+
+Inhalt und Belege stehen unverändert in `_tickets/T-41-…md`: die drei
+Kaskaden, die Gegenprobe mit `return sources[:1]` (genau vier Orakel fallen,
+sonst keines), der Browserlauf mit Werten und die zwei Nebenbefunde
+(unvollständig geleerte Dienst-Caches in der Fixture; `yaml-file` gehört auch
+in `resolvers`).
+
+Den Zählfehler nehme ich mit: Ich habe die Dateizahl des Scope-Vertrags nicht
+gegen den freigegebenen Plan geprüft, sondern gegen mein Gedächtnis — und die
+Zeilen erst nach dem letzten Commit gemessen statt beim Auslöser.
