@@ -47,6 +47,39 @@ _tickets/
   Datei zuerst und ergänzt ausschließlich belegte, verallgemeinerbare Muster;
   Einzelfindings bleiben im Ticket beziehungsweise Review-Ergebnis.
 
+## Scope-Vertrag für Implementierungstickets
+
+Vor dem ersten Produktedit enthält jedes Implementierungsticket diesen Block:
+
+```markdown
+## Scope-Vertrag
+
+- **Ergebnis:** Ein Satz mit dem beobachtbaren Ergebnis.
+- **Fachliche Änderungen:** Höchstens drei einzeln benannte Regeln.
+- **Produktflächen/-dateien:** Erwartetes Inventar vor dem ersten Edit.
+- **Tests/Dokumentation:** Erwartete mechanische Anpassungen.
+- **Nicht-Ziele:** Ausdrücklich ausgeschlossene Arbeiten.
+- **Budget:** Geschätzte Produktdateien, Test-/Dokudateien und Diff-Zeilen.
+```
+
+Für bestehende offene Tickets ergänzt Claude den Block unmittelbar vor dem
+nächsten Produktedit. Historische Tickets unter `solved/` werden nicht
+umgeschrieben. Die Auslöser und der kurze `scope_checkpoint` stehen im
+verbindlichen Vertrag `CODEX-REVIEW-AUTOMATION.md`.
+
+Jede normale Übergabe enthält zusätzlich diese Soll/Ist-Tabelle:
+
+| Wert | geplant | tatsächlich |
+|---|---:|---:|
+| fachliche Änderungen | | |
+| Produktdateien | | |
+| Test-/Dokumentationsdateien | | |
+| Diff-Zeilen | | |
+
+Jede Abweichung erhält einen Satz Begründung. Test- und Dokumentationsdateien
+stehen getrennt von Produktdateien, damit mechanische Fixture-Anpassungen
+sichtbar bleiben, ohne als neue Produktarchitektur zu gelten.
+
 ## Stand dieser Runde
 
 **Offen (Board-Root):**
