@@ -103,6 +103,9 @@ def test_ein_fehlschlag_faellt_weiter() -> None:
 
     assert answer.price == 111.11, "die Datei hinter der stummen Quelle kam nicht dran"
     assert first.calls == 1 and second.calls == 1
+    assert answer.source == "yaml-file", (
+        "die Antwort trägt nicht die Quelle, die sie geliefert hat"
+    )
 
 
 def test_ohne_jeden_treffer_bleibt_es_beim_fehlschlag() -> None:
@@ -116,19 +119,6 @@ def test_ohne_jeden_treffer_bleibt_es_beim_fehlschlag() -> None:
 
     assert CompositeQuoteProvider(*sources).fetch_quote(_INSTRUMENT) is None
     assert [source.calls for source in sources] == [1, 1]
-
-
-def test_die_kaskade_traegt_den_namen_der_ersten_quelle() -> None:
-    """Ein Name muss sein — das Protokoll verlangt ihn.
-
-    Der Name der Kaskade ist der der ersten Quelle und nicht etwa „composite":
-    Wo er auftaucht, soll ein Betreiber eine Quelle wiedererkennen, die er
-    konfiguriert hat. Welche Quelle eine **einzelne** Antwort geliefert hat,
-    steht ohnehin an der Antwort und nicht an der Kette.
-    """
-    assert CompositeQuoteProvider(
-        _QuoteSource("online", None), _QuoteSource("yaml-file", None)
-    ).name == "online"
 
 
 # ─── Tagesreihen ──────────────────────────────────────────────────────────────

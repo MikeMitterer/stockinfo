@@ -128,6 +128,13 @@ class RawQuote:
     type: str | None = None
     exchange: str | None = None
     isin: str | None = None
+    # Welche Quelle **diese** Antwort geliefert hat. In einer Kaskade ist das
+    # nicht die Quelle, die vorne steht: Fällt die erste durch, stammt der
+    # Metadatenstand von der zweiten. Die Angabe reist deshalb an der Antwort
+    # und nicht an der Kette — ein „zuletzt gefragt"-Zustand am Anbieter
+    # behauptete bei zwei gleichzeitigen Anfragen das Falsche. `EtfDetails`
+    # trägt ihre Herkunft aus demselben Grund selbst.
+    source: str | None = None
 
 
 @dataclass

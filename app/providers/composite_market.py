@@ -18,10 +18,13 @@ Zeitgrenzen sind ausdrücklich nicht Gegenstand: Gefragt wird der Reihe nach,
 und die erste Antwort gilt.
 """
 
+from dataclasses import replace
+
 from app.providers.base import (
     Identity,
     RawQuote,
     ResolvedInstrument,
+    declared_name,
 )
 
 
@@ -61,6 +64,17 @@ class CompositeQuoteProvider(_Chain):
     def fetch_quote(self, instrument: ResolvedInstrument) -> RawQuote | None:
         """Der erste gelieferte Kurs.
 
+        Die Antwort trägt die Quelle, die sie **geliefert** hat. Der Name der
+        Kaskade ist der der ersten Quelle und wäre hier die falsche Auskunft:
+        Fällt die erste durch, stammt der Metadatenstand von der zweiten, und
+        ein Betreiber suchte den Fehler sonst bei einer Quelle, die gar nichts
+        geantwortet hat.
+
+        Notiert wird das **an der Antwort**, nicht an der Kaskade. Ein Feld
+        „zuletzt geliefert" am Anbieter wäre bei zwei gleichzeitigen Anfragen
+        die Herkunft der jeweils anderen. Eine Quelle, die sich selbst
+        beschriftet, behält ihre Angabe.
+
         Args:
             instrument: Das aufgelöste Papier.
 
@@ -73,7 +87,9 @@ class CompositeQuoteProvider(_Chain):
         for provider in self._providers:
             quote = provider.fetch_quote(instrument)
             if quote is not None:
-                return quote
+                if quote.source:
+                    return quote
+                return replace(quote, source=declared_name(provider))
         return None
 
 

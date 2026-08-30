@@ -7,6 +7,7 @@ from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
 from app.models import ListedIdentityOut
 from app.exchanges import split_symbol
 from app.providers.base import EtfDetails, RawQuote, ResolvedInstrument
+from app.providers.composite_market import CompositeQuoteProvider
 from app.services.quote_service import (
     InstrumentNotFoundError,
     QuoteService,
@@ -838,6 +839,38 @@ def test_eine_kursquelle_mit_metadaten_wird_sehr_wohl_genannt() -> None:
     )
 
     assert service.get_quote_by_isin("IE00B3RBWM25").source == "yfinance"
+
+
+def test_die_herkunft_nennt_die_quelle_die_geantwortet_hat() -> None:
+    """**Nicht die, die vorne steht.**
+
+    Eine Kaskade trägt den Namen ihrer ersten Quelle — den braucht das
+    Protokoll, und ein Betreiber erkennt daran seine Konfiguration wieder.
+    Für eine **einzelne** Antwort ist dieser Name aber die falsche Auskunft:
+    Fällt die erste Quelle durch und liefert die zweite Name und Gattung, dann
+    stammt der Metadatenstand von der zweiten. Stünde dort „first", suchte ein
+    Betreiber den Fehler bei einer Quelle, die gar nichts geliefert hat.
+
+    Deshalb reist die Herkunft **an der Antwort** und nicht an der Kette: kein
+    gemeinsamer „zuletzt gefragt"-Zustand, der bei zwei gleichzeitigen
+    Anfragen das Falsche behauptet.
+    """
+
+    class Silent(FakeQuoteProvider):
+        name = "first"
+
+    class Answering(FakeQuoteProvider):
+        name = "second"
+
+    service = QuoteService(
+        CompositeQuoteProvider(
+            Silent(None), Answering(_etf_quote())  # trägt `type="etf"`
+        ),
+        FakeEtfProvider(None),
+        FakeResolver(_resolved("VGWL.DE", isin="IE00B3RBWM25", type="etf")),
+    )
+
+    assert service.get_quote_by_isin("IE00B3RBWM25").source == "second"
 
 
 def test_eine_namenlose_quelle_erfindet_keinen_namen() -> None:

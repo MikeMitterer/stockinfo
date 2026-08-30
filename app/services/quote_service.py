@@ -361,15 +361,27 @@ class QuoteService:
         wieder Name oder Gattung, folgt die Herkunft von selbst, ohne dass
         jemand daran denken muss.
 
+        **Gefragt wird die Antwort, nicht der Anbieter.** In einer Kaskade
+        sind das zwei verschiedene Dinge: Fällt die erste Quelle durch,
+        stammen die Metadaten von der zweiten, während `declared_name` am
+        Anbieter weiterhin die erste nennt. Wer sich hier auf den Anbieter
+        verlässt, schreibt einen Namen auf, der nichts geliefert hat.
+
+        Der Rückfall auf den Anbieter bleibt für den Normalfall einer
+        einzelnen Quelle: Sie beschriftet ihre Antwort nicht, und ihr Name ist
+        dort ohne Zweideutigkeit der richtige.
+
         Args:
             raw: Die Antwort der Kursquelle.
 
         Returns:
-            Der Name der Kursquelle, falls sie Metadaten beigesteuert hat;
-            sonst ``None``.
+            Der Name der Quelle, die geantwortet hat, falls sie Metadaten
+            beigesteuert hat; sonst ``None``.
         """
         contributed = any((raw.name, raw.type, raw.exchange))
-        return declared_name(self._quote_provider) if contributed else None
+        if not contributed:
+            return None
+        return raw.source or declared_name(self._quote_provider)
 
 
     def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
