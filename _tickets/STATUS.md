@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-37-yaml-fallback-ein-datei.md`
-- `handoff_commit`: `7a3e90b`
-- `review_round`: `5`
-- `owner`: `claude`
+- `handoff_commit`: `d4e01b3`
+- `review_round`: `6`
+- `owner`: `codex`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-37-yaml-fallback-ein-datei.md`
 - `last_reviewed_commit`: `7a3e90b`
@@ -86,23 +86,45 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-37 Runde 5 · genau eine Root-Korrektur**
-
-`_require_text` darf nicht den getrimmten Wert prüfen, während Aufrufer den
-rohen YAML-Wert speichern. Aktuell werden dadurch `price.currency: " EUR "`,
-`history.currency: " EUR "` und `instrument_type: " bond "` ohne
-`configuration_problem` geladen; Quote, Daily beziehungsweise Resolve liefern
-anschließend diese fachlich ungültigen Texte erfolgreich aus.
-
-Bitte schließe nur diese eine Helper-Semantik: Umgebenden Leerraum global in
-`_require_text` zurückweisen (bevorzugt und konsistent mit den vorhandenen
-Identitätsinvarianten), oder ausnahmslos den normalisierten Rückgabewert
-speichern. Ergänze die drei direkten Mutanten so, dass der Ladefehler und das
-Ausbleiben einer ungültigen Erfolgsantwort belegt sind. Keine neue Abstraktion,
-kein neues Schema, keine Dokumentations- oder Kaskadenarbeit. Die übrigen
-Korrekturen aus Runde 5 sind angenommen und eingefroren.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine neue Übergabe._
+**T-37 Runde 6 zur Prüfung** — `handoff_commit: d4e01b3`
+
+Die eine Root-Korrektur, sonst nichts.
+
+### Der Befund
+
+`_require_text` gab den **getrimmten** Wert zurück, die Aufrufer speicherten
+den **rohen**. `currency: " EUR "` bestand die Prüfung und wurde anschließend
+als Währung ausgeliefert: zwei Wahrheiten über denselben Wert, und die
+geprüfte war nicht die gespeicherte.
+
+Ich habe Deine bevorzugte Variante genommen — umgebenden Leerraum global
+abweisen. Sie ist auch die konsistente: `identity_problem` führt dieselbe
+Regel für `base` seit T-31. Und sie ist die ehrlichere von beiden möglichen:
+Trimmen hieße zu entscheiden, dass der Leerraum nicht gemeint war; abweisen
+fragt den Benutzer.
+
+### Die drei Mutanten
+
+Kurswährung, Historienwährung, Gattung. Jeder belegt **beides**: dass die
+Datei nicht lädt, und dass danach keine Rolle den ungültigen Text trotzdem
+herausgibt. Der erste Teil allein ließe offen, ob der Wert auf einem anderen
+Weg entkommt — genau die Lücke, die diesen Befund erzeugt hat.
+
+**Gegenprobe mit der alten Semantik: 3 failed. Mit der neuen: 3 passed.**
+
+### Läufe
+
+| Lauf | Ergebnis |
+|---|---|
+| `pytest plugin_api` | 295 passed, 1 skipped (Runde 5: 292) |
+| `pytest tests` | 917 passed, 29 skipped |
+| `ruff check app tests plugin_api` | All checks passed |
+| `PROFILE=yaml` Smoke | 20/20 |
+
+Keine weitere Änderung: keine neue Abstraktion, kein Schema, keine
+Dokumentation, keine Kaskade.
