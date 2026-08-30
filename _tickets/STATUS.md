@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
-- `handoff_commit`: `f742c9c`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `0bb5c20`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
 - `last_reviewed_commit`: `f742c9c`
@@ -86,29 +86,53 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-41 Runde 1 · genau ein fachlicher Rest.**
-
-`CompositeQuoteProvider.name` nennt immer die erste Quelle. Fällt diese durch
-und liefert die zweite `RawQuote` Name/Gattung/Börse, übernimmt
-`QuoteService` diese Metadaten, schreibt als `quote.source` aber den Namen der
-ersten Quelle. Unabhängige Reproduktion: Metadaten von `second`,
-`source="first"`.
-
-Bitte korrigiere ausschließlich diese Gewinnerherkunft in den bereits
-vorhandenen Quote-Composite-Dateien. Sie muss für die konkrete Antwort
-kontextlokal/nebenläufigkeitssicher sein; kein gemeinsames veränderliches
-„last provider". Ersetze das falsche Orakel „Name ist immer die erste Quelle"
-durch einen öffentlichen `QuoteService`-Fall: erste Quelle `None`, zweite
-liefert Name/Gattung/Börse, `quote.source == "second"`. Keine neue
-Produktdatei, kein öffentlicher Typ/Vertrag, keine Doku oder Browserarbeit;
-das korrigierte Gesamt-Diff bleibt unter 1.200 Zeilen.
-
-Codex-Selbstheilung `f742c9c` ist die neue Basis: nur Prozesschronik aus
-Kommentaren/Docstrings sowie der widersprüchliche Versionssatz entfernt. 79
-fokussierte Tests, Ruff und Diff-Check sind danach grün. Alle übrigen
-Kaskadenbefunde sind angenommen und eingefroren.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine neue Übergabe._
+**T-41 Runde 2 — die Gewinnerherkunft ist korrigiert.** `0bb5c20`, Branch
+`t-41-role-kaskaden`, Worktree sauber.
+
+Der Befund traf zu. Reproduziert **vor** der Korrektur durch den verlangten
+öffentlichen Fall: `'first' == 'second'`.
+
+Die Herkunft reist jetzt an der Antwort. `RawQuote` bekommt ein `source`, das
+die Kaskade beim Durchreichen setzt — per `dataclasses.replace`, also ohne
+die fremde Instanz zu verändern, und ohne jeden gemeinsamen Zustand. Eine
+Quelle, die sich selbst beschriftet, behält ihre Angabe.
+`_metadata_source` liest zuerst die Antwort und fällt erst dann auf den
+Anbieternamen zurück; für die einzelne Quelle bleibt damit alles wie vorher.
+
+Das falsche Orakel „Name ist immer die erste Quelle" ist weg. Sein Docstring
+behauptete übrigens schon, die Herkunft stehe „ohnehin an der Antwort" — sie
+stand dort nur nicht.
+
+**Zwei Abweichungen von deiner Auflage, beide gemessen und beide zu
+entscheiden:**
+
+1. Ich habe **zwei bestehende Produktdateien angefasst, die nicht im
+   Scope-Vertrag stehen**: `app/providers/base.py` (das neue Feld, 7 Zeilen)
+   und `app/services/quote_service.py` (die Leseseite, 18 Zeilen). Keine
+   *neue* Datei, aber mehr als die vier vereinbarten Flächen. `quote_service`
+   ließ sich nicht vermeiden — dort steht die falsche Auskunft. Für `base.py`
+   sehe ich keine Alternative, die ohne gemeinsamen Zustand auskommt: Der
+   Anbieter kann die Herkunft einer *einzelnen* Antwort nicht tragen.
+2. `RawQuote` ist ein interner Core-Datentyp, kein Plugin- oder
+   REST-Vertrag; `contract/core-contract.json` und `stockinfo_plugin` sind
+   unberührt. Ob dir das als „kein öffentlicher Typ" genügt, entscheidest du.
+
+Gegenprobe: Mit `return quote` statt des Stempels fallen genau zwei Orakel —
+der öffentliche `QuoteService`-Fall und der Kaskadenfall — und sonst keines.
+
+Netto gegen den Abzweig: **14 Dateien, 1.106 Zeilen** (ohne Ticket- und
+Statusdateien), also unter 1.200. Diese Runde 92 Zeilen.
+
+`ruff` sauber, `pytest -m "not integration"` 936 grün, plugin_api 295 grün,
+`PROFILE=yaml ./_tickets/T-35-smoke.sh --run` 20/20, `git diff --check`
+sauber. Doku und Browserlauf sind unberührt.
+
+**Ein Hinweis zum vollen Lauf:** `pytest tests` **ohne** den Marker-Filter war
+in zwei Läufen unterschiedlich rot — einmal ein OpenFIGI-, einmal zwei
+yfinance-Integrationstests. Beide bestehen einzeln; das sind die
+Netzfälle gegen die echten Anbieter, nicht dieser Stand.
