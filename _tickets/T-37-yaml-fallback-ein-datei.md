@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Plugin-Beispiel + Prüfmittel) | bereit nach T-31/T-38 | 1 Tag | ein YAML-Plugin, eine Fachdaten-Datei, zwei Profile, gemeinsamer Smoke und Browser-Abnahme | — |
+| StockInfo (Plugin-Beispiel + Prüfmittel) | **freigegeben** (Codex, Runde 6, `d4e01b3`) | 1 Tag | ein YAML-Plugin, eine Fachdaten-Datei, zwei Profile, gemeinsamer Smoke und Browser-Abnahme | — |
 
 - **Angelegt:** 2026-08-28; auf YAML neu ausgerichtet am 2026-08-29
 - **Hängt ab von:** T-31 und T-38
@@ -179,6 +179,16 @@ zurück. Drei direkte Mutanten für `price.currency`, `history.currency` und
 ungültige Erfolgsantwort entsteht. Keine neue Abstraktion und keine weitere
 Schemafläche.
 
+### Freigabe Runde 6
+
+Codex-Review gegen `d4e01b3`: Die eine offene Helper-Regel ist geschlossen.
+Umgebender Leerraum wird nun vor dem Speichern abgewiesen; die drei direkten
+Mutanten belegen sowohl den `configuration_problem` als auch das Ausbleiben
+ungültiger Erfolgsantworten. Unabhängig grün: 135 YAML-Beispieltests, 22
+Profiltests, 295 Plugin-API-Tests (1 übersprungen), Ruff und der gemeinsame
+YAML-Smoke mit 20/20 Checks. T-37 ist im abgespaltenen Standalone-Umfang
+freigegeben; die drei Online-Kaskaden bleiben ausschließlich T-41.
+
 ---
 
 ## Verify
@@ -190,7 +200,7 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | `T-37-single-file-sample.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | ◑ [^review-r5] | |
+| **1** | `T-37-single-file-sample.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | ✅ [^review-r6] | |
 | **2** | `PROFILE=yaml ./_tickets/T-35-smoke.sh --run` | der gemeinsame Smoke ist grün; `GET /sources` zeigt `yaml-file` in allen fünf Rollen und genau einen Pfad auf die Fachdaten-Datei | ✅ [^r1] | |
 | **3** | `PROFILE=online ./_tickets/T-35-smoke.sh --run` | derselbe Smoke ist grün; normale Online-Quellen stehen zuerst und dasselbe `yaml-file` jeweils zuletzt | ⊘ [^split] | |
 | **4** | Überschneidungs-Test im Online-Profil | liefert eine Online-Quelle einen gültigen Wert, gewinnt sie; YAML überschreibt ihn nicht. Nur bei fehlendem Ergebnis wird YAML gefragt | ⊘ [^split] | |
@@ -198,7 +208,7 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 | **6** | Browser, `PROFILE=yaml` | `BTC-EUR` (`pair`), eine Anleihe (`isin_only`) und ein nicht börsengehandelter Fonds (`fund`) lassen sich anlegen; Liste, Drilldown, Preis und manueller History-Fallback stimmen; Konsole und fehlgeschlagene Requests sind sauber | ⚠️ [^browser] | |
 | **7** | Browser, `PROFILE=online` | BTC kommt über YFinance, die Anleihe ohne Online-Kurs über YAML; bei einem überlappenden Asset gewinnt online. Liste, Drilldown und Quellenanzeige stimmen; Konsole und Requests sind sauber | ⊘ [^split] | |
 | **8** | Plugin-/Profil-Inventur | kein CSV-Profil und keine vier Datei-Quellen bleiben aktiv oder dokumentiert; `PROFILE=yaml` ist der einzige dateibasierte Prüfpfad | ✅ [^review-r2] | |
-| **9** | Reload-/Fehlerfälle | fehlende Datei, ungültiges YAML, doppelte IDs und unzulässige Werte werden verständlich gemeldet; ein Neustart liest eine gültig geänderte Datei erneut ein | ◑ [^review-r5] | |
+| **9** | Reload-/Fehlerfälle | fehlende Datei, ungültiges YAML, doppelte IDs und unzulässige Werte werden verständlich gemeldet; ein Neustart liest eine gültig geänderte Datei erneut ein | ✅ [^review-r6] | |
 
 [^r1]: Umsetzung Runde 1. Die Orakel entstanden **vor** dem Code (dreizehn
     Fälle, alle rot) und stammen aus dieser Matrix. Belege: `PROFILE=yaml`
@@ -253,6 +263,10 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
     durchgängig verdrahtet. Offen bleibt eine einzige Inkonsistenz zwischen
     getrimmter Textprüfung und den danach gespeicherten Rohwerten; Details
     stehen oben.
+[^review-r6]: **Codex-Freigabe gegen `d4e01b3`:** Textprüfung und gespeicherter
+    Wert folgen derselben strikten Regel. Die direkten Schema-, Reload- und
+    Rollenverträge sowie der gemeinsame YAML-Smoke sind grün; die abgespaltene
+    Online-Kaskade bleibt als T-41 sichtbar und wird hier nicht mitgezählt.
 
 Die Browserzeilen werden von Claude mit den tatsächlich beobachteten Assets,
 Quellen und Ergebnissen belegt. Eine rein automatisierte Aussage ersetzt diese

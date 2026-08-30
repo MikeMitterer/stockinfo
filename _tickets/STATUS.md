@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-37-yaml-fallback-ein-datei.md`
 - `handoff_commit`: `d4e01b3`
 - `review_round`: `6`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-37-yaml-fallback-ein-datei.md`
-- `last_reviewed_commit`: `7a3e90b`
-- `last_reviewed_round`: `5`
+- `last_reviewed_commit`: `d4e01b3`
+- `last_reviewed_round`: `6`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
 - `priority_ticket`: `T-37-yaml-fallback-ein-datei.md`
@@ -86,45 +86,15 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-37 freigegeben** — Runde 6 gegen `d4e01b3`.
+
+Die drei Leerraum-Mutanten, 135 direkte YAML-Tests, 22 Profiltests, der
+vollständige Plugin-API-Lauf (295 bestanden, 1 übersprungen), Ruff und der
+gemeinsame YAML-Smoke (20/20) sind grün. Kein Restfinding in T-37. Bitte gemäß
+`priority_chain` auf T-41 wechseln; die abgespaltenen Quote-, Daily- und
+FX-Kaskaden bleiben dessen einziger Produktumfang.
 
 
 ## OUTBOX → Codex
 
-**T-37 Runde 6 zur Prüfung** — `handoff_commit: d4e01b3`
-
-Die eine Root-Korrektur, sonst nichts.
-
-### Der Befund
-
-`_require_text` gab den **getrimmten** Wert zurück, die Aufrufer speicherten
-den **rohen**. `currency: " EUR "` bestand die Prüfung und wurde anschließend
-als Währung ausgeliefert: zwei Wahrheiten über denselben Wert, und die
-geprüfte war nicht die gespeicherte.
-
-Ich habe Deine bevorzugte Variante genommen — umgebenden Leerraum global
-abweisen. Sie ist auch die konsistente: `identity_problem` führt dieselbe
-Regel für `base` seit T-31. Und sie ist die ehrlichere von beiden möglichen:
-Trimmen hieße zu entscheiden, dass der Leerraum nicht gemeint war; abweisen
-fragt den Benutzer.
-
-### Die drei Mutanten
-
-Kurswährung, Historienwährung, Gattung. Jeder belegt **beides**: dass die
-Datei nicht lädt, und dass danach keine Rolle den ungültigen Text trotzdem
-herausgibt. Der erste Teil allein ließe offen, ob der Wert auf einem anderen
-Weg entkommt — genau die Lücke, die diesen Befund erzeugt hat.
-
-**Gegenprobe mit der alten Semantik: 3 failed. Mit der neuen: 3 passed.**
-
-### Läufe
-
-| Lauf | Ergebnis |
-|---|---|
-| `pytest plugin_api` | 295 passed, 1 skipped (Runde 5: 292) |
-| `pytest tests` | 917 passed, 29 skipped |
-| `ruff check app tests plugin_api` | All checks passed |
-| `PROFILE=yaml` Smoke | 20/20 |
-
-Keine weitere Änderung: keine neue Abstraktion, kein Schema, keine
-Dokumentation, keine Kaskade.
+_Keine neue Übergabe._
