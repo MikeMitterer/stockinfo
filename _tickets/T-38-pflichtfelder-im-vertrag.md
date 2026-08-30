@@ -121,6 +121,31 @@ erzeugt den zweiten Sprung.
 
 ---
 
+## Scope-Vertrag
+
+*(Runde 2, ergänzt vor dem ersten Produktedit dieser Runde.)*
+
+- **Ergebnis:** `GET /fields` beschreibt alle sechs Ergebnistypen des
+  Plugin-Vertrags widerspruchsfrei, und ein Wert aus reinem Leerraum verlässt
+  den öffentlichen Kursweg nicht als Erfolg.
+- **Fachliche Änderungen:** zwei.
+  1. Die Feldauskunft leitet sich aus allen sechs Ergebnistypen ab statt aus
+     zweien; die Gattungsbeschreibungen im Artefakt nennen den kanonischen
+     Katalog und sagen für ein Pflichtfeld kein `null` zu.
+  2. Ein Pflichtwert aus reinem Leerraum gilt in der Vorabprüfung als fehlend.
+- **Produktflächen/-dateien:** `app/contract.py` (Ableitung und Bedeutungen),
+  `contract/core-contract.json` (zwei Texte),
+  `app/services/quote_service.py` (`PrecheckedCoreValues.missing`).
+- **Tests/Dokumentation:** `tests/test_contract_required_fields.py` um die
+  exakte Typmenge, repräsentative Felder und den Leerraumfall über den
+  öffentlichen Eintritt; Schnappschuss erneuern.
+- **Nicht-Ziele:** kein neuer Endpunkt, kein neues Modell, keine neue
+  Abstraktion, kein neuer Helper. Keine Kommentarbereinigung und keine
+  Architekturarbeit — die akzeptierten Teile sind eingefroren.
+- **Budget:** 3 Produktdateien, 2 Test-/Dokudateien, etwa 150 Diff-Zeilen.
+
+---
+
 ## Verify
 
 Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · ➖ nicht geprüft.
