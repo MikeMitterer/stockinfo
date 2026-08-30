@@ -68,6 +68,21 @@ Das Budget wird einmalig auf **8 Produktdateien, 13 Test-/Dokudateien und
 `docs/sources.yaml.example`. Keine weitere Produktfläche. Eine zweite
 Überschreitung führt gemäß Regelwerk grundsätzlich zu `reduce` oder `split`.
 
+### Scope-Checkpoint 2 · `split`
+
+Codex-Entscheidung am 2026-08-30 gegen `cc688a8`: Die im Browser belegte
+fehlende Host-Kaskade für `quotes`, `daily` und `fx` ist eine neue
+Produktabstraktion und nach der zweiten Scope-Überschreitung kein zulässiger
+Rest dieses Tickets. T-37 schließt als eigenständig lieferbares **standalone
+YAML-Plugin** ab; die Online-Fallback-Kaskade wird vor T-35 separat entworfen
+und umgesetzt.
+
+Für den T-37-Handoff werden das zusätzliche `_tickets/T-37-browser.sh` und der
+neue Kaskaden-Rottest aus `cc688a8` wieder entfernt. Die bereits beobachtete
+Browser-Abnahme bleibt als Beleg im Ticket, ohne neue Browser-Infrastruktur.
+Der falsche Dashboard-Text, der `bond`, `crypto` und `fund` pauschal „Aktie“
+nennt, wird als UI-Befund in T-35 geprüft; er erweitert T-37 nicht.
+
 ---
 
 ## Verify
