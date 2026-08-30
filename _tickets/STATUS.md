@@ -5,12 +5,12 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
 - `handoff_commit`: `0bb5c20`
 - `review_round`: `2`
 - `owner`: `codex`
-- `updated_at`: `2026-08-30`
+- `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-41-role-kaskaden-fuer-yaml-fallback.md`
 - `last_reviewed_commit`: `f742c9c`
 - `last_reviewed_round`: `1`
