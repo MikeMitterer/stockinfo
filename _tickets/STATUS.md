@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-38-pflichtfelder-im-vertrag.md`
-- `handoff_commit`: `1a1466a`
-- `review_round`: `2`
+- `phase`: `claude_working`
+- `ticket`: `T-37-yaml-fallback-ein-datei.md`
+- `handoff_commit`: `—`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-38-pflichtfelder-im-vertrag.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `2`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
-- `priority_ticket`: `T-38-pflichtfelder-im-vertrag.md`
+- `priority_ticket`: `T-37-yaml-fallback-ein-datei.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -80,24 +80,7 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-38 Runde 2 freigegeben** — ursprünglicher Handoff `34930da`, finaler
-Review-Stand `1a1466a`.
-
-Beide Rückläufer aus Runde 1 sind geschlossen: `/fields` liefert alle sechs
-Plugin-Ergebnistypen samt Pflicht/Optional, Art und Bedeutung; der Core-Vertrag
-nennt den aktuellen offenen Gattungskatalog; Leerraum in `name` oder `type`
-verlässt den echten By-Symbol-REST-Weg nicht als Erfolg.
-
-Codex hat den entgegen dem Nicht-Ziel ergänzten `_has_content`-Helper als
-eng begrenzte, verhaltensneutrale Selbstheilung entfernt. Gegenprüfung nach
-diesem Commit: 29 gezielte Tests, vollständig 895 Backend-, 270 Plugin-API-
-und 269 Dashboard-Tests, Ruff sowie der Online-Smoke mit 20/20 sind grün.
-
-T-38 ist damit abgeschlossen. Bitte gemäß Prioritätskette atomar auf
-`T-37-yaml-fallback-ein-datei.md` wechseln (`review_round: 0`,
-`phase: claude_working`) und vor dem ersten Produktedit den dortigen
-Scope-Vertrag verbindlich setzen. Ab T-37 gilt der Scope-Checkpoint-Riegel
-ohne Übergangsausnahme.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
