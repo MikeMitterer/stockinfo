@@ -90,7 +90,7 @@ usage() {
     usageLine "-k | --keep-log  " "Server-Log und Volume stehen lassen"
     usageLine "-i | --info      " "Einstellungen anzeigen"
     echo
-    echo -e "    ${YELLOW}PROFILE${NC}=online|csv  — dieselben Checks, andere Quellen (T-37)"
+    echo -e "    ${YELLOW}PROFILE${NC}=online|yaml — dieselben Checks, andere Quellen"
     usageLine "-h | --help      " "Diese Hilfe anzeigen"
     echo
     echo -e "${LIGHT_BLUE}Hints:${NC}"
@@ -159,79 +159,76 @@ providers:
 YAML
 }
 
-# Schreibt die Kette des CSV-Profils samt ihrer Dateien.
+# Schreibt die Kette des YAML-Profils samt ihrer Fachdatendatei.
 #
 # **Dieselben drei Papiere wie online, mit denselben Werten** — nur so bleiben
 # die Checks darunter identisch. Weicht ein Wert ab, prüft der Lauf nicht mehr
 # dieselbe Aussage, sondern eine ähnliche.
-writeCsvProfile() {
-    EXPECTED_SOURCES="canada-file,fx-file,metadata-file,prices-file-daily,prices-file-quote"
-    EXPECTED_FX_SOURCE="fx-file"
-    local -r _PLUGINS="${WORKDIR}/plugins"
-    mkdir -p "${_PLUGINS}"
+writeYamlProfile() {
+    EXPECTED_SOURCES="yaml-file"
+    EXPECTED_FX_SOURCE="yaml-file"
 
-    # Die Beispiele werden als **Dateien** ins Volume gelegt — der Ladeweg,
-    # den ein Betreiber nimmt. `canada-file` liegt zwar auch als Entry-Point
-    # vor; die anderen vier gibt es nur so, und zwei Ladewege im selben Lauf
-    # zu mischen machte die Aussage unschärfer.
-    cp "${PROJECT_ROOT}/plugin_api/examples/canada_file.py"   "${_PLUGINS}/aufloesung.py"
-    cp "${PROJECT_ROOT}/plugin_api/examples/metadata_file.py" "${_PLUGINS}/kennzahlen.py"
-    cp "${PROJECT_ROOT}/plugin_api/examples/prices_file.py"   "${_PLUGINS}/kurse.py"
-    printf '\nSOURCES = [CanadaFileResolver]\n'   >> "${_PLUGINS}/aufloesung.py"
-    printf '\nSOURCES = [MetadataFileSource]\n'   >> "${_PLUGINS}/kennzahlen.py"
-    printf '\nSOURCES = [PricesFileQuoteSource, PricesFileDailySource, FxFileSource]\n' \
-        >> "${_PLUGINS}/kurse.py"
+    # **Eine Quelle in fuenf Rollen, eine Datei.** Bis T-37 standen hier vier
+    # Beispiel-Plugins mit vier CSV-Dateien; der Betreiber musste sie
+    # zueinander passend halten, ohne dass etwas das geprueft haette.
+    #
+    # Geladen wird ueber den **Entry-Point** — `yaml-file` ist im Paket
+    # angemeldet und installiert. Eine Kopie ins Volume waere der zweite
+    # Ladeweg, und den prueft `tests/test_plugin_vertical.py`.
+    cat > "${WORKDIR}/assets.yaml" <<'YAML'
+version: 1
 
-    cat > "${WORKDIR}/isins.csv" <<'CSV'
-isin;ticker;mic;name;type
-IE00B4L5Y983;EUNL;XETR;iShares Core MSCI World UCITS ETF;etf
-US0378331005;APC;XETR;Apple Inc.;stock
-CA7800871021;RY;XTSE;Royal Bank of Canada;stock
-CSV
+instruments:
+  - id: world-etf
+    identity: {kind: listed, isin: IE00B4L5Y983, ticker: EUNL, mic: XETR}
+    name: iShares Core MSCI World UCITS ETF
+    instrument_type: etf
+    price: {value: 128.21, currency: EUR, as_of: "2026-08-27T17:30:00+02:00"}
+    # Die TER steht in **Basispunkten** — `20` sind `0,20 %`, derselbe Wert,
+    # den justETF online liefert. Dass beide Profile dasselbe anzeigen, obwohl
+    # die Quellen in verschiedenen Einheiten liefern, ist der schaerfste
+    # Einzelbeweis dafuer, dass die Einheitendeklaration des Vertrags traegt.
+    metadata: {ter_bps: 20, provider: iShares, fund_domicile: Ireland}
+    # Die Tagesreihe pruefen Check `#9`: Ohne sie liefert die Rolle `daily`
+    # nichts, und der Lauf zeigte eine leere Reihe statt einer fehlenden
+    # Zusage. Die CSV-Fassung trug diese Werte in `closes.csv`.
+    history:
+      currency: EUR
+      closes:
+        - {date: "2026-08-25", value: 127.90}
+        - {date: "2026-08-26", value: 128.05}
+        - {date: "2026-08-27", value: 128.21}
 
-    cat > "${WORKDIR}/closes.csv" <<'CSV'
-ticker;mic;day;close;currency
-EUNL;XETR;2026-08-27;128.21;EUR
-APC;XETR;2026-08-27;277.40;EUR
-RY;XTSE;2026-08-27;283.40;CAD
-CSV
+  - id: apple-xetra
+    identity: {kind: listed, isin: US0378331005, ticker: APC, mic: XETR}
+    name: Apple Inc.
+    instrument_type: stock
+    price: {value: 277.40, currency: EUR, as_of: "2026-08-27T17:30:00+02:00"}
 
-    # Die TER steht hier in **Basispunkten** — `20` sind `0,20 %`, derselbe
-    # Wert, den justETF online liefert. Dass beide Profile dasselbe anzeigen,
-    # obwohl die Quellen in verschiedenen Einheiten liefern, ist der schärfste
-    # Einzelbeweis dafür, dass die Einheitendeklaration des Vertrags trägt.
-    cat > "${WORKDIR}/meta.csv" <<'CSV'
-isin;ter_bps;provider;fund_domicile
-IE00B4L5Y983;20;iShares;Ireland
-CSV
+  - id: rbc-toronto
+    identity: {kind: listed, isin: CA7800871021, ticker: RY, mic: XTSE}
+    name: Royal Bank of Canada
+    instrument_type: stock
+    price: {value: 283.40, currency: CAD, as_of: "2026-08-27T21:00:00+02:00"}
+    history:
+      currency: CAD
+      closes:
+        - {date: "2026-08-27", value: 283.40}
 
-    cat > "${WORKDIR}/fx.csv" <<'CSV'
-base;quote;day;rate
-CAD;EUR;2026-08-27;0.6412
-CSV
+fx_rates:
+  - {base: CAD, quote: EUR, rate: 0.6412, as_of: "2026-08-27T17:30:00+02:00"}
+YAML
 
-    # `prefixes` ist der Grund, warum das Beispiel hier ohne Änderung taugt:
-    # Es ist auf `CA` voreingestellt, aber konfigurierbar.
     cat > "${WORKDIR}/sources.yaml" <<YAML
-resolvers: [canada-file]
-etf_meta:  [metadata-file]
-quotes:    [prices-file-quote]
-daily:     [prices-file-daily]
-fx:        [fx-file]
+resolvers: [yaml-file]
+etf_meta:  [yaml-file]
+quotes:    [yaml-file]
+daily:     [yaml-file]
+fx:        [yaml-file]
 
 providers:
-  canada-file:
-    path: ${WORKDIR}/isins.csv
-    prefixes: [IE, US, CA]
-  metadata-file:
-    path: ${WORKDIR}/meta.csv
-    prefixes: [IE, US, CA]
-  prices-file-quote:
-    path: ${WORKDIR}/closes.csv
-  prices-file-daily:
-    path: ${WORKDIR}/closes.csv
-  fx-file:
-    path: ${WORKDIR}/fx.csv
+  yaml-file:
+    path: ${WORKDIR}/assets.yaml
 YAML
 }
 
@@ -243,9 +240,9 @@ prepareVolume() {
 
     case "${PROFILE}" in
         online) writeOnlineProfile ;;
-        csv)    writeCsvProfile ;;
+        yaml)   writeYamlProfile ;;
         *)
-            echo -e "  ${RED}✗${NC} Unbekanntes Profil '${PROFILE}' — erlaubt: online, csv"
+            echo -e "  ${RED}✗${NC} Unbekanntes Profil '${PROFILE}' — erlaubt: online, yaml"
             return 1
             ;;
     esac
@@ -373,7 +370,7 @@ print(f'{row[0]} Zeilen, zuletzt {row[1]}')
 
 # **Vor allen anderen: Taugen die Erwartungswerte selbst?**
 #
-# Mike ausdrücklich: „Stelle natürlich vorher fest, dass die Testdaten im CSV
+# Mike ausdrücklich: „Stelle natürlich vorher fest, dass die Testdaten
 # passen." Ohne diesen Check misst ein grüner Lauf womöglich nur, dass beide
 # Seiten denselben Tippfehler teilen.
 #
@@ -383,8 +380,8 @@ print(f'{row[0]} Zeilen, zuletzt {row[1]}')
 #
 # Der Check läuft in **beiden** Profilen und ist damit kein Sonderweg: Online
 # prüft er die Erwartungen, gegen die die echten Quellen gehalten werden; im
-# CSV-Profil zusätzlich die Werte, die in den Dateien stehen. Ein falsch
-# erwarteter MIC fiele online genauso auf.
+# YAML-Profil zusätzlich die Werte, die in der Fachdatendatei stehen. Ein
+# falsch erwarteter MIC fiele online genauso auf.
 # Prueft die Daten **eines** Verzeichnisses gegen die Vertragsinvarianten.
 #
 # Herausgezogen, damit die Negativprobe weiter unten **denselben** Parser
@@ -392,13 +389,12 @@ print(f'{row[0]} Zeilen, zuletzt {row[1]}')
 # genau die Sorte Doppelung faellt in diesem Projekt regelmaessig auf.
 #
 # Params:
-#   $1 - Verzeichnis mit den CSV-Dateien
+#   $1 - Verzeichnis mit der Fachdatendatei
 #
 # Returns:
 #   Exitstatus des Parsers; die Befunde stehen auf stdout.
 checkDataIn() {
     "${VENV_PY}" - "$1" <<'PY'
-import csv
 import sys
 from pathlib import Path
 
@@ -438,8 +434,8 @@ if is_real_mic("US"):
 if not currency_problem("GBX"):
     findings.append("Pence werden nicht als Untereinheit erkannt")
 
-# Im CSV-Profil zusaetzlich die Dateien selbst.
-def as_number(raw: str, where: str) -> float | None:
+# Im YAML-Profil zusaetzlich die Fachdatendatei selbst.
+def as_number(raw: object, where: str) -> float | None:
     """Eine Zahl aus der Datei — oder ein Befund statt eines Abbruchs.
 
     Hier stand blankes `float(...)`. Ein unbrauchbarer Wert liess den Pruefer
@@ -454,51 +450,82 @@ def as_number(raw: str, where: str) -> float | None:
         return None
 
 
-def rows(name: str) -> list[dict]:
-    path = workdir / name
-    if not path.is_file():
-        return []
-    with path.open(encoding="utf-8", newline="") as handle:
-        return list(csv.DictReader(handle, delimiter=";"))
+assets = workdir / "assets.yaml"
+if assets.is_file():
+    import yaml
 
-for row in rows("isins.csv"):
-    if not isin_check_digit_is_valid(row["isin"]):
-        findings.append(f"isins.csv: falsche Pruefziffer {row['isin']}")
-    if not is_real_mic(row["mic"]):
-        findings.append(f"isins.csv: kein echter MIC {row['mic']}")
-    if not (row.get("name") or "").strip():
-        findings.append(f"isins.csv: Name fehlt bei {row['isin']}")
-    # Der Katalog aus T-31, Entscheidung 2. Ein Tippfehler in der Gattung
-    # waere sonst genau der Fall, den der UI-Lauf teuer gemacht hat.
-    if (row.get("type") or "").strip() not in ("stock", "etf", "etc", "crypto", "bond"):
-        findings.append(f"isins.csv: unbekannte Gattung {row.get('type')!r} bei {row['isin']}")
+    try:
+        data = yaml.safe_load(assets.read_text(encoding="utf-8")) or {}
+    except yaml.YAMLError as error:
+        findings.append(f"assets.yaml ist kein gueltiges YAML: {error}")
+        data = {}
 
-for row in rows("closes.csv"):
-    if not is_real_mic(row["mic"]):
-        findings.append(f"closes.csv: kein echter MIC {row['mic']}")
-    problem = currency_problem(row["currency"])
-    if problem:
-        findings.append(f"closes.csv: {row['currency']} — {problem}")
-    close = as_number(row["close"], "closes.csv")
-    if close is not None and not is_finite_price(close):
-        findings.append(f"closes.csv: unbrauchbarer Kurs {row['close']}")
+    for entry in data.get("instruments") or []:
+        where = f"assets.yaml/{entry.get('id')}"
+        identity = entry.get("identity") or {}
+        kind = identity.get("kind")
 
-for row in rows("meta.csv"):
-    if not isin_check_digit_is_valid(row["isin"]):
-        findings.append(f"meta.csv: falsche Pruefziffer {row['isin']}")
-    raw_bps = (row.get("ter_bps") or "").strip()
-    bps = as_number(raw_bps, "meta.csv") if raw_bps else None
-    if bps is not None and not 0 <= bps <= 500:
-        findings.append(f"meta.csv: TER {raw_bps} bps ausserhalb des Wertebereichs")
+        if kind not in ("listed", "pair", "isin_only"):
+            findings.append(f"{where}: unbekannte Identitaetsform {kind!r}")
+        if kind in ("listed", "isin_only") and not isin_check_digit_is_valid(
+            identity.get("isin")
+        ):
+            findings.append(f"{where}: falsche Pruefziffer {identity.get('isin')!r}")
+        if kind == "listed" and not is_real_mic(identity.get("mic")):
+            findings.append(f"{where}: kein echter MIC {identity.get('mic')!r}")
+        if kind == "pair":
+            problem = currency_problem(identity.get("quote_currency"))
+            if problem:
+                findings.append(f"{where}: quote_currency {problem}")
 
-for row in rows("fx.csv"):
-    for field in ("base", "quote"):
-        problem = currency_problem(row[field])
-        if problem:
-            findings.append(f"fx.csv: {row[field]} — {problem}")
-    rate = as_number(row["rate"], "fx.csv")
-    if rate is not None and not is_finite_price(rate):
-        findings.append(f"fx.csv: unbrauchbarer Kurs {row['rate']}")
+        if not (entry.get("name") or "").strip():
+            findings.append(f"{where}: Name fehlt")
+        # Der Katalog aus T-31, Entscheidung 2. Ein Tippfehler in der Gattung
+        # waere sonst genau der Fall, den der UI-Lauf teuer gemacht hat.
+        if entry.get("instrument_type") not in (
+            "stock", "etf", "etc", "fund", "crypto", "bond"
+        ):
+            findings.append(
+                f"{where}: unbekannte Gattung {entry.get('instrument_type')!r}"
+            )
+
+        price = entry.get("price") or {}
+        if price:
+            problem = currency_problem(price.get("currency"))
+            if problem:
+                findings.append(f"{where}: price.currency {problem}")
+            value = as_number(price.get("value"), where)
+            if value is not None and not is_finite_price(value):
+                findings.append(f"{where}: unbrauchbarer Kurs {price.get('value')!r}")
+
+        history = entry.get("history") or {}
+        if history:
+            problem = currency_problem(history.get("currency"))
+            if problem:
+                findings.append(f"{where}: history.currency {problem}")
+            for close in history.get("closes") or []:
+                value = as_number(close.get("value"), where)
+                if value is not None and not is_finite_price(value):
+                    findings.append(
+                        f"{where}: unbrauchbarer Schlusskurs {close.get('value')!r}"
+                    )
+
+        metadata = entry.get("metadata") or {}
+        raw_bps = metadata.get("ter_bps")
+        if raw_bps is not None:
+            bps = as_number(raw_bps, where)
+            if bps is not None and not 0 <= bps <= 500:
+                findings.append(f"{where}: TER {raw_bps} bps ausserhalb des Bereichs")
+
+    for rate in data.get("fx_rates") or []:
+        where = f"assets.yaml/fx {rate.get('base')}/{rate.get('quote')}"
+        for field in ("base", "quote"):
+            problem = currency_problem(rate.get(field))
+            if problem:
+                findings.append(f"{where}: {rate.get(field)!r} — {problem}")
+        value = as_number(rate.get("rate"), where)
+        if value is not None and not is_finite_price(value):
+            findings.append(f"{where}: unbrauchbarer Kurs {rate.get('rate')!r}")
 
 print("; ".join(findings))
 PY
@@ -532,21 +559,25 @@ checkTestData() {
 # ist. `checkTestData` prueft die echten Daten und ist deshalb per Definition
 # immer gruen; ob er einen Fehler *finden* wuerde, sagt er nicht.
 #
-# Hier bekommt er deshalb eine Datei mit drei eingebauten Fehlern: falsche
+# Hier bekommt er deshalb **eine** Datei mit drei eingebauten Fehlern: falsche
 # Pruefziffer, Sammelcode statt MIC, unbrauchbarer Kurs. Findet er sie nicht
 # — oder bricht er dabei ab, ohne es zu melden —, ist der Check oben wertlos.
+#
+# Drei Fehler in einem Eintrag, weil der Pruefer sie alle melden muss und nicht
+# beim ersten stehenbleiben darf.
 checkTestDataCatchesErrors() {
     local -r _BROKEN="${WORKDIR}/negativprobe"
     mkdir -p "${_BROKEN}"
 
-    cat > "${_BROKEN}/isins.csv" <<'CSV'
-isin;ticker;mic;name;type
-XX0000000000;EUNL;US;Falsche Pruefziffer und Sammelcode;etf
-CSV
-    cat > "${_BROKEN}/closes.csv" <<'CSV'
-ticker;mic;day;close;currency
-EUNL;XETR;2026-08-27;keine-zahl;EUR
-CSV
+    cat > "${_BROKEN}/assets.yaml" <<'YAML'
+version: 1
+instruments:
+  - id: kaputt
+    identity: {kind: listed, isin: XX0000000000, ticker: EUNL, mic: US}
+    name: Falsche Pruefziffer und Sammelcode
+    instrument_type: etf
+    price: {value: keine-zahl, currency: EUR, as_of: "2026-08-27T17:30:00+02:00"}
+YAML
 
     local _OUTPUT _STATUS
     _OUTPUT="$(checkDataIn "${_BROKEN}" 2>&1)"

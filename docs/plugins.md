@@ -111,12 +111,18 @@ quotes:    [yfinance]
 
 providers:
   meine-quelle:
-    path: data/meine-tabelle.csv
+    path: data/meine-tabelle.yaml
 ```
 
 Die Reihenfolge ist die Aussage und wird nicht umsortiert. `GET /sources` zeigt
 danach, was tatsächlich gilt — einschließlich der Quellen, die **nicht**
 arbeiten können und warum.
+
+**Eine Quelle darf in mehreren Rollen stehen.** Das mitgelieferte `yaml-file`
+tut genau das: Es liest eine Datei und bedient daraus Auflösung, Kurs,
+Historie, Metadaten und Devisen. Wer handgepflegte Werte als **letzten**
+Rückfall will, trägt es in jeder Kette ans Ende — dann gewinnt jede
+Online-Quelle, die etwas liefert, und die Datei ergänzt nur die Lücken.
 
 ## Was die App mit einem fremden Plugin macht
 
