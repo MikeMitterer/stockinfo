@@ -138,9 +138,12 @@ def test_die_history_wird_auf_das_fenster_beschnitten() -> None:
         )
     )
 
-    assert type(outside).__name__ == "NotFound", (
-        f"ein Fenster ohne gepflegte Tage liefert Werte: {outside}"
-    )
+    # **Leer, nicht unbekannt.** Das Papier ist geführt und hat einen Verlauf —
+    # nur nicht in diesem Fenster. `NotFound` hieße „kenne ich nicht" und
+    # schickte den Aufrufer eine Quelle weiter, die es auch nicht besser weiß.
+    assert outside.bars == (), f"das Fenster wurde ignoriert: {outside}"
+    assert outside.currency == "EUR"
+    assert outside.adjusted is False
 
 
 def test_derselbe_wechselkurs_auf_sich_selbst_ist_eins() -> None:
@@ -150,9 +153,15 @@ def test_derselbe_wechselkurs_auf_sich_selbst_ist_eins() -> None:
     „kenne ich nicht" abzuweisen zwänge den Host, dieselbe Rechnung selbst
     anzustellen — für eine Zahl, die feststeht.
     """
-    answer = _source().fetch_rate(FxRequest(base="CAD", quote="CAD"))
+    source = _source()
 
-    assert getattr(answer, "rate", None) == 1.0, answer
+    assert source.fetch_rate(FxRequest(base="CAD", quote="CAD")).rate == 1.0
+
+    # **Nur für eine echte Währung.** `ZZZ` vergibt ISO 4217 nicht; ihm 1.0 zu
+    # antworten hieße, einen Tippfehler zu bestätigen.
+    invented = FxRequest(base="ZZZ", quote="ZZZ")
+    assert source.handles(invented) is False
+    assert getattr(source.fetch_rate(invented), "rate", None) is None
 
 
 def test_zustaendig_ist_wer_die_zeile_hat() -> None:
@@ -172,51 +181,124 @@ def test_zustaendig_ist_wer_die_zeile_hat() -> None:
     assert source.handles(ResolveRequest(isin=_ABSENT)) is False
 
 
-@pytest.mark.parametrize(
-    ("broken", "expected"),
-    [
-        pytest.param("version: 1\ninstruments: {}\n", "liste", id="instruments-objekt"),
-        pytest.param(
-            "version: 999\ninstruments: []\n", "version", id="unbekannte-version"
-        ),
-        pytest.param(
-            """version: 1
+# Der Rumpf, an dem jede Grenze einzeln verbogen wird. Ein Mutant, der zwei
+# Fehler trägt, belegt nicht, welcher gefunden wurde.
+_SHELL = """version: 1
 instruments:
   - id: a
     identity: {kind: isin_only, isin: DE0001102531}
-    name: Raumschiff
-    instrument_type: spaceship
-""",
+    name: Bundesanleihe
+    instrument_type: bond
+"""
+
+
+@pytest.mark.parametrize(
+    ("broken", "expected"),
+    [
+        # ─── die Wurzel ──────────────────────────────────────────────────────
+        pytest.param("version: 1\ninstruments: {}\n", "liste", id="instruments-objekt"),
+        pytest.param("version: 999\ninstruments: []\n", "version", id="version-unbekannt"),
+        pytest.param("version: true\ninstruments: []\n", "version", id="version-boolean"),
+        pytest.param("version: 1.0\ninstruments: []\n", "version", id="version-gleitkomma"),
+        pytest.param("instruments: []\n", "version", id="version-fehlt"),
+        pytest.param(
+            "version: 1\ninstruments: []\nfx_rates: {}\n", "liste", id="fx-objekt"
+        ),
+        pytest.param(
+            "version: 1\ninstruments: []\nfx_rates: [7]\n", "objekt", id="fx-punkt-skalar"
+        ),
+        pytest.param("version: 1\ninstruments: [7]\n", "objekt", id="instrument-skalar"),
+        # ─── ein Instrument ──────────────────────────────────────────────────
+        pytest.param(
+            _SHELL.replace("id: a", "id: 7"), "zeichenkette", id="id-zahl"
+        ),
+        pytest.param(
+            _SHELL.replace("name: Bundesanleihe", "name: 7"),
+            "zeichenkette",
+            id="name-zahl",
+        ),
+        pytest.param(
+            _SHELL.replace("instrument_type: bond", "instrument_type: 7"),
+            "zeichenkette",
+            id="gattung-zahl",
+        ),
+        pytest.param(
+            _SHELL.replace("instrument_type: bond", "instrument_type: spaceship"),
             "spaceship",
             id="gattung-ausserhalb-des-katalogs",
         ),
         pytest.param(
-            """version: 1
-instruments:
-  - id: a
-    identity: {kind: isin_only, isin: DE0001102531}
-    name: Anleihe
-    instrument_type: bond
-    metadata: {ter_bps: nope}
-""",
-            "ter_bps",
-            id="kennzahl-ist-keine-zahl",
+            _SHELL.replace(
+                "identity: {kind: isin_only, isin: DE0001102531}", "identity: nope"
+            ),
+            "objekt",
+            id="identity-skalar",
+        ),
+        # ─── die Unterblöcke ─────────────────────────────────────────────────
+        pytest.param(_SHELL + "    price: []\n", "objekt", id="price-liste"),
+        pytest.param(_SHELL + "    metadata: []\n", "objekt", id="metadata-liste"),
+        pytest.param(_SHELL + "    history: []\n", "objekt", id="history-liste"),
+        pytest.param(
+            _SHELL + "    history: {currency: EUR, closes: 7}\n",
+            "liste",
+            id="closes-skalar",
+        ),
+        pytest.param(
+            _SHELL + "    history: {currency: EUR, closes: [7]}\n",
+            "objekt",
+            id="close-punkt-skalar",
+        ),
+        pytest.param(
+            _SHELL + "    history: {currency: 7, closes: []}\n",
+            "zeichenkette",
+            id="history-waehrung-zahl",
+        ),
+        pytest.param(
+            _SHELL
+            + '    price: {value: 1.0, currency: 7, as_of: "2026-08-27T17:30:00+02:00"}\n',
+            "zeichenkette",
+            id="price-waehrung-zahl",
+        ),
+        # ─── die Kennzahlen ──────────────────────────────────────────────────
+        pytest.param(
+            _SHELL + "    metadata: {ter_bps: nope}\n", "ter_bps", id="kennzahl-text"
+        ),
+        pytest.param(
+            _SHELL + "    metadata: {ter_bps: 5000}\n",
+            "bereich",
+            id="kennzahl-ausserhalb-des-bereichs",
+        ),
+        pytest.param(
+            _SHELL + "    metadata: {provider: 7}\n",
+            "zeichenkette",
+            id="kennzahl-text-ist-zahl",
+        ),
+        # ─── die Devisen ─────────────────────────────────────────────────────
+        pytest.param(
+            "version: 1\ninstruments: []\nfx_rates:\n  - {base: 7, quote: EUR, rate: 1.0,"
+            ' as_of: "2026-08-27T17:30:00+02:00"}\n',
+            "zeichenkette",
+            id="fx-basis-zahl",
         ),
     ],
 )
-def test_ein_formfehler_entkommt_dem_konstruktor_nicht(
+def test_jede_grenze_meldet_ihre_form(
     tmp_path: Path, broken: str, expected: str
 ) -> None:
-    """**Vier Wege, auf denen ein Benutzerwert bisher entkam.**
+    """**Die Formgrenze, einmal vollständig.**
 
-    Zwei davon warfen erst später — `instruments: {}` im Konstruktor, eine
-    unlesbare Kennzahl beim Abruf. Ein Fehler, der die Quelle nicht sauber
-    abschaltet, kostet den Betreiber die Meldung: Er sieht einen Stacktrace
-    oder eine Rolle, die stumm nichts liefert.
+    Bis hierher wurde sie mit Einzelfällen nachgezogen, und die Übergabe
+    behauptete danach, es entkomme nichts mehr. Das stimmte nicht: `identity:
+    nope`, eine Zahl in `name`, ein skalarer Listenpunkt und leere Listen an
+    `price`/`metadata`/`history` kamen weiterhin durch — die letzten drei, weil
+    `or {}` jeden falsey Wert in ein „fehlt" verwandelt.
 
-    Die beiden anderen wurden **angenommen**: eine unbekannte Formatversion
-    und eine Gattung außerhalb des Katalogs. Beides sieht aus wie eine Datei,
-    die funktioniert, und ist eine, die stillschweigend etwas anderes bedeutet.
+    Jeder Fall verbiegt **eine** Grenze an einem sonst tadellosen Rumpf. Zwei
+    Fehler in einem Mutanten belegten nicht, welcher gefunden wurde.
+
+    Zwei Fälle sind dabei Fallen der Sprache selbst: ``version: true`` und
+    ``version: 1.0`` galten als Fassung 1, weil ``True == 1`` und ``1.0 == 1``
+    in einer Menge von Ganzzahlen gefunden werden.
     """
     path = tmp_path / "kaputt.yaml"
     path.write_text(broken, encoding="utf-8")

@@ -62,6 +62,7 @@ import yaml
 
 from stockinfo_plugin.invariants import (
     currency_problem,
+    is_finite_number,
     has_timezone,
     identity_problem,
     is_finite_price,
@@ -110,30 +111,118 @@ nicht gab — und der Benutzer bekäme eine Datei, die *fast* funktioniert.
 """
 
 
-def _require_list(value: object, name: str, path: object) -> None:
-    """Ein Block, der eine Liste sein muss, ist eine.
+def _require_list(value: object, name: str, of_objects: bool = True) -> list:
+    """Ein Block, der eine Liste von Objekten sein muss, ist eine.
+
+    Args:
+        value: Der Wert aus der Datei; ``None`` heißt „nicht vorhanden".
+        name: Fundort für die Meldung.
+        of_objects: Ob jeder Listenpunkt ein Objekt sein muss.
+
+    Returns:
+        Die Liste, oder ``[]`` wenn der Block fehlt.
 
     Raises:
-        FileProblem: Der Block trägt etwas anderes. Ohne diese Prüfung stirbt
-            die Schleife darüber mit einem `AttributeError`, und der Betreiber
-            liest einen Stacktrace statt der Zeile, die er ändern muss.
+        FileProblem: Der Block oder einer seiner Punkte trägt etwas anderes.
+            Ohne diese Prüfung stirbt die Schleife darüber mit einem
+            `AttributeError`, und der Betreiber liest einen Stacktrace statt
+            der Zeile, die er ändern muss.
     """
-    if value is None or isinstance(value, list):
-        return
-    where = f"{path}: {name}" if path else name
-    raise FileProblem(
-        f"{where} ist {type(value).__name__} statt einer Liste"
-    )
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        raise FileProblem(f"{name} ist {type(value).__name__} statt einer Liste")
+    if of_objects:
+        for position, item in enumerate(value, start=1):
+            if not isinstance(item, dict):
+                raise FileProblem(
+                    f"{name}[{position}] ist {type(item).__name__} statt eines "
+                    "Objekts"
+                )
+    return value
 
 
-def _require_mapping(value: object, name: str) -> None:
-    """Ein Block, der ein Objekt sein muss, ist eines.
+def _require_mapping(entry: dict, key: str, where: str) -> dict:
+    """Ein optionaler Unterblock ist ein Objekt — oder er fehlt.
+
+    **`or {}` war hier der Fehler.** Es macht aus jedem falsey Wert ein
+    „fehlt": Eine leere Liste an `price` verschwand still, statt beanstandet
+    zu werden. Ein Benutzer, der `price: []` schreibt, meint etwas — und
+    bekam eine Datei, die tat, als stünde dort nichts.
+
+    Returns:
+        Der Unterblock, oder ``{}`` wenn der Schlüssel fehlt.
 
     Raises:
-        FileProblem: Der Block trägt etwas anderes.
+        FileProblem: Der Schlüssel ist da und trägt kein Objekt.
     """
+    if key not in entry or entry[key] is None:
+        return {}
+    value = entry[key]
     if not isinstance(value, dict):
-        raise FileProblem(f"{name} ist {type(value).__name__} statt eines Objekts")
+        raise FileProblem(
+            f"{where}.{key} ist {type(value).__name__} statt eines Objekts"
+        )
+    return value
+
+
+def _require_text(value: object, name: str) -> str:
+    """Ein Feld, das Text sein muss, ist Text — und nicht leer.
+
+    Raises:
+        FileProblem: Der Wert fehlt, ist leer oder ist keine Zeichenkette. Eine
+            Zahl in `name` sieht in der Datei harmlos aus und wirft erst dort,
+            wo jemand sie zu strippen versucht.
+    """
+    if not isinstance(value, str):
+        raise FileProblem(
+            f"{name} ist {type(value).__name__} statt einer Zeichenkette"
+        )
+    if not value.strip():
+        raise FileProblem(f"{name} ist leer")
+    return value.strip()
+
+
+def _require_version(value: object) -> None:
+    """Die Formatfassung ist **genau** eine bekannte Ganzzahl.
+
+    Raises:
+        FileProblem: Die Angabe fehlt, ist keine Ganzzahl oder keine bekannte.
+
+    **`isinstance(value, int)` allein genügt nicht**, und das ist eine Falle
+    von Python selbst: ``True`` *ist* eine Ganzzahl und ``True == 1``. Eine
+    Datei mit ``version: true`` galt damit als Fassung 1. Dasselbe für
+    ``1.0``, das in einer Menge von Ganzzahlen ebenfalls gefunden wird.
+    """
+    if isinstance(value, bool) or not isinstance(value, int):
+        raise FileProblem(
+            f"version ist {value!r} ({type(value).__name__}) statt einer "
+            f"Ganzzahl aus {sorted(_KNOWN_VERSIONS)}"
+        )
+    if value not in _KNOWN_VERSIONS:
+        raise FileProblem(
+            f"version {value} ist unbekannt — diese Fassung liest "
+            f"{sorted(_KNOWN_VERSIONS)}. Eine höhere Zahl bedeutet ein Format, "
+            "das hier niemand kennt; sie stillschweigend zu lesen hieße, etwas "
+            "anderes zu verstehen als gemeint"
+        )
+
+
+def _require_currency(value: object, where: str) -> str:
+    """Eine Währung ist ein ISO-4217-Code — und zuerst überhaupt Text.
+
+    `currency_problem` erwartet eine Zeichenkette; eine Zahl aus der Datei käme
+    dort als `TypeError` heraus statt als Befund. Die Typprüfung steht deshalb
+    davor und nicht daneben.
+
+    Raises:
+        FileProblem: Kein Text, oder kein gültiger Code.
+    """
+    code = _require_text(value, f"{where}.currency")
+    problem = currency_problem(code)
+    if problem:
+        raise FileProblem(f"{where}.currency {problem}")
+    return code
 
 
 def _identity_of(entry: dict) -> object:
@@ -210,26 +299,19 @@ class _Catalogue:
         # gemessen: `instruments: {}` ließ den Konstruktor mit einem
         # `AttributeError` sterben. Der Betreiber las einen Stacktrace statt
         # der Zeile, die er ändern muss.
-        version = raw.get("version")
-        if version not in _KNOWN_VERSIONS:
-            raise FileProblem(
-                f"{path}: version {version!r} ist unbekannt — diese Fassung "
-                f"liest {sorted(_KNOWN_VERSIONS)}. Eine höhere Zahl bedeutet "
-                "ein Format, das hier niemand kennt; sie stillschweigend zu "
-                "lesen hieße, etwas anderes zu verstehen als gemeint"
-            )
-        _require_list(raw.get("instruments"), "instruments", path)
-        _require_list(raw.get("fx_rates"), "fx_rates", path)
+        _require_version(raw.get("version"))
+        instruments = _require_list(raw.get("instruments"), "instruments")
+        rates = _require_list(raw.get("fx_rates"), "fx_rates")
 
         self.by_isin: dict[str, dict] = {}
         self.by_symbol: dict[str, dict] = {}
         self.fx: dict[tuple[str, str], dict] = {}
         seen_ids: set[str] = set()
 
-        for entry in raw.get("instruments") or []:
+        for entry in instruments:
             self._add_instrument(entry, seen_ids)
 
-        for rate in raw.get("fx_rates") or []:
+        for rate in rates:
             self._add_rate(rate)
 
     def _add_instrument(self, entry: dict, seen_ids: set[str]) -> None:
@@ -249,13 +331,7 @@ class _Catalogue:
                 nennt die Kennung und die verletzte Regel — ohne beides sucht
                 der Betreiber in einer Datei mit hundert Zeilen.
         """
-        if not isinstance(entry, dict):
-            raise FileProblem(
-                f"instruments enthält {type(entry).__name__} statt eines "
-                "Eintrags — jeder Listenpunkt ist ein Objekt mit id, identity, "
-                "name und instrument_type"
-            )
-        entry_id = entry.get("id")
+        entry_id = _require_text(entry.get("id"), "instruments[].id")
         where = f"Eintrag {entry_id!r}"
         if entry_id in seen_ids:
             raise FileProblem(
@@ -264,19 +340,16 @@ class _Catalogue:
             )
         seen_ids.add(entry_id)
 
+        _require_mapping(entry, "identity", where)
         identity = _identity_of(entry)
         problem = identity_problem(identity)
         if problem:
             raise FileProblem(f"{where}: {problem}")
 
-        if not (entry.get("name") or "").strip():
-            raise FileProblem(f"{where}: name fehlt — Pflichtfeld seit T-38")
-        instrument_type = (entry.get("instrument_type") or "").strip()
-        if not instrument_type:
-            raise FileProblem(
-                f"{where}: instrument_type fehlt — an ihm hängt, welche "
-                "Metadatenquellen überhaupt gefragt werden"
-            )
+        _require_text(entry.get("name"), f"{where}.name")
+        instrument_type = _require_text(
+            entry.get("instrument_type"), f"{where}.instrument_type"
+        )
         # **Gegen die eigene Zusage geprüft, nicht gegen einen fremden
         # Katalog.** Was der Host führt, entscheidet er; was *diese* Quelle
         # zusagt, steht in `SUPPORTED_TYPES`. Eine Gattung daneben wäre eine
@@ -288,24 +361,21 @@ class _Catalogue:
                 f"Katalog {sorted(YamlFileSource.SUPPORTED_TYPES)}"
             )
 
-        price = entry.get("price") or {}
+        price = _require_mapping(entry, "price", where)
         if price:
-            _require_mapping(price, f"{where}.price")
             self._check_amount(price, f"{where}, price")
 
-        metadata = entry.get("metadata") or {}
+        metadata = _require_mapping(entry, "metadata", where)
         if metadata:
-            _require_mapping(metadata, f"{where}.metadata")
             self._check_metadata(metadata, where)
 
-        history = entry.get("history") or {}
+        history = _require_mapping(entry, "history", where)
         if history:
-            _require_mapping(history, f"{where}.history")
-            problem = currency_problem(history.get("currency"))
-            if problem:
-                raise FileProblem(f"{where}: history.currency {problem}")
-            _require_list(history.get("closes"), f"{where}.history.closes", None)
-            self._check_closes(history.get("closes") or [], where)
+            _require_currency(history.get("currency"), f"{where}.history")
+            self._check_closes(
+                _require_list(history.get("closes"), f"{where}.history.closes"),
+                where,
+            )
 
         record = {**entry, "identity": identity}
         symbol = _symbol_of(identity)
@@ -342,9 +412,7 @@ class _Catalogue:
                 ein anderer als in Frankfurt, und ``0`` ist keine Angabe,
                 sondern eine fehlende Angabe, die sich als Zahl ausgibt.
         """
-        problem = currency_problem(amount.get("currency"))
-        if problem:
-            raise FileProblem(f"{where}.currency {problem}")
+        _require_currency(amount.get("currency"), where)
         if not is_finite_price(amount.get("value")):
             raise FileProblem(
                 f"{where}.value {amount.get('value')!r} ist kein brauchbarer "
@@ -368,15 +436,34 @@ class _Catalogue:
             spec = next(
                 (item for item in YamlFileSource.FIELDS if item.name == field), None
             )
-            if spec is None or spec.kind != "number":
+            if spec is None:
+                continue
+            if spec.kind != "number":
+                _require_text(metadata[key], f"{where}.metadata.{key}")
                 continue
             try:
-                float(metadata[key])
+                number = float(metadata[key])
             except (TypeError, ValueError) as error:
                 raise FileProblem(
                     f"{where}: metadata.{key} ist {metadata[key]!r} und damit "
                     "keine Zahl"
                 ) from error
+            if not is_finite_number(number):
+                raise FileProblem(
+                    f"{where}: metadata.{key} ist {metadata[key]!r} — verlangt "
+                    "ist eine endliche Zahl"
+                )
+            # **Der deklarierte Bereich ist die Zusage der Quelle an sich
+            # selbst.** Eine TER von 5000 Basispunkten ist keine TER, sondern
+            # ein Tippfehler; sie durchzulassen hieße, den eigenen `FieldSpec`
+            # für Zierde zu halten.
+            if spec.plausible:
+                low, high = spec.plausible
+                if not low <= number <= high:
+                    raise FileProblem(
+                        f"{where}: metadata.{key} = {number} liegt außerhalb "
+                        f"des deklarierten Bereichs {low}..{high}"
+                    )
 
     @staticmethod
     def _check_closes(closes: list[dict], where: str) -> None:
@@ -390,7 +477,7 @@ class _Catalogue:
         """
         seen: set[date] = set()
         for close in closes:
-            day = _as_date(close.get("date"), where)
+            day = _as_date(close.get("date"), f"{where}.history")
             if day in seen:
                 raise FileProblem(
                     f"{where}: der {day.isoformat()} steht zweimal in der "
@@ -405,9 +492,9 @@ class _Catalogue:
 
     def _add_rate(self, rate: dict) -> None:
         """Prüft einen Wechselkurs und legt ihn ab."""
-        base = str(rate.get("base", "")).upper()
-        quote = str(rate.get("quote", "")).upper()
-        where = f"fx_rates {base}/{quote}"
+        where = f"fx_rates {rate.get('base')!r}/{rate.get('quote')!r}"
+        base = _require_text(rate.get("base"), f"{where}.base").upper()
+        quote = _require_text(rate.get("quote"), f"{where}.quote").upper()
         for field, value in (("base", base), ("quote", quote)):
             problem = currency_problem(value)
             if problem:
@@ -612,7 +699,10 @@ class YamlFileSource(
         if self._catalogue is None:
             return None
         base, quote = request.base.upper(), request.quote.upper()
-        if base and base == quote:
+        if base and base == quote and not currency_problem(base):
+            # **Nur für eine echte Währung.** `ZZZ/ZZZ` ist keine Identität,
+            # sondern ein Tippfehler; ihm 1.0 zu antworten hieße, einen Code
+            # zu bestätigen, den ISO 4217 nicht vergibt.
             return {"base": base, "quote": quote, "rate": 1.0, "as_of": None}
         return self._catalogue.fx.get((base, quote))
 
@@ -700,6 +790,13 @@ class YamlFileSource(
         # Aufrufer sieht das aus wie eine Antwort auf seine Frage und ist die
         # Antwort auf eine andere. Gemessen lieferte eine Anfrage ab 2030 drei
         # Werte aus 2026.
+        history = entry.get("history") or {}
+        if not history:
+            # Kein gepflegter Verlauf — dazu gibt es nichts zu sagen, auch
+            # keine leere Reihe: Die trüge eine Währung, die niemand genannt
+            # hat.
+            return NotFound()
+
         bars = [
             DailyBar(day=day, close=float(close["value"]))
             for close in _closes(entry)
@@ -707,8 +804,10 @@ class YamlFileSource(
             if (request.start is None or day >= request.start)
             and (request.end is None or day <= request.end)
         ]
-        if not bars:
-            return NotFound()
+        # **Leer ist nicht dasselbe wie unbekannt.** Ein bekanntes Papier ohne
+        # Punkte im angefragten Fenster hat einen Verlauf — nur nicht dort.
+        # `NotFound` hieße „dieses Papier kenne ich nicht" und schickte den
+        # Aufrufer eine Quelle weiter, die es auch nicht besser weiß.
         return DailySeries(
             bars=tuple(bars),
             currency=str((entry.get("history") or {})["currency"]),
