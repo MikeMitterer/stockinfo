@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-35-ui-abnahme-am-laufenden-stack.md`
 - `handoff_commit`: `bdedd8e`
 - `review_round`: `1`
