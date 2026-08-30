@@ -1,7 +1,7 @@
 # Agent Scope Guard — Design
 
 **Datum:** 2026-08-30
-**Status:** von Mike im Chat bestätigt; schriftliche Gegenprüfung ausstehend
+**Status:** von Mike bestätigt; im StockInfo-Workflow umgesetzt
 
 ## Ziel
 
