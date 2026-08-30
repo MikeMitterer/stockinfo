@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-37-yaml-fallback-ein-datei.md`
-- `handoff_commit`: `f34cc3f`
+- `handoff_commit`: `cc688a8`
 - `review_round`: `0`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-08-30`
 - `last_reviewed_ticket`: `T-38-pflichtfelder-im-vertrag.md`
 - `last_reviewed_commit`: `1a1466a`
@@ -80,22 +80,101 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-37 Scope-Checkpoint 1 — Entscheidung: `continue`** gegen `f34cc3f`.
-
-Der Umfang bleibt ein Ergebnis: 1.146 Zeilen sind der reine Abgang der
-ersetzten CSV-Beispiele samt Tests und Fixtures; die drei zusätzlichen
-Produktdateien korrigieren nur vier Zeilen mit veralteten Beispielnamen. Es
-gibt weder ein unabhängig lieferbares Teilstück noch eine neue
-Produktentscheidung.
-
-Einmalig erweitertes Budget: **8 Produktdateien, 13 Test-/Dokudateien,
-maximal 2.700 gesamte Diff-Zeilen**. Offen und erlaubt sind ausschließlich
-`_tickets/T-35-smoke.sh`, `docs/plugins.md` und
-`docs/sources.yaml.example`; keine weitere Produktfläche. Die normale
-Übergabe weist Plan/Ist gegen dieses Budget aus. Eine zweite Überschreitung
-führt grundsätzlich zu `reduce` oder `split`.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**T-37 · Scope-Checkpoint 2** — `handoff_commit: cc688a8`
+
+Auslöser: **eine neue Abstraktion**, die nicht im Vertrag steht. Kein
+Größenproblem — das Budget ist eingehalten.
+
+### Der Befund
+
+Der Browserlauf zu Verify `#7` zeigt: Im Online-Profil bleibt die Anleihe ohne
+Kurs. `502 quote_unavailable`, obwohl `yaml-file` in `quotes` an zweiter Stelle
+steht und die Datei einen gepflegten Schlusskurs führt.
+
+Die Ursache steht als Absicht im Code (`app/container.py`):
+
+> **Eine, nicht eine Kette:** Für Kurse, Tagesreihen und Wechselkurse gibt es
+> keinen Composite, und einen zu erfinden hieße, eine Rangfolge zu bauen, die
+> niemand angefordert hat.
+
+`_first(role)` nimmt für `quotes`, `daily` und `fx` die **erste** einsatzbereite
+Quelle. `quotes: [yfinance, yaml-file]` heißt damit: yfinance, Punkt.
+
+**Inzwischen hat sie jemand angefordert.** T-37 verlangt sie viermal — Verify
+`#3` („dasselbe `yaml-file` jeweils zuletzt"), `#4` („nur bei fehlendem
+Ergebnis wird YAML gefragt"), `#7` („die Anleihe ohne Online-Kurs über YAML")
+und Mikes Entscheidung 6 aus T-31 („hängt das YAML-Plugin ans **Ende** seiner
+Kette").
+
+Das ist eine Kaskade für drei Rollen — die vierte Abstraktion dieser Art neben
+`CompositeResolver` und der Metadatenkaskade. Sie steht nicht im Scope-Vertrag,
+und Deine `continue`-Entscheidung schloss weitere Produktflächen aus. Deshalb
+halte ich an.
+
+### Belegt, nicht behauptet
+
+`tests/test_yaml_profile.py::test_die_datei_antwortet_wenn_die_quelle_davor_nichts_hat`
+ist **absichtlich rot** und sagt dasselbe wie der Browser.
+
+**Mein Orakel zu Matrix `#4` prüfte bisher nur die eine Hälfte** — dass eine
+vorgelagerte Quelle gewinnt. Ein Rückfall, der nie gefragt wird, gewinnt
+ebenfalls nie; beide Fälle waren grün. Gefunden hat die Lücke der Lauf mit
+Augen, nicht die Suite. Das ist der dritte Fall dieser Art in diesem Ticket.
+
+### Was fertig ist
+
+| Verify | Stand |
+|---|---|
+| `#1` Beispieldatei + Vorabprüfung | ✅ |
+| `#2` `PROFILE=yaml` | ✅ 20/20 |
+| `#3` `PROFILE=online` | ✅ 20/20 — aber ohne Datei-Rückfall, siehe oben |
+| `#4` Überschneidung | ◑ die eine Hälfte grün, die andere rot |
+| `#5` Persistenz, Preis-Rückfall | ✅ |
+| `#6` Browser, YAML-Profil | ✅ **live bestätigt**, siehe unten |
+| `#7` Browser, Online-Profil | ⚠️ ETF und Überschneidung stimmen, Anleihe fällt durch |
+| `#8` Inventur | ✅ |
+| `#9` Fehlerfälle | ✅ |
+
+### Verify `#6`, live beobachtet
+
+Drei Formen über die Oberfläche angelegt, alle mit den Werten aus der Datei:
+
+| Papier | Form | Typ | Kurs |
+|---|---|---|---|
+| `BTC-EUR` | `pair` | crypto | 94.500,00 EUR |
+| `DE0001102531` | `isin_only` | bond | 99,42 EUR — **jüngster Schlusskurs**, `price` fehlt |
+| `DE0009848119` | `isin_only` | fund | 142,50 EUR |
+
+Die ISIN-Spalte des Paars zeigt „hat keine — Währungspaar" statt eines
+Editors. Konsole leer, alle Requests 200.
+
+### Ein zweiter, kleinerer Befund aus demselben Lauf
+
+Der Drilldown der **Anleihe** sagt: *„Kennzahlen werden nur für ETFs geholt —
+dieses Papier ist **eine Aktie**."* Sie ist eine `bond`. Der Text
+(`dashboard/src/i18n/de.ts:350`) kennt nur ETF und Aktie und ist seit T-31/T-38
+für `bond`, `crypto` und `fund` schlicht falsch. Eine Zeile, aber wieder eine
+neue Fläche — deshalb hier gemeldet statt gefixt.
+
+### Umfang gegen das erweiterte Budget
+
+| Wert | erlaubt | tatsächlich |
+|---|---:|---:|
+| Produktdateien | 8 | 8 |
+| Test-/Dokudateien | 13 | 14 |
+| Diff-Zeilen | 2700 | ~2600 |
+
+Die vierzehnte Datei ist `_tickets/T-37-browser.sh` — der Starter für die
+Browser-Abnahme, den Verify `#6`/`#7` verlangen. Ohne ihn ließe sich der Lauf
+nicht wiederholen.
+
+### Die Frage an Dich
+
+`continue` (Kaskade für die drei Rollen bauen), `split` (eigenes Ticket, T-37
+schließt ohne Verify `#7`) oder `mike` (die Entscheidung von damals wird
+umgestoßen — sie war ausdrücklich begründet)?
