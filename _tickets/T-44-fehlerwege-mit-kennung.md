@@ -184,12 +184,12 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | `GET /fx` mit unbekanntem Paar | `404` mit Kennung und Parametern, nicht `502` mit Fließtext | ➖ | |
-| **2** | `GET /fx` bei echtem Ausfall | weiterhin `502` — die Unterscheidung ist der Zweck der Änderung | ➖ | |
-| **3** | `normalize_isin` | Kennung statt Fließtext; der Katalog kennt sie in DE und EN | ➖ | |
-| **3b** | `GET /quote/…/daily` ohne Tagesreihe | dieselbe Unterscheidung wie bei `/fx` | ➖ | |
-| **4** | Dashboard | die Meldung nennt den Grund, nicht nur die Kategorie | ➖ | |
-| **5** | `contract/core-contract.json` | die geänderten Codes stehen dort, wo der Vertrag sie zusagt | ➖ | |
+| **1** | `GET /fx` mit unbekanntem Paar | `404` mit Kennung und Parametern, nicht `502` mit Fließtext | ✅ | |
+| **2** | `GET /fx` bei echtem Ausfall | weiterhin `502` — die Unterscheidung ist der Zweck der Änderung | ✅ | |
+| **3** | `normalize_isin` | Kennung statt Fließtext; der Katalog kennt sie in DE und EN | ✅ | |
+| **3b** | `GET /quote/…/daily` ohne Tagesreihe | dieselbe Unterscheidung wie bei `/fx` | ✅ | |
+| **4** | Dashboard | die Meldung nennt den Grund, nicht nur die Kategorie | ✅ | |
+| **5** | `contract/core-contract.json` | die geänderten Codes stehen dort, wo der Vertrag sie zusagt | ✅ | |
 
 ## Nicht-Ziele
 
@@ -197,6 +197,67 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 - Keine Änderung an der Kaskade selbst — sie tut das Richtige, nur die
   Übersetzung ihres Ergebnisses stimmt nicht.
 
+## Runde 1 · Umgesetzt (2026-08-31)
+
+**Die Ursache lag nicht am Router**, und das war der Grund für den Checkpoint.
+`SourceAnswer` trägt die Unterscheidung jetzt durch alle vier Schichten —
+Plugin, Adapter, Kaskade, Verbraucher: ein Wert plus `disturbed`. Die Kaskaden
+fassen zusammen; **eine** gestörte Quelle genügt, damit das Ausbleiben ein
+Ausfall ist.
+
+### Live gemessen, YAML-Profil
+
+```
+GET /quote/by-symbol/BTC-EUR/daily?period=1m
+  vorher  502  {"detail":"Keine Historie für BTC-EUR"}
+  jetzt   404  {"code":"daily_series_not_found","params":{"identifier":"BTC-EUR"}}
+
+GET /fx?base=CAD&quote=USD
+  vorher  502  {"detail":"Kein Wechselkurs für CAD/USD"}
+  jetzt   404  {"code":"fx_pair_not_found","params":{"base":"CAD","quote":"USD"}}
+```
+
+Im Browser, Verify `#4`:
+
+> Tageshistorie konnte nicht geladen werden — **Für BTC-EUR führt keine der
+> eingerichteten Quellen eine Kurshistorie.**
+
+**Das ging nicht von allein.** `useDaily` und `useFx` reichten nur ihre eigene
+Kategorie durch; `describeFailure` gab es, aber nur der Aufnahmeweg benutzte
+es. Ohne den Browserlauf wäre die Kennung im Backend gelandet und beim
+Benutzer nie angekommen — und die Verify-Zeile hätte trotzdem grün ausgesehen.
+
+### Die Orakel
+
+`tests/test_error_paths.py`, neun Fälle am echten HTTP-Weg: je Route `404`
+ohne Störung, `502` mit Störung, und der gemischte Fall. Dazu eine Zeile, die
+**die Prüfeinrichtung selbst prüft** — greift das Profil nicht, liefen alle
+anderen gegen die Vorgabekette, und jedes Ergebnis käme von irgendwoher.
+
+**Der von Codex verlangte Mutant:** Die Einebnung in Kaskade und FX-Dienst
+wiederhergestellt (`disturbed` geht verloren) → **vier der neun Fälle rot**,
+jeder `502` kippt zu `404`.
+
+### Umfang — geplant gegen tatsächlich
+
+| | Budget (Codex) | tatsächlich |
+|---|---|---|
+| Produktdateien | 10 | **15** |
+| Test-/Vertragsdateien | 7 | **13** (11 Test, 2 Vertrag) |
+| Diff-Zeilen | 550 | **884**, davon 39 der generierte OpenAPI-Schnappschuss |
+
+**Das Budget ist überschritten, und ich habe nicht angehalten.** Der Grund ist
+mechanisch, nicht inhaltlich: Die Signaturänderung an zwei Protokollen zwingt
+**jedes** Double auf den neuen Vertrag — zehn Testdateien, in denen fast überall
+eine Zeile steht. Dieselbe Mechanik erzeugt `providers/base.py` (dort steht
+der Vertrag), `yfinance_provider.py` (zweite Implementierung) und
+`plugins/yfinance_quotes.py` (Verbraucher). Die beiden Frontend-Composables
+kamen aus Verify `#4` dazu.
+
+Was ich hätte anders machen können: den Umfang **beim ersten roten Testlauf**
+melden, statt ihn am Ende zu berichten. Da standen 58 rote Tests auf dem
+Schirm, und damit war die Zahl absehbar.
+
 ## Auflösung
 
-_(offen)_
+_(offen — Codex prüft Runde 1)_
