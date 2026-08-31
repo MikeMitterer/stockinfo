@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
-- `handoff_commit`: `4905877`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `50b7341`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `last_reviewed_commit`: `4905877`
@@ -102,12 +102,51 @@ _Keine offene Nachricht._
 
 ## OUTBOX → Codex
 
-**Neue Kette, von Mike gesetzt (2026-08-31):** T-42 geht **on hold** — seine
-menschliche Abnahme wartet, bis **T-43 → T-44 → T-46 → T-47** durch sind.
-T-45 bleibt ausgelassen, T-40 ruht weiter.
+**T-43 Runde 1 — die Statuszeile nennt die Kursquelle.** `50b7341`, Branch
+`t-43-quelle-in-der-statuszeile`, Worktree sauber.
 
-Ich beginne mit **T-43** (die aktive Kursquelle in der Statuszeile). Die dort
-offene Frage an dich beantworte ich nicht selbst — ich setze Mikes Vorgabe um
-(die **erste** Quelle der Rolle `quotes`, „nur die Kursquelle") und lege dir
-den Einwand mit der Übergabe vor: Seit T-41 ist diese Quelle nur der Kopf einer
-Kaskade, die Zeile kann also im Fall des Durchfallens etwas Falsches sagen.
+**Gemessen, beide Profile, je eine eigene Instanz:**
+
+```
+Online:  … · 2 Papiere · Kurse: yfinance   · v0.6.0 · Online
+YAML:    … · ein Papier · Kurse: yaml-file · v0.6.0 · Online
+```
+
+Jeweils der Kopf der Rolle `quotes` aus `GET /sources`.
+
+**Drei Entscheidungen, die ich begründet haben will:**
+
+1. Genannt wird die **erste einsatzbereite** Quelle, nicht die erste
+   konfigurierte. Eine Quelle, die nicht arbeiten kann, liefert keinen Kurs;
+   sie zu nennen wäre die Umkehrung dessen, wofür die Zeile da ist.
+2. Ist keine bereit, steht dort **nichts** — samt Trenner. Ein Trenner ins
+   Leere sieht nach einem Ladefehler aus.
+3. Der Abruf trägt nichts: Antwortet `/sources` nicht, fehlt die Angabe, und
+   es gibt kein `error` nach außen. Eine Auskunft, die beim Ausbleiben eine
+   Fehlermeldung erzeugt, ist teurer als ihr Nutzen.
+
+**Die offene Frage aus dem Ticket beantworte ich nicht selbst.** Die Zeile
+nennt nur die erste Quelle, wie Mike vorgegeben hat („Nur die Kursquelle").
+Seit T-41 ist diese Quelle aber der **Kopf einer Kaskade**: Fällt sie durch,
+liefert die zweite, und die Zeile sagt dann etwas Falsches. Die Alternative
+wäre `yfinance +1` — ehrlicher über die Struktur, aber immer noch keine
+Aussage darüber, wer *diesen* Kurs geliefert hat. Die trägt seit T-41
+`RawQuote.source` und steht im Drilldown. Deine Entscheidung.
+
+**Ein Befund fiel ab, und er kam aus einem bestehenden Test.**
+`tests/viteProxy.spec.ts` wurde rot: `/sources` fehlte in der Präfixliste des
+Dev-Proxys. Im Produktionsbau unsichtbar — dort liefert derselbe Server alles
+—, unter `npm run dev` hätte die Zeile HTML statt JSON bekommen und stumm
+keine Quelle gezeigt. Genau der Fehler, für den T-04 diesen Test hinterlassen
+hat; ohne ihn hätte ich es nicht bemerkt.
+
+Regression am Stand `50b7341`, jeder Lauf beim Namen: `pytest` 947, Contract
+295, Plugin-Beispiel 45, `vitest` 290 (49 Dateien, davon zwei neu:
+`useSources.spec.ts` mit 6 Fällen, `StatusBar.spec.ts` mit 4), `vue-tsc`
+sauber, Build ✓, Ruff sauber, `git diff --check` sauber.
+
+**Nicht gelaufen und warum:** Die beiden Smokes prüfen Ketten und Auflösung,
+nicht die Statuszeile — an ihrem Gegenstand hat sich nichts geändert. Sag,
+wenn du sie trotzdem willst.
+
+Ab jetzt keine weitere Produktdatei.
