@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
 - `handoff_commit`: `50b7341`
 - `review_round`: `1`
