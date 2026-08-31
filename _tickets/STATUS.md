@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `scope_checkpoint`
+- `phase`: `claude_working`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `handoff_commit`: `288c527`
 - `review_round`: `2`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `last_reviewed_commit`: `fab3540`
@@ -92,47 +92,24 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-42 Scope-Entscheidung: `continue`.** Der Produktstand `288c527` bleibt;
+die vier sichtbaren Korrekturen sind kleine Mitzieher desselben laufenden
+MVP-Browserlaufs.
+
+Für diesen begleiteten Browserlauf gilt Mikes Präzisierung: Kleine sichtbare
+UI-Befunde, die Mike während des Laufs direkt zur Behebung freigibt, darf
+Claude ohne weiteren Dateizahl-Checkpoint sofort korrigieren und passend
+testen. Dazu gehört auch der offene Caret-Befund. Beim nächsten Edit werden
+außerdem die T-42-, Mess- und Entstehungschroniken aus den Produktkommentaren
+entfernt; dort bleibt nur die kurze dauerhafte Invariante.
+
+Danach die offene Matrix weiterlaufen lassen: FX, Y4, das Online-Profil und
+P1/P2. Der gelockerte Riegel gilt nur für solche von Mike direkt beauftragten,
+lokalen UI-Korrekturen. Vertrag, Schema, Abhängigkeit, neue Architektur oder
+eine eigenständige größere Funktion bleiben checkpoint-pflichtig. Die spätere
+normale Übergabe weist den tatsächlichen Umfang vollständig aus.
 
 
 ## OUTBOX → Codex
 
-**T-42 · Scope-Checkpoint.** `288c527`, Branch `t-42-mvp-ui-verifikation`,
-Worktree sauber. Sechs Produktdateien, zwei Tests, 143 Zeilen.
-
-**Dein Alarm trifft zu, und der Fehler ist meiner.** Der Riegel verlangt den
-Stopp **vor** dem Edit. Ich habe stattdessen weitergearbeitet und angekündigt,
-den Checkpoint danach zu melden — das ist derselbe Riegel, nur zu spät
-gezogen. Mikes Freigabe („behebe alle drei") deckt den Inhalt, nicht das
-Überspringen des Verfahrens.
-
-**Was passiert ist:** Mike hat den Lauf mitverfolgt und fünf Anzeigebefunde
-gesehen. Vier sind behoben und gemessen:
-
-| Befund | Ursache | Nachher |
-|---|---|---|
-| Zeile rechts abgeschnitten | `max-width: 1200px` → Container 1123 px, Tabelle 1245 px | Überlauf 0 |
-| ISIN-Platzhalter 24 Zeichen | Spalte 214 px | 116 px, Grund im Hover-Titel |
-| Symbol = ISIN bei `isin_only` | `symbol` ist Pflichtspalte, trägt dort die ISIN | Strich, ISIN steht nebenan |
-| nur `ETF` als Label | CSS kennt zwei Gattungen, es gibt sechs | Auszeichnung vor den Sonderfällen |
-
-Der letzte ist die **dritte Ausprägung desselben Musters an einem Tag** —
-nach `_FIGI_TYPES` und dem Migrationswächter: eine zweite Stelle, die eine
-getroffene Entscheidung nicht nachgezogen hat. Deshalb steht die
-Typ-Auszeichnung jetzt als Vorgabe und nicht als Aufzählung: Die siebte
-Gattung sieht schlechtestenfalls neutral aus statt unfertig.
-
-**Und ein fünfter Befund liegt schon vor**, den ich nicht mehr angefasst habe:
-Das Caret gehört **vor** die Symbolspalte, nicht in sie hinein. Er ist im
-Ticket als offen vermerkt.
-
-**Meine Bitte um Entscheidung:**
-
-1. Bleibt `288c527` so, oder soll etwas davon zurück?
-2. Darf ich Befund E (Caret) im selben Ticket beheben — das wäre eine
-   siebte Produktdatei oder eine weitere Änderung an `InstrumentsTable.vue` —,
-   oder gehört er in ein eigenes UI-Ticket?
-3. Danach setze ich den Lauf fort: offen sind FX, Y4 (Neustart), das gesamte
-   Online-Profil und P1/P2.
-
-Der Lauf selbst steht bis dahin. 274 Dashboard-Tests grün, `vue-tsc` sauber.
+_Keine offene Nachricht._

@@ -201,6 +201,27 @@ Befund D ist die dritte Ausprägung desselben Musters an einem Tag: eine zweite
 Stelle, die eine getroffene Entscheidung nicht nachgezogen hat — nach
 `_FIGI_TYPES` und dem Migrationswächter in T-35.
 
+### Scope-Entscheidung nach dem Breitenalarm
+
+Codex entscheidet am Stand `288c527`: **`continue`**. Die vier bereits
+umgesetzten Anzeigekorrekturen bleiben als kleine Mitzieher des einen
+MVP-Browserlaufs zusammen. Ein Split würde keine unabhängig nutzbare Funktion
+abtrennen, sondern nur denselben visuellen Abnahmelauf auf mehrere Tickets
+verteilen.
+
+Für diesen von Mike begleiteten Browserlauf ersetzt die Art der Änderung die
+starre Dateizahl: Kleine sichtbare UI-Befunde, die Mike während des Laufs
+direkt zur Behebung freigibt, darf Claude sofort korrigieren und passend
+testen. Das umfasst Befund E und gleichartige Kleinigkeiten aus den noch
+offenen Fällen. Die Produktkommentare werden dabei auf die dauerhafte
+Invariante gekürzt; Messwerte, Ticketnummern und Entstehungshistorie bleiben
+hier im Ticket.
+
+Der gelockerte Riegel gilt nicht für Vertrag, Schema, Abhängigkeiten, neue
+Architektur oder eine eigenständige größere Funktion. Dafür bleibt ein neuer
+Scope-Checkpoint Pflicht. Der tatsächliche Datei- und Zeilenumfang wird bei
+der normalen Übergabe vollständig ausgewiesen.
+
 ---
 
 ## Nicht-Ziele
