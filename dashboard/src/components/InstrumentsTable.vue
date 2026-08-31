@@ -327,8 +327,16 @@ function price(value: number | null): string {
                 >
                   <!-- Ein Papier der Form `isin_only` hat kein Börsensymbol. -->
                   <template v-if="symbolOf(item)">{{ symbolOf(item) }}</template>
-                  <span v-else class="dim" :title="t('table.noSymbolReason')">—</span>
+                  <span v-else class="dim">—</span>
                 </button>
+                <!--
+                  Der Grund steht **neben** dem Strich und nicht nur in seinem
+                  `title`: Ein Hover ist auf einem Touchgerät nicht erreichbar
+                  und für die Tastatur nicht fokussierbar.
+                -->
+                <span v-if="!symbolOf(item)" class="th-hint" @click.stop>
+                  <InfoHint :text="t('table.noSymbolReason')" />
+                </span>
               </td>
               <td class="mono dim isin-cell">
                 <span v-if="isinOf(item.identity)">{{ isinOf(item.identity) }}</span>
@@ -339,11 +347,18 @@ function price(value: number | null): string {
                 />
                 <!--
                   Kein Wert heißt hier dasselbe wie in jeder anderen Spalte:
-                  ein Strich, der Grund im Titel. Ein sichtbarer Erklärtext
-                  bestimmt die Spaltenbreite für **alle** Zeilen — eine ISIN
-                  braucht 12 Zeichen, ein Satz das Doppelte.
+                  ein Strich. Ein sichtbarer Erklärtext bestimmt die
+                  Spaltenbreite für **alle** Zeilen — eine ISIN braucht zwölf
+                  Zeichen, ein Satz das Doppelte. Der Grund steht deshalb im
+                  Hinweis daneben, der auch per Touch und Tastatur erreichbar
+                  ist.
                 -->
-                <span v-else class="dim" :title="t('table.noIsinReason')">—</span>
+                <template v-else>
+                  <span class="dim">—</span>
+                  <span class="th-hint" @click.stop>
+                    <InfoHint :text="t('table.noIsinReason')" />
+                  </span>
+                </template>
               </td>
               <td class="name">
                 <button
@@ -631,67 +646,7 @@ tbody tr {
 }
 
 // Varianten der globalen .badge-Pill
-/*
- * **Jede Gattung trägt die Pille, auch die, die es noch nicht gibt.**
- *
- * Die Auszeichnung steht deshalb vor den Sonderfällen und nicht in ihnen: Ein
- * neuer Gattungswert sieht schlechtestenfalls neutral aus statt unfertig, und
- * die Spalte bleibt bündig, weil alle Zellen dieselbe Box tragen.
- */
-/*
- * Der Umschalter steht in einer eigenen, schmalen Spalte.
- *
- * `min-width` und nicht nur `width`: In einer Tabelle ist `width` ein Wunsch.
- * Wird die Tabelle enger als ihr Inhalt, verteilt der Layout-Algorithmus die
- * Knappheit über alle Spalten — auch über die schmalste. Das Zeichen wird
- * dabei **horizontal** gestaucht und steht verzerrt da, weil seine Höhe
- * bleibt.
- */
-.caret-col {
-  width: 1.75rem;
-  min-width: 1.75rem;
-  padding-right: 0;
-  text-align: center;
-}
-
-.row-toggle.caret-only {
-  padding: 0;
-  color: inherit;
-
-  // Das Zeichen behält seine Kantenlänge, egal wie eng die Spalte wird.
-  :deep(svg) {
-    flex: none;
-    width: 0.9375rem;
-    min-width: 0.9375rem;
-  }
-}
-
-.badge.type {
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: $color-muted;
-  background: token(--text-muted, 0.14);
-
-  /*
-   * Die Kategoriefarben kommen aus dem Fundament und sind über alle Themes
-   * gleich. Die Zuordnung ist die naheliegende: Anleihe zu `bonds`, ETC zu
-   * `metals` (ein ETC hält üblicherweise Rohstoff), Fonds zu `moneymarket`
-   * als dem verbleibenden Fondsvehikel.
-   *
-   * **Für Krypto führt das Fundament keine Kategorie**, und eine zu erfinden
-   * hieße, eine Farbe zu setzen, die im nächsten Theme etwas anderes bedeutet.
-   * Die Gattung behält deshalb die neutrale Pille — sichtbar ausgezeichnet,
-   * nur ohne eigene Farbe.
-   */
-  &.etf { color: $color-accent; background: token(--accent, 0.15); }
-  &.stock { color: $color-stock; background: token(--asset-stocks, 0.16); }
-  &.bond { color: token(--asset-bonds); background: token(--asset-bonds, 0.16); }
-  &.etc { color: token(--asset-metals); background: token(--asset-metals, 0.16); }
-  &.fund {
-    color: token(--asset-moneymarket);
-    background: token(--asset-moneymarket, 0.16);
-  }
-}
+.badge.type { @include instrument-type-badge; }
 
 /*
  * **Die Zelle bleibt eine Tabellenzelle.** Hier stand `display: flex`, und das

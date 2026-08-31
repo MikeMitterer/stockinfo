@@ -4,9 +4,10 @@ import { useI18n } from 'vue-i18n'
 import { NButton } from 'naive-ui'
 import { UxCaret } from '@mmit/ux-foundation'
 
+import InfoHint from './InfoHint.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
-import { acceptsIsin, isinOf } from '../types'
+import { acceptsIsin, isinOf, symbolOf } from '../types'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 const props = defineProps<{
@@ -57,7 +58,17 @@ function price(value: number | null): string {
 <template>
   <article class="icard card" :class="{ 'icard--selected': selected }">
     <div class="icard__head" @click="emit('select', item)">
-      <span class="icard__symbol mono">{{ item.symbol }}</span>
+      <!--
+        Dieselbe Regel wie in der Tabelle: Ein Papier der Form `isin_only` hat
+        kein Börsensymbol, und die Karte darf keins behaupten.
+      -->
+      <span class="icard__symbol mono">
+        <template v-if="symbolOf(item)">{{ symbolOf(item) }}</template>
+        <template v-else>
+          <span class="dim">—</span>
+          <InfoHint :text="t('table.noSymbolReason')" />
+        </template>
+      </span>
       <span v-if="item.type" class="icard__type badge" :class="item.type">{{ item.type }}</span>
       <span class="icard__price mono">
         {{ price(item.latest_price) }}
@@ -153,8 +164,11 @@ function price(value: number | null): string {
             :symbol="item.symbol"
             @save="emit('set-isin', $event)"
           />
-          <!-- Wie in der Tabelle: ein Strich, der Grund im Titel. -->
-          <span v-else class="dim" :title="t('table.noIsinReason')">—</span>
+          <!-- Wie in der Tabelle: ein Strich, der Grund daneben. -->
+          <template v-else>
+            <span class="dim">—</span>
+            <InfoHint :text="t('table.noIsinReason')" />
+          </template>
         </dd>
         <dt>{{ t('table.colPoints') }}</dt>
         <dd class="mono">{{ item.history_count }}</dd>
@@ -193,22 +207,7 @@ function price(value: number | null): string {
 
 .icard__symbol { font-weight: 600; }
 
-// Dieselbe Zuordnung wie in der Tabelle — die Begründung steht dort.
-.icard__type {
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: $color-muted;
-  background: token(--text-muted, 0.14);
-
-  &.etf { color: $color-accent; background: token(--accent, 0.15); }
-  &.stock { color: $color-stock; background: token(--asset-stocks, 0.16); }
-  &.bond { color: token(--asset-bonds); background: token(--asset-bonds, 0.16); }
-  &.etc { color: token(--asset-metals); background: token(--asset-metals, 0.16); }
-  &.fund {
-    color: token(--asset-moneymarket);
-    background: token(--asset-moneymarket, 0.16);
-  }
-}
+.icard__type { @include instrument-type-badge; }
 
 .icard__price {
   grid-column: 3;

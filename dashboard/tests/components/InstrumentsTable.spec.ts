@@ -3,6 +3,7 @@ import { NSelect } from 'naive-ui'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 
+import InfoHint from '../../src/components/InfoHint.vue'
 import InstrumentsTable from '../../src/components/InstrumentsTable.vue'
 import { useTableSort } from '../../src/composables/useTableSort'
 import { i18n } from '../../src/i18n'
@@ -401,16 +402,20 @@ describe('InstrumentsTable · Identitätsformen', () => {
     const wrapper = mountTable([pair])
 
     expect(wrapper.find('.isin__add').exists()).toBe(false)
-    // Ein Strich wie in jeder anderen leeren Zelle — und der Grund im Titel.
-    // Sichtbar stand er bis T-42 in der Zelle und war doppelt so breit wie
-    // eine ISIN; er hat die Spalte gedehnt, bis die Aktionen aus dem Blickfeld
-    // fielen. Geprueft wird deshalb beides: der Strich und die Auskunft.
+    // Ein Strich wie in jeder anderen leeren Zelle, der Grund daneben. Ein
+    // sichtbarer Erklaertext bestimmt die Spaltenbreite fuer alle Zeilen.
     // **`.isin-cell .dim`, nicht `.dim`.** Die Zelle selbst traegt die Klasse
     // auch; ein zu weiter Selektor findet das `td` und prueft dessen Titel,
     // den es nie gab.
-    const empty = wrapper.find('.isin-cell .dim')
-    expect(empty.text()).toBe('—')
-    expect(empty.attributes('title')).toBe(i18n.global.t('table.noIsinReason'))
+    // Der Grund steht im Hinweis daneben, nicht im `title`: Ein Hover ist auf
+    // einem Touchgeraet nicht erreichbar und fuer die Tastatur nicht
+    // fokussierbar.
+    expect(wrapper.find('.isin-cell .dim').text()).toBe('—')
+    // **Alle Hinweise, nicht der erste.** Der Spaltenkopf traegt selbst einen;
+    // `findComponent` liefert ihn und pruefte damit den falschen Text.
+    expect(
+      wrapper.findAllComponents(InfoHint).map((hint) => hint.props('text')),
+    ).toContain(i18n.global.t('table.noIsinReason'))
   })
 
   it('bietet dem Listing ohne ISIN weiterhin den Editor', () => {
@@ -423,4 +428,45 @@ describe('InstrumentsTable · Identitätsformen', () => {
 
     expect(wrapper.find('.isin__add').exists()).toBe(true)
   })
+
+  /*
+   * Ein Papier, das nur ueber seine ISIN identifiziert ist, hat kein
+   * Boersensymbol. In der Datenbank steht dort trotzdem die ISIN, weil die
+   * Spalte einen Schluessel braucht — die Oberflaeche darf sie nicht als
+   * Symbol ausgeben.
+   */
+  it('behauptet bei einer isin_only-Identitaet kein Symbol', () => {
+    stubMatchMedia(false)
+    const bond = makeInstrument({
+      symbol: 'DE0001102531',
+      identity: { kind: 'isin_only', isin: 'DE0001102531' },
+    })
+
+    const wrapper = mountTable([bond])
+
+    expect(wrapper.find('td.sym .dim').text()).toBe('—')
+    // Die ISIN steht in ihrer eigenen Spalte — genau einmal.
+    expect(wrapper.text().match(/DE0001102531/g)).toHaveLength(1)
+  })
+
+  /*
+   * Die Auszeichnung der Gattung steht **vor** den Sonderfaellen. Ein Wert,
+   * den das Stylesheet nicht kennt, bekommt deshalb die neutrale Pille statt
+   * gar keine — geprueft an einer Gattung ohne eigene Farbe.
+   */
+  it('zeichnet auch eine Gattung ohne eigene Farbe als Pille aus', () => {
+    stubMatchMedia(false)
+    const crypto = makeInstrument({
+      symbol: 'BTC-EUR',
+      type: 'crypto',
+      identity: { kind: 'pair', base: 'BTC', quote_currency: 'EUR' },
+    })
+
+    const wrapper = mountTable([crypto])
+    const badge = wrapper.find('.badge.type')
+
+    expect(badge.exists()).toBe(true)
+    expect(badge.classes()).toContain('crypto')
+  })
+
 })

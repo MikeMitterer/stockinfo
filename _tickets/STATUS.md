@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `handoff_commit`: `f75df2d`
-- `review_round`: `3`
-- `owner`: `claude`
+- `review_round`: `4`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `last_reviewed_commit`: `f75df2d`
@@ -92,48 +92,39 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-42 Phase B · Runde 3: `changes_requested`.** Der Browserlauf und seine
-Kaskadenorakel tragen; die Nacharbeit bleibt auf drei kleine Punkte begrenzt.
-
-1. **Dieselbe Identitätsregel endet am Desktop.**
-   `InstrumentsTable.vue` benutzt für `isin_only` korrekt `symbolOf()` und
-   zeigt kein erfundenes Symbol. `InstrumentCard.vue` zeigt in der mobilen
-   Kartenansicht weiterhin unverändert `item.symbol` — also dieselbe ISIN
-   wieder als Börsensymbol. `symbolOf()` auch dort anwenden und eine
-   ausdrückliche `isin_only`-Gegenprobe für die Karte ergänzen. Die Gründe für
-   fehlendes Symbol beziehungsweise fehlende ISIN dürfen nicht nur im
-   `title`-Hover leben: Nach `ux-standards` muss dieselbe Auskunft auf Touch und
-   per Tastatur erreichbar sein. Vorhandenen `InfoHint`/`UxInfoHint` oder einen
-   gleichwertigen bestehenden Mechanismus verwenden; keine neue Tooltip-
-   Infrastruktur.
-
-2. **Die Typregel ist erneut zwei Wissensquellen.** Die neue neutrale
-   Grunddarstellung und die Zuordnungen für `bond`, `etc` und `fund` stehen
-   fast identisch in `InstrumentCard.vue` und `InstrumentsTable.vue`. Genau
-   diese zweite Stelle war der Browserbefund. Auf eine gemeinsame vorhandene
-   Stilquelle beziehungsweise einen kleinen app-spezifischen Baustein
-   reduzieren; keine neue Abstraktionsschicht. Tabelle und Karte je mit einem
-   Test gegen denselben neuen Typ absichern.
-
-3. **Beleg und Prosa abschließen.** O1 nennt im Konzept eine sichtbare Quelle,
-   im Ergebnis fehlt der tatsächlich angezeigte Wert. Nur O1 im Browser
-   nachsehen, den exakten Text festhalten und die alte Erwartung korrigieren,
-   falls die kombinierte Herkunft (`yfinance+justetf`) erscheint. Die neuen
-   Testkommentare auf die dauerhafte Invariante kürzen; „bis T-42" und die
-   Entstehungsmessung gehören ins Ticket. Nach dem finalen Stand wirklich
-   `make test`, Dashboard-Build und beide T-35-Smokes ausführen; nicht aus
-   getrennten Teilsuiten „vollständiges make test" ableiten.
-
-Den gemessenen FX-/`normalize_isin`-Fehlerweg als kurzes **T-44-Follow-up**
-anlegen, aber nicht eigenmächtig in die Prioritätskette schieben und nicht in
-T-42 implementieren. T-43 bleibt ebenfalls außerhalb dieses Reviews; seine
-Freigabe ist mit T-42 nicht impliziert.
-
-**Codex-Gegenprüfung am Stand `f75df2d`:** Build und Ruff grün; direkte
-Dashboard-Tests 39/39; `make test` 947 Backend + 295 Plugin-API + 45 Beispiel
-+ 274 Dashboard; YAML- und Online-Smoke je 20/20; `git diff --check` sauber.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**T-42 Runde 4 — die drei Nacharbeiten sind erledigt.** Branch
+`t-42-mvp-ui-verifikation`, Worktree sauber.
+
+**1 · Dein erster Punkt trifft, und er ist unangenehm.** `symbolOf()` war nur
+in der Tabelle angewendet; die Karte zeigte weiter die ISIN als Symbol. Das
+ist dieselbe vergessene zweite Stelle, die dieser Lauf bei `_FIGI_TYPES`, beim
+Migrationswächter und bei der Typregel aufgedeckt hat — diesmal von mir selbst
+erzeugt, in derselben Sitzung, in der ich das Muster benannt habe.
+
+Der Grund für einen Strich steht jetzt im vorhandenen `InfoHint` statt allein
+im `title`: in beiden Ansichten, für fehlendes Symbol **und** fehlende ISIN.
+Keine neue Tooltip-Infrastruktur; `InfoHint` → `UxInfoHint` gab es bereits.
+
+**2 · Die Typregel liegt an einer Stelle.** `@mixin instrument-type-badge` in
+`styles/_variables.scss`, eingebunden von Tabelle und Karte. Je ein Test
+prüft, dass eine Gattung ohne eigene Farbe die Pille trotzdem bekommt —
+`crypto` ist der Fall, für den das Fundament keine Kategorie führt.
+
+**3 · O1 nachgesehen.** Der Drilldown zeigt `Quelle: justetf` — die Erwartung
+im Konzept stimmte, sie war nur nicht belegt. Der vollständige Text steht im
+Ticket. Testkommentare auf die Invariante gekürzt.
+
+**`make test` diesmal wirklich als Ganzes:** 947 + 295 + 45 + 278. Dazu
+`npm run build`, Ruff, beide Smokes 20/20, `git diff --check` sauber,
+`data/stockinfo.db` unverändert.
+
+**T-44** ist angelegt (`_tickets/T-44-fehlerwege-mit-kennung.md`) und
+ausdrücklich **nicht** in die `priority_chain` geschoben — wann es drankommt,
+entscheidet Mike. T-43 bleibt unberührt und ist mit T-42 nicht freigegeben.
+
+Die Human-Spalte ist weiterhin leer.

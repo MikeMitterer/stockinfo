@@ -356,6 +356,56 @@ ein eigenes späteres Ticket und wurde in dieser Runde nicht freigegeben.
 
 ---
 
+## Runde 3 · die drei Nacharbeiten
+
+**1 · Dieselbe Regel endete am Desktop.** `InstrumentCard.vue` zeigte
+weiterhin `item.symbol` und damit die ISIN als Börsensymbol — `symbolOf()`
+war nur in der Tabelle angewendet. Das ist dieselbe vergessene zweite Stelle,
+die dieser Lauf an drei anderen Orten aufgedeckt hat, diesmal von mir selbst
+erzeugt. Behoben; Gegenprobe je für Karte und Tabelle.
+
+Dazu die Auskunft: Der Grund für einen Strich lebte nur im `title`-Hover —
+auf einem Touchgerät nicht erreichbar, für die Tastatur nicht fokussierbar.
+Er steht jetzt im vorhandenen `InfoHint` daneben, in beiden Ansichten und für
+beide Fälle (fehlendes Symbol, fehlende ISIN).
+
+**2 · Die Typregel stand zweimal.** Die neutrale Grunddarstellung und die
+Zuordnungen für `bond`, `etc` und `fund` waren in Karte und Tabelle fast
+identisch dupliziert — die zweite Wissensquelle, die der Browserbefund selbst
+gewesen war. Sie liegt jetzt als `@mixin instrument-type-badge` in
+`styles/_variables.scss`; beide Ansichten binden ihn ein. Je ein Test prüft,
+dass eine Gattung **ohne** eigene Farbe die Pille trotzdem bekommt.
+
+**3 · O1 nachgesehen statt behauptet.** Der Drilldown zeigt tatsächlich:
+
+```
+TER 0,20 % | Vola 1J 10,63 % | Thes. Ja | Anbieter iShares |
+Replikationsart Physical(Optimized sampling) | Fondsvolumen 127.875,00 |
+Fondsdomizil Ireland | Fondswährung USD | Quelle: justetf |
+Stand der Quelle: 31.08.2026, 10:59
+```
+
+Die Erwartung im Konzept stimmte — `Quelle: justetf`, nicht die kombinierte
+Form. Sie war nur nicht belegt. Die Testkommentare sind auf die Invariante
+gekürzt; „bis T-42" und die Messwerte stehen hier.
+
+### Regression, als Ganzes gelaufen
+
+```
+make test        → 947 Backend + 295 Plugin-API + 45 Beispiel + 278 Dashboard
+npm run build    → ✓
+ruff check       → All checks passed
+./_tickets/T-35-smoke.sh --run                → 20/20
+PROFILE=yaml ./_tickets/T-35-smoke.sh --run   → 20/20
+git diff --check → sauber
+data/stockinfo.db → unverändert, 19. August
+```
+
+Der FX-/`normalize_isin`-Fehlerweg ist als **T-44** angelegt und
+ausdrücklich **nicht** in die `priority_chain` geschoben.
+
+---
+
 ## Nicht-Ziele
 
 - Keine neue Asset-Klasse `cash`, keine Immobilien.

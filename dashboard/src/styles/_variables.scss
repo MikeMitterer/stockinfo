@@ -46,3 +46,33 @@ $health-down: ux.token(--status-out);
 $radius: var(--radius-lg);
 $font-mono: 'SF Mono', 'JetBrains Mono', 'Menlo', ui-monospace, monospace;
 $status-h: 32px;
+
+/*
+ * Die Gattungspille — **eine** Regel für Tabelle und Karte.
+ *
+ * Jede Gattung trägt die Auszeichnung, auch eine künftige: Die Grundfarbe
+ * steht vor den Sonderfällen, damit ein neuer Wert neutral aussieht statt
+ * unfertig. Die Kategoriefarben kommen aus dem Fundament und sind über alle
+ * Themes gleich — Anleihe zu `bonds`, ETC zu `metals` (ein ETC hält
+ * üblicherweise Rohstoff), Fonds zu `moneymarket` als dem verbleibenden
+ * Fondsvehikel.
+ *
+ * Für Krypto führt das Fundament keine Kategorie. Eine zu erfinden hieße,
+ * eine Farbe zu setzen, die im nächsten Theme etwas anderes bedeutet; die
+ * Gattung behält deshalb die neutrale Pille.
+ */
+@mixin instrument-type-badge {
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: $color-muted;
+  background: ux.token(--text-muted, 0.14);
+
+  &.etf { color: $color-accent; background: ux.token(--accent, 0.15); }
+  &.stock { color: $color-stock; background: ux.token(--asset-stocks, 0.16); }
+  &.bond { color: ux.token(--asset-bonds); background: ux.token(--asset-bonds, 0.16); }
+  &.etc { color: ux.token(--asset-metals); background: ux.token(--asset-metals, 0.16); }
+  &.fund {
+    color: ux.token(--asset-moneymarket);
+    background: ux.token(--asset-moneymarket, 0.16);
+  }
+}

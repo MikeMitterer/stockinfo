@@ -1,6 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
 
+import InfoHint from '../../src/components/InfoHint.vue'
 import InstrumentCard from '../../src/components/InstrumentCard.vue'
 import { i18n } from '../../src/i18n'
 import type { InstrumentSummary } from '../../src/types'
@@ -134,12 +135,39 @@ describe('InstrumentCard', () => {
     await wrapper.find('.icard__toggle').trigger('click')
 
     expect(wrapper.find('.isin__add').exists()).toBe(false)
-    // Ein Strich wie in jeder anderen leeren Zelle — und der Grund im Titel.
-    // Sichtbar stand er bis T-42 in der Zelle und war doppelt so breit wie
-    // eine ISIN; er hat die Spalte gedehnt, bis die Aktionen aus dem Blickfeld
-    // fielen. Geprueft wird deshalb beides: der Strich und die Auskunft.
-    const empty = wrapper.find('.dim')
-    expect(empty.text()).toBe('—')
-    expect(empty.attributes('title')).toBe(i18n.global.t('table.noIsinReason'))
+    // Ein Strich wie in jeder anderen leeren Zelle, der Grund daneben.
+    // Wie in der Tabelle: der Grund im Hinweis, erreichbar per Touch und Tastatur.
+    expect(wrapper.find('.dim').text()).toBe('—')
+    expect(
+      wrapper.findAllComponents(InfoHint).map((hint) => hint.props('text')),
+    ).toContain(i18n.global.t('table.noIsinReason'))
   })
+
+  /*
+   * Dieselbe Regel wie in der Tabelle: Ein Papier, das nur ueber seine ISIN
+   * identifiziert ist, hat kein Boersensymbol — und die Karte darf keins
+   * behaupten, nur weil `instruments.symbol` dort die ISIN traegt.
+   */
+  it('behauptet bei einer isin_only-Identitaet kein Symbol', () => {
+    const wrapper = mountCard({
+      symbol: 'DE0001102531',
+      identity: { kind: 'isin_only', isin: 'DE0001102531' },
+    })
+
+    expect(wrapper.find('.icard__symbol').text()).toContain('—')
+    expect(wrapper.find('.icard__symbol').text()).not.toContain('DE0001102531')
+  })
+
+  it('zeichnet auch eine Gattung ohne eigene Farbe als Pille aus', () => {
+    const wrapper = mountCard({
+      symbol: 'BTC-EUR',
+      type: 'crypto',
+      identity: { kind: 'pair', base: 'BTC', quote_currency: 'EUR' },
+    })
+    const badge = wrapper.find('.icard__type')
+
+    expect(badge.exists()).toBe(true)
+    expect(badge.classes()).toContain('crypto')
+  })
+
 })
