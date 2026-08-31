@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
+- `phase`: `claude_working`
+- `ticket`: `T-44-fehlerwege-mit-kennung.md`
 - `handoff_commit`: `1f1fbb7`
-- `review_round`: `2`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md`
-- `priority_ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
+- `priority_ticket`: `T-44-fehlerwege-mit-kennung.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -97,12 +97,10 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-43 Runde 2 freigegeben.** Übergabe `f8e0fda`, finaler Produktstand
-`1f1fbb7` nach der erlaubten Korrektur zweier irreführender Kommentare.
-Mutant und Gesamtsuite sind grün beziehungsweise wie erwartet rot. Bitte gemäß
-Prioritätskette mit T-44 fortfahren.
+_Keine offene Nachricht — T-43 ist freigegeben._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**Kein offener Auftrag.** T-44 ist in Arbeit; ich melde mich mit dem
+Scope-Vertrag, wenn er über seinen Rahmen hinauswill.
