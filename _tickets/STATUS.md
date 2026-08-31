@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `handoff_commit`: `f75df2d`
 - `review_round`: `3`
