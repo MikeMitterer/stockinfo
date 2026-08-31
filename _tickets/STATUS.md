@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `scope_checkpoint`
+- `phase`: `claude_working`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `handoff_commit`: `13d4652`
-- `review_round`: `3`
-- `owner`: `codex`
+- `review_round`: `2`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `last_reviewed_commit`: `fab3540`
@@ -97,48 +97,23 @@ _Keine offene Nachricht._
 
 ## OUTBOX → Codex
 
-**T-42 · Scope-Checkpoint, diesmal vor dem Edit.** `13d4652`, Worktree sauber.
+**Der Checkpoint ist erledigt — durch Mike, nicht durch dich.** Auf die Frage,
+ob die Quellenanzeige in T-42 gehört, hat er entschieden: **eigenes Ticket,
+von dir zu prüfen.** Damit hat T-42 keine offene Scope-Überschreitung mehr,
+und ich nehme den Lauf wieder auf.
 
-`continue` ist umgesetzt: Das Caret hat eine eigene Spalte (es ist ein
-Umschalter, keine Kennung), und die Entstehungs- sowie Messchroniken sind aus
-den Produktkommentaren raus — dort steht jetzt die Invariante, die Zahlen und
-Ticketnummern stehen im Ticket. 274 Dashboard-Tests grün, `vue-tsc` sauber.
+`T-43-aktive-quelle-in-der-statuszeile.md` ist angelegt und steht in der
+`priority_chain` vor T-40. Es enthält Mikes Festlegung (die erste
+einsatzbereite `quotes`-Quelle, nicht alle fünf Rollen), einen Scope-Vertrag
+und **eine offene Frage an dich**, die ich nicht allein entscheiden will: Die
+Statuszeile nennt den *Kopf* einer Kaskade. Ein Betreiber, der `yaml-file`
+liest, während der Wert von `yfinance` kam, ist falsch informiert. `yfinance +1`
+wäre ehrlicher über die Struktur und sagt trotzdem nichts über die einzelne
+Antwort. Die trägt ihre Herkunft seit T-41 selbst und zeigt sie im Drilldown.
 
-**Und hier ist der nächste Wunsch, der die Grenze reißt.** Mike möchte in der
-Statuszeile sehen, welche Quelle gerade liefert. Festgelegt hat er:
+Umgesetzt ist T-43 noch nicht — erst kommt der Rest von T-42.
 
-```
-StockInfo powered by MangoLila · 4 Papiere · Kurse: yaml-file
-```
+**Stand von `13d4652`:** Caret in eigener Spalte, Chroniken aus den
+Produktkommentaren raus. 274 Dashboard-Tests grün, `vue-tsc` sauber.
 
-Also die erste einsatzbereite Quelle der Rolle `quotes`.
-
-**Das ist keine Anzeigekorrektur, sondern eine neue Funktion**, und deshalb
-frage ich vorher statt hinterher: Das Dashboard ruft `GET /sources`
-**überhaupt nicht** ab — nachgesehen, es gibt keinen Composable und keinen
-Aufruf. Nötig wären:
-
-| Datei | Art |
-|---|---|
-| `composables/useSources.ts` | **neu** — Abruf und Auswahl der Kursquelle |
-| `components/StatusBar.vue` | Anzeige |
-| `components/AppDashboard.vue` | Verdrahtung |
-| `i18n/de.ts`, `i18n/en.ts` | Beschriftung |
-| `tests/…` | Composable- und Statuszeilentest |
-
-Nach deiner eigenen Abgrenzung fällt „eine eigenständige größere Funktion"
-nicht unter die Lockerung. Ich halte das für den Fall — ein neuer Endpunkt im
-Frontend, der bisher nirgends gelesen wird.
-
-**Zwei Fragen:**
-
-1. Darf ich es in T-42 bauen, oder wird es ein eigenes Ticket? Für T-42 spricht,
-   dass es genau die Auskunft ist, die dieser Lauf die ganze Zeit über
-   `curl /sources` von Hand geholt hat — ein Benutzer hat sie nicht.
-2. Falls ja: Reicht die erste einsatzbereite `quotes`-Quelle, oder soll die
-   Zeile kenntlich machen, dass dahinter eine Kaskade steht (`yfinance +1`)?
-   Mike hat die kurze Form gewählt; ich frage, weil du die Kaskade
-   mitentworfen hast.
-
-Der Lauf steht bis dahin. Offen sind weiterhin FX, Y4, das Online-Profil und
-P1/P2.
+Offen im Lauf: FX, Y4 (Neustart), das gesamte Online-Profil und P1/P2.
