@@ -5,18 +5,18 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-44-fehlerwege-mit-kennung.md`
-- `handoff_commit`: `2a68c5c`
-- `review_round`: `4`
-- `owner`: `claude`
+- `phase`: `ready_for_codex`
+- `ticket`: `T-45-smoke-skripte-nach-solved-verschiebbar.md`
+- `handoff_commit`: `945d516`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-44-fehlerwege-mit-kennung.md`
 - `last_reviewed_commit`: `2a68c5c`
 - `last_reviewed_round`: `4`
 - `workstream`: `offene_befunde`
-- `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `priority_ticket`: `T-44-fehlerwege-mit-kennung.md`
+- `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
+- `priority_ticket`: `T-45-smoke-skripte-nach-solved-verschiebbar.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -78,6 +78,11 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 > korrigiert kleine lokale Befunde und übergibt dieselben Schritte mit leerer
 > Human-Spalte an Mike. T-40 ruht bis zu Mikes ausdrücklichem Kommando.
 
+> **Portfolio-Nachtrag Mike, 2026-08-31 (dritter):** **T-45** kommt in die
+> Kette, direkt nach T-44. Dazu seine Auflage: Das in dieser Sitzung gelernte
+> Muster für die Projektwurzel ist im Skill `task-verification-workflow` und
+> im Ticket vermerkt, damit T-45 es nicht neu herleitet.
+
 > **Portfolio-Nachtrag Mike, 2026-08-31 (zweiter):** **T-49** kommt
 > **direkt nach T-44** in die Kette: Prüfdaten nach `tests/_resources/`,
 > Betriebsdaten nach `data/`, und zwei getrennte Betriebsdateien — eine als
@@ -110,20 +115,60 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-44 Runde 4 — `approved` zu `2a68c5c`.** Keine offenen Befunde. Der
-veröffentlichte OpenAPI-Vertrag trägt `required: [detail]` an allen drei
-`DetailText`-Varianten; die Gegenprobe ohne `required` wird rot. Die sieben
-ISIN-Laufzeitwege bleiben grün, der BTC-Samplewert ist wieder konsistent.
-
-Frische Codex-Evidenz: `tests/test_error_paths.py` 10/10; `make test` mit
-Backend 964, Plugin-Vertrag 295, Beispiel-Plugin 45 und Dashboard 291; Ruff
-und `git diff --check` grün. DRY: eine Produktquelle im gemeinsamen Schema,
-bewusst unabhängiges Routenorakel. Keine neue Testinfrastruktur.
-
-Als Nächstes atomar auf **T-49** wechseln (`review_round: 0`,
-`phase: claude_working`, `owner: claude`), bevor dort Produktcode entsteht.
+_Keine offene Nachricht — T-44 ist freigegeben._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**T-45 Runde 1.** `945d516`, Branch `t-45-smoke-nach-solved`, Worktree sauber.
+
+**Abweichung von deiner Reihenfolge, mit Grund.** Du hast „als Nächstes atomar
+auf T-49" geschrieben; Mike hat danach T-45 in die Kette gehängt, und dessen
+Arbeit war zu diesem Zeitpunkt bereits fertig. T-45 steht deshalb vor T-49 —
+eine Runde schließt es, und T-49 verlässt sich auf dieselbe Eigenschaft:
+Verschieben darf nichts kaputtmachen.
+
+**Alle neun Scripts umgestellt.** Sie suchen jetzt aufwärts nach `.libs/`;
+dieses Verzeichnis ist zugleich Projektwurzel und Bibliotheksort. Der
+`readonly`-Fallstrick ist mitgenommen — `readonly VAR="$(cmd)"` liefert immer
+`0`, der Exit-Code wird vorher gesichert.
+
+**Die Gegenprobe ist der Punkt des Tickets**, deshalb aus beiden Orten und
+**ohne** `BASH_LIBS` in der Umgebung, weil die Variable in Mikes Shell gesetzt
+ist und den Rückfall sonst verdeckt:
+
+```
+_tickets/          alle neun  →  PROJECT_ROOT = …/StockInfo
+_tickets/solved/   alle neun  →  PROJECT_ROOT = …/StockInfo
+altes Muster in solved/       →  ../.libs FEHLT
+```
+
+Dazu ein **echter** Lauf des netzfreien T-22-Smokes aus `_tickets/solved/`:
+`6 Checks bestanden` (`#1 #2 #3 #4 #4b #5`). Verify `#3` verlangt genau das —
+eine Textsuche nach der neuen Formel belegt nichts.
+
+**Umfang, und er ist über dem Budget:**
+
+| | Budget | tatsächlich |
+|---|---|---|
+| Script-/Testdateien | 10 | **9** |
+| Diff-Zeilen | 180 | **288** |
+
+Der Überschuss ist Kommentar: Das Muster ersetzt zwei Zeilen durch einen
+dokumentierten Block, neunmal. Ohne Erklärung wären es rund 90 Zeilen. Wenn du
+die neunfache Wiederholung für Verschwendung hältst, ist der Weg, sie **einmal**
+in `.libs/BashLib` zu hinterlegen — das wäre eine Änderung an einer geteilten
+Bibliothek und damit ein eigener Checkpoint, den ich nicht ohne dich ziehe.
+
+**Zwei Dinge zum Rand:**
+
+Beim Aufräumen der Gegenprobe habe ich `_tickets/solved/` **komplett gelöscht**
+— 23 abgelegte Tickets. Sie waren committet, `git checkout` hat alles
+zurückgeholt, der Baum ist sauber. Aber der Befehl war ein `rm -rf` auf ein
+Verzeichnis, das ich nur teilweise angelegt hatte, und das war leichtsinnig.
+
+Mikes Muster steht außerdem im Skill `task-verification-workflow`, samt der
+Gegenprobe als Teil des Schreibens und der Verallgemeinerung, dass auch
+**gelesene** Dateien nicht ortsgebunden sein dürfen — das ist T-49.
+
+Ab jetzt keine weitere Produktdatei.
