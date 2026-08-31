@@ -126,7 +126,7 @@ logs: ## Server-Logs folgen
 ##@ Tests
 
 .PHONY: test
-test: test-backend test-plugin-api test-dashboard ## Alle Tests — Backend + Plugin-API + Dashboard
+test: test-backend test-plugin-api test-example test-dashboard ## Alle Tests — Backend + Plugin-API + Beispielpaket + Dashboard
 
 .PHONY: test-backend
 test-backend: ## Backend-Tests (pytest)  [ARGS="-k name"]
@@ -138,6 +138,18 @@ test-backend: ## Backend-Tests (pytest)  [ARGS="-k name"]
 .PHONY: test-plugin-api
 test-plugin-api: ## Tests des Plugin-Vertrags (eigenes Paket)
 	cd plugin_api && $(WORKSPACE)/$(PYTEST) -q
+
+# Das Entwicklerbeispiel läuft mit, obwohl es nichts ausliefert. Ein Beispiel,
+# das niemand ausführt, stimmt genau bis zur nächsten Vertragsänderung — und
+# ein fremder Autor liest es als Vorlage, ohne zu ahnen, dass es veraltet ist.
+#
+# Über `PYTHONPATH` statt einer Installation: Das Paket ist absichtlich **nicht**
+# Teil der Arbeitsumgebung, sonst prüfte der Lauf eine Version, die niemand
+# gebaut hat.
+.PHONY: test-example
+test-example: ## Tests des Beispiel-Plugins (us-example)
+	cd plugin_api/examples/us-example && \
+		PYTHONPATH=src:$(WORKSPACE)/plugin_api/src $(WORKSPACE)/$(PYTEST) -q
 
 .PHONY: test-dashboard
 test-dashboard: ## Dashboard-Tests (vitest)

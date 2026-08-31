@@ -10,3 +10,11 @@ docker/logs/
 docker/.last-build-tag
 docker/.last_login
 .libs/
+# Bauartefakte der Python-Pakete (`plugin_api/`, das Beispiel-Plugin).
+#
+# **Hier und nicht nur global:** Auf dieser Maschine verdeckt eine
+# `~/.gitignore` die Verzeichnisse ohnehin — auf jeder anderen nicht, und dann
+# landet ein gebautes Wheel im Repository, ohne dass es jemand bemerkt.
+build/
+dist/
+*.egg-info/

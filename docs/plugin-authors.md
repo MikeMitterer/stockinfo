@@ -1,0 +1,386 @@
+# Writing a StockInfo data source
+
+StockInfo can be run anywhere, but it can only be tested against a few
+markets. If you sit in one of the others, you will find a problem with your
+market in minutes — and you should be able to fix it without touching this
+repository.
+
+This guide is for the author of such a plugin. It is not a reference: the
+authoritative field lists live in the contract package itself
+([`stockinfo_plugin/types.py`](../plugin_api/src/stockinfo_plugin/types.py)
+and [`sources.py`](../plugin_api/src/stockinfo_plugin/sources.py)), and every
+rule below is enforced by a test suite you inherit.
+
+A complete, installable example accompanies this text:
+[`plugin_api/examples/us-example/`](../plugin_api/examples/us-example/). It is
+short enough to read in one sitting and is built, installed and exercised the
+way this guide describes.
+
+---
+
+## 1. The mental model
+
+A plugin offers one or more of **five roles**:
+
+| Role | Question it answers |
+|---|---|
+| `resolvers` | Which listing is this paper? |
+| `quotes` | What does it cost right now? |
+| `daily` | What were its closing prices? |
+| `etf_meta` | What are its key figures — expense ratio, provider, domicile? |
+| `fx` | What is the rate between these two currencies? |
+
+One class may serve several roles. The bundled `yaml-file` source serves all
+five from a single file; the US example serves two.
+
+**Being loaded and being used are two different things.** Installing a package
+makes a source *available*; `data/sources.yaml` decides which sources are
+asked, in which role, and in which order. A source nobody lists is never
+called, and it is not an error — it is a configuration.
+
+---
+
+## 2. The contract
+
+### Identity comes in three shapes
+
+Not every paper trades on an exchange, so there is no single "identity" field:
+
+| Shape | Carries | Used for |
+|---|---|---|
+| `ListedIdentity` | `ticker` + `mic`, optionally `isin` | shares, ETFs, ETCs, listed bonds |
+| `PairIdentity` | `base` + `quote_currency` | native crypto (`BTC`/`EUR`) |
+| `IsinOnlyIdentity` | `isin` | OTC bonds, funds without a venue |
+
+A ticker without a venue is ambiguous — `RY` exists in Toronto and in New
+York, at different prices in different currencies. A venue without a ticker
+says nothing. Both shapes exist because forcing every paper into
+`ticker` + `mic` meant a coin needed an invented exchange.
+
+Declare which shapes you serve in `SUPPORTED_KINDS`. The default is
+`{"listed"}`, and an **empty** set means "promised nothing" — not "everything".
+
+### Genus is an open list
+
+`stock`, `etf`, `etc`, `fund`, `crypto`, `bond`. Declare yours in
+`SUPPORTED_TYPES`. The list grows; an empty set again means you promised
+nothing rather than everything, so a genus added next year does not silently
+become your responsibility.
+
+### Three fields are mandatory on a hit
+
+`Resolved` requires `identity`, `name` **and** `instrument_type`. None of them
+has a default, and that is deliberate: a default value is permission to leave
+it out. When they were optional, sources left them out, papers displayed
+blank, and — because the genus was missing — the metadata source was never
+asked at all. For months, without a message.
+
+If you do not know one of them, return `NotFound`. A later source in the chain
+may know better; half an answer takes that chance away, because the chain
+stops at the first hit.
+
+### Four ways to say no, and they are not interchangeable
+
+| Answer | Means | The host does |
+|---|---|---|
+| `NotResponsible` | "not my market" | asks the next source |
+| `NotFound` | "my market, and this paper is not in it" | 404 — but keeps asking the chain |
+| `Unavailable` | "could not look — network, quota, error" | 502, keeps the stored value |
+| `Unsupported` | "recognised, and I do not carry this *kind* of paper" | 400 |
+
+`Unsupported` is the only one that says something about the *paper* rather
+than about your source: an index is not a tradeable instrument, and no amount
+of retrying will make it one.
+
+The difference between `NotFound` and `Unavailable` is the reason the union
+exists. An outage that arrives as "not found" deletes a paper the operator
+still owns.
+
+### Your methods never raise
+
+`resolve`, `fetch_quote`, `fetch_daily`, `fetch` and `fetch_rate` turn every
+failure into `Unavailable` (or `None`, where the role says so). The chain
+decides what happens next; a plugin that lets an exception through fails the
+contract suite. There is no timeout the host can impose on you — synchronous
+Python in the same process cannot be interrupted — so set your own on every
+I/O call you make.
+
+### The version is written out, never inherited
+
+```python
+class MySource(Resolver):
+    name = "my-source"
+    api_version = 2      # in your own class body, always
+```
+
+The loader rejects a class that does not carry `api_version` in its own
+`__dict__`. An inherited number would follow the host through a contract
+change your plugin has never been adapted to — a barrier that lets everyone
+through is not one.
+
+---
+
+## 3. The smallest package that works
+
+```
+my-source/
+├── pyproject.toml
+├── src/
+│   └── stockinfo_source_my_market/
+│       ├── __init__.py
+│       └── source.py
+└── tests/
+    └── test_my_source.py
+```
+
+`pyproject.toml`, in full:
+
+```toml
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "stockinfo-source-my-market"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["stockinfo-plugin-api>=0.2"]
+
+[project.optional-dependencies]
+testing = ["stockinfo-plugin-api[testing]>=0.2"]
+
+[project.entry-points."stockinfo.sources"]
+my-source = "stockinfo_source_my_market:MySource"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+```
+
+The entry-point **name** is what an operator writes in `sources.yaml`. Announce
+a multi-role source **once**: two entry points would build two instances that
+no longer share a cache or a rate limit.
+
+Depend on the contract package and nothing of the host. A plugin that reaches
+into StockInfo's internals is a fork that happens to install.
+
+### Take your transport as an argument
+
+```python
+def __init__(self, config=None, market=None):
+    super().__init__(config)
+    self._api_key = str(self._config.get("api_key") or "").strip()
+    self._market = market or _RealClient(self._api_key)
+```
+
+This one line is what lets your tests run without a network and without a key.
+The host only ever passes `config`; the second parameter is for you.
+
+### Say why you cannot work
+
+```python
+def configuration_problem(self) -> str:
+    if not self._api_key:
+        return ("api_key is missing — set providers.my-source.api_key in "
+                "sources.yaml, e.g. to ${MY_MARKET_API_KEY}")
+    return ""
+```
+
+The sentence is read by someone who did not write your plugin, in
+`GET /sources`. "Not configured" tells them something is wrong and nothing
+about what to do. Name the setting and the way to supply it.
+
+### Inherit the tests
+
+```python
+from stockinfo_plugin.testing import QuoteContract, ResolverContract
+
+class TestMyResolver(ResolverContract):
+    responsible = ResolveRequest(isin="US0378331005")
+    not_responsible = ResolveRequest(isin="DE0007164600")
+    unknown = ResolveRequest(isin="US38259P5089")
+
+    def make_source(self):
+        return MySource({"api_key": "test"})
+```
+
+Six lines buy you about thirty assertions per role: that you never raise, that
+you say why you stand still, that an unrelated request costs nothing, that a
+hit carries every mandatory field, that no mutable state lives on the class.
+Write the three requests, inherit the rest, then add the handful of facts only
+you know — that this ISIN is Apple, on NASDAQ, and a stock.
+
+---
+
+## 4. Installing it
+
+**While developing**, drop a `.py` file into `data/plugins/` and export
+`SOURCES`:
+
+```python
+SOURCES = [MySource]
+```
+
+Restart, and the name appears in `GET /sources`. Files starting with `_` are
+skipped.
+
+**To hand it around**, build a wheel and pin it in `data/sources.yaml`:
+
+```yaml
+plugins:
+  packages:
+    - stockinfo-source-my-market==0.1.0
+```
+
+On start-up the app installs the list into `data/plugin-env/<hash>` and adds
+that directory to the import path. Three rules apply:
+
+* **Pinned versions only.** The directory name is a checksum over the list;
+  without `==`, the same hash would point at a different package tomorrow.
+  `>=`, a bare name, a git URL or a pip option are refused by name.
+* **Wheels only.** Otherwise build tools would have to ship in the image, and
+  a `setup.py` would run as code on start-up.
+* **The contract stays the host's.** A constraint prevents a plugin from
+  pulling a different version of `stockinfo-plugin-api` into the directory,
+  where it would sit in front on the import path and win.
+
+Same list ⇒ same directory ⇒ **no installation** on the next start. A changed
+list means a new directory; the old one stays, so rolling back is a one-line
+edit.
+
+Why not plain `pip install`? In the official container, `site-packages` lives
+in the *image* and is gone after the next `docker pull`. `/data` is the volume
+and survives the update.
+
+> There is deliberately no mechanism that fetches anything on its own. A
+> plugin runs with the app's permissions; what gets installed is the
+> operator's explicit decision, not a side effect of a config file.
+
+---
+
+## 5. Choosing sources: `sources.yaml`
+
+```yaml
+plugins:
+  packages:
+    - stockinfo-source-us-example==0.1.0
+
+resolvers: [us-example, openfigi, yahoo-search, yaml-file]
+etf_meta:  [justetf, yfinance, yaml-file]
+quotes:    [us-example, yfinance, yaml-file]
+daily:     [yfinance, yaml-file]
+fx:        [yfinance, yaml-file]
+
+providers:
+  us-example:
+    api_key: ${US_MARKET_API_KEY}
+    base_url: ${US_MARKET_BASE_URL}
+  openfigi:
+    api_key: ${OPENFIGI_API_KEY}
+  yaml-file:
+    path: /data/assets.yaml
+```
+
+Three separate decisions live in that file, and it helps to keep them apart:
+
+1. **What is installed** — `plugins.packages`.
+2. **What is used, and in which role** — the five role lines.
+3. **How each source is configured** — `providers`.
+
+The order is your statement and is never re-sorted. `GET /sources` afterwards
+shows what actually applies, including sources that **cannot** work and why.
+
+---
+
+## 6. Environment variables
+
+`${NAME}` in a value is replaced by the process environment — exactly the
+value, no shell, no defaults, no partial substitution beyond the placeholder.
+A missing variable leaves the source unconfigured, which `GET /sources`
+reports as such rather than starting with an empty key.
+
+The key never goes into the YAML file or into version control.
+
+**Local development** — a `.env` beside the app:
+
+```bash
+US_MARKET_API_KEY=sk-your-key-here
+```
+
+**Docker Compose**:
+
+```yaml
+services:
+  stockinfo:
+    image: mikemitterer/stockinfo:latest
+    environment:
+      - US_MARKET_API_KEY=${US_MARKET_API_KEY}   # from the host's .env
+    volumes:
+      - ./data:/data
+```
+
+**Unraid** — add a variable in the template editor:
+
+```
+Config Type: Variable
+Name:        US_MARKET_API_KEY
+Key:         US_MARKET_API_KEY
+Value:       sk-your-key-here
+```
+
+---
+
+## 7. What "fallback" means here
+
+Every role asks its chain **in the written order** and takes the first solid
+answer:
+
+```yaml
+quotes: [yfinance, yaml-file]
+```
+
+Online wins where it has a price; the hand-maintained file steps in only where
+none arrives — for a bond, say, that no online source carries. The file never
+overwrites an online hit.
+
+Two details worth knowing:
+
+* For `daily`, an **empty** series is an answer — "looked, nothing in this
+  period" — and ends the chain. Only "could not look" falls through.
+* `GET /fx` names the source that **delivered** the rate, not the one that
+  happens to be first in the list.
+
+And one that costs an hour if you miss it: **a file source has to appear in
+`resolvers` too.** A paper no online source knows cannot be added at all —
+the intake fails at resolution, long before anyone asks for a price.
+
+---
+
+## 8. When it does not work
+
+| Symptom | Cause | Check |
+|---|---|---|
+| Name missing from `GET /sources` | package not installed, or entry point not declared | `plugins_loaded` in the log lists what was found |
+| `'my-source' is not a known source` | the name in the role line differs from the entry-point name | compare `sources.yaml` against `pyproject.toml` |
+| Loaded but skipped | wrong `api_version`, or it is not in its own class body | the loader logs the rejection with the reason |
+| `configured: false` | `configuration_problem()` spoke | the reason is in the `/sources` entry |
+| Pinned package refused | `>=`, a bare name or a git URL in `plugins.packages` | pin with `==` |
+| Installation fails | not available as a wheel, or the index cannot be reached | `plugin_env_install_failed` in the log carries pip's output |
+| Never asked for a paper | `SUPPORTED_KINDS` / `SUPPORTED_TYPES` do not cover it, or `handles` says no | both are pre-filters; `handles` is the decision |
+
+The one that catches almost everyone: **`preferred_mic` is a wish, not a
+filter, and it is never empty** — the host fills it with `XETR` by default.
+Read as a filter, it makes your source answer `NotResponsible` to everything
+while the code still looks perfectly reasonable.
+
+---
+
+## Where to go next
+
+* [`plugin_api/examples/us-example/`](../plugin_api/examples/us-example/) — the
+  package this guide describes, with its tests.
+* [`plugin_api/examples/yaml_file.py`](../plugin_api/examples/yaml_file.py) —
+  one source serving all five roles from a file.
+* [`docs/plugins.md`](plugins.md) — the operator's view, in German.
+* [`plugin_api/src/stockinfo_plugin/`](../plugin_api/src/stockinfo_plugin/) —
+  the contract itself. Every rule above is a docstring there, and the tests
+  next to it are what enforce them.

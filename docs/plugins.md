@@ -164,57 +164,21 @@ Timeout ließe den Aufrufer zurückkehren, der Thread liefe weiter. Zeitgrenzen
 setzt deshalb das Plugin bei seinen eigenen I/O-Aufrufen — der Vertrag verlangt
 es, erzwingen kann er es nicht.
 
-## Was eine Auflösung tragen muss
+## Wer selbst eine Quelle schreibt
 
-Drei Felder, alle Pflicht — und keines hat einen Vorgabewert:
+Ab hier ist die Anleitung **englisch** und steht in
+[`docs/plugin-authors.md`](plugin-authors.md): Identitätsformen,
+Pflichtfelder, die vier Arten „nein" zu sagen, das kleinste installierbare
+Paket, das geerbte Testkit und die Stolperstellen.
 
-| Feld | Bedeutung |
-|---|---|
-| `identity` | Die Identität in ihrer Form: `ListedIdentity` (Ticker + MIC), `PairIdentity` (Basiswert + Quote-Währung, für natives Krypto) oder `IsinOnlyIdentity` (die ISIN selbst, für OTC-Anleihen). |
-| `name` | Der Anzeigename des Papiers. |
-| `instrument_type` | Die Gattung: `stock`, `etf`, `etc`, `fund`, `crypto`, `bond`. Die Aufzählung ist **offen** — ein neuer Wert ist ein Nachtrag und kein Bruch. |
+Sie ist englisch, weil ihre Leser es sind — ein Plugin für den brasilianischen
+oder japanischen Markt schreibt niemand, der dieses Repository auf Deutsch
+liest. Und sie steht **einmal**: Zwei Anleitungen zu derselben Sache laufen
+beim ersten Nachtrag auseinander, und dann ist die falsche die, die jemand
+zufällig zuerst findet.
 
-**Wer eines davon nicht kennt, antwortet `NotFound`.** Das ist keine Härte,
-sondern die einzige ehrliche Antwort: „Ich habe einen Ticker, weiß aber nicht,
-was das Papier ist" ist keine brauchbare Auflösung. Eine spätere Quelle in der
-Kette darf es besser wissen — eine halbe Antwort nimmt ihr diese Gelegenheit,
-weil die Kette beim ersten Treffer aufhört.
-
-Der Anlass ist gemessen und nicht theoretisch: Bis August 2026 waren `name` und
-`instrument_type` optional. Quellen ließen sie leer, die App nahm es an,
-speicherte es und zeigte leere Felder — und weil die Gattung fehlte, wurde die
-Metadatenquelle **gar nicht erst** befragt. Ohne Meldung, ohne
-Protokolleintrag, monatelang.
-
-Ein leerer String zählt dabei nicht als Wert. Der Host prüft nicht nur, ob das
-Feld da ist, sondern ob etwas darin steht; `stockinfo_plugin.invariants.
-resolution_problem` ist dieselbe Funktion, die auch das Testkit benutzt — wer
-mag, ruft sie vor dem Antworten selbst.
-
-Für die anderen Rollen gilt dasselbe Prinzip an anderen Feldern: Ein `Quote`
-trägt Preis, Währung und Zeitpunkt mit Zone, alle drei ohne Vorgabewert. Was
-eine Rolle verlangt, steht maschinenlesbar unter `GET /fields` im Abschnitt
-`plugin_contract`.
-
-## Den Vertrag selbst
-
-`stockinfo-plugin-api` ist ein eigenständiges Paket mit fünf Rollen
-(`Resolver`, `MetadataSource`, `QuoteSource`, `DailyCloseSource`, `FxSource`),
-fachlichen Invarianten und einem Testkit. Ein Plugin erbt die Vertragssuite
-seiner Rolle, statt eigene Prüfungen zu schreiben:
-
-```python
-from stockinfo_plugin.testing import ResolverContract
-
-
-class TestMeinResolver(ResolverContract):
-    responsible = ResolveRequest(isin="CA78012H5675")
-    not_responsible = ResolveRequest(symbol="AAPL")
-    unknown = ResolveRequest(isin="CA0679011084")
-
-    def make_source(self):
-        return MeinResolver()
-```
-
-Beispiele liegen in `plugin_api/examples/` — sie werden als
-`stockinfo_plugin_examples` mitinstalliert und lassen sich direkt importieren.
+Ein vollständiges, baubares Beispielpaket liegt daneben in
+[`plugin_api/examples/us-example/`](../plugin_api/examples/us-example/); das
+mitgelieferte `yaml-file` in
+[`plugin_api/examples/yaml_file.py`](../plugin_api/examples/yaml_file.py)
+zeigt eine Quelle in allen fünf Rollen.

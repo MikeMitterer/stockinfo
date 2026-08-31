@@ -52,14 +52,79 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | englischer Plugin-Leitfaden | Ein neuer Entwickler versteht in höchstens etwa 15 Minuten: Rollen, Identitäten, Pflichtfelder, Fehlersemantik und den kleinsten Plugin-Aufbau | | |
-| **2** | Abschnitt `sources.yaml` | Paketinstallation, Quellenwahl und Reihenfolge sind getrennt erklärt; „first successful result wins“ sowie YAML als letztes Fallback sind mit einem vollständigen Beispiel sichtbar | | |
-| **3** | Abschnitt Environment | `${NAME}` wird erklärt: exakte Ersetzung eines YAML-Werts, Verhalten bei fehlender Variable und sichere Beispiele für `.env`, Docker/Compose und Unraid; kein echter Schlüssel steht in Git | | |
-| **4** | Entwickler-Sample | ein minimales installierbares US-Beispielpaket enthält `pyproject.toml`, Entry-Points, einen Resolver, eine Kursquelle und ausdrücklich den eingebrannten Literalwert `api_version = 2` | | |
-| **5** | Sample-Tests | Contract-Kit und paketlokale Tests laufen ohne echtes Netz und ohne echten API-Key; HTTP-/Provider-Verhalten ist injizierbar oder gefakt | | |
-| **6** | gebautes Sample-Wheel + frische Testumgebung | das Wheel lässt sich bauen, über eine fest gepinnte `plugins.packages`-Zeile installieren und nach Neustart in `GET /sources` erkennen | | |
-| **7** | Sample-End-to-End | ein US-Instrument wird über das Sample aufgelöst und bepreist; ein dort nicht beantwortetes Instrument fällt nachweislich an die nächste Quelle zurück | | |
-| **8** | Dokumentationsinventur | bestehende Plugin-Anleitungen widersprechen dem neuen Leitfaden nicht; veraltete Beispiele sind korrigiert, ersetzt oder verweisen auf die kanonische englische Anleitung | | |
+| **1** | englischer Plugin-Leitfaden | Ein neuer Entwickler versteht in höchstens etwa 15 Minuten: Rollen, Identitäten, Pflichtfelder, Fehlersemantik und den kleinsten Plugin-Aufbau | ✅ | |
+| **2** | Abschnitt `sources.yaml` | Paketinstallation, Quellenwahl und Reihenfolge sind getrennt erklärt; „first successful result wins“ sowie YAML als letztes Fallback sind mit einem vollständigen Beispiel sichtbar | ✅ | |
+| **3** | Abschnitt Environment | `${NAME}` wird erklärt: exakte Ersetzung eines YAML-Werts, Verhalten bei fehlender Variable und sichere Beispiele für `.env`, Docker/Compose und Unraid; kein echter Schlüssel steht in Git | ✅ | |
+| **4** | Entwickler-Sample | ein minimales installierbares US-Beispielpaket enthält `pyproject.toml`, Entry-Points, einen Resolver, eine Kursquelle und ausdrücklich den eingebrannten Literalwert `api_version = 2` | ✅ | |
+| **5** | Sample-Tests | Contract-Kit und paketlokale Tests laufen ohne echtes Netz und ohne echten API-Key; HTTP-/Provider-Verhalten ist injizierbar oder gefakt | ✅ | |
+| **6** | gebautes Sample-Wheel + frische Testumgebung | das Wheel lässt sich bauen, über eine fest gepinnte `plugins.packages`-Zeile installieren und nach Neustart in `GET /sources` erkennen | ✅ | |
+| **7** | Sample-End-to-End | ein US-Instrument wird über das Sample aufgelöst und bepreist; ein dort nicht beantwortetes Instrument fällt nachweislich an die nächste Quelle zurück | ✅ | |
+| **8** | Dokumentationsinventur | bestehende Plugin-Anleitungen widersprechen dem neuen Leitfaden nicht; veraltete Beispiele sind korrigiert, ersetzt oder verweisen auf die kanonische englische Anleitung | ✅ | |
+
+### Was gelaufen ist
+
+**Zeilen 1–3 · der Leitfaden** — `docs/plugin-authors.md`, 386 Zeilen, acht
+Abschnitte in der Reihenfolge des Auftrags. Die Vertragsfelder sind
+**verlinkt**, nicht abgeschrieben: Eine zweite Referenz läuft beim ersten
+Nachtrag auseinander, und dann ist die falsche die, die jemand zuerst findet.
+`${NAME}` ist mit `.env`, Docker Compose und Unraid belegt; kein Schlüssel im
+Repository — der Abnahmelauf lief mit `US_MARKET_API_KEY=demo-key-not-a-secret`
+aus der Prozessumgebung.
+
+**Zeilen 4–5 · das Beispiel** — `plugin_api/examples/us-example/`, ein eigenes
+Paket mit eigener `pyproject.toml`, einer Quelle in **zwei** Rollen und
+`api_version = 2` im eigenen Klassenkörper. Der Anbieter ist ein Protokoll und
+wird hereingereicht; die 43 Tests laufen ohne Netz und ohne Schlüssel, davon
+rund 36 aus den geerbten Vertragssuiten.
+
+**Ein Befund am eigenen Beispiel, und er steht jetzt im Leitfaden.** Der erste
+Entwurf las `preferred_mic` als Filter — und die Quelle antwortete auf
+**alles** `NotResponsible`, während der Code vernünftig aussah. Das Feld ist
+ein Wunsch und nie leer: Der Host füllt es mit `XETR` vor. Gefunden hat das
+nicht das Lesen, sondern der erste Lauf der geerbten Suite (7 rot). Der Fall
+steht als Test (`test_a_preferred_venue_does_not_cancel_responsibility`), im
+Quelltext des Beispiels und im Abschnitt „When it does not work".
+
+**Zeile 6 · der echte Installationsweg** — Wheel gebaut, in `sources.yaml`
+gepinnt (`stockinfo-source-us-example==0.1.0`), App gestartet:
+
+```
+plugin_env_installed   packages=1 path=…/plugin-env/2a9d70b521672eae
+plugins_loaded         names=['us-example', 'yaml-file']
+```
+
+`GET /sources` danach: `us-example` in `resolvers` **und** `quotes`, beide
+`configured: true`.
+
+Ein Umweg war nötig und gehört benannt: Das Wheel liegt auf keinem Index. Der
+Lauf setzte deshalb `PIP_FIND_LINKS` auf ein lokales Verzeichnis — pip-
+Konfiguration des Betreibers, nicht des Plugins; `app/plugin_env.py` blieb
+unberührt. Ein zusätzliches `PIP_NO_INDEX=1` scheiterte, weil dann auch die
+transitive Abhängigkeit `PyYAML` nicht mehr auffindbar war.
+
+**Zeile 7 · durch die ganze Kette**, Kette
+`resolvers: [us-example, openfigi, yahoo-search]`, `quotes: [us-example, yfinance]`:
+
+| Anfrage | Ergebnis | Wer hat geantwortet |
+|---|---|---|
+| `US0378331005` | `AAPL` / NASDAQ / 231,40 USD | das Beispiel, in beiden Rollen |
+| `US88160R1014` | `TL0.DE` / Xetra / 301,50 EUR | das Beispiel führt Tesla nicht (`NotFound`) — OpenFIGI und yfinance übernehmen |
+| `DE0007164600` | `SAP.DE` / Xetra / 190,30 EUR | das Beispiel ist unzuständig und wird gar nicht erst befragt |
+
+Die mittlere Zeile ist der eigentliche Beleg: Der Rückfall geschieht **nach**
+einer zuständigen Quelle, die nichts hatte.
+
+**Zeile 8 · Inventur** — `docs/plugins.md` bleibt die deutsche Betreibersicht
+und verweist für alles, was den Autor betrifft, auf den Leitfaden; die beiden
+Autorenabschnitte („Was eine Auflösung tragen muss", „Den Vertrag selbst")
+sind dort ersetzt statt gedoppelt. `docs/sources.yaml.example` widerspricht
+nicht und bleibt unverändert.
+
+**Eine Nebenwirkung, die ich melde statt sie zu verstecken:** T-38 belegt seine
+Verify-Zeile 10 mit „`docs/plugins.md` — ein Plugin-Autor liest, welche Felder
+er liefern muss". Dieser Inhalt steht jetzt in `plugin-authors.md`; der
+Verweis führt über einen Klick dorthin. Ein Duplikat wäre genau das, was
+dieses Ticket abschaffen soll.
 
 ---
 
