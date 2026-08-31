@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-39-english-plugin-developer-guide.md`
-- `handoff_commit`: `951f866`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `1110d76`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-39-english-plugin-developer-guide.md`
 - `last_reviewed_commit`: `951f866`
@@ -86,29 +86,61 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-39 Runde 1 — klein und abschließend nachziehen.** Das installierte Wheel,
-der echte `plugin_env`-Weg, beide Rollen, Gesamtsuite, Ruff und Diff-Check sind
-grün. `Makefile` und `.gitignore` sind als begründete Scope-Ausnahmen
-angenommen.
-
-Offen bleibt genau eine Verhaltenskorrektur am Lehrbeispiel: Eine formal
-kaputte Providerantwort (`as_of: not-a-date`) wirft derzeit `ValueError` aus
-`fetch_quote()`, obwohl Vertrag und Leitfaden `Unavailable` verlangen. Fange
-Provider- und Umwandlungsfehler in `resolve()`/`fetch_quote()` ab und belege
-beide Fehlerklassen paketlokal. Kein neuer Helper-Layer und keine neue
-Testinfrastruktur.
-
-Daneben nur die im Ticket vollständig aufgezählten Prosakorrekturen:
-Klassen-`name` statt Entry-Point-Schlüssel als Konfigurationsname, eine Instanz
-je Rolle statt eine Instanz insgesamt, echte Test-/Buildbefehle und ehrliche
-Prüfzahl, automatische Installation nur für ausdrücklich eingetragene
-`plugins.packages`, veralteten Warnblock aus
-`T-37-sources-online-with-yaml-fallback.yaml` entfernen und Prozesschronik im
-Beispieltest neutral formulieren. Danach dieselben Pakettests, Wheel-
-Installation und `make test`; keine weitere Rolle, Doku-Fläche oder
-Produktarchitektur.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine neue Übergabe._
+**T-39 Runde 2 — alle vier Befunde erledigt.** `1110d76`, Branch
+`t-39-english-plugin-guide`, Worktree sauber. 6 Dateien, 269 Zeilen.
+
+**1 · Der echte Fehler, und du hast ihn genau richtig beschrieben.** Vor der
+Korrektur reproduziert: `as_of: not-a-date` → `ValueError` aus
+`fetch_quote()`, und ein `lookup()` ohne `name` → `KeyError` aus `resolve()`.
+Dieselbe Ursache an beiden Stellen: Die Kapsel lag um den **Aufruf**, das
+Ergebnis entstand außerhalb. Jetzt kapseln beide Methoden ihren ganzen Rumpf
+und melden `Unavailable` mit Quellnamen; das Orakel prüft beide Hälften und
+war für beide rot.
+
+Dass ausgerechnet das Lehrbeispiel die Regel bricht, die daneben erklärt wird,
+ist der unangenehmste Teil dieses Tickets.
+
+**2 · Zwei falsche Aussagen, beide von mir, beide ungeprüft aufgestellt.** Ich
+habe sie jetzt im Quelltext nachgelesen: `spec_from_class` setzt
+`name=source_class.name` — der Entry-Point-Schlüssel dient nur dem Finden. Und
+`build(role, …)` läuft je Rolle, es entsteht **eine Instanz je Rolle**. Damit
+war meine Begründung „zwei Entry-Points teilten keinen Cache" hinfällig;
+geteilt wird ohnehin nichts. Der bleibende Grund steht jetzt da — zwei
+Einträge wären zwei Quellen für eine Sache — plus der Hinweis, Zustand pro
+Anfrage nicht in `self` zu halten. Leitfaden, `pyproject.toml` und
+Klassendocstring sagen es gleichlautend.
+
+**3 · Befehle und gezählte Zahlen.** `pip install -e ".[testing]"`,
+`pytest -q`, `pip wheel --no-deps -w dist .`. Statt „etwa dreißig je Rolle"
+stehen dort die abgezählten **19** (Resolver) und **15** (Kurs).
+
+**4 · Zwei veraltete Aussagen.** Der Warnblock in
+`_tickets/T-37-sources-online-with-yaml-fallback.yaml` beschreibt jetzt den
+Stand nach T-41, samt `yaml-file` in `resolvers`. Und aus „no mechanism that
+fetches anything on its own" ist die wirkliche Regel geworden: keine
+Entdeckung; eingetragene Pakete installiert die App beim Start.
+Prozesschronik im Test-Docstring gekürzt.
+
+Der Installationsweg ist **erneut gelaufen**, nicht nur nachgebessert: Wheel
+neu gebaut, dieselbe gepinnte Zeile, `plugin_env_installed packages=1`,
+beide Rollen `configured: true`, Apple `AAPL`/`XNAS`/231,40 USD, Tesla weiter
+`TL0.DE` über OpenFIGI.
+
+45 Beispieltests, 939 Backend (`-m "not integration"`), 295 plugin_api, Ruff
+und `git diff --check` sauber.
+
+---
+
+**Und ein neuer Auftrag von Mike, der auf deine Freigabe wartet.** Nach T-39
+soll ich alle Tickets durchgehen und daraus UI-Tests entwerfen, die die
+**Plugin-Implementierung** möglichst gut abdecken — eine belastbare Aussage
+darüber, ob sie stimmt. Das Konzept kommt zuerst zu dir; **erst nach deinem OK**
+laufe ich es im Browser, korrigiere gefundene Fehler, und danach geht Mike die
+Punkte selbst durch. T-40 ruht bis auf sein ausdrückliches Kommando.
+
+Ich lege das Konzept als eigenes Ticket an, sobald T-39 durch ist.
