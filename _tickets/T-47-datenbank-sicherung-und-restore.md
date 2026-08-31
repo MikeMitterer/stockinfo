@@ -101,7 +101,10 @@ Deshalb:
 | `GET /backups` | Liste: Name, Zeitpunkt, Größe, Kennung, `compatible: true/false` gegenüber der **laufenden** Konfiguration |
 | `POST /backups` | Legt eine Sicherung an, liefert denselben Eintrag zurück |
 | `POST /backups/{name}/restore` | Merkt die Datei zum Einspielen vor, antwortet `202` mit „Neustart erforderlich" |
-| `DELETE /backups/{name}` | *(offen — siehe Entscheidungen)* |
+
+Ein `DELETE` gibt es **nicht**: Die zehnte Sicherung verdrängt die älteste,
+und ein zweiter Löschweg wäre nur eine zweite Gelegenheit, die falsche Datei
+zu treffen.
 
 ### Wiederherstellen mit Neustart
 
@@ -149,13 +152,29 @@ führt die Zusammenführungsfragen durch die Hintertür wieder ein.
 
 ## Offen — Entscheidungen und die Frage an Codex
 
-**An Mike:**
+**Von Mike entschieden (2026-08-31):**
 
-1. **Aufräumen.** Wie viele Sicherungen bleiben liegen? Vorschlag: die letzten
-   zehn, ältere werden beim Anlegen entfernt — und `DELETE` braucht es dann
-   gar nicht.
-2. **Von selbst sichern?** Nur auf Knopfdruck, oder zusätzlich einmal täglich
-   und vor jedem Wiederherstellen (Letzteres ist oben schon vorgesehen)?
+> „10 Sicherungen und kein automatisches Backup. Im UI muss klar sein welche
+> Sicherungen existieren und natürlich muss eine entsprechende Meldung kommen
+> dass ein Restore einen Neustart bedingt."
+
+Damit ist festgelegt:
+
+1. **Zehn Sicherungen bleiben liegen**, die älteste weicht beim Anlegen der
+   elften. `DELETE /backups/{name}` entfällt damit — eine Route weniger, und
+   der einzige Löschweg ist der, den das Aufräumen ohnehin geht.
+2. **Kein Zeitplan.** Gesichert wird auf Knopfdruck — und automatisch **nur**
+   unmittelbar vor einem Wiederherstellen. Diese eine Ausnahme bleibt: Wer
+   zurückspielt, verliert sonst genau den Stand, den er vielleicht gleich
+   vermisst. Sie zählt in die zehn hinein.
+3. **Die Liste gehört ins UI**, nicht nur in die REST-Antwort: Zeitpunkt,
+   Größe und sichtbar, ob eine Sicherung zur laufenden Quellenlage passt. Eine
+   unpassende steht dort mit ihrem Grund, nicht ausgeblendet — sonst sucht
+   jemand eine Datei, die er im Verzeichnis liegen sieht.
+4. **Der Neustart wird vorher angesagt, nicht hinterher.** Die Bestätigung vor
+   dem Wiederherstellen nennt ihn ausdrücklich; danach steht sichtbar, dass
+   ein Neustart aussteht, bis er erfolgt ist. Ein `202` allein, das niemand
+   liest, ist keine Ansage.
 
 **An Codex:**
 
@@ -185,8 +204,11 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 | **5** | dasselbe mit `force` | läuft, und die Instanz sagt danach sichtbar, dass sie es getan hat | ➖ | |
 | **6** | Sicherung mit neuerem Schema | abgelehnt, auch mit `force` | ➖ | |
 | **7** | vor dem Wiederherstellen | eine Sicherung des alten Standes liegt vor | ➖ | |
-| **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert | ➖ | |
+| **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ➖ | |
 | **9** | `PRAGMA user_version` | ist gesetzt und wird beim Prüfen gelesen | ➖ | |
+| **10** | elfte Sicherung | die älteste ist weg, es liegen zehn; keine zweite Löschmöglichkeit | ➖ | |
+| **11** | UI-Liste | alle vorhandenen Sicherungen sind sichtbar, unpassende **mit Grund** statt ausgeblendet | ➖ | |
+| **12** | Bestätigung vor dem Wiederherstellen | der Neustart wird **vorher** genannt, nicht erst danach | ➖ | |
 
 ## Nicht-Ziele
 
