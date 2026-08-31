@@ -477,6 +477,72 @@ Instrumente, jüngstes vom 19. August, gleiche Größe.
 
 ---
 
+## Runde 7 · der Platzhalter, und was der Regressionslauf dabei fand
+
+**Der siebte Anzeigebefund war eine Messung wert.** In der Zeile stehen vier
+Platzhalter nebeneinander, und einer sah anders aus. Gemessen statt geschätzt:
+
+| Spalte | Schrift | Breite |
+|---|---|---|
+| ISIN | SF Mono | 8,2 px |
+| Vola | SF Mono | 8,2 px |
+| TER | SF Mono | 8,2 px |
+| Thes. | **Inter Variable** | **6,3 px** |
+
+Die Thes.-Spalte ist als einzige nicht `mono`; ein Bindestrich fällt dort um
+knapp ein Drittel schmaler aus. Nebeneinander liest sich das wie zwei
+verschiedene Zeichen. Der Platzhalter trägt jetzt in allen Spalten dieselbe
+Schrift — nachgemessen 8,2 px, viermal.
+
+### Der T-22-Smoke war rot, und zwar zu Recht
+
+Beim Regressionslauf fiel Check `#4` aus: *„der Tippfehler nennt sich selbst
+und die verfügbaren Namen"* — beobachtet: keine Meldung im Log.
+
+**Nicht meine UI-Arbeit.** `git diff be8f10d..HEAD --stat` fasst ausschließlich
+`dashboard/` und `_tickets/` an; der Check war vorher schon rot und ist in den
+letzten Runden nicht gelaufen. Die Übergaben nannten „beide Smokes 20/20" —
+das war T-35 in zwei Profilen, nicht T-22.
+
+**Die Zusage ist nicht gebrochen, sie steht woanders.** Bis Runde 5 warf der
+Kettenbau bei einem unbekannten Namen. Das wurde bewusst geändert und ist im
+Quelltext auch begründet: Ein Paket, dessen Installation fehlschlägt, nähme
+sonst die ganze App mit, obwohl eine gesunde Ersatzquelle daneben steht. Ein
+Tippfehler kostet seither **seine** Quelle, nicht den Start — und der Grund
+samt den bekannten Namen steht in `/sources`:
+
+```
+GET /sources → { "name": "openfgi", "configured": false,
+  "reason": "'openfgi' ist keine bekannte Quelle — bekannt sind:
+             justetf, openfigi, yahoo-search, yaml-file, yfinance" }
+```
+
+Der Check las weiterhin das Server-Log. Er liest den Grund jetzt aus
+`/sources`; ein zweiter Check `#4b` hält die neue Zusage fest — der Start
+überlebt den Tippfehler, die Kette bleibt leer. **6/6.**
+
+**Zwei Kommentare in `app/sources_registry.py`** beschrieben weiter das alte
+Verhalten („bricht den Bau ab"). Sie waren die letzte Stelle, an der die
+abgelöste Regel noch stand — dasselbe Muster wie bei `_FIGI_TYPES` und der
+Migrationsprüfung: eine Entscheidung, die eine zweite Stelle nicht erreicht
+hat.
+
+**Was daran generalisierbar ist:** Ein Smoke, den man nicht laufen lässt,
+altert lautlos mit. Rot wurde er nicht durch eine Regression, sondern durch
+eine bewusste Änderung, die ihn niemand nachziehen ließ — und in der Zwischenzeit
+hätte er eine echte Regression an derselben Stelle nicht mehr melden können.
+
+### Regression am Stand `c046297`
+
+| Lauf | Ergebnis |
+|---|---|
+| `make test` | 947 + 295 + 45 + 278 grün |
+| `vue-tsc --noEmit` | sauber |
+| Build | ✓ |
+| Ruff | sauber |
+| T-35-Smoke, Profil O | 20/20 |
+| T-22-Smoke | 6/6 |
+
 ## Nicht-Ziele
 
 - Keine neue Asset-Klasse `cash`, keine Immobilien.
