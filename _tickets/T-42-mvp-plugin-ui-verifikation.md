@@ -168,6 +168,41 @@ Browser-Infrastruktur entstehen daraus nicht.
 
 ---
 
+## Phase B · Der Lauf, unterbrochen vom Breitenalarm (2026-08-31)
+
+### Was gelaufen ist, bevor der Riegel griff
+
+Profil Y, alle Werte im Browser abgelesen:
+
+| Fall | Ergebnis | Beleg |
+|---|---|---|
+| **Y1** | `BTC-EUR` · `CRYPTO` · 94.500,00 EUR · ISIN-Spalte leer | die `pair`-Form trägt |
+| **Y2** | `DE0001102531` · `BOND` · 99,42 EUR; 1M-Chart zeigt **drei** Punkte (99,18 / 99,31 / 99,42), Skala 99,16–99,44 | die gepflegte History ist die Kursquelle |
+| **Y3** | `DE0009848119` · **`FUND`** · 142,50 EUR; Drilldown: „dieses Papier ist keiner" | Gattung **und** Hinweistext stimmen |
+| **R1** | `IE00B4L5Y983` · `ETF` · 128,21 EUR · TER 0,20 % · Anbieter iShares · Domizil Ireland · „Quelle: yaml-file" | Auflösung, Kurs, Metadaten aus derselben Datei |
+
+Damit sind vier der fünf Rollen über echte Eintrittspfade belegt (Auflösung,
+Kurs, Tagesreihe, Metadaten). Offen: FX, Y4 (Neustart) und das gesamte
+Online-Profil einschließlich P1/P2.
+
+### Fünf Anzeigebefunde, von Mike im Lauf gesehen
+
+Vier sind behoben (`288c527`), der fünfte steht offen:
+
+| # | Befund | Ursache, gemessen | Stand |
+|---|---|---|---|
+| **A** | Zeile rechts abgeschnitten | `main.content` `max-width: 1200px` → Container 1123 px, Tabelle 1245 px; Aktionsspalte hinter `overflow-x`, 600 px Fenster ungenutzt | behoben, Überlauf **0** |
+| **B** | ISIN-Platzhalter zu lang | „hat keine — Währungspaar" = 24 Zeichen dehnte die Spalte auf 214 px | behoben, 116 px; Grund im Hover-Titel |
+| **C** | Symbol = ISIN bei `isin_only` | `instruments.symbol` ist Pflicht, dort steht die ISIN; die UI zeigte sie doppelt und behauptete ein Börsensymbol | behoben, Strich mit Hover-Grund (`symbolOf()`) |
+| **D** | nur `ETF` sah aus wie ein Label | das CSS kannte zwei Gattungen, seit T-31/T-38 gibt es sechs | behoben; Auszeichnung steht jetzt **vor** den Sonderfällen |
+| **E** | Caret gehört **vor** die Symbolspalte, nicht hinein | noch nicht untersucht | **offen — wartet auf den Checkpoint** |
+
+Befund D ist die dritte Ausprägung desselben Musters an einem Tag: eine zweite
+Stelle, die eine getroffene Entscheidung nicht nachgezogen hat — nach
+`_FIGI_TYPES` und dem Migrationswächter in T-35.
+
+---
+
 ## Nicht-Ziele
 
 - Keine neue Asset-Klasse `cash`, keine Immobilien.

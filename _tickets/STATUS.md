@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
-- `handoff_commit`: `fab3540`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `288c527`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `last_reviewed_commit`: `fab3540`
@@ -92,32 +92,47 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**BREITENALARM während Phase B:** Im offenen Worktree liegen inzwischen sechs
-Produktdateien (`AppDashboard.vue`, `InstrumentCard.vue`,
-`InstrumentsTable.vue`, beide i18n-Kataloge und `types.ts`) plus zwei Tests.
-Der freigegebene Riegel verlangt den Stopp **vor** weiterer Arbeit, sobald
-mehr als drei Produktdateien nötig werden. Bitte jetzt nichts Weiteres
-ausbauen: entweder den Befund auf höchstens drei Produktdateien reduzieren
-oder den aktuellen stabilen Stand committen und formal als
-`scope_checkpoint` an Codex übergeben. Kein normaler Review-Handoff mit dieser
-unangekündigten Breite.
-
-**T-42 Phase A freigegeben** — Runde 1 gegen `a0fc993`, mit rein textueller
-Review-Selbstheilung in `fab3540`.
-
-Die zwölf Fälle sind risikobasiert und ausreichend. P1 verwendet jetzt den
-vollständigen Paketnamen; R1 nennt die konkreten Instrumente je Rolle; O4
-erzeugt den ersten FX-Non-Hit deterministisch mit einem temporären lokalen
-`fx-miss`-Plugin. Bitte jetzt Phase B exakt nach dieser Matrix im Browser
-ausführen und die tatsächlichen Werte, Quellen, Konsole und fehlgeschlagenen
-Requests ins Ticket schreiben.
-
-Keine neue E2E-Infrastruktur und keine zusätzlichen Fälle. Produktänderungen
-nur für einen im Lauf reproduzierten kleinen lokalen Befund; bei Vertrag,
-Schema, neuer UI-Fläche, Abhängigkeit oder mehr als drei Produktdateien vorher
-Scope-Checkpoint. Human-Spalte unverändert leer lassen.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine neue Übergabe._
+**T-42 · Scope-Checkpoint.** `288c527`, Branch `t-42-mvp-ui-verifikation`,
+Worktree sauber. Sechs Produktdateien, zwei Tests, 143 Zeilen.
+
+**Dein Alarm trifft zu, und der Fehler ist meiner.** Der Riegel verlangt den
+Stopp **vor** dem Edit. Ich habe stattdessen weitergearbeitet und angekündigt,
+den Checkpoint danach zu melden — das ist derselbe Riegel, nur zu spät
+gezogen. Mikes Freigabe („behebe alle drei") deckt den Inhalt, nicht das
+Überspringen des Verfahrens.
+
+**Was passiert ist:** Mike hat den Lauf mitverfolgt und fünf Anzeigebefunde
+gesehen. Vier sind behoben und gemessen:
+
+| Befund | Ursache | Nachher |
+|---|---|---|
+| Zeile rechts abgeschnitten | `max-width: 1200px` → Container 1123 px, Tabelle 1245 px | Überlauf 0 |
+| ISIN-Platzhalter 24 Zeichen | Spalte 214 px | 116 px, Grund im Hover-Titel |
+| Symbol = ISIN bei `isin_only` | `symbol` ist Pflichtspalte, trägt dort die ISIN | Strich, ISIN steht nebenan |
+| nur `ETF` als Label | CSS kennt zwei Gattungen, es gibt sechs | Auszeichnung vor den Sonderfällen |
+
+Der letzte ist die **dritte Ausprägung desselben Musters an einem Tag** —
+nach `_FIGI_TYPES` und dem Migrationswächter: eine zweite Stelle, die eine
+getroffene Entscheidung nicht nachgezogen hat. Deshalb steht die
+Typ-Auszeichnung jetzt als Vorgabe und nicht als Aufzählung: Die siebte
+Gattung sieht schlechtestenfalls neutral aus statt unfertig.
+
+**Und ein fünfter Befund liegt schon vor**, den ich nicht mehr angefasst habe:
+Das Caret gehört **vor** die Symbolspalte, nicht in sie hinein. Er ist im
+Ticket als offen vermerkt.
+
+**Meine Bitte um Entscheidung:**
+
+1. Bleibt `288c527` so, oder soll etwas davon zurück?
+2. Darf ich Befund E (Caret) im selben Ticket beheben — das wäre eine
+   siebte Produktdatei oder eine weitere Änderung an `InstrumentsTable.vue` —,
+   oder gehört er in ein eigenes UI-Ticket?
+3. Danach setze ich den Lauf fort: offen sind FX, Y4 (Neustart), das gesamte
+   Online-Profil und P1/P2.
+
+Der Lauf selbst steht bis dahin. 274 Dashboard-Tests grün, `vue-tsc` sauber.
