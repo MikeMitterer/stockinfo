@@ -61,10 +61,20 @@ function price(value: number | null): string {
       <!--
         Dieselbe Regel wie in der Tabelle: Ein Papier der Form `isin_only` hat
         kein Börsensymbol, und die Karte darf keins behaupten.
+
+        **Der Grund steht hier neben dem Strich, nicht am Spaltenkopf.** Die
+        Karte hat keine Spaltenköpfe; ohne diese Stelle wäre der Strich auf
+        Touch und für die Tastatur unerklärt. Er erscheint nur bei einem Papier
+        ohne Symbol, also einmal je Karte statt in jeder Zeile.
       -->
       <span class="icard__symbol mono">
         <template v-if="symbolOf(item)">{{ symbolOf(item) }}</template>
-        <span v-else class="dim">{{ t('common.noValue') }}</span>
+        <template v-else>
+          <span class="dim">{{ t('common.noValue') }}</span>
+          <span class="icard__hint" @click.stop>
+            <InfoHint :text="t('table.noSymbolReason')" />
+          </span>
+        </template>
       </span>
       <span v-if="item.type" class="icard__type badge" :class="item.type">{{ item.type }}</span>
       <span class="icard__price mono">
@@ -156,7 +166,7 @@ function price(value: number | null): string {
         <!-- Die Karte hat keine Spaltenköpfe; der Hinweis sitzt am Label. -->
         <dt>
           {{ t('table.colIsin') }}
-          <InfoHint :text="t('hints.isinDash')" />
+          <InfoHint :text="t('table.noIsinReason')" />
         </dt>
         <dd>
           <span v-if="isinOf(item.identity)" class="mono">{{ isinOf(item.identity) }}</span>
@@ -203,6 +213,9 @@ function price(value: number | null): string {
 }
 
 .icard__symbol { font-weight: 600; }
+
+// Derselbe Abstand wie am Spaltenkopf der Tabelle.
+.icard__hint { cursor: default; margin-left: 0.25rem; }
 
 .icard__type { @include instrument-type-badge; }
 

@@ -149,10 +149,9 @@ const markTitle = computed(() => {
   }
 
   /*
-   * Der Platzhalter trägt dieselbe Schrift wie in den Nachbarspalten. Die
-   * Thes.-Spalte ist als einzige nicht `mono`, und ein Bindestrich fällt dort
-   * um knapp ein Drittel schmaler aus — gemessen 6,3 gegen 8,2 px. In einer
-   * Zeile nebeneinander sieht das nach zwei verschiedenen Zeichen aus.
+   * Der Platzhalter trägt dieselbe Schrift, egal in welcher Spalte er steht.
+   * Nicht jede Spalte ist `mono`; ein proportionaler Bindestrich ist schmaler,
+   * und nebeneinander sähen zwei Platzhalter nach zwei Zeichen aus.
    */
   &__empty {
     color: $color-muted;

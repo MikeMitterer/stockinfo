@@ -14,10 +14,19 @@
 #
 #   1. Gilt eine vertauschte Reihenfolge? (`#1`)
 #   2. Bleibt OpenFIGI ohne Key **aktiv**? (`#2`)
-#   3. Fällt eine Quelle mit **pflichtigem** Key ohne Key aus der Kette,
-#      ohne dass der Start scheitert? (`#2b`)
-#   4. Startet die App ohne Datei mit Vorgaben? (`#3`)
-#   5. Nennt ein Tippfehler den Namen **und** die verfügbaren? (`#4`)
+#   3. Startet die App ohne Datei mit Vorgaben? (`#3`)
+#   4. Nennt ein Tippfehler den Namen **und** die verfügbaren? (`#4`)
+#   5. Fällt die unbrauchbare Quelle aus, ohne den Start zu kosten? (`#4b`)
+#   6. Trägt die Datei Verweise statt Schlüsseln? (`#5`)
+#
+# **`#2b` aus T-22 läuft hier nicht**, und das ist keine Lücke, sondern der
+# Stand: Der Check verlangt eine Quelle mit **pflichtigem** Schlüssel, und
+# keine der gebauten deklariert einen (`SourceSpec.needs` ist überall leer).
+# Die Zusage selbst prüfen die Unit-Tests zu `is_configured`; sobald eine
+# Quelle mit Pflichtangabe entsteht, gehört sie hierher zurück.
+#
+# Die erwarteten Kennungen stehen in `EXPECTED_IDS` — eine Zahl allein hätte
+# den Tausch von `#2b` gegen `#4b` gutgläubig als „alle bestanden" gemeldet.
 #
 # Verwendung:
 #   ./_tickets/T-22-smoke.sh --run
@@ -43,11 +52,16 @@ readonly PORT="${PORT:-8774}"
 readonly BASE_URL="http://127.0.0.1:${PORT}"
 readonly VENV_PY="${PROJECT_ROOT}/.venv/bin/python"
 
-# Wie viele Checks dieser Lauf **erwartet**. Ohne diese Zahl kann ein Lauf,
-# der unterwegs abbricht, mit zwei Ergebnissen und `COUNT_FAIL=0` grün enden —
-# genau das P-05, das die Schlussmarke verhindern soll. Sie tut es nur, wenn
-# sie auch die Vollständigkeit prüft.
-readonly EXPECTED_CHECKS=6
+# Welche Checks dieser Lauf **erwartet** — als Kennungen, nicht als Zahl.
+#
+# Die Zahl allein verhindert nur, dass ein unterwegs abgebrochener Lauf mit
+# `COUNT_FAIL=0` grün endet. Sie sagt nichts darüber, ob die gelaufenen Checks
+# **dieselben** sind: Wird einer ersetzt, stimmt die Summe weiter. Genau das
+# ist hier passiert, als `#4b` an die Stelle von `#2b` trat.
+readonly EXPECTED_IDS="#1 #2 #3 #4 #4b #5"
+
+# Was tatsächlich gelaufen ist — von `report` gefüllt, am Ende verglichen.
+SEEN_IDS=""
 
 COUNT_OK=0
 COUNT_FAIL=0
@@ -181,6 +195,10 @@ report() {
     local -r _OK="$3"
     local -r _ACTUAL="$4"
 
+    # Die Kennung ohne Auffüll-Leerzeichen — `report` bekommt sie als `"#4 "`,
+    # damit die Spalten stehen.
+    SEEN_IDS="${SEEN_IDS}${SEEN_IDS:+ }${_LINE// /}"
+
     if [[ "${_OK}" == true ]]; then
         COUNT_OK=$((COUNT_OK + 1))
         echo -e "  ${GREEN}✓${NC} ${_LINE} ${_WHAT}"
@@ -251,31 +269,28 @@ print(json.load(sys.stdin)['config_path'])" 2>/dev/null)"
         "resolvers: ${_CHAIN}, config_path: ${_PATH}"
 }
 
-# Der Grund einer Quelle aus `/sources`.
+# Ein Feld einer Quelle aus `/sources`.
 #
 # Params:
 #   $1 - Name der Quelle
-reasonOf() {
+#   $2 - Feldname, z.B. `reason` oder `configured`
+fieldOf() {
     curl -s --max-time 30 "${BASE_URL}/sources" | "${VENV_PY}" -c "
 import json, sys
 data = json.load(sys.stdin)
-print(next((r['reason'] for r in data['sources'] if r['name'] == '$1'), ''))
+print(next((str(r['$2']) for r in data['sources'] if r['name'] == '$1'), ''))
 " 2>/dev/null
 }
 
-# `#4`: Ein Tippfehler nennt Namen und Alternativen.
-#
-# **Die Zusage steht, die Stelle hat sich verschoben.** Bis Runde 5 warf der
-# Kettenbau bei einem unbekannten Namen, und der Check las die Meldung aus dem
-# Log. Seither kostet ein Tippfehler nur seine eigene Quelle: Ein Paket, dessen
-# Installation fehlschlug, nimmt nicht mehr die ganze App mit. Der Grund steht
-# dafür in `/sources` — dort, wo ein Betreiber nachsieht, und nicht nur dort,
-# wo er zufällig mitprotokolliert wurde.
+# `#4`: Ein Tippfehler nennt Namen und Alternativen — in `/sources`, nicht im
+# Log: Ein unbekannter Name kostet **seine** Quelle, nicht den Start, also gibt
+# es keinen Abbruch, den ein Protokoll festhalten könnte.
 checkTypo() {
     writeConfig "resolvers: [openfgi]"
     startServer || return 1
-    local -r _REASON="$(reasonOf openfgi)"
-    local -r _CHAIN="$(chainOf resolvers)"
+    local -r _REASON="$(fieldOf openfgi reason)"
+    local -r _CONFIGURED="$(fieldOf openfgi configured)"
+    local -r _HEALTH="$(curl -s -o /dev/null -w '%{http_code}' --max-time 10 "${BASE_URL}/health")"
     stopServer
 
     report "#4 " "der Tippfehler nennt sich selbst und die verfügbaren Namen" \
@@ -283,10 +298,16 @@ checkTypo() {
             && echo true || echo false)" \
         "${_REASON:-kein Grund in /sources}"
 
-    # Und er kostet **nur diese Quelle**: Die App läuft, die Kette bleibt leer.
-    report "#4b" "der Start überlebt den Tippfehler" \
-        "$([[ "${_CHAIN}" == "openfgi" ]] && echo true || echo false)" \
-        "resolvers: ${_CHAIN:-<leer>} — die App antwortet, die Kette baut nichts"
+    # **Zwei Aussagen, und beide gehören zusammen.** Der Name allein sagt nur,
+    # dass die Datei gelesen wurde; erst `configured: false` sagt, dass die
+    # Quelle nicht gebaut wurde, und erst die lebende Route sagt, dass es den
+    # Start trotzdem nicht gekostet hat. Ohne die erste wäre ein
+    # stillschweigend arbeitender Tippfehler grün, ohne die zweite ein
+    # abgestürzter Server.
+    report "#4b" "die Quelle fällt aus, der Start überlebt sie" \
+        "$([[ "${_CONFIGURED}" == "False" && "${_HEALTH}" == "200" ]] \
+            && echo true || echo false)" \
+        "configured=${_CONFIGURED:-<keine Angabe>}, GET /health → ${_HEALTH}"
 }
 
 # `#5`: Die Datei trägt Verweise statt Schlüssel.
@@ -325,15 +346,19 @@ runChecks() {
     done
 
     echo
-    # **Die Schlussmarke.** Ein Lauf, der unterwegs abbricht, erreicht sie nicht
-    # und sieht deshalb nie wie ein bestandener aus (P-05).
-    if [[ "${COUNT_FAIL}" -eq 0 && "${COUNT_OK}" -eq "${EXPECTED_CHECKS}" ]]; then
+    # **Die Schlussmarke, und sie prüft die Identität statt der Anzahl.** Ein
+    # Lauf, der unterwegs abbricht, erreicht sie nicht (P-05) — und einer, der
+    # einen Check gegen einen anderen tauscht, kommt an ihr nicht vorbei.
+    if [[ "${COUNT_FAIL}" -eq 0 && "${SEEN_IDS}" == "${EXPECTED_IDS}" ]]; then
         echo -e "  ${GREEN}✓ ${COUNT_OK} Checks bestanden, keine Fehler${NC}"
+        echo -e "      ${SEEN_IDS}"
         echo
         return 0
     fi
     if [[ "${COUNT_FAIL}" -eq 0 ]]; then
-        echo -e "  ${RED}✗ nur ${COUNT_OK} von ${EXPECTED_CHECKS} Checks gelaufen${NC}"
+        echo -e "  ${RED}✗ es liefen andere Checks als zugesagt${NC}"
+        echo -e "      erwartet:  ${EXPECTED_IDS}"
+        echo -e "      gelaufen:  ${SEEN_IDS:-<keiner>}"
         echo -e "      Der Lauf ist unvollständig — das ist kein bestandener Lauf."
         echo
         return 1

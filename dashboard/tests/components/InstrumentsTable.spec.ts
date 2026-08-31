@@ -412,7 +412,7 @@ describe('InstrumentsTable · Identitätsformen', () => {
     expect(wrapper.find('.isin-cell .dim').text()).toBe(i18n.global.t('common.noValue'))
     expect(
       wrapper.findAllComponents(InfoHint).map((hint) => hint.props('text')),
-    ).toContain(i18n.global.t('hints.isinDash'))
+    ).toContain(i18n.global.t('table.noIsinReason'))
   })
 
   it('bietet dem Listing ohne ISIN weiterhin den Editor', () => {

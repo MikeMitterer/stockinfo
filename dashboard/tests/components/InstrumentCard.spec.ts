@@ -140,7 +140,7 @@ describe('InstrumentCard', () => {
     expect(wrapper.find('.dim').text()).toBe(i18n.global.t('common.noValue'))
     expect(
       wrapper.findAllComponents(InfoHint).map((hint) => hint.props('text')),
-    ).toContain(i18n.global.t('hints.isinDash'))
+    ).toContain(i18n.global.t('table.noIsinReason'))
   })
 
   /*
@@ -156,6 +156,40 @@ describe('InstrumentCard', () => {
 
     expect(wrapper.find('.icard__symbol').text()).toContain(i18n.global.t('common.noValue'))
     expect(wrapper.find('.icard__symbol').text()).not.toContain('DE0001102531')
+  })
+
+  /*
+   * **Die Karte hat keine Spaltenkoepfe.** Was in der Tabelle einmal ueber der
+   * Spalte steht, hat hier keinen Ort — ohne diese Zeile bliebe der Strich auf
+   * Touch und fuer die Tastatur unerklaert. Geprueft wird der Text aus dem
+   * Katalog, nicht seine Formulierung: Beide Darstellungsformen ziehen aus
+   * derselben Quelle, und genau das ist die Zusage.
+   */
+  it('erklaert den fehlenden Symbolstrich auch ohne Spaltenkopf', () => {
+    const wrapper = mountCard({
+      symbol: 'DE0001102531',
+      identity: { kind: 'isin_only', isin: 'DE0001102531' },
+    })
+
+    expect(
+      wrapper.findAllComponents(InfoHint).map((hint) => hint.props('text')),
+    ).toContain(i18n.global.t('table.noSymbolReason'))
+  })
+
+  /*
+   * Die Gegenprobe: Ein Papier **mit** Symbol traegt den Hinweis nicht. Ohne
+   * sie waere der Fall darueber auch gruen, wenn die Karte ihn immer zeigte —
+   * und genau das war Mikes Einwand gegen den Hinweis in jeder Zeile.
+   */
+  it('zeigt den Symbol-Hinweis nicht, wo ein Symbol steht', () => {
+    const wrapper = mountCard({
+      symbol: 'EUNL.DE',
+      identity: { kind: 'listed', ticker: 'EUNL', mic: 'XETR', isin: 'IE00B4L5Y983' },
+    })
+
+    expect(
+      wrapper.findAllComponents(InfoHint).map((hint) => hint.props('text')),
+    ).not.toContain(i18n.global.t('table.noSymbolReason'))
   })
 
   it('zeichnet auch eine Gattung ohne eigene Farbe als Pille aus', () => {

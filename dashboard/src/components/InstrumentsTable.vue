@@ -293,10 +293,10 @@ function price(value: number | null): string {
                 <InfoHint :text="t('hints.points')" settings-tab="environment" />
               </span>
               <span v-if="column.key === 'symbol'" class="th-hint" @click.stop>
-                <InfoHint :text="t('hints.symbolDash')" />
+                <InfoHint :text="t('table.noSymbolReason')" />
               </span>
               <span v-if="column.key === 'isin'" class="th-hint" @click.stop>
-                <InfoHint :text="t('hints.isinDash')" />
+                <InfoHint :text="t('table.noIsinReason')" />
               </span>
               <span v-if="sortKey === column.key" class="arrow">
                 {{ direction === 'asc' ? '▲' : '▼' }}
@@ -633,6 +633,34 @@ tbody tr {
 .row-toggle .ux-caret {
   margin-right: 0.3rem;
   color: $color-accent;
+}
+
+/*
+ * Der Umschalter steht in einer eigenen, schmalen Spalte.
+ *
+ * `min-width` und nicht nur `width`: In einer Tabelle ist `width` ein Wunsch.
+ * Wird die Tabelle enger als ihr Inhalt, verteilt der Layout-Algorithmus die
+ * Knappheit über alle Spalten — auch über die schmalste. Das Zeichen wird
+ * dabei **horizontal** gestaucht und steht verzerrt da, weil seine Höhe
+ * bleibt.
+ */
+.caret-col {
+  width: 1.75rem;
+  min-width: 1.75rem;
+  padding-right: 0;
+  text-align: center;
+}
+
+.row-toggle.caret-only {
+  padding: 0;
+  color: inherit;
+
+  // Das Zeichen behält seine Kantenlänge, egal wie eng die Spalte wird.
+  :deep(svg) {
+    flex: none;
+    width: 0.9375rem;
+    min-width: 0.9375rem;
+  }
 }
 
 // In der Namensspalte übernimmt der Knopf die Kürzung, die vorher an der

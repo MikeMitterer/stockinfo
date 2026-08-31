@@ -277,7 +277,7 @@ Alle behoben und gemessen — `288c527`, `13d4652`, `35ddf27`.
 | **C** | Symbol = ISIN bei `isin_only` | `instruments.symbol` ist Pflichtspalte und trägt dort die ISIN | Strich mit Hover-Grund; `symbolOf()` als Gegenstück zu `isinOf()` |
 | **D** | nur `ETF` sah aus wie ein Label | das CSS kannte zwei Gattungen, seit T-31/T-38 gibt es sechs | Auszeichnung **vor** den Sonderfällen; die siebte Gattung sieht neutral aus, nicht unfertig |
 | **E** | Caret gehört vor die Symbolspalte | es stand in der Zelle unter der Überschrift „Symbol" | eigene Spalte, eigenes `aria-label` |
-| **F** | Caret schrumpfte bei schmalem Fenster | `width` ist in einer Tabelle ein Wunsch: 15×15 → **5×15**, also verzerrt | `min-width`; nachgemessen 15×15 bei 900, 1000, 1150 px |
+| **F** | Caret schrumpfte bei schmalem Fenster | `width` ist in einer Tabelle ein Wunsch: 15×15 → **5×15**, also verzerrt | `min-width`; nachgemessen 15×15 bei 900, 1000, 1150 px — **die Regel ging in `d3f1949` wieder verloren, siehe Runde 8** |
 
 Befund D ist die dritte Ausprägung desselben Musters an einem Tag — nach
 `_FIGI_TYPES` und dem Migrationswächter in T-35: eine zweite Stelle, die eine
@@ -565,6 +565,73 @@ der Stand dennoch nicht:
 
 Die generelle Verschiebbarkeit aller Smoke-Skripte ist nicht Teil der
 UI-Korrektur; sie steht separat in T-45.
+
+## Runde 8 · Codex' vier Befunde
+
+### 1 · Die Karte hatte ihre Auskunft wieder verloren
+
+Der Hinweis wanderte in Runde 7 in den **Spaltenkopf** — und die Karte hat
+keine Spaltenköpfe. Für ein Papier der Form `isin_only` stand dort seither ein
+stummer Strich, auf Touch und für die Tastatur unerklärt. Dazu doppelten die
+neuen `hints.symbolDash`/`hints.isinDash` die vorhandenen
+`table.noSymbolReason`/`table.noIsinReason`.
+
+Jetzt: **ein** Katalogeintrag je Fall, im Wortlaut so gefasst, dass er über
+einer Spalte wie neben einem Strich steht. Beide Darstellungsformen ziehen aus
+derselben Quelle — die Tabelle am Spaltenkopf, die Karte neben dem Strich,
+und dort nur bei einem Papier ohne Symbol.
+
+**Zwei Tests statt einem:** einer, dass die Karte den Hinweis zeigt, und die
+Gegenprobe, dass ein Papier **mit** Symbol ihn nicht trägt. Ohne die zweite
+wäre auch eine Karte grün, die ihn immer zeigt — also genau das, was Mike an
+der Tabelle beanstandet hatte. Der Mutant (Hinweis aus der Karte entfernt)
+macht den ersten rot und lässt die Gegenprobe grün.
+
+### 2 · Die Caret-Regeln waren still verschwunden
+
+`d3f1949` hat beim Extrahieren der Typ-Pille auch `.caret-col` und
+`.row-toggle.caret-only` gelöscht. Beide Klassen standen weiter im Template,
+kein CSS dazu — und das Ticket meldete Befund F trotzdem als behoben.
+
+Regeln wiederhergestellt und **am finalen Stand** gemessen, mit Mutant:
+
+| | Zelle | Caret |
+|---|---|---|
+| mit den Regeln | 28,6 px | **15,0 × 15,2 px** |
+| Regeln zur Laufzeit entfernt | 13,6 px | **4,8 × 15,2 px** |
+
+Die zweite Zeile ist genau die Verzerrung aus Befund F: schmaler, aber gleich
+hoch. Erst der Mutant hat das gezeigt — die ersten drei Messversuche ergaben
+mit und ohne Regel dasselbe, weil die Tabelle in `.scroll` liegt und unter
+ihrer inhaltlichen Mindestbreite lieber scrollt als schrumpft. Die
+Aussagekraft entstand erst, als der Rest der Spalten ausgeblendet war.
+
+**Und die allererste Messung war schlicht falsch:** `min-width: 0px` bei
+frisch gebautem Stand — der Browser hielt das alte Stylesheet. Ohne
+Hard-Reload hätte hier eine wiederhergestellte Regel als „wirkt nicht"
+dagestanden.
+
+### 3 · Der Smoke zählte richtig und hieß falsch
+
+`#2b` stand im Kopf und lief nicht. Es verlangt eine Quelle mit **pflichtigem**
+Schlüssel, und keine der gebauten deklariert einen — `SourceSpec.needs` ist
+überall leer. Der Check ist deshalb **ehrlich herausgenommen**, mit dem Grund
+im Kopf; die Zusage selbst prüfen die Unit-Tests zu `is_configured`.
+
+`#4b` prüft jetzt beides: `configured: false` **und** `GET /health → 200`. Der
+Name allein sagte nur, dass die Datei gelesen wurde.
+
+Die Schlussmarke vergleicht **Kennungen statt einer Zahl**
+(`EXPECTED_IDS="#1 #2 #3 #4 #4b #5"`). Mutant: ein entfernter Check meldet
+`erwartet … gelaufen #1 #2 #4 #4b #5` statt einer Summe, die weiter stimmt.
+Zweiter Mutant: aus `openfgi` wird `openfigi` — beide Tippfehler-Orakel werden
+rot, keins ist Beifang des anderen.
+
+### 4 · Chronik aus den Kommentaren
+
+„Bis Runde 5" im Smoke, „stand zuvor an zehn Stellen" im Katalog und die
+Messwerte in `MetricValue.vue` sagen, was **war**. Im Code steht jetzt, was
+**gilt**; die Zahlen stehen hier.
 
 ## Nicht-Ziele
 

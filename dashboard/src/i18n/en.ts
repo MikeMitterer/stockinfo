@@ -38,8 +38,11 @@ export const en = {
     toggleDetails: 'Show/hide details',
     colIsin: 'ISIN',
     /* The reason for the dash, as a hover text — see the German file. */
-    noIsinReason: 'A currency pair carries no ISIN — that is the shape of the instrument, not a gap.',
-    noSymbolReason: 'This instrument is identified by its ISIN alone and has no exchange symbol.',
+    /* Die eine Quelle für beide Darstellungsformen — siehe die deutsche Fassung. */
+    noIsinReason:
+      'A hyphen means there is no ISIN: a currency pair carries none. That is the shape of the instrument, not a gap.',
+    noSymbolReason:
+      'A hyphen means there is no exchange symbol: some instruments — an OTC bond, say — are identified by their ISIN alone.',
     colName: 'Name',
     colType: 'Type',
     colPrice: 'Price',
@@ -266,10 +269,6 @@ export const en = {
     },
   },
   hints: {
-    symbolDash:
-      'A hyphen means there is no exchange symbol: some instruments — an OTC bond, say — are identified by their ISIN alone.',
-    isinDash:
-      'A hyphen means there is no ISIN: a currency pair carries none. That is the shape of the instrument, not a gap.',
     more: 'More about this →',
     openSetting: 'To the setting →',
     points:

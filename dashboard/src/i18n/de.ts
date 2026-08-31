@@ -9,13 +9,12 @@ export const de = {
   app: { brandLead: 'Stock', brandAccent: 'Info' },
 
   /*
-   * Was in einer Zelle steht, die keinen Wert hat — **an einer Stelle**.
+   * Was in einer Zelle steht, die keinen Wert hat — **an einer Stelle**. Jede
+   * weitere Fassung im Quelltext wäre eine zweite Wahrheit, die niemand
+   * mitzieht.
    *
-   * Er stand zuvor als festes Zeichen an zehn Stellen in vier Dateien; ein
-   * Wechsel hätte alle zehn treffen müssen, und wer eine übersieht, sieht
-   * es nur im Betrieb. Ein Bindestrich, kein Geviertstrich: Der
-   * Geviertstrich ist ein Satzzeichen für Gedankenstriche, keine Marke für
-   * einen fehlenden Wert.
+   * Ein Bindestrich, kein Geviertstrich: Der Geviertstrich ist ein
+   * Satzzeichen für Gedankenstriche, keine Marke für einen fehlenden Wert.
    */
   common: { noValue: '-' },
 
@@ -43,10 +42,16 @@ export const de = {
     colSymbol: 'Symbol',
     toggleDetails: 'Details ein-/ausblenden',
     colIsin: 'ISIN',
-    /* Der Grund für den Strich, als Hover-Text — er kostet keine Spaltenbreite. */
-    noIsinReason: 'Ein Währungspaar trägt keine ISIN — das ist die Form des Papiers, keine Lücke.',
-    /* Warum in der Symbolspalte ein Strich stehen kann — siehe `noIsinReason`. */
-    noSymbolReason: 'Dieses Papier wird nur über seine ISIN identifiziert und hat kein Börsensymbol.',
+    /*
+     * Warum in diesen beiden Spalten ein Strich stehen kann — **die** Quelle
+     * dafür, für jede Darstellungsform. Der Wortlaut nennt deshalb kein
+     * einzelnes Papier: Er steht am Spaltenkopf der Tabelle wie neben dem
+     * Strich der Karte.
+     */
+    noIsinReason:
+      'Ein Bindestrich steht, wo es keine ISIN gibt: Ein Währungspaar trägt keine. Das ist die Form des Papiers, keine Lücke.',
+    noSymbolReason:
+      'Ein Bindestrich steht, wo es kein Börsensymbol gibt: Manche Papiere — etwa eine OTC-Anleihe — werden allein über ihre ISIN identifiziert.',
     colName: 'Name',
     colType: 'Typ',
     colPrice: 'Kurs',
@@ -311,10 +316,6 @@ export const de = {
    * `more` und `openSetting` sind die beiden Verweise darin.
    */
   hints: {
-    symbolDash:
-      'Ein Bindestrich steht, wo es kein Börsensymbol gibt: Manche Papiere — etwa eine OTC-Anleihe — werden allein über ihre ISIN identifiziert.',
-    isinDash:
-      'Ein Bindestrich steht, wo es keine ISIN gibt: Ein Währungspaar trägt keine. Das ist die Form des Papiers, keine Lücke.',
     more: 'Mehr dazu →',
     openSetting: 'Zur Einstellung →',
     points:
