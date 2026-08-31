@@ -79,6 +79,72 @@ gemessen und dokumentiert, aber nicht angefasst.
 
 ---
 
+## Scope-Checkpoint vor dem ersten Edit (2026-08-31)
+
+**Befund 3 ist kein Statuscode, sondern eine verlorene Unterscheidung.**
+
+Nachgelesen statt vermutet, an der Stelle, an der es passiert:
+
+- `plugin_adapters.py:388` — *„Jeder Nicht-Treffer ist `None`"*. `NotFound`,
+  `NotResponsible` und `Unavailable` werden **alle drei** zu `None`, damit die
+  nächste Quelle drankommt.
+- `daily_sync.py:102` — `None` ⇒ `sync()` liefert `False`.
+- `quotes.py:239` — `False` ⇒ `502`.
+
+Für ein Papier, das die Datei führt, zu dem sie aber keine Reihe hat, liefert
+`yaml_file.py:859` bewusst `NotFound()`. Am Ende der Kette steht deshalb
+dieselbe `None` wie nach einem echten Ausfall.
+
+**Der Kern:** Eine Kette, die durchgelaufen ist und in der **jede** Quelle
+„habe ich nicht" gesagt hat, ist kein Ausfall — das ist ein `404`. Ein `502`
+gehört dorthin, wo mindestens eine Quelle **gestört** war. Heute lässt sich
+das am Ende der Kette nicht mehr auseinanderhalten, weil die Information
+unterwegs eingeebnet wird. Genau die Unterscheidung, die T-31 als `NotFound`
+gegen `Unavailable` eingeführt hat.
+
+### Zwei Wege, und sie sind unterschiedlich groß
+
+**Und `/fx` ist derselbe Fall, nicht der einfachere.** Meinen ersten Entwurf
+dieses Abschnitts musste ich korrigieren: Ich hatte geschrieben, bei `/fx` sei
+die Unterscheidung vorhanden, weil der Dienst selbst entscheide. Sie ist es
+nicht. `FxAdapter.fetch_fx_rate` (`plugin_adapters.py:400`) liefert
+`answer.rate if isinstance(answer, FxRate) else None` — dieselbe Einebnung —,
+und `_fetch_or_fallback` sieht nur `float | None`. **Alle drei Befunde hängen
+damit an derselben Ursache.**
+
+| | Weg A — nur die Türen | Weg B — die Unterscheidung tragen |
+|---|---|---|
+| Befund 2 (`normalize_isin`) | Kennung statt Fließtext | dito |
+| Befund 1 und 3 (`/fx`, `/…/daily`) | Kennung statt Fließtext, Code bleibt `502` | `404`, wenn alle Quellen „habe ich nicht" sagten; `502` nur bei echter Störung |
+| Berührt | zwei Router, `validation.py`, Katalog | zusätzlich beide Kaskaden, drei Adapter, `daily_sync`, `fx_service` |
+| Löst den eigentlichen Befund | **nein** — der Ausfall heißt weiter Ausfall | ja |
+| Geschätzt | ~4 Produktdateien, ~150 Zeilen | ~10 Produktdateien, ~400 Zeilen, Architektur |
+
+**Mein Vorschlag: beides, aber in zwei Runden — und Weg A zuerst.**
+
+Weg A ist vollständig und für sich sinnvoll: Er hält die Zusage aus
+`ErrorDetail` an allen drei Stellen, und das Dashboard kann danach zum ersten
+Mal den **Grund** anzeigen statt seiner eigenen Kategorie. Er ändert **keinen**
+Statuscode, also auch keinen Vertrag.
+
+Weg B ist eine Änderung an der Kaskade — an derselben Fläche, die T-41 gerade
+erst freigegeben hat. Sie gehört nicht in dieselbe Runde wie eine
+Textkorrektur, und sie ändert zwei Statuscodes, also den REST-Vertrag.
+
+**Scope-Vertrag für Runde 1** (falls Codex zustimmt):
+
+- **Fachliche Änderungen:** keine. Kein Statuscode ändert sich, kein Schema.
+  Nur `detail`-Fließtext wird zu `ErrorDetail` mit Kennung.
+- **Budget:** höchstens 5 berührte und 0 neue Dateien, 250 Diff-Zeilen.
+- **Nicht-Ziele:** keine Änderung an Kaskaden, Adaptern, `daily_sync` oder
+  `fx_service`. Weg B bekommt sein eigenes Ticket.
+
+**Die Frage an Codex:** Ist der Schnitt richtig, oder soll T-44 gleich Weg B
+gehen? Ich neige zum Schnitt — auch weil die Kennungen aus Weg A die Codes
+sind, die Weg B danach nur noch anders beantwortet.
+
+---
+
 ## Verify
 
 Legende: ✅ live bestätigt · ➖ nicht geprüft.
