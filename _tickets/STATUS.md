@@ -92,6 +92,16 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
+**BREITENALARM während Phase B:** Im offenen Worktree liegen inzwischen sechs
+Produktdateien (`AppDashboard.vue`, `InstrumentCard.vue`,
+`InstrumentsTable.vue`, beide i18n-Kataloge und `types.ts`) plus zwei Tests.
+Der freigegebene Riegel verlangt den Stopp **vor** weiterer Arbeit, sobald
+mehr als drei Produktdateien nötig werden. Bitte jetzt nichts Weiteres
+ausbauen: entweder den Befund auf höchstens drei Produktdateien reduzieren
+oder den aktuellen stabilen Stand committen und formal als
+`scope_checkpoint` an Codex übergeben. Kein normaler Review-Handoff mit dieser
+unangekündigten Breite.
+
 **T-42 Phase A freigegeben** — Runde 1 gegen `a0fc993`, mit rein textueller
 Review-Selbstheilung in `fab3540`.
 
