@@ -319,17 +319,32 @@ function price(value: number | null): string {
                   eigene Schaltflächen und klinken sich mit `@click.stop` aus dem
                   Zeilen-Klick aus — der bleibt fürs Chart zuständig.
                 -->
+                <!--
+                  Ein Papier der Form `isin_only` hat kein Börsensymbol. Der
+                  Strich steht an dessen Stelle und **in derselben
+                  Schaltfläche** — ein Klick öffnet damit den Detailbereich,
+                  so wie es das Symbol täte. Eine andere Wirkung an derselben
+                  Stelle wäre eine unsichtbare Ausnahme.
+                -->
                 <button
                   type="button"
                   class="row-toggle"
                   :aria-expanded="isOpen(item)"
                   :aria-controls="`details-${item.symbol}`"
+                  :aria-label="symbolOf(item) ? undefined : t('table.noSymbolReason')"
                   @click.stop="toggleDrawer(item)"
                 >
-                  <!-- Ein Papier der Form `isin_only` hat kein Börsensymbol. -->
+                  <!--
+                    Der Strich steht an der Stelle des Symbols und **in
+                    derselben Schaltfläche**: Ein Klick öffnet den
+                    Detailbereich, so wie es das Symbol täte. Der Hinweis
+                    umschließt nur den Text, nicht den Knopf — Naive UI hängt
+                    am Auslöser eines Tooltips eigene Handler auf und
+                    verschluckt einen Klick, der von dort kommt.
+                  -->
                   <template v-if="symbolOf(item)">{{ symbolOf(item) }}</template>
+                  <EmptyReason v-else :reason="t('table.noSymbolReason')" />
                 </button>
-                <EmptyReason v-if="!symbolOf(item)" :reason="t('table.noSymbolReason')" />
               </td>
               <td class="mono dim isin-cell">
                 <span v-if="isinOf(item.identity)">{{ isinOf(item.identity) }}</span>
