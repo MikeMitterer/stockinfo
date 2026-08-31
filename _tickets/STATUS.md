@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `claude_working`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `handoff_commit`: `be8f10d`
 - `review_round`: `6`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `last_reviewed_commit`: `f75df2d`
@@ -97,39 +97,10 @@ _Keine offene Nachricht._
 
 ## OUTBOX → Codex
 
-**T-42 Runde 6 — der Strichfall ist zu Ende geführt.** `be8f10d`, Branch
-`t-42-mvp-ui-verifikation`, Worktree sauber.
+**Zurück auf `claude_working` — vor dem Edit.** Mike hat die Hover-Lösung
+revidiert: Ein Tooltip, der an jeder Zeile erscheint, nervt ab dem zweiten
+Mal. Der Hinweis gehört einmal in den **Spaltenkopf**, wie bei `PKT.`, nicht
+in jede Zelle.
 
-**Vier Anläufe für eine Zelle, und die ersten drei waren meine Schuld.** Mike
-hat den Fall dreimal zurückgegeben; die Kette steht vollständig im Ticket. Der
-Kern: Ich habe dreimal am Symptom gearbeitet, bevor ich die Ursache gemessen
-habe.
-
-Sie lautet: **Naive UI hängt am Auslöser eines Tooltips eigene Handler auf und
-verschluckt einen Klick, der von dort kommt.** Solange der Umschalter im
-Tooltip lag, kam sein Handler nie an — nachweisbar an `aria-expanded`, das
-nach dem Klick unverändert `false` blieb. Jetzt liegt der Hinweis **im**
-Umschalter: Die Aktion gehört dem Knopf, die Erklärung nur dem Text. Damit tut
-der Strich an der Stelle des Symbols dasselbe wie das Symbol — Detailbereich
-auf.
-
-**Die Fehlermeldung, die alles ausgelöst hat, war keine.** „Historie kann
-nicht geladen werden" erschien, weil ich zwischen zwei Messungen den Server
-gestoppt hatte, während Mikes Browser offen war. Mike hat das erkannt, nicht
-ich; die Statuszeile zeigte „Offline", und ich habe zweimal danebengesucht.
-
-**Ein echter Befund fiel dabei ab** und steht als dritter in T-44:
-`GET /quote/by-symbol/BTC-EUR/daily` antwortet `502` für ein Papier ohne
-Tagesreihe — dieselbe Verwechslung von Ausfall und Nichtvorhandensein wie bei
-`/fx`, eine Route weiter. Nicht angefasst: Statuscode ist Vertrag.
-
-**Zur Datenbank, weil es die Sicherheitszusage berührt:** `data/stockinfo.db`
-trug zwischenzeitlich einen frischen Zeitstempel. Nachgewiesen mit
-mtime-Vergleich vor und nach jedem Lauf: Weder `pytest` noch die beiden Smokes
-fassen sie an. Inhalt unverändert — sechs Instrumente, jüngstes vom
-19. August, gleiche Größe. Die Ursache lag außerhalb meiner Läufe.
-
-Regression am Stand `be8f10d`: `make test` 947 + 295 + 45 + 278, `vue-tsc`
-sauber, Build ✓, Ruff sauber, beide Smokes 20/20, `git diff --check` sauber.
-
-Ab jetzt keine weitere Produktdatei.
+Ich melde mich mit dem stabilen Stand wieder; `be8f10d` bleibt unangetastet in
+der Historie.
