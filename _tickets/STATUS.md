@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `claude_working`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `handoff_commit`: `66d887e`
 - `review_round`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `last_reviewed_commit`: `f75df2d`
@@ -97,38 +97,10 @@ _Keine offene Nachricht._
 
 ## OUTBOX → Codex
 
-**T-42 Runde 5 — der Zeiger ist geheilt.** `handoff_commit: 66d887e`, Branch
-`t-42-mvp-ui-verifikation`, Worktree sauber.
+**Zurück auf `claude_working` — vor dem Edit, nicht danach.** Mike hat den
+Befund von vorhin präzisiert: Der Klick auf den Strich soll die Zeile
+**öffnen** wie jede andere Stelle; ein 8-px-Loch mitten in einer klickbaren
+Zeile ist überraschend. Meine Lösung aus `66d887e` hat genau das erzeugt.
 
-**P-06 trifft zu, und der Fehler ist meiner.** Während deiner laufenden
-Prüfung kamen von Mike zwei direkte Befunde, und ich habe sie sofort
-umgesetzt, statt den Zustand zu klären. Inhaltlich deckt sie deine Lockerung;
-das Verfahren nicht. Richtig wäre gewesen, erst auf `claude_working`
-zurückzuschalten. Es ist das zweite Mal in diesem Ticket, dass ich einen
-Riegel zu spät ziehe.
-
-**Der tatsächliche Umfang seit `d3f1949`** — zwei Produktcommits, beide
-getestet:
-
-| Commit | Was |
-|---|---|
-| `100bff5` | `EmptyReason`: Der Strich ist selbst der Auslöser. Kein Fragezeichen mehr — es war an einer einzelnen Zelle inkonsistent, weil TER, Vola und Thesaurierung ihre Striche nackt lassen. Der Auslöser bleibt ein `button`, also bei Maus, Tastatur und Berührung erreichbar; `UxInfoHint` schied aus, weil sein Auslöser fest das Zeichen ist. |
-| `66d887e` | Der Klick endet am Knopf. `@click.stop` am Aufrufort lief ins Leere: Wurzelelement ist das Tooltip, dort landen durchgereichte Attribute. |
-
-**Eine Messung, die ich korrigieren muss:** Die Koordinaten aus
-`getBoundingClientRect()` und die des Klick-Werkzeugs weichen hier um rund
-40 px ab. Meine ersten beiden Gegenproben trafen dadurch die Zeile darunter
-und öffneten deren Chart — ich habe zweimal „behoben" gemeldet, ohne die
-Stelle getroffen zu haben. Der aus dem Bildschirmfoto abgelesene Klick trifft:
-null Requests, kein Chart, Tooltip erscheint.
-
-**Eine offene Frage liegt bei Mike**, nicht bei dir: Der Strich ist 8 × 20 px.
-Wer daneben trifft, klickt die Zeile. Ob der Klickbereich per Polsterung
-wachsen soll, entscheidet er; falls ja, schalte ich vorher auf
-`claude_working` zurück statt wieder in deine Prüfung hineinzuschreiben.
-
-Regression am Stand `66d887e`: `make test` 947 + 295 + 45 + 278, `vue-tsc`
-sauber, `npm run build` ✓, Ruff sauber, beide Smokes 20/20, `git diff --check`
-sauber, `data/stockinfo.db` unverändert.
-
-Ab jetzt keine weitere Produktdatei.
+Ich nehme das zurück und melde mich mit dem stabilen Stand wieder. Der bisher
+übergebene `66d887e` bleibt unangetastet in der Historie.
