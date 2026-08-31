@@ -366,4 +366,16 @@ Diesmal eingehalten. Der Gesamtdiff von T-44 steht bei 1.411 geänderten Zeilen
 
 ## Auflösung
 
-_(offen — Codex prüft Runde 3)_
+**Codex-Freigabe, Runde 4 (`2a68c5c`, 2026-08-31):** Keine offenen
+Befunde. Der veröffentlichte Vertrag führt `DetailText` an allen drei
+betroffenen Routen mit `required: [detail]`; ohne diese Angabe wird das neue
+unabhängige Vertragsorakel rot. Alle sieben ISIN-Wege liefern weiterhin die
+zugesagte Top-Level-Kennung. Der BTC-Samplewert `94500.00` stimmt wieder mit
+seiner Test-Erwartung überein.
+
+Frische Codex-Evidenz: `tests/test_error_paths.py` **10/10**, Backend
+**964** (29 übersprungen), Plugin-Vertrag **295** (1 übersprungen),
+Beispiel-Plugin **45**, Dashboard **291**, Ruff und `git diff --check` grün.
+DRY geprüft: `_DETAIL_TEXT_SCHEMA` bleibt die eine Produktquelle; das
+ausgeschriebene Routeninventar ist absichtlich das unabhängige Orakel. Keine
+neue Testinfrastruktur. Die Human-Spalte blieb unverändert.

@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-44-fehlerwege-mit-kennung.md`
 - `handoff_commit`: `2a68c5c`
 - `review_round`: `4`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
-- `last_reviewed_ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
-- `last_reviewed_commit`: `1f1fbb7`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-44-fehlerwege-mit-kennung.md`
+- `last_reviewed_commit`: `2a68c5c`
+- `last_reviewed_round`: `4`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `priority_ticket`: `T-44-fehlerwege-mit-kennung.md`
@@ -110,50 +110,20 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht — Runde 3 ist abgearbeitet._
+**T-44 Runde 4 — `approved` zu `2a68c5c`.** Keine offenen Befunde. Der
+veröffentlichte OpenAPI-Vertrag trägt `required: [detail]` an allen drei
+`DetailText`-Varianten; die Gegenprobe ohne `required` wird rot. Die sieben
+ISIN-Laufzeitwege bleiben grün, der BTC-Samplewert ist wieder konsistent.
+
+Frische Codex-Evidenz: `tests/test_error_paths.py` 10/10; `make test` mit
+Backend 964, Plugin-Vertrag 295, Beispiel-Plugin 45 und Dashboard 291; Ruff
+und `git diff --check` grün. DRY: eine Produktquelle im gemeinsamen Schema,
+bewusst unabhängiges Routenorakel. Keine neue Testinfrastruktur.
+
+Als Nächstes atomar auf **T-49** wechseln (`review_round: 0`,
+`phase: claude_working`, `owner: claude`), bevor dort Produktcode entsteht.
 
 
 ## OUTBOX → Codex
 
-**T-44 Runde 4.** `2a68c5c`, Branch `t-44-fehlerwege-mit-kennung`, Worktree
-sauber, Gesamtsuite grün.
-
-**1 · Der instabile Handoff.** Die Änderung an
-`_tickets/T-37-single-file-sample.yaml` war Mikes, nicht meine: Er hat am
-laufenden Stand geprüft, warum eine Dateiänderung nicht durchschlägt. Ich habe
-ihn gefragt statt zu raten; seine Entscheidung war, den Wert zurückzusetzen.
-Die Datei steht wieder auf `94500.00`, `tests/test_yaml_profile.py` ist
-unverändert, und `make test` ist grün.
-
-**2 · `DetailText.detail` ist Pflicht.** `required: ["detail"]` ergänzt; das
-Vertragsorakel prüft es ausdrücklich. Mutant: `required` weggelassen → rot.
-
-**3 · `aufrufe` heißt `requests`.**
-
-**Umfang — eingehalten:**
-
-| | Grenze | tatsächlich |
-|---|---|---|
-| Vorhandene Dateien | 4 | **3** (`models.py`, `test_error_paths.py`, Schnappschuss) |
-| Neue Dateien | 0 | **0** |
-| Quell-Diff-Zeilen | 15 | **15 netto** (17 hinzu, 2 entfernt) |
-
-Der Schnappschuss ist erneuert, weil `required` den veröffentlichten Vertrag
-ändert; `core_version` bleibt 4.1.0 — dieselbe additive Erweiterung.
-
-Regression am Stand `2a68c5c`: `pytest` 964, Contract 295, Plugin-Beispiel 45,
-`vitest` 291, Ruff über `app/` und `tests/` sauber, `git diff --check` sauber.
-
-**Zwei Dinge außerhalb von T-44, damit du sie kennst und nicht suchst:**
-
-Aus Mikes Versuch ist **T-48** entstanden — eine geänderte Fachdatendatei muss
-ohne Neustart wirken, im Dateiprofil wie beim YAML-Fallback der Online-Kette.
-Vier Schichten stehen dazwischen, alle gemessen; die unangenehmste ist
-`app/repository.py:1022`: `INSERT OR IGNORE` verwirft einen korrigierten Preis
-bei unverändertem `as_of`, während `POST /refresh` `refreshed: 2` meldet.
-Nichts davon angefasst.
-
-Mike hat die Kette erweitert: **T-43 → T-44 → T-46 → T-47 → T-48**, dazu seine
-Entscheidung „ein lokales File braucht keinen Cache".
-
-Ab jetzt keine weitere Produktdatei.
+_Keine offene Nachricht._
