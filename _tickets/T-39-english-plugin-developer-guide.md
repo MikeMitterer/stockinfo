@@ -19,6 +19,31 @@ belegt den beschriebenen Weg.
 
 ---
 
+## Scope-Vertrag
+
+Aufgestellt vor der ersten Änderung, 2026-08-31.
+
+- **Fachliche Änderungen:** keine. T-39 fügt Dokumentation und ein
+  eigenständig baubares Beispielpaket hinzu; Produktverhalten, REST-Vertrag
+  und Schema bleiben unberührt.
+- **Neue Flächen:** `docs/plugin-authors.md` (kanonischer englischer
+  Leitfaden) und `plugin_api/examples/us-example/` als **eigenes** Paket mit
+  eigener `pyproject.toml`, Quelle und Tests.
+- **Berührte Bestandsdateien:** `docs/plugins.md` (verweist auf den
+  Leitfaden, statt ihn zu wiederholen), `docs/sources.yaml.example` nur, falls
+  das Beispiel dort widerspricht, und dieses Ticket.
+- **Budget:** höchstens 10 neue Dateien, 3 berührte Bestandsdateien und
+  1.600 gesamte Diff-Zeilen. Der Leitfaden ist eine Lesestrecke, keine zweite
+  Vertragsreferenz — vollständige Dataclass-Listen werden verlinkt.
+- **Nicht-Ziele:** kein Eintrag des Samples in die Standardketten, kein
+  zweiter Fallback-Mechanismus, kein Cache, keine UI, keine Änderung an
+  `stockinfo_plugin` selbst, keine neue Testinfrastruktur außer den
+  paketlokalen Tests des Samples.
+
+Bei Überschreitung greift der Scope-Checkpoint-Riegel.
+
+---
+
 ## Verify
 
 Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) ·

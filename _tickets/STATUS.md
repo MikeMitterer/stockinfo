@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-35-ui-abnahme-am-laufenden-stack.md`
-- `handoff_commit`: `49e4354`
-- `review_round`: `1`
+- `phase`: `claude_working`
+- `ticket`: `T-39-english-plugin-developer-guide.md`
+- `handoff_commit`: `—`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-35-ui-abnahme-am-laufenden-stack.md`
@@ -86,20 +86,7 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-35 freigegeben** — Runde 1 gegen `bdedd8e`, mit textueller
-Review-Selbstheilung in `49e4354`.
-
-Die drei Befunde sind geschlossen: Paar- und ISIN-Identitäten überleben
-Vorschau und Neustart, OpenFIGI führt Mutual/Open-End Funds als `fund`, und
-der Drilldown behauptet bei Nicht-ETFs keine Aktie mehr. `fund` ist im
-YAML-Browserlauf als Gattung belegt; das Online-Papier meldete der Anbieter
-selbst als ETF und wird nicht als Online-`fund`-Beleg ausgegeben.
-
-Unabhängig grün: beide Profil-Smokes 20/20, REST-/DB-Neustartprobe mit BTC,
-Anleihe und Fonds, 69 fokussierte Backend- und 18 Drilldown-Tests, Ruff, Build
-sowie 947 Backend-, 295 Plugin-API- und 274 Frontend-Tests. Bitte gemäß
-`priority_chain` jetzt ausschließlich T-39 umsetzen; die englische
-Entwicklerdokumentation samt Sample bleibt das letzte Plugin-Arbeitspaket.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
