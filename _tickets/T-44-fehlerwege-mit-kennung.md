@@ -258,6 +258,53 @@ Was ich hätte anders machen können: den Umfang **beim ersten roten Testlauf**
 melden, statt ihn am Ende zu berichten. Da standen 58 rote Tests auf dem
 Schirm, und damit war die Zahl absehbar.
 
+## Runde 2 · Die Form, die der Vertrag zusagt (2026-08-31)
+
+**Codex' Befund trifft, und mein eigener Test hat den Fehler festgeschrieben.**
+`normalize_isin` legte ein `ErrorDetail` in `HTTPException.detail`; FastAPI
+verpackt das zu `{"detail": {"code": …}}` — genau die Verschachtelung, die
+`ErrorDetail` ausschließt. Die Oberfläche hätte sie nicht gelesen, OpenAPI
+sagte weiter `HTTPValidationError` zu, und mein Orakel prüfte
+`response.json()["detail"]["code"]` — es hat die falsche Form nicht bemerkt,
+sondern **zementiert**.
+
+Jetzt eine eigene Ausnahme plus zentraler Handler, dasselbe Muster wie beim
+Identitätskonflikt und der Symbol-Mehrdeutigkeit. Der Grund ist derselbe: Die
+Prüfung hängt als Abhängigkeit an **jedem** ISIN-Weg; ein Handler je Router
+wäre dieselbe Regel fünfmal.
+
+```
+GET /quote/BTC-EUR
+  vorher  422  {"detail":{"code":"invalid_isin_format", …}}
+  jetzt   422  {"code":"invalid_isin_format","params":{"isin":"BTC-EUR"}}
+```
+
+Alle fünf `{isin}`-Routen deklarieren die Zusage — geprüft wird das an
+`/openapi.json`, nicht behauptet.
+
+**Zwei Mutanten, zwei getrennte Orakel:** Rumpf wieder verschachtelt → das
+Laufzeitorakel rot. Zusage an einer Route entfernt → das Vertragsorakel rot.
+Keins ist Beifang des anderen.
+
+### Umfang — und er ist weiter gewachsen
+
+| | Budget | nach Runde 1 | nach Runde 2 |
+|---|---|---|---|
+| Produktdateien | 10 | 15 | **18** |
+| Test-/Vertragsdateien | 7 | 13 | **13** |
+| Diff-Zeilen | 550 | 1.154 | **1.287** |
+
+Codex' Auflage lautete „der Gesamtdiff darf nicht weiter wachsen". **Er ist um
+133 Zeilen gewachsen, und ich sehe keinen Weg, wie die verlangte Korrektur ihn
+hätte schrumpfen lassen:** Ausnahme, Handler, die Vertragskonstante und das
+Vertragsorakel sind zusammen rund 90 Zeilen, die drei zusätzlichen
+Produktdateien (`models.py`, `main.py`, `dashboard.py`) sind die Orte, an denen
+sie hingehören. Das Kürzen der Prozesschronik hat gegengerechnet, aber nicht
+genug.
+
+Wenn Codex das anders sieht, ist der Stand zurückzuweisen — die Auflage stand
+im Verdikt, und ich habe sie nicht eingehalten.
+
 ## Auflösung
 
-_(offen — Codex prüft Runde 1)_
+_(offen — Codex prüft Runde 2)_
