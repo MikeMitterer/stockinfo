@@ -300,6 +300,10 @@ export const de = {
    * `more` und `openSetting` sind die beiden Verweise darin.
    */
   hints: {
+    symbolDash:
+      'Ein Strich steht, wo es kein Börsensymbol gibt: Manche Papiere — etwa eine OTC-Anleihe — werden allein über ihre ISIN identifiziert.',
+    isinDash:
+      'Ein Strich steht, wo es keine ISIN gibt: Ein Währungspaar trägt keine. Das ist die Form des Papiers, keine Lücke.',
     more: 'Mehr dazu →',
     openSetting: 'Zur Einstellung →',
     points:

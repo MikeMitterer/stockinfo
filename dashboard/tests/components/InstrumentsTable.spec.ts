@@ -3,7 +3,7 @@ import { NSelect } from 'naive-ui'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 
-import EmptyReason from '../../src/components/EmptyReason.vue'
+import InfoHint from '../../src/components/InfoHint.vue'
 import InstrumentsTable from '../../src/components/InstrumentsTable.vue'
 import { useTableSort } from '../../src/composables/useTableSort'
 import { i18n } from '../../src/i18n'
@@ -407,11 +407,12 @@ describe('InstrumentsTable · Identitätsformen', () => {
     // **`.isin-cell .dim`, nicht `.dim`.** Die Zelle selbst traegt die Klasse
     // auch; ein zu weiter Selektor findet das `td` und prueft dessen Titel,
     // den es nie gab.
-    // Der Strich traegt seinen Grund selbst: als Knopf, damit er bei Maus,
-    // Tastatur und Beruehrung erreichbar ist — ein `title` kann nur das erste.
-    const reason = wrapper.findComponent(EmptyReason)
-    expect(reason.text()).toBe('—')
-    expect(reason.props('reason')).toBe(i18n.global.t('table.noIsinReason'))
+    // Der Strich ist still; der Grund steht **einmal** am Spaltenkopf. Ein
+    // Hinweis in jeder Zelle erklaert beim ersten Mal etwas und stoert danach.
+    expect(wrapper.find('.isin-cell .dim').text()).toBe('—')
+    expect(
+      wrapper.findAllComponents(InfoHint).map((hint) => hint.props('text')),
+    ).toContain(i18n.global.t('hints.isinDash'))
   })
 
   it('bietet dem Listing ohne ISIN weiterhin den Editor', () => {

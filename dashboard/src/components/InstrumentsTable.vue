@@ -5,7 +5,6 @@ import { NButton, NSelect } from 'naive-ui'
 
 import { UxCaret, useIsCompact } from '@mmit/ux-foundation'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
-import EmptyReason from './EmptyReason.vue'
 import InfoHint from './InfoHint.vue'
 import InstrumentCard from './InstrumentCard.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
@@ -285,8 +284,19 @@ function price(value: number | null): string {
                 das würde schon das Antippen des Fragezeichens die Tabelle
                 umsortieren.
               -->
+              <!--
+                Der Hinweis steht **einmal je Spalte**, nicht in jeder Zelle.
+                Ein Tooltip an jedem Strich erklärt beim ersten Mal etwas und
+                stört danach jedes Mal.
+              -->
               <span v-if="column.key === 'history_count'" class="th-hint" @click.stop>
                 <InfoHint :text="t('hints.points')" settings-tab="environment" />
+              </span>
+              <span v-if="column.key === 'symbol'" class="th-hint" @click.stop>
+                <InfoHint :text="t('hints.symbolDash')" />
+              </span>
+              <span v-if="column.key === 'isin'" class="th-hint" @click.stop>
+                <InfoHint :text="t('hints.isinDash')" />
               </span>
               <span v-if="sortKey === column.key" class="arrow">
                 {{ direction === 'asc' ? '▲' : '▼' }}
@@ -335,15 +345,12 @@ function price(value: number | null): string {
                   @click.stop="toggleDrawer(item)"
                 >
                   <!--
-                    Der Strich steht an der Stelle des Symbols und **in
-                    derselben Schaltfläche**: Ein Klick öffnet den
-                    Detailbereich, so wie es das Symbol täte. Der Hinweis
-                    umschließt nur den Text, nicht den Knopf — Naive UI hängt
-                    am Auslöser eines Tooltips eigene Handler auf und
-                    verschluckt einen Klick, der von dort kommt.
+                    Ein Papier der Form `isin_only` hat kein Börsensymbol; der
+                    Strich steht an seiner Stelle und in derselben
+                    Schaltfläche, tut also dasselbe. Warum er dort steht,
+                    erklärt der Hinweis am Spaltenkopf.
                   -->
-                  <template v-if="symbolOf(item)">{{ symbolOf(item) }}</template>
-                  <EmptyReason v-else :reason="t('table.noSymbolReason')" />
+                  {{ symbolOf(item) ?? '—' }}
                 </button>
               </td>
               <td class="mono dim isin-cell">
@@ -359,7 +366,7 @@ function price(value: number | null): string {
                   Spaltenbreite für **alle** Zeilen — eine ISIN braucht zwölf
                   Zeichen, ein Satz das Doppelte.
                 -->
-                <EmptyReason v-else :reason="t('table.noIsinReason')" />
+                <span v-else class="dim">—</span>
               </td>
               <td class="name">
                 <button

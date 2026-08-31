@@ -263,6 +263,10 @@ export const en = {
     },
   },
   hints: {
+    symbolDash:
+      'A dash means there is no exchange symbol: some instruments — an OTC bond, say — are identified by their ISIN alone.',
+    isinDash:
+      'A dash means there is no ISIN: a currency pair carries none. That is the shape of the instrument, not a gap.',
     more: 'More about this →',
     openSetting: 'To the setting →',
     points:
