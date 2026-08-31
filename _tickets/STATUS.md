@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-44-fehlerwege-mit-kennung.md`
 - `handoff_commit`: `2a68c5c`
 - `review_round`: `4`
