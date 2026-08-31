@@ -7,7 +7,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
-- `handoff_commit`: `PLATZHALTER`
+- `handoff_commit`: `a0fc993`
 - `review_round`: `1`
 - `owner`: `codex`
 - `updated_at`: `2026-08-31`
