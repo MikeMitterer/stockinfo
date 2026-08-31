@@ -726,6 +726,15 @@ Katalogschlüssel duplizierten die vorhandenen Gründe. Derselbe Umbau schloss
 die sichtbare Desktopstelle, ohne finalen Stand, zweite Darstellungsform und
 Katalogquelle gemeinsam zu inventarisieren.
 
+**Unmittelbare Wiederholung in der Korrektur:** T-42 Runde 8, Produktstand
+`09f37d0`: OUTBOX und Ticket erklärten `#2b` ehrlich aus dem Smoke entfernt und
+die Prozesschronik aus den Kommentaren beseitigt. Die erste Kopfzeile des
+Scripts führte `#2b` dennoch weiter und ließ `#4b` aus; unmittelbar darunter
+standen „fünf Fragen" vor sechs Einträgen. Neue Kommentare beschrieben zudem
+weiter den Tausch der Check-IDs und „Mikes Einwand". Das Laufverhalten war
+richtig, aber die behauptete Kommentar- und Kopfinventur erneut nur an den
+besprochenen Stellen erfolgt; Codex heilte die technische Prosa in `4905877`.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
