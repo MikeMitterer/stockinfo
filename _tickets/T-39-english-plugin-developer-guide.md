@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (documentation + `plugin_api` example) | wartend | 1 Tag | englischer Entwicklerleitfaden, minimales Paketbeispiel, keine Produktfunktion | — |
+| StockInfo (documentation + `plugin_api` example) | Änderungen angefordert (Codex, Runde 1) | 1 Tag | englischer Entwicklerleitfaden, minimales Paketbeispiel, keine Produktfunktion | — |
 
 - **Angelegt:** 2026-08-29, auf Wunsch von Mike
 - **Hängt ab von:** T-31 → T-38 → T-37 → T-35 vollständig technisch
@@ -52,14 +52,63 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | englischer Plugin-Leitfaden | Ein neuer Entwickler versteht in höchstens etwa 15 Minuten: Rollen, Identitäten, Pflichtfelder, Fehlersemantik und den kleinsten Plugin-Aufbau | ✅ | |
+| **1** | englischer Plugin-Leitfaden | Ein neuer Entwickler versteht in höchstens etwa 15 Minuten: Rollen, Identitäten, Pflichtfelder, Fehlersemantik und den kleinsten Plugin-Aufbau | ◑ [^review-r1] | |
 | **2** | Abschnitt `sources.yaml` | Paketinstallation, Quellenwahl und Reihenfolge sind getrennt erklärt; „first successful result wins“ sowie YAML als letztes Fallback sind mit einem vollständigen Beispiel sichtbar | ✅ | |
 | **3** | Abschnitt Environment | `${NAME}` wird erklärt: exakte Ersetzung eines YAML-Werts, Verhalten bei fehlender Variable und sichere Beispiele für `.env`, Docker/Compose und Unraid; kein echter Schlüssel steht in Git | ✅ | |
 | **4** | Entwickler-Sample | ein minimales installierbares US-Beispielpaket enthält `pyproject.toml`, Entry-Points, einen Resolver, eine Kursquelle und ausdrücklich den eingebrannten Literalwert `api_version = 2` | ✅ | |
-| **5** | Sample-Tests | Contract-Kit und paketlokale Tests laufen ohne echtes Netz und ohne echten API-Key; HTTP-/Provider-Verhalten ist injizierbar oder gefakt | ✅ | |
+| **5** | Sample-Tests | Contract-Kit und paketlokale Tests laufen ohne echtes Netz und ohne echten API-Key; HTTP-/Provider-Verhalten ist injizierbar oder gefakt | ◑ [^review-r1] | |
 | **6** | gebautes Sample-Wheel + frische Testumgebung | das Wheel lässt sich bauen, über eine fest gepinnte `plugins.packages`-Zeile installieren und nach Neustart in `GET /sources` erkennen | ✅ | |
 | **7** | Sample-End-to-End | ein US-Instrument wird über das Sample aufgelöst und bepreist; ein dort nicht beantwortetes Instrument fällt nachweislich an die nächste Quelle zurück | ✅ | |
-| **8** | Dokumentationsinventur | bestehende Plugin-Anleitungen widersprechen dem neuen Leitfaden nicht; veraltete Beispiele sind korrigiert, ersetzt oder verweisen auf die kanonische englische Anleitung | ✅ | |
+| **8** | Dokumentationsinventur | bestehende Plugin-Anleitungen widersprechen dem neuen Leitfaden nicht; veraltete Beispiele sind korrigiert, ersetzt oder verweisen auf die kanonische englische Anleitung | ◑ [^review-r1] | |
+
+[^review-r1]: Das installierte Wheel und der Entry-Point funktionieren. Offen
+    sind die Fehlernormalisierung des Lehrbeispiels und vier eng benannte
+    Dokumentationskorrekturen; siehe Review Runde 1.
+
+### Codex-Review Runde 1 · Beispielvertrag und Anleitung angleichen
+
+Der Paketweg ist unabhängig bestätigt: Beide Wheels wurden aus dem Checkout
+gebaut, `stockinfo-source-us-example==0.1.0` über den echten
+`plugin_env.ensure()`-Weg installiert und anschließend aus
+`data/plugin-env/<hash>` geladen. Der geladene Entry-Point meldet
+`resolvers` und `quotes`; Apple wird als `AAPL` aufgelöst. `make test` ist mit
+947 Backend-, 295 Contract-, 43 Beispiel- und 274 Dashboard-Tests grün; Ruff
+und Diff-Check ebenfalls.
+
+Der Abschluss bleibt auf **eine kleine Codekorrektur plus technische Prosa**
+begrenzt:
+
+1. `UsExampleSource` hält die im Leitfaden erklärte Regel „methods never
+   raise" bei fehlerhaften Providerdaten noch nicht. Eine injizierte Antwort
+   mit `as_of: not-a-date` lässt `fetch_quote()` reproduzierbar mit
+   `ValueError` abbrechen. `resolve()` und `fetch_quote()` müssen Fehler aus
+   Provideraufruf **und** Antwortumwandlung als `Unavailable` mit Quellname
+   zurückgeben. Paketlokale negative Tests erzeugen mindestens eine
+   unerwartete Provider-Ausnahme und eine formal kaputte Providerantwort; der
+   bisherige gültige Treffer bleibt unverändert.
+2. Der Leitfaden beschreibt Loader-Lebenszyklus und Namen falsch. Maßgeblich
+   in `sources.yaml` ist `UsExampleSource.name`, nicht der Schlüssel des
+   Entry-Points. Beide sollen der Verständlichkeit halber gleich heißen.
+   Außerdem baut die Registry eine Instanz **je konfigurierter Rolle**, nicht
+   eine gemeinsame Instanz für alle Rollen. Die gegenteiligen Aussagen in
+   Leitfaden, Beispielmodul und `pyproject.toml` werden korrigiert; keine
+   Loaderänderung und kein gemeinsamer Cache entstehen daraus.
+3. Der Leitfaden nennt für sein Ziel „bauen, testen und installieren" noch
+   keinen Test- oder Buildbefehl. Ergänzt werden die kurzen, tatsächlich
+   laufenden Befehle für Testabhängigkeiten, `pytest` und Wheel-Bau. Die Zahl
+   der geerbten Prüfungen wird dabei nicht als „etwa dreißig je Rolle"
+   überzeichnet.
+4. `_tickets/T-37-sources-online-with-yaml-fallback.yaml` verliert den nach
+   T-41 falschen Warnblock „NOCH NICHT UNTERSTUETZT". Der Hinweis im
+   Leitfaden, es gebe keine automatische Installation aus der Konfiguration,
+   wird zur wirklichen Regel präzisiert: Es gibt keine automatische
+   Paketentdeckung; ausdrücklich unter `plugins.packages` eingetragene Pakete
+   installiert die App beim Start. Prozesschronik im Beispiel-Testdocstring
+   wird auf die aktuelle Invariante verkürzt.
+
+`Makefile` und `.gitignore` sind als enge Scope-Ausnahmen angenommen. Keine
+weitere Produktdatei, kein neuer Vertrag, keine neue Testinfrastruktur und
+keine Erweiterung des Samples um zusätzliche Rollen.
 
 ### Was gelaufen ist
 
