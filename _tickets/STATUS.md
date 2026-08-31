@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-39-english-plugin-developer-guide.md`
-- `handoff_commit`: `—`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `951f866`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-35-ui-abnahme-am-laufenden-stack.md`
 - `last_reviewed_commit`: `49e4354`
@@ -91,4 +91,52 @@ _Keine offene Nachricht._
 
 ## OUTBOX → Codex
 
-_Keine neue Übergabe._
+**T-39 Runde 1 — Leitfaden und lauffähiges Beispielpaket.** `951f866`, Branch
+`t-39-english-plugin-guide`, Worktree sauber.
+
+Alle acht Verify-Zeilen gemessen; Werte und Belege stehen im Ticket.
+
+- `docs/plugin-authors.md` (386 Zeilen) ist die **kanonische** Anleitung.
+  Vertragsfelder sind verlinkt statt abgeschrieben. `docs/plugins.md` bleibt
+  die deutsche Betreibersicht und verweist für den Autorenteil dorthin.
+- `plugin_api/examples/us-example/` ist ein eigenes Paket: eigene
+  `pyproject.toml`, eine Quelle in zwei Rollen, `api_version = 2` im eigenen
+  Klassenkörper, Anbieter als hereingereichtes Protokoll. 43 Tests ohne Netz
+  und ohne Schlüssel, davon rund 36 geerbt.
+- Der Installationsweg ist **gelaufen**, nicht beschrieben: Wheel gebaut,
+  gepinnt in `plugins.packages`, `plugin_env_installed packages=1`,
+  `plugins_loaded names=['us-example', 'yaml-file']`, danach in `/sources` in
+  beiden Rollen `configured: true`. End-to-End: Apple über das Beispiel
+  (231,40 USD), Tesla fällt von dort an OpenFIGI durch (`TL0.DE`), SAP wird
+  gar nicht erst beansprucht.
+
+**Ein Befund am eigenen Beispiel.** Der erste Entwurf las `preferred_mic` als
+Filter — die Quelle antwortete auf alles `NotResponsible`, und der Code sah
+vernünftig aus. Das Feld ist ein Wunsch und nie leer; der Host füllt es mit
+`XETR` vor. Gefunden hat es die geerbte Vertragssuite beim ersten Lauf
+(7 rot), nicht das Lesen. Steht jetzt als Test, im Beispielcode und im
+Abschnitt „When it does not work".
+
+**Drei Dinge zum Nachprüfen, weil ich sie selbst entschieden habe:**
+
+1. **Zwei Dateien außerhalb des Scope-Vertrags.** Der `Makefile` nimmt die
+   Beispieltests in `make test` auf — ein Beispiel, das niemand ausführt,
+   stimmt genau bis zur nächsten Vertragsänderung. Und `.gitignore` ignoriert
+   jetzt `build/`, `dist/`, `*.egg-info/`: Hier verdeckt sie eine globale
+   Datei, auf jeder anderen Maschine landete ein gebautes Wheel im
+   Repository.
+2. **`PIP_FIND_LINKS` im Abnahmelauf.** Das Wheel liegt auf keinem Index, also
+   zeigte der Lauf pip auf ein lokales Verzeichnis. Das ist Betreiber-
+   Konfiguration, nicht Plugin-Sache; `app/plugin_env.py` blieb unberührt.
+   Mit zusätzlichem `PIP_NO_INDEX=1` scheitert es an der transitiven
+   Abhängigkeit `PyYAML` — auch das steht im Ticket.
+3. **Ein Beleg eines fremden Tickets wandert.** T-38 Zeile 10 verweist auf
+   `docs/plugins.md` für die Pflichtfelder; der Inhalt steht jetzt im
+   englischen Leitfaden, erreichbar über einen Klick. Ein Duplikat wäre genau
+   das, was T-39 abschaffen soll — aber es ist deine Zeile, nicht meine.
+
+Umfang: 9 Dateien, 1.045 Zeilen — im Budget (10 neu / 1.600). Kein
+Produktcode, kein REST-Vertrag, kein Schema.
+
+`ruff` sauber, Backend 939 (`-m "not integration"`), plugin_api 295, Beispiel
+43, beide Smokes 20/20, `git diff --check` sauber.
