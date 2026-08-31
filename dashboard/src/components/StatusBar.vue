@@ -17,6 +17,11 @@ const props = defineProps<{
   version: string | null
   /** Anzahl der geführten Papiere — der aktive Kontext dieser App. */
   instrumentCount?: number
+  /**
+   * Die Quelle, von der die angezeigten Kurse kommen — der Kopf der Rolle
+   * `quotes`. `null`, solange sie unbekannt ist oder keine bereitsteht.
+   */
+  quoteSource?: string | null
 }>()
 
 const emit = defineEmits<{
@@ -37,11 +42,24 @@ const backendState = computed<BackendState>(() => {
   return 'offline'
 })
 
-const context = computed(() =>
-  props.instrumentCount === undefined
-    ? ''
-    : t('status.instruments', props.instrumentCount, { named: { count: props.instrumentCount } }),
-)
+/*
+ * Der Kontext ist **eine** Zeile aus mehreren Angaben, nicht mehrere Felder:
+ * Das Fundament nimmt einen Text. Fehlt eine Angabe, fällt sie samt ihrem
+ * Trenner weg — eine Zeile mit einem Trenner ins Leere sieht nach einem
+ * Ladefehler aus.
+ */
+const context = computed(() => {
+  const parts: string[] = []
+  if (props.instrumentCount !== undefined) {
+    parts.push(
+      t('status.instruments', props.instrumentCount, { named: { count: props.instrumentCount } }),
+    )
+  }
+  if (props.quoteSource) {
+    parts.push(t('status.quoteSource', { name: props.quoteSource }))
+  }
+  return parts.join(' · ')
+})
 </script>
 
 <template>

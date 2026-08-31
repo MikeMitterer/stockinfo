@@ -63,11 +63,17 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise ·
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Statuszeile, YAML-Profil | dort steht `yaml-file` — dieselbe Quelle, die `GET /sources` für `quotes` an erster Stelle führt | ➖ | |
-| **2** | Statuszeile, Online-Profil | dort steht `yfinance`; nach einem Profilwechsel ändert sich die Anzeige mit | ➖ | |
-| **3** | keine Quelle einsatzbereit | die Zeile behauptet keine Quelle, sondern lässt die Angabe weg oder sagt es | ➖ | |
-| **4** | `/sources` nicht erreichbar | die Statuszeile bleibt benutzbar; ein Fehlschlag beim Nebenabruf nimmt nicht die Seite mit | ➖ | |
-| **5** | Tests | Composable und Anzeige sind je einzeln geprüft, ohne echtes Netz | ➖ | |
+| **1** | Statuszeile, YAML-Profil | dort steht `yaml-file` — dieselbe Quelle, die `GET /sources` für `quotes` an erster Stelle führt | ✅ | |
+| **2** | Statuszeile, Online-Profil | dort steht `yfinance`; nach einem Profilwechsel ändert sich die Anzeige mit | ✅ | |
+| **3** | keine Quelle einsatzbereit | die Zeile behauptet keine Quelle, sondern lässt die Angabe weg oder sagt es | ✅ [^unit] | |
+| **4** | `/sources` nicht erreichbar | die Statuszeile bleibt benutzbar; ein Fehlschlag beim Nebenabruf nimmt nicht die Seite mit | ✅ [^unit] | |
+| **5** | Tests | Composable und Anzeige sind je einzeln geprüft, ohne echtes Netz | ✅ | |
+| **6** | Dev-Proxy | `/sources` steht in `api-prefixes.ts` — sonst liefert `npm run dev` HTML statt JSON | ✅ | |
+
+[^unit]: Nicht im Browser, sondern im Test: Beide Fälle brauchen einen
+    Server, der eine unbrauchbare Kette führt beziehungsweise nicht antwortet.
+    Den herzustellen hieße, das Profil kaputt zu machen, um die Anzeige zu
+    prüfen — der Unit-Test stellt genau diese beiden Antworten her.
 
 ---
 
@@ -88,6 +94,39 @@ Zwei Möglichkeiten, und die Wahl gehört nicht mir allein:
 Beides sagt nichts über die einzelne Antwort. Die trägt seit T-41 ihre Herkunft
 selbst (`RawQuote.source`) — sie steht im Drilldown, nicht hier.
 
+## Runde 1 · Umgesetzt (2026-08-31)
+
+**Live gemessen, beide Profile, je eine eigene Instanz:**
+
+```
+Online:  StockInfo powered by MangoLila · 2 Papiere · Kurse: yfinance   · v0.6.0 · Online
+YAML:    StockInfo powered by MangoLila · ein Papier · Kurse: yaml-file · v0.6.0 · Online
+```
+
+Beides stimmt mit dem Kopf der Rolle `quotes` aus `GET /sources` überein —
+online `yfinance` vor `yaml-file`, im YAML-Profil `yaml-file` allein.
+
+**Die erste einsatzbereite, nicht die erste konfigurierte.** Eine Quelle, die
+nicht arbeiten kann, liefert auch keinen Kurs; sie zu nennen wäre die genaue
+Umkehrung dessen, wofür die Zeile da ist. Ist keine bereit, steht dort nichts —
+eine Zeile, die eine Quelle behauptet, wo keine antwortet, ist schlechter als
+eine ohne Angabe.
+
+**Der Nebenabruf trägt nichts.** Antwortet `/sources` nicht, bleibt die Zeile
+ohne die Angabe stehen; es gibt kein `error` nach außen. Eine Auskunft, die
+beim Ausbleiben eine Fehlermeldung erzeugt, wäre teurer als ihr Nutzen.
+
+**Ein Befund fiel dabei ab, und er kam aus einem bestehenden Test.**
+`tests/viteProxy.spec.ts` hält die angeforderten Pfade gegen die Präfixliste
+des Dev-Proxys und wurde rot: `/sources` fehlte. Im Produktionsbau wäre das
+unsichtbar — dort liefert derselbe Server alles —, unter `npm run dev` hätte
+die Statuszeile HTML statt JSON bekommen und stumm keine Quelle gezeigt. Genau
+der Fehler, für den T-04 diesen Test hinterlassen hat.
+
+**Nicht getan:** Die Zeile nennt weiter **nur** die erste Quelle, wie Mike es
+vorgegeben hat („Nur die Kursquelle"). Der Einwand aus der offenen Frage bleibt
+damit unbeantwortet und liegt bei Codex.
+
 ## Auflösung
 
-_(offen)_
+_(offen — Codex prüft Runde 1 und die offene Frage)_

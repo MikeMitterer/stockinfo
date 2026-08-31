@@ -25,6 +25,7 @@ import { useInstrumentActions } from '../composables/useInstrumentActions'
 import { useInstruments } from '../composables/useInstruments'
 import { useOverrides } from '../composables/useOverrides'
 import { useRefresh } from '../composables/useRefresh'
+import { useSources } from '../composables/useSources'
 import { refOf } from '../types'
 import type { InstrumentOverrides, InstrumentSummary, RangeKey } from '../types'
 import { currenciesFromExchanges } from '../utils/currencies'
@@ -42,6 +43,7 @@ import { buildFieldOptions } from '../utils/fieldOptions'
 const { t } = useI18n()
 
 const { env, load: loadEnv } = useEnvironment()
+const { quoteSource, load: loadSources } = useSources()
 const { data: exchanges, load: loadExchanges } = useExchanges()
 const fxCurrencies = computed(() => currenciesFromExchanges(exchanges.value))
 const { instruments, load: loadInstruments, error: instrumentsError } = useInstruments()
@@ -131,7 +133,7 @@ const chartSeries = computed<{ x: number; y: number }[]>(() => {
 
 onMounted(async () => {
   startHealth()
-  await Promise.all([loadEnv(), loadInstruments(), loadExchanges()])
+  await Promise.all([loadEnv(), loadInstruments(), loadExchanges(), loadSources()])
 })
 
 onUnmounted(() => stopHealth())
@@ -273,6 +275,7 @@ function closeChart(): void {
         :status="healthStatus"
         :version="healthVersion"
         :instrument-count="instruments.length"
+        :quote-source="quoteSource"
         @open-status="activeTab = 'settings'"
       />
     </template>

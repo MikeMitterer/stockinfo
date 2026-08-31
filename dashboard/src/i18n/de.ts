@@ -227,6 +227,12 @@ export const de = {
     poweredBy: 'powered by',
     version: 'v{version}',
     instruments: 'keine Papiere | ein Papier | {count} Papiere',
+    /*
+     * Woher die Kurse kommen. **„Kurse", nicht „Quelle":** Die Zeile nennt
+     * eine von fünf Rollen, und welche das ist, muss sie selbst sagen — die
+     * übrigen vier können jederzeit von jemand anderem bedient werden.
+     */
+    quoteSource: 'Kurse: {name}',
     ok: 'Online',
     degraded: 'Prüfe…',
     down: 'Offline',

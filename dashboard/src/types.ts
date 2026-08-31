@@ -178,6 +178,29 @@ export interface InstrumentSummary {
   shadowed_fields: OverrideField[]
 }
 
+/**
+ * Ein Glied einer Quellenkette, wie `/sources` es beschreibt.
+ *
+ * `position` ist der Rang **innerhalb einer Rolle**, 1-basiert — die Kette ist
+ * eine Rangfolge und keine Menge. `configured` sagt, ob die Quelle arbeiten
+ * kann; eine, die es nicht kann, steht trotzdem in der Liste, damit ein
+ * Betreiber sieht, dass er sie konfiguriert hat.
+ */
+export interface SourceEntry {
+  name: string
+  role: string
+  position: number
+  configured: boolean
+  reason: string
+  cost: string
+}
+
+export interface SourcesInfo {
+  config_path: string | null
+  profile: string | null
+  sources: SourceEntry[]
+}
+
 export interface EnvInfo {
   version: string
   database_path: string
