@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (laufender Stack) | Phase A freigegeben; Browserlauf offen | Konzept 2 h, Lauf 3 h | risikobasierte Browser-Abnahme der fertigen Plugin-Kette; danach dieselbe kurze Matrix für Mike | — |
+| StockInfo (laufender Stack) | Phase B gelaufen, zur Prüfung | Konzept 2 h, Lauf 3 h | risikobasierte Browser-Abnahme der fertigen Plugin-Kette; danach dieselbe kurze Matrix für Mike | — |
 
 - **Angelegt:** 2026-08-31, nach technischer Freigabe von T-39
 - **Hängt ab von:** T-31, T-38, T-37, T-41, T-35 und T-39 freigegeben
@@ -64,12 +64,16 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teil
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | **1** | Konzept-Handoff an Codex | höchstens 12 Fälle; jeder unterscheidet einen benannten Plugin-Fehler und nennt Profil, Eingabe, Ergebnis und Quelle | ✅ [^concept-r1] | |
-| **2** | YAML-Profil im Browser | BTC, Anleihe/History und Fonds lassen sich aufnehmen und bleiben nach Neustart mit korrekter Gattung und Herkunft sichtbar | ➖ | |
-| **3** | Online-Profil im Browser | Online gewinnt bei Überlappung; YAML schließt eine echte Lücke; Aktie/ETF, BTC, Bond und `fund` sind vertreten | ➖ | |
-| **4** | Rollen im UI/Netzwerk | Resolver, Quote, Daily, Metadaten und FX werden mindestens einmal über einen echten Eintrittspfad unterschieden | ➖ | |
-| **5** | Diagnose und Fehler | `/sources`, sichtbare Fehlermeldungen, Konsole und fehlgeschlagene Requests widersprechen dem angezeigten Zustand nicht | ➖ | |
-| **6** | Regression | betroffene Tests, beide Profil-Smokes, Ruff, Build und vollständiges `make test` sind nach dem finalen Browserstand grün | ➖ | |
-| **7** | Mike-Handoff | dieselben kurzen Schritte sind ohne Entwicklungswissen nachvollziehbar; Human-Spalte ist leer und bereit zur Abnahme | ➖ | |
+| **2** | YAML-Profil im Browser | BTC, Anleihe/History und Fonds lassen sich aufnehmen und bleiben nach Neustart mit korrekter Gattung und Herkunft sichtbar | ✅ | |
+| **3** | Online-Profil im Browser | Online gewinnt bei Überlappung; YAML schließt eine echte Lücke; Aktie/ETF, BTC, Bond und `fund` sind vertreten | ✅ | |
+| **4** | Rollen im UI/Netzwerk | Resolver, Quote, Daily, Metadaten und FX werden mindestens einmal über einen echten Eintrittspfad unterschieden | ✅ | |
+| **5** | Diagnose und Fehler | `/sources`, sichtbare Fehlermeldungen, Konsole und fehlgeschlagene Requests widersprechen dem angezeigten Zustand nicht | ⚠️ [^fx] | |
+| **6** | Regression | betroffene Tests, beide Profil-Smokes, Ruff, Build und vollständiges `make test` sind nach dem finalen Browserstand grün | ✅ | |
+| **7** | Mike-Handoff | dieselben kurzen Schritte sind ohne Entwicklungswissen nachvollziehbar; Human-Spalte ist leer und bereit zur Abnahme | ✅ | |
+
+[^fx]: Der FX-Fehlerweg meldet einen Sachverhalt falsch — siehe „Zwei
+    Befunde am Fehlerweg" unten. Er ist gemessen, nicht behoben: Ein
+    Statuscode ist REST-Vertrag und damit checkpoint-pflichtig.
 
 [^concept-r1]: Codex hat Phase A gegen `a0fc993` geprüft und drei rein
     textuelle Ausführungsdetails in `fab3540` präzisiert. Phase B ist damit
@@ -221,6 +225,109 @@ Der gelockerte Riegel gilt nicht für Vertrag, Schema, Abhängigkeiten, neue
 Architektur oder eine eigenständige größere Funktion. Dafür bleibt ein neuer
 Scope-Checkpoint Pflicht. Der tatsächliche Datei- und Zeilenumfang wird bei
 der normalen Übergabe vollständig ausgewiesen.
+
+---
+
+## Phase B · Der vollständige Lauf (2026-08-31)
+
+Drei Profile, alle Werte im Browser abgelesen oder über den öffentlichen
+Eintritt gemessen. `data/stockinfo.db` blieb unberührt — weiterhin 19. August,
+638.976 Bytes.
+
+### Profil Y · die Identitätsformen
+
+| Fall | Gemessen | Beleg |
+|---|---|---|
+| **Y1** | `BTC-EUR` · `CRYPTO` · 94.500,00 EUR · ISIN-Spalte leer mit Hover-Grund | die `pair`-Form trägt bis in die Anzeige |
+| **Y2** | `DE0001102531` · `BOND` · 99,42 EUR; 1M-Chart mit **drei** Punkten (99,18 / 99,31 / 99,42), Skala 99,16–99,44 | die gepflegte History **ist** die Kursquelle |
+| **Y3** | `DE0009848119` · **`FUND`** · 142,50 EUR; Drilldown: „dieses Papier ist keiner" | Gattung und Hinweistext stimmen beide |
+| **Y4** | Neustart auf derselben Datenbank: alle vier Papiere unverändert, `GET /migration` → `pending: false`, `unchanged: 4`, `/sources` → 200 | **kein** Migrationszustand durch das Krypto-Papier |
+| **R1** | ETF 128,21 EUR + TER 0,20 % + iShares + Ireland; Bond-Chart; `/fx` CAD→EUR = 0,641 mit `Quelle: yaml-file` | alle **fünf** Rollen aus einer Datei, über echte Eintrittspfade |
+
+### Profil O · die Kaskade
+
+Kette: `resolvers: [openfigi, yahoo-search, yaml-file]`,
+`quotes: [yfinance, yaml-file]`, `fx: [fx-miss, yaml-file]`.
+
+| Fall | Gemessen | Der Gegenwert, ohne den es nichts belegt |
+|---|---|---|
+| **O1** | `IE00B4L5Y983` · 127,49 EUR · **TER 0,20 %, Vola 10,63 %, Thes. Ja** | die Metadatenkette wurde gefragt — ohne Gattung wäre sie übersprungen worden |
+| **O2** | derselbe ETF: **127,49** EUR | die Datei führt **128,21**; online hat gewonnen. Auch der Name ist der von OpenFIGI, nicht der der Datei |
+| **O3** | `DE0001102531` · 99,42 EUR | online existiert kein Kurs; ohne `yaml-file` in `resolvers` scheiterte schon die Aufnahme |
+| **O4** | `/fx` CAD→EUR = 0,641, Feld **Quelle: `yaml-file`** | `fx-miss` steht **vor** ihr in der Kette und liefert `NotFound` |
+| **O5** | „Zu XX0000000000 hat keine der eingerichteten Quellen ein Wertpapier gefunden"; **null** Zeilen in `instruments` | die Meldung nennt die Kennung, die Datenbank bleibt sauber |
+
+### Das fremde Plugin
+
+| Fall | Gemessen |
+|---|---|
+| **P1** | `plugin_env_installed packages=1`, `plugins_loaded names=['us-example', 'yaml-file']`; in `/sources` in **beiden** Rollen einsatzbereit; `US0378331005` → `AAPL` / `XNAS` / 231,40 USD / „Apple Inc." |
+| **P2** | ohne gesetzte Umgebungsvariable: `configured: false` mit dem Satz „api_key is missing — set providers.us-example.api_key in sources.yaml, e.g. to …"; die übrige Kette arbeitet weiter (SAP → `SAP.DE` / 189,22 EUR) |
+
+---
+
+## Sechs Anzeigebefunde, von Mike im Lauf gesehen
+
+Alle behoben und gemessen — `288c527`, `13d4652`, `35ddf27`.
+
+| # | Befund | Ursache | Nachher |
+|---|---|---|---|
+| **A** | Zeile rechts abgeschnitten | `main.content` `max-width: 1200px` → Container 1123 px, Tabelle 1245 px | Überlauf **0** |
+| **B** | ISIN-Platzhalter zu lang | 24 Zeichen Erklärtext dehnten die Spalte auf 214 px | 116 px, Grund im Hover-Titel |
+| **C** | Symbol = ISIN bei `isin_only` | `instruments.symbol` ist Pflichtspalte und trägt dort die ISIN | Strich mit Hover-Grund; `symbolOf()` als Gegenstück zu `isinOf()` |
+| **D** | nur `ETF` sah aus wie ein Label | das CSS kannte zwei Gattungen, seit T-31/T-38 gibt es sechs | Auszeichnung **vor** den Sonderfällen; die siebte Gattung sieht neutral aus, nicht unfertig |
+| **E** | Caret gehört vor die Symbolspalte | es stand in der Zelle unter der Überschrift „Symbol" | eigene Spalte, eigenes `aria-label` |
+| **F** | Caret schrumpfte bei schmalem Fenster | `width` ist in einer Tabelle ein Wunsch: 15×15 → **5×15**, also verzerrt | `min-width`; nachgemessen 15×15 bei 900, 1000, 1150 px |
+
+Befund D ist die dritte Ausprägung desselben Musters an einem Tag — nach
+`_FIGI_TYPES` und dem Migrationswächter in T-35: eine zweite Stelle, die eine
+getroffene Entscheidung nicht nachgezogen hat.
+
+**Auf Nachfrage geprüft statt zugesichert:** Ein Inventar über alle Vue-Dateien
+findet **null** feste Texte zwischen Tags; alle 44 Attributtexte laufen über
+`t(…)` oder eine Variable, die ihrerseits aus dem Katalog kommt. Die Suche ist
+gegengeprüft — sie findet ein eingeschmuggeltes „Hinzufügen".
+
+---
+
+## Zwei Befunde am Fehlerweg — gemessen, nicht behoben
+
+Aufgefallen, weil Mike fragte, warum ein Kurs nicht geladen werden konnte:
+
+```
+GET /fx?base=CAD&quote=USD  →  HTTP 502
+{"detail":"Kein Wechselkurs für CAD/USD"}
+```
+
+1. **Der Statuscode ist falsch.** `502` heißt „die Gegenstelle ist
+   ausgefallen". Hier wurde die Quelle gefragt und hat geantwortet, dass sie
+   dieses Paar nicht führt — das ist ein `404`. Genau diese Unterscheidung
+   führt T-31 im Plugin-Vertrag als `NotFound` gegen `Unavailable`;
+   `app/routers/fx.py:31` wirft beides zusammen. Ein Betreiber sucht daraufhin
+   den Fehler bei seiner Quelle statt in seiner Datei.
+2. **Deutscher Fließtext statt einer Kennung.** Dieselbe Sorte, die T-35
+   Befund 4 abgeschafft hat. Das Dashboard kann deshalb nur seine eigene
+   Kategorie zeigen („Wechselkurs konnte nicht geladen werden") und nicht den
+   Grund — es wirft nichts weg, es bekommt nichts.
+
+**Nicht angefasst:** Ein Statuscode ist REST-Vertrag und damit
+checkpoint-pflichtig. Derselbe Befund steht seit T-35 für `normalize_isin`
+offen; beide gehören in ein gemeinsames kleines Ticket.
+
+---
+
+## Regression nach dem finalen Stand
+
+```
+ruff check app tests plugin_api/{src,tests,examples}   → All checks passed
+pytest -q tests -m "not integration"                    → 939 passed, 29 skipped
+pytest -q plugin_api/tests                              → 295 passed, 1 skipped
+make test-example                                       → 45 passed
+vitest run (dashboard)                                  → 274 passed
+./_tickets/T-35-smoke.sh --run                          → 20/20
+PROFILE=yaml ./_tickets/T-35-smoke.sh --run             → 20/20
+git diff --check                                        → sauber
+```
 
 ---
 
