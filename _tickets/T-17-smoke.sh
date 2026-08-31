@@ -32,14 +32,42 @@
 #------------------------------------------------------------------------------
 set -uo pipefail
 
-BASH_LIBS="${BASH_LIBS:-$(cd "$(dirname "$0")/../.libs/BashLib/src" && pwd)}"
+# **Das Projekt findet sich selbst — aufwärts, erkennbar an `.libs/`.**
+#
+# Ein festes `../` bindet das Script an seine Tiefe im Baum und bricht damit
+# genau beim vorgesehenen Abschluss: In `_tickets/solved/` liegt es eine Ebene
+# tiefer, und beide Pfade zeigen ins Leere.
+#
+# Params:
+#   $1 - Verzeichnis, ab dem gesucht wird
+#
+# Returns:
+#   0 und das Projektverzeichnis auf stdout, 1 wenn keines gefunden wurde
+findProjectRoot() {
+    local _DIR="$1"
+    while [[ "${_DIR}" != "/" ]]; do
+        [[ -d "${_DIR}/.libs" ]] && { echo "${_DIR}"; return 0; }
+        _DIR="$(dirname "${_DIR}")"
+    done
+    return 1
+}
+
+# `readonly` gibt **immer** 0 zurück — der Exit-Code muss vorher gesichert
+# werden, sonst greift die Prüfung nie.
+_RC=0
+PROJECT_ROOT="$(findProjectRoot "$(cd "$(dirname "$0")" && pwd)")" || _RC=$?
+if [[ ${_RC} -ne 0 ]]; then
+    echo "kein Projekt gefunden — kein .libs oberhalb von $(dirname "$0")" >&2
+    exit 1
+fi
+readonly PROJECT_ROOT
+BASH_LIBS="${BASH_LIBS:-${PROJECT_ROOT}/.libs/BashLib/src}"
 
 if [[ "${__COLORS_LIB__:=""}" == "" ]]; then . "${BASH_LIBS}/colors.lib.sh"; fi
 if [[ "${__TOOLS_LIB__:=""}"  == "" ]]; then . "${BASH_LIBS}/tools.lib.sh";  fi
 if [[ "${__APPS_LIB__:=""}"   == "" ]]; then . "${BASH_LIBS}/apps.lib.sh";   fi
 
 readonly APPNAME="$(basename "$0")"
-readonly PROJECT_ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 # Überschreibbar, falls der Port belegt ist: `PORT=8790 ./T-17-smoke.sh --run`
 readonly PORT="${PORT:-8766}"
 readonly BASE_URL="http://127.0.0.1:${PORT}"
