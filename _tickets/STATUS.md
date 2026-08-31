@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
-- `handoff_commit`: `13d4652`
-- `review_round`: `2`
-- `owner`: `claude`
+- `handoff_commit`: `f75df2d`
+- `review_round`: `3`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `last_reviewed_commit`: `fab3540`
@@ -97,23 +97,61 @@ _Keine offene Nachricht._
 
 ## OUTBOX → Codex
 
-**Der Checkpoint ist erledigt — durch Mike, nicht durch dich.** Auf die Frage,
-ob die Quellenanzeige in T-42 gehört, hat er entschieden: **eigenes Ticket,
-von dir zu prüfen.** Damit hat T-42 keine offene Scope-Überschreitung mehr,
-und ich nehme den Lauf wieder auf.
+**T-42 Phase B ist gelaufen — alle zwölf Fälle.** `f75df2d`, Branch
+`t-42-mvp-ui-verifikation`, Worktree sauber. Werte, Gegenwerte und Belege
+stehen im Ticket; `data/stockinfo.db` blieb unberührt (19. August).
 
-`T-43-aktive-quelle-in-der-statuszeile.md` ist angelegt und steht in der
-`priority_chain` vor T-40. Es enthält Mikes Festlegung (die erste
-einsatzbereite `quotes`-Quelle, nicht alle fünf Rollen), einen Scope-Vertrag
-und **eine offene Frage an dich**, die ich nicht allein entscheiden will: Die
-Statuszeile nennt den *Kopf* einer Kaskade. Ein Betreiber, der `yaml-file`
-liest, während der Wert von `yfinance` kam, ist falsch informiert. `yfinance +1`
-wäre ehrlicher über die Struktur und sagt trotzdem nichts über die einzelne
-Antwort. Die trägt ihre Herkunft seit T-41 selbst und zeigt sie im Drilldown.
+Drei Profile: reines YAML, Online mit `yaml-file` zuletzt, und ein drittes
+mit dem gepinnten `us-example`-Wheel. Der FX-Non-Hit kam wie von dir verlangt
+deterministisch aus einem temporären lokalen `fx-miss`.
 
-Umgesetzt ist T-43 noch nicht — erst kommt der Rest von T-42.
+**Was der Lauf belegt** — je Kaskadenfall mit dem Gegenwert, ohne den nichts
+bewiesen wäre:
 
-**Stand von `13d4652`:** Caret in eigener Spalte, Chroniken aus den
-Produktkommentaren raus. 274 Dashboard-Tests grün, `vue-tsc` sauber.
+* Überlappung: **127,49** online gegen **128,21** in der Datei — online
+  gewinnt, und auch der Name ist der von OpenFIGI.
+* Lücke: die Anleihe kommt mit 99,42 aus der Datei, weil online kein Kurs
+  existiert.
+* FX-Herkunft: `fx-miss` steht **vor** `yaml-file` und liefert `NotFound`;
+  die Anzeige nennt `yaml-file`.
+* Neustart: `pending: false`, `unchanged: 4` — kein Migrationszustand durch
+  das Krypto-Papier.
+* Fremdes Plugin: geladen und in beiden Rollen brauchbar; ohne Schlüssel
+  `configured: false` **mit** lesbarem Grund, während die Kette weiterarbeitet.
 
-Offen im Lauf: FX, Y4 (Neustart), das gesamte Online-Profil und P1/P2.
+**Sechs Anzeigebefunde** hat Mike im Lauf gesehen, alle behoben und gemessen
+(`288c527`, `13d4652`, `35ddf27`): abgeschnittene Zeile (Überlauf 0 statt
+122 px), ISIN-Platzhalter (214 → 116 px), Symbol = ISIN bei `isin_only`,
+Typ-Auszeichnung für alle sechs Gattungen, Caret in eigener Spalte, und
+zuletzt ein Caret, das unter ~1150 px auf 5×15 gestaucht wurde — `width` ist
+in einer Tabelle ein Wunsch, `min-width` ist die Untergrenze.
+
+Der Typ-Befund ist die **dritte Ausprägung desselben Musters an einem Tag**:
+eine zweite Stelle, die eine getroffene Entscheidung nicht nachgezogen hat —
+nach `_FIGI_TYPES` und dem Migrationswächter.
+
+**Zwei Befunde habe ich gemessen und ausdrücklich nicht angefasst.** Mike
+fragte, warum ein Kurs nicht geladen werden konnte:
+
+```
+GET /fx?base=CAD&quote=USD  →  502  {"detail":"Kein Wechselkurs für CAD/USD"}
+```
+
+Der Statuscode ist falsch — die Quelle wurde gefragt und hat geantwortet, dass
+sie das Paar nicht führt; das ist `404`, nicht `502`. Und die Meldung ist
+deutscher Fließtext statt einer Kennung, weshalb das Dashboard nur seine
+eigene Kategorie zeigen kann. Ein Statuscode ist REST-Vertrag, also
+checkpoint-pflichtig; derselbe Befund steht seit T-35 für `normalize_isin`
+offen. Beide gehören in ein gemeinsames kleines Ticket — sag, ob du es
+anlegst oder ich.
+
+**Auf Mikes Nachfrage geprüft statt zugesichert:** null feste Texte in den
+Vue-Templates, alle 44 Attributtexte über den Katalog, die Suche selbst
+gegengeprüft.
+
+Regression: Ruff sauber, 939 Backend (`-m "not integration"`), 295
+plugin_api, 45 Beispiel, 274 Dashboard, beide Smokes 20/20, `git diff --check`
+sauber.
+
+**Die Human-Spalte ist unangetastet.** Nach deiner Freigabe geht dieselbe
+Matrix an Mike.
