@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (laufender Stack) | Phase B gelaufen, zur Prüfung | Konzept 2 h, Lauf 3 h | risikobasierte Browser-Abnahme der fertigen Plugin-Kette; danach dieselbe kurze Matrix für Mike | — |
+| StockInfo (laufender Stack) | Nacharbeit nach Codex-Runde 3 | Konzept 2 h, Lauf 3 h | risikobasierte Browser-Abnahme der fertigen Plugin-Kette; danach dieselbe kurze Matrix für Mike | — |
 
 - **Angelegt:** 2026-08-31, nach technischer Freigabe von T-39
 - **Hängt ab von:** T-31, T-38, T-37, T-41, T-35 und T-39 freigegeben
@@ -328,6 +328,31 @@ vitest run (dashboard)                                  → 274 passed
 PROFILE=yaml ./_tickets/T-35-smoke.sh --run             → 20/20
 git diff --check                                        → sauber
 ```
+
+### Codex-Review Phase B · Runde 3
+
+Der Browserlauf selbst ist belastbar: Die Gegenwerte unterscheiden
+Online-vor-YAML, YAML-Lücke und FX-Fallback; Neustart und fremdes Wheel laufen
+über ihre echten Eintrittspfade. Codex hat unabhängig Build und Ruff, 39
+direkt betroffene Dashboard-Tests, das vollständige `make test` (947 + 295 +
+45 + 274) sowie beide T-35-Smokes mit je 20/20 bestätigt.
+
+Vor der Freigabe bleiben drei kleine Nacharbeiten:
+
+1. Die mobile `InstrumentCard` zeigt bei `isin_only` weiterhin die ISIN als
+   Symbol, obwohl die Desktop-Tabelle dafür bereits `symbolOf()` benutzt.
+   Außerdem sind die neuen Gründe nur per `title`-Hover erreichbar; Touch und
+   Tastatur brauchen denselben vorhandenen Hinweisweg.
+2. Die neue Typdarstellung samt `bond`-/`etc`-/`fund`-Zuordnung steht doppelt
+   in Karte und Tabelle. Sie wird auf eine Wissensquelle reduziert und in
+   beiden Darstellungen gegen denselben neuen Typ geprüft.
+3. O1 bekommt den tatsächlich sichtbaren Quelltext als Beleg; die neuen
+   Testkommentare verlieren Prozesschronik. Nach der Korrektur laufen das
+   echte `make test`, der Build und beide Smokes nochmals.
+
+Der separat gefundene REST-Fehlerweg wird nur als T-44-Follow-up erfasst. Er
+ist kein Anlass, T-42 um einen Vertragsumbau zu erweitern. T-43 ist ebenfalls
+ein eigenes späteres Ticket und wurde in dieser Runde nicht freigegeben.
 
 ---
 

@@ -706,6 +706,16 @@ Metadaten, schrieb als `quote.source` aber den Namen der ersten Quelle. Die
 Reihenfolge funktionierte; der bestehende Herkunftsvertrag wurde nicht durch
 den neuen Composite bis zu seinem Verbraucher verfolgt.
 
+**Neuer Beleg:** T-42 Phase B Runde 3, Commit `f75df2d`: OUTBOX und Ticket
+meldeten sechs Anzeigebefunde als vollständig behoben. Die Desktop-Tabelle
+blendete bei `isin_only` den technischen ISIN-Platzhalter mit `symbolOf()` aus;
+die mobile `InstrumentCard` zeigte denselben Wert weiter unverändert als
+Börsensymbol. Gleichzeitig wurde die Typ-Auszeichnung gerade wegen einer
+vergessenen zweiten Darstellungsstelle repariert, ihre neue Farbzuordnung aber
+wieder nahezu identisch in Tabelle und Karte angelegt. Die sichtbaren Beispiele
+waren korrigiert, die gemeinsame Darstellungsregel erneut nicht über alle
+Verbraucher und nicht auf eine Wissensquelle gezogen.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope

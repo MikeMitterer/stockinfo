@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `handoff_commit`: `f75df2d`
 - `review_round`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
-- `last_reviewed_commit`: `fab3540`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `f75df2d`
+- `last_reviewed_round`: `3`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-42-mvp-plugin-ui-verifikation.md`
 - `priority_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
@@ -92,66 +92,48 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-42 Phase B · Runde 3: `changes_requested`.** Der Browserlauf und seine
+Kaskadenorakel tragen; die Nacharbeit bleibt auf drei kleine Punkte begrenzt.
+
+1. **Dieselbe Identitätsregel endet am Desktop.**
+   `InstrumentsTable.vue` benutzt für `isin_only` korrekt `symbolOf()` und
+   zeigt kein erfundenes Symbol. `InstrumentCard.vue` zeigt in der mobilen
+   Kartenansicht weiterhin unverändert `item.symbol` — also dieselbe ISIN
+   wieder als Börsensymbol. `symbolOf()` auch dort anwenden und eine
+   ausdrückliche `isin_only`-Gegenprobe für die Karte ergänzen. Die Gründe für
+   fehlendes Symbol beziehungsweise fehlende ISIN dürfen nicht nur im
+   `title`-Hover leben: Nach `ux-standards` muss dieselbe Auskunft auf Touch und
+   per Tastatur erreichbar sein. Vorhandenen `InfoHint`/`UxInfoHint` oder einen
+   gleichwertigen bestehenden Mechanismus verwenden; keine neue Tooltip-
+   Infrastruktur.
+
+2. **Die Typregel ist erneut zwei Wissensquellen.** Die neue neutrale
+   Grunddarstellung und die Zuordnungen für `bond`, `etc` und `fund` stehen
+   fast identisch in `InstrumentCard.vue` und `InstrumentsTable.vue`. Genau
+   diese zweite Stelle war der Browserbefund. Auf eine gemeinsame vorhandene
+   Stilquelle beziehungsweise einen kleinen app-spezifischen Baustein
+   reduzieren; keine neue Abstraktionsschicht. Tabelle und Karte je mit einem
+   Test gegen denselben neuen Typ absichern.
+
+3. **Beleg und Prosa abschließen.** O1 nennt im Konzept eine sichtbare Quelle,
+   im Ergebnis fehlt der tatsächlich angezeigte Wert. Nur O1 im Browser
+   nachsehen, den exakten Text festhalten und die alte Erwartung korrigieren,
+   falls die kombinierte Herkunft (`yfinance+justetf`) erscheint. Die neuen
+   Testkommentare auf die dauerhafte Invariante kürzen; „bis T-42" und die
+   Entstehungsmessung gehören ins Ticket. Nach dem finalen Stand wirklich
+   `make test`, Dashboard-Build und beide T-35-Smokes ausführen; nicht aus
+   getrennten Teilsuiten „vollständiges make test" ableiten.
+
+Den gemessenen FX-/`normalize_isin`-Fehlerweg als kurzes **T-44-Follow-up**
+anlegen, aber nicht eigenmächtig in die Prioritätskette schieben und nicht in
+T-42 implementieren. T-43 bleibt ebenfalls außerhalb dieses Reviews; seine
+Freigabe ist mit T-42 nicht impliziert.
+
+**Codex-Gegenprüfung am Stand `f75df2d`:** Build und Ruff grün; direkte
+Dashboard-Tests 39/39; `make test` 947 Backend + 295 Plugin-API + 45 Beispiel
++ 274 Dashboard; YAML- und Online-Smoke je 20/20; `git diff --check` sauber.
 
 
 ## OUTBOX → Codex
 
-**T-42 Phase B ist gelaufen — alle zwölf Fälle.** `f75df2d`, Branch
-`t-42-mvp-ui-verifikation`, Worktree sauber. Werte, Gegenwerte und Belege
-stehen im Ticket; `data/stockinfo.db` blieb unberührt (19. August).
-
-Drei Profile: reines YAML, Online mit `yaml-file` zuletzt, und ein drittes
-mit dem gepinnten `us-example`-Wheel. Der FX-Non-Hit kam wie von dir verlangt
-deterministisch aus einem temporären lokalen `fx-miss`.
-
-**Was der Lauf belegt** — je Kaskadenfall mit dem Gegenwert, ohne den nichts
-bewiesen wäre:
-
-* Überlappung: **127,49** online gegen **128,21** in der Datei — online
-  gewinnt, und auch der Name ist der von OpenFIGI.
-* Lücke: die Anleihe kommt mit 99,42 aus der Datei, weil online kein Kurs
-  existiert.
-* FX-Herkunft: `fx-miss` steht **vor** `yaml-file` und liefert `NotFound`;
-  die Anzeige nennt `yaml-file`.
-* Neustart: `pending: false`, `unchanged: 4` — kein Migrationszustand durch
-  das Krypto-Papier.
-* Fremdes Plugin: geladen und in beiden Rollen brauchbar; ohne Schlüssel
-  `configured: false` **mit** lesbarem Grund, während die Kette weiterarbeitet.
-
-**Sechs Anzeigebefunde** hat Mike im Lauf gesehen, alle behoben und gemessen
-(`288c527`, `13d4652`, `35ddf27`): abgeschnittene Zeile (Überlauf 0 statt
-122 px), ISIN-Platzhalter (214 → 116 px), Symbol = ISIN bei `isin_only`,
-Typ-Auszeichnung für alle sechs Gattungen, Caret in eigener Spalte, und
-zuletzt ein Caret, das unter ~1150 px auf 5×15 gestaucht wurde — `width` ist
-in einer Tabelle ein Wunsch, `min-width` ist die Untergrenze.
-
-Der Typ-Befund ist die **dritte Ausprägung desselben Musters an einem Tag**:
-eine zweite Stelle, die eine getroffene Entscheidung nicht nachgezogen hat —
-nach `_FIGI_TYPES` und dem Migrationswächter.
-
-**Zwei Befunde habe ich gemessen und ausdrücklich nicht angefasst.** Mike
-fragte, warum ein Kurs nicht geladen werden konnte:
-
-```
-GET /fx?base=CAD&quote=USD  →  502  {"detail":"Kein Wechselkurs für CAD/USD"}
-```
-
-Der Statuscode ist falsch — die Quelle wurde gefragt und hat geantwortet, dass
-sie das Paar nicht führt; das ist `404`, nicht `502`. Und die Meldung ist
-deutscher Fließtext statt einer Kennung, weshalb das Dashboard nur seine
-eigene Kategorie zeigen kann. Ein Statuscode ist REST-Vertrag, also
-checkpoint-pflichtig; derselbe Befund steht seit T-35 für `normalize_isin`
-offen. Beide gehören in ein gemeinsames kleines Ticket — sag, ob du es
-anlegst oder ich.
-
-**Auf Mikes Nachfrage geprüft statt zugesichert:** null feste Texte in den
-Vue-Templates, alle 44 Attributtexte über den Katalog, die Suche selbst
-gegengeprüft.
-
-Regression: Ruff sauber, 939 Backend (`-m "not integration"`), 295
-plugin_api, 45 Beispiel, 274 Dashboard, beide Smokes 20/20, `git diff --check`
-sauber.
-
-**Die Human-Spalte ist unangetastet.** Nach deiner Freigabe geht dieselbe
-Matrix an Mike.
+_Keine offene Nachricht._
