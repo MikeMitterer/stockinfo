@@ -102,14 +102,24 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | `git mv _tickets/*.yaml _tickets/solved/` | **kein** Test wird rot — der Umzug eines Tickets ist folgenlos | ➖ | |
-| **2** | `grep` über Tests und Skripte | kein ausführbarer Verweis auf `_tickets/` mehr | ➖ | |
-| **3** | Prüfdatei ändern | genau die Tests werden rot, die den Wert festhalten — und nur die | ➖ | |
-| **4** | Betriebsdatei ändern | **kein** Test wird rot | ➖ | |
-| **5** | Fallback-Vorlage | enthält kein Papier, das die Online-Kette selbst beantwortet | ➖ | |
-| **6** | Online-Profil, Quelle gestört | die Datei springt **nicht** mit einem alten Kurs ein, wo online etwas liefern sollte | ➖ | |
-| **7** | reines Dateiprofil mit der eigenständigen Vorlage | alle fünf Rollen werden bedient, wie bisher | ➖ | |
-| **8** | `sources-profile.sh` | legt die Betriebsdatei aus der neuen Vorlage an, nicht aus `_tickets/` | ➖ | |
+| **1** | `git mv _tickets/*.yaml _tickets/solved/` | **kein** Test wird rot — der Umzug eines Tickets ist folgenlos | ✅ | |
+| **2** | `grep` über Tests und Skripte | kein ausführbarer Verweis auf `_tickets/` mehr | ✅ | |
+| **3** | Prüfdatei ändern | genau die Tests werden rot, die den Wert festhalten — und nur die | ✅ | |
+| **4** | Betriebsdatei ändern | **kein** Test wird rot | ✅ | |
+| **5** | Fallback-Vorlage | enthält kein Papier, das die Online-Kette selbst beantwortet | ⚠️ [^fonds] | |
+| **6** | Online-Profil, Quelle gestört | die Datei springt **nicht** mit einem alten Kurs ein, wo online etwas liefern sollte | ✅ | |
+| **7** | reines Dateiprofil mit der eigenständigen Vorlage | alle fünf Rollen werden bedient, wie bisher | ✅ | |
+| **8** | `sources-profile.sh` | legt die Betriebsdatei aus der neuen Vorlage an, nicht aus `_tickets/` | ➖ [^script] | |
+
+[^fonds]: Die Anleihe ist sicher — es gibt keine Quelle, die sie führt. Beim
+    Fonds `DE0009848119` ist es eine Einschätzung: Er ist nicht
+    börsengehandelt, aber ob yfinance ihn als Mutual Fund kennt, habe ich
+    **nicht** gemessen. Verbindlich ist die Regel, nicht meine Auswahl.
+
+[^script]: `scripts/sources-profile.sh` liegt auf dem noch nicht
+    zusammengeführten Branch `feat/sources-profile-script` und zeigt dort auf
+    den alten Ort. Der Verweis zieht nach, sobald der Branch landet — hier ist
+    nichts zu ändern, was es auf diesem Branch nicht gibt.
 
 ## Nicht-Ziele
 
@@ -117,6 +127,30 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 - Keine neue Rolle, kein neuer Endpunkt.
 - Kein Umbau der Tests über das Verschieben und Umbiegen hinaus.
 
+## Runde 1 · Umgesetzt (2026-08-31)
+
+**Der Umzug ist folgenlos — gemessen, nicht behauptet.** Vier Ticketdateien
+samt zwei Smoke-Scripts nach `solved/` verschoben:
+
+```
+git mv _tickets/T-37-*.md _tickets/T-45-*.md _tickets/T-22-smoke.sh _tickets/T-35-smoke.sh _tickets/solved/
+→ 964 passed, 29 skipped        (vorher: 13 failed)
+→ T-22-Smoke aus solved/: 6/6
+```
+
+**Und die inhaltliche Zusage, als A/B.** Dieselbe gestörte Online-Quelle,
+dieselbe Anfrage, nur die Datei dahinter unterscheidet sich — **je frischer
+Datenbank**, weil der erste Anlauf sich eine geteilt hatte und damit nur den
+Cache maß:
+
+| Datei hinter der gestörten Quelle | Antwort auf `GET /quote/IE00B4L5Y983` |
+|---|---|
+| `assets-standalone.yaml` | **200 · 128,21 €** — ein Kurs vom 27. August, als aktueller ausgegeben |
+| `assets-fallback.yaml` | **404 · `instrument_not_found`** — ehrlich |
+
+Das ist der Grund für die Aufteilung, in einer Zeile: Dieselbe Störung wird
+einmal verschwiegen und einmal gemeldet.
+
 ## Auflösung
 
-_(offen)_
+_(offen — Codex prüft Runde 1)_

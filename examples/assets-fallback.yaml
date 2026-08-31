@@ -1,0 +1,55 @@
+version: 1
+
+# Vorlage: die Datei **hinter** der Online-Kette.
+#
+# Hier steht ausschließlich, was keine Online-Quelle beantworten kann — eine
+# OTC-Anleihe ohne Börsenkurs, ein Fonds, den kein Anbieter führt, eine von
+# Hand gepflegte Reihe.
+#
+# **Ein Papier, das eine Online-Quelle kennt, gehört nicht hierher.** Es wäre
+# nicht bloß überflüssig: Fällt die Online-Quelle aus, greift die Kaskade auf
+# diese Datei durch und liefert den hier eingetragenen Preis — plausibel
+# aussehend, ohne Kennzeichnung, statt eines ehrlichen Ausfalls. Je kürzer
+# diese Datei, desto seltener kann das passieren.
+#
+# Für den umgekehrten Fall — eine Instanz, die **nur** aus dieser Datei lebt —
+# ist `assets-standalone.yaml` die Vorlage. Dort ist Vollständigkeit die
+# Zusage, hier ist Kürze die Zusage.
+instruments:
+  # Eine Anleihe ohne Börsenkurs: Es gibt keinen Anbieter, der sie führt, und
+  # ohne `price` springt der jüngste gepflegte Schlusskurs als aktueller Kurs
+  # ein.
+  - id: german-bond
+    identity:
+      kind: isin_only
+      isin: DE0001102531
+    name: Bundesrepublik Deutschland
+    instrument_type: bond
+    history:
+      currency: EUR
+      closes:
+        - date: "2026-08-25"
+          value: 99.18
+        - date: "2026-08-26"
+          value: 99.31
+        - date: "2026-08-27"
+          value: 99.42
+    note: Keine Abfragequelle vorhanden; die gepflegte Historie ist der Rückfall.
+
+  # Ein nicht börsengehandelter Publikumsfonds. Er trägt eine ISIN, aber keinen
+  # Handelsplatz — die Gattung `fund` (nicht `etf`), damit ihn niemand an eine
+  # ETF-Anreicherung schickt, die ihn nicht führt.
+  - id: active-fund
+    identity:
+      kind: isin_only
+      isin: DE0009848119
+    name: DWS Top Dividende LD
+    instrument_type: fund
+    price:
+      value: 142.50
+      currency: EUR
+      as_of: "2026-08-27T17:30:00+02:00"
+
+# **Keine Devisenkurse hier.** Die Online-Kette beantwortet sie; ein Eintrag
+# wäre genau die Falle, die oben beschrieben ist — bei einer Störung stünde
+# ein alter Kurs da, wo ein Ausfall hingehört.

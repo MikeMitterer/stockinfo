@@ -51,7 +51,9 @@ Format::
     fx_rates:
       - {base: CAD, quote: EUR, rate: 0.6412, as_of: "2026-08-27T17:30:00+02:00"}
 
-Das vollständige Beispiel liegt in `_tickets/T-37-single-file-sample.yaml`.
+Zwei Vorlagen liegen in `examples/`: `assets-standalone.yaml` für eine
+Instanz, die nur aus dieser Datei lebt, und `assets-fallback.yaml` für die
+Datei hinter einer Online-Kette.
 """
 
 from datetime import date, datetime, timezone

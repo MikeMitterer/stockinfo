@@ -78,4 +78,5 @@ providers:
 # Reihe als Antwort und beendet die Kette; nur ein Ausfall fällt weiter.
 #
 # Das Format der Datei steht in `docs/plugins.md`; ein vollständiges Beispiel
-# liegt in `_tickets/T-37-single-file-sample.yaml`.
+# liegt als `examples/assets-standalone.yaml` bereit; die schmale Fassung
+# hinter einer Online-Kette als `examples/assets-fallback.yaml`.

@@ -42,7 +42,7 @@ _SERVICE_CACHES = (
     get_fx_service,
 )
 
-SAMPLE = Path(__file__).resolve().parents[1] / "_tickets" / "T-37-single-file-sample.yaml"
+SAMPLE = Path(__file__).resolve().parent / "_resources" / "assets.yaml"
 
 # Eine Quelle, die **gestört** ist: Sie ist zuständig und kann nicht antworten.
 # Das Gegenstück zu `answers-never` aus `test_yaml_profile`, das sauber

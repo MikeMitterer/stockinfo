@@ -13,10 +13,11 @@ Matrix `#9`  Fehlende Datei, ungültiges YAML und doppelte Kennungen werden
              verständlich gemeldet
 ============ ================================================================
 
-**Die Fachdatendatei ist die aus dem Ticket.** `_tickets/T-37-single-file-sample.yaml`
-wird hier nicht nachgebaut, sondern benutzt. Eine Kopie im Testordner wäre
-bequemer und würde beim ersten Nachtrag auseinanderlaufen — dann beschriebe das
-Ticket ein Format, das niemand mehr prüft.
+**Die Fachdatendatei gehört den Tests.** Sie liegt in `tests/_resources/`
+und wird hier benutzt, nicht nachgebaut. Vorher lag sie neben ihrem Ticket —
+und weil ein erledigtes Ticket nach `solved/` wandert, hätte dieser
+vorgesehene Schritt den ganzen Lauf rot gemacht. Werte, die ein Test
+festhält, gehören dorthin, wo der Test sie verantwortet.
 
 **Was diese Datei bewusst nicht prüft.** Die Browserzeile `#6` verlangt einen
 Lauf mit Augen; ein grüner Test hier ersetzt ihn nicht und behauptet es auch
@@ -59,7 +60,7 @@ Objekts. Sie danach noch einmal zu verwerfen hieße, `/sources` eine dritte
 Konfiguration unterzuschieben — die Rollen meldeten dann „noch nicht gebaut".
 """
 
-SAMPLE = Path(__file__).parent.parent / "_tickets" / "T-37-single-file-sample.yaml"
+SAMPLE = Path(__file__).parent / "_resources" / "assets.yaml"
 
 # Zwei Kursquellen, die **vor** der Datei stehen. Sie belegen die beiden
 # Hälften der Kaskade: Wer liefert, gewinnt; wer schweigt, reicht weiter.

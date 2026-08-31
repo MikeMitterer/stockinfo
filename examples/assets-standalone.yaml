@@ -1,0 +1,94 @@
+version: 1
+
+# Vorlage: die Datei einer Instanz, die **nur** aus ihr lebt.
+#
+# Hier ist Vollständigkeit die Zusage: Was nicht darinsteht, kennt diese
+# Instanz nicht. Alle fünf Rollen werden aus dieser einen Datei bedient —
+# Auflösung, Kurs, Tagesreihe, Metadaten und Devisen.
+#
+# Für den anderen Fall — die Datei **hinter** einer Online-Kette — ist
+# `assets-fallback.yaml` die Vorlage. Dort ist Kürze die Zusage, und der
+# Unterschied ist keine Ordnungsfrage: Ein Papier, das online beantwortet
+# wird, führt in einer Fallback-Datei bei jeder Störung zu einem alten Kurs
+# statt zu einem ehrlichen Ausfall.
+#
+# StockInfo speichert jeden übernommenen Kurs und Verlaufspunkt in seiner
+# Datenbank. `history` ist optional und als von Hand gepflegter Rückfall für
+# Papiere gedacht, die keine Quelle abfragen kann; fehlt `price`, springt der
+# jüngste Schlusskurs als aktueller Kurs ein.
+instruments:
+  - id: world-etf
+    identity:
+      kind: listed
+      isin: IE00B4L5Y983
+      ticker: EUNL
+      mic: XETR
+    name: iShares Core MSCI World UCITS ETF
+    instrument_type: etf
+    price:
+      value: 128.21
+      currency: EUR
+      as_of: "2026-08-27T17:30:00+02:00"
+    metadata:
+      ter_bps: 20
+      provider: iShares
+      fund_domicile: Ireland
+
+  - id: apple-xetra
+    identity:
+      kind: listed
+      isin: US0378331005
+      ticker: APC
+      mic: XETR
+    name: Apple Inc.
+    instrument_type: stock
+    price:
+      value: 277.40
+      currency: EUR
+      as_of: "2026-08-27T17:30:00+02:00"
+
+  - id: bitcoin-eur
+    identity:
+      kind: pair
+      base: BTC
+      quote_currency: EUR
+    name: Bitcoin
+    instrument_type: crypto
+    price:
+      value: 94500.00
+      currency: EUR
+      as_of: "2026-08-27T17:30:00+02:00"
+
+  - id: german-bond
+    identity:
+      kind: isin_only
+      isin: DE0001102531
+    name: Bundesrepublik Deutschland
+    instrument_type: bond
+    history:
+      currency: EUR
+      closes:
+        - date: "2026-08-25"
+          value: 99.18
+        - date: "2026-08-26"
+          value: 99.31
+        - date: "2026-08-27"
+          value: 99.42
+    note: No query source is available; the manually maintained history is the fallback.
+
+  - id: active-fund
+    identity:
+      kind: isin_only
+      isin: DE0009848119
+    name: DWS Top Dividende LD
+    instrument_type: fund
+    price:
+      value: 142.50
+      currency: EUR
+      as_of: "2026-08-27T17:30:00+02:00"
+
+fx_rates:
+  - base: CAD
+    quote: EUR
+    as_of: "2026-08-27T17:30:00+02:00"
+    rate: 0.6412
