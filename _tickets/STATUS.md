@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
-- `handoff_commit`: `50b7341`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `f8e0fda`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
 - `last_reviewed_commit`: `50b7341`
@@ -97,26 +97,63 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-43 Runde 1 — Änderungen erforderlich.** Produktstand `50b7341`.
-
-1. Zeige die geordnete, einsatzbereite **Kurskette**, nicht nur deren ersten
-   Eintrag: online etwa `Kurse: yfinance → yaml-file`, YAML allein
-   `Kurse: yaml-file`. `/sources` kennt die laufende Kette, aber nicht die
-   Herkunft einer einzelnen gespeicherten Quote; diese wird weder im REST-
-   Modell noch in der Quote-Tabelle geführt. Keine API-, Schema- oder
-   Datenmodelländerung für T-43. Der Zwei-Quellen-Test muss beide Namen in
-   Reihenfolge verlangen und gegen den Mutanten „nur erster Name" rot werden.
-2. Umfang wieder einfangen. Einmalig genehmigtes Dateibudget: 2 neue plus 8
-   berührte Dateien, keine weitere Produktfläche. Gesamtbudget für Runde 2:
-   höchstens 300 Diff-Zeilen. Prozesschronik (`seit T-43`) und wiederholte
-   Begründungsblöcke in Produkt-/Testcode auf die aktuelle Invariante kürzen.
-   Die nächste OUTBOX nennt geplant/tatsächlich für fachliche Änderungen,
-   Produktdateien, Test-/Dokudateien und Diff-Zeilen.
-
-Danach beide Profile erneut im Browser prüfen. Unabhängig grün: `make test`
-(947 + 295 + 45 + 290), Dashboard-Build, Ruff und `git diff --check`.
+_Keine offene Nachricht — Runde 1 ist abgearbeitet._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**T-43 Runde 2 — beide Befunde umgesetzt.** `f8e0fda`, Branch
+`t-43-quelle-in-der-statuszeile`, Worktree sauber.
+
+**1 · Die Kette statt ihres Kopfes.** Dein Befund trifft, und er beantwortet
+die offene Frage anders als **beide** Vorschläge, die im Ticket standen. Ich
+hatte „erste Quelle" gegen „`yfinance +1`" gestellt und dabei übersehen, dass
+schon die Frage falsch war: `/sources` weiß, wer gefragt wird — nicht, wer
+eine bestimmte gespeicherte Quote geliefert hat. Ein einzelner Name war damit
+keine unscharfe Angabe, sondern eine Aussage, die diese Daten nicht decken.
+
+Im Browser gemessen, beide Profile, je eine eigene Instanz:
+
+```
+Online:  … · 2 Papiere · Kurse: yfinance → yaml-file · v0.6.0 · Online
+YAML:    … · ein Papier · Kurse: yaml-file          · v0.6.0 · Online
+```
+
+**Der verlangte Mutant:** `chain.join(' → ')` durch `chain[0]` ersetzt — zwei
+Tests werden rot, der deutsche und der englische. Die Ein-Quellen-Fassung
+kommt an dieser Zeile nicht vorbei.
+
+**2 · Umfang, geplant gegen tatsächlich:**
+
+| | geplant | Runde 1 | Runde 2 | gesamt |
+|---|---|---|---|---|
+| Fachliche Änderungen | keine | keine | keine | **keine** |
+| Neue Dateien | 1 | 3 | 0 | **3** |
+| Berührte Dateien | 5 | 5 | 8 | **6** |
+| Diff-Zeilen | 250 | 335 | 154 | **298** |
+
+Runde 2 bleibt mit 154 Zeilen unter deinen 300 und berührt keine neue
+Produktfläche.
+
+**Eine Abweichung zu deiner Buchung, die ich nicht glattziehe:** Du hast 2 neue
+plus 8 berührte Dateien gezählt, `git diff --name-status` gibt 3 neue plus 6
+berührte aus. Die Differenz sind die beiden Testdateien — ich zähle sie als
+neu. Ich schreibe die Zahl, die das Werkzeug ausgibt, statt die Zählweise zu
+wählen, die besser zu deiner Genehmigung passt.
+
+**Was den Überschritt verursacht hat:** Der Scope-Vertrag nannte „ein
+Composable" und fünf Dateien — gedacht war die reine Anzeige. Der zentrale Typ,
+die Proxy-Liste und die zweite Testgrenze kamen beim Bauen dazu, jede einzeln
+plausibel. Genau dafür ist der Checkpoint da, und ich habe ihn nicht gezogen.
+
+**Prozesschronik gekürzt:** `seit T-43` aus der Präfixliste und dem
+Testkopf, „daran ist Runde 1 gescheitert" aus zwei Testkommentaren. Im Code
+steht die geltende Invariante, die Chronik im Ticket.
+
+Regression am Stand `f8e0fda`, jeder Lauf beim Namen: `pytest` 947, Contract
+295, Plugin-Beispiel 45, `vitest` 291 (49 Dateien), `vue-tsc` sauber, Build ✓,
+Ruff sauber, `git diff --check` sauber. Die beiden Smokes sind erneut **nicht**
+gelaufen — ihr Gegenstand ist die Kettenbildung im Backend, und dort hat sich
+nichts geändert.
+
+Ab jetzt keine weitere Produktdatei.
