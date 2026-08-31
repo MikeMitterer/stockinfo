@@ -32,6 +32,7 @@ export const en = {
     title: 'Assets',
     empty: 'No securities cached yet — add one above by ISIN or symbol.',
     colSymbol: 'Symbol',
+    toggleDetails: 'Show/hide details',
     colIsin: 'ISIN',
     /* The reason for the dash, as a hover text — see the German file. */
     noIsinReason: 'A currency pair carries no ISIN — that is the shape of the instrument, not a gap.',

@@ -306,17 +306,11 @@ function closeChart(): void {
   /*
    * **1200 px sind eine Lesebreite, keine Tabellenbreite.**
    *
-   * Gemessen in T-42 auf einem 1834 px breiten Fenster: Der Inhaltsbereich
-   * bekam 1200 px, die Tabelle darin 1123 px, und die Tabelle selbst brauchte
-   * 1245 px. Die Aktionsspalte — JSON, Profil, Aktualisieren, Löschen — lag
-   * damit hinter `overflow-x: auto`, während rechts 600 px Fensterbreite
-   * ungenutzt blieben. Sichtbar war das nur als abgeschnittene Zeile.
-   *
-   * Die Grenze bleibt für alles, was man **liest**: Eine Zeile Fließtext über
-   * die volle Breite eines 27-Zoll-Schirms ist unlesbar. Die Assets-Tabelle
-   * darf sie überschreiten, weil sie nichts erzählt, sondern Spalten zeigt —
-   * `min()` deckelt sie weiterhin, damit sie auf sehr breiten Schirmen nicht
-   * ins Uferlose läuft.
+   * Die Grenze gilt für alles, was man liest: Eine Zeile Fließtext über die
+   * volle Breite eines großen Schirms ist unlesbar. Die Assets-Tabelle darf
+   * sie überschreiten, weil sie nichts erzählt, sondern Spalten zeigt —
+   * andernfalls landet die Aktionsspalte hinter `overflow-x`, während rechts
+   * Fensterbreite ungenutzt bleibt.
    */
   max-width: 1200px;
   margin: 0 auto;

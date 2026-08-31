@@ -264,6 +264,8 @@ function price(value: number | null): string {
       <table class="data-table">
         <thead>
           <tr>
+            <!-- Der Umschalter hat eine eigene Spalte; er ist keine Kennung. -->
+            <th class="caret-col"></th>
             <th
               v-for="column in columns"
               :key="column.key"
@@ -298,6 +300,18 @@ function price(value: number | null): string {
               :class="{ selected: item.symbol === selectedSymbol }"
               @click="emit('select', item)"
             >
+              <td class="caret-col">
+                <button
+                  type="button"
+                  class="row-toggle caret-only"
+                  :aria-expanded="isOpen(item)"
+                  :aria-controls="`details-${item.symbol}`"
+                  :aria-label="t('table.toggleDetails')"
+                  @click.stop="toggleDrawer(item)"
+                >
+                  <UxCaret :open="isOpen(item)" />
+                </button>
+              </td>
               <td class="sym mono">
                 <!--
                   Kennung öffnet die Zeile (ux-standards): Symbol und Name sind
@@ -311,15 +325,9 @@ function price(value: number | null): string {
                   :aria-controls="`details-${item.symbol}`"
                   @click.stop="toggleDrawer(item)"
                 >
-                  <!--
-                    Ein Papier der Form `isin_only` hat kein Anbieter-Symbol;
-                    in der Datenbank steht dort die ISIN, weil die Spalte einen
-                    Schlüssel braucht. Sie hier zu zeigen hieße, sie doppelt zu
-                    zeigen — die Spalte daneben trägt sie bereits.
-                  -->
-                  <UxCaret :open="isOpen(item)" /><template v-if="symbolOf(item)">{{
-                    symbolOf(item)
-                  }}</template><span v-else class="dim" :title="t('table.noSymbolReason')">—</span>
+                  <!-- Ein Papier der Form `isin_only` hat kein Börsensymbol. -->
+                  <template v-if="symbolOf(item)">{{ symbolOf(item) }}</template>
+                  <span v-else class="dim" :title="t('table.noSymbolReason')">—</span>
                 </button>
               </td>
               <td class="mono dim isin-cell">
@@ -331,14 +339,9 @@ function price(value: number | null): string {
                 />
                 <!--
                   Kein Wert heißt hier dasselbe wie in jeder anderen Spalte:
-                  ein Strich. Bis T-42 stand der Grund als sichtbarer Text in
-                  der Zelle und hat die Spalte auf 214 px gedehnt — doppelt so
-                  breit, wie eine ISIN je braucht, und damit die Aktionsspalte
-                  aus dem Blickfeld gedrückt.
-
-                  Die Auskunft ist deshalb nicht weg, sondern im Titel: Wer
-                  wissen will, warum dort nichts steht, erfährt es beim
-                  Darüberfahren — ohne dass es jede andere Zeile Platz kostet.
+                  ein Strich, der Grund im Titel. Ein sichtbarer Erklärtext
+                  bestimmt die Spaltenbreite für **alle** Zeilen — eine ISIN
+                  braucht 12 Zeichen, ein Satz das Doppelte.
                 -->
                 <span v-else class="dim" :title="t('table.noIsinReason')">—</span>
               </td>
@@ -430,7 +433,7 @@ function price(value: number | null): string {
               </td>
             </tr>
             <tr v-if="isOpen(item)" :id="`details-${item.symbol}`" class="details-row">
-              <td :colspan="columns.length + 1">
+              <td :colspan="columns.length + 2">
                 <InstrumentDrilldown
                   :item="item"
                   :busy="item.symbol === savingSymbol"
@@ -631,16 +634,22 @@ tbody tr {
 /*
  * **Jede Gattung trägt die Pille, auch die, die es noch nicht gibt.**
  *
- * Bis T-42 standen hier zwei Regeln, `etf` und `stock` — aus der Zeit, als es
- * zwei Gattungen gab. Seit T-31 und T-38 sind es sechs, und die vier neuen
- * fielen durch: `CRYPTO`, `BOND` und `FUND` standen als nackter Text neben
- * einem beschrifteten `ETF`, in derselben Spalte.
- *
- * Deshalb steht die Auszeichnung jetzt **vor** den Sonderfällen und nicht in
- * ihnen. Eine siebte Gattung sieht damit schlechtestenfalls neutral aus statt
- * unfertig — und die Spalte bleibt bündig, weil alle Zellen dieselbe Box
- * tragen.
+ * Die Auszeichnung steht deshalb vor den Sonderfällen und nicht in ihnen: Ein
+ * neuer Gattungswert sieht schlechtestenfalls neutral aus statt unfertig, und
+ * die Spalte bleibt bündig, weil alle Zellen dieselbe Box tragen.
  */
+/* Der Umschalter steht in einer eigenen, schmalen Spalte. */
+.caret-col {
+  width: 1.75rem;
+  padding-right: 0;
+  text-align: center;
+}
+
+.row-toggle.caret-only {
+  padding: 0;
+  color: inherit;
+}
+
 .badge.type {
   text-transform: uppercase;
   letter-spacing: 0.03em;

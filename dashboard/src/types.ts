@@ -102,12 +102,8 @@ export function isinOf(identity: Identity): string | null {
  * Das Gegenstück zu `isinOf`, und aus demselben Grund: `instruments.symbol`
  * ist in der Datenbank Pflicht, weil jede Zeile einen Schlüssel braucht. Für
  * ein Papier der Form `isin_only` steht dort deshalb die **ISIN** — ein
- * technischer Platzhalter, kein Symbol.
- *
- * Die Oberfläche zeigte ihn bis T-42 in der Symbolspalte an, direkt neben
- * derselben ISIN in der Spalte daneben. Sie behauptete damit ein Symbol, das
- * es nicht gibt — spiegelbildlich zu der Ehrlichkeit, mit der sie beim
- * Währungspaar auf die fehlende ISIN hinweist.
+ * technischer Platzhalter, kein Symbol, und nichts, was die Oberfläche als
+ * eines ausgeben darf.
  */
 export function symbolOf(instrument: { identity: Identity; symbol: string }): string | null {
   return instrument.identity.kind === 'isin_only' ? null : instrument.symbol
