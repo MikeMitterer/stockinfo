@@ -199,8 +199,7 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
         )
         # Ohne Wert hat der Anbieter nichts geliefert; `disturbed` sagt, ob das
         # eine Störung war. Beides einzuebnen machte aus einem Ausfall ein
-        # „gibt es nicht", und die App hörte auf zu fragen. Seit T-44 trägt
-        # `SourceAnswer` die Unterscheidung, statt sie aus `None` zu erraten.
+        # „gibt es nicht", und die App hörte auf zu fragen.
         if not answer.is_hit:
             if answer.disturbed:
                 return Unavailable(f"{symbol}: Tagesreihe nicht abrufbar")

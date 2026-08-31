@@ -26,9 +26,9 @@ class FxPairNotFoundError(Exception):
     """Keine Quelle führt dieses Währungspaar.
 
     **Kein Ausfall.** Die Kette ist vollständig durchgelaufen, jede Quelle hat
-    geantwortet — nur führt keine dieses Paar. Bis T-44 kam das als `502` beim
-    Betreiber an, der daraufhin den Fehler bei seiner Quelle suchte statt in
-    seiner Datei.
+    geantwortet — nur führt keine dieses Paar. Als `502` gemeldet schickte das
+    den Betreiber zur Fehlersuche bei einer Quelle, die nichts falsch gemacht
+    hat.
     """
 
 

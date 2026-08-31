@@ -25,6 +25,7 @@ from app import __version__
 from app.config import Settings, get_settings
 from app.container import get_cached_quote_service, get_quote_analyzer
 from app.models import (
+    INVALID_ISIN_RESPONSE,
     AnalyzeResult,
     CollectorEntry,
     EnvInfo,
@@ -189,7 +190,11 @@ def refresh_all(service: ServiceDep) -> RefreshResult:
     return RefreshResult(total=total, refreshed=refreshed)
 
 
-@router.post("/refresh/{isin}", response_model=QuoteResponse)
+@router.post(
+    "/refresh/{isin}",
+    response_model=QuoteResponse,
+    responses=INVALID_ISIN_RESPONSE,
+)
 def refresh_one(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     """Aktualisiert ein einzelnes Instrument per ISIN."""
     try:
@@ -211,7 +216,9 @@ def refresh_one_by_symbol(symbol: SymbolPath, service: ServiceDep) -> QuoteRespo
         ) from exc
 
 
-@router.delete("/instruments/{isin}", status_code=204)
+@router.delete(
+    "/instruments/{isin}", status_code=204, responses=INVALID_ISIN_RESPONSE
+)
 def delete_instrument(isin: IsinPath, service: ServiceDep) -> Response:
     """Löscht ein Instrument samt Historie per ISIN."""
     if not service.delete_instrument(isin):

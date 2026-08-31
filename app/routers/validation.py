@@ -13,11 +13,34 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Query
 
 from app.exchanges import ISIN_PATTERN
-from app.models import ErrorDetail
 
 # Ein ungültiges ISIN-Format als Kennung. Derselbe Katalogeintrag bedient jeden
 # Client; der Satz entsteht dort, wo er gelesen wird.
 REASON_INVALID_ISIN = "invalid_isin_format"
+
+
+class InvalidIsinError(Exception):
+    """Die Eingabe hat nicht das Format einer ISIN.
+
+    **Eine eigene Ausnahme statt `HTTPException`**, und der Grund ist die Form
+    der Antwort: FastAPI verpackt `HTTPException.detail` in
+    ``{"detail": …}``. Ein `ErrorDetail` dort hinein zu legen ergäbe
+    ``{"detail": {"code": …}}`` — genau die Verschachtelung, die `ErrorDetail`
+    ausdrücklich ausschließt, und die kein Konsument erwartet.
+
+    Der zentrale Handler in `app.main` macht daraus die zugesagte Form. Er
+    steht dort und nicht in den Routern, weil diese Validierung als
+    Abhängigkeit an jedem ISIN-Weg hängt: Ein Handler je Router wäre dieselbe
+    Regel viermal, und beim fünften Weg fehlte sie.
+    """
+
+    def __init__(self, isin: str) -> None:
+        """
+        Args:
+            isin: Die Eingabe, so wie sie ankam — ungetrimmt und ungekürzt.
+        """
+        super().__init__(isin)
+        self.isin = isin
 
 # Yahoo-Symbole: Kennung plus optionales Börsensuffix (VGWL.DE), dazu die
 # Sonderformen für Indizes (^GDAXI) und Devisen (EURUSD=X).
@@ -38,19 +61,14 @@ def normalize_isin(isin: str) -> str:
         Die normalisierte ISIN.
 
     Raises:
-        HTTPException: 422 bei ungültigem Format — mit **Kennung**, nicht mit
-            deutschem Fließtext. `ErrorDetail` sagt zu, dass der Satz im UI
-            entsteht; ein anderer Client als das Dashboard erreicht diese
-            Stelle, und ihm nützt „Ungültiges ISIN-Format" nichts.
+        InvalidIsinError: Bei ungültigem Format. Der zentrale Handler macht
+            daraus einen `422` mit **Kennung** statt deutschem Fließtext: Der
+            Satz entsteht im UI, und ein anderer Client als das Dashboard
+            erreicht diese Stelle ebenfalls.
     """
     normalized = isin.strip().upper()
     if not ISIN_PATTERN.fullmatch(normalized):
-        raise HTTPException(
-            status_code=422,
-            detail=ErrorDetail(
-                code=REASON_INVALID_ISIN, params={"isin": isin}
-            ).model_dump(),
-        )
+        raise InvalidIsinError(isin)
     return normalized
 
 

@@ -290,7 +290,7 @@
           "422": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/HTTPValidationError"
+                "$ref": "#/components/schemas/ErrorDetail"
               }
             }
           }
@@ -332,7 +332,7 @@
           "422": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/HTTPValidationError"
+                "$ref": "#/components/schemas/ErrorDetail"
               }
             }
           },
@@ -383,7 +383,7 @@
           "422": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/HTTPValidationError"
+                "$ref": "#/components/schemas/ErrorDetail"
               }
             }
           }

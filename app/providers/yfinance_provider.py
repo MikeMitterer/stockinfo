@@ -114,7 +114,7 @@ class YFinanceProvider:
         Returns:
             Der Kurs. **Zwei verschiedene Fehlschläge**: Wirft der Abruf, ist
             das eine Störung; antwortet Yahoo ohne Kurs, führt es das Paar
-            schlicht nicht. Bis T-44 waren beide dasselbe ``None``.
+            schlicht nicht.
         """
         symbol = f"{base}{quote}=X"
         try:

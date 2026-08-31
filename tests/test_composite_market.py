@@ -182,7 +182,7 @@ def test_ohne_jede_reihe_bleibt_es_ohne_wert() -> None:
 
 
 def test_eine_einzige_stoerung_faerbt_die_ganze_kette() -> None:
-    """**Die Aggregation, um die es in T-44 geht.**
+    """**Die Aggregation, um die es geht.**
 
     Zwei Quellen ohne Wert, aber nur eine davon gestört: Dann ist die Auskunft
     unvollständig, nicht negativ. Ohne diese Zeile wäre `disturbed` am Ende

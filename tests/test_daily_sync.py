@@ -40,8 +40,8 @@ class FakeProvider:
         """
         Args:
             rows: Die gelieferte Reihe; ``None`` heisst „keine Auskunft".
-            disturbed: Ob das Ausbleiben eine Stoerung war. Seit T-44 muss das
-                Double sagen, welchen Fall es meint.
+            disturbed: Ob das Ausbleiben eine Stoerung war. Das Double muss
+                sagen, welchen der beiden Faelle es meint.
         """
         self.calls: list[str | None] = []
         self._rows = rows

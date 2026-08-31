@@ -30,9 +30,9 @@ class _FakeFx:
         """
         Args:
             rate: Der gelieferte Kurs, oder ``None`` fuer „habe ich nicht".
-            disturbed: Ob das Ausbleiben eine **Stoerung** war. Seit T-44 muss
-                jedes Double sagen, welchen der beiden Faelle es meint — genau
-                das ist der Unterschied zwischen `404` und `502`.
+            disturbed: Ob das Ausbleiben eine **Stoerung** war. Jedes Double
+                muss sagen, welchen der beiden Faelle es meint — das ist der
+                Unterschied zwischen `404` und `502`.
         """
         self.rate = rate
         self.disturbed = disturbed
@@ -80,7 +80,7 @@ def test_eine_stoerung_ohne_cache_wirft_den_ausfall(repo: QuoteRepository) -> No
 
 
 def test_ein_nicht_gefuehrtes_paar_ist_kein_ausfall(repo: QuoteRepository) -> None:
-    """**Der Kern von T-44.** Die Quelle hat geantwortet: Sie fuehrt das Paar
+    """Die Quelle hat geantwortet: Sie fuehrt das Paar
     nicht. Das ist eine Auskunft und kein Ausfall — der Aufrufer bekommt
     deshalb einen anderen Fehler, aus dem der Router `404` statt `502` macht.
     """
@@ -295,7 +295,7 @@ def test_ohne_cache_und_ohne_stoerung_ist_es_ein_nicht_gefuehrtes_paar(
 def test_eine_einzige_stoerung_macht_die_ganze_kette_zum_ausfall(
     repo: QuoteRepository,
 ) -> None:
-    """**Der gemischte Fall, den Codex als Pflichtorakel verlangt hat.**
+    """**Der gemischte Fall — der eigentliche Pruefstein.**
 
     Eine Quelle war gestoert, die andere fuehrt das Paar schlicht nicht. Dann
     ist die Auskunft unvollstaendig: Vielleicht haette die gestoerte Quelle den

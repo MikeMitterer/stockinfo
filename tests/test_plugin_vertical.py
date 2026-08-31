@@ -813,10 +813,10 @@ def test_nur_eine_reihe_ist_eine_auskunft(answer, expected, disturbed: bool, why
     Nicht-Treffer fallen weiter und dürfen das Wasserzeichen nicht vorrücken.
     Eine leere Reihe bleibt `[]`: Sie ist eine Auskunft, nur eine leere.
 
-    **Seit T-44 prüft dieselbe Zeile eine zweite Aussage**: Von den drei
-    Nicht-Treffern ist nur `Unavailable` eine Störung. `NotFound` und
-    `NotResponsible` sind vollständige Antworten, nur negative — und der
-    Unterschied entscheidet weiter oben zwischen `404` und `502`.
+    **Dieselbe Zeile prüft eine zweite Aussage**: Von den drei Nicht-Treffern
+    ist nur `Unavailable` eine Störung. `NotFound` und `NotResponsible` sind
+    vollständige Antworten, nur negative — und der Unterschied entscheidet
+    weiter oben zwischen `404` und `502`.
     """
 
     class _Source(DailyCloseSource):

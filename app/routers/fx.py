@@ -52,9 +52,9 @@ def fx(service: FxDep, base: str, quote: str):
 
     **`404` und `502` sagen Verschiedenes.** Führt keine Quelle das Paar, ist
     die Kette vollständig durchgelaufen — das ist `404`. Ein `502` steht nur
-    dort, wo mindestens eine Quelle gestört war. Bis T-44 bekam beides denselben
-    Code, und ein Betreiber suchte den Fehler bei seiner Quelle statt in seiner
-    Datei.
+    dort, wo mindestens eine Quelle gestört war. Beides auf einen Code zu legen
+    schickt den Betreiber zur Fehlersuche bei einer Quelle, die nichts falsch
+    gemacht hat.
     """
     if not _CURRENCY.match(base) or not _CURRENCY.match(quote):
         return _error(422, REASON_INVALID_CURRENCY, base=base, quote=quote)

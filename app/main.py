@@ -45,6 +45,7 @@ from app.container import get_sources_config, warm_all_chains
 from app.plugin_loader import load_all
 from app.routers import dashboard, fields, fx, instruments, migration, quotes
 from app.routers.migration import get_gate
+from app.routers.validation import REASON_INVALID_ISIN, InvalidIsinError
 from app.scheduler import RefreshScheduler
 from app.sources_registry import close_all, register_loaded
 
@@ -218,6 +219,37 @@ async def identity_conflict(
     return JSONResponse(
         status_code=status.HTTP_409_CONFLICT,
         content=ErrorDetail(code=REASON_IDENTITY_CONFLICT, params=params).model_dump(),
+    )
+
+
+@app.exception_handler(InvalidIsinError)
+async def invalid_isin(request: Request, exc: InvalidIsinError) -> JSONResponse:
+    """Macht aus dem unbrauchbaren ISIN-Format einen `422` **mit Kennung**.
+
+    **Zentral, aus demselben Grund wie die beiden Handler daneben:** Die
+    Prüfung hängt als Abhängigkeit an jedem ISIN-Weg — `/quote/{isin}`, beide
+    Historien und der Aufnahmeweg. Ein Handler je Router wäre dieselbe Regel
+    viermal.
+
+    Der Rumpf steht **nicht** unter `detail`. Eine `HTTPException` verpackte
+    ihn dort, und ein Konsument müsste erst auspacken, was er typisiert
+    erwartet — genau das schließt `ErrorDetail` aus.
+
+    Args:
+        request: Der auslösende Request; nur für die Signatur nötig.
+        exc: Die Eingabe, die kein ISIN-Format hat.
+
+    Returns:
+        `422` mit `{code, params}` — dieselbe Form wie jede andere Ablehnung.
+    """
+    logger.info(REASON_INVALID_ISIN, path=request.url.path, isin=exc.isin)
+    return JSONResponse(
+        # `…_CONTENT` und nicht `…_ENTITY`: Letzteres ist in dieser
+        # Starlette-Fassung verworfen und warnt bei jedem Aufruf.
+        status_code=status.HTTP_422_UNPROCESSABLE_CONTENT,
+        content=ErrorDetail(
+            code=REASON_INVALID_ISIN, params={"isin": exc.isin}
+        ).model_dump(),
     )
 
 

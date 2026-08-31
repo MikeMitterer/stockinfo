@@ -1,4 +1,4 @@
-"""Was `404` und `502` an den Fehlerwegen bedeuten (T-44).
+"""Was `404` und `502` an den Fehlerwegen bedeuten.
 
 **Die Unterscheidung ist der ganze Ticketinhalt**, und sie lässt sich nur am
 echten HTTP-Weg prüfen: Ob die App einen sauberen Nichttreffer von einer
@@ -231,17 +231,52 @@ def test_eine_gestoerte_devisenquelle_neben_einem_nichttreffer_bleibt_502(
 
 
 def test_eine_unbrauchbare_isin_wird_mit_kennung_abgelehnt(client: TestClient) -> None:
-    """`422` mit Kennung statt deutschem Fließtext.
+    """`422` mit Kennung — **auf oberster Ebene**, nicht unter `detail`.
 
-    Das Dashboard erreicht diese Stelle nicht, weil es ISIN und Symbol selbst
-    unterscheidet — ein anderer Client tut das nicht, und ihm nützt
-    „Ungültiges ISIN-Format" nichts.
+    `ErrorDetail` sagt die unverschachtelte Form ausdrücklich zu: Ein Rumpf
+    unter `detail` zwänge jeden Konsumenten, erst auszupacken, was er dann doch
+    typisiert erwartet. Geprüft werden deshalb die **exakten** Schlüssel; eine
+    Prüfung auf `["code"]` allein wäre auch bei `{"detail": {...}, "code": …}`
+    grün.
     """
     response = client.get("/quote/BTC-EUR")
 
     assert response.status_code == 422, response.text
-    assert response.json()["detail"]["code"] == "invalid_isin_format"
-    assert response.json()["detail"]["params"] == {"isin": "BTC-EUR"}
+    assert set(response.json()) == {"code", "params"}, response.text
+    assert response.json() == {
+        "code": "invalid_isin_format",
+        "params": {"isin": "BTC-EUR"},
+    }
+
+
+def test_der_vertrag_sagt_dieselbe_form_zu_wie_die_laufzeit(
+    client: TestClient,
+) -> None:
+    """**Der veröffentlichte Vertrag und der Rumpf müssen übereinstimmen.**
+
+    Die Laufzeitform allein genügt nicht: Ein Konsument liest OpenAPI. Stand
+    dort weiter `HTTPValidationError`, behandelte er einen Fall, den es nicht
+    gibt, und den echten nicht — bei grünem Schnappschuss, denn der vergleicht
+    das Deklarierte mit sich selbst.
+
+    Geprüft wird an **jeder** Route, die diese gemeinsame Validierung benutzt:
+    Eine Zusage nur dort, wo der Fehler zuerst auffiel, veröffentlichte für
+    dieselbe Lage zwei Verträge.
+    """
+    schema = client.get("/openapi.json").json()
+    isin_routes = [
+        (path, method)
+        for path, methods in schema["paths"].items()
+        if "{isin}" in path
+        for method in methods
+    ]
+
+    assert isin_routes, "keine ISIN-Route gefunden — der Test prüfte nichts"
+
+    for path, method in isin_routes:
+        declared = schema["paths"][path][method]["responses"]["422"]
+        ref = declared["content"]["application/json"]["schema"]["$ref"]
+        assert ref.endswith("/ErrorDetail"), f"{method.upper()} {path}: {ref}"
 
 
 def test_ein_unbrauchbarer_waehrungscode_wird_mit_kennung_abgelehnt(

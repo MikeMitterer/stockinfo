@@ -309,11 +309,11 @@ export const de = {
         'Keine Quelle konnte nachsehen: {identifier}. Ob es das Papier gibt, ' +
         'ist damit offen.',
       /*
-       * **Dieselbe Trennung eine Ebene tiefer** (T-44). Die vier Kennungen
-       * darunter kommen paarweise: Einmal hat die Kette vollständig
-       * geantwortet und nichts gefunden, einmal war sie gestört. Wer beides
-       * gleich benennt, schickt den Betreiber zur Fehlersuche bei einer
-       * Quelle, die gar nichts falsch gemacht hat.
+       * **Dieselbe Trennung eine Ebene tiefer.** Die vier Kennungen darunter
+       * kommen paarweise: Einmal hat die Kette vollständig geantwortet und
+       * nichts gefunden, einmal war sie gestört. Wer beides gleich benennt,
+       * schickt den Betreiber zur Fehlersuche bei einer Quelle, die gar nichts
+       * falsch gemacht hat.
        */
       daily_series_not_found:
         'Für {identifier} führt keine der eingerichteten Quellen eine ' +

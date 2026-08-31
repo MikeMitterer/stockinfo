@@ -361,8 +361,8 @@ class DailyAdapter(_Adapter):
         Returns:
             Zeilen mit ``date``, ``close`` und ``currency`` als Wert; ``[]``,
             wenn es im Zeitraum nichts gibt. Ohne Wert sagt `disturbed`, ob
-            eine Störung vorlag — genau die Unterscheidung des Vertrags, die
-            bis T-44 hier eingeebnet wurde.
+            eine Störung vorlag — die Unterscheidung des Vertrags wird hier
+            nicht eingeebnet.
         """
         if identity is None:
             logger.info("daily_without_identity", symbol=symbol)
@@ -392,8 +392,8 @@ class DailyAdapter(_Adapter):
             )
         # Jeder Nicht-Treffer lässt die nächste Quelle ran. **Nur `Unavailable`
         # ist dabei eine Störung** — `NotFound` und `NotResponsible` sind
-        # vollständige Antworten, nur negative. Bis T-44 waren alle drei
-        # dasselbe `None`, und der Router machte daraus einen Ausfall.
+        # vollständige Antworten, nur negative. Alle drei gleich zu melden
+        # machte aus jedem Nichttreffer einen Ausfall.
         return SourceAnswer(disturbed=isinstance(answer, Unavailable))
 
 

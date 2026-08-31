@@ -25,9 +25,9 @@ export function useFx(): {
     try {
       result.value = await apiClient.get<FxRate>(fxPath(base, quote))
     } catch (err) {
-      // Wie bei der Tagesreihe: Der Grund steht seit T-44 als Kennung im
-      // Rumpf — ein „konnte nicht geladen werden" ohne ihn verschweigt,
-      // ob das Paar nicht geführt wird oder eine Quelle gestört war.
+      // Wie bei der Tagesreihe: Der Grund steht als Kennung im Rumpf — ein
+      // „konnte nicht geladen werden" ohne ihn verschweigt, ob das Paar nicht
+      // geführt wird oder eine Quelle gestört war.
       error.value = describeFailure(translate('errors.fx'), err)
       consola.error('useFx.convert', err)
     } finally {

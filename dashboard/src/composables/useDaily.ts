@@ -36,8 +36,8 @@ export function useDaily(): {
       daily.value = result
     } catch (err) {
       if (currentRequest !== requestId) return
-      // **Kategorie und Grund**, nicht nur die Kategorie: Seit T-44 nennt das
-      // Backend hier eine Kennung, und „konnte nicht geladen werden" allein
+      // **Kategorie und Grund**, nicht nur die Kategorie: Das Backend nennt
+      // hier eine Kennung, und „konnte nicht geladen werden" allein
       // verschweigt, ob es die Reihe nicht gibt oder eine Quelle gestört war.
       error.value = describeFailure(translate('errors.daily'), err)
       consola.error('useDaily.load', err)

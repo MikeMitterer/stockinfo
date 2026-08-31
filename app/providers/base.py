@@ -26,16 +26,14 @@ PayloadT = TypeVar("PayloadT")
 class SourceAnswer(Generic[PayloadT]):
     """Was eine Quelle geantwortet hat — **und ob dabei etwas gestört war**.
 
-    Bis T-44 kannte der Core an dieser Stelle zwei Ausgänge: einen Wert oder
-    ``None``. Damit fielen zwei Sachverhalte zusammen, die der Plugin-Vertrag
-    seit T-31 ausdrücklich trennt: „habe ich nicht" (`NotFound`,
-    `NotResponsible`) und „konnte nicht nachsehen" (`Unavailable`). Am Ende
-    einer Kette war nicht mehr erkennbar, welcher von beiden vorlag — und der
-    Router beantwortete beide mit `502`.
+    Der Plugin-Vertrag trennt zwei Sachverhalte, die ein blosses ``None``
+    zusammenwirft: „habe ich nicht" (`NotFound`, `NotResponsible`) und „konnte
+    nicht nachsehen" (`Unavailable`). Beide Ausgänge sehen am Ende einer Kette
+    gleich aus, bedeuten aber Verschiedenes.
 
     Der Unterschied ist keine Feinheit: Eine Kette, in der **jede** Quelle
     „habe ich nicht" gesagt hat, ist kein Ausfall. Sie hat vollständig
-    geantwortet, nur eben negativ.
+    geantwortet, nur eben negativ — und das ist ein `404`, kein `502`.
 
     Attributes:
         value: Die Antwort, oder ``None`` wenn keine Quelle eine hatte.

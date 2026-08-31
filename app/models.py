@@ -983,6 +983,24 @@ IDENTITY_CONFLICT_RESPONSE: dict[int | str, dict[str, object]] = {
     }
 }
 
+INVALID_ISIN_RESPONSE: dict[int | str, dict[str, object]] = {
+    422: {
+        "model": ErrorDetail,
+        "description": (
+            "Die Eingabe hat nicht das Format einer ISIN "
+            "(`code: invalid_isin_format`, `params.isin` nennt sie). Der Rumpf "
+            "steht **nicht** unter `detail` — wie jede andere Ablehnung trägt "
+            "er `code` und `params` auf oberster Ebene"
+        ),
+    }
+}
+"""Die `422`-Zusage jedes Weges, der eine ISIN im Pfad entgegennimmt.
+
+**Die Zusage gehört an jede dieser Routen, nicht an eine.** Die Prüfung hängt
+als gemeinsame Abhängigkeit daran; wer sie nur dort deklariert, wo sie zuerst
+auffiel, veröffentlicht für dieselbe Lage zwei verschiedene Verträge.
+"""
+
 INSTRUMENT_NOT_FOUND_RESPONSE: dict[int | str, dict[str, object]] = {
     404: {
         "model": ErrorDetail,

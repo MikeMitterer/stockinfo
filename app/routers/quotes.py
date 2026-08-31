@@ -25,6 +25,7 @@ from app.container import get_cached_quote_service, get_daily_history_service
 from app.models import (
     IDENTITY_CONFLICT_RESPONSE,
     INSTRUMENT_NOT_FOUND_RESPONSE,
+    INVALID_ISIN_RESPONSE,
     SYMBOL_CONFLICT_RESPONSE,
     DailyPoint,
     ErrorDetail,
@@ -59,9 +60,9 @@ REASON_UNSUPPORTED_TYPE = "unsupported_instrument_type"
 # hat nichts falsch gemacht und kann nichts besser machen.
 REASON_CURRENCY_MISMATCH = "quote_currency_mismatch"
 
-# Keine Quelle fuehrt fuer dieses Papier eine Tagesreihe (T-44). **Kein
-# Ausfall**: Die Kette ist vollstaendig durchgelaufen, jede Quelle hat
-# geantwortet — nur hat keine die Reihe.
+# Keine Quelle fuehrt fuer dieses Papier eine Tagesreihe. **Kein Ausfall**:
+# Die Kette ist vollstaendig durchgelaufen, jede Quelle hat geantwortet — nur
+# hat keine die Reihe.
 REASON_NO_DAILY_SERIES = "daily_series_not_found"
 
 # Mindestens eine befragte Quelle war gestoert. Erst das ist ein `502`.
@@ -125,8 +126,8 @@ def _unsupported_type(exc: UnsupportedInstrumentTypeError) -> JSONResponse:
 
 
 # Was die beiden Daily-Routen zusagen. **Beide dasselbe**: Der Unterschied
-# zwischen „gibt es nicht" und „konnte nicht nachsehen" hängt seit T-44 an der
-# Kette, nicht am Eintrittsweg.
+# zwischen „gibt es nicht" und „konnte nicht nachsehen" hängt an der Kette,
+# nicht am Eintrittsweg.
 DAILY_ERROR_RESPONSES = {
     404: {"model": ErrorDetail, "description": "Keine Quelle führt diese Reihe"},
     502: {"model": ErrorDetail, "description": "Eine befragte Quelle war gestört"},
@@ -210,7 +211,11 @@ def quote_by_symbol(
 @router.get(
     "/quote/{isin}",
     response_model=QuoteResponse,
-    responses={**IDENTITY_CONFLICT_RESPONSE, **INSTRUMENT_NOT_FOUND_RESPONSE},
+    responses={
+        **IDENTITY_CONFLICT_RESPONSE,
+        **INSTRUMENT_NOT_FOUND_RESPONSE,
+        **INVALID_ISIN_RESPONSE,
+    },
 )
 def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     """Liefert den Kurs zu einer ISIN (bevorzugt Xetra/EUR)."""
@@ -251,6 +256,7 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     responses={
         **IDENTITY_CONFLICT_RESPONSE,
         **INSTRUMENT_NOT_FOUND_RESPONSE,
+        **INVALID_ISIN_RESPONSE,
         **DAILY_ERROR_RESPONSES,
     },
 )
@@ -287,11 +293,9 @@ def daily_history_by_symbol(
     try:
         return service.get_daily(symbol=symbol, period=period)
     except DailySeriesNotFoundError:
-        # **Seit T-44 kann auch dieser Pfad unterscheiden.** Die frühere
-        # Begründung — der Provider sage nicht, ob er das Symbol nicht kennt
-        # oder gerade nicht antwortet — galt, solange beides als `None` ankam.
-        # Jetzt trägt die Kette die Unterscheidung bis hierher, und ein `404`
-        # ist keine Vermutung mehr.
+        # **Auch dieser Pfad unterscheidet.** Die Kette trägt bis hierher,
+        # ob keine Quelle die Reihe führt oder ob eine gestört war; ein `404`
+        # ist damit keine Vermutung über den Anbieter.
         return _daily_error(404, REASON_NO_DAILY_SERIES, symbol)
     except QuoteUnavailableError:
         return _daily_error(502, REASON_DAILY_UNAVAILABLE, symbol)
@@ -319,7 +323,11 @@ def quote_history_by_symbol(
 @router.get(
     "/quote/{isin}/history",
     response_model=list[QuotePoint],
-    responses={**IDENTITY_CONFLICT_RESPONSE, **INSTRUMENT_NOT_FOUND_RESPONSE},
+    responses={
+        **IDENTITY_CONFLICT_RESPONSE,
+        **INSTRUMENT_NOT_FOUND_RESPONSE,
+        **INVALID_ISIN_RESPONSE,
+    },
 )
 def quote_history(
     isin: IsinPath,

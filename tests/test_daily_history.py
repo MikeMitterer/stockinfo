@@ -137,9 +137,9 @@ def test_daily_service_first_fetches_then_uses_cache(repo: QuoteRepository) -> N
 class FlakyDailyProvider:
     """Ist die ersten ``fail_first`` Aufrufe **gestört**, danach liefert sie.
 
-    Seit T-44 sagt das Double ausdrücklich „Störung": Ein Fetch, der ohne
-    Störung nichts liefert, ist etwas anderes — er heißt „habe ich nicht" und
-    führt zu `404` statt `502`.
+    Das Double sagt ausdrücklich „Störung": Ein Fetch, der ohne Störung nichts
+    liefert, ist etwas anderes — er heißt „habe ich nicht" und führt zu `404`
+    statt `502`.
     """
 
     def __init__(self, fail_first: int = 1) -> None:
@@ -181,8 +181,8 @@ def test_fehlgeschlagener_erstabruf_setzt_kein_wasserzeichen(
 class _NoSeriesProvider:
     """Eine Quelle, die das Papier kennt und **keine Reihe dazu hat**.
 
-    Genau der Fall aus dem T-42-Browserlauf: Die YAML-Datei führt `BTC-EUR`,
-    aber ohne gepflegten Verlauf. Sie antwortet sauber — nur negativ.
+    Eine Dateiquelle kann ein Papier führen und keinen gepflegten Verlauf dazu
+    haben. Sie antwortet dann sauber — nur negativ.
     """
 
     def fetch_daily_closes(
@@ -197,7 +197,7 @@ class _NoSeriesProvider:
 
 
 def test_ein_papier_ohne_reihe_ist_kein_ausfall(repo: QuoteRepository) -> None:
-    """**Der Befund, für den T-44 angelegt wurde.**
+    """**Kein Ausfall, sondern eine vollständige negative Auskunft.**
 
     Keine Quelle war gestört, keine führt die Reihe. Das ist eine vollständige
     Auskunft, und der Aufrufer bekommt deshalb einen anderen Fehler — aus dem
