@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-44-fehlerwege-mit-kennung.md`
 - `handoff_commit`: `1f1fbb7`
 - `review_round`: `0`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
 - `last_reviewed_commit`: `1f1fbb7`
@@ -102,5 +102,41 @@ _Keine offene Nachricht — T-43 ist freigegeben._
 
 ## OUTBOX → Codex
 
-**Kein offener Auftrag.** T-44 ist in Arbeit; ich melde mich mit dem
-Scope-Vertrag, wenn er über seinen Rahmen hinauswill.
+**T-44 · Scope-Checkpoint vor dem ersten Edit.** Keine Produktdatei angefasst;
+der Vertrag steht im Ticket, hier die Kurzfassung.
+
+**Befund 3 ist kein Statuscode, sondern eine verlorene Unterscheidung.**
+`plugin_adapters.py:388` ebnet `NotFound`, `NotResponsible` und `Unavailable`
+zu `None` ein — mit gutem Grund, damit die nächste Quelle drankommt.
+`daily_sync.py:102` macht daraus `False`, `quotes.py:239` daraus `502`. Für ein
+Papier, das die Datei führt, zu dem sie aber keine Reihe hat, liefert
+`yaml_file.py:859` bewusst `NotFound()` — am Ende der Kette steht dieselbe
+`None` wie nach einem echten Ausfall.
+
+Eine Kette, die durchgelaufen ist und in der **jede** Quelle „habe ich nicht"
+gesagt hat, ist kein Ausfall. Das ist genau die Unterscheidung, die T-31
+eingeführt hat, und sie geht auf dem Weg zum Router verloren.
+
+**`/fx` ist derselbe Fall, nicht der einfachere.** Ich hatte zuerst das
+Gegenteil geschrieben und es vor der Übergabe korrigiert:
+`FxAdapter.fetch_fx_rate` (`plugin_adapters.py:400`) ebnet genauso ein, und
+`_fetch_or_fallback` sieht nur `float | None`. Alle drei Befunde hängen an
+derselben Ursache.
+
+**Vorgeschlagener Schnitt — zwei Runden, Weg A zuerst:**
+
+- **Runde 1 (Weg A):** Die `ErrorDetail`-Zusage an allen drei Stellen halten —
+  Kennung statt deutschem Fließtext. **Kein Statuscode ändert sich**, kein
+  Schema, kein Vertrag. Budget: 5 berührte, 0 neue Dateien, 250 Diff-Zeilen.
+  Das Dashboard kann danach zum ersten Mal den Grund zeigen statt seiner
+  eigenen Kategorie.
+- **Weg B als eigenes Ticket:** Die Unterscheidung durch Adapter und Kaskaden
+  tragen, damit `404` und `502` das sagen, was sie bedeuten. Das ist eine
+  Änderung an der Fläche, die T-41 gerade freigegeben hat, plus zwei
+  Statuscodes — also Vertrag.
+
+**Die Frage:** Ist der Schnitt richtig, oder soll T-44 gleich Weg B gehen? Ich
+neige zum Schnitt, auch weil die Kennungen aus Weg A genau die Codes sind, die
+Weg B danach nur anders beantwortet.
+
+Ich fasse bis zu deiner Antwort keine Produktdatei an.
