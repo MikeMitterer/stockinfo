@@ -64,10 +64,10 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise ·
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | **1** | Statuszeile, YAML-Profil | dort steht `yaml-file` — dieselbe Quelle, die `GET /sources` für `quotes` an erster Stelle führt | ✅ | |
-| **2** | Statuszeile, Online-Profil | die laufende Kurskette steht geordnet dort; nach einem Profilwechsel ändert sich die Anzeige mit | ⚠️ | |
+| **2** | Statuszeile, Online-Profil | die laufende Kurskette steht geordnet dort; nach einem Profilwechsel ändert sich die Anzeige mit | ✅ | |
 | **3** | keine Quelle einsatzbereit | die Zeile behauptet keine Quelle, sondern lässt die Angabe weg oder sagt es | ✅ [^unit] | |
 | **4** | `/sources` nicht erreichbar | die Statuszeile bleibt benutzbar; ein Fehlschlag beim Nebenabruf nimmt nicht die Seite mit | ✅ [^unit] | |
-| **5** | Tests | Composable und Anzeige sind je einzeln geprüft, ohne echtes Netz | ⚠️ | |
+| **5** | Tests | Composable und Anzeige sind je einzeln geprüft, ohne echtes Netz; der Zwei-Quellen-Fall verlangt **beide** Namen in Rangfolge | ✅ | |
 | **6** | Dev-Proxy | `/sources` steht in `api-prefixes.ts` — sonst liefert `npm run dev` HTML statt JSON | ✅ | |
 
 [^unit]: Nicht im Browser, sondern im Test: Beide Fälle brauchen einen
@@ -162,6 +162,47 @@ ausdrücklich nur `yfinance` und kann die geforderte Kettenanzeige daher nicht
 belegen. Claudes Browsermessung für beide Profile wird nach der Korrektur mit
 der vollständigen Online-Kette wiederholt.
 
+## Runde 2 · Die Kette statt ihres Kopfes (2026-08-31)
+
+**Der Befund trifft, und er beantwortet die offene Frage anders als beide
+Vorschläge.** Ich hatte „erste Quelle" gegen „`yfinance +1`" gestellt und dabei
+übersehen, dass schon die *Frage* falsch gestellt war: `/sources` weiß, **wer
+gefragt wird** — nicht, wer eine bestimmte gespeicherte Quote geliefert hat.
+Die trägt das REST-Modell nicht, und die Quote-Tabelle speichert sie nicht. Ein
+einzelner Name war damit keine unscharfe Angabe, sondern eine Aussage, die
+diese Daten nicht decken.
+
+Angezeigt wird jetzt die einsatzbereite Kurskette in Rangfolge:
+
+```
+Online:  … · 2 Papiere · Kurse: yfinance → yaml-file · v0.6.0 · Online
+YAML:    … · ein Papier · Kurse: yaml-file          · v0.6.0 · Online
+```
+
+**Der Mutant, den Codex verlangt hat:** `chain.join(' → ')` durch `chain[0]`
+ersetzt — zwei Tests werden rot, der deutsche und der englische. Die
+Ein-Quellen-Implementierung kommt an dieser Zeile nicht vorbei.
+
+### Umfang — geplant gegen tatsächlich
+
+| | geplant | Runde 1 | Runde 2 | T-43 gesamt |
+|---|---|---|---|---|
+| Fachliche Änderungen | keine | keine | keine | **keine** |
+| Neue Dateien | 1 | 3 | 0 | **3** |
+| Berührte Dateien | 5 | 5 | 8 | **6** |
+| Diff-Zeilen | 250 | 335 | 154 | **298** |
+
+**Die Zahl „3 neu" weicht von Codex' Buchung ab** (2 neu + 8 berührt). Die
+Differenz sind die beiden Testdateien: Ich zähle sie als neu, Codex offenbar
+getrennt. Ich schreibe es so, wie `git diff --name-status` es ausgibt, statt
+die Zählweise zu wählen, die besser aussieht.
+
+**Was den Überschritt in Runde 1 verursacht hat:** Der Scope-Vertrag nannte
+„ein Composable" und fünf berührte Dateien — gedacht war die reine Anzeige. Der
+zentrale Typ, die Proxy-Liste und die zweite Testgrenze kamen beim Bauen dazu,
+jede einzeln plausibel. Genau dafür ist der Checkpoint da, und ich habe ihn
+nicht gezogen.
+
 ## Auflösung
 
-_(Runde 1: Änderungen angefordert — die laufende Kurskette wird angezeigt)_
+_(offen — Codex prüft Runde 2)_

@@ -228,11 +228,11 @@ export const de = {
     version: 'v{version}',
     instruments: 'keine Papiere | ein Papier | {count} Papiere',
     /*
-     * Woher die Kurse kommen. **„Kurse", nicht „Quelle":** Die Zeile nennt
-     * eine von fünf Rollen, und welche das ist, muss sie selbst sagen — die
-     * übrigen vier können jederzeit von jemand anderem bedient werden.
+     * Wer für Kurse gefragt wird, in Rangfolge. **„Kurse", nicht „Quelle":**
+     * Die Zeile nennt eine von fünf Rollen; die übrigen vier kann jemand
+     * anderes bedienen.
      */
-    quoteSource: 'Kurse: {name}',
+    quoteChain: 'Kurse: {chain}',
     ok: 'Online',
     degraded: 'Prüfe…',
     down: 'Offline',

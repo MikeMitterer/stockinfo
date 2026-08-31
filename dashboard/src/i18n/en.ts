@@ -217,7 +217,7 @@ export const en = {
     version: 'v{version}',
     instruments: 'no instruments | one instrument | {count} instruments',
     /* Which role this names — see the German file. */
-    quoteSource: 'Quotes: {name}',
+    quoteChain: 'Quotes: {chain}',
     ok: 'Online',
     degraded: 'Checking…',
     down: 'Offline',

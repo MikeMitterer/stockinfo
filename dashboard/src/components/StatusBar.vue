@@ -17,11 +17,8 @@ const props = defineProps<{
   version: string | null
   /** Anzahl der geführten Papiere — der aktive Kontext dieser App. */
   instrumentCount?: number
-  /**
-   * Die Quelle, von der die angezeigten Kurse kommen — der Kopf der Rolle
-   * `quotes`. `null`, solange sie unbekannt ist oder keine bereitsteht.
-   */
-  quoteSource?: string | null
+  /** Die einsatzbereite Kurskette in Rangfolge; leer, wenn keine bekannt ist. */
+  quoteChain?: string[]
 }>()
 
 const emit = defineEmits<{
@@ -43,10 +40,9 @@ const backendState = computed<BackendState>(() => {
 })
 
 /*
- * Der Kontext ist **eine** Zeile aus mehreren Angaben, nicht mehrere Felder:
- * Das Fundament nimmt einen Text. Fehlt eine Angabe, fällt sie samt ihrem
- * Trenner weg — eine Zeile mit einem Trenner ins Leere sieht nach einem
- * Ladefehler aus.
+ * Der Kontext ist **eine** Zeile aus mehreren Angaben: Das Fundament nimmt
+ * einen Text. Fehlt eine Angabe, fällt sie samt ihrem Trenner weg — ein
+ * Trenner ins Leere sieht nach einem Ladefehler aus.
  */
 const context = computed(() => {
   const parts: string[] = []
@@ -55,8 +51,9 @@ const context = computed(() => {
       t('status.instruments', props.instrumentCount, { named: { count: props.instrumentCount } }),
     )
   }
-  if (props.quoteSource) {
-    parts.push(t('status.quoteSource', { name: props.quoteSource }))
+  const chain = props.quoteChain ?? []
+  if (chain.length > 0) {
+    parts.push(t('status.quoteChain', { chain: chain.join(' → ') }))
   }
   return parts.join(' · ')
 })

@@ -25,7 +25,6 @@ export const apiPrefixes = [
   '/operational',
   '/ready',
   '/refresh',
-  // Die Quellenketten — seit T-43 liest sie auch die Statuszeile.
   '/sources',
   '/docs',
   '/redoc',

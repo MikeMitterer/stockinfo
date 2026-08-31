@@ -25,35 +25,39 @@ function answerWith(entries: Array<{ name: string; position: number; configured:
 }
 
 describe('useSources', () => {
-  it('nennt die erste einsatzbereite Quelle der Kursrolle', async () => {
+  /*
+   * **Beide Namen, und in dieser Reihenfolge.** `/sources` beschreibt, wer
+   * gefragt wird — nicht, wer eine gespeicherte Quote geliefert hat. Ein
+   * einzelner Name waere eine Aussage, die diese Daten nicht decken.
+   */
+  it('nennt die einsatzbereite Kurskette in Rangfolge', async () => {
     answerWith([
       { name: 'yfinance', position: 1, configured: true },
       { name: 'yaml-file', position: 2, configured: true },
     ])
-    const { quoteSource, load } = useSources()
+    const { quoteChain, load } = useSources()
     await load()
 
-    expect(quoteSource.value).toBe('yfinance')
+    expect(quoteChain.value).toEqual(['yfinance', 'yaml-file'])
   })
 
   /*
-   * **Nicht die erste konfigurierte, sondern die erste einsatzbereite.** Eine
-   * Quelle, die nicht arbeiten kann, liefert auch keinen Kurs — sie zu nennen
-   * waere die Umkehrung dessen, wofuer die Zeile da ist.
+   * Eine Quelle, die nicht arbeiten kann, wird zwar gefragt, antwortet aber
+   * nicht — sie gehoert nicht in eine Zeile, die sagt, wer liefert.
    */
-  it('ueberspringt eine Quelle, die nicht arbeiten kann', async () => {
+  it('laesst eine Quelle weg, die nicht arbeiten kann', async () => {
     answerWith([
       { name: 'openfigi', position: 1, configured: false },
       { name: 'yaml-file', position: 2, configured: true },
     ])
-    const { quoteSource, load } = useSources()
+    const { quoteChain, load } = useSources()
     await load()
 
-    expect(quoteSource.value).toBe('yaml-file')
+    expect(quoteChain.value).toEqual(['yaml-file'])
   })
 
   /*
-   * Die Reihenfolge steht in `position`, nicht in der Reihenfolge der Liste.
+   * Die Rangfolge steht in `position`, nicht in der Reihenfolge der Antwort.
    * Ohne die Sortierung haenge die Anzeige daran, wie der Server serialisiert.
    */
   it('folgt der Rangfolge, nicht der Reihenfolge der Antwort', async () => {
@@ -61,35 +65,31 @@ describe('useSources', () => {
       { name: 'yaml-file', position: 2, configured: true },
       { name: 'yfinance', position: 1, configured: true },
     ])
-    const { quoteSource, load } = useSources()
+    const { quoteChain, load } = useSources()
     await load()
 
-    expect(quoteSource.value).toBe('yfinance')
+    expect(quoteChain.value).toEqual(['yfinance', 'yaml-file'])
   })
 
   it('behauptet keine Quelle, wenn keine bereitsteht', async () => {
     answerWith([{ name: 'openfigi', position: 1, configured: false }])
-    const { quoteSource, load } = useSources()
+    const { quoteChain, load } = useSources()
     await load()
 
-    expect(quoteSource.value).toBeNull()
+    expect(quoteChain.value).toEqual([])
   })
 
-  /*
-   * Ein Nebenabruf darf die Seite nicht mitnehmen: `load()` faengt den Fehler,
-   * und die Angabe fehlt einfach.
-   */
+  /* Ein Nebenabruf darf die Seite nicht mitnehmen: `load()` faengt den Fehler. */
   it('bleibt still, wenn /sources nicht antwortet', async () => {
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new Error('offline')))
-    const { quoteSource, load } = useSources()
+    const { quoteChain, load } = useSources()
 
     await expect(load()).resolves.toBeUndefined()
-    expect(quoteSource.value).toBeNull()
+    expect(quoteChain.value).toEqual([])
   })
 
   /*
-   * Die Gegenprobe zur Rollenwahl: Eine Devisenquelle an erster Stelle darf
-   * die Kursangabe nicht besetzen. Ohne diesen Fall waere der Filter auf
+   * Die Gegenprobe zur Rollenwahl: Ohne diesen Fall waere der Filter auf
    * `role === 'quotes'` entbehrlich, und niemand haette es gemerkt.
    */
   it('nimmt keine Quelle aus einer anderen Rolle', async () => {
@@ -109,9 +109,9 @@ describe('useSources', () => {
         ),
       ),
     )
-    const { quoteSource, load } = useSources()
+    const { quoteChain, load } = useSources()
     await load()
 
-    expect(quoteSource.value).toBe('yfinance')
+    expect(quoteChain.value).toEqual(['yfinance'])
   })
 })

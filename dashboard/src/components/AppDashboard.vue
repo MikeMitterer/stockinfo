@@ -43,7 +43,7 @@ import { buildFieldOptions } from '../utils/fieldOptions'
 const { t } = useI18n()
 
 const { env, load: loadEnv } = useEnvironment()
-const { quoteSource, load: loadSources } = useSources()
+const { quoteChain, load: loadSources } = useSources()
 const { data: exchanges, load: loadExchanges } = useExchanges()
 const fxCurrencies = computed(() => currenciesFromExchanges(exchanges.value))
 const { instruments, load: loadInstruments, error: instrumentsError } = useInstruments()
@@ -275,7 +275,7 @@ function closeChart(): void {
         :status="healthStatus"
         :version="healthVersion"
         :instrument-count="instruments.length"
-        :quote-source="quoteSource"
+        :quote-chain="quoteChain"
         @open-status="activeTab = 'settings'"
       />
     </template>

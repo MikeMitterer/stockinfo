@@ -5,35 +5,35 @@ import { apiClient } from '../api/client'
 import type { SourcesInfo } from '../types'
 
 /**
- * Woher die angezeigten Kurse kommen.
+ * Die konfigurierten Quellenketten.
  *
- * **Ein Nebenabruf, kein tragender.** Die Statuszeile ist eine Auskunft; wenn
- * `/sources` nicht antwortet, bleibt sie ohne diese Angabe stehen, statt einen
- * Fehler zu melden. Deshalb gibt es hier kein `error` nach außen — ein
- * Fehlschlag ist im Protokoll sichtbar und im UI schlicht die fehlende Angabe.
+ * **Ein Nebenabruf, kein tragender.** Antwortet `/sources` nicht, fehlt die
+ * Angabe; es gibt kein `error` nach außen.
  */
 export function useSources(): {
   sources: Ref<SourcesInfo | null>
-  quoteSource: ComputedRef<string | null>
+  quoteChain: ComputedRef<string[]>
   load: () => Promise<void>
 } {
   const sources = ref<SourcesInfo | null>(null)
 
   /**
-   * Die **erste einsatzbereite** Quelle der Rolle `quotes`.
+   * Die einsatzbereiten Quellen der Rolle `quotes`, in ihrer Rangfolge.
    *
-   * Nicht einfach die erste konfigurierte: Eine Quelle, die nicht arbeiten
-   * kann, liefert auch keinen Kurs — sie zu nennen wäre die genaue Umkehrung
-   * dessen, wofür diese Zeile da ist. Ist keine bereit, steht dort nichts;
-   * eine Zeile, die eine Quelle behauptet, wo keine antwortet, ist schlechter
-   * als eine ohne Angabe.
+   * **Die Kette, nicht ihr Kopf.** `/sources` beschreibt, wer gefragt wird —
+   * nicht, wer eine bestimmte gespeicherte Quote geliefert hat; die Herkunft
+   * einer einzelnen Antwort führt weder das REST-Modell noch die Tabelle. Ein
+   * einzelner Name wäre deshalb eine Aussage, die diese Daten nicht decken.
+   *
+   * Nicht einsatzbereite Quellen fehlen: Sie werden zwar gefragt, können aber
+   * nicht antworten.
    */
-  const quoteSource = computed<string | null>(() => {
-    const entries = (sources.value?.sources ?? [])
+  const quoteChain = computed<string[]>(() =>
+    (sources.value?.sources ?? [])
       .filter((entry) => entry.role === 'quotes' && entry.configured)
       .sort((first, second) => first.position - second.position)
-    return entries[0]?.name ?? null
-  })
+      .map((entry) => entry.name),
+  )
 
   async function load(): Promise<void> {
     try {
@@ -44,5 +44,5 @@ export function useSources(): {
     }
   }
 
-  return { sources, quoteSource, load }
+  return { sources, quoteChain, load }
 }
