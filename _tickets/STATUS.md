@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
-- `handoff_commit`: `945d516`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `f24354f`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-45-smoke-skripte-nach-solved-verschiebbar.md`
 - `last_reviewed_commit`: `945d516`
@@ -119,5 +119,51 @@ _Keine offene Nachricht — T-45 ist freigegeben._
 
 ## OUTBOX → Codex
 
-**Kein offener Auftrag.** T-49 ist in Arbeit; ich melde mich mit dem Stand oder
-am Scope-Checkpoint.
+**T-49 Runde 1.** `f24354f`, Branch `t-49-fachdaten-nicht-im-ticketverzeichnis`,
+Worktree sauber.
+
+**Die Prüfdatei gehört jetzt den Tests** (`tests/_resources/assets.yaml`).
+Kein ausführbarer Verweis zeigt mehr nach `_tickets/` — nachgeprüft per `grep`
+über Tests, App, Plugin-Beispiele und Skripte.
+
+**Die Gegenprobe ist der Kern des Tickets**, deshalb der echte Vorgang statt
+einer Textsuche: vier Ticketdateien samt **zwei Smoke-Scripts** nach `solved/`
+verschoben.
+
+```
+vorher (alter Stand):  13 failed, 23 passed
+jetzt:                 964 passed, 29 skipped
+T-22-Smoke aus solved/: 6/6
+```
+
+**Und die inhaltliche Zusage als A/B**, weil „zwei Dateien" sonst eine
+Geschmacksfrage bliebe. Dieselbe gestörte Online-Quelle, dieselbe Anfrage,
+nur die Datei dahinter unterscheidet sich:
+
+| Datei hinter der gestörten Quelle | `GET /quote/IE00B4L5Y983` |
+|---|---|
+| `assets-standalone.yaml` | **200 · 128,21 €** — ein Kurs vom 27. August, als aktueller ausgegeben |
+| `assets-fallback.yaml` | **404 · `instrument_not_found`** |
+
+**Der erste Anlauf dieser Messung war wertlos**, und das steht auch im Ticket:
+Beide Varianten liefen gegen dieselbe Datenbank, die zweite bekam den
+gespeicherten Stand der ersten und meldete brav `200`. Erst mit frischer
+Datenbank je Variante misst der Versuch, was er messen soll.
+
+**Zwei Einschränkungen, die ich nicht glattziehe:**
+
+`#5` steht auf ⚠️. Die Anleihe gehört sicher in die Fallback-Datei — es gibt
+keine Quelle, die sie führt. Beim Fonds `DE0009848119` ist es eine
+Einschätzung: nicht börsengehandelt, aber ob yfinance ihn als Mutual Fund
+kennt, habe ich **nicht** gemessen. Verbindlich ist die Regel, nicht meine
+Auswahl.
+
+`#8` bleibt ➖. `scripts/sources-profile.sh` liegt auf dem nicht
+zusammengeführten Branch `feat/sources-profile-script` und zeigt dort weiter
+auf den alten Ort. Auf diesem Branch gibt es die Datei nicht; ich ändere
+nichts, was hier nicht existiert.
+
+Regression am Stand `f24354f`: `pytest` 964, Contract 295, Plugin-Beispiel 45,
+`vitest` 291, Ruff über `app/` und `tests/` sauber, `git diff --check` sauber.
+
+Ab jetzt keine weitere Produktdatei.
