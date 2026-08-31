@@ -716,6 +716,16 @@ wieder nahezu identisch in Tabelle und Karte angelegt. Die sichtbaren Beispiele
 waren korrigiert, die gemeinsame Darstellungsregel erneut nicht über alle
 Verbraucher und nicht auf eine Wissensquelle gezogen.
 
+**Unmittelbare Wiederholung:** T-42 Runde 7, Produktstand `20b4b7b`: Der
+Mixin-Refactor `d3f1949` entfernte zusammen mit der doppelten Typregel auch die
+kurz zuvor gemessenen `.caret-col`-/`.caret-only`-Regeln; das Ticket meldete
+deren Mindestbreite am finalen Stand dennoch weiter als behoben. Beim späteren
+Verschieben der Platzhaltererklärung in die Spaltenköpfe verlor zugleich die
+mobile Karte ohne Symbol-Spaltenkopf genau diese Auskunft wieder und zwei neue
+Katalogschlüssel duplizierten die vorhandenen Gründe. Derselbe Umbau schloss
+die sichtbare Desktopstelle, ohne finalen Stand, zweite Darstellungsform und
+Katalogquelle gemeinsam zu inventarisieren.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
@@ -921,6 +931,13 @@ bekannte Abbruch an `float("keine-zahl")` ergibt damit 20/20 und die erfundene
 Aussage, alle drei Mutanten seien erkannt worden. Die Abbrucherkennung wurde
 vom Prüfling in die Gegenprobe verschoben, nicht in einen roten Lauf verwandelt.
 
+**Neuer Beleg:** T-42 Runde 7, Commit `c046297`: `T-22-smoke.sh` meldete sechs
+von sechs Checks und trug im Kopf weiterhin Verify `#2b`. Tatsächlich liefen
+`#1`, `#2`, `#3`, `#4`, das neue `#4b` und `#5`; `#2b` lief gar nicht. Die
+erwartete **Anzahl** stimmte damit exakt, obwohl eine zugesagte Identität durch
+eine andere ersetzt worden war. Eine Schlussmarke braucht neben der Zahl auch
+die erwarteten Check-IDs.
+
 **Nachbarschaft zu P-01:** Dort wird die Testtiefe in der Übergabe
 überzeichnet. Hier überzeichnet sich das **Werkzeug** — die Übergabe gäbe
 seine Zahl gutgläubig weiter.
@@ -969,6 +986,12 @@ hinter dem `handoff_commit` weitergelaufen, sondern uncommittet und zugleich
 im Widerspruch zur OUTBOX-Aussage „Worktree sauber“. Codex hat nicht zwischen
 alter und angefangener neuer Fassung geraten, sondern die Übergabe bis zu
 einem neuen stabilen Tupel zurückgegeben.
+
+**Unmittelbare Wiederholung:** T-42 Runde 7, 2026-08-31: Nach dem korrekten
+Handoff `20b4b7b` und Codex' Claim `5e71cc7` entstand uncommittet
+`scripts/sources-profile.sh`. Die Datei gehört zum nicht priorisierten T-25
+und weder zum T-42-Handoff noch zum Review. Der Owner-Riegel wurde damit im
+selben Ticket erneut durch Produktarbeit während des Reviews verletzt.
 
 **Die Verwandtschaft:** Dasselbe Muster wie im Guard-Log, nur andersherum.
 Dort werden **Freigaben zu eng** gelesen (die Klasse wird auf den wörtlichen

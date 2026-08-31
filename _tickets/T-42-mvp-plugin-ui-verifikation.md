@@ -543,6 +543,29 @@ hätte er eine echte Regression an derselben Stelle nicht mehr melden können.
 | T-35-Smoke, Profil O | 20/20 |
 | T-22-Smoke | 6/6 |
 
+### Codex-Review · Runde 7
+
+Der Laufstand ist technisch breit grün: Codex bestätigt unabhängig
+`make test` mit 947 + 295 + 45 + 278 Tests, Build, Ruff, T-35 online 20/20,
+T-35 YAML 20/20 und den aktuellen T-22-Lauf mit nominell 6/6. Freigegeben ist
+der Stand dennoch nicht:
+
+- Die mobile Karte hat keinen Symbol-Spaltenkopf und verlor mit dem Ausbau von
+  `EmptyReason` daher die zugängliche Erklärung des Symbol-Platzhalters. Die
+  neuen `hints.*Dash`-Texte sind zugleich eine zweite Katalogquelle neben den
+  vorhandenen `table.no*Reason`-Texten.
+- Der Typ-Mixin-Commit `d3f1949` entfernte unbeabsichtigt auch die zuvor
+  gemessenen `.caret-col`-/`.caret-only`-Regeln. Das Ticket belegt damit einen
+  alten Zwischenstand, nicht den finalen Handoff.
+- T-22s Zähler ist vollständig, seine Identitäten sind es nicht: `#2b` fehlt,
+  während das neue `#4b` nur den konfigurierten Tippfehlernamen sieht und die
+  behauptete leere Laufzeitkette nicht misst.
+- Vier neue Produkt-/Testkommentare tragen wieder Rundenchronik oder
+  Laufmesswerte statt nur die dauerhafte Invariante.
+
+Die generelle Verschiebbarkeit aller Smoke-Skripte ist nicht Teil der
+UI-Korrektur; sie steht separat in T-45.
+
 ## Nicht-Ziele
 
 - Keine neue Asset-Klasse `cash`, keine Immobilien.
