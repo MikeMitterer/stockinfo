@@ -292,6 +292,18 @@ def test_der_vertrag_nennt_je_route_alle_moeglichen_422_formen(
             f"{method.upper()} {path}"
         )
 
+    # Die Fließtext-Variante sagt `detail` als **Pflicht** zu. Ohne diese Zeile
+    # erlaubte der Vertrag `{}` und beschriebe damit gerade nicht, was sie
+    # ausmacht.
+    detail_text = next(
+        variant
+        for variant in schema["paths"]["/analyze"]["get"]["responses"]["422"]["content"][
+            "application/json"
+        ]["schema"]["anyOf"]
+        if variant.get("title") == "DetailText"
+    )
+    assert detail_text["required"] == ["detail"]
+
 
 def test_jeder_isin_weg_liefert_zur_laufzeit_die_zugesagte_kennung(
     client: TestClient,
@@ -305,7 +317,7 @@ def test_jeder_isin_weg_liefert_zur_laufzeit_die_zugesagte_kennung(
     Geprüft wird der **exakte** Rumpf: `["code"]` allein wäre auch bei
     `{"detail": {...}, "code": …}` grün.
     """
-    aufrufe = [
+    requests = [
         ("get", "/quote/BTC-EUR", None),
         ("get", "/quote/BTC-EUR/daily", None),
         ("get", "/quote/BTC-EUR/history", None),
@@ -315,7 +327,7 @@ def test_jeder_isin_weg_liefert_zur_laufzeit_die_zugesagte_kennung(
         ("put", "/instruments/by-symbol/EUNL.DE/isin", {"isin": "BTC-EUR"}),
     ]
 
-    for method, url, payload in aufrufe:
+    for method, url, payload in requests:
         response = (
             client.request(method, url, json=payload)
             if payload is not None

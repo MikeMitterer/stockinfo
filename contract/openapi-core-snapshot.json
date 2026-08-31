@@ -403,6 +403,9 @@
                         "type": "string"
                       }
                     },
+                    "required": [
+                      "detail"
+                    ],
                     "title": "DetailText",
                     "type": "object"
                   }

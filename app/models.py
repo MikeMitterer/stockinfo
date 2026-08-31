@@ -988,6 +988,9 @@ _VALIDATION_SCHEMA = {"$ref": "#/components/schemas/HTTPValidationError"}
 _DETAIL_TEXT_SCHEMA = {
     "title": "DetailText",
     "type": "object",
+    # **Pflicht, nicht nur beschrieben.** Ohne `required` erlaubt der Vertrag
+    # `{}` — und sagt damit gerade nicht zu, was diese Variante ausmacht.
+    "required": ["detail"],
     "properties": {"detail": {"type": "string"}},
 }
 
