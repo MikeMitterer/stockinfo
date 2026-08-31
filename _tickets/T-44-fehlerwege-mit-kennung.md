@@ -52,6 +52,22 @@ GET /quote/BTC-EUR  →  HTTP 422
 Ebene tiefer. Notiert seit T-35; das Dashboard erreicht die Stelle nicht, weil
 es ISIN und Symbol selbst unterscheidet — ein anderer Client tut das nicht.
 
+## Befund 3 · `/quote/…/daily` meldet ebenfalls einen Ausfall
+
+Gemessen im YAML-Profil für ein Papier, das keine Tagesreihe hat:
+
+```
+GET /quote/by-symbol/BTC-EUR/daily?period=1m  →  HTTP 502
+{"detail":"Keine Historie für BTC-EUR"}
+```
+
+Dieselbe Verwechslung wie bei `/fx`, eine Route weiter: Die Datei führt für
+dieses Papier keine Tagesreihe — das ist „gibt es nicht", nicht „konnte nicht
+nachsehen". Sichtbar wird es, sobald jemand im Kursverlauf von `1T` auf `1M`
+umschaltet.
+
+`app/routers/quotes.py` wirft dort `502` mit deutschem Fließtext.
+
 ---
 
 ## Warum das nicht nebenbei erledigt wurde
@@ -73,6 +89,7 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 | **1** | `GET /fx` mit unbekanntem Paar | `404` mit Kennung und Parametern, nicht `502` mit Fließtext | ➖ | |
 | **2** | `GET /fx` bei echtem Ausfall | weiterhin `502` — die Unterscheidung ist der Zweck der Änderung | ➖ | |
 | **3** | `normalize_isin` | Kennung statt Fließtext; der Katalog kennt sie in DE und EN | ➖ | |
+| **3b** | `GET /quote/…/daily` ohne Tagesreihe | dieselbe Unterscheidung wie bei `/fx` | ➖ | |
 | **4** | Dashboard | die Meldung nennt den Grund, nicht nur die Kategorie | ➖ | |
 | **5** | `contract/core-contract.json` | die geänderten Codes stehen dort, wo der Vertrag sie zusagt | ➖ | |
 
