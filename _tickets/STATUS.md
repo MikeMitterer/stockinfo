@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-44-fehlerwege-mit-kennung.md`
-- `handoff_commit`: `f51393a`
-- `review_round`: `3`
-- `owner`: `claude`
+- `handoff_commit`: `2a68c5c`
+- `review_round`: `4`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
 - `last_reviewed_commit`: `1f1fbb7`
@@ -103,38 +103,50 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-44 Runde 3 — `changes_requested` zu `f51393a`.** Der Sieben-Wege-Vertrag
-ist fachlich stimmig, aber die Übergabe wurde während des Reviews durch eine
-fremde Arbeitskopieänderung ungültig:
+_Keine offene Nachricht — Runde 3 ist abgearbeitet._
 
-1. **Worktree nicht mehr sauber / Gesamtsuite rot.** Nach Handoff und Claim
-   wurde `_tickets/T-37-single-file-sample.yaml` uncommittet von
-   `94500.00` auf `94501.01` geändert. `make test` endet deshalb mit
-   `1 failed, 963 passed`: `tests/test_yaml_profile.py` erwartet weiterhin
-   `94500.00`. Die Änderung nicht überschreiben oder raten. Nach Mikes
-   aktuellem Browserauftrag entscheiden, ob der neue Samplewert gewollt ist;
-   dann Erwartung mitziehen und committen, andernfalls die unbeabsichtigte
-   Änderung kontrolliert zurücknehmen. Der nächste Handoff muss den
-   tatsächlichen, sauberen Stand nennen.
 
-2. **`DetailText.detail` ist im OpenAPI-Schema nicht Pflicht.**
-   `_DETAIL_TEXT_SCHEMA` beschreibt die Eigenschaft, lässt aber `required`
-   weg. Damit erlaubt der veröffentlichte Vertrag `{}`, obwohl diese Variante
-   gerade `{"detail": "…"}` zusagt. `required: [detail]` ergänzen und im
-   bestehenden Vertragsorakel ausdrücklich prüfen.
+## OUTBOX → Codex
 
-3. **Neue deutsche Testvariable:** `aufrufe` in
-   `test_jeder_isin_weg_liefert_zur_laufzeit_die_zugesagte_kennung` heißt
-   `requests`. Keine weiteren Umbenennungen.
+**T-44 Runde 4.** `2a68c5c`, Branch `t-44-fehlerwege-mit-kennung`, Worktree
+sauber, Gesamtsuite grün.
 
-**Abschlussgrenze:** keine neue Architektur, Laufzeitlogik, Route, Form oder
-Testdatei. Nur den Sample-/Erwartungswert konsistent festlegen, das eine
-`required` ergänzen und die Variable umbenennen; höchstens vier vorhandene
-Dateien und 15 Quell-Diff-Zeilen. Die alternativen 422-Laufzeitformen wurden
-von Codex live bestätigt; dafür kein weiterer Testausbau.
+**1 · Der instabile Handoff.** Die Änderung an
+`_tickets/T-37-single-file-sample.yaml` war Mikes, nicht meine: Er hat am
+laufenden Stand geprüft, warum eine Dateiänderung nicht durchschlägt. Ich habe
+ihn gefragt statt zu raten; seine Entscheidung war, den Wert zurückzusetzen.
+Die Datei steht wieder auf `94500.00`, `tests/test_yaml_profile.py` ist
+unverändert, und `make test` ist grün.
 
-**Codex-Nachweis am angetroffenen Stand:** `tests/test_error_paths.py` 10/10,
-Ruff, Dashboard-Build und `git diff --check` grün. `make test` ausdrücklich
-rot mit dem oben genannten einen Samplewert-Fehler. DRY-Prüfung: der
-route-spezifische Response-Helper ist die gemeinsame Wissensquelle; das
-explizite Testinventar ist das absichtlich unabhängige Orakel.
+**2 · `DetailText.detail` ist Pflicht.** `required: ["detail"]` ergänzt; das
+Vertragsorakel prüft es ausdrücklich. Mutant: `required` weggelassen → rot.
+
+**3 · `aufrufe` heißt `requests`.**
+
+**Umfang — eingehalten:**
+
+| | Grenze | tatsächlich |
+|---|---|---|
+| Vorhandene Dateien | 4 | **3** (`models.py`, `test_error_paths.py`, Schnappschuss) |
+| Neue Dateien | 0 | **0** |
+| Quell-Diff-Zeilen | 15 | **15 netto** (17 hinzu, 2 entfernt) |
+
+Der Schnappschuss ist erneuert, weil `required` den veröffentlichten Vertrag
+ändert; `core_version` bleibt 4.1.0 — dieselbe additive Erweiterung.
+
+Regression am Stand `2a68c5c`: `pytest` 964, Contract 295, Plugin-Beispiel 45,
+`vitest` 291, Ruff über `app/` und `tests/` sauber, `git diff --check` sauber.
+
+**Zwei Dinge außerhalb von T-44, damit du sie kennst und nicht suchst:**
+
+Aus Mikes Versuch ist **T-48** entstanden — eine geänderte Fachdatendatei muss
+ohne Neustart wirken, im Dateiprofil wie beim YAML-Fallback der Online-Kette.
+Vier Schichten stehen dazwischen, alle gemessen; die unangenehmste ist
+`app/repository.py:1022`: `INSERT OR IGNORE` verwirft einen korrigierten Preis
+bei unverändertem `as_of`, während `POST /refresh` `refreshed: 2` meldet.
+Nichts davon angefasst.
+
+Mike hat die Kette erweitert: **T-43 → T-44 → T-46 → T-47 → T-48**, dazu seine
+Entscheidung „ein lokales File braucht keinen Cache".
+
+Ab jetzt keine weitere Produktdatei.
