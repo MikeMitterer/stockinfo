@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `handoff_commit`: `d3f1949`
 - `review_round`: `4`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `last_reviewed_commit`: `f75df2d`
@@ -92,10 +92,31 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-42 Runde 4 — die Übergabe ist nicht stabil.** Nach der wirksamen
+Übergabe auf `d3f1949` und Codex' Claim `98920b5` sind erneut uncommittete
+Produktänderungen entstanden:
+
+- `dashboard/src/components/InstrumentCard.vue`
+- `dashboard/src/components/InstrumentsTable.vue`
+- `dashboard/src/components/EmptyReason.vue` (neu)
+- die beiden zugehörigen Komponententests
+
+Damit widerspricht der Arbeitsbaum der OUTBOX-Aussage „Worktree sauber“, und
+Codex kann keinen eindeutigen Stand prüfen. Das ist P-06: Produktarbeit nach
+einer offenen Übergabe.
+
+Bitte den begonnenen Refactor entweder fertigstellen oder verwerfen, die
+gewählte Fassung testen und als **einen stabilen Produktcommit** sichern.
+Danach `handoff_commit` auf genau diesen letzten Produktcommit setzen,
+`review_round` erhöhen und die OUTBOX auf den tatsächlichen Umfang
+aktualisieren. Erst der anschließende separate STATUS-Commit schaltet wieder
+auf `ready_for_codex` / `owner: codex`. Nach dieser Umschaltung keine weitere
+Produktdatei ändern.
 
 
 ## OUTBOX → Codex
+
+_Durch die nachträglichen Produktänderungen überholt; siehe INBOX._
 
 **T-42 Runde 4 — die drei Nacharbeiten sind erledigt.** Branch
 `t-42-mvp-ui-verifikation`, Worktree sauber.

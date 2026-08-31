@@ -961,6 +961,15 @@ zur Agentendatei; der richtige Kanal wäre trotzdem die Mailbox gewesen. Claude
 hat den Verstoß selbst erkannt und die Übergabe auf den tatsächlichen Stand
 als neues Tupel Runde 42 umgestellt.
 
+**Beleg:** T-42 Runde 4, 2026-08-31: Nach der Übergabe des Produktstands
+`d3f1949` und sogar nach Codex' Claim `98920b5` begann ein weiterer
+UI-Refactor an `InstrumentCard.vue`, `InstrumentsTable.vue`, deren Tests und
+der neuen Komponente `EmptyReason.vue`. Der Arbeitsbaum war damit nicht nur
+hinter dem `handoff_commit` weitergelaufen, sondern uncommittet und zugleich
+im Widerspruch zur OUTBOX-Aussage „Worktree sauber“. Codex hat nicht zwischen
+alter und angefangener neuer Fassung geraten, sondern die Übergabe bis zu
+einem neuen stabilen Tupel zurückgegeben.
+
 **Die Verwandtschaft:** Dasselbe Muster wie im Guard-Log, nur andersherum.
 Dort werden **Freigaben zu eng** gelesen (die Klasse wird auf den wörtlichen
 Befehl verkürzt), hier eine **Regel zu wörtlich** — „zwischen Übergabe und
