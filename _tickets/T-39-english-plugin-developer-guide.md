@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (documentation + `plugin_api` example) | Runde 2 zur Prüfung | 1 Tag | englischer Entwicklerleitfaden, minimales Paketbeispiel, keine Produktfunktion | — |
+| StockInfo (documentation + `plugin_api` example) | freigegeben (Codex, Runde 2) | 1 Tag | englischer Entwicklerleitfaden, minimales Paketbeispiel, keine Produktfunktion | — |
 
 - **Angelegt:** 2026-08-29, auf Wunsch von Mike
 - **Hängt ab von:** T-31 → T-38 → T-37 → T-35 vollständig technisch
@@ -272,7 +272,7 @@ Es demonstriert am US-Markt nur den vollständigen Entwicklerweg:
 - eine Quote-Quelle für dieselbe Zuständigkeit,
 - Konfiguration von API-Key und Basis-URL über `providers`,
 - ein injizierbarer/fake HTTP-Pfad für deterministische Tests,
-- Entry-Points für beide Quellen,
+- ein Entry-Point für beide Rollen,
 - geerbte Contract-Suiten plus wenige Beispiel-spezifische Tests,
 - ein passendes `sources.yaml` und kurze Build-/Install-/Test-Kommandos.
 
@@ -320,5 +320,15 @@ Stand aus T-31/T-38/T-37, nicht nach einem Zwischenstand dieses Tickets.
 
 ## Auflösung
 
-_(wartend — erst nach der vollständigen technischen Freigabe von
-T-31 → T-38 → T-37 → T-35)_
+Freigegeben gegen Claudes Korrekturstand `1110d76` und die rein textuelle
+Codex-Selbstheilung `2520366`. Das Lehrbeispiel normalisiert Fehler aus
+Provideraufruf und Antwortumwandlung; die beiden Negativklassen sind
+ausführbar belegt. Der Leitfaden beschreibt Klassenname, Entry-Point,
+rollenweisen Lebenszyklus, Build, Test, Installation, Umgebung und YAML-
+Fallback entsprechend dem tatsächlichen Loader.
+
+Unabhängig grün: 947 Backend-, 295 Contract-, 45 Beispiel- und 274
+Dashboard-Tests, Ruff und Diff-Check. Das finale Wheel wurde erneut gebaut,
+isoliert installiert und über seinen Entry-Point geladen; `us-example` meldet
+`resolvers` und `quotes` und liefert den Beispielkurs 231,40 USD. Die
+Human-Spalte bleibt unverändert leer.

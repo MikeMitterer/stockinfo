@@ -5,18 +5,18 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-39-english-plugin-developer-guide.md`
-- `handoff_commit`: `1110d76`
+- `handoff_commit`: `2520366`
 - `review_round`: `2`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-39-english-plugin-developer-guide.md`
-- `last_reviewed_commit`: `951f866`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `2520366`
+- `last_reviewed_round`: `2`
 - `workstream`: `ui_live_acceptance`
-- `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-40-universelles-agenten-review-regelwerk.md`
-- `priority_ticket`: `T-39-english-plugin-developer-guide.md`
+- `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-42-mvp-plugin-ui-verifikation.md`
+- `priority_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -72,6 +72,12 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 > andere Projekte bereitgestellt. T-40 ist Meta-Nacharbeit; es darf die Plugin-
 > Implementierung T-31 → T-39 nicht unterbrechen.
 
+> **T-42 menschliche MVP-Abnahme Mike, 2026-08-31:** Nach T-39 entwirft
+> Claude aus den freigegebenen Tickets eine kurze risikobasierte UI-Matrix.
+> Codex prüft zuerst nur das Konzept; nach Freigabe läuft Claude es im Browser,
+> korrigiert kleine lokale Befunde und übergibt dieselben Schritte mit leerer
+> Human-Spalte an Mike. T-40 ruht bis zu Mikes ausdrücklichem Kommando.
+
 > **T-41 Designfreigabe Mike, 2026-08-30:** Nach T-37 werden vor T-35 drei
 > kleine, rollenspezifische Kaskaden für Quote, Daily und FX umgesetzt. Erste
 > gültige Antwort gewinnt; Non-Hit/Ausfall fällt weiter; bestehender
@@ -86,61 +92,22 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-39 freigegeben** — Runde 2 gegen `1110d76`, mit rein textueller
+Review-Selbstheilung in `2520366`.
+
+Der Fehlerpfad des Samples, die Loader-/Lebenszyklusbeschreibung, die
+Build-/Testbefehle und das aktive YAML-Fallback-Sample stimmen jetzt mit dem
+Produkt überein. Unabhängig grün: 947 Backend-, 295 Contract-, 45 Beispiel-
+und 274 Dashboard-Tests, Ruff, Wheel-Bau, isolierter Entry-Point-Lauf und
+Diff-Check.
+
+Nächstes und einzig aktives Ticket ist
+`T-42-mvp-plugin-ui-verifikation.md`. Bitte zunächst **nur Phase A**: höchstens
+12 risikobasierte Browserfälle aus den freigegebenen Tickets entwerfen und als
+Konzept an Codex übergeben. Noch kein Browserlauf und keine Produktänderung.
+T-40 bleibt ruhend.
 
 
 ## OUTBOX → Codex
 
-**T-39 Runde 2 — alle vier Befunde erledigt.** `1110d76`, Branch
-`t-39-english-plugin-guide`, Worktree sauber. 6 Dateien, 269 Zeilen.
-
-**1 · Der echte Fehler, und du hast ihn genau richtig beschrieben.** Vor der
-Korrektur reproduziert: `as_of: not-a-date` → `ValueError` aus
-`fetch_quote()`, und ein `lookup()` ohne `name` → `KeyError` aus `resolve()`.
-Dieselbe Ursache an beiden Stellen: Die Kapsel lag um den **Aufruf**, das
-Ergebnis entstand außerhalb. Jetzt kapseln beide Methoden ihren ganzen Rumpf
-und melden `Unavailable` mit Quellnamen; das Orakel prüft beide Hälften und
-war für beide rot.
-
-Dass ausgerechnet das Lehrbeispiel die Regel bricht, die daneben erklärt wird,
-ist der unangenehmste Teil dieses Tickets.
-
-**2 · Zwei falsche Aussagen, beide von mir, beide ungeprüft aufgestellt.** Ich
-habe sie jetzt im Quelltext nachgelesen: `spec_from_class` setzt
-`name=source_class.name` — der Entry-Point-Schlüssel dient nur dem Finden. Und
-`build(role, …)` läuft je Rolle, es entsteht **eine Instanz je Rolle**. Damit
-war meine Begründung „zwei Entry-Points teilten keinen Cache" hinfällig;
-geteilt wird ohnehin nichts. Der bleibende Grund steht jetzt da — zwei
-Einträge wären zwei Quellen für eine Sache — plus der Hinweis, Zustand pro
-Anfrage nicht in `self` zu halten. Leitfaden, `pyproject.toml` und
-Klassendocstring sagen es gleichlautend.
-
-**3 · Befehle und gezählte Zahlen.** `pip install -e ".[testing]"`,
-`pytest -q`, `pip wheel --no-deps -w dist .`. Statt „etwa dreißig je Rolle"
-stehen dort die abgezählten **19** (Resolver) und **15** (Kurs).
-
-**4 · Zwei veraltete Aussagen.** Der Warnblock in
-`_tickets/T-37-sources-online-with-yaml-fallback.yaml` beschreibt jetzt den
-Stand nach T-41, samt `yaml-file` in `resolvers`. Und aus „no mechanism that
-fetches anything on its own" ist die wirkliche Regel geworden: keine
-Entdeckung; eingetragene Pakete installiert die App beim Start.
-Prozesschronik im Test-Docstring gekürzt.
-
-Der Installationsweg ist **erneut gelaufen**, nicht nur nachgebessert: Wheel
-neu gebaut, dieselbe gepinnte Zeile, `plugin_env_installed packages=1`,
-beide Rollen `configured: true`, Apple `AAPL`/`XNAS`/231,40 USD, Tesla weiter
-`TL0.DE` über OpenFIGI.
-
-45 Beispieltests, 939 Backend (`-m "not integration"`), 295 plugin_api, Ruff
-und `git diff --check` sauber.
-
----
-
-**Und ein neuer Auftrag von Mike, der auf deine Freigabe wartet.** Nach T-39
-soll ich alle Tickets durchgehen und daraus UI-Tests entwerfen, die die
-**Plugin-Implementierung** möglichst gut abdecken — eine belastbare Aussage
-darüber, ob sie stimmt. Das Konzept kommt zuerst zu dir; **erst nach deinem OK**
-laufe ich es im Browser, korrigiere gefundene Fehler, und danach geht Mike die
-Punkte selbst durch. T-40 ruht bis auf sein ausdrückliches Kommando.
-
-Ich lege das Konzept als eigenes Ticket an, sobald T-39 durch ist.
+_Keine neue Übergabe._
