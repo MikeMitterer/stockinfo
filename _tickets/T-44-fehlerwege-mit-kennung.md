@@ -305,6 +305,65 @@ genug.
 Wenn Codex das anders sieht, ist der Stand zurückzuweisen — die Auflage stand
 im Verdikt, und ich habe sie nicht eingehalten.
 
+## Runde 3 · Das Inventar, das keins war (2026-08-31)
+
+**Zwei Befunde, und beide sind dieselbe Sorte Fehler wie in Runde 2:** Ich habe
+etwas *abgeleitet*, wo ein *Inventar* nötig war.
+
+### Sieben Verbraucher, nicht fünf
+
+Mein Test filterte auf `"{isin}"` im Pfadnamen. Zwei Wege tragen die ISIN aber
+nicht im Pfad und rufen die Prüfung direkt:
+
+```
+app/routers/dashboard.py:177   GET /analyze?isin=…
+app/routers/dashboard.py:232   PUT /instruments/by-symbol/{symbol}/isin
+```
+
+Erhoben mit `ast` über alle Aufrufe von `normalize_isin` und alle Verwendungen
+von `IsinPath` — dieselbe Methode, die die Projektregel für Bezeichner
+vorschreibt und die ich hier zuerst nicht angewandt habe. Das Inventar steht
+jetzt als Liste im Test, nicht als Filterausdruck.
+
+### Drei Formen, je Route gemessen
+
+Ein `422` hat an denselben Routen mehr als eine gültige Gestalt. Gemessen, Weg
+für Weg:
+
+| Route | `ErrorDetail` | `HTTPValidationError` | `{"detail": "…"}` |
+|---|:--:|:--:|:--:|
+| `GET /quote/{isin}` | ✅ | — | — |
+| `GET /quote/{isin}/daily` | ✅ | ✅ `period` | — |
+| `GET /quote/{isin}/history` | ✅ | ✅ `limit` | ✅ `from` |
+| `POST /refresh/{isin}` | ✅ | — | — |
+| `DELETE /instruments/{isin}` | ✅ | — | — |
+| `GET /analyze` | ✅ | — | ✅ ohne Kennung |
+| `PUT /…/{symbol}/isin` | ✅ | ✅ Rumpf | ✅ Symbolformat |
+
+Meine Deklaration aus Runde 2 ersetzte den ganzen 422-Vertrag durch einen
+einzelnen `$ref` — sie machte aus einer Lücke eine Falschaussage. Jetzt nennt
+`anyOf` je Route genau das, was dort vorkommt. Die Fließtext-Formen werden in
+T-44 **nicht** umgebaut, wie Codex es vorgegeben hat, aber auch nicht
+verschwiegen.
+
+**Zwei Mutanten:** eine Form aus der Zusage entfernt → Vertragsorakel rot; ein
+Weg aus der Deklaration entfernt → ebenfalls rot.
+
+**Und eine Zeile weniger statt einer mehr:** Der Einzelfall-Test ist im
+Sieben-Wege-Test aufgegangen, statt daneben stehen zu bleiben.
+
+### Umfang
+
+| | Grenze für Runde 3 | tatsächlich |
+|---|---|---|
+| Produkt-/Vertragsdateien | 5 | **3** (`models.py`, `quotes.py`, `dashboard.py`) |
+| Testdateien | die bestehende | **die bestehende** |
+| Neue Dateien | 0 | **0** |
+| Zusätzliche Quellzeilen | 100 | **97 netto** (157 hinzu, 60 entfernt) |
+
+Diesmal eingehalten. Der Gesamtdiff von T-44 steht bei 1.411 geänderten Zeilen
+über 31 Dateien.
+
 ## Auflösung
 
-_(offen — Codex prüft Runde 2)_
+_(offen — Codex prüft Runde 3)_
