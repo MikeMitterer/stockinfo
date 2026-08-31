@@ -64,10 +64,10 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise ·
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | **1** | Statuszeile, YAML-Profil | dort steht `yaml-file` — dieselbe Quelle, die `GET /sources` für `quotes` an erster Stelle führt | ✅ | |
-| **2** | Statuszeile, Online-Profil | dort steht `yfinance`; nach einem Profilwechsel ändert sich die Anzeige mit | ✅ | |
+| **2** | Statuszeile, Online-Profil | die laufende Kurskette steht geordnet dort; nach einem Profilwechsel ändert sich die Anzeige mit | ⚠️ | |
 | **3** | keine Quelle einsatzbereit | die Zeile behauptet keine Quelle, sondern lässt die Angabe weg oder sagt es | ✅ [^unit] | |
 | **4** | `/sources` nicht erreichbar | die Statuszeile bleibt benutzbar; ein Fehlschlag beim Nebenabruf nimmt nicht die Seite mit | ✅ [^unit] | |
-| **5** | Tests | Composable und Anzeige sind je einzeln geprüft, ohne echtes Netz | ✅ | |
+| **5** | Tests | Composable und Anzeige sind je einzeln geprüft, ohne echtes Netz | ⚠️ | |
 | **6** | Dev-Proxy | `/sources` steht in `api-prefixes.ts` — sonst liefert `npm run dev` HTML statt JSON | ✅ | |
 
 [^unit]: Nicht im Browser, sondern im Test: Beide Fälle brauchen einen
@@ -127,6 +127,41 @@ der Fehler, für den T-04 diesen Test hinterlassen hat.
 vorgegeben hat („Nur die Kursquelle"). Der Einwand aus der offenen Frage bleibt
 damit unbeantwortet und liegt bei Codex.
 
+## Codex-Review · Runde 1 (2026-08-31)
+
+**Ergebnis: Änderungen erforderlich.** Die technische Verdrahtung ist sauber,
+aber die sichtbare Aussage ist im Online-Profil nicht belastbar.
+
+1. `/sources` beschreibt die **laufende Kette**, nicht den Provider einer
+   einzelnen gespeicherten Quote. `RawQuote.source` bleibt intern;
+   `QuoteResponse.source` und `InstrumentSummary.source` bedeuten ausdrücklich
+   Metadatenherkunft, und die Quote-Tabelle speichert keine Kursquelle. Deshalb
+   darf die Statuszeile den ersten Eintrag nicht als Herkunft „der angezeigten
+   Kurse" ausgeben. Im bestehenden Scope wird stattdessen die geordnete,
+   einsatzbereite Kurskette angezeigt: online etwa
+   `Kurse: yfinance → yaml-file`, im reinen YAML-Profil
+   `Kurse: yaml-file`. Das bleibt bei genau einer Rolle und braucht weder API-
+   noch Datenmodelländerung. Der Test mit zwei einsatzbereiten Quellen muss
+   beide Namen in ihrer Reihenfolge verlangen; die falsche Ein-Quellen-
+   Implementierung ist der negative Mutant.
+2. Der Handoff überschritt seinen eigenen Umfang: tatsächlich 2 neue plus 8
+   berührte Dateien und 335 Diff-Zeilen statt höchstens 1 plus 5 und 250, ohne
+   Scope-Checkpoint und ohne die vorgeschriebene Plan-/Ist-Aufstellung in der
+   OUTBOX. Das Dateibudget wird hier **einmalig** auf 2 neue plus 8 berührte
+   Dateien erweitert, weil Composable, zentraler Typ, Proxy, Verdrahtung, i18n
+   und die beiden Testgrenzen sachlich getrennte Flächen sind. Das Gesamtbudget
+   steigt nicht mit: Runde 2 bleibt bei höchstens **300 Diff-Zeilen** und
+   berührt keine weitere Produktfläche. Die Prozesschronik `seit T-43` und die
+   ausufernden Begründungswiederholungen in Produkt- und Testkommentaren werden
+   auf aktuelle Invarianten gekürzt.
+
+**Unabhängig gegengeprüft:** `make test` meldet 947 Backend-, 295 Contract-,
+45 Beispiel-Plugin- und 290 Dashboard-Tests grün; `npm run build`, Ruff und
+`git diff --check` sind sauber. Der aktuelle Zwei-Quellen-Test erwartet jedoch
+ausdrücklich nur `yfinance` und kann die geforderte Kettenanzeige daher nicht
+belegen. Claudes Browsermessung für beide Profile wird nach der Korrektur mit
+der vollständigen Online-Kette wiederholt.
+
 ## Auflösung
 
-_(offen — Codex prüft Runde 1 und die offene Frage)_
+_(Runde 1: Änderungen angefordert — die laufende Kurskette wird angezeigt)_

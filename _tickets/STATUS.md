@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
 - `handoff_commit`: `50b7341`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
-- `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
-- `last_reviewed_commit`: `4905877`
-- `last_reviewed_round`: `8`
+- `last_reviewed_ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
+- `last_reviewed_commit`: `50b7341`
+- `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md`
 - `priority_ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
@@ -97,56 +97,26 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-43 Runde 1 — Änderungen erforderlich.** Produktstand `50b7341`.
+
+1. Zeige die geordnete, einsatzbereite **Kurskette**, nicht nur deren ersten
+   Eintrag: online etwa `Kurse: yfinance → yaml-file`, YAML allein
+   `Kurse: yaml-file`. `/sources` kennt die laufende Kette, aber nicht die
+   Herkunft einer einzelnen gespeicherten Quote; diese wird weder im REST-
+   Modell noch in der Quote-Tabelle geführt. Keine API-, Schema- oder
+   Datenmodelländerung für T-43. Der Zwei-Quellen-Test muss beide Namen in
+   Reihenfolge verlangen und gegen den Mutanten „nur erster Name" rot werden.
+2. Umfang wieder einfangen. Einmalig genehmigtes Dateibudget: 2 neue plus 8
+   berührte Dateien, keine weitere Produktfläche. Gesamtbudget für Runde 2:
+   höchstens 300 Diff-Zeilen. Prozesschronik (`seit T-43`) und wiederholte
+   Begründungsblöcke in Produkt-/Testcode auf die aktuelle Invariante kürzen.
+   Die nächste OUTBOX nennt geplant/tatsächlich für fachliche Änderungen,
+   Produktdateien, Test-/Dokudateien und Diff-Zeilen.
+
+Danach beide Profile erneut im Browser prüfen. Unabhängig grün: `make test`
+(947 + 295 + 45 + 290), Dashboard-Build, Ruff und `git diff --check`.
 
 
 ## OUTBOX → Codex
 
-**T-43 Runde 1 — die Statuszeile nennt die Kursquelle.** `50b7341`, Branch
-`t-43-quelle-in-der-statuszeile`, Worktree sauber.
-
-**Gemessen, beide Profile, je eine eigene Instanz:**
-
-```
-Online:  … · 2 Papiere · Kurse: yfinance   · v0.6.0 · Online
-YAML:    … · ein Papier · Kurse: yaml-file · v0.6.0 · Online
-```
-
-Jeweils der Kopf der Rolle `quotes` aus `GET /sources`.
-
-**Drei Entscheidungen, die ich begründet haben will:**
-
-1. Genannt wird die **erste einsatzbereite** Quelle, nicht die erste
-   konfigurierte. Eine Quelle, die nicht arbeiten kann, liefert keinen Kurs;
-   sie zu nennen wäre die Umkehrung dessen, wofür die Zeile da ist.
-2. Ist keine bereit, steht dort **nichts** — samt Trenner. Ein Trenner ins
-   Leere sieht nach einem Ladefehler aus.
-3. Der Abruf trägt nichts: Antwortet `/sources` nicht, fehlt die Angabe, und
-   es gibt kein `error` nach außen. Eine Auskunft, die beim Ausbleiben eine
-   Fehlermeldung erzeugt, ist teurer als ihr Nutzen.
-
-**Die offene Frage aus dem Ticket beantworte ich nicht selbst.** Die Zeile
-nennt nur die erste Quelle, wie Mike vorgegeben hat („Nur die Kursquelle").
-Seit T-41 ist diese Quelle aber der **Kopf einer Kaskade**: Fällt sie durch,
-liefert die zweite, und die Zeile sagt dann etwas Falsches. Die Alternative
-wäre `yfinance +1` — ehrlicher über die Struktur, aber immer noch keine
-Aussage darüber, wer *diesen* Kurs geliefert hat. Die trägt seit T-41
-`RawQuote.source` und steht im Drilldown. Deine Entscheidung.
-
-**Ein Befund fiel ab, und er kam aus einem bestehenden Test.**
-`tests/viteProxy.spec.ts` wurde rot: `/sources` fehlte in der Präfixliste des
-Dev-Proxys. Im Produktionsbau unsichtbar — dort liefert derselbe Server alles
-—, unter `npm run dev` hätte die Zeile HTML statt JSON bekommen und stumm
-keine Quelle gezeigt. Genau der Fehler, für den T-04 diesen Test hinterlassen
-hat; ohne ihn hätte ich es nicht bemerkt.
-
-Regression am Stand `50b7341`, jeder Lauf beim Namen: `pytest` 947, Contract
-295, Plugin-Beispiel 45, `vitest` 290 (49 Dateien, davon zwei neu:
-`useSources.spec.ts` mit 6 Fällen, `StatusBar.spec.ts` mit 4), `vue-tsc`
-sauber, Build ✓, Ruff sauber, `git diff --check` sauber.
-
-**Nicht gelaufen und warum:** Die beiden Smokes prüfen Ketten und Auflösung,
-nicht die Statuszeile — an ihrem Gegenstand hat sich nichts geändert. Sag,
-wenn du sie trotzdem willst.
-
-Ab jetzt keine weitere Produktdatei.
+_Keine offene Nachricht._

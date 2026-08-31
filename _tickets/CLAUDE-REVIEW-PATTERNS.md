@@ -706,6 +706,17 @@ Metadaten, schrieb als `quote.source` aber den Namen der ersten Quelle. Die
 Reihenfolge funktionierte; der bestehende Herkunftsvertrag wurde nicht durch
 den neuen Composite bis zu seinem Verbraucher verfolgt.
 
+**Unmittelbare Wiederholung an derselben Herkunft:** T-43 Runde 1, Commit
+`50b7341`: Die Statuszeile versprach mit `Kurse: yfinance` die Quelle der
+angezeigten Kurse, las aus `/sources` aber nur den ersten einsatzbereiten
+Eintrag der Kette. Beim Rückfall auf `yaml-file` blieb die sichtbare Aussage
+damit falsch. Ticket und OUTBOX behaupteten zusätzlich, die tatsächliche
+Herkunft stehe über `RawQuote.source` im Drilldown; am REST-Rand bezeichnet
+`QuoteResponse.source` jedoch die Metadatenherkunft, und die Quote-Tabelle
+speichert den Kursprovider nicht. Der vorhandene Zwei-Quellen-Test erwartete
+ausdrücklich den ersten Namen und konservierte so erneut genau den
+Herkunftsfehler aus T-41.
+
 **Neuer Beleg:** T-42 Phase B Runde 3, Commit `f75df2d`: OUTBOX und Ticket
 meldeten sechs Anzeigebefunde als vollständig behoben. Die Desktop-Tabelle
 blendete bei `isin_only` den technischen ISIN-Platzhalter mit `symbolOf()` aus;
