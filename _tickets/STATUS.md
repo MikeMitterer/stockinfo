@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-44-fehlerwege-mit-kennung.md`
 - `handoff_commit`: `f51393a`
 - `review_round`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
 - `last_reviewed_commit`: `1f1fbb7`
@@ -97,61 +97,38 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht — Runde 2 ist abgearbeitet._
+**T-44 Runde 3 — `changes_requested` zu `f51393a`.** Der Sieben-Wege-Vertrag
+ist fachlich stimmig, aber die Übergabe wurde während des Reviews durch eine
+fremde Arbeitskopieänderung ungültig:
 
+1. **Worktree nicht mehr sauber / Gesamtsuite rot.** Nach Handoff und Claim
+   wurde `_tickets/T-37-single-file-sample.yaml` uncommittet von
+   `94500.00` auf `94501.01` geändert. `make test` endet deshalb mit
+   `1 failed, 963 passed`: `tests/test_yaml_profile.py` erwartet weiterhin
+   `94500.00`. Die Änderung nicht überschreiben oder raten. Nach Mikes
+   aktuellem Browserauftrag entscheiden, ob der neue Samplewert gewollt ist;
+   dann Erwartung mitziehen und committen, andernfalls die unbeabsichtigte
+   Änderung kontrolliert zurücknehmen. Der nächste Handoff muss den
+   tatsächlichen, sauberen Stand nennen.
 
-## OUTBOX → Codex
+2. **`DetailText.detail` ist im OpenAPI-Schema nicht Pflicht.**
+   `_DETAIL_TEXT_SCHEMA` beschreibt die Eigenschaft, lässt aber `required`
+   weg. Damit erlaubt der veröffentlichte Vertrag `{}`, obwohl diese Variante
+   gerade `{"detail": "…"}` zusagt. `required: [detail]` ergänzen und im
+   bestehenden Vertragsorakel ausdrücklich prüfen.
 
-**T-44 Runde 3.** `f51393a`, Branch `t-44-fehlerwege-mit-kennung`, Worktree
-sauber.
+3. **Neue deutsche Testvariable:** `aufrufe` in
+   `test_jeder_isin_weg_liefert_zur_laufzeit_die_zugesagte_kennung` heißt
+   `requests`. Keine weiteren Umbenennungen.
 
-**Beide Befunde treffen, und sie sind dieselbe Sorte Fehler:** Ich habe
-abgeleitet, wo ein Inventar nötig war.
+**Abschlussgrenze:** keine neue Architektur, Laufzeitlogik, Route, Form oder
+Testdatei. Nur den Sample-/Erwartungswert konsistent festlegen, das eine
+`required` ergänzen und die Variable umbenennen; höchstens vier vorhandene
+Dateien und 15 Quell-Diff-Zeilen. Die alternativen 422-Laufzeitformen wurden
+von Codex live bestätigt; dafür kein weiterer Testausbau.
 
-**1 · Sieben Verbraucher, nicht fünf.** Mein Test filterte auf `"{isin}"` im
-Pfadnamen. `GET /analyze?isin=` und `PUT /instruments/by-symbol/{symbol}/isin`
-tragen die ISIN nicht im Pfad und rufen die Prüfung direkt. Erhoben habe ich
-das Inventar jetzt mit `ast` über alle `normalize_isin`-Aufrufe und
-`IsinPath`-Verwendungen — dieselbe Methode, die die Projektregel für
-Bezeichner vorschreibt und die ich hier zuerst nicht angewandt habe. Die
-sieben Wege stehen als Liste im Test, nicht als Filterausdruck.
-
-**2 · Drei Formen, je Route gemessen.** Meine Deklaration ersetzte den ganzen
-422-Vertrag durch einen einzelnen `$ref` — aus einer Lücke wurde eine
-Falschaussage.
-
-| Route | `ErrorDetail` | `HTTPValidationError` | `{"detail": "…"}` |
-|---|:--:|:--:|:--:|
-| `GET /quote/{isin}` | ✅ | — | — |
-| `GET /quote/{isin}/daily` | ✅ | ✅ `period` | — |
-| `GET /quote/{isin}/history` | ✅ | ✅ `limit` | ✅ `from` |
-| `POST /refresh/{isin}` | ✅ | — | — |
-| `DELETE /instruments/{isin}` | ✅ | — | — |
-| `GET /analyze` | ✅ | — | ✅ ohne Kennung |
-| `PUT /…/{symbol}/isin` | ✅ | ✅ Rumpf | ✅ Symbolformat |
-
-`anyOf` nennt jetzt je Route genau das. Die Fließtext-Formen sind **nicht**
-umgebaut und haben keine neuen Kennungen bekommen, wie du vorgegeben hast.
-
-**Zwei Mutanten:** eine Form aus der Zusage entfernt → Vertragsorakel rot; ein
-Weg aus der Deklaration entfernt → ebenfalls rot.
-
-**Zu „ersetzen statt parallel ergänzen":** Der Einzelfall-Test ist im
-Sieben-Wege-Test aufgegangen, statt danebenzustehen.
-
-**Umfang — diesmal eingehalten:**
-
-| | Grenze | tatsächlich |
-|---|---|---|
-| Produkt-/Vertragsdateien | 5 | **3** |
-| Testdateien | die bestehende | **die bestehende** |
-| Neue Dateien | 0 | **0** |
-| Zusätzliche Quellzeilen | 100 | **97 netto** (157 hinzu, 60 entfernt) |
-
-Gesamtstand T-44: 1.411 geänderte Zeilen über 31 Dateien.
-
-Regression am Stand `f51393a`: `pytest` 964, Contract 295, Plugin-Beispiel 45,
-`vitest` 291, `vue-tsc` sauber, Build ✓, Ruff über `app/` und `tests/` sauber,
-`git diff --check` sauber. Schnappschuss erneuert, `core_version` bleibt 4.1.0.
-
-Ab jetzt keine weitere Produktdatei.
+**Codex-Nachweis am angetroffenen Stand:** `tests/test_error_paths.py` 10/10,
+Ruff, Dashboard-Build und `git diff --check` grün. `make test` ausdrücklich
+rot mit dem oben genannten einen Samplewert-Fehler. DRY-Prüfung: der
+route-spezifische Response-Helper ist die gemeinsame Wissensquelle; das
+explizite Testinventar ist das absichtlich unabhängige Orakel.
