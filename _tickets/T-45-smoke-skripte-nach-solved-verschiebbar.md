@@ -9,8 +9,7 @@
 `_tickets/solved/`. Heute zeigen Projekt-Root und BashLib dort eine Ebene zu
 tief.
 
-**Priorität:** Follow-up außerhalb der aktuellen Kette; vor dem Archivieren
-der betroffenen Tickets erledigen.
+**Priorität:** direkt nach T-44 und vor T-49 in der bestätigten Kette.
 
 ---
 
@@ -21,10 +20,10 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung ·
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | alle neun `T-*-smoke.sh` in `_tickets/` | `--info`/`--help` findet Projekt-Root, `.venv` und BashLib | ➖ | |
-| 2 | dieselben Skripte unter `_tickets/solved/` | dieselben Pfade werden gefunden; kein Script erwartet `_tickets/.venv` oder `_tickets/.libs` | ➖ | |
-| 3 | mindestens T-22 und T-35 nach simulierter Verschiebung | ihre echten `--run`-Checks bleiben grün und benutzen weiter temporäre Daten | ➖ | |
-| 4 | Root-Ermittlung | eine gemeinsame, dokumentierte Regel; keine neun auseinanderlaufenden Sonderfälle | ➖ | |
+| 1 | alle neun `T-*-smoke.sh` in `_tickets/` | `--info`/`--help` findet Projekt-Root, `.venv` und BashLib | ✅ | |
+| 2 | dieselben Skripte unter `_tickets/solved/` | dieselben Pfade werden gefunden; kein Script erwartet `_tickets/.venv` oder `_tickets/.libs` | ✅ | |
+| 3 | mindestens T-22 und T-35 nach simulierter Verschiebung | ihre echten `--run`-Checks bleiben grün und benutzen weiter temporäre Daten | ✅ | |
+| 4 | Root-Ermittlung | eine gemeinsame, dokumentierte Regel; keine neun auseinanderlaufenden Sonderfälle | ✅ | |
 
 ---
 
@@ -138,8 +137,17 @@ eine Änderung an einer geteilten Bibliothek und damit ein eigener Checkpoint.
 
 ## Auflösung
 
-_(offen — Codex prüft Runde 1)_
+**Codex-Freigabe, Runde 1 (`945d516`, 2026-08-31):** Keine offenen
+Befunde. Kein Script wurde verschoben; temporäre Symlinks unter `solved/`
+bildeten nur den späteren Aufrufsort nach. Alle neun Scripts fanden von beiden
+Tiefen ohne geerbtes `BASH_LIBS` dieselbe Projektwurzel. T-22 lief dort mit
+**6/6**, T-35 im YAML-Profil mit **20/20** Checks. Der alte feste Pfad
+`_tickets/solved/../.libs` fehlt und bildet damit die rote Gegenprobe.
 
-### Auflösung
-
-_(offen)_
+Frische Regression: Backend **964**, Plugin-Vertrag **295**,
+Beispiel-Plugin **45**, Dashboard **291**; alle neun Scripts bestehen
+`bash -n` und bleiben ausführbar. Shellcheck meldet nur bereits vorhandene
+Stellen außerhalb des T-45-Diffs. DRY geprüft: In BashLib existiert keine
+Root-Funktion; die identische Suche ist notwendiger Bootstrap, bevor BashLib
+überhaupt lokalisierbar ist, und folgt der einen im Workflow festgelegten
+Regel. Keine neue Testinfrastruktur. Die Human-Spalte blieb unverändert.
