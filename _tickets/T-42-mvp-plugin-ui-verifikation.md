@@ -440,6 +440,43 @@ wachsen soll, ohne dass das Zeichen größer wird, entscheidet Mike.
 
 ---
 
+## Runde 6 · der Strich, in drei Anläufen
+
+Mike hat den Fall dreimal zurückgegeben, und jedes Mal zu Recht. Die Kette
+steht hier vollständig, weil sie zeigt, wie eine falsche erste Frage drei
+Runden kostet.
+
+| Anlauf | Was ich tat | Was Mike sah |
+|---|---|---|
+| 1 | Klick unterbunden (`@click.stop` an der Komponente) | „Klicke ich auf den Bindestrich, bekomme ich ‚Historie kann nicht geladen werden'" |
+| 2 | Klick durchgelassen | „Neben dem Strich funktioniert es, auf dem Strich nicht" — der `.stop` lag am Aufrufort und lief ins Leere, weil das Wurzelelement das Tooltip ist |
+| 3 | Klick öffnet den Kursverlauf wie die Zeile | „Klicke ich auf EUNL.DE, klappt die Detailansicht auf, klicke ich auf den Bindestrich, öffnet sich die Kursansicht" |
+| 4 | Der Strich sitzt **im** Umschalter, der Hinweis nur um den Text | stimmt |
+
+**Die Ursache, gemessen statt vermutet:** Naive UI hängt am Auslöser eines
+Tooltips eigene Handler auf und verschluckt einen Klick, der von dort kommt.
+Solange der Knopf im Tooltip lag, kam sein Handler nie an — nachweisbar an
+`aria-expanded`, das nach dem Klick unverändert `false` blieb. Jetzt liegt der
+Hinweis im Knopf statt umgekehrt: Die Aktion gehört dem Knopf, die Erklärung
+dem Text.
+
+**Und die ursprüngliche Fehlermeldung war keine.** „Historie kann nicht
+geladen werden" erschien, weil ich zwischen zwei Messungen den Server
+gestoppt hatte, während Mikes Browser offen war — die Statuszeile zeigte
+folgerichtig „Offline". Mike hat es erkannt, nicht ich. Beide Endpunkte
+antworten in beiden Profilen mit `200` und Daten.
+
+**Ein echter Befund kam beim Nachgehen heraus** und steht jetzt als dritter in
+T-44: `GET /quote/by-symbol/BTC-EUR/daily` antwortet mit `502` für ein Papier,
+das schlicht keine Tagesreihe hat.
+
+**Zur Datenbank:** `data/stockinfo.db` trug zwischenzeitlich einen frischen
+Zeitstempel. Nachgewiesen: Weder `pytest` noch die beiden Smokes fassen sie an
+(mtime vor und nach jedem Lauf identisch). Inhalt unverändert — sechs
+Instrumente, jüngstes vom 19. August, gleiche Größe.
+
+---
+
 ## Nicht-Ziele
 
 - Keine neue Asset-Klasse `cash`, keine Immobilien.
