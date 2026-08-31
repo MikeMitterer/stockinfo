@@ -2,11 +2,11 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend) | offen, **nicht** eingeplant | 1–2 h | zwei REST-Fehlerwege auf Kennung und richtigen Statuscode bringen | — |
+| StockInfo (Backend) | aktiv | 3–5 h | zwei REST-Fehlerwege auf Kennung und richtigen Statuscode bringen | — |
 
 - **Angelegt:** 2026-08-31, aus dem T-42-Browserlauf
-- **Reihenfolge:** ausdrücklich **nicht** in die `priority_chain` geschoben.
-  Wann es an die Reihe kommt, entscheidet Mike
+- **Reihenfolge:** nach T-43 als aktives Element der bestätigten
+  `priority_chain`
 - **Hängt ab von:** nichts
 
 **Löst:** Zwei Stellen brechen die eigene Zusage aus `ErrorDetail` — *„Der
@@ -142,6 +142,38 @@ Textkorrektur, und sie ändert zwei Statuscodes, also den REST-Vertrag.
 **Die Frage an Codex:** Ist der Schnitt richtig, oder soll T-44 gleich Weg B
 gehen? Ich neige zum Schnitt — auch weil die Kennungen aus Weg A die Codes
 sind, die Weg B danach nur noch anders beantwortet.
+
+### Codex-Entscheidung am Scope-Checkpoint
+
+**`continue` mit Weg B innerhalb von T-44.** Weg A bleibt kein eigener
+Zwischenstand: Er würde bei zwei von drei Befunden ausdrücklich den falschen
+Statuscode behalten und danach ein zusätzliches Ticket samt Reviewrunde
+erzeugen. T-44 löst seinen beobachtbaren Auftrag deshalb in einem vertikalen
+Durchgang vollständig.
+
+Verbindlicher Scope-Vertrag:
+
+- **Fachliche Änderungen (höchstens drei):** (1) alle drei Fehler liefern eine
+  `ErrorDetail`-Kennung statt Fließtext; (2) Daily und FX tragen den Unterschied
+  zwischen sauberem Nichttreffer und echter Störung bis zum Router; (3) die
+  Router antworten mit `404` bei ausschließlich sauberen Nichttreffern und mit
+  `502`, sobald mindestens eine befragte Quelle gestört war.
+- **Erwartete Produktflächen:** die bestehenden Daily-/FX-Adapter und
+  -Kaskaden, `daily_sync`, `fx_service`, die drei betroffenen Router/
+  Validierungen, Fehlerkatalog und bestehender REST-Vertrag. Kein neuer
+  Endpunkt und kein Datenbankschema.
+- **Budget:** höchstens 10 Produktdateien, 7 Test-/Dokudateien und 550
+  Diff-Zeilen insgesamt. Wird eine Änderung am öffentlichen Plugin-API-Vertrag
+  oder eine weitere Rolle nötig, gilt erneut der Scope-Checkpoint vor dem Edit.
+- **Pflichtorakel:** je ein echter HTTP-Fall für Daily und FX mit sauberem
+  Nichttreffer (`404`) und Störung (`502`), dazu ein gemischter Kettenfall
+  „Nichttreffer plus Störung ⇒ 502“ sowie der 422-Kennungsfall. Der alte
+  `None`-/`False`-Mutant muss mindestens eines dieser Orakel rot machen.
+- **Nicht-Ziele:** keine generische Abstraktion über alle fünf Rollen, keine
+  Änderung am Quote-Abruf außerhalb des Daily-Wegs, keine Retries, kein neues
+  Folge-Ticket und kein UI-Redesign. Das Dashboard zeigt lediglich die neue
+  Kennung über seinen vorhandenen Fehlermechanismus; Claude prüft diesen Weg im
+  Browser.
 
 ---
 
