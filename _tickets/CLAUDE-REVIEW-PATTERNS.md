@@ -717,6 +717,19 @@ speichert den Kursprovider nicht. Der vorhandene Zwei-Quellen-Test erwartete
 ausdrücklich den ersten Namen und konservierte so erneut genau den
 Herkunftsfehler aus T-41.
 
+**Unmittelbare Wiederholung bei einem gemeinsamen Validator:** T-44 Runde 2,
+Commit `5668dc7`: OUTBOX und Test erklärten alle fünf `{isin}`-Routen für
+vollständig dokumentiert. `normalize_isin()` hatte aber zwei weitere direkte
+Verbraucher in `/analyze` und im PUT zum Nachtragen einer ISIN; beide lieferten
+zur Laufzeit den neuen top-level `ErrorDetail`, veröffentlichten weiter
+`HTTPValidationError`. Der neue Test leitete sein Inventar ausschließlich aus
+dem Pfadplatzhalter `{isin}` ab und konnte diese Verbraucher prinzipbedingt
+nicht finden. Außerdem ersetzte dieselbe Deklaration bei Daily und History den
+gesamten 422-Vertrag durch `ErrorDetail`, obwohl ungültige Query-Parameter dort
+weiter `HTTPValidationError` beziehungsweise `{"detail": "…"}` liefern. Die
+Korrektur schloss die besprochenen fünf Pfade, ohne Erzeuger und alle
+Antwortvarianten des gemeinsamen Statuscodes zu inventarisieren.
+
 **Neuer Beleg:** T-42 Phase B Runde 3, Commit `f75df2d`: OUTBOX und Ticket
 meldeten sechs Anzeigebefunde als vollständig behoben. Die Desktop-Tabelle
 blendete bei `isin_only` den technischen ISIN-Platzhalter mit `symbolOf()` aus;
