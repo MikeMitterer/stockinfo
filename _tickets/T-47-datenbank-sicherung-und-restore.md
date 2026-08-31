@@ -164,9 +164,10 @@ Damit ist festgelegt:
    elften. `DELETE /backups/{name}` entfällt damit — eine Route weniger, und
    der einzige Löschweg ist der, den das Aufräumen ohnehin geht.
 2. **Kein Zeitplan.** Gesichert wird auf Knopfdruck — und automatisch **nur**
-   unmittelbar vor einem Wiederherstellen. Diese eine Ausnahme bleibt: Wer
-   zurückspielt, verliert sonst genau den Stand, den er vielleicht gleich
-   vermisst. Sie zählt in die zehn hinein.
+   unmittelbar vor einem Wiederherstellen. Diese eine Ausnahme hat Mike auf
+   Nachfrage ausdrücklich bestätigt („Backup vor Restore passt natürlich",
+   2026-08-31): Wer zurückspielt, verliert sonst genau den Stand, den er
+   vielleicht gleich vermisst. Sie zählt in die zehn hinein.
 3. **Die Liste gehört ins UI**, nicht nur in die REST-Antwort: Zeitpunkt,
    Größe und sichtbar, ob eine Sicherung zur laufenden Quellenlage passt. Eine
    unpassende steht dort mit ihrem Grund, nicht ausgeblendet — sonst sucht
