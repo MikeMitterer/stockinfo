@@ -134,6 +134,12 @@ describe('InstrumentCard', () => {
     await wrapper.find('.icard__toggle').trigger('click')
 
     expect(wrapper.find('.isin__add').exists()).toBe(false)
-    expect(wrapper.text()).toContain(i18n.global.t('table.noIsinByForm'))
+    // Ein Strich wie in jeder anderen leeren Zelle — und der Grund im Titel.
+    // Sichtbar stand er bis T-42 in der Zelle und war doppelt so breit wie
+    // eine ISIN; er hat die Spalte gedehnt, bis die Aktionen aus dem Blickfeld
+    // fielen. Geprueft wird deshalb beides: der Strich und die Auskunft.
+    const empty = wrapper.find('.dim')
+    expect(empty.text()).toBe('—')
+    expect(empty.attributes('title')).toBe(i18n.global.t('table.noIsinReason'))
   })
 })

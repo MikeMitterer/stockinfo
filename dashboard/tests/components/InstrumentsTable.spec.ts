@@ -401,7 +401,16 @@ describe('InstrumentsTable · Identitätsformen', () => {
     const wrapper = mountTable([pair])
 
     expect(wrapper.find('.isin__add').exists()).toBe(false)
-    expect(wrapper.text()).toContain(i18n.global.t('table.noIsinByForm'))
+    // Ein Strich wie in jeder anderen leeren Zelle — und der Grund im Titel.
+    // Sichtbar stand er bis T-42 in der Zelle und war doppelt so breit wie
+    // eine ISIN; er hat die Spalte gedehnt, bis die Aktionen aus dem Blickfeld
+    // fielen. Geprueft wird deshalb beides: der Strich und die Auskunft.
+    // **`.isin-cell .dim`, nicht `.dim`.** Die Zelle selbst traegt die Klasse
+    // auch; ein zu weiter Selektor findet das `td` und prueft dessen Titel,
+    // den es nie gab.
+    const empty = wrapper.find('.isin-cell .dim')
+    expect(empty.text()).toBe('—')
+    expect(empty.attributes('title')).toBe(i18n.global.t('table.noIsinReason'))
   })
 
   it('bietet dem Listing ohne ISIN weiterhin den Editor', () => {

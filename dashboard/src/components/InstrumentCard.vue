@@ -153,7 +153,8 @@ function price(value: number | null): string {
             :symbol="item.symbol"
             @save="emit('set-isin', $event)"
           />
-          <span v-else class="dim">{{ t('table.noIsinByForm') }}</span>
+          <!-- Wie in der Tabelle: ein Strich, der Grund im Titel. -->
+          <span v-else class="dim" :title="t('table.noIsinReason')">—</span>
         </dd>
         <dt>{{ t('table.colPoints') }}</dt>
         <dd class="mono">{{ item.history_count }}</dd>
@@ -192,11 +193,21 @@ function price(value: number | null): string {
 
 .icard__symbol { font-weight: 600; }
 
+// Dieselbe Zuordnung wie in der Tabelle — die Begründung steht dort.
 .icard__type {
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  color: $color-muted;
+  background: token(--text-muted, 0.14);
+
   &.etf { color: $color-accent; background: token(--accent, 0.15); }
   &.stock { color: $color-stock; background: token(--asset-stocks, 0.16); }
+  &.bond { color: token(--asset-bonds); background: token(--asset-bonds, 0.16); }
+  &.etc { color: token(--asset-metals); background: token(--asset-metals, 0.16); }
+  &.fund {
+    color: token(--asset-moneymarket);
+    background: token(--asset-moneymarket, 0.16);
+  }
 }
 
 .icard__price {

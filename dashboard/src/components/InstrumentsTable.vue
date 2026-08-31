@@ -10,7 +10,7 @@ import InstrumentCard from './InstrumentCard.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
 import MetricValue from './MetricValue.vue'
-import { acceptsIsin, isinOf } from '../types'
+import { acceptsIsin, isinOf, symbolOf } from '../types'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 const props = defineProps<{
@@ -311,7 +311,15 @@ function price(value: number | null): string {
                   :aria-controls="`details-${item.symbol}`"
                   @click.stop="toggleDrawer(item)"
                 >
-                  <UxCaret :open="isOpen(item)" />{{ item.symbol }}
+                  <!--
+                    Ein Papier der Form `isin_only` hat kein Anbieter-Symbol;
+                    in der Datenbank steht dort die ISIN, weil die Spalte einen
+                    Schlüssel braucht. Sie hier zu zeigen hieße, sie doppelt zu
+                    zeigen — die Spalte daneben trägt sie bereits.
+                  -->
+                  <UxCaret :open="isOpen(item)" /><template v-if="symbolOf(item)">{{
+                    symbolOf(item)
+                  }}</template><span v-else class="dim" :title="t('table.noSymbolReason')">—</span>
                 </button>
               </td>
               <td class="mono dim isin-cell">
@@ -321,7 +329,18 @@ function price(value: number | null): string {
                   :symbol="item.symbol"
                   @save="emit('set-isin', $event)"
                 />
-                <span v-else class="dim">{{ t('table.noIsinByForm') }}</span>
+                <!--
+                  Kein Wert heißt hier dasselbe wie in jeder anderen Spalte:
+                  ein Strich. Bis T-42 stand der Grund als sichtbarer Text in
+                  der Zelle und hat die Spalte auf 214 px gedehnt — doppelt so
+                  breit, wie eine ISIN je braucht, und damit die Aktionsspalte
+                  aus dem Blickfeld gedrückt.
+
+                  Die Auskunft ist deshalb nicht weg, sondern im Titel: Wer
+                  wissen will, warum dort nichts steht, erfährt es beim
+                  Darüberfahren — ohne dass es jede andere Zeile Platz kostet.
+                -->
+                <span v-else class="dim" :title="t('table.noIsinReason')">—</span>
               </td>
               <td class="name">
                 <button
@@ -609,11 +628,44 @@ tbody tr {
 }
 
 // Varianten der globalen .badge-Pill
+/*
+ * **Jede Gattung trägt die Pille, auch die, die es noch nicht gibt.**
+ *
+ * Bis T-42 standen hier zwei Regeln, `etf` und `stock` — aus der Zeit, als es
+ * zwei Gattungen gab. Seit T-31 und T-38 sind es sechs, und die vier neuen
+ * fielen durch: `CRYPTO`, `BOND` und `FUND` standen als nackter Text neben
+ * einem beschrifteten `ETF`, in derselben Spalte.
+ *
+ * Deshalb steht die Auszeichnung jetzt **vor** den Sonderfällen und nicht in
+ * ihnen. Eine siebte Gattung sieht damit schlechtestenfalls neutral aus statt
+ * unfertig — und die Spalte bleibt bündig, weil alle Zellen dieselbe Box
+ * tragen.
+ */
 .badge.type {
   text-transform: uppercase;
   letter-spacing: 0.03em;
+  color: $color-muted;
+  background: token(--text-muted, 0.14);
+
+  /*
+   * Die Kategoriefarben kommen aus dem Fundament und sind über alle Themes
+   * gleich. Die Zuordnung ist die naheliegende: Anleihe zu `bonds`, ETC zu
+   * `metals` (ein ETC hält üblicherweise Rohstoff), Fonds zu `moneymarket`
+   * als dem verbleibenden Fondsvehikel.
+   *
+   * **Für Krypto führt das Fundament keine Kategorie**, und eine zu erfinden
+   * hieße, eine Farbe zu setzen, die im nächsten Theme etwas anderes bedeutet.
+   * Die Gattung behält deshalb die neutrale Pille — sichtbar ausgezeichnet,
+   * nur ohne eigene Farbe.
+   */
   &.etf { color: $color-accent; background: token(--accent, 0.15); }
   &.stock { color: $color-stock; background: token(--asset-stocks, 0.16); }
+  &.bond { color: token(--asset-bonds); background: token(--asset-bonds, 0.16); }
+  &.etc { color: token(--asset-metals); background: token(--asset-metals, 0.16); }
+  &.fund {
+    color: token(--asset-moneymarket);
+    background: token(--asset-moneymarket, 0.16);
+  }
 }
 
 /*

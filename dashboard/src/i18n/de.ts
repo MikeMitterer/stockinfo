@@ -31,7 +31,15 @@ export const de = {
     empty: 'Noch keine Wertpapiere gecacht — oben per ISIN oder Symbol hinzufügen.',
     colSymbol: 'Symbol',
     colIsin: 'ISIN',
-    noIsinByForm: 'hat keine — Währungspaar',
+    /*
+     * Der Grund für den Strich, als Hover-Text. Sichtbar stand er bis T-42
+     * in der Zelle und hat die Spalte auf 214 px gedehnt — doppelt so breit
+     * wie eine ISIN je braucht. Als Titel erklärt er dasselbe und kostet
+     * keine Spaltenbreite.
+     */
+    noIsinReason: 'Ein Währungspaar trägt keine ISIN — das ist die Form des Papiers, keine Lücke.',
+    /* Warum in der Symbolspalte ein Strich stehen kann — siehe `noIsinReason`. */
+    noSymbolReason: 'Dieses Papier wird nur über seine ISIN identifiziert und hat kein Börsensymbol.',
     colName: 'Name',
     colType: 'Typ',
     colPrice: 'Kurs',
