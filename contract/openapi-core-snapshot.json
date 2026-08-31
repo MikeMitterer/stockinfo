@@ -332,7 +332,14 @@
           "422": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ErrorDetail"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ErrorDetail"
+                  },
+                  {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  }
+                ]
               }
             }
           },
@@ -383,7 +390,23 @@
           "422": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/ErrorDetail"
+                "anyOf": [
+                  {
+                    "$ref": "#/components/schemas/ErrorDetail"
+                  },
+                  {
+                    "$ref": "#/components/schemas/HTTPValidationError"
+                  },
+                  {
+                    "properties": {
+                      "detail": {
+                        "type": "string"
+                      }
+                    },
+                    "title": "DetailText",
+                    "type": "object"
+                  }
+                ]
               }
             }
           }

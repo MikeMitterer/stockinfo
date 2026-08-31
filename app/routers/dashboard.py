@@ -25,7 +25,6 @@ from app import __version__
 from app.config import Settings, get_settings
 from app.container import get_cached_quote_service, get_quote_analyzer
 from app.models import (
-    INVALID_ISIN_RESPONSE,
     AnalyzeResult,
     CollectorEntry,
     EnvInfo,
@@ -38,6 +37,7 @@ from app.models import (
     RefreshResult,
     SourceEntry,
     SourcesResponse,
+    invalid_isin_response,
 )
 from app.exchanges import COLLECTORS, EXCHANGES, preference_kind
 from app.container import get_sources_config
@@ -158,7 +158,11 @@ def sources() -> SourcesResponse:
     )
 
 
-@router.get("/analyze", response_model=AnalyzeResult)
+@router.get(
+    "/analyze",
+    response_model=AnalyzeResult,
+    responses=invalid_isin_response(detail_text=True),
+)
 def analyze(
     analyzer: AnalyzerDep,
     isin: str | None = None,
@@ -193,7 +197,7 @@ def refresh_all(service: ServiceDep) -> RefreshResult:
 @router.post(
     "/refresh/{isin}",
     response_model=QuoteResponse,
-    responses=INVALID_ISIN_RESPONSE,
+    responses=invalid_isin_response(),
 )
 def refresh_one(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     """Aktualisiert ein einzelnes Instrument per ISIN."""
@@ -217,7 +221,7 @@ def refresh_one_by_symbol(symbol: SymbolPath, service: ServiceDep) -> QuoteRespo
 
 
 @router.delete(
-    "/instruments/{isin}", status_code=204, responses=INVALID_ISIN_RESPONSE
+    "/instruments/{isin}", status_code=204, responses=invalid_isin_response()
 )
 def delete_instrument(isin: IsinPath, service: ServiceDep) -> Response:
     """Löscht ein Instrument samt Historie per ISIN."""
@@ -226,7 +230,11 @@ def delete_instrument(isin: IsinPath, service: ServiceDep) -> Response:
     return Response(status_code=204)
 
 
-@router.put("/instruments/by-symbol/{symbol}/isin", response_model=dict)
+@router.put(
+    "/instruments/by-symbol/{symbol}/isin",
+    response_model=dict,
+    responses=invalid_isin_response(validation=True, detail_text=True),
+)
 def set_isin(symbol: SymbolPath, payload: IsinUpdate, service: ServiceDep) -> dict:
     """Trägt die ISIN eines Instruments (per Symbol) nachträglich ein."""
     isin = normalize_isin(payload.isin)

@@ -25,13 +25,13 @@ from app.container import get_cached_quote_service, get_daily_history_service
 from app.models import (
     IDENTITY_CONFLICT_RESPONSE,
     INSTRUMENT_NOT_FOUND_RESPONSE,
-    INVALID_ISIN_RESPONSE,
     SYMBOL_CONFLICT_RESPONSE,
     DailyPoint,
     ErrorDetail,
     QuotePoint,
     QuoteResponse,
 )
+from app.models import invalid_isin_response
 from app.exchanges import REASON_NO_SUFFIX
 from app.routers.instruments import REASON_QUOTE_UNAVAILABLE
 from app.services.intake_service import REASON_NOT_FOUND
@@ -214,7 +214,7 @@ def quote_by_symbol(
     responses={
         **IDENTITY_CONFLICT_RESPONSE,
         **INSTRUMENT_NOT_FOUND_RESPONSE,
-        **INVALID_ISIN_RESPONSE,
+        **invalid_isin_response(),
     },
 )
 def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
@@ -256,8 +256,8 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
     responses={
         **IDENTITY_CONFLICT_RESPONSE,
         **INSTRUMENT_NOT_FOUND_RESPONSE,
-        **INVALID_ISIN_RESPONSE,
         **DAILY_ERROR_RESPONSES,
+        **invalid_isin_response(validation=True),
     },
 )
 def daily_history(
@@ -326,7 +326,7 @@ def quote_history_by_symbol(
     responses={
         **IDENTITY_CONFLICT_RESPONSE,
         **INSTRUMENT_NOT_FOUND_RESPONSE,
-        **INVALID_ISIN_RESPONSE,
+        **invalid_isin_response(validation=True, detail_text=True),
     },
 )
 def quote_history(

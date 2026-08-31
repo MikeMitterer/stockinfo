@@ -230,53 +230,102 @@ def test_eine_gestoerte_devisenquelle_neben_einem_nichttreffer_bleibt_502(
 # ─── Die Kennung an der Eingangstür ───────────────────────────────────────────
 
 
-def test_eine_unbrauchbare_isin_wird_mit_kennung_abgelehnt(client: TestClient) -> None:
-    """`422` mit Kennung — **auf oberster Ebene**, nicht unter `detail`.
+# **Ein Inventar, keine Ableitung.** Der erste Anlauf filterte auf `"{isin}"`
+# im Pfad und fand damit fünf von sieben Wegen: `GET /analyze?isin=…` und
+# `PUT /instruments/by-symbol/{symbol}/isin` rufen die Prüfung direkt auf und
+# tragen die ISIN nicht im Pfadnamen. Eine Liste, die man aus einer Zeichenkette
+# errät, behauptet Vollständigkeit und hat sie nicht.
+#
+# Je Weg steht hier, **welche 422-Formen dort wirklich vorkommen** — gemessen,
+# nicht angenommen. `ErrorDetail` an jedem, weil die gemeinsame Prüfung überall
+# hängt; die beiden anderen nur, wo die Route sie erzeugen kann.
+ISIN_ROUTES = [
+    ("/quote/{isin}", "get", {"ErrorDetail"}),
+    ("/quote/{isin}/daily", "get", {"ErrorDetail", "HTTPValidationError"}),
+    (
+        "/quote/{isin}/history",
+        "get",
+        {"ErrorDetail", "HTTPValidationError", "DetailText"},
+    ),
+    ("/refresh/{isin}", "post", {"ErrorDetail"}),
+    ("/instruments/{isin}", "delete", {"ErrorDetail"}),
+    ("/analyze", "get", {"ErrorDetail", "DetailText"}),
+    (
+        "/instruments/by-symbol/{symbol}/isin",
+        "put",
+        {"ErrorDetail", "HTTPValidationError", "DetailText"},
+    ),
+]
 
-    `ErrorDetail` sagt die unverschachtelte Form ausdrücklich zu: Ein Rumpf
-    unter `detail` zwänge jeden Konsumenten, erst auszupacken, was er dann doch
-    typisiert erwartet. Geprüft werden deshalb die **exakten** Schlüssel; eine
-    Prüfung auf `["code"]` allein wäre auch bei `{"detail": {...}, "code": …}`
-    grün.
-    """
-    response = client.get("/quote/BTC-EUR")
 
-    assert response.status_code == 422, response.text
-    assert set(response.json()) == {"code", "params"}, response.text
-    assert response.json() == {
-        "code": "invalid_isin_format",
-        "params": {"isin": "BTC-EUR"},
-    }
+def _declared_422_forms(schema: dict, path: str, method: str) -> set[str]:
+    """Die im Vertrag zugesagten 422-Formen einer Route, als Namensmenge."""
+    body = schema["paths"][path][method]["responses"]["422"]["content"]
+    declared = body["application/json"]["schema"]
+    variants = declared.get("anyOf", [declared])
+    names = set()
+    for variant in variants:
+        reference = variant.get("$ref")
+        names.add(reference.rsplit("/", 1)[-1] if reference else variant["title"])
+    return names
 
 
-def test_der_vertrag_sagt_dieselbe_form_zu_wie_die_laufzeit(
+def test_der_vertrag_nennt_je_route_alle_moeglichen_422_formen(
     client: TestClient,
 ) -> None:
-    """**Der veröffentlichte Vertrag und der Rumpf müssen übereinstimmen.**
+    """**Der veröffentlichte Vertrag und die Laufzeit müssen übereinstimmen.**
 
     Die Laufzeitform allein genügt nicht: Ein Konsument liest OpenAPI. Stand
-    dort weiter `HTTPValidationError`, behandelte er einen Fall, den es nicht
+    dort nur `HTTPValidationError`, behandelte er einen Fall, den es so nicht
     gibt, und den echten nicht — bei grünem Schnappschuss, denn der vergleicht
     das Deklarierte mit sich selbst.
 
-    Geprüft wird an **jeder** Route, die diese gemeinsame Validierung benutzt:
-    Eine Zusage nur dort, wo der Fehler zuerst auffiel, veröffentlichte für
-    dieselbe Lage zwei Verträge.
+    Umgekehrt gilt dasselbe: Eine Route, die außer der ungültigen ISIN noch
+    andere `422` erzeugen kann, darf nicht nur `ErrorDetail` zusagen. Ein
+    Konsument, der danach seinen Parser baut, bricht am ersten Zeitfenster.
     """
     schema = client.get("/openapi.json").json()
-    isin_routes = [
-        (path, method)
-        for path, methods in schema["paths"].items()
-        if "{isin}" in path
-        for method in methods
+
+    for path, method, expected in ISIN_ROUTES:
+        assert path in schema["paths"], f"{path} fehlt im Vertrag"
+        assert _declared_422_forms(schema, path, method) == expected, (
+            f"{method.upper()} {path}"
+        )
+
+
+def test_jeder_isin_weg_liefert_zur_laufzeit_die_zugesagte_kennung(
+    client: TestClient,
+) -> None:
+    """Alle sieben Wege, mit derselben unbrauchbaren ISIN.
+
+    Die Gegenprobe zur Vertragsprüfung darüber: Dort steht, was zugesagt ist,
+    hier, was ankommt. Beides getrennt zu prüfen ist der Punkt — ein Vertrag,
+    der von der Laufzeit abweicht, ist schlimmer als keiner.
+
+    Geprüft wird der **exakte** Rumpf: `["code"]` allein wäre auch bei
+    `{"detail": {...}, "code": …}` grün.
+    """
+    aufrufe = [
+        ("get", "/quote/BTC-EUR", None),
+        ("get", "/quote/BTC-EUR/daily", None),
+        ("get", "/quote/BTC-EUR/history", None),
+        ("post", "/refresh/BTC-EUR", None),
+        ("delete", "/instruments/BTC-EUR", None),
+        ("get", "/analyze?isin=BTC-EUR", None),
+        ("put", "/instruments/by-symbol/EUNL.DE/isin", {"isin": "BTC-EUR"}),
     ]
 
-    assert isin_routes, "keine ISIN-Route gefunden — der Test prüfte nichts"
-
-    for path, method in isin_routes:
-        declared = schema["paths"][path][method]["responses"]["422"]
-        ref = declared["content"]["application/json"]["schema"]["$ref"]
-        assert ref.endswith("/ErrorDetail"), f"{method.upper()} {path}: {ref}"
+    for method, url, payload in aufrufe:
+        response = (
+            client.request(method, url, json=payload)
+            if payload is not None
+            else client.request(method, url)
+        )
+        assert response.status_code == 422, f"{method.upper()} {url}: {response.text}"
+        assert response.json() == {
+            "code": "invalid_isin_format",
+            "params": {"isin": "BTC-EUR"},
+        }, f"{method.upper()} {url}"
 
 
 def test_ein_unbrauchbarer_waehrungscode_wird_mit_kennung_abgelehnt(
