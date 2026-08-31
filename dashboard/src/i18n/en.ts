@@ -37,8 +37,7 @@ export const en = {
     colSymbol: 'Symbol',
     toggleDetails: 'Show/hide details',
     colIsin: 'ISIN',
-    /* The reason for the dash, as a hover text — see the German file. */
-    /* Die eine Quelle für beide Darstellungsformen — siehe die deutsche Fassung. */
+    /* Die eine Erklärung für beide Darstellungsformen — siehe die deutsche Fassung. */
     noIsinReason:
       'A hyphen means there is no ISIN: a currency pair carries none. That is the shape of the instrument, not a gap.',
     noSymbolReason:

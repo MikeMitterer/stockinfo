@@ -178,8 +178,7 @@ describe('InstrumentCard', () => {
 
   /*
    * Die Gegenprobe: Ein Papier **mit** Symbol traegt den Hinweis nicht. Ohne
-   * sie waere der Fall darueber auch gruen, wenn die Karte ihn immer zeigte —
-   * und genau das war Mikes Einwand gegen den Hinweis in jeder Zeile.
+   * sie waere der Fall darueber auch gruen, wenn die Karte ihn immer zeigte.
    */
   it('zeigt den Symbol-Hinweis nicht, wo ein Symbol steht', () => {
     const wrapper = mountCard({

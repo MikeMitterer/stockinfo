@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #------------------------------------------------------------------------------
-# T-22-smoke.sh — Verify #1/#2/#2b/#3/#4/#5: Quellen konfigurieren statt verdrahten
+# T-22-smoke.sh — Verify #1/#2/#3/#4/#4b/#5: Quellen konfigurieren statt verdrahten
 #
 # Die Verify-Zeilen von T-22 sagen alle „…, Neustart". Das ist der Kern: Eine
 # Konfiguration, die erst nach einem Neustart gilt, muss auch **über einen
@@ -10,7 +10,7 @@
 # **Kein Netz nötig.** Geprüft wird, welche Kette entsteht — nicht, was die
 # Quellen liefern. Die Arbeits-Datenbank wird nicht angefasst.
 #
-# Fünf Fragen, die nur hier zusammen beantwortet werden:
+# Sechs Fragen, die nur hier zusammen beantwortet werden:
 #
 #   1. Gilt eine vertauschte Reihenfolge? (`#1`)
 #   2. Bleibt OpenFIGI ohne Key **aktiv**? (`#2`)
@@ -25,8 +25,8 @@
 # Die Zusage selbst prüfen die Unit-Tests zu `is_configured`; sobald eine
 # Quelle mit Pflichtangabe entsteht, gehört sie hierher zurück.
 #
-# Die erwarteten Kennungen stehen in `EXPECTED_IDS` — eine Zahl allein hätte
-# den Tausch von `#2b` gegen `#4b` gutgläubig als „alle bestanden" gemeldet.
+# Die erwarteten Kennungen stehen in `EXPECTED_IDS`: Eine Zahl allein erkennt
+# nicht, wenn ein zugesagter Check durch einen anderen ersetzt wird.
 #
 # Verwendung:
 #   ./_tickets/T-22-smoke.sh --run
@@ -56,8 +56,7 @@ readonly VENV_PY="${PROJECT_ROOT}/.venv/bin/python"
 #
 # Die Zahl allein verhindert nur, dass ein unterwegs abgebrochener Lauf mit
 # `COUNT_FAIL=0` grün endet. Sie sagt nichts darüber, ob die gelaufenen Checks
-# **dieselben** sind: Wird einer ersetzt, stimmt die Summe weiter. Genau das
-# ist hier passiert, als `#4b` an die Stelle von `#2b` trat.
+# **dieselben** sind: Wird einer ersetzt, stimmt die Summe weiter.
 readonly EXPECTED_IDS="#1 #2 #3 #4 #4b #5"
 
 # Was tatsächlich gelaufen ist — von `report` gefüllt, am Ende verglichen.
@@ -347,7 +346,7 @@ runChecks() {
 
     echo
     # **Die Schlussmarke, und sie prüft die Identität statt der Anzahl.** Ein
-    # Lauf, der unterwegs abbricht, erreicht sie nicht (P-05) — und einer, der
+    # Lauf, der unterwegs abbricht, erreicht sie nicht — und einer, der
     # einen Check gegen einen anderen tauscht, kommt an ihr nicht vorbei.
     if [[ "${COUNT_FAIL}" -eq 0 && "${SEEN_IDS}" == "${EXPECTED_IDS}" ]]; then
         echo -e "  ${GREEN}✓ ${COUNT_OK} Checks bestanden, keine Fehler${NC}"
