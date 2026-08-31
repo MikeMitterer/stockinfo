@@ -42,8 +42,8 @@ describe('useSources', () => {
   })
 
   /*
-   * Eine Quelle, die nicht arbeiten kann, wird zwar gefragt, antwortet aber
-   * nicht — sie gehoert nicht in eine Zeile, die sagt, wer liefert.
+   * Eine Quelle, die nicht arbeiten kann, wird aus der Laufzeitkette entfernt
+   * und gehoert deshalb nicht in die Anzeige.
    */
   it('laesst eine Quelle weg, die nicht arbeiten kann', async () => {
     answerWith([

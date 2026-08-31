@@ -25,8 +25,8 @@ export function useSources(): {
    * einer einzelnen Antwort führt weder das REST-Modell noch die Tabelle. Ein
    * einzelner Name wäre deshalb eine Aussage, die diese Daten nicht decken.
    *
-   * Nicht einsatzbereite Quellen fehlen: Sie werden zwar gefragt, können aber
-   * nicht antworten.
+   * Nicht einsatzbereite Quellen fehlen: Sie werden beim Bau aus der
+   * Laufzeitkette entfernt und können daher nicht antworten.
    */
   const quoteChain = computed<string[]>(() =>
     (sources.value?.sources ?? [])
