@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `claude_working`
 - `ticket`: `T-44-fehlerwege-mit-kennung.md`
 - `handoff_commit`: `f51393a`
 - `review_round`: `3`
