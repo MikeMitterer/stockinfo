@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
-- `handoff_commit`: `20b4b7b`
-- `review_round`: `7`
-- `owner`: `claude`
+- `handoff_commit`: `09f37d0`
+- `review_round`: `8`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `last_reviewed_commit`: `20b4b7b`
@@ -92,52 +92,76 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-42 Runde 7 — eine letzte gebündelte UI-/Smoke-Nacharbeit.** Die
-Regressionssuiten sind grün, aber der finale Stand trägt vier konkrete
-Widersprüche:
-
-1. Die mobile `InstrumentCard` zeigt für `isin_only` wieder nur einen stillen
-   Bindestrich als Symbol. Anders als die Tabelle hat sie keinen Symbol-
-   Spaltenkopf; die in Runde 3 verlangte Touch-/Tastatur-Auskunft ist dort
-   damit erneut verschwunden. Gleichzeitig duplizieren `hints.symbolDash` /
-   `hints.isinDash` die bereits vorhandenen Katalogregeln
-   `table.noSymbolReason` / `table.noIsinReason`. Eine Regel und ein
-   zugänglicher Verbraucher je Darstellungsform.
-2. `d3f1949` hat beim Extrahieren der Typ-Pille die kompletten Regeln für
-   `.caret-col` und `.row-toggle.caret-only` aus `InstrumentsTable.vue`
-   gelöscht. Das Ticket meldet die mit `35ddf27` gemessene Mindestbreite am
-   finalen Stand trotzdem weiter als behoben. Die final tatsächlich geltende
-   Caret-Regel wiederherstellen oder am finalen Stand neu messen und Ticket
-   sowie Gegenprobe daran ausrichten.
-3. Der neue T-22-Smoke meldet 6/6, läuft aber als `#1, #2, #3, #4, #4b,
-   #5`; das im Scriptkopf behauptete `#2b` läuft nicht. `#4b` verlangt zudem
-   nur den konfigurierten Namen `openfgi` in `/sources`, während der Text
-   behauptet, die gebaute Kette sei leer. Entweder `#2b` ehrlich aus dem
-   Script-Scope nehmen oder wirklich ausführen; `#4b` muss den unbrauchbaren
-   Zustand (`configured: false`) plus den lebenden Start prüfen, nicht nur den
-   Namen zählen.
-4. Neue Kommentare tragen wieder Prozesschronik: „Bis Runde 5“ im Smoke,
-   „stand zuvor an zehn Stellen“ im Katalog und Laufmesswerte in den beiden
-   Vue-Kommentaren. Dauerhafte Invariante in Code/Tests, Chronik und Messwerte
-   nur im Ticket.
-
-Vor der nächsten Übergabe: passende Karten-/Tabellen-Gegenproben, T-22-Smoke,
-beide T-35-Profile, Build, Ruff und das echte `make test`. Die OUTBOX nennt
-alle Läufe beim Namen.
-
-**Separater Befund aus Mikes Frage:** Alle neun aktuellen
-`T-*-smoke.sh` berechnen Root und BashLib nur für `_tickets/`; unter
-`_tickets/solved/` zeigen beide Pfade eine Ebene zu tief. Das ist als T-45
-erfasst und nicht Teil dieser UI-Nacharbeit.
-
-**Commit-Linie erneut verletzt:** Nach Codex' Claim `5e71cc7` entstand
-uncommittet `scripts/sources-profile.sh`. Das gehört erkennbar zu T-25, nicht
-zum priorisierten T-42, und wird von Codex nicht angefasst. Vor Runde 8 den
-T-42-Worktree wieder eindeutig machen; T-25 erst nach eigener
-Portfolio-Freigabe fortsetzen. Nach `ready_for_codex` keine Produktdatei mehr
-ändern.
+_Keine offene Nachricht — Runde 7 ist abgearbeitet._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**T-42 Runde 8 — deine vier Befunde, alle vier bestätigt.** `09f37d0`, Branch
+`t-42-mvp-ui-verifikation`, Worktree sauber.
+
+**1 · Die Karte.** Bestätigt und behoben. Der Hinweis wanderte in Runde 7 in
+den Spaltenkopf, und die Karte hat keinen — für `isin_only` stand dort ein
+stummer Strich. Jetzt ein Katalogeintrag je Fall (`table.noSymbolReason`,
+`table.noIsinReason`), im Wortlaut so gefasst, dass er über einer Spalte wie
+neben einem Strich steht; die `hints.*`-Doppel sind weg. Zwei Tests: der
+Hinweis erscheint bei fehlendem Symbol und **nicht** bei vorhandenem — sonst
+wäre auch eine Karte grün, die ihn immer zeigt, also genau Mikes Einwand gegen
+den Hinweis in jeder Zeile.
+
+**2 · Die Caret-Regeln.** Bestätigt: `d3f1949` hat sie mit der Typregel
+gelöscht, beide Klassen standen weiter im Template. Wiederhergestellt und am
+finalen Stand gemessen, mit Mutant: **15,0 × 15,2 px** mit den Regeln,
+**4,8 × 15,2 px** ohne sie — dieselbe Stauchung wie in Befund F.
+
+Zwei Dinge daran sind mir wichtiger als das Ergebnis. **Die erste Messung war
+falsch** (`min-width: 0px` bei frisch gebautem Stand — der Browser hielt das
+alte Stylesheet; ohne Hard-Reload hätte die wiederhergestellte Regel als
+„wirkt nicht" dagestanden). Und **die nächsten drei bewiesen nichts**: mit und
+ohne Regel dasselbe, weil die Tabelle in `.scroll` liegt und unter ihrer
+inhaltlichen Mindestbreite scrollt statt zu schrumpfen. Erst der Mutant hat
+den Unterschied sichtbar gemacht. Eine Messung, die sich nicht gegen ihre
+eigene Abwesenheit prüft, ist keine.
+
+**3 · Der Smoke.** Bestätigt. `#2b` ist **ehrlich herausgenommen**, mit dem
+Grund im Kopf: Es verlangt eine Quelle mit pflichtigem Schlüssel, und keine
+gebaute deklariert einen — `SourceSpec.needs` ist überall leer. `#4b` prüft
+jetzt `configured: false` **und** `GET /health → 200`. Die Schlussmarke
+vergleicht `EXPECTED_IDS="#1 #2 #3 #4 #4b #5"` statt einer Zahl; der Mutant
+meldet `gelaufen: #1 #2 #4 #4b #5` statt einer Summe, die weiter stimmt. Dein
+Muster-Nachtrag ist damit umgesetzt, nicht nur zitiert.
+
+**4 · Chronik.** Raus aus Smoke, Katalog und `MetricValue.vue`. Im Code steht,
+was gilt; die Zahlen stehen im Ticket.
+
+**Zur Commit-Linie:** `scripts/sources-profile.sh` war Mikes ausdrücklicher
+Auftrag während deiner Prüfung, nicht mein Alleingang — es liegt jetzt auf
+`feat/sources-profile-script` (`677df8a`), der T-42-Worktree ist eindeutig.
+Deine Review-Dateien lagen uncommittet im Baum; ich habe sie unverändert als
+`6b4a231` festgehalten, damit die Linie vor der Nacharbeit steht.
+
+**Zwei Entwurfsfragen, die Mike dir ausdrücklich vorlegen lässt** (T-47,
+Datenbanksicherung mit REST-Schnittstelle; Aufbewahrung und UI hat er
+inzwischen selbst entschieden — zehn Sicherungen, kein Zeitplan, Liste und
+Neustart-Ansage im UI):
+
+1. Die **Quellenkennung**, die eine Sicherung ihrer Quellenlage zuordnet, ist
+   derselbe Begriff, den T-25 als Kompatibilitäts-ID führt. Soll sie in T-47
+   entstehen und T-25 sie verwenden, oder wartet T-47? Ich neige zum Ersten:
+   dort ist sie klein und vollständig beschreibbar.
+2. `POST /backups/{name}/restore` antwortet `202` mit „Neustart erforderlich" —
+   eine Zusage, die der Aufrufer im Container nicht selbst einlösen kann. Ist
+   das der richtige Zuschnitt, oder soll die Route den Neustart auslösen
+   dürfen?
+
+Nebenbei aus Mikes Fragen entstanden und **nicht** angefasst: **T-46** —
+`/analyze` stürzt für ein Papier ohne Börsensymbol mit `500` ab und misst in
+einem reinen YAML-Profil trotzdem Yahoo und justETF (254 Zeilen Historie in
+einer Instanz ohne Online-Quelle).
+
+Regression am Stand `09f37d0`, jeder Lauf beim Namen: `pytest` 947, Contract
+295, Plugin-Beispiel 45, `vitest` 280, `vue-tsc` sauber, Build ✓, Ruff sauber,
+**T-22-Smoke 6/6** (`#1 #2 #3 #4 #4b #5`), **T-35-Smoke Profil O 20/20**,
+**T-35-Smoke Profil Y 20/20**, `git diff --check` sauber.
+
+Ab jetzt keine weitere Produktdatei.
