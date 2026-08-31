@@ -100,21 +100,21 @@ jeder Kette, einschließlich `resolvers`.
 | **O1** | `IE00B4L5Y983` | Kurs **und** TER, Anbieter, Domizil im Drilldown; „Quelle: justetf" | Kurs yfinance, Metadaten justETF | Fehlt die Gattung, wird die Metadatenquelle **gar nicht erst** gefragt — leer ohne Meldung (T-38 `#5`) |
 | **O2** | dasselbe Papier, das die YAML-Datei mit **abweichendem** Wert führt | der **Online**-Wert steht da, nicht der aus der Datei | yfinance | Die Datei überschreibt einen gültigen Online-Treffer (T-37 `#4`) |
 | **O3** | `DE0001102531` | 99,42 EUR aus der Datei — obwohl online kein Kurs existiert | `yaml-file` | Die Kette bricht nach der ersten Quelle ab (T-41); und ohne `yaml-file` in `resolvers` scheitert schon die **Aufnahme** (T-35, Doku-Befund) |
-| **O4** | `/fx` CAD→EUR, erste FX-Quelle antwortet nicht | Kurs erscheint, Feld „Quelle" nennt **`yaml-file`** | `yaml-file` | Die Herkunft nennt die Quelle, die vorn steht, statt der, die geliefert hat (T-41 Runde 2) |
+| **O4** | `/fx` CAD→EUR; temporäre lokale Quelle `fx-miss` antwortet zuerst mit `NotFound` | Kurs erscheint, Feld „Quelle" nennt **`yaml-file`** | `yaml-file` | Die Herkunft nennt die Quelle, die vorn steht, statt der, die geliefert hat (T-41 Runde 2) |
 | **O5** | `XX0000000000` | verständliche Meldung mit der Kennung im Text; **keine** neue Zeile; genau **ein** fehlgeschlagener Request | — | „Hinzufügen fehlgeschlagen" ohne Grund, und eine halbe Zeile bleibt in der Datenbank zurück (T-35 Befund 4) |
 
 ### Das fremde Plugin über den Entry-Point
 
 | # | Eingabe | Sichtbar erwartet | Quelle | Unterscheidet den Fehler |
 |---|---|---|---|---|
-| **P1** | `us-example==0.1.0` gepinnt, Neustart, dann `US0378331005` | in `/sources` in **beiden** Rollen einsatzbereit; Zeile `AAPL`, NASDAQ, USD | `us-example` | Der Entry-Point-Weg lädt nicht, oder der Name kommt aus dem Schlüssel statt aus der Klasse (T-39 Runde 2) |
+| **P1** | `stockinfo-source-us-example==0.1.0` gepinnt, Neustart, dann `US0378331005` | in `/sources` in **beiden** Rollen einsatzbereit; Zeile `AAPL`, NASDAQ, USD | `us-example` | Das installierte Wheel wird nicht über seinen Entry-Point bis in Registry und UI geladen (T-39) |
 | **P2** | dasselbe Plugin, **ohne** gesetzte `US_MARKET_API_KEY` | `/sources` zeigt es als nicht einsatzbereit **mit lesbarem Grund**; die übrige Kette arbeitet weiter | — | Eine Quelle steht still und sagt nicht warum; oder sie reißt die ganze Kette mit (T-23/T-39) |
 
 ### Die Rollen, einmal jede
 
 | # | Eingabe | Sichtbar erwartet | Quelle | Unterscheidet den Fehler |
 |---|---|---|---|---|
-| **R1** | Profil Y: Aufnahme → Liste → Chart → Drilldown → Devisenseite | Auflösung, Kurs, Tagesreihe, Kennzahlen und Wechselkurs kommen **alle fünf** aus derselben Datei | `yaml-file` | Eine Rolle steht in `/sources` als konfiguriert, wird aber über keinen echten Eintritt je gefragt (T-37 `#2`) |
+| **R1** | Profil Y: World-ETF aufnehmen und Drilldown öffnen; Bond-Chart öffnen; CAD→EUR rechnen | Auflösung/Kurs/Metadaten am ETF, Tagesreihe am Bond und FX kommen über die zugehörigen REST-Requests **alle fünf** aus derselben Datei | `yaml-file` | Eine Rolle steht in `/sources` als konfiguriert, wird aber über keinen echten Eintritt je gefragt (T-37 `#2`) |
 
 ### Was bewusst **kein** Browserfall ist
 
@@ -140,9 +140,13 @@ Datenherkunft ist kein Beleg.
 
 **Vorbereitung, die zum Lauf gehört:** O2 braucht ein Papier, das in beiden
 Quellen mit **unterschiedlichem** Wert steht — `IE00B4L5Y983` führt die
-Beispieldatei mit 128,21, online steht ein anderer Kurs. O4 braucht eine erste
-FX-Quelle, die nichts liefert. Beides sind Konfigurations- und Datenfragen,
-keine Produktänderungen.
+Beispieldatei mit 128,21, online steht ein anderer Kurs. Für O4 liegt im
+temporären Datenverzeichnis eine einzelne `data/plugins/fx_miss.py`: eine
+`FxSource`, die CAD→EUR übernimmt und `NotFound` liefert. Die Kette lautet
+`fx: [fx-miss, yaml-file]`; die Datei wird weder committet noch zur neuen
+Testinfrastruktur. So entsteht der entscheidende Unterschied deterministisch,
+ohne Yahoo-Verfügbarkeit zu raten. Beides sind Laufkonfiguration und
+Testdaten, keine Produktänderungen.
 
 ---
 
