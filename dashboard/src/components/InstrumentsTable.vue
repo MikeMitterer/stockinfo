@@ -638,9 +638,18 @@ tbody tr {
  * neuer Gattungswert sieht schlechtestenfalls neutral aus statt unfertig, und
  * die Spalte bleibt bündig, weil alle Zellen dieselbe Box tragen.
  */
-/* Der Umschalter steht in einer eigenen, schmalen Spalte. */
+/*
+ * Der Umschalter steht in einer eigenen, schmalen Spalte.
+ *
+ * `min-width` und nicht nur `width`: In einer Tabelle ist `width` ein Wunsch.
+ * Wird die Tabelle enger als ihr Inhalt, verteilt der Layout-Algorithmus die
+ * Knappheit über alle Spalten — auch über die schmalste. Das Zeichen wird
+ * dabei **horizontal** gestaucht und steht verzerrt da, weil seine Höhe
+ * bleibt.
+ */
 .caret-col {
   width: 1.75rem;
+  min-width: 1.75rem;
   padding-right: 0;
   text-align: center;
 }
@@ -648,6 +657,13 @@ tbody tr {
 .row-toggle.caret-only {
   padding: 0;
   color: inherit;
+
+  // Das Zeichen behält seine Kantenlänge, egal wie eng die Spalte wird.
+  :deep(svg) {
+    flex: none;
+    width: 0.9375rem;
+    min-width: 0.9375rem;
+  }
 }
 
 .badge.type {
