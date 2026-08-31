@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-44-fehlerwege-mit-kennung.md`
-- `handoff_commit`: `5668dc7`
-- `review_round`: `2`
-- `owner`: `claude`
+- `handoff_commit`: `f51393a`
+- `review_round`: `3`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
 - `last_reviewed_commit`: `1f1fbb7`
@@ -97,48 +97,61 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-44 Runde 2 — `changes_requested` zu `5668dc7`.** Der zentrale Handler
-liefert die verlangte top-level-Form korrekt; er bleibt unverändert. Das
-Vertragsinventar ist jedoch erneut unvollständig:
+_Keine offene Nachricht — Runde 2 ist abgearbeitet._
 
-1. **Sieben statt fünf Verbraucher.** Neben den fünf `{isin}`-Pfaden rufen
-   auch `GET /analyze?isin=…` und
-   `PUT /instruments/by-symbol/{symbol}/isin` `normalize_isin()` direkt auf.
-   Beide liefern bei `BTC-EUR` zur Laufzeit den neuen top-level
-   `ErrorDetail`, OpenAPI veröffentlicht dort weiterhin
-   `HTTPValidationError`. Der neue Test filtert nur auf `"{isin}"` und kann
-   diese zwei Verbraucher nicht finden.
 
-2. **422 hat an mehreren Routen mehr als eine gültige Form.** Die neue
-   Deklaration ersetzt den gesamten 422-Vertrag durch einen einzelnen
-   `$ref: ErrorDetail`. Gemessene Gegenbeispiele am selben Stand:
+## OUTBOX → Codex
 
-   - `/quote/{isin}/daily?period=nope` → FastAPI-`HTTPValidationError`
-   - `/quote/{isin}/history?limit=0` → `HTTPValidationError`
-   - `/quote/{isin}/history?from=nope` → `{"detail": "…"}`
-   - `/analyze` ohne Kennung → `{"detail": "…"}`
-   - PUT ohne `isin` → `HTTPValidationError`; ungültiges Symbol →
-     `{"detail": "…"}`
+**T-44 Runde 3.** `f51393a`, Branch `t-44-fehlerwege-mit-kennung`, Worktree
+sauber.
 
-   Der veröffentlichte 422 muss je Route **alle dort tatsächlich möglichen
-   Formen** enthalten; die neue `invalid_isin_format`-Variante darin ist
-   `ErrorDetail`. Andere bestehende 422-Laufzeitformen werden in T-44 weder
-   umgebaut noch mit neuen Kennungen versehen.
+**Beide Befunde treffen, und sie sind dieselbe Sorte Fehler:** Ich habe
+abgeleitet, wo ein Inventar nötig war.
 
-**Abschließende Korrektur:** explizites Inventar der sieben Routen statt einer
-Ableitung aus dem Pfadnamen; OpenAPI-422 je Route vollständig machen und die
-Orakel gegen (a) top-level `ErrorDetail` für die ungültige ISIN sowie (b) die
-weiterhin möglichen anderen 422-Formen prüfen. Kein neuer Handler, Fehlercode,
-i18n-Text, Endpunkt, Modell oder Produktverhalten.
+**1 · Sieben Verbraucher, nicht fünf.** Mein Test filterte auf `"{isin}"` im
+Pfadnamen. `GET /analyze?isin=` und `PUT /instruments/by-symbol/{symbol}/isin`
+tragen die ISIN nicht im Pfad und rufen die Prüfung direkt. Erhoben habe ich
+das Inventar jetzt mit `ast` über alle `normalize_isin`-Aufrufe und
+`IsinPath`-Verwendungen — dieselbe Methode, die die Projektregel für
+Bezeichner vorschreibt und die ich hier zuerst nicht angewandt habe. Die
+sieben Wege stehen als Liste im Test, nicht als Filterausdruck.
 
-**Runden-3-Grenze:** höchstens fünf bereits vorhandene Produkt-/Vertragsdateien
-plus die bestehende Testdatei, keine neue Datei und höchstens 100 zusätzliche
-Quell-Diff-Zeilen. Vorhandene falsche Deklarationen/Assertions ersetzen statt
-parallel ergänzen. Bei Überschreitung sofort `scope_checkpoint`.
+**2 · Drei Formen, je Route gemessen.** Meine Deklaration ersetzte den ganzen
+422-Vertrag durch einen einzelnen `$ref` — aus einer Lücke wurde eine
+Falschaussage.
 
-**Codex-Nachweis:** alle sieben ungültigen-ISIN-Aufrufe liefern 422 mit
-top-level `ErrorDetail`; die zwei fehlenden OpenAPI-Pfade sowie die oben
-genannten konkurrierenden 422-Formen sind live reproduziert. `make test` ist
-grün (964 Backend, 295 Plugin-API, 45 Beispiel, 291 Dashboard), ebenso Ruff
-und `git diff --check`. DRY-Prüfung: Handler, Kennung und Response-Konstante
-sind zentral; der Befund liegt im unvollständigen Verbraucher-/Varianteninventar.
+| Route | `ErrorDetail` | `HTTPValidationError` | `{"detail": "…"}` |
+|---|:--:|:--:|:--:|
+| `GET /quote/{isin}` | ✅ | — | — |
+| `GET /quote/{isin}/daily` | ✅ | ✅ `period` | — |
+| `GET /quote/{isin}/history` | ✅ | ✅ `limit` | ✅ `from` |
+| `POST /refresh/{isin}` | ✅ | — | — |
+| `DELETE /instruments/{isin}` | ✅ | — | — |
+| `GET /analyze` | ✅ | — | ✅ ohne Kennung |
+| `PUT /…/{symbol}/isin` | ✅ | ✅ Rumpf | ✅ Symbolformat |
+
+`anyOf` nennt jetzt je Route genau das. Die Fließtext-Formen sind **nicht**
+umgebaut und haben keine neuen Kennungen bekommen, wie du vorgegeben hast.
+
+**Zwei Mutanten:** eine Form aus der Zusage entfernt → Vertragsorakel rot; ein
+Weg aus der Deklaration entfernt → ebenfalls rot.
+
+**Zu „ersetzen statt parallel ergänzen":** Der Einzelfall-Test ist im
+Sieben-Wege-Test aufgegangen, statt danebenzustehen.
+
+**Umfang — diesmal eingehalten:**
+
+| | Grenze | tatsächlich |
+|---|---|---|
+| Produkt-/Vertragsdateien | 5 | **3** |
+| Testdateien | die bestehende | **die bestehende** |
+| Neue Dateien | 0 | **0** |
+| Zusätzliche Quellzeilen | 100 | **97 netto** (157 hinzu, 60 entfernt) |
+
+Gesamtstand T-44: 1.411 geänderte Zeilen über 31 Dateien.
+
+Regression am Stand `f51393a`: `pytest` 964, Contract 295, Plugin-Beispiel 45,
+`vitest` 291, `vue-tsc` sauber, Build ✓, Ruff über `app/` und `tests/` sauber,
+`git diff --check` sauber. Schnappschuss erneuert, `core_version` bleibt 4.1.0.
+
+Ab jetzt keine weitere Produktdatei.
