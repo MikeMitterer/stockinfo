@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `handoff_commit`: `4905877`
 - `review_round`: `8`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `last_reviewed_commit`: `4905877`
@@ -92,34 +92,26 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-42 Runde 8 ist freigegeben.** Die vier Befunde aus Runde 7 sind am
-übergebenen Produktstand `09f37d0` geschlossen. Codex hat ausschließlich vier
-Kommentarreste selbst geheilt: Der Smoke-Kopf nennt jetzt wirklich
-`#1/#2/#3/#4/#4b/#5`, „fünf Fragen“ wurde zu sechs, und drei neue
-Chronikformulierungen beschreiben nur noch die geltende Invariante. Finaler
-Produktstand dieser Runde: `4905877`.
-
-Unabhängig bestätigt: `make test` mit 947 Backend-, 295 Contract-, 45
-Beispiel- und 280 Dashboard-Tests; Build und Ruff sauber; T-22-Smoke 6/6;
-T-35 online 20/20 und YAML 20/20. Der T-22-Mutant ohne `#3` endet rot und
-nennt die tatsächlich gelaufenen Kennungen. DRY geprüft für die beiden
-Kataloggründe, Karten-/Tabellenverbraucher und die Caret-Regel: je eine
-Wissensquelle, kein neuer Kandidat. Die Human-Spalte blieb unverändert.
-
-T-47: Die Quellenkennung und T-25s Kompatibilitäts-ID werden **nicht**
-gleichgesetzt. T-47 darf einen strikten Fingerprint der tatsächlichen
-Quellenlage für Restore-Sicherheit definieren; T-25 behält die bewusst vom
-Profilautor vergebene semantische Kompatibilitäts-ID. T-47 wartet damit nicht
-auf T-25, und T-25 konsumiert später nicht den T-47-Hash. Die Restore-Route
-startet den Prozess **nicht** selbst neu: `202` bestätigt nur den vorgemerkten
-Restore, UI und Antwort verlangen den vom Supervisor/Container ausgeführten
-Neustart.
-
-T-42 ist das letzte Glied der bestätigten Kette. Nach dem atomaren Wechsel
-geht der Zustand daher auf `portfolio_review`, `owner: mike`; kein weiteres
-Ticket automatisch beginnen und T-40 weiter ruhen lassen.
+_Keine offene Nachricht — Runde 8 ist freigegeben, die Kette ist zu Ende._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**Kein offener Auftrag.** T-42 Runde 8 ist freigegeben (`4905877`), und damit
+ist das letzte Glied der bestätigten Kette abgearbeitet. Der Zustand steht auf
+`portfolio_review`, `owner: mike` — kein weiteres Ticket ist begonnen, T-40
+ruht weiter bis zu Mikes ausdrücklichem Kommando.
+
+Deine beiden Richtungsentscheidungen zu T-47 stehen im Ticket, samt Begründung.
+Der Rest des Entwurfs wartet auf sein eigenes Review, wenn Mike ihn einplant.
+
+Was **auf Mike** wartet, in dieser Reihenfolge:
+
+1. **Die T-42-Matrix mit leerer Human-Spalte** — zwölf Fälle in zwei Profilen,
+   dieselben Schritte, die der Browserlauf gegangen ist.
+2. **Die Portfolio-Entscheidung**, was als Nächstes drankommt. Offen und
+   ausdrücklich **nicht** eingeplant: T-43 (Kursquelle in der Statuszeile,
+   mit einer offenen Frage an dich), T-44 (drei Fehlerwege ohne Kennung),
+   T-45 (Smoke-Skripte unter `solved/`), T-46 (`/analyze` geht an der Kette
+   vorbei und stürzt für `isin_only` ab), T-47 (Datenbanksicherung),
+   T-25 (Profilrotation) und T-40 (Regelwerk universalisieren).
