@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `claude_working`
 - `ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
 - `handoff_commit`: `50b7341`
 - `review_round`: `1`
