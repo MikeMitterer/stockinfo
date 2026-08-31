@@ -41,10 +41,10 @@ function toggle(): void {
   expanded.value = !expanded.value
 }
 
-/** Formatiert einen Kurs mit zwei Nachkommastellen (oder '—'), sprachabhängig. Mirror von InstrumentsTable. */
+/** Formatiert einen Kurs mit zwei Nachkommastellen (oder Platzhalter), sprachabhängig. Mirror von InstrumentsTable. */
 function price(value: number | null): string {
   return value === null
-    ? '—'
+    ? t('common.noValue')
     : value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
@@ -64,14 +64,14 @@ function price(value: number | null): string {
       -->
       <span class="icard__symbol mono">
         <template v-if="symbolOf(item)">{{ symbolOf(item) }}</template>
-        <span v-else class="dim">—</span>
+        <span v-else class="dim">{{ t('common.noValue') }}</span>
       </span>
       <span v-if="item.type" class="icard__type badge" :class="item.type">{{ item.type }}</span>
       <span class="icard__price mono">
         {{ price(item.latest_price) }}
         <span class="icard__ccy">{{ item.latest_currency ?? '' }}</span>
       </span>
-      <span class="icard__name">{{ item.name ?? '—' }}</span>
+      <span class="icard__name">{{ item.name ?? t('common.noValue') }}</span>
     </div>
 
     <div class="icard__foot">
@@ -165,7 +165,7 @@ function price(value: number | null): string {
             :symbol="item.symbol"
             @save="emit('set-isin', $event)"
           />
-          <span v-else class="dim">—</span>
+          <span v-else class="dim">{{ t('common.noValue') }}</span>
         </dd>
         <dt>{{ t('table.colPoints') }}</dt>
         <dd class="mono">{{ item.history_count }}</dd>

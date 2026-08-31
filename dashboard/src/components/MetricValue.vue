@@ -68,7 +68,7 @@ function formatNumber(raw: number): string {
 
 const display = computed(() => {
   if (typeof value.value === 'string') return value.value
-  if (numericValue.value === null) return '—'
+  if (numericValue.value === null) return t('common.noValue')
   return formatNumber(numericValue.value)
 })
 
@@ -99,7 +99,7 @@ const markTitle = computed(() => {
         <span v-if="item.accumulating !== null" class="badge thes" :class="{ acc: item.accumulating }">
           {{ item.accumulating ? t('table.yes') : t('table.no') }}
         </span>
-        <span v-else class="metric__empty">—</span>
+        <span v-else class="metric__empty">{{ t('common.noValue') }}</span>
       </template>
       <template v-else>{{ display }}</template>
     </span>

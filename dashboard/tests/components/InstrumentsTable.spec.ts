@@ -409,7 +409,7 @@ describe('InstrumentsTable · Identitätsformen', () => {
     // den es nie gab.
     // Der Strich ist still; der Grund steht **einmal** am Spaltenkopf. Ein
     // Hinweis in jeder Zelle erklaert beim ersten Mal etwas und stoert danach.
-    expect(wrapper.find('.isin-cell .dim').text()).toBe('—')
+    expect(wrapper.find('.isin-cell .dim').text()).toBe(i18n.global.t('common.noValue'))
     expect(
       wrapper.findAllComponents(InfoHint).map((hint) => hint.props('text')),
     ).toContain(i18n.global.t('hints.isinDash'))
@@ -441,7 +441,7 @@ describe('InstrumentsTable · Identitätsformen', () => {
 
     const wrapper = mountTable([bond])
 
-    expect(wrapper.find('td.sym').text()).toContain('—')
+    expect(wrapper.find('td.sym').text()).toContain(i18n.global.t('common.noValue'))
     // Die ISIN steht in ihrer eigenen Spalte — genau einmal.
     expect(wrapper.text().match(/DE0001102531/g)).toHaveLength(1)
   })

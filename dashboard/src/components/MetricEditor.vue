@@ -130,7 +130,7 @@ const numberMax = computed(() => NUMBER_MAX[props.field] ?? Number.MAX_SAFE_INTE
 
 /** Fondsvolumen ist keine Prozentzahl — TER und Volatilität schon. */
 const numberDisplay = computed(() => {
-  if (numericValue.value === null) return '—'
+  if (numericValue.value === null) return t('common.noValue')
   const formatted = n(numericValue.value, DIGITS)
   return props.field === 'fund_size' ? formatted : `${formatted} %`
 })
@@ -244,7 +244,7 @@ function normalizeText(value: string | null): string | null {
         <span
           v-else
           class="metric-editor__empty"
-        >—</span>
+        >{{ t('common.noValue') }}</span>
       </button>
 
       <UxInlineNumber

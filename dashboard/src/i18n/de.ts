@@ -8,6 +8,17 @@ export const de = {
    */
   app: { brandLead: 'Stock', brandAccent: 'Info' },
 
+  /*
+   * Was in einer Zelle steht, die keinen Wert hat — **an einer Stelle**.
+   *
+   * Er stand zuvor als festes Zeichen an zehn Stellen in vier Dateien; ein
+   * Wechsel hätte alle zehn treffen müssen, und wer eine übersieht, sieht
+   * es nur im Betrieb. Ein Bindestrich, kein Geviertstrich: Der
+   * Geviertstrich ist ein Satzzeichen für Gedankenstriche, keine Marke für
+   * einen fehlenden Wert.
+   */
+  common: { noValue: '-' },
+
   nav: {
     assets: 'Assets',
     exchanges: 'Börsen',
@@ -301,9 +312,9 @@ export const de = {
    */
   hints: {
     symbolDash:
-      'Ein Strich steht, wo es kein Börsensymbol gibt: Manche Papiere — etwa eine OTC-Anleihe — werden allein über ihre ISIN identifiziert.',
+      'Ein Bindestrich steht, wo es kein Börsensymbol gibt: Manche Papiere — etwa eine OTC-Anleihe — werden allein über ihre ISIN identifiziert.',
     isinDash:
-      'Ein Strich steht, wo es keine ISIN gibt: Ein Währungspaar trägt keine. Das ist die Form des Papiers, keine Lücke.',
+      'Ein Bindestrich steht, wo es keine ISIN gibt: Ein Währungspaar trägt keine. Das ist die Form des Papiers, keine Lücke.',
     more: 'Mehr dazu →',
     openSetting: 'Zur Einstellung →',
     points:

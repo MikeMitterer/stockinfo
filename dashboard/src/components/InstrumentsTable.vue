@@ -196,10 +196,10 @@ function yahooLink(item: InstrumentSummary): string {
   return props.yahooUrl ? props.yahooUrl.replace('{symbol}', item.symbol) : ''
 }
 
-/** Formatiert einen Kurs mit zwei Nachkommastellen (oder '—'), sprachabhängig. */
+/** Formatiert einen Kurs mit zwei Nachkommastellen (oder Platzhalter), sprachabhängig. */
 function price(value: number | null): string {
   return value === null
-    ? '—'
+    ? t('common.noValue')
     : value.toLocaleString(locale.value, { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 }
 
@@ -350,7 +350,7 @@ function price(value: number | null): string {
                     Schaltfläche, tut also dasselbe. Warum er dort steht,
                     erklärt der Hinweis am Spaltenkopf.
                   -->
-                  {{ symbolOf(item) ?? '—' }}
+                  {{ symbolOf(item) ?? t('common.noValue') }}
                 </button>
               </td>
               <td class="mono dim isin-cell">
@@ -366,7 +366,7 @@ function price(value: number | null): string {
                   Spaltenbreite für **alle** Zeilen — eine ISIN braucht zwölf
                   Zeichen, ein Satz das Doppelte.
                 -->
-                <span v-else class="dim">—</span>
+                <span v-else class="dim">{{ t('common.noValue') }}</span>
               </td>
               <td class="name">
                 <button
@@ -376,12 +376,12 @@ function price(value: number | null): string {
                   :aria-controls="`details-${item.symbol}`"
                   @click.stop="toggleDrawer(item)"
                 >
-                  {{ item.name ?? '—' }}
+                  {{ item.name ?? t('common.noValue') }}
                 </button>
               </td>
               <td>
                 <span v-if="item.type" class="badge type" :class="item.type">{{ item.type }}</span>
-                <span v-else class="dim">—</span>
+                <span v-else class="dim">{{ t('common.noValue') }}</span>
               </td>
               <td class="num mono">
                 {{ price(item.latest_price) }}
@@ -541,7 +541,12 @@ thead th.sortable {
   user-select: none;
   white-space: nowrap;
   &:hover { color: $color-accent; }
-  .arrow { color: $color-accent; font-size: 0.6rem; }
+  /*
+   * Der Zeiger braucht denselben Abstand wie der Hinweis. Ohne ihn stößt er
+   * direkt an das Fragezeichen — gemessen null Pixel Lücke —, und die beiden
+   * verschmelzen zu einem unleserlichen Zeichen.
+   */
+  .arrow { color: $color-accent; font-size: 0.6rem; margin-left: 0.25rem; }
   // Der Hinweis sortiert nicht — also auch kein Sortier-Zeiger darüber.
   .th-hint { cursor: default; margin-left: 0.25rem; }
 }

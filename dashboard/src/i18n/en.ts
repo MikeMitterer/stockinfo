@@ -10,6 +10,9 @@ export const en = {
    */
   app: { brandLead: 'Stock', brandAccent: 'Info' },
 
+  /* The placeholder for an empty cell — see the German file. */
+  common: { noValue: '-' },
+
   nav: {
     assets: 'Assets',
     exchanges: 'Exchanges',
@@ -264,9 +267,9 @@ export const en = {
   },
   hints: {
     symbolDash:
-      'A dash means there is no exchange symbol: some instruments — an OTC bond, say — are identified by their ISIN alone.',
+      'A hyphen means there is no exchange symbol: some instruments — an OTC bond, say — are identified by their ISIN alone.',
     isinDash:
-      'A dash means there is no ISIN: a currency pair carries none. That is the shape of the instrument, not a gap.',
+      'A hyphen means there is no ISIN: a currency pair carries none. That is the shape of the instrument, not a gap.',
     more: 'More about this →',
     openSetting: 'To the setting →',
     points:

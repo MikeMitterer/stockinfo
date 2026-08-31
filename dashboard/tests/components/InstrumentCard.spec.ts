@@ -137,7 +137,7 @@ describe('InstrumentCard', () => {
     expect(wrapper.find('.isin__add').exists()).toBe(false)
     // Ein Strich wie in jeder anderen leeren Zelle, der Grund daneben.
     // Wie in der Tabelle: stiller Strich, Erklaerung am Label.
-    expect(wrapper.find('.dim').text()).toBe('—')
+    expect(wrapper.find('.dim').text()).toBe(i18n.global.t('common.noValue'))
     expect(
       wrapper.findAllComponents(InfoHint).map((hint) => hint.props('text')),
     ).toContain(i18n.global.t('hints.isinDash'))
@@ -154,7 +154,7 @@ describe('InstrumentCard', () => {
       identity: { kind: 'isin_only', isin: 'DE0001102531' },
     })
 
-    expect(wrapper.find('.icard__symbol').text()).toContain('—')
+    expect(wrapper.find('.icard__symbol').text()).toContain(i18n.global.t('common.noValue'))
     expect(wrapper.find('.icard__symbol').text()).not.toContain('DE0001102531')
   })
 
