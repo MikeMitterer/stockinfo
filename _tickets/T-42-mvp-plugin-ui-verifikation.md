@@ -73,6 +73,79 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teil
 
 ---
 
+## Phase A · Das Konzept (2026-08-31)
+
+**Zwölf Fälle, und jeder ist gegen einen Fehler geschrieben, den es gab.** Die
+Herkunftsspalte nennt ihn: fast jede Zeile unten stammt aus einem Befund, der
+in einem der freigegebenen Tickets wirklich aufgetreten ist. Ein Fall, der
+keinen benannten Fehler unterscheidet, prüft nur, dass die App startet.
+
+Profil **Y** = reines Ein-Datei-YAML (`yaml-file` in allen fünf Rollen).
+Profil **O** = Online/YFinance mit demselben `yaml-file` als letztem Glied
+jeder Kette, einschließlich `resolvers`.
+
+### Profil Y — die Identitätsformen und die Gattungen
+
+| # | Eingabe | Sichtbar erwartet | Quelle | Unterscheidet den Fehler |
+|---|---|---|---|---|
+| **Y1** | `BTC-EUR` | Zeile `CRYPTO`, 94.500,00 EUR, ISIN-Spalte sagt „hat keine — Währungspaar" | `yaml-file` | Ein Papier ohne Börse ist nicht aufnehmbar oder bekommt eine erfundene — die `pair`-Form aus T-31 |
+| **Y2** | `DE0001102531` | Zeile `BOND`, 99,42 EUR; Tagesreihe zeigt **drei** Punkte (99,18 / 99,31 / 99,42) | `yaml-file` | Ohne `price` bleibt die Anleihe preislos, statt den jüngsten gepflegten Schlusskurs zu nehmen (T-37 `#5`) |
+| **Y3** | `DE0009848119` | Zeile **`FUND`**, 142,50 EUR; im Drilldown ein Hinweis, der **keine** Gattung behauptet | `yaml-file` | Ein Publikumsfonds erscheint als `etf` und löst damit die ETF-Anreicherung aus (T-35 Befund B); der Hinweis nennt jedes Nicht-ETF „eine Aktie" (T-35 Befund C) |
+| **Y4** | Neustart des Dienstes auf **derselben** Datenbank | Alle drei Papiere unverändert sichtbar; `GET /migration` meldet `pending: false` | — | Ein regulär aufgenommenes Krypto-Papier versetzt die App beim nächsten Start in den Migrationszustand und bietet an, es zu löschen (T-35 Befund A) |
+
+### Profil O — die Kaskade
+
+| # | Eingabe | Sichtbar erwartet | Quelle | Unterscheidet den Fehler |
+|---|---|---|---|---|
+| **O1** | `IE00B4L5Y983` | Kurs **und** TER, Anbieter, Domizil im Drilldown; „Quelle: justetf" | Kurs yfinance, Metadaten justETF | Fehlt die Gattung, wird die Metadatenquelle **gar nicht erst** gefragt — leer ohne Meldung (T-38 `#5`) |
+| **O2** | dasselbe Papier, das die YAML-Datei mit **abweichendem** Wert führt | der **Online**-Wert steht da, nicht der aus der Datei | yfinance | Die Datei überschreibt einen gültigen Online-Treffer (T-37 `#4`) |
+| **O3** | `DE0001102531` | 99,42 EUR aus der Datei — obwohl online kein Kurs existiert | `yaml-file` | Die Kette bricht nach der ersten Quelle ab (T-41); und ohne `yaml-file` in `resolvers` scheitert schon die **Aufnahme** (T-35, Doku-Befund) |
+| **O4** | `/fx` CAD→EUR, erste FX-Quelle antwortet nicht | Kurs erscheint, Feld „Quelle" nennt **`yaml-file`** | `yaml-file` | Die Herkunft nennt die Quelle, die vorn steht, statt der, die geliefert hat (T-41 Runde 2) |
+| **O5** | `XX0000000000` | verständliche Meldung mit der Kennung im Text; **keine** neue Zeile; genau **ein** fehlgeschlagener Request | — | „Hinzufügen fehlgeschlagen" ohne Grund, und eine halbe Zeile bleibt in der Datenbank zurück (T-35 Befund 4) |
+
+### Das fremde Plugin über den Entry-Point
+
+| # | Eingabe | Sichtbar erwartet | Quelle | Unterscheidet den Fehler |
+|---|---|---|---|---|
+| **P1** | `us-example==0.1.0` gepinnt, Neustart, dann `US0378331005` | in `/sources` in **beiden** Rollen einsatzbereit; Zeile `AAPL`, NASDAQ, USD | `us-example` | Der Entry-Point-Weg lädt nicht, oder der Name kommt aus dem Schlüssel statt aus der Klasse (T-39 Runde 2) |
+| **P2** | dasselbe Plugin, **ohne** gesetzte `US_MARKET_API_KEY` | `/sources` zeigt es als nicht einsatzbereit **mit lesbarem Grund**; die übrige Kette arbeitet weiter | — | Eine Quelle steht still und sagt nicht warum; oder sie reißt die ganze Kette mit (T-23/T-39) |
+
+### Die Rollen, einmal jede
+
+| # | Eingabe | Sichtbar erwartet | Quelle | Unterscheidet den Fehler |
+|---|---|---|---|---|
+| **R1** | Profil Y: Aufnahme → Liste → Chart → Drilldown → Devisenseite | Auflösung, Kurs, Tagesreihe, Kennzahlen und Wechselkurs kommen **alle fünf** aus derselben Datei | `yaml-file` | Eine Rolle steht in `/sources` als konfiguriert, wird aber über keinen echten Eintritt je gefragt (T-37 `#2`) |
+
+### Was bewusst **kein** Browserfall ist
+
+- **Leere Tagesreihe gegen Ausfall** (T-41 `#2`). Der Unterschied entscheidet,
+  ob ein Wasserzeichen vorrückt — im Browser sehen beide Fälle gleich aus. Er
+  ist am Composite direkt geprüft, und ein Browserfall würde ihn behaupten
+  statt zeigen.
+- **Contract-Kit, Mutanten, Invarianten.** Das sind Aussagen über den Vertrag,
+  nicht über die Oberfläche; sie stehen in den Suiten und laufen in `make
+  test` mit.
+- **Jede frühere Verify-Zeile einzeln.** T-35 allein hat 28. Die zwölf oben
+  decken die Risikogrenzen; die übrigen prüfen dieselbe Grenze ein zweites Mal.
+- **Der Drilldown-Text in allen fünf Nicht-ETF-Gattungen.** Y3 zeigt einen
+  Fall; die übrigen vier sind im Dashboard-Test parametrisiert.
+
+### Was der Lauf mitschreibt
+
+Je Fall: die tatsächlich angezeigten Werte, die Herkunftsangabe, und bei den
+Kaskadenfällen der **Gegenwert** aus der jeweils anderen Quelle — ohne ihn
+belegt „online gewinnt" nichts. Dazu Konsole und fehlgeschlagene Requests über
+den ganzen Lauf, gemessen und nicht behauptet: Ein grüner Screenshot ohne
+Datenherkunft ist kein Beleg.
+
+**Vorbereitung, die zum Lauf gehört:** O2 braucht ein Papier, das in beiden
+Quellen mit **unterschiedlichem** Wert steht — `IE00B4L5Y983` führt die
+Beispieldatei mit 128,21, online steht ein anderer Kurs. O4 braucht eine erste
+FX-Quelle, die nichts liefert. Beides sind Konfigurations- und Datenfragen,
+keine Produktänderungen.
+
+---
+
 ## Nicht-Ziele
 
 - Keine neue Asset-Klasse `cash`, keine Immobilien.

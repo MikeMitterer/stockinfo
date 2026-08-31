@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-39-english-plugin-developer-guide.md`
-- `handoff_commit`: `2520366`
-- `review_round`: `2`
-- `owner`: `claude`
+- `phase`: `ready_for_codex`
+- `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
+- `handoff_commit`: `PLATZHALTER`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-39-english-plugin-developer-guide.md`
 - `last_reviewed_commit`: `2520366`
@@ -92,22 +92,36 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-39 freigegeben** — Runde 2 gegen `1110d76`, mit rein textueller
-Review-Selbstheilung in `2520366`.
-
-Der Fehlerpfad des Samples, die Loader-/Lebenszyklusbeschreibung, die
-Build-/Testbefehle und das aktive YAML-Fallback-Sample stimmen jetzt mit dem
-Produkt überein. Unabhängig grün: 947 Backend-, 295 Contract-, 45 Beispiel-
-und 274 Dashboard-Tests, Ruff, Wheel-Bau, isolierter Entry-Point-Lauf und
-Diff-Check.
-
-Nächstes und einzig aktives Ticket ist
-`T-42-mvp-plugin-ui-verifikation.md`. Bitte zunächst **nur Phase A**: höchstens
-12 risikobasierte Browserfälle aus den freigegebenen Tickets entwerfen und als
-Konzept an Codex übergeben. Noch kein Browserlauf und keine Produktänderung.
-T-40 bleibt ruhend.
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-_Keine neue Übergabe._
+**T-42 Phase A — das Konzept, zwölf Fälle.** Branch `t-42-mvp-ui-verifikation`.
+Kein Browserlauf, keine Produktänderung; genau wie beauftragt.
+
+**Der Zuschnitt:** Jeder Fall ist gegen einen Fehler geschrieben, den es
+**gab**. Die letzte Spalte der Matrix nennt ihn samt Ticket — fast jede Zeile
+stammt aus einem Befund aus T-31, T-37, T-38, T-41, T-35 oder T-39. Ein Fall,
+der keinen benannten Fehler unterscheidet, prüft nur, dass die App startet;
+davon steht keiner drin.
+
+Aufteilung: 4 Fälle im YAML-Profil (die drei Identitätsformen und der
+Neustart), 5 im Online-Profil (Kaskade, Überlappung, Lücke, FX-Herkunft,
+Fehlermeldung), 2 für das fremde Plugin über den Entry-Point (geladen und
+brauchbar / stillstehend mit Grund), 1 für die fünf Rollen aus einer Datei.
+
+**Vier Auslassungen, die ich begründet habe** statt sie wegzulassen: die
+Unterscheidung leere Reihe/Ausfall (im Browser nicht sichtbar, am Composite
+geprüft), Contract-Kit und Mutanten (Aussagen über den Vertrag, nicht über die
+Oberfläche), die 28 Einzelzeilen aus T-35 (dieselben Grenzen mehrfach), und
+der Drilldown-Text in allen fünf Gattungen (einer im Browser, vier im
+Dashboard-Test parametrisiert).
+
+**Zwei Fälle brauchen Vorbereitung, und die ist Konfiguration, kein Produkt:**
+O2 verlangt ein Papier, das in beiden Quellen mit **unterschiedlichem** Wert
+steht — sonst belegt „online gewinnt" nichts; O4 verlangt eine erste
+FX-Quelle, die nichts liefert.
+
+Wenn dir ein Fall fehlt oder einer zu wenig unterscheidet, sag es jetzt —
+danach läuft er im Browser und ist teurer zu ändern.
