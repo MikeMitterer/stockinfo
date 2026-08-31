@@ -47,7 +47,7 @@ readonly VENV_PY="${PROJECT_ROOT}/.venv/bin/python"
 # der unterwegs abbricht, mit zwei Ergebnissen und `COUNT_FAIL=0` grün enden —
 # genau das P-05, das die Schlussmarke verhindern soll. Sie tut es nur, wenn
 # sie auch die Vollständigkeit prüft.
-readonly EXPECTED_CHECKS=5
+readonly EXPECTED_CHECKS=6
 
 COUNT_OK=0
 COUNT_FAIL=0
@@ -251,19 +251,42 @@ print(json.load(sys.stdin)['config_path'])" 2>/dev/null)"
         "resolvers: ${_CHAIN}, config_path: ${_PATH}"
 }
 
+# Der Grund einer Quelle aus `/sources`.
+#
+# Params:
+#   $1 - Name der Quelle
+reasonOf() {
+    curl -s --max-time 30 "${BASE_URL}/sources" | "${VENV_PY}" -c "
+import json, sys
+data = json.load(sys.stdin)
+print(next((r['reason'] for r in data['sources'] if r['name'] == '$1'), ''))
+" 2>/dev/null
+}
+
 # `#4`: Ein Tippfehler nennt Namen und Alternativen.
+#
+# **Die Zusage steht, die Stelle hat sich verschoben.** Bis Runde 5 warf der
+# Kettenbau bei einem unbekannten Namen, und der Check las die Meldung aus dem
+# Log. Seither kostet ein Tippfehler nur seine eigene Quelle: Ein Paket, dessen
+# Installation fehlschlug, nimmt nicht mehr die ganze App mit. Der Grund steht
+# dafür in `/sources` — dort, wo ein Betreiber nachsieht, und nicht nur dort,
+# wo er zufällig mitprotokolliert wurde.
 checkTypo() {
     writeConfig "resolvers: [openfgi]"
-    startServer >/dev/null 2>&1
-    # Der Start scheitert absichtlich — geprüft wird die Meldung im Log.
-    sleep 1
+    startServer || return 1
+    local -r _REASON="$(reasonOf openfgi)"
+    local -r _CHAIN="$(chainOf resolvers)"
     stopServer
-    local -r _MESSAGE="$(grep -o "'openfgi'[^\"]*" "${LOGFILE}" | tail -1)"
 
     report "#4 " "der Tippfehler nennt sich selbst und die verfügbaren Namen" \
-        "$([[ "${_MESSAGE}" == *"openfgi"* && "${_MESSAGE}" == *"openfigi"* ]] \
+        "$([[ "${_REASON}" == *"openfgi"* && "${_REASON}" == *"openfigi"* ]] \
             && echo true || echo false)" \
-        "${_MESSAGE:-keine Meldung im Log}"
+        "${_REASON:-kein Grund in /sources}"
+
+    # Und er kostet **nur diese Quelle**: Die App läuft, die Kette bleibt leer.
+    report "#4b" "der Start überlebt den Tippfehler" \
+        "$([[ "${_CHAIN}" == "openfgi" ]] && echo true || echo false)" \
+        "resolvers: ${_CHAIN:-<leer>} — die App antwortet, die Kette baut nichts"
 }
 
 # `#5`: Die Datei trägt Verweise statt Schlüssel.

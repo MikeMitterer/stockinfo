@@ -466,15 +466,12 @@ def build_chain(role: str, config, settings) -> list[object]:
 
     evaluated = _evaluate(role, config, settings)
 
-    # **Die Momentaufnahme steht, bevor irgendetwas werfen kann.** Ein
-    # unbekannter Name in der Kette bricht den Bau ab — und ohne diese Zeile
-    # zeigte `/sources` danach die **vorige** Kette, also gerade nicht den
-    # Zustand, der den Betreiber interessiert. Der Fall, für den er die
-    # Auskunft aufruft, wäre der einzige, in dem sie ihn anlügt.
+    # **Die Momentaufnahme steht, bevor gebaut wird.** Der Bau einer einzelnen
+    # Quelle kann werfen; ohne diese Zeile zeigte `/sources` danach die
+    # **vorige** Kette, also gerade nicht den Zustand, der den Betreiber
+    # interessiert. Der Fall, für den er die Auskunft aufruft, wäre der
+    # einzige, in dem sie ihn anlügt.
     entries = [entry for entry, _ in evaluated]
-    # Die Beschreibung steht, **bevor** irgendetwas werfen kann: Ein unbekannter
-    # Name bricht den Bau ab, und ohne diese Zeile zeigte `/sources` danach die
-    # vorige Kette — ausgerechnet im Fall, für den man sie aufruft.
     _CHAINS[role] = (config, [], entries)
 
     built: list[object] = []
