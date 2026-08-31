@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (documentation + `plugin_api` example) | Änderungen angefordert (Codex, Runde 1) | 1 Tag | englischer Entwicklerleitfaden, minimales Paketbeispiel, keine Produktfunktion | — |
+| StockInfo (documentation + `plugin_api` example) | Runde 2 zur Prüfung | 1 Tag | englischer Entwicklerleitfaden, minimales Paketbeispiel, keine Produktfunktion | — |
 
 - **Angelegt:** 2026-08-29, auf Wunsch von Mike
 - **Hängt ab von:** T-31 → T-38 → T-37 → T-35 vollständig technisch
@@ -52,18 +52,18 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | englischer Plugin-Leitfaden | Ein neuer Entwickler versteht in höchstens etwa 15 Minuten: Rollen, Identitäten, Pflichtfelder, Fehlersemantik und den kleinsten Plugin-Aufbau | ◑ [^review-r1] | |
+| **1** | englischer Plugin-Leitfaden | Ein neuer Entwickler versteht in höchstens etwa 15 Minuten: Rollen, Identitäten, Pflichtfelder, Fehlersemantik und den kleinsten Plugin-Aufbau | ✅ [^round2] | |
 | **2** | Abschnitt `sources.yaml` | Paketinstallation, Quellenwahl und Reihenfolge sind getrennt erklärt; „first successful result wins“ sowie YAML als letztes Fallback sind mit einem vollständigen Beispiel sichtbar | ✅ | |
 | **3** | Abschnitt Environment | `${NAME}` wird erklärt: exakte Ersetzung eines YAML-Werts, Verhalten bei fehlender Variable und sichere Beispiele für `.env`, Docker/Compose und Unraid; kein echter Schlüssel steht in Git | ✅ | |
 | **4** | Entwickler-Sample | ein minimales installierbares US-Beispielpaket enthält `pyproject.toml`, Entry-Points, einen Resolver, eine Kursquelle und ausdrücklich den eingebrannten Literalwert `api_version = 2` | ✅ | |
-| **5** | Sample-Tests | Contract-Kit und paketlokale Tests laufen ohne echtes Netz und ohne echten API-Key; HTTP-/Provider-Verhalten ist injizierbar oder gefakt | ◑ [^review-r1] | |
+| **5** | Sample-Tests | Contract-Kit und paketlokale Tests laufen ohne echtes Netz und ohne echten API-Key; HTTP-/Provider-Verhalten ist injizierbar oder gefakt | ✅ [^round2] | |
 | **6** | gebautes Sample-Wheel + frische Testumgebung | das Wheel lässt sich bauen, über eine fest gepinnte `plugins.packages`-Zeile installieren und nach Neustart in `GET /sources` erkennen | ✅ | |
 | **7** | Sample-End-to-End | ein US-Instrument wird über das Sample aufgelöst und bepreist; ein dort nicht beantwortetes Instrument fällt nachweislich an die nächste Quelle zurück | ✅ | |
-| **8** | Dokumentationsinventur | bestehende Plugin-Anleitungen widersprechen dem neuen Leitfaden nicht; veraltete Beispiele sind korrigiert, ersetzt oder verweisen auf die kanonische englische Anleitung | ◑ [^review-r1] | |
+| **8** | Dokumentationsinventur | bestehende Plugin-Anleitungen widersprechen dem neuen Leitfaden nicht; veraltete Beispiele sind korrigiert, ersetzt oder verweisen auf die kanonische englische Anleitung | ✅ [^round2] | |
 
-[^review-r1]: Das installierte Wheel und der Entry-Point funktionieren. Offen
-    sind die Fehlernormalisierung des Lehrbeispiels und vier eng benannte
-    Dokumentationskorrekturen; siehe Review Runde 1.
+[^round2]: In Runde 1 offen und in Runde 2 erledigt: die Fehlernormalisierung
+    des Beispiels sowie vier Dokumentationskorrekturen. Der Abschnitt „Runde 2"
+    unten nennt jede einzeln.
 
 ### Codex-Review Runde 1 · Beispielvertrag und Anleitung angleichen
 
@@ -109,6 +109,55 @@ begrenzt:
 `Makefile` und `.gitignore` sind als enge Scope-Ausnahmen angenommen. Keine
 weitere Produktdatei, kein neuer Vertrag, keine neue Testinfrastruktur und
 keine Erweiterung des Samples um zusätzliche Rollen.
+
+### Runde 2 · die vier Befunde
+
+**1 · Das Beispiel brach die Regel, die es lehrt.** Reproduziert vor der
+Korrektur: eine Antwort mit `as_of: not-a-date` ließ `fetch_quote()` mit
+`ValueError` abbrechen — und ein `lookup()` ohne `name` `resolve()` mit
+`KeyError`. Der Grund war derselbe an beiden Stellen: Die Kapsel lag um den
+**Aufruf**, das Ergebnis wurde außerhalb gebaut.
+
+Beide Methoden kapseln jetzt ihren ganzen Rumpf und melden `Unavailable` mit
+Quellnamen. Das Orakel
+`test_nothing_escapes_as_an_exception` prüft beide Hälften — eine geworfene
+Ausnahme und eine formal kaputte Antwort — und war vorher für beide rot.
+
+**2 · Der Leitfaden beschrieb Namen und Lebenszyklus falsch.** Nachgeprüft im
+Quelltext statt geraten:
+
+* `app/plugin_loader.py: spec_from_class` setzt `name=source_class.name`. Der
+  Entry-Point-Schlüssel dient nur dem **Finden** der Klasse.
+* `SourceSpec.build(role, …)` läuft je Rolle, und `spec_from_class.build` ruft
+  `source_class(config)`. Es entsteht also **eine Instanz je Rolle**.
+
+Damit war meine Begründung „zwei Entry-Points teilten keinen Cache" falsch:
+Geteilt wird ohnehin nichts. Der bleibende Grund ist ein anderer und steht
+jetzt da — zwei Entry-Points wären zwei *Quellen* in der Registry, mit zwei
+Namen und zwei Zeilen in `/sources` für eine Sache. Leitfaden, `pyproject.toml`
+und Klassendocstring sagen das gleichlautend; dazu der Hinweis, Zustand pro
+Anfrage nicht in `self` zu halten.
+
+**3 · Befehle statt Zusagen.** Der Leitfaden nennt jetzt `pip install -e
+".[testing]"`, `pytest -q` und `pip wheel --no-deps -w dist .`. Die Zahl der
+geerbten Prüfungen ist **gezählt** statt geschätzt: 19 für den Resolver, 15
+für die Kursquelle — vorher stand dort „etwa dreißig je Rolle".
+
+**4 · Zwei veraltete Aussagen.** Der Warnblock in
+`_tickets/T-37-sources-online-with-yaml-fallback.yaml` beschrieb den Stand vor
+T-41; er ist durch die Beschreibung dessen ersetzt, was jetzt gilt,
+einschließlich `yaml-file` in `resolvers`. Und aus „no mechanism that fetches
+anything on its own" ist die tatsächliche Regel geworden: Es gibt keine
+**Entdeckung** — die unter `plugins.packages` eingetragenen Pakete installiert
+die App beim Start. Die Prozesschronik im Test-Docstring ist auf die
+Invariante gekürzt.
+
+**Erneut gelaufen, nicht nur nachgebessert:** Wheel neu gebaut, über dieselbe
+gepinnte Zeile installiert (`plugin_env_installed packages=1`,
+`plugins_loaded names=['us-example', 'yaml-file']`), `us-example` in beiden
+Rollen `configured: true`, Apple `AAPL`/`XNAS`/231,40 USD, Tesla weiterhin
+`TL0.DE` über OpenFIGI. 45 Beispieltests, 939 Backend, 295 plugin_api, Ruff
+und Diff-Check sauber.
 
 ### Was gelaufen ist
 

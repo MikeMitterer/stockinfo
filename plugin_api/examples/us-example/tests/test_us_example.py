@@ -170,6 +170,53 @@ def test_an_outage_is_not_the_same_as_an_unknown_paper() -> None:
     assert isinstance(_source().resolve(ResolveRequest(isin=ABSENT)), NotFound)
 
 
+@pytest.mark.parametrize(
+    ("vendor", "what"),
+    [
+        ("raises", "an unexpected exception from the vendor call"),
+        ("garbage", "a malformed field in an otherwise successful answer"),
+    ],
+)
+def test_nothing_escapes_as_an_exception(vendor: str, what: str) -> None:
+    """**"Never raises" covers the answer, not only the call.**
+
+    Guarding the vendor call and building the result outside the guard leaves
+    the second half open: an answer that arrives as `200 OK` and cannot be
+    turned into a `Quote` still takes the request down.
+
+    Both halves are checked here — an exception the vendor throws, and a
+    malformed field in an answer it delivers.
+    """
+
+    class _Raises:
+        def lookup(self, isin: str):
+            raise RuntimeError("connection reset")
+
+        def price(self, ticker: str):
+            raise RuntimeError("connection reset")
+
+    class _Garbage:
+        def lookup(self, isin: str):
+            return {"ticker": "AAPL"}  # no name, no type
+
+        def price(self, ticker: str):
+            return {"price": "cheap", "currency": "USD", "as_of": "not-a-date"}
+
+    source = UsExampleSource(
+        CONFIG, market=_Raises() if vendor == "raises" else _Garbage()
+    )
+
+    resolved = source.resolve(ResolveRequest(isin=KNOWN))
+    quoted = source.fetch_quote(
+        QuoteRequest(identity=ListedIdentity(ticker="AAPL", mic="XNAS", isin=KNOWN))
+    )
+
+    assert isinstance(resolved, Unavailable), f"resolve() let {what} through"
+    assert isinstance(quoted, Unavailable), f"fetch_quote() let {what} through"
+    assert "us-example" in resolved.error
+    assert "us-example" in quoted.error
+
+
 def test_the_price_carries_currency_and_a_zoned_timestamp() -> None:
     """A price without a currency is a number, and a naive timestamp is wrong.
 

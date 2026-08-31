@@ -156,9 +156,19 @@ my-source = "stockinfo_source_my_market:MySource"
 where = ["src"]
 ```
 
-The entry-point **name** is what an operator writes in `sources.yaml`. Announce
-a multi-role source **once**: two entry points would build two instances that
-no longer share a cache or a rate limit.
+**What an operator writes in `sources.yaml` is your class's `name`
+attribute** — not the entry-point key. The host reads the key only to find the
+class, then takes `MySource.name` from there. Keep the two identical anyway;
+a package whose entry point says one thing and whose class says another is a
+puzzle for whoever configures it.
+
+Announce a multi-role source **once**. Not because of shared state — the host
+builds a fresh instance per configured role, so two entry points would not
+cost you a cache you had — but because two entry points are two *sources* in
+the registry: two names to know, two lines in `GET /sources`, for one thing.
+
+Since a role gets its own instance, keep per-request state out of `self` — or
+accept that it is not shared with your other role.
 
 Depend on the contract package and nothing of the host. A plugin that reaches
 into StockInfo's internals is a fork that happens to install.
@@ -203,11 +213,27 @@ class TestMyResolver(ResolverContract):
         return MySource({"api_key": "test"})
 ```
 
-Six lines buy you about thirty assertions per role: that you never raise, that
-you say why you stand still, that an unrelated request costs nothing, that a
-hit carries every mandatory field, that no mutable state lives on the class.
+Six lines buy you the whole role suite. For the bundled example that is 19
+inherited cases for the resolver and 15 for the quote source: that you never
+raise, that you say why you stand still, that an unrelated request costs
+nothing, that a hit carries every mandatory field, that no mutable state lives
+on the class.
+
 Write the three requests, inherit the rest, then add the handful of facts only
 you know — that this ISIN is Apple, on NASDAQ, and a stock.
+
+Run them:
+
+```bash
+python -m pip install -e ".[testing]"
+python -m pytest -q
+```
+
+And build the wheel you hand around:
+
+```bash
+python -m pip wheel --no-deps -w dist .
+```
 
 ---
 
@@ -251,9 +277,10 @@ Why not plain `pip install`? In the official container, `site-packages` lives
 in the *image* and is gone after the next `docker pull`. `/data` is the volume
 and survives the update.
 
-> There is deliberately no mechanism that fetches anything on its own. A
-> plugin runs with the app's permissions; what gets installed is the
-> operator's explicit decision, not a side effect of a config file.
+> **Nothing is ever discovered.** The app installs exactly the packages
+> listed under `plugins.packages` and looks for nothing else — no registry
+> scan, no suggestions, no updates. A plugin runs with the app's permissions,
+> so what gets installed stays a line somebody typed.
 
 ---
 

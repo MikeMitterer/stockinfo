@@ -88,10 +88,11 @@ class _FakeMarket:
 class UsExampleSource(Resolver, QuoteSource):
     """Resolves and prices papers listed on one US venue.
 
-    **Two roles, one class, one instance.** The operator writes `us-example`
-    on both the `resolvers:` and the `quotes:` line; the host builds the
-    source once and asks it in each role. Splitting it into two entry points
-    would create two instances that no longer share a rate limit.
+    **Two roles, one class — but one instance per role.** The operator writes
+    `us-example` (this class's `name`, not the entry-point key) on both the
+    `resolvers:` and the `quotes:` line, and the host builds the source once
+    for each. Nothing in `self` is therefore shared between the two roles,
+    which is why this example keeps no per-request state there.
     """
 
     name = "us-example"
@@ -168,9 +169,13 @@ class UsExampleSource(Resolver, QuoteSource):
     def resolve(self, request: ResolveRequest) -> Resolution:
         """Answer the identity question.
 
-        **Never raises.** Every failure becomes `Unavailable`; the chain
-        decides what to do, and a plugin that lets an exception through fails
-        the contract suite.
+        **Never raises — and the guard covers the whole body, not just the
+        call.** A vendor that replies `200 OK` with a missing field fails
+        during conversion, not during the request; a guard around the call
+        alone would let that through.
+
+        Every failure becomes `Unavailable`; the chain decides what to do, and
+        a plugin that lets an exception through fails the contract suite.
 
         The three answers below are three different facts, and the host acts
         differently on each: `NotResponsible` lets the next source try,
@@ -181,27 +186,26 @@ class UsExampleSource(Resolver, QuoteSource):
             return NotResponsible()
         try:
             paper = self._market.lookup(request.isin or "")
-        except MarketUnreachable as error:
-            return Unavailable(error=f"us-example: {error}")
-
-        if paper is None:
-            return NotFound()
-
-        # All three fields are mandatory. Leaving `name` or `instrument_type`
-        # empty used to be allowed, and the result was a paper that displayed
-        # blank and never had its metadata fetched — see T-38.
-        return Resolved(
-            identity=ListedIdentity(
-                ticker=paper["ticker"], mic=VENUE, isin=request.isin
-            ),
-            name=paper["name"],
-            instrument_type=paper["type"],
-        )
+            if paper is None:
+                return NotFound()
+            # All three fields are mandatory. Leaving `name` or
+            # `instrument_type` empty used to be allowed, and the result was a
+            # paper that displayed blank and never had its metadata fetched.
+            return Resolved(
+                identity=ListedIdentity(
+                    ticker=paper["ticker"], mic=VENUE, isin=request.isin
+                ),
+                name=paper["name"],
+                instrument_type=paper["type"],
+            )
+        except Exception as error:  # noqa: BLE001 — see the docstring
+            return Unavailable(error=f"us-example: {type(error).__name__}: {error}")
 
     # ── QuoteSource ──────────────────────────────────────────────────────────
 
     def fetch_quote(self, request: QuoteRequest) -> QuoteResult:
-        """Answer the price question. **Never raises**, same as `resolve`.
+        """Answer the price question. **Never raises**, same as `resolve` —
+        including the conversion of the answer, not only the call.
 
         The request carries the identity, not a vendor symbol: turning
         `AAPL` + `XNAS` into whatever this vendor calls it is this source's
@@ -212,19 +216,17 @@ class UsExampleSource(Resolver, QuoteSource):
         identity = request.identity
         try:
             tick = self._market.price(identity.ticker)
-        except MarketUnreachable as error:
-            return Unavailable(error=f"us-example: {error}")
-
-        if tick is None:
-            return NotFound()
-
-        return Quote(
-            price=float(tick["price"]),
-            # ISO 4217, and in the major unit. A venue quoting in cents
-            # converts here — the host has no way to know it did not.
-            currency=str(tick["currency"]),
-            as_of=self._as_of(tick["as_of"]),
-        )
+            if tick is None:
+                return NotFound()
+            return Quote(
+                price=float(tick["price"]),
+                # ISO 4217, and in the major unit. A venue quoting in cents
+                # converts here — the host has no way to know it did not.
+                currency=str(tick["currency"]),
+                as_of=self._as_of(tick["as_of"]),
+            )
+        except Exception as error:  # noqa: BLE001 — see the docstring
+            return Unavailable(error=f"us-example: {type(error).__name__}: {error}")
 
     @staticmethod
     def _as_of(raw: str) -> datetime:

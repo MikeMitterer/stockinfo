@@ -20,9 +20,16 @@ dependencies = ["stockinfo-plugin-api>=0.2"]
 testing = ["stockinfo-plugin-api[testing]>=0.2"]
 
 # One source, announced once, usable in two roles. The host asks the class
-# which roles it implements; the operator writes the same name on both lines
-# in `sources.yaml`. Announcing it twice would create two independent
-# instances that no longer share a cache or a rate limit.
+# which roles it implements; the operator writes `UsExampleSource.name` on
+# both lines in `sources.yaml`.
+#
+# The key below is only how the host *finds* the class — the name it registers
+# comes from the class attribute. They are kept identical on purpose: a
+# package that says one thing here and another there is a puzzle for whoever
+# configures it.
+#
+# Announcing it twice would put two sources into the registry for one thing,
+# with two names to know and two lines in `GET /sources`.
 [project.entry-points."stockinfo.sources"]
 us-example = "stockinfo_source_us_example:UsExampleSource"
 
