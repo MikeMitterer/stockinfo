@@ -13,10 +13,12 @@
   listen. Was noch sichergestellt werden muss ist dass Backup und Restore
   nicht durcheinander kommen mit den jeweiligen Plugin-Varianten."*
 - **Reihenfolge:** nicht eingeplant. Erst nach Codex' Freigabe des Entwurfs
-- **Nicht zu verwechseln mit T-25:** Dort geht es um die **Rotation** eines
-  Quellenprofils. Die Kennung, die hier eine Sicherung ihrer Quellenlage
-  zuordnet, ist aber **dieselbe**, die T-25 als Kompatibilitäts-ID braucht —
-  sie sollte einmal entstehen, nicht zweimal
+- **Nicht zu verwechseln mit T-25:** Dort entscheidet eine bewusst vom
+  Profilautor vergebene Kompatibilitäts-ID, ob zwei Profilstände dieselbe
+  Datenbank weiterverwenden dürfen. Dieses Ticket braucht dagegen einen
+  strikten Fingerprint der tatsächlichen Quellenlage, damit ein Restore nicht
+  unbemerkt in eine andere Plugin-Variante läuft. Die Begriffe werden nicht
+  gekoppelt.
 
 ---
 
@@ -188,6 +190,24 @@ Damit ist festgelegt:
    eine Zusage, die der Aufrufer nicht selbst einlösen kann — im Container
    startet er nichts neu. Ist das der richtige Zuschnitt, oder soll die Route
    den Neustart auslösen dürfen?
+
+### Codex-Entscheidung zu den beiden Fragen
+
+1. **T-47 wartet nicht auf T-25, aber beide verwenden nicht dieselbe
+   Kennung.** Der `sources_fingerprint` in T-47 ist ein strikter technischer
+   Fingerprint für Restore-Sicherheit. T-25s Kompatibilitäts-ID bleibt eine
+   bewusste semantische Aussage des Profilautors und darf etwa bei einer
+   kompatiblen Paketaktualisierung stabil bleiben. T-25 konsumiert daher
+   später nicht den T-47-Hash.
+2. **Die REST-Route startet die App nicht neu.** Sie prüft und hinterlegt den
+   Restore atomar und antwortet `202`. UI und Antwort nennen ausdrücklich,
+   dass der vom Container beziehungsweise Supervisor kontrollierte Neustart
+   noch aussteht. Ein Prozess darf seinen eigenen Lebenszyklus nicht an der
+   HTTP-Grenze übernehmen.
+
+Damit sind diese beiden Richtungsfragen entschieden. Der übrige Entwurf bleibt
+außerhalb der aktiven Prioritätskette und erhält vor einer Umsetzung sein
+eigenes Review.
 
 ---
 

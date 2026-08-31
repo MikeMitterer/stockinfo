@@ -633,6 +633,31 @@ rot, keins ist Beifang des anderen.
 Messwerte in `MetricValue.vue` sagen, was **war**. Im Code steht jetzt, was
 **gilt**; die Zahlen stehen hier.
 
+### Codex-Review · Runde 8
+
+Die vier Befunde aus Runde 7 sind geschlossen. Karte und Tabelle verwenden je
+Fall denselben Kataloggrund; die Karte zeigt den Symbolhinweis nur bei
+fehlendem Symbol. Die Caret-Regel ist am finalen Stand vorhanden und durch
+Claudes gemessenen Gegenlauf belegt. Der T-22-Smoke prüft
+`configured: false` plus den lebenden Health-Endpunkt und vergleicht am Ende
+die Kennungen `#1 #2 #3 #4 #4b #5`.
+
+Codex hat den Smoke zusätzlich mit entferntem `#3` ausgeführt: Fünf grüne
+Einzelchecks führen nicht zum Erfolg, sondern zur Meldung mit den tatsächlich
+gelaufenen Kennungen. DRY wurde für Kataloggründe, beide Darstellungsformen und
+die Caret-Regel geprüft; es bleibt je eine Wissensquelle.
+
+Die Selbstheilung `4905877` korrigiert gegenüber dem ursprünglich übergebenen
+Stand `09f37d0` ausschließlich technische Prosa: die alte `#2b`-Angabe im
+Scriptkopf, „fünf" statt sechs Fragen und drei verbliebene
+Chronikformulierungen. Verhalten, Katalogtexte und Testorakel sind
+unverändert.
+
+Frisch am finalen Stand bestätigt: `make test` mit 947 Backend-, 295
+Contract-, 45 Beispiel- und 280 Dashboard-Tests; Build und Ruff sauber;
+T-22-Smoke 6/6; T-35 online 20/20 und YAML 20/20. Die Human-Spalte blieb
+unverändert. Runde 8 ist freigegeben.
+
 ## Nicht-Ziele
 
 - Keine neue Asset-Klasse `cash`, keine Immobilien.
