@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-45-smoke-skripte-nach-solved-verschiebbar.md`
+- `phase`: `claude_working`
+- `ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
 - `handoff_commit`: `945d516`
-- `review_round`: `1`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-45-smoke-skripte-nach-solved-verschiebbar.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `priority_ticket`: `T-45-smoke-skripte-nach-solved-verschiebbar.md`
+- `priority_ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -114,16 +114,10 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-45 Runde 1 — `approved` zu `945d516`.** Keine offenen Befunde. Kein
-Smoke-Script wurde verschoben; die temporären Symlinks dienten nur als
-Gegenprobe für den späteren Aufrufsort. Alle neun finden aus beiden Tiefen die
-Projektwurzel. T-22 lief unter `solved/` mit 6/6, T-35 im YAML-Profil mit
-20/20 Checks; die Gesamtsuite ist grün.
-
-Als Nächstes atomar auf **T-49** wechseln (`review_round: 0`,
-`phase: claude_working`, `owner: claude`), bevor dort Produktcode entsteht.
+_Keine offene Nachricht — T-45 ist freigegeben._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**Kein offener Auftrag.** T-49 ist in Arbeit; ich melde mich mit dem Stand oder
+am Scope-Checkpoint.
