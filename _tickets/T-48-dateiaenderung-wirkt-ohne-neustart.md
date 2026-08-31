@@ -86,15 +86,26 @@ der Tragweite:
 
 | | Was passiert | Preis |
 |---|---|---|
-| `ON CONFLICT … DO UPDATE` | Ein Kurs mit gleichem Zeitpunkt und anderem Preis **ersetzt** den alten | Gilt für **alle** Quellen; eine korrigierte Online-Antwort überschreibt dann ebenfalls |
+| `ON CONFLICT … DO UPDATE` | Ein Kurs mit gleichem Zeitpunkt und anderem Preis **ersetzt** den alten | Gilt für **alle** Quellen |
 | Nur ehrlich zählen | `refreshed` zählt, was wirklich geschrieben wurde; ein verworfener Schreibversuch steht im Protokoll | Behebt Mikes Fall **nicht** |
 
 Der erste Weg löst das Problem, der zweite behebt nur die Falschmeldung. Sie
 schließen einander nicht aus.
 
-**Schicht 3 (TTL).** Offen, ob eine Dateiquelle überhaupt eine TTL haben soll.
-Sie schont bei entfernten Quellen ein Kontingent; bei einer lokalen Datei
-schont sie nichts.
+**Ein Einwand, den ich zurückziehe.** Der erste Entwurf nannte als Preis, eine
+„korrigierte Online-Antwort" würde dann ebenfalls überschreiben. Auf Mikes
+Nachfrage: Diesen Fall kann ich **nicht belegen**. Kursnachträge zum selben
+Zeitpunkt gibt es an Börsen; ob yfinance sie je liefert, habe ich nicht
+gemessen. Ein plausibel klingender Grund ohne Messung ist kein Argument — der
+einzige nachweisbare Fall ist die Datei.
+
+**Schicht 3 (TTL) — von Mike entschieden (2026-08-31):** *„Ein lokales File
+braucht keinen Cache."* Eine Dateiquelle wird also bei jeder Anfrage gefragt;
+die TTL gilt weiter für entfernte Quellen, wo sie ein Kontingent schont.
+
+Das entschärft auch Schicht 1: Wer bei jeder Anfrage liest, braucht keine
+`mtime`-Prüfung. Die Frage ist dann nur noch, ob das Lesen billig genug ist —
+und das ist eine Messung, keine Meinung.
 
 ---
 
@@ -109,7 +120,7 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 | **2** | dasselbe, `as_of` unverändert | der korrigierte Wert kommt an — nicht nur bei neuem Zeitstempel | ➖ | |
 | **3** | Online-Profil mit `yaml-file` als letztem Glied | dieselbe Zusage; die Datei ist dort dieselbe Quelle | ➖ | |
 | **4** | Datei kaputt gemacht, während der Dienst läuft | der Dienst bleibt stehen und meldet den Grund; er fällt nicht auf einen halben Katalog zurück | ➖ | |
-| **5** | Datei unverändert, viele Anfragen | sie wird nicht bei jeder Anfrage neu geparst | ➖ | |
+| **5** | Datei unverändert, viele Anfragen | die Antwortzeit bleibt brauchbar — gemessen, nicht geschätzt | ➖ | |
 | **6** | `POST /refresh` mit verworfenem Schreibversuch | `refreshed` zählt ihn **nicht** als Erfolg | ➖ | |
 
 ## Nicht-Ziele

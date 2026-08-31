@@ -15,7 +15,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_commit`: `1f1fbb7`
 - `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
-- `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md`
+- `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `priority_ticket`: `T-44-fehlerwege-mit-kennung.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
@@ -77,6 +77,12 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 > Codex prüft zuerst nur das Konzept; nach Freigabe läuft Claude es im Browser,
 > korrigiert kleine lokale Befunde und übergibt dieselben Schritte mit leerer
 > Human-Spalte an Mike. T-40 ruht bis zu Mikes ausdrücklichem Kommando.
+
+> **Portfolio-Nachtrag Mike, 2026-08-31:** **T-48** hängt hinten an die Kette
+> an: T-43 → T-44 → T-46 → T-47 → T-48. Eine geänderte Fachdatendatei muss
+> ohne Neustart wirken — im reinen Dateiprofil **und** beim YAML-Fallback der
+> Online-Kette. Dazu seine Entscheidung: *„Ein lokales File braucht keinen
+> Cache."*
 
 > **Portfolio-Entscheidung Mike, 2026-08-31:** T-42 ist **on hold** — die
 > menschliche Abnahme der Matrix wartet, bis **T-43 → T-44 → T-46 → T-47**
