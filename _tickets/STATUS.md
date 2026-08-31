@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-44-fehlerwege-mit-kennung.md`
 - `handoff_commit`: `cc7cafc`
 - `review_round`: `1`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
 - `last_reviewed_commit`: `1f1fbb7`
