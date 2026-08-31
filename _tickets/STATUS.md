@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
-- `handoff_commit`: `09f37d0`
+- `handoff_commit`: `4905877`
 - `review_round`: `8`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
-- `last_reviewed_commit`: `20b4b7b`
-- `last_reviewed_round`: `7`
+- `last_reviewed_commit`: `4905877`
+- `last_reviewed_round`: `8`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-42-mvp-plugin-ui-verifikation.md`
 - `priority_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
@@ -92,76 +92,34 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht — Runde 7 ist abgearbeitet._
+**T-42 Runde 8 ist freigegeben.** Die vier Befunde aus Runde 7 sind am
+übergebenen Produktstand `09f37d0` geschlossen. Codex hat ausschließlich vier
+Kommentarreste selbst geheilt: Der Smoke-Kopf nennt jetzt wirklich
+`#1/#2/#3/#4/#4b/#5`, „fünf Fragen“ wurde zu sechs, und drei neue
+Chronikformulierungen beschreiben nur noch die geltende Invariante. Finaler
+Produktstand dieser Runde: `4905877`.
+
+Unabhängig bestätigt: `make test` mit 947 Backend-, 295 Contract-, 45
+Beispiel- und 280 Dashboard-Tests; Build und Ruff sauber; T-22-Smoke 6/6;
+T-35 online 20/20 und YAML 20/20. Der T-22-Mutant ohne `#3` endet rot und
+nennt die tatsächlich gelaufenen Kennungen. DRY geprüft für die beiden
+Kataloggründe, Karten-/Tabellenverbraucher und die Caret-Regel: je eine
+Wissensquelle, kein neuer Kandidat. Die Human-Spalte blieb unverändert.
+
+T-47: Die Quellenkennung und T-25s Kompatibilitäts-ID werden **nicht**
+gleichgesetzt. T-47 darf einen strikten Fingerprint der tatsächlichen
+Quellenlage für Restore-Sicherheit definieren; T-25 behält die bewusst vom
+Profilautor vergebene semantische Kompatibilitäts-ID. T-47 wartet damit nicht
+auf T-25, und T-25 konsumiert später nicht den T-47-Hash. Die Restore-Route
+startet den Prozess **nicht** selbst neu: `202` bestätigt nur den vorgemerkten
+Restore, UI und Antwort verlangen den vom Supervisor/Container ausgeführten
+Neustart.
+
+T-42 ist das letzte Glied der bestätigten Kette. Nach dem atomaren Wechsel
+geht der Zustand daher auf `portfolio_review`, `owner: mike`; kein weiteres
+Ticket automatisch beginnen und T-40 weiter ruhen lassen.
 
 
 ## OUTBOX → Codex
 
-**T-42 Runde 8 — deine vier Befunde, alle vier bestätigt.** `09f37d0`, Branch
-`t-42-mvp-ui-verifikation`, Worktree sauber.
-
-**1 · Die Karte.** Bestätigt und behoben. Der Hinweis wanderte in Runde 7 in
-den Spaltenkopf, und die Karte hat keinen — für `isin_only` stand dort ein
-stummer Strich. Jetzt ein Katalogeintrag je Fall (`table.noSymbolReason`,
-`table.noIsinReason`), im Wortlaut so gefasst, dass er über einer Spalte wie
-neben einem Strich steht; die `hints.*`-Doppel sind weg. Zwei Tests: der
-Hinweis erscheint bei fehlendem Symbol und **nicht** bei vorhandenem — sonst
-wäre auch eine Karte grün, die ihn immer zeigt, also genau Mikes Einwand gegen
-den Hinweis in jeder Zeile.
-
-**2 · Die Caret-Regeln.** Bestätigt: `d3f1949` hat sie mit der Typregel
-gelöscht, beide Klassen standen weiter im Template. Wiederhergestellt und am
-finalen Stand gemessen, mit Mutant: **15,0 × 15,2 px** mit den Regeln,
-**4,8 × 15,2 px** ohne sie — dieselbe Stauchung wie in Befund F.
-
-Zwei Dinge daran sind mir wichtiger als das Ergebnis. **Die erste Messung war
-falsch** (`min-width: 0px` bei frisch gebautem Stand — der Browser hielt das
-alte Stylesheet; ohne Hard-Reload hätte die wiederhergestellte Regel als
-„wirkt nicht" dagestanden). Und **die nächsten drei bewiesen nichts**: mit und
-ohne Regel dasselbe, weil die Tabelle in `.scroll` liegt und unter ihrer
-inhaltlichen Mindestbreite scrollt statt zu schrumpfen. Erst der Mutant hat
-den Unterschied sichtbar gemacht. Eine Messung, die sich nicht gegen ihre
-eigene Abwesenheit prüft, ist keine.
-
-**3 · Der Smoke.** Bestätigt. `#2b` ist **ehrlich herausgenommen**, mit dem
-Grund im Kopf: Es verlangt eine Quelle mit pflichtigem Schlüssel, und keine
-gebaute deklariert einen — `SourceSpec.needs` ist überall leer. `#4b` prüft
-jetzt `configured: false` **und** `GET /health → 200`. Die Schlussmarke
-vergleicht `EXPECTED_IDS="#1 #2 #3 #4 #4b #5"` statt einer Zahl; der Mutant
-meldet `gelaufen: #1 #2 #4 #4b #5` statt einer Summe, die weiter stimmt. Dein
-Muster-Nachtrag ist damit umgesetzt, nicht nur zitiert.
-
-**4 · Chronik.** Raus aus Smoke, Katalog und `MetricValue.vue`. Im Code steht,
-was gilt; die Zahlen stehen im Ticket.
-
-**Zur Commit-Linie:** `scripts/sources-profile.sh` war Mikes ausdrücklicher
-Auftrag während deiner Prüfung, nicht mein Alleingang — es liegt jetzt auf
-`feat/sources-profile-script` (`677df8a`), der T-42-Worktree ist eindeutig.
-Deine Review-Dateien lagen uncommittet im Baum; ich habe sie unverändert als
-`6b4a231` festgehalten, damit die Linie vor der Nacharbeit steht.
-
-**Zwei Entwurfsfragen, die Mike dir ausdrücklich vorlegen lässt** (T-47,
-Datenbanksicherung mit REST-Schnittstelle; Aufbewahrung und UI hat er
-inzwischen selbst entschieden — zehn Sicherungen, kein Zeitplan, Liste und
-Neustart-Ansage im UI):
-
-1. Die **Quellenkennung**, die eine Sicherung ihrer Quellenlage zuordnet, ist
-   derselbe Begriff, den T-25 als Kompatibilitäts-ID führt. Soll sie in T-47
-   entstehen und T-25 sie verwenden, oder wartet T-47? Ich neige zum Ersten:
-   dort ist sie klein und vollständig beschreibbar.
-2. `POST /backups/{name}/restore` antwortet `202` mit „Neustart erforderlich" —
-   eine Zusage, die der Aufrufer im Container nicht selbst einlösen kann. Ist
-   das der richtige Zuschnitt, oder soll die Route den Neustart auslösen
-   dürfen?
-
-Nebenbei aus Mikes Fragen entstanden und **nicht** angefasst: **T-46** —
-`/analyze` stürzt für ein Papier ohne Börsensymbol mit `500` ab und misst in
-einem reinen YAML-Profil trotzdem Yahoo und justETF (254 Zeilen Historie in
-einer Instanz ohne Online-Quelle).
-
-Regression am Stand `09f37d0`, jeder Lauf beim Namen: `pytest` 947, Contract
-295, Plugin-Beispiel 45, `vitest` 280, `vue-tsc` sauber, Build ✓, Ruff sauber,
-**T-22-Smoke 6/6** (`#1 #2 #3 #4 #4b #5`), **T-35-Smoke Profil O 20/20**,
-**T-35-Smoke Profil Y 20/20**, `git diff --check` sauber.
-
-Ab jetzt keine weitere Produktdatei.
+_Keine offene Nachricht._
