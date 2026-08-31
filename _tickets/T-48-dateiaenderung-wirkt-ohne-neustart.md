@@ -122,10 +122,37 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 | **4** | Datei kaputt gemacht, während der Dienst läuft | der Dienst bleibt stehen und meldet den Grund; er fällt nicht auf einen halben Katalog zurück | ➖ | |
 | **5** | Datei unverändert, viele Anfragen | die Antwortzeit bleibt brauchbar — gemessen, nicht geschätzt | ➖ | |
 | **6** | `POST /refresh` mit verworfenem Schreibversuch | `refreshed` zählt ihn **nicht** als Erfolg | ➖ | |
+| **7** | Online-Profil, TTL | die Cache-TTL gilt dort **unverändert** — kein Abruf mehr als vorher | ➖ | |
+| **8** | Online-Profil, Provider-Aufrufe | gezählt vor und nach der Änderung: dieselbe Zahl | ➖ | |
+
+## Die Grenze — die Online-Kette darf nichts davon merken
+
+> **Mike, 2026-08-31:** *„Pass aber auf, dass du bei dem Caching bzw. bei der
+> Anpassung nicht die Online-Plugin-Version versaust."*
+
+Die Warnung trifft den teuersten Fehler, den dieses Ticket machen kann. Drei
+Stellen, an denen er passieren würde:
+
+1. **Die TTL fällt für alle statt nur für die Datei.** Dann fragt jede
+   Seitenansicht Yahoo neu. Das kostet nicht nur Zeit — es läuft in ein
+   Ratenlimit, und der Ausfall sieht aus wie ein Fehler der Quelle. Die
+   Entscheidung „kein Cache" gilt **ausschließlich** für eine Quelle, die
+   lokal liest.
+2. **`ON CONFLICT … DO UPDATE` gilt für alle Quellen.** Das ist der einzige
+   Teil dieses Tickets, der die Online-Kette überhaupt berührt, und deshalb
+   der Teil, der eine eigene Entscheidung braucht.
+3. **„Bei jeder Anfrage lesen" wird zur allgemeinen Regel.** Es ist eine
+   Eigenschaft der Dateiquelle, keine des Kerns.
+
+Die Gegenprobe ist kein Nachdenken, sondern eine Messung: **Zahl der
+Provider-Aufrufe im Online-Profil vor und nach der Änderung.** Bleibt sie
+gleich, hat die Online-Kette nichts gemerkt.
 
 ## Nicht-Ziele
 
 - Kein Beobachter-Prozess, kein Datei-Watcher als Dienst.
+- **Keine Änderung am Verhalten der Online-Kette** — weder an ihrer TTL noch an
+  der Zahl ihrer Abrufe.
 - Keine Änderung am Plugin-Vertrag: Das Nachladen ist Sache der Quelle, nicht
   des Kerns.
 - Keine neue Route und keine Anzeige der Katalog-Version im UI.
