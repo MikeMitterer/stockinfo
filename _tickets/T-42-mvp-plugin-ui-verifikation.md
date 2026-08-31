@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (laufender Stack) | offen | Konzept 2 h, Lauf 3 h | risikobasierte Browser-Abnahme der fertigen Plugin-Kette; danach dieselbe kurze Matrix für Mike | — |
+| StockInfo (laufender Stack) | Phase A freigegeben; Browserlauf offen | Konzept 2 h, Lauf 3 h | risikobasierte Browser-Abnahme der fertigen Plugin-Kette; danach dieselbe kurze Matrix für Mike | — |
 
 - **Angelegt:** 2026-08-31, nach technischer Freigabe von T-39
 - **Hängt ab von:** T-31, T-38, T-37, T-41, T-35 und T-39 freigegeben
@@ -63,13 +63,17 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teil
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Konzept-Handoff an Codex | höchstens 12 Fälle; jeder unterscheidet einen benannten Plugin-Fehler und nennt Profil, Eingabe, Ergebnis und Quelle | ➖ | |
+| **1** | Konzept-Handoff an Codex | höchstens 12 Fälle; jeder unterscheidet einen benannten Plugin-Fehler und nennt Profil, Eingabe, Ergebnis und Quelle | ✅ [^concept-r1] | |
 | **2** | YAML-Profil im Browser | BTC, Anleihe/History und Fonds lassen sich aufnehmen und bleiben nach Neustart mit korrekter Gattung und Herkunft sichtbar | ➖ | |
 | **3** | Online-Profil im Browser | Online gewinnt bei Überlappung; YAML schließt eine echte Lücke; Aktie/ETF, BTC, Bond und `fund` sind vertreten | ➖ | |
 | **4** | Rollen im UI/Netzwerk | Resolver, Quote, Daily, Metadaten und FX werden mindestens einmal über einen echten Eintrittspfad unterschieden | ➖ | |
 | **5** | Diagnose und Fehler | `/sources`, sichtbare Fehlermeldungen, Konsole und fehlgeschlagene Requests widersprechen dem angezeigten Zustand nicht | ➖ | |
 | **6** | Regression | betroffene Tests, beide Profil-Smokes, Ruff, Build und vollständiges `make test` sind nach dem finalen Browserstand grün | ➖ | |
 | **7** | Mike-Handoff | dieselben kurzen Schritte sind ohne Entwicklungswissen nachvollziehbar; Human-Spalte ist leer und bereit zur Abnahme | ➖ | |
+
+[^concept-r1]: Codex hat Phase A gegen `a0fc993` geprüft und drei rein
+    textuelle Ausführungsdetails in `fab3540` präzisiert. Phase B ist damit
+    freigegeben; die übrigen Zeilen bleiben bis zum echten Lauf offen.
 
 ---
 
@@ -147,6 +151,20 @@ temporären Datenverzeichnis eine einzelne `data/plugins/fx_miss.py`: eine
 Testinfrastruktur. So entsteht der entscheidende Unterschied deterministisch,
 ohne Yahoo-Verfügbarkeit zu raten. Beides sind Laufkonfiguration und
 Testdaten, keine Produktänderungen.
+
+### Codex-Freigabe Phase A · Runde 1
+
+Die zwölf Fälle decken die drei Identitätsformen, `fund`, Online-vor-YAML,
+YAML-Lücke, Quote-/Daily-/FX-Herkunft, Metadaten, Neustart, Fehlermeldung und
+beide externen Ladewege ab. Die ausgelassenen Contract-/Mutantenfälle bleiben
+zu Recht unterhalb des Browsers; dort wäre ihre Unterscheidung nicht sichtbar.
+
+Vor dem Lauf wurden nur drei Angaben mechanisch präzisiert: der vollständige
+Paketname des Beispiel-Wheels, konkrete Eingaben für die Fünf-Rollen-Inventur
+und ein temporäres `fx-miss`-Dateiplugin als deterministischer erster
+FX-Non-Hit. Damit hängt kein Orakel von einem zufällig bei Yahoo fehlenden Paar
+ab. Phase B darf genau diese Matrix ausführen; neue Fälle oder dauerhafte
+Browser-Infrastruktur entstehen daraus nicht.
 
 ---
 

@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
-- `handoff_commit`: `a0fc993`
+- `handoff_commit`: `fab3540`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
-- `last_reviewed_ticket`: `T-39-english-plugin-developer-guide.md`
-- `last_reviewed_commit`: `2520366`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
+- `last_reviewed_commit`: `fab3540`
+- `last_reviewed_round`: `1`
 - `workstream`: `ui_live_acceptance`
 - `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-42-mvp-plugin-ui-verifikation.md`
 - `priority_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
@@ -92,36 +92,22 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht._
+**T-42 Phase A freigegeben** — Runde 1 gegen `a0fc993`, mit rein textueller
+Review-Selbstheilung in `fab3540`.
+
+Die zwölf Fälle sind risikobasiert und ausreichend. P1 verwendet jetzt den
+vollständigen Paketnamen; R1 nennt die konkreten Instrumente je Rolle; O4
+erzeugt den ersten FX-Non-Hit deterministisch mit einem temporären lokalen
+`fx-miss`-Plugin. Bitte jetzt Phase B exakt nach dieser Matrix im Browser
+ausführen und die tatsächlichen Werte, Quellen, Konsole und fehlgeschlagenen
+Requests ins Ticket schreiben.
+
+Keine neue E2E-Infrastruktur und keine zusätzlichen Fälle. Produktänderungen
+nur für einen im Lauf reproduzierten kleinen lokalen Befund; bei Vertrag,
+Schema, neuer UI-Fläche, Abhängigkeit oder mehr als drei Produktdateien vorher
+Scope-Checkpoint. Human-Spalte unverändert leer lassen.
 
 
 ## OUTBOX → Codex
 
-**T-42 Phase A — das Konzept, zwölf Fälle.** Branch `t-42-mvp-ui-verifikation`.
-Kein Browserlauf, keine Produktänderung; genau wie beauftragt.
-
-**Der Zuschnitt:** Jeder Fall ist gegen einen Fehler geschrieben, den es
-**gab**. Die letzte Spalte der Matrix nennt ihn samt Ticket — fast jede Zeile
-stammt aus einem Befund aus T-31, T-37, T-38, T-41, T-35 oder T-39. Ein Fall,
-der keinen benannten Fehler unterscheidet, prüft nur, dass die App startet;
-davon steht keiner drin.
-
-Aufteilung: 4 Fälle im YAML-Profil (die drei Identitätsformen und der
-Neustart), 5 im Online-Profil (Kaskade, Überlappung, Lücke, FX-Herkunft,
-Fehlermeldung), 2 für das fremde Plugin über den Entry-Point (geladen und
-brauchbar / stillstehend mit Grund), 1 für die fünf Rollen aus einer Datei.
-
-**Vier Auslassungen, die ich begründet habe** statt sie wegzulassen: die
-Unterscheidung leere Reihe/Ausfall (im Browser nicht sichtbar, am Composite
-geprüft), Contract-Kit und Mutanten (Aussagen über den Vertrag, nicht über die
-Oberfläche), die 28 Einzelzeilen aus T-35 (dieselben Grenzen mehrfach), und
-der Drilldown-Text in allen fünf Gattungen (einer im Browser, vier im
-Dashboard-Test parametrisiert).
-
-**Zwei Fälle brauchen Vorbereitung, und die ist Konfiguration, kein Produkt:**
-O2 verlangt ein Papier, das in beiden Quellen mit **unterschiedlichem** Wert
-steht — sonst belegt „online gewinnt" nichts; O4 verlangt eine erste
-FX-Quelle, die nichts liefert.
-
-Wenn dir ein Fall fehlt oder einer zu wenig unterscheidet, sag es jetzt —
-danach läuft er im Browser und ist teurer zu ändern.
+_Keine neue Übergabe._
