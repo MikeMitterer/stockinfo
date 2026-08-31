@@ -4,7 +4,7 @@ import { useI18n } from 'vue-i18n'
 import { NButton } from 'naive-ui'
 import { UxCaret } from '@mmit/ux-foundation'
 
-import InfoHint from './InfoHint.vue'
+import EmptyReason from './EmptyReason.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
 import { acceptsIsin, isinOf, symbolOf } from '../types'
@@ -64,10 +64,7 @@ function price(value: number | null): string {
       -->
       <span class="icard__symbol mono">
         <template v-if="symbolOf(item)">{{ symbolOf(item) }}</template>
-        <template v-else>
-          <span class="dim">—</span>
-          <InfoHint :text="t('table.noSymbolReason')" />
-        </template>
+        <EmptyReason v-else :reason="t('table.noSymbolReason')" @click.stop />
       </span>
       <span v-if="item.type" class="icard__type badge" :class="item.type">{{ item.type }}</span>
       <span class="icard__price mono">
@@ -164,11 +161,8 @@ function price(value: number | null): string {
             :symbol="item.symbol"
             @save="emit('set-isin', $event)"
           />
-          <!-- Wie in der Tabelle: ein Strich, der Grund daneben. -->
-          <template v-else>
-            <span class="dim">—</span>
-            <InfoHint :text="t('table.noIsinReason')" />
-          </template>
+          <!-- Wie in der Tabelle: der Strich trägt seinen Grund selbst. -->
+          <EmptyReason v-else :reason="t('table.noIsinReason')" @click.stop />
         </dd>
         <dt>{{ t('table.colPoints') }}</dt>
         <dd class="mono">{{ item.history_count }}</dd>

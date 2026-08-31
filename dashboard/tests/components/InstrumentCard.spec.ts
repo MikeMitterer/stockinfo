@@ -1,7 +1,7 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
 
-import InfoHint from '../../src/components/InfoHint.vue'
+import EmptyReason from '../../src/components/EmptyReason.vue'
 import InstrumentCard from '../../src/components/InstrumentCard.vue'
 import { i18n } from '../../src/i18n'
 import type { InstrumentSummary } from '../../src/types'
@@ -136,10 +136,9 @@ describe('InstrumentCard', () => {
 
     expect(wrapper.find('.isin__add').exists()).toBe(false)
     // Ein Strich wie in jeder anderen leeren Zelle, der Grund daneben.
-    // Wie in der Tabelle: der Grund im Hinweis, erreichbar per Touch und Tastatur.
-    expect(wrapper.find('.dim').text()).toBe('—')
+    // Wie in der Tabelle: der Strich ist der Ausloeser.
     expect(
-      wrapper.findAllComponents(InfoHint).map((hint) => hint.props('text')),
+      wrapper.findAllComponents(EmptyReason).map((r) => r.props('reason')),
     ).toContain(i18n.global.t('table.noIsinReason'))
   })
 

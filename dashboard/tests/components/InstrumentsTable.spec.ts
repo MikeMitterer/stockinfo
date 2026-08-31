@@ -3,7 +3,7 @@ import { NSelect } from 'naive-ui'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { nextTick } from 'vue'
 
-import InfoHint from '../../src/components/InfoHint.vue'
+import EmptyReason from '../../src/components/EmptyReason.vue'
 import InstrumentsTable from '../../src/components/InstrumentsTable.vue'
 import { useTableSort } from '../../src/composables/useTableSort'
 import { i18n } from '../../src/i18n'
@@ -407,15 +407,11 @@ describe('InstrumentsTable · Identitätsformen', () => {
     // **`.isin-cell .dim`, nicht `.dim`.** Die Zelle selbst traegt die Klasse
     // auch; ein zu weiter Selektor findet das `td` und prueft dessen Titel,
     // den es nie gab.
-    // Der Grund steht im Hinweis daneben, nicht im `title`: Ein Hover ist auf
-    // einem Touchgeraet nicht erreichbar und fuer die Tastatur nicht
-    // fokussierbar.
-    expect(wrapper.find('.isin-cell .dim').text()).toBe('—')
-    // **Alle Hinweise, nicht der erste.** Der Spaltenkopf traegt selbst einen;
-    // `findComponent` liefert ihn und pruefte damit den falschen Text.
-    expect(
-      wrapper.findAllComponents(InfoHint).map((hint) => hint.props('text')),
-    ).toContain(i18n.global.t('table.noIsinReason'))
+    // Der Strich traegt seinen Grund selbst: als Knopf, damit er bei Maus,
+    // Tastatur und Beruehrung erreichbar ist — ein `title` kann nur das erste.
+    const reason = wrapper.findComponent(EmptyReason)
+    expect(reason.text()).toBe('—')
+    expect(reason.props('reason')).toBe(i18n.global.t('table.noIsinReason'))
   })
 
   it('bietet dem Listing ohne ISIN weiterhin den Editor', () => {
@@ -444,7 +440,7 @@ describe('InstrumentsTable · Identitätsformen', () => {
 
     const wrapper = mountTable([bond])
 
-    expect(wrapper.find('td.sym .dim').text()).toBe('—')
+    expect(wrapper.find('td.sym').text()).toContain('—')
     // Die ISIN steht in ihrer eigenen Spalte — genau einmal.
     expect(wrapper.text().match(/DE0001102531/g)).toHaveLength(1)
   })

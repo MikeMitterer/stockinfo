@@ -5,6 +5,7 @@ import { NButton, NSelect } from 'naive-ui'
 
 import { UxCaret, useIsCompact } from '@mmit/ux-foundation'
 import { useTableSort, type SortKey } from '../composables/useTableSort'
+import EmptyReason from './EmptyReason.vue'
 import InfoHint from './InfoHint.vue'
 import InstrumentCard from './InstrumentCard.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
@@ -327,16 +328,12 @@ function price(value: number | null): string {
                 >
                   <!-- Ein Papier der Form `isin_only` hat kein Börsensymbol. -->
                   <template v-if="symbolOf(item)">{{ symbolOf(item) }}</template>
-                  <span v-else class="dim">—</span>
                 </button>
-                <!--
-                  Der Grund steht **neben** dem Strich und nicht nur in seinem
-                  `title`: Ein Hover ist auf einem Touchgerät nicht erreichbar
-                  und für die Tastatur nicht fokussierbar.
-                -->
-                <span v-if="!symbolOf(item)" class="th-hint" @click.stop>
-                  <InfoHint :text="t('table.noSymbolReason')" />
-                </span>
+                <EmptyReason
+                  v-if="!symbolOf(item)"
+                  :reason="t('table.noSymbolReason')"
+                  @click.stop
+                />
               </td>
               <td class="mono dim isin-cell">
                 <span v-if="isinOf(item.identity)">{{ isinOf(item.identity) }}</span>
@@ -347,18 +344,11 @@ function price(value: number | null): string {
                 />
                 <!--
                   Kein Wert heißt hier dasselbe wie in jeder anderen Spalte:
-                  ein Strich. Ein sichtbarer Erklärtext bestimmt die
+                  ein Strich. Ein sichtbarer Erklärtext bestimmte sonst die
                   Spaltenbreite für **alle** Zeilen — eine ISIN braucht zwölf
-                  Zeichen, ein Satz das Doppelte. Der Grund steht deshalb im
-                  Hinweis daneben, der auch per Touch und Tastatur erreichbar
-                  ist.
+                  Zeichen, ein Satz das Doppelte.
                 -->
-                <template v-else>
-                  <span class="dim">—</span>
-                  <span class="th-hint" @click.stop>
-                    <InfoHint :text="t('table.noIsinReason')" />
-                  </span>
-                </template>
+                <EmptyReason v-else :reason="t('table.noIsinReason')" @click.stop />
               </td>
               <td class="name">
                 <button
