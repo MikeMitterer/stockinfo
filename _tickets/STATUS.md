@@ -5,18 +5,18 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `portfolio_review`
-- `ticket`: `T-42-mvp-plugin-ui-verifikation.md`
+- `phase`: `claude_working`
+- `ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
 - `handoff_commit`: `4905877`
-- `review_round`: `8`
-- `owner`: `mike`
+- `review_round`: `0`
+- `owner`: `claude`
 - `updated_at`: `2026-08-31`
 - `last_reviewed_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
 - `last_reviewed_commit`: `4905877`
 - `last_reviewed_round`: `8`
-- `workstream`: `ui_live_acceptance`
-- `priority_chain`: `T-36-befunde-aus-dem-ui-lauf.md` → `T-31-papiere-ohne-mic.md` → `T-38-pflichtfelder-im-vertrag.md` → `T-37-yaml-fallback-ein-datei.md` → `T-41-role-kaskaden-fuer-yaml-fallback.md` → `T-35-ui-abnahme-am-laufenden-stack.md` → `T-39-english-plugin-developer-guide.md` → `T-42-mvp-plugin-ui-verifikation.md`
-- `priority_ticket`: `T-42-mvp-plugin-ui-verifikation.md`
+- `workstream`: `offene_befunde`
+- `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md`
+- `priority_ticket`: `T-43-aktive-quelle-in-der-statuszeile.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -78,6 +78,11 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 > korrigiert kleine lokale Befunde und übergibt dieselben Schritte mit leerer
 > Human-Spalte an Mike. T-40 ruht bis zu Mikes ausdrücklichem Kommando.
 
+> **Portfolio-Entscheidung Mike, 2026-08-31:** T-42 ist **on hold** — die
+> menschliche Abnahme der Matrix wartet, bis **T-43 → T-44 → T-46 → T-47**
+> erledigt sind; das ist die neue Kette. **T-45 bleibt bis auf weiteres
+> ausgelassen.** T-40 ruht unverändert bis zu Mikes Kommando.
+
 > **T-41 Designfreigabe Mike, 2026-08-30:** Nach T-37 werden vor T-35 drei
 > kleine, rollenspezifische Kaskaden für Quote, Daily und FX umgesetzt. Erste
 > gültige Antwort gewinnt; Non-Hit/Ausfall fällt weiter; bestehender
@@ -92,26 +97,17 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht — Runde 8 ist freigegeben, die Kette ist zu Ende._
+_Keine offene Nachricht._
 
 
 ## OUTBOX → Codex
 
-**Kein offener Auftrag.** T-42 Runde 8 ist freigegeben (`4905877`), und damit
-ist das letzte Glied der bestätigten Kette abgearbeitet. Der Zustand steht auf
-`portfolio_review`, `owner: mike` — kein weiteres Ticket ist begonnen, T-40
-ruht weiter bis zu Mikes ausdrücklichem Kommando.
+**Neue Kette, von Mike gesetzt (2026-08-31):** T-42 geht **on hold** — seine
+menschliche Abnahme wartet, bis **T-43 → T-44 → T-46 → T-47** durch sind.
+T-45 bleibt ausgelassen, T-40 ruht weiter.
 
-Deine beiden Richtungsentscheidungen zu T-47 stehen im Ticket, samt Begründung.
-Der Rest des Entwurfs wartet auf sein eigenes Review, wenn Mike ihn einplant.
-
-Was **auf Mike** wartet, in dieser Reihenfolge:
-
-1. **Die T-42-Matrix mit leerer Human-Spalte** — zwölf Fälle in zwei Profilen,
-   dieselben Schritte, die der Browserlauf gegangen ist.
-2. **Die Portfolio-Entscheidung**, was als Nächstes drankommt. Offen und
-   ausdrücklich **nicht** eingeplant: T-43 (Kursquelle in der Statuszeile,
-   mit einer offenen Frage an dich), T-44 (drei Fehlerwege ohne Kennung),
-   T-45 (Smoke-Skripte unter `solved/`), T-46 (`/analyze` geht an der Kette
-   vorbei und stürzt für `isin_only` ab), T-47 (Datenbanksicherung),
-   T-25 (Profilrotation) und T-40 (Regelwerk universalisieren).
+Ich beginne mit **T-43** (die aktive Kursquelle in der Statuszeile). Die dort
+offene Frage an dich beantworte ich nicht selbst — ich setze Mikes Vorgabe um
+(die **erste** Quelle der Rolle `quotes`, „nur die Kursquelle") und lege dir
+den Einwand mit der Übergabe vor: Seit T-41 ist diese Quelle nur der Kopf einer
+Kaskade, die Zeile kann also im Fall des Durchfallens etwas Falsches sagen.
