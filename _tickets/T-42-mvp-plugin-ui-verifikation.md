@@ -406,6 +406,40 @@ ausdrücklich **nicht** in die `priority_chain` geschoben.
 
 ---
 
+## Runde 5 · zwei Nachträge aus dem begleiteten Lauf
+
+Beide auf Mikes direkte Ansage während des Laufs, also unter der für T-42
+gelockerten Regel für sichtbare UI-Befunde.
+
+**Der Strich trägt seinen Grund selbst.** Das Fragezeichen aus Runde 3 war an
+einer einzelnen Zelle inkonsistent: Die Tabelle ist voller Striche — TER,
+Vola, Thesaurierung —, und keiner davon trägt eins. `EmptyReason` macht
+stattdessen den Strich selbst zum Auslöser, sichtbar nur durch den gepunkteten
+Unterstrich wie bei einer Abkürzung. Damit gilt eine Regel statt einer
+Ausnahme, und die Auskunft bleibt trotzdem erreichbar: Der Auslöser ist ein
+`button` und greift bei Maus, Tastaturfokus und Berührung. `UxInfoHint` kam
+dafür nicht in Frage — sein Auslöser ist fest das Frage-/Info-Zeichen.
+
+**Der Klick endet am Strich.** Ein Klick darauf öffnete den Chart der Zeile.
+`@click.stop` stand am Aufrufort und lief ins Leere: Wurzelelement von
+`EmptyReason` ist das Tooltip, und dort landen durchgereichte Attribute — nicht
+am Knopf. Der Klick endet jetzt im Knopf selbst, unabhängig davon, wie ein
+Aufrufer die Komponente einbettet.
+
+**Zur Messung, weil sie zweimal falsch war:** Die Koordinaten aus
+`getBoundingClientRect()` und die des Klick-Werkzeugs weichen in dieser
+Umgebung um rund 40 px ab. Meine ersten beiden Gegenproben landeten dadurch in
+der Zeile darunter und öffneten deren Chart — ich habe zweimal „behoben"
+gemeldet, ohne die Stelle getroffen zu haben. Erst der aus dem Bildschirmfoto
+abgelesene Klick trifft; er löst **null** Requests aus und öffnet keinen Chart.
+
+**Offen, bei Mike:** Der Strich ist 8 × 20 px. Wer die Zelle statt des
+Zeichens trifft, klickt die Zeile — das ist kein Defekt, aber ein zu kleines
+Ziel (Richtwert Maus ~24 px, Touch 44). Ob der Klickbereich per Polsterung
+wachsen soll, ohne dass das Zeichen größer wird, entscheidet Mike.
+
+---
+
 ## Nicht-Ziele
 
 - Keine neue Asset-Klasse `cash`, keine Immobilien.
