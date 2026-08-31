@@ -28,8 +28,9 @@ testing = ["stockinfo-plugin-api[testing]>=0.2"]
 # package that says one thing here and another there is a puzzle for whoever
 # configures it.
 #
-# Announcing it twice would put two sources into the registry for one thing,
-# with two names to know and two lines in `GET /sources`.
+# Do not repeat the class under another key. Its roles come from its base
+# classes; a second entry only registers the same class `name` twice, which
+# the loader reports as a duplicate before keeping the last registration.
 [project.entry-points."stockinfo.sources"]
 us-example = "stockinfo_source_us_example:UsExampleSource"
 

@@ -1,10 +1,8 @@
 # data/sources.yaml — normales Online-Profil mit YAML als letztem Fallback
 #
-# Seit T-41 tut dieses Profil, was es beschreibt: Jede der fuenf Rollen fragt
-# ihre Kette der Reihe nach. Bis dahin nahm die App fuer `quotes`, `daily` und
-# `fx` nur die erste einsatzbereite Quelle, und `yaml-file` am Ende der Kette
-# wurde nie gefragt — im Browserlauf zu T-37 hat das eine Anleihe ohne Kurs
-# gekostet.
+# Jede der fuenf Rollen fragt ihre Kette in der geschriebenen Reihenfolge.
+# Online-Quellen gewinnen bei einem Treffer; `yaml-file` am Ende springt nur
+# ein, wenn davor keine Quelle eine belastbare Antwort liefert.
 #
 # `yaml-file` steht auch in `resolvers`, und das ist kein Schmuck: Ein Papier,
 # das keine Online-Quelle kennt, laesst sich sonst gar nicht erst aufnehmen —

@@ -162,10 +162,10 @@ class, then takes `MySource.name` from there. Keep the two identical anyway;
 a package whose entry point says one thing and whose class says another is a
 puzzle for whoever configures it.
 
-Announce a multi-role source **once**. Not because of shared state — the host
-builds a fresh instance per configured role, so two entry points would not
-cost you a cache you had — but because two entry points are two *sources* in
-the registry: two names to know, two lines in `GET /sources`, for one thing.
+Announce a source class **once**. The host derives all of its roles from the
+base classes it inherits; repeating the same class under another entry-point
+key adds no role. It only registers the same class `name` twice, which the
+loader reports as a duplicate before keeping the last registration.
 
 Since a role gets its own instance, keep per-request state out of `self` — or
 accept that it is not shared with your other role.

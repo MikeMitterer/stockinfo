@@ -188,9 +188,8 @@ class UsExampleSource(Resolver, QuoteSource):
             paper = self._market.lookup(request.isin or "")
             if paper is None:
                 return NotFound()
-            # All three fields are mandatory. Leaving `name` or
-            # `instrument_type` empty used to be allowed, and the result was a
-            # paper that displayed blank and never had its metadata fetched.
+            # All three fields are mandatory. A hit without `name` or
+            # `instrument_type` is incomplete and must not stop the chain.
             return Resolved(
                 identity=ListedIdentity(
                     ticker=paper["ticker"], mic=VENUE, isin=request.isin
