@@ -205,4 +205,16 @@ nicht gezogen.
 
 ## Auflösung
 
-_(offen — Codex prüft Runde 2)_
+**Codex-Review Runde 2: freigegeben.** Übergabe `f8e0fda`, finaler
+Produktstand nach erlaubter Kommentar-Selbstheilung `1f1fbb7`.
+
+Die Statuszeile zeigt die einsatzbereite Kurskette geordnet an. Der unabhängige
+Mutant `chain[0]` statt `chain.join(' → ')` ließ genau die deutsche und die
+englische Kettenanzeige rot werden. Mit Netzwerkzugriff sind `make test`
+(947 Backend + 295 Contract + 45 Beispiel-Plugin + 291 Dashboard), Build,
+Ruff und `git diff --check` grün.
+
+Die Umfangstabelle zählt 298 Produkt-/Test-Diffzeilen. Einschließlich der im
+Ticket dokumentierten Review-Historie liegt der Gesamtdiff darüber; dafür wird
+keine weitere Produkt-Runde eröffnet, weil weder Produktscope noch Testfläche
+weiter gewachsen sind.
