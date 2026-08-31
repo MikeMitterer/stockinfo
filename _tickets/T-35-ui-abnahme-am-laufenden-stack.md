@@ -2,13 +2,14 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Dashboard + Backend) | offen | 3 h | Anlegen, Anzeigen, Ändern, Löschen, Cache — im Browser, gegen echte Quellen | — |
+| StockInfo (Dashboard + Backend) | freigegeben (Codex, Runde 1) | 3 h | Anlegen, Anzeigen, Ändern, Löschen, Cache — im Browser, gegen echte Quellen | — |
 
 - **Angelegt:** 2026-08-28, nach der Freigabe des Plugin-MVP (`a9e49f9`)
 - **Beauftragt von Mike, 2026-08-28:** „erstelle ein Ticket bei dem du dir
   zuerst überlegst welche wichtigen UI tests du machen kannst … Führe dann die
   UI tests selbständig durch."
-- **Hängt ab von:** nichts. Prüft den freigegebenen Stand, ändert ihn nicht
+- **Erster Lauf:** ohne Abhängigkeit auf dem damaligen Stand
+- **Zweiter Lauf hängt ab von:** T-31, T-38, T-37 und T-41
 - **Plugin-Vorgabe Mike:** es läuft die Kette, **die auf YFinance zugreift** —
   `openfigi` → `yahoo-search` für die Auflösung, `justetf` → `yfinance` für
   ETF-Kennzahlen, `yfinance` für Kurs, Tagesreihe und Devisen
@@ -66,8 +67,6 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | **9** | Browser-Konsole über den ganzen Lauf | keine Fehler, keine fehlgeschlagenen Requests, keine Warnung über fehlende Felder | ✅ | |
 
 _(Die `Human`-Spalte bleibt leer — sie gehört Mike.)_
-
----
 
 ---
 
@@ -178,6 +177,11 @@ Frankfurter Notiz meldet. Gemessen, nicht vermutet. Der Fonds ist einer, aber
 die Quelle sagt etwas anderes, und ihr zu widersprechen wäre Raten. Im
 YAML-Profil, wo die Datei `fund` sagt, steht `FUND` in der Oberfläche.
 
+Damit ist `fund` **nicht** als Online-Gattung belegt: Online wurde dasselbe
+wirtschaftliche Papier geprüft, aber als vom Anbieter gemeldeter ETF. Der
+Gattungsfall `fund` ist im Browser über das YAML-Profil und für OpenFIGI über
+das ausführbare Mapping-Orakel belegt.
+
 ### Befund C · Der Drilldown nannte jedes Nicht-ETF eine Aktie
 
 Der mitgebrachte Befund aus T-37, unten beschrieben. Behoben: Der Satz nennt
@@ -207,6 +211,25 @@ Artikel — und sie steht ohnehin als Kennzeichen in derselben Zeile.
 Sorte Zusagenbruch, die Befund 4 des ersten Laufs behoben hat, eine Ebene
 tiefer. Das Dashboard erreicht diese Stelle nicht, weil es ISIN und Symbol
 selbst unterscheidet; deshalb hier nur notiert und nicht mitrepariert.
+
+### Codex-Freigabe Runde 1
+
+Freigegeben gegen Claudes Produktstand `bdedd8e` und die rein textuelle
+Review-Selbstheilung `49e4354`. Der Umfang blieb bei vier Produktflächen und
+drei zugehörigen Testdateien; alle drei Änderungen stammen unmittelbar aus
+den verlangten Asset- und Drilldown-Fällen.
+
+Codex hat beide REST-Smokes unabhängig mit je 20/20 Checks wiederholt. Ein
+zusätzlicher Durchstich über den öffentlichen Symbol-/Aufnahmeweg und einen
+echten Neustart hielt `BTC-EUR`, die Anleihe und den Fonds als drei
+unveränderte Instrumente: `pending:false`, keine Ablehnung, kein verlorener
+Kurspunkt. 69 fokussierte Backend- und 18 Drilldown-Tests, Ruff, Build sowie
+der vollständige Lauf mit 947 Backend-, 295 Plugin-API- und 274
+Frontend-Tests sind grün.
+
+In dieser Codex-Sitzung war keine Browser-Instanz verbunden. Die sichtbare
+Browser-Spalte bleibt deshalb Claudes Live-Beleg und wurde nicht als eigene
+Codex-Prüfung ausgegeben. Die Human-Spalte bleibt unverändert leer.
 
 ---
 
