@@ -329,11 +329,7 @@ function price(value: number | null): string {
                   <!-- Ein Papier der Form `isin_only` hat kein Börsensymbol. -->
                   <template v-if="symbolOf(item)">{{ symbolOf(item) }}</template>
                 </button>
-                <EmptyReason
-                  v-if="!symbolOf(item)"
-                  :reason="t('table.noSymbolReason')"
-                  @click.stop
-                />
+                <EmptyReason v-if="!symbolOf(item)" :reason="t('table.noSymbolReason')" />
               </td>
               <td class="mono dim isin-cell">
                 <span v-if="isinOf(item.identity)">{{ isinOf(item.identity) }}</span>
@@ -348,7 +344,7 @@ function price(value: number | null): string {
                   Spaltenbreite für **alle** Zeilen — eine ISIN braucht zwölf
                   Zeichen, ein Satz das Doppelte.
                 -->
-                <EmptyReason v-else :reason="t('table.noIsinReason')" @click.stop />
+                <EmptyReason v-else :reason="t('table.noIsinReason')" />
               </td>
               <td class="name">
                 <button

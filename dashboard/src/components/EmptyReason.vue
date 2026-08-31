@@ -27,7 +27,20 @@ defineProps<{
 <template>
   <NTooltip trigger="hover" :style="{ maxWidth: '20rem' }">
     <template #trigger>
-      <button type="button" class="empty-reason" :aria-label="reason">—</button>
+      <!--
+        Der Klick endet **hier**, nicht beim Aufrufer. Ein `@click.stop` an der
+        Komponente liefe ins Leere: Wurzelelement ist das Tooltip, und dort
+        landen durchgereichte Attribute — nicht am Knopf. Der Strich erklärt
+        nur; er darf die Zeilenaktion darunter nie auslösen.
+      -->
+      <button
+        type="button"
+        class="empty-reason"
+        :aria-label="reason"
+        @click.stop.prevent
+      >
+        —
+      </button>
     </template>
     {{ reason }}
   </NTooltip>

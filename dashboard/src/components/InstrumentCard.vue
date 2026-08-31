@@ -64,7 +64,7 @@ function price(value: number | null): string {
       -->
       <span class="icard__symbol mono">
         <template v-if="symbolOf(item)">{{ symbolOf(item) }}</template>
-        <EmptyReason v-else :reason="t('table.noSymbolReason')" @click.stop />
+        <EmptyReason v-else :reason="t('table.noSymbolReason')" />
       </span>
       <span v-if="item.type" class="icard__type badge" :class="item.type">{{ item.type }}</span>
       <span class="icard__price mono">
@@ -162,7 +162,7 @@ function price(value: number | null): string {
             @save="emit('set-isin', $event)"
           />
           <!-- Wie in der Tabelle: der Strich trägt seinen Grund selbst. -->
-          <EmptyReason v-else :reason="t('table.noIsinReason')" @click.stop />
+          <EmptyReason v-else :reason="t('table.noIsinReason')" />
         </dd>
         <dt>{{ t('table.colPoints') }}</dt>
         <dd class="mono">{{ item.history_count }}</dd>
