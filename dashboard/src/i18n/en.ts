@@ -292,7 +292,6 @@ export const en = {
     explain:
       'The configured source provides the figures where it has them. You can only ' +
       'fill in by hand what it does not provide — it always takes precedence.',
-    /* The sentence does not name the genus — see the German file. */
     notEtf:
       'Figures are only fetched for ETFs — this instrument is not one. The source is ' +
       'never queried for it, so every field can be entered by hand.',

@@ -242,18 +242,10 @@ def keeps_its_identity(
 ) -> bool:
     """Trägt diese Zeile bereits eine **vollständige** kanonische Identität?
 
-    Entschieden wird nach den Daten, und **je Form**: Was vollständig heißt,
-    sagt `IDENTITY_CHECK` weiter oben — ein Währungspaar hat keinen Ticker,
-    eine OTC-Anleihe keinen MIC. Nur für `listed` gilt Ticker **und** echter
-    MIC; der Sammelcode `US` zählt dort nicht, weil er ein interner Suchcode
-    ist und im kanonischen Feld nie stehen darf.
-
-    **Bis T-35 kannte diese Funktion nur die `listed`-Form**, und die Folge
-    war im Browserlauf zu sehen: Ein regulär aufgenommenes Krypto-Papier
-    stand danach in `GET /migration` unter „abgelehnt" — die App hätte beim
-    nächsten Start angeboten, es samt Kurspunkten zu löschen. Der Umzug von
-    T-21 ist für Zeilen ohne Identität da, nicht für die beiden Formen, die
-    T-31 eingeführt hat.
+    Entschieden wird nach den Daten und je Form: Ein Währungspaar hat keinen
+    Ticker, eine OTC-Anleihe keinen MIC. Nur für `listed` gilt Ticker **und**
+    echter MIC; der Sammelcode `US` zählt dort nicht, weil er ein interner
+    Suchcode und im kanonischen Feld unzulässig ist.
 
     Args:
         ticker: Der gespeicherte Ticker.
@@ -307,9 +299,8 @@ def plan_migration(connection: sqlite3.Connection) -> MigrationPlan:
     # erfassen muss — und ein Symbol allein sagt ihm das nicht. Bis Runde 30
     # holte der Plan sie nicht, und der Bericht bekam sie deshalb nur aus der
     # Tabelle; über REST kamen sie nie an.
-    # `kind`, `base` und `quote_currency` kommen erst mit T-31 dazu; eine
-    # Datenbank, die den Umzug noch vor sich hat, kennt sie nicht. Deshalb
-    # dieselbe Vorsicht wie bei `ticker`/`mic`: fragen, was da ist.
+    # Ältere Schemata kennen die Formspalten noch nicht. Deshalb dieselbe
+    # Vorsicht wie bei `ticker`/`mic`: fragen, was tatsächlich vorhanden ist.
     has_forms = _has_form_columns(connection)
     columns = (
         "id, symbol, isin, name, exchange, type, currency"
@@ -454,10 +445,9 @@ def _has_identity_columns(connection: sqlite3.Connection) -> bool:
 def _has_form_columns(connection: sqlite3.Connection) -> bool:
     """Trägt `instruments` die Formspalten aus T-31 schon?
 
-    Getrennt von `_has_identity_columns` gefragt, weil die beiden Umzüge
-    getrennt sind: Ein Bestand kann `ticker`/`mic` haben und `kind` noch
-    nicht. Dort ist jede Zeile ein Listing, und die alte Prüfung ist die
-    richtige.
+    Getrennt von `_has_identity_columns` gefragt: Ein Bestand kann
+    `ticker`/`mic` haben, aber noch keine Formspalten. Dort ist jede Zeile ein
+    Listing, und die alte Prüfung ist die richtige.
 
     Args:
         connection: Offene Verbindung; wird nur gelesen.

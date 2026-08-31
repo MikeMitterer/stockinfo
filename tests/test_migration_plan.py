@@ -362,24 +362,7 @@ def test_nur_eine_vollstaendige_zuordnung_bleibt_unangetastet(
 def test_die_anderen_identitaetsformen_ueberleben_die_vorschau(
     tmp_path, kind: str, values: dict
 ) -> None:
-    """**Gemessen im UI-Lauf zu T-35, und der teuerste Befund dieses Laufs.**
-
-    Ein Krypto-Papier, in der laufenden App regulär aufgenommen, stand danach
-    in `GET /migration` unter `rejected` — mit dem Grund
-    `symbol_without_exchange_suffix` und dem Preis „1 Kurspunkt geht
-    verloren". Beim nächsten Start hätte die App im Migrations-Riegel
-    gestanden und angeboten, das Papier zu **löschen**.
-
-    Die Ursache ist die dritte ihrer Art an einem Tag: `keeps_its_identity`
-    prüfte nur die `listed`-Form (Ticker **und** MIC). Eine `pair`-Zeile hat
-    keinen Ticker, eine `isin_only`-Zeile keinen MIC — beide sind seit T-31
-    vollständige, im Schema per `CHECK` erzwungene Identitäten und keine
-    Altlast.
-
-    Geprüft werden **beide** neuen Formen, nicht nur die gemessene: Die
-    Anleihe wäre derselbe Fehler eine Form weiter, nur ohne Browserlauf, der
-    ihn zeigt.
-    """
+    """Paar und reine ISIN sind vollständige Identitäten, keine Altlasten."""
     path = str(tmp_path / "heute.db")
     assert init_db(path) is False
 

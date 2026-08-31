@@ -111,18 +111,8 @@ describe('InstrumentDrilldown', () => {
     expect(wrapper.text()).not.toContain(i18n.global.t('drilldown.nothingProvided'))
   })
 
-  /*
-   * **Der Hinweis darf die Gattung nicht raten.**
-   *
-   * Gemessen im Browser: Unter einer Bundesanleihe stand „dieses Papier ist
-   * eine Aktie". Der Satz stimmte, solange es zwei Gattungen gab; seit T-31
-   * und T-38 sind es sechs, und er ist die einzige Stelle, an der ein
-   * Benutzer die Gattung seines Papiers erklärt bekommt.
-   *
-   * Geprüft wird über **alle** Nicht-ETF-Gattungen, nicht an einem Beispiel:
-   * Ein Text, der für `bond` stimmt und für `crypto` nicht, wäre derselbe
-   * Fehler eine Gattung weiter.
-   */
+  // Alle Nicht-ETF-Gattungen teilen denselben Hinweis; keine darf darin als
+  // Aktie bezeichnet werden.
   it.each(['stock', 'bond', 'crypto', 'etc', 'fund'])(
     'erklärt bei %s, ohne die Gattung zu behaupten',
     (type) => {

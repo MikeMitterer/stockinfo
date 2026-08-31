@@ -346,18 +346,8 @@ export const de = {
     explain:
       'Die Kennzahlen holt die eingerichtete Quelle, wo sie welche hat. Von Hand ' +
       'lässt sich nur ergänzen, was sie nicht liefert — sie hat immer Vorrang.',
-    /*
-     * **Der Satz nennt die Gattung nicht.** Er hieß „dieses Papier ist eine
-     * Aktie" — gemessen im Browser stand das unter einer Bundesanleihe. Das
-     * stimmte, solange es zwei Gattungen gab; seit T-31 und T-38 sind es
-     * sechs.
-     *
-     * Die Gattung zu interpolieren wäre die größere Änderung: sechs
-     * Übersetzungen je Sprache, dazu der Artikel („ein ETC", „eine Anleihe",
-     * „ein Fonds"). Sie steht ohnehin als Kennzeichen in derselben Zeile —
-     * hier zählt allein, dass es **kein** ETF ist, und genau das entscheidet
-     * das Backend (`quote_service`: `if instrument_type == "etf":`).
-     */
+    // Die konkrete Gattung steht bereits als Kennzeichen in derselben Zeile;
+    // hier zählt nur, dass die ETF-Anreicherung nicht zuständig ist.
     notEtf:
       'Kennzahlen werden nur für ETFs geholt — dieses Papier ist keiner. Die ' +
       'Quelle wird deshalb gar nicht erst abgefragt, alle Felder lassen sich von Hand nachtragen.',

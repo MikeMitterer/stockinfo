@@ -61,10 +61,10 @@ class FigiMatch:
     ticker: str
     name: str | None = None
     instrument_type: str | None = None
-    """``"etf"``, ``"stock"`` oder ``None`` — das Vokabular der App."""
+    """``"etf"``, ``"fund"``, ``"stock"`` oder ``None``."""
 
 
-# OpenFIGIs Gattungen in die zwei Begriffe der App. Die Liste ist bewusst
+# OpenFIGIs Gattungen in die unterstützten Begriffe der App. Die Liste ist bewusst
 # **kurz und wörtlich**: Was hier nicht steht, wird zu ``None`` und nicht
 # geraten. Ein falsch geratenes „stock" wäre schlimmer als kein Wert — es
 # schaltete die ETF-Anreicherung stillschweigend ab, und genau dieser Fehler
@@ -73,18 +73,9 @@ class FigiMatch:
 # Gemessen: `IE00B4L5Y983` liefert `securityType: "ETP"`, `securityType2:
 # "Mutual Fund"`. Beide Felder werden geprüft, weil OpenFIGI die Gattung je
 # nach Papier im einen oder anderen führt.
-# **Die zweite Tabelle, die bei T-31 vergessen wurde.** `QUOTE_TYPE_MAP` in
-# `app/providers/base.py` bildet Yahoos `MUTUALFUND` seit Mikes Entscheidung
-# vom 2026-08-29 auf `fund` ab; hier stand weiterhin `etf`. Zwei Tabellen für
-# dieselbe Frage, eine gepflegt und eine nicht — und diese hier gewinnt, weil
-# OpenFIGI vorn in der Auflösungskette steht.
-#
-# Die Folge wäre dieselbe, die `fund` überhaupt veranlasst hat: Ein nicht
-# börsengehandelter Fonds bekäme die ETF-Anreicherung samt TER-Frage an
-# justETF, wo er nicht geführt wird.
-#
-# `ETP` bleibt `etf`: Exchange Traded Product umfasst ETF und ETC, und ohne
-# feinere Auskunft ist `etf` hier die Näherung und nicht das Raten.
+# Mutual und Open-End Funds bleiben `fund`: Als `etf` würden sie fälschlich
+# die ETF-Anreicherung bei justETF auslösen. `ETP` behält die bestehende
+# Zuordnung zu `etf`.
 _FIGI_TYPES: dict[str, str] = {
     "ETP": "etf",
     "MUTUAL FUND": "fund",
