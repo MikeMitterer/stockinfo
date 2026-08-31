@@ -23,7 +23,7 @@ Grenze konkret zurückgeben lassen will, bleibt bei ihm.
 from stockinfo_plugin.types import Identity
 
 from app.db import init_db
-from app.providers.base import EtfDetails
+from app.providers.base import EtfDetails, SourceAnswer
 from app.repository import QuoteRepository
 from app.services.daily_sync import DailyCloseSync
 from app.services.quote_cache import CachedQuoteService
@@ -45,8 +45,8 @@ class EmptyDailyCloseProvider:
         *,
         identity: Identity | None = None,
         instrument_type: str | None = None,
-    ) -> list[dict] | None:
-        return []
+    ) -> SourceAnswer[list[dict]]:
+        return SourceAnswer([])
 
 
 def empty_daily_sync(repository: QuoteRepository) -> DailyCloseSync:

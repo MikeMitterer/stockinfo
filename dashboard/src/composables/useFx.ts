@@ -2,6 +2,7 @@ import { consola } from 'consola'
 import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
+import { describeFailure } from '../api/reason'
 import { fxPath } from '../api/paths'
 import { translate } from '../i18n'
 import type { FxRate } from '../types'
@@ -24,7 +25,10 @@ export function useFx(): {
     try {
       result.value = await apiClient.get<FxRate>(fxPath(base, quote))
     } catch (err) {
-      error.value = translate('errors.fx')
+      // Wie bei der Tagesreihe: Der Grund steht seit T-44 als Kennung im
+      // Rumpf — ein „konnte nicht geladen werden" ohne ihn verschweigt,
+      // ob das Paar nicht geführt wird oder eine Quelle gestört war.
+      error.value = describeFailure(translate('errors.fx'), err)
       consola.error('useFx.convert', err)
     } finally {
       loading.value = false

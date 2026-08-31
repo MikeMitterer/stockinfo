@@ -265,6 +265,20 @@ export const en = {
       quote_unavailable:
         'No source could look it up: {identifier}. Whether the security exists ' +
         'is therefore open.',
+      /* Die vier paarweisen Kennungen — siehe die deutsche Fassung. */
+      daily_series_not_found:
+        'None of the configured sources carries a price history for {identifier}.',
+      daily_source_unavailable:
+        'The price history for {identifier} could not be fetched — at least ' +
+        'one source did not answer.',
+      fx_pair_not_found:
+        'None of the configured sources carries the rate {base}/{quote}.',
+      fx_source_unavailable:
+        'The rate {base}/{quote} could not be fetched — at least one source ' +
+        'did not answer.',
+      invalid_currency_code:
+        '{base} and {quote} must be three-letter currency codes.',
+      invalid_isin_format: '{isin} is not shaped like an ISIN.',
       /* Fallback for a code this UI does not know — from a newer backend or a plugin. */
       unknown: 'The source reports an error this interface does not know: {code}.',
     },

@@ -7,6 +7,7 @@ import pytest
 
 from app.db import init_db
 from app.models import ListedIdentityOut, QuoteResponse
+from app.providers.base import SourceAnswer
 from app.repository import QuoteRepository
 from app.services.daily_sync import DailyCloseSync
 
@@ -35,9 +36,16 @@ def _seed(repo: QuoteRepository) -> dict:
 
 
 class FakeProvider:
-    def __init__(self, rows: list[dict] | None) -> None:
+    def __init__(self, rows: list[dict] | None, *, disturbed: bool = False) -> None:
+        """
+        Args:
+            rows: Die gelieferte Reihe; ``None`` heisst „keine Auskunft".
+            disturbed: Ob das Ausbleiben eine Stoerung war. Seit T-44 muss das
+                Double sagen, welchen Fall es meint.
+        """
         self.calls: list[str | None] = []
         self._rows = rows
+        self._disturbed = disturbed
 
     def fetch_daily_closes(
         self,
@@ -46,9 +54,9 @@ class FakeProvider:
         *,
         identity: object | None = None,
         instrument_type: str | None = None,
-    ):
+    ) -> SourceAnswer[list[dict]]:
         self.calls.append(start)
-        return self._rows
+        return SourceAnswer(self._rows, disturbed=self._disturbed)
 
 
 def test_sync_holt_bei_leerem_cache_und_setzt_wasserzeichen(
@@ -59,17 +67,36 @@ def test_sync_holt_bei_leerem_cache_und_setzt_wasserzeichen(
     sync = DailyCloseSync(repo, provider)
 
     start = (date.today() - timedelta(days=370)).isoformat()
-    assert sync.sync(inst["id"], inst["symbol"], start) is True
+    assert sync.sync(inst["id"], inst["symbol"], start).value is True
     assert repo.get_daily_meta(inst["id"]) is not None
     assert len(repo.get_daily_closes(inst["id"])) == 1
 
 
-def test_sync_meldet_false_bei_fehlgeschlagenem_erstabruf(
+def test_sync_meldet_die_stoerung_beim_erstabruf(repo: QuoteRepository) -> None:
+    inst = _seed(repo)
+    sync = DailyCloseSync(repo, FakeProvider(None, disturbed=True))
+
+    answer = sync.sync(inst["id"], inst["symbol"], None)
+
+    assert answer.is_hit is False
+    assert answer.disturbed is True, "die Stoerung ging auf dem Weg verloren"
+    assert repo.get_daily_meta(inst["id"]) is None
+
+
+def test_sync_reicht_den_sauberen_nichttreffer_unveraendert_durch(
     repo: QuoteRepository,
 ) -> None:
+    """**Die Gegenprobe zum Fall darueber.** Ohne sie waere `disturbed` auch
+    dann gruen, wenn `sync` es fest auf `True` setzte — und damit jede fehlende
+    Reihe wieder ein Ausfall.
+    """
     inst = _seed(repo)
-    sync = DailyCloseSync(repo, FakeProvider(None))  # Provider-Fehler
-    assert sync.sync(inst["id"], inst["symbol"], None) is False
+    sync = DailyCloseSync(repo, FakeProvider(None))
+
+    answer = sync.sync(inst["id"], inst["symbol"], None)
+
+    assert answer.is_hit is False
+    assert answer.disturbed is False
     assert repo.get_daily_meta(inst["id"]) is None
 
 

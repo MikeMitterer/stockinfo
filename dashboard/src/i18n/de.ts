@@ -309,6 +309,27 @@ export const de = {
         'Keine Quelle konnte nachsehen: {identifier}. Ob es das Papier gibt, ' +
         'ist damit offen.',
       /*
+       * **Dieselbe Trennung eine Ebene tiefer** (T-44). Die vier Kennungen
+       * darunter kommen paarweise: Einmal hat die Kette vollständig
+       * geantwortet und nichts gefunden, einmal war sie gestört. Wer beides
+       * gleich benennt, schickt den Betreiber zur Fehlersuche bei einer
+       * Quelle, die gar nichts falsch gemacht hat.
+       */
+      daily_series_not_found:
+        'Für {identifier} führt keine der eingerichteten Quellen eine ' +
+        'Kurshistorie.',
+      daily_source_unavailable:
+        'Die Kurshistorie zu {identifier} war nicht abrufbar — mindestens ' +
+        'eine Quelle hat nicht geantwortet.',
+      fx_pair_not_found:
+        'Keine der eingerichteten Quellen führt den Kurs {base}/{quote}.',
+      fx_source_unavailable:
+        'Der Kurs {base}/{quote} war nicht abrufbar — mindestens eine Quelle ' +
+        'hat nicht geantwortet.',
+      invalid_currency_code:
+        '{base} und {quote} müssen dreibuchstabige Währungscodes sein.',
+      invalid_isin_format: '{isin} hat nicht das Format einer ISIN.',
+      /*
        * Der Rückfall für eine Kennung, die diese Oberfläche nicht kennt —
        * etwa aus einem neueren Backend oder einem Plugin. Vorher stand die
        * rohe Kennung im Toast; `instrument_not_found` als Satz zu lesen ist

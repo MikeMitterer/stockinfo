@@ -194,15 +194,18 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
                 f"keine yfinance-Schreibweise für {request.identity}"
             )
 
-        closes = self._provider.fetch_daily_closes(
+        answer = self._provider.fetch_daily_closes(
             symbol, request.start.isoformat() if request.start else None
         )
-        # `None` heißt „konnte nicht fragen", `[]` heißt „nichts da". Die
-        # Anbindung unterscheidet beides ausdrücklich — sie einzuebnen machte
-        # aus einem Ausfall ein „gibt es nicht", und die App hörte auf zu
-        # fragen.
-        if closes is None:
-            return Unavailable(f"{symbol}: Tagesreihe nicht abrufbar")
+        # Ohne Wert hat der Anbieter nichts geliefert; `disturbed` sagt, ob das
+        # eine Störung war. Beides einzuebnen machte aus einem Ausfall ein
+        # „gibt es nicht", und die App hörte auf zu fragen. Seit T-44 trägt
+        # `SourceAnswer` die Unterscheidung, statt sie aus `None` zu erraten.
+        if not answer.is_hit:
+            if answer.disturbed:
+                return Unavailable(f"{symbol}: Tagesreihe nicht abrufbar")
+            return NotFound()
+        closes = answer.value or []
         if not closes:
             return NotFound()
 
@@ -252,9 +255,17 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
                 as_of=datetime.now(timezone.utc),
             )
 
-        rate = self._provider.fetch_fx_rate(request.base, request.quote)
-        if rate is None:
-            return NotFound()
+        answer = self._provider.fetch_fx_rate(request.base, request.quote)
+        if not answer.is_hit:
+            # Dieselbe Weiche wie bei der Tagesreihe: Ein Abruf, der geworfen
+            # hat, ist eine Störung; eine Antwort ohne Kurs heißt „führe ich
+            # nicht".
+            return (
+                Unavailable(f"{request.base}{request.quote}: Kurs nicht abrufbar")
+                if answer.disturbed
+                else NotFound()
+            )
+        rate = answer.value
         if not is_finite_price(rate):
             return Unavailable(f"unbrauchbarer Kurs {rate!r}")
 

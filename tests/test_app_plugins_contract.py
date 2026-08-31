@@ -36,7 +36,7 @@ from stockinfo_plugin.testing import (
 from app.plugins.justetf_metadata import JustEtfMetadataPlugin, as_readings
 from app.plugins.yfinance_metadata import YFinanceMetadataPlugin
 from app.plugins.yfinance_quotes import YFinancePlugin
-from app.providers.base import EtfDetails, RawQuote
+from app.providers.base import EtfDetails, RawQuote, SourceAnswer
 
 
 class FakeJustEtf:
@@ -86,16 +86,24 @@ class FakeYFinance:
             volume=1234,
         )
 
-    def fetch_daily_closes(self, symbol: str, start: str | None = None) -> list[dict] | None:
+    def fetch_daily_closes(
+        self, symbol: str, start: str | None = None
+    ) -> SourceAnswer[list[dict]]:
         if symbol != "EUNL.DE":
-            return []
-        return [
-            {"date": "2026-01-02", "close": 95.1, "currency": "EUR"},
-            {"date": "2026-01-03", "close": 95.8, "currency": "EUR"},
-        ]
+            return SourceAnswer([])
+        return SourceAnswer(
+            [
+                {"date": "2026-01-02", "close": 95.1, "currency": "EUR"},
+                {"date": "2026-01-03", "close": 95.8, "currency": "EUR"},
+            ]
+        )
 
-    def fetch_fx_rate(self, base: str, quote: str) -> float | None:
-        return 0.9376 if (base, quote) == ("EUR", "CHF") else None
+    def fetch_fx_rate(self, base: str, quote: str) -> SourceAnswer[float]:
+        if (base, quote) == ("EUR", "CHF"):
+            return SourceAnswer(0.9376)
+        # Kein Kurs, aber auch keine Störung: Dieses Double kennt das Paar
+        # schlicht nicht.
+        return SourceAnswer()
 
 
 class TestJustEtfMetadata(MetadataContract):

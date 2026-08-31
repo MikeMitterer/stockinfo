@@ -55,7 +55,10 @@ def test_die_leere_daily_grenze_meldet_keinen_fehler() -> None:
     Der Unterschied ist im Produktcode entscheidend, und eine Grenze, die ihn
     verwechselt, prüft in jedem Test das falsche Verhalten.
     """
-    assert EmptyDailyCloseProvider().fetch_daily_closes("VGWL.DE") == []
+    answer = EmptyDailyCloseProvider().fetch_daily_closes("VGWL.DE")
+
+    assert answer.value == []
+    assert answer.disturbed is False, "eine leere Reihe ist keine Störung"
 
 
 def test_die_leere_etf_grenze_ist_nicht_zustaendig() -> None:

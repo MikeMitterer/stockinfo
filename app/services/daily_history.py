@@ -14,6 +14,17 @@ from app.services.daily_sync import DailyCloseProvider, DailyCloseSync
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteUnavailableError
 
+
+class DailySeriesNotFoundError(Exception):
+    """Keine Quelle führt für dieses Papier eine Tagesreihe.
+
+    **Der Unterschied zu `QuoteUnavailableError` ist der ganze Zweck.** Dort
+    war mindestens eine Quelle gestört; hier haben alle geantwortet und keine
+    hat die Reihe. Eine Anleihe ohne gepflegten Verlauf ist kein Ausfall, und
+    ein Betreiber, der `502` liest, sucht den Fehler bei seiner Quelle statt in
+    seiner Datei.
+    """
+
 # Zeitraum-Kürzel → Anzahl Tage rückwärts ('max' = alles)
 _PERIOD_DAYS = {"1w": 7, "1m": 31, "3m": 93, "1y": 366}
 
@@ -48,18 +59,23 @@ class DailyHistoryService:
 
         Raises:
             QuoteUnavailableError: Instrument unbekannt und nicht beschaffbar,
-                oder Erst-Abruf der Historie fehlgeschlagen.
+                oder mindestens eine befragte Quelle war gestört.
+            DailySeriesNotFoundError: Die Kette ist vollständig durchgelaufen
+                und keine Quelle führt diese Reihe.
         """
         instrument = self._quotes.ensure_instrument(isin=isin, symbol=symbol)
         desired_start = self._period_start(period)
-        if not self._sync.sync(
+        synced = self._sync.sync(
             instrument["id"],
             instrument["symbol"],
             desired_start,
             identity=identity_from_row(instrument),
             instrument_type=instrument.get("type"),
-        ):
-            raise QuoteUnavailableError(instrument["symbol"])
+        )
+        if not synced.is_hit:
+            if synced.disturbed:
+                raise QuoteUnavailableError(instrument["symbol"])
+            raise DailySeriesNotFoundError(instrument["symbol"])
         rows = self._repository.get_daily_closes(instrument["id"], desired_start)
         return [self._to_point(row, instrument) for row in rows]
 

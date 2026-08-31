@@ -6,7 +6,12 @@ import pytest
 
 from app.db import init_db
 from app.repository import QuoteRepository
-from app.services.fx_service import CachedFxService, FxUnavailableError
+from app.providers.base import SourceAnswer
+from app.services.fx_service import (
+    CachedFxService,
+    FxPairNotFoundError,
+    FxUnavailableError,
+)
 
 
 @pytest.fixture
@@ -21,13 +26,21 @@ class _FakeFx:
     #: T-37 steht `name` im `FxRateProvider`-Protokoll.
     name = "yfinance"
 
-    def __init__(self, rate: float | None) -> None:
+    def __init__(self, rate: float | None, *, disturbed: bool = False) -> None:
+        """
+        Args:
+            rate: Der gelieferte Kurs, oder ``None`` fuer „habe ich nicht".
+            disturbed: Ob das Ausbleiben eine **Stoerung** war. Seit T-44 muss
+                jedes Double sagen, welchen der beiden Faelle es meint — genau
+                das ist der Unterschied zwischen `404` und `502`.
+        """
         self.rate = rate
+        self.disturbed = disturbed
         self.calls = 0
 
-    def fetch_fx_rate(self, base: str, quote: str) -> float | None:
+    def fetch_fx_rate(self, base: str, quote: str) -> SourceAnswer[float]:
         self.calls += 1
-        return self.rate
+        return SourceAnswer(self.rate, disturbed=self.disturbed)
 
 
 def test_gleiche_waehrung_ist_eins_ohne_fetch(repo: QuoteRepository) -> None:
@@ -60,9 +73,19 @@ def test_fetch_fehler_mit_cache_liefert_stale(repo: QuoteRepository) -> None:
     assert result.rate == 1.10 and result.stale is True
 
 
-def test_fetch_fehler_ohne_cache_wirft(repo: QuoteRepository) -> None:
-    service = CachedFxService(_FakeFx(None), repo, ttl_hours=1)
+def test_eine_stoerung_ohne_cache_wirft_den_ausfall(repo: QuoteRepository) -> None:
+    service = CachedFxService(_FakeFx(None, disturbed=True), repo, ttl_hours=1)
     with pytest.raises(FxUnavailableError):
+        service.get_rate("EUR", "USD")
+
+
+def test_ein_nicht_gefuehrtes_paar_ist_kein_ausfall(repo: QuoteRepository) -> None:
+    """**Der Kern von T-44.** Die Quelle hat geantwortet: Sie fuehrt das Paar
+    nicht. Das ist eine Auskunft und kein Ausfall — der Aufrufer bekommt
+    deshalb einen anderen Fehler, aus dem der Router `404` statt `502` macht.
+    """
+    service = CachedFxService(_FakeFx(None), repo, ttl_hours=1)
+    with pytest.raises(FxPairNotFoundError):
         service.get_rate("EUR", "USD")
 
 
@@ -169,8 +192,8 @@ def test_die_herkunft_ueberlebt_auch_einen_stale_treffer(
 class _NamedFx(_FakeFx):
     """Eine Devisenquelle mit eigenem Namen — für die Herkunftsprüfung."""
 
-    def __init__(self, name: str, rate: float | None) -> None:
-        super().__init__(rate)
+    def __init__(self, name: str, rate: float | None, *, disturbed: bool = False) -> None:
+        super().__init__(rate, disturbed=disturbed)
         self.name = name
 
 
@@ -253,18 +276,43 @@ def test_erst_nach_dem_gesamtausfall_greift_der_stale_cache(
     )
 
 
-def test_ohne_cache_bleibt_der_typisierte_fehler(repo: QuoteRepository) -> None:
-    """Alle Quellen stumm und nichts gespeichert — dann der bekannte Fehler.
+def test_ohne_cache_und_ohne_stoerung_ist_es_ein_nicht_gefuehrtes_paar(
+    repo: QuoteRepository,
+) -> None:
+    """Alle Quellen sagen „habe ich nicht" — die Kette ist durchgelaufen.
 
-    Das Verhalten ändert sich durch die Kaskade **nicht**; es tritt nur später
-    ein. Der Aufrufer sieht denselben Fall wie bisher.
+    Sie hat vollstaendig geantwortet, nur negativ. Das ist kein Ausfall, und
+    genau deshalb ist es ein anderer Fehler.
     """
     sources = [_NamedFx("yfinance", None), _NamedFx("yaml-file", None)]
+
+    with pytest.raises(FxPairNotFoundError):
+        CachedFxService(sources, repo, ttl_hours=1).get_rate("CAD", "EUR")
+
+    assert [source.calls for source in sources] == [1, 1]
+
+
+def test_eine_einzige_stoerung_macht_die_ganze_kette_zum_ausfall(
+    repo: QuoteRepository,
+) -> None:
+    """**Der gemischte Fall, den Codex als Pflichtorakel verlangt hat.**
+
+    Eine Quelle war gestoert, die andere fuehrt das Paar schlicht nicht. Dann
+    ist die Auskunft unvollstaendig: Vielleicht haette die gestoerte Quelle den
+    Kurs gehabt. Ein `404` behauptete hier „gibt es nicht" auf einer Grundlage,
+    die die Kette gar nicht erhoben hat.
+    """
+    sources = [
+        _NamedFx("yfinance", None, disturbed=True),
+        _NamedFx("yaml-file", None),
+    ]
 
     with pytest.raises(FxUnavailableError):
         CachedFxService(sources, repo, ttl_hours=1).get_rate("CAD", "EUR")
 
-    assert [source.calls for source in sources] == [1, 1]
+    assert [source.calls for source in sources] == [1, 1], (
+        "nach einer Stoerung wurde die naechste Quelle nicht mehr gefragt"
+    )
 
 
 def test_eine_einzelne_quelle_bleibt_zulaessig(repo: QuoteRepository) -> None:

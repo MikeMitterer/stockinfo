@@ -3,6 +3,7 @@ import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
 import { instrumentPath } from '../api/paths'
+import { describeFailure } from '../api/reason'
 import type { DailyPoint, InstrumentRef } from '../types'
 import { translate } from '../i18n'
 
@@ -35,7 +36,10 @@ export function useDaily(): {
       daily.value = result
     } catch (err) {
       if (currentRequest !== requestId) return
-      error.value = translate('errors.daily')
+      // **Kategorie und Grund**, nicht nur die Kategorie: Seit T-44 nennt das
+      // Backend hier eine Kennung, und „konnte nicht geladen werden" allein
+      // verschweigt, ob es die Reihe nicht gibt oder eine Quelle gestört war.
+      error.value = describeFailure(translate('errors.daily'), err)
       consola.error('useDaily.load', err)
     } finally {
       if (currentRequest === requestId) loading.value = false

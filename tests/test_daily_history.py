@@ -7,8 +7,9 @@ import pytest
 
 from app.db import init_db
 from app.models import ListedIdentityOut, QuoteResponse
+from app.providers.base import SourceAnswer
 from app.repository import QuoteRepository
-from app.services.daily_history import DailyHistoryService
+from app.services.daily_history import DailyHistoryService, DailySeriesNotFoundError
 from app.services.quote_service import QuoteUnavailableError
 
 
@@ -68,13 +69,13 @@ class FakeDailyProvider:
         *,
         identity: object | None = None,
         instrument_type: str | None = None,
-    ) -> list[dict]:
+    ) -> SourceAnswer[list[dict]]:
         self.calls.append(start)
-        return [
+        return SourceAnswer([
             {"date": _day(7), "close": 160.0, "currency": "EUR"},
             {"date": _day(6), "close": 161.0, "currency": "EUR"},
             {"date": _day(4), "close": 162.0, "currency": "EUR"},
-        ]
+        ])
 
 
 class FakeQuotes:
@@ -134,7 +135,12 @@ def test_daily_service_first_fetches_then_uses_cache(repo: QuoteRepository) -> N
 
 
 class FlakyDailyProvider:
-    """Schlägt die ersten ``fail_first`` Aufrufe fehl (None), danach Daten."""
+    """Ist die ersten ``fail_first`` Aufrufe **gestört**, danach liefert sie.
+
+    Seit T-44 sagt das Double ausdrücklich „Störung": Ein Fetch, der ohne
+    Störung nichts liefert, ist etwas anderes — er heißt „habe ich nicht" und
+    führt zu `404` statt `502`.
+    """
 
     def __init__(self, fail_first: int = 1) -> None:
         self.calls: list[str | None] = []
@@ -147,11 +153,11 @@ class FlakyDailyProvider:
         *,
         identity: object | None = None,
         instrument_type: str | None = None,
-    ) -> list[dict] | None:
+    ) -> SourceAnswer[list[dict]]:
         self.calls.append(start)
         if len(self.calls) <= self._fail_first:
-            return None
-        return [{"date": _day(4), "close": 162.0, "currency": "EUR"}]
+            return SourceAnswer(disturbed=True)
+        return SourceAnswer([{"date": _day(4), "close": 162.0, "currency": "EUR"}])
 
 
 def test_fehlgeschlagener_erstabruf_setzt_kein_wasserzeichen(
@@ -170,6 +176,38 @@ def test_fehlgeschlagener_erstabruf_setzt_kein_wasserzeichen(
     result = service.get_daily(isin="IE00B3RBWM25", period="1m")
     assert len(result) == 1
     assert repo.get_daily_meta(instrument["id"]) is not None
+
+
+class _NoSeriesProvider:
+    """Eine Quelle, die das Papier kennt und **keine Reihe dazu hat**.
+
+    Genau der Fall aus dem T-42-Browserlauf: Die YAML-Datei führt `BTC-EUR`,
+    aber ohne gepflegten Verlauf. Sie antwortet sauber — nur negativ.
+    """
+
+    def fetch_daily_closes(
+        self,
+        symbol: str,
+        start: str | None = None,
+        *,
+        identity: object | None = None,
+        instrument_type: str | None = None,
+    ) -> SourceAnswer[list[dict]]:
+        return SourceAnswer()
+
+
+def test_ein_papier_ohne_reihe_ist_kein_ausfall(repo: QuoteRepository) -> None:
+    """**Der Befund, für den T-44 angelegt wurde.**
+
+    Keine Quelle war gestört, keine führt die Reihe. Das ist eine vollständige
+    Auskunft, und der Aufrufer bekommt deshalb einen anderen Fehler — aus dem
+    der Router `404` statt `502` macht.
+    """
+    _seed(repo)
+    service = DailyHistoryService(repo, _NoSeriesProvider(), FakeQuotes(repo))
+
+    with pytest.raises(DailySeriesNotFoundError):
+        service.get_daily(isin="IE00B3RBWM25", period="1m")
 
 
 def test_fehlgeschlagener_folgeabruf_liefert_cache_ohne_fortschreibung(
@@ -206,11 +244,11 @@ class _ProviderWithoutCurrency:
         *,
         identity: object | None = None,
         instrument_type: str | None = None,
-    ) -> list[dict]:
-        return [
+    ) -> SourceAnswer[list[dict]]:
+        return SourceAnswer([
             {"date": _day(5), "close": 160.0},
             {"date": _day(3), "close": 161.0},
-        ]
+        ])
 
 
 def test_tagespunkt_ohne_waehrung_erbt_die_des_listings(repo: QuoteRepository) -> None:

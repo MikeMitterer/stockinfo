@@ -7,6 +7,7 @@ import pytest
 
 from app.db import init_db
 from app.models import ListedIdentityOut, QuoteResponse
+from app.providers.base import SourceAnswer
 from app.repository import QuoteRepository
 from app.services.daily_sync import DailyCloseSync
 from app.services.quote_cache import CachedQuoteService, RefreshInProgressError
@@ -208,11 +209,13 @@ class _FakeDailyProvider:
         *,
         identity: object | None = None,
         instrument_type: str | None = None,
-    ):
-        return [
-            {"date": f"2026-01-{index + 1:02d}", "close": close, "currency": "EUR"}
-            for index, close in enumerate(self._closes)
-        ]
+    ) -> SourceAnswer[list[dict]]:
+        return SourceAnswer(
+            [
+                {"date": f"2026-01-{index + 1:02d}", "close": close, "currency": "EUR"}
+                for index, close in enumerate(self._closes)
+            ]
+        )
 
 
 class _StockQuoteService:
@@ -301,7 +304,7 @@ def test_refresh_behaelt_letzte_volatilitaet_bei_fehlgeschlagener_neuberechnung(
     """EOD-Cache leer und Delta-Fetch tot → letzter bekannter Wert bleibt erhalten."""
 
     class _FailingDailyProvider:
-        """Liefert nie Kurse (leerer EOD-Cache, Delta-Fetch schlägt fehl)."""
+        """Liefert nie Kurse — und zwar als **Störung**, nicht als Nichttreffer."""
 
         def fetch_daily_closes(
             self,
@@ -310,8 +313,8 @@ def test_refresh_behaelt_letzte_volatilitaet_bei_fehlgeschlagener_neuberechnung(
             *,
             identity: object | None = None,
             instrument_type: str | None = None,
-        ):
-            return None
+        ) -> SourceAnswer[list[dict]]:
+            return SourceAnswer(disturbed=True)
 
     db_path = str(tmp_path / "vola3.db")
     init_db(db_path)

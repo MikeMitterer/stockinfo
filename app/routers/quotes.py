@@ -35,7 +35,7 @@ from app.exchanges import REASON_NO_SUFFIX
 from app.routers.instruments import REASON_QUOTE_UNAVAILABLE
 from app.services.intake_service import REASON_NOT_FOUND
 from app.routers.validation import IsinPath, SymbolPath, TimeRange, normalize_symbol
-from app.services.daily_history import DailyHistoryService
+from app.services.daily_history import DailyHistoryService, DailySeriesNotFoundError
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import (
     InstrumentNotFoundError,
@@ -58,6 +58,14 @@ REASON_UNSUPPORTED_TYPE = "unsupported_instrument_type"
 # Ein **Datenfehler der Quelle**, deshalb 502 und nicht 400: Der Aufrufer
 # hat nichts falsch gemacht und kann nichts besser machen.
 REASON_CURRENCY_MISMATCH = "quote_currency_mismatch"
+
+# Keine Quelle fuehrt fuer dieses Papier eine Tagesreihe (T-44). **Kein
+# Ausfall**: Die Kette ist vollstaendig durchgelaufen, jede Quelle hat
+# geantwortet — nur hat keine die Reihe.
+REASON_NO_DAILY_SERIES = "daily_series_not_found"
+
+# Mindestens eine befragte Quelle war gestoert. Erst das ist ein `502`.
+REASON_DAILY_UNAVAILABLE = "daily_source_unavailable"
 
 
 def _not_found(isin: str) -> JSONResponse:
@@ -113,6 +121,27 @@ def _unsupported_type(exc: UnsupportedInstrumentTypeError) -> JSONResponse:
             code=REASON_UNSUPPORTED_TYPE,
             params={"symbol": exc.symbol, "instrument_type": exc.instrument_type},
         ).model_dump(),
+    )
+
+
+# Was die beiden Daily-Routen zusagen. **Beide dasselbe**: Der Unterschied
+# zwischen „gibt es nicht" und „konnte nicht nachsehen" hängt seit T-44 an der
+# Kette, nicht am Eintrittsweg.
+DAILY_ERROR_RESPONSES = {
+    404: {"model": ErrorDetail, "description": "Keine Quelle führt diese Reihe"},
+    502: {"model": ErrorDetail, "description": "Eine befragte Quelle war gestört"},
+}
+
+
+def _daily_error(status: int, code: str, identifier: str) -> JSONResponse:
+    """Ein Fehler der Tagesreihe — als Kennung, mit dem gefragten Papier dabei.
+
+    Beide Daily-Routen teilen sie sich: Zwei Fassungen wären die Stelle, an der
+    `404` und `502` beim nächsten Mal wieder auseinanderlaufen.
+    """
+    return JSONResponse(
+        status_code=status,
+        content=ErrorDetail(code=code, params={"identifier": identifier}).model_dump(),
     )
 
 
@@ -219,7 +248,11 @@ def quote_by_isin(isin: IsinPath, service: ServiceDep) -> QuoteResponse:
 @router.get(
     "/quote/{isin}/daily",
     response_model=list[DailyPoint],
-    responses={**IDENTITY_CONFLICT_RESPONSE, **INSTRUMENT_NOT_FOUND_RESPONSE},
+    responses={
+        **IDENTITY_CONFLICT_RESPONSE,
+        **INSTRUMENT_NOT_FOUND_RESPONSE,
+        **DAILY_ERROR_RESPONSES,
+    },
 )
 def daily_history(
     isin: IsinPath,
@@ -234,16 +267,16 @@ def daily_history(
         # Ausfall bei Yahoo. Beides auf denselben Code zu legen nimmt jedem
         # Client die Möglichkeit, sie auseinanderzuhalten.
         return _not_found(isin)
-    except QuoteUnavailableError as exc:
-        raise HTTPException(
-            status_code=502, detail=f"Keine Historie für {isin}"
-        ) from exc
+    except DailySeriesNotFoundError:
+        return _daily_error(404, REASON_NO_DAILY_SERIES, isin)
+    except QuoteUnavailableError:
+        return _daily_error(502, REASON_DAILY_UNAVAILABLE, isin)
 
 
 @router.get(
     "/quote/by-symbol/{symbol}/daily",
     response_model=list[DailyPoint],
-    responses=SYMBOL_CONFLICT_RESPONSE,
+    responses={**SYMBOL_CONFLICT_RESPONSE, **DAILY_ERROR_RESPONSES},
 )
 def daily_history_by_symbol(
     symbol: SymbolPath,
@@ -253,16 +286,15 @@ def daily_history_by_symbol(
     """Liefert echte Tages-Schlusskurse (EOD) zu einem Symbol, inkrementell gecacht."""
     try:
         return service.get_daily(symbol=symbol, period=period)
-    except QuoteUnavailableError as exc:
-        # Bewusst 502 und nicht 404: Auf dem Symbol-Pfad gibt es keine
-        # Auflösung, die scheitern könnte — `fetch_quote` liefert `None`, ob
-        # Yahoo das Symbol nicht kennt oder gerade nicht antwortet. Die beiden
-        # auseinanderzuhalten hieße, den Provider danach zu fragen; solange er
-        # es nicht sagt, wäre ein 404 geraten. Der ISIN-Pfad kann es, dort
-        # scheitert die Auflösung sichtbar.
-        raise HTTPException(
-            status_code=502, detail=f"Keine Historie für {symbol}"
-        ) from exc
+    except DailySeriesNotFoundError:
+        # **Seit T-44 kann auch dieser Pfad unterscheiden.** Die frühere
+        # Begründung — der Provider sage nicht, ob er das Symbol nicht kennt
+        # oder gerade nicht antwortet — galt, solange beides als `None` ankam.
+        # Jetzt trägt die Kette die Unterscheidung bis hierher, und ein `404`
+        # ist keine Vermutung mehr.
+        return _daily_error(404, REASON_NO_DAILY_SERIES, symbol)
+    except QuoteUnavailableError:
+        return _daily_error(502, REASON_DAILY_UNAVAILABLE, symbol)
 
 
 @router.get(

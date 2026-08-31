@@ -12,7 +12,7 @@ import structlog
 
 from stockinfo_plugin.types import Identity
 
-from app.providers.base import DailyCloseProvider
+from app.providers.base import DailyCloseProvider, SourceAnswer
 from app.repository import QuoteRepository
 
 logger = structlog.get_logger()
@@ -38,7 +38,7 @@ class DailyCloseSync:
         *,
         identity: Identity | None = None,
         instrument_type: str | None = None,
-    ) -> bool:
+    ) -> SourceAnswer[bool]:
         """Lädt nur fehlende Tage nach — anhand der Fetch-Wasserzeichen.
 
         ``fetched_to`` = bis wann bereits abgefragt, ``fetched_from`` = ab wann
@@ -47,35 +47,49 @@ class DailyCloseSync:
         keine dauerhafte Datenlücke.
 
         Returns:
-            ``False`` nur, wenn noch nie abgefragt wurde und der Erst-Fetch
-            fehlschlägt (kein Cache vorhanden); sonst ``True``.
+            ``value=True``, sobald etwas Verwertbares vorliegt. Ohne Wert ist
+            der Erst-Fetch fehlgeschlagen und es gibt keinen Cache — dann sagt
+            `disturbed`, ob eine Quelle **gestört** war oder ob schlicht keine
+            diese Reihe führt. Der Router macht daraus `502` oder `404`.
         """
         today = date.today().isoformat()
         meta = self._repository.get_daily_meta(instrument_id)
 
         if meta is None:  # noch nie abgefragt → gesamten Zeitraum holen
-            if not self._fetch_and_store(instrument_id, symbol, desired_start, identity, instrument_type):
-                return False
+            first = self._fetch_and_store(
+                instrument_id, symbol, desired_start, identity, instrument_type
+            )
+            if not first.is_hit:
+                return SourceAnswer(disturbed=first.disturbed)
             self._repository.set_daily_meta(instrument_id, desired_start, today)
-            return True
+            return SourceAnswer(True)
 
         fetched_from = meta["fetched_from"]
         fetched_to = meta["fetched_to"]
 
         if fetched_to is None or fetched_to < today:  # neue Tage seither
-            if self._fetch_and_store(instrument_id, symbol, fetched_to, identity, instrument_type):
+            if self._fetch_and_store(
+                instrument_id, symbol, fetched_to, identity, instrument_type
+            ).is_hit:
                 fetched_to = today
 
         if fetched_from is not None:  # gesamte Historie noch nicht geholt
             if desired_start is None:  # 'max' verlangt → alles holen
-                if self._fetch_and_store(instrument_id, symbol, None, identity, instrument_type):
+                if self._fetch_and_store(
+                    instrument_id, symbol, None, identity, instrument_type
+                ).is_hit:
                     fetched_from = None
             elif desired_start < fetched_from:  # weiter zurück verlangt
-                if self._fetch_and_store(instrument_id, symbol, desired_start, identity, instrument_type):
+                if self._fetch_and_store(
+                    instrument_id, symbol, desired_start, identity, instrument_type
+                ).is_hit:
                     fetched_from = desired_start
 
         self._repository.set_daily_meta(instrument_id, fetched_from, fetched_to)
-        return True
+        # **Ein Wasserzeichen liegt vor.** Was danach fehlschlägt, kostet
+        # frische Tage, nicht die Auskunft: Der gespeicherte Stand bleibt eine
+        # Antwort, und der Aufrufer bekommt sie.
+        return SourceAnswer(True)
 
     def _fetch_and_store(
         self,
@@ -84,24 +98,31 @@ class DailyCloseSync:
         start: str | None,
         identity: Identity | None = None,
         instrument_type: str | None = None,
-    ) -> bool:
+    ) -> SourceAnswer[bool]:
         """Holt EOD-Kurse ab ``start`` und schreibt sie in den Cache.
 
         Returns:
-            True bei erfolgreichem Fetch (auch ohne neue Zeilen), False wenn
-            der Provider einen Fehler signalisiert.
+            ``value=True`` bei erfolgreichem Fetch, auch ohne neue Zeilen.
+            Ohne Wert hat keine Quelle geliefert; `disturbed` reicht dabei
+            durch, ob das eine Störung war.
         """
         # **Die Identität wird durchgereicht, nicht zurückgerechnet.** Ein
         # Symbol ohne Suffix — `AAPL` — gehört zu einer der fünf US-Börsen, die
         # absichtlich keinen Alias führen; aus ihm die Börse zu erraten ginge
         # nicht, und der Versuch hat in Runde 3 alle aliaslosen Plätze still
         # abgeschaltet: null Provider-Aufrufe, `None` als Ergebnis.
-        rows = self._provider.fetch_daily_closes(
+        answer = self._provider.fetch_daily_closes(
             symbol, start=start, identity=identity, instrument_type=instrument_type
         )
-        if rows is None:
-            logger.warning("daily_sync_failed", symbol=symbol, start=start)
-            return False
+        if not answer.is_hit:
+            logger.warning(
+                "daily_sync_failed",
+                symbol=symbol,
+                start=start,
+                disturbed=answer.disturbed,
+            )
+            return SourceAnswer(disturbed=answer.disturbed)
+        rows = answer.value or []
         self._repository.upsert_daily_closes(instrument_id, rows)
         logger.debug("daily_synced", symbol=symbol, start=start, rows=len(rows))
-        return True
+        return SourceAnswer(True)

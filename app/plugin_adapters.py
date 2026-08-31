@@ -59,6 +59,7 @@ from app.providers.base import (
     RawQuote,
     Resolution,
     ResolvedInstrument,
+    SourceAnswer,
 )
 
 logger = structlog.get_logger()
@@ -339,7 +340,7 @@ class DailyAdapter(_Adapter):
         *,
         identity: Identity | None = None,
         instrument_type: str | None = None,
-    ) -> list[dict] | None:
+    ) -> SourceAnswer[list[dict]]:
         """Die Tagesreihe in der Form, die der Core liest.
 
         **Die Identität kommt herein, sie wird nicht zurückgerechnet.**
@@ -358,15 +359,16 @@ class DailyAdapter(_Adapter):
                 Aufrufer bereits hatte.
 
         Returns:
-            Zeilen mit ``date``, ``close`` und ``currency``; ``None`` bei einer
-            Störung, ``[]`` wenn es nichts gibt. Die Unterscheidung stammt aus
-            dem Vertrag und wird hier nicht eingeebnet.
+            Zeilen mit ``date``, ``close`` und ``currency`` als Wert; ``[]``,
+            wenn es im Zeitraum nichts gibt. Ohne Wert sagt `disturbed`, ob
+            eine Störung vorlag — genau die Unterscheidung des Vertrags, die
+            bis T-44 hier eingeebnet wurde.
         """
         if identity is None:
             logger.info("daily_without_identity", symbol=symbol)
-            return None
+            return SourceAnswer()
         if not self._serves(identity, instrument_type):
-            return None
+            return SourceAnswer()
 
         answer = self._source.fetch_daily(
             DailyRequest(
@@ -378,26 +380,37 @@ class DailyAdapter(_Adapter):
         # heißt „nachgesehen, in diesem Zeitraum nichts", und der Core drückt
         # das als `[]` aus.
         if isinstance(answer, DailySeries):
-            return [
-                {
-                    "date": bar.day.isoformat(),
-                    "close": bar.close,
-                    "currency": answer.currency,
-                }
-                for bar in answer.bars
-            ]
-        # Jeder Nicht-Treffer ist `None`: Die nächste Quelle ist dran, und das
-        # Wasserzeichen bleibt stehen, solange keine Quelle Auskunft gab.
-        return None
+            return SourceAnswer(
+                [
+                    {
+                        "date": bar.day.isoformat(),
+                        "close": bar.close,
+                        "currency": answer.currency,
+                    }
+                    for bar in answer.bars
+                ]
+            )
+        # Jeder Nicht-Treffer lässt die nächste Quelle ran. **Nur `Unavailable`
+        # ist dabei eine Störung** — `NotFound` und `NotResponsible` sind
+        # vollständige Antworten, nur negative. Bis T-44 waren alle drei
+        # dasselbe `None`, und der Router machte daraus einen Ausfall.
+        return SourceAnswer(disturbed=isinstance(answer, Unavailable))
 
 
 class FxAdapter(_Adapter):
     """Ein Plugin der Devisenrolle, in der Sprache des Core."""
 
-    def fetch_fx_rate(self, base: str, quote: str) -> float | None:
-        """Der Kurs als nackte Zahl — mehr liest der Core hier nicht."""
+    def fetch_fx_rate(self, base: str, quote: str) -> SourceAnswer[float]:
+        """Der Kurs — und ob sein Ausbleiben eine Störung war.
+
+        `NotFound` heißt „dieses Paar führe ich nicht" und ist eine Auskunft;
+        `Unavailable` heißt „konnte nicht nachsehen". Der Unterschied entscheidet
+        weiter oben zwischen `404` und `502`.
+        """
         answer = self._source.fetch_rate(FxRequest(base=base, quote=quote))
-        return answer.rate if isinstance(answer, FxRate) else None
+        if isinstance(answer, FxRate):
+            return SourceAnswer(answer.rate)
+        return SourceAnswer(disturbed=isinstance(answer, Unavailable))
 
 
 class MetadataAdapter(_Adapter):

@@ -13,6 +13,11 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, Query
 
 from app.exchanges import ISIN_PATTERN
+from app.models import ErrorDetail
+
+# Ein ungültiges ISIN-Format als Kennung. Derselbe Katalogeintrag bedient jeden
+# Client; der Satz entsteht dort, wo er gelesen wird.
+REASON_INVALID_ISIN = "invalid_isin_format"
 
 # Yahoo-Symbole: Kennung plus optionales Börsensuffix (VGWL.DE), dazu die
 # Sonderformen für Indizes (^GDAXI) und Devisen (EURUSD=X).
@@ -33,12 +38,18 @@ def normalize_isin(isin: str) -> str:
         Die normalisierte ISIN.
 
     Raises:
-        HTTPException: 422 bei ungültigem Format.
+        HTTPException: 422 bei ungültigem Format — mit **Kennung**, nicht mit
+            deutschem Fließtext. `ErrorDetail` sagt zu, dass der Satz im UI
+            entsteht; ein anderer Client als das Dashboard erreicht diese
+            Stelle, und ihm nützt „Ungültiges ISIN-Format" nichts.
     """
     normalized = isin.strip().upper()
     if not ISIN_PATTERN.fullmatch(normalized):
         raise HTTPException(
-            status_code=422, detail=f"Ungültiges ISIN-Format: {isin}"
+            status_code=422,
+            detail=ErrorDetail(
+                code=REASON_INVALID_ISIN, params={"isin": isin}
+            ).model_dump(),
         )
     return normalized
 

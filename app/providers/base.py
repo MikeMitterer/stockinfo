@@ -6,7 +6,7 @@ API-Antwort zusammen. Protokolle ermöglichen austauschbare Implementierungen
 """
 
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Generic, Protocol, TypeVar
 
 from stockinfo_plugin.types import (
     Identity,
@@ -18,6 +18,39 @@ from stockinfo_plugin.types import (
     Unavailable,
     Unsupported,
 )
+
+PayloadT = TypeVar("PayloadT")
+
+
+@dataclass(frozen=True)
+class SourceAnswer(Generic[PayloadT]):
+    """Was eine Quelle geantwortet hat — **und ob dabei etwas gestört war**.
+
+    Bis T-44 kannte der Core an dieser Stelle zwei Ausgänge: einen Wert oder
+    ``None``. Damit fielen zwei Sachverhalte zusammen, die der Plugin-Vertrag
+    seit T-31 ausdrücklich trennt: „habe ich nicht" (`NotFound`,
+    `NotResponsible`) und „konnte nicht nachsehen" (`Unavailable`). Am Ende
+    einer Kette war nicht mehr erkennbar, welcher von beiden vorlag — und der
+    Router beantwortete beide mit `502`.
+
+    Der Unterschied ist keine Feinheit: Eine Kette, in der **jede** Quelle
+    „habe ich nicht" gesagt hat, ist kein Ausfall. Sie hat vollständig
+    geantwortet, nur eben negativ.
+
+    Attributes:
+        value: Die Antwort, oder ``None`` wenn keine Quelle eine hatte.
+        disturbed: Ob mindestens eine befragte Quelle gestört war. Nur dann
+            ist ein ausbleibender Wert ein Ausfall.
+    """
+
+    value: PayloadT | None = None
+    disturbed: bool = False
+
+    @property
+    def is_hit(self) -> bool:
+        """Hat eine Quelle geantwortet? Auch eine leere Reihe ist eine Antwort."""
+        return self.value is not None
+
 
 # Der kanonische Gattungskatalog (T-31, Entscheidung 2 · T-38 kanonisiert ihn).
 # **Offen, nicht abschließend**: Ein neuer Wert ist ein Nachtrag und kein Bruch,
@@ -263,9 +296,11 @@ class DailyCloseProvider(Protocol):
     Vertrag, und die Verbraucher hingen weiter an der alten. Jetzt steht er
     einmal hier, neben `QuoteProvider`, und `daily_sync` importiert ihn.
 
-    ``None`` heißt „konnte nicht nachsehen" (Netz, Rate-Limit), die leere Liste
-    „nachgesehen, nichts da". Der Unterschied entscheidet, ob ein gespeicherter
-    Stand überschrieben werden darf.
+    Die Antwort ist ein `SourceAnswer`: ``value=None`` heißt „keine Auskunft",
+    die leere Liste „nachgesehen, nichts da". `disturbed` sagt, ob das
+    Ausbleiben eine Störung war. Der Unterschied entscheidet, ob ein
+    gespeicherter Stand überschrieben werden darf — und was der Router
+    antwortet.
     """
 
     def fetch_daily_closes(
@@ -275,7 +310,7 @@ class DailyCloseProvider(Protocol):
         *,
         identity: Identity | None = None,
         instrument_type: str | None = None,
-    ) -> list[dict] | None:
+    ) -> SourceAnswer[list[dict]]:
         """Holt Tagesschlusskurse.
 
         **Die Identität kommt seit T-23 mit, und das ist kein Beiwerk.**
@@ -310,7 +345,7 @@ class FxRateProvider(Protocol):
     `CachedFxService._fx_source`.
     """
 
-    def fetch_fx_rate(self, base: str, quote: str) -> float | None: ...
+    def fetch_fx_rate(self, base: str, quote: str) -> SourceAnswer[float]: ...
 
 
 class EtfEnricher(Protocol):

@@ -1,5 +1,5 @@
 {
-  "core_version": "4.0.0",
+  "core_version": "4.1.0",
   "paths": {
     "/fields": {
       "get": {
@@ -29,10 +29,24 @@
               }
             }
           },
+          "404": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
+              }
+            }
+          },
           "422": {
             "application/json": {
               "schema": {
-                "$ref": "#/components/schemas/HTTPValidationError"
+                "$ref": "#/components/schemas/ErrorDetail"
+              }
+            }
+          },
+          "502": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
               }
             }
           }
@@ -162,6 +176,13 @@
               }
             }
           },
+          "404": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
+              }
+            }
+          },
           "409": {
             "application/json": {
               "schema": {
@@ -181,6 +202,13 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          },
+          "502": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
               }
             }
           }
@@ -305,6 +333,13 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/HTTPValidationError"
+              }
+            }
+          },
+          "502": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ErrorDetail"
               }
             }
           }

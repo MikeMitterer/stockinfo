@@ -15,7 +15,7 @@ gewinnt" auch dann grün, wenn die zweite gar nicht existierte.
 
 import pytest
 
-from app.providers.base import RawQuote, ResolvedInstrument
+from app.providers.base import RawQuote, ResolvedInstrument, SourceAnswer
 from app.providers.composite_market import (
     CompositeDailyCloseProvider,
     CompositeQuoteProvider,
@@ -58,9 +58,12 @@ class _QuoteSource:
 class _DailySource:
     """Dasselbe für die Historie."""
 
-    def __init__(self, name: str, answer: list[dict] | None) -> None:
+    def __init__(
+        self, name: str, answer: list[dict] | None, *, disturbed: bool = False
+    ) -> None:
         self.name = name
         self._answer = answer
+        self._disturbed = disturbed
         self.calls = 0
 
     def fetch_daily_closes(
@@ -70,9 +73,9 @@ class _DailySource:
         *,
         identity: object | None = None,
         instrument_type: str | None = None,
-    ) -> list[dict] | None:
+    ) -> SourceAnswer[list[dict]]:
         self.calls += 1
-        return self._answer
+        return SourceAnswer(self._answer, disturbed=self._disturbed)
 
 
 # ─── Kurse ────────────────────────────────────────────────────────────────────
@@ -130,7 +133,7 @@ def test_die_erste_reihe_gewinnt() -> None:
 
     answer = CompositeDailyCloseProvider(first, second).fetch_daily_closes("EUNL.DE")
 
-    assert answer == [{"day": "2026-08-27", "close": 128.21}]
+    assert answer.value == [{"day": "2026-08-27", "close": 128.21}]
     assert second.calls == 0
 
 
@@ -149,22 +152,22 @@ def test_eine_leere_reihe_ist_ein_treffer_und_stoppt_die_kette() -> None:
 
     answer = CompositeDailyCloseProvider(first, second).fetch_daily_closes("EUNL.DE")
 
-    assert answer == []
+    assert answer.value == []
     assert second.calls == 0, "die leere Reihe wurde als Fehlschlag behandelt"
 
 
 def test_ein_ausfall_faellt_weiter() -> None:
-    first = _DailySource("online", None)
+    first = _DailySource("online", None, disturbed=True)
     second = _DailySource("yaml-file", [{"day": "2026-08-27", "close": 111.11}])
 
     answer = CompositeDailyCloseProvider(first, second).fetch_daily_closes("EUNL.DE")
 
-    assert answer == [{"day": "2026-08-27", "close": 111.11}]
+    assert answer.value == [{"day": "2026-08-27", "close": 111.11}]
     assert first.calls == 1 and second.calls == 1
 
 
-def test_ohne_jede_reihe_bleibt_es_beim_ausfall() -> None:
-    """Nach dem Gesamtausfall bleibt ``None`` — und das Wasserzeichen stehen.
+def test_ohne_jede_reihe_bleibt_es_ohne_wert() -> None:
+    """Nach der ganzen Kette kein Wert — und das Wasserzeichen bleibt stehen.
 
     `DailyCloseSync` unterscheidet daran, ob es seinen Stand vorrücken darf.
     Käme hier ``[]`` heraus, hielte die App einen Ausfall für eine Auskunft
@@ -172,8 +175,37 @@ def test_ohne_jede_reihe_bleibt_es_beim_ausfall() -> None:
     """
     sources = [_DailySource("a", None), _DailySource("b", None)]
 
-    assert CompositeDailyCloseProvider(*sources).fetch_daily_closes("X") is None
+    answer = CompositeDailyCloseProvider(*sources).fetch_daily_closes("X")
+
+    assert answer.is_hit is False
     assert [source.calls for source in sources] == [1, 1]
+
+
+def test_eine_einzige_stoerung_faerbt_die_ganze_kette() -> None:
+    """**Die Aggregation, um die es in T-44 geht.**
+
+    Zwei Quellen ohne Wert, aber nur eine davon gestört: Dann ist die Auskunft
+    unvollständig, nicht negativ. Ohne diese Zeile wäre `disturbed` am Ende
+    der Kette immer `False`, und jeder Ausfall käme als „gibt es nicht" an.
+    """
+    sources = [_DailySource("a", None), _DailySource("b", None, disturbed=True)]
+
+    answer = CompositeDailyCloseProvider(*sources).fetch_daily_closes("X")
+
+    assert answer.is_hit is False
+    assert answer.disturbed is True
+
+
+def test_ohne_stoerung_bleibt_die_kette_ein_sauberer_nichttreffer() -> None:
+    """Die Gegenprobe: Sagen alle Quellen sauber „habe ich nicht", ist die
+    Kette **vollständig** durchgelaufen. Ohne diesen Fall wäre auch eine
+    Kaskade grün, die `disturbed` fest auf `True` setzt.
+    """
+    sources = [_DailySource("a", None), _DailySource("b", None)]
+
+    answer = CompositeDailyCloseProvider(*sources).fetch_daily_closes("X")
+
+    assert answer.disturbed is False
 
 
 def test_die_anfrage_reist_unveraendert_weiter() -> None:

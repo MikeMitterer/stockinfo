@@ -12,7 +12,7 @@ import math
 import structlog
 import yfinance as yf
 
-from app.providers.base import QUOTE_TYPE_MAP, RawQuote
+from app.providers.base import QUOTE_TYPE_MAP, RawQuote, SourceAnswer
 
 logger = structlog.get_logger()
 
@@ -66,7 +66,7 @@ class YFinanceProvider:
 
     def fetch_daily_closes(
         self, symbol: str, start: str | None = None
-    ) -> list[dict] | None:
+    ) -> SourceAnswer[list[dict]]:
         """Holt echte Tages-Schlusskurse (EOD) von Yahoo Finance.
 
         Args:
@@ -75,9 +75,10 @@ class YFinanceProvider:
                 verfügbare Historie.
 
         Returns:
-            Liste von ``{"date", "close", "currency"}``; leer wenn Yahoo keine
-            Daten hat, ``None`` bei Fehler (Netz, Rate-Limit) — damit der
-            Aufrufer Fehler von 'keine Daten' unterscheiden kann.
+            Die Reihe als ``{"date", "close", "currency"}``; die leere Liste,
+            wenn Yahoo nichts führt. Ein Fehler (Netz, Rate-Limit) ist eine
+            **Störung** und wird als solche gemeldet — der Aufrufer soll ihn
+            nicht mit „keine Daten" verwechseln.
         """
         try:
             ticker = yf.Ticker(symbol)
@@ -87,10 +88,10 @@ class YFinanceProvider:
                 history = ticker.history(period="max", interval="1d", auto_adjust=True)
         except Exception as exc:
             logger.warning("fetch_daily_failed", symbol=symbol, error=str(exc))
-            return None
+            return SourceAnswer(disturbed=True)
 
         if history is None or history.empty:
-            return []
+            return SourceAnswer([])
 
         currency = self._fast_attr(ticker.fast_info, "currency")
         rows: list[dict] = []
@@ -105,25 +106,27 @@ class YFinanceProvider:
                     "currency": currency,
                 }
             )
-        return rows
+        return SourceAnswer(rows)
 
-    def fetch_fx_rate(self, base: str, quote: str) -> float | None:
+    def fetch_fx_rate(self, base: str, quote: str) -> SourceAnswer[float]:
         """Holt den Wechselkurs 1 base = ? quote von Yahoo (Symbol '{BASE}{QUOTE}=X').
 
         Returns:
-            Kurs als float, oder ``None`` bei Fehler bzw. fehlendem Kurs.
+            Der Kurs. **Zwei verschiedene Fehlschläge**: Wirft der Abruf, ist
+            das eine Störung; antwortet Yahoo ohne Kurs, führt es das Paar
+            schlicht nicht. Bis T-44 waren beide dasselbe ``None``.
         """
         symbol = f"{base}{quote}=X"
         try:
             rate = self._fast_attr(yf.Ticker(symbol).fast_info, "last_price")
         except Exception as exc:
             logger.warning("fetch_fx_failed", pair=f"{base}{quote}", error=str(exc))
-            return None
+            return SourceAnswer(disturbed=True)
         rate = self._as_tradeable_price(rate)
         if rate is None:
             logger.warning("fetch_fx_no_rate", pair=f"{base}{quote}")
-            return None
-        return rate
+            return SourceAnswer()
+        return SourceAnswer(rate)
 
     @staticmethod
     def _as_tradeable_price(value: Any) -> float | None:

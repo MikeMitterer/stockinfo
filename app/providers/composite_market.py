@@ -24,6 +24,7 @@ from app.providers.base import (
     Identity,
     RawQuote,
     ResolvedInstrument,
+    SourceAnswer,
     declared_name,
 )
 
@@ -103,7 +104,7 @@ class CompositeDailyCloseProvider(_Chain):
         *,
         identity: Identity | None = None,
         instrument_type: str | None = None,
-    ) -> list[dict] | None:
+    ) -> SourceAnswer[list[dict]]:
         """Die erste Auskunft — **einschließlich der leeren Reihe**.
 
         ``[]`` heißt „nachgesehen, in diesem Zeitraum nichts" und ist damit
@@ -112,9 +113,15 @@ class CompositeDailyCloseProvider(_Chain):
         weil eine zweite Quelle für denselben Zeitraum Werte führen kann, die
         die erste bewusst nicht hat.
 
-        ``None`` heißt „konnte nicht nachsehen" und fällt weiter. Bleibt es
-        dabei, ist auch die Gesamtantwort ``None``: `DailyCloseSync`
-        unterscheidet daran, ob es sein Wasserzeichen vorrücken darf.
+        Ohne Wert fällt es weiter. Bleibt es dabei, hat die Kette nichts —
+        und `disturbed` sagt dann, **warum**: Es genügt eine einzige gestörte
+        Quelle, damit das Ausbleiben ein Ausfall ist und keine Auskunft. Hat
+        dagegen jede Quelle sauber „habe ich nicht" gesagt, ist die Kette
+        vollständig durchgelaufen; das ist eine Antwort, nur eine negative.
+
+        `DailyCloseSync` unterscheidet am Wert, ob es sein Wasserzeichen
+        vorrücken darf; der Router unterscheidet an `disturbed`, ob er `404`
+        oder `502` schuldet.
 
         Args:
             symbol: Das Anbieter-Symbol.
@@ -124,12 +131,15 @@ class CompositeDailyCloseProvider(_Chain):
             instrument_type: Die Gattung, falls bekannt.
 
         Returns:
-            Die erste gelieferte Reihe, oder ``None`` nach dem Gesamtausfall.
+            Die erste gelieferte Reihe; sonst eine leere Antwort, deren
+            `disturbed` die Störungen der ganzen Kette zusammenfasst.
         """
+        disturbed = False
         for provider in self._providers:
-            closes = provider.fetch_daily_closes(
+            answer = provider.fetch_daily_closes(
                 symbol, start, identity=identity, instrument_type=instrument_type
             )
-            if closes is not None:
-                return closes
-        return None
+            if answer.is_hit:
+                return answer
+            disturbed = disturbed or answer.disturbed
+        return SourceAnswer(disturbed=disturbed)

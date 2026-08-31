@@ -43,6 +43,7 @@ from stockinfo_plugin import (
 from app.container import get_sources_config
 from app.main import app
 from app.plugin_adapters import DailyAdapter, MetadataAdapter, ResolverAdapter
+from app.providers.base import SourceAnswer
 from app.plugin_loader import ENTRY_POINT_GROUP, load_all
 from app.sources_registry import register_loaded, specs_by_name
 
@@ -342,7 +343,9 @@ def test_die_tagesreihe_erreicht_den_anbieter_auch_ohne_alias() -> None:
     class Binding:
         def fetch_daily_closes(self, symbol: str, start: str | None = None, **_: object):
             asked.append(symbol)
-            return [{"date": "2026-01-03", "close": 1.0, "currency": "USD"}]
+            return SourceAnswer(
+                [{"date": "2026-01-03", "close": 1.0, "currency": "USD"}]
+            )
 
     adapter = DailyAdapter(YFinancePlugin(provider=Binding()), "XETR")
 
@@ -782,29 +785,38 @@ def test_eine_nicht_deklarierte_gattung_erreicht_die_metadatenquelle_nicht() -> 
 
 
 @pytest.mark.parametrize(
-    ("answer", "expected", "why"),
+    ("answer", "expected", "disturbed", "why"),
     [
         pytest.param(
             DailySeries(bars=(), currency="EUR", adjusted=False),
             [],
+            False,
             "nachgesehen, in diesem Zeitraum nichts",
             id="leere-reihe",
         ),
-        pytest.param(NotFound(), None, "dieses Papier führe ich nicht", id="notfound"),
         pytest.param(
-            NotResponsible(reason="ohne Schlüssel"), None, "gar nicht gefragt",
+            NotFound(), None, False, "dieses Papier führe ich nicht", id="notfound"
+        ),
+        pytest.param(
+            NotResponsible(reason="ohne Schlüssel"), None, False, "gar nicht gefragt",
             id="notresponsible",
         ),
         pytest.param(
-            Unavailable(error="Netz"), None, "konnte nicht nachsehen", id="unavailable"
+            Unavailable(error="Netz"), None, True, "konnte nicht nachsehen",
+            id="unavailable",
         ),
     ],
 )
-def test_nur_eine_reihe_ist_eine_auskunft(answer, expected, why: str) -> None:
+def test_nur_eine_reihe_ist_eine_auskunft(answer, expected, disturbed: bool, why: str) -> None:
     """Nur `DailySeries` ist eine Auskunft, einschließlich der leeren Reihe.
 
     Nicht-Treffer fallen weiter und dürfen das Wasserzeichen nicht vorrücken.
     Eine leere Reihe bleibt `[]`: Sie ist eine Auskunft, nur eine leere.
+
+    **Seit T-44 prüft dieselbe Zeile eine zweite Aussage**: Von den drei
+    Nicht-Treffern ist nur `Unavailable` eine Störung. `NotFound` und
+    `NotResponsible` sind vollständige Antworten, nur negative — und der
+    Unterschied entscheidet weiter oben zwischen `404` und `502`.
     """
 
     class _Source(DailyCloseSource):
@@ -827,4 +839,8 @@ def test_nur_eine_reihe_ist_eine_auskunft(answer, expected, why: str) -> None:
         instrument_type="etf",
     )
 
-    assert result == expected, why
+    assert result.value == expected, why
+    assert result.disturbed is disturbed, (
+        'nur eine Störung darf als Störung ankommen — sonst wird aus '
+        '„habe ich nicht" wieder ein Ausfall'
+    )

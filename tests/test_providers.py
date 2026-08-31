@@ -307,18 +307,41 @@ def test_yfinance_fetch_fx_rate(monkeypatch) -> None:
 
     monkeypatch.setattr(yfinance_module.yf, "Ticker", fake_ticker)
 
-    rate = YFinanceProvider().fetch_fx_rate("EUR", "USD")
+    answer = YFinanceProvider().fetch_fx_rate("EUR", "USD")
 
-    assert rate == 1.1538
+    assert answer.value == 1.1538
     assert captured["symbol"] == "EURUSD=X"
 
 
-def test_yfinance_fetch_fx_rate_ohne_wert_gibt_none(monkeypatch) -> None:
+def test_yfinance_ohne_kurs_meldet_keine_stoerung(monkeypatch) -> None:
+    """Yahoo hat geantwortet und führt das Paar nicht — **kein Ausfall**.
+
+    Der Unterschied trägt bis in den Statuscode: Ohne ihn beantwortet die App
+    ein nicht geführtes Paar mit `502` und schickt den Betreiber zur
+    Fehlersuche bei seiner Quelle.
+    """
     class _NoRate:
         fast_info = type("F", (), {"last_price": None})()
 
     monkeypatch.setattr(yfinance_module.yf, "Ticker", lambda s: _NoRate())
-    assert YFinanceProvider().fetch_fx_rate("EUR", "USD") is None
+
+    answer = YFinanceProvider().fetch_fx_rate("EUR", "USD")
+
+    assert answer.is_hit is False
+    assert answer.disturbed is False
+
+
+def test_ein_geworfener_abruf_ist_eine_stoerung(monkeypatch) -> None:
+    """Die Gegenprobe: Wirft der Abruf, war die Quelle wirklich gestört."""
+    def _boom(symbol: str):
+        raise RuntimeError("Netz weg")
+
+    monkeypatch.setattr(yfinance_module.yf, "Ticker", _boom)
+
+    answer = YFinanceProvider().fetch_fx_rate("EUR", "USD")
+
+    assert answer.is_hit is False
+    assert answer.disturbed is True
 
 
 def test_unbekannte_ausschuettungspolitik_bleibt_unbekannt(monkeypatch) -> None:
@@ -405,7 +428,7 @@ def test_unbrauchbare_wechselkurse_werden_verworfen(monkeypatch, kaputt) -> None
         yfinance_module.yf, "Ticker", lambda symbol: _FakeTicker(price=kaputt)
     )
 
-    assert YFinanceProvider().fetch_fx_rate("EUR", "USD") is None
+    assert YFinanceProvider().fetch_fx_rate("EUR", "USD").is_hit is False
 
 
 def test_brauchbarer_kurs_kommt_durch(monkeypatch) -> None:
@@ -418,7 +441,7 @@ def test_brauchbarer_kurs_kommt_durch(monkeypatch) -> None:
 
     assert quote is not None
     assert quote.price == 160.98
-    assert YFinanceProvider().fetch_fx_rate("EUR", "USD") == 160.98
+    assert YFinanceProvider().fetch_fx_rate("EUR", "USD").value == 160.98
 
 
 # ─── yfinance als ETF-Quelle (nicht-europäische Papiere) ──────────────────────

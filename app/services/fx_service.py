@@ -19,7 +19,17 @@ logger = structlog.get_logger()
 
 
 class FxUnavailableError(Exception):
-    """Es konnte kein Wechselkurs beschafft werden und kein Cache liegt vor."""
+    """Mindestens eine Quelle war gestört, und kein Cache liegt vor."""
+
+
+class FxPairNotFoundError(Exception):
+    """Keine Quelle führt dieses Währungspaar.
+
+    **Kein Ausfall.** Die Kette ist vollständig durchgelaufen, jede Quelle hat
+    geantwortet — nur führt keine dieses Paar. Bis T-44 kam das als `502` beim
+    Betreiber an, der daraufhin den Fehler bei seiner Quelle suchte statt in
+    seiner Datei.
+    """
 
 
 class FxRepository(Protocol):
@@ -97,7 +107,8 @@ class CachedFxService:
             (frisch oder stale) oder frisch beschafft.
 
         Raises:
-            FxUnavailableError: Kein Kurs beschaffbar und kein Cache vorhanden.
+            FxUnavailableError: Eine Quelle war gestört und kein Cache liegt vor.
+            FxPairNotFoundError: Keine Quelle führt dieses Paar.
         """
         base, quote = base.upper(), quote.upper()
         if base == quote:
@@ -118,11 +129,14 @@ class CachedFxService:
         # Quelle, die ihn nicht geliefert hat.
         rate: float | None = None
         source: str | None = None
+        disturbed = False
         for provider in self._providers:
-            rate = provider.fetch_fx_rate(base, quote)
-            if rate is not None:
+            answer = provider.fetch_fx_rate(base, quote)
+            if answer.is_hit:
+                rate = answer.value
                 source = declared_name(provider)
                 break
+            disturbed = disturbed or answer.disturbed
 
         if rate is None:
             # Erst nach dem **Gesamtausfall**: Solange irgendeine Quelle
@@ -130,7 +144,12 @@ class CachedFxService:
             if cached:
                 logger.warning("serving_stale_fx", base=base, quote=quote)
                 return self._from_cache(cached, stale=True)
-            raise FxUnavailableError(f"{base}{quote}")
+            # **Zwei verschiedene Lagen, zwei verschiedene Fehler.** War keine
+            # Quelle gestört, hat die Kette vollständig geantwortet: Sie führt
+            # dieses Paar nicht.
+            if disturbed:
+                raise FxUnavailableError(f"{base}{quote}")
+            raise FxPairNotFoundError(f"{base}{quote}")
 
         now = datetime.now(timezone.utc).isoformat()
         self._repository.save_fx_rate(base, quote, rate, now, now, source)
