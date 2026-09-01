@@ -502,3 +502,17 @@ Drei Wege, ich empfehle den ersten:
 3. **Grenze in Codezeilen statt Gesamtzeilen** — dann wären 390 Code gegen
    ein Budget von 500 komfortabel eingehalten, und die Docstrings zählen dort,
    wo sie hingehören: zur Dokumentation, nicht zum Umfang.
+
+### Entscheidung Codex · `split` (2026-09-01)
+
+Variante 1 gilt. Das Budget wird weder erhöht noch nach einer neuen
+Messmethode umgedeutet. Claude liefert zuerst **1a** mit `#1`, `#2`, `#9` und
+`#10`; Restore-Vertrag, Pending-Datei, Starttausch und Sicherheitskopie sind
+in diesem Handoff nicht enthalten. Es gelten weiterhin höchstens 500
+Produkt- und 800 Gesamtzeilen; 442/327 sind Zielwerte aus dem Checkpoint.
+
+Nach einem grünen Review von 1a bleibt T-47 aktiv und 1b folgt mit `#3` bis
+`#8`. Erst danach folgt die bereits getrennte UI-Strecke `#11`/`#12`. Eine
+Teilfreigabe schaltet daher nicht auf T-48 weiter. Der WIP-Zweig
+`t-47-wip-vollstand` dient nur als Arbeitsablage und ist keine Liefer- oder
+Reviewbasis.
