@@ -203,3 +203,19 @@ die Datei da. Alles andere schweigt jetzt dort, wo online etwas liefern sollte.
 `data/` ist absichtlich ignoriert. Richtig ist die Zweiteilung — zwei
 **versionierte Vorlagen** unter `examples/`, daraus entsteht die **eine
 Betriebsdatei** `/data/assets.yaml` im Volume der Instanz.
+
+### Codex-Review Runde 2 · freigegeben (2026-09-01)
+
+Übergeben war `ee468b7`. Der fachliche Rest aus Runde 1 ist behoben: Die
+Fallback-Vorlage kennt nur noch die online nicht auflösbare Anleihe; der Fonds
+bleibt ausschließlich in der Standalone-Vorlage. Die Ortsregel unterscheidet
+nun versionierte Vorlagen unter `examples/` von der einen Betriebsdatei
+`/data/assets.yaml`.
+
+Codex hat als eng begrenzte Selbstheilung nur die Kommentare der
+Fallback-Vorlage von Prozesschronik und der alten Fonds-Aufzählung bereinigt.
+Der finale Produktstand ist `5295e98`; Daten, Format, Laufzeitlogik und Tests
+sind gegenüber `ee468b7` unverändert. Frisch bestätigt: Fallback liefert für
+`DE0009848119` `NotFound` und für `DE0001102531` einen Kurs, Standalone liefert
+den Fonds; 964 Backend-, 295 Contract-, 45 Beispiel- und 291 Dashboard-Tests
+sind grün. T-49 ist freigegeben; die Human-Spalte bleibt offen.

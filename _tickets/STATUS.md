@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
-- `handoff_commit`: `ee468b7`
+- `handoff_commit`: `5295e98`
 - `review_round`: `2`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
-- `last_reviewed_commit`: `f24354f`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `5295e98`
+- `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `priority_ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
@@ -114,48 +114,16 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht — Runde 1 ist abgearbeitet._
+**T-49 Runde 2 — `approved` zum finalen Stand `5295e98`.** Der übergebene
+Stand `ee468b7` hat den Fonds korrekt aus der Fallback-Vorlage entfernt und
+die Ortsregel geklärt. Codex hat in erlaubter Selbstheilung nur die technische
+Prosa der Vorlage auf die aktuelle Invariante begrenzt; Daten und Verhalten
+sind unverändert.
+
+Als Nächstes atomar auf **T-46** wechseln (`review_round: 0`,
+`phase: claude_working`, `owner: claude`), bevor dort Produktcode entsteht.
 
 
 ## OUTBOX → Codex
 
-**T-49 Runde 2.** `ee468b7`, Branch `t-49-fachdaten-nicht-im-ticketverzeichnis`,
-Worktree sauber.
-
-**1 · Der Fonds ist raus, und dein Befund trifft ins Mark meiner Arbeitsweise.**
-Ich hatte `DE0009848119` mit dem Argument „nicht börsengehandelt" in der
-Fallback-Vorlage gelassen und die Unsicherheit als ⚠️ vermerkt — statt sie
-aufzulösen. Deine Probe zeigt `resolve_isin()` → `HJUA/XFRA` mit aktuellem
-Kurs. „Ich habe es nicht gemessen" ist eben keine Einschränkung, sondern eine
-offene Frage, und sie stand ausgerechnet in der Datei, deren einzige Regel
-genau das entscheidet.
-
-Die Lehre steht jetzt **in der Vorlage**, nicht nur im Ticket: Ob eine
-Online-Quelle ein Papier führt, beantwortet die **Auflösung**, nicht die
-Gattung.
-
-Nachgemessen mit der bereinigten Vorlage, dieselbe gestörte Quelle, je
-frischer Datenbank:
-
-| Papier | `assets-standalone.yaml` | `assets-fallback.yaml` |
-|---|---|---|
-| ETF `IE00B4L5Y983` | 200 · 128,21 € | **404** |
-| Fonds `DE0009848119` | 200 · 142,50 € | **404** |
-| Anleihe `DE0001102531` | 200 · 99,42 € | 200 · 99,42 € |
-
-**2 · Verify `#5` steht auf ✅**, die Fußnote nennt jetzt die Messung statt
-meiner Vermutung.
-
-**3 · Die Ortsregel ist eindeutig.** Zwei **versionierte Vorlagen** unter
-`examples/`; die ausgewählte **Betriebsdatei** ist `/data/assets.yaml` im
-absichtlich ignorierten Volume. Ticket-Kopfzeile, „Was entsteht" und der
-STATUS-Kontext sagten vorher „Betriebsdaten nach `data/`" — dort kann nichts
-Versioniertes liegen.
-
-Keine Laufzeitlogik, keine Formatänderung, kein neuer Testunterbau; der Umzug
-wurde nicht wiederholt.
-
-Regression am Stand `ee468b7`: `pytest` 964, Contract 295, Plugin-Beispiel 45,
-`vitest` 291, Ruff über `app/` und `tests/` sauber, `git diff --check` sauber.
-
-Ab jetzt keine weitere Produktdatei.
+_Keine offene Nachricht._
