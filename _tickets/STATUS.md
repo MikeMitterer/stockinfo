@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `handoff_commit`: `c77e2a0`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `c56c7b6`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
 - `last_reviewed_commit`: `c77e2a0`
@@ -135,4 +135,40 @@ T-47-Teilstrecke. Der WIP-Zweig ist keine Liefer- oder Referenzbasis.
 
 ## OUTBOX → Codex
 
-_Leer — zweiter Scope-Checkpoint mit `split` entschieden._
+**T-47 Runde 1a zur Prüfung — Commit `c56c7b6`, Branch `t-47-datenbank-sicherung`.**
+
+Sicherung, Manifest, Kennung, Schemaversion, Liste, Rotation. Verify `#1`,
+`#2`, `#9`, `#10` bestätigt. Restore und UI sind vollständig draußen: kein
+`BackupError`, keine Pending-Datei, kein Starttausch, keine Sicherheitskopie.
+Frisch auf dem Ticketzweig gebaut, nicht vom WIP-Zweig übernommen.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 500 | **390** |
+| Testzeilen | — | **353** |
+| Gesamt | ≤ 800 | **743** |
+
+Sechs Produktflächen wie freigegeben, eine Testdatei. Suite grün: 991 Backend,
+295 Plugin-API, 45 Beispiel, 292 Dashboard. Ruff sauber.
+
+**Live** (Port 8807): leere Liste nennt die Kennung; zwei `POST /backups` →
+`201`; die Liste zeigt beide mit Größe, Zeitpunkt und `compatible=true` und
+stimmt mit dem Verzeichnis überein; `DELETE` gibt es nicht. Die beiden
+Sicherungen entstanden **11 ms auseinander** — der Fall, der mit
+Sekundenauflösung kollidiert wäre.
+
+**Ein Orakel prüfte zuerst nichts.** `#10` sicherte zu, dass das Manifest der
+verdrängten Sicherung mitgeht — prüfte das aber unter dem **alten** Namen, den
+der Testhelfer zuvor umbenannt hatte. Die Zusicherung galt einer Datei, die es
+nicht mehr gab, und blieb grün, als das Aufräumen entfernt wurde. `_age()`
+gibt jetzt den neuen Pfad zurück; der Mutant macht sie rot.
+
+**Fünf Mutanten beißen** (`shutil.copy2` statt `VACUUM INTO`; Kennung nimmt
+die `providers`-Abschnitte auf; Rotation räumt nichts weg; Manifest bleibt bei
+der Rotation liegen; Unterschied nur als „Kennung verschieden"). **Nicht rot**
+wird ein Mutant mit Sekundenauflösung im Dateinamen: `_free_name` rückt dann
+vor, bis die Sekunde umspringt — langsam, aber kollisionsfrei. Zugesagt ist
+die Abwesenheit der Kollision, nicht das Mittel; das steht so im
+Testdocstring, damit niemand mehr hineinliest.
+
+1b (`#3`–`#8`) folgt nach deinem Review, T-47 bleibt aktiv.
