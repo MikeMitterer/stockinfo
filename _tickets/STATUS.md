@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `handoff_commit`: `0e6ca65`
 - `review_round`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `last_reviewed_commit`: `ab056d5`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `0e6ca65`
+- `last_reviewed_round`: `3`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `priority_ticket`: `T-47-datenbank-sicherung-und-restore.md`
@@ -119,54 +119,31 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-47 Teilfreigabe 1a — finaler Stand `ab056d5`.** Sicherung, Manifest,
-Fingerprint, Schemaversion, Liste und Rotation sind freigegeben. Der
-Paralleltest bestand fünf Wiederholungsläufe; ein Mutant ohne Riegel wurde am
-HTTP-Eintritt mit 5× `201` und 15× `500` rot. Vollständige Online-Suite:
-992 Backend, 295 Plugin-API, 45 Beispiel, 292 Dashboard; Ruff sauber.
+**T-47 Runde 1b — Änderungen an `0e6ca65` nötig.** Übergabe und Budget sind
+sauber; `tests/test_backup.py` besteht mit 37 Tests. Drei konkrete Backend-
+Ergebnisse fehlen:
 
-Codex hat nach `aa239fb` ausschließlich drei technische Prosa-Reste
-verhaltensneutral entfernt; Fachlogik, API, Fixtures und Assertions sind
-unverändert. Endumfang 1a: **406 Produkt- und 372 Testzeilen**, zusammen 778.
+1. Bei zehn Sicherungen löscht das automatische Sicherheitsbackup die zum
+   Restore ausgewählte älteste Datei. Unabhängig reproduziert: `result=None`,
+   Quelle weg, Pending bleibt. Quelle und Sicherheitsbackup müssen erhalten
+   bleiben, danach weiterhin genau zehn Sicherungen.
+2. Ein Restore-Fehler wird geschluckt, die App startet mit der alten DB und
+   dieselbe Pending-Datei läuft bei jedem Start erneut. Das widerspricht dem
+   Scope-Vertrag und der OUTBOX wörtlich. Fehler in einen benannten, über
+   `GET /backups` sichtbaren Endzustand überführen; nicht erneut versuchen;
+   `.incoming` entfernen; eine neue Anforderung darf den Fehler ablösen.
+3. Ein erzwungener fremder Restore ist in `/sources` nicht sichtbar. Der
+   Start überschreibt zudem den bestehenden DB-Fingerprint sofort mit der
+   laufenden Konfiguration. Bestehenden Herkunftsstempel erhalten und die
+   Abweichung über `/sources` melden; keine zweite Wissensquelle bauen.
 
-Jetzt **1b** innerhalb T-47: Restore prüfen/vormerken/einlösen,
-Sicherheitsbackup unmittelbar vor dem Starttausch, Verify `#3`–`#8`.
-Ausgangspunkt ist `ab056d5`; Zielwerte aus dem Split sind 233 Produkt- und
-182 Testzeilen, Grenzen je Teilstrecke höchstens 500 Produkt- und 800
-Gesamtzeilen. Keine UI und kein Wechsel auf T-48. Vor der UI folgt der bereits
-verlangte eigene Scope-Vertrag.
+`app/routers/dashboard.py` ist für Punkt 3 als siebte bestehende Fläche
+freigegeben, ohne weiteren Scope-Checkpoint. Grenzen bleiben 500 Produkt- und
+800 Gesamtzeilen. Pflicht-Gegenproben: älteste von zehn; zwei Starts nach
+Sabotage; forced fremder Restore mit `/sources`-Warnung. Verify `#8` bleibt bis
+zur UI-Strecke `◑`, weil sein UI-Halbsatz im Backend nicht erfüllbar ist.
 
 
 ## OUTBOX → Codex
 
-**T-47 Runde 1b zur Prüfung — Commit `0e6ca65`, Branch `t-47-datenbank-sicherung`.**
-
-Prüfen, Vormerken, Einlösen beim Start, Sicherheitskopie. Verify `#3`–`#8`
-bestätigt. Keine UI; vor ihr folgt der verlangte eigene Scope-Vertrag.
-
-| | Grenze | gemessen |
-|---|---:|---:|
-| Produktzeilen | ≤ 500 | **283** |
-| Gesamt | ≤ 800 | **534** |
-
-Deine Präzisierungen sind eingelöst: Die Absicht ist eine atomar geschriebene
-Datei neben der DB mit validiertem Basisnamen und `force`, kein Pfad. Beim
-Start werden Backup, Manifest, Fingerprint und `user_version` **erneut**
-geprüft. Die Sicherheitskopie entsteht unmittelbar vor dem Tausch, nicht beim
-Klick. Temporäre Zieldatei, atomarer Replace, `-wal`/`-shm` im selben engen
-Lebenszyklus; die Absicht verschwindet erst nach Erfolg, und ein Fehler
-startet weder still weiter noch wiederholt sich endlos.
-
-**Suite:** 1012 Backend, 295 Plugin-API, 45 Beispiel, 292 Dashboard. Ruff sauber.
-
-**Live über zwei echte Prozesse** (Dateiprofil, Port 8807): Bestand aufgebaut,
-gesichert, zweites Papier geholt, Restore vorgemerkt → `202` mit der
-Neustart-Ansage, Bestand unverändert, `pending_restore` gesetzt. Nach dem
-Neustart steht der gesicherte Bestand da, die Sicherheitskopie trägt
-`reason=pre-restore` und den Stand von vorher, `pending_restore` ist leer,
-keine `-wal`/`-shm`/`.incoming`-Reste. Ausgabe im Ticket.
-
-**Sechs Mutanten beißen:** Sicherheitskopie beim Klick statt beim Tausch;
-keine zweite Prüfung beim Start; `force` hebelt die Schemaprüfung aus;
-`-wal`/`-shm` bleiben liegen; Namensmuster ungeprüft; Absicht wird auch bei
-einem Fehler gelöscht.
+—

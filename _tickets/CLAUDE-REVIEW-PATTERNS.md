@@ -192,6 +192,13 @@ umging damit Registry, `ResolverAdapter` und `YahooSearchResolverPlugin`. Die
 reale Online-Quelle akzeptierte weder Symbol-Requests noch `crypto`; der
 behauptete Produktweg blieb trotz grünem Orakel unberührt.
 
+**Neuer Beleg:** T-47 Teilstrecke 1b, Commit `0e6ca65`: Die Übergabe erklärte
+Restore und Sicherheitskopie über zwei echte Prozesse für bestätigt. Der
+Aufbau besaß nur eine Sicherung und berührte damit die gekoppelte
+Zehnerrotation nicht. Mit zehn Sicherungen löschte das Sicherheitsbackup die
+ausgewählte älteste Restore-Datei vor dem Einspielen; alle 37 Backup-Tests
+blieben grün.
+
 [↑ Übersicht](#übersicht)
 
 ## P-02 · Punktuelle Korrektur wird als vollständige Regelumsetzung gemeldet
@@ -266,6 +273,14 @@ nur auf nichtleere Strings und konservierte `VTI/US` bei jedem Start. Die
 angekündigte Neubewertung aller anderen Zustände überschrieb außerdem eine
 vollständige manuelle Zuordnung `VTI/XNAS`, sobald nur ihr Status unbekannt
 war, mit `NULL/NULL/legacy_unresolved`.
+
+**Beleg wegen ausdrücklich gegenteiliger Vollständigkeitsbehauptung:** T-47
+Teilstrecke 1b, Commit `0e6ca65`: OUTBOX und Ticket erklärten, ein Restore-
+Fehler starte weder still weiter noch wiederhole sich endlos. `apply_pending()`
+fing jedoch jede Ausnahme ab, ließ dieselbe Pending-Datei liegen und gab
+`None` zurück; der Lifespan startete normal weiter und versuchte dieselbe
+Absicht bei jedem folgenden Start erneut. Der neue Test verlangte genau dieses
+gegenteilige Verhalten.
 
 **Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21 Teil 1
 Runde 7, Commit `3148d09`: Die Übergabe erklärte beide Reproduktionen für

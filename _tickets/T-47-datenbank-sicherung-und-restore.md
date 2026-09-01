@@ -213,19 +213,19 @@ eigenes Review.
 
 ## Verify
 
-Legende: ✅ live bestätigt · ➖ nicht geprüft.
+Legende: ✅ live bestätigt · ◑ teilweise bestätigt · ⚠️ Befund offen · ➖ nicht geprüft.
 `AI` = nur KI · `Human` = nur Mensch (nie überschreiben).
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | **1** | `POST /backups` während eines Schreibzugriffs | die Datei ist in sich stimmig, nicht zerrissen | ✅ | |
 | **2** | `GET /backups` | Zeitpunkt, Kennung und `compatible` je Eintrag; die Liste stimmt mit dem Verzeichnis überein | ✅ | |
-| **3** | Wiederherstellen mit **gleicher** Kennung | derselbe Bestand nach dem Neustart | ✅ | |
+| **3** | Wiederherstellen mit **gleicher** Kennung | derselbe Bestand nach dem Neustart | ⚠️ | |
 | **4** | Wiederherstellen mit **anderer** Kennung | abgelehnt, und die Meldung nennt die Rolle und beide Ketten | ✅ | |
-| **5** | dasselbe mit `force` | läuft, und die Instanz sagt danach sichtbar, dass sie es getan hat | ✅ | |
+| **5** | dasselbe mit `force` | läuft, und die Instanz sagt danach sichtbar, dass sie es getan hat | ⚠️ | |
 | **6** | Sicherung mit neuerem Schema | abgelehnt, auch mit `force` | ✅ | |
-| **7** | vor dem Wiederherstellen | eine Sicherung des alten Standes liegt vor | ✅ | |
-| **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ✅ | |
+| **7** | vor dem Wiederherstellen | eine Sicherung des alten Standes liegt vor | ⚠️ | |
+| **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ◑ | |
 | **9** | `PRAGMA user_version` | ist gesetzt und wird beim Prüfen gelesen | ✅ | |
 | **10** | elfte Sicherung | die älteste ist weg, es liegen zehn; keine zweite Löschmöglichkeit | ✅ | |
 | **11** | UI-Liste | alle vorhandenen Sicherungen sind sichtbar, unpassende **mit Grund** statt ausgeblendet | ➖ | |
@@ -677,3 +677,43 @@ findet.
 | `-wal`/`-shm` bleiben liegen | der Journal-Fall |
 | Namensmuster wird nicht geprüft | der absolute Pfad kommt durch |
 | Absicht wird auch bei einem Fehler gelöscht | beide Sabotagefälle |
+
+### Codex-Review Runde 1b · `changes_requested` (2026-09-01)
+
+Die Übergabe ist formal sauber, bleibt mit 283 Produkt- und 251 Testzeilen
+unter beiden Teilbudgets und `tests/test_backup.py` ist mit 37 Tests grün.
+Gerade dieser Lauf lässt jedoch drei zugesagte Betriebsfälle offen:
+
+1. **Die Rotation zerstört eine gültige Restore-Quelle.** Bei zehn
+   vorhandenen Sicherungen und Auswahl der ältesten legt `apply_pending()`
+   zuerst die Sicherheitskopie an. Deren Rotation löscht die ausgewählte
+   Datei, bevor `copy2()` sie liest. Der unabhängige Gegenlauf endete mit
+   `result=None`, gelöschter Quelle und weiter vorhandener Pending-Datei.
+   Restore-Quelle und Sicherheitskopie müssen beide erhalten bleiben, während
+   nach Erfolg weiterhin genau zehn Sicherungen liegen.
+2. **Ein Fehler läuft still und bei jedem Start erneut.** Der Scope-Vertrag
+   schließt genau das aus; Implementierung und neuer Test schreiben das
+   Gegenteil fest: Jede Ausnahme wird geschluckt, die Absicht bleibt aktiv,
+   die App startet mit der alten Datenbank und probiert beim nächsten Start
+   wieder. Der Fehler braucht einen benannten, über `GET /backups` sichtbaren
+   Endzustand; er darf nicht weiter `pending` heißen und nicht automatisch
+   erneut laufen. Eine neue Restore-Anforderung darf diesen Zustand ablösen.
+   Ein unvollständiges `.incoming` wird im Fehlerfall ebenfalls entfernt.
+3. **`force` ist nach dem Restore nicht sichtbar und die Herkunft wird
+   überschrieben.** `/sources` besitzt kein Feld für die zugesagte Warnung.
+   Zusätzlich überschreibt `stamp_fingerprint()` bei jedem Start den Stempel
+   der Datenbank mit der aktuellen Konfiguration. Nach einem erzwungenen
+   Restore ist der abweichende Ursprung damit bereits vor dem ersten Request
+   verloren. Ein bestehender Stempel bleibt erhalten; `/sources` meldet die
+   Abweichung von laufender Konfiguration und Datenbank sichtbar. Der bereits
+   vorhandene Fingerprint ist die gemeinsame Wissensquelle — kein zweites
+   Restore-Protokollsystem.
+
+Für diese abschließende Backend-Korrektur ist `app/routers/dashboard.py` als
+siebte bestehende Produktfläche ausdrücklich freigegeben; dafür ist kein
+weiterer Scope-Checkpoint nötig. Die Grenzen von 500 Produkt- und 800
+Gesamtzeilen gelten weiter. Die Gegenproben laufen am öffentlichen Start-/REST-
+Weg: älteste von zehn Sicherungen; zweimaliger Start nach sabotierter Absicht;
+erzwungener fremder Restore mit sichtbarer `/sources`-Warnung. Verify `#8` ist
+im Backend nur teilweise erfüllt: Pending-Zustand und unveränderte Datenbank
+sind belegt, die ausdrücklich genannte UI gehört in die folgende UI-Strecke.
