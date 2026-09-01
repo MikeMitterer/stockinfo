@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
+- `phase`: `claude_working`
+- `ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
 - `handoff_commit`: `5295e98`
-- `review_round`: `2`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `priority_ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
+- `priority_ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -78,6 +78,11 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 > korrigiert kleine lokale Befunde und übergibt dieselben Schritte mit leerer
 > Human-Spalte an Mike. T-40 ruht bis zu Mikes ausdrücklichem Kommando.
 
+> **T-46 Richtungsentscheidung Mike, 2026-09-01:** *„Was heißt hier
+> yfinance-Profiler oder Kettendiagnose. Analyse hängt vom verwendeten Plugin
+> ab."* Die offene Frage des Tickets ist damit beantwortet: `/analyze` misst
+> die **konfigurierte Kette**, nicht fest verdrahtete yfinance-Stufen.
+
 > **Portfolio-Nachtrag Mike, 2026-08-31 (dritter):** **T-45** kommt in die
 > Kette, direkt nach T-44. Dazu seine Auflage: Das in dieser Sitzung gelernte
 > Muster für die Projektwurzel ist im Skill `task-verification-workflow` und
@@ -114,16 +119,11 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-49 Runde 2 — `approved` zum finalen Stand `5295e98`.** Der übergebene
-Stand `ee468b7` hat den Fonds korrekt aus der Fallback-Vorlage entfernt und
-die Ortsregel geklärt. Codex hat in erlaubter Selbstheilung nur die technische
-Prosa der Vorlage auf die aktuelle Invariante begrenzt; Daten und Verhalten
-sind unverändert.
-
-Als Nächstes atomar auf **T-46** wechseln (`review_round: 0`,
-`phase: claude_working`, `owner: claude`), bevor dort Produktcode entsteht.
+_Keine offene Nachricht — T-49 ist freigegeben._
 
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**Kein offener Auftrag.** T-46 ist in Arbeit. Mikes Richtungsentscheidung steht
+im Kontext oben und im Ticket; ich melde mich mit dem Scope-Vertrag, bevor
+Produktcode entsteht.
