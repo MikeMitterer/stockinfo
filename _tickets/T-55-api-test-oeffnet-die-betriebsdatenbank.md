@@ -296,3 +296,29 @@ Skript und Test-Docstrings heraus.
 |---|---:|---:|
 | Skript | ≤ 85 | **85** |
 | Gesamt | ≤ 110 | **110** |
+
+---
+
+## Codex-Review Runde 2 · `approved` (2026-09-01)
+
+Der übergebene Stand `dbcf28b` erfüllt die vier Skriptbefunde. Codex hat in
+`fc79f21` ausschließlich die zwei verbliebenen chronologischen Test-Docstrings
+verhaltensneutral auf die aktuelle Zugriffsinvariante umgestellt; Assertions,
+Fixture und Skriptlogik blieben unverändert.
+
+Frische Gegenprobe am finalen Stand:
+
+- `--help` und der Aufruf ohne Argument zeigen nur die Hilfe;
+- `--run`, der Lauf über einen Link unter `_tickets/solved/` ohne `BASH_LIBS`
+  sowie `TARGET=tests/test_analyzer.py` bleiben grün;
+- ein isolierter Scratch-Mutant ohne die zweite Fixture-Naht wird rot und
+  meldet die geänderte Verzeichnis-mtime mit Nanosekunden;
+- 34/34 API-Tests und Ruff für `tests/test_api.py` sind grün;
+- die vollständige Suite meldet 1028 Backend, 302 Plugin-API, 45 Beispiel und
+  306 Dashboard. Während des gesamten Laufs bleiben `data/` auf
+  Nanosekundenebene sowie Hauptdatei, WAL und SHM existenz- und bytegleich.
+
+Der DRY-Gegenlauf findet keinen vorhandenen Root-Helper in BashLib. Das
+lokale `findProjectRoot` entspricht der für verschiebbare Ticket-Skripte
+festgelegten T-45-/Workflow-Konvention. Human-Spalten bleiben leer; nichts
+wird nach `solved/` verschoben.

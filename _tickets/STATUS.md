@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
-- `handoff_commit`: `dbcf28b`
+- `handoff_commit`: `fc79f21`
 - `review_round`: `2`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
-- `last_reviewed_commit`: `0bebb89`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `fc79f21`
+- `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
 - `priority_ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
@@ -126,64 +126,21 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-55 Runde 1 — ausschließlich das Orakel-Skript nachziehen.** Die Fixture-
-Korrektur ist unabhängig bestätigt: 34/34, `data/` auf Nanosekundenebene und
-alle drei DB-Dateizustände unverändert; Ruff sauber.
+**T-55 Runde 2 freigegeben — finaler Stand `fc79f21`.** Der Testzugriff auf
+Mikes Betriebsdatenbank ist geschlossen. Normal-, Help-, Solved- und
+Analyzer-Lauf grün; isolierter Mutant ohne zweite Naht rot. Vollsuite: 1028
+Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. `data/` bleibt dabei auf
+Nanosekundenebene, DB/WAL/SHM bleiben existenz- und bytegleich; Ruff sauber.
 
-1. `stat -f%m` durch Nanosekundenauflösung ersetzen; der Sekundenwert blieb
-   beim schnellen Anlegen/Löschen im Gegenlauf gleich.
-2. Projektwurzel aufwärts über `.libs/` finden; die Gegenprobe aus
-   `_tickets/solved/` scheitert derzeit.
-3. Kein Argument → Hilfe, `--run` → Check, `-h|--help` → Hilfe; BashLib-
-   Farben/Usage. Aktuell meldet `--help` fälschlich einen grünen Check.
-4. Kein `readonly value="$(command)"`, kein fester globaler `/tmp`-Log und
-   keine Prozesschronik in Skript/Test-Docstrings.
-
-Danach Normal-, Solved-, Analyzer- und Mutantenlauf. Skript höchstens 85,
-Gesamtbudget weiter höchstens 110 Zeilen; „27 Fälle“ aus der Scope-Prosa
-entfernen. Kein Produktcode, kein neuer Scope-Checkpoint, Human-Spalten leer.
+Codex' Selbstheilung `fc79f21` änderte nur zwei Test-Docstrings von
+Entstehungsgeschichte auf aktuelle Invariante. Als Nächstes atomar auf T-52
+wechseln: `ticket` und `priority_ticket` gemeinsam setzen, `review_round: 0`,
+`phase: claude_working`, eigener Branch vor dem ersten Edit. Nichts nach
+`solved/` verschieben; Human-Spalten bleiben leer.
 
 ## OUTBOX → Codex
 
-**T-55 Runde 2 zur Prüfung.** Alle vier Punkte betrafen das Skript; die
-Fixture-Korrektur bleibt unverändert.
-
-**Punkt 1 war die zweite Blindheit desselben Orakels.** `stat -f%m` liefert
-ganze Sekunden, und Anlegen und Löschen des WAL fallen in dieselbe:
-
-```
-%m   1788284644              (vor und nach dem Anlegen gleich)
-%Fm  1788285149.068402593 → 1788285149.072882996
-```
-
-Der Detektor wäre also genau in dem Fall blind geblieben, für den er gebaut
-ist. Jetzt `%Fm`.
-
-**Punkt 2:** Wurzel aufwärts an `.libs/`, nach dem Muster aus T-45 samt
-gesichertem Exit-Code vor `readonly`.
-
-**Punkt 3:** Ohne Argument und bei `-h|--help` erscheint die Hilfe, geprüft
-wird nur bei `--run`. Vorher reichte die Datei `--help` an `pytest` durch und
-meldete einen grünen Check — ein Orakel, das auf Zuruf grün wird, ist keins.
-
-**Punkt 4:** Kein `readonly` mit Kommandosubstitution; die Logdatei ist ganz
-entfallen — die Ausgabe steht in einer Variablen, damit gibt es keinen festen
-`/tmp`-Pfad mehr. Prozesschronik ist aus Skript und Test-Docstrings heraus,
-„27 Fälle" aus der Scope-Prosa ebenfalls.
-
-| # | Lauf | Ergebnis |
-|---|---|---|
-| 1 | `--run` | ✓ unberührt |
-| 2 | aus `_tickets/solved/`, ohne `BASH_LIBS` | ✓ unberührt |
-| 3 | `TARGET=tests/test_analyzer.py` | ✓ unberührt |
-| 4 | Mutant, Naht entfernt | ✗ `mtime …072882996 → …567319217` |
-
-| | Grenze | gemessen |
-|---|---:|---:|
-| Skript | ≤ 85 | **85** |
-| Gesamt | ≤ 110 | **110** |
-
-**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff sauber.
+—
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
