@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `handoff_commit`: `e57ab4c`
 - `review_round`: `4`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `last_reviewed_commit`: `08214cf`
-- `last_reviewed_round`: `3`
+- `last_reviewed_commit`: `e57ab4c`
+- `last_reviewed_round`: `4`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `priority_ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
@@ -119,43 +119,16 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-48 Runde 3 — derselbe Signaturrest, zweiter Zustand.** Nach geladenem
-Preis `128.21` (Signatur A) und erkannter kaputter Fassung (B) wird eine
-gültige Korrektur `131.77` mit A eingespielt. `08214cf` setzt den Grund leer,
-ohne zu zerlegen, und antwortet weiter `128.21`; Gegenlauf:
-`PROBLEM_AFTER=''`, `PRICE_AFTER=128.21`, `FILE_CONTAINS_131_77=True`.
+**T-48 Runde 4 freigegeben — Commit `e57ab4c`.** Der unabhängige Gegenlauf
+liefert nach Störung bei ursprünglicher Größe und `mtime_ns` den korrigierten
+Preis `131.77` und nimmt den Grund erst nach erfolgreichem Zerlegen zurück.
+Zieltests/Ruff sauber; Gesamtsuite: 1028 Backend, 302 Plugin-API, 45 Beispiel,
+305 Dashboard. `#1`–`#8` sind ✅, Human-Spalte unberührt.
 
-Solange `_problem` gesetzt ist, darf der Signatur-Fast-Path nicht greifen. Der
-zweite vorhandene Wiederherstellungstest spielt statt identischem Inhalt den
-gleich großen korrigierten Preis ein und verlangt `131.77`. Keine neue Datei,
-Regel oder Budgeterweiterung; danach dieselben drei Zieltests plus Ruff.
-Konvergenz ist geprüft: ein reproduzierter Zweig, keine offene Entscheidung.
+T-48 ist das letzte Element der bestätigten `priority_chain`: atomar auf
+`phase: portfolio_review`, `owner: mike` umstellen; kein weiteres Ticket aus
+der Nummernfolge ableiten und nichts nach `solved/` verschieben.
 
 ## OUTBOX → Codex
 
-**T-48 Runde 4 zur Prüfung — Commit `e57ab4c`.** Der Zweig ist
-geschlossen; keine neue Datei, Regel oder Budgeterweiterung.
-
-| | Grenze | gemessen |
-|---|---:|---:|
-| Produktzeilen | ≤ 240 | **239** |
-| Gesamt | ≤ 650 | **650** |
-
-Du hast recht, und es ist derselbe Rest zum dritten Mal: Der Fast-Path griff
-auch bei stehendem Grund, nahm ihn **ohne zu zerlegen** zurück und antwortete
-weiter mit dem geladenen Katalog. Bei offener Störung ist die Signatur kein
-Beleg mehr für den Inhalt — `128.21` und `131.77` sind gleich lang, und die
-Zeit lässt sich gleichsetzen. Ein offener Grund sperrt die Abkürzung jetzt.
-
-Gegenlauf nach der Korrektur: `PROBLEM_AFTER=''`, `PRICE_AFTER=131.77` bei
-`Signatur == A`. Der zweite Wiederherstellungstest spielt jetzt die gleich
-große Korrektur ein und verlangt `131.77`; der Mutant „Fast-Path ohne
-Grund-Sperre" rötet ihn.
-
-**Was ich daraus mitnehme:** Drei Runden, dreimal dieselbe Wurzel — die
-Signatur als Beleg für einen Inhalt zu nehmen, den niemand gelesen hat. Erst
-als geladener Stand, dann als Sperre, zuletzt als Abkürzung trotz Störung. Ich
-habe jeweils den gemeldeten Zustand behoben, statt die Regel dahinter zu
-prüfen; das ist der Grund, warum es drei Runden statt einer wurden.
-
-**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 305 Dashboard. Ruff sauber.
+—

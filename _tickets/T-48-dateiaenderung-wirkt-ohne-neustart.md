@@ -119,7 +119,7 @@ Legende: ✅ bestätigt · ◑ teilweise bestätigt · ➖ nicht geprüft.
 | **1** | reines YAML-Profil, Preis in der Datei ändern | die Änderung ist **ohne Neustart** sichtbar | ✅ | |
 | **2** | dasselbe, `as_of` unverändert | der korrigierte Wert kommt an — nicht nur bei neuem Zeitstempel | ✅ | |
 | **3** | Online-Profil mit `yaml-file` als letztem Glied | dieselbe Zusage; die Datei ist dort dieselbe Quelle | ✅ | |
-| **4** | Datei kaputt gemacht, während der Dienst läuft | der Dienst bleibt stehen und meldet den Grund; er fällt nicht auf einen halben Katalog zurück | ◑ | |
+| **4** | Datei kaputt gemacht, während der Dienst läuft | der Dienst bleibt stehen und meldet den Grund; er fällt nicht auf einen halben Katalog zurück | ✅ | |
 | **5** | Datei unverändert, viele Anfragen | die Antwortzeit bleibt brauchbar — gemessen, nicht geschätzt | ✅ | |
 | **6** | `POST /refresh` nach Preiskorrektur bei gleichem `as_of` | `refreshed` zählt die erfolgreiche Korrektur, und die Liste enthält den neuen Wert | ✅ | |
 | **7** | Online-Profil, TTL | die Cache-TTL gilt dort **unverändert** — kein Abruf mehr als vorher | ✅ | |
@@ -526,6 +526,27 @@ Rest ist ein einzelner, reproduzierter Zweig in `_reload()` samt bereits
 vorhandenem Test. Es fehlt keine Produktentscheidung und kein unabhängiger
 Scope. Die nächste Runde ist belastbar abschließend, weil das Gegenorakel den
 genauen noch grünen falschen Pfad ausführt. `#4` bleibt bis dahin ◑.
+
+### Codex-Review Runde 4 · `approved` (2026-09-01)
+
+Commit `e57ab4c` schließt denselben Signaturzweig ab: Der Fast Path greift nur
+noch ohne offenen Störungsgrund; bei einer Störung wird der aktuelle Inhalt
+zuerst wieder erfolgreich zerlegt. Der unabhängige Gegenlauf mit korrigiertem
+Preis, ursprünglicher Größe und ursprünglicher `mtime_ns` ergab:
+
+```text
+PROBLEM_AFTER=''
+PRICE_BEFORE=128.21
+PRICE_AFTER=131.77
+RECOVERED=True
+```
+
+Der finale Umfang hält die erweiterte Grenze exakt: acht Produkt- und drei
+Testflächen, 239 Produkt- und 650 Gesamtzeilen. `git show --check`, die
+berührten Ruff-Prüfungen und Zieltests (68 Host, 142 Plugin) sind sauber.
+Frische Gesamtsuite: **1028 Backend**, **302 Plugin-API**, **45
+Entwicklerbeispiel** und **305 Dashboard-Tests** bestanden. Die Human-Spalte
+bleibt unberührt; Codex verschiebt das Ticket nicht nach `solved/`.
 
 ### Runde 3 · die Signaturerholung (Claude, 2026-09-01)
 
