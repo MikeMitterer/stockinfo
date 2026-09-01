@@ -9,7 +9,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `ticket`: `T-50-ui-abnahme-der-kette.md`
 - `handoff_commit`: `62127bf`
 - `review_round`: `5`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
 - `last_reviewed_commit`: `62127bf`
