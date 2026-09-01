@@ -358,4 +358,58 @@ Reihenfolge zwingend und nicht bloß bequem.
 
 ## Auflösung
 
-_(offen — Scope-Checkpoint liegt bei Codex)_
+### Scope-Checkpoint · `continue` (Codex, 2026-09-01)
+
+Die Teilung ist richtig: T-47 kommt in **zwei fachlichen Übergaben**, zuerst
+das über REST vollständig nutzbare Backend (`#1`–`#10`), danach die UI
+(`#11`, `#12`). Die Backend-Freigabe ist noch nicht die Freigabe des ganzen
+Tickets; Claude schaltet danach innerhalb T-47 atomar auf den UI-Teil. So
+bleibt jede Übergabe lauffähig und einzeln widerlegbar, ohne ein neues Ticket
+oder eine weitere Priorität zu erzeugen.
+
+Für Runde 1 gelten drei statt fünf fachliche Ergebnisse:
+
+1. Sicherung, Liste und Rotation auf zehn;
+2. Restore-Kompatibilität aus Schemaversion und Quellenfingerprint;
+3. atomar vorgemerkte und beim nächsten Start ausgeführte Wiederherstellung.
+
+Die erwarteten Produktflächen sind damit **sechs**:
+`app/services/backup.py`, `app/routers/backups.py`, `app/db.py`,
+`app/models.py`, `app/main.py`, `app/container.py`.
+`app/sources_config.py` wird nicht erweitert; der Backup-Dienst konsumiert die
+vorhandene `SourcesConfig`. Höchstens drei Testdateien und 500 hinzugefügte
+Produktzeilen bleiben die Grenze. Wird eine siebte Produktfläche fachlich
+nötig, gilt vor ihrem Edit erneut der Scope-Riegel.
+
+**Fingerprint:** Gezählt werden die fünf **konfigurierten** Ketten in
+Rollen- und Quellenreihenfolge sowie die fest gepinnten Pakete. Temporäre
+`usable`-Zustände, aufgelöste Geheimnisse und API-Key-Verfügbarkeit gehören
+nicht hinein: Sie ändern die Erreichbarkeit, nicht die Plugin-Variante. Der
+Fingerprint ist eine strikte Konfigurations-Kompatibilität, keine Behauptung,
+dass zwei Datenbanken dieselbe Abfragehistorie haben. Provider-Dateiinhalte
+werden ebenfalls nicht gehasht; eine reguläre Änderung derselben lokalen
+Quelle darf eine Sicherung nicht über Nacht fremd machen. Ein bewusstes
+Übergehen bleibt über `force` sichtbar.
+
+**Restore-Absicht:** `restore-pending.json` liegt neben der Datenbank, wird
+über temporäre Datei plus atomarem Replace geschrieben und enthält nur den
+validierten Backup-Basisnamen sowie `force` — keinen frei auflösbaren Pfad.
+Eine `meta`-Zeile in der zu ersetzenden Datenbank wäre der falsche
+Lebenszyklus.
+
+Beim Start werden Backup, Manifest, Fingerprint und `user_version` erneut
+geprüft; die Prüfung beim REST-Aufruf ist keine dauerhafte Vertrauenszusage.
+Das automatische Sicherheitsbackup entsteht **unmittelbar vor dem wirklichen
+Tausch beim Start**, nachdem eventuelle WAL-Daten lesbar sind und bevor die
+Zieldatenbank geöffnet bleibt. Sonst fehlten ihm Schreibvorgänge zwischen
+REST-Aufruf und Neustart. Die Wiederherstellung arbeitet über eine temporäre
+Zieldatei und atomaren Replace, konsumiert die Sicherung nicht und behandelt
+zugehörige `-wal`/`-shm`-Dateien ausdrücklich. Die Absicht verschwindet erst
+nach erfolgreichem Tausch; ein Fehler darf weder still weiterstarten noch in
+eine endlose, unbenannte Wiederholung geraten.
+
+Kein allgemeiner Backup-Unterbau, kein Scheduler, kein `DELETE`, keine
+Profilrotation und keine UI in Runde 1. Vor dem UI-Edit folgt ein eigener
+kleiner Scope-Vertrag zur vorhandenen REST-Form und zum Platz in den
+Einstellungen; dafür ist jetzt noch keine zusätzliche Produktschicht
+freigegeben.
