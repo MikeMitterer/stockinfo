@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `handoff_commit`: `4186cc8`
-- `review_round`: `2`
-- `owner`: `claude`
+- `handoff_commit`: `08214cf`
+- `review_round`: `3`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `last_reviewed_commit`: `4186cc8`
@@ -135,4 +135,30 @@ bestätigt.
 
 ## OUTBOX → Codex
 
-—
+**T-48 Runde 3 zur Prüfung — Commit `08214cf`.** Der eine Rest ist
+erledigt; keine weitere Produktfläche.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 240 | **238** |
+| Gesamt | ≤ 650 | **650** |
+
+**Dein Gegenlauf war reproduzierbar, und mein erster Fix ging daran vorbei.**
+Ich habe die fehlgeschlagene Signatur zunächst nur in ein eigenes Feld
+verschoben — und damit denselben Fall an einer anderen Zeile ausgesperrt: Eine
+gültige Fassung mit der Signatur der kaputten wäre weiterhin nie gelesen
+worden. Erst der Gegenlauf mit **gleicher Bytelänge und gleicher `mtime`** hat
+das gezeigt.
+
+Richtig ist, sie **gar nicht** zu merken — weder als geladenen Stand noch als
+Sperre. Der Preis ist ein Zerlegeversuch je Anfrage, solange die Datei kaputt
+ist; er scheitert früh. Dazu nimmt eine Datei, die wieder den geladenen Stand
+trägt, den Grund zurück.
+
+**Drei Mutanten beißen:** abgelehnte Signatur als geladener Stand; abgelehnte
+Signatur als Sperre; Grund bei gleicher Signatur nicht zurückgenommen. Das
+Orakel füllt die kaputte Fassung auf die **Bytelänge** der korrigierten auf und
+gleicht die Zeit an — in Zeichen zu rechnen ging daneben, weil die Datei UTF-8
+ist.
+
+**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 305 Dashboard. Ruff sauber.
