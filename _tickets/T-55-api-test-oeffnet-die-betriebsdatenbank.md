@@ -76,3 +76,79 @@ Betriebsdatenbank migrieren oder WAL/SHM im Produkt abschalten.
 | **2** | Betriebsdateien | Hauptdatei, WAL und SHM vor/nach byte- und existenzgleich | ➖ | |
 | **3** | `/ready` | `ok` und DB-Fehler bleiben unterscheidbar getestet | ➖ | |
 | **4** | Regression | `make test` und Ruff grün; Isolationsorakel ruft `tests/test_api.py` direkt mit eigener DB-Naht auf, nicht über die von `.env` überschriebene Make-Variable | ➖ | |
+
+---
+
+## Scope-Vertrag (Claude, 2026-09-01, vor dem ersten Edit)
+
+### Die fachliche Änderung
+
+Die Fixture `client` überschreibt `get_cached_quote_service` als **FastAPI-
+Dependency**. `/ready` ruft ihn nicht als Dependency, sondern direkt im
+Modulnamensraum von `app.main` — dort greift die Überschreibung nicht.
+
+Genau **ein** Fall der Datei fällt deshalb durch:
+
+| Fall | Naht | Folge |
+|---|---|---|
+| `test_readiness_meldet_die_datenbank` | keine | ruft den echten Dienst, öffnet `data/stockinfo.db` |
+| `test_readiness_meldet_503_wenn_die_datenbank_nicht_erreichbar_ist` | `monkeypatch` auf `app.main` | isoliert |
+
+Die Korrektur schließt die Naht **in der Fixture**, nicht im einzelnen Test:
+Die Zusage der Datei — *„TestClient ohne Lifespan (kein Scheduler/DB)"* — soll
+für alle 27 Fälle gelten und nicht davon abhängen, dass jeder neue Fall daran
+denkt. Der `503`-Fall setzt seinen kaputten Dienst danach weiterhin selbst und
+gewinnt, weil er später greift.
+
+### Erwartete Flächen
+
+| Datei | Was |
+|---|---|
+| `tests/test_api.py` | Fixture schließt die Naht; Zusage im Docstring präzisiert |
+| `_tickets/T-55-isolation.sh` | Gegenorakel: Bestand der drei Betriebsdateien vor/nach einem **direkten** `pytest`-Lauf |
+
+**Kein Produktcode.** `/ready` bleibt, wie es ist — dass es den Dienst direkt
+holt, ist eine Frage für ein anderes Ticket und steht hier unter Nicht-Ziele.
+
+### Budget
+
+| | Grenze |
+|---|---:|
+| `tests/test_api.py` | ≤ 40 |
+| Orakel-Skript | ≤ 70 |
+| **Gesamt** | **≤ 110** |
+
+**Gezählt** als Summe der hinzugefügten Zeilen aus `git diff --numstat` gegen
+den Abzweigpunkt, **ohne** Ticket- und `STATUS.md`-Dateien.
+
+### Pflichtorakel
+
+1. **Existenz zählt mit, nicht nur der Inhalt.** Das WAL ist derzeit gar nicht
+   vorhanden; ein Lauf, der es anlegt und liegen lässt, wäre über einen reinen
+   Inhaltsvergleich unsichtbar. Geprüft wird für `stockinfo.db`, `-wal` und
+   `-shm` je **Existenz und Prüfsumme**.
+2. **Der Mutant muss röten.** Die Naht aus der Fixture entfernt, dann muss das
+   Skript fehlschlagen. Ohne diesen Gegenlauf belegt ein grünes Skript nur,
+   dass gerade nichts passiert ist.
+3. **`/ready` bleibt unterscheidbar:** `ok` und `database: error` liefern
+   weiterhin `200` bzw. `503`.
+4. **Der Lauf geht direkt an `pytest`**, nicht über `make` — die
+   Make-Grenze überschreibt `DATABASE_PATH` aus dem `.env` und macht jedes
+   vorangestellte `env DATABASE_PATH=…` wirkungslos. Das ist Codex' Befund
+   oben; er ist die Begründung für die Aufrufform des Orakels.
+
+### Nicht-Ziele
+
+- `/ready` umbauen, damit es den Dienst als Dependency bezieht. Das wäre die
+  strukturell sauberere Antwort und **Produktcode** — hier nicht.
+- Makefile oder `.env` anfassen.
+- Andere Testdateien anfassen. Der Gegenlauf hat sie geprüft: Sie sind sauber.
+- WAL/SHM im Produkt abschalten oder die Betriebsdatenbank migrieren.
+
+### Eine Berichtigung zum Protokoll
+
+Der Abschlusslauf von T-50 hat `make test` und `make test-backend` **ohne**
+vorangestelltes `DATABASE_PATH` aufgerufen; die im Befund oben zitierte Zeile
+`env DATABASE_PATH=… make test` stammt nicht daraus. Am Ergebnis ändert das
+nichts — der Verursacher ist derselbe —, und der Hinweis auf die Make-Grenze
+ist unabhängig davon richtig und für Orakel 4 der Grund.
