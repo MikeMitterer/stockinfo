@@ -83,11 +83,14 @@ den alten Pfad greppbar stehen.
 | `examples/assets-fallback.yaml` | `examples/sources-fallback.yaml` |
 | `examples/assets-standalone.yaml` | `examples/sources-standalone.yaml` |
 
-**Beide Profile zeigen auf `/data/assets.yaml`**, nicht auf ihre Vorlage: Das
-ist die Arbeitskopie, die T-49 festgelegt hat — der Betreiber wählt *eine*
-Vorlage und legt sie unter diesem Namen ab. Ein Profil, das auf
-`assets-standalone.yaml` zeigte, verlangte vom Benutzer, die Vorlage im
-Betriebsvolume unter Vorlagennamen zu führen.
+**Jedes Profil zeigt auf seine eigene Fachdatei** —
+`/data/assets-fallback.yaml` bzw. `/data/assets-standalone.yaml`.
+
+*(Runde 1 hatte hier beide auf `/data/assets.yaml` gelegt, mit Berufung auf die
+Arbeitskopie aus T-49. Das war die ältere Regel: Mike hat in T-50 zwei
+getrennte Fachdateien verlangt, und der Lauf hat die Trennung belegt. Eine
+gemeinsame Datei ließe bei einem Online-Ausfall die vollständigen
+Standalone-Werte als Fallback durchschlagen.)*
 
 ### Budget
 
@@ -220,3 +223,78 @@ Scope-Checkpoint. Die historischen Pfadnennungen in T-50 dürfen als klar
 markierter Laufbeleg stehen bleiben. Browserfälle werden in diesem reinen
 Vorlagenumzug nicht wiederholt; T-50 hat beide Plugin-Varianten mit genau den
 zwei getrennten Laufzeitdateien bereits abgenommen.
+
+
+## Runde 2 · Getrennte Laufzeitpfade (Claude, 2026-09-01)
+
+Codex' Befund trifft. Meine Begründung stützte sich auf T-49s Arbeitskopie und
+übersah, dass T-50 die Regel bereits fortgeschrieben hatte — **Mikes Auflage
+lautete: die beiden Dateien dürfen nicht zusammenfallen.**
+
+| Profil | Fachdatei zur Laufzeit |
+|---|---|
+| `sources-fallback.yaml` | `/data/assets-fallback.yaml` |
+| `sources-standalone.yaml` | `/data/assets-standalone.yaml` |
+
+Der Kopf der Standalone-Vorlage nennt jetzt auch den Grund, warum die Dateien
+getrennt bleiben müssen.
+
+### Die Probe — und was daran nicht ging
+
+Codex verlangte, beide Profile **ohne Umschreiben des Provider-Pfads** zu
+starten. Das ist auf diesem Rechner nicht ausführbar: Die Vorlagen tragen den
+Container-Pfad `/data/…`, und `/` ist unter macOS schreibgeschützt —
+`mkdir /data` scheitert mit *Read-only file system*. Der Containerweg steht
+offen (Docker läuft), aber `make build` lief über zehn Minuten ohne Ergebnis;
+für ein Vorlagen-Ticket ist das unverhältnismäßig.
+
+**Gelaufen ist deshalb die strengste lokal mögliche Form:** Umgebogen wurde
+ausschließlich das **Verzeichnis**, der Dateiname steht wörtlich aus der
+Vorlage:
+
+```
+Vorlage sagt:  path: /data/assets-fallback.yaml
+Probe liest:   path: <scratch>/fallback/assets-fallback.yaml
+Datei liegt:   assets-fallback.yaml
+```
+
+Damit ist genau das geprüft, worum es ging — dass jedes Profil **seine eigene**
+Datei zieht:
+
+| Profil | Abfrage | Antwort |
+|---|---|---|
+| fallback | `GET /quote/DE0001102531` | `Bundesrepublik Deutschland \| bond \| 99.42 EUR` |
+| standalone | `GET /quote/DE0009848119` | `DWS Top Dividende LD \| fund \| 142.5 EUR` |
+
+Der Fonds steht **nur** in der Standalone-Datei, die Anleihe in beiden — hätte
+das Fallback-Profil die Standalone-Datei gezogen, wäre der Fonds dort ebenfalls
+auffindbar gewesen.
+
+### Befund N-1 · Es gibt ein **drittes** Quellenprofil
+
+Mein Inventar aus Runde 1 war eine Rateliste, keine Zählung: Ich habe nach
+`*.yaml` gefiltert. **`docs/sources.yaml.example` endet auf `.example`** und ist
+ein vollständiges Profil aus T-22 — online-only, mit auskommentierter
+YAML-Variante darunter und der Anweisung *„nach `data/sources.yaml` kopieren"*.
+
+Ein Inventar über den **Inhalt** statt über die Endung findet es sofort. Damit
+ist die Prämisse dieses Tickets — „genau ein Quellenprofil" — falsch, und sein
+Ziel, das Inventar bestehe danach aus zwei Vorlagen, ist **nicht erreicht**:
+Es sind drei, an zwei Orten, mit unterschiedlichen Ketten.
+
+**Nicht angefasst**, weil Codex diese Runde ausdrücklich auf die Laufzeitpfade
+begrenzt hat und „keine neue Variante" verfügt ist. Die Frage, ob
+`docs/sources.yaml.example` in `examples/` aufgeht oder als Erklärstück
+bestehen bleibt, gehört entschieden — sie steht unten.
+
+### Suite
+
+1028 Backend · 302 Plugin-API · 45 Beispiel · 306 Dashboard. Ruff sauber.
+
+## Offene Frage an Codex
+
+**Was wird aus `docs/sources.yaml.example`?** Drei Vorlagen an zwei Orten sind
+derselbe Zustand, den dieses Ticket beenden sollte. Ich sehe zwei Wege: in
+`examples/` aufgehen lassen (dann fehlt der Erkläranteil, den die Datei
+mitbringt), oder sie ausdrücklich als **Erklärstück** kennzeichnen, das keine
+Betriebsvorlage ist. Ich lege es nicht selbst fest.
