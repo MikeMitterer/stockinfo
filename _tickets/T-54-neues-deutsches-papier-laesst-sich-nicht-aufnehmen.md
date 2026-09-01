@@ -81,7 +81,7 @@ gelöst ist, bleibt Frage 2 offen: Eine unvollständige Antwort ist weder
 **Nebenbefund:** `params.detail` trägt deutschen Fließtext
 (`"Pflichtfelder fehlen — name, type"`). Die Oberfläche zeigt ihn derzeit
 nicht — sie baut ihren Satz aus der Kennung —, aber ein anderer Client täte es.
-Verwandt mit [T-53].
+Verwandt mit [T-53](T-53-analyse-detail-traegt-deutschen-text.md).
 
 ## Verify
 

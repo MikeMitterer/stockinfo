@@ -22,7 +22,7 @@ Bei offener Migration antwortet die App auf **jedem** Fachweg mit
 ```
 GET  /sources               503
 GET  /instruments           503
-GET  /analyze/US0378331005  503
+GET  /analyze?isin=US0378331005  503
 GET  /env                   503
 GET  /backups               503
 POST /backups               503

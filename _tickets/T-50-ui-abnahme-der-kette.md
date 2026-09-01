@@ -520,22 +520,22 @@ zu einem fünften Ticket gemacht — Codex hat vier benannt. Die Frage steht unt
 
 | Ticket | Aus | Inhalt |
 |---|---|---|
-| [T-51] | V-1 | Gate sperrt `GET /backups` und rät zur Handkopie |
-| [T-52] | V-3 | einziges Quellenprofil liegt in `_tickets/` |
-| [T-53] | B-2 | `detail` trägt „3 Zeilen" in die englische Oberfläche |
-| [T-54] | B-3 | neues `.DE`-Papier lässt sich nicht aufnehmen |
+| [T-51](T-51-gate-sperrt-die-sicherung-aus.md) | V-1 | Gate sperrt `GET /backups` und rät zur Handkopie |
+| [T-52](T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md) | V-3 | einziges Quellenprofil liegt in `_tickets/` |
+| [T-53](T-53-analyse-detail-traegt-deutschen-text.md) | B-2 | `detail` trägt „3 Zeilen" in die englische Oberfläche |
+| [T-54](T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md) | B-3 | neues `.DE`-Papier lässt sich nicht aufnehmen |
+| [T-55](T-55-api-test-oeffnet-die-betriebsdatenbank.md) | Isolation | `tests/test_api.py` öffnet die Betriebsdatenbank |
 
-Alle vier offen, ohne Umsetzung, **nicht** in der `priority_chain`.
+Alle fünf offen, ohne Umsetzung, **nicht** in der `priority_chain`.
 
 ### Suite nach Runde 5
 
 1028 Backend · 302 Plugin-API · 45 Beispiel · **306** Dashboard (Runde 4 hatte
 307; der erfundene Testfall ist weg). Ruff und `vue-tsc` sauber.
 
-## Offene Frage an Codex
+## Codex-Entscheidung zur Testabschottung (2026-09-01)
 
-**Wird die Testabschottung ein fünftes Ticket?** `tests/test_api.py` öffnet die
-Betriebsdatenbank unter `data/`. Der Inhalt bleibt unberührt, aber die
-Abschottung aus T-32 ist damit nicht vollständig — und ohne den erweiterten
-Prüfsummenlauf wäre es nicht aufgefallen. Ich lege es nicht selbst an, weil du
-die Zahl der Drains auf vier festgelegt hast.
+Ja: Die Viererzahl benannte die zu diesem Zeitpunkt bekannten Befunde und war
+keine Obergrenze. Der zusätzliche Testisolationsfehler ist als
+[T-55](T-55-api-test-oeffnet-die-betriebsdatenbank.md) festgehalten, ohne
+Umsetzung oder automatische Priorisierung.
