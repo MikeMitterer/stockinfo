@@ -189,3 +189,75 @@ Abzweigpunkt, ohne Ticket- und `STATUS.md`-Dateien.
   Quellen bleibt die Frage offen und gehört in ein eigenes Ticket.
 - Den deutschen Fließtext in `params.detail` — das ist [T-53].
 - `split_symbol`, die Vorzugsbörse oder den Cache-Weg anfassen.
+
+---
+
+## Scope-Checkpoint · Ein zweiter, älterer Defekt blockiert Verify `#2`
+
+Die Korrektur des Suffix-Wegs **wirkt**: `GET /quote?symbol=SAP.DE` liefert
+jetzt `stock | SAP SE | XETR` — Name und Gattung gefüllt, die genannte Börse
+erhalten.
+
+**Das zweite Papier scheitert trotzdem**, und zwar an etwas anderem:
+
+```
+sqlite3.IntegrityError: UNIQUE constraint failed: instruments.isin
+```
+
+### Der Beleg, dass es nicht meine Änderung ist
+
+Mit dem **Originalcode**, frische Datenbank, zwei suffixlose US-Papiere:
+
+| Aufruf | Antwort |
+|---|---|
+| `GET /quote?symbol=MSFT` | `200` |
+| `GET /quote?symbol=AAPL` | **`500`**, `IntegrityError` |
+
+```
+sqlite> select symbol, quote(isin) from instruments;
+MSFT|''
+```
+
+### Die Wurzel
+
+`app/plugin_adapters.py:232`, `_instrument_from`:
+
+```python
+isin=identity.isin or fallback_isin,
+```
+
+Der Symbolweg ruft `_translate(..., fallback_isin="")`. Ein börsengehandeltes
+Papier **ohne** ISIN bekommt damit den **Leerstring** statt `NULL` — und
+`instruments.isin` ist `TEXT UNIQUE`. SQLite lässt beliebig viele `NULL` zu,
+aber nur **einen** Leerstring.
+
+**Warum es bisher niemandem auffiel:** Es braucht zwei börsengehandelte
+Papiere ohne ISIN. Ein Paar wie `BTC-EUR` zählt nicht — es trägt `kind: pair`
+und gar kein ISIN-Feld. Und der Suffix-Weg, über den die meisten solchen
+Papiere kämen, brach schon vorher an `core_incomplete` ab, **bevor** je ein
+`INSERT` lief. Meine Korrektur hat den Weg bis zur Datenbank geöffnet und den
+älteren Defekt damit sichtbar gemacht.
+
+### Warum ich hier anhalte
+
+Verify `#2` verlangt `SAP.DE` **und** `BMW.DE`. Deutsche Listings tragen über
+`yahoo-search` keine ISIN — das zweite scheitert also zwangsläufig. Ohne diese
+Stelle ist T-54 nicht abschließbar.
+
+Die Stelle liegt aber in einer **anderen Schicht** als der Rest des Tickets:
+Adapter und Datenbankspalte statt `quote_service`. Mein Scope-Vertrag nennt
+ausdrücklich *ein* Produktmodul. Das ist die „tatsächlich neue Fläche", für die
+ein Checkpoint vorgesehen ist.
+
+### Drei Wege, die ich sehe
+
+- **A — im Adapter:** `identity.isin or fallback_isin or None`. Eine Zeile,
+  trifft alle Formen gleich, und der Leerstring entsteht gar nicht erst.
+- **B — im Repository:** beim Schreiben leer auf `NULL` normalisieren. Fängt
+  auch andere Wege ab, verlegt die Regel aber weg von ihrer Entstehung.
+- **C — eigenes Ticket:** T-54 endet bei *einem* aufnehmbaren Papier mit
+  Suffix, Verify `#2` bleibt ◑, der Rest wird gedrainiert.
+
+Ich neige zu **A**: Der Leerstring ist dort ein Platzhalter für „keine ISIN",
+und genau das heißt `NULL`. Aber es ist eine Vertragsfrage über die
+Identitätsform, und die entscheide ich nicht nebenbei.

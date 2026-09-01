@@ -484,8 +484,7 @@ class QuoteService:
         # Geraten wird weiterhin nicht: `AAPL` bekommt keinen erfundenen MIC.
         ticker, mic = split_symbol(symbol)
         if ticker and mic:
-            resolved = ResolvedInstrument(symbol=symbol, ticker=ticker, mic=mic)
-            return self._build(resolved, enrich_etf)
+            return self._build(self._described(symbol, ticker, mic), enrich_etf)
 
         # **Erst jetzt wird gefragt** (T-31, Matrix `#5`). Ein Symbol ohne
         # Börsensuffix ist nicht zwangsläufig unbrauchbar — es kann ein Papier
@@ -518,6 +517,37 @@ class QuoteService:
         if resolution.type is not None and resolution.type not in INSTRUMENT_TYPES:
             raise UnsupportedInstrumentTypeError(symbol, resolution.type)
         return self._build(resolution, enrich_etf)
+
+    def _described(self, symbol: str, ticker: str, mic: str) -> ResolvedInstrument:
+        """Die Identität aus dem Symbol, Name und Gattung aus der Quelle.
+
+        **Die genannte Börse gewinnt.** Wer `GOLD.SG` tippt, meint Stuttgart,
+        auch wenn eine Quelle die Vorzugsbörse nennt — dafür steht dieser Weg
+        da, und daran ändert sich nichts.
+
+        Beschrieben wird das Papier trotzdem von einer Quelle. Bis hierher
+        entstand ein `ResolvedInstrument` **ohne Namen und ohne Gattung**; die
+        Kursquelle liefert beides nicht, und seit T-38 sind sie Pflicht. Jedes
+        Papier mit Börsensuffix scheiterte deshalb bei der Aufnahme an
+        `core_incomplete` — mit `502`, obwohl gar keine Quelle gefragt worden
+        war.
+
+        **Eine ausbleibende Beschreibung bricht hier nicht ab.** Sie führt zur
+        selben Pflichtfeldprüfung wie bisher, nur eine Ebene später und mit
+        einer Quelle, die wirklich gefragt wurde.
+
+        Args:
+            symbol: Das vom Benutzer genannte Symbol samt Suffix.
+            ticker: Kanonischer Ticker daraus.
+            mic: Börse daraus — die des Benutzers.
+
+        Returns:
+            Das aufgelöste Instrument mit der Identität aus dem Symbol.
+        """
+        described = self._resolver.resolve_symbol(symbol)
+        if isinstance(described, ResolvedInstrument):
+            return replace(described, symbol=symbol, ticker=ticker, mic=mic)
+        return ResolvedInstrument(symbol=symbol, ticker=ticker, mic=mic)
 
     def get_quote_for_known(
         self,
