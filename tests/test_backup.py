@@ -10,9 +10,6 @@ Die Zusicherungen stammen aus der Verify-Matrix, nicht aus dem Code:
 `#9`  `PRAGMA user_version` ist gesetzt und wird gelesen
 `#10` Die elfte Sicherung lässt zehn liegen, die älteste weicht samt Manifest
 ===== ======================================================================
-
-Wiederherstellen (`#3`–`#8`) und die UI (`#11`, `#12`) sind nicht Teil dieses
-Stands; sie hier zu prüfen wäre eine Behauptung über Code, den es nicht gibt.
 """
 
 import json
@@ -356,9 +353,8 @@ def test_gleichzeitige_aufrufe_bekommen_je_eine_eigene_sicherung(
     """**Zwanzig Aufrufe zugleich — am HTTP-Eintritt, nicht im Dienst.**
 
     `_free_name()` prüft, ob ein Pfad frei ist; zwischen dieser Prüfung und dem
-    `VACUUM INTO` wählt ein zweiter Handler denselben Namen. `VACUUM INTO`
-    schreibt dann in eine bestehende Datei und scheitert mit „table instruments
-    already exists" — gemessen 13 von 20 Aufrufen.
+    `VACUUM INTO` kann ein zweiter Handler denselben Namen wählen. Der Test
+    unterscheidet die serialisierte Folge von diesem Wettlauf.
 
     Ein sequenzieller Lauf ersetzt das nicht: Er erzeugt den Wettlauf gar
     nicht. Geprüft wird deshalb dreierlei — jede Antwort ist ein `201`, danach

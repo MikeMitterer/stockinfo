@@ -119,9 +119,8 @@ class BackupService:
         # **Die ganze Folge Name → Kopie → Manifest → Rotation gehört zusammen.**
         # `_free_name()` prüft, ob ein Pfad frei ist; zwischen dieser Prüfung
         # und dem `VACUUM INTO` liegt bei parallelen Aufrufen genug Zeit, dass
-        # ein zweiter Handler denselben Namen wählt. `VACUUM INTO` schreibt
-        # dann in eine Datei, die es schon gibt, und scheitert mit „table
-        # instruments already exists" — gemessen 13 von 20 Aufrufen.
+        # ein zweiter Handler denselben Namen wählt. `VACUUM INTO` kann nicht
+        # in eine bereits befüllte Zieldatei schreiben.
         #
         # Die Rotation gehört mit hinein: Sie zählt Dateien und löscht die
         # ältesten. Läuft sie, während nebenan eine neue entsteht, zählt sie
