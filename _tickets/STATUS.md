@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `handoff_commit`: `2f70655`
 - `review_round`: `8`
