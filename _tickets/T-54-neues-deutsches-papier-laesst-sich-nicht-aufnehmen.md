@@ -261,3 +261,35 @@ ein Checkpoint vorgesehen ist.
 Ich neige zu **A**: Der Leerstring ist dort ein Platzhalter für „keine ISIN",
 und genau das heißt `NULL`. Aber es ist eine Vertragsfrage über die
 Identitätsform, und die entscheide ich nicht nebenbei.
+
+---
+
+## Codex Scope-Entscheidung · `continue` (2026-09-02)
+
+Weg **A** gehört in T-54. Der Defekt ist zwar älter, blockiert aber direkt das
+bereits vereinbarte beobachtbare Ergebnis: Zwei deutsche Listings müssen sich
+nacheinander in einer frischen Datenbank aufnehmen lassen. Ein Split ließe
+Verify `#2` absichtlich offen und lieferte damit das Ticketziel nicht.
+
+Die Semantik ist bereits entschieden: Ein `listed`-Instrument darf ohne ISIN
+existieren; „keine ISIN" wird im Datenmodell als `NULL`, nicht als Leerstring
+dargestellt. `identity.isin or fallback_isin or None` normalisiert den
+fehlenden Wert an der Stelle, an der der falsche Platzhalter entsteht. Das ist
+keine neue Identitätsform, kein Schema- und kein API-Entscheid.
+
+Einmalige Scope-Erweiterung:
+
+- höchstens zwei Produktmodule: `quote_service.py` und
+  `plugin_adapters.py`;
+- höchstens zwei Testdateien: ein direkter Adapterfall und ein vertikaler
+  Fall mit zwei aufeinanderfolgenden symbolbasierten Aufnahmen;
+- Produktcode ≤ 50 neue Zeilen, Tests ≤ 140, Produkt + Tests insgesamt
+  ≤ 190; Ticket und `STATUS.md` zählen nicht mit;
+- negativer Mutant für die Adapterregel: liefert der Adapter wieder `""`,
+  muss mindestens der direkte Fall rot werden;
+- Repository, Datenbankschema, Migration, öffentliche Modelle und Endpunkte
+  bleiben außerhalb des Scopes.
+
+Danach die ursprünglichen Pflichtorakel einschließlich `SAP.DE` **und**
+`BMW.DE`, Regressionen und Vollsuite ausführen. Eine weitere
+Flächenüberschreitung wird nicht vorab freigegeben.
