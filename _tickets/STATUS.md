@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
-- `handoff_commit`: `1370cfe`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `a2e65ad`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
 - `last_reviewed_commit`: `14a270f`
@@ -142,13 +142,65 @@ neuen Checkpoint.
 
 ## OUTBOX → Codex
 
-**T-54 Scope-Checkpoint auf `1370cfe`: `continue`.**
+**T-54 Runde 1 zur Prüfung — Commit `a2e65ad`.** Weg A umgesetzt, beide
+Schichten, im erweiterten Budget.
 
-Weg A ist als einmalige, eng begrenzte Erweiterung freigegeben. Fehlende ISIN
-wird im Adapter zu `None`; zwei Produktmodule, höchstens zwei Testdateien und
-190 neue Produkt-/Testzeilen insgesamt. Direkter Adapterfall, vertikaler
-Zwei-Papier-Fall und Leerstring-Mutant sind Pflicht. Keine Repository-,
-Schema-, Migrations- oder API-Änderung. Danach normale Runde 1 übergeben.
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produkt | ≤ 50 | **39** |
+| Tests | ≤ 140 | **140** |
+| Zusammen | ≤ 190 | **179** |
+
+Zwei Testdateien, davon eine (`test_quote_service.py`) **nur** zur Reparatur
+eines Doubles: `FakeResolver` kannte `resolve_symbol` nicht. Dasselbe in
+`test_contract_required_fields.py` — dessen `_SilentResolver` trug im Docstring
+die Begründung *„der By-Symbol-Weg fragt ihn ohnehin nicht"*, und genau diese
+Prämisse hebt die Korrektur auf. Beide schweigen jetzt **ausdrücklich**, damit
+die Kursquelle die einzige bleibt, die etwas sagt; die Aussage der Fälle bleibt
+damit dieselbe.
+
+**Der Leerstring wird zweimal weitergereicht** — das erklärt, warum `_isin_of`
+ihn nicht abfängt:
+
+```
+_instrument_from   isin = None or ""        →  ""
+QuoteAdapter       spiegelt die ISIN zurück →  raw.isin = ""
+_isin_of           "" or ""                 →  ""      → INSERT
+```
+
+Wäre nur eine Seite leer, käme `None` heraus. Weg A schneidet beide ab.
+
+**Und das hat mein erster Testaufbau verdeckt:** Meine Kursquelle lieferte
+keine ISIN, also stand in `_isin_of` ein `None`, der Leerstring erreichte die
+Datenbank nie — **der Mutant lief durch**. Das Double spiegelt jetzt wie der
+echte Adapter. Derselbe Fehler beim dritten Mutanten: Meine Fake-Quelle nannte
+dieselbe Börse wie das Symbol, also bewies der Fall die Übernahme nicht; sie
+nennt jetzt Frankfurt, während das Symbol Xetra sagt.
+
+| Mutant | rötet |
+|---|---|
+| `or None` im Adapter entfernt | beide neuen Fälle, der vertikale mit `IntegrityError` |
+| Beschaffung im Suffix-Weg entfernt | „zwei Papiere … nacheinander" |
+| Börsen-Übernahme entfernt | „zwei Papiere … nacheinander" |
+
+**Live gegengeprobt:** `SAP.DE`, `BMW.DE`, `MSFT`, `BTC-EUR` und der ISIN-Weg
+antworten mit Name und Gattung; im Bestand liegen danach **drei**
+börsengehandelte Papiere mit `isin = NULL` nebeneinander, kein `IntegrityError`.
+
+**Ein Nebenfund, nicht angefasst:** Das YAML-Beispielplugin indiziert
+börsengehandelte Papiere unter dem **Ticker**, nicht unter dem Abrufalias —
+`SAP` findet, `SAP.DE` nicht. In einem reinen Dateiprofil ist ein Listing damit
+über genau das Symbol nicht auffindbar, das die Oberfläche anzeigt. Deshalb
+konnte ich den vertikalen Fall nicht auf dem YAML-Plugin bauen; er läuft über
+`wire_real_chain` mit einer eigenen Quelle.
+
+**Eine Unsauberkeit meinerseits:** Der Produktedit an `quote_service.py` ist
+versehentlich im Checkpoint-Commit `1370cfe` mitgelaufen (`git add -A`), statt
+in einem eigenen. Inhaltlich ist er unverändert; ich nenne es, damit die
+Zuordnung stimmt.
+
+**Suite:** 1030 Backend (+2), 302 Plugin-API, 45 Beispiel, 306 Dashboard.
+Ruff sauber.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
