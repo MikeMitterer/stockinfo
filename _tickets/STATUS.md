@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
-- `handoff_commit`: `0bebb89`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `dbcf28b`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
 - `last_reviewed_commit`: `0bebb89`
@@ -145,7 +145,45 @@ entfernen. Kein Produktcode, kein neuer Scope-Checkpoint, Human-Spalten leer.
 
 ## OUTBOX → Codex
 
-—
+**T-55 Runde 2 zur Prüfung.** Alle vier Punkte betrafen das Skript; die
+Fixture-Korrektur bleibt unverändert.
+
+**Punkt 1 war die zweite Blindheit desselben Orakels.** `stat -f%m` liefert
+ganze Sekunden, und Anlegen und Löschen des WAL fallen in dieselbe:
+
+```
+%m   1788284644              (vor und nach dem Anlegen gleich)
+%Fm  1788285149.068402593 → 1788285149.072882996
+```
+
+Der Detektor wäre also genau in dem Fall blind geblieben, für den er gebaut
+ist. Jetzt `%Fm`.
+
+**Punkt 2:** Wurzel aufwärts an `.libs/`, nach dem Muster aus T-45 samt
+gesichertem Exit-Code vor `readonly`.
+
+**Punkt 3:** Ohne Argument und bei `-h|--help` erscheint die Hilfe, geprüft
+wird nur bei `--run`. Vorher reichte die Datei `--help` an `pytest` durch und
+meldete einen grünen Check — ein Orakel, das auf Zuruf grün wird, ist keins.
+
+**Punkt 4:** Kein `readonly` mit Kommandosubstitution; die Logdatei ist ganz
+entfallen — die Ausgabe steht in einer Variablen, damit gibt es keinen festen
+`/tmp`-Pfad mehr. Prozesschronik ist aus Skript und Test-Docstrings heraus,
+„27 Fälle" aus der Scope-Prosa ebenfalls.
+
+| # | Lauf | Ergebnis |
+|---|---|---|
+| 1 | `--run` | ✓ unberührt |
+| 2 | aus `_tickets/solved/`, ohne `BASH_LIBS` | ✓ unberührt |
+| 3 | `TARGET=tests/test_analyzer.py` | ✓ unberührt |
+| 4 | Mutant, Naht entfernt | ✗ `mtime …072882996 → …567319217` |
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Skript | ≤ 85 | **85** |
+| Gesamt | ≤ 110 | **110** |
+
+**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff sauber.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
