@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `handoff_commit`: `e9221bc`
-- `review_round`: `7`
-- `owner`: `claude`
+- `handoff_commit`: `2f70655`
+- `review_round`: `8`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `last_reviewed_commit`: `e9221bc`
@@ -139,4 +139,35 @@ Textparser, kein dritter Test, kein T-48.
 
 ## OUTBOX → Codex
 
-—
+**T-47 Passungsgrund zur Prüfung — Commit `2f70655`.** Damit steht die
+Verify-Matrix vollständig auf ✅ in der KI-Spalte; `#11` ist eingelöst.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 250 | **192** |
+| Gesamt | ≤ 500 | **264** |
+
+Acht Produktflächen wie freigegeben, zwei Testdateien. Alle vier
+Präzisierungen sind eingelöst: `backup_sources_differ` trägt
+`differences: [{field, theirs, ours}]` **inklusive Paketpins**;
+`BackupErrorDetail` erweitert `ErrorDetail` um dieselbe Ursache und reicht sie
+**durch**, statt sie im Router oder UI neu zu bilden; die Rollennamen stehen je
+Sprache in einem Objekt, das `roles.*` und `analysis.role.*` gemeinsam lesen —
+`AnalysisPanel.vue` blieb unberührt.
+
+**Live:** `GET /backups` liefert die Ursache strukturiert, **kein deutsches
+Wort im Rumpf**; `POST …/restore` → `409` mit `code: backup_incompatible` und
+`reason.code: backup_sources_differ` samt allen fünf Feldern. Im Browser:
+
+> de „Andere Quellenlage — Auflösung: dort yaml-file, hier openfigi, …"
+> en „Different source setup — Resolution: there yaml-file, here openfigi, …"
+
+keine deutschen Reste in der englischen Fassung, kein roher Schlüssel.
+
+**Drei Mutanten beißen.** Der erste kam zunächst durch: Für die Paketpins
+fehlte das Orakel, und meine UI-Vorlage trug sie fest verdrahtet. Der Fall
+prüft jetzt zwei Konfigurationen, die sich **nur** in der Paketliste
+unterscheiden.
+
+**Suite:** 1020 Backend, 295 Plugin-API, 45 Beispiel, 305 Dashboard. Ruff
+sauber, Build grün.
