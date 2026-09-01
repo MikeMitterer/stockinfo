@@ -1181,20 +1181,20 @@ aus **einer** Ursache gebildet.
 |---|---|---|
 | `backup_schema_too_new` | `user_version` > `SCHEMA_VERSION` | beide Zahlen |
 | `backup_fingerprint_mismatch` | Manifest und Datenbank nennen verschiedene Kennungen | — |
-| `backup_chain_differs` | andere Quellenlage | je abweichende Rolle beide Ketten |
+| `backup_sources_differ` | andere Quellenlage oder Paketpins | je abweichende Rolle **und** gegebenenfalls `packages`, jeweils beide Listen |
 
 ### Die Form
 
 ```python
-class ChainDifference(BaseModel):
-    role: str
+class BackupDifference(BaseModel):
+    field: str
     theirs: list[str]
     ours: list[str]
 
 class BackupReason(BaseModel):
     code: str
     params: dict[str, str] = {}
-    differences: list[ChainDifference] = []
+    differences: list[BackupDifference] = []
 ```
 
 `BackupEntry.reason` wird von `str` zu `BackupReason | None`. **Das ist eine
@@ -1210,7 +1210,7 @@ ein Konsument außerhalb dieses Dashboards existiert noch nicht.
 1. **Die Ablehnung bleibt `ErrorDetail`** mit `code: backup_incompatible` und
    `params: {name}`; das UI bildet den Satz aus dem **Listeneintrag**, den es
    für diesen Namen ohnehin hat. Die Ursache ist dieselbe (`BackupReason`),
-   die Fehlerform bleibt wie in T-44 zugesagt. **Mein Vorschlag.**
+   aber ein REST-Konsument ohne vorherige Liste bekäme den Grund nicht.
 2. Die Ablehnung bekommt ein eigenes Antwortmodell mit eingebettetem
    `BackupReason`. Vollständiger für einen Konsumenten ohne Liste — aber eine
    zweite Fehlerform neben `ErrorDetail`.
@@ -1218,16 +1218,18 @@ ein Konsument außerhalb dieses Dashboards existiert noch nicht.
 ### Die Rollennamen — eine DRY-Frage
 
 `analysis.role.*` führt vier Rollen (ohne `fx`), der Passungsgrund braucht alle
-fünf. Ich schlage einen gemeinsamen Block `roles.*` vor, den beide lesen; das
-kostet eine geänderte Zeile in `AnalysisPanel.vue`. Die Alternative wäre ein
-zweiter Rollenkatalog — dieselben Wörter zweimal.
+fünf. Beide Kataloge erhalten je **ein** gemeinsames Rollenobjekt einschließlich
+`fx`, das sowohl unter `roles.*` als auch für den bestehenden
+`analysis.role.*` referenziert wird. Damit bleibt der Text eine Wissensquelle,
+ohne `AnalysisPanel.vue` oder seinen Test nur für einen Schlüsselpfad
+anzufassen. `packages` ist keine Rolle und erhält einen eigenen Backup-Text.
 
 ### Erwartete Flächen
 
 | | |
 |---|---|
-| Backend | `app/models.py` (zwei Modelle), `app/services/backup.py` (`_judge`/`_difference` liefern Struktur) |
-| Dashboard | `types.ts`, `BackupsPanel.vue`, `i18n/de.ts`, `i18n/en.ts`, `AnalysisPanel.vue` (nur die Rollenzeile) |
+| Backend | `app/models.py`, `app/services/backup.py`, `app/main.py`, `app/routers/backups.py` |
+| Dashboard | `types.ts`, `BackupsPanel.vue`, `i18n/de.ts`, `i18n/en.ts` |
 | Tests | `tests/test_backup.py`, `dashboard/tests/components/BackupsPanel.spec.ts` |
 
 Kein neuer Endpunkt, kein Parsen deutscher Sätze im Browser, kein allgemeiner
@@ -1235,16 +1237,42 @@ Fehlerumbau.
 
 ### Budget — mit der Zählweise
 
-Höchstens **7 Produktdateien**, **2 Testdateien**, **200 hinzugefügte
-Produktzeilen** und **400 Gesamtzeilen** — hinzugefügte Zeilen in `app/`,
+Höchstens **8 Produktdateien**, **2 Testdateien**, **250 hinzugefügte
+Produktzeilen** und **500 Gesamtzeilen** — hinzugefügte Zeilen in `app/`,
 `dashboard/src/` und beiden Testbäumen zusammen.
 
 ### Pflichtorakel
 
-1. Die Liste nennt für eine fremde Quellenlage **Rolle und beide Ketten**
-   strukturiert; der Rumpf enthält **kein** deutsches Wort.
+1. Die Liste nennt für eine fremde Quellenlage **Rolle und beide Ketten** sowie
+   abweichende Paketpins strukturiert; der Rumpf enthält **kein** deutsches
+   Wort.
 2. Dasselbe im UI in DE **und** EN — kein roher Schlüssel, kein deutscher Satz
    in der englischen Fassung.
 3. Die drei Ursachen sind unterscheidbar und tragen ihre Parameter; ein zu
    neues Schema nennt beide Zahlen.
 4. Die `409`-Ablehnung und der Listeneintrag nennen **dieselbe** Ursache.
+
+### Entscheidung Codex zum Mini-Scope · `continue` (2026-09-01)
+
+Der strukturierte Grund wird umgesetzt; die oben korrigierten Flächen und
+Budgets gelten. Die drei Ursachen bleiben stabil:
+
+- `backup_schema_too_new` mit Backup- und App-Schema;
+- `backup_fingerprint_mismatch` für den Widerspruch zwischen Datenbankstempel
+  und Manifest;
+- `backup_sources_differ` für die Abweichung zur laufenden Konfiguration. Die
+  `differences` enthalten die fünf Rollen **und** bei Bedarf `packages` als
+  sprachneutrales Feld mit `theirs`/`ours`. Fehlen Details im Manifest, bleibt
+  die Kennung trotzdem aussagekräftig und die Liste leer.
+
+Für die REST-Ablehnung gilt Variante 2, als **spezialisierte Erweiterung** der
+T-44-Form: `code` und `params` bleiben erhalten, hinzu kommt derselbe
+`BackupReason`, den der Listeneintrag trägt. Alle drei Restore-Statuscodes
+deklarieren diese eine erweiterte Form; `reason` darf dort fehlen, wo keine
+Passungsursache existiert. Ein REST-Konsument muss die Liste nicht zuerst
+laden, und die Ursache wird nicht im Router neu berechnet.
+
+Die Rollentexte werden pro Sprache als ein gemeinsames Objekt referenziert;
+kein Edit an `AnalysisPanel.vue`, kein dritter Test. Erwartet sind damit exakt
+acht Produkt- und zwei Testflächen. Keine neue Route, kein allgemeiner Umbau
+von `ErrorDetail`, kein UI-Parsing von Backendtext und kein T-48.
