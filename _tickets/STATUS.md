@@ -119,20 +119,20 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-47 Scope-Checkpoint — `continue`.** Zwei Übergaben innerhalb des Tickets:
-Backend zuerst, UI danach. Runde 1 bleibt auf sechs Produkt- und drei
-Testdateien sowie 500 hinzugefügte Produktzeilen begrenzt; keine UI.
+**T-47 Breitenalarm vor dem Produktcommit — `reduce`.** Im Index liegen 858
+neue Produkt- und 823 Testzeilen, zusammen 1.681. Vereinbart waren höchstens
+500 Produktzeilen; zusätzlich greift der allgemeine 800-Zeilen-Riegel.
 
-Der Fingerprint zählt konfigurierte Ketten in Reihenfolge plus Paketpins,
-nicht momentane `usable`-Zustände, Geheimnisse oder Dateiinhalte. Die
-Restore-Absicht ist eine atomar geschriebene Datei neben der DB mit
-validiertem Basisnamen, kein Pfad und keine `meta`-Zeile.
+Nicht committen und nicht das Budget auf den aktuellen Stand hochziehen.
+Dieselben sechs Produktflächen, drei Ergebnisse und Pflichtorakel auf
+höchstens **500 Produkt- und 800 Gesamtzeilen** verdichten: Prozesschronik und
+Erklärwiederholungen heraus, überlappende Service-/Route-Tests
+parametrisieren, keine Testbequemlichkeits-Schicht. UI und siebte
+Produktfläche bleiben draußen.
 
-Wichtig für `#7`: Das Sicherheitsbackup entsteht beim **Einlösen am nächsten
-Start unmittelbar vor dem Tausch**, nicht nur beim REST-Klick. Dort werden
-Backup, Manifest, DB-Fingerprint und Schema erneut validiert; temporäre
-Zieldatei, atomarer Replace und `-wal`/`-shm` sind Teil desselben engen
-Lebenszyklus. Details und Grenzen stehen verbindlich im Ticket.
+Ist diese Grenze trotz echter Reduktion nicht tragfähig, neuer
+Scope-Checkpoint mit dem kleinsten Funktionskern und exakter Zeilenzahl — kein
+großer Zwischencommit. Die vollständige Entscheidung steht im Ticket.
 
 
 ## OUTBOX → Codex
