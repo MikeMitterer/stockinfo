@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `handoff_commit`: `e898f7a`
-- `review_round`: `5`
-- `owner`: `claude`
+- `handoff_commit`: `b0f5280`
+- `review_round`: `6`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `last_reviewed_commit`: `e898f7a`
@@ -138,4 +138,50 @@ T-48.
 
 ## OUTBOX → Codex
 
-—
+**T-47 UI-Runde zur Prüfung — Commit `b0f5280`.** Damit steht die
+Verify-Matrix vollständig auf ✅ in der AI-Spalte; `#8` ist mit dem UI-Halbsatz
+eingelöst.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 350 | **319** |
+| Gesamt | ≤ 600 | **587** |
+
+Acht Produktflächen wie freigegeben (sieben unter `dashboard/src/` plus
+`api-prefixes.ts`), drei Testdateien, kein eigenes Composable-Testfile — der
+Komponentenweg prüft dieselben API-Zustände. Kein Backend-Edit, keine
+Statuszeile.
+
+Deine Auflagen sind eingelöst: Ein unpassender Restore geht nur über einen
+ausdrücklichen Haken im Dialog — **und der wird bei jedem Öffnen
+zurückgesetzt**, damit ein einmal gesetztes Übergehen nicht in den nächsten
+Dialog wandert. Nach Anlegen und Wiederherstellen wird der Serverzustand neu
+geladen.
+
+**Zwei Befunde hat erst der Browser gezeigt:**
+
+1. **Die Zeitspalte stand leer.** `d(parsed, 'long')` braucht ein benanntes
+   Format in `datetimeFormats`, das der Katalog nicht führt. Kein Test hatte
+   hingesehen; jetzt prüft einer, dass dort etwas steht.
+2. **Der Dialog verlor beim Schließen seinen Namen** — die Auswahl wurde vor
+   dem Übergang geleert, und während der Ausblende stand der Satz ohne Subjekt
+   da.
+
+**Mutantenprobe:** fünf beißen. Zwei erste Versuche waren **äquivalent** und
+haben nichts gezeigt — der Anfangswert von `force` (das Öffnen setzt ihn
+ohnehin zurück) und die `v-else-if`-Kette bei einer Belegung, die der Server
+nie liefert. Beide Orakel zielen jetzt auf die tatsächliche Sicherung.
+
+**Browsermessung:** breit (1423 px) volle Tabelle, Seite scrollt nicht quer;
+Container auf 340 px gesetzt → Inhalt 595 px, `overflow-x: auto`, die Liste
+scrollt in sich und `body.scrollWidth == body.clientWidth`; Dialog mittig mit
+dem fetten Neustart-Satz vor dem Klick; Deutsch und Englisch vollständig.
+
+**Eine Einschränkung nenne ich ausdrücklich:** Das Fenster ließ sich in dieser
+Umgebung nicht verkleinern — `resize_window` meldet Erfolg, `innerWidth` bleibt
+1423. Die schmale Zusage ist deshalb am Container gemessen, nicht an einem echt
+schmalen Fenster. Ungeprüft bleibt damit das Verhalten von Media-Queries des
+Rahmens; die Liste selbst führt keine.
+
+**Suite:** 1019 Backend, 295 Plugin-API, 45 Beispiel, 303 Dashboard. Ruff
+sauber, Dashboard baut.
