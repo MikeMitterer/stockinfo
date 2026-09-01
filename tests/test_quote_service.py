@@ -132,6 +132,15 @@ class FakeResolver:
     def resolve_isin(self, isin: str):
         return self._resolved
 
+    def resolve_symbol(self, symbol: str):
+        """Zum Symbol schweigt dieses Double.
+
+        Die Fälle unten treten über ein zerlegbares Symbol ein und prüfen, was
+        die **Kursquelle** liefert. Gäbe der Resolver hier eine Beschreibung,
+        stammte die halbe Antwort aus dem Aufbau statt aus der Messung.
+        """
+        return NotFound()
+
 
 def _etf_quote() -> RawQuote:
     return RawQuote(

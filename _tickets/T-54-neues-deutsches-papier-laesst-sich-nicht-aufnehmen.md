@@ -87,12 +87,12 @@ Verwandt mit [T-53](T-53-analyse-detail-traegt-deutschen-text.md).
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Ursache | belegt, **warum** `name`/`type` fehlen — nicht vermutet | ➖ | |
-| **2** | Aufnahme | `SAP.DE` und `BMW.DE` lassen sich über das Feld aufnehmen, mit Name und Gattung | ➖ | |
-| **3** | Kein Rückschritt | `MSFT`, `EUNL.DE`, `BTC-EUR` und ein `isin_only`-Papier gehen weiter | ➖ | |
-| **4** | Fehlerweg | eine unvollständige Antwort ist von „nicht gefunden" und „Quelle weg" unterscheidbar — Kennung und Statuscode | ➖ | |
-| **5** | Mutant | die Pflichtfeldprüfung ausgehängt rötet einen Test | ➖ | |
-| **6** | Regression | `make test` und Ruff grün | ➖ | |
+| **1** | Ursache | belegt, **warum** `name`/`type` fehlen — nicht vermutet | ✅ | |
+| **2** | Aufnahme | `SAP.DE` und `BMW.DE` lassen sich über das Feld aufnehmen, mit Name und Gattung | ✅ | |
+| **3** | Kein Rückschritt | `MSFT`, `EUNL.DE`, `BTC-EUR` und ein `isin_only`-Papier gehen weiter | ✅ | |
+| **4** | Fehlerweg | eine unvollständige Antwort ist von „nicht gefunden" und „Quelle weg" unterscheidbar — Kennung und Statuscode | ✅ [^kennung] | |
+| **5** | Mutant | die Pflichtfeldprüfung ausgehängt rötet einen Test | ✅ | |
+| **6** | Regression | `make test` und Ruff grün | ✅ | |
 
 ---
 
@@ -293,3 +293,88 @@ Einmalige Scope-Erweiterung:
 Danach die ursprünglichen Pflichtorakel einschließlich `SAP.DE` **und**
 `BMW.DE`, Regressionen und Vollsuite ausführen. Eine weitere
 Flächenüberschreitung wird nicht vorab freigegeben.
+
+
+---
+
+## Runde 1 · Umgesetzt (Claude, 2026-09-02)
+
+### Zwei Korrekturen, zwei Schichten
+
+**1 · Der Suffix-Weg beschafft eine Beschreibung** (`quote_service.py`). Die
+Abkürzung bleibt in ihrem Zweck — die Identität kommt weiter aus dem Symbol,
+damit die genannte Börse gewinnt —, aber Name und Gattung holt jetzt
+`resolve_symbol`. Bleibt die Quelle stumm, entsteht dasselbe nackte Instrument
+wie bisher; der Fall endet dann an derselben Prüfung, nur mit einer Quelle, die
+wirklich gefragt wurde.
+
+**2 · Keine ISIN heißt `None`** (`plugin_adapters.py`, Weg A). Der Leerstring
+entsteht gar nicht mehr.
+
+### Warum der Leerstring bis zur Datenbank kam
+
+Er wird **zweimal** weitergereicht, und das erklärt, warum `_isin_of` ihn nicht
+abfängt:
+
+```
+_instrument_from   isin = None or ""        →  ""
+QuoteAdapter       spiegelt die ISIN zurück →  raw.isin = ""
+_isin_of           "" or ""                 →  ""      → INSERT
+```
+
+`_isin_of` gibt `resolved.isin or raw.isin`. Wäre nur **eine** Seite leer, käme
+`None` heraus — beide sind es. Die Korrektur an der Wurzel schneidet beide ab:
+Mit `resolved.isin = None` spiegelt der Adapter `None` zurück.
+
+**Das hat mein erster Testaufbau verdeckt.** Meine Kursquelle lieferte keine
+ISIN, also stand in `_isin_of` ein `None` und der Leerstring erreichte die
+Datenbank nie — der Mutant lief durch. Das Double spiegelt jetzt wie der echte
+Adapter.
+
+### Die Mutanten
+
+| Mutant | rötet |
+|---|---|
+| `or None` im Adapter entfernt | beide neuen Fälle, der vertikale mit `IntegrityError` |
+| Beschaffung im Suffix-Weg entfernt | „zwei Papiere … nacheinander" |
+| Börsen-Übernahme entfernt | „zwei Papiere … nacheinander" |
+
+Der dritte Mutant biss zuerst **nicht**: Meine Fake-Quelle nannte dieselbe
+Börse wie das Symbol. Sie nennt jetzt Frankfurt, während das Symbol Xetra sagt.
+
+### Live gegengeprobt
+
+| Aufruf | Antwort |
+|---|---|
+| `quote?symbol=SAP.DE` | `stock \| SAP SE` |
+| `quote?symbol=BMW.DE` | `stock \| BAYERISCHE MOTOREN WERKE AG` |
+| `quote?symbol=MSFT` | `stock \| Microsoft Corporation` |
+| `quote?symbol=BTC-EUR` | `crypto \| Bitcoin EUR` |
+| `quote/IE00B4L5Y983` | `etf \| ISHARES CORE MSCI WORLD` |
+
+Im Bestand liegen danach **drei** börsengehandelte Papiere mit `isin = NULL`
+nebeneinander, kein `IntegrityError`.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produkt | ≤ 50 | **39** |
+| Tests | ≤ 140 | **140** |
+| Zusammen | ≤ 190 | **179** |
+
+**Suite:** 1030 Backend (+2) · 302 Plugin-API · 45 Beispiel · 306 Dashboard.
+Ruff sauber.
+
+### Zwei Dinge, die ich nicht angefasst habe
+
+- **Das YAML-Beispielplugin indiziert börsengehandelte Papiere unter dem
+  Ticker**, nicht unter dem Abrufalias: `SAP` findet, `SAP.DE` nicht. In einem
+  reinen Dateiprofil ist ein Listing damit über genau das Symbol nicht
+  auffindbar, das die Oberfläche selbst anzeigt. Eigener Befund, eigenes
+  Ticket — hier nur vermerkt.
+- **Die Kennung für „Antwort unvollständig".** Auf diesem Weg entsteht der Fall
+  nicht mehr; für wirklich unvollständige Quellen bleibt die Frage offen.
+
+[^kennung]: Der Fehlerweg ist **beantwortet, nicht umgebaut**: Die Quelle war
+    nie gefragt, also war `502 quote_unavailable` doppelt falsch. Nach der
+    Korrektur entsteht der Fall auf diesem Weg nicht mehr. Eine eigene Kennung
+    für eine wirklich unvollständige Antwort bleibt offen — siehe Nicht-Ziele.

@@ -216,12 +216,21 @@ class _WhitespaceQuoteSource:
 
 
 class _SilentResolver:
-    """Löst nichts auf — der By-Symbol-Weg fragt ihn ohnehin nicht."""
+    """Löst nichts auf — auch nicht über das Symbol.
+
+    Seit der Suffix-Weg eine Beschreibung beschafft, ist **Schweigen der
+    Aufbau**, nicht die Abwesenheit einer Methode: Nur wenn hier nichts
+    zurückkommt, ist die Kursquelle die einzige, die etwas über das Papier
+    sagt — und genau das braucht der Fall unten.
+    """
 
     def handles(self, isin: str) -> bool:
         return True
 
     def resolve_isin(self, isin: str):
+        return NotFound()
+
+    def resolve_symbol(self, symbol: str):
         return NotFound()
 
 
@@ -240,8 +249,8 @@ def test_leerraum_verlaesst_den_kursweg_nicht_als_erfolg(
     verlässt den Kursweg als Erfolg, und in der Oberfläche steht ein leeres
     Feld mit einem Häkchen davor.
 
-    **Der Weg ist mit Absicht der By-Symbol-Eintritt.** Ein zerlegbares Symbol
-    wird nicht aufgelöst — die Kursquelle ist dann die einzige, die etwas über
+    **Der Weg ist mit Absicht der By-Symbol-Eintritt.** Der Resolver schweigt
+    hier zu beiden Fragen — die Kursquelle ist dann die einzige, die etwas über
     das Papier sagt, und ihre Antwort erreicht die Vorabprüfung ungefiltert.
     Über die ISIN käme der Fall gar nicht so weit: Dort weist ihn schon die
     Host-Grenze ab, und ein Test über diesen Weg wäre auch dann grün, wenn die
@@ -593,4 +602,123 @@ def test_openfigi_sagt_lieber_nichts_als_die_haelfte(
         f"unvollstaendig bekannt ist ein NotFound, kein {type(answer).__name__}: "
         "Der Dienst war erreichbar und hat geantwortet, die Antwort trägt nur "
         "nicht, was der Vertrag verlangt"
+    )
+
+
+class _EchoingQuoteSource:
+    """Die Kursgrenze, die die ISIN der Auflösung **zurückspiegelt**.
+
+    So verhält sich der echte `QuoteAdapter`. Ein Double, das hier `None`
+    liefert, verdeckt den Fall: Der Leerstring käme nie bis zur Datenbank, und
+    der Test wäre grün, ohne etwas zu belegen.
+    """
+
+    def fetch_quote(self, instrument: ResolvedInstrument):
+        from app.providers.base import RawQuote
+
+        return RawQuote(
+            symbol=instrument.symbol,
+            isin=instrument.isin,
+            price=98.5,
+            quote_time="2026-09-02T09:00:00+00:00",
+            currency="EUR",
+            type=instrument.type,
+        )
+
+
+class _ListedWithoutIsin:
+    """Eine Quelle, die börsengehandelte Papiere **ohne ISIN** kennt.
+
+    Der Normalfall bei deutschen Listings über die Suche: Ticker und
+    Handelsplatz stehen fest, eine ISIN nennt die Quelle nicht.
+
+    **Sie nennt absichtlich Frankfurt**, während das Symbol Xetra sagt: Sonst
+    wäre die Zusicherung erfüllt, egal welche Seite die Börse liefert.
+    """
+
+    SUPPORTED_KINDS = frozenset({"listed"})
+    SUPPORTED_TYPES = frozenset({"stock"})
+
+    _NAMEN = {"SAP": "SAP SE", "BMW": "Bayerische Motoren Werke AG"}
+
+    def handles(self, request) -> bool:
+        return bool(request.symbol or request.isin)
+
+    def resolve(self, request):
+        ticker = (request.symbol or "").split(".")[0].upper()
+        if ticker not in self._NAMEN:
+            return NotFound()
+        return Resolved(
+            identity=ListedIdentity(
+                ticker=ticker, mic="XFRA", isin=None, kind="listed"
+            ),
+            name=self._NAMEN[ticker],
+            instrument_type="stock",
+        )
+
+
+def test_ein_listing_ohne_isin_bekommt_keinen_leerstring() -> None:
+    """Keine ISIN heißt `None`, nicht `""`.
+
+    Der Symbolweg hat keine angefragte ISIN und reicht als Rückfall den
+    Leerstring durch. Der belegt in der `UNIQUE`-Spalte den einen Platz, den
+    es dafür gibt; `NULL` darf beliebig oft vorkommen.
+    """
+    from app.plugin_adapters import _instrument_from
+
+    answer = Resolved(
+        identity=ListedIdentity(ticker="SAP", mic="XETR", isin=None, kind="listed"),
+        name="SAP SE",
+        instrument_type="stock",
+    )
+
+    instrument = _instrument_from(answer, fallback_isin="")
+
+    assert instrument.isin is None
+
+
+def test_zwei_papiere_ohne_isin_lassen_sich_nacheinander_aufnehmen(
+    tmp_path: Path,
+) -> None:
+    """Zwei symbolbasierte Aufnahmen hintereinander, über die echte Kette.
+
+    Die Identität entsteht aus dem Symbol, damit die genannte Börse gewinnt;
+    beschrieben wird das Papier trotzdem von einer Quelle, sonst fehlen Name
+    und Gattung.
+
+    **Zweimal, weil erst das zweite Papier den Fall zeigt:** Das erste gelingt
+    auch mit einem Leerstring als ISIN.
+    """
+    from app.container import get_cached_quote_service
+
+    service, repository = wire_real_chain(
+        str(tmp_path / "ohne-isin.db"),
+        _EchoingQuoteSource(),
+        CompositeResolver(ResolverAdapter(_ListedWithoutIsin(), "XETR")),
+    )
+    app.dependency_overrides[get_cached_quote_service] = lambda: service
+    client = TestClient(app)
+    try:
+        erste = client.get("/quote", params={"symbol": "SAP.DE"})
+        zweite = client.get("/quote", params={"symbol": "BMW.DE"})
+    finally:
+        app.dependency_overrides.clear()
+
+    assert erste.status_code == 200, erste.text
+    assert zweite.status_code == 200, zweite.text
+    assert erste.json()["name"] == "SAP SE"
+    assert erste.json()["type"] == "stock"
+    assert zweite.json()["name"] == "Bayerische Motoren Werke AG"
+    # Die genannte Börse gewinnt: Das Symbol sagt Xetra, die Quelle Frankfurt.
+    assert erste.json()["identity"]["mic"] == "XETR"
+    assert zweite.json()["identity"]["mic"] == "XETR"
+
+    with repository._connect() as connection:
+        gespeichert = connection.execute(
+            "SELECT symbol, isin FROM instruments ORDER BY symbol"
+        ).fetchall()
+
+    assert [row["symbol"] for row in gespeichert] == ["BMW.DE", "SAP.DE"]
+    assert [row["isin"] for row in gespeichert] == [None, None], (
+        "keine ISIN heißt NULL — ein Leerstring belegte den einen UNIQUE-Platz"
     )

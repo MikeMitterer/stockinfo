@@ -228,7 +228,13 @@ def _instrument_from(answer: Resolved, *, fallback_isin: str) -> ResolvedInstrum
     definition = EXCHANGES.get(identity.mic)
     return ResolvedInstrument(
         symbol=provider_alias(identity.ticker, identity.mic),
-        isin=identity.isin or fallback_isin,
+        # **`None`, nicht der Leerstring.** Der Symbolweg reicht als
+        # `fallback_isin` ein `""` durch — es gibt dort keine angefragte ISIN.
+        # Ohne die Normalisierung landet dieser Platzhalter in
+        # `instruments.isin`, und die Spalte ist `TEXT UNIQUE`: Beliebig viele
+        # `NULL` sind erlaubt, aber nur **ein** Leerstring. Das zweite
+        # börsengehandelte Papier ohne ISIN scheiterte damit am `INSERT`.
+        isin=identity.isin or fallback_isin or None,
         exchange=definition.name if definition else None,
         name=answer.name,
         type=answer.instrument_type,
