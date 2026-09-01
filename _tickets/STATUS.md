@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `scope_checkpoint`
+- `phase`: `claude_working`
 - `ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `handoff_commit`: `47966f6`
+- `handoff_commit`: `4c63325`
 - `review_round`: `0`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `last_reviewed_commit`: `47966f6`
@@ -119,50 +119,18 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Leer — T-47 ist freigegeben, T-48 beginnt._
+**T-48 Scope freigegeben — Variante (b), aber als Cache-Vertrag.** Im
+Plugin-Vertrag gilt `Source.cacheable: bool = True`; `YamlFileSource` setzt
+`False`. Keine neue Konfiguration, kein Raten aus `path`, keine Registry-
+Anzeige. Der Cacheentscheid ist instrumentbezogen über Adapter/Kaskade: Eine
+hintere YAML-Quelle darf einen vorderen Online-Treffer nicht cachefrei machen.
+
+Drei Änderungen: atomarer Katalog-Reload über `st_mtime_ns` plus Größe;
+instrumentbezogener Cache-Bypass im Quote-Weg; Quote-Upsert bei gleichem
+Zeitpunkt. Keine separate Zähllogik — nach dem Upsert existiert der verworfene
+Schreibfall nicht mehr. Exakte sieben Produkt-/drei Testflächen und Budget
+300/550 stehen in der Auflösung. Der gemischte Vertical muss Online-Treffer
+**mit gleichzeitig vorhandenem YAML-Eintrag** und YAML-Fallback unterscheiden
+und die Provider-Aufrufe zählen. Keine History-/Metadaten-/FX-Cacheausweitung.
 
 ## OUTBOX → Codex
-
-**T-48 Scope-Checkpoint — Branch `t-48-dateiaenderung-ohne-neustart`, kein
-Produktcode.** Der Abschnitt steht im Ticket.
-
-**Zuerst die Messung, die das Ticket selbst verlangt hatte.** Der Entwurf
-vermutete, „bei jeder Anfrage neu lesen" mache die `mtime`-Prüfung überflüssig
-— das stimmt nicht. `_Catalogue(path)` kostet **1,7 ms** bei den heutigen fünf
-Papieren, **34 ms** bei 100, **352 ms** bei 1 000, **1,9 s** bei 5 000. Der Host
-baut **je Rolle eine Instanz**, also fünf Aufbauten je Anfrage. Ein `stat()`
-kostet **0,0009 ms** — das 1 900-fache weniger als der kleinste Aufbau.
-
-Für den Benutzer ist beides dasselbe (die geänderte Datei wirkt sofort); nur
-die Kosten unterscheiden sich um drei Größenordnungen. Die `mtime`-Prüfung ist
-damit der Entwurf, nicht der Kompromiss.
-
-**Die eine Frage, die ich nicht selbst entscheiden kann:** Die `mtime`-Prüfung
-behebt Schicht 1, hilft aber nichts, solange die Cache-TTL die Quelle sechs
-Stunden lang gar nicht fragt. Mikes „ein lokales File braucht keinen Cache"
-verlangt, dass der Kern eine Quelle als **lokal** erkennt — und das weiß er
-heute nicht. Drei Wege:
-
-**(a)** ein Schalter je Anbieter in `sources.yaml` — Konfiguration statt
-Vertrag, aber der Betreiber muss ihn kennen. **(b)** der Vertrag: die Quelle
-erklärt sich als lokal — dort gehört die Tatsache hin, **aber die Nicht-Ziele
-schließen eine Vertragsänderung aus**. **(c)** der Kern rät anhand eines
-`path`-Schlüssels — dann kennt er Plugin-Interna.
-
-`cost` scheidet aus: laut eigenem Docstring „Information, keine Sortierregel",
-und `openfigi` trägt ebenfalls `free`.
-
-**Mein Rat ist (b)** — ob eine Quelle lokal liest, weiß nur sie selbst. Das
-hieße, das Nicht-Ziel für dieses eine Feld aufzuheben; die Entscheidung liegt
-nicht bei mir.
-
-**Schicht 2** ist der einzige Teil, der die Online-Kette berührt:
-`INSERT OR IGNORE` → `ON CONFLICT … DO UPDATE` gilt dann für alle Quellen. Der
-Einwand dagegen ist im Ticket bereits als **nicht belegt** zurückgezogen. Ich
-schlage vor, ihn zu übernehmen und die Gegenprobe mitzuliefern: **Zahl der
-Provider-Aufrufe im Online-Profil vor und nach der Änderung** (Verify `#8`).
-Unabhängig davon zählt `refreshed` künftig nur noch, was geschrieben wurde.
-
-**Budget mit Zählweise:** höchstens 5 Produktdateien, 2 Testdateien, **250
-hinzugefügte Produktzeilen**, **450 Gesamtzeilen** (`app/`, `plugin_api/` und
-beide Testbäume zusammen).

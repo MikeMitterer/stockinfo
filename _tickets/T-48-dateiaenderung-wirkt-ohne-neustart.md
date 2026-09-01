@@ -247,4 +247,68 @@ richtig, wenn `ON CONFLICT` nicht kommt.
 
 ## Auflösung
 
-_(offen — Scope-Checkpoint liegt bei Codex)_
+### Codex-Entscheidung · `continue`, Vertrag statt Konfiguration (2026-09-01)
+
+Variante **(b)** gilt, aber der Vertrag nennt die fachlich benötigte
+Eigenschaft und nicht den vermuteten Speicherort: `Source.cacheable: bool =
+True`. Die Vorgabe hält bestehende Plugins und Online-Quellen unverändert;
+`YamlFileSource` setzt sie auf `False`. Kein `local`-Schalter in
+`sources.yaml`, keine Auswertung eines plugin-eigenen `path`-Schlüssels und
+keine Umdeutung von `cost`.
+
+**Wichtig für das Online-Profil:** `cacheable=False` darf nicht auf die ganze
+Kette hochgezogen werden. Adapter und Kaskade beantworten die Cachefrage für
+das konkrete Instrument; maßgeblich ist die erste Quelle, die nach
+Identitätsform, Gattung und `handles()` dafür infrage kommt. Eine dahinter
+liegende Dateiquelle macht einen von der vorderen Online-Quelle bedienten Wert
+nicht cachefrei. Das Pflichtorakel misst deshalb beides in derselben Kette:
+ein Online-Treffer behält exakt seine bisherige Aufrufzahl, ein von der
+Dateiquelle bedientes Fallback-Papier übernimmt die Dateikorrektur ohne
+Neustart.
+
+Die Dateiquelle prüft eine billige Dateisignatur (`st_mtime_ns` plus Größe)
+vor jedem fachlichen Eintritt und baut den neuen Katalog vollständig in einer
+lokalen Variable. Erst ein komplett gültiger Katalog ersetzt den alten. Eine
+kaputte Zwischenfassung erzeugt eine verständliche Störung statt eines halben
+Katalogs; nach der nächsten gültigen Änderung erholt sich dieselbe Instanz.
+Die Reload-Regel steht einmal und gilt für alle fünf Rollen der Quelle.
+
+`quotes` verwendet bei `(instrument_id, quote_time)` einen Upsert. Damit gibt
+es den verworfenen Schreibversuch aus Schicht 2 nicht mehr: Ein erfolgreich
+beschaffter Korrekturwert wurde geschrieben, ein Schreibfehler läuft bereits
+in den vorhandenen Fehlerpfad und erhöht `refreshed` nicht. Eine zusätzliche
+Zählabstraktion entsteht nicht.
+
+Der aktive Zuschnitt betrifft den im Ticket gemessenen **aktuellen Preis**.
+Das Nachladen des Plugin-Katalogs gilt zwar für alle fünf Rollen; die getrennten
+persistenten Cacheverträge für Historie, Metadaten und FX werden hier aber
+nicht umgebaut und deshalb auch nicht als sofort sichtbare UI-Zusage
+ausgegeben. Das verhindert, dass aus einem Kursbefund unbemerkt vier
+Cache-Projekte werden.
+
+#### Verbindlicher Scope-Vertrag
+
+- **Drei Änderungen:** atomarer Katalog-Reload bei geänderter Dateisignatur;
+  rückwärtskompatibles `cacheable` mit instrumentbezogener Auswertung im
+  Quote-Weg; Quote-Upsert bei gleichem Zeitpunkt.
+- **Erwartete Produktflächen:**
+  `plugin_api/src/stockinfo_plugin/sources.py`,
+  `plugin_api/examples/yaml_file.py`, `app/plugin_adapters.py`,
+  `app/providers/composite_market.py`, `app/services/quote_service.py`,
+  `app/services/quote_cache.py`, `app/repository.py` — höchstens sieben.
+- **Testflächen:** `plugin_api/tests/test_yaml_file.py`,
+  `tests/test_yaml_profile.py`, `tests/test_quote_cache.py` — höchstens drei.
+- **Budget:** höchstens 300 hinzugefügte Produkt- und 550 Gesamtzeilen.
+- **Pflichtorakel:** `#1`–`#5` am echten Datei-/HTTP-Weg; `#6` belegt den
+  ersetzten Wert und die unverändert ehrliche Refresh-Zahl; `#7`/`#8` zählen
+  im gemischten Profil die Online-Aufrufe, einschließlich eines
+  Online-Treffers bei gleichzeitig vorhandenem YAML-Eintrag. Ein Mutant ohne
+  Upsert, ohne Reload und mit kettenweitem Cache-Bypass muss je einen dieser
+  Fälle röten.
+- **Nicht-Ziele:** keine Registry-/Konfigurationsänderung, kein Watcher, keine
+  Datenbankmigration, keine neue Route und kein Umbau der getrennten
+  History-/Metadaten-/FX-Caches.
+
+Der Scope-Handoff bezieht sich auf den Entwurfscommit `4c63325`; der zuvor in
+`STATUS.md` stehengebliebene T-47-Produktcommit war kein gültiger
+Scope-Handoff und wird mit dieser Entscheidung berichtigt.
