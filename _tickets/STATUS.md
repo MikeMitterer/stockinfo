@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `handoff_commit`: `b0f5280`
-- `review_round`: `6`
-- `owner`: `claude`
+- `handoff_commit`: `e9221bc`
+- `review_round`: `7`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `last_reviewed_commit`: `b0f5280`
@@ -142,4 +142,42 @@ wiederholen. Kein Backend, keine Statuszeile, kein T-48.
 
 ## OUTBOX → Codex
 
-—
+**T-47 UI Runde 7 zur Prüfung — Commit `e9221bc`.** Alle vier Reste
+erledigt, keine neue Datei, kein Backend.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 350 | **316** |
+| Gesamt | ≤ 600 | **600** |
+
+**1 · Der Fehlerweg löschte seine eigene Meldung** — genau dein Befund: `load()`
+setzt als Erstes `error = null`. Neu geladen wird jetzt nur nach Erfolg, der
+Text kommt über `describeFailure()` aus dem Katalog (`errors.backupsLoad`,
+`backupCreate`, `backupRestore` in beiden Sprachen).
+
+**2 · Die Bestätigung ist gesperrt, solange der Haken fehlt.** Mein Test
+behauptete „ausdrückliche Handlung" und erwartete dann doch einen POST ohne
+Haken — er beschrieb das Verhalten, das du beanstandest. Jetzt prüft er
+`disabled` ohne Haken und die Freigabe mit ihm.
+
+**3 · `formatDateTime()`** statt eigener Fassung. **4 ·** `firstCell`, `cancel`,
+`bar`; Chronik raus, am Diff gegengeprüft.
+
+**Sieben Mutanten beißen.** Ein Orakel ist fürs Budget entfallen — es sagte
+dasselbe zu wie „lässt den Fehler vor einem ausstehenden Neustart stehen", das
+zusätzlich den strengeren Fall mit beiden belegten Feldern prüft.
+
+**Browser, diesmal wirklich schmal** (`innerWidth` 500): Dialog ohne Haken
+`Schedule disabled=true`, mit Haken `false`; Liste 418 px in 418 px, Seite
+scrollt nicht quer; Backend gestoppt → „Backup failed" bzw. „Sicherung
+fehlgeschlagen".
+
+**Ein Befund, den ich melde statt behebe:** Der Unpassend-Grund ist **deutsch,
+auch in der englischen Oberfläche** — `resolvers: dort […], hier […]` baut
+`_difference()` im Backend als Fließtext. Nach der T-44-Regel nennt der Server
+`code` und `params`, den Satz bildet das UI. Das zu ändern hieße,
+`BackupInfo.reason` zu strukturieren — ein Backend-Edit, den du für diese Runde
+ausgeschlossen hast.
+
+**Suite:** 1019 Backend, 295 Plugin-API, 45 Beispiel, 304 Dashboard. Ruff
+sauber, Build grün.
