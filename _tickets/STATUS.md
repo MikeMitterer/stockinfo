@@ -5,18 +5,18 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `portfolio_review`
-- `ticket`: `T-50-ui-abnahme-der-kette.md`
+- `phase`: `scope_checkpoint`
+- `ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
 - `handoff_commit`: `62127bf`
-- `review_round`: `5`
-- `owner`: `mike`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
 - `last_reviewed_commit`: `62127bf`
 - `last_reviewed_round`: `5`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md` → `T-50-ui-abnahme-der-kette.md`
-- `priority_ticket`: `T-50-ui-abnahme-der-kette.md`
+- `priority_ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -140,7 +140,46 @@ nichts nach `solved/` verschieben. Human-Spalten bleiben leer.
 
 ## OUTBOX → Codex
 
-—
+**Scope-Checkpoint: die Reihenfolge von T-51 bis T-55.** Mike hat sie
+beauftragt — *„Erledige zuerst T-51 – T-55. Check die Reihenfolge vorher noch
+mit Codex ab."* Ausdrücklich **ohne** Verschiebung nach `solved/`; die
+Abnahme bleibt davon unberührt. Kein Edit, bis du zustimmst oder umstellst.
+
+**Vorschlag: T-55 → T-54 → T-52 → T-53 → T-51.**
+
+**T-55 zuerst, obwohl es das kleinste ist.** Solange `/ready` an der
+Dependency-Überschreibung vorbei `get_cached_quote_service()` ruft, fasst jeder
+`make test`-Lauf Mikes Betriebsdatenbank an. Die vier folgenden Tickets
+erzeugen zusammen ein Vielfaches der bisherigen Läufe. Es zuerst zu erledigen
+heißt, die restliche Arbeit an einer Stelle abzusichern, statt viermal
+hinterher zu prüfen, ob etwas passiert ist. Es hat außerdem keine offene
+Entscheidung — du hast die Ursache bereits benannt.
+
+**T-54 als zweites**, weil es als einziges echten Schaden anrichtet. Zwei
+Vorbehalte, die ich nicht überspiele: Die Ursache für die fehlenden
+Pflichtfelder ist **nicht ermittelt** — ich habe den Browserlauf dort bewusst
+abgebrochen. Und die zweite Frage des Tickets (`502 quote_unavailable` für
+eine Antwort, die angekommen ist) ist eine Vertragsfrage. Ich rechne mit einem
+eigenen Scope-Checkpoint, sobald die Ursache steht, und würde die Reparatur
+**nicht** an eine neue Kennung koppeln, ohne dass du sie gesehen hast.
+
+**T-52 als drittes:** mechanisch, keine Entscheidung, und es räumt den
+Umzugsweg für T-37 frei.
+
+**T-53 als viertes.** Es teilt seine Wurzel mit dem Nebenbefund aus T-54 —
+`params.detail` trägt dort ebenfalls deutschen Fließtext. **Frage an dich:**
+zusammenlegen oder getrennt lassen? Ich neige zu getrennt, weil T-53 die
+Analyse-Nutzlast betrifft und der Nebenbefund den Fehlerweg; zusammengelegt
+würde ein kleines Ticket ein großes aufhalten.
+
+**T-51 zuletzt**, weil es als einziges eine **Produktentscheidung von Mike**
+braucht (Leseweg freigeben / nur Text ändern / eigene Handlung im Gate). Es
+sollte die anderen vier nicht blockieren. **Vorschlag:** Ich lege ihm die drei
+Varianten schon jetzt vor, damit die Antwort da ist, wenn das Ticket dran ist —
+statt am Ende auf sie zu warten.
+
+Ein Branch je Ticket nach dem üblichen Schema, beginnend mit
+`t-55-api-test-oeffnet-die-betriebsdatenbank`.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
