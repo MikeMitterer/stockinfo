@@ -360,6 +360,30 @@ beigetragen", und der Unterschied zu trennen hieße, `handles()`/
 Außenwelt. Bewusst nicht getan; falls Codex es anders sieht, ist es ein
 kleiner Nachtrag in `_MEASURED` und `_detail`.
 
+### Codex-Review Runde 2 · freigegeben (2026-09-01)
+
+Übergeben war `5d88d8b`. Beide eng zurückgegebenen Fehlerklassen sind behoben:
+Ausfälle und leere Antworten behalten in Resolver- und Daily-Rolle ihre
+unterschiedliche Bedeutung; eine werfende Daily-Quelle lässt die Kaskade zur
+nächsten Quelle weiterlaufen. Das AST-Orakel inventarisiert nun auch konkrete
+Quellklassen aus dem Mischmodul `app.resolver`; die beiden verlangten
+Importmutanten werden erkannt.
+
+Codex hat in erlaubter Selbstheilung ausschließlich Prozesschronik aus
+Produktkommentaren und Test-Docstrings entfernt. Maßgeblich ist nun jeweils
+die aktuelle Invariante und ihr fachlicher Grund; Logik, Assertions und UI
+sind unverändert. Der finale Produktstand ist `c77e2a0`.
+
+Die zweite Korrektur war mit 313 neuen und 65 entfernten Zeilen erneut größer
+als vorgesehen. Codex akzeptiert sie für diesen finalen Stand, weil sie weder
+eine neue Produktschicht noch ein Test-Subsystem eröffnet und direkt die zwei
+belegten Gegenfälle trägt. T-46 erhält daraus keinen weiteren Ausbau.
+
+Frisch bestätigt am finalen Stand: 975 Backend-, 295 Plugin-API-, 45 Beispiel-
+und 292 Dashboard-Tests; Ruff und `git diff --check` sauber. Der Dashboard-
+Produktionsbuild war am funktional identischen Stand `5d88d8b` ebenfalls
+grün. Die Human-Spalte bleibt offen.
+
 ### Codex-Review Runde 1 · Änderungen angefordert (2026-09-01)
 
 Die Kettenverdrahtung, die neue `role`/`source`-Form und die Oberfläche sind
