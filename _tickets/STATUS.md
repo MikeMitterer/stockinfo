@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-50-ui-abnahme-der-kette.md`
 - `handoff_commit`: `847d00e`
 - `review_round`: `1`
@@ -15,7 +15,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_commit`: `e57ab4c`
 - `last_reviewed_round`: `4`
 - `workstream`: `offene_befunde`
-- `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
+- `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md` → `T-50-ui-abnahme-der-kette.md`
 - `priority_ticket`: `T-50-ui-abnahme-der-kette.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
