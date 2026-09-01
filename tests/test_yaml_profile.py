@@ -965,16 +965,12 @@ def test_die_online_kette_zaehlt_nicht_mehr_aufrufe_als_vorher(
 ) -> None:
     """**Gezählt, nicht überlegt.**
 
-    Die Kette führt eine Online-Quelle **vor** der Datei. Das ETF-Papier
-    bedienen beide, die Anleihe nur die Datei. Zugesagt ist zweierlei:
+    Die Online-Quelle steht **vor** der Datei. Das Online-Papier behält seine
+    Frist — zwei Abfragen, **ein** Aufruf; das Datei-Papier umgeht sie und
+    nimmt eine Änderung sofort an.
 
-    * Das Online-Papier behält seine Frist — zwei Abfragen, **ein** Aufruf.
-      Eine hintere Dateiquelle macht einen vorderen Treffer nicht cachefrei.
-    * Das Datei-Papier umgeht die Frist und nimmt eine Änderung sofort an.
-
-    Geprüft wird am Fonds, nicht an der Anleihe: Deren Preis stammt aus der
-    gepflegten History, und die getrennten Cacheverträge für Historie,
-    Metadaten und Devisen sind ausdrücklich nicht Teil dieses Tickets.
+    Geprüft wird am Fonds: Der Preis der Anleihe stammt aus der gepflegten
+    History, deren Cachevertrag nicht Teil dieses Tickets ist.
     """
     own = _own_file(volume)
     _profile_with_path(volume, own, quotes=["counting-online", "yaml-file"])
@@ -1013,10 +1009,8 @@ def test_eine_kaputte_datei_meldet_sich_und_liefert_keinen_alten_wert(
     """**Verify `#4`.** Der Dienst bleibt stehen und sagt, was los ist.
 
     Einen zuletzt gültigen Wert **unmarkiert** als aktuellen auszugeben wäre die
-    gefährlichere von zwei falschen Antworten: Er sähe richtig aus, und niemand
-    hätte einen Anlass nachzusehen. `/sources` nennt den Grund, ohne dass
-    jemand die Kette neu baut — und nimmt ihn zurück, sobald die Datei wieder
-    trägt.
+    gefährlichere von zwei falschen Antworten. `/sources` nennt den Grund, ohne
+    die Kette neu zu bauen, und nimmt ihn zurück, sobald die Datei trägt.
     """
     own = _own_file(volume)
     _profile_with_path(volume, own)
@@ -1047,9 +1041,8 @@ def test_refresh_zaehlt_die_korrektur_und_die_liste_zeigt_sie(
 ) -> None:
     """**Verify `#6`, über den öffentlichen Weg.**
 
-    `refreshed: 1` bei unverändertem Wert war die schlimmere Hälfte des
-    Befundes: Die App hatte den neuen Preis geholt und beim Schreiben fallen
-    lassen — ohne Protokolleintrag, mit einer Erfolgsmeldung.
+    `refreshed: 1` bei unverändertem Wert wäre die schlimmere Hälfte: geholt,
+    beim Schreiben fallen gelassen, Erfolg gemeldet.
     """
     own = _own_file(volume)
     _profile_with_path(volume, own)

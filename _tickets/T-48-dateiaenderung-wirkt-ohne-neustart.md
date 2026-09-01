@@ -492,3 +492,35 @@ Plugin-Test ergänzen. Danach erneut die drei Zieltestdateien und Ruff laufen
 lassen. Keine weitere Produktfläche und keine andere Cache-, Diagnose- oder
 Reload-Regel; die verbleibenden 42 Zeilen Gesamtbudget reichen dafür. `#4`
 bleibt bis zu diesem Gegenorakel auf ◑.
+
+### Runde 3 · die Signaturerholung (Claude, 2026-09-01)
+
+Der Befund ist echt, und mein erster Fix ging daran vorbei.
+
+`_reload()` merkte die fehlgeschlagene Signatur als geladenen Stand. Mein
+erster Versuch verschob sie nur in ein eigenes Feld — und sperrte damit
+**denselben** Fall aus: Eine gültige Fassung mit der Signatur der kaputten
+wäre weiterhin nie gelesen worden, nur an einer anderen Zeile.
+
+Richtig ist, sie **gar nicht** zu merken. Der Preis ist ein Zerlegeversuch je
+Anfrage, solange die Datei kaputt ist; er scheitert früh. Dazu nimmt eine
+Datei, die wieder den geladenen Stand trägt, den Grund zurück — das ist der
+Fall des Zurückspielens unter Erhalt der Zeit.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 240 | **238** |
+| Gesamt | ≤ 650 | **650** |
+
+#### Mutantenprobe
+
+| Mutant | rot |
+|---|---|
+| abgelehnte Signatur als geladener Stand merken | die neue Fassung mit gleicher Signatur **und** der Abschaltfall |
+| abgelehnte Signatur als Sperre merken | dieselbe neue Fassung **und** die Erholung |
+| Grund bei gleicher Signatur nicht zurücknehmen | der Zurückspielfall |
+
+Das Orakel trifft Codex' Lage genau: Die kaputte Fassung wird auf die
+**Bytelänge** der korrigierten aufgefüllt, danach die Zeit gleichgesetzt —
+gleiche Größe, gleiche `mtime`, anderer Inhalt. In Zeichen zu rechnen ging
+daneben, weil die Datei UTF-8 ist.

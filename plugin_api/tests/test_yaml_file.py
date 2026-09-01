@@ -10,6 +10,7 @@ geerbte Suite. Sechs Zeilen je Rolle, und der Vertrag ist gemessen statt
 zugesagt.
 """
 
+import os
 from datetime import date
 from pathlib import Path
 
@@ -521,11 +522,8 @@ def test_ein_geaenderter_preis_wirkt_ohne_neue_instanz(tmp_path: Path) -> None:
 
 
 def test_eine_unveraenderte_datei_wird_nicht_neu_gelesen(tmp_path: Path) -> None:
-    """Die Signatur ist der Grund, warum das Nachladen billig bleibt.
-
-    Ohne sie entstünde bei **jeder** Anfrage ein neuer Katalog — je Rolle, und
-    linear zur Dateigröße.
-    """
+    """Die Signatur hält das Nachladen billig: Ohne sie entstünde bei **jeder**
+    Anfrage ein neuer Katalog, je Rolle und linear zur Dateigröße."""
     source = YamlFileSource({"path": str(_copy(tmp_path))})
     _price(source)
     catalogue = source._loaded
@@ -542,10 +540,8 @@ def test_eine_kaputte_datei_schaltet_die_quelle_ab_statt_alt_zu_antworten(
     """**Kein halber Katalog — und kein alter Wert als aktueller.**
 
     Wer eine große Datei bearbeitet, speichert zwischendurch einen ungültigen
-    Stand. Auf ihn hereinzufallen hieße, mitten im Betrieb einen halben
-    Bestand zu führen; den letzten gültigen weiter als aktuellen auszugeben
-    wäre die gefährlichere Antwort — er sähe richtig aus, und niemand hätte
-    einen Anlass nachzusehen.
+    Stand. Den letzten gültigen weiter als aktuellen auszugeben wäre die
+    gefährlichere Antwort: Er sähe richtig aus.
     """
     path = _copy(tmp_path)
     source = YamlFileSource({"path": str(path)})
@@ -587,3 +583,55 @@ def test_die_dateiquelle_erklaert_sich_als_nicht_zwischenspeicherbar() -> None:
 
     assert YamlFileSource.cacheable is False
     assert Source.cacheable is True
+
+
+def test_eine_neue_fassung_mit_der_signatur_der_kaputten_wird_gelesen(
+    tmp_path: Path,
+) -> None:
+    """Gleiche Größe, gleiche Zeit — und trotzdem ein anderer Inhalt.
+
+    Das trifft, wer eine Sicherungskopie unter Erhalt der Zeit zurückspielt.
+    Eine abgelehnte Signatur zu merken hieße: nie wieder gelesen.
+    """
+    path = _copy(tmp_path)
+    source = YamlFileSource({"path": str(path)})
+    assert _price(source) == 128.21
+    corrected = path.read_text(encoding="utf-8").replace("value: 128.21", "value: 131.77")
+
+    # Auf die **Bytelänge** auffüllen: Leerraum heilt kein ungültiges YAML,
+    # macht aber die Größe gleich. In Zeichen zu rechnen ginge daneben (UTF-8).
+    broken = "instruments:\n  - kaputt: [\n"
+    padding = len(corrected.encode("utf-8")) - len(broken.encode("utf-8"))
+    path.write_text(broken + " " * padding, encoding="utf-8")
+    assert source.configuration_problem()
+    rejected = path.stat()
+
+    path.write_text(corrected, encoding="utf-8")
+    os.utime(path, ns=(rejected.st_atime_ns, rejected.st_mtime_ns))
+    assert (path.stat().st_mtime_ns, path.stat().st_size) == (
+        rejected.st_mtime_ns,
+        rejected.st_size,
+    ), "der Aufbau erzeugt keine gleiche Signatur"
+
+    assert _price(source) == 131.77, "die neue Fassung wird nie gelesen"
+    assert source.configuration_problem() == "", "der Grund blieb stehen"
+
+
+def test_eine_zurueckgespielte_datei_mit_der_alten_signatur_wird_wieder_gueltig(
+    tmp_path: Path,
+) -> None:
+    """Trägt die Datei wieder den geladenen Stand, endet die Störung — sonst
+    bliebe der Grund stehen, obwohl beide dasselbe führen."""
+    path = _copy(tmp_path)
+    source = YamlFileSource({"path": str(path)})
+    _price(source)
+    good, before = path.read_text(encoding="utf-8"), path.stat()
+
+    path.write_text("instruments:\n  - kaputt: [\n", encoding="utf-8")
+    assert source.configuration_problem()
+
+    path.write_text(good, encoding="utf-8")
+    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+
+    assert source.configuration_problem() == ""
+    assert _price(source) == 128.21

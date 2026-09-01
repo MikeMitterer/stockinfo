@@ -347,11 +347,9 @@ def describe_chain(role: str, config, settings=None) -> list[ChainEntry]:
         # Die laufende Kette. Neu zu bauen hieße, einen **anderen** Zustand zu
         # zeigen als den, der gerade arbeitet.
         #
-        # **Der Grund wird jedes Mal neu erfragt, das Objekt aber nicht neu
-        # gebaut.** Eine Quelle kann zur Laufzeit ausfallen — eine Datei wird
-        # unlesbar, ein Kontingent läuft ab. Ein Schnappschuss vom Bau meldete
-        # dann „einsatzbereit", während der Betreiber gerade vor leeren Listen
-        # sitzt und den Fehler bei der App sucht.
+        # **Der Grund wird neu erfragt, das Objekt nicht neu gebaut.** Eine
+        # Quelle kann zur Laufzeit ausfallen; ein Schnappschuss vom Bau meldete
+        # dann „einsatzbereit", während der Betreiber vor leeren Listen sitzt.
         return [_with_live_reason(entry, source) for entry, source in cached[3]]
 
     # **Ein reiner Lesezugriff baut nichts** — und sagt das auch.

@@ -113,10 +113,8 @@ def _cacheable_chain(providers: tuple, instrument: ResolvedInstrument) -> bool:
             continue
         disturbed = getattr(provider, "disturbed", None)
         # **Eine gestörte Quelle zählt, als käme sie infrage.** Ob sie das
-        # Papier führt, weiß sie gerade selbst nicht — ihre Auskunft hängt an
-        # dem, was nicht lesbar ist. Sie zu überspringen hieße, den
-        # gespeicherten Wert als aktuellen auszugeben, obwohl niemand ihn
-        # bestätigt hat.
+        # Papier führt, weiß sie selbst nicht; sie zu überspringen hieße, den
+        # gespeicherten Wert als aktuellen auszugeben.
         if not serves(instrument) and not (disturbed is not None and disturbed()):
             continue
         answer = getattr(provider, "cacheable_for", None)

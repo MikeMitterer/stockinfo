@@ -739,9 +739,8 @@ class YamlFileSource(
         beim achten Eintrittspunkt.
 
         **Während einer Störung liefert sie nichts.** Der letzte gültige
-        Katalog bleibt für den atomaren Tausch erhalten, aber ihn als aktuellen
-        Wert auszugeben hieße, einen Stand zu behaupten, den die Datei gerade
-        nicht trägt — und der Betreiber hätte keinen Anlass nachzusehen.
+        Katalog bleibt für den atomaren Tausch erhalten; ihn als aktuellen Wert
+        auszugeben hieße, einen Stand zu behaupten, den die Datei nicht trägt.
         """
         self._reload()
         return None if self._problem else self._loaded
@@ -764,6 +763,9 @@ class YamlFileSource(
             return
         signature = (info.st_mtime_ns, info.st_size)
         if signature == self._signature and self._loaded is not None:
+            # Die Datei trägt wieder den Stand, der hier liegt — ein
+            # stehengebliebener Grund wäre eine Störung, die es nicht mehr gibt.
+            self._problem = ""
             return
         try:
             fresh = _Catalogue(self._path)
@@ -775,8 +777,11 @@ class YamlFileSource(
             # Anfrage denselben aussichtslosen Aufbau erneut. Die Erholung
             # blockiert das nicht: Die nächste gültige Fassung trägt eine
             # andere Signatur.
+            # **Eine abgelehnte Signatur wird nicht gemerkt** — weder als
+            # geladener Stand noch als Sperre: Beides schlösse eine gültige
+            # Fassung aus, die zufällig dieselbe Größe und Zeit trägt. Der
+            # Preis ist ein Zerlegeversuch je Anfrage; er scheitert früh.
             self._problem = str(error)
-            self._signature = signature
             logger.warning("yaml-file: %s", self._problem)
             return
         self._loaded = fresh
