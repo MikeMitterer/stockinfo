@@ -57,3 +57,66 @@ Vorgabe machen. Es ist ein Umzug, keine Konfigurationsänderung.
 | **2** | Verweise | kein Test, Skript oder Dokument zeigt noch auf den alten Ort | ➖ | |
 | **3** | Beide Profile startbar | eine Instanz läuft mit jedem der beiden, direkt aus der Vorlage | ➖ | |
 | **4** | Umzugsprobe | T-37 lässt sich nach `solved/` verschieben, ohne dass etwas bricht | ➖ | |
+
+---
+
+## Scope-Vertrag (Claude, 2026-09-01, vor dem ersten Edit)
+
+### Das Inventar zuerst
+
+Gesucht wurde im ganzen Repo, nicht geraten. **Kein Code, kein Test, kein
+Skript** liest die Datei — nur drei Ticket-Dokumente nennen sie:
+
+| Fundort | Art |
+|---|---|
+| `T-37-yaml-fallback-ein-datei.md:297` | lebender Verweis („liegt in …") |
+| `T-39-english-plugin-developer-guide.md:101,147` | Protokoll dessen, was T-39 an ihr geändert hat |
+
+Die T-39-Stellen benennen **dieselbe Datei**, die nur umzieht; sie beim neuen
+Pfad zu nennen bleibt historisch richtig, und ein „damals lag sie in …" ließe
+den alten Pfad greppbar stehen.
+
+### Die Namen paaren sich mit den Fachdaten
+
+| Fachdaten (T-49) | Quellenprofil (neu) |
+|---|---|
+| `examples/assets-fallback.yaml` | `examples/sources-fallback.yaml` |
+| `examples/assets-standalone.yaml` | `examples/sources-standalone.yaml` |
+
+**Beide Profile zeigen auf `/data/assets.yaml`**, nicht auf ihre Vorlage: Das
+ist die Arbeitskopie, die T-49 festgelegt hat — der Betreiber wählt *eine*
+Vorlage und legt sie unter diesem Namen ab. Ein Profil, das auf
+`assets-standalone.yaml` zeigte, verlangte vom Benutzer, die Vorlage im
+Betriebsvolume unter Vorlagennamen zu führen.
+
+### Budget
+
+| | Grenze |
+|---|---:|
+| `examples/` (beide Profile) | ≤ 70 |
+| Doku-Anpassungen | ≤ 10 |
+
+Gezählt als hinzugefügte Zeilen aus `git diff --numstat` gegen den
+Abzweigpunkt, ohne Ticket- und `STATUS.md`-Dateien.
+
+### Pflichtorakel
+
+1. **Der Umzug ist erst fertig, wenn der alte Name nirgends mehr vorkommt** —
+   geprüft per Suche über das ganze Repo, nicht über eine Liste erwarteter
+   Orte.
+2. **Beide Profile starten wirklich eine Instanz.** Eine Vorlage, die nur
+   gültiges YAML ist, belegt nichts: Ein Tippfehler im Rollennamen fällt erst
+   auf, wenn die App die Kette baut. Geprüft wird über `GET /sources` gegen
+   eine isolierte Kopie.
+3. **Die Umzugsprobe wird gespielt, nicht behauptet:** Nach dem Umzug darf
+   nichts außerhalb von `_tickets/` mehr auf eine Datei *im* Ticketverzeichnis
+   zeigen.
+
+### Nicht-Ziele
+
+- Ketten ändern, Rollen ergänzen, ein Profil zur Vorgabe machen.
+- `scripts/sources-profile.sh` — liegt unverschmolzen auf
+  `feat/sources-profile-script` und zeigt auf `_tickets/T-37-single-file-sample.yaml`,
+  eine Datei, die T-49 bereits aufgelöst hat. Das ist **T-49 Verify #8** und
+  bleibt dort.
+- Tickets nach `solved/` verschieben.
