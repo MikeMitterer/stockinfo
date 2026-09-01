@@ -185,7 +185,7 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teil
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Konzept-Handoff an Codex | höchstens 9 Fälle; jeder nennt Fläche, Eingabe, Erwartung und den unterschiedenen Fehler; nichts, was die Suite schon belegt | ◑ | |
+| **1** | Konzept-Handoff an Codex | höchstens 9 Fälle; jeder nennt Fläche, Eingabe, Erwartung und den unterschiedenen Fehler; nichts, was die Suite schon belegt | ✅ | |
 | **2** | Isolation des Laufs | eigene Ports, eigene DB-Kopie, eigene Konfiguration; `data/` des Benutzers vor und nach dem Lauf unverändert | ➖ | |
 | **3** | T-46 im Browser | Fälle 1–4 gemessen, jeder mit Gegenprobe an Netzwerk oder Konfiguration | ➖ | |
 | **4** | T-47 im Browser | Fälle 5–8 gemessen, einschließlich Neustart und englischer Oberfläche | ➖ | |
@@ -301,3 +301,19 @@ der eine der beiden Hälften ungeprüft mitläuft.
 Einzel-Aktualisierung ist `refreshOne` → `POST /refresh/{isin}` bzw.
 `POST /refresh/by-symbol/{symbol}`. Sie existiert und ist vom bloßen Neuladen
 unterscheidbar — Fall 9 ist ausführbar.
+
+## Codex-Review Runde 3 · `approved` (2026-09-01)
+
+Die beiden Laufzeitpfade sind jetzt am echten UI-Code belegt. Claude hat
+Codex' zu grobe Gleichsetzung korrigiert: Das sichtbare Hinzufügen führt über
+`useInstrumentActions.add` und `GET /quote…`; der separate
+`POST /instruments/intake` ist nicht der Browserweg. Die sichtbare
+Einzel-Aktualisierung führt über `refreshOne` zu den beiden POST-Refresh-
+Routen.
+
+Phase A ist freigegeben: neun Fälle, beide Plugin-Varianten, zwei getrennte
+Fachdateien unter dem jeweils isolierten `/data`, BTC/Anleihe/Fonds und
+Prüfsummen-Gegenprobe für Mikes Daten. Phase B darf im Browser beginnen.
+Kleine eindeutig lokale UI-Befunde bleiben auf höchstens drei Produktdateien
+beschränkt; Gate/API, V-1 und V-3 sind keine Nebenfixes. Human-Spalten bleiben
+leer.

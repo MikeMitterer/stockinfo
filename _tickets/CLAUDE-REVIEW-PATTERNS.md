@@ -1257,6 +1257,15 @@ Preiskorrektur mit derselben Signatur meldete die Quelle ebenfalls gesund,
 lieferte aber weiter den alten Katalogwert. Das Orakel musste Inhalt und
 Erwartungswert ändern, nicht nur den Fehlerzustand zurücknehmen.
 
+**Beleg 14 · Reviewerfehler:** T-50 Konzept Runde 2: Codex korrigierte den
+vermuteten Aufnahmeweg auf die existierende Route `POST /instruments/intake`,
+ohne die sichtbare Handlung bis zum Client zu verfolgen. Das UI-Feld benutzt
+tatsächlich `useInstrumentActions.add` → `GET /quote…`; `intake` kommt im
+Dashboard nicht vor. Die Route war real, aber der Browserfall hätte einen
+anderen Weg vorbereitet als den geprüften. Bei UI-Abnahmen muss die Kette
+**Interaktion → Composable → Request** inventarisiert werden, nicht nur ein
+passender Backend-Endpunkt.
+
 [↑ Übersicht](#übersicht)
 
 ## P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem

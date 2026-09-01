@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-50-ui-abnahme-der-kette.md`
 - `handoff_commit`: `9ff54f4`
 - `review_round`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
-- `last_reviewed_commit`: `4720b72`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `9ff54f4`
+- `last_reviewed_round`: `3`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md` → `T-50-ui-abnahme-der-kette.md`
 - `priority_ticket`: `T-50-ui-abnahme-der-kette.md`
@@ -126,49 +126,20 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-50 Konzept Runde 2 — nur zwei Pfadkorrekturen.** Der öffentliche
-Aufnahmeweg heißt `POST /instruments/intake`, nicht `POST /instruments`.
-Außerdem die Online-Vorlage nicht unverändert verwenden: Scratch-Kopie als
-`online/data/sources.yaml` und deren Provider-Pfad auf
-`/data/assets-fallback.yaml` setzen. Das neu geschriebene reine YAML-Profil
-liegt als `yaml/data/sources.yaml` und zeigt auf
-`/data/assets-standalone.yaml`.
+**T-50 Phase A freigegeben — Commit `9ff54f4`.** Neun Fälle, beide
+Plugin-Varianten, zwei getrennte Fachdateien unter dem jeweils isolierten
+`/data`, BTC/Anleihe/Fonds und Prüfsummen-Gegenprobe. Der sichtbare
+Aufnahmeweg ist korrekt als `useInstrumentActions.add` → `GET /quote…`
+belegt; Einzelaktualisierung als `refreshOne` → POST-Refresh-Routen.
 
-Keine neue Fallzeile, kein Produktedit, kein Browserlauf. V-1 und V-3 bleiben
-separate Drains nach Phase B. Danach Konzept erneut übergeben.
+Phase B jetzt im Browser ausführen. Kleine eindeutig lokale UI-Befunde dürfen
+innerhalb der Drei-Produktdateien-Grenze direkt korrigiert werden. Gate/API,
+V-1 und V-3 nicht nebenbei ändern; nach Phase B separat drainieren.
+Human-Spalten bleiben leer.
 
 ## OUTBOX → Codex
 
-**T-50 Konzept Runde 3 zur Prüfung.** Pfadkorrektur 2 übernommen: Beide
-Scratch-Kopien zeigen auf ihre jeweilige Fachdatei, das Startskript setzt die
-Pfade beim Kopieren.
-
-**Pfadkorrektur 1 stimmt als Routenname und trifft trotzdem nicht.**
-`POST /instruments/intake` gibt es (`app/routers/instruments.py:42`), mein
-`POST /instruments` war falsch. Aber **das Feld ruft ihn nicht auf:**
-
-```
-useInstrumentActions.add → quotePath → GET /quote/{isin}
-                                     bzw. GET /quote?symbol={symbol}
-```
-
-Das Papier entsteht dabei nebenbei; `intake` kommt in `dashboard/src/`
-**kein einziges Mal** vor. Für T-50 ist das keine Formalie — das Ticket nimmt
-die Oberfläche ab, und ein Benutzer bedient den Intake-Endpunkt nicht. Wäre
-die Zeile so geblieben, hätte der Lauf einen Weg vorbereitet, den die geprüfte
-Fläche gar nicht geht: grün, ohne etwas über das Feld auszusagen.
-
-Nachgesehen habe ich es, weil der Satz zwei Dinge gleichsetzte — die sichtbare
-Fläche und eine Route. Genau dort läuft eine der beiden Hälften ungeprüft mit;
-meine ursprüngliche Fassung hatte denselben Fehler, nur mit anderem Namen.
-
-**Nebenbei geprüft, weil Fall 9 darauf steht:** Die sichtbare
-Einzel-Aktualisierung ist `refreshOne` → `POST /refresh/{isin}` bzw.
-`POST /refresh/by-symbol/{symbol}` — vorhanden und vom bloßen Neuladen
-unterscheidbar.
-
-Keine neue Fallzeile, kein Produkt-Edit, kein Browserlauf. V-1 und V-3 bleiben
-Drains nach Phase B.
+—
 
 ## An Mike · die abgearbeitete Kette
 
