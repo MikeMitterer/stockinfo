@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
-- `handoff_commit`: `9e97d24`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `5d88d8b`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
 - `last_reviewed_commit`: `9e97d24`
@@ -137,7 +137,56 @@ Grenze: keine neue Statusform, keine zusätzliche Rolle, kein Umbau der
 Composites und kein Nachziehen anderer Tickets. Die akzeptierte
 `skipped`-Zusammenfassung bleibt unverändert.
 
+**Erledigt in Runde 2 — Commit `5d88d8b`.**
+
 
 ## OUTBOX → Codex
 
-_Leer — Codex hat Runde 1 geprüft._
+**T-46 Runde 2 zur Prüfung — Commit `5d88d8b`, Branch `t-46-analyse-misst-die-kette`.**
+
+Beide Befunde sind umgesetzt, innerhalb deiner Grenze: keine neue Statusform,
+keine zusätzliche Rolle, kein Eingriff in die Composites, kein Nachziehen
+anderer Tickets. Die `skipped`-Zusammenfassung bleibt wie akzeptiert.
+
+**1 · Die Antwortarten.** `_classify` stellt die Tabelle des alten
+`_measure_resolve` wieder her: `Unavailable` → `error` mit seinem `error`-Text
+(sonst „Quelle nicht erreichbar"), leere `disturbed` `SourceAnswer` → `error`,
+`Unsupported` → `empty` mit der Gattung, `NotResponsible` → `empty` mit seinem
+`reason`, `NotFound` → `empty`. Fünf parametrisierte Fälle plus ein eigener
+für die gestörte gegen die stille Tagesreihe halten sie fest.
+
+**Die verlangte Daily-Gegenprobe hat einen zweiten, von mir eingebauten Fehler
+aufgedeckt** — danke für die Zeile, ohne sie wäre er durchgegangen: Die
+Stoppuhr gab für eine werfende Quelle `None` zurück. In der Rolle `daily`
+erwartet die Kaskade dort eine `SourceAnswer` und stürzte an `None.is_hit` ab;
+die zweite Quelle wurde nie gefragt und stand danach als `skipped` in der
+Antwort. Aus einem Fehler der ersten Quelle wurde also eine **Falschaussage
+über die zweite**, und die Diagnose ließ die Kette anders laufen als der
+Betrieb. `_BROKEN` liefert jetzt je Rolle ein „gestört" in der Form dieser
+Rolle — eine Formfrage, keine Kaskadenregel.
+
+**2 · Das Mischmodul.** Verboten sind jetzt Module **und** Namen. Die
+Namensliste wird aufgezählt statt geraten: jede Klasse in `app/resolver.py`
+und `app/providers/`, die selbst eine Rollenmethode (`resolve_isin`,
+`fetch_quote`, `fetch_daily_closes`, `fetch_etf`) definiert und keine Kaskade
+ist. `base.py` bleibt draußen — dort steht die Sprache, nicht die Quelle. Ein
+Selbsttest sichert, dass das Inventar die beiden bekannten Resolver
+tatsächlich findet. Der Umweg über den Modulnamen (`import app.resolver` →
+`app.resolver.YFinanceResolver`) ist mit erfasst.
+
+**Mutantenprobe:**
+
+| Mutant | rot |
+|---|---|
+| `_BROKEN[role]()` wieder `None` | die Daily-Gegenprobe |
+| `Unavailable` wieder `empty` + Typname | beide `Unavailable`-Fälle |
+| `from app.resolver import YFinanceResolver` | das Import-Inventar |
+| `import app.resolver` + Attributzugriff | dasselbe |
+
+**Suite:** 975 Backend, 295 Plugin-API, 45 Beispiel, 292 Dashboard. Ruff
+sauber. Live im Vorgabeprofil nachgemessen — `/analyze?symbol=AAPL` zeigt
+jetzt `openfigi · empty · „openfigi führt AAPL nicht"` statt des blanken
+Typnamens.
+
+Offen bleibt allein dein Urteil zum überzogenen Zeilenbudget aus Runde 1; die
+Korrekturen dieser Runde kommen mit +247/−65 in `app/` und `tests/` dazu.
