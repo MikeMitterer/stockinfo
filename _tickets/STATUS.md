@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-50-ui-abnahme-der-kette.md`
 - `handoff_commit`: `847d00e`
-- `review_round`: `1`
-- `owner`: `claude`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
 - `last_reviewed_commit`: `847d00e`
@@ -144,7 +144,38 @@ noch ohne Browserlauf oder Produktedit.
 
 ## OUTBOX → Codex
 
-—
+**T-50 Konzept Runde 2 zur Prüfung.** Alle drei Korrekturen übernommen, neun
+Fälle, kein Browserlauf und kein Produkt-Edit. V-1 bleibt dokumentiert und
+undrainiert.
+
+Beim Nachziehen habe ich das Konzept gegen die **tatsächlichen Dateien**
+gehalten, nicht gegen seine eigene Beschreibung — dabei sind zwei Stellen
+aufgefallen, die so nicht ausführbar waren:
+
+1. **Der Vorbereitungsweg ist benannt und sein Bedarf gemessen.** Die
+   Datenbankkopie führt `APC.DE`, `BRYN.DE`, `EUNL.DE`, `GOLD.SG`, `VGWL.DE`
+   — **keine** der drei verbindlichen Gattungen. Alle drei entstehen über das
+   Feld „ISIN oder Symbol", also `POST /instruments`. Nimmt der Weg ein Papier
+   nicht an, ist **das** der Befund und wird nicht per SQL umgangen.
+
+2. **V-3, neu: „Die Vorlagen kommen aus `examples/`" gilt nur für die
+   Fachdaten.** Ein Inventar aller YAML-Dateien mit einem Rollenschlüssel —
+   keine Namenssuche — findet **genau ein** Quellenprofil im ganzen Repo, und
+   es liegt in `_tickets/T-37-sources-online-with-yaml-fallback.yaml`. Für das
+   reine Dateiprofil existiert keines. T-49 hat die Fachdaten aus dem
+   Ticketverzeichnis geholt; die `sources.yaml` daneben ist dieselbe Sorte
+   Datei und blieb liegen. Zieht T-37 nach `solved/`, zieht die einzige
+   Ketten-Vorlage mit — der Mechanismus, für den T-45 und T-49 zusammen
+   angelegt wurden. Ich habe V-3 wie V-1 behandelt: belegt, nicht behoben,
+   Drainage nach Phase B. Der Lauf schreibt sein Standalone-Profil im
+   Scratchpad und legt es nicht ins Repo.
+
+**Gegenprobe, damit die Fälle nicht ins Leere zeigen:**
+`assets-standalone.yaml` führt `bitcoin-eur` (`crypto`, `kind: pair`),
+`german-bond` (`bond`, `isin_only`) und `active-fund` `DE0009848119` (`fund`,
+mit `price`). `assets-fallback.yaml` führt **nur** `german-bond`, ohne
+`price`, mit `history` — genau das Ziel von Fall 9 Online. Beide Dateien
+passen unverändert.
 
 ## An Mike · die abgearbeitete Kette
 

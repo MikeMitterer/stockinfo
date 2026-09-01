@@ -43,9 +43,15 @@ Befunde findet, die ein Browserlauf vorher sichtbar gemacht hätte.
   `VACUUM INTO`, `sources.yaml` und Fachdatei unter dessen `/data`:
   `online/data/assets-fallback.yaml` für Online/YFinance mit `yaml-file` als
   letztem Fallback; `yaml/data/assets-standalone.yaml` für das reine
-  YAML-Plugin. Die versionierten Vorlagen kommen aus `examples/`. Die beiden
-  Varianten laufen nacheinander auf denselben isolierten Ports; ein
-  Profilwechsel gilt nicht als T-48-Neustarttest.
+  YAML-Plugin. Die versionierten **Fachdaten**-Vorlagen kommen aus
+  `examples/`. Die beiden Varianten laufen nacheinander auf denselben
+  isolierten Ports; ein Profilwechsel gilt nicht als T-48-Neustarttest.
+- **Die Ketten-Konfiguration hat nur eine Vorlage, und die liegt falsch.**
+  Die Online-Variante bekommt ihre `sources.yaml` aus
+  `_tickets/T-37-sources-online-with-yaml-fallback.yaml`; für das reine
+  Dateiprofil existiert **keine** Vorlage im Repo. Der Lauf schreibt sie
+  deshalb im Scratchpad (fünf Rollen, überall nur `yaml-file`) und legt sie
+  **nicht** ins Repo — siehe V-3.
 - **Zwei Dateien sind fachlich notwendig.** Die Fallback-Datei enthält nur,
   was online keinen Kurs bekommt; die Standalone-Datei ist der vollständige
   Bestand. Eine gemeinsame Datei würde bei einem Online-Ausfall plausible
@@ -55,8 +61,11 @@ Befunde findet, die ein Browserlauf vorher sichtbar gemacht hätte.
   nicht berühren.
 - **Drei verbindliche Gattungen im isolierten Bestand:** `BTC-EUR` als
   `crypto`, `DE0001102531` als `bond` und `DE0009848119` als `fund`. Fehlen
-  sie in der Datenbankkopie, werden sie vor dem Browserlauf über den
-  öffentlichen Aufnahmeweg angelegt; keine direkte SQL-Testpräparation.
+  sie in der Datenbankkopie — und in der Kopie fehlen alle drei —, werden sie
+  vor dem Browserlauf über den öffentlichen Aufnahmeweg angelegt: das Feld
+  „ISIN oder Symbol" über der Assets-Liste, also `POST /instruments`. Keine
+  direkte SQL-Präparation; wo der Aufnahmeweg das Papier nicht annimmt, ist
+  **das** der Befund und wird nicht umgangen.
 - **Belegpflicht.** Ein Screenshot allein belegt nichts. Zu jedem Fall gehört
   die sichtbare Anzeige **und** die Gegenprobe an der Quelle — Netzwerkantwort,
   Konsole oder Dateiinhalt. Ein Wert, der stimmt, weil er aus dem Cache kommt,
@@ -107,6 +116,22 @@ nach Phase B in ein eigenes Ticket drainiert; dieser Lauf behebt ihn nicht.
 Platzhalter, keine Beschriftung — ein leerer Rahmen über dem Feld „ISIN oder
 Symbol". Zu prüfen als Fall 1; falls bestätigt, ist es eine reine
 Anzeigekorrektur und fällt unter die Lockerung oben.
+
+**V-3 · Die Ketten-Konfiguration hat T-49 nicht mitgemacht.** Ein Inventar
+aller YAML-Dateien im Repo — jede Datei mit einem Rollenschlüssel, nicht eine
+Namenssuche — findet **genau ein** Quellenprofil, und es liegt in
+`_tickets/T-37-sources-online-with-yaml-fallback.yaml`. Für das reine
+Dateiprofil gibt es keines.
+
+T-49 hat die **Fachdaten** aus dem Ticketverzeichnis geholt und zwei Vorlagen
+unter `examples/` abgelegt. Die `sources.yaml` daneben ist genau dieselbe
+Sorte Datei — versionierte Betriebsvorlage, kein Prüfmittel — und blieb
+liegen. Zieht T-37 nach `solved/`, zieht die einzige Ketten-Vorlage mit; das
+ist der Mechanismus, für den T-45 und T-49 zusammen angelegt wurden.
+
+**Nicht Teil von T-50**, aus demselben Grund wie V-1: Er wird belegt und nach
+Phase B gedrainiert. Der Lauf selbst schreibt seine beiden Profile im
+Scratchpad.
 
 **Nicht-Befund · durchscheinende Auswahlliste.** Der erste Bildschirmabzug
 zeigte die geöffnete Liste durchsichtig, mit übereinanderliegendem Text. Die
@@ -194,3 +219,32 @@ Vor der erneuten Übergabe nennt Phase B außerdem den öffentlichen
 Vorbereitungsweg für die drei Assets und die Prüfsummen-Gegenprobe für Mikes
 unberührte Daten. Danach kann das Konzept ohne weiteren Designentscheid in den
 Browserlauf gehen.
+
+## Runde 2 · Konzept nachgezogen (Claude, 2026-09-01)
+
+Alle drei Korrekturen übernommen; die Fallzahl bleibt bei neun. Zwei Stellen
+waren noch nicht ausführbar, und beide fielen erst auf, weil ich das Konzept
+gegen die **tatsächlichen Dateien** gehalten habe statt gegen seine eigene
+Beschreibung:
+
+1. **Der Aufnahmeweg ist jetzt benannt und der Bedarf gemessen.** Die
+   Datenbankkopie enthält fünf Papiere — `APC.DE`, `BRYN.DE`, `EUNL.DE`,
+   `GOLD.SG`, `VGWL.DE`. **Keine** der drei verbindlichen Gattungen ist
+   darunter; alle drei werden über das Feld „ISIN oder Symbol", also
+   `POST /instruments`, angelegt. Nimmt der Weg ein Papier nicht an, ist das
+   der Befund und wird nicht per SQL umgangen.
+2. **„Die Vorlagen kommen aus `examples/`" stimmt nur für die Fachdaten.**
+   Für die Rollenketten gibt es dort nichts. Das Inventar findet genau ein
+   Quellenprofil im ganzen Repo, und es liegt im Ticketverzeichnis — V-3. Der
+   Lauf schreibt das Standalone-Profil deshalb im Scratchpad.
+
+**Gegenprobe zu den Gattungen, damit die Fälle nicht ins Leere zeigen:**
+`assets-standalone.yaml` führt `bitcoin-eur` (`crypto`, `kind: pair`),
+`german-bond` (`bond`, `isin_only`) und `active-fund` `DE0009848119` (`fund`,
+mit `price`) — Fall 9 Standalone ist damit gedeckt.
+`assets-fallback.yaml` führt **nur** `german-bond`, und zwar ohne `price`,
+mit `history`. Genau darauf zielt Fall 9 Online; die Datei ist also passend
+und muss für diesen Lauf nicht erweitert werden.
+
+Kein Browserlauf, kein Produkt-Edit. V-1 und V-3 bleiben undrainiert bis nach
+Phase B.
