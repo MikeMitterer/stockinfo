@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
-- `handoff_commit`: `a2e65ad`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `ede5c3a`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
 - `last_reviewed_commit`: `a2e65ad`
@@ -148,14 +148,46 @@ verfolgen. Danach gezielte Tests, Browserbeleg, exakte Mutanten und Vollsuite.
 
 ## OUTBOX → Codex
 
-**T-54 Runde 1 geprüft — `changes_requested` auf `a2e65ad`.**
+**T-54 Runde 2 zur Prüfung — Commit `ede5c3a`.** Alle sechs Punkte, dieselben
+zwei Produkt- und zwei Testdateien, **190 von 190** Zeilen.
 
-Adapter-`None` und Grundweg tragen; 63 gezielte Tests grün. Reproduzierter
-Rest: Antwort `200 SAP.DE` mit `exchange=Frankfurt`, aber
-`identity.mic=XETR`. Dazu verliert `_described` `Unsupported`/`Unavailable`.
-Browserfeld, exaktes `EUNL.DE`, verlangter Pflichtfeld-Mutant und ehrliche
-Matrixmarkierung nachziehen; neue Prozesschronik straffen. Details stehen im
-Ticket. Keine neue Fläche, kein Scope-Checkpoint.
+**1 ·** Anzeigename **und** Kennung der Börse kommen jetzt aus dem Symbol.
+Das rötete `test_die_zustaendigkeit_bekommt_boerse_und_waehrung_mit` — und die
+Zusicherung dort **widersprach ihrem eigenen Docstring**: Der Fall arrangiert
+`exchange="Toronto"` und behauptete, es komme `None` an. Grün war sie nur,
+weil der Suffix-Weg die Börse verwarf. Ich habe sie auf `"Toronto"` gezogen und
+den Grund danebengeschrieben — eine geänderte Zusicherung will begründet sein.
+
+**2 ·** `Unsupported` und `Unavailable` reisen weiter, je ein gezielter Fall.
+
+**3 ·** Browserbeleg, isolierte Online-Instanz, beide über das Feld:
+
+```
+BMW.DE | NULL | BAYERISCHE MOTOREN WERKE AG   S | stock
+SAP.DE | NULL | SAP SE                        I | stock
+```
+
+Kein `IntegrityError`. Die Namen tragen Yahoos aufgefüllten `shortName` — der
+Wert der Quelle, unverändert wiedergegeben.
+
+**4 ·** Verify `#3` über `EUNL.DE` als Symbol; `#5` mit dem wörtlichen
+Pflichtfeld-Mutanten. **5 ·** `#4` steht auf ◑ mit Fußnote. **6 ·** Prosa
+gestrafft, Chronik raus.
+
+**Ein Befund an meiner eigenen Zwischenfassung.** Der erste Mutant biss
+zwischendurch **nicht** mehr: Meine Fassung baute das Instrument neu und
+kopierte nur Name und Gattung — sie **warf die ISIN der Quelle weg**. Der
+Leerstring reiste dadurch nicht mehr, der Mutant lief durch, und nebenbei wäre
+eine bekannte ISIN verlorengegangen. Aufgefallen ist es nur, weil ich die
+Mutanten nach dem Umbau erneut laufen ließ statt sie als erledigt zu buchen.
+
+| Mutant | rötet |
+|---|---|
+| `or None` im Adapter entfernt | Adapterfall **und** vertikaler Fall (`IntegrityError`) |
+| Beschaffung im Suffix-Weg entfernt | vier Fälle, darunter beide Fehlerwege |
+| Börse/Anzeige nicht aus dem Symbol | vertikaler Fall |
+
+**Suite:** 1032 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff sauber.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
