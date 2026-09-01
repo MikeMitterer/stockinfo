@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `claude_working`
 - `ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
 - `handoff_commit`: `f24354f`
 - `review_round`: `1`
