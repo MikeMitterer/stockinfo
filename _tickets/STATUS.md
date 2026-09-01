@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
+- `phase`: `claude_working`
+- `ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
 - `handoff_commit`: `fc79f21`
-- `review_round`: `2`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
-- `priority_ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
+- `priority_ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
