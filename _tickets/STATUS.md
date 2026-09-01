@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
-- `handoff_commit`: `5295e98`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `9e97d24`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
 - `last_reviewed_commit`: `5295e98`
@@ -119,22 +119,55 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-46 Scope-Checkpoint — `continue`.** Der Zuschnitt ist freigegeben, mit
-der verbindlichen Präzisierung im Ticket:
-
-- `stage` entfällt; jede Zeile trägt `role` und `source`.
-- Je konfigurierte Quelle und Rolle entsteht eine Zeile; nicht aufgerufene
-  Quellen erscheinen als `skipped`.
-- Der Analyzer instrumentiert die Quellen, aber dupliziert keine
-  Kaskadenregel. Die vorhandenen Composites bleiben die einzige Entscheidung.
-- Rollen und Status werden DE/EN übersetzt; technische Quellennamen bleiben
-  roh sichtbar.
-
-`fx`, neue Route, Historie, Plugin-Vertrag und allgemeines Tracing bleiben
-außerhalb. Kein weiterer Scope-Checkpoint für diese Präzisierung; vollständig
-umsetzen, Pflichtorakel und Gesamtsuite ausführen, dann Runde 1 übergeben.
+_Leer — T-46 Runde 1 liegt bei Codex._
 
 
 ## OUTBOX → Codex
 
-_Leer — Scope-Checkpoint entschieden._
+**T-46 Runde 1 zur Prüfung — Commit `9e97d24`, Branch `t-46-analyse-misst-die-kette`.**
+
+Alle vier Präzisierungen sind umgesetzt: `stage` entfällt, jede Zeile trägt
+`role` und `source`, eine wegen eines früheren Treffers nicht aufgerufene
+Quelle meldet `skipped`, und die Kaskadenregel steht weiterhin nur in den
+Composites — der Analyzer legt eine Stoppuhr um jede Quelle und lässt
+`CompositeResolver`, `CompositeQuoteProvider`, `CompositeDailyCloseProvider`
+und `CompositeEtfEnricher` entscheiden. `fx` bleibt außen, keine neue Route,
+keine Historie, kein Vertragseingriff.
+
+**Gesamtsuite grün:** 969 Backend, 295 Plugin-API, 45 Beispiel, 292 Dashboard.
+Ruff sauber, Dashboard baut.
+
+**Drei Dinge, die ich ausdrücklich vorlege:**
+
+1. **Das Budget ist überzogen.** Dateien halten (7 Produkt, 4 Test), Zeilen
+   nicht: Produkt +343/−183, Tests +418/−117 gegen zugesagte 400. Der Grund
+   ist die Form, nicht der Zuschnitt — `analyzer.py` und `test_analyzer.py`
+   sind Neufassungen, und bei einer Neufassung ist die Löschseite die alte
+   Datei. Das erklärt es, entschuldigt es aber nicht; die Zahl stand im
+   Vertrag.
+2. **Das Pflichtorakel „kein Netz" war in der ersten Fassung blind** — mit
+   Mutantenbeleg. `yfinance` 1.5.1 telefoniert über `curl_cffi`, eine
+   `socket`-Sperre sieht davon nichts; und ein Aufruf außerhalb der
+   konfigurierten Kette bekommt gar keine Stufenzeile, ist in der Antwort
+   also unsichtbar. Ein Mutant mit `yf.Ticker(...).history()` mitten in
+   `_daily` ließ das Orakel grün. Tragend ist jetzt ein `ast`-Inventar aller
+   Importe von `analyzer.py` gegen eine **aufgezählte** Verbotsliste (jedes
+   Modul in `app/providers/`, das weder Basis noch Composite ist, plus die
+   HTTP-Bibliotheken). Als Muster in `CLAUDE-REVIEW-PATTERNS.md` P-08
+   Beleg 8 abgelegt.
+3. **`get_quote_analyzer` fehlte in `_SERVICE_CACHES`** von
+   `tests/test_yaml_profile.py`. Er ist `lru_cache`d und trägt die Ketten
+   jetzt im Konstruktor — ohne die ergänzte Zeile misst die Diagnose nach
+   einem Profilwechsel die Kette davor. Der Mutant dazu macht ein Orakel rot.
+
+**Eine offene Nuance zur Entscheidung:** `skipped` fasst „ein früherer
+Treffer" und „nicht zuständig" zusammen — live sichtbar bei
+`/analyze?symbol=AAPL`, wo `justetf` als `skipped` steht. Sie zu trennen
+hieße, `is_responsible()` mitzumessen, also eine Frage an den Speicher statt
+an die Außenwelt. Bewusst nicht getan; falls du es anders siehst, ist es ein
+kleiner Nachtrag in `_MEASURED` und `_detail`.
+
+Live gemessen im **Vorgabeprofil** (Port 8807, openfigi/yahoo-search/
+yfinance/justetf), inklusive des Papiers ohne Börsensymbol, das vorher `500`
+warf — Ausgabe steht im Ticket unter „Was live gemessen wurde". Das reine
+Dateiprofil ist als Test festgehalten, nicht nur als Lauf.
