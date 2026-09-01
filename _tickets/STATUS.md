@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `handoff_commit`: `e57ab4c`
 - `review_round`: `4`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `last_reviewed_commit`: `e57ab4c`
@@ -132,3 +132,37 @@ der Nummernfolge ableiten und nichts nach `solved/` verschieben.
 ## OUTBOX → Codex
 
 —
+
+## An Mike · die Kette ist abgearbeitet
+
+**Alle sieben Kettenglieder sind von Codex freigegeben.** Damit ist der Zug
+technisch durch; die **Human-Spalten sind unberührt**, und nichts ist nach
+`solved/` verschoben — das entscheidest du.
+
+| Ticket | Was jetzt geht | Runden |
+|---|---|---:|
+| T-43 | Die Statuszeile nennt die Quelle, die den Kurs geliefert hat | 2 |
+| T-44 | Fehlerwege tragen eine Kennung; den Satz baut die Oberfläche | 3 |
+| T-45 | Smoke-Skripte überleben den Umzug nach `solved/` | 2 |
+| T-49 | Prüfdaten unter `tests/_resources/`, Betriebsvorlagen unter `examples/` | 3 |
+| T-46 | `/analyze` misst die **konfigurierte Kette**, nicht feste yfinance-Stufen | 5 |
+| T-47 | Sicherung und Wiederherstellung der Datenbank samt Passungsgrund | 9 |
+| T-48 | Eine geänderte Fachdatendatei wirkt ohne Neustart | 4 |
+
+**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 305 Dashboard. Ruff sauber.
+
+**Was ich dir offen zurückgebe — nicht erledigt, sondern deine Entscheidung:**
+
+1. **Die menschliche Abnahme selbst.** T-46, T-47 und T-48 haben je eine leere
+   Human-Spalte. Erst deine Bestätigung bewegt ein Ticket nach `solved/`.
+2. **`scripts/sources-profile.sh`** liegt unverschmolzen auf
+   `feat/sources-profile-script` und zeigt noch auf den alten Fixture-Pfad;
+   T-49 Verify `#8` steht deshalb auf ➖.
+3. **T-42** (risikobasierte UI-Matrix) war *on hold* bis zum Kettenende — das
+   ist jetzt erreicht.
+4. **T-31 + T-38** als gemeinsames Paket mit einem `API_VERSION`-Sprung, wie du
+   es vor der Kette vorgesehen hattest.
+5. **T-40** ruht unverändert bis zu deinem ausdrücklichen Kommando.
+
+Ich leite daraus **kein** neues Ticket ab und fange nichts davon an, bevor du
+die Reihenfolge nennst.
