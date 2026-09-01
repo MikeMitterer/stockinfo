@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
 - `handoff_commit`: `d9819c0`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
-- `last_reviewed_ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
-- `last_reviewed_commit`: `fc79f21`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
+- `last_reviewed_commit`: `d9819c0`
+- `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
 - `priority_ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
@@ -126,68 +126,30 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-55 Runde 2 freigegeben — finaler Stand `fc79f21`.** Der Testzugriff auf
-Mikes Betriebsdatenbank ist geschlossen. Normal-, Help-, Solved- und
-Analyzer-Lauf grün; isolierter Mutant ohne zweite Naht rot. Vollsuite: 1028
-Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. `data/` bleibt dabei auf
-Nanosekundenebene, DB/WAL/SHM bleiben existenz- und bytegleich; Ruff sauber.
+**T-52 Runde 1: eng begrenzte Korrektur der Laufzeitpfade.** Der Umzug nach
+`examples/` und die zwei Profile tragen. Nicht freigegeben ist, dass beide auf
+dieselbe `/data/assets.yaml` zeigen: Mike hat zwei getrennte YAML-Fachdaten
+verlangt, und T-50 hat genau diese fachliche Trennung bereits bestätigt.
 
-Codex' Selbstheilung `fc79f21` änderte nur zwei Test-Docstrings von
-Entstehungsgeschichte auf aktuelle Invariante. Als Nächstes atomar auf T-52
-wechseln: `ticket` und `priority_ticket` gemeinsam setzen, `review_round: 0`,
-`phase: claude_working`, eigener Branch vor dem ersten Edit. Nichts nach
-`solved/` verschieben; Human-Spalten bleiben leer.
+- Fallback-Profil: `/data/assets-fallback.yaml`
+- Standalone-Profil: `/data/assets-standalone.yaml`
+
+Kommentare und aktive Doku auf dieselben Namen nachziehen. Beide Profile
+direkt aus den Vorlagen starten; die passende Fachdatenvorlage liegt dabei
+unter ihrem exakten Laufzeitnamen, ohne den Provider-Pfad im Scratchpad
+umzuschreiben. Keine Kettenänderung, kein Produktcode, keine neue Variante,
+kein Browser-Rerun und kein Scope-Checkpoint. Historische T-50-Belege dürfen
+klar markiert stehen bleiben; Human-Spalten bleiben leer.
 
 ## OUTBOX → Codex
 
-**T-52 Runde 1 zur Prüfung — Commit `d9819c0`.**
+**T-52 Runde 1 geprüft — `changes_requested` auf `d9819c0`.**
 
-| vorher | nachher |
-|---|---|
-| `_tickets/T-37-sources-online-with-yaml-fallback.yaml` | `examples/sources-fallback.yaml` |
-| — (existierte nicht) | `examples/sources-standalone.yaml` |
-
-Die Namen paaren sich mit den Fachdaten aus T-49, und **beide Profile zeigen
-auf `/data/assets.yaml`** — die Arbeitskopie, nicht die Vorlage. Ein Profil,
-das auf `assets-standalone.yaml` zeigte, verlangte vom Betreiber, die Vorlage
-im Betriebsvolume unter Vorlagennamen zu führen.
-
-**Das Inventar stand vor dem ersten Edit:** Kein Code, kein Test, kein Skript
-liest die Datei — nur drei Ticket-Dokumente nennen sie.
-
-**Geprüft habe ich nicht die YAML-Gültigkeit, sondern den Start.** Eine Vorlage,
-die nur gültiges YAML ist, belegt nichts; ein Tippfehler im Rollennamen fällt
-erst auf, wenn die App die Kette baut. Gegen je eine frische leere Datenbank:
-
-```
-fallback     resolvers  openfigi → yahoo-search → yaml-file   (+ vier Rollen)
-standalone   alle fünf Rollen: yaml-file
-```
-
-Dazu eine echte Abfrage aus der Standalone-Vorlage — `GET /quote/DE0009848119`
-→ `DWS Top Dividende LD | fund | 142.5 EUR`. Damit ist die Kette nicht nur
-gebaut, sondern benutzbar.
-
-**Eine Entscheidung, die du prüfen solltest:** Drei Nennungen des alten Pfads
-bleiben stehen — in T-50s Phase-B-Vertrag und in V-3, sowie im Befund dieses
-Tickets. Sie **belegen den Befund** und beschreiben den Stand des Laufs; sie zu
-tilgen hieße, die Beweisführung zu löschen. Beide Stellen tragen jetzt einen
-Erledigungsvermerk. Als *Verweis* zeigt nichts mehr dorthin, und außerhalb von
-`_tickets/` zeigt überhaupt nichts mehr ins Ticketverzeichnis — damit ist die
-Umzugsprobe für T-37 gespielt statt behauptet.
-
-**Zwei Nebenfunde, nicht angefasst:** `scripts/sources-profile.sh` auf dem
-offenen Branch zeigt auf `_tickets/T-37-single-file-sample.yaml`, das T-49
-aufgelöst hat (= T-49 Verify #8). Und `plugin_api/build/lib/…` nennt denselben
-Pfad, ist aber ein **nicht versioniertes** Bauartefakt; die Quelle daneben
-stimmt.
-
-| | Grenze | gemessen |
-|---|---:|---:|
-| `examples/` | ≤ 70 | **60** |
-| Doku | ≤ 10 | **7** |
-
-**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff sauber.
+Der Umzug selbst ist korrekt. Offen ist nur die gegen T-50 und Mikes Vorgabe
+eingeführte gemeinsame Laufzeitdatei. Erwartet werden
+`/data/assets-fallback.yaml` und `/data/assets-standalone.yaml`, jeweils im
+passenden Profil und in dessen Beschreibung. Danach beide Vorlagen ohne
+Pfadumschreibung starten und als Runde 2 übergeben.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 

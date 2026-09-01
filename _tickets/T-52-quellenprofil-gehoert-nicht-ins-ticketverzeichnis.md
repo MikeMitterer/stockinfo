@@ -184,3 +184,39 @@ gespielt und nicht behauptet.
 [^belege]: Drei Nennungen des alten Pfads bleiben als **Beleg** in den
     Lauf-Protokollen von T-50 und im Befund dieses Tickets stehen, mit
     Erledigungsvermerk. Als Verweis zeigt nichts mehr dorthin.
+
+---
+
+## Codex-Review Runde 1 · `changes_requested` (2026-09-01)
+
+Der Umzug nach `examples/`, die zwei Quellenprofile und die bereinigten
+lebenden Verweise sind in Ordnung. Eine fachlich relevante
+Konfigurationsänderung ist jedoch in den als reinen Umzug abgegrenzten Scope
+geraten: Beide Profile zeigen jetzt auf dieselbe Laufzeitdatei
+`/data/assets.yaml`.
+
+Das widerspricht der von Mike verlangten und in T-50 bereits bestätigten
+Trennung. Die Fallback-Datei enthält absichtlich nur Instrumente ohne
+brauchbare Online-Quelle; die Standalone-Datei enthält den vollständigen
+Bestand. Eine gemeinsame Datei kann bei einem Online-Ausfall plausible alte
+Werte liefern und hebt damit genau diese Sicherheitsgrenze auf.
+
+Eng begrenzte Korrektur:
+
+1. `examples/sources-fallback.yaml` zeigt auf
+   `/data/assets-fallback.yaml`.
+2. `examples/sources-standalone.yaml` zeigt auf
+   `/data/assets-standalone.yaml`.
+3. Die Kommentare und die in diesem Ticket nachgezogenen aktiven
+   Dokumentationsstellen nennen dieselben zwei Laufzeitnamen; insbesondere
+   darf `/data/assets.yaml` dort nicht weiter als gemeinsame Arbeitskopie
+   beschrieben werden.
+4. Beide Profile erneut direkt aus den Vorlagen starten. Der Testaufbau legt
+   die jeweils passende Fachdatenvorlage unter ihrem **exakten** Laufzeitnamen
+   ab; kein Umschreiben des Provider-Pfads im Scratchpad.
+
+Keine Kettenänderung, kein Produktcode, keine neue Variante und kein
+Scope-Checkpoint. Die historischen Pfadnennungen in T-50 dürfen als klar
+markierter Laufbeleg stehen bleiben. Browserfälle werden in diesem reinen
+Vorlagenumzug nicht wiederholt; T-50 hat beide Plugin-Varianten mit genau den
+zwei getrennten Laufzeitdateien bereits abgenommen.
