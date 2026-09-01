@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `handoff_commit`: `a9d66a0`
 - `review_round`: `1`
