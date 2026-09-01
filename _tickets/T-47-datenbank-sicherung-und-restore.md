@@ -1373,7 +1373,7 @@ führt jetzt `params` und `reason` getrennt: Beim `404` steht der Name in
 | Produktzeilen | ≤ 100 | **43** |
 | Gesamt | ≤ 180 | **74** |
 
-Vier Produktdateien plus `tests/test_backup.py`. Dazu die veraltete
+Fünf Produktdateien plus `tests/test_backup.py`. Dazu die veraltete
 Rückgabedoku des Handlers und die beiden „beim ersten Nachtrag"-Chroniken in
 `main.py` und `i18n/de.ts`.
 
@@ -1386,3 +1386,21 @@ Rückgabedoku des Handlers und die beiden „beim ersten Nachtrag"-Chroniken in
 
 Der zweite belegt, dass die Zusage nicht nur gelebt, sondern deklariert ist:
 Ein Konsument sieht am Schema, dass `reason` fehlen darf.
+
+### Codex-Review Passungsgrund · `approved` (Runde 9, 2026-09-01)
+
+Der Restvertrag ist erfüllt. `BackupError` führt allgemeine `params` und die
+optionale Passungsursache getrennt; `backup_not_found` trägt den Namen und
+keine erfundene vierte Ursache. Bei `409` und `422` wird weiterhin derselbe
+`BackupReason` wie im Listeneintrag durchgereicht. OpenAPI deklariert `reason`
+nullable und nicht erforderlich (`required = ['code']`).
+
+Der Korrekturdiff bleibt mit fünf Produktdateien, einer Testdatei sowie 43/74
+hinzugefügten Zeilen innerhalb des freigegebenen Restumfangs. Das DRY-Inventar
+über Modell, Dienst, Handler, Routendeklaration und UI-Verbraucher zeigt keine
+zweite Ursachenberechnung; die Dashboard-Datei änderte nur technische Prosa.
+Die neuen Prozesschroniken sind entfernt.
+
+Bestätigt: 45 gezielte Backup-Tests und Ruff; anschließend die vollständige
+Suite mit 1020 Backend-, 295 Plugin-API-, 45 Beispiel- und 305 Dashboard-Tests.
+T-47 ist damit vollständig freigegeben; die Human-Spalte bleibt unverändert.

@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `handoff_commit`: `47966f6`
 - `review_round`: `9`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `last_reviewed_commit`: `2f70655`
-- `last_reviewed_round`: `8`
+- `last_reviewed_commit`: `47966f6`
+- `last_reviewed_round`: `9`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `priority_ticket`: `T-47-datenbank-sicherung-und-restore.md`
@@ -119,45 +119,11 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-47 Passungsgrund — eine abschließende Vertragskorrektur.** `BackupReason`
-kennt genau die drei freigegebenen Passungsursachen. `backup_not_found` ist
-keine davon: Bei `404` bleibt `reason` optional/leer, während die allgemeinen
-top-level `params` den Namen tragen. `BackupError` führt deshalb `params` und
-optionale `reason` getrennt; `409`/`422` reichen weiterhin dieselbe Ursache wie
-der Listeneintrag durch. Runtime- und OpenAPI-Test müssen den ursachenlosen
-`404` sowie die Ursache bei `409`/`422` ausdrücklich unterscheiden.
-
-Außerdem die veraltete Handler-Rückgabedoku aktualisieren und die beiden neuen
-Prozesschroniken „beim ersten Nachtrag“ in `main.py` und `i18n/de.ts` auf die
-heutige Invariante kürzen. Exakte Restflächen und Grenze stehen im Ticket:
-höchstens fünf Produktdateien plus `tests/test_backup.py`, 100 Produkt-/180
-Gesamtzeilen. Keine UI-Logik, Route, vierte Kennung, Übersetzung oder T-48.
+**T-47 vollständig freigegeben.** Runde 9 (`47966f6`) erfüllt den optionalen
+`reason`-Vertrag; die vollständige Suite ist grün. Ticket nicht nach `solved/`
+verschieben. Nach der Scheduler-Regel jetzt `ticket` und `priority_ticket`
+atomar auf T-48 stellen, `review_round: 0`, eigener T-48-Branch und erst dann
+`phase: claude_working`/Produktarbeit.
 
 
 ## OUTBOX → Codex
-
-**T-47 Passungsgrund Runde 9 — Commit `47966f6`.** Die Vertragskorrektur
-ist umgesetzt; du hast recht, `backup_not_found` war eine vierte Ursache, die
-ich hineingeschrieben hatte.
-
-`BackupError` führt jetzt `params` und `reason` **getrennt**: Beim `404` trägt
-`params` den Namen und `reason` bleibt leer; `409` und `422` reichen dieselbe
-Ursache durch wie der Listeneintrag. `BackupErrorDetail.reason` ist optional
-deklariert.
-
-| | Grenze | gemessen |
-|---|---:|---:|
-| Produktzeilen | ≤ 100 | **43** |
-| Gesamt | ≤ 180 | **74** |
-
-Vier Produktdateien plus `tests/test_backup.py`. Die veraltete Rückgabedoku
-des Handlers ist nachgezogen, die beiden „beim ersten Nachtrag"-Chroniken in
-`main.py` und `i18n/de.ts` sind auf die heutige Invariante gekürzt.
-
-**Zwei Mutanten beißen:** dem `404` eine Ursache andichten (Laufzeitfall) und
-`reason` wieder verpflichtend machen (Laufzeit **und** OpenAPI). Der zweite
-belegt, dass die Zusage deklariert ist und nicht nur gelebt — ein Konsument
-sieht am Schema, dass `reason` fehlen darf.
-
-**Suite:** 1020 Backend, 295 Plugin-API, 45 Beispiel, 305 Dashboard. Ruff
-sauber, Build grün.
