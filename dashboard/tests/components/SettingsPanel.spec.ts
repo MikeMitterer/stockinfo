@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import { NButton, NTabs } from 'naive-ui'
 
 import SettingsPanel from '../../src/components/SettingsPanel.vue'
+import type { SettingsTab } from '../../src/types'
 import { i18n } from '../../src/i18n'
 
 /**
@@ -13,7 +14,7 @@ import { i18n } from '../../src/i18n'
  * Zusage. Was bleibt, ist das Verhalten — welche Reiter es gibt, welcher aktiv
  * ist, und dass eine Auswahl gemeldet wird.
  */
-function mountPanel(tab: 'appearance' | 'language' | 'links' | 'environment' = 'appearance') {
+function mountPanel(tab: SettingsTab = 'appearance') {
   return mount(SettingsPanel, {
     props: { tab, env: null },
     global: { plugins: [i18n] },
@@ -25,13 +26,13 @@ beforeEach(() => {
 })
 
 describe('SettingsPanel', () => {
-  it('rendert vier Reiter in der Reihenfolge Darstellung, Sprache, Links, Environment', () => {
+  it('rendert die Reiter in der Reihenfolge Darstellung, Sprache, Links, Sicherungen, Environment', () => {
     // Über die Reiter-Leiste, nicht über die Panes: Naive rendert nur die
     // aktive Pane — die Beschriftungen stehen trotzdem alle in der Leiste.
     const wrapper = mountPanel()
     const leiste = wrapper.find('.n-tabs-nav').text()
 
-    for (const label of ['Darstellung', 'Sprache', 'API & Links', 'Environment']) {
+    for (const label of ['Darstellung', 'Sprache', 'API & Links', 'Sicherungen', 'Environment']) {
       expect(leiste, label).toContain(label)
     }
   })

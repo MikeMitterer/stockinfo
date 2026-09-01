@@ -5,7 +5,7 @@ import type { SettingsTab, TabKey } from '../types'
 const TABS: TabKey[] = ['assets', 'exchanges', 'analysis', 'fx', 'settings']
 const DEFAULT_TAB: TabKey = 'assets'
 
-export const SETTINGS_TABS: SettingsTab[] = ['appearance', 'language', 'links', 'environment']
+export const SETTINGS_TABS: SettingsTab[] = ['appearance', 'language', 'links', 'backups', 'environment']
 export const DEFAULT_SETTINGS_TAB: SettingsTab = 'appearance'
 
 interface HashRoute {

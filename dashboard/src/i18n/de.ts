@@ -234,12 +234,40 @@ export const de = {
     de: 'Deutsch',
     en: 'Englisch',
   },
+  backups: {
+    title: 'Sicherungen der Datenbank',
+    hint:
+      'Es bleiben {keep} Sicherungen liegen; die älteste weicht beim Anlegen ' +
+      'der nächsten. Gesichert wird auf Knopfdruck, nicht nach Zeitplan.',
+    create: 'Jetzt sichern',
+    restore: 'Wiederherstellen',
+    empty: 'Noch keine Sicherung angelegt.',
+    colCreated: 'Zeitpunkt',
+    colSize: 'Größe',
+    colFit: 'Passung',
+    fits: 'passt zur laufenden Quellenlage',
+    /*
+     * **Der Neustart steht vor der Entscheidung.** Ihn erst in der Antwort zu
+     * nennen hieße, ihn mitzuteilen, nachdem der Benutzer geklickt hat.
+     */
+    confirmTitle: 'Wiederherstellen?',
+    confirmBody: '{name} wird beim nächsten Start eingespielt.',
+    confirmRestart:
+      'Dafür ist ein Neustart der App nötig. Bis dahin läuft der bisherige ' +
+      'Bestand unverändert weiter.',
+    confirmYes: 'Vormerken',
+    confirmNo: 'Abbrechen',
+    forceLabel: 'Trotzdem einspielen — {reason}',
+    pending: 'Ein Neustart steht aus: {name} wird beim nächsten Start eingespielt.',
+    failed: 'Das Einspielen ist gescheitert: {reason}. Es wird nicht erneut versucht.',
+  },
   settings: {
     title: 'Einstellungen',
     tab: {
       appearance: 'Darstellung',
       language: 'Sprache',
       links: 'API & Links',
+      backups: 'Sicherungen',
       environment: 'Environment',
     },
     language: {

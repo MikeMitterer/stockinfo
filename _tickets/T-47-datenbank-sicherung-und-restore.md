@@ -225,11 +225,11 @@ Legende: ✅ live bestätigt · ◑ teilweise bestätigt · ⚠️ Befund offen 
 | **5** | dasselbe mit `force` | läuft, und die Instanz sagt danach sichtbar, dass sie es getan hat | ✅ | |
 | **6** | Sicherung mit neuerem Schema | abgelehnt, auch mit `force` | ✅ | |
 | **7** | vor dem Wiederherstellen | eine Sicherung des alten Standes liegt vor | ✅ | |
-| **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ◑ | |
+| **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ✅ | |
 | **9** | `PRAGMA user_version` | ist gesetzt und wird beim Prüfen gelesen | ✅ | |
 | **10** | elfte Sicherung | die älteste ist weg, es liegen zehn; keine zweite Löschmöglichkeit | ✅ | |
-| **11** | UI-Liste | alle vorhandenen Sicherungen sind sichtbar, unpassende **mit Grund** statt ausgeblendet | ➖ | |
-| **12** | Bestätigung vor dem Wiederherstellen | der Neustart wird **vorher** genannt, nicht erst danach | ➖ | |
+| **11** | UI-Liste | alle vorhandenen Sicherungen sind sichtbar, unpassende **mit Grund** statt ausgeblendet | ✅ | |
+| **12** | Bestätigung vor dem Wiederherstellen | der Neustart wird **vorher** genannt, nicht erst danach | ✅ | |
 
 ## Nicht-Ziele
 
@@ -970,3 +970,60 @@ eine normale Bestätigung darf ihn nicht unbemerkt übergehen. Nach Anlegen und
 Restore wird der Serverzustand erneut geladen statt im Browser ein zweites
 Backup-Modell fortzuschreiben. Browsermessung breit/schmal und beide Sprachen
 gehören in die Übergabe. Keine Statuszeile, kein Backend und kein T-48.
+
+### UI-Runde · Umsetzung (Claude, 2026-09-01)
+
+`#11`, `#12` und der UI-Halbsatz von `#8` — damit steht die Verify-Matrix
+vollständig auf ✅ (AI-Spalte). Ein fünfter Einstellungsreiter `backups`,
+erreichbar über `#/settings?tab=backups`.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 350 | **319** |
+| Gesamt | ≤ 600 | **587** |
+
+Acht Produktflächen wie freigegeben (sieben unter `dashboard/src/` plus
+`api-prefixes.ts`), drei Testdateien.
+
+#### Zwei Befunde, die erst der Browser gezeigt hat
+
+**Die Zeitspalte stand leer.** `d(parsed, 'long')` braucht ein benanntes
+Format in `datetimeFormats`, das dieser Katalog nicht führt — die Zelle blieb
+blank. Kein Test hatte hingesehen; jetzt prüft einer, dass dort etwas steht.
+`toLocaleString(locale)` ersetzt den Aufruf.
+
+**Der Dialog verlor beim Schließen seinen Namen.** Die Auswahl wurde sofort
+geleert, und während der Ausblende stand „… wird beim nächsten Start
+eingespielt" ohne Subjekt da. Der Dialog hat jetzt ein eigenes
+Offen-Kennzeichen; die Auswahl fällt erst nach dem Übergang.
+
+#### Mutantenprobe
+
+| Mutant | rot |
+|---|---|
+| unpassende Sicherungen ausblenden | vier Fälle, darunter `#11` |
+| Neustart-Satz aus dem Dialog nehmen | `#12` |
+| Übergehen wird beim Öffnen nicht zurückgesetzt | „trägt kein Übergehen weiter" |
+| nach dem Anlegen nicht neu laden | „lädt den Serverzustand neu" |
+| Fehler und Neustart gleichzeitig zeigen | „Fehler steht vor dem Neustart" |
+
+Zwei erste Mutantenversuche waren **äquivalent** und haben nichts gezeigt: der
+Anfangswert von `force` (das Öffnen setzt ihn ohnehin zurück) und die
+`v-else-if`-Kette bei einer Belegung, die der Server nie liefert. Beide Orakel
+zielen jetzt auf die tatsächliche Sicherung.
+
+#### Browsermessung
+
+| | Ergebnis |
+|---|---|
+| breit (1423 px) | volle Tabelle, Seite scrollt nicht quer |
+| Container auf 340 px | Inhalt 595 px, `overflow-x: auto` — **die Liste scrollt in sich**, `body.scrollWidth == body.clientWidth` |
+| Dialog | mittig, Neustart-Satz fett **vor** dem Klick |
+| Sprachen | Deutsch und Englisch vollständig, kein roher Schlüssel |
+
+**Eine Einschränkung, die ich nenne, statt sie zu übergehen:** Das Browserfenster
+ließ sich in dieser Umgebung nicht verkleinern — `resize_window` meldet Erfolg,
+`window.innerWidth` bleibt bei 1423. Die schmale Zusage ist deshalb am
+Container gemessen (auf 340 px gesetzt, Werte oben) und nicht an einem echt
+schmalen Fenster. Was dabei ungeprüft bleibt: Media-Queries des Rahmens — die
+Liste selbst führt keine.

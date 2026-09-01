@@ -18,6 +18,7 @@ export const apiPrefixes = [
   '/exchanges',
   '/fx',
   '/analyze',
+  '/backups',
   '/env',
   '/health',
   // Die drei Wege des Identitäts-Umzugs und der Diagnose (T-21 Teil 3).

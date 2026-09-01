@@ -65,6 +65,17 @@ describe('useHashTab', () => {
     unmount()
   })
 
+  it('spricht den Sicherungs-Reiter über die Adresse an', () => {
+    // Der Grund für die Adressierbarkeit: Ein Hinweis irgendwo in der App soll
+    // auf **diese** Einstellung zeigen können, statt „steht in den
+    // Einstellungen" zu sagen.
+    window.location.hash = '#/settings?tab=backups'
+    const { tab, settingsTab, unmount } = mountHashTab()
+    expect(tab.value).toBe('settings')
+    expect(settingsTab.value).toBe('backups')
+    unmount()
+  })
+
   it('fällt bei unbekanntem Reiter auf appearance zurück', () => {
     window.location.hash = '#/settings?tab=bogus'
     const { tab, settingsTab, unmount } = mountHashTab()

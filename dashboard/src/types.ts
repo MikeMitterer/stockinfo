@@ -313,7 +313,7 @@ export interface FxRate {
 export type TabKey = 'assets' | 'exchanges' | 'analysis' | 'fx' | 'settings'
 
 /** Reiter innerhalb der Einstellungsseite (adressierbar via #/settings?tab=…). */
-export type SettingsTab = 'appearance' | 'language' | 'links' | 'environment'
+export type SettingsTab = 'appearance' | 'language' | 'links' | 'backups' | 'environment'
 
 /** Bekannte Icon-Namen der Navigation (deckungsgleich mit den Tabs). */
 export type NavIconName = TabKey
@@ -388,4 +388,33 @@ export interface MigrationPreview {
 export interface MigrationReport {
   completed: boolean
   rejected: RejectedInstrument[]
+}
+
+/** Eine Sicherung, so wie `GET /backups` sie zeigt. */
+export interface BackupEntry {
+  name: string
+  created_at: string
+  size: number
+  fingerprint: string
+  /** Passt sie zur **laufenden** Quellenlage? */
+  compatible: boolean
+  /** Warum nicht; leer, solange sie passt. */
+  reason: string
+}
+
+/** Die Sicherungen einer Instanz samt ihrem Wiederherstellungs-Zustand. */
+export interface BackupList {
+  fingerprint: string
+  /** Gesetzt, solange ein Neustart aussteht — dann ist die DB noch die alte. */
+  pending_restore: string | null
+  /** Warum der letzte Tausch scheiterte; dann steht kein Neustart mehr aus. */
+  restore_error: string
+  backups: BackupEntry[]
+}
+
+/** Die Antwort auf ein vorgemerktes Wiederherstellen. */
+export interface RestoreAccepted {
+  backup: BackupEntry
+  restart_required: boolean
+  detail: string
 }

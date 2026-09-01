@@ -213,12 +213,37 @@ export const en = {
     de: 'German',
     en: 'English',
   },
+  backups: {
+    title: 'Database backups',
+    hint:
+      '{keep} backups are kept; the oldest gives way when the next one is ' +
+      'created. Backups are taken on demand, not on a schedule.',
+    create: 'Back up now',
+    restore: 'Restore',
+    empty: 'No backup yet.',
+    colCreated: 'Created',
+    colSize: 'Size',
+    colFit: 'Fit',
+    fits: 'matches the running source setup',
+    /* Der Neustart steht vor der Entscheidung — siehe die deutsche Fassung. */
+    confirmTitle: 'Restore?',
+    confirmBody: '{name} will be applied on the next start.',
+    confirmRestart:
+      'This requires restarting the app. Until then the current data keeps ' +
+      'running unchanged.',
+    confirmYes: 'Schedule',
+    confirmNo: 'Cancel',
+    forceLabel: 'Restore anyway — {reason}',
+    pending: 'A restart is pending: {name} will be applied on the next start.',
+    failed: 'Restoring failed: {reason}. It will not be retried.',
+  },
   settings: {
     title: 'Settings',
     tab: {
       appearance: 'Appearance',
       language: 'Language',
       links: 'API & Links',
+      backups: 'Backups',
       environment: 'Environment',
     },
     language: {
