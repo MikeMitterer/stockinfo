@@ -7,10 +7,8 @@ import { i18n } from '../../src/i18n'
 import type { BackupList } from '../../src/types'
 
 /**
- * Die Sicherungsansicht.
- *
- * Geprüft wird der gerenderte Text und der ausgelöste Aufruf — nicht die
- * inneren Klassen von Naive UI. Die Zusagen stammen aus der Verify-Matrix:
+ * Die Sicherungsansicht. Geprüft wird der gerenderte Text und der ausgelöste
+ * Aufruf, nicht die inneren Klassen von Naive UI.
  *
  * ===== ==================================================================
  * `#11` Auch unpassende Sicherungen sind sichtbar, mit ihrem Grund
@@ -46,11 +44,8 @@ function listing(extra: Partial<BackupList> = {}): BackupList {
 }
 
 /**
- * Mountet die Ansicht mit **eingefangenem** Teleport.
- *
- * Naive versetzt den Dialog an den Dokumentkörper; ohne diesen Stub läge er
- * außerhalb des Wrappers, und jede Zusage über ihn müsste am globalen DOM
- * hängen — samt der Reste, die ein vorheriger Fall dort liegen lässt.
+ * Mountet die Ansicht mit **eingefangenem** Teleport: Sonst läge der Dialog am
+ * Dokumentkörper, und jede Zusage über ihn hinge am globalen DOM.
  */
 function mountPanel() {
   return mount(BackupsPanel, {
@@ -58,11 +53,14 @@ function mountPanel() {
   })
 }
 
+/** Der Bestätigungsknopf des Dialogs. */
+function confirmButton(wrapper: ReturnType<typeof mountPanel>) {
+  return wrapper.findAll('button').find((candidate) => /Vormerken|Schedule/.test(candidate.text()))
+}
+
 /** Klickt im Dialog auf „Vormerken". */
 async function confirmDialog(wrapper: ReturnType<typeof mountPanel>): Promise<void> {
-  const button = wrapper
-    .findAll('button')
-    .find((candidate) => /Vormerken|Schedule/.test(candidate.text()))
+  const button = confirmButton(wrapper)
   expect(button, 'der Bestätigungsknopf fehlt').toBeTruthy()
   await button?.trigger('click')
   await flushPromises()
@@ -86,12 +84,11 @@ describe('BackupsPanel', () => {
     expect(text).toContain('quotes: dort [yaml-file], hier [yfinance]')
     expect(text).toContain('passt zur laufenden Quellenlage')
     expect(wrapper.findAll('tbody tr')).toHaveLength(2)
-    // **Die Zeitspalte muss etwas enthalten.** Sie stand im Browser leer, weil
-    // `d()` ein benanntes Format braucht, das der Katalog nicht führt — im
-    // Test fiel das nicht auf, weil niemand hinsah.
-    const ersteZelle = wrapper.findAll('tbody tr')[0].findAll('td')[0].text()
-    expect(ersteZelle).not.toBe('')
-    expect(ersteZelle).toMatch(/2026/)
+    // **Die Zeitspalte muss etwas enthalten** — eine leere Zelle fällt nur
+    // auf, wenn jemand hinsieht.
+    const firstCell = wrapper.findAll('tbody tr')[0].findAll('td')[0].text()
+    expect(firstCell).not.toBe('')
+    expect(firstCell).toMatch(/2026/)
   })
 
   it('nennt den Neustart, bevor der Aufruf hinausgeht', async () => {
@@ -109,10 +106,10 @@ describe('BackupsPanel', () => {
     expect(post).not.toHaveBeenCalled()
   })
 
-  it('verlangt für eine unpassende Sicherung eine ausdrückliche Handlung', async () => {
-    // Ohne den Haken geht der Aufruf **ohne** `force` hinaus und wird vom
-    // Backend mit `409` abgelehnt — das Übergehen ist eine Entscheidung des
-    // Benutzers, keine Voreinstellung der Ansicht.
+  it('sperrt die Bestätigung, solange das Übergehen nicht gesetzt ist', async () => {
+    // **Der Dialog weiß schon, dass die Sicherung nicht passt.** Den Aufruf
+    // trotzdem hinauszulassen hieße, den Benutzer erst aus einem `409`
+    // erfahren zu lassen, was hier längst dasteht.
     vi.spyOn(apiClient, 'get').mockResolvedValue(listing())
     const post = vi.spyOn(apiClient, 'post').mockResolvedValue({})
 
@@ -122,38 +119,31 @@ describe('BackupsPanel', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Trotzdem einspielen')
-    expect(wrapper.find('.n-checkbox').exists(), 'die Force-Handlung fehlt').toBe(true)
-    expect(post).not.toHaveBeenCalled()
+    expect(confirmButton(wrapper)?.attributes('disabled')).toBeDefined()
 
-    // **Ohne Zutun kein `force`.** Der Haken sichtbar zu machen genügt nicht —
-    // steht er vorbelegt, geht das Übergehen ungefragt hinaus, und der
-    // Benutzer hat nie entschieden.
     await confirmDialog(wrapper)
-
-    expect(post).toHaveBeenCalledTimes(1)
-    expect(post.mock.calls[0][0]).not.toContain('force')
+    expect(post, 'der Aufruf ging trotz gesperrter Aktion hinaus').not.toHaveBeenCalled()
   })
 
-  it('übergeht die Quellenlage erst, wenn der Haken gesetzt ist', async () => {
+  it('gibt die Bestätigung mit dem Haken frei — dann mit `force`', async () => {
     vi.spyOn(apiClient, 'get').mockResolvedValue(listing())
     const post = vi.spyOn(apiClient, 'post').mockResolvedValue({})
-
     const wrapper = mountPanel()
     await flushPromises()
     await wrapper.findAll('tbody button')[1].trigger('click')
-    await flushPromises()
     await wrapper.find('.n-checkbox').trigger('click')
     await flushPromises()
+
+    expect(confirmButton(wrapper)?.attributes('disabled')).toBeUndefined()
     await confirmDialog(wrapper)
 
     expect(post.mock.calls[0][0]).toContain('force=true')
   })
 
   it('trägt ein gesetztes Übergehen nicht in den nächsten Dialog', async () => {
-    // **Der eigentliche Schutz sitzt im Öffnen, nicht im Anfangswert.** Wer
-    // einmal übergangen hat und danach eine passende Sicherung wählt, würde
-    // sonst wieder mit `force` einspielen — ohne es zu wollen und ohne es zu
-    // sehen, denn bei einer passenden Sicherung gibt es den Haken gar nicht.
+    // **Der Schutz sitzt im Öffnen, nicht im Anfangswert.** Wer einmal
+    // übergangen hat und danach eine passende Sicherung wählt, spielte sonst
+    // wieder mit `force` ein — dort gibt es den Haken nicht.
     vi.spyOn(apiClient, 'get').mockResolvedValue(listing())
     const post = vi.spyOn(apiClient, 'post').mockResolvedValue({})
 
@@ -162,10 +152,10 @@ describe('BackupsPanel', () => {
     await wrapper.findAll('tbody button')[1].trigger('click')
     await wrapper.find('.n-checkbox').trigger('click')
     await flushPromises()
-    const abbrechen = wrapper
+    const cancel = wrapper
       .findAll('button')
       .find((candidate) => /Abbrechen|Cancel/.test(candidate.text()))
-    await abbrechen?.trigger('click')
+    await cancel?.trigger('click')
     await flushPromises()
 
     await wrapper.findAll('tbody button')[0].trigger('click')
@@ -187,12 +177,13 @@ describe('BackupsPanel', () => {
     await flushPromises()
 
     expect(wrapper.text()).toContain('Das Einspielen ist gescheitert')
+    expect(wrapper.text()).toContain('Zielmedium voll')
     expect(wrapper.text()).not.toContain('Ein Neustart steht aus')
   })
 
   it('lädt nach dem Anlegen den Serverzustand neu', async () => {
-    // Anlegen verdrängt die älteste; eine Ansicht, die ihren eigenen Stand
-    // fortschreibt, zeigt danach etwas anderes als die Instanz.
+    // Anlegen verdrängt die älteste; ein fortgeschriebener Eigenstand zeigte
+    // danach etwas anderes als die Instanz.
     const get = vi.spyOn(apiClient, 'get').mockResolvedValue(listing())
     vi.spyOn(apiClient, 'post').mockResolvedValue({})
 
@@ -206,9 +197,46 @@ describe('BackupsPanel', () => {
     expect(get).toHaveBeenCalledTimes(2)
   })
 
+  it('nennt den Grund aus dem Katalog und lädt danach nicht nach', async () => {
+    // **Ein Nachladen im Fehlerfall löschte genau die Meldung**, für die der
+    // Aufruf gerade gescheitert ist — der Benutzer sähe einen Klick ohne
+    // Wirkung und ohne Grund. Der Text kommt aus dem Katalog, nicht aus
+    // `String(err)`: Sonst stünde in der englischen Oberfläche ein deutscher.
+    for (const [locale, expected] of [
+      ['de', 'Sicherung fehlgeschlagen'],
+      ['en', 'Backup failed'],
+    ] as const) {
+      i18n.global.locale.value = locale
+      const get = vi.spyOn(apiClient, 'get').mockResolvedValue(listing())
+      vi.spyOn(apiClient, 'post').mockRejectedValue(new Error('boom'))
+
+      const wrapper = mountPanel()
+      await flushPromises()
+      await wrapper.find('button').trigger('click')
+      await flushPromises()
+
+      expect(wrapper.text()).toContain(expected)
+      expect(wrapper.text(), 'der rohe Fehlertext steht da').not.toContain('boom')
+      expect(get, 'nach dem Fehlschlag wurde nachgeladen').toHaveBeenCalledTimes(1)
+      vi.restoreAllMocks()
+    }
+  })
+
+  it('nennt auch ein gescheitertes Wiederherstellen beim Namen', async () => {
+    vi.spyOn(apiClient, 'get').mockResolvedValue(listing())
+    vi.spyOn(apiClient, 'post').mockRejectedValue(new Error('boom'))
+    const wrapper = mountPanel()
+    await flushPromises()
+    await wrapper.findAll('tbody button')[0].trigger('click')
+    await flushPromises()
+    await confirmDialog(wrapper)
+
+    expect(wrapper.text()).toContain('Wiederherstellen fehlgeschlagen')
+  })
+
   it('zeigt einen ausstehenden Neustart', async () => {
-    // **`#8`, UI-Halbsatz.** Eine Ansage, die nur einmal in einer Antwort
-    // stand, sieht nach dem Neuladen der Seite niemand mehr.
+    // **`#8`, UI-Halbsatz.** Eine Ansage nur in der Antwort sieht nach dem
+    // Neuladen niemand mehr.
     vi.spyOn(apiClient, 'get').mockResolvedValue(
       listing({ pending_restore: FITTING.name }),
     )
@@ -220,23 +248,9 @@ describe('BackupsPanel', () => {
     expect(wrapper.text()).toContain(FITTING.name)
   })
 
-  it('zeigt einen gescheiterten Tausch statt eines ausstehenden Neustarts', async () => {
-    // Nach einem Fehler folgt kein Versuch mehr — dann steht dort nichts aus.
-    vi.spyOn(apiClient, 'get').mockResolvedValue(
-      listing({ restore_error: `${FITTING.name}: OSError: Zielmedium voll` }),
-    )
-
-    const wrapper = mountPanel()
-    await flushPromises()
-
-    expect(wrapper.text()).toContain('Das Einspielen ist gescheitert')
-    expect(wrapper.text()).toContain('Zielmedium voll')
-    expect(wrapper.text()).not.toContain('Ein Neustart steht aus')
-  })
-
   it('übersetzt beide Sprachen und lässt keinen Schlüssel roh stehen', async () => {
-    // Das `analysis.role.`-Muster aus T-46: Ein fehlender Schlüssel fällt in
-    // der Oberfläche nur auf, wenn jemand hinsieht — hier sieht der Test hin.
+    // Ein fehlender Schlüssel fällt in der Oberfläche nur auf, wenn jemand
+    // hinsieht — hier sieht der Test hin.
     vi.spyOn(apiClient, 'get').mockResolvedValue(listing())
 
     for (const [locale, expected] of [

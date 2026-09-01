@@ -30,10 +30,10 @@ describe('SettingsPanel', () => {
     // Über die Reiter-Leiste, nicht über die Panes: Naive rendert nur die
     // aktive Pane — die Beschriftungen stehen trotzdem alle in der Leiste.
     const wrapper = mountPanel()
-    const leiste = wrapper.find('.n-tabs-nav').text()
+    const bar = wrapper.find('.n-tabs-nav').text()
 
     for (const label of ['Darstellung', 'Sprache', 'API & Links', 'Sicherungen', 'Environment']) {
-      expect(leiste, label).toContain(label)
+      expect(bar, label).toContain(label)
     }
   })
 

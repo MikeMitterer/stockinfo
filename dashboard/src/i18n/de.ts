@@ -321,6 +321,9 @@ export const de = {
     analysis: 'Analyse fehlgeschlagen',
     fx: 'Wechselkurs konnte nicht geladen werden',
     overrides: 'Kennzahlen konnten nicht gespeichert werden',
+    backupsLoad: 'Sicherungen konnten nicht geladen werden',
+    backupCreate: 'Sicherung fehlgeschlagen',
+    backupRestore: 'Wiederherstellen fehlgeschlagen',
 
     /*
      * Der **Grund** hinter der Kategorie darüber, je Kennung aus

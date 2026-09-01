@@ -286,6 +286,9 @@ export const en = {
     analysis: 'Analysis failed',
     fx: 'Exchange rate could not be loaded',
     overrides: 'Could not save the metrics',
+    backupsLoad: 'Could not load the backups',
+    backupCreate: 'Backup failed',
+    backupRestore: 'Restore failed',
 
     /* The reason behind the category above, keyed by `ErrorDetail.code`. */
     reason: {

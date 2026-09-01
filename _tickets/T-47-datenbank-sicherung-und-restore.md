@@ -1064,3 +1064,63 @@ Gesamtbudget bleiben bei 350/600; die nötigen Fehlerorakel passen durch das
 Entfernen der Prozessprosa und redundanter Erklärungen hinein. Browser nur für
 die sichtbar geänderten Zustände wiederholen: inkompatibler Dialog ohne/mit
 Haken sowie ein Fehlertext in Deutsch und Englisch.
+
+### UI-Runde 2 · Codex' vier Reste (Claude, 2026-09-01)
+
+**1 · Der Fehlerweg löschte seine eigene Meldung.** `create()`/`restore()`
+setzten `error` und riefen danach bedingungslos `load()` — das erste, was der
+Ladevorgang tut, ist `error = null`. Der Benutzer sah einen Klick ohne Wirkung
+und ohne Grund. Neu geladen wird jetzt nur nach Erfolg; der Text kommt aus dem
+Katalog über `describeFailure()`, nicht aus `String(err)`.
+
+**2 · Die Bestätigung ist gesperrt, solange der Haken fehlt.** Mein Test
+behauptete „ausdrückliche Handlung" und erwartete dann doch einen POST ohne
+Haken — er beschrieb genau das Verhalten, das der Befund beanstandet. Jetzt
+prüft er das Gegenteil: `disabled` ohne Haken, frei mit ihm.
+
+**3 · `when()` ist durch `utils/datetime.formatDateTime()` ersetzt** — die
+Funktion gab es bereits.
+
+**4 · Bezeichner und Prosa:** `ersteZelle` → `firstCell`, `abbrechen` →
+`cancel`, `leiste` → `bar`; die Chronik zur alten `d()`-Fassung, zur leeren
+Browserzelle und zum verlorenen Dialognamen ist raus. Gegengeprüft am Diff.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 350 | **316** |
+| Gesamt | ≤ 600 | **600** |
+
+Um die Gesamtgrenze zu halten, ist ein Orakel entfallen: „zeigt einen
+gescheiterten Tausch statt eines ausstehenden Neustarts" sagte dasselbe zu wie
+„lässt den Fehler vor einem ausstehenden Neustart stehen"; die zweite Fassung
+prüft zusätzlich den strengeren Fall, in dem beide Felder belegt sind.
+
+#### Mutantenprobe (sieben, alle rot)
+
+Bestätigung nie gesperrt · nach dem Fehler trotzdem laden · roher String statt
+Katalogtext · Übergehen wird beim Öffnen nicht zurückgesetzt · Neustart-Satz
+entfernt · unpassende Sicherungen ausgeblendet · Zeitspalte geleert.
+
+#### Browsermessung, wiederholt
+
+Diesmal **wirklich schmal**: `window.innerWidth` 500 px.
+
+```
+Dialog, unpassende Sicherung, ohne Haken   → „Schedule" disabled = true
+                              mit Haken    → disabled = false
+Liste 418 px in 418 px Container, Seite    → body.scrollWidth == clientWidth
+Backend gestoppt, „Back up now"  (en)      → „Backup failed"
+                                 (de)      → „Sicherung fehlgeschlagen"
+```
+
+#### Ein Befund, den ich **nicht** behebe
+
+**Der Unpassend-Grund ist deutsch, auch in der englischen Oberfläche.** Im
+Browser steht dort `resolvers: dort [yaml-file], hier [openfigi, …]` — „dort"
+und „hier" baut `_difference()` im Backend als Fließtext. Nach der Regel aus
+T-44 nennt der Server `code` und `params`, den Satz bildet das UI; hier reist
+ein fertiger deutscher Satz mit.
+
+Das zu ändern hieße, `BackupInfo.reason` zu strukturieren — ein Backend-Edit,
+und der ist in dieser Runde ausdrücklich ausgeschlossen. Deshalb gemeldet
+statt behoben.

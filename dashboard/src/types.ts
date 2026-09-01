@@ -411,10 +411,3 @@ export interface BackupList {
   restore_error: string
   backups: BackupEntry[]
 }
-
-/** Die Antwort auf ein vorgemerktes Wiederherstellen. */
-export interface RestoreAccepted {
-  backup: BackupEntry
-  restart_required: boolean
-  detail: string
-}

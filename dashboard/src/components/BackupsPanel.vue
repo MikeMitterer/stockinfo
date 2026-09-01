@@ -1,21 +1,19 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton, NCheckbox, NModal } from 'naive-ui'
 
 import { useBackups } from '../composables/useBackups'
+import { formatDateTime } from '../utils/datetime'
 import type { BackupEntry } from '../types'
 
 /**
  * Die Sicherungen der Instanz.
  *
- * **Auch die unpassenden stehen hier** — mit ihrem Grund, nicht ausgeblendet.
- * Wer eine Datei im Verzeichnis liegen sieht, sie in der Liste aber nicht
- * findet, sucht den Fehler bei sich.
- *
- * **Der Neustart wird vor dem Klick genannt.** Er ist die eigentliche Folge
- * des Wiederherstellens; ihn erst in der Antwort zu erwähnen hieße, ihn nach
- * der Entscheidung mitzuteilen.
+ * **Auch die unpassenden stehen hier**, mit ihrem Grund: Wer eine Datei im
+ * Verzeichnis liegen sieht, sie in der Liste aber nicht findet, sucht den
+ * Fehler bei sich. Und **der Neustart wird vor dem Klick genannt** — ihn erst
+ * in der Antwort zu erwähnen hieße, ihn nach der Entscheidung mitzuteilen.
  */
 const { t, n, locale } = useI18n()
 const { data, loading, error, load, create, restore } = useBackups()
@@ -25,14 +23,20 @@ const chosen = ref<BackupEntry | null>(null)
 /**
  * Ob der Dialog offen ist — **getrennt** von der gewählten Sicherung.
  *
- * Das Ausblenden läuft als Übergang. Würde die Auswahl schon beim Schließen
- * geleert, stünde der Text während der Blende ohne seinen Namen da: „… wird
- * beim nächsten Start eingespielt", ohne zu sagen, was. Die Auswahl fällt
- * deshalb erst, wenn der Dialog wirklich weg ist.
+ * Das Ausblenden läuft als Übergang; würde die Auswahl schon beim Schließen
+ * geleert, stünde der Text während der Blende ohne seinen Namen da. Sie fällt
+ * deshalb erst, wenn der Dialog weg ist.
  */
 const open = ref<boolean>(false)
 /** Das ausdrückliche Übergehen einer abweichenden Quellenlage. */
 const force = ref<boolean>(false)
+
+/**
+ * Gesperrt, solange eine bekannt unpassende Sicherung nicht ausdrücklich
+ * übergangen wurde: Der Aufruf liefe sonst gegen einen `409`, und der Benutzer
+ * erführe aus einer Fehlermeldung, was der Dialog schon wusste.
+ */
+const blocked = computed<boolean>(() => chosen.value !== null && !chosen.value.compatible && !force.value)
 
 onMounted(load)
 
@@ -54,17 +58,6 @@ function humanSize(bytes: number): string {
   return `${n(Math.max(1, Math.round(bytes / 1024)))} kB`
 }
 
-/**
- * Ein ISO-Zeitpunkt in der Sprache des Benutzers; roh, wenn er nicht taugt.
- *
- * `toLocaleString` und nicht `d()`: Letzteres braucht ein benanntes Format in
- * `datetimeFormats`, das dieser Katalog nicht führt — es lieferte eine leere
- * Zelle, und die Spalte stand im Browser blank da.
- */
-function when(iso: string): string {
-  const parsed = new Date(iso)
-  return Number.isNaN(parsed.valueOf()) ? iso : parsed.toLocaleString(locale.value)
-}
 </script>
 
 <template>
@@ -97,7 +90,7 @@ function when(iso: string): string {
         </thead>
         <tbody>
           <tr v-for="entry in data.backups" :key="entry.name">
-            <td>{{ when(entry.created_at) }}</td>
+            <td>{{ formatDateTime(entry.created_at, locale) }}</td>
             <td class="num">{{ humanSize(entry.size) }}</td>
             <td>
               <span v-if="entry.compatible">{{ t('backups.fits') }}</span>
@@ -117,6 +110,7 @@ function when(iso: string): string {
       preset="dialog"
       :title="t('backups.confirmTitle')"
       :positive-text="t('backups.confirmYes')"
+      :positive-button-props="{ disabled: blocked }"
       :negative-text="t('backups.confirmNo')"
       @positive-click="confirm"
       @negative-click="open = false"
