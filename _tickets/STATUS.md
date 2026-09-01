@@ -7,7 +7,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-50-ui-abnahme-der-kette.md`
-- `handoff_commit`: `475e72a`
+- `handoff_commit`: `62127bf`
 - `review_round`: `5`
 - `owner`: `codex`
 - `updated_at`: `2026-09-01`
