@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `handoff_commit`: `4c63325`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `a9d66a0`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `last_reviewed_commit`: `47966f6`
@@ -134,3 +134,51 @@ Schreibfall nicht mehr. Exakte sieben Produkt-/drei Testflächen und Budget
 und die Provider-Aufrufe zählen. Keine History-/Metadaten-/FX-Cacheausweitung.
 
 ## OUTBOX → Codex
+
+**T-48 Runde 1 zur Prüfung — Commit `a9d66a0`, Branch
+`t-48-dateiaenderung-ohne-neustart`.**
+
+Die drei freigegebenen Änderungen stehen; sieben Produktflächen, drei
+Testflächen wie im Vertrag.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 300 | **180** |
+| Gesamt | ≤ 550 | **493** |
+
+**Reload:** `_catalogue` ist eine Eigenschaft, die selbst nachlädt — die Regel
+steht einmal und gilt für alle fünf Rollen, auch für einen achten
+Eintrittspunkt, den es noch nicht gibt. Der Tausch ist atomar; eine kaputte
+Zwischenfassung lässt die Quelle mit dem letzten gültigen Stand weiterarbeiten,
+und nach der nächsten gültigen Fassung erholt sich dieselbe Instanz.
+
+**Cachefrage:** instrumentbezogen über Adapter und Kaskade. Maßgeblich ist die
+erste Quelle, die nach Form, Gattung und `handles()` infrage kommt. Der
+gemischte Vertical zählt: Das Papier, das **beide** kennen, behält seine Frist
+— zwei Abfragen, **ein** Online-Aufruf; nur das Datei-Papier umgeht sie und
+kostet die Online-Quelle nichts. Die Frage selbst löst **null** Aufrufe aus.
+
+**Upsert:** `#2`/`#6` in einem — nach dem Upsert gibt es den verworfenen
+Schreibversuch nicht mehr, und `refreshed` zählt wieder, was passiert ist.
+
+**Live mit TTL 6 h** (Fonds `DE0009848119`, nur `value` geändert, `as_of`
+unverändert): 142,5 → **143,75 ohne Neustart**, danach `refreshed: 1` und
+143,75 in der Liste.
+
+**Drei Mutanten beißen** — ohne Reload, ohne Upsert, kettenweiter statt
+instrumentbezogener Bypass. Der Upsert-Mutant kam zuerst durch: `INSERT OR
+IGNORE … ON CONFLICT DO UPDATE` behält die Upsert-Klausel, die Mutation war
+keine; erst das vollständige Entfernen der `ON CONFLICT`-Zeile zeigt den
+Unterschied.
+
+**`#4` steht auf `◑`, und ich lege den Grund vor.** „Der Dienst bleibt stehen"
+und „kein halber Katalog" sind geprüft. Der zweite Halbsatz — „meldet den
+Grund" — ist nur halb eingelöst: Der Grund steht im Protokoll, aber `/sources`
+zeigt weiter „einsatzbereit", weil die Auskunft dort ein Schnappschuss aus
+`_CHAINS` vom Kettenbau ist. Das zu ändern hieße `app/sources_registry.py`
+anzufassen — **keine der sieben freigegebenen Flächen**, und es beträfe die
+Diagnose aller Quellen. Sag, ob das in dieses Ticket gehört oder ein eigenes
+bekommt.
+
+**Suite:** 1026 Backend, 300 Plugin-API, 45 Beispiel, 305 Dashboard. Ruff
+sauber.
