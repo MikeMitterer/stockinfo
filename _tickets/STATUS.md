@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
 - `handoff_commit`: `23aa81e`
 - `review_round`: `2`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
-- `last_reviewed_commit`: `d9819c0`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `23aa81e`
+- `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
 - `priority_ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
@@ -126,63 +126,30 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-52 Runde 1: eng begrenzte Korrektur der Laufzeitpfade.** Der Umzug nach
-`examples/` und die zwei Profile tragen. Nicht freigegeben ist, dass beide auf
-dieselbe `/data/assets.yaml` zeigen: Mike hat zwei getrennte YAML-Fachdaten
-verlangt, und T-50 hat genau diese fachliche Trennung bereits bestätigt.
+**T-52 Runde 2: den gefundenen dritten Profilweg auflösen.** Die zwei
+Laufzeitpfade aus `db83ac3` sind korrekt; die lokale Probe mit nur geändertem
+Verzeichnisanteil genügt. Kein Container-Build und kein Browser-Rerun.
 
-- Fallback-Profil: `/data/assets-fallback.yaml`
-- Standalone-Profil: `/data/assets-standalone.yaml`
-
-Kommentare und aktive Doku auf dieselben Namen nachziehen. Beide Profile
-direkt aus den Vorlagen starten; die passende Fachdatenvorlage liegt dabei
-unter ihrem exakten Laufzeitnamen, ohne den Provider-Pfad im Scratchpad
-umzuschreiben. Keine Kettenänderung, kein Produktcode, keine neue Variante,
-kein Browser-Rerun und kein Scope-Checkpoint. Historische T-50-Belege dürfen
-klar markiert stehen bleiben; Human-Spalten bleiben leer.
+`docs/sources.yaml.example` entfällt: Sie ist eine dritte kopierbare Vorlage,
+obwohl online-only bereits die Vorgabe ohne Datei ist, und enthält zudem eine
+veraltete Aussage zum YAML-Profil. Den vorhandenen Erklärabschnitt in
+`docs/plugins.md` nicht duplizieren; dort nur kurz auf die zwei kanonischen
+Paare unter `examples/` verweisen. Aktive Verweise nachziehen, historische
+Ticket-/Planbelege dürfen stehen bleiben. Inhaltsinventar muss danach genau
+zwei kopierbare Profile finden; beide gezielt parsen und starten. Keine
+Vollsuite, kein Produktcode, kein neues Profil, kein Scope-Checkpoint.
 
 ## OUTBOX → Codex
 
-**T-52 Runde 2 zur Prüfung.** Dein Befund trifft: Meine Begründung stützte sich
-auf T-49s Arbeitskopie und übersah, dass **T-50 die Regel fortgeschrieben
-hatte** — Mikes Auflage war, dass die beiden Dateien nicht zusammenfallen
-dürfen. Jetzt `/data/assets-fallback.yaml` bzw. `/data/assets-standalone.yaml`;
-der Kopf der Standalone-Vorlage nennt auch den Grund.
+**T-52 Runde 2 geprüft — `changes_requested` auf `23aa81e`.**
 
-**Zur Prüfvorschrift „ohne den Provider-Pfad umzuschreiben": lokal nicht
-ausführbar.** Die Vorlagen tragen den Container-Pfad `/data/…`, und `/` ist
-unter macOS schreibgeschützt — `mkdir /data` scheitert mit *Read-only file
-system*. Der Containerweg steht offen (Docker läuft), aber `make build` lief
-über zehn Minuten ohne Ergebnis; für ein Vorlagen-Ticket unverhältnismäßig.
-
-Gelaufen ist die strengste lokal mögliche Form: **umgebogen wurde nur das
-Verzeichnis, der Dateiname steht wörtlich aus der Vorlage.**
-
-| Profil | Abfrage | Antwort |
-|---|---|---|
-| fallback | `GET /quote/DE0001102531` | `Bundesrepublik Deutschland \| bond \| 99.42 EUR` |
-| standalone | `GET /quote/DE0009848119` | `DWS Top Dividende LD \| fund \| 142.5 EUR` |
-
-Der Fonds steht **nur** in der Standalone-Datei — zöge das Fallback-Profil die
-falsche Datei, wäre er dort auffindbar gewesen. Sag, ob dir das genügt; sonst
-baue ich das Image und laufe es im Container.
-
-**N-1 · Es gibt ein drittes Quellenprofil, und mein Inventar hat es
-übersehen.** Ich habe nach `*.yaml` gefiltert — **`docs/sources.yaml.example`**
-endet auf `.example` und ist ein vollständiges Profil aus T-22: online-only,
-mit auskommentierter YAML-Variante darunter und der Anweisung *„nach
-`data/sources.yaml` kopieren"*. Ein Inventar über den **Inhalt** statt über die
-Endung findet es sofort. Das ist genau der Fehler, vor dem die Projektregel
-warnt — `grep` findet nur, was man vorher erraten hat.
-
-Damit ist die Prämisse dieses Tickets falsch und sein Ziel **nicht erreicht**:
-Es sind drei Vorlagen an zwei Orten, mit unterschiedlichen Ketten. Angefasst
-habe ich nichts, weil du diese Runde auf die Laufzeitpfade begrenzt und „keine
-neue Variante" verfügt hast. **Die Frage steht im Ticket:** geht die Datei in
-`examples/` auf, oder wird sie ausdrücklich als Erklärstück gekennzeichnet, das
-keine Betriebsvorlage ist?
-
-**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff sauber.
+Die getrennten Pfade sind freigegeben. Der neue Inventarbefund ist richtig:
+`docs/sources.yaml.example` ist eine dritte, veraltete Betriebsvorlage. Codex'
+Entscheidung: Datei entfernen, nichts davon als dritte Variante nach
+`examples/` kopieren; `docs/plugins.md` verweist knapp auf die zwei
+kanonischen Profil-/Fachdatenpaare. Aktive Verweise nachziehen, Inhaltsinventar
+auf exakt zwei Profile sowie beide gezielten Starts belegen und Runde 3
+übergeben.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 

@@ -298,3 +298,35 @@ derselbe Zustand, den dieses Ticket beenden sollte. Ich sehe zwei Wege: in
 `examples/` aufgehen lassen (dann fehlt der Erkläranteil, den die Datei
 mitbringt), oder sie ausdrücklich als **Erklärstück** kennzeichnen, das keine
 Betriebsvorlage ist. Ich lege es nicht selbst fest.
+
+---
+
+## Codex-Review Runde 2 · `changes_requested` (2026-09-01)
+
+Die Pfadkorrektur in `db83ac3` trägt: Fallback und Standalone zeigen auf die
+zwei getrennten Laufzeitdateien, und die Kommentare erklären die fachliche
+Grenze. Die lokale Startprobe mit ausschließlich ausgetauschtem
+Verzeichnisanteil genügt; sie behält die beiden entscheidenden Dateinamen bei.
+Ein Container-Build oder Browser-Rerun ist dafür nicht erforderlich.
+
+Der neue Inventarbefund ist richtig und wird **in T-52** bereinigt:
+
+1. `docs/sources.yaml.example` entfällt. Sie ist eine dritte kopierbare
+   Betriebsvorlage, obwohl die Online-Standardkette ohne Datei bereits gilt;
+   zugleich enthält ihr Kommentarblock den inzwischen falschen Stand, YAML sei
+   nur als eigenständiges Profil möglich.
+2. Der bereits vollständige Abschnitt `Auswählen: sources.yaml` in
+   `docs/plugins.md` bleibt die Erklärung. Dort kommt nur ein kurzer Verweis
+   auf die zwei kanonischen Paare hinzu:
+   `sources-fallback.yaml` + `assets-fallback.yaml` sowie
+   `sources-standalone.yaml` + `assets-standalone.yaml`.
+3. Aktive Verweise auf `docs/sources.yaml.example` werden auf die zwei
+   kanonischen Beispiele oder auf `docs/plugins.md` umgestellt. Historische
+   Ticket- und Planbelege dürfen als Geschichte stehen bleiben; sie sind keine
+   Installationsanweisung.
+4. Das Inhaltsinventar — nicht ein `*.yaml`-Namensfilter — weist danach genau
+   zwei kopierbare Quellenprofile aus, beide unter `examples/`. Beide Profile
+   noch einmal parsen und gezielt starten; keine Vollsuite wiederholen.
+
+Keine dritte Profilvariante, kein Verschieben des alten Erklärblocks nach
+`examples/`, kein Produktcode und kein Scope-Checkpoint. Danach Runde 3.
