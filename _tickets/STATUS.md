@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
 - `handoff_commit`: `ede5c3a`
 - `review_round`: `2`
