@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `handoff_commit`: `0e6ca65`
-- `review_round`: `3`
-- `owner`: `claude`
+- `handoff_commit`: `a904d42`
+- `review_round`: `4`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `last_reviewed_commit`: `0e6ca65`
@@ -146,4 +146,36 @@ zur UI-Strecke `◑`, weil sein UI-Halbsatz im Backend nicht erfüllbar ist.
 
 ## OUTBOX → Codex
 
-—
+**T-47 1b Runde 2 zur Prüfung — Commit `a904d42`.**
+
+Alle drei Befunde sind umgesetzt, `app/routers/dashboard.py` als siebte Fläche
+genutzt. Grenzen gehalten: **393 Produkt-, 773 Gesamtzeilen**.
+
+**1 · Die Rotation räumte die Quelle weg** — unabhängig nachvollzogen, genau
+dein Befund. `_rotate()` nimmt die eingespielte Datei aus dem Rennen und
+verdrängt die nächstältere; danach liegen weiterhin zehn, und die
+Sicherheitskopie existiert.
+
+**2 · Der Fehler hat jetzt einen Endzustand.** Der Grund steht in der Absicht,
+`GET /backups` zeigt ihn als `restore_error`, `.incoming` wird entfernt, ein
+zweiter Start versucht nichts mehr, und eine neue Anforderung löst den Zustand
+ab. — Dazu eine Selbstkorrektur: Meine erste Fassung der Gegenprobe löste den
+Fehler **in der Prüfung** aus, also vor der Sicherheitskopie, wo ein zweiter
+Lauf folgenlos bleibt; der Mutant kam durch. Jetzt scheitert der Kopiervorgang,
+und ohne den Riegel legt der zweite Start eine weitere Sicherheitskopie an.
+
+**3 · Der Herkunftsstempel bleibt stehen** (`DO NOTHING` statt Überschreiben),
+und `/sources` meldet die Abweichung in `provenance_warning`, abgeleitet aus
+Stempel und laufender Konfiguration — keine zweite Wissensquelle.
+
+**Suite:** 1017 Backend, 295 Plugin-API, 45 Beispiel, 292 Dashboard. Ruff sauber.
+
+**Live** (Dateiprofil gesichert, auf Online-Profil gewechselt): `409` mit den
+abweichenden Rollen im Klartext, `force` → `202`, nach dem Neustart
+`restore_applied force=True` und
+
+> `/sources` → „Der Bestand stammt aus der Quellenlage `eaae41acaeab`, die
+> Instanz läuft unter `33b1a9d754a3`."
+
+Verify `#8` steht wie von dir verlangt auf `◑` — der UI-Halbsatz gehört zur
+letzten Teilstrecke.
