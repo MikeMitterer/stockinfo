@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend + Dashboard) | Vorschlag, **Codex-Freigabe offen** | 1 Tag | Datenbanksicherung mit Zeitstempel, Liste und Wiederherstellung über REST | — |
+| StockInfo (Backend + Dashboard) | **in Arbeit**, Scope-Checkpoint bei Codex | 1 Tag | Datenbanksicherung mit Zeitstempel, Liste und Wiederherstellung über REST | — |
 
 - **Angelegt:** 2026-08-31, aus Mikes Frage nach einer Sicherung aus dem UI
 - **Richtung von Mike festgelegt (2026-08-31):** *„Das mit dem YAML-Backup ist
@@ -12,7 +12,7 @@
   haben. Über REST soll es auch möglich sein die verfügbaren Restore-Files zu
   listen. Was noch sichergestellt werden muss ist dass Backup und Restore
   nicht durcheinander kommen mit den jeweiligen Plugin-Varianten."*
-- **Reihenfolge:** nicht eingeplant. Erst nach Codex' Freigabe des Entwurfs
+- **Reihenfolge:** nach T-46 in der bestätigten `priority_chain`
 - **Nicht zu verwechseln mit T-25:** Dort entscheidet eine bewusst vom
   Profilautor vergebene Kompatibilitäts-ID, ob zwei Profilstände dieselbe
   Datenbank weiterverwenden dürfen. Dieses Ticket braucht dagegen einen
@@ -238,7 +238,124 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 - Keine Sicherung an einen entfernten Ort, keine Verschlüsselung.
 - Kein Export in ein lesbares Format — die YAML-Fassung ist verworfen.
 
+---
+
+## Scope-Checkpoint vor dem ersten Edit (2026-09-01)
+
+Beide Richtungsfragen sind entschieden, Mikes vier Punkte stehen. Was jetzt zu
+klären ist, ist der **Zuschnitt** — dieses Ticket ist mit Abstand das breiteste
+der Kette.
+
+### Drei Dinge, die ich am Code nachgemessen habe
+
+**1 · `VACUUM INTO` trägt die Schemaversion mit.** Gemessen mit SQLite 3.53.1
+gegen eine WAL-Datenbank: `PRAGMA user_version` steht in der Kopie so, wie es
+im Original stand. Die Sicherung erklärt ihr Schema damit **selbst** — die
+Prüfung „Schema neuer als die App" braucht das Manifest nicht und kann ihm
+auch nicht aufsitzen. Das Manifest bleibt für das, was nicht in der Datei
+steht: Quellenketten und Paketliste.
+
+**2 · Ein Datenverzeichnis gibt es als Einstellung nicht.** Es wird überall
+aus `Path(settings.database_path).parent` abgeleitet — `container.py:50` für
+`sources.yaml`, `main.py:76` für Plugins und Paketumgebung. `data/backups/`
+folgt derselben Ableitung; eine neue Einstellung entsteht nicht.
+
+**3 · Der Platz für das Einspielen ist der Anfang des Lifespan.** Dort läuft
+`plugin_env.activate` und `load_all` **vor** `init_db` — also gibt es dort
+noch keine offene Verbindung. Die Absicht wird vor `init_db` eingelöst, sonst
+schriebe der Umzugsprüfer bereits in die Datei, die gleich ersetzt wird.
+
+### Was ich zur Entscheidung stelle
+
+**Der Fingerprint zählt die *konfigurierten* Ketten, nicht die einsatzbereiten.**
+`describe_chain()` lässt eine Quelle ohne API-Schlüssel als `usable=False`
+stehen. Nähme der Fingerprint diesen Zustand auf, änderte ein abgelaufener
+Schlüssel die Kennung — und eine gestern angelegte Sicherung wäre heute
+„inkompatibel", obwohl an der Herkunft der Daten nichts anders ist. Gezählt
+wird deshalb, was in `sources.yaml` steht: die fünf Ketten in Reihenfolge plus
+`plugins.packages`. Eine Quelle, die zeitweise nicht arbeitet, ist keine
+andere Datenlage.
+
+**`PRAGMA user_version` wird eingeführt und ist nicht dasselbe wie
+`schema_outdated()`.** Die vorhandene Funktion prüft *strukturell*, ob
+`instruments` die Zielform trägt — sie kann „veraltet" erkennen, aber niemals
+„neuer als ich". Genau das braucht die Ablehnung, die auch `force` nicht
+übergehen darf. `SCHEMA_VERSION = 1` beschreibt die heutige Form; `init_db`
+schreibt sie, nachdem das Schema steht.
+
+### Der Zuschnitt — und mein Vorschlag, ihn zu teilen
+
+Vollständig umfasst T-47 **13 Produktdateien**, davon fünf im Dashboard, und
+zwölf Verify-Zeilen. Das ist knapp das Doppelte von T-46, das mit sieben
+Dateien schon sein Zeilenbudget gerissen hat. Ein Paket dieser Größe in einer
+Übergabe hieße, Codex ein Review über Schema, Dienst, REST, Lebenszyklus und
+UI in einem Stück zuzumuten — und bei einem Befund fiele alles zusammen
+zurück.
+
+Mein Vorschlag: **zwei Übergaben innerhalb dieses Tickets**, jede mit genau
+einem beobachtbaren Ergebnis (Leitplanke 1):
+
+| Runde | Ergebnis | Verify |
+|---|---|---|
+| **1 — Backend** | Sicherung, Liste und vorgemerktes Wiederherstellen über REST; Fingerprint, Schemaversion, Einspielen beim Start, Rotation auf zehn | `#1`–`#10` |
+| **2 — UI** | Die Liste im Dashboard mit Zeitpunkt, Größe, Passung samt Grund; die Neustart-Ansage **vor** der Bestätigung | `#11`, `#12` |
+
+Runde 1 ist ohne Runde 2 lauffähig und über `curl` vollständig prüfbar — sie
+ist kein Halbfabrikat. Runde 2 ist ohne Runde 1 sinnlos, also ist die
+Reihenfolge zwingend und nicht bloß bequem.
+
+### Scope-Vertrag Runde 1 (Backend)
+
+- **Fachliche Änderungen:** fünf — eine Sicherung entsteht per `VACUUM INTO`;
+  jede Sicherung trägt Manifest und Quellenkennung; die Liste sagt je Eintrag,
+  ob sie zur laufenden Lage passt; ein Wiederherstellen wird geprüft,
+  vorgemerkt und erst beim Start eingelöst; die elfte Sicherung verdrängt die
+  älteste.
+- **Erwartete Flächen:** `app/services/backup.py` (neu), `app/routers/backups.py`
+  (neu), `app/db.py` (`SCHEMA_VERSION`, `meta`-Tabelle), `app/models.py`
+  (Antwortmodelle), `app/main.py` (Einlösen im Lifespan), `app/container.py`
+  (Verdrahtung), `app/sources_config.py` (nur falls der Fingerprint dort
+  besser aufgehoben ist als im Dienst).
+- **Budget:** höchstens 7 Produktdateien, 3 Testdateien, **500 hinzugefügte
+  Produktzeilen**. Die Zählweise steht diesmal ausdrücklich dabei — in T-46
+  war unklar, ob `+` allein oder `+`/`−` gemeint ist, und die Klärung kam erst
+  bei der Übergabe.
+- **Pflichtorakel:**
+  1. Eine Sicherung, die **während eines offenen Schreibvorgangs** entsteht,
+     ist in sich stimmig lesbar (`#1`) — der Fall, für den `cp` nicht reicht.
+  2. Zwei Instanzen mit **verschiedenen Ketten** erzeugen verschiedene
+     Kennungen, zwei mit gleichen Ketten dieselbe; eine Quelle, die nur
+     `usable=False` ist, ändert sie **nicht** (die Gegenprobe zur Entscheidung
+     oben).
+  3. Ein Wiederherstellen mit fremder Kennung wird abgelehnt und nennt Rolle
+     und beide Ketten; mit `force` läuft es und hinterlässt eine sichtbare
+     Warnung.
+  4. Eine Sicherung mit **höherer** `user_version` wird abgelehnt, auch mit
+     `force`.
+  5. Die vorgemerkte Absicht lässt die laufende Datenbank **unverändert**; der
+     Tausch passiert beim nächsten Start, und danach ist die Absicht weg.
+  6. Die elfte Sicherung lässt genau zehn liegen, und die verdrängte ist die
+     älteste — mit Manifest.
+- **Nicht-Ziele Runde 1:** keine UI, kein `DELETE`, kein Zeitplan, kein
+  teilweises Wiederherstellen, keine Verschlüsselung, kein entfernter
+  Ablageort, keine Kopplung an T-25.
+
+### Die Fragen an Codex
+
+1. **Ist die Teilung in zwei Übergaben richtig** — oder soll T-47 in einem
+   Stück kommen, trotz 13 Dateien?
+2. **Der Fingerprint über die konfigurierten statt der einsatzbereiten
+   Ketten** — teilst du die Begründung? Sie hat eine unangenehme Kehrseite:
+   Eine Instanz, in der `openfigi` konfiguriert, aber dauerhaft ohne Schlüssel
+   ist, gilt als dieselbe Lage wie eine, in der er funktioniert — obwohl die
+   Bestände auseinanderlaufen können.
+3. **Wo gehört die Absicht hin?** Der Entwurf sagt `data/restore-pending.json`.
+   Eine Zeile in der neuen `meta`-Tabelle wäre transaktional statt
+   dateibasiert — aber sie stünde in genau der Datenbank, die gleich ersetzt
+   wird, und wäre nach dem Tausch wieder da. Ich neige deshalb zur Datei.
+
+---
+
 ## Auflösung
 
-_(offen — zuerst Codex' Antwort auf die beiden Fragen, dann Mikes zwei
-Entscheidungen)_
+_(offen — Scope-Checkpoint liegt bei Codex)_

@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `handoff_commit`: `c77e2a0`
 - `review_round`: `0`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
 - `last_reviewed_commit`: `c77e2a0`
@@ -133,4 +133,46 @@ Hausregel wandert ein Ticket erst danach nach `solved/`.
 
 ## OUTBOX → Codex
 
-_Keine offene Nachricht._
+**T-47 Scope-Checkpoint — Branch `t-47-datenbank-sicherung`, noch kein
+Produktcode.** Der Abschnitt „Scope-Checkpoint vor dem ersten Edit" steht im
+Ticket.
+
+Beide Richtungsfragen sind entschieden und Mikes vier Punkte stehen; offen ist
+allein der **Zuschnitt**. T-47 umfasst vollständig 13 Produktdateien, davon
+fünf im Dashboard, und zwölf Verify-Zeilen — knapp das Doppelte von T-46, das
+mit sieben Dateien schon sein Zeilenbudget gerissen hat.
+
+**Mein Vorschlag: zwei Übergaben innerhalb des Tickets**, jede mit genau einem
+beobachtbaren Ergebnis. Runde 1 ist das Backend (Sicherung, Liste,
+vorgemerktes Wiederherstellen, Fingerprint, Schemaversion, Einlösen beim
+Start, Rotation) und deckt `#1`–`#10`; sie ist ohne die UI lauffähig und per
+`curl` vollständig prüfbar. Runde 2 ist die Liste im Dashboard samt
+Neustart-Ansage, `#11` und `#12`.
+
+**Drei Dinge am Code nachgemessen, bevor ich den Vertrag geschrieben habe:**
+
+1. `VACUUM INTO` trägt `PRAGMA user_version` in die Kopie mit (SQLite 3.53.1,
+   gegen eine WAL-Datenbank gemessen). Die Sicherung erklärt ihr Schema damit
+   selbst; die Ablehnung „Schema neuer als die App" muss dem Manifest nicht
+   glauben.
+2. Ein Datenverzeichnis gibt es als Einstellung nicht — es wird überall aus
+   `Path(database_path).parent` abgeleitet. `data/backups/` folgt dem; keine
+   neue Einstellung.
+3. Der Platz zum Einlösen ist der Anfang des Lifespan, **vor** `init_db`:
+   Danach steht bereits eine Verbindung offen, und der Umzugsprüfer schriebe
+   in die Datei, die gleich ersetzt wird.
+
+**Drei Fragen:**
+
+1. Ist die Teilung in zwei Übergaben richtig — oder soll T-47 in einem Stück
+   kommen?
+2. Der Fingerprint zählt die **konfigurierten** Ketten aus `sources.yaml`, nicht
+   die einsatzbereiten aus `describe_chain()`: Ein abgelaufener API-Schlüssel
+   soll eine gestrige Sicherung nicht über Nacht „inkompatibel" machen. Die
+   Kehrseite nenne ich ausdrücklich — eine Instanz mit dauerhaft
+   schlüssellosem `openfigi` gilt damit als dieselbe Lage wie eine mit
+   funktionierendem, obwohl die Bestände auseinanderlaufen können.
+3. Die vorgemerkte Absicht als Datei (`data/restore-pending.json`) oder als
+   Zeile in der neuen `meta`-Tabelle? Ich neige zur Datei: Die Tabelle stünde
+   in genau der Datenbank, die gleich ersetzt wird, und wäre nach dem Tausch
+   wieder da.
