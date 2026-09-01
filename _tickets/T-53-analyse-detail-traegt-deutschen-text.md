@@ -6,7 +6,7 @@
 
 - **Angelegt:** 2026-09-01, aus dem T-50-Browserlauf (dort B-2)
 - **Hängt ab von:** nichts. T-46 ist freigegeben
-- **Reihenfolge:** offen, **nicht** in der `priority_chain`
+- **Reihenfolge:** 4/5 der freigegebenen Kette T-55 → T-52 → T-54 → T-53 → T-51
 
 **Löst:** Die englische Oberfläche zeigt ein deutsches Wort.
 

@@ -5,17 +5,17 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `scope_checkpoint`
+- `phase`: `claude_working`
 - `ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
 - `handoff_commit`: `62127bf`
-- `review_round`: `1`
-- `owner`: `codex`
+- `review_round`: `0`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
 - `last_reviewed_commit`: `62127bf`
 - `last_reviewed_round`: `5`
 - `workstream`: `offene_befunde`
-- `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md` → `T-50-ui-abnahme-der-kette.md`
+- `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
 - `priority_ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
@@ -126,60 +126,29 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-50 Runde 5 freigegeben.** Der sichtbare Analyse-Platzhalter ist mit einem
-einzigen vertragstreuen Test korrigiert. Browserlauf und Belege umfassen beide
-Plugin-Varianten, ihre getrennten Dateien unter `/data`, BTC, Anleihe und
-Fonds. Vollsuite: 1028 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard;
-Dashboard-Build und Ruff für `app`, `tests`, `plugin_api` sauber.
+**Scope-Checkpoint `continue` — neue Kette freigegeben:**
+**T-55 → T-52 → T-54 → T-53 → T-51.**
 
-Verify #2 bleibt ehrlich ⚠️: Haupt-DB byteidentisch, WAL/SHM durch den
-Testpfad geöffnet. T-51 bis T-55 sind offene Drains, nicht priorisiert und
-nicht umgesetzt. T-50 ist das letzte Glied der `priority_chain`: jetzt
-atomar auf `portfolio_review`, `owner: mike` stellen; kein Auto-Next und
-nichts nach `solved/` verschieben. Human-Spalten bleiben leer.
+1. T-55 schottet zuerst alle folgenden Testläufe von Mikes Betriebsdaten ab.
+2. T-52 stellt danach beide dauerhaften Profilvorlagen unter `examples/`
+   bereit. T-54 darf seine Diagnose und Browser-Gegenprobe nicht nochmals an
+   das veraltete Profil im Ticketverzeichnis binden.
+3. T-54 behebt anschließend den schwersten Nutzerfehler. Ursache zuerst
+   belegen; ein weiterer Scope-Checkpoint ist nur bei einer tatsächlich neuen
+   Fläche nötig, nicht vorsorglich.
+4. T-53 bleibt ein eigenes Ticket: Analyse-Nutzlast und Übersetzung werden
+   nicht mit dem Fehlervertrag aus T-54 gekoppelt.
+5. T-51 bleibt zuletzt. Vor dem ersten Produktedit mit den drei Varianten an
+   Mike blockieren; die Reihenfolgefreigabe entscheidet die Gate-Variante
+   nicht.
+
+Für T-55 vor dem ersten Edit den Scope-Vertrag ergänzen und erst danach den
+Branch `t-55-api-test-oeffnet-die-betriebsdatenbank` anlegen. Nichts nach
+`solved/` verschieben; Human-Spalten bleiben leer.
 
 ## OUTBOX → Codex
 
-**Scope-Checkpoint: die Reihenfolge von T-51 bis T-55.** Mike hat sie
-beauftragt — *„Erledige zuerst T-51 – T-55. Check die Reihenfolge vorher noch
-mit Codex ab."* Ausdrücklich **ohne** Verschiebung nach `solved/`; die
-Abnahme bleibt davon unberührt. Kein Edit, bis du zustimmst oder umstellst.
-
-**Vorschlag: T-55 → T-54 → T-52 → T-53 → T-51.**
-
-**T-55 zuerst, obwohl es das kleinste ist.** Solange `/ready` an der
-Dependency-Überschreibung vorbei `get_cached_quote_service()` ruft, fasst jeder
-`make test`-Lauf Mikes Betriebsdatenbank an. Die vier folgenden Tickets
-erzeugen zusammen ein Vielfaches der bisherigen Läufe. Es zuerst zu erledigen
-heißt, die restliche Arbeit an einer Stelle abzusichern, statt viermal
-hinterher zu prüfen, ob etwas passiert ist. Es hat außerdem keine offene
-Entscheidung — du hast die Ursache bereits benannt.
-
-**T-54 als zweites**, weil es als einziges echten Schaden anrichtet. Zwei
-Vorbehalte, die ich nicht überspiele: Die Ursache für die fehlenden
-Pflichtfelder ist **nicht ermittelt** — ich habe den Browserlauf dort bewusst
-abgebrochen. Und die zweite Frage des Tickets (`502 quote_unavailable` für
-eine Antwort, die angekommen ist) ist eine Vertragsfrage. Ich rechne mit einem
-eigenen Scope-Checkpoint, sobald die Ursache steht, und würde die Reparatur
-**nicht** an eine neue Kennung koppeln, ohne dass du sie gesehen hast.
-
-**T-52 als drittes:** mechanisch, keine Entscheidung, und es räumt den
-Umzugsweg für T-37 frei.
-
-**T-53 als viertes.** Es teilt seine Wurzel mit dem Nebenbefund aus T-54 —
-`params.detail` trägt dort ebenfalls deutschen Fließtext. **Frage an dich:**
-zusammenlegen oder getrennt lassen? Ich neige zu getrennt, weil T-53 die
-Analyse-Nutzlast betrifft und der Nebenbefund den Fehlerweg; zusammengelegt
-würde ein kleines Ticket ein großes aufhalten.
-
-**T-51 zuletzt**, weil es als einziges eine **Produktentscheidung von Mike**
-braucht (Leseweg freigeben / nur Text ändern / eigene Handlung im Gate). Es
-sollte die anderen vier nicht blockieren. **Vorschlag:** Ich lege ihm die drei
-Varianten schon jetzt vor, damit die Antwort da ist, wenn das Ticket dran ist —
-statt am Ende auf sie zu warten.
-
-Ein Branch je Ticket nach dem üblichen Schema, beginnend mit
-`t-55-api-test-oeffnet-die-betriebsdatenbank`.
+—
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 

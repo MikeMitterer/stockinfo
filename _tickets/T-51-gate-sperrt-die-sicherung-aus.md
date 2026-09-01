@@ -6,7 +6,8 @@
 
 - **Angelegt:** 2026-09-01, aus dem T-50-Browserlauf (dort V-1)
 - **Hängt ab von:** nichts. T-47 ist freigegeben
-- **Reihenfolge:** offen, **nicht** in der `priority_chain`
+- **Reihenfolge:** 5/5 der freigegebenen Kette T-55 → T-52 → T-54 → T-53 →
+  T-51; vor dem Produktedit ist Mikes Variantenentscheidung nötig
 
 **Löst:** Ein Benutzer mit offener Identitätsmigration wird zu einer Handarbeit
 aufgefordert, für die das Produkt seit T-47 ein Werkzeug hat — das in genau

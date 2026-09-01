@@ -6,7 +6,7 @@
 
 - **Angelegt:** 2026-09-01, aus dem Isolations-Gegenlauf von T-50
 - **Hängt ab von:** nichts
-- **Reihenfolge:** offen, **nicht** in der `priority_chain`
+- **Reihenfolge:** 1/5 der freigegebenen Kette T-55 → T-52 → T-54 → T-53 → T-51
 
 **Löst:** Eine als „kein Netz, keine DB" beschriebene HTTP-Testdatei öffnet
 beim Readiness-Test die Betriebsdatenbank und verändert dadurch deren

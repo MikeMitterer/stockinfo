@@ -6,7 +6,7 @@
 
 - **Angelegt:** 2026-09-01, aus dem T-50-Browserlauf (dort V-3)
 - **Hängt ab von:** nichts. T-49 ist freigegeben
-- **Reihenfolge:** offen, **nicht** in der `priority_chain`
+- **Reihenfolge:** 2/5 der freigegebenen Kette T-55 → T-52 → T-54 → T-53 → T-51
 
 **Löst:** T-49 hat die **Fachdaten** aus dem Ticketverzeichnis geholt. Die
 `sources.yaml` daneben ist dieselbe Sorte Datei und blieb liegen.

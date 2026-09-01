@@ -6,9 +6,9 @@
 
 - **Angelegt:** 2026-09-01, aus dem T-50-Browserlauf (dort B-3)
 - **Hängt ab von:** nichts
-- **Reihenfolge:** offen, **nicht** in der `priority_chain` — **aber der
-  gewichtigste der vier Drains**, weil er die häufigste Handlung eines neuen
-  Benutzers trifft
+- **Reihenfolge:** 3/5 der freigegebenen Kette T-55 → T-52 → T-54 → T-53 →
+  T-51 — der gewichtigste Drain, aber erst nach Testisolation und dauerhaften
+  Profilvorlagen
 
 **Löst:** Wer `SAP.DE` in das Feld über der Assets-Liste tippt, bekommt eine
 Fehlermeldung, die ihn zur Quelle schickt. Die Quelle ist in Ordnung.
