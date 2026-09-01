@@ -5,12 +5,12 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
 - `handoff_commit`: `f24354f`
 - `review_round`: `1`
 - `owner`: `codex`
-- `updated_at`: `2026-08-31`
+- `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-45-smoke-skripte-nach-solved-verschiebbar.md`
 - `last_reviewed_commit`: `945d516`
 - `last_reviewed_round`: `1`
