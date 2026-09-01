@@ -6,6 +6,7 @@ from collections.abc import Iterator
 import pytest
 from fastapi.testclient import TestClient
 
+import app.main as main_module
 from app.container import get_cached_quote_service, get_daily_history_service
 from app.main import app
 from app.models import DailyPoint, ListedIdentityOut, QuotePoint, QuoteResponse
@@ -33,6 +34,15 @@ class FakeDaily:
 
 class FakeService:
     """Ersetzt den CachedQuoteService; steuert Erfolg/Fehler über Präfixe."""
+
+    def count_instruments(self) -> int:
+        """Der Blick, mit dem `/ready` die Datenbank prüft.
+
+        Die Zahl ist gleichgültig — die Route wertet nur aus, **ob** der Aufruf
+        durchgeht. Dass die Methode hier fehlte, gehörte zum Befund: Ohne sie
+        ließ sich der Dienst an dieser Stelle gar nicht ersetzen.
+        """
+        return 3
 
     def get_by_isin(self, isin: str) -> QuoteResponse:
         if isin.startswith("XX"):
@@ -99,10 +109,23 @@ class FakeService:
 
 
 @pytest.fixture
-def client() -> Iterator[TestClient]:
-    """TestClient ohne Lifespan (kein Scheduler/DB), Service überschrieben."""
+def client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
+    """TestClient ohne Lifespan (kein Scheduler/DB), Service überschrieben.
+
+    **Zwei Nähte, weil es zwei Zugriffsarten gibt.** `dependency_overrides`
+    fängt jede Route, die den Dienst als FastAPI-Dependency deklariert.
+    `/ready` tut das nicht — es holt ihn direkt aus dem Modulnamensraum von
+    `app.main` — und griff deshalb an der Überschreibung vorbei auf die
+    Betriebsdatenbank unter `data/` zu.
+
+    Die zweite Naht sitzt hier statt im einzelnen Test: Die Zusage der ersten
+    Zeile dieser Datei soll für **jeden** ihrer Fälle gelten und nicht davon
+    abhängen, dass ein künftiger daran denkt. Wer einen anderen Dienst
+    braucht — der `503`-Fall weiter unten —, setzt ihn danach und gewinnt.
+    """
     app.dependency_overrides[get_cached_quote_service] = FakeService
     app.dependency_overrides[get_daily_history_service] = FakeDaily
+    monkeypatch.setattr(main_module, "get_cached_quote_service", FakeService)
     yield TestClient(app)
     app.dependency_overrides.clear()
 

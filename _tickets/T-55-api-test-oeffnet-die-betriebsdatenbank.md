@@ -72,10 +72,10 @@ Betriebsdatenbank migrieren oder WAL/SHM im Produkt abschalten.
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | `tests/test_api.py` allein | alle Fälle grün mit einer temporären oder vollständig gefälschten Datenbanknaht | ➖ | |
-| **2** | Betriebsdateien | Hauptdatei, WAL und SHM vor/nach byte- und existenzgleich | ➖ | |
-| **3** | `/ready` | `ok` und DB-Fehler bleiben unterscheidbar getestet | ➖ | |
-| **4** | Regression | `make test` und Ruff grün; Isolationsorakel ruft `tests/test_api.py` direkt mit eigener DB-Naht auf, nicht über die von `.env` überschriebene Make-Variable | ➖ | |
+| **1** | `tests/test_api.py` allein | alle Fälle grün mit einer temporären oder vollständig gefälschten Datenbanknaht | ✅ | |
+| **2** | Betriebsdateien | Hauptdatei, WAL und SHM vor/nach byte- und existenzgleich | ✅ [^blind] | |
+| **3** | `/ready` | `ok` und DB-Fehler bleiben unterscheidbar getestet | ✅ | |
+| **4** | Regression | `make test` und Ruff grün; Isolationsorakel ruft `tests/test_api.py` direkt mit eigener DB-Naht auf, nicht über die von `.env` überschriebene Make-Variable | ✅ | |
 
 ---
 
@@ -152,3 +152,68 @@ vorangestelltes `DATABASE_PATH` aufgerufen; die im Befund oben zitierte Zeile
 `env DATABASE_PATH=… make test` stammt nicht daraus. Am Ergebnis ändert das
 nichts — der Verursacher ist derselbe —, und der Hinweis auf die Make-Grenze
 ist unabhängig davon richtig und für Orakel 4 der Grund.
+
+---
+
+## Runde 1 · Umgesetzt (Claude, 2026-09-01)
+
+### Die Korrektur
+
+Zwei Nähte, weil es zwei Zugriffsarten gibt:
+
+```python
+app.dependency_overrides[get_cached_quote_service] = FakeService          # Routen
+monkeypatch.setattr(main_module, "get_cached_quote_service", FakeService) # /ready
+```
+
+Dazu bekommt `FakeService` die Methode `count_instruments`, mit der `/ready`
+nachsieht. Dass sie fehlte, gehörte zum Befund: Ohne sie ließ sich der Dienst
+an dieser Stelle gar nicht ersetzen.
+
+**Kein Produktcode angefasst.**
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| `tests/test_api.py` | ≤ 40 | **25** |
+| Orakel-Skript | ≤ 70 | **67** |
+| Gesamt | ≤ 110 | **92** |
+
+### Das Orakel war zuerst blind — und das ist der eigentliche Ertrag
+
+Pflichtorakel 1 oben verlangte Prüfsumme **und Existenz** der drei Dateien.
+Genau so gebaut, meldete das Skript gegen den **unbehobenen** Defekt:
+
+```
+✓ tests/test_api.py laesst die Betriebsdatenbank unberuehrt
+  fehlt   data/stockinfo.db-wal
+  fehlt   data/stockinfo.db-shm
+```
+
+Der Grund ist der Lebenszyklus selbst: SQLite legt WAL und SHM beim Öffnen an
+und räumt sie beim sauberen Schließen wieder ab. Vorher wie nachher steht
+„fehlt". **Der Zustand, der die beiden Fälle unterscheidet, existiert nur
+während des Laufs** — und ein Vergleich davor und danach kann ihn nicht sehen.
+
+Sichtbar wird er an der **mtime von `data/` selbst**: Das Anlegen und Löschen
+eines Verzeichniseintrags ändert sie. Gegengeprobt mit `tests/test_analyzer.py`,
+das die Datenbank nicht anfasst — dort bleibt sie unverändert; der Detektor ist
+also nicht bloß empfindlich.
+
+| Lauf | Urteil |
+|---|---|
+| ohne Naht (Mutant) | ✗ `data/ mtime 1788284624 → 1788284644` |
+| mit Naht | ✓ unverändert |
+
+**Aufgefallen ist es nur, weil das Orakel gegen den unbehobenen Defekt lief,
+bevor die Korrektur geschrieben war.** In der umgekehrten Reihenfolge wäre ein
+grünes Skript der Beleg gewesen — für nichts. Pflichtorakel 1 ist damit als
+Formulierung widerlegt: „Existenz zählt mit" reicht nicht, wenn der Zustand
+zwischen zwei Messpunkten entsteht und wieder vergeht.
+
+### Suite
+
+1028 Backend · 302 Plugin-API · 45 Beispiel · 306 Dashboard. Ruff sauber.
+
+[^blind]: Der reine Datei-Vergleich — auch mit Existenz — ist für diesen Fall
+    **blind**; gemessen und dokumentiert oben. Der tragende Vergleich ist die
+    mtime von `data/`.
