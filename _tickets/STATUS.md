@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-50-ui-abnahme-der-kette.md`
 - `handoff_commit`: `9ff54f4`
-- `review_round`: `3`
-- `owner`: `claude`
+- `review_round`: `4`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
 - `last_reviewed_commit`: `9ff54f4`
@@ -139,7 +139,56 @@ Human-Spalten bleiben leer.
 
 ## OUTBOX → Codex
 
-—
+**T-50 Phase B fertig — zur Prüfung.** Alle neun Fälle in beiden Varianten
+gemessen, nacheinander auf denselben isolierten Ports. **Eine** Produktdatei
+geändert. Prüfsummen vor/nach identisch, beide Prozesse beendet, Ports frei.
+
+**Behoben (B-1):** `AnalysisPanel.vue` startete die Auswahl mit `''` statt
+`null`. Naive zeigt den Platzhalter nur ohne Wert — ein Leerstring ist einer.
+Eine Datei, zwei Tests.
+
+**Und hier der Teil, den du sonst findest:** Mein zweiter Test war zuerst
+wertlos. Er prüfte, ob der Name des gewählten Papiers im Text auftaucht — der
+taucht **nie** auf, egal wie die Auswahl steht. Grün, Mutant durchgelaufen.
+Jetzt wird die Schaltfläche beobachtet; zwei Mutanten röten je genau einen
+Test:
+
+| Mutant | rötet |
+|---|---|
+| `ref<string>('')` statt `null` | „reicht dem Auswahlfeld kein leeres Symbol als Auswahl" |
+| Wächterzeile entfernt | „gibt die Schaltfläche ohne Auswahl nicht frei …" |
+
+**Nicht behoben, zwei neue Befunde:**
+
+**B-2** — `app/services/analyzer.py:168` bildet `f"{len(rows)} Zeilen"` und
+schickt es als `detail`. Die englische Oberfläche zeigt „answered · 3
+**Zeilen**". Dieselbe Zusage, die T-44 für die Fehlerwege durchgesetzt hat,
+eine Ebene weiter. Fix = vier Dateien plus Nutzlastform → Checkpoint.
+
+**B-3, und das ist der schwere** — `SAP.DE` und `BMW.DE` lassen sich über das
+Feld **nicht aufnehmen**: `502 quote_unavailable`,
+`detail: "Pflichtfelder fehlen — name, type"`. `MSFT` geht. Gemessen: yfinance
+liefert für `SAP.DE` `longName='SAP SE'`, `quoteType='EQUITY'`; die Analyse
+derselben Kette meldet `resolvers ok`, `quotes ok`, `daily ok`. Die Quelle ist
+also weder ausgefallen noch unvollständig. **Reproduziert auch unter den
+Vorgaben ohne `sources.yaml`** — also in Mikes eigener Konfiguration. Bestehende
+`.DE`-Papiere laufen weiter; betroffen ist die Neuaufnahme.
+
+Die Oberfläche sagt dazu „Keine Quelle konnte nachsehen … Ob es das Papier
+gibt, ist damit offen" und schickt den Betreiber zur Quelle, während der Fehler
+im Feldvertrag liegt — derselbe Verwechslungstyp wie T-44 Befund 1. Feldvertrag,
+Statuscode und Fehlerkennung liegen weit außerhalb von T-50; ich habe nichts
+angefasst.
+
+**Vier Nicht-Befunde sind ausdrücklich als solche belegt**, darunter der Fonds,
+der online als `etf` erscheint: yfinance meldet für `HJUA.F` selbst
+`quoteType='ETF'`. Kein Verstoß gegen Mikes `fund`-Entscheidung.
+
+**Drains nach diesem Ticket:** V-1 (Gate sperrt `GET /backups`), V-3
+(Quellenprofil liegt im Ticketverzeichnis), B-2, B-3.
+
+**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, **307** Dashboard (+2).
+Ruff und `vue-tsc` sauber.
 
 ## An Mike · die abgearbeitete Kette
 

@@ -186,14 +186,14 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teil
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | **1** | Konzept-Handoff an Codex | höchstens 9 Fälle; jeder nennt Fläche, Eingabe, Erwartung und den unterschiedenen Fehler; nichts, was die Suite schon belegt | ✅ | |
-| **2** | Isolation des Laufs | eigene Ports, eigene DB-Kopie, eigene Konfiguration; `data/` des Benutzers vor und nach dem Lauf unverändert | ➖ | |
-| **3** | T-46 im Browser | Fälle 1–4 gemessen, jeder mit Gegenprobe an Netzwerk oder Konfiguration | ➖ | |
-| **4** | T-47 im Browser | Fälle 5–8 gemessen, einschließlich Neustart und englischer Oberfläche | ➖ | |
-| **5** | T-48 im Browser | Fall 9 in beiden Profilen, mit Dateiinhalt und Netzwerkantwort als Gegenprobe | ➖ | |
-| **6** | Befunde | jeder Befund nennt Messung, Fundort und ob er in diesem Ticket behoben wurde oder checkpoint-pflichtig ist | ➖ | |
-| **7** | Konsole und Netzwerk | keine unerklärte Fehlermeldung, kein fehlgeschlagener Request, der dem Angezeigten widerspricht | ➖ | |
-| **8** | Regression nach etwaigen Korrekturen | `make test` und Ruff grün; ohne Korrektur entfällt die Zeile nicht, sondern wird als „keine Änderung" belegt | ➖ | |
-| **9** | Mike-Handoff | die Fälle sind ohne Entwicklungswissen nachvollziehbar; Human-Spalte leer | ➖ | |
+| **2** | Isolation des Laufs | eigene Ports, eigene DB-Kopie, eigene Konfiguration; `data/` des Benutzers vor und nach dem Lauf unverändert | ✅ [^rueckstand] | |
+| **3** | T-46 im Browser | Fälle 1–4 gemessen, jeder mit Gegenprobe an Netzwerk oder Konfiguration | ✅ | |
+| **4** | T-47 im Browser | Fälle 5–8 gemessen, einschließlich Neustart und englischer Oberfläche | ✅ | |
+| **5** | T-48 im Browser | Fall 9 in beiden Profilen, mit Dateiinhalt und Netzwerkantwort als Gegenprobe | ✅ | |
+| **6** | Befunde | jeder Befund nennt Messung, Fundort und ob er in diesem Ticket behoben wurde oder checkpoint-pflichtig ist | ✅ | |
+| **7** | Konsole und Netzwerk | keine unerklärte Fehlermeldung, kein fehlgeschlagener Request, der dem Angezeigten widerspricht | ✅ | |
+| **8** | Regression nach etwaigen Korrekturen | `make test` und Ruff grün; ohne Korrektur entfällt die Zeile nicht, sondern wird als „keine Änderung" belegt | ✅ | |
+| **9** | Mike-Handoff | die Fälle sind ohne Entwicklungswissen nachvollziehbar; Human-Spalte leer | ✅ | |
 
 ---
 
@@ -317,3 +317,106 @@ Prüfsummen-Gegenprobe für Mikes Daten. Phase B darf im Browser beginnen.
 Kleine eindeutig lokale UI-Befunde bleiben auf höchstens drei Produktdateien
 beschränkt; Gate/API, V-1 und V-3 sind keine Nebenfixes. Human-Spalten bleiben
 leer.
+
+---
+
+## Phase B · Der Lauf (Claude, 2026-09-01)
+
+**Alle neun Fälle gemessen, in beiden Varianten, nacheinander auf `8123`/`5273`.**
+Eine Produktdatei geändert. Die Prüfsummen von `data/stockinfo.db`, beiden
+`examples/`-Vorlagen, `tests/_resources/assets.yaml` und dem Quellenprofil sind
+vor und nach dem Lauf identisch.
+
+### Was die Fälle gezeigt haben
+
+| # | Gemessen | Ergebnis |
+|---|---|:--:|
+| 1 | Auswahlfeld im Ruhezustand | ✅ nach Korrektur — **B-1** |
+| 2 | `BTC-EUR` online | ✅ Stufen = `sources.yaml`, `nichts`/`geliefert`/`nicht gefragt` unterschieden |
+| 3 | Anleihe im Dateiprofil | ✅ nur `yaml-file`, Auflösung über die ISIN ohne Börsensymbol |
+| 4 | `STOCKINFO-NOT-FOUND` | ✅ kein Abbruch; drei Auflöser melden `nichts` mit Grund, Folgerollen `nicht gefragt` |
+| 5 | Sicherung anlegen | ✅ `01.09.2026, 18:39`, 328 kB; Datei mit Millisekundenstempel und Fingerabdruck |
+| 6 | Unpassende Sicherung | ✅ Satz aus Kennung; **Klick auf „Vormerken" ohne Kästchen erzeugt kein `pending_restore` und keine Anfrage** |
+| 7 | Wiederherstellen + Neustart | ✅ 9 Papiere mit `MSFT` → 8 ohne; `pending_restore` leer, Absichtsdatei weg, Vorzustand selbst gesichert |
+| 8 | Englische Oberfläche | ✅ Liste, Datum (`Sep 1, 2026, 6:39 PM`), Grund und Dialog vollständig englisch |
+| 9 | Datei ändern, Einzel-Aktualisierung | ✅ online `99.42 → 97.55 → 96.10`, standalone `142.50 → 138.75`; **beide Male bei unveränderter Dateigröße** |
+
+Zu Fall 9: Die Werte wurden absichtlich **gleich lang** gewählt. Damit ändert
+sich nur `mtime_ns`, und der Signatur-Fast-Path aus T-48 Runde 4 wird an genau
+der Stelle geprüft, an der er dreimal falsch war.
+
+### B-1 · Behoben in diesem Ticket
+
+`AnalysisPanel.vue` startete die Auswahl mit `''` statt `null`. Naive zeigt den
+Platzhalter nur ohne Wert — ein Leerstring **ist** einer. Das Feld stand
+deshalb leer und beschriftungslos da und trug ein Löschsymbol für eine Auswahl,
+die niemand getroffen hatte. Eine Produktdatei, zwei Tests.
+
+**Der zweite Test war zuerst wertlos.** Er prüfte, ob der Name des Papiers im
+Text auftaucht — der taucht nie auf, egal wie die Auswahl steht. Grün, und der
+Mutant lief durch. Beobachtet wird jetzt die **Schaltfläche**: Ohne Auswahl darf
+sie nicht freigegeben sein, auch nicht neben einem Papier ohne Symbol. Zwei
+Mutanten, zwei Röter:
+
+| Mutant | rötet |
+|---|---|
+| `ref<string>('')` statt `null` | „reicht dem Auswahlfeld kein leeres Symbol als Auswahl" |
+| Wächterzeile entfernt | „gibt die Schaltfläche ohne Auswahl nicht frei …" |
+
+### Neue Befunde — **nicht** behoben
+
+**B-2 · Deutsche Fachwörter in der englischen Analyse.**
+`app/services/analyzer.py:168` bildet `f"{len(rows)} Zeilen"` und schickt das als
+`detail`. Die englische Oberfläche zeigt „answered · 3 **Zeilen**". Die Kennung
+ist da, der Text daneben bricht dieselbe Zusage, die T-44 für die Fehlerwege
+durchgesetzt hat. **Checkpoint-pflichtig:** Der Fix beträfe Server, Komponente
+und beide Kataloge — vier Dateien — und änderte die Form der Nutzlast.
+
+**B-3 · Ein neues deutsches Papier lässt sich nicht aufnehmen.**
+`SAP.DE` und `BMW.DE` scheitern am Feld „ISIN oder Symbol" mit
+`502 quote_unavailable`, `detail: "Pflichtfelder fehlen — name, type"`. `MSFT`
+geht. Gemessen:
+
+- yfinance liefert für `SAP.DE` `longName='SAP SE'`, `quoteType='EQUITY'` — die
+  Quelle ist **weder ausgefallen noch unvollständig**.
+- Die Analyse derselben Kette meldet `resolvers yahoo-search ok`,
+  `quotes yfinance ok`, `daily yfinance ok`. Die Kette trägt also.
+- Reproduziert unter der T-37-Kette **und unter den Vorgaben ohne
+  `sources.yaml`** — also in **Mikes eigener Konfiguration**.
+- Der Bestand ist davon unberührt; bereits aufgenommene `.DE`-Papiere laufen
+  weiter. Betroffen ist nur die **Neuaufnahme**.
+
+Die Oberfläche sagt dazu *„Keine Quelle konnte nachsehen … Ob es das Papier
+gibt, ist damit offen."* — sie schickt den Betreiber zur Quelle, während der
+Fehler im Feldvertrag liegt. Das ist derselbe Verwechslungstyp, den T-44 für
+`/fx` behoben hat, eine Ebene weiter.
+
+**Weit außerhalb von T-50** (Feldvertrag, Statuscode, Fehlerkennung) und
+deshalb weder behoben noch angefasst. Aus meiner Sicht der dringendste der
+offenen Punkte, weil er die häufigste Handlung eines neuen Benutzers trifft.
+
+### Nicht-Befunde — gemessen und verworfen
+
+- **Fonds als `etf` statt `fund`.** Online kommt `DE0009848119` als `etf`
+  (`HJUA.F`, 176,10) heraus, im Dateiprofil als `fund` (142,50). Kein Verstoß
+  gegen Mikes Entscheidung: yfinance selbst meldet für `HJUA.F`
+  `quoteType='ETF'`. Die App gibt die Antwort der Quelle wieder, statt
+  `MUTUALFUND` umzudeuten.
+- **Durchscheinende Auswahlliste** — Einblende-Animation, siehe oben.
+- **Widerspruch zwischen Liste und API nach Kettenwechsel.** Die
+  Sicherungsliste zeigte „passt", während die API `compatible: false` meldete.
+  Ursache: Ein Wechsel nur über den `#`-Pfad hängt die Komponente nicht neu
+  ein. Nach hartem Neuladen stimmt beides. Normales SPA-Verhalten.
+- **`DE0009848119DE0009848119`.** Ein Verbindungsabbruch der Browsersteuerung
+  hatte meine erste Eingabe stehen lassen, die zweite hängte sich an. Mein
+  Fehler, kein Produktfehler — die Meldung der App war korrekt.
+
+### Suite nach der Korrektur
+
+1028 Backend · 302 Plugin-API · 45 Beispiel · **307** Dashboard (vorher 305).
+Ruff und `vue-tsc` sauber.
+
+[^rueckstand]: `checksums.sh before|after` über `data/stockinfo.db`, beide
+    `examples/`-Vorlagen, `tests/_resources/assets.yaml` und
+    `_tickets/T-37-sources-online-with-yaml-fallback.yaml` — identisch. Beide
+    isolierten Prozesse sind beendet, die Ports frei.

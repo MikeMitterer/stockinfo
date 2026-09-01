@@ -13,7 +13,15 @@ const props = defineProps<{ instruments: InstrumentSummary[] }>()
 const { t } = useI18n()
 const { result, loading, error, analyze } = useAnalysis()
 
-const selectedSymbol = ref<string>('')
+/**
+ * Die gewählte Zeile — **`null`, nicht `''`**.
+ *
+ * Naive zeigt den Platzhalter nur, solange kein Wert gesetzt ist. Ein
+ * Leerstring *ist* ein Wert: Das Feld stand deshalb leer und beschriftungslos
+ * da und trug obendrein ein Löschsymbol für eine Auswahl, die niemand
+ * getroffen hatte.
+ */
+const selectedSymbol = ref<string | null>(null)
 const freeInput = ref<string>('')
 
 // Freitext hat Vorrang; sonst das gewählte Listen-Instrument.
@@ -24,6 +32,9 @@ const target = computed<InstrumentRef | null>(() => {
       ? { isin: raw.toUpperCase(), symbol: raw }
       : { isin: null, symbol: raw }
   }
+  // Ohne Auswahl gar nicht erst suchen: Ein `null` gegen ein Papier ohne
+  // Symbol verglichen träfe zu und wählte still eine Zeile aus.
+  if (!selectedSymbol.value) return null
   const found = props.instruments.find(
     (instrument) => instrument.symbol === selectedSymbol.value,
   )
