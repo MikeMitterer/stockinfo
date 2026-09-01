@@ -199,6 +199,12 @@ Zehnerrotation nicht. Mit zehn Sicherungen löschte das Sicherheitsbackup die
 ausgewählte älteste Restore-Datei vor dem Einspielen; alle 37 Backup-Tests
 blieben grün.
 
+**Neuer Beleg:** T-47 Teilstrecke 1b Runde 2, Commit `a904d42`: Der Test
+`test_ein_erzwungener_fremder_restore_ist_in_sources_sichtbar` trug den
+gesamten Nutzerweg im Namen, schrieb den fremden Fingerprint aber direkt per
+SQL und rief danach nur `/sources` auf. Request mit `force`, Pending-Datei und
+Starttausch durften vollständig fehlen, ohne dass das Orakel rot wurde.
+
 [↑ Übersicht](#übersicht)
 
 ## P-02 · Punktuelle Korrektur wird als vollständige Regelumsetzung gemeldet
@@ -281,6 +287,12 @@ fing jedoch jede Ausnahme ab, ließ dieselbe Pending-Datei liegen und gab
 `None` zurück; der Lifespan startete normal weiter und versuchte dieselbe
 Absicht bei jedem folgenden Start erneut. Der neue Test verlangte genau dieses
 gegenteilige Verhalten.
+
+**Neuer Beleg derselben Regel:** T-47 Teilstrecke 1b Runde 2, Commit
+`a904d42`: Die Korrektur meldete einen benannten Endzustand, der nicht mehr
+pending sei. `restore_state()` und der neue Test lieferten bei einem Fehler
+jedoch weiterhin gleichzeitig den Namen als `pending_restore` und den Grund
+als `restore_error`, obwohl kein weiterer Startversuch mehr vorgesehen war.
 
 **Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21 Teil 1
 Runde 7, Commit `3148d09`: Die Übergabe erklärte beide Reproduktionen für

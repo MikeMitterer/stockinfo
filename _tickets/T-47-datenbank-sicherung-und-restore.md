@@ -220,13 +220,13 @@ Legende: ✅ live bestätigt · ◑ teilweise bestätigt · ⚠️ Befund offen 
 |---|---|---|:--:|---|
 | **1** | `POST /backups` während eines Schreibzugriffs | die Datei ist in sich stimmig, nicht zerrissen | ✅ | |
 | **2** | `GET /backups` | Zeitpunkt, Kennung und `compatible` je Eintrag; die Liste stimmt mit dem Verzeichnis überein | ✅ | |
-| **3** | Wiederherstellen mit **gleicher** Kennung | derselbe Bestand nach dem Neustart | ⚠️ | |
+| **3** | Wiederherstellen mit **gleicher** Kennung | derselbe Bestand nach dem Neustart | ✅ | |
 | **4** | Wiederherstellen mit **anderer** Kennung | abgelehnt, und die Meldung nennt die Rolle und beide Ketten | ✅ | |
 | **5** | dasselbe mit `force` | läuft, und die Instanz sagt danach sichtbar, dass sie es getan hat | ⚠️ | |
 | **6** | Sicherung mit neuerem Schema | abgelehnt, auch mit `force` | ✅ | |
-| **7** | vor dem Wiederherstellen | eine Sicherung des alten Standes liegt vor | ⚠️ | |
+| **7** | vor dem Wiederherstellen | eine Sicherung des alten Standes liegt vor | ✅ | |
 | **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ◑ | |
-| **9** | `PRAGMA user_version` | ist gesetzt und wird beim Prüfen gelesen | ◑ | |
+| **9** | `PRAGMA user_version` | ist gesetzt und wird beim Prüfen gelesen | ✅ | |
 | **10** | elfte Sicherung | die älteste ist weg, es liegen zehn; keine zweite Löschmöglichkeit | ✅ | |
 | **11** | UI-Liste | alle vorhandenen Sicherungen sind sichtbar, unpassende **mit Grund** statt ausgeblendet | ➖ | |
 | **12** | Bestätigung vor dem Wiederherstellen | der Neustart wird **vorher** genannt, nicht erst danach | ➖ | |
@@ -775,3 +775,35 @@ scheiterte in meiner ersten Fassung schon in der Prüfung — also **vor** der
 Sicherheitskopie, wo ein zweiter Lauf folgenlos bleibt. Der Schaden entsteht
 erst danach; der Fehler wird jetzt im Kopiervorgang ausgelöst, und ohne den
 Riegel legt der zweite Start eine weitere Sicherheitskopie an.
+
+### Codex-Review Runde 4 · `changes_requested` (2026-09-01)
+
+Rotation und Herkunftserhalt tragen: Der Grenztest mit der ältesten von zehn
+Sicherungen ist grün, nach Erfolg bleiben Quelle und Sicherheitskopie unter
+insgesamt zehn Dateien erhalten. 42 gezielte Backup-Tests und Ruff sind
+sauber; der Teilumfang liegt mit 393 Produkt- und 380 Testzeilen bei exakt 773.
+
+Zwei kleine Abschlussreste bleiben:
+
+1. **Der Fehlerzustand heißt in der öffentlichen Antwort weiterhin pending.**
+   `restore_state()` gibt bei gesetztem `failed` zugleich den Backup-Namen
+   zurück; `GET /backups` liefert damit `pending_restore=<name>` **und**
+   `restore_error=<grund>`. Der Test verlangt diesen widersprüchlichen Zustand
+   sogar. Wenn kein automatischer Versuch mehr folgt, gilt öffentlich
+   `pending_restore: null`; der Name darf Teil des benannten Fehlerzustands
+   sein, aber nicht der Neustart-Ansage. Die Gegenprobe läuft über
+   `GET /backups` nach dem gescheiterten Start und bestätigt zusätzlich, dass
+   ein zweiter Start keinen Versuch ausführt. Ein unlesbarer Intent darf dabei
+   niemals den literalen Namen `"None"` erzeugen.
+2. **Der angebliche Forced-Restore-Test führt keinen Restore aus.**
+   `test_ein_erzwungener_fremder_restore_ist_in_sources_sichtbar` schreibt den
+   fremden Fingerprint direkt per SQL und ruft nur `/sources` auf. Er bleibt
+   grün, wenn Request, `force`, Pending-Datei oder Starttausch kaputtgehen. Der
+   dauerhafte vertikale Gegenlauf muss die fremde Sicherung über den
+   veröffentlichten Restore-Weg mit `force` vormerken, den Starttausch
+   ausführen und erst danach die Warnung aus `/sources` lesen. Claudes echter
+   Zweiprozess-Lauf ist gute Zusatz-Evidenz, ersetzt dieses Orakel aber nicht.
+
+Keine weitere Produktfläche und kein neuer Zustand sind nötig. Erwartet sind
+nur die öffentliche Trennung von Pending und Fehler sowie der echte
+Akzeptanzpfad im Test; die nächste Runde ist damit konkret abschließend.
