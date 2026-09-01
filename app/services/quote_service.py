@@ -14,7 +14,7 @@ import structlog
 from stockinfo_plugin.types import Unavailable, Unsupported
 
 from app.contract import required_fields
-from app.exchanges import split_symbol
+from app.exchanges import EXCHANGES, split_symbol
 from app.models import (
     identity_columns,
     IdentityOut,
@@ -521,33 +521,48 @@ class QuoteService:
     def _described(self, symbol: str, ticker: str, mic: str) -> ResolvedInstrument:
         """Die Identität aus dem Symbol, Name und Gattung aus der Quelle.
 
-        **Die genannte Börse gewinnt.** Wer `GOLD.SG` tippt, meint Stuttgart,
-        auch wenn eine Quelle die Vorzugsbörse nennt — dafür steht dieser Weg
-        da, und daran ändert sich nichts.
+        **Die genannte Börse gewinnt:** `ticker`, `mic` und der Anzeigename
+        kommen aus dem Symbol — wer `GOLD.SG` tippt, meint Stuttgart. Die
+        Quelle steuert bei, was die Identität nicht sagt.
 
-        Beschrieben wird das Papier trotzdem von einer Quelle. Bis hierher
-        entstand ein `ResolvedInstrument` **ohne Namen und ohne Gattung**; die
-        Kursquelle liefert beides nicht, und seit T-38 sind sie Pflicht. Jedes
-        Papier mit Börsensuffix scheiterte deshalb bei der Aufnahme an
-        `core_incomplete` — mit `502`, obwohl gar keine Quelle gefragt worden
-        war.
+        **Die ISIN der Quelle reist mit:** Sie sagt nichts über den
+        Handelsplatz, sondern über das Papier.
 
-        **Eine ausbleibende Beschreibung bricht hier nicht ab.** Sie führt zur
-        selben Pflichtfeldprüfung wie bisher, nur eine Ebene später und mit
-        einer Quelle, die wirklich gefragt wurde.
+        **Ablehnung und Ausfall reisen weiter**, wie auf dem suffixlosen Weg;
+        sonst käme ein Index als „Pflichtfelder fehlen" heraus und ein
+        Netzausfall als Aussage über das Papier. Ein `NotFound` bricht nicht
+        ab: Dann entscheidet die Pflichtfeldprüfung.
 
         Args:
-            symbol: Das vom Benutzer genannte Symbol samt Suffix.
+            symbol: Das genannte Symbol samt Suffix.
             ticker: Kanonischer Ticker daraus.
             mic: Börse daraus — die des Benutzers.
 
         Returns:
             Das aufgelöste Instrument mit der Identität aus dem Symbol.
+
+        Raises:
+            UnsupportedInstrumentTypeError: Gattung, die StockInfo nicht führt.
+            QuoteUnavailableError: Die Quelle ist ausgefallen.
         """
         described = self._resolver.resolve_symbol(symbol)
-        if isinstance(described, ResolvedInstrument):
-            return replace(described, symbol=symbol, ticker=ticker, mic=mic)
-        return ResolvedInstrument(symbol=symbol, ticker=ticker, mic=mic)
+        if isinstance(described, Unsupported):
+            raise UnsupportedInstrumentTypeError(symbol, described.instrument_type)
+        if isinstance(described, Unavailable):
+            raise QuoteUnavailableError(f"{symbol}: {described.error}")
+
+        definition = EXCHANGES.get(mic)
+        bare = ResolvedInstrument(
+            symbol=symbol,
+            ticker=ticker,
+            mic=mic,
+            exchange=definition.name if definition else None,
+        )
+        if not isinstance(described, ResolvedInstrument):
+            return bare
+        return replace(
+            bare, name=described.name, type=described.type, isin=described.isin
+        )
 
     def get_quote_for_known(
         self,

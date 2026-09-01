@@ -2,7 +2,7 @@
 
 import pytest
 import structlog
-from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable
+from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable, Unsupported
 
 from app.models import ListedIdentityOut
 from app.exchanges import split_symbol
@@ -12,6 +12,7 @@ from app.services.quote_service import (
     InstrumentNotFoundError,
     QuoteService,
     QuoteUnavailableError,
+    UnsupportedInstrumentTypeError,
     annualized_volatility,
 )
 
@@ -123,8 +124,9 @@ class FakeResolver:
     `NotFound` genau dasselbe bedeutet.
     """
 
-    def __init__(self, resolved) -> None:
+    def __init__(self, resolved, symbol_answer=None) -> None:
         self._resolved = NotFound() if resolved is None else resolved
+        self._symbol_answer = symbol_answer
 
     def handles(self, isin: str) -> bool:
         return True
@@ -133,13 +135,10 @@ class FakeResolver:
         return self._resolved
 
     def resolve_symbol(self, symbol: str):
-        """Zum Symbol schweigt dieses Double.
-
-        Die Fälle unten treten über ein zerlegbares Symbol ein und prüfen, was
-        die **Kursquelle** liefert. Gäbe der Resolver hier eine Beschreibung,
-        stammte die halbe Antwort aus dem Aufbau statt aus der Messung.
+        """Schweigt zum Symbol, sofern der Fall nichts anderes verlangt: Die
+        meisten prüfen, was die **Kursquelle** liefert.
         """
-        return NotFound()
+        return self._symbol_answer or NotFound()
 
 
 def _etf_quote() -> RawQuote:
@@ -597,7 +596,10 @@ def test_europaeischer_etf_ohne_isin_bleibt_geschuetzt() -> None:
 
 
 def test_die_zustaendigkeit_bekommt_boerse_und_waehrung_mit() -> None:
-    """Ohne die beiden Angaben kann die Quelle ohne ISIN nichts entscheiden."""
+    """Ohne die beiden Angaben kann die Quelle ohne ISIN nichts entscheiden.
+
+    Die Börse stammt aus dem Symbol — `XIC.TO` ist Toronto.
+    """
     etf = RawQuote(
         symbol="XIC.TO",
         name="XIC.TO Testpapier",
@@ -615,7 +617,7 @@ def test_die_zustaendigkeit_bekommt_boerse_und_waehrung_mit() -> None:
 
     service.get_quote_by_symbol("XIC.TO")
 
-    assert enricher.seen_responsibility == [(None, None, "CAD")]
+    assert enricher.seen_responsibility == [(None, "Toronto", "CAD")]
 
 
 def _us_etf_quote() -> RawQuote:
@@ -900,3 +902,24 @@ def test_eine_namenlose_quelle_erfindet_keinen_namen() -> None:
     )
 
     assert service.get_quote_by_isin("IE00B3RBWM25").source is None
+
+
+@pytest.mark.parametrize(
+    ("answer", "expected"),
+    [
+        (Unsupported(instrument_type="index", detail="yahoo: ^GDAXI"),
+         UnsupportedInstrumentTypeError),
+        (Unavailable(error="yahoo: timeout"), QuoteUnavailableError),
+    ],
+    ids=["abgelehnte-gattung", "ausgefallene-quelle"],
+)
+def test_der_suffixweg_reicht_ablehnung_und_ausfall_weiter(answer, expected) -> None:
+    """Beide Ausgänge gelten auch dort, wo die Börse im Symbol steht."""
+    service = QuoteService(
+        FakeQuoteProvider(_etf_quote()),
+        FakeEtfProvider(None),
+        FakeResolver(None, symbol_answer=answer),
+    )
+
+    with pytest.raises(expected):
+        service.get_quote_by_symbol("VGWL.DE")

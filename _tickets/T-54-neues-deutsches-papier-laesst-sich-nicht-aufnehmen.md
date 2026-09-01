@@ -90,7 +90,7 @@ Verwandt mit [T-53](T-53-analyse-detail-traegt-deutschen-text.md).
 | **1** | Ursache | belegt, **warum** `name`/`type` fehlen — nicht vermutet | ✅ | |
 | **2** | Aufnahme | `SAP.DE` und `BMW.DE` lassen sich über das Feld aufnehmen, mit Name und Gattung | ✅ | |
 | **3** | Kein Rückschritt | `MSFT`, `EUNL.DE`, `BTC-EUR` und ein `isin_only`-Papier gehen weiter | ✅ | |
-| **4** | Fehlerweg | eine unvollständige Antwort ist von „nicht gefunden" und „Quelle weg" unterscheidbar — Kennung und Statuscode | ✅ [^kennung] | |
+| **4** | Fehlerweg | eine unvollständige Antwort ist von „nicht gefunden" und „Quelle weg" unterscheidbar — Kennung und Statuscode | ◑ [^kennung] | |
 | **5** | Mutant | die Pflichtfeldprüfung ausgehängt rötet einen Test | ✅ | |
 | **6** | Regression | `make test` und Ruff grün | ✅ | |
 
@@ -374,10 +374,10 @@ Ruff sauber.
 - **Die Kennung für „Antwort unvollständig".** Auf diesem Weg entsteht der Fall
   nicht mehr; für wirklich unvollständige Quellen bleibt die Frage offen.
 
-[^kennung]: Der Fehlerweg ist **beantwortet, nicht umgebaut**: Die Quelle war
-    nie gefragt, also war `502 quote_unavailable` doppelt falsch. Nach der
-    Korrektur entsteht der Fall auf diesem Weg nicht mehr. Eine eigene Kennung
-    für eine wirklich unvollständige Antwort bleibt offen — siehe Nicht-Ziele.
+[^kennung]: **Teilweise.** Der beobachtete Weg ist repariert: Die Quelle war
+    nie gefragt, also war `502 quote_unavailable` doppelt falsch, und der Fall
+    entsteht hier nicht mehr. Eine **generische** Kennung für eine wirklich
+    unvollständige Antwort ist Nicht-Ziel dieses Tickets und bleibt offen.
 
 ---
 
@@ -425,3 +425,59 @@ Dieselben zwei Produkt- und zwei Testdateien, keine neue Fläche und kein
 Scope-Checkpoint. Die 190-Zeilen-Grenze bleibt; für zusätzliche Assertions und
 Fälle werden die ausführlichen neuen Testdoubles/Docstrings gestrafft. Der
 YAML-Alias-Nebenfund bleibt nur dokumentiert und wird in T-54 nicht verfolgt.
+
+
+## Runde 2 · Sechs Korrekturen (Claude, 2026-09-02)
+
+**1 · Die Börse reist vollständig aus dem Symbol.** Reproduziert war
+`exchange=Frankfurt` neben `identity.mic=XETR` — der Anzeigename kam aus der
+Antwort der Quelle, die Kennung aus dem Symbol. Jetzt beides aus dem Symbol.
+
+Das rötete `test_die_zustaendigkeit_bekommt_boerse_und_waehrung_mit`, und die
+Zusicherung dort **widersprach ihrem eigenen Docstring**: Der Fall arrangiert
+`exchange="Toronto"` und behauptete, es komme `None` an — grün nur, weil der
+Suffix-Weg die Börse verwarf. Sie steht jetzt auf `"Toronto"`.
+
+**2 · `Unsupported` und `Unavailable` reisen weiter.** Ein Index käme sonst als
+„Pflichtfelder fehlen" heraus, ein Netzausfall als Aussage über das Papier. Je
+ein gezielter Fall, parametrisiert.
+
+**3 · Browserbeleg**, isolierte Online-Instanz, beide über das Feld:
+
+```
+BMW.DE | NULL | BAYERISCHE MOTOREN WERKE AG   S | stock
+SAP.DE | NULL | SAP SE                        I | stock
+```
+
+Kein `IntegrityError`. *(Die Namen tragen Yahoos aufgefüllten `shortName` —
+der Wert der Quelle, unverändert wiedergegeben; kein Befund dieses Tickets.)*
+
+**4 · Verify `#3` über `EUNL.DE` als Symbol**, nicht über eine Ersatz-ISIN;
+`#5` mit dem wörtlichen Pflichtfeld-Mutanten.
+
+**5 · Verify `#4` steht auf ◑** — der beobachtete Weg ist repariert, die
+generische Kennung war Nicht-Ziel.
+
+**6 · Prosa gestrafft**, Prozesschronik aus den neuen Docstrings.
+
+### Was die Mutanten zeigten
+
+| Mutant | rötet |
+|---|---|
+| `or None` im Adapter entfernt | Adapterfall **und** vertikaler Fall (`IntegrityError`) |
+| Beschaffung im Suffix-Weg entfernt | vier Fälle, darunter beide Fehlerwege |
+| Börse/Anzeige nicht aus dem Symbol | vertikaler Fall |
+
+**Der erste Mutant biss zwischendurch nicht mehr** — und das war ein echter
+Befund an meiner eigenen Zwischenfassung: Sie baute das Instrument neu und
+kopierte nur Name und Gattung, **warf also die ISIN der Quelle weg**. Der
+Leerstring reiste dadurch nicht mehr, der Mutant lief durch — und nebenbei
+wäre eine bekannte ISIN verlorengegangen. Sie reist wieder mit; sie sagt
+nichts über den Handelsplatz, sondern über das Papier.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Zusammen | ≤ 190 | **190** |
+
+**Suite:** 1032 Backend · 302 Plugin-API · 45 Beispiel · 306 Dashboard.
+Ruff sauber.

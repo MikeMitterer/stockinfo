@@ -92,13 +92,18 @@ class _SilentlyIncomplete(Resolver):
 
 
 class _QuoteSource:
-    """Die Kursgrenze — liefert immer, damit der Test die Auflösung misst."""
+    """Die Kursgrenze — liefert immer, damit der Test die Auflösung misst.
+
+    Sie **spiegelt die ISIN zurück**, wie der echte `QuoteAdapter` — ein
+    Double mit `None` verdeckt sonst, was von dort kommt.
+    """
 
     def fetch_quote(self, instrument: ResolvedInstrument):
         from app.providers.base import RawQuote
 
         return RawQuote(
             symbol=instrument.symbol,
+            isin=instrument.isin,
             price=98.5,
             quote_time="2026-08-29T17:00:00+00:00",
             currency="EUR",
@@ -218,10 +223,8 @@ class _WhitespaceQuoteSource:
 class _SilentResolver:
     """Löst nichts auf — auch nicht über das Symbol.
 
-    Seit der Suffix-Weg eine Beschreibung beschafft, ist **Schweigen der
-    Aufbau**, nicht die Abwesenheit einer Methode: Nur wenn hier nichts
-    zurückkommt, ist die Kursquelle die einzige, die etwas über das Papier
-    sagt — und genau das braucht der Fall unten.
+    **Das Schweigen ist der Aufbau:** Nur wenn hier nichts zurückkommt, ist die
+    Kursquelle die einzige, die etwas über das Papier sagt.
     """
 
     def handles(self, isin: str) -> bool:
@@ -605,32 +608,9 @@ def test_openfigi_sagt_lieber_nichts_als_die_haelfte(
     )
 
 
-class _EchoingQuoteSource:
-    """Die Kursgrenze, die die ISIN der Auflösung **zurückspiegelt**.
-
-    So verhält sich der echte `QuoteAdapter`. Ein Double, das hier `None`
-    liefert, verdeckt den Fall: Der Leerstring käme nie bis zur Datenbank, und
-    der Test wäre grün, ohne etwas zu belegen.
-    """
-
-    def fetch_quote(self, instrument: ResolvedInstrument):
-        from app.providers.base import RawQuote
-
-        return RawQuote(
-            symbol=instrument.symbol,
-            isin=instrument.isin,
-            price=98.5,
-            quote_time="2026-09-02T09:00:00+00:00",
-            currency="EUR",
-            type=instrument.type,
-        )
-
-
 class _ListedWithoutIsin:
-    """Eine Quelle, die börsengehandelte Papiere **ohne ISIN** kennt.
-
-    Der Normalfall bei deutschen Listings über die Suche: Ticker und
-    Handelsplatz stehen fest, eine ISIN nennt die Quelle nicht.
+    """Börsengehandelte Papiere **ohne ISIN** — der Normalfall deutscher
+    Listings über die Suche.
 
     **Sie nennt absichtlich Frankfurt**, während das Symbol Xetra sagt: Sonst
     wäre die Zusicherung erfüllt, egal welche Seite die Börse liefert.
@@ -660,9 +640,8 @@ class _ListedWithoutIsin:
 def test_ein_listing_ohne_isin_bekommt_keinen_leerstring() -> None:
     """Keine ISIN heißt `None`, nicht `""`.
 
-    Der Symbolweg hat keine angefragte ISIN und reicht als Rückfall den
-    Leerstring durch. Der belegt in der `UNIQUE`-Spalte den einen Platz, den
-    es dafür gibt; `NULL` darf beliebig oft vorkommen.
+    Der Leerstring belegt in der `UNIQUE`-Spalte den einen Platz, den es dafür
+    gibt; `NULL` darf beliebig oft vorkommen.
     """
     from app.plugin_adapters import _instrument_from
 
@@ -682,22 +661,10 @@ def test_zwei_papiere_ohne_isin_lassen_sich_nacheinander_aufnehmen(
 ) -> None:
     """Zwei symbolbasierte Aufnahmen hintereinander, über die echte Kette.
 
-    Die Identität entsteht aus dem Symbol, damit die genannte Börse gewinnt;
-    beschrieben wird das Papier trotzdem von einer Quelle, sonst fehlen Name
-    und Gattung.
-
     **Zweimal, weil erst das zweite Papier den Fall zeigt:** Das erste gelingt
     auch mit einem Leerstring als ISIN.
     """
-    from app.container import get_cached_quote_service
-
-    service, repository = wire_real_chain(
-        str(tmp_path / "ohne-isin.db"),
-        _EchoingQuoteSource(),
-        CompositeResolver(ResolverAdapter(_ListedWithoutIsin(), "XETR")),
-    )
-    app.dependency_overrides[get_cached_quote_service] = lambda: service
-    client = TestClient(app)
+    client, repository = _chain(str(tmp_path / "ohne-isin.db"), _ListedWithoutIsin())
     try:
         erste = client.get("/quote", params={"symbol": "SAP.DE"})
         zweite = client.get("/quote", params={"symbol": "BMW.DE"})
