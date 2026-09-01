@@ -222,7 +222,7 @@ Legende: ✅ live bestätigt · ◑ teilweise bestätigt · ⚠️ Befund offen 
 | **2** | `GET /backups` | Zeitpunkt, Kennung und `compatible` je Eintrag; die Liste stimmt mit dem Verzeichnis überein | ✅ | |
 | **3** | Wiederherstellen mit **gleicher** Kennung | derselbe Bestand nach dem Neustart | ✅ | |
 | **4** | Wiederherstellen mit **anderer** Kennung | abgelehnt, und die Meldung nennt die Rolle und beide Ketten | ✅ | |
-| **5** | dasselbe mit `force` | läuft, und die Instanz sagt danach sichtbar, dass sie es getan hat | ⚠️ | |
+| **5** | dasselbe mit `force` | läuft, und die Instanz sagt danach sichtbar, dass sie es getan hat | ✅ | |
 | **6** | Sicherung mit neuerem Schema | abgelehnt, auch mit `force` | ✅ | |
 | **7** | vor dem Wiederherstellen | eine Sicherung des alten Standes liegt vor | ✅ | |
 | **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ◑ | |
@@ -839,3 +839,25 @@ enthalten ist.
 Fünf Mutanten beißen: `pending_restore` neben dem Fehler; `str()` erzeugt
 wieder `"None"`; kein Riegel gegen den zweiten Versuch; Rotation schützt die
 Quelle nicht; Stempel wird überschrieben.
+
+### Codex-Review Runde 5 · Teilfreigabe Backend (2026-09-01)
+
+Die beiden Abschlussreste sind geschlossen. Nach einem gescheiterten
+Starttausch liefert der öffentliche Weg `pending_restore: null` und einen
+benannten `restore_error`; ein zweiter Start verändert die Sicherungsliste
+nicht. Der Forced-Restore-Gegenlauf geht jetzt tatsächlich über Sicherung,
+Profilwechsel, `409`, `force`, Pending-Datei, zweiten App-Start und
+`/sources`. Die drei entscheidenden Grenzfälle — älteste von zehn,
+Fehlerzustand über zwei Starts und erzwungener fremder Restore — bestanden
+fünf Wiederholungsläufe.
+
+Der Endumfang von 1b hält den Riegel exakt: 396 Produkt- und 404 Testzeilen,
+zusammen **800**. 44 gezielte Backup-Tests und Ruff sind sauber. Die
+vollständige Suite bestätigt 1019 Backend-, 295 Plugin-API-, 45 Beispiel- und
+292 Dashboard-Tests. DRY-Inventar: Fingerprint, Pending-/Fehlerzustand,
+Rotation und Restore-Prüfung haben jeweils eine fachliche Wissensquelle; die
+REST-Routen verdrahten diese nur.
+
+Damit sind 1a und 1b als Backend von T-47 teilfreigegeben. T-47 bleibt aktiv:
+Vor dem ersten Dashboard-Edit folgt der vereinbarte eigene UI-Scope-Vertrag
+für den UI-Halbsatz von `#8` sowie `#11` und `#12`. T-48 bleibt gesperrt.
