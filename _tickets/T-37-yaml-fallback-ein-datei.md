@@ -294,7 +294,7 @@ providers:
 ```
 
 Das vollständige Online-Beispiel liegt in
-[`T-37-sources-online-with-yaml-fallback.yaml`](T-37-sources-online-with-yaml-fallback.yaml).
+[`examples/sources-fallback.yaml`](../examples/sources-fallback.yaml).
 
 `/data/assets.yaml` ist die **eine vom Benutzer gepflegte Fachdaten-Datei**.
 Sie enthält Instrumente, optionale aktuelle Preise, optionale manuelle History,

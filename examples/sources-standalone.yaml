@@ -1,0 +1,25 @@
+# Vorlage: reines Dateiprofil — alle fuenf Rollen bedient das YAML-Plugin
+#
+# Kopieren nach `data/sources.yaml` neben der Datenbank. Die passende
+# Fachdaten-Vorlage daneben ist `assets-standalone.yaml`: Hier ist
+# Vollstaendigkeit die Zusage, denn hinter dieser Kette steht nichts mehr.
+# Fuer eine Instanz mit Online-Quellen ist `sources-fallback.yaml` das
+# Gegenstueck.
+#
+# **Keine Online-Quelle in irgendeiner Rolle.** Faellt die Kette durch, muss
+# sie ehrlich durchfallen. Stuende `yfinance` daneben, waere bei jedem Befund
+# offen, welche der beiden Quellen geantwortet hat — und ein Ausfall der
+# Online-Seite saehe aus wie eine Luecke in der Datei.
+#
+# Diese Datei konfiguriert nur die Quellenketten. Die vom Benutzer gepflegten
+# Instrumente stehen gesammelt in genau einer Datei: /data/assets.yaml
+
+resolvers: [yaml-file]
+etf_meta:  [yaml-file]
+quotes:    [yaml-file]
+daily:     [yaml-file]
+fx:        [yaml-file]
+
+providers:
+  yaml-file:
+    path: /data/assets.yaml

@@ -1,4 +1,9 @@
-# data/sources.yaml — normales Online-Profil mit YAML als letztem Fallback
+# Vorlage: Online-Profil mit YAML als letztem Fallback
+#
+# Kopieren nach `data/sources.yaml` neben der Datenbank. Die passende
+# Fachdaten-Vorlage daneben ist `assets-fallback.yaml` — sie enthaelt nur, was
+# online keinen Kurs bekommt. Fuer eine Instanz, die ausschliesslich aus der
+# Datei lebt, ist `sources-standalone.yaml` das Gegenstueck.
 #
 # Jede der fuenf Rollen fragt ihre Kette in der geschriebenen Reihenfolge.
 # Online-Quellen gewinnen bei einem Treffer; `yaml-file` am Ende springt nur

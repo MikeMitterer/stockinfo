@@ -98,7 +98,7 @@ begrenzt:
    laufenden Befehle für Testabhängigkeiten, `pytest` und Wheel-Bau. Die Zahl
    der geerbten Prüfungen wird dabei nicht als „etwa dreißig je Rolle"
    überzeichnet.
-4. `_tickets/T-37-sources-online-with-yaml-fallback.yaml` verliert den nach
+4. `examples/sources-fallback.yaml` verliert den nach
    T-41 falschen Warnblock „NOCH NICHT UNTERSTUETZT". Der Hinweis im
    Leitfaden, es gebe keine automatische Installation aus der Konfiguration,
    wird zur wirklichen Regel präzisiert: Es gibt keine automatische
@@ -144,7 +144,7 @@ geerbten Prüfungen ist **gezählt** statt geschätzt: 19 für den Resolver, 15
 für die Kursquelle — vorher stand dort „etwa dreißig je Rolle".
 
 **4 · Zwei veraltete Aussagen.** Der Warnblock in
-`_tickets/T-37-sources-online-with-yaml-fallback.yaml` beschrieb den Stand vor
+`examples/sources-fallback.yaml` beschrieb den Stand vor
 T-41; er ist durch die Beschreibung dessen ersetzt, was jetzt gilt,
 einschließlich `yaml-file` in `resolvers`. Und aus „no mechanism that fetches
 anything on its own" ist die tatsächliche Regel geworden: Es gibt keine

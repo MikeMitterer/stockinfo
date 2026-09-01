@@ -53,10 +53,10 @@ Vorgabe machen. Es ist ein Umzug, keine Konfigurationsänderung.
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Inventar | beide Profile liegen unter `examples/`, keines mehr in `_tickets/` | ➖ | |
-| **2** | Verweise | kein Test, Skript oder Dokument zeigt noch auf den alten Ort | ➖ | |
-| **3** | Beide Profile startbar | eine Instanz läuft mit jedem der beiden, direkt aus der Vorlage | ➖ | |
-| **4** | Umzugsprobe | T-37 lässt sich nach `solved/` verschieben, ohne dass etwas bricht | ➖ | |
+| **1** | Inventar | beide Profile liegen unter `examples/`, keines mehr in `_tickets/` | ✅ | |
+| **2** | Verweise | kein Test, Skript oder Dokument zeigt noch auf den alten Ort | ✅ [^belege] | |
+| **3** | Beide Profile startbar | eine Instanz läuft mit jedem der beiden, direkt aus der Vorlage | ✅ | |
+| **4** | Umzugsprobe | T-37 lässt sich nach `solved/` verschieben, ohne dass etwas bricht | ✅ | |
 
 ---
 
@@ -120,3 +120,67 @@ Abzweigpunkt, ohne Ticket- und `STATUS.md`-Dateien.
   eine Datei, die T-49 bereits aufgelöst hat. Das ist **T-49 Verify #8** und
   bleibt dort.
 - Tickets nach `solved/` verschieben.
+
+
+---
+
+## Runde 1 · Umgesetzt (Claude, 2026-09-01)
+
+### Der Umzug
+
+| vorher | nachher |
+|---|---|
+| `_tickets/T-37-sources-online-with-yaml-fallback.yaml` | `examples/sources-fallback.yaml` |
+| — (existierte nicht) | `examples/sources-standalone.yaml` |
+
+Die Namen paaren sich jetzt mit den Fachdaten aus T-49, und **beide Profile
+zeigen auf `/data/assets.yaml`** — die Arbeitskopie, nicht die Vorlage. Der
+Kopf jeder Datei nennt ihr Gegenstück und die passende Fachdaten-Vorlage.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| `examples/` (beide Profile) | ≤ 70 | **60** |
+| Doku-Anpassungen | ≤ 10 | **7** |
+
+### Die Orakel
+
+**1 · Der alte Name kommt nirgends mehr als Verweis vor.** Übrig sind drei
+Nennungen in T-50 und T-52 — sie **belegen den Befund** und beschreiben den
+Stand des Laufs. Sie zu tilgen hieße, die Beweisführung zu löschen; beide
+Stellen tragen jetzt einen Erledigungsvermerk auf dieses Ticket.
+
+**2 · Beide Vorlagen starten wirklich eine Instanz.** Gültiges YAML belegt
+nichts — ein Tippfehler im Rollennamen fällt erst auf, wenn die App die Kette
+baut. Gegen je eine frische, leere Datenbank gemessen über `GET /sources`:
+
+```
+fallback     resolvers  openfigi → yahoo-search → yaml-file
+             quotes     yfinance → yaml-file            (…und drei weitere Rollen)
+standalone   alle fünf Rollen: yaml-file
+```
+
+Dazu eine **echte Abfrage** aus der Standalone-Vorlage, damit nicht nur die
+Kette gebaut, sondern auch benutzbar ist:
+`GET /quote/DE0009848119` → `DWS Top Dividende LD | fund | 142.5 EUR`.
+
+**3 · Nichts außerhalb von `_tickets/` zeigt mehr in das Ticketverzeichnis.**
+Gesucht über `app/`, `tests/`, `plugin_api/`, `dashboard/src`, `scripts/`,
+`Makefile` und `examples/` — kein Treffer. Damit ist die Umzugsprobe für T-37
+gespielt und nicht behauptet.
+
+### Zwei Nebenfunde, beide nicht angefasst
+
+- `scripts/sources-profile.sh` auf `feat/sources-profile-script` zeigt auf
+  `_tickets/T-37-single-file-sample.yaml` — eine Datei, die T-49 aufgelöst hat.
+  Das ist **T-49 Verify #8** und bleibt dort.
+- `plugin_api/build/lib/…/yaml_file.py` nennt denselben alten Pfad, ist aber
+  ein **nicht versioniertes** Bauartefakt; die Quelle daneben zeigt korrekt
+  auf `examples/`.
+
+### Suite
+
+1028 Backend · 302 Plugin-API · 45 Beispiel · 306 Dashboard. Ruff sauber.
+
+[^belege]: Drei Nennungen des alten Pfads bleiben als **Beleg** in den
+    Lauf-Protokollen von T-50 und im Befund dieses Tickets stehen, mit
+    Erledigungsvermerk. Als Verweis zeigt nichts mehr dorthin.

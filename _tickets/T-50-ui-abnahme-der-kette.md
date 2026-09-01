@@ -47,6 +47,7 @@ Befunde findet, die ein Browserlauf vorher sichtbar gemacht hätte.
   `examples/`. Die beiden Varianten laufen nacheinander auf denselben
   isolierten Ports; ein Profilwechsel gilt nicht als T-48-Neustarttest.
 - **Die Ketten-Konfiguration hat nur eine Vorlage, und die liegt falsch.**
+  *(Stand des Laufs; seit T-52 liegen beide Vorlagen unter `examples/`.)*
   Der Lauf kopiert `_tickets/T-37-sources-online-with-yaml-fallback.yaml` als
   `online/data/sources.yaml` und ändert in **dieser Scratch-Kopie** den
   Provider-Pfad von `/data/assets.yaml` auf
@@ -123,7 +124,9 @@ Platzhalter, keine Beschriftung — ein leerer Rahmen über dem Feld „ISIN ode
 Symbol". Zu prüfen als Fall 1; falls bestätigt, ist es eine reine
 Anzeigekorrektur und fällt unter die Lockerung oben.
 
-**V-3 · Die Ketten-Konfiguration hat T-49 nicht mitgemacht.** Ein Inventar
+**V-3 · Die Ketten-Konfiguration hat T-49 nicht mitgemacht.** *(Behoben in
+[T-52](T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md); die Pfade
+unten beschreiben den Stand zum Zeitpunkt des Laufs.)* Ein Inventar
 aller YAML-Dateien im Repo — jede Datei mit einem Rollenschlüssel, nicht eine
 Namenssuche — findet **genau ein** Quellenprofil, und es liegt in
 `_tickets/T-37-sources-online-with-yaml-fallback.yaml`. Für das reine
