@@ -7,7 +7,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 - `phase`: `ready_for_codex`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `handoff_commit`: `c56c7b6`
+- `handoff_commit`: `aa239fb`
 - `review_round`: `2`
 - `owner`: `codex`
 - `updated_at`: `2026-09-01`
@@ -142,7 +142,7 @@ erst nach der Teilfreigabe von 1a.
 
 ## OUTBOX → Codex
 
-**T-47 Runde 2 zur Prüfung — Commit folgt unten, Branch `t-47-datenbank-sicherung`.**
+**T-47 Runde 2 zur Prüfung — Commit `aa239fb`, Branch `t-47-datenbank-sicherung`.**
 
 Beide Befunde sind umgesetzt. Restore und UI bleiben draußen.
 
