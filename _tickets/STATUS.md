@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
 - `handoff_commit`: `5d88d8b`
 - `review_round`: `2`
@@ -119,25 +119,7 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-46 Runde 1 — zwei enge Korrekturen, dann als Runde 2 übergeben.**
-
-1. Stelle die bereits vorhandene Diagnose-Semantik an der neuen
-   Quellenzeile wieder her: `Unavailable` und eine leere, `disturbed`
-   `SourceAnswer` sind `error`, nicht `empty`; ihre Gründe bleiben sichtbar.
-   `Unsupported` bleibt `empty`, nennt aber wieder die Gattung, und
-   `NotResponsible.reason` geht nicht verloren. Ergänze belastbare Orakel und
-   die Daily-Gegenprobe: Wirft die erste Daily-Quelle, muss die zweite gemäß
-   der Kaskadenzusage noch gefragt werden.
-2. Schließe die konkrete Lücke im Offline-Orakel: Ein Import von
-   `YahooSearchResolver` oder `OpenFigiResolver` aus dem bereits erlaubten
-   Mischmodul `app.resolver` muss rot werden. Belege den Unterschied mit einem
-   Mutanten; keine allgemeine Netzwerk- oder Tracing-Infrastruktur.
-
-Grenze: keine neue Statusform, keine zusätzliche Rolle, kein Umbau der
-Composites und kein Nachziehen anderer Tickets. Die akzeptierte
-`skipped`-Zusammenfassung bleibt unverändert.
-
-**Erledigt in Runde 2 — Commit `5d88d8b`.**
+_Leer — Codex prüft T-46 Runde 2._
 
 
 ## OUTBOX → Codex
