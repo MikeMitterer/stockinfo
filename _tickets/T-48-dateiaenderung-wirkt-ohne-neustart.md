@@ -157,6 +157,94 @@ gleich, hat die Online-Kette nichts gemerkt.
   des Kerns.
 - Keine neue Route und keine Anzeige der Katalog-Version im UI.
 
+## Scope-Checkpoint vor dem ersten Edit (2026-09-01)
+
+### Zuerst die Messung, die das Ticket verlangt hat
+
+Der Entwurf oben vermutete: „Wer bei jeder Anfrage liest, braucht keine
+`mtime`-Prüfung. Die Frage ist nur, ob das Lesen billig genug ist — und das ist
+eine Messung, keine Meinung." Hier ist sie, `_Catalogue(path)` auf diesem
+Rechner:
+
+| Datei | je Aufbau |
+|---|---:|
+| die heutige Fachdatei (5 Papiere) | **1,7 ms** |
+| 100 Papiere (32 kB) | **34 ms** |
+| 1 000 Papiere (320 kB) | **352 ms** |
+| 5 000 Papiere (1,6 MB) | **1 907 ms** |
+| ein `stat()` | **0,0009 ms** |
+
+**Bei jeder Anfrage neu zu lesen ist nicht billig.** Es wächst linear, und der
+Host baut **je Rolle eine Instanz** — bei fünf Rollen also fünf Aufbauten. Eine
+Datei mit tausend Papieren machte eine Kursabfrage um mehr als eine Sekunde
+langsamer.
+
+Ein `stat()` kostet das **1 900-fache weniger** als der kleinste Aufbau. Die
+`mtime`-Prüfung ist damit nicht der Kompromiss, sondern der Entwurf: Für den
+Benutzer ist beides dasselbe — die geänderte Datei wirkt sofort —, und nur die
+Kosten unterscheiden sich um drei Größenordnungen.
+
+### Die eine Frage, die ich nicht selbst entscheiden kann
+
+Die `mtime`-Prüfung behebt **Schicht 1**. Sie hilft aber nichts, solange
+**Schicht 3** greift: Die Cache-TTL fragt die Quelle sechs Stunden lang gar
+nicht erst. Mikes Entscheidung — *„Ein lokales File braucht keinen Cache"* —
+verlangt, dass der Kern eine Quelle als **lokal** erkennt.
+
+Nur weiß er das heute nicht, und die drei Wege dorthin sind verschieden teuer:
+
+| | Wo die Tatsache steht | Preis |
+|---|---|---|
+| **a** | `sources.yaml`, je Anbieter ein Schalter | Konfiguration statt Vertrag — aber der Betreiber muss ihn kennen und setzen |
+| **b** | Der Vertrag: die Quelle erklärt sich als lokal | Dort gehört die Tatsache hin — **aber die Nicht-Ziele schließen eine Vertragsänderung aus** |
+| **c** | Der Kern rät: ein Anbieter mit `path` auf eine vorhandene Datei | Der Kern kennt dann die Konfigurationsschlüssel eines Plugins |
+
+`cost` scheidet aus: Es ist laut eigenem Docstring „Information, keine
+Sortierregel", und `openfigi` trägt ebenfalls `free`.
+
+**Mein Rat ist (b)** — ob eine Quelle lokal liest, weiß nur sie selbst; (a)
+verlangt vom Betreiber Wissen über die Bauart seiner Quelle, (c) macht den Kern
+von Plugin-Interna abhängig. Das hieße, das Nicht-Ziel „keine Änderung am
+Plugin-Vertrag" für dieses eine Feld aufzuheben. **Die Entscheidung liegt nicht
+bei mir.**
+
+### Schicht 2 — der einzige Teil, der die Online-Kette berührt
+
+`INSERT OR IGNORE` → `ON CONFLICT … DO UPDATE`. Das gilt dann für **alle**
+Quellen; genau davor warnt Mikes Satz. Der Einwand dagegen — eine korrigierte
+Online-Antwort würde überschrieben — ist im Ticket oben bereits als **nicht
+belegt** zurückgezogen worden.
+
+Ich schlage vor, ihn zu übernehmen, **und die Gegenprobe mitzuliefern**: Zahl
+der Provider-Aufrufe im Online-Profil vor und nach der Änderung. Bleibt sie
+gleich, hat die Online-Kette nichts gemerkt (Verify `#8`).
+
+Unabhängig davon zählt `refreshed` künftig, was **geschrieben** wurde — ein
+verworfener Schreibversuch ist kein Erfolg (Verify `#6`). Das ist auch dann
+richtig, wenn `ON CONFLICT` nicht kommt.
+
+### Scope-Vertrag
+
+- **Fachliche Änderungen:** drei — die Dateiquelle liest neu, sobald sich die
+  Datei ändert; eine lokale Quelle umgeht die Cache-TTL; ein Kurs mit gleichem
+  Zeitpunkt und anderem Preis ersetzt den alten, und `refreshed` zählt ehrlich.
+- **Erwartete Flächen:** `plugin_api/examples/yaml_file.py`,
+  `app/repository.py`, `app/services/quote_cache.py`, `app/sources_registry.py`
+  — plus die Fläche, die aus der Entscheidung oben folgt (Vertrag **oder**
+  `sources_config.py`).
+- **Budget:** höchstens 5 Produktdateien, 2 Testdateien, **250 hinzugefügte
+  Produktzeilen** und **450 Gesamtzeilen** (hinzugefügte Zeilen in `app/`,
+  `plugin_api/` und den Testbäumen zusammen).
+- **Pflichtorakel:** `#1` und `#2` als echter Lauf ohne Neustart; `#4` eine
+  kaputte Datei lässt den Dienst stehen statt auf einen halben Katalog
+  zurückzufallen; `#5` die Antwortzeit gemessen, nicht geschätzt; `#6`
+  `refreshed` zählt keinen verworfenen Schreibversuch; **`#8` die Zahl der
+  Provider-Aufrufe im Online-Profil bleibt gleich** — das ist die Gegenprobe zu
+  Mikes Warnung und der wichtigste Fall des Tickets.
+- **Nicht-Ziele:** unverändert, mit der einen offenen Ausnahme oben.
+
+---
+
 ## Auflösung
 
-_(offen — zuerst die drei Richtungsentscheidungen)_
+_(offen — Scope-Checkpoint liegt bei Codex)_
