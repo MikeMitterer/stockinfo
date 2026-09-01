@@ -12,6 +12,11 @@ version: 1
 # aussehend, ohne Kennzeichnung, statt eines ehrlichen Ausfalls. Je kürzer
 # diese Datei, desto seltener kann das passieren.
 #
+# **Die Zugehörigkeit wird gemessen, nicht geschätzt.** Ein Publikumsfonds
+# stand hier zunächst mit dem Argument „nicht börsengehandelt" — die Probe
+# ergab `DE0009848119` → `HJUA/XFRA` mit aktuellem Kurs. Ob eine Online-Quelle
+# ein Papier führt, beantwortet die Auflösung, nicht die Gattung.
+#
 # Für den umgekehrten Fall — eine Instanz, die **nur** aus dieser Datei lebt —
 # ist `assets-standalone.yaml` die Vorlage. Dort ist Vollständigkeit die
 # Zusage, hier ist Kürze die Zusage.
@@ -35,20 +40,6 @@ instruments:
         - date: "2026-08-27"
           value: 99.42
     note: Keine Abfragequelle vorhanden; die gepflegte Historie ist der Rückfall.
-
-  # Ein nicht börsengehandelter Publikumsfonds. Er trägt eine ISIN, aber keinen
-  # Handelsplatz — die Gattung `fund` (nicht `etf`), damit ihn niemand an eine
-  # ETF-Anreicherung schickt, die ihn nicht führt.
-  - id: active-fund
-    identity:
-      kind: isin_only
-      isin: DE0009848119
-    name: DWS Top Dividende LD
-    instrument_type: fund
-    price:
-      value: 142.50
-      currency: EUR
-      as_of: "2026-08-27T17:30:00+02:00"
 
 # **Keine Devisenkurse hier.** Die Online-Kette beantwortet sie; ein Eintrag
 # wäre genau die Falle, die oben beschrieben ist — bei einer Störung stünde

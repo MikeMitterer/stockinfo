@@ -85,7 +85,7 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 > **Portfolio-Nachtrag Mike, 2026-08-31 (zweiter):** **T-49** kommt
 > **direkt nach T-44** in die Kette: Prüfdaten nach `tests/_resources/`,
-> Betriebsdaten nach `data/`, und zwei getrennte Betriebsdateien — eine als
+> zwei versionierte Betriebsvorlagen nach `examples/` — eine als
 > Fallback hinter der Online-Kette, eine für das reine Dateiprofil. Grund:
 > Eine Datei im Ticketverzeichnis dient drei Herren, und ihr vorgesehener
 > Umzug nach `solved/` reißt gemessen 13 Tests mit.

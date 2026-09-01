@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Tests + Beispieldaten + Doku) | offen | 3–4 h | Prüfdaten nach `tests/_resources/`, Betriebsdaten nach `data/`, und zwei getrennte Betriebsdateien statt einer | — |
+| StockInfo (Tests + Beispieldaten + Doku) | offen | 3–4 h | Prüfdaten nach `tests/_resources/`, zwei versionierte Betriebsvorlagen nach `examples/` statt einer Datei im Ticketverzeichnis | — |
 
 - **Angelegt:** 2026-08-31, auf Mikes Befund
 - **Beauftragt von Mike:** *„Es kann nicht sein, dass wenn ich das yaml-File in
@@ -79,17 +79,19 @@ Daraus folgt die Aufteilung nach Zweck, nicht nach Geschmack:
 
 | Datei | Inhalt | Regel |
 |---|---|---|
-| **Fallback** hinter der Online-Kette | **nur**, was online nicht zu holen ist — die OTC-Anleihe, von Hand gepflegte Historie | Ein Papier, das eine Online-Quelle kennt, gehört **nicht** hinein |
+| **Fallback** hinter der Online-Kette | **nur**, was online nicht zu holen ist — die OTC-Anleihe, von Hand gepflegte Historie | Ein Papier, das eine Online-Quelle kennt, gehört **nicht** hinein. Ob sie es kennt, entscheidet die **Auflösung**, nicht die Gattung |
 | **Eigenständig**, reines Dateiprofil | der vollständige Bestand samt Kursen, Historie und Devisen | Hier ist Vollständigkeit die Zusage |
 
 ## Was entsteht
 
 1. **`tests/_resources/`** — die Prüfdatei, im Besitz der Tests. Werte dort
    sind festgehalten und ändern sich nur mit dem Test, der sie festhält.
-2. **`data/`** — die Betriebsdateien, die niemand aus einem Test liest.
-   `yaml_file.py` erwartet dort ohnehin schon `/data/assets.yaml`.
-3. **Beide Betriebsvorlagen** als Beispiel mit den Regeln von oben; die
-   Autorendoku nennt den Unterschied.
+2. **`examples/`** — die beiden **versionierten Vorlagen**, die niemand aus
+   einem Test liest. Sie sind Vorlagen und keine Betriebsdaten: Die
+   Betriebsdatei entsteht daraus im Volume.
+3. **`/data/assets.yaml`** — die **ausgewählte Betriebsdatei**. `data/` ist
+   absichtlich in `.gitignore`; dort liegt, was der Instanz gehört, und
+   `yaml_file.py` erwartet genau diesen Pfad als Vorgabe.
 4. **Kein ausführbarer Verweis mehr nach `_tickets/`** — die Tickets
    beschreiben die Datei weiter, aber nichts hängt an ihrem Ort.
 
@@ -106,15 +108,17 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 | **2** | `grep` über Tests und Skripte | kein ausführbarer Verweis auf `_tickets/` mehr | ✅ | |
 | **3** | Prüfdatei ändern | genau die Tests werden rot, die den Wert festhalten — und nur die | ✅ | |
 | **4** | Betriebsdatei ändern | **kein** Test wird rot | ✅ | |
-| **5** | Fallback-Vorlage | enthält kein Papier, das die Online-Kette selbst beantwortet | ⚠️ [^fonds] | |
+| **5** | Fallback-Vorlage | enthält kein Papier, das die Online-Kette selbst beantwortet | ✅ [^gemessen] | |
 | **6** | Online-Profil, Quelle gestört | die Datei springt **nicht** mit einem alten Kurs ein, wo online etwas liefern sollte | ✅ | |
 | **7** | reines Dateiprofil mit der eigenständigen Vorlage | alle fünf Rollen werden bedient, wie bisher | ✅ | |
 | **8** | `sources-profile.sh` | legt die Betriebsdatei aus der neuen Vorlage an, nicht aus `_tickets/` | ➖ [^script] | |
 
-[^fonds]: Die Anleihe ist sicher — es gibt keine Quelle, die sie führt. Beim
-    Fonds `DE0009848119` ist es eine Einschätzung: Er ist nicht
-    börsengehandelt, aber ob yfinance ihn als Mutual Fund kennt, habe ich
-    **nicht** gemessen. Verbindlich ist die Regel, nicht meine Auswahl.
+[^gemessen]: **Meine Einschätzung war falsch, und Codex hat sie gemessen.**
+    Ich hatte den Fonds `DE0009848119` mit dem Argument „nicht
+    börsengehandelt" in der Fallback-Vorlage gelassen; die Probe am
+    2026-09-01 ergibt `resolve_isin()` → `HJUA/XFRA` **mit aktuellem Kurs**.
+    Er ist damit genau der Fall, den die Regel verbietet, und ist entfernt.
+    Übrig bleibt die Anleihe, für die es wirklich keine Quelle gibt.
 
 [^script]: `scripts/sources-profile.sh` liegt auf dem noch nicht
     zusammengeführten Branch `feat/sources-profile-script` und zeigt dort auf
