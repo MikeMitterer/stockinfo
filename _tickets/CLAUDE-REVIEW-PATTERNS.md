@@ -1241,6 +1241,14 @@ siebenmal `201`; 13 Aufrufe wählten zwischen Existenzprüfung und
 nacheinander" erzeugte nicht den Zustand „gleichzeitig", den die
 Kollisionsregel beherrschen muss.
 
+**Beleg 12:** T-48 Runde 2, Commit `4186cc8`: Übergabe und Ticket erklärten,
+eine fehlgeschlagene Dateisignatur blockiere die Erholung nicht. Der
+Erholungstest schrieb aber eine Datei mit anderer Größe und Mtime. Der
+entscheidende Zustand — gültige Wiederherstellung mit derselben
+`(st_mtime_ns, size)`-Signatur — fehlte. Ein Gegenlauf stellte genau diesen
+Stand her; `_reload()` kehrte vor dem Parser zurück und ließ die Quelle
+dauerhaft gestört.
+
 [↑ Übersicht](#übersicht)
 
 ## P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem

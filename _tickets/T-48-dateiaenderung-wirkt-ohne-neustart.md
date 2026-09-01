@@ -111,7 +111,7 @@ und das ist eine Messung, keine Meinung.
 
 ## Verify
 
-Legende: ✅ live bestätigt · ➖ nicht geprüft.
+Legende: ✅ bestätigt · ◑ teilweise bestätigt · ➖ nicht geprüft.
 `AI` = nur KI · `Human` = nur Mensch (nie überschreiben).
 
 | # | Where | Look for | AI | Human |
@@ -119,7 +119,7 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 | **1** | reines YAML-Profil, Preis in der Datei ändern | die Änderung ist **ohne Neustart** sichtbar | ✅ | |
 | **2** | dasselbe, `as_of` unverändert | der korrigierte Wert kommt an — nicht nur bei neuem Zeitstempel | ✅ | |
 | **3** | Online-Profil mit `yaml-file` als letztem Glied | dieselbe Zusage; die Datei ist dort dieselbe Quelle | ✅ | |
-| **4** | Datei kaputt gemacht, während der Dienst läuft | der Dienst bleibt stehen und meldet den Grund; er fällt nicht auf einen halben Katalog zurück | ✅ | |
+| **4** | Datei kaputt gemacht, während der Dienst läuft | der Dienst bleibt stehen und meldet den Grund; er fällt nicht auf einen halben Katalog zurück | ◑ | |
 | **5** | Datei unverändert, viele Anfragen | die Antwortzeit bleibt brauchbar — gemessen, nicht geschätzt | ✅ | |
 | **6** | `POST /refresh` nach Preiskorrektur bei gleichem `as_of` | `refreshed` zählt die erfolgreiche Korrektur, und die Liste enthält den neuen Wert | ✅ | |
 | **7** | Online-Profil, TTL | die Cache-TTL gilt dort **unverändert** — kein Abruf mehr als vorher | ✅ | |
@@ -464,3 +464,31 @@ nicht nur über das Repository.
 | gestörte Datei antwortet mit dem alten Wert | `#4`, HTTP **und** Plugin |
 | `/sources` fragt nicht live | `#4` |
 | ohne Upsert | `#2`/`#6` und der lokale Cache-Bypass |
+
+### Codex-Review Runde 2 · `changes_requested` (2026-09-01)
+
+Die vier angeforderten Korrekturen sind bis auf **einen reproduzierten
+Randfall** erfüllt. Die Zielprüfungen sind grün (68 Host-, 140 Plugin-Tests),
+Ruff ebenfalls. Umfang und Flächen bleiben mit 237/608 hinzugefügten Zeilen
+innerhalb des erweiterten Vertrags.
+
+Die Aussage „eine fehlgeschlagene Signatur blockiert die Erholung nicht" ist
+noch falsch: `_reload()` speichert nach einem Parserfehler die Kombination aus
+`st_mtime_ns` und Größe. Wird danach eine gültige, gleich große Fassung mit
+derselben Nanosekunden-Mtime wiederhergestellt, kehrt die Abkürzung vor dem
+Parser zurück und `_problem` bleibt dauerhaft gesetzt. Der Gegenlauf auf
+Commit `4186cc8` ergab:
+
+```text
+FIRST_PROBLEM=True
+CURRENT_SIGNATURE=(1788270351773018490, 875)
+STORED_SIGNATURE=(1788270351773018490, 875)
+RECOVERED=False
+```
+
+Abschluss: Eine **fehlgeschlagene** Signatur nicht als erfolgreich geladenen
+Stand merken und den gleich großen/gleich datierten Wiederherstellungsfall als
+Plugin-Test ergänzen. Danach erneut die drei Zieltestdateien und Ruff laufen
+lassen. Keine weitere Produktfläche und keine andere Cache-, Diagnose- oder
+Reload-Regel; die verbleibenden 42 Zeilen Gesamtbudget reichen dafür. `#4`
+bleibt bis zu diesem Gegenorakel auf ◑.
