@@ -822,6 +822,15 @@ class SourcesResponse(BaseModel):
     profile: str | None = Field(
         default=None, description="Eingetragenes Profilpaket, sofern eines gilt"
     )
+    provenance_warning: str = Field(
+        default="",
+        description=(
+            "Der Bestand stammt aus einer **anderen** Quellenlage als der "
+            "laufenden — etwa nach einem erzwungenen Wiederherstellen. Die "
+            "Papiere darin können in einer Form vorliegen, die die laufende "
+            "Kette nicht bedient; leer, solange beides zusammenpasst"
+        ),
+    )
     sources: list[SourceEntry]
 
     model_config = ConfigDict(
@@ -1121,6 +1130,14 @@ class BackupList(BaseModel):
         description=(
             "Name der vorgemerkten Sicherung, solange ein Neustart aussteht — "
             "dann ist die laufende Datenbank noch die alte"
+        ),
+    )
+    restore_error: str = Field(
+        default="",
+        description=(
+            "Warum der Tausch beim letzten Start scheiterte. Steht hier etwas, "
+            "wird **nicht** erneut versucht: Derselbe Grund träfe beim nächsten "
+            "Start wieder zu. Eine neue Anforderung löst den Zustand ab"
         ),
     )
     backups: list[BackupEntry]

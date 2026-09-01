@@ -105,6 +105,9 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     # Die Kennung steht in der Datenbank selbst, nicht nur im Manifest daneben:
     # Eine Sicherung ohne Manifest bleibt zuordenbar, ein vertauschtes fällt auf.
+    # **Ein vorhandener Stempel bleibt stehen** — er sagt, unter welcher Lage
+    # dieser Bestand entstanden ist. Ihn hier zu überschreiben löschte die
+    # Auskunft, die `/sources` nach einem erzwungenen Restore melden soll.
     stamp_fingerprint(settings.database_path, fingerprint_of(get_sources_config()))
 
     running: list[RefreshScheduler] = []

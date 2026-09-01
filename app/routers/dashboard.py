@@ -23,6 +23,7 @@ from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app import __version__
 from app.config import Settings, get_settings
+from app.services.backup import fingerprint_of, stamped_fingerprint
 from app.container import get_cached_quote_service, get_quote_analyzer
 from app.models import (
     AnalyzeResult,
@@ -41,7 +42,7 @@ from app.models import (
 )
 from app.exchanges import COLLECTORS, EXCHANGES, preference_kind
 from app.container import get_sources_config
-from app.sources_config import ROLES
+from app.sources_config import ROLES, SourcesConfig
 from app.sources_registry import describe_chain
 from app.routers.validation import (
     IsinPath,
@@ -154,7 +155,31 @@ def sources() -> SourcesResponse:
     return SourcesResponse(
         config_path=str(config.path) if config.path else None,
         profile=config.profile,
+        provenance_warning=_provenance_warning(config),
         sources=entries,
+    )
+
+
+def _provenance_warning(config: SourcesConfig) -> str:
+    """Stammt der Bestand aus einer anderen Quellenlage als der laufenden?
+
+    **Gemeldet, nicht geheilt.** Die Datenbank trägt die Kennung, unter der sie
+    entstanden ist; nach einem erzwungenen Wiederherstellen weicht sie von der
+    laufenden Konfiguration ab. Die Papiere darin können dann in einer Form
+    vorliegen, die die laufende Kette nicht bedient — und das fiele sonst erst
+    beim nächsten Kursabruf auf, papierweise.
+
+    Die Auskunft kommt aus dem vorhandenen Stempel und der laufenden
+    Konfiguration; ein eigener Vermerk daneben wäre eine zweite Wissensquelle,
+    die beim ersten Nachtrag von der ersten abwiche.
+    """
+    stamped = stamped_fingerprint(get_settings().database_path)
+    running = fingerprint_of(config)
+    if not stamped or stamped == running:
+        return ""
+    return (
+        f"Der Bestand stammt aus der Quellenlage {stamped}, die Instanz läuft "
+        f"unter {running}."
     )
 
 

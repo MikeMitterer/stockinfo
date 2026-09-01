@@ -95,17 +95,20 @@ def fingerprint_of(config: SourcesConfig) -> str:
 
 
 def stamp_fingerprint(database_path: str | Path, fingerprint: str) -> None:
-    """Schreibt die Kennung in die Datenbank selbst.
+    """Schreibt die Kennung in die Datenbank — **nur, wenn noch keine dasteht**.
 
-    **Damit eine Datei ohne Manifest zuordenbar bleibt** und ein vertauschtes
-    Manifest auffällt. Gestempelt wird beim Start, nicht beim Sichern — sonst
-    trüge eine früh angelegte Sicherung keine Kennung.
+    Der Stempel sagt, unter welcher Quellenlage dieser Bestand entstanden ist.
+    Ihn beim Start mit der laufenden Konfiguration zu überschreiben löschte
+    genau diese Auskunft: Ein eingespielter fremder Bestand sähe danach aus,
+    als wäre er hier entstanden, und `/sources` hätte nichts mehr zu melden.
+
+    Eine Abweichung wird deshalb **gemeldet, nicht geheilt**.
     """
     connection = get_connection(str(database_path))
     try:
         connection.execute(
             "INSERT INTO meta (key, value) VALUES (?, ?) "
-            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            "ON CONFLICT(key) DO NOTHING",
             (FINGERPRINT_KEY, fingerprint),
         )
         connection.commit()
@@ -168,7 +171,7 @@ class BackupService:
         """Die Kennung der **laufenden** Konfiguration."""
         return fingerprint_of(self._config)
 
-    def create(self, *, reason: str = "manual") -> BackupInfo:
+    def create(self, *, reason: str = "manual", protect: str = "") -> BackupInfo:
         """Legt eine Sicherung an und räumt die älteste weg, wenn nötig.
 
         Serialisiert: Gleichzeitige Aufrufe bekommen der Reihe nach je eine
@@ -178,11 +181,16 @@ class BackupService:
             reason: `manual` oder `pre-restore`. Steht im Manifest, damit
                 erkennbar bleibt, welche Sicherung ein Wiederherstellen
                 begleitet hat.
+            protect: Eine Sicherung, die die Rotation **nicht** wegräumen darf.
+                Beim Einlösen ist das die Datei, die gleich eingespielt wird:
+                Sie ist bei zehn vorhandenen Sicherungen oft die älteste, und
+                die Sicherheitskopie hätte sie sonst genau in dem Moment
+                gelöscht, in dem sie gebraucht wird.
         """
         with self._lock:
-            return self._create_locked(reason)
+            return self._create_locked(reason, protect)
 
-    def _create_locked(self, reason: str) -> BackupInfo:
+    def _create_locked(self, reason: str, protect: str = "") -> BackupInfo:
         self.directory.mkdir(parents=True, exist_ok=True)
         fingerprint = self.fingerprint
         created_at, target = self._free_name(datetime.now(timezone.utc), fingerprint)
@@ -208,7 +216,7 @@ class BackupService:
             ),
         )
         logger.info("backup_created", name=target.name, reason=reason)
-        self._rotate()
+        self._rotate(protect)
         return self._info(target)
 
     def _free_name(self, moment: datetime, fingerprint: str) -> tuple[datetime, Path]:
@@ -226,14 +234,22 @@ class BackupService:
                 return moment, target
             moment += timedelta(milliseconds=1)
 
-    def _rotate(self) -> None:
+    def _rotate(self, protect: str = "") -> None:
         """Lässt die zehn jüngsten liegen — die elfte verdrängt die älteste.
 
         **Es gibt keinen zweiten Löschweg.** Ein `DELETE` wäre nur eine zweite
         Gelegenheit, die falsche Datei zu treffen.
+
+        `protect` nimmt eine Datei aus dem Rennen: Wer gerade eingespielt wird,
+        wird nicht weggeräumt, auch wenn er der älteste ist. Verdrängt wird
+        dann der nächstältere, sodass am Ende weiterhin zehn liegen.
         """
-        files = sorted(self.directory.glob("stockinfo-*.db"))
-        for stale in files[: max(0, len(files) - KEEP_BACKUPS)]:
+        files = [
+            path
+            for path in sorted(self.directory.glob("stockinfo-*.db"))
+            if path.name != protect
+        ]
+        for stale in files[: max(0, len(files) + (1 if protect else 0) - KEEP_BACKUPS)]:
             stale.unlink(missing_ok=True)
             stale.with_suffix(".json").unlink(missing_ok=True)
             logger.info("backup_rotated_out", name=stale.name)
@@ -380,23 +396,35 @@ def apply_pending(database_path: str, config: SourcesConfig) -> str | None:
     if not pending.is_file():
         return None
 
+    intent = _read_intent(pending)
+    if intent.get("failed"):
+        # **Kein zweiter Versuch.** Ein gescheiterter Tausch scheitert beim
+        # nächsten Start aus demselben Grund erneut; ihn stumm zu wiederholen
+        # hieße, bei jedem Start dieselbe Sicherheitskopie anzulegen. Der
+        # Zustand bleibt stehen, bis jemand eine neue Anforderung stellt.
+        return None
+
     service = BackupService(database_path, config)
+    name = str(intent.get("backup", ""))
+    force = bool(intent.get("force", False))
+    temporary = database.with_name(database.name + ".incoming")
     try:
-        intent = json.loads(pending.read_text(encoding="utf-8"))
-        name = str(intent.get("backup", ""))
-        force = bool(intent.get("force", False))
         source = service.resolve(service.check(name, force=force).name)
 
         if database.is_file():
-            service.create(reason="pre-restore")
+            service.create(reason="pre-restore", protect=source.name)
 
-        temporary = database.with_name(database.name + ".incoming")
         shutil.copy2(source, temporary)
         os.replace(temporary, database)
         for suffix in ("-wal", "-shm"):
             database.with_name(database.name + suffix).unlink(missing_ok=True)
     except Exception as exc:  # noqa: BLE001 — ein Start bricht daran nicht ab
-        logger.error("restore_failed", error=str(exc), exc_info=True)
+        logger.error("restore_failed", name=name, error=str(exc))
+        temporary.unlink(missing_ok=True)
+        _write_atomic(
+            pending,
+            json.dumps({**intent, "failed": f"{type(exc).__name__}: {exc}"}, indent=2),
+        )
         return None
 
     pending.unlink(missing_ok=True)
@@ -404,15 +432,40 @@ def apply_pending(database_path: str, config: SourcesConfig) -> str | None:
     return name
 
 
-def pending_restore(database_path: str) -> str | None:
-    """Der Name der vorgemerkten Sicherung, falls ein Neustart aussteht."""
-    pending = Path(database_path).parent / PENDING_FILENAME
-    if not pending.is_file():
+def restore_state(database_path: str) -> tuple[str | None, str]:
+    """Was von einem angeforderten Wiederherstellen übrig ist.
+
+    Returns:
+        Den Namen der vorgemerkten Sicherung und — falls der Tausch beim Start
+        scheiterte — den Grund im Klartext. Beides steht in `GET /backups`:
+        Ein Fehler, den nur das Protokoll kennt, ist für den Betreiber keiner.
+    """
+    intent = _read_intent(Path(database_path).parent / PENDING_FILENAME)
+    return (str(intent.get("backup")) or None if intent else None), str(
+        intent.get("failed", "")
+    )
+
+
+def stamped_fingerprint(database_path: str | Path) -> str | None:
+    """Die Kennung, unter der die **vorhandene** Datenbank entstanden ist."""
+    path = Path(database_path)
+    if not path.is_file():
         return None
     try:
-        return str(json.loads(pending.read_text(encoding="utf-8")).get("backup")) or None
-    except (OSError, ValueError):
+        return _read_stamp(path)[0]
+    except sqlite3.DatabaseError:
         return None
+
+
+def _read_intent(pending: Path) -> dict:
+    """Die hinterlegte Absicht — oder eine leere, wenn keine lesbar ist."""
+    if not pending.is_file():
+        return {}
+    try:
+        loaded = json.loads(pending.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        return {}
+    return loaded if isinstance(loaded, dict) else {}
 
 
 def _read_manifest(database_file: Path) -> dict:

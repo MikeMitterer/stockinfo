@@ -33,7 +33,9 @@ from app.services.backup import (
     BackupService,
     apply_pending,
     fingerprint_of,
+    restore_state,
     stamp_fingerprint,
+    stamped_fingerprint,
 )
 from app.sources_config import ROLES, SourcesConfig
 
@@ -621,3 +623,130 @@ def test_die_form_der_ausgaenge_steht_im_openapi(client: TestClient) -> None:
     for code in ("404", "409", "422"):
         body = declared[code]["content"]["application/json"]["schema"]
         assert "ErrorDetail" in json.dumps(body), f"{code} sagt keine Form zu"
+
+
+# ─── Die drei Gegenproben aus dem Review ──────────────────────────────────────
+
+
+def test_die_aelteste_von_zehn_ueberlebt_ihr_eigenes_wiederherstellen(
+    volume: Path,
+) -> None:
+    """**Die Sicherheitskopie darf nicht wegräumen, was sie sichern hilft.**
+
+    Bei zehn vorhandenen Sicherungen ist die zum Einspielen gewählte oft die
+    älteste. Die Sicherheitskopie davor macht elf, die Rotation räumt die
+    älteste weg — und das war die Quelle. Zurück blieb eine Absicht ohne
+    Datei und ein Bestand, der nie getauscht wurde.
+    """
+    service = _service(volume)
+    _put(volume, "GESICHERT")
+    oldest = service.create().name
+    for _ in range(KEEP_BACKUPS - 1):
+        service.create()
+    assert len(list(service.directory.glob("stockinfo-*.db"))) == KEEP_BACKUPS
+
+    service.request_restore(oldest)
+    _put(volume, "ZWISCHENDURCH")
+    applied = apply_pending(str(volume / "stockinfo.db"), _ONLINE)
+
+    assert applied == oldest
+    assert (service.directory / oldest).is_file(), "die Quelle wurde wegrotiert"
+    assert _symbols(volume / "stockinfo.db") == ["GESICHERT"]
+    assert len(list(service.directory.glob("stockinfo-*.db"))) == KEEP_BACKUPS
+    safety = [
+        path
+        for path in service.directory.glob("stockinfo-*.db")
+        if json.loads(path.with_suffix(".json").read_text("utf-8"))["reason"] == "pre-restore"
+    ]
+    assert len(safety) == 1, "die Sicherheitskopie fehlt oder wurde selbst wegrotiert"
+
+
+def test_ein_gescheiterter_tausch_wird_nicht_bei_jedem_start_wiederholt(
+    volume: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**Zwei Starts nach einer Sabotage — der zweite versucht nichts mehr.**
+
+    Der Fehler wird **nach** der Sicherheitskopie ausgelöst, denn dort sitzt
+    der Schaden: Ein stiller Wiederholversuch legte bei jedem Start eine
+    weitere an und drängte damit die eigentliche Sicherung aus der Rotation.
+    Ein Fehler vor der Prüfung bliebe folgenlos und könnte den Unterschied gar
+    nicht zeigen.
+    """
+    _put(volume, "UNBERUEHRT")
+    info = _service(volume).create()
+    _service(volume).request_restore(info.name)
+
+    def _boom(*args: object, **kwargs: object) -> None:
+        raise OSError("Zielmedium voll")
+
+    monkeypatch.setattr("app.services.backup.shutil.copy2", _boom)
+
+    assert apply_pending(str(volume / "stockinfo.db"), _ONLINE) is None
+    after_first = sorted(path.name for path in _service(volume).directory.glob("*"))
+    pending, error = restore_state(str(volume / "stockinfo.db"))
+
+    assert pending == info.name
+    assert "Zielmedium voll" in error, error
+    assert not (volume / "stockinfo.db.incoming").exists(), "das Zwischenprodukt blieb"
+
+    assert apply_pending(str(volume / "stockinfo.db"), _ONLINE) is None
+    assert sorted(path.name for path in _service(volume).directory.glob("*")) == after_first, (
+        "der zweite Start hat es erneut versucht"
+    )
+    assert _symbols(volume / "stockinfo.db") == ["UNBERUEHRT"]
+
+
+def test_eine_neue_anforderung_loest_den_fehlerzustand_ab(volume: Path) -> None:
+    """Sonst bliebe der Betreiber in einem Zustand, aus dem er nicht
+    herauskommt, ohne eine Datei von Hand zu löschen."""
+    _put(volume, "UNBERUEHRT")
+    verloren = _service(volume).create()
+    heil = _service(volume).create()
+    _service(volume).request_restore(verloren.name)
+    (_service(volume).directory / verloren.name).unlink()
+    apply_pending(str(volume / "stockinfo.db"), _ONLINE)
+
+    _service(volume).request_restore(heil.name)
+
+    pending, error = restore_state(str(volume / "stockinfo.db"))
+    assert pending == heil.name
+    assert error == ""
+    assert apply_pending(str(volume / "stockinfo.db"), _ONLINE) == heil.name
+
+
+def test_ein_erzwungener_fremder_restore_ist_in_sources_sichtbar(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """**Der Bestand behält seine Herkunft, und `/sources` sagt es.**
+
+    Wer mit `force` eine fremde Lage einspielt, bekommt Papiere in einer Form,
+    die die laufende Kette womöglich nicht bedient. Überschriebe der Start den
+    Herkunftsstempel mit der laufenden Konfiguration, sähe der Bestand danach
+    aus, als wäre er hier entstanden — und niemand könnte den Unterschied noch
+    sehen.
+    """
+    assert client.get("/sources").json()["provenance_warning"] == ""
+    fremd = "aaaaaaaaaaaa"
+    stamp = get_connection(str(tmp_path / "stockinfo.db"))
+    try:
+        stamp.execute(
+            "INSERT INTO meta (key, value) VALUES ('sources_fingerprint', ?) "
+            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
+            (fremd,),
+        )
+        stamp.commit()
+    finally:
+        stamp.close()
+
+    warning = client.get("/sources").json()["provenance_warning"]
+
+    assert fremd in warning
+    assert client.get("/backups").json()["fingerprint"] in warning
+
+
+def test_ein_start_ueberschreibt_den_herkunftsstempel_nicht(volume: Path) -> None:
+    """Der Stempel entsteht einmal und bleibt — er beschreibt die Herkunft der
+    Daten, nicht die Konfiguration von jetzt."""
+    stamp_fingerprint(volume / "stockinfo.db", fingerprint_of(_FILE_ONLY))
+
+    assert stamped_fingerprint(volume / "stockinfo.db") == fingerprint_of(_ONLINE)

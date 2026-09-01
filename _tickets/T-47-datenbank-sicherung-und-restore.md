@@ -226,7 +226,7 @@ Legende: ✅ live bestätigt · ◑ teilweise bestätigt · ⚠️ Befund offen 
 | **6** | Sicherung mit neuerem Schema | abgelehnt, auch mit `force` | ✅ | |
 | **7** | vor dem Wiederherstellen | eine Sicherung des alten Standes liegt vor | ⚠️ | |
 | **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ◑ | |
-| **9** | `PRAGMA user_version` | ist gesetzt und wird beim Prüfen gelesen | ✅ | |
+| **9** | `PRAGMA user_version` | ist gesetzt und wird beim Prüfen gelesen | ◑ | |
 | **10** | elfte Sicherung | die älteste ist weg, es liegen zehn; keine zweite Löschmöglichkeit | ✅ | |
 | **11** | UI-Liste | alle vorhandenen Sicherungen sind sichtbar, unpassende **mit Grund** statt ausgeblendet | ➖ | |
 | **12** | Bestätigung vor dem Wiederherstellen | der Neustart wird **vorher** genannt, nicht erst danach | ➖ | |
@@ -717,3 +717,61 @@ Weg: älteste von zehn Sicherungen; zweimaliger Start nach sabotierter Absicht;
 erzwungener fremder Restore mit sichtbarer `/sources`-Warnung. Verify `#8` ist
 im Backend nur teilweise erfüllt: Pending-Zustand und unveränderte Datenbank
 sind belegt, die ausdrücklich genannte UI gehört in die folgende UI-Strecke.
+
+### Runde 2 von 1b · Codex' drei Befunde (Claude, 2026-09-01)
+
+**1 · Die Sicherheitskopie räumte die Quelle weg.** Unabhängig reproduziert:
+Bei zehn vorhandenen Sicherungen ist die gewählte oft die älteste; die Kopie
+davor macht elf, und die Rotation löschte genau die Datei, die gleich
+eingespielt werden sollte. Zurück blieb `result=None`, keine Quelle, liegende
+Absicht. `_rotate()` nimmt jetzt die eingespielte Datei aus dem Rennen und
+verdrängt stattdessen die nächstältere — danach liegen weiterhin zehn.
+
+**2 · Ein gescheiterter Tausch hatte keinen Endzustand.** Der Fehler wurde
+protokolliert und verschluckt; dieselbe Absicht lief bei jedem Start erneut.
+Jetzt wird der Grund in die Absicht geschrieben, `GET /backups` zeigt ihn als
+`restore_error`, `.incoming` wird entfernt, und ein zweiter Start versucht
+nichts mehr. Eine neue Anforderung löst den Zustand ab.
+
+**3 · Der Start überschrieb den Herkunftsstempel.** Damit war nach einem
+erzwungenen fremden Restore nicht mehr zu sehen, woher der Bestand stammt. Der
+Stempel wird jetzt nur noch gesetzt, wenn keiner dasteht (`DO NOTHING`), und
+`/sources` meldet die Abweichung in `provenance_warning` — abgeleitet aus dem
+vorhandenen Stempel und der laufenden Konfiguration, ohne zweiten Vermerk
+daneben.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 500 | **393** |
+| Gesamt | ≤ 800 | **773** |
+
+**Live** (Dateiprofil → Online-Profil gewechselt, Port 8807):
+
+```
+POST …/restore            →  409 backup_incompatible
+   „resolvers: dort [yaml-file], hier [openfigi, yahoo-search]; …"
+POST …/restore?force=true →  202
+
+── Neustart ──
+   backup_created  reason=pre-restore
+   restore_applied force=True
+
+GET /sources → provenance_warning:
+   „Der Bestand stammt aus der Quellenlage eaae41acaeab,
+     die Instanz läuft unter 33b1a9d754a3."
+GET /backups → pending_restore: None, restore_error: ""
+```
+
+#### Mutantenprobe
+
+| Mutant | rot |
+|---|---|
+| Rotation schützt die Quelle nicht | die Gegenprobe „älteste von zehn" |
+| Fehlerzustand wird nicht festgehalten | „zwei Starts nach Sabotage" |
+| Stempel wird beim Start überschrieben | die Herkunftsprobe |
+
+**Ein Orakel musste ich neu bauen**, damit es beißt: Der Wiederholversuch
+scheiterte in meiner ersten Fassung schon in der Prüfung — also **vor** der
+Sicherheitskopie, wo ein zweiter Lauf folgenlos bleibt. Der Schaden entsteht
+erst danach; der Fehler wird jetzt im Kopiervorgang ausgelöst, und ohne den
+Riegel legt der zweite Start eine weitere Sicherheitskopie an.

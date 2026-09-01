@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, Query, status
 
 from app.container import get_backup_service
 from app.models import BackupEntry, BackupList, ErrorDetail, RestoreAccepted
-from app.services.backup import BackupInfo, BackupService, pending_restore
+from app.services.backup import BackupInfo, BackupService, restore_state
 
 router = APIRouter(tags=["backups"])
 
@@ -56,9 +56,11 @@ def list_backups(service: BackupService = Depends(get_backup_service)) -> Backup
     hieße, jemanden nach einer Datei suchen zu lassen, die er im Verzeichnis
     liegen sieht.
     """
+    pending, error = restore_state(str(service.database_path))
     return BackupList(
         fingerprint=service.fingerprint,
-        pending_restore=pending_restore(str(service.database_path)),
+        pending_restore=pending,
+        restore_error=error,
         backups=[_entry(info) for info in service.list()],
     )
 
