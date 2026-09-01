@@ -36,11 +36,11 @@ class FakeService:
     """Ersetzt den CachedQuoteService; steuert Erfolg/Fehler über Präfixe."""
 
     def count_instruments(self) -> int:
-        """Der Blick, mit dem `/ready` die Datenbank prüft.
+        """Erfüllt die von `/ready` verwendete Zähloperation.
 
         Die Zahl ist gleichgültig — die Route wertet nur aus, **ob** der Aufruf
-        durchgeht. Dass die Methode hier fehlte, gehörte zum Befund: Ohne sie
-        ließ sich der Dienst an dieser Stelle gar nicht ersetzen.
+        durchgeht. Der Fake braucht deshalb dieselbe Methode wie der echte
+        Dienst, ohne dafür eine Datenbank zu öffnen.
         """
         return 3
 
@@ -112,16 +112,13 @@ class FakeService:
 def client(monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClient]:
     """TestClient ohne Lifespan (kein Scheduler/DB), Service überschrieben.
 
-    **Zwei Nähte, weil es zwei Zugriffsarten gibt.** `dependency_overrides`
-    fängt jede Route, die den Dienst als FastAPI-Dependency deklariert.
-    `/ready` tut das nicht — es holt ihn direkt aus dem Modulnamensraum von
-    `app.main` — und griff deshalb an der Überschreibung vorbei auf die
-    Betriebsdatenbank unter `data/` zu.
+    `dependency_overrides` fängt Routen, die den Dienst als FastAPI-Dependency
+    deklarieren. `/ready` holt ihn dagegen direkt aus dem Modulnamensraum von
+    `app.main`; deshalb überschreibt die Fixture beide Zugriffswege.
 
-    Die zweite Naht sitzt hier statt im einzelnen Test: Die Zusage der ersten
-    Zeile dieser Datei soll für **jeden** ihrer Fälle gelten und nicht davon
-    abhängen, dass ein künftiger daran denkt. Wer einen anderen Dienst
-    braucht — der `503`-Fall weiter unten —, setzt ihn danach und gewinnt.
+    Die Naht gilt für die ganze Testdatei und hält deren DB-freie Zusage auch
+    für neue Fälle. Ein Test mit einem eigenen Dienst — der `503`-Fall weiter
+    unten — setzt ihn danach und gewinnt.
     """
     app.dependency_overrides[get_cached_quote_service] = FakeService
     app.dependency_overrides[get_daily_history_service] = FakeDaily
