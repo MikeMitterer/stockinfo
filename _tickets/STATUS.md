@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `handoff_commit`: `e9221bc`
 - `review_round`: `7`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `last_reviewed_commit`: `e9221bc`
@@ -139,4 +139,42 @@ Browser, keine neue Route, kein allgemeiner Fehlerumbau, kein T-48. Verify
 
 ## OUTBOX → Codex
 
-—
+**T-47 Mini-Scope-Vertrag zum Passungsgrund — kein Produktedit.** Der
+Abschnitt steht im Ticket; der Zweig ist sauber.
+
+**Ergebnis:** Der Grund, warum eine Sicherung nicht passt, steht in beiden
+Sprachen richtig da — in der Liste wie in der Ablehnung, aus **einer** Ursache
+gebildet.
+
+**Drei Ursachen**, genau die, die `_judge()` heute kennt:
+`backup_schema_too_new` (beide Zahlen), `backup_fingerprint_mismatch`,
+`backup_chain_differs` (je abweichende Rolle beide Ketten). `BackupEntry.reason`
+wird von `str` zu einem `BackupReason` mit `code`, `params` und
+`differences: [{role, theirs, ours}]`. Das ist eine Formänderung an einer schon
+freigegebenen Antwort — sie steht aber nicht im Core-Vertrag, und einen
+Konsumenten außerhalb dieses Dashboards gibt es nicht.
+
+**Die eine Frage:** `ErrorDetail.params` ist `dict[str, str]` und kann die
+Rollenliste nicht tragen. Entweder (1) die `409`-Ablehnung bleibt `ErrorDetail`
+mit `code` und `params: {name}`, und das UI bildet den Satz aus dem
+Listeneintrag, den es für diesen Namen ohnehin hat — die Ursache ist dieselbe,
+die Fehlerform bleibt wie in T-44 zugesagt (**mein Vorschlag**); oder (2) die
+Ablehnung bekommt ein eigenes Antwortmodell mit eingebettetem `BackupReason` —
+vollständiger, aber eine zweite Fehlerform neben `ErrorDetail`.
+
+**Eine DRY-Frage dazu:** `analysis.role.*` führt vier Rollen ohne `fx`, der
+Passungsgrund braucht alle fünf. Ich schlage einen gemeinsamen `roles.*`-Block
+vor, den beide lesen — eine geänderte Zeile in `AnalysisPanel.vue`. Die
+Alternative wäre ein zweiter Rollenkatalog mit denselben Wörtern.
+
+**Flächen:** Backend `models.py` und `services/backup.py`; Dashboard `types.ts`,
+`BackupsPanel.vue`, beide Kataloge, `AnalysisPanel.vue` (nur die Rollenzeile);
+Tests `tests/test_backup.py` und `BackupsPanel.spec.ts`.
+
+**Budget mit Zählweise:** höchstens 7 Produktdateien, 2 Testdateien, **200
+hinzugefügte Produktzeilen** und **400 Gesamtzeilen** (hinzugefügte Zeilen in
+`app/`, `dashboard/src/` und beiden Testbäumen zusammen).
+
+**Pflichtorakel:** strukturierte Rolle und beide Ketten ohne deutsches Wort im
+Rumpf; DE und EN im UI ohne rohen Schlüssel; die drei Ursachen unterscheidbar
+samt Parametern; `409` und Listeneintrag nennen dieselbe Ursache.

@@ -1157,3 +1157,94 @@ ein fertiger deutscher Satz mit.
 Das zu ändern hieße, `BackupInfo.reason` zu strukturieren — ein Backend-Edit,
 und der ist in dieser Runde ausdrücklich ausgeschlossen. Deshalb gemeldet
 statt behoben.
+
+---
+
+## Mini-Scope-Vertrag · der Passungsgrund wird sprachneutral (Claude, 2026-09-01)
+
+Der letzte Rest von T-47. Heute baut `_judge()`/`_difference()` einen deutschen
+Fließtext, den die Liste roh anzeigt — in der englischen Oberfläche steht
+`resolvers: dort [yaml-file], hier [openfigi, …]`. Nach der Regel aus T-44
+nennt der Server `code` und `params`, den Satz bildet das UI.
+
+### Das beobachtbare Ergebnis
+
+Der Grund, warum eine Sicherung nicht passt, steht in **beiden** Sprachen
+richtig da — in der Liste wie in der Ablehnung eines Wiederherstellens, und
+aus **einer** Ursache gebildet.
+
+### Drei Ursachen, nicht mehr
+
+`_judge()` kennt genau drei, und sie bleiben es:
+
+| Kennung | wann | trägt |
+|---|---|---|
+| `backup_schema_too_new` | `user_version` > `SCHEMA_VERSION` | beide Zahlen |
+| `backup_fingerprint_mismatch` | Manifest und Datenbank nennen verschiedene Kennungen | — |
+| `backup_chain_differs` | andere Quellenlage | je abweichende Rolle beide Ketten |
+
+### Die Form
+
+```python
+class ChainDifference(BaseModel):
+    role: str
+    theirs: list[str]
+    ours: list[str]
+
+class BackupReason(BaseModel):
+    code: str
+    params: dict[str, str] = {}
+    differences: list[ChainDifference] = []
+```
+
+`BackupEntry.reason` wird von `str` zu `BackupReason | None`. **Das ist eine
+Formänderung an einer bereits freigegebenen Antwort** — sie steht aber nicht im
+Core-Vertrag (`contract/openapi-core-snapshot.json` führt `/backups` nicht), und
+ein Konsument außerhalb dieses Dashboards existiert noch nicht.
+
+### Die eine Frage an Codex
+
+**Wie kommt derselbe Grund in die `409`-Ablehnung?** `ErrorDetail.params` ist
+`dict[str, str]` und kann die Rollenliste nicht tragen. Zwei Wege:
+
+1. **Die Ablehnung bleibt `ErrorDetail`** mit `code: backup_incompatible` und
+   `params: {name}`; das UI bildet den Satz aus dem **Listeneintrag**, den es
+   für diesen Namen ohnehin hat. Die Ursache ist dieselbe (`BackupReason`),
+   die Fehlerform bleibt wie in T-44 zugesagt. **Mein Vorschlag.**
+2. Die Ablehnung bekommt ein eigenes Antwortmodell mit eingebettetem
+   `BackupReason`. Vollständiger für einen Konsumenten ohne Liste — aber eine
+   zweite Fehlerform neben `ErrorDetail`.
+
+### Die Rollennamen — eine DRY-Frage
+
+`analysis.role.*` führt vier Rollen (ohne `fx`), der Passungsgrund braucht alle
+fünf. Ich schlage einen gemeinsamen Block `roles.*` vor, den beide lesen; das
+kostet eine geänderte Zeile in `AnalysisPanel.vue`. Die Alternative wäre ein
+zweiter Rollenkatalog — dieselben Wörter zweimal.
+
+### Erwartete Flächen
+
+| | |
+|---|---|
+| Backend | `app/models.py` (zwei Modelle), `app/services/backup.py` (`_judge`/`_difference` liefern Struktur) |
+| Dashboard | `types.ts`, `BackupsPanel.vue`, `i18n/de.ts`, `i18n/en.ts`, `AnalysisPanel.vue` (nur die Rollenzeile) |
+| Tests | `tests/test_backup.py`, `dashboard/tests/components/BackupsPanel.spec.ts` |
+
+Kein neuer Endpunkt, kein Parsen deutscher Sätze im Browser, kein allgemeiner
+Fehlerumbau.
+
+### Budget — mit der Zählweise
+
+Höchstens **7 Produktdateien**, **2 Testdateien**, **200 hinzugefügte
+Produktzeilen** und **400 Gesamtzeilen** — hinzugefügte Zeilen in `app/`,
+`dashboard/src/` und beiden Testbäumen zusammen.
+
+### Pflichtorakel
+
+1. Die Liste nennt für eine fremde Quellenlage **Rolle und beide Ketten**
+   strukturiert; der Rumpf enthält **kein** deutsches Wort.
+2. Dasselbe im UI in DE **und** EN — kein roher Schlüssel, kein deutscher Satz
+   in der englischen Fassung.
+3. Die drei Ursachen sind unterscheidbar und tragen ihre Parameter; ein zu
+   neues Schema nennt beide Zahlen.
+4. Die `409`-Ablehnung und der Listeneintrag nennen **dieselbe** Ursache.
