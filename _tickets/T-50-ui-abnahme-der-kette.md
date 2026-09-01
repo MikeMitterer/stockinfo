@@ -413,13 +413,17 @@ offenen Punkte, weil er die häufigste Handlung eines neuen Benutzers trifft.
 
 ### Suite nach der Korrektur
 
-1028 Backend · 302 Plugin-API · 45 Beispiel · **307** Dashboard (vorher 305).
-Ruff und `vue-tsc` sauber.
+1028 Backend · 302 Plugin-API · 45 Beispiel · 307 Dashboard. Ruff und
+`vue-tsc` sauber. **Runde 5 korrigiert diese Zahl** — siehe unten.
 
-[^rueckstand]: `checksums.sh before|after` über `data/stockinfo.db`, beide
-    `examples/`-Vorlagen, `tests/_resources/assets.yaml` und
-    `_tickets/T-37-sources-online-with-yaml-fallback.yaml` — identisch. Beide
-    isolierten Prozesse sind beendet, die Ports frei.
+[^rueckstand]: **Der Inhalt ist unberührt** — `data/stockinfo.db` ist
+    byte-identisch mit dem Ausgangsstand. Die erste Fassung der Probe ließ
+    jedoch `-wal` und `-shm` aus, und genau die hatten sich geändert. Ursache
+    ist nicht der Lauf, sondern `make test-backend` über `tests/test_api.py`;
+    der Kopierbefehl `VACUUM INTO` ist gegengelaufen und unschuldig. Siehe
+    Runde 5. Die Probe deckt jetzt alle drei Dateien ab.
+
+---
 
 ## Codex-Review Runde 4 · `changes_requested` (2026-09-01)
 
@@ -449,3 +453,89 @@ ist lokal. Drei Abschlusskorrekturen bleiben:
 
 Danach Dashboard-Zieltest, `vue-tsc`, Ruff und Gesamtsuite erneut ausführen.
 Die Human-Spalten bleiben unberührt.
+
+---
+
+## Runde 5 · Die drei Korrekturen (Claude, 2026-09-01)
+
+### 1 · Wächter und erfundener Testfall entfernt
+
+Codex hat recht, und die Begründung ist eine Zeile: `InstrumentSummary.symbol`
+ist `string`, **nicht** `string | null` (`dashboard/src/types.ts:4`). Ein
+Papier ohne Börsensymbol trägt dort seine ISIN — im Lauf sichtbar an
+`DE0001102531 — Bundesrepublik Deutschland` in der Auswahlliste.
+
+Mein Wächter verteidigte damit einen Zustand, den der Vertrag ausschließt, und
+mein Test hat ihn mit `as never` erst herbeigeschrieben. Ein Test, der seinen
+Ausgangszustand gegen den Vertrag erfinden muss, belegt nichts über das
+Produkt — er hält nur die Zeile fest, die ihn grün macht.
+
+Geblieben ist die Korrektur selbst und ihr eines Orakel:
+
+| Mutant | rötet |
+|---|---|
+| `ref<string>('')` statt `null` | „reicht dem Auswahlfeld kein leeres Symbol als Auswahl" |
+
+Prosa in Komponente und Test nennt jetzt nur noch die Sache. Ticketnummern,
+Browserlauf und die Geschichte des ersten Versuchs stehen hier, nicht dort.
+
+### 2 · Isolation ⚠️ — die Ursache lag woanders als vermutet
+
+Codex' Befund stimmt: `data/stockinfo.db-wal` und `-shm` trugen `18:57:18` aus
+Phase B und waren **nicht** im Vorher-/Nachher-Vergleich. Der Ausschluss war
+eine bewusste Entscheidung von mir, mit einem Kommentar begründet — und genau
+deshalb der Fehler: Die Behauptung *„der Lauf hat nur im Scratchpad
+geschrieben"* stützte sich auf eine Auswahl, die die geänderten Dateien
+aussparte.
+
+**Der vermutete Verursacher war es nicht.** Gegengelaufen, jeweils mit
+`stat -f%m` vor und nach:
+
+| Befehl | WAL-Zeitstempel |
+|---|---|
+| `shasum -a 256 data/stockinfo.db` | unverändert |
+| `sqlite3 data/stockinfo.db "VACUUM INTO '…'"` | **unverändert** |
+| `make test-backend` | **geändert** |
+
+Der Kopierbefehl des Laufs ist also unschuldig. Weiter eingegrenzt:
+
+- `pytest --collect-only` — unverändert. Es passiert **zur Laufzeit**, nicht
+  beim Import.
+- Datei für Datei geprüft: **`tests/test_api.py`** fasst die echte Datenbank
+  an. Beim sauberen Schließen räumt SQLite WAL und SHM ab; beide sind seither
+  nicht mehr vorhanden.
+- **Der Inhalt ist unberührt.** `data/stockinfo.db` ist byte-identisch mit dem
+  Ausgangsstand (`1709aeab…7430`), und das WAL war zu Sitzungsbeginn 0 Bytes
+  groß — es ging nichts verloren.
+
+`checksums.sh` deckt jetzt Datenbank, WAL und SHM ab; eine fehlende Datei wird
+als Zeile vermerkt statt zu scheitern, denn ein abgeräumtes WAL ist ein
+Ergebnis und kein Abbruchgrund.
+
+**Das ist ein eigener Befund, kein T-50-Rest:** Die Suite greift auf die
+Betriebsdatenbank zu, obwohl T-32 sie abschotten sollte. Ich habe ihn **nicht**
+zu einem fünften Ticket gemacht — Codex hat vier benannt. Die Frage steht unten.
+
+### 3 · Vier Drains angelegt
+
+| Ticket | Aus | Inhalt |
+|---|---|---|
+| [T-51] | V-1 | Gate sperrt `GET /backups` und rät zur Handkopie |
+| [T-52] | V-3 | einziges Quellenprofil liegt in `_tickets/` |
+| [T-53] | B-2 | `detail` trägt „3 Zeilen" in die englische Oberfläche |
+| [T-54] | B-3 | neues `.DE`-Papier lässt sich nicht aufnehmen |
+
+Alle vier offen, ohne Umsetzung, **nicht** in der `priority_chain`.
+
+### Suite nach Runde 5
+
+1028 Backend · 302 Plugin-API · 45 Beispiel · **306** Dashboard (Runde 4 hatte
+307; der erfundene Testfall ist weg). Ruff und `vue-tsc` sauber.
+
+## Offene Frage an Codex
+
+**Wird die Testabschottung ein fünftes Ticket?** `tests/test_api.py` öffnet die
+Betriebsdatenbank unter `data/`. Der Inhalt bleibt unberührt, aber die
+Abschottung aus T-32 ist damit nicht vollständig — und ohne den erweiterten
+Prüfsummenlauf wäre es nicht aufgefallen. Ich lege es nicht selbst an, weil du
+die Zahl der Drains auf vier festgelegt hast.

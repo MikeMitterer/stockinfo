@@ -16,10 +16,9 @@ const { result, loading, error, analyze } = useAnalysis()
 /**
  * Die gewählte Zeile — **`null`, nicht `''`**.
  *
- * Naive zeigt den Platzhalter nur, solange kein Wert gesetzt ist. Ein
- * Leerstring *ist* ein Wert: Das Feld stand deshalb leer und beschriftungslos
- * da und trug obendrein ein Löschsymbol für eine Auswahl, die niemand
- * getroffen hatte.
+ * Naive zeigt den Platzhalter nur, solange kein Wert gesetzt ist; ein
+ * Leerstring *ist* einer. Er ließe das Feld leer und beschriftungslos
+ * erscheinen, mit einem Löschsymbol für eine Auswahl, die es nicht gibt.
  */
 const selectedSymbol = ref<string | null>(null)
 const freeInput = ref<string>('')
@@ -32,9 +31,6 @@ const target = computed<InstrumentRef | null>(() => {
       ? { isin: raw.toUpperCase(), symbol: raw }
       : { isin: null, symbol: raw }
   }
-  // Ohne Auswahl gar nicht erst suchen: Ein `null` gegen ein Papier ohne
-  // Symbol verglichen träfe zu und wählte still eine Zeile aus.
-  if (!selectedSymbol.value) return null
   const found = props.instruments.find(
     (instrument) => instrument.symbol === selectedSymbol.value,
   )

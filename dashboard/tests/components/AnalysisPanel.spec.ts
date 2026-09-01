@@ -52,13 +52,12 @@ describe('AnalysisPanel', () => {
 
   /*
    * **Der Platzhalter hängt am `null`, nicht am Leerstring.** Naive zeigt ihn
-   * nur, solange kein Wert gesetzt ist; ein `''` *ist* ein Wert. Im Browserlauf
-   * zu T-50 stand das Feld deshalb leer und ohne Beschriftung da und trug ein
-   * Löschsymbol für eine Auswahl, die niemand getroffen hatte.
+   * nur, solange kein Wert gesetzt ist; ein `''` *ist* einer und ließe das
+   * Feld leer und beschriftungslos erscheinen.
    *
-   * Geprüft wird der Wert, den die Komponente an das Auswahlfeld reicht — der
-   * gerenderte Text belegte nichts: Naive malt den Platzhalter erst im
-   * echten Popover-Layout, das `jsdom` nicht aufbaut.
+   * Geprüft wird der Wert, den die Komponente an das Auswahlfeld reicht: Den
+   * Platzhalter malt Naive erst im echten Popover-Layout, das `jsdom` nicht
+   * aufbaut — am gerenderten Text wäre nichts zu sehen.
    */
   it('reicht dem Auswahlfeld kein leeres Symbol als Auswahl', () => {
     const wrapper = mount(AnalysisPanel, {
@@ -67,33 +66,5 @@ describe('AnalysisPanel', () => {
     })
 
     expect(wrapper.findComponent(NSelect).props('value')).toBeNull()
-  })
-
-  /*
-   * Die Gegenprobe zur Zeile darüber, und sie ist der Grund für die
-   * Wächterzeile: Ein Papier **ohne** Börsensymbol trägt `null`. Ohne Wächter
-   * trifft die leere Auswahl genau darauf, `target` wird wahr — und die
-   * Schaltfläche gibt sich frei, obwohl niemand etwas gewählt hat.
-   *
-   * **Beobachtet wird die Schaltfläche, nicht der Text.** Der erste Anlauf
-   * dieses Tests prüfte, ob der Name des Papiers auftaucht; er tut es nie,
-   * egal wie die Auswahl steht. Der Test war grün und hat den Mutanten
-   * durchgelassen.
-   */
-  it('gibt die Schaltfläche ohne Auswahl nicht frei, auch nicht bei einem Papier ohne Symbol', () => {
-    const wrapper = mount(AnalysisPanel, {
-      global: { plugins: [i18n] },
-      props: {
-        instruments: [
-          {
-            symbol: null,
-            name: 'Bundesrepublik Deutschland',
-            identity: { kind: 'isin_only', isin: 'DE0001102531' },
-          } as never,
-        ],
-      },
-    })
-
-    expect(wrapper.find('button').attributes('disabled')).toBeDefined()
   })
 })

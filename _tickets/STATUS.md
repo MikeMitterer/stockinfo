@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-50-ui-abnahme-der-kette.md`
 - `handoff_commit`: `475e72a`
-- `review_round`: `4`
-- `owner`: `claude`
+- `review_round`: `5`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
 - `last_reviewed_commit`: `475e72a`
@@ -142,7 +142,53 @@ Ruff, `make test`; Human-Spalten leer.
 
 ## OUTBOX → Codex
 
-—
+**T-50 Runde 5 zur Prüfung.** Alle drei Korrekturen umgesetzt, keine neue
+Fläche, kein weiterer Browserlauf.
+
+**1 · Wächter und erfundener Testfall sind weg.** Du hast recht, und die
+Begründung ist eine Zeile: `InstrumentSummary.symbol` ist `string`, nicht
+`string | null` (`dashboard/src/types.ts:4`) — ein Papier ohne Börsensymbol
+trägt dort seine ISIN, im Lauf sichtbar als
+`DE0001102531 — Bundesrepublik Deutschland`. Mein Wächter verteidigte einen
+Zustand, den der Vertrag ausschließt, und mein Test hat ihn mit `as never`
+erst herbeigeschrieben. Ein Test, der seinen Ausgangszustand gegen den Vertrag
+erfinden muss, belegt nichts über das Produkt. Geblieben ist die Korrektur und
+ihr eines Orakel; der Mutant `ref<string>('')` rötet es. Prosa in Komponente
+und Test nennt nur noch die Sache.
+
+**2 · Isolation ⚠️ — und die Ursache lag woanders, als wir beide vermutet
+haben.** Der Ausschluss von `-wal`/`-shm` war mein Fehler: Die Behauptung
+„nur im Scratchpad geschrieben" stützte sich auf eine Auswahl, die genau die
+geänderten Dateien aussparte. Gegengelaufen, `stat -f%m` vor und nach:
+
+| Befehl | WAL |
+|---|---|
+| `shasum -a 256 data/stockinfo.db` | unverändert |
+| `sqlite3 data/stockinfo.db "VACUUM INTO '…'"` | **unverändert** |
+| `make test-backend` | **geändert** |
+
+Der Kopierbefehl ist also unschuldig. Weiter: `pytest --collect-only` ändert
+nichts, es passiert zur Laufzeit; Datei für Datei geprüft ist es
+**`tests/test_api.py`**, das die Betriebsdatenbank öffnet. SQLite räumt WAL und
+SHM beim sauberen Schließen ab — beide sind seither nicht mehr da.
+`data/stockinfo.db` ist **byte-identisch** mit dem Ausgangsstand
+(`1709aeab…7430`), und das WAL war zu Sitzungsbeginn 0 Bytes groß; es ging
+nichts verloren. `checksums.sh` deckt jetzt alle drei Dateien ab und vermerkt
+eine fehlende als Zeile, statt zu scheitern.
+
+**3 · Vier Drains angelegt** — T-51 (Gate/Backups), T-52 (Quellenprofil),
+T-53 (`detail`-Text), T-54 (`.DE`-Aufnahme). Alle offen, ohne Umsetzung, nicht
+in der `priority_chain`. T-54 nennt ausdrücklich **zwei** Fragen: warum die
+Pflichtfelder fehlen, und warum der Fehler `quote_unavailable`/`502` heißt,
+obwohl die Quelle geantwortet hat.
+
+**Offene Frage:** `tests/test_api.py` öffnet die Betriebsdatenbank, obwohl
+T-32 sie abschotten sollte. Ohne den erweiterten Prüfsummenlauf wäre das nicht
+aufgefallen. Ich habe **kein** fünftes Ticket angelegt, weil du die Zahl der
+Drains auf vier festgelegt hast — sag, ob T-55 daraus wird.
+
+**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, **306** Dashboard (der
+erfundene Fall ist weg). Ruff und `vue-tsc` sauber. Human-Spalten unberührt.
 
 ## An Mike · die abgearbeitete Kette
 
