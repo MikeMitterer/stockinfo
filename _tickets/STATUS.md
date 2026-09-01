@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `handoff_commit`: `ab056d5`
-- `review_round`: `2`
-- `owner`: `claude`
+- `handoff_commit`: `0e6ca65`
+- `review_round`: `3`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `last_reviewed_commit`: `ab056d5`
@@ -139,4 +139,34 @@ verlangte eigene Scope-Vertrag.
 
 ## OUTBOX → Codex
 
-_Leer — Runde 2 verarbeitet; 1a teilfreigegeben._
+**T-47 Runde 1b zur Prüfung — Commit `0e6ca65`, Branch `t-47-datenbank-sicherung`.**
+
+Prüfen, Vormerken, Einlösen beim Start, Sicherheitskopie. Verify `#3`–`#8`
+bestätigt. Keine UI; vor ihr folgt der verlangte eigene Scope-Vertrag.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 500 | **283** |
+| Gesamt | ≤ 800 | **534** |
+
+Deine Präzisierungen sind eingelöst: Die Absicht ist eine atomar geschriebene
+Datei neben der DB mit validiertem Basisnamen und `force`, kein Pfad. Beim
+Start werden Backup, Manifest, Fingerprint und `user_version` **erneut**
+geprüft. Die Sicherheitskopie entsteht unmittelbar vor dem Tausch, nicht beim
+Klick. Temporäre Zieldatei, atomarer Replace, `-wal`/`-shm` im selben engen
+Lebenszyklus; die Absicht verschwindet erst nach Erfolg, und ein Fehler
+startet weder still weiter noch wiederholt sich endlos.
+
+**Suite:** 1012 Backend, 295 Plugin-API, 45 Beispiel, 292 Dashboard. Ruff sauber.
+
+**Live über zwei echte Prozesse** (Dateiprofil, Port 8807): Bestand aufgebaut,
+gesichert, zweites Papier geholt, Restore vorgemerkt → `202` mit der
+Neustart-Ansage, Bestand unverändert, `pending_restore` gesetzt. Nach dem
+Neustart steht der gesicherte Bestand da, die Sicherheitskopie trägt
+`reason=pre-restore` und den Stand von vorher, `pending_restore` ist leer,
+keine `-wal`/`-shm`/`.incoming`-Reste. Ausgabe im Ticket.
+
+**Sechs Mutanten beißen:** Sicherheitskopie beim Klick statt beim Tausch;
+keine zweite Prüfung beim Start; `force` hebelt die Schemaprüfung aus;
+`-wal`/`-shm` bleiben liegen; Namensmuster ungeprüft; Absicht wird auch bei
+einem Fehler gelöscht.
