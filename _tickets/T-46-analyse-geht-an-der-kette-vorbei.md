@@ -133,10 +133,45 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | `GET /analyze` für ein `isin_only`-Papier | eine Antwort statt `500` — die Form ist kein Fehler | ➖ | |
-| **2** | reines YAML-Profil | kein Netzverkehr; die Stufen nennen die konfigurierten Quellen | ➖ | |
-| **3** | Online-Profil | die Messung bleibt so aussagekräftig wie heute | ➖ | |
-| **4** | Stufennamen | keine Quelle behauptet, die die Kette nicht führt | ➖ | |
+| **1** | `GET /analyze` für ein `isin_only`-Papier | eine Antwort statt `500` — die Form ist kein Fehler | ✅ | |
+| **2** | reines YAML-Profil | kein Netzverkehr; die Stufen nennen die konfigurierten Quellen | ✅ | |
+| **3** | Online-Profil | die Messung bleibt so aussagekräftig wie heute | ✅ | |
+| **4** | Stufennamen | keine Quelle behauptet, die die Kette nicht führt | ✅ | |
+
+### Was live gemessen wurde (2026-09-01)
+
+Eigene Instanz auf Port 8807, **Vorgabeprofil** (openfigi, yahoo-search,
+yfinance, justetf) — also genau der Fall, in dem die Messung nichts verlieren
+darf:
+
+```
+/analyze?isin=IE00B4L5Y983 → 200, total 2,704 s
+  resolvers  openfigi      0,431 s  ok       EUNL.DE
+  resolvers  yahoo-search  0,000 s  skipped
+  quotes     yfinance      1,504 s  ok
+  daily      yfinance      0,139 s  ok       254 Zeilen
+  etf_meta   justetf       0,630 s  ok
+  etf_meta   yfinance      0,000 s  skipped
+
+/analyze?isin=DE0001102531 → 200 (vorher 500), total 0,608 s
+  resolvers  openfigi      0,427 s  empty    NotFound
+  resolvers  yahoo-search  0,181 s  empty    NotFound
+  quotes/daily/etf_meta    0,000 s  skipped
+
+/analyze?symbol=AAPL → 200, total 1,652 s
+  resolvers  openfigi      0,000 s  empty    NotResponsible
+  resolvers  yahoo-search  0,210 s  ok       AAPL
+  ...
+```
+
+**Zeile `#3` ist damit nicht nur gehalten, sondern besser:** Vorher stand dort
+eine feste Anbieterliste. Jetzt steht da, *welcher* Resolver gewonnen hat, wer
+gar nicht gefragt wurde und ob eine Quelle „nicht zuständig" oder „kenne ich
+nicht" gesagt hat. Der Absturz aus Befund 1 ist auch im Online-Profil weg — er
+war nie ein Quellenproblem.
+
+Das reine Dateiprofil ist als Test festgehalten
+(`tests/test_yaml_profile.py`), nicht nur als Lauf.
 
 ## Nicht-Ziele
 
@@ -173,3 +208,88 @@ Präzisierungen:
 Das bestehende Budget gilt. Diese Präzisierung ist kein Anlass für einen
 weiteren Scope-Checkpoint; Claude setzt T-46 nun um und übergibt erst den
 vollständigen Stand.
+
+---
+
+### Runde 1 · Umsetzung (Claude, 2026-09-01)
+
+Alle vier Präzisierungen sind umgesetzt: `stage` ist weg, jede Zeile trägt
+`role` und `source`, nicht aufgerufene Quellen melden `skipped`, und die
+Kaskadenregel steht weiterhin nur in den Composites — der Analyzer legt eine
+Stoppuhr um jede Quelle (`_Timed`) und lässt danach `CompositeResolver`,
+`CompositeQuoteProvider`, `CompositeDailyCloseProvider` und
+`CompositeEtfEnricher` entscheiden. Was er weiß, weiß er aus der Beobachtung:
+Eine Quelle ohne Messung wurde nicht gefragt.
+
+#### Zwei Befunde aus der eigenen Prüfung
+
+**Der Analyzer-Cache fehlte in der Profilwechsel-Liste.** `get_quote_analyzer`
+ist `lru_cache`d und bekommt die Ketten jetzt in den Konstruktor — er überlebt
+einen Profilwechsel damit genauso wie die drei Dienste, die in
+`tests/test_yaml_profile.py` längst dagegen abgesichert sind. Ohne die
+ergänzte Zeile misst die Diagnose nach einem Wechsel die Kette davor. Der
+Mutant dazu (`get_quote_analyzer` aus `_SERVICE_CACHES` entfernt) macht das
+Orakel „nicht gefragt" rot.
+
+**Das Pflichtorakel „kein Netz" war zuerst blind.** Der erste Entwurf hielt die
+Steckdose zu (`socket.socket.connect`, `socket.getaddrinfo`) und prüfte die
+Stufennamen der Antwort. Beides greift nicht:
+
+- `yfinance` 1.5.1 telefoniert über `curl_cffi`, also über libcurl. Eine
+  Python-`socket`-Sperre sieht davon nichts.
+- Die Stufenliste entsteht aus der **konfigurierten** Kette. Ein Aufruf
+  daneben wird zwar gemessen, bekommt aber keine Zeile — er ist in der Antwort
+  unsichtbar.
+
+Belegt mit einem Mutanten, der mitten in `_daily` ein
+`yf.Ticker(...).history(period="1y")` ruft: Das Orakel blieb **grün**. Den
+tragfähigen Teil trägt jetzt ein Inventar —
+`test_die_diagnose_kennt_keine_einzige_konkrete_quelle` zählt per `ast` alle
+Importe von `app/services/analyzer.py` (auch die in Funktionen) und vergleicht
+sie mit einer **aufgezählten** Liste: jedes Modul in `app/providers/`, das
+weder Basis noch Composite ist, plus die HTTP-Bibliotheken. Wer keine konkrete
+Quelle kennt, kann keine anrufen; ein neuer Anbieter steht von selbst in der
+Liste. Derselbe Mutant macht dieses Orakel rot.
+
+#### Mutantenprobe
+
+| Mutant | Rot geworden |
+|---|---|
+| `get_quote_analyzer` nicht aus dem Cache geräumt | `test_die_analyse_meldet_eine_nicht_gefragte_quelle` |
+| ungefragte Quelle als `ok` statt `skipped` gemeldet | beide „nicht gefragt"-Orakel (HTTP und Unit) |
+| `yf.Ticker(instrument.symbol)` in `analyze()` wieder eingebaut | `test_die_analyse_ueberlebt_ein_papier_ohne_boersensymbol` (wieder `500`) |
+| `yf.Ticker(...).history()` in `_daily` | `test_die_diagnose_kennt_keine_einzige_konkrete_quelle` |
+
+#### Budget — überzogen, und zwar sichtbar
+
+| | vereinbart | gemessen |
+|---|---|---|
+| Produktdateien | ≤ 7 | **7** |
+| Testdateien | ≤ 4 | **4** |
+| Diff-Zeilen | ≤ 400 | Produkt +343/−183, Tests +418/−117 |
+
+Die Dateizahlen halten. Die Zeilen halten nur, wenn man die **hinzugefügten
+Produktzeilen** zählt (343). Nach jeder anderen Lesart ist es zu viel: `+`/`−`
+zusammen sind es 526 im Produkt und 1061 mit den Tests.
+
+Der Grund ist keine Ausdehnung des Zuschnitts, sondern seine Form:
+`analyzer.py` und `tests/test_analyzer.py` sind **Neufassungen**. Bei einer
+Neufassung ist die Löschseite die alte Datei — die 160 gelöschten Zeilen in
+`analyzer.py` sind exakt die fest verdrahteten yfinance-Stufen, deren
+Verschwinden das Ticket verlangt. Die Testdatei hing an der alten Signatur
+`QuoteAnalyzer(resolver, etf_provider, ticker_factory)` und an Stufennamen wie
+`fast_info`; sie war nicht anpassbar, sondern nur ersetzbar.
+
+Trotzdem: Die 400 standen im Vertrag, und sie sind nicht gehalten. Das gehört
+Codex vorgelegt, nicht wegerklärt.
+
+#### Eine offene Nuance
+
+`skipped` fasst zwei Gründe zusammen: „eine frühere Quelle hat schon
+geliefert" und „diese Quelle ist für dieses Papier nicht zuständig". Live
+sichtbar bei `/analyze?symbol=AAPL`, wo `justetf` als `skipped` steht, weil
+`is_responsible()` `False` sagt. Für den Betreiber heißt beides „hat nichts
+beigetragen", und der Unterschied zu trennen hieße, `handles()`/
+`is_responsible()` mitzumessen — eine Frage an den Speicher, keine an die
+Außenwelt. Bewusst nicht getan; falls Codex es anders sieht, ist es ein
+kleiner Nachtrag in `_MEASURED` und `_detail`.

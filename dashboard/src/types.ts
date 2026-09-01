@@ -323,7 +323,10 @@ export type RangeKey = 'intraday' | '1w' | '1m' | '3m' | '1y' | 'max'
 
 /** Eine einzelne Stufe der On-Demand-Analyse (z.B. Kurs, Historie, Metadaten). */
 export interface AnalyzeStage {
-  stage: string
+  /** Die Rolle, in der die Quelle steht — `resolvers`, `quotes`, `daily`, `etf_meta`. */
+  role: string
+  /** Ihr Name aus `sources.yaml`; technisch und deshalb unübersetzt. */
+  source: string
   seconds: number
   status: string
   detail: string | null

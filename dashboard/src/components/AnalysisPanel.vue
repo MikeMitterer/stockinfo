@@ -79,19 +79,29 @@ const instrumentOptions = computed(() =>
     <table v-if="result" class="stages">
       <thead>
         <tr>
-          <th>{{ t('analysis.colStage') }}</th>
+          <th>{{ t('analysis.colRole') }}</th>
+          <th>{{ t('analysis.colSource') }}</th>
           <th>{{ t('analysis.colSeconds') }}</th>
           <th>{{ t('analysis.colStatus') }}</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="s in result.stages" :key="s.stage" :class="s.status">
-          <td>{{ s.stage }}</td>
+        <!--
+          Die Rolle wird übersetzt, der Quellenname nicht: Er steht so in
+          `sources.yaml`, und ein übersetzter Name wäre in keiner Datei zu
+          finden.
+        -->
+        <tr v-for="s in result.stages" :key="`${s.role}/${s.source}`" :class="s.status">
+          <td>{{ t(`analysis.role.${s.role}`) }}</td>
+          <td>{{ s.source }}</td>
           <td class="num">{{ s.seconds.toFixed(2) }}s</td>
-          <td>{{ s.status }}<span v-if="s.detail"> · {{ s.detail }}</span></td>
+          <td>
+            {{ t(`analysis.status.${s.status}`) }}<span v-if="s.detail"> · {{ s.detail }}</span>
+          </td>
         </tr>
         <tr class="total">
           <td>{{ t('analysis.total') }}</td>
+          <td></td>
           <td class="num">{{ result.total.toFixed(2) }}s</td>
           <td></td>
         </tr>

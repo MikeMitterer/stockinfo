@@ -18,12 +18,11 @@ from app.providers.composite_market import (
     CompositeDailyCloseProvider,
     CompositeQuoteProvider,
 )
-from app.providers.justetf_provider import JustEtfProvider
 from app.repository import QuoteRepository
 from app.resolver import CompositeResolver
 from app.sources_config import SourcesConfig, load_sources_config
 from app.sources_registry import build_chain
-from app.services.analyzer import QuoteAnalyzer
+from app.services.analyzer import ROLES as ANALYZED_ROLES, QuoteAnalyzer
 from app.services.daily_history import DailyHistoryService
 from app.services.daily_sync import DailyCloseSync
 from app.services.fx_service import CachedFxService
@@ -212,14 +211,12 @@ def get_daily_history_service() -> DailyHistoryService:
 def get_quote_analyzer() -> QuoteAnalyzer:
     """Baut den (gecachten) QuoteAnalyzer aus der aktuellen Konfiguration.
 
-    Hier steht bewusst `JustEtfProvider` statt des Composite: Der Analyzer misst
-    Laufzeiten je Schritt, und die Stufe heißt „justetf". Mit dem Composite
-    meldete sie für ein US-Papier 0 ms und „ok" — richtig gemessen, aber falsch
-    beschriftet. Der teure Schritt, den diese Seite sichtbar machen soll, ist
-    der Scrape.
+    **Er bekommt dieselben Ketten wie der Betrieb**, nicht eigene Anbieter. Bis
+    T-46 stand hier `JustEtfProvider` fest verdrahtet und daneben `yf.Ticker`
+    im Analyzer selbst: Eine Instanz ohne Online-Quelle maß damit Yahoo und
+    justETF — Zahlen zu einer Kette, die sie gar nicht führt.
     """
-    resolver = _build_resolver()
-    return QuoteAnalyzer(resolver, JustEtfProvider())
+    return QuoteAnalyzer({role: _chain(role) for role in ANALYZED_ROLES})
 
 
 @lru_cache

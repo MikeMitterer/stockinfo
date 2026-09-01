@@ -146,13 +146,38 @@ export const de = {
   },
   analysis: {
     title: 'Live-Analyse',
-    hint: 'Misst die Dauer der einzelnen Abfrage-Schritte. Löst echte externe Abfragen aus (kein Cache).',
+    /*
+     * **„Externe Abfragen" stand hier zu Unrecht.** Gemessen wird die
+     * konfigurierte Kette — in einem reinen Dateiprofil verlässt dabei nichts
+     * den Rechner. Der Cache bleibt außen vor, das gilt weiter.
+     */
+    hint: 'Misst die konfigurierte Quellenkette Rolle für Rolle — am Cache vorbei.',
     pickInstrument: 'Instrument wählen',
     orEnter: 'oder ISIN/Symbol eingeben',
     placeholder: 'ISIN oder Symbol (z.B. EUNL.DE)',
     run: 'Analysieren',
     running: 'Messe…',
-    colStage: 'Schritt',
+    /*
+     * **Rolle statt Anbietername.** Die Analyse misst, was die konfigurierte
+     * Kette tut; welche Quelle in einer Rolle steht, entscheidet
+     * `sources.yaml`. Ihr Name bleibt roh — er soll in der Datei
+     * wiederzufinden sein.
+     */
+    colRole: 'Rolle',
+    colSource: 'Quelle',
+    role: {
+      resolvers: 'Auflösung',
+      quotes: 'Kurs',
+      daily: 'Tagesreihe',
+      etf_meta: 'Metadaten',
+    },
+    status: {
+      ok: 'geliefert',
+      empty: 'nichts',
+      error: 'Fehler',
+      /* Nicht „übersprungen": Die Kaskade hatte schon eine Antwort. */
+      skipped: 'nicht gefragt',
+    },
     colSeconds: 'Dauer',
     colStatus: 'Status',
     total: 'Gesamt',

@@ -1,177 +1,336 @@
-"""Tests für den QuoteAnalyzer (externe Calls über Fakes)."""
+"""Die Diagnose misst die **konfigurierte Kette**, nicht feste Anbieter.
 
-from stockinfo_plugin.types import (
-    NotFound,
-    NotResponsible,
-    Unavailable,
-    Unsupported,
-)
+Bis T-46 baute der Analyzer `yf.Ticker` und `JustEtfProvider` selbst und
+beschriftete seine Stufen mit deren Namen. Eine Instanz ohne Online-Quelle
+bekam damit Zahlen zu einer Kette, die sie nicht führt — und ging beim
+Analysieren ins Netz, obwohl sie bewusst offline lief.
 
-from app.providers.base import EtfDetails, ResolvedInstrument
+Geprüft wird deshalb dreierlei:
+
+============ ================================================================
+Zuordnung    Je konfigurierte Quelle **und** Rolle eine Zeile, in der
+             Reihenfolge der Konfiguration
+Nichtfragen  Eine Quelle, die die Kaskade nach einem Treffer nicht mehr
+             gebraucht hat, meldet `skipped` — nicht `0 ms, ok`
+Ausgänge     `ok`, `empty` und `error` unterscheiden sich, und keiner davon
+             bricht die übrigen Rollen ab
+============ ================================================================
+"""
+
+import ast
+from pathlib import Path
+
+from stockinfo_plugin.types import NotFound, Unavailable
+
+from app.providers.base import EtfDetails, ResolvedInstrument, SourceAnswer
 from app.services.analyzer import QuoteAnalyzer
 
+_APP = Path(__file__).resolve().parent.parent / "app"
 
-class _FakeResolver:
-    """Liefert eine vorgegebene Resolution — auch die negativen Arten.
+_ETF = ResolvedInstrument(
+    symbol="EUNL.DE", isin="IE00B4L5Y983", ticker="EUNL", mic="XETR", type="etf"
+)
 
-    ``None`` bleibt als Kurzschreibweise für „kenne ich nicht" erlaubt, damit
-    die älteren Tests lesbar bleiben.
-    """
 
-    def __init__(self, resolved) -> None:
-        self._resolved = NotFound() if resolved is None else resolved
+class _Resolver:
+    """Eine Auflösungsquelle mit fester Antwort."""
+
+    def __init__(self, name: str, answer=None) -> None:
+        self.name = name
+        self._answer = _ETF if answer is None else answer
+        self.calls = 0
 
     def handles(self, isin: str) -> bool:
         return True
 
     def resolve_isin(self, isin: str):
-        return self._resolved
+        self.calls += 1
+        return self._answer
+
+    def resolve_symbol(self, symbol: str):
+        self.calls += 1
+        return self._answer
 
 
-class _FakeEtf:
-    def __init__(self, details: EtfDetails | None) -> None:
+class _Quotes:
+    def __init__(self, name: str, quote=None) -> None:
+        self.name = name
+        self._quote = quote
+        self.calls = 0
+
+    def fetch_quote(self, instrument):
+        self.calls += 1
+        return self._quote
+
+
+class _Daily:
+    def __init__(self, name: str, rows=None) -> None:
+        self.name = name
+        self._rows = rows
+        self.calls = 0
+
+    def fetch_daily_closes(self, symbol, start=None, *, identity=None, instrument_type=None):
+        self.calls += 1
+        return SourceAnswer(self._rows)
+
+
+class _Meta:
+    def __init__(self, name: str, details=None) -> None:
+        self.name = name
         self._details = details
+        self.calls = 0
 
-    def is_responsible(self, isin: str) -> bool:
+    def is_responsible(self, isin, **kwargs) -> bool:
         return True
 
-    def fetch_etf(self, isin: str, symbol: str | None = None) -> EtfDetails | None:
+    def fetch_etf(self, isin, symbol=None, **kwargs):
+        self.calls += 1
         return self._details
 
 
-class _FakeFastInfo:
-    last_price = 128.6
-    currency = "EUR"
+def _rows(count: int) -> list[dict]:
+    return [
+        {"date": f"2026-08-{day + 1:02d}", "close": 100.0 + day, "currency": "EUR"}
+        for day in range(count)
+    ]
 
 
-class _FakeTicker:
-    def __init__(self, symbol: str) -> None:
-        self.symbol = symbol
-        self.fast_info = _FakeFastInfo()
-        self.isin = "IE00B4L5Y983"
-
-    def get_info(self) -> dict:
-        return {"longName": "Test ETF"}
-
-    def history(self, **kwargs):
-        return [1, 2, 3]  # len() = "3 rows"
+def _stages(result) -> dict[tuple[str, str], object]:
+    return {(stage.role, stage.source): stage for stage in result.stages}
 
 
-def _analyzer(resolved=None, details=None) -> QuoteAnalyzer:
-    return QuoteAnalyzer(
-        _FakeResolver(resolved or ResolvedInstrument(symbol="EUNL.DE", type="etf")),
-        _FakeEtf(details or EtfDetails(ter=0.2)),
-        ticker_factory=_FakeTicker,
+# ─── Keine eigene Quelle ──────────────────────────────────────────────────────
+
+
+def _imported_modules(path: Path) -> set[str]:
+    """Jedes importierte Modul einer Datei — auch die in Funktionen.
+
+    Ein Inventar, keine Textsuche: `ast` zählt `Import` und `ImportFrom`
+    überall auf, ein `grep` nach `yfinance` hätte einen Import in einer
+    Funktion oder unter anderem Namen verfehlt.
+    """
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    modules: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules |= {alias.name for alias in node.names}
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            modules.add(node.module)
+    return {name.split(".")[0] for name in modules} | modules
+
+
+def test_die_diagnose_kennt_keine_einzige_konkrete_quelle() -> None:
+    """**Das Pflichtorakel „kein Netz" — als Inventar, nicht als Steckdose.**
+
+    Der naheliegende Weg wäre, im Dateiprofil die Steckdose zuzuhalten und zu
+    zählen, ob jemand hinausgeht. Er trägt hier nicht: `yfinance` telefoniert
+    über `curl_cffi`, also über libcurl, und nicht über Pythons `socket`. Ein
+    eingebauter Mutant, der mitten in der Diagnose `yf.Ticker(...).history()`
+    rief, ließ genau dieses Orakel grün — gemessen wurde eine Leitung, die die
+    Quelle gar nicht benutzt.
+
+    Was tragfähig ist, ist die Abhängigkeit selbst: Wer keine konkrete Quelle
+    kennt, kann keine anrufen. Die verbotene Liste wird dabei **aufgezählt**
+    (jedes Modul in `app/providers/`, das keine Kaskade und keine Basis ist)
+    und nicht geraten — ein neuer Anbieter steht damit von selbst darin.
+    """
+    infrastructure = {"__init__", "base", "composite_etf", "composite_market"}
+    concrete_providers = {
+        f"app.providers.{path.stem}"
+        for path in (_APP / "providers").glob("*.py")
+        if path.stem not in infrastructure
+    }
+    assert concrete_providers, "das Inventar der Anbieter ist leer — es misst nichts"
+
+    forbidden = concrete_providers | {
+        "yfinance",
+        "curl_cffi",
+        "requests",
+        "httpx",
+        "urllib",
+        "urllib3",
+        "aiohttp",
+        "socket",
+    }
+
+    found = _imported_modules(_APP / "services" / "analyzer.py") & forbidden
+
+    assert not found, f"die Diagnose kennt eine konkrete Quelle: {sorted(found)}"
+
+
+# ─── Zuordnung ────────────────────────────────────────────────────────────────
+
+
+def test_jede_konfigurierte_quelle_bekommt_eine_zeile() -> None:
+    """**Die Rolle sagt, wonach gefragt wurde; die Quelle, wer geantwortet hat.**
+
+    Ein fester Anbietername konnte beides nicht: Er behauptete eine Quelle, die
+    im Profil vielleicht gar nicht steht.
+    """
+    analyzer = QuoteAnalyzer(
+        {
+            "resolvers": [_Resolver("yaml-file")],
+            "quotes": [_Quotes("yaml-file", object())],
+            "daily": [_Daily("yaml-file", _rows(3))],
+            "etf_meta": [_Meta("yaml-file", EtfDetails(ter=0.2))],
+        }
     )
 
+    result = analyzer.analyze(isin="IE00B4L5Y983")
 
-def test_analyze_per_isin_liefert_alle_stages() -> None:
-    result = _analyzer().analyze(isin="IE00B4L5Y983")
-    stages = {s.stage: s for s in result.stages}
-    assert set(stages) >= {"openfigi", "fast_info", "get_info", "isin", "history", "justetf"}
-    assert stages["openfigi"].status == "ok"
-    assert stages["history"].detail == "3 rows"
+    assert [(stage.role, stage.source) for stage in result.stages] == [
+        ("resolvers", "yaml-file"),
+        ("quotes", "yaml-file"),
+        ("daily", "yaml-file"),
+        ("etf_meta", "yaml-file"),
+    ]
     assert result.symbol == "EUNL.DE"
-    assert result.total >= 0.0
 
 
-def test_analyze_per_symbol_ueberspringt_openfigi() -> None:
-    result = _analyzer().analyze(symbol="AAPL")
-    stages = {s.stage: s for s in result.stages}
-    assert stages["openfigi"].status == "skipped"
-    assert stages["fast_info"].status == "ok"
+def test_die_reihenfolge_ist_die_der_konfiguration() -> None:
+    """Ein Betreiber liest hier seine eigene Kette und soll sie wiedererkennen.
+
+    Ohne diese Zusage stünde die Reihenfolge der **Messung** da — und die
+    kippt, sobald eine Quelle schneller antwortet als eine frühere.
+    """
+    analyzer = QuoteAnalyzer(
+        {
+            "resolvers": [_Resolver("yaml-file")],
+            "quotes": [_Quotes("online", None), _Quotes("yaml-file", object())],
+        }
+    )
+
+    result = analyzer.analyze(symbol="EUNL.DE")
+
+    assert [stage.source for stage in result.stages] == [
+        "yaml-file",  # resolvers
+        "online",
+        "yaml-file",
+    ]
 
 
-def test_stage_fehler_bricht_kette_nicht_ab() -> None:
-    class _BoomTicker(_FakeTicker):
-        def get_info(self) -> dict:
+# ─── Nicht gefragt ────────────────────────────────────────────────────────────
+
+
+def test_eine_nicht_gefragte_quelle_meldet_das_auch() -> None:
+    """**Der Unterschied, um den es geht.** Eine Kaskade hört beim Treffer auf.
+
+    Die zweite Quelle mit `0 ms, ok` zu melden wäre richtig gemessen und falsch
+    verstanden: Sie hat nicht schnell geantwortet, sie wurde nicht gefragt.
+    """
+    first = _Quotes("online", object())
+    second = _Quotes("yaml-file", object())
+    analyzer = QuoteAnalyzer(
+        {"resolvers": [_Resolver("yaml-file")], "quotes": [first, second]}
+    )
+
+    stages = _stages(analyzer.analyze(symbol="EUNL.DE"))
+
+    assert stages[("quotes", "online")].status == "ok"
+    assert stages[("quotes", "yaml-file")].status == "skipped"
+    assert second.calls == 0, "die zweite Quelle wurde trotz Treffer gefragt"
+
+
+def test_ohne_treffer_kommt_die_zweite_quelle_dran() -> None:
+    """Die Gegenprobe: Ohne sie wäre `skipped` auch grün, wenn nie jemand fällt."""
+    analyzer = QuoteAnalyzer(
+        {
+            "resolvers": [_Resolver("yaml-file")],
+            "quotes": [_Quotes("online", None), _Quotes("yaml-file", object())],
+        }
+    )
+
+    stages = _stages(analyzer.analyze(symbol="EUNL.DE"))
+
+    assert stages[("quotes", "online")].status == "empty"
+    assert stages[("quotes", "yaml-file")].status == "ok"
+
+
+# ─── Ausgänge ─────────────────────────────────────────────────────────────────
+
+
+def test_ein_fehler_beendet_die_uebrigen_rollen_nicht() -> None:
+    class _Boom(_Quotes):
+        def fetch_quote(self, instrument):
             raise RuntimeError("boom")
 
     analyzer = QuoteAnalyzer(
-        _FakeResolver(ResolvedInstrument(symbol="EUNL.DE", type="etf")),
-        _FakeEtf(None),
-        ticker_factory=_BoomTicker,
+        {
+            "resolvers": [_Resolver("yaml-file")],
+            "quotes": [_Boom("online")],
+            "daily": [_Daily("yaml-file", _rows(2))],
+        }
     )
-    result = analyzer.analyze(isin="IE00B4L5Y983")
-    stages = {s.stage: s for s in result.stages}
-    assert stages["get_info"].status == "error"
-    assert stages["get_info"].detail == "RuntimeError"
-    assert stages["isin"].status == "ok"  # Kette läuft weiter
+
+    stages = _stages(analyzer.analyze(isin="IE00B4L5Y983"))
+
+    assert stages[("quotes", "online")].status == "error"
+    assert stages[("quotes", "online")].detail == "RuntimeError"
+    assert stages[("daily", "yaml-file")].status == "ok", "die Analyse brach ab"
 
 
-def test_nicht_aufloesbare_isin_liefert_teilergebnis() -> None:
-    analyzer = QuoteAnalyzer(_FakeResolver(None), _FakeEtf(None), ticker_factory=_FakeTicker)
+def test_ein_papier_ohne_boersensymbol_bricht_nicht_ab() -> None:
+    """**Der Absturz aus dem Befund.** Eine `isin_only`-Identität ist kein Fehler.
+
+    Vorher baute der Analyzer daraus einen `yf.Ticker` und bekam ein
+    `ValueError` — die Route endete im `500`. Ohne festen Anbieter gibt es
+    diesen Schritt nicht mehr.
+    """
+    bond = ResolvedInstrument(symbol="DE0001102531", isin="DE0001102531", kind="isin_only", type="bond")
+    analyzer = QuoteAnalyzer(
+        {"resolvers": [_Resolver("yaml-file", bond)], "quotes": [_Quotes("yaml-file", object())]}
+    )
+
+    result = analyzer.analyze(isin="DE0001102531")
+
+    assert result.symbol == "DE0001102531"
+    assert _stages(result)[("quotes", "yaml-file")].status == "ok"
+
+
+def test_ein_nicht_gefundenes_papier_liefert_ein_teilergebnis() -> None:
+    """Die Auflösung meldet `empty`, die übrigen Rollen bleiben ungefragt."""
+    analyzer = QuoteAnalyzer(
+        {
+            "resolvers": [_Resolver("yaml-file", NotFound())],
+            "quotes": [_Quotes("yaml-file", object())],
+        }
+    )
+
     result = analyzer.analyze(isin="XX0000000000")
-    stages = {s.stage: s for s in result.stages}
-    assert stages["openfigi"].status == "empty"
-    assert stages["fast_info"].status == "skipped"
+    stages = _stages(result)
+
+    assert stages[("resolvers", "yaml-file")].status == "empty"
+    assert stages[("resolvers", "yaml-file")].detail == "NotFound"
+    assert stages[("quotes", "yaml-file")].status == "skipped"
+    assert result.symbol == "XX0000000000"
 
 
-def test_analyse_ueberlebt_ein_unbekanntes_papier() -> None:
-    """Der Diagnose-Endpunkt darf an einer negativen Antwort nicht zerbrechen.
+def test_ein_quellenausfall_ist_kein_leeres_ergebnis() -> None:
+    """`Unavailable` sagt etwas anderes als „nichts gefunden".
 
-    Seit T-20 liefert der Resolver `NotFound` statt ``None``. Der Analyzer
-    prüfte weiter auf ``None`` und griff danach auf `.symbol` zu — für ein
-    unbekanntes Papier endete `/analyze` damit in einem 500, obwohl er gerade
-    dann ein Teilergebnis liefern soll.
-    """
-    analyzer = QuoteAnalyzer(_FakeResolver(NotFound()), _FakeEtf(None))
-
-    ergebnis = analyzer.analyze(isin="XX0000000000")
-
-    stages = {stage.stage: stage for stage in ergebnis.stages}
-    assert stages["openfigi"].status == "empty"
-    # Der Analyzer fällt auf die ISIN als Anzeigenamen zurück — er liefert ein
-    # Teilergebnis, statt abzubrechen. Genau das ist sein Zweck.
-    assert ergebnis.symbol == "XX0000000000"
-    assert stages["fast_info"].status == "skipped"
-
-
-def test_analyse_meldet_einen_quellenausfall_als_fehler() -> None:
-    """`Unavailable` ist kein leeres Ergebnis — es ist ein Fehler.
-
-    Wer die Diagnose aufruft, will genau das sehen: nicht „nichts gefunden",
-    sondern „die Quelle war nicht erreichbar".
+    Wer die Diagnose aufruft, will genau das unterscheiden — und seit T-44 tut
+    es der Rest der App auch.
     """
     analyzer = QuoteAnalyzer(
-        _FakeResolver(Unavailable(error="openfigi: down")), _FakeEtf(None)
+        {"resolvers": [_Resolver("openfigi", Unavailable(error="down"))]}
     )
 
-    ergebnis = analyzer.analyze(isin="IE00B4L5Y983")
+    stage = _stages(analyzer.analyze(isin="IE00B4L5Y983"))[("resolvers", "openfigi")]
 
-    stages = {stage.stage: stage for stage in ergebnis.stages}
-    assert stages["openfigi"].status == "error"
-    assert "openfigi" in (stages["openfigi"].detail or "")
+    assert stage.detail == "Unavailable"
 
 
-def test_analyse_meldet_eine_unzustaendige_kette_als_leer() -> None:
-    """Niemand war zuständig — nachgesehen hat auch niemand, aber kaputt ist nichts."""
-    analyzer = QuoteAnalyzer(
-        _FakeResolver(NotResponsible(reason="keine zuständige Quelle")), _FakeEtf(None)
-    )
+def test_eine_leere_rolle_erzeugt_keine_zeile() -> None:
+    """Was nicht konfiguriert ist, wird auch nicht behauptet.
 
-    stages = {s.stage: s for s in analyzer.analyze(isin="XX0000000000").stages}
-
-    assert stages["openfigi"].status == "empty"
-
-
-def test_analyse_nennt_die_nicht_gefuehrte_gattung() -> None:
-    """Die fünfte Antwortart, in dem Endpunkt, dessen Zweck der Grund ist.
-
-    **Zwei Aussagen, und beide sind nötig.** `empty` und nicht `error`: Die
-    Kette hat einwandfrei gearbeitet, sie hat das Papier sogar erkannt — ein
-    `error` schickte den Betreiber auf die Suche nach einer Störung, die es
-    nicht gibt. Und das Detail nennt die **Gattung**: Ohne eigene Zeile fiele
-    der Fall in das leere `empty` ganz unten, richtig in der Farbe und stumm
-    im Grund.
+    Eine Instanz ohne ETF-Metadaten bekommt keine `etf_meta`-Zeile mit
+    `skipped` — sie hat diese Rolle nicht, und eine leere Zeile dafür wäre eine
+    Aussage über eine Kette, die es nicht gibt.
     """
     analyzer = QuoteAnalyzer(
-        _FakeResolver(Unsupported(instrument_type="index")), _FakeEtf(None)
+        {"resolvers": [_Resolver("yaml-file")], "quotes": [_Quotes("yaml-file", object())]}
     )
 
-    stages = {s.stage: s for s in analyzer.analyze(isin="DE0008469008").stages}
+    result = analyzer.analyze(symbol="EUNL.DE")
 
-    assert stages["openfigi"].status == "empty", "kein Ausfall — die Kette lief"
-    assert "index" in (stages["openfigi"].detail or ""), (
-        "ohne die Gattung im Detail ist die Diagnose an dieser Stelle stumm"
-    )
+    assert [stage.role for stage in result.stages] == ["resolvers", "quotes"]

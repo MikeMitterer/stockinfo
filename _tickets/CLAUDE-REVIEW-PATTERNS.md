@@ -1148,6 +1148,19 @@ finden. Der Arrange-Schritt erzeugte nie den behaupteten Zustand „beide Namen
 im Endpunkt“, und die Assertion wechselte für den zweiten Namen die
 Systemgrenze.
 
+**Beleg 8:** T-46 Runde 1 (vor der Übergabe selbst gefunden): Das Pflichtorakel
+„im Dateiprofil geht nichts ins Netz" hielt `socket.socket.connect` und
+`socket.getaddrinfo` zu und prüfte zusätzlich die Quellennamen der Antwort.
+Beide Hälften waren blind. `yfinance` 1.5.1 telefoniert über `curl_cffi`, also
+über libcurl — die Python-`socket`-Sperre bewacht eine Leitung, die die Quelle
+gar nicht benutzt. Und die Stufenliste entsteht aus der **konfigurierten**
+Kette, ein Aufruf daneben bekommt keine Zeile. Ein Mutant mit
+`yf.Ticker(...).history()` mitten in der Diagnose ließ das Orakel grün. Die
+Lehre über den Einzelfall hinaus: **Eine Sperre prüft den Kanal, den sie
+kennt.** Wo die Abstinenz von einer fremden Bibliothek abhängt, ist die
+Abhängigkeit selbst das belastbarere Orakel — hier ein `ast`-Inventar aller
+Importe des Moduls gegen eine aufgezählte Liste konkreter Quellen.
+
 [↑ Übersicht](#übersicht)
 
 ## P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem

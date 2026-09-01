@@ -39,6 +39,7 @@ from app.container import (
     get_cached_quote_service,
     get_daily_history_service,
     get_fx_service,
+    get_quote_analyzer,
     get_sources_config,
 )
 from app.main import app
@@ -47,12 +48,17 @@ _SERVICE_CACHES = (
     get_cached_quote_service,
     get_daily_history_service,
     get_fx_service,
+    get_quote_analyzer,
 )
 """Jeder gecachte Dienst, der Quellen festhält — **vollständig**, nicht auf Zuruf.
 
 Ein Dienst, der hier fehlt, überlebt den Profilwechsel mit den Quellen des
 vorigen Tests. Das fällt nicht auf, solange sein Test der erste seiner Art im
 Lauf ist.
+
+**Der Analyzer gehört seit T-46 dazu.** Er bekommt die Ketten in den
+Konstruktor und ist selbst gecacht — ohne diese Zeile misst die Diagnose nach
+einem Profilwechsel weiter die Kette davor.
 
 **Die Konfiguration steht bewusst nicht dabei.** Sie wird beim Profilwechsel
 einmal neu gelesen, und die Ketten hängen daran über die **Identität** des
@@ -164,10 +170,10 @@ def _restart_chains() -> None:
     # neue Profil und `/quote` antwortete aus dem Netz — die Auskunft und das
     # Verhalten wären auseinandergelaufen.
     #
-    # **Alle drei, nicht nur der Kursdienst.** `/fx` und die Historie hängen an
-    # eigenen Caches; ein Test dafür wäre grün gewesen, solange er zufällig der
-    # erste seiner Art im Lauf war — und beim nächsten hinzugefügten Test still
-    # umgekippt.
+    # **Alle, nicht nur der Kursdienst.** `/fx`, die Historie und seit T-46 die
+    # Diagnose hängen an eigenen Caches; ein Test dafür wäre grün gewesen,
+    # solange er zufällig der erste seiner Art im Lauf war — und beim nächsten
+    # hinzugefügten Test still umgekippt.
     for cache in _SERVICE_CACHES:
         cache.cache_clear()
 
@@ -421,6 +427,117 @@ def test_die_devisenrolle_nennt_den_wirklichen_lieferanten(
     assert body["rate"] == 0.6412
     assert body["source"] == "yaml-file", (
         f"die Herkunft nennt nicht den Lieferanten: {body}"
+    )
+
+
+# ─── T-46 · die Diagnose misst die konfigurierte Kette ────────────────────────
+
+
+def test_die_analyse_geht_im_dateiprofil_nicht_ins_netz(
+    volume: Path, client, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**Das Pflichtorakel des Tickets.** Kein Netzaufruf, wo keine Netzquelle steht.
+
+    Bis T-46 baute der Analyzer `yf.Ticker` und rief justETF direkt. Eine
+    Instanz, die bewusst offline lief, ging beim Analysieren trotzdem hinaus —
+    und bekam 254 Zeilen Historie aus einer Quelle, die in ihrem Profil gar
+    nicht vorkommt.
+
+    **Dieser Test belegt den öffentlichen Weg, nicht die Abstinenz.** Er zeigt,
+    dass `/analyze` im Dateiprofil genau die konfigurierten Quellen nennt und
+    dabei über keine Python-Verbindung geht. Für „kein Netz" allein reicht das
+    nicht: `yfinance` telefoniert über `curl_cffi`, also über libcurl, und ein
+    eingebauter Mutant mit `yf.Ticker(...).history()` mitten in der Diagnose
+    ließ die Steckdosenzählung unten grün. Den tragfähigen Teil der Zusage
+    trägt deshalb `test_die_diagnose_kennt_keine_einzige_konkrete_quelle` in
+    `tests/test_analyzer.py` — wer keine konkrete Quelle kennt, kann keine
+    anrufen. Beide zusammen sind das Pflichtorakel, keines allein.
+    """
+    _profile(
+        volume,
+        {
+            "resolvers": ["yaml-file"],
+            "etf_meta": ["yaml-file"],
+            "quotes": ["yaml-file"],
+            "daily": ["yaml-file"],
+            "fx": ["yaml-file"],
+        },
+    )
+
+    attempts: list[object] = []
+
+    def _refuse(*args: object, **kwargs: object) -> None:
+        attempts.append(args[1:] if len(args) > 1 else args)
+        raise OSError("kein Netz in diesem Test")
+
+    monkeypatch.setattr("socket.socket.connect", _refuse)
+    monkeypatch.setattr("socket.getaddrinfo", _refuse)
+
+    body = client.get("/analyze", params={"isin": _ETF}).json()
+
+    assert attempts == [], f"die Analyse hat das Netz gesucht: {attempts}"
+    assert {stage["source"] for stage in body["stages"]} == {"yaml-file"}, (
+        f"eine Stufe nennt eine Quelle ausserhalb des Profils: {body['stages']}"
+    )
+    assert [stage["status"] for stage in body["stages"]].count("error") == 0, (
+        f"eine Stufe endete im Fehler: {body['stages']}"
+    )
+    assert body["symbol"] == "EUNL.DE"
+
+
+def test_die_analyse_ueberlebt_ein_papier_ohne_boersensymbol(
+    volume: Path, client
+) -> None:
+    """**Befund 1 des Tickets.** Eine `isin_only`-Identität ist kein Fehler.
+
+    Die Bundesanleihe hat kein Börsensymbol; die Auflösung liefert deshalb die
+    ISIN als `symbol`. `yf.Ticker("DE0001102531")` warf darauf ein
+    `ValueError`, und die Route endete im `500` — in **beiden** Profilen, es
+    war also nie ein Quellenproblem.
+    """
+    _profile(
+        volume,
+        {
+            "resolvers": ["yaml-file"],
+            "etf_meta": [],
+            "quotes": ["yaml-file"],
+            "daily": ["yaml-file"],
+            "fx": [],
+        },
+    )
+
+    response = client.get("/analyze", params={"isin": _BOND})
+
+    assert response.status_code == 200, response.text
+    assert response.json()["symbol"] == _BOND
+
+
+def test_die_analyse_meldet_eine_nicht_gefragte_quelle(volume: Path, client) -> None:
+    """**Das dritte Pflichtorakel.** Eine Kaskade hört beim ersten Treffer auf.
+
+    Die zweite Quelle mit `0 ms, ok` zu melden wäre richtig gemessen und falsch
+    verstanden: Sie hat nicht schnell geantwortet, sie wurde nicht gefragt. Der
+    Unterschied steht deshalb in der Antwort und nicht nur in einer Zählung.
+    """
+    _profile(
+        volume,
+        {
+            "resolvers": ["yaml-file"],
+            "etf_meta": [],
+            "quotes": ["always-answers", "yaml-file"],
+            "daily": [],
+            "fx": [],
+        },
+    )
+
+    stages = {
+        (stage["role"], stage["source"]): stage
+        for stage in client.get("/analyze", params={"isin": _ETF}).json()["stages"]
+    }
+
+    assert stages[("quotes", "always-answers")]["status"] == "ok"
+    assert stages[("quotes", "yaml-file")]["status"] == "skipped", (
+        f"die Datei wurde trotz Treffer davor gefragt: {stages}"
     )
 
 

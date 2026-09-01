@@ -268,7 +268,11 @@ def test_analyze_liefert_stages(client: TestClient) -> None:
                 symbol="EUNL.DE",
                 isin=isin,
                 total=1.23,
-                stages=[AnalyzeStage(stage="openfigi", seconds=0.5, status="ok")],
+                stages=[
+                    AnalyzeStage(
+                        role="quotes", source="yaml-file", seconds=0.5, status="ok"
+                    )
+                ],
             )
 
     app.dependency_overrides[get_quote_analyzer] = lambda: _StubAnalyzer()
@@ -280,4 +284,6 @@ def test_analyze_liefert_stages(client: TestClient) -> None:
     assert response.status_code == 200
     body = response.json()
     assert body["total"] == 1.23
-    assert body["stages"][0]["stage"] == "openfigi"
+    assert body["stages"][0]["role"] == "quotes"
+    assert body["stages"][0]["source"] == "yaml-file"
+    assert "stage" not in body["stages"][0], "das alte Feld reist weiter mit"

@@ -8,7 +8,10 @@ vi.mock('../../src/composables/useAnalysis', () => ({
       symbol: 'EUNL.DE',
       isin: 'IE00B4L5Y983',
       total: 1.2,
-      stages: [{ stage: 'openfigi', seconds: 0.5, status: 'ok', detail: null }],
+      stages: [
+        { role: 'quotes', source: 'yaml-file', seconds: 0.5, status: 'ok', detail: null },
+        { role: 'daily', source: 'yaml-file', seconds: 0, status: 'skipped', detail: null },
+      ],
     }),
     loading: ref(false),
     error: ref(null),
@@ -25,8 +28,24 @@ describe('AnalysisPanel', () => {
       global: { plugins: [i18n] },
       props: { instruments: [] },
     })
-    expect(wrapper.text()).toContain('openfigi')
+    expect(wrapper.text()).toContain('yaml-file')
     expect(wrapper.text()).toContain('0.50')
     expect(wrapper.text()).toContain('1.20')
+  })
+
+  /*
+   * Die Rolle wird übersetzt, der Quellenname nicht. Er soll in `sources.yaml`
+   * wiederzufinden sein — ein übersetztes „Datei" führte beim Suchen ins Leere.
+   */
+  it('übersetzt Rolle und Status, lässt den Quellennamen roh', () => {
+    const text = mount(AnalysisPanel, {
+      global: { plugins: [i18n] },
+      props: { instruments: [] },
+    }).text()
+
+    expect(text).toContain('Quote')
+    expect(text).toContain('Daily series')
+    expect(text).toContain('not asked')
+    expect(text).not.toContain('analysis.role.')
   })
 })

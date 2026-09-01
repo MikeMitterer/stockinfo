@@ -861,13 +861,24 @@ class IsinUpdate(BaseModel):
 
 
 class AnalyzeStage(BaseModel):
-    """Eine gemessene Stage des Live-Fetch (Diagnose)."""
+    """Eine gemessene Quelle in einer Rolle.
 
-    stage: str = Field(
-        description="openfigi | fast_info | get_info | isin | history | justetf"
-    )
+    **Rolle und Quelle, nicht ein fester Anbietername.** Vorher hieß das Feld
+    `stage` und trug Werte wie `openfigi` oder `justetf` — Namen von Anbietern,
+    die eine Instanz gar nicht konfiguriert haben muss. Eine Diagnose, die
+    misst, was die App **tut**, kennt nur die Rolle und die Quelle, die in ihr
+    steht.
+
+    `skipped` heißt „nicht gefragt": Eine Kaskade hört beim ersten Treffer auf,
+    und die dahinterliegenden Quellen haben nichts geantwortet, weil sie nichts
+    gefragt wurden. Sie mit `0 ms, ok` zu melden wäre richtig gemessen und
+    falsch verstanden.
+    """
+
+    role: str = Field(description="resolvers | quotes | daily | etf_meta")
+    source: str = Field(description="Name der Quelle aus `sources.yaml`")
     seconds: float
-    status: str = Field(description="ok | error | empty | skipped")
+    status: str = Field(description="ok | empty | error | skipped")
     detail: str | None = None
 
 

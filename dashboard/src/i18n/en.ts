@@ -135,13 +135,28 @@ export const en = {
   },
   analysis: {
     title: 'Live analysis',
-    hint: 'Measures the duration of each fetch step. Triggers real external requests (no cache).',
+    /* „Externe Abfragen" stand hier zu Unrecht — siehe die deutsche Fassung. */
+    hint: 'Measures the configured source chain role by role — bypassing the cache.',
     pickInstrument: 'Pick instrument',
     orEnter: 'or enter ISIN/symbol',
     placeholder: 'ISIN or symbol (e.g. EUNL.DE)',
     run: 'Analyze',
     running: 'Measuring…',
-    colStage: 'Step',
+    /* Rolle übersetzt, Quellenname roh — siehe die deutsche Fassung. */
+    colRole: 'Role',
+    colSource: 'Source',
+    role: {
+      resolvers: 'Resolution',
+      quotes: 'Quote',
+      daily: 'Daily series',
+      etf_meta: 'Metadata',
+    },
+    status: {
+      ok: 'answered',
+      empty: 'nothing',
+      error: 'error',
+      skipped: 'not asked',
+    },
     colSeconds: 'Duration',
     colStatus: 'Status',
     total: 'Total',
