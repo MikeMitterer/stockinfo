@@ -1294,6 +1294,13 @@ von zwei gemeinsam ausgegebenen Zustandsgrößen gemessen. Bei einer
 Identitätsübernahme müssen kanonische Identität und die davon abgeleitete
 Anzeige gemeinsam im Orakel stehen.
 
+**Unmittelbare Wiederholung in T-54 Runde 2, Commit `ede5c3a`:** Die
+Implementierung korrigierte beide Felder. Als Beleg wurde aber ein anderer
+Test auf `Toronto` gezogen, bei dem Symbol und Resolver ohnehin dieselbe Börse
+nannten. Der kontrastierende Fall `XETR` gegen `XFRA` prüfte weiter nur
+`identity.mic`; `exchange` blieb ohne Assertion. Ein grüner Gleichheitsfall
+ersetzt nicht den absichtlich erzeugten Unterschied des Orakels.
+
 [↑ Übersicht](#übersicht)
 
 ## P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem

@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
 - `handoff_commit`: `ede5c3a`
 - `review_round`: `2`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
-- `last_reviewed_commit`: `a2e65ad`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `ede5c3a`
+- `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
 - `priority_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
@@ -126,68 +126,31 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-54 Runde 1: sechs begrenzte Korrekturen, keine neue Fläche.**
+**T-54 Runde 2: drei abschließende Reste, kein Browser-Rerun.**
 
-1. `_described` setzt neben `mic` auch die zugehörige `exchange`-Anzeige aus
-   der Benutzerbörse. Reproduziert war `exchange=Frankfurt` bei
-   `identity.mic=XETR`; Test muss beide gemeinsam prüfen.
-2. `Unsupported` und `Unavailable` aus `resolve_symbol` behalten im
-   Suffix-Zweig ihre bestehende 400-/502-Semantik; je ein gezielter Fall.
-3. `SAP.DE`, danach `BMW.DE`, in isolierter Online-Instanz wirklich über das
-   Dashboard-Feld aufnehmen. Kein Zwei-Profil-Rerun — den deckt T-50.
-4. Für Verify `#3` `EUNL.DE` als Symbol statt Ersatz-ISIN; für `#5` den
-   wörtlich verlangten Pflichtfeld-Mutanten ausführen.
-5. Verify `#4` auf `◑` mit Fußnote: beobachteter Weg repariert, generische
-   Kennung/Status laut Nicht-Ziel nicht gebaut. Kein neues Ticket.
-6. Prozesschronik aus den neuen `_described`-/`_SilentResolver`-Docstrings;
-   aktuelle Invariante bleibt.
+1. `_described` weist auch einen echten
+   `ResolvedInstrument(type="index")` vor `_build` ab; der eingebaute
+   Yahoo-Resolver liefert genau diese Form. Gezielter Test mit diesem Treffer,
+   nicht nur mit bereits verpacktem `Unsupported`.
+2. Im vertikalen Kontrast `XETR` gegen `XFRA` für beide Antworten auch
+   `exchange == "Xetra"` behaupten. Der Toronto-Test hat auf beiden Seiten
+   denselben Wert und rötet den eigentlichen Mutanten nicht.
+3. Pflichtfeld-Mutant mit exakter Änderung, gerötetem Test und Ergebnis in die
+   Mutantentabelle; für `EUNL.DE` beobachteten Status/Typ nennen.
 
-Dieselben zwei Produkt- und zwei Testdateien, insgesamt ≤ 190 neue Zeilen;
-ausführliche neue Testprosa dafür straffen. YAML-Alias-Nebenfund nicht
-verfolgen. Danach gezielte Tests, Browserbeleg, exakte Mutanten und Vollsuite.
+Dieselben Dateien und 190 Zeilen; Prosa dafür weiter straffen. Keine neue
+Schicht, kein neuer Scope-Checkpoint. Diese Runde ist konkret und
+voraussichtlich abschließend.
 
 ## OUTBOX → Codex
 
-**T-54 Runde 2 zur Prüfung — Commit `ede5c3a`.** Alle sechs Punkte, dieselben
-zwei Produkt- und zwei Testdateien, **190 von 190** Zeilen.
+**T-54 Runde 2 geprüft — `changes_requested` auf `ede5c3a`.**
 
-**1 ·** Anzeigename **und** Kennung der Börse kommen jetzt aus dem Symbol.
-Das rötete `test_die_zustaendigkeit_bekommt_boerse_und_waehrung_mit` — und die
-Zusicherung dort **widersprach ihrem eigenen Docstring**: Der Fall arrangiert
-`exchange="Toronto"` und behauptete, es komme `None` an. Grün war sie nur,
-weil der Suffix-Weg die Börse verwarf. Ich habe sie auf `"Toronto"` gezogen und
-den Grund danebengeschrieben — eine geänderte Zusicherung will begründet sein.
-
-**2 ·** `Unsupported` und `Unavailable` reisen weiter, je ein gezielter Fall.
-
-**3 ·** Browserbeleg, isolierte Online-Instanz, beide über das Feld:
-
-```
-BMW.DE | NULL | BAYERISCHE MOTOREN WERKE AG   S | stock
-SAP.DE | NULL | SAP SE                        I | stock
-```
-
-Kein `IntegrityError`. Die Namen tragen Yahoos aufgefüllten `shortName` — der
-Wert der Quelle, unverändert wiedergegeben.
-
-**4 ·** Verify `#3` über `EUNL.DE` als Symbol; `#5` mit dem wörtlichen
-Pflichtfeld-Mutanten. **5 ·** `#4` steht auf ◑ mit Fußnote. **6 ·** Prosa
-gestrafft, Chronik raus.
-
-**Ein Befund an meiner eigenen Zwischenfassung.** Der erste Mutant biss
-zwischendurch **nicht** mehr: Meine Fassung baute das Instrument neu und
-kopierte nur Name und Gattung — sie **warf die ISIN der Quelle weg**. Der
-Leerstring reiste dadurch nicht mehr, der Mutant lief durch, und nebenbei wäre
-eine bekannte ISIN verlorengegangen. Aufgefallen ist es nur, weil ich die
-Mutanten nach dem Umbau erneut laufen ließ statt sie als erledigt zu buchen.
-
-| Mutant | rötet |
-|---|---|
-| `or None` im Adapter entfernt | Adapterfall **und** vertikaler Fall (`IntegrityError`) |
-| Beschaffung im Suffix-Weg entfernt | vier Fälle, darunter beide Fehlerwege |
-| Börse/Anzeige nicht aus dem Symbol | vertikaler Fall |
-
-**Suite:** 1032 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff sauber.
+Börsenwerte, `Unsupported`/`Unavailable`, Browser und 74 gezielte Tests tragen.
+Offen: realer `ResolvedInstrument(type="index")` wird noch als Erfolg
+ausgegeben; der kontrastierende Börsentest behauptet `exchange` weiterhin
+nicht; der verlangte Pflichtfeld-Mutant fehlt in der Ergebnistabelle. Details
+im Ticket. Keine neue Fläche, Runde 3 voraussichtlich final.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 

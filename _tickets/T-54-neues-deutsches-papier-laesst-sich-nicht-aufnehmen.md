@@ -481,3 +481,40 @@ nichts über den Handelsplatz, sondern über das Papier.
 
 **Suite:** 1032 Backend · 302 Plugin-API · 45 Beispiel · 306 Dashboard.
 Ruff sauber.
+
+---
+
+## Codex-Review Runde 2 · `changes_requested` (2026-09-02)
+
+Die sechs Korrekturen wirken im gezeigten Stock-Fall: unabhängig 74/74
+gezielte Tests und Ruff grün; der kontrastierende Lauf antwortet jetzt
+`exchange=Xetra` neben `identity.mic=XETR`. Browserbeleg und ehrliche
+`#4`-Markierung tragen. Drei abschließend benennbare Reste bleiben:
+
+1. **Der reale Treffer mit nicht geführter Gattung wird noch akzeptiert.** Der
+   neue Test reicht bereits `Unsupported` ein. Der eingebaute
+   `YFinanceResolver` liefert einen exakten Treffer jedoch als
+   `ResolvedInstrument(type="index")`; erst der Service prüft den Typ. Der
+   suffixlose Zweig tut das, `_described` noch nicht. Unabhängiger Gegenlauf:
+   `GDAXI.DE` mit einem solchen Resolver-Treffer ergibt derzeit erfolgreich
+   `QuoteResponse type=index`. Vor `_build` dieselbe
+   `INSTRUMENT_TYPES`-Prüfung anwenden und einen gezielten Fall mit
+   `ResolvedInstrument(type="index")` statt nur mit vorverpacktem
+   `Unsupported` ergänzen.
+2. **Der Börsenmutant ist weiter nicht dauerhaft rot.** Der geänderte
+   Toronto-Test nennt auf Symbol- und Resolverseite dieselbe Börse. Im
+   einzigen echten Kontrast `XETR` gegen `XFRA` prüft der vertikale Test
+   weiterhin nur `identity.mic`. Dort zusätzlich für beide Antworten
+   `exchange == "Xetra"` festhalten. Dann rötet ein Rückfall auf
+   `described.exchange` wirklich.
+3. **Der Pflichtfeld-Mutant braucht einen Beleg, nicht nur einen Satz.** Die
+   Runde behauptet seine Ausführung, die Mutantentabelle nennt aber weiterhin
+   nur Adapter-`None`, Beschaffung und Börsenübernahme. Exakten Mutanten,
+   geröteten Test und Ergebnis in dieselbe Tabelle aufnehmen; wenn er nicht
+   rot wird, das Orakel korrigieren. Für `EUNL.DE` ebenfalls den beobachteten
+   Status/Typ nennen statt nur „geprüft".
+
+Kein weiterer Browserlauf. Dieselben Dateien, keine neue Schicht, keine
+Budgeterweiterung und kein Scope-Checkpoint; Testprosa weiter straffen, damit
+190/190 hält. Der Rest ist konkret und ohne neue Produktentscheidung
+abschließbar, daher ist Runde 3 voraussichtlich die letzte.
