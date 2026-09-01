@@ -1,4 +1,4 @@
-"""Sicherung anlegen und listen (T-47, Teil 1a).
+"""Sicherung anlegen und listen.
 
 Der Router hält nur HTTP fest. Was eine Sicherung ist und wann sie zur
 laufenden Quellenlage passt, entscheidet `app/services/backup.py`.
@@ -46,6 +46,6 @@ def list_backups(service: BackupService = Depends(get_backup_service)) -> Backup
 def create_backup(service: BackupService = Depends(get_backup_service)) -> BackupEntry:
     """Legt eine Sicherung an — auf Knopfdruck, nie nach Zeitplan.
 
-    Die elfte verdrängt die älteste (Mike, 2026-08-31).
+    Die elfte verdrängt die älteste.
     """
     return _entry(service.create())

@@ -1,4 +1,4 @@
-"""Sicherung, Kennung und Liste — die Orakel aus T-47, Teil 1a.
+"""Sicherung, Kennung und Liste.
 
 Die Zusicherungen stammen aus der Verify-Matrix, nicht aus dem Code:
 
@@ -11,14 +11,15 @@ Die Zusicherungen stammen aus der Verify-Matrix, nicht aus dem Code:
 `#10` Die elfte Sicherung lässt zehn liegen, die älteste weicht samt Manifest
 ===== ======================================================================
 
-**Was hier nicht steht:** Wiederherstellen (`#3`–`#8`) gehört zur zweiten
-Teilstrecke, die UI (`#11`, `#12`) zur dritten. Beides hier zu prüfen wäre
-eine Behauptung über Code, den es noch nicht gibt.
+Wiederherstellen (`#3`–`#8`) und die UI (`#11`, `#12`) sind nicht Teil dieses
+Stands; sie hier zu prüfen wäre eine Behauptung über Code, den es nicht gibt.
 """
 
 import json
 import sqlite3
+from collections import Counter
 from collections.abc import Iterator
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 import pytest
@@ -80,11 +81,9 @@ def _symbols(database: Path) -> list[str]:
 def _age(path: Path, index: int) -> Path:
     """Rückt eine Sicherung im Namen nach vorn — sonst steht die Reihenfolge nicht.
 
-    Gibt den **neuen** Pfad zurück. Die erste Fassung tat das nicht, und der
-    Rotationstest prüfte danach das Manifest unter dem alten Namen: eine
-    Zusicherung über eine Datei, die es nach dem Umbenennen nicht mehr gab.
-    Sie war deshalb immer erfüllt, auch als das Aufräumen des Manifests
-    entfernt wurde.
+    Gibt den **neuen** Pfad zurück: Eine Zusicherung über den alten Namen
+    beträfe eine Datei, die es nach dem Umbenennen nicht mehr gibt, und wäre
+    damit immer erfüllt.
     """
     older = path.with_name(path.name.replace("stockinfo-2", f"stockinfo-1{index:03d}", 1))
     path.rename(older)
@@ -150,9 +149,9 @@ def test_eine_sicherung_entsteht_waehrend_geschrieben_wird(volume: Path) -> None
     """**Der Grund für `VACUUM INTO` statt einer Dateikopie.**
 
     Der Aufbau ist der Trick: Die Verbindung bleibt **offen**, der
-    festgeschriebene Stand liegt damit noch im WAL. Eine erste Fassung schloss
-    sie — dabei schreibt SQLite das WAL zurück, und ein `shutil.copy2`-Mutant
-    bestand den Test. Jetzt liefert er eine leere Datei.
+    festgeschriebene Stand liegt damit noch im WAL. Wird sie vorher geschlossen,
+    schreibt SQLite das WAL zurück — dann liefert auch eine simple Dateikopie
+    das richtige Ergebnis, und der Test unterscheidet nichts mehr.
     """
     writer = get_connection(str(volume / "stockinfo.db"))
     try:
@@ -187,11 +186,9 @@ def test_die_sicherung_traegt_kennung_und_manifest(volume: Path) -> None:
 def test_zwei_sicherungen_kurz_nacheinander_kollidieren_nicht(volume: Path) -> None:
     """`VACUUM INTO` schreibt in keine bestehende Datei.
 
-    Zugesagt ist hier die **Abwesenheit einer Kollision**, nicht der
-    Millisekundenstempel als Mittel: Ein Mutant mit Sekundenauflösung besteht
-    diesen Test, weil `_free_name` dann so lange vorrückt, bis die Sekunde
-    umspringt. Das ist langsam und nicht der Entwurf — aber es kollidiert
-    nicht, und genau das ist die Zusage.
+    Zugesagt ist die **Abwesenheit einer Kollision**, nicht der
+    Millisekundenstempel als Mittel: Auch mit Sekundenauflösung rückt
+    `_free_name` vor, bis die Sekunde umspringt — langsam, aber kollisionsfrei.
     """
     service = _service(volume)
 
@@ -240,7 +237,7 @@ def test_woraus_die_kennung_entsteht(other: SourcesConfig, same: bool) -> None:
 
 
 def test_die_elfte_sicherung_verdraengt_die_aelteste(volume: Path) -> None:
-    """Zehn bleiben liegen (Mike, 2026-08-31) — und das Manifest geht mit.
+    """Zehn bleiben liegen — und das Manifest geht mit.
 
     Bliebe es zurück, sammelte das Verzeichnis Manifeste ohne Datenbank.
     """
@@ -351,3 +348,29 @@ def test_es_gibt_keinen_zweiten_loeschweg(client: TestClient) -> None:
     assert not any(
         "delete" in methods for route, methods in paths.items() if route.startswith("/backups")
     )
+
+
+def test_gleichzeitige_aufrufe_bekommen_je_eine_eigene_sicherung(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """**Zwanzig Aufrufe zugleich — am HTTP-Eintritt, nicht im Dienst.**
+
+    `_free_name()` prüft, ob ein Pfad frei ist; zwischen dieser Prüfung und dem
+    `VACUUM INTO` wählt ein zweiter Handler denselben Namen. `VACUUM INTO`
+    schreibt dann in eine bestehende Datei und scheitert mit „table instruments
+    already exists" — gemessen 13 von 20 Aufrufen.
+
+    Ein sequenzieller Lauf ersetzt das nicht: Er erzeugt den Wettlauf gar
+    nicht. Geprüft wird deshalb dreierlei — jede Antwort ist ein `201`, danach
+    liegen genau zehn Paare aus Datenbank und Manifest, und kein
+    Zwischenprodukt bleibt zurück.
+    """
+    with ThreadPoolExecutor(max_workers=20) as pool:
+        responses = [pool.submit(client.post, "/backups") for _ in range(20)]
+        codes = [future.result().status_code for future in responses]
+
+    directory = tmp_path / "backups"
+    assert codes == [201] * 20, f"nicht jeder Aufruf kam durch: {Counter(codes)}"
+    assert len(list(directory.glob("stockinfo-*.db"))) == KEEP_BACKUPS
+    assert len(list(directory.glob("stockinfo-*.json"))) == KEEP_BACKUPS
+    assert list(directory.glob("*.tmp")) == [], "ein Zwischenprodukt blieb liegen"

@@ -1097,7 +1097,7 @@ SYMBOL_CONFLICT_RESPONSE: dict[int | str, dict[str, object]] = {
 
 
 class BackupEntry(BaseModel):
-    """Eine Sicherung, so wie die Liste sie zeigt (T-47)."""
+    """Eine Sicherung, so wie die Liste sie zeigt."""
 
     name: str = Field(description="Dateiname der Sicherung")
     created_at: str = Field(description="Zeitpunkt der Sicherung, ISO-8601 in UTC")

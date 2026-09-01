@@ -1,20 +1,17 @@
-"""Sicherung der Datenbank — anlegen, beschreiben, listen (T-47, Teil 1a).
+"""Sicherung der Datenbank — anlegen, beschreiben, listen.
 
 **Das Kopieren ist der kleinere Teil.** Eine Datenbank ist nicht
 quellenneutral: Dasselbe Papier wird über die Online-Kette zu
 `listed`/`EUNL`/`XETR` und über eine Dateiquelle womöglich zu etwas anderem.
-Eine Sicherung, die man später ins falsche Profil zurückspielt, ergibt einen
-Bestand, den die laufende Kette nicht bedienen kann — und das fällt erst beim
-nächsten Kursabruf auf, papierweise. Jede Sicherung trägt deshalb eine
-**Quellenkennung**, schon bevor es ein Zurückspielen gibt.
+Eine Sicherung, die man ins falsche Profil zurückspielt, ergibt einen Bestand,
+den die laufende Kette nicht bedienen kann — und das fällt erst beim nächsten
+Kursabruf auf, papierweise. Jede Sicherung trägt deshalb eine
+**Quellenkennung**.
 
 **`VACUUM INTO` statt einer Dateikopie:** Im WAL-Modus liegen die jüngsten
 Schreibvorgänge in der `-wal`-Datei; eine Kopie der `.db` allein ergibt einen
 Stand, den es nie gab. `VACUUM INTO` erzeugt eine in sich stimmige Datei und
 trägt `PRAGMA user_version` mit.
-
-Das Wiederherstellen gehört zur zweiten Teilstrecke und steht bewusst nicht
-hier.
 """
 
 import hashlib
@@ -22,6 +19,7 @@ import json
 import os
 import sqlite3
 import tempfile
+import threading
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -35,7 +33,7 @@ logger = structlog.get_logger()
 
 BACKUP_DIRNAME = "backups"
 KEEP_BACKUPS = 10
-"""Wie viele Sicherungen liegen bleiben (Mike, 2026-08-31)."""
+"""Wie viele Sicherungen liegen bleiben."""
 
 FINGERPRINT_KEY = "sources_fingerprint"
 
@@ -118,6 +116,17 @@ class BackupService:
         """
         self._database = Path(database_path)
         self._config = config
+        # **Die ganze Folge Name → Kopie → Manifest → Rotation gehört zusammen.**
+        # `_free_name()` prüft, ob ein Pfad frei ist; zwischen dieser Prüfung
+        # und dem `VACUUM INTO` liegt bei parallelen Aufrufen genug Zeit, dass
+        # ein zweiter Handler denselben Namen wählt. `VACUUM INTO` schreibt
+        # dann in eine Datei, die es schon gibt, und scheitert mit „table
+        # instruments already exists" — gemessen 13 von 20 Aufrufen.
+        #
+        # Die Rotation gehört mit hinein: Sie zählt Dateien und löscht die
+        # ältesten. Läuft sie, während nebenan eine neue entsteht, zählt sie
+        # einen Stand, den es gleich nicht mehr gibt.
+        self._lock = threading.Lock()
 
     @property
     def directory(self) -> Path:
@@ -130,7 +139,15 @@ class BackupService:
         return fingerprint_of(self._config)
 
     def create(self) -> BackupInfo:
-        """Legt eine Sicherung an und räumt die älteste weg, wenn nötig."""
+        """Legt eine Sicherung an und räumt die älteste weg, wenn nötig.
+
+        Serialisiert: Gleichzeitige Aufrufe bekommen der Reihe nach je eine
+        eigene Sicherung, statt sich gegenseitig die Datei wegzuschreiben.
+        """
+        with self._lock:
+            return self._create_locked()
+
+    def _create_locked(self) -> BackupInfo:
         self.directory.mkdir(parents=True, exist_ok=True)
         fingerprint = self.fingerprint
         created_at, target = self._free_name(datetime.now(timezone.utc), fingerprint)

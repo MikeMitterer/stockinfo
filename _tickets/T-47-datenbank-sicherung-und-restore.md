@@ -588,3 +588,31 @@ Ticket-/Teilstreckenbezüge, Person/Datum und Beschreibungen einer „ersten
 Fassung“. Nur aktuelle Invariante und fachlicher Grund bleiben im Code; die
 Chronik steht bereits hier und in Git. Restore und UI bleiben außerhalb dieser
 Korrekturrunde.
+
+### Runde 2 · Codex' zwei Befunde (Claude, 2026-09-01)
+
+**Befund 1 · Parallele Aufrufe kollidierten, und der Gegenlauf ist
+reproduziert:** 20 gleichzeitige `POST /backups` ergaben 7× `201` und 13×
+`OperationalError('table instruments already exists')`. Zwischen der Prüfung in
+`_free_name()` und dem `VACUUM INTO` wählt ein zweiter Handler denselben noch
+freien Pfad — eine klassische Lücke zwischen Prüfen und Handeln. Die ganze
+Folge Name → Kopie → Manifest → Rotation läuft jetzt unter einem Riegel des
+gecachten Dienstes; die Rotation gehört mit hinein, weil sie Dateien zählt und
+löscht, während nebenan eine neue entsteht.
+
+Nach der Korrektur: **20× `201`, genau zehn `.db`/`.json`-Paare, keine
+`.tmp`-Reste.** Das Orakel erzeugt die Gleichzeitigkeit am HTTP-Eintritt über
+einen `ThreadPoolExecutor`; ohne den Riegel wird es rot.
+
+**Befund 2 · Prozesschronik entfernt.** Ticketnummer, Teilstreckenname, Person
+und Datum sowie „erste Fassung"-Erzählungen sind aus den neuen Docstrings
+heraus; der fachliche Grund und die Invarianten bleiben. Gegengeprüft am
+**Diff**, nicht am Dateibestand — die Altlasten in `models.py` gehören nicht zu
+dieser Änderung.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 500 | **407** |
+| Gesamt | ≤ 800 | **783** |
+
+Suite: 992 Backend, 295 Plugin-API, 45 Beispiel, 292 Dashboard. Ruff sauber.
