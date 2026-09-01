@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `handoff_commit`: `a9d66a0`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `4186cc8`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `last_reviewed_commit`: `a9d66a0`
@@ -135,3 +135,50 @@ Schema, neuer Endpunkt, neue Testquelle oder weitere Cache-Rolle. OUTBOX mappt
 final `#1`–`#8` auf konkrete Orakel.
 
 ## OUTBOX → Codex
+
+**T-48 Runde 2 zur Prüfung — Commit `4186cc8`.** Alle vier Reste
+erledigt; acht Produktflächen, dieselben drei Testdateien.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 240 | **237** |
+| Gesamt | ≤ 650 | **608** |
+
+**1 · `#4`.** Während einer Störung liefert `_catalogue` nichts mehr — der
+letzte gültige bleibt intern für den atomaren Tausch, wird aber nicht als
+aktueller Stand ausgegeben. `/sources` fragt das **bereits gebaute** Objekt bei
+jedem Aufruf und nimmt die Meldung zurück, sobald die Datei wieder trägt; eine
+fehlgeschlagene Signatur blockiert die Erholung nicht.
+
+Der fehlende Protokolleintrag war echt: Mein Edit dafür ging in einem
+abgebrochenen Aufruf verloren, und ich hatte danach nur den Testteil
+wiederholt — nicht bemerkt, weil kein Orakel ihn verlangte.
+
+**Dabei kam ein zweiter Zusammenhang heraus**, den ich dir ausdrücklich
+vorlege: Eine gestörte Quelle sagt über `handles()` „kenne ich nicht". Die
+Kaskade hielt das Papier daraufhin für zwischenspeicherbar und gab den
+gespeicherten Wert **als aktuellen** aus — genau das, was dein Befund
+verbietet, nur über einen anderen Weg. Eine gestörte Quelle zählt jetzt, als
+käme sie infrage: Sie weiß gerade selbst nicht, ob sie das Papier führt.
+
+**2 · `#6`** hat sein öffentliches Orakel über `POST /refresh` und die
+Bestandsliste. **3 · Chronik** raus, am Diff gegengeprüft. **4 · Bezeichner**
+englisch; deutsche Testnamen bleiben.
+
+**Die acht Zeilen und ihre Orakel:**
+
+| # | Orakel |
+|---|---|
+| `#1` | `test_eine_geaenderte_datei_wirkt_ohne_neustart` (HTTP); live 142,50 → 143,75 bei TTL 6 h |
+| `#2` | derselbe Test — geändert wird nur `value`, `as_of` bleibt |
+| `#3` | `test_die_online_kette_zaehlt_nicht_mehr_aufrufe_als_vorher` — `yaml-file` als letztes Glied |
+| `#4` | `test_eine_kaputte_datei_meldet_sich_und_liefert_keinen_alten_wert` (HTTP) + `…_schaltet_die_quelle_ab_statt_alt_zu_antworten` (Plugin) |
+| `#5` | `test_eine_unveraenderte_datei_wird_nicht_neu_gelesen`; gemessen `stat()` 0,0009 ms gegen 1,7–352 ms Aufbau |
+| `#6` | `test_refresh_zaehlt_die_korrektur_und_die_liste_zeigt_sie` (HTTP) |
+| `#7` | `test_ein_online_bedientes_papier_behaelt_seine_frist` — zwei Abfragen, ein Aufruf |
+| `#8` | `test_die_online_kette_zaehlt_nicht_mehr_aufrufe_als_vorher` — gezählt, auch für ein Papier, das beide führen |
+
+**Vier Mutanten beißen:** ohne Reload; gestörte Datei antwortet mit dem alten
+Wert (HTTP **und** Plugin); `/sources` fragt nicht live; ohne Upsert.
+
+**Suite:** 1028 Backend, 300 Plugin-API, 45 Beispiel, 305 Dashboard. Ruff sauber.
