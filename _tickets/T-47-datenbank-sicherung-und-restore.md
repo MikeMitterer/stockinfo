@@ -861,3 +861,85 @@ REST-Routen verdrahten diese nur.
 Damit sind 1a und 1b als Backend von T-47 teilfreigegeben. T-47 bleibt aktiv:
 Vor dem ersten Dashboard-Edit folgt der vereinbarte eigene UI-Scope-Vertrag
 für den UI-Halbsatz von `#8` sowie `#11` und `#12`. T-48 bleibt gesperrt.
+
+---
+
+## Scope-Vertrag UI (Claude, 2026-09-01)
+
+Die letzte Teilstrecke: `#11`, `#12` und der UI-Halbsatz von `#8`. Das Backend
+ist teilfreigegeben und liefert alles Nötige — es entsteht keine neue Route.
+
+### Das beobachtbare Ergebnis
+
+Ein Betreiber sieht seine Sicherungen im Dashboard, legt eine an und spielt
+eine zurück — **mit dem Neustart angesagt, bevor er klickt**, und danach
+sichtbar ausstehend, bis er erfolgt ist.
+
+### Drei fachliche Änderungen, nicht mehr
+
+1. **Die Liste** mit Zeitpunkt, Größe und Passung. Eine unpassende Sicherung
+   steht **mit ihrem Grund** darin statt ausgeblendet (`#11`) — sonst sucht
+   jemand eine Datei, die er im Verzeichnis liegen sieht.
+2. **Die Bestätigung nennt den Neustart vorher** (`#12`). Ein `202`, das
+   niemand liest, ist keine Ansage; der Satz gehört vor den Klick.
+3. **Ein ausstehender Neustart bleibt sichtbar**, solange er gilt — ebenso ein
+   gescheiterter Tausch mit seinem Grund (UI-Halbsatz von `#8`). Beides steht
+   in `GET /backups` bereit (`pending_restore`, `restore_error`).
+
+### Der Platz: ein fünfter Reiter in den Einstellungen
+
+`SettingsPanel` führt heute `appearance`, `language`, `links`, `environment`.
+`backups` kommt dazu und ist über `#/settings?tab=backups` ansteuerbar — genau
+die Adressierbarkeit, die der Panel-Docstring dafür vorsieht.
+
+**Die Statuszeile bleibt außen vor.** Sie zeigt den laufenden Zustand, nicht
+eine anstehende Handlung; ein Hinweis dort wäre eine vierte Fachänderung und
+ein zweiter Ort für dieselbe Auskunft.
+
+### Erwartete Flächen
+
+| Datei | was |
+|---|---|
+| `components/BackupsPanel.vue` | neu — Liste, Anlegen, Bestätigung |
+| `composables/useBackups.ts` | neu — Laden, Anlegen, Wiederherstellen |
+| `components/SettingsPanel.vue` | Reiter einhängen |
+| `composables/useHashTab.ts` | `SETTINGS_TABS` um `backups` |
+| `types.ts` | `SettingsTab`, `BackupEntry`, `BackupList`, `RestoreAccepted` |
+| `i18n/de.ts`, `i18n/en.ts` | beide Kataloge |
+
+`api-prefixes.ts` nur, falls `/backups` dort fehlt — der vorhandene
+`viteProxy.spec.ts` liest die Pfade aus dem Quelltext und meldet das von
+selbst. Kein Backend-Edit.
+
+### Budget — mit der Zählweise dabei
+
+Höchstens **6 Produktdateien** in `dashboard/src/`, **2 Testdateien** in
+`dashboard/tests/`, **350 hinzugefügte Produktzeilen** und **600 Gesamtzeilen**
+(hinzugefügte Zeilen in beiden Bäumen zusammen). Die Zählweise steht diesmal
+im Vertrag, nicht erst in der Übergabe.
+
+### Pflichtorakel
+
+1. Eine unpassende Sicherung ist **sichtbar** und nennt ihren Grund; sie lässt
+   sich nicht ohne ausdrückliches Übergehen zurückspielen.
+2. Die Bestätigung enthält das Wort „Neustart", **bevor** der Aufruf
+   abgeschickt wird — geprüft am gerenderten Text, nicht am Aufrufergebnis.
+3. Nach einer Anforderung steht der ausstehende Neustart in der Ansicht; nach
+   einem Fehler steht dort der Grund und **kein** ausstehender Neustart.
+4. Rollen- und Statustexte kommen aus beiden Katalogen; kein Schlüssel bleibt
+   roh stehen (`analysis.role.`-Muster aus T-46).
+
+### Browsermatrix
+
+| | breit (≥ 1024) | schmal (< 640) |
+|---|---|---|
+| Liste | vollständige Tabelle | **scrollt in sich**, die Seite nicht |
+| Bestätigung | Dialog mittig | passt ohne horizontales Scrollen |
+
+Gemessen wird im Browser, nicht geschätzt — ein grüner Komponententest sagt
+nichts über die Oberfläche.
+
+### Nicht-Ziele
+
+Keine neue Route, kein Löschweg im UI, kein Zeitplan, keine Anzeige des
+Manifests im Rohtext, keine Änderung an der Statuszeile.
