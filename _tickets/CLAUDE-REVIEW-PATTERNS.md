@@ -1249,6 +1249,14 @@ entscheidende Zustand — gültige Wiederherstellung mit derselben
 Stand her; `_reload()` kehrte vor dem Parser zurück und ließ die Quelle
 dauerhaft gestört.
 
+**Beleg 13:** T-48 Runde 3, Commit `08214cf`: Der neue Test unterschied die
+abgelehnte Signatur vom geladenen Stand, der zweite Test stellte jedoch nur
+den **identischen** geladenen Inhalt wieder her. Die Implementierung durfte
+deshalb bei dessen Signatur `_problem` ungeprüft löschen. Eine gleich große
+Preiskorrektur mit derselben Signatur meldete die Quelle ebenfalls gesund,
+lieferte aber weiter den alten Katalogwert. Das Orakel musste Inhalt und
+Erwartungswert ändern, nicht nur den Fehlerzustand zurücknehmen.
+
 [↑ Übersicht](#übersicht)
 
 ## P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem

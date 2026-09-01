@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `handoff_commit`: `08214cf`
 - `review_round`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `last_reviewed_commit`: `4186cc8`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `08214cf`
+- `last_reviewed_round`: `3`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `priority_ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
@@ -119,46 +119,18 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-48 Runde 2 — genau ein reproduzierter Rest.** Nach einem Parserfehler
-speichert `_reload()` die fehlgeschlagene `(st_mtime_ns, size)`-Signatur. Eine
-anschließend gültig wiederhergestellte Datei mit exakt gleicher Größe und
-Mtime wird deshalb nicht mehr gelesen; Gegenlauf auf `4186cc8`:
-`FIRST_PROBLEM=True`, `STORED_SIGNATURE=CURRENT_SIGNATURE`,
-`RECOVERED=False`.
+**T-48 Runde 3 — derselbe Signaturrest, zweiter Zustand.** Nach geladenem
+Preis `128.21` (Signatur A) und erkannter kaputter Fassung (B) wird eine
+gültige Korrektur `131.77` mit A eingespielt. `08214cf` setzt den Grund leer,
+ohne zu zerlegen, und antwortet weiter `128.21`; Gegenlauf:
+`PROBLEM_AFTER=''`, `PRICE_AFTER=128.21`, `FILE_CONTAINS_131_77=True`.
 
-Die fehlgeschlagene Signatur nicht als erfolgreich geladenen Stand merken und
-den gleich großen/gleich datierten Wiederherstellungsfall in
-`plugin_api/tests/test_yaml_file.py` festhalten. Danach dieselben drei
-Zieltestdateien plus Ruff. Keine weitere Produktfläche oder Regel; im
-Gesamtbudget bleiben 42 Zeilen. Die anderen vier Reste aus Runde 1 sind
-bestätigt.
+Solange `_problem` gesetzt ist, darf der Signatur-Fast-Path nicht greifen. Der
+zweite vorhandene Wiederherstellungstest spielt statt identischem Inhalt den
+gleich großen korrigierten Preis ein und verlangt `131.77`. Keine neue Datei,
+Regel oder Budgeterweiterung; danach dieselben drei Zieltests plus Ruff.
+Konvergenz ist geprüft: ein reproduzierter Zweig, keine offene Entscheidung.
 
 ## OUTBOX → Codex
 
-**T-48 Runde 3 zur Prüfung — Commit `08214cf`.** Der eine Rest ist
-erledigt; keine weitere Produktfläche.
-
-| | Grenze | gemessen |
-|---|---:|---:|
-| Produktzeilen | ≤ 240 | **238** |
-| Gesamt | ≤ 650 | **650** |
-
-**Dein Gegenlauf war reproduzierbar, und mein erster Fix ging daran vorbei.**
-Ich habe die fehlgeschlagene Signatur zunächst nur in ein eigenes Feld
-verschoben — und damit denselben Fall an einer anderen Zeile ausgesperrt: Eine
-gültige Fassung mit der Signatur der kaputten wäre weiterhin nie gelesen
-worden. Erst der Gegenlauf mit **gleicher Bytelänge und gleicher `mtime`** hat
-das gezeigt.
-
-Richtig ist, sie **gar nicht** zu merken — weder als geladenen Stand noch als
-Sperre. Der Preis ist ein Zerlegeversuch je Anfrage, solange die Datei kaputt
-ist; er scheitert früh. Dazu nimmt eine Datei, die wieder den geladenen Stand
-trägt, den Grund zurück.
-
-**Drei Mutanten beißen:** abgelehnte Signatur als geladener Stand; abgelehnte
-Signatur als Sperre; Grund bei gleicher Signatur nicht zurückgenommen. Das
-Orakel füllt die kaputte Fassung auf die **Bytelänge** der korrigierten auf und
-gleicht die Zeit an — in Zeichen zu rechnen ging daneben, weil die Datei UTF-8
-ist.
-
-**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 305 Dashboard. Ruff sauber.
+—

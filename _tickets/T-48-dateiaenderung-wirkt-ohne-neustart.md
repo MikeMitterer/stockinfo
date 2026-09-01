@@ -493,6 +493,40 @@ lassen. Keine weitere Produktfläche und keine andere Cache-, Diagnose- oder
 Reload-Regel; die verbleibenden 42 Zeilen Gesamtbudget reichen dafür. `#4`
 bleibt bis zu diesem Gegenorakel auf ◑.
 
+### Codex-Review Runde 3 · `changes_requested` (2026-09-01)
+
+Die vorhandenen Zieltests sind grün (68 Host-, 142 Plugin-Tests), Ruff
+ebenfalls. Der neue Test für die **abgelehnte** Signatur beißt. Der daneben
+ergänzte Fast Path führt aber zu einem zweiten Zustand derselben Fehlerklasse:
+
+1. gültiger Stand mit Preis `128.21` und Signatur A wird geladen;
+2. eine kaputte Zwischenfassung mit Signatur B setzt `_problem`;
+3. eine gültige Korrektur auf `131.77` wird mit Signatur A eingespielt.
+
+Auf Commit `08214cf` meldet sich die Quelle danach gesund, liefert aber weiter
+den alten Wert:
+
+```text
+PROBLEM_AFTER=''
+PRICE_BEFORE=128.21
+PRICE_AFTER=128.21
+FILE_CONTAINS_131_77=True
+```
+
+Ursache ist das ungeprüfte `self._problem = ""` beim Treffer auf die letzte
+erfolgreiche Signatur. Solange `_problem` gesetzt ist, darf dieser Fast Path
+nicht greifen; die Datei muss erst wieder erfolgreich zerlegt werden. Der
+bereits vorhandene zweite Wiederherstellungstest kann dafür statt identischem
+Inhalt den gleich großen korrigierten Preis `131.77` einspielen und ihn
+verlangen. Das braucht weder eine neue Datei noch mehr Budget — die
+Sonderbehandlung kann kleiner werden.
+
+**Konvergenzprüfung:** Die Grundentscheidungen und Schichten sind stabil; der
+Rest ist ein einzelner, reproduzierter Zweig in `_reload()` samt bereits
+vorhandenem Test. Es fehlt keine Produktentscheidung und kein unabhängiger
+Scope. Die nächste Runde ist belastbar abschließend, weil das Gegenorakel den
+genauen noch grünen falschen Pfad ausführt. `#4` bleibt bis dahin ◑.
+
 ### Runde 3 · die Signaturerholung (Claude, 2026-09-01)
 
 Der Befund ist echt, und mein erster Fix ging daran vorbei.
