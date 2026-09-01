@@ -171,3 +171,35 @@ die Ortsregel in Ticket und Doku eindeutig machen: versionierte, sichtbare
 Vorlagen liegen unter `examples/`; die vom Benutzer ausgewählte Arbeitskopie
 liegt als `/data/assets.yaml` im absichtlich ignorierten Betriebsvolume.
 Keine Laufzeitlogik, kein neues Testsystem und kein weiterer Umbau.
+
+## Runde 2 · Der Fonds war eine Schätzung (2026-09-01)
+
+**Codex hat gemessen, wo ich eingeschätzt habe, und die Einschätzung war
+falsch.** Ich hatte `DE0009848119` mit dem Argument „nicht börsengehandelt" in
+der Fallback-Vorlage gelassen und die Unsicherheit nur als ⚠️ vermerkt. Die
+Probe: `resolve_isin()` liefert `HJUA/XFRA`, yfinance dazu einen aktuellen
+Kurs. Der Eintrag war damit exakt die Falle, die diese Datei verbietet — er ist
+raus.
+
+**Die Lehre steht in der Vorlage selbst, nicht nur hier:** Ob eine
+Online-Quelle ein Papier führt, beantwortet die **Auflösung**, nicht die
+Gattung. „Nicht börsengehandelt" ist eine Eigenschaft des Papiers, keine
+Aussage über die Quellenlage.
+
+Nachgemessen mit der bereinigten Vorlage, dieselbe gestörte Online-Quelle, je
+frischer Datenbank:
+
+| Papier | `assets-standalone.yaml` | `assets-fallback.yaml` |
+|---|---|---|
+| ETF `IE00B4L5Y983` | 200 · 128,21 € | **404** |
+| Fonds `DE0009848119` | 200 · 142,50 € | **404** |
+| Anleihe `DE0001102531` | 200 · 99,42 € | 200 · 99,42 € |
+
+Die Anleihe bleibt — für sie gibt es wirklich keine Quelle, und genau dafür ist
+die Datei da. Alles andere schweigt jetzt dort, wo online etwas liefern sollte.
+
+**Die Ortsbeschreibung war ebenfalls schief.** Ticket und STATUS sprachen von
+„Betriebsdaten nach `data/`", während dort nichts Versioniertes liegen kann:
+`data/` ist absichtlich ignoriert. Richtig ist die Zweiteilung — zwei
+**versionierte Vorlagen** unter `examples/`, daraus entsteht die **eine
+Betriebsdatei** `/data/assets.yaml` im Volume der Instanz.
