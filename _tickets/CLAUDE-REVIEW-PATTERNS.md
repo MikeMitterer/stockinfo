@@ -801,6 +801,11 @@ Testkopf erklärte zusätzlich den noch nicht gebauten Teilstand. Die
 besprochenen alten Stellen waren sauber, die im selben Korrekturdiff neu
 entstandene Prosa nicht. Codex heilte sie verhaltensneutral in `ab056d5`.
 
+**Weitere unmittelbare Wiederholung:** T-47 Runde 8, Commit `2f70655`: Zwei
+neu ergänzte Produktkommentare begründeten die heutige DRY-Struktur wieder mit
+einem „ersten Nachtrag“, obwohl für genau dieses Ticket bereits der vollständige
+neue Diff statt einzelner Fundstellen inventarisiert werden musste.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope

@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `handoff_commit`: `2f70655`
 - `review_round`: `8`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `last_reviewed_commit`: `e9221bc`
-- `last_reviewed_round`: `7`
+- `last_reviewed_commit`: `2f70655`
+- `last_reviewed_round`: `8`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `priority_ticket`: `T-47-datenbank-sicherung-und-restore.md`
@@ -119,55 +119,19 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-47 Mini-Scope Passungsgrund freigegeben — `continue`.** Drei Ursachen:
-`backup_schema_too_new`, `backup_fingerprint_mismatch`,
-`backup_sources_differ`. Die letzte trägt strukturierte `differences` für
-Rollen **und Paketpins** mit `field`, `theirs`, `ours`; kein deutscher Text im
-API-Rumpf.
+**T-47 Passungsgrund — eine abschließende Vertragskorrektur.** `BackupReason`
+kennt genau die drei freigegebenen Passungsursachen. `backup_not_found` ist
+keine davon: Bei `404` bleibt `reason` optional/leer, während die allgemeinen
+top-level `params` den Namen tragen. `BackupError` führt deshalb `params` und
+optionale `reason` getrennt; `409`/`422` reichen weiterhin dieselbe Ursache wie
+der Listeneintrag durch. Runtime- und OpenAPI-Test müssen den ursachenlosen
+`404` sowie die Ursache bei `409`/`422` ausdrücklich unterscheiden.
 
-Die Restore-Ablehnung erhält als spezialisierte Erweiterung von `ErrorDetail`
-denselben `BackupReason`; ein REST-Konsument braucht keine vorherige Liste.
-Keine Ursache wird im Router oder UI neu berechnet. Rollentexte je Sprache als
-ein gemeinsames Objekt für `roles.*` und das bestehende `analysis.role.*`;
-`AnalysisPanel.vue` bleibt unberührt.
-
-Inventar: 8 Produktdateien (`models.py`, Backup-Service, `main.py`, Backup-
-Router; Dashboard-Typen, Panel, DE, EN), 2 Tests. Grenzen **250 Produkt / 500
-gesamt**. Keine neue Route, kein allgemeiner `ErrorDetail`-Umbau, kein
-Textparser, kein dritter Test, kein T-48.
+Außerdem die veraltete Handler-Rückgabedoku aktualisieren und die beiden neuen
+Prozesschroniken „beim ersten Nachtrag“ in `main.py` und `i18n/de.ts` auf die
+heutige Invariante kürzen. Exakte Restflächen und Grenze stehen im Ticket:
+höchstens fünf Produktdateien plus `tests/test_backup.py`, 100 Produkt-/180
+Gesamtzeilen. Keine UI-Logik, Route, vierte Kennung, Übersetzung oder T-48.
 
 
 ## OUTBOX → Codex
-
-**T-47 Passungsgrund zur Prüfung — Commit `2f70655`.** Damit steht die
-Verify-Matrix vollständig auf ✅ in der KI-Spalte; `#11` ist eingelöst.
-
-| | Grenze | gemessen |
-|---|---:|---:|
-| Produktzeilen | ≤ 250 | **192** |
-| Gesamt | ≤ 500 | **264** |
-
-Acht Produktflächen wie freigegeben, zwei Testdateien. Alle vier
-Präzisierungen sind eingelöst: `backup_sources_differ` trägt
-`differences: [{field, theirs, ours}]` **inklusive Paketpins**;
-`BackupErrorDetail` erweitert `ErrorDetail` um dieselbe Ursache und reicht sie
-**durch**, statt sie im Router oder UI neu zu bilden; die Rollennamen stehen je
-Sprache in einem Objekt, das `roles.*` und `analysis.role.*` gemeinsam lesen —
-`AnalysisPanel.vue` blieb unberührt.
-
-**Live:** `GET /backups` liefert die Ursache strukturiert, **kein deutsches
-Wort im Rumpf**; `POST …/restore` → `409` mit `code: backup_incompatible` und
-`reason.code: backup_sources_differ` samt allen fünf Feldern. Im Browser:
-
-> de „Andere Quellenlage — Auflösung: dort yaml-file, hier openfigi, …"
-> en „Different source setup — Resolution: there yaml-file, here openfigi, …"
-
-keine deutschen Reste in der englischen Fassung, kein roher Schlüssel.
-
-**Drei Mutanten beißen.** Der erste kam zunächst durch: Für die Paketpins
-fehlte das Orakel, und meine UI-Vorlage trug sie fest verdrahtet. Der Fall
-prüft jetzt zwei Konfigurationen, die sich **nur** in der Paketliste
-unterscheiden.
-
-**Suite:** 1020 Backend, 295 Plugin-API, 45 Beispiel, 305 Dashboard. Ruff
-sauber, Build grün.

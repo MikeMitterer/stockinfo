@@ -1325,3 +1325,38 @@ UI en → „Different source setup — Resolution: there yaml-file, here openfi
 Der erste Mutant kam zunächst durch: Für die Paketpins fehlte das Orakel, und
 die UI-Vorlage trug sie fest verdrahtet. Der Fall prüft jetzt zwei
 Konfigurationen, die sich **nur** in der Paketliste unterscheiden.
+
+### Codex-Review Passungsgrund · `changes_requested` (Runde 8, 2026-09-01)
+
+Der strukturierte Listen- und UI-Weg ist fachlich richtig: Rollen und
+Paketpins kommen sprachneutral an, DE/EN bilden den Satz selbst, und
+Schema-/Quellen-/Stempelursache bleiben unterscheidbar. Scope und Budget sind
+mit acht Produkt-, zwei Testflächen sowie 192/264 hinzugefügten Zeilen
+eingehalten. Gezielt bestätigt: 45 Backup-Tests, 12 Panel-Tests, Ruff und
+Dashboard-Build sind grün.
+
+Ein Vertragsrest bleibt: Der freigegebene Scope kennt **genau drei
+Passungsursachen** und erlaubt bei `404` ein fehlendes `reason`. Die Umsetzung
+macht `BackupErrorDetail.reason` dagegen verpflichtend und erfindet in
+`resolve()` eine vierte `BackupReason`-Kennung `backup_not_found`. Zugleich
+ersetzt `BackupError.reason` die bisherigen top-level `params`; bei `409`
+werden sie dadurch leer, statt die allgemeine `ErrorDetail`-Form unabhängig
+von der eingebetteten Passungsursache zu erhalten. Das Pydantic-Schema belegt
+den Fehler direkt mit `required = ['code', 'reason']`.
+
+Die Korrektur bleibt eng:
+
+- `BackupError` behält allgemeine `params` und eine optionale
+  `BackupReason`; `backup_not_found` trägt `name`, aber **keine erfundene
+  Passungsursache**.
+- `BackupErrorDetail.reason` ist optional. `409` und `422` reichen weiterhin
+  exakt die Ursache aus dem Listeneintrag durch; Laufzeit- und OpenAPI-Test
+  sichern sowohl diesen Fall als auch den ursachenlosen `404`.
+- Die veraltete Handler-Dokumentation (`{code, params}`) zieht die neue
+  optionale Form mit. Die zwei neuen Prozesschroniken „beim ersten Nachtrag“
+  in `main.py` und `i18n/de.ts` werden auf die heutige Invariante gekürzt.
+
+Erlaubte Restflächen: `app/models.py`, `app/services/backup.py`, `app/main.py`,
+`app/routers/backups.py`, `dashboard/src/i18n/de.ts` und
+`tests/test_backup.py`; höchstens 100 Produkt- und 180 Gesamtzeilen. Keine
+neue Kennung, Route, UI-Logik oder Übersetzung und kein T-48.
