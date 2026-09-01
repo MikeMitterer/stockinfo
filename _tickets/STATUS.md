@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-50-ui-abnahme-der-kette.md`
 - `handoff_commit`: `62127bf`
 - `review_round`: `5`
@@ -142,36 +142,51 @@ nichts nach `solved/` verschieben. Human-Spalten bleiben leer.
 
 —
 
-## An Mike · die abgearbeitete Kette
+## An Mike · die Kette **und** der Abnahmelauf sind durch
 
-**Alle sieben Kettenglieder sind von Codex freigegeben.** Damit ist der Zug
-technisch durch; die **Human-Spalten sind unberührt**, und nichts ist nach
-`solved/` verschoben — das entscheidest du.
+**Acht Kettenglieder freigegeben**, zuletzt T-50 in Runde 5. Die Human-Spalten
+sind unberührt, nichts liegt in `solved/` — das entscheidest du.
 
 | Ticket | Was jetzt geht | Runden |
 |---|---|---:|
-| T-43 | Die Statuszeile nennt die Quelle, die den Kurs geliefert hat | 2 |
+| T-43 | Die Statuszeile nennt die Kette, die den Kurs geliefert hat | 2 |
 | T-44 | Fehlerwege tragen eine Kennung; den Satz baut die Oberfläche | 3 |
 | T-45 | Smoke-Skripte überleben den Umzug nach `solved/` | 2 |
 | T-49 | Prüfdaten unter `tests/_resources/`, Betriebsvorlagen unter `examples/` | 3 |
-| T-46 | `/analyze` misst die **konfigurierte Kette**, nicht feste yfinance-Stufen | 5 |
-| T-47 | Sicherung und Wiederherstellung der Datenbank samt Passungsgrund | 9 |
+| T-46 | `/analyze` misst die **konfigurierte Kette** | 5 |
+| T-47 | Sicherung und Wiederherstellung samt Passungsgrund | 9 |
 | T-48 | Eine geänderte Fachdatendatei wirkt ohne Neustart | 4 |
+| T-50 | Browser-Abnahme der drei letzten — neun Fälle, beide Plugin-Varianten | 5 |
 
-**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 305 Dashboard. Ruff sauber.
+**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff und
+`vue-tsc` sauber.
 
-**Was ich dir offen zurückgebe — nicht erledigt, sondern deine Entscheidung:**
+### Was der Browserlauf gebracht hat
 
-1. **Die menschliche Abnahme selbst.** T-46, T-47 und T-48 haben je eine leere
-   Human-Spalte. Erst deine Bestätigung bewegt ein Ticket nach `solved/`.
-2. **`scripts/sources-profile.sh`** liegt unverschmolzen auf
-   `feat/sources-profile-script` und zeigt noch auf den alten Fixture-Pfad;
-   T-49 Verify `#8` steht deshalb auf ➖.
-3. **T-42** (risikobasierte UI-Matrix) war *on hold* bis zum Kettenende — das
-   ist jetzt erreicht.
-4. **T-31 + T-38** als gemeinsames Paket mit einem `API_VERSION`-Sprung, wie du
-   es vor der Kette vorgesehen hattest.
-5. **T-40** ruht unverändert bis zu deinem ausdrücklichen Kommando.
+Eine Korrektur (der Platzhalter im Analysefeld) und **fünf neue Tickets**, alle
+offen, keins priorisiert, keins umgesetzt:
 
-Ich leite daraus **kein** neues Ticket ab und fange nichts davon an, bevor du
-die Reihenfolge nennst.
+| | Befund | Gewicht |
+|---|---|---|
+| **T-54** | `SAP.DE` und `BMW.DE` lassen sich **nicht neu aufnehmen** — `502`, „Pflichtfelder fehlen". Die Quelle liefert `longName` und `quoteType` vollständig; reproduziert **auch mit den Vorgaben**, also in deiner Konfiguration. Bestand unberührt, nur die Neuaufnahme | **der schwerste** |
+| T-51 | Das Migrationsgate sperrt `GET /backups` und rät gleichzeitig zur Handkopie der Datenbank | mittel |
+| T-55 | `tests/test_api.py` öffnet die Betriebsdatenbank unter `data/`, obwohl T-32 sie abschotten sollte | mittel |
+| T-52 | Das einzige Quellenprofil liegt in `_tickets/`; T-49 hat nur die Fachdaten geholt | klein |
+| T-53 | `"3 Zeilen"` steht in der englischen Analyse | klein |
+
+**Deine `data/stockinfo.db` ist byte-identisch mit dem Stand vor dem Lauf.**
+WAL und SHM sind verschwunden — verursacht von `make test-backend`, nicht vom
+Browserlauf; sie waren leer, es ging nichts verloren. Genau das ist T-55.
+
+### Was auf dich wartet
+
+1. **Deine Abnahme** von T-46, T-47, T-48 und T-50 — erst sie bewegt ein Ticket
+   nach `solved/`.
+2. **Die Reihenfolge** für T-51 bis T-55. Mein Vorschlag: T-54 zuerst, weil er
+   die häufigste Handlung eines neuen Benutzers trifft.
+3. **T-42** (UI-Matrix der Plugin-Kette), **T-31 + T-38** als Paket mit einem
+   gemeinsamen `API_VERSION`-Sprung, **T-40** ruht bis zu deinem Kommando.
+4. `scripts/sources-profile.sh` liegt weiter unverschmolzen auf
+   `feat/sources-profile-script`; T-49 Verify `#8` bleibt ➖.
+
+Ich leite daraus nichts ab und fange nichts an, bevor du die Reihenfolge nennst.
