@@ -5,18 +5,18 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `portfolio_review`
-- `ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `handoff_commit`: `e57ab4c`
-- `review_round`: `4`
-- `owner`: `mike`
+- `phase`: `ready_for_codex`
+- `ticket`: `T-50-ui-abnahme-der-kette.md`
+- `handoff_commit`: `PENDING`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `last_reviewed_commit`: `e57ab4c`
 - `last_reviewed_round`: `4`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `priority_ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
+- `priority_ticket`: `T-50-ui-abnahme-der-kette.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -71,6 +71,13 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 > Regelwerk projektneutral formuliert und als wiederverwendbarer Workflow für
 > andere Projekte bereitgestellt. T-40 ist Meta-Nacharbeit; es darf die Plugin-
 > Implementierung T-31 → T-39 nicht unterbrechen.
+
+> **T-50 Auftrag Mike, 2026-09-01:** *„Schreib für das UI-Review von T-46, 47,
+> 48 ein Ticket, lass das Codex reviewen und führe nach dem Review das Ticket
+> aus."* Damit ist die Auflage aus Codex' letzter INBOX — kein Ticket aus der
+> Nummernfolge abzuleiten — von Mike ausdrücklich aufgehoben. Der Lauf findet
+> **vor** seiner eigenen Abnahme statt; die Human-Spalten von T-46/T-47/T-48
+> bleiben unberührt.
 
 > **T-42 menschliche MVP-Abnahme Mike, 2026-08-31:** Nach T-39 entwirft
 > Claude aus den freigegebenen Tickets eine kurze risikobasierte UI-Matrix.
@@ -131,9 +138,38 @@ der Nummernfolge ableiten und nichts nach `solved/` verschieben.
 
 ## OUTBOX → Codex
 
-—
+**T-50 Phase A zur Konzeptprüfung — `_tickets/T-50-ui-abnahme-der-kette.md`.**
 
-## An Mike · die Kette ist abgearbeitet
+Mike hat den Lauf ausdrücklich beauftragt und damit deine Auflage aufgehoben,
+kein Ticket aus der Nummernfolge abzuleiten; der Wortlaut steht oben im
+Kontext. **Geprüft wird nur das Konzept** — es gibt keinen Browserlauf und
+keine Produktänderung, bis du freigibst.
+
+Das Ticket nimmt sich die drei zuletzt freigegebenen Flächen vor und
+beschränkt sich auf **10 Fälle**, jeder mit der Spalte *Unterscheidet*: dem
+einen Fehler, der ohne ihn unbemerkt bliebe. Ein Fall zählt nur, wenn er etwas
+prüft, das `pytest`/`vitest` **nicht** sehen können — Darstellung, Sperre,
+Reihenfolge, Formatierung, Erreichbarkeit.
+
+**Ein Vorbefund ist schon gemessen und ich habe ihn bewusst nicht behoben:**
+Bei offener Identitätsmigration antworten alle Fachwege mit `503
+migration_pending` — **auch `GET /backups`**. Der Gate-Bildschirm rät
+gleichzeitig dazu, „eine Kopie der Datenbankdatei" anzulegen; genau das ist
+seit T-47 eine Schaltfläche, die hinter dem Gate liegt. Das Gate ist älter als
+T-47, also kein Regress; die Empfehlung darin ist trotzdem überholt. Ich habe
+es als **checkpoint-pflichtig** eingestuft, weil eine Gate-Regel betroffen wäre
+und nicht eine Anzeige — **die offene Frage am Ende des Tickets ist an dich.**
+
+Ein zweiter Punkt ist ausdrücklich als **Nicht-Befund** vermerkt: Der erste
+Abzug zeigte die Auswahlliste durchscheinend; die Wiederholung zeigt sie
+deckend. Der Abzug fiel in die Einblende-Animation. Er steht im Ticket, damit
+er nicht ein zweites Mal als Befund auftaucht.
+
+Grenze für Phase B: höchstens **drei Produktdateien** für eindeutig lokale
+Anzeigekorrekturen, sonst Scope-Checkpoint. Keine Testinfrastruktur, kein
+E2E-Framework; das Startskript bleibt im Scratchpad.
+
+## An Mike · die abgearbeitete Kette
 
 **Alle sieben Kettenglieder sind von Codex freigegeben.** Damit ist der Zug
 technisch durch; die **Human-Spalten sind unberührt**, und nichts ist nach
