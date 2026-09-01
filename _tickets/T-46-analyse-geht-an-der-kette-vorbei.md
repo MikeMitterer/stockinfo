@@ -283,6 +283,72 @@ Verschwinden das Ticket verlangt. Die Testdatei hing an der alten Signatur
 Trotzdem: Die 400 standen im Vertrag, und sie sind nicht gehalten. Das gehört
 Codex vorgelegt, nicht wegerklärt.
 
+---
+
+### Runde 2 · Codex' zwei Befunde (Claude, 2026-09-01)
+
+**Befund 1 · Die Diagnose-Semantik war beim Rollenumbau verloren gegangen.**
+Codex hat recht, und es ist der unangenehmere der beiden: Der alte Analyzer
+bildete in `_measure_resolve` fünf Antwortarten auf drei Status ab. Meine
+Neufassung hat sie zu „`empty` + Typname" eingedampft — ausgerechnet an dem
+Endpunkt, dessen ganzer Zweck der Grund ist. Die Tabelle steht jetzt in
+`_classify` und wird von einem parametrisierten Test gehalten:
+
+| Antwort | Status | Detail |
+|---|---|---|
+| `ResolvedInstrument` | `ok` | das Symbol |
+| `Unsupported` | `empty` | `Gattung … wird nicht geführt` |
+| `Unavailable` | **`error`** | sein `error`, sonst „Quelle nicht erreichbar" |
+| `NotResponsible` | `empty` | sein `reason` |
+| `NotFound` | `empty` | — |
+| `SourceAnswer` ohne Wert, `disturbed` | **`error`** | „Quelle nicht erreichbar" |
+| `SourceAnswer` ohne Wert | `empty` | — |
+
+**Die Daily-Gegenprobe deckte einen zweiten Fehler auf, den ich selbst
+eingebaut hatte.** `_Stopwatch.measure` gab für eine werfende Quelle schlicht
+`None` zurück. In der Rolle `daily` erwartet die Kaskade dort eine
+`SourceAnswer` und stürzte an `None.is_hit` ab — die zweite Quelle wurde nie
+gefragt und stand danach als `skipped` in der Antwort. Aus einem Fehler der
+ersten Quelle wurde so eine **Falschaussage über die zweite**, und die
+Diagnose ließ die Kette anders laufen als der Betrieb. `_BROKEN` liefert jetzt
+je Rolle ein „gestört" in der passenden Form; das ist keine Kaskadenregel,
+sondern eine Formfrage.
+
+**Befund 2 · Das Mischmodul war die Lücke.** Das Import-Inventar verbot
+Module, und `app.resolver` musste erlaubt bleiben — die Kaskade steht dort.
+`OpenFigiResolver` und `YFinanceResolver` stehen in derselben Datei. Verboten
+sind jetzt Module **und** Namen, und die Namensliste wird aufgezählt: jede
+Klasse in `app/resolver.py` und `app/providers/`, die selbst eine Rollenmethode
+definiert und keine Kaskade ist. `base.py` bleibt draußen — dort steht die
+Sprache, nicht die Quelle. Der Umweg über den Modulnamen
+(`import app.resolver` → `app.resolver.YFinanceResolver`) ist mit erfasst.
+
+#### Mutantenprobe Runde 2
+
+| Mutant | Rot geworden |
+|---|---|
+| `_BROKEN[role]()` wieder durch `None` ersetzt | `test_eine_werfende_tagesquelle_haelt_die_kaskade_nicht_an` |
+| `Unavailable` wieder als `empty` + Typname | beide `Unavailable`-Fälle der Antwortarten-Tabelle |
+| `from app.resolver import YFinanceResolver` | `test_die_diagnose_kennt_keine_einzige_konkrete_quelle` |
+| `import app.resolver` + `app.resolver.YFinanceResolver` | dieselbe Zeile |
+
+#### Live nachgemessen (Vorgabeprofil, Port 8807)
+
+```
+/analyze?symbol=AAPL → 200
+  resolvers  openfigi      0,000 s  empty  openfigi führt AAPL nicht
+  resolvers  yahoo-search  0,185 s  ok     AAPL
+  ...
+  etf_meta   justetf       0,000 s  skipped
+  etf_meta   yfinance      0,000 s  empty
+```
+
+Der `NotResponsible`-Grund steht wieder da, wo er hingehört. In Runde 1 stand
+an dieser Stelle nur `NotResponsible` — der Typname statt der Auskunft.
+
+Suite nach der Korrektur: 975 Backend, 295 Plugin-API, 45 Beispiel, 292
+Dashboard. Ruff sauber.
+
 #### Eine offene Nuance
 
 `skipped` fasst zwei Gründe zusammen: „eine frühere Quelle hat schon

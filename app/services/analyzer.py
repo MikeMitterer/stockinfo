@@ -21,7 +21,7 @@ from typing import Any
 from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable, Unsupported
 
 from app.models import AnalyzeResult, AnalyzeStage
-from app.providers.base import ResolvedInstrument, declared_name
+from app.providers.base import ResolvedInstrument, SourceAnswer, declared_name
 from app.resolver import CompositeResolver
 from app.providers.composite_etf import CompositeEtfEnricher
 from app.providers.composite_market import (
@@ -70,9 +70,11 @@ class _Stopwatch:
             call: Die aufzurufende Funktion ohne Argumente.
 
         Returns:
-            Was die Quelle geliefert hat — unverändert. Ein Fehler wird
-            erfasst und als ``None`` weitergereicht, damit die Kaskade
-            weiterfällt wie ohne Messung.
+            Was die Quelle geliefert hat — unverändert. Wirft sie, wird das
+            erfasst und statt der Antwort ein „gestört" **in der Form dieser
+            Rolle** weitergereicht (`_BROKEN`): Die Kaskade fällt dann weiter,
+            wie sie es zusagt, statt an einer unpassenden Ersatzantwort
+            abzubrechen und die übrigen Quellen ungefragt zu lassen.
         """
         start = time.perf_counter()
         try:
@@ -81,10 +83,10 @@ class _Stopwatch:
             self.records.append(
                 _Record(role, source, _elapsed(start), "error", type(exc).__name__)
             )
-            return None
+            return _BROKEN[role]()
         seconds = _elapsed(start)
-        status = "empty" if _is_empty(value) else "ok"
-        self.records.append(_Record(role, source, seconds, status, _detail(value)))
+        status, detail = _classify(value)
+        self.records.append(_Record(role, source, seconds, status, detail))
         return value
 
 
@@ -123,31 +125,52 @@ def _elapsed(start: float) -> float:
     return round(time.perf_counter() - start, 3)
 
 
-def _is_empty(value: Any) -> bool:
-    """Hat die Quelle nichts geliefert?
+_UNREACHABLE = "Quelle nicht erreichbar"
 
-    Die vier Rollen antworten in vier Formen, und „nichts" sieht in jeder
-    anders aus: ``None`` beim Kurs und bei den Metadaten, eine Antwort ohne
-    Wert bei der Tagesreihe, ein Nicht-Treffer des Vertrags bei der Auflösung.
+
+def _classify(value: Any) -> tuple[str, str | None]:
+    """Was die Antwort einer Quelle bedeutet — Status und Grund.
+
+    **Der Unterschied zwischen `empty` und `error` ist der Zweck dieses
+    Endpunkts.** „Nichts gefunden" und „konnte nicht nachsehen" führen zu
+    verschiedenen nächsten Schritten; sie beide grau zu färben nähme der
+    Diagnose genau die Auskunft, für die es sie gibt. Die Tabelle stand vor
+    T-46 schon einmal hier und ist beim Umbau auf Rollen verloren gegangen:
+
+    | Antwort | Status | Detail |
+    |---|---|---|
+    | `ResolvedInstrument` | `ok` | das Symbol |
+    | `Unsupported` | `empty` | die **Gattung** — erkannt, nur nicht geführt |
+    | `Unavailable` | **`error`** | der genannte Grund |
+    | `NotResponsible` | `empty` | sein `reason`, falls einer dasteht |
+    | `NotFound` | `empty` | — nachgesehen, nichts da |
+    | `SourceAnswer` ohne Wert, `disturbed` | **`error`** | Störung der Quelle |
+    | `SourceAnswer` ohne Wert | `empty` | — |
+    | `SourceAnswer` mit Reihe | `ok` | die Zeilenzahl |
+
+    **`Unsupported` ist `empty` und nicht `error`** (T-31, Matrix `#6`): Die
+    Kette hat einwandfrei gearbeitet — sie hat das Papier sogar erkannt. Ein
+    `error` schickte den Betreiber auf die Suche nach einer Störung, die es
+    nicht gibt.
     """
-    if value is None:
-        return True
-    if hasattr(value, "is_hit"):
-        return not value.is_hit
-    if isinstance(value, (list, tuple)):
-        return not value
-    return isinstance(value, (NotResponsible, NotFound, Unavailable, Unsupported))
-
-
-def _detail(value: Any) -> str | None:
-    """Ein Wort dazu, was ankam — soweit es sich ohne Raten sagen lässt."""
-    if hasattr(value, "value") and isinstance(getattr(value, "value", None), list):
-        return f"{len(value.value)} Zeilen"
     if isinstance(value, ResolvedInstrument):
-        return value.symbol
-    if isinstance(value, (NotResponsible, NotFound, Unavailable, Unsupported)):
-        return type(value).__name__
-    return None
+        return "ok", value.symbol
+    if isinstance(value, Unsupported):
+        return "empty", f"Gattung {value.instrument_type} wird nicht geführt"
+    if isinstance(value, Unavailable):
+        return "error", value.error or _UNREACHABLE
+    if isinstance(value, NotResponsible):
+        return "empty", value.reason or None
+    if isinstance(value, NotFound):
+        return "empty", None
+    if isinstance(value, SourceAnswer):
+        if not value.is_hit:
+            return ("error", _UNREACHABLE) if value.disturbed else ("empty", None)
+        rows = value.value
+        return "ok", (f"{len(rows)} Zeilen" if isinstance(rows, list) else None)
+    if value is None or (isinstance(value, (list, tuple)) and not value):
+        return "empty", None
+    return "ok", None
 
 
 # Welche Methode je Rolle die Außenwelt fragt — und damit gemessen wird.
@@ -156,6 +179,21 @@ _MEASURED = {
     "quotes": {"fetch_quote"},
     "daily": {"fetch_daily_closes"},
     "etf_meta": {"fetch_etf"},
+}
+
+# Wie eine **kaputte** Quelle in ihrer Rolle aussieht.
+#
+# **Eine Diagnose darf die Kette nicht anders laufen lassen als der Betrieb.**
+# Wirft eine Quelle, gab die Stoppuhr bisher schlicht ``None`` zurück — in der
+# Rolle `daily` erwartet die Kaskade dort aber eine `SourceAnswer` und stürzte
+# an `None.is_hit` ab. Die zweite Quelle wurde dann nie gefragt, obwohl die
+# Kaskade genau das zusagt. Der Ersatz ist deshalb keine Kaskadenregel, sondern
+# eine Formfrage: „gestört" in der Sprache der jeweiligen Rolle.
+_BROKEN = {
+    "resolvers": lambda: Unavailable(error=_UNREACHABLE),
+    "quotes": lambda: None,
+    "daily": lambda: SourceAnswer(disturbed=True),
+    "etf_meta": lambda: None,
 }
 
 
