@@ -96,7 +96,7 @@ Genau **ein** Fall der Datei fällt deshalb durch:
 
 Die Korrektur schließt die Naht **in der Fixture**, nicht im einzelnen Test:
 Die Zusage der Datei — *„TestClient ohne Lifespan (kein Scheduler/DB)"* — soll
-für alle 27 Fälle gelten und nicht davon abhängen, dass jeder neue Fall daran
+für jeden ihrer Fälle gelten und nicht davon abhängen, dass ein künftiger daran
 denkt. Der `503`-Fall setzt seinen kaputten Dienst danach weiterhin selbst und
 gewinnt, weil er später greift.
 
@@ -250,3 +250,49 @@ muss rot, der Analyzer-Kontrolllauf grün werden. Die Skriptgrenze darf dafür
 auf höchstens 85 Zeilen wachsen; zusammen mit den 25 Testzeilen bleibt das
 Gesamtbudget von 110 unverändert. In der Scope-Prosa die veraltete Zahl
 „27 Fälle“ entfernen. Kein Produktcode und kein neuer Scope-Checkpoint.
+
+
+---
+
+## Runde 2 · Das Orakel nachgezogen (Claude, 2026-09-01)
+
+Die Fixture-Korrektur bleibt unverändert; alle vier Punkte betrafen das Skript.
+
+**1 · Sekunden reichen nicht.** `stat -f%m` liefert ganze Sekunden, und Anlegen
+und Löschen des WAL fallen in dieselbe. Gemessen an `data/`:
+
+```
+%m   1788284644              (vor und nach dem Anlegen gleich)
+%Fm  1788285149.068402593 → 1788285149.072882996
+```
+
+Jetzt `%Fm`. Ohne diesen Hinweis wäre der Detektor genau in dem Fall blind
+geblieben, für den er gebaut ist — die zweite Blindheit desselben Orakels.
+
+**2 · Die Wurzel wird aufwärts an `.libs/` erkannt**, nach dem Muster aus T-45
+samt gesichertem Exit-Code vor `readonly`. Die Gegenprobe läuft jetzt aus
+`_tickets/solved/` und ohne `BASH_LIBS` in der Umgebung.
+
+**3 · Ohne Argument und bei `-h|--help` erscheint die Hilfe**, geprüft wird nur
+bei `--run`. Vorher reichte die Datei `--help` an `pytest` durch und meldete
+einen grünen Check — ein Orakel, das auf Zuruf grün wird, ist keins. Farben und
+`usageLine` kommen aus der BashLib.
+
+**4 · Kein `readonly value="$(command)"`** — `APPNAME` wird erst zugewiesen,
+dann festgesetzt. Die Log-Datei ist ganz entfallen: Die Ausgabe steht in einer
+Variablen, damit gibt es keinen festen `/tmp`-Pfad mehr. Prozesschronik ist aus
+Skript und Test-Docstrings heraus.
+
+### Die vier Läufe
+
+| # | Lauf | Ergebnis |
+|---|---|---|
+| 1 | `_tickets/T-55-isolation.sh --run` | ✓ unberührt |
+| 2 | aus `_tickets/solved/`, ohne `BASH_LIBS` | ✓ unberührt |
+| 3 | `TARGET=tests/test_analyzer.py` | ✓ unberührt |
+| 4 | Mutant, Naht entfernt | ✗ `mtime …072882996 → …567319217` |
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Skript | ≤ 85 | **85** |
+| Gesamt | ≤ 110 | **110** |

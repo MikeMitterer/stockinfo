@@ -1,67 +1,85 @@
 #!/usr/bin/env bash
+#------------------------------------------------------------------------------
+# T-55-isolation.sh — belegt, dass eine Testdatei `data/stockinfo.db` weder
+# oeffnet noch veraendert
 #
-# Belegt, dass `tests/test_api.py` die Betriebsdatenbank nicht anfasst.
-#
-# **Die Verzeichnis-mtime ist der eigentliche Detektor.** Ein Vergleich der
-# drei Dateien allein — auch mit Existenz — ist **blind**: SQLite legt WAL und
-# SHM beim Oeffnen an und raeumt sie beim sauberen Schliessen wieder ab. Vorher
-# wie nachher steht dann "fehlt", und der Lauf sieht unschuldig aus. Gemessen:
-# In genau dieser Lage meldete die erste Fassung dieses Skripts ein gruenes
-# Ergebnis, obwohl der Defekt unveraendert vorlag.
-#
-# Das Anlegen und Loeschen aendert dagegen die mtime von `data/` selbst. Die
-# Gegenprobe mit `tests/test_analyzer.py`, das die Datenbank nicht anfasst,
-# laesst sie unveraendert — der Detektor ist also nicht bloss empfindlich.
-#
-# Die drei Dateizustaende bleiben trotzdem im Bericht: Sie sagen, **was**
-# passiert ist, wenn die mtime anschlaegt.
-#
-# **Direkt an pytest, nicht ueber make.** Die Make-Grenze ueberschreibt
-# DATABASE_PATH aus dem eingebundenen `.env`; ein vorangestelltes
-# `env DATABASE_PATH=… make test` bleibt deshalb wirkungslos und waere als
-# Isolationsorakel wertlos.
-set -euo pipefail
+# **Der Dateivergleich allein ist blind:** SQLite legt WAL und SHM beim Oeffnen
+# an und raeumt sie beim Schliessen ab — vorher wie nachher steht "fehlt".
+# Sichtbar wird das Oeffnen an der mtime von `data/`, und erst auf
+# **Nanosekunden**: Anlegen und Loeschen fallen in dieselbe Sekunde. Der Aufruf
+# geht direkt an pytest, weil make DATABASE_PATH ueberschreibt.
+#------------------------------------------------------------------------------
+set -uo pipefail
 
-readonly _PROJECT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-readonly _TARGET="${1:-tests/test_api.py}"
+# Aufwaerts, erkennbar an `.libs/` — ein festes `../` braeche in `solved/`.
+findProjectRoot() {
+    local _DIR="$1"
+    while [[ "${_DIR}" != "/" ]]; do
+        [[ -d "${_DIR}/.libs" ]] && { echo "${_DIR}"; return 0; }
+        _DIR="$(dirname "${_DIR}")"
+    done
+    return 1
+}
+# `readonly` liefert **immer** 0 — der Exit-Code muss vorher gesichert werden.
+_RC=0
+PROJECT_ROOT="$(findProjectRoot "$(cd "$(dirname "$0")" && pwd)")" || _RC=$?
+if [[ ${_RC} -ne 0 ]]; then
+    echo "kein Projekt gefunden — kein .libs oberhalb von $(dirname "$0")" >&2
+    exit 1
+fi
+readonly PROJECT_ROOT
+BASH_LIBS="${BASH_LIBS:-${PROJECT_ROOT}/.libs/BashLib/src}"
+if [[ "${__COLORS_LIB__:=""}" == "" ]]; then . "${BASH_LIBS}/colors.lib.sh"; fi
+if [[ "${__TOOLS_LIB__:=""}"  == "" ]]; then . "${BASH_LIBS}/tools.lib.sh";  fi
+APPNAME="$(basename "$0")"
+readonly APPNAME
+readonly TARGET="${TARGET:-tests/test_api.py}"
+readonly DB="data/stockinfo.db"
+usage() {
+    echo -e "\nUsage: ${APPNAME} [ options ]\n"
+    usageLine "-r | --run " "Prueft, ob ${TARGET} ${DB} unberuehrt laesst"
+    usageLine "-h | --help" "Diese Hilfe anzeigen"
+    echo -e "\n    ${YELLOW}TARGET${NC}=<pfad> — andere Testdatei pruefen\n"
+}
 
-cd "${_PROJECT}"
-
-# Zustand der drei Betriebsdateien als eine Zeile je Datei: Pruefsumme oder
-# ausdruecklich "fehlt". Beides ist ein Ergebnis, keins ist ein Abbruchgrund.
+# Eine Zeile je DB-Datei; eine fehlende ist ein Ergebnis, kein Abbruchgrund.
 state() {
-    local _FILE
-    for _FILE in data/stockinfo.db{,-wal,-shm}; do
-        if [[ -f "${_FILE}" ]]; then
-            printf '%s  %s\n' "$(shasum -a 256 "${_FILE}" | cut -d' ' -f1)" "${_FILE}"
-        else
-            printf '%-64s  %s\n' "fehlt" "${_FILE}"
-        fi
+    local _FILE _SUM
+    for _FILE in "${DB}" "${DB}-wal" "${DB}-shm"; do
+        _SUM="fehlt"
+        [[ -f "${_FILE}" ]] && _SUM="$(shasum -a 256 "${_FILE}" | cut -d' ' -f1)"
+        printf '%-64s  %s\n' "${_SUM}" "${_FILE}"
     done
 }
 
-readonly _BEFORE="$(state)"
-readonly _DIR_BEFORE="$(stat -f%m data)"
-
-.venv/bin/pytest "${_TARGET}" -q > /tmp/t55-pytest.log 2>&1 || {
-    echo "✗ ${_TARGET} ist rot — Isolation nicht beurteilbar" >&2
-    tail -20 /tmp/t55-pytest.log >&2
-    exit 2
+runCheck() {
+    cd "${PROJECT_ROOT}" || return 2
+    local _OUT _BEFORE _AFTER _MTIME _MTIME_AFTER
+    _BEFORE="$(state)"; _MTIME="$(stat -f%Fm data)"
+    if ! _OUT="$(.venv/bin/pytest "${TARGET}" -q 2>&1)"; then
+        echo -e "  ${RED}✗${NC} ${TARGET} ist rot — Isolation nicht beurteilbar"
+        echo "${_OUT}" | tail -20 >&2; return 2
+    fi
+    _AFTER="$(state)"; _MTIME_AFTER="$(stat -f%Fm data)"
+    if [[ "${_BEFORE}" == "${_AFTER}" && "${_MTIME}" == "${_MTIME_AFTER}" ]]; then
+        echo -e "  ${GREEN}✓${NC} ${TARGET} laesst ${DB} unberuehrt (mtime ${_MTIME_AFTER})"
+        return 0
+    fi
+    echo -e "  ${RED}✗${NC} ${TARGET} hat ${DB} angefasst"
+    echo -e "      data/ mtime ${_MTIME} → ${_MTIME_AFTER}"
+    diff <(echo "${_BEFORE}") <(echo "${_AFTER}") >&2
+    return 1
 }
 
-readonly _AFTER="$(state)"
-readonly _DIR_AFTER="$(stat -f%m data)"
-
-if [[ "${_BEFORE}" == "${_AFTER}" && "${_DIR_BEFORE}" == "${_DIR_AFTER}" ]]; then
-    echo "✓ ${_TARGET} laesst die Betriebsdatenbank unberuehrt"
-    echo "  data/ mtime ${_DIR_AFTER} unveraendert"
-    echo "${_AFTER}"
-else
-    echo "✗ ${_TARGET} hat die Betriebsdatenbank angefasst:" >&2
-    if [[ "${_DIR_BEFORE}" != "${_DIR_AFTER}" ]]; then
-        echo "  data/ mtime ${_DIR_BEFORE} → ${_DIR_AFTER}" >&2
-        echo "  (WAL/SHM angelegt und beim Schliessen wieder abgeraeumt)" >&2
-    fi
-    diff <(echo "${_BEFORE}") <(echo "${_AFTER}") >&2 || true
-    exit 1
-fi
+RUN=false
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -r|--run)  RUN=true ;;
+        -h|--help) usage; exit 0 ;;
+        *)         echo "Unbekannte Option: $1"; usage; exit 1 ;;
+    esac
+    shift
+done
+[[ "${RUN}" == true ]] || { usage; exit 0; }
+runCheck
+exit $?
