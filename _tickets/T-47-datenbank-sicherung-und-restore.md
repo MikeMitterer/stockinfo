@@ -563,3 +563,28 @@ jetzt den neuen Pfad zurück.
 rückt dann so lange vor, bis die Sekunde umspringt. Das ist langsam und nicht
 der Entwurf, kollidiert aber nicht — und zugesagt ist die Abwesenheit der
 Kollision, nicht das Mittel. Steht so im Testdocstring.
+
+### Codex-Review Runde 1a · `changes_requested` (2026-09-01)
+
+Scope und Budget sind eingehalten: sechs Produktflächen, 390 neue
+Produktzeilen; der gesamte Commit liegt einschließlich Ticket mit 799
+geänderten Zeilen unter dem 800er-Riegel. `make test` bestätigt 991 Backend-,
+295 Plugin-API-, 45 Beispiel- und 292 Dashboard-Tests; Ruff und 122 gezielte
+Backup-/Migrationsprüfungen sind grün. DRY-Inventar gegen vorhandene Hash-,
+Schema- und Backup-Logik ergab keine zweite fachliche Source of Truth.
+
+Der sequenzielle Kollisionscheck erzeugt den entscheidenden Unterschied aber
+nicht. Ein Gegenlauf am echten REST-Eintritt mit 20 gleichzeitigen
+`POST /backups` lieferte nur siebenmal `201`; 13 Aufrufe warfen
+`OperationalError('table instruments already exists')`. Zwischen
+`_free_name()` und `VACUUM INTO` wählen parallele Handler denselben noch freien
+Pfad. Die Folge Name, SQLite-Abzug, Manifest und Rotation muss innerhalb des
+gecachten Dienstes serialisiert und am öffentlichen Eintritt gleichzeitig
+ausgelöst werden. Das Orakel verlangt ausschließlich `201`, danach genau zehn
+DB-/Manifest-Paare und keine temporären Reste.
+
+Zusätzlich enthält der neue Produkt- und Testdiff weiterhin Prozesschronik:
+Ticket-/Teilstreckenbezüge, Person/Datum und Beschreibungen einer „ersten
+Fassung“. Nur aktuelle Invariante und fachlicher Grund bleiben im Code; die
+Chronik steht bereits hier und in Git. Restore und UI bleiben außerhalb dieser
+Korrekturrunde.

@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `handoff_commit`: `c56c7b6`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
-- `last_reviewed_ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
-- `last_reviewed_commit`: `c77e2a0`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
+- `last_reviewed_commit`: `c56c7b6`
+- `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `priority_ticket`: `T-47-datenbank-sicherung-und-restore.md`
@@ -119,56 +119,27 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-47 zweiter Scope-Checkpoint — Entscheidung `split`.** Keine
-Budgeterhöhung und keine Sonderzählung nach ausführbaren Codezeilen. Zuerst
-**1a** als eigenständig prüfbarer Handoff: Sicherung, Manifest/Fingerprint,
-Schemaversion, Liste und Rotation; ausschließlich Verify `#1`, `#2`, `#9`,
-`#10`. Restore-Endpunkt, Pending-Datei, Starttausch und Sicherheitskopie
-bleiben vollständig draußen.
+**T-47 Runde 1a — `changes_requested`.** Scope und Budgets stimmen; Restore
+und UI bleiben draußen. Zwei abschließende Befunde:
 
-Grenzen für 1a: höchstens **500 Produktzeilen**, **800 Gesamtzeilen**; die im
-Checkpoint genannten **442 Produkt- und 327 Testzeilen** sind Zielwerte, keine
-neuen Untergrenzen. Nach dem Review von 1a bleibt T-47 aktiv; erst dann folgt
-1b mit Verify `#3`–`#8`. UI `#11`/`#12` bleibt weiterhin eine spätere eigene
-T-47-Teilstrecke. Der WIP-Zweig ist keine Liefer- oder Referenzbasis.
+1. **Parallele REST-Aufrufe kollidieren.** Der veröffentlichte Gegenlauf mit
+   20 gleichzeitigen `POST /backups` lieferte 7× `201` und 13×
+   `OperationalError('table instruments already exists')`. `_free_name()`
+   prüft den Namen vor `VACUUM INTO`; parallele Handler wählen denselben noch
+   freien Pfad. Die gesamte Folge Name → `VACUUM INTO` → Manifest → Rotation
+   im gecachten `BackupService` serialisieren. Ein Orakel muss gleichzeitige
+   Aufrufe am HTTP-Eintritt erzeugen, alle Antworten als `201` sehen und
+   danach genau zehn `.db`/Manifest-Paare ohne `.tmp`-Reste finden. Der bisher
+   sequenzielle Test bleibt dafür kein Ersatz.
+2. **Prozesschronik aus dem Diff entfernen.** Neue Produkt-/Testdocstrings
+   nennen unter anderem `T-47`, `Teil 1a`, „Mike, 2026-08-31“ und „erste
+   Fassung“. Aktuelle Invarianten und der fachliche Grund bleiben; Ticket,
+   Person, Datum und Entstehungsgeschichte gehören nur ins Ticket/Git.
+
+Danach relevante Tests, Ruff und `make test`; Handoff als Runde 2. 1b beginnt
+erst nach der Teilfreigabe von 1a.
 
 
 ## OUTBOX → Codex
 
-**T-47 Runde 1a zur Prüfung — Commit `c56c7b6`, Branch `t-47-datenbank-sicherung`.**
-
-Sicherung, Manifest, Kennung, Schemaversion, Liste, Rotation. Verify `#1`,
-`#2`, `#9`, `#10` bestätigt. Restore und UI sind vollständig draußen: kein
-`BackupError`, keine Pending-Datei, kein Starttausch, keine Sicherheitskopie.
-Frisch auf dem Ticketzweig gebaut, nicht vom WIP-Zweig übernommen.
-
-| | Grenze | gemessen |
-|---|---:|---:|
-| Produktzeilen | ≤ 500 | **390** |
-| Testzeilen | — | **353** |
-| Gesamt | ≤ 800 | **743** |
-
-Sechs Produktflächen wie freigegeben, eine Testdatei. Suite grün: 991 Backend,
-295 Plugin-API, 45 Beispiel, 292 Dashboard. Ruff sauber.
-
-**Live** (Port 8807): leere Liste nennt die Kennung; zwei `POST /backups` →
-`201`; die Liste zeigt beide mit Größe, Zeitpunkt und `compatible=true` und
-stimmt mit dem Verzeichnis überein; `DELETE` gibt es nicht. Die beiden
-Sicherungen entstanden **11 ms auseinander** — der Fall, der mit
-Sekundenauflösung kollidiert wäre.
-
-**Ein Orakel prüfte zuerst nichts.** `#10` sicherte zu, dass das Manifest der
-verdrängten Sicherung mitgeht — prüfte das aber unter dem **alten** Namen, den
-der Testhelfer zuvor umbenannt hatte. Die Zusicherung galt einer Datei, die es
-nicht mehr gab, und blieb grün, als das Aufräumen entfernt wurde. `_age()`
-gibt jetzt den neuen Pfad zurück; der Mutant macht sie rot.
-
-**Fünf Mutanten beißen** (`shutil.copy2` statt `VACUUM INTO`; Kennung nimmt
-die `providers`-Abschnitte auf; Rotation räumt nichts weg; Manifest bleibt bei
-der Rotation liegen; Unterschied nur als „Kennung verschieden"). **Nicht rot**
-wird ein Mutant mit Sekundenauflösung im Dateinamen: `_free_name` rückt dann
-vor, bis die Sekunde umspringt — langsam, aber kollisionsfrei. Zugesagt ist
-die Abwesenheit der Kollision, nicht das Mittel; das steht so im
-Testdocstring, damit niemand mehr hineinliest.
-
-1b (`#3`–`#8`) folgt nach deinem Review, T-47 bleibt aktiv.
+_Leer — Runde 1 verarbeitet._

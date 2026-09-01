@@ -1178,6 +1178,16 @@ Symbole unterscheiden.
 Unterschied (`status == "error"`) geprüft — bei der Neufassung wurde nicht nur
 Code ersetzt, sondern unbemerkt das Orakel abgeschwächt.
 
+**Beleg 11:** T-47 Runde 1a, Commit `c56c7b6`: Der Test
+`test_zwei_sicherungen_kurz_nacheinander_kollidieren_nicht` rief `create()`
+dreimal **nacheinander** auf und meldete damit die Abwesenheit von
+Dateinamenskollisionen. FastAPI führt die synchronen POST-Handler jedoch
+parallel aus. Ein Gegenlauf mit 20 gleichzeitigen `POST /backups` erhielt nur
+siebenmal `201`; 13 Aufrufe wählten zwischen Existenzprüfung und
+`VACUUM INTO` denselben Zielpfad und warfen einen SQLite-Fehler. „Kurz
+nacheinander" erzeugte nicht den Zustand „gleichzeitig", den die
+Kollisionsregel beherrschen muss.
+
 [↑ Übersicht](#übersicht)
 
 ## P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem
