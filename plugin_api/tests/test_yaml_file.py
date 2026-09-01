@@ -493,69 +493,68 @@ def test_leerraum_am_rand_wird_abgewiesen_und_nie_ausgeliefert(
 # ─── Die Datei wirkt ohne Neustart ────────────────────────────────────────────
 
 
-def _kopie(tmp_path: Path) -> Path:
+def _copy(tmp_path: Path) -> Path:
     """Die Prüfdatei an einem Ort, den ein Test verändern darf."""
-    ziel = tmp_path / "assets.yaml"
-    ziel.write_text(FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
-    return ziel
+    target = tmp_path / "assets.yaml"
+    target.write_text(FIXTURE.read_text(encoding="utf-8"), encoding="utf-8")
+    return target
 
 
-def _preis(source: YamlFileSource, isin: str = _ETF) -> float | None:
+def _price(source: YamlFileSource, isin: str = _ETF) -> float | None:
     answer = source.fetch_quote(QuoteRequest(identity=IsinOnlyIdentity(isin=isin)))
     return getattr(answer, "price", None)
 
 
 def test_ein_geaenderter_preis_wirkt_ohne_neue_instanz(tmp_path: Path) -> None:
-    """**Der Kern des Tickets.** Wer die Datei pflegt, will seinen Wert sehen.
+    """Wer die Datei pflegt, sieht seinen Wert — ohne den Prozess anzuhalten."""
+    path = _copy(tmp_path)
+    source = YamlFileSource({"path": str(path)})
+    before = _price(source)
 
-    Bis hierher las die Quelle die Datei einmal im Konstruktor; ein laufender
-    Prozess hielt damit eine Momentaufnahme, und die Datei war für ihn danach
-    ohne Bedeutung.
-    """
-    datei = _kopie(tmp_path)
-    source = YamlFileSource({"path": str(datei)})
-    vorher = _preis(source)
-
-    datei.write_text(
-        datei.read_text(encoding="utf-8").replace("value: 128.21", "value: 131.77"),
+    path.write_text(
+        path.read_text(encoding="utf-8").replace("value: 128.21", "value: 131.77"),
         encoding="utf-8",
     )
 
-    assert vorher == 128.21
-    assert _preis(source) == 131.77, "dieselbe Instanz liest die Änderung nicht"
+    assert before == 128.21
+    assert _price(source) == 131.77, "dieselbe Instanz liest die Änderung nicht"
 
 
 def test_eine_unveraenderte_datei_wird_nicht_neu_gelesen(tmp_path: Path) -> None:
     """Die Signatur ist der Grund, warum das Nachladen billig bleibt.
 
-    Ohne sie entstünde bei **jeder** Anfrage ein neuer Katalog — gemessen 1,7 ms
-    bei fünf Papieren und 352 ms bei tausend, und das je Rolle.
+    Ohne sie entstünde bei **jeder** Anfrage ein neuer Katalog — je Rolle, und
+    linear zur Dateigröße.
     """
-    source = YamlFileSource({"path": str(_kopie(tmp_path))})
-    _preis(source)
-    katalog = source._loaded
+    source = YamlFileSource({"path": str(_copy(tmp_path))})
+    _price(source)
+    catalogue = source._loaded
 
     for _ in range(5):
-        _preis(source)
+        _price(source)
 
-    assert source._loaded is katalog, "der Katalog wurde ohne Anlass neu gebaut"
+    assert source._loaded is catalogue, "der Katalog wurde ohne Anlass neu gebaut"
 
 
-def test_eine_kaputte_datei_nimmt_der_quelle_nicht_ihren_bestand(tmp_path: Path) -> None:
-    """**Kein halber Katalog.** Der neue entsteht vollständig, bevor er gilt.
+def test_eine_kaputte_datei_schaltet_die_quelle_ab_statt_alt_zu_antworten(
+    tmp_path: Path,
+) -> None:
+    """**Kein halber Katalog — und kein alter Wert als aktueller.**
 
     Wer eine große Datei bearbeitet, speichert zwischendurch einen ungültigen
-    Stand. Fiele die Quelle darauf herein, verlöre sie ihren Bestand mitten im
-    Betrieb — und der Betreiber sähe leere Listen, während seine Datei nur halb
-    fertig war.
+    Stand. Auf ihn hereinzufallen hieße, mitten im Betrieb einen halben
+    Bestand zu führen; den letzten gültigen weiter als aktuellen auszugeben
+    wäre die gefährlichere Antwort — er sähe richtig aus, und niemand hätte
+    einen Anlass nachzusehen.
     """
-    datei = _kopie(tmp_path)
-    source = YamlFileSource({"path": str(datei)})
-    assert _preis(source) == 128.21
+    path = _copy(tmp_path)
+    source = YamlFileSource({"path": str(path)})
+    assert _price(source) == 128.21
 
-    datei.write_text("instruments:\n  - kaputt: [\n", encoding="utf-8")
+    path.write_text("instruments:\n  - kaputt: [\n", encoding="utf-8")
 
-    assert _preis(source) == 128.21, "die Quelle fiel auf einen halben Katalog zurück"
+    answer = source.fetch_quote(QuoteRequest(identity=IsinOnlyIdentity(isin=_ETF)))
+    assert type(answer).__name__ == "Unavailable", answer
     assert source.configuration_problem(), "die Störung wird verschwiegen"
 
 
@@ -563,18 +562,18 @@ def test_dieselbe_instanz_erholt_sich_nach_der_naechsten_gueltigen_fassung(
     tmp_path: Path,
 ) -> None:
     """Sonst müsste der Betreiber neu starten — genau das schließt das Ticket aus."""
-    datei = _kopie(tmp_path)
-    source = YamlFileSource({"path": str(datei)})
-    _preis(source)
-    datei.write_text("instruments:\n  - kaputt: [\n", encoding="utf-8")
+    path = _copy(tmp_path)
+    source = YamlFileSource({"path": str(path)})
+    _price(source)
+    path.write_text("instruments:\n  - kaputt: [\n", encoding="utf-8")
     assert source.configuration_problem()
 
-    datei.write_text(
+    path.write_text(
         FIXTURE.read_text(encoding="utf-8").replace("value: 128.21", "value: 142.05"),
         encoding="utf-8",
     )
 
-    assert _preis(source) == 142.05
+    assert _price(source) == 142.05
     assert source.configuration_problem() == "", "die Störung blieb stehen"
 
 

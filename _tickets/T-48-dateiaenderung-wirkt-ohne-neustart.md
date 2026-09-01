@@ -119,9 +119,9 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 | **1** | reines YAML-Profil, Preis in der Datei ändern | die Änderung ist **ohne Neustart** sichtbar | ✅ | |
 | **2** | dasselbe, `as_of` unverändert | der korrigierte Wert kommt an — nicht nur bei neuem Zeitstempel | ✅ | |
 | **3** | Online-Profil mit `yaml-file` als letztem Glied | dieselbe Zusage; die Datei ist dort dieselbe Quelle | ✅ | |
-| **4** | Datei kaputt gemacht, während der Dienst läuft | der Dienst bleibt stehen und meldet den Grund; er fällt nicht auf einen halben Katalog zurück | ◑ | |
+| **4** | Datei kaputt gemacht, während der Dienst läuft | der Dienst bleibt stehen und meldet den Grund; er fällt nicht auf einen halben Katalog zurück | ✅ | |
 | **5** | Datei unverändert, viele Anfragen | die Antwortzeit bleibt brauchbar — gemessen, nicht geschätzt | ✅ | |
-| **6** | `POST /refresh` nach Preiskorrektur bei gleichem `as_of` | `refreshed` zählt die erfolgreiche Korrektur, und die Liste enthält den neuen Wert | ⚠️ | |
+| **6** | `POST /refresh` nach Preiskorrektur bei gleichem `as_of` | `refreshed` zählt die erfolgreiche Korrektur, und die Liste enthält den neuen Wert | ✅ | |
 | **7** | Online-Profil, TTL | die Cache-TTL gilt dort **unverändert** — kein Abruf mehr als vorher | ✅ | |
 | **8** | Online-Profil, Provider-Aufrufe | gezählt vor und nach der Änderung: dieselbe Zahl | ✅ | |
 
@@ -413,3 +413,54 @@ UI, kein neues Modell/Schema, keine Route, keine Registry-Neukonstruktion,
 keine History-/Metadaten-/FX-Ausweitung und kein weiterer Test-Plugin-Typ. Die
 finale OUTBOX ordnet `#1`–`#8` je einem konkreten automatischen oder live
 gemessenen Orakel zu.
+
+### Runde 2 · die vier Reste (Claude, 2026-09-01)
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 240 | **237** |
+| Gesamt | ≤ 650 | **608** |
+
+**1 · `#4` ist eingelöst, und der Befund war doppelt.** Während einer Störung
+liefert `_catalogue` nichts mehr: Der letzte gültige Katalog bleibt intern für
+den atomaren Tausch, wird aber nicht als aktueller Stand ausgegeben. `/sources`
+fragt das **bereits gebaute** Objekt bei jedem Aufruf nach seinem Grund —
+gebaut wird nichts — und nimmt die Meldung zurück, sobald die Datei wieder
+trägt. Der Protokolleintrag fehlte tatsächlich: Mein Edit dafür war in einem
+abgebrochenen Aufruf verlorengegangen, und ich hatte nur den Testteil
+wiederholt.
+
+Dabei kam ein zweiter Zusammenhang heraus: Eine gestörte Quelle sagt über
+`handles()` „kenne ich nicht" — die Kaskade hielt das Papier daraufhin für
+zwischenspeicherbar und gab den gespeicherten Wert **als aktuellen** aus. Eine
+gestörte Quelle zählt jetzt, als käme sie infrage; sie weiß gerade selbst
+nicht, ob sie das Papier führt.
+
+**2 · `#6` hat jetzt sein Orakel** über `POST /refresh` und die Bestandsliste,
+nicht nur über das Repository.
+
+**3 · Chronik** aus Produkt- und Testprosa entfernt, am Diff gegengeprüft.
+**4 · Bezeichner** englisch (`_copy`, `_price`, `_own_file`, `_rewrite`,
+`before`, `after`, `moment`, `catalogue`, `path`); deutsche Testnamen bleiben.
+
+#### Die acht Zeilen und ihre Orakel
+
+| # | Orakel |
+|---|---|
+| `#1` | `test_eine_geaenderte_datei_wirkt_ohne_neustart` (HTTP) · live: 142,50 → 143,75 bei TTL 6 h |
+| `#2` | derselbe Test — geändert wird **nur** `value`, `as_of` bleibt |
+| `#3` | `test_die_online_kette_zaehlt_nicht_mehr_aufrufe_als_vorher` — `yaml-file` als letztes Glied bedient den Fonds |
+| `#4` | `test_eine_kaputte_datei_meldet_sich_und_liefert_keinen_alten_wert` (HTTP) + `test_eine_kaputte_datei_schaltet_die_quelle_ab_statt_alt_zu_antworten` (Plugin) |
+| `#5` | `test_eine_unveraenderte_datei_wird_nicht_neu_gelesen` — derselbe Katalog über fünf Anfragen; gemessen `stat()` 0,0009 ms gegen 1,7–352 ms Aufbau |
+| `#6` | `test_refresh_zaehlt_die_korrektur_und_die_liste_zeigt_sie` (HTTP) |
+| `#7` | `test_ein_online_bedientes_papier_behaelt_seine_frist` — zwei Abfragen, ein Aufruf |
+| `#8` | `test_die_online_kette_zaehlt_nicht_mehr_aufrufe_als_vorher` — gezählte Aufrufe, auch für ein Papier, das Online **und** Datei führen |
+
+#### Mutantenprobe
+
+| Mutant | rot |
+|---|---|
+| ohne Reload | `#1`, `#4`, `#6` und die Erholung |
+| gestörte Datei antwortet mit dem alten Wert | `#4`, HTTP **und** Plugin |
+| `/sources` fragt nicht live | `#4` |
+| ohne Upsert | `#2`/`#6` und der lokale Cache-Bypass |

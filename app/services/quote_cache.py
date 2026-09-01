@@ -809,11 +809,9 @@ class CachedQuoteService:
         latest = (
             self._repository.get_latest_quote(instrument["id"]) if instrument else None
         )
-        # **Eine lokale Quelle kennt keine Frist.** Die TTL schont ein
-        # Kontingent; wo es keines gibt, verzögert sie nur, was der Betreiber
-        # gerade in seine Datei geschrieben hat. Gefragt wird **je Papier**:
+        # **Eine lokale Quelle kennt keine Frist.** Gefragt wird **je Papier**:
         # Steht die Dateiquelle hinter einer Online-Quelle, bleibt ein von der
-        # vorderen bedienter Wert ganz normal zwischengespeichert.
+        # vorderen bedienter Wert zwischengespeichert.
         asks = getattr(self._quote_service, "cacheable_for", None)
         cached_allowed = True if asks is None or not instrument else asks(instrument)
         if (

@@ -91,10 +91,9 @@ class QuoteUnavailableError(Exception):
 
 
 def _as_resolved(row: object) -> ResolvedInstrument:
-    """Eine gespeicherte Zeile als aufgelöstes Papier — nur für die Cachefrage.
+    """Eine gespeicherte Zeile als aufgelöstes Papier — für die Cachefrage.
 
-    Sie braucht Identität und Gattung, sonst nichts; Kurs und Metadaten stehen
-    an dieser Stelle nicht zur Debatte.
+    Sie braucht Identität und Gattung, sonst nichts.
     """
     get = row.get if isinstance(row, dict) else lambda key, default=None: getattr(row, key, default)
     return ResolvedInstrument(
@@ -355,10 +354,8 @@ class QuoteService:
     def cacheable_for(self, row: object) -> bool:
         """Darf ein Kurs zu diesem Papier zwischengespeichert werden?
 
-        Die Frage geht an die Kette, nicht an eine Einstellung: Sie kennt die
-        Quellen und weiß, welche für dieses Papier zuerst infrage kommt. Eine
-        Kette ohne diese Auskunft gilt als zwischenspeicherbar — wer nichts
-        erklärt, hat nichts geändert.
+        Die Frage geht an die Kette: Sie weiß, welche Quelle für dieses Papier
+        zuerst infrage kommt. Ohne diese Auskunft gilt zwischenspeicherbar.
 
         Args:
             row: Eine Instrumentenzeile mit den Identitätsspalten.

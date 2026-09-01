@@ -27,6 +27,7 @@ from app.plugin_adapters import (
     MetadataAdapter,
     QuoteAdapter,
     ResolverAdapter,
+    unwrap,
 )
 from app.plugin_guard import GuardedSource
 from app.plugins.justetf_metadata import JustEtfMetadataPlugin
@@ -172,7 +173,9 @@ nicht" die einzige ehrliche Antwort.
 _LAST_REASON: dict[str, str] = {}
 """Der zuletzt gemeldete Grund je Quelle — damit `/sources` ihn nennen kann."""
 
-_CHAINS: dict[str, tuple[object, list[object], list["ChainEntry"]]] = {}
+_CHAINS: dict[
+    str, tuple[object, list[object], list["ChainEntry"], list[tuple["ChainEntry", object | None]]]
+] = {}
 """Je Rolle **eine** Kette: die Konfiguration, die Objekte, ihre Beschreibung.
 
 Bis Runde 4 baute jeder Aufruf neu. Das reale Composition-Root fragt `daily`
@@ -303,7 +306,7 @@ def close_all() -> None:
     # stehen; sie zweimal zu schließen wäre für ein Plugin, das eine Datei
     # schließt, ein Fehler zweiter Ordnung.
     seen: set[int] = set()
-    for role, (_, sources, _entries) in _CHAINS.items():
+    for role, (_, sources, _entries, _pairs) in _CHAINS.items():
         for source in sources:
             if id(source) in seen:
                 continue
@@ -343,7 +346,13 @@ def describe_chain(role: str, config, settings=None) -> list[ChainEntry]:
     if cached is not None and cached[0] is config:
         # Die laufende Kette. Neu zu bauen hieße, einen **anderen** Zustand zu
         # zeigen als den, der gerade arbeitet.
-        return cached[2]
+        #
+        # **Der Grund wird jedes Mal neu erfragt, das Objekt aber nicht neu
+        # gebaut.** Eine Quelle kann zur Laufzeit ausfallen — eine Datei wird
+        # unlesbar, ein Kontingent läuft ab. Ein Schnappschuss vom Bau meldete
+        # dann „einsatzbereit", während der Betreiber gerade vor leeren Listen
+        # sitzt und den Fehler bei der App sucht.
+        return [_with_live_reason(entry, source) for entry, source in cached[3]]
 
     # **Ein reiner Lesezugriff baut nichts** — und sagt das auch.
     #
@@ -472,7 +481,7 @@ def build_chain(role: str, config, settings) -> list[object]:
     # interessiert. Der Fall, für den er die Auskunft aufruft, wäre der
     # einzige, in dem sie ihn anlügt.
     entries = [entry for entry, _ in evaluated]
-    _CHAINS[role] = (config, [], entries)
+    _CHAINS[role] = (config, [], entries, evaluated)
 
     built: list[object] = []
     for entry, source in evaluated:
@@ -487,7 +496,7 @@ def build_chain(role: str, config, settings) -> list[object]:
             continue
         built.append(source)
 
-    _CHAINS[role] = (config, built, entries)
+    _CHAINS[role] = (config, built, entries, evaluated)
     return built
 
 
@@ -559,6 +568,35 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | 
     # zur zweiten Wahrheit, die beim nächsten Umbau niemand mitpflegt.
     adapter = ROLE_ADAPTERS[role]
     return adapter(source, settings.default_exchange)
+
+
+def _with_live_reason(entry: "ChainEntry", source: object | None) -> "ChainEntry":
+    """Derselbe Eintrag, aber mit dem Grund von **jetzt**.
+
+    Gefragt wird das gebaute Objekt; gebaut wird nichts. Schweigt es wieder,
+    ist die Quelle erneut einsatzbereit — ohne Neustart.
+    """
+    if source is None or not entry.known or not entry.role_ok:
+        return entry
+    problem = _diagnosis_of(source)
+    if not problem:
+        return entry
+    return replace(entry, configured=False, reason=problem)
+
+
+def _diagnosis_of(source: object) -> str:
+    """Was die Quelle **jetzt** über ihre Arbeitsfähigkeit sagt.
+
+    Gefragt wird die Quelle unter Adapter und Kapsel: Die Auskunft gehört ihr,
+    nicht der Übersetzungsschicht darüber.
+    """
+    ask = getattr(unwrap(source), "configuration_problem", None)
+    if not callable(ask):
+        return ""
+    try:
+        return str(ask() or "")
+    except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
+        return f"configuration_problem() wirft: {type(error).__name__}: {error}"
 
 
 def _diagnosis(spec: SourceSpec, source: object) -> str:

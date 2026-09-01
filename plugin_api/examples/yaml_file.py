@@ -56,6 +56,7 @@ Instanz, die nur aus dieser Datei lebt, und `assets-fallback.yaml` für die
 Datei hinter einer Online-Kette.
 """
 
+import logging
 from datetime import date, datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -98,6 +99,11 @@ from stockinfo_plugin import (
     Unit,
     isin_of,
 )
+
+logger = logging.getLogger(__name__)
+"""Die Standardbibliothek, nicht das Protokoll des Hosts: Ein Beispiel-Plugin
+soll seinen Grund nennen können, ohne sich an eine fremde Bibliothek zu binden."""
+
 
 
 class FileProblem(Exception):
@@ -707,11 +713,8 @@ class YamlFileSource(
     )
 
     cacheable = False
-    """Eine gepflegte Datei kostet nichts und soll sofort wirken.
-
-    Ein Zwischenspeicher schützte hier kein Kontingent; er verzögerte nur, was
-    der Betreiber gerade geändert hat.
-    """
+    """Eine gepflegte Datei kostet nichts und soll sofort wirken — ein
+    Zwischenspeicher schützte hier kein Kontingent."""
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
@@ -729,34 +732,35 @@ class YamlFileSource(
 
     @property
     def _catalogue(self) -> "_Catalogue | None":
-        """Der Katalog — **nachgeladen, falls sich die Datei geändert hat**.
+        """Der Katalog — nachgeladen, falls sich die Datei geändert hat.
 
         Eine Eigenschaft und keine sieben Aufrufe: Jede der fünf Rollen liest
         hierüber, und eine Regel, die an sieben Stellen wiederholt wird, fehlt
         beim achten Eintrittspunkt.
+
+        **Während einer Störung liefert sie nichts.** Der letzte gültige
+        Katalog bleibt für den atomaren Tausch erhalten, aber ihn als aktuellen
+        Wert auszugeben hieße, einen Stand zu behaupten, den die Datei gerade
+        nicht trägt — und der Betreiber hätte keinen Anlass nachzusehen.
         """
         self._reload()
-        return self._loaded
+        return None if self._problem else self._loaded
 
     def _reload(self) -> None:
         """Liest die Datei neu, **wenn sie sich geändert hat**.
 
-        Die Signatur ist `st_mtime_ns` und Größe: Ein `stat()` kostet
-        Bruchteile einer Mikrosekunde, ein Katalogaufbau je nach Dateigröße
-        Millisekunden bis Sekunden. Bei jeder Anfrage neu zu lesen wäre
-        derselbe Nutzen zu tausendfachem Preis.
+        Die Signatur ist `st_mtime_ns` und Größe: Ein `stat()` kostet Bruchteile
+        einer Mikrosekunde, ein Katalogaufbau Millisekunden bis Sekunden.
 
         **Der Tausch ist atomar.** Der neue Katalog entsteht vollständig in
-        einer lokalen Variablen; erst wenn er gültig ist, ersetzt er den
-        alten. Eine halb geschriebene Datei nimmt der Quelle damit nicht ihren
-        bisherigen Bestand — sie meldet eine Störung und arbeitet weiter mit
-        dem, was zuletzt gültig war. Nach der nächsten gültigen Fassung
-        erholt sich dieselbe Instanz.
+        einer lokalen Variablen; erst wenn er gültig ist, ersetzt er den alten.
+        Nach der nächsten gültigen Fassung erholt sich dieselbe Instanz.
         """
         try:
             info = self._path.stat()
         except OSError as error:
             self._problem = f"{self._path} nicht lesbar: {error}"
+            logger.warning("yaml-file: %s", self._problem)
             return
         signature = (info.st_mtime_ns, info.st_size)
         if signature == self._signature and self._loaded is not None:
@@ -764,8 +768,16 @@ class YamlFileSource(
         try:
             fresh = _Catalogue(self._path)
         except FileProblem as error:
+            # Der Grund gehört ins Protokoll, nicht nur ins Feld: Eine Quelle,
+            # die stumm ausfällt, ließe den Betreiber rätseln.
+            #
+            # Die Signatur wird trotzdem vermerkt — sonst versuchte jede
+            # Anfrage denselben aussichtslosen Aufbau erneut. Die Erholung
+            # blockiert das nicht: Die nächste gültige Fassung trägt eine
+            # andere Signatur.
             self._problem = str(error)
             self._signature = signature
+            logger.warning("yaml-file: %s", self._problem)
             return
         self._loaded = fresh
         self._signature = signature

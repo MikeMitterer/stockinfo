@@ -1055,8 +1055,7 @@ class OnlineQuoteService(FakeQuoteService):
 
 
 def test_ein_lokal_bedientes_papier_umgeht_die_frist(repo: QuoteRepository) -> None:
-    """**Mikes Fall.** Wer die Datei ändert, will den Wert sehen — nicht in sechs
-    Stunden.
+    """Wer die Datei ändert, will den Wert sehen — nicht in sechs Stunden.
 
     Die TTL schont ein Kontingent. Wo es keines gibt, verzögert sie nur, was der
     Betreiber gerade geschrieben hat.
@@ -1074,7 +1073,7 @@ def test_ein_lokal_bedientes_papier_umgeht_die_frist(repo: QuoteRepository) -> N
 
 
 def test_ein_online_bedientes_papier_behaelt_seine_frist(repo: QuoteRepository) -> None:
-    """**Die Gegenprobe zu Mikes Warnung.** Die Online-Kette merkt nichts.
+    """**Die Gegenprobe.** Die Online-Kette behält ihre Frist.
 
     Ohne sie wäre der Fall darüber auch dann grün, wenn die Frist für **alle**
     fiele — und dann fragte jede Seitenansicht das Netz neu, bis es in sein
@@ -1110,16 +1109,16 @@ def test_ein_dienst_ohne_die_auskunft_verhaelt_sich_unveraendert(
 def test_ein_korrigierter_preis_zum_selben_zeitpunkt_ersetzt_den_alten(
     repo: QuoteRepository,
 ) -> None:
-    """**Der still verworfene Wert.** `INSERT OR IGNORE` traf die vorhandene Zeile.
+    """Ein korrigierter Preis zum selben Zeitpunkt gewinnt.
 
-    Wer in einer gepflegten Datei nur den Preis korrigiert und den Zeitstempel
-    stehen lässt — der Normalfall —, bekam den alten Wert zurück, während der
-    Refresh Erfolg meldete.
+    Wer in einer gepflegten Datei nur den Preis ändert und den Zeitstempel
+    stehen lässt, trifft die vorhandene Zeile — das ist der Normalfall beim
+    Korrigieren, nicht der Ausnahmefall.
     """
-    zeitpunkt = _now()
-    repo.save_quote(_response(zeitpunkt, price=94500.0))
+    moment = _now()
+    repo.save_quote(_response(moment, price=94500.0))
 
-    repo.save_quote(_response(zeitpunkt, price=94501.0))
+    repo.save_quote(_response(moment, price=94501.0))
 
     instrument = repo.get_instrument_by_isin("IE00B3RBWM25")
     latest = repo.get_latest_quote(instrument["id"])

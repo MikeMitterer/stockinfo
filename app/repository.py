@@ -1019,17 +1019,11 @@ class QuoteRepository:
     ) -> None:
         """Schreibt einen Kurspunkt; ein Wert zum selben Zeitpunkt wird ersetzt.
 
-        **`INSERT OR IGNORE` war hier die falsche Regel.** Sie sollte
-        verhindern, dass zwei Abrufe zur selben Sekunde eine Dublette
-        erzeugen — traf aber auch den Fall, für den sie nie gedacht war: Wer
-        in einer gepflegten Datei **nur den Preis** korrigiert und den
-        Zeitstempel stehen lässt, trifft die vorhandene Zeile. Der neue Wert
-        fiel weg, ohne Protokolleintrag, und der Refresh meldete Erfolg.
-
-        Mit dem Upsert gibt es diesen Fall nicht mehr: Ein beschaffter Wert
-        wird geschrieben, und `refreshed` zählt damit wieder, was wirklich
-        passiert ist. Für zwei gleiche Abrufe ändert sich nichts — dieselben
-        Werte überschreiben sich selbst.
+        **Ein korrigierter Preis darf die vorhandene Zeile gewinnen.** Wer in
+        einer gepflegten Datei nur den Preis ändert und den Zeitstempel stehen
+        lässt, träfe sonst eine Zeile, die den neuen Wert verwirft — ohne
+        Protokolleintrag und mit einer Erfolgsmeldung. Für zwei gleiche Abrufe
+        ändert sich nichts: Dieselben Werte überschreiben sich selbst.
         """
         connection.execute(
             "INSERT INTO quotes "

@@ -921,7 +921,7 @@ def test_die_dateiquelle_deklariert_alle_formen_und_gattungen() -> None:
     )
 
 
-# ─── T-48 · die Datei wirkt ohne Neustart, die Online-Kette merkt nichts ──────
+# ─── Die Datei wirkt ohne Neustart, die Online-Kette merkt nichts ────────────
 
 
 def _tally(volume: Path) -> int:
@@ -930,33 +930,40 @@ def _tally(volume: Path) -> int:
     return int(counter.read_text()) if counter.exists() else 0
 
 
+def _own_file(volume: Path) -> Path:
+    """Eine Kopie der Beispieldatei, die der Test verändern darf."""
+    own = volume / "assets.yaml"
+    own.write_text(SAMPLE.read_text(encoding="utf-8"), encoding="utf-8")
+    return own
+
+
+def _rewrite(path: Path, old: str, new: str) -> None:
+    """Ersetzt einen Wert in der Datei — wie ein Betreiber es täte."""
+    path.write_text(path.read_text(encoding="utf-8").replace(old, new), encoding="utf-8")
+
+
 def test_eine_geaenderte_datei_wirkt_ohne_neustart(volume: Path, client) -> None:
-    """**Der Kern des Tickets, über den öffentlichen Weg.**
+    """Geändert wird **nur der Preis**; `as_of` bleibt stehen.
 
-    Geändert wird **nur der Preis**; `as_of` bleibt stehen. Genau dieser Fall
-    fiel vorher zweimal durch: Das Plugin hielt eine Momentaufnahme, und der
-    Schreibweg verwarf den korrigierten Wert bei gleichem Zeitstempel.
+    Das ist der Normalfall beim Korrigieren — und die Zusage des Tickets: Wer
+    seine Datei pflegt, sieht seinen Wert, ohne den Dienst anzuhalten.
     """
-    eigene = volume / "assets.yaml"
-    eigene.write_text(SAMPLE.read_text(encoding="utf-8"), encoding="utf-8")
-    _profile_with_path(volume, eigene)
+    own = _own_file(volume)
+    _profile_with_path(volume, own)
 
-    vorher = client.get(f"/quote/{_ETF}").json()["price"]
-    eigene.write_text(
-        eigene.read_text(encoding="utf-8").replace("value: 128.21", "value: 131.77"),
-        encoding="utf-8",
-    )
-    nachher = client.get(f"/quote/{_ETF}").json()
+    before = client.get(f"/quote/{_ETF}").json()["price"]
+    _rewrite(own, "value: 128.21", "value: 131.77")
+    after = client.get(f"/quote/{_ETF}").json()
 
-    assert vorher == 128.21
-    assert nachher["price"] == 131.77, "die Änderung erreicht den laufenden Dienst nicht"
-    assert nachher["cached"] is False
+    assert before == 128.21
+    assert after["price"] == 131.77, "die Änderung erreicht den laufenden Dienst nicht"
+    assert after["cached"] is False
 
 
 def test_die_online_kette_zaehlt_nicht_mehr_aufrufe_als_vorher(
     volume: Path, client
 ) -> None:
-    """**Die Gegenprobe zu Mikes Warnung — gezählt, nicht überlegt.**
+    """**Gezählt, nicht überlegt.**
 
     Die Kette führt eine Online-Quelle **vor** der Datei. Das ETF-Papier
     bedienen beide, die Anleihe nur die Datei. Zugesagt ist zweierlei:
@@ -969,19 +976,15 @@ def test_die_online_kette_zaehlt_nicht_mehr_aufrufe_als_vorher(
     gepflegten History, und die getrennten Cacheverträge für Historie,
     Metadaten und Devisen sind ausdrücklich nicht Teil dieses Tickets.
     """
-    eigene = volume / "assets.yaml"
-    eigene.write_text(SAMPLE.read_text(encoding="utf-8"), encoding="utf-8")
-    _profile_with_path(volume, eigene, quotes=["counting-online", "yaml-file"])
+    own = _own_file(volume)
+    _profile_with_path(volume, own, quotes=["counting-online", "yaml-file"])
 
     assert client.get(f"/quote/{_ETF}").json()["price"] == 999.0
     client.get(f"/quote/{_ETF}")
     assert _tally(volume) == 1, "die Online-Quelle wurde trotz frischem Cache erneut gefragt"
 
     client.get(f"/quote/{_FUND}")
-    eigene.write_text(
-        eigene.read_text(encoding="utf-8").replace("value: 142.50", "value: 143.75"),
-        encoding="utf-8",
-    )
+    _rewrite(own, "value: 142.50", "value: 143.75")
 
     assert client.get(f"/quote/{_FUND}").json()["price"] == 143.75
     assert _tally(volume) == 1, "das Datei-Papier hat die Online-Quelle gekostet"
@@ -1002,3 +1005,60 @@ def _profile_with_path(
     lines += ["", "providers:", "  yaml-file:", f"    path: {path}"]
     (volume / "sources.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
     _restart_chains()
+
+
+def test_eine_kaputte_datei_meldet_sich_und_liefert_keinen_alten_wert(
+    volume: Path, client
+) -> None:
+    """**Verify `#4`.** Der Dienst bleibt stehen und sagt, was los ist.
+
+    Einen zuletzt gültigen Wert **unmarkiert** als aktuellen auszugeben wäre die
+    gefährlichere von zwei falschen Antworten: Er sähe richtig aus, und niemand
+    hätte einen Anlass nachzusehen. `/sources` nennt den Grund, ohne dass
+    jemand die Kette neu baut — und nimmt ihn zurück, sobald die Datei wieder
+    trägt.
+    """
+    own = _own_file(volume)
+    _profile_with_path(volume, own)
+    assert client.get(f"/quote/{_ETF}").json()["price"] == 128.21
+
+    own.write_text("instruments:\n  - kaputt: [\n", encoding="utf-8")
+
+    assert client.get("/health").status_code == 200, "der Dienst ist gefallen"
+    # **Der gespeicherte Wert bleibt abrufbar, aber nicht als aktueller.** Ein
+    # Quellenausfall darf einen Bestand nicht in einen Fehler verwandeln; ihn
+    # unmarkiert auszugeben hieße dagegen, einen Stand zu behaupten, den die
+    # Datei gerade nicht trägt.
+    disturbed = client.get(f"/quote/{_ETF}").json()
+    assert disturbed["stale"] is True, disturbed
+    quotes = [e for e in client.get("/sources").json()["sources"] if e["role"] == "quotes"]
+    assert quotes[0]["configured"] is False, "die Störung bleibt unsichtbar"
+    assert quotes[0]["reason"], "der Grund fehlt"
+
+    _rewrite(own, "instruments:\n  - kaputt: [\n", SAMPLE.read_text(encoding="utf-8"))
+
+    assert client.get(f"/quote/{_ETF}").json()["price"] == 128.21
+    healed = [e for e in client.get("/sources").json()["sources"] if e["role"] == "quotes"]
+    assert healed[0]["configured"] is True, "die Quelle erholt sich nicht ohne Neustart"
+
+
+def test_refresh_zaehlt_die_korrektur_und_die_liste_zeigt_sie(
+    volume: Path, client
+) -> None:
+    """**Verify `#6`, über den öffentlichen Weg.**
+
+    `refreshed: 1` bei unverändertem Wert war die schlimmere Hälfte des
+    Befundes: Die App hatte den neuen Preis geholt und beim Schreiben fallen
+    lassen — ohne Protokolleintrag, mit einer Erfolgsmeldung.
+    """
+    own = _own_file(volume)
+    _profile_with_path(volume, own)
+    client.get(f"/quote/{_FUND}")
+
+    _rewrite(own, "value: 142.50", "value: 143.75")
+    refreshed = client.post("/refresh").json()
+
+    assert refreshed["refreshed"] >= 1, refreshed
+    listed = {entry["symbol"]: entry for entry in client.get("/instruments").json()}
+    fund = next(entry for entry in listed.values() if entry["symbol"].startswith("DE0009"))
+    assert fund["latest_price"] == 143.75, "die Liste trägt den alten Wert"

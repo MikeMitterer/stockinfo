@@ -274,16 +274,27 @@ class QuoteAdapter(_Adapter):
     """
 
     def serves(self, instrument: ResolvedInstrument) -> bool:
-        """Käme diese Quelle für dieses Papier überhaupt infrage?
+        """Käme diese Quelle für dieses Papier infrage?
 
         Dieselbe Frage, die `fetch_quote` vor dem Abruf stellt — Form, Gattung
-        und `handles()`. Sie kostet keine Anfrage und kein Kontingent: Alle
-        drei sind Fragen an den Speicher der Quelle.
+        und `handles()`, alle drei ohne Anfrage und ohne Kontingent.
         """
         identity = instrument.identity()
         if identity is None or not self._serves(identity, instrument.type):
             return False
         return bool(self._source.handles(QuoteRequest(identity=identity)))
+
+    def disturbed(self) -> bool:
+        """Meldet die Quelle gerade eine Störung?
+
+        Dann lässt sich nicht sagen, ob sie dieses Papier bedient hätte — ihre
+        Auskunft hängt an dem, was gerade nicht lesbar ist.
+        """
+        ask = getattr(unwrap(self._source), "configuration_problem", None)
+        try:
+            return bool(callable(ask) and ask())
+        except Exception:  # noqa: BLE001 — fremder Code; eine Störung bleibt eine
+            return True
 
     def cacheable_for(self, instrument: ResolvedInstrument) -> bool:
         """Darf eine Antwort zu diesem Papier zwischengespeichert werden?

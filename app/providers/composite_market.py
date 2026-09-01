@@ -101,17 +101,23 @@ class CompositeQuoteProvider(_Chain):
 def _cacheable_chain(providers: tuple, instrument: ResolvedInstrument) -> bool:
     """Darf ein Kurs zu diesem Papier zwischengespeichert werden?
 
-    **Maßgeblich ist die erste Quelle, die für dieses Papier infrage kommt** —
-    nicht die Kette als Ganzes. Eine Dateiquelle hinter einer Online-Quelle
-    macht einen von der vorderen bedienten Wert nicht cachefrei; sonst fragte
-    jede Seitenansicht das Netz neu und liefe in dessen Ratenlimit.
-
-    Quellen ohne die Auskunft gelten als zwischenspeicherbar: Wer nichts
-    erklärt, hat nichts geändert.
+    **Maßgeblich ist die erste Quelle, die dafür infrage kommt** — nicht die
+    Kette als Ganzes. Eine Dateiquelle hinter einer Online-Quelle macht einen
+    von der vorderen bedienten Wert nicht cachefrei; sonst fragte jede
+    Seitenansicht das Netz neu und liefe in dessen Ratenlimit. Quellen ohne
+    die Auskunft gelten als zwischenspeicherbar.
     """
     for provider in providers:
         serves = getattr(provider, "serves", None)
-        if serves is None or not serves(instrument):
+        if serves is None:
+            continue
+        disturbed = getattr(provider, "disturbed", None)
+        # **Eine gestörte Quelle zählt, als käme sie infrage.** Ob sie das
+        # Papier führt, weiß sie gerade selbst nicht — ihre Auskunft hängt an
+        # dem, was nicht lesbar ist. Sie zu überspringen hieße, den
+        # gespeicherten Wert als aktuellen auszugeben, obwohl niemand ihn
+        # bestätigt hat.
+        if not serves(instrument) and not (disturbed is not None and disturbed()):
             continue
         answer = getattr(provider, "cacheable_for", None)
         return True if answer is None else bool(answer(instrument))

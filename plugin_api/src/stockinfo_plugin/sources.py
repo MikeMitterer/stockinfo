@@ -77,18 +77,14 @@ class Source:
     cacheable: bool = True
     """Darf der Host eine Antwort dieser Quelle zwischenspeichern?
 
-    **Die Vorgabe ist ``True``** — jede bestehende Quelle bleibt damit
-    unverändert, und wer nichts erklärt, hat nichts geändert.
+    **Die Vorgabe ist ``True``** — wer nichts erklärt, hat nichts geändert.
+    ``False`` gehört einer Quelle, die **lokal** liest: Ein Zwischenspeicher
+    wäre dort kein Schutz, sondern eine Verzögerung um eine Frist, die für ein
+    Kontingent gedacht war, das es nicht gibt.
 
-    ``False`` gehört einer Quelle, die **lokal** liest: Dort kostet eine
-    Anfrage nichts, und ein Zwischenspeicher wäre kein Schutz, sondern eine
-    Verzögerung — wer seine Datei ändert, sähe die Änderung erst nach Ablauf
-    einer Frist, die für ein Kontingent gedacht war, das es hier nicht gibt.
-
-    **Die Angabe gilt der Quelle, nicht der Kette.** Steht eine Dateiquelle
+    **Die Angabe gilt der Quelle, nicht der Kette:** Steht eine Dateiquelle
     hinter einer Online-Quelle, bleibt ein von der vorderen bedienter Wert
-    ganz normal zwischengespeichert; nur die Papiere, die wirklich aus der
-    Datei kommen, umgehen den Speicher.
+    zwischengespeichert.
     """
 
     cost: Cost = "free"
