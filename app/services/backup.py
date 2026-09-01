@@ -29,6 +29,7 @@ from pathlib import Path
 import structlog
 
 from app.db import SCHEMA_VERSION, get_connection
+from app.models import BackupReason, SourceDifference
 from app.sources_config import ROLES, SourcesConfig
 
 logger = structlog.get_logger()
@@ -49,20 +50,20 @@ Versuch, das Verzeichnis zu verlassen; geprüft wird vor jedem Dateizugriff."""
 
 
 class BackupError(Exception):
-    """Eine Ablehnung des Wiederherstellens — mit ihrer Kennung.
+    """Eine Ablehnung des Wiederherstellens — mit ihrer Ursache.
 
-    Drei Fälle, **eine** Klasse: Sie unterscheiden sich in Kennung und
-    Statuscode, nicht im Verhalten.
+    Die Ursache wird **nicht neu berechnet**, sondern durchgereicht: Sie ist
+    dieselbe, die auch der Listeneintrag trägt.
     """
 
     NOT_FOUND = "backup_not_found"
     INCOMPATIBLE = "backup_incompatible"
     SCHEMA_TOO_NEW = "backup_schema_too_new"
 
-    def __init__(self, code: str, message: str, **params: object) -> None:
+    def __init__(self, code: str, message: str, reason: BackupReason) -> None:
         super().__init__(message)
         self.code = code
-        self.params = params
+        self.reason = reason
 
 
 @dataclass(frozen=True)
@@ -74,7 +75,7 @@ class BackupInfo:
     size: int
     fingerprint: str
     compatible: bool
-    reason: str = ""
+    reason: BackupReason | None = None
 
 
 def fingerprint_of(config: SourcesConfig) -> str:
@@ -266,47 +267,67 @@ class BackupService:
         stamped, version = _read_stamp(path)
         manifest = _read_manifest(path)
         fingerprint = stamped or str(manifest.get("sources_fingerprint", ""))
-        compatible, reason = self._judge(fingerprint, version, stamped, manifest)
+        reason = self._judge(fingerprint, version, stamped, manifest)
         return BackupInfo(
             name=path.name,
             created_at=str(manifest.get("created_at", "")),
             size=path.stat().st_size,
             fingerprint=fingerprint,
-            compatible=compatible,
+            compatible=reason is None,
             reason=reason,
         )
 
     def _judge(
         self, fingerprint: str, version: int, stamped: str | None, manifest: dict
-    ) -> tuple[bool, str]:
-        """Passt die Sicherung zur laufenden Lage — und wenn nicht, warum?
+    ) -> BackupReason | None:
+        """Warum die Sicherung nicht passt — oder ``None``, wenn sie passt.
 
         Das zu neue Schema steht vorn: Eine ältere App kann eine neuere
         Datenbank nicht lesen, und das ist ein anderer Befund als eine
         abweichende Quellenlage.
         """
         if version > SCHEMA_VERSION:
-            return False, f"Schema {version} ist neuer als diese App ({SCHEMA_VERSION})"
+            return BackupReason(
+                code="backup_schema_too_new",
+                params={"version": str(version), "app": str(SCHEMA_VERSION)},
+            )
         declared = manifest.get("sources_fingerprint")
         if stamped and declared and stamped != declared:
-            return False, "Manifest und Datenbank nennen verschiedene Kennungen"
+            return BackupReason(code="backup_fingerprint_mismatch")
         if fingerprint != self.fingerprint:
-            return False, self._difference(manifest)
-        return True, ""
+            return BackupReason(
+                code="backup_sources_differ", differences=self._differences(manifest)
+            )
+        return None
 
-    def _difference(self, manifest: dict) -> str:
-        """Welche Rolle abweicht — im Klartext. „Kennung verschieden" ist wahr
-        und nutzlos; wer die Meldung liest, will wissen, was anders steht."""
+    # Der Rückgabetyp steht in Anführungszeichen: `list` ist in diesem
+    # Klassenkörper von der gleichnamigen Methode verdeckt.
+    def _differences(self, manifest: dict) -> "list[SourceDifference]":
+        """Wo die beiden Lagen auseinandergehen — Rollen **und** Paketpins.
+
+        „Kennung verschieden" ist wahr und nutzlos; wer die Meldung liest, will
+        wissen, was anders steht. Die Paketliste gehört dazu: Sie geht in die
+        Kennung ein, und ohne sie stünde bei gleichen Ketten eine Abweichung
+        ohne Ort da.
+        """
         theirs = manifest.get("sources", {})
-        if not isinstance(theirs, dict) or not theirs:
-            return "andere Quellenlage; das Manifest nennt sie nicht"
-        differences = [
-            f"{role}: dort [{', '.join(theirs.get(role) or ['—'])}], "
-            f"hier [{', '.join(self._config.chain(role) or ['—'])}]"
+        theirs = theirs if isinstance(theirs, dict) else {}
+        found = [
+            SourceDifference(
+                field=role, theirs=list(theirs.get(role) or []), ours=list(self._config.chain(role))
+            )
             for role in ROLES
             if list(theirs.get(role) or []) != list(self._config.chain(role))
         ]
-        return "; ".join(differences) if differences else "andere Paketliste"
+        packages = manifest.get("packages")
+        packages = list(packages) if isinstance(packages, list) else []
+        if sorted(packages) != sorted(self._config.packages):
+            found.append(
+                SourceDifference(
+                    field="packages", theirs=packages, ours=list(self._config.packages)
+                )
+            )
+        return found
 
 
     def request_restore(self, name: str, *, force: bool = False) -> BackupInfo:
@@ -341,20 +362,17 @@ class BackupService:
         path = self.resolve(name)
         info = self._info(path)
         _, version = _read_stamp(path)
-        if version > SCHEMA_VERSION:
+        if version > SCHEMA_VERSION and info.reason is not None:
             raise BackupError(
                 BackupError.SCHEMA_TOO_NEW,
                 f"Sicherung {name} trägt Schema {version}",
-                name=name,
-                schema_version=version,
-                app_schema_version=SCHEMA_VERSION,
+                info.reason,
             )
-        if not info.compatible and not force:
+        if not info.compatible and not force and info.reason is not None:
             raise BackupError(
                 BackupError.INCOMPATIBLE,
                 f"Sicherung {name} gehört zu einer anderen Quellenlage",
-                name=name,
-                difference=info.reason,
+                info.reason,
             )
         return info
 
@@ -362,12 +380,16 @@ class BackupService:
         """Vom Namen zur Datei — mit der Musterprüfung **vor** dem Zugriff."""
         if not _NAME_PATTERN.match(name):
             raise BackupError(
-                BackupError.NOT_FOUND, f"{name} ist kein Sicherungsname", name=name
+                BackupError.NOT_FOUND,
+                f"{name} ist kein Sicherungsname",
+                BackupReason(code=BackupError.NOT_FOUND, params={"name": name}),
             )
         path = self.directory / name
         if not path.is_file():
             raise BackupError(
-                BackupError.NOT_FOUND, f"Sicherung {name} gibt es nicht", name=name
+                BackupError.NOT_FOUND,
+                f"Sicherung {name} gibt es nicht",
+                BackupReason(code=BackupError.NOT_FOUND, params={"name": name}),
             )
         return path
 

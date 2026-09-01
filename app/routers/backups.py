@@ -11,30 +11,34 @@ treffen.
 from fastapi import APIRouter, Depends, Query, status
 
 from app.container import get_backup_service
-from app.models import BackupEntry, BackupList, ErrorDetail, RestoreAccepted
+from app.models import BackupEntry, BackupErrorDetail, BackupList, RestoreAccepted
 from app.services.backup import BackupInfo, BackupService, restore_state
 
 router = APIRouter(tags=["backups"])
 
 RESTORE_ERRORS: dict[int | str, dict[str, object]] = {
-    404: {"model": ErrorDetail, "description": "`backup_not_found`"},
+    404: {"model": BackupErrorDetail, "description": "`backup_not_found`"},
     409: {
-        "model": ErrorDetail,
+        "model": BackupErrorDetail,
         "description": (
-            "`backup_incompatible` — andere Quellenlage; `params.difference` "
-            "nennt die abweichenden Rollen mit beiden Ketten. `force=true` "
+            "`backup_incompatible` — andere Quellenlage; `reason.differences` "
+            "nennt Rollen und Paketpins mit beiden Ständen. `force=true` "
             "übergeht es"
         ),
     },
     422: {
-        "model": ErrorDetail,
+        "model": BackupErrorDetail,
         "description": (
             "`backup_schema_too_new` — **auch `force` hebt das nicht auf**: "
             "Eine ältere App kann eine neuere Datenbank nicht lesen"
         ),
     },
 }
-"""Die drei Ausgänge — deklariert, nicht nur gelebt."""
+"""Die drei Ausgänge — deklariert, nicht nur gelebt.
+
+Jeder trägt seine Ursache mit: Ein Konsument soll den Grund aus der Ablehnung
+erfahren, ohne vorher die Liste geholt zu haben.
+"""
 
 
 def _entry(info: BackupInfo) -> BackupEntry:

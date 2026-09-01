@@ -228,7 +228,7 @@ Legende: ✅ live bestätigt · ◑ teilweise bestätigt · ⚠️ Befund offen 
 | **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ✅ | |
 | **9** | `PRAGMA user_version` | ist gesetzt und wird beim Prüfen gelesen | ✅ | |
 | **10** | elfte Sicherung | die älteste ist weg, es liegen zehn; keine zweite Löschmöglichkeit | ✅ | |
-| **11** | UI-Liste | alle vorhandenen Sicherungen sind sichtbar, unpassende **mit Grund** statt ausgeblendet | ◑ | |
+| **11** | UI-Liste | alle vorhandenen Sicherungen sind sichtbar, unpassende **mit Grund** statt ausgeblendet | ✅ | |
 | **12** | Bestätigung vor dem Wiederherstellen | der Neustart wird **vorher** genannt, nicht erst danach | ✅ | |
 
 ## Nicht-Ziele
@@ -1276,3 +1276,52 @@ Die Rollentexte werden pro Sprache als ein gemeinsames Objekt referenziert;
 kein Edit an `AnalysisPanel.vue`, kein dritter Test. Erwartet sind damit exakt
 acht Produkt- und zwei Testflächen. Keine neue Route, kein allgemeiner Umbau
 von `ErrorDetail`, kein UI-Parsing von Backendtext und kein T-48.
+
+### Passungsgrund · Umsetzung (Claude, 2026-09-01)
+
+Drei Ursachen als Kennung, kein deutscher Text mehr im API-Rumpf. Damit steht
+die Verify-Matrix vollständig auf ✅ in der KI-Spalte.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 250 | **192** |
+| Gesamt | ≤ 500 | **264** |
+
+`BackupReason` trägt `code`, `params` und `differences: [{field, theirs, ours}]`
+— `field` ist eine Rolle **oder** `packages`. Die Paketpins gehören dazu: Sie
+gehen in die Kennung ein, und ohne sie stünde bei gleichen Ketten eine
+Abweichung ohne Ort da.
+
+`BackupErrorDetail` erweitert `ErrorDetail` um genau diese Ursache; sie wird
+**durchgereicht, nicht neu gebildet**, weder im Router noch im UI. Die
+Rollennamen stehen je Sprache in **einem** Objekt, das `roles.*` und
+`analysis.role.*` gemeinsam lesen — `AnalysisPanel.vue` blieb unberührt.
+
+#### Live
+
+```
+GET /backups  → reason: {"code":"backup_sources_differ","differences":[
+                  {"field":"resolvers","theirs":["yaml-file"],
+                   "ours":["openfigi","yahoo-search"]}, …]}
+                deutsche Wörter im Rumpf: keine
+
+POST …/restore → 409, code backup_incompatible,
+                 reason.code backup_sources_differ,
+                 Felder: resolvers, etf_meta, quotes, daily, fx
+
+UI de → „Andere Quellenlage — Auflösung: dort yaml-file, hier openfigi, …"
+UI en → „Different source setup — Resolution: there yaml-file, here openfigi, …"
+        deutsche Reste: keine
+```
+
+#### Mutantenprobe
+
+| Mutant | rot |
+|---|---|
+| Paketpins fallen aus dem Grund | die neue Paketprobe |
+| die Ablehnung bildet eine zweite Ursache | `409`-Fall „fremde Lage" |
+| der Feldname bleibt roh statt übersetzt | beide Sprachfälle im Panel |
+
+Der erste Mutant kam zunächst durch: Für die Paketpins fehlte das Orakel, und
+die UI-Vorlage trug sie fest verdrahtet. Der Fall prüft jetzt zwei
+Konfigurationen, die sich **nur** in der Paketliste unterscheiden.

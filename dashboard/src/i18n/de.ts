@@ -1,4 +1,18 @@
 /** Deutscher Message-Katalog — Schema-Quelle für alle weiteren Sprachen. */
+/**
+ * Die fünf Rollen der Quellenkette — **einmal** benannt.
+ *
+ * Die Analyse zeigt vier davon, der Passungsgrund alle fünf. Zwei Kataloge
+ * mit denselben Wörtern liefen beim ersten Nachtrag auseinander.
+ */
+const roles = {
+  resolvers: 'Auflösung',
+  quotes: 'Kurs',
+  daily: 'Tagesreihe',
+  etf_meta: 'Metadaten',
+  fx: 'Devisen',
+}
+
 export const de = {
   /*
    * Wortmarke in zwei Teilen: Farbig ist der Teil, der die App
@@ -165,12 +179,7 @@ export const de = {
      */
     colRole: 'Rolle',
     colSource: 'Quelle',
-    role: {
-      resolvers: 'Auflösung',
-      quotes: 'Kurs',
-      daily: 'Tagesreihe',
-      etf_meta: 'Metadaten',
-    },
+    role: roles,
     status: {
       ok: 'geliefert',
       empty: 'nichts',
@@ -234,6 +243,7 @@ export const de = {
     de: 'Deutsch',
     en: 'Englisch',
   },
+  roles,
   backups: {
     title: 'Sicherungen der Datenbank',
     hint:
@@ -246,6 +256,15 @@ export const de = {
     colSize: 'Größe',
     colFit: 'Passung',
     fits: 'passt zur laufenden Quellenlage',
+    reason: {
+      /* Die Kennungen aus `BackupReason.code`; den Satz bildet das UI. */
+      backup_schema_too_new: 'Schema {version} ist neuer als diese App ({app})',
+      backup_fingerprint_mismatch: 'Manifest und Datenbank nennen verschiedene Kennungen',
+      backup_sources_differ: 'Andere Quellenlage',
+      line: '{field}: dort {theirs}, hier {ours}',
+      packages: 'Pakete',
+      none: '—',
+    },
     /*
      * **Der Neustart steht vor der Entscheidung.** Ihn erst in der Antwort zu
      * nennen hieße, ihn mitzuteilen, nachdem der Benutzer geklickt hat.

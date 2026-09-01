@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { apiClient } from '../../src/api/client'
 import BackupsPanel from '../../src/components/BackupsPanel.vue'
 import { i18n } from '../../src/i18n'
-import type { BackupList } from '../../src/types'
+import type { BackupEntry, BackupList } from '../../src/types'
 
 /**
  * Die Sicherungsansicht. Geprüft wird der gerenderte Text und der ausgelöste
@@ -16,21 +16,28 @@ import type { BackupList } from '../../src/types'
  * `#8`  Ein ausstehender Neustart bleibt sichtbar; ein Fehler ebenso
  * ===== ==================================================================
  */
-const FITTING = {
+const FITTING: BackupEntry = {
   name: 'stockinfo-20260901T120000000Z-abcdef123456.db',
   created_at: '2026-09-01T12:00:00Z',
   size: 90112,
   fingerprint: 'abcdef123456',
   compatible: true,
-  reason: '',
+  reason: null,
 }
-const FOREIGN = {
+const FOREIGN: BackupEntry = {
   name: 'stockinfo-20260831T120000000Z-999999999999.db',
   created_at: '2026-08-31T12:00:00Z',
   size: 81920,
   fingerprint: '999999999999',
   compatible: false,
-  reason: 'quotes: dort [yaml-file], hier [yfinance]',
+  reason: {
+    code: 'backup_sources_differ',
+    params: {},
+    differences: [
+      { field: 'quotes', theirs: ['yaml-file'], ours: ['yfinance'] },
+      { field: 'packages', theirs: [], ours: ['stockinfo-source-x==0.1.0'] },
+    ],
+  },
 }
 
 function listing(extra: Partial<BackupList> = {}): BackupList {
@@ -80,8 +87,11 @@ describe('BackupsPanel', () => {
     const wrapper = mountPanel()
     await flushPromises()
 
+    // **Der Satz entsteht hier**, aus Kennung und Feldern — nicht im Server.
     const text = wrapper.text()
-    expect(text).toContain('quotes: dort [yaml-file], hier [yfinance]')
+    expect(text).toContain('Andere Quellenlage')
+    expect(text).toContain('Kurs: dort yaml-file, hier yfinance')
+    expect(text).toContain('Pakete: dort —, hier stockinfo-source-x==0.1.0')
     expect(text).toContain('passt zur laufenden Quellenlage')
     expect(wrapper.findAll('tbody tr')).toHaveLength(2)
     // **Die Zeitspalte muss etwas enthalten** — eine leere Zelle fällt nur
@@ -246,6 +256,26 @@ describe('BackupsPanel', () => {
 
     expect(wrapper.text()).toContain('Ein Neustart steht aus')
     expect(wrapper.text()).toContain(FITTING.name)
+  })
+
+  it('nennt den Passungsgrund in beiden Sprachen, ohne deutschen Rest', async () => {
+    // Der Server liefert nur Kennung und Felder; stünde dort ein fertiger
+    // Satz, läse die englische Oberfläche ihn deutsch.
+    vi.spyOn(apiClient, 'get').mockResolvedValue(listing())
+
+    for (const [locale, expected] of [
+      ['de', 'Kurs: dort yaml-file, hier yfinance'],
+      ['en', 'Quote: there yaml-file, here yfinance'],
+    ] as const) {
+      i18n.global.locale.value = locale
+      const wrapper = mountPanel()
+      await flushPromises()
+
+      expect(wrapper.text()).toContain(expected)
+      expect(wrapper.text()).not.toContain('backups.reason.')
+      expect(wrapper.text()).not.toContain('roles.')
+      if (locale === 'en') expect(wrapper.text()).not.toContain('dort')
+    }
   })
 
   it('übersetzt beide Sprachen und lässt keinen Schlüssel roh stehen', async () => {

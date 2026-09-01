@@ -5,7 +5,7 @@ import { NButton, NCheckbox, NModal } from 'naive-ui'
 
 import { useBackups } from '../composables/useBackups'
 import { formatDateTime } from '../utils/datetime'
-import type { BackupEntry } from '../types'
+import type { BackupEntry, BackupReason } from '../types'
 
 /**
  * Die Sicherungen der Instanz.
@@ -53,6 +53,25 @@ async function confirm(): Promise<void> {
   await restore(entry.name, force.value)
 }
 
+/**
+ * Der Passungsgrund als Satz — gebildet aus Kennung und Werten.
+ *
+ * Der Server nennt `code`, `params` und die abweichenden Felder; ein fertiger
+ * Text von dort stünde auch in der englischen Oberfläche deutsch da.
+ */
+function describeReason(reason: BackupReason): string {
+  const head = t(`backups.reason.${reason.code}`, reason.params)
+  if (reason.differences.length === 0) return head
+  const lines = reason.differences.map((item) =>
+    t('backups.reason.line', {
+      field: item.field === 'packages' ? t('backups.reason.packages') : t(`roles.${item.field}`),
+      theirs: item.theirs.join(', ') || t('backups.reason.none'),
+      ours: item.ours.join(', ') || t('backups.reason.none'),
+    }),
+  )
+  return `${head} — ${lines.join('; ')}`
+}
+
 /** Bytes in etwas Lesbares — die Größe ist ein Anhaltspunkt, keine Messgröße. */
 function humanSize(bytes: number): string {
   return `${n(Math.max(1, Math.round(bytes / 1024)))} kB`
@@ -94,7 +113,7 @@ function humanSize(bytes: number): string {
             <td class="num">{{ humanSize(entry.size) }}</td>
             <td>
               <span v-if="entry.compatible">{{ t('backups.fits') }}</span>
-              <span v-else class="backups__reason">{{ entry.reason }}</span>
+              <span v-else class="backups__reason">{{ describeReason(entry.reason!) }}</span>
             </td>
             <td>
               <NButton size="small" @click="ask(entry)">{{ t('backups.restore') }}</NButton>
@@ -121,7 +140,7 @@ function humanSize(bytes: number): string {
       <!-- Der Neustart steht **vor** der Entscheidung, nicht in der Antwort. -->
       <p class="backups__restart">{{ t('backups.confirmRestart') }}</p>
       <NCheckbox v-if="chosen && !chosen.compatible" v-model:checked="force">
-        {{ t('backups.forceLabel', { reason: chosen.reason }) }}
+        {{ t('backups.forceLabel', { reason: describeReason(chosen.reason!) }) }}
       </NCheckbox>
     </NModal>
   </section>

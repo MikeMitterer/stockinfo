@@ -138,7 +138,9 @@ def test_ein_neueres_schema_gilt_als_unpassend(volume: Path) -> None:
     entry = service.list()[0]
 
     assert entry.compatible is False
-    assert "Schema" in entry.reason and str(SCHEMA_VERSION + 1) in entry.reason
+    assert entry.reason is not None
+    assert entry.reason.code == "backup_schema_too_new"
+    assert entry.reason.params == {"version": str(SCHEMA_VERSION + 1), "app": str(SCHEMA_VERSION)}
 
 
 # ─── #1 · die Sicherung während des Schreibens ────────────────────────────────
@@ -263,9 +265,28 @@ def test_die_liste_zeigt_auch_die_unpassenden_mit_ihrem_grund(volume: Path) -> N
 
     assert [entry.name for entry in entries] == [info.name]
     assert entries[0].compatible is False
-    difference = entries[0].reason
-    assert "quotes" in difference and "yfinance" in difference and "yaml-file" in difference
+    reason = entries[0].reason
+    assert reason is not None and reason.code == "backup_sources_differ"
+    quotes = next(item for item in reason.differences if item.field == "quotes")
+    assert quotes.theirs == ["yfinance"] and quotes.ours == ["yaml-file"]
+    # **Kein deutsches Wort im Rumpf.** Den Satz bildet das UI; ein fertiger
+    # Text hier stünde auch in der englischen Oberfläche deutsch da.
+    assert "dort" not in reason.model_dump_json() and "hier" not in reason.model_dump_json()
     assert entries[0].size > 0
+
+
+def test_eine_abweichende_paketliste_bekommt_ihr_eigenes_feld(volume: Path) -> None:
+    """Ein beigesteuertes Paket geht in die Kennung ein — dann muss es auch im
+    Grund stehen, sonst stünde dort eine Abweichung ohne Ort."""
+    info = _service(volume).create()
+    mit_paket = SourcesConfig(chains=_ONLINE.chains, packages=("stockinfo-source-x==0.1.0",))
+
+    reason = _service(volume, mit_paket).list()[0].reason
+
+    assert reason is not None and reason.code == "backup_sources_differ"
+    packages = next(item for item in reason.differences if item.field == "packages")
+    assert packages.theirs == [] and packages.ours == ["stockinfo-source-x==0.1.0"]
+    assert [item.field for item in reason.differences] == ["packages"], info.name
 
 
 def test_die_juengste_steht_vorn(volume: Path) -> None:
@@ -377,12 +398,15 @@ def test_eine_fremde_kennung_wird_abgelehnt_und_nennt_die_rolle(volume: Path) ->
     will wissen, was anders steht."""
     info = _service(volume).create()
 
+    listed = _service(volume, _FILE_ONLY).list()[0].reason
+
     with pytest.raises(BackupError) as fehler:
         _service(volume, _FILE_ONLY).request_restore(info.name)
 
-    difference = str(fehler.value.params["difference"])
     assert fehler.value.code == BackupError.INCOMPATIBLE
-    assert "quotes" in difference and "yfinance" in difference and "yaml-file" in difference
+    # **Dieselbe Ursache wie im Listeneintrag**, nicht eine zweite Fassung.
+    assert fehler.value.reason == listed
+    assert {item.field for item in fehler.value.reason.differences} >= {"quotes", "resolvers"}
     assert not (volume / PENDING_FILENAME).exists(), "die Absicht wurde trotzdem gelegt"
 
 
@@ -419,6 +443,7 @@ def test_ein_neueres_schema_wird_auch_mit_force_abgelehnt(volume: Path, force: b
         service.request_restore(info.name, force=force)
 
     assert fehler.value.code == BackupError.SCHEMA_TOO_NEW
+    assert fehler.value.reason.code == "backup_schema_too_new"
     assert not (volume / PENDING_FILENAME).exists()
 
 
@@ -596,7 +621,12 @@ def test_die_drei_ablehnungen_haben_je_ihren_status(
     response = client.post(f"/backups/{name}/restore", params={"force": case == "newer"})
 
     assert response.status_code == expected_status, response.text
-    assert response.json()["code"] == expected_code
+    body = response.json()
+    assert body["code"] == expected_code
+    # Der Konsument erfährt den Grund aus der **Ablehnung**, ohne die Liste.
+    assert body["reason"]["code"], body
+    if case == "foreign":
+        assert {item["field"] for item in body["reason"]["differences"]} >= {"quotes"}
     assert not (tmp_path / PENDING_FILENAME).exists()
 
 

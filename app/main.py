@@ -34,6 +34,7 @@ from app.migration_guard import (
 )
 from app.models import (
     AmbiguousSymbolDetail,
+    BackupErrorDetail,
     ErrorDetail,
     HealthResponse,
     ListingCandidate,
@@ -555,13 +556,13 @@ async def backup_error(request: Request, exc: BackupError) -> JSONResponse:
         BackupError.INCOMPATIBLE: status.HTTP_409_CONFLICT,
         BackupError.SCHEMA_TOO_NEW: status.HTTP_422_UNPROCESSABLE_CONTENT,
     }
-    logger.info(exc.code, path=request.url.path, **exc.params)
+    logger.info(exc.code, path=request.url.path, reason=exc.reason.code)
     return JSONResponse(
         status_code=codes.get(exc.code, status.HTTP_400_BAD_REQUEST),
-        content=ErrorDetail(
-            code=exc.code,
-            # `params` ist überall eine Abbildung auf **Text**; eine
-            # Schemaversion ist eine Zahl.
-            params={key: str(value) for key, value in exc.params.items()},
+        # **Dieselbe Ursache wie im Listeneintrag**, durchgereicht statt neu
+        # gebildet: Zwei Fassungen desselben Befundes liefen beim ersten
+        # Nachtrag auseinander.
+        content=BackupErrorDetail(
+            code=exc.code, params=exc.reason.params, reason=exc.reason
         ).model_dump(),
     )

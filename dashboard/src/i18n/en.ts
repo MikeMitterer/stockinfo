@@ -1,6 +1,15 @@
 import type { de } from './de'
 
 /** Englischer Message-Katalog — muss dem Schema von `de` entsprechen. */
+/** Die fünf Rollen der Quellenkette — einmal benannt, siehe die deutsche Fassung. */
+const roles = {
+  resolvers: 'Resolution',
+  quotes: 'Quote',
+  daily: 'Daily series',
+  etf_meta: 'Metadata',
+  fx: 'FX',
+}
+
 export const en = {
   /*
    * Wortmarke in zwei Teilen: Farbig ist der Teil, der die App
@@ -145,12 +154,7 @@ export const en = {
     /* Rolle übersetzt, Quellenname roh — siehe die deutsche Fassung. */
     colRole: 'Role',
     colSource: 'Source',
-    role: {
-      resolvers: 'Resolution',
-      quotes: 'Quote',
-      daily: 'Daily series',
-      etf_meta: 'Metadata',
-    },
+    role: roles,
     status: {
       ok: 'answered',
       empty: 'nothing',
@@ -213,6 +217,7 @@ export const en = {
     de: 'German',
     en: 'English',
   },
+  roles,
   backups: {
     title: 'Database backups',
     hint:
@@ -225,6 +230,14 @@ export const en = {
     colSize: 'Size',
     colFit: 'Fit',
     fits: 'matches the running source setup',
+    reason: {
+      backup_schema_too_new: 'Schema {version} is newer than this app ({app})',
+      backup_fingerprint_mismatch: 'Manifest and database name different fingerprints',
+      backup_sources_differ: 'Different source setup',
+      line: '{field}: there {theirs}, here {ours}',
+      packages: 'Packages',
+      none: '—',
+    },
     /* Der Neustart steht vor der Entscheidung — siehe die deutsche Fassung. */
     confirmTitle: 'Restore?',
     confirmBody: '{name} will be applied on the next start.',

@@ -1105,6 +1105,29 @@ SYMBOL_CONFLICT_RESPONSE: dict[int | str, dict[str, object]] = {
 }
 
 
+class SourceDifference(BaseModel):
+    """Eine Stelle, an der zwei Quellenlagen auseinandergehen."""
+
+    field: str = Field(description="Eine Rolle (`quotes`, …) oder `packages`")
+    theirs: list[str] = Field(description="Was die Sicherung führte")
+    ours: list[str] = Field(description="Was die laufende Instanz führt")
+
+
+class BackupReason(BaseModel):
+    """Warum eine Sicherung nicht passt — als **Kennung**, nicht als Satz.
+
+    Dieselbe Regel wie bei `ErrorDetail`: Der Server nennt den Grund, den Satz
+    bildet das UI. Ein deutscher Backendtext stünde sonst in der englischen
+    Oberfläche.
+    """
+
+    code: str = Field(description="`backup_schema_too_new` · `backup_fingerprint_mismatch` · `backup_sources_differ`")
+    params: dict[str, str] = Field(default_factory=dict, description="Werte für den Satz")
+    differences: list[SourceDifference] = Field(
+        default_factory=list, description="Nur bei `backup_sources_differ`"
+    )
+
+
 class BackupEntry(BaseModel):
     """Eine Sicherung, so wie die Liste sie zeigt."""
 
@@ -1113,9 +1136,21 @@ class BackupEntry(BaseModel):
     size: int = Field(description="Größe der Datenbankdatei in Bytes")
     fingerprint: str = Field(description="Quellenkennung, unter der sie entstand")
     compatible: bool = Field(description="Passt sie zur **laufenden** Quellenlage?")
-    reason: str = Field(
-        default="", description="Warum sie nicht passt; leer, solange sie passt"
+    reason: BackupReason | None = Field(
+        default=None, description="Warum sie nicht passt; `null`, solange sie passt"
     )
+
+
+class BackupErrorDetail(ErrorDetail):
+    """Eine abgelehnte Wiederherstellung — mit ihrer Ursache.
+
+    `ErrorDetail` trägt nur `dict[str, str]` und könnte die abweichenden Ketten
+    nicht nennen. Die Erweiterung hängt sie an, statt den Aufrufer auf die
+    Liste zu verweisen: Ein REST-Konsument soll den Grund aus der Ablehnung
+    selbst erfahren.
+    """
+
+    reason: BackupReason
 
 
 class BackupList(BaseModel):

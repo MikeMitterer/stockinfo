@@ -398,8 +398,23 @@ export interface BackupEntry {
   fingerprint: string
   /** Passt sie zur **laufenden** Quellenlage? */
   compatible: boolean
-  /** Warum nicht; leer, solange sie passt. */
-  reason: string
+  /** Warum nicht; `null`, solange sie passt. */
+  reason: BackupReason | null
+}
+
+/** Eine Stelle, an der zwei Quellenlagen auseinandergehen. */
+export interface SourceDifference {
+  /** Eine Rolle (`quotes`, …) oder `packages`. */
+  field: string
+  theirs: string[]
+  ours: string[]
+}
+
+/** Warum eine Sicherung nicht passt — als Kennung, den Satz bildet das UI. */
+export interface BackupReason {
+  code: string
+  params: Record<string, string>
+  differences: SourceDifference[]
 }
 
 /** Die Sicherungen einer Instanz samt ihrem Wiederherstellungs-Zustand. */
