@@ -2,9 +2,8 @@ version: 1
 
 # Vorlage: die Datei **hinter** der Online-Kette.
 #
-# Hier steht ausschließlich, was keine Online-Quelle beantworten kann — eine
-# OTC-Anleihe ohne Börsenkurs, ein Fonds, den kein Anbieter führt, eine von
-# Hand gepflegte Reihe.
+# Hier steht ausschließlich, was keine Online-Quelle beantworten kann — in
+# dieser Vorlage eine OTC-Anleihe mit von Hand gepflegter Reihe.
 #
 # **Ein Papier, das eine Online-Quelle kennt, gehört nicht hierher.** Es wäre
 # nicht bloß überflüssig: Fällt die Online-Quelle aus, greift die Kaskade auf
@@ -12,10 +11,8 @@ version: 1
 # aussehend, ohne Kennzeichnung, statt eines ehrlichen Ausfalls. Je kürzer
 # diese Datei, desto seltener kann das passieren.
 #
-# **Die Zugehörigkeit wird gemessen, nicht geschätzt.** Ein Publikumsfonds
-# stand hier zunächst mit dem Argument „nicht börsengehandelt" — die Probe
-# ergab `DE0009848119` → `HJUA/XFRA` mit aktuellem Kurs. Ob eine Online-Quelle
-# ein Papier führt, beantwortet die Auflösung, nicht die Gattung.
+# **Die Zugehörigkeit wird gemessen, nicht aus der Gattung abgeleitet.** Ob
+# eine Online-Quelle ein Papier führt, beantwortet ihre Auflösung und Abfrage.
 #
 # Für den umgekehrten Fall — eine Instanz, die **nur** aus dieser Datei lebt —
 # ist `assets-standalone.yaml` die Vorlage. Dort ist Vollständigkeit die
