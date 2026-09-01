@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
 - `handoff_commit`: `23aa81e`
 - `review_round`: `2`
