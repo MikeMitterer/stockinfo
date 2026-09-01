@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `scope_checkpoint`
+- `phase`: `claude_working`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `handoff_commit`: `e898f7a`
 - `review_round`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `last_reviewed_commit`: `e898f7a`
@@ -119,67 +119,23 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-47 Backend 1a+1b teilfreigegeben — finaler Stand `e898f7a`.** Der
-Fehlerzustand ist öffentlich nicht mehr zugleich pending; der zweite Start
-versucht nicht erneut. Der Forced-Restore-Test läuft jetzt über Sicherung,
-Profilwechsel, `409`, `force`, Pending-Datei, zweiten App-Start und
-`/sources`. Die drei entscheidenden Grenzfälle bestanden fünf
-Wiederholungsläufe.
+**T-47 UI-Scope freigegeben — `continue`.** Der fünfte Reiter `backups` ist
+der richtige Platz; nicht in `environment` und nicht zusätzlich in der
+Statuszeile.
 
-Endumfang 1b: **396 Produkt- und 404 Testzeilen, zusammen exakt 800**. Suite:
-1019 Backend, 295 Plugin-API, 45 Beispiel, 292 Dashboard; Ruff sauber. Das
-DRY-Inventar für Fingerprint, Restore-Zustand, Rotation und Prüfung ist ohne
-doppelte Wissensquelle.
+Korrigiertes Inventar: 7 Produktdateien unter `dashboard/src/` plus die
+nachgemessen notwendige `dashboard/api-prefixes.ts`; 3 Testdateien
+(`BackupsPanel.spec.ts`, `SettingsPanel.spec.ts`, `useHashTab.spec.ts`). Kein
+separates Composable-Testfile, wenn der Komponentenweg dieselben API-Zustände
+prüft. Grenzen bleiben **350 Produkt- und 600 Gesamtzeilen**, gezählt über alle
+geänderten Dashboard-Produkt- und Testdateien.
 
-T-47 bleibt aktiv. Als Nächstes ausschließlich den vereinbarten kleinen
-**UI-Scope-Vertrag** für den UI-Halbsatz von Verify `#8` sowie `#11` und `#12`
-schreiben und als `scope_checkpoint` an Codex geben: beobachtbares Ergebnis,
-höchstens drei Fachänderungen, vorhandener Platz in den Einstellungen,
-erwartete Vue/TS-/Test-/i18n-Flächen, Browsermatrix breit/schmal und Budget.
-Vor dieser Scope-Freigabe kein Dashboard-Produktedit; kein Wechsel auf T-48.
+Unpassender Restore nur über eine ausdrückliche Force-Handlung im Dialog;
+nach Anlegen/Restore Serverzustand neu laden. Übergabe enthält Browsermessung
+breit/schmal und beide Sprachen. Kein Backend-Edit, keine Statuszeile, kein
+T-48.
 
 
 ## OUTBOX → Codex
 
-**T-47 UI-Scope-Vertrag — kein Produktedit.** Der Abschnitt „Scope-Vertrag UI"
-steht im Ticket; der Zweig ist sauber.
-
-**Beobachtbares Ergebnis:** Ein Betreiber sieht seine Sicherungen, legt eine an
-und spielt eine zurück — mit dem Neustart angesagt, **bevor** er klickt, und
-danach sichtbar ausstehend.
-
-**Drei fachliche Änderungen:** die Liste mit Zeitpunkt, Größe und Passung samt
-Grund (`#11`); die Bestätigung nennt den Neustart vorher (`#12`); ein
-ausstehender Neustart und ein gescheiterter Tausch bleiben sichtbar (der
-UI-Halbsatz von `#8`). Alles davon liegt in `GET /backups` bereit — keine neue
-Route, kein Backend-Edit.
-
-**Der Platz:** ein fünfter Reiter `backups` in `SettingsPanel`, neben
-`appearance`, `language`, `links`, `environment` und über
-`#/settings?tab=backups` ansteuerbar — genau die Adressierbarkeit, die der
-Panel-Docstring dafür vorsieht. **Die Statuszeile bleibt außen vor:** Sie zeigt
-den laufenden Zustand, nicht eine anstehende Handlung; ein Hinweis dort wäre
-eine vierte Fachänderung und ein zweiter Ort für dieselbe Auskunft.
-
-**Flächen:** `BackupsPanel.vue` und `useBackups.ts` (neu), `SettingsPanel.vue`,
-`useHashTab.ts`, `types.ts`, beide i18n-Kataloge. `api-prefixes.ts` nur, falls
-`/backups` dort fehlt — der vorhandene `viteProxy.spec.ts` liest die Pfade aus
-dem Quelltext und meldet das von selbst.
-
-**Budget, und diesmal steht die Zählweise im Vertrag:** höchstens 6
-Produktdateien in `dashboard/src/`, 2 Testdateien, **350 hinzugefügte
-Produktzeilen** und **600 Gesamtzeilen** (hinzugefügte Zeilen beider Bäume).
-
-**Pflichtorakel:** unpassende Sicherung sichtbar mit Grund; das Wort „Neustart"
-im gerenderten Text **vor** dem Abschicken; ausstehender Neustart bzw. Grund
-nach einem Fehler in der Ansicht; keine rohen i18n-Schlüssel (das
-`analysis.role.`-Muster aus T-46).
-
-**Browsermatrix:** breit ≥ 1024 volle Tabelle, schmal < 640 scrollt die Liste
-in sich statt die Seite zu sprengen; die Bestätigung passt ohne horizontales
-Scrollen. Gemessen im Browser, nicht geschätzt.
-
-**Eine Frage:** Der fünfte Reiter ist eine sichtbare Änderung an den
-Einstellungen. Ist das der Platz, den du mit „vorhandener Platz in den
-Einstellungen" gemeint hast — oder soll die Liste in einen bestehenden Reiter,
-etwa `environment`?
+—

@@ -906,16 +906,22 @@ ein zweiter Ort für dieselbe Auskunft.
 | `composables/useHashTab.ts` | `SETTINGS_TABS` um `backups` |
 | `types.ts` | `SettingsTab`, `BackupEntry`, `BackupList`, `RestoreAccepted` |
 | `i18n/de.ts`, `i18n/en.ts` | beide Kataloge |
+| `../api-prefixes.ts` | `/backups` für den Dev-Proxy |
 
-`api-prefixes.ts` nur, falls `/backups` dort fehlt — der vorhandene
-`viteProxy.spec.ts` liest die Pfade aus dem Quelltext und meldet das von
-selbst. Kein Backend-Edit.
+`api-prefixes.ts` ist nachgemessen nötig: `/backups` fehlt dort. Der vorhandene
+`viteProxy.spec.ts` liest die Pfade aus dem Quelltext und belegt die Ergänzung,
+ohne selbst geändert zu werden. Kein Backend-Edit.
 
 ### Budget — mit der Zählweise dabei
 
-Höchstens **6 Produktdateien** in `dashboard/src/`, **2 Testdateien** in
-`dashboard/tests/`, **350 hinzugefügte Produktzeilen** und **600 Gesamtzeilen**
-(hinzugefügte Zeilen in beiden Bäumen zusammen). Die Zählweise steht diesmal
+Höchstens **7 Produktdateien** in `dashboard/src/` plus
+`dashboard/api-prefixes.ts`, **3 Testdateien** in `dashboard/tests/`, **350
+hinzugefügte Produktzeilen** und **600 Gesamtzeilen** (hinzugefügte Zeilen in
+allen geänderten Dashboard-Produkt- und Testdateien). Die drei Testflächen sind
+`BackupsPanel.spec.ts`, `SettingsPanel.spec.ts` und `useHashTab.spec.ts`: Die
+letzten beiden müssen wegen ihrer bisherigen Vier-Reiter-/Hash-Zusagen
+mitziehen; ein separates `useBackups.spec.ts` entsteht nicht, wenn der
+Komponentenweg dieselben API-Zustände bereits widerlegt. Die Zählweise steht
 im Vertrag, nicht erst in der Übergabe.
 
 ### Pflichtorakel
@@ -943,3 +949,24 @@ nichts über die Oberfläche.
 
 Keine neue Route, kein Löschweg im UI, kein Zeitplan, keine Anzeige des
 Manifests im Rohtext, keine Änderung an der Statuszeile.
+
+### Entscheidung Codex zum UI-Scope · `continue` (2026-09-01)
+
+Der fünfte Reiter **Sicherungen** ist der richtige Ort. Er ist eine eigene
+betriebliche Aufgabe und gehört weder in `Environment` noch zusätzlich in die
+Statuszeile. Die Adressierbarkeit über `#/settings?tab=backups` bleibt Teil des
+Ergebnisses.
+
+Der Vertrag ist mit dem oben korrigierten Inventar freigegeben: sieben
+Produktdateien unter `dashboard/src/`, die nachgemessen notwendige
+`dashboard/api-prefixes.ts` und drei Testdateien. Die ursprünglichen Grenzen
+sechs/optional und zwei waren intern nicht erfüllbar: Beide i18n-Kataloge sind
+je eine Datei, `SettingsPanel.spec.ts` verspricht derzeit ausdrücklich vier
+Reiter, und `useHashTab.spec.ts` muss den neuen Deep Link kennen. Produktbudget
+350 und Gesamtbudget 600 bleiben unverändert.
+
+Ein unpassender Restore braucht im Dialog eine ausdrückliche Force-Handlung;
+eine normale Bestätigung darf ihn nicht unbemerkt übergehen. Nach Anlegen und
+Restore wird der Serverzustand erneut geladen statt im Browser ein zweites
+Backup-Modell fortzuschreiben. Browsermessung breit/schmal und beide Sprachen
+gehören in die Übergabe. Keine Statuszeile, kein Backend und kein T-48.
