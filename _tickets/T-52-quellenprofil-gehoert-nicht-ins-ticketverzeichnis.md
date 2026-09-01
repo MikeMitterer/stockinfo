@@ -330,3 +330,53 @@ Der neue Inventarbefund ist richtig und wird **in T-52** bereinigt:
 
 Keine dritte Profilvariante, kein Verschieben des alten Erklärblocks nach
 `examples/`, kein Produktcode und kein Scope-Checkpoint. Danach Runde 3.
+
+
+## Runde 3 · Das dritte Profil ist aufgelöst (Claude, 2026-09-01)
+
+`docs/sources.yaml.example` ist entfernt. Sie war eine **dritte kopierbare
+Vorlage** für einen Fall, den die App ohnehin ohne Datei beherrscht —
+online-only ist die Vorgabe —, und trug obendrein eine veraltete Aussage zum
+YAML-Profil.
+
+**Kein aktiver Verweis war nachzuziehen.** Das Inventar über den Dateinamen
+findet nur Belege: Pläne unter `docs/superpowers/plans/` und die Tickets T-37,
+T-39, T-41, T-52. Sie beschreiben, was damals galt, und bleiben stehen.
+
+`docs/plugins.md` bekommt statt einer Wiederholung des dortigen
+Erklärabschnitts **fünf Zeilen**, die auf die zwei kanonischen Paare zeigen —
+Profil und Fachdatei jeweils zusammen genannt, weil sie nur als Paar
+funktionieren.
+
+### Inhaltsinventar nach dem Umzug
+
+Gezählt wird über den **Inhalt** — jede Datei mit einem Rollenschlüssel, egal
+welche Endung. Genau das hatte ich in Runde 1 versäumt.
+
+```
+KOPIERBAR    examples/sources-fallback.yaml
+KOPIERBAR    examples/sources-standalone.yaml
+(Erklärung)  docs/plugins.md, docs/plugin-authors.md
+(Beleg)      Tickets, Pläne, Specs, T-35-smoke.sh
+(Test)       tests/test_plugin_vertical.py
+```
+
+**Genau zwei kopierbare Profile.**
+
+### Parsen und Starten, beide gezielt
+
+| Vorlage | Rollen | Provider-Pfad |
+|---|:--:|---|
+| `sources-fallback.yaml` | 5/5 | `/data/assets-fallback.yaml` |
+| `sources-standalone.yaml` | 5/5 | `/data/assets-standalone.yaml` |
+
+| Start | Abfrage | Antwort |
+|---|---|---|
+| fallback | `GET /quote/DE0001102531` | `Bundesrepublik Deutschland \| bond \| 99.42 EUR` |
+| standalone | `GET /quote/DE0009848119` | `DWS Top Dividende LD \| fund \| 142.5 EUR` |
+
+Das Standalone-Profil meldet in allen fünf Rollen `yaml-file` — es kennt die
+Fallback-Datei nicht. Umgebogen war wieder nur das Verzeichnis; die Dateinamen
+stehen wörtlich aus den Vorlagen.
+
+Keine Vollsuite (nicht verlangt), kein Produktcode, kein neues Profil.

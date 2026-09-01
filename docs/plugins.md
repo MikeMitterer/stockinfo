@@ -118,6 +118,12 @@ Die Reihenfolge ist die Aussage und wird nicht umsortiert. `GET /sources` zeigt
 danach, was tatsächlich gilt — einschließlich der Quellen, die **nicht**
 arbeiten können und warum.
 
+Zwei fertige Paare liegen unter [`examples/`](../examples/): je ein
+Quellenprofil und die Fachdatei, auf die es zeigt —
+`sources-fallback.yaml` mit `assets-fallback.yaml` für Online-Betrieb mit
+Rückfall, `sources-standalone.yaml` mit `assets-standalone.yaml` für eine
+Instanz ohne Netz.
+
 **Eine Quelle darf in mehreren Rollen stehen.** Das mitgelieferte `yaml-file`
 tut genau das: Es liest eine Datei und bedient daraus Auflösung, Kurs,
 Historie, Metadaten und Devisen.
