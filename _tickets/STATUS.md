@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `handoff_commit`: `a9d66a0`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
-- `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `last_reviewed_commit`: `47966f6`
-- `last_reviewed_round`: `9`
+- `last_reviewed_ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
+- `last_reviewed_commit`: `a9d66a0`
+- `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `priority_ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
@@ -119,66 +119,19 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-48 Scope freigegeben — Variante (b), aber als Cache-Vertrag.** Im
-Plugin-Vertrag gilt `Source.cacheable: bool = True`; `YamlFileSource` setzt
-`False`. Keine neue Konfiguration, kein Raten aus `path`, keine Registry-
-Anzeige. Der Cacheentscheid ist instrumentbezogen über Adapter/Kaskade: Eine
-hintere YAML-Quelle darf einen vorderen Online-Treffer nicht cachefrei machen.
+**T-48 Runde 1 — eine konsolidierte Restkorrektur.** Erstens `#4`: Bei
+kaputtem YAML keinen alten Wert still als aktuell ausgeben; `/sources` liest
+den Laufzeitgrund vom bereits gebauten Objekt und zeigt `configured=false`,
+nach gültiger Korrektur wieder `true`. Dafür ist `app/sources_registry.py` als
+achte Produktfläche freigegeben, ohne Kette oder Quelle neu zu bauen.
 
-Drei Änderungen: atomarer Katalog-Reload über `st_mtime_ns` plus Größe;
-instrumentbezogener Cache-Bypass im Quote-Weg; Quote-Upsert bei gleichem
-Zeitpunkt. Keine separate Zähllogik — nach dem Upsert existiert der verworfene
-Schreibfall nicht mehr. Exakte sieben Produkt-/drei Testflächen und Budget
-300/550 stehen in der Auflösung. Der gemischte Vertical muss Online-Treffer
-**mit gleichzeitig vorhandenem YAML-Eintrag** und YAML-Fallback unterscheiden
-und die Provider-Aufrufe zählen. Keine History-/Metadaten-/FX-Cacheausweitung.
+Zweitens `#6`: öffentlicher Test über `POST /refresh` plus Bestandsliste bei
+geändertem Preis und gleichem `as_of`; die korrigierte Matrixzeile steht im
+Ticket. Drittens Prozesschronik aus neuer Produkt-/Testprosa entfernen.
+Viertens neue deutsche Hilfs-/lokale Bezeichner aus der im Ticket stehenden
+AST-Liste englisch benennen; deutsche Testnamen bleiben. Gesamtgrenze 240
+Produkt/650 total, acht Produkt-/dieselben drei Testdateien. Kein UI, Modell,
+Schema, neuer Endpunkt, neue Testquelle oder weitere Cache-Rolle. OUTBOX mappt
+final `#1`–`#8` auf konkrete Orakel.
 
 ## OUTBOX → Codex
-
-**T-48 Runde 1 zur Prüfung — Commit `a9d66a0`, Branch
-`t-48-dateiaenderung-ohne-neustart`.**
-
-Die drei freigegebenen Änderungen stehen; sieben Produktflächen, drei
-Testflächen wie im Vertrag.
-
-| | Grenze | gemessen |
-|---|---:|---:|
-| Produktzeilen | ≤ 300 | **180** |
-| Gesamt | ≤ 550 | **493** |
-
-**Reload:** `_catalogue` ist eine Eigenschaft, die selbst nachlädt — die Regel
-steht einmal und gilt für alle fünf Rollen, auch für einen achten
-Eintrittspunkt, den es noch nicht gibt. Der Tausch ist atomar; eine kaputte
-Zwischenfassung lässt die Quelle mit dem letzten gültigen Stand weiterarbeiten,
-und nach der nächsten gültigen Fassung erholt sich dieselbe Instanz.
-
-**Cachefrage:** instrumentbezogen über Adapter und Kaskade. Maßgeblich ist die
-erste Quelle, die nach Form, Gattung und `handles()` infrage kommt. Der
-gemischte Vertical zählt: Das Papier, das **beide** kennen, behält seine Frist
-— zwei Abfragen, **ein** Online-Aufruf; nur das Datei-Papier umgeht sie und
-kostet die Online-Quelle nichts. Die Frage selbst löst **null** Aufrufe aus.
-
-**Upsert:** `#2`/`#6` in einem — nach dem Upsert gibt es den verworfenen
-Schreibversuch nicht mehr, und `refreshed` zählt wieder, was passiert ist.
-
-**Live mit TTL 6 h** (Fonds `DE0009848119`, nur `value` geändert, `as_of`
-unverändert): 142,5 → **143,75 ohne Neustart**, danach `refreshed: 1` und
-143,75 in der Liste.
-
-**Drei Mutanten beißen** — ohne Reload, ohne Upsert, kettenweiter statt
-instrumentbezogener Bypass. Der Upsert-Mutant kam zuerst durch: `INSERT OR
-IGNORE … ON CONFLICT DO UPDATE` behält die Upsert-Klausel, die Mutation war
-keine; erst das vollständige Entfernen der `ON CONFLICT`-Zeile zeigt den
-Unterschied.
-
-**`#4` steht auf `◑`, und ich lege den Grund vor.** „Der Dienst bleibt stehen"
-und „kein halber Katalog" sind geprüft. Der zweite Halbsatz — „meldet den
-Grund" — ist nur halb eingelöst: Der Grund steht im Protokoll, aber `/sources`
-zeigt weiter „einsatzbereit", weil die Auskunft dort ein Schnappschuss aus
-`_CHAINS` vom Kettenbau ist. Das zu ändern hieße `app/sources_registry.py`
-anzufassen — **keine der sieben freigegebenen Flächen**, und es beträfe die
-Diagnose aller Quellen. Sag, ob das in dieses Ticket gehört oder ein eigenes
-bekommt.
-
-**Suite:** 1026 Backend, 300 Plugin-API, 45 Beispiel, 305 Dashboard. Ruff
-sauber.

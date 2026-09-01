@@ -806,6 +806,12 @@ neu ergänzte Produktkommentare begründeten die heutige DRY-Struktur wieder mit
 einem „ersten Nachtrag“, obwohl für genau dieses Ticket bereits der vollständige
 neue Diff statt einzelner Fundstellen inventarisiert werden musste.
 
+**Weitere Wiederholung:** T-48 Runde 1, Commit `a9d66a0`: Produkt- und
+Testdocstrings führten erneut Ticket, Mike und die verworfene
+`INSERT OR IGNORE`-Fassung als Begründung. Gleichzeitig entstanden nach der
+AST-Pflicht wieder deutsche Hilfsfunktionen und lokale Variablen; die
+Übergabe hatte nur die fachlichen Mutanten inventarisiert.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope

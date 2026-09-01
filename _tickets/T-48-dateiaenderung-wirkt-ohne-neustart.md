@@ -121,7 +121,7 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 | **3** | Online-Profil mit `yaml-file` als letztem Glied | dieselbe Zusage; die Datei ist dort dieselbe Quelle | ✅ | |
 | **4** | Datei kaputt gemacht, während der Dienst läuft | der Dienst bleibt stehen und meldet den Grund; er fällt nicht auf einen halben Katalog zurück | ◑ | |
 | **5** | Datei unverändert, viele Anfragen | die Antwortzeit bleibt brauchbar — gemessen, nicht geschätzt | ✅ | |
-| **6** | `POST /refresh` mit verworfenem Schreibversuch | `refreshed` zählt ihn **nicht** als Erfolg | ✅ | |
+| **6** | `POST /refresh` nach Preiskorrektur bei gleichem `as_of` | `refreshed` zählt die erfolgreiche Korrektur, und die Liste enthält den neuen Wert | ⚠️ | |
 | **7** | Online-Profil, TTL | die Cache-TTL gilt dort **unverändert** — kein Abruf mehr als vorher | ✅ | |
 | **8** | Online-Profil, Provider-Aufrufe | gezählt vor und nach der Änderung: dieselbe Zahl | ✅ | |
 
@@ -368,3 +368,48 @@ dort ist ein Schnappschuss aus `_CHAINS`, der beim Kettenbau entsteht; ein
 Laufzeitproblem erreicht sie nie. Das zu ändern hieße `app/sources_registry.py`
 anzufassen — **keine der sieben freigegebenen Flächen**, und es beträfe die
 Diagnose aller Quellen. Deshalb gemeldet statt erledigt.
+
+### Codex-Review Runde 1 · `changes_requested` (2026-09-01)
+
+Scope und Budget sind eingehalten: sieben Produkt-, drei Testflächen, 180/493
+hinzugefügte Zeilen. 140 YAML-Plugin- sowie 66 Cache-/Profiltests und Ruff sind
+grün. Reload, Quote-Upsert und der instrumentbezogene Online-Gegenfall sind im
+Diff vorhanden; DRY-geprüft wurden Katalogzugriff, Cacheentscheidung und
+Quote-Persistenz.
+
+Der vollständige Rest passt in **eine** Korrekturrunde:
+
+1. **Verify `#4` ist noch nicht erfüllt.** Eine kaputte Fassung setzt nur
+   `_problem`; alle Fachmethoden liefern über `_loaded` den alten Wert weiter,
+   und die laufende `/sources`-Momentaufnahme bleibt ohne Grund auf
+   `configured=true`. Einen Protokolleintrag erzeugt `_reload()` ebenfalls
+   nicht. Der letzte gültige Katalog darf intern für den atomaren Tausch
+   erhalten bleiben, aber ein Fachrequest während der Störung darf den Fehler
+   nicht still als aktuellen Wert ausgeben. `/sources` muss am **bereits
+   gebauten Objekt** `configured=false` samt verständlichem Grund zeigen und
+   nach einer gültigen Fassung ohne Neubau wieder `true`. Dafür ist als achte
+   und letzte Produktfläche `app/sources_registry.py` freigegeben; keine neue
+   Antwortform oder Route. Eine fehlgeschlagene Signatur darf die Erholung
+   nicht blockieren.
+2. **Verify `#6` behauptet mehr als sein Orakel.** Der Repository-Test belegt
+   den Upsert, ruft aber weder `POST /refresh` noch die Bestandsliste auf. Die
+   Matrix ist oben auf die mit dem Upsert gültige Zusage korrigiert. Ein
+   öffentlicher Test ändert nur den Preis bei gleichem `as_of`, ruft
+   `POST /refresh` und belegt sowohl `refreshed` als auch den gespeicherten
+   Listenwert. Erst dann wird `#6` wieder ✅.
+3. **Die neue technische Prosa trägt erneut Implementierungschronik.** Dazu
+   gehören `INSERT OR IGNORE war hier …`, „Kern des Tickets“, „Bis hierher“,
+   „Mikes Fall/Warnung“, der `T-48`-Testkopf und „fiel vorher zweimal durch“.
+   Produkt- und Testdocstrings nennen nur heutige Invariante und fachlichen
+   Grund; Verlauf und Attribution stehen bereits hier.
+4. **Neue Hilfsbezeichner und lokale Variablen sind deutsch.** Die
+   AST-Differenz nennt `_kopie`, `_preis`, `ziel`, `datei`, `katalog`,
+   `vorher`, `zeitpunkt`, `eigene` und `nachher`. Testnamen dürfen nach der
+   Projektregel deutsch bleiben; Hilfsfunktionen und Variablen nicht.
+
+Restumfang: höchstens acht Produktdateien und dieselben drei Testdateien,
+höchstens 240 Produkt- und 650 Gesamtzeilen für den ganzen T-48-Diff. Keine
+UI, kein neues Modell/Schema, keine Route, keine Registry-Neukonstruktion,
+keine History-/Metadaten-/FX-Ausweitung und kein weiterer Test-Plugin-Typ. Die
+finale OUTBOX ordnet `#1`–`#8` je einem konkreten automatischen oder live
+gemessenen Orakel zu.
