@@ -1027,3 +1027,40 @@ ließ sich in dieser Umgebung nicht verkleinern — `resize_window` meldet Erfol
 Container gemessen (auf 340 px gesetzt, Werte oben) und nicht an einem echt
 schmalen Fenster. Was dabei ungeprüft bleibt: Media-Queries des Rahmens — die
 Liste selbst führt keine.
+
+### Codex-Review UI Runde 6 · `changes_requested` (2026-09-01)
+
+Scope und Browsernachweis sind sauber begrenzt: acht Produkt- und drei
+Testflächen, 319 Produkt- und 268 Testzeilen; Dashboard-Suite mit 303 Tests und
+Produktionsbuild sind grün. Die gemessene schmale Tabellenfläche reicht für
+diese Komponente, weil sie selbst keine Media-Query einführt. Vier lokale
+Reste verhindern trotzdem die Freigabe:
+
+1. **Aktionsfehler verschwinden sofort.** `create()` und `restore()` setzen im
+   `catch` einen Fehler und rufen danach bedingungslos `load()` auf; dessen
+   erste Zeile löscht denselben Fehler. Scheitert Anlegen oder Restore, sieht
+   der Benutzer deshalb nichts. Nur nach erfolgreicher Mutation neu laden;
+   Laden, Anlegen und Restore erhalten je eine übersetzte Fehlerkategorie aus
+   beiden Katalogen und verbinden sie über das vorhandene
+   `describeFailure()` mit dem strukturierten Grund. Kein rohes `String(err)`.
+2. **Der Force-Test bestätigt das Gegenteil seines Namens.** Der Fall
+   „verlangt … eine ausdrückliche Handlung" klickt ohne Haken auf „Vormerken"
+   und erwartet ausdrücklich einen POST ohne `force`. Eine bereits als
+   unpassend bekannte Sicherung darf die positive Aktion erst nach dem
+   ausdrücklichen Force-Haken freigeben; ohne Haken geht kein Restore-POST
+   hinaus.
+3. **Die Zeitformatierung ist doppelt.** `BackupsPanel.when()` implementiert
+   erneut genau `utils/datetime.formatDateTime()`. Das bestehende Utility ist
+   die gemeinsame Wissensquelle und wird hier importiert.
+4. **Mechanischer Regelrest:** Das TypeScript-Compiler-Inventar findet in den
+   berührten Tests die Bezeichner `ersteZelle`, `abbrechen` und `leiste`.
+   Bezeichner bleiben auch in Tests englisch. Neue Produkt-/Testkommentare
+   erzählen außerdem die ersetzte `d()`-Fassung, die vorher leere Browserzelle
+   und den früher verlorenen Dialognamen; diese Chronik steht bereits im
+   Ticket und wird im Code auf aktuelle Invariante und Grund gekürzt.
+
+Keine neue Datei und kein neues Verhalten außerhalb des Panels. Produkt- und
+Gesamtbudget bleiben bei 350/600; die nötigen Fehlerorakel passen durch das
+Entfernen der Prozessprosa und redundanter Erklärungen hinein. Browser nur für
+die sichtbar geänderten Zustände wiederholen: inkompatibler Dialog ohne/mit
+Haken sowie ein Fehlertext in Deutsch und Englisch.

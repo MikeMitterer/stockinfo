@@ -294,6 +294,13 @@ pending sei. `restore_state()` und der neue Test lieferten bei einem Fehler
 jedoch weiterhin gleichzeitig den Namen als `pending_restore` und den Grund
 als `restore_error`, obwohl kein weiterer Startversuch mehr vorgesehen war.
 
+**Neuer Beleg mit gegenteiliger Assertion:** T-47 UI-Runde, Commit `b0f5280`:
+Scope, Übergabe und Testname erklärten, eine unpassende Sicherung verlange vor
+dem Restore eine ausdrückliche Force-Handlung. Der Test klickte ohne gesetzten
+Haken auf die positive Aktion und verlangte anschließend ausdrücklich genau
+einen Restore-POST ohne `force`; er schrieb damit das Gegenteil der Regel als
+grünes Orakel fest.
+
 **Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21 Teil 1
 Runde 7, Commit `3148d09`: Die Übergabe erklärte beide Reproduktionen für
 nicht mehr herstellbar und `is_real_mic` zur einen, von Migration und Prüfung
