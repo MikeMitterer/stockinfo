@@ -34,8 +34,7 @@ from app.providers.composite_market import (
 # Wechselkurs gehört zu einem Währungspaar, nicht zu einem Wertpapier.
 ROLES = ("resolvers", "quotes", "daily", "etf_meta")
 
-# Wie weit zurück die Tagesreihe angefragt wird. Ein Jahr plus Puffer — dieselbe
-# Spanne wie bisher, damit die Messung vergleichbar bleibt.
+# Wie weit zurück die Tagesreihe angefragt wird: ein Jahr plus Puffer.
 _DAILY_WINDOW_DAYS = 370
 
 
@@ -134,8 +133,7 @@ def _classify(value: Any) -> tuple[str, str | None]:
     **Der Unterschied zwischen `empty` und `error` ist der Zweck dieses
     Endpunkts.** „Nichts gefunden" und „konnte nicht nachsehen" führen zu
     verschiedenen nächsten Schritten; sie beide grau zu färben nähme der
-    Diagnose genau die Auskunft, für die es sie gibt. Die Tabelle stand vor
-    T-46 schon einmal hier und ist beim Umbau auf Rollen verloren gegangen:
+    Diagnose genau die Auskunft, für die es sie gibt:
 
     | Antwort | Status | Detail |
     |---|---|---|
@@ -148,8 +146,8 @@ def _classify(value: Any) -> tuple[str, str | None]:
     | `SourceAnswer` ohne Wert | `empty` | — |
     | `SourceAnswer` mit Reihe | `ok` | die Zeilenzahl |
 
-    **`Unsupported` ist `empty` und nicht `error`** (T-31, Matrix `#6`): Die
-    Kette hat einwandfrei gearbeitet — sie hat das Papier sogar erkannt. Ein
+    **`Unsupported` ist `empty` und nicht `error`:** Die Kette hat einwandfrei
+    gearbeitet — sie hat das Papier sogar erkannt. Ein
     `error` schickte den Betreiber auf die Suche nach einer Störung, die es
     nicht gibt.
     """
@@ -184,11 +182,10 @@ _MEASURED = {
 # Wie eine **kaputte** Quelle in ihrer Rolle aussieht.
 #
 # **Eine Diagnose darf die Kette nicht anders laufen lassen als der Betrieb.**
-# Wirft eine Quelle, gab die Stoppuhr bisher schlicht ``None`` zurück — in der
-# Rolle `daily` erwartet die Kaskade dort aber eine `SourceAnswer` und stürzte
-# an `None.is_hit` ab. Die zweite Quelle wurde dann nie gefragt, obwohl die
-# Kaskade genau das zusagt. Der Ersatz ist deshalb keine Kaskadenregel, sondern
-# eine Formfrage: „gestört" in der Sprache der jeweiligen Rolle.
+# Gibt die Stoppuhr für jede kaputte Quelle schlicht ``None`` zurück, bricht die
+# Daily-Kaskade an `None.is_hit` ab und fragt spätere Quellen nicht mehr. Der
+# Ersatz ist deshalb keine Kaskadenregel, sondern eine Formfrage: „gestört" in
+# der Sprache der jeweiligen Rolle.
 _BROKEN = {
     "resolvers": lambda: Unavailable(error=_UNREACHABLE),
     "quotes": lambda: None,

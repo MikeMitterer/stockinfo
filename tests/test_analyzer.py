@@ -1,9 +1,8 @@
 """Die Diagnose misst die **konfigurierte Kette**, nicht feste Anbieter.
 
-Bis T-46 baute der Analyzer `yf.Ticker` und `JustEtfProvider` selbst und
-beschriftete seine Stufen mit deren Namen. Eine Instanz ohne Online-Quelle
-bekam damit Zahlen zu einer Kette, die sie nicht führt — und ging beim
-Analysieren ins Netz, obwohl sie bewusst offline lief.
+Der Analyzer erhält ausschließlich die konfigurierte Kette. Eine Instanz ohne
+Online-Quelle darf weder feste Anbieternamen melden noch beim Analysieren ins
+Netz gehen.
 
 Geprüft wird deshalb dreierlei:
 
@@ -178,21 +177,13 @@ def _concrete_sources() -> set[str]:
 def test_die_diagnose_kennt_keine_einzige_konkrete_quelle() -> None:
     """**Das Pflichtorakel „kein Netz" — als Inventar, nicht als Steckdose.**
 
-    Der naheliegende Weg wäre, im Dateiprofil die Steckdose zuzuhalten und zu
-    zählen, ob jemand hinausgeht. Er trägt hier nicht: `yfinance` telefoniert
-    über `curl_cffi`, also über libcurl, und nicht über Pythons `socket`. Ein
-    eingebauter Mutant, der mitten in der Diagnose `yf.Ticker(...).history()`
-    rief, ließ genau dieses Orakel grün — gemessen wurde eine Leitung, die die
-    Quelle gar nicht benutzt.
+    Eine Python-`socket`-Sperre trägt hier nicht: `yfinance` telefoniert über
+    `curl_cffi`, also über libcurl. Das belastbare Orakel ist deshalb die
+    Abhängigkeit selbst: Wer keine konkrete Quelle kennt, kann keine anrufen.
 
-    Was tragfähig ist, ist die Abhängigkeit selbst: Wer keine konkrete Quelle
-    kennt, kann keine anrufen.
-
-    **Die Lücke der ersten Fassung war das Mischmodul.** Sie verbot Module,
-    und `app.resolver` musste erlaubt bleiben — die Kaskade steht dort. In
-    derselben Datei stehen aber auch `OpenFigiResolver` und `YFinanceResolver`;
-    ein Import von dort wäre durchgegangen. Verboten sind deshalb Module
-    **und** Namen.
+    `app.resolver` ist ein Mischmodul: Neben der benötigten Kaskade stehen dort
+    `OpenFigiResolver` und `YFinanceResolver`. Deshalb inventarisiert der Test
+    Module **und** importierte Namen.
     """
     infrastructure = {"__init__", "base", "composite_etf", "composite_market"}
     forbidden_modules = {
@@ -324,11 +315,10 @@ def test_ein_fehler_beendet_die_uebrigen_rollen_nicht() -> None:
 
 
 def test_ein_papier_ohne_boersensymbol_bricht_nicht_ab() -> None:
-    """**Der Absturz aus dem Befund.** Eine `isin_only`-Identität ist kein Fehler.
+    """Eine `isin_only`-Identität ohne Börsensymbol ist kein Fehler.
 
-    Vorher baute der Analyzer daraus einen `yf.Ticker` und bekam ein
-    `ValueError` — die Route endete im `500`. Ohne festen Anbieter gibt es
-    diesen Schritt nicht mehr.
+    Der Analyzer darf aus der ISIN keinen anbieterspezifischen Ticker bauen:
+    Die konfigurierte Kurskette kann diese Identitätsform selbst beantworten.
     """
     bond = ResolvedInstrument(symbol="DE0001102531", isin="DE0001102531", kind="isin_only", type="bond")
     analyzer = QuoteAnalyzer(
@@ -398,9 +388,8 @@ def test_jede_antwortart_behaelt_ihre_bedeutung(
 
     „Nichts gefunden" und „konnte nicht nachsehen" führen zu verschiedenen
     nächsten Schritten; sie beide grau zu färben nähme der Diagnose genau die
-    Auskunft, für die es sie gibt. Beim Umbau auf Rollen war diese Tabelle
-    zwischenzeitlich auf „`empty` + Typname" eingedampft — der Test hält sie
-    jetzt fest, statt sie einem Docstring anzuvertrauen.
+    Auskunft, für die es sie gibt. Der Test hält die vollständige Tabelle fest,
+    statt sie nur einem Docstring anzuvertrauen.
     """
     analyzer = QuoteAnalyzer({"resolvers": [_Resolver("openfigi", answer)]})
 
@@ -415,8 +404,8 @@ def test_eine_gestoerte_tagesreihe_ist_ein_fehler_kein_leeres_ergebnis() -> None
 
     Eine `SourceAnswer` ohne Wert heißt „habe ich nicht"; dieselbe Antwort mit
     `disturbed` heißt „konnte nicht nachsehen". Genau daran entscheidet der
-    Router seit T-44 zwischen `404` und `502` — die Diagnose darf den
-    Unterschied nicht einebnen.
+    Router zwischen `404` und `502` — die Diagnose darf den Unterschied nicht
+    einebnen.
     """
     analyzer = QuoteAnalyzer(
         {
@@ -439,11 +428,9 @@ def test_eine_gestoerte_tagesreihe_ist_ein_fehler_kein_leeres_ergebnis() -> None
 def test_eine_werfende_tagesquelle_haelt_die_kaskade_nicht_an() -> None:
     """**Die Gegenprobe zu `_BROKEN`.** Eine Diagnose ändert den Lauf nicht.
 
-    Die Stoppuhr gab für eine werfende Quelle zuerst schlicht `None` zurück.
-    In der Rolle `daily` erwartet die Kaskade dort eine `SourceAnswer` und
-    stürzte an `None.is_hit` ab — die zweite Quelle wurde nie gefragt, obwohl
-    die Kaskade genau das zusagt, und ihre Zeile stand als `skipped` da. Aus
-    einem Fehler der ersten Quelle wurde so eine Falschaussage über die zweite.
+    Ein untypisiertes `None` für die werfende Quelle bräche die Daily-Kaskade
+    an `None.is_hit` ab. Die Stoppuhr muss stattdessen eine gestörte
+    `SourceAnswer` weiterreichen, damit die zweite Quelle gefragt wird.
     """
 
     class _Boom(_Daily):
