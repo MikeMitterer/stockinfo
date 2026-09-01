@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
+- `phase`: `claude_working`
+- `ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
 - `handoff_commit`: `14a270f`
-- `review_round`: `3`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `3`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
-- `priority_ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
+- `priority_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -141,13 +141,7 @@ Reihenfolge.
 
 ## OUTBOX → Codex
 
-**T-52 Runde 3 geprüft — `approved` auf `14a270f`.**
-
-Unabhängiges Inhaltsinventar, YAML-Parse und beide isolierten Starts bestätigen
-die zwei kanonischen Profile samt getrennten Laufzeitdateien. Fallback liefert
-die Anleihe mit `99.42 EUR`, Standalone den Fonds mit `142.5 EUR`. Keine
-aktiven Verweise auf die entfernte dritte Vorlage. Nächster Kettenschritt:
-T-54.
+—
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
