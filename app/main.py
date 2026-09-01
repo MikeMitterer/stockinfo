@@ -20,7 +20,12 @@ from app.config import Settings, get_settings
 from app.docs import register_docs
 from app.container import get_cached_quote_service
 from app.db import init_db
-from app.services.backup import fingerprint_of, stamp_fingerprint
+from app.services.backup import (
+    BackupError,
+    apply_pending,
+    fingerprint_of,
+    stamp_fingerprint,
+)
 from app.migration_guard import (
     HEALTHCHECK_PATH,
     REASON_MIGRATION_PENDING,
@@ -75,6 +80,13 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # den Start ausdrücklich **nicht** ab: Wer eine Quelle kaputt macht,
     # verliert diese Quelle, nicht seine Installation.
     data_dir = Path(settings.database_path).parent
+
+    # **Eine vorgemerkte Wiederherstellung zuerst.** Weiter unten öffnet
+    # `init_db` die Datei; der Tausch gehört an die einzige Stelle im Leben des
+    # Prozesses, an der noch keine Verbindung offen ist.
+    restored = apply_pending(settings.database_path, get_sources_config())
+    if restored:
+        logger.info("restore_completed", backup=restored)
     # **Erst die beigesteuerten Pakete, dann suchen.** Sie liegen unter `/data`
     # und überleben damit ein Image-Update; `site-packages` im Image tut das
     # nicht. Schlägt die Installation fehl, fehlen diese Quellen — der Start
@@ -517,3 +529,36 @@ def mount_dashboard(app: FastAPI, static_dir: str) -> bool:
 
 
 mount_dashboard(app, get_settings().static_dir)
+
+
+@app.exception_handler(BackupError)
+async def backup_error(request: Request, exc: BackupError) -> JSONResponse:
+    """Übersetzt die drei Ablehnungen des Sicherungswegs in ihre Statuscodes.
+
+    **Zentral, wie die Handler darüber:** Geworfen werden sie im Dienst, und
+    dorthin führt jeder Weg, der eine Sicherung benennt — die REST-Route wie
+    die zweite Prüfung beim Start.
+
+    Die drei Fälle sind bewusst nicht ein Status: „gibt es nicht", „passt
+    nicht" und „kann ich nicht lesen" führen zu verschiedenen nächsten
+    Schritten. Nur der letzte lässt sich auch mit `force` nicht übergehen.
+
+    Returns:
+        `404`, `409` oder `422` mit `{code, params}` — dieselbe Form wie jede
+        andere Ablehnung dieser App.
+    """
+    codes = {
+        BackupError.NOT_FOUND: status.HTTP_404_NOT_FOUND,
+        BackupError.INCOMPATIBLE: status.HTTP_409_CONFLICT,
+        BackupError.SCHEMA_TOO_NEW: status.HTTP_422_UNPROCESSABLE_CONTENT,
+    }
+    logger.info(exc.code, path=request.url.path, **exc.params)
+    return JSONResponse(
+        status_code=codes.get(exc.code, status.HTTP_400_BAD_REQUEST),
+        content=ErrorDetail(
+            code=exc.code,
+            # `params` ist überall eine Abbildung auf **Text**; eine
+            # Schemaversion ist eine Zahl.
+            params={key: str(value) for key, value in exc.params.items()},
+        ).model_dump(),
+    )

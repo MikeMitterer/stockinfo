@@ -17,6 +17,8 @@ trägt `PRAGMA user_version` mit.
 import hashlib
 import json
 import os
+import re
+import shutil
 import sqlite3
 import tempfile
 import threading
@@ -36,6 +38,31 @@ KEEP_BACKUPS = 10
 """Wie viele Sicherungen liegen bleiben."""
 
 FINGERPRINT_KEY = "sources_fingerprint"
+
+PENDING_FILENAME = "restore-pending.json"
+"""Die vorgemerkte Absicht. Liegt **neben** der Datenbank, nicht darin — sie
+soll den Tausch überleben, der die Datenbank ersetzt."""
+
+_NAME_PATTERN = re.compile(r"^stockinfo-\d{8}T\d{9}Z-[0-9a-f]{12}\.db$")
+"""**Ein Name, kein Pfad.** Schrägstriche, `..` und absolute Pfade sind ein
+Versuch, das Verzeichnis zu verlassen; geprüft wird vor jedem Dateizugriff."""
+
+
+class BackupError(Exception):
+    """Eine Ablehnung des Wiederherstellens — mit ihrer Kennung.
+
+    Drei Fälle, **eine** Klasse: Sie unterscheiden sich in Kennung und
+    Statuscode, nicht im Verhalten.
+    """
+
+    NOT_FOUND = "backup_not_found"
+    INCOMPATIBLE = "backup_incompatible"
+    SCHEMA_TOO_NEW = "backup_schema_too_new"
+
+    def __init__(self, code: str, message: str, **params: object) -> None:
+        super().__init__(message)
+        self.code = code
+        self.params = params
 
 
 @dataclass(frozen=True)
@@ -128,6 +155,10 @@ class BackupService:
         self._lock = threading.Lock()
 
     @property
+    def database_path(self) -> Path:
+        return self._database
+
+    @property
     def directory(self) -> Path:
         """Abgeleitet aus dem Datenbankpfad, nicht zusätzlich eingestellt."""
         return self._database.parent / BACKUP_DIRNAME
@@ -137,16 +168,21 @@ class BackupService:
         """Die Kennung der **laufenden** Konfiguration."""
         return fingerprint_of(self._config)
 
-    def create(self) -> BackupInfo:
+    def create(self, *, reason: str = "manual") -> BackupInfo:
         """Legt eine Sicherung an und räumt die älteste weg, wenn nötig.
 
         Serialisiert: Gleichzeitige Aufrufe bekommen der Reihe nach je eine
         eigene Sicherung, statt sich gegenseitig die Datei wegzuschreiben.
+
+        Args:
+            reason: `manual` oder `pre-restore`. Steht im Manifest, damit
+                erkennbar bleibt, welche Sicherung ein Wiederherstellen
+                begleitet hat.
         """
         with self._lock:
-            return self._create_locked()
+            return self._create_locked(reason)
 
-    def _create_locked(self) -> BackupInfo:
+    def _create_locked(self, reason: str) -> BackupInfo:
         self.directory.mkdir(parents=True, exist_ok=True)
         fingerprint = self.fingerprint
         created_at, target = self._free_name(datetime.now(timezone.utc), fingerprint)
@@ -166,11 +202,12 @@ class BackupService:
                     "sources_fingerprint": fingerprint,
                     "sources": {role: list(self._config.chain(role)) for role in ROLES},
                     "packages": list(self._config.packages),
+                    "reason": reason,
                 },
                 indent=2,
             ),
         )
-        logger.info("backup_created", name=target.name)
+        logger.info("backup_created", name=target.name, reason=reason)
         self._rotate()
         return self._info(target)
 
@@ -257,6 +294,125 @@ class BackupService:
             if list(theirs.get(role) or []) != list(self._config.chain(role))
         ]
         return "; ".join(differences) if differences else "andere Paketliste"
+
+
+    def request_restore(self, name: str, *, force: bool = False) -> BackupInfo:
+        """Prüft eine Sicherung und hinterlegt die Absicht.
+
+        **An der laufenden Datenbank ändert sich hier nichts.** Sie trägt offene
+        Verbindungen und den Scheduler; getauscht wird beim nächsten Start.
+
+        Raises:
+            BackupError: Unbekannter Name, neueres Schema, oder fremde
+                Quellenlage ohne `force`.
+        """
+        info = self.check(name, force=force)
+        _write_atomic(
+            self._database.parent / PENDING_FILENAME,
+            json.dumps({"backup": info.name, "force": force}, indent=2),
+        )
+        logger.info("restore_requested", name=info.name, force=force)
+        return info
+
+    def check(self, name: str, *, force: bool) -> BackupInfo:
+        """Die gemeinsame Prüfung von REST-Aufruf und Einlösen beim Start.
+
+        **Zweimal aufgerufen, mit Absicht.** Zwischen Klick und Neustart kann
+        sich die Konfiguration ändern oder die Datei verschwinden; eine Prüfung
+        nur vorne wäre ein Versprechen auf einen Zustand, den beim Tausch
+        niemand nachsieht.
+
+        Ein neueres Schema hebt auch `force` nicht auf: Dort geht es nicht um
+        Erlaubnis, sondern darum, dass die App die Datei nicht lesen kann.
+        """
+        path = self.resolve(name)
+        info = self._info(path)
+        _, version = _read_stamp(path)
+        if version > SCHEMA_VERSION:
+            raise BackupError(
+                BackupError.SCHEMA_TOO_NEW,
+                f"Sicherung {name} trägt Schema {version}",
+                name=name,
+                schema_version=version,
+                app_schema_version=SCHEMA_VERSION,
+            )
+        if not info.compatible and not force:
+            raise BackupError(
+                BackupError.INCOMPATIBLE,
+                f"Sicherung {name} gehört zu einer anderen Quellenlage",
+                name=name,
+                difference=info.reason,
+            )
+        return info
+
+    def resolve(self, name: str) -> Path:
+        """Vom Namen zur Datei — mit der Musterprüfung **vor** dem Zugriff."""
+        if not _NAME_PATTERN.match(name):
+            raise BackupError(
+                BackupError.NOT_FOUND, f"{name} ist kein Sicherungsname", name=name
+            )
+        path = self.directory / name
+        if not path.is_file():
+            raise BackupError(
+                BackupError.NOT_FOUND, f"Sicherung {name} gibt es nicht", name=name
+            )
+        return path
+
+
+def apply_pending(database_path: str, config: SourcesConfig) -> str | None:
+    """Löst eine vorgemerkte Wiederherstellung ein — **vor** der ersten Verbindung.
+
+    1. Absicht lesen; ohne sie passiert nichts.
+    2. Erneut prüfen — die Prüfung beim REST-Aufruf ist keine dauerhafte Zusage.
+    3. **Jetzt** den aktuellen Stand sichern. Zwischen Klick und Neustart wird
+       weitergeschrieben; eine Sicherung vom Klick fehlten genau diese Zeilen.
+    4. Über eine temporäre Zieldatei und atomaren Austausch tauschen; die
+       Sicherung wird kopiert, nicht verbraucht.
+    5. `-wal`/`-shm` entfernen — sie gehören zur alten Datei. Bliebe eines
+       liegen, läse SQLite den neuen Bestand mit dem Journal des vorigen.
+    6. Erst danach die Absicht löschen.
+
+    Ein Fehler bricht den Start **nicht** ab und lässt die Absicht liegen: Die
+    Datenbank ist unangetastet, und der Wunsch verschwindet nicht spurlos.
+    """
+    database = Path(database_path)
+    pending = database.parent / PENDING_FILENAME
+    if not pending.is_file():
+        return None
+
+    service = BackupService(database_path, config)
+    try:
+        intent = json.loads(pending.read_text(encoding="utf-8"))
+        name = str(intent.get("backup", ""))
+        force = bool(intent.get("force", False))
+        source = service.resolve(service.check(name, force=force).name)
+
+        if database.is_file():
+            service.create(reason="pre-restore")
+
+        temporary = database.with_name(database.name + ".incoming")
+        shutil.copy2(source, temporary)
+        os.replace(temporary, database)
+        for suffix in ("-wal", "-shm"):
+            database.with_name(database.name + suffix).unlink(missing_ok=True)
+    except Exception as exc:  # noqa: BLE001 — ein Start bricht daran nicht ab
+        logger.error("restore_failed", error=str(exc), exc_info=True)
+        return None
+
+    pending.unlink(missing_ok=True)
+    logger.info("restore_applied", name=name, force=force)
+    return name
+
+
+def pending_restore(database_path: str) -> str | None:
+    """Der Name der vorgemerkten Sicherung, falls ein Neustart aussteht."""
+    pending = Path(database_path).parent / PENDING_FILENAME
+    if not pending.is_file():
+        return None
+    try:
+        return str(json.loads(pending.read_text(encoding="utf-8")).get("backup")) or None
+    except (OSError, ValueError):
+        return None
 
 
 def _read_manifest(database_file: Path) -> dict:

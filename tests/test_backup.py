@@ -28,7 +28,10 @@ from app.db import SCHEMA_VERSION, get_connection, init_db
 from app.main import app
 from app.services.backup import (
     KEEP_BACKUPS,
+    PENDING_FILENAME,
+    BackupError,
     BackupService,
+    apply_pending,
     fingerprint_of,
     stamp_fingerprint,
 )
@@ -370,3 +373,251 @@ def test_gleichzeitige_aufrufe_bekommen_je_eine_eigene_sicherung(
     assert len(list(directory.glob("stockinfo-*.db"))) == KEEP_BACKUPS
     assert len(list(directory.glob("stockinfo-*.json"))) == KEEP_BACKUPS
     assert list(directory.glob("*.tmp")) == [], "ein Zwischenprodukt blieb liegen"
+
+
+# ─── #4, #5, #6 · die drei Ablehnungen ────────────────────────────────────────
+
+
+def test_eine_fremde_kennung_wird_abgelehnt_und_nennt_die_rolle(volume: Path) -> None:
+    """„Kennung verschieden" ist wahr und nutzlos — wer die Meldung liest,
+    will wissen, was anders steht."""
+    info = _service(volume).create()
+
+    with pytest.raises(BackupError) as fehler:
+        _service(volume, _FILE_ONLY).request_restore(info.name)
+
+    difference = str(fehler.value.params["difference"])
+    assert fehler.value.code == BackupError.INCOMPATIBLE
+    assert "quotes" in difference and "yfinance" in difference and "yaml-file" in difference
+    assert not (volume / PENDING_FILENAME).exists(), "die Absicht wurde trotzdem gelegt"
+
+
+def test_mit_force_laeuft_dieselbe_sicherung_durch(volume: Path) -> None:
+    """Die Gegenprobe: Ohne sie wäre die Ablehnung auch grün, wenn `force`
+    gar nichts täte."""
+    info = _service(volume).create()
+
+    _service(volume, _FILE_ONLY).request_restore(info.name, force=True)
+
+    assert json.loads((volume / PENDING_FILENAME).read_text("utf-8")) == {
+        "backup": info.name,
+        "force": True,
+    }
+
+
+@pytest.mark.parametrize("force", [False, True], ids=["ohne-force", "mit-force"])
+def test_ein_neueres_schema_wird_auch_mit_force_abgelehnt(volume: Path, force: bool) -> None:
+    """**Der einzige Grund, den `force` nicht übergeht.**
+
+    Bei der Kennung geht es um Erlaubnis; bei einer neueren Datenbank um
+    Können — eine ältere App liest sie nicht.
+    """
+    service = _service(volume)
+    info = service.create()
+    connection = sqlite3.connect(service.directory / info.name)
+    try:
+        connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION + 1}")
+        connection.commit()
+    finally:
+        connection.close()
+
+    with pytest.raises(BackupError) as fehler:
+        service.request_restore(info.name, force=force)
+
+    assert fehler.value.code == BackupError.SCHEMA_TOO_NEW
+    assert not (volume / PENDING_FILENAME).exists()
+
+
+@pytest.mark.parametrize(
+    "name",
+    ["../stockinfo.db", "/etc/passwd", "stockinfo-20260901T120000000Z-abc.db", "x.db", ""],
+    ids=["elternpfad", "absolut", "kurze-kennung", "fremdes-muster", "leer"],
+)
+def test_ein_name_der_keiner_ist_wird_abgewiesen(volume: Path, name: str) -> None:
+    """Die Musterprüfung steht **vor** dem Dateizugriff, nicht nach ihm."""
+    with pytest.raises(BackupError) as fehler:
+        _service(volume).request_restore(name)
+    assert fehler.value.code == BackupError.NOT_FOUND
+
+
+# ─── #3, #7, #8 · das Einlösen beim Start ─────────────────────────────────────
+
+
+def _put(volume: Path, symbol: str) -> None:
+    connection = get_connection(str(volume / "stockinfo.db"))
+    try:
+        _insert(connection, symbol)
+        connection.commit()
+    finally:
+        connection.close()
+
+
+def test_die_vorgemerkte_absicht_laesst_die_datenbank_unberuehrt(volume: Path) -> None:
+    """**`#8`.** Der Aufruf prüft und schreibt eine Datei. Mehr nicht — eine
+    laufende App trägt offene Verbindungen und den Scheduler auf der Datei."""
+    _put(volume, "ALT")
+    info = _service(volume).create()
+    _put(volume, "NEUER")
+
+    _service(volume).request_restore(info.name)
+
+    assert _symbols(volume / "stockinfo.db") == ["ALT", "NEUER"]
+    assert (volume / PENDING_FILENAME).is_file()
+
+
+def test_der_start_spielt_ein_und_sichert_vorher_den_zwischenstand(volume: Path) -> None:
+    """**`#3` und `#7` an einem Stück — und der Zeitpunkt ist der Punkt.**
+
+    Die Sicherheitskopie entsteht beim **Einlösen**, nicht beim Klick.
+    Dazwischen liegt ein Neustart, und dazwischen wird weitergeschrieben:
+    `ZWISCHENDURCH` fehlte einer Kopie vom Klickzeitpunkt.
+    """
+    _put(volume, "GESICHERT")
+    info = _service(volume).create()
+    _service(volume).request_restore(info.name)
+    _put(volume, "ZWISCHENDURCH")
+
+    applied = apply_pending(str(volume / "stockinfo.db"), _ONLINE)
+
+    assert applied == info.name
+    assert _symbols(volume / "stockinfo.db") == ["GESICHERT"]
+    assert not (volume / PENDING_FILENAME).exists()
+    safety = [
+        path
+        for path in _service(volume).directory.glob("stockinfo-*.db")
+        if json.loads(path.with_suffix(".json").read_text("utf-8"))["reason"] == "pre-restore"
+    ]
+    assert len(safety) == 1
+    assert _symbols(safety[0]) == ["GESICHERT", "ZWISCHENDURCH"]
+    assert (_service(volume).directory / info.name).is_file(), "die Sicherung wurde verbraucht"
+
+
+def test_das_journal_der_alten_datei_bleibt_nicht_liegen(volume: Path) -> None:
+    """Ein zurückgelassenes `-wal` läse den neuen Bestand mit dem alten Journal.
+
+    Der Aufbau muss das Journal erst herstellen: Ohne eine offene Verbindung
+    gibt es zum Tauschzeitpunkt gar keines, und der Test prüfte nichts.
+    """
+    _put(volume, "GESICHERT")
+    info = _service(volume).create()
+    _service(volume).request_restore(info.name)
+
+    leftover = get_connection(str(volume / "stockinfo.db"))
+    try:
+        _insert(leftover, "IM_JOURNAL")
+        leftover.commit()
+        assert (volume / "stockinfo.db-wal").exists(), "der Aufbau erzeugt kein Journal"
+
+        apply_pending(str(volume / "stockinfo.db"), _ONLINE)
+
+        assert not (volume / "stockinfo.db-wal").exists()
+        assert not (volume / "stockinfo.db-shm").exists()
+        assert not (volume / "stockinfo.db.incoming").exists()
+    finally:
+        leftover.close()
+
+
+@pytest.mark.parametrize(
+    "sabotage",
+    [
+        pytest.param("delete", id="datei-verschwunden"),
+        pytest.param("switch", id="konfiguration-gewechselt"),
+        pytest.param("none", id="gar-keine-absicht"),
+    ],
+)
+def test_ein_start_scheitert_nicht_an_einer_sicherung(volume: Path, sabotage: str) -> None:
+    """**Die zweite Prüfung beim Start ist keine Formsache.**
+
+    Zwischen Klick und Neustart kann die Datei verschwinden oder die
+    Konfiguration wechseln. Beides lässt die Datenbank unberührt und bricht den
+    Start nicht ab; die Absicht bleibt liegen, damit der Wunsch nicht spurlos
+    verschwindet.
+    """
+    _put(volume, "UNBERUEHRT")
+    config = _ONLINE
+    if sabotage != "none":
+        info = _service(volume).create()
+        _service(volume).request_restore(info.name)
+        if sabotage == "delete":
+            (_service(volume).directory / info.name).unlink()
+        else:
+            config = _FILE_ONLY
+
+    assert apply_pending(str(volume / "stockinfo.db"), config) is None
+    assert _symbols(volume / "stockinfo.db") == ["UNBERUEHRT"]
+    assert (volume / PENDING_FILENAME).is_file() is (sabotage != "none")
+
+
+# ─── Der veröffentlichte Weg des Wiederherstellens ────────────────────────────
+
+
+def test_ein_restore_antwortet_mit_202_und_nennt_den_neustart(
+    client: TestClient, tmp_path: Path
+) -> None:
+    """Die Ansage steht im Rumpf **und** in der Liste.
+
+    Eine Ansage, die nur einmal in einer HTTP-Antwort stand, ist keine: Wer die
+    Seite neu lädt, sieht sie nicht mehr, und die Instanz läuft weiter mit dem
+    alten Bestand.
+    """
+    name = client.post("/backups").json()["name"]
+
+    accepted = client.post(f"/backups/{name}/restore")
+
+    assert accepted.status_code == 202, accepted.text
+    assert accepted.json()["restart_required"] is True
+    assert "Neustart" in accepted.json()["detail"]
+    assert (tmp_path / PENDING_FILENAME).is_file()
+    assert client.get("/backups").json()["pending_restore"] == name
+
+
+@pytest.mark.parametrize(
+    ("case", "expected_status", "expected_code"),
+    [
+        pytest.param("unknown", 404, "backup_not_found", id="unbekannt"),
+        pytest.param("foreign", 409, "backup_incompatible", id="fremde-lage"),
+        pytest.param("newer", 422, "backup_schema_too_new", id="neueres-schema"),
+    ],
+)
+def test_die_drei_ablehnungen_haben_je_ihren_status(
+    client: TestClient, tmp_path: Path, case: str, expected_status: int, expected_code: str
+) -> None:
+    """„Gibt es nicht", „passt nicht" und „kann ich nicht lesen" führen zu
+    verschiedenen nächsten Schritten — also nicht zu einem Status."""
+    name = "stockinfo-20260901T120000000Z-abcdef123456.db"
+    if case != "unknown":
+        name = client.post("/backups").json()["name"]
+    if case == "foreign":
+        (tmp_path / "sources.yaml").write_text(
+            "\n".join(f"{role}: [yaml-file]" for role in ROLES) + "\n", encoding="utf-8"
+        )
+        get_sources_config.cache_clear()
+        get_backup_service.cache_clear()
+    if case == "newer":
+        connection = sqlite3.connect(tmp_path / "backups" / name)
+        try:
+            connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION + 1}")
+            connection.commit()
+        finally:
+            connection.close()
+
+    # `force` nur beim Schema: Dort soll es **nicht** helfen. Bei der fremden
+    # Lage hülfe es, und der Fall prüfte dann seine eigene Ausnahme.
+    response = client.post(f"/backups/{name}/restore", params={"force": case == "newer"})
+
+    assert response.status_code == expected_status, response.text
+    assert response.json()["code"] == expected_code
+    assert not (tmp_path / PENDING_FILENAME).exists()
+
+
+def test_die_form_der_ausgaenge_steht_im_openapi(client: TestClient) -> None:
+    """**Deklariert, nicht nur gelebt.** Ein Konsument soll die drei Fälle
+    behandeln können, ohne sie erst im Betrieb zu entdecken."""
+    declared = client.get("/openapi.json").json()["paths"][
+        "/backups/{name}/restore"
+    ]["post"]["responses"]
+
+    assert {"202", "404", "409", "422"} <= set(declared)
+    for code in ("404", "409", "422"):
+        body = declared[code]["content"]["application/json"]["schema"]
+        assert "ErrorDetail" in json.dumps(body), f"{code} sagt keine Form zu"

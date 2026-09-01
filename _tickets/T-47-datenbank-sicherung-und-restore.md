@@ -220,12 +220,12 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 |---|---|---|:--:|---|
 | **1** | `POST /backups` während eines Schreibzugriffs | die Datei ist in sich stimmig, nicht zerrissen | ✅ | |
 | **2** | `GET /backups` | Zeitpunkt, Kennung und `compatible` je Eintrag; die Liste stimmt mit dem Verzeichnis überein | ✅ | |
-| **3** | Wiederherstellen mit **gleicher** Kennung | derselbe Bestand nach dem Neustart | ➖ | |
-| **4** | Wiederherstellen mit **anderer** Kennung | abgelehnt, und die Meldung nennt die Rolle und beide Ketten | ➖ | |
-| **5** | dasselbe mit `force` | läuft, und die Instanz sagt danach sichtbar, dass sie es getan hat | ➖ | |
-| **6** | Sicherung mit neuerem Schema | abgelehnt, auch mit `force` | ➖ | |
-| **7** | vor dem Wiederherstellen | eine Sicherung des alten Standes liegt vor | ➖ | |
-| **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ➖ | |
+| **3** | Wiederherstellen mit **gleicher** Kennung | derselbe Bestand nach dem Neustart | ✅ | |
+| **4** | Wiederherstellen mit **anderer** Kennung | abgelehnt, und die Meldung nennt die Rolle und beide Ketten | ✅ | |
+| **5** | dasselbe mit `force` | läuft, und die Instanz sagt danach sichtbar, dass sie es getan hat | ✅ | |
+| **6** | Sicherung mit neuerem Schema | abgelehnt, auch mit `force` | ✅ | |
+| **7** | vor dem Wiederherstellen | eine Sicherung des alten Standes liegt vor | ✅ | |
+| **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ✅ | |
 | **9** | `PRAGMA user_version` | ist gesetzt und wird beim Prüfen gelesen | ✅ | |
 | **10** | elfte Sicherung | die älteste ist weg, es liegen zehn; keine zweite Löschmöglichkeit | ✅ | |
 | **11** | UI-Liste | alle vorhandenen Sicherungen sind sichtbar, unpassende **mit Grund** statt ausgeblendet | ➖ | |
@@ -632,3 +632,48 @@ Umfang von 1a beträgt 406 Produkt- und 372 Testzeilen, zusammen 778.
 
 1a ist damit teilfreigegeben. T-47 bleibt aktiv und geht unmittelbar in 1b
 mit Verify `#3` bis `#8`; T-48 und die UI bleiben gesperrt.
+
+### Runde 1b · Wiederherstellen (Claude, 2026-09-01)
+
+Prüfen, Vormerken, Einlösen beim Start, Sicherheitskopie. Verify `#3`–`#8`
+bestätigt; die UI (`#11`, `#12`) bleibt die letzte Teilstrecke.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 500 | **283** |
+| Gesamt | ≤ 800 | **534** |
+
+**Live über zwei echte Prozesse** (Dateiprofil, Port 8807):
+
+```
+Bestand aufgebaut               ['EUNL.DE']
+POST /backups               →   B1
+zweites Papier geholt           ['DE0001102531', 'EUNL.DE']
+POST /backups/B1/restore    →   202, „… verlangt einen Neustart der App …"
+Bestand danach                  ['DE0001102531', 'EUNL.DE']   ← unberührt
+pending_restore                 B1
+
+── Prozess beendet, neu gestartet ──
+   backup_created  reason=pre-restore
+   restore_applied force=False
+
+Bestand nach dem Neustart       ['EUNL.DE']
+pending_restore                 None
+Sicherheitskopie enthält        ['DE0001102531', 'EUNL.DE']
+Reste (wal/shm/incoming)        keine
+```
+
+Die Tests rufen `apply_pending()` direkt; die Grenze, an der es im Betrieb
+schiefgeht, liegt aber dort, wo ein Prozess endet und der nächste die Datei
+findet.
+
+#### Mutantenprobe
+
+| Mutant | rot |
+|---|---|
+| Sicherheitskopie beim Klick statt beim Tausch | `#7` — der Zwischenstand fehlt |
+| beim Start nicht erneut prüfen | die fremde Lage kommt durch |
+| `force` hebelt auch die Schemaprüfung aus | `#6`, Dienst **und** HTTP |
+| `-wal`/`-shm` bleiben liegen | der Journal-Fall |
+| Namensmuster wird nicht geprüft | der absolute Pfad kommt durch |
+| Absicht wird auch bei einem Fehler gelöscht | beide Sabotagefälle |

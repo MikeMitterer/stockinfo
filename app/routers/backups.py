@@ -8,13 +8,33 @@ ein zweiter Löschweg wäre nur eine zweite Gelegenheit, die falsche Datei zu
 treffen.
 """
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 
 from app.container import get_backup_service
-from app.models import BackupEntry, BackupList
-from app.services.backup import BackupInfo, BackupService
+from app.models import BackupEntry, BackupList, ErrorDetail, RestoreAccepted
+from app.services.backup import BackupInfo, BackupService, pending_restore
 
 router = APIRouter(tags=["backups"])
+
+RESTORE_ERRORS: dict[int | str, dict[str, object]] = {
+    404: {"model": ErrorDetail, "description": "`backup_not_found`"},
+    409: {
+        "model": ErrorDetail,
+        "description": (
+            "`backup_incompatible` — andere Quellenlage; `params.difference` "
+            "nennt die abweichenden Rollen mit beiden Ketten. `force=true` "
+            "übergeht es"
+        ),
+    },
+    422: {
+        "model": ErrorDetail,
+        "description": (
+            "`backup_schema_too_new` — **auch `force` hebt das nicht auf**: "
+            "Eine ältere App kann eine neuere Datenbank nicht lesen"
+        ),
+    },
+}
+"""Die drei Ausgänge — deklariert, nicht nur gelebt."""
 
 
 def _entry(info: BackupInfo) -> BackupEntry:
@@ -38,6 +58,7 @@ def list_backups(service: BackupService = Depends(get_backup_service)) -> Backup
     """
     return BackupList(
         fingerprint=service.fingerprint,
+        pending_restore=pending_restore(str(service.database_path)),
         backups=[_entry(info) for info in service.list()],
     )
 
@@ -49,3 +70,36 @@ def create_backup(service: BackupService = Depends(get_backup_service)) -> Backu
     Die elfte verdrängt die älteste.
     """
     return _entry(service.create())
+
+
+@router.post(
+    "/backups/{name}/restore",
+    response_model=RestoreAccepted,
+    status_code=status.HTTP_202_ACCEPTED,
+    responses=RESTORE_ERRORS,
+)
+def restore_backup(
+    name: str,
+    force: bool = Query(
+        default=False,
+        description="Abweichende Quellenkennung übergehen; ein neueres Schema nicht",
+    ),
+    service: BackupService = Depends(get_backup_service),
+) -> RestoreAccepted:
+    """Merkt eine Sicherung zum Einspielen vor — **`202`, nicht `200`**.
+
+    An der laufenden Datenbank ändert sich nichts; getauscht wird beim nächsten
+    Start. Bis dahin steht der ausstehende Neustart in `GET /backups`, damit die
+    Ansage nicht nur einmal in einer HTTP-Antwort stand.
+    """
+    info = service.request_restore(name, force=force)
+    return RestoreAccepted(
+        backup=_entry(info),
+        # „Neustart" steht hier ausdrücklich — „beim nächsten Start" liest sich
+        # wie etwas, das von selbst passiert.
+        detail=(
+            f"{info.name} ist zum Einspielen vorgemerkt. Die Wiederherstellung "
+            "verlangt einen Neustart der App; bis dahin läuft der bisherige "
+            "Bestand unverändert weiter."
+        ),
+    )

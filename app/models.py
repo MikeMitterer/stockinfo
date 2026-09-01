@@ -1116,4 +1116,24 @@ class BackupList(BaseModel):
     """
 
     fingerprint: str = Field(description="Quellenkennung der laufenden Konfiguration")
+    pending_restore: str | None = Field(
+        default=None,
+        description=(
+            "Name der vorgemerkten Sicherung, solange ein Neustart aussteht — "
+            "dann ist die laufende Datenbank noch die alte"
+        ),
+    )
     backups: list[BackupEntry]
+
+
+class RestoreAccepted(BaseModel):
+    """Die Antwort auf ein vorgemerktes Wiederherstellen — `202`, nicht `200`.
+
+    **Der Dienst startet sich nicht selbst neu.** Ein Prozess, der seinen
+    Lebenszyklus an der HTTP-Grenze übernimmt, entzieht ihn dem Container, der
+    ihn führt. Die Antwort sagt, was noch fehlt, statt es zu tun.
+    """
+
+    backup: BackupEntry
+    restart_required: bool = True
+    detail: str = Field(description="Klartext: der Neustart steht noch aus")
