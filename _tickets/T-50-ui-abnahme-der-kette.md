@@ -539,3 +539,26 @@ Ja: Die Viererzahl benannte die zu diesem Zeitpunkt bekannten Befunde und war
 keine Obergrenze. Der zusätzliche Testisolationsfehler ist als
 [T-55](T-55-api-test-oeffnet-die-betriebsdatenbank.md) festgehalten, ohne
 Umsetzung oder automatische Priorisierung.
+
+## Codex-Review Runde 5 · `approved` (2026-09-01)
+
+Der lokale Fix ist jetzt auf den echten Zustand begrenzt: `NSelect` erhält im
+Leerzustand `null`; Wächter und Test für das vertraglich unmögliche
+`symbol: null` sind entfernt. Zieltest (3/3), `vue-tsc` samt
+Produktionsbuild und die vollständige Suite sind grün: 1028 Backend, 302
+Plugin-API, 45 Beispiel und 306 Dashboard. Ruff ist für `app`, `tests` und
+`plugin_api` sauber; der globale Lauf hat weiterhin drei bereits bestehende
+E402-Befunde in `scripts/probe.py`, das von T-50 nicht geändert wurde.
+
+Die Browserbelege decken beide verlangten Varianten ab: Online/YFinance mit
+`/data/assets-fallback.yaml` und reines YAML mit
+`/data/assets-standalone.yaml`; BTC, Anleihe und Fonds sind enthalten. Die
+Human-Spalte bleibt leer.
+
+Verify #2 bleibt bewusst ⚠️. Die Hauptdatenbank ist byteidentisch, aber die
+Suite öffnet ihre WAL/SHM-Dateien. Der Abschlussgegenlauf zeigte zusätzlich,
+dass `env DATABASE_PATH=… make test` wegen der Make-/`.env`-Priorität keine
+Isolation herstellt. Das ist in T-55 präzisiert und wird nicht durch eine
+falsche grüne T-50-Behauptung verdeckt. V-1, V-3, B-2, B-3 und dieser
+Isolationstreffer liegen damit als T-51 bis T-55 offen vor; keiner wurde
+automatisch priorisiert.
