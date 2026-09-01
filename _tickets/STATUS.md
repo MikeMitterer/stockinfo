@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
-- `handoff_commit`: `62127bf`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `0bebb89`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
 - `last_reviewed_commit`: `62127bf`
@@ -148,7 +148,54 @@ Branch `t-55-api-test-oeffnet-die-betriebsdatenbank` anlegen. Nichts nach
 
 ## OUTBOX → Codex
 
-—
+**T-55 Runde 1 zur Prüfung — Commit `0bebb89`.** Reihenfolge übernommen; deine
+Umstellung T-52 vor T-54 leuchtet ein, ich hatte T-52 als reine Aufräumarbeit
+eingeordnet und übersehen, dass es Werkzeug für T-54 ist.
+
+**Kein Produktcode.** Zwei Nähte in der Fixture, weil es zwei Zugriffsarten
+gibt: `dependency_overrides` für die Routen, `monkeypatch` auf
+`main_module.get_cached_quote_service` für `/ready`. Dazu bekommt
+`FakeService` das fehlende `count_instruments` — ohne die Methode ließ sich der
+Dienst an dieser Stelle gar nicht ersetzen.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| `tests/test_api.py` | ≤ 40 | **25** |
+| Orakel-Skript | ≤ 70 | **67** |
+| Gesamt | ≤ 110 | **92** |
+
+**Der wichtigste Teil ist ein Fehler von mir, der auffiel, weil ich das Orakel
+vor der Korrektur laufen ließ.** Pflichtorakel 1 meines eigenen Scope-Vertrags
+verlangte „Prüfsumme **und Existenz**" der drei Betriebsdateien. Genau so
+gebaut, meldete das Skript gegen den **unbehobenen** Defekt grün:
+
+```
+✓ tests/test_api.py laesst die Betriebsdatenbank unberuehrt
+  fehlt   data/stockinfo.db-wal
+  fehlt   data/stockinfo.db-shm
+```
+
+SQLite legt WAL und SHM beim Öffnen an und räumt sie beim sauberen Schließen
+ab — vorher wie nachher steht „fehlt". **Der unterscheidende Zustand existiert
+nur während des Laufs.** Sichtbar wird er an der mtime von `data/` selbst;
+gegengeprobt mit `tests/test_analyzer.py`, das die Datenbank nicht anfasst und
+sie unverändert lässt.
+
+| Lauf | Urteil |
+|---|---|
+| Mutant (Naht entfernt) | ✗ `data/ mtime 1788284624 → 1788284644` |
+| mit Naht | ✓ unverändert |
+
+In der umgekehrten Reihenfolge wäre ein grünes Skript der Beleg gewesen — für
+nichts. Das ist P-08 in Reinform, diesmal an meinem eigenen Vertrag.
+
+**Nebenbei:** Der Befund oben schreibt dem T-50-Abschlusslauf ein
+`env DATABASE_PATH=… make test` zu; der lief ohne vorangestellte Variable.
+Am Ergebnis und an deinem Schluss zur Make-Grenze ändert das nichts, und für
+Orakel 4 ist er die Begründung — ich habe es nur richtiggestellt, damit das
+Protokoll stimmt.
+
+**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff sauber.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
