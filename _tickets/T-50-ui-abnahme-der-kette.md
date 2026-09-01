@@ -28,7 +28,7 @@ Befunde findet, die ein Browserlauf vorher sichtbar gemacht hätte.
 
 ### Phase A · Konzept, kein Browserlauf, keine Produktänderung
 
-- Höchstens **10 sichtbare Fälle**. Jeder nennt Fläche, Eingabe, sichtbares
+- Höchstens **9 sichtbare Fälle**. Jeder nennt Fläche, Eingabe, sichtbares
   Ergebnis und **den einen Fehler, den er unterscheidet**.
 - Ein Fall zählt nur, wenn er etwas prüft, das die Suite **nicht** prüfen
   kann: Darstellung, Reihenfolge, Sperre, Formatierung, Erreichbarkeit.
@@ -38,19 +38,35 @@ Befunde findet, die ein Browserlauf vorher sichtbar gemacht hätte.
 
 ### Phase B · Browserlauf
 
-- **Isolierte Instanz.** Eigene Ports (API `8123`, UI `5273`), eigene
-  Datenbankkopie per `VACUUM INTO`, eigene `sources.yaml` und `assets.yaml`
-  im Scratchpad. Mikes `data/` wird nicht angefasst — der Lauf enthält
+- **Zwei isolierte Plugin-Varianten.** Eigene Ports (API `8123`, UI `5273`)
+  und je Variante ein eigenes Scratch-Volume mit Datenbankkopie per
+  `VACUUM INTO`, `sources.yaml` und Fachdatei unter dessen `/data`:
+  `online/data/assets-fallback.yaml` für Online/YFinance mit `yaml-file` als
+  letztem Fallback; `yaml/data/assets-standalone.yaml` für das reine
+  YAML-Plugin. Die versionierten Vorlagen kommen aus `examples/`. Die beiden
+  Varianten laufen nacheinander auf denselben isolierten Ports; ein
+  Profilwechsel gilt nicht als T-48-Neustarttest.
+- **Zwei Dateien sind fachlich notwendig.** Die Fallback-Datei enthält nur,
+  was online keinen Kurs bekommt; die Standalone-Datei ist der vollständige
+  Bestand. Eine gemeinsame Datei würde bei einem Online-Ausfall plausible
+  alte Werte als Fallback zulassen und genau die Trennung aus T-49 aufheben.
+  Mikes echtes `data/` wird nicht angefasst — der Lauf enthält
   Wiederherstellungen und Dateiänderungen, und die dürfen seinen Bestand
   nicht berühren.
-- **Beide Profile**, weil T-48 in beiden wirken muss: Online mit `yaml-file`
-  als letztem Rückfall, und das reine Dateiprofil.
+- **Drei verbindliche Gattungen im isolierten Bestand:** `BTC-EUR` als
+  `crypto`, `DE0001102531` als `bond` und `DE0009848119` als `fund`. Fehlen
+  sie in der Datenbankkopie, werden sie vor dem Browserlauf über den
+  öffentlichen Aufnahmeweg angelegt; keine direkte SQL-Testpräparation.
 - **Belegpflicht.** Ein Screenshot allein belegt nichts. Zu jedem Fall gehört
   die sichtbare Anzeige **und** die Gegenprobe an der Quelle — Netzwerkantwort,
   Konsole oder Dateiinhalt. Ein Wert, der stimmt, weil er aus dem Cache kommt,
   ist kein bestandener T-48-Fall.
 - **Wiederholung statt Momentaufnahme.** Eine Beobachtung während einer
   laufenden Animation ist keine Messung; siehe den Nicht-Befund unten.
+- **Rückstandsfrei:** Nach dem Lauf werden die isolierten Prozesse beendet.
+  Vorher/nachher-Prüfsummen der vom Benutzer verwendeten Datenbank und
+  Konfigurationsdateien belegen, dass der Lauf ausschließlich im Scratchpad
+  geschrieben hat.
 
 ### Fehlerbehandlung und Grenze
 
@@ -83,8 +99,9 @@ ein Werkzeug hat, das er in diesem Moment nicht erreichen kann.
 Das ist **kein Fehler von T-47**: Das Gate ist älter, und dass ein Schreibweg
 vor einer offenen Migration gesperrt ist, ist vertretbar. Aber `GET /backups`
 ist ein reiner Leseweg, und die Empfehlung im Gate ist seit T-47 überholt.
-**Checkpoint-pflichtig** — die Änderung beträfe eine Gate-Regel, nicht eine
-Anzeige. Dieser Lauf **misst und belegt** ihn; er behebt ihn nicht.
+**Nicht Teil von T-50.** Die Änderung beträfe eine Gate-Regel oder eine neue
+Handlung im Gate, nicht eine lokale Anzeige. Der Befund bleibt belegt und wird
+nach Phase B in ein eigenes Ticket drainiert; dieser Lauf behebt ihn nicht.
 
 **V-2 · Das Instrumentenfeld der Analyse ist im Ruhezustand leer.** Kein
 Platzhalter, keine Beschriftung — ein leerer Rahmen über dem Feld „ISIN oder
@@ -109,25 +126,24 @@ unbemerkt bliebe.
 | # | Fläche und Eingabe | Sichtbar erwartet | Unterscheidet |
 |---|---|---|---|
 | **1** | Analyse-Seite im Ruhezustand | Beide Eingabefelder sind beschriftet oder tragen einen Platzhalter; die Auswahl listet den Bestand | V-2; ein Feld, dessen Zweck man raten muss |
-| **2** | Ein Papier aus dem Bestand analysieren, Online-Profil | Die Stufen tragen die Namen aus `sources.yaml` (`yfinance`, `yaml-file`), **nicht** fest verdrahtete yfinance-Stufen | Die Analyse misst etwas anderes als das, was die App benutzt — Mikes Richtungsentscheidung vom 2026-09-01 |
-| **3** | Dasselbe Papier im **reinen Dateiprofil** analysieren | Dieselbe Seite zeigt jetzt `yaml-file` als Stufe; die Rollen sind unterscheidbar | Eine Anzeige, die die Kette hart kennt statt sie zu lesen |
-| **4** | Ein Papier analysieren, das die Online-Kette **nicht** führt | Der Ausfall einer Stufe bricht die Messung nicht ab; die Zeile nennt einen Grund statt leer zu bleiben | Die `_BROKEN`-Ersatzantworten aus T-46 — sichtbar, nicht nur im Test |
+| **2** | `BTC-EUR` (`crypto`) aus dem Bestand analysieren, Online-Profil | Die Stufen tragen die Namen aus `sources.yaml` (`yfinance`, `yaml-file`), **nicht** fest verdrahtete yfinance-Stufen | Die Analyse misst etwas anderes als das, was die App benutzt — und der Paar-Aufnahmeweg fehlt im sichtbaren Lauf |
+| **3** | `DE0001102531` (`bond`) im **reinen Dateiprofil** analysieren | Dieselbe Seite zeigt `yaml-file` als Stufe; die Rollen sind unterscheidbar und das Papier braucht kein Börsensymbol | Eine Anzeige, die die Kette hart kennt oder `isin_only` still wie ein Listing behandelt |
+| **4** | `STOCKINFO-NOT-FOUND` im Online-Profil analysieren | Der Ausfall einer Stufe bricht die Messung nicht ab; die Zeile nennt einen Grund statt leer zu bleiben | Die `_BROKEN`-Ersatzantworten aus T-46 — sichtbar, nicht nur im Test |
 
 ### T-47 · Sicherung und Wiederherstellung
 
 | # | Fläche und Eingabe | Sichtbar erwartet | Unterscheidet |
 |---|---|---|---|
 | **5** | Sicherung anlegen, Liste danach | Die neue Sicherung erscheint **mit lesbarem Datum und Größe**; die Liste lädt nach Erfolg neu | Die leere Zeitspalte aus dem T-47-Lauf; ein Eigenstand, der von der Instanz abweicht |
-| **6** | Zwei Sicherungen **im selben Moment** anlegen | Zwei Einträge, keine Kollision, keine Fehlermeldung | Der Namensstoß innerhalb einer Sekunde |
-| **7** | Eine unpassende Sicherung wiederherstellen wollen | Der Grund steht **als Satz** in der Zeile; im Dialog ist „Ja" gesperrt, bis das Kästchen gesetzt ist; der Neustart-Hinweis steht **vor** der Entscheidung | Eine Sperre, die erst der `409` aus dem Netz erklärt |
-| **8** | Wiederherstellung bestätigen, App neu starten | Nach dem Start ist der gesicherte Stand da; die Zustandszeile ist wieder leer | Eine Absicht, die den Neustart nicht überlebt — oder ihn jedes Mal wiederholt |
-| **9** | Oberfläche auf **Englisch** stellen, Fälle 5 und 7 erneut ansehen | Grund, Datum und Fehlermeldung sind englisch — keine deutschen Reste | Ein fertiger Satz vom Server; die Kennung aus T-44 wäre umsonst |
+| **6** | Eine unpassende Sicherung wiederherstellen wollen | Der Grund steht **als Satz** in der Zeile; im Dialog ist „Ja" gesperrt, bis das Kästchen gesetzt ist; der Neustart-Hinweis steht **vor** der Entscheidung | Eine Sperre, die erst der `409` aus dem Netz erklärt |
+| **7** | Wiederherstellung bestätigen, App neu starten | Nach dem Start ist der gesicherte Stand da; die Zustandszeile ist wieder leer | Eine Absicht, die den Neustart nicht überlebt — oder ihn jedes Mal wiederholt |
+| **8** | Oberfläche auf **Englisch** stellen, Fälle 5 und 6 erneut ansehen | Grund, Datum und Fehlermeldung sind englisch — keine deutschen Reste | Ein fertiger Satz vom Server; die Kennung aus T-44 wäre umsonst |
 
 ### T-48 · Geänderte Fachdatei ohne Neustart
 
 | # | Fläche und Eingabe | Sichtbar erwartet | Unterscheidet |
 |---|---|---|---|
-| **10** | `assets.yaml` bei laufender App ändern, Seite neu laden — in **beiden** Profilen | Der neue Wert steht in der Oberfläche, **ohne** Neustart; die Gegenprobe am Dateiinhalt stimmt überein | Ein Wert, der nur deshalb stimmt, weil er aus dem Cache oder dem alten Katalog kommt |
+| **9** | Bei laufender Online-/YFinance-Variante in `/data/assets-fallback.yaml` den jüngsten Historywert der Anleihe `DE0001102531` und bei laufender reiner YAML-Variante in `/data/assets-standalone.yaml` den Preis des Fonds `DE0009848119` ändern; jeweils die **sichtbare Einzel-Aktualisierung** auslösen | Der neue Wert steht danach in der Oberfläche, **ohne** Neustart der jeweiligen Variante; Dateiinhalt und Netzwerkantwort stimmen überein | Eine der beiden Plugin-Varianten liest die falsche/gleiche Basisdatei, oder ein Wert bliebe nach bloßem Neuladen in Datenbank, Cache oder altem Katalog hängen |
 
 ---
 
@@ -138,11 +154,11 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teil
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Konzept-Handoff an Codex | höchstens 10 Fälle; jeder nennt Fläche, Eingabe, Erwartung und den unterschiedenen Fehler; nichts, was die Suite schon belegt | ➖ | |
+| **1** | Konzept-Handoff an Codex | höchstens 9 Fälle; jeder nennt Fläche, Eingabe, Erwartung und den unterschiedenen Fehler; nichts, was die Suite schon belegt | ◑ | |
 | **2** | Isolation des Laufs | eigene Ports, eigene DB-Kopie, eigene Konfiguration; `data/` des Benutzers vor und nach dem Lauf unverändert | ➖ | |
 | **3** | T-46 im Browser | Fälle 1–4 gemessen, jeder mit Gegenprobe an Netzwerk oder Konfiguration | ➖ | |
-| **4** | T-47 im Browser | Fälle 5–9 gemessen, einschließlich Neustart und englischer Oberfläche | ➖ | |
-| **5** | T-48 im Browser | Fall 10 in beiden Profilen, mit Dateiinhalt als Gegenprobe | ➖ | |
+| **4** | T-47 im Browser | Fälle 5–8 gemessen, einschließlich Neustart und englischer Oberfläche | ➖ | |
+| **5** | T-48 im Browser | Fall 9 in beiden Profilen, mit Dateiinhalt und Netzwerkantwort als Gegenprobe | ➖ | |
 | **6** | Befunde | jeder Befund nennt Messung, Fundort und ob er in diesem Ticket behoben wurde oder checkpoint-pflichtig ist | ➖ | |
 | **7** | Konsole und Netzwerk | keine unerklärte Fehlermeldung, kein fehlgeschlagener Request, der dem Angezeigten widerspricht | ➖ | |
 | **8** | Regression nach etwaigen Korrekturen | `make test` und Ruff grün; ohne Korrektur entfällt die Zeile nicht, sondern wird als „keine Änderung" belegt | ➖ | |
@@ -150,10 +166,31 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teil
 
 ---
 
-## Offene Frage an Codex
+## Codex-Review Runde 1 · `changes_requested` (2026-09-01)
 
-**Gehört V-1 in dieses Ticket?** Ich habe ihn als checkpoint-pflichtig
-eingestuft und messe ihn nur. Wenn du findest, dass `GET /backups` als
-Leseweg vor dem Gate offenstehen muss und das eine Zeile ist, sag es im
-Konzept-Review — dann wird daraus ein eigenes Ticket und nicht ein
-Nebenprodukt eines Abnahmelaufs.
+Das Konzept bleibt auf neun sichtbare Fälle begrenzt. Drei Korrekturen sind
+vor dem Browserlauf nötig:
+
+1. Der Gleichzeitigkeitstest für Sicherungen entfällt. Zwanzig parallele
+   `POST /backups` sind bereits automatisiert belegt; zwei Klicks im Browser
+   erzeugen den entscheidenden Zustand weder zuverlässig noch UI-spezifisch.
+2. Mikes verbindliche Asset-Abnahme wird ohne neue Fälle eingebaut:
+   `BTC-EUR` in die Online-Analyse, die Anleihe in Datei-Analyse und
+   Online-Fallback, der Fonds in den Standalone-Hot-Reload.
+3. Ein Reload der Seite beschafft absichtlich keinen Kurs. T-48 wird deshalb
+   über die sichtbare Einzel-Aktualisierung geprüft; Dateiinhalt,
+   Netzwerkantwort und UI-Wert müssen denselben neuen Wert tragen. Der Lauf
+   verwendet dabei ausdrücklich zwei Fachdateien unter den isolierten
+   Data-Verzeichnissen: `assets-fallback.yaml` für Online/YFinance plus YAML-
+   Rückfall und `assets-standalone.yaml` für das reine YAML-Plugin.
+
+V-1 gehört **nicht** in die Umsetzung dieses Tickets. Ob Backup-Routen vor
+dem Migrationsgate offenstehen oder das Gate eine eigene Backup-Handlung
+bekommt, ist eine Produktentscheidung über Gate und API. T-50 dokumentiert
+den bereits gemessenen Befund und drainiert ihn nach Phase B in ein separates
+Ticket; es ändert weder Gate noch Backup-Routen.
+
+Vor der erneuten Übergabe nennt Phase B außerdem den öffentlichen
+Vorbereitungsweg für die drei Assets und die Prüfsummen-Gegenprobe für Mikes
+unberührte Daten. Danach kann das Konzept ohne weiteren Designentscheid in den
+Browserlauf gehen.

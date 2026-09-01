@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-50-ui-abnahme-der-kette.md`
 - `handoff_commit`: `847d00e`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
-- `last_reviewed_ticket`: `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `last_reviewed_commit`: `e57ab4c`
-- `last_reviewed_round`: `4`
+- `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
+- `last_reviewed_commit`: `847d00e`
+- `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md` → `T-50-ui-abnahme-der-kette.md`
 - `priority_ticket`: `T-50-ui-abnahme-der-kette.md`
@@ -126,48 +126,25 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-48 Runde 4 freigegeben — Commit `e57ab4c`.** Der unabhängige Gegenlauf
-liefert nach Störung bei ursprünglicher Größe und `mtime_ns` den korrigierten
-Preis `131.77` und nimmt den Grund erst nach erfolgreichem Zerlegen zurück.
-Zieltests/Ruff sauber; Gesamtsuite: 1028 Backend, 302 Plugin-API, 45 Beispiel,
-305 Dashboard. `#1`–`#8` sind ✅, Human-Spalte unberührt.
+**T-50 Konzept Runde 1 — drei abschließende Korrekturen.** Erstens den bereits
+automatisiert belegten Parallel-Backup-Fall aus dem Browserlauf entfernen.
+Zweitens BTC, Anleihe und Fonds in die vorhandenen Fälle einbauen. Drittens
+T-48 über die sichtbare Einzel-Aktualisierung statt bloßes Neuladen prüfen.
 
-T-48 ist das letzte Element der bestätigten `priority_chain`: atomar auf
-`phase: portfolio_review`, `owner: mike` umstellen; kein weiteres Ticket aus
-der Nummernfolge ableiten und nichts nach `solved/` verschieben.
+Mike ergänzt verbindlich: beide Plugin-Varianten laufen im Browser. Dafür
+gibt es im isolierten Scratch je ein eigenes `/data`: Online/YFinance plus
+YAML-Fallback mit `/data/assets-fallback.yaml`, reines YAML mit
+`/data/assets-standalone.yaml`. Vorlagen aus `examples/`; niemals Mikes echtes
+`data/`. Die Dateien dürfen nicht zusammenfallen, weil Fallback und
+vollständiger Standalone-Bestand verschiedene Zusagen haben.
+
+V-1 nur dokumentieren und nach Phase B in ein separates Ticket drainieren;
+Gate und Backup-Routen in T-50 nicht ändern. Danach Konzept erneut übergeben,
+noch ohne Browserlauf oder Produktedit.
 
 ## OUTBOX → Codex
 
-**T-50 Phase A zur Konzeptprüfung — `_tickets/T-50-ui-abnahme-der-kette.md`.**
-
-Mike hat den Lauf ausdrücklich beauftragt und damit deine Auflage aufgehoben,
-kein Ticket aus der Nummernfolge abzuleiten; der Wortlaut steht oben im
-Kontext. **Geprüft wird nur das Konzept** — es gibt keinen Browserlauf und
-keine Produktänderung, bis du freigibst.
-
-Das Ticket nimmt sich die drei zuletzt freigegebenen Flächen vor und
-beschränkt sich auf **10 Fälle**, jeder mit der Spalte *Unterscheidet*: dem
-einen Fehler, der ohne ihn unbemerkt bliebe. Ein Fall zählt nur, wenn er etwas
-prüft, das `pytest`/`vitest` **nicht** sehen können — Darstellung, Sperre,
-Reihenfolge, Formatierung, Erreichbarkeit.
-
-**Ein Vorbefund ist schon gemessen und ich habe ihn bewusst nicht behoben:**
-Bei offener Identitätsmigration antworten alle Fachwege mit `503
-migration_pending` — **auch `GET /backups`**. Der Gate-Bildschirm rät
-gleichzeitig dazu, „eine Kopie der Datenbankdatei" anzulegen; genau das ist
-seit T-47 eine Schaltfläche, die hinter dem Gate liegt. Das Gate ist älter als
-T-47, also kein Regress; die Empfehlung darin ist trotzdem überholt. Ich habe
-es als **checkpoint-pflichtig** eingestuft, weil eine Gate-Regel betroffen wäre
-und nicht eine Anzeige — **die offene Frage am Ende des Tickets ist an dich.**
-
-Ein zweiter Punkt ist ausdrücklich als **Nicht-Befund** vermerkt: Der erste
-Abzug zeigte die Auswahlliste durchscheinend; die Wiederholung zeigt sie
-deckend. Der Abzug fiel in die Einblende-Animation. Er steht im Ticket, damit
-er nicht ein zweites Mal als Befund auftaucht.
-
-Grenze für Phase B: höchstens **drei Produktdateien** für eindeutig lokale
-Anzeigekorrekturen, sonst Scope-Checkpoint. Keine Testinfrastruktur, kein
-E2E-Framework; das Startskript bleibt im Scratchpad.
+—
 
 ## An Mike · die abgearbeitete Kette
 
