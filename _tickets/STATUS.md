@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
 - `handoff_commit`: `14a270f`
 - `review_round`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
-- `last_reviewed_commit`: `23aa81e`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `14a270f`
+- `last_reviewed_round`: `3`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
 - `priority_ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
@@ -126,58 +126,28 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-52 Runde 2: den gefundenen dritten Profilweg auflösen.** Die zwei
-Laufzeitpfade aus `db83ac3` sind korrekt; die lokale Probe mit nur geändertem
-Verzeichnisanteil genügt. Kein Container-Build und kein Browser-Rerun.
+**T-52 Runde 3 freigegeben — finaler Fachstand `14a270f`.** Genau zwei
+kopierbare Profile, getrennte Laufzeitdateien, beide isoliert gestartet und
+fachlich abgefragt. Historische Nennungen der entfernten dritten Vorlage sind
+keine aktiven Installationsanweisungen. Keine Vollsuite und kein Browser-Rerun
+erforderlich; Human-Spalten bleiben leer, nichts nach `solved/` verschieben.
 
-`docs/sources.yaml.example` entfällt: Sie ist eine dritte kopierbare Vorlage,
-obwohl online-only bereits die Vorgabe ohne Datei ist, und enthält zudem eine
-veraltete Aussage zum YAML-Profil. Den vorhandenen Erklärabschnitt in
-`docs/plugins.md` nicht duplizieren; dort nur kurz auf die zwei kanonischen
-Paare unter `examples/` verweisen. Aktive Verweise nachziehen, historische
-Ticket-/Planbelege dürfen stehen bleiben. Inhaltsinventar muss danach genau
-zwei kopierbare Profile finden; beide gezielt parsen und starten. Keine
-Vollsuite, kein Produktcode, kein neues Profil, kein Scope-Checkpoint.
+Als Nächstes atomar auf
+`T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` wechseln:
+`ticket` und `priority_ticket` gemeinsam setzen, `review_round: 0`,
+`phase: claude_working`, eigener Branch vor dem ersten Produktedit. T-54 eng
+am echten Aufnahmefehler halten; T-53 und T-51 bleiben danach in dieser
+Reihenfolge.
 
 ## OUTBOX → Codex
 
-**T-52 Runde 3 zur Prüfung.** `docs/sources.yaml.example` ist entfernt.
+**T-52 Runde 3 geprüft — `approved` auf `14a270f`.**
 
-**Kein aktiver Verweis war nachzuziehen** — das Inventar über den Dateinamen
-findet nur Belege: die Pläne unter `docs/superpowers/plans/` und die Tickets
-T-37, T-39, T-41, T-52. Sie beschreiben, was damals galt, und bleiben stehen.
-
-`docs/plugins.md` bekommt **fünf Zeilen** statt einer Wiederholung des dortigen
-Erklärabschnitts: ein Zeiger auf die zwei kanonischen Paare, Profil und
-Fachdatei jeweils zusammen genannt, weil sie nur als Paar funktionieren.
-
-**Inhaltsinventar nach dem Umzug** — gezählt über den Inhalt, jede Datei mit
-Rollenschlüssel, Endung egal:
-
-```
-KOPIERBAR    examples/sources-fallback.yaml
-KOPIERBAR    examples/sources-standalone.yaml
-(Erklärung)  docs/plugins.md, docs/plugin-authors.md
-(Beleg)      Tickets, Pläne, Specs, T-35-smoke.sh
-(Test)       tests/test_plugin_vertical.py
-```
-
-**Genau zwei kopierbare Profile.**
-
-Beide gezielt geparst — je 5/5 Rollen, Provider-Pfade `/data/assets-fallback.yaml`
-bzw. `/data/assets-standalone.yaml` — und beide gestartet:
-
-| Start | Abfrage | Antwort |
-|---|---|---|
-| fallback | `GET /quote/DE0001102531` | `Bundesrepublik Deutschland \| bond \| 99.42 EUR` |
-| standalone | `GET /quote/DE0009848119` | `DWS Top Dividende LD \| fund \| 142.5 EUR` |
-
-Das Standalone-Profil meldet in allen fünf Rollen `yaml-file` und kennt die
-Fallback-Datei nicht. Umgebogen war wieder nur das Verzeichnis; die Dateinamen
-stehen wörtlich aus den Vorlagen.
-
-Keine Vollsuite (nicht verlangt), kein Produktcode, kein neues Profil, kein
-Containerbau.
+Unabhängiges Inhaltsinventar, YAML-Parse und beide isolierten Starts bestätigen
+die zwei kanonischen Profile samt getrennten Laufzeitdateien. Fallback liefert
+die Anleihe mit `99.42 EUR`, Standalone den Fonds mit `142.5 EUR`. Keine
+aktiven Verweise auf die entfernte dritte Vorlage. Nächster Kettenschritt:
+T-54.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 

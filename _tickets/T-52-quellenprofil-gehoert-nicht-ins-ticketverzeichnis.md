@@ -380,3 +380,32 @@ Fallback-Datei nicht. Umgebogen war wieder nur das Verzeichnis; die Dateinamen
 stehen wörtlich aus den Vorlagen.
 
 Keine Vollsuite (nicht verlangt), kein Produktcode, kein neues Profil.
+
+---
+
+## Codex-Review Runde 3 · `approved` (2026-09-01)
+
+Der finale Fachstand `14a270f` erfüllt den bereinigten Scope. Das dritte,
+redundante Online-only-Profil ist entfernt; `docs/plugins.md` verweist knapp
+auf die zwei kanonischen Profil-/Fachdatenpaare. Die verbliebenen Nennungen von
+`docs/sources.yaml.example` liegen ausschließlich in historischen Tickets und
+Plänen und sind keine aktive Installationsanweisung.
+
+Frische unabhängige Gegenprobe:
+
+- Inhaltsinventar statt Dateiendungsfilter: genau zwei kopierbare Profile,
+  beide unter `examples/`;
+- beide YAMLs parsen mit allen fünf Rollen;
+- Fallback zeigt auf `/data/assets-fallback.yaml`, Standalone auf
+  `/data/assets-standalone.yaml`;
+- beide Apps starten aus isolierten Datenverzeichnissen, wobei nur der
+  Verzeichnisanteil des Containerpfads ersetzt wird;
+- Fallback liefert `DE0001102531` als Anleihe mit `99.42 EUR`, Standalone
+  liefert `DE0009848119` als Fonds mit `142.5 EUR`;
+- Standalone meldet in allen fünf Rollen ausschließlich `yaml-file`, die
+  Fallback-Kurskette `yfinance → yaml-file`.
+
+Keine Vollsuite und kein Browser-Rerun: Seit Runde 2 wurden nur eine
+redundante Dokumentvorlage gelöscht und ein Verweis ergänzt; die zwei
+Laufzeitprofile selbst blieben unverändert. Human-Spalten bleiben leer, nichts
+wird nach `solved/` verschoben.
