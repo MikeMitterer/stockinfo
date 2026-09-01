@@ -116,14 +116,14 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | reines YAML-Profil, Preis in der Datei ändern | die Änderung ist **ohne Neustart** sichtbar | ➖ | |
-| **2** | dasselbe, `as_of` unverändert | der korrigierte Wert kommt an — nicht nur bei neuem Zeitstempel | ➖ | |
-| **3** | Online-Profil mit `yaml-file` als letztem Glied | dieselbe Zusage; die Datei ist dort dieselbe Quelle | ➖ | |
-| **4** | Datei kaputt gemacht, während der Dienst läuft | der Dienst bleibt stehen und meldet den Grund; er fällt nicht auf einen halben Katalog zurück | ➖ | |
-| **5** | Datei unverändert, viele Anfragen | die Antwortzeit bleibt brauchbar — gemessen, nicht geschätzt | ➖ | |
-| **6** | `POST /refresh` mit verworfenem Schreibversuch | `refreshed` zählt ihn **nicht** als Erfolg | ➖ | |
-| **7** | Online-Profil, TTL | die Cache-TTL gilt dort **unverändert** — kein Abruf mehr als vorher | ➖ | |
-| **8** | Online-Profil, Provider-Aufrufe | gezählt vor und nach der Änderung: dieselbe Zahl | ➖ | |
+| **1** | reines YAML-Profil, Preis in der Datei ändern | die Änderung ist **ohne Neustart** sichtbar | ✅ | |
+| **2** | dasselbe, `as_of` unverändert | der korrigierte Wert kommt an — nicht nur bei neuem Zeitstempel | ✅ | |
+| **3** | Online-Profil mit `yaml-file` als letztem Glied | dieselbe Zusage; die Datei ist dort dieselbe Quelle | ✅ | |
+| **4** | Datei kaputt gemacht, während der Dienst läuft | der Dienst bleibt stehen und meldet den Grund; er fällt nicht auf einen halben Katalog zurück | ◑ | |
+| **5** | Datei unverändert, viele Anfragen | die Antwortzeit bleibt brauchbar — gemessen, nicht geschätzt | ✅ | |
+| **6** | `POST /refresh` mit verworfenem Schreibversuch | `refreshed` zählt ihn **nicht** als Erfolg | ✅ | |
+| **7** | Online-Profil, TTL | die Cache-TTL gilt dort **unverändert** — kein Abruf mehr als vorher | ✅ | |
+| **8** | Online-Profil, Provider-Aufrufe | gezählt vor und nach der Änderung: dieselbe Zahl | ✅ | |
 
 ## Die Grenze — die Online-Kette darf nichts davon merken
 
@@ -312,3 +312,59 @@ Cache-Projekte werden.
 Der Scope-Handoff bezieht sich auf den Entwurfscommit `4c63325`; der zuvor in
 `STATUS.md` stehengebliebene T-47-Produktcommit war kein gültiger
 Scope-Handoff und wird mit dieser Entscheidung berichtigt.
+
+### Runde 1 · Umsetzung (Claude, 2026-09-01)
+
+Die drei freigegebenen Änderungen stehen; sieben Produktflächen, drei
+Testflächen wie im Vertrag.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 300 | **180** |
+| Gesamt | ≤ 550 | **493** |
+
+**Der Reload ist eine Eigenschaft, kein Aufruf an sieben Stellen.** `_catalogue`
+lädt selbst nach; die Regel steht damit einmal und gilt für alle fünf Rollen —
+auch für einen achten Eintrittspunkt, den es noch nicht gibt.
+
+**Live, mit TTL 6 Stunden** (Dateiprofil, Fonds `DE0009848119`):
+
+```
+vorher   142.5   cached=False
+Datei:   value: 142.50 → 143.75   (as_of unverändert)
+nachher  143.75  cached=False     ← ohne Neustart
+POST /refresh → {"total":1,"refreshed":1}
+Liste    143.75                   ← der Upsert hat ihn behalten
+```
+
+**Die Gegenprobe zu Mikes Warnung, gezählt:** In einer Kette
+`counting-online, yaml-file` behält das Papier, das **beide** kennen, seine
+Frist — zwei Abfragen, **ein** Aufruf. Nur das Papier, das allein die Datei
+kennt, umgeht sie, und es kostet die Online-Quelle nichts. Die Cachefrage
+selbst löst **null** Provider-Aufrufe aus.
+
+#### Mutantenprobe
+
+| Mutant | rot |
+|---|---|
+| ohne Reload | `#1` und der gemischte Vertical, dazu die Erholung nach einer kaputten Datei |
+| ohne Upsert | `#2`/`#6` — der korrigierte Wert fällt wieder weg |
+| kettenweiter statt instrumentbezogener Bypass | der gemischte Vertical: die Online-Quelle wird ein zweites Mal gefragt |
+
+Der Upsert-Mutant kam zunächst durch: `INSERT OR IGNORE … ON CONFLICT DO UPDATE`
+behält die Upsert-Klausel — die Mutation war keine. Erst das vollständige
+Entfernen der `ON CONFLICT`-Zeile zeigt den Unterschied.
+
+#### `#4` steht auf ◑ — und warum
+
+Der Dienst **bleibt stehen** und fällt **nicht** auf einen halben Katalog
+zurück; eine kaputte Zwischenfassung lässt ihn mit dem letzten gültigen Stand
+weiterarbeiten, und nach der nächsten gültigen Fassung erholt sich dieselbe
+Instanz. Beides ist geprüft.
+
+Der zweite Halbsatz — „**meldet den Grund**" — ist nur halb eingelöst: Der Grund
+steht im Protokoll, aber `/sources` zeigt weiter „einsatzbereit". Die Auskunft
+dort ist ein Schnappschuss aus `_CHAINS`, der beim Kettenbau entsteht; ein
+Laufzeitproblem erreicht sie nie. Das zu ändern hieße `app/sources_registry.py`
+anzufassen — **keine der sieben freigegebenen Flächen**, und es beträfe die
+Diagnose aller Quellen. Deshalb gemeldet statt erledigt.

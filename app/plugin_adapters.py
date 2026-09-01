@@ -273,6 +273,26 @@ class QuoteAdapter(_Adapter):
     die Identität; sie wegzuwerfen und danach zu erraten ist der Umweg.
     """
 
+    def serves(self, instrument: ResolvedInstrument) -> bool:
+        """Käme diese Quelle für dieses Papier überhaupt infrage?
+
+        Dieselbe Frage, die `fetch_quote` vor dem Abruf stellt — Form, Gattung
+        und `handles()`. Sie kostet keine Anfrage und kein Kontingent: Alle
+        drei sind Fragen an den Speicher der Quelle.
+        """
+        identity = instrument.identity()
+        if identity is None or not self._serves(identity, instrument.type):
+            return False
+        return bool(self._source.handles(QuoteRequest(identity=identity)))
+
+    def cacheable_for(self, instrument: ResolvedInstrument) -> bool:
+        """Darf eine Antwort zu diesem Papier zwischengespeichert werden?
+
+        Die Auskunft der Quelle selbst — die Kaskade fragt nur die erste, die
+        für dieses Papier infrage kommt.
+        """
+        return bool(getattr(unwrap(self._source), "cacheable", True))
+
     def fetch_quote(self, instrument: ResolvedInstrument) -> RawQuote | None:
         """Holt den Kurs zu einer aufgelösten Identität.
 

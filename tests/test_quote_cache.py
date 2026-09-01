@@ -1035,3 +1035,92 @@ def test_auch_der_refresh_haelt_den_gespeicherten_stand(
     assert result.price == 170.0
     assert result.ter == 0.2
     assert result.provider == "Vanguard"
+
+
+# ─── Eine lokale Quelle kennt keine Frist ─────────────────────────────────────
+
+
+class LocalQuoteService(FakeQuoteService):
+    """Ein Dienst, dessen Kette dieses Papier aus einer lokalen Datei bedient."""
+
+    def cacheable_for(self, row: object) -> bool:
+        return False
+
+
+class OnlineQuoteService(FakeQuoteService):
+    """Ein Dienst mit einer Online-Kette — die Frist gilt unverändert."""
+
+    def cacheable_for(self, row: object) -> bool:
+        return True
+
+
+def test_ein_lokal_bedientes_papier_umgeht_die_frist(repo: QuoteRepository) -> None:
+    """**Mikes Fall.** Wer die Datei ändert, will den Wert sehen — nicht in sechs
+    Stunden.
+
+    Die TTL schont ein Kontingent. Wo es keines gibt, verzögert sie nur, was der
+    Betreiber gerade geschrieben hat.
+    """
+    fake = LocalQuoteService(_response(_now(), price=200.0))
+    service = CachedQuoteService(
+        fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)
+    )
+
+    service.get_by_isin("IE00B3RBWM25")
+    result = service.get_by_isin("IE00B3RBWM25")
+
+    assert fake.calls == 2, "die Frist hat die lokale Quelle stumm geschaltet"
+    assert result.cached is False
+
+
+def test_ein_online_bedientes_papier_behaelt_seine_frist(repo: QuoteRepository) -> None:
+    """**Die Gegenprobe zu Mikes Warnung.** Die Online-Kette merkt nichts.
+
+    Ohne sie wäre der Fall darüber auch dann grün, wenn die Frist für **alle**
+    fiele — und dann fragte jede Seitenansicht das Netz neu, bis es in sein
+    Ratenlimit läuft.
+    """
+    fake = OnlineQuoteService(_response(_now()))
+    service = CachedQuoteService(
+        fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)
+    )
+
+    service.get_by_isin("IE00B3RBWM25")
+    result = service.get_by_isin("IE00B3RBWM25")
+
+    assert fake.calls == 1, "die Online-Kette wurde ein zweites Mal gefragt"
+    assert result.cached is True
+
+
+def test_ein_dienst_ohne_die_auskunft_verhaelt_sich_unveraendert(
+    repo: QuoteRepository,
+) -> None:
+    """Wer nichts erklärt, hat nichts geändert — die Vorgabe ist die alte Regel."""
+    fake = FakeQuoteService(_response(_now()))
+    service = CachedQuoteService(
+        fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)
+    )
+
+    service.get_by_isin("IE00B3RBWM25")
+    service.get_by_isin("IE00B3RBWM25")
+
+    assert fake.calls == 1
+
+
+def test_ein_korrigierter_preis_zum_selben_zeitpunkt_ersetzt_den_alten(
+    repo: QuoteRepository,
+) -> None:
+    """**Der still verworfene Wert.** `INSERT OR IGNORE` traf die vorhandene Zeile.
+
+    Wer in einer gepflegten Datei nur den Preis korrigiert und den Zeitstempel
+    stehen lässt — der Normalfall —, bekam den alten Wert zurück, während der
+    Refresh Erfolg meldete.
+    """
+    zeitpunkt = _now()
+    repo.save_quote(_response(zeitpunkt, price=94500.0))
+
+    repo.save_quote(_response(zeitpunkt, price=94501.0))
+
+    instrument = repo.get_instrument_by_isin("IE00B3RBWM25")
+    latest = repo.get_latest_quote(instrument["id"])
+    assert latest["price"] == 94501.0, "der korrigierte Wert fiel weg"

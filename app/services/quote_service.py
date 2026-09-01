@@ -90,6 +90,25 @@ class QuoteUnavailableError(Exception):
         self.resolved = resolved
 
 
+def _as_resolved(row: object) -> ResolvedInstrument:
+    """Eine gespeicherte Zeile als aufgelöstes Papier — nur für die Cachefrage.
+
+    Sie braucht Identität und Gattung, sonst nichts; Kurs und Metadaten stehen
+    an dieser Stelle nicht zur Debatte.
+    """
+    get = row.get if isinstance(row, dict) else lambda key, default=None: getattr(row, key, default)
+    return ResolvedInstrument(
+        symbol=str(get("symbol") or ""),
+        isin=get("isin"),
+        kind=str(get("kind") or "listed"),
+        ticker=get("ticker"),
+        mic=get("mic"),
+        base=get("base"),
+        quote_currency=get("quote_currency"),
+        type=get("type"),
+    )
+
+
 class QuoteCurrencyMismatchError(Exception):
     """Der gelieferte Kurs steht in einer anderen Währung als das Paar (`#7`).
 
@@ -332,6 +351,22 @@ class QuoteService:
         self._quote_provider = quote_provider
         self._etf_provider = etf_provider
         self._resolver = resolver
+
+    def cacheable_for(self, row: object) -> bool:
+        """Darf ein Kurs zu diesem Papier zwischengespeichert werden?
+
+        Die Frage geht an die Kette, nicht an eine Einstellung: Sie kennt die
+        Quellen und weiß, welche für dieses Papier zuerst infrage kommt. Eine
+        Kette ohne diese Auskunft gilt als zwischenspeicherbar — wer nichts
+        erklärt, hat nichts geändert.
+
+        Args:
+            row: Eine Instrumentenzeile mit den Identitätsspalten.
+        """
+        answer = getattr(self._quote_provider, "cacheable_for", None)
+        if answer is None:
+            return True
+        return bool(answer(_as_resolved(row)))
 
     def _metadata_source(self, raw: RawQuote) -> str | None:
         """Woher der Metadatenstand dieser Antwort kommt — oder ``None``.

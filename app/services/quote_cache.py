@@ -809,7 +809,19 @@ class CachedQuoteService:
         latest = (
             self._repository.get_latest_quote(instrument["id"]) if instrument else None
         )
-        if instrument and latest and is_fresh(latest["fetched_at"], self._ttl_hours):
+        # **Eine lokale Quelle kennt keine Frist.** Die TTL schont ein
+        # Kontingent; wo es keines gibt, verzögert sie nur, was der Betreiber
+        # gerade in seine Datei geschrieben hat. Gefragt wird **je Papier**:
+        # Steht die Dateiquelle hinter einer Online-Quelle, bleibt ein von der
+        # vorderen bedienter Wert ganz normal zwischengespeichert.
+        asks = getattr(self._quote_service, "cacheable_for", None)
+        cached_allowed = True if asks is None or not instrument else asks(instrument)
+        if (
+            instrument
+            and latest
+            and cached_allowed
+            and is_fresh(latest["fetched_at"], self._ttl_hours)
+        ):
             return StoredQuote(
                 self._with_overrides(
                     self._from_cache(instrument, latest, stale=False), instrument["id"]

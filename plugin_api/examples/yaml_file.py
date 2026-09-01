@@ -706,6 +706,13 @@ class YamlFileSource(
         ("fund_domicile", "fund_domicile"),
     )
 
+    cacheable = False
+    """Eine gepflegte Datei kostet nichts und soll sofort wirken.
+
+    Ein Zwischenspeicher schützte hier kein Kontingent; er verzögerte nur, was
+    der Betreiber gerade geändert hat.
+    """
+
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         """
         Args:
@@ -716,11 +723,53 @@ class YamlFileSource(
         super().__init__(config)
         self._path = Path(self._config.get("path", "/data/assets.yaml"))
         self._problem = ""
-        self._catalogue: _Catalogue | None = None
+        self._loaded: _Catalogue | None = None
+        self._signature: tuple[int, int] | None = None
+        self._reload()
+
+    @property
+    def _catalogue(self) -> "_Catalogue | None":
+        """Der Katalog — **nachgeladen, falls sich die Datei geändert hat**.
+
+        Eine Eigenschaft und keine sieben Aufrufe: Jede der fünf Rollen liest
+        hierüber, und eine Regel, die an sieben Stellen wiederholt wird, fehlt
+        beim achten Eintrittspunkt.
+        """
+        self._reload()
+        return self._loaded
+
+    def _reload(self) -> None:
+        """Liest die Datei neu, **wenn sie sich geändert hat**.
+
+        Die Signatur ist `st_mtime_ns` und Größe: Ein `stat()` kostet
+        Bruchteile einer Mikrosekunde, ein Katalogaufbau je nach Dateigröße
+        Millisekunden bis Sekunden. Bei jeder Anfrage neu zu lesen wäre
+        derselbe Nutzen zu tausendfachem Preis.
+
+        **Der Tausch ist atomar.** Der neue Katalog entsteht vollständig in
+        einer lokalen Variablen; erst wenn er gültig ist, ersetzt er den
+        alten. Eine halb geschriebene Datei nimmt der Quelle damit nicht ihren
+        bisherigen Bestand — sie meldet eine Störung und arbeitet weiter mit
+        dem, was zuletzt gültig war. Nach der nächsten gültigen Fassung
+        erholt sich dieselbe Instanz.
+        """
         try:
-            self._catalogue = _Catalogue(self._path)
+            info = self._path.stat()
+        except OSError as error:
+            self._problem = f"{self._path} nicht lesbar: {error}"
+            return
+        signature = (info.st_mtime_ns, info.st_size)
+        if signature == self._signature and self._loaded is not None:
+            return
+        try:
+            fresh = _Catalogue(self._path)
         except FileProblem as error:
             self._problem = str(error)
+            self._signature = signature
+            return
+        self._loaded = fresh
+        self._signature = signature
+        self._problem = ""
 
     def configuration_problem(self) -> str:
         """Warum diese Quelle nicht arbeiten kann — oder ``""``.
@@ -729,6 +778,7 @@ class YamlFileSource(
         schweigt, kostet den Betreiber den Nachmittag: Er sieht leere Listen
         und sucht den Fehler in der App.
         """
+        self._reload()
         if not self._path.exists():
             return f"Datei {self._path} nicht gefunden — Pfad in der Konfiguration prüfen"
         return self._problem

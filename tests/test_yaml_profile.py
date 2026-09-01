@@ -98,6 +98,46 @@ class AlwaysAnswers(QuoteSource):
 SOURCES = [AlwaysAnswers]
 '''
 
+_COUNTING_ONLINE = '''
+from datetime import datetime, timezone
+from pathlib import Path
+
+from stockinfo_plugin import Quote, QuoteSource
+
+
+class CountingOnline(QuoteSource):
+    """Steht **vor** der Datei und kennt nur das ETF-Papier.
+
+    Sie zählt ihre Aufrufe in eine Datei — der Test läuft im selben Prozess,
+    aber die Quelle wird vom Lader gebaut und ist von außen nicht greifbar.
+    """
+
+    name = "counting-online"
+    api_version = 2
+    SUPPORTED_KINDS = frozenset({"listed", "pair", "isin_only"})
+    SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "crypto", "bond"})
+
+    MINE = "IE00B4L5Y983"
+    TALLY = Path(__file__).parent.parent / "online-calls.txt"
+
+    def handles(self, request) -> bool:
+        return getattr(request.identity, "isin", None) == self.MINE
+
+    def fetch_quote(self, request):
+        if getattr(request.identity, "isin", None) != self.MINE:
+            return None
+        seen = int(self.TALLY.read_text()) if self.TALLY.exists() else 0
+        self.TALLY.write_text(str(seen + 1))
+        return Quote(
+            price=999.0,
+            currency="EUR",
+            as_of=datetime(2026, 8, 30, 12, 0, tzinfo=timezone.utc),
+        )
+
+
+SOURCES = [CountingOnline]
+'''
+
 _ANSWERS_NEVER = '''
 from stockinfo_plugin import DailyCloseSource, FxSource, NotFound, QuoteSource
 
@@ -194,6 +234,7 @@ def volume(tmp_path: Path) -> Path:
     # heißt nicht, in einer Kette zu stehen — das entscheidet `sources.yaml`.
     (plugins / "vorne.py").write_text(_ALWAYS_ANSWERS, encoding="utf-8")
     (plugins / "stumm.py").write_text(_ANSWERS_NEVER, encoding="utf-8")
+    (plugins / "zaehlend.py").write_text(_COUNTING_ONLINE, encoding="utf-8")
     return tmp_path
 
 
@@ -878,3 +919,86 @@ def test_die_dateiquelle_deklariert_alle_formen_und_gattungen() -> None:
     assert YamlFileSource.SUPPORTED_TYPES == frozenset(
         {"stock", "etf", "etc", "fund", "crypto", "bond"}
     )
+
+
+# ─── T-48 · die Datei wirkt ohne Neustart, die Online-Kette merkt nichts ──────
+
+
+def _tally(volume: Path) -> int:
+    """Wie oft die zählende Online-Quelle gefragt wurde."""
+    counter = volume / "online-calls.txt"
+    return int(counter.read_text()) if counter.exists() else 0
+
+
+def test_eine_geaenderte_datei_wirkt_ohne_neustart(volume: Path, client) -> None:
+    """**Der Kern des Tickets, über den öffentlichen Weg.**
+
+    Geändert wird **nur der Preis**; `as_of` bleibt stehen. Genau dieser Fall
+    fiel vorher zweimal durch: Das Plugin hielt eine Momentaufnahme, und der
+    Schreibweg verwarf den korrigierten Wert bei gleichem Zeitstempel.
+    """
+    eigene = volume / "assets.yaml"
+    eigene.write_text(SAMPLE.read_text(encoding="utf-8"), encoding="utf-8")
+    _profile_with_path(volume, eigene)
+
+    vorher = client.get(f"/quote/{_ETF}").json()["price"]
+    eigene.write_text(
+        eigene.read_text(encoding="utf-8").replace("value: 128.21", "value: 131.77"),
+        encoding="utf-8",
+    )
+    nachher = client.get(f"/quote/{_ETF}").json()
+
+    assert vorher == 128.21
+    assert nachher["price"] == 131.77, "die Änderung erreicht den laufenden Dienst nicht"
+    assert nachher["cached"] is False
+
+
+def test_die_online_kette_zaehlt_nicht_mehr_aufrufe_als_vorher(
+    volume: Path, client
+) -> None:
+    """**Die Gegenprobe zu Mikes Warnung — gezählt, nicht überlegt.**
+
+    Die Kette führt eine Online-Quelle **vor** der Datei. Das ETF-Papier
+    bedienen beide, die Anleihe nur die Datei. Zugesagt ist zweierlei:
+
+    * Das Online-Papier behält seine Frist — zwei Abfragen, **ein** Aufruf.
+      Eine hintere Dateiquelle macht einen vorderen Treffer nicht cachefrei.
+    * Das Datei-Papier umgeht die Frist und nimmt eine Änderung sofort an.
+
+    Geprüft wird am Fonds, nicht an der Anleihe: Deren Preis stammt aus der
+    gepflegten History, und die getrennten Cacheverträge für Historie,
+    Metadaten und Devisen sind ausdrücklich nicht Teil dieses Tickets.
+    """
+    eigene = volume / "assets.yaml"
+    eigene.write_text(SAMPLE.read_text(encoding="utf-8"), encoding="utf-8")
+    _profile_with_path(volume, eigene, quotes=["counting-online", "yaml-file"])
+
+    assert client.get(f"/quote/{_ETF}").json()["price"] == 999.0
+    client.get(f"/quote/{_ETF}")
+    assert _tally(volume) == 1, "die Online-Quelle wurde trotz frischem Cache erneut gefragt"
+
+    client.get(f"/quote/{_FUND}")
+    eigene.write_text(
+        eigene.read_text(encoding="utf-8").replace("value: 142.50", "value: 143.75"),
+        encoding="utf-8",
+    )
+
+    assert client.get(f"/quote/{_FUND}").json()["price"] == 143.75
+    assert _tally(volume) == 1, "das Datei-Papier hat die Online-Quelle gekostet"
+
+
+def _profile_with_path(
+    volume: Path, path: Path, quotes: list[str] | None = None
+) -> None:
+    """Wie `_profile`, aber mit einer Datei, die der Test verändern darf."""
+    chains = {
+        "resolvers": ["yaml-file"],
+        "etf_meta": ["yaml-file"],
+        "quotes": quotes or ["yaml-file"],
+        "daily": ["yaml-file"],
+        "fx": ["yaml-file"],
+    }
+    lines = [f"{role}: [{', '.join(names)}]" for role, names in chains.items()]
+    lines += ["", "providers:", "  yaml-file:", f"    path: {path}"]
+    (volume / "sources.yaml").write_text("\n".join(lines) + "\n", encoding="utf-8")
+    _restart_chains()
