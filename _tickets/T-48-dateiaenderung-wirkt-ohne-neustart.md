@@ -558,3 +558,26 @@ Das Orakel trifft Codex' Lage genau: Die kaputte Fassung wird auf die
 **Bytelänge** der korrigierten aufgefüllt, danach die Zeit gleichgesetzt —
 gleiche Größe, gleiche `mtime`, anderer Inhalt. In Zeichen zu rechnen ging
 daneben, weil die Datei UTF-8 ist.
+
+### Runde 4 · derselbe Rest, dritter Zustand (Claude, 2026-09-01)
+
+Der Fast-Path griff auch, wenn ein Grund stand. Er nahm ihn dann zurück,
+**ohne zu zerlegen**, und antwortete weiter mit dem geladenen Katalog — obwohl
+in der Datei die Korrektur stand. Die Signatur ist bei offener Störung kein
+Beleg mehr dafür, dass die Datei den geladenen Stand trägt: `128.21` und
+`131.77` sind gleich lang, und die Zeit lässt sich gleichsetzen.
+
+Ein offener Grund sperrt die Abkürzung jetzt. Dass ein kaputter Zustand damit
+je Anfrage einen Zerlegeversuch kostet, bleibt der bewusste Preis.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 240 | **239** |
+| Gesamt | ≤ 650 | **650** |
+
+Gegenlauf nach der Korrektur: `PROBLEM_AFTER=''`, `PRICE_AFTER=131.77` bei
+`Signatur == A`. Der Mutant „Fast-Path ohne Grund-Sperre" rötet den neuen Fall.
+
+**Drei Runden, dreimal dieselbe Wurzel** — die Signatur als Beleg für einen
+Inhalt zu nehmen, den niemand gelesen hat. Erst als geladener Stand, dann als
+Sperre, zuletzt als Abkürzung trotz offener Störung.

@@ -1057,8 +1057,7 @@ class OnlineQuoteService(FakeQuoteService):
 def test_ein_lokal_bedientes_papier_umgeht_die_frist(repo: QuoteRepository) -> None:
     """Wer die Datei ändert, will den Wert sehen — nicht in sechs Stunden.
 
-    Die TTL schont ein Kontingent. Wo es keines gibt, verzögert sie nur, was der
-    Betreiber gerade geschrieben hat.
+    Die TTL schont ein Kontingent; wo es keines gibt, verzögert sie nur.
     """
     fake = LocalQuoteService(_response(_now(), price=200.0))
     service = CachedQuoteService(
@@ -1073,12 +1072,9 @@ def test_ein_lokal_bedientes_papier_umgeht_die_frist(repo: QuoteRepository) -> N
 
 
 def test_ein_online_bedientes_papier_behaelt_seine_frist(repo: QuoteRepository) -> None:
-    """**Die Gegenprobe.** Die Online-Kette behält ihre Frist.
-
-    Ohne sie wäre der Fall darüber auch dann grün, wenn die Frist für **alle**
-    fiele — und dann fragte jede Seitenansicht das Netz neu, bis es in sein
-    Ratenlimit läuft.
-    """
+    """**Die Gegenprobe.** Ohne sie wäre der Fall darüber auch dann grün, wenn
+    die Frist für **alle** fiele — und dann fragte jede Seitenansicht das Netz
+    neu, bis es in sein Ratenlimit läuft."""
     fake = OnlineQuoteService(_response(_now()))
     service = CachedQuoteService(
         fake, repo, ttl_hours=6, daily_sync=empty_daily_sync(repo)
@@ -1109,12 +1105,8 @@ def test_ein_dienst_ohne_die_auskunft_verhaelt_sich_unveraendert(
 def test_ein_korrigierter_preis_zum_selben_zeitpunkt_ersetzt_den_alten(
     repo: QuoteRepository,
 ) -> None:
-    """Ein korrigierter Preis zum selben Zeitpunkt gewinnt.
-
-    Wer in einer gepflegten Datei nur den Preis ändert und den Zeitstempel
-    stehen lässt, trifft die vorhandene Zeile — das ist der Normalfall beim
-    Korrigieren, nicht der Ausnahmefall.
-    """
+    """Ein korrigierter Preis zum selben Zeitpunkt gewinnt — wer nur den Preis
+    ändert und den Zeitstempel stehen lässt, trifft die vorhandene Zeile."""
     moment = _now()
     repo.save_quote(_response(moment, price=94500.0))
 

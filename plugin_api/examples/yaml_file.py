@@ -762,10 +762,11 @@ class YamlFileSource(
             logger.warning("yaml-file: %s", self._problem)
             return
         signature = (info.st_mtime_ns, info.st_size)
-        if signature == self._signature and self._loaded is not None:
-            # Die Datei trägt wieder den Stand, der hier liegt — ein
-            # stehengebliebener Grund wäre eine Störung, die es nicht mehr gibt.
-            self._problem = ""
+        if signature == self._signature and self._loaded is not None and not self._problem:
+            # **Ein offener Grund sperrt diese Abkürzung.** Dann ist die
+            # Signatur kein Beleg mehr dafür, dass die Datei den geladenen
+            # Stand trägt: Eine Korrektur kann gleich groß und gleich datiert
+            # sein und trotzdem etwas anderes enthalten.
             return
         try:
             fresh = _Catalogue(self._path)

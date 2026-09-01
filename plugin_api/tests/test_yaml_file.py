@@ -557,7 +557,7 @@ def test_eine_kaputte_datei_schaltet_die_quelle_ab_statt_alt_zu_antworten(
 def test_dieselbe_instanz_erholt_sich_nach_der_naechsten_gueltigen_fassung(
     tmp_path: Path,
 ) -> None:
-    """Sonst müsste der Betreiber neu starten — genau das schließt das Ticket aus."""
+    """Sonst müsste der Betreiber neu starten."""
     path = _copy(tmp_path)
     source = YamlFileSource({"path": str(path)})
     _price(source)
@@ -588,11 +588,9 @@ def test_die_dateiquelle_erklaert_sich_als_nicht_zwischenspeicherbar() -> None:
 def test_eine_neue_fassung_mit_der_signatur_der_kaputten_wird_gelesen(
     tmp_path: Path,
 ) -> None:
-    """Gleiche Größe, gleiche Zeit — und trotzdem ein anderer Inhalt.
-
-    Das trifft, wer eine Sicherungskopie unter Erhalt der Zeit zurückspielt.
-    Eine abgelehnte Signatur zu merken hieße: nie wieder gelesen.
-    """
+    """Gleiche Größe, gleiche Zeit, anderer Inhalt — das trifft, wer eine
+    Sicherungskopie unter Erhalt der Zeit zurückspielt. Eine abgelehnte
+    Signatur zu merken hieße: nie wieder gelesen."""
     path = _copy(tmp_path)
     source = YamlFileSource({"path": str(path)})
     assert _price(source) == 128.21
@@ -617,21 +615,30 @@ def test_eine_neue_fassung_mit_der_signatur_der_kaputten_wird_gelesen(
     assert source.configuration_problem() == "", "der Grund blieb stehen"
 
 
-def test_eine_zurueckgespielte_datei_mit_der_alten_signatur_wird_wieder_gueltig(
+def test_eine_korrektur_mit_der_urspruenglichen_signatur_wird_gelesen(
     tmp_path: Path,
 ) -> None:
-    """Trägt die Datei wieder den geladenen Stand, endet die Störung — sonst
-    bliebe der Grund stehen, obwohl beide dasselbe führen."""
+    """Gleiche Signatur wie **vor** der Störung — und trotzdem ein neuer Wert.
+
+    Die Abkürzung zu nehmen hieße, den Grund zurückzunehmen, ohne nachgesehen
+    zu haben — und weiter den alten Preis auszugeben.
+    """
     path = _copy(tmp_path)
     source = YamlFileSource({"path": str(path)})
-    _price(source)
-    good, before = path.read_text(encoding="utf-8"), path.stat()
+    assert _price(source) == 128.21
+    good, first = path.read_text(encoding="utf-8"), path.stat()
 
     path.write_text("instruments:\n  - kaputt: [\n", encoding="utf-8")
     assert source.configuration_problem()
 
-    path.write_text(good, encoding="utf-8")
-    os.utime(path, ns=(before.st_atime_ns, before.st_mtime_ns))
+    # Gleich groß wie die Ausgangsfassung: `128.21` und `131.77` sind gleich lang.
+    corrected = good.replace("value: 128.21", "value: 131.77")
+    path.write_text(corrected, encoding="utf-8")
+    os.utime(path, ns=(first.st_atime_ns, first.st_mtime_ns))
+    assert (path.stat().st_mtime_ns, path.stat().st_size) == (
+        first.st_mtime_ns,
+        first.st_size,
+    ), "der Aufbau trifft die ursprüngliche Signatur nicht"
 
-    assert source.configuration_problem() == ""
-    assert _price(source) == 128.21
+    assert _price(source) == 131.77, "der alte Preis kam trotz Korrektur zurück"
+    assert source.configuration_problem() == "", "der Grund blieb stehen"
