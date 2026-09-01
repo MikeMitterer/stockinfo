@@ -1276,6 +1276,15 @@ Hilfsdateien trugen danach einen Zeitstempel aus dem Browserlauf. Ein Orakel
 darf weder den Produktvertrag per `as never` umgehen noch Teile eines
 mehrdateiligen Zustands auslassen.
 
+**Beleg 16:** T-55 Runde 1, Commit `0bebb89`: Das nachgeschärfte
+Isolationsskript erkannte korrekt, dass transiente WAL/SHM-Dateien über die
+Verzeichnis-mtime sichtbar werden, maß diese mit `stat -f%m` aber nur in ganzen
+Sekunden. Eine Datei anzulegen und sofort zu löschen ließ den Sekundenwert
+gleich, während `st_mtime_ns` sich änderte. Genau der schnelle
+Anlegen-/Löschen-Zyklus, den das Orakel unterscheiden soll, konnte daher weiter
+grün bleiben. Die richtige Zustandsgröße allein genügt nicht; ihre Auflösung
+muss den erzeugten Unterschied ebenfalls tragen.
+
 [↑ Übersicht](#übersicht)
 
 ## P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem

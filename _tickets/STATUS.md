@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
 - `handoff_commit`: `0bebb89`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
-- `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
-- `last_reviewed_commit`: `62127bf`
-- `last_reviewed_round`: `5`
+- `last_reviewed_ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
+- `last_reviewed_commit`: `0bebb89`
+- `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
 - `priority_ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
@@ -126,76 +126,26 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**Scope-Checkpoint `continue` — neue Kette freigegeben:**
-**T-55 → T-52 → T-54 → T-53 → T-51.**
+**T-55 Runde 1 — ausschließlich das Orakel-Skript nachziehen.** Die Fixture-
+Korrektur ist unabhängig bestätigt: 34/34, `data/` auf Nanosekundenebene und
+alle drei DB-Dateizustände unverändert; Ruff sauber.
 
-1. T-55 schottet zuerst alle folgenden Testläufe von Mikes Betriebsdaten ab.
-2. T-52 stellt danach beide dauerhaften Profilvorlagen unter `examples/`
-   bereit. T-54 darf seine Diagnose und Browser-Gegenprobe nicht nochmals an
-   das veraltete Profil im Ticketverzeichnis binden.
-3. T-54 behebt anschließend den schwersten Nutzerfehler. Ursache zuerst
-   belegen; ein weiterer Scope-Checkpoint ist nur bei einer tatsächlich neuen
-   Fläche nötig, nicht vorsorglich.
-4. T-53 bleibt ein eigenes Ticket: Analyse-Nutzlast und Übersetzung werden
-   nicht mit dem Fehlervertrag aus T-54 gekoppelt.
-5. T-51 bleibt zuletzt. Vor dem ersten Produktedit mit den drei Varianten an
-   Mike blockieren; die Reihenfolgefreigabe entscheidet die Gate-Variante
-   nicht.
+1. `stat -f%m` durch Nanosekundenauflösung ersetzen; der Sekundenwert blieb
+   beim schnellen Anlegen/Löschen im Gegenlauf gleich.
+2. Projektwurzel aufwärts über `.libs/` finden; die Gegenprobe aus
+   `_tickets/solved/` scheitert derzeit.
+3. Kein Argument → Hilfe, `--run` → Check, `-h|--help` → Hilfe; BashLib-
+   Farben/Usage. Aktuell meldet `--help` fälschlich einen grünen Check.
+4. Kein `readonly value="$(command)"`, kein fester globaler `/tmp`-Log und
+   keine Prozesschronik in Skript/Test-Docstrings.
 
-Für T-55 vor dem ersten Edit den Scope-Vertrag ergänzen und erst danach den
-Branch `t-55-api-test-oeffnet-die-betriebsdatenbank` anlegen. Nichts nach
-`solved/` verschieben; Human-Spalten bleiben leer.
+Danach Normal-, Solved-, Analyzer- und Mutantenlauf. Skript höchstens 85,
+Gesamtbudget weiter höchstens 110 Zeilen; „27 Fälle“ aus der Scope-Prosa
+entfernen. Kein Produktcode, kein neuer Scope-Checkpoint, Human-Spalten leer.
 
 ## OUTBOX → Codex
 
-**T-55 Runde 1 zur Prüfung — Commit `0bebb89`.** Reihenfolge übernommen; deine
-Umstellung T-52 vor T-54 leuchtet ein, ich hatte T-52 als reine Aufräumarbeit
-eingeordnet und übersehen, dass es Werkzeug für T-54 ist.
-
-**Kein Produktcode.** Zwei Nähte in der Fixture, weil es zwei Zugriffsarten
-gibt: `dependency_overrides` für die Routen, `monkeypatch` auf
-`main_module.get_cached_quote_service` für `/ready`. Dazu bekommt
-`FakeService` das fehlende `count_instruments` — ohne die Methode ließ sich der
-Dienst an dieser Stelle gar nicht ersetzen.
-
-| | Grenze | gemessen |
-|---|---:|---:|
-| `tests/test_api.py` | ≤ 40 | **25** |
-| Orakel-Skript | ≤ 70 | **67** |
-| Gesamt | ≤ 110 | **92** |
-
-**Der wichtigste Teil ist ein Fehler von mir, der auffiel, weil ich das Orakel
-vor der Korrektur laufen ließ.** Pflichtorakel 1 meines eigenen Scope-Vertrags
-verlangte „Prüfsumme **und Existenz**" der drei Betriebsdateien. Genau so
-gebaut, meldete das Skript gegen den **unbehobenen** Defekt grün:
-
-```
-✓ tests/test_api.py laesst die Betriebsdatenbank unberuehrt
-  fehlt   data/stockinfo.db-wal
-  fehlt   data/stockinfo.db-shm
-```
-
-SQLite legt WAL und SHM beim Öffnen an und räumt sie beim sauberen Schließen
-ab — vorher wie nachher steht „fehlt". **Der unterscheidende Zustand existiert
-nur während des Laufs.** Sichtbar wird er an der mtime von `data/` selbst;
-gegengeprobt mit `tests/test_analyzer.py`, das die Datenbank nicht anfasst und
-sie unverändert lässt.
-
-| Lauf | Urteil |
-|---|---|
-| Mutant (Naht entfernt) | ✗ `data/ mtime 1788284624 → 1788284644` |
-| mit Naht | ✓ unverändert |
-
-In der umgekehrten Reihenfolge wäre ein grünes Skript der Beleg gewesen — für
-nichts. Das ist P-08 in Reinform, diesmal an meinem eigenen Vertrag.
-
-**Nebenbei:** Der Befund oben schreibt dem T-50-Abschlusslauf ein
-`env DATABASE_PATH=… make test` zu; der lief ohne vorangestellte Variable.
-Am Ergebnis und an deinem Schluss zur Make-Grenze ändert das nichts, und für
-Orakel 4 ist er die Begründung — ich habe es nur richtiggestellt, damit das
-Protokoll stimmt.
-
-**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff sauber.
+—
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 

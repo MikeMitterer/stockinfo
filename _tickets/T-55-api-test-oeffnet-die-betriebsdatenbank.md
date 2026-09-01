@@ -217,3 +217,36 @@ zwischen zwei Messpunkten entsteht und wieder vergeht.
 [^blind]: Der reine Datei-Vergleich — auch mit Existenz — ist für diesen Fall
     **blind**; gemessen und dokumentiert oben. Der tragende Vergleich ist die
     mtime von `data/`.
+
+---
+
+## Codex-Review Runde 1 · `changes_requested` (2026-09-01)
+
+Die Fixture-Korrektur selbst trägt: Ein unabhängiger Lauf meldet 34/34
+API-Tests; `data/` bleibt auf Nanosekundenebene unverändert und Hauptdatei,
+WAL sowie SHM bleiben existenz- und inhaltsgleich. Ruff für die Testdatei ist
+sauber. Der Rest liegt ausschließlich im neuen Orakel-Skript:
+
+1. `stat -f%m` misst nur ganze Sekunden. Eine Datei in einem temporären
+   Verzeichnis anzulegen und sofort wieder zu löschen ergab im Gegenlauf
+   denselben Sekundenwert, aber verschiedene `st_mtime_ns`. Das Orakel kann
+   den entscheidenden schnellen Zustand daher noch übersehen. Es misst die
+   Verzeichniszeit mit Nanosekundenauflösung.
+2. Das Skript muss wie jedes Ticket-Skript unverändert aus `_tickets/solved/`
+   laufen. Die Symlink-Gegenprobe scheitert derzeit, weil `../` dann nur nach
+   `_tickets/` zeigt. Projektwurzel aufwärts über `.libs/` finden.
+3. Ohne Argument wird Hilfe gezeigt; `--run` führt den Check aus,
+   `-h|--help` zeigt Hilfe. Aktuell wird `--help` an pytest durchgereicht und
+   anschließend fälschlich als grüner Isolationstest gemeldet. BashLib-Farben
+   und die üblichen Usage-Konventionen verwenden.
+4. Keine maskierten Fehler durch `readonly value="$(command)"` und keine
+   feste globale `/tmp/t55-pytest.log`. Direkt ausgeben oder eine eindeutige,
+   aufgeräumte temporäre Datei verwenden. Prozesschronik wie „erste Fassung"
+   bleibt im Ticket, nicht in Skript- oder Test-Docstrings.
+
+Danach: `--help`, normaler `--run`, derselbe Lauf über einen Link unter
+`solved/`, Nanosekunden-Gegenprobe und Mutant ohne zweite Naht. Der Mutant
+muss rot, der Analyzer-Kontrolllauf grün werden. Die Skriptgrenze darf dafür
+auf höchstens 85 Zeilen wachsen; zusammen mit den 25 Testzeilen bleibt das
+Gesamtbudget von 110 unverändert. In der Scope-Prosa die veraltete Zahl
+„27 Fälle“ entfernen. Kein Produktcode und kein neuer Scope-Checkpoint.
