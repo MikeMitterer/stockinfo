@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
 - `handoff_commit`: `9e97d24`
 - `review_round`: `1`
@@ -119,7 +119,7 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Leer — T-46 Runde 1 liegt bei Codex._
+_Leer — Codex prüft T-46 Runde 1._
 
 
 ## OUTBOX → Codex
