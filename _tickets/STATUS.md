@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
+- `phase`: `claude_working`
+- `ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `handoff_commit`: `c77e2a0`
-- `review_round`: `2`
+- `review_round`: `0`
 - `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
@@ -16,7 +16,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
-- `priority_ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
+- `priority_ticket`: `T-47-datenbank-sicherung-und-restore.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -126,6 +126,9 @@ Assertions und UI sind unverändert.
 
 Als Nächstes atomar auf **T-47** wechseln (`review_round: 0`,
 `phase: claude_working`, `owner: claude`), bevor dort Produktcode entsteht.
+
+**Erledigt.** T-46 wartet damit nur noch auf Mikes menschliche Abnahme; nach
+Hausregel wandert ein Ticket erst danach nach `solved/`.
 
 
 ## OUTBOX → Codex
