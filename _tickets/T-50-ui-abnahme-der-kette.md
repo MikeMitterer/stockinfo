@@ -64,11 +64,14 @@ Befunde findet, die ein Browserlauf vorher sichtbar gemacht hätte.
 - **Drei verbindliche Gattungen im isolierten Bestand:** `BTC-EUR` als
   `crypto`, `DE0001102531` als `bond` und `DE0009848119` als `fund`. Fehlen
   sie in der Datenbankkopie — und in der Kopie fehlen alle drei —, werden sie
-  vor dem Browserlauf über den öffentlichen Aufnahmeweg angelegt: das Feld
-  „ISIN oder Symbol" über der Assets-Liste, also
-  `POST /instruments/intake`. Keine
-  direkte SQL-Präparation; wo der Aufnahmeweg das Papier nicht annimmt, ist
-  **das** der Befund und wird nicht umgangen.
+  vor dem Browserlauf über das Feld „ISIN oder Symbol" über der Assets-Liste
+  angelegt. **Das Feld ruft nicht `POST /instruments/intake`**, sondern
+  `GET /quote/{isin}` bzw. `GET /quote?symbol={symbol}`
+  (`useInstrumentActions.add` → `quotePath`); das Papier entsteht dabei
+  nebenbei. Der Lauf nimmt bewusst diesen Weg, weil T-50 die **Oberfläche**
+  abnimmt und ein Benutzer den Intake-Endpunkt nicht bedient. Keine direkte
+  SQL-Präparation; wo das Feld ein Papier nicht annimmt, ist **das** der
+  Befund und wird nicht umgangen.
 - **Belegpflicht.** Ein Screenshot allein belegt nichts. Zu jedem Fall gehört
   die sichtbare Anzeige **und** die Gegenprobe an der Quelle — Netzwerkantwort,
   Konsole oder Dateiinhalt. Ein Wert, der stimmt, weil er aus dem Cache kommt,
@@ -267,3 +270,34 @@ zwei konkrete Pfade waren noch nicht ausführbar:
 Keine neue Fallzeile, kein Produktedit und kein Browserlauf. Nach dieser
 Pfadkorrektur ist Phase A freigabefähig; V-1 und V-3 bleiben dokumentierte
 separate Drains nach Phase B.
+
+## Runde 3 · Der Aufnahmeweg heißt anders, als beide ihn genannt haben (Claude, 2026-09-01)
+
+Pfadkorrektur 2 übernommen — die Scratch-Kopien zeigen auf ihre jeweilige
+Fachdatei; das Startskript setzt beide Pfade beim Kopieren.
+
+**Pfadkorrektur 1 stimmt als Routenname und trifft trotzdem nicht.**
+`POST /instruments/intake` existiert (`app/routers/instruments.py:42`) — mein
+`POST /instruments` war falsch. Aber **das Feld ruft ihn nicht auf.** Der Weg
+hinter „Hinzufügen" ist
+
+```
+useInstrumentActions.add → quotePath → GET /quote/{isin}
+                                     bzw. GET /quote?symbol={symbol}
+```
+
+Das Papier entsteht dabei nebenbei; `intake` erscheint im ganzen
+`dashboard/src/` **kein einziges Mal**. Für T-50 ist das nicht bloß eine
+Formalie: Das Ticket nimmt die **Oberfläche** ab, und ein Benutzer bedient den
+Intake-Endpunkt nicht. Wäre die Zeile so stehen geblieben, hätte der Lauf
+einen Weg vorbereitet, den die geprüfte Fläche gar nicht geht — die
+Vorbereitung wäre grün gewesen und hätte nichts über das Feld ausgesagt.
+
+Nachgesehen habe ich das, weil derselbe Satz zwei Dinge gleichsetzte: die
+sichtbare Fläche und eine Route. Solche Gleichsetzungen sind die Stelle, an
+der eine der beiden Hälften ungeprüft mitläuft.
+
+**Nebenbei geprüft, weil Fall 9 darauf steht:** Die sichtbare
+Einzel-Aktualisierung ist `refreshOne` → `POST /refresh/{isin}` bzw.
+`POST /refresh/by-symbol/{symbol}`. Sie existiert und ist vom bloßen Neuladen
+unterscheidbar — Fall 9 ist ausführbar.

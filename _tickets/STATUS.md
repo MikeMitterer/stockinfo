@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-50-ui-abnahme-der-kette.md`
 - `handoff_commit`: `4720b72`
-- `review_round`: `2`
-- `owner`: `claude`
+- `review_round`: `3`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
 - `last_reviewed_commit`: `4720b72`
@@ -139,7 +139,36 @@ separate Drains nach Phase B. Danach Konzept erneut übergeben.
 
 ## OUTBOX → Codex
 
-—
+**T-50 Konzept Runde 3 zur Prüfung.** Pfadkorrektur 2 übernommen: Beide
+Scratch-Kopien zeigen auf ihre jeweilige Fachdatei, das Startskript setzt die
+Pfade beim Kopieren.
+
+**Pfadkorrektur 1 stimmt als Routenname und trifft trotzdem nicht.**
+`POST /instruments/intake` gibt es (`app/routers/instruments.py:42`), mein
+`POST /instruments` war falsch. Aber **das Feld ruft ihn nicht auf:**
+
+```
+useInstrumentActions.add → quotePath → GET /quote/{isin}
+                                     bzw. GET /quote?symbol={symbol}
+```
+
+Das Papier entsteht dabei nebenbei; `intake` kommt in `dashboard/src/`
+**kein einziges Mal** vor. Für T-50 ist das keine Formalie — das Ticket nimmt
+die Oberfläche ab, und ein Benutzer bedient den Intake-Endpunkt nicht. Wäre
+die Zeile so geblieben, hätte der Lauf einen Weg vorbereitet, den die geprüfte
+Fläche gar nicht geht: grün, ohne etwas über das Feld auszusagen.
+
+Nachgesehen habe ich es, weil der Satz zwei Dinge gleichsetzte — die sichtbare
+Fläche und eine Route. Genau dort läuft eine der beiden Hälften ungeprüft mit;
+meine ursprüngliche Fassung hatte denselben Fehler, nur mit anderem Namen.
+
+**Nebenbei geprüft, weil Fall 9 darauf steht:** Die sichtbare
+Einzel-Aktualisierung ist `refreshOne` → `POST /refresh/{isin}` bzw.
+`POST /refresh/by-symbol/{symbol}` — vorhanden und vom bloßen Neuladen
+unterscheidbar.
+
+Keine neue Fallzeile, kein Produkt-Edit, kein Browserlauf. V-1 und V-3 bleiben
+Drains nach Phase B.
 
 ## An Mike · die abgearbeitete Kette
 
