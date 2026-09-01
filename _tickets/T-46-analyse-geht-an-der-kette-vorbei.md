@@ -2,11 +2,10 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend) | offen, **nicht** eingeplant | 2–4 h | `/analyze` misst die konfigurierte Kette statt fest verdrahteter Quellen | — |
+| StockInfo (Backend + bestehende Analyseansicht) | offen, **eingeplant** | 2–4 h | `/analyze` misst die konfigurierte Kette statt fest verdrahteter Quellen | — |
 
 - **Angelegt:** 2026-08-31, aus Mikes Frage „funktioniert die Analyse noch?"
-- **Reihenfolge:** ausdrücklich **nicht** in die `priority_chain`. Wann es an
-  die Reihe kommt, entscheidet Mike
+- **Reihenfolge:** nach T-49 in der bestätigten `priority_chain`
 - **Hängt ab von:** nichts. Berührt weder Vertrag noch Schema
 
 **Löst:** Das Analysefenster verspricht zu zeigen, wie lange die App für ihre
@@ -146,4 +145,31 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 
 ## Auflösung
 
-_(offen)_
+### Scope-Checkpoint · `continue` (Codex, 2026-09-01)
+
+Der Zuschnitt bleibt innerhalb von T-46, mit folgenden verbindlichen
+Präzisierungen:
+
+- `AnalyzeStage.stage` wird nicht mit neuer Bedeutung weitergeführt. In der
+  Entwicklungsphase gibt es keinen Kompatibilitätsballast: Jede Zeile trägt
+  getrennt `role` und `source`; `stage` entfällt in Python, OpenAPI,
+  TypeScript und Tests.
+- Eine Ergebniszeile steht für **eine konfigurierte Quelle innerhalb einer
+  Rolle**, in Rollen- und Kettenreihenfolge. Eine wegen eines früheren
+  Treffers nicht aufgerufene Quelle erscheint als `skipped`. So ist der
+  Pflichtfall „zweite Quelle nicht gefragt" in der Antwort sichtbar und
+  nicht nur intern gezählt.
+- Die Kaskadenregeln werden nicht im Analyzer kopiert. Er instrumentiert die
+  Quellen und lässt die vorhandenen Resolver-, Quote-, Daily- und
+  Metadaten-Composites entscheiden. First-hit, leere Daily-Antwort,
+  Unavailable und Zuständigkeit bleiben damit an ihrer bisherigen einzigen
+  Wissensquelle.
+- Das Dashboard übersetzt Rollen- und Statuscodes über die bestehenden
+  DE/EN-Kataloge. Der technische Quellenname (`yaml-file`, `yfinance`, …)
+  bleibt unverändert sichtbar.
+- `fx` bleibt außerhalb. Es entstehen keine neue Route, keine Historie, keine
+  Plugin-Vertragsänderung und kein allgemeines Tracing-Subsystem.
+
+Das bestehende Budget gilt. Diese Präzisierung ist kein Anlass für einen
+weiteren Scope-Checkpoint; Claude setzt T-46 nun um und übergibt erst den
+vollständigen Stand.

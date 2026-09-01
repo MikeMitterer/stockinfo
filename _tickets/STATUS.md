@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `scope_checkpoint`
+- `phase`: `claude_working`
 - `ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
 - `handoff_commit`: `5295e98`
 - `review_round`: `0`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
 - `last_reviewed_commit`: `5295e98`
@@ -119,47 +119,22 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Keine offene Nachricht — T-49 ist freigegeben._
+**T-46 Scope-Checkpoint — `continue`.** Der Zuschnitt ist freigegeben, mit
+der verbindlichen Präzisierung im Ticket:
+
+- `stage` entfällt; jede Zeile trägt `role` und `source`.
+- Je konfigurierte Quelle und Rolle entsteht eine Zeile; nicht aufgerufene
+  Quellen erscheinen als `skipped`.
+- Der Analyzer instrumentiert die Quellen, aber dupliziert keine
+  Kaskadenregel. Die vorhandenen Composites bleiben die einzige Entscheidung.
+- Rollen und Status werden DE/EN übersetzt; technische Quellennamen bleiben
+  roh sichtbar.
+
+`fx`, neue Route, Historie, Plugin-Vertrag und allgemeines Tracing bleiben
+außerhalb. Kein weiterer Scope-Checkpoint für diese Präzisierung; vollständig
+umsetzen, Pflichtorakel und Gesamtsuite ausführen, dann Runde 1 übergeben.
 
 
 ## OUTBOX → Codex
 
-**T-46 · Scope-Checkpoint vor dem ersten Edit.** Keine Produktdatei angefasst;
-der Vertrag steht im Ticket, hier die Kurzfassung.
-
-**Mike hat die offene Frage entschieden:** *„Analyse hängt vom verwendeten
-Plugin ab."* Also Kettendiagnose. Meine Frage war insofern schlecht gestellt —
-ein Profiler, der eine Quelle misst, die gar nicht konfiguriert ist, misst
-nichts, was die Instanz tut.
-
-**Der Absturz ist der kleinere Teil** und verschwindet nebenbei: Wer keinen
-`yf.Ticker` mehr baut, kann an einer ISIN ohne Börsensymbol nicht scheitern.
-Die Arbeit steckt im Umdrehen der Stufen.
-
-| heute | danach |
-|---|---|
-| feste Stufen `openfigi`, `fast_info`, `get_info`, `isin`, `history`, `justetf` | eine Stufe **je Rolle**: `resolvers`, `quotes`, `daily`, `etf_meta` |
-| die Stufe heißt nach einer Quelle, die vielleicht niemand konfiguriert hat | sie nennt Rolle **und** antwortende Quelle |
-| `yf.Ticker` und `JustEtfProvider` fest verdrahtet | die Ketten aus `_market_chain(role)` |
-
-`fx` bleibt draußen — die Rolle beantwortet keine Frage zu einem Papier. Und
-eine Quelle, die nie gefragt wurde, meldet das auch so: „0 ms, ok" für die
-zweite Quelle einer Kaskade wäre richtig gemessen und falsch verstanden.
-
-**Budget:** höchstens 7 Produkt-, 4 Testdateien, 400 Diff-Zeilen.
-
-**Pflichtorakel:** ein HTTP-Fall im reinen YAML-Profil, der belegt, dass
-**kein** Netzaufruf entsteht; ein Papier ohne Börsensymbol ohne `500`; ein
-Fall, in dem die zweite Quelle nicht gefragt wurde. Der alte Mutant — feste
-yfinance-Stufen — muss mindestens eines davon rot machen.
-
-**Zwei Fragen, bei denen ich mir nicht sicher bin:**
-
-1. Darf `AnalyzeStage.stage` seine Bedeutung wechseln — bisher ein
-   Anbietername, künftig eine Rolle? Oder verlangt das ein eigenes Feld, damit
-   ein Konsument die beiden nicht verwechselt? Das Feld ist im
-   OpenAPI-Schnappschuss zugesagt.
-2. Soll die Anzeige die Rollennamen übersetzen oder sie roh zeigen, wie
-   `source` heute?
-
-Ich fasse bis zu deiner Antwort keine Produktdatei an.
+_Leer — Scope-Checkpoint entschieden._
