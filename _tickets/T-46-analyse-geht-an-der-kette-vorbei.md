@@ -69,16 +69,61 @@ Drei Folgen, und die dritte ist die unangenehmste:
 
 ---
 
-## Richtung — noch nicht entschieden
+## Richtung — von Mike entschieden (2026-09-01)
 
-Der Kern ist nicht der Absturz, sondern die Frage, was die Analyse **ist**:
-ein yfinance-Profiler oder eine Kettendiagnose. Die zweite Lesart würde die
-Stufen aus den Rollen bilden (`resolvers`, `quotes`, `daily`, `etf_meta`, `fx`)
-und je Rolle die Quelle nennen, die geantwortet hat — dieselbe Auskunft, die
-`RawQuote.source` seit T-41 schon trägt.
+> *„Was heißt hier yfinance-Profiler oder Kettendiagnose. Analyse hängt vom
+> verwendeten Plugin ab."*
 
-Das ist mehr als eine Fehlerbehebung und gehört deshalb vor den Beginn
-entschieden, nicht während der Umsetzung.
+**Kettendiagnose.** Die Stufen kommen aus den Rollen und nennen die Quelle, die
+geantwortet hat — dieselbe Auskunft, die `RawQuote.source` seit T-41 trägt. Die
+Frage war insofern schlecht gestellt: Ein Profiler, der eine Quelle misst, die
+gar nicht konfiguriert ist, misst nichts, was die Instanz tut.
+
+---
+
+## Scope-Checkpoint vor dem ersten Edit (2026-09-01)
+
+**Der Absturz ist der kleinere Teil.** Er verschwindet nebenbei: Wer keinen
+`yf.Ticker` mehr baut, kann an einer ISIN ohne Börsensymbol nicht mehr
+scheitern. Die Arbeit steckt darin, die Stufen umzudrehen.
+
+### Was entsteht
+
+| heute | danach |
+|---|---|
+| feste Stufen `openfigi`, `fast_info`, `get_info`, `isin`, `history`, `justetf` | eine Stufe **je Rolle**: `resolvers`, `quotes`, `daily`, `etf_meta` |
+| die Stufe heißt nach einer Quelle, die vielleicht niemand konfiguriert hat | die Stufe nennt die Rolle **und** die Quelle, die geantwortet hat |
+| `yf.Ticker` und `JustEtfProvider` fest verdrahtet | die Ketten aus `_market_chain(role)` |
+| ein Papier ohne Symbol lässt die Route mit `500` abstürzen | es wird schlicht aufgelöst oder nicht |
+
+**`fx` bleibt draußen:** Die Rolle beantwortet keine Frage zu einem Papier.
+
+**Eine Quelle, die nie gefragt wurde, meldet das auch so.** Eine Kaskade hört
+beim ersten Treffer auf; „0 ms, ok" für die zweite Quelle wäre richtig gemessen
+und falsch verstanden.
+
+### Scope-Vertrag
+
+- **Fachliche Änderungen:** drei — Stufen aus Rollen statt fester Namen; jede
+  Stufe nennt ihre Quelle; kein `500` mehr für eine Identität ohne Symbol.
+- **Erwartete Flächen:** `services/analyzer.py` (Umbau), `models.py`
+  (`AnalyzeStage` bekommt `role` und `source`), `container.py` (Ketten statt
+  fester Anbieter), `routers/dashboard.py` (nur falls nötig), im Dashboard
+  `AnalysisPanel.vue` und beide Kataloge.
+- **Budget:** höchstens 7 Produktdateien, 4 Testdateien, 400 Diff-Zeilen.
+- **Pflichtorakel:** ein echter HTTP-Fall im **reinen YAML-Profil**, der belegt,
+  dass **kein** Netzaufruf entsteht; ein Fall für ein Papier ohne Börsensymbol
+  (kein `500`); ein Fall, in dem die zweite Quelle einer Kette nicht gefragt
+  wurde und das auch meldet. Der alte Mutant — feste yfinance-Stufen — muss
+  mindestens eines davon rot machen.
+- **Nicht-Ziele:** keine neue Route, keine gespeicherte Messhistorie, keine
+  Änderung am Plugin-Vertrag, keine Messung der Rolle `fx`.
+
+**Die Frage an Codex:** Ist der Zuschnitt richtig? Zwei Punkte, bei denen ich
+mir nicht sicher bin — ob `AnalyzeStage.stage` seine Bedeutung wechseln darf
+(bisher ein Anbietername, künftig eine Rolle) oder ob das ein neues Feld
+verlangt; und ob die Anzeige die Rollennamen übersetzen soll oder sie roh
+zeigt wie `source` heute.
 
 ---
 
