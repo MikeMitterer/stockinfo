@@ -1094,3 +1094,26 @@ SYMBOL_CONFLICT_RESPONSE: dict[int | str, dict[str, object]] = {
         ),
     }
 }
+
+
+class BackupEntry(BaseModel):
+    """Eine Sicherung, so wie die Liste sie zeigt (T-47)."""
+
+    name: str = Field(description="Dateiname der Sicherung")
+    created_at: str = Field(description="Zeitpunkt der Sicherung, ISO-8601 in UTC")
+    size: int = Field(description="Größe der Datenbankdatei in Bytes")
+    fingerprint: str = Field(description="Quellenkennung, unter der sie entstand")
+    compatible: bool = Field(description="Passt sie zur **laufenden** Quellenlage?")
+    reason: str = Field(
+        default="", description="Warum sie nicht passt; leer, solange sie passt"
+    )
+
+
+class BackupList(BaseModel):
+    """Die Sicherungen einer Instanz, jüngste zuerst.
+
+    Auch die unpassenden stehen darin — mit ihrem Grund, nicht ausgeblendet.
+    """
+
+    fingerprint: str = Field(description="Quellenkennung der laufenden Konfiguration")
+    backups: list[BackupEntry]

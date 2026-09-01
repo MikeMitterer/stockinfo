@@ -20,6 +20,7 @@ from app.config import Settings, get_settings
 from app.docs import register_docs
 from app.container import get_cached_quote_service
 from app.db import init_db
+from app.services.backup import fingerprint_of, stamp_fingerprint
 from app.migration_guard import (
     HEALTHCHECK_PATH,
     REASON_MIGRATION_PENDING,
@@ -43,7 +44,7 @@ from app.repository import (
 from app import plugin_env
 from app.container import get_sources_config, warm_all_chains
 from app.plugin_loader import load_all
-from app.routers import dashboard, fields, fx, instruments, migration, quotes
+from app.routers import backups, dashboard, fields, fx, instruments, migration, quotes
 from app.routers.migration import get_gate
 from app.routers.validation import REASON_INVALID_ISIN, InvalidIsinError
 from app.scheduler import RefreshScheduler
@@ -89,6 +90,10 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     if init_db(settings.database_path):
         get_gate().block()
+
+    # Die Kennung steht in der Datenbank selbst, nicht nur im Manifest daneben:
+    # Eine Sicherung ohne Manifest bleibt zuordenbar, ein vertauschtes fällt auf.
+    stamp_fingerprint(settings.database_path, fingerprint_of(get_sources_config()))
 
     running: list[RefreshScheduler] = []
     scheduler_lock = threading.Lock()
@@ -175,6 +180,7 @@ app.include_router(dashboard.router)
 app.include_router(fx.router)
 app.include_router(fields.router)
 app.include_router(migration.router)
+app.include_router(backups.router)
 
 
 @app.exception_handler(IdentityConflictError)

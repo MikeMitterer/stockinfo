@@ -23,6 +23,7 @@ from app.resolver import CompositeResolver
 from app.sources_config import SourcesConfig, load_sources_config
 from app.sources_registry import build_chain
 from app.services.analyzer import ROLES as ANALYZED_ROLES, QuoteAnalyzer
+from app.services.backup import BackupService
 from app.services.daily_history import DailyHistoryService
 from app.services.daily_sync import DailyCloseSync
 from app.services.fx_service import CachedFxService
@@ -217,6 +218,17 @@ def get_quote_analyzer() -> QuoteAnalyzer:
     justETF — Zahlen zu einer Kette, die sie gar nicht führt.
     """
     return QuoteAnalyzer({role: _chain(role) for role in ANALYZED_ROLES})
+
+
+@lru_cache
+def get_backup_service() -> BackupService:
+    """Baut den (gecachten) BackupService.
+
+    **Dieselbe `SourcesConfig` wie der Betrieb.** Läse er die Datei selbst,
+    beschriebe er eine Konfiguration, die gar nicht läuft — und die Kennung
+    stünde für eine Lage, die es nicht gibt.
+    """
+    return BackupService(get_settings().database_path, get_sources_config())
 
 
 @lru_cache

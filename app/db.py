@@ -130,6 +130,27 @@ CREATE TABLE IF NOT EXISTS fx_rates (
     source     TEXT,
     PRIMARY KEY (base, quote)
 );
+
+-- Was die Datenbank über sich selbst weiß — damit eine Sicherung ohne
+-- Manifest zuordenbar bleibt. Was hier steht, beschreibt die Datei, nicht
+-- ihren Inhalt.
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+"""
+
+SCHEMA_VERSION = 1
+"""Die Form dieses Schemas — als **Zahl**, die nur wächst.
+
+`schema_outdated()` prüft die Form *strukturell* und beantwortet „ist hier
+etwas nachzuholen?". Die Gegenrichtung — **„ist diese Datei neuer als ich?"** —
+kann es nicht beantworten. Genau die entscheidet, ob eine Sicherung überhaupt
+lesbar ist, und sie duldet später kein `force`: Eine höhere Nummer heißt, dass
+die App die Datei nicht lesen *kann*.
+
+`VACUUM INTO` trägt den Wert in die Kopie mit; jede Sicherung erklärt ihr
+Schema damit selbst und ist nicht auf ihr Manifest angewiesen.
 """
 
 
@@ -184,6 +205,9 @@ def init_db(database_path: str) -> bool:
         connection.executescript(_SCHEMA)
         _migrate(connection)
         _create_identity_indices(connection)
+        # Erst wenn das Schema wirklich steht: Die Nummer ist eine Zusage an
+        # eine spätere Wiederherstellung.
+        connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         connection.commit()
         plan = plan_migration(connection)
     finally:

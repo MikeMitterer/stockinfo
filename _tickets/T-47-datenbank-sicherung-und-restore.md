@@ -218,16 +218,16 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | `POST /backups` während eines Schreibzugriffs | die Datei ist in sich stimmig, nicht zerrissen | ➖ | |
-| **2** | `GET /backups` | Zeitpunkt, Kennung und `compatible` je Eintrag; die Liste stimmt mit dem Verzeichnis überein | ➖ | |
+| **1** | `POST /backups` während eines Schreibzugriffs | die Datei ist in sich stimmig, nicht zerrissen | ✅ | |
+| **2** | `GET /backups` | Zeitpunkt, Kennung und `compatible` je Eintrag; die Liste stimmt mit dem Verzeichnis überein | ✅ | |
 | **3** | Wiederherstellen mit **gleicher** Kennung | derselbe Bestand nach dem Neustart | ➖ | |
 | **4** | Wiederherstellen mit **anderer** Kennung | abgelehnt, und die Meldung nennt die Rolle und beide Ketten | ➖ | |
 | **5** | dasselbe mit `force` | läuft, und die Instanz sagt danach sichtbar, dass sie es getan hat | ➖ | |
 | **6** | Sicherung mit neuerem Schema | abgelehnt, auch mit `force` | ➖ | |
 | **7** | vor dem Wiederherstellen | eine Sicherung des alten Standes liegt vor | ➖ | |
 | **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ➖ | |
-| **9** | `PRAGMA user_version` | ist gesetzt und wird beim Prüfen gelesen | ➖ | |
-| **10** | elfte Sicherung | die älteste ist weg, es liegen zehn; keine zweite Löschmöglichkeit | ➖ | |
+| **9** | `PRAGMA user_version` | ist gesetzt und wird beim Prüfen gelesen | ✅ | |
+| **10** | elfte Sicherung | die älteste ist weg, es liegen zehn; keine zweite Löschmöglichkeit | ✅ | |
 | **11** | UI-Liste | alle vorhandenen Sicherungen sind sichtbar, unpassende **mit Grund** statt ausgeblendet | ➖ | |
 | **12** | Bestätigung vor dem Wiederherstellen | der Neustart wird **vorher** genannt, nicht erst danach | ➖ | |
 
@@ -516,3 +516,50 @@ Nach einem grünen Review von 1a bleibt T-47 aktiv und 1b folgt mit `#3` bis
 Teilfreigabe schaltet daher nicht auf T-48 weiter. Der WIP-Zweig
 `t-47-wip-vollstand` dient nur als Arbeitsablage und ist keine Liefer- oder
 Reviewbasis.
+
+---
+
+### Runde 1a · Umsetzung (Claude, 2026-09-01)
+
+Sicherung, Manifest, Kennung, Schemaversion, Liste und Rotation. Restore und
+UI sind vollständig draußen — kein `BackupError`, keine Pending-Datei, kein
+Starttausch, keine Sicherheitskopie.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 500 | **390** |
+| Testzeilen | — | **353** |
+| Gesamt | ≤ 800 | **743** |
+
+Sechs Produktflächen wie freigegeben, eine Testdatei. Suite grün: 991 Backend,
+295 Plugin-API, 45 Beispiel, 292 Dashboard; Ruff sauber.
+
+**Live** (Port 8807, Vorgabeprofil): leere Liste nennt die Kennung
+`db0403b106cf`; zwei `POST /backups` → `201`; die Liste zeigt beide mit Größe,
+Zeitpunkt und `compatible=true` und stimmt mit dem Verzeichnis überein (je
+`.db` und `.json`); `DELETE` gibt es nicht (`404`). Die beiden Sicherungen
+entstanden **11 ms auseinander** — genau der Fall, der mit Sekundenauflösung
+kollidiert wäre.
+
+#### Ein Orakel, das zuerst nichts geprüft hat
+
+`#10` sicherte zu, dass das Manifest der verdrängten Sicherung mitgeht — prüfte
+das aber unter dem **alten** Namen, den der Testhelfer zuvor umbenannt hatte.
+Die Zusicherung war damit über eine Datei formuliert, die es nicht mehr gab,
+und blieb grün, als das Aufräumen des Manifests entfernt wurde. `_age()` gibt
+jetzt den neuen Pfad zurück.
+
+#### Mutantenprobe
+
+| Mutant | rot |
+|---|---|
+| `shutil.copy2` statt `VACUUM INTO` | `#1` — die Sicherung ist leer |
+| Kennung nimmt die `providers`-Abschnitte auf | die `usable`-Gegenprobe |
+| Rotation räumt nichts weg | `#10` |
+| Manifest bleibt bei der Rotation liegen | `#10` (nach der Korrektur oben) |
+| Unterschied nur als „Kennung verschieden" | `#2` — der Grund fehlt |
+
+**Nicht rot** wird ein Mutant mit Sekundenauflösung im Dateinamen: `_free_name`
+rückt dann so lange vor, bis die Sekunde umspringt. Das ist langsam und nicht
+der Entwurf, kollidiert aber nicht — und zugesagt ist die Abwesenheit der
+Kollision, nicht das Mittel. Steht so im Testdocstring.
