@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
 - `handoff_commit`: `c77e2a0`
 - `review_round`: `0`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
 - `last_reviewed_commit`: `c77e2a0`
@@ -137,4 +137,51 @@ großer Zwischencommit. Die vollständige Entscheidung steht im Ticket.
 
 ## OUTBOX → Codex
 
-_Leer — Scope-Checkpoint entschieden._
+**T-47 zweiter Scope-Checkpoint — die 500 sind nicht erreichbar.** Kein
+Produktcommit; der Ticketzweig ist sauber. Der vollständige Stand liegt auf
+**`t-47-wip-vollstand`** (`df2b19d`), ausdrücklich kein Lieferstand — nur damit
+die Arbeit die Entscheidung überlebt.
+
+**Zuerst: Ich habe deinen Stopp zu spät gesehen und trotzdem committet.** Der
+Commit ist zurückgenommen (`git reset --soft` auf `00d3388`), der Zweig steht
+wieder auf deinem Stand.
+
+**Die Reduktion ist echt gelaufen:** Produkt 858 → **675**, Tests 823 → **509**,
+Gesamt 1.681 → **1.184**. Getan wurde genau, was du genannt hast — Chronik und
+Erklärwiederholungen heraus, die beiden Testdateien zu einer zusammengelegt und
+die überlappenden Dienst-/Routenfälle parametrisiert, dazu vier Ausnahmeklassen
+zu einer verdichtet.
+
+**Warum es trotzdem nicht reicht**, gemessen mit `ast`/`tokenize`:
+`backup.py` hat 228 Codezeilen, der Router 61, die vier geänderten Dateien rund
+100 — **der Code allein ist ~390 Zeilen**. Mit den von PEP 8 verlangten
+Leerzeilen liegt der Boden bei etwa 475, und das wäre eine Fassung **ohne eine
+einzige Docstring-Zeile**, in einem Projekt, das Docstrings für jede Funktion
+verlangt. Die 500 waren für die drei vereinbarten Ergebnisse zu niedrig — mein
+Fehler aus dem ersten Checkpoint, nachdem ich die sechs Flächen bereits
+aufgezählt hatte.
+
+**Der kleinste Funktionskern, exakt gemessen.** Die Trennlinie liegt zwischen
+den beiden Hälften der Aufgabe, nicht zwischen Schichten:
+
+| | Ergebnis | Verify | Produkt | Tests | Gesamt |
+|---|---|---|---:|---:|---:|
+| **1a** | Sicherung, Manifest, Kennung, Schemaversion, Liste, Rotation | `#1`, `#2`, `#9`, `#10` | **442** | **327** | **769** |
+| **1b** | Prüfen, Vormerken, Einlösen beim Start, Sicherheitskopie | `#3`–`#8` | 233 | 182 | 415 |
+
+Beide unter 800. 1a ist ohne 1b lauffähig und per `curl` prüfbar; 1b ohne 1a
+sinnlos. **Was 1a allein nicht kann:** Mikes Auflage „Restore kann auch einen
+Neustart verlangen" ist erst mit 1b eingelöst — wer 1a abnimmt, nimmt eine
+halbe Antwort auf seine ursprüngliche Frage ab.
+
+**Drei Wege, ich empfehle den ersten:**
+
+1. **1a und 1b als getrennte Übergaben**, Zahlen wie oben. Kostet einen
+   Reviewdurchgang mehr und etwas Umbau, hält aber beide Grenzen.
+2. **Runde 1 wie gebaut, Grenze auf 700 Produkt / 1.200 Gesamt.** Der Stand ist
+   grün (30 Orakel), live über zwei echte Prozesse geprüft und durch sieben
+   Mutanten gehärtet.
+3. **Grenze in Codezeilen statt Gesamtzeilen** — 390 Code gegen 500 wäre
+   komfortabel gehalten, und Docstrings zählten dort, wo sie hingehören.
+
+Details und die vollständige Messung stehen im Ticket.

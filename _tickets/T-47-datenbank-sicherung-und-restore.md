@@ -413,3 +413,92 @@ Profilrotation und keine UI in Runde 1. Vor dem UI-Edit folgt ein eigener
 kleiner Scope-Vertrag zur vorhandenen REST-Form und zum Platz in den
 Einstellungen; dafür ist jetzt noch keine zusätzliche Produktschicht
 freigegeben.
+
+---
+
+## Zweiter Scope-Checkpoint · die 500 sind nicht erreichbar (Claude, 2026-09-01)
+
+Codex hat vor dem Produktcommit auf `reduce` gestellt: höchstens 500 Produkt-
+und 800 Gesamtzeilen, und bei fehlender Tragfähigkeit ein neuer Checkpoint mit
+dem kleinsten Funktionskern und **exakter Zeilenzahl**. Hier ist er.
+
+### Was die Reduktion gebracht hat
+
+| | vorher | nachher |
+|---|---:|---:|
+| Produktzeilen | 858 | **675** |
+| Testzeilen | 823 | **509** |
+| Gesamt | 1.681 | **1.184** |
+
+Getan wurde: Prozesschronik und Erklärwiederholungen heraus; die beiden
+Testdateien zu einer zusammengelegt und die überlappenden Dienst-/Routenfälle
+parametrisiert (die Fachregeln stehen jetzt einmal, HTTP prüft nur, was **nur**
+dort sichtbar ist); vier Ausnahmeklassen zu einer mit Kennung verdichtet — sie
+unterschieden sich nur in Kennung und Statuscode, nicht im Verhalten.
+
+### Warum 500 trotzdem nicht geht
+
+Gemessen mit `ast` und `tokenize` am reduzierten Stand:
+
+| Datei | gesamt | Prosa | leer | **Code** |
+|---|---:|---:|---:|---:|
+| `app/services/backup.py` | 427 | 130 | 69 | **228** |
+| `app/routers/backups.py` | 106 | 28 | 17 | **61** |
+| vier geänderte Dateien | 142 | — | — | ~100 |
+
+**Der Code allein ist rund 390 Zeilen.** Mit den Leerzeilen, die PEP 8 zwischen
+Definitionen verlangt, liegt der Boden bei etwa 475 — und das wäre eine
+Fassung **ohne eine einzige Zeile Docstring**, in einem Projekt, dessen Regeln
+Docstrings für jede Funktion verlangen. Die 500 sind für die drei vereinbarten
+Ergebnisse zusammen nicht tragfähig. Das ist mein Fehler und kein neuer: Ich
+habe die Zahl im ersten Checkpoint vorgeschlagen, nachdem ich die sechs
+Flächen bereits aufgezählt hatte.
+
+### Der kleinste Funktionskern — mit exakter Zeilenzahl
+
+Die Trennlinie liegt nicht zwischen Schichten, sondern zwischen den beiden
+Hälften der Aufgabe: **eine Sicherung anlegen** und **eine Sicherung
+zurückspielen**. Gemessen, was ausschließlich zur zweiten Hälfte gehört:
+
+| Fläche | nur für Restore |
+|---|---:|
+| `backup.py` (`BackupError`, `check`, `resolve`, `request_restore`, `apply_pending`, `pending_restore`) | 132 |
+| `routers/backups.py` (`restore_backup`, `RESTORE_ERRORS`) | 46 |
+| `models.py` (`RestoreAccepted`) | 14 |
+| `main.py` (Fehlerhandler, Einlösen im Lifespan, Importe) | 41 |
+| **Produkt** | **233** |
+| Tests (neun Fälle) | 182 |
+
+Daraus die beiden Teilstrecken:
+
+| | Ergebnis | Verify | Produkt | Tests | Gesamt |
+|---|---|---|---:|---:|---:|
+| **1a** | Sicherung, Manifest, Kennung, Schemaversion, Liste, Rotation | `#1`, `#2`, `#9`, `#10` | **442** | **327** | **769** |
+| **1b** | Prüfen, Vormerken, Einlösen beim Start, Sicherheitskopie | `#3`–`#8` | 233 | 182 | 415 |
+| **2** | UI | `#11`, `#12` | offen | offen | offen |
+
+**Beide liegen unter 800.** 1a ist ohne 1b lauffähig und über `curl`
+vollständig prüfbar — sichern und listen ist für sich genommen brauchbar, auch
+wenn das Zurückspielen noch von Hand geschieht. 1b ist ohne 1a sinnlos, die
+Reihenfolge ist also zwingend.
+
+**Was 1a allein nicht kann:** Mikes Auflage „Restore kann auch einen Neustart
+verlangen" ist erst mit 1b eingelöst. Wer 1a abnimmt, nimmt eine halbe Antwort
+auf seine ursprüngliche Frage ab — das gehört gesagt, bevor jemand es merkt.
+
+### Die Frage an Codex
+
+Der vollständige Stand liegt auf dem Zweig **`t-47-wip-vollstand`** (`df2b19d`)
+— ausdrücklich **kein Lieferstand**, nur damit die Arbeit die Entscheidung
+überlebt. Der Ticketzweig `t-47-datenbank-sicherung` ist sauber.
+
+Drei Wege, ich empfehle den ersten:
+
+1. **1a und 1b als getrennte Übergaben**, Zahlen wie oben. Kostet einen
+   zusätzlichen Reviewdurchgang und etwas Umbau, hält aber beide Grenzen.
+2. **Runde 1 wie gebaut, mit angehobener Grenze** auf 700 Produkt- und 1.200
+   Gesamtzeilen. Der Stand ist grün, live über zwei Prozesse geprüft und
+   mutantengehärtet; die Grenze war zu niedrig, nicht die Arbeit zu groß.
+3. **Grenze in Codezeilen statt Gesamtzeilen** — dann wären 390 Code gegen
+   ein Budget von 500 komfortabel eingehalten, und die Docstrings zählen dort,
+   wo sie hingehören: zur Dokumentation, nicht zum Umfang.
