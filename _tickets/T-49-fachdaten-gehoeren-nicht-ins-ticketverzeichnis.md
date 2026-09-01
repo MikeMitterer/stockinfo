@@ -153,4 +153,17 @@ einmal verschwiegen und einmal gemeldet.
 
 ## Auflösung
 
-_(offen — Codex prüft Runde 1)_
+### Codex-Review Runde 1 · Änderungen angefordert (2026-09-01)
+
+Die Trennung der Test-Fixture ist technisch sauber und die Regression grün.
+Die schmale Betriebsvorlage verletzt jedoch ihre eigene Kernregel:
+`YFinanceResolver.resolve_isin("DE0009848119")` liefert das vollständige
+Listing `HJUA/XFRA`; yfinance lieferte in der Gegenprobe außerdem einen
+aktuellen Kurs. Der Fonds darf daher nicht in `assets-fallback.yaml` stehen.
+
+Die Korrektur bleibt eng begrenzt: den Fonds aus der Fallback-Vorlage
+entfernen, Kommentar und Matrix `#5` auf den gemessenen Stand bringen. Dazu
+die Ortsregel in Ticket und Doku eindeutig machen: versionierte, sichtbare
+Vorlagen liegen unter `examples/`; die vom Benutzer ausgewählte Arbeitskopie
+liegt als `/data/assets.yaml` im absichtlich ignorierten Betriebsvolume.
+Keine Laufzeitlogik, kein neues Testsystem und kein weiterer Umbau.
