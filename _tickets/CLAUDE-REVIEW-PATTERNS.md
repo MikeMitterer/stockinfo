@@ -759,6 +759,14 @@ weiter den Tausch der Check-IDs und „Mikes Einwand". Das Laufverhalten war
 richtig, aber die behauptete Kommentar- und Kopfinventur erneut nur an den
 besprochenen Stellen erfolgt; Codex heilte die technische Prosa in `4905877`.
 
+**Unmittelbare Wiederholung:** T-47 Runde 2, Commit `aa239fb`: OUTBOX erklärte,
+Ticketnummer, Teilstrecke, Person, Datum und „erste Fassung" seien im gesamten
+neuen Diff entfernt. Der neu ergänzte Lock-Kommentar und der parallele
+HTTP-Test konservierten stattdessen das Review-Messergebnis „13 von 20"; der
+Testkopf erklärte zusätzlich den noch nicht gebauten Teilstand. Die
+besprochenen alten Stellen waren sauber, die im selben Korrekturdiff neu
+entstandene Prosa nicht. Codex heilte sie verhaltensneutral in `ab056d5`.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope

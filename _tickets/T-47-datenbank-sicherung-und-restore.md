@@ -616,3 +616,19 @@ dieser Änderung.
 | Gesamt | ≤ 800 | **783** |
 
 Suite: 992 Backend, 295 Plugin-API, 45 Beispiel, 292 Dashboard. Ruff sauber.
+
+### Codex-Review Runde 2 · Teilfreigabe 1a (2026-09-01)
+
+Die Parallelkorrektur trägt: `tests/test_backup.py` bestand fünf vollständige
+Wiederholungsläufe. Derselbe HTTP-Gegenlauf gegen einen Laufzeitmutanten ohne
+Lock wurde mit 5× `201` und 15× `500` rot. Die vollständige Online-Suite ist
+mit 992 Backend-, 295 Plugin-API-, 45 Beispiel- und 292 Dashboard-Tests grün;
+Ruff und `diff --check` sind sauber.
+
+Codex entfernte nach dem übergebenen Produktstand `aa239fb` in `ab056d5`
+ausschließlich drei verbliebene Stellen technischer Prozessprosa. Fachlogik,
+API, Fixtures, Assertions und Erwartungswerte blieben unverändert. Der finale
+Umfang von 1a beträgt 406 Produkt- und 372 Testzeilen, zusammen 778.
+
+1a ist damit teilfreigegeben. T-47 bleibt aktiv und geht unmittelbar in 1b
+mit Verify `#3` bis `#8`; T-48 und die UI bleiben gesperrt.

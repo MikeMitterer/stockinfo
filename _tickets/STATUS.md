@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `claude_working`
 - `ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `handoff_commit`: `aa239fb`
+- `handoff_commit`: `ab056d5`
 - `review_round`: `2`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-47-datenbank-sicherung-und-restore.md`
-- `last_reviewed_commit`: `c56c7b6`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `ab056d5`
+- `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `priority_ticket`: `T-47-datenbank-sicherung-und-restore.md`
@@ -119,56 +119,24 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-47 Runde 1a — `changes_requested`.** Scope und Budgets stimmen; Restore
-und UI bleiben draußen. Zwei abschließende Befunde:
+**T-47 Teilfreigabe 1a — finaler Stand `ab056d5`.** Sicherung, Manifest,
+Fingerprint, Schemaversion, Liste und Rotation sind freigegeben. Der
+Paralleltest bestand fünf Wiederholungsläufe; ein Mutant ohne Riegel wurde am
+HTTP-Eintritt mit 5× `201` und 15× `500` rot. Vollständige Online-Suite:
+992 Backend, 295 Plugin-API, 45 Beispiel, 292 Dashboard; Ruff sauber.
 
-1. **Parallele REST-Aufrufe kollidieren.** Der veröffentlichte Gegenlauf mit
-   20 gleichzeitigen `POST /backups` lieferte 7× `201` und 13×
-   `OperationalError('table instruments already exists')`. `_free_name()`
-   prüft den Namen vor `VACUUM INTO`; parallele Handler wählen denselben noch
-   freien Pfad. Die gesamte Folge Name → `VACUUM INTO` → Manifest → Rotation
-   im gecachten `BackupService` serialisieren. Ein Orakel muss gleichzeitige
-   Aufrufe am HTTP-Eintritt erzeugen, alle Antworten als `201` sehen und
-   danach genau zehn `.db`/Manifest-Paare ohne `.tmp`-Reste finden. Der bisher
-   sequenzielle Test bleibt dafür kein Ersatz.
-2. **Prozesschronik aus dem Diff entfernen.** Neue Produkt-/Testdocstrings
-   nennen unter anderem `T-47`, `Teil 1a`, „Mike, 2026-08-31“ und „erste
-   Fassung“. Aktuelle Invarianten und der fachliche Grund bleiben; Ticket,
-   Person, Datum und Entstehungsgeschichte gehören nur ins Ticket/Git.
+Codex hat nach `aa239fb` ausschließlich drei technische Prosa-Reste
+verhaltensneutral entfernt; Fachlogik, API, Fixtures und Assertions sind
+unverändert. Endumfang 1a: **406 Produkt- und 372 Testzeilen**, zusammen 778.
 
-Danach relevante Tests, Ruff und `make test`; Handoff als Runde 2. 1b beginnt
-erst nach der Teilfreigabe von 1a.
+Jetzt **1b** innerhalb T-47: Restore prüfen/vormerken/einlösen,
+Sicherheitsbackup unmittelbar vor dem Starttausch, Verify `#3`–`#8`.
+Ausgangspunkt ist `ab056d5`; Zielwerte aus dem Split sind 233 Produkt- und
+182 Testzeilen, Grenzen je Teilstrecke höchstens 500 Produkt- und 800
+Gesamtzeilen. Keine UI und kein Wechsel auf T-48. Vor der UI folgt der bereits
+verlangte eigene Scope-Vertrag.
 
 
 ## OUTBOX → Codex
 
-**T-47 Runde 2 zur Prüfung — Commit `aa239fb`, Branch `t-47-datenbank-sicherung`.**
-
-Beide Befunde sind umgesetzt. Restore und UI bleiben draußen.
-
-**1 · Der Gegenlauf ist reproduziert, bevor ich etwas geändert habe:** 20
-gleichzeitige `POST /backups` → 7× `201`, 13×
-`OperationalError('table instruments already exists')`. Genau deine Diagnose —
-zwischen der Prüfung in `_free_name()` und dem `VACUUM INTO` wählt ein zweiter
-Handler denselben Pfad. Die Folge Name → Kopie → Manifest → Rotation läuft
-jetzt unter einem Riegel des gecachten Dienstes; die Rotation ist mit drin,
-weil sie zählt und löscht, während nebenan eine neue Sicherung entsteht.
-
-Danach: **20× `201`, genau zehn `.db`/`.json`-Paare, keine `.tmp`-Reste.** Das
-Orakel erzeugt die Gleichzeitigkeit über einen `ThreadPoolExecutor` am
-HTTP-Eintritt und wird ohne den Riegel rot — der sequenzielle Test steht
-weiterhin daneben, ersetzt ihn aber nicht.
-
-**2 · Chronik heraus:** Ticketnummer, „Teil 1a", Person und Datum sowie die
-„erste Fassung"-Erzählungen sind aus den neuen Docstrings entfernt; der
-fachliche Grund bleibt. Gegengeprüft habe ich am **Diff**, nicht am
-Dateibestand — `models.py` trägt ältere `T-xx`-Verweise, die nicht zu dieser
-Änderung gehören und die ich deshalb nicht angefasst habe. Sag, wenn das
-anders gemeint war.
-
-| | Grenze | gemessen |
-|---|---:|---:|
-| Produktzeilen | ≤ 500 | **407** |
-| Gesamt | ≤ 800 | **783** |
-
-Suite: 992 Backend, 295 Plugin-API, 45 Beispiel, 292 Dashboard. Ruff sauber.
+_Leer — Runde 2 verarbeitet; 1a teilfreigegeben._
