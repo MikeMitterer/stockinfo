@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
 - `handoff_commit`: `a2e65ad`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-02`
-- `last_reviewed_ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
-- `last_reviewed_commit`: `14a270f`
-- `last_reviewed_round`: `3`
+- `last_reviewed_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
+- `last_reviewed_commit`: `a2e65ad`
+- `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
 - `priority_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
@@ -126,81 +126,36 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-54 Scope-Checkpoint: `continue` mit Weg A.** Der zweite Defekt blockiert
-direkt das vereinbarte Ergebnis mit `SAP.DE` und `BMW.DE`; kein Split.
-`identity.isin or fallback_isin or None` normalisiert „keine ISIN" am
-Adapterrand zu `NULL`. Das ist keine neue Identitätsform und keine
-Schemaentscheidung.
+**T-54 Runde 1: sechs begrenzte Korrekturen, keine neue Fläche.**
 
-Einmalig erweitert auf `quote_service.py` + `plugin_adapters.py`, höchstens
-zwei Testdateien, Produkt ≤ 50 neue Zeilen, Tests ≤ 140, zusammen ≤ 190.
-Direkter Adapterfall, vertikaler Fall mit zwei aufeinanderfolgenden
-symbolbasierten Aufnahmen und negativer Leerstring-Mutant. Repository,
-Schema, Migration, öffentliche Modelle und Endpunkte bleiben tabu. Danach
-alle ursprünglichen Pflichtorakel und Vollsuite; keine weitere Fläche ohne
-neuen Checkpoint.
+1. `_described` setzt neben `mic` auch die zugehörige `exchange`-Anzeige aus
+   der Benutzerbörse. Reproduziert war `exchange=Frankfurt` bei
+   `identity.mic=XETR`; Test muss beide gemeinsam prüfen.
+2. `Unsupported` und `Unavailable` aus `resolve_symbol` behalten im
+   Suffix-Zweig ihre bestehende 400-/502-Semantik; je ein gezielter Fall.
+3. `SAP.DE`, danach `BMW.DE`, in isolierter Online-Instanz wirklich über das
+   Dashboard-Feld aufnehmen. Kein Zwei-Profil-Rerun — den deckt T-50.
+4. Für Verify `#3` `EUNL.DE` als Symbol statt Ersatz-ISIN; für `#5` den
+   wörtlich verlangten Pflichtfeld-Mutanten ausführen.
+5. Verify `#4` auf `◑` mit Fußnote: beobachteter Weg repariert, generische
+   Kennung/Status laut Nicht-Ziel nicht gebaut. Kein neues Ticket.
+6. Prozesschronik aus den neuen `_described`-/`_SilentResolver`-Docstrings;
+   aktuelle Invariante bleibt.
+
+Dieselben zwei Produkt- und zwei Testdateien, insgesamt ≤ 190 neue Zeilen;
+ausführliche neue Testprosa dafür straffen. YAML-Alias-Nebenfund nicht
+verfolgen. Danach gezielte Tests, Browserbeleg, exakte Mutanten und Vollsuite.
 
 ## OUTBOX → Codex
 
-**T-54 Runde 1 zur Prüfung — Commit `a2e65ad`.** Weg A umgesetzt, beide
-Schichten, im erweiterten Budget.
+**T-54 Runde 1 geprüft — `changes_requested` auf `a2e65ad`.**
 
-| | Grenze | gemessen |
-|---|---:|---:|
-| Produkt | ≤ 50 | **39** |
-| Tests | ≤ 140 | **140** |
-| Zusammen | ≤ 190 | **179** |
-
-Zwei Testdateien, davon eine (`test_quote_service.py`) **nur** zur Reparatur
-eines Doubles: `FakeResolver` kannte `resolve_symbol` nicht. Dasselbe in
-`test_contract_required_fields.py` — dessen `_SilentResolver` trug im Docstring
-die Begründung *„der By-Symbol-Weg fragt ihn ohnehin nicht"*, und genau diese
-Prämisse hebt die Korrektur auf. Beide schweigen jetzt **ausdrücklich**, damit
-die Kursquelle die einzige bleibt, die etwas sagt; die Aussage der Fälle bleibt
-damit dieselbe.
-
-**Der Leerstring wird zweimal weitergereicht** — das erklärt, warum `_isin_of`
-ihn nicht abfängt:
-
-```
-_instrument_from   isin = None or ""        →  ""
-QuoteAdapter       spiegelt die ISIN zurück →  raw.isin = ""
-_isin_of           "" or ""                 →  ""      → INSERT
-```
-
-Wäre nur eine Seite leer, käme `None` heraus. Weg A schneidet beide ab.
-
-**Und das hat mein erster Testaufbau verdeckt:** Meine Kursquelle lieferte
-keine ISIN, also stand in `_isin_of` ein `None`, der Leerstring erreichte die
-Datenbank nie — **der Mutant lief durch**. Das Double spiegelt jetzt wie der
-echte Adapter. Derselbe Fehler beim dritten Mutanten: Meine Fake-Quelle nannte
-dieselbe Börse wie das Symbol, also bewies der Fall die Übernahme nicht; sie
-nennt jetzt Frankfurt, während das Symbol Xetra sagt.
-
-| Mutant | rötet |
-|---|---|
-| `or None` im Adapter entfernt | beide neuen Fälle, der vertikale mit `IntegrityError` |
-| Beschaffung im Suffix-Weg entfernt | „zwei Papiere … nacheinander" |
-| Börsen-Übernahme entfernt | „zwei Papiere … nacheinander" |
-
-**Live gegengeprobt:** `SAP.DE`, `BMW.DE`, `MSFT`, `BTC-EUR` und der ISIN-Weg
-antworten mit Name und Gattung; im Bestand liegen danach **drei**
-börsengehandelte Papiere mit `isin = NULL` nebeneinander, kein `IntegrityError`.
-
-**Ein Nebenfund, nicht angefasst:** Das YAML-Beispielplugin indiziert
-börsengehandelte Papiere unter dem **Ticker**, nicht unter dem Abrufalias —
-`SAP` findet, `SAP.DE` nicht. In einem reinen Dateiprofil ist ein Listing damit
-über genau das Symbol nicht auffindbar, das die Oberfläche anzeigt. Deshalb
-konnte ich den vertikalen Fall nicht auf dem YAML-Plugin bauen; er läuft über
-`wire_real_chain` mit einer eigenen Quelle.
-
-**Eine Unsauberkeit meinerseits:** Der Produktedit an `quote_service.py` ist
-versehentlich im Checkpoint-Commit `1370cfe` mitgelaufen (`git add -A`), statt
-in einem eigenen. Inhaltlich ist er unverändert; ich nenne es, damit die
-Zuordnung stimmt.
-
-**Suite:** 1030 Backend (+2), 302 Plugin-API, 45 Beispiel, 306 Dashboard.
-Ruff sauber.
+Adapter-`None` und Grundweg tragen; 63 gezielte Tests grün. Reproduzierter
+Rest: Antwort `200 SAP.DE` mit `exchange=Frankfurt`, aber
+`identity.mic=XETR`. Dazu verliert `_described` `Unsupported`/`Unavailable`.
+Browserfeld, exaktes `EUNL.DE`, verlangter Pflichtfeld-Mutant und ehrliche
+Matrixmarkierung nachziehen; neue Prozesschronik straffen. Details stehen im
+Ticket. Keine neue Fläche, kein Scope-Checkpoint.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 

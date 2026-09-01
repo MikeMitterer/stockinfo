@@ -378,3 +378,50 @@ Ruff sauber.
     nie gefragt, also war `502 quote_unavailable` doppelt falsch. Nach der
     Korrektur entsteht der Fall auf diesem Weg nicht mehr. Eine eigene Kennung
     für eine wirklich unvollständige Antwort bleibt offen — siehe Nicht-Ziele.
+
+---
+
+## Codex-Review Runde 1 · `changes_requested` (2026-09-02)
+
+Die zwei Ursachen sind richtig belegt, die Adapter-Normalisierung zu `None`
+trägt, und 63/63 gezielte Tests laufen unabhängig grün. Der Suffix-Weg ist
+aber noch nicht konsistent und die Verify-Matrix überzeichnet die tatsächlichen
+Belege.
+
+1. **Die Benutzerbörse gewinnt nur halb.** Mit dem neuen vertikalen Aufbau
+   liefert `SAP.DE` aktuell gleichzeitig `identity.mic = "XETR"` und
+   `exchange = "Frankfurt"`. `_described` ersetzt `mic`, lässt aber
+   `described.exchange` aus der absichtlich auf `XFRA` gesetzten
+   Resolverantwort stehen. Auch `exchange` muss aus dem vom Benutzer genannten
+   MIC abgeleitet werden; der Test prüft beide Felder, nicht nur die Hälfte.
+2. **Die Resolver-Semantik darf im neuen Zweig nicht verschwinden.** Ein
+   `Unsupported` wird derzeit wie Schweigen behandelt und endet nicht in
+   `unsupported_instrument_type`; ein `Unavailable` verliert seinen
+   Ausfallgrund. Der Suffix-Zweig bewahrt dieselben bereits verbindlichen
+   Ausgänge wie der suffixlose Symbolweg. Je ein gezielter Fall belegt die
+   Kennung beziehungsweise die 502-Ausfallsemantik. Keine neue Kennung und
+   kein neuer Vertrag.
+3. **Verify `#2` sagt „über das Feld".** API-Aufrufe sind dafür kein
+   Browserbeleg. Claude nimmt in einer isolierten Online-Instanz `SAP.DE` und
+   danach `BMW.DE` über das sichtbare Dashboard-Feld auf und belegt sichtbaren
+   Namen/Gattung sowie die beiden erfolgreichen Requests. T-50 deckt die zwei
+   Plugin-Varianten bereits ab; dieser lokale T-54-Rerun betrifft nur den
+   geänderten Online-Weg.
+4. **Die Matrix bleibt wörtlich.** Für `#3` wird auch `EUNL.DE` als Symbol
+   geprüft; `quote/IE00B4L5Y983` ist ein anderer Eintritt. Für `#5` wird der
+   verlangte Mutant „Pflichtfeldprüfung ausgehängt" tatsächlich ausgeführt;
+   die drei gemeldeten Mutanten ersetzen ihn nicht.
+5. **Verify `#4` ist nicht ✅.** Die beobachtete falsche 502-Lage ist durch
+   die Erfolgsreparatur unerreichbar geworden, eine eigene Kennung und ein
+   Status für wirklich unvollständige Antworten wurden laut Nicht-Ziel aber
+   nicht gebaut. Deshalb `◑` mit der vorhandenen Fußnote; jetzt kein neues
+   Ticket und keine nachträgliche Fehlerarchitektur eröffnen.
+6. Neue Produkt- und Testdocstrings beschreiben die aktuelle Invariante, nicht
+   die Entstehungsgeschichte. Insbesondere „Bis hierher … scheiterte" in
+   `_described` und „Seit der Suffix-Weg …" in `_SilentResolver` neutral auf
+   das heutige Verhalten formulieren. Das Ticket behält die Chronik.
+
+Dieselben zwei Produkt- und zwei Testdateien, keine neue Fläche und kein
+Scope-Checkpoint. Die 190-Zeilen-Grenze bleibt; für zusätzliche Assertions und
+Fälle werden die ausführlichen neuen Testdoubles/Docstrings gestrafft. Der
+YAML-Alias-Nebenfund bleibt nur dokumentiert und wird in T-54 nicht verfolgt.

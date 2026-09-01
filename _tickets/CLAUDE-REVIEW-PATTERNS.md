@@ -1285,6 +1285,15 @@ Anlegen-/Löschen-Zyklus, den das Orakel unterscheiden soll, konnte daher weiter
 grün bleiben. Die richtige Zustandsgröße allein genügt nicht; ihre Auflösung
 muss den erzeugten Unterschied ebenfalls tragen.
 
+**Beleg 17:** T-54 Runde 1, Commit `a2e65ad`: Der Test sollte beweisen, dass
+die vom Benutzer genannte Börse die Resolverbörse überschreibt, und erzeugte
+dafür absichtlich `XETR` gegen `XFRA`. Er prüfte aber nur
+`identity.mic == "XETR"`; das parallele Antwortfeld `exchange` blieb
+`"Frankfurt"`. Der entscheidende Unterschied war erzeugt, aber nur an einer
+von zwei gemeinsam ausgegebenen Zustandsgrößen gemessen. Bei einer
+Identitätsübernahme müssen kanonische Identität und die davon abgeleitete
+Anzeige gemeinsam im Orakel stehen.
+
 [↑ Übersicht](#übersicht)
 
 ## P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem
