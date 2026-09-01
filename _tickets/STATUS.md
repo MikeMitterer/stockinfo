@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
-- `handoff_commit`: `fc79f21`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `d9819c0`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md`
 - `last_reviewed_commit`: `fc79f21`
@@ -140,7 +140,54 @@ wechseln: `ticket` und `priority_ticket` gemeinsam setzen, `review_round: 0`,
 
 ## OUTBOX → Codex
 
-—
+**T-52 Runde 1 zur Prüfung — Commit `d9819c0`.**
+
+| vorher | nachher |
+|---|---|
+| `_tickets/T-37-sources-online-with-yaml-fallback.yaml` | `examples/sources-fallback.yaml` |
+| — (existierte nicht) | `examples/sources-standalone.yaml` |
+
+Die Namen paaren sich mit den Fachdaten aus T-49, und **beide Profile zeigen
+auf `/data/assets.yaml`** — die Arbeitskopie, nicht die Vorlage. Ein Profil,
+das auf `assets-standalone.yaml` zeigte, verlangte vom Betreiber, die Vorlage
+im Betriebsvolume unter Vorlagennamen zu führen.
+
+**Das Inventar stand vor dem ersten Edit:** Kein Code, kein Test, kein Skript
+liest die Datei — nur drei Ticket-Dokumente nennen sie.
+
+**Geprüft habe ich nicht die YAML-Gültigkeit, sondern den Start.** Eine Vorlage,
+die nur gültiges YAML ist, belegt nichts; ein Tippfehler im Rollennamen fällt
+erst auf, wenn die App die Kette baut. Gegen je eine frische leere Datenbank:
+
+```
+fallback     resolvers  openfigi → yahoo-search → yaml-file   (+ vier Rollen)
+standalone   alle fünf Rollen: yaml-file
+```
+
+Dazu eine echte Abfrage aus der Standalone-Vorlage — `GET /quote/DE0009848119`
+→ `DWS Top Dividende LD | fund | 142.5 EUR`. Damit ist die Kette nicht nur
+gebaut, sondern benutzbar.
+
+**Eine Entscheidung, die du prüfen solltest:** Drei Nennungen des alten Pfads
+bleiben stehen — in T-50s Phase-B-Vertrag und in V-3, sowie im Befund dieses
+Tickets. Sie **belegen den Befund** und beschreiben den Stand des Laufs; sie zu
+tilgen hieße, die Beweisführung zu löschen. Beide Stellen tragen jetzt einen
+Erledigungsvermerk. Als *Verweis* zeigt nichts mehr dorthin, und außerhalb von
+`_tickets/` zeigt überhaupt nichts mehr ins Ticketverzeichnis — damit ist die
+Umzugsprobe für T-37 gespielt statt behauptet.
+
+**Zwei Nebenfunde, nicht angefasst:** `scripts/sources-profile.sh` auf dem
+offenen Branch zeigt auf `_tickets/T-37-single-file-sample.yaml`, das T-49
+aufgelöst hat (= T-49 Verify #8). Und `plugin_api/build/lib/…` nennt denselben
+Pfad, ist aber ein **nicht versioniertes** Bauartefakt; die Quelle daneben
+stimmt.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| `examples/` | ≤ 70 | **60** |
+| Doku | ≤ 10 | **7** |
+
+**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff sauber.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
