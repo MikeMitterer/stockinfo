@@ -228,7 +228,7 @@ Legende: ✅ live bestätigt · ◑ teilweise bestätigt · ⚠️ Befund offen 
 | **8** | Absicht hinterlegt, App startet nicht neu | die laufende Datenbank ist unverändert, und das UI sagt, dass ein Neustart aussteht | ✅ | |
 | **9** | `PRAGMA user_version` | ist gesetzt und wird beim Prüfen gelesen | ✅ | |
 | **10** | elfte Sicherung | die älteste ist weg, es liegen zehn; keine zweite Löschmöglichkeit | ✅ | |
-| **11** | UI-Liste | alle vorhandenen Sicherungen sind sichtbar, unpassende **mit Grund** statt ausgeblendet | ✅ | |
+| **11** | UI-Liste | alle vorhandenen Sicherungen sind sichtbar, unpassende **mit Grund** statt ausgeblendet | ◑ | |
 | **12** | Bestätigung vor dem Wiederherstellen | der Neustart wird **vorher** genannt, nicht erst danach | ✅ | |
 
 ## Nicht-Ziele
@@ -1064,6 +1064,39 @@ Gesamtbudget bleiben bei 350/600; die nötigen Fehlerorakel passen durch das
 Entfernen der Prozessprosa und redundanter Erklärungen hinein. Browser nur für
 die sichtbar geänderten Zustände wiederholen: inkompatibler Dialog ohne/mit
 Haken sowie ein Fehlertext in Deutsch und Englisch.
+
+### Codex-Review UI Runde 7 · Teilfreigabe und neuer Scope-Riegel (2026-09-01)
+
+Die vier UI-Reste sind geschlossen. Eine bekannte unpassende Sicherung hält
+die positive Aktion bis zum Force-Haken gesperrt; Mutationsfehler bleiben
+sichtbar, werden über `describeFailure()` lokalisiert und lösen keinen
+Reload aus; `formatDateTime()` ist wieder die gemeinsame Wissensquelle. Das
+Compiler-Inventar enthält die drei beanstandeten deutschen Bezeichner nicht
+mehr. Endumfang: 316 Produkt- und 284 Testzeilen, zusammen exakt 600.
+
+Dashboard-Suite (304 Tests), Produktionsbuild und vollständige Suite sind
+grün: 1019 Backend, 295 Plugin-API, 45 Beispiel, 304 Dashboard. Claudes echte
+500-px-Browsermessung bestätigt gesperrte/freigegebene Force-Aktion, fehlenden
+Seitenüberhang und Fehlerkategorien in Deutsch und Englisch. Diese UI-Mechanik
+ist teilfreigegeben.
+
+Der Browser hat zugleich den letzten fachlichen Rest von `#11` sichtbar
+gemacht: `BackupEntry.reason` ist deutscher Backend-Fließtext (`dort`/`hier`)
+und bleibt deshalb in der englischen Oberfläche deutsch. Das darf weder durch
+String-Parsen noch durch Ersetzungen im Browser geheilt werden. Vor einem
+weiteren Produktedit folgt ein eigener kleiner Scope-Vertrag innerhalb T-47:
+
+- `GET /backups` liefert den Passungsgrund als sprachneutrale, strukturierte
+  Kennung mit den nötigen Werten; Rolle und beide Ketten bleiben sichtbar.
+- Dieselbe fachliche Ursache speist die vorhandenen Restore-Ablehnungen; keine
+  zweite Unterschiedslogik neben `_judge()`/`check()`.
+- Alle Backup-Reason-/Restore-Codes haben deutsche und englische UI-Texte.
+- Keine neue Route, kein allgemeiner Fehlerumbau, kein Parser für deutschen
+  Text und kein T-48.
+
+Der Scope-Checkpoint nennt erwartete Backend-/Dashboard-/Testflächen und ein
+eigenes Budget. Bis zu seiner Freigabe bleibt `#11` wegen der englischen
+Darstellung auf `◑`; alle anderen Matrixzeilen bleiben bestätigt.
 
 ### UI-Runde 2 · Codex' vier Reste (Claude, 2026-09-01)
 
