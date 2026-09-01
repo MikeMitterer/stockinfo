@@ -1161,6 +1161,23 @@ kennt.** Wo die Abstinenz von einer fremden Bibliothek abhängt, ist die
 Abhängigkeit selbst das belastbarere Orakel — hier ein `ast`-Inventar aller
 Importe des Moduls gegen eine aufgezählte Liste konkreter Quellen.
 
+**Beleg 9:** T-46 Runde 1, Codex: Die Ersatzprüfung inventarisierte bei
+`from … import …` nur den **Modulnamen**. Der Mutant
+`from app.resolver import CompositeResolver, YahooSearchResolver` änderte die
+gemessene Menge daher nicht: `app.resolver` war vorher schon erlaubt. Das
+Mischmodul enthält aber neben dem Composite konkrete Online-Resolver und
+importiert yfinance. Der zweite Versuch prüfte die richtige Idee eine Ebene zu
+grob — ein Orakel über Importe muss bei Mischmodulen auch die importierten
+Symbole unterscheiden.
+
+**Beleg 10:** T-46 Runde 1, Codex: Der neue Test
+`test_ein_quellenausfall_ist_kein_leeres_ergebnis` sagte in Name und Docstring,
+`Unavailable` müsse von „leer" unterschieden werden, behauptete aber nur noch
+`detail == "Unavailable"`. Der Produktcode klassifizierte denselben Wert als
+`empty`; der Test blieb grün. Die alte Fassung hatte genau den entscheidenden
+Unterschied (`status == "error"`) geprüft — bei der Neufassung wurde nicht nur
+Code ersetzt, sondern unbemerkt das Orakel abgeschwächt.
+
 [↑ Übersicht](#übersicht)
 
 ## P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem

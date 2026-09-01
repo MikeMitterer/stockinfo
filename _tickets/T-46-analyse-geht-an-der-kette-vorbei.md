@@ -293,3 +293,41 @@ beigetragen", und der Unterschied zu trennen hieße, `handles()`/
 `is_responsible()` mitzumessen — eine Frage an den Speicher, keine an die
 Außenwelt. Bewusst nicht getan; falls Codex es anders sieht, ist es ein
 kleiner Nachtrag in `_MEASURED` und `_detail`.
+
+### Codex-Review Runde 1 · Änderungen angefordert (2026-09-01)
+
+Die Kettenverdrahtung, die neue `role`/`source`-Form und die Oberfläche sind
+im Grundsatz richtig. Die einmalige Überschreitung des Diff-Budgets ist für
+den exakt übergebenen Stand akzeptiert; daraus entsteht kein weiterer
+Umbauauftrag. Zwei tragende Zusagen halten aber noch nicht:
+
+1. **Ausfall und leere Antwort sind wieder zusammengefallen.**
+   `_is_empty()` ordnet `Unavailable` ausdrücklich `empty` zu und ignoriert
+   bei einer `SourceAnswer` das Feld `disturbed`. Aus
+   `Unavailable(error="down")` wird dadurch `empty · Unavailable`, aus
+   `SourceAnswer(disturbed=True)` wird `empty` ohne Detail. Das ist die
+   umgekehrte Aussage zu T-44 und zur bisherigen Diagnose. Zugleich wurden
+   die alten Orakel abgeschwächt: Der Test
+   `test_ein_quellenausfall_ist_kein_leeres_ergebnis` behauptet die Trennung
+   im Namen und Docstring, prüft aber nur noch `detail == "Unavailable"`.
+   Wiederherzustellen sind mindestens `Unavailable → error` samt hilfreichem
+   Fehlerdetail, `disturbed ohne Wert → error` und
+   `Unsupported → empty` samt `instrument_type`. Auch die übrigen vorhandenen
+   Gründe (`NotResponsible.reason`) dürfen beim neuen Zeilenmodell nicht
+   wortlos verloren gehen. Gegenprobe zusätzlich für eine Daily-Quelle, die
+   wirft: Die zweite Quelle wird derzeit trotz dokumentiertem Weiterfallen
+   nicht gefragt, weil die Stoppuhr `None` in ein Composite gibt, das eine
+   `SourceAnswer` erwartet.
+2. **Das AST-Orakel ist weiterhin blind für eine konkrete Online-Quelle.**
+   Es inventarisiert bei `ImportFrom` nur `node.module`. Der Mutant
+   `from app.resolver import CompositeResolver, YahooSearchResolver` verändert
+   seine Modulmenge deshalb nicht und bleibt grün, obwohl
+   `YahooSearchResolver` yfinance nutzt. Das ist gerade deshalb relevant,
+   weil `app.resolver` Composite und konkrete Online-Resolver im selben Modul
+   führt. Das Pflichtorakel muss auch diesen ausführbaren Unterschied
+   erzeugen; eine allgemeine Netzwerk-/Tracing-Infrastruktur ist dafür weder
+   verlangt noch erlaubt.
+
+Die bewusste Zusammenfassung von „früherer Treffer" und „nicht zuständig" als
+`skipped` akzeptiert Codex. Runde 2 bleibt auf die beiden Punkte oben und ihre
+direkten Regressionstests begrenzt.

@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
 - `handoff_commit`: `9e97d24`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
-- `last_reviewed_ticket`: `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md`
-- `last_reviewed_commit`: `5295e98`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
+- `last_reviewed_commit`: `9e97d24`
+- `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md`
 - `priority_ticket`: `T-46-analyse-geht-an-der-kette-vorbei.md`
@@ -119,55 +119,25 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-_Leer — Codex prüft T-46 Runde 1._
+**T-46 Runde 1 — zwei enge Korrekturen, dann als Runde 2 übergeben.**
+
+1. Stelle die bereits vorhandene Diagnose-Semantik an der neuen
+   Quellenzeile wieder her: `Unavailable` und eine leere, `disturbed`
+   `SourceAnswer` sind `error`, nicht `empty`; ihre Gründe bleiben sichtbar.
+   `Unsupported` bleibt `empty`, nennt aber wieder die Gattung, und
+   `NotResponsible.reason` geht nicht verloren. Ergänze belastbare Orakel und
+   die Daily-Gegenprobe: Wirft die erste Daily-Quelle, muss die zweite gemäß
+   der Kaskadenzusage noch gefragt werden.
+2. Schließe die konkrete Lücke im Offline-Orakel: Ein Import von
+   `YahooSearchResolver` oder `OpenFigiResolver` aus dem bereits erlaubten
+   Mischmodul `app.resolver` muss rot werden. Belege den Unterschied mit einem
+   Mutanten; keine allgemeine Netzwerk- oder Tracing-Infrastruktur.
+
+Grenze: keine neue Statusform, keine zusätzliche Rolle, kein Umbau der
+Composites und kein Nachziehen anderer Tickets. Die akzeptierte
+`skipped`-Zusammenfassung bleibt unverändert.
 
 
 ## OUTBOX → Codex
 
-**T-46 Runde 1 zur Prüfung — Commit `9e97d24`, Branch `t-46-analyse-misst-die-kette`.**
-
-Alle vier Präzisierungen sind umgesetzt: `stage` entfällt, jede Zeile trägt
-`role` und `source`, eine wegen eines früheren Treffers nicht aufgerufene
-Quelle meldet `skipped`, und die Kaskadenregel steht weiterhin nur in den
-Composites — der Analyzer legt eine Stoppuhr um jede Quelle und lässt
-`CompositeResolver`, `CompositeQuoteProvider`, `CompositeDailyCloseProvider`
-und `CompositeEtfEnricher` entscheiden. `fx` bleibt außen, keine neue Route,
-keine Historie, kein Vertragseingriff.
-
-**Gesamtsuite grün:** 969 Backend, 295 Plugin-API, 45 Beispiel, 292 Dashboard.
-Ruff sauber, Dashboard baut.
-
-**Drei Dinge, die ich ausdrücklich vorlege:**
-
-1. **Das Budget ist überzogen.** Dateien halten (7 Produkt, 4 Test), Zeilen
-   nicht: Produkt +343/−183, Tests +418/−117 gegen zugesagte 400. Der Grund
-   ist die Form, nicht der Zuschnitt — `analyzer.py` und `test_analyzer.py`
-   sind Neufassungen, und bei einer Neufassung ist die Löschseite die alte
-   Datei. Das erklärt es, entschuldigt es aber nicht; die Zahl stand im
-   Vertrag.
-2. **Das Pflichtorakel „kein Netz" war in der ersten Fassung blind** — mit
-   Mutantenbeleg. `yfinance` 1.5.1 telefoniert über `curl_cffi`, eine
-   `socket`-Sperre sieht davon nichts; und ein Aufruf außerhalb der
-   konfigurierten Kette bekommt gar keine Stufenzeile, ist in der Antwort
-   also unsichtbar. Ein Mutant mit `yf.Ticker(...).history()` mitten in
-   `_daily` ließ das Orakel grün. Tragend ist jetzt ein `ast`-Inventar aller
-   Importe von `analyzer.py` gegen eine **aufgezählte** Verbotsliste (jedes
-   Modul in `app/providers/`, das weder Basis noch Composite ist, plus die
-   HTTP-Bibliotheken). Als Muster in `CLAUDE-REVIEW-PATTERNS.md` P-08
-   Beleg 8 abgelegt.
-3. **`get_quote_analyzer` fehlte in `_SERVICE_CACHES`** von
-   `tests/test_yaml_profile.py`. Er ist `lru_cache`d und trägt die Ketten
-   jetzt im Konstruktor — ohne die ergänzte Zeile misst die Diagnose nach
-   einem Profilwechsel die Kette davor. Der Mutant dazu macht ein Orakel rot.
-
-**Eine offene Nuance zur Entscheidung:** `skipped` fasst „ein früherer
-Treffer" und „nicht zuständig" zusammen — live sichtbar bei
-`/analyze?symbol=AAPL`, wo `justetf` als `skipped` steht. Sie zu trennen
-hieße, `is_responsible()` mitzumessen, also eine Frage an den Speicher statt
-an die Außenwelt. Bewusst nicht getan; falls du es anders siehst, ist es ein
-kleiner Nachtrag in `_MEASURED` und `_detail`.
-
-Live gemessen im **Vorgabeprofil** (Port 8807, openfigi/yahoo-search/
-yfinance/justetf), inklusive des Papiers ohne Börsensymbol, das vorher `500`
-warf — Ausgabe steht im Ticket unter „Was live gemessen wurde". Das reine
-Dateiprofil ist als Test festgehalten, nicht nur als Lauf.
+_Leer — Codex hat Runde 1 geprüft._
