@@ -1266,6 +1266,16 @@ anderen Weg vorbereitet als den geprüften. Bei UI-Abnahmen muss die Kette
 **Interaktion → Composable → Request** inventarisiert werden, nicht nur ein
 passender Backend-Endpunkt.
 
+**Beleg 15:** T-50 Phase B, Commit `475e72a`: Der zweite UI-Test baute mit
+`symbol: null as never` ein Instrument, das weder Pydantic- noch TypeScript-
+Vertrag zulassen; eine ISIN-only-Anleihe trägt ihre ISIN im Stringfeld. Nur
+dieser erfundene Zustand machte die neue Wächterzeile notwendig und rötete
+ihren Mutanten. Gleichzeitig erklärte die Isolation sich für ✅, obwohl der
+Vorher-/Nachher-Check nur `stockinfo.db`, nicht deren WAL/SHM erfasste; beide
+Hilfsdateien trugen danach einen Zeitstempel aus dem Browserlauf. Ein Orakel
+darf weder den Produktvertrag per `as never` umgehen noch Teile eines
+mehrdateiligen Zustands auslassen.
+
 [↑ Übersicht](#übersicht)
 
 ## P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem

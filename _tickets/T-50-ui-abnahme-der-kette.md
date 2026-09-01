@@ -186,7 +186,7 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung · ◑ teil
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | **1** | Konzept-Handoff an Codex | höchstens 9 Fälle; jeder nennt Fläche, Eingabe, Erwartung und den unterschiedenen Fehler; nichts, was die Suite schon belegt | ✅ | |
-| **2** | Isolation des Laufs | eigene Ports, eigene DB-Kopie, eigene Konfiguration; `data/` des Benutzers vor und nach dem Lauf unverändert | ✅ [^rueckstand] | |
+| **2** | Isolation des Laufs | eigene Ports, eigene DB-Kopie, eigene Konfiguration; `data/` des Benutzers vor und nach dem Lauf unverändert | ⚠️ [^rueckstand] | |
 | **3** | T-46 im Browser | Fälle 1–4 gemessen, jeder mit Gegenprobe an Netzwerk oder Konfiguration | ✅ | |
 | **4** | T-47 im Browser | Fälle 5–8 gemessen, einschließlich Neustart und englischer Oberfläche | ✅ | |
 | **5** | T-48 im Browser | Fall 9 in beiden Profilen, mit Dateiinhalt und Netzwerkantwort als Gegenprobe | ✅ | |
@@ -420,3 +420,32 @@ Ruff und `vue-tsc` sauber.
     `examples/`-Vorlagen, `tests/_resources/assets.yaml` und
     `_tickets/T-37-sources-online-with-yaml-fallback.yaml` — identisch. Beide
     isolierten Prozesse sind beendet, die Ports frei.
+
+## Codex-Review Runde 4 · `changes_requested` (2026-09-01)
+
+Die neun Browserfälle sind nachvollziehbar protokolliert; B-1 ist sichtbar
+reproduziert und der eigentliche Fix (`NSelect` erhält im Leerzustand `null`)
+ist lokal. Drei Abschlusskorrekturen bleiben:
+
+1. Der zweite Test erzeugt mit `symbol: null as never` einen Zustand, den
+   Backend- und Dashboard-Vertrag ausschließen (`InstrumentSummary.symbol`
+   ist überall `string`; eine ISIN-only-Anleihe trägt ihre ISIN als Symbol).
+   Die dadurch begründete Wächterzeile und dieser Test entfallen. Der erste
+   Test auf den echten `null`-Auswahlwert bleibt. T-50-/Versuchschronik wird
+   aus neuer Produkt- und Testprosa entfernt; sie steht bereits hier im
+   Ticket.
+2. Verify `#2` war zu stark. `data/stockinfo.db` blieb laut Prüfsumme und Mtime
+   unverändert, aber `data/stockinfo.db-wal` und `data/stockinfo.db-shm`
+   tragen beide `2026-09-01 18:57:18`, also einen Zeitpunkt aus Phase B; der
+   Check erfasste sie nicht. Claude dokumentiert den exakten Kopier-/Öffnungs-
+   befehl und ob er diese Dateien berührt hat. Ohne Vorher-Prüfsumme ist der
+   vergangene Lauf nicht nachträglich voll beweisbar; deshalb bleibt die
+   Isolation ehrlich auf ⚠️ statt den gesamten Browserlauf zu wiederholen.
+   Künftige Läufe inventarisieren Hauptdatei **und** WAL/SHM vorab.
+3. „Drain nach Phase B" muss tatsächlich stattfinden: V-1, V-3, B-2 und B-3
+   werden vier kleine, einzweckige offene Tickets (T-51 bis T-54), jeweils mit
+   Beobachtung, Nicht-Zielen und kurzer Verify-Matrix. Keine Umsetzung und
+   keine Aufnahme in `priority_chain`; die Reihenfolge entscheidet Mike.
+
+Danach Dashboard-Zieltest, `vue-tsc`, Ruff und Gesamtsuite erneut ausführen.
+Die Human-Spalten bleiben unberührt.

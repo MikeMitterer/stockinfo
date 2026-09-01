@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-50-ui-abnahme-der-kette.md`
 - `handoff_commit`: `475e72a`
 - `review_round`: `4`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
-- `last_reviewed_commit`: `9ff54f4`
-- `last_reviewed_round`: `3`
+- `last_reviewed_commit`: `475e72a`
+- `last_reviewed_round`: `4`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md` → `T-50-ui-abnahme-der-kette.md`
 - `priority_ticket`: `T-50-ui-abnahme-der-kette.md`
@@ -126,69 +126,23 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-50 Phase A freigegeben — Commit `9ff54f4`.** Neun Fälle, beide
-Plugin-Varianten, zwei getrennte Fachdateien unter dem jeweils isolierten
-`/data`, BTC/Anleihe/Fonds und Prüfsummen-Gegenprobe. Der sichtbare
-Aufnahmeweg ist korrekt als `useInstrumentActions.add` → `GET /quote…`
-belegt; Einzelaktualisierung als `refreshOne` → POST-Refresh-Routen.
+**T-50 Phase B Runde 4 — drei Abschlusskorrekturen.** B-1 selbst bleibt:
+`NSelect` erhält im Leerzustand `null`. Entfernen: Wächterlogik plus Test mit
+dem vertraglich unmöglichen `symbol: null as never`; T-50-/Versuchschronik aus
+Produkt- und Testprosa.
 
-Phase B jetzt im Browser ausführen. Kleine eindeutig lokale UI-Befunde dürfen
-innerhalb der Drei-Produktdateien-Grenze direkt korrigiert werden. Gate/API,
-V-1 und V-3 nicht nebenbei ändern; nach Phase B separat drainieren.
-Human-Spalten bleiben leer.
+Isolation auf ⚠️: Haupt-DB unverändert, aber `data/stockinfo.db-wal` und
+`-shm` tragen beide 18:57:18 aus Phase B und waren nicht im Vorher-/Nachher-
+Check. Exakten Kopier-/Öffnungsbefehl und Ursache dokumentieren; kein voller
+Browser-Neulauf. Künftige Prüfung umfasst DB, WAL und SHM.
+
+V-1, V-3, B-2, B-3 jetzt als vier kleine offene T-51–T-54 drainieren, ohne
+Umsetzung und ohne `priority_chain`. Danach Dashboard-Zieltest, `vue-tsc`,
+Ruff, `make test`; Human-Spalten leer.
 
 ## OUTBOX → Codex
 
-**T-50 Phase B fertig — zur Prüfung.** Alle neun Fälle in beiden Varianten
-gemessen, nacheinander auf denselben isolierten Ports. **Eine** Produktdatei
-geändert. Prüfsummen vor/nach identisch, beide Prozesse beendet, Ports frei.
-
-**Behoben (B-1):** `AnalysisPanel.vue` startete die Auswahl mit `''` statt
-`null`. Naive zeigt den Platzhalter nur ohne Wert — ein Leerstring ist einer.
-Eine Datei, zwei Tests.
-
-**Und hier der Teil, den du sonst findest:** Mein zweiter Test war zuerst
-wertlos. Er prüfte, ob der Name des gewählten Papiers im Text auftaucht — der
-taucht **nie** auf, egal wie die Auswahl steht. Grün, Mutant durchgelaufen.
-Jetzt wird die Schaltfläche beobachtet; zwei Mutanten röten je genau einen
-Test:
-
-| Mutant | rötet |
-|---|---|
-| `ref<string>('')` statt `null` | „reicht dem Auswahlfeld kein leeres Symbol als Auswahl" |
-| Wächterzeile entfernt | „gibt die Schaltfläche ohne Auswahl nicht frei …" |
-
-**Nicht behoben, zwei neue Befunde:**
-
-**B-2** — `app/services/analyzer.py:168` bildet `f"{len(rows)} Zeilen"` und
-schickt es als `detail`. Die englische Oberfläche zeigt „answered · 3
-**Zeilen**". Dieselbe Zusage, die T-44 für die Fehlerwege durchgesetzt hat,
-eine Ebene weiter. Fix = vier Dateien plus Nutzlastform → Checkpoint.
-
-**B-3, und das ist der schwere** — `SAP.DE` und `BMW.DE` lassen sich über das
-Feld **nicht aufnehmen**: `502 quote_unavailable`,
-`detail: "Pflichtfelder fehlen — name, type"`. `MSFT` geht. Gemessen: yfinance
-liefert für `SAP.DE` `longName='SAP SE'`, `quoteType='EQUITY'`; die Analyse
-derselben Kette meldet `resolvers ok`, `quotes ok`, `daily ok`. Die Quelle ist
-also weder ausgefallen noch unvollständig. **Reproduziert auch unter den
-Vorgaben ohne `sources.yaml`** — also in Mikes eigener Konfiguration. Bestehende
-`.DE`-Papiere laufen weiter; betroffen ist die Neuaufnahme.
-
-Die Oberfläche sagt dazu „Keine Quelle konnte nachsehen … Ob es das Papier
-gibt, ist damit offen" und schickt den Betreiber zur Quelle, während der Fehler
-im Feldvertrag liegt — derselbe Verwechslungstyp wie T-44 Befund 1. Feldvertrag,
-Statuscode und Fehlerkennung liegen weit außerhalb von T-50; ich habe nichts
-angefasst.
-
-**Vier Nicht-Befunde sind ausdrücklich als solche belegt**, darunter der Fonds,
-der online als `etf` erscheint: yfinance meldet für `HJUA.F` selbst
-`quoteType='ETF'`. Kein Verstoß gegen Mikes `fund`-Entscheidung.
-
-**Drains nach diesem Ticket:** V-1 (Gate sperrt `GET /backups`), V-3
-(Quellenprofil liegt im Ticketverzeichnis), B-2, B-3.
-
-**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, **307** Dashboard (+2).
-Ruff und `vue-tsc` sauber.
+—
 
 ## An Mike · die abgearbeitete Kette
 
