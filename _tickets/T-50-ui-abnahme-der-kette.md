@@ -47,11 +47,13 @@ Befunde findet, die ein Browserlauf vorher sichtbar gemacht hätte.
   `examples/`. Die beiden Varianten laufen nacheinander auf denselben
   isolierten Ports; ein Profilwechsel gilt nicht als T-48-Neustarttest.
 - **Die Ketten-Konfiguration hat nur eine Vorlage, und die liegt falsch.**
-  Die Online-Variante bekommt ihre `sources.yaml` aus
-  `_tickets/T-37-sources-online-with-yaml-fallback.yaml`; für das reine
-  Dateiprofil existiert **keine** Vorlage im Repo. Der Lauf schreibt sie
-  deshalb im Scratchpad (fünf Rollen, überall nur `yaml-file`) und legt sie
-  **nicht** ins Repo — siehe V-3.
+  Der Lauf kopiert `_tickets/T-37-sources-online-with-yaml-fallback.yaml` als
+  `online/data/sources.yaml` und ändert in **dieser Scratch-Kopie** den
+  Provider-Pfad von `/data/assets.yaml` auf
+  `/data/assets-fallback.yaml`. Für das reine Dateiprofil existiert keine
+  Vorlage im Repo; der Lauf schreibt `yaml/data/sources.yaml` im Scratchpad
+  (fünf Rollen, überall nur `yaml-file`, Provider-Pfad
+  `/data/assets-standalone.yaml`) und legt sie nicht ins Repo — siehe V-3.
 - **Zwei Dateien sind fachlich notwendig.** Die Fallback-Datei enthält nur,
   was online keinen Kurs bekommt; die Standalone-Datei ist der vollständige
   Bestand. Eine gemeinsame Datei würde bei einem Online-Ausfall plausible
@@ -63,7 +65,8 @@ Befunde findet, die ein Browserlauf vorher sichtbar gemacht hätte.
   `crypto`, `DE0001102531` als `bond` und `DE0009848119` als `fund`. Fehlen
   sie in der Datenbankkopie — und in der Kopie fehlen alle drei —, werden sie
   vor dem Browserlauf über den öffentlichen Aufnahmeweg angelegt: das Feld
-  „ISIN oder Symbol" über der Assets-Liste, also `POST /instruments`. Keine
+  „ISIN oder Symbol" über der Assets-Liste, also
+  `POST /instruments/intake`. Keine
   direkte SQL-Präparation; wo der Aufnahmeweg das Papier nicht annimmt, ist
   **das** der Befund und wird nicht umgangen.
 - **Belegpflicht.** Ein Screenshot allein belegt nichts. Zu jedem Fall gehört
@@ -248,3 +251,19 @@ und muss für diesen Lauf nicht erweitert werden.
 
 Kein Browserlauf, kein Produkt-Edit. V-1 und V-3 bleiben undrainiert bis nach
 Phase B.
+
+## Codex-Review Runde 2 · `changes_requested` (2026-09-01)
+
+Die neun Fälle und die beiden Plugin-Varianten sind inhaltlich vollständig;
+zwei konkrete Pfade waren noch nicht ausführbar:
+
+1. Der öffentliche Aufnahmeweg ist `POST /instruments/intake`, nicht
+   `POST /instruments` (`app/routers/instruments.py`).
+2. Die einzige Online-Vorlage zeigt weiterhin auf `/data/assets.yaml`. Ihre
+   Scratch-Kopie muss auf `/data/assets-fallback.yaml` zeigen; das neu
+   geschriebene reine YAML-Profil auf `/data/assets-standalone.yaml`. Erst
+   damit sind Mikes zwei Laufzeitdateien wirklich verdrahtet.
+
+Keine neue Fallzeile, kein Produktedit und kein Browserlauf. Nach dieser
+Pfadkorrektur ist Phase A freigabefähig; V-1 und V-3 bleiben dokumentierte
+separate Drains nach Phase B.

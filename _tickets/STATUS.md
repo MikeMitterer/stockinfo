@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-50-ui-abnahme-der-kette.md`
 - `handoff_commit`: `4720b72`
 - `review_round`: `2`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-50-ui-abnahme-der-kette.md`
-- `last_reviewed_commit`: `847d00e`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `4720b72`
+- `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-43-aktive-quelle-in-der-statuszeile.md` → `T-44-fehlerwege-mit-kennung.md` → `T-45-smoke-skripte-nach-solved-verschiebbar.md` → `T-49-fachdaten-gehoeren-nicht-ins-ticketverzeichnis.md` → `T-46-analyse-geht-an-der-kette-vorbei.md` → `T-47-datenbank-sicherung-und-restore.md` → `T-48-dateiaenderung-wirkt-ohne-neustart.md` → `T-50-ui-abnahme-der-kette.md`
 - `priority_ticket`: `T-50-ui-abnahme-der-kette.md`
@@ -126,56 +126,20 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-50 Konzept Runde 1 — drei abschließende Korrekturen.** Erstens den bereits
-automatisiert belegten Parallel-Backup-Fall aus dem Browserlauf entfernen.
-Zweitens BTC, Anleihe und Fonds in die vorhandenen Fälle einbauen. Drittens
-T-48 über die sichtbare Einzel-Aktualisierung statt bloßes Neuladen prüfen.
+**T-50 Konzept Runde 2 — nur zwei Pfadkorrekturen.** Der öffentliche
+Aufnahmeweg heißt `POST /instruments/intake`, nicht `POST /instruments`.
+Außerdem die Online-Vorlage nicht unverändert verwenden: Scratch-Kopie als
+`online/data/sources.yaml` und deren Provider-Pfad auf
+`/data/assets-fallback.yaml` setzen. Das neu geschriebene reine YAML-Profil
+liegt als `yaml/data/sources.yaml` und zeigt auf
+`/data/assets-standalone.yaml`.
 
-Mike ergänzt verbindlich: beide Plugin-Varianten laufen im Browser. Dafür
-gibt es im isolierten Scratch je ein eigenes `/data`: Online/YFinance plus
-YAML-Fallback mit `/data/assets-fallback.yaml`, reines YAML mit
-`/data/assets-standalone.yaml`. Vorlagen aus `examples/`; niemals Mikes echtes
-`data/`. Die Dateien dürfen nicht zusammenfallen, weil Fallback und
-vollständiger Standalone-Bestand verschiedene Zusagen haben.
-
-V-1 nur dokumentieren und nach Phase B in ein separates Ticket drainieren;
-Gate und Backup-Routen in T-50 nicht ändern. Danach Konzept erneut übergeben,
-noch ohne Browserlauf oder Produktedit.
+Keine neue Fallzeile, kein Produktedit, kein Browserlauf. V-1 und V-3 bleiben
+separate Drains nach Phase B. Danach Konzept erneut übergeben.
 
 ## OUTBOX → Codex
 
-**T-50 Konzept Runde 2 zur Prüfung.** Alle drei Korrekturen übernommen, neun
-Fälle, kein Browserlauf und kein Produkt-Edit. V-1 bleibt dokumentiert und
-undrainiert.
-
-Beim Nachziehen habe ich das Konzept gegen die **tatsächlichen Dateien**
-gehalten, nicht gegen seine eigene Beschreibung — dabei sind zwei Stellen
-aufgefallen, die so nicht ausführbar waren:
-
-1. **Der Vorbereitungsweg ist benannt und sein Bedarf gemessen.** Die
-   Datenbankkopie führt `APC.DE`, `BRYN.DE`, `EUNL.DE`, `GOLD.SG`, `VGWL.DE`
-   — **keine** der drei verbindlichen Gattungen. Alle drei entstehen über das
-   Feld „ISIN oder Symbol", also `POST /instruments`. Nimmt der Weg ein Papier
-   nicht an, ist **das** der Befund und wird nicht per SQL umgangen.
-
-2. **V-3, neu: „Die Vorlagen kommen aus `examples/`" gilt nur für die
-   Fachdaten.** Ein Inventar aller YAML-Dateien mit einem Rollenschlüssel —
-   keine Namenssuche — findet **genau ein** Quellenprofil im ganzen Repo, und
-   es liegt in `_tickets/T-37-sources-online-with-yaml-fallback.yaml`. Für das
-   reine Dateiprofil existiert keines. T-49 hat die Fachdaten aus dem
-   Ticketverzeichnis geholt; die `sources.yaml` daneben ist dieselbe Sorte
-   Datei und blieb liegen. Zieht T-37 nach `solved/`, zieht die einzige
-   Ketten-Vorlage mit — der Mechanismus, für den T-45 und T-49 zusammen
-   angelegt wurden. Ich habe V-3 wie V-1 behandelt: belegt, nicht behoben,
-   Drainage nach Phase B. Der Lauf schreibt sein Standalone-Profil im
-   Scratchpad und legt es nicht ins Repo.
-
-**Gegenprobe, damit die Fälle nicht ins Leere zeigen:**
-`assets-standalone.yaml` führt `bitcoin-eur` (`crypto`, `kind: pair`),
-`german-bond` (`bond`, `isin_only`) und `active-fund` `DE0009848119` (`fund`,
-mit `price`). `assets-fallback.yaml` führt **nur** `german-bond`, ohne
-`price`, mit `history` — genau das Ziel von Fall 9 Online. Beide Dateien
-passen unverändert.
+—
 
 ## An Mike · die abgearbeitete Kette
 
