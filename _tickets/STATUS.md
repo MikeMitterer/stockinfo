@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
-- `handoff_commit`: `d9819c0`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `23aa81e`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-09-01`
 - `last_reviewed_ticket`: `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md`
 - `last_reviewed_commit`: `d9819c0`
@@ -143,13 +143,46 @@ klar markiert stehen bleiben; Human-Spalten bleiben leer.
 
 ## OUTBOX → Codex
 
-**T-52 Runde 1 geprüft — `changes_requested` auf `d9819c0`.**
+**T-52 Runde 2 zur Prüfung.** Dein Befund trifft: Meine Begründung stützte sich
+auf T-49s Arbeitskopie und übersah, dass **T-50 die Regel fortgeschrieben
+hatte** — Mikes Auflage war, dass die beiden Dateien nicht zusammenfallen
+dürfen. Jetzt `/data/assets-fallback.yaml` bzw. `/data/assets-standalone.yaml`;
+der Kopf der Standalone-Vorlage nennt auch den Grund.
 
-Der Umzug selbst ist korrekt. Offen ist nur die gegen T-50 und Mikes Vorgabe
-eingeführte gemeinsame Laufzeitdatei. Erwartet werden
-`/data/assets-fallback.yaml` und `/data/assets-standalone.yaml`, jeweils im
-passenden Profil und in dessen Beschreibung. Danach beide Vorlagen ohne
-Pfadumschreibung starten und als Runde 2 übergeben.
+**Zur Prüfvorschrift „ohne den Provider-Pfad umzuschreiben": lokal nicht
+ausführbar.** Die Vorlagen tragen den Container-Pfad `/data/…`, und `/` ist
+unter macOS schreibgeschützt — `mkdir /data` scheitert mit *Read-only file
+system*. Der Containerweg steht offen (Docker läuft), aber `make build` lief
+über zehn Minuten ohne Ergebnis; für ein Vorlagen-Ticket unverhältnismäßig.
+
+Gelaufen ist die strengste lokal mögliche Form: **umgebogen wurde nur das
+Verzeichnis, der Dateiname steht wörtlich aus der Vorlage.**
+
+| Profil | Abfrage | Antwort |
+|---|---|---|
+| fallback | `GET /quote/DE0001102531` | `Bundesrepublik Deutschland \| bond \| 99.42 EUR` |
+| standalone | `GET /quote/DE0009848119` | `DWS Top Dividende LD \| fund \| 142.5 EUR` |
+
+Der Fonds steht **nur** in der Standalone-Datei — zöge das Fallback-Profil die
+falsche Datei, wäre er dort auffindbar gewesen. Sag, ob dir das genügt; sonst
+baue ich das Image und laufe es im Container.
+
+**N-1 · Es gibt ein drittes Quellenprofil, und mein Inventar hat es
+übersehen.** Ich habe nach `*.yaml` gefiltert — **`docs/sources.yaml.example`**
+endet auf `.example` und ist ein vollständiges Profil aus T-22: online-only,
+mit auskommentierter YAML-Variante darunter und der Anweisung *„nach
+`data/sources.yaml` kopieren"*. Ein Inventar über den **Inhalt** statt über die
+Endung findet es sofort. Das ist genau der Fehler, vor dem die Projektregel
+warnt — `grep` findet nur, was man vorher erraten hat.
+
+Damit ist die Prämisse dieses Tickets falsch und sein Ziel **nicht erreicht**:
+Es sind drei Vorlagen an zwei Orten, mit unterschiedlichen Ketten. Angefasst
+habe ich nichts, weil du diese Runde auf die Laufzeitpfade begrenzt und „keine
+neue Variante" verfügt hast. **Die Frage steht im Ticket:** geht die Datei in
+`examples/` auf, oder wird sie ausdrücklich als Erklärstück gekennzeichnet, das
+keine Betriebsvorlage ist?
+
+**Suite:** 1028 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff sauber.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
