@@ -97,12 +97,10 @@ def fingerprint_of(config: SourcesConfig) -> str:
 def stamp_fingerprint(database_path: str | Path, fingerprint: str) -> None:
     """Schreibt die Kennung in die Datenbank — **nur, wenn noch keine dasteht**.
 
-    Der Stempel sagt, unter welcher Quellenlage dieser Bestand entstanden ist.
-    Ihn beim Start mit der laufenden Konfiguration zu überschreiben löschte
-    genau diese Auskunft: Ein eingespielter fremder Bestand sähe danach aus,
-    als wäre er hier entstanden, und `/sources` hätte nichts mehr zu melden.
-
-    Eine Abweichung wird deshalb **gemeldet, nicht geheilt**.
+    Der Stempel sagt, unter welcher Quellenlage der Bestand entstanden ist. Ihn
+    beim Start zu überschreiben löschte diese Auskunft: Ein eingespielter
+    fremder Bestand sähe aus, als wäre er hier entstanden. Eine Abweichung wird
+    **gemeldet, nicht geheilt**.
     """
     connection = get_connection(str(database_path))
     try:
@@ -182,10 +180,9 @@ class BackupService:
                 erkennbar bleibt, welche Sicherung ein Wiederherstellen
                 begleitet hat.
             protect: Eine Sicherung, die die Rotation **nicht** wegräumen darf.
-                Beim Einlösen ist das die Datei, die gleich eingespielt wird:
-                Sie ist bei zehn vorhandenen Sicherungen oft die älteste, und
-                die Sicherheitskopie hätte sie sonst genau in dem Moment
-                gelöscht, in dem sie gebraucht wird.
+                Beim Einlösen ist das die Datei, die gleich eingespielt wird —
+                bei zehn vorhandenen oft die älteste, die die Sicherheitskopie
+                sonst genau dann löschte, wenn sie gebraucht wird.
         """
         with self._lock:
             return self._create_locked(reason, protect)
@@ -435,15 +432,21 @@ def apply_pending(database_path: str, config: SourcesConfig) -> str | None:
 def restore_state(database_path: str) -> tuple[str | None, str]:
     """Was von einem angeforderten Wiederherstellen übrig ist.
 
+    **Beides zugleich gibt es nicht.** Nach einem Fehler folgt kein Versuch
+    mehr; `pending_restore` wäre eine Ankündigung, die niemand einlöst. Der
+    Name wandert in den Grund.
+
     Returns:
-        Den Namen der vorgemerkten Sicherung und — falls der Tausch beim Start
-        scheiterte — den Grund im Klartext. Beides steht in `GET /backups`:
-        Ein Fehler, den nur das Protokoll kennt, ist für den Betreiber keiner.
+        Den Namen **oder** — nach einem gescheiterten Tausch — `None` und den
+        Grund. Ein unlesbarer Eintrag ergibt `None`, nicht den Text `"None"`.
     """
     intent = _read_intent(Path(database_path).parent / PENDING_FILENAME)
-    return (str(intent.get("backup")) or None if intent else None), str(
-        intent.get("failed", "")
-    )
+    name = intent.get("backup")
+    name = name if isinstance(name, str) and name else None
+    failed = str(intent.get("failed") or "")
+    if failed:
+        return None, f"{name}: {failed}" if name else failed
+    return name, ""
 
 
 def stamped_fingerprint(database_path: str | Path) -> str | None:

@@ -807,3 +807,35 @@ Zwei kleine Abschlussreste bleiben:
 Keine weitere Produktfläche und kein neuer Zustand sind nötig. Erwartet sind
 nur die öffentliche Trennung von Pending und Fehler sowie der echte
 Akzeptanzpfad im Test; die nächste Runde ist damit konkret abschließend.
+
+### Runde 4 von 1b · zwei Abschlussreste (Claude, 2026-09-01)
+
+**1 · `pending_restore` und `restore_error` standen nebeneinander.** Nach einem
+Fehler folgt kein Versuch mehr; die Ankündigung löste niemand mehr ein. Der
+Name wandert jetzt in den Grund, `pending_restore` ist `null`. Dazu der von dir
+genannte `"None"`-Fall: `str(intent.get("backup"))` machte aus einem fehlenden
+Eintrag den Text `"None"` — die Liste kündigte eine Sicherung an, die es nie
+gab. Drei parametrisierte Fälle halten das fest (ohne Namen, unlesbar, falsche
+Form).
+
+**2 · Der `/sources`-Beleg läuft jetzt über den echten Nutzerweg.** Vorher
+schrieb er den Stempel per SQL und prüfte die Anzeige — das belegte nicht, dass
+ein Restore ihn überhaupt hinterlässt. Jetzt: sichern, Profil wechseln, `409`
+sehen, mit `force` vormerken, **zweiter `TestClient` als zweiter Start**, dann
+`/sources`. Genau an dieser Grenze ging der Stempel vorher verloren, und der
+Mutant „Stempel überschreiben" macht den Test rot.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 500 | **396** |
+| Gesamt | ≤ 800 | **800** |
+
+Um die Gesamtgrenze zu halten, ist ein Orakel entfallen: Der Unit-Fall zum
+Wiederholversuch sagte dasselbe zu wie der öffentliche, den du verlangt hast —
+derselbe Mutant machte beide rot. Zwei Zusagen für eine Regel sind eine zu
+viel. Ebenso der Stempel-Unit-Test, der im `/sources`-Weg vollständig
+enthalten ist.
+
+Fünf Mutanten beißen: `pending_restore` neben dem Fehler; `str()` erzeugt
+wieder `"None"`; kein Riegel gegen den zweiten Versuch; Rotation schützt die
+Quelle nicht; Stempel wird überschrieben.

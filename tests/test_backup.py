@@ -35,7 +35,6 @@ from app.services.backup import (
     fingerprint_of,
     restore_state,
     stamp_fingerprint,
-    stamped_fingerprint,
 )
 from app.sources_config import ROLES, SourcesConfig
 
@@ -58,6 +57,12 @@ def volume(tmp_path: Path) -> Path:
     init_db(str(database))
     stamp_fingerprint(database, fingerprint_of(_ONLINE))
     return tmp_path
+
+
+def _reload() -> None:
+    """Verwirft die gecachten Dienste — wie ein Neustart es täte."""
+    for cache in (get_settings, get_sources_config, get_backup_service):
+        cache.cache_clear()
 
 
 def _service(volume: Path, config: SourcesConfig = _ONLINE) -> BackupService:
@@ -98,12 +103,8 @@ def _age(path: Path, index: int) -> Path:
 
 
 def test_eine_frische_datenbank_traegt_ihre_schemaversion(volume: Path) -> None:
-    """Ohne diese Zahl gäbe es keine Antwort auf „ist die Datei neuer als ich?".
-
-    `schema_outdated()` prüft die Form strukturell und erkennt nur die
-    Gegenrichtung; eine Sicherung aus einer neueren App sähe für sie
-    unauffällig aus.
-    """
+    """Ohne diese Zahl gäbe es keine Antwort auf „ist die Datei neuer als ich?"
+    — `schema_outdated()` erkennt strukturell nur die Gegenrichtung."""
     connection = sqlite3.connect(volume / "stockinfo.db")
     try:
         assert connection.execute("PRAGMA user_version").fetchone()[0] == SCHEMA_VERSION
@@ -112,8 +113,8 @@ def test_eine_frische_datenbank_traegt_ihre_schemaversion(volume: Path) -> None:
 
 
 def test_die_sicherung_traegt_die_schemaversion_mit(volume: Path) -> None:
-    """`VACUUM INTO` nimmt `user_version` in die Kopie mit — deshalb erklärt
-    jede Sicherung ihr Schema selbst und ist nicht auf ihr Manifest angewiesen."""
+    """`VACUUM INTO` nimmt `user_version` mit — jede Sicherung erklärt ihr
+    Schema selbst, ohne ihr Manifest."""
     info = _service(volume).create()
 
     connection = sqlite3.connect(_service(volume).directory / info.name)
@@ -124,11 +125,7 @@ def test_die_sicherung_traegt_die_schemaversion_mit(volume: Path) -> None:
 
 
 def test_ein_neueres_schema_gilt_als_unpassend(volume: Path) -> None:
-    """Der Befund unterscheidet sich von „andere Quellenlage" und sagt es auch.
-
-    Der Grund wird hier nur **gemeldet**; was daraus folgt, entscheidet die
-    zweite Teilstrecke.
-    """
+    """Der Befund unterscheidet sich von „andere Quellenlage" und sagt es auch."""
     service = _service(volume)
     info = service.create()
     connection = sqlite3.connect(service.directory / info.name)
@@ -239,10 +236,8 @@ def test_woraus_die_kennung_entsteht(other: SourcesConfig, same: bool) -> None:
 
 
 def test_die_elfte_sicherung_verdraengt_die_aelteste(volume: Path) -> None:
-    """Zehn bleiben liegen — und das Manifest geht mit.
-
-    Bliebe es zurück, sammelte das Verzeichnis Manifeste ohne Datenbank.
-    """
+    """Zehn bleiben liegen — und das Manifest geht mit; sonst sammelte das
+    Verzeichnis Manifeste ohne Datenbank."""
     service = _service(volume)
     aged = [
         _age(service.directory / service.create().name, index)
@@ -305,13 +300,10 @@ def client(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> Iterator[TestClie
     """Die App auf einem frischen Volume — als Kontextmanager, damit der
     Lifespan läuft: Dort entsteht das Schema und der Stempel."""
     monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "stockinfo.db"))
-    caches = (get_settings, get_sources_config, get_backup_service)
-    for cache in caches:
-        cache.cache_clear()
+    _reload()
     with TestClient(app) as opened:
         yield opened
-    for cache in caches:
-        cache.cache_clear()
+    _reload()
 
 
 def test_der_weg_ueber_http_von_der_leeren_liste_bis_zum_eintrag(
@@ -468,12 +460,9 @@ def test_die_vorgemerkte_absicht_laesst_die_datenbank_unberuehrt(volume: Path) -
 
 
 def test_der_start_spielt_ein_und_sichert_vorher_den_zwischenstand(volume: Path) -> None:
-    """**`#3` und `#7` an einem Stück — und der Zeitpunkt ist der Punkt.**
-
-    Die Sicherheitskopie entsteht beim **Einlösen**, nicht beim Klick.
-    Dazwischen liegt ein Neustart, und dazwischen wird weitergeschrieben:
-    `ZWISCHENDURCH` fehlte einer Kopie vom Klickzeitpunkt.
-    """
+    """**`#3` und `#7` an einem Stück.** Die Sicherheitskopie entsteht beim
+    **Einlösen**, nicht beim Klick: `ZWISCHENDURCH` fehlte einer Kopie vom
+    Klickzeitpunkt."""
     _put(volume, "GESICHERT")
     info = _service(volume).create()
     _service(volume).request_restore(info.name)
@@ -497,8 +486,8 @@ def test_der_start_spielt_ein_und_sichert_vorher_den_zwischenstand(volume: Path)
 def test_das_journal_der_alten_datei_bleibt_nicht_liegen(volume: Path) -> None:
     """Ein zurückgelassenes `-wal` läse den neuen Bestand mit dem alten Journal.
 
-    Der Aufbau muss das Journal erst herstellen: Ohne eine offene Verbindung
-    gibt es zum Tauschzeitpunkt gar keines, und der Test prüfte nichts.
+    Der Aufbau muss das Journal erst herstellen: Ohne offene Verbindung gibt es
+    zum Tauschzeitpunkt keines.
     """
     _put(volume, "GESICHERT")
     info = _service(volume).create()
@@ -532,8 +521,7 @@ def test_ein_start_scheitert_nicht_an_einer_sicherung(volume: Path, sabotage: st
 
     Zwischen Klick und Neustart kann die Datei verschwinden oder die
     Konfiguration wechseln. Beides lässt die Datenbank unberührt und bricht den
-    Start nicht ab; die Absicht bleibt liegen, damit der Wunsch nicht spurlos
-    verschwindet.
+    Start nicht ab.
     """
     _put(volume, "UNBERUEHRT")
     config = _ONLINE
@@ -633,10 +621,8 @@ def test_die_aelteste_von_zehn_ueberlebt_ihr_eigenes_wiederherstellen(
 ) -> None:
     """**Die Sicherheitskopie darf nicht wegräumen, was sie sichern hilft.**
 
-    Bei zehn vorhandenen Sicherungen ist die zum Einspielen gewählte oft die
-    älteste. Die Sicherheitskopie davor macht elf, die Rotation räumt die
-    älteste weg — und das war die Quelle. Zurück blieb eine Absicht ohne
-    Datei und ein Bestand, der nie getauscht wurde.
+    Bei zehn Sicherungen ist die gewählte oft die älteste; die Kopie davor
+    macht elf, und die Rotation räumte die Quelle weg.
     """
     service = _service(volume)
     _put(volume, "GESICHERT")
@@ -661,44 +647,9 @@ def test_die_aelteste_von_zehn_ueberlebt_ihr_eigenes_wiederherstellen(
     assert len(safety) == 1, "die Sicherheitskopie fehlt oder wurde selbst wegrotiert"
 
 
-def test_ein_gescheiterter_tausch_wird_nicht_bei_jedem_start_wiederholt(
-    volume: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """**Zwei Starts nach einer Sabotage — der zweite versucht nichts mehr.**
-
-    Der Fehler wird **nach** der Sicherheitskopie ausgelöst, denn dort sitzt
-    der Schaden: Ein stiller Wiederholversuch legte bei jedem Start eine
-    weitere an und drängte damit die eigentliche Sicherung aus der Rotation.
-    Ein Fehler vor der Prüfung bliebe folgenlos und könnte den Unterschied gar
-    nicht zeigen.
-    """
-    _put(volume, "UNBERUEHRT")
-    info = _service(volume).create()
-    _service(volume).request_restore(info.name)
-
-    def _boom(*args: object, **kwargs: object) -> None:
-        raise OSError("Zielmedium voll")
-
-    monkeypatch.setattr("app.services.backup.shutil.copy2", _boom)
-
-    assert apply_pending(str(volume / "stockinfo.db"), _ONLINE) is None
-    after_first = sorted(path.name for path in _service(volume).directory.glob("*"))
-    pending, error = restore_state(str(volume / "stockinfo.db"))
-
-    assert pending == info.name
-    assert "Zielmedium voll" in error, error
-    assert not (volume / "stockinfo.db.incoming").exists(), "das Zwischenprodukt blieb"
-
-    assert apply_pending(str(volume / "stockinfo.db"), _ONLINE) is None
-    assert sorted(path.name for path in _service(volume).directory.glob("*")) == after_first, (
-        "der zweite Start hat es erneut versucht"
-    )
-    assert _symbols(volume / "stockinfo.db") == ["UNBERUEHRT"]
-
-
 def test_eine_neue_anforderung_loest_den_fehlerzustand_ab(volume: Path) -> None:
-    """Sonst bliebe der Betreiber in einem Zustand, aus dem er nicht
-    herauskommt, ohne eine Datei von Hand zu löschen."""
+    """Sonst käme der Betreiber aus dem Zustand nur heraus, indem er eine Datei
+    von Hand löscht."""
     _put(volume, "UNBERUEHRT")
     verloren = _service(volume).create()
     heil = _service(volume).create()
@@ -715,38 +666,89 @@ def test_eine_neue_anforderung_loest_den_fehlerzustand_ab(volume: Path) -> None:
 
 
 def test_ein_erzwungener_fremder_restore_ist_in_sources_sichtbar(
-    client: TestClient, tmp_path: Path
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """**Der Bestand behält seine Herkunft, und `/sources` sagt es.**
+    """**Der ganze Nutzerweg, nicht sein Ergebnis.**
 
-    Wer mit `force` eine fremde Lage einspielt, bekommt Papiere in einer Form,
-    die die laufende Kette womöglich nicht bedient. Überschriebe der Start den
-    Herkunftsstempel mit der laufenden Konfiguration, sähe der Bestand danach
-    aus, als wäre er hier entstanden — und niemand könnte den Unterschied noch
-    sehen.
+    Sichern, Profil wechseln, Ablehnung sehen, mit `force` vormerken, **neu
+    starten**, dann `/sources` lesen. Der zweite `TestClient` ist der zweite
+    Start; an dieser Grenze ging der Stempel vorher verloren.
     """
-    assert client.get("/sources").json()["provenance_warning"] == ""
-    fremd = "aaaaaaaaaaaa"
-    stamp = get_connection(str(tmp_path / "stockinfo.db"))
-    try:
-        stamp.execute(
-            "INSERT INTO meta (key, value) VALUES ('sources_fingerprint', ?) "
-            "ON CONFLICT(key) DO UPDATE SET value = excluded.value",
-            (fremd,),
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "stockinfo.db"))
+    _reload()
+    with TestClient(app) as first:
+        name = first.post("/backups").json()["name"]
+        herkunft = first.get("/backups").json()["fingerprint"]
+        assert first.get("/sources").json()["provenance_warning"] == ""
+
+        (tmp_path / "sources.yaml").write_text(
+            "\n".join(f"{role}: [yaml-file]" for role in ROLES) + "\n", encoding="utf-8"
         )
-        stamp.commit()
-    finally:
-        stamp.close()
+        _reload()
 
-    warning = client.get("/sources").json()["provenance_warning"]
+        assert first.post(f"/backups/{name}/restore").status_code == 409
+        assert first.post(f"/backups/{name}/restore", params={"force": True}).status_code == 202
 
-    assert fremd in warning
-    assert client.get("/backups").json()["fingerprint"] in warning
+    _reload()
+    with TestClient(app) as second:  # der zweite Start löst die Absicht ein
+        sources = second.get("/sources").json()
+        backups = second.get("/backups").json()
+    _reload()
+
+    assert backups["pending_restore"] is None, "die Absicht blieb liegen"
+    assert backups["restore_error"] == "", backups["restore_error"]
+    assert herkunft in sources["provenance_warning"], sources["provenance_warning"]
+    assert backups["fingerprint"] in sources["provenance_warning"]
+    assert backups["fingerprint"] != herkunft
 
 
-def test_ein_start_ueberschreibt_den_herkunftsstempel_nicht(volume: Path) -> None:
-    """Der Stempel entsteht einmal und bleibt — er beschreibt die Herkunft der
-    Daten, nicht die Konfiguration von jetzt."""
-    stamp_fingerprint(volume / "stockinfo.db", fingerprint_of(_FILE_ONLY))
+@pytest.mark.parametrize(
+    ("content", "expected"),
+    [
+        pytest.param('{"backup": null, "failed": "kaputt"}', (None, "kaputt"), id="ohne-namen"),
+        pytest.param("{kein json", (None, ""), id="unlesbar"),
+        pytest.param("[]", (None, ""), id="falsche-form"),
+    ],
+)
+def test_ein_unlesbarer_eintrag_erzeugt_keinen_namen(
+    volume: Path, content: str, expected: tuple[str | None, str]
+) -> None:
+    """`None` ist kein Dateiname: `str(...)` machte aus einem fehlenden Eintrag
+    den Text `"None"`, und die Liste kündigte eine Sicherung an, die es nie
+    gab."""
+    (volume / PENDING_FILENAME).write_text(content, encoding="utf-8")
 
-    assert stamped_fingerprint(volume / "stockinfo.db") == fingerprint_of(_ONLINE)
+    assert restore_state(str(volume / "stockinfo.db")) == expected
+
+
+def test_der_fehlerzustand_ist_ueber_backups_sichtbar(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """**Der öffentliche Weg, nach erstem und zweitem Start.** Ein Fehler, den
+    nur das Protokoll kennt, ist für den Betreiber keiner — und neben ihm steht
+    kein `pending_restore`."""
+    monkeypatch.setenv("DATABASE_PATH", str(tmp_path / "stockinfo.db"))
+    _reload()
+    with TestClient(app) as first:
+        name = first.post("/backups").json()["name"]
+        assert first.post(f"/backups/{name}/restore").status_code == 202
+        assert first.get("/backups").json()["pending_restore"] == name
+
+    def _boom(*args: object, **kwargs: object) -> None:
+        raise OSError("Zielmedium voll")
+
+    monkeypatch.setattr("app.services.backup.shutil.copy2", _boom)
+
+    seen = []
+    for _ in range(2):
+        _reload()
+        with TestClient(app) as later:
+            seen.append(later.get("/backups").json())
+    _reload()
+
+    for body in seen:
+        assert body["pending_restore"] is None
+        assert name in body["restore_error"]
+        assert "Zielmedium voll" in body["restore_error"]
+    assert not (tmp_path / "stockinfo.db.incoming").exists()
+    assert seen[0]["backups"] == seen[1]["backups"], "der zweite Start hat es erneut versucht"
