@@ -2,8 +2,8 @@
 /**
  * Die fünf Rollen der Quellenkette — **einmal** benannt.
  *
- * Die Analyse zeigt vier davon, der Passungsgrund alle fünf. Zwei Kataloge
- * mit denselben Wörtern liefen beim ersten Nachtrag auseinander.
+ * Die Analyse zeigt vier davon, der Passungsgrund alle fünf; beide lesen
+ * dieses Objekt, damit es die Wörter nur einmal gibt.
  */
 const roles = {
   resolvers: 'Auflösung',

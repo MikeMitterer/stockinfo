@@ -50,19 +50,29 @@ Versuch, das Verzeichnis zu verlassen; geprüft wird vor jedem Dateizugriff."""
 
 
 class BackupError(Exception):
-    """Eine Ablehnung des Wiederherstellens — mit ihrer Ursache.
+    """Eine Ablehnung des Wiederherstellens.
 
-    Die Ursache wird **nicht neu berechnet**, sondern durchgereicht: Sie ist
-    dieselbe, die auch der Listeneintrag trägt.
+    `params` und `reason` stehen **getrennt**: Ein unbekannter Name hat keine
+    Passungsursache — dort trägt `params` den Namen und `reason` bleibt leer.
+    Wo es eine Ursache gibt, wird sie **durchgereicht, nicht neu berechnet**:
+    Sie ist dieselbe, die der Listeneintrag trägt.
     """
 
     NOT_FOUND = "backup_not_found"
     INCOMPATIBLE = "backup_incompatible"
     SCHEMA_TOO_NEW = "backup_schema_too_new"
 
-    def __init__(self, code: str, message: str, reason: BackupReason) -> None:
+    def __init__(
+        self,
+        code: str,
+        message: str,
+        *,
+        params: dict[str, str] | None = None,
+        reason: BackupReason | None = None,
+    ) -> None:
         super().__init__(message)
         self.code = code
+        self.params = params or {}
         self.reason = reason
 
 
@@ -366,13 +376,15 @@ class BackupService:
             raise BackupError(
                 BackupError.SCHEMA_TOO_NEW,
                 f"Sicherung {name} trägt Schema {version}",
-                info.reason,
+                params={"name": name},
+                reason=info.reason,
             )
         if not info.compatible and not force and info.reason is not None:
             raise BackupError(
                 BackupError.INCOMPATIBLE,
                 f"Sicherung {name} gehört zu einer anderen Quellenlage",
-                info.reason,
+                params={"name": name},
+                reason=info.reason,
             )
         return info
 
@@ -382,14 +394,14 @@ class BackupService:
             raise BackupError(
                 BackupError.NOT_FOUND,
                 f"{name} ist kein Sicherungsname",
-                BackupReason(code=BackupError.NOT_FOUND, params={"name": name}),
+                params={"name": name},
             )
         path = self.directory / name
         if not path.is_file():
             raise BackupError(
                 BackupError.NOT_FOUND,
                 f"Sicherung {name} gibt es nicht",
-                BackupReason(code=BackupError.NOT_FOUND, params={"name": name}),
+                params={"name": name},
             )
         return path
 

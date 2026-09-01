@@ -453,10 +453,16 @@ def test_ein_neueres_schema_wird_auch_mit_force_abgelehnt(volume: Path, force: b
     ids=["elternpfad", "absolut", "kurze-kennung", "fremdes-muster", "leer"],
 )
 def test_ein_name_der_keiner_ist_wird_abgewiesen(volume: Path, name: str) -> None:
-    """Die Musterprüfung steht **vor** dem Dateizugriff, nicht nach ihm."""
+    """Die Musterprüfung steht **vor** dem Dateizugriff, nicht nach ihm.
+
+    Der Name steht in `params`, nicht in einer Ursache: Ob es die Datei gibt,
+    ist keine Frage der Passung.
+    """
     with pytest.raises(BackupError) as fehler:
         _service(volume).request_restore(name)
     assert fehler.value.code == BackupError.NOT_FOUND
+    assert fehler.value.reason is None
+    assert fehler.value.params == {"name": name}
 
 
 # ─── #3, #7, #8 · das Einlösen beim Start ─────────────────────────────────────
@@ -623,10 +629,20 @@ def test_die_drei_ablehnungen_haben_je_ihren_status(
     assert response.status_code == expected_status, response.text
     body = response.json()
     assert body["code"] == expected_code
-    # Der Konsument erfährt den Grund aus der **Ablehnung**, ohne die Liste.
-    assert body["reason"]["code"], body
-    if case == "foreign":
-        assert {item["field"] for item in body["reason"]["differences"]} >= {"quotes"}
+    assert body["params"]["name"] == name
+    if case == "unknown":
+        # **Ein unbekannter Name ist keine Passungsursache.** Eine Kennung
+        # dafür zu erfinden hieße, eine vierte Ursache zu behaupten.
+        assert body.get("reason") is None, body
+    else:
+        # Der Konsument erfährt den Grund aus der **Ablehnung**, ohne die Liste.
+        assert body["reason"]["code"] != expected_code or case == "newer"
+        assert body["reason"]["code"] in (
+            "backup_schema_too_new",
+            "backup_sources_differ",
+        )
+        if case == "foreign":
+            assert {item["field"] for item in body["reason"]["differences"]} >= {"quotes"}
     assert not (tmp_path / PENDING_FILENAME).exists()
 
 
@@ -640,7 +656,16 @@ def test_die_form_der_ausgaenge_steht_im_openapi(client: TestClient) -> None:
     assert {"202", "404", "409", "422"} <= set(declared)
     for code in ("404", "409", "422"):
         body = declared[code]["content"]["application/json"]["schema"]
-        assert "ErrorDetail" in json.dumps(body), f"{code} sagt keine Form zu"
+        assert "BackupErrorDetail" in json.dumps(body), f"{code} sagt keine Form zu"
+
+    # **Die Ursache ist optional — und das steht im Schema.** Ein Konsument
+    # soll den ursachenlosen `404` behandeln können, ohne ihn im Betrieb zu
+    # entdecken.
+    schema = client.get("/openapi.json").json()["components"]["schemas"]
+    reason = schema["BackupErrorDetail"]["properties"]["reason"]
+    assert "BackupErrorDetail" not in schema["ErrorDetail"].get("required", [])
+    assert "reason" not in schema["BackupErrorDetail"].get("required", [])
+    assert "null" in json.dumps(reason), reason
 
 
 # ─── Die drei Gegenproben aus dem Review ──────────────────────────────────────

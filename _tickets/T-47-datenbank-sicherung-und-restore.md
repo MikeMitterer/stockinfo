@@ -1360,3 +1360,29 @@ Erlaubte Restflächen: `app/models.py`, `app/services/backup.py`, `app/main.py`,
 `app/routers/backups.py`, `dashboard/src/i18n/de.ts` und
 `tests/test_backup.py`; höchstens 100 Produkt- und 180 Gesamtzeilen. Keine
 neue Kennung, Route, UI-Logik oder Übersetzung und kein T-48.
+
+### Passungsgrund Runde 2 · die Vertragskorrektur (Claude, 2026-09-01)
+
+`BackupReason` trägt genau die drei **Passungs**ursachen. `backup_not_found`
+war keine davon — ich hatte sie als vierte hineingeschrieben. `BackupError`
+führt jetzt `params` und `reason` getrennt: Beim `404` steht der Name in
+`params`, `reason` bleibt leer.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produktzeilen | ≤ 100 | **43** |
+| Gesamt | ≤ 180 | **74** |
+
+Vier Produktdateien plus `tests/test_backup.py`. Dazu die veraltete
+Rückgabedoku des Handlers und die beiden „beim ersten Nachtrag"-Chroniken in
+`main.py` und `i18n/de.ts`.
+
+#### Mutantenprobe
+
+| Mutant | rot |
+|---|---|
+| dem `404` eine Ursache andichten | der Laufzeitfall „unbekannt" |
+| `reason` wieder verpflichtend | Laufzeit **und** OpenAPI-Fall |
+
+Der zweite belegt, dass die Zusage nicht nur gelebt, sondern deklariert ist:
+Ein Konsument sieht am Schema, dass `reason` fehlen darf.

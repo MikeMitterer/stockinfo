@@ -1121,7 +1121,13 @@ class BackupReason(BaseModel):
     Oberfläche.
     """
 
-    code: str = Field(description="`backup_schema_too_new` · `backup_fingerprint_mismatch` · `backup_sources_differ`")
+    code: str = Field(
+        description=(
+            "Genau eine der drei **Passungs**ursachen: `backup_schema_too_new` · "
+            "`backup_fingerprint_mismatch` · `backup_sources_differ`. Ein "
+            "unbekannter Name ist keine davon — dort fehlt die Ursache"
+        )
+    )
     params: dict[str, str] = Field(default_factory=dict, description="Werte für den Satz")
     differences: list[SourceDifference] = Field(
         default_factory=list, description="Nur bei `backup_sources_differ`"
@@ -1148,9 +1154,15 @@ class BackupErrorDetail(ErrorDetail):
     nicht nennen. Die Erweiterung hängt sie an, statt den Aufrufer auf die
     Liste zu verweisen: Ein REST-Konsument soll den Grund aus der Ablehnung
     selbst erfahren.
+
+    **`reason` fehlt beim `404`.** Ein unbekannter Name ist keine
+    Passungsursache; dort trägt `params` den Namen, und eine erfundene vierte
+    Kennung wäre eine Ursache, die es nicht gibt.
     """
 
-    reason: BackupReason
+    reason: BackupReason | None = Field(
+        default=None, description="Die Passungsursache; `null` bei `backup_not_found`"
+    )
 
 
 class BackupList(BaseModel):

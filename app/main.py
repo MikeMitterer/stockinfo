@@ -548,21 +548,22 @@ async def backup_error(request: Request, exc: BackupError) -> JSONResponse:
     Schritten. Nur der letzte lässt sich auch mit `force` nicht übergehen.
 
     Returns:
-        `404`, `409` oder `422` mit `{code, params}` — dieselbe Form wie jede
-        andere Ablehnung dieser App.
+        `404`, `409` oder `422` mit `{code, params}` wie jede andere Ablehnung
+        dieser App — bei `409` und `422` zusätzlich mit `reason`, der
+        Passungsursache des Listeneintrags. Der `404` trägt keine: Ein
+        unbekannter Name ist keine Passungsfrage.
     """
     codes = {
         BackupError.NOT_FOUND: status.HTTP_404_NOT_FOUND,
         BackupError.INCOMPATIBLE: status.HTTP_409_CONFLICT,
         BackupError.SCHEMA_TOO_NEW: status.HTTP_422_UNPROCESSABLE_CONTENT,
     }
-    logger.info(exc.code, path=request.url.path, reason=exc.reason.code)
+    logger.info(exc.code, path=request.url.path, **exc.params)
     return JSONResponse(
         status_code=codes.get(exc.code, status.HTTP_400_BAD_REQUEST),
         # **Dieselbe Ursache wie im Listeneintrag**, durchgereicht statt neu
-        # gebildet: Zwei Fassungen desselben Befundes liefen beim ersten
-        # Nachtrag auseinander.
+        # gebildet — sonst gäbe es zwei Fassungen desselben Befundes.
         content=BackupErrorDetail(
-            code=exc.code, params=exc.reason.params, reason=exc.reason
+            code=exc.code, params=exc.params, reason=exc.reason
         ).model_dump(),
     )
