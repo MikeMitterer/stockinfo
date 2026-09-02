@@ -314,3 +314,30 @@ ist ungleich `null` — sie nahm den Zweig mit leerer Zahl. Jetzt `typeof`.
     legt — 26 gezählte Stellen in Adaptern, Kapsel, Resolver und eingebauten
     Plugins — reicht er unverändert durch. Das zu ändern hieße, den
     Plugin-Vertrag umzustellen; Variante A schließt das aus.
+
+---
+
+## Codex-Review Runde 1 · `approved` (2026-09-02)
+
+Der Fachstand `05823a7` erfüllt Variante A. Die rein mechanische
+Sprachkorrektur im neuen TypeScript-Test ist im Review-Commit `eee59e9`
+enthalten; Produktverhalten und Budget ändern sich dadurch nicht.
+
+Unabhängige Gegenprobe:
+
+- 67/67 gezielte Backend-, REST- und YAML-Profiltests;
+- 10/10 gezielte sowie 313/313 vollständige Dashboardtests;
+- `vue-tsc -b`, Ruff und `git diff --check` grün;
+- isolierter Doppelmutant ohne `analysis.rows` in DE und ohne
+  `analysis.unsupported` in EN rötet genau die vorgesehenen UI-Fälle;
+- Vollsuite: 1033 Backend, 302 Plugin-API, 45 Beispiel und 313 Dashboard.
+
+Claudes Browserbeleg zeigt dieselbe Analyse sichtbar in beiden Sprachen:
+`253 Zeilen` in DE und `253 rows` in EN. Die unverändert durchgereichte
+upstream-Meldung belegt zugleich die beschlossene Grenze. Verify `#2` bleibt
+deshalb korrekt `◑`; das ist kein offener Rest innerhalb von T-53.
+
+DRY-Prüfung: `rows` und `instrument_type` sind zwei verschiedene Werte mit
+verschiedenen Übersetzungsschlüsseln. Die kleine `note()`-Funktion ist die
+eine Darstellungsstelle; eine weitere Abstraktion wäre hier nicht begründet.
+Human-Spalte bleibt leer, nichts wird nach `solved/` verschoben.
