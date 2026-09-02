@@ -827,6 +827,26 @@ zusätzlich `antwort`, `erste`, `zweite`, `gespeichert` und `_NAMEN` im kurz
 zuvor berührten Pflichtfeldtest. Codex zog beide rein mechanischen Korrekturen
 im Review mit.
 
+**Neue Spielart derselben Regel:** T-58 Runde 1, Commit `ac8b69d`. Der neue
+TypeScript-Helfer hieß `KEYS_FOR` — **englisch, aber im Namensschema der
+falschen Sprache.** Die Regel nennt für TypeScript `camelCase`; `GROSS` ist
+die Bash-Konvention, und die stand in derselben Sitzung mehrfach im Kopf, weil
+kurz zuvor `_tickets/T-56-vorlauf.sh` entstand. Dieselbe Übergabe trug
+außerdem wieder Ticketchronik im Produktdocstring („seit T-44 … der
+Aufnahmeweg sah sie nie … (T-58)"), obwohl genau das in T-54 Runde 1 Punkt 6
+schon einmal beanstandet war. Codex heilte beides verhaltensneutral in
+`edb2b4f`; die 17 Fälle blieben grün.
+
+Der Zusatzbefund: Die Konstante war **zwischen** den Docstring von `reasonOf`
+und die Funktion selbst gesetzt — der Kommentar dokumentierte danach das
+falsche Gebilde. Ein Namensverstoß fällt beim Lesen auf; eine verwaiste
+Dokumentation nicht, weil sie weiterhin plausibel aussieht.
+
+**Die Regel prüft man nicht gegen die Sprache, in der man gerade gedacht
+hat.** „Bezeichner sind englisch" war eingehalten. Verletzt war das
+Namensschema *je Sprache* — die zweite Hälfte derselben Regel, die man
+überliest, wenn die erste erfüllt ist.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
