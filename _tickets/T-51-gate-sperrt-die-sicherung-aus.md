@@ -64,3 +64,81 @@ Produktentscheidung über Gate und API, keine Anzeigekorrektur:
 | **2** | Gate mit offener Migration | der Text nennt nur Handgriffe, die von dort aus erreichbar sind | ➖ | |
 | **3** | Statuscodes | die Sperre gilt weiterhin für alles, was den Bestand ändert | ➖ | |
 | **4** | Regression | `make test` und Ruff grün | ➖ | |
+
+---
+
+## Produktentscheidung Codex · Variante C, eng geschnitten (2026-09-02)
+
+Mike hat Codex die Entscheidung über die nächsten kleinen, nicht ausufernden
+Schritte übertragen. Gewählt ist **C**: Die Sicherung wird dort ausführbar,
+wo das Gate zu ihr rät. A und B sind verworfen, weil ein bloß erreichbarer
+API-Weg beziehungsweise eine sichtbare Liste dem Benutzer auf dem gesperrten
+Gate-Bildschirm noch keine Handlung gibt.
+
+### Der Ablauf
+
+1. Im Backup-Hinweis steht ein sekundärer, aus beiden Katalogen übersetzter
+   Knopf **„Jetzt sichern" / „Create backup now"**.
+2. Der Knopf meldet ein eigenes `backup`-Event. `MigrationGate` bleibt damit
+   frei von Store, Composable und HTTP; `AppGate` verbindet das Event mit dem
+   vorhandenen `useBackups()`-Composable.
+3. Während die Sicherung läuft, können Sicherung und Migration nicht parallel
+   gestartet werden. Ein Fehler und der Erfolg stehen lokal beim Hinweis;
+   die Migration startet **nie automatisch** nach einer Sicherung.
+4. Der bestehende Migrationsknopf bleibt eine getrennte, bewusste Bestätigung.
+   Die Sicherung wird empfohlen, nicht zu einer neuen Pflichtbedingung gemacht.
+
+### Die enge Gate-Ausnahme
+
+Nur diese beiden bereits vorhandenen Routen kommen als exakte Methode/Pfad-
+Paare in die Allowlist:
+
+```
+GET  /backups
+POST /backups
+```
+
+`GET` ist nötig, weil `useBackups.create()` nach erfolgreichem `POST` seinen
+Stand über den vorhandenen Leseweg aktualisiert. Insbesondere bleiben
+`POST /backups/{name}/restore`, Instrumente, Kurse und alle übrigen
+Schreibwege gesperrt. Keine Präfixregel und keine allgemeine Ausnahme für
+„Backup-Routen".
+
+### Erwartete Flächen
+
+| Datei/Fläche | Änderung |
+|---|---|
+| `app/migration_guard.py` | genau die zwei Allowlist-Paare |
+| vorhandene Guard-/Endpoint-Tests | erlaubte Methoden und weiterhin gesperrter Restore-/Fachweg |
+| `dashboard/src/components/MigrationGate.vue` | Props für Zustand/Fehler/Erfolg, `backup`-Event und sekundärer Naive-Button |
+| `dashboard/src/components/AppGate.vue` | vorhandenes `useBackups()` verdrahten; kein zweiter HTTP-Weg |
+| `dashboard/src/i18n/{de,en}.ts` | Handlung, Erfolg und Fehlerkontext in beiden Sprachen |
+| vorhandene Gate-Tests | Klick, gegenseitige Sperre, Erfolg/Fehler und DE/EN |
+
+### Nicht-Ziele
+
+- Keine Backup-Liste, Restore-Auswahl oder Einstellungsansicht im Gate.
+- Kein automatisches Backup und kein automatisches Weiterlaufen zur Migration.
+- Keine Änderung an Rotation, Fingerprint, Restore oder Migrationsfachlogik.
+- Keine neue Komponente im UX-Fundament; der Identitätsumzug bleibt ein
+  StockInfo-Fachthema.
+
+### Pflichtorakel
+
+1. Bei offener Migration liefern nur `GET /backups` und `POST /backups` aus
+   dieser Fachgruppe Erfolg; Restore und ein anderer Schreibweg bleiben 503.
+2. Entfernt man eines der zwei Allowlist-Paare oder ersetzt man die exakten
+   Paare durch eine zu breite Backup-Präfixregel, wird ein Test rot.
+3. Ein Klick erzeugt genau eine Sicherung und keinen Confirm-Request; während
+   des Laufs sind beide Handlungen gegeneinander verriegelt.
+4. Erfolg und Fehler stehen im Gate in DE und EN; kein sichtbarer Satz ist im
+   Template hartkodiert.
+5. Claudes Browserlauf benutzt eine isolierte Datenbank, legt über den
+   sichtbaren Knopf tatsächlich eine Sicherung an und prüft die Oberfläche in
+   beiden Sprachen. Die Migration muss für diese Abnahme nicht ausgeführt
+   werden.
+
+Der Umfang bleibt bei der vorhandenen Time-box von 1–2 Stunden. Falls die
+Verdrahtung eine neue API, ein neues Backup-Composable oder eine neue
+Zustandsmaschine verlangen würde, ist das ein Scope-Checkpoint statt ein
+Nachtrag.
