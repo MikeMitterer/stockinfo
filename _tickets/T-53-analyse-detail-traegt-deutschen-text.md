@@ -319,9 +319,9 @@ ist ungleich `null` — sie nahm den Zweig mit leerer Zahl. Jetzt `typeof`.
 
 ## Codex-Review Runde 1 · `approved` (2026-09-02)
 
-Der Fachstand `05823a7` erfüllt Variante A. Die rein mechanische
-Sprachkorrektur im neuen TypeScript-Test ist im Review-Commit `eee59e9`
-enthalten; Produktverhalten und Budget ändern sich dadurch nicht.
+Der Fachstand `05823a7` erfüllt Variante A. Die rein mechanischen
+Sprachkorrekturen in den berührten Tests sind in den Review-Commits `eee59e9`
+und `57bfaa4` enthalten; Produktverhalten und Budget ändern sich dadurch nicht.
 
 Unabhängige Gegenprobe:
 
