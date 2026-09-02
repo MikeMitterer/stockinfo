@@ -4,11 +4,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ref } from 'vue'
 
 /** Die Stufen, die der Lauf gemeldet hat — je Fall gesetzt. */
-const gemessen = vi.hoisted(() => ({
+const measured = vi.hoisted(() => ({
   stages: [] as Record<string, unknown>[],
 }))
 
-const VORGABE = [
+const DEFAULT_STAGES = [
   { role: 'quotes', source: 'yaml-file', seconds: 0.5, status: 'ok', detail: null },
   { role: 'daily', source: 'yaml-file', seconds: 0, status: 'skipped', detail: null },
 ]
@@ -19,7 +19,7 @@ vi.mock('../../src/composables/useAnalysis', () => ({
       symbol: 'EUNL.DE',
       isin: 'IE00B4L5Y983',
       total: 1.2,
-      stages: gemessen.stages,
+      stages: measured.stages,
     }),
     loading: ref(false),
     error: ref(null),
@@ -31,12 +31,12 @@ import AnalysisPanel from '../../src/components/AnalysisPanel.vue'
 import { i18n } from '../../src/i18n'
 
 /** Der gerenderte Text — die Verdrahtung ist in jedem Fall dieselbe. */
-const gerendert = (): string =>
+const rendered = (): string =>
   mount(AnalysisPanel, { global: { plugins: [i18n] }, props: { instruments: [] } }).text()
 
 describe('AnalysisPanel', () => {
   beforeEach(() => {
-    gemessen.stages = [...VORGABE]
+    measured.stages = [...DEFAULT_STAGES]
     i18n.global.locale.value = 'en'
   })
 
@@ -91,30 +91,30 @@ describe('AnalysisPanel', () => {
     ['de', 3, '3 Zeilen'],
     ['en', 1, '1 row'],
     ['en', 3, '3 rows'],
-  ])('setzt die Zeilenzahl in %s für %i zusammen', (locale, rows, erwartet) => {
+  ])('setzt die Zeilenzahl in %s für %i zusammen', (locale, rows, expected) => {
     i18n.global.locale.value = locale as 'de' | 'en'
-    gemessen.stages = [{ ...VORGABE[0], rows }]
+    measured.stages = [{ ...DEFAULT_STAGES[0], rows }]
 
-    expect(gerendert()).toContain(erwartet)
+    expect(rendered()).toContain(expected)
   })
 
   it.each([
     ['de', 'Gattung index wird nicht geführt'],
     ['en', 'instrument type index is not supported'],
-  ])('nennt die nicht geführte Gattung in %s', (locale, erwartet) => {
+  ])('nennt die nicht geführte Gattung in %s', (locale, expected) => {
     i18n.global.locale.value = locale as 'de' | 'en'
-    gemessen.stages = [{ ...VORGABE[0], status: 'empty', instrument_type: 'index' }]
+    measured.stages = [{ ...DEFAULT_STAGES[0], status: 'empty', instrument_type: 'index' }]
 
-    expect(gerendert()).toContain(erwartet)
+    expect(rendered()).toContain(expected)
   })
 
   // Die Gegenprobe: Was **weiter oben in der Kette** entstand, bleibt
   // wortgleich — diese Grenze ist bewusst nicht verschoben.
   it('reicht die Meldung aus der Kette unverändert durch', () => {
-    gemessen.stages = [
-      { ...VORGABE[0], status: 'empty', detail: 'openfigi führt EUNL.DE nicht' },
+    measured.stages = [
+      { ...DEFAULT_STAGES[0], status: 'empty', detail: 'openfigi führt EUNL.DE nicht' },
     ]
 
-    expect(gerendert()).toContain('openfigi führt EUNL.DE nicht')
+    expect(rendered()).toContain('openfigi führt EUNL.DE nicht')
   })
 })
