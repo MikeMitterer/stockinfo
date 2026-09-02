@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-53-analyse-detail-traegt-deutschen-text.md`
 - `handoff_commit`: `05823a7`
 - `review_round`: `1`
