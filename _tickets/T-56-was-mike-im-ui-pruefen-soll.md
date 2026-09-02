@@ -76,8 +76,10 @@ Port und eigener Fachdatei unter ihrem `/data`:
     ihm allein lässt sich der Handelsplatz nicht ableiten."; EN „Adding failed
     — The symbol has no exchange suffix — the trading venue cannot be derived
     from it alone." Im selben Handgriff fiel auf, dass der Titel nach einem
-    Live-Sprachwechsel deutsch blieb; dieser kleine lokale Befund wird vor der
-    finalen Übergabe direkt in T-56 korrigiert und wiederholt.
+    Live-Sprachwechsel deutsch blieb. Das war als kleiner lokaler Befund
+    eingeplant — **das Inventar hat ihn aus diesem Repo herausgeführt.** Die
+    Ursache liegt im Vertrag von `@mmit/ux-foundation`; siehe Runde 5 und
+    Frage **G**.
 [^kette]: **Wortlaut geschärft.** Ich hatte „nennt die antwortende Quelle"
     geschrieben — das sagt T-43 nirgends zu. Seine Zeile `#2` verlangt „die
     laufende Kurskette steht geordnet dort", und genau das steht dort:
@@ -120,9 +122,10 @@ Wiederholungsbeleg bleiben gemeinsam in dieser Abnahme.
 
 ## Was nur Mike beantworten kann
 
-Sechs Fragen. Keine davon ist eine Prüfung, ob etwas funktioniert — das steht
-oben und ist dann bereits belegt. Es sind Urteile, und ein *„nein"* ist keine
-Fehlermeldung, sondern eine Produktentscheidung.
+**Sieben** Fragen — sechs aus dem Zuschnitt, die siebte aus dem Lauf. Keine
+davon ist eine Prüfung, ob etwas funktioniert; das steht oben und ist dort
+belegt. Es sind Urteile, und ein *„nein"* ist keine Fehlermeldung, sondern
+eine Produktentscheidung.
 
 | # | Wo | Die Frage | Human |
 |---|---|---|---|
@@ -132,6 +135,7 @@ Fehlermeldung, sondern eine Produktentscheidung.
 | **D** | Restore-Bestätigung aus Punkt 7 | Ist die Warnung deutlich genug für etwas, das Daten überschreibt — oder zu beiläufig? | |
 | **E** | Statuszeile | Nützlich oder Lärm? | |
 | **F** | die Oberfläche als Ganzes | Was fällt dir auf, das in keinem der Punkte steht? | |
+| **G** | `ux-foundation`, `NotifyOptions` | Nach einem Sprachwechsel **ohne Neuladen** bleibt die Überschrift eines Hinweises in der alten Sprache; der Text wechselt mit. Die kleinste Korrektur ist `title: string \| (() => string)` im Fundament. **Soll es das können — oder ist der Fall selten genug, um ihn zu lassen?** Begründung in Runde 5 | |
 
 **A** ist die einzige Frage, hinter der schon eine Entscheidung von mir steht:
 Ich habe den Namen nicht angefasst, weil eine Quelle wiederzugeben etwas
@@ -473,11 +477,8 @@ beim nächsten `npm install` weg — und sie bedient weitere Apps.
 
 Jeder wäre ein Umweg um eine Ursache, die woanders liegt.
 
-### Die siebte Frage an Mike
+### Die siebte Frage
 
-| # | Wo | Die Frage | Human |
-|---|---|---|---|
-| **G** | `ux-foundation`, `NotifyOptions` | Nach einem Sprachwechsel **ohne Neuladen** bleibt die Überschrift eines Hinweises in der alten Sprache; der Text wechselt mit. Die kleinste Korrektur ist `title: string \| (() => string)` im Fundament. **Soll das Fundament das können — oder ist der Fall selten genug, um ihn zu lassen?** | |
-
-Das ist bewusst eine Frage an Mike und keine an Codex: Es geht um ein
-geteiltes Deliverable, das weitere Apps bedient, nicht um StockInfo-Fachlogik.
+Der Befund steht als **Frage G** oben bei den anderen — er ist bewusst eine
+Frage an Mike und keine an Codex: Es geht um ein geteiltes Deliverable, das
+weitere Apps bedient, nicht um StockInfo-Fachlogik.
