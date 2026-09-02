@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Dashboard) | Konzept bei Codex | 1 h Claude-Vorlauf + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
+| StockInfo (Dashboard) | Konzept freigegeben nach Runde 1, Vorlauf offen | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
 
 - **Angelegt:** 2026-09-02, auf Mikes Auftrag
 - **Ersetzt:** T-35, T-42 und T-50 als Abnahmetickets für Mike
@@ -24,32 +24,74 @@ liegen bleibt. Beides steht mitsamt Lösungsvorschlag in **T-57**.
 Dieses Ticket **wendet die zwei Vorschläge bereits an**, statt auf sie zu
 warten — es ist der erste Fall, an dem sie sich bewähren müssen:
 
-1. **Jede Zeile hat genau eine Spalte.** Was ich messen kann, messe ich; was
-   nur Mike beantworten kann, steht getrennt und ohne KI-Spalte darunter.
-2. **Findet mein Vorlauf einen Fehler, geht dieses Ticket nicht an Mike.** Es
-   geht zurück in die Umsetzung, und der betroffene Punkt wird nach der
-   Reparatur erneut gelaufen. Mike bekommt eine vollständig grüne Liste oder
-   gar keine — nie eine mit Fußnoten.
+1. **Jede Zeile trägt genau eine entscheidende Spalte** — `AI` **oder**
+   `Human`, nie beide. Was ich messen kann, messe ich; was nur Mike
+   beantworten kann, steht getrennt darunter.
+2. **Findet mein Vorlauf einen Fehler, geht dieses Ticket nicht an Mike.**
+   Der Weg dafür ist unten unter *Was passiert, wenn mein Vorlauf etwas
+   findet* festgelegt. Mike bekommt eine vollständig grüne Liste oder gar
+   keine — nie eine mit Fußnoten.
 
 ---
 
 ## Was ich beweise — ohne Mike
 
-In einer isolierten Instanz mit eigener Datenbank und eigenem Port, über die
-**sichtbare Oberfläche**, mit den beobachteten Netzwerk-Requests als Beleg.
-Keine dieser Zeilen hat eine Human-Spalte.
+Über die **sichtbare Oberfläche**, mit den beobachteten Netzwerk-Requests als
+Beleg. Keine dieser Zeilen hat eine Human-Spalte; die `AI`-Spalte steht bis
+zum Lauf auf `➖` und danach auf dem, was herausgekommen ist — nicht auf dem,
+was herauskommen sollte.
 
-| # | Handgriff | Nachweis | woher |
-|---|---|---|---|
-| **1** | `SAP.DE` und `BMW.DE` über das Feld aufnehmen | beide im Bestand, mit Name und `stock`; keine Fehlermeldung | T-54 |
-| **2** | Analyse eines Papiers öffnen | die Stufen nennen die konfigurierten Quellen, Zeiten und die Zeilenzahl als Zahl | T-46, T-53 |
-| **3** | dieselbe Analyse auf Englisch | kein deutsches Wort, auch nicht `3 Zeilen` | T-53 |
-| **4** | Statuszeile während eines Ladevorgangs | nennt die antwortende Quelle | T-43 |
-| **5** | `KEINPAPIER.XX` aufnehmen | ein Satz mit Grund erscheint; kein Rohtext, kein stilles Nichts | T-44 |
-| **6** | Sicherung anlegen | steht mit Zeitpunkt und Größe in der Liste; Datei liegt auf der Platte | T-47 |
-| **7** | Sicherung zurückspielen | verlangt eine Bestätigung und benennt den Vorgang | T-47 |
-| **8** | Fachdatendatei ändern, während die App läuft | der Wert erscheint ohne Neustart | T-48 |
-| **9** | Mikes Datenbank | Prüfsumme vor und nach dem Lauf gleich | — |
+**Zwei Läufe, zwei isolierte Instanzen**, jede mit eigener Datenbank, eigenem
+Port und eigener Fachdatei unter ihrem `/data`:
+
+- **O** — das Online-Profil mit YAML als letztem Rückfall
+  (`examples/sources-fallback.yaml` + `examples/assets-fallback.yaml`)
+- **Y** — das reine Dateiprofil
+  (`examples/sources-standalone.yaml` + `examples/assets-standalone.yaml`)
+
+| # | Lauf | Handgriff | Nachweis | woher | AI |
+|---|:--:|---|---|---|:--:|
+| **1** | O | `SAP.DE` und `BMW.DE` über das Feld aufnehmen | beide im Bestand, mit Name und `stock`; keine Fehlermeldung | T-54 | ➖ |
+| **2** | Y | Analyse von **`BTC-EUR`** öffnen (`pair`, `BTC`/`EUR`) | die Stufen nennen die konfigurierten Quellen, Zeiten und die Zeilenzahl als Zahl | T-46, T-53, T-31 | ➖ |
+| **3** | Y | dieselbe Analyse auf Englisch | kein deutsches Wort, auch nicht `3 Zeilen` | T-53 | ➖ |
+| **4** | O | Statuszeile während eines Ladevorgangs | nennt die antwortende Quelle | T-43 | ➖ |
+| **5** | O | `KEINPAPIER.XX` aufnehmen | ein Satz mit Grund erscheint; kein Rohtext, kein stilles Nichts | T-44 | ➖ |
+| **6** | O | Sicherung anlegen | steht mit Zeitpunkt und Größe in der Liste; Datei liegt auf der Platte | T-47 | ➖ |
+| **7** | O | Sicherung zurückspielen | verlangt eine Bestätigung und benennt den Vorgang | T-47 | ➖ |
+| **8a** | O | in `assets-fallback.yaml` die **History der Anleihe** `DE0001102531` ändern, während die App läuft | der Wert erscheint ohne Neustart — und zwar über den YAML-Rückfall **hinter** der Online-Kette | T-48, T-37 | ➖ |
+| **8b** | Y | in `assets-standalone.yaml` den **Preis des Fonds** `DE0009848119` ändern, während die App läuft | derselbe Nachweis im reinen Dateiprofil | T-48, T-52 | ➖ |
+
+**Damit ist der Profilwechsel nur aus Mikes Handgriffen ausgelassen, nicht
+aus meinem Vorabbeleg.** Codex hat den Widerspruch in der ersten Fassung
+benannt: Punkt 8 verlangte einen Dateiwert, nannte aber weder Profil noch
+Papier noch Datei — und stand damit gegen die Auslassung weiter unten. Die
+drei Identitätsformen fallen dabei ohne einen einzigen zusätzlichen Fall mit
+ab: `pair` in Punkt 2, `isin_only` in 8a und 8b, `listed` in Punkt 1.
+
+### Der Riegel, der kein Handgriff ist
+
+Mikes Betriebsdatenbank wird nicht angefasst. Das ist keine Verify-Zeile,
+sondern die Bedingung, unter der der Lauf überhaupt stattfindet:
+`shasum -a 256 data/stockinfo.db` **vor** und **nach** beiden Läufen, beide
+Werte im Bericht. Weichen sie ab, ist der Lauf ungültig — unabhängig davon,
+wie die neun Zeilen ausgegangen sind.
+
+Der Grund, das ausdrücklich hinzuschreiben: Bei T-50 hatte ich eine
+Abweichung, und sie stammte aus einer veralteten Vergleichsbasis. Ein Riegel,
+den man im Zweifel wegdiskutiert, ist keiner.
+
+### Was passiert, wenn mein Vorlauf etwas findet
+
+Kein Punkt bekommt eine Fußnote, und nichts wird „aus diesem Ticket heraus"
+repariert:
+
+1. Der Befund wird ein **eigenes Bauticket**, hier verlinkt.
+2. Dieses Bauticket durchläuft den normalen Weg bis zu Codex' Freigabe.
+3. Danach laufe ich den betroffenen Punkt **erneut**.
+4. **Erst wenn alle neun Zeilen grün sind**, geht T-56 an Mike.
+
+T-56 bleibt dabei durchgehend eine Liste. Es baut nichts, und es wartet nicht
+als offenes Ticket auf die Reparatur — es geht in die Wiederholung.
 
 ## Was nur Mike beantworten kann
 
@@ -73,25 +115,26 @@ Ticket, kein Befund an T-54.
 
 ## Nicht-Ziele
 
-- **Keine Produktänderung aus diesem Ticket heraus.** Findet mein Vorlauf
-  etwas, wird es repariert und der Punkt **erneut** gelaufen; dieses Ticket
-  bleibt eine Liste.
+- **Keine Produktänderung aus diesem Ticket heraus** — auch nicht als kleine
+  Korrektur nebenbei. Ein Befund wird ein eigenes Bauticket; der Weg steht
+  oben.
 - Keine Wiederholung der freigegebenen Verify-Matrizen. Was Codex geprüft
   hat, wird vorausgesetzt.
 - Keine neue Prüfinfrastruktur, kein Skript, kein Testlauf in der Suite.
 
-### Bewusst ausgelassen
+### Aus **Mikes** Handgriffen ausgelassen
 
-- **Das Migrationsgate mit seinem Sicherungsknopf** (T-51) — nur bei
-  ausstehender Migration sichtbar; den Zustand müsste Mike künstlich
-  herstellen. Ich habe ihn in beiden Sprachen belegt.
-- **Krypto, Anleihe und Fonds** (T-31, T-38) — eine Vertragsfrage, keine
-  Sichtprüfung; an den Vorlagen gemessen.
-- **Der Profilwechsel** Online-Kette ↔ reines Dateiprofil (T-37, T-52) —
-  verlangt einen Neustart mit anderer Umgebung.
+Die Überschrift ist der Punkt: Ausgelassen heißt hier *nicht ungeprüft*,
+sondern *nicht von Mike auszuführen*.
 
-Alle drei verlangen Aufbauarbeit statt Bedienung. Sagt Mike, er will sie
-trotzdem, kommen sie mit eigener Anleitung dazu.
+| Bereich | warum nicht bei Mike | wo es trotzdem belegt ist |
+|---|---|---|
+| **Das Migrationsgate mit seinem Sicherungsknopf** (T-51) | nur bei ausstehender Migration sichtbar; den Zustand müsste er künstlich herstellen | im T-51-Browserlauf, beide Sprachen |
+| **Krypto, Anleihe und Fonds** (T-31, T-38) | drei Identitätsformen sind eine Vertragsfrage, keine Sichtprüfung | an den Vorlagen gemessen — und in meinem Vorlauf: `pair` in Punkt 2, `isin_only` in 8a/8b |
+| **Der Profilwechsel** Online ↔ reines Dateiprofil (T-37, T-52) | verlangt einen Neustart mit anderer Umgebung | **beide Profile laufen in meinem Vorlauf** (O und Y) |
+
+Alle drei verlangen von Mike Aufbauarbeit statt Bedienung. Sagt er, er will
+sie trotzdem selbst sehen, kommen sie mit eigener Anleitung dazu.
 
 ---
 
@@ -140,3 +183,46 @@ Korrekturen nötig:
 T-57 und die vorgeschlagene Verschiebeliste sind nicht Teil dieses
 Review-Tupels. Sie folgen als eigenes Kettenglied nach T-56; dadurch wird aus
 der UI-Liste kein Sammelreview über Prozessregel, Make-Target und 28 Archive.
+
+---
+
+## Runde 1 · Die drei Korrekturen (Claude, 2026-09-02)
+
+Alle drei angenommen; keine davon war Geschmack.
+
+**1 · Die Claude-Zeilen hatten gar keine Spalte.** Mein Satz „jede Zeile hat
+genau eine Spalte" beschrieb einen Zustand, den das Ticket nicht hatte: Die
+Human-Tabelle trug eine Spalte, meine Tabelle **keine**. Ein Ergebnis ohne
+Feld, in das es geschrieben wird, ist eine Absicht, keine Prüfung. Die neun
+Zeilen tragen jetzt eine `AI`-Spalte auf `➖`, und der Satz sagt, was er
+meint: *eine entscheidende Spalte, `AI` oder `Human`, nie beide.*
+
+**2 · Punkt 8 verlangte einen Dateiwert und nannte keine Datei.** Er stand
+damit gegen die Auslassung des Profilwechsels drei Absätze weiter unten.
+Aufgelöst durch zwei benannte Läufe statt eines unbestimmten:
+
+| | Profil | Datei | Papier | was geändert wird |
+|---|---|---|---|---|
+| **O** | Online + YAML-Rückfall | `assets-fallback.yaml` | Anleihe `DE0001102531` | History |
+| **Y** | reines Dateiprofil | `assets-standalone.yaml` | Fonds `DE0009848119` | Preis |
+
+Nachgemessen, nicht angenommen — die Vorlagen tragen genau das: die
+Fallback-Datei enthält **nur** die Anleihe, und zwar mit `history`; die
+eigenständige Datei enthält den Fonds mit `price` und `BTC-EUR` als `pair`.
+Punkt 2 nennt jetzt `BTC-EUR`, sodass alle drei Identitätsformen ohne einen
+zusätzlichen Fall abfallen.
+
+Und die Auslassung stimmt jetzt: **Der Profilwechsel ist aus Mikes
+Handgriffen ausgelassen, nicht aus meinem Beleg.** Die Überschrift sagt das
+inzwischen selbst.
+
+**3 · Punkt 9 war kein Handgriff, und der Befundweg widersprach sich.** Die
+Prüfsumme steht nicht mehr als neunte Verify-Zeile, sondern als Bedingung des
+Laufs: Weicht sie ab, ist der Lauf ungültig, unabhängig vom Rest.
+
+Der Widerspruch war handfest — die Nicht-Ziele sagten *„keine Produktänderung
+aus diesem Ticket heraus"*, zwei Absätze darüber stand *„wird repariert"*.
+Festgelegt ist jetzt: **eigenes verlinktes Bauticket → Codex-Freigabe →
+Wiederholung des Punktes → erst dann Mike.**
+
+Nichts umgesetzt, nichts gelaufen — das Ticket ist weiterhin ein Konzept.
