@@ -63,3 +63,86 @@ und war in T-50 ausdrücklich ausgeschlossen.
 | **2** | Antwort | kein deutscher Fließtext mehr in der Nutzlast | ➖ | |
 | **3** | Oberfläche EN und DE | die Zeile liest sich in beiden Sprachen vollständig | ➖ | |
 | **4** | Mutant | ein Katalogeintrag entfernt rötet einen Test | ➖ | |
+
+---
+
+## Das Inventar (Claude, 2026-09-02, vor dem ersten Edit)
+
+Gezählt wurde **jede** Rückgabe von `_classify`, nicht die eine gefundene
+Stelle. Sie zerfallen in drei Sorten:
+
+| Antwort | `detail` heute | Sorte |
+|---|---|---|
+| `ResolvedInstrument` | `value.symbol` | **Wert** |
+| `NotFound` | `None` | — |
+| `Unavailable` | `value.error` | **Meldung der Quelle** |
+| `NotResponsible` | `value.reason` | **Meldung der Quelle** |
+| `Unsupported` | `f"Gattung {typ} wird nicht geführt"` | **Prosa des Hosts** |
+| `SourceAnswer`, gestört | `"Quelle nicht erreichbar"` | **Prosa des Hosts** |
+| `Unavailable` ohne `error` | `"Quelle nicht erreichbar"` | **Prosa des Hosts** |
+| `SourceAnswer` mit Reihe | `f"{n} Zeilen"` | **Prosa des Hosts** |
+
+**Vier Stellen komponiert der Host selbst**, und nur die sind hier Gegenstand.
+Die Meldungen der Quellen (`openfigi: HTTP 503`) bleiben, wie sie sind: Sie
+gehören der Quelle, nicht uns; sie zu übersetzen wäre ein anderes Ticket und
+eine andere Frage.
+
+---
+
+## Scope-Vertrag
+
+### Die fachliche Änderung
+
+`detail` trägt danach nur noch **Werte und fremde Meldungen**. Was der Host zu
+sagen hat, sagt er in Feldern:
+
+| Fall | statt Prosa |
+|---|---|
+| Reihe geliefert | `rows: int` — die Zahl |
+| Gattung nicht geführt | `instrument_type: str` — die Gattung |
+| Quelle nicht erreichbar | **nichts** — `status: error` sagt es bereits |
+
+Die dritte Zeile ist die interessanteste: `"Quelle nicht erreichbar"` wiederholt
+nur, was `status` schon trägt. Ein Feld dafür wäre eine dritte Fassung
+derselben Aussage.
+
+**`/analyze` steht nicht im versionierten Kernvertrag** (`contract/` kennt es
+nicht) — die Nutzlast gehört der App. Zwei zusätzliche, optionale Felder sind
+für vorhandene Konsumenten rückwärtsverträglich.
+
+### Erwartete Flächen
+
+| Datei | Was |
+|---|---|
+| `app/services/analyzer.py` | `_classify` liefert Werte statt Sätze |
+| `app/models.py` | `AnalyzeStage` bekommt `rows` und `instrument_type` |
+| `dashboard/src/types.ts` | dieselben zwei Felder |
+| `dashboard/src/components/AnalysisPanel.vue` | setzt den Satz zusammen |
+| `dashboard/src/i18n/{de,en}.ts` | die zwei Sätze, mit Plural |
+
+### Budget
+
+| | Grenze |
+|---|---:|
+| Produkt (Backend + Dashboard) | ≤ 70 |
+| Tests | ≤ 90 |
+
+Gezählt als hinzugefügte Zeilen aus `git diff --numstat` gegen den
+Abzweigpunkt, ohne Ticket- und `STATUS.md`-Dateien.
+
+### Pflichtorakel
+
+1. **Die Nutzlast trägt keinen deutschen Satz mehr** — geprüft an der Antwort,
+   nicht am Quelltext.
+2. **Beide Sprachen lesen sich vollständig**, Singular **und** Plural: `1 Zeile`
+   gegen `3 Zeilen`, `1 row` gegen `3 rows`. Ohne den Singular bewiese der Test
+   nur, dass irgendein Text erscheint.
+3. **Ein entfernter Katalogeintrag rötet einen Test.**
+4. **Die fremde Meldung bleibt unangetastet:** Ein `Unavailable` mit `error`
+   erreicht die Oberfläche wortgleich.
+
+### Nicht-Ziele
+
+- Meldungen der Quellen übersetzen oder normieren.
+- `status` ändern, neue Stufen einführen, den Kernvertrag anfassen.
+- Die Fehlerwege aus T-44 oder die Kennungsfrage aus T-54 anfassen.
