@@ -134,11 +134,14 @@ _UNREACHABLE = "Quelle nicht erreichbar"
 def _classify(value: Any) -> tuple[str, str | None, int | None, str | None]:
     """Was die Antwort einer Quelle bedeutet — Status, Grund, Werte.
 
-    **`detail` trägt keinen Satz des Hosts.** Was wir selbst zu sagen haben,
-    steht als Wert daneben: die Zeilenzahl als Zahl, die nicht geführte Gattung
-    als Gattung. Den Satz baut die Oberfläche, und nur sie kennt die Sprache
-    ihres Lesers. Was von einer **Quelle** kommt — `openfigi: HTTP 503` —
-    bleibt unverändert in `detail`: Es gehört ihr, nicht uns.
+    **Diese Stelle komponiert keinen Satz mehr.** Was der Analyzer selbst zu
+    sagen hat, steht als Wert daneben: die Zeilenzahl als Zahl, die nicht
+    geführte Gattung als Gattung. Den Satz baut die Oberfläche, und nur sie
+    kennt die Sprache ihres Lesers.
+
+    **`detail` ist damit nicht allgemein frei von Host-Text:** Was die Kette
+    weiter oben in `reason`/`error` gelegt hat, reicht diese Funktion
+    unverändert durch — eine Vertragsfrage, in T-53 bewusst nicht entschieden.
 
     „Quelle nicht erreichbar" entfällt ersatzlos: `status` sagt das bereits,
     und ein Feld dafür wäre eine dritte Fassung derselben Aussage.

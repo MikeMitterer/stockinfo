@@ -329,7 +329,7 @@ export interface AnalyzeStage {
   source: string
   seconds: number
   status: string
-  /** Was die **Quelle** gesagt hat — nie ein Satz des Hosts. */
+  /** Was die Kette gemeldet hat — Freitext, unübersetzt. */
   detail: string | null
   /** Zeilen einer Tagesreihe; den Satz baut die Oberfläche. */
   rows: number | null

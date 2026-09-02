@@ -44,12 +44,13 @@ async function run(): Promise<void> {
 /**
  * Der Zusatz hinter dem Status — **hier** entsteht der Satz, nicht im Server.
  *
- * Die Nutzlast trägt Werte: die Zeilenzahl als Zahl, die nicht geführte
- * Gattung als Gattung. `detail` dagegen ist, was die **Quelle** gesagt hat,
- * und bleibt unübersetzt: Es gehört ihr.
+ * Die Nutzlast trägt Werte; `detail` dagegen ist Freitext aus der Kette und
+ * bleibt unübersetzt.
  */
 function note(stage: AnalyzeStage): string | null {
-  if (stage.rows !== null) return t('analysis.rows', stage.rows, { named: { count: stage.rows } })
+  // `typeof`, nicht `!== null`: Ein fehlendes Feld ist `undefined` und damit
+  // ungleich `null` — es nähme sonst diesen Zweig mit leerer Zahl.
+  if (typeof stage.rows === 'number') return t('analysis.rows', stage.rows, { named: { count: stage.rows } })
   if (stage.instrument_type) return t('analysis.unsupported', { type: stage.instrument_type })
   return stage.detail
 }

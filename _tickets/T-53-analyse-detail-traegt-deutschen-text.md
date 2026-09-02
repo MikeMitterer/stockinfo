@@ -59,10 +59,10 @@ und war in T-50 ausdrücklich ausgeschlossen.
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Inventar | alle Stellen, die `detail` füllen, sind aufgezählt und eingeordnet | ➖ | |
-| **2** | Antwort | kein deutscher Fließtext mehr in der Nutzlast | ➖ | |
-| **3** | Oberfläche EN und DE | die Zeile liest sich in beiden Sprachen vollständig | ➖ | |
-| **4** | Mutant | ein Katalogeintrag entfernt rötet einen Test | ➖ | |
+| **1** | Inventar | alle Stellen, die `detail` füllen, sind aufgezählt und eingeordnet | ✅ | |
+| **2** | Antwort | kein deutscher Fließtext mehr in der Nutzlast | ◑ [^grenze] | |
+| **3** | Oberfläche EN und DE | die Zeile liest sich in beiden Sprachen vollständig | ✅ | |
+| **4** | Mutant | ein Katalogeintrag entfernt rötet einen Test | ✅ | |
 
 ---
 
@@ -252,3 +252,65 @@ Damit gilt für den Abschluss:
 
 Das bestehende Budget bleibt unverändert. Kommentarpräzisierungen sind
 zeilenneutral zu halten; sie begründen keine neue Produktschicht.
+
+
+---
+
+## Runde 1 · Umgesetzt, Variante A (Claude, 2026-09-02)
+
+### Was der Analyzer nicht mehr sagt
+
+| Fall | vorher | jetzt |
+|---|---|---|
+| Reihe geliefert | `"253 Zeilen"` | `rows: 253` |
+| Gattung nicht geführt | `"Gattung index wird nicht geführt"` | `instrument_type: "index"` |
+| Quelle nicht erreichbar | `"Quelle nicht erreichbar"` | — `status: error` sagt es |
+
+Den Satz baut die Oberfläche, mit Plural. **`detail` bleibt Freitext aus der
+Kette** und wird unverändert durchgereicht; die Kommentare sagen das jetzt
+genau so, statt mehr zu behaupten.
+
+### Die Belege
+
+**Nutzlast** — Werte statt Sätze:
+
+```
+daily      yfinance      ok     detail=None  rows=253  type=None
+resolvers  yahoo-search  empty  detail=None  rows=None type=index
+```
+
+**Beide Sprachen im Browser**, dieselbe Messung:
+
+```
+DE   Tagesreihe  yfinance  0.30s  geliefert · 253 Zeilen
+EN   Daily series yfinance 0.28s  answered · 253 rows
+```
+
+Daneben in **beiden** Ansichten unverändert `openfigi führt EUNL.DE nicht` —
+die Grenze, die dieses Ticket nicht verschiebt.
+
+**Singular und Plural** sind eigene Fälle: Ohne den Singular fiele `1 Zeilen`
+niemandem auf.
+
+| Mutant | rötet |
+|---|---|
+| `rows` aus `de.ts` entfernt | beide deutschen Zeilenzahl-Fälle |
+| `unsupported` aus `en.ts` entfernt | den englischen Gattungsfall |
+
+**Ein Fehler, den erst der Test gefunden hat:** `note()` prüfte
+`stage.rows !== null`. Eine Stufe **ohne** das Feld trägt `undefined`, und das
+ist ungleich `null` — sie nahm den Zweig mit leerer Zahl. Jetzt `typeof`.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produkt | ≤ 70 | **70** |
+| Tests | ≤ 90 | **72** |
+
+**Suite:** 1033 Backend · 302 Plugin-API · 45 Beispiel · **313** Dashboard
+(+7). Ruff und `vue-tsc` sauber.
+
+[^grenze]: **Teilweise, und die Grenze ist dokumentiert.** Der Analyzer
+    komponiert keinen Satz mehr. Was die Kette weiter oben in `reason`/`error`
+    legt — 26 gezählte Stellen in Adaptern, Kapsel, Resolver und eingebauten
+    Plugins — reicht er unverändert durch. Das zu ändern hieße, den
+    Plugin-Vertrag umzustellen; Variante A schließt das aus.
