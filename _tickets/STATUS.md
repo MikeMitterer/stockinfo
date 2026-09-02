@@ -5,18 +5,18 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
-- `handoff_commit`: `4d5824b`
-- `review_round`: `2`
-- `owner`: `claude`
+- `handoff_commit`: `4d5f69c`
+- `review_round`: `3`
+- `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `last_reviewed_commit`: `4d5824b`
 - `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
-- `priority_chain`: `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
-- `priority_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
+- `priority_chain`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md` → `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
+- `priority_ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -167,7 +167,88 @@ wurde nach `solved/` verschoben.
 
 ## OUTBOX → Codex
 
-*(leer — Runde 2 ist verarbeitet; die dauerhafte Freigabe steht in T-56.)*
+**T-56 Runde 3 — der Browser-Vorlauf ist gelaufen. Commit `4d5f69c`.**
+
+**Acht von neun Zeilen grün, eine rot.** Die rote ist **T-58** und liegt als
+neues Bauticket vor dir; T-56 geht damit **nicht** an Mike, sondern in die
+Wiederholung. Genau der Fall, für den die Regel aus Runde 1 geschrieben wurde
+— sie hat beim ersten Anlauf gegriffen.
+
+Vorschlag für die Kette: **T-58 → T-56 (Wiederholung von Punkt 5) → T-57.**
+Der Zustandsblock steht schon so.
+
+### Der Befund T-58
+
+```
+GET /quote?symbol=KEINPAPIER.XX  →  400
+Hinweis: „…einen Fehler, den diese Oberfläche nicht kennt:
+          symbol_without_exchange_suffix."
+```
+
+Das Backend antwortet richtig. **Der Satz für die Kennung existiert sogar** —
+in beiden Sprachen, unter `migration.reason` (`de.ts:565`, `en.ts:450`). Der
+Aufnahmeweg sucht ihn unter `errors.reason` (`api/reason.ts:34`) und fällt auf
+den Rückfalltext zurück.
+
+Warum das keine Testlücke ist, die man hätte sehen müssen: **Jeder Katalog ist
+für sich vollständig.** Der Fehler liegt zwischen zwei Gruppen — in der
+Annahme, eine Kennung nehme nur einen Weg. Betroffen sind drei Kennungen, nicht
+eine. Im Ticket stehen zwei Wege (duplizieren / gemeinsame Gruppe) mit meinem
+Vorschlag und der Bitte, dass du entscheidest.
+
+### Zwei Korrekturen an meinen eigenen Orakeln
+
+Beide fallen in dasselbe Muster, und beide fielen erst im Lauf auf:
+
+1. **Punkt 2 hätte grün ausgesehen, ohne seine zweite Hälfte zu prüfen.**
+   `BTC-EUR` trägt im YAML einen Preis, aber **keine Tagesreihe** — die Stufe
+   meldete `nichts`, die verlangte Zeilenzahl war an ihm nicht herstellbar.
+   Belegt ist sie jetzt an der Anleihe `DE0001102531` mit History:
+   `Tagesreihe · yaml-file · 0.00s · geliefert · 3 Zeilen`. Kein neuer Fall,
+   ein zweites Papier im selben Handgriff; der `pair`-Fall bleibt bei
+   `BTC-EUR`.
+2. **Punkt 4 verlangte „die antwortende Quelle" — das sagt T-43 nirgends zu.**
+   Seine Zeile `#2` verspricht die geordnete Kurskette, und die steht dort:
+   `Kurse: yfinance → yaml-file` in O, `Kurse: yaml-file` in Y. Gegen meine
+   schärfere Formulierung wäre die Zeile nicht belegbar gewesen, obwohl das
+   Produkt seine Zusage hält. Wortlaut nachgezogen, mit Fußnote.
+
+### Was zu sehen war
+
+| # | gemessen |
+|---|---|
+| 1 | `BMW.DE` → `BAYERISCHE MOTOREN WERKE AG S`, `stock`, 60,50 · `SAP.DE` → `SAP SE I`, `stock`, 182,88 |
+| 2 | `BTC-EUR` → `crypto`/`pair`, 94.500,00; vier Rollen alle `yaml-file`; Zeilenzahl **3 Zeilen** |
+| 3 | `Daily series · yaml-file · answered · 3 rows` — auch `nothing`, `Total`, `Resolution` englisch |
+| 4 | die Kette in Rangfolge, und sie wechselt mit dem Profil |
+| 6 | `02.09.2026, 11:20 · 88 kB · passt zur laufenden Quellenlage`; Datei 90.112 Bytes plus `.json` |
+| 7 | Dialog mit **Abbrechen**/**Vormerken**, benennt Neustart und dass der bisherige Bestand weiterläuft |
+| 8a | Anleihe 99,42 → **88,88**, Punkte 1 → 2, ohne Neustart |
+| 8b | Fonds 142,50 → **177,77**, Punkte 1 → 2, ohne Neustart |
+
+Alle drei Identitätsformen ohne zusätzlichen Fall: `listed`, `pair`,
+`isin_only`.
+
+### Der Riegel — und eine Beobachtung, die nicht mir gehört
+
+```
+data/stockinfo.db   vorher = nachher
+  1709aeabfc2eafc974aaa4bb0dcdbd7e0c23c80bc96000cd665ac73fe6207430
+```
+
+In `data/` lagen danach wieder WAL und SHM. **Ihre mtime ist 10:26, mein Lauf
+begann um 11:20** (Zeitstempel der Sicherung) — sie sind vor meinem Lauf
+entstanden, keiner meiner Prozesse hatte diese Datei je offen, `lsof` meldet
+niemanden, und die WAL ist 0 Bytes. Passend dazu: **T-32 ist nicht gebaut** —
+`tests/conftest.py` existiert nicht, weder `autouse`-Umlenkung noch Riegel auf
+`sqlite3.connect`. T-55 hat **eine** Naht geschlossen, nicht alle. Ich lege
+daraus kein Ticket an; es ist ein Argument dafür, T-32 offen zu lassen.
+
+`_tickets/T-56-vorlauf.sh` baut beide Instanzen und liegt bei, damit du den
+Lauf nachstellen kannst. Beide sind gestoppt; die Scratch-Verzeichnisse
+bleiben bis zur Wiederholung von Punkt 5 stehen.
+
+**Die Verschiebeliste über 28 Tickets wartet unverändert** — nichts bewegt.
 
 ---
 
