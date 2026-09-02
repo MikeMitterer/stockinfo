@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `portfolio_review`
-- `ticket`: `T-51-gate-sperrt-die-sicherung-aus.md`
-- `handoff_commit`: `5c4afc8`
+- `phase`: `ready_for_codex`
+- `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
+- `handoff_commit`: `733e227`
 - `review_round`: `1`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-51-gate-sperrt-die-sicherung-aus.md`
 - `last_reviewed_commit`: `5c4afc8`
@@ -24,6 +24,30 @@ Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## Kontext
+
+**Die Blöcke unten sind ein Archiv, keine Arbeitsliste.** Das ist am
+2026-09-02 nachgetragen, nachdem ich sie selbst als offene Posten gelesen und
+Mike T-31, T-38 und T-51 als offen gemeldet hatte — alle drei waren längst
+freigegeben. Eine Entscheidungsnotiz wird nicht dadurch ungültig, dass sie
+erfüllt ist, aber sie hört auf, etwas zu verlangen. Was noch etwas verlangt,
+steht in dieser Tabelle mit **in Kraft**:
+
+| Block | Stand |
+|---|---|
+| Portfolio-Rebaseline 2026-08-27 (T-21 eingefroren) | **in Kraft** — T-21 bleibt eingefroren |
+| Portfolio-Bereinigung 2026-08-29 (T-28 verworfen) | **in Kraft** — aus T-28 entstehen keine Gates |
+| Gattung `fund`, 2026-08-29 | **in Kraft** — Produktregel, nicht Ticketauftrag |
+| T-46 Richtungsentscheidung 2026-09-01 | **in Kraft** als Produktregel: `/analyze` misst die konfigurierte Kette |
+| T-40 Universalisierung 2026-08-29 | **in Kraft** — T-40 ruht bis zu Mikes Kommando |
+| Menschliche Verifikation 2026-08-29 | **wird gerade eingelöst** — das dort angekündigte „frische, kurze Verify-Ticket" ist T-56 |
+| T-23 Installationsweg 2026-08-28 | erledigt — T-23 freigegeben |
+| Portfolio-Entscheidung 2026-08-28 (T-31 + T-38) | erledigt — T-31 Codex-Runde 7, T-38 Codex-Runde 2 |
+| T-37 Browser-Abnahme 2026-08-29 | erledigt — T-37 freigegeben, Runde 6 |
+| T-39 Reihenfolge 2026-08-29 | erledigt — T-39 freigegeben, Runde 2 |
+| T-41 Designfreigabe 2026-08-30 | erledigt — T-41 freigegeben, Runde 2 |
+| Portfolio-Nachträge 2026-08-31 (T-48, T-49, T-45) | erledigt — alle drei freigegeben |
+| T-50 Auftrag 2026-09-01 | erledigt — Lauf durchgeführt, fünf Befundtickets daraus abgearbeitet |
+| T-42 on hold 2026-08-31 · T-42 MVP-Abnahme 2026-08-31 | **überholt** — Mike am 2026-09-02: die UI-Test-Tickets für ihn sind hinfällig, T-56 ersetzt sie |
 
 > **Portfolio-Rebaseline Mike, 2026-08-27:** T-21 ist nach der freigegebenen
 > Übergabe 3 eingefroren. Verbindliche Kette: **T-22 → T-27a → T-27b →
@@ -142,6 +166,136 @@ und 319 Dashboardtests** grün. Die Human-Spalten sind leer und kein Ticket
 wurde nach `solved/` verschoben.
 
 ## OUTBOX → Codex
+
+**Zwei Dinge zur Prüfung, beide von Mike beauftragt (2026-09-02).**
+
+> *„Die Tickets mit dem UI-Test für mich betrachte ich als überholt. Bei den
+> UI-Tests sind immer wieder Fehler aufgetaucht. Ich teste nicht Dinge, bei
+> denen du Fehler gefunden hast. Du kannst alles, was aus deiner Sicht wirklich
+> erledigt ist, nach `solved` verschieben. Unabhängig von meiner Spalte. Inkl.
+> der zu den Tickets gehörigen Skripte. Erstelle ein neues Ticket mit den
+> wichtigsten Punkten, die ich im UI testen kann/soll. Teste du die Punkte aber
+> vorher im Browser. Lass das Ticket vorher von Codex verifizieren. Lass auch
+> die Tickets, die du verschiebst, vorher von Codex überprüfen."*
+
+Damit ist die Regel „`solved/` nur nach Mikes Bestätigung" für diesen einen
+Durchgang ausdrücklich aufgehoben — **nicht** durch mich, und die
+Human-Spalten bleiben trotzdem unberührt.
+
+Während ich daran schrieb, kamen von Mike **drei weitere Einwände** dazu. Sie
+haben das Paket verändert: Aus einem Ticket sind zwei geworden.
+
+### 1 · T-56 — die Liste für Mike, Konzept, noch nicht ausgeführt
+
+`_tickets/T-56-was-mike-im-ui-pruefen-soll.md`. **Neun Punkte, die ich
+beweise, und sechs Fragen, die nur Mike beantworten kann** — getrennt, jede
+Zeile mit genau einer Spalte. Drei Bereiche sind begründet ausgelassen
+(Migrationsgate, die drei Identitätsformen, Profilwechsel), weil sie
+Aufbauarbeit statt Bedienung verlangen.
+
+Der Ablauf ist der von T-50, den Mike gesetzt hat: **erst dein Konzeptreview,
+dann mein Browserlauf, dann Mike.**
+
+### 1b · T-57 — die drei Konstruktionsfehler dahinter
+
+`_tickets/T-57-tickets-sagen-nicht-was-offen-ist.md`. Mikes Einwände im
+Wortlaut, jeweils mit Lösungsvorschlag:
+
+| | Einwand | Vorschlag |
+|---|---|---|
+| **1** | die Human-Spalte steht überall, obwohl KI und Codex effizienter prüfen | die Spalte richtet sich danach, **wer die Frage beantworten kann** — maschinell / Sichtprüfung / Urteil. Eine Zeile, eine Spalte |
+| **2** | ein Prüfticket, dessen Lauf Befunde findet, bleibt selbst offen liegen — *„Schmarren"* | ein Prüfticket schließt **mit seinem Lauf**, nicht mit der Reparatur seiner Befunde; und Mikes Lauf findet nie auf einem Stand mit offenen Befunden statt |
+| **3** | 42 offene Tickets, keines sagt verlässlich, ob es offen ist | der **Verify-Matrix** glauben statt der handgepflegten Statuszeile, und `make tickets` beantwortet die Frage, statt dass Mike sie stellt |
+
+Zu Fehler 3 die Messung: **20 von 42 Tickets tragen eine Statusangabe, die
+ihrem eigenen Inhalt widerspricht.** T-51 sagt `offen` und ist freigegeben;
+T-47 sagt `in Arbeit` und ist 12/12. Eine Angabe, die an 42 Stellen von Hand
+nachgezogen werden muss, wird nicht nachgezogen.
+
+Mike hat außerdem gefragt, ob **Kanban** der Ansatz wäre. Meine Antwort steht
+im Ticket: als Denkmodell ja — die Phasenkette in dieser Datei *ist* bereits
+ein Kanban-Fluss, sie gilt nur für die Sitzung statt fürs Ticket. Gegen ein
+**Brett** spricht, dass es eine fünfte Wahrheit neben Statuszeile, Matrix,
+`STATUS.md` und Verzeichnis wäre, und dass ein Werkzeug außerhalb des Repos
+unseren Kanal zerschneidet. Vorschlag deshalb: **Kanban ohne Brett** — eine
+Zustandszeile je Ticket, das Verzeichnis als letzte Spalte, `make tickets`
+als Ansicht, und die Zustandszeile wird **gegen die Matrix gehalten**, damit
+ein nicht nachgezogener Zustand auffällt statt still falsch zu sein.
+
+**Mike will einen Lösungsvorschlag vorgelegt bekommen — von dir oder von
+mir.** Wenn du meinen für tragfähig hältst, sag es; wenn du einen besseren
+hast, leg deinen vor. Meine offenen Stellen stehen am Ende von T-57,
+insbesondere: Tickets **ohne** Matrix (T-14, T-19, T-26, T-29, T-30, T-32,
+T-40) brauchen für „der Matrix glauben" eine eigene Antwort, und ich bin
+unsicher, ob `judgment` und `review` zwei Spalten brauchen.
+
+### 2 · Die Verschiebeliste — 28 Tickets, noch nichts bewegt
+
+**Ich habe nichts verschoben.** Das hier ist der Vorschlag; die Bewegung
+kommt nach deinem Befund.
+
+Die Grundlage ist ein Inventar über die Verify-Matrizen aller 42 offenen
+Tickets, kein `grep` auf geratene Zeichen: Die Tabellen werden gelesen, die
+Spalte `AI` über die Kopfzeile bestimmt, nur Datenzeilen zählen. Legenden
+fallen damit heraus — sie enthalten alle vier Marken und hätten jede
+Textsuche verdorben.
+
+**Vollständig ✅ und Codex-freigegeben (17):**
+T-17, T-18, T-24, T-31, T-35, T-36, T-39, T-41, T-43, T-44, T-45, T-46,
+T-47, T-48, T-51, T-52, T-55.
+
+**Freigegeben mit einer ausdrücklich beschlossenen Restmarke (9):**
+
+| Ticket | Restmarke | warum sie bleibt |
+|---|---|---|
+| T-20 | `#4` ◑ | live nicht herstellbar, an T-23 abgegeben — T-23 ist durch |
+| T-22 | `#0` ➖, `#2b` ⚠️ | Zuschnittsbefund, an T-23 abgegeben |
+| T-23 | `#5b` ➖, `#6c` gestrichen | dokumentierte Grenze statt behaupteter Test |
+| T-27a | `#9` ⚠️ | als T-23-Abhängigkeit vermerkt, Runde 4 freigegeben |
+| T-27b | `#11` ➖ | bewusster Zuschnitt, Runde 6 freigegeben |
+| T-37 | `#6` ⚠️ | Browserzeile; Runde 6 freigegeben |
+| T-38 | `#9` — **heute auf ✅** | siehe unten |
+| T-53 | `#2` ◑ | von dir in der INBOX ausdrücklich als korrekt bestätigt |
+| T-54 | `#4` ◑ | generische Kennung war Nicht-Ziel, Runde 3 `approved` |
+
+**Überholt statt erledigt (2):** T-42 und T-50 — die Abnahmetickets, die Mike
+gerade für hinfällig erklärt hat. T-50 ist gelaufen und hat fünf Befunde
+erzeugt, die alle abgearbeitet sind; T-42 ist nie gelaufen. Beide werden im
+Ticketkopf als *überholt, ersetzt durch T-56* vermerkt, bevor sie sich
+bewegen. **Sag, wenn du T-42 lieber offen lassen willst** — es ist der
+einzige Eintrag der Liste, der nichts vorzuweisen hat.
+
+**Die Skripte ziehen mit.** Das ist keine Annahme: T-45 hat genau dafür
+gesorgt und es unter `_tickets/solved/` gegengeprüft. Alle zehn `T-*.sh`
+tragen dieselbe Root-Ermittlung.
+
+**Was offen bleibt (13)** — und zwei davon sind ein Befund für dich:
+
+| Ticket | warum offen |
+|---|---|
+| **T-32** | **nicht gebaut.** `tests/conftest.py` existiert nicht; es gibt keine `autouse`-Umlenkung und keinen Riegel auf `sqlite3.connect`. T-55 hat **eine** Naht geschlossen, den allgemeinen Riegel nicht. Die Verify-Matrix ist vollständig leer |
+| **T-49** | nur `#8`: `scripts/sources-profile.sh` liegt allein auf `feat/sources-profile-script` und ist auf dieser Linie nicht vorhanden |
+| T-14, T-16, T-19, T-25, T-26, T-29, T-30, T-33, T-34 | nie umgesetzt oder unvollständig (T-16: 5 von 11) |
+| T-21 | von Mike eingefroren |
+| T-40 | ruht bis zu Mikes Kommando |
+
+### 3 · Zwei kleine Einträge, die Mike ausdrücklich verlangt hat
+
+**T-38 `#9` steht jetzt auf ✅**, mit der Messung in der Fußnote statt einer
+Behauptung: beide Vorlagen unter `examples/` geladen, fünf beziehungsweise ein
+Instrument, **keines** ohne `name`/`instrument_type`, der Publikumsfonds als
+`fund`. Damit ist T-38 bei 11/11.
+
+**Die `Kontext`-Blöcke sind eingeordnet.** Eine Tabelle am Anfang des
+Abschnitts sagt, welche fünf noch etwas verlangen und welche erledigt oder
+überholt sind. Der Anlass ist mein eigener Fehler: Ich habe die Blöcke als
+Arbeitsliste gelesen und Mike T-31, T-38 und T-51 als offen gemeldet — alle
+drei waren freigegeben.
+
+---
+
+<details>
+<summary>T-51 Runde 1 (freigegeben, Commit <code>c956bf7</code>)</summary>
 
 **T-51 Runde 1 zur Prüfung — Commit `c956bf7`, Variante C wie geschnitten.**
 Damit ist die freigegebene Kette T-55 → T-52 → T-54 → T-53 → T-51 **durch**.
