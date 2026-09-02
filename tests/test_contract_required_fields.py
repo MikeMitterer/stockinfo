@@ -615,20 +615,20 @@ class _ListedWithoutIsin:
     SUPPORTED_KINDS = frozenset({"listed"})
     SUPPORTED_TYPES = frozenset({"stock"})
 
-    _NAMEN = {"SAP": "SAP SE", "BMW": "Bayerische Motoren Werke AG"}
+    _NAMES = {"SAP": "SAP SE", "BMW": "Bayerische Motoren Werke AG"}
 
     def handles(self, request) -> bool:
         return bool(request.symbol or request.isin)
 
     def resolve(self, request):
         ticker = (request.symbol or "").split(".")[0].upper()
-        if ticker not in self._NAMEN:
+        if ticker not in self._NAMES:
             return NotFound()
         return Resolved(
             identity=ListedIdentity(
                 ticker=ticker, mic="XFRA", isin=None, kind="listed"
             ),
-            name=self._NAMEN[ticker],
+            name=self._NAMES[ticker],
             instrument_type="stock",
         )
 
@@ -661,27 +661,27 @@ def test_zwei_papiere_ohne_isin_lassen_sich_nacheinander_aufnehmen(
     """
     client, repository = _chain(str(tmp_path / "ohne-isin.db"), _ListedWithoutIsin())
     try:
-        erste = client.get("/quote", params={"symbol": "SAP.DE"})
-        zweite = client.get("/quote", params={"symbol": "BMW.DE"})
+        first_response = client.get("/quote", params={"symbol": "SAP.DE"})
+        second_response = client.get("/quote", params={"symbol": "BMW.DE"})
     finally:
         app.dependency_overrides.clear()
 
-    assert erste.status_code == 200, erste.text
-    assert zweite.status_code == 200, zweite.text
-    assert erste.json()["name"] == "SAP SE"
-    assert erste.json()["type"] == "stock"
-    assert zweite.json()["name"] == "Bayerische Motoren Werke AG"
+    assert first_response.status_code == 200, first_response.text
+    assert second_response.status_code == 200, second_response.text
+    assert first_response.json()["name"] == "SAP SE"
+    assert first_response.json()["type"] == "stock"
+    assert second_response.json()["name"] == "Bayerische Motoren Werke AG"
     # Die genannte Börse gewinnt: Das Symbol sagt Xetra, die Quelle Frankfurt.
-    for antwort in (erste, zweite):
-        assert antwort.json()["identity"]["mic"] == "XETR"
-        assert antwort.json()["exchange"] == "Xetra"
+    for response in (first_response, second_response):
+        assert response.json()["identity"]["mic"] == "XETR"
+        assert response.json()["exchange"] == "Xetra"
 
     with repository._connect() as connection:
-        gespeichert = connection.execute(
+        stored_rows = connection.execute(
             "SELECT symbol, isin FROM instruments ORDER BY symbol"
         ).fetchall()
 
-    assert [row["symbol"] for row in gespeichert] == ["BMW.DE", "SAP.DE"]
-    assert [row["isin"] for row in gespeichert] == [None, None], (
+    assert [row["symbol"] for row in stored_rows] == ["BMW.DE", "SAP.DE"]
+    assert [row["isin"] for row in stored_rows] == [None, None], (
         "keine ISIN heißt NULL — ein Leerstring belegte den einen UNIQUE-Platz"
     )
