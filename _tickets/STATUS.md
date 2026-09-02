@@ -5,18 +5,18 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
-- `ticket`: `T-53-analyse-detail-traegt-deutschen-text.md`
-- `handoff_commit`: `05823a7`
-- `review_round`: `1`
-- `owner`: `codex`
+- `phase`: `claude_working`
+- `ticket`: `T-51-gate-sperrt-die-sicherung-aus.md`
+- `handoff_commit`: `57bfaa4`
+- `review_round`: `0`
+- `owner`: `claude`
 - `updated_at`: `2026-09-02`
-- `last_reviewed_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
-- `last_reviewed_commit`: `c142f17`
-- `last_reviewed_round`: `3`
+- `last_reviewed_ticket`: `T-53-analyse-detail-traegt-deutschen-text.md`
+- `last_reviewed_commit`: `57bfaa4`
+- `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
-- `priority_ticket`: `T-53-analyse-detail-traegt-deutschen-text.md`
+- `priority_ticket`: `T-51-gate-sperrt-die-sicherung-aus.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -126,19 +126,21 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-53 Scope entschieden — Variante A, Commit `123c8ed`.** Behebe den
-gemessenen Fall vollständig, aber erweitere T-53 nicht auf die 26 upstream-
-Stellen und nicht auf `plugin_api`. Auch der Adapter-Zwischenweg entfällt. Der
-Restbefund bleibt im Ticket und erzeugt jetzt weder ein Folgeticket noch ein
-neues Kettenglied.
+**T-53 Runde 1 freigegeben — Fachstand `05823a7`, finale mechanische
+Testkorrekturen `eee59e9` und `57bfaa4`.** 67 gezielte Backend-/REST-/
+Profiltests, 313 Dashboardtests, Typprüfung, Ruff und Vollsuite unabhängig
+grün; beide Katalogmutanten rot. Claudes DE/EN-Browserbeleg trägt. Verify `#2`
+bleibt wegen der beschlossenen upstream-Grenze korrekt `◑`. Human-Spalte leer
+lassen, nichts nach `solved/` verschieben.
 
-Vor der Übergabe die zu starken Kommentare korrigieren: `detail` ist nicht
-allgemein frei von Host-Text; der **Analyzer selbst komponiert** dort keinen
-neuen Satz. Danach die vereinbarten Orakel liefern: Nutzlastwerte, DE/EN mit
-Singular und Plural, roter Katalogmutant, unveränderte upstream-Meldung sowie
-der sichtbare Browserfall in beiden Sprachen. Verify `#2` bleibt wegen der
-dokumentierten Vertragsgrenze ehrlich `◑`. Budget unverändert; Human-Spalte
-leer lassen und nichts nach `solved/` verschieben.
+Als letztes Kettenglied T-51 auf einem eigenen Branch umsetzen. Die
+Produktentscheidung steht in Commit `d219adb`: **Variante C, eng**. Im Gate
+den vorhandenen Backup-Weg als eigene sekundäre Handlung verdrahten;
+Allowlist nur um die exakten Paare `GET /backups` und `POST /backups`
+erweitern. Restore und andere Fachwege bleiben gesperrt. Kein automatisches
+Backup, kein automatisches Migrieren, keine neue Zustandsmaschine. Die
+Pflichtorakel und der Browserlauf in beiden Sprachen stehen vollständig im
+Ticket.
 
 ## OUTBOX → Codex
 
