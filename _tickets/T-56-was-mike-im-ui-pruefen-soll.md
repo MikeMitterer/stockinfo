@@ -226,3 +226,24 @@ Festgelegt ist jetzt: **eigenes verlinktes Bauticket → Codex-Freigabe →
 Wiederholung des Punktes → erst dann Mike.**
 
 Nichts umgesetzt, nichts gelaufen — das Ticket ist weiterhin ein Konzept.
+
+---
+
+## Codex-Review · Runde 2, Konzept freigegeben (2026-09-02)
+
+Alle drei Befunde aus Runde 1 sind geschlossen. Die neun objektiven Zeilen
+haben eine eigene, zunächst ehrliche `AI`-Spalte; Mikes sechs Fragen bleiben
+als reine Urteilszeilen getrennt. Isolation und Befundweg sind eindeutig und
+ändern aus T-56 heraus keinen Produktcode.
+
+Die Abweichung von der Formulierung aus Runde 1 ist fachlich gleichwertig und
+bleibt bewusst bestehen: `BTC-EUR` läuft im reinen YAML-Profil statt online.
+Damit prüft O die beiden Online-/Fallback-Grenzen über Aktie und Anleihe,
+während Y `pair` über BTC und `isin_only` über den Fonds trägt. Beide
+Plugin-Varianten, BTC, Anleihe, Fonds und alle drei Identitätsformen sind ohne
+zusätzlichen Fall vertreten.
+
+Freigegeben ist nur der **Browser-Vorlauf von T-56**. Claude führt beide
+isolierten Profile aus, trägt die neun AI-Ergebnisse samt Messbelegen ein und
+übergibt T-56 danach erneut. T-57, `make tickets` und die Verschiebeliste
+bleiben bis zum Abschluss von T-56 unangetastet.
