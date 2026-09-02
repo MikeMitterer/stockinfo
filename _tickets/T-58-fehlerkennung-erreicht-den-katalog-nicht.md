@@ -167,3 +167,69 @@ am Migrationskatalog und keine neue Testinfrastruktur.
 - Eine erfundene Kennung bleibt grün über `errors.reason.unknown`; der Fix
   darf Vorwärtskompatibilität nicht mit vermeintlicher Vollständigkeit
   verwechseln.
+
+---
+
+## Runde 1 · Umsetzung (Claude, 2026-09-02)
+
+Variante C wie geschnitten. **Dein Befund an meinem Inventar sitzt:** Ich habe
+drei Kennungen genannt, weil ich den *Migrationskatalog* aufgezählt habe statt
+`input_failure()`. Es sind vier — dieselbe Sorte Fehler wie in T-58 selbst,
+eine Ebene höher: die falsche Seite gezählt.
+
+### Was steht
+
+| Datei | Änderung |
+|---|---|
+| `dashboard/src/api/reason.ts` | `KEYS_FOR(code)` — `errors.reason` **vor** `migration.reason`, `unknown` bleibt letzte Stufe |
+| `dashboard/src/i18n/de.ts` | `errors.reason.ambiguous_exchange_suffix` |
+| `dashboard/src/i18n/en.ts` | dasselbe englisch |
+| `dashboard/tests/api/reason.spec.ts` | die vier Kennungen als **eigene** Aufzählung, beide Sprachen, plus die Rückfallprobe |
+
+Die Reihenfolge ist nicht beliebig: `errors.reason` zuerst, damit ein Weg mit
+einem eigenen, passenderen Satz gegen den geteilten gewinnt.
+
+Die vier Kennungen stehen **von Hand** im Test, nicht aus einem Katalog
+gezogen. Aus dem Katalog gelesen prüfte die Liste sich selbst und wäre immer
+vollständig; als unabhängige Behauptung über das Backend wird sie rot, sobald
+`input_failure()` ihr davonläuft.
+
+### Die drei Pflichtgegenproben
+
+| # | Mutation | rötet |
+|---|---|---|
+| **M1** | zweite Suchstufe aus `KEYS_FOR` entfernt | `Identitaetskennungen des Aufnahmewegs` in **de und en** |
+| **M2** | `ambiguous_exchange_suffix` aus **beiden** Katalogen | dieselben zwei Fälle |
+| **M3** | `unknown` aus **beiden** Katalogen | `laesst eine wirklich unbekannte Kennung im uebersetzten Rueckfall` + ein vorhandener Fall |
+
+**Zwei eigene Fehler auf dem Weg dorthin**, beide beim Nachmessen gefunden:
+
+1. **M2 und M3 haben zuerst den falschen Test gerötet.** Ich hatte den Eintrag
+   nur aus `de.ts` entfernt; rot wurde daraufhin der vorhandene
+   Symmetriewächter „Sprachkataloge kennen dieselben Kennungen in DE und EN" —
+   **nicht** mein neuer Test. Der Mutant war zu schwach: Er stellte
+   Katalog-Asymmetrie her, nicht das Fehlen des Satzes. Erst das Entfernen aus
+   **beiden** Katalogen prüft, was die Gegenprobe behauptet.
+2. **„Nichts rot" war eine kaputte Messung, kein bestandener Check.** Mein
+   erstes Mutantenwerkzeug schnitt beim Entfernen von `unknown` den Rest der
+   Datei mit ab; der Lauf startete gar nicht, und meine Ausgabe meldete
+   trotzdem „nichts rot". Nachgeprüft an der Zeilenzahl — 586 → **585**, ein
+   einziger Eintrag — rötet M3 sauber.
+
+### Budget und Suite
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| neue/geänderte Zeilen | ≤ 100 | **94** |
+| Produktdateien | 3 | 3 |
+| Testdateien | 1 | 1 |
+
+**Dashboard:** 322 Tests (vorher 319), `vue-tsc` sauber. Keine Python-Datei
+berührt.
+
+### Ein Nebenfund, den ich nicht angefasst habe
+
+`app/exchanges.py:544` sagt im Docstring von `input_failure()` *„Dieselben
+drei Kennungen"* — die Funktion hat vier Rückgabewege. Genau diese Zeile hat
+mich beim Anlegen des Tickets in die Irre geführt. Backendänderungen sind
+Nicht-Ziel dieses Tickets, deshalb steht es hier statt im Code.
