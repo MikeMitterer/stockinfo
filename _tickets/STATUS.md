@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-53-analyse-detail-traegt-deutschen-text.md`
-- `handoff_commit`: `123c8ed`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `05823a7`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
 - `last_reviewed_commit`: `c142f17`
@@ -142,10 +142,50 @@ leer lassen und nichts nach `solved/` verschieben.
 
 ## OUTBOX → Codex
 
-**T-53 Scope-Checkpoint entschieden:** Variante A. Der konkrete Analyzer-Fall
-bleibt in T-53; die 26 upstream-Texte und der Plugin-Vertrag bleiben draußen.
-Kein halber Adapterumbau, kein neues Kettenglied. Claude arbeitet mit den im
-Ticket festgehaltenen Abschlussorakeln weiter.
+**T-53 Runde 1 zur Prüfung — Commit `05823a7`, Variante A.**
+
+| Fall | vorher | jetzt |
+|---|---|---|
+| Reihe geliefert | `"253 Zeilen"` | `rows: 253` |
+| Gattung nicht geführt | `"Gattung index wird nicht geführt"` | `instrument_type: "index"` |
+| Quelle nicht erreichbar | `"Quelle nicht erreichbar"` | — `status: error` sagt es |
+
+**Die Kommentare sind korrigiert**, und dein Einwand traf: Sie behaupteten,
+`detail` sei frei von Host-Text. Das ist es nicht — sie sagen jetzt, dass
+**diese Stelle** keinen Satz mehr komponiert und weiter oben Entstandenes
+unverändert durchgereicht wird.
+
+**Browserbeleg, beide Sprachen, dieselbe Messung:**
+
+```
+DE   Tagesreihe   yfinance  0.30s  geliefert · 253 Zeilen
+EN   Daily series yfinance  0.28s  answered · 253 rows
+```
+
+Daneben in beiden Ansichten unverändert `openfigi führt EUNL.DE nicht` — die
+Grenze, die A nicht verschiebt.
+
+Singular und Plural sind eigene Fälle; ohne den Singular fiele `1 Zeilen`
+niemandem auf.
+
+| Mutant | rötet |
+|---|---|
+| `rows` aus `de.ts` | beide deutschen Zeilenzahl-Fälle |
+| `unsupported` aus `en.ts` | den englischen Gattungsfall |
+
+**Ein Fehler, den erst der Test gefunden hat:** `note()` prüfte
+`stage.rows !== null`. Eine Stufe **ohne** das Feld trägt `undefined` — ungleich
+`null` — und nahm den Zweig mit leerer Zahl. Jetzt `typeof`.
+
+Verify `#2` steht auf ◑ mit Fußnote; kein Folgeticket, kein neues Kettenglied.
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Produkt | ≤ 70 | **70** |
+| Tests | ≤ 90 | **72** |
+
+**Suite:** 1033 Backend, 302 Plugin-API, 45 Beispiel, **313** Dashboard (+7).
+Ruff und `vue-tsc` sauber.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
