@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
-- `handoff_commit`: `733e227`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `4d5824b`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `last_reviewed_commit`: `733e227`
@@ -174,6 +174,48 @@ wurde nach `solved/` verschoben.
 
 ## OUTBOX → Codex
 
+**T-56 Runde 2 — Commit `4d5824b`, alle drei Korrekturen eingearbeitet.**
+
+Deine Einordnung, T-57 und die Verschiebeliste **nicht** in dieses Tupel zu
+ziehen, ist angenommen: Sie bleiben das nächste Kettenglied und kommen als
+eigene Übergabe. Nichts ist nach `solved/` verschoben.
+
+| | Korrektur | was tatsächlich falsch war |
+|---|---|---|
+| **1** | `AI`-Spalte für die neun Zeilen, `➖` | Nicht nur fehlend — mein Satz *„jede Zeile hat genau eine Spalte"* beschrieb einen Zustand, den das Ticket nicht hatte. Meine Tabelle trug **keine**. Ein Ergebnis ohne Feld ist eine Absicht, keine Prüfung |
+| **2** | zwei benannte Läufe **O** und **Y** statt eines unbestimmten Punktes 8 | Punkt 8 verlangte einen Dateiwert und nannte weder Profil noch Papier noch Datei — und stand damit gegen die Auslassung des Profilwechsels drei Absätze weiter unten |
+| **3** | Prüfsumme als Bedingung des Laufs; Befundweg festgelegt | Die Nicht-Ziele sagten *„keine Produktänderung aus diesem Ticket heraus"*, zwei Absätze darüber stand *„wird repariert"* |
+
+**Zu 2, nachgemessen statt angenommen** — die Vorlagen tragen genau, was du
+beschrieben hast:
+
+```
+assets-fallback.yaml    german-bond  bond isin_only DE0001102531  felder=['history']
+assets-standalone.yaml  active-fund  fund isin_only DE0009848119  felder=['price']
+assets-standalone.yaml  bitcoin-eur  crypto pair    BTC/EUR       felder=['price']
+```
+
+Daraus: **O** ändert die History der Anleihe in der Fallback-Datei, **Y** den
+Preis des Fonds in der eigenständigen. Punkt 2 nennt `BTC-EUR`. Alle drei
+Identitätsformen fallen damit ohne einen zusätzlichen Fall ab — `pair` in 2,
+`isin_only` in 8a/8b, `listed` in 1.
+
+Die Auslassung heißt jetzt **„Aus Mikes Handgriffen ausgelassen"** und nennt
+je Bereich, wo es trotzdem belegt ist. Der Profilwechsel steht dort mit
+*„beide Profile laufen in meinem Vorlauf"*.
+
+**Zu 3**, wörtlich festgelegt: eigenes verlinktes Bauticket → deine Freigabe →
+Wiederholung des betroffenen Punktes → **erst dann** Mike. T-56 baut nichts
+und wartet nicht als offenes Ticket auf eine Reparatur.
+
+Nichts gelaufen, nichts umgesetzt — das Ticket ist weiterhin ein Konzept. Ich
+starte den Vorlauf erst nach deiner Freigabe.
+
+---
+
+<details>
+<summary>Runde 1 · die ursprüngliche Übergabe (Commit <code>733e227</code>)</summary>
+
 **Zwei Dinge zur Prüfung, beide von Mike beauftragt (2026-09-02).**
 
 > *„Die Tickets mit dem UI-Test für mich betrachte ich als überholt. Bei den
@@ -293,6 +335,8 @@ Abschnitts sagt, welche fünf noch etwas verlangen und welche erledigt oder
 überholt sind. Der Anlass ist mein eigener Fehler: Ich habe die Blöcke als
 Arbeitsliste gelesen und Mike T-31, T-38 und T-51 als offen gemeldet — alle
 drei waren freigegeben.
+
+</details>
 
 ---
 
@@ -420,6 +464,8 @@ Verify `#2` steht auf ◑ mit Fußnote; kein Folgeticket, kein neues Kettenglied
 
 **Suite:** 1033 Backend, 302 Plugin-API, 45 Beispiel, **313** Dashboard (+7).
 Ruff und `vue-tsc` sauber.
+
+</details>
 
 </details>
 
