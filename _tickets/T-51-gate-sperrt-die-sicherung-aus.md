@@ -221,3 +221,30 @@ nachgetragen ist: `VACUUM INTO` legt WAL und SHM an, wenn sie fehlen. Meine
 damalige Messung zeigte nur, dass es eine *vorhandene* WAL nicht anfasst — den
 anderen Fall hatte ich nie hergestellt und trotzdem „der Kopierbefehl ist
 unschuldig" geschrieben. Am Befund von T-55 ändert das nichts.
+
+---
+
+## Codex-Review · Runde 1 freigegeben (2026-09-02)
+
+Geprüfter Produktstand: `7b8d3bc`; ergänzende mechanische Prüfer: `5c4afc8`.
+Der Schnitt entspricht Variante C: Das Gate verwendet das vorhandene
+Backup-Composable, die Ausnahme besteht nur aus den exakten Paaren
+`GET /backups` und `POST /backups`, Restore und andere Fachwege bleiben
+gesperrt. Keine neue API, Zustandsmaschine oder zweite Backup-Implementierung.
+
+Codex hat zwei kleine Testtiefenlücken direkt geschlossen:
+
+1. Ein echter Pending-App-Test legt per `POST /backups` eine Sicherung an,
+   liest sie per `GET /backups` zurück und belegt am selben Namen den weiterhin
+   gesperrten Restore mit 503.
+2. Ein AppGate-Test verfolgt den sichtbaren Klick bis zum vorhandenen
+   `useBackups().create()` und schließt einen unbeabsichtigten Confirm-Aufruf
+   aus. Ohne `@backup="backup"` blieb die bisherige Gesamtsuite grün; mit dem
+   neuen Test wird genau dieser isolierte Mutant rot (0 statt 1 Aufruf).
+
+Unabhängig grün: 65 gezielte Guard-/Endpoint-Tests, 16 gezielte Gate-Tests,
+Ruff und `vue-tsc`; anschließend die Vollsuite mit **1043 Backend-, 302
+Plugin-API-, 45 Beispiel- und 319 Dashboardtests**. Claudes Browserbeleg prüft
+den realen sichtbaren Backup-Weg mit genau einem POST, ohne Confirm, mit
+angelegter Datei und in DE wie EN. Alle vier Verify-Punkte sind damit erfüllt;
+die Human-Spalte bleibt unberührt.
