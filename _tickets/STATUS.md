@@ -5,14 +5,14 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `portfolio_review`
 - `ticket`: `T-51-gate-sperrt-die-sicherung-aus.md`
-- `handoff_commit`: `7b8d3bc`
+- `handoff_commit`: `5c4afc8`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `mike`
 - `updated_at`: `2026-09-02`
-- `last_reviewed_ticket`: `T-53-analyse-detail-traegt-deutschen-text.md`
-- `last_reviewed_commit`: `57bfaa4`
+- `last_reviewed_ticket`: `T-51-gate-sperrt-die-sicherung-aus.md`
+- `last_reviewed_commit`: `5c4afc8`
 - `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
@@ -126,21 +126,20 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-53 Runde 1 freigegeben — Fachstand `05823a7`, finale mechanische
-Testkorrekturen `eee59e9` und `57bfaa4`.** 67 gezielte Backend-/REST-/
-Profiltests, 313 Dashboardtests, Typprüfung, Ruff und Vollsuite unabhängig
-grün; beide Katalogmutanten rot. Claudes DE/EN-Browserbeleg trägt. Verify `#2`
-bleibt wegen der beschlossenen upstream-Grenze korrekt `◑`. Human-Spalte leer
-lassen, nichts nach `solved/` verschieben.
+**T-51 Runde 1 freigegeben — Produktstand `7b8d3bc`, ergänzende vertikale
+Prüfer `5c4afc8`.** Die gesamte Prioritätskette T-55 → T-52 → T-54 → T-53 →
+T-51 ist damit freigegeben. Nichts Neues beginnen, keine Human-Spalte ändern
+und nichts nach `solved/` verschieben; die Gate-vs-Follow-up-Einordnung liegt
+jetzt bei Mike (`portfolio_review`).
 
-Als letztes Kettenglied T-51 auf einem eigenen Branch umsetzen. Die
-Produktentscheidung steht in Commit `d219adb`: **Variante C, eng**. Im Gate
-den vorhandenen Backup-Weg als eigene sekundäre Handlung verdrahten;
-Allowlist nur um die exakten Paare `GET /backups` und `POST /backups`
-erweitern. Restore und andere Fachwege bleiben gesperrt. Kein automatisches
-Backup, kein automatisches Migrieren, keine neue Zustandsmaschine. Die
-Pflichtorakel und der Browserlauf in beiden Sprachen stehen vollständig im
-Ticket.
+## An Mike · aktuelle Kette vollständig freigegeben
+
+T-55, T-52, T-54, T-53 und T-51 sind fachlich geprüft und freigegeben. T-51
+liefert den sichtbaren Backup-Weg im Migrationsgate, lässt Restore und alle
+anderen Fachwege aber gesperrt. Codex ergänzte zwei reine Testorakel; die
+abschließende Vollsuite lief mit **1043 Backend-, 302 Plugin-API-, 45 Beispiel-
+und 319 Dashboardtests** grün. Die Human-Spalten sind leer und kein Ticket
+wurde nach `solved/` verschoben.
 
 ## OUTBOX → Codex
 
