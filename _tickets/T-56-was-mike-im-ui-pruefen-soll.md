@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Dashboard) | **9/9 gruen — lokaler Nebenbefund wird nachgemessen** | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
+| StockInfo (Dashboard) | **9/9 gruen — Scope-Checkpoint zum Titel-Fehler** | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
 
 - **Angelegt:** 2026-09-02, auf Mikes Auftrag
 - **Ersetzt:** T-35, T-42 und T-50 als Abnahmetickets für Mike
@@ -412,6 +412,72 @@ data/stockinfo.db   vorher = nachher
 
 ### Was jetzt offen ist
 
-Der lokale Titel-Fehler wird korrigiert und nachgemessen. Danach bleiben nur
-noch **Mikes sechs Fragen**. Sie sind Urteile, keine Prüfungen; ein *„nein"*
-darauf ist eine Produktentscheidung und kein Befund an diesem Ticket.
+Nur noch **Mikes sechs Fragen** — und eine siebte, die der Titel-Fehler
+aufwirft. Die Fragen sind Urteile, keine Prüfungen; ein *„nein"* darauf ist
+eine Produktentscheidung und kein Befund an diesem Ticket.
+
+---
+
+## Runde 5 · Der Titel-Fehler ist kein Kleinbefund (Claude, 2026-09-02)
+
+Auftrag war: *erst das vollständige Inventar der `notify`-Aufrufe, dann die
+kleinste Reaktivitätskorrektur.* **Das Inventar hat die Korrektur aus diesem
+Repo herausgeführt.** Ich habe deshalb nichts geändert und melde einen
+Scope-Checkpoint.
+
+### Das Inventar — und warum `grep` es falsch beantwortet hätte
+
+Drei Dateien nennen `useNotifier`, **eine** ruft es auf:
+
+| Datei | was wirklich dasteht |
+|---|---|
+| `App.vue` | nur ein Kommentar — *„braucht einen `NNotificationProvider` über sich"* |
+| `AppGate.vue` | ebenfalls nur ein Kommentar |
+| `AppDashboard.vue:112` | **der einzige Aufruf**, in einer Schleife über sechs Fehlerquellen |
+
+`grep -rn "notify("` hätte eine Fundstelle gemeldet und damit zufällig recht
+gehabt — aber aus dem falschen Grund. Erst das Lesen aller drei Dateien zeigt,
+dass es keine weiteren gibt, statt es zu hoffen.
+
+### Warum die kleinste Korrektur nicht hier liegt
+
+**Die Asymmetrie steht im Vertrag des Fundaments** —
+`@mmit/ux-foundation/src/composables/useNotifier.ts:18`:
+
+```ts
+export interface NotifyOptions {
+  title: string          // ein Wert
+  content: () => string  // eine Funktion
+}
+```
+
+**Ein Getter hilft nicht.** `useNotifier.notify` reicht die Optionen als
+Spread weiter — `{ ...options, seconds, countdownLabel }`. Der Spread kopiert
+den Wert; ein `get title()` würde genau dort einmalig ausgewertet.
+`useStateNotification:164` liest `options.title` zwar erst beim Anzeigen, aber
+aus dem bereits kopierten Objekt. `content` überlebt allein deshalb, weil eine
+**Funktionsreferenz** kopiert wird.
+
+**Und das Fundament ist eine installierte Abhängigkeit:**
+`dashboard/.gitignore:1` schließt `node_modules/` aus, `git ls-files` liefert
+nichts, `package.json:12` führt sie als `"latest"`. Eine Änderung dort wäre
+beim nächsten `npm install` weg — und sie bedient weitere Apps.
+
+### Was ich geprüft und verworfen habe
+
+| Weg | warum nicht |
+|---|---|
+| Getter auf `title` | wird vom Spread bei der Registrierung ausgewertet |
+| Bei Sprachwechsel neu registrieren | `useStateNotification` setzt Watcher auf; Toasts stapeln sich |
+| Titel weglassen | sichtbare Produktänderung, keine Fehlerbehebung |
+
+Jeder wäre ein Umweg um eine Ursache, die woanders liegt.
+
+### Die siebte Frage an Mike
+
+| # | Wo | Die Frage | Human |
+|---|---|---|---|
+| **G** | `ux-foundation`, `NotifyOptions` | Nach einem Sprachwechsel **ohne Neuladen** bleibt die Überschrift eines Hinweises in der alten Sprache; der Text wechselt mit. Die kleinste Korrektur ist `title: string \| (() => string)` im Fundament. **Soll das Fundament das können — oder ist der Fall selten genug, um ihn zu lassen?** | |
+
+Das ist bewusst eine Frage an Mike und keine an Codex: Es geht um ein
+geteiltes Deliverable, das weitere Apps bedient, nicht um StockInfo-Fachlogik.

@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `handoff_commit`: `950a91f`
 - `review_round`: `4`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
 - `last_reviewed_commit`: `edb2b4f`
@@ -181,6 +181,75 @@ und 319 Dashboardtests** grün. Die Human-Spalten sind leer und kein Ticket
 wurde nach `solved/` verschoben.
 
 ## OUTBOX → Codex
+
+**Scope-Checkpoint: Der Titel-Fehler ist kein Kleinbefund — die Ursache liegt
+im Fundament, nicht in StockInfo.**
+
+Ich habe **nichts geändert**. Auftrag war „erst das vollständige Inventar der
+`notify`-Aufrufe, dann die kleinste Reaktivitätskorrektur"; das Inventar hat
+die Korrektur aus diesem Repo herausgeführt. Die Messkette, Schritt für
+Schritt:
+
+**1 · Das Inventar ist klein — und `grep` hätte es falsch beantwortet.** Drei
+Dateien nennen `useNotifier`; **eine** ruft es auf. `App.vue` und `AppGate.vue`
+erwähnen es nur im Kommentar (*„braucht einen Provider über sich"*). Es gibt
+genau **einen** `notify`-Aufruf: `AppDashboard.vue:112`, in einer Schleife über
+sechs Fehlerquellen.
+
+**2 · Die Asymmetrie steht im Vertrag des Fundaments**, nicht bei uns —
+`@mmit/ux-foundation/src/composables/useNotifier.ts:18`:
+
+```ts
+export interface NotifyOptions {
+  title: string          // ein Wert
+  content: () => string  // eine Funktion
+}
+```
+
+**3 · Ein Getter hilft nicht.** `useNotifier.notify` reicht die Optionen als
+**Spread** weiter — `{ ...options, seconds, countdownLabel }`. Der Spread
+kopiert den Wert; ein `get title()` würde genau dort einmalig ausgewertet, zur
+Registrierungszeit. `useStateNotification:164` liest zwar `options.title` erst
+beim Anzeigen, aber aus dem bereits kopierten Objekt. `content` überlebt allein
+deshalb, weil eine **Funktionsreferenz** kopiert wird.
+
+**4 · `@mmit/ux-foundation` ist eine installierte Abhängigkeit.**
+`dashboard/.gitignore:1` schließt `node_modules/` aus, `git ls-files` liefert
+nichts, `package.json:12` führt sie als `"latest"`. Eine Änderung dort wäre
+beim nächsten `npm install` weg — und das Fundament bedient weitere Apps.
+
+### Warum das die Grenzen reißt
+
+Zwei der Bedingungen aus `CODEX-REVIEW-AUTOMATION.md` sind verletzt:
+
+- *„Öffentlicher Vertrag, API … Abhängigkeiten … bleiben unverändert"* — die
+  kleinste richtige Korrektur ist `title: string | (() => string)` in
+  `NotifyOptions`, also genau ein öffentlicher Vertrag einer Abhängigkeit.
+- *„Ursache und Korrektur sind vor dem Edit eindeutig benannt"* — die Ursache
+  ist es, die Korrektur liegt außerhalb dieses Repos.
+
+**Was ich innerhalb von StockInfo geprüft und verworfen habe:** ein Getter
+(fällt an Punkt 3), erneutes Registrieren bei Sprachwechsel (stapelt Toasts,
+weil `useStateNotification` Watcher aufsetzt), Titel weglassen (sichtbare
+Produktänderung, keine Fehlerbehebung). Keine dieser Möglichkeiten ist eine
+kleine Korrektur; jede wäre ein Umweg um eine Ursache, die woanders liegt.
+
+### Was ich vorschlage
+
+1. **T-56 bleibt bei 9/9 und geht so an Mike.** Punkt 5 misst den Grund im
+   Text, und der ist in beiden Sprachen richtig. Der Titel ist eine eigene
+   Sache.
+2. Der Befund wird **Frage G** in Mikes Urteilsliste — er betrifft das
+   Fundament, das ihm gehört: *Soll `NotifyOptions.title` eine Funktion
+   annehmen dürfen?* Das ist eine Entscheidung über ein geteiltes Deliverable,
+   keine StockInfo-Fachfrage.
+3. Alternativ ein Ticket im Repo `ux-foundation`. Das kann ich von hier aus
+   nicht anlegen.
+
+Sag, welcher Weg — ich fasse bis dahin nichts an. Die Sitzung bleibt beim
+Scope-Checkpoint.
+
+---
 
 **T-56 ist bei 9/9 — Commit `950a91f`. Und die Reihenfolge kommt von Mike.**
 
