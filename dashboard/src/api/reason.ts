@@ -3,45 +3,29 @@ import { i18n } from '../i18n'
 import { ApiError } from './client'
 
 /**
- * Der **Grund** hinter einem fehlgeschlagenen Aufruf, in der Sprache des UI.
- *
- * Bis T-35 zeigte jeder Fehlschlag nur seine Kategorie — „Hinzufügen
- * fehlgeschlagen". Warum, stand ausschließlich in der Browserkonsole. Für eine
- * unauflösbare ISIN hieß das: Der Benutzer sah, *dass* etwas nicht ging, und
- * hatte keine Möglichkeit zu erfahren, *was*. Genau der Fall, den T-28 Zeile 3
- * mit „die App sagt das verständlich" meint.
- *
- * **Übersetzt wird die Kennung, nicht der Backendtext.** `ErrorDetail` sagt
- * das ausdrücklich zu: Der Server nennt `code` und `params`, den Satz bildet
- * das UI — sonst stünde in der englischen Oberfläche ein deutscher Satz.
- *
- * Der Rückfall auf einen mitgelieferten Fließtext ist bewusst und **nicht**
- * der Regelweg: Es gibt im Backend noch Stellen, die `{"detail": "…"}`
- * schicken (die `502`-Fälle nennen dort die ausgefallenen Quellen, was
- * niemand verlieren will). Sie stumm zu verschlucken wäre schlechter, als sie
- * unübersetzt zu zeigen. Wo eine Kennung existiert, gewinnt sie.
- *
- * @param error - Was der Aufruf geworfen hat.
- * @returns Der Grund, oder `null` wenn sich keiner benennen lässt.
- */
-/**
  * Wo ein Satz zu einer Kennung stehen kann — in dieser Reihenfolge.
  *
- * **Zwei Gruppen, weil eine Kennung zwei Wege nimmt.** `input_failure()` im
- * Backend und der Umzugsbericht beantworten dieselbe Frage an dasselbe
- * Symbol; die Kennungen sind bewusst dieselben (`app/exchanges.py`). Die
- * Sätze dazu wohnen aber seit T-44 unter `migration.reason`, weil sie dort
- * zuerst gebraucht wurden — der Aufnahmeweg sah sie nie und zeigte die
- * Kennung roh (T-58).
+ * Ein aufnahmespezifischer Satz unter `errors.reason` gewinnt vor einem
+ * gemeinsam mit dem Migrationsbericht verwendeten Satz.
  *
- * Gesucht wird **zuerst** unter `errors.reason`: Wo ein Weg einen eigenen,
- * passenderen Satz hat, gewinnt er gegen den geteilten.
+ * @param code - Strukturierte Fehlerkennung des Backends.
+ * @returns Übersetzungsschlüssel in fachlicher Vorrangfolge.
  */
-const KEYS_FOR = (code: string): readonly string[] => [
+const reasonKeys = (code: string): readonly string[] => [
   `errors.reason.${code}`,
   `migration.reason.${code}`,
 ]
 
+/**
+ * Der **Grund** hinter einem fehlgeschlagenen Aufruf, in der Sprache des UI.
+ *
+ * Übersetzt wird die Kennung, nicht der Backendtext. Der Rückfall auf einen
+ * mitgelieferten Fließtext bleibt für ältere Fehlerantworten erhalten; wo
+ * eine Kennung existiert, gewinnt sie.
+ *
+ * @param error - Was der Aufruf geworfen hat.
+ * @returns Der Grund, oder `null` wenn sich keiner benennen lässt.
+ */
 export function reasonOf(error: unknown): string | null {
   if (!(error instanceof ApiError)) return null
 
@@ -50,7 +34,7 @@ export function reasonOf(error: unknown): string | null {
 
   if (typeof body.code === 'string') {
     const params = isRecord(body.params) ? body.params : {}
-    for (const key of KEYS_FOR(body.code)) {
+    for (const key of reasonKeys(body.code)) {
       // `te` fragt, ob der Katalog die Kennung kennt. Ohne diese Frage lieferte
       // vue-i18n den Schlüssel selbst zurück — der Benutzer läse dann
       // `errors.reason.instrument_not_found`, was schlimmer ist als nichts.
