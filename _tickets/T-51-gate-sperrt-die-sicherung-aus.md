@@ -60,10 +60,10 @@ Produktentscheidung über Gate und API, keine Anzeigekorrektur:
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | Entscheidung | eine der Varianten ist gewählt und begründet; die anderen sind als verworfen vermerkt | ➖ | |
-| **2** | Gate mit offener Migration | der Text nennt nur Handgriffe, die von dort aus erreichbar sind | ➖ | |
-| **3** | Statuscodes | die Sperre gilt weiterhin für alles, was den Bestand ändert | ➖ | |
-| **4** | Regression | `make test` und Ruff grün | ➖ | |
+| **1** | Entscheidung | eine der Varianten ist gewählt und begründet; die anderen sind als verworfen vermerkt | ✅ | |
+| **2** | Gate mit offener Migration | der Text nennt nur Handgriffe, die von dort aus erreichbar sind | ✅ | |
+| **3** | Statuscodes | die Sperre gilt weiterhin für alles, was den Bestand ändert | ✅ | |
+| **4** | Regression | `make test` und Ruff grün | ✅ | |
 
 ---
 
@@ -142,3 +142,82 @@ Der Umfang bleibt bei der vorhandenen Time-box von 1–2 Stunden. Falls die
 Verdrahtung eine neue API, ein neues Backup-Composable oder eine neue
 Zustandsmaschine verlangen würde, ist das ein Scope-Checkpoint statt ein
 Nachtrag.
+
+---
+
+## Runde 1 · Claude, Umsetzung (2026-09-02)
+
+Variante C wie geschnitten. Keine neue API, kein zweiter HTTP-Weg, keine neue
+Zustandsmaschine — der Scope-Checkpoint war also nicht fällig.
+
+### Was steht
+
+| Datei | Änderung |
+|---|---|
+| `app/migration_guard.py` | die zwei Paare als exakte `(Methode, Pfad)`-Tupel |
+| `dashboard/src/components/MigrationGate.vue` | `backingUp?`/`backupError?`/`backupDone?`, `backup`-Event, sekundärer Knopf **in** der Warnung |
+| `dashboard/src/components/AppGate.vue` | vorhandenes `useBackups()` verdrahtet |
+| `dashboard/src/i18n/{de,en}.ts` | `migration.backupNow`/`backingUp`/`backupDone`; der Rat zur Dateikopie von Hand ist raus |
+| `tests/test_migration_guard.py`, `tests/test_migration_endpoints.py` | erlaubte Paare, weiterhin gesperrter Restore |
+| `dashboard/tests/components/MigrationGate.spec.ts` | Klick, Verriegelung, Erfolg/Fehler, DE/EN |
+
+Die Verriegelung ist `locked = busy || backingUp` — beide Knöpfe lesen dieselbe
+Bedingung, statt jeder seine eigene zu führen.
+
+### Die vier Mutanten
+
+Jeder wurde eingesetzt, die Suite lief, der Mutant wurde zurückgenommen.
+
+| # | Mutation | Erwartet rot | Tatsächlich |
+|---|---|---|---|
+| 1 | exakte Paare → Präfixregel auf `/backups` | Restore-Test | rot: `POST /backups/x.db/restore` kam mit 200 durch |
+| 2 | `("POST", "/backups")` aus der Allowlist entfernt | Anlegen | rot: 503 statt 201 |
+| 3 | `locked` auf `busy` verkürzt | Verriegelung | rot: Migrationsknopf während der Sicherung klickbar |
+| 4 | `v-else-if` beim Erfolg → `v-if` | Erfolg/Fehler | rot: beide Sätze gleichzeitig sichtbar |
+
+Mutant 1 ist der, um den es dem Pflichtorakel geht: Die Präfixregel sieht
+harmlos aus und öffnet das Einspielen eines alten Standes an der Migration
+vorbei.
+
+### Der Browserlauf
+
+Isolierte Kopie, eigener Port, ausstehende Migration. Gemessen an den
+Netzwerk-Requests, nicht am Eindruck:
+
+```
+GET  /backups                     200
+POST /backups/<name>/restore      503
+ein Klick auf „Jetzt sichern"  →  POST /backups   201
+                                  GET  /backups   200   (der Refresh)
+0 Confirm-Requests
+```
+
+Die Sicherungsdatei lag danach tatsächlich auf der Platte. Beide Sprachen
+geprüft — DE „Jetzt sichern" / „Gesichert. Die Kopie liegt bei den
+Sicherungen.", EN „Create backup now" / „Backed up. The copy is with your
+backups." Die Sprache wurde über `localStorage['stockinfo-lang']` umgestellt,
+weil die Einstellungen hinter dem Gate liegen. Instanz gestoppt, Kopie
+gelöscht.
+
+### Suite
+
+1042 Backend, 302 Plugin-API, 45 Beispiel, 318 Dashboard. Ruff und `vue-tsc`
+sauber.
+
+### Was Codex wissen muss
+
+**Die `checksums.sh`-Abweichung ist meine, nicht die des Tickets.** Die
+Vergleichsbasis stammt aus T-50 — davor hat T-52 die Dateien
+`examples/sources-*.yaml` berechtigterweise geändert. Mikes Betriebsdatenbank
+ist byte-gleich:
+
+```
+data/stockinfo.db  vorher = jetzt
+  1709aeabfc2eafc974aaa4bb0dcdbd7e0c23c80bc96000cd665ac73fe6207430
+```
+
+Beim Aufräumen danach ist eine **Berichtigung zu T-55** angefallen, die dort
+nachgetragen ist: `VACUUM INTO` legt WAL und SHM an, wenn sie fehlen. Meine
+damalige Messung zeigte nur, dass es eine *vorhandene* WAL nicht anfasst — den
+anderen Fall hatte ich nie hergestellt und trotzdem „der Kopierbefehl ist
+unschuldig" geschrieben. Am Befund von T-55 ändert das nichts.
