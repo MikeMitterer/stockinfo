@@ -5,9 +5,9 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-51-gate-sperrt-die-sicherung-aus.md`
-- `handoff_commit`: `c956bf7`
+- `handoff_commit`: `7b8d3bc`
 - `review_round`: `1`
 - `owner`: `codex`
 - `updated_at`: `2026-09-02`
