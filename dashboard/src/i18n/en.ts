@@ -337,6 +337,14 @@ export const en = {
       invalid_currency_code:
         '{base} and {quote} must be three-letter currency codes.',
       invalid_isin_format: '{isin} is not shaped like an ISIN.',
+      /*
+       * The only identity code that can arise here alone. The other three —
+       * missing, unknown and non-canonical suffix — are shared with the
+       * migration report and read from `migration.reason` (T-58).
+       */
+      ambiguous_exchange_suffix:
+        'The exchange suffix matches more than one venue — the input does ' +
+        'not say which one is meant.',
       /* Fallback for a code this UI does not know — from a newer backend or a plugin. */
       unknown: 'The source reports an error this interface does not know: {code}.',
     },

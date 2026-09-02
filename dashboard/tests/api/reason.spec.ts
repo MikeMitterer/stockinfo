@@ -150,6 +150,55 @@ describe('Sprachkataloge', () => {
   })
 })
 
+/**
+ * Was `input_failure()` in `app/exchanges.py` zurueckgeben kann.
+ *
+ * **Von Hand aufgezaehlt, und das ist der Punkt.** Diese Liste aus einem
+ * Katalog zu ziehen hiesse, den Katalog gegen sich selbst zu pruefen — sie
+ * waere immer vollstaendig und faende nie etwas. Sie ist eine unabhaengige
+ * Behauptung ueber das Backend; laeuft sie ihm davon, wird dieser Test rot,
+ * und genau dafuer ist er da.
+ *
+ * Der Befund aus T-58 entstand, weil ich drei davon im Migrationskatalog
+ * gezaehlt habe statt vier an ihrer Quelle. `ambiguous_exchange_suffix` kann
+ * nur beim Eintippen entstehen und fehlt dort zu Recht.
+ */
+const INTAKE_REASON_CODES = [
+  'symbol_without_exchange_suffix',
+  'unknown_exchange_suffix',
+  'non_canonical_ticker',
+  'ambiguous_exchange_suffix',
+] as const
+
+describe('Identitaetskennungen des Aufnahmewegs', () => {
+  it.each(LOCALES)('hat in %s fuer jede Kennung einen Satz statt der rohen Kennung', (locale) => {
+    i18n.global.locale.value = locale
+
+    for (const code of INTAKE_REASON_CODES) {
+      const reason = reasonOf(new ApiError(400, JSON.stringify({ code })))
+
+      expect(reason, `${locale}.${code}`).not.toBeNull()
+      // Der Rueckfall nennt die Kennung im Satz — genau das soll hier nicht
+      // mehr passieren.
+      expect(String(reason), `${locale}.${code}`).not.toContain(code)
+      expect(String(reason).trim().length, `${locale}.${code}`).toBeGreaterThan(25)
+    }
+  })
+
+  /*
+   * **Die Gegenprobe zur Gegenprobe.** Ohne sie koennte man den Rueckfall
+   * loeschen und der Test oben bliebe gruen — waehrend eine Kennung aus einem
+   * neueren Backend danach wortlos verschwaende. Vorwaertskompatibilitaet ist
+   * nicht dasselbe wie Vollstaendigkeit.
+   */
+  it('laesst eine wirklich unbekannte Kennung im uebersetzten Rueckfall', () => {
+    const reason = reasonOf(new ApiError(400, JSON.stringify({ code: 'aus_einem_neueren_backend' })))
+
+    expect(reason).toContain('aus_einem_neueren_backend')
+    expect(reason).not.toBe('aus_einem_neueren_backend')
+  })
+})
+
 describe('Erklaertexte im Aufklappbereich', () => {
   it('nennen keine eingebaute Quelle beim Namen', () => {
     // **Derselbe Waechter wie fuer `errors.reason`, eine Textgruppe weiter.**

@@ -24,6 +24,24 @@ import { ApiError } from './client'
  * @param error - Was der Aufruf geworfen hat.
  * @returns Der Grund, oder `null` wenn sich keiner benennen lässt.
  */
+/**
+ * Wo ein Satz zu einer Kennung stehen kann — in dieser Reihenfolge.
+ *
+ * **Zwei Gruppen, weil eine Kennung zwei Wege nimmt.** `input_failure()` im
+ * Backend und der Umzugsbericht beantworten dieselbe Frage an dasselbe
+ * Symbol; die Kennungen sind bewusst dieselben (`app/exchanges.py`). Die
+ * Sätze dazu wohnen aber seit T-44 unter `migration.reason`, weil sie dort
+ * zuerst gebraucht wurden — der Aufnahmeweg sah sie nie und zeigte die
+ * Kennung roh (T-58).
+ *
+ * Gesucht wird **zuerst** unter `errors.reason`: Wo ein Weg einen eigenen,
+ * passenderen Satz hat, gewinnt er gegen den geteilten.
+ */
+const KEYS_FOR = (code: string): readonly string[] => [
+  `errors.reason.${code}`,
+  `migration.reason.${code}`,
+]
+
 export function reasonOf(error: unknown): string | null {
   if (!(error instanceof ApiError)) return null
 
@@ -31,12 +49,13 @@ export function reasonOf(error: unknown): string | null {
   if (body === null) return trimmed(error.detail)
 
   if (typeof body.code === 'string') {
-    const key = `errors.reason.${body.code}`
     const params = isRecord(body.params) ? body.params : {}
-    // `te` fragt, ob der Katalog die Kennung kennt. Ohne diese Frage lieferte
-    // vue-i18n den Schlüssel selbst zurück — der Benutzer läse dann
-    // `errors.reason.instrument_not_found`, was schlimmer ist als nichts.
-    if (i18n.global.te(key)) return i18n.global.t(key, params)
+    for (const key of KEYS_FOR(body.code)) {
+      // `te` fragt, ob der Katalog die Kennung kennt. Ohne diese Frage lieferte
+      // vue-i18n den Schlüssel selbst zurück — der Benutzer läse dann
+      // `errors.reason.instrument_not_found`, was schlimmer ist als nichts.
+      if (i18n.global.te(key)) return i18n.global.t(key, params)
+    }
     // **Auch das Unbekannte wird übersetzt.** Die rohe Kennung stehen zu
     // lassen war der erste Anlauf; sie ist ein Bezeichner für Maschinen und in
     // keiner Sprache ein Satz. Der Rückfall sagt ehrlich, dass die Oberfläche

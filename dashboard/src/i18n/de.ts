@@ -407,6 +407,19 @@ export const de = {
         '{base} und {quote} müssen dreibuchstabige Währungscodes sein.',
       invalid_isin_format: '{isin} hat nicht das Format einer ISIN.',
       /*
+       * **Die einzige Identitätskennung, die nur hier entstehen kann.** Die
+       * drei anderen — fehlendes, unbekanntes und nicht kanonisches Kürzel —
+       * teilt der Aufnahmeweg mit dem Umzugsbericht; ihre Sätze stehen unter
+       * `migration.reason` und werden von dort mitbenutzt (T-58).
+       *
+       * Ein mehrdeutiger Suffix entsteht dagegen nur beim Eintippen: Der
+       * Umzugsbericht liest gespeicherte Symbole, und die sind bereits
+       * entschieden.
+       */
+      ambiguous_exchange_suffix:
+        'Das Börsenkürzel im Symbol passt auf mehrere Handelsplätze — ' +
+        'welcher gemeint ist, sagt die Eingabe nicht.',
+      /*
        * Der Rückfall für eine Kennung, die diese Oberfläche nicht kennt —
        * etwa aus einem neueren Backend oder einem Plugin. Vorher stand die
        * rohe Kennung im Toast; `instrument_not_found` als Satz zu lesen ist
