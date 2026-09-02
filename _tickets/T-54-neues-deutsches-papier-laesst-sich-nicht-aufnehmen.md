@@ -554,3 +554,36 @@ Kontrast `XETR` gegen `XFRA` prüft jetzt für **beide** Antworten `mic == XETR`
 
 **Suite:** 1033 Backend · 302 Plugin-API · 45 Beispiel · 306 Dashboard.
 Ruff sauber. Kein Browser-Rerun (nicht verlangt).
+
+---
+
+## Codex-Review Runde 3 · `approved` (2026-09-02)
+
+Der finale Fachstand `c142f17` schließt die drei Restpunkte. Frische
+unabhängige Gegenprobe:
+
+- 75/75 gezielte Tests über Pflichtfelder, Quote-Service und neue
+  Identitätsformen; Ruff für alle berührten Python-Dateien grün;
+- ein echter `ResolvedInstrument(type="index")` endet in
+  `UnsupportedInstrumentTypeError`, nicht in einer erfolgreichen
+  `QuoteResponse`;
+- `SAP.DE` und `BMW.DE` antworten im kontrastierenden vertikalen Aufbau beide
+  mit `exchange="Xetra"`, `identity.mic="XETR"` und `type="stock"`;
+- isolierter M4-Gegenlauf (`if not missing` → `if True`) rötet fünf der
+  gezielt gestarteten Fälle; isolierter M6-Gegenlauf (`exchange=None`) rötet
+  sowohl den vertikalen Kontrast als auch den Toronto-Fall;
+- Vollsuite: 1033 Backend, 302 Plugin-API, 45 Beispiel und 306 Dashboard.
+
+Claudes dokumentierter Browserlauf nimmt `SAP.DE` und danach `BMW.DE` über
+das sichtbare Feld einer isolierten Online-Instanz auf; beide stehen mit Name
+und Gattung im Bestand, ihre ISIN ist jeweils `NULL`. Verify `#4` bleibt
+korrekt auf `◑`: Der konkret beobachtete falsche 502-Weg ist beseitigt, die
+allgemeine Kennung für beliebige unvollständige Antworten war ausdrücklich
+Nicht-Ziel und wird hier nicht nachgebaut.
+
+DRY-Prüfung: Die Ergebnisbehandlung in `_described` teilt Ablehnung und
+Ausfall mit dem suffixlosen Weg, hat aber bewusst eine andere
+`NotFound`-Folge und überschreibt zusätzlich die vom Benutzer genannte
+Listing-Identität. Eine gemeinsame Abstraktion würde diese zwei verschiedenen
+Regeln verdecken; keine Extraktion. Human-Spalten bleiben leer, nichts wird
+nach `solved/` verschoben.

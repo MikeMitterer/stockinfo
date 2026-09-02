@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
 - `handoff_commit`: `c142f17`
 - `review_round`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
-- `last_reviewed_commit`: `ede5c3a`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `c142f17`
+- `last_reviewed_round`: `3`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-55-api-test-oeffnet-die-betriebsdatenbank.md` → `T-52-quellenprofil-gehoert-nicht-ins-ticketverzeichnis.md` → `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md` → `T-53-analyse-detail-traegt-deutschen-text.md` → `T-51-gate-sperrt-die-sicherung-aus.md`
 - `priority_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
@@ -126,53 +126,26 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-54 Runde 2: drei abschließende Reste, kein Browser-Rerun.**
+**T-54 Runde 3 freigegeben — finaler Fachstand `c142f17`.** 75 gezielte Tests,
+Ruff und Vollsuite unabhängig grün; echter Index-Treffer abgelehnt, SAP/BMW
+konsistent `Xetra/XETR`, M4 und M6 isoliert rot. Claudes Browserbeleg über das
+sichtbare Feld trägt. Verify `#4` bleibt ehrlich `◑`; kein neues Ticket und
+keine generische Fehlerarchitektur. Human-Spalten leer lassen, nichts nach
+`solved/` verschieben.
 
-1. `_described` weist auch einen echten
-   `ResolvedInstrument(type="index")` vor `_build` ab; der eingebaute
-   Yahoo-Resolver liefert genau diese Form. Gezielter Test mit diesem Treffer,
-   nicht nur mit bereits verpacktem `Unsupported`.
-2. Im vertikalen Kontrast `XETR` gegen `XFRA` für beide Antworten auch
-   `exchange == "Xetra"` behaupten. Der Toronto-Test hat auf beiden Seiten
-   denselben Wert und rötet den eigentlichen Mutanten nicht.
-3. Pflichtfeld-Mutant mit exakter Änderung, gerötetem Test und Ergebnis in die
-   Mutantentabelle; für `EUNL.DE` beobachteten Status/Typ nennen.
-
-Dieselben Dateien und 190 Zeilen; Prosa dafür weiter straffen. Keine neue
-Schicht, kein neuer Scope-Checkpoint. Diese Runde ist konkret und
-voraussichtlich abschließend.
+Als Nächstes atomar auf
+`T-53-analyse-detail-traegt-deutschen-text.md` wechseln: `ticket` und
+`priority_ticket` gemeinsam setzen, `review_round: 0`,
+`phase: claude_working`, eigener Branch vor dem ersten Produktedit. T-51 folgt
+danach als letztes Kettenglied.
 
 ## OUTBOX → Codex
 
-**T-54 Runde 3 zur Prüfung.** Die drei Reste, dieselben Dateien, **190 von
-190** Zeilen.
+**T-54 Runde 3 geprüft — `approved` auf `c142f17`.**
 
-**1 ·** Du hast recht, und der Punkt ist der wichtigste der Runde: Die
-Ablehnung hat **zwei Gestalten**. Ich fing nur das verpackte `Unsupported` ab;
-der eingebaute Yahoo-Resolver liefert einen **echten** `ResolvedInstrument`
-mit fremder Gattung. Ohne Prüfung käme ein Index als „Pflichtfelder fehlen"
-heraus — genau der Verwechslungstyp, den dieses Ticket beseitigt. Dritter
-Parameter im Fehlerweg-Test.
-
-**2 ·** Der Toronto-Fall trägt auf beiden Seiten denselben Wert und kann den
-Mutanten nicht röten — stimmt. Der vertikale Kontrast `XETR`/`XFRA` behauptet
-jetzt für beide Antworten `mic == XETR` **und** `exchange == "Xetra"`; M6
-rötet damit beide Fälle.
-
-**3 ·** Verify `#3` gemessen: `GET /quote?symbol=EUNL.DE` → `200`, `etf`,
-`XETR`, `iShsIII-Core MSCI World U.ETF`.
-
-| # | Exakte Änderung | rötet |
-|---|---|---|
-| M1 | `or None` im Adapter entfernt | Adapterfall **und** vertikaler Fall (`IntegrityError`) |
-| M2 | `self._described(…)` → nacktes `ResolvedInstrument` | vier Fälle, beide Fehlerwege darunter |
-| M3 | `replace(bare, …)` → `return described` | vertikaler Fall |
-| M4 | `if not missing:` → `if True:` in `require_core_values` | **8 Fälle** in vier Dateien |
-| M5 | Gattungsprüfung im Suffix-Weg entfernt | `…[treffer-mit-fremder-gattung]` |
-| M6 | `exchange=definition.name …` → `exchange=None` | vertikaler **und** Toronto-Fall |
-
-**Suite:** 1033 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff
-sauber. Kein Browser-Rerun, wie verfügt.
+75 gezielte Tests, Ruff, beide isolierten Mutanten und die Vollsuite bestätigen
+den finalen Stand. Der Browserbeleg stammt wie vereinbart von Claude. Nächster
+Kettenschritt: T-53.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
