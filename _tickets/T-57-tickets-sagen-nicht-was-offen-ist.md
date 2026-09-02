@@ -60,13 +60,16 @@ sehen sollte, inzwischen fünfmal geändert hatte.
 
 Die Ursache ist eine Verwechslung: **Ein Prüfticket wird behandelt wie ein
 Bauticket.** Ein Bauticket ist fertig, wenn der Code stimmt. Ein Prüfticket
-ist fertig, wenn **die Prüfung stattgefunden hat und jeder Befund ein Zuhause
-hat.** Dass Befunde entstehen, ist sein Erfolg, nicht sein Rückstand.
+ist fertig, wenn **die Prüfung stattgefunden hat und jeder Befund erledigt
+oder klar zugeordnet ist.** Dass Befunde entstehen, ist sein Erfolg, nicht
+sein Rückstand.
 
 **Vorschlag, zwei Teile:**
 
-1. **Ein Prüfticket schließt mit seinem Lauf**, nicht mit der Reparatur seiner
-   Befunde. Den Rückstand tragen die Befundtickets.
+1. **Kleine lokale Befunde bleiben im Prüfticket.** Sie werden dort korrigiert
+   und gezielt nachgemessen; dafür entsteht kein eigenes Ticket. Nur Befunde
+   außerhalb der Kleinbefund-Grenzen aus `CODEX-REVIEW-AUTOMATION.md` tragen
+   ihren Rückstand in einem eigenen Ticket oder Scope-Checkpoint.
 2. **Mikes Lauf findet nie auf einem Stand mit offenen Befunden statt.**
    Findet mein Vorlauf etwas, geht das Ticket **nicht** weiter an Mike,
    sondern zurück in die Umsetzung; nach der Reparatur wird der betroffene

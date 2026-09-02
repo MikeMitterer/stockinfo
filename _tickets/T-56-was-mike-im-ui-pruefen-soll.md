@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Dashboard) | **9/9 gruen — wartet auf Mikes sechs Urteile** | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
+| StockInfo (Dashboard) | **9/9 gruen — lokaler Nebenbefund wird nachgemessen** | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
 
 - **Angelegt:** 2026-09-02, auf Mikes Auftrag
 - **Ersetzt:** T-35, T-42 und T-50 als Abnahmetickets für Mike
@@ -75,8 +75,9 @@ Port und eigener Fachdatei unter ihrem `/data`:
     DE „Hinzufügen fehlgeschlagen — Dem Symbol fehlt das Börsenkürzel — aus
     ihm allein lässt sich der Handelsplatz nicht ableiten."; EN „Adding failed
     — The symbol has no exchange suffix — the trading venue cannot be derived
-    from it alone." Der Lauf fand dabei einen **Nebenbefund**, der Punkt 5
-    nicht betrifft: die Überschrift des Hinweises — siehe **T-59**.
+    from it alone." Im selben Handgriff fiel auf, dass der Titel nach einem
+    Live-Sprachwechsel deutsch blieb; dieser kleine lokale Befund wird vor der
+    finalen Übergabe direkt in T-56 korrigiert und wiederholt.
 [^kette]: **Wortlaut geschärft.** Ich hatte „nennt die antwortende Quelle"
     geschrieben — das sagt T-43 nirgends zu. Seine Zeile `#2` verlangt „die
     laufende Kurskette steht geordnet dort", und genau das steht dort:
@@ -105,16 +106,17 @@ den man im Zweifel wegdiskutiert, ist keiner.
 
 ### Was passiert, wenn mein Vorlauf etwas findet
 
-Kein Punkt bekommt eine Fußnote, und nichts wird „aus diesem Ticket heraus"
-repariert:
+Ein kleiner, eindeutig lokaler Befund wird nach der Regel in
+`CODEX-REVIEW-AUTOMATION.md` direkt im laufenden Ticket korrigiert. Danach
+läuft der betroffene Handgriff erneut; eine Codex-Zwischenfreigabe ist dafür
+nicht nötig. Erst wenn der Befund eine neue Entscheidung, einen Vertrag, ein
+Schema, Konfiguration oder eine weitere Produktschicht berührt beziehungsweise
+das Kleinbudget überschreitet, entsteht ein eigenes Bauticket oder ein
+Scope-Checkpoint.
 
-1. Der Befund wird ein **eigenes Bauticket**, hier verlinkt.
-2. Dieses Bauticket durchläuft den normalen Weg bis zu Codex' Freigabe.
-3. Danach laufe ich den betroffenen Punkt **erneut**.
-4. **Erst wenn alle neun Zeilen grün sind**, geht T-56 an Mike.
-
-T-56 bleibt dabei durchgehend eine Liste. Es baut nichts, und es wartet nicht
-als offenes Ticket auf die Reparatur — es geht in die Wiederholung.
+**Erst wenn alle neun Zeilen und die dabei gefundenen lokalen Korrekturen
+grün nachgemessen sind**, geht T-56 an Mike. Befund, Korrektur und
+Wiederholungsbeleg bleiben gemeinsam in dieser Abnahme.
 
 ## Was nur Mike beantworten kann
 
@@ -138,9 +140,9 @@ Ticket, kein Befund an T-54.
 
 ## Nicht-Ziele
 
-- **Keine Produktänderung aus diesem Ticket heraus** — auch nicht als kleine
-  Korrektur nebenbei. Ein Befund wird ein eigenes Bauticket; der Weg steht
-  oben.
+- Keine ungeplante Produktänderung jenseits der ausdrücklich begrenzten
+  Kleinbefund-Regel. Größere oder fachlich neue Änderungen folgen dem normalen
+  Ticket- beziehungsweise Scope-Checkpoint-Weg.
 - Keine Wiederholung der freigegebenen Verify-Matrizen. Was Codex geprüft
   hat, wird vorausgesetzt.
 - Keine neue Prüfinfrastruktur, kein Skript, kein Testlauf in der Suite.
@@ -353,7 +355,8 @@ bleiben bis zum Abschluss von T-56 unangetastet.
 
 ## Runde 4 · Punkt 5 wiederholt (Claude, 2026-09-02)
 
-**Neun von neun Zeilen grün.** Damit ist T-56 fertig für Mike.
+**Neun von neun Zeilen grün.** Der Funktionspunkt ist erfüllt; vor der
+Übergabe an Mike bleibt nur der dabei gefundene lokale Titel-Fehler.
 
 **Die Reihenfolge kommt von ihm, nicht von mir.** Codex hatte die
 Wiederholung an seine T-58-Freigabe gebunden; Mike hat sie ausdrücklich
@@ -394,8 +397,9 @@ lautet die Überschrift `Error`.
 
 Ursache in `AppDashboard.vue:115`: `title: t('errors.title')` ist ein **Wert**
 und wird einmal beim Aufbau ausgewertet, `content: () => …` eine **Funktion**.
-Das ist **T-59** und wird dort behandelt, nicht hier. Punkt 5 misst den Grund
-im Text, und der stimmt in beiden Sprachen.
+Nach Mikes Klarstellung ist das kein eigenes Ticket: Claude korrigiert den
+lokalen Reaktivitätsfehler direkt in T-56, ergänzt eine gezielte Gegenprobe
+und wiederholt denselben Browser-Handgriff mit Live-Sprachwechsel.
 
 ### Der Riegel
 
@@ -408,5 +412,6 @@ data/stockinfo.db   vorher = nachher
 
 ### Was jetzt offen ist
 
-Nur noch **Mikes sechs Fragen**. Sie sind Urteile, keine Prüfungen; ein
-*„nein"* darauf ist eine Produktentscheidung und kein Befund an diesem Ticket.
+Der lokale Titel-Fehler wird korrigiert und nachgemessen. Danach bleiben nur
+noch **Mikes sechs Fragen**. Sie sind Urteile, keine Prüfungen; ein *„nein"*
+darauf ist eine Produktentscheidung und kein Befund an diesem Ticket.

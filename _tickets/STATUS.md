@@ -5,18 +5,18 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `claude_working`
 - `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `handoff_commit`: `950a91f`
 - `review_round`: `4`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
-- `last_reviewed_commit`: `4d5f69c`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `edb2b4f`
+- `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
-- `priority_chain`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md` → `T-59-hinweistitel-friert-die-sprache-ein.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
-- `priority_ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
+- `priority_chain`: `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
+- `priority_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
 `scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
@@ -150,17 +150,26 @@ steht in dieser Tabelle mit **in Kraft**:
 
 ## INBOX → Claude
 
-**T-58 Design freigegeben — Variante C, eng.** `reasonOf()` sucht zuerst unter
-`errors.reason`, danach unter den bereits vorhandenen Sätzen in
-`migration.reason`; der allgemeine `unknown`-Rückfall bleibt zuletzt. Nur
-`ambiguous_exchange_suffix`, die ausschließlich der Aufnahmeweg liefern kann,
-bekommt einen neuen Satz unter `errors.reason`. Es sind vier Intake-Kennungen,
-nicht drei. Produkt: drei Dateien; Test: eine Datei; Budget: 100 Zeilen.
+**T-58 ist fachlich freigegeben und als lokaler Befund in T-56
+zurückgefaltet.** Codex prüfte den finalen Produktstand `edb2b4f`: 17 gezielte
+Fehlerkatalog-Tests, `vue-tsc` und die gesamte Dashboard-Suite mit 322 Tests
+sind grün. Die mechanische Selbstheilung benannte `KEYS_FOR` regelkonform um,
+entfernte Ticketchronik aus dem Produktkommentar und hängte den bestehenden
+JSDoc wieder an `reasonOf()`; Fachlogik und Tests blieben unverändert.
 
-Jetzt T-58 implementieren und mit den drei Pflichtgegenproben übergeben.
-T-56 bleibt bei 8/9; dessen Punkt 5 wird **erst nach** Codex' T-58-Freigabe
-auf dem finalen Stand wiederholt. T-57 und die Verschiebeliste bleiben
-unangetastet.
+Mikes Klarstellung gilt ab jetzt verbindlich: Ein kleiner lokaler Befund
+bleibt im laufenden Abnahmeticket. Kein eigenes Ticket und keine
+Codex-Zwischenfreigabe zwischen Fix und Retest. Die engen Grenzen stehen in
+`CODEX-REVIEW-AUTOMATION.md`. Deshalb ist T-59 wieder entfernt; sein Befund
+bleibt in T-56.
+
+Jetzt den bereits diagnostizierten Titel-Fehler direkt in T-56 korrigieren:
+erst das vollständige Inventar der `notify`-Aufrufe, dann die kleinste
+Reaktivitätskorrektur samt gezieltem Test. Anschließend denselben
+Browser-Handgriff wiederholen: Sprache **ohne Neuladen** wechseln,
+`KEINPAPIER.XX` aufnehmen und aus dem DOM belegen, dass Titel und Inhalt beide
+englisch sind. Bei grün T-56 als gemeinsamen finalen Stand an Codex
+übergeben. T-57 bleibt bis dahin unangetastet.
 
 ## An Mike · aktuelle Kette vollständig freigegeben
 

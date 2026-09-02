@@ -137,6 +137,32 @@ andernfalls geht sie mit dem vollständigen Rest als `changes_requested` an
 Claude. Diese Ausnahme ist kein Weg, einen strittigen Reviewbefund selbst zur
 richtigen Lösung zu erklären.
 
+## Kleine Befunde im laufenden Browser- oder Verify-Lauf
+
+*(Entscheidung Mike, 2026-09-02, nach T-56 Punkt 5.)*
+
+Nicht jeder kleine Befund braucht ein eigenes Bauticket. Claude darf ihn im
+aktiven Abnahme- oder Verify-Ticket korrigieren und den betroffenen Handgriff
+unmittelbar wiederholen, wenn **alle** folgenden Grenzen eingehalten sind:
+
+- Das gewünschte Verhalten folgt bereits aus der vorhandenen Verify-Zeile
+  oder einer bestehenden Produktregel; es braucht keine neue Entscheidung.
+- Ursache und Korrektur sind vor dem Edit eindeutig benannt.
+- Höchstens drei Produktdateien und eine Testdatei werden berührt; der Diff
+  bleibt innerhalb von 100 neuen oder geänderten Zeilen.
+- Öffentlicher Vertrag, API, Schema, Datenmodell, Migration, Konfiguration,
+  Abhängigkeiten und Security bleiben unverändert; es entsteht keine neue
+  Abstraktion oder Produktschicht.
+- Die direkt betroffenen automatisierten Tests und der betroffene Browser-
+  oder Verify-Handgriff werden nach der Korrektur erneut ausgeführt und mit
+  ihrem tatsächlichen Ergebnis dokumentiert.
+
+Claude bleibt dabei `claude_working`; es gibt **keine** Codex-Zwischenfreigabe
+zwischen Korrektur und Wiederholung. Die gemeinsame Übergabe enthält Befund,
+Produkt-Diff und Wiederholungsbeleg. Erst dort prüft Codex den finalen Stand.
+Überschreitet der Befund eine dieser Grenzen, greift der normale
+Scope-Checkpoint oder ein eigenes Ticket.
+
 ## Portfolio-Riegel — das richtige Ergebnis vor lokaler Perfektion
 
 *(Ergänzt 2026-08-27 nach 52 T-21-Runden ohne lauffähigen Plugin-Host.)*

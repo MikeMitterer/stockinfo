@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Dashboard-Katalog) | offen | 1 h | die Kennungen des Aufnahmewegs finden ihre Sätze | — |
+| StockInfo (Dashboard-Katalog) | erledigt — als lokaler Befund in T-56 zurückgefaltet | 1 h | die Kennungen des Aufnahmewegs finden ihre Sätze | — |
 
 - **Angelegt:** 2026-09-02, aus dem Browser-Vorlauf zu **T-56**, dort Punkt 5
 - **Blockiert:** T-56 — Punkt 5 geht nicht grün an Mike, bis das hier zu ist
@@ -10,6 +10,11 @@
 
 **Löst:** Ein Benutzer, der sich vertippt, liest eine rohe Kennung. Genau das
 sollte **T-44** beseitigen.
+
+> **Prozessentscheidung Mike, 2026-09-02:** Dieser eng begrenzte Befund hätte
+> kein eigenes Ticket gebraucht. Der bereits entstandene Zwischenzettel bleibt
+> nur als Historie erhalten; Korrektur, Browser-Wiederholung und finale
+> Übergabe gehören gemeinsam zu T-56.
 
 ---
 
