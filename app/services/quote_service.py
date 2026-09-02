@@ -523,15 +523,14 @@ class QuoteService:
 
         **Die genannte Börse gewinnt:** `ticker`, `mic` und der Anzeigename
         kommen aus dem Symbol — wer `GOLD.SG` tippt, meint Stuttgart. Die
-        Quelle steuert bei, was die Identität nicht sagt.
+        Quelle steuert bei, was die Identität nicht sagt; ihre ISIN reist mit,
+        denn die sagt etwas über das Papier, nicht über den Handelsplatz.
 
-        **Die ISIN der Quelle reist mit:** Sie sagt nichts über den
-        Handelsplatz, sondern über das Papier.
-
-        **Ablehnung und Ausfall reisen weiter**, wie auf dem suffixlosen Weg;
-        sonst käme ein Index als „Pflichtfelder fehlen" heraus und ein
-        Netzausfall als Aussage über das Papier. Ein `NotFound` bricht nicht
-        ab: Dann entscheidet die Pflichtfeldprüfung.
+        **Ablehnung und Ausfall reisen weiter**, sonst käme ein Index als
+        „Pflichtfelder fehlen" heraus und ein Netzausfall als Aussage über das
+        Papier. Die Ablehnung hat **zwei Gestalten** — ein verpacktes
+        `Unsupported` und einen Treffer mit fremder Gattung; der eingebaute
+        Yahoo-Resolver liefert die zweite. `NotFound` bricht nicht ab.
 
         Args:
             symbol: Das genannte Symbol samt Suffix.
@@ -560,6 +559,8 @@ class QuoteService:
         )
         if not isinstance(described, ResolvedInstrument):
             return bare
+        if described.type is not None and described.type not in INSTRUMENT_TYPES:
+            raise UnsupportedInstrumentTypeError(symbol, described.type)
         return replace(
             bare, name=described.name, type=described.type, isin=described.isin
         )

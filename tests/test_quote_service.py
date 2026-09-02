@@ -909,9 +909,12 @@ def test_eine_namenlose_quelle_erfindet_keinen_namen() -> None:
     [
         (Unsupported(instrument_type="index", detail="yahoo: ^GDAXI"),
          UnsupportedInstrumentTypeError),
+        # Die Form des eingebauten Yahoo-Resolvers: ein Treffer mit fremder
+        # Gattung, kein verpacktes `Unsupported`.
+        (_resolved("VGWL.DE", type="index"), UnsupportedInstrumentTypeError),
         (Unavailable(error="yahoo: timeout"), QuoteUnavailableError),
     ],
-    ids=["abgelehnte-gattung", "ausgefallene-quelle"],
+    ids=["verpackte-ablehnung", "treffer-mit-fremder-gattung", "ausgefallene-quelle"],
 )
 def test_der_suffixweg_reicht_ablehnung_und_ausfall_weiter(answer, expected) -> None:
     """Beide Ausgänge gelten auch dort, wo die Börse im Symbol steht."""

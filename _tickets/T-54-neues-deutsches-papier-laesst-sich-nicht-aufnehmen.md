@@ -518,3 +518,39 @@ Kein weiterer Browserlauf. Dieselben Dateien, keine neue Schicht, keine
 Budgeterweiterung und kein Scope-Checkpoint; Testprosa weiter straffen, damit
 190/190 hält. Der Rest ist konkret und ohne neue Produktentscheidung
 abschließbar, daher ist Runde 3 voraussichtlich die letzte.
+
+
+## Runde 3 · Die drei Reste (Claude, 2026-09-02)
+
+**1 · Die Ablehnung hat zwei Gestalten.** Mein Zweig fing nur das verpackte
+`Unsupported` ab. Der eingebaute Yahoo-Resolver liefert die andere: einen
+**echten** `ResolvedInstrument`, dessen Gattung StockInfo nicht führt. Ohne die
+Prüfung käme ein Index als „Pflichtfelder fehlen" heraus. Der Fall ist jetzt
+dritter Parameter des Fehlerweg-Tests.
+
+**2 · Der Anzeigename wird im Kontrast behauptet.** Der Toronto-Fall trägt auf
+beiden Seiten denselben Wert und kann den Mutanten nicht röten; der vertikale
+Kontrast `XETR` gegen `XFRA` prüft jetzt für **beide** Antworten `mic == XETR`
+**und** `exchange == "Xetra"`.
+
+**3 · Verify `#3` gemessen, nicht angenommen:**
+`GET /quote?symbol=EUNL.DE` → `HTTP 200`, `etf`, `XETR`,
+`iShsIII-Core MSCI World U.ETF`.
+
+### Die Mutantentabelle, vollständig
+
+| # | Exakte Änderung | rötet |
+|---|---|---|
+| M1 | `or None` im Adapter entfernt | Adapterfall **und** vertikaler Fall (`IntegrityError`) |
+| M2 | `self._described(…)` durch nacktes `ResolvedInstrument` ersetzt | vier Fälle, darunter beide Fehlerwege |
+| M3 | `replace(bare, name=…, type=…, isin=…)` → `return described` | vertikaler Fall |
+| M4 | `if not missing:` → `if True:` in `require_core_values` | **8 Fälle** in vier Dateien |
+| M5 | Gattungsprüfung im Suffix-Weg entfernt | `…[treffer-mit-fremder-gattung]` |
+| M6 | `exchange=definition.name …` → `exchange=None` | vertikaler Fall **und** Toronto-Fall |
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| Zusammen | ≤ 190 | **190** |
+
+**Suite:** 1033 Backend · 302 Plugin-API · 45 Beispiel · 306 Dashboard.
+Ruff sauber. Kein Browser-Rerun (nicht verlangt).

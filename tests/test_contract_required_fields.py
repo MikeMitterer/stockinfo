@@ -221,10 +221,8 @@ class _WhitespaceQuoteSource:
 
 
 class _SilentResolver:
-    """Löst nichts auf — auch nicht über das Symbol.
-
-    **Das Schweigen ist der Aufbau:** Nur wenn hier nichts zurückkommt, ist die
-    Kursquelle die einzige, die etwas über das Papier sagt.
+    """Löst nichts auf, auch nicht über das Symbol: **Das Schweigen ist der
+    Aufbau** — nur so ist die Kursquelle die einzige, die etwas sagt.
     """
 
     def handles(self, isin: str) -> bool:
@@ -609,11 +607,9 @@ def test_openfigi_sagt_lieber_nichts_als_die_haelfte(
 
 
 class _ListedWithoutIsin:
-    """Börsengehandelte Papiere **ohne ISIN** — der Normalfall deutscher
-    Listings über die Suche.
-
-    **Sie nennt absichtlich Frankfurt**, während das Symbol Xetra sagt: Sonst
-    wäre die Zusicherung erfüllt, egal welche Seite die Börse liefert.
+    """Börsengehandelte Papiere **ohne ISIN**, wie deutsche Listings über die
+    Suche. **Sie nennt absichtlich Frankfurt**, während das Symbol Xetra sagt:
+    Sonst wäre die Zusicherung erfüllt, egal welche Seite die Börse liefert.
     """
 
     SUPPORTED_KINDS = frozenset({"listed"})
@@ -659,10 +655,9 @@ def test_ein_listing_ohne_isin_bekommt_keinen_leerstring() -> None:
 def test_zwei_papiere_ohne_isin_lassen_sich_nacheinander_aufnehmen(
     tmp_path: Path,
 ) -> None:
-    """Zwei symbolbasierte Aufnahmen hintereinander, über die echte Kette.
-
-    **Zweimal, weil erst das zweite Papier den Fall zeigt:** Das erste gelingt
-    auch mit einem Leerstring als ISIN.
+    """Zwei symbolbasierte Aufnahmen hintereinander, über die echte Kette —
+    **zweimal, weil erst das zweite den Fall zeigt:** Das erste gelingt auch
+    mit einem Leerstring als ISIN.
     """
     client, repository = _chain(str(tmp_path / "ohne-isin.db"), _ListedWithoutIsin())
     try:
@@ -677,8 +672,9 @@ def test_zwei_papiere_ohne_isin_lassen_sich_nacheinander_aufnehmen(
     assert erste.json()["type"] == "stock"
     assert zweite.json()["name"] == "Bayerische Motoren Werke AG"
     # Die genannte Börse gewinnt: Das Symbol sagt Xetra, die Quelle Frankfurt.
-    assert erste.json()["identity"]["mic"] == "XETR"
-    assert zweite.json()["identity"]["mic"] == "XETR"
+    for antwort in (erste, zweite):
+        assert antwort.json()["identity"]["mic"] == "XETR"
+        assert antwort.json()["exchange"] == "Xetra"
 
     with repository._connect() as connection:
         gespeichert = connection.execute(
