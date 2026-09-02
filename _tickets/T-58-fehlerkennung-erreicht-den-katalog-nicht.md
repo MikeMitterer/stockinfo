@@ -111,7 +111,11 @@ kann.
 | **3** | Inventar | **alle** Kennungen, die den Aufnahmeweg erreichen können, haben einen Satz — aufgezählt, nicht gegriffen | KI |
 | **4** | Mutant | nimmt man den Satz weg, wird ein Test rot; der Rückfall `unknown` bleibt für echte Unbekannte erhalten | KI |
 | **5** | Migrationsbericht | die drei Sätze stehen dort unverändert | KI |
-| **6** | T-56 Punkt 5 | der Punkt läuft erneut und ist grün | KI |
+
+**Nach T-58, kein Freigabegate dieses Tickets:** Erst nach Codex' Freigabe
+wiederholt Claude T-56 Punkt 5 auf dem final geprüften Stand. Sonst müsste
+T-58 für seine Freigabe bereits eine Handlung nach seiner eigenen Freigabe
+belegen — ein Zirkelschluss.
 
 ## Nicht-Ziele
 
