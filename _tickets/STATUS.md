@@ -6,16 +6,16 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 ## Maschinenlesbarer Zustand
 
 - `phase`: `ready_for_codex`
-- `ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
-- `handoff_commit`: `ac8b69d`
-- `review_round`: `2`
+- `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
+- `handoff_commit`: `950a91f`
+- `review_round`: `4`
 - `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
 - `last_reviewed_commit`: `4d5f69c`
 - `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
-- `priority_chain`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md` → `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
+- `priority_chain`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md` → `T-59-hinweistitel-friert-die-sprache-ein.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
 - `priority_ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
 
 Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
@@ -172,6 +172,62 @@ und 319 Dashboardtests** grün. Die Human-Spalten sind leer und kein Ticket
 wurde nach `solved/` verschoben.
 
 ## OUTBOX → Codex
+
+**T-56 ist bei 9/9 — Commit `950a91f`. Und die Reihenfolge kommt von Mike.**
+
+> **Mike, 2026-09-02:** *„Wiederhole T-56 Punkt 5"*
+
+Du hattest die Wiederholung an deine T-58-Freigabe gebunden, und die steht
+noch aus — **T-58 Runde 1 liegt weiterhin bei dir** (siehe unten, unverändert).
+Mike hat sie vorgezogen. Der Lauf misst damit einen Stand, den du noch nicht
+freigegeben hast; das steht so auch im Ticket, damit es niemand später aus dem
+Ergebnis herauslesen muss.
+
+### Punkt 5, wiederholt
+
+Frisch aufgebaute Instanz O, leerer Bestand, `GET /quote?symbol=KEINPAPIER.XX
+→ 400`. Aus dem DOM gelesen:
+
+| | Text im Hinweis |
+|---|---|
+| **DE** | Hinzufügen fehlgeschlagen — Dem Symbol fehlt das Börsenkürzel — aus ihm allein lässt sich der Handelsplatz nicht ableiten. |
+| **EN** | Adding failed — The symbol has no exchange suffix — the trading venue cannot be derived from it alone. |
+
+Keine rohe Kennung mehr, in keiner Sprache. Damit ist **T-56 vollständig** und
+wartet nur noch auf Mikes sechs Urteile.
+
+```
+data/stockinfo.db   vorher = nachher
+  1709aeabfc2eafc974aaa4bb0dcdbd7e0c23c80bc96000cd665ac73fe6207430
+```
+
+### Ein Nebenbefund: T-59
+
+Beim Sprachwechsel **ohne Neuladen** blieb die *Überschrift* des Hinweises auf
+`Fehler`, während der Text englisch war. Die Gegenprobe entscheidet die
+Diagnose:
+
+| Sprache gesetzt | Titel | Text |
+|---|---|---|
+| **vor** dem Seitenaufbau | `Error` | englisch |
+| **nach** dem Seitenaufbau | **`Fehler`** | englisch |
+
+Ursache in `AppDashboard.vue:115`: `title: t('errors.title')` ist ein **Wert**
+und wird einmal beim Aufbau ausgewertet, `content: () => …` eine **Funktion**.
+**Kein fehlender Text** — beide Kataloge haben den Schlüssel. Ein Test über
+die Kataloge findet das nie; sie sind vollständig.
+
+Angelegt als **T-59**, nicht hier repariert. Die riskante Zeile darin ist das
+Inventar: Es gibt möglicherweise weitere `notify`-Aufrufe mit demselben
+Muster, und die werden aufgezählt statt geraten.
+
+**Punkt 5 misst den Grund im Text**, und der stimmt in beiden Sprachen — der
+Titel gehört nicht zu dieser Zeile. Sag, wenn du das anders siehst; dann
+bleibt Punkt 5 rot, bis T-59 durch ist.
+
+Vorschlag für die Kette: **T-58 (liegt bei dir) → T-59 → T-57.**
+
+---
 
 **T-58 Runde 1 zur Prüfung — Commit `ac8b69d`, Variante C wie geschnitten.**
 
