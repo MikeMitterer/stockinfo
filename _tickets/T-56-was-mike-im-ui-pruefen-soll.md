@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Dashboard) | Vorlauf gelaufen — 8/9 gruen, wartet auf T-58 | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
+| StockInfo (Dashboard) | **9/9 gruen — wartet auf Mikes sechs Urteile** | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
 
 - **Angelegt:** 2026-09-02, auf Mikes Auftrag
 - **Ersetzt:** T-35, T-42 und T-50 als Abnahmetickets für Mike
@@ -55,7 +55,7 @@ Port und eigener Fachdatei unter ihrem `/data`:
 | **2** | Y | Analyse von **`BTC-EUR`** öffnen (`pair`, `BTC`/`EUR`) | die Stufen nennen die konfigurierten Quellen, Zeiten und die Zeilenzahl als Zahl | T-46, T-53, T-31 | ✅ [^zeilen] |
 | **3** | Y | dieselbe Analyse auf Englisch | kein deutsches Wort, auch nicht `3 Zeilen` | T-53 | ✅ |
 | **4** | O | Statuszeile während eines Ladevorgangs | die laufende **Kurskette** steht geordnet dort | T-43 | ✅ [^kette] |
-| **5** | O | `KEINPAPIER.XX` aufnehmen | ein Satz mit Grund erscheint; kein Rohtext, kein stilles Nichts | T-44 | ❌ **T-58** |
+| **5** | O | `KEINPAPIER.XX` aufnehmen | ein Satz mit Grund erscheint; kein Rohtext, kein stilles Nichts | T-44 | ✅ [^wdh] |
 | **6** | O | Sicherung anlegen | steht mit Zeitpunkt und Größe in der Liste; Datei liegt auf der Platte | T-47 | ✅ |
 | **7** | O | Sicherung zurückspielen | verlangt eine Bestätigung und benennt den Vorgang | T-47 | ✅ |
 | **8a** | O | in `assets-fallback.yaml` die **History der Anleihe** `DE0001102531` ändern, während die App läuft | der Wert erscheint ohne Neustart — und zwar über den YAML-Rückfall **hinter** der Online-Kette | T-48, T-37 | ✅ |
@@ -69,6 +69,14 @@ Port und eigener Fachdatei unter ihrem `/data`:
     `Tagesreihe · yaml-file · 0.00s · geliefert · 3 Zeilen`. Der `pair`-Fall
     bleibt über `BTC-EUR` belegt; **kein neuer Fall, ein zweites Papier im
     selben Handgriff.**
+[^wdh]: **Wiederholt am 2026-09-02 nach T-58**, auf frisch aufgebauter Instanz.
+    `GET /quote?symbol=KEINPAPIER.XX → 400`, und im Hinweis steht statt der
+    rohen Kennung ein Satz — in beiden Sprachen, aus dem DOM gelesen:
+    DE „Hinzufügen fehlgeschlagen — Dem Symbol fehlt das Börsenkürzel — aus
+    ihm allein lässt sich der Handelsplatz nicht ableiten."; EN „Adding failed
+    — The symbol has no exchange suffix — the trading venue cannot be derived
+    from it alone." Der Lauf fand dabei einen **Nebenbefund**, der Punkt 5
+    nicht betrifft: die Überschrift des Hinweises — siehe **T-59**.
 [^kette]: **Wortlaut geschärft.** Ich hatte „nennt die antwortende Quelle"
     geschrieben — das sagt T-43 nirgends zu. Seine Zeile `#2` verlangt „die
     laufende Kurskette steht geordnet dort", und genau das steht dort:
@@ -340,3 +348,65 @@ Freigegeben ist nur der **Browser-Vorlauf von T-56**. Claude führt beide
 isolierten Profile aus, trägt die neun AI-Ergebnisse samt Messbelegen ein und
 übergibt T-56 danach erneut. T-57, `make tickets` und die Verschiebeliste
 bleiben bis zum Abschluss von T-56 unangetastet.
+
+---
+
+## Runde 4 · Punkt 5 wiederholt (Claude, 2026-09-02)
+
+**Neun von neun Zeilen grün.** Damit ist T-56 fertig für Mike.
+
+**Die Reihenfolge kommt von ihm, nicht von mir.** Codex hatte die
+Wiederholung an seine T-58-Freigabe gebunden; Mike hat sie ausdrücklich
+vorgezogen (*„Wiederhole T-56 Punkt 5"*). T-58 liegt weiterhin bei Codex zur
+Prüfung — dieser Lauf misst also einen Stand, den er noch nicht freigegeben
+hat. Das ist keine Umgehung, sondern Mikes Entscheidung, und sie steht hier,
+damit niemand sie später aus dem Ergebnis herauslesen muss.
+
+### Was gemessen wurde
+
+Frisch aufgebaute Instanz O, leerer Bestand, ein Handgriff je Sprache:
+
+```
+GET /quote?symbol=KEINPAPIER.XX  →  400
+```
+
+Aus dem DOM gelesen, nicht vom Bild abgeschätzt:
+
+| | Text im Hinweis |
+|---|---|
+| **DE** | Hinzufügen fehlgeschlagen — Dem Symbol fehlt das Börsenkürzel — aus ihm allein lässt sich der Handelsplatz nicht ableiten. |
+| **EN** | Adding failed — The symbol has no exchange suffix — the trading venue cannot be derived from it alone. |
+
+**Keine rohe Kennung mehr, in keiner der beiden Sprachen.** Punkt 5 ist damit
+erfüllt.
+
+### Ein Nebenbefund, der Punkt 5 nicht betrifft
+
+Beim Sprachwechsel **ohne Neuladen** blieb die *Überschrift* des Hinweises auf
+`Fehler`, während der Text englisch war. Die Gegenprobe zeigt, dass es kein
+fehlender Text ist: Steht die Sprache schon **beim Seitenaufbau** auf `en`,
+lautet die Überschrift `Error`.
+
+| Sprache gesetzt | Titel | Text |
+|---|---|---|
+| vor dem Aufbau | `Error` | englisch |
+| nach dem Aufbau | **`Fehler`** | englisch |
+
+Ursache in `AppDashboard.vue:115`: `title: t('errors.title')` ist ein **Wert**
+und wird einmal beim Aufbau ausgewertet, `content: () => …` eine **Funktion**.
+Das ist **T-59** und wird dort behandelt, nicht hier. Punkt 5 misst den Grund
+im Text, und der stimmt in beiden Sprachen.
+
+### Der Riegel
+
+```
+data/stockinfo.db   vorher = nachher
+  1709aeabfc2eafc974aaa4bb0dcdbd7e0c23c80bc96000cd665ac73fe6207430
+```
+
+`data/` enthält danach nur `stockinfo.db` — diesmal keine WAL-Reste.
+
+### Was jetzt offen ist
+
+Nur noch **Mikes sechs Fragen**. Sie sind Urteile, keine Prüfungen; ein
+*„nein"* darauf ist eine Produktentscheidung und kein Befund an diesem Ticket.
