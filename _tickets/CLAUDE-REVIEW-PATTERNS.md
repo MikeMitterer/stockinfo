@@ -816,7 +816,10 @@ AST-Pflicht wieder deutsche Hilfsfunktionen und lokale Variablen; die
 TypeScript-Testdatei führte mit `gemessen`, `VORGABE`, `gerendert` und
 `erwartet` erneut deutsche Bezeichner ein. Fachtests, Mutanten und Ruff waren
 grün, der neue Diff wurde aber wieder nicht gegen die verbindliche
-Sprachtrennung geprüft; Codex zog die rein mechanische Korrektur im Review mit.
+Sprachtrennung geprüft. Das danach vollständig gelesene Sitzungsinventar fand
+zusätzlich `antwort`, `erste`, `zweite`, `gespeichert` und `_NAMEN` im kurz
+zuvor berührten Pflichtfeldtest. Codex zog beide rein mechanischen Korrekturen
+im Review mit.
 
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
