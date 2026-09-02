@@ -812,6 +812,12 @@ Testdocstrings führten erneut Ticket, Mike und die verworfene
 AST-Pflicht wieder deutsche Hilfsfunktionen und lokale Variablen; die
 Übergabe hatte nur die fachlichen Mutanten inventarisiert.
 
+**Weitere Wiederholung:** T-53 Runde 1, Commit `05823a7`: Die neue
+TypeScript-Testdatei führte mit `gemessen`, `VORGABE`, `gerendert` und
+`erwartet` erneut deutsche Bezeichner ein. Fachtests, Mutanten und Ruff waren
+grün, der neue Diff wurde aber wieder nicht gegen die verbindliche
+Sprachtrennung geprüft; Codex zog die rein mechanische Korrektur im Review mit.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
