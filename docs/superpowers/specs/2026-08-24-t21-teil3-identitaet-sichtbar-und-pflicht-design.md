@@ -573,7 +573,7 @@ Dokumente gegenseitig:
 
 | Stelle | Was dort steht |
 |---|---|
-| `_tickets/T-24-rest-core-vertrag.md:194` | führt `identity_status = legacy_unresolved` als Vertragsgegenstand |
+| `_tickets/solved/T-24-rest-core-vertrag.md:194` | führt `identity_status = legacy_unresolved` als Vertragsgegenstand |
 | `docs/superpowers/specs/2026-08-19-plugin-system-design.md:667` | *„T-21 braucht Zwischenzustand … `NULL`-fähige Spalten plus `identity_status`, sonst ist ‚melden statt raten' technisch unmöglich"* — als **übernommen** markiert |
 
 Die zweite ist die heikelste: Sie steht als abgehakte Entscheidung in einem

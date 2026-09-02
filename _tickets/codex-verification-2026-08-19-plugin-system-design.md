@@ -3809,7 +3809,7 @@ Dokuments ergänzen.
 - Design: `docs/superpowers/specs/2026-08-19-plugin-system-design.md`
 - Review-/Kommunikationskanal: dieses Dokument
 - zentrale StockInfo-Tickets zunächst insbesondere:
-  `_tickets/T-24-rest-core-vertrag.md` und
+  `_tickets/solved/T-24-rest-core-vertrag.md` und
   `_tickets/T-25-quellenprofil-wechseln.md`
 - StockPortfolio-Gegenstück:
   `/Volumes/DevLocal/DevWeb/Production/StockPortfolio/_tickets/T-35-stockinfo-generation-und-waehrung.md`

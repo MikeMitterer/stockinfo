@@ -1,7 +1,7 @@
 # Der REST-Core von StockInfo — was zugesagt ist
 
 **Vertragsversion 2.0.0** · Stand 2026-08-26 · Tickets
-[T-24](../_tickets/T-24-rest-core-vertrag.md) und
+[T-24](../_tickets/solved/T-24-rest-core-vertrag.md) und
 [T-21](../_tickets/T-21-identitaet-mic-und-ticker.md)
 
 > **Was 2.0.0 gegenüber 1.0.0 ändert** — ein Major-Sprung, weil beides

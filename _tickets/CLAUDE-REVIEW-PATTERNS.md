@@ -867,7 +867,7 @@ gespeicherten Identität.
 diesem Lauf? Bei Prozess-Cleanup nur eigene PID beziehungsweise eigene
 Prozessgruppe verwenden und Konflikte vor dem Start abbrechen.
 
-**Beleg:** T-17 Runde 1, Commit `84c9c2d`: `_tickets/T-17-smoke.sh`
+**Beleg:** T-17 Runde 1, Commit `84c9c2d`: `_tickets/solved/T-17-smoke.sh`
 beendete nach dem Lauf alle Prozesse auf Port 8766; ein bereits laufender
 fremder Server konnte zusätzlich den Health-Check bestehen und danach beendet
 werden.

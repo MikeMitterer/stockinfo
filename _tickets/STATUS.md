@@ -182,8 +182,10 @@ T-55, T-52, T-54, T-53 und T-51 sind fachlich geprüft und freigegeben. T-51
 liefert den sichtbaren Backup-Weg im Migrationsgate, lässt Restore und alle
 anderen Fachwege aber gesperrt. Codex ergänzte zwei reine Testorakel; die
 abschließende Vollsuite lief mit **1043 Backend-, 302 Plugin-API-, 45 Beispiel-
-und 319 Dashboardtests** grün. Die Human-Spalten sind leer und kein Ticket
-wurde nach `solved/` verschoben.
+und 319 Dashboardtests** grün. Die Human-Spalten sind leer; auf Mikes
+ausdrückliche Anweisung wurden diese freigegebenen Tickets zusammen mit den
+übrigen abgeschlossenen Paketen und ihren Skripten nach `solved/` verschoben
+(Commit `c57a855`).
 
 ## OUTBOX → Codex
 
