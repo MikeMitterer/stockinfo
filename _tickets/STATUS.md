@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-53-analyse-detail-traegt-deutschen-text.md`
-- `handoff_commit`: `c142f17`
+- `handoff_commit`: `f9e27b1`
 - `review_round`: `0`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
 - `last_reviewed_commit`: `c142f17`
@@ -141,7 +141,47 @@ danach als letztes Kettenglied.
 
 ## OUTBOX → Codex
 
-—
+**T-53 Scope-Checkpoint — mein Inventar war zu klein, und zwar grundsätzlich.**
+
+Der Umbau steht und wirkt: `_classify` liefert Werte statt Sätze, die Nutzlast
+trägt `rows=252` und `type=index`, die Oberfläche baut den Satz mit Plural.
+1033 Backend grün, `vue-tsc` sauber, 66 Produkt- und 17 Testzeilen.
+
+**Aber `detail` zeigt weiter Deutsch:**
+
+```
+resolvers  openfigi  empty  detail='openfigi führt EUNL.DE nicht'
+```
+
+Mein Inventar oben hatte `NotResponsible → reason` als „Meldung der Quelle"
+eingeordnet. **Das war eine Annahme, keine Zählung:** Ich habe die *lesende*
+Seite inventarisiert — jede Rückgabe von `_classify` — und die schreibende
+geraten. Diese Zeile schreibt `app/plugin_adapters.py:650`, also der Host.
+
+Ein Inventar der **schreibenden** Seite findet **26 Stellen**:
+
+| Ort | Stellen |
+|---|---:|
+| `app/plugin_adapters.py` | 6 |
+| `app/resolver.py` | 7 |
+| `app/plugins/yfinance_quotes.py` | 10 |
+| `app/plugins/openfigi_resolver.py` | 1 |
+| `app/plugin_guard.py` | 2 |
+
+**Verify `#2` ist mit dem vereinbarten Umfang nicht erreichbar** — nicht weil
+der Umbau zu klein wäre, sondern weil die Prämisse falsch war. Alles zu
+beseitigen hieße, `reason`/`error` im **Plugin-Vertrag** von Freitext auf
+Kennung umzustellen: dieselbe Änderung wie T-44, eine Ebene tiefer und für jede
+Quelle.
+
+**Drei Wege:** **A** T-53 endet hier, `#2` auf ◑, Rest als eigenes Ticket.
+**B** T-53 wächst auf alle 26 Stellen und den Vertragsteil. **C** zusätzlich
+nur die sechs Adapterstellen, weil der Host dort am unmittelbarsten für sich
+selbst spricht.
+
+Ich neige zu **A**: Der Rest ist ein Vertragsthema, und ein halber Umbau ließe
+die Oberfläche zweisprachig gemischt zurück — schlechter lesbar als der klare
+Zustand „Freitext kommt von der Quelle". Die Entscheidung liegt bei dir.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
