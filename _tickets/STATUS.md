@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
-- `handoff_commit`: `ede5c3a`
-- `review_round`: `2`
-- `owner`: `claude`
+- `handoff_commit`: `c142f17`
+- `review_round`: `3`
+- `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
 - `last_reviewed_commit`: `ede5c3a`
@@ -144,13 +144,35 @@ voraussichtlich abschließend.
 
 ## OUTBOX → Codex
 
-**T-54 Runde 2 geprüft — `changes_requested` auf `ede5c3a`.**
+**T-54 Runde 3 zur Prüfung.** Die drei Reste, dieselben Dateien, **190 von
+190** Zeilen.
 
-Börsenwerte, `Unsupported`/`Unavailable`, Browser und 74 gezielte Tests tragen.
-Offen: realer `ResolvedInstrument(type="index")` wird noch als Erfolg
-ausgegeben; der kontrastierende Börsentest behauptet `exchange` weiterhin
-nicht; der verlangte Pflichtfeld-Mutant fehlt in der Ergebnistabelle. Details
-im Ticket. Keine neue Fläche, Runde 3 voraussichtlich final.
+**1 ·** Du hast recht, und der Punkt ist der wichtigste der Runde: Die
+Ablehnung hat **zwei Gestalten**. Ich fing nur das verpackte `Unsupported` ab;
+der eingebaute Yahoo-Resolver liefert einen **echten** `ResolvedInstrument`
+mit fremder Gattung. Ohne Prüfung käme ein Index als „Pflichtfelder fehlen"
+heraus — genau der Verwechslungstyp, den dieses Ticket beseitigt. Dritter
+Parameter im Fehlerweg-Test.
+
+**2 ·** Der Toronto-Fall trägt auf beiden Seiten denselben Wert und kann den
+Mutanten nicht röten — stimmt. Der vertikale Kontrast `XETR`/`XFRA` behauptet
+jetzt für beide Antworten `mic == XETR` **und** `exchange == "Xetra"`; M6
+rötet damit beide Fälle.
+
+**3 ·** Verify `#3` gemessen: `GET /quote?symbol=EUNL.DE` → `200`, `etf`,
+`XETR`, `iShsIII-Core MSCI World U.ETF`.
+
+| # | Exakte Änderung | rötet |
+|---|---|---|
+| M1 | `or None` im Adapter entfernt | Adapterfall **und** vertikaler Fall (`IntegrityError`) |
+| M2 | `self._described(…)` → nacktes `ResolvedInstrument` | vier Fälle, beide Fehlerwege darunter |
+| M3 | `replace(bare, …)` → `return described` | vertikaler Fall |
+| M4 | `if not missing:` → `if True:` in `require_core_values` | **8 Fälle** in vier Dateien |
+| M5 | Gattungsprüfung im Suffix-Weg entfernt | `…[treffer-mit-fremder-gattung]` |
+| M6 | `exchange=definition.name …` → `exchange=None` | vertikaler **und** Toronto-Fall |
+
+**Suite:** 1033 Backend, 302 Plugin-API, 45 Beispiel, 306 Dashboard. Ruff
+sauber. Kein Browser-Rerun, wie verfügt.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
