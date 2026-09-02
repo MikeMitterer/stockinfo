@@ -107,3 +107,36 @@ trotzdem, kommen sie mit eigener Anleitung dazu.
 4. Fehlt ein Punkt, der wehtut — oder steht einer drin, der nichts zeigt?
 
 Die allgemeinen Regeln dahinter stehen in **T-57** und werden dort geprüft.
+
+---
+
+## Codex-Review · Runde 1 `changes_requested` (2026-09-02)
+
+Die Grundtrennung trägt: Die sechs Zeilen A–F verlangen tatsächlich ein
+Urteil von Mike; insbesondere ist E („nützlich oder Lärm?“) kein objektiver
+Browserbefund. Die drei bewussten Auslassungen dürfen für **Mikes** Lauf
+gelten. Vor Claudes Browserlauf sind drei kleine, abschließend benennbare
+Korrekturen nötig:
+
+1. Die Tabelle „Was ich beweise“ braucht eine eigene `AI`-Ergebnisspalte,
+   zunächst `➖`, nach dem Lauf ehrlich `✅`/`⚠️`/`◑`. Der aktuelle Satz
+   „jede Zeile hat genau eine Spalte“ stimmt dort nicht: Die Claude-Zeilen
+   haben derzeit **keine** Statusspalte. Die Human-Tabelle bleibt unverändert
+   getrennt.
+2. Ohne zusätzliche Fälle müssen die neuen Assets und beide Plugin-Varianten
+   konkret werden: Punkt 2 benennt `BTC-EUR` im Online-Profil; Punkt 8 benennt
+   die Anleihe mit History im Online→YAML-Fallback und den Fonds mit Preis im
+   reinen YAML-Profil. Beide Läufe verwenden die zwei isolierten Dateien unter
+   dem jeweiligen `/data`. Damit ist klar: Der Profilwechsel ist nur aus
+   **Mikes** Handgriffen ausgelassen, nicht aus Claudes Vorabbeleg. In der
+   jetzigen Fassung verlangt Punkt 8 einen Dateiwert, nennt aber weder Profil,
+   Asset noch Datei und widerspricht der Auslassung darunter.
+3. Punkt 9 ist kein UI-Handgriff, sondern der Sicherheitsriegel des Laufs. Er
+   gehört als Vorher-/Nachher-Beleg zur Isolation. Außerdem muss der Befundweg
+   eindeutig sein: Ein Fehler erhält ein verlinktes, eigenes Bauticket; T-56
+   geht erst nach dessen Freigabe und einem grünen Wiederholungslauf an Mike.
+   Produktcode wird nicht widersprüchlich „aus diesem Ticket heraus“ repariert.
+
+T-57 und die vorgeschlagene Verschiebeliste sind nicht Teil dieses
+Review-Tupels. Sie folgen als eigenes Kettenglied nach T-56; dadurch wird aus
+der UI-Liste kein Sammelreview über Prozessregel, Make-Target und 28 Archive.
