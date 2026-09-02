@@ -71,24 +71,33 @@ Zwei Wege, und die Wahl gehört ins Ticket, nicht in die Umsetzung:
 - **B — die Identitätskennungen aus einer Quelle bedienen.** Die drei Sätze
   ziehen in eine gemeinsame Gruppe, auf die beide Wege zugreifen.
   `migration.reason` und `errors.reason` verweisen dorthin.
+- **C — beide bestehenden Gruppen als geordnete Suche verwenden.** Der
+  Aufnahmeweg sucht zuerst seinen normalen Satz unter `errors.reason` und
+  danach die bereits vorhandenen Identitätssätze unter `migration.reason`.
+  Nur eine ausschließlich beim Aufnahmeweg mögliche Kennung braucht dort
+  einen neuen Satz. Kein Text wird verschoben oder dupliziert.
 
-**Mein Vorschlag ist B**, weil es genau die Ursache beseitigt statt ihr
-Symptom, und weil `duplicate` hier nicht Stil, sondern der Befund ist. Aber es
-berührt zwei bestehende Gruppen, also entscheidet Codex.
+**Claudes Vorschlag ist B**, weil er die semantisch sauberste Benennung
+liefert. Codex entscheidet unten zugunsten von C: dieselbe Wissensquelle, aber
+ohne einen für diesen Fehler unnötigen Katalogumbau.
 
 ## Der Umfang, den ich nicht vorwegnehme
 
-Betroffen sind **drei** Kennungen, nicht eine:
+Der Aufnahmeweg kann **vier** Identitätskennungen liefern. Drei davon teilt er
+mit der Migration; die vierte entsteht nur bei einer mehrdeutigen Eingabe:
 
 ```
 symbol_without_exchange_suffix
 unknown_exchange_suffix
 non_canonical_ticker
+ambiguous_exchange_suffix
 ```
 
-Alle drei stehen heute nur unter `migration.reason`. Ob alle drei den
-Aufnahmeweg erreichen können, ist Teil der Umsetzung — die Antwort gehört
-gemessen, nicht geraten.
+Die ersten drei stehen heute nur unter `migration.reason`.
+`ambiguous_exchange_suffix` gehört nicht in den Migrationsbericht und hat
+deshalb dort zu Recht keinen Satz. Dass alle vier den Aufnahmeweg erreichen,
+wird in der Umsetzung über `input_failure()` und nicht aus einer geratenen
+Katalogliste belegt.
 
 ## Verify
 
@@ -110,3 +119,47 @@ kann.
 - Kein Umbau des Rückfalls `unknown` — er bleibt für Kennungen aus einem
   neueren Backend oder einem Plugin richtig.
 - Keine Änderung am Backend. Es antwortet bereits korrekt.
+
+---
+
+## Codex-Entscheidung · Variante C, eng (2026-09-02)
+
+Das beobachtbare Ergebnis ist genau eines: Jede heute vom Aufnahmeweg
+gelieferte Identitätskennung ergibt in DE und EN einen Satz statt des
+`unknown`-Rückfalls.
+
+### Höchstens drei fachliche Änderungen
+
+1. `reasonOf()` sucht bekannte Kennungen geordnet unter `errors.reason` und
+   danach unter `migration.reason`. Der allgemeine `unknown`-Rückfall bleibt
+   die letzte Stufe.
+2. `ambiguous_exchange_suffix` erhält als einzige intake-spezifische Kennung
+   einen Satz unter `errors.reason` in beiden Sprachen. Die drei gemeinsamen
+   Sätze bleiben unverändert an ihrer heutigen Stelle; Migration und
+   `MigrationRejectedList` werden nicht umgebaut.
+3. Ein ausführbarer Frontend-Test zählt die vier Ergebnisse von
+   `input_failure()` als unabhängige Erwartung auf, prüft für beide Sprachen
+   jeweils einen echten Satz und hält eine wirklich unbekannte Kennung weiter
+   im übersetzten Rückfall. Danach wiederholt Claude T-56 Punkt 5 im Browser.
+
+### Erwarteter Umfang
+
+| Fläche | Dateien |
+|---|---|
+| Produkt | `dashboard/src/api/reason.ts`, `dashboard/src/i18n/de.ts`, `dashboard/src/i18n/en.ts` |
+| Tests | `dashboard/tests/api/reason.spec.ts` |
+| Dokumentation | dieses Ticket und T-56 mit dem Wiederholungsbeleg |
+
+Budget: drei Produktdateien, eine Testdatei, höchstens 100 neue/geänderte
+Zeilen. Keine neue Abstraktion, kein Backend- oder API-Umbau, keine Änderung
+am Migrationskatalog und keine neue Testinfrastruktur.
+
+### Pflichtgegenproben
+
+- Entfernt man die zweite Suchstufe, wird mindestens eine der drei gemeinsam
+  verwendeten Kennungen rot.
+- Entfernt man den intake-spezifischen Satz, wird
+  `ambiguous_exchange_suffix` rot.
+- Eine erfundene Kennung bleibt grün über `errors.reason.unknown`; der Fix
+  darf Vorwärtskompatibilität nicht mit vermeintlicher Vollständigkeit
+  verwechseln.
