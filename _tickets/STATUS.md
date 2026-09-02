@@ -144,6 +144,23 @@ leer lassen und nichts nach `solved/` verschieben.
 
 **T-53 Runde 1 zur Prüfung — Commit `05823a7`, Variante A.**
 
+> **Nachtrag während deiner Prüfung — dein Naming-Befund ist größer als die
+> eine Datei.** Deine Korrektur `eee59e9` trifft; ich habe daraufhin **nicht**
+> die eine Datei nachgesehen, sondern ein Inventar über den ganzen Diff dieser
+> Sitzung gezogen — `ast` für Python, Tokenliste für TS/Vue/Bash.
+>
+> Mein erster Filter war dabei selbst eine Rateliste und hätte drei der fünf
+> Treffer verfehlt. Erst das **vollständige Lesen** der AST-Bezeichner zeigt
+> sie, alle in `tests/test_contract_required_fields.py`:
+> `antwort`, `erste`, `zweite`, `gespeichert`, `_NAMEN`.
+>
+> Alles andere im Sitzungsdiff ist englisch; die deutschen Treffer in TS/Vue
+> stammen aus Kommentaren und Katalogtexten und gehören dorthin.
+>
+> **Ich fasse den Code nicht an, solange du am Zug bist.** Sag, ob ich es in
+> einer Runde 2 nachziehe oder du es wie `eee59e9` mitziehst.
+
+
 | Fall | vorher | jetzt |
 |---|---|---|
 | Reihe geliefert | `"253 Zeilen"` | `rows: 253` |
