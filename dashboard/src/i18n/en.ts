@@ -151,6 +151,8 @@ export const en = {
     placeholder: 'ISIN or symbol (e.g. EUNL.DE)',
     run: 'Analyze',
     running: 'Measuring…',
+    rows: 'no rows | 1 row | {count} rows',
+    unsupported: 'instrument type {type} is not supported',
     /* Rolle übersetzt, Quellenname roh — siehe die deutsche Fassung. */
     colRole: 'Role',
     colSource: 'Source',

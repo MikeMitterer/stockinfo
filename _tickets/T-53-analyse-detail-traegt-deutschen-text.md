@@ -146,3 +146,77 @@ Abzweigpunkt, ohne Ticket- und `STATUS.md`-Dateien.
 - Meldungen der Quellen übersetzen oder normieren.
 - `status` ändern, neue Stufen einführen, den Kernvertrag anfassen.
 - Die Fehlerwege aus T-44 oder die Kennungsfrage aus T-54 anfassen.
+
+---
+
+## Scope-Checkpoint · Mein Inventar war zu klein, und zwar grundsätzlich
+
+Der Umbau ist gemacht und wirkt. Die Nutzlast trägt jetzt Werte:
+
+```
+daily      yfinance      ok      detail=None   rows=252   type=None
+resolvers  yahoo-search  empty   detail=None   rows=None  type=index
+```
+
+**Aber `detail` zeigt weiter Deutsch:**
+
+```
+resolvers  openfigi  empty  detail='openfigi führt EUNL.DE nicht'
+```
+
+### Warum das nicht die Meldung einer Quelle ist
+
+Mein Inventar oben ordnete `NotResponsible → value.reason` als „Meldung der
+Quelle" ein. **Das war eine Annahme, keine Zählung.** Ich hatte die *lesende*
+Seite inventarisiert — jede Rückgabe von `_classify` — und die schreibende
+Seite dabei geraten.
+
+Diese Zeile schreibt `app/plugin_adapters.py:650`, also der **Host**:
+
+```python
+return NotResponsible(reason=f"{self.name} führt {symbol} nicht")
+```
+
+Ein Inventar der schreibenden Seite findet **26 Stellen**, die deutschen Text
+in `reason` oder `error` legen — verteilt über Adapter, Kapsel, Resolver-Kaskade
+und die eingebauten Plugins:
+
+| Ort | Stellen |
+|---|---:|
+| `app/plugin_adapters.py` | 6 |
+| `app/resolver.py` | 7 |
+| `app/plugins/yfinance_quotes.py` | 10 |
+| `app/plugins/openfigi_resolver.py` | 1 |
+| `app/plugin_guard.py` | 2 |
+
+Alle können über `detail` in der Oberfläche landen.
+
+### Was das für das Ticket heißt
+
+**Verify `#2` — „kein deutscher Fließtext mehr in der Nutzlast" — ist mit dem
+vereinbarten Umfang nicht erreichbar.** Nicht, weil der Umbau zu klein wäre,
+sondern weil die Prämisse falsch war: Der Satz entsteht nicht nur im Analyzer.
+
+Ihn überall zu beseitigen hieße, `reason` und `error` im **Plugin-Vertrag** von
+Freitext auf Kennung und Werte umzustellen — dieselbe Änderung, die T-44 für
+die REST-Fehlerwege gemacht hat, eine Ebene tiefer und für jede Quelle. Das ist
+kein Nachtrag zu diesem Ticket.
+
+### Drei Wege
+
+- **A — T-53 endet hier.** Der Analyzer komponiert nichts mehr selbst; das ist
+  sein Beitrag. Verify `#2` wird auf ◑ mit dieser Begründung gesetzt, der Rest
+  wird als eigenes Ticket gedrainiert.
+- **B — T-53 wächst** auf die 26 Stellen und den Vertragsteil. Deutlich
+  größer als das Ticket beschreibt, und es berührt `plugin_api`.
+- **C — Zwischenweg:** zusätzlich die **sechs** Stellen im Adapter
+  (`plugin_adapters.py`), weil der Host dort am unmittelbarsten für sich selbst
+  spricht. Die Plugins und die Kaskade blieben.
+
+Ich neige zu **A**: Die verbleibenden Sätze sind ein Vertragsthema, und ein
+halber Umbau ließe die Oberfläche zweisprachig gemischt zurück — schlechter
+lesbar als der klare Zustand „Freitext kommt von der Quelle".
+
+**Stand der Arbeit:** 66 Produkt- und 17 Testzeilen, Suite 1033 grün,
+`vue-tsc` sauber. Nichts davon hängt an der Entscheidung; sie betrifft nur,
+wie weit es geht.

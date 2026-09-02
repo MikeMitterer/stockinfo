@@ -329,7 +329,12 @@ export interface AnalyzeStage {
   source: string
   seconds: number
   status: string
+  /** Was die **Quelle** gesagt hat — nie ein Satz des Hosts. */
   detail: string | null
+  /** Zeilen einer Tagesreihe; den Satz baut die Oberfläche. */
+  rows: number | null
+  /** Gattung, die nicht geführt wird. */
+  instrument_type: string | null
 }
 
 /** Ergebnis einer On-Demand-Stage-Analyse für ein Instrument. */

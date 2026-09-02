@@ -888,7 +888,14 @@ class AnalyzeStage(BaseModel):
     source: str = Field(description="Name der Quelle aus `sources.yaml`")
     seconds: float
     status: str = Field(description="ok | empty | error | skipped")
+    #: Was die **Quelle** gesagt hat, oder das aufgelöste Symbol — nie ein Satz
+    #: des Hosts. Der entstünde hier in einer Sprache und stünde dann auch in
+    #: der anderen Oberfläche.
     detail: str | None = None
+    rows: int | None = Field(default=None, description="Zeilen einer Tagesreihe")
+    instrument_type: str | None = Field(
+        default=None, description="Gattung, die nicht geführt wird"
+    )
 
 
 class AnalyzeResult(BaseModel):

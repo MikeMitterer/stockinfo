@@ -171,6 +171,8 @@ export const de = {
     placeholder: 'ISIN oder Symbol (z.B. EUNL.DE)',
     run: 'Analysieren',
     running: 'Messe…',
+    rows: 'keine Zeilen | 1 Zeile | {count} Zeilen',
+    unsupported: 'Gattung {type} wird nicht geführt',
     /*
      * **Rolle statt Anbietername.** Die Analyse misst, was die konfigurierte
      * Kette tut; welche Quelle in einer Rolle steht, entscheidet

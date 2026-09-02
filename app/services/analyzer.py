@@ -47,6 +47,8 @@ class _Record:
     seconds: float
     status: str
     detail: str | None = None
+    rows: int | None = None
+    instrument_type: str | None = None
 
 
 class _Stopwatch:
@@ -84,8 +86,10 @@ class _Stopwatch:
             )
             return _BROKEN[role]()
         seconds = _elapsed(start)
-        status, detail = _classify(value)
-        self.records.append(_Record(role, source, seconds, status, detail))
+        status, detail, rows, instrument_type = _classify(value)
+        self.records.append(
+            _Record(role, source, seconds, status, detail, rows, instrument_type)
+        )
         return value
 
 
@@ -127,24 +131,33 @@ def _elapsed(start: float) -> float:
 _UNREACHABLE = "Quelle nicht erreichbar"
 
 
-def _classify(value: Any) -> tuple[str, str | None]:
-    """Was die Antwort einer Quelle bedeutet — Status und Grund.
+def _classify(value: Any) -> tuple[str, str | None, int | None, str | None]:
+    """Was die Antwort einer Quelle bedeutet — Status, Grund, Werte.
+
+    **`detail` trägt keinen Satz des Hosts.** Was wir selbst zu sagen haben,
+    steht als Wert daneben: die Zeilenzahl als Zahl, die nicht geführte Gattung
+    als Gattung. Den Satz baut die Oberfläche, und nur sie kennt die Sprache
+    ihres Lesers. Was von einer **Quelle** kommt — `openfigi: HTTP 503` —
+    bleibt unverändert in `detail`: Es gehört ihr, nicht uns.
+
+    „Quelle nicht erreichbar" entfällt ersatzlos: `status` sagt das bereits,
+    und ein Feld dafür wäre eine dritte Fassung derselben Aussage.
 
     **Der Unterschied zwischen `empty` und `error` ist der Zweck dieses
     Endpunkts.** „Nichts gefunden" und „konnte nicht nachsehen" führen zu
     verschiedenen nächsten Schritten; sie beide grau zu färben nähme der
     Diagnose genau die Auskunft, für die es sie gibt:
 
-    | Antwort | Status | Detail |
+    | Antwort | Status | Was mitgeht |
     |---|---|---|
-    | `ResolvedInstrument` | `ok` | das Symbol |
-    | `Unsupported` | `empty` | die **Gattung** — erkannt, nur nicht geführt |
-    | `Unavailable` | **`error`** | der genannte Grund |
-    | `NotResponsible` | `empty` | sein `reason`, falls einer dasteht |
+    | `ResolvedInstrument` | `ok` | `detail`: das Symbol |
+    | `Unsupported` | `empty` | `instrument_type`: die **Gattung** |
+    | `Unavailable` | **`error`** | `detail`: der Grund der Quelle |
+    | `NotResponsible` | `empty` | `detail`: sein `reason` |
     | `NotFound` | `empty` | — nachgesehen, nichts da |
-    | `SourceAnswer` ohne Wert, `disturbed` | **`error`** | Störung der Quelle |
+    | `SourceAnswer` ohne Wert, `disturbed` | **`error`** | — |
     | `SourceAnswer` ohne Wert | `empty` | — |
-    | `SourceAnswer` mit Reihe | `ok` | die Zeilenzahl |
+    | `SourceAnswer` mit Reihe | `ok` | `rows`: die Zeilenzahl |
 
     **`Unsupported` ist `empty` und nicht `error`:** Die Kette hat einwandfrei
     gearbeitet — sie hat das Papier sogar erkannt. Ein
@@ -152,23 +165,23 @@ def _classify(value: Any) -> tuple[str, str | None]:
     nicht gibt.
     """
     if isinstance(value, ResolvedInstrument):
-        return "ok", value.symbol
+        return "ok", value.symbol, None, None
     if isinstance(value, Unsupported):
-        return "empty", f"Gattung {value.instrument_type} wird nicht geführt"
+        return "empty", None, None, value.instrument_type
     if isinstance(value, Unavailable):
-        return "error", value.error or _UNREACHABLE
+        return "error", value.error or None, None, None
     if isinstance(value, NotResponsible):
-        return "empty", value.reason or None
+        return "empty", value.reason or None, None, None
     if isinstance(value, NotFound):
-        return "empty", None
+        return "empty", None, None, None
     if isinstance(value, SourceAnswer):
         if not value.is_hit:
-            return ("error", _UNREACHABLE) if value.disturbed else ("empty", None)
+            return ("error" if value.disturbed else "empty"), None, None, None
         rows = value.value
-        return "ok", (f"{len(rows)} Zeilen" if isinstance(rows, list) else None)
+        return "ok", None, (len(rows) if isinstance(rows, list) else None), None
     if value is None or (isinstance(value, (list, tuple)) and not value):
-        return "empty", None
-    return "ok", None
+        return "empty", None, None, None
+    return "ok", None, None, None
 
 
 # Welche Methode je Rolle die Außenwelt fragt — und damit gemessen wird.
@@ -317,6 +330,8 @@ class QuoteAnalyzer:
                         seconds=record.seconds if record else 0.0,
                         status=record.status if record else "skipped",
                         detail=record.detail if record else None,
+                        rows=record.rows if record else None,
+                        instrument_type=record.instrument_type if record else None,
                     )
                 )
         return stages

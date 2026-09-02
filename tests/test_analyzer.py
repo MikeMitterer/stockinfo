@@ -352,37 +352,43 @@ def test_ein_nicht_gefundenes_papier_liefert_ein_teilergebnis() -> None:
 
 
 @pytest.mark.parametrize(
-    ("answer", "expected_status", "expected_detail"),
+    ("answer", "expected_status", "expected_detail", "expected_type"),
     [
         pytest.param(
             Unavailable(error="openfigi: 503"),
             "error",
             "openfigi: 503",
+            None,
             id="Ausfall-ist-ein-Fehler-und-nennt-seinen-Grund",
         ),
+        # Ohne Text der Quelle bleibt `detail` leer: `status` sagt bereits, dass
+        # nicht nachgesehen werden konnte, und ein Satz des Hosts stünde in der
+        # englischen Oberfläche deutsch da.
         pytest.param(
-            Unavailable(),
-            "error",
-            "Quelle nicht erreichbar",
-            id="Ausfall-ohne-Text-sagt-wenigstens-das",
+            Unavailable(), "error", None, None, id="Ausfall-ohne-Text-nennt-keinen"
         ),
         pytest.param(
             Unsupported(instrument_type="index"),
             "empty",
-            "Gattung index wird nicht geführt",
+            None,
+            "index",
             id="erkannt-aber-nicht-gefuehrt-ist-kein-Fehler",
         ),
         pytest.param(
             NotResponsible(reason="keine ISIN"),
             "empty",
             "keine ISIN",
+            None,
             id="nicht-zustaendig-nennt-seinen-Grund",
         ),
-        pytest.param(NotFound(), "empty", None, id="nachgesehen-nichts-da"),
+        pytest.param(NotFound(), "empty", None, None, id="nachgesehen-nichts-da"),
     ],
 )
 def test_jede_antwortart_behaelt_ihre_bedeutung(
-    answer: object, expected_status: str, expected_detail: str | None
+    answer: object,
+    expected_status: str,
+    expected_detail: str | None,
+    expected_type: str | None,
 ) -> None:
     """**Der Zweck des Endpunkts steckt in diesem Unterschied.**
 
@@ -397,6 +403,7 @@ def test_jede_antwortart_behaelt_ihre_bedeutung(
 
     assert stage.status == expected_status
     assert stage.detail == expected_detail
+    assert stage.instrument_type == expected_type
 
 
 def test_eine_gestoerte_tagesreihe_ist_ein_fehler_kein_leeres_ergebnis() -> None:
@@ -420,7 +427,7 @@ def test_eine_gestoerte_tagesreihe_ist_ein_fehler_kein_leeres_ergebnis() -> None
     stages = _stages(analyzer.analyze(isin="IE00B4L5Y983"))
 
     assert stages[("daily", "gestoert")].status == "error"
-    assert stages[("daily", "gestoert")].detail == "Quelle nicht erreichbar"
+    assert stages[("daily", "gestoert")].detail is None
     assert stages[("daily", "stumm")].status == "empty"
     assert stages[("daily", "stumm")].detail is None
 
@@ -448,7 +455,7 @@ def test_eine_werfende_tagesquelle_haelt_die_kaskade_nicht_an() -> None:
     assert stages[("daily", "online")].detail == "RuntimeError"
     assert second.calls == 1, "die zweite Quelle wurde nach dem Fehler nicht gefragt"
     assert stages[("daily", "yaml-file")].status == "ok"
-    assert stages[("daily", "yaml-file")].detail == "3 Zeilen"
+    assert stages[("daily", "yaml-file")].rows == 3
 
 
 def test_eine_leere_rolle_erzeugt_keine_zeile() -> None:

@@ -6,7 +6,7 @@ import { NButton, NInput, NSelect } from 'naive-ui'
 import { isIsin } from '../api/paths'
 import { useAnalysis } from '../composables/useAnalysis'
 import { isinOf, refOf } from '../types'
-import type { InstrumentRef, InstrumentSummary } from '../types'
+import type { AnalyzeStage, InstrumentRef, InstrumentSummary } from '../types'
 
 const props = defineProps<{ instruments: InstrumentSummary[] }>()
 
@@ -39,6 +39,19 @@ const target = computed<InstrumentRef | null>(() => {
 
 async function run(): Promise<void> {
   if (target.value) await analyze(target.value)
+}
+
+/**
+ * Der Zusatz hinter dem Status — **hier** entsteht der Satz, nicht im Server.
+ *
+ * Die Nutzlast trägt Werte: die Zeilenzahl als Zahl, die nicht geführte
+ * Gattung als Gattung. `detail` dagegen ist, was die **Quelle** gesagt hat,
+ * und bleibt unübersetzt: Es gehört ihr.
+ */
+function note(stage: AnalyzeStage): string | null {
+  if (stage.rows !== null) return t('analysis.rows', stage.rows, { named: { count: stage.rows } })
+  if (stage.instrument_type) return t('analysis.unsupported', { type: stage.instrument_type })
+  return stage.detail
 }
 
 /** Auswahlliste für Naive: Wert ist das Symbol, Beschriftung nennt den Namen. */
@@ -103,7 +116,7 @@ const instrumentOptions = computed(() =>
           <td>{{ s.source }}</td>
           <td class="num">{{ s.seconds.toFixed(2) }}s</td>
           <td>
-            {{ t(`analysis.status.${s.status}`) }}<span v-if="s.detail"> · {{ s.detail }}</span>
+            {{ t(`analysis.status.${s.status}`) }}<span v-if="note(s)"> · {{ note(s) }}</span>
           </td>
         </tr>
         <tr class="total">
