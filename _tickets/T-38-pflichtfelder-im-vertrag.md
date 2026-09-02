@@ -161,7 +161,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | **6b** | dieselbe Auskunft | `name` und `type` stehen dort als **Pflicht**. Heute sagt sie `required: false` — das widerspricht der Entscheidung, sobald sie umgesetzt ist | ✅ [^r1] | |
 | **7** | `contract/core-contract.json` | `core_version` steigt, weil ein optionales Feld zum Pflichtfeld wird. Das ist laut eigener Regel **breaking** → Major | ✅ [^m] | |
 | **8** | die vier eingebauten Plugins | jedes liefert die Pflichtfelder oder antwortet ehrlich mit `NotFound` | ✅ [^r1] | |
-| **9** | das YAML-Beispiel | jeder `instrument`-Eintrag trägt `name` und `type`; ein nicht börsengehandelter Fonds kommt als `fund`, nicht `etf`. Siehe T-37 | ➖ [^t37] | |
+| **9** | das YAML-Beispiel | jeder `instrument`-Eintrag trägt `name` und `type`; ein nicht börsengehandelter Fonds kommt als `fund`, nicht `etf`. Siehe T-37 | ✅ [^t37] | |
 | **10** | `docs/plugins.md` | ein Plugin-Autor liest, welche Felder er liefern **muss** | ✅ [^r2] | |
 
 [^r1]: Umsetzung Runde 1 gegen `96b3184`. Die Orakel entstanden **vor** dem
@@ -189,8 +189,25 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `core_version` 3.0.0 → 4.0.0, weil ein optionales Feld zum Pflichtfeld
     wird. Betroffen sind `quote.name`, `quote.type`, `instrument.name`,
     `instrument.type`.
-[^t37]: Gehört zum YAML-Plugin und wird dort erfüllt — T-37 ist das nächste
+[^t37]: Gehört zum YAML-Plugin und wird dort erfüllt — T-37 war das nächste
     Kettenglied. Hier bewusst offen gelassen statt vorweggenommen.
+
+    **Eingelöst, gemessen am 2026-09-02** an den Vorlagen, die T-49 nach
+    `examples/` gebracht hat. Nicht `grep`, sondern das geladene YAML:
+
+    ```
+    examples/assets-standalone.yaml — 5 Instrumente, ohne name/instrument_type: keine
+      etf    listed    iShares Core MSCI World UCITS ETF
+      stock  listed    Apple Inc.
+      crypto pair      Bitcoin
+      bond   isin_only Bundesrepublik Deutschland
+      fund   isin_only DWS Top Dividende LD
+    examples/assets-fallback.yaml   — 1 Instrument,  ohne name/instrument_type: keine
+    ```
+
+    Der Publikumsfonds steht als `fund`, nicht als `etf` — das war der Punkt
+    der Zeile. Nebenbei belegt dieselbe Messung alle drei Identitätsformen aus
+    T-31 (`listed`, `pair`, `isin_only`) an echten Betriebsvorlagen.
 
 ---
 
