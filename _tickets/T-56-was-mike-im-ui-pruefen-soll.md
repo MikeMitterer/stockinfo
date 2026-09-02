@@ -482,3 +482,62 @@ Jeder wäre ein Umweg um eine Ursache, die woanders liegt.
 Der Befund steht als **Frage G** oben bei den anderen — er ist bewusst eine
 Frage an Mike und keine an Codex: Es geht um ein geteiltes Deliverable, das
 weitere Apps bedient, nicht um StockInfo-Fachlogik.
+
+---
+
+## Runde 6 · Frage G ist beantwortet — und im Fundament umgesetzt
+
+> **Mike, 2026-09-02:** *„1 - ja"*
+
+Damit war der Weg freigegeben, den Frage G benannt hatte. Umgesetzt ist er
+**nicht hier**, sondern im Repo `ux-foundation`
+(`/Volumes/DevLocal/DevWeb/Production/ux-foundation`, GitHub
+`MikeMitterer/ux-foundation`), Branch `fix/notify-title-follows-locale`,
+Commit `fcd088c`.
+
+### Was dort steht
+
+`NotifyOptions.title` und `StateNotificationOptions.title` nehmen jetzt
+`string | (() => string)`. Ein gemeinsamer Helfer löst beide Formen auf; er
+steht in den **Quellen des Watchers**, damit auch eine bereits offene Meldung
+nachzieht.
+
+**Additiv, kein Bruch:** Eine Zeichenkette bleibt gültig. Das ist eigens
+geprüft — in einem Paket, das jede einbindende App bedient, wäre eine
+Erweiterung, die zum Bruch wird, der teurere Fehler.
+
+| | Grenze | gemessen |
+|---|---|---|
+| Suite | vorher 142 | **145** |
+| `make typecheck`, `make lint` | sauber | sauber |
+
+### Ein Mutant, der nicht biss — und warum das mein Fehler war
+
+| Mutant | rötet |
+|---|---|
+| Überschrift aus den Watcher-Quellen | *„zieht die Überschrift einer offenen Meldung nach"* |
+| Nachziehen am offenen Toast entfernt | derselbe Fall |
+| Zeichenkette nicht mehr unterstützt | **neun** Fälle in beiden Gruppen |
+
+Der erste blieb zunächst **grün**. Meine erste Testfassung ließ den *Text*
+mitwechseln — dann feuert der Watcher schon wegen des Textes, und ob die
+Überschrift in seinen Quellen steht, ist nicht mehr unterscheidbar. Der Test
+lässt den Text jetzt bewusst unverändert; erst ein Wechsel, den **allein** die
+Überschrift auslöst, prüft die Zusage.
+
+### Was das für StockInfo bedeutet — noch nichts
+
+```
+StockInfo/dashboard/node_modules/@mmit/ux-foundation  →  title: string
+ux-foundation (Quelle, fcd088c)                       →  title: string | (() => string)
+```
+
+StockInfo bezieht das Paket als **Version 0.6.0 aus der npm-Registry**
+(`package-lock.json`, `resolved: registry.npmjs.org`). Der Aufrufer
+`AppDashboard.vue:115` kann erst dann auf `title: () => t('errors.title')`
+umgestellt werden, wenn eine neue Version veröffentlicht und hier gezogen ist —
+vorher scheitert die Typprüfung an der installierten 0.6.0.
+
+**Veröffentlichen gehört Mike.** Ich habe nichts gepusht und nichts publiziert;
+der Commit liegt lokal auf seinem Branch. Bis dahin bleibt Frage G *beantwortet
+und vorbereitet*, aber in der Oberfläche unverändert.

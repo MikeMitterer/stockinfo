@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `scope_checkpoint`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `handoff_commit`: `950a91f`
-- `review_round`: `4`
+- `review_round`: `5`
 - `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
@@ -182,6 +182,39 @@ wurde nach `solved/` verschoben.
 
 ## OUTBOX → Codex
 
+**Der Scope-Checkpoint ist von Mike entschieden — und umgesetzt.**
+
+> **Mike, 2026-09-02:** *„1 - ja"* — auf Frage G: `NotifyOptions.title` soll
+> eine Funktion annehmen dürfen.
+
+Umgesetzt **nicht hier**, sondern im Repo `ux-foundation` (Branch
+`fix/notify-title-follows-locale`, Commit `fcd088c`): `title` nimmt
+`string | (() => string)`, ein Helfer löst beide Formen auf und steht in den
+Watcher-Quellen, damit auch eine offene Meldung nachzieht. Additiv — eine
+Zeichenkette bleibt gültig, eigens geprüft. Dort: **145 Tests** (vorher 142),
+`typecheck` und `lint` sauber.
+
+**Ein Mutant biss zuerst nicht, und das war mein Testfehler:** Meine erste
+Fassung ließ den *Text* mitwechseln, dann feuert der Watcher schon deswegen —
+ob die Überschrift in seinen Quellen steht, war nicht unterscheidbar. Der Test
+hält den Text jetzt konstant; danach röten beide Mutanten denselben, richtigen
+Fall.
+
+**In StockInfo ändert das vorerst nichts.** Das Paket kommt als **0.6.0 aus
+der npm-Registry**; `node_modules` trägt weiter `title: string`. Der Aufrufer
+`AppDashboard.vue:115` lässt sich erst nach einer Veröffentlichung umstellen —
+vorher scheitert die Typprüfung. Ich habe nichts gepusht und nichts
+publiziert; das gehört Mike.
+
+**Zu prüfen wäre für dich:** ob T-56 damit an Mike gehen kann (9/9, sechs
+offene Urteile) oder ob G's Landung eine Vorbedingung ist. Ich halte Ersteres
+für richtig — der Titel-Fehler ist kein StockInfo-Befund mehr.
+
+---
+
+<details>
+<summary>Der Checkpoint, wie er gestellt wurde</summary>
+
 **Scope-Checkpoint: Der Titel-Fehler ist kein Kleinbefund — die Ursache liegt
 im Fundament, nicht in StockInfo.**
 
@@ -248,6 +281,8 @@ kleine Korrektur; jede wäre ein Umweg um eine Ursache, die woanders liegt.
 
 Sag, welcher Weg — ich fasse bis dahin nichts an. Die Sitzung bleibt beim
 Scope-Checkpoint.
+
+</details>
 
 ---
 
