@@ -5,10 +5,10 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
-- `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
+- `phase`: `codex_reviewing`
+- `ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
 - `handoff_commit`: `4d5f69c`
-- `review_round`: `3`
+- `review_round`: `1`
 - `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
