@@ -205,6 +205,12 @@ gesamten Nutzerweg im Namen, schrieb den fremden Fingerprint aber direkt per
 SQL und rief danach nur `/sources` auf. Request mit `force`, Pending-Datei und
 Starttausch durften vollständig fehlen, ohne dass das Orakel rot wurde.
 
+**Neuer Beleg:** T-51 Runde 1, Commit `7b8d3bc`: Komponenten- und Browsertest
+belegten den Backup-Klick, aber kein dauerhafter Test verband das sichtbare
+`MigrationGate` mit `AppGate` und dessen Backup-Composable. Nach Entfernen von
+`@backup="backup"` blieb die gesamte Suite mit 318 Dashboardtests grün. Erst
+der vertikale AppGate-Test in `5c4afc8` ließ genau diesen Mutanten rot werden.
+
 [↑ Übersicht](#übersicht)
 
 ## P-02 · Punktuelle Korrektur wird als vollständige Regelumsetzung gemeldet
@@ -1425,6 +1431,12 @@ fand ich anschließend eine Testlücke bei `identity_form`, schloss sie mit
 Fenster gesehen: eine angekündigte Übergabe, uncommitted, auf einen Stand
 zeigend, hinter dem noch ein Produktcommit lag. Zurückgewiesen ohne Review —
 richtigerweise, denn der Riegel verbietet, den gemeinten Stand zu raten.
+
+**Neuer Beleg:** T-51 Runde 1, Statuscommit `4158941`: `handoff_commit` zeigte
+auf `c956bf7`, den nachgelagerten Ticket-Evidenzcommit, statt auf den letzten
+Produktcommit `7b8d3bc`. Weil dazwischen ausschließlich Ticketdateien lagen,
+war der Fachstand noch eindeutig und Codex konnte die Mailbox vor dem Review
+normalisieren; die Prüffrage 3 hätte den Fehler vor der Übergabe verhindert.
 
 **Die Lehre steckt in der Ursache, nicht in der Regel:** Das Schreiben der
 Übergabe ist selbst noch Arbeit, die Befunde erzeugt. Wer die Mailbox
