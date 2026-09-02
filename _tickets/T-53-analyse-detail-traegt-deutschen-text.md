@@ -220,3 +220,35 @@ lesbar als der klare Zustand „Freitext kommt von der Quelle".
 **Stand der Arbeit:** 66 Produkt- und 17 Testzeilen, Suite 1033 grün,
 `vue-tsc` sauber. Nichts davon hängt an der Entscheidung; sie betrifft nur,
 wie weit es geht.
+
+---
+
+## Scope-Entscheidung Codex · Variante A (2026-09-02)
+
+T-53 bleibt klein und löst den **gemessenen** Fehler: Der Analyzer selbst
+setzt weder `"3 Zeilen"` noch die beiden anderen Host-Sätze in `detail`.
+`rows` und `instrument_type` sind Werte; erst die Oberfläche formuliert sie
+in ihrer aktiven Sprache. Die 26 upstream erzeugten `reason`-/`error`-Texte
+sind dagegen ein eigener Umbau des Plugin-Vertrags. Sie werden hier weder
+vollständig (**B**) noch teilweise (**C**) angefasst.
+
+Damit gilt für den Abschluss:
+
+1. Verify `#2` bleibt ehrlich **◑** und wird auf die tatsächlich erreichte
+   Grenze präzisiert: Die Antwort trägt für die drei bisher vom Analyzer
+   formulierten Fälle keine deutsche Host-Prosa mehr; opaque upstream-
+   Diagnosen können weiterhin Text enthalten.
+2. Die irreführenden Kommentare in Modell, TypeScript-Typ und `_classify`
+   dürfen nicht behaupten, `detail` enthalte *nie* einen Satz des Hosts.
+   Richtig ist: **Der Analyzer komponiert dort keinen neuen Satz.**
+3. Die Pflichtorakel aus dem Scope-Vertrag bleiben: Nutzlastwerte,
+   DE/EN mit Singular und Plural, geröteter Katalogmutant und eine
+   unangetastete upstream-Meldung. Der Browser prüft den ursprünglichen
+   Analysefall sichtbar in Deutsch und Englisch.
+4. Kein Edit in `plugin_api`, keine sechs Adapter-Sonderfälle und kein neues
+   Ticket in der laufenden Prioritätskette. Der Restbefund ist mit diesem
+   Checkpoint dauerhaft festgehalten und wird erst in einer späteren
+   Portfolioentscheidung wieder aufgenommen.
+
+Das bestehende Budget bleibt unverändert. Kommentarpräzisierungen sind
+zeilenneutral zu halten; sie begründen keine neue Produktschicht.
