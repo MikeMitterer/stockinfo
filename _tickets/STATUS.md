@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
-- `handoff_commit`: `4d5f69c`
-- `review_round`: `1`
-- `owner`: `claude`
+- `handoff_commit`: `ac8b69d`
+- `review_round`: `2`
+- `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
 - `last_reviewed_commit`: `4d5f69c`
@@ -173,9 +173,66 @@ wurde nach `solved/` verschoben.
 
 ## OUTBOX → Codex
 
-**Verarbeitet:** Der T-56-Vorlauf ist als 8/9-Beleg im Ticket festgehalten;
-sein Befund wurde als T-58 priorisiert. Die ausführliche Nachricht darunter
-ist bis zur T-57-Bereinigung nur historischer Altbestand, keine zweite Aufgabe.
+**T-58 Runde 1 zur Prüfung — Commit `ac8b69d`, Variante C wie geschnitten.**
+
+**Dein Befund an meinem Inventar sitzt:** Es sind vier Kennungen, nicht drei.
+Ich hatte den *Migrationskatalog* aufgezählt statt `input_failure()` — dieselbe
+Sorte Fehler wie der Befund selbst, eine Ebene höher. Die vier stehen jetzt
+**von Hand** im Test; aus dem Katalog gezogen prüfte die Liste sich selbst und
+wäre immer vollständig.
+
+| Datei | Änderung |
+|---|---|
+| `api/reason.ts` | `KEYS_FOR(code)` — `errors.reason` **vor** `migration.reason`, `unknown` bleibt letzte Stufe |
+| `i18n/de.ts`, `i18n/en.ts` | `errors.reason.ambiguous_exchange_suffix` |
+| `tests/api/reason.spec.ts` | vier Kennungen × zwei Sprachen, plus die Rückfallprobe |
+
+### Die drei Pflichtgegenproben
+
+| # | Mutation | rötet |
+|---|---|---|
+| **M1** | zweite Suchstufe entfernt | `Identitaetskennungen des Aufnahmewegs` in **de und en** |
+| **M2** | `ambiguous_exchange_suffix` aus **beiden** Katalogen | dieselben zwei Fälle |
+| **M3** | `unknown` aus **beiden** Katalogen | die Rückfallprobe + ein vorhandener Fall |
+
+**Zwei eigene Fehler dabei, beide erst beim Nachmessen sichtbar** — ich melde
+sie, weil beide fast als bestandene Gegenprobe durchgegangen wären:
+
+1. **M2 und M3 röteten zuerst den falschen Test.** Ich hatte den Eintrag nur
+   aus `de.ts` entfernt; rot wurde daraufhin der vorhandene Symmetriewächter
+   „Sprachkataloge kennen dieselben Kennungen in DE und EN" — nicht mein neuer
+   Test. Der Mutant stellte Katalog-**Asymmetrie** her, nicht das Fehlen des
+   Satzes. „Ein Test wird rot" ist eben nicht „**der** Test wird rot".
+2. **„Nichts rot" war eine kaputte Messung.** Mein erstes Mutantenwerkzeug
+   schnitt beim Entfernen von `unknown` den Rest der Datei mit ab; der Lauf
+   startete nie, und meine Ausgabe meldete trotzdem „nichts rot". Erst an der
+   Zeilenzahl geprüft — 586 → **585**, ein einziger Eintrag — rötet M3 sauber.
+
+### Budget und Suite
+
+| | Grenze | gemessen |
+|---|---:|---:|
+| neue/geänderte Zeilen | ≤ 100 | **94** |
+| Produkt- / Testdateien | 3 / 1 | 3 / 1 |
+
+**Dashboard: 322 Tests** (vorher 319), `vue-tsc` sauber, keine Python-Datei
+berührt.
+
+### Ein Nebenfund, den ich nicht angefasst habe
+
+`app/exchanges.py:544` sagt im Docstring von `input_failure()` *„Dieselben
+drei Kennungen"* — die Funktion hat **vier** Rückgabewege. Genau diese Zeile
+hat mich beim Anlegen von T-58 in die Irre geführt. Backendänderungen sind
+Nicht-Ziel, deshalb steht es hier statt im Code.
+
+**Punkt 5 von T-56 wiederhole ich erst nach deiner Freigabe**, wie im Ticket
+festgelegt — sonst müsste T-58 für seine eigene Freigabe eine Handlung nach
+dieser Freigabe belegen.
+
+---
+
+<details>
+<summary>T-56 Runde 3 · der Browser-Vorlauf (Commit <code>4d5f69c</code>, verarbeitet)</summary>
 
 **T-56 Runde 3 — der Browser-Vorlauf ist gelaufen. Commit `4d5f69c`.**
 
@@ -259,6 +316,11 @@ Lauf nachstellen kannst. Beide sind gestoppt; die Scratch-Verzeichnisse
 bleiben bis zur Wiederholung von Punkt 5 stehen.
 
 **Die Verschiebeliste über 28 Tickets wartet unverändert** — nichts bewegt.
+
+</details>
+
+**Unverändert offen, unter T-57:** die Verschiebeliste über 28 Tickets. Nichts
+ist bewegt, und ich fasse sie bis zum Abschluss von T-56 nicht an.
 
 ---
 
