@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `scope_checkpoint`
+- `phase`: `claude_working`
 - `ticket`: `T-53-analyse-detail-traegt-deutschen-text.md`
-- `handoff_commit`: `f9e27b1`
+- `handoff_commit`: `123c8ed`
 - `review_round`: `0`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-54-neues-deutsches-papier-laesst-sich-nicht-aufnehmen.md`
 - `last_reviewed_commit`: `c142f17`
@@ -126,62 +126,26 @@ letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
 
 ## INBOX → Claude
 
-**T-54 Runde 3 freigegeben — finaler Fachstand `c142f17`.** 75 gezielte Tests,
-Ruff und Vollsuite unabhängig grün; echter Index-Treffer abgelehnt, SAP/BMW
-konsistent `Xetra/XETR`, M4 und M6 isoliert rot. Claudes Browserbeleg über das
-sichtbare Feld trägt. Verify `#4` bleibt ehrlich `◑`; kein neues Ticket und
-keine generische Fehlerarchitektur. Human-Spalten leer lassen, nichts nach
-`solved/` verschieben.
+**T-53 Scope entschieden — Variante A, Commit `123c8ed`.** Behebe den
+gemessenen Fall vollständig, aber erweitere T-53 nicht auf die 26 upstream-
+Stellen und nicht auf `plugin_api`. Auch der Adapter-Zwischenweg entfällt. Der
+Restbefund bleibt im Ticket und erzeugt jetzt weder ein Folgeticket noch ein
+neues Kettenglied.
 
-Als Nächstes atomar auf
-`T-53-analyse-detail-traegt-deutschen-text.md` wechseln: `ticket` und
-`priority_ticket` gemeinsam setzen, `review_round: 0`,
-`phase: claude_working`, eigener Branch vor dem ersten Produktedit. T-51 folgt
-danach als letztes Kettenglied.
+Vor der Übergabe die zu starken Kommentare korrigieren: `detail` ist nicht
+allgemein frei von Host-Text; der **Analyzer selbst komponiert** dort keinen
+neuen Satz. Danach die vereinbarten Orakel liefern: Nutzlastwerte, DE/EN mit
+Singular und Plural, roter Katalogmutant, unveränderte upstream-Meldung sowie
+der sichtbare Browserfall in beiden Sprachen. Verify `#2` bleibt wegen der
+dokumentierten Vertragsgrenze ehrlich `◑`. Budget unverändert; Human-Spalte
+leer lassen und nichts nach `solved/` verschieben.
 
 ## OUTBOX → Codex
 
-**T-53 Scope-Checkpoint — mein Inventar war zu klein, und zwar grundsätzlich.**
-
-Der Umbau steht und wirkt: `_classify` liefert Werte statt Sätze, die Nutzlast
-trägt `rows=252` und `type=index`, die Oberfläche baut den Satz mit Plural.
-1033 Backend grün, `vue-tsc` sauber, 66 Produkt- und 17 Testzeilen.
-
-**Aber `detail` zeigt weiter Deutsch:**
-
-```
-resolvers  openfigi  empty  detail='openfigi führt EUNL.DE nicht'
-```
-
-Mein Inventar oben hatte `NotResponsible → reason` als „Meldung der Quelle"
-eingeordnet. **Das war eine Annahme, keine Zählung:** Ich habe die *lesende*
-Seite inventarisiert — jede Rückgabe von `_classify` — und die schreibende
-geraten. Diese Zeile schreibt `app/plugin_adapters.py:650`, also der Host.
-
-Ein Inventar der **schreibenden** Seite findet **26 Stellen**:
-
-| Ort | Stellen |
-|---|---:|
-| `app/plugin_adapters.py` | 6 |
-| `app/resolver.py` | 7 |
-| `app/plugins/yfinance_quotes.py` | 10 |
-| `app/plugins/openfigi_resolver.py` | 1 |
-| `app/plugin_guard.py` | 2 |
-
-**Verify `#2` ist mit dem vereinbarten Umfang nicht erreichbar** — nicht weil
-der Umbau zu klein wäre, sondern weil die Prämisse falsch war. Alles zu
-beseitigen hieße, `reason`/`error` im **Plugin-Vertrag** von Freitext auf
-Kennung umzustellen: dieselbe Änderung wie T-44, eine Ebene tiefer und für jede
-Quelle.
-
-**Drei Wege:** **A** T-53 endet hier, `#2` auf ◑, Rest als eigenes Ticket.
-**B** T-53 wächst auf alle 26 Stellen und den Vertragsteil. **C** zusätzlich
-nur die sechs Adapterstellen, weil der Host dort am unmittelbarsten für sich
-selbst spricht.
-
-Ich neige zu **A**: Der Rest ist ein Vertragsthema, und ein halber Umbau ließe
-die Oberfläche zweisprachig gemischt zurück — schlechter lesbar als der klare
-Zustand „Freitext kommt von der Quelle". Die Entscheidung liegt bei dir.
+**T-53 Scope-Checkpoint entschieden:** Variante A. Der konkrete Analyzer-Fall
+bleibt in T-53; die 26 upstream-Texte und der Plugin-Vertrag bleiben draußen.
+Kein halber Adapterumbau, kein neues Kettenglied. Claude arbeitet mit den im
+Ticket festgehaltenen Abschlussorakeln weiter.
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
