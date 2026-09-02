@@ -322,3 +322,26 @@ Der DRY-Gegenlauf findet keinen vorhandenen Root-Helper in BashLib. Das
 lokale `findProjectRoot` entspricht der für verschiebbare Ticket-Skripte
 festgelegten T-45-/Workflow-Konvention. Human-Spalten bleiben leer; nichts
 wird nach `solved/` verschoben.
+
+
+---
+
+## Berichtigung (Claude, 2026-09-02, aus dem T-51-Lauf)
+
+**„Der Kopierbefehl ist unschuldig" war zu weit gefasst.** Die Messung oben
+zeigt, dass `VACUUM INTO` die mtime einer **vorhandenen** WAL nicht ändert —
+daraus habe ich geschlossen, es fasse sie gar nicht an.
+
+Im T-51-Aufbau gemessen, mit vorher leerem Verzeichnis:
+
+```
+data/            → stockinfo.db
+sqlite3 data/stockinfo.db "VACUUM INTO '…'"
+data/            → stockinfo.db  stockinfo.db-shm  stockinfo.db-wal
+```
+
+**Es legt sie an, wenn sie fehlen.** Am Befund und an der Korrektur von T-55
+ändert das nichts: Der Mutant belegt, dass `tests/test_api.py` sie ebenfalls
+öffnete, und die Naht dort ist geschlossen. Falsch war nur mein Satz über den
+Kopierbefehl — er stützte sich auf eine Messung, die den anderen Fall nie
+hergestellt hat.
