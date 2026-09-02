@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Dashboard) | Konzept freigegeben nach Runde 1, Vorlauf offen | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
+| StockInfo (Dashboard) | Vorlauf gelaufen — 8/9 gruen, wartet auf T-58 | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
 
 - **Angelegt:** 2026-09-02, auf Mikes Auftrag
 - **Ersetzt:** T-35, T-42 und T-50 als Abnahmetickets für Mike
@@ -51,15 +51,30 @@ Port und eigener Fachdatei unter ihrem `/data`:
 
 | # | Lauf | Handgriff | Nachweis | woher | AI |
 |---|:--:|---|---|---|:--:|
-| **1** | O | `SAP.DE` und `BMW.DE` über das Feld aufnehmen | beide im Bestand, mit Name und `stock`; keine Fehlermeldung | T-54 | ➖ |
-| **2** | Y | Analyse von **`BTC-EUR`** öffnen (`pair`, `BTC`/`EUR`) | die Stufen nennen die konfigurierten Quellen, Zeiten und die Zeilenzahl als Zahl | T-46, T-53, T-31 | ➖ |
-| **3** | Y | dieselbe Analyse auf Englisch | kein deutsches Wort, auch nicht `3 Zeilen` | T-53 | ➖ |
-| **4** | O | Statuszeile während eines Ladevorgangs | nennt die antwortende Quelle | T-43 | ➖ |
-| **5** | O | `KEINPAPIER.XX` aufnehmen | ein Satz mit Grund erscheint; kein Rohtext, kein stilles Nichts | T-44 | ➖ |
-| **6** | O | Sicherung anlegen | steht mit Zeitpunkt und Größe in der Liste; Datei liegt auf der Platte | T-47 | ➖ |
-| **7** | O | Sicherung zurückspielen | verlangt eine Bestätigung und benennt den Vorgang | T-47 | ➖ |
-| **8a** | O | in `assets-fallback.yaml` die **History der Anleihe** `DE0001102531` ändern, während die App läuft | der Wert erscheint ohne Neustart — und zwar über den YAML-Rückfall **hinter** der Online-Kette | T-48, T-37 | ➖ |
-| **8b** | Y | in `assets-standalone.yaml` den **Preis des Fonds** `DE0009848119` ändern, während die App läuft | derselbe Nachweis im reinen Dateiprofil | T-48, T-52 | ➖ |
+| **1** | O | `SAP.DE` und `BMW.DE` über das Feld aufnehmen | beide im Bestand, mit Name und `stock`; keine Fehlermeldung | T-54 | ✅ |
+| **2** | Y | Analyse von **`BTC-EUR`** öffnen (`pair`, `BTC`/`EUR`) | die Stufen nennen die konfigurierten Quellen, Zeiten und die Zeilenzahl als Zahl | T-46, T-53, T-31 | ✅ [^zeilen] |
+| **3** | Y | dieselbe Analyse auf Englisch | kein deutsches Wort, auch nicht `3 Zeilen` | T-53 | ✅ |
+| **4** | O | Statuszeile während eines Ladevorgangs | die laufende **Kurskette** steht geordnet dort | T-43 | ✅ [^kette] |
+| **5** | O | `KEINPAPIER.XX` aufnehmen | ein Satz mit Grund erscheint; kein Rohtext, kein stilles Nichts | T-44 | ❌ **T-58** |
+| **6** | O | Sicherung anlegen | steht mit Zeitpunkt und Größe in der Liste; Datei liegt auf der Platte | T-47 | ✅ |
+| **7** | O | Sicherung zurückspielen | verlangt eine Bestätigung und benennt den Vorgang | T-47 | ✅ |
+| **8a** | O | in `assets-fallback.yaml` die **History der Anleihe** `DE0001102531` ändern, während die App läuft | der Wert erscheint ohne Neustart — und zwar über den YAML-Rückfall **hinter** der Online-Kette | T-48, T-37 | ✅ |
+| **8b** | Y | in `assets-standalone.yaml` den **Preis des Fonds** `DE0009848119` ändern, während die App läuft | derselbe Nachweis im reinen Dateiprofil | T-48, T-52 | ✅ |
+
+[^zeilen]: **`BTC-EUR` allein konnte die Zeilenzahl nicht zeigen** — es trägt
+    im YAML einen Preis, aber keine Tagesreihe; die Stufe meldete `nichts`.
+    Die Zeile hätte damit grün ausgesehen, ohne ihre zweite Hälfte je geprüft
+    zu haben — genau das Muster, das in `CLAUDE-REVIEW-PATTERNS.md` steht.
+    Belegt ist sie an der Anleihe `DE0001102531`, die eine History hat:
+    `Tagesreihe · yaml-file · 0.00s · geliefert · 3 Zeilen`. Der `pair`-Fall
+    bleibt über `BTC-EUR` belegt; **kein neuer Fall, ein zweites Papier im
+    selben Handgriff.**
+[^kette]: **Wortlaut geschärft.** Ich hatte „nennt die antwortende Quelle"
+    geschrieben — das sagt T-43 nirgends zu. Seine Zeile `#2` verlangt „die
+    laufende Kurskette steht geordnet dort", und genau das steht dort:
+    `Kurse: yfinance → yaml-file` in O, `Kurse: yaml-file` in Y. Gegen meine
+    ursprüngliche, schärfere Formulierung wäre die Zeile nicht belegbar
+    gewesen, obwohl das Produkt seine Zusage hält.
 
 **Damit ist der Profilwechsel nur aus Mikes Handgriffen ausgelassen, nicht
 aus meinem Vorabbeleg.** Codex hat den Widerspruch in der ersten Fassung
@@ -226,6 +241,84 @@ Festgelegt ist jetzt: **eigenes verlinktes Bauticket → Codex-Freigabe →
 Wiederholung des Punktes → erst dann Mike.**
 
 Nichts umgesetzt, nichts gelaufen — das Ticket ist weiterhin ein Konzept.
+
+---
+
+## Runde 2 · Der Browser-Vorlauf (Claude, 2026-09-02)
+
+**Acht von neun Zeilen grün, eine rot.** Die rote geht als **T-58** ihren
+eigenen Weg; T-56 wandert damit nicht zu Mike, sondern in die Wiederholung —
+genau wie oben festgelegt.
+
+### Der Aufbau
+
+`_tickets/T-56-vorlauf.sh` baut beide Instanzen. Jede bekommt ein eigenes
+`data/` mit eigener Datenbank, eigenem Port, eigener Fachdatei und dem
+Beispiel-Plugin aus `plugin_api/examples/yaml_file.py`:
+
+```
+O  API 8901 · UI 5901 · sources-fallback   → openfigi, yahoo-search, yaml-file
+Y  API 8902 · UI 5902 · sources-standalone → yaml-file in allen fünf Rollen
+```
+
+Der einzige Eingriff in die Vorlagen: `/data/assets-*.yaml` zeigt auf das
+isolierte Verzeichnis statt in den Container.
+
+### Was zu sehen war
+
+| # | gemessen |
+|---|---|
+| **1** | `BMW.DE` → `BAYERISCHE MOTOREN WERKE AG S`, `stock`, 60,50 EUR · `SAP.DE` → `SAP SE I`, `stock`, 182,88 EUR |
+| **2** | `BTC-EUR` → `crypto`, `pair`, 94.500,00 EUR; Analyse: vier Rollen, alle `yaml-file`. Zeilenzahl an `DE0001102531`: **3 Zeilen** |
+| **3** | `Daily series · yaml-file · 0.00s · answered · 3 rows` — auch `nothing`, `Total`, `Resolution` englisch |
+| **4** | O: `Kurse: yfinance → yaml-file` · Y: `Kurse: yaml-file` — die Kette in Rangfolge, und sie ändert sich mit dem Profil |
+| **5** | **rot** — siehe unten |
+| **6** | `02.09.2026, 11:20 · 88 kB · passt zur laufenden Quellenlage`; auf der Platte `stockinfo-20260902T092052358Z-ce358593616a.db` (90.112 Bytes) plus `.json` |
+| **7** | Dialog: *„…wird beim nächsten Start eingespielt. Dafür ist ein Neustart der App nötig. Bis dahin läuft der bisherige Bestand unverändert weiter."* mit **Abbrechen** / **Vormerken** |
+| **8a** | Anleihe 99,42 → **88,88**, Punkte 1 → 2, ohne Neustart |
+| **8b** | Fonds 142,50 → **177,77**, Punkte 1 → 2, ohne Neustart |
+
+Die drei Identitätsformen sind dabei ohne einen zusätzlichen Fall belegt:
+`listed` (SAP.DE, BMW.DE), `pair` (BTC-EUR), `isin_only` (Anleihe, Fonds).
+
+### Der Befund — Punkt 5
+
+```
+GET /quote?symbol=KEINPAPIER.XX  →  400
+Hinweis: „…einen Fehler, den diese Oberfläche nicht kennt:
+          symbol_without_exchange_suffix."
+```
+
+Der Satz für diese Kennung **existiert** — unter `migration.reason`. Der
+Aufnahmeweg sucht ihn unter `errors.reason` (`api/reason.ts:34`) und fällt auf
+den Rückfalltext zurück. Zwei Gruppen, eine Kennung, die beide Wege nimmt.
+Vollständig in **T-58**.
+
+### Der Riegel
+
+```
+data/stockinfo.db   vorher : 1709aeabfc2eafc974aaa4bb0dcdbd7e0c23c80bc96000cd665ac73fe6207430
+                    nachher: 1709aeabfc2eafc974aaa4bb0dcdbd7e0c23c80bc96000cd665ac73fe6207430
+```
+
+**Und eine Beobachtung, die nicht mir gehört:** In `data/` lagen nach dem Lauf
+wieder WAL und SHM. Ihre mtime ist **10:26**; mein Lauf begann um **11:20**
+(Zeitstempel der Sicherung). Sie sind also vor meinem Lauf entstanden, keiner
+meiner Prozesse hatte diese Datei je offen, und die WAL ist 0 Bytes groß.
+Passend dazu: **T-32 ist nicht gebaut** — `tests/conftest.py` existiert nicht,
+es gibt weder die `autouse`-Umlenkung noch den Riegel auf `sqlite3.connect`.
+T-55 hat eine Naht geschlossen, nicht alle. Das ist ein Argument dafür, T-32
+offen zu lassen, kein Befund dieses Tickets.
+
+### Wie es weitergeht
+
+1. **T-58** durchläuft den normalen Weg bis zur Freigabe.
+2. Danach laufe ich **Punkt 5 erneut**.
+3. Erst wenn alle neun Zeilen grün sind, geht T-56 an Mike.
+
+Die sechs Fragen an ihn sind davon unberührt und stehen bereit — **A** hat der
+Lauf sogar geschärft: Beide Namen tragen Yahoos Füllzeichen sichtbar
+(`SAP SE I`, `BAYERISCHE MOTOREN WERKE AG S`).
 
 ---
 
