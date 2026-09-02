@@ -236,6 +236,29 @@ def test_jeder_erlaubte_pfad_antwortet_auch_wirklich(
     assert response.headers["content-type"].startswith("application/json")
 
 
+def test_die_sicherung_laeuft_im_pending_zustand_durch_die_echte_app(
+    pending: TestClient,
+) -> None:
+    """Anlegen und Auffrischen laufen durch Middleware, Router und Dienst.
+
+    Die Allowlist-Funktion allein wäre zu flach: Ein dort erlaubtes Paar kann
+    am Router fehlen oder hinter einer anderen Abhängigkeit scheitern. Der
+    Gegencheck auf Restore beweist zugleich, dass kein Backup-Präfix offen ist.
+    """
+    created = pending.post("/backups")
+
+    assert created.status_code == 201
+    name = created.json()["name"]
+    listed = pending.get("/backups")
+    assert listed.status_code == 200
+    assert name in {entry["name"] for entry in listed.json()["backups"]}
+
+    restore = pending.post(f"/backups/{name}/restore")
+    assert restore.status_code == 503
+    assert restore.json()["detail"] == "migration_pending"
+    assert pending.get("/migration").json()["pending"] is True
+
+
 @pytest.mark.parametrize(
     ("method", "path"),
     [
