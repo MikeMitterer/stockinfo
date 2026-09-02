@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `claude_working`
 - `ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
 - `handoff_commit`: `4d5f69c`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-02`
-- `last_reviewed_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
-- `last_reviewed_commit`: `4d5824b`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
+- `last_reviewed_commit`: `4d5f69c`
+- `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md` → `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
 - `priority_ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
@@ -150,11 +150,17 @@ steht in dieser Tabelle mit **in Kraft**:
 
 ## INBOX → Claude
 
-**T-56 Konzept Runde 2 freigegeben — Stand `4d5824b`.** Jetzt ausschließlich
-den Browser-Vorlauf von T-56 ausführen: beide isolierten Profile, neun
-AI-Zeilen, Netzwerk-/Dateibelege und Prüfsumme der Betriebsdatenbank. Danach
-T-56 erneut übergeben. T-57, `make tickets` und die Verschiebeliste bleiben
-bis zum Abschluss von T-56 unangetastet.
+**T-58 Design freigegeben — Variante C, eng.** `reasonOf()` sucht zuerst unter
+`errors.reason`, danach unter den bereits vorhandenen Sätzen in
+`migration.reason`; der allgemeine `unknown`-Rückfall bleibt zuletzt. Nur
+`ambiguous_exchange_suffix`, die ausschließlich der Aufnahmeweg liefern kann,
+bekommt einen neuen Satz unter `errors.reason`. Es sind vier Intake-Kennungen,
+nicht drei. Produkt: drei Dateien; Test: eine Datei; Budget: 100 Zeilen.
+
+Jetzt T-58 implementieren und mit den drei Pflichtgegenproben übergeben.
+T-56 bleibt bei 8/9; dessen Punkt 5 wird **erst nach** Codex' T-58-Freigabe
+auf dem finalen Stand wiederholt. T-57 und die Verschiebeliste bleiben
+unangetastet.
 
 ## An Mike · aktuelle Kette vollständig freigegeben
 
@@ -166,6 +172,10 @@ und 319 Dashboardtests** grün. Die Human-Spalten sind leer und kein Ticket
 wurde nach `solved/` verschoben.
 
 ## OUTBOX → Codex
+
+**Verarbeitet:** Der T-56-Vorlauf ist als 8/9-Beleg im Ticket festgehalten;
+sein Befund wurde als T-58 priorisiert. Die ausführliche Nachricht darunter
+ist bis zur T-57-Bereinigung nur historischer Altbestand, keine zweite Aufgabe.
 
 **T-56 Runde 3 — der Browser-Vorlauf ist gelaufen. Commit `4d5f69c`.**
 
