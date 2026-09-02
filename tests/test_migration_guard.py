@@ -376,3 +376,36 @@ def test_ohne_ausstehenden_umzug_gibt_es_nichts_zu_beanspruchen() -> None:
 
     assert gate.pending is False
     assert gate.claim() is False
+
+
+@pytest.mark.parametrize(
+    ("method", "path", "allowed"),
+    [
+        ("GET", "/backups", True),
+        ("POST", "/backups", True),
+        # **Die Gegenprobe zur Präfixregel.** Eine Ausnahme für „Backup-Routen"
+        # ließe auch das Einspielen zu — und ein Restore vor dem Umzug legte
+        # einen Bestand hin, den der Umzug nie gesehen hat.
+        ("POST", "/backups/stockinfo-20260902T090000000Z-abc.db/restore", False),
+        ("DELETE", "/backups", False),
+        ("GET", "/instruments", False),
+        ("GET", "/quote/IE00B4L5Y983", False),
+    ],
+    ids=[
+        "liste-lesen",
+        "sicherung-anlegen",
+        "restore-bleibt-gesperrt",
+        "andere-methode-bleibt-gesperrt",
+        "bestand-bleibt-gesperrt",
+        "kurs-bleibt-gesperrt",
+    ],
+)
+def test_die_sicherung_ist_moeglich_der_rest_bleibt_gesperrt(
+    method: str, path: str, allowed: bool
+) -> None:
+    """Der Umzug rät zur Sicherung — also muss genau sie durchkommen.
+
+    Geprüft werden **Paare** aus Methode und Pfad, nicht ein Präfix: Der
+    Unterschied entscheidet, ob `restore` mit durchrutscht.
+    """
+    assert is_allowed(method, path, frozenset()) is allowed

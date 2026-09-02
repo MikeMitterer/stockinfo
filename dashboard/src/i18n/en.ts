@@ -421,9 +421,11 @@ export const en = {
 
     backupTitle: 'Back up first',
     backupBody:
-      'The migration cannot be undone. Make a copy of the database file before you ' +
-      'confirm — afterwards the rows listed above and their prices exist only in ' +
-      'the report.',
+      'The migration cannot be undone. Back up the database before you confirm — ' +
+      'afterwards the rows listed above and their prices exist only in the report.',
+    backupNow: 'Create backup now',
+    backingUp: 'Backing up…',
+    backupDone: 'Backed up. The copy is with your backups.',
 
     confirm: 'Run the migration now',
     confirming: 'Migration running…',

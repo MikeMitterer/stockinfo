@@ -58,6 +58,18 @@ ALLOWED_ROUTES: frozenset[tuple[str, str]] = frozenset(
         ("GET", "/migration"),  # die Vorschau
         ("POST", "/migration/confirm"),  # die Bestätigung
         ("GET", "/migration/report"),  # der Bericht danach
+        # **Der Umzug rät zur Sicherung — also muss sie hier möglich sein.**
+        # Ihn zu empfehlen und den Weg dahin zu sperren hieße, den Benutzer zu
+        # einer Handarbeit zu schicken, für die das Produkt eine Schaltfläche
+        # hat (T-51).
+        #
+        # `GET` gehört dazu, weil das Anlegen seinen Stand danach über den
+        # Leseweg auffrischt. **Zwei Paare, keine Präfixregel:**
+        # `POST /backups/{name}/restore` bliebe sonst offen — und ein Restore
+        # vor dem Umzug spielte einen Bestand ein, den der Umzug noch gar
+        # nicht gesehen hat.
+        ("GET", "/backups"),
+        ("POST", "/backups"),
     }
 )
 

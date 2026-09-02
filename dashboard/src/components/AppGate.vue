@@ -1,8 +1,9 @@
 <script setup lang="ts">
-import { onMounted } from 'vue'
+import { onMounted, ref } from 'vue'
 
 import AppDashboard from './AppDashboard.vue'
 import MigrationGate from './MigrationGate.vue'
+import { useBackups } from '../composables/useBackups'
 import { useMigration } from '../composables/useMigration'
 
 /**
@@ -20,6 +21,30 @@ import { useMigration } from '../composables/useMigration'
  * Provider *über* sich braucht. Diese Weiche ist Inhalt.
  */
 const { phase, preview, report, error, check, confirm, retry } = useMigration()
+
+/**
+ * Die Sicherung vor dem Umzug — **derselbe Weg wie in den Einstellungen**.
+ *
+ * Das Gate selbst bleibt frei von HTTP: Es meldet `backup` und bekommt seinen
+ * Zustand als Props. Ein zweiter Beschaffungsweg neben `useBackups()` wäre
+ * eine zweite Stelle, an der Rotation und Fingerabdruck gepflegt werden
+ * müssten.
+ */
+const {
+  loading: backingUp,
+  error: backupError,
+  create: createBackup,
+} = useBackups()
+
+/** Ob in dieser Sitzung schon gesichert wurde — der Erfolg steht sonst nirgends. */
+const backupDone = ref(false)
+
+async function backup(): Promise<void> {
+  await createBackup()
+  // `useBackups` behält seinen Fehler bis zum nächsten Versuch; nur ohne ihn
+  // ist wirklich eine Sicherung entstanden.
+  backupDone.value = backupError.value === null
+}
 
 onMounted(() => void check())
 </script>
@@ -44,6 +69,10 @@ onMounted(() => void check())
     :preview="preview"
     :report="report"
     :error="error"
+    :backing-up="backingUp"
+    :backup-error="backupError"
+    :backup-done="backupDone"
+    @backup="backup"
     @confirm="confirm"
     @retry="retry"
     @continue="check"

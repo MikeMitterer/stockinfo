@@ -186,13 +186,17 @@ def test_der_start_erkennt_den_ausstehenden_umzug(pending: TestClient) -> None:
 #
 # `/migration/confirm` fehlt hier bewusst: Er **führt aus**. Ein Test, der ihn
 # nebenbei aufriefe, zöge dem Rest der Datei den Boden weg — er hat weiter
-# unten einen eigenen, echten Integrationstest.
+# unten einen eigenen, echten Integrationstest. `POST /backups` fehlt aus
+# demselben Grund: Er legt eine Datei an.
 _EXPECTED_RESPONSES = {
     ("GET", "/health"): 200,
     ("GET", HEALTHCHECK_PATH): 200,
     ("GET", "/ready"): 503,  # ehrlich: der Fachbetrieb ist gesperrt
     ("GET", "/migration"): 200,
     ("GET", "/migration/report"): 200,
+    # Der Umzug rät zur Sicherung; die Liste dahinter muss erreichbar sein,
+    # weil das Anlegen seinen Stand darüber auffrischt (T-51).
+    ("GET", "/backups"): 200,
 }
 
 
@@ -203,7 +207,10 @@ def test_die_erwartungstabelle_deckt_die_allowlist_ab() -> None:
     nächsten neuen Pfad zurückbleibt — und die Lücke fiele niemandem auf,
     weil ein nicht aufgezählter Pfad einfach nicht geprüft würde.
     """
-    covered = set(_EXPECTED_RESPONSES) | {("POST", "/migration/confirm")}
+    covered = set(_EXPECTED_RESPONSES) | {
+        ("POST", "/migration/confirm"),
+        ("POST", "/backups"),
+    }
 
     assert covered == set(ALLOWED_ROUTES)
 

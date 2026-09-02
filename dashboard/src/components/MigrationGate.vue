@@ -28,9 +28,16 @@ const props = defineProps<{
   preview: MigrationPreview | null
   report: MigrationReport | null
   error: string | null
+  /** Läuft gerade eine Sicherung? Sie verriegelt beide Handlungen. */
+  backingUp?: boolean
+  /** Warum die Sicherung scheiterte — fertiger Satz aus dem Katalog. */
+  backupError?: string | null
+  /** Wurde in dieser Sitzung schon gesichert? */
+  backupDone?: boolean
 }>()
 
 const emit = defineEmits<{
+  (event: 'backup'): void
   (event: 'confirm'): void
   (event: 'retry'): void
   (event: 'continue'): void
@@ -53,6 +60,15 @@ const rejected = computed<RejectedInstrument[]>(() =>
  * `confirming` lief, sprang die Oberfläche dabei auf die Vorschau zurück.
  */
 const busy = computed(() => props.phase === 'confirming' || props.phase === 'restarting')
+
+/**
+ * Beide Handlungen sperren einander, solange eine läuft.
+ *
+ * Nicht aus Vorsicht, sondern weil sie einander widersprechen: Eine Sicherung
+ * hält den Stand **vor** dem Umzug fest. Startete der Umzug daneben, wäre
+ * hinterher offen, welchen der beiden Stände die Kopie trägt.
+ */
+const locked = computed(() => busy.value || props.backingUp === true)
 
 /** Der Umzug ist durch, der Betrieb nicht — inklusive laufender Wiederholung. */
 const startupFailed = computed(
@@ -167,10 +183,36 @@ const startupFailed = computed(
         <NAlert type="warning" :bordered="false" class="gate__alert">
           <strong>{{ t('migration.backupTitle') }}</strong>
           <p class="gate__backup-body">{{ t('migration.backupBody') }}</p>
+          <!--
+            **Die Handlung steht dort, wo der Rat steht.** Zu einer Kopie zu
+            raten und den Weg dahin zu sperren war der Befund; ein Verweis auf
+            die Einstellungen bliebe einer, denn die sind von hier aus nicht
+            erreichbar.
+          -->
+          <NButton
+            class="gate__backup-action"
+            :loading="backingUp"
+            :disabled="locked"
+            @click="emit('backup')"
+          >
+            {{ backingUp ? t('migration.backingUp') : t('migration.backupNow') }}
+          </NButton>
+          <p v-if="backupError" class="gate__backup-state gate__backup-state--error">
+            {{ backupError }}
+          </p>
+          <p v-else-if="backupDone" class="gate__backup-state">
+            {{ t('migration.backupDone') }}
+          </p>
         </NAlert>
 
         <div class="gate__actions">
-          <NButton type="primary" size="large" :loading="busy" @click="emit('confirm')">
+          <NButton
+            type="primary"
+            size="large"
+            :loading="busy"
+            :disabled="locked"
+            @click="emit('confirm')"
+          >
             {{ busy ? t('migration.confirming') : t('migration.confirm') }}
           </NButton>
         </div>
@@ -223,6 +265,15 @@ const startupFailed = computed(
 
   &__alert {
     margin: 1.5rem 0;
+  }
+
+  &__backup-action { margin-top: 0.6rem; }
+
+  &__backup-state {
+    margin: 0.5rem 0 0;
+    font-size: 0.9rem;
+
+    &--error { color: $color-danger; }
   }
 
   &__backup-body {

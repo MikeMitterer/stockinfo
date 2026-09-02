@@ -90,7 +90,10 @@ describe('MigrationGate · Phase 1', () => {
     const gate = mountGate()
     expect(gate.emitted('confirm')).toBeUndefined()
 
-    await gate.find('button').trigger('click')
+    // **Ausdrücklich der Bestätigungsknopf.** Seit die Sicherung im Hinweis
+    // steht, ist er nicht mehr der erste im Baum — `find('button')` träfe die
+    // Sicherung und dieser Fall wäre stillschweigend ein anderer.
+    await gate.find('.gate__actions button').trigger('click')
 
     expect(gate.emitted('confirm')).toHaveLength(1)
   })
@@ -178,5 +181,53 @@ describe('MigrationGate · unbekannte Kennung', () => {
     })
 
     expect(gate.text()).toContain('brandneuer_grund')
+  })
+})
+
+
+describe('MigrationGate · die Sicherung im Hinweis', () => {
+  it('meldet die Sicherung erst auf Klick und ruft nichts selbst', async () => {
+    const gate = mountGate()
+    expect(gate.emitted('backup')).toBeUndefined()
+
+    await gate.find('.gate__backup-action').trigger('click')
+
+    expect(gate.emitted('backup')).toHaveLength(1)
+    expect(gate.emitted('confirm')).toBeUndefined()
+  })
+
+  /*
+   * **Beide Handlungen sperren einander.** Eine Sicherung hält den Stand vor
+   * dem Umzug fest; liefe der Umzug daneben, wäre hinterher offen, welchen der
+   * beiden Stände die Kopie trägt.
+   */
+  it('verriegelt Umzug und Sicherung gegeneinander, solange eine läuft', () => {
+    const gate = mountGate({ backingUp: true })
+
+    for (const button of gate.findAll('button')) {
+      expect(button.attributes('disabled')).toBeDefined()
+    }
+  })
+
+  it.each([
+    ['de', 'Jetzt sichern'],
+    ['en', 'Create backup now'],
+  ])('beschriftet die Handlung in %s aus dem Katalog', (locale, expected) => {
+    i18n.global.locale.value = locale as 'de' | 'en'
+    const text = mountGate().text()
+    i18n.global.locale.value = 'en'
+
+    expect(text).toContain(expected)
+  })
+
+  it('zeigt den Erfolg, und den Fehler statt des Erfolgs', () => {
+    expect(mountGate({ backupDone: true }).text()).toContain(
+      i18n.global.t('migration.backupDone'),
+    )
+
+    const failed = mountGate({ backupDone: true, backupError: 'Sicherung fehlgeschlagen' })
+
+    expect(failed.text()).toContain('Sicherung fehlgeschlagen')
+    expect(failed.text()).not.toContain(i18n.global.t('migration.backupDone'))
   })
 })

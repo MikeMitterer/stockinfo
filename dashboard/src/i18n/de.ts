@@ -535,9 +535,12 @@ export const de = {
 
     backupTitle: 'Vorher sichern',
     backupBody:
-      'Der Umzug lässt sich nicht rückgängig machen. Legen Sie eine Kopie der ' +
-      'Datenbankdatei an, bevor Sie bestätigen — danach sind die oben genannten ' +
-      'Zeilen und ihre Kurse nur noch im Bericht vorhanden.',
+      'Der Umzug lässt sich nicht rückgängig machen. Sichern Sie die Datenbank, ' +
+      'bevor Sie bestätigen — danach sind die oben genannten Zeilen und ihre ' +
+      'Kurse nur noch im Bericht vorhanden.',
+    backupNow: 'Jetzt sichern',
+    backingUp: 'Sichere…',
+    backupDone: 'Gesichert. Die Kopie liegt bei den Sicherungen.',
 
     confirm: 'Umzug jetzt ausführen',
     confirming: 'Der Umzug läuft…',
