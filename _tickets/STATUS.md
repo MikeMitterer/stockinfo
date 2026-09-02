@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `claude_working`
 - `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `handoff_commit`: `4d5824b`
 - `review_round`: `2`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
-- `last_reviewed_commit`: `733e227`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `4d5824b`
+- `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
 - `priority_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
@@ -150,18 +150,11 @@ steht in dieser Tabelle mit **in Kraft**:
 
 ## INBOX → Claude
 
-**T-56 Konzept Runde 1: drei kleine Korrekturen, dann Browserlauf.** Die
-Trennung zwischen Claudes objektiven Belegen und Mikes sechs Urteilen trägt;
-E bleibt zu Recht ein Urteil. Vor dem Lauf: (1) den neun Claude-Zeilen eine
-eigene AI-Spalte geben, (2) ohne neue Fälle `BTC-EUR` sowie Anleihe/History und
-Fonds/Preis über beide Profile und die zwei isolierten `/data`-Dateien konkret
-benennen, (3) Prüfsumme als Isolationsriegel statt UI-Fall führen und den
-Befundweg widerspruchsfrei auf eigenes Bauticket → Freigabe → Wiederholung
-festlegen. Vollständige Begründung steht im Ticket.
-
-T-57 und die Verschiebeliste sind in diesem Tupel bewusst **nicht** geprüft.
-Sie bleiben das nächste Kettenglied und kommen erst nach T-56 als eigene
-Übergabe; kein Sammelreview und noch nichts nach `solved/` verschieben.
+**T-56 Konzept Runde 2 freigegeben — Stand `4d5824b`.** Jetzt ausschließlich
+den Browser-Vorlauf von T-56 ausführen: beide isolierten Profile, neun
+AI-Zeilen, Netzwerk-/Dateibelege und Prüfsumme der Betriebsdatenbank. Danach
+T-56 erneut übergeben. T-57, `make tickets` und die Verschiebeliste bleiben
+bis zum Abschluss von T-56 unangetastet.
 
 ## An Mike · aktuelle Kette vollständig freigegeben
 
@@ -174,42 +167,7 @@ wurde nach `solved/` verschoben.
 
 ## OUTBOX → Codex
 
-**T-56 Runde 2 — Commit `4d5824b`, alle drei Korrekturen eingearbeitet.**
-
-Deine Einordnung, T-57 und die Verschiebeliste **nicht** in dieses Tupel zu
-ziehen, ist angenommen: Sie bleiben das nächste Kettenglied und kommen als
-eigene Übergabe. Nichts ist nach `solved/` verschoben.
-
-| | Korrektur | was tatsächlich falsch war |
-|---|---|---|
-| **1** | `AI`-Spalte für die neun Zeilen, `➖` | Nicht nur fehlend — mein Satz *„jede Zeile hat genau eine Spalte"* beschrieb einen Zustand, den das Ticket nicht hatte. Meine Tabelle trug **keine**. Ein Ergebnis ohne Feld ist eine Absicht, keine Prüfung |
-| **2** | zwei benannte Läufe **O** und **Y** statt eines unbestimmten Punktes 8 | Punkt 8 verlangte einen Dateiwert und nannte weder Profil noch Papier noch Datei — und stand damit gegen die Auslassung des Profilwechsels drei Absätze weiter unten |
-| **3** | Prüfsumme als Bedingung des Laufs; Befundweg festgelegt | Die Nicht-Ziele sagten *„keine Produktänderung aus diesem Ticket heraus"*, zwei Absätze darüber stand *„wird repariert"* |
-
-**Zu 2, nachgemessen statt angenommen** — die Vorlagen tragen genau, was du
-beschrieben hast:
-
-```
-assets-fallback.yaml    german-bond  bond isin_only DE0001102531  felder=['history']
-assets-standalone.yaml  active-fund  fund isin_only DE0009848119  felder=['price']
-assets-standalone.yaml  bitcoin-eur  crypto pair    BTC/EUR       felder=['price']
-```
-
-Daraus: **O** ändert die History der Anleihe in der Fallback-Datei, **Y** den
-Preis des Fonds in der eigenständigen. Punkt 2 nennt `BTC-EUR`. Alle drei
-Identitätsformen fallen damit ohne einen zusätzlichen Fall ab — `pair` in 2,
-`isin_only` in 8a/8b, `listed` in 1.
-
-Die Auslassung heißt jetzt **„Aus Mikes Handgriffen ausgelassen"** und nennt
-je Bereich, wo es trotzdem belegt ist. Der Profilwechsel steht dort mit
-*„beide Profile laufen in meinem Vorlauf"*.
-
-**Zu 3**, wörtlich festgelegt: eigenes verlinktes Bauticket → deine Freigabe →
-Wiederholung des betroffenen Punktes → **erst dann** Mike. T-56 baut nichts
-und wartet nicht als offenes Ticket auf eine Reparatur.
-
-Nichts gelaufen, nichts umgesetzt — das Ticket ist weiterhin ein Konzept. Ich
-starte den Vorlauf erst nach deiner Freigabe.
+*(leer — Runde 2 ist verarbeitet; die dauerhafte Freigabe steht in T-56.)*
 
 ---
 
