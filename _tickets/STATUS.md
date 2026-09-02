@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `blocked`
 - `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `handoff_commit`: `950a91f`
 - `review_round`: `5`
-- `owner`: `codex`
+- `owner`: `mike`
 - `updated_at`: `2026-09-02`
-- `last_reviewed_ticket`: `T-58-fehlerkennung-erreicht-den-katalog-nicht.md`
-- `last_reviewed_commit`: `edb2b4f`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
+- `last_reviewed_commit`: `950a91f`
+- `last_reviewed_round`: `5`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
 - `priority_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
@@ -150,28 +150,33 @@ steht in dieser Tabelle mit **in Kraft**:
 
 ## INBOX → Claude
 
-**T-58 ist fachlich freigegeben und als lokaler Befund in T-56
-zurückgefaltet.** Codex prüfte den finalen Produktstand `edb2b4f`: 17 gezielte
-Fehlerkatalog-Tests, `vue-tsc` und die gesamte Dashboard-Suite mit 322 Tests
-sind grün. Die mechanische Selbstheilung benannte `KEYS_FOR` regelkonform um,
-entfernte Ticketchronik aus dem Produktkommentar und hängte den bestehenden
-JSDoc wieder an `reasonOf()`; Fachlogik und Tests blieben unverändert.
+**Codex-Review T-56 Runde 5: Foundation-Code freigegeben, Landung fehlt.**
+Commit `fcd088c` im Repo `ux-foundation` ist fachlich geprüft. Frisch grün:
+145 Tests, `vue-tsc` und ESLint. Die Erweiterung ist rückwärtskompatibel und
+gehört gemäß UX-Regel ins gemeinsame Fundament.
 
-Mikes Klarstellung gilt ab jetzt verbindlich: Ein kleiner lokaler Befund
-bleibt im laufenden Abnahmeticket. Kein eigenes Ticket und keine
-Codex-Zwischenfreigabe zwischen Fix und Retest. Die engen Grenzen stehen in
-`CODEX-REVIEW-AUTOMATION.md`. Deshalb ist T-59 wieder entfernt; sein Befund
-bleibt in T-56.
+T-56 geht trotzdem noch **nicht** an Mike: StockInfo installiert weiterhin
+`@mmit/ux-foundation` 0.6.0 mit `title: string`; im Produkt ist der sichtbare
+Fehler daher unverändert vorhanden. Die Landung ist Teil derselben Korrektur,
+kein neues Ticket.
 
-Jetzt den bereits diagnostizierten Titel-Fehler direkt in T-56 korrigieren:
-erst das vollständige Inventar der `notify`-Aufrufe, dann die kleinste
-Reaktivitätskorrektur samt gezieltem Test. Anschließend denselben
-Browser-Handgriff wiederholen: Sprache **ohne Neuladen** wechseln,
-`KEINPAPIER.XX` aufnehmen und aus dem DOM belegen, dass Titel und Inhalt beide
-englisch sind. Bei grün T-56 als gemeinsamen finalen Stand an Codex
-übergeben. T-57 bleibt bis dahin unangetastet.
+Warte auf Mikes Integrationsentscheidung für den Foundation-Branch. Danach:
+Foundation integrieren, als neues Minor-Release veröffentlichen, das Paket in
+StockInfo aktualisieren, in `AppDashboard.vue` den Titel als Funktion
+übergeben, Dashboardtests und Typecheck ausführen und den Browser-Handgriff
+mit Sprachwechsel ohne Neuladen wiederholen. Erst der grüne DOM-Beleg für
+englischen Titel **und** englischen Inhalt wird als T-56-Endstand übergeben.
+T-57 bleibt bis dahin unangetastet.
 
-## An Mike · aktuelle Kette vollständig freigegeben
+## An Mike · eine Release-Entscheidung ist offen
+
+Der Code in `ux-foundation/fix/notify-title-follows-locale` ist geprüft und
+grün, aber weder integriert noch veröffentlicht. Ohne Veröffentlichung und
+StockInfo-Update bleibt der Fehler im ausgelieferten Produkt. Bitte die
+Integrationsart für den Foundation-Branch wählen; danach kann Claude die
+Landung und den Browser-Retest abschließen.
+
+## Frühere vollständig freigegebene Kette
 
 T-55, T-52, T-54, T-53 und T-51 sind fachlich geprüft und freigegeben. T-51
 liefert den sichtbaren Backup-Weg im Migrationsgate, lässt Restore und alle

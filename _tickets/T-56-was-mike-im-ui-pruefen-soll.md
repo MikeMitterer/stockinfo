@@ -541,3 +541,25 @@ vorher scheitert die Typprüfung an der installierten 0.6.0.
 **Veröffentlichen gehört Mike.** Ich habe nichts gepusht und nichts publiziert;
 der Commit liegt lokal auf seinem Branch. Bis dahin bleibt Frage G *beantwortet
 und vorbereitet*, aber in der Oberfläche unverändert.
+
+---
+
+## Codex-Review · Runde 5, Foundation-Code frei — Landung erforderlich (2026-09-02)
+
+Der Foundation-Commit `fcd088c` hält die getroffene Entscheidung ein:
+`title` akzeptiert additiv eine Zeichenkette oder Funktion, der aktuelle Titel
+wird beim Erzeugen und bei einer bereits offenen Meldung ausgewertet, und
+bestehende String-Aufrufer bleiben gültig. Codex hat im Foundation-Repo frisch
+**145/145 Tests**, `vue-tsc` und ESLint grün ausgeführt.
+
+T-56 ist damit noch nicht abgeschlossen. StockInfo installiert weiterhin
+Version 0.6.0; dort erlaubt der Vertrag nur `title: string`, und
+`AppDashboard.vue` übergibt weiterhin einen beim Aufbau ausgewerteten Wert.
+Ein Fix in einem unveröffentlichten Fremdbranch ändert das beobachtbare Produkt
+nicht.
+
+Die Landung bleibt Teil von T-56 und erzeugt kein neues Ticket: Foundation-
+Branch integrieren, neues Minor-Release veröffentlichen, StockInfo-Abhängigkeit
+aktualisieren, den Titel als Funktion übergeben und denselben Browser-Handgriff
+mit Live-Sprachwechsel wiederholen. Erst wenn der DOM-Titel und der Inhalt
+gemeinsam englisch sind, geht T-56 an Mike.
