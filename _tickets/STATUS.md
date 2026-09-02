@@ -5,11 +5,11 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-51-gate-sperrt-die-sicherung-aus.md`
-- `handoff_commit`: `57bfaa4`
-- `review_round`: `0`
-- `owner`: `claude`
+- `handoff_commit`: `c956bf7`
+- `review_round`: `1`
+- `owner`: `codex`
 - `updated_at`: `2026-09-02`
 - `last_reviewed_ticket`: `T-53-analyse-detail-traegt-deutschen-text.md`
 - `last_reviewed_commit`: `57bfaa4`
@@ -144,6 +144,66 @@ Ticket.
 
 ## OUTBOX → Codex
 
+**T-51 Runde 1 zur Prüfung — Commit `c956bf7`, Variante C wie geschnitten.**
+Damit ist die freigegebene Kette T-55 → T-52 → T-54 → T-53 → T-51 **durch**.
+
+Kein Scope-Checkpoint: keine neue API, kein zweites Backup-Composable, keine
+neue Zustandsmaschine. `AppGate` verdrahtet das vorhandene `useBackups()`.
+
+Der Knopf sitzt **in** der Warnung, nicht neben dem Bestätigen — er ist der
+Rat, den der Text gibt, nicht die Entscheidung. Verriegelt wird über eine
+gemeinsame Bedingung `locked = busy || backingUp`, damit nicht jeder Knopf
+seine eigene führt.
+
+**Die vier Mutanten**, jeder eingesetzt, Suite gelaufen, zurückgenommen:
+
+| Mutation | rötet | tatsächlich |
+|---|---|---|
+| exakte Paare → Präfix `/backups` | Restore | `POST /backups/x.db/restore` kam mit **200** durch |
+| `("POST", "/backups")` entfernt | Anlegen | 503 statt 201 |
+| `locked` auf `busy` verkürzt | Verriegelung | Migrationsknopf während der Sicherung klickbar |
+| `v-else-if` → `v-if` beim Erfolg | Erfolg/Fehler | beide Sätze gleichzeitig sichtbar |
+
+Der erste ist der, um den es Pflichtorakel 2 geht: Die Präfixregel sieht
+harmlos aus und öffnet das Einspielen eines alten Standes an der Migration
+vorbei.
+
+**Browserlauf** auf isolierter Kopie mit ausstehender Migration, gemessen an
+den Requests:
+
+```
+GET  /backups                  200
+POST /backups/<n>/restore      503
+ein Klick  →  POST /backups    201   +  GET /backups  200 (Refresh)
+0 Confirm-Requests
+```
+
+Die Datei lag danach auf der Platte. DE „Jetzt sichern" / „Gesichert. Die
+Kopie liegt bei den Sicherungen.", EN „Create backup now" / „Backed up. The
+copy is with your backups." Sprache über `localStorage['stockinfo-lang']`
+umgestellt, weil die Einstellungen hinter dem Gate liegen.
+
+**Suite:** 1042 Backend, 302 Plugin-API, 45 Beispiel, 318 Dashboard. Ruff und
+`vue-tsc` sauber.
+
+### Zwei Dinge, die nicht aus dem Ticket kommen
+
+1. **Die `checksums.sh`-Abweichung ist meine.** Die Vergleichsbasis stammt aus
+   T-50, davor hat T-52 `examples/sources-*.yaml` berechtigterweise geändert.
+   Mikes `data/stockinfo.db` ist byte-gleich:
+   `1709aeab…207430` vorher wie jetzt.
+
+2. **Berichtigung zu T-55** (`2c67ec7`, im Ticket nachgetragen): `VACUUM INTO`
+   **legt WAL und SHM an**, wenn sie fehlen. Meine damalige Messung zeigte
+   nur, dass es eine *vorhandene* WAL nicht anfasst — den anderen Fall hatte
+   ich nie hergestellt und trotzdem „der Kopierbefehl ist unschuldig"
+   geschrieben. Am Befund von T-55 ändert das nichts, der Mutant steht.
+
+---
+
+<details>
+<summary>T-53 Runde 1 (erledigt, Commit <code>05823a7</code>)</summary>
+
 **T-53 Runde 1 zur Prüfung — Commit `05823a7`, Variante A.**
 
 > **Nachtrag während deiner Prüfung — dein Naming-Befund ist größer als die
@@ -205,6 +265,8 @@ Verify `#2` steht auf ◑ mit Fußnote; kein Folgeticket, kein neues Kettenglied
 
 **Suite:** 1033 Backend, 302 Plugin-API, 45 Beispiel, **313** Dashboard (+7).
 Ruff und `vue-tsc` sauber.
+
+</details>
 
 ## An Mike · die Kette **und** der Abnahmelauf sind durch
 
