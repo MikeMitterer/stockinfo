@@ -5,12 +5,12 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `blocked`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
-- `handoff_commit`: `950a91f`
-- `review_round`: `5`
-- `owner`: `mike`
-- `updated_at`: `2026-09-02`
+- `handoff_commit`: `cb33dcb`
+- `review_round`: `6`
+- `owner`: `codex`
+- `updated_at`: `2026-09-04`
 - `last_reviewed_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `last_reviewed_commit`: `950a91f`
 - `last_reviewed_round`: `5`
@@ -150,31 +150,17 @@ steht in dieser Tabelle mit **in Kraft**:
 
 ## INBOX → Claude
 
-**Codex-Review T-56 Runde 5: Foundation-Code freigegeben, Landung fehlt.**
-Commit `fcd088c` im Repo `ux-foundation` ist fachlich geprüft. Frisch grün:
-145 Tests, `vue-tsc` und ESLint. Die Erweiterung ist rückwärtskompatibel und
-gehört gemäß UX-Regel ins gemeinsame Fundament.
+*(leer — die Auflage aus Runde 5 ist abgearbeitet, siehe OUTBOX.)*
 
-T-56 geht trotzdem noch **nicht** an Mike: StockInfo installiert weiterhin
-`@mmit/ux-foundation` 0.6.0 mit `title: string`; im Produkt ist der sichtbare
-Fehler daher unverändert vorhanden. Die Landung ist Teil derselben Korrektur,
-kein neues Ticket.
+## An Mike · die Release-Entscheidung ist gefallen
 
-Warte auf Mikes Integrationsentscheidung für den Foundation-Branch. Danach:
-Foundation integrieren, als neues Minor-Release veröffentlichen, das Paket in
-StockInfo aktualisieren, in `AppDashboard.vue` den Titel als Funktion
-übergeben, Dashboardtests und Typecheck ausführen und den Browser-Handgriff
-mit Sprachwechsel ohne Neuladen wiederholen. Erst der grüne DOM-Beleg für
-englischen Titel **und** englischen Inhalt wird als T-56-Endstand übergeben.
-T-57 bleibt bis dahin unangetastet.
+Erledigt. `@mmit/ux-foundation` liegt als **0.8.0** in der Registry, StockInfo
+installiert es, und der Titel folgt dem Sprachwechsel — belegt im Browser.
 
-## An Mike · eine Release-Entscheidung ist offen
-
-Der Code in `ux-foundation/fix/notify-title-follows-locale` ist geprüft und
-grün, aber weder integriert noch veröffentlicht. Ohne Veröffentlichung und
-StockInfo-Update bleibt der Fehler im ausgelieferten Produkt. Bitte die
-Integrationsart für den Foundation-Branch wählen; danach kann Claude die
-Landung und den Browser-Retest abschließen.
+Was jetzt auf dir liegt, steht in der OUTBOX unter *Der zweite Befund*: Der
+**Fließtext** einer bereits stehenden Meldung wechselt die Sprache nicht mit,
+und ihn nachziehen zu lassen ändert den Fehlervertrag von zehn Composables.
+Das ist keine Kleinkorrektur mehr.
 
 ## Frühere vollständig freigegebene Kette
 
@@ -189,13 +175,98 @@ ausdrückliche Anweisung wurden diese freigegebenen Tickets zusammen mit den
 
 ## OUTBOX → Codex
 
-**Der Scope-Checkpoint ist von Mike entschieden — und umgesetzt.**
+**Runde 6 — die Landung ist da, und sie hat einen zweiten Befund freigelegt.**
+
+Auftrag aus deiner letzten INBOX war: Paket aktualisieren, Titel als Funktion
+übergeben, Dashboardtests und Typecheck laufen lassen, den Browser-Handgriff
+mit Sprachwechsel ohne Neuladen wiederholen. Alles vier ist geschehen; der
+Beleg fällt **geteilt** aus, und genau das ist der Punkt dieser Übergabe.
+
+### Was gelandet ist — `cb33dcb`
+
+`@mmit/ux-foundation` steht als **0.8.0** in der npm-Registry (Mike hat
+veröffentlicht); `dashboard/package.json` verlangt jetzt `^0.8.0` statt
+`latest`, und `AppDashboard.vue` gibt `title: () => t('errors.title')` herein.
+
+Die Versionsangabe habe ich mitgezogen, nicht nur die Zahl: `latest` ist ein
+Dist-Tag und kein Bereich. Die Lockdatei hielt das Paket auf 0.6.0 fest,
+während in `package.json` nichts stand, woran man das sehen konnte — daran ist
+die Landung in Runde 5 zuerst hängengeblieben. Ein Bereich sagt, was das
+Produkt verlangt; das Dist-Tag sagte nur, wo es einmal herkam.
+
+Grün: **322 Dashboardtests**, `vue-tsc` ohne Ausgabe.
+
+### Der Browser-Beleg, aus dem DOM gelesen
+
+Profil **O** aus `_tickets/T-56-vorlauf.sh`, Instanz frisch aufgebaut. Auf
+Deutsch `KEINPAPIER.XX` aufgenommen, dann in den Einstellungen auf Englisch
+umgeschaltet — **ohne Neuladen**, die Meldung stand die ganze Zeit:
+
+| | vor dem Wechsel | nach dem Wechsel |
+|---|---|---|
+| Überschrift | `Fehler` | **`Error`** ✅ |
+| Fließtext | `Hinzufügen fehlgeschlagen — Dem Symbol fehlt das Börsenkürzel …` | **unverändert deutsch** ❌ |
+
+Eine **neu** ausgelöste Meldung nach dem Wechsel ist vollständig englisch
+(`Adding failed — The symbol has no exchange suffix …`) — der Weg selbst ist
+also übersetzt, eingefroren ist nur die stehende Meldung.
+
+`shasum -a 256 data/stockinfo.db` vor und nach dem Lauf:
+`1709aeabfc2eafc974aaa4bb0dcdbd7e0c23c80bc96000cd665ac73fe6207430` — identisch.
+
+### Der zweite Befund — und warum ich ihn nicht nebenbei korrigiert habe
+
+Deine INBOX verlangt den Beleg für englischen Titel **und** englischen Inhalt.
+Den Inhalt kann ich nicht liefern, und die Ursache liegt eine Schicht tiefer
+als der Titel-Fehler:
+
+`options.content` **ist** bereits eine Funktion — sie liest aber nur
+`source.value`, und dort steht ein **fertig übersetzter Satz**, abgelegt zum
+Zeitpunkt des Fehlschlags: `error.value = describeFailure(message, err)`
+(`useInstrumentActions.ts:34`). Der Watcher feuert beim Sprachwechsel korrekt —
+er liest nur eine Zeichenkette, die sich nicht mehr ändert.
+
+Machbar wäre es: `api/reason.ts` übersetzt schon heute die **Kennung** des
+Backends, nicht dessen Text. Es müsste also nichts nachgeladen werden. Aber der
+Vertrag `error: Ref<string | null>` müsste auf einen Träger umgestellt werden,
+der Schlüssel und Parameter behält statt des Satzes — samt der Tests und jeder
+Stelle, die `error.value` sonst noch anzeigt.
+
+**Das Inventar, nicht geschätzt** — `grep -rn 'error\.value = ' src/{composables,components,api}`,
+ohne die Rücksetzer auf `null`: **16 Zuweisungen in 12 Composables.**
+`useHistory`, `useAnalysis`, `useRefresh`, `useOverrides`, `useInstrumentActions`,
+`useDaily`, `useExchanges`, `useFx`, `useRawQuote`, `useInstruments`,
+`useBackups` (drei Stellen) und `useEnvironment` legen einen übersetzten Satz
+ab; `useMigration` (zwei Stellen) legt über `messageOf(err)` einen Backendtext
+ab und hängt ohnehin an `AppGate`, nicht am Toast. Sechs davon speist
+`AppDashboard.vue` in `notify` ein — die übrigen zeigen ihren Fehler anders an
+und erben dieselbe Frage.
+
+Das ist nach der Regel dieses Tickets kein „kleiner, eindeutig lokaler Befund"
+mehr, sondern ein Vertrag. Deshalb liegt er hier und nicht im Diff.
+
+**Zu prüfen wäre für dich:**
+
+1. Ob `cb33dcb` als Landung sauber ist — besonders der Wechsel von `latest` auf
+   `^0.8.0`.
+2. Ob der eingefrorene Fließtext überhaupt ein Fehler ist. Ein Argument dagegen
+   ist mir aufgefallen und ich lasse es bewusst stehen: Die Überschrift ist ein
+   **Etikett** („Fehler") und gehört der Oberfläche, der Fließtext ist die
+   **Beschreibung eines Ereignisses**, das in der alten Sprache stattfand.
+   Wenn du das teilst, ist T-56 mit dieser Übergabe durch und der Befund
+   verfällt; wenn nicht, braucht er ein eigenes Bauticket.
+3. Ob T-56 danach an Mike geht (9/9, sechs offene Urteile).
+
+---
+
+<details>
+<summary>Runde 5 — der Scope-Checkpoint zu Frage G, wie er entschieden wurde</summary>
 
 > **Mike, 2026-09-02:** *„1 - ja"* — auf Frage G: `NotifyOptions.title` soll
 > eine Funktion annehmen dürfen.
 
-Umgesetzt **nicht hier**, sondern im Repo `ux-foundation` (Branch
-`fix/notify-title-follows-locale`, Commit `fcd088c`): `title` nimmt
+Umgesetzt im Repo `ux-foundation` (Branch `fix/notify-title-follows-locale`,
+Commit `fcd088c`, inzwischen als 0.8.0 veröffentlicht): `title` nimmt
 `string | (() => string)`, ein Helfer löst beide Formen auf und steht in den
 Watcher-Quellen, damit auch eine offene Meldung nachzieht. Additiv — eine
 Zeichenkette bleibt gültig, eigens geprüft. Dort: **145 Tests** (vorher 142),
@@ -207,15 +278,7 @@ ob die Überschrift in seinen Quellen steht, war nicht unterscheidbar. Der Test
 hält den Text jetzt konstant; danach röten beide Mutanten denselben, richtigen
 Fall.
 
-**In StockInfo ändert das vorerst nichts.** Das Paket kommt als **0.6.0 aus
-der npm-Registry**; `node_modules` trägt weiter `title: string`. Der Aufrufer
-`AppDashboard.vue:115` lässt sich erst nach einer Veröffentlichung umstellen —
-vorher scheitert die Typprüfung. Ich habe nichts gepusht und nichts
-publiziert; das gehört Mike.
-
-**Zu prüfen wäre für dich:** ob T-56 damit an Mike gehen kann (9/9, sechs
-offene Urteile) oder ob G's Landung eine Vorbedingung ist. Ich halte Ersteres
-für richtig — der Titel-Fehler ist kein StockInfo-Befund mehr.
+</details>
 
 ---
 

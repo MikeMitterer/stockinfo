@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Dashboard) | **9/9 gruen — Scope-Checkpoint zum Titel-Fehler** | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
+| StockInfo (Dashboard) | **9/9 gruen — Titel gelandet, Fliesstext offen (Runde 7)** | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
 
 - **Angelegt:** 2026-09-02, auf Mikes Auftrag
 - **Ersetzt:** T-35, T-42 und T-50 als Abnahmetickets für Mike
@@ -563,3 +563,58 @@ Branch integrieren, neues Minor-Release veröffentlichen, StockInfo-Abhängigkei
 aktualisieren, den Titel als Funktion übergeben und denselben Browser-Handgriff
 mit Live-Sprachwechsel wiederholen. Erst wenn der DOM-Titel und der Inhalt
 gemeinsam englisch sind, geht T-56 an Mike.
+
+## Runde 7 · Die Landung — halb belegt (Claude, 2026-09-04)
+
+Mike hat `@mmit/ux-foundation` als **0.8.0** veröffentlicht und die
+Aktualisierung beauftragt. Sie ist erfolgt, Commit `cb33dcb`.
+
+### Was gelandet ist
+
+`dashboard/package.json` verlangt `^0.8.0` statt `latest`, und
+`AppDashboard.vue` gibt `title: () => t('errors.title')` herein.
+
+Die Versionsangabe zog mit, weil sie Teil der Ursache war: `latest` ist ein
+Dist-Tag, kein Bereich. Die Lockdatei hielt das Paket auf 0.6.0 fest, und aus
+`package.json` war nicht abzulesen, welche Fassung das Produkt verlangt —
+genau daran ist die Landung in Runde 5 zuerst hängengeblieben.
+
+**322 Dashboardtests** und `vue-tsc` grün.
+
+### Der Browser-Beleg
+
+Profil **O** aus `T-56-vorlauf.sh`, frisch aufgebaute Instanz. Auf Deutsch
+`KEINPAPIER.XX` aufgenommen, dann in den Einstellungen auf Englisch
+umgeschaltet — ohne Neuladen, die Meldung stand durchgehend. Aus dem DOM
+gelesen:
+
+| | vor dem Wechsel | nach dem Wechsel |
+|---|---|---|
+| Überschrift | `Fehler` | **`Error`** ✅ |
+| Fließtext | `Hinzufügen fehlgeschlagen — Dem Symbol fehlt das Börsenkürzel …` | **unverändert deutsch** ❌ |
+
+Eine **neu** ausgelöste Meldung nach dem Wechsel ist vollständig englisch
+(`Adding failed — The symbol has no exchange suffix …`).
+
+`shasum -a 256 data/stockinfo.db` vor und nach dem Lauf identisch:
+`1709aeabfc2eafc974aaa4bb0dcdbd7e0c23c80bc96000cd665ac73fe6207430`.
+
+### Warum der Fließtext nicht mitgezogen wurde
+
+`options.content` ist bereits eine Funktion — sie liest aber `source.value`,
+und dort steht ein fertig übersetzter Satz, abgelegt zum Zeitpunkt des
+Fehlschlags. Der Watcher feuert korrekt; er liest nur eine Zeichenkette, die
+sich nicht mehr ändert.
+
+Das Inventar dazu ist gemessen, nicht geschätzt —
+`grep -rn 'error\.value = ' src/{composables,components,api}` ohne die
+Rücksetzer auf `null`: **16 Zuweisungen in 12 Composables**, sechs davon
+speist `AppDashboard.vue` in `notify` ein. Den Satz durch Schlüssel und
+Parameter zu ersetzen ändert `error: Ref<string | null>` in allen zwölf, samt
+Tests und jeder Anzeigestelle.
+
+Das ist nach der Regel dieses Tickets kein kleiner lokaler Befund mehr,
+sondern ein Vertrag — er geht als Scope-Frage an Codex und Mike, nicht in
+diesen Diff. Offen bleibt dabei ausdrücklich, **ob** es überhaupt ein Fehler
+ist: Die Überschrift ist ein Etikett der Oberfläche, der Fließtext die
+Beschreibung eines Ereignisses, das in der alten Sprache stattfand.
