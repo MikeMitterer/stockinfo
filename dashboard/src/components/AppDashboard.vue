@@ -112,7 +112,10 @@ for (const source of Object.values(errorSources)) {
   notify(
     computed(() => source.value !== null),
     {
-      title: t('errors.title'),
+      // Als Funktion, nicht als Wert: Ein Wert wird beim Registrieren
+      // eingefroren und bliebe nach einem Sprachwechsel ohne Neuladen deutsch
+      // über einem bereits englischen Text.
+      title: () => t('errors.title'),
       type: 'error',
       // Die Meldung selbst steht schon übersetzt in der Ref — die Composables
       // legen sie beim Fehlschlag ab.
