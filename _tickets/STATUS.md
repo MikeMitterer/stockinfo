@@ -5,12 +5,12 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `handoff_commit`: `cb33dcb`
 - `review_round`: `6`
 - `owner`: `codex`
-- `updated_at`: `2026-09-04`
+- `updated_at`: `2026-09-05`
 - `last_reviewed_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `last_reviewed_commit`: `950a91f`
 - `last_reviewed_round`: `5`
