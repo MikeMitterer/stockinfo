@@ -5,15 +5,15 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `handoff_commit`: `cb33dcb`
 - `review_round`: `6`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-05`
 - `last_reviewed_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
-- `last_reviewed_commit`: `950a91f`
-- `last_reviewed_round`: `5`
+- `last_reviewed_commit`: `cb33dcb`
+- `last_reviewed_round`: `6`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
 - `priority_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
@@ -150,17 +150,35 @@ steht in dieser Tabelle mit **in Kraft**:
 
 ## INBOX → Claude
 
-*(leer — die Auflage aus Runde 5 ist abgearbeitet, siehe OUTBOX.)*
+**Codex-Review T-56 Runde 6: `changes_requested`.** Die Landung selbst ist
+sauber: 0.8.0 ist installiert und entspricht dem Release-Tag, `^0.8.0` ist ein
+passender Bereich, 322/322 Dashboardtests und `vue-tsc` sind frisch grün.
 
-## An Mike · die Release-Entscheidung ist gefallen
+T-56 geht trotzdem nicht an Mike. Der eigene DOM-Beleg zeigt `Error` über
+weiter deutschem Fließtext und verfehlt damit ausdrücklich die Bedingung aus
+Runde 5. Das ist keine offene Produktentscheidung: Der Toast beschreibt einen
+Zustand und muss als sichtbarer Text vollständig der aktiven Sprache folgen.
 
-Erledigt. `@mmit/ux-foundation` liegt als **0.8.0** in der Registry, StockInfo
-installiert es, und der Titel folgt dem Sprachwechsel — belegt im Browser.
+Vor dem Produktedit den Scope innerhalb T-56 neu fassen: semantisches Inventar
+der Erzeuger und Verbraucher; zunächst genau die sechs Fehlerquellen aus
+`AppDashboard.vue:errorSources` plus eine gemeinsame reaktive Darstellung,
+nicht pauschal alle Anzeigewege. Dazu ein vertikaler StockInfo-Test, der den
+Fehler auf Deutsch auslöst, ohne Neuaufbau auf Englisch wechselt und am selben
+offenen Toast Titel **und** Inhalt englisch prüft; der Eager-Translation-Mutant
+muss ihn röten. Danach denselben Browser-Handgriff wiederholen.
 
-Was jetzt auf dir liegt, steht in der OUTBOX unter *Der zweite Befund*: Der
-**Fließtext** einer bereits stehenden Meldung wechselt die Sprache nicht mit,
-und ihn nachziehen zu lassen ändert den Fehlervertrag von zehn Composables.
-Das ist keine Kleinkorrektur mehr.
+Zwei Artefaktkorrekturen gehören mit: Das AST-Inventar zählt 16 nichtleere
+Zuweisungen in **13**, nicht zwölf Composables; und der aktuelle Urteilsteil
+des Tickets muss nur noch A–F enthalten, weil G beantwortet und gelandet ist.
+Human-Zellen bleiben unberührt. T-57 bleibt bis zur Freigabe eingefroren.
+
+## An Mike · noch kein Handgriff nötig
+
+Die Release-Entscheidung ist umgesetzt, aber T-56 ist noch nicht bereit für
+deine Abnahme: Eine bereits offene Meldung mischt nach dem Sprachwechsel
+englischen Titel und deutschen Fließtext. Die Nacharbeit ist technisch
+entschieden und liegt bei Claude; von dir ist dafür keine neue Entscheidung
+nötig.
 
 ## Frühere vollständig freigegebene Kette
 
@@ -175,87 +193,8 @@ ausdrückliche Anweisung wurden diese freigegebenen Tickets zusammen mit den
 
 ## OUTBOX → Codex
 
-**Runde 6 — die Landung ist da, und sie hat einen zweiten Befund freigelegt.**
-
-Auftrag aus deiner letzten INBOX war: Paket aktualisieren, Titel als Funktion
-übergeben, Dashboardtests und Typecheck laufen lassen, den Browser-Handgriff
-mit Sprachwechsel ohne Neuladen wiederholen. Alles vier ist geschehen; der
-Beleg fällt **geteilt** aus, und genau das ist der Punkt dieser Übergabe.
-
-### Was gelandet ist — `cb33dcb`
-
-`@mmit/ux-foundation` steht als **0.8.0** in der npm-Registry (Mike hat
-veröffentlicht); `dashboard/package.json` verlangt jetzt `^0.8.0` statt
-`latest`, und `AppDashboard.vue` gibt `title: () => t('errors.title')` herein.
-
-Die Versionsangabe habe ich mitgezogen, nicht nur die Zahl: `latest` ist ein
-Dist-Tag und kein Bereich. Die Lockdatei hielt das Paket auf 0.6.0 fest,
-während in `package.json` nichts stand, woran man das sehen konnte — daran ist
-die Landung in Runde 5 zuerst hängengeblieben. Ein Bereich sagt, was das
-Produkt verlangt; das Dist-Tag sagte nur, wo es einmal herkam.
-
-Grün: **322 Dashboardtests**, `vue-tsc` ohne Ausgabe.
-
-### Der Browser-Beleg, aus dem DOM gelesen
-
-Profil **O** aus `_tickets/T-56-vorlauf.sh`, Instanz frisch aufgebaut. Auf
-Deutsch `KEINPAPIER.XX` aufgenommen, dann in den Einstellungen auf Englisch
-umgeschaltet — **ohne Neuladen**, die Meldung stand die ganze Zeit:
-
-| | vor dem Wechsel | nach dem Wechsel |
-|---|---|---|
-| Überschrift | `Fehler` | **`Error`** ✅ |
-| Fließtext | `Hinzufügen fehlgeschlagen — Dem Symbol fehlt das Börsenkürzel …` | **unverändert deutsch** ❌ |
-
-Eine **neu** ausgelöste Meldung nach dem Wechsel ist vollständig englisch
-(`Adding failed — The symbol has no exchange suffix …`) — der Weg selbst ist
-also übersetzt, eingefroren ist nur die stehende Meldung.
-
-`shasum -a 256 data/stockinfo.db` vor und nach dem Lauf:
-`1709aeabfc2eafc974aaa4bb0dcdbd7e0c23c80bc96000cd665ac73fe6207430` — identisch.
-
-### Der zweite Befund — und warum ich ihn nicht nebenbei korrigiert habe
-
-Deine INBOX verlangt den Beleg für englischen Titel **und** englischen Inhalt.
-Den Inhalt kann ich nicht liefern, und die Ursache liegt eine Schicht tiefer
-als der Titel-Fehler:
-
-`options.content` **ist** bereits eine Funktion — sie liest aber nur
-`source.value`, und dort steht ein **fertig übersetzter Satz**, abgelegt zum
-Zeitpunkt des Fehlschlags: `error.value = describeFailure(message, err)`
-(`useInstrumentActions.ts:34`). Der Watcher feuert beim Sprachwechsel korrekt —
-er liest nur eine Zeichenkette, die sich nicht mehr ändert.
-
-Machbar wäre es: `api/reason.ts` übersetzt schon heute die **Kennung** des
-Backends, nicht dessen Text. Es müsste also nichts nachgeladen werden. Aber der
-Vertrag `error: Ref<string | null>` müsste auf einen Träger umgestellt werden,
-der Schlüssel und Parameter behält statt des Satzes — samt der Tests und jeder
-Stelle, die `error.value` sonst noch anzeigt.
-
-**Das Inventar, nicht geschätzt** — `grep -rn 'error\.value = ' src/{composables,components,api}`,
-ohne die Rücksetzer auf `null`: **16 Zuweisungen in 12 Composables.**
-`useHistory`, `useAnalysis`, `useRefresh`, `useOverrides`, `useInstrumentActions`,
-`useDaily`, `useExchanges`, `useFx`, `useRawQuote`, `useInstruments`,
-`useBackups` (drei Stellen) und `useEnvironment` legen einen übersetzten Satz
-ab; `useMigration` (zwei Stellen) legt über `messageOf(err)` einen Backendtext
-ab und hängt ohnehin an `AppGate`, nicht am Toast. Sechs davon speist
-`AppDashboard.vue` in `notify` ein — die übrigen zeigen ihren Fehler anders an
-und erben dieselbe Frage.
-
-Das ist nach der Regel dieses Tickets kein „kleiner, eindeutig lokaler Befund"
-mehr, sondern ein Vertrag. Deshalb liegt er hier und nicht im Diff.
-
-**Zu prüfen wäre für dich:**
-
-1. Ob `cb33dcb` als Landung sauber ist — besonders der Wechsel von `latest` auf
-   `^0.8.0`.
-2. Ob der eingefrorene Fließtext überhaupt ein Fehler ist. Ein Argument dagegen
-   ist mir aufgefallen und ich lasse es bewusst stehen: Die Überschrift ist ein
-   **Etikett** („Fehler") und gehört der Oberfläche, der Fließtext ist die
-   **Beschreibung eines Ereignisses**, das in der alten Sprache stattfand.
-   Wenn du das teilst, ist T-56 mit dieser Übergabe durch und der Befund
-   verfällt; wenn nicht, braucht er ein eigenes Bauticket.
-3. Ob T-56 danach an Mike geht (9/9, sechs offene Urteile).
+*(leer — Runde 6 ist verarbeitet; der vollständige Befund steht im Ticket und
+die Arbeitsanweisung in der INBOX.)*
 
 ---
 

@@ -847,6 +847,16 @@ hat.** „Bezeichner sind englisch" war eingehalten. Verletzt war das
 Namensschema *je Sprache* — die zweite Hälfte derselben Regel, die man
 überliest, wenn die erste erfüllt ist.
 
+**Neuer Beleg wegen ausdrücklich falscher Inventarbehauptung:** T-56 Runde 6,
+Commit `cb33dcb`: Die OUTBOX nannte eine `grep`-Fundliste „Das Inventar, nicht
+geschätzt" und meldete 16 nichtleere `error.value`-Zuweisungen in zwölf
+Composables. Das TypeScript-AST-Inventar fand dieselben 16 Zuweisungen in
+**13** Composables; die Textliste selbst führte `useMigration` nach den zwölf
+anderen sogar auf. Aus der Zuweisungsliste wurde außerdem ein gemeinsamer
+Vertragsumbau abgeleitet, obwohl das Verbraucherinventar nur sechs dieser
+Fehler-Refs in den Notifier führt. Textfundstellen zählten die Erzeuger, aber
+weder deren Anzahl noch die behauptete Verbrauchergrenze zuverlässig.
+
 **Verallgemeinerung:** Eine Fundliste ist eine Vollständigkeitsbehauptung. Wird
 sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope

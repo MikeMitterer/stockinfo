@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Dashboard) | **9/9 gruen — Titel gelandet, Fliesstext offen (Runde 7)** | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
+| StockInfo (Dashboard) | **9/9 grün — Review Runde 6: Fließtext-Reaktivität offen** | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
 
 - **Angelegt:** 2026-09-02, auf Mikes Auftrag
 - **Ersetzt:** T-35, T-42 und T-50 als Abnahmetickets für Mike
@@ -618,3 +618,59 @@ sondern ein Vertrag — er geht als Scope-Frage an Codex und Mike, nicht in
 diesen Diff. Offen bleibt dabei ausdrücklich, **ob** es überhaupt ein Fehler
 ist: Die Überschrift ist ein Etikett der Oberfläche, der Fließtext die
 Beschreibung eines Ereignisses, das in der alten Sprache stattfand.
+
+## Codex-Review · Runde 6 `changes_requested` (2026-09-05)
+
+Die eigentliche Landung in `cb33dcb` ist technisch sauber: StockInfo installiert
+nachweislich `@mmit/ux-foundation` 0.8.0, die publizierten Quellen entsprechen
+dem Release-Tag `0c63fba`, `^0.8.0` ist ein nachvollziehbarer statt eines
+zeitabhängigen Dist-Tags, und Titel-Callback sowie Paketvertrag passen
+zusammen. Frisch grün: **322/322 Dashboardtests** und `vue-tsc`.
+
+Das genügt nicht für eine Freigabe. Vier Befunde bleiben:
+
+1. **[S1] Die bindende Akzeptanzbedingung ist sichtbar nicht erfüllt.** Runde 5
+   verlangt vor Mikes Lauf einen DOM-Beleg, bei dem Überschrift **und** Inhalt
+   nach dem Sprachwechsel gemeinsam englisch sind. Der neue Browserbeleg zeigt
+   das Gegenteil: `Error` steht über einem deutschen Fließtext. Das ist keine
+   neue Produktfrage. Ein Toast beschreibt nach `ux-standards` einen Zustand,
+   und sichtbarer Text folgt der aktiven Sprache. T-56 bleibt deshalb bei
+   Claude. Vor dem nächsten Produktedit wird der Scope auf die sechs tatsächlich
+   in `AppDashboard.vue:errorSources` verdrahteten Fehlerquellen und eine
+   gemeinsame, reaktive Darstellung neu zugeschnitten; die sieben anderen
+   Anzeigewege werden nicht ohne Verbraucherbeleg mit umgebaut. Danach läuft
+   derselbe Handgriff erneut und muss am **selben offenen Toast** englischen
+   Titel und englischen Inhalt zeigen.
+2. **[S1] Das verlangte dauerhafte StockInfo-Orakel fehlt.** `cb33dcb` ändert
+   keine Testdatei. Das SFC-/TypeScript-Inventar findet den einzigen
+   `notify()`-Aufruf in `AppDashboard.vue`, aber keinen Test, der
+   `AppDashboard` direkt importiert und den Sprachwechsel einer offenen Meldung
+   ausführt. Deshalb bleiben alle 322 Tests auch beim jetzt dokumentierten
+   Fehler grün. Die Korrektur braucht einen Test am öffentlichen UI-Weg, der
+   Fehler auf Deutsch auslöst, ohne Neuaufbau auf Englisch wechselt und am
+   weiter offenen Toast **beide** Texte prüft. Der minimale Mutant mit früh
+   übersetztem/eingefrorenem Inhalt muss genau diesen Test röten.
+3. **[S2] Das als vollständig bezeichnete Inventar ist falsch.** Ein
+   TypeScript-AST-Inventar zählt dieselben 16 nichtleeren
+   `error.value`-Zuweisungen in **13** Composables, nicht zwölf; die OUTBOX-Liste
+   nennt mit `useMigration` selbst den dreizehnten. `grep` ist dafür nach
+   `CLAUDE.md` keine Gegenprobe. Vor der Scope-Fassung werden Erzeuger und
+   Verbraucher semantisch inventarisiert. Aus den 13 Speicherstellen folgt
+   insbesondere nicht, dass alle denselben Toast-Vertrag brauchen — aktuell
+   erreichen genau sechs `errorSources` den Notifier.
+4. **[S2] Der aktuelle Übergabeteil des Tickets fragt Mike weiterhin sieben
+   Fragen einschließlich G.** G ist beantwortet und als 0.8.0 gelandet; offen
+   sind A–F. Vor der erneuten Übergabe muss der aktuelle Urteilsteil genau diese
+   sechs Fragen zeigen. Die leeren Human-Zellen bleiben selbstverständlich
+   unberührt; die Auflösung von G bleibt in Runde 6 als Historie erhalten.
+
+**DRY-Prüfung:** Im Diff von `cb33dcb` entsteht keine zweite
+Notifier-Implementierung; Auflösung und Watcher bleiben im Fundament, StockInfo
+reicht nur den Katalogzugriff herein. Für die Nacharbeit gilt dieselbe Grenze:
+ein gemeinsamer Fehlerträger beziehungsweise Renderer, keine sechs unabhängigen
+Übersetzungsmechanismen. Neue Testinfrastruktur ist weder vorhanden noch nötig.
+
+**Konvergenz:** Die Grundentscheidungen sind stabil. Der Rest ist mit
+reaktivem Fließtext, einem vertikalen Orakel, korrigiertem Inventar und sechs
+aktuellen Urteilsfragen konkret. Nach einer Scope-Neufassung innerhalb T-56 ist
+eine abschließende Runde belastbar; T-57 bleibt bis dahin eingefroren.
