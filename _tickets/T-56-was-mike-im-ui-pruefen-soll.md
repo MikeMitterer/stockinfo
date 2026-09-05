@@ -2,7 +2,7 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Dashboard) | **9/9 grün — Review Runde 6: Fließtext-Reaktivität offen** | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
+| StockInfo (Dashboard) | **9/9 grün — Codex-freigegeben in Runde 6** | ~2 h Claude-Vorlauf (zwei Profile) + ~15 min Mike | Mikes Urteil zu sechs Fragen; der Funktionsnachweis liegt bei mir | — |
 
 - **Angelegt:** 2026-09-02, auf Mikes Auftrag
 - **Ersetzt:** T-35, T-42 und T-50 als Abnahmetickets für Mike
@@ -122,7 +122,7 @@ Wiederholungsbeleg bleiben gemeinsam in dieser Abnahme.
 
 ## Was nur Mike beantworten kann
 
-**Sieben** Fragen — sechs aus dem Zuschnitt, die siebte aus dem Lauf. Keine
+**Sechs** Fragen aus dem Zuschnitt. Keine
 davon ist eine Prüfung, ob etwas funktioniert; das steht oben und ist dort
 belegt. Es sind Urteile, und ein *„nein"* ist keine Fehlermeldung, sondern
 eine Produktentscheidung.
@@ -135,7 +135,6 @@ eine Produktentscheidung.
 | **D** | Restore-Bestätigung aus Punkt 7 | Ist die Warnung deutlich genug für etwas, das Daten überschreibt — oder zu beiläufig? | |
 | **E** | Statuszeile | Nützlich oder Lärm? | |
 | **F** | die Oberfläche als Ganzes | Was fällt dir auf, das in keinem der Punkte steht? | |
-| **G** | `ux-foundation`, `NotifyOptions` | Nach einem Sprachwechsel **ohne Neuladen** bleibt die Überschrift eines Hinweises in der alten Sprache; der Text wechselt mit. Die kleinste Korrektur ist `title: string \| (() => string)` im Fundament. **Soll es das können — oder ist der Fall selten genug, um ihn zu lassen?** Begründung in Runde 5 | |
 
 **A** ist die einzige Frage, hinter der schon eine Entscheidung von mir steht:
 Ich habe den Namen nicht angefasst, weil eine Quelle wiederzugeben etwas
@@ -608,9 +607,9 @@ sich nicht mehr ändert.
 
 Das Inventar dazu ist gemessen, nicht geschätzt —
 `grep -rn 'error\.value = ' src/{composables,components,api}` ohne die
-Rücksetzer auf `null`: **16 Zuweisungen in 12 Composables**, sechs davon
+Rücksetzer auf `null`: **16 Zuweisungen in 13 Composables**, sechs davon
 speist `AppDashboard.vue` in `notify` ein. Den Satz durch Schlüssel und
-Parameter zu ersetzen ändert `error: Ref<string | null>` in allen zwölf, samt
+Parameter zu ersetzen ändert `error: Ref<string | null>` in allen 13, samt
 Tests und jeder Anzeigestelle.
 
 Das ist nach der Regel dieses Tickets kein kleiner lokaler Befund mehr,
@@ -674,3 +673,16 @@ ein gemeinsamer Fehlerträger beziehungsweise Renderer, keine sechs unabhängige
 reaktivem Fließtext, einem vertikalen Orakel, korrigiertem Inventar und sechs
 aktuellen Urteilsfragen konkret. Nach einer Scope-Neufassung innerhalb T-56 ist
 eine abschließende Runde belastbar; T-57 bleibt bis dahin eingefroren.
+
+## Produktentscheidung nach Runde 6 · Minor statt Gate (2026-09-05)
+
+Mike stuft den sichtbaren Sonderfall ausdrücklich als **kleinen Bug und nicht
+als Blocker** ein: Ein Sprachwechsel genau während der Anzeige eines Toasts
+kann vorkommen, verhindert aber weder die T-56-Abnahme noch den MVP.
+
+Damit sind die beiden S1-Befunde aus Runde 6 nicht widerlegt, sondern als
+offene Nacharbeit nach
+`T-61-offener-toast-behaelt-alte-inhaltssprache.md` verschoben. Die beiden
+S2-Artefakte sind oben korrigiert: Das Inventar nennt 13 Composables, und der
+aktuelle Urteilsteil enthält nur noch A–F; keine Human-Zelle wurde ausgefüllt.
+T-56 ist in Runde 6 freigegeben.

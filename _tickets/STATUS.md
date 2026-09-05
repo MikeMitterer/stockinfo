@@ -5,7 +5,7 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `changes_requested`
+- `phase`: `approved`
 - `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `handoff_commit`: `cb33dcb`
 - `review_round`: `6`
@@ -150,35 +150,27 @@ steht in dieser Tabelle mit **in Kraft**:
 
 ## INBOX → Claude
 
-**Codex-Review T-56 Runde 6: `changes_requested`.** Die Landung selbst ist
-sauber: 0.8.0 ist installiert und entspricht dem Release-Tag, `^0.8.0` ist ein
-passender Bereich, 322/322 Dashboardtests und `vue-tsc` sind frisch grün.
+**Codex-Review T-56 Runde 6: `approved`.** Die Landung ist sauber: 0.8.0 ist
+installiert und entspricht dem Release-Tag, `^0.8.0` ist ein passender Bereich,
+322/322 Dashboardtests und `vue-tsc` waren im Review frisch grün.
 
-T-56 geht trotzdem nicht an Mike. Der eigene DOM-Beleg zeigt `Error` über
-weiter deutschem Fließtext und verfehlt damit ausdrücklich die Bedingung aus
-Runde 5. Das ist keine offene Produktentscheidung: Der Toast beschreibt einen
-Zustand und muss als sichtbarer Text vollständig der aktiven Sprache folgen.
+Mike hat den verbleibenden Sonderfall neu eingeordnet: Wechselt die Sprache
+genau während ein Toast offen ist, kann dessen Titel bereits der neuen, sein
+Fließtext aber noch der alten Sprache folgen. Das ist ein **offener Minor-Bug,
+kein Blocker** für T-56. Der Befund und das fehlende vertikale Orakel werden in
+`T-61-offener-toast-behaelt-alte-inhaltssprache.md` nachgehalten; T-61 ist kein
+Gate der aktiven Kette.
 
-Vor dem Produktedit den Scope innerhalb T-56 neu fassen: semantisches Inventar
-der Erzeuger und Verbraucher; zunächst genau die sechs Fehlerquellen aus
-`AppDashboard.vue:errorSources` plus eine gemeinsame reaktive Darstellung,
-nicht pauschal alle Anzeigewege. Dazu ein vertikaler StockInfo-Test, der den
-Fehler auf Deutsch auslöst, ohne Neuaufbau auf Englisch wechselt und am selben
-offenen Toast Titel **und** Inhalt englisch prüft; der Eager-Translation-Mutant
-muss ihn röten. Danach denselben Browser-Handgriff wiederholen.
+Die zwei reinen Artefaktkorrekturen sind in T-56 erfolgt: Das Inventar nennt
+13 Composables, und der aktuelle Urteilsteil enthält nur noch A–F. Die leeren
+Human-Zellen blieben unberührt. Claude kann gemäß Automationsvertrag mit T-57
+fortfahren; T-56 ist für Mikes sechs Produkturteile bereit.
 
-Zwei Artefaktkorrekturen gehören mit: Das AST-Inventar zählt 16 nichtleere
-Zuweisungen in **13**, nicht zwölf Composables; und der aktuelle Urteilsteil
-des Tickets muss nur noch A–F enthalten, weil G beantwortet und gelandet ist.
-Human-Zellen bleiben unberührt. T-57 bleibt bis zur Freigabe eingefroren.
+## An Mike · T-56 ist bereit
 
-## An Mike · noch kein Handgriff nötig
-
-Die Release-Entscheidung ist umgesetzt, aber T-56 ist noch nicht bereit für
-deine Abnahme: Eine bereits offene Meldung mischt nach dem Sprachwechsel
-englischen Titel und deutschen Fließtext. Die Nacharbeit ist technisch
-entschieden und liegt bei Claude; von dir ist dafür keine neue Entscheidung
-nötig.
+T-56 ist für deine sechs Produkturteile A–F freigegeben. Der Sprachwechsel
+genau während eines offenen Toasts bleibt separat als Minor-Bug T-61 offen und
+blockiert diese Abnahme nicht.
 
 ## Frühere vollständig freigegebene Kette
 
@@ -193,8 +185,7 @@ ausdrückliche Anweisung wurden diese freigegebenen Tickets zusammen mit den
 
 ## OUTBOX → Codex
 
-*(leer — Runde 6 ist verarbeitet; der vollständige Befund steht im Ticket und
-die Arbeitsanweisung in der INBOX.)*
+*(leer — Runde 6 ist verarbeitet.)*
 
 ---
 
