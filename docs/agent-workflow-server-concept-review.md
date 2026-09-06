@@ -190,6 +190,28 @@ Abschnitt 9 kennt für das Ende eines Laufs nur `interrupted` und „Abbrechen".
 **Vorschlag: `context_budget` als konfigurierbare Größe je Rollenprofil, mit
 zwei Schwellen und einem eigenen Abschlussweg.**
 
+### `context_budget` ist eine gesetzte Arbeitsgrenze, nicht das Kontextfenster
+
+Das ist die entscheidende Festlegung, und sie gehört vor alles andere:
+`context_budget` ist ein **absolut konfigurierter Wert** — Startwert 100 000
+Token — und wird ausdrücklich *nicht* aus der Fenstergröße des Modells
+abgeleitet. Die beobachtete Verschlechterung setzt lange vor dem vollen Fenster
+ein; sie ist ein Erfahrungswert, kein Bruchteil der Kapazität.
+
+Daraus folgt unmittelbar: **Ein Modell mit größerem Fenster bekommt nicht
+automatisch ein größeres Budget.** Der Wechsel auf ein 1M-Fenster hebt die
+Grenze nicht an. Wer sie anheben will, tut das als bewusste Entscheidung mit
+Beleg — etwa Läufen, die jenseits der bisherigen Grenze nachweislich noch
+saubere Ergebnisse geliefert haben.
+
+Das Fenster des Modells dient nur als Plausibilitätsschranke: Ist das
+konfigurierte Budget größer als das gemeldete Fenster, ist die Konfiguration
+falsch, und der Dienst sagt das beim Setzen statt beim Auslösen.
+
+Konfiguriert wird der Wert je Rollenprofil — ein Verifier, der viel fremden
+Code liest, verbraucht anders als ein Developer — wie jede andere Einstellung
+über CLI und Web mit Revisionsprüfung (Abschnitt 8).
+
 ### Zwei Schwellen, nicht eine
 
 Eine harte Obergrenze allein feuert zu spät. Das Schreiben eines brauchbaren
@@ -203,11 +225,12 @@ wenn er am meisten zählt.
 | `soft_limit` (Startwert 60 %) | Kein neues Teilziel mehr beginnen | Auf einen abschließbaren Stand zuarbeiten |
 | `hard_limit` (Startwert 80 %) | Nur noch den Checkpoint schreiben | `checkpoint_submit`, danach Lauf beenden |
 
-Die Prozentwerte beziehen sich auf `context_budget`; die absolute Grenze ist
-modell- und aufgabenabhängig, deshalb Konfiguration statt Konstante. Ein
-Verifier, der viel fremden Code liest, erreicht sie anders als ein Developer.
-Konfiguriert wird sie wie jede andere Einstellung über CLI und Web mit
-Revisionsprüfung (Abschnitt 8).
+**Beide Prozentwerte beziehen sich auf `context_budget`, nicht auf das
+Kontextfenster.** Bei einem Budget von 100 000 Token heißt das 60 000 und
+80 000 — unabhängig davon, ob das Modell 200 000 oder eine Million fasst. Die
+Oberfläche zeigt entsprechend absolute Zahlen gegen das Budget („62 000 /
+100 000"), keinen Fensterfüllstand; sonst liest jemand die Anzeige als „noch
+viel Platz", während die Arbeitsgrenze längst erreicht ist.
 
 ### Der Dienst kann den Kontext nicht messen — das gehört hingeschrieben
 
