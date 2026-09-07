@@ -3,11 +3,17 @@
 Kleine, ephemere Mailbox für den asynchronen Austausch. Dauerhafte
 Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
+**Die Rollen legst du über `implementer` (Coder) und `reviewer` (Verifier)
+fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
+`owner` weiter unten bezeichnet dagegen die Instanz, die gerade am Zug ist.
+
 ## Maschinenlesbarer Zustand
 
+- `implementer`: `codex`
+- `reviewer`: `claude`
 - `phase`: `ready_for_claude`
 - `ticket`: `T-26-offene-details-umsetzen.md`
-- `handoff_commit`: `abda3c9`
+- `handoff_commit`: `53d8d9f`
 - `review_round`: `1`
 - `owner`: `claude`
 - `updated_at`: `2026-09-07`
@@ -15,8 +21,6 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 - `last_reviewed_commit`: `cb33dcb`
 - `last_reviewed_round`: `6`
 - `workstream`: `offene_befunde`
-- `implementer`: `codex`
-- `reviewer`: `claude`
 - `priority_chain`: `T-26-offene-details-umsetzen.md` → `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
 - `priority_ticket`: `T-26-offene-details-umsetzen.md`
 
@@ -44,12 +48,22 @@ Diese zusätzlichen Phasen gelten für den ausdrücklich beauftragten Rollenwech
 Die frühere Freigabe und die Rollenangaben im Archiv unten beschreiben alte
 Übergaben, keinen Auftrag zum parallelen Weiterarbeiten an T-57.
 
-## OUTBOX → Claude · T-26 Runde 1
+## OUTBOX → Claude · T-26 Runde 1, aktualisierter Prüfstand
 
-**Prüfstand `abda3c9`**, Coder Codex, Verifier Claude, Auftrag Mike vom
-2026-09-07. T-26 ist implementiert einschließlich REST, Dashboard und erstem
-Browserlauf. Bitte unabhängig nach dem aktuellen Reviewvertrag prüfen;
-T-56/F wartet auf dieses Ergebnis. Kein Auftrag für T-57 vor Abschluss.
+**Prüfstand `53d8d9f`**, aufbauend auf `abda3c9`. Noch keine abgeschlossene
+Claude-Prüfung; die Rundenkennung bleibt 1. Mike hat die UI-Nacharbeit direkt
+beauftragt, ausdrücklich ohne vorherigen Review dieser Korrektur. Sie ist
+umgesetzt und getestet; keine separate UI-Reviewrunde anlegen. Der ursprüngliche
+Auftrag zur unabhängigen Gesamtverifikation von T-26 bleibt bestehen.
+
+**Nacharbeit:** Feldzeitstempel vollständig entfernt, auch aus Tooltips;
+„Source as of“ bleibt unten. Sichtbarer Nur-Lesen-Hinweis und Erklärung der
+Schreibrechte. Ladetext-Schlüssel korrigiert. Im Browser leere Zahl und Text
+wirklich eingegeben (0 und Testanbieter), nach vollständigem Reload sichtbar,
+anschließend per UI gelöscht und per REST null bestätigt. Boolean-Zyklus
+true/false/null separat im Komponententest. 6/6 Detailtests, vue-tsc und
+TS-Inventar erfolgreich. Testfenster enthält jetzt editierbare Lücken.
+Details und unveränderte Human-Rückmeldungen stehen in T-26 (6a, 8a–8c).
 
 **Umfang offenlegen:** Der Plan nennt die drei fachlichen Teile Feldschema,
 generischer Speicher/Merge und REST/UI. Ein numerisches Vorabbudget fehlt;
