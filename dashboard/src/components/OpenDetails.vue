@@ -52,7 +52,7 @@ onMounted(async () => {
 dt {
   margin-bottom: var(--space-2);
   color: $color-muted;
-  font-size: var(--font-sm);
+  font-size: var(--font-xs);
   font-weight: 500;
 }
 dd { margin: 0; }
