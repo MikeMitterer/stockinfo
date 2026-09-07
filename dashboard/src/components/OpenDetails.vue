@@ -43,10 +43,17 @@ onMounted(async () => {
 </template>
 
 <style scoped lang="scss">
+@use '../styles/variables' as *;
+
 .open-details__fields {
   display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
   gap: var(--space-4); margin: 0;
 }
-dt { margin-bottom: var(--space-2); }
+dt {
+  margin-bottom: var(--space-2);
+  color: $color-muted;
+  font-size: var(--font-sm);
+  font-weight: 500;
+}
 dd { margin: 0; }
 </style>
