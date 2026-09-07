@@ -98,14 +98,15 @@ ohne vorherige Claude-Prüfung. Sein weiterer Hinweis: Der Zeitpunkt steht
 bereits unten bei „Source as of“; ein zusätzlicher Zeit-Tooltip ist unnötig.
 
 Umgesetzt: keine Zeitangabe und kein Zeit-Tooltip pro Feld; die gemeinsame
-Fußzeile bleibt. Gesperrte Felder tragen „Nur Lesen“/„Read only“. Der Infohinweis
-unterscheidet nicht editierbare Plugin-Felder von Feldern mit Quellenwert.
+Fußzeile bleibt. Auf Mikes weiteren Auftrag entfallen auch „Nur Lesen“/„Read only“ und
+alle Info-Symbole samt Erklärungstexten an den Feldern. Die Bedienung allein
+zeigt, ob ein Feld editierbar ist.
 Bearbeiten-Schaltflächen nennen ihr Feld. Beim Test zusätzlich den fehlenden
 Ladetext-Schlüssel des Feldkatalogs korrigiert.
 
 | # | Lauf | Handgriff | Nachweis | woher | AI |
 |---|---|---|---|---|:--:|
-| 6a | B | ETF-Details öffnen | kein Datum im Feldbereich, gemeinsame Fußzeile bleibt; Sperrgrund im Infohinweis | Chrome-Snapshot und Screenshot | ✅ |
+| 6a | B | ETF-Details öffnen | kein Datum im Feldbereich, gemeinsame Fußzeile bleibt; keine Read-only-Texte oder Info-Symbole pro Feld | Chrome-Snapshot und Screenshot | ✅ |
 | 8a | B | leeren Score 0 und leeren Anbieter „Testanbieter“ per UI setzen, Browser neu laden | beide Werte sichtbar und per REST als manual gespeichert | echte Zahl-/Freitextbedienung, Reload, GET instruments | ✅ |
 | 8b | B | beide manuellen Angaben per Clear/Entfernen löschen | beide null; readonly false bleibt erhalten | UI und REST-Rücklesen | ✅ |
 | 8c | A | editierbaren Boolean über echten Komponentenbutton umschalten | true → false → null; false zeigt Nein | Komponententest, kein Live-Boolean-Lauf | ➖ |

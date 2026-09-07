@@ -17,10 +17,6 @@ export const de = {
   details: {
     loading: 'Lade Felder…',
     editField: '{field} bearbeiten',
-    readOnly: 'Nur Lesen',
-    readOnlyHint: 'Dieses Feld ist laut Quelle nicht manuell bearbeitbar.',
-    providerHint: 'Dieser Wert kommt aus der Quelle. Manuelle Angaben ergänzen nur fehlende Quellenwerte.',
-    editableHint: 'Hier kannst du einen fehlenden Quellenwert ergänzen. Liefert die Quelle später einen Wert, hat dieser Vorrang.',
     currency: 'Währung',
     manual: 'Von Hand',
     shadowed: 'Eigener Wert {value} wird von der Quelle verdeckt.',

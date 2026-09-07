@@ -3,7 +3,6 @@ import { computed, ref, watch } from 'vue'
 import { NButton, NInput, NSelect } from 'naive-ui'
 import { UxInlineNumber } from '@mmit/ux-foundation'
 import { useI18n } from 'vue-i18n'
-import InfoHint from './InfoHint.vue'
 import type { DetailDefinition, DetailInput, DetailValue } from '../types'
 
 const props = defineProps<{ definition: DetailDefinition; value: DetailValue; busy?: boolean; options?: string[] }>()
@@ -11,8 +10,6 @@ const emit = defineEmits<{ (event: 'commit', value: DetailInput): void }>()
 const { t, locale, n } = useI18n()
 const label = computed(() => locale.value === 'de' ? props.definition.label_de || props.definition.label_en : props.definition.label_en)
 const editable = computed(() => props.definition.overridable && props.value.origin !== 'provider')
-const hint = computed(() => !props.definition.overridable ? t('details.readOnlyHint')
-  : props.value.origin === 'provider' ? t('details.providerHint') : t('details.editableHint'))
 const numeric = computed(() => typeof props.value.manual_value === 'number' ? props.value.manual_value : null)
 const display = computed(() => {
   const value = props.value.value
@@ -56,8 +53,6 @@ function toggle(): void {
       :disabled="busy" :title="t('overrides.removeOwn')" @click="commit(null)">✕</NButton>
     <small v-if="value.origin === 'manual'">{{ t('details.manual') }}</small>
     <small v-else-if="value.source">{{ value.source }}</small>
-    <small v-if="!editable">{{ t('details.readOnly') }}</small>
-    <InfoHint :text="hint" icon="info" />
     <small v-if="value.shadowed">{{ t('details.shadowed', { value: value.manual_value }) }}</small>
   </div>
 </template>
