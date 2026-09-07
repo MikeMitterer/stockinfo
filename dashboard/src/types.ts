@@ -189,6 +189,7 @@ export interface InstrumentSummary {
  * Betreiber sieht, dass er sie konfiguriert hat.
  */
 export interface SourceEntry {
+  data_version?: number
   name: string
   role: string
   position: number

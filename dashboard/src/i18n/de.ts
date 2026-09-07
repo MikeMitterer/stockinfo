@@ -272,6 +272,7 @@ export const de = {
       /* Die Kennungen aus `BackupReason.code`; den Satz bildet das UI. */
       backup_schema_too_new: 'Schema {version} ist neuer als diese App ({app})',
       backup_fingerprint_mismatch: 'Manifest und Datenbank nennen verschiedene Kennungen',
+      backup_data_version_differ: 'Inkompatible Plugin-Datenversion',
       backup_sources_differ: 'Andere Quellenlage',
       line: '{field}: dort {theirs}, hier {ours}',
       packages: 'Pakete',

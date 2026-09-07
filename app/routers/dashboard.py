@@ -19,6 +19,7 @@ Nebenwirkung dieses Tickets.
 
 from typing import Annotated
 
+from app.data_versions import declared_versions
 from app.detail_models import DetailInput, DetailValue
 
 from fastapi import APIRouter, Depends, HTTPException, Response
@@ -142,9 +143,11 @@ def sources() -> SourcesResponse:
     # eine Kette, die gar nicht läuft — und die Diagnose wäre genau dann
     # falsch, wenn man sie braucht.
     config = get_sources_config()
+    versions = declared_versions(config)
     entries = [
         SourceEntry(
             name=entry.name,
+            data_version=versions.get(entry.name, 1),
             role=entry.role,
             position=entry.position,
             configured=entry.usable,

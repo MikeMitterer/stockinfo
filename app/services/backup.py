@@ -1,12 +1,7 @@
 """Sicherung der Datenbank — anlegen, beschreiben, listen.
 
-**Das Kopieren ist der kleinere Teil.** Eine Datenbank ist nicht
-quellenneutral: Dasselbe Papier wird über die Online-Kette zu
-`listed`/`EUNL`/`XETR` und über eine Dateiquelle womöglich zu etwas anderem.
-Eine Sicherung, die man ins falsche Profil zurückspielt, ergibt einen Bestand,
-den die laufende Kette nicht bedienen kann — und das fällt erst beim nächsten
-Kursabruf auf, papierweise. Jede Sicherung trägt deshalb eine
-**Quellenkennung**.
+Die Kompatibilität folgt den vom Plugin-Autor deklarierten Datenversionen.
+Paketpins und Rollenketten bleiben Herkunftsinformation, keine Sperre.
 
 **`VACUUM INTO` statt einer Dateikopie:** Im WAL-Modus liegen die jüngsten
 Schreibvorgänge in der `-wal`-Datei; eine Kopie der `.db` allein ergibt einen
@@ -29,6 +24,7 @@ from pathlib import Path
 import structlog
 
 from app.db import SCHEMA_VERSION, get_connection
+from app.data_versions import declared_versions, stored_versions, stamp_versions
 from app.models import BackupReason, SourceDifference
 from app.sources_config import ROLES, SourcesConfig
 
@@ -209,13 +205,15 @@ class BackupService:
         finally:
             connection.close()
 
+        stamp_versions(target, self._config)
         _write_atomic(
             target.with_suffix(".json"),
             json.dumps(
                 {
                     "created_at": created_at.isoformat().replace("+00:00", "Z"),
                     "schema_version": SCHEMA_VERSION,
-                    "sources_fingerprint": fingerprint,
+                    "data_versions": stored_versions(target),
+                    "sources_fingerprint": _read_stamp(target)[0] or fingerprint,
                     "sources": {role: list(self._config.chain(role)) for role in ROLES},
                     "packages": list(self._config.packages),
                     "reason": reason,
@@ -277,7 +275,7 @@ class BackupService:
         stamped, version = _read_stamp(path)
         manifest = _read_manifest(path)
         fingerprint = stamped or str(manifest.get("sources_fingerprint", ""))
-        reason = self._judge(fingerprint, version, stamped, manifest)
+        reason = self._judge(fingerprint, version, stamped, manifest, stored_versions(path))
         return BackupInfo(
             name=path.name,
             created_at=str(manifest.get("created_at", "")),
@@ -288,13 +286,12 @@ class BackupService:
         )
 
     def _judge(
-        self, fingerprint: str, version: int, stamped: str | None, manifest: dict
+        self, fingerprint: str, version: int, stamped: str | None, manifest: dict, data_versions: dict[str, int]
     ) -> BackupReason | None:
         """Warum die Sicherung nicht passt — oder ``None``, wenn sie passt.
 
-        Das zu neue Schema steht vorn: Eine ältere App kann eine neuere
-        Datenbank nicht lesen, und das ist ein anderer Befund als eine
-        abweichende Quellenlage.
+        Technische Lesbarkeit und Integrität werden separat geprüft. Fachliche
+        Inkompatibilität entsteht ausschließlich durch data_version.
         """
         if version > SCHEMA_VERSION:
             return BackupReason(
@@ -304,41 +301,14 @@ class BackupService:
         declared = manifest.get("sources_fingerprint")
         if stamped and declared and stamped != declared:
             return BackupReason(code="backup_fingerprint_mismatch")
-        if fingerprint != self.fingerprint:
-            return BackupReason(
-                code="backup_sources_differ", differences=self._differences(manifest)
-            )
-        return None
-
-    # Der Rückgabetyp steht in Anführungszeichen: `list` ist in diesem
-    # Klassenkörper von der gleichnamigen Methode verdeckt.
-    def _differences(self, manifest: dict) -> "list[SourceDifference]":
-        """Wo die beiden Lagen auseinandergehen — Rollen **und** Paketpins.
-
-        „Kennung verschieden" ist wahr und nutzlos; wer die Meldung liest, will
-        wissen, was anders steht. Die Paketliste gehört dazu: Sie geht in die
-        Kennung ein, und ohne sie stünde bei gleichen Ketten eine Abweichung
-        ohne Ort da.
-        """
-        theirs = manifest.get("sources", {})
-        theirs = theirs if isinstance(theirs, dict) else {}
-        found = [
-            SourceDifference(
-                field=role, theirs=list(theirs.get(role) or []), ours=list(self._config.chain(role))
-            )
-            for role in ROLES
-            if list(theirs.get(role) or []) != list(self._config.chain(role))
+        differences = [
+            SourceDifference(field=name, theirs=[str(data_versions.get(name, 1))], ours=[str(value)])
+            for name, value in declared_versions(self._config).items()
+            if data_versions.get(name, 1) != value
         ]
-        packages = manifest.get("packages")
-        packages = list(packages) if isinstance(packages, list) else []
-        if sorted(packages) != sorted(self._config.packages):
-            found.append(
-                SourceDifference(
-                    field="packages", theirs=packages, ours=list(self._config.packages)
-                )
-            )
-        return found
-
+        if differences:
+            return BackupReason(code="backup_data_version_differ", differences=differences)
+        return None
 
     def request_restore(self, name: str, *, force: bool = False) -> BackupInfo:
         """Prüft eine Sicherung und hinterlegt die Absicht.
@@ -382,7 +352,7 @@ class BackupService:
         if not info.compatible and not force and info.reason is not None:
             raise BackupError(
                 BackupError.INCOMPATIBLE,
-                f"Sicherung {name} gehört zu einer anderen Quellenlage",
+                f"Sicherung {name} hat eine inkompatible Plugin-Datenversion",
                 params={"name": name},
                 reason=info.reason,
             )

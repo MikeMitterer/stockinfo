@@ -4,13 +4,74 @@
 StockInfo leitet sie weder aus Paketversionen noch aus einem Hash der
 Quellenkonfiguration ab. StockInfo sichert den Bestand und kontrolliert den
 Migrationsaufruf. Diese Richtung ist von Mike am 2026-09-07 bestätigt;
-die Umsetzung steht noch aus.
+die erste Umsetzung (`data_version` und Backup-Prüfung) steht im Abschnitt unten.
+
+## Umgesetzt · data_version, 2026-09-07
+
+Mike: „T-21 Fehlertext klären wir gleich, T-25 - führe zumindest die angesprochene data_version ein. Das ist die einzige Zahl das ein Backup inkompatibel machen kann.“
+
+Der beauftragte Teil ist implementiert: `Source.data_version` ist eine positive
+Ganzzahl mit Standard `1`; der Loader und das Plugin-Testharness prüfen die
+Deklaration. `GET /sources` liefert sie je Quelle. Plugin-Namen ordnen die
+Werte zu; Rollenreihenfolge, Paketpins und Profilname sind keine fachlichen
+Ablehnungsgründe mehr. Nur unterschiedliche Datenversionen aktiver Quellen
+führen zu `backup_data_version_differ`. Entfernte Quellen werden nicht
+verglichen. Neue Quellen mit Stand 1 passen; bei einem anderen Stand greift
+der Vergleich gegen die bisherige implizite 1.
+
+Der verwendete Stand liegt in `meta.plugin_data_versions` in der DB und ihrer
+Sicherung sowie informativ im Manifest. Alte Backups ohne Marker gelten als
+Stand 1. Neue Datenbanken übernehmen die Deklaration; vorhandene Werte werden
+bei einem Plugin-Update nicht überschrieben. Ein Backup ohne Manifest bleibt
+prüfbar. Der Quellen-Fingerprint bleibt Herkunftsinformation; beim Sichern
+wird die tatsächliche DB-Herkunft ins Manifest übernommen.
+
+Technische Lesbarkeit (`backup_schema_too_new`) und die Integritätsprüfung
+zwischen Manifest und Datenbank bleiben getrennte Fehlerfälle. `force` ist
+weiter der bestehende ausdrückliche Restore-Override. Kein Plugin-Update führt
+allein zur Rotation oder Migration. Die neue Zahl sperrt **Backups**, noch
+nicht automatisch den Betrieb einer aktualisierten Quelle auf dem vorhandenen
+Bestand: Migrationsausführung und Betriebssperre bleiben im Folgeumfang.
+
+### Verifikation des beauftragten Teils
+
+- 13 gezielte Tests: Paket-/Kettenwechsel, Datenversionswechsel, fehlendes
+  Manifest, Altbackup, unveränderter DB-Stempel, frische DB, ungültige Werte
+  sowie Datei-Plugin → Loader → REST → Restore-Anforderung → echter zweiter
+  App-Lifespan mit geänderter Deklaration. Der zweite Start prüft neu und
+  lehnt den vorgemerkten Restore ab. Keine Online- oder Docker-Verifikation.
+- Frischer Backendlauf: **1087 bestanden, 29 übersprungen, 8 Online-Tests
+  abgewählt**. Plugin-API und Beispielplugin: **356 bestanden, 1 übersprungen**.
+- Backup-UI: **14 Tests bestanden**, einschließlich DE/EN mit Plugin-Namen und
+  beiden Datenständen. `vue-tsc` und Ruff bestanden.
+- Dashboard-Gesamtlauf vor den zwei neuen UI-Tests: **334 bestanden, 1 Fehler**.
+  Vorbestehender CSS-Befund: `tests/componentStyles.spec.ts` beanstandet
+  `DetailEditor.vue`, `.detail-editor__text { min-width: ... }`.
+  Beide Dateien sind gegenüber dem Ausgangscommit unverändert. Kein grüner
+  Gesamtlauf behauptet; der Befund gehört nicht zur Datenkompatibilität.
+
+```bash
+# M1 und Datenversionsvergleich; noch keine Migrationsabnahme M2–M5
+.venv/bin/pytest -q tests/test_backup_data_version.py tests/test_backup.py
+# Backend: frischer Datenpfad, keine echte externe API
+TASK_DATA_DIR=$(mktemp -d /tmp/stockinfo-t25-verify.XXXXXX)
+env DATABASE_PATH="$TASK_DATA_DIR/stockinfo.db" .venv/bin/pytest -q -m 'not integration'
+# Plugin-Vertrag und Beispielplugin
+PYTHONPATH=plugin_api/src:plugin_api/examples/us-example/src .venv/bin/pytest -q plugin_api/tests plugin_api/examples/us-example/tests
+# Datenversionsgrund im UI
+npm --prefix dashboard test -- tests/components/BackupsPanel.spec.ts
+./dashboard/node_modules/.bin/vue-tsc -b dashboard/tsconfig.json
+```
+
+Die bisherige Richtung unten bleibt der Folgeumfang. Der aktuelle Teil ist
+keine Implementierung des gesamten Migrationssystems und keine unabhängige
+Agentenfreigabe. T-25 bleibt für diese Restarbeit offen.
 
 ## Für dich
 
-Aktuell kein Handgriff nötig. Der nächste technische Schritt ist, den kleinen
-Plugin-Vertrag und das Fehlerverhalten konkret zu entwerfen. Es läuft noch
-keine Implementierung oder unabhängige Abnahme.
+Aktuell kein Handgriff nötig. Der beauftragte Teil ist implementiert und
+geprüft. Für den Folgeumfang sind Migrationseinstieg und Fehlerverhalten
+noch zu entwerfen; keine unabhängige Abnahme läuft.
 
 ### Bisherige Antworten und Rückmeldungen
 
@@ -30,8 +91,8 @@ implementiert. Die früher diskutierte Major-Versionsregel wird nicht verfolgt.
 ### Beschlossener Ablauf
 
 1. Jedes Plugin deklariert seine Datenkompatibilitäts-Version; StockInfo
-   speichert den verwendeten Stand je Plugin. `data_version` ist der
-   vorgeschlagene Feldname, noch kein veröffentlichter API-Vertrag.
+   speichert den verwendeten Stand je Plugin. `data_version` ist jetzt als
+   additive Deklaration implementiert.
 2. Bei unverändertem Stand braucht ein Paketupdate keine Datenmigration.
 3. Bei verändertem Stand muss das Plugin einen passenden Migrationsweg vom
    gespeicherten zum neuen Stand bereitstellen. Übersprungene Paketversionen
@@ -74,7 +135,7 @@ zugesagt gekennzeichnet. Die heutige Zustimmung erledigt oder verwirft diese
 Restanforderung nicht. Ihre Einplanung sowie die alte Forderung nach
 fortlaufenden Backupnummern sind bei der weiteren Eingrenzung separat zu klären.
 
-### Aktueller Nachweis
+### Befund vor der Umsetzung · Historie
 
 `app/services/backup.py`, `fingerprint_of`, berücksichtigt momentan Rollenketten
 und exakte Paketpins. Beim geprüften Wechsel `example-source==1.0.0` auf
@@ -109,8 +170,9 @@ eine Paketversionsänderung allein soll keine Datenumwandlung auslösen.
 
 ### Auflösung
 
-Offen: Richtung am 2026-09-07 von Mike bestätigt. Schnittstellenentwurf und
-Implementierung fehlen. STATUS-Rollen und Prioritätskette bleiben unverändert.
+Teilweise umgesetzt: `data_version` und Backup-Kompatibilitätsprüfung sind
+auf Mikes Auftrag implementiert. Der Migrationseinstieg und seine sichere
+Ausführung fehlen weiterhin. STATUS-Rollen und Prioritätskette bleiben unverändert.
 
 ## Frühere Anforderungen und Prüfungen · Historie
 

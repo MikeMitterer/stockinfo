@@ -167,6 +167,9 @@ def _check(source_class: Any, origin: str) -> LoadProblem | None:
             f"{source_class.name}: api_version {version!r}, diese App spricht "
             f"{API_VERSION} — das Plugin wurde gegen einen anderen Vertrag gebaut",
         )
+    data_version = getattr(source_class, "data_version", 1)
+    if type(data_version) is not int or data_version < 1:
+        return LoadProblem(origin, f"{source_class.name}: data_version muss eine positive Ganzzahl sein")
     if not roles_of(source_class):
         return LoadProblem(
             origin,

@@ -20,6 +20,7 @@ from app.config import Settings, get_settings
 from app.docs import register_docs
 from app.container import get_cached_quote_service
 from app.db import init_db
+from app.data_versions import stamp_versions
 from app.services.backup import (
     BackupError,
     apply_pending,
@@ -82,12 +83,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     # verliert diese Quelle, nicht seine Installation.
     data_dir = Path(settings.database_path).parent
 
-    # **Eine vorgemerkte Wiederherstellung zuerst.** Weiter unten öffnet
-    # `init_db` die Datei; der Tausch gehört an die einzige Stelle im Leben des
-    # Prozesses, an der noch keine Verbindung offen ist.
-    restored = apply_pending(settings.database_path, get_sources_config())
-    if restored:
-        logger.info("restore_completed", backup=restored)
     # **Erst die beigesteuerten Pakete, dann suchen.** Sie liegen unter `/data`
     # und überleben damit ein Image-Update; `site-packages` im Image tut das
     # nicht. Schlägt die Installation fehl, fehlen diese Quellen — der Start
@@ -97,6 +92,14 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     )
     register_loaded(load_all(data_dir).specs)
 
+    # **Eine vorgemerkte Wiederherstellung zuerst.** Weiter unten öffnet
+    # `init_db` die Datei; der Tausch gehört an die einzige Stelle im Leben des
+    # Prozesses, an der noch keine Verbindung offen ist.
+    restored = apply_pending(settings.database_path, get_sources_config())
+    if restored:
+        logger.info("restore_completed", backup=restored)
+    fresh_database = not Path(settings.database_path).exists()
+
     # **Jede Rolle einmal bauen, bevor jemand fragt.** Sonst zeigt `/sources`
     # einen spekulativen Zustand, der sich nach dem ersten Fachrequest ändert.
     warm_all_chains()
@@ -104,6 +107,7 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     if init_db(settings.database_path):
         get_gate().block()
 
+    stamp_versions(settings.database_path, get_sources_config(), fresh=fresh_database)
     initialize_detail_catalog()
 
     # Die Kennung steht in der Datenbank selbst, nicht nur im Manifest daneben:

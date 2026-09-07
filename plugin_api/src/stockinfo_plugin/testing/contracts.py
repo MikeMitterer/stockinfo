@@ -120,6 +120,11 @@ class SourceContract:
             "Zustand nach __init__ verschieben."
         )
 
+    def test_data_version_ist_eine_positive_ganzzahl(self) -> None:
+        """Bool und Zeichenketten sind keine Datenkompatibilitäts-Version."""
+        version = self.make_source().data_version
+        assert type(version) is int and version >= 1
+
     def test_hat_einen_namen(self) -> None:
         """Ohne Namen lässt sich die Quelle nicht konfigurieren und nicht melden."""
         source = self.make_source()

@@ -796,6 +796,7 @@ class SourceEntry(BaseModel):
     kostenpflichtige Quelle nicht unbemerkt vor einer kostenlosen steht.
     """
 
+    data_version: int = Field(default=1, ge=1, description="Vom Plugin deklarierte Datenkompatibilität")
     name: str = Field(description="Kurzname aus der Konfiguration")
     role: str = Field(description="resolvers, etf_meta, quotes, daily oder fx")
     position: int = Field(description="Rang in der Kette, 1-basiert")
@@ -1137,13 +1138,13 @@ class BackupReason(BaseModel):
     code: str = Field(
         description=(
             "Genau eine der drei **Passungs**ursachen: `backup_schema_too_new` · "
-            "`backup_fingerprint_mismatch` · `backup_sources_differ`. Ein "
+            "`backup_fingerprint_mismatch` · `backup_data_version_differ`. Ein "
             "unbekannter Name ist keine davon — dort fehlt die Ursache"
         )
     )
     params: dict[str, str] = Field(default_factory=dict, description="Werte für den Satz")
     differences: list[SourceDifference] = Field(
-        default_factory=list, description="Nur bei `backup_sources_differ`"
+        default_factory=list, description="Nur bei `backup_data_version_differ`"
     )
 
 

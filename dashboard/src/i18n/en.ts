@@ -245,6 +245,7 @@ export const en = {
     reason: {
       backup_schema_too_new: 'Schema {version} is newer than this app ({app})',
       backup_fingerprint_mismatch: 'Manifest and database name different fingerprints',
+      backup_data_version_differ: 'Incompatible plugin data version',
       backup_sources_differ: 'Different source setup',
       line: '{field}: there {theirs}, here {ours}',
       packages: 'Packages',

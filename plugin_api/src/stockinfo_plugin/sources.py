@@ -38,6 +38,14 @@ class Source:
     name: str = ""
     """Eindeutiger Kurzname, taucht in Konfiguration und Protokoll auf."""
 
+    data_version: int = 1
+    """Datenkompatibilität, unabhängig von Paket- und API-Version.
+
+    Positive Ganzzahl. Nur bei unverträglicher Bedeutung gespeicherter Daten
+    erhöhen. Der Host vergleicht diesen Stand beim Wiederherstellen; eine
+    Änderung führt noch keine Migration aus. Bestehende Plugins starten bei 1.
+    """
+
     api_version: int = API_VERSION
     """Vertragsversion, gegen die dieses Plugin gebaut wurde.
 

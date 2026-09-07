@@ -295,3 +295,19 @@ describe('BackupsPanel', () => {
     }
   })
 })
+
+it.each(['de', 'en'] as const)('zeigt Datenversion und Plugin-Namen in %s', async (locale) => {
+  i18n.global.locale.value = locale
+  vi.spyOn(apiClient, 'get').mockResolvedValue(listing({ backups: [{
+    ...FOREIGN,
+    reason: { code: 'backup_data_version_differ', params: {}, differences: [
+      { field: 'example-source', theirs: ['1'], ours: ['2'] },
+    ] },
+  }] }))
+  const wrapper = mountPanel()
+  await flushPromises()
+  expect(wrapper.text()).toContain(locale === 'de' ? 'Inkompatible Plugin-Datenversion' : 'Incompatible plugin data version')
+  expect(wrapper.text()).toContain(locale === 'de' ? 'example-source: dort 1, hier 2' : 'example-source: there 1, here 2')
+  expect(wrapper.text()).not.toContain('roles.example-source')
+  wrapper.unmount()
+})

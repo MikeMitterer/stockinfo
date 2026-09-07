@@ -155,8 +155,9 @@ BUILTIN_SOURCES: tuple[SourceSpec, ...] = (
         "openfigi",
         frozenset({"resolvers"}),
         _openfigi,
+        declaration=OpenFigiResolverPlugin,
     ),
-    SourceSpec("yahoo-search", frozenset({"resolvers"}), _yahoo_search),
+    SourceSpec("yahoo-search", frozenset({"resolvers"}), _yahoo_search, declaration=YahooSearchResolverPlugin),
     SourceSpec(
         "justetf",
         frozenset({"etf_meta"}),

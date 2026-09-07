@@ -37,6 +37,7 @@ from app.services.backup import (
     stamp_fingerprint,
 )
 from app.sources_config import ROLES, SourcesConfig
+from app.plugins.yfinance_metadata import YFinanceMetadataPlugin
 
 _ONLINE = SourcesConfig(
     chains={
@@ -256,37 +257,20 @@ def test_die_elfte_sicherung_verdraengt_die_aelteste(volume: Path) -> None:
 # ─── #2 · die Liste ───────────────────────────────────────────────────────────
 
 
-def test_die_liste_zeigt_auch_die_unpassenden_mit_ihrem_grund(volume: Path) -> None:
-    """„Kennung verschieden" ist wahr und nutzlos — wer die Meldung liest,
-    will wissen, was anders steht."""
+def test_die_liste_zeigt_abweichende_datenversionen(volume: Path, monkeypatch) -> None:
     info = _service(volume).create()
-
-    entries = _service(volume, _FILE_ONLY).list()
-
-    assert [entry.name for entry in entries] == [info.name]
-    assert entries[0].compatible is False
-    reason = entries[0].reason
-    assert reason is not None and reason.code == "backup_sources_differ"
-    quotes = next(item for item in reason.differences if item.field == "quotes")
-    assert quotes.theirs == ["yfinance"] and quotes.ours == ["yaml-file"]
-    # **Kein deutsches Wort im Rumpf.** Den Satz bildet das UI; ein fertiger
-    # Text hier stünde auch in der englischen Oberfläche deutsch da.
-    assert "dort" not in reason.model_dump_json() and "hier" not in reason.model_dump_json()
-    assert entries[0].size > 0
+    monkeypatch.setattr(YFinanceMetadataPlugin, 'data_version', 2)
+    entry = _service(volume).list()[0]
+    assert entry.name == info.name and not entry.compatible
+    assert entry.reason.code == 'backup_data_version_differ'
+    difference = entry.reason.differences[0]
+    assert (difference.field, difference.theirs, difference.ours) == ('yfinance', ['1'], ['2'])
 
 
-def test_eine_abweichende_paketliste_bekommt_ihr_eigenes_feld(volume: Path) -> None:
-    """Ein beigesteuertes Paket geht in die Kennung ein — dann muss es auch im
-    Grund stehen, sonst stünde dort eine Abweichung ohne Ort."""
-    info = _service(volume).create()
-    mit_paket = SourcesConfig(chains=_ONLINE.chains, packages=("stockinfo-source-x==0.1.0",))
-
-    reason = _service(volume, mit_paket).list()[0].reason
-
-    assert reason is not None and reason.code == "backup_sources_differ"
-    packages = next(item for item in reason.differences if item.field == "packages")
-    assert packages.theirs == [] and packages.ours == ["stockinfo-source-x==0.1.0"]
-    assert [item.field for item in reason.differences] == ["packages"], info.name
+def test_eine_abweichende_paketliste_bleibt_kompatibel(volume: Path) -> None:
+    _service(volume).create()
+    config = SourcesConfig(chains=_ONLINE.chains, packages=('stockinfo-source-x==2.0.0',))
+    assert _service(volume, config).list()[0].compatible
 
 
 def test_die_juengste_steht_vorn(volume: Path) -> None:
@@ -393,33 +377,23 @@ def test_gleichzeitige_aufrufe_bekommen_je_eine_eigene_sicherung(
 # ─── #4, #5, #6 · die drei Ablehnungen ────────────────────────────────────────
 
 
-def test_eine_fremde_kennung_wird_abgelehnt_und_nennt_die_rolle(volume: Path) -> None:
-    """„Kennung verschieden" ist wahr und nutzlos — wer die Meldung liest,
-    will wissen, was anders steht."""
+def test_eine_andere_datenversion_wird_abgelehnt(volume: Path, monkeypatch) -> None:
     info = _service(volume).create()
-
-    listed = _service(volume, _FILE_ONLY).list()[0].reason
-
-    with pytest.raises(BackupError) as fehler:
-        _service(volume, _FILE_ONLY).request_restore(info.name)
-
-    assert fehler.value.code == BackupError.INCOMPATIBLE
-    # **Dieselbe Ursache wie im Listeneintrag**, nicht eine zweite Fassung.
-    assert fehler.value.reason == listed
-    assert {item.field for item in fehler.value.reason.differences} >= {"quotes", "resolvers"}
-    assert not (volume / PENDING_FILENAME).exists(), "die Absicht wurde trotzdem gelegt"
+    monkeypatch.setattr(YFinanceMetadataPlugin, 'data_version', 2)
+    listed = _service(volume).list()[0].reason
+    with pytest.raises(BackupError) as failure:
+        _service(volume).request_restore(info.name)
+    assert failure.value.code == BackupError.INCOMPATIBLE
+    assert failure.value.reason == listed
+    assert not (volume / PENDING_FILENAME).exists()
 
 
-def test_mit_force_laeuft_dieselbe_sicherung_durch(volume: Path) -> None:
-    """Die Gegenprobe: Ohne sie wäre die Ablehnung auch grün, wenn `force`
-    gar nichts täte."""
+def test_mit_force_laeuft_dieselbe_sicherung_durch(volume: Path, monkeypatch) -> None:
     info = _service(volume).create()
-
-    _service(volume, _FILE_ONLY).request_restore(info.name, force=True)
-
-    assert json.loads((volume / PENDING_FILENAME).read_text("utf-8")) == {
-        "backup": info.name,
-        "force": True,
+    monkeypatch.setattr(YFinanceMetadataPlugin, 'data_version', 2)
+    _service(volume).request_restore(info.name, force=True)
+    assert json.loads((volume / PENDING_FILENAME).read_text('utf-8')) == {
+        'backup': info.name, 'force': True,
     }
 
 
@@ -439,11 +413,11 @@ def test_ein_neueres_schema_wird_auch_mit_force_abgelehnt(volume: Path, force: b
     finally:
         connection.close()
 
-    with pytest.raises(BackupError) as fehler:
+    with pytest.raises(BackupError) as failure:
         service.request_restore(info.name, force=force)
 
-    assert fehler.value.code == BackupError.SCHEMA_TOO_NEW
-    assert fehler.value.reason.code == "backup_schema_too_new"
+    assert failure.value.code == BackupError.SCHEMA_TOO_NEW
+    assert failure.value.reason.code == "backup_schema_too_new"
     assert not (volume / PENDING_FILENAME).exists()
 
 
@@ -458,11 +432,11 @@ def test_ein_name_der_keiner_ist_wird_abgewiesen(volume: Path, name: str) -> Non
     Der Name steht in `params`, nicht in einer Ursache: Ob es die Datei gibt,
     ist keine Frage der Passung.
     """
-    with pytest.raises(BackupError) as fehler:
+    with pytest.raises(BackupError) as failure:
         _service(volume).request_restore(name)
-    assert fehler.value.code == BackupError.NOT_FOUND
-    assert fehler.value.reason is None
-    assert fehler.value.params == {"name": name}
+    assert failure.value.code == BackupError.NOT_FOUND
+    assert failure.value.reason is None
+    assert failure.value.params == {"name": name}
 
 
 # ─── #3, #7, #8 · das Einlösen beim Start ─────────────────────────────────────
@@ -543,15 +517,15 @@ def test_das_journal_der_alten_datei_bleibt_nicht_liegen(volume: Path) -> None:
     "sabotage",
     [
         pytest.param("delete", id="datei-verschwunden"),
-        pytest.param("switch", id="konfiguration-gewechselt"),
+        pytest.param("switch", id="datenversion-gewechselt"),
         pytest.param("none", id="gar-keine-absicht"),
     ],
 )
-def test_ein_start_scheitert_nicht_an_einer_sicherung(volume: Path, sabotage: str) -> None:
+def test_ein_start_scheitert_nicht_an_einer_sicherung(volume: Path, sabotage: str, monkeypatch) -> None:
     """**Die zweite Prüfung beim Start ist keine Formsache.**
 
     Zwischen Klick und Neustart kann die Datei verschwinden oder die
-    Konfiguration wechseln. Beides lässt die Datenbank unberührt und bricht den
+    Datenversion wechseln. Beides lässt die Datenbank unberührt und bricht den
     Start nicht ab.
     """
     _put(volume, "UNBERUEHRT")
@@ -562,7 +536,7 @@ def test_ein_start_scheitert_nicht_an_einer_sicherung(volume: Path, sabotage: st
         if sabotage == "delete":
             (_service(volume).directory / info.name).unlink()
         else:
-            config = _FILE_ONLY
+            monkeypatch.setattr(YFinanceMetadataPlugin, "data_version", 2)
 
     assert apply_pending(str(volume / "stockinfo.db"), config) is None
     assert _symbols(volume / "stockinfo.db") == ["UNBERUEHRT"]
@@ -601,7 +575,7 @@ def test_ein_restore_antwortet_mit_202_und_nennt_den_neustart(
     ],
 )
 def test_die_drei_ablehnungen_haben_je_ihren_status(
-    client: TestClient, tmp_path: Path, case: str, expected_status: int, expected_code: str
+    client: TestClient, tmp_path: Path, case: str, expected_status: int, expected_code: str, monkeypatch
 ) -> None:
     """„Gibt es nicht", „passt nicht" und „kann ich nicht lesen" führen zu
     verschiedenen nächsten Schritten — also nicht zu einem Status."""
@@ -609,11 +583,7 @@ def test_die_drei_ablehnungen_haben_je_ihren_status(
     if case != "unknown":
         name = client.post("/backups").json()["name"]
     if case == "foreign":
-        (tmp_path / "sources.yaml").write_text(
-            "\n".join(f"{role}: [yaml-file]" for role in ROLES) + "\n", encoding="utf-8"
-        )
-        get_sources_config.cache_clear()
-        get_backup_service.cache_clear()
+        monkeypatch.setattr(YFinanceMetadataPlugin, 'data_version', 2)
     if case == "newer":
         connection = sqlite3.connect(tmp_path / "backups" / name)
         try:
@@ -639,10 +609,10 @@ def test_die_drei_ablehnungen_haben_je_ihren_status(
         assert body["reason"]["code"] != expected_code or case == "newer"
         assert body["reason"]["code"] in (
             "backup_schema_too_new",
-            "backup_sources_differ",
+            "backup_data_version_differ",
         )
         if case == "foreign":
-            assert {item["field"] for item in body["reason"]["differences"]} >= {"quotes"}
+            assert {item["field"] for item in body["reason"]["differences"]} == {"yfinance"}
     assert not (tmp_path / PENDING_FILENAME).exists()
 
 
@@ -706,26 +676,26 @@ def test_eine_neue_anforderung_loest_den_fehlerzustand_ab(volume: Path) -> None:
     """Sonst käme der Betreiber aus dem Zustand nur heraus, indem er eine Datei
     von Hand löscht."""
     _put(volume, "UNBERUEHRT")
-    verloren = _service(volume).create()
-    heil = _service(volume).create()
-    _service(volume).request_restore(verloren.name)
-    (_service(volume).directory / verloren.name).unlink()
+    lost = _service(volume).create()
+    intact = _service(volume).create()
+    _service(volume).request_restore(lost.name)
+    (_service(volume).directory / lost.name).unlink()
     apply_pending(str(volume / "stockinfo.db"), _ONLINE)
 
-    _service(volume).request_restore(heil.name)
+    _service(volume).request_restore(intact.name)
 
     pending, error = restore_state(str(volume / "stockinfo.db"))
-    assert pending == heil.name
+    assert pending == intact.name
     assert error == ""
-    assert apply_pending(str(volume / "stockinfo.db"), _ONLINE) == heil.name
+    assert apply_pending(str(volume / "stockinfo.db"), _ONLINE) == intact.name
 
 
-def test_ein_erzwungener_fremder_restore_ist_in_sources_sichtbar(
+def test_ein_profilwechsel_bleibt_kompatibel_und_herkunft_sichtbar(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """**Der ganze Nutzerweg, nicht sein Ergebnis.**
 
-    Sichern, Profil wechseln, Ablehnung sehen, mit `force` vormerken, **neu
+    Sichern, Profil wechseln, ohne Zwang vormerken, **neu
     starten**, dann `/sources` lesen. Der zweite `TestClient` ist der zweite
     Start; an dieser Grenze ging der Stempel vorher verloren.
     """
@@ -733,7 +703,7 @@ def test_ein_erzwungener_fremder_restore_ist_in_sources_sichtbar(
     _reload()
     with TestClient(app) as first:
         name = first.post("/backups").json()["name"]
-        herkunft = first.get("/backups").json()["fingerprint"]
+        provenance = first.get("/backups").json()["fingerprint"]
         assert first.get("/sources").json()["provenance_warning"] == ""
 
         (tmp_path / "sources.yaml").write_text(
@@ -741,8 +711,7 @@ def test_ein_erzwungener_fremder_restore_ist_in_sources_sichtbar(
         )
         _reload()
 
-        assert first.post(f"/backups/{name}/restore").status_code == 409
-        assert first.post(f"/backups/{name}/restore", params={"force": True}).status_code == 202
+        assert first.post(f"/backups/{name}/restore").status_code == 202
 
     _reload()
     with TestClient(app) as second:  # der zweite Start löst die Absicht ein
@@ -752,9 +721,9 @@ def test_ein_erzwungener_fremder_restore_ist_in_sources_sichtbar(
 
     assert backups["pending_restore"] is None, "die Absicht blieb liegen"
     assert backups["restore_error"] == "", backups["restore_error"]
-    assert herkunft in sources["provenance_warning"], sources["provenance_warning"]
+    assert provenance in sources["provenance_warning"], sources["provenance_warning"]
     assert backups["fingerprint"] in sources["provenance_warning"]
-    assert backups["fingerprint"] != herkunft
+    assert backups["fingerprint"] != provenance
 
 
 @pytest.mark.parametrize(

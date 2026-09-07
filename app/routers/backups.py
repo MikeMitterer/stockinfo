@@ -21,8 +21,8 @@ RESTORE_ERRORS: dict[int | str, dict[str, object]] = {
     409: {
         "model": BackupErrorDetail,
         "description": (
-            "`backup_incompatible` — andere Quellenlage; `reason.differences` "
-            "nennt Rollen und Paketpins mit beiden Ständen. `force=true` "
+            "`backup_incompatible` — andere Plugin-Datenversion; `reason.differences` "
+            "nennt Plugins mit beiden Datenversionen. `force=true` "
             "übergeht es"
         ),
     },
