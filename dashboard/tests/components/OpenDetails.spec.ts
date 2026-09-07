@@ -20,6 +20,19 @@ beforeEach(() => { i18n.global.locale.value = 'de' })
 afterEach(() => { vi.unstubAllGlobals(); i18n.global.locale.value = previousLocale })
 
 describe('Offene Detailfelder', () => {
+  it.each([false, true])('entfernt Zahlen über das rechte rote Löschkreuz (Währung: %s)', async (currencyRequired) => {
+    const wrapper = mount(DetailEditor, {
+      props: {
+        definition: { ...definition, unit: currencyRequired ? 'absolute' : 'percent', currency_required: currencyRequired },
+        value: { ...value, value: 500, manual_value: 500, currency: 'EUR', manual_currency: 'EUR', origin: 'manual' },
+      },
+      global: { plugins: [i18n] },
+    })
+    expect(wrapper.find('.inline-number__clear').exists()).toBe(false)
+    await wrapper.get('button.n-button--error-type').trigger('click')
+    expect(wrapper.emitted('commit')?.[0]).toEqual([{ value: null, currency: currencyRequired ? 'EUR' : null }])
+  })
+
   it('zeigt ein vorher unbekanntes Plugin-Feld und reicht die Eingabe weiter', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ details: [definition] }))))
     const wrapper = mount(OpenDetails, {

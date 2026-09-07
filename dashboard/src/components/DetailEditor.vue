@@ -40,7 +40,7 @@ function toggle(): void {
     <template v-if="editable">
       <UxInlineNumber v-if="definition.kind === 'number'" :value="numeric" :display="display"
         :min="definition.minimum ?? undefined" :max="definition.maximum ?? undefined"
-        :precision="4" :empty-value="null" :disabled="busy"
+        :precision="4" :disabled="busy"
         :edit-label="t('details.editField', { field: label })" :clear-label="t('overrides.clear')" @commit="commit($event)" />
       <NButton v-else-if="definition.kind === 'boolean'" size="small" :disabled="busy" :aria-label="t('details.editField', { field: label })" @click="toggle">{{ display }}</NButton>
       <NSelect v-else class="detail-editor__text" :value="typeof value.manual_value === 'string' ? value.manual_value : null"
@@ -52,7 +52,7 @@ function toggle(): void {
         @update:value="changeCurrency" />
     </template>
     <span v-else>{{ display }}</span>
-    <NButton v-if="definition.overridable && value.manual_value !== null && (definition.kind !== 'number' || !editable)" size="tiny" quaternary type="error"
+    <NButton v-if="definition.overridable && value.manual_value !== null" size="tiny" quaternary type="error"
       :disabled="busy" :title="t('overrides.removeOwn')" @click="commit(null)">✕</NButton>
     <small v-if="value.shadowed">{{ t('details.shadowed', { value: value.manual_value }) }}</small>
   </div>

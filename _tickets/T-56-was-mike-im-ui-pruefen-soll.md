@@ -169,6 +169,16 @@ wie bei Fondswährung. Beide verwenden die vorhandene Vorschlagsliste
 kompakt neben dem Betrag. Bestehende Großschreibung und Speicherlogik bleiben
 erhalten. Sechs Detail-Komponententests und vue-tsc erfolgreich.
 
+### UI-Nacharbeit: Einheitliches rotes × rechts
+
+Auf Mikes Rückmeldung sitzt das Löschkreuz nun bei allen manuellen
+Detailwerten rechts. Das linke Löschsymbol des Zahleneditors entfällt auch
+bei TER. Beim Fondsvolumen steht das gemeinsame × hinter der Währung und
+entfernt den manuellen Betrag samt Währung; ein Betrag ohne Währung wird
+nicht neu gespeichert. Acht Detail-Komponententests inklusive Löschen von
+Zahlen mit/ohne Währung und vue-tsc erfolgreich. Position und rote Farbe im
+Browser geprüft, Betriebswerte nicht gelöscht.
+
 ### Bekannte Einschränkung
 
 Beim Sprachwechsel kann der Inhalt einer bereits offenen Meldung in der
