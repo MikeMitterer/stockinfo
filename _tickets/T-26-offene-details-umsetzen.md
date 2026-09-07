@@ -176,6 +176,13 @@ Live bei TER gemessen: Feld links 42,59 px, Tooltip zuvor 151,64 px,
 jetzt 43 px. 25 betroffene Komponententests und `vue-tsc` erfolgreich.
 Dieser UI-Nachtrag folgt auf den grünen Gesamtlauf oben.
 
+### Herkunfts-Tooltips entfernt
+
+Auf Mikes anschließende Rückmeldung „Der ToolTip ist nervig“ sind die
+Herkunfts-Tooltips samt zusätzlichem Tastaturfokus an den Feldern entfernt.
+Die Quellenfußzeile und die Herkunftsdaten in REST bleiben erhalten.
+Sechs Detail-Komponententests und vue-tsc erfolgreich.
+
 ### Auflösung
 
 Implementiert und nach Claudes erster Prüfung korrigiert. Die zweite
