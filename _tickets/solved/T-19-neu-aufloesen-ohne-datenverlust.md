@@ -1,13 +1,13 @@
-# T-19 · Verbleibender Punkt: Herkunft der Auflösung
+# T-19 · Abschluss: Löschen und Neuanlegen, Diagnose über Analyse
 
 **Eine Börsenzuordnung wird nicht am bestehenden Asset korrigiert.** Für eine
 andere Zuordnung muss der Nutzer das Asset löschen und neu anlegen. Damit
 entfällt der in T-19 vorgeschlagene Neuauflösungs- und Korrekturweg vollständig.
 
-Die Quellenübersicht (#8) ist bereits umgesetzt. Als noch nicht erledigter
-Einzelpunkt bleibt die Herkunft der Auflösung (#7). Das Ticket bleibt dafür
-offen; die heutige Entscheidung beauftragt keine Implementierung dieses Rests.
-Für Mike ist aktuell kein Handgriff nötig.
+T-19 ist auf Mikes Auftrag vom 2026-09-07 abgeschlossen. Die Quellenübersicht
+(#8) ist umgesetzt; den Diagnosezweck von #7 deckt die vorhandene Analyse ab.
+Eine dauerhafte Speicherung der ursprünglichen Auflösungsquelle wird nicht
+mehr verlangt. Für Mike bleibt keine Aufgabe offen.
 
 ## Für dich
 
@@ -18,14 +18,17 @@ Für Mike ist aktuell kein Handgriff nötig.
 | Ticketüberarbeitung | Mike, 2026-09-07: „T-19 - was gilt noch. Überarbeite das Ticket nach den neuen Regeln“ | Gegen den aktuellen Code geprüft; alte Anforderungen eingeordnet. |
 | Börsenzuordnung, #1–6 einschließlich #2a/#2b | Mike, 2026-09-07: „Börsenzuordnung kann nicht korrigiert werden - der User muss das Asset löschen und neu anlegen.“ | Produktentscheidung übernommen. Korrektur-Endpunkt, Vorschau und Übernahme alter Daten entfallen. |
 
-### Was bleibt?
+Mike, 2026-09-07: „Erledigt mit dem Hinweis auf Analyse“. Abschluss übernommen;
+keine historische Speicherung und keine zusätzliche UI-Anzeige beauftragt.
+
+### Abschließende Einordnung
 
 | Prüfpunkt | Aktuelle Einordnung |
 |---|---|
 | #1–6, #2a/#2b | Entfallen durch Mikes Entscheidung; nicht als umgesetzt oder bestanden gewertet. |
-| #7 · Herkunft der Auflösung | Noch offen: Die tatsächlich auflösende Quelle wird nicht als eigenes dauerhaftes Merkmal gespeichert. Kein aktueller Implementierungsauftrag. |
+| #7 · Herkunft der Auflösung | Durch die vorhandene Analyse für den Diagnosezweck abgedeckt; historische Speicherung entfällt. |
 | #8 · Quellenübersicht | Umgesetzt; keine Nacharbeit aus T-19. |
-| #9 · Projektchecks | Kein eigenständiges Feature; nur bei einer künftigen Umsetzung von #7 erneut relevant. |
+| #9 · Projektchecks | Kein eigenständiges Feature; ohne Produktänderung kein weiterer Testlauf erforderlich. |
 
 ## Umsetzung und technische Nachweise
 
@@ -41,14 +44,17 @@ Der zuvor beschriebene Repository-Pfad für automatisch aktualisierte Identität
 ist davon zu unterscheiden. Er wurde nur im Code betrachtet, nicht live als
 Fehler reproduziert. Daraus wird hier kein neuer Korrekturauftrag abgeleitet.
 
-### Verbleibender Umfang: #7
+### #7 durch die Analyse abgedeckt
 
-`ResolvedInstrument` und das Instrument-Schema speichern keinen eigenen
-dauerhaften Resolver-Namen. Die Herkunft von Kursen und einzelnen Detailwerten
-belegt nicht, welche Quelle die Identität aufgelöst hat. Sollte #7 umgesetzt
-werden, sind Persistenz, REST-Auskunft und die gewünschte Darstellung vorher
-konkret festzulegen. Die in T-56 entfernten Tooltips werden nicht automatisch
-wieder eingeführt. Die alte Time-box von vier Stunden gilt für diesen Rest nicht.
+Die vorhandene Analyse (`GET /analyze`) durchläuft die aktuell konfigurierte
+Resolver-Kette erneut. Sie zeigt je Quelle den Namen, Erfolg oder Fehler und
+bei erfolgreicher Auflösung das ermittelte Symbol. Das deckt den gewünschten
+Diagnosezweck ab (`app/services/analyzer.py`, `QuoteAnalyzer._resolve` und
+`_stages`). Es wird kein weiteres Feld und kein zusätzlicher Tooltip eingeführt.
+
+Die Analyse zeigt den aktuellen Lauf, nicht die historische Auflösung beim
+Anlegen des Assets. Diese historische Speicherung wird für T-19 auf Mikes
+Entscheidung hin nicht mehr verlangt.
 
 ### Verify
 
@@ -57,7 +63,7 @@ Produktentscheidung abgeleitet.
 
 | # | Prüfgegenstand | Nachweis / Stand | AI |
 |---|---|---|:--:|
-| 7 | Tatsächlich auflösende Quelle dauerhaft nachvollziehbar | Noch nicht implementiert; konkrete Prüfung erst mit festgelegtem REST-/UI-Vertrag | ➖ |
+| 7 | Auflösende Quelle zur Diagnose nachvollziehen | Bestehende Analyse im Code geprüft; historische Speicherung als Anforderung gestrichen | ➖ |
 | 8 | Quellen je Rolle, Reihenfolge, Nutzbarkeit und Fehlergrund | Im Code von `GET /sources` vorhanden; bestehende Quellenkonfigurationstests bestanden | ➖ |
 
 Bereits ausgeführte Prüfung vom 2026-09-07: 16 Quellenkonfigurations- und
@@ -79,8 +85,10 @@ REST-Änderung. Rollen, Prioritätskette und Reviewstatus bleiben unverändert.
 ### Auflösung
 
 Der Hauptumfang ist durch Mikes Produktentscheidung vom 2026-09-07 verworfen.
-#8 ist umgesetzt; #7 bleibt als einziger fachlicher Rest offen. Frühere
-Antworten, IDs und Belege sind unten erhalten und keine aktuellen Aufträge.
+#8 ist umgesetzt; #7 ist mit dem Hinweis auf die vorhandene Analyse erledigt.
+Mike, 2026-09-07: „Erledigt mit dem Hinweis auf Analyse“. Das Ticket wird nach
+`solved/` verschoben. Keine offenen Restpunkte. Frühere Antworten, IDs und
+Belege sind unten erhalten und keine aktuellen Aufträge.
 
 ## Review-Verlauf · Historie
 
@@ -259,7 +267,7 @@ von Hand gepflegten Kennzahlen.
 > Das ist **falsch** und wäre gefährlicher als der heutige Zustand — siehe
 > „Warum ‚kein Datenverlust' das falsche Ziel war".
 
-**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 
 **Hängt an:** nichts. Sollte **vor** dem Plugin-System stehen.
 
