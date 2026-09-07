@@ -1,6 +1,6 @@
 # T-32 · Ein Test darf die Arbeitsdatenbank nicht erreichen
 
-- **Status:** offen
+- **Status:** offen — nichts umgesetzt; Stand gemessen 2026-09-07
 - **Angelegt:** 2026-08-26, beim Bau von T-21 Teil 3, Übergabe 3 (Runde 40)
 - **Repo:** StockInfo
 - **Hängt ab von:** nichts — unabhängig umsetzbar
@@ -38,15 +38,81 @@ Nächsten, der einen Dienst schreibt.
 ## Verify-Matrix
 
 Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · ➖ keine
-Live-Verifikation.
+Live-Verifikation · ❌ gemessen und **nicht** erfüllt.
+
+Die `AI`-Spalte trägt den von Claude am 2026-09-07 gemessenen Stand; die
+Messungen stehen unter [Prüfstand 2026-09-07](#prüfstand-2026-09-07).
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| 1 | `tests/conftest.py` | eine `autouse`-Vorrichtung setzt `DATABASE_PATH` für **jeden** Test auf ein temporäres Verzeichnis und leert die Settings-Caches | | |
-| 2 | Gegenprobe | ein absichtlich auf `data/` zielender Test schlägt **fehl**, statt die Datei zu öffnen — der Riegel wird also geprüft, nicht nur behauptet | | |
-| 3 | `app/container.py` | `get_daily_history_service` bezieht sein Repository über dieselbe Abhängigkeit wie die übrigen Dienste, statt es selbst zu bauen | | |
-| 4 | ganzer Lauf | `make test` bleibt grün, und kein Test hängt still an einer anderen Datenbank als seiner eigenen | | |
-| 5 | Dauerhaftigkeit | die Regel steht dort, wo sie beim nächsten Dienst gelesen wird — Skill `code-standards` oder `CLAUDE.md`, nicht nur in diesem Ticket | | |
+| 1 | `tests/conftest.py` | eine `autouse`-Vorrichtung setzt `DATABASE_PATH` für **jeden** Test auf ein temporäres Verzeichnis und leert die Settings-Caches | ❌ | |
+| 2 | Gegenprobe | ein absichtlich auf `data/` zielender Test schlägt **fehl**, statt die Datei zu öffnen — der Riegel wird also geprüft, nicht nur behauptet | ❌ | |
+| 3 | `app/container.py` | `get_daily_history_service` bezieht sein Repository über dieselbe Abhängigkeit wie die übrigen Dienste, statt es selbst zu bauen | ❌ | |
+| 4 | ganzer Lauf | `make test` bleibt grün, und kein Test hängt still an einer anderen Datenbank als seiner eigenen | ◑ | |
+| 5 | Dauerhaftigkeit | die Regel steht dort, wo sie beim nächsten Dienst gelesen wird — Skill `code-standards` oder `CLAUDE.md`, nicht nur in diesem Ticket | ❌ | |
+
+<a id="prüfstand-2026-09-07"></a>
+
+### Prüfstand 2026-09-07 · gemessen von Claude
+
+**Nichts vom Riegel ist gebaut — aber die Gefahr ist heute latent, nicht akut.**
+Das ist der ganze Befund in einem Satz, und die beiden Hälften gehören zusammen.
+
+**`#1`** `tests/conftest.py` existiert nicht; im ganzen Repo liegt keine
+`conftest.py`. `[tool.pytest.ini_options]` in `pyproject.toml` setzt kein
+`DATABASE_PATH`. Es gibt also weder Umlenkung noch Cache-Leerung.
+
+**`#3`** Der im Ticket benannte Baufehler steht unverändert im Code:
+`app/container.py:213` baut `QuoteRepository(settings.database_path)` selbst.
+
+**`#2`** Gemessen statt geschlossen: Ein Test, der absichtlich
+`get_connection('data/stockinfo.db')` aufruft, läuft **durch**.
+
+```
+tests/test_t32_selftest.py .                    [100%]
+1 passed in 0.07s
+```
+
+Verlangt ist das Gegenteil. Der Testfall lag nur für diese Messung im Baum und
+ist wieder entfernt; er gehört mit dem Riegel zusammen eingecheckt.
+
+**`#4` ist der Grund für `◑`.** Über den vollständigen Lauf hat eine Sonde jeden
+`sqlite3.connect` mitgeschrieben und auf Pfade unterhalb von `data/` geprüft:
+
+```
+1069 passed, 29 skipped, 8 deselected
+Zugriffe auf data/ während des Laufs: KEINE
+```
+
+Die Suite ist grün und **kein einziger Test** hängt derzeit an der
+Arbeitsdatenbank. Das ist die gute Nachricht — und genau der Zustand, den das
+Ticket beschreibt: „Das war Glück, keine Eigenschaft des Aufbaus." Ohne `#1`
+und `#2` sichert nichts, dass der nächste Dienst es nicht wieder tut.
+
+**Die Sonde ist gegengeprüft.** Eine Messung, die nichts findet, ist wertlos,
+solange nicht feststeht, dass sie etwas finden *kann*. Derselbe Lauf gegen den
+absichtlichen Zugriff meldet ihn mit Testnamen:
+
+```
+…/data/stockinfo.db <- tests/test_t32_selftest.py::…_absichtlichen_zugriff (call)
+```
+
+**`#5`** Die Regel steht weder in `CLAUDE.md` noch in `AGENTS.md` noch im Skill
+`code-standards`.
+
+**Ein Hinweis zur Methode, damit ihn niemand nachbaut:** Der Hash von
+`data/stockinfo.db` ändert sich während eines Testlaufs — er ändert sich aber
+auch, wenn gar nichts läuft. Auf diesem Rechner bedienen zwei uvicorn-Instanzen
+(Ports 8801 und 8802) die Datei samt Scheduler. „Hash vorher/nachher" ist hier
+also **kein** Orakel; nur das Mitschreiben der Verbindungen unterscheidet
+zuverlässig.
+
+```bash
+# Sonde: jeden sqlite3.connect auf einen Pfad unterhalb von data/ mitschreiben,
+# den Lauf aber durchlassen, damit die Liste vollständig wird.
+env PYTHONPATH=. T32_GUARDED_DIR="$(pwd)/data" T32_REPORT=/tmp/t32.txt \
+  .venv/bin/pytest -q -p dbwatch_probe -m "not integration"
+```
 
 ## Vorschlag für den Riegel
 
