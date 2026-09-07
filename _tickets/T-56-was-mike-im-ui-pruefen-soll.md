@@ -31,7 +31,7 @@ Die Laufangabe ordnet den Handgriff der passenden vorbereiteten Instanz zu.
 | Frage | Prüfpunkt # | Lauf | Handgriff | Dein Urteil | Human |
 |---|---|:--:|---|---|---|
 | **B** | [2](#pruefpunkt-2) | Y | Im Bestand **`BTC-EUR`** auswählen und dessen Analyse öffnen (`pair`, `BTC`/`EUR`). Die angezeigten Angaben ansehen. | Zeigt es das, was dich interessiert — oder fehlt eine Angabe, die du dort erwartest? | Passt |
-| **C** | [5](#pruefpunkt-5) | O | **`KEINPAPIER.XX`** über das Feld zum Aufnehmen eingeben und das Hinzufügen auslösen. Den daraufhin angezeigten Fehlerhinweis lesen. | **Ist der Satz verständlich?** Würdest du danach wissen, was zu tun ist? | Bei der Fehlermeldung sollte das Symbol, bzw. was auch immer ich in das Feld eingegeben habe, getrimmt, angezeigt werden. |
+| **C** | [5](#pruefpunkt-5) | O | **`KEINPAPIER.XX`** über das Feld zum Aufnehmen eingeben und das Hinzufügen auslösen. Den daraufhin angezeigten Fehlerhinweis lesen. | **Ist der Satz verständlich?** Würdest du danach wissen, was zu tun ist? | Passt so |
 
 **Zu B:** Den Hinweis auf unpassende editierbare Felder hast du bereits
 gegeben. Hier kannst du weitere fehlende Angaben ergänzen.
@@ -160,6 +160,14 @@ jeweiligen Betrag. Die separate Fondswährung beschreibt die Fondswährung,
 nicht zwingend die Währung des Volumenbetrags.
 Live `/fields` mit neutralen Labels bestätigt. 110 betroffene Plugin-/Detailtests,
 Ruff und vollständiges Python-Bezeichnerinventar erfolgreich.
+
+### UI-Nacharbeit: Einheitliche Währungsauswahl
+
+Beim Fondsvolumen jetzt dieselbe filterbare Naive-Auswahl mit freier Eingabe
+wie bei Fondswährung. Beide verwenden die vorhandene Vorschlagsliste
+`fieldOptions.fund_currency`; keine zweite Währungsliste. Die Auswahl bleibt
+kompakt neben dem Betrag. Bestehende Großschreibung und Speicherlogik bleiben
+erhalten. Sechs Detail-Komponententests und vue-tsc erfolgreich.
 
 ### Bekannte Einschränkung
 

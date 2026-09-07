@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { NButton, NInput, NSelect } from 'naive-ui'
+import { NButton, NSelect } from 'naive-ui'
 import { UxInlineNumber } from '@mmit/ux-foundation'
 import { useI18n } from 'vue-i18n'
 import type { DetailDefinition, DetailInput, DetailValue } from '../types'
 
-const props = defineProps<{ definition: DetailDefinition; value: DetailValue; busy?: boolean; options?: string[] }>()
+const props = defineProps<{ definition: DetailDefinition; value: DetailValue; busy?: boolean; options?: string[]; currencyOptions?: string[] }>()
 const emit = defineEmits<{ (event: 'commit', value: DetailInput): void }>()
 const { t, locale, n } = useI18n()
 const label = computed(() => locale.value === 'de' ? props.definition.label_de || props.definition.label_en : props.definition.label_en)
@@ -46,9 +46,10 @@ function toggle(): void {
       <NSelect v-else class="detail-editor__text" :value="typeof value.manual_value === 'string' ? value.manual_value : null"
         :options="(options ?? []).map((value) => ({ label: value, value }))" filterable tag size="small" :placeholder="label" :disabled="busy"
         @update:value="commit($event)" />
-      <NInput v-if="definition.currency_required" class="detail-editor__currency" :value="draftCurrency" size="small"
-        :placeholder="t('details.currency')" :disabled="busy" :maxlength="3"
-        @change="changeCurrency" />
+      <NSelect v-if="definition.currency_required" class="detail-editor__currency" :value="draftCurrency || null" size="small"
+        :options="(currencyOptions ?? []).map((value) => ({ label: value, value }))" filterable tag
+        :placeholder="t('details.currency')" :disabled="busy"
+        @update:value="changeCurrency" />
     </template>
     <span v-else>{{ display }}</span>
     <NButton v-if="definition.overridable && value.manual_value !== null && (definition.kind !== 'number' || !editable)" size="tiny" quaternary type="error"
