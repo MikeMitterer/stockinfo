@@ -1,8 +1,34 @@
-# T-57 · Die Tickets sagen nicht, was offen ist — drei Konstruktionsfehler
+# T-57 · Tickets zeigen ihren tatsächlichen Arbeitsstand
+
+**Abgeschlossen durch teilweise Umsetzung und Ablösung, 2026-09-07.**
+Mike hat die Einordnung mit „Passt“ bestätigt. In StockInfo bleibt kein
+Umsetzungsauftrag für ein zusätzliches Übersichtswerkzeug offen.
+
+## Auflösung
+
+- Die Trennung von KI-Nachweisen und menschlichem Urteil ist im Skill
+  `task-verification-workflow` geregelt und in T-56 angewendet.
+- Kleine lokale UI-Befunde werden im Prüfticket korrigiert und gezielt
+  nachgemessen; der gemeinsame Workflow regelt diesen Ablauf.
+- Die Ablage trennt offene, zurückgestellte, verworfene und erledigte Tickets.
+- Ticketübersicht und weitergehender Kanban-Lebenszyklus sind im
+  [KanTandem-Konzept](/Volumes/DevLocal/DevKI/Production/KanTandem/CONCEPT.md)
+  beschrieben. Ein zusätzliches StockInfo-`make tickets` wird nicht umgesetzt.
+  Das ist eine Ablösung des Vorschlags, kein Nachweis einer fertigen
+  KanTandem-Implementierung.
+
+**Korrektur des ursprünglichen Vorschlags:** Eine vollständig grüne
+Prüfmatrix bedeutet nicht automatisch „erledigt“. Unabhängiger Review,
+menschliche Abnahme und offene Entscheidungen sind gesondert zu beachten.
+
+Die ursprünglichen Kriterien bleiben unten als Historie erhalten; sie werden
+nicht pauschal als erfüllt markiert. Keine weitere Entscheidung für T-57 offen.
+
+## Ursprünglicher Vorschlag · Historie
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Prozess + ein Übersichtswerkzeug) | Vorschlag bei Codex | 2–3 h | Human-Spalte, Abschluss von Prüftickets, Übersicht über den Rest | — |
+| StockInfo (Prozess + ein Übersichtswerkzeug) | teilweise umgesetzt, durch KanTandem abgelöst | 2–3 h | Human-Spalte, Abschluss von Prüftickets, Übersicht über den Rest | — |
 
 - **Angelegt:** 2026-09-02, aus drei Einwänden von Mike an einem Tag
 - **Hängt ab von:** nichts. Berührt jedes Ticket, ändert an keinem den Inhalt
