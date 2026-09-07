@@ -21,7 +21,7 @@ from app.providers.composite_market import (
 from app.repository import QuoteRepository
 from app.resolver import CompositeResolver
 from app.sources_config import SourcesConfig, load_sources_config
-from app.sources_registry import build_chain
+from app.sources_registry import build_chain, detail_definitions
 from app.services.analyzer import ROLES as ANALYZED_ROLES, QuoteAnalyzer
 from app.services.backup import BackupService
 from app.services.daily_history import DailyHistoryService
@@ -32,6 +32,14 @@ from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteService
 
 logger = structlog.get_logger()
+
+
+def initialize_detail_catalog() -> None:
+    """Persistiert das validierte Profilschema nach der DB-Initialisierung."""
+    settings = get_settings()
+    QuoteRepository(settings.database_path).detail_catalog(
+        detail_definitions(get_sources_config(), settings)
+    )
 
 
 def sources_path(settings) -> Path:
@@ -161,9 +169,6 @@ def get_cached_quote_service() -> CachedQuoteService:
         resolver,
     )
     repository = QuoteRepository(settings.database_path)
-    from app.sources_registry import detail_definitions
-
-    repository.detail_catalog(detail_definitions(get_sources_config(), settings))
     daily_sync = DailyCloseSync(
         repository, CompositeDailyCloseProvider(*_market_chain("daily"))
     )

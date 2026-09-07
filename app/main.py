@@ -48,7 +48,7 @@ from app.repository import (
     IdentityConflictError,
 )
 from app import plugin_env
-from app.container import get_sources_config, warm_all_chains
+from app.container import get_sources_config, initialize_detail_catalog, warm_all_chains
 from app.plugin_loader import load_all
 from app.routers import backups, dashboard, fields, fx, instruments, migration, quotes
 from app.routers.migration import get_gate
@@ -103,6 +103,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
 
     if init_db(settings.database_path):
         get_gate().block()
+
+    initialize_detail_catalog()
 
     # Die Kennung steht in der Datenbank selbst, nicht nur im Manifest daneben:
     # Eine Sicherung ohne Manifest bleibt zuordenbar, ein vertauschtes fällt auf.

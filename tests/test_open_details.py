@@ -97,3 +97,49 @@ def test_plausibilitaet_verwendet_die_deklarierte_einheit():
 
     result = MetadataAdapter(RatioSource(), 'XETR').fetch_etf('IE00B4L5Y983')
     assert result.detail_readings['sample']['ter']['value'] == 0.2
+
+
+def test_migration_uebernimmt_waehrung_des_manuellen_betrags():
+    import sqlite3
+    from app import detail_store
+
+    connection = sqlite3.connect(':memory:')
+    connection.row_factory = sqlite3.Row
+    connection.executescript('''
+        CREATE TABLE meta(key TEXT PRIMARY KEY,value TEXT);
+        CREATE TABLE instruments(id INTEGER PRIMARY KEY,fund_currency TEXT);
+        CREATE TABLE instrument_overrides(instrument_id INTEGER,fund_size REAL,
+            fund_currency TEXT,updated_at TEXT);
+        INSERT INTO instruments VALUES(1,'USD');
+        INSERT INTO instruments VALUES(2,'GBP');
+        INSERT INTO instrument_overrides VALUES(1,500000,'EUR','2026-09-07');
+        INSERT INTO instrument_overrides VALUES(2,200000,NULL,'2026-09-07');
+    ''')
+    detail_store.initialize(connection)
+    rows = connection.execute("SELECT instrument_id,currency FROM detail_overrides WHERE field='fund_size' ORDER BY instrument_id").fetchall()
+    assert [tuple(row) for row in rows] == [(1, 'EUR'), (2, 'GBP')]
+    connection.close()
+
+
+def test_alter_override_weg_erhaelt_die_gespeicherte_betragswaehrung(tmp_path):
+    from app.db import init_db
+    from app.detail_models import DetailInput
+    from app.repository import QuoteRepository
+    from app.services.quote_cache import CachedQuoteService
+    from tests.boundaries import empty_daily_sync
+    from tests.test_quote_cache import FakeQuoteService, _now, _response
+
+    class FundSource(SampleSource):
+        FIELDS = (FieldSpec('fund_size', kind='number', unit=Unit.ABSOLUTE),
+                  FieldSpec('fund_currency'))
+
+    path = str(tmp_path / 'money.db')
+    init_db(path)
+    repo = QuoteRepository(path)
+    repo.detail_catalog(definitions_for(FundSource()))
+    response = _response(_now())
+    saved = repo.save_quote(response)
+    repo.set_detail_overrides(saved.instrument_id, {'fund_size': DetailInput(value=20, currency='EUR')}, _now())
+    service = CachedQuoteService(FakeQuoteService(response), repo, 6, empty_daily_sync(repo))
+    service.set_overrides(response.symbol, {'fund_size': 30})
+    assert service.get_instrument_summary(saved.instrument_id)['details']['fund_size']['manual_currency'] == 'EUR'

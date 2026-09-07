@@ -52,6 +52,10 @@ from app.providers.base import ResolvedInstrument
 from app.repository import QuoteRepository
 from app.resolver import CompositeResolver
 from tests.boundaries import wire_real_chain
+from tests import test_yaml_profile as yaml_profile
+
+fields_client = yaml_profile.client
+volume = yaml_profile.volume
 
 _ISIN = "IE00B4L5Y983"
 
@@ -343,16 +347,14 @@ def test_eine_vollstaendige_antwort_kommt_weiterhin_durch(tmp_path: Path) -> Non
 # ─── Matrix #6b · die Auskunft ────────────────────────────────────────────────
 
 
-def test_die_feldauskunft_kennt_den_plugin_vertrag() -> None:
+def test_die_feldauskunft_kennt_den_plugin_vertrag(fields_client) -> None:
     """`GET /fields` beschreibt heute nur die REST-Modelle.
 
     Der Endpunkt ist die Stelle, an der ein Plugin-Autor nachsieht, was er
     liefern muss. Steht der Vertrag dort nicht, muss er den Quelltext lesen —
     und die Zusage lebt an zwei Orten, von denen einer veraltet.
     """
-    client = TestClient(app)
-
-    answer = client.get("/fields").json()
+    answer = fields_client.get("/fields").json()
 
     assert "plugin_contract" in answer, (
         "die Auskunft kennt den Plugin-Vertrag nicht — ein Autor findet die "
@@ -445,16 +447,14 @@ def test_die_gattungsbeschreibung_nennt_den_ganzen_katalog() -> None:
         )
 
 
-def test_name_und_gattung_stehen_dort_als_pflicht() -> None:
+def test_name_und_gattung_stehen_dort_als_pflicht(fields_client) -> None:
     """Matrix `#6b` wörtlich: Sie stehen dort als Pflicht.
 
     Eine Auskunft, die `required: false` sagt, während der Vertrag das Feld
     verlangt, ist schlimmer als keine: Sie ist eine Zusage, auf die sich
     jemand verlässt.
     """
-    client = TestClient(app)
-
-    contract = client.get("/fields").json().get("plugin_contract", {})
+    contract = fields_client.get("/fields").json().get("plugin_contract", {})
     resolved = {field["name"]: field for field in contract.get("resolved", [])}
 
     assert resolved.get("name", {}).get("required") is True, resolved

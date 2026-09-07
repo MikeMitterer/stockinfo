@@ -95,6 +95,13 @@ const skipReason = computed<'notEtf' | 'noIsin' | 'nothing' | null>(() => {
 const fetchedAt = computed(() =>
   props.item.meta_fetched_at ? formatDateTime(props.item.meta_fetched_at, locale.value) : null,
 )
+
+/** Die Fußzeile fasst die Herkunft der sichtbaren Quellenwerte zusammen. */
+const detailSources = computed(() => props.item.details === undefined
+  ? props.item.source
+  : [...new Set(Object.values(props.item.details)
+    .filter((value) => value.origin === 'provider' && value.source)
+    .map((value) => value.source))].sort().join(' + '))
 </script>
 
 <template>
@@ -133,8 +140,8 @@ const fetchedAt = computed(() =>
         CSV-Profil `metadata-file`. Er wird hier **nicht** gedeutet: Welche
         Namen es gibt, entscheidet `sources.yaml`.
       -->
-      <p v-if="item.source" class="drilldown__fetched">
-        {{ t('drilldown.source') }}: <span class="mono">{{ item.source }}</span>
+      <p v-if="detailSources" class="drilldown__fetched">
+        {{ t('drilldown.source') }}: <span class="mono">{{ detailSources }}</span>
       </p>
       <!--
         Der Absatz steht immer, auch ohne Zeitstempel: Er trägt das

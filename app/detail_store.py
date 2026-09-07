@@ -34,8 +34,10 @@ def initialize(connection: sqlite3.Connection) -> None:
     connection.execute("INSERT OR IGNORE INTO meta(key,value) VALUES ('details_generation_id',?)", (str(uuid.uuid4()),))
     if connection.execute("SELECT 1 FROM meta WHERE key='details_migrated'").fetchone():
         return
+    fund_currencies = {}
     for stored in connection.execute('SELECT * FROM instruments').fetchall():
         row = dict(stored)
+        fund_currencies[row['id']] = row.get('fund_currency')
         for field in CANONICAL:
             value = row.get(field)
             if value is not None:
@@ -52,7 +54,8 @@ def initialize(connection: sqlite3.Connection) -> None:
             value = row.get(field)
             if field == 'accumulating' and value is not None:
                 value = bool(value)
-            put_manual(connection, row['instrument_id'], field, value, None, row['updated_at'])
+            currency = (row.get('fund_currency') or fund_currencies.get(row['instrument_id'])) if field == 'fund_size' else None
+            put_manual(connection, row['instrument_id'], field, value, currency, row['updated_at'])
     # Nach erfolgreicher Übernahme existiert nur eine schreibbare Wahrheit.
     columns = {row[1] for row in connection.execute('PRAGMA table_info(instruments)')}
     retained = set(CANONICAL) & columns
@@ -119,7 +122,7 @@ def read(connection, row: dict, *, effective: bool = False) -> dict:
     details = {}
     result = dict(row)
     result['manual_fields'], result['shadowed_fields'] = [], []
-    for field in set(CANONICAL) | applicable | set(providers) | set(manual):
+    for field in sorted(set(CANONICAL) | applicable | set(providers) | set(manual)):
         definition = by_name.get(field)
         sources = definition.sources if definition else []
         candidates = providers.get(field, [])

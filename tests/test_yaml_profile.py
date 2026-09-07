@@ -196,6 +196,7 @@ def _restart_chains() -> None:
     from app.config import get_settings
     from app.sources_config import ROLES
     from app.sources_registry import build_chain
+    from app.container import initialize_detail_catalog
 
     get_sources_config.cache_clear()
     config = get_sources_config()
@@ -216,6 +217,7 @@ def _restart_chains() -> None:
     # hinzugefügten Test still umgekippt.
     for cache in _SERVICE_CACHES:
         cache.cache_clear()
+    initialize_detail_catalog()
 
 
 @pytest.fixture

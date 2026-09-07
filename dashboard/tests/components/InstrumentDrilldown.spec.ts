@@ -7,6 +7,20 @@ import { i18n } from '../../src/i18n'
 import { makeInstrument } from '../fixtures/instrument'
 
 describe('InstrumentDrilldown', () => {
+  it('nennt nur Quellen der tatsächlich gelieferten Detailwerte', () => {
+    const wrapper = mount(InstrumentDrilldown, {
+      global: { plugins: [i18n], stubs: { OpenDetails: true } },
+      props: { item: makeInstrument({ source: 'risk-demo', details: {
+        ter: { value: 0.2, unit: 'percent', currency: null, origin: 'provider',
+          source: 'yaml-file', as_of: null, shadowed: false, manual_value: null, manual_currency: null },
+        provider: { value: 'Test', unit: null, currency: null, origin: 'manual',
+          source: null, as_of: null, shadowed: false, manual_value: 'Test', manual_currency: null },
+      } }) },
+    })
+    expect(wrapper.get('.drilldown__source').text()).toContain('yaml-file')
+    expect(wrapper.get('.drilldown__source').text()).not.toContain('risk-demo')
+  })
+
   it('zeigt alle acht Kennzahlen zum Pflegen', () => {
     const wrapper = mount(InstrumentDrilldown, {
       global: { plugins: [i18n] },

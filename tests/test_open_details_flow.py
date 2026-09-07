@@ -117,3 +117,51 @@ def test_schemaentfernung_erhoeht_version_im_rest_vertrag(volume, client):
     assert after['generation_id'] == before['generation_id']
     assert after['details_version'] == before['details_version'] + 1
     assert all(not entry['name'].startswith('risk-demo.') for entry in after['details'])
+
+
+def test_konstruktorfehler_behaelt_schema_und_manuelle_werte(volume, client, monkeypatch):
+    from app.plugin_adapters import unwrap
+    from app.sources_registry import build_chain
+    from app.container import get_sources_config
+    from app.config import get_settings
+
+    chains = {'resolvers': ['yaml-file'], 'quotes': ['yaml-file'],
+              'etf_meta': ['risk-demo', 'yaml-file']}
+    _profile(volume, chains)
+    before = client.get('/fields').json()
+    assert client.get('/quote/IE00B4L5Y983').status_code == 200
+    item = client.get('/instruments').json()[0]
+    path = f"/instruments/by-id/{item['listing_id']}/details"
+    assert client.patch(path, json={'risk-demo.score': {'value': 0}}).status_code == 200
+    source = unwrap(build_chain('etf_meta', get_sources_config(), get_settings())[0])
+    attempts = []
+
+    def fail_construction(self, config):
+        attempts.append(config)
+        raise RuntimeError('Dienst beim Konstruktor nicht erreichbar')
+
+    monkeypatch.setattr(type(source), '__init__', fail_construction)
+    _profile(volume, chains)
+    assert attempts
+    assert client.get('/fields').json() == before
+    during = client.get('/instruments').json()[0]['details']
+    assert during['risk-demo.score']['value'] == 0
+    assert during['risk-demo.score']['origin'] == 'manual'
+
+
+def test_feldauskunft_funktioniert_mit_nur_lesender_verbindung(volume, client, monkeypatch):
+    from app import repository
+
+    _profile(volume, {'quotes': ['yaml-file'], 'etf_meta': ['risk-demo', 'yaml-file']})
+    before = client.get('/fields').json()
+    connect = repository.get_connection
+
+    def read_only(path):
+        connection = connect(path)
+        connection.execute('PRAGMA query_only=ON')
+        return connection
+
+    monkeypatch.setattr(repository, 'get_connection', read_only)
+    response = client.get('/fields')
+    assert response.status_code == 200
+    assert response.json() == before

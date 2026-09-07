@@ -88,6 +88,9 @@ class SourceSpec:
     fragt „kann ich arbeiten", nicht „ist alles gesetzt".
     """
 
+    declaration: type | None = None
+    """Plugin-Klasse: statische Feldzusagen sind ohne Konstruktor lesbar."""
+
 
 def _openfigi(role: str, config: dict, settings) -> object:
     """OpenFIGI — der Schlüssel kommt aus der Datei **oder** aus den Einstellungen.
@@ -158,11 +161,13 @@ BUILTIN_SOURCES: tuple[SourceSpec, ...] = (
         "justetf",
         frozenset({"etf_meta"}),
         _justetf,
+        declaration=JustEtfMetadataPlugin,
     ),
     SourceSpec(
         "yfinance",
         frozenset({"etf_meta", "quotes", "daily", "fx"}),
         _yfinance,
+        declaration=YFinanceMetadataPlugin,
     ),
 )
 
@@ -529,6 +534,19 @@ aus.
 """
 
 
+def _register_detail_schema(name: str, declaration: object) -> bool:
+    """Validiert Feldzusagen unabhängig von der Betriebsfähigkeit der Quelle."""
+    try:
+        declared = definitions_for(declaration)
+        merge_definitions([*_DETAIL_SCHEMAS.values(), declared])
+        _DETAIL_SCHEMAS[name] = declared
+        return True
+    except Exception as error:  # noqa: BLE001 — fremde Deklarationen dürfen den Start nicht abbrechen
+        _LAST_REASON[name] = str(error)
+        logger.warning('source_fields_invalid', source=name, error=str(error))
+        return False
+
+
 def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | None:
     """Baut **eine** Quelle — gekapselt, adaptiert, und mit Diagnose geprüft.
 
@@ -551,6 +569,9 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | 
         Die einsatzbereite Quelle, oder ``None`` — dann steht der Grund im
         Protokoll und die Kette geht ohne sie weiter.
     """
+    if role == 'etf_meta' and spec.declaration is not None:
+        if not _register_detail_schema(spec.name, spec.declaration):
+            return None
     try:
         source = spec.build(role, config, settings)
     except Exception as error:  # noqa: BLE001 — fremder Code, jeder Fehler zählt
@@ -563,14 +584,8 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | 
         )
         return None
 
-    if role == 'etf_meta':
-        try:
-            declared = definitions_for(source)
-            merge_definitions([*_DETAIL_SCHEMAS.values(), declared])
-            _DETAIL_SCHEMAS[spec.name] = declared
-        except Exception as error:  # noqa: BLE001 — fremde Deklarationen dürfen den Start nicht abbrechen
-            _LAST_REASON[spec.name] = str(error)
-            logger.warning('source_fields_invalid', source=spec.name, error=str(error))
+    if role == 'etf_meta' and spec.declaration is None:
+        if not _register_detail_schema(spec.name, source):
             return None
     problem = _diagnosis(spec, source)
     if problem:

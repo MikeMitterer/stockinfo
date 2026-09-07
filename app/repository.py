@@ -5,9 +5,8 @@ gehaltene Verbindung — so ist der Zugriff thread-safe (Request-Threadpool und
 Hintergrund-Scheduler teilen sich keine Connection).
 """
 
+import json
 import sqlite3
-
-from app import detail_store
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -15,6 +14,7 @@ from dataclasses import dataclass
 
 import structlog
 
+from app import detail_store
 from app.db import get_connection
 from app.exchanges import canonical_identity, identity_from_symbol
 from app.models import (
@@ -579,7 +579,6 @@ class QuoteRepository:
 
     def get_overrides(self, instrument_id: int) -> dict | None:
         """Kompatibilitätsprojektion der generischen manuellen Eingaben."""
-        import json
 
         with self._connect() as connection:
             rows = connection.execute('SELECT field,value,as_of FROM detail_overrides WHERE instrument_id=?', (instrument_id,)).fetchall()
@@ -722,6 +721,8 @@ class QuoteRepository:
             saved = self._upsert_instrument(connection, response)
             self._insert_quote(connection, saved.instrument_id, response)
             for source, readings in response.detail_readings.items():
+                # Migrierte Sammelquellen wie yfinance+justetf werden beim ersten
+                # Einzelquellen-Refresh durch die feldweise Herkunft ersetzt.
                 connection.execute(
                     "DELETE FROM detail_values WHERE instrument_id=? AND (source=? OR instr('+' || source || '+', '+' || ? || '+') > 0 OR source='legacy')",
                     (saved.instrument_id, source, source),

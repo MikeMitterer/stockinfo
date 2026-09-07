@@ -9,7 +9,9 @@ Antwort Pflicht sind.
 from fastapi import APIRouter, HTTPException
 
 from app.contract import ContractUnavailableError, core_contract, plugin_contract
+from app.config import get_settings
 from app.models import FieldsResponse
+from app.repository import QuoteRepository
 
 router = APIRouter(tags=["contract"])
 
@@ -38,20 +40,13 @@ def fields() -> FieldsResponse:
             status_code=503, detail="Vertragsartefakt nicht lesbar"
         ) from exc
 
-    from app.container import get_sources_config
-    from app.config import get_settings
-    from app.repository import QuoteRepository
-    from app.sources_registry import detail_definitions
-
-    settings = get_settings()
-    definitions, version = QuoteRepository(settings.database_path).detail_catalog(
-        detail_definitions(get_sources_config(), settings)
-    )
+    repository = QuoteRepository(get_settings().database_path)
+    definitions, version = repository.detail_catalog()
     return FieldsResponse(
         core_version=contract["core_version"],
         core=contract["core"],
         endpoints=contract["endpoints"],
-        generation_id=QuoteRepository(settings.database_path).detail_generation(),
+        generation_id=repository.detail_generation(),
         details_version=version,
         details=definitions,
         plugin_contract=plugin_contract(),

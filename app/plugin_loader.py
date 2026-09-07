@@ -132,6 +132,7 @@ def spec_from_class(source_class: type) -> SourceSpec:
         build=build,
         cost=getattr(source_class, "cost", "free"),
         loaded=True,
+        declaration=source_class,
     )
 
 

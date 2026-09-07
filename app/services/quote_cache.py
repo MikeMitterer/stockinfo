@@ -700,6 +700,10 @@ class CachedQuoteService:
         instrument = self._require_instrument(symbol)
         definitions, _ = self._repository.detail_catalog()
         by_name = {definition.name: definition for definition in definitions}
+        currency = (values.get('fund_currency')
+                    or instrument.get('details', {}).get('fund_size', {}).get('manual_currency')
+                    or instrument.get('manual_fund_currency')
+                    or instrument.get('fund_currency'))
         if definitions or self._repository.has_detail_catalog():
             for field, value in values.items():
                 if value is None:
@@ -708,12 +712,12 @@ class CachedQuoteService:
                 if definition is None or not definition.applies(instrument['type'], instrument['kind']) or not definition.overridable:
                     raise ValueError(f'Feld nicht bearbeitbar: {field}')
                 validate_input(definition, DetailInput(value=value,
-                    currency=(instrument.get('fund_currency') or values.get('fund_currency')) if definition.currency_required else None))
+                    currency=currency if definition.currency_required else None))
         self._repository.set_overrides(
             instrument["id"],
             values=values,
             updated_at=datetime.now(timezone.utc).isoformat(),
-            currency=instrument.get('fund_currency') or values.get('fund_currency'),
+            currency=currency,
         )
         return self.get_overrides(symbol)
 
