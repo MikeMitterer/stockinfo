@@ -12,6 +12,7 @@ const roles = {
 
 export const en = {
   details: {
+    source: 'Source: {source}',
     loading: 'Loading fields…',
     editField: 'Edit {field}',
     currency: 'Currency',

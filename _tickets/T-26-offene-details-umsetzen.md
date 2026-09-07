@@ -118,6 +118,20 @@ Gezielt 6/6 Detail-Komponententests und vue-tsc erfolgreich; Compiler-Inventar
 und `git diff --check` geprüft. Kein erneuter Backend-Volltest für diese
 Frontend-Nacharbeit erforderlich.
 
+### Herkunft im Tooltip und unterscheidbare Testinstrumente
+
+Weiterer direkter Auftrag Mike: Herkunft nicht im normalen Feldbereich
+anzeigen. Quellennamen und „Von Hand“ stehen jetzt nur im Tooltip am Feld,
+ohne Info-Symbol. Live am ETF geprüft: Feldbereich ohne Herkunftstext,
+Tastaturfokus auf TER zeigt „Source: yaml-file“. Bearbeitung bleibt erhalten.
+
+Auf Mikes Hinweis zur Demo gelten Score und Verified im isolierten Plugin
+jetzt ausschließlich für Krypto. Nach Neustart der eigenen Testinstanz per
+REST bestätigt: BTC hat score/verified, EUNL provider/ter/fund_domicile.
+Die Demo-Datei liegt ausschließlich im temporären Testvolume, nicht im
+Betriebsprofil. Frühere ETF-Score-Nachweise oben beschreiben den damaligen
+Teststand. Aktuell ist beim ETF der Anbieter, bei BTC der Score editierbar.
+
 ### Auflösung
 
 Implementiert und erstgetestet. Claude soll insbesondere Migration,

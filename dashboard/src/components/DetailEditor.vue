@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, ref, watch } from 'vue'
-import { NButton, NInput, NSelect } from 'naive-ui'
+import { NButton, NInput, NSelect, NTooltip } from 'naive-ui'
 import { UxInlineNumber } from '@mmit/ux-foundation'
 import { useI18n } from 'vue-i18n'
 import type { DetailDefinition, DetailInput, DetailValue } from '../types'
@@ -10,6 +10,9 @@ const emit = defineEmits<{ (event: 'commit', value: DetailInput): void }>()
 const { t, locale, n } = useI18n()
 const label = computed(() => locale.value === 'de' ? props.definition.label_de || props.definition.label_en : props.definition.label_en)
 const editable = computed(() => props.definition.overridable && props.value.origin !== 'provider')
+const provenance = computed(() => props.value.origin === 'manual' ? t('details.manual')
+  : props.value.source ? t('details.source', { source: props.value.source }) : '')
+const showProvenance = ref(false)
 const numeric = computed(() => typeof props.value.manual_value === 'number' ? props.value.manual_value : null)
 const display = computed(() => {
   const value = props.value.value
@@ -34,27 +37,31 @@ function toggle(): void {
 </script>
 
 <template>
-  <div class="detail-editor">
-    <template v-if="editable">
-      <UxInlineNumber v-if="definition.kind === 'number'" :value="numeric" :display="display"
-        :min="definition.minimum ?? undefined" :max="definition.maximum ?? undefined"
-        :precision="4" :empty-value="null" :disabled="busy"
-        :edit-label="t('details.editField', { field: label })" :clear-label="t('overrides.clear')" @commit="commit($event)" />
-      <NButton v-else-if="definition.kind === 'boolean'" size="small" :disabled="busy" :aria-label="t('details.editField', { field: label })" @click="toggle">{{ display }}</NButton>
-      <NSelect v-else :value="typeof value.manual_value === 'string' ? value.manual_value : null"
-        :options="(options ?? []).map((value) => ({ label: value, value }))" filterable tag size="small" :placeholder="label" :disabled="busy"
-        @update:value="commit($event)" />
-      <NInput v-if="definition.currency_required" :value="draftCurrency" size="small"
-        :placeholder="t('details.currency')" :disabled="busy" :maxlength="3"
-        @change="changeCurrency" />
+  <NTooltip v-model:show="showProvenance" :disabled="!provenance">
+    <template #trigger>
+      <div class="detail-editor" :tabindex="!editable && provenance ? 0 : undefined"
+        @focusin="showProvenance = true" @focusout="showProvenance = false">
+        <template v-if="editable">
+          <UxInlineNumber v-if="definition.kind === 'number'" :value="numeric" :display="display"
+            :min="definition.minimum ?? undefined" :max="definition.maximum ?? undefined"
+            :precision="4" :empty-value="null" :disabled="busy"
+            :edit-label="t('details.editField', { field: label })" :clear-label="t('overrides.clear')" @commit="commit($event)" />
+          <NButton v-else-if="definition.kind === 'boolean'" size="small" :disabled="busy" :aria-label="t('details.editField', { field: label })" @click="toggle">{{ display }}</NButton>
+          <NSelect v-else :value="typeof value.manual_value === 'string' ? value.manual_value : null"
+            :options="(options ?? []).map((value) => ({ label: value, value }))" filterable tag size="small" :placeholder="label" :disabled="busy"
+            @update:value="commit($event)" />
+          <NInput v-if="definition.currency_required" :value="draftCurrency" size="small"
+            :placeholder="t('details.currency')" :disabled="busy" :maxlength="3"
+            @change="changeCurrency" />
+        </template>
+        <span v-else>{{ display }}</span>
+        <NButton v-if="definition.overridable && value.manual_value !== null && (definition.kind !== 'number' || !editable)" size="tiny" quaternary
+          :disabled="busy" :title="t('overrides.removeOwn')" @click="commit(null)">✕</NButton>
+        <small v-if="value.shadowed">{{ t('details.shadowed', { value: value.manual_value }) }}</small>
+      </div>
     </template>
-    <span v-else>{{ display }}</span>
-    <NButton v-if="definition.overridable && value.manual_value !== null && (definition.kind !== 'number' || !editable)" size="tiny" quaternary
-      :disabled="busy" :title="t('overrides.removeOwn')" @click="commit(null)">✕</NButton>
-    <small v-if="value.origin === 'manual'">{{ t('details.manual') }}</small>
-    <small v-else-if="value.source">{{ value.source }}</small>
-    <small v-if="value.shadowed">{{ t('details.shadowed', { value: value.manual_value }) }}</small>
-  </div>
+    {{ provenance }}
+  </NTooltip>
 </template>
 
 <style scoped lang="scss">
