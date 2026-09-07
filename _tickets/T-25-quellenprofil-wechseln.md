@@ -1,3 +1,127 @@
+# T-25 · Plugin-Datenkompatibilität und Migration
+
+**Der Plugin-Autor erklärt die Datenkompatibilität und liefert die Migration.**
+StockInfo leitet sie weder aus Paketversionen noch aus einem Hash der
+Quellenkonfiguration ab. StockInfo sichert den Bestand und kontrolliert den
+Migrationsaufruf. Diese Richtung ist von Mike am 2026-09-07 bestätigt;
+die Umsetzung steht noch aus.
+
+## Für dich
+
+Aktuell kein Handgriff nötig. Der nächste technische Schritt ist, den kleinen
+Plugin-Vertrag und das Fehlerverhalten konkret zu entwerfen. Es läuft noch
+keine Implementierung oder unabhängige Abnahme.
+
+### Bisherige Antworten und Rückmeldungen
+
+Mike, 2026-09-07:
+
+> Wenn wir diese Automatismen, die sehr komplex sind, einfach dem Plugin-Autor überlassen? Er soll ein Flag setzen, das die DB inkompatibel zum Vorgänger macht. Der Plugin-Author muss für die DB-Migration sorgen in dem ein von ihm bereitgestelltest Script oder so läuft
+
+Auf den Vorschlag einer Datenkompatibilitäts-Version (`data_version`) statt
+eines booleschen Flags, einer vom Plugin bereitgestellten Migration und eines
+gesicherten Aufrufs durch StockInfo antwortete Mike: **„Passt“**.
+
+Damit ist die Richtung entschieden; die genaue Schnittstelle ist noch nicht
+implementiert. Die früher diskutierte Major-Versionsregel wird nicht verfolgt.
+
+## Umsetzung und technische Nachweise
+
+### Beschlossener Ablauf
+
+1. Jedes Plugin deklariert seine Datenkompatibilitäts-Version; StockInfo
+   speichert den verwendeten Stand je Plugin. `data_version` ist der
+   vorgeschlagene Feldname, noch kein veröffentlichter API-Vertrag.
+2. Bei unverändertem Stand braucht ein Paketupdate keine Datenmigration.
+3. Bei verändertem Stand muss das Plugin einen passenden Migrationsweg vom
+   gespeicherten zum neuen Stand bereitstellen. Übersprungene Paketversionen
+   müssen berücksichtigt werden; ein Flag „zum Vorgänger inkompatibel“ genügt
+   deshalb nicht.
+4. StockInfo sichert vor der Migration und ruft einen einheitlichen
+   Migrationseinstieg des Plugins auf.
+5. Erst nach erfolgreicher Migration darf der neue Plugin-Stand den Bestand
+   verwenden. Fehlt ein passender Weg oder scheitert die Migration, bleibt
+   diese Verwendung gesperrt. Der Bestand muss wiederherstellbar bleiben.
+
+Das Plugin verantwortet seine Datenumwandlung. Das gemeinsame StockInfo-Schema
+bleibt Verantwortung des Hosts; eine Migration darf nicht beliebig die von
+anderen Plugins verwendeten Tabellen verändern. Wie diese Grenze technisch
+durchgesetzt wird, gehört zum Schnittstellenentwurf.
+
+### Was dadurch entfällt und was noch zu klären ist
+
+Die bisherige automatische Entscheidung über Dateninkompatibilität anhand von
+Paketpins, Rollenketten oder Major-Versionen entfällt. Es wird auch keine
+frische Datenbank allein wegen eines solchen Vergleichs angelegt. Der
+bestehende Konfigurations-Fingerprint kann Herkunft dokumentieren, ist aber
+kein Ersatz für die deklarierte Datenkompatibilität.
+
+Der alte Rotationsentwurf samt Last-known-good-Plugin-Umgebung und siebenstufiger
+Crash-Matrix wird nicht unverändert als Implementierungsauftrag übernommen.
+Backup und Schutz vor einer halbfertigen Migration bleiben erforderlich.
+T-23 liefert keinen Preflight: Dieser wurde dort ausdrücklich gestrichen.
+
+Vor Umsetzung sind Plugin-Identifikation, Speicherung der Versionsstände,
+Migrationsparameter und erlaubte Schreibzugriffe sowie das atomare Abschließen
+oder Wiederherstellen bei einem Fehler festzulegen. Auch die Behandlung alter
+Datenbanken ohne gespeicherten Plugin-Stand benötigt eine ausdrückliche Regel;
+sie darf weder Kompatibilität raten noch Daten verwerfen.
+
+Die Erkennung einer neuen Datenbankgeneration durch StockPortfolio ist davon
+fachlich unabhängig. `generation_id` ist weiterhin nicht implementiert und im
+aktuellen Core-Artefakt unter `planned.generation_runtime` als noch nicht
+zugesagt gekennzeichnet. Die heutige Zustimmung erledigt oder verwirft diese
+Restanforderung nicht. Ihre Einplanung sowie die alte Forderung nach
+fortlaufenden Backupnummern sind bei der weiteren Eingrenzung separat zu klären.
+
+### Aktueller Nachweis
+
+`app/services/backup.py`, `fingerprint_of`, berücksichtigt momentan Rollenketten
+und exakte Paketpins. Beim geprüften Wechsel `example-source==1.0.0` auf
+`example-source==1.0.1` änderte sich die Kennung von `daf2bd492e20` auf
+`9ae973ee1a4c`. `BackupService._judge` meldet bei abweichender Kennung
+`backup_sources_differ`. Ein Profilname allein geht dagegen nicht in den Hash
+ein. Die gewünschte Datenkompatibilitäts-Erklärung ist noch nicht vorhanden.
+
+### Verify · neuer Umfang
+
+Neue Kennungen M1–M5 unterscheiden diese Kriterien von der alten Matrix.
+Legende: ➖ keine Live-Verifikation. Prüfläufe müssen eigene temporäre Daten
+und kontrollierte Testplugins verwenden; keine Produktionsmigration zum Testen.
+
+| # | Aktion | Erwarteter Nachweis | AI |
+|---|---|---|:--:|
+| M1 | Paketversion ändern, Datenkompatibilitäts-Version beibehalten | Keine Migration und keine Ablehnung allein wegen des Paket-Bumps | ➖ |
+| M2 | Datenkompatibilitäts-Version mit passender Migration ändern | Sicherung vor erstem Schreibzugriff; neue Daten und Versionsstand erst nach Erfolg verwendbar | ➖ |
+| M3 | Mehrere Paketstände überspringen oder passende Migration weglassen | Passender Weg vom tatsächlich gespeicherten Stand; andernfalls keine Nutzung durch den neuen Plugin-Stand | ➖ |
+| M4 | Migration mit Fehler oder Prozessabbruch beenden | Kein als erfolgreich markierter Teilstand; Bestand konsistent wiederherstellbar | ➖ |
+| M5 | Migration mit Daten anderer Plugins und gemeinsamem Schema prüfen | Nur erlaubte Daten betroffen; gemeinsames Schema und fremde Daten geschützt | ➖ |
+
+Dies ist eine beschlossene Richtung mit prüfbaren Kernanforderungen, noch kein
+vollständiger Implementierungsplan. Alte AI-Nachweise und leere Human-Felder
+bleiben unverändert in der Historie; sie bestätigen die neue Migration nicht.
+
+### Side-Effects
+
+Heute nur Ticketänderung. Keine Plugin-Installation, Migration, Sicherung oder
+Datenbankrotation ausgeführt. Der spätere Vertrag betrifft Plugin-API und Host;
+eine Paketversionsänderung allein soll keine Datenumwandlung auslösen.
+
+### Auflösung
+
+Offen: Richtung am 2026-09-07 von Mike bestätigt. Schnittstellenentwurf und
+Implementierung fehlen. STATUS-Rollen und Prioritätskette bleiben unverändert.
+
+## Frühere Anforderungen und Prüfungen · Historie
+
+Die folgende Fassung bleibt als vollständiger Nachweis der früheren Kriterien,
+Antworten und Prüfungen erhalten. Ihr Rotationsauftrag, die T-23-Abhängigkeit
+und die Behauptung eines bereits zugesagten Generation-Vertrags sind durch
+die aktuelle Einordnung oben überholt; sie sind keine neuen Arbeitsaufträge.
+
+<details>
+<summary>Bisheriger Rotationsentwurf und Claudes Prüfstand vom 2026-09-07</summary>
+
 # T-25 · Quellenprofil wechseln — Sicherung und frische Datenbank
 
 | Repo | Status | Time-box | Scope | GH-Issue |
@@ -388,3 +512,5 @@ Zum Abschluss fehlen drei Dinge, in dieser Reihenfolge:
 Punkt 1 ist der einzige, der einen veröffentlichten Vertrag unerfüllt lässt, und
 zugleich der, an dem StockPortfolio hängt. Ob das Ticket so bleibt oder in
 `generation_id` und Rotation geteilt wird, ist eine Portfolio-Entscheidung.
+
+</details>
