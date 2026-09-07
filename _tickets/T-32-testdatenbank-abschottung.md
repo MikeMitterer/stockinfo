@@ -1,5 +1,45 @@
 # T-32 · Ein Test darf die Arbeitsdatenbank nicht erreichen
 
+## Erneute Einordnung · Codex, 2026-09-07
+
+**Weiterhin offen. Für sichere Entwicklung wichtig, für die Funktion des
+Plugin-MVP kein Auslieferungsblocker.** Mike hat eine Bestandsprüfung und
+Relevanzbewertung beauftragt, keine Umsetzung.
+
+Aktuell bestätigt: Es gibt weiterhin keine `tests/conftest.py` und keinen
+zentralen SQLite-Zugriffsschutz. `make test-backend` startet pytest ohne
+isolierten Datenpfad. `get_daily_history_service` baut sein Repository aus
+`get_settings().database_path`. Einzeltests wie `tests/test_daily_history.py`
+verwenden eigene temporäre Repositories; das ersetzt keine zentrale Sperre.
+
+Der letzte T-25-Gesamtlauf war ausdrücklich auf einen frischen temporären
+`DATABASE_PATH` umgelenkt (1087 bestanden, 29 übersprungen, 8 abgewählt).
+Das belegt keinen allgemeinen Zugriffsschutz. Claudes frühere Verbindungs-
+Sonde wurde hier nicht wiederholt; insbesondere wurde kein absichtlicher
+Zugriff auf die aktuelle Arbeitsdatenbank durchgeführt.
+
+**Empfehlung: kleines Entwicklungsschutz-Ticket, etwa 1–2 Stunden inklusive
+Gegenprobe und Suite; Schätzung, noch kein Implementierungsplan.** Auf temporäre
+Standardpfade, passende Cache-Bereinigung und einen getesteten Zugriffsschutz
+begrenzen. Relative Pfade, SQLite-Datei-URIs und Symlinks dürfen den Schutz
+nicht umgehen; der tatsächlich konfigurierte Arbeitsdatenpfad muss ebenfalls
+berücksichtigt werden. Keine Datenkopie oder Backup-Automatik nötig.
+
+Die aktuelle Matrix widerspricht sich bei #3: Sie verlangt einen Umbau der
+Repository-Verdrahtung, während „Was hier nicht hineingehört“ diese
+Architekturfrage ausschließt. Für den Schutz ist dieser Umbau nicht nötig;
+er sollte aus dem Pflichtumfang genommen werden. Ein Composition-Root darf
+Repositories aus Settings bauen, sofern Tests zuverlässig isoliert sind.
+Die konkrete alte IntakeService-Lücke ist bereits behoben.
+
+T-32 verhindert keinen bekannten aktuellen Plugin-Fehler. Es schützt davor,
+dass ein zukünftiger Test unbemerkt echte Daten liest oder verändert. Daher
+höher priorisieren als kosmetische Restpunkte, aber den Plugin-Abschluss
+nicht mit einer Architekturüberarbeitung verknüpfen. Keine Statusänderung.
+
+---
+
+
 - **Status:** offen — nichts umgesetzt; Stand gemessen 2026-09-07
 - **Angelegt:** 2026-08-26, beim Bau von T-21 Teil 3, Übergabe 3 (Runde 40)
 - **Repo:** StockInfo
