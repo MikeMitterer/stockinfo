@@ -130,6 +130,17 @@ Betriebsdatenbank vor/nach dem Durchlauf SHA256 identisch:
 `8a382f24ea608540acc8ad322fbc6e1037d3effb7a7e22bf9d0cbef216c69728`.
 Human-Antworten unverändert. Die Eingabefelder sind für Mikes Abnahme wieder leer.
 
+### UI-Nacharbeit: Löschknopf neben dem Textfeld
+
+Mike meldete auf `localhost:5173/#/assets`, dass das × eine Zeile tiefer steht,
+und wünschte es rot. Bei GOLD.SG reproduziert: NSelect beanspruchte die ganze
+Breite, das × brach um. Textauswahl jetzt mit flexibler Restbreite und
+`min-width: 0`; Löschknopf als Naive-Fehleraktion rot.
+Desktop und 390 px gemessen: Anbieter, Fondswährung und Domizil samt × auf
+derselben Mittellinie; kein horizontaler Überlauf. Rot im DOM bestätigt
+(`rgb(224, 82, 82)`). Sechs Detail-Komponententests und vue-tsc grün.
+Betriebswerte nur angesehen, keine Eingabe oder Löschung ausgeführt.
+
 ### Bekannte Einschränkung
 
 Beim Sprachwechsel kann der Inhalt einer bereits offenen Meldung in der

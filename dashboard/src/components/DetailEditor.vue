@@ -41,7 +41,7 @@ function toggle(): void {
         :precision="4" :empty-value="null" :disabled="busy"
         :edit-label="t('details.editField', { field: label })" :clear-label="t('overrides.clear')" @commit="commit($event)" />
       <NButton v-else-if="definition.kind === 'boolean'" size="small" :disabled="busy" :aria-label="t('details.editField', { field: label })" @click="toggle">{{ display }}</NButton>
-      <NSelect v-else :value="typeof value.manual_value === 'string' ? value.manual_value : null"
+      <NSelect v-else class="detail-editor__text" :value="typeof value.manual_value === 'string' ? value.manual_value : null"
         :options="(options ?? []).map((value) => ({ label: value, value }))" filterable tag size="small" :placeholder="label" :disabled="busy"
         @update:value="commit($event)" />
       <NInput v-if="definition.currency_required" :value="draftCurrency" size="small"
@@ -49,7 +49,7 @@ function toggle(): void {
         @change="changeCurrency" />
     </template>
     <span v-else>{{ display }}</span>
-    <NButton v-if="definition.overridable && value.manual_value !== null && (definition.kind !== 'number' || !editable)" size="tiny" quaternary
+    <NButton v-if="definition.overridable && value.manual_value !== null && (definition.kind !== 'number' || !editable)" size="tiny" quaternary type="error"
       :disabled="busy" :title="t('overrides.removeOwn')" @click="commit(null)">✕</NButton>
     <small v-if="value.shadowed">{{ t('details.shadowed', { value: value.manual_value }) }}</small>
   </div>
@@ -57,5 +57,6 @@ function toggle(): void {
 
 <style scoped lang="scss">
 .detail-editor { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.detail-editor__text { flex: 1 1 0; min-width: 0; }
 small { color: var(--color-text-muted); }
 </style>
