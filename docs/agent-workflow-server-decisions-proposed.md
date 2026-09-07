@@ -23,8 +23,43 @@ sie stehen am Ende von Abschnitt 5. Ohne sie wäre der Rest widerspruchsfrei
 umsetzbar. Frühere Review-Runden blieben als Prüfbelege daneben erhalten.
 
 **Der Konzeptreview ist selbst ein Anwendungsfall des Produkts.** Er hat
-bisher drei Runden gebraucht, ohne dass eine Zeile Produktcode gelaufen wäre.
-Abschnitt 5 schlägt daraus eine ausdrückliche Konvergenzgrenze vor.
+bisher mehrere Runden gebraucht, ohne dass eine Zeile Produktcode gelaufen
+wäre. Abschnitt 5 schlägt daraus eine ausdrückliche Konvergenzgrenze vor.
+
+## Herkunft der Regeln in dieser Datei
+
+Drei verschiedene Dinge stehen hier nebeneinander, und sie dürfen nicht
+gleich aussehen. Eine Antwort auf eine Einzelfrage ist keine Abnahme des
+Ganzen.
+
+**Von Mike entschieden** — steht so oder sinngemäß von ihm:
+
+- TypeScript, Node.js, SQLite, Vue 3 (0a).
+- Kanban-Lebenszyklus mit den neun Zuständen; genau eine führende
+  Ticketquelle, Dateien **oder** GitHub Issues, keine bidirektionale
+  Spiegelung; kein `solved` neben `Erledigt`; technische Freigabe und
+  menschliche Abnahme bleiben getrennt (0b).
+- Ordner bestimmen den Ticketstatus. Worktrees haben ihre Berechtigung, aber
+  nicht als Statusindikator (7. September 2026).
+- Rollen sind grundsätzlich offen; Security-Analyst und Code-Optimizer sind
+  vorstellbar (7. September 2026).
+- Mehrbenutzerbetrieb entfällt, wenn er zu kompliziert wird
+  (7. September 2026).
+- Dokumentbasierte Konzeptreviews sind ein verbindliches Produktziel
+  (7. September 2026).
+- Review-Limit konfigurierbar, Standard 3; dauerhafte Agentensitzungen mit
+  neuem Turn je Lauf; tokenfreies Worker-Polling; mehrere Instanzen desselben
+  Providers sind eigenständige Agenten (frühere Runden).
+
+**Vorgeschlagen, nicht entschieden** — von Claude oder Codex erarbeitet und
+hier eingearbeitet, damit die Datei widerspruchsfrei lesbar ist: die
+Übergangs- und Rechtetabelle, die Zustandsabbildung samt `next_step`, der
+Ticketvertrag mit `content_version` und `source_state`, Ablageort und
+Abgleichprotokoll, die GitHub-Labelabbildung, das Pflichtenmodell `author`,
+`review`, `plan`, `decide`, der Vorschlags-/Abnahmeweg für Dokumente sowie
+sämtliche Abnahmeergänzungen zu M1.
+
+**Offen, nur Mike kann entscheiden:** siehe Abschnitt 5.
 
 **Verbindliche Benutzerpräzisierungen sind hier bereits eingearbeitet:**
 Kontext bleibt zwischen Läufen in derselben Agentensitzung erhalten;
@@ -59,7 +94,8 @@ Lies diese Konzeptdatei vollständig; sie ist die einzige Regelquelle. Ältere
 Review- und Stellungnahmedateien sind Prüfbelege, keine gültigen Regeln.
 Prüfe vorhandene Projektregeln und den Arbeitsstand. Der Umsetzungsauftrag
 gilt, sobald die vier offenen Produktentscheidungen aus Abschnitt 5 beantwortet
-sind; alles Übrige ist entschieden. Eröffne keine allgemeine neue Konzeptrunde.
+sind. Unterscheide dabei die drei Herkunftsklassen im Abschnitt „Herkunft der
+Regeln": Nur die erste ist entschieden. Eröffne keine allgemeine neue Runde.
 Verwende den festgelegten TypeScript-Stack aus Abschnitt 0a, bereits für
 den programmatischen Vorabnachweis und anschließend für das Produkt.
 
@@ -118,9 +154,14 @@ Für das Produkt gelten diese Begriffe und Invarianten:
   nicht erraten. Owner folgt der zuständigen Pflicht. Am Review-Limit wird das
   letzte Urteil vollständig ausgeführt und erst der **Start der nächsten
   Runde** verweigert, mit Owner `human`.
-- **Übergabe:** stabile ID, Ticket, Runde, Basiscommit, Commit-/Tree-Hash,
-  fixierte Anforderungsfassung und Prüfbelege. Keine Freigabe eines anderen
-  oder inzwischen veränderten Standes. Der Dienst prüft Git-Werte selbst.
+- **Übergabe:** stabile Übergabe-ID, Ticket-ID, Rundenzuordnung, `subject_kind`,
+  fixierte Anforderungsfassung, Prüfgegenstand und Prüfbelege. Bei `code`
+  ermittelt und validiert der Dienst Basiscommit, Commit und Tree-Hash selbst;
+  bei `document` speichert er die übergebenen Inhalte unveränderlich und
+  ermittelt deren Hash — ein Produktcode-Commit ist dafür nicht erforderlich.
+  Besteht der Prüfgegenstand aus mehreren Dokumenten, fixiert die Übergabe
+  deren Zuordnung und sämtliche Inhalte gemeinsam. Keine Freigabe eines anderen
+  oder inzwischen veränderten Standes.
 - **Nebenläufigkeit:** stabile Lauf-ID, Claim und Revision pro betroffenem
   Objekt; höchstens ein aktiver Turn je Agentensitzung. Gleiche
   Abschlussnachricht wird nur einmal wirksam. Nach Absturz
@@ -128,8 +169,10 @@ Für das Produkt gelten diese Begriffe und Invarianten:
 - **Problem-Report:** Pflichtartefakt mit Ticket/Runde/Snapshot, Autorrolle,
   eindeutiger Agent-ID, Spezialisierung, verständlicher Kurzfassung,
   ausgeführten Prüfungen und Einschränkungen.
-  Jedes Finding nennt ID, Schwere, Status, Stelle/Verify-Zeile, Erwartung,
-  Beobachtung, Reproduktion, Evidenz und später den Korrektur-/Gegenprüfbeleg.
+  Jedes Finding nennt ID, Schwere, Status, Fundstelle, Erwartung, Beobachtung,
+  Evidenz und später den Korrektur-/Gegenprüfbeleg. Die Fundstelle ist bei
+  `code` die Datei-/Verify-Zeile mit Reproduktion, bei `document` die
+  betroffene Regel mit Gegenfall und Quellenbezug.
 - **Finding-Status:** `open`, `disputed`, `resolved`, `accepted`, `withdrawn`.
   Developer meldet Korrektur, Verifier bestätigt sie. Mensch akzeptiert einen
   Rest. Falsche Befunde werden begründet zurückgenommen. Blockierende Findings
@@ -398,6 +441,31 @@ Menschen; bei GitHub gibt es für Label keine Sperre. Der Dienst **erkennt**
 konkurrierende Änderungen, er verhindert sie nicht. Erkannt heißt: sperren und
 melden, nicht korrigieren.
 
+*Deshalb ein klarer Bearbeitungsmodus statt einer unerfüllbaren Zusage.* Der
+Dienst unterscheidet aktiven Betrieb und direkte Quellenbearbeitung. Im aktiven
+Betrieb schreibt ausschließlich der Dienst in die Ticketquelle; menschliche
+Änderungen laufen über Web oder CLI, Agenten über MCP.
+
+Für direkte Dateiänderungen aktiviert der Mensch den Bearbeitungsmodus. Der
+Dienst sperrt neue Auftragsstarts und Quellschreibvorgänge, lässt aktive Turns
+geordnet enden und sichert ihre Ergebnisse. Erst wenn kein aktiver Turn und
+keine unvollendete Quellschreiboperation verbleibt, bestätigt er den Modus —
+**ein unklarer Prozesszustand ist keine Bestätigung.** Nach den Änderungen
+fordert der Mensch die Wiederaufnahme an; der Dienst liest die Quelle
+vollständig neu und prüft Identitäten, Statuszüge, Inhaltsänderungen und
+bestehende Prüfbezüge. Bei einem Konflikt bleibt die Automation gesperrt. Ein
+Neustart hebt den Bearbeitungsmodus nicht auf.
+
+Das ist eine Vereinbarung, keine Betriebssystemsperre. Direkte Änderungen
+außerhalb des bestätigten Modus sind vom sicheren Schreibvertrag nicht
+abgedeckt: Erkannte Abweichungen sperren die Automation, aber eine lückenlose
+Erkennung beliebiger konkurrierender Zugriffe wird ausdrücklich nicht
+zugesichert. Für M1 genügt ein CLI-Weg zum Pausieren und Wiederaufnehmen; der
+bestätigte Modus und seine Persistenz über einen Neustart gehören dann zur
+M1-Abnahme. Beim GitHub-Adapter gilt dieselbe fachliche Regel, aber eine
+lokale Sperre erreicht fremde Integrationen nicht; welche Garantien dort
+tatsächlich bestehen, weist der Adapter nach seinem eigenen Nachweis aus.
+
 *Wiederanlauf.* Nach einem Absturz entscheidet der tatsächliche Quellstand
 gegen die gespeicherte Absicht: Ziel bereits erreicht → bestätigen. Quelle
 unverändert am Ausgangspunkt → Schreiben wiederholen. Quelle steht woanders →
@@ -493,6 +561,61 @@ Der `author` einer Pflichtenklasse erzeugt und ändert den Prüfgegenstand —
 Produktcode oder Dokument. Die Überarbeitung eines Konzepts fällt damit weder
 zwischen `plan` und `implement` noch verlangt sie eine eigene Rolle.
 
+**Zwei Hashes, zwei Bezüge.** `requirements_version` fixiert die Fassung der
+Ticketanforderungen, `subject_version` den Inhalt des geprüften Dokuments.
+Beide sind Inhalts-Hashes und trotzdem verschiedene Dinge: Das eine sagt,
+wonach geprüft wird, das andere, was geprüft wird.
+
+### Gültige Fassung und Änderungsvorschlag
+
+Ein Dokumentauftrag unterscheidet die bisher gültige Fassung vom aktuellen
+Änderungsvorschlag. Der Autor bearbeitet ausschließlich den Vorschlag; die
+gültige Fassung bleibt unverändert verfügbar. Bei einer erstmaligen Erstellung
+gibt es zunächst noch keine gültige Fassung.
+
+Jede Übergabe fixiert den Inhalt des Vorschlags und erhält eine stabile
+Kennung mit Inhalts-Hash. Prüfberichte, technische Freigabe und menschliche
+Abnahme beziehen sich auf genau diese Fassung. Eine weitere Bearbeitung
+erzeugt eine neue Fassung; alte Urteile werden nicht darauf übertragen.
+
+Erst nach Zustimmung aller für die Übergabe vorgesehenen Pflichtprüfer gelangt
+das Ticket nach `Abnahme`. Der menschliche Entscheider nimmt die bezeichnete
+Fassung ausdrücklich an oder weist sie zurück. **Die Übernahme in die gültige
+Fassung darf der Dienst erst aufgrund dieser Abnahme ausführen.** Eine
+Stellungnahme, Korrekturmeldung oder technische Freigabe allein berechtigt
+nicht dazu.
+
+Vor der Übernahme prüft der Dienst, dass die abgenommene Vorschlagsfassung und
+die erwartete bisher gültige Fassung noch vorliegen. Bei Abweichung bleibt die
+Übernahme offen und der Konflikt sichtbar. Abnahmeentscheidung und
+erfolgreiche Übernahme werden getrennt dokumentiert: Ein Fehler beim Übernehmen
+ist kein erfolgreicher Abschluss, und eine Wiederholung verwendet dieselbe
+abgenommene Fassung.
+
+Eine teilweise Annahme darf keine neue, ungeprüfte Mischfassung als vollständig
+geprüft ausweisen. Für M1 genügt die Abnahme einer ganzen fixierten Fassung;
+gewünschte Teiländerungen gehen zurück an den Autor und werden neu übergeben.
+
+### Mehrere Artefakte an einem Ticket
+
+Ein Ticket kann Konzeptfassung, Prüfbericht, Stellungnahme und Überarbeitung
+zugleich führen. **Jeder Prüfauftrag nennt ausdrücklich seinen primären
+Prüfgegenstand**, dessen fixierte Fassung und die herangezogenen
+Referenzfassungen. Der Bezug auf dasselbe Ticket genügt nicht, um zwei
+Prüfaufträge als Prüfung desselben Snapshots zu behandeln.
+
+Mehrere Pflichtprüfer zählen nur dann zur gemeinsamen fachlichen Runde, wenn
+sie derselben festgelegten Übergabe zugeordnet sind. Die Gegenprüfung eines
+Berichts kann eine Klärung innerhalb dieser Runde sein; das wird mit Auftrag
+und Bezug festgehalten und **nicht nachträglich aus Dateinamen abgeleitet**.
+Eine neue überarbeitete Hauptfassung braucht eine neue Übergabe und deren
+Gegenprüfung. Alle Runden bleiben dem Ticketbudget zugeordnet.
+
+Abläufe ohne gespeicherte Übergabe- und Rundenzuordnung werden als
+**Rekonstruktion** gekennzeichnet; daraus wird kein exakt gemessener
+Rundenverbrauch abgeleitet. Für einen Papierdurchlauf dürfen konkrete
+Budgetwerte ausdrücklich als Annahme verwendet werden.
+
 ## 1. Bisherige Bewertung der Punkte A–H
 
 | Punkt | Entscheidung |
@@ -515,6 +638,13 @@ werden Repository-Objekte, nicht Arbeitsverzeichnis oder aktiver Branch.
 Git lässt denselben Branch regulär nicht in zwei Worktrees auschecken;
 dieser Schutz wird nicht mit Force-Optionen umgangen.
 [Git-Worktrees](https://git-scm.com/docs/git-worktree)
+
+Diese Regel gilt für `subject_kind: code`. **Ein Dokumentauftrag braucht weder
+Worktree noch Branch noch Commit:** Sein fixierter Stand ist der gespeicherte
+Inhalt mit Hash. Auftragsvalidierung, Checkpoint, Wiederaufnahme und
+Abnahmeprüfung dürfen für ihn keinen Git-Snapshot verlangen — eine
+Wiederaufnahme lädt genau den gespeicherten Dokumentstand und nicht die
+inzwischen veränderte Datei gleichen Namens.
 
 Kein automatisches Fast-Forward oder Merge in den menschlichen Arbeitsbranch.
 Das Ergebnis ist zunächst ein geprüfter Ticket-Commit. Ein neuer Lauf darf
@@ -760,9 +890,10 @@ Er darf fehlgeschlagenes Resume nicht still durch einen leeren Chat ersetzen.
 
 Beim Wechsel des Tickets oder Review-Snapshots benennt der neue Turn den
 aktuellen Auftrag und Stand ausdrücklich. Alter Gesprächskontext ist keine
-frische Testevidenz. Der Verifier muss Tests und Befunde weiterhin am aktuellen
-Snapshot prüfen. Arbeitsverzeichnis und Snapshot werden vor jedem Turn
-validiert; die dauerhafte Sitzung berechtigt nicht zur Arbeit im alten Worktree.
+frische Testevidenz. Der Prüfer muss Befunde weiterhin am aktuellen Snapshot
+belegen. Vor jedem Turn wird der fixierte Stand validiert — bei `code`
+Arbeitsverzeichnis und Commit, bei `document` der gespeicherte Inhalt samt
+Hash; die dauerhafte Sitzung berechtigt nicht zur Arbeit am alten Stand.
 
 Sitzungswechsel ist ein kontrollierter Ausnahmeweg bei nicht wiederherstellbarer
 Sitzung, erreichter konfigurierter Kontextgrenze, Kontextproblemen oder
@@ -1147,7 +1278,7 @@ lesbaren Fehlerbericht, Korrektur und Gegenprüfung.**
 | Rollen | Ein `author` und ein `review`, Zuordnung aus der Konfigurationsdatei; `config show` zeigt wirksame Werte |
 | Ticketquelle | Dateiadapter, ein konfigurierter Ordnerpfad, voller Kanban-Zyklus lesbar; automatisiert nur Bereit → In Arbeit → Review → Abnahme |
 | Ausführung | Ein expliziter CLI-Auftrag je Turn in derselben Agentensitzung; kein periodischer Timer und keine automatische Folgerunde |
-| Arbeitsverzeichnisse | Eigener Autoren-Ticket-Worktree, eigener detached Review-Worktree; Mensch-Checkout bleibt unberührt und ist nie die Ticketablage |
+| Arbeitsverzeichnisse | Bei `code` eigener Autoren-Ticket-Worktree und eigener detached Review-Worktree; bei `document` keiner. Mensch-Checkout bleibt unberührt und ist nie die Ticketablage |
 | Zustand | Kleine lokale Persistenz, stabile Ticket-/Lauf-/Akteurs-IDs, `next_step`, persistente Sitzungszuordnung, ein aktiver Turn pro Akteur, wiederholbarer Abschluss |
 | Snapshot | Bei `subject_kind: code` Basiscommit, Commit und Tree; bei `document` gespeicherter Inhalt mit Hash. Anforderungsstand fixiert, Drift geprüft |
 | MCP | Minimaler vertikaler Vertrag: Auftrag übernehmen sowie Ergebnis oder Checkpoint abgeben; Operationen nach dem Beweisweg zuschneiden |
@@ -1189,6 +1320,16 @@ Human-Spalte; M1 benötigt dafür noch keinen vollständigen Admin-Webdialog.
    DB-Bestätigung beendet. Nach dem Start wird die gespeicherte Absicht gegen
    den tatsächlichen Quellstand aufgelöst, ohne eine zwischenzeitliche
    menschliche Änderung zu überschreiben und ohne Auftrag doppelt zu starten.
+9. **Vorschlag und Abnahme:** Die gültige Dokumentfassung bleibt während
+   Bearbeitung und Prüfung unverändert lesbar. Entsteht nach der Prüfung eine
+   weitere Fassung, gilt die Freigabe der geprüften nicht für sie. Scheitert
+   die Übernahme nach der Abnahme, bleibt die Entscheidung erhalten, der
+   Fehler ist sichtbar, und der Dienst meldet keinen erfolgreichen Abschluss.
+10. **Bearbeitungsmodus:** Solange ein Turn läuft, wird die Pause nicht
+    bestätigt. Im bestätigten Modus bleibt ein direkter Zug nach
+    `Zurückgestellt` bei der Wiederaufnahme erhalten und startet keinen
+    Auftrag. Ein Neustart hebt den Modus nicht auf. Eine doppelte Identität
+    verhindert die Wiederaufnahme.
 
 Die im Vorabnachweis geprüfte Vertauschbarkeit wird bei der Anbindung beider
 Runner erhalten. Einmalige Gegenproben für doppelte Abschlusszustellung,
@@ -1293,10 +1434,12 @@ bearbeitbare Quelldaten und ausdrücklich keine bloßen Exporte.
 Vor der ersten Nutzung mit realen Arbeitsdaten müssen Snapshot-Zuordnung,
 Human-Einträge, offene Findings und Wiederherstellung nachweislich funktionieren.
 
-### Vier offene Produktentscheidungen
+### Offene Produktentscheidungen
 
-Alles Übrige ist entschieden. Diese vier hängen an Mike, weil jede Antwort
-konsistent umsetzbar wäre und die Wahl eine Präferenz ist, kein Sachzwang:
+Der übrige Text ist entweder von Mike entschieden oder ein Vorschlag; die
+Zuordnung steht im Abschnitt „Herkunft der Regeln". Die folgenden Punkte
+hängen an Mike, weil jede Antwort konsistent umsetzbar wäre und die Wahl eine
+Präferenz ist, kein Sachzwang:
 
 1. **Darf eine KI `Bereit` setzen, oder ist Triage menschlich?** Empfehlung:
    menschlich. `Bereit` heißt „Anforderungen sind klar" — das ist das Urteil,
@@ -1309,6 +1452,14 @@ konsistent umsetzbar wäre und die Wahl eine Präferenz ist, kein Sachzwang:
    Vertraglich ist es ein ungültiger Quellenstand. Ergonomisch wäre eine
    Rückfrage „als Erledigt oder Verworfen übernehmen?" freundlicher. Empfehlung:
    Konflikt in M1-Nähe, Rückfrage erst mit dem GitHub-Adapter.
+5. **Darf direkt in der Ticketquelle bearbeitet werden, während der Dienst
+   arbeitet — oder nur im pausierten Bearbeitungsmodus?** Das ist eine
+   Einschränkung der Entscheidung „Menschen können die führende Quelle direkt
+   bearbeiten" und deshalb Mikes. Empfehlung: Bearbeitungsmodus, weil die
+   Alternative eine Zusage über gleichzeitige Editor-, Git- und Dienstzugriffe
+   wäre, die kein lokaler Dienst einhalten kann. Der Preis ist gering: In M1
+   startet ohnehin jeder Turn von Hand, und der Modus kostet dort einen
+   CLI-Befehl. Wirksam wird die Einschränkung erst mit der Automation in M2.
 
 ### Konvergenzgrenze für dieses Konzept
 
@@ -1319,9 +1470,10 @@ Vorhaben einen Erfolgsweg, muss dieser Weg **einmal durchgelaufen** sein,
 bevor die Vorarbeiten weiterlaufen — als dünnstes lauffähiges Skelett,
 hartverdrahtet und hässlich erlaubt.
 
-Deshalb: **Der nächste Schritt ist der Anschlusscheck beider Laufzeiten, nicht
-die nächste Konzeptrunde.** Weitere Konzeptarbeit an Verträgen, die der
-Vorabnachweis ohnehin bestätigen oder widerlegen wird, ist ab hier aufgeschoben.
-Eine neue Runde beginnt nur bei einer echten Produktentscheidung Mikes oder
-einem Befund, der den Vorabnachweis selbst unmöglich macht. Der Versuch
-entscheidet Werkzeugdetails mit Evidenz.
+**Empfehlung, nicht Beschluss:** den Anschlusscheck beider Laufzeiten als
+nächsten Arbeitsauftrag vorziehen und weitere Konzeptarbeit an Verträgen
+zurückstellen, die der Vorabnachweis ohnehin bestätigen oder widerlegen wird.
+Ob die Konzeptrunden weiterlaufen, entscheidet Mike; ein Anschlusscheck
+beendet sie nicht von selbst und bestätigt auch keinen der fachlichen
+Verträge hier. Er entscheidet Werkzeugdetails mit Evidenz — mehr nicht,
+aber das ist derzeit das Einzige, was überhaupt niemand weiß.
