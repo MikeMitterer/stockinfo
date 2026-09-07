@@ -1,8 +1,13 @@
 # T-62 · Anzeigenamen eines Instruments bearbeiten
 
+**Zurückgestellt auf Mikes Auftrag vom 2026-09-07.** Seit Verwendung des
+Langnamens passt die Anzeige. Eine manuelle Namensbearbeitung wird aktuell
+nicht benötigt; die ursprüngliche Spezifikation bleibt für einen späteren
+Bedarf erhalten. Keine Umsetzung beauftragt.
+
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend + Dashboard) | **offen · beauftragt zur Ticketanlage** | ~3–5 h inklusive Tests und Browserprüfung, Schätzung | Persistenter Anzeigename, API und Editor | — |
+| StockInfo (Backend + Dashboard) | zurückgestellt · Langname genügt | ~3–5 h inklusive Tests und Browserprüfung, Schätzung | Persistenter Anzeigename, API und Editor | — |
 
 - **Angelegt:** 2026-09-07, auf Mikes Auftrag während der UI-Abnahme T-56
 - **Anlass:** T-56, Frage A. Nach Aufnahme von `SAP.DE` sieht Mike
@@ -114,4 +119,5 @@ durch Bearbeiten oder Zurücksetzen nicht verändert werden.
 
 ### Auflösung
 
-Offen. Angelegt ist der Arbeitsauftrag; Implementierung und Verifikation stehen aus.
+Nach `postponed/` verschoben. Der ursprüngliche Anlass ist durch den passenden
+Langnamen entfallen; eine manuelle Namensbearbeitung wurde nicht implementiert.
