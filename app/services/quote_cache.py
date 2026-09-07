@@ -7,6 +7,9 @@ zurückgegeben statt eines Fehlers.
 """
 
 import threading
+
+from app.details import CANONICAL, merge_value, validate_input
+from app.detail_models import DetailInput, DetailValue
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
@@ -100,17 +103,17 @@ def apply_overrides(row: dict) -> dict:
     shadowed_fields: list[str] = []
 
     for field in OVERRIDE_FIELDS:
-        manual = result.get(f"manual_{field}")
-        if field == "accumulating":
+        manual = result.get(f'manual_{field}')
+        provider = result.get(field)
+        if field == 'accumulating':
             manual = _as_bool(manual)
-            result["manual_accumulating"] = manual
-        if manual is None:
-            continue
-
-        if result.get(field) is None:
-            result[field] = manual
+            provider = _as_bool(provider)
+        merged = merge_value({'value': provider}, {'value': manual}, CANONICAL[field][1])
+        result[field] = merged.value
+        result[f'manual_{field}'] = merged.manual_value
+        if merged.origin == 'manual':
             manual_fields.append(field)
-        else:
+        if merged.shadowed:
             shadowed_fields.append(field)
 
     result["manual_fields"] = manual_fields
@@ -493,18 +496,12 @@ class CachedQuoteService:
                 return response
             instrument_id = instrument["id"]
 
-        overrides = self._repository.get_overrides(instrument_id)
-        if overrides is None:
-            return response
-
-        row = apply_overrides(
-            {
-                **{field: getattr(response, field) for field in OVERRIDE_FIELDS},
-                **{f"manual_{field}": overrides[field] for field in OVERRIDE_FIELDS},
-            }
-        )
-        for field in OVERRIDE_FIELDS:
-            setattr(response, field, row[field])
+        stored = self._repository.get_instrument_with_latest(instrument_id)
+        if stored is not None:
+            row = apply_overrides(stored)
+            for field in OVERRIDE_FIELDS:
+                setattr(response, field, row[field])
+            response.details = {key: DetailValue.model_validate(value) for key, value in row['details'].items()}
         return response
 
     def _save_fresh(self, fresh: QuoteResponse) -> StoredQuote:
@@ -701,12 +698,41 @@ class CachedQuoteService:
             InstrumentNotFoundError: Symbol unbekannt.
         """
         instrument = self._require_instrument(symbol)
+        definitions, _ = self._repository.detail_catalog()
+        by_name = {definition.name: definition for definition in definitions}
+        if definitions or self._repository.has_detail_catalog():
+            for field, value in values.items():
+                if value is None:
+                    continue
+                definition = by_name.get(field)
+                if definition is None or not definition.applies(instrument['type'], instrument['kind']) or not definition.overridable:
+                    raise ValueError(f'Feld nicht bearbeitbar: {field}')
+                validate_input(definition, DetailInput(value=value,
+                    currency=(instrument.get('fund_currency') or values.get('fund_currency')) if definition.currency_required else None))
         self._repository.set_overrides(
             instrument["id"],
             values=values,
             updated_at=datetime.now(timezone.utc).isoformat(),
+            currency=instrument.get('fund_currency') or values.get('fund_currency'),
         )
         return self.get_overrides(symbol)
+
+    def set_detail_overrides(self, listing_id: str, values: dict[str, DetailInput]) -> dict:
+        """Prüft den vollständigen Patch vor dem atomaren Schreiben."""
+        instrument = self._repository.get_instrument_by_listing_id(listing_id)
+        if instrument is None:
+            raise InstrumentNotFoundError(listing_id)
+        definitions, _ = self._repository.detail_catalog()
+        by_name = {definition.name: definition for definition in definitions}
+        for field, entry in values.items():
+            definition = by_name.get(field)
+            if definition is None or not definition.applies(instrument['type'], instrument['kind']):
+                raise ValueError(f'Feld für dieses Instrument nicht deklariert: {field}')
+            if not definition.overridable:
+                raise ValueError(f'Feld nicht bearbeitbar: {field}')
+            validate_input(definition, entry)
+        self._repository.set_detail_overrides(instrument['id'], values, datetime.now(timezone.utc).isoformat())
+        return self.get_instrument_summary(instrument['id'])['details']
 
     def _require_instrument(self, symbol: str) -> dict:
         """Holt ein Instrument per Symbol oder wirft."""

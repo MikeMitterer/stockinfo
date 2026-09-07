@@ -36,6 +36,17 @@ from app.plugins.yahoo_search_resolver import YahooSearchResolverPlugin
 from app.plugins.yfinance_metadata import YFinanceMetadataPlugin
 from app.plugins.yfinance_quotes import YFinancePlugin
 
+from app.details import definitions_for, merge_definitions
+
+_DETAIL_SCHEMAS: dict[str, list] = {}
+
+
+def detail_definitions(config, settings) -> list:
+    """Validiertes Profilschema, auch bei einer vorübergehend kranken Quelle."""
+    build_chain('etf_meta', config, settings)
+    return merge_definitions(_DETAIL_SCHEMAS.values())
+
+
 logger = structlog.get_logger()
 
 
@@ -471,6 +482,8 @@ def build_chain(role: str, config, settings) -> list[object]:
         # nebeneinander, und `close()` erreichte nur eine davon.
         return cached[1]
 
+    if role == "etf_meta":
+        _DETAIL_SCHEMAS.clear()
     evaluated = _evaluate(role, config, settings)
 
     # **Die Momentaufnahme steht, bevor gebaut wird.** Der Bau einer einzelnen
@@ -550,6 +563,15 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | 
         )
         return None
 
+    if role == 'etf_meta':
+        try:
+            declared = definitions_for(source)
+            merge_definitions([*_DETAIL_SCHEMAS.values(), declared])
+            _DETAIL_SCHEMAS[spec.name] = declared
+        except Exception as error:  # noqa: BLE001 — fremde Deklarationen dürfen den Start nicht abbrechen
+            _LAST_REASON[spec.name] = str(error)
+            logger.warning('source_fields_invalid', source=spec.name, error=str(error))
+            return None
     problem = _diagnosis(spec, source)
     if problem:
         _LAST_REASON[spec.name] = problem

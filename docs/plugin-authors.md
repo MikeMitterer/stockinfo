@@ -411,3 +411,54 @@ while the code still looks perfectly reasonable.
 * [`plugin_api/src/stockinfo_plugin/`](../plugin_api/src/stockinfo_plugin/) —
   the contract itself. Every rule above is a docstring there, and the tests
   next to it are what enforce them.
+
+
+## Open detail fields
+
+A metadata source declares its fields through `FIELDS`. The host persists all
+valid declared readings, including fields that the dashboard has never seen.
+The eight existing metrics retain their canonical names; new keys are exposed
+as `<source.name>.<field.name>` (for example `risk-demo.score`). Incompatible
+canonical types or units cause the source to be rejected when its chain is built.
+
+```python
+FIELDS = (
+    FieldSpec("score", kind="number", label_en="Risk score",
+              label_de="Risikoscore", plausible=(0, 100)),
+    FieldSpec("verified", kind="boolean", label_en="Verified",
+              overridable=False),
+    FieldSpec("provider", label_en="Fund provider",
+              instrument_types=frozenset({"etf", "fund"})),
+)
+```
+
+`instrument_types=None` inherits `SUPPORTED_TYPES`. An explicit subset restricts
+one field; an empty subset makes it applicable to no instrument. This lets a
+source serve both funds and crypto without advertising fund fields for coins.
+`SUPPORTED_KINDS` also limits applicability. The dashboard uses the returned
+schema and instrument details to choose its fields and editors.
+
+`GET /fields` returns the configured, validated detail schema, including
+`name`, `kind`, `unit`, labels, `overridable`, `sources`, `scopes`, numeric bounds
+and `currency_required`. Its integer `details_version` increases whenever that
+schema changes, including removals. Cache it with `generation_id`; temporary
+source health does not change the schema. The full generation endpoint and
+response-header contract remain tracked separately in T-25.
+
+Both quote responses and `GET /instruments` carry a `details` map. Each value
+includes `value`, `unit`, `currency`, `origin`, `source`, `as_of`, `shadowed`,
+`manual_value` and `manual_currency`. Source priority is applied per field;
+`0` and `false` are values, not missing data. Existing top-level metrics remain
+compatibility projections of the same stored values.
+
+Use `PATCH /instruments/by-id/{listing_id}/details` with a partial object:
+
+```json
+{"risk-demo.score": {"value": 0}}
+```
+
+An omitted field is unchanged; `{"value": null}` removes only its manual
+value. The server rejects unknown, inapplicable and read-only fields with
+HTTP 422 and validates the entire patch before writing. Absolute amounts
+require a three-letter uppercase currency code. Provider values take
+precedence; a retained manual value is reported as shadowed when applicable.

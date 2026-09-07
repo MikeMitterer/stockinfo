@@ -136,6 +136,8 @@ export function refOf(instrument: { identity: Identity; symbol: string }): Instr
 }
 
 export interface InstrumentSummary {
+  listing_id: string
+  details?: Record<string, DetailValue>
   identity: Identity
   symbol: string
   exchange: string | null
@@ -431,3 +433,32 @@ export interface BackupList {
   restore_error: string
   backups: BackupEntry[]
 }
+
+
+export interface DetailDefinition {
+  name: string
+  kind: 'number' | 'text' | 'boolean'
+  unit: string | null
+  label_en: string
+  label_de: string
+  overridable: boolean
+  minimum: number | null
+  maximum: number | null
+  currency_required: boolean
+}
+export interface DetailInput {
+  value: number | boolean | string | null
+  currency?: string | null
+}
+export interface DetailValue {
+  value: DetailInput['value']
+  unit: string | null
+  currency: string | null
+  origin: 'provider' | 'manual' | null
+  source: string | null
+  as_of: string | null
+  shadowed: boolean
+  manual_value: DetailInput['value']
+  manual_currency: string | null
+}
+export type OverridePatch = Partial<InstrumentOverrides> & { details?: Record<string, DetailInput> }

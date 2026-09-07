@@ -1,4 +1,113 @@
-# T-56 · Was nur Mike entscheiden kann — und was ich vorher beweise
+# T-56 · Deine Rückmeldung zur Oberfläche
+
+Der technische Vorlauf ist **in Runde 6 freigegeben**.
+
+A–F sind beantwortet. Die Nacharbeit zu C und zum API-Link ist umgesetzt und
+im Browser geprüft. Die Nacharbeit zu F ist mit T-26 implementiert und
+erstgetestet; Claudes unabhängige Prüfung steht noch aus.
+
+## Was nur Mike beantworten kann
+
+### Deine Antworten zu Analyse und Fehlermeldung
+
+**Lauf Y** ist das reine Dateiprofil (`sources-standalone.yaml` und
+`assets-standalone.yaml`).
+
+**Lauf O** ist das Online-Profil mit YAML-Rückfall
+(`sources-fallback.yaml` und `assets-fallback.yaml`).
+
+Die Laufangabe ordnet den Handgriff der passenden vorbereiteten Instanz zu.
+
+| Frage | Prüfpunkt # | Lauf | Handgriff | Dein Urteil | Human |
+|---|---|:--:|---|---|---|
+| **B** | [2](#pruefpunkt-2) | Y | Im Bestand **`BTC-EUR`** auswählen und dessen Analyse öffnen (`pair`, `BTC`/`EUR`). Die angezeigten Angaben ansehen. | Zeigt es das, was dich interessiert — oder fehlt eine Angabe, die du dort erwartest? | Passt |
+| **C** | [5](#pruefpunkt-5) | O | **`KEINPAPIER.XX`** über das Feld zum Aufnehmen eingeben und das Hinzufügen auslösen. Den daraufhin angezeigten Fehlerhinweis lesen. | **Ist der Satz verständlich?** Würdest du danach wissen, was zu tun ist? | Bei der Fehlermeldung sollte das Symbol, bzw. was auch immer ich in das Feld eingegeben habe, getrimmt, angezeigt werden. |
+
+**Zu B:** Den Hinweis auf unpassende editierbare Felder hast du bereits
+gegeben. Hier kannst du weitere fehlende Angaben ergänzen.
+
+**Zu C:** Die Fehlermeldung enthält jetzt die getrimmte Eingabe; dein
+Originalurteil bleibt oben erhalten.
+
+### Deine bisherigen Antworten
+
+A, D und E hast du positiv beantwortet.
+
+F enthält deinen Änderungswunsch;
+diese Rückmeldung bedeutet noch nicht, dass die Änderung umgesetzt ist.
+
+Die ursprüngliche Frage A bleibt zur Einordnung deiner Antwort erhalten.
+
+| # | Wo | Die Frage | Human |
+|---|---|---|---|
+| **A** | Bestand nach Punkt 1 | Yahoo liefert `BAYERISCHE MOTOREN WERKE AG   S` als Namen — mit Füllzeichen. Ich gebe den Wert der Quelle unverändert wieder. **Willst du das so, oder soll StockInfo den Namen putzen?** | Inzwischen wurde auf Langename umgestellt - das passt so |
+| **D** | Restore-Bestätigung aus Punkt 7 | Ist die Warnung deutlich genug für etwas, das Daten überschreibt — oder zu beiläufig? | OK so |
+| **E** | Statuszeile | Nützlich oder Lärm? | Passt gut so |
+| **F** | die Oberfläche als Ganzes | Was fällt dir auf, das in keinem der Punkte steht? | Die Detailansicht muss die angezeigten und bearbeitbaren Angaben nach Instrumenttyp auswählen. Bei BTC-Eur kann zb die Fondswährung angepasst werden - Schmarren.|
+
+### Deine weiteren Rückmeldungen
+
+Jede Rückmeldung nennt die zugehörige Prüfung. Der Link führt direkt zur
+Prüfzeile mit Handgriff und erwartetem Ergebnis; deine Anmerkung bleibt im
+Originalwortlaut erhalten.
+
+| Prüfpunkt | Deine Anmerkung |
+|---|---|
+| [1 · SAP.DE und BMW.DE aufnehmen](#pruefpunkt-1) | Name wurde nur in der Kurzform übernommen, ist inzwischen aber korrigiert |
+| [2 · BTC-EUR: Analyse und angezeigte Felder](#pruefpunkt-2) | OK, die editierbaren Felder passen aber nicht |
+| [4 · Statuszeile während des Ladens](#pruefpunkt-4) | OK |
+| [5 · Fehlermeldung bei KEINPAPIER.XX](#pruefpunkt-5) | ok |
+| [6 · Sicherung anlegen](#pruefpunkt-6) | OK, funktioniert auch über REST |
+| [8a · Anleihe: geänderte YAML-History ohne Neustart](#pruefpunkt-8a) | OK |
+
+Anmerkungen, Mike:
+Gestartet ist das ganze mit der Migrationsseite. Ein Asset wurde verworfen die anderen wurden übernommen.
+Backup vor der Migration hat auch funktioniert.
+
+Bei Einstellungen / API & Links / API-Wurzel - kommt auf die aktuelle Seite - scheint mir nicht sinnvoll zu sein.
+
+### Nachprüfung und Korrekturen · 2026-09-07
+
+| Befund | Stand | Nachweis |
+|---|---|---|
+| C: Eingabe fehlt im Fehler | Behoben: getrimmte Eingabe in DE/EN, Fehlergrund bleibt erhalten | Browser auf localhost:5173: `  KEINPAPIER.XX  ` eingegeben; Toast zeigt `Hinzufügen von „KEINPAPIER.XX“ fehlgeschlagen` mit Grund. Zwei neue Sprachtests. |
+| API-Wurzel führt ins Dashboard | Behoben: Link entfernt; Swagger, OpenAPI und Health bleiben | Einstellungen → API & Links im Browser: drei API-Links, keine API-Wurzel. |
+| F: Fondsfelder bei BTC-EUR | **Implementiert, Claude-Prüfung offen** | T-26 reicht Deklaration, Anwendbarkeit und Schreibrecht bis REST/UI durch. Isolierter Browserlauf: BTC ohne Fondsfelder, ETF mit Fondsfeldern, unbekanntes Testfeld editierbar. |
+
+Frisch geprüft: **324/324 Dashboardtests**, `vue-tsc --noEmit` und
+`git diff --check` erfolgreich; TypeScript-Compiler-Inventar der neu berührten
+Dateien geprüft. Die Browserprüfung betrifft die beiden lokalen Korrekturen,
+keinen erneuten vollständigen Zwei-Profil-Vorlauf. Die historischen neun
+AI-Ergebnisse bleiben dem damaligen Stand zugeordnet.
+
+**Scope-Checkpoint F:** T-26 beschreibt die generische Durchleitung der
+Plugin-Felder, ihre Darstellung und `overridable` einschließlich Backend.
+Zusätzlich muss die Anwendbarkeit je Instrument geklärt werden: Eine globale
+`FIELDS`-Liste allein genügt bei einem Plugin für mehrere Gattungen nicht.
+Mike hat T-26 einschließlich REST, UI und erstem UI-Test beauftragt;
+Codex implementiert und Claude verifiziert anschließend. T-56 wird deshalb nicht als vollständig erledigt markiert.
+T-61 ist zurückgestellt; T-62 bleibt offen; die Börsenauskunft gehört zu T-30.
+
+### Bekannte Einschränkung
+
+Beim Sprachwechsel kann der Inhalt einer bereits offenen Meldung in der
+alten Sprache bleiben. Du hast das als **kleinen Bug, nicht als Blocker**
+eingestuft.
+
+Die Nacharbeit liegt in
+[T-61](postponed/T-61-offener-toast-behaelt-alte-inhaltssprache.md); die Abnahme von T-56
+und der MVP sind dadurch nicht blockiert.
+
+---
+
+## Umsetzung und technische Nachweise
+
+**Layout-Hinweis für Claude und Codex (2026-09-07):** Auf Mikes Auftrag steht
+sein Arbeitsbereich jetzt am Anfang. Fragen A–F, Human-Antworten, neun
+AI-Ergebnisse und Review-Belege bleiben erhalten. Mikes Anmerkungen aus der
+AI-Tabelle stehen getrennt oben. Den Arbeitsbereich bei neuen Ergebnissen
+aktualisieren; abgeschlossene Review-Runden bleiben Historie. Diese Umordnung
+ändert weder Freigabe noch Zuständigkeit oder Abnahmekriterien.
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
@@ -8,31 +117,6 @@
 - **Ersetzt:** T-35, T-42 und T-50 als Abnahmetickets für Mike
 - **Hängt ab von:** nichts. Alle geprüften Stände sind Codex-freigegeben
 
-**Löst:** Es gibt drei Tickets, die Mike durch die Oberfläche führen sollten,
-und keines hat den Zweck erfüllt. T-35 und T-50 wurden **von mir** gelaufen
-und haben dabei Befunde produziert; T-42 ist nie gelaufen.
-
----
-
-## Warum dieses Ticket anders gebaut ist als seine Vorgänger
-
-Mike hat an T-56 zwei Konstruktionsfehler benannt, die **alle** Tickets
-betreffen: dass die Human-Spalte überall steht, auch wo die KI-Messung strikt
-besser ist, und dass ein Prüfticket, das Befunde findet, danach selbst offen
-liegen bleibt. Beides steht mitsamt Lösungsvorschlag in **T-57**.
-
-Dieses Ticket **wendet die zwei Vorschläge bereits an**, statt auf sie zu
-warten — es ist der erste Fall, an dem sie sich bewähren müssen:
-
-1. **Jede Zeile trägt genau eine entscheidende Spalte** — `AI` **oder**
-   `Human`, nie beide. Was ich messen kann, messe ich; was nur Mike
-   beantworten kann, steht getrennt darunter.
-2. **Findet mein Vorlauf einen Fehler, geht dieses Ticket nicht an Mike.**
-   Der Weg dafür ist unten unter *Was passiert, wenn mein Vorlauf etwas
-   findet* festgelegt. Mike bekommt eine vollständig grüne Liste oder gar
-   keine — nie eine mit Fußnoten.
-
----
 
 ## Was ich beweise — ohne Mike
 
@@ -51,15 +135,15 @@ Port und eigener Fachdatei unter ihrem `/data`:
 
 | # | Lauf | Handgriff | Nachweis | woher | AI |
 |---|:--:|---|---|---|:--:|
-| **1** | O | `SAP.DE` und `BMW.DE` über das Feld aufnehmen | beide im Bestand, mit Name und `stock`; keine Fehlermeldung | T-54 | ✅ |
-| **2** | Y | Analyse von **`BTC-EUR`** öffnen (`pair`, `BTC`/`EUR`) | die Stufen nennen die konfigurierten Quellen, Zeiten und die Zeilenzahl als Zahl | T-46, T-53, T-31 | ✅ [^zeilen] |
-| **3** | Y | dieselbe Analyse auf Englisch | kein deutsches Wort, auch nicht `3 Zeilen` | T-53 | ✅ |
-| **4** | O | Statuszeile während eines Ladevorgangs | die laufende **Kurskette** steht geordnet dort | T-43 | ✅ [^kette] |
-| **5** | O | `KEINPAPIER.XX` aufnehmen | ein Satz mit Grund erscheint; kein Rohtext, kein stilles Nichts | T-44 | ✅ [^wdh] |
-| **6** | O | Sicherung anlegen | steht mit Zeitpunkt und Größe in der Liste; Datei liegt auf der Platte | T-47 | ✅ |
-| **7** | O | Sicherung zurückspielen | verlangt eine Bestätigung und benennt den Vorgang | T-47 | ✅ |
-| **8a** | O | in `assets-fallback.yaml` die **History der Anleihe** `DE0001102531` ändern, während die App läuft | der Wert erscheint ohne Neustart — und zwar über den YAML-Rückfall **hinter** der Online-Kette | T-48, T-37 | ✅ |
-| **8b** | Y | in `assets-standalone.yaml` den **Preis des Fonds** `DE0009848119` ändern, während die App läuft | derselbe Nachweis im reinen Dateiprofil | T-48, T-52 | ✅ |
+| **1** | O | <a id="pruefpunkt-1"></a>`SAP.DE` und `BMW.DE` über das Feld aufnehmen | beide im Bestand, mit Name und `stock`; keine Fehlermeldung | T-54 | ✅ |
+| **2** | Y | <a id="pruefpunkt-2"></a>Analyse von **`BTC-EUR`** öffnen (`pair`, `BTC`/`EUR`) | die Stufen nennen die konfigurierten Quellen, Zeiten und die Zeilenzahl als Zahl | T-46, T-53, T-31 | ✅ [^zeilen] |
+| **3** | Y | <a id="pruefpunkt-3"></a>dieselbe Analyse auf Englisch | kein deutsches Wort, auch nicht `3 Zeilen` | T-53 | ✅ |
+| **4** | O | <a id="pruefpunkt-4"></a>Statuszeile während eines Ladevorgangs | die laufende **Kurskette** steht geordnet dort | T-43 | ✅ [^kette] |
+| **5** | O | <a id="pruefpunkt-5"></a>`KEINPAPIER.XX` aufnehmen | ein Satz mit Grund erscheint; kein Rohtext, kein stilles Nichts | T-44 | ✅ [^wdh] |
+| **6** | O | <a id="pruefpunkt-6"></a>Sicherung anlegen | steht mit Zeitpunkt und Größe in der Liste; Datei liegt auf der Platte | T-47 | ✅ |
+| **7** | O | <a id="pruefpunkt-7"></a>Sicherung zurückspielen | verlangt eine Bestätigung und benennt den Vorgang | T-47 | ✅ |
+| **8a** | O | <a id="pruefpunkt-8a"></a>in `assets-fallback.yaml` die **History der Anleihe** `DE0001102531` ändern, während die App läuft | der Wert erscheint ohne Neustart — und zwar über den YAML-Rückfall **hinter** der Online-Kette | T-48, T-37 | ✅ |
+| **8b** | Y | <a id="pruefpunkt-8b"></a>in `assets-standalone.yaml` den **Preis des Fonds** `DE0009848119` ändern, während die App läuft | derselbe Nachweis im reinen Dateiprofil | T-48, T-52 | ✅ |
 
 [^zeilen]: **`BTC-EUR` allein konnte die Zeilenzahl nicht zeigen** — es trägt
     im YAML einen Preis, aber keine Tagesreihe; die Stufe meldete `nichts`.
@@ -120,27 +204,6 @@ Scope-Checkpoint.
 grün nachgemessen sind**, geht T-56 an Mike. Befund, Korrektur und
 Wiederholungsbeleg bleiben gemeinsam in dieser Abnahme.
 
-## Was nur Mike beantworten kann
-
-**Sechs** Fragen aus dem Zuschnitt. Keine
-davon ist eine Prüfung, ob etwas funktioniert; das steht oben und ist dort
-belegt. Es sind Urteile, und ein *„nein"* ist keine Fehlermeldung, sondern
-eine Produktentscheidung.
-
-| # | Wo | Die Frage | Human |
-|---|---|---|---|
-| **A** | Bestand nach Punkt 1 | Yahoo liefert `BAYERISCHE MOTOREN WERKE AG   S` als Namen — mit Füllzeichen. Ich gebe den Wert der Quelle unverändert wieder. **Willst du das so, oder soll StockInfo den Namen putzen?** | |
-| **B** | Analysefenster | Zeigt es das, was dich interessiert — oder fehlt eine Angabe, die du dort erwartest? | |
-| **C** | Fehlermeldung aus Punkt 5 | **Ist der Satz verständlich?** Würdest du danach wissen, was zu tun ist? | |
-| **D** | Restore-Bestätigung aus Punkt 7 | Ist die Warnung deutlich genug für etwas, das Daten überschreibt — oder zu beiläufig? | |
-| **E** | Statuszeile | Nützlich oder Lärm? | |
-| **F** | die Oberfläche als Ganzes | Was fällt dir auf, das in keinem der Punkte steht? | |
-
-**A** ist die einzige Frage, hinter der schon eine Entscheidung von mir steht:
-Ich habe den Namen nicht angefasst, weil eine Quelle wiederzugeben etwas
-anderes ist, als sie zu korrigieren. Sagst du „putzen", ist das ein neues
-Ticket, kein Befund an T-54.
-
 ## Nicht-Ziele
 
 - Keine ungeplante Produktänderung jenseits der ausdrücklich begrenzten
@@ -165,6 +228,46 @@ Alle drei verlangen von Mike Aufbauarbeit statt Bedienung. Sagt er, er will
 sie trotzdem selbst sehen, kommen sie mit eigener Anleitung dazu.
 
 ---
+
+## Review-Verlauf · Historie
+
+Die folgenden Abschnitte dokumentieren den damaligen Stand. Frühere offene
+Fragen und Sperren sind zusammen mit ihren späteren Auflösungen zu lesen.
+Für Mikes aktuellen Handlungsbedarf gilt der Arbeitsbereich am Anfang;
+die Produktentscheidung nach Runde 6 hält die Freigabe fest.
+
+### Ursprünglicher Anlass und Zuschnitt
+
+**Löst:** Es gibt drei Tickets, die Mike durch die Oberfläche führen sollten,
+und keines hat den Zweck erfüllt. T-35 und T-50 wurden **von mir** gelaufen
+und haben dabei Befunde produziert; T-42 ist nie gelaufen.
+
+## Warum dieses Ticket anders gebaut ist als seine Vorgänger
+
+Mike hat an T-56 zwei Konstruktionsfehler benannt, die **alle** Tickets
+betreffen: dass die Human-Spalte überall steht, auch wo die KI-Messung strikt
+besser ist, und dass ein Prüfticket, das Befunde findet, danach selbst offen
+liegen bleibt. Beides steht mitsamt Lösungsvorschlag in **T-57**.
+
+Dieses Ticket **wendet die zwei Vorschläge bereits an**, statt auf sie zu
+warten — es ist der erste Fall, an dem sie sich bewähren müssen:
+
+1. **Jede Zeile trägt genau eine entscheidende Spalte** — `AI` **oder**
+   `Human`, nie beide. Was ich messen kann, messe ich; was nur Mike
+   beantworten kann, steht getrennt darunter.
+2. **Findet mein Vorlauf einen Fehler, geht dieses Ticket nicht an Mike.**
+   Der Weg dafür ist unten unter *Was passiert, wenn mein Vorlauf etwas
+   findet* festgelegt. Mike bekommt eine vollständig grüne Liste oder gar
+   keine — nie eine mit Fußnoten.
+
+---
+
+### Frühere Begründung zu Frage A · durch Mikes Antwort überholt
+
+**A** ist die einzige Frage, hinter der schon eine Entscheidung von mir steht:
+Ich habe den Namen nicht angefasst, weil eine Quelle wiederzugeben etwas
+anderes ist, als sie zu korrigieren. Sagst du „putzen", ist das ein neues
+Ticket, kein Befund an T-54.
 
 ## Was Codex an diesem Konzept prüfen soll
 
@@ -682,7 +785,7 @@ kann vorkommen, verhindert aber weder die T-56-Abnahme noch den MVP.
 
 Damit sind die beiden S1-Befunde aus Runde 6 nicht widerlegt, sondern als
 offene Nacharbeit nach
-`T-61-offener-toast-behaelt-alte-inhaltssprache.md` verschoben. Die beiden
+`postponed/T-61-offener-toast-behaelt-alte-inhaltssprache.md` verschoben. Die beiden
 S2-Artefakte sind oben korrigiert: Das Inventar nennt 13 Composables, und der
 aktuelle Urteilsteil enthält nur noch A–F; keine Human-Zelle wurde ausgefüllt.
 T-56 ist in Runde 6 freigegeben.

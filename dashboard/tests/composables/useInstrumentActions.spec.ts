@@ -4,11 +4,28 @@ vi.mock('consola', () => ({
   consola: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }))
 
+import { i18n } from '../../src/i18n'
+
 import { useInstrumentActions } from '../../src/composables/useInstrumentActions'
 
 afterEach(() => vi.unstubAllGlobals())
 
 describe('useInstrumentActions', () => {
+  it.each(['de', 'en'] as const)('nennt bei Fehlern die getrimmte Eingabe auf %s', async (locale) => {
+    const previousLocale = i18n.global.locale.value
+    i18n.global.locale.value = locale
+    try {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('Testgrund', { status: 400 })))
+      const { add, error } = useInstrumentActions()
+      await add('  KEINPAPIER.XX  ')
+      expect(error.value).toContain('KEINPAPIER.XX')
+      expect(error.value).not.toContain('  KEINPAPIER.XX  ')
+      expect(error.value).toContain('Testgrund')
+    } finally {
+      i18n.global.locale.value = previousLocale
+    }
+  })
+
   it('add ruft /quote/{isin} bei ISIN', async () => {
     const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }))
     vi.stubGlobal('fetch', fetchMock)

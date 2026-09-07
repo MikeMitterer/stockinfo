@@ -5,7 +5,7 @@ API-Antwort zusammen. Protokolle ermöglichen austauschbare Implementierungen
 (Strategy Pattern) und einfaches Mocken in Tests.
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Generic, Protocol, TypeVar
 
 from stockinfo_plugin.types import (
@@ -171,6 +171,8 @@ class RawQuote:
 @dataclass
 class EtfDetails:
     """ETF-spezifische Zusatzdaten (z.B. von justETF)."""
+
+    detail_readings: dict[str, dict[str, dict]] = field(default_factory=dict)
 
     ter: float | None = None
     provider: str | None = None

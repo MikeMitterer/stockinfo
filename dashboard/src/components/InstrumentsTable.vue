@@ -11,7 +11,7 @@ import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
 import MetricValue from './MetricValue.vue'
 import { acceptsIsin, isinOf, symbolOf } from '../types'
-import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
+import type { OverridePatch, InstrumentSummary, OverrideField } from '../types'
 
 const props = defineProps<{
   instruments: InstrumentSummary[]
@@ -34,7 +34,7 @@ const emit = defineEmits<{
   (event: 'json', item: InstrumentSummary): void
   (
     event: 'override',
-    payload: { item: InstrumentSummary; patch: Partial<InstrumentOverrides> },
+    payload: { item: InstrumentSummary; patch: OverridePatch },
   ): void
 }>()
 
@@ -55,7 +55,6 @@ const columns: { key: SortKey; label: string; align?: string }[] = [
   { key: 'ter', label: 'table.colTer', align: 'num' },
   { key: 'volatility', label: 'table.colVola', align: 'num' },
   { key: 'accumulating', label: 'table.colAccumulating', align: 'center' },
-  { key: 'history_count', label: 'table.colPoints', align: 'num' },
 ]
 
 const sortedInstruments = computed(() => sort(props.instruments))
@@ -289,9 +288,6 @@ function price(value: number | null): string {
                 Ein Tooltip an jedem Strich erklärt beim ersten Mal etwas und
                 stört danach jedes Mal.
               -->
-              <span v-if="column.key === 'history_count'" class="th-hint" @click.stop>
-                <InfoHint :text="t('hints.points')" settings-tab="environment" />
-              </span>
               <span v-if="column.key === 'symbol'" class="th-hint" @click.stop>
                 <InfoHint :text="t('table.noSymbolReason')" />
               </span>
@@ -325,9 +321,8 @@ function price(value: number | null): string {
               </td>
               <td class="sym mono">
                 <!--
-                  Kennung öffnet die Zeile (ux-standards): Symbol und Name sind
-                  eigene Schaltflächen und klinken sich mit `@click.stop` aus dem
-                  Zeilen-Klick aus — der bleibt fürs Chart zuständig.
+                  Caret und Symbol öffnen die Details. Name und übrige
+                  Datenzellen wählen das Papier für das Diagramm aus.
                 -->
                 <!--
                   Ein Papier der Form `isin_only` hat kein Börsensymbol. Der
@@ -372,9 +367,7 @@ function price(value: number | null): string {
                 <button
                   type="button"
                   class="row-toggle"
-                  :aria-expanded="isOpen(item)"
-                  :aria-controls="`details-${item.symbol}`"
-                  @click.stop="toggleDrawer(item)"
+                  @click.stop="emit('select', item)"
                 >
                   {{ item.name ?? t('common.noValue') }}
                 </button>
@@ -395,7 +388,6 @@ function price(value: number | null): string {
               <td class="num mono dim"><MetricValue :item="item" field="ter" /></td>
               <td class="num mono dim"><MetricValue :item="item" field="volatility" /></td>
               <td class="center"><MetricValue :item="item" field="accumulating" /></td>
-              <td class="num mono dim">{{ item.history_count }}</td>
               <td class="actions" @click.stop>
                 <NButton
                   class="ext"

@@ -74,9 +74,9 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
   it('bietet den Leerlauf als erste Wahl — sonst ließe sich Sortieren nicht abschalten', () => {
     stubMatchMedia(true)
     const wrapper = mountTable()
-    const optionen = wrapper.findComponent(NSelect).props('options')!
+    const options = wrapper.findComponent(NSelect).props('options')!
 
-    expect(optionen[0]).toEqual({ value: '', label: 'Ohne Sortierung' })
+    expect(options[0]).toEqual({ value: '', label: 'Ohne Sortierung' })
   })
 
   it('steht ohne aktive Sortierung auf dem Leerlauf', () => {
@@ -106,13 +106,13 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
   it('Wahl des Leerlaufs setzt eine aktive Sortierung zurück', async () => {
     stubMatchMedia(true)
     const wrapper = mountTable()
-    const auswahl = wrapper.findComponent(NSelect)
+    const selection = wrapper.findComponent(NSelect)
 
-    auswahl.vm.$emit('update:value', 'name')
+    selection.vm.$emit('update:value', 'name')
     await wrapper.vm.$nextTick()
     expect(window.localStorage.getItem('stockinfo-sort')).not.toBeNull()
 
-    auswahl.vm.$emit('update:value', '')
+    selection.vm.$emit('update:value', '')
     await wrapper.vm.$nextTick()
 
     expect(wrapper.findComponent(NSelect).props('value')).toBe('')
@@ -141,7 +141,7 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
 
 /*
  * Konflikt gelöst wie im Plan festgehalten: Die Zeile öffnet weiterhin das
- * Chart (`@click`), nur Symbol und Name klinken sich mit `@click.stop` aus und
+ * Chart (`@click`), nur Caret und Symbol klinken sich mit `@click.stop` aus und
  * öffnen stattdessen den Detailbereich.
  */
 describe('InstrumentsTable — Detailbereich', () => {
@@ -149,24 +149,24 @@ describe('InstrumentsTable — Detailbereich', () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
 
-    await wrapper.get('.row-toggle').trigger('click')
+    await wrapper.get('.sym .row-toggle').trigger('click')
 
     expect(wrapper.emitted('select')).toBeUndefined()
     expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(true)
   })
 
-  it('öffnet den Detailbereich auch beim Klick auf den Namen', async () => {
+  it('öffnet beim Klick auf den Namen das Diagramm und keine Details', async () => {
     stubMatchMedia(false)
     const wrapper = mountTable()
 
     await wrapper.get('.name .row-toggle').trigger('click')
 
-    expect(wrapper.emitted('select')).toBeUndefined()
-    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(true)
+    expect(wrapper.emitted('select')).toEqual([[base]])
+    expect(wrapper.findComponent({ name: 'InstrumentDrilldown' }).exists()).toBe(false)
   })
 
   /*
-   * Sichtprüfung: Symbol und Name öffnen die Zeile zwar, aber ohne sichtbares
+   * Sichtprüfung: Caret und Symbol öffnen die Zeile zwar, aber ohne sichtbares
    * Merkmal sieht man ihnen das nicht an — „Klick auf das Symbol ist zu wenig
    * intuitiv". Der Pfeil steht deshalb vorne in der Zeile, wie ihn die
    * Kartenliste unter `md` längst zeigt (`InstrumentCard.vue`).
@@ -285,9 +285,9 @@ describe('InstrumentsTable — Detailbereich', () => {
 
     // Nachgestellt wie in echt: Das Bedienelement im Detailbereich ist das Ziel
     // und ruft `preventDefault()`, bevor das Ereignis zur Tabelle hochsteigt.
-    const detailbereich = wrapper.get('.details-row').element
-    detailbereich.addEventListener('keydown', (event) => event.preventDefault())
-    detailbereich.dispatchEvent(
+    const detailsElement = wrapper.get('.details-row').element
+    detailsElement.addEventListener('keydown', (event) => event.preventDefault())
+    detailsElement.dispatchEvent(
       new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }),
     )
     await nextTick()

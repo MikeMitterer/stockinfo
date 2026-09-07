@@ -534,6 +534,9 @@ class FieldSpec:
             neu einführt — die App hat für sie keinen Katalogeintrag.
         label_de: Deutsche Beschriftung, falls der Autor sie liefern kann.
         overridable: Ob ein Mensch den Wert von Hand nachtragen darf.
+        instrument_types: Optionale Einschränkung auf Gattungen dieser Quelle.
+            ``None`` übernimmt ``SUPPORTED_TYPES``; eine leere Menge gilt für
+            kein Instrument. Die Ergänzung ist innerhalb API-Version 2 additiv.
     """
 
     name: str
@@ -543,6 +546,8 @@ class FieldSpec:
     label_en: str = ""
     label_de: str = ""
     overridable: bool = True
+    # None übernimmt die Gattungen der Quelle; eine leere Menge gilt für keine.
+    instrument_types: frozenset[str] | None = None
 
     def is_plausible(self, value: object) -> bool:
         """Liegt der Wert im erwarteten Bereich?

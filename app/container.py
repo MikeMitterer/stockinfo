@@ -161,6 +161,9 @@ def get_cached_quote_service() -> CachedQuoteService:
         resolver,
     )
     repository = QuoteRepository(settings.database_path)
+    from app.sources_registry import detail_definitions
+
+    repository.detail_catalog(detail_definitions(get_sources_config(), settings))
     daily_sync = DailyCloseSync(
         repository, CompositeDailyCloseProvider(*_market_chain("daily"))
     )

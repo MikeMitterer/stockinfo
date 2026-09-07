@@ -29,6 +29,9 @@ from __future__ import annotations
 from dataclasses import fields
 from datetime import date
 
+from app.details import definitions_for, validate_input
+from app.detail_models import DetailInput
+
 import structlog
 
 from stockinfo_plugin.invariants import identity_problem, resolution_problem
@@ -459,9 +462,8 @@ class MetadataAdapter(_Adapter):
     (`Reading`) — Letzteres, damit ein Feld ankommen kann, das die App noch
     nicht kennt.
 
-    Der Adapter füllt deshalb nur, was `EtfDetails` hat. **Ein unbekanntes Feld
-    geht hier verloren**, und das ist der ehrliche Stand: Es aufzuheben ist
-    T-26, nicht dieses Ticket.
+    Alle deklarierten Felder gelangen normalisiert in `detail_readings`.
+    Bekannte Felder werden zusätzlich für die bestehenden Aufrufer projiziert.
     """
 
     def is_responsible(
@@ -539,8 +541,7 @@ class MetadataAdapter(_Adapter):
             Prozent), wird **nicht still übernommen**: Er fehlt, und der Grund
             steht im Protokoll. Eine falsche Zahl ist schlimmer als keine.
 
-            **Unbekannte Felder gehen hier verloren** — sie aufzuheben ist
-            T-26. Das ist der ehrliche Stand und keine Zusage.
+            Neue deklarierte Felder bleiben mit Namespace und Quelle erhalten.
         """
         # **Der Vorfilter, jetzt auch hier** (Codex `#4`). Eine Quelle, die
         # diese Gattung nicht deklariert hat, wird gar nicht erst gefragt —
@@ -548,46 +549,54 @@ class MetadataAdapter(_Adapter):
         if identity is not None and not self._serves(identity, instrument_type):
             return None
 
-        readings = self._source.fetch(
-            self._request(isin, symbol, exchange, currency)
-        )
-        if not readings:
+        request = self._request(isin, symbol, exchange, currency)
+        if not self._source.handles(request):
             return None
-
-        known = {field.name for field in fields(EtfDetails)}
-        values: dict[str, object] = {}
-        provenance: set[str] = set()
-
+        readings = self._source.fetch(request)
+        if readings is None:
+            return None
+        definitions = {
+            definition.name.split('.')[-1]: definition
+            for definition in definitions_for(self._source)
+            if identity is None or definition.applies(instrument_type, identity.kind)
+        }
+        normalized = {}
+        values = {}
         for reading in readings:
-            if reading.field not in known or reading.field == "source":
+            if reading.field == 'name':
+                values['name'] = reading.value
                 continue
-            if reading.source:
-                provenance.add(reading.source)
-
-            wanted = CORE_UNITS.get(reading.field)
-            if wanted is None or not isinstance(reading.value, (int, float)):
-                values[reading.field] = reading.value
+            definition = definitions.get(reading.field)
+            if definition is None:
                 continue
-
-            declared = getattr(self._source, "declared", lambda _: None)(reading.field)
-            given = reading.unit or getattr(declared, "unit", None)
-            converted = convert(float(reading.value), given, wanted)
-            if converted is None:
-                logger.warning(
-                    "metadata_unit_mismatch",
-                    field=reading.field,
-                    given=given.value if given else None,
-                    wanted=wanted.value,
-                )
+            declared = self._source.declared(reading.field)
+            value = reading.value
+            given = reading.unit or declared.unit
+            plausible_value = value
+            if value is not None and given and declared.unit and given != declared.unit:
+                if type(value) not in (int, float):
+                    continue
+                plausible_value = convert(value, given, declared.unit)
+                if plausible_value is None:
+                    continue
+            if not declared.is_plausible(plausible_value):
                 continue
-            values[reading.field] = converted
-
-        if not values:
-            return None
-        # Die Quelle beschriftet sich selbst — der Service soll sie nicht raten
-        # müssen. Mehrere Herkünfte in einer Antwort werden benannt, nicht auf
-        # eine reduziert.
-        values["source"] = "+".join(sorted(provenance)) or None
+            if definition.unit and given and value is not None:
+                if type(value) not in (int, float):
+                    continue
+                value = convert(value, given, Unit(definition.unit))
+                if value is None:
+                    continue
+            # Fondsgröße kommt vom bisherigen Adapter bereits in Millionen.
+            try:
+                entry = validate_input(definition, DetailInput(value=value, currency=reading.currency))
+            except ValueError:
+                continue
+            normalized[definition.name] = entry.model_dump()
+            if definition.name in {field.name for field in fields(EtfDetails)}:
+                values[definition.name] = entry.value
+        values['source'] = self.name
+        values['detail_readings'] = {self.name: normalized}
         return EtfDetails(**values)
 
 

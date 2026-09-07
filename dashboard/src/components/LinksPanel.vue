@@ -12,7 +12,6 @@ interface ApiLink {
 const { t } = useI18n()
 
 const links = computed<ApiLink[]>(() => [
-  { label: t('links.apiRoot'), url: `${API_BASE_URL}/` },
   { label: t('links.swagger'), url: `${API_BASE_URL}/docs` },
   { label: t('links.openapi'), url: `${API_BASE_URL}/openapi.json` },
   { label: t('links.health'), url: `${API_BASE_URL}/health` },

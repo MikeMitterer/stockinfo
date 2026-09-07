@@ -1,5 +1,5 @@
 {
-  "core_version": "4.1.0",
+  "core_version": "4.2.0",
   "details_version": 0,
   "generation": {
     "endpoint": "/generation",
@@ -518,11 +518,7 @@
     "consumer_rule": "Unbekannte Felder werden ignoriert, nicht als Fehler behandelt. Nur so bleibt eine additive Erweiterung wirklich additiv."
   },
   "planned": {
-    "note": "Entschieden, aber noch nicht zugesagt. Diese Einträge sind nicht Teil von core_version 2.0.0 — sie stehen hier, damit ein Konsument weiß, was kommt, und nicht, damit er sich darauf verlässt.",
-    "details_container": {
-      "ticket": "T-26",
-      "effect": "die ETF-Kennzahlen ziehen in einen additiven details-Container um (Major)"
-    },
+    "note": "Entschieden, aber noch nicht zugesagt; diese Laufzeitfunktionen sind weiterhin offen.",
     "generation_runtime": {
       "ticket": "T-25",
       "effect": "Route /generation, Header-Middleware, expose_headers, persistierte UUID"

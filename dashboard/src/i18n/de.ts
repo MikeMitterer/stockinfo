@@ -14,6 +14,13 @@ const roles = {
 }
 
 export const de = {
+  details: {
+    currency: 'Währung',
+    manual: 'Von Hand',
+    shadowed: 'Eigener Wert {value} wird von der Quelle verdeckt.',
+    loadFailed: 'Feldkatalog konnte nicht geladen werden.',
+    empty: 'Für dieses Instrument sind keine Detailfelder deklariert.',
+  },
   /*
    * Wortmarke in zwei Teilen: Farbig ist der Teil, der die App
    * unterscheidet — "Stock" teilen sich alle. Getrennt im Katalog und
@@ -336,6 +343,7 @@ export const de = {
     refresh: 'Refresh fehlgeschlagen',
     rawQuote: 'Abfrage fehlgeschlagen',
     add: 'Hinzufügen fehlgeschlagen',
+    addIdentifier: 'Hinzufügen von „{identifier}“ fehlgeschlagen',
     refreshOne: 'Aktualisieren fehlgeschlagen',
     remove: 'Löschen fehlgeschlagen',
     setIsin: 'ISIN konnte nicht gespeichert werden',

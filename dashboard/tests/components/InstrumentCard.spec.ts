@@ -59,11 +59,11 @@ describe('InstrumentCard', () => {
     expect(wrapper.findAllComponents({ name: 'MetricEditor' })).toHaveLength(8)
   })
 
-  it('zeigt weiterhin die Anzahl gespeicherter Kurspunkte', async () => {
+  it('zeigt keine Anzahl gespeicherter Kurspunkte', async () => {
     const wrapper = mountCard({ history_count: 42 })
     await wrapper.find('.icard__toggle').trigger('click')
 
-    expect(wrapper.find('.icard__details').text()).toContain('42')
+    expect(wrapper.find('.icard__details').text()).not.toContain('42')
   })
 
   it('reicht ein commit aus dem Detailbereich unverändert als override weiter', async () => {

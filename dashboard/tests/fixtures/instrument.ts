@@ -27,6 +27,7 @@ export function makeInstrument(
   return {
     identity: { kind: 'listed', ticker: 'APC', mic: 'XETR', isin: identityIsin },
     symbol: 'APC.DE',
+    listing_id: '00000000-0000-4000-8000-000000000001',
     exchange: 'XETR',
     name: 'Apple Inc.',
     type: 'stock',

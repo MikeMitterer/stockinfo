@@ -15,7 +15,6 @@ export const SORT_KEYS = [
   'ter',
   'volatility',
   'accumulating',
-  'history_count',
 ] as const
 export type SortKey = (typeof SORT_KEYS)[number]
 export type SortDirection = 'asc' | 'desc'

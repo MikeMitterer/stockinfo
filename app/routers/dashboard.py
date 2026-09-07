@@ -19,6 +19,8 @@ Nebenwirkung dieses Tickets.
 
 from typing import Annotated
 
+from app.detail_models import DetailInput, DetailValue
+
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app import __version__
@@ -303,6 +305,8 @@ def set_overrides(
     """
     try:
         return InstrumentOverrides(**service.set_overrides(symbol, payload.model_dump()))
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error
     except InstrumentNotFoundError as exc:
         raise HTTPException(
             status_code=404, detail=f"Unbekanntes Symbol {symbol}"
@@ -315,3 +319,14 @@ def delete_instrument_by_symbol(symbol: SymbolPath, service: ServiceDep) -> Resp
     if not service.delete_by_symbol(symbol):
         raise HTTPException(status_code=404, detail=f"Unbekanntes Symbol {symbol}")
     return Response(status_code=204)
+
+
+@router.patch('/instruments/by-id/{listing_id}/details', response_model=dict[str, DetailValue])
+def patch_details(listing_id: str, payload: dict[str, DetailInput], service: ServiceDep) -> dict:
+    """Partielle manuelle Detailwerte über die eindeutige Listing-ID."""
+    try:
+        return service.set_detail_overrides(listing_id, payload)
+    except InstrumentNotFoundError as error:
+        raise HTTPException(status_code=404, detail='Unbekanntes Listing') from error
+    except ValueError as error:
+        raise HTTPException(status_code=422, detail=str(error)) from error

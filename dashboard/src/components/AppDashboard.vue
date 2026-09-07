@@ -27,7 +27,7 @@ import { useOverrides } from '../composables/useOverrides'
 import { useRefresh } from '../composables/useRefresh'
 import { useSources } from '../composables/useSources'
 import { refOf } from '../types'
-import type { InstrumentOverrides, InstrumentSummary, RangeKey } from '../types'
+import type { OverridePatch, InstrumentSummary, RangeKey } from '../types'
 import { currenciesFromExchanges } from '../utils/currencies'
 import { buildFieldOptions } from '../utils/fieldOptions'
 
@@ -181,7 +181,7 @@ async function onAdd(identifier: string): Promise<void> {
  */
 async function onOverride(payload: {
   item: InstrumentSummary
-  patch: Partial<InstrumentOverrides>
+  patch: OverridePatch
 }): Promise<void> {
   await saveOverrides(payload.item, payload.patch)
   await loadInstruments()

@@ -685,17 +685,18 @@ class YamlFileSource(
         FieldSpec(
             "ter",
             kind="number",
+            instrument_types=frozenset({"etf", "etc", "fund"}),
             unit=Unit.BASIS_POINTS,
             plausible=(0.5, 500.0),
             label_en="Total expense ratio",
             label_de="Gesamtkostenquote",
         ),
         FieldSpec(
-            "provider", kind="text", label_en="Fund provider", label_de="Anbieter"
+            "provider", kind="text", instrument_types=frozenset({"etf", "etc", "fund"}), label_en="Fund provider", label_de="Anbieter"
         ),
         FieldSpec(
             "fund_domicile",
-            kind="text",
+            kind="text", instrument_types=frozenset({"etf", "etc", "fund"}),
             label_en="Fund domicile",
             label_de="Fondsdomizil",
         ),

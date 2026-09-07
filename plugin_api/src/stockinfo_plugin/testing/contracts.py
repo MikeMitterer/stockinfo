@@ -481,6 +481,15 @@ class MetadataContract(SourceContract):
         names = [spec.name for spec in source.FIELDS]
         assert len(names) == len(set(names)), f"doppelte Felder: {names}"
 
+    def test_feldgeltung_ist_eine_teilmenge_der_quellengattungen(self) -> None:
+        """Ein Mehrzweck-Plugin kann die Gattungen je Kennzahl einschränken."""
+        source = self.make_source()
+        for spec in source.FIELDS:
+            assert isinstance(spec.overridable, bool)
+            if spec.instrument_types is not None:
+                assert isinstance(spec.instrument_types, frozenset)
+                assert spec.instrument_types.issubset(source.SUPPORTED_TYPES)
+
     def test_jedes_feld_traegt_eine_beschriftung(self) -> None:
         """Jedes deklarierte Feld braucht wenigstens einen englischen Namen.
 

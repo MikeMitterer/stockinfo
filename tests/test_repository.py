@@ -226,7 +226,7 @@ def test_duplikate_verlieren_weder_overrides_noch_daily_wasserzeichen(tmp_path) 
         connection.row_factory = sqlite3.Row
         instrument_rows = connection.execute("SELECT id FROM instruments").fetchall()
         override = connection.execute(
-            "SELECT instrument_id, ter FROM instrument_overrides"
+            "SELECT instrument_id, json_extract(value, '$') AS ter FROM detail_overrides WHERE field='ter'"
         ).fetchall()
         meta = connection.execute(
             "SELECT instrument_id, fetched_from, fetched_to FROM daily_meta"
@@ -316,12 +316,13 @@ def test_overrides_werden_feldweise_zusammengefuehrt(tmp_path) -> None:
 
     with sqlite3.connect(db_file) as connection:
         connection.row_factory = sqlite3.Row
-        rows = connection.execute("SELECT * FROM instrument_overrides").fetchall()
+        rows = connection.execute("SELECT DISTINCT instrument_id FROM detail_overrides").fetchall()
+    stored = QuoteRepository(db_file).get_overrides(rows[0]['instrument_id'])
 
     assert len(rows) == 1
-    assert rows[0]["ter"] == 0.20, "der Keeper behält bei Konflikt das letzte Wort"
-    assert rows[0]["volatility"] == 12.5, "seine Lücke füllt das Duplikat"
-    assert rows[0]["updated_at"] == "2026-02-01", "der jüngere Stand zählt"
+    assert stored["ter"] == 0.20, "der Keeper behält bei Konflikt das letzte Wort"
+    assert stored["volatility"] == 12.5, "seine Lücke füllt das Duplikat"
+    assert stored["updated_at"] == "2026-02-01", "der jüngere Stand zählt"
 
 
 def test_daily_spannen_mit_luecke_werden_nicht_zusammengezogen(tmp_path) -> None:

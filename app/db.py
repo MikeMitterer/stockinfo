@@ -140,7 +140,7 @@ CREATE TABLE IF NOT EXISTS meta (
 );
 """
 
-SCHEMA_VERSION = 1
+SCHEMA_VERSION = 2
 """Die Form dieses Schemas — als **Zahl**, die nur wächst.
 
 `schema_outdated()` prüft die Form *strukturell* und beantwortet „ist hier
@@ -204,6 +204,9 @@ def init_db(database_path: str) -> bool:
     try:
         connection.executescript(_SCHEMA)
         _migrate(connection)
+        from app.detail_store import initialize
+
+        initialize(connection)
         _create_identity_indices(connection)
         # Erst wenn das Schema wirklich steht: Die Nummer ist eine Zusage an
         # eine spätere Wiederherstellung.
@@ -578,6 +581,16 @@ def _dedupe_symbols(connection: sqlite3.Connection) -> None:
                     "WHERE instrument_id = ?",
                     (keeper["id"], duplicate["id"]),
                 )
+            for table, columns in (
+                ('detail_values', 'field,source,value,currency,as_of'),
+                ('detail_overrides', 'field,value,currency,as_of'),
+            ):
+                connection.execute(
+                    f'INSERT OR IGNORE INTO {table}(instrument_id,{columns}) '
+                    f'SELECT ?,{columns} FROM {table} WHERE instrument_id=?',
+                    (keeper['id'], duplicate['id']),
+                )
+                connection.execute(f'DELETE FROM {table} WHERE instrument_id=?', (duplicate['id'],))
             _merge_overrides(connection, keeper["id"], duplicate["id"])
             _merge_daily_meta(connection, keeper["id"], duplicate["id"])
             connection.execute(

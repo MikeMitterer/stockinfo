@@ -27,6 +27,7 @@ export const apiPrefixes = [
   '/ready',
   '/refresh',
   '/sources',
+  '/fields',
   '/docs',
   '/redoc',
   '/openapi.json',

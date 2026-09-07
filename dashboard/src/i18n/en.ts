@@ -11,6 +11,13 @@ const roles = {
 }
 
 export const en = {
+  details: {
+    currency: 'Currency',
+    manual: 'Manual',
+    shadowed: 'The source takes precedence over your value {value}.',
+    loadFailed: 'Could not load field definitions.',
+    empty: 'No detail fields are declared for this instrument.',
+  },
   /*
    * Wortmarke in zwei Teilen: Farbig ist der Teil, der die App
    * unterscheidet — "Stock" teilen sich alle. Getrennt im Katalog und
@@ -295,6 +302,7 @@ export const en = {
     refresh: 'Refresh failed',
     rawQuote: 'Request failed',
     add: 'Adding failed',
+    addIdentifier: 'Adding “{identifier}” failed',
     refreshOne: 'Refresh failed',
     remove: 'Delete failed',
     setIsin: 'Could not save ISIN',

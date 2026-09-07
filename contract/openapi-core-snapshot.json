@@ -1,5 +1,5 @@
 {
-  "core_version": "4.1.0",
+  "core_version": "4.2.0",
   "paths": {
     "/fields": {
       "get": {
@@ -480,6 +480,249 @@
       "title": "DailyPoint",
       "type": "object"
     },
+    "DetailDefinition": {
+      "description": "Kanonische Feldbeschreibung für generische Konsumenten.",
+      "properties": {
+        "currency_required": {
+          "default": false,
+          "title": "Currency Required",
+          "type": "boolean"
+        },
+        "kind": {
+          "enum": [
+            "number",
+            "text",
+            "boolean"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "label_de": {
+          "default": "",
+          "title": "Label De",
+          "type": "string"
+        },
+        "label_en": {
+          "title": "Label En",
+          "type": "string"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Maximum"
+        },
+        "minimum": {
+          "anyOf": [
+            {
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Minimum"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "overridable": {
+          "default": true,
+          "title": "Overridable",
+          "type": "boolean"
+        },
+        "scopes": {
+          "items": {
+            "$ref": "#/components/schemas/DetailScope"
+          },
+          "title": "Scopes",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Sources",
+          "type": "array"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Unit"
+        }
+      },
+      "required": [
+        "name",
+        "kind",
+        "label_en"
+      ],
+      "title": "DetailDefinition",
+      "type": "object"
+    },
+    "DetailScope": {
+      "description": "Die deklarierte Anwendbarkeit einer Quelle, unabhängig von ihrer Gesundheit.",
+      "properties": {
+        "identity_kinds": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Identity Kinds",
+          "type": "array"
+        },
+        "instrument_types": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Instrument Types",
+          "type": "array"
+        },
+        "source": {
+          "title": "Source",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "instrument_types",
+        "identity_kinds"
+      ],
+      "title": "DetailScope",
+      "type": "object"
+    },
+    "DetailValue": {
+      "description": "Wirksamer Wert samt Herkunft und separat erhaltener manueller Eingabe.",
+      "properties": {
+        "as_of": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "As Of"
+        },
+        "currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Currency"
+        },
+        "manual_currency": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Manual Currency"
+        },
+        "manual_value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Manual Value"
+        },
+        "origin": {
+          "anyOf": [
+            {
+              "enum": [
+                "provider",
+                "manual"
+              ],
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Origin"
+        },
+        "shadowed": {
+          "default": false,
+          "title": "Shadowed",
+          "type": "boolean"
+        },
+        "source": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source"
+        },
+        "unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Unit"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Value"
+        }
+      },
+      "title": "DetailValue",
+      "type": "object"
+    },
     "EndpointSpec": {
       "description": "Ein öffentlicher Endpunkt samt Methode und zulässigen Query-Namen.",
       "properties": {
@@ -579,7 +822,7 @@
         },
         "details": {
           "items": {
-            "$ref": "#/components/schemas/FieldSpec"
+            "$ref": "#/components/schemas/DetailDefinition"
           },
           "title": "Details",
           "type": "array"
@@ -599,6 +842,11 @@
           "title": "Endpoints",
           "type": "object"
         },
+        "generation_id": {
+          "description": "Stabile Generation des Detailkatalogs",
+          "title": "Generation Id",
+          "type": "string"
+        },
         "plugin_contract": {
           "additionalProperties": {
             "items": {
@@ -615,6 +863,7 @@
         "core_version",
         "core",
         "endpoints",
+        "generation_id",
         "details_version"
       ],
       "title": "FieldsResponse",
@@ -714,6 +963,13 @@
             }
           ],
           "title": "Currency"
+        },
+        "details": {
+          "additionalProperties": {
+            "$ref": "#/components/schemas/DetailValue"
+          },
+          "title": "Details",
+          "type": "object"
         },
         "exchange": {
           "anyOf": [
@@ -1257,6 +1513,13 @@
           "description": "Handelswährung, ISO-4217 (oder 'GBp')",
           "title": "Currency",
           "type": "string"
+        },
+        "details": {
+          "additionalProperties": {
+            "$ref": "#/components/schemas/DetailValue"
+          },
+          "title": "Details",
+          "type": "object"
         },
         "exchange": {
           "anyOf": [

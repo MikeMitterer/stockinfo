@@ -4,7 +4,7 @@ import { ref, type Ref } from 'vue'
 import { apiClient } from '../api/client'
 import { describeFailure } from '../api/reason'
 import { instrumentPath, isIsin, quotePath } from '../api/paths'
-import { translate } from '../i18n'
+import { i18n, translate } from '../i18n'
 import type { InstrumentRef } from '../types'
 
 export { isIsin }
@@ -41,7 +41,7 @@ export function useInstrumentActions(): {
   async function add(identifier: string): Promise<void> {
     const trimmed = identifier.trim()
     const path = quotePath({ isin: isIsin(trimmed) ? trimmed : null, symbol: trimmed })
-    await run(() => apiClient.get(path), translate('errors.add'))
+    await run(() => apiClient.get(path), i18n.global.t('errors.addIdentifier', { identifier: trimmed }))
   }
 
   async function refreshOne(item: InstrumentRef): Promise<void> {

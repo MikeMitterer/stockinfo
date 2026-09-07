@@ -177,7 +177,7 @@ def test_etf_wird_mit_justetf_angereichert() -> None:
     assert result.source == "yfinance+justetf"
 
 
-def test_aktie_wird_nicht_angereichert() -> None:
+def test_auch_eine_aktie_wird_an_die_zustaendige_metadatenquelle_gereicht() -> None:
     stock = RawQuote(
         symbol="BRYN.DE",
         name="BRYN.DE Testpapier",
@@ -188,7 +188,7 @@ def test_aktie_wird_nicht_angereichert() -> None:
     )
     service = QuoteService(
         FakeQuoteProvider(stock),
-        FakeEtfProvider(EtfDetails(ter=0.99)),  # würde ignoriert
+        FakeEtfProvider(EtfDetails(ter=0.99)),  # erklärt sich ausdrücklich zuständig
         FakeResolver(
             _resolved("BRYN.DE", isin="US0846707026", type="stock")
         ),
@@ -197,7 +197,7 @@ def test_aktie_wird_nicht_angereichert() -> None:
     result = service.get_quote_by_isin("US0846707026")
 
     assert result.type == "stock"
-    assert result.ter is None
+    assert result.ter == 0.99
     assert result.source == "yfinance"
 
 
@@ -498,12 +498,8 @@ def test_erfolgreiche_anreicherung_gilt_als_vollstaendig() -> None:
     assert service.get_quote_by_isin("IE00B3RBWM25").metadata_complete is True
 
 
-def test_eine_aktie_gilt_als_vollstaendig() -> None:
-    """Bei einer Aktie ist nichts anzureichern — es gibt also nichts zu schützen.
-
-    Bliebe sie auf ``False``, würde das Repository ihre Metadatenfelder nie
-    mehr aktualisieren.
-    """
+def test_ausgefallene_zustaendige_quelle_schuetzt_auch_aktienmetadaten() -> None:
+    """Die zuständige Quelle schweigt: Der gespeicherte Stand bleibt geschützt."""
     stock_quote = RawQuote(
         symbol="APC.DE",
         name="APC.DE Testpapier",
@@ -520,7 +516,7 @@ def test_eine_aktie_gilt_als_vollstaendig() -> None:
         ),
     )
 
-    assert service.get_quote_by_isin("US0378331005").metadata_complete is True
+    assert service.get_quote_by_isin("US0378331005").metadata_complete is False
 
 
 def test_ohne_gattung_gibt_es_gar_keine_antwort() -> None:

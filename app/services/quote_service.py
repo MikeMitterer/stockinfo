@@ -738,7 +738,7 @@ class QuoteService:
 
         ensure_core_complete(response)
 
-        if instrument_type == "etf":
+        if instrument_type is not None:
             # Ohne ISIN beantworten Börse und Währung die Zuständigkeit mit —
             # für `XIC.TO` nennt yfinance keine ISIN, und `.TO` in CAD sagt
             # bereits, dass justETF dieses Papier nicht führt. Vorher fiel
@@ -783,9 +783,8 @@ class QuoteService:
             # dabei; „ich weiß nichts über die ETF-Felder" ist dann die
             # ehrlichere Aussage als „vollständig".
             #
-            # Eine bekannte Gattung außer `etf` bleibt bewusst vollständig: Da
-            # gibt es nichts anzureichern und also nichts zu schützen — sonst
-            # bekäme eine Aktie ihre Metadaten nie wieder aktualisiert.
+            # Bei bekannter Gattung bestimmen die Plugin-Deklarationen oben,
+            # welche Felder abgefragt werden; auch Aktien und Krypto sind möglich.
             response.metadata_complete = False
         return response
 
@@ -845,6 +844,7 @@ class QuoteService:
         if details is None:
             logger.debug("etf_enrichment_skipped", isin=isin)
             return False
+        response.detail_readings = details.detail_readings
         response.ter = details.ter
         response.provider = details.provider
         response.replication = details.replication

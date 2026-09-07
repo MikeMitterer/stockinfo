@@ -5,6 +5,7 @@ Papier führt, hängt an seinem Domizil, und keine einzelne deckt alle ab.
 """
 
 import structlog
+from dataclasses import fields
 
 from app.providers.base import EtfDetails, EtfEnricher
 
@@ -77,6 +78,7 @@ class CompositeEtfEnricher:
         Returns:
             Die erste nicht-leere Antwort, sonst ``None``.
         """
+        combined = None
         for enricher in self._enrichers:
             if not enricher.is_responsible(isin, exchange=exchange, currency=currency):
                 continue
@@ -94,5 +96,11 @@ class CompositeEtfEnricher:
                 instrument_type=instrument_type,
             )
             if details is not None:
-                return details
-        return None
+                if combined is None:
+                    combined = details
+                else:
+                    combined.detail_readings.update(details.detail_readings)
+                    for field in fields(details):
+                        if field.name != 'detail_readings' and getattr(combined, field.name) is None:
+                            setattr(combined, field.name, getattr(details, field.name))
+        return combined

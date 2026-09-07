@@ -4,9 +4,10 @@ import { useI18n } from 'vue-i18n'
 
 import InfoHint from './InfoHint.vue'
 import MetricEditor from './MetricEditor.vue'
+import OpenDetails from './OpenDetails.vue'
 import { sourceProvides } from '../composables/useOverrides'
 import { OVERRIDE_FIELDS, isinOf } from '../types'
-import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
+import type { OverridePatch, InstrumentSummary, OverrideField } from '../types'
 import { formatDateTime } from '../utils/datetime'
 import { FIELD_LABEL_KEY } from '../utils/fieldLabels'
 
@@ -41,7 +42,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
-  (event: 'commit', patch: Partial<InstrumentOverrides>): void
+  (event: 'commit', patch: OverridePatch): void
 }>()
 
 const { t, locale } = useI18n()
@@ -51,7 +52,7 @@ function optionsFor(field: OverrideField): string[] | undefined {
   return props.fieldOptions?.[field]
 }
 
-function onCommit(patch: Partial<InstrumentOverrides>): void {
+function onCommit(patch: OverridePatch): void {
   emit('commit', patch)
 }
 
@@ -98,7 +99,8 @@ const fetchedAt = computed(() =>
 
 <template>
   <div class="drilldown">
-    <dl class="drilldown__fields">
+    <OpenDetails v-if="item.details !== undefined" :item="item" :busy="busy" :field-options="fieldOptions" @commit="onCommit" />
+    <dl v-else class="drilldown__fields">
       <!--
         Die Fläche markiert, wo etwas zu tun ist — nicht jedes Feld. Wo die
         Quelle liefert, ist das Feld gesperrt (Vorrang-Regel), und eine
@@ -146,9 +148,9 @@ const fetchedAt = computed(() =>
         </template>
         <InfoHint :text="t('drilldown.explain')" icon="info" />
       </p>
-      <p v-if="skipReason === 'notEtf'" class="drilldown__explain">{{ t('drilldown.notEtf') }}</p>
-      <p v-else-if="skipReason === 'noIsin'" class="drilldown__explain">{{ t('drilldown.noIsin') }}</p>
-      <p v-else-if="skipReason === 'nothing'" class="drilldown__explain">{{ t('drilldown.nothingProvided') }}</p>
+      <p v-if="item.details === undefined && skipReason === 'notEtf'" class="drilldown__explain">{{ t('drilldown.notEtf') }}</p>
+      <p v-else-if="item.details === undefined && skipReason === 'noIsin'" class="drilldown__explain">{{ t('drilldown.noIsin') }}</p>
+      <p v-else-if="item.details === undefined && skipReason === 'nothing'" class="drilldown__explain">{{ t('drilldown.nothingProvided') }}</p>
     </div>
   </div>
 </template>

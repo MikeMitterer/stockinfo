@@ -8,7 +8,7 @@ import InfoHint from './InfoHint.vue'
 import InstrumentDrilldown from './InstrumentDrilldown.vue'
 import IsinEditor from './IsinEditor.vue'
 import { acceptsIsin, isinOf, symbolOf } from '../types'
-import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
+import type { OverridePatch, InstrumentSummary, OverrideField } from '../types'
 
 const props = defineProps<{
   item: InstrumentSummary
@@ -28,7 +28,7 @@ const emit = defineEmits<{
   (event: 'remove', item: InstrumentSummary): void
   (event: 'json', item: InstrumentSummary): void
   (event: 'set-isin', payload: { symbol: string; isin: string }): void
-  (event: 'override', patch: Partial<InstrumentOverrides>): void
+  (event: 'override', patch: OverridePatch): void
 }>()
 
 const { t, locale } = useI18n()
@@ -177,8 +177,6 @@ function price(value: number | null): string {
           />
           <span v-else class="dim">{{ t('common.noValue') }}</span>
         </dd>
-        <dt>{{ t('table.colPoints') }}</dt>
-        <dd class="mono">{{ item.history_count }}</dd>
       </dl>
 
       <!--

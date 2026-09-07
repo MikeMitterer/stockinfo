@@ -6,6 +6,8 @@ Hintergrund-Scheduler teilen sich keine Connection).
 """
 
 import sqlite3
+
+from app import detail_store
 import uuid
 from collections.abc import Iterator
 from contextlib import contextmanager
@@ -260,7 +262,7 @@ class QuoteRepository:
             row = connection.execute(
                 "SELECT * FROM instruments WHERE isin = ?", (isin,)
             ).fetchone()
-            return dict(row) if row else None
+            return detail_store.read(connection, dict(row)) if row else None
 
     def get_instrument_by_symbol(self, symbol: str) -> dict | None:
         """Gibt das **eindeutige** Instrument zum Symbol zurück (oder ``None``).
@@ -270,7 +272,7 @@ class QuoteRepository:
         """
         with self._connect() as connection:
             row = self._unique_symbol_row(connection, symbol)
-            return dict(row) if row else None
+            return detail_store.read(connection, dict(row)) if row else None
 
     def get_instrument_by_identity(self, identity: IdentityOut) -> dict | None:
         """Gibt das Instrument zur **kanonischen Identität** zurück.
@@ -292,7 +294,7 @@ class QuoteRepository:
         """
         with self._connect() as connection:
             row = self._identity_row(connection, identity)
-            return dict(row) if row else None
+            return detail_store.read(connection, dict(row)) if row else None
 
     @staticmethod
     def _identity_row(
@@ -482,7 +484,7 @@ class QuoteRepository:
         """Gibt alle bekannten Instrumente zurück (für den Hintergrund-Refresh)."""
         with self._connect() as connection:
             rows = connection.execute("SELECT * FROM instruments").fetchall()
-            return [dict(row) for row in rows]
+            return [detail_store.read(connection, dict(row)) for row in rows]
 
     def list_instruments_with_latest(self) -> list[dict]:
         """Gibt alle Instrumente inkl. jüngstem Kurs, History-Anzahl und Overrides zurück.
@@ -493,7 +495,7 @@ class QuoteRepository:
         """
         with self._connect() as connection:
             rows = connection.execute(self._instrument_query()).fetchall()
-            return [dict(row) for row in rows]
+            return [detail_store.read(connection, dict(row)) for row in rows]
 
     def get_instrument_with_latest(self, instrument_id: int) -> dict | None:
         """Dieselbe Zeile wie in der Liste, für **ein** Instrument.
@@ -514,21 +516,17 @@ class QuoteRepository:
             row = connection.execute(
                 self._instrument_query("WHERE i.id = ?"), (instrument_id,)
             ).fetchone()
-            return dict(row) if row else None
+            return detail_store.read(connection, dict(row)) if row else None
 
     @staticmethod
     def _instrument_query(where: str = "") -> str:
         """Die **eine** Abfrage hinter Übersicht und Einzelzeile."""
-        manual = ",\n                   ".join(
-            f"o.{field} AS manual_{field}" for field in OVERRIDE_FIELDS
-        )
         return f"""
             SELECT i.*,
                    q.price      AS latest_price,
                    q.quote_time AS latest_quote_time,
                    q.currency   AS latest_currency,
                    q.fetched_at AS latest_fetched_at,
-                   {manual},
                    (SELECT COUNT(*) FROM quotes WHERE instrument_id = i.id)
                        AS history_count
             FROM instruments i
@@ -536,7 +534,6 @@ class QuoteRepository:
                 SELECT id FROM quotes WHERE instrument_id = i.id
                 ORDER BY quote_time DESC LIMIT 1
             )
-            LEFT JOIN instrument_overrides o ON o.instrument_id = i.id
             {where}
             ORDER BY i.symbol
         """
@@ -581,63 +578,62 @@ class QuoteRepository:
             )
 
     def get_overrides(self, instrument_id: int) -> dict | None:
-        """Gibt die von Hand gepflegten Kennzahlen eines Instruments zurück.
-
-        Returns:
-            Zeile als dict oder None, wenn nie etwas eingetragen wurde.
-        """
-        with self._connect() as connection:
-            row = connection.execute(
-                "SELECT * FROM instrument_overrides WHERE instrument_id = ?",
-                (instrument_id,),
-            ).fetchone()
-            return dict(row) if row else None
-
-    def set_overrides(
-        self, instrument_id: int, values: dict[str, object], updated_at: str
-    ) -> None:
-        """Schreibt die manuellen Kennzahlen — immer den vollständigen Satz.
-
-        ``None`` heißt **löschen**, nicht „unverändert": Die Oberfläche schickt
-        stets alle Felder, und ein geleertes muss den Wert auch wieder entfernen
-        können. Bleibt nichts übrig, verschwindet die Zeile ganz.
-
-        Die Spaltenliste kommt aus ``OVERRIDE_FIELDS`` statt aus getippten
-        Parametern — bei acht Feldern wäre eine Signatur aus Einzelwerten nicht
-        mehr zu lesen, und jede neue Kennzahl müsste an vier Stellen nachgezogen
-        werden.
-        """
-        filtered = {field: values.get(field) for field in OVERRIDE_FIELDS}
-        filtered["accumulating"] = (
-            None if filtered["accumulating"] is None else int(bool(filtered["accumulating"]))
-        )
+        """Kompatibilitätsprojektion der generischen manuellen Eingaben."""
+        import json
 
         with self._connect() as connection:
-            if all(value is None for value in filtered.values()):
-                connection.execute(
-                    "DELETE FROM instrument_overrides WHERE instrument_id = ?",
-                    (instrument_id,),
-                )
-                return
+            rows = connection.execute('SELECT field,value,as_of FROM detail_overrides WHERE instrument_id=?', (instrument_id,)).fetchall()
+            if not rows:
+                return None
+            values = {field: None for field in OVERRIDE_FIELDS}
+            values.update({row['field']: json.loads(row['value']) for row in rows if row['field'] in values})
+            values['instrument_id'] = instrument_id
+            values['updated_at'] = max(row['as_of'] or '' for row in rows)
+            return values
 
-            columns = ", ".join(OVERRIDE_FIELDS)
-            placeholders = ", ".join("?" for _ in OVERRIDE_FIELDS)
-            assignments = ", ".join(f"{field} = excluded.{field}" for field in OVERRIDE_FIELDS)
-            connection.execute(
-                f"INSERT INTO instrument_overrides (instrument_id, {columns}, updated_at) "
-                f"VALUES (?, {placeholders}, ?) "
-                f"ON CONFLICT(instrument_id) DO UPDATE SET {assignments}, "
-                "updated_at = excluded.updated_at",
-                (instrument_id, *(filtered[field] for field in OVERRIDE_FIELDS), updated_at),
-            )
+    def set_overrides(self, instrument_id: int, values: dict[str, object], updated_at: str, currency: str | None = None) -> None:
+        """Der alte Vollsatz schreibt denselben Speicher wie generische Overrides."""
+        with self._connect() as connection:
+            for field in OVERRIDE_FIELDS:
+                detail_store.put_manual(connection, instrument_id, field, values.get(field), currency if field == 'fund_size' else None, updated_at)
+
+    def set_detail_overrides(self, instrument_id: int, values: dict, updated_at: str) -> None:
+        """Schreibt einen bereits validierten Patch atomar."""
+        with self._connect() as connection:
+            for field, entry in values.items():
+                detail_store.put_manual(connection, instrument_id, field, entry.value, entry.currency, updated_at)
+
+    def detail_generation(self) -> str:
+        """Bleibt über Neustarts erhalten und reist mit Sicherungen mit."""
+        with self._connect() as connection:
+            return connection.execute("SELECT value FROM meta WHERE key='details_generation_id'").fetchone()[0]
+
+    def has_detail_catalog(self) -> bool:
+        """Unterscheidet ein leeres Profilschema vom alten internen Aufruf ohne Schema."""
+        with self._connect() as connection:
+            return connection.execute("SELECT 1 FROM meta WHERE key='details_schema'").fetchone() is not None
+
+    def detail_catalog(self, definitions=None) -> tuple[list, int]:
+        """Liest das Profilschema oder schreibt eine neue Version atomar."""
+        with self._connect() as connection:
+            if definitions is not None:
+                version = detail_store.sync_catalog(connection, definitions)
+            else:
+                row = connection.execute("SELECT value FROM meta WHERE key='details_version'").fetchone()
+                version = int(row[0]) if row else 0
+            return detail_store.catalog(connection), version
+
+    def get_instrument_by_listing_id(self, listing_id: str) -> dict | None:
+        """Eindeutiger öffentlicher Schreibweg, auch bei gleichnamigen Listings."""
+        with self._connect() as connection:
+            row = connection.execute('SELECT * FROM instruments WHERE listing_id=?', (listing_id,)).fetchone()
+            return detail_store.read(connection, dict(row)) if row else None
 
     def set_volatility(self, instrument_id: int, volatility: float) -> None:
-        """Aktualisiert gezielt die Volatilität eines Instruments."""
+        """Berechnete Volatilität ist ebenfalls ein generischer Quellenwert."""
         with self._connect() as connection:
-            connection.execute(
-                "UPDATE instruments SET volatility = ? WHERE id = ?",
-                (volatility, instrument_id),
-            )
+            detail_store.put_provider(connection, instrument_id, 'volatility',
+                {'value': volatility, 'source': 'calculated'})
 
     def delete_by_symbol(self, symbol: str) -> bool:
         """Löscht **ein** Instrument (und seine Quotes via Cascade) per Symbol.
@@ -725,6 +721,24 @@ class QuoteRepository:
         with self._connect() as connection:
             saved = self._upsert_instrument(connection, response)
             self._insert_quote(connection, saved.instrument_id, response)
+            for source, readings in response.detail_readings.items():
+                connection.execute(
+                    "DELETE FROM detail_values WHERE instrument_id=? AND (source=? OR instr('+' || source || '+', '+' || ? || '+') > 0 OR source='legacy')",
+                    (saved.instrument_id, source, source),
+                )
+                for field, entry in readings.items():
+                    detail_store.put_provider(connection, saved.instrument_id, field,
+                        {**entry, 'source': source, 'as_of': response.fetched_at})
+            # Alte Provider und berechnete Kennzahlen benutzen denselben Speicher.
+            declared = {field for readings in response.detail_readings.values() for field in readings}
+            for field in self._writable_fields(response):
+                if field in OVERRIDE_FIELDS and field not in declared and not response.detail_readings:
+                    connection.execute('DELETE FROM detail_values WHERE instrument_id=? AND field=?',
+                                       (saved.instrument_id, field))
+                    detail_store.put_provider(connection, saved.instrument_id, field,
+                        {'value': getattr(response, field), 'source': response.source or 'legacy',
+                         'currency': response.fund_currency if field == 'fund_size' else None,
+                         'as_of': response.fetched_at})
             return saved
 
     def _upsert_instrument(
@@ -742,7 +756,7 @@ class QuoteRepository:
         existing_id = self._find_instrument_id(
             connection, response.symbol, response.identity
         )
-        meta = {field: getattr(response, field) for field in self._writable_fields(response)}
+        meta = {field: getattr(response, field) for field in self._writable_fields(response) if field not in OVERRIDE_FIELDS}
 
         if existing_id is None:
             try:

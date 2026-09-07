@@ -1,48 +1,107 @@
 # T-26 · Offene Detailfelder tatsächlich durchreichen
 
-| Repo | Status | Time-box | Scope | GH-Issue |
-|---|---|---|---|---|
-| StockInfo (Backend + Dashboard) | offen | 1 Tag | generische Persistenz, `details` in der API, generische Darstellung | — |
+Plugin-Felder werden jetzt gespeichert, über REST ausgeliefert und im Dashboard
+anhand ihrer Deklaration angezeigt. Der erste UI-Test ist gelaufen; die
+unabhängige Prüfung durch Claude steht noch aus. T-56/F bleibt bis dahin offen.
 
-**Löst:** Entschieden ist, dass der Core geschlossen und die Details **offen und
-additiv** sind. Umgesetzt ist davon nichts. Ohne dieses Ticket kann T-23 ein
-Plugin laden, dessen korrekt deklarierte neue Felder in Backend, Datenbank,
-Override-Modell und Dashboard **verloren gehen** — der Vertrag verspräche eine
-Erweiterbarkeit, die eine Schicht später endet.
+## Für dich
 
-**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+Aktuell ist keine weitere Entscheidung oder Wiederholung des Tests nötig.
+Dein Auftrag vom 2026-09-07 gilt: **Codex implementiert einschließlich REST,
+UI und erstem UI-Test; Claude verifiziert anschließend.** Die Rückmeldungen
+zur Oberfläche bleiben unverändert in [T-56](T-56-was-mike-im-ui-pruefen-soll.md).
+T-62 zum Anzeigenamen bleibt offen.
 
-**Hängt an:** T-24 (die `details`-Hülle gehört zum REST-Vertrag), **T-21**
-(generische Override-Endpunkte brauchen die eindeutige Adressierung) und
-**T-23** (die `FieldSpec`-Deklarationen kommen von der Registry, dort sitzt auch
-die Kollisionsprüfung).
-**Muss vor** dem ersten Plugin liegen, das neue Felder mitbringt — solange es
-fehlt, darf der Vertrag unbekannte Felder nicht *behaupten*.
+## Umsetzung und technische Nachweise
 
----
+| Repo | Time-box | Scope | GH-Issue |
+|---|---|---|---|
+| StockInfo | ursprünglich 1 Tag | Plugin-Katalog → Persistenz → REST → Dashboard | — |
 
-## Verify
+**Ergebnis:** Ein korrekt deklariertes neues Feld übersteht den Weg von einem
+Datei-Plugin bis zum REST-Ergebnis und zur Bearbeitung im Browser, ohne eine
+Feldliste im Dashboard zu ändern.
 
-Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · ➖ keine Live-Verifikation.
+Die drei fachlichen Teile sind Feldschema samt Anwendbarkeit/Version,
+generischer Speicher samt Migration/Quellenvorrang und REST/UI-Durchleitung.
+Betroffen sind Plugin-API, Registry/Adapter, Repository/Service, REST-Vertrag
+und Dashboard. Das entspricht dem ausdrücklich erweiterten Auftrag; ein
+beziffertes Dateibudget wurde vor der Umsetzung allerdings nicht eingetragen.
+Der Umfang muss deshalb bei der Übergabe ausdrücklich mitgeprüft werden.
 
-| # | Where | Look for | AI | Human |
-|---|---|---|:--:|---|
-| 1 | Plugin mit einem unbekannten, korrekt deklarierten Feld | Wert wird gespeichert, nicht verworfen | | |
-| 2 | `GET /quote/{isin}` | Feld erscheint im `details`-Container | | |
-| 3 | `GET /instruments` | dito | | |
-| 4 | **`GET /fields`** | nennt alle bekannten Felder samt Typ, Einheit, Beschriftung, `overridable` — **und eine Versionsnummer** | | |
-| 5 | Plugin nachinstallieren, das ein Feld ergänzt | Feld-Version erhöht sich; ein Konsument kann daran erkennen, dass er neu laden muss | | |
-| 6 | Dashboard, Detailbereich | stellt ein unbekanntes Feld generisch dar, ohne Codeänderung | | |
-| 7 | Feld mit `overridable=False` | lässt sich **nicht** von Hand überschreiben | | |
-| 8 | Feld mit `overridable=True` | manueller Wert füllt nur die Lücke; ein Quellenwert gewinnt | | |
-| 9 | zwei Quellen, verschiedene Felder | Herkunft steht **je Feld**, nicht je Zeile | | |
-| 9b | **Harness-Stufe 3** (Fortsetzung des Laufs aus T-23/T-25) | unbekanntes Detailfeld, Herkunft, Persistenz und Override überstehen den ganzen Weg bis zur REST-Antwort | | |
-| 10 | älterer Konsument (Fixture ohne `details`) | ignoriert unbekannte Einträge, bricht nicht | | |
-| 11 | `make test` | grün | | |
+Nicht-Ziele: T-25 vollständig umsetzen, Namen editierbar machen (T-62),
+Börsenkatalog erweitern (T-30), neue Chart-Funktionen oder Plugin-Installation.
+Der Umsetzungsplan steht in
+[2026-09-07-t26-open-details.md](../docs/superpowers/plans/2026-09-07-t26-open-details.md).
 
----
+### Verify
 
-## Details
+**B** = isolierter Browserlauf auf `http://127.0.0.1:5186/#/assets`,
+Backend `http://127.0.0.1:8936`, eigenes temporäres Datenvolume,
+Quellen `risk-demo` + `yaml-file`. **A** = automatisierter Test mit eigener DB.
+Die Browserinstanz ist eine Testinstanz; ihre Laufzeit ist kein Betriebsversprechen.
+
+| # | Lauf | Handgriff | Nachweis | woher | AI |
+|---|---|---|---|---|:--:|
+| 1 | B/A | ETF mit neuem `risk-demo.score` aufnehmen | Feld gespeichert und nach erneutem Lesen vorhanden | REST-Kette, Browser | ✅ |
+| 2 | B/A | `GET /quote/IE00B4L5Y983` lesen | unbekanntes Feld unter `details`, TER identisch zur bisherigen Projektion | REST-Kette | ✅ |
+| 3 | B/A | `GET /instruments` lesen | Werte und Herkunft unter `details` | REST-Kette, Browser | ✅ |
+| 4 | B/A | `GET /fields` lesen | Typ, Einheit, Labels, Schreibrecht, Quellen, Anwendbarkeit und Version | REST-Kette | ✅ |
+| 5 | A | Schema ändern und Quelle entfernen; Ausfall simulieren | Version steigt bei Änderung/Entfernung, bleibt bei Ausfall gleich | `test_open_details*.py`; kein separater Installationslauf | ➖ |
+| 6 | B | BTC und ETF aufklappen, DE/EN und 390 px prüfen | unbekannte Felder generisch; BTC ohne Fondsfelder; kein horizontaler Überlauf | Chrome, sichtbare Bedienung | ✅ |
+| 7 | B/A | `verified` zu überschreiben versuchen | kein Editor; PATCH 422, vorhandenes `false` bleibt | Browser und REST-Kette | ✅ |
+| 8 | B/A | Score 0 eintragen, Quelle auf 17 ändern, aktualisieren, Eingabe entfernen | Quelle gewinnt; 0 als verdeckt sichtbar; Löschen lässt 17 bestehen | Browser-PATCH und Refresh | ✅ |
+| 9 | B | ETF-Details öffnen | Score/Verified nennen risk-demo, Fondsfelder yaml-file | Chrome-Snapshot | ✅ |
+| 9b | B/A | Datei-Plugin durch Registry, Beschaffung, DB und REST führen | unbekanntes Feld samt Herkunft, Persistenz und Override erhalten | `test_open_details_flow.py`, gleicher Plugin-Code im Browser | ✅ |
+| 10 | A | Dashboard-Fixtures ohne `details` rendern | bisheriger Detailpfad bleibt kompatibel | bestehende Komponenten-Suite | ➖ |
+| 11 | A | vollständige lokale Suite ausführen | 1065 Backend, 303 Plugin-API, 45 Beispiel, 329 Dashboard erfolgreich | `make test`, 2026-09-07 | ➖ |
+
+Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise ·
+➖ ausschließlich automatisierte Tests/Review, keine Live-Verifikation.
+
+**Prüflauf:** Backend 29 übersprungen, 8 Online-Integrationstests abgewählt;
+Plugin-API 1 übersprungen. Ruff und `vue-tsc --noEmit` erfolgreich. AST- und
+TypeScript-Compiler-Inventar der berührten Dateien geprüft. Keine unabhängige
+Freigabe und kein erneuter vollständiger Zwei-Profil-Lauf von T-56 behauptet.
+
+```bash
+# #1–5, #7–9b: reproduzierbarer REST-/Persistenzlauf mit Testvolumes
+.venv/bin/pytest -q tests/test_open_details.py tests/test_open_details_flow.py
+# #11: vollständige lokale Suite, Betriebsdatenbank abgeschottet
+env DATABASE_PATH=/tmp/stockinfo-t26-suite/stockinfo.db make test ARGS='-m "not integration"'
+# #4: aktuelle Felddefinitionen der isolierten Browserinstanz
+curl -sS http://127.0.0.1:8936/fields
+# #2 und #3: Details der Testinstanz
+curl -sS http://127.0.0.1:8936/quote/IE00B4L5Y983
+curl -sS http://127.0.0.1:8936/instruments
+```
+
+**Nebenwirkungen:** Datenbankschema 2 übernimmt bisherige Detailspalten und
+manuelle Werte in generische Tabellen. Die bisherigen Top-Level-REST-Felder
+bleiben als Projektion erhalten. Neue Metadatenfelder müssen im Plugin
+deklariert sein; der Core verwirft undeclared/ungültige Werte. `/fields` nennt
+eine persistierte Detailgeneration und einen atomaren Schema-Zähler; T-25s
+allgemeine Header-/Generation-Laufzeit bleibt offen. API_VERSION bleibt 2;
+`FieldSpec.instrument_types` ist ein optionaler Zusatz.
+
+**Browserbreite:** Nach dem mobilen Test blieb zunächst eine feste Emulation
+aktiv; der Wechsel auf eine feste Desktopbreite behob das Resize-Problem noch
+nicht. Auf Mikes zweiten Hinweis vollständig entfernt. Echter Fenster-Resize
+geprüft: 1100 px Fenster → 1060 px Tabelle, 1505 px → 1465 px. Die Ansicht
+reagiert wieder auf die Fensterbreite; keine CSS-Änderung erforderlich.
+
+### Auflösung
+
+Implementiert und erstgetestet. Claude soll insbesondere Migration,
+Schema-Stabilität, Quellenpriorität und serverseitige Schreibrechte unabhängig
+prüfen. Das Ticket bleibt bis zur Prüfung offen.
+
+## Fachliche Anforderungen und Designentscheidungen
+
+Die folgenden Anforderungen stammen aus dem ursprünglichen Ticket. Der aktuelle
+Umsetzungs- und Prüfstand steht oben; diese Zielbeschreibung ist keine offene
+Arbeitsliste und keine unabhängige Freigabe.
+
 
 ### Was zu bauen ist
 
@@ -163,7 +222,3 @@ Typ nennen, sonst rät jeder Konsument. Zwischengespeichert wird immer unter
 Profils eine Quelle nachinstalliert wird.
 
 ---
-
-## Auflösung
-
-_(offen)_

@@ -3,7 +3,7 @@ import { ref, type Ref } from 'vue'
 
 import { apiClient } from '../api/client'
 import { translate } from '../i18n'
-import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
+import type { InstrumentOverrides, OverridePatch, InstrumentSummary, OverrideField } from '../types'
 
 /**
  * Von Hand nachgetragene Kennzahlen schreiben (T-09).
@@ -20,7 +20,7 @@ import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../t
 export function useOverrides(): {
   saving: Ref<string | null>
   error: Ref<string | null>
-  save: (item: InstrumentSummary, patch: Partial<InstrumentOverrides>) => Promise<void>
+  save: (item: InstrumentSummary, patch: OverridePatch) => Promise<void>
 } {
   /** Symbol des Papiers, das gerade gespeichert wird — für die Zeilen-Anzeige. */
   const saving = ref<string | null>(null)
@@ -28,7 +28,7 @@ export function useOverrides(): {
 
   async function save(
     item: InstrumentSummary,
-    patch: Partial<InstrumentOverrides>,
+    patch: OverridePatch,
   ): Promise<void> {
     /*
      * Feld für Feld ausgeschrieben — und das bleibt so.
@@ -42,6 +42,7 @@ export function useOverrides(): {
      * erweitert wurde. Mit Zusicherung liefe derselbe Fall stumm durch, und
      * das Backend löschte die neue Kennzahl bei jedem Schreiben.
      */
+    const { details, ...legacyPatch } = patch
     const payload: InstrumentOverrides = {
       ter: item.manual_ter,
       volatility: item.manual_volatility,
@@ -51,14 +52,18 @@ export function useOverrides(): {
       fund_size: item.manual_fund_size,
       fund_domicile: item.manual_fund_domicile,
       fund_currency: item.manual_fund_currency,
-      ...patch,
+      ...legacyPatch,
     }
 
     saving.value = item.symbol
     error.value = null
     try {
-      const pfad = `/instruments/by-symbol/${encodeURIComponent(item.symbol)}/overrides`
-      await apiClient.put(pfad, payload)
+      const path = `/instruments/by-symbol/${encodeURIComponent(item.symbol)}/overrides`
+      if (details) {
+        await apiClient.patch(`/instruments/by-id/${encodeURIComponent(item.listing_id)}/details`, details)
+      } else {
+        await apiClient.put(path, payload)
+      }
     } catch (err) {
       error.value = translate('errors.overrides')
       consola.error('useOverrides.save', item.symbol, err)

@@ -38,11 +38,21 @@ def fields() -> FieldsResponse:
             status_code=503, detail="Vertragsartefakt nicht lesbar"
         ) from exc
 
+    from app.container import get_sources_config
+    from app.config import get_settings
+    from app.repository import QuoteRepository
+    from app.sources_registry import detail_definitions
+
+    settings = get_settings()
+    definitions, version = QuoteRepository(settings.database_path).detail_catalog(
+        detail_definitions(get_sources_config(), settings)
+    )
     return FieldsResponse(
         core_version=contract["core_version"],
         core=contract["core"],
         endpoints=contract["endpoints"],
-        details_version=contract["details_version"],
-        details=contract.get("details", []),
+        generation_id=QuoteRepository(settings.database_path).detail_generation(),
+        details_version=version,
+        details=definitions,
         plugin_contract=plugin_contract(),
     )

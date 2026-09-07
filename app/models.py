@@ -3,6 +3,8 @@
 from collections.abc import Callable
 from typing import Annotated, Any, Literal, Union
 
+from app.detail_models import DetailDefinition, DetailValue
+
 from pydantic import BaseModel, ConfigDict, Field
 
 
@@ -386,6 +388,8 @@ class QuoteResponse(BaseModel):
         extra="forbid", json_schema_extra=always_present("cached", "stale")
     )
 
+    details: dict[str, DetailValue] = Field(default_factory=dict)
+    detail_readings: dict[str, dict[str, dict]] = Field(default_factory=dict, exclude=True)
     symbol: str
     exchange: str | None = None
     # **Pflicht seit T-38** (Mike, 2026-08-30). Bis dahin war beides
@@ -548,6 +552,7 @@ class InstrumentSummary(BaseModel):
         )
     )
 
+    details: dict[str, DetailValue] = Field(default_factory=dict)
     symbol: str
     # Die kanonische Identität. **Pflicht, nicht nullable** — eine gespeicherte
     # Zeile ohne vollständige Identität kann es seit dem `CHECK` nicht geben,
@@ -649,8 +654,9 @@ class FieldsResponse(BaseModel):
     core_version: str = Field(description="SemVer des geschlossenen Core")
     core: dict[str, list[FieldSpec]]
     endpoints: dict[str, list[EndpointSpec]]
+    generation_id: str = Field(description="Stabile Generation des Detailkatalogs")
     details_version: int = Field(description="Zähler der offenen Detailmenge")
-    details: list[FieldSpec] = Field(default_factory=list)
+    details: list[DetailDefinition] = Field(default_factory=list)
     plugin_contract: dict[str, list[FieldSpec]] = Field(
         default_factory=dict,
         description=(
