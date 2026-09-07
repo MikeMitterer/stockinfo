@@ -1,6 +1,7 @@
 # T-33 · Plugin-Antworten dürfen die Börsenzuordnung nicht still ändern
 
-**Für den Plugin-Abschluss relevant:** Unterschiedliche Plugins können dieselbe
+**Zurückgestellt auf Mikes Auftrag vom 2026-09-07; kein Blocker für den
+Plugin-Abschluss.** Unterschiedliche Plugins können dieselbe
 ISIN an unterschiedlichen Handelsplätzen auflösen. Der Core muss verhindern,
 dass dadurch eine bestehende Börsenzuordnung oder deren Kursreihe still
 verändert wird. Das gilt auch bei unveränderter `data_version`.
@@ -11,11 +12,17 @@ Löschen/Neuanlegen als Ausweg. Die Entscheidung steht; die Umsetzung ist offen.
 
 ## Für dich
 
-Aktuell kein Handgriff nötig. Der nächste technische Schritt ist, die noch
-fehlende Absicherung ohne kollidierende zweite Zeile zu prüfen und umzusetzen.
-Keine automatische Wechsel- oder Migrationsfunktion entwickeln.
+Aktuell keine Aufgabe und keine Umsetzung eingeplant. Der konkrete
+Zwei-Listing-Fall wurde gezielt im Test aufgebaut; ein entsprechender Fehler
+im normalen Betrieb ist damit nicht belegt. Die zusätzliche Absicherung
+bleibt als Sonderfall zurückgestellt. Kein Wiederaufnahmetermin festgelegt.
 
 ### Bisherige Antworten und Rückmeldungen
+
+Mike: „Wobei ich die Situation, dass es eine bestehende Datenbanke gibt und ein neues Plugin die Daten anders auflöst als sehr konstruiert ansehe“
+
+Mike: „OK, dann T-33 auf postponed“. Die zuvor bestätigte fachliche
+Eingrenzung bleibt erhalten; ihre Umsetzung ist zurückgestellt.
 
 Mike: „Bei der Prüfung auf Relevanz musst du einen potentiellen Plugin-Author mit einbeziehen.“
 
@@ -26,7 +33,7 @@ Bestand durch Umhängen von Identitäten oder Kursreihen lösen müssen.
 
 Mike bestätigt mit „Passt“ den Vorschlag, T-33 auf Schutz und verständliche
 Fehlermeldung zu reduzieren. Der Ausweg folgt der Entscheidung in
-[T-19](solved/T-19-neu-aufloesen-ohne-datenverlust.md): eine andere
+[T-19](../solved/T-19-neu-aufloesen-ohne-datenverlust.md): eine andere
 Börsenzuordnung durch Löschen und Neuanlegen.
 
 ## Umsetzung und technische Nachweise
@@ -195,7 +202,7 @@ hieße, dieselbe Entscheidung zweimal zu treffen.
 
 > **Nachtrag 2026-09-07:** T-29 ist verworfen und trägt diese Politik nicht mehr.
 > Der Alias ist seit T-23/T-31 kein Abrufschlüssel; der Bestandsschutz für
-> veröffentlichte Aliase steht in [T-30](T-30-plugin-boersenauskunft.md), der
+> veröffentlichte Aliase steht in [T-30](../T-30-plugin-boersenauskunft.md), der
 > portable JSON-Weg ist gestrichen. Die `listing_id`- und Historienfrage dieses
 > Tickets hat damit **keinen** Vorgänger mehr, an dem sie hängt — sie ist hier
 > zu beantworten oder ausdrücklich einem anderen Ticket zuzuweisen.
