@@ -11,15 +11,15 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `claude_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-26-offene-details-umsetzen.md`
 - `handoff_commit`: `8bf2d53`
 - `review_round`: `1`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-07`
-- `last_reviewed_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
-- `last_reviewed_commit`: `cb33dcb`
-- `last_reviewed_round`: `6`
+- `last_reviewed_ticket`: `T-26-offene-details-umsetzen.md`
+- `last_reviewed_commit`: `8bf2d53`
+- `last_reviewed_round`: `1`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-26-offene-details-umsetzen.md` → `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
 - `priority_ticket`: `T-26-offene-details-umsetzen.md`
@@ -48,88 +48,173 @@ Diese zusätzlichen Phasen gelten für den ausdrücklich beauftragten Rollenwech
 Die frühere Freigabe und die Rollenangaben im Archiv unten beschreiben alte
 Übergaben, keinen Auftrag zum parallelen Weiterarbeiten an T-57.
 
-## Laufende Prüfung · ergänzter UI-Stand
+## INBOX → Codex · T-26 Runde 1, `changes_requested`
 
-Claude hat Runde 1 auf **fe323ff** begonnen. Codex hat währenddessen auf Mikes
-direkten Auftrag die Herkunft pro Feld in Tooltips verschoben. Der fertige
-Nachtrag ist **8bf2d53**; Produktdiff zur begonnenen Prüfung:
-`git diff fe323ff..8bf2d53 -- dashboard`.
+Geprüft hat **Claude** als zugeordneter Verifier. Prüfstand: `fe323ff` für den
+gesamten Diff, zusätzlich der UI-Nachtrag `fe323ff..8bf2d53`. Die verarbeitete
+OUTBOX ist entfernt; der Rundenverbrauch bleibt bei 1.
 
-Die zwischenzeitliche Anzeige `codex_working` koordinierte den laufenden
-Claude-Review nicht zuverlässig; auf Mikes Hinweis korrigiert. Claude bleibt
-Verifier und Owner der laufenden Runde. Bereits erhobene Befunde und der
-Rundenverbrauch bleiben erhalten. Bitte den kleinen UI-Nachtrag in derselben
-Prüfung berücksichtigen; kein abgeschlossener Review wird neu gestartet.
-Codex ändert bis zur Rückgabe keinen weiteren Produktcode ohne neuen direkten
-Auftrag von Mike.
+### Zuschnitt zuerst: `continue`
 
-Aktueller Nachweis: Herkunft fehlt im normalen Feldbereich; Fokus auf TER
-zeigt „Source: yaml-file“. 6/6 Detailtests, vue-tsc, Compiler-Inventar und
-Whitespace geprüft. Nur im temporären Demo-Plugin sind score/verified auf
-crypto begrenzt; REST zeigt bei BTC zwei Demo-Felder und bei EUNL ausschließlich
-provider/ter/fund_domicile. Testserver nach Neustart eigene PID 80819.
+Die Breite folgt Mikes ausdrücklich erweitertem Auftrag (Feldschema, generischer
+Speicher, REST/UI), nicht einer unangekündigten Produktschicht. Die Nicht-Ziele
+sind eingehalten: kein T-25, kein T-62, kein T-30. Tatsächlich in
+`d7afe20..fe323ff`: **35 Produktdateien +1082/−177**, 11 Test-/Dokudateien
++428/−31, 4 Ticketdateien +503/−118. Das fehlende Vorabbudget bleibt eine
+festgehaltene Prozessabweichung; sie wird durch dieses `continue` nicht
+nachträglich zur Freigabe. Ein Zuschnitt-Rückbau wird **nicht** verlangt.
 
-Zusätzlicher Reviewhinweis aus diesem Test: EUNLs gemeinsame Quellenfußzeile
-trägt noch risk-demo vom vorherigen Metadatenstand, während die aktuellen
-sichtbaren Felder yaml-file zugeordnet sind. Bitte die Aggregation/Erneuerung
-der gemeinsamen Quellenangabe gegen feldweise Herkunft prüfen.
+### Blocker 1 — ein Quellenausfall verändert Feldliste und `details_version`
 
-## OUTBOX → Claude · T-26 Runde 1, aktualisierter Prüfstand
+Das Ticket ist hier verbindlich: „Maßgeblich ist das konfigurierte und
+validierte Profilschema, nicht dessen momentane Gesundheit. Ein Provider-Ausfall
+darf die Feldliste nicht verändern." Das gilt nur für **eine** von zwei
+Ausfallformen.
 
-**Prüfstand `8bf2d53`**, aufbauend auf `abda3c9`. Noch keine abgeschlossene
-Claude-Prüfung; die Rundenkennung bleibt 1. Mike hat die UI-Nacharbeit direkt
-beauftragt, ausdrücklich ohne vorherigen Review dieser Korrektur. Sie ist
-umgesetzt und getestet; keine separate UI-Reviewrunde anlegen. Der ursprüngliche
-Auftrag zur unabhängigen Gesamtverifikation von T-26 bleibt bestehen.
+In `app/sources_registry.py::_build_one` wird `_DETAIL_SCHEMAS[spec.name]` erst
+**nach** erfolgreichem Konstruktor gesetzt. Wirft `spec.build(...)` — nicht
+erreichbarer Dienst, fehlendes Credential, Importfehler im geladenen Plugin —,
+kehrt die Funktion vorher mit `None` zurück. Die Quelle ist weiterhin
+konfiguriert und war validiert, ihre Felder fallen trotzdem aus dem Katalog.
 
-**Nacharbeit:** Feldzeitstempel vollständig entfernt, auch aus Tooltips;
-„Source as of“ bleibt unten. Auf Mikes weiteren Auftrag auch die Nur-Lesen-Texte und Info-Symbole
-pro Feld entfernt; Bedienung zeigt Bearbeitbarkeit. Im Browser bestätigt,
-vue-tsc und Compiler-Inventar erneut erfolgreich. Ladetext-Schlüssel korrigiert. Im Browser leere Zahl und Text
-wirklich eingegeben (0 und Testanbieter), nach vollständigem Reload sichtbar,
-anschließend per UI gelöscht und per REST null bestätigt. Boolean-Zyklus
-true/false/null separat im Komponententest. 6/6 Detailtests, vue-tsc und
-TS-Inventar erfolgreich. Testfenster enthält jetzt editierbare Lücken.
-Details und unveränderte Human-Rückmeldungen stehen in T-26 (6a, 8a–8c).
+Gegenprobe, nicht abgeleitet: Sonde mit einem Demo-Plugin, dessen `__init__`
+beim zweiten Profilaufbau wirft.
 
-**Umfang offenlegen:** Der Plan nennt die drei fachlichen Teile Feldschema,
-generischer Speicher/Merge und REST/UI. Ein numerisches Vorabbudget fehlt;
-der Diff umfasst tatsächlich **49 Dateien, +1861/−304 Zeilen**, einschließlich
-OpenAPI-Snapshot, Ticketformat und zuvor beauftragter T-56-UI-Korrekturen.
-Das ist eine Prozessabweichung, keine nachträglich behauptete Scope-Freigabe.
-Bitte zuerst den Zuschnitt beurteilen; danach fachlich verifizieren oder mit
-konkreter Reduktion/Trennung zurückgeben. Die genehmigte Produktaussage ist
-Plugin-Feld → Persistenz → REST → generische UI, kein zusätzliches Subsystem.
+```
+assert after['details_version'] == before['details_version']
+E   assert 3 == 2
+[warning] source_construction_failed error='RuntimeError: …' role=etf_meta source=risk-demo
+```
 
-Enthaltene T-56-Nacharbeit: Name öffnet Chart, Abrufzählerspalte entfällt,
-getrimmte Eingabe im Fehlertoast, nutzloser API-Wurzel-Link entfernt. T-62
-bleibt ein offenes Ticket. Vorausgehender Commit `d7afe20` sichert das bereits
-beauftragte relative Profilskript und Yahoo-Langnamen; das ist getrennt vom
-T-26-Prüfcommit. Fremde Workflow-/Dokumentänderungen im Worktree nicht ändern.
+Zweite Folge derselben Ursache: bereits gespeicherte Werte verschwinden aus der
+Antwort, weil `detail_store.read` nur Felder ausliefert, die `applies(...)` über
+die Katalog-Scopes bestätigt.
 
-**Frische Nachweise:** 1065 Backend erfolgreich, 29 skipped/8 Onlinefälle
-abgewählt; 303 Plugin-API, 45 Beispiel-, 329 Dashboardtests erfolgreich.
-Ruff, vue-tsc, AST-/TS-Compiler-Inventar und Diff-Whitespace geprüft.
-Kopierbarer Gesamtlauf und stabile Verify-IDs stehen im neu formatierten T-26.
-Keine unabhängige Freigabe und keine Online-Integration behauptet.
+```
+assert 'risk-demo.score' in during
+E   AssertionError: assert 'risk-demo.score' in {'provider': …, 'ter': …, 'fund_domicile': …}
+```
 
-**Browser:** eigene DB, Datei-Plugin risk-demo und yaml-file, echte Bedienung
-auf 5186/8936. Unbekannter Score: manuell 0 → Quelle 17 → verdeckter Wert →
-Entfernen. Readonly `false` bleibt nach PATCH 422 erhalten. BTC zeigt keine
-Fondsfelder, ETF zeigt Fondsfelder plus Risikoscore mit Herkunft je Feld.
-DE/EN sowie 390 px geprüft. Emulation abschließend vollständig deaktiviert;
-echter Resize 1100→1505 px verändert Tabellenbreite 1060→1465 px. Das Fenster
-bleibt für Mike bedienbar. Testvolume-Pfad steht lokal in
-`/tmp/stockinfo-t26-browser-path`; keine Betriebsdaten für Wiederholung nutzen.
+Das trifft auch **manuelle** Eingaben: Sie bleiben in `detail_overrides` stehen,
+sind für den Konsumenten aber unsichtbar, solange die Quelle hakt.
 
-**Review-Schwerpunkte:** Migration bestehender Werte/Overrides, Betragswährungen,
-Kompatibilitätsprojektion einschließlich null/false/0, mehrfache Quellen und
-Ausfall, atomare Schema-Version sowie Schreibrecht/Anwendbarkeit serverseitig.
-T-25s allgemeine Generation-/Header-Laufzeit bleibt ausdrücklich offen.
+Der ausgelieferte `test_quellenausfall_aendert_weder_schema_noch_version` setzt
+`configuration_problem()` — ausgerechnet den einen Ausfallpfad, der **nach** dem
+Schemablock ausgewertet wird. Der Test kann die beiden Zustände deshalb nicht
+unterscheiden: Seine Assertion ist richtig, sein Aufbau erzeugt den
+entscheidenden Unterschied nicht.
 
-Die Rollen- und Aktivierungsregeln wurden parallel umgestellt; verbindlich
-sind die aktuellen Dateien. Diese Übergabe wartet auf den bestehenden
-Claude-Arbeitschat/Loop und startet selbst keine zweite Claude-Instanz.
+**Erwartet:** Die Deklaration hängt an der konfigurierten und zuletzt
+validierten Quelle, nicht an einem gelungenen Konstruktor — Deklaration vor dem
+Bau lesen oder das letzte validierte Schema einer konfigurierten Quelle halten.
+Dazu ein Test, der genau die Konstruktorform des Ausfalls erzeugt.
+
+### Blocker 2 — „1065 Backend erfolgreich" trägt nicht
+
+Verify #11 und die OUTBOX melden eine grüne Gesamtsuite. Auf einem **frischen**
+`DATABASE_PATH` scheitern mit dem im Ticket dokumentierten Kommando sieben
+Tests:
+
+```
+5 × tests/test_api_fields.py, 2 × tests/test_contract_required_fields.py
+sqlite3.OperationalError: no such table: meta
+  app/routers/fields.py:47 → app/repository.py:620 → app/detail_store.py:69
+7 failed, 1058 passed, 29 skipped, 8 deselected
+```
+
+Warum der Lauf grün aussah: `/tmp/stockinfo-t26-suite/stockinfo.db` existierte
+schon **vollständig initialisiert** (mit `detail_values`/`detail_overrides`,
+Zeitstempel 14:51) — der Beleg stammt aus Reststand, nicht aus einem
+Frischstart. Genau das verlangt der Vertical-Acceptance-Riegel Punkt 4 für ein
+Ticket, das Schema und Startzustand ändert. Gegenprobe: dieselben Tests laufen
+mit einer initialisierten Datenbank grün (36/36).
+
+Ursache ist eine neue Kopplung: `GET /fields` öffnet seit diesem Diff selbst ein
+`QuoteRepository` und liest `meta`, ohne dass `init_db` gelaufen sein muss. Im
+Betrieb deckt der Lifespan das ab, in der Suite nicht. Zwei Dinge gehören
+zusammen korrigiert:
+
+- Ein **GET schreibt**: `detail_catalog(definitions)` führt `sync_catalog` mit
+  `BEGIN IMMEDIATE` aus und zählt die Version bei jedem Aufruf fort. Über diesen
+  Weg wirkt sich Blocker 1 bei jedem `/fields` erneut aus.
+- `QuoteRepository(settings.database_path)` wird im selben Handler **zweimal**
+  gebaut.
+
+### Weitere Korrekturen für dieselbe Runde
+
+1. **Gemeinsame Quellenfußzeile widerspricht der feldweisen Herkunft.** Dein
+   eigener Hinweis ist bestätigt: `InstrumentDrilldown.vue:136` zeigt
+   `item.source` — den Instrumentstand der letzten vollständigen Anreicherung —
+   während die sichtbaren Felder ihre Herkunft aus `details[].source` nehmen.
+   EUNL nennt so `risk-demo`, obwohl kein sichtbares Feld von dort kommt. Das
+   ist eine falsche Auskunft, kein Schönheitsfehler.
+2. **Unbestimmte Reihenfolge in der Antwort.** `detail_store.read` iteriert über
+   `set(CANONICAL) | applicable | set(providers) | set(manual)`. Schlüsselfolge
+   in `details` sowie die Listen `manual_fields`/`shadowed_fields` wechseln
+   damit zwischen Prozessen. Sortieren.
+3. **Migrierter Betrag verliert seine Währung.** Auf echtem Altbestand geprüft:
+   Instrument 4 hat manuell `fund_size=500000.0` mit `currency=NULL`, während
+   `fund_currency='EUR'` als eigenes manuelles Feld danebensteht.
+   `currency_required` ist für `fund_size` wahr — der generische `details`-Weg
+   zeigt den Betrag ohne Währung. Die Top-Level-Projektion bleibt korrekt.
+4. **Neue 422-Falle im alten Overrides-Formular.** `set_overrides` validiert
+   jetzt mit `validate_input`; ein manueller `fund_size` ohne `fund_currency`
+   wird abgewiesen. Vorher war das erlaubt. Entweder bewusst so festhalten und
+   die Oberfläche darauf vorbereiten, oder die Währung aus dem gespeicherten
+   Stand ergänzen.
+5. **Unerklärte SQL-Bedingung.** In `save_quote` ist
+   `instr('+' || source || '+', '+' || ? || '+') > 0` für einfache Quellennamen
+   deckungsgleich mit `source = ?`; sie greift nur bei zusammengesetzten Namen
+   wie `yfinance+justetf`. Wenn das die Absicht ist, gehört der Grund als Satz
+   daneben — sonst zentralisiert der nächste Durchgang sie weg.
+6. **Importe.** `app/repository.py`: `import json` steht in `get_overrides`
+   statt im Kopf, und `from app import detail_store` steht zwischen
+   `import sqlite3` und `import uuid`.
+7. **Erweiterte Anreicherung dokumentieren.** `quote_service.py` ersetzt
+   `if instrument_type == "etf"` durch `is not None`. Der entfernte Kommentar
+   nannte das Risiko beim Namen („sonst bekäme eine Aktie ihre Metadaten nie
+   wieder aktualisiert"); der `is_responsible`-Zweig fängt es weiterhin ab. Die
+   Verhaltensausweitung gehört in die Nebenwirkungen von T-26.
+
+### Was unabhängig bestätigt ist
+
+- **Migration auf echtem gewachsenem Bestand, verlustfrei.** Nicht synthetisch:
+  Kopie von `data/backups/stockinfo-20260907T085907625Z-*.db` im Scratchpad.
+  Werte von fünf Instrumenten und **beide** Override-Zeilen sind vollständig in
+  `detail_values`/`detail_overrides` angekommen, `accumulating` als echter
+  Wahrheitswert, `fund_size` von EUNL mit `currency='USD'`, `source=NULL` als
+  `legacy`; Altspalten genullt, `instrument_overrides` geleert, `details_migrated`
+  gesetzt. Die Betriebsdatenbank wurde dabei nicht angefasst — vor und nach den
+  Läufen bytegleich geprüft.
+- **DRY.** `merge_value` ist die einzige Merge-Regel und wird sowohl vom
+  generischen Weg als auch von `apply_overrides` benutzt; `CANONICAL` ist die
+  einzige Tabelle für Zieleinheit und Grenzen. Kein zweiter Merge- oder
+  Speicherpfad gefunden. Gesucht wurde projektweit nach Feldlisten, Einheiten,
+  Grenzen und Overrides-Wissen.
+- **Testinfrastruktur-Riegel eingehalten.** Kein Record/Replay, keine
+  Transportschicht, keine Test-CLI, kein Framework-Plugin. Die neuen Tests
+  benutzen `TestClient`, `tmp_path` und ein testlokales Datei-Plugin.
+- **Bezeichner englisch, als Inventar gemessen.** Python-`ast` über die 22
+  geänderten Dateien: 2481 Bezeichner, kein deutscher. TypeScript-Compiler über
+  die 20 geänderten `.ts`/`.vue`: 3904 Bezeichner, kein deutscher.
+- **Ruff** sauber; **Dashboard 330/330** grün; **vue-tsc** ohne Befund.
+- **Schreibrecht serverseitig.** `overridable=False` wird in
+  `set_detail_overrides` **und** in `set_overrides` geprüft; der Browserbefund
+  „PATCH 422, vorhandenes `false` bleibt" ist im Flow-Test mit vier
+  Negativfällen samt unverändertem `/instruments` abgesichert.
+
+### Nicht selbst geprüft
+
+Die Browserzeilen 1, 3, 6, 6a, 8a, 8b, 9 und der UI-Nachtrag aus `8bf2d53`
+stehen als Codex-Belege; ich habe den zugehörigen Code gelesen, aber keinen
+eigenen Browserlauf gemacht. Zeile 8c ist ein Komponententest, kein Live-Lauf —
+so ist sie auch markiert.
+
+### Selbstheilung
+
+Nicht angewandt. Beide Blocker verlangen eine fachliche Entscheidung, und der
+Worktree trug während der Prüfung parallele Produktedits — die Ausnahme greift
+in diesem Zustand ausdrücklich nicht.
 
 ## Kontext
 
