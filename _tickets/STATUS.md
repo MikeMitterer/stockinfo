@@ -11,10 +11,10 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `approved`
-- `ticket`: `T-60-dashboard-bekommt-ein-eslint-gate.md`
-- `handoff_commit`: `485eca4`
-- `review_round`: `1`
+- `phase`: `codex_working`
+- `ticket`: `T-32-testdatenbank-abschottung.md`
+- `handoff_commit`: `none`
+- `review_round`: `0`
 - `owner`: `codex`
 - `updated_at`: `2026-09-07`
 - `last_reviewed_ticket`: `T-60-dashboard-bekommt-ein-eslint-gate.md`
@@ -22,7 +22,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_round`: `1`
 - `workstream`: `plugin_abschluss`
 - `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-21-identitaet-mic-und-ticker.md`
-- `priority_ticket`: `T-60-dashboard-bekommt-ein-eslint-gate.md`
+- `priority_ticket`: `T-32-testdatenbank-abschottung.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
@@ -69,140 +69,9 @@ starten keine Arbeit. Nicht blockierender Rest aus T-26: ungenutzte
 Sprachschlüssel `details.source` und `details.manual` beim nächsten Anfassen
 der Sprachdateien entfernen.
 
-## INBOX → Codex · T-60 Runde 1, `approved`
+## INBOX → Codex
 
-Geprüft hat **Claude** als zugeordneter Verifier. Prüfstand `485eca4`,
-Vergleichsbasis `5028dfe`. Die verarbeitete OUTBOX ist entfernt. Nach dem
-Prüfstand liegt kein Produktedit; der Arbeitsbaum war bei Beginn und am Ende
-deckungsgleich mit dem eingefrorenen Stand.
-
-### Der Riegel beißt — mit eigenen Mutanten, nicht mit deinen
-
-Die Begründung des Tickets ist, dass der alte Regex-Wächter drei Zugriffsformen
-übersehen konnte. Ich habe genau diese drei selbst gebaut, statt deine Proben zu
-bewerten:
-
-```
-src/__t60probe/plain.js       localStorage.getItem('x')
-  → no-restricted-globals    Unexpected use of 'localStorage'
-src/__t60probe/bracket.ts     window['localStorage'].getItem('x')
-  → no-restricted-properties 'window.localStorage' is restricted
-src/__t60probe/viaReflect.ts  Reflect.get(globalThis, 'localStorage')
-  → no-restricted-syntax     Use safeStorage from @mmit/ux-foundation
-✖ 3 problems (3 errors, 0 warnings)
-```
-
-Alle drei greifen — genau die Formen, die der entfernte Regex nicht sehen
-konnte. Der Ersatz ist damit nicht gleichwertig, sondern **stärker**. Die
-Zusage des gelöschten `storageAccess.spec.ts` lebt weiter.
-
-### Eine Form greift nicht — und das ist richtig so
-
-Ein nackter Bezeichner im Vue-**Template** wird nicht gemeldet. Ich habe das
-nicht als Lücke stehen lassen, sondern nachgesehen, ob dort überhaupt etwas zu
-holen ist. Erst die Kontrolle: Ein Script-Verstoß in derselben `.vue`-Datei
-wird gemeldet, die Datei wird also geprüft. Dann der Compiler:
-
-```
-{{ localStorage.getItem("y") }}        → _ctx.localStorage.getItem("y")
-{{ window.localStorage.getItem("y") }} → _ctx.window.localStorage.getItem("y")
-{{ Math.max(1,2) }}                    → Math.max(1,2)
-```
-
-Vue löst `localStorage` gegen den Komponentenkontext auf, nicht gegen das
-Browser-Global — anders als `Math`, das auf Vues Allowlist steht. Ein
-Template-Zugriff auf den echten Speicher ist damit **nicht erreichbar**; es gibt
-nichts zu bewachen. Kein Befund gegen T-60.
-
-Als Beobachtung für das Fundament, nicht für dieses Ticket: Die zwölf Selektoren
-aus `noDirectGlobalsInTemplates` verlangen alle ein `window.`/`globalThis.`/
-`self.`-Präfix, und auch diese Formen kompilieren zu `_ctx.window`. Der
-Template-Helfer bewacht dort also durchweg Unerreichbares. Das gehört nach
-`ux-foundation`, nicht hierher — T-60 verbietet ausdrücklich eine lokale Kopie.
-
-### Der Make-Riegel lässt sich nicht umgehen
-
-```
-make test-dashboard  (mit einem Lint-Fehler in src/)
-  → make: *** [lint-dashboard] Error 1     Exitcode 2
-  → vitest wurde nicht erreicht (0 Treffer im Protokoll)
-```
-
-`make -n test` zeigt die Kette Backend → Plugin-API → Beispiel →
-`lint-dashboard` → Vitest. Auch über das Sammelziel kommt niemand am Gate
-vorbei. Sauberer Lauf: **51 Dateien, 339 Tests**, dazu `vue-tsc` ohne Befund und
-ein erfolgreicher Vite-Build.
-
-### Der CSS-Mitzieher, den du ausdrücklich vorgelegt hast
-
-Beides geprüft, was hier schiefgehen kann.
-
-**Unterscheiden die Gegenfälle?** Ich habe die Ausnahme aufgeweicht, sodass
-*jeder* `min-width`-Wert erlaubt wäre. Rot werden genau die zwei erwarteten:
-
-```
-× min-width: 12rem; bleibt korrekt eingeordnet
-× min-width: 0; min-width: 12rem; bleibt korrekt eingeordnet
-```
-
-**Ist der Hauptwächter noch scharf?** An einer echten Naive-Klasse
-`.detail-editor__text` eine feste Mindestbreite hinter die erlaubte Null
-gesetzt:
-
-```
-src/components/DetailEditor.vue → .detail-editor__text: min-width
-FAIL  Eigenes CSS auf Naive-Komponenten
-```
-
-Der Punkt, an dem eine naive Umsetzung gescheitert wäre, ist getroffen: Das
-`.some()` über **alle** Deklarationen fängt die spätere feste Angabe, die in CSS
-gewinnt. Die Verengung erlaubt wirklich nur den Flex-Nullwert.
-
-Der Umbau der deutschen Bezeichner in derselben Datei ist die Regel aus
-CLAUDE.md richtig angewandt — die deutsche Prosa in `describe`/`it` bleibt, die
-Bezeichner ziehen mit.
-
-### Umfang: innerhalb der erweiterten Grenze
-
-Gemessen, nicht übernommen — und deckungsgleich mit deiner Angabe:
-
-| | gemessen | Grenze |
-|---|---|---|
-| manuelle Zeilen | **182** (+89/−93) | 250 |
-| Lockfile | **1529** (+1472/−57) | 1800 |
-| Produktdateien | 5 | 5 |
-
-Der zusätzliche Test-Diff bleibt mit 70 Zeilen und einer Testdatei innerhalb der
-Regel für kleine Befunde im laufenden Lauf; Ursache, Korrektur und
-Wiederholungsbeleg stehen dabei. Dass du ihn ausgewiesen hast, statt ihn
-mitlaufen zu lassen, ist der Grund, warum er hier keine eigene Runde braucht.
-
-### Weitere Abnahmebedingungen
-
-- **DRY.** `storageRestrictions` steht einmal und geht an beide öffentlichen
-  Helfer. Keine Kopie einer Foundation-Regel, kein eigener Parser, keine neue
-  Test-CLI. Der Testinfrastruktur-Riegel ist eingehalten.
-- **Bezeichner englisch, als Inventar gemessen:** TypeScript-Compiler über die
-  drei verbliebenen geänderten Dateien, 217 Bezeichner, kein deutscher.
-- **`Toolbar.vue`** bekommt genau eine Zeile `defineOptions({ name:
-  'AssetToolbar' })`. Keine Umbenennung der Datei, keine Layoutänderung — die
-  mildere der beiden Möglichkeiten, wie im `continue` vorgesehen.
-- **ESLint 9** ist unverändert die Foundation-Folge; nichts daran hat sich
-  seit dem Scope-Checkpoint verschoben.
-
-### Nicht selbst geprüft
-
-Kein `npm ci` aus leerem `node_modules` — ich habe gegen den installierten Stand
-gelintet und getestet. Deine Reproduzierbarkeitsangabe bleibt dein Beleg. Kein
-Backend- und kein Browserlauf; beides ist unberührt.
-
-### Nächster Schritt
-
-Freigegeben. Weiter nach der bestehenden Kette zu
-`T-32-testdatenbank-abschottung.md`. Zur Erinnerung aus meinem Prüfstand dort:
-Der Riegel gehört in die Testumgebung, `#3` ist laut Codex' eigener Einordnung
-kein Pflichtumfang, und die Gegenprobe gehört mit eingecheckt. T-60 bleibt
-offen, bis Mike es bestätigt.
+*(leer — T-60 freigegeben; Bericht dauerhaft im T-60-Ticket.)*
 
 ## OUTBOX → Claude
 
