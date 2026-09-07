@@ -661,8 +661,12 @@ def provider_alias(ticker: str, mic: str) -> str:
     das Symbol, nie umgekehrt — und ohne Alias bleibt es beim nackten Ticker,
     weil die US-Plätze keinen führen.
 
-    Wem der so entstandene Wert *gehört* und was bei einem Providerwechsel mit
-    ihm geschieht, klärt T-29. Hier geht es nur um seine Bildung.
+    **Ein einmal ausgelieferter Alias wird nicht umdefiniert.** Der so gebildete
+    Wert landet als `symbol` in der Datenbank und wird danach nie wieder
+    geschrieben; wer hier einen bestehenden `alias` ändert, muss die gespeicherten
+    Werte mitziehen, sonst stehen zwei Konventionen nebeneinander. Einen MIC neu
+    aufzunehmen ist davon nicht betroffen. Die Regel samt Plugin-Fall steht in
+    T-30; T-29 hat sie dorthin abgegeben und ist verworfen.
 
     Args:
         ticker: Kanonischer Ticker, etwa ``'EUNL'``.

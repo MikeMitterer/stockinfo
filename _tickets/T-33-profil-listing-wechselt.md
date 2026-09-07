@@ -90,6 +90,13 @@ Was danach mit dem bisherigen Profil-Listing geschieht, ist eine Frage an die
 Backup-Arten) sowie am Generationssignal aus T-25. Sie in T-21 zu beantworten
 hieße, dieselbe Entscheidung zweimal zu treffen.
 
+> **Nachtrag 2026-09-07:** T-29 ist verworfen und trägt diese Politik nicht mehr.
+> Der Alias ist seit T-23/T-31 kein Abrufschlüssel; der Bestandsschutz für
+> veröffentlichte Aliase steht in [T-30](T-30-plugin-boersenauskunft.md), der
+> portable JSON-Weg ist gestrichen. Die `listing_id`- und Historienfrage dieses
+> Tickets hat damit **keinen** Vorgänger mehr, an dem sie hängt — sie ist hier
+> zu beantworten oder ausdrücklich einem anderen Ticket zuzuweisen.
+
 ## Die Auswege, wie sie beim Fund aussahen
 
 Alle drei betreffen das **bisherige** Profil-Listing. Keiner verschiebt eine

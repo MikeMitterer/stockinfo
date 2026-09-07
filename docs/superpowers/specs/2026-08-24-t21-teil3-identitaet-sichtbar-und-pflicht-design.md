@@ -590,8 +590,10 @@ Einordnen ausgeschieden sind.
 Entscheidung Mike, 2026-08-24: aufteilen. Zwei Themen sind aus diesem Entwurf
 herausgeschnitten und liegen als Tickets im Board:
 
-* **[`T-29`](../../../_tickets/T-29-alias-lebenszyklus-und-providerwechsel.md)
+* **[`T-29`](../../../_tickets/rejected/T-29-alias-lebenszyklus-und-providerwechsel.md)
   — Provider-Alias: Eigentümer, Lebenszyklus, Wechsel.** Aus Runde 9, Finding 1.
+  *Nachtrag 2026-09-07: verworfen — der Alias ist seit T-23/T-31 kein
+  Abrufschlüssel mehr, der Rest steht in T-30.*
   Wer `symbol` besitzt, was beim Providerwechsel damit geschieht, Backup-Pflicht
   und Best-Effort-Restore samt Importbericht. Revidiert außerdem
   `T-25-quellenprofil-wechseln.md:94-110`.

@@ -2,7 +2,120 @@
 
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Backend + Dashboard) | offen | 1 Tag | Eigentum an `symbol`, Wechselregeln, Backup-Pflicht, Importbericht | — |
+| StockInfo (Backend + Dashboard) | **verworfen 2026-09-07** | 1 Tag | Eigentum an `symbol`, Wechselregeln, Backup-Pflicht, Importbericht | — |
+
+> **Verworfen am 2026-09-07, Entscheidung Mike.** Der Anlass dieses Tickets ist
+> durch andere Arbeit behoben, der eine verbliebene Rest ist nach
+> [T-30](../T-30-plugin-boersenauskunft.md) übernommen, und den letzten
+> eigenständigen Teil — den portablen JSON-Export/Import — hat Mike
+> ausdrücklich gestrichen: *„JSON-Export, Import ist zu aufwendig — wird nicht
+> weiter verfolgt."*
+>
+> Die Begründung im Einzelnen steht unter
+> [Einordnung 2026-09-07](#einordnung-2026-09-07). Der ursprüngliche Text
+> darunter bleibt unverändert als Nachweis der damaligen Lage stehen; er ist
+> **kein Arbeitsauftrag mehr**.
+
+<a id="einordnung-2026-09-07"></a>
+
+## Einordnung 2026-09-07 · geprüft von Claude
+
+Auftrag von Mike: „Überprüfe T-29, ist das Ticket überhaupt noch relevant und
+wie wichtig ist es aus deiner Sicht?"
+
+### Der Anlass ist behoben — durch T-21, T-23 und T-31
+
+Das Ticket trägt einen einzigen begründenden Satz: `symbol` sei zugleich
+App-eigener Anzeigewert **und** anbietergebundener Abrufschlüssel, weshalb ein
+Wert nicht gleichzeitig `EUNL.DE` für Yahoo und `EUNL.XETRA` für EODHD sein
+könne. Dieser Satz stimmt nicht mehr.
+
+Seit `API_VERSION 2` trägt die Kursanfrage nur noch die Identität:
+
+```python
+class QuoteRequest:
+    identity: Identity        # kein symbol
+```
+
+Jede Quelle bildet ihr Anbietersymbol daraus selbst
+(`app/plugins/yfinance_quotes.py:142`). Der gespeicherte Wert entsteht
+umgekehrt aus derselben Identität über `provider_alias(ticker, mic)` — eine
+Richtung, eine Stelle. Der `QuoteAdapter` führt in seinem Docstring genau die
+Begründung dieses Tickets und hält fest, dass der Core seit T-23 die Identität
+hereinreicht.
+
+**Damit gibt es keinen anbietereigenen Alias-Bestand.** Der Begriff existiert im
+Code nicht als Datenhaltung. Die Zeilen `#1`, `#2`, `#3`, `#5` und `#6` verlieren
+ihre Voraussetzung: Es ist nichts zu besitzen, zu entfernen oder zu berichten.
+
+### Der eine Rest ist nach T-30 gewandert
+
+`symbol` wird bei der Anlage einmal berechnet und danach nie wieder
+geschrieben — er steht nicht in `_META_FIELDS`. Die Ableitungsvorschrift steht
+aber in `EXCHANGES[mic].alias`, also in der Tabelle, die T-30 für Plugins
+öffnet. Ändert sich dort ein bestehender Alias, tragen alte und neue Zeilen
+verschiedene Konventionen. Die Regel dazu steht jetzt in T-30 samt Verify-Zeile
+`#6c`; sie ist ein Absatz, kein Ticket.
+
+### Der JSON-Export/Import ist gestrichen
+
+Teil **(a)** der Backup-Tabelle unten existiert nicht: Es gibt nur `/backups`
+und `/backups/{name}/restore`, also ausschließlich den SQLite-Snapshot **(b)**.
+Der portable Weg hat mit Aliasen nichts zu tun und steckte nur deshalb hier,
+weil Mikes Entscheidung vom 2026-08-24 Backup und Bestätigung im selben Atemzug
+nannte. Am 2026-09-07 hat Mike ihn als zu aufwendig gestrichen.
+
+Der Snapshot **(b)** ist dagegen gebaut und belegt: `VACUUM INTO` statt `cp`,
+`test_eine_sicherung_entsteht_waehrend_geschrieben_wird` für den Schreibfall,
+Manifest, Aufbewahrung von zehn Ständen, Ablehnung fremder Sicherungen. Das ist
+in T-25 entstanden, nicht hier.
+
+### Die Verweise dieses Tickets zeigen ins Leere
+
+* `quote_service.py:255` rufe `fetch_quote(resolved.symbol)` — der Aufruf ist
+  heute `fetch_quote(resolved)` in Zeile 679.
+* „Revidiert T-25" mitsamt der Zitatstelle `T-25:94-110` zeigt in einen
+  Abschnitt, der seit dem 2026-09-07 im Archivteil des neu geschriebenen T-25
+  liegt.
+* „Hängt an T-25 (Profilbegriff und **Rotation**)" — die Rotation ist im neuen
+  T-25 ausdrücklich fallengelassen.
+* `#7` verlangt, dass T-21, T-25 und die Plugin-Spec denselben Vertrag nennen.
+  T-25 beantwortet die Frage „was passiert mit Daten, wenn das Plugin wechselt"
+  inzwischen anders und neuer: plugin-deklarierte `data_version` mit
+  plugin-gelieferter Migration statt Best-Effort-Import. Die Aufgabe lebt dort
+  weiter, nicht hier.
+
+### Verify · Stand bei der Verwerfung
+
+`—` bedeutet **gegenstandslos**: Die Voraussetzung der Zeile ist entfallen.
+`✗` bedeutet **verworfen** durch Mikes Entscheidung.
+`➖` steht wie gehabt für automatisierte Belege ohne Live-Verifikation.
+
+| # | Where | Stand |
+|---|---|:--:|
+| 1 | Alias einem Provider zugeordnet; `(ticker, mic)` providerunabhängig | — |
+| 2 | kein Alias von A überlebt beim neuen Provider | — |
+| 3 | nicht überführbarer Fall bleibt ohne Alias | — |
+| 4 | Backup vor dem Wechsel verlangt und bestätigt | — |
+| 4a | **(a) JSON** — Export im UI | ✗ |
+| 4b | **(a) JSON** — Import, anderes Plugin | ✗ |
+| 4c | **(b) Snapshot** — Erzeugung über SQLite-Backup-API | ➖ |
+| 4d | **(b) Snapshot** — bitgenaues Rollback | ➖ |
+| 4e | UI trennt (a) und (b) unverwechselbar | — |
+| 5 | Importbericht der nicht wiederhergestellten Fälle | ✗ |
+| 6 | kein alter Alias lebt über Endpunkte, Links oder Cache weiter | — |
+| 7 | T-21, T-25 und Plugin-Spec nennen denselben Vertrag | → T-25 |
+| 8 | `make test` grün | ➖ |
+
+Zu `#8`, gemessen am 2026-09-07: `1069 passed, 29 skipped, 8 deselected` auf
+frischem Datenpfad, Dashboard `331 passed`.
+
+---
+
+## Ursprünglicher Text · Nachweis der Lage vom 2026-08-24
+
+Alles Folgende bleibt unverändert erhalten. Es beschreibt einen behobenen
+Zustand und stellt keine Anforderung mehr.
 
 **Löst:** Die Spalte `symbol` trägt heute zwei Bedeutungen, ohne sich zu
 entscheiden. Der Plugin-Entwurf nennt sie einen *stabilen, App-eigenen
@@ -21,7 +134,7 @@ gleichzeitig `EUNL.DE` für Yahoo und `EUNL.XETRA` für EODHD sein.
 herausgeschnitten, weil es die Bedeutung einer Vertragsspalte ändert, in T-25
 eingreift und die Plugin-Spec berührt — Entscheidung Mike, 2026-08-24.
 
-**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 · Entwurf für dieses Ticket steht aus.
 
 **Hängt an:** T-21 (liefert die kanonische Identität `(ticker, mic)`, von der

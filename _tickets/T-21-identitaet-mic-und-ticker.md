@@ -116,10 +116,13 @@ muss, ist kein Plugin).
 > Der Entwurf war über das Ticket hinausgewachsen. Zwei Themen liegen jetzt als
 > eigene Tickets im Board:
 >
-> * [`T-29`](T-29-alias-lebenszyklus-und-providerwechsel.md) — **Provider-Alias:
->   Eigentümer, Lebenszyklus, Wechsel.** Wer `symbol` besitzt, was beim
->   Providerwechsel damit geschieht, Backup-Pflicht und Best-Effort-Restore.
->   **Revidiert `T-25:94-110`.**
+> * [`T-29`](rejected/T-29-alias-lebenszyklus-und-providerwechsel.md) —
+>   **Provider-Alias: Eigentümer, Lebenszyklus, Wechsel.** Wer `symbol` besitzt,
+>   was beim Providerwechsel damit geschieht, Backup-Pflicht und
+>   Best-Effort-Restore. **Revidiert `T-25:94-110`.**
+>   *Nachtrag 2026-09-07: verworfen. Der Alias ist seit T-23/T-31 kein
+>   Abrufschlüssel mehr, die Bestandsschutzregel steht in T-30, den
+>   JSON-Export/Import hat Mike gestrichen.*
 > * [`T-30`](T-30-plugin-boersenauskunft.md) — **plugin-deklarierte
 >   Börsenauskunft.** Neuer `plugin_api`-Typ samt Merge-, Vorrang-, Kollisions-,
 >   Provenienz- und Invalidierungsregeln.
@@ -127,6 +130,9 @@ muss, ist kein Plugin).
 > **Teil 3 stärkt die Zusage zu `symbol` deshalb nicht.** Der Sprung auf
 > `core_version 2.0.0` betrifft `ticker`, `mic`, `listing_id` und den strengeren
 > Aufnahmeweg — nicht die Bedeutung von `symbol`. Die wird in T-29 geklärt.
+> *Nachtrag 2026-09-07: Sie hat sich stattdessen erledigt. Seit `API_VERSION 2`
+> trägt `QuoteRequest` nur die Identität, und `symbol` ist ein daraus
+> abgeleiteter Anzeigewert. Was davon offenblieb, steht in T-30.*
 
 > **Die Handzuordnung ist gestrichen — der Symbolweg verlangt die Kombination
 > künftig im Vertrag** *(Claude, 2026-08-24; Entscheidungen Mike)*

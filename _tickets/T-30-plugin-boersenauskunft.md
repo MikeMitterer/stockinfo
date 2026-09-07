@@ -45,8 +45,49 @@ Codex hat in Runde 9 fünf Regelbereiche benannt, die alle offen sind:
 * **Provenienz** — woher ein Eintrag stammt, muss am Eintrag ablesbar sein.
 * **Invalidierung** — was mit deklarierten Einträgen geschieht, wenn das Plugin
   verschwindet oder sich ändert.
+* **Bestandsschutz für veröffentlichte Aliase** — siehe unten. Aus T-29
+  übernommen, als dieses am 2026-09-07 verworfen wurde.
 
 Dazu der neue Typ in `plugin_api` samt `API_VERSION`-Sprung (additiv).
+
+## Ein veröffentlichter Alias ist eine Zusage
+
+*(Aus T-29 übernommen; dort war es die letzte offene Frage, nachdem T-21, T-23
+und T-31 den Alias als Abrufschlüssel abgelöst hatten. Gemessen 2026-09-07.)*
+
+`symbol` entsteht bei der Anlage eines Instruments **einmal** aus der
+kanonischen Identität — `provider_alias(ticker, mic)` macht aus
+`('EUNL', 'XETR')` den Wert `EUNL.DE`. Danach schreibt ihn nichts mehr: Er
+steht nicht in `_META_FIELDS` und überlebt deshalb jede Aktualisierung
+unverändert. Die Ableitungsvorschrift steht dagegen in genau der Tabelle, die
+dieses Ticket für Plugins öffnet: `EXCHANGES[mic].alias`.
+
+Daraus folgt eine Regel, die der Entwurf mitnehmen muss:
+
+> **Ein einmal ausgelieferter Alias wird nicht umdefiniert.** Geschieht es doch
+> — durch Korrektur im Core oder durch ein Plugin, das einen MIC neu belegt —,
+> müssen die bereits gespeicherten `symbol`-Werte mitgezogen werden.
+
+Ohne sie tragen alte Zeilen die alte und neue Zeilen die neue Konvention,
+nebeneinander in derselben Tabelle, ohne Fehler und ohne Meldung. **Neue MICs
+hinzuzufügen ist davon nicht betroffen** — nur das Ändern eines bestehenden
+Alias erzeugt den Bruch. Der Vorrangfall aus dem Merge oben ist genau ein
+solcher Fall, sobald ein Plugin einen MIC des Core-Katalogs überschreibt.
+
+Zwei Dinge, die hier ausdrücklich **kein** Problem sind:
+
+* **Mehrdeutigkeit.** Einen `UNIQUE`-Index auf `symbol` gibt es nicht; eindeutig
+  sind `isin`, `listing_id`, `(ticker, mic)` und `(base, quote_currency)`. Zwei
+  gleichnamige Listings sind vorgesehen, die `by-symbol`-Wege antworten mit
+  `409`.
+* **Der Abruf.** Seit `API_VERSION 2` trägt `QuoteRequest` nur die Identität;
+  jede Quelle bildet ihr Anbietersymbol selbst. Ein geänderter Alias kann
+  deshalb keinen Abruf brechen, nur Anzeige und `by-symbol`-URLs verschieben.
+
+Nachrangig, aber beim Entwurf mitzudenken: Das Alphabet der Aliase ist Yahoos
+(`XETR → DE`, `XSTU → SG`, `XLON → L`, `XTSE → TO`, US-Plätze ohne Suffix,
+Krypto als `BTC-EUR`). Der Wert ist App-eigen und abgeleitet, sein Vokabular
+stammt aus einer Quelle. Solange Yahoo in der Kette steht, fällt das nicht auf.
 
 ## Vorbedingung aus T-21 Teil 3
 
@@ -73,6 +114,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 5 | Eintrag im REST | Provenienz ist ablesbar (Core oder welches Plugin) | | |
 | 6 | Plugin entfernt | deklarierte Einträge verschwinden; kein verwaister MIC bleibt stehen | | |
 | 6b | `COLLECTOR_CODES` bei dynamischen Plugins | **keine** beim Import eingefrorene Menge dient als Wahrheit; gefragt wird der zusammengeführte Katalog, oder die Ableitung wird bei Invalidierung erneuert (Auflage aus T-21 Runde 13) | | |
+| 6c | ein bestehender Alias wird geändert (Core-Korrektur oder Plugin-Vorrang) | gespeicherte `symbol`-Werte ziehen mit; keine zwei Konventionen in einer Tabelle. Ein **neu hinzugefügter** MIC lässt vorhandene Zeilen unberührt | | |
 | 7 | Dashboard | zeigt plugin-gelieferte Börsen in Hilfe und Anzeige — ausschließlich über Core-REST | | |
 | 8 | Antworttyp aus T-21 Teil 3 | musste **nicht** geändert werden, um Plugin-Einträge aufzunehmen | | |
 | 9 | `make test` | Backend, Plugin-API und Dashboard grün | | |

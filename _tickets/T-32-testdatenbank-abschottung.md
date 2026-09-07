@@ -136,4 +136,7 @@ der ihn auslöst, ist eine Behauptung.
 * Die Frage, ob Dienste ihr Repository überhaupt selbst bauen dürfen. Das ist
   eine Architekturfrage; hier geht es nur darum, dass ein Fehler dabei im Test
   auffliegt statt an der Produktivdatenbank.
-* Ein Backup-Mechanismus. Der liegt in T-29.
+* Ein Backup-Mechanismus. Der liegt in T-29. *(Nachtrag 2026-09-07: T-29 ist
+  verworfen. Der SQLite-Snapshot ist in T-25 entstanden und steht in
+  `app/services/backup.py`; der portable JSON-Weg ist gestrichen. An dieser
+  Abgrenzung ändert sich nichts — ein Riegel im Test ist kein Backup.)*
