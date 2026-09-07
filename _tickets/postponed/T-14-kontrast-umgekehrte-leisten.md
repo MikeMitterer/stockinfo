@@ -1,8 +1,11 @@
 # T-14 · Kontrast auf umgekehrten Leisten — und ein Prüfskript, das ihn sieht
 
+**Zurückgestellt auf Mikes Auftrag, 2026-09-07.** Kein Termin oder Anlass
+für die Wiederaufnahme festgelegt. Befunde und Prüfkriterien bleiben erhalten.
+
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| ux-foundation (Deliverable) + alle Apps | ready | ~4 h | Token + Komponente + Prüfskript | — |
+| ux-foundation (Deliverable) + alle Apps | zurückgestellt | ~4 h | Token + Komponente + Prüfskript | — |
 
 **Löst:** Verify #7 aus **T-13**. In den Themes, die hellen Inhalt zwischen
 dunkle Leisten setzen (`sepia`, `meadow`), liegen Wortmarke, Akzent-Verweis und
