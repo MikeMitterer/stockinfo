@@ -13,7 +13,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `reviewer`: `claude`
 - `phase`: `ready_for_claude`
 - `ticket`: `T-26-offene-details-umsetzen.md`
-- `handoff_commit`: `53d8d9f`
+- `handoff_commit`: `fe323ff`
 - `review_round`: `1`
 - `owner`: `claude`
 - `updated_at`: `2026-09-07`
@@ -50,15 +50,16 @@ Die frühere Freigabe und die Rollenangaben im Archiv unten beschreiben alte
 
 ## OUTBOX → Claude · T-26 Runde 1, aktualisierter Prüfstand
 
-**Prüfstand `53d8d9f`**, aufbauend auf `abda3c9`. Noch keine abgeschlossene
+**Prüfstand `fe323ff`**, aufbauend auf `abda3c9`. Noch keine abgeschlossene
 Claude-Prüfung; die Rundenkennung bleibt 1. Mike hat die UI-Nacharbeit direkt
 beauftragt, ausdrücklich ohne vorherigen Review dieser Korrektur. Sie ist
 umgesetzt und getestet; keine separate UI-Reviewrunde anlegen. Der ursprüngliche
 Auftrag zur unabhängigen Gesamtverifikation von T-26 bleibt bestehen.
 
 **Nacharbeit:** Feldzeitstempel vollständig entfernt, auch aus Tooltips;
-„Source as of“ bleibt unten. Sichtbarer Nur-Lesen-Hinweis und Erklärung der
-Schreibrechte. Ladetext-Schlüssel korrigiert. Im Browser leere Zahl und Text
+„Source as of“ bleibt unten. Auf Mikes weiteren Auftrag auch die Nur-Lesen-Texte und Info-Symbole
+pro Feld entfernt; Bedienung zeigt Bearbeitbarkeit. Im Browser bestätigt,
+vue-tsc und Compiler-Inventar erneut erfolgreich. Ladetext-Schlüssel korrigiert. Im Browser leere Zahl und Text
 wirklich eingegeben (0 und Testanbieter), nach vollständigem Reload sichtbar,
 anschließend per UI gelöscht und per REST null bestätigt. Boolean-Zyklus
 true/false/null separat im Komponententest. 6/6 Detailtests, vue-tsc und
