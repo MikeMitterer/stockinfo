@@ -130,6 +130,11 @@ def _identity(symbol: str, exchange_code: str | None) -> tuple[str | None, str |
     return (ticker, mic) if is_canonical_ticker(ticker) else (None, None)
 
 
+def _quote_name(quote: dict) -> str | None:
+    """Bevorzugt den Langnamen; der Kurzname ist nur der Rückfall."""
+    return quote.get("longname") or quote.get("shortname")
+
+
 def _quote_type(quote: dict) -> str:
     """Liest den ``quoteType`` eines Yahoo-Treffers normalisiert aus.
 
@@ -343,7 +348,7 @@ class YFinanceResolver:
                 return NotFound()
             return ResolvedInstrument(
                 symbol=symbol,
-                name=exact.get("shortname") or exact.get("longname"),
+                name=_quote_name(exact),
                 type=instrument_type,
                 kind="pair",
                 base=base.upper(),
@@ -365,7 +370,7 @@ class YFinanceResolver:
 
         return ResolvedInstrument(
             symbol=symbol,
-            name=exact.get("shortname") or exact.get("longname"),
+            name=_quote_name(exact),
             type=instrument_type,
             kind="listed",
             ticker=ticker,
@@ -431,7 +436,7 @@ class YFinanceResolver:
             exchange=top.get("exchDisp") or exchange_code,
             ticker=ticker,
             mic=mic,
-            name=top.get("shortname") or top.get("longname"),
+            name=_quote_name(top),
             type=QUOTE_TYPE_MAP.get(_quote_type(top)),
             currency=None,  # Währung kommt aus dem Live-Quote, nicht aus der Suche
         )

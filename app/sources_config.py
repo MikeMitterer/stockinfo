@@ -97,7 +97,18 @@ class SourcesConfig:
         Quelle bekommt ihren Abschnitt, nicht die Einstellungen der App und
         nicht die Abschnitte der anderen.
         """
-        return self.providers.get(name, {})
+        section = self.providers.get(name, {})
+        # Die Fachdatei gehört zur Quellenkonfiguration, nicht zum CWD.
+        # Absolute Altpfade bleiben gültig; andere Plugin-Optionen unverändert.
+        if name == "yaml-file" and self.path is not None:
+            asset_path = section.get("path")
+            if (
+                isinstance(asset_path, str)
+                and asset_path
+                and not Path(asset_path).is_absolute()
+            ):
+                return {**section, "path": str(self.path.parent / asset_path)}
+        return section
 
 
 def environment_from(settings) -> dict[str, str]:
@@ -234,7 +245,7 @@ def load_sources_config(path: str | Path, settings) -> SourcesConfig:
     """
     defaults = default_chains(settings.strict_exchange)
     env = environment_from(settings)
-    source = Path(path)
+    source = Path(path).absolute()
     if not source.is_file():
         logger.info(
             "sources_config_default",
