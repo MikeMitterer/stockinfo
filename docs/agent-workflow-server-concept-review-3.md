@@ -434,7 +434,8 @@ zusammen mit der Entscheidung über den gemeinsamen Host.
 
 1. **Liegen die Tickets im Produktrepo auf einem eigenen Branch mit eigenem
    Worktree, oder daneben ohne Versionierung?** (→ A; ich empfehle den
-   eigenen Branch.)
+   eigenen Branch.) — **entschieden, siehe Nachtrag:** Ordner bleiben der
+   Status; offen ist nur noch der Ort, Empfehlung Variante 1 für M1.
 2. **Darf eine KI `Bereit` setzen, oder ist Triage menschlich?** (→ D; ich
    empfehle menschlich, weil `Bereit` heißt „Anforderungen sind klar" — und
    das ist das Urteil, gegen das später geprüft wird.)
@@ -447,10 +448,131 @@ zusammen mit der Entscheidung über den gemeinsamen Host.
 6. **Sollen mehrere Menschen am selben Projekt arbeiten können — und wenn
    ja, auf einem gemeinsamen Host oder über GitHub als Quelle?** (→ H; ich
    empfehle, das Datenmodell sofort mehrbenutzerfähig zu schneiden und den
-   Betrieb auf einen gemeinsamen Host zu legen, sobald es so weit ist.)
+   Betrieb auf einen gemeinsamen Host zu legen, sobald es so weit ist.) —
+   **entschieden, siehe Nachtrag:** Modell ja, Betrieb entfällt.
 
 Punkt 1 blockiert die weiteren Verträge: Solange die Ablage nicht feststeht,
 sind Snapshot, Abgleich und Konfliktregeln nicht abschließend formulierbar.
 Punkt 6 hängt daran — ein gemeinsamer Host verträgt sich mit dem
 Dateiadapter, verteilte Rechner nicht. Die übrigen vier lassen sich
 unabhängig voneinander entscheiden.
+
+**Punkt 1 und 6 sind inzwischen entschieden, Punkt 2 bis 5 stehen offen.**
+Siehe Nachtrag.
+
+---
+
+# Nachtrag · Mikes Entscheidungen zu Runde 3
+
+Stand: 7. September 2026, unmittelbar im Anschluss an die Runde.
+
+## Ordner bleiben der Status (zu A)
+
+**Entschieden:** Der Ordner bleibt der Statusindikator. Worktrees haben ihre
+Berechtigung, aber nicht diese. Ordner sind nachvollziehbarer.
+
+Die Entscheidung widerspricht Befund A nicht — er hat den Ordnerstatus nicht
+angegriffen, sondern seinen **Ort**. Nicht die Worktrees sind der
+Statusindikator, sie vervielfältigen ihn nur: Liegt der Ordnerbaum im
+Produktrepo, hat ihn jedes Worktree als eigene Kopie auf einem anderen
+Commit. Damit bleibt eine einzige Frage offen, und sie ist kleiner als der
+Befund klang.
+
+**Die Regel, die unabhängig vom Ort gilt** und die den Ordnermodell erst
+sicher macht:
+
+1. Der Dienst liest den Status aus **genau einem** Pfad. Kopien desselben
+   Ordnerbaums in Agenten-Worktrees sind veraltetes Beiwerk und werden nie
+   als Quelle gelesen.
+2. **Agenten verschieben keine Ticketdateien.** Ein Statuswechsel läuft über
+   MCP; der Dienst führt ihn in der führenden Ablage aus. Damit enthält kein
+   geprüfter Commit je seinen eigenen Prüfstatus, und kein `git revert` auf
+   Produktcode bewegt ein Ticket.
+3. Der Agent bekommt den Ticketinhalt als fixierte Anforderungsfassung im
+   Auftragspaket — sie hat keinen Ordner und damit keinen Status.
+
+**Offen bleibt nur der Ort:**
+
+| Variante | Wie | Preis |
+|---|---|---|
+| 1 · `_tickets/` im Produktrepo, ein schreibendes Verzeichnis | Wie heute in StockInfo. Der Dienst verschiebt nur im festgelegten Checkout, committet nicht selbst; die Züge werden mitcommittet, wenn ohnehin committet wird | Keine Einrichtung. Ticket- und Codehistorie bleiben verflochten; „wann ging T-7 ins Review" ist nur über Merges lesbar |
+| 2 · Eigener Ticketbranch, einmal ausgecheckt | Der Dienst committet jeden Zug in eine eigene lineare Historie | Einmalige Einrichtung eines Arbeitsverzeichnisses. Saubere Ticketchronik, kein Rauschen auf Feature-Branches |
+| 3 · Eigenes kleines Ticket-Repo neben dem Code | Vollständige Trennung | Tickets reisen nicht mehr mit dem Produktrepo |
+
+**Empfehlung: M1 nimmt Variante 1**, weil sie null Einrichtung kostet und
+genau der heutigen Praxis entspricht — der Ablauf soll sich beweisen, nicht
+die Ablage. Der Ticketpfad bleibt dabei **konfiguriert**, damit Variante 2
+später eine Konfigurationsänderung ist und kein Umbau. Das ist dieselbe
+Linie wie in Befund F: Vertrag vollständig, Umsetzung schmal.
+
+Voraussetzung für Variante 1 ist Regel 1 und 2 oben. Ohne sie kehren genau
+die drei Folgen aus Befund A zurück.
+
+## Rollen sind offen (zu H)
+
+**Entschieden:** Es gibt grundsätzlich mehrere Rollen; Security-Analyst und
+Code-Optimizer sind vorstellbar. Ein fester Zweierschnitt
+`developer`/`verifier` bildet das nicht ab.
+
+**Vorschlag: freier Rollenname, geschlossene Pflichtenklasse.** Die
+Invarianten des Entwurfs hängen alle an wenigen Rechten — genau ein aktiver
+Produktschreiber, Freigabe nur bei Zustimmung aller Pflichtprüfer, keine KI
+in der Human-Spalte. Wären Rollen samt Rechten frei, wäre keine davon
+prüfbar. Deshalb: `role` wird der frei vergebene, überall angezeigte Name,
+und jede Rolle erklärt genau eine `duty`:
+
+| `duty` | Darf | Beispiele |
+|---|---|---|
+| `implement` | Produktcode im Ticket-Worktree schreiben, Übergabe erzeugen | Developer, Code-Optimizer, Migrations-Umsetzer |
+| `review` | Lesen, testen, Findings und Urteil schreiben; kein Produktcode | Verifier Code & Tests, Security-Analyst, UX-Prüfer |
+| `plan` | Ticketinhalt vorschlagen; keine Codeänderung, kein Urteil | Planner, Architekt |
+| `decide` | Abnahme, Wiedereröffnung, Limits, Budgets | ausschließlich Menschen |
+
+Drei Folgen, die ich für wichtiger halte als die Umbenennung selbst:
+
+- **Ein Security-Analyst kostet nichts an neuer Mechanik.** Er ist
+  `duty: review` und fällt vollständig unter den vorhandenen Vertrag aus 1a:
+  gleicher Snapshot, eigener Review-Worktree, eigener Report mit Autor-ID,
+  pro Ticket als Pflichtprüfer oder beratend gesetzt. Mehrere Prüfer
+  desselben Snapshots bleiben **eine** Runde — zusätzliche Prüfrollen
+  vervielfachen die Kosten je Runde, nicht die Zahl der Runden.
+- **Ein Code-Optimizer ist kein weiterer Prüfer, sondern ein zweiter
+  Schreiber.** `duty: implement` trifft die Regel aus 1a, dass zwei
+  implementierende Instanzen getrennte Arbeitspakete, Branches und
+  Integration brauchen. Sauber ist er deshalb als Developer eines eigenen
+  Folgetickets, nicht als Zusatzteilnehmer in einem laufenden. Die Variante
+  „zweite Schreibphase innerhalb eines Tickets" wäre eine weitere
+  Kanban-Spalte — genau das, was 0b vermeiden wollte.
+- **Eine Rolle nennt ihre benötigten Werkzeuge** (`browser`, `test-runner`,
+  `network`). Fehlen sie dem zugeordneten Agenten, weist der Dienst die
+  Rolle als nicht ausführbar aus, statt eine schwächere Prüfung als
+  vollwertige zu verbuchen. Der Entwurf fordert das für UX bereits; mit
+  offenen Rollen wird daraus eine allgemeine Regel.
+
+`specialization` aus 1a geht im Rollennamen auf. Ein zweites Feld mit
+derselben Bedeutung braucht es dann nicht mehr.
+
+## Mehrere Menschen: Modell ja, Betrieb nein
+
+**Entschieden:** Wenn Mehrbenutzerbetrieb zu kompliziert wird, entfällt er.
+
+Das Teure daran war ohnehin nie das Modell, sondern der Betrieb —
+Authentisierung, gemeinsamer Host, zwei Rechner. Der Modellteil kommt jetzt
+zusätzlich **umsonst**: Sobald `duty` die Rechte trägt, verschwindet `human`
+als Rolle von selbst. Ein Mensch ist ein `actor` mit `kind: human`, der eine
+Pflicht hält; `decide` haben nur Menschen. Die Rollenänderung oben erzwingt
+diesen Schnitt also unabhängig von der Mehrbenutzerfrage.
+
+Festlegung deshalb:
+
+- **Bleibt:** `actor` mit stabiler ID und `kind: ai | human`, `assignee` mit
+  Akteurs-ID an jedem Ticket, das auf einen Menschen wartet, und die
+  Rechtestufe für `decide`. Kosten: ein Feld mehr, solange nur Mike
+  eingetragen ist.
+- **Entfällt:** gemeinsamer Host, Authentisierung als Mehrbenutzerfunktion,
+  verteilte Dienste, Rechteverwaltung über zwei Stufen hinaus.
+- **Ausdrücklich festhalten:** Einzelbenutzerbetrieb ist eine Voraussetzung,
+  keine Zufälligkeit der ersten Version. Zwei Menschen mit je eigenem
+  lokalen Dienst auf derselben Ticketquelle erzeugen zwei Datenbanken über
+  dieselben Tickets — die bidirektionale Spiegelung, die 0b ausschließt.
+  Wer den Betrieb später will, entscheidet dann über den gemeinsamen Host.
