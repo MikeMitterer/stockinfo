@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-32-testdatenbank-abschottung.md`
-- `handoff_commit`: `none`
-- `review_round`: `0`
-- `owner`: `codex`
+- `handoff_commit`: `5b02ba1`
+- `review_round`: `1`
+- `owner`: `claude`
 - `updated_at`: `2026-09-07`
 - `last_reviewed_ticket`: `T-60-dashboard-bekommt-ein-eslint-gate.md`
 - `last_reviewed_commit`: `485eca4`
@@ -71,11 +71,47 @@ der Sprachdateien entfernen.
 
 ## INBOX → Codex
 
-*(leer — T-60 freigegeben; Bericht dauerhaft im T-60-Ticket.)*
+*(leer — nächste Übergabe T-32.)*
 
 ## OUTBOX → Claude
 
-*(leer — Runde 1 verarbeitet.)*
+**T-32 Runde 1 — Prüfstand `5b02ba1`, Basis `ae31d09`.**
+
+Codex implementiert, Claude prüft. Bitte den zentralen Test-Datenbankschutz
+gegen den Scope-Vertrag im T-32-Ticket verifizieren. Keine App-Änderung:
+`tests/conftest.py` registriert einen nativen SQLite-Audit-Hook vor Collection
+und isoliert DATABASE_PATH samt Settings-/Service-/Quellen-Caches je Test.
+`tests/test_database_isolation.py` enthält die dauerhaften Gegenproben.
+
+Matrix-Zuordnung: #1 zwei frische Standardpfade und zwei Tagesdienst-Cachefälle;
+#2 15 Kombinationen aus drei Connect-Aufrufen/fünf Pfadformen, neues Ziel im
+geschützten Verzeichnis, externer konfigurierter Startpfad im Kindprozess,
+erlaubte temporäre und In-Memory-Verbindungen; #5 Regel in CLAUDE.md.
+#3 ist ausdrücklich ausgenommen (kein Composition-Root-Umbau).
+#4 `make test ARGS="-m 'not integration'"` ohne manuell gesetzten Datenpfad:
+1110 Backend bestanden, 29 übersprungen, 8 Onlinefälle abgewählt; Plugin-API
+309/1 übersprungen, Beispiel 47, Dashboard 339 samt ESLint. Onlinefälle sind
+wegen zuvor beobachteter Netzwerk-Timeouts keine bestandene Verifikation.
+
+Gezielter Wiederholungslauf: `.venv/bin/pytest -q tests/test_database_isolation.py`
+23 bestanden. Ruff für beide Testdateien grün. Anfangs 18 rot/2 grün;
+Mutant ohne Audit-Hook 16 rot/6 grün, ohne Tagesdienst-Cache-Leerung 1 rot/21
+grün, ohne Erfassung des konfigurierten Pfads 1 rot/22 abgewählt. Alle
+Mutanten zurückgenommen; nur temporäre Stand-ins, kein absichtlicher Zugriff
+auf echte Arbeitsdaten. Logs und genaue Grenzen stehen im Ticket.
+
+Geplant/tatsächlich: drei Änderungen (Fixture, Audit-Schutz, Tests/Regel),
+keine Produktdatei, zwei Testdateien/zwei Dokumentationsdateien,
+264 hinzugefügte T-32-Zeilen gegenüber höchstens 400. Native Audit-API,
+pytest und kleiner Start-Subprozess; kein eigenes Test-Subsystem. DRY-Suche
+findet keinen bestehenden zentralen Schutz, AST-Inventar ohne Namensbefund.
+
+Zusätzlich enthält der Commit den von Mike ausdrücklich beauftragten
+T-60-Ticketabschluss samt Beschreibung/Nachprüfung unter solved/ und den
+zugehörigen Statushinweis. Das ist kein T-32-Produktscope. Fremde uncommittete
+Workflow-/Dokumentationsänderungen bleiben erhalten; insbesondere enthält
+CLAUDE.md im Prüfcommit ausschließlich die neue zehnzeilige Testregel.
+Bitte für die Reviewbasis den Commit-Diff verwenden.
 
 ## Archiv · T-60 Scope-Checkpoint: `continue`
 
