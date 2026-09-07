@@ -1,5 +1,31 @@
 # T-16 · Review-Fixes und die zweite ETF-Quelle am laufenden System prüfen
 
+Abgeschlossen auf Mikes Auftrag vom 2026-09-07. Die UI-Abnahme wurde durch
+T-56 abgelöst; der alte Befund #5c ist in T-17 behoben und verifiziert.
+Die unbestätigten Docker-Tests stehen jetzt in
+[T-63](../T-63-docker-start-und-betrieb-pruefen.md).
+
+## Für dich
+
+Keine weitere Aufgabe in T-16. Mike: „Kennzeichne es als erledigt - erstelle ein eigenes Ticket für die Docker-Tests“.
+
+## Abschluss und technische Einordnung · 2026-09-07
+
+Die erneute Prüfung von `tests/test_quote_cache.py` ergab 35 bestandene Tests.
+Der genaue alte US-ETF-UI-Ablauf „TER setzen und danach Refresh“ wurde dabei
+nicht erneut live ausgeführt. Der Abschluss ist Mikes Entscheidung und keine
+nachträgliche Bestätigung aller alten Prüfzellen. Die bisherigen Antworten
+und Belege bleiben unten unverändert erhalten.
+
+Das Smoke-Skript wird mit dem Ticket unter `solved/` archiviert. Seine alten
+Provider-Erwartungen sind historisch; es wurde nicht erneut als aktueller
+Gesamtnachweis ausgeführt. Docker #9 bleibt ohne Live-Nachweis.
+
+## Ursprünglicher Prüfstand · Historie
+
+Die folgenden Statusangaben, offenen Punkte und Befehle beschreiben den
+früheren Stand; sie sind kein aktueller Auftrag.
+
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
 | StockInfo (Backend + Dashboard) | in-review | 15 min (nur noch UI) | Verifikation am laufenden System, kein Code | — |
