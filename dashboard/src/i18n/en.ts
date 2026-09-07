@@ -12,6 +12,12 @@ const roles = {
 
 export const en = {
   details: {
+    loading: 'Loading fields…',
+    editField: 'Edit {field}',
+    readOnly: 'Read only',
+    readOnlyHint: 'The source declares this field as not manually editable.',
+    providerHint: 'This value comes from the source. Manual entries can only fill missing source values.',
+    editableHint: 'You can fill a missing source value here. If the source later supplies a value, it takes precedence.',
     currency: 'Currency',
     manual: 'Manual',
     shadowed: 'The source takes precedence over your value {value}.',

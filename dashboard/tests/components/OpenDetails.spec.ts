@@ -63,4 +63,22 @@ describe('Offene Detailfelder', () => {
     expect(fetchMock.mock.calls[0][1].method).toBe('PATCH')
     expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({ 'sample.risk': { value: false } })
   })
+
+  it('schaltet eine editierbare Ja-Nein-Angabe durch wahr, falsch und leer', async () => {
+    const wrapper = mount(DetailEditor, {
+      props: { definition: { ...definition, kind: 'boolean' }, value },
+      global: { plugins: [i18n] },
+    })
+    const button = () => wrapper.get('button[aria-label="Risiko bearbeiten"]')
+    await button().trigger('click')
+    expect(wrapper.emitted('commit')?.at(-1)).toEqual([{ value: true, currency: null }])
+    await wrapper.setProps({ value: { ...value, value: true, manual_value: true, origin: 'manual' } })
+    await button().trigger('click')
+    expect(wrapper.emitted('commit')?.at(-1)).toEqual([{ value: false, currency: null }])
+    await wrapper.setProps({ value: { ...value, value: false, manual_value: false, origin: 'manual' } })
+    expect(button().text()).toBe('Nein')
+    await button().trigger('click')
+    expect(wrapper.emitted('commit')?.at(-1)).toEqual([{ value: null, currency: null }])
+    wrapper.unmount()
+  })
 })

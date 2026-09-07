@@ -3,7 +3,7 @@ import { computed, ref, watch } from 'vue'
 import { NButton, NInput, NSelect } from 'naive-ui'
 import { UxInlineNumber } from '@mmit/ux-foundation'
 import { useI18n } from 'vue-i18n'
-import { formatDateTime } from '../utils/datetime'
+import InfoHint from './InfoHint.vue'
 import type { DetailDefinition, DetailInput, DetailValue } from '../types'
 
 const props = defineProps<{ definition: DetailDefinition; value: DetailValue; busy?: boolean; options?: string[] }>()
@@ -11,6 +11,8 @@ const emit = defineEmits<{ (event: 'commit', value: DetailInput): void }>()
 const { t, locale, n } = useI18n()
 const label = computed(() => locale.value === 'de' ? props.definition.label_de || props.definition.label_en : props.definition.label_en)
 const editable = computed(() => props.definition.overridable && props.value.origin !== 'provider')
+const hint = computed(() => !props.definition.overridable ? t('details.readOnlyHint')
+  : props.value.origin === 'provider' ? t('details.providerHint') : t('details.editableHint'))
 const numeric = computed(() => typeof props.value.manual_value === 'number' ? props.value.manual_value : null)
 const display = computed(() => {
   const value = props.value.value
@@ -40,8 +42,8 @@ function toggle(): void {
       <UxInlineNumber v-if="definition.kind === 'number'" :value="numeric" :display="display"
         :min="definition.minimum ?? undefined" :max="definition.maximum ?? undefined"
         :precision="4" :empty-value="null" :disabled="busy"
-        :edit-label="t('overrides.edit')" :clear-label="t('overrides.clear')" @commit="commit($event)" />
-      <NButton v-else-if="definition.kind === 'boolean'" size="small" :disabled="busy" @click="toggle">{{ display }}</NButton>
+        :edit-label="t('details.editField', { field: label })" :clear-label="t('overrides.clear')" @commit="commit($event)" />
+      <NButton v-else-if="definition.kind === 'boolean'" size="small" :disabled="busy" :aria-label="t('details.editField', { field: label })" @click="toggle">{{ display }}</NButton>
       <NSelect v-else :value="typeof value.manual_value === 'string' ? value.manual_value : null"
         :options="(options ?? []).map((value) => ({ label: value, value }))" filterable tag size="small" :placeholder="label" :disabled="busy"
         @update:value="commit($event)" />
@@ -54,7 +56,8 @@ function toggle(): void {
       :disabled="busy" :title="t('overrides.removeOwn')" @click="commit(null)">✕</NButton>
     <small v-if="value.origin === 'manual'">{{ t('details.manual') }}</small>
     <small v-else-if="value.source">{{ value.source }}</small>
-    <small v-if="value.as_of">{{ formatDateTime(value.as_of, locale) }}</small>
+    <small v-if="!editable">{{ t('details.readOnly') }}</small>
+    <InfoHint :text="hint" icon="info" />
     <small v-if="value.shadowed">{{ t('details.shadowed', { value: value.manual_value }) }}</small>
   </div>
 </template>

@@ -90,6 +90,33 @@ nicht. Auf Mikes zweiten Hinweis vollständig entfernt. Echter Fenster-Resize
 geprüft: 1100 px Fenster → 1060 px Tabelle, 1505 px → 1465 px. Die Ansicht
 reagiert wieder auf die Fensterbreite; keine CSS-Änderung erforderlich.
 
+### Direkte UI-Nacharbeit auf Mikes Auftrag · 2026-09-07
+
+Mike beanstandete die Zeitangaben pro Feld und die scheinbar vollständige
+Sperre. Er beauftragte unmittelbare Korrektur und Tests editierbarer Felder,
+ohne vorherige Claude-Prüfung. Sein weiterer Hinweis: Der Zeitpunkt steht
+bereits unten bei „Source as of“; ein zusätzlicher Zeit-Tooltip ist unnötig.
+
+Umgesetzt: keine Zeitangabe und kein Zeit-Tooltip pro Feld; die gemeinsame
+Fußzeile bleibt. Gesperrte Felder tragen „Nur Lesen“/„Read only“. Der Infohinweis
+unterscheidet nicht editierbare Plugin-Felder von Feldern mit Quellenwert.
+Bearbeiten-Schaltflächen nennen ihr Feld. Beim Test zusätzlich den fehlenden
+Ladetext-Schlüssel des Feldkatalogs korrigiert.
+
+| # | Lauf | Handgriff | Nachweis | woher | AI |
+|---|---|---|---|---|:--:|
+| 6a | B | ETF-Details öffnen | kein Datum im Feldbereich, gemeinsame Fußzeile bleibt; Sperrgrund im Infohinweis | Chrome-Snapshot und Screenshot | ✅ |
+| 8a | B | leeren Score 0 und leeren Anbieter „Testanbieter“ per UI setzen, Browser neu laden | beide Werte sichtbar und per REST als manual gespeichert | echte Zahl-/Freitextbedienung, Reload, GET instruments | ✅ |
+| 8b | B | beide manuellen Angaben per Clear/Entfernen löschen | beide null; readonly false bleibt erhalten | UI und REST-Rücklesen | ✅ |
+| 8c | A | editierbaren Boolean über echten Komponentenbutton umschalten | true → false → null; false zeigt Nein | Komponententest, kein Live-Boolean-Lauf | ➖ |
+
+Der isolierte Testbestand bleibt mit editierbaren Lücken vorbereitet:
+Risikoscore bei BTC/ETF und Fondsanbieter beim ETF. Dafür ausschließlich die
+Dateien im eigenen Testvolume geändert. Betriebsdaten bleiben unberührt.
+Gezielt 6/6 Detail-Komponententests und vue-tsc erfolgreich; Compiler-Inventar
+und `git diff --check` geprüft. Kein erneuter Backend-Volltest für diese
+Frontend-Nacharbeit erforderlich.
+
 ### Auflösung
 
 Implementiert und erstgetestet. Claude soll insbesondere Migration,

@@ -30,7 +30,7 @@ onMounted(async () => {
 <template>
   <div class="open-details">
     <p v-if="error" role="alert">{{ error }}</p>
-    <p v-else-if="loading">{{ t('table.loading') }}</p>
+    <p v-else-if="loading">{{ t('details.loading') }}</p>
     <p v-else-if="fields.length === 0">{{ t('details.empty') }}</p>
     <dl v-else class="open-details__fields">
       <div v-for="definition in fields" :key="definition.name">
