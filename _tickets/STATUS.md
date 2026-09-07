@@ -11,18 +11,18 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `portfolio_review`
-- `ticket`: `none`
-- `handoff_commit`: `cb14e4b`
+- `phase`: `codex_working`
+- `ticket`: `T-60-dashboard-bekommt-ein-eslint-gate.md`
+- `handoff_commit`: `none`
 - `review_round`: `0`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-09-07`
 - `last_reviewed_ticket`: `T-26-offene-details-umsetzen.md`
 - `last_reviewed_commit`: `cb14e4b`
 - `last_reviewed_round`: `2`
-- `workstream`: `offene_befunde`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `workstream`: `plugin_abschluss`
+- `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-21-identitaet-mic-und-ticker.md`
+- `priority_ticket`: `T-60-dashboard-bekommt-ein-eslint-gate.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
@@ -36,34 +36,46 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
-## Aktiver Rollenwechsel · Auftrag Mike, 2026-09-07
+## Aktive Kette · Auftrag Mike, 2026-09-07
 
-Für T-26 implementiert **Codex**, danach verifiziert **Claude** unabhängig.
-T-26 ist Voraussetzung für den Feldpunkt F in T-56. Bis zur fertigen Übergabe
-bleibt `owner: codex`; Claude ändert keinen Produktcode. Bei Übergabe folgen
-`phase: ready_for_claude`, `owner: claude` und der konkrete Prüfstand. Claude
-setzt während der Prüfung `claude_reviewing` und meldet `approved` oder
-`changes_requested`; bei Nacharbeit geht der Owner zurück an Codex.
-Diese zusätzlichen Phasen gelten für den ausdrücklich beauftragten Rollenwechsel.
-Die frühere Freigabe und die Rollenangaben im Archiv unten beschreiben alte
-Übergaben, keinen Auftrag zum parallelen Weiterarbeiten an T-57.
+**Codex entwickelt, Claude prüft unabhängig.** Mike: „Beginne mit T-60,
+überleg dir dann für STATUS.md eine vernünftige Kette. T-63 kannst du
+einstweilen stehen lassen. Der Entwicklungszyklus starte dann ganz normal.
+Du entwickelst, Claude überprüft.“
 
-## Abschluss der Prioritätskette
+| Reihenfolge | Umfang und Grund |
+|---|---|
+| T-60 | ESLint samt Foundation-Speicherregeln in den normalen Dashboard-Testlauf aufnehmen. |
+| T-32 | Testdatenbank absichern, bevor weitere Plugin-/Core-Integrationstests entstehen; gezielter Schutz, keine Architektur-Neufassung. |
+| T-30 | Neue Handelsplätze und Rollenunterstützung für externe Plugin-Autoren ermöglichen; bestehende Core-Aliase bleiben unverändert. |
+| T-21 | Zunächst ausschließlich offenes #2g: übersetzte Fehlertexte samt gezielter Verifikation. Börsenabweichungs-UI und Docker-Pending-Langzeittest sind keine automatisch gestarteten Folgearbeiten. |
 
-Mike hat T-57 am 2026-09-07 mit „Passt“ zur vorgeschlagenen Einordnung
-abgeschlossen: teilweise umgesetzt, im übrigen durch KanTandem abgelöst.
+T-63 bleibt offen und außerhalb der Kette. T-25 hat die beauftragte
+`data_version`-Teillösung; die weitergehende automatische Migration wird durch
+diese Kette nicht beauftragt. Zurückgestellte Tickets bleiben zurückgestellt.
+Nach T-21 #2g folgt `portfolio_review`, Owner Mike; keine vollständige
+Erledigung von T-21 allein aus dieser Teilkorrektur ableiten.
+
+Vor jeder Übergabe stehen Befunde und Prüfnachweise vollständig in der
+OUTBOX. Erst danach folgen `ready_for_claude` und Owner Claude. Nach dem
+Review gehen Freigabe oder Nacharbeit an Codex; der Scheduler nimmt nur
+Arbeit für den eingetragenen Owner und das aktuelle Prioritätsticket auf.
+
+## Frühere Kette · abgeschlossen
+
 T-26, T-56 und T-57 liegen unter `solved/`; T-62 ist zurückgestellt.
-Die vereinbarte Prioritätskette ist beendet. Kein Implementierungs- oder
-Reviewauftrag ist aktiv. Der Zustand ist `portfolio_review`, Owner Mike;
-eine neue Aufgabe benötigt eine neue Einplanung.
+Die frühere Prioritätskette ist beendet. Ihre historischen Übergaben unten
+starten keine Arbeit. Nicht blockierender Rest aus T-26: ungenutzte
+Sprachschlüssel `details.source` und `details.manual` beim nächsten Anfassen
+der Sprachdateien entfernen.
 
-Die Auflösung von T-57 nennt die bereits geltenden Regeln und die Ablösung
-des Übersichtswerkzeugs durch das KanTandem-Konzept, ohne dessen Umsetzung
-als abgeschlossen auszugeben. Eine grüne Matrix ersetzt keine erforderliche
-Review- oder menschliche Abnahme.
+## INBOX → Codex
 
-Nicht blockierender Rest aus T-26: ungenutzte Sprachschlüssel `details.source`
-und `details.manual` beim nächsten Anfassen der Sprachdateien entfernen.
+*(leer — T-60 in Arbeit.)*
+
+## OUTBOX → Claude
+
+*(leer — noch keine Übergabe.)*
 
 ## Kontext
 
@@ -190,7 +202,7 @@ steht in dieser Tabelle mit **in Kraft**:
 - Übergabe- und Scheduler-Regeln: `CODEX-REVIEW-AUTOMATION.md` und
   `CODEX-IN-CONTEXT-SCHEDULER.md`.
 
-## INBOX → Claude
+## Archiv · INBOX → Claude
 
 **Codex-Review T-56 Runde 6: `approved`.** Die Landung ist sauber: 0.8.0 ist
 installiert und entspricht dem Release-Tag, `^0.8.0` ist ein passender Bereich,
@@ -225,7 +237,7 @@ ausdrückliche Anweisung wurden diese freigegebenen Tickets zusammen mit den
 übrigen abgeschlossenen Paketen und ihren Skripten nach `solved/` verschoben
 (Commit `c57a855`).
 
-## OUTBOX → Codex
+## Archiv · OUTBOX → Codex
 
 *(leer — Runde 6 ist verarbeitet.)*
 
