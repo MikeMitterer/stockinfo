@@ -1,3 +1,97 @@
+# T-19 · Verbleibender Punkt: Herkunft der Auflösung
+
+**Eine Börsenzuordnung wird nicht am bestehenden Asset korrigiert.** Für eine
+andere Zuordnung muss der Nutzer das Asset löschen und neu anlegen. Damit
+entfällt der in T-19 vorgeschlagene Neuauflösungs- und Korrekturweg vollständig.
+
+Die Quellenübersicht (#8) ist bereits umgesetzt. Als noch nicht erledigter
+Einzelpunkt bleibt die Herkunft der Auflösung (#7). Das Ticket bleibt dafür
+offen; die heutige Entscheidung beauftragt keine Implementierung dieses Rests.
+Für Mike ist aktuell kein Handgriff nötig.
+
+## Für dich
+
+### Bisherige Antworten und Rückmeldungen
+
+| Bezug | Rückmeldung im Originalwortlaut | Bearbeitungsstand |
+|---|---|---|
+| Ticketüberarbeitung | Mike, 2026-09-07: „T-19 - was gilt noch. Überarbeite das Ticket nach den neuen Regeln“ | Gegen den aktuellen Code geprüft; alte Anforderungen eingeordnet. |
+| Börsenzuordnung, #1–6 einschließlich #2a/#2b | Mike, 2026-09-07: „Börsenzuordnung kann nicht korrigiert werden - der User muss das Asset löschen und neu anlegen.“ | Produktentscheidung übernommen. Korrektur-Endpunkt, Vorschau und Übernahme alter Daten entfallen. |
+
+### Was bleibt?
+
+| Prüfpunkt | Aktuelle Einordnung |
+|---|---|
+| #1–6, #2a/#2b | Entfallen durch Mikes Entscheidung; nicht als umgesetzt oder bestanden gewertet. |
+| #7 · Herkunft der Auflösung | Noch offen: Die tatsächlich auflösende Quelle wird nicht als eigenes dauerhaftes Merkmal gespeichert. Kein aktueller Implementierungsauftrag. |
+| #8 · Quellenübersicht | Umgesetzt; keine Nacharbeit aus T-19. |
+| #9 · Projektchecks | Kein eigenständiges Feature; nur bei einer künftigen Umsetzung von #7 erneut relevant. |
+
+## Umsetzung und technische Nachweise
+
+### Verbindliche Produktregel
+
+Ein Wechsel der Börsenzuordnung erfordert Löschen und Neuanlegen. Es entsteht
+kein REST- oder UI-Weg, der die Zuordnung eines bestehenden Assets korrigiert.
+T-19 verlangt keine Übernahme der Kurshistorie oder manuellen Angaben aus dem
+gelöschten Asset in die Neuanlage. Der bisherige Vorschlag, manuelle Angaben
+zu erhalten und nur Kursreihen zu verwerfen, ist damit abgelöst.
+
+Der zuvor beschriebene Repository-Pfad für automatisch aktualisierte Identitäten
+ist davon zu unterscheiden. Er wurde nur im Code betrachtet, nicht live als
+Fehler reproduziert. Daraus wird hier kein neuer Korrekturauftrag abgeleitet.
+
+### Verbleibender Umfang: #7
+
+`ResolvedInstrument` und das Instrument-Schema speichern keinen eigenen
+dauerhaften Resolver-Namen. Die Herkunft von Kursen und einzelnen Detailwerten
+belegt nicht, welche Quelle die Identität aufgelöst hat. Sollte #7 umgesetzt
+werden, sind Persistenz, REST-Auskunft und die gewünschte Darstellung vorher
+konkret festzulegen. Die in T-56 entfernten Tooltips werden nicht automatisch
+wieder eingeführt. Die alte Time-box von vier Stunden gilt für diesen Rest nicht.
+
+### Verify
+
+Legende: ➖ keine Live-Verifikation; kein Prüfergebnis wird aus der
+Produktentscheidung abgeleitet.
+
+| # | Prüfgegenstand | Nachweis / Stand | AI |
+|---|---|---|:--:|
+| 7 | Tatsächlich auflösende Quelle dauerhaft nachvollziehbar | Noch nicht implementiert; konkrete Prüfung erst mit festgelegtem REST-/UI-Vertrag | ➖ |
+| 8 | Quellen je Rolle, Reihenfolge, Nutzbarkeit und Fehlergrund | Im Code von `GET /sources` vorhanden; bestehende Quellenkonfigurationstests bestanden | ➖ |
+
+Bereits ausgeführte Prüfung vom 2026-09-07: 16 Quellenkonfigurations- und
+35 Quote-Cache-Tests bestanden (zusammen 51). Kein Live-Nachweis für #7,
+kein Test eines Börsenwechsels und kein neuer vollständiger Projekt-Testlauf.
+
+```bash
+# #8: vorhandene Quellenkonfiguration und REST-Auskunft
+.venv/bin/pytest -q tests/test_sources_config.py
+# #9: bereits geprüfte Cache-Regressionen
+.venv/bin/pytest -q tests/test_quote_cache.py
+```
+
+### Side-Effects
+
+Nur Ticketänderung. Keine Assets gelöscht oder angelegt, keine Produkt- oder
+REST-Änderung. Rollen, Prioritätskette und Reviewstatus bleiben unverändert.
+
+### Auflösung
+
+Der Hauptumfang ist durch Mikes Produktentscheidung vom 2026-09-07 verworfen.
+#8 ist umgesetzt; #7 bleibt als einziger fachlicher Rest offen. Frühere
+Antworten, IDs und Belege sind unten erhalten und keine aktuellen Aufträge.
+
+## Review-Verlauf · Historie
+
+Die folgende Überarbeitung wurde durch Mikes anschließende Entscheidung
+abgelöst. Insbesondere sind ihre Korrekturwege und offenen Prüfpunkte #1–6
+keine Anforderungen mehr. Sie enthält auch die ursprüngliche August-Fassung
+mit unveränderten leeren Human-Feldern.
+
+<details>
+<summary>Überarbeitung vor Mikes Entscheidung · 2026-09-07</summary>
+
 # T-19 · Börsenzuordnung korrigieren, ohne Kursreihen zu vermischen
 
 **Offen bleibt der sichere Korrekturweg:** Ein falsch zugeordnetes Papier soll
@@ -261,5 +355,7 @@ Ergebnis oder eine zusätzliche Diagnosemethode — Entscheidung offen, siehe Sp
 ## Auflösung
 
 _(offen)_
+
+</details>
 
 </details>
