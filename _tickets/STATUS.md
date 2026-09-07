@@ -13,7 +13,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `reviewer`: `claude`
 - `phase`: `claude_reviewing`
 - `ticket`: `T-26-offene-details-umsetzen.md`
-- `handoff_commit`: `fe323ff`
+- `handoff_commit`: `8bf2d53`
 - `review_round`: `1`
 - `owner`: `claude`
 - `updated_at`: `2026-09-07`
@@ -48,9 +48,35 @@ Diese zusätzlichen Phasen gelten für den ausdrücklich beauftragten Rollenwech
 Die frühere Freigabe und die Rollenangaben im Archiv unten beschreiben alte
 Übergaben, keinen Auftrag zum parallelen Weiterarbeiten an T-57.
 
+## Laufende Prüfung · ergänzter UI-Stand
+
+Claude hat Runde 1 auf **fe323ff** begonnen. Codex hat währenddessen auf Mikes
+direkten Auftrag die Herkunft pro Feld in Tooltips verschoben. Der fertige
+Nachtrag ist **8bf2d53**; Produktdiff zur begonnenen Prüfung:
+`git diff fe323ff..8bf2d53 -- dashboard`.
+
+Die zwischenzeitliche Anzeige `codex_working` koordinierte den laufenden
+Claude-Review nicht zuverlässig; auf Mikes Hinweis korrigiert. Claude bleibt
+Verifier und Owner der laufenden Runde. Bereits erhobene Befunde und der
+Rundenverbrauch bleiben erhalten. Bitte den kleinen UI-Nachtrag in derselben
+Prüfung berücksichtigen; kein abgeschlossener Review wird neu gestartet.
+Codex ändert bis zur Rückgabe keinen weiteren Produktcode ohne neuen direkten
+Auftrag von Mike.
+
+Aktueller Nachweis: Herkunft fehlt im normalen Feldbereich; Fokus auf TER
+zeigt „Source: yaml-file“. 6/6 Detailtests, vue-tsc, Compiler-Inventar und
+Whitespace geprüft. Nur im temporären Demo-Plugin sind score/verified auf
+crypto begrenzt; REST zeigt bei BTC zwei Demo-Felder und bei EUNL ausschließlich
+provider/ter/fund_domicile. Testserver nach Neustart eigene PID 80819.
+
+Zusätzlicher Reviewhinweis aus diesem Test: EUNLs gemeinsame Quellenfußzeile
+trägt noch risk-demo vom vorherigen Metadatenstand, während die aktuellen
+sichtbaren Felder yaml-file zugeordnet sind. Bitte die Aggregation/Erneuerung
+der gemeinsamen Quellenangabe gegen feldweise Herkunft prüfen.
+
 ## OUTBOX → Claude · T-26 Runde 1, aktualisierter Prüfstand
 
-**Prüfstand `fe323ff`**, aufbauend auf `abda3c9`. Noch keine abgeschlossene
+**Prüfstand `8bf2d53`**, aufbauend auf `abda3c9`. Noch keine abgeschlossene
 Claude-Prüfung; die Rundenkennung bleibt 1. Mike hat die UI-Nacharbeit direkt
 beauftragt, ausdrücklich ohne vorherigen Review dieser Korrektur. Sie ist
 umgesetzt und getestet; keine separate UI-Reviewrunde anlegen. Der ursprüngliche
