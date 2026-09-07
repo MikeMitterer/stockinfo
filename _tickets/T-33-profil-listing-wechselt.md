@@ -1,3 +1,106 @@
+# T-33 · Plugin-Antworten dürfen die Börsenzuordnung nicht still ändern
+
+**Für den Plugin-Abschluss relevant:** Unterschiedliche Plugins können dieselbe
+ISIN an unterschiedlichen Handelsplätzen auflösen. Der Core muss verhindern,
+dass dadurch eine bestehende Börsenzuordnung oder deren Kursreihe still
+verändert wird. Das gilt auch bei unveränderter `data_version`.
+
+Mike hat den reduzierten Umfang am 2026-09-07 mit **„Passt“** bestätigt:
+Schutz vor stillen Börsenwechseln, verständlicher Konflikt und
+Löschen/Neuanlegen als Ausweg. Die Entscheidung steht; die Umsetzung ist offen.
+
+## Für dich
+
+Aktuell kein Handgriff nötig. Der nächste technische Schritt ist, die noch
+fehlende Absicherung ohne kollidierende zweite Zeile zu prüfen und umzusetzen.
+Keine automatische Wechsel- oder Migrationsfunktion entwickeln.
+
+### Bisherige Antworten und Rückmeldungen
+
+Mike: „Bei der Prüfung auf Relevanz musst du einen potentiellen Plugin-Author mit einbeziehen.“
+
+Die Einschätzung berücksichtigt deshalb auch ein neues Plugin, dessen
+Auflösung vom vorhandenen Bestand abweicht. Der Plugin-Autor braucht eine
+verlässliche Core-Regel und darf nicht selbst Konflikte im gemeinsamen
+Bestand durch Umhängen von Identitäten oder Kursreihen lösen müssen.
+
+Mike bestätigt mit „Passt“ den Vorschlag, T-33 auf Schutz und verständliche
+Fehlermeldung zu reduzieren. Der Ausweg folgt der Entscheidung in
+[T-19](solved/T-19-neu-aufloesen-ohne-datenverlust.md): eine andere
+Börsenzuordnung durch Löschen und Neuanlegen.
+
+## Umsetzung und technische Nachweise
+
+### Verbindlicher Umfang
+
+- Eine Plugin-Antwort darf ein bestehendes Listing nicht auf einen anderen
+  Handelsplatz umstellen. Das gilt für alle speichernden Wege, einschließlich
+  Aufnahme und Kursaktualisierung, auch ohne zweite kollidierende Zeile.
+- Ein solcher Widerspruch wird als typisierter Konflikt zurückgegeben. Das
+  vorhandene `409 identity_conflict` ist der Ausgangspunkt; der genaue
+  Fehlervertrag ist bei der Umsetzung abzugleichen.
+- Die Oberfläche erklärt den Konflikt und den Ausweg Löschen/Neuanlegen in
+  Deutsch und Englisch. Kein automatisches Löschen oder Neuanlegen.
+- Bei Ablehnung bleiben Identität, `listing_id`, bestehende Kursreihen und
+  manuelle Angaben unverändert. Eine neue Kursantwort darf nicht teilweise
+  unter der alten Zuordnung gespeichert werden.
+- Kompatible Antworten für dasselbe Listing bleiben möglich. Das Nachtragen
+  einer bisher fehlenden ISIN am unveränderten Listing ist kein Börsenwechsel.
+
+### Ausgenommen
+
+Keine inaktiven Listings, kein Modell eines wechselnden „aktiven
+Profil-Listings“, keine automatische Historienmigration und keine
+Zusammenführung verschiedener Handelsplätze. Kein Generationssignal als
+Voraussetzung für die Konfliktablehnung. Die früheren Wechseloptionen unten
+sind durch die bestätigte Eingrenzung abgelöst.
+
+### Aktueller Befund
+
+Der bereits bekannte Fall mit zwei kollidierenden Zeilen wird als
+`409 identity_conflict` behandelt. Frisch geprüft: **52 Tests bestanden** in
+Repository, Aufnahmeweg und Symbolmehrdeutigkeit.
+
+Der Fall ohne zweite Zeile ist damit nicht abgenommen:
+`_find_instrument_id` sucht zuerst über die ISIN; `_identity_update` kann die
+gefundene Zeile aktualisieren. Hier muss der Schutz unabhängig vom
+Eindeutigkeitsindex greifen. Bisheriger Codebefund, kein neuer Live-Test.
+
+```bash
+# Bestand der Konflikt- und Identitätsprüfungen, keine vollständige Abnahme
+.venv/bin/pytest -q tests/test_repository.py tests/test_identity_intake_paths.py tests/test_symbol_ambiguity.py
+```
+
+### Verify · reduzierter Umfang
+
+Neue Kennungen S1–S5 unterscheiden die Schutzprüfungen vom alten Wechselplan.
+Alle technischen Fälle auf eigener temporärer DB mit kontrollierten
+Plugin-Antworten prüfen. Legende: ➖ keine neue Live-Verifikation.
+
+| # | Handgriff | Erwarteter Nachweis | AI |
+|---|---|---|:--:|
+| S1 | Eine Plugin-Antwort liefert dieselbe ISIN mit anderer Börse; keine zweite Zeile vorhanden | Typisierter Konflikt; bestehende Identität, ID und Daten vollständig unverändert | ➖ |
+| S2 | Dieselbe Antwort bei bereits vorhandener zweiter Notierung | Konflikt ohne Zusammenführung, Löschung oder teilweise gespeicherten Kurs | ➖ |
+| S3 | Antwort bestätigt dasselbe Listing oder ergänzt dessen bisher fehlende ISIN ohne Konflikt | Reguläre Aktualisierung weiterhin möglich | ➖ |
+| S4 | Konflikt über alle betroffenen speichernden REST-Wege auslösen | Einheitlicher Fehlervertrag und keine Nebenwirkungen; Tests ersetzen nur die Außengrenzen | ➖ |
+| S5 | Konflikt im UI in DE und EN auslösen | Verständliche Erklärung mit Löschen/Neuanlegen als Ausweg, keine automatische Aktion | ➖ |
+
+### Side-Effects und Auflösung
+
+Heute nur Ticketänderung. Keine Assets verändert und kein Produktcode
+angepasst. Umfang entschieden, Umsetzung und Abnahme offen. Die historische
+Matrix bleibt unverändert als Beleg erhalten; ihre offenen Entscheidungen
+sind keine neuen Arbeitsaufträge. Rollen und Prioritätskette bleiben unverändert.
+
+## Frühere Fassung · Historie
+
+Die folgenden Wechseloptionen und Generation-Abhängigkeiten sind durch Mikes
+Entscheidung vom 2026-09-07 abgelöst. Ursprüngliche Kennungen, Fußnoten und
+leere Human-Felder bleiben erhalten.
+
+<details>
+<summary>Früherer Plan für einen aktiven Profil-Listingwechsel</summary>
+
 # T-33 · Wenn das Profil den Handelsplatz wechselt
 
 - **Status:** offen (Entscheidung ausstehend)
@@ -117,3 +220,5 @@ Alle drei betreffen das **bisherige** Profil-Listing. Keiner verschiebt eine
    sagen, dass „aktiv" eine Eigenschaft des Profils ist und nicht der Zeile.
 
 Keiner der drei ist offensichtlich richtig. Die Entscheidung gehört Mike.
+
+</details>
