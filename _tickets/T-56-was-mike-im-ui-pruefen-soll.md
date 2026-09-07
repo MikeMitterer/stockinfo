@@ -141,6 +141,16 @@ derselben Mittellinie; kein horizontaler Überlauf. Rot im DOM bestätigt
 (`rgb(224, 82, 82)`). Sechs Detail-Komponententests und vue-tsc grün.
 Betriebswerte nur angesehen, keine Eingabe oder Löschung ausgeführt.
 
+### UI-Nacharbeit: Währung neben Fondsvolumen
+
+Mikes Befund auf GOLD.SG bestätigt: Das Währungsfeld belegte 100 Prozent
+der Spalte und brach unter den Betrag um. Jetzt kompakt mit 7 rem neben dem
+Betrag, Abstand 4 px. Technisches „absolute“ wird nicht als Einheit angezeigt;
+beim Bearbeiten steht die Währung im eigenen Eingabefeld, bei Quellenwerten
+weiterhin am Betrag. Desktop und 390 px: Betrag und Währung auf gleicher
+Mittellinie, kein horizontaler Überlauf. Sechs Detail-Komponententests und
+vue-tsc erfolgreich; Betriebswerte nicht geändert.
+
 ### Bekannte Einschränkung
 
 Beim Sprachwechsel kann der Inhalt einer bereits offenen Meldung in der

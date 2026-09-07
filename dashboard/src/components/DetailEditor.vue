@@ -16,7 +16,9 @@ const display = computed(() => {
   if (value === null) return t('common.noValue')
   if (typeof value === 'boolean') return t(value ? 'table.yes' : 'table.no')
   const text = typeof value === 'number' ? n(value) : value
-  const unit = props.definition.unit === 'percent' ? '%' : props.value.currency || props.definition.unit || ''
+  const unit = props.definition.currency_required
+    ? (editable.value ? '' : props.value.currency || '')
+    : props.definition.unit === 'percent' ? '%' : props.definition.unit || ''
   return `${text}${unit ? ` ${unit}` : ''}`
 })
 const draftCurrency = ref(props.value.manual_currency || props.value.currency || '')
@@ -44,7 +46,7 @@ function toggle(): void {
       <NSelect v-else class="detail-editor__text" :value="typeof value.manual_value === 'string' ? value.manual_value : null"
         :options="(options ?? []).map((value) => ({ label: value, value }))" filterable tag size="small" :placeholder="label" :disabled="busy"
         @update:value="commit($event)" />
-      <NInput v-if="definition.currency_required" :value="draftCurrency" size="small"
+      <NInput v-if="definition.currency_required" class="detail-editor__currency" :value="draftCurrency" size="small"
         :placeholder="t('details.currency')" :disabled="busy" :maxlength="3"
         @change="changeCurrency" />
     </template>
@@ -58,5 +60,6 @@ function toggle(): void {
 <style scoped lang="scss">
 .detail-editor { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
 .detail-editor__text { flex: 1 1 0; min-width: 0; }
+.detail-editor__currency { flex: 0 0 7rem; width: 7rem; }
 small { color: var(--color-text-muted); }
 </style>
