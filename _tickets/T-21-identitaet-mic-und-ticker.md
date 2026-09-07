@@ -1,5 +1,55 @@
 # T-21 · Identität auf MIC + Ticker umstellen
 
+## Erneute Verifikation · Codex, 2026-09-07
+
+**Ergebnis: Der freigegebene Identitätskern besteht die gezielten aktuellen
+Regressionstests; das gesamte Ticket ist weiterhin nicht abschlussreif.**
+Geprüft wurde der Arbeitsstand bei `de8501b`. Der Auftrag „T-21 - verifiziere
+das Ticket“ hebt die bisherige Einfrierung nicht als Implementierungsauftrag
+auf. Keine Produktänderung und keine neue Freigabe der damals ungeprüften 4A-Fassung.
+
+### Aktuelle Befunde
+
+| Bezug | Ergebnis | Beleg |
+|---|---|---|
+| #2e, #2e2, #2e3 | Anzeige der Abweichung von der bevorzugten Börse fehlt weiterhin. Tatsächliche Börse/Währung allein erfüllen den erwarteten Vergleich nicht. | AST-Inventar der Backend-Antwortmodelle und Dashboard-Routen sowie TS-Compiler-Inventar der Dashboard-Skripte: kein Abweichungsmodell/-pfad und keine Vergleichslogik. `ExchangesResponse` liefert die Präferenz, `InstrumentSummary` die Identität; die geforderte Darstellung wird nicht aufgebaut. |
+| #2g | Die Zusage „immer übersetzt, nie statusText oder rohes JSON“ wird nicht vollständig erfüllt. | `dashboard/src/api/client.ts`, `request`: bei scheiterndem Lesen des Fehlerkörpers Rückfall auf `response.statusText`. `dashboard/src/api/reason.ts`, `reasonOf`: bei nicht parsebarem Körper wird der Rohtext übernommen. Ein Körper wie `{"detail":` kann deshalb unverändert in `describeFailure` landen. Der vorhandene Test bestätigt sogar die Durchreichung von `Internal Server Error`. Codebefund, kein neuer Browser-Live-Test. |
+| #2b6c | Docker-Langzeittest im Migrations-Pending-Zustand bleibt ohne frischen Nachweis. | In dieser Prüfung kein Image-/Containerlauf. T-63 enthält allgemeine Docker-Tests; deren Anlage erfüllt die spezielle Zeit- und Pending-Bedingung nicht. |
+
+### Was inzwischen überholt ist
+
+Die globale alte Invariante „jedes Instrument hat Ticker und MIC“ gilt seit
+T-31 nur für `listed`. `pair` und `isin_only` sind gültige eigene Formen.
+`identity_status = resolved` ist kein aktuelles Speicherziel. Der Core steht
+inzwischen auf 4.2.0; die damalige Forderung nach dem Sprung auf 2.0.0 ist ein
+historischer Auslieferungsnachweis. T-23 ist längst abgeschlossen und wird
+nicht wieder durch alte Blockertexte gesperrt. T-19 ist abgeschlossen: Eine
+andere Börsenzuordnung erfolgt über Löschen und Neuanlegen.
+
+### Frisch ausgeführte Prüfungen
+
+**281 Backendtests und 48 Dashboardtests bestanden.** Backend: Identität,
+Aufnahmewege, Mehrdeutigkeit, Börsenkatalog, Migrationsplanung/-anwendung,
+Gate und Schichtengrenzen. Dashboard: Fehlerübersetzung/Transport,
+Migrationsoberfläche, App-Gate, Börsenansicht, Instrumentaktionen und Proxy.
+
+```bash
+# #1–3b, #5: gezielte Identitäts-, Migrations- und Aufnahmeprüfungen
+.venv/bin/pytest -q tests/test_identity_migration.py tests/test_identity_creation.py tests/test_identity_intake_paths.py tests/test_identity_new_forms.py tests/test_resolver_identity.py tests/test_symbol_ambiguity.py tests/test_exchange_catalog.py tests/test_exchanges.py tests/test_migration_apply.py tests/test_migration_endpoints.py tests/test_migration_guard.py tests/test_migration_plan.py tests/test_migration_reason_catalogue.py tests/test_boundaries.py
+# #2b6i, #2b8/#2b9, #2g: vorhandene Dashboard-Regressionen
+npm --prefix dashboard test -- tests/api/reason.spec.ts tests/api/client.spec.ts tests/components/MigrationGate.spec.ts tests/components/AppGate.spec.ts tests/components/ExchangesPanel.spec.ts tests/composables/useInstrumentActions.spec.ts tests/viteProxy.spec.ts
+```
+
+Die grünen Tests ersetzen die fehlenden Zusagen oben nicht. Kein vollständiger
+`make test`-Lauf, kein neuer Online-/Browser-/Docker-Test, keine Migration einer
+Kopie des aktuellen Produktionsbestands und keine neue vollständige
+Bezeichnerprüfung. Die alte Human-Matrix und historische Freigaben bleiben
+unverändert. Für den Abschluss müssen die offenen Anforderungen umgesetzt
+oder von Mike ausdrücklich aus dem Umfang genommen werden.
+
+---
+
+
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
 | StockInfo (Backend + Dashboard) | eingefroren nach Übergabe 3 | 1 Tag | Schema-Migration, Symbolerzeugung | — |
