@@ -37,7 +37,7 @@ function toggle(): void {
 </script>
 
 <template>
-  <NTooltip v-model:show="showProvenance" :disabled="!provenance">
+  <NTooltip v-model:show="showProvenance" :disabled="!provenance" placement="top-start">
     <template #trigger>
       <div class="detail-editor" :tabindex="!editable && provenance ? 0 : undefined"
         @focusin="showProvenance = true" @focusout="showProvenance = false">

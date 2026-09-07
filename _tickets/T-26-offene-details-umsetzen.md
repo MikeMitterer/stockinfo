@@ -168,6 +168,14 @@ auf englische Bezeichner geprüft. Browser: 1194 px, kein horizontaler Überlauf
 Die UI-Nachprüfung dieser Runde betrifft die Quellenfußzeile; frühere
 Eingabe-/Löschtests werden dadurch nicht als neu ausgeführt ausgegeben.
 
+### Tooltip-Position auf Mikes Rückmeldung
+
+Herkunfts-Tooltip links am Feld ausgerichtet (`top-start`); zuvor war er
+über der Mitte der ganzen Spalte und damit weit rechts vom kurzen Wert.
+Live bei TER gemessen: Feld links 42,59 px, Tooltip zuvor 151,64 px,
+jetzt 43 px. 25 betroffene Komponententests und `vue-tsc` erfolgreich.
+Dieser UI-Nachtrag folgt auf den grünen Gesamtlauf oben.
+
 ### Auflösung
 
 Implementiert und nach Claudes erster Prüfung korrigiert. Die zweite
