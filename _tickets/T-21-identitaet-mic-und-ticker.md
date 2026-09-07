@@ -16,6 +16,17 @@ auf. Keine Produktänderung und keine neue Freigabe der damals ungeprüften 4A-F
 | #2g | Die Zusage „immer übersetzt, nie statusText oder rohes JSON“ wird nicht vollständig erfüllt. | `dashboard/src/api/client.ts`, `request`: bei scheiterndem Lesen des Fehlerkörpers Rückfall auf `response.statusText`. `dashboard/src/api/reason.ts`, `reasonOf`: bei nicht parsebarem Körper wird der Rohtext übernommen. Ein Körper wie `{"detail":` kann deshalb unverändert in `describeFailure` landen. Der vorhandene Test bestätigt sogar die Durchreichung von `Internal Server Error`. Codebefund, kein neuer Browser-Live-Test. |
 | #2b6c | Docker-Langzeittest im Migrations-Pending-Zustand bleibt ohne frischen Nachweis. | In dieser Prüfung kein Image-/Containerlauf. T-63 enthält allgemeine Docker-Tests; deren Anlage erfüllt die spezielle Zeit- und Pending-Bedingung nicht. |
 
+### Zugehörige Smoke-Skripte
+
+Auf Mikes Rückfrage ebenfalls im Code geprüft, nicht ausgeführt:
+`T-21-smoke.sh` prüft weiterhin jedes Asset auf Ticker/MIC und berücksichtigt
+`pair`/`isin_only` nicht. `T-21c-smoke.sh` verlangt fest `core_version = 2.0.0`
+(statt des heutigen 4.2.0). `T-21b-smoke.sh` prüft historische Online-
+Aufnahmefälle, unter anderem Apple und die Ablehnung von `BRK-B`.
+Die drei Skripte sind keine frisch bestätigten aktuellen Abschlussprüfungen.
+Sie bleiben bis zum Ticketabschluss beim Ticket und werden dann gemeinsam
+archiviert; die neu ausgeführten Regressionstests stehen oben.
+
 ### Was inzwischen überholt ist
 
 Die globale alte Invariante „jedes Instrument hat Ticker und MIC“ gilt seit
