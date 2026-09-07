@@ -30,10 +30,11 @@ const props = defineProps<{
 
 const { t, n } = useI18n()
 
-const state = computed(() => overrideState(props.item, props.field))
+const applicable = computed(() => props.item.details === undefined || Object.hasOwn(props.item.details, props.field))
+const state = computed(() => applicable.value ? overrideState(props.item, props.field) : null)
 
 /** Der wirksame Wert — das, was die Zelle zeigt. */
-const value = computed<number | boolean | string | null>(() => props.item[props.field])
+const value = computed<number | boolean | string | null>(() => applicable.value ? props.item[props.field] : null)
 
 const numericValue = computed(() => (typeof value.value === 'number' ? value.value : null))
 
@@ -48,7 +49,7 @@ const isPercentField = computed(() => props.field === 'ter' || props.field === '
  * in `MetricEditor.vue` und in `InstrumentDrilldown.vue`, je einmal anders
  * formuliert.
  */
-const fromSource = computed(() => sourceProvides(props.item, props.field))
+const fromSource = computed(() => applicable.value && sourceProvides(props.item, props.field))
 
 /*
  * Immer zwei Nachkommastellen, und über `n()` statt `toFixed`.
@@ -96,8 +97,8 @@ const markTitle = computed(() => {
   >
     <span class="metric__static" :class="{ 'metric__static--fixed': field === 'accumulating' }">
       <template v-if="field === 'accumulating'">
-        <span v-if="item.accumulating !== null" class="badge thes" :class="{ acc: item.accumulating }">
-          {{ item.accumulating ? t('table.yes') : t('table.no') }}
+        <span v-if="value !== null" class="badge thes" :class="{ acc: value }">
+          {{ value ? t('table.yes') : t('table.no') }}
         </span>
         <span v-else class="metric__empty">{{ t('common.noValue') }}</span>
       </template>

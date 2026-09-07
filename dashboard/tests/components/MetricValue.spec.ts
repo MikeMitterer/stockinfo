@@ -6,6 +6,17 @@ import { i18n } from '../../src/i18n'
 import { makeInstrument } from '../fixtures/instrument'
 
 describe('MetricValue', () => {
+  it.each(['ter', 'accumulating'] as const)('zeigt alte %s-Eingaben ohne anwendbares Detailfeld nicht an', (field) => {
+    const wrapper = mount(MetricValue, {
+      global: { plugins: [i18n] },
+      props: { item: makeInstrument({ type: 'stock', details: {}, ter: 0.25,
+        accumulating: true, manual_ter: 0.25, manual_accumulating: true,
+        manual_fields: ['ter', 'accumulating'] }), field },
+    })
+    expect(wrapper.find('.metric__mark').exists()).toBe(false)
+    expect(wrapper.text()).toBe(i18n.global.t('common.noValue'))
+  })
+
   it('zeigt den wirksamen Wert ohne jede Bedienung', () => {
     const wrapper = mount(MetricValue, {
       global: { plugins: [i18n] },

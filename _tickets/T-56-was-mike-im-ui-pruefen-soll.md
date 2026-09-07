@@ -179,6 +179,18 @@ nicht neu gespeichert. Acht Detail-Komponententests inklusive Löschen von
 Zahlen mit/ohne Währung und vue-tsc erfolgreich. Position und rote Farbe im
 Browser geprüft, Betriebswerte nicht gelöscht.
 
+### UI-Nacharbeit: Veraltete Kennzahlen außerhalb des Profils
+
+BRYN.DE lieferte `details: {}`, aber noch alte Top-Level-Werte und manuelle
+Markierungen für TER/Thesaurierung. Die Tabellen-/Kartenkomponente berücksichtigt
+jetzt dieselbe Feldanwendbarkeit wie die Detailansicht: Bei vorhandenem
+`details` erscheinen nur darin enthaltene Kennzahlen, sonst ein Strich ohne
+Markierung. Das betrifft auch eine alte Volatilität ohne aktuelle Deklaration.
+Der Legacy-Pfad ohne `details` bleibt kompatibel; gespeicherte Werte und REST
+unverändert. Zwei Regressionen zuerst rot, anschließend 52 betroffene
+Komponententests und vue-tsc grün. Live BRYN ohne Markierungen, GOLD weiterhin
+mit seinen anwendbaren manuellen TER-/Thesaurierungswerten.
+
 ### Bekannte Einschränkung
 
 Beim Sprachwechsel kann der Inhalt einer bereits offenen Meldung in der
