@@ -4,9 +4,19 @@ Der technische Vorlauf ist **in Runde 6 freigegeben**.
 
 A–F sind beantwortet. Die Nacharbeit zu C und zum API-Link ist umgesetzt und
 im Browser geprüft. Die Nacharbeit zu F ist mit T-26 implementiert und
-erstgetestet; Claudes unabhängige Prüfung steht noch aus.
+erstgetestet und durch Claude in T-26 Runde 2 auf `cb14e4b` freigegeben.
+Offen ist dein abschließendes Urteil zu den angepassten Detailfeldern (F).
 
 ## Was nur Mike beantworten kann
+
+**Noch offen: dein Urteil zur Nacharbeit an F.** In der laufenden Testansicht
+`http://127.0.0.1:5186/#/assets` BTC-EUR und EUNL.DE über das Symbol aufklappen:
+BTC zeigt keine Fondsfelder, EUNL die deklarierten Fondsfelder. Herkunfts-Tooltips
+und Read-only-Hinweise an einzelnen Feldern sind entfernt; die Quellenfußzeile
+bleibt. Entspricht die angepasste Detailansicht jetzt deinem Wunsch?
+Die BTC-Felder Score/Bestätigt sind synthetische Plugin-Testdaten, keine
+fachlichen Aussagen über Bitcoin. Die bisherigen Human-Antworten bleiben unten
+unverändert; A–E müssen nicht erneut beantwortet werden.
 
 ### Deine Antworten zu Analyse und Fehlermeldung
 
@@ -72,7 +82,7 @@ Bei Einstellungen / API & Links / API-Wurzel - kommt auf die aktuelle Seite - sc
 |---|---|---|
 | C: Eingabe fehlt im Fehler | Behoben: getrimmte Eingabe in DE/EN, Fehlergrund bleibt erhalten | Browser auf localhost:5173: `  KEINPAPIER.XX  ` eingegeben; Toast zeigt `Hinzufügen von „KEINPAPIER.XX“ fehlgeschlagen` mit Grund. Zwei neue Sprachtests. |
 | API-Wurzel führt ins Dashboard | Behoben: Link entfernt; Swagger, OpenAPI und Health bleiben | Einstellungen → API & Links im Browser: drei API-Links, keine API-Wurzel. |
-| F: Fondsfelder bei BTC-EUR | **Implementiert, Claude-Prüfung offen** | T-26 reicht Deklaration, Anwendbarkeit und Schreibrecht bis REST/UI durch. Isolierter Browserlauf: BTC ohne Fondsfelder, ETF mit Fondsfeldern, unbekanntes Testfeld editierbar. |
+| F: Fondsfelder bei BTC-EUR | **Technisch freigegeben, T-26 Runde 2** | T-26 reicht Deklaration, Anwendbarkeit und Schreibrecht bis REST/UI durch. Isolierter Browserlauf: BTC ohne Fondsfelder, ETF mit Fondsfeldern, unbekanntes Testfeld editierbar. |
 
 Frisch geprüft: **324/324 Dashboardtests**, `vue-tsc --noEmit` und
 `git diff --check` erfolgreich; TypeScript-Compiler-Inventar der neu berührten
@@ -85,7 +95,8 @@ Plugin-Felder, ihre Darstellung und `overridable` einschließlich Backend.
 Zusätzlich muss die Anwendbarkeit je Instrument geklärt werden: Eine globale
 `FIELDS`-Liste allein genügt bei einem Plugin für mehrere Gattungen nicht.
 Mike hat T-26 einschließlich REST, UI und erstem UI-Test beauftragt;
-Codex implementiert und Claude verifiziert anschließend. T-56 wird deshalb nicht als vollständig erledigt markiert.
+Codex hat implementiert, Claude hat den Stand `cb14e4b` unabhängig freigegeben.
+T-56 bleibt für Mikes abschließendes Urteil zu F offen.
 T-61 ist zurückgestellt; T-62 bleibt offen; die Börsenauskunft gehört zu T-30.
 
 ### Bekannte Einschränkung

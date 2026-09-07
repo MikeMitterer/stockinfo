@@ -11,18 +11,18 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `approved`
-- `ticket`: `T-26-offene-details-umsetzen.md`
+- `phase`: `blocked`
+- `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `handoff_commit`: `cb14e4b`
-- `review_round`: `2`
-- `owner`: `codex`
+- `review_round`: `0`
+- `owner`: `mike`
 - `updated_at`: `2026-09-07`
 - `last_reviewed_ticket`: `T-26-offene-details-umsetzen.md`
 - `last_reviewed_commit`: `cb14e4b`
 - `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
 - `priority_chain`: `T-26-offene-details-umsetzen.md` → `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
-- `priority_ticket`: `T-26-offene-details-umsetzen.md`
+- `priority_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
@@ -48,119 +48,19 @@ Diese zusätzlichen Phasen gelten für den ausdrücklich beauftragten Rollenwech
 Die frühere Freigabe und die Rollenangaben im Archiv unten beschreiben alte
 Übergaben, keinen Auftrag zum parallelen Weiterarbeiten an T-57.
 
-## INBOX → Codex · T-26 Runde 2, `approved`
+## Kontext zum aktiven Schritt · T-56/F
 
-Geprüft hat **Claude** als zugeordneter Verifier. Prüfstand `a97bf2c`
-(`c0c859f` Nacharbeit, `a97bf2c` Tooltip-Position), zusätzlich der von Mike
-während der Runde beauftragte Nachtrag `cb14e4b`. Die verarbeitete OUTBOX ist
-entfernt. Freigabe ist die technische Verifikation, **keine** Abnahme durch Mike.
+T-26 wurde von Claude in Runde 2 auf `cb14e4b` technisch freigegeben.
+Der vollständige Bericht liegt in der Reviewhistorie von T-26; die INBOX ist
+verarbeitet. Beide Blocker und die sieben weiteren Befunde sind erledigt.
+Die priorisierte Arbeit steht jetzt bei T-56: Mikes abschließendes Urteil zur
+angepassten Detailansicht F fehlt. Technische Nachweise stehen bereit;
+Human-Antworten und Ticketablage bleiben unverändert. Kein neuer Review läuft.
+T-57 beginnt erst nach Abschluss dieser Abnahme.
 
-### Beide Blocker sind erledigt — mit meiner eigenen Gegenprobe
-
-**Blocker 1, Quellenausfall.** Ich habe nicht deinen Regressionstest bewertet,
-sondern meine unveränderte Sonde aus Runde 1 erneut laufen lassen — dieselbe
-Datei, die damals rot war:
-
-```
-2 passed
-```
-
-Beide Zusagen halten: `details_version` bleibt stehen, und der gespeicherte Wert
-bleibt in `/quote` sichtbar. Der Zuschnitt der Lösung stimmt: `SourceSpec`
-trägt jetzt die Plugin-Klasse, und `_register_detail_schema` liest die statische
-Feldzusage **vor** `spec.build(...)`. `plugin_loader.spec_from_class` setzt
-`declaration` ebenfalls, also gilt das für geladene Datei-Plugins genauso wie
-für die eingebauten Quellen — genau dort lag der Fehler.
-
-**Blocker 2, Frischstart.** Auf einem per `mktemp -d` erzeugten, nachweislich
-leeren Verzeichnis:
-
-```
-1069 passed, 29 skipped, 8 deselected
-```
-
-Das ist exakt deine Zahl. `/fields` liest jetzt nur noch (`detail_catalog()`
-ohne Argument), die Synchronisation sitzt im Lifespan hinter `init_db`, und das
-Repository wird nur einmal gebaut. Dass die `/fields`-Tests auf den
-Lifespan-Client umgestellt wurden, ist keine abgeschwächte Zusicherung, sondern
-der echte Produktstartweg.
-
-Die Korrektur der falschen Volltest-Angabe steht ausdrücklich im Ticket, samt
-Bestätigung meiner Gegenprobe. Damit ist der Beleg wieder belastbar.
-
-### Die sieben weiteren Befunde, einzeln nachgemessen
-
-1. **Quellenfußzeile.** `detailSources` leitet aus den tatsächlich gelieferten
-   Provider-Werten ab und fällt bei fehlendem `details` auf `item.source`
-   zurück — die Kompatibilität aus Verify #10 bleibt erhalten. Einzige
-   Fundstelle im Dashboard, keine zweite Aggregation.
-2. **Reihenfolge.** `sorted(...)` vor der Projektion; `manual_fields` und
-   `shadowed_fields` erben die Stabilität.
-3. **Migrierter Betrag.** Auf demselben echten Altbestand wie in Runde 1
-   nachgemessen: Instrument 4 hat manuell `fund_size=500000.0` **mit
-   `currency='EUR'`**. Zeilenzahlen unverändert (17 Provider, 8 manuell), also
-   keine Nebenwirkung. Instrument 1 behält korrekt `NULL` — seine
-   `fund_currency` war schon vorher unbekannt, und sie wird nicht aus der
-   Handelswährung geraten. Diese Zurückhaltung ist die richtige Entscheidung.
-4. **422-Falle.** Die Währung kommt jetzt aus Eingabe, gespeichertem manuellem
-   Betrag, manueller Fondswährung oder Instrumentstand. Ein Betrag ohne
-   irgendeine bekannte Währung wird weiterhin abgewiesen — das ist fachlich
-   richtig und ausdrücklich so festgehalten.
-5. **SQL-Kommentar** steht und benennt den Zweck (migrierte Sammelquellen wie
-   `yfinance+justetf`).
-6. **Importe** sind im Kopf und in der richtigen Reihenfolge.
-7. **Ausweitung der Metadatenabfrage** ist in den Nebenwirkungen dokumentiert.
-
-### Was ich zusätzlich geprüft habe
-
-- **Kein stehengebliebener Katalog.** Die Verlagerung in den Lifespan wäre
-  falsch, wenn das Profil zur Laufzeit neu gelesen würde. Wird es nicht: in
-  `app/` gibt es kein `cache_clear` und keinen Reload-Endpunkt, ein
-  Profilwechsel verlangt einen Neustart, und der Neustart synchronisiert. Der
-  Testhelfer `_restart_chains()` bildet genau das nach.
-- **DRY.** `_register_detail_schema` fasst den vorher doppelten Block zusammen —
-  die Nacharbeit hat die Duplikation verringert, nicht vergrößert.
-  `merge_value` bleibt die einzige Merge-Regel.
-- **Bezeichnerinventar über den gesamten Diff `d7afe20..a97bf2c`:** Python-`ast`
-  27 Dateien, 13685 Bezeichnerknoten, 3069 eindeutig — kein deutscher.
-  TypeScript-Compiler 21 Dateien, 4361 Bezeichner — kein deutscher. `cb14e4b`
-  fügt nichts hinzu, es entfernt nur, und ist damit abgedeckt. Dass
-  `test_api_fields.py` die deutschen Lokalvariablen beim Anfassen gleich
-  mitgezogen hat, ist die Regel aus CLAUDE.md richtig angewandt.
-- **Ruff** sauber, **vue-tsc** ohne Befund, **Dashboard 331/331** grün.
-- **Umfang** stimmt mit deiner Angabe überein: Produkt 37 Dateien +1128/−181,
-  Tests/Doku 15 Dateien +570/−66. Der Zuschnitt ist unverändert der aus meinem
-  `continue` in Runde 1; Loader und Lifespan folgen unmittelbar den beiden
-  Blockern und sind keine neue Fläche.
-
-### Der Tooltip-Nachtrag `cb14e4b`
-
-Mitgeprüft wie gewünscht. Die Entfernung ist sauber: `NTooltip`, `provenance`,
-`showProvenance`, der zusätzliche `tabindex` und die beiden Fokus-Handler sind
-vollständig weg, der Rest der Vorlage steht unverändert wie vor der
-Tooltip-Einführung. Die Quellenfußzeile bleibt und liefert die Herkunft weiter —
-das war Mikes Bedingung. Dashboard **331/331** grün auch auf diesem Stand.
-
-**Ein kleiner Rest bleibt:** `details.source` und `details.manual` stehen noch in
-`de.ts` und `en.ts`, werden aber in `src` und `tests` nirgends mehr verwendet.
-Ich habe sie **nicht** selbst entfernt — die Selbstheilung schließt i18n-Texte
-ausdrücklich aus. Bitte beim nächsten Anfassen der Datei mitziehen; für die
-Freigabe ist es kein Hindernis.
-
-### Nicht selbst geprüft
-
-Alle Browserzeilen bleiben deine Belege — ich habe keinen eigenen Browserlauf
-gemacht. Das betrifft die Live-Fußzeile an EUNL und
-die Bedienzeilen 6, 6a, 8a, 8b und 9. Den zugehörigen Code habe ich gelesen; er
-deckt sich mit den Beschreibungen.
-
-### Nächster Schritt
-
-Freigegeben nach der bestehenden Prioritätskette weiter zu
-`T-56-was-mike-im-ui-pruefen-soll.md`. **Achtung:** T-56 ist Mikes
-Abnahmeticket; Feldpunkt F ist durch diese Freigabe technisch entsperrt, aber
-die Human-Spalten füllt niemand außer Mike. Das Ticket T-26 bleibt offen, bis
-Mike es bestätigt — ein Review verschiebt nichts nach `solved/`.
+Die ungenutzten Übersetzungsschlüssel `details.source` und `details.manual`
+sind als nicht blockierender Rest in T-26 dokumentiert; wie von Claude
+vorgesehen beim nächsten Anfassen der Sprachdateien entfernen.
 
 ## Kontext
 
