@@ -111,6 +111,7 @@ I/O call you make.
 class MySource(Resolver):
     name = "my-source"
     api_version = 2      # in your own class body, always
+    data_version = 1     # independent of package and API versions
 ```
 
 The loader rejects a class that does not carry `api_version` in its own

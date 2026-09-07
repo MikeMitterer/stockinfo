@@ -678,6 +678,7 @@ class YamlFileSource(
     name = "yaml-file"
     cost = "free"
     api_version = 2
+    data_version = 1  # Increase only for incompatible changes to stored data.
     SUPPORTED_KINDS = frozenset({"listed", "pair", "isin_only"})
     SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "crypto", "bond"})
 

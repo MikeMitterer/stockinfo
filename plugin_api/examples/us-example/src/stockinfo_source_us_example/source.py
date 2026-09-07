@@ -103,6 +103,7 @@ class UsExampleSource(Resolver, QuoteSource):
     # silently follow the host through a contract change the plugin has not
     # been adapted to.
     api_version = 2
+    data_version = 1  # Increase only for incompatible changes to stored data.
 
     # One venue, two genera. An empty set would mean "promised nothing", and
     # the host would skip this source for every known genus.
