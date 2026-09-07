@@ -12,7 +12,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `phase`: `blocked`
-- `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
+- `ticket`: `T-57-tickets-sagen-nicht-was-offen-ist.md`
 - `handoff_commit`: `cb14e4b`
 - `review_round`: `0`
 - `owner`: `mike`
@@ -21,8 +21,8 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_commit`: `cb14e4b`
 - `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
-- `priority_chain`: `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
-- `priority_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
+- `priority_chain`: `T-57-tickets-sagen-nicht-was-offen-ist.md`
+- `priority_ticket`: `T-57-tickets-sagen-nicht-was-offen-ist.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
@@ -48,18 +48,18 @@ Diese zusätzlichen Phasen gelten für den ausdrücklich beauftragten Rollenwech
 Die frühere Freigabe und die Rollenangaben im Archiv unten beschreiben alte
 Übergaben, keinen Auftrag zum parallelen Weiterarbeiten an T-57.
 
-## Kontext zum aktiven Schritt · T-56/F
+## Kontext zum aktiven Schritt · T-57
 
-Mike hat T-26 am 2026-09-07 abgeschlossen; das Ticket liegt unter
-`solved/T-26-offene-details-umsetzen.md`. Die technische Freigabe von Claude
-auf `cb14e4b` bleibt dort in der Reviewhistorie erhalten.
+Mike hat T-56 am 2026-09-07 mit „Damit sollte T-56 durch sein“ abgenommen.
+T-26 und T-56 liegen unter `solved/`, einschließlich Review- und UI-Nachweisen.
+Die letzte UI-Korrektur steht in `aa680cc`; kein weiterer UI-Befund offen.
 
-Codex hat den beauftragten ersten UI-Durchlauf F abgeschlossen: BTC/ETF-Felder,
-Zahl 0 und Freitext speichern, Browser-/Backend-Neustart, Löschen und mobile
-ETF-Details bei 390 px. Nachweise F1–F6 stehen in T-56. Betriebsdatenbank
-bytegleich, keine Produktänderung. Das künstliche „Bestätigt“-Feld ist aus der
-temporären Testkonfiguration entfernt. T-56 bleibt für Mikes UI-Urteil offen;
-T-57 beginnt erst nach dieser Abnahme. Kein Agentenreview läuft.
+Nächster Punkt der vereinbarten Kette ist T-57. Das Ticket ist ein Vorschlag
+zur Ticketübersicht; Verify #6 verlangt ausdrücklich Mikes Entscheidung über
+den vorgeschlagenen Prozess und die Statuszeile. Die Vorschläge sind zudem
+gegen die inzwischen geänderten Skills und KanTandem abzugleichen, bevor ein
+neues StockInfo-Übersichtswerkzeug gebaut wird. Deshalb keine neue Umsetzung
+oder Review-Übergabe aus der T-56-Abnahme ableiten. Owner Mike, kein Review läuft.
 
 Nicht blockierender Rest aus T-26: ungenutzte Sprachschlüssel `details.source`
 und `details.manual` beim nächsten Anfassen der Sprachdateien entfernen.

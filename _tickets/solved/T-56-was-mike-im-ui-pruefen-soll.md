@@ -3,20 +3,15 @@
 Der technische Vorlauf ist **in Runde 6 freigegeben**.
 
 A–F sind beantwortet. Die Nacharbeit zu C und zum API-Link ist umgesetzt und
-im Browser geprüft. Die Nacharbeit zu F ist mit [T-26](solved/T-26-offene-details-umsetzen.md) implementiert und
+im Browser geprüft. Die Nacharbeit zu F ist mit [T-26](T-26-offene-details-umsetzen.md) implementiert und
 erstgetestet und durch Claude in T-26 Runde 2 auf `cb14e4b` freigegeben.
-Offen ist dein abschließendes Urteil zu den angepassten Detailfeldern (F).
+Mike hat T-56 am 2026-09-07 nach den UI-Nacharbeiten abgenommen.
 
 ## Was nur Mike beantworten kann
 
-**Noch offen: dein Urteil zur Nacharbeit an F.** In der laufenden Testansicht
-`http://127.0.0.1:5186/#/assets` BTC-EUR und EUNL.DE über das Symbol aufklappen:
-BTC zeigt keine Fondsfelder, EUNL die deklarierten Fondsfelder. Herkunfts-Tooltips
-und Read-only-Hinweise an einzelnen Feldern sind entfernt; die Quellenfußzeile
-bleibt. Entspricht die angepasste Detailansicht jetzt deinem Wunsch?
-Der BTC-Score ist ein synthetisches Plugin-Testfeld, keine Risikobewertung
-von Bitcoin. Das irreführende Testfeld „Bestätigt“ wurde aus der Testkonfiguration entfernt. Die bisherigen Human-Antworten bleiben unten
-unverändert; A–E müssen nicht erneut beantwortet werden.
+**Abgenommen am 2026-09-07.** Mike: „Damit sollte T-56 durch sein“.
+Die früheren Urteile und die Nachweise zu den UI-Korrekturen bleiben unten
+erhalten. Es ist kein weiterer Handgriff für dieses Ticket offen.
 
 ### Deine Antworten zu Analyse und Fehlermeldung
 
@@ -96,7 +91,7 @@ Zusätzlich muss die Anwendbarkeit je Instrument geklärt werden: Eine globale
 `FIELDS`-Liste allein genügt bei einem Plugin für mehrere Gattungen nicht.
 Mike hat T-26 einschließlich REST, UI und erstem UI-Test beauftragt;
 Codex hat implementiert, Claude hat den Stand `cb14e4b` unabhängig freigegeben.
-T-56 bleibt für Mikes abschließendes Urteil zu F offen.
+T-56 ist nach Mikes abschließendem Urteil abgenommen.
 T-61 ist zurückgestellt; T-62 bleibt offen; die Börsenauskunft gehört zu T-30.
 
 ### Erster UI-Durchlauf F durch Codex · 2026-09-07
@@ -198,7 +193,7 @@ alten Sprache bleiben. Du hast das als **kleinen Bug, nicht als Blocker**
 eingestuft.
 
 Die Nacharbeit liegt in
-[T-61](postponed/T-61-offener-toast-behaelt-alte-inhaltssprache.md); die Abnahme von T-56
+[T-61](../postponed/T-61-offener-toast-behaelt-alte-inhaltssprache.md); die Abnahme von T-56
 und der MVP sind dadurch nicht blockiert.
 
 ---
