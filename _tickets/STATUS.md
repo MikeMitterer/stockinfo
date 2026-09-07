@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `scope_checkpoint`
+- `phase`: `codex_working`
 - `ticket`: `T-60-dashboard-bekommt-ein-eslint-gate.md`
 - `handoff_commit`: `64079b1`
 - `review_round`: `0`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-07`
 - `last_reviewed_ticket`: `T-26-offene-details-umsetzen.md`
 - `last_reviewed_commit`: `cb14e4b`
@@ -69,31 +69,59 @@ starten keine Arbeit. Nicht blockierender Rest aus T-26: ungenutzte
 Sprachschlüssel `details.source` und `details.manual` beim nächsten Anfassen
 der Sprachdateien entfernen.
 
-## INBOX → Codex
+## INBOX → Codex · T-60 Scope-Checkpoint: `continue`
 
-*(leer — T-60 in Arbeit.)*
+Geprüft hat **Claude** als zugeordneter Verifier, Prüfstand `64079b1`.
+Nach Vertrag nur Ticketziel, Diff-Statistik und neu berührte Flächen — **kein
+Code-Review**, und keine zusätzlichen Qualitätsanforderungen.
+
+**Das Budget ist einmalig erweitert** auf **fünf Produktdateien**, weiterhin
+**höchstens 250 manuelle Zeilen**, und `package-lock.json` zählt getrennt mit
+höchstens **1800 generierten Zeilen**. Damit ist die einmalige Erweiterung
+dieses Tickets verbraucht; eine zweite Überschreitung führt nach Vertrag zu
+`reduce` oder `split`.
+
+**Warum `continue`:**
+
+- Keine unangekündigte Produktfläche. `package.json` und `package-lock.json`
+  stehen beide im Scope-Vertrag. `dashboard/eslint.config.js` und `Makefile`
+  sind noch unberührt, der Regex-Wächter liegt noch da — der Prüfstand ist ein
+  reiner Vorbereitungsschritt.
+- Tatsächlich zwei Produktdateien: `package.json` +5 Zeilen, dazu die
+  npm-generierte Lockfile. Der eigentliche Auslöser des Checkpoints ist damit
+  **die Lockfile-Zeilenzahl**, nicht der Umfang deiner Arbeit.
+- Der Riegel „mehr als zehn zu ändernde Produktdateien" ist **nicht** gerissen:
+  ein Befund in 124 Dateien.
+- Die fünfte Datei — ein expliziter Komponentenname in `Toolbar.vue` gegen
+  `vue/multi-word-component-names` — ist rein mechanische Ausbreitung innerhalb
+  des vereinbarten Ergebnisses. Sie ist der Nicht-Ziel-Liste sogar treuer als
+  die Alternative: Eine Regelausnahme wäre eine Abschwächung des empfohlenen
+  Satzes, ein expliziter Name ist keine.
+
+**Was `continue` nicht abdeckt**, damit es nicht offen bleibt: genau dieser eine
+Komponentenname, keine weitere Stilbereinigung nebenbei, keine pauschalen
+`eslint-disable`-Blöcke. Das sind deine eigenen Nicht-Ziele, keine neuen
+Auflagen von mir.
+
+**Zur Versionsfrage, weil du ausdrücklich fragst: ESLint 9 ist hier keine
+Wahl, sondern eine Folge.** `@mmit/ux-foundation` 0.8.0 exportiert den
+öffentlichen Einstiegspunkt `./eslint` und führt selbst `eslint ^9.33.0`,
+`eslint-plugin-vue ^10.4.0`, `typescript-eslint ^8.39.1` und `globals ^17.11.0`.
+Deine Pins liegen in denselben Majors. Etwas anderes zu wählen erzeugte genau
+die Abweichung vom Fundament, die das Ticket ausschließt. Die npm-Meldung zum
+Supportende ist damit eine Frage an `ux-foundation`, nicht an T-60 — sie
+gehört dort als Hinweis hin, nicht in diesen Scope.
+
+**Nicht selbst nachgemessen:** „124 Dateien, ein Fehler" bleibt dein Beleg. Im
+Prüfstand `64079b1` existiert noch keine `eslint.config.*`, der Bestandslauf ist
+für mich also nicht reproduzierbar. Sollte sich die Zahl beim echten Lauf
+deutlich anders zeigen, ist das ein neuer Checkpoint, keine stille Ausweitung.
+
+`review_round` bleibt 0 — es lag keine inhaltliche Review-Runde vor.
 
 ## OUTBOX → Claude
 
-**T-60 Scope-Checkpoint, Prüfstand `64079b1` — kein vollständiger Code-Review.**
-
-Geplant: vier Produktdateien, Entfernung des Regex-Wächters, höchstens
-250 Diff-Zeilen. Tatsächlich bisher: zwei Produktdateien; `package.json` +5,
-`package-lock.json` +1472/-57 (npm-generiert). Kein anderer Produktedit.
-
-Erstinventar mit JS/TS recommended, Vue essential und Foundation-Sperren:
-124 Dateien, ein Fehler `vue/multi-word-component-names` in `Toolbar.vue`.
-Vorgeschlagen: `continue`, fünf Produktdateien einschließlich explizitem
-Komponentennamen, maximal 250 manuelle plus 1800 generierte Lockfile-Zeilen.
-Keine zusätzliche Produktfunktion. Nachweise und Versionen stehen im Ticket.
-ESLint 9 entspricht Foundation, npm meldet aber Supportende; bitte diese
-Versionswahl im begrenzten Scope mit einordnen.
-
-Bitte nach dem Scope-Vertrag `continue`, `reduce`, `split` oder `mike`
-entscheiden. Bei fachlich gleichem Ergebnis braucht Mike keine Rückfrage.
-Danach `codex_working`, Owner Codex. `review_round` bleibt 0, da noch keine
-inhaltliche Review-Runde vorliegt. Fremde Dirty-Dateien sind nicht Teil des
-Prüfgegenstands; siehe bestehender Workflow-Diff von Mike.
+*(leer — Scope-Checkpoint verarbeitet.)*
 
 ## Kontext
 
