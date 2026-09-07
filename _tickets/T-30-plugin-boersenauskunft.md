@@ -1,3 +1,97 @@
+# T-30 · Plugins ergänzen Börsen und deklarieren ihre Unterstützung
+
+**T-30 gehört zum Abschluss des erweiterbaren Plugin-Systems.** Ein
+Plugin-Autor muss zusätzliche Handelsplätze einbringen können, ohne den
+StockInfo-Core ändern zu müssen. Bestehende Börsen werden referenziert,
+fehlende ergänzt und widersprüchliche Deklarationen abgelehnt.
+
+**Core-Aliase werden nicht überschrieben.** Die unterschiedliche Schreibweise
+eines Anbieters übersetzt das Plugin intern aus Ticker und MIC. Daraus entsteht
+kein Änderungs- oder Migrationsauftrag für bestehende `symbol`-Werte.
+Der Umfang ist entschieden; die Umsetzung steht noch aus.
+
+## Für dich
+
+Aktuell kein Handgriff nötig. Als Nächstes sind Deklaration und Validierung
+innerhalb dieses Umfangs konkret auszuarbeiten. Keine neue Implementierungs-
+oder Review-Übergabe wird allein durch diese Notiz gestartet.
+
+### Bisherige Antworten und Rückmeldungen
+
+Mike, 2026-09-07: „Ich halte es doch für relevant - ein potentieller Plugin-Author braucht das, oder sehe ich da was falsch?“
+
+Einordnung korrigiert: Die bisherige Beschränkung auf vorhandene Plugins war
+zu eng. Ohne T-30 begrenzt der fest eingebaute Katalog die Erweiterbarkeit.
+
+Mike: „Weshalb sollte jemand die Core-Aliases überschreiben?“
+
+Antwort und vereinbarte Eingrenzung: Anbieterübersetzungen gehören ins Plugin.
+Für T-30 genügt „bestehende Börsen referenzieren, fehlende Börsen ergänzen,
+widersprüchliche Deklarationen ablehnen“. Mike bestätigt: **„Ja, halte das so fest“**.
+
+## Umsetzung und technische Nachweise
+
+### Verbindlicher Umfang
+
+- Plugins können neue MICs mit lesbarem Börsennamen deklarieren und ihre
+  Unterstützung für bestehende oder neue MICs je Quellenrolle angeben.
+- Der Core validiert die Angaben und führt sie mit dem bestehenden Katalog
+  zusammen. Eine Unterstützungsangabe für einen vorhandenen MIC ändert
+  dessen Definition nicht. Widersprüche werden ausdrücklich gemeldet;
+  weder Ladereihenfolge noch Plugin-Vorrang überschreiben einen Core-Eintrag.
+- Neue Handelsplätze sind über den regulären Aufnahmeweg mit Ticker und MIC
+  verwendbar. Die Deklaration bleibt kein reiner Anzeigeeintrag.
+- Herkunft und Unterstützung werden über Core-REST ausgegeben und auf
+  „Exchanges“ angezeigt. Das Dashboard spricht niemals direkt mit Plugins.
+- Entfernte Plugins hinterlassen keine fälschliche Unterstützungsmarkierung.
+  Der Katalog berücksichtigt weiterhin vorhandene Deklarationen. Das
+  Entfernen eines Plugins löscht keine gespeicherten Assets.
+
+### Ausdrücklich ausgenommen
+
+Kein Überschreiben bestehender Core-Aliase oder anderer Core-Börsendefinitionen,
+keine automatische Umdefinition gespeicherter Symbole und keine daraus
+abgeleitete Datenmigration. Insbesondere entfällt der aus T-29 übernommene
+Migrationsumfang von #6c. Ein neu ergänzter MIC lässt vorhandene Zeilen unverändert.
+
+Die Schreibweise der externen API ist Sache des jeweiligen Plugins: Aus
+`EUNL` / `XETR` bildet es die benötigte Anbieterkennung. Ein providerspezifisches
+Suffix ist kein Grund, den Core-Alias zu ändern.
+
+### Akzeptanz und Bezug zur bisherigen Matrix
+
+Die ursprünglichen IDs und leeren Human-Felder bleiben unten als Historie
+vollständig erhalten. Aktuell gilt insbesondere:
+
+| Bezug | Geltende Anforderung |
+|---|---|
+| #1, #2 | Deklaration für neue Börsen und Unterstützung je Rolle; kanonische Validierung im Core. Genaue API-Form und Versionsbehandlung im Entwurf festlegen. |
+| #2c–#3 | Eingaben dürfen keine widersprüchliche MIC-/Alias-Auflösung erzeugen. Sammelcodes bleiben von MICs getrennt. |
+| #4 | Bestehenden Core-MIC referenzieren ist erlaubt; widersprüchliche Neudefinition wird abgelehnt. Keine überschreibende Vorrangregel. |
+| #5 | Herkunft und deklarierte Unterstützung sind über REST nachvollziehbar. |
+| #6, #6b | Katalog und Unterstützung spiegeln die geladenen Deklarationen wider; kein veralteter Zustand nach Plugin-Entfernung. |
+| #6c | Ersetzt durch Bestandsschutz: Ein Überschreibversuch verändert weder Core-Alias noch gespeicherte Symbole. Keine Symbolmigration. |
+| #7 | Neue Handelsplätze im Aufnahmefeld akzeptieren; Katalog und Unterstützung auf „Exchanges“ über REST anzeigen. |
+| #8, #9 | Vorhandene REST-Zusagen erhalten und passende Vertrags-, Integrations- und Dashboardtests ausführen. |
+
+Keine neue Live-Verifikation und keine technische Freigabe mit dieser
+Scope-Entscheidung. Die frühere Time-box von einem Tag ist vor Umsetzung
+gegen den konkretisierten Entwurf zu prüfen.
+
+### Side-Effects und Auflösung
+
+Heute nur Ticketänderung. Offen für Entwurf und Implementierung im oben
+vereinbarten Umfang. Keine Änderung an Rollen oder Prioritätskette.
+
+## Frühere Fassung · Historie
+
+Die folgende Fassung dokumentiert die Herkunft und bisherigen Prüfkennungen.
+Ihre überschreibenden Vorrangregeln und der Alias-Migrationsauftrag sind durch
+Mikes Entscheidung oben abgelöst und keine aktuellen Anforderungen.
+
+<details>
+<summary>Vor der Eingrenzung vom 2026-09-07</summary>
+
 # T-30 · Plugin-deklarierte Börsenauskunft
 
 | Repo | Status | Time-box | Scope | GH-Issue |
@@ -118,3 +212,5 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 7 | Dashboard | zeigt plugin-gelieferte Börsen in Hilfe und Anzeige — ausschließlich über Core-REST | | |
 | 8 | Antworttyp aus T-21 Teil 3 | musste **nicht** geändert werden, um Plugin-Einträge aufzunehmen | | |
 | 9 | `make test` | Backend, Plugin-API und Dashboard grün | | |
+
+</details>
