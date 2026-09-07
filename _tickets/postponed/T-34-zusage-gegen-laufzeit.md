@@ -1,5 +1,45 @@
 # T-34 · Zusage gegen Laufzeit — Wächter statt Review
 
+**Zurückgestellt auf Mikes Entscheidung vom 2026-09-07.** Die allgemeinen
+Wächter sind keine Voraussetzung für den Abschluss des Plugin-Systems.
+Gezielte Tests neuer Plugin- und REST-Zusagen gehören zu
+[T-30](../T-30-plugin-boersenauskunft.md); die Fehlertext-Prüfung bleibt bei
+[T-21 #2g](../T-21-identitaet-mic-und-ticker.md).
+
+## Für dich
+
+Aktuell kein Handgriff nötig. Mike hat die vorgeschlagene Zurückstellung mit
+„Ja, erledige das“ bestätigt. Kein Wiederaufnahmetermin und kein neuer
+Implementierungs- oder Reviewauftrag.
+
+## Einordnung und technische Nachweise
+
+Auch ein externer Plugin-Autor braucht verlässliche Verträge und ausführbare
+Beispiele. Dafür sind gezielte Vertrags- und Integrationstests unmittelbar
+nützlich; eine vollständige automatische Zuordnung jeder Vertragszusage zu
+einem Laufzeittest ist zusätzliche Qualitätssicherung.
+
+Die historische Aussage, nur Menschen prüften die Verbindung von Vertrag und
+Laufzeit, ist inzwischen überholt: Es gibt OpenAPI-/Vertragsprüfungen,
+Plugin→Core-Pflichtfeldtests und einen Laufzeitvergleich der Ambiguitäts-Fixture.
+Die Fehlerkatalogprüfung deckt bisher Migrationsgründe ab, nicht alle Kennungen.
+`planned` enthält noch `generation_runtime`; `details_container` ist umgesetzt.
+Geplante Antworten können nicht als bereits vorhandene Laufzeit verlangt werden.
+
+Bei der Prüfung am 2026-09-07: **115 bestanden, 29 übersprungen**;
+eine Deprecation-Warnung. Ausgeführt aus der Projektwurzel:
+
+```bash
+# Bestandsprüfung zu den historischen Kriterien #1–3; keine vollständige Erfüllung
+.venv/bin/pytest -q tests/test_contract.py tests/test_contract_openapi.py tests/test_contract_required_fields.py tests/test_migration_reason_catalogue.py tests/test_symbol_ambiguity.py
+```
+
+Die allgemeinen Wächter bleiben unimplementiert. Die folgende Matrix und ihre
+leeren Human-Felder bleiben als Historie erhalten; ihre alten Zeit- und
+Übergabeangaben sind keine aktuelle Einplanung.
+
+## Frühere Fassung · Historie
+
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
 | StockInfo (Tests + Vertragsartefakt) | offen | 1 Tag [^box] | drei Wächter zwischen Vertrag, Fixtures und laufendem Dienst | — |

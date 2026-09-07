@@ -78,7 +78,20 @@ Keine neue Live-Verifikation und keine technische Freigabe mit dieser
 Scope-Entscheidung. Die frühere Time-box von einem Tag ist vor Umsetzung
 gegen den konkretisierten Entwurf zu prüfen.
 
-### Side-Effects und Auflösung
+### Gezielte Vertragsprüfungen · Entscheidung vom 2026-09-07
+
+Mit der Zurückstellung von [T-34](postponed/T-34-zusage-gegen-laufzeit.md)
+bleiben die Prüfungen der hier neu eingeführten Zusagen Teil von #8/#9:
+Plugin-Vertragsprüfungen im Autor-Harness und Integrationstests über den echten
+Plugin-Lader → Core → REST. Sie belegen neue MICs im Aufnahmeweg, Unterstützung
+je Rolle, Herkunft sowie die ausdrückliche Ablehnung widersprüchlicher
+Deklarationen einschließlich Bestandsschutz für Core-Aliase und Assets.
+Plugin-Entfernung und verbleibende Deklarationen werden ebenfalls geprüft.
+Die Autor-Dokumentation enthält ein ausführbares Deklarationsbeispiel samt
+Prüfbefehl. Ein allgemeines Framework zur Zuordnung sämtlicher Vertragszusagen
+zu Tests ist keine Voraussetzung für T-30.
+
+### Auflösung
 
 Heute nur Ticketänderung. Offen für Entwurf und Implementierung im oben
 vereinbarten Umfang. Keine Änderung an Rollen oder Prioritätskette.

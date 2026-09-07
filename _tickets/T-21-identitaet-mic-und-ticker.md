@@ -16,6 +16,18 @@ auf. Keine Produktänderung und keine neue Freigabe der damals ungeprüften 4A-F
 | #2g | Die Zusage „immer übersetzt, nie statusText oder rohes JSON“ wird nicht vollständig erfüllt. | `dashboard/src/api/client.ts`, `request`: bei scheiterndem Lesen des Fehlerkörpers Rückfall auf `response.statusText`. `dashboard/src/api/reason.ts`, `reasonOf`: bei nicht parsebarem Körper wird der Rohtext übernommen. Ein Körper wie `{"detail":` kann deshalb unverändert in `describeFailure` landen. Der vorhandene Test bestätigt sogar die Durchreichung von `Internal Server Error`. Codebefund, kein neuer Browser-Live-Test. |
 | #2b6c | Docker-Langzeittest im Migrations-Pending-Zustand bleibt ohne frischen Nachweis. | In dieser Prüfung kein Image-/Containerlauf. T-63 enthält allgemeine Docker-Tests; deren Anlage erfüllt die spezielle Zeit- und Pending-Bedingung nicht. |
 
+### Prüfauftrag für #2g · Entscheidung vom 2026-09-07
+
+Mit der Zurückstellung von [T-34](postponed/T-34-zusage-gegen-laufzeit.md)
+bleibt die gezielte Fehlertext-Prüfung beim offenen Fehlertext-Punkt #2g.
+Bei dessen Korrektur sind bekannte und unbekannte Fehlerkennungen in DE/EN,
+kaputtes JSON, leere Antworten, scheiterndes Lesen des Fehlerkörpers und
+Netzwerkfehler zu prüfen. Rohes Server-JSON und `statusText` dürfen nicht als
+UI-Fehlertext erscheinen; vorhandene strukturierte Fachmeldungen bleiben
+erhalten. Ein allgemeines AST-Framework für sämtliche Backend-Kennungen ist
+keine Voraussetzung dieser Korrektur. Diese Zuordnung ist kein Nachweis einer
+bereits erfolgten Umsetzung oder Verifikation von #2g.
+
 ### Zugehörige Smoke-Skripte
 
 Auf Mikes Rückfrage ebenfalls im Code geprüft, nicht ausgeführt:
