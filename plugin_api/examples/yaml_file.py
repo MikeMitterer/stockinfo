@@ -688,8 +688,8 @@ class YamlFileSource(
             instrument_types=frozenset({"etf", "etc", "fund"}),
             unit=Unit.BASIS_POINTS,
             plausible=(0.5, 500.0),
-            label_en="Total expense ratio",
-            label_de="Gesamtkostenquote",
+            label_en="Total expense ratio (TER)",
+            label_de="Gesamtkostenquote (TER)",
         ),
         FieldSpec(
             "provider", kind="text", instrument_types=frozenset({"etf", "etc", "fund"}), label_en="Fund provider", label_de="Anbieter"
