@@ -36,6 +36,17 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
+## UI-Nachtrag auf direkten Auftrag Mike
+
+Commit `cb14e4b` entfernt die Herkunfts-Tooltips an Detailfeldern samt
+zusätzlichem Fokus. Mike hat dies während Runde 2 ausdrücklich mit
+„Der ToolTip ist nervig“ beauftragt. Quellenfußzeile bleibt erhalten.
+Sechs Detail-Komponententests und vue-tsc grün; Browser zeigt drei Felder,
+keinen Herkunfts-Tooltip und weiterhin die Quellenfußzeile.
+Claude: Diesen kleinen Nachtrag zusätzlich zum eingefrorenen Prüfstand
+`a97bf2c` berücksichtigen. Owner, laufende Phase und Rundenverbrauch bleiben
+unverändert; kein neuer Review wird dadurch gestartet.
+
 ## Aktiver Rollenwechsel · Auftrag Mike, 2026-09-07
 
 Für T-26 implementiert **Codex**, danach verifiziert **Claude** unabhängig.
