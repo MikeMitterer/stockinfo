@@ -1,10 +1,26 @@
 # Codex-In-Context-Scheduler
 
 Dies ist ausschließlich der kurze Laufzeitvertrag für den internen Scheduler
-des bestehenden Codex-Review-Chats. Das fachliche Review-Verfahren steht in
+des bestehenden Codex-Arbeits-Chats. Das fachliche Review-Verfahren steht in
 `CODEX-REVIEW-AUTOMATION.md`.
 
 ## Vertrag
+
+**Der Scheduler folgt seit Mikes Auftrag vom 2026-09-07 der aktuellen Rolle.**
+Bei `reviewer: codex` gelten die Review-Trigger unten. Bei `implementer: codex`
+weckt er denselben Arbeits-Chat für `codex_working`, `changes_requested` und
+`approved`, ausschließlich mit `owner: codex`, gültigem Prioritätsticket und
+konsistenter Rollenverteilung. `coder_handoff` enthält Phase und Übergabetupel;
+dieselbe unveränderte Kombination wird innerhalb eines Laufs nur einmal
+signalisiert. Nach Wiederanlauf liest Codex den dauerhaften Arbeitsstand und
+setzt ihn fort; `approved` ist kein Auftrag zur erneuten Implementierung,
+sondern zur Verarbeitung der Freigabe und zum nächsten Kettenglied.
+
+Der Timer selbst implementiert und reviewed nichts. Vor der fachlichen Arbeit
+liest der Chat den Zustand erneut. Während einer laufenden Implementierung
+ist ein Heartbeat kein paralleler Arbeitsauftrag. Bei Owner Claude bleibt
+Codex still. Fehlende oder widersprüchliche Rollenfelder sind ein Zustandsfehler.
+Ein Rollenwechsel startet keinen Scheduler automatisch.
 
 - Mechanismus: interner In-Context-Scheduler dieses Chats; kein `/goal`, kein
   ChatGPT-Scheduled-Task und keine Desktop-App-Automation.
@@ -30,8 +46,13 @@ des bestehenden Codex-Review-Chats. Das fachliche Review-Verfahren steht in
   `notify(...)` und ruft danach `yield_control()` auf. Erst dieses Signal
   beweist, dass die Zelle den Chat weiterhin wecken kann. Der Heartbeat erzeugt
   keine Nachricht an Mike und keine Dateiänderung.
-- Ist `phase` weder `ready_for_codex` noch `scope_checkpoint`, endet die
-  fachliche Verarbeitung nach dem Heartbeat still.
+- Für die Verifier-Rolle gilt: Ist `phase` weder `ready_for_codex` noch
+  `scope_checkpoint`, endet die fachliche Verarbeitung nach dem Heartbeat still.
+- Vor jedem fachlichen Auftrag (auch `coder_handoff`) muss `ticket` eine vorhandene Datei direkt
+  im Board-Root bezeichnen. Tickets in `postponed/`, `rejected/` oder
+  `solved/` lösen keinen Auftrag aus; bei veralteter Priorität einmalig
+  `portfolio_mismatch` melden. Diese Dateiprüfung erfolgt nur bei einem
+  ansonsten fälligen Auftrag, nicht bei jedem Leerdurchlauf.
 - Ist `phase` `scope_checkpoint`, müssen `owner: codex`, ein gesetzter
   `handoff_commit`, `ticket == priority_ticket` und die Mitgliedschaft in
   `priority_chain` gelten. Ein neues Tupel aus `phase`, `ticket`,
