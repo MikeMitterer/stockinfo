@@ -11,7 +11,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `ready_for_claude`
+- `phase`: `claude_reviewing`
 - `ticket`: `T-60-dashboard-bekommt-ein-eslint-gate.md`
 - `handoff_commit`: `485eca4`
 - `review_round`: `1`
