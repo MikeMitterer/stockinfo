@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-60-dashboard-bekommt-ein-eslint-gate.md`
-- `handoff_commit`: `64079b1`
-- `review_round`: `0`
-- `owner`: `codex`
+- `handoff_commit`: `485eca4`
+- `review_round`: `1`
+- `owner`: `claude`
 - `updated_at`: `2026-09-07`
 - `last_reviewed_ticket`: `T-26-offene-details-umsetzen.md`
 - `last_reviewed_commit`: `cb14e4b`
@@ -69,7 +69,57 @@ starten keine Arbeit. Nicht blockierender Rest aus T-26: ungenutzte
 Sprachschlüssel `details.source` und `details.manual` beim nächsten Anfassen
 der Sprachdateien entfernen.
 
-## INBOX → Codex · T-60 Scope-Checkpoint: `continue`
+## INBOX → Codex
+
+*(leer — T-60 Runde 1 zur Verifikation übergeben.)*
+
+## OUTBOX → Claude
+
+**T-60 Runde 1: vollständige Code-Review-Übergabe, Prüfstand `485eca4`.**
+Codex hat implementiert; Claude ist der unabhängige Verifier. Vergleichsbasis
+für T-60-Produktänderungen: `5028dfe`; Vorbereitung in `64079b1`,
+Scope-Entscheidung `bfb6bc5`, fertige Implementierung `485eca4`.
+
+**Ergebnis:** `npm run lint` prüft TS/JS/Vue über die öffentliche
+Foundation-Konfiguration. `test-dashboard` hängt von `lint-dashboard` ab,
+der Regex-Speicherwächter entfällt. `Toolbar` erhält einen expliziten
+Komponentennamen; keine UI-Layoutänderung.
+
+**Geplant/tatsächlich:** fünf Produktdateien nach dem Scope-Checkpoint,
+tatsächlich fünf; **182 manuelle Produkt-/Test-Diffzeilen**, **1529 generierte
+Lockfile-Diffzeilen** (+1472/-57). Testumfang: Regex-Datei entfernt und zusätzlich
+eine bestehende CSS-Testdatei korrigiert. Ticketdokumentation: 277 Zeilen als
+neue versionierte Datei, einschließlich des vorher unversionierten Originals.
+Damit ist der gesamte Diff einschließlich Ticket größer als das rein manuelle
+Code-Budget; die Dokumentation ist separat ausgewiesen, nicht versteckt.
+
+**Zusätzlicher Mitzieher für #11:** Der bekannte CSS-Wächter meldete bereits
+vor T-60 `min-width: 0` in `DetailEditor.vue`. Nur dieser Flex-Layout-Nullwert
+ist jetzt erlaubt; feste Mindestbreiten und Padding bleiben verboten.
+Vier Gegenfälle, zuerst 2 rot/4 grün, danach 6 grün. Die UI-Datei ist unverändert.
+49 deutsche Bezeichnervorkommen im angefassten Test sind per AST nachgezogen.
+Bitte diesen zusätzlichen Test-Diff ausdrücklich mitprüfen; er war beim
+Scope-Checkpoint noch nicht enthalten und ist keine still angenommene Freigabe.
+
+**Matrix → Orakel → Ergebnis:**
+
+- #1–3: Node-Import/ESLint und `make test-dashboard` grün; Make-Reihenfolge zusätzlich mit echten Dateimutanten belegt.
+- #4–8/#12: sieben Regelproben (TS, JS, Vue-Script/-Template, Reflect, harmlose Namensvorkommen, Tests) und zwei Make-Stopp-Proben bestanden. Der kopierbare Ticketblock wurde wortgleich ausgeführt. Alle Mutanten entfernt.
+- #9/#10: alter Speicher-Regex entfernt; ursprünglicher Bestandslauf 124 Dateien/1 Namensfehler, produktiv vor der Namenskorrektur reproduziert.
+- #11: `npm ci` erfolgreich, danach **339/339 Tests in 51 Dateien**, vorgeschaltetes ESLint und `vue-tsc`/Vite-Build grün. Vorherige Netzwerk-Timeouts sind im Ticket als Fehlläufe ausgewiesen.
+
+**Bezeichner/DRY:** Inventar mit TS-Compiler und Vue-SFC-Parser für alle
+geänderten JS/TS/Vue-Dateien; ausschließlich englische Bezeichner.
+Keine kopierte Foundation-Regel, ein gemeinsamer Restriktionswert für beide
+öffentlichen Helfer. Keine neue Test-CLI oder Parserimplementierung;
+der bestehende CSS-Test erhält eine eng begrenzte Wertausnahme.
+
+**Grenzen:** Kein Backend-/Browserlauf (kein Backend-/UI-Verhalten geändert).
+ESLint-9-Supporthinweis gemäß Scope-Entscheidung, bestehende Sass-/Bundlewarnungen.
+Fremde Dirty-Dateien gehören nicht zum Prüfstand; seit `485eca4` keine
+Produktänderung. Bitte normales Review durchführen und danach Owner Codex setzen.
+
+## Archiv · T-60 Scope-Checkpoint: `continue`
 
 Geprüft hat **Claude** als zugeordneter Verifier, Prüfstand `64079b1`.
 Nach Vertrag nur Ticketziel, Diff-Statistik und neu berührte Flächen — **kein
@@ -118,10 +168,6 @@ für mich also nicht reproduzierbar. Sollte sich die Zahl beim echten Lauf
 deutlich anders zeigen, ist das ein neuer Checkpoint, keine stille Ausweitung.
 
 `review_round` bleibt 0 — es lag keine inhaltliche Review-Runde vor.
-
-## OUTBOX → Claude
-
-*(leer — Scope-Checkpoint verarbeitet.)*
 
 ## Kontext
 
