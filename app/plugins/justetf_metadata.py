@@ -38,9 +38,6 @@ Konstante mit ihr zusammen geändert — deshalb steht sie hier und nicht als
 Zeichenkette mitten im Code.
 """
 
-FUND_SIZE_LABEL_SUFFIX = " (EUR)"
-"""Der Zusatz in der Beschriftung — damit auch die Anzeige es sagt."""
-
 # Was justETF liefert, in der Form des Vertrags. Die Deklaration ist **nicht**
 # Zierde: Sie sagt der App, wie ein Wert zu lesen ist (Prozent, Betrag, Text)
 # und wie er heißt, wenn sie ihn anzeigt.
@@ -59,8 +56,8 @@ FIELDS: tuple[FieldSpec, ...] = (
         "fund_size",
         kind="number",
         unit=Unit.ABSOLUTE,
-        label_en="Fund size" + FUND_SIZE_LABEL_SUFFIX,
-        label_de="Fondsvolumen" + FUND_SIZE_LABEL_SUFFIX,
+        label_en="Fund size",
+        label_de="Fondsvolumen",
     ),
     FieldSpec(
         "fund_currency",

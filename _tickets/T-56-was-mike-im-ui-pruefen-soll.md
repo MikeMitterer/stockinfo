@@ -151,6 +151,16 @@ weiterhin am Betrag. Desktop und 390 px: Betrag und Währung auf gleicher
 Mittellinie, kein horizontaler Überlauf. Sechs Detail-Komponententests und
 vue-tsc erfolgreich; Betriebswerte nicht geändert.
 
+### UI-Nacharbeit: Neutrale Beschriftung des Fondsvolumens
+
+Mikes Hinweis auf „Fondsvolumen (EUR)“ trotz eigener Währungseingabe bestätigt.
+Der feste Zusatz kam aus der justETF-Deklaration. Labels heißen jetzt
+„Fondsvolumen“ / „Fund size“; justETF liefert weiterhin EUR als Währung am
+jeweiligen Betrag. Die separate Fondswährung beschreibt die Fondswährung,
+nicht zwingend die Währung des Volumenbetrags.
+Live `/fields` mit neutralen Labels bestätigt. 110 betroffene Plugin-/Detailtests,
+Ruff und vollständiges Python-Bezeichnerinventar erfolgreich.
+
 ### Bekannte Einschränkung
 
 Beim Sprachwechsel kann der Inhalt einer bereits offenen Meldung in der
