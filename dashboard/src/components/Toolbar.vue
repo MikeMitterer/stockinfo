@@ -3,6 +3,8 @@ import { ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { NButton, NInput } from 'naive-ui'
 
+defineOptions({ name: 'AssetToolbar' })
+
 /**
  * Die Leiste über der Assets-Tabelle: ein Papier hinzufügen.
  *

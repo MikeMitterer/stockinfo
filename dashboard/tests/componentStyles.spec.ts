@@ -22,7 +22,7 @@ import { describe, expect, it } from 'vitest'
 const SRC = resolve(process.cwd(), 'src')
 
 /** Was eine Komponentenbibliothek selbst mitbringt — hier also tabu. */
-const IHRE_SACHE = [
+const COMPONENT_PROPERTIES = [
   'background',
   'border',
   'border-radius',
@@ -46,52 +46,66 @@ function vueFiles(dir: string = SRC): string[] {
   })
 }
 
-interface Fund {
-  datei: string
-  klasse: string
-  eigenschaften: string[]
+interface StyleOverride {
+  file: string
+  className: string
+  properties: string[]
 }
 
 /** Sucht Klassen, die an einer Naive-Komponente hängen und eigenes CSS tragen. */
-function funde(quelle: string, datei: string): Fund[] {
-  const template = quelle.split('<template>')[1]?.split('<style')[0] ?? ''
-  const style = quelle.split('<style')[1] ?? ''
+function findOverrides(source: string, file: string): StyleOverride[] {
+  const template = source.split('<template>')[1]?.split('<style')[0] ?? ''
+  const style = source.split('<style')[1] ?? ''
 
-  const klassen = new Set<string>()
-  for (const treffer of template.matchAll(/<N[A-Za-z]+\b[^>]*?\sclass="([^"]+)"/gs)) {
-    for (const name of (treffer[1] ?? '').split(/\s+/)) klassen.add(name)
+  const classNames = new Set<string>()
+  for (const match of template.matchAll(/<N[A-Za-z]+\b[^>]*?\sclass="([^"]+)"/gs)) {
+    for (const name of (match[1] ?? '').split(/\s+/)) classNames.add(name)
   }
 
-  const gefunden: Fund[] = []
-  for (const klasse of klassen) {
-    const regel = new RegExp(`\\.${klasse.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{((?:[^{}]|\\{[^{}]*\\})*)\\}`, 'g')
-    for (const treffer of style.matchAll(regel)) {
-      const block = treffer[1] ?? ''
-      const eigenschaften = IHRE_SACHE.filter((name) =>
-        new RegExp(`(?<![\\w-])${name}\\s*:`).test(block),
-      )
-      if (eigenschaften.length > 0) gefunden.push({ datei, klasse, eigenschaften })
+  const findings: StyleOverride[] = []
+  for (const className of classNames) {
+    const rule = new RegExp(`\\.${className.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}\\s*\\{((?:[^{}]|\\{[^{}]*\\})*)\\}`, 'g')
+    for (const match of style.matchAll(rule)) {
+      const block = match[1] ?? ''
+      const properties = COMPONENT_PROPERTIES.filter((name) => {
+        const declarations = block.matchAll(new RegExp(`(?<![\\w-])${name}\\s*:\\s*([^;}]+)`, 'g'))
+        // Null erlaubt einem Flex-Element zu schrumpfen; feste Mindestbreiten bleiben verboten.
+        return [...declarations].some((declaration) => name !== 'min-width' || declaration[1]?.trim() !== '0')
+      })
+      if (properties.length > 0) findings.push({ file, className, properties })
     }
   }
-  return gefunden
+  return findings
 }
+
+describe('Layout-Ausnahme für schrumpfende Flex-Elemente', () => {
+  it.each([
+    ['min-width: 0;', false],
+    ['min-width: 12rem;', true],
+    ['min-width: 0; min-width: 12rem;', true],
+    ['padding: 0;', true],
+  ])('%s bleibt korrekt eingeordnet', (declaration, forbidden) => {
+    const source = `<template><NSelect class="probe" /></template><style>.probe { ${declaration} }</style>`
+    expect(findOverrides(source, 'probe.vue').length > 0).toBe(forbidden)
+  })
+})
 
 describe('Eigenes CSS auf Naive-Komponenten', () => {
   it('gibt es nicht — Größe über `size`, Bedeutung über `type`', () => {
-    const alle = vueFiles().flatMap((pfad) =>
-      funde(readFileSync(pfad, 'utf8'), relative(process.cwd(), pfad)),
+    const allFindings = vueFiles().flatMap((path) =>
+      findOverrides(readFileSync(path, 'utf8'), relative(process.cwd(), path)),
     )
 
-    const bericht = alle
-      .map((f) => `${f.datei} → .${f.klasse}: ${f.eigenschaften.join(', ')}`)
+    const report = allFindings
+      .map((f) => `${f.file} → .${f.className}: ${f.properties.join(', ')}`)
       .join('\n')
 
-    expect(alle, `Eigenes CSS auf einer Naive-Komponente:\n${bericht}`).toEqual([])
+    expect(allFindings, `Eigenes CSS auf einer Naive-Komponente:\n${report}`).toEqual([])
   })
 
   it('findet überhaupt Komponenten — sonst prüft der Wächter nichts', () => {
-    const mitNaive = vueFiles().filter((pfad) => /<N[A-Za-z]+/.test(readFileSync(pfad, 'utf8')))
+    const withNaive = vueFiles().filter((path) => /<N[A-Za-z]+/.test(readFileSync(path, 'utf8')))
 
-    expect(mitNaive.length).toBeGreaterThan(8)
+    expect(withNaive.length).toBeGreaterThan(8)
   })
 })

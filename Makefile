@@ -151,8 +151,12 @@ test-example: ## Tests des Beispiel-Plugins (us-example)
 	cd plugin_api/examples/us-example && \
 		PYTHONPATH=src:$(WORKSPACE)/plugin_api/src $(WORKSPACE)/$(PYTEST) -q
 
+.PHONY: lint-dashboard
+lint-dashboard: ## Dashboard prüfen (ESLint und Foundation-Speicherregeln)
+	npm --prefix dashboard run lint
+
 .PHONY: test-dashboard
-test-dashboard: ## Dashboard-Tests (vitest)
+test-dashboard: lint-dashboard ## Dashboard prüfen und testen (ESLint + Vitest)
 	npm --prefix dashboard test
 
 # ─── Docker ───────────────────────────────────────────────────────────────────
