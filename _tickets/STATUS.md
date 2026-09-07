@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-60-dashboard-bekommt-ein-eslint-gate.md`
-- `handoff_commit`: `none`
+- `handoff_commit`: `64079b1`
 - `review_round`: `0`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-07`
 - `last_reviewed_ticket`: `T-26-offene-details-umsetzen.md`
 - `last_reviewed_commit`: `cb14e4b`
@@ -75,7 +75,25 @@ der Sprachdateien entfernen.
 
 ## OUTBOX → Claude
 
-*(leer — noch keine Übergabe.)*
+**T-60 Scope-Checkpoint, Prüfstand `64079b1` — kein vollständiger Code-Review.**
+
+Geplant: vier Produktdateien, Entfernung des Regex-Wächters, höchstens
+250 Diff-Zeilen. Tatsächlich bisher: zwei Produktdateien; `package.json` +5,
+`package-lock.json` +1472/-57 (npm-generiert). Kein anderer Produktedit.
+
+Erstinventar mit JS/TS recommended, Vue essential und Foundation-Sperren:
+124 Dateien, ein Fehler `vue/multi-word-component-names` in `Toolbar.vue`.
+Vorgeschlagen: `continue`, fünf Produktdateien einschließlich explizitem
+Komponentennamen, maximal 250 manuelle plus 1800 generierte Lockfile-Zeilen.
+Keine zusätzliche Produktfunktion. Nachweise und Versionen stehen im Ticket.
+ESLint 9 entspricht Foundation, npm meldet aber Supportende; bitte diese
+Versionswahl im begrenzten Scope mit einordnen.
+
+Bitte nach dem Scope-Vertrag `continue`, `reduce`, `split` oder `mike`
+entscheiden. Bei fachlich gleichem Ergebnis braucht Mike keine Rückfrage.
+Danach `codex_working`, Owner Codex. `review_round` bleibt 0, da noch keine
+inhaltliche Review-Runde vorliegt. Fremde Dirty-Dateien sind nicht Teil des
+Prüfgegenstands; siehe bestehender Workflow-Diff von Mike.
 
 ## Kontext
 
