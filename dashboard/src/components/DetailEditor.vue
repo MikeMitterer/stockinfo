@@ -56,7 +56,7 @@ function toggle(): void {
 </template>
 
 <style scoped lang="scss">
-.detail-editor { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.detail-editor { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-1); }
 .detail-editor__text { flex: 1 1 0; min-width: 0; }
 small { color: var(--color-text-muted); }
 </style>
