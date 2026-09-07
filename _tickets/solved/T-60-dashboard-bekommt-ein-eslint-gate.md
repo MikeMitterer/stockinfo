@@ -1,19 +1,74 @@
-# T-60 · Das Dashboard hat keinen ESLint-Gate
+# T-60 · Dashboard-Code automatisch auf Regelverstöße prüfen
 
-**In Arbeit seit 2026-09-07: Codex entwickelt, Claude prüft.** Die frühere
+**Das Ticket schließt eine Lücke im normalen Dashboard-Testlauf:** Bisher
+fehlte eine eingebundene statische Codeprüfung mit ESLint. Bestimmte
+Regelverstöße konnten deshalb trotz erfolgreicher Tests unbemerkt bleiben.
+
+**Beispiel:** Neuer UI-Code greift direkt auf `localStorage` zu, obwohl die
+App dafür den vorgesehenen Speicherzugang verwenden soll. Der normale
+Testbefehl soll diesen Verstoß automatisch erkennen und fehlschlagen.
+Dafür wird die vorhandene Foundation-Regel eingebunden.
+
+**Stand: abgeschlossen.** Der normale Testlauf enthält jetzt die Codeprüfung.
+Mike hat den Abschluss am 2026-09-07 bestätigt.
+
+## Für dich
+
+Kein weiterer Handgriff nötig. Mikes Abschlussbestätigung vom 2026-09-07:
+„T-60 kannst du damit schließen“. Die Entwicklung läuft bei T-32 weiter.
+
+## Umsetzung und technische Nachweise · 2026-09-07
+
+### Was der Linter leisten soll
+
+ESLint untersucht den Dashboard-Quelltext, ohne die Anwendung auszuführen.
+Er soll typische Programmierfehler früh erkennen und vereinbarte Regeln
+automatisch durchsetzen:
+
+- JavaScript und TypeScript: unter anderem unbenutzte Variablen und
+  problematische Sprachkonstruktionen über die empfohlenen Regelpakete.
+- Vue: grundlegende Komponenten- und Templatefehler über `flat/essential`.
+- App-Code unter `src/`: direkte Zugriffe auf `localStorage` verhindern.
+  Dafür gelten die vorhandenen Regeln aus `@mmit/ux-foundation/eslint`;
+  die Fehlermeldung verweist auf `safeStorage`. Testcode darf den
+  Browserspeicher für Aufbau und Prüfung von Tests direkt verwenden.
+
+Geprüft werden JavaScript-, TypeScript- und Vue-Dateien im Dashboard,
+einschließlich Tests und Konfiguration. `dist/` und `node_modules/` bleiben
+ausgenommen. Schon eine Warnung lässt den Lauf fehlschlagen. Typprüfung
+(`vue-tsc`), Verhaltenstests (Vitest) und UI-Prüfungen bleiben eigenständige
+Prüfungen; ESLint ersetzt sie nicht. Ein allgemeiner Formatierer oder eine
+Prüfung des Python-Backends ist nicht Bestandteil dieses Tickets.
+
+### Richtiger Einsatz im Entwicklungsablauf
+
+`npm --prefix dashboard run lint` startet die tatsächliche ESLint-Konfiguration
+mit `eslint . --max-warnings 0`. `make lint-dashboard` ruft denselben Befehl
+auf. `make test-dashboard` führt ihn zwingend vor Vitest aus und bricht bei
+einem Regelverstoß ab; `make test` enthält diesen Dashboard-Testlauf ebenfalls.
+Ein direktes `npm --prefix dashboard test` startet hingegen ausschließlich
+Vitest, `npm --prefix dashboard run build` Typprüfung und Build. Für die
+gemeinsame Prüfung ist deshalb `make test-dashboard` der Einstieg.
+
+Die bisherigen Gegenproben im Nachweis unten prüfen auch die Wirksamkeit:
+absichtlich eingebaute Speicherzugriffe müssen sowohl ESLint als auch den
+Make-Testlauf stoppen. Ein erfolgreicher Lauf ohne solche Gegenproben allein
+wäre kein Beleg, dass die Sperren greifen.
+
+**Nachprüfung auf Mikes Wunsch, 2026-09-07:** Konfiguration, npm-Skripte und
+Make-Abhängigkeiten erneut geprüft. `make -n test` bestätigt die Einbindung
+in den Gesamtlauf. `npm --prefix dashboard run lint` endet mit Exit 0,
+ohne Fehler oder Warnungen. Anschließend `make test-dashboard` tatsächlich
+ausgeführt: ESLint erfolgreich, danach **339 Tests in 51 Dateien bestanden**
+(Start 22:35:57 Ortszeit). Es gibt dabei keine weiteren Linterbefunde zu
+korrigieren. Die vorhandenen Sass-Abkündigungs- und i18n-Meldungen stammen
+aus dem Testlauf, nicht aus ESLint.
+
+**Umsetzung und Review vom 2026-09-07: Codex entwickelte, Claude prüfte.** Die frühere
 Abhängigkeit ist erfüllt: Die installierte `@mmit/ux-foundation` 0.8.0 liefert
 `@mmit/ux-foundation/eslint`, beide Konfigurationshelfer lassen sich direkt
 mit Node importieren. ESLint, 339 Dashboardtests und der Build sind grün;
 Claude hat den Prüfstand `485eca4` in Runde 1 freigegeben (`1f8fd2f`).
-
-## Für dich
-
-Aktuell kein Handgriff nötig. Mike hat Umsetzung und anschließenden
-Claude-Review beauftragt. Claude hat die mechanische Budgeterweiterung mit `continue` freigegeben
-(`bfb6bc5`). Technisch freigegeben; Mikes Abschlussbestätigung ist noch offen.
-Die Entwicklung setzt unabhängig davon bei T-32 fort.
-
-## Umsetzung und technische Nachweise · 2026-09-07
 
 Vor dem ersten Produktedit: `npm --prefix dashboard run lint` scheitert mit
 `Missing script: lint`. Danach Bestandsinventar mit einer temporären Flat-Config
@@ -411,4 +466,3 @@ Freigegeben. Weiter nach der bestehenden Kette zu
 Der Riegel gehört in die Testumgebung, `#3` ist laut Codex' eigener Einordnung
 kein Pflichtumfang, und die Gegenprobe gehört mit eingecheckt. T-60 bleibt
 offen, bis Mike es bestätigt.
-

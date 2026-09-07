@@ -45,7 +45,7 @@ Du entwickelst, Claude überprüft.“
 
 | Reihenfolge | Umfang und Grund |
 |---|---|
-| T-60 | ESLint samt Foundation-Speicherregeln in den normalen Dashboard-Testlauf aufnehmen. |
+| T-60 | Abgeschlossen und von Mike am 2026-09-07 bestätigt; Ticket unter `solved/`. ESLint samt Foundation-Speicherregeln ist im normalen Dashboard-Testlauf eingebunden. |
 | T-32 | Testdatenbank absichern, bevor weitere Plugin-/Core-Integrationstests entstehen; gezielter Schutz, keine Architektur-Neufassung. |
 | T-30 | Neue Handelsplätze und Rollenunterstützung für externe Plugin-Autoren ermöglichen; bestehende Core-Aliase bleiben unverändert. |
 | T-21 | Zunächst ausschließlich offenes #2g: übersetzte Fehlertexte samt gezielter Verifikation. Börsenabweichungs-UI und Docker-Pending-Langzeittest sind keine automatisch gestarteten Folgearbeiten. |

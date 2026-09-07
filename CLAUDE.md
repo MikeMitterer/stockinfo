@@ -44,3 +44,13 @@ Vollständige Konventionen samt Namensschema je Sprache: Skill `code-standards`.
 > üblicher Einstieg und **verweist** hierher, statt die Regeln zu kopieren —
 > zwei Kopien liefen beim ersten Nachtrag auseinander. Wo eine Zeile
 > rollenabhängig ist, nennt sie die Rolle ausdrücklich.
+
+## Datenbankzugriffe in Tests
+
+Backend-Tests erhalten durch `tests/conftest.py` je Test einen temporären
+`DATABASE_PATH`; Settings-, Service- und Quellen-Caches werden zurückgesetzt.
+SQLite-Verbindungen nach `data/` oder zur vor Testbeginn konfigurierten
+Arbeitsdatenbank werden vor dem Öffnen abgewiesen. Zusätzliche Datenbanken
+gehören unter `tmp_path`. Den Riegel nicht für einen Test abschalten; Gegenproben
+verwenden temporäre Stand-ins. Die App-Verdrahtung darf Settings verwenden,
+aber Tests dürfen sich nicht auf Daten aus dem Arbeitsbestand verlassen.

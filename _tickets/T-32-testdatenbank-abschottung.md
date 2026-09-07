@@ -1,5 +1,91 @@
 # T-32 · Ein Test darf die Arbeitsdatenbank nicht erreichen
 
+**In Arbeit: zweites Ticket der von Mike beauftragten Kette.** Codex entwickelt,
+Claude prüft. Der Schutz entsteht in der Testumgebung; die Repository-
+Verdrahtung der App bleibt unverändert. Der frühere Pflichtpunkt #3 entfällt
+entsprechend der eingeplanten Eingrenzung.
+
+## Für dich
+
+Aktuell kein Handgriff nötig. Die Gegenproben arbeiten nur mit temporären
+Stand-ins; kein Test öffnet absichtlich die echte Arbeitsdatenbank.
+
+## Scope-Vertrag · 2026-09-07
+
+Ergebnis: Der normale Backend-Testlauf verwendet je Test einen frischen
+Datenbankpfad und verweigert Verbindungsaufbauten zur Arbeitsdatenbank.
+
+1. Autouse-Fixture für `DATABASE_PATH` und Settings-/Service-Caches.
+2. Nativer Python-Audit-Hook für `sqlite3.connect`: schützt das Projekt-`data/`
+   und den vor Testbeginn konfigurierten Datenbankpfad; normalisiert relative
+   Pfade, SQLite-Datei-URIs und Symlinks. Auch gespeicherte Connect-Referenzen
+   und direkte Connection-Konstruktoren bleiben erfasst. Keine eigene SQLite-
+   Implementierung, kein pytest-Plugin und kein Test-Subsystem.
+3. Eingecheckte Gegenproben sowie kurze Regel in `CLAUDE.md`.
+
+Dateien: `tests/conftest.py`, `tests/test_database_isolation.py`, `CLAUDE.md`
+und dieses Ticket. Budget: zwei Testdateien, zwei Dokumentationsdateien,
+höchstens 400 manuelle Diff-Zeilen. Keine App-Datei, keine neue Abhängigkeit,
+kein Backup, kein Composition-Root-Umbau und keine Sicherheits-Sandbox gegen
+absichtlichen Umgehungscode.
+
+Akzeptanzfälle: #1 zwei aufeinanderfolgende Tests erhalten unterschiedliche,
+leere Standarddatenbanken; ein neuer Settings-Wert und neu gebaute Dienste
+verwenden den aktuellen Testpfad. #2 gesperrte Verbindungen über native und
+zuvor gespeicherte Aufrufe scheitern **vor Dateierstellung**; normale temporäre
+und In-Memory-Verbindungen bleiben möglich. #4 der normale Make-Gesamtlauf
+bleibt grün; #5 die dauerhafte Entwicklungsregel steht in `CLAUDE.md`.
+
+## Umsetzung und Nachweise · Codex, 2026-09-07
+
+Der Zugriffsschutz ist implementiert; die unabhängige Prüfung durch Claude
+steht an. Der native Audit-Hook wird bereits beim Import von `conftest.py`
+registriert, bevor Testmodule gesammelt werden. Die Autouse-Fixture setzt
+je Test einen frischen Pfad und leert Settings-, Service- und Quellen-Caches
+vor und nach dem Test. Die App-Verdrahtung bleibt unverändert.
+
+| # | Aktueller Nachweis | AI |
+|---|---|:--:|
+| 1 | Zwei aufeinanderfolgende Tests erhalten leere Datenbanken; zwei weitere prüfen den aktuellen Pfad des gecachten Tagesdienstes. | ✅ |
+| 2 | 15 Kombinationen aus Connect-Aufruf und Pfadform, Verzeichnisschutz sowie extern konfigurierter Pfad im frischen Python-Prozess: Abbruch vor Dateierstellung. Temporäre und Speicherdatenbanken bleiben verwendbar. | ✅ |
+| 3 | Aus dem aktuellen Pflichtumfang genommen; siehe Scope-Vertrag. | ➖ |
+| 4 | Normaler Make-Gesamtlauf ohne manuell gesetzten Datenpfad: 1110 Backendtests bestanden, 29 übersprungen, 8 Online-Integrationstests abgewählt; Plugin-API 309 bestanden/1 übersprungen, Beispiel 47, Dashboard 339 samt ESLint. Onlinefälle wegen zuvor beobachteter Netzwerk-Timeouts nicht erneut ausgeführt. | ⚠️ |
+| 5 | Entwicklungsregel in `CLAUDE.md` ergänzt. | ✅ |
+
+```bash
+.venv/bin/pytest -q tests/test_database_isolation.py
+.venv/bin/ruff check tests/conftest.py tests/test_database_isolation.py
+make test ARGS="-m 'not integration'"
+```
+
+Gezielte Prüfung zuletzt **23 bestanden**, Ruff ohne Befund. Der Gesamtlauf
+steht in `/tmp/stockinfo-t32-final-suite.log`. Kein vorbereiteter Datenbestand
+oder extern gesetzter `DATABASE_PATH` ist für diesen Lauf erforderlich.
+
+**Gegenproben:** Vor der Implementierung 18 fehlgeschlagen/2 bestanden.
+Ohne Registrierung des Audit-Hooks scheiterten 16 von damals 22 Fällen;
+ohne Cache-Leerung des Tagesdienstes scheiterte dessen zweiter Durchlauf
+(1 fehlgeschlagen/21 bestanden). Ohne Erfassung von `PROTECTED_DATABASES`
+scheiterte der neue externe Startpfad-Fall (1 fehlgeschlagen/22 abgewählt).
+Alle Mutanten sind zurückgenommen. Sie verwenden ausschließlich temporäre
+Stand-ins. Logs: `/tmp/stockinfo-t32-mutant-guard.log`,
+`/tmp/stockinfo-t32-mutant-cache.log`, `/tmp/stockinfo-t32-mutant-configured.log`.
+
+**Umfang und Grenzen:** Zwei Testdateien und zwei Dokumentationsdateien,
+unter 400 Diff-Zeilen; keine Produktdatei oder Abhängigkeit. Native Python-
+Audits, pytest-Fixture und ein kleiner Subprozess zur Startprüfung bilden
+kein eigenes Test-Subsystem. AST-Bezeichnerinventar geprüft; DRY-Suche findet
+keinen bestehenden zentralen Datenbankschutz. Die Cache-Liste ist notwendige
+Verdrahtung bestehender Factory-Funktionen. Der Schutz betrifft SQLite-
+Verbindungsaufbauten im Testprozess; er ist keine allgemeine Sandbox für
+beliebige Dateioperationen, SQL-ATTACH oder nicht instrumentierte Kindprozesse.
+
+## Frühere Einordnung und Nachweise · Historie
+
+Die folgenden Einschätzungen und Prüfnummern bleiben erhalten. Der damalige
+reine Prüfauftrag ist durch Mikes Auftrag zur Ausführung der Kette abgelöst;
+#3 ist keine aktuelle Implementierungsanforderung.
+
 ## Erneute Einordnung · Codex, 2026-09-07
 
 **Weiterhin offen. Für sichere Entwicklung wichtig, für die Funktion des
