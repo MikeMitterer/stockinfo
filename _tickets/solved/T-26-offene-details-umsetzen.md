@@ -3,15 +3,14 @@
 Plugin-Felder werden jetzt gespeichert, über REST ausgeliefert und im Dashboard
 anhand ihrer Deklaration angezeigt. Der erste UI-Test ist gelaufen; die
 zweite Prüfung durch Claude hat den Stand `cb14e4b` freigegeben.
-Die technische Voraussetzung für T-56/F ist damit erfüllt; Mikes Abnahme bleibt offen.
+Mike hat T-26 am 2026-09-07 abgeschlossen. Die UI-Verifikation läuft in T-56.
 
 ## Für dich
 
-Die technische Prüfung ist abgeschlossen. Dein abschließendes Urteil zur
-angepassten Detailansicht gehört zu T-56/F; bestehende Antworten bleiben erhalten.
+Die technische Prüfung ist abgeschlossen. Die UI-Verifikation gehört zu T-56/F; bestehende Antworten bleiben erhalten.
 Dein Auftrag vom 2026-09-07 gilt: **Codex implementiert einschließlich REST,
 UI und erstem UI-Test; Claude verifiziert anschließend.** Die Rückmeldungen
-zur Oberfläche bleiben unverändert in [T-56](T-56-was-mike-im-ui-pruefen-soll.md).
+zur Oberfläche bleiben unverändert in [T-56](../T-56-was-mike-im-ui-pruefen-soll.md).
 T-62 zum Anzeigenamen bleibt offen.
 
 ## Umsetzung und technische Nachweise
@@ -34,7 +33,7 @@ Der Umfang muss deshalb bei der Übergabe ausdrücklich mitgeprüft werden.
 Nicht-Ziele: T-25 vollständig umsetzen, Namen editierbar machen (T-62),
 Börsenkatalog erweitern (T-30), neue Chart-Funktionen oder Plugin-Installation.
 Der Umsetzungsplan steht in
-[2026-09-07-t26-open-details.md](../docs/superpowers/plans/2026-09-07-t26-open-details.md).
+[2026-09-07-t26-open-details.md](../../docs/superpowers/plans/2026-09-07-t26-open-details.md).
 
 ### Verify
 
@@ -187,8 +186,7 @@ Sechs Detail-Komponententests und vue-tsc erfolgreich.
 ### Auflösung
 
 Claude hat die Nacharbeit einschließlich Tooltip-Entfernung in Runde 2 auf
-`cb14e4b` unabhängig freigegeben. Das Ticket bleibt bis zu Mikes Bestätigung
-im Board; die weitere Abnahme erfolgt in T-56.
+`cb14e4b` unabhängig freigegeben. Mike hat T-26 bestätigt; die weitere UI-Abnahme erfolgt in T-56.
 
 ## Fachliche Anforderungen und Designentscheidungen
 
@@ -611,3 +609,9 @@ Mike es bestätigt — ein Review verschiebt nichts nach `solved/`.
 
 
 </details>
+
+## Abschluss durch Mike
+
+> T-26 ist aus meiner Sicht erledigt. UI wird in T-56 verifiziert - den ersten Durchlauf kannst du machen
+
+Auftrag vom 2026-09-07: T-26 abgeschlossen; Codex führt die erste UI-Nachprüfung in T-56 aus.

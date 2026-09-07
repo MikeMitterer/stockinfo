@@ -3,7 +3,7 @@
 Der technische Vorlauf ist **in Runde 6 freigegeben**.
 
 A–F sind beantwortet. Die Nacharbeit zu C und zum API-Link ist umgesetzt und
-im Browser geprüft. Die Nacharbeit zu F ist mit T-26 implementiert und
+im Browser geprüft. Die Nacharbeit zu F ist mit [T-26](solved/T-26-offene-details-umsetzen.md) implementiert und
 erstgetestet und durch Claude in T-26 Runde 2 auf `cb14e4b` freigegeben.
 Offen ist dein abschließendes Urteil zu den angepassten Detailfeldern (F).
 
@@ -14,8 +14,8 @@ Offen ist dein abschließendes Urteil zu den angepassten Detailfeldern (F).
 BTC zeigt keine Fondsfelder, EUNL die deklarierten Fondsfelder. Herkunfts-Tooltips
 und Read-only-Hinweise an einzelnen Feldern sind entfernt; die Quellenfußzeile
 bleibt. Entspricht die angepasste Detailansicht jetzt deinem Wunsch?
-Die BTC-Felder Score/Bestätigt sind synthetische Plugin-Testdaten, keine
-fachlichen Aussagen über Bitcoin. Die bisherigen Human-Antworten bleiben unten
+Der BTC-Score ist ein synthetisches Plugin-Testfeld, keine Risikobewertung
+von Bitcoin. Das irreführende Testfeld „Bestätigt“ wurde aus der Testkonfiguration entfernt. Die bisherigen Human-Antworten bleiben unten
 unverändert; A–E müssen nicht erneut beantwortet werden.
 
 ### Deine Antworten zu Analyse und Fehlermeldung
@@ -98,6 +98,37 @@ Mike hat T-26 einschließlich REST, UI und erstem UI-Test beauftragt;
 Codex hat implementiert, Claude hat den Stand `cb14e4b` unabhängig freigegeben.
 T-56 bleibt für Mikes abschließendes Urteil zu F offen.
 T-61 ist zurückgestellt; T-62 bleibt offen; die Börsenauskunft gehört zu T-30.
+
+### Erster UI-Durchlauf F durch Codex · 2026-09-07
+
+Mike hat T-26 ausdrücklich abgeschlossen und den ersten UI-Durchlauf hier
+beauftragt. T-26 liegt unter `solved/`; die menschliche UI-Abnahme bleibt hier.
+Geprüft auf `http://127.0.0.1:5186/#/assets`, isoliertes YAML-/Demo-Profil,
+eigener Backend-Port 8936. Backend mit dem freigegebenen Produktstand neu gestartet.
+
+| # | Handgriff | Beobachtetes Ergebnis | AI |
+|---|---|---|:--:|
+| F1 | BTC-EUR und EUNL.DE über Symbol öffnen | BTC ohne Fondsfelder; ETF mit TER, Anbieter, Fondsdomizil; Quellenwerte ohne Editor | ✅ |
+| F2 | BTC-Score 0 und ETF-Anbieter `UI-Test T-56` über UI eingeben | Beide gespeichert, REST-Herkunft `manual` | ✅ |
+| F3 | Browser neu laden, Backend neu starten und Details erneut öffnen | 0 und Freitext bleiben sichtbar; REST bestätigt beide Werte | ✅ |
+| F4 | Score mit Leeren, Anbieter mit Entfernen löschen | Beide manuell null; TER 0,2 % und Domizil Ireland unverändert | ✅ |
+| F5 | Feldbereich und Quellenfußzeile ansehen | Keine Herkunfts-Tooltips, einzelnen Datumsangaben oder Read-only-Hinweise; Fußzeile bleibt | ✅ |
+| F6 | ETF in 390-px-Kartenansicht über mehr aufklappen | Alle drei Detailfelder sichtbar, Dokumentbreite 390 px, kein horizontaler Überlauf; Emulation anschließend vollständig entfernt | ✅ |
+
+Die Zahl-/Texteingaben wurden zunächst mit der noch laufenden Testinstanz
+gespeichert, anschließend mit dem neu gestarteten freigegebenen Backend gelesen
+und gelöscht. Kein neuer vollständiger Online-/YAML-Vorlauf der historischen
+neun Prüfpunkte behauptet; dieser Durchlauf prüft die Nacharbeit F auf Deutsch.
+
+**Testdaten-Befund:** Mike fragte erneut nach „Bestätigt“. Das war ein festes
+`false` des Demo-Plugins ohne fachliche BTC-Bedeutung. Aus der temporären
+Plugin-Deklaration und Lieferung entfernt, Test-Backend neu gestartet.
+`GET /instruments` nennt bei BTC nur noch `risk-demo.score`, beim ETF
+`fund_domicile`, `provider`, `ter`. Kein Produktcode geändert.
+
+Betriebsdatenbank vor/nach dem Durchlauf SHA256 identisch:
+`8a382f24ea608540acc8ad322fbc6e1037d3effb7a7e22bf9d0cbef216c69728`.
+Human-Antworten unverändert. Die Eingabefelder sind für Mikes Abnahme wieder leer.
 
 ### Bekannte Einschränkung
 

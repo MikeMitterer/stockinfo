@@ -21,7 +21,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_commit`: `cb14e4b`
 - `last_reviewed_round`: `2`
 - `workstream`: `offene_befunde`
-- `priority_chain`: `T-26-offene-details-umsetzen.md` → `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
+- `priority_chain`: `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
 - `priority_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
@@ -50,17 +50,19 @@ Die frühere Freigabe und die Rollenangaben im Archiv unten beschreiben alte
 
 ## Kontext zum aktiven Schritt · T-56/F
 
-T-26 wurde von Claude in Runde 2 auf `cb14e4b` technisch freigegeben.
-Der vollständige Bericht liegt in der Reviewhistorie von T-26; die INBOX ist
-verarbeitet. Beide Blocker und die sieben weiteren Befunde sind erledigt.
-Die priorisierte Arbeit steht jetzt bei T-56: Mikes abschließendes Urteil zur
-angepassten Detailansicht F fehlt. Technische Nachweise stehen bereit;
-Human-Antworten und Ticketablage bleiben unverändert. Kein neuer Review läuft.
-T-57 beginnt erst nach Abschluss dieser Abnahme.
+Mike hat T-26 am 2026-09-07 abgeschlossen; das Ticket liegt unter
+`solved/T-26-offene-details-umsetzen.md`. Die technische Freigabe von Claude
+auf `cb14e4b` bleibt dort in der Reviewhistorie erhalten.
 
-Die ungenutzten Übersetzungsschlüssel `details.source` und `details.manual`
-sind als nicht blockierender Rest in T-26 dokumentiert; wie von Claude
-vorgesehen beim nächsten Anfassen der Sprachdateien entfernen.
+Codex hat den beauftragten ersten UI-Durchlauf F abgeschlossen: BTC/ETF-Felder,
+Zahl 0 und Freitext speichern, Browser-/Backend-Neustart, Löschen und mobile
+ETF-Details bei 390 px. Nachweise F1–F6 stehen in T-56. Betriebsdatenbank
+bytegleich, keine Produktänderung. Das künstliche „Bestätigt“-Feld ist aus der
+temporären Testkonfiguration entfernt. T-56 bleibt für Mikes UI-Urteil offen;
+T-57 beginnt erst nach dieser Abnahme. Kein Agentenreview läuft.
+
+Nicht blockierender Rest aus T-26: ungenutzte Sprachschlüssel `details.source`
+und `details.manual` beim nächsten Anfassen der Sprachdateien entfernen.
 
 ## Kontext
 
