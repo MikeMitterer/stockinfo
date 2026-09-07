@@ -5,23 +5,90 @@ Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
 ## Maschinenlesbarer Zustand
 
-- `phase`: `approved`
-- `ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
-- `handoff_commit`: `cb33dcb`
-- `review_round`: `6`
+- `phase`: `ready_for_claude`
+- `ticket`: `T-26-offene-details-umsetzen.md`
+- `handoff_commit`: `abda3c9`
+- `review_round`: `1`
 - `owner`: `claude`
-- `updated_at`: `2026-09-05`
+- `updated_at`: `2026-09-07`
 - `last_reviewed_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
 - `last_reviewed_commit`: `cb33dcb`
 - `last_reviewed_round`: `6`
 - `workstream`: `offene_befunde`
-- `priority_chain`: `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
-- `priority_ticket`: `T-56-was-mike-im-ui-pruefen-soll.md`
+- `implementer`: `codex`
+- `reviewer`: `claude`
+- `priority_chain`: `T-26-offene-details-umsetzen.md` → `T-56-was-mike-im-ui-pruefen-soll.md` → `T-57-tickets-sagen-nicht-was-offen-ist.md`
+- `priority_ticket`: `T-26-offene-details-umsetzen.md`
 
-Erlaubte Phasen: `claude_working` → bei Breitenalarm kurz
-`scope_checkpoint` → `ready_for_codex` → `codex_reviewing` →
-`changes_requested` oder `approved`; `portfolio_review` übergibt nach dem
-letzten Kettenglied an Mike, `blocked` nur bei einem echten Hindernis.
+Die Phasennamen richten sich nach der aktuellen Zuordnung:
+
+| Coder | Verifier | Arbeit | Bereit für Review | Review läuft |
+|---|---|---|---|---|
+| `codex` | `claude` | `codex_working` | `ready_for_claude` | `claude_reviewing` |
+| `claude` | `codex` | `claude_working` | `ready_for_codex` | `codex_reviewing` |
+
+`scope_checkpoint` geht an den Verifier; `changes_requested` und `approved`
+geben an den Coder zurück. `portfolio_review` und echte
+Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
+`reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
+
+## Aktiver Rollenwechsel · Auftrag Mike, 2026-09-07
+
+Für T-26 implementiert **Codex**, danach verifiziert **Claude** unabhängig.
+T-26 ist Voraussetzung für den Feldpunkt F in T-56. Bis zur fertigen Übergabe
+bleibt `owner: codex`; Claude ändert keinen Produktcode. Bei Übergabe folgen
+`phase: ready_for_claude`, `owner: claude` und der konkrete Prüfstand. Claude
+setzt während der Prüfung `claude_reviewing` und meldet `approved` oder
+`changes_requested`; bei Nacharbeit geht der Owner zurück an Codex.
+Diese zusätzlichen Phasen gelten für den ausdrücklich beauftragten Rollenwechsel.
+Die frühere Freigabe und die Rollenangaben im Archiv unten beschreiben alte
+Übergaben, keinen Auftrag zum parallelen Weiterarbeiten an T-57.
+
+## OUTBOX → Claude · T-26 Runde 1
+
+**Prüfstand `abda3c9`**, Coder Codex, Verifier Claude, Auftrag Mike vom
+2026-09-07. T-26 ist implementiert einschließlich REST, Dashboard und erstem
+Browserlauf. Bitte unabhängig nach dem aktuellen Reviewvertrag prüfen;
+T-56/F wartet auf dieses Ergebnis. Kein Auftrag für T-57 vor Abschluss.
+
+**Umfang offenlegen:** Der Plan nennt die drei fachlichen Teile Feldschema,
+generischer Speicher/Merge und REST/UI. Ein numerisches Vorabbudget fehlt;
+der Diff umfasst tatsächlich **49 Dateien, +1861/−304 Zeilen**, einschließlich
+OpenAPI-Snapshot, Ticketformat und zuvor beauftragter T-56-UI-Korrekturen.
+Das ist eine Prozessabweichung, keine nachträglich behauptete Scope-Freigabe.
+Bitte zuerst den Zuschnitt beurteilen; danach fachlich verifizieren oder mit
+konkreter Reduktion/Trennung zurückgeben. Die genehmigte Produktaussage ist
+Plugin-Feld → Persistenz → REST → generische UI, kein zusätzliches Subsystem.
+
+Enthaltene T-56-Nacharbeit: Name öffnet Chart, Abrufzählerspalte entfällt,
+getrimmte Eingabe im Fehlertoast, nutzloser API-Wurzel-Link entfernt. T-62
+bleibt ein offenes Ticket. Vorausgehender Commit `d7afe20` sichert das bereits
+beauftragte relative Profilskript und Yahoo-Langnamen; das ist getrennt vom
+T-26-Prüfcommit. Fremde Workflow-/Dokumentänderungen im Worktree nicht ändern.
+
+**Frische Nachweise:** 1065 Backend erfolgreich, 29 skipped/8 Onlinefälle
+abgewählt; 303 Plugin-API, 45 Beispiel-, 329 Dashboardtests erfolgreich.
+Ruff, vue-tsc, AST-/TS-Compiler-Inventar und Diff-Whitespace geprüft.
+Kopierbarer Gesamtlauf und stabile Verify-IDs stehen im neu formatierten T-26.
+Keine unabhängige Freigabe und keine Online-Integration behauptet.
+
+**Browser:** eigene DB, Datei-Plugin risk-demo und yaml-file, echte Bedienung
+auf 5186/8936. Unbekannter Score: manuell 0 → Quelle 17 → verdeckter Wert →
+Entfernen. Readonly `false` bleibt nach PATCH 422 erhalten. BTC zeigt keine
+Fondsfelder, ETF zeigt Fondsfelder plus Risikoscore mit Herkunft je Feld.
+DE/EN sowie 390 px geprüft. Emulation abschließend vollständig deaktiviert;
+echter Resize 1100→1505 px verändert Tabellenbreite 1060→1465 px. Das Fenster
+bleibt für Mike bedienbar. Testvolume-Pfad steht lokal in
+`/tmp/stockinfo-t26-browser-path`; keine Betriebsdaten für Wiederholung nutzen.
+
+**Review-Schwerpunkte:** Migration bestehender Werte/Overrides, Betragswährungen,
+Kompatibilitätsprojektion einschließlich null/false/0, mehrfache Quellen und
+Ausfall, atomare Schema-Version sowie Schreibrecht/Anwendbarkeit serverseitig.
+T-25s allgemeine Generation-/Header-Laufzeit bleibt ausdrücklich offen.
+
+Die Rollen- und Aktivierungsregeln wurden parallel umgestellt; verbindlich
+sind die aktuellen Dateien. Diese Übergabe wartet auf den bestehenden
+Claude-Arbeitschat/Loop und startet selbst keine zweite Claude-Instanz.
 
 ## Kontext
 
@@ -38,7 +105,7 @@ steht in dieser Tabelle mit **in Kraft**:
 | Portfolio-Bereinigung 2026-08-29 (T-28 verworfen) | **in Kraft** — aus T-28 entstehen keine Gates |
 | Gattung `fund`, 2026-08-29 | **in Kraft** — Produktregel, nicht Ticketauftrag |
 | T-46 Richtungsentscheidung 2026-09-01 | **in Kraft** als Produktregel: `/analyze` misst die konfigurierte Kette |
-| T-40 Universalisierung 2026-08-29 | **in Kraft** — T-40 ruht bis zu Mikes Kommando |
+| T-40 Universalisierung 2026-08-29 | **abgelöst am 2026-09-07** — [T-40 abgeschlossen](solved/T-40-universelles-agenten-review-regelwerk.md); offene Kriterien nach KanTandem übernommen |
 | Menschliche Verifikation 2026-08-29 | **wird gerade eingelöst** — das dort angekündigte „frische, kurze Verify-Ticket" ist T-56 |
 | T-23 Installationsweg 2026-08-28 | erledigt — T-23 freigegeben |
 | Portfolio-Entscheidung 2026-08-28 (T-31 + T-38) | erledigt — T-31 Codex-Runde 7, T-38 Codex-Runde 2 |
@@ -158,7 +225,7 @@ Mike hat den verbleibenden Sonderfall neu eingeordnet: Wechselt die Sprache
 genau während ein Toast offen ist, kann dessen Titel bereits der neuen, sein
 Fließtext aber noch der alten Sprache folgen. Das ist ein **offener Minor-Bug,
 kein Blocker** für T-56. Der Befund und das fehlende vertikale Orakel werden in
-`T-61-offener-toast-behaelt-alte-inhaltssprache.md` nachgehalten; T-61 ist kein
+`postponed/T-61-offener-toast-behaelt-alte-inhaltssprache.md` nachgehalten; T-61 ist kein
 Gate der aktiven Kette.
 
 Die zwei reinen Artefaktkorrekturen sind in T-56 erfolgt: Das Inventar nennt
@@ -169,7 +236,7 @@ fortfahren; T-56 ist für Mikes sechs Produkturteile bereit.
 ## An Mike · T-56 ist bereit
 
 T-56 ist für deine sechs Produkturteile A–F freigegeben. Der Sprachwechsel
-genau während eines offenen Toasts bleibt separat als Minor-Bug T-61 offen und
+genau während eines offenen Toasts bleibt separat als Minor-Bug T-61 zurückgestellt und
 blockiert diese Abnahme nicht.
 
 ## Frühere vollständig freigegebene Kette
@@ -601,7 +668,7 @@ tragen dieselbe Root-Ermittlung.
 | **T-49** | nur `#8`: `scripts/sources-profile.sh` liegt allein auf `feat/sources-profile-script` und ist auf dieser Linie nicht vorhanden |
 | T-14, T-16, T-19, T-25, T-26, T-29, T-30, T-33, T-34 | nie umgesetzt oder unvollständig (T-16: 5 von 11) |
 | T-21 | von Mike eingefroren |
-| T-40 | ruht bis zu Mikes Kommando |
+| T-40 | abgelöst durch KanTandem am 2026-09-07; kein offener StockInfo-Auftrag |
 
 ### 3 · Zwei kleine Einträge, die Mike ausdrücklich verlangt hat
 
@@ -792,7 +859,8 @@ Browserlauf; sie waren leer, es ging nichts verloren. Genau das ist T-55.
 2. **Die Reihenfolge** für T-51 bis T-55. Mein Vorschlag: T-54 zuerst, weil er
    die häufigste Handlung eines neuen Benutzers trifft.
 3. **T-42** (UI-Matrix der Plugin-Kette), **T-31 + T-38** als Paket mit einem
-   gemeinsamen `API_VERSION`-Sprung, **T-40** ruht bis zu deinem Kommando.
+   gemeinsamen `API_VERSION`-Sprung. **T-40** wurde am 2026-09-07 durch
+   KanTandem abgelöst; seine offenen Anforderungen sind dort übernommen.
 4. `scripts/sources-profile.sh` liegt weiter unverschmolzen auf
    `feat/sources-profile-script`; T-49 Verify `#8` bleibt ➖.
 
