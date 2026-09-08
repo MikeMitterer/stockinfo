@@ -11,7 +11,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `changes_requested`
+- `phase`: `codex_working`
 - `ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 - `handoff_commit`: `d7b4ab3`
 - `review_round`: `1`
@@ -36,11 +36,26 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
+## Vorgemerkt · T-66 MCP-Subprojekt
+
+[T-66 · Assets und Charts über eine KI bedienen](postponed/T-66-mcp-assets-und-browser-steuern.md)
+liegt in `postponed/`. Der eigenständige MCP-Dienst gehört nach `mcp/`;
+die Umsetzung wartet auf **Mikes ausdrückliches OK**.
+
+**Verifier für T-66: Claude.** Diese Zuordnung ist für die spätere technische
+Verifikation vorgemerkt; sie ist weder eine technische Freigabe noch eine
+Aktivierung des Tickets. Erst nach Mikes OK wird T-66 in den Board-Root
+verschoben und ausdrücklich eingeplant. Bei seiner Aktivierung muss der
+aktive Zustandsblock `reviewer: claude` tragen.
+
+T-66 ist kein automatischer Nachfolger der laufenden Kette. Die aktive
+Mailbox, Priorität und Übergabe von T-65 bleiben davon unberührt.
+
 ## Aktuelle Arbeit · T-65, Auftrag Mike, 2026-09-08
 
 T-21 Börsenabdeckung ist in Runde 3 technisch freigegeben (`f3b383b`).
-T-65 ist umgesetzt: Aufnahmeprüfung und UI-Weg samt DE/EN-Browsertests.
-Claude prüft den eingefrorenen Stand unabhängig. Das Ticket trägt Scope und Belege.
+T-65 ist umgesetzt; Claude bestätigt in Runde 1 Fachwege und Prüfnachweise.
+Codex korrigiert B1 (Begründungen erhalten) und B2 (benannte Fehlerkonstante).
 
 ## Vorheriger Nachtrag · T-21, Auftrag Mike, 2026-09-08
 
