@@ -78,6 +78,7 @@ describe('ExchangesPanel', () => {
     await wrapper.find('input').setValue('Budapest')
     expect(wrapper.find('.n-data-table').exists()).toBe(false)
     expect(wrapper.find('.exchanges__venues').text()).toContain('regional')
+    expect(wrapper.find('.exchanges__suffix strong').text()).toBe('.XBUD')
     await wrapper.setProps({ data: { default_exchange: 'US', default_exchange_kind: 'collector',
       unspecified_support: [], catalog: [wrapper.props('data')!.catalog[2]!] } })
     expect(wrapper.text()).not.toContain('regional')

@@ -67,7 +67,12 @@ const columns = computed<DataTableColumns<ExchangeEntry>>(() => [
         <NListItem v-for="entry in exchanges" :key="entry.mic">
           <strong>{{ entry.mic }} · {{ entry.name }}</strong>
           <NTag v-if="entry.mic === data.default_exchange" size="small" type="info" class="exchanges__default">{{ t('exchanges.default') }}</NTag>
-          <p>{{ t(`exchanges.regions.${entry.region}`) }} · {{ entry.currency }} · {{ t('exchanges.colSuffix') }}: {{ entry.alias ? `.${entry.alias}` : t('exchanges.noSuffix') }}</p>
+          <p>{{ t(`exchanges.regions.${entry.region}`) }} · {{ entry.currency }}</p>
+          <p class="exchanges__suffix">
+            {{ t('exchanges.colSuffix') }}:
+            <strong v-if="entry.alias">.{{ entry.alias }}</strong>
+            <span v-else>{{ t('exchanges.noSuffix') }}</span>
+          </p>
           <NText depth="3">{{ origin(entry) }}</NText>
           <p v-if="entry.currency === 'GBp'">{{ t('exchanges.penceNote') }}</p>
           <ExchangeSupport :entries="entry.support ?? []" />
@@ -107,5 +112,6 @@ const columns = computed<DataTableColumns<ExchangeEntry>>(() => [
   &__hint { color: token(--text-muted); }
   h2, h3, p { margin: 0; }
   &__venues p { margin-block: var(--space-2); }
+  &__suffix strong { color: token(--accent); font-size: var(--font-lg); }
 }
 </style>

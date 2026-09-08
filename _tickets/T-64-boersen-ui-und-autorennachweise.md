@@ -115,6 +115,10 @@ vorher rot und sind nach Trennung grün; 4 Komponententests, ESLint und Build
 erneut bestanden. Browser: Spalten MIC, Handelsplatz, App-Suffix, Region,
 Quellen/Rollen; Xetra hat `.DE` allein in der Suffixzelle. Bei 1024 und
 390 px kein horizontaler Überlauf, mobil bleibt das Suffix beschriftet.
+Zweiter UI-Nachtrag Mike: Mobil steht das vorhandene Suffix auf einer eigenen
+Zeile, fett, größer und in Akzentfarbe. Browser bei 390 px: `.DE` mit 18 px
+und Schriftgewicht 700; fehlende Suffixe bleiben normal beschriftet.
+Komponententests, Build und ESLint nachgezogen und erneut grün.
 
 ## Herkunft
 
