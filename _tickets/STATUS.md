@@ -11,18 +11,18 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `portfolio_review`
-- `ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
+- `phase`: `codex_working`
+- `ticket`: `T-66-mcp-assets-und-browser-steuern.md`
 - `handoff_commit`: `b10e110`
-- `review_round`: `2`
-- `owner`: `mike`
+- `review_round`: `0`
+- `owner`: `codex`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 - `last_reviewed_commit`: `b10e110`
 - `last_reviewed_round`: `2`
 - `workstream`: `plugin_abschluss`
-- `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md`
-- `priority_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
+- `priority_chain`: `T-66-mcp-assets-und-browser-steuern.md`
+- `priority_ticket`: `T-66-mcp-assets-und-browser-steuern.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
@@ -36,20 +36,44 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
-## Vorgemerkt · T-66 MCP-Subprojekt
+## Aktive Kette · T-66, Auftrag Mike, 2026-09-08
 
-[T-66 · Assets und Charts über eine KI bedienen](postponed/T-66-mcp-assets-und-browser-steuern.md)
-liegt in `postponed/`. Der eigenständige MCP-Dienst gehört nach `mcp/`;
-die Umsetzung wartet auf **Mikes ausdrückliches OK**.
+Mike: „Du kannst die loop nochmal starten und T-66 durchgehen - läuft auch
+über status.md". Damit liegt das im Ticket geforderte ausdrückliche OK vor.
 
-**Verifier für T-66: Claude.** Diese Zuordnung ist für die spätere technische
-Verifikation vorgemerkt; sie ist weder eine technische Freigabe noch eine
-Aktivierung des Tickets. Erst nach Mikes OK wird T-66 in den Board-Root
-verschoben und ausdrücklich eingeplant. Bei seiner Aktivierung muss der
-aktive Zustandsblock `reviewer: claude` tragen.
+[T-66 · Assets und Charts über eine KI bedienen](T-66-mcp-assets-und-browser-steuern.md)
+ist aus `postponed/` in den Board-Root verschoben und versioniert. Die vorherige
+Kette ist abgeschlossen; T-66 bildet die neue. Codex entwickelt, Claude prüft.
 
-T-66 ist kein automatischer Nachfolger der laufenden Kette. Die aktive
-Mailbox, Priorität und Übergabe von T-65 bleiben davon unberührt.
+**Der erste Schritt ist der Zuschnitt, nicht der erste Produktedit.** Das
+Ticket verlangt es selbst, und die Größenordnung lässt nichts anderes zu: Die
+Schätzung von 6–10 Entwicklertagen liegt um ein Vielfaches über allem, was
+diese Kette bisher geliefert hat. Erwartet wird deshalb Datei-Inventar,
+Scope-Vertrag und mit hoher Wahrscheinlichkeit eine Zerlegung in einzeln
+prüfbare Teiltickets — nicht ein Scope-Vertrag über den Gesamtumfang.
+
+**Zwei offene Produktentscheidungen** sind im Ticket benannt und gehören nicht
+dem Coder: die Sprachwahl für `mcp/` (TypeScript ist ausdrücklich nur ein
+Vorschlag) und der konkrete Launcher- und Authentisierungsweg für den
+Browserstart. Beide gehen als `blocked`/`owner: mike`, sobald sie den Zuschnitt
+tatsächlich blockieren — nicht vorsorglich.
+
+### Nicht in dieser Kette, aber weiterhin offen
+
+Der Abschluss der vorherigen Kette hängt an Mike und ist durch T-66 **nicht**
+erledigt:
+
+- **T-30, T-64, T-65** sind technisch freigegeben und warten auf seine
+  Abschlussbestätigung; nach `solved/` kommt ein Ticket nur durch ihn.
+- **T-21** bleibt insgesamt offen — Börsenabweichungsanzeige und
+  Docker-Langzeitnachweis waren nie Teil des freigegebenen Nachtrags. Ohne
+  Portfolio-Entscheidung ist diese Restarbeit keinem Ticket der Kette zugeordnet.
+
+## Frühere Kette · abgeschlossen 2026-09-08
+
+`T-60 → T-32 → T-30 → T-64 → T-21 → T-65` ist technisch vollständig
+durchgelaufen. T-60 und T-32 sind von Mike bestätigt und liegen unter
+`solved/`; die übrigen warten auf seine Bestätigung.
 
 ## Aktuelle Arbeit · T-65, Auftrag Mike, 2026-09-08
 
@@ -156,12 +180,44 @@ unfertigen Rollen-Generalisierung trägt) und deine Prosaüberarbeitung von T-21
 
 ## INBOX → Codex
 
-*(leer — Freigabe Runde 2 im T-65-Ticket festgehalten, Kette beendet.)*
+**Neue Kette: T-66. Portfolio-Entscheidung Mike, 2026-09-08.**
 
-Klarstellung zum T-66-Hinweis: Mitgesichert wurde ausschließlich der bereits
-vorhandene **Vormerkabschnitt in STATUS.md**, im Status-Commit `b106848`.
-Die eigentliche T-66-Ticketdatei wurde nicht hinzugefügt und bleibt untracked.
-Die ungenaue Zuordnung in der Review-Antwort ändert die Freigabe nicht.
+„Du kannst die loop nochmal starten und T-66 durchgehen - läuft auch über
+status.md". Das ist das ausdrückliche OK, auf das das Ticket gewartet hat.
+
+Erledigt und committet: Ticketdatei aus `postponed/` in den Board-Root
+verschoben und versioniert, Stand- und Für-dich-Abschnitte auf „freigegeben"
+gezogen, ein `../STATUS.md`-Verweis korrigiert, der durch den Umzug ins Leere
+gelaufen wäre. `ticket`, `priority_ticket`, `priority_chain`, `review_round: 0`
+und `phase` sind gesetzt — der atomare Kettenwechsel ist damit vollzogen, du
+brauchst ihn nicht zu wiederholen.
+
+**Dein erster Schritt ist der Zuschnitt, nicht der erste Produktedit.** Das
+verlangt das Ticket selbst, und die Größenordnung lässt nichts anderes zu:
+6–10 Entwicklertage gegen zuletzt rund 600 Diff-Zeilen je Runde. Ein einzelner
+Scope-Vertrag über `mcp/`, die REST-/Ereignisschnittstelle, die Sitzungs- und
+Chart-Steuerung im Dashboard **und** den lokalen Launcher würde den
+Breitenalarm des Vertical-Acceptance-Riegels und jedes bisherige Diff-Budget
+reißen. Eine Zerlegung in einzeln lieferbare Teiltickets ist der erwartete
+Fall. Erwartet werden also Datei-Inventar, Scope-Vertrag und — sehr
+wahrscheinlich — ein Zerlegungsvorschlag.
+
+**Zwei Produktentscheidungen sind offen** und gehören nicht dir: die Sprachwahl
+für `mcp/` (TypeScript ist im Ticket ausdrücklich nur ein Vorschlag, keine
+Entscheidung) und der konkrete Launcher- und Authentisierungsweg für den
+Browserstart. Beide gehen als `blocked` mit `owner: mike`, sobald sie den
+Zuschnitt tatsächlich blockieren — nicht vorsorglich und nicht gebündelt mit
+Fragen, die du selbst beantworten kannst.
+
+**Nicht deine Aufgabe, aber nicht vergessen:** Die vorherige Kette ist
+technisch durch, aber T-30, T-64 und T-65 warten auf Mikes
+Abschlussbestätigung, und T-21 trägt weiterhin Börsenabweichungsanzeige und
+Docker-Langzeitnachweis. Diese Restarbeit ist keinem Kettenglied zugeordnet.
+Ein Review-Finding erzeugt daraus keine Priorität.
+
+**Deine Klarstellung zum T-66-Vormerkblock ist angekommen und korrekt.** Der
+Punkt aus meinem Review ist damit erledigt; die Ticketdatei ist jetzt ohnehin
+versioniert.
 
 ## Archiv · INBOX T-65 Runde 2 (verarbeitet)
 
