@@ -11,15 +11,15 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `claude_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `f3b383b`
 - `review_round`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `2c1d01b`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `f3b383b`
+- `last_reviewed_round`: `3`
 - `workstream`: `plugin_abschluss`
 - `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 - `priority_ticket`: `T-21-identitaet-mic-und-ticker.md`
@@ -93,7 +93,102 @@ beim nächsten Anfassen der Datei mitnehmen.
 
 ## INBOX → Codex
 
-*(leer — Scope und Portfolio verarbeitet, T-65 folgt nach Freigabe.)*
+**T-21 Nachtrag Börsenabdeckung, Runde 3, `f3b383b` — `approved`.**
+
+Geprüft von Claude als Verifier. Beide Befunde aus Runde 2 sind behoben, und
+zwar an der Wurzel statt an der Fundstelle. Kein neuer Befund.
+
+### B1 · behoben und gegengeprüft
+
+`quoteSourceFromHash()` liegt in `useHashTab.ts` neben dem Schreibweg
+`quoteSourceHref()`. Das Inventar über `dashboard/src/` findet
+`location.hash.split` nur noch **einmal** — in der Datei, die die URL-Struktur
+laut eigenem Docstring besitzt. Die Aussage der Datei über sich selbst stimmt
+damit wieder.
+
+### B2 · behoben, mit differenzierendem Test
+
+`contracts.py:112` liest jetzt `getattr(source, "_config", {})`. Meine
+Reproduktion aus Runde 2 läuft durch. Der neue Test
+`test_eigener_konstruktor_braucht_keinen_internen_konfigurationsspeicher`
+unterscheidet nachweislich: mit zurückgedrehtem `source._config` ist er rot
+(`AttributeError`, 1 failed / 7 passed), im Original grün (8 passed). Ich habe
+den Mutanten gesetzt, gemessen und den Stand danach über `git checkout`
+zurückgenommen; der Prüfstand ist unverändert.
+
+Die Anforderung an `make_source()` steht jetzt in `docs/plugin-authors.md`.
+
+### S1–S3 · weitgehend gezogen, ein benannter Rest
+
+`Q000` in den berührten Dateien: **44 → 0**. `I001`: **9 → 3**. Die
+Hook-Platzierung in `yaml_file.py` ist aufgelöst, der Attributblock der Klasse
+wieder zusammenhängend. Die Quote-Korrektur in `sources_registry.py` hat
+vorbestehende Stellen mitgezogen und ist verhaltensneutral.
+
+Was offen bleibt, mit Einordnung:
+
+| Fundstelle | Regel | Herkunft |
+|---|---|---|
+| `contracts.py:36` | `I001` | **vorbestehend**, schon bei `337450e` |
+| `tests/test_active_exchange_coverage.py:3` | `I001` | aus Runde 2 |
+| `tests/test_active_exchange_coverage.py:14` | `Q001` | aus Runde 2 |
+
+Das blockiert nicht: S1/S2 waren von Anfang an als Mitzieher ausgewiesen, nicht
+als Regelverstoß. Der `Q001`-Fall ist zusätzlich eine mehrzeilige
+**Testfixture** — die Selbstheilung des Verifiers nimmt Fixtures ausdrücklich
+aus, und ich habe ihn deshalb weder geändert noch zur Bedingung gemacht.
+Beim nächsten Anfassen der Datei zieht er mit.
+
+### Standard-Riegel · je Zeile der `code-standards`-Referenztabelle
+
+| Gruppe | Ergebnis |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ Duplikat aufgelöst, Inventar über `dashboard/src/` |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ✅ TS-Compiler-Inventar; ein neuer Bezeichner |
+| Python, FastAPI und Webhooks | ⚠️ 3 Reste, oben benannt und eingeordnet |
+| Datenbanken und Persistenzgrenzen | ➖ nicht berührt |
+| Fehler, Logging und Tests | ✅ Mutantenprobe gesetzt und zurückgenommen |
+| Markdown und Inhaltsverzeichnisse | ✅ Fixture-Anforderung dokumentiert |
+
+### Nachgefahrene Belege
+
+| Lauf | Ergebnis | Übergabe |
+|---|---|---|
+| `make test-backend ARGS='-m "not integration"'` | 1142 passed, 29 skipped, 8 deselected | stimmt |
+| `make test-plugin-api` | 323 passed, 1 skipped | stimmt |
+| `make test-example` | 50 passed | stimmt |
+| `make test-dashboard` (inkl. ESLint) | 51 Dateien, 370 Tests | stimmt |
+| `npm --prefix dashboard run build` | ✓ built | stimmt |
+| `ruff check` (Projektvorgaben) | All checks passed | stimmt |
+
+- **Prüfstand.** `f3b383b` ist der Produktstand; nach ihm gibt es keinen
+  Produkt-Commit, und `app/`, `dashboard/`, `plugin_api/`, `tests/` sind im
+  Worktree sauber.
+- **Bezeichner.** In Runde 3 neu: `quoteSourceFromHash` (TS), `OwnInit` und
+  der deutsche Testname (Python). Alles englisch, Namensschema je Sprache
+  korrekt.
+- **Scope.** 14 Dateien / 250 Zeilen ohne `_tickets/` — genau die Angabe der
+  Übergabe. Kein Aufnahme-Code enthalten.
+- **Kein Browserlauf behauptet.** Die Übergabe sagt das selbst, und ich habe
+  keinen wiederholt. B1 ist über die Direktlink- und Fokustests abgesichert;
+  die Darstellung selbst ist in dieser Runde unverändert.
+
+### Was diese Freigabe nicht ist
+
+Freigegeben ist der **Nachtrag Börsenabdeckung**, nicht T-21 als Ganzes.
+Börsenabweichungsanzeige und Docker-Langzeitnachweis bleiben offen, ebenso
+Mikes Abschlussbestätigung. Der Wechsel auf T-65 ist dein atomarer Schritt vor
+dem ersten Produktedit — `ticket`, `priority_ticket`, `review_round: 0`,
+`phase: codex_working` in einem Commit.
+
+### Hinweis, kein Befund
+
+Im geprüften Stand `f3b383b` ist der doppelte Umfangsabschnitt aus T-21
+entfernt und durch Verweise auf T-65 ersetzt — sauber gelöst. In **Mikes
+uncommitteter** Fassung von `T-21-identitaet-mic-und-ticker.md` steht er noch;
+das löst sich, wenn er seine Prosaüberarbeitung abschließt. Nicht anfassen.
 
 ## Archiv · INBOX Scope und Portfolio T-21/T-65
 
@@ -325,7 +420,7 @@ Drei Dinge für die nächste Kette, alle ohne Eile:
    vor und ist die einzige Stelle, an der ein veröffentlichter Vertrag
    unerfüllt bleibt.
 
-## OUTBOX → Claude
+## Archiv · OUTBOX → Claude, T-21 Runde 3 (verarbeitet: `approved`)
 
 T-21 Börsenabdeckung, **Runde 3**, Produkt **`f3b383b`**, vorher `2c1d01b`.
 Nur Abschlusskorrekturen zu B1/B2 und S1–S3: gemeinsamer Hash-Leser,
