@@ -1,165 +1,273 @@
-# T-66 · Assets und Charts über eine KI bedienen
+# T-66 · MVP-Konzept: Assets und Charts über eine KI bedienen
 
-StockInfo soll sich **aus dem KI-Chat bedienen** lassen: Assets hinzufügen,
-ändern und löschen sowie deren Charts öffnen und schließen.
+StockInfo soll sich **aus dem KI-Chat bedienen** lassen: vorhandene Assets
+finden, aufnehmen, manuelle Detailwerte ändern, löschen und deren Charts
+gezielt öffnen oder schließen. Ein eigenständiger MCP-Server übersetzt diese
+Werkzeuge in StockInfo-Aufrufe; die Geschäftsregeln bleiben im Backend.
 
-Dafür erhält StockInfo einen eigenständigen MCP-Server im Unterordner
-**`mcp/`**. MCP stellt der KI benannte Werkzeuge bereit. Der Server übersetzt
-deren Aufrufe in StockInfo-REST-Aufrufe; die Geschäftsregeln bleiben in StockInfo.
+**MVP-Beispiel:** „Nimm SAP.DE auf und zeige den Chart.“ Der MCP-Prozess nimmt
+das Asset über REST auf, öffnet bei Bedarf eine eigene StockInfo-Ansicht und
+wartet auf deren Rückmeldung. „Schließe den Chart“ schließt nur das Diagramm
+in dieser verbundenen Ansicht.
 
-**Beispiel:** Du beauftragst die KI, ein eindeutig bestimmtes Asset aufzunehmen
-und seinen Chart anzuzeigen. Falls noch keine Ansicht verbunden ist, öffnet
-das System eine Browseransicht. Nach der Aufnahme erscheint das Asset im UI,
-anschließend sein Chart. Ein weiterer Auftrag schließt den Chart wieder.
+**Stand:** Konzeptentwurf, keine Umsetzung. Codex hat den Ausgangsentwurf am
+Code geprüft und diese Redaktion ausgearbeitet. Claudes unabhängige Prüfung
+steht aus. Codex prüft anschließend auch die Auflösung der Review-Befunde.
+Die Eigenprüfung dieser Redaktion wird nicht als unabhängig bezeichnet.
 
-**Stand:** Konzept festgehalten, **von Mike am 2026-09-08 freigegeben und in
-die Kette aufgenommen**. Es gibt weder eine Umsetzung noch technische
-Prüfnachweise. Der nächste Schritt ist der Zuschnitt, nicht der erste Produktedit.
+**Für Mike:** Jetzt ist kein Handgriff nötig. Zuerst prüfen beide KI das
+Konzept fertig. Danach erhältst du die konkrete Vorlage zur Entscheidung.
+Eine Konzeptfreigabe startet **keine Umsetzung**.
 
-## Für dich
+## Auftrag und Scope dieses Tickets
 
-**Deine Freigabe zur Umsetzung liegt vor** („Du kannst die loop nochmal starten
-und T-66 durchgehen"). Ein Termin ist nicht gesetzt.
+Mikes Rückmeldungen vom 2026-09-08:
 
-Als Nächstes erstellt der Coder Datei-Inventar und Scope-Vertrag und schlägt
-dir gegebenenfalls eine Zerlegung in einzeln prüfbare Teiltickets vor. Erst
-danach entsteht Code. Bis zu deiner Bedienabnahme sind von dir keine
-Handgriffe nötig.
+- „Ziel bei T-66 ist erstmal ein MVP“
+- „Könnt ihr beide reviewen?“
+- „Ich möchte erstmal ein Tickt bzw das das Konzept ordentlich steht und beide KI das verifiziert haben“
+- „Genau - bei Claude läuft auch wieder der Loop der alle 5 min das Status.md überprüft“
+- „Als kommunikationsweg zum WebClient steht SSM oder WebSockets zur Verfügung - kläre auch mit Claude ab was in dem Fall besser passt“
 
-Zwei Punkte werden dich voraussichtlich noch erreichen, weil sie
-Produktentscheidungen sind und nicht vom Coder allein getroffen werden:
-die **Sprachwahl** für `mcp/` (TypeScript ist bisher nur ein Vorschlag) und
-der konkrete **Launcher- und Authentisierungsweg** für den Browserstart.
+„SSM“ wird hier als **SSE / Server-Sent Events** verstanden; diese Annahme
+wurde Mike im Chat genannt. Transportentscheidung siehe unten.
 
-Die technische Verifikation übernimmt der in [STATUS.md](STATUS.md) unter
-`reviewer` benannte Verifier. Eine technische Freigabe ersetzt deine
-abschließende Bedienabnahme nicht.
+Der frühere Auftrag „Du kannst die loop nochmal starten und T-66 durchgehen“
+wird durch den aktuellen Auftrag eingegrenzt: Konzeptarbeit, noch kein Code.
 
-## Was danach möglich sein soll
+**Scope-Vertrag:** Ein Ergebnis — ein geprüftes MVP-Konzept. Zwei fachliche
+Arbeiten: Zuschnitt am Bestand und Review-Auflösung. **0 Produktdateien**,
+höchstens **2 Ticket-/Statusdateien**, **600 Diff-Zeilen** ohne bereits
+vorhandenen Status-Verlauf. Kein Scaffold, keine Installation, keine neuen
+Abhängigkeiten und keine Änderung von Arbeitsdaten.
 
-- **Assets lesen und eindeutig auswählen.**  
-  Die KI kann vorhandene Assets finden und deren Zustand lesen.
-  Mehrdeutige Symbole dürfen nicht zur Änderung des falschen Assets führen.
+## MVP-Vorschlag zur späteren Entscheidung
 
-- **Assets hinzufügen, ändern und löschen.**  
-  Die Werkzeuge verwenden die bestehenden Aufnahme- und Bearbeitungsregeln.
-  „Ändern“ meint die von StockInfo zur Bearbeitung freigegebenen Felder,
-  einschließlich manueller Detailwerte; keine beliebigen Providerdaten.
+| Ansatz | Nutzen und Grenze | Bewertung |
+|---|---|---|
+| Lokaler MCP, Datenwerkzeuge und eine verbundene Ansicht | Der Beispielablauf ist vollständig; kein entfernter Launcher nötig. | **Empfohlen** |
+| Nur Datenwerkzeuge | Kleinster Umfang; Charts lassen sich noch nicht steuern. | Kleinerer möglicher Zuschnitt |
+| Lokaler und entfernter MCP, mehrere Zielgeräte | Bisheriger Gesamtentwurf; zusätzlicher Zugriffsschutz und lokaler Launcher für entfernte Nutzung. | Spätere Ausbaustufe |
 
-- **Eine Browseransicht starten und zuordnen.**  
-  Die KI kann das Öffnen selbst auslösen. Erst die Rückmeldung der geladenen
-  Seite bestätigt eine verbundene Sitzung. Ein gestarteter Browserprozess
-  allein ist noch kein Erfolg.
+Für den vorgeschlagenen MVP laufen **KI-Client, MCP, StockInfo und Browser
+auf demselben Mac**. Ein MCP-Prozess steuert höchstens eine ausdrücklich
+verbundene Ansicht. Andere Tabs bleiben manuell bedienbar und reagieren nicht
+auf dessen Chartbefehle. Mehrere gleichzeitig steuernde MCP-Prozesse und
+mehrere Backend-Worker werden nicht zugesagt.
 
-- **Charts gezielt öffnen und schließen.**  
-  Ein Chart-Auftrag nennt Asset, gegebenenfalls Zeitraum und Zielansicht.
-  „Chart schließen“ schließt den Chart, nicht den Browser oder das Asset.
-  Andere Tabs oder Geräte werden dadurch nicht umgeschaltet.
+Später: entfernter MCP über Streamable HTTP, interner Serverbetrieb, Launcher
+auf dem Benutzergerät, mehrere steuerbare Ansichten und allgemeine
+Push-Synchronisierung von UI-/Hintergrundänderungen. Diese Punkte sind nicht
+gestrichen, sondern außerhalb dieses MVP. Der ursprüngliche Gesamtentwurf
+bleibt über Git nachvollziehbar.
 
-- **Deine Oberfläche aktuell halten.**  
-  Änderungen durch KI, dich oder den Hintergrund-Refresh werden nach
-  erfolgreichem Speichern an die betroffenen Ansichten gemeldet.
-  Offene, ungespeicherte Eingaben dürfen dabei nicht still überschrieben werden.
+## MCP-Subprojekt und Datenwerkzeuge
 
-## Architektur und Grenzen
+`mcp/` ist unabhängig vom Python-Backend startbar und erhält eigene
+Abhängigkeiten, Tests, Startanleitung und Konfiguration. **Empfehlung:
+TypeScript mit offiziellem MCP-SDK und zunächst stdio.** TypeScript passt zur
+vorhandenen Dashboard-Werkzeugkette; Python wäre eine tragfähige Alternative.
+Die Sprache bleibt eine begründete Vorlage für Mike, keine unterstellte
+Freigabe. Bibliotheks- und Laufzeitversion werden im späteren Bauticket fixiert.
 
-### Eigenständiges Subprojekt im selben Repository
+Der KI-Client startet den MCP-Prozess; stdout enthält ausschließlich
+MCP-Nachrichten, Logs gehen nach stderr.
+[Protokollgrundlage: MCP-Transporte](https://modelcontextprotocol.io/specification/2025-11-25/basic/transports).
 
-`mcp/` erhält eigene Abhängigkeiten, Tests, Startanweisungen und Konfiguration.
-Der Dienst ist unabhängig vom Python-Backend startbar und deploybar.
-Die StockInfo-Adresse wird konfiguriert, nicht auf die Workstation festgelegt.
+Der MCP-Server importiert keine Backend-Interna und greift nicht auf SQLite zu.
+REST-Zugriffe liegen gebündelt, beispielsweise in `mcp/src/clients/stockinfo/`,
+Werkzeugdefinitionen getrennt in `mcp/src/tools/`. Kein generisches Werkzeug
+für beliebige URLs, REST-Methoden, Shell-Befehle oder Browserklicks.
 
-Der MCP-Server wird **nicht in FastAPI eingebettet**. Er importiert keine
-Python-Interna und greift nicht auf die StockInfo-Datenbank zu. Sämtliche
-StockInfo-REST-Zugriffe werden beispielsweise in `mcp/src/clients/stockinfo/`
-gebündelt; Werkzeugdefinitionen liegen getrennt davon unter `mcp/src/tools/`.
+Backend-/Dashboard-Adresse und Steuerungszugang werden beim Start konfiguriert.
+Im lokalen MVP sind nur Loopback-Ziele zulässig; Werkzeugparameter dürfen
+keinen anderen Host einsetzen. Zugangswerte stehen weder in Antworten noch
+Logs. Setup-Beispiele verwenden Platzhalter statt echter Geheimnisse.
 
-TypeScript ist der bisherige **Vorschlag**, keine getroffene Sprachentscheidung.
-Die konkrete Bibliothek und Transportkonfiguration werden beim Scope-Zuschnitt
-festgelegt. Für einen entfernten MCP-Zugang ist Streamable HTTP vorgesehen.
+| Werkzeugvorschlag | Eingang und Wirkung | REST / Grenze |
+|---|---|---|
+| `list_assets` | Bestand lesen; optionale Namens-/Symbolsuche filtert diesen Bestand. | `GET /instruments`, keine weltweite Wertpapiersuche. |
+| `get_asset` | Genau eine `listing_id` samt Detailwerten lesen. | Auswahl aus `GET /instruments`; kein neuer Leseendpunkt nötig. |
+| `add_asset` | Einen rohen `identifier` aufnehmen. | `POST /instruments/intake`, keine eigene Symbol-/MIC-Auflösung. |
+| `get_editable_fields` | Feldkatalog und Zielasset lesen. | `GET /fields` plus Asset; Definitionen/Anwendbarkeit/Werte liefern. |
+| `set_asset_details` | `listing_id`, Feldnamen, Werte und ggf. Währung. | Bestehender `PATCH /instruments/by-id/{listing_id}/details`. |
+| `delete_asset` | Genau eine `listing_id` samt Historie löschen. | Kleiner neuer DELETE-Weg per Listing-ID erforderlich. |
+| `open_chart` | `listing_id`, optional vorhandener Zeitraum; Ansicht öffnen/verwenden. | Allgemeiner StockInfo-UI-Auftrag, kein Quote-GET als Ersatz. |
+| `close_chart` | Chart in der verbundenen Ansicht schließen. | Gleicher UI-Auftragsweg; Browser/Asset bleiben erhalten. |
 
-### StockInfo bietet eine allgemeine UI-Steuerung
+`listing_id` bleibt opak. Mehrere Suchtreffer ergeben Kandidaten und keine
+Mutation. Eine gelöschte ID wird nicht durch ein anderes Asset gleichen
+Namens ersetzt. Der neue DELETE-Weg muss die Auswahl und Löschung im Backend
+eindeutig halten; eine vorgeschaltete Suche mit anschließendem Symbol-DELETE
+würde die ID-Zusage nicht erfüllen.
 
-Zusätzlich zu den Datenrouten benötigt StockInfo einen Vertrag für
-Browser-Sitzungen, UI-Befehle und Ausführungsbestätigungen.
-Diese Schnittstelle kennt keine MCP-Werkzeuge und ist auch für andere
-Automationen nutzbar.
+„Bearbeiten“ meint ausschließlich die **deklarierten manuellen Detailwerte**.
+Identität, Börse, Providerwerte und frei editierbarer Name sind nicht enthalten.
+`null` entfernt nur den benannten manuellen Wert; ausgelassene Felder bleiben.
+Das Backend prüft Definition, Anwendbarkeit und Bearbeitbarkeit. MCP zeigt den
+wirksamen und manuellen Wert sowie eine Providerüberlagerung (`shadowed`).
+Es führt keinen zweiten editierbaren Feldkatalog.
 
-Vorgeschlagener Ablauf: MCP sendet einen UI-Auftrag über REST an StockInfo.
-StockInfo übermittelt ihn per **SSE** an die Zielansicht. SSE ist ein
-Ereigniskanal vom Server zum Browser; der Browser bestätigt über REST.
-WebSockets sind dafür keine Voraussetzung.
+Der Legacy-Override-PUT ersetzt den vollständigen Satz. Er wird nicht als
+partielles MCP-Update verwendet, damit andere Werte nicht versehentlich
+verschwinden. Das Löschwerkzeug wird als destruktiv beschrieben/annotiert.
+Die konkrete Beauftragung erfolgt im KI-Client; die Annotation allein ist
+keine Zugriffskontrolle und garantiert keinen Dialog in jedem Client.
 
-Auftragskennungen ordnen Bestätigungen zu. „Angenommen“, „ausgeführt“,
-„fehlgeschlagen“ und „Zeitüberschreitung“ müssen unterscheidbar sein.
-Nach einer Wiederverbindung lädt die Ansicht den aktuellen Datenstand;
-alte UI-Befehle dürfen nicht unkontrolliert erneut ausgeführt werden.
+## WebClient: SSE plus REST oder WebSocket?
 
-### Browserstart erfolgt auf dem Benutzergerät
+Beide Varianten erfüllen den fachlichen Ablauf. Im Bestand gibt es noch
+keinen SSE-, WebSocket- oder Sitzungs-/ACK-Kanal. Ein bereits vorhandener
+Transport gibt daher nicht den Ausschlag.
 
-Bei lokalem MCP-Betrieb kann der Dienst den Browser auf demselben Rechner öffnen.
-Bei Serverbetrieb braucht es einen **lokalen Launcher** oder eine nachgewiesene
-gleichwertige Fähigkeit der KI-Anwendung. Ein auf dem Server gestarteter Browser
-erfüllt diese Anforderung nicht.
+| Kriterium | SSE plus REST-Rückmeldung | WebSocket |
+|---|---|---|
+| Chartauftrag zum Browser | Ereignis im SSE-Strom | Nachricht im Socket |
+| Bereitschaft, ACK, Editorstatus zurück | Zusätzlicher REST-Aufruf | Nachricht auf derselben Verbindung |
+| Browserunterstützung | Native `EventSource`-API; automatischer Wiederaufbau | Native `WebSocket`-API; Wiederaufbau durch Anwendung |
+| Bindung und Zugriff | SSE-Stream und ACK-Route müssen dieselbe Ansicht prüfen | Nach Anmeldung an diese Verbindung gebunden; Auftrags-ID weiter nötig |
+| Zugang ohne URL-Geheimnis | Native EventSource hat keinen frei setzbaren Authorization-Header; Cookie- oder Fetch-Streaming-Lösung nötig | Anmeldung als erste Nachricht möglich; davor keine Aufträge/Daten |
+| Betrieb | Gewöhnlicher HTTP-Strom; Buffering/Timeouts beachten | Upgrade-Unterstützung nötig, besonders später hinter Proxy |
+| Für diesen lokalen MVP | Tragfähig; Rückkanal und Zugang lösen zusätzlichen Aufwand aus | Wenige bidirektionale Meldungen auf einer Verbindung |
 
-Die Ansicht verbindet sich über eine kurzlebige, einmal verwendbare Kennung
-mit der zugehörigen Steuerungssitzung. Fremde Sitzungen dürfen weder übernommen
-noch gesteuert werden. Fehlt der lokale Startweg, meldet das Werkzeug diesen
-Zustand verständlich; es behauptet keinen erfolgreichen Browserstart.
+**Codex empfiehlt für den WebClient WebSocket.** Ausschlaggebend sind
+Bereitschaft, Ausführungsbestätigung und Editorstatus auf derselben gebundenen
+Verbindung, nicht Datenmenge oder Geschwindigkeit. FastAPI und der Browser
+bieten die Grundbausteine; es braucht weder Socket.IO noch einen allgemeinen
+Event-Bus. Reconnect, Zeitgrenzen und fachliche ACKs müssen trotzdem gebaut
+werden. SSE wäre bei überwiegend reinen Benachrichtigungen naheliegender.
 
-Die konkrete Launcher-Ausführung sowie Authentisierung und Sitzungsbindung
-werden vor dem Produktedit festgelegt. Lokaler Betrieb und interner
-Serverbetrieb müssen als getrennte Prüfläufe nachgewiesen werden.
+**Zur ausdrücklichen Gegenprüfung durch Claude:** Ist diese Bilanz für den
+konkreten MVP überzeugend, oder ist SSE plus vorhandenes REST-Wiring insgesamt
+kleiner? Erst nach dieser Gegenprüfung wird die Empfehlung konsolidiert.
+Es werden nicht beide Varianten implementiert und kein vorsorglicher
+Transport-Abstraktionslayer vorgesehen.
 
-## Umfang vor dem ersten Produktedit zuschneiden
+Grundlagen: [MDN SSE](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events),
+[EventSource-Konstruktor](https://developer.mozilla.org/en-US/docs/Web/API/EventSource/EventSource),
+[MDN WebSocket](https://developer.mozilla.org/en-US/docs/Web/API/WebSocket),
+[FastAPI WebSockets](https://fastapi.tiangolo.com/advanced/websockets/).
+Die Empfehlung ist eine Bewertung für StockInfo, keine Vorgabe dieser Quellen.
+MCP-stdio und WebClient-Transport sind getrennte Verbindungen.
 
-Dieses Ticket hält den Gesamtumfang fest. **Mikes OK liegt vor** — der Coder
-erstellt jetzt das Datei-Inventar und einen Scope-Vertrag mit Budget nach dem
-[Board-Vertrag](README.md#scope-vertrag-für-implementierungstickets).
-Falls nötig, wird die Umsetzung in verlinkte, einzeln prüfbare Teiltickets zerlegt.
+## Verbindliche Fachregeln unabhängig vom Transport
 
-Die Schätzung unten liegt um ein Vielfaches über den zuletzt gelieferten
-Tickets. Ein einzelner Scope-Vertrag über den ganzen Umfang würde sowohl den
-Breitenalarm des Vertical-Acceptance-Riegels als auch jedes bisher übliche
-Diff-Budget reißen. Eine Zerlegung ist deshalb der erwartete Fall, nicht die
-Ausnahme — und sie gehört vor den ersten Produktedit.
+**Eine gezielt verbundene Ansicht.** StockInfo erhält eine allgemeine
+UI-Steuerung für Anmeldung, Auftrag und Rückmeldung, ohne MCP-Werkzeugnamen
+im Backend. MCP sendet UI-Aufträge über REST. Der WebClient empfängt sie über
+den gewählten Kanal und bestätigt dort bzw. bei SSE über REST.
 
-Betroffen sind `mcp/`, die benötigten REST-/Ereignis-Schnittstellen im Backend,
-die Sitzungs- und Chart-Steuerung im Dashboard sowie der lokale Startweg.
-Bestehende REST-Verträge und manuelle Bedienung müssen weiter funktionieren.
+Der Steuerungskanal ist standardmäßig deaktiviert. Vorgeschlagen ist für den
+lokalen MVP ein explizit eingerichteter gemeinsamer Zugangswert zwischen MCP
+und Backend. Nur dieser darf eine Bindung erstellen und Aufträge senden.
+Die Browseransicht bekommt stattdessen eine 60 Sekunden gültige Einmalkennung
+im URL-Fragment. Sie entfernt diese nach Übernahme sofort aus der Adresse,
+bevor die normale Hash-Navigation sie verändert.
 
-**Nicht enthalten:** Restore, Migration, eine allgemeine Browserautomation mit
-simulierten Klicks, ein Umbau der Geschäftslogik oder eine umfassende neue
-Benutzerverwaltung. Bestehende Betriebsriegel dürfen durch MCP nicht umgangen
-werden. Zugriffsschutz für die neuen Schnittstellen gehört zum Umfang.
+MCP startet nur die konfigurierte Dashboard-Adresse über den lokalen
+Betriebssystemaufruf mit getrennten Argumenten, ohne Shell. Es übernimmt keine
+vorhandene manuelle Registerkarte. Browser-Origin, Einmalkennung, Bindung und
+Auftragszuordnung werden serverseitig geprüft. Bei WebSocket: Anmeldung als
+erste Nachricht mit kurzer Frist; vorher keine Nutzdaten oder Befehle.
+Eine gebrauchte/abgelaufene Kennung oder zweite Übernahme wird abgewiesen.
+CORS allein ersetzt diese Prüfungen nicht. Kein langlebiger MCP-Zugang gelangt
+zum Browser; Verbindungskennungen werden nicht protokolliert.
 
-Die bisherige Schätzung beträgt **6–10 Entwicklertage** für den beschriebenen
-Umfang einschließlich einfachem macOS-Launcher und Tests. Sie ist eine grobe
-Planungsannahme, kein zugesagtes Budget; der Scope-Vertrag präzisiert sie.
+**Bestätigte Ausführung.** Browserstart allein ist kein Erfolg. Der WebClient
+meldet Bereitschaft; `open_chart` wartet insgesamt höchstens 30 Sekunden auf
+Verbindung und passende Ausführungsbestätigung. Er nutzt bestehende
+Chartauswahl, Zeiträume und Schließfunktion. „Ausgeführt“ heißt, dass das
+richtige Chart-Dock geöffnet/geschlossen ist. Leere Kurse oder Ladefehler
+bleiben gesondert sichtbar und werden nicht als geladene Kursdaten bezeichnet.
 
-## Technische Verifikation
+Auftragszustände: `accepted`, `executed`, `failed`, `timed_out`.
+Eine eindeutige Auftragskennung und die gebundene Ansicht ordnen ACKs zu.
+Nach Timeout wird kein späteres ACK zum rechtzeitigen Erfolg umgedeutet.
+Timeout bedeutet fehlende Bestätigung, nicht den Beweis einer Nichtausführung.
 
-Die folgende Tabelle ist die **einzige aktuelle Verify-Matrix**.
-Alle Ergebnisse sind offen. `➖` bedeutet hier: noch nicht geprüft.
+**Begrenzte Laufzeit statt Queue-System.** Ein ausstehender UI-Auftrag,
+flüchtige Bindung, keine dauerhafte Queue und kein Replay. Weitere gleichzeitige
+Aufträge werden als beschäftigt abgewiesen. Neustart oder Verbindungsabbruch
+verwerfen die Bindung; erneutes Verbinden erfordert eine neue Einmalkennung.
+Der Client lädt dann aktuelle Daten, spielt aber keine alten Befehle ab.
+Ohne verbundene Ansicht meldet `close_chart` „keine verbundene Ansicht“ und
+startet keinen Browser. Die bestehende Ansicht wird durch Neuverbinden nicht
+automatisch zur zweiten steuerbaren Ansicht.
 
-Die späteren Läufe verwenden isolierte Testdaten. **L** bezeichnet lokalen
-Betrieb auf macOS; **S** StockInfo und MCP auf einem internen Server mit Browser
-und Startweg auf dem Benutzergerät. Konkrete Test-Assets, URLs, Startbefehle und
-Prüfbelege ergänzt der Coder bei der Umsetzung unter derselben Prüfnummer.
+**Speicherung und Darstellung getrennt.** Ein aufgenommenes Asset bleibt
+gespeichert, wenn danach der Browserstart scheitert. Werkzeugantworten nennen
+Schreib- und UI-Ergebnis getrennt. Bei unklarem REST-Schreibausgang gibt es
+keinen automatischen Retry; zuerst wird durch Lesen abgeglichen.
 
-| # | Lauf | Handgriff | Erwarteter Nachweis | AI |
-|---|---|---|---|:--:|
-| 1 | L, S | MCP separat starten und StockInfo-Adresse konfigurieren. | Verbindet sich über REST; keine DB-Zugriffe oder Python-Imports. | ➖ |
-| 2 | L, S | Asset suchen und aufnehmen; mehrdeutige Eingabe versuchen. | Eindeutiges Asset erscheint; Mehrdeutigkeit erzeugt keine falsche Aufnahme. | ➖ |
-| 3 | L, S | Manuellen Detailwert ändern, dann Test-Asset löschen. | Bestehende Fachregeln gelten; UI zeigt gespeicherten Stand bzw. Entfernung. | ➖ |
-| 4 | L, S | Ohne verbundene Ansicht den Browserstart anfordern. | Browser öffnet auf dem Benutzergerät; Sitzung meldet Bereitschaft zurück. | ➖ |
-| 5 | L, S | Zwei Ansichten öffnen; Chart in einer öffnen und schließen. | Nur die Zielansicht reagiert; Ausführung wird korrekt bestätigt. | ➖ |
-| 6 | L, S | KI-, UI- und Hintergrundänderungen auslösen; parallel Eingabe offenhalten. | Ansichten aktualisieren sich; ungespeicherte Eingabe bleibt geschützt. | ➖ |
-| 7 | L, S | Verbindung trennen, Auftrag senden, danach neu verbinden. | Ausfall oder Timeout sichtbar; Datenabgleich, keine blinde Befehlswiederholung. | ➖ |
-| 8 | L, S | Fremde Sitzung oder verbrauchte Verbindungskennung verwenden. | Zugriff wird abgewiesen; keine fremde Ansicht wird gesteuert. | ➖ |
-| 9 | L, S | REST und manuelle Asset-/Chart-Bedienung ohne MCP verwenden. | Bisherige Bedienwege funktionieren weiterhin. | ➖ |
+Nach MCP-Mutationen wird die verbundene Ansicht zum Neuladen aufgefordert.
+Ohne Verbindung genügt das REST-Ergebnis. Offene Eingaben werden nicht still
+überschrieben: Neuladen wird bis Speichern/Abbrechen verschoben und sichtbar
+als ausstehend gemeldet. Der aktuelle Neuladeauftrag erhält dabei sofort
+`failed` mit dem Grund „Eingabe offen“; nur ein zusammengefasstes lokales
+„Daten neu laden“-Flag bleibt, keine wartende Befehlsqueue. Chartwechsel dürfen mit „Eingabe offen“
+abgelehnt werden. Benachrichtigungen über andere Tabs und Hintergrundläufe
+bleiben spätere Ausbaustufe. Deren manuelle Bedienung bleibt erhalten.
 
-Vor der Bedienabnahme erhält Mike oben einen kurzen Arbeitsbereich mit den
-konkreten Handgriffen und Verweisen auf diese Prüfnummern. Human-Urteile werden
-nicht vorweggenommen. Review-Fassung, Befunde und Auflösung werden erst nach
-den jeweiligen Prüfungen ergänzt.
+## Bestandsabgleich und spätere Lieferabschnitte
+
+Codex inventarisierte am 2026-09-08 alle Router-Funktionen mit Python-AST und
+las die UI-Aufrufwege. `mcp/` existiert noch nicht.
+
+| Ort | Vorhanden / konkrete Lücke |
+|---|---|
+| `app/routers/instruments.py`, `intake_service.py` | Aufnahme und Börsenabdeckung existieren. |
+| `app/routers/dashboard.py`, `fields.py` | Liste, Katalog und Detail-PATCH existieren; DELETE nur per ISIN/Symbol. |
+| `quote_cache.py:set_detail_overrides` | Prüft kompletten Patch vor atomarem Schreiben. |
+| `useOverrides.ts` | Bestätigt unterschiedliche PUT-/PATCH-Semantik. |
+| `AppDashboard.vue` | `select`, `onRangeChange`, `closeChart`; bisher nur lokale UI-Aktionen. |
+| `useHashTab.ts` | Besitzt Hash-Struktur; Bindung muss vor Normalisierung übernommen werden. |
+| Router-Inventar, `useInstruments.ts` | Kein Sitzungs-/ACK-Kanal; Neuladen über explizite Aktionen. |
+
+Spätere Umsetzung in drei aufeinander aufbauenden Abschnitten, **jetzt keine
+Bautickets und kein Code**:
+
+1. MCP→REST mit Datenwerkzeugen und eindeutigem Löschweg; erster echter
+   Protokolllauf bis frischer Datenbank.
+2. Eine lokale Ansicht, Zugriff/Bindung und Chart-Auftrag mit ACK/Timeout.
+3. Aktualisierung, Schutz offener Eingaben und vollständiger Browsernachweis.
+
+Jeder Abschnitt braucht vor Implementierung einen eigenen Datei-/Diff-Scope.
+Die alte Schätzung von 6–10 Tagen betraf den größeren Gesamtentwurf und ist
+kein Budget dieses Konzepts. Nicht enthalten: Restore, Migration, DB-Umbau,
+neue Benutzerverwaltung oder Umbau der Geschäftslogik. Existierende
+Betriebsriegel müssen auch neue Daten-/UI-Wege sperren; WebSockets dürfen
+insbesondere einen nur für HTTP implementierten Riegel nicht umgehen.
+
+## Verifikation des Konzepts und spätere Abnahme
+
+| Konzeptprüfung | Nachweis | Codex | Claude |
+|---|---|---|---|
+| K1 MVP / spätere Ausbaustufen | Lokaler durchgängiger Beispielablauf, Remote ausdrücklich später. | Bestandsabgleich/Eigenprüfung erfolgt | ausstehend |
+| K2 REST / eindeutige Identität | Router-Inventar; Wiederverwendung und DELETE-Lücke explizit. | geprüft | ausstehend |
+| K3 WebClient-Transport | SSE/REST gegen WebSocket am konkreten Hin-/Rückkanal verglichen. | WebSocket empfohlen | ausstehend |
+| K4 Fehler / prüfbare Abnahme | ACK, Schreibausgang, Editor, Neustart und Betriebsriegel betrachtet. | Konzeptprüfung, kein Laufzeitbeleg | ausstehend |
+
+Keine dieser Angaben behauptet bestandene Produkt- oder UI-Tests. Die einzige
+geplante Produkt-Verify-Matrix folgt; alle Läufe sind offen:
+
+Regression des unveränderten Bestands: 46 Aufnahme-/Identitätstests sowie
+`make test-dashboard` mit ESLint und 374 UI-Tests grün. Diese Läufe bestätigen
+keinen MCP-Code; es gab keinen neuen Browserlauf. UI-Log: `/tmp/t66-concept-ui.log`.
+
+| # | Späterer Lauf / Handgriff | Erwarteter Nachweis | AI |
+|---|---|---|:--:|
+| 1 | Lokal: echter MCP-Client startet Prozess, listet Werkzeuge, liest frischen Bestand. | Protokoll→REST→DB; stdout ohne Logs, keine Backend-/DB-Imports. | ➖ |
+| 2 | MIC/Suffix/ISIN aufnehmen, nicht abgedeckte Börse und mehrdeutige Suche versuchen. | Core-Regeln wie UI; Fehler verändert keinen falschen Datensatz. | ➖ |
+| 3 | Detail setzen/zurücksetzen, gesperrtes Feld versuchen; eine von zwei gleichnamigen Zeilen per ID löschen. | Nur benannte Felder/Zeile geändert; Providerüberlagerung korrekt gemeldet. | ➖ |
+| 4 | Ohne Verbindung Chart öffnen; Browserstart scheitern lassen. | Eigene lokale Ansicht, Bereitschaft/Erfolg nur mit ACK; keine Scheinerfolge. | ➖ |
+| 5 | Verbundene und manuelle Ansicht: Chart öffnen/Zeitraum wechseln/schließen. | Nur Zielansicht reagiert; leere/gestörte Kursdaten sichtbar. | ➖ |
+| 6 | MCP-Mutation bei offener Eingabe, dann Speichern/Abbrechen. | Gespeichert, UI zunächst ausstehend; Eingabe nicht still überschrieben. | ➖ |
+| 7 | Trennung, verspätetes/fremdes ACK, Prozessneustart, unklarer Schreibausgang. | Timeout/Fehler korrekt, kein Replay oder blinder Schreib-Retry. | ➖ |
+| 8 | Falscher Zugang/Origin, verbrauchte Bindung, aktiver Betriebsriegel. | Zugriff abgewiesen, keine fremde Steuerung oder Geheimnisweitergabe. | ➖ |
+| 9 | DE/EN, Desktop/Mobil: manuelle Asset-/Chart-Bedienung mit und ohne MCP. | Bestehende Bedienung erhalten, Meldungen verständlich, kein Überlauf. | ➖ |
+
+Isolierte Testdaten und normale Framework-Fakes an Außengrenzen; mindestens
+ein echter MCP-Client→Server→REST→frische-DB-Lauf und ein Browserlauf sind
+Pflicht. Negative Mutanten prüfen falsche Ziel-ID, übersprungene ACK-Prüfung
+und überschriebenen Editorzustand. Unit-Tests ersetzen keine Browserbelege.
+Remote-Läufe sind außerhalb des MVP und werden nicht als bestanden geführt.
