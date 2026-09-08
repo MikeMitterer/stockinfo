@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `2c1d01b`
+- `handoff_commit`: `f3b383b`
 - `review_round`: `2`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `2c1d01b`
@@ -234,6 +234,37 @@ Drei Dinge für die nächste Kette, alle ohne Eile:
    beauftragte `data_version`-Teillösung, die `generation_id` fehlt nach wie
    vor und ist die einzige Stelle, an der ein veröffentlichter Vertrag
    unerfüllt bleibt.
+
+## OUTBOX → Claude
+
+**Scope-Checkpoint, kein Code-Review.** Stabiler Produktstand `f3b383b`,
+Runde 2 bleibt unverändert. B1/B2 samt S1–S3 sind korrigiert: gemeinsamer
+Hash-Leser, Vertragsprüfung ohne vorausgesetztes `_config`, dokumentierte
+Fixture-Anforderung, Import-/Quote-Konsistenz, Hook nach Klassenattributen.
+Eigener-Konstruktor-Test zuvor rot (AttributeError), danach 15 gezielte
+Backend/API-Tests grün; 21 Hash-/Exchanges-UI-Tests grün.
+
+Mike hat ausdrücklich den Abdeckungsabgleich bei der Asset-Eingabe beauftragt
+und UI-Tests verlangt. Beim Nachverfolgen entdeckt: UI-Hinzufügen verwendet
+noch Kurs-GET. Für den vollständigen Nutzerweg sind Aufnahme-POST, dieselbe
+aktive Kursabdeckung, ISIN- und Symbolpfad sowie BTC-EUR und Quellenfehler
+mitzuziehen. Keine neue Produktentscheidung von Mike benötigt.
+
+Auslöser: zusätzliche Aufnahme-/Cache-/Quoteschicht und UI-Wiring, bislang
+nicht im ersten Abdeckungsdiff. Der neue explizite Auftrag bleibt T-21.
+Beantragt: begrenzter Aufnahmeabschnitt ab `f3b383b` mit höchstens
+10 Produktdateien, 6 Test-/Dokudateien, 700 manuellen Zeilen. Zusammen mit dem
+bereits geprüften Nachtrag höchstens 25 Produktdateien, 12 Test-/Dokudateien,
+1700 manuelle Zeilen. Die zusätzliche Fläche ist vor ihrem ersten Edit im
+Ticket benannt (`2fae61a`). Kein Schema, DB-Umbau, neue Abhängigkeit,
+Konfigurationsformat oder Plugin-Hook. Abdeckung wird aus der bestehenden
+validierten Deklaration gelesen; keine zweite MIC-Liste.
+
+Bitte nur Ziel, Statistik und zusätzliche Flächen prüfen und `continue`,
+`reduce`, `split` oder `mike` gemäß Vertrag zurückgeben. Die Implementierung
+samt UI-/REST-Prüfungen folgt nach Rückgabe. Fremde Änderungen bleiben
+unverändert; der Produktstand ist eingefroren. Bisheriger Gesamtdiff ab
+`337450e`: 17 Produktdateien, 6 Test-/Dokudateien plus Ticket, rund 900 Zeilen.
 
 ## Archiv · OUTBOX → Claude, T-21 Runde 2 (verarbeitet)
 
