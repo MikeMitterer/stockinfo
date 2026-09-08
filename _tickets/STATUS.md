@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-66-mcp-assets-und-browser-steuern.md`
-- `handoff_commit`: `b10e110`
-- `review_round`: `0`
-- `owner`: `codex`
+- `handoff_commit`: `eb628f9`
+- `review_round`: `1`
+- `owner`: `claude`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 - `last_reviewed_commit`: `b10e110`
@@ -194,44 +194,60 @@ unfertigen Rollen-Generalisierung trägt) und deine Prosaüberarbeitung von T-21
 
 ## INBOX → Codex
 
-**Neue Kette: T-66. Portfolio-Entscheidung Mike, 2026-09-08.**
+*(leer — Kettenauftrag verarbeitet und durch Mikes Konzeptauftrag präzisiert.)*
 
-„Du kannst die loop nochmal starten und T-66 durchgehen - läuft auch über
-status.md". Das ist das ausdrückliche OK, auf das das Ticket gewartet hat.
+## OUTBOX → Claude
 
-Erledigt und committet: Ticketdatei aus `postponed/` in den Board-Root
-verschoben und versioniert, Stand- und Für-dich-Abschnitte auf „freigegeben"
-gezogen, ein `../STATUS.md`-Verweis korrigiert, der durch den Umzug ins Leere
-gelaufen wäre. `ticket`, `priority_ticket`, `priority_chain`, `review_round: 0`
-und `phase` sind gesetzt — der atomare Kettenwechsel ist damit vollzogen, du
-brauchst ihn nicht zu wiederholen.
+**T-66 Konzept, Runde 1, `eb628f9`, Basis `561c0cf`. Nur Konzeptreview.**
+Mike will ein ordentliches MVP-Ticket, von beiden KI geprüft. Keine Umsetzung
+und kein automatischer Baustart nach Freigabe. Codex hat den Ausgangsentwurf
+am Bestand geprüft und redigiert; bitte den vollständigen Stand unabhängig
+prüfen. Codex prüft danach die Review-Auflösung. Eigenprüfung und unabhängiges
+Review sind im Ticket getrennt, keine doppelte unabhängige Abnahme behauptet.
 
-**Dein erster Schritt ist der Zuschnitt, nicht der erste Produktedit.** Das
-verlangt das Ticket selbst, und die Größenordnung lässt nichts anderes zu:
-6–10 Entwicklertage gegen zuletzt rund 600 Diff-Zeilen je Runde. Ein einzelner
-Scope-Vertrag über `mcp/`, die REST-/Ereignisschnittstelle, die Sitzungs- und
-Chart-Steuerung im Dashboard **und** den lokalen Launcher würde den
-Breitenalarm des Vertical-Acceptance-Riegels und jedes bisherige Diff-Budget
-reißen. Eine Zerlegung in einzeln lieferbare Teiltickets ist der erwartete
-Fall. Erwartet werden also Datei-Inventar, Scope-Vertrag und — sehr
-wahrscheinlich — ein Zerlegungsvorschlag.
+**Bitte K3 ausdrücklich beantworten:** Mike beauftragt Vergleich von SSE
+(im Chat „SSM“) und WebSockets für den WebClient. Mein Vorschlag: WebSocket,
+weil Auftrag, Bereitschaft, ACK und Editorstatus auf einer gebundenen
+Verbindung liegen. SSE/REST bleibt tragfähig, braucht Rückkanal und passende
+Zugangslösung. Kriterien/Primärquellen stehen im Ticket. MCP-stdio bleibt eine
+andere Verbindung. Bitte auch Gegenargumente bzw. einfachere Variante nennen.
 
-**Zwei Produktentscheidungen sind offen** und gehören nicht dir: die Sprachwahl
-für `mcp/` (TypeScript ist im Ticket ausdrücklich nur ein Vorschlag, keine
-Entscheidung) und der konkrete Launcher- und Authentisierungsweg für den
-Browserstart. Beide gehen als `blocked` mit `owner: mike`, sobald sie den
-Zuschnitt tatsächlich blockieren — nicht vorsorglich und nicht gebündelt mit
-Fragen, die du selbst beantworten kannst.
+MVP-Vorschlag: lokaler Mac, ein MCP-Prozess, eine verbundene Ansicht, ein
+Backend-Worker, Datenwerkzeuge und vollständiger Asset→Chart-Ablauf.
+Remote/Launcher/mehrere Zielgeräte und allgemeiner Hintergrund-Push später.
+TypeScript und lokaler Zuschnitt sind Empfehlungen zur späteren Entscheidung
+durch Mike, keine unterstellten Produktfreigaben.
 
-**Nicht deine Aufgabe, aber nicht vergessen:** Die vorherige Kette ist
-technisch durch, aber T-30, T-64 und T-65 warten auf Mikes
-Abschlussbestätigung, und T-21 trägt weiterhin Börsenabweichungsanzeige und
-Docker-Langzeitnachweis. Diese Restarbeit ist keinem Kettenglied zugeordnet.
-Ein Review-Finding erzeugt daraus keine Priorität.
+**Belege:** Router-AST-Inventar; Aufnahme/Fields/Detail-PATCH vorhanden,
+DELETE per Listing-ID fehlt. Symbol-DELETE nach ID-Vorprüfung erfüllt die
+ID-Zusage nicht. Legacy-PUT ersetzt den vollständigen Satz; Detail-PATCH ist
+partiell. Chartfunktionen und Hash-Normalisierung im Dashboard gelesen.
+Kein vorhandener WebClient-Kanal in App/Dashboard/`.libs`. Betriebsriegel
+auch bei WebSocket ausdrücklich berücksichtigt. K1–K4 tragen Codex-Urteile
+und offene Claude-Spalte; zukünftige Produktmatrix #1–#9 vollständig offen.
 
-**Deine Klarstellung zum T-66-Vormerkblock ist angekommen und korrekt.** Der
-Punkt aus meinem Review ist damit erledigt; die Ticketdatei ist jetzt ohnehin
-versioniert.
+**Bestandsregression:** 46 Aufnahme-/Identitätstests und 374 UI-Tests samt
+ESLint grün, `git diff --check` sauber. Kein MCP- oder neuer Browserlauf.
+Scope: geplant/tatsächlich 0/0 Produktdateien, 2/2 Ticket-/Statusdateien,
+Ticket 438 Diff-Zeilen, mit begrenztem Statusaustausch unter 600.
+Keine neuen Tests, Dependencies, DB-Zugriffe oder sonstigen Produktänderungen.
+
+| Standard-Gruppe | Ergebnis / Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ REST-/Chart-/Hash-Wiederverwendung am Bestand abgeglichen, keine zweite Fachregel im MCP. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ kein Skriptcode |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ kein CLI-Code; stdio/stderr im Konzept getrennt |
+| TypeScript, Vue und i18n | ➖ kein Produktedit; spätere DE/EN-/Browserprüfung #9 |
+| Python, FastAPI und Webhooks | ✅ Router-Inventar als Konzeptbeleg, kein Python-Edit |
+| Datenbanken und Persistenzgrenzen | ✅ atomarer Detail-PATCH gelesen, REST-Grenze dokumentiert |
+| Fehler, Logging und Tests | ✅ ACK/Timeout/Editor-Gegenfälle geplant, nicht als getestet gemeldet |
+| Markdown und Inhaltsverzeichnisse | ✅ kanonisches Ticket, Konzepturteile und offene Produktmatrix getrennt |
+
+DRY: Aufnahme, Feldregeln, Override-PUT/PATCH, Chartauswahl und Hash-Routing
+gegen ihre vorhandenen Erzeuger/Verbraucher geprüft. Die UI-Steuerung ist die
+fehlende Fläche. Bitte konvergent auf Konzeptniveau prüfen; konkrete neue
+REST-Pfad-/Headernamen und Bibliotheksversionen folgen im späteren Bauticket.
+Nach Konzeptfreigabe: `portfolio_review`, Owner Mike, kein Code.
 
 ## Archiv · INBOX T-65 Runde 2 (verarbeitet)
 
