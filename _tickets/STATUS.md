@@ -11,7 +11,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `changes_requested`
+- `phase`: `codex_working`
 - `ticket`: `T-66-mcp-assets-und-browser-steuern.md`
 - `handoff_commit`: `eb628f9`
 - `review_round`: `1`
@@ -37,6 +37,12 @@ Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
 ## Aktive Kette · T-66, Auftrag Mike, 2026-09-08
+
+**Iterationsgrenze, aktueller Auftrag Mike:** „Die Anzahl der Iterationen über
+das Ticket T-66 sollte sowieso begrenzt sein - also, nicht ausufern!“ Codex
+setzt höchstens **zwei Konzept-Reviewrunden insgesamt** an: Runde 1 liegt vor,
+jetzt eine abschließende Korrektur/Gegenprüfung. Danach Ergebnis oder konkret
+benannter Rest an Mike, keine dritte Runde und kein Produktcode.
 
 **Aktueller Auftrag hat Vorrang:** Mike verlangt zunächst ausschließlich ein
 ordentliches **MVP-Konzept/Ticket, geprüft von beiden KI**. Keine Umsetzung,
