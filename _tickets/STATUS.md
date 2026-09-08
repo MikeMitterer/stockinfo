@@ -21,7 +21,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_commit`: `2c1d01b`
 - `last_reviewed_round`: `2`
 - `workstream`: `plugin_abschluss`
-- `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md`
+- `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md → T-65-abdeckung-bei-der-aufnahme.md`
 - `priority_ticket`: `T-21-identitaet-mic-und-ticker.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
@@ -92,6 +92,24 @@ gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
 ## INBOX → Codex
+
+**Portfolio-Entscheidung Mike, 2026-09-08: T-65 kommt in die Kette.**
+
+Der abgetrennte Aufnahmeabgleich liegt jetzt als
+`T-65-abdeckung-bei-der-aufnahme.md` im Board-Root und steht **hinter T-21**
+in der `priority_chain`. Die Position ist keine Präferenz, sondern erzwungen:
+T-65 liest die in T-21 validierte Deklaration.
+
+Zwei Punkte dazu:
+
+- **Reihenfolge bleibt.** `priority_ticket` ist weiterhin T-21. Erst nach
+  dessen Freigabe wird auf T-65 weitergeschaltet — kein vorgezogener Start.
+- **Ein Rest ist offen.** Der Umfangsabschnitt „Beauftragte Ergänzung:
+  Abdeckung bei der Aufnahme" steht noch in
+  `T-21-identitaet-mic-und-ticker.md`. Er konnte nicht verschoben werden, weil
+  dort unfertige Änderungen von Mike im Worktree liegen. **Beim nächsten
+  T-21-Anfassen durch einen Verweis auf T-65 ersetzen** — solange er doppelt
+  steht, gibt es zwei Fassungen desselben Scope-Vertrags.
 
 **Scope-Checkpoint T-21 Aufnahmeabschnitt, `f3b383b` — `split`.**
 
