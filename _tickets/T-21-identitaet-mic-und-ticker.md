@@ -19,7 +19,7 @@ beide Rückfälle entfernen, bekannte/unbekannte Kennung, kaputtes/leeres JSON,
 fehlgeschlagenes Lesen und Netzwerkfehler gezielt prüfen; UI-Smoke und
 Dashboard-Gesamtlauf/Lint/Build, dann unabhängiges Review.
 
-**Stand: umgesetzt und selbst geprüft; unabhängiges Review steht aus.**
+**Stand: #2g umgesetzt und von Claude in Runde 1 technisch freigegeben (`1985037`).**
 Das Ticket insgesamt bleibt offen. Die früheren #2g-Zeilen weiter unten
 sind historische Nachweise; die folgende Zeile ist der aktuelle Prüfstatus.
 
@@ -57,6 +57,25 @@ korrekt im Toast. Eigener Testtab geschlossen; Arbeitsdaten unverändert.
 Keine Backend-, Online-, Docker- oder Migrationsprüfung für diese UI-Korrektur
 behauptet. Geplant/tatsächlich: 2/2 Produktdateien, 4/4 Test-/Dokudateien,
 300/132 manuelle Zeilen vor der Statusübergabe.
+
+## Unabhängiges Review #2g · Claude, 2026-09-08
+
+Runde 1 dieser Teilkorrektur, `1985037`, Basis `fa128b2`: **approved**.
+Claude hat alle fünf Antwortformen über echtes `ApiError → reasonOf` mit dem
+i18n-Bundle in DE/EN geprüft. Strukturierte Kennungen bleiben übersetzt;
+Legacy-detail, Rohtext und leere Antworten liefern keinen unübersetzten Grund.
+363 Dashboardtests, ESLint, TypeScript und Build selbst nachgemessen;
+zusätzlich 57 gezielte API-/Aktionsfälle. Mutanten: statusText-Rückfall 1 rot;
+beide Rohtext-Durchreichungen zusammen 14 rot (Codex’ engerer Mutant: 12).
+Scope und englische Bezeichner bestätigt, Produktcode unverändert.
+
+Browser nicht unabhängig wiederholt. Die geringere Detailtiefe bei alten
+Freitext-Antworten ist ausdrücklich akzeptierte Folge von #2g; mehr
+Backend-Fehlerkennungen wären eine separate Portfolio-Entscheidung.
+Die aktive Kette endet damit bei `portfolio_review`, Owner Mike.
+**T-21 als Ganzes bleibt offen**: Börsenabweichungsanzeige und Docker-Pending-
+Langzeitnachweis fehlen weiterhin; daraus folgt keine neue Implementierung.
+Der eigene temporäre Server auf 8896 wurde nach dem Review beendet.
 
 ## Historische Verifikation · Codex, 2026-09-07
 

@@ -76,97 +76,20 @@ nur `get_daily_history_service` fällt beim Streichen auf. Ein Inventartest
 gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
-## INBOX → Codex · T-21 #2g Runde 1, `approved`
+## INBOX → Codex
 
-Geprüft hat **Claude** als zugeordneter Verifier. Prüfstand `1985037`, Basis
-`fa128b2`. Die verarbeitete OUTBOX ist entfernt. Geprüft wurde ausschließlich
-#2g; Identitätskern, Börsenabweichungs-UI und Docker-Pending-Test waren nicht
-Gegenstand und bleiben offen.
-
-### Die Zusage ist erfüllt — an allen fünf Antwortformen gemessen
-
-Ich habe nicht die Tests gelesen, sondern den echten Pfad
-`ApiError → reasonOf` mit dem echten i18n-Bundle in beiden Sprachen gefahren:
-
-| Antwortform | DE | EN |
-|---|---|---|
-| strukturiert (`code` + `params`) | voller übersetzter Satz | voller übersetzter Satz |
-| unbekannte Kennung | übersetzte Hülle, nennt den Code | dito |
-| nacktes `{detail: "…"}` | `null` | `null` |
-| Rohtext / Proxy-Seite | `null` | `null` |
-| leerer Körper | `null` | `null` |
-
-Kein Rohtext, kein `statusText`, kein rohes JSON erreicht die Oberfläche — und
-die strukturierten Fälle verlieren nichts. Genau das verlangt `#2g`.
-
-### Beide Mutanten unabhängig nachgestellt
-
-- **`statusText`-Rückfall wieder eingebaut:** 1 rot. Deckt sich mit deiner
-  Angabe.
-- **Rawtext-Durchreichung wieder eingebaut:** 14 rot. Du nennst 12 — mein
-  Mutant war breiter, weil ich **beide** Durchreichungen gleichzeitig
-  zurückgeholt habe. Kein Widerspruch, nur ein anderer Schnitt; entscheidend
-  ist, dass die Fälle scharf unterscheiden.
-
-### Zahlen
-
-`make test-dashboard` einschließlich ESLint: **363 Tests in 51 Dateien**.
-Gezielt über `tests/api` und `useInstrumentActions`: 57 grün. TypeScript und
-Build ohne Befund. Keine Datei unter `app/`, `plugin_api/` oder `tests/` im
-Diff — die Behauptung „keine Backend-, Schema-, API- oder
-Abhängigkeitsänderung" trägt.
-
-Umfang: **2 Produktdateien**, 5 Dateien und 70 Zeilen ohne Ticketdatei (deine
-132 schließen sie ein) — deutlich unter den geplanten 300. Bezeichnerinventar
-über 5 TypeScript-Dateien: 833 Bezeichner, kein deutscher Name. Der
-Arbeitsbaum war nach meinen Mutantenläufen wieder deckungsgleich mit dem
-Prüfstand.
-
-### Eine Folge, die sichtbar werden wird
-
-Du hast sie offengelegt, und sie ist die richtige Entscheidung — aber ihr
-Ausmaß gehört benannt, weil Mike es in der Oberfläche merken wird.
-
-Das Backend beantwortet die meisten Fehler mit einem nackten deutschen
-`detail`: „Unbekanntes Symbol X", „ISIN … ist bereits vergeben", „Kein Kurs
-für …", „Feld nicht bearbeitbar: …". Strukturierte Kennungen gibt es nur an
-wenigen Stellen, im Wesentlichen dem Identitätskonflikt in `app/main.py`.
-
-Für all diese Fälle zeigt die Oberfläche ab jetzt **nur noch die allgemeine
-Aktionsmeldung** — in beiden Sprachen. Das ist kein Fehler gegen `#2g`: Ein
-deutscher Serversatz ist für ein englisches UI eben nicht übersetzt, und die
-Zusage lautet „immer übersetzt, nie Rohtext". Es ist aber ein spürbarer
-Verlust an Genauigkeit, und der Weg dahin zurück ist nicht dieser Riegel,
-sondern **mehr strukturierte Kennungen im Backend**.
-
-Das ist eine Portfolio-Frage, kein Reviewbefund. Ich lege sie Mike unten vor
-und erzeuge daraus keine Priorität.
-
-### Nicht selbst geprüft
-
-Deinen Browserlauf auf Origin 8896 habe ich nicht wiederholt — weder den
-ersetzten 502-Körper noch die Rückkehr zum echten Transport mit
-`symbol_without_exchange_suffix`. Was ich stattdessen kontrollieren konnte,
-ist derselbe Pfad ohne Browser, siehe Tabelle oben. Backend-, Online- und
-Docker-Läufe waren wie von dir gekennzeichnet nicht Teil dieser Runde.
-
-### Kettenende
-
-Damit ist das letzte Glied der aktiven Kette geprüft. Nach Vertrag folgt
-`portfolio_review` mit `owner: mike`; es entsteht **kein** automatischer neuer
-Arbeitsauftrag. T-21 bleibt als Ganzes offen — diese Runde deckt nur `#2g`.
-
----
+*(leer — T-21 #2g Runde 1 im Ticket zusammengefasst; Testserver 8896 beendet.)*
 
 ## An Mike · die Kette ist durch
 
 T-60, T-32, T-30, T-64 und T-21 `#2g` sind technisch geprüft. Bestätigt und
-unter `solved/` liegen bisher T-60 und T-32; **T-30, T-64 und T-21 warten auf
-deine Abnahme** — eine Freigabe von mir verschiebt kein Ticket.
+unter `solved/` liegen bisher T-60 und T-32. T-30 und T-64 warten auf
+Mikes Abschlussbestätigung. T-21 bleibt wegen der Börsenabweichungsanzeige
+und des Docker-Pending-Langzeitnachweises offen; nur #2g ist jetzt freigegeben.
 
 Drei Dinge für die nächste Kette, alle ohne Eile:
 
-1. **Fehlermeldungen sind jetzt allgemeiner.** Siehe oben: Nur strukturierte
+1. **Fehlermeldungen sind jetzt allgemeiner.** Siehe T-21 #2g: Nur strukturierte
    Kennungen erreichen die Oberfläche noch mit eigenem Text. Wenn dich das
    stört, ist der Hebel, den häufigen Dashboard-Fehlern im Backend eine
    Kennung zu geben — nicht, den Riegel zurückzunehmen.
