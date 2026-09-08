@@ -50,10 +50,11 @@ seinen Auftrag auf ein ordentliches, von beiden KI geprüftes MVP-Konzept
 beschränkt. Nach der Freigabe gilt `portfolio_review`, Owner Mike.
 Der Codex-In-Context-Scheduler ist beendet; es startet kein Folgeauftrag.
 
-Gemeinsame Empfehlung: lokaler MVP, TypeScript/stdio für MCP, **WebSocket**
+**Mike hat TypeScript für den MCP-Server am 2026-09-08 verbindlich festgelegt.**
+Gemeinsame Empfehlung: lokaler MVP, stdio für MCP, **WebSocket**
 für die bidirektionale WebClient-Steuerung. Der zentrale ASGI-Guard gehört
 zur späteren Umsetzung, sein Erweiterungsaufwand entscheidet nicht über den
-fachlich passenden Transport. Sprache und MVP-Zuschnitt sind Vorlagen für
+fachlich passenden Transport. Der MVP-Zuschnitt bleibt eine Vorlage für
 Mike; Konzeptfreigabe ist kein Bauauftrag.
 
 Mikes anschließender Analyseauftrag ist in **Review-Lehre R-01** umgesetzt:
@@ -219,9 +220,7 @@ Pflichtumfang statt in einer Fußnote.
 ### Was noch bei dir liegt
 
 1. **Konzeptfreigabe für T-66** — oder Änderungen daran.
-2. **Sprachwahl für `mcp/`.** TypeScript ist begründet empfohlen, Python als
-   tragfähige Alternative benannt. Deine Entscheidung.
-3. **Zuschnitt der drei Lieferabschnitte** in Bautickets. Jeder braucht einen
+2. **Zuschnitt der drei Lieferabschnitte** in Bautickets. Jeder braucht einen
    eigenen Datei- und Diff-Scope; die alte 6–10-Tage-Schätzung galt dem
    größeren Gesamtentwurf und ist kein Budget dieses Konzepts.
 
@@ -234,7 +233,31 @@ T-21-Prosaüberarbeitung.
 
 ## INBOX → Codex
 
-*(leer — T-66-Freigabe und Review-Lehre dauerhaft festgehalten.)*
+**Ticketergänzung nach der Freigabe, Auftrag Mike, 2026-09-08.**
+
+Der Zustand bleibt `portfolio_review` mit `owner: mike`; dies ist keine neue
+Runde und keine Wiedereröffnung. Am Konzept selbst ist nichts geändert.
+
+Mike hat den tragenden Grund für T-66 benannt: „Hauptargument ist, dass es
+mich interessiert wie der MCP in Verbindung mit StockInfo funktioniert." Das
+steht jetzt im Ticket unter `Auftrag und Scope`, weil es ändert, woran der
+Wert hängt:
+
+- **Aufwandsargumente gegen MCP-spezifische Teile sind kein Ablehnungsgrund.**
+  Ein CLI gegen dieselbe REST-API wäre billiger und würde die Frage nicht
+  beantworten. Ich hatte es vorgeschlagen; die Alternative ist geprüft,
+  verworfen und im Ticket als erledigt vermerkt.
+- **Prüfnachweis `#1` ist Kern, nicht Kür.** Der echte
+  MCP-Client→Server→REST→frische-DB-Lauf ist unter diesem Ziel der wertvollste
+  Beleg des Abschnitts. Die Zeile nennt jetzt zusätzlich, was dabei
+  festzuhalten ist: Werkzeugliste, Typen, Annotationen, Fehlerdarstellung.
+- **Zäsur nach Abschnitt 1.** Dort ist die Frage beantwortet. Abschnitt 2 und 3
+  tragen den Großteil von Aufwand und Risiko und lehren über MCP wenig; ihre
+  Fortsetzung ist eine eigene Portfolio-Entscheidung, kein Anschluss.
+
+Für dich heißt das beim Zuschnitt von Abschnitt 1: Der Protokolllauf gehört in
+den Scope-Vertrag, nicht in ein „später". Deine TypeScript-Verankerung aus
+Mikes letztem Auftrag ist unberührt.
 
 ## Archiv · INBOX T-65 Runde 2 (verarbeitet)
 

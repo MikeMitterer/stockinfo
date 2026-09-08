@@ -15,8 +15,9 @@ in Runde 2 freigegeben. Codex hat die Review-Auflösung nachgeprüft. Keine
 offenen Konzeptbefunde, keine dritte Runde. Codex ist Autor der Redaktion;
 seine Eigenprüfung wird nicht als zusätzliche unabhängige Abnahme bezeichnet.
 
-**Für Mike:** Die Vorlage ist bereit zur Entscheidung über lokalen MVP,
-TypeScript/stdio und WebSocket zum WebClient. Es wurde kein Produktcode
+**Für Mike:** TypeScript ist als Sprache verbindlich festgelegt. Die Vorlage
+ist bereit zur Entscheidung über lokalen MVP, stdio und WebSocket zum
+WebClient. Es wurde kein Produktcode
 geschrieben. Eine Umsetzung braucht einen eigenen Auftrag.
 
 ## Auftrag und Scope dieses Tickets
@@ -30,6 +31,34 @@ Mikes Rückmeldungen vom 2026-09-08:
 - „Als kommunikationsweg zum WebClient steht SSM oder WebSockets zur Verfügung - kläre auch mit Claude ab was in dem Fall besser passt“
 - „Die Anzahl der Iterationen über das Ticket T-66 sollte sowieso begrenzt sein - also, nicht ausufern!“
 - „Die Entscheidung muss für die technisch bessere Lösung fallen! und nicht deshalb weil bestimmte Guards erweitert werden müssen“
+- „Verankere im Ticket noch dass der MCP-Server mit Typescript gebaut wird“
+
+### Das Ziel ist Erkenntnis, nicht nur die Funktion
+
+Mike am 2026-09-08: „Hauptargument ist, dass es mich interessiert wie der MCP
+in Verbindung mit StockInfo funktioniert."
+
+**Das ist der tragende Grund für dieses Ticket** und nicht nur seine
+Begründung. Es ändert, woran der Wert hängt:
+
+- **Aufwandsargumente gegen MCP-spezifische Teile sind kein Ablehnungsgrund.**
+  Ein Kommandozeilenwerkzeug gegen dieselbe REST-API wäre billiger zu bauen,
+  mit `subprocess` statt echtem Protokolllauf zu prüfen und zusätzlich für
+  Mensch, Skripte und Cron nutzbar. Es beantwortet Mikes Frage nicht. Diese
+  Alternative ist geprüft und verworfen; sie wird nicht erneut vorgeschlagen.
+- **Prüfnachweis `#1` ist Kern, nicht Kür.** Der echte Lauf
+  MCP-Client → Server → REST → frische Datenbank ist der teuerste Beleg des
+  ersten Abschnitts und unter diesem Ziel zugleich der wertvollste: Er *ist*
+  die Antwort auf die Frage.
+- **Der lehrreiche Teil ist Abschnitt 1.** Werkzeugdeklaration, Typisierung,
+  Annotationen wie „destruktiv", die Fehlersemantik, die beim Modell ankommt,
+  und das Verhalten bei mehrdeutigen Treffern — das ist MCP. Abschnitt 2 und 3
+  sind WebSocket-, Bindungs- und Guard-Arbeit im Backend; dort liegt der
+  Großteil von Aufwand und Risiko, und MCP ist daran nur der Auslöser.
+
+Daraus folgt eine **bewusste Zäsur nach Abschnitt 1**: Danach ist die Frage
+beantwortet, und die Fortsetzung ist eine eigene Entscheidung von Mike, keine
+Selbstverständlichkeit.
 
 **Höchstens zwei Konzept-Reviewrunden insgesamt.** Danach geht das Ergebnis
 mit gegebenenfalls offenen Restpunkten an Mike. Keine dritte Schleife und
@@ -70,11 +99,11 @@ bleibt über Git nachvollziehbar.
 ## MCP-Subprojekt und Datenwerkzeuge
 
 `mcp/` ist unabhängig vom Python-Backend startbar und erhält eigene
-Abhängigkeiten, Tests, Startanleitung und Konfiguration. **Empfehlung:
-TypeScript mit offiziellem MCP-SDK und zunächst stdio.** TypeScript passt zur
-vorhandenen Dashboard-Werkzeugkette; Python wäre eine tragfähige Alternative.
-Die Sprache bleibt eine begründete Vorlage für Mike, keine unterstellte
-Freigabe. Bibliotheks- und Laufzeitversion werden im späteren Bauticket fixiert.
+Abhängigkeiten, Tests, Startanleitung und Konfiguration. **Verbindliche
+Sprachentscheidung von Mike, 2026-09-08: Der MCP-Server wird in TypeScript
+gebaut.** TypeScript passt zur vorhandenen Dashboard-Werkzeugkette.
+Vorgesehen sind das offizielle MCP-SDK und zunächst stdio. Bibliotheks- und
+Laufzeitversion werden im späteren Bauticket fixiert.
 
 Der KI-Client startet den MCP-Prozess; stdout enthält ausschließlich
 MCP-Nachrichten, Logs gehen nach stderr.
@@ -263,6 +292,11 @@ Bautickets und kein Code**:
    Chart-Auftrag mit ACK/Timeout; bisherige HTTP-Absicherung gegenprüfen.
 3. Aktualisierung, Schutz offener Eingaben und vollständiger Browsernachweis.
 
+**Nach Abschnitt 1 wird angehalten und Mike entschieden.** Dort ist das
+Erkenntnisziel oben erreicht; Abschnitt 2 und 3 tragen den Großteil von
+Aufwand und Risiko und lehren über MCP wenig. Die Fortsetzung ist eine eigene
+Portfolio-Entscheidung, kein automatischer Anschluss.
+
 Jeder Abschnitt braucht vor Implementierung einen eigenen Datei-/Diff-Scope.
 Die alte Schätzung von 6–10 Tagen betraf den größeren Gesamtentwurf und ist
 kein Budget dieses Konzepts. Nicht enthalten: Restore, Migration, DB-Umbau,
@@ -299,7 +333,7 @@ keinen MCP-Code; es gab keinen neuen Browserlauf. UI-Log: `/tmp/t66-concept-ui.l
 
 | # | Späterer Lauf / Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | Lokal: echter MCP-Client startet Prozess, listet Werkzeuge, liest frischen Bestand. | Protokoll→REST→DB; stdout ohne Logs, keine Backend-/DB-Imports. | ➖ |
+| 1 | Lokal: echter MCP-Client startet Prozess, listet Werkzeuge, liest frischen Bestand. **Kern des Erkenntnisziels, nicht ersetzbar durch Unit-Tests.** | Protokoll→REST→DB; stdout ohne Logs, keine Backend-/DB-Imports. Werkzeugliste, Typen, Annotationen und Fehlerdarstellung im Client festhalten. | ➖ |
 | 2 | MIC/Suffix/ISIN aufnehmen, nicht abgedeckte Börse und mehrdeutige Suche versuchen. | Core-Regeln wie UI; Fehler verändert keinen falschen Datensatz. | ➖ |
 | 3 | Detail setzen/zurücksetzen, gesperrtes Feld versuchen; eine von zwei gleichnamigen Zeilen per ID löschen. | Nur benannte Felder/Zeile geändert; Providerüberlagerung korrekt gemeldet. | ➖ |
 | 4 | Ohne Verbindung Chart öffnen; Browserstart scheitern lassen. | Eigene lokale Ansicht, Bereitschaft/Erfolg nur mit ACK; keine Scheinerfolge. | ➖ |
