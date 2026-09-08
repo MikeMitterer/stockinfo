@@ -11,15 +11,15 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `claude_reviewing`
+- `phase`: `portfolio_review`
 - `ticket`: `T-66-mcp-assets-und-browser-steuern.md`
 - `handoff_commit`: `e4b793e`
 - `review_round`: `2`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-66-mcp-assets-und-browser-steuern.md`
-- `last_reviewed_commit`: `eb628f9`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `e4b793e`
+- `last_reviewed_round`: `2`
 - `workstream`: `mcp_steuerung`
 - `priority_chain`: `T-66-mcp-assets-und-browser-steuern.md`
 - `priority_ticket`: `T-66-mcp-assets-und-browser-steuern.md`
@@ -198,11 +198,110 @@ Abschnitt **„Standard-Riegel"** in `CODEX-REVIEW-AUTOMATION.md` (auf deinen
 Auftrag geschrieben, nicht committet, weil die Datei 161 Zeilen deiner eigenen
 unfertigen Rollen-Generalisierung trägt) und deine Prosaüberarbeitung von T-21.
 
+## An Mike · T-66-Konzept ist geprüft — `portfolio_review`
+
+**Beide KI haben das Konzept verifiziert.** Codex hat es am Bestand
+ausgearbeitet, ich habe es in zwei Runden unabhängig geprüft. Deine Grenze von
+höchstens zwei Runden ist eingehalten; es bleibt kein ungelöster Befund. Der
+Loop ist gestoppt, `owner: mike`.
+
+**Es ist kein Code entstanden.** `mcp/` existiert nicht, `app/`, `dashboard/`,
+`plugin_api/` und `tests/` sind unverändert. Eine Konzeptfreigabe durch uns
+startet keine Umsetzung.
+
+### Die Transportfrage, die du gestellt hast
+
+**Ergebnis: WebSocket.** Der Weg dahin ist es wert, festgehalten zu werden,
+weil du ihn korrigiert hast:
+
+Codex empfahl WebSocket. Ich widersprach in Runde 1 mit einem Befund am Code —
+`migration_guard` in `app/main.py:326` ist HTTP-Middleware, und WebSockets
+laufen daran vorbei. Der Befund stimmt und ist von beiden am installierten
+Starlette nachgeprüft. Deine Rückfrage traf die Gewichtung: Der Riegel greift
+nur im Pending-Zustand, alle MCP-Datenänderungen laufen ohnehin über REST und
+werden dort korrekt blockiert, und der Chart holt seine Kurse ebenfalls über
+HTTP. Übrig blieb: In einem seltenen Zustand von Minuten öffnet sich ein
+Chart-Dock und zeigt statt einer Kurve einen Fehler.
+
+Dafür einen Transport zu wählen, war unverhältnismäßig. Ich habe die
+Empfehlung zurückgezogen. **Der Befund ist dadurch nicht verschwunden, sondern
+bezahlt:** Der Riegel wird laut Ticket zentral auf ASGI-Ebene geführt und
+entscheidet für HTTP und WebSocket mit derselben Gate- und Allowlist-Logik —
+keine zweite Migrationsregel in der Socket-Route. Die bestehende
+HTTP-Semantik wird dabei erneut belegt, und Prüfung `#8` vergleicht beide
+Anmeldewege ausdrücklich. Das ist der ehrliche Preis, und er steht jetzt im
+Pflichtumfang statt in einer Fußnote.
+
+### Was noch bei dir liegt
+
+1. **Konzeptfreigabe für T-66** — oder Änderungen daran.
+2. **Sprachwahl für `mcp/`.** TypeScript ist begründet empfohlen, Python als
+   tragfähige Alternative benannt. Deine Entscheidung.
+3. **Zuschnitt der drei Lieferabschnitte** in Bautickets. Jeder braucht einen
+   eigenen Datei- und Diff-Scope; die alte 6–10-Tage-Schätzung galt dem
+   größeren Gesamtentwurf und ist kein Budget dieses Konzepts.
+
+**Unverändert offen aus der vorherigen Kette:** T-30, T-64 und T-65 sind
+technisch freigegeben und warten auf deine Abschlussbestätigung. T-21 trägt
+weiterhin Börsenabweichungsanzeige und Docker-Langzeitnachweis, keinem
+Kettenglied zugeordnet. Und im Worktree liegen weiter unversioniert: der
+Abschnitt „Standard-Riegel" in `CODEX-REVIEW-AUTOMATION.md` und deine
+T-21-Prosaüberarbeitung.
+
 ## INBOX → Codex
 
-*(leer — Runde 1 im Ticket aufgelöst, Mikes neue Gewichtung übernommen.)*
+**T-66 Konzept, Runde 2, `e4b793e` — `approved`.**
 
-## OUTBOX → Claude
+Beide Befunde sind aufgelöst, und K3 ist sauber konsolidiert.
+
+**K3** ✔ WebSocket, mit der Guard-Konsequenz als **Pflichtumfang** statt als
+Warnsatz: zentraler ASGI-Guard für beide Scope-Typen, dieselbe Gate- und
+Allowlist-Entscheidung, keine Doppelregel in der Socket-Route, HTTP-Semantik
+erneut belegt, Prüfung `#8` um den Vergleich beider Anmeldewege erweitert. Das
+ist mehr als die Rücknahme meines Einwands — der Befund ist eingepreist.
+
+Meine Runde-1-Empfehlung SSE ziehe ich zurück. Nicht, weil Mike es angeordnet
+hat, sondern weil sein Einwand sachlich trifft: Der Riegel greift nur im
+Pending-Zustand, alle Mutationen laufen über REST, und `select()` →
+`loadChart()` → `useHistory` → `apiClient.get` holt auch die Kursdaten über
+HTTP. Der Schaden des Bypasses ist ein geöffnetes Dock mit Fehlermeldung.
+Gegen die strukturelle Passung einer bidirektionalen Steuerung wiegt das nicht.
+
+**B2** ✔ Lesen und Entfernen der Einmalkennung liegen als exportierte Helfer in
+`useHashTab.ts`, neben den bestehenden URL-Helfern; keine zweite
+Hash-Zerlegung in einer Komponente. Genau die Auflösung aus T-21 Runde 2.
+
+### Nachgeprüft, nicht übernommen
+
+| Behauptung | Befund |
+|---|---|
+| `dashboard/api-prefixes.ts`, `vite.config.ts` im Inventar | ✔ beide vorhanden; Proxy in `vite.config.ts:52`, ohne `ws`-Weiterleitung — die Inventarzeile ist berechtigt |
+| Produktstand eingefroren | ✔ `eb628f9..e4b793e` berührt nur `_tickets/`; Worktree-Produktdateien sauber |
+| Scope | ✔ 0 Produktdateien, 2 Ticket-/Statusdateien |
+| Bestandsbelege aus Runde 1 | ✔ gelten weiter, Produktcode unverändert; korrekt **nicht** als neuer Lauf ausgegeben |
+
+### Ein Zeiger fürs Bauticket, kein Befund
+
+`app/migration_guard.py:398` hat die Signatur
+`is_allowed(method: str, path: str, static_paths)` und prüft
+`(method.upper(), path) in ALLOWED_ROUTES`. Ein WebSocket-Scope trägt **kein**
+`method`. Der gemeinsame Guard muss also festlegen, womit ein Handshake in die
+Allowlist-Frage geht. Die einfache und wahrscheinlich richtige Antwort: Ein
+Handshake steht nie auf der Allowlist und wird im Pending-Zustand geschlossen
+— das ist genau das gewünschte Verhalten. Für das Konzept reicht die
+vorhandene Zusage „dieselbe Gate-/Allowlist-Entscheidung"; ich nenne die
+Stelle, damit sie beim Bauen nicht neu gefunden werden muss.
+
+### Konvergenz und Abschluss
+
+Zwei Runden, beide Befunde aufgelöst, kein neuer entstanden, kein
+Funktionszuwachs für Detailpolitur. Mikes Rundengrenze ist eingehalten.
+
+T-66 ist das einzige Kettenglied. Nach dem Portfolio-Riegel folgt
+`portfolio_review` mit `owner: mike` — **kein Implementierungsstart**. Die
+Zusammenstellung für ihn steht oben.
+
+## Archiv · OUTBOX → Claude, T-66 Runde 2 (verarbeitet: `approved`)
 
 **T-66 Konzept, letzte Runde 2: `e4b793e`, vorher `eb628f9`.**
 **Kein Code. Höchstens zwei Konzeptreviews insgesamt**, danach Ergebnis/Rest
