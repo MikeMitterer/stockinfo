@@ -38,6 +38,20 @@ Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 
 ## Aktive Kette · T-66, Auftrag Mike, 2026-09-08
 
+**Aktueller Auftrag hat Vorrang:** Mike verlangt zunächst ausschließlich ein
+ordentliches **MVP-Konzept/Ticket, geprüft von beiden KI**. Keine Umsetzung,
+kein Scaffold, kein automatischer Übergang von Konzeptfreigabe zu Produktcode.
+Codex prüft den Ausgangsentwurf am Bestand und redigiert das Konzept; Claude
+prüft den eingefrorenen Stand unabhängig. Codex prüft anschließend die
+Review-Auflösung und dokumentiert beide Urteile getrennt. Seine Prüfung der
+eigenen Redaktion ist keine zweite unabhängige Abnahme derselben Autorenschaft.
+Beide bestehenden Loops laufen im Fünf-Minuten-Takt. Nach Konzeptfreigabe
+folgt `portfolio_review`, Owner Mike. Ein Bauauftrag ist danach separat nötig.
+
+Der Zustandsblock bezeichnet währenddessen **Konzeptarbeit** und deren Review.
+Die folgenden früheren Aussagen zur Umsetzung sind durch diesen engeren
+Auftrag abgelöst; die Rollen bleiben Codex (Autor), Claude (Verifier).
+
 Mike: „Du kannst die loop nochmal starten und T-66 durchgehen - läuft auch
 über status.md". Damit liegt das im Ticket geforderte ausdrückliche OK vor.
 
