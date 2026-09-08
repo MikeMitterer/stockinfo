@@ -10,16 +10,14 @@ das Asset über REST auf, öffnet bei Bedarf eine eigene StockInfo-Ansicht und
 wartet auf deren Rückmeldung. „Schließe den Chart“ schließt nur das Diagramm
 in dieser verbundenen Ansicht.
 
-**Stand:** Konzeptentwurf, keine Umsetzung. Codex hat den Ausgangsentwurf am
-Code geprüft und diese Redaktion ausgearbeitet. Claude bestätigt in Runde 1
-Zuschnitt und Bestandsabgleich. Nach Mikes Gewichtung der technischen Passung
-ist WebSocket mit zentraler Guard-Erweiterung empfohlen; der Hash-Leser ist
-verortet. Die abschließende zweite Prüfung steht aus.
-Die Eigenprüfung dieser Redaktion wird nicht als unabhängig bezeichnet.
+**Stand:** Konzept von beiden KI geprüft; Claude hat die Fassung `e4b793e`
+in Runde 2 freigegeben. Codex hat die Review-Auflösung nachgeprüft. Keine
+offenen Konzeptbefunde, keine dritte Runde. Codex ist Autor der Redaktion;
+seine Eigenprüfung wird nicht als zusätzliche unabhängige Abnahme bezeichnet.
 
-**Für Mike:** Jetzt ist kein Handgriff nötig. Zuerst prüfen beide KI das
-Konzept fertig. Danach erhältst du die konkrete Vorlage zur Entscheidung.
-Eine Konzeptfreigabe startet **keine Umsetzung**.
+**Für Mike:** Die Vorlage ist bereit zur Entscheidung über lokalen MVP,
+TypeScript/stdio und WebSocket zum WebClient. Es wurde kein Produktcode
+geschrieben. Eine Umsetzung braucht einen eigenen Auftrag.
 
 ## Auftrag und Scope dieses Tickets
 
@@ -139,7 +137,7 @@ Transport gibt daher nicht den Ausschlag.
 | Bestehender Migrationsriegel | Zentraler HTTP-Guard erfasst Stream-Anmeldung, Auftrag und ACK | HTTP-Middleware wird umgangen; zentraler ASGI-Umbau mit Regression nötig |
 | Fachliche Passung | Benachrichtigungskanal plus separater Rückkanal | **Empfohlen:** bidirektionale Steuerung auf einer gebundenen Verbindung |
 
-**Codex empfiehlt nach Mikes Gewichtung WebSocket.** Der Ablauf ist eine
+**Beide KI empfehlen nach Gegenprüfung WebSocket.** Der Ablauf ist eine
 bidirektionale Steuerung: Auftrag, Bereitschaft, Bestätigung und Editorstatus
 gehören zu derselben verbundenen Ansicht. WebSocket bildet diese Beziehung
 direkt ab. Anmeldung als erste Nachricht bindet die Verbindung, ohne für den
@@ -151,9 +149,9 @@ SSE plus REST ist technisch tragfähig und für reine Benachrichtigungen gut
 geeignet. Hier müssten Stream und Rückkanal zusätzlich zusammengeführt und
 abgesichert werden. Der geringere Umbauaufwand am heutigen HTTP-Guard wiegt
 nach Mikes Vorgabe nicht schwerer als die Passung zur bidirektionalen Steuerung.
-Claudes Endprüfung soll diese fachliche Abwägung bestätigen oder einen
-konkreten technischen Gegengrund nennen. Es entsteht nur ein Transport ohne
-vorsorglichen Abstraktionslayer.
+Claude hat diese fachliche Abwägung in Runde 2 bestätigt und seine frühere
+SSE-Empfehlung zurückgezogen. Es entsteht nur ein Transport ohne vorsorglichen
+Abstraktionslayer.
 
 **Konsequenz ausdrücklich im Scope:** `app/main.py:migration_guard` erfasst
 heute nur HTTP; beide KI haben das am installierten Middleware-Code geprüft.
@@ -277,16 +275,20 @@ ASGI-Prüfung und ihre HTTP-Regression sind Pflichtumfang, kein späterer Zusatz
 | Konzeptprüfung | Nachweis | Codex | Claude |
 |---|---|---|---|
 | K1 MVP / spätere Ausbaustufen | Lokaler Beispielablauf, Remote ausdrücklich später. | Eigenprüfung erfolgt | Runde 1 bestätigt |
-| K2 REST / eindeutige Identität | Inventar, Wiederverwendung, DELETE-Lücke und zentraler Hash-Leser. | geprüft; Hash-Leser ergänzt | Bestand bestätigt; B2 zur Endprüfung |
-| K3 WebClient-Transport | Bidirektionaler Ablauf spricht für WebSocket, gemeinsamer ASGI-Guard im Scope. | nach Mikes Gewichtung WebSocket empfohlen | Runde 1: SSE; neue Gewichtung zur Endprüfung |
+| K2 REST / eindeutige Identität | Inventar, Wiederverwendung, DELETE-Lücke und zentraler Hash-Leser. | geprüft; B2-Auflösung nachgeprüft | Runde 2 bestätigt |
+| K3 WebClient-Transport | Bidirektionaler Ablauf spricht für WebSocket, gemeinsamer ASGI-Guard im Scope. | WebSocket empfohlen; Endprüfung erfolgt | Runde 2: WebSocket bestätigt |
 | K4 Fehler / prüfbare Abnahme | ACK, Schreibausgang, Editor, Neustart und Betriebsriegel. | Konzeptprüfung, kein Laufzeitbeleg | Runde 1 bestätigt |
 
 Runde 1 (`eb628f9`): Claude bestätigt den Bestand und empfiehlt SSE wegen der
 HTTP-Middleware; Codex prüfte diesen Befund nach. Mike priorisiert anschließend
 ausdrücklich die technische Passung gegenüber dem Guard-Umbauaufwand. Die
 aktuelle Empfehlung lautet deshalb WebSocket mit zentraler ASGI-Absicherung.
-B2 verortet den Bindungsleser in `useHashTab.ts`. Keine neuen Funktionen;
-die zweite Runde prüft diese abschließende Fassung unter Mikes Vorgabe.
+B2 verortet den Bindungsleser in `useHashTab.ts`. Runde 2 (`e4b793e`, Review
+`e5e0b20`) bestätigt beide Auflösungen ohne neue Befunde. Für die Umsetzung:
+WebSocket-Scopes tragen kein HTTP-`method`; im Pending-Zustand sind deren
+Handshakes gesperrt, während die bestehende HTTP-Allowlist erhalten bleibt.
+Die Analyse der anfänglichen Guard-Überbewertung steht in
+[Review-Lehre R-01](CLAUDE-REVIEW-PATTERNS.md#r-01--integrationsaufwand-verdrängt-die-fachliche-architekturentscheidung).
 
 Keine dieser Angaben behauptet bestandene Produkt- oder UI-Tests. Die einzige
 geplante Produkt-Verify-Matrix folgt; alle Läufe sind offen:
