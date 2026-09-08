@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-64-boersen-ui-und-autorennachweise.md`
-- `handoff_commit`: `1814232`
+- `handoff_commit`: `e427013`
 - `review_round`: `1`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-30-plugin-boersenauskunft.md`
 - `last_reviewed_commit`: `441b4b0`
@@ -82,14 +82,12 @@ beim nächsten Anfassen der Datei mitnehmen.
 
 ## OUTBOX → Claude
 
-**Übergabe vor Review-Beginn zurückgenommen:** Mike verlangt zusätzlich
-MIC und Suffix generell farbig, Desktop und mobil. Codex ergänzt nur diese
-Darstellung und übergibt danach den neuen Prüfstand; Runde 1 bleibt erhalten.
-Der folgende Übergabetext wird mit dem finalen Stand ersetzt.
-
-**T-64 Runde 1 — Prüfstand `1814232`, Basis `f624670`.** Codex entwickelt,
-Claude prüft. Mikes beide aktuellen UI-Nachträge sind enthalten: App-Suffix
-in eigener Desktop-Spalte; mobil auf eigener Zeile, fett, größer, Akzentfarbe.
+**T-64 Runde 1 — Prüfstand `e427013`, Basis `f624670`.** Codex entwickelt,
+Claude prüft. Mikes UI-Nachträge sind enthalten: App-Suffix in eigener
+Desktop-Spalte; mobil auf eigener Zeile, fett und größer. MIC und vorhandene
+Suffixe sind nun durchgehend in Akzentfarbe, auch bei Sammelcode-Mitgliedern.
+Die erste Übergabe wurde vor Review-Beginn für diesen Farbauftrag zurückgenommen;
+Runde 1 bleibt erhalten.
 
 Exchanges liest Katalog, Herkunft und rollenbezogene Unterstützung aus REST.
 Suche nach MIC/Name/Quelle, eigene Sammelcodes mit Mitgliedern, Default-Marke,
@@ -100,7 +98,7 @@ ruft die öffentliche Validierung auf; US-Beispiel und englische Anleitung
 sind nachgezogen, Paketanforderung 0.3 ausdrücklich noch unveröffentlicht.
 
 **Scope geplant/tatsächlich:** 3/3 fachliche Änderungen; 10/10 Produktdateien;
-6/6 Test-/Dokudateien; 800/639 manuelle Zeilen vor dieser Statusübergabe.
+6/6 Test-/Dokudateien; 800/646 manuelle Zeilen vor dieser Statusübergabe.
 Nachträge bleiben in denselben Dateien. Keine neue Schicht oder Abhängigkeit.
 `details.source/manual` beim ohnehin nötigen Katalogedit entfernt, wie als
 nicht blockierender T-26-Rest vereinbart.
@@ -119,7 +117,9 @@ frischen temporären Daten: neue MIC-Angaben, Ausfall/Neuladen und Profilwechsel
 korrekt. Nach Entfernen des deklarierenden Plugins aus dem Profil verschwinden
 XBUD/regional aus REST und der bereits geöffneten Seite. Keine horizontalen
 Überläufe bei 390/1024/1440 px. Mobile Hervorhebung zuletzt gemessen: .DE,
-18 px/700/Akzentfarbe. Keine Online-/Docker-Prüfung behauptet.
+18 px/700/Akzentfarbe. Farb-Nachtrag bei 1787/390 px geprüft: MIC und
+Suffix lesen denselben Akzent-Token. 4 Komponententests, Build und ESLint
+erneut grün. Keine Online-/Docker-Prüfung behauptet.
 
 Die eigene Testseite wurde geschlossen. Isolierter Server auf Port 8896
 (PID 62450) bleibt für den Review verfügbar, aktuell mit Legacy-only-Profil;
