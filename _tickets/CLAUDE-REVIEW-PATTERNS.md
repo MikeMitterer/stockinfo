@@ -23,9 +23,76 @@ duplizieren.
 - [P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem](#p-09--eine-testanforderung-wächst-zum-unbeauftragten-subsystem)
 - [P-10 · Ein Integrationstest berührt seine Außengrenze nicht](#p-10--ein-integrationstest-berührt-seine-außengrenze-nicht)
 - [P-11 · Die Übergabe steht in der Mailbox, bevor es sie gibt](#p-11--die-übergabe-steht-in-der-mailbox-bevor-es-sie-gibt)
+- [R-01 · Integrationsaufwand verdrängt die fachliche Architekturentscheidung](#r-01--integrationsaufwand-verdrängt-die-fachliche-architekturentscheidung)
 - [Leitplanken für das spätere Skill-Proposal](#leitplanken-für-das-spätere-skill-proposal)
 
+## R-01 · Integrationsaufwand verdrängt die fachliche Architekturentscheidung
+
+**Einzelfall-Lehre auf ausdrücklichen Auftrag von Mike, 2026-09-08.**
+Hier wird kein zweiter Vorfall und kein statistisch wiederkehrendes Muster
+behauptet. Untersucht ist Claude als Verifier von T-66; Codex hat die
+Fehlgewichtung zunächst übernommen. Die Regel gilt für beide Rollen.
+
+**Erkennungsregel:** Ein korrekter lokaler Befund — ein bestehender Guard
+erfasst einen neuen Transport nicht — wird zum ausschlaggebenden Argument
+gegen diesen Transport, bevor Nachrichtenwirkung, tatsächlicher Schaden und
+der notwendige Integrationsschritt getrennt bewertet sind. „Noch nicht
+abgesichert“ wird wie „technisch ungeeignet“ behandelt.
+
+**Beleg:** T-66 Konzept Runde 1, Prüfstand `eb628f9`, Review `a2193e7`.
+Claude priorisierte SSE, weil `migration_guard` als HTTP-Middleware keinen
+WebSocket-Handshake prüft. Der Befund stimmt. Seine Gewichtung war zu hoch:
+Die geplanten Nachrichten steuern das UI; Datenmutationen bleiben REST.
+Der existierende Chartweg lautet `AppDashboard.select` → `loadChart` →
+`useHistory.load`/`useDaily.load` → `apiClient.get`, ebenfalls HTTP.
+Bei aktiver Migration bleibt die Datenanfrage gesperrt. Ein dennoch geöffnetes
+Chart-Dock ist ein UI-Zustandsproblem, kein dadurch belegter ungeschützter
+Datenzugriff. Der Migrationsriegel ist außerdem eine Betriebssperre, kein
+Nachweis einer umgangenen Authentisierung. Eine reale Bindungs-/Zugriffslücke
+wäre separat zu prüfen und dürfte nicht bagatellisiert werden.
+
+**Wie die Fehlgewichtung entstand:** Die überprüfte Middleware-Eigenschaft
+wurde mit einer ungeprüften Aussage über ihre Folgen verbunden. Der Review
+stellte Bypass oder doppelte Prüfung in den Vordergrund und behandelte den
+ebenfalls möglichen zentralen ASGI-Umbau vor allem als Kostenargument. Damit
+dominierte die Wiederverwendung eines Hilfsmechanismus die Passung zum
+eigentlichen Ablauf: wenige Serverbefehle, UI-Aktion oder REST-Anfrage und
+Rückmeldung. Die bidirektionale Verbindung und der zusätzliche Bindungsaufwand
+bei getrenntem SSE-/REST-Rückkanal wurden nicht gleichgewichtig bewertet.
+
+**Codex-Anteil:** Codex prüfte die HTTP-Middleware, übernahm die Schlussfolgerung
+aber ohne eigene Folgenbewertung und konsolidierte zunächst SSE in `26590c8`.
+Nach Mikes Einwand wurde WebSocket mit gemeinsamer ASGI-Absicherung empfohlen
+(`e4b793e`). Claude zog in Runde 2 die SSE-Empfehlung mit genau diesem
+Wirkungsabgleich zurück (`e5e0b20`). Es waren zwei Runden, keine weitere nötig.
+
+**Gegenprüfung vor einem Architekturveto:**
+
+1. Nachricht bis zur Wirkung verfolgen: reiner UI-Zustand, Lesen oder Schreiben;
+   welche vorhandene Grenze erreicht der Folgeaufruf tatsächlich?
+2. Den Auslöser und konkreten unerwünschten Effekt nennen. Ein nicht erfasster
+   Transport allein beweist weder Datenzugriff noch Datenverlust.
+3. Fachliche Eignung, Schutzanforderung und einmaligen Integrationsaufwand
+   getrennt bewerten. Eine gemeinsame Erweiterung erhält DRY; nur die Kopie
+   derselben Regel wäre ein Duplikat.
+4. Beide Varianten nach denselben Kriterien vergleichen: Nachrichtenrichtungen,
+   Bindung, Bestätigung, Fehlerbehandlung und Betrieb. „Passt zum bisherigen
+   Guard“ ist ein Kostenpunkt, kein pauschales Architekturveto.
+5. Ein Vetobefund nennt, was trotz eines angemessenen zentralen Integrationsfixes
+   technisch schlechter oder unzulässig bliebe. Gibt es das nicht, ist der Fix
+   Umsetzungsumfang; die Entscheidung folgt dem Nutzerablauf und seinen Vorgaben.
+
+Keine neue Prozessschicht, keine zusätzlichen Reviewrunden: Diese fünf Fragen
+werden bei der Gewichtung eines konkreten Befunds beantwortet. Sie sind kein
+Grund, hypothetische Risiken oder weitere Sicherheitsarchitektur zu erfinden.
+
+[↑ Übersicht](#übersicht)
+
 ## Leitplanken für das spätere Skill-Proposal
+
+Siehe auch die ausdrücklich von Mike beauftragte [T-66-Review-Lehre](#r-01--integrationsaufwand-verdrängt-die-fachliche-architekturentscheidung)
+zur Gewichtung von Befunden. Sie betrifft Claude als Verifier und Codex bei
+der Übernahme seiner Empfehlung.
 
 Dieser Abschnitt ist **kein Claude-Fehlermuster**, sondern das Prozesslearning
 aus T-21 Teil 3. Dort brauchte ein reiner Entwurf die Runden 8 bis 24. Ein

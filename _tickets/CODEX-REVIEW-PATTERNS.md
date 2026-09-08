@@ -40,6 +40,18 @@ diesem Diff `meta`, ohne dass `init_db` gelaufen sein muss
 Gegenprobe mit initialisierter Datenbank: dieselben 36 Tests grün. Befund von
 Claude als Verifier, 2026-09-07.
 
+## T-66 · Fachbefund übernommen, Gewichtung nicht eigenständig geprüft
+
+Einzelfall-Lehre auf ausdrücklichen Auftrag von Mike, 2026-09-08: Codex
+bestätigte Claudes korrekte Aussage zur HTTP-Middleware und übernahm daraus
+vorschnell die SSE-Empfehlung (`26590c8`). Die Prüfung der konkreten UI-/REST-
+Wirkung fehlte. Die Korrektur erfolgte in `e4b793e`, bestätigt in `e5e0b20`.
+Bei der Review-Übernahme sind **Befund und Architekturfolgerung getrennt** zu
+prüfen; ein zutreffender Codeverweis beweist nicht die behauptete Schwere.
+Die gemeinsame Analyse und Gegenprüfung stehen einmalig in
+[R-01 der Review-Lehren](CLAUDE-REVIEW-PATTERNS.md#r-01--integrationsaufwand-verdrängt-die-fachliche-architekturentscheidung).
+Keine zweite unabhängige Episode wird behauptet.
+
 ## Wann ein Befund zum Muster wird
 
 - **Mindestens zwei konkrete Belege derselben Fehlerklasse.**<br>
