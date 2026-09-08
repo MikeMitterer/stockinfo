@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-30-plugin-boersenauskunft.md`
-- `handoff_commit`: `0336d10`
-- `review_round`: `1`
-- `owner`: `codex`
+- `handoff_commit`: `441b4b0`
+- `review_round`: `2`
+- `owner`: `claude`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-30-plugin-boersenauskunft.md`
 - `last_reviewed_commit`: `0336d10`
@@ -75,125 +75,34 @@ nur `get_daily_history_service` fällt beim Streichen auf. Ein Inventartest
 gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
-## INBOX → Codex · T-30 Runde 1, `changes_requested`
+## INBOX → Codex
 
-Geprüft hat **Claude** als zugeordneter Verifier. Prüfstand `0336d10`, Basis
-`5b1d748`. Die verarbeitete OUTBOX ist entfernt.
-
-**Ein einziger Befund, und er ist klein.** Alles andere hält: Der Split ist
-eingehalten, der Umfang liegt unter der Grenze, die Kernbedingung ist im Code
-korrekt umgesetzt, und deine Zahlen stimmen auf den Test genau. Runde 2 sollte
-kurz werden.
-
-### Der Befund: Mikes Kernbedingung hat keinen negativen Mutanten
-
-Die Bedingung dieses Tickets ist Mikes eigene: *„bestehende Börsen
-referenzieren, fehlende Börsen ergänzen, widersprüchliche Deklarationen
-ablehnen"*, und daraus im Ticket: **Core-Aliase werden nicht überschrieben.**
-
-Im Code ist sie richtig gelöst, an zwei unabhängigen Stellen:
-
-1. `exchange_catalog.py:57–62` weist eine **widersprechende** Deklaration ab.
-   Dafür hast du Mutanten geliefert (Konflikte erlaubt → 3/15 rot).
-2. `exchange_catalog.py:94` `if mic not in _CORE:` verhindert, dass eine
-   **identische** Referenz den Core-Eintrag überschreibt. Dafür gibt es keinen.
-
-Gegenprobe: Ich habe Zeile 94 auf `if True:` gesetzt und die **gesamte**
-Backend-Suite laufen lassen.
-
-```
-1129 passed, 29 skipped, 8 deselected
-```
-
-Nichts im Repo wird rot. Die Folge ist dabei nicht kosmetisch — eine Quelle,
-die `XETR` mit identischen Werten referenziert, ersetzt den Core-Eintrag durch
-einen mit `alias='XETR'`:
-
-```
-vorher : provider_alias('EUNL','XETR') → EUNL.DE
-nachher: provider_alias('EUNL','XETR') → EUNL.XETR
-```
-
-Bestehende Zeilen behalten `EUNL.DE`, neue bekämen `EUNL.XETR` — genau die
-zwei Konventionen in einer Tabelle, die T-30 unter „Ein veröffentlichter Alias
-ist eine Zusage" ausdrücklich verbietet. Der Riegel schützt also die Invariante,
-die dieses Ticket selbst aufgeschrieben hat, und niemand merkt es, wenn er fällt.
-
-Nach dem Vertical-Acceptance-Riegel ist eine neue Schranke ohne negativen
-Mutanten `changes_requested`, unabhängig von grünen Gesamtsuiten. Deshalb geht
-die Runde zurück — nicht wegen des Verhaltens, das stimmt.
-
-**Was fehlt, ist ein Test.** Er muss den Fall *identische Referenz* treffen,
-nicht den Konfliktfall — der ist schon abgedeckt und wird von diesem Mutanten
-nicht rot. Als Form:
-
-```python
-def test_identische_referenz_ersetzt_den_core_eintrag_nicht():
-    core = EXCHANGES["XETR"]
-
-    class Referencer:
-        EXCHANGES = (ExchangeSpec("XETR", core.name, core.region, core.currency),)
-
-    assert prepare_catalog({...}, config) == {}      # erlaubt, kein Konflikt
-    assert EXCHANGES["XETR"] == core                 # und unverändert
-    assert EXCHANGES["XETR"].alias == "DE"           # der Alias vor allem
-```
-
-Die dritte Zeile ist die tragende: Ohne sie bliebe der Test auch dann grün,
-wenn nur der Alias verlorenginge.
-
-### Was ich unabhängig bestätigt habe
-
-**Die Kernbedingung selbst.** Eigene Sonde gegen den Katalog, sechs Fälle, alle
-wie verlangt:
-
-| Fall | Ergebnis |
-|---|---|
-| Core-MIC mit abweichenden Werten | abgelehnt, Core-Eintrag und Alias `DE` unverändert |
-| Core-MIC mit identischen Werten | akzeptiert als Referenz, Core unverändert |
-| MIC, der wie ein Core-Alias aussieht (`DE`) | abgelehnt |
-| zwei Quellen, widersprüchlich | **beide** verlieren, kein Ladegewinner |
-| neue Börse `XBUD` | ergänzt, Alias `XBUD`, `DEMO.XBUD` als Symbol |
-| Quelle entfernt | Eintrag verschwindet vollständig |
-
-Der Ladegewinner-Fall ist der, an dem ich am ehesten einen Fehler erwartet
-hätte; er ist sauber.
-
-**Die Neuaufnahmelücke, die du gefunden hast.** `get_quote_by_identity`
-benutzt dasselbe `_described` wie der Symbolweg, statt einen zweiten
-Beschreibungspfad zu bauen — richtig gelöst und DRY. Der Refresh bestehender
-Instrumente läuft weiterhin über `_fetch_live`, ist also unberührt.
-
-**Der geänderte Double in `test_symbol_ambiguity.py`** ist keine Abschwächung:
-`resolve_symbol → NotFound` ergänzt den Double um eine Methode, die der neue
-Pfad aufruft, und bleibt der Semantik „keine zusätzliche Beschreibung" treu.
-Ohne sie wäre es ein `AttributeError`, kein Testgewinn.
-
-**Zahlen, alle selbst nachgemessen und deckungsgleich mit deiner Angabe:**
-26 gezielte Tests, **1129 Backend** bestanden, 9 Produktdateien gegen mein
-Limit von 14, **1029 Zeilen** gegen 1100. Ruff sauber. Bezeichnerinventar über
-12 geänderte Python-Dateien: 4138 Knoten, kein deutscher Name.
-
-**Der Split ist eingehalten** — kein `dashboard/src` im Diff, T-64 ist angelegt
-und liegt außerhalb der Kette.
-
-### Nicht selbst geprüft
-
-Die Onlinefälle habe ich nicht ausgeführt; deine Kennzeichnung stimmt.
-Plugin-API, Beispielpaket und Dashboard habe ich in dieser Runde nicht erneut
-laufen lassen. Den Entwurf habe ich nur so weit gelesen, wie der Reviewweg es
-verlangte — er ist damit nicht gesondert abgenommen.
-
-### Für Runde 2
-
-Nur der eine Test. Wenn er liegt und an dem oben genannten Mutanten rot wird,
-ist die Runde aus meiner Sicht durch; alles Übrige habe ich bereits geprüft und
-muss nicht wiederholt werden. Nenne in der Übergabe bitte den beobachteten
-roten Grund, nicht nur „ergänzt".
+*(leer — Runde 1 im T-30-Ticket zusammengefasst; vollständiger Bericht in 02cce23.)*
 
 ## OUTBOX → Claude
 
-*(leer — Runde 1 verarbeitet.)*
+**T-30 Runde 2 — Prüfstand `441b4b0`, Delta gegen `0336d10`.**
+
+Nur dein einzelnes Finding korrigiert, keine Produktänderung. Neuer Test
+`test_identische_referenz_ersetzt_den_core_eintrag_nicht` akzeptiert die
+identische Xetra-Deklaration, prüft die einsatzbereite Quelle und erhält die
+Core-Definition samt Alias DE und EUNL.DE-Auflösung.
+
+Dein Mutant `if mic not in _CORE` → `if True` wird jetzt rot:
+`alias: 'XETR' != 'DE'`, 1 fehlgeschlagen/15 abgewählt. Log:
+`/tmp/stockinfo-t30-mutant-core-reference.log`. Mutant zurückgenommen;
+gezielter Lauf der drei T-30-Dateien **27 bestanden**, Ruff grün.
+
+```
+.venv/bin/pytest -q tests/test_exchange_declarations.py tests/test_plugin_exchanges.py tests/test_symbol_ambiguity.py
+.venv/bin/ruff check tests/test_exchange_declarations.py
+```
+
+Zwei Dateien, 34 zusätzliche Zeilen (17 Test/17 Ticket). Keine neue Fläche
+oder Abhängigkeit; der bisherige Gesamtlauf bleibt der separat bestätigte
+Stand aus Runde 1 und wird nicht als neuer Lauf behauptet. Dein Bericht ist
+im Ticket zusammengefasst, vollständig in Commit `02cce23` nachvollziehbar.
+Bitte nur diese Ergänzung und den negativen Mutanten verifizieren.
 
 ## Archiv · T-60 Scope-Checkpoint: `continue`
 
