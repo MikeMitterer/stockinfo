@@ -1,14 +1,36 @@
 # T-32 · Ein Test darf die Arbeitsdatenbank nicht erreichen
 
-**Technisch freigegeben: Claude hat Runde 1 am 2026-09-08 abgeschlossen.**
-Mikes Abschlussbestätigung ist noch offen. Der Schutz entsteht in der Testumgebung; die Repository-
-Verdrahtung der App bleibt unverändert. Der frühere Pflichtpunkt #3 entfällt
-entsprechend der eingeplanten Eingrenzung.
+Dieses Ticket verhindert, dass ein automatisierter Test **versehentlich die
+Arbeitsdatenbank öffnet**. Der Schutz liegt zentral in der Testumgebung.
+
+Beispiel: Ein Dienst baut seine Datenbankverbindung aus den App-Einstellungen.
+Im Test muss er eine temporäre Datenbank verwenden. Ein direkter Zugriff auf
+die geschützte Arbeitsdatenbank wird vor dem Öffnen abgewiesen.
+
+**Abgeschlossen.** Der Verifier hat Runde 1 am 2026-09-08 freigegeben, Mike hat
+am selben Tag bestätigt und abgenommen: *„T-32 ist bestätigt und abgenommen."*
+Damit wandert das Ticket nach `solved/`.
+
+Offen bleibt eine **nicht blockierende** Nacharbeit, die den Abschluss nicht
+aufhält: Die Liste der zu leerenden Fabriken in `tests/conftest.py` ist heute
+vollständig, aber nicht gegen Ergänzungen gesichert — ein Inventartest gegen die
+`lru_cache`-Namen in `app.container` würde das abdecken. Belege stehen unten im
+Reviewbericht.
+
+Die App-Verdrahtung bleibt unverändert; der frühere Pflichtpunkt #3 ist aus
+dem Umfang genommen. Der Gesamtlauf hat wegen ausgelassener Online-Tests eine
+Einschränkung. Maßgeblich ist die [aktuelle Verify-Matrix](#verify-matrix-aktuell).
 
 ## Für dich
 
-Aktuell kein Handgriff nötig. Die Gegenproben arbeiten nur mit temporären
-Stand-ins; kein Test öffnet absichtlich die echte Arbeitsdatenbank.
+Du kannst **den Ticketabschluss bestätigen**. Ein zusätzlicher manueller
+Datenbanktest durch dich ist nicht vorgesehen. Die Gegenproben verwenden
+nur temporäre Ersatzdateien, nicht absichtliche Zugriffe auf deine echte
+Arbeitsdatenbank.
+
+Als nicht blockierende Nacharbeit nennt das Review einen Inventartest für
+die Liste gecachter Dienste. Der Zugriffsschutz gilt im Testprozess, nicht
+als allgemeine Sperre für beliebige Kindprozesse oder Dateioperationen.
 
 ## Scope-Vertrag · 2026-09-07
 
@@ -43,13 +65,22 @@ registriert, bevor Testmodule gesammelt werden. Die Autouse-Fixture setzt
 je Test einen frischen Pfad und leert Settings-, Service- und Quellen-Caches
 vor und nach dem Test. Die App-Verdrahtung bleibt unverändert.
 
-| # | Aktueller Nachweis | AI |
-|---|---|:--:|
-| 1 | Zwei aufeinanderfolgende Tests erhalten leere Datenbanken; zwei weitere prüfen den aktuellen Pfad des gecachten Tagesdienstes. | ✅ |
-| 2 | 15 Kombinationen aus Connect-Aufruf und Pfadform, Verzeichnisschutz sowie extern konfigurierter Pfad im frischen Python-Prozess: Abbruch vor Dateierstellung. Temporäre und Speicherdatenbanken bleiben verwendbar. | ✅ |
-| 3 | Aus dem aktuellen Pflichtumfang genommen; siehe Scope-Vertrag. | ➖ |
-| 4 | Normaler Make-Gesamtlauf ohne manuell gesetzten Datenpfad: 1110 Backendtests bestanden, 29 übersprungen, 8 Online-Integrationstests abgewählt; Plugin-API 309 bestanden/1 übersprungen, Beispiel 47, Dashboard 339 samt ESLint. Onlinefälle wegen zuvor beobachteter Netzwerk-Timeouts nicht erneut ausgeführt. | ⚠️ |
-| 5 | Entwicklungsregel in `CLAUDE.md` ergänzt. | ✅ |
+<a id="verify-matrix-aktuell"></a>
+
+### Verify-Matrix · aktuell
+
+Einzige aktuelle Prüftabelle, Stand nach Review Runde 1 vom 2026-09-08.
+✅ bestätigt · ⚠️ bestätigt mit Einschränkung · ➖ aus dem Pflichtumfang
+entfallen (#3, nicht als bestanden gewertet). `Human` bleibt ausschließlich
+Mikes Urteil; die technische Freigabe füllt diese Spalte nicht.
+
+| # | Aktueller Nachweis | AI | Human |
+|---|---|:--:|---|
+| 1 | Zwei aufeinanderfolgende Tests erhalten leere Datenbanken; zwei weitere prüfen den aktuellen Pfad des gecachten Tagesdienstes. | ✅ | |
+| 2 | 15 Kombinationen aus Connect-Aufruf und Pfadform, Verzeichnisschutz sowie extern konfigurierter Pfad im frischen Python-Prozess: Abbruch vor Dateierstellung. Temporäre und Speicherdatenbanken bleiben verwendbar. | ✅ | |
+| 3 | Aus dem aktuellen Pflichtumfang genommen; siehe Scope-Vertrag. | ➖ | |
+| 4 | Normaler Make-Gesamtlauf ohne manuell gesetzten Datenpfad: 1110 Backendtests bestanden, 29 übersprungen, 8 Online-Integrationstests abgewählt; Plugin-API 309 bestanden/1 übersprungen, Beispiel 47, Dashboard 339 samt ESLint. Onlinefälle wegen zuvor beobachteter Netzwerk-Timeouts nicht erneut ausgeführt. | ⚠️ | |
+| 5 | Entwicklungsregel in `CLAUDE.md` ergänzt. | ✅ | |
 
 ```bash
 .venv/bin/pytest -q tests/test_database_isolation.py
@@ -84,6 +115,9 @@ beliebige Dateioperationen, SQL-ATTACH oder nicht instrumentierte Kindprozesse.
 Die folgenden Einschätzungen und Prüfnummern bleiben erhalten. Der damalige
 reine Prüfauftrag ist durch Mikes Auftrag zur Ausführung der Kette abgelöst;
 #3 ist keine aktuelle Implementierungsanforderung.
+
+<details>
+<summary>Ausgangsbefund vor der Umsetzung · 2026-09-07</summary>
 
 ## Erneute Einordnung · Codex, 2026-09-07
 
@@ -160,21 +194,18 @@ Und jede künftige Ergänzung darf ihn wiederholen, solange nichts widerspricht.
 Ein Riegel gehört deshalb in die Testumgebung, nicht in die Sorgfalt des
 Nächsten, der einen Dienst schreibt.
 
-## Verify-Matrix
+<a id="verify-matrix"></a>
 
-Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · ➖ keine
-Live-Verifikation · ❌ gemessen und **nicht** erfüllt.
+### Frühere Messung · vor der Umsetzung
 
-Die `AI`-Spalte trägt den von Claude am 2026-09-07 gemessenen Stand; die
-Messungen stehen unter [Prüfstand 2026-09-07](#prüfstand-2026-09-07).
+Am 2026-09-07 waren #1, #2 und #5 noch nicht erfüllt; #4 war nur teilweise
+belegt. Auch der später ausdrücklich entfallene Punkt #3 war damals nicht
+umgesetzt. Diese Aussagen beschreiben den Ausgangsbefund, nicht den heutigen
+Prüfstand. Die einzelnen damaligen Messungen folgen unten.
 
-| # | Where | Look for | AI | Human |
-|---|---|---|:--:|---|
-| 1 | `tests/conftest.py` | eine `autouse`-Vorrichtung setzt `DATABASE_PATH` für **jeden** Test auf ein temporäres Verzeichnis und leert die Settings-Caches | ❌ | |
-| 2 | Gegenprobe | ein absichtlich auf `data/` zielender Test schlägt **fehl**, statt die Datei zu öffnen — der Riegel wird also geprüft, nicht nur behauptet | ❌ | |
-| 3 | `app/container.py` | `get_daily_history_service` bezieht sein Repository über dieselbe Abhängigkeit wie die übrigen Dienste, statt es selbst zu bauen | ❌ | |
-| 4 | ganzer Lauf | `make test` bleibt grün, und kein Test hängt still an einer anderen Datenbank als seiner eigenen | ◑ | |
-| 5 | Dauerhaftigkeit | die Regel steht dort, wo sie beim nächsten Dienst gelesen wird — Skill `code-standards` oder `CLAUDE.md`, nicht nur in diesem Ticket | ❌ | |
+Den gültigen Stand aller Prüfnummern enthält ausschließlich die
+[aktuelle Verify-Matrix](#verify-matrix-aktuell). Die frühere Tabelle enthielt
+keine menschlichen Antworten.
 
 <a id="prüfstand-2026-09-07"></a>
 
@@ -266,7 +297,14 @@ der ihn auslöst, ist eine Behauptung.
   `app/services/backup.py`; der portable JSON-Weg ist gestrichen. An dieser
   Abgrenzung ändert sich nichts — ein Riegel im Test ist kein Backup.)*
 
+</details>
+
 ## Review-Historie · Claude, Runde 1, approved
+
+Redaktioneller Nachtrag vom 2026-09-08: Die im Review erwähnte ältere
+Messtabelle ist inzwischen durch den datierten Ausgangsbefund oben ersetzt.
+Es gibt nur noch eine aktuelle Verify-Matrix; das folgende Urteil bleibt
+im damaligen Wortlaut erhalten.
 
 Geprüft hat **Claude** als zugeordneter Verifier. Prüfstand `5b02ba1`, Basis
 `ae31d09`. Die verarbeitete OUTBOX ist entfernt. Ich hatte den Bestand dieses
@@ -306,7 +344,7 @@ data/stockinfo.db vorher/nachher: bytegleich
 ```
 
 Das ist die eigentliche Wirkung des Tickets und zugleich die Antwort auf
-[CX-01](CODEX-REVIEW-PATTERNS.md): Bis heute brauchte ein sauberer Lauf einen
+[CX-01](../CODEX-REVIEW-PATTERNS.md): Bis heute brauchte ein sauberer Lauf einen
 manuell gesetzten Datenpfad, und genau daran ist der T-26-Beleg gescheitert.
 Jetzt ist der normale Lauf strukturell sicher — es gibt keinen Pfad mehr, den
 man vergessen kann. Deine Zahl stimmt auf den Test genau.
