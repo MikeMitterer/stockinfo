@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `portfolio_review`
+- `phase`: `codex_working`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `1985037`
 - `review_round`: `1`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `1985037`
@@ -35,6 +35,15 @@ Die Phasennamen richten sich nach der aktuellen Zuordnung:
 geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
+
+## Aktueller Nachtrag · T-21, Auftrag Mike, 2026-09-08
+
+Codex ergänzt die aktive Börsenabdeckung: deklarierte Online-Rollen und
+YAML ausschließlich aus dem aktuellen Dateibestand, in REST und Exchanges.
+Mike hat beide Profile und die Zuordnung zu T-21 bestätigt. Claude prüft
+den abgeschlossenen Nachtrag unabhängig. Frühere Freigaben bleiben erhalten;
+Börsenabweichungsanzeige und Docker-Langzeittest sind weiterhin außerhalb
+dieses Nachtrags.
 
 ## Aktive Kette · Auftrag Mike, 2026-09-07
 
