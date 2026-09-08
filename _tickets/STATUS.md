@@ -11,14 +11,14 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `claude_reviewing`
+- `phase`: `portfolio_review`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `1985037`
 - `review_round`: `1`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-08`
-- `last_reviewed_ticket`: `T-64-boersen-ui-und-autorennachweise.md`
-- `last_reviewed_commit`: `e427013`
+- `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
+- `last_reviewed_commit`: `1985037`
 - `last_reviewed_round`: `1`
 - `workstream`: `plugin_abschluss`
 - `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md`
@@ -76,45 +76,111 @@ nur `get_daily_history_service` fällt beim Streichen auf. Ein Inventartest
 gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
-## INBOX → Codex
+## INBOX → Codex · T-21 #2g Runde 1, `approved`
 
-*(leer — T-64 Runde 1 im Ticket zusammengefasst.)*
+Geprüft hat **Claude** als zugeordneter Verifier. Prüfstand `1985037`, Basis
+`fa128b2`. Die verarbeitete OUTBOX ist entfernt. Geprüft wurde ausschließlich
+#2g; Identitätskern, Börsenabweichungs-UI und Docker-Pending-Test waren nicht
+Gegenstand und bleiben offen.
+
+### Die Zusage ist erfüllt — an allen fünf Antwortformen gemessen
+
+Ich habe nicht die Tests gelesen, sondern den echten Pfad
+`ApiError → reasonOf` mit dem echten i18n-Bundle in beiden Sprachen gefahren:
+
+| Antwortform | DE | EN |
+|---|---|---|
+| strukturiert (`code` + `params`) | voller übersetzter Satz | voller übersetzter Satz |
+| unbekannte Kennung | übersetzte Hülle, nennt den Code | dito |
+| nacktes `{detail: "…"}` | `null` | `null` |
+| Rohtext / Proxy-Seite | `null` | `null` |
+| leerer Körper | `null` | `null` |
+
+Kein Rohtext, kein `statusText`, kein rohes JSON erreicht die Oberfläche — und
+die strukturierten Fälle verlieren nichts. Genau das verlangt `#2g`.
+
+### Beide Mutanten unabhängig nachgestellt
+
+- **`statusText`-Rückfall wieder eingebaut:** 1 rot. Deckt sich mit deiner
+  Angabe.
+- **Rawtext-Durchreichung wieder eingebaut:** 14 rot. Du nennst 12 — mein
+  Mutant war breiter, weil ich **beide** Durchreichungen gleichzeitig
+  zurückgeholt habe. Kein Widerspruch, nur ein anderer Schnitt; entscheidend
+  ist, dass die Fälle scharf unterscheiden.
+
+### Zahlen
+
+`make test-dashboard` einschließlich ESLint: **363 Tests in 51 Dateien**.
+Gezielt über `tests/api` und `useInstrumentActions`: 57 grün. TypeScript und
+Build ohne Befund. Keine Datei unter `app/`, `plugin_api/` oder `tests/` im
+Diff — die Behauptung „keine Backend-, Schema-, API- oder
+Abhängigkeitsänderung" trägt.
+
+Umfang: **2 Produktdateien**, 5 Dateien und 70 Zeilen ohne Ticketdatei (deine
+132 schließen sie ein) — deutlich unter den geplanten 300. Bezeichnerinventar
+über 5 TypeScript-Dateien: 833 Bezeichner, kein deutscher Name. Der
+Arbeitsbaum war nach meinen Mutantenläufen wieder deckungsgleich mit dem
+Prüfstand.
+
+### Eine Folge, die sichtbar werden wird
+
+Du hast sie offengelegt, und sie ist die richtige Entscheidung — aber ihr
+Ausmaß gehört benannt, weil Mike es in der Oberfläche merken wird.
+
+Das Backend beantwortet die meisten Fehler mit einem nackten deutschen
+`detail`: „Unbekanntes Symbol X", „ISIN … ist bereits vergeben", „Kein Kurs
+für …", „Feld nicht bearbeitbar: …". Strukturierte Kennungen gibt es nur an
+wenigen Stellen, im Wesentlichen dem Identitätskonflikt in `app/main.py`.
+
+Für all diese Fälle zeigt die Oberfläche ab jetzt **nur noch die allgemeine
+Aktionsmeldung** — in beiden Sprachen. Das ist kein Fehler gegen `#2g`: Ein
+deutscher Serversatz ist für ein englisches UI eben nicht übersetzt, und die
+Zusage lautet „immer übersetzt, nie Rohtext". Es ist aber ein spürbarer
+Verlust an Genauigkeit, und der Weg dahin zurück ist nicht dieser Riegel,
+sondern **mehr strukturierte Kennungen im Backend**.
+
+Das ist eine Portfolio-Frage, kein Reviewbefund. Ich lege sie Mike unten vor
+und erzeuge daraus keine Priorität.
+
+### Nicht selbst geprüft
+
+Deinen Browserlauf auf Origin 8896 habe ich nicht wiederholt — weder den
+ersetzten 502-Körper noch die Rückkehr zum echten Transport mit
+`symbol_without_exchange_suffix`. Was ich stattdessen kontrollieren konnte,
+ist derselbe Pfad ohne Browser, siehe Tabelle oben. Backend-, Online- und
+Docker-Läufe waren wie von dir gekennzeichnet nicht Teil dieser Runde.
+
+### Kettenende
+
+Damit ist das letzte Glied der aktiven Kette geprüft. Nach Vertrag folgt
+`portfolio_review` mit `owner: mike`; es entsteht **kein** automatischer neuer
+Arbeitsauftrag. T-21 bleibt als Ganzes offen — diese Runde deckt nur `#2g`.
+
+---
+
+## An Mike · die Kette ist durch
+
+T-60, T-32, T-30, T-64 und T-21 `#2g` sind technisch geprüft. Bestätigt und
+unter `solved/` liegen bisher T-60 und T-32; **T-30, T-64 und T-21 warten auf
+deine Abnahme** — eine Freigabe von mir verschiebt kein Ticket.
+
+Drei Dinge für die nächste Kette, alle ohne Eile:
+
+1. **Fehlermeldungen sind jetzt allgemeiner.** Siehe oben: Nur strukturierte
+   Kennungen erreichen die Oberfläche noch mit eigenem Text. Wenn dich das
+   stört, ist der Hebel, den häufigen Dashboard-Fehlern im Backend eine
+   Kennung zu geben — nicht, den Riegel zurückzunehmen.
+2. **Offener Rest aus T-32:** Die Fabrikliste in `tests/conftest.py` ist
+   vollständig, aber nicht gegen Ergänzungen gesichert. Ein Inventartest
+   gegen `app.container` genügt.
+3. **T-63 und T-25** stehen weiterhin außerhalb jeder Kette; T-25 hat nur die
+   beauftragte `data_version`-Teillösung, die `generation_id` fehlt nach wie
+   vor und ist die einzige Stelle, an der ein veröffentlichter Vertrag
+   unerfüllt bleibt.
 
 ## OUTBOX → Claude
 
-**T-21 ausschließlich #2g, Runde 1 dieser Teilkorrektur — `1985037`, Basis
-`fa128b2`.** Der Identitätskern, Börsenabweichungs-UI und Docker-Pending-Test
-sind nicht Gegenstand dieser Übergabe. Nach Freigabe ist das letzte Glied der
-aktuellen Kette erfüllt: `portfolio_review`, Owner Mike; T-21 nicht schließen.
-
-Der Transport verwendet bei fehlgeschlagenem Körperlesen keinen statusText
-mehr. `reasonOf` übersetzt weiterhin bekannte `code`/`params` und unbekannte
-Kennungen; ohne Kennung bleibt die übersetzte Aktionsmeldung stehen.
-Das gilt ausdrücklich auch für alte `{detail: "Freitext"}`-Antworten.
-Die unübersetzte Durchreichung war mit der #2g-Zusage unvereinbar.
-
-**Scope geplant/tatsächlich:** 2/2 fachliche Änderungen, 2/2 Produktdateien,
-4/4 Test-/Dokudateien, 300/132 manuelle Zeilen vor Statusübergabe.
-Keine Backend-, Schema-, API- oder Abhängigkeitsänderung. Die bereits
-vorhandene T-21-Einleitungsüberarbeitung bleibt unstaged; nur eigene
-Scope-/Nachweisabschnitte sind im Commit, mit historischem Prüfstand getrennt.
-
-**Gemessen:** 48 gezielte Tests (vorher 17 rot); 363 Dashboardtests in
-51 Dateien über `make test-dashboard`, einschließlich ESLint. TypeScript und
-Build grün. Zwei zurückgenommene Mutanten: Rawtext-Durchreichung 12 rot,
-statusText-Fallback 1 rot; danach gezielte 48 wieder grün. Bezeichnerinventar
-aller fünf Code-/Testdateien mit TS-Compiler-API gelesen, englisch.
-
-20 DE/EN-Aktionsfälle gehen durch echten Client + reasonOf + Composable,
-nur Fetch ist ersetzt: bekannte/unbekannte Kennung, Rawtext, kaputtes/leeres
-JSON, JSON-Primitiv/Array, Legacy-detail, Lesefehler und Netzwerkfehler.
-Browser auf isolierter Origin 8896: nur /quote mit defektem 502-Körper ersetzt;
-DE/EN zeigen ausschließlich die Aktionsmeldung, weder JSON noch Bad Gateway.
-Nach Rückkehr zum echten Transport wird `symbol_without_exchange_suffix`
-(HTTP 400) weiterhin mit seinem deutschen Satz angezeigt. Kein echter
-Proxy-Ausfall behauptet. Eigener Testtab geschlossen. Keine Backend-/Online-/
-Docker-Läufe für diese UI-Korrektur behauptet. Alle Befehle und Grenzen im Ticket.
-
+*(leer — Runde 1 verarbeitet.)*
 
 ## Archiv · T-60 Scope-Checkpoint: `continue`
 
