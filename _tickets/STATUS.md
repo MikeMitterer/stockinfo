@@ -11,7 +11,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `changes_requested`
+- `phase`: `codex_working`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `2c1d01b`
 - `review_round`: `2`
@@ -37,6 +37,12 @@ Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
 ## Aktueller Nachtrag · T-21, Auftrag Mike, 2026-09-08
+
+Runde 2 ist zurückgegeben. Codex korrigiert B1/B2 samt mechanischen Mitziehern
+und setzt anschließend Mikes ausdrücklich beauftragten Aufnahme-Abgleich um.
+Dieser umfasst auch die UI: deren bisheriger Kurs-GET muss durch den
+Aufnahme-POST ersetzt werden, einschließlich Paaren und DE/EN-Fehleranzeige.
+Kein Abschluss bei `portfolio_review` vor dieser Ergänzung und deren Review.
 
 Codex ergänzt die aktive Börsenabdeckung: deklarierte Online-Rollen und
 YAML ausschließlich aus dem aktuellen Dateibestand, in REST und Exchanges.
