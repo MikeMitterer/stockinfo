@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `none`
-- `review_round`: `0`
-- `owner`: `codex`
+- `handoff_commit`: `1985037`
+- `review_round`: `1`
+- `owner`: `claude`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-64-boersen-ui-und-autorennachweise.md`
 - `last_reviewed_commit`: `e427013`
@@ -82,7 +82,39 @@ beim nächsten Anfassen der Datei mitnehmen.
 
 ## OUTBOX → Claude
 
-*(leer — Runde 1 verarbeitet.)*
+**T-21 ausschließlich #2g, Runde 1 dieser Teilkorrektur — `1985037`, Basis
+`fa128b2`.** Der Identitätskern, Börsenabweichungs-UI und Docker-Pending-Test
+sind nicht Gegenstand dieser Übergabe. Nach Freigabe ist das letzte Glied der
+aktuellen Kette erfüllt: `portfolio_review`, Owner Mike; T-21 nicht schließen.
+
+Der Transport verwendet bei fehlgeschlagenem Körperlesen keinen statusText
+mehr. `reasonOf` übersetzt weiterhin bekannte `code`/`params` und unbekannte
+Kennungen; ohne Kennung bleibt die übersetzte Aktionsmeldung stehen.
+Das gilt ausdrücklich auch für alte `{detail: "Freitext"}`-Antworten.
+Die unübersetzte Durchreichung war mit der #2g-Zusage unvereinbar.
+
+**Scope geplant/tatsächlich:** 2/2 fachliche Änderungen, 2/2 Produktdateien,
+4/4 Test-/Dokudateien, 300/132 manuelle Zeilen vor Statusübergabe.
+Keine Backend-, Schema-, API- oder Abhängigkeitsänderung. Die bereits
+vorhandene T-21-Einleitungsüberarbeitung bleibt unstaged; nur eigene
+Scope-/Nachweisabschnitte sind im Commit, mit historischem Prüfstand getrennt.
+
+**Gemessen:** 48 gezielte Tests (vorher 17 rot); 363 Dashboardtests in
+51 Dateien über `make test-dashboard`, einschließlich ESLint. TypeScript und
+Build grün. Zwei zurückgenommene Mutanten: Rawtext-Durchreichung 12 rot,
+statusText-Fallback 1 rot; danach gezielte 48 wieder grün. Bezeichnerinventar
+aller fünf Code-/Testdateien mit TS-Compiler-API gelesen, englisch.
+
+20 DE/EN-Aktionsfälle gehen durch echten Client + reasonOf + Composable,
+nur Fetch ist ersetzt: bekannte/unbekannte Kennung, Rawtext, kaputtes/leeres
+JSON, JSON-Primitiv/Array, Legacy-detail, Lesefehler und Netzwerkfehler.
+Browser auf isolierter Origin 8896: nur /quote mit defektem 502-Körper ersetzt;
+DE/EN zeigen ausschließlich die Aktionsmeldung, weder JSON noch Bad Gateway.
+Nach Rückkehr zum echten Transport wird `symbol_without_exchange_suffix`
+(HTTP 400) weiterhin mit seinem deutschen Satz angezeigt. Kein echter
+Proxy-Ausfall behauptet. Eigener Testtab geschlossen. Keine Backend-/Online-/
+Docker-Läufe für diese UI-Korrektur behauptet. Alle Befehle und Grenzen im Ticket.
+
 
 ## Archiv · T-60 Scope-Checkpoint: `continue`
 
