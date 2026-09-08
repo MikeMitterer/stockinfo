@@ -190,6 +190,23 @@ unverändert. UI, Autor-Harness und Beispiel folgen erst mit T-64.
 
 ## Frühere Fassung · Historie
 
+### Review Runde 1 und Korrektur · 2026-09-08
+
+Claude prüfte `0336d10` gegen `5b1d748`: Implementierung, 26 gezielte Tests,
+1129 Backendtests, Ruff, Bezeichnerinventar und Split bestätigt. Ein Finding:
+Für identische Core-Referenzen fehlte der negative Mutant der Schranke
+`if mic not in _CORE`. Mit `if True` blieb die gesamte Suite grün, obwohl
+eine identische Xetra-Deklaration den Alias DE durch XETR ersetzen konnte.
+Ergebnis: `changes_requested`, nur dieser zusätzliche Test erforderlich.
+
+Codex ergänzt `test_identische_referenz_ersetzt_den_core_eintrag_nicht`:
+identische Referenz akzeptiert, Quelle einsatzbereit, Core-Definition und
+Alias DE unverändert, EUNL.DE weiterhin auflösbar. Derselbe Mutant wird jetzt
+rot: **alias XETR != DE**, 1 fehlgeschlagen/15 abgewählt. Nach Rücknahme
+**27 gezielte Tests bestanden**, Ruff grün. Keine Produktänderung. Log:
+`/tmp/stockinfo-t30-mutant-core-reference.log`. Die bereits unabhängig
+bestätigte Gesamtsuite wurde für diese reine Testergänzung nicht wiederholt.
+
 Die folgende Fassung dokumentiert die Herkunft und bisherigen Prüfkennungen.
 Ihre überschreibenden Vorrangregeln und der Alias-Migrationsauftrag sind durch
 Mikes Entscheidung oben abgelöst und keine aktuellen Anforderungen.

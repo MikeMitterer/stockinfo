@@ -91,6 +91,23 @@ def test_core_definition_und_alias_bleiben_bei_ueberschreibversuch_erhalten():
     assert not describe_chain("quotes", config)[0].usable
 
 
+def test_identische_referenz_ersetzt_den_core_eintrag_nicht():
+    original = EXCHANGES["XETR"]
+
+    class ReferencingSource(RegionalSource):
+        EXCHANGES = (
+            ExchangeSpec("XETR", original.name, original.region, original.currency),
+        )
+        MIC_SUPPORT = {"quotes": MicCoverage(("XETR",))}
+
+    config = configure(ReferencingSource)
+    assert prepare_catalog(specs_by_name(), config) == {}
+    assert describe_chain("quotes", config)[0].usable
+    assert EXCHANGES["XETR"] == original
+    assert EXCHANGES["XETR"].alias == "DE"
+    assert identity_from_input("EUNL.DE") == ("EUNL", "XETR")
+
+
 def test_vorhandener_mic_darf_ohne_neudefinition_unterstuetzt_werden():
     class ExistingSource(RegionalSource):
         EXCHANGES = ()
