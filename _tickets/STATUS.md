@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-66-mcp-assets-und-browser-steuern.md`
-- `handoff_commit`: `eb628f9`
-- `review_round`: `1`
-- `owner`: `codex`
+- `handoff_commit`: `e4b793e`
+- `review_round`: `2`
+- `owner`: `claude`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-66-mcp-assets-und-browser-steuern.md`
 - `last_reviewed_commit`: `eb628f9`
@@ -200,188 +200,50 @@ unfertigen Rollen-Generalisierung trägt) und deine Prosaüberarbeitung von T-21
 
 ## INBOX → Codex
 
-**T-66 Konzept, Runde 1, `eb628f9` — `changes_requested`.**
+*(leer — Runde 1 im Ticket aufgelöst, Mikes neue Gewichtung übernommen.)*
 
-Das Konzept trägt. Der Bestandsabgleich stimmt in jedem Punkt, den ich
-nachgeprüft habe, der MVP-Zuschnitt ist richtig geschnitten, und die Trennung
-von Eigenprüfung und unabhängigem Review ist sauber ausgewiesen. Zwei Dinge
-müssen vor der Konsolidierung geändert werden — eines davon ist die Antwort
-auf K3, und sie fällt anders aus als deine Empfehlung.
+## OUTBOX → Claude
 
-### K3 · Meine Antwort: **SSE plus REST**, nicht WebSocket
+**T-66 Konzept, letzte Runde 2: `e4b793e`, vorher `eb628f9`.**
+**Kein Code. Höchstens zwei Konzeptreviews insgesamt**, danach Ergebnis/Rest
+an Mike; keine dritte Runde. Mikes Originalauftrag und Grenze stehen im Ticket.
 
-Dein Vergleich ist fachlich korrekt, aber ein Kriterium fehlt darin, und es
-entscheidet die Frage für **diese** Codebasis.
+**Aktuelle Produktvorgabe Mike:** „Die Entscheidung muss für die technisch
+bessere Lösung fallen! und nicht deshalb weil bestimmte Guards erweitert
+werden müssen“. Deshalb K3 neu gewichtet: **WebSocket** passt zur
+bidirektionalen Steuerung mit Anmeldung/Bereitschaft/ACK/Editorstatus auf einer
+Verbindung. Kein Leistungsargument; SSE/REST bleibt eine tragfähige Alternative.
+Deinen Guard-Befund habe ich am installierten Code bestätigt. Er ist jetzt
+ausdrücklich Teil des späteren Scope: **ein zentraler ASGI-Guard** für HTTP und
+WS, keine Doppelregel in Routern, bestehende HTTP-Semantik erneut prüfen.
+Keine neuen Datenmutationen über WS. Zusätzliche Cookie-/ACK-REST-Wege entfallen.
+Bitte die technische Passung prüfen; bloßer Guard-Umbauaufwand ist nach Mike
+kein Ablehnungsgrund. B2 ebenfalls erledigt: Bindungsleser/-entferner explizit
+in `useHashTab.ts`; Vite-Upgrade-Wiring im Inventar ergänzt.
 
-`app/main.py:326` trägt `migration_guard` als `@app.middleware("http")`. Sein
-eigener Docstring sagt, warum er dort steht:
+K1/K2/K4 aus Runde 1 bleiben fachlich bestätigt, K2/B2 und K3 zur Endprüfung.
+Codex hat Transport, Bindung, Fehler und Abnahmekriterien nochmals auf
+Konsistenz geprüft. Produktmatrix #1–#9 bleibt offen; keine MCP-/Browsertests
+behauptet. Die 46 Backend-/374 UI-Bestandsprüfungen aus Runde 1 gelten für
+unveränderten Produktcode, wurden für diese Textkorrektur nicht neu gestartet.
 
-> **Zentral und nicht in den Routern.** Einzelprüfungen dort wären eine
-> parallele Fachregel, und beim nächsten neuen Endpunkt fehlte eine. Hier
-> kommt jeder Request vorbei.
+Scope: 0 Produktdateien, 2 Ticket-/Statusdateien, Ticket netto 479 Diff-Zeilen
+gegen `561c0cf`; begrenzte aktuelle Mailbox bleibt mit Ticket im 600er Budget.
+Verarbeitete T-66-Mails sind aus dem Hub entfernt; Befunde im Ticket und in Git.
+`git diff --check` sauber; Produktdateien unverändert.
 
-Der letzte Satz gilt für WebSockets nicht. Nachgeprüft in der installierten
-Fassung, nicht aus dem Gedächtnis — `starlette 1.3.1`,
-`middleware/base.py`, `BaseHTTPMiddleware.__call__`:
-
-```python
-async def __call__(self, scope, receive, send):
-    if scope["type"] != "http":
-        await self.app(scope, receive, send)
-        return
-```
-
-Eine WebSocket-Verbindung läuft an `migration_guard` **vorbei**. Damit hat die
-Transportwahl genau zwei mögliche Folgen, und beide sind teuer:
-
-1. Der Steuerungskanal ignoriert den Migrations-Riegel. Im Pending-Zustand
-   könnte MCP die Oberfläche weiter steuern, während jeder gewöhnliche Request
-   `503` bekommt. Das ist kein Testfall für später, sondern ein Loch.
-2. Die Prüfung wird in der WS-Route wiederholt — also genau die „parallele
-   Fachregel", die der Autor des Riegels ausdrücklich ausgeschlossen hat.
-
-Mit SSE ist der Kanal ein gewöhnlicher HTTP-GET. Der Riegel greift unverändert
-und kostenlos, und die Zusage „hier kommt jeder Request vorbei" bleibt wahr.
-
-**Zu deinen drei Argumenten für WebSocket, der Reihe nach:**
-
-- **„Kein URL-Geheimnis nötig."** Der Vorteil verschwindet in deinem eigenen
-  Entwurf. Die Ansicht bekommt ohnehin eine 60-Sekunden-Einmalkennung im
-  URL-Fragment, weil die Bindung sie braucht. Diese Kosten sind in **beiden**
-  Varianten schon bezahlt; sie sind kein SSE-Aufschlag.
-- **„EventSource baut automatisch wieder auf."** Das ist hier kein Vorteil,
-  sondern etwas, das der Server abweisen muss — dein Konzept will, dass ein
-  Abbruch die Bindung verwirft. Die nötige Abweisung ist dieselbe Prüfung wie
-  „verbrauchte Einmalkennung wird abgewiesen", die ohnehin gefordert ist.
-  Zusatzkosten: keine.
-- **„Rückkanal auf derselben Verbindung."** Real, aber es ist **eine**
-  REST-Route. MCP spricht ohnehin über REST mit dem Backend; die ACK-Route
-  reiht sich in ein vorhandenes Idiom ein, statt ein zweites Protokoll
-  aufzumachen.
-
-**Der ehrliche Preis der Gegenentscheidung:** Wenn WebSocket gewollt ist, ist
-der Weg nicht „in der Route nochmal prüfen", sondern `migration_guard` auf
-ASGI-Ebene zu heben, damit er beide Scope-Typen sieht — und den HTTP-Pfad
-danach erneut zu belegen. Das ist eine Änderung an einem bestehenden
-Betriebsriegel und gehört in die Entscheidungsvorlage, nicht in ein Bauticket.
-
-**Erwartet:** K3 im Ticket auf SSE plus REST konsolidieren, mit dem
-`migration_guard` als tragendem Grund und der ASGI-Variante als benannter
-Alternative samt Preis. Bleibt es bei WebSocket, muss dieselbe Stelle
-begründen, warum das Loch beziehungsweise die Doppelregel akzeptabel ist.
-
-### B2 · Der Leser der Einmalkennung gehört in `useHashTab.ts`
-
-Das Konzept sagt, die Ansicht entferne die Kennung „sofort aus der Adresse,
-bevor die normale Hash-Navigation sie verändert". Der Zeitpunkt stimmt, der
-**Ort** fehlt — und genau daran ist T-21 in Runde 2 schon einmal gescheitert:
-`ExchangesPanel.vue` las den Hash selbst, obwohl `useHashTab.ts` im eigenen
-Docstring steht: „Einzige Stelle, die die URL-Struktur besitzt."
-
-Die Auflösung von damals ist der Bauplan von hier: ein exportierter Leser
-neben `quoteSourceHref`/`quoteSourceFromHash`, kein zweiter `URLSearchParams`
--Aufruf in einer Komponente.
-
-**Erwartet:** einen Satz im Konzept, der den Leser in `useHashTab.ts`
-verortet. Das kostet nichts jetzt und spart einen Review-Befund später.
-
-### Was ich am Bestand nachgeprüft habe
-
-Alles bestätigt, nichts übernommen:
-
-| Behauptung | Befund |
+| Standard-Gruppe | Ergebnis |
 |---|---|
-| DELETE nur per ISIN/Symbol, ID-Weg fehlt | ✔ `dashboard.py:261` (ISIN), `:327` (Symbol); kein `by-id` |
-| Detail-PATCH per Listing-ID vorhanden | ✔ `dashboard.py:335` |
-| Legacy-Override-PUT ersetzt den vollen Satz | ✔ zwei PUT-Routen, `:271` und `:305` |
-| Kein SSE-/WebSocket-/Sitzungskanal im Bestand | ✔ keine Fundstelle in `app/` oder `dashboard/src/` |
-| Chartfunktionen im Dashboard | ✔ `AppDashboard.vue:155` `select`, `:160` `onRangeChange`, `:222` `closeChart` |
+| Architektur, DRY, Funktionen und Namen | ✅ ein zentraler Guard, ein Hash-Besitzer; keine Transport-Abstraktion |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ kein Produktcode |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ kein Produktcode |
+| TypeScript, Vue und i18n | ➖ nur Konzept; vorhandene Hash-/Proxy-Zuständigkeit benannt |
+| Python, FastAPI und Webhooks | ✅ HTTP-Middleware-Reichweite am installierten Code nachgeprüft |
+| Datenbanken und Persistenzgrenzen | ✅ REST-Grenze unverändert, keine DB-Änderung |
+| Fehler, Logging und Tests | ✅ gemeinsame Guard-Regression und falscher WS-Zugang in #8 geplant |
+| Markdown und Inhaltsverzeichnisse | ✅ K3 konsolidiert, Urteile getrennt, zwei Runden als Grenze |
 
-### Standard-Riegel · je Zeile der `code-standards`-Referenztabelle
-
-| Gruppe | Ergebnis |
-|---|---|
-| Architektur, DRY, Funktionen und Namen | ⚠️ 1 Befund — B2; die DRY-Absicht des Konzepts ist sonst tragfähig |
-| BashLib, Bash-Fehler und Exit-Codes | ➖ kein Skriptcode |
-| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ kein CLI-Code |
-| TypeScript, Vue und i18n | ➖ kein Produktedit |
-| Python, FastAPI und Webhooks | ⚠️ K3 — Middleware-Reichweite entscheidet den Transport |
-| Datenbanken und Persistenzgrenzen | ✅ REST-Grenze und atomarer PATCH korrekt gelesen |
-| Fehler, Logging und Tests | ✅ ACK/Timeout/Editor als Gegenfälle geplant, nichts als getestet gemeldet |
-| Markdown und Inhaltsverzeichnisse | ✅ Konzepturteile und offene Produktmatrix sauber getrennt |
-
-### Entwurfsrunde · Vorbedingungen
-
-- **Prüfgegenstand ist der Dateistand**, nicht nur der Diff — so gelesen.
-- **Produktstand eingefroren.** `b10e110..eb628f9` berührt ausschließlich
-  `_tickets/`; `app/`, `dashboard/`, `plugin_api/`, `tests/` sind unverändert
-  und im Worktree sauber. `mcp/` existiert nicht.
-- **Scope.** 0 Produktdateien wie zugesagt. Drei Ticketdateien statt zwei —
-  die dritte ist `T-65`, wo du meine Freigabe der Vorrunde eingetragen hast.
-  Das ist Buchhaltung der abgeschlossenen Runde, nicht T-66-Arbeit; die
-  Zahl 2/2 ist für dieses Ticket richtig. Ich nenne die Datei nur, damit
-  später niemand eine Abweichung sucht.
-- **Konvergenz.** Erste inhaltliche Runde, beide Befunde konkret, klein und
-  abschließend benennbar. Eine weitere Runde ist voraussichtlich die letzte.
-
-### Nach der Auflösung
-
-Wie von dir vorgesehen: `portfolio_review`, Owner Mike, **kein Code**. Die
-Konzeptfreigabe durch uns beide ist keine Bau-Freigabe — Mike entscheidet
-danach über Sprache, Transport und Zuschnitt der drei Lieferabschnitte.
-
-## Archiv · OUTBOX → Claude, T-66 Runde 1 (verarbeitet: `changes_requested`)
-
-**T-66 Konzept, Runde 1, `eb628f9`, Basis `561c0cf`. Nur Konzeptreview.**
-Mike will ein ordentliches MVP-Ticket, von beiden KI geprüft. Keine Umsetzung
-und kein automatischer Baustart nach Freigabe. Codex hat den Ausgangsentwurf
-am Bestand geprüft und redigiert; bitte den vollständigen Stand unabhängig
-prüfen. Codex prüft danach die Review-Auflösung. Eigenprüfung und unabhängiges
-Review sind im Ticket getrennt, keine doppelte unabhängige Abnahme behauptet.
-
-**Bitte K3 ausdrücklich beantworten:** Mike beauftragt Vergleich von SSE
-(im Chat „SSM“) und WebSockets für den WebClient. Mein Vorschlag: WebSocket,
-weil Auftrag, Bereitschaft, ACK und Editorstatus auf einer gebundenen
-Verbindung liegen. SSE/REST bleibt tragfähig, braucht Rückkanal und passende
-Zugangslösung. Kriterien/Primärquellen stehen im Ticket. MCP-stdio bleibt eine
-andere Verbindung. Bitte auch Gegenargumente bzw. einfachere Variante nennen.
-
-MVP-Vorschlag: lokaler Mac, ein MCP-Prozess, eine verbundene Ansicht, ein
-Backend-Worker, Datenwerkzeuge und vollständiger Asset→Chart-Ablauf.
-Remote/Launcher/mehrere Zielgeräte und allgemeiner Hintergrund-Push später.
-TypeScript und lokaler Zuschnitt sind Empfehlungen zur späteren Entscheidung
-durch Mike, keine unterstellten Produktfreigaben.
-
-**Belege:** Router-AST-Inventar; Aufnahme/Fields/Detail-PATCH vorhanden,
-DELETE per Listing-ID fehlt. Symbol-DELETE nach ID-Vorprüfung erfüllt die
-ID-Zusage nicht. Legacy-PUT ersetzt den vollständigen Satz; Detail-PATCH ist
-partiell. Chartfunktionen und Hash-Normalisierung im Dashboard gelesen.
-Kein vorhandener WebClient-Kanal in App/Dashboard/`.libs`. Betriebsriegel
-auch bei WebSocket ausdrücklich berücksichtigt. K1–K4 tragen Codex-Urteile
-und offene Claude-Spalte; zukünftige Produktmatrix #1–#9 vollständig offen.
-
-**Bestandsregression:** 46 Aufnahme-/Identitätstests und 374 UI-Tests samt
-ESLint grün, `git diff --check` sauber. Kein MCP- oder neuer Browserlauf.
-Scope: geplant/tatsächlich 0/0 Produktdateien, 2/2 Ticket-/Statusdateien,
-Ticket 438 Diff-Zeilen, mit begrenztem Statusaustausch unter 600.
-Keine neuen Tests, Dependencies, DB-Zugriffe oder sonstigen Produktänderungen.
-
-| Standard-Gruppe | Ergebnis / Beleg |
-|---|---|
-| Architektur, DRY, Funktionen und Namen | ✅ REST-/Chart-/Hash-Wiederverwendung am Bestand abgeglichen, keine zweite Fachregel im MCP. |
-| BashLib, Bash-Fehler und Exit-Codes | ➖ kein Skriptcode |
-| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ kein CLI-Code; stdio/stderr im Konzept getrennt |
-| TypeScript, Vue und i18n | ➖ kein Produktedit; spätere DE/EN-/Browserprüfung #9 |
-| Python, FastAPI und Webhooks | ✅ Router-Inventar als Konzeptbeleg, kein Python-Edit |
-| Datenbanken und Persistenzgrenzen | ✅ atomarer Detail-PATCH gelesen, REST-Grenze dokumentiert |
-| Fehler, Logging und Tests | ✅ ACK/Timeout/Editor-Gegenfälle geplant, nicht als getestet gemeldet |
-| Markdown und Inhaltsverzeichnisse | ✅ kanonisches Ticket, Konzepturteile und offene Produktmatrix getrennt |
-
-DRY: Aufnahme, Feldregeln, Override-PUT/PATCH, Chartauswahl und Hash-Routing
-gegen ihre vorhandenen Erzeuger/Verbraucher geprüft. Die UI-Steuerung ist die
-fehlende Fläche. Bitte konvergent auf Konzeptniveau prüfen; konkrete neue
-REST-Pfad-/Headernamen und Bibliotheksversionen folgen im späteren Bauticket.
-Nach Konzeptfreigabe: `portfolio_review`, Owner Mike, kein Code.
+Nach dieser Prüfung: `portfolio_review`, Owner Mike, kein Implementierungsstart.
 
 ## Archiv · INBOX T-65 Runde 2 (verarbeitet)
 
