@@ -20,7 +20,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 - `last_reviewed_commit`: `b10e110`
 - `last_reviewed_round`: `2`
-- `workstream`: `plugin_abschluss`
+- `workstream`: `mcp_steuerung`
 - `priority_chain`: `T-66-mcp-assets-und-browser-steuern.md`
 - `priority_ticket`: `T-66-mcp-assets-und-browser-steuern.md`
 
