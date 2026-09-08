@@ -7,8 +7,10 @@ Scope-Checkpoint zu T-30 vom 2026-09-08 abgetrennt.
 
 ## Für dich
 
-Das Ticket steht außerhalb der laufenden Kette. Offen ist seine Einordnung
-durch Mike; die Abtrennung selbst beauftragt noch keine Umsetzung.
+Mike hat die dynamische Exchanges-Seite am 2026-09-08 ausdrücklich beauftragt:
+„UI berücksichtigst du auch“ und „Die Exchanges Seite muss entsprechend
+dynamisch werden“. T-64 folgt unmittelbar nach dem laufenden T-30-Review,
+vor T-21 #2g. T-30 ist freigegeben; STATUS.md führt jetzt T-64 als aktives Ticket. Aktuell kein weiterer Handgriff nötig.
 
 ## Umsetzung und technische Nachweise
 
@@ -37,4 +39,5 @@ beschreibt das vereinbarte Verhalten.
 
 Claude entschied am 2026-09-08 im Scope-Checkpoint zu `d0e6ad0`: `split`.
 T-30 behält Plugin/Core/REST; UI, Browserlauf, Autor-Harness und Beispiel
-werden separat geliefert. Keine Änderung der Prioritätskette durch den Split.
+werden separat geliefert. Der Split selbst änderte die Priorität nicht;
+Mikes anschließender UI-Auftrag priorisiert T-64 direkt nach T-30.

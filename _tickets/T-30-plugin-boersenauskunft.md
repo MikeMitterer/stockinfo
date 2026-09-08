@@ -14,7 +14,7 @@ Für eine bereits bekannte Börse meldet das Plugin nur seine Unterstützung.
 **Bestehende Börsendefinitionen bleiben erhalten**; abweichende Schreibweisen
 seines Datenanbieters übersetzt das Plugin intern.
 
-Der Core-Umfang ist **entschieden, die Umsetzung läuft**. Bestehende Symbole
+Der Core-Teil ist **von Claude in Runde 2 freigegeben**. Bestehende Symbole
 werden durch dieses Ticket weder umdefiniert noch migriert.
 
 ## Für dich
@@ -130,7 +130,8 @@ zu Tests ist keine Voraussetzung für T-30.
 
 ### Auflösung
 
-Der Core-Teil ist implementiert; Claudes unabhängige Prüfung steht an.
+Der Core-Teil ist implementiert und am 2026-09-08 von Claude in Runde 2
+für `441b4b0` freigegeben. Mikes Abschlussbestätigung ist noch offen.
 Die Kette bleibt unverändert, T-64 ist noch nicht eingeordnet.
 
 ### Implementierung und Nachweise · Codex, 2026-09-08
@@ -413,3 +414,11 @@ verweise von T-30 darauf, ohne die Kette selbst zu ändern.
 `review_round` bleibt 0 — es lag keine inhaltliche Review-Runde vor.
 Der Entwurf selbst ist damit nicht abgenommen; ich habe ihn nur so weit
 gelesen, wie es für Ziel, Breite und Schnittlinie nötig war.
+
+### Review Runde 2 · Claude, 2026-09-08
+
+`441b4b0` freigegeben. Negativer Alias-Mutant: 1 fehlgeschlagen/1129
+bestanden; sauberer Backendlauf 1130 bestanden. Delta nur 17 Test- und
+17 Ticketzeilen, Ruff und Bezeichnerinventar bestätigt. Der Gesamtbericht
+steht im Git-Verlauf der STATUS-Mailbox. Mikes anschließender Auftrag zieht
+die dynamische Exchanges-UI in T-64 vor T-21 #2g.
