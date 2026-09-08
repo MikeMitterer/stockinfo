@@ -40,6 +40,9 @@ REASON_UNKNOWN_FORM = "identifier_unknown_form"
 # Form und Zerlegung stimmen, aber die Quellen kennen das Papier nicht.
 REASON_NOT_FOUND = "instrument_not_found"
 
+# Der Handelsplatz ist erkannt, aber das aktive Profil bietet dafür keine Kurse.
+REASON_NOT_COVERED = "exchange_not_covered"
+
 
 @dataclass(frozen=True)
 class IntakeResult:
@@ -71,7 +74,9 @@ class IntakeRejected(Exception):
 class IntakeService:
     """Nimmt einen rohen Feldwert entgegen und macht daraus ein Instrument."""
 
-    def __init__(self, quotes: CachedQuoteService, covered_mics: frozenset[str]) -> None:
+    def __init__(
+        self, quotes: CachedQuoteService, covered_mics: frozenset[str]
+    ) -> None:
         self._quotes = quotes
         self._covered_mics = covered_mics
 
@@ -157,7 +162,9 @@ class IntakeService:
         an dasselbe Symbol, nur an anderer Stelle gestellt.
         """
         if is_isin(value):
-            return self._quotes.store_by_isin(value, check_identity=self._check_identity)
+            return self._quotes.store_by_isin(
+                value, check_identity=self._check_identity
+            )
 
         identity = identity_from_input(value)
         if identity is None:
@@ -168,7 +175,9 @@ class IntakeService:
                         raise IntakeRejected(REASON_NO_SUFFIX, identifier=value)
 
                 try:
-                    return self._quotes.store_by_symbol(value, check_identity=check_unlisted)
+                    return self._quotes.store_by_symbol(
+                        value, check_identity=check_unlisted
+                    )
                 except UnresolvableSymbolError as exc:
                     raise IntakeRejected(failure, identifier=value) from exc
             raise IntakeRejected(
@@ -187,5 +196,8 @@ class IntakeService:
 
     def _check_identity(self, identity: Identity | None) -> None:
         """Nur Listings benötigen eine Kursquelle für ihren Handelsplatz."""
-        if isinstance(identity, ListedIdentity) and identity.mic not in self._covered_mics:
-            raise IntakeRejected("exchange_not_covered", mic=identity.mic)
+        if (
+            isinstance(identity, ListedIdentity)
+            and identity.mic not in self._covered_mics
+        ):
+            raise IntakeRejected(REASON_NOT_COVERED, mic=identity.mic)

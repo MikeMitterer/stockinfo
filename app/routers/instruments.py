@@ -42,13 +42,27 @@ IntakeDep = Annotated[IntakeService, Depends(get_intake_service)]
 # Die Quelle hat nicht geantwortet — kein Fehler des Aufrufers.
 REASON_QUOTE_UNAVAILABLE = "quote_unavailable"
 
-
+# Anders als die Symbolform-Gründe in `app.exchanges` beschreibt diese Kennung
+# eine verstandene Eingabe, deren Gattung bewusst nicht aufgenommen wird.
+# Sie gehört deshalb zur gemeinsamen REST-Abbildung der Quellenantwort.
 REASON_UNSUPPORTED_TYPE = "unsupported_instrument_type"
+
+# Die Quelle liefert eine andere Währung als das Paar verlangt. Der Aufrufer
+# kann das nicht korrigieren: ein Quelldatenfehler, deshalb 502 statt 400.
 REASON_CURRENCY_MISMATCH = "quote_currency_mismatch"
 
 
 def _unsupported_type(exc: UnsupportedInstrumentTypeError) -> JSONResponse:
-    """Dieselbe Gattungsablehnung an Kurs- und Aufnahme-Eingang."""
+    """Dieselbe Gattungsablehnung an Kurs- und Aufnahme-Eingang.
+
+    Eine eigene Kennung unterscheidet eine verstandene, bewusst abgelehnte
+    Gattung von einer unauflösbaren Eingabe. Zwei Antwortfassungen würden
+    auseinanderlaufen; deshalb teilen Kurs- und Aufnahmewege diese Funktion.
+
+    Der Parameter `symbol` darf auch eine ISIN enthalten: Er bezeichnet die
+    Benutzereingabe und ist unter diesem Namen im UI-Katalog verankert. Eine
+    Umbenennung würde den stabilen Kennungsvertrag der Fehlerantwort brechen.
+    """
     return JSONResponse(
         status_code=400,
         content=ErrorDetail(
@@ -64,7 +78,11 @@ def _currency_mismatch(exc: QuoteCurrencyMismatchError) -> JSONResponse:
         status_code=502,
         content=ErrorDetail(
             code=REASON_CURRENCY_MISMATCH,
-            params={"symbol": exc.symbol, "expected": exc.expected, "delivered": exc.delivered},
+            params={
+                "symbol": exc.symbol,
+                "expected": exc.expected,
+                "delivered": exc.delivered,
+            },
         ).model_dump(),
     )
 

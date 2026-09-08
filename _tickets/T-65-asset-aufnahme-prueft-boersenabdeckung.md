@@ -11,7 +11,9 @@ ohne Kursabfrage oder neue Datenbankzeile. Nach Ergänzung passender Dateidaten
 ist die Aufnahme möglich. Eine Börsenzusage garantiert weiterhin keinen Kurs
 für jedes Wertpapier.
 
-**Stand:** Implementiert und durch Codex geprüft; unabhängiges Review steht aus.
+**Stand:** Implementiert und durch Codex geprüft. Claude hat in Runde 1 die
+Fachwege und Tests bestätigt; zwei Dokumentations-/Benennungsbefunde korrigiert,
+erneute unabhängige Prüfung steht aus.
 Ergänzung zu T-21, aus dessen
 Nachtrag auf Empfehlung von Claude im Scope-Checkpoint `f3b383b` getrennt.
 Mike hat die Umsetzung ausdrücklich beauftragt; sie folgt unmittelbar auf die
@@ -99,6 +101,19 @@ nochmals **21 passed**. Ruff einschließlich zusätzlicher `I,Q`-Regeln für die
 berührten Python-Dateien und `git diff --check` grün.
 Lokale Logs: `/tmp/t65-backend.log`, `/tmp/t65-ui.log`, `/tmp/t65-build.log`,
 `/tmp/t65-targeted-final.log`, `/tmp/t65-mutant-{coverage,cache,identity,ui}.log`.
+
+### Review Runde 1 · Korrekturen
+
+Claude prüfte `d7b4ab3`: Fachwege und Tests bestätigt, Abdeckungs- und
+Cache-Mutanten selbst rot nachgestellt. Kein eigener Browserlauf des Verifiers.
+B1 korrigiert: Gemeinsame Fehlerdarstellung erklärt wieder ihren DRY-Grund,
+den stabilen Parameter `symbol` auch für ISIN sowie die Abgrenzung der
+Gattungsablehnung von Symbolformfehlern. B2 korrigiert: `REASON_NOT_COVERED`
+benennt den unveränderten REST-Code samt fachlicher Begründung. Keine neue
+Fachregel oder UI-Änderung. Lange Zeilen in den beiden Dateien umgebrochen.
+Gegenprüfung: 46 Profil-/Identitätstests grün, Ruff `E,F,I,Q` grün,
+AST-Bezeichnerinventar und DRY-Suche geprüft. UI-/Browserbelege aus Runde 1
+gelten unverändert; in dieser rein mechanischen Runde nicht erneut ausgeführt.
 
 ### Side-Effects
 
