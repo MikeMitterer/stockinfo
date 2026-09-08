@@ -83,16 +83,14 @@ describe('reasonOf', () => {
     expect(reason).toContain('aus_der_zukunft')
   })
 
-  it('reicht einen alten Fliesstext-Koerper durch, statt ihn zu verschlucken', () => {
-    // Es gibt sie noch: Die 502-Faelle nennen im `detail` die ausgefallenen
-    // Quellen. Unuebersetzt anzuzeigen ist besser als gar nicht.
+  it('übernimmt keinen unübersetzbaren alten Detailtext', () => {
     const reason = reasonOf(new ApiError(502, JSON.stringify({ detail: 'openfigi; yfinance' })))
 
-    expect(reason).toBe('openfigi; yfinance')
+    expect(reason).toBeNull()
   })
 
-  it('nimmt auch einen Koerper, der gar kein JSON ist', () => {
-    expect(reasonOf(new ApiError(500, 'Internal Server Error'))).toBe('Internal Server Error')
+  it('übernimmt keinen Körper, der gar kein JSON ist', () => {
+    expect(reasonOf(new ApiError(500, 'Internal Server Error'))).toBeNull()
   })
 
   it('macht aus einem leeren Koerper keinen leeren Grund', () => {

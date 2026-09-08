@@ -42,7 +42,7 @@ async function request<T>(
     headers: { 'Content-Type': 'application/json' },
   })
   if (!response.ok && !alsoOk.includes(response.status)) {
-    const detail = await response.text().catch(() => response.statusText)
+    const detail = await response.text().catch(() => '')
     throw new ApiError(response.status, detail)
   }
   if (response.status === 204) {

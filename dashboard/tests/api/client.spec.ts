@@ -8,6 +8,15 @@ afterEach(() => {
 })
 
 describe('apiClient', () => {
+  it('behält den HTTP-Status bei Lesefehlern ohne statusText als Ersatzkörper', async () => {
+    const response = new Response('', { status: 502, statusText: 'Bad Gateway' })
+    vi.spyOn(response, 'text').mockRejectedValue(new Error('stream aborted'))
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response))
+    await expect(apiClient.get('/quote?symbol=DEMO.XBUD')).rejects.toMatchObject({
+      status: 502, detail: '',
+    })
+  })
+
   it('get parst JSON', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
       new Response(JSON.stringify([{ symbol: 'VGWL.DE' }]), { status: 200 }),

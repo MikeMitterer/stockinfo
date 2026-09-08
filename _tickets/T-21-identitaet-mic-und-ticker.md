@@ -1,6 +1,64 @@
 # T-21 · Identität auf MIC + Ticker umstellen
 
-## Erneute Verifikation · Codex, 2026-09-07
+## Aktuelle Teilumsetzung #2g · 2026-09-08
+
+Scope-Vertrag: Nur die übersetzten Fehlertexte werden korrigiert. Ohne
+verwertbare Fehlerkennung bleibt die übersetzte Aktionsmeldung stehen;
+`code`/`params` behalten ihre fachliche Übersetzung. Unbekannte Kennungen
+erscheinen weiter im übersetzten Rückfallsatz. Freier Servertext, kaputtes
+JSON und `statusText` sind keine UI-Meldungen.
+
+Zwei fachliche Änderungen: Transport ohne statusText-Rückfall; Anzeige ohne
+Rohtext-Rückfall. Erwartet **2 Produktdateien** (`api/client.ts`, `api/reason.ts`),
+**4 Test-/Dokudateien** (Client-, Reason-, Aktions-Tests, dieses Ticket),
+**300 manuelle Diff-Zeilen**. Kein Backend-/Schema-/API-Umbau, keine neuen
+Abhängigkeiten, keine Börsenabweichungs-UI und kein Docker-Langzeittest.
+
+Prüffolge: DE/EN-Aktionsfälle vom Transport bis zur Fehlermeldung rot zeigen,
+beide Rückfälle entfernen, bekannte/unbekannte Kennung, kaputtes/leeres JSON,
+fehlgeschlagenes Lesen und Netzwerkfehler gezielt prüfen; UI-Smoke und
+Dashboard-Gesamtlauf/Lint/Build, dann unabhängiges Review.
+
+**Stand: umgesetzt und selbst geprüft; unabhängiges Review steht aus.**
+Das Ticket insgesamt bleibt offen. Die früheren #2g-Zeilen weiter unten
+sind historische Nachweise; die folgende Zeile ist der aktuelle Prüfstatus.
+
+| # | Nachweis | AI |
+|---|---|:--:|
+| 2g | Bekannte/unbekannte Kennungen, Rawtext, kaputtes/leeres JSON, JSON-Primitiv/Array, Legacy-detail, Lesefehler und Netzwerkfehler in DE/EN; kein Rohtext oder statusText im UI. | ✅ |
+
+Bekannte `code`/`params`-Fachmeldungen bleiben erhalten. Ältere Antworten nur
+mit freiem `detail`-Text zeigen jetzt die übersetzte Aktionsmeldung; dieser
+bewusste Rückfall verhindert unübersetzte Server- und Proxy-Texte.
+
+```bash
+npm --prefix dashboard test -- --run tests/api/reason.spec.ts tests/api/client.spec.ts tests/composables/useInstrumentActions.spec.ts
+make test-dashboard
+npm --prefix dashboard run build
+```
+
+**48 gezielte Tests** bestanden, vorher 17 rot. **363 Dashboardtests in
+51 Dateien** bestanden, einschließlich ESLint; TypeScript/Build grün.
+Zwei zurückgenommene Mutanten: Rohtext-Rückfall wieder eingebaut → 12 rot;
+statusText-Rückfall wieder eingebaut → 1 rot. Danach gezielte 48 erneut grün.
+Logs: `/tmp/stockinfo-t21-fallback-final.log`,
+`/tmp/stockinfo-t21-dashboard.log`, `/tmp/stockinfo-t21-build.log`,
+`/tmp/stockinfo-t21-mutant-{body,status}.log`.
+TS-Compiler-Inventar der fünf geänderten Code-/Testdateien: Bezeichner englisch.
+
+Browser-Smoke auf `http://127.0.0.1:8896/#/assets`, isolierte Testdaten aus T-64:
+Nur `/quote` wurde im Testtab über `fetch` mit HTTP 502 und dem defekten Körper
+`{"detail":` ersetzt. DE: „Hinzufügen von „DEMO.XBUD“ fehlgeschlagen“;
+EN: „Adding “DEMO.XBUD” failed“. Weder JSON noch „Bad Gateway“ erschienen.
+Dies ist eine kontrollierte Browserantwort, kein echter Proxy-Ausfall.
+Nach Wiederherstellen des echten Transports lieferte derselbe Server HTTP 400
+mit `symbol_without_exchange_suffix`; dessen deutscher Erklärungssatz erschien
+korrekt im Toast. Eigener Testtab geschlossen; Arbeitsdaten unverändert.
+Keine Backend-, Online-, Docker- oder Migrationsprüfung für diese UI-Korrektur
+behauptet. Geplant/tatsächlich: 2/2 Produktdateien, 4/4 Test-/Dokudateien,
+300/132 manuelle Zeilen vor der Statusübergabe.
+
+## Historische Verifikation · Codex, 2026-09-07
 
 **Ergebnis: Der freigegebene Identitätskern besteht die gezielten aktuellen
 Regressionstests; das gesamte Ticket ist weiterhin nicht abschlussreif.**
@@ -8,7 +66,7 @@ Geprüft wurde der Arbeitsstand bei `de8501b`. Der Auftrag „T-21 - verifiziere
 das Ticket“ hebt die bisherige Einfrierung nicht als Implementierungsauftrag
 auf. Keine Produktänderung und keine neue Freigabe der damals ungeprüften 4A-Fassung.
 
-### Aktuelle Befunde
+### Befunde des damaligen Prüfstands
 
 | Bezug | Ergebnis | Beleg |
 |---|---|---|
