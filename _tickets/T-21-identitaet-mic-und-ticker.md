@@ -1,44 +1,12 @@
 # T-21 · Identität auf MIC + Ticker umstellen
 
-## Beauftragte Ergänzung: Abdeckung bei der Aufnahme · 2026-09-08
+## Beauftragte Ergänzung: Abdeckung bei der Aufnahme
 
-Mike: „Ja dann implementiere das - das gehört zur Vollständigen implementierung
-des Plugins dazu“. Die neue Abdeckung muss auch bei der Asset-Eingabe gelten.
-Der Review von `2c1d01b` ist zurückgegeben; B1/B2 und die mechanischen
-Mitzieher sind in `f3b383b` korrigiert. Der Aufnahmeweg folgt nach Scope-Checkpoint. Kein weiterer Handgriff von Mike erforderlich.
-
-**Scope:** Zwei Änderungen: (1) Aufnahme prüft dieselbe aktuelle, nutzbare
-Kursabdeckung wie `/exchanges`, bei Symbolen vor Quellenabfrage, bei ISIN nach
-Auflösung und vor Kursabfrage/Speicherung; (2) strukturierte Ablehnung mit
-verständlichem DE/EN-Text. Keine MIC-Prüfung für Paar- und ISIN-only-Identitäten.
-Fehlende/ungültige Deklaration verspricht keine Abdeckung. Die normale Prüfung
-des konkreten Wertpapiers bleibt notwendig. Bestehende Kurs-Lesewege und Refresh
-werden nicht umgebaut.
-
-Die UI verwendet bisher Kurs-GET statt Aufnahme-POST. Diese Umstellung gehört
-zur Ergänzung, einschließlich bestehender Paar- und Quellenfehlerfälle.
-Geplant: höchstens zehn Produktdateien (`exchange_catalog`, `container`,
-`intake_service`, `quote_cache`, `quote_service`, Aufnahme-/Kursrouter,
-`useInstrumentActions`, DE/EN), sechs Test-/Dokudateien
-(Profiltests, Aufnahme-Regressionen, UI-Aktionen/Fehlertexte, Autorenanleitung, Ticket),
-700 manuelle Diff-Zeilen für diese ausdrücklich neu beauftragte Ergänzung.
-Kein neues Endpoint, Schema, Plugin-Hook, Konfigurationsformat oder DB-Umbau.
-
-Akzeptanz am öffentlichen Eingang `/instruments/intake`, jeweils mit frischer
-Testdatenbank: abgedecktes Listing aufnehmbar; bekannter unversorgter MIC
-abgelehnt, ohne Kursabfrage oder DB-Zeile; Alias und MIC gleich; ISIN kann die
-Prüfung nicht umgehen; YAML-Ergänzung/Entfernung wirkt beim nächsten Request;
-Online mit Fallback und reines YAML stimmen mit `/exchanges` überein.
-Metadaten allein und defekte/fehlende Zusagen erlauben keine Aufnahme.
-Mike erinnert ausdrücklich an UI-Tests: DE/EN zeigt den MIC und einen
-verständlichen Grund; Browserläufe in beiden Profilen prüfen Erfolg, Ablehnung
-und unveränderte Asset-Liste nach Ablehnung. BTC-EUR bleibt aufnehmbar. Je neuem Unterschied rote
-Akzeptanzprobe vor Implementierung, danach grüne Gegenprobe und Claude-Review.
-
-| # | Nachweis | AI |
-|---|---|:--:|
-| intake-coverage | Aufnahme und REST-Abdeckung stimmen in beiden Profilen überein; keine Speicherung bei Ablehnung. | ➖ |
-| intake-coverage-ui | Die Aufnahme zeigt den Abdeckungsfehler in DE und EN verständlich. | ➖ |
+Mikes ausdrücklicher Umsetzungsauftrag und die UI-Tests werden in
+[T-65](T-65-asset-aufnahme-prueft-boersenabdeckung.md) umgesetzt. Claude hat
+im Scope-Checkpoint `f3b383b` die getrennte Prüfung dieses Nutzerwegs
+empfohlen (`split`). T-65 folgt aufgrund des bestehenden Auftrags unmittelbar
+auf die Korrekturen dieses Nachtrags; keine neue Entscheidung erforderlich.
 
 ## Nachtrag Börsenabdeckung · 2026-09-08
 
@@ -134,7 +102,17 @@ Python-AST- und TS-Compiler-Inventare: englische Bezeichner; deutsche Testnamen.
 
 **Mikes Rückmeldung:** „UI - viel besser“. Das ist die Rückmeldung zur
 überarbeiteten Oberfläche; kein Abschluss des gesamten Tickets T-21.
-Unabhängiges Review dieses Nachtrags steht noch aus.
+Claude hat Runde 2 (`2c1d01b`) geprüft: B1 (doppelte Hash-Auswertung) und
+B2 (vorausgesetztes `_config` im Autorenvertrag) sowie mechanische Mitzieher.
+Korrigiert in `f3b383b`: gemeinsamer Hash-Leser; eigener Konstruktor ohne
+Basiskonfiguration erlaubt, Fixture-Anforderung dokumentiert; Imports/Quotes
+konsistent, Hook hinter Klassenattributen. Neuer Konstruktor-Test zuerst rot
+mit AttributeError, danach grün. 15 gezielte Backend/API-Tests, 21 Hash-/UI-Tests,
+1142 Backend (29 skip, 8 deselected), 323 API (1 skip), 50 Beispiel und
+370 Dashboardtests grün; Build und Ruff grün. Bezeichnerinventar geprüft.
+Logs `/tmp/t21-r3-{backend,api,ui,build}.log`. Erneutes Review steht aus.
+Die Aufnahme-Ergänzung ist nach Scope-Entscheid in T-65 getrennt; diese
+Runde enthält ausschließlich Korrekturen zum bereits geprüften Nachtrag.
 
 ## Aktuelle Teilumsetzung #2g · 2026-09-08
 
