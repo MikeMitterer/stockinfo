@@ -11,6 +11,9 @@ Ein Plugin erfüllt eine Rolle oder mehrere. Die kommerziellen Anbieter decken
 """
 
 from typing import Any
+from collections.abc import Mapping
+from types import MappingProxyType
+from stockinfo_plugin.exchanges import ExchangeSpec, MicCoverage
 
 from stockinfo_plugin.types import (
     API_VERSION,
@@ -37,6 +40,15 @@ class Source:
 
     name: str = ""
     """Eindeutiger Kurzname, taucht in Konfiguration und Protokoll auf."""
+
+    EXCHANGES: tuple[ExchangeSpec, ...] = ()
+    """Neue Handelsplätze; bestehende Börsen über MIC_SUPPORT referenzieren."""
+
+    MIC_SUPPORT: Mapping[str, MicCoverage] = MappingProxyType({})
+    """Je Rolle: fehlt = unbekannt, leere MIC-Folge = keine Unterstützung.
+
+    Eine Deklaration ist keine Garantie für jeden Ticker oder Live-Abruf.
+    """
 
     data_version: int = 1
     """Datenkompatibilität, unabhängig von Paket- und API-Version.

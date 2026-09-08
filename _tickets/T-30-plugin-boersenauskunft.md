@@ -14,7 +14,7 @@ Für eine bereits bekannte Börse meldet das Plugin nur seine Unterstützung.
 **Bestehende Börsendefinitionen bleiben erhalten**; abweichende Schreibweisen
 seines Datenanbieters übersetzt das Plugin intern.
 
-Der Umfang ist **entschieden, der Entwurf wird vorbereitet**. Bestehende Symbole
+Der Core-Umfang ist **entschieden, die Umsetzung läuft**. Bestehende Symbole
 werden durch dieses Ticket weder umdefiniert noch migriert.
 
 ## Für dich
@@ -22,7 +22,8 @@ werden durch dieses Ticket weder umdefiniert noch migriert.
 Aktuell ist **kein Handgriff nötig**.
 
 Codex führt das Ticket als nächstes Element der beauftragten Kette aus.
-Der Entwurf geht wegen der erwarteten Breite vor Produktcode an Claude.
+Claude hat den Umfang vor Produktcode geteilt. Oberfläche, Autor-Harness
+und Beispiel stehen in [T-64](T-64-boersen-ui-und-autorennachweise.md).
 
 ### Bisherige Antworten und Rückmeldungen
 
@@ -49,17 +50,25 @@ Unterstützung je Rolle ohne Änderung bestehender Aliase oder Assets.
    gemeinsamer Validierung und Autor-Harness.
 2. Deterministischer Core-Katalog aus dem aktiven Profil, Aufnahmeweg und
    REST-Auskunft einschließlich Konflikten und Entfernung.
-3. Exchanges-UI und ausführbares Autorenbeispiel samt gezielten Tests.
+3. Gezielte Akzeptanz- und Konflikttests über Aufnahmeweg und REST.
 
 Der [Entwurf](../docs/superpowers/specs/2026-09-08-plugin-exchanges-design.md)
 legt Vertragsform, Lebenszyklus, Grenzen und Akzeptanzfälle fest. Die
 Schätzung von 16–20 Produktdateien, 8–10 Test-/Dokumentationsdateien und
 1400–1800 manuellen Diff-Zeilen überschreitet den allgemeinen 800-Zeilen-
-Riegel. Deshalb zunächst Scope-Checkpoint, keine Produktimplementierung.
+Riegel. Claude hat mit `split` entschieden: T-30 behält den Core bis REST.
+Einmalig genehmigtes Budget: höchstens 14 Produktdateien, 8–10 Test-/
+Dokumentationsdateien und 1100 manuelle Diff-Zeilen. Die UI und der
+Autor-Harness samt Beispiel sind nach T-64 abgetrennt.
 Keine Migration, keine Alias-Überschreibung, kein ISO-Vollimport und kein
 neues Test-Subsystem. Der bestehende UI-Entwurf vom Vortag bleibt unberührt.
 
 ### Verbindlicher Umfang
+
+**Aktueller Lieferumfang nach dem Split:** Die UI- und Autor-Harness-Anteile
+der folgenden Gesamtanforderungen gehören zu T-64. T-30 liefert den
+Plugin-/Core-/REST-Pfad. Die frühere Gesamtbeschreibung bleibt als Bezug
+erhalten und ist keine zusätzliche Implementierungszusage dieser Übergabe.
 
 - Plugins können neue MICs mit lesbarem Börsennamen deklarieren und ihre
   Unterstützung für bestehende oder neue MICs je Quellenrolle angeben.
@@ -121,8 +130,63 @@ zu Tests ist keine Voraussetzung für T-30.
 
 ### Auflösung
 
-Heute nur Ticketänderung. Offen für Entwurf und Implementierung im oben
-vereinbarten Umfang. Keine Änderung an Rollen oder Prioritätskette.
+Der Core-Teil ist implementiert; Claudes unabhängige Prüfung steht an.
+Die Kette bleibt unverändert, T-64 ist noch nicht eingeordnet.
+
+### Implementierung und Nachweise · Codex, 2026-09-08
+
+`ExchangeSpec` und `MicCoverage` sind optionale öffentliche Deklarationen.
+Der Core prüft das vollständige Profil vor dem Quellenbau. Widersprüche
+verwerfen alle beteiligten Quellen, ohne Ladegewinner; Referenzen auf
+entfallene Definitionen werden ebenfalls abgewiesen. Neue App-Suffixe sind
+die MICs selbst, bestehende Core-Aliase bleiben erhalten. REST ergänzt
+`declared_by`, `support` und `unspecified_support`; der vorhandene
+Core-Katalog und die Herkunftsform bleiben kompatibel.
+
+Der erste Akzeptanzlauf war rot (neue Deklaration noch nicht importierbar),
+der Fall ohne Deklaration grün. Danach zeigte der echte Aufnahmeweg eine
+vorhandene Lücke: Neuaufnahme verwendete den Abruf für bekannte Assets und
+hatte deshalb bei vertragskonformen Kursplugins keinen Namen/keine Gattung.
+`get_quote_by_identity` beschafft die Beschreibung, hält aber den genannten
+MIC fest. Refresh vorhandener Assets bleibt beim bekannten Datensatz.
+Der alte No-Resolver-Testdouble erhält die vorhandene `resolve_symbol`-
+Schnittstelle; sein Ergebnis bleibt `NotFound`.
+
+| Bezug | Konkretes Orakel | AI |
+|---|---|:--:|
+| #1–3 | Struktur-/Wertprüfung, unbekannte Referenzen und Rollen in `test_exchange_declarations.py`; ungültige Quellen erhalten Diagnosen. | ✅ |
+| #4, #6c | Core-Überschreibversuch bleibt unwirksam; widersprüchliche neue Definitionen werden in beiden Ladereihenfolgen abgewiesen. | ✅ |
+| #5 | Echter Start → `POST /instruments/intake` → `GET /exchanges`: Quelle, Rolle, Bestandsumfang, Einsatzbereitschaft. | ✅ |
+| #6, #6b | Identische Deklarationen behalten verbleibende Quellen; Entfernung beseitigt Katalog-/Supporteinträge und lässt gespeicherte Assets stehen. | ✅ |
+| #7 Core | Neues `DEMO.XBUD` ergibt HTTP 201 und persistiertes `(DEMO, XBUD)`; ohne Deklaration HTTP 400. | ✅ |
+| #7 UI, #8/#9 Autor-Harness | Nach T-64 abgetrennt, hier nicht als umgesetzt gewertet. | ➖ |
+| #8/#9 Core | Gesamtlauf: 1129 Backend bestanden, 29 übersprungen, 8 Onlinefälle abgewählt; Plugin-API 309/1 übersprungen, Beispiel 47, Dashboard 339 samt ESLint. | ⚠️ |
+
+```bash
+.venv/bin/pytest -q tests/test_exchange_declarations.py tests/test_plugin_exchanges.py tests/test_symbol_ambiguity.py
+make test ARGS="-m 'not integration'"
+```
+
+Gezielt zuletzt **26 bestanden**. Gesamtlauf ohne vorbereitete Datenbank
+oder manuellen Datenpfad: `/tmp/stockinfo-t30-suite.log`. Beide Plugin-Ladewege
+verwenden echte Modulimporte; beim Entry-Point-Fall wird nur die Discovery
+durch ein echtes `importlib.metadata.EntryPoint`-Objekt ersetzt. Keine
+Paketinstallation behauptet. Onlinefälle bleiben ausdrücklich ungeprüft.
+
+Mutanten jeweils rot, anschließend zurückgenommen: Validierung entfernt
+7/15 rot, Konfliktsperre entfernt 3/15 rot, unbekannte Referenzen erlaubt
+1/15 rot, Betriebsfähigkeit immer wahr 1/15 rot; Katalogveröffentlichung
+entfernt und Entfernung nicht invalidiert jeweils 2/4 vertikale Fälle rot.
+Logs: `/tmp/stockinfo-t30-mutant-*.log`. Alle Datendateien liegen in pytest-
+Tempverzeichnissen. Ruff über alle geänderten Python-Dateien grün;
+vollständiges AST-Bezeichnerinventar ohne deutschen Bezeichner.
+
+DRY: bestehende MIC-/Währungsvalidierung wiederverwendet; ein zentraler
+Profilkatalog, ein Pfad zur Beschreibung neuer Listings. Keine parallele
+REST-Tabelle, kein erfundener Handles-Aufruf, kein Test-Subsystem. Die
+Paketveröffentlichung ist nicht Bestandteil dieses Entwicklungsauftrags;
+API_VERSION bleibt wegen der optionalen Erweiterung 2, data_version bleibt
+unverändert. UI, Autor-Harness und Beispiel folgen erst mit T-64.
 
 ## Frühere Fassung · Historie
 
@@ -255,3 +319,80 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 9 | `make test` | Backend, Plugin-API und Dashboard grün | | |
 
 </details>
+
+## Review-Historie · Scope-Checkpoint: split, 2026-09-08
+
+Geprüft hat **Claude** als zugeordneter Verifier, Prüfstand `d0e6ad0`.
+Nach Vertrag nur Ziel, Diff-Statistik und neu berührte Flächen — **kein
+Code-Review**, keine zusätzlichen Qualitätsanforderungen. Der Checkpoint kam
+vor dem ersten Produktedit; genau so ist der Riegel gedacht.
+
+### Warum nicht `continue`
+
+Die Schätzung von 1400–1800 manuellen Zeilen ist mehr als das **Doppelte** des
+800-Zeilen-Riegels, und es existiert noch keine Zeile Code. Ich darf das Budget
+einmal erweitern — eine Verdopplung auf Verdacht wäre aber keine Erweiterung
+mehr, sondern das Abschalten der Grenze. Landet der Diff dann bei 2200, ist der
+Hebel schon verbraucht.
+
+Dazu die Breite: berührt werden Plugin-API, Registry/Loader, Core-Katalog,
+REST und Dashboard — **fünf Produktschichten**. Der Vertical-Acceptance-Riegel
+will zuerst einen dünnen vertikalen Pfad grün sehen und erst danach die
+horizontale Verbreiterung.
+
+### Warum `split` und nicht `reduce`
+
+Nichts an dem Umfang ist überflüssig — es ist nur zweierlei. Die Trennlinie
+zieht dein eigener Entwurf in „Umsetzung in prüfbaren Schritten": Schritte 1
+und 2 sind der vertikale Pfad samt Schutzregeln, Schritt 3 ist die Oberfläche
+und das Autorenbeispiel. Auch dein erster Akzeptanzfall endet bei
+`GET /exchanges` und braucht keine UI.
+
+Entscheidend ist, dass die Abhängigkeit **einseitig** ist: Die feste Grenze im
+Ticket sagt, das Dashboard spricht ausschließlich über Core-REST. Die UI kann
+also erst entstehen, wenn REST steht, und ist danach reiner Konsument. Das ist
+ein natürlicher Schnitt entlang einer bestehenden Grenze, kein künstlicher.
+
+### Der Schnitt
+
+**T-30 behält** — unabhängig lieferbar und über den bereits entworfenen
+Akzeptanzfall prüfbar:
+
+- optionaler Plugin-Vertrag für Handelsplätze und Rollenabdeckung samt
+  gemeinsamer Validierung
+- deterministischer Core-Katalog aus dem aktiven Profil, Konflikte,
+  Plugin-Entfernung
+- regulärer Aufnahmeweg mit neuem MIC bis in die Persistenz
+- `GET /exchanges` mit Herkunft und Unterstützung je Rolle
+
+Beobachtbares Ergebnis: frischer Start, `DEMO.XBUD` aufnehmen, Wert
+gespeichert, Deklaration und Herkunft über REST lesbar — ohne Deklaration
+bleibt derselbe Eingang abgewiesen.
+
+**Neues Ticket bekommt** Schritt 3: Exchanges-Oberfläche, Browserlauf für
+DE/EN und schmales Fenster, Autor-Harness und ausführbares Beispiel.
+
+### Budget für das verkleinerte T-30
+
+Damit du nicht in einen zweiten Checkpoint für eine absehbare Überschreitung
+läufst, erweitere ich hiermit **einmalig** auf **höchstens 14 Produktdateien
+und 1100 manuelle Diff-Zeilen**, Test-/Dokumentationsdateien wie geplant.
+Damit ist die eine erlaubte Erweiterung dieses Tickets verbraucht.
+
+Die Zahl ist aus deiner Gesamtschätzung abgeleitet, nicht selbst gemessen.
+Ergibt deine Neuschätzung ohne UI und Beispiel etwas deutlich anderes, sag es
+**vor** dem ersten Produktedit — dann ist es dieselbe Entscheidung, nur mit
+besseren Zahlen. Danach führt eine zweite Überschreitung nach Vertrag zu
+`reduce` oder `split`.
+
+### Was ich nicht entschieden habe
+
+Wo das neue UI-Ticket in der Prioritätskette landet, ist eine
+Portfolio-Entscheidung und gehört Mike. Ein Split erzeugt keine neue Priorität:
+T-30 bleibt an seiner Stelle in der Kette, das abgetrennte Ticket kommt ins
+Board und wartet dort auf eine ausdrückliche Einordnung. Bitte lege es an und
+verweise von T-30 darauf, ohne die Kette selbst zu ändern.
+
+`review_round` bleibt 0 — es lag keine inhaltliche Review-Runde vor.
+Der Entwurf selbst ist damit nicht abgenommen; ich habe ihn nur so weit
+gelesen, wie es für Ziel, Breite und Schnittlinie nötig war.

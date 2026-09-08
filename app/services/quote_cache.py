@@ -16,7 +16,6 @@ from datetime import datetime, timedelta, timezone
 
 import structlog
 
-from app.exchanges import provider_alias
 from app.models import (
     OVERRIDE_FIELDS,
     ListedIdentityOut,
@@ -213,9 +212,9 @@ class CachedQuoteService:
 
         Die genannte Börse bleibt deshalb bis zur Speicherung erhalten: Das
         Nachschlagen läuft über `(ticker, mic)`, und der frische Abruf über
-        `get_quote_for_known`, dem beide Werte ausdrücklich mitgegeben werden.
-        Der Alias entsteht nur noch dort, wo er hingehört — als Format für die
-        Kursquelle.
+        `get_quote_by_identity`, dem beide Werte ausdrücklich mitgegeben werden.
+        Dieser Neuaufnahmeweg beschafft auch Name und Gattung; ein vorhandenes
+        Listing wird weiterhin über den bekannten Bestand aufgefrischt.
 
         Args:
             ticker: Kanonischer Ticker aus der Eingabe.
@@ -230,14 +229,9 @@ class CachedQuoteService:
         if instrument:
             return self._get(instrument, lambda: self._fetch_live(instrument))
 
-        symbol = provider_alias(ticker, mic)
         return self._get(
             None,
-            lambda: self._quote_service.get_quote_for_known(
-                symbol,
-                identity=ListedIdentityOut(ticker=ticker, mic=mic),
-                enrich_etf=True,
-            ),
+            lambda: self._quote_service.get_quote_by_identity(ticker, mic),
         )
 
     def store_by_symbol(self, symbol: str) -> StoredQuote:

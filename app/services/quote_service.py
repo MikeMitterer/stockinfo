@@ -14,7 +14,7 @@ import structlog
 from stockinfo_plugin.types import Unavailable, Unsupported
 
 from app.contract import required_fields
-from app.exchanges import EXCHANGES, split_symbol
+from app.exchanges import EXCHANGES, provider_alias, split_symbol
 from app.models import (
     identity_columns,
     IdentityOut,
@@ -517,6 +517,11 @@ class QuoteService:
         if resolution.type is not None and resolution.type not in INSTRUMENT_TYPES:
             raise UnsupportedInstrumentTypeError(symbol, resolution.type)
         return self._build(resolution, enrich_etf)
+
+    def get_quote_by_identity(self, ticker: str, mic: str) -> QuoteResponse:
+        """Beschreibt ein neues Listing, ohne dessen gewählten MIC zu ersetzen."""
+        symbol = provider_alias(ticker, mic)
+        return self._build(self._described(symbol, ticker, mic), True)
 
     def _described(self, symbol: str, ticker: str, mic: str) -> ResolvedInstrument:
         """Die Identität aus dem Symbol, Name und Gattung aus der Quelle.

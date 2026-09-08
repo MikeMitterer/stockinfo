@@ -56,12 +56,15 @@ class _QuoteSource:
 
 
 class _NoResolver:
-    """Auf dem Symbolweg wird nicht aufgelöst."""
+    """Keine zusätzliche Beschreibung zum genannten Listing."""
 
     def handles(self, isin: str) -> bool:
         return True
 
     def resolve_isin(self, isin: str):
+        return NotFound()
+
+    def resolve_symbol(self, symbol: str):
         return NotFound()
 
 

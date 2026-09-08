@@ -37,6 +37,7 @@ from app.plugins.yfinance_metadata import YFinanceMetadataPlugin
 from app.plugins.yfinance_quotes import YFinancePlugin
 
 from app.details import definitions_for, merge_definitions
+from app.exchange_catalog import prepare_catalog, reset_catalog
 
 _DETAIL_SCHEMAS: dict[str, list] = {}
 
@@ -215,6 +216,7 @@ def register_loaded(specs: tuple[SourceSpec, ...]) -> None:
     Args:
         specs: Was `app.plugin_loader.load_all` gefunden hat.
     """
+    reset_catalog()
     _LOADED.clear()
     _LOADED.update({spec.name: spec for spec in specs})
     # **Die Momentaufnahme wird ungültig, sobald sich die Registry ändert.**
@@ -408,6 +410,7 @@ def _evaluate(role: str, config, settings=None) -> list[tuple[ChainEntry, object
             über sich selbst sagt, weiß erst der Bau.
     """
     known = specs_by_name()
+    exchange_problems = prepare_catalog(known, config)
     result: list[tuple[ChainEntry, object | None]] = []
 
     for position, name in enumerate(config.chain(role), start=1):
@@ -430,6 +433,10 @@ def _evaluate(role: str, config, settings=None) -> list[tuple[ChainEntry, object
             reason = f"kennt die Rolle '{role}' nicht"
         elif not configured:
             reason = "Pflichtangaben fehlen"
+
+        if name in exchange_problems:
+            configured = False
+            reason = exchange_problems[name]
 
         source = None
         if spec is not None and role_ok and configured and settings is not None:

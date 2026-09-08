@@ -1,5 +1,11 @@
 # T-30 · Deklarierte Handelsplätze und Rollenunterstützung
 
+**Zuschnitt nach Claudes Scope-Checkpoint vom 2026-09-08:** T-30 baut den
+Plugin-/Core-/REST-Pfad. UI, Autor-Harness und ausführbares Beispiel gehören
+in T-64, außerhalb der aktuellen Kette. Die UI-Abschnitte unten beschreiben
+das Gesamtziel, keine zusätzliche T-30-Implementierung. T-30 hat einmalig
+höchstens 14 Produktdateien und 1100 manuelle Diff-Zeilen.
+
 ## Ergebnis und Abgrenzung
 
 Ein externes Plugin kann einen bisher unbekannten MIC samt Anzeigenamen
@@ -37,8 +43,9 @@ Autor-Harness zur Verfügung. Katalogabhängige Konflikte prüft allein der Host
 
 Es handelt sich um eine optionale Erweiterung: bestehende API-2-Plugins
 bleiben lauffähig und melden keine erfundene Unterstützung. `API_VERSION`
-bleibt 2, das Plugin-Paket erhält die additive Version 0.3.0. Neue Beispiele
-verlangen mindestens diesen Paketstand. `data_version` bleibt unverändert,
+bleibt 2. Für die nächste additive Veröffentlichung ist Paketversion 0.3.0
+vorgesehen; ein Release samt Tag/Push wird hier nicht ausgeführt. Neue
+Beispiele und deren Paketanforderung folgen in T-64. `data_version` bleibt unverändert,
 weil keine gespeicherte Bedeutung geändert wird. `/exchanges` liegt außerhalb
 des geschlossenen REST-Core; dessen Versionsnummer bleibt unverändert.
 

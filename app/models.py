@@ -723,13 +723,27 @@ auseinanderhalten muss. Der Typ kann sie jetzt nicht mehr ausdrücken.
 """
 
 
+class ExchangeSource(BaseModel):
+    """Eine konfigurierte Quelle in einer Listing-Rolle."""
+
+    source: str
+    role: str
+    usable: bool
+
+
+class ExchangeSupport(ExchangeSource):
+    """Deklarierte Marktabdeckung oder bestandsabhängige Unterstützung."""
+
+    scope: Literal["market", "inventory"]
+
+
 class ExchangeEntry(BaseModel):
     """Ein **Handelsplatz** im Katalog — hat einen echten MIC.
 
-    ``alias`` ist das nackte Token ohne Punkt, das die aktive Kursquelle an den
-    Ticker hängt — oder ``None``, wenn die Börse keines anhängt (die fünf
-    US-Plätze). Genau ein Alias je Börse: Die zweite zulässige Eingabeform ist
-    der kanonische MIC selbst.
+    ``alias`` ist das nackte App-Suffix ohne Punkt — oder ``None`` bei einer
+    Börse ohne App-Suffix (etwa die fünf US-Plätze). Neue Plugin-Börsen
+    verwenden ihren MIC. Anbieterübersetzungen bleiben im jeweiligen Plugin.
+    Die zweite zulässige Eingabeform ist der kanonische MIC selbst.
 
     ``None`` und nicht ``""``: Abwesenheit ist kein Alias aus null Zeichen.
     Der Leerstring wird deshalb auch **abgelehnt** — sonst gäbe es die
@@ -740,6 +754,8 @@ class ExchangeEntry(BaseModel):
     kind: Literal["exchange"] = "exchange"
     mic: str
     alias: Annotated[str, Field(min_length=1)] | None = None
+    declared_by: list[str] = Field(default_factory=list)
+    support: list[ExchangeSupport] = Field(default_factory=list)
     name: str
     region: str
     currency: str
@@ -861,6 +877,7 @@ class ExchangesResponse(BaseModel):
     default_exchange: str
     default_exchange_kind: Literal["exchange", "collector", "unknown"]
     catalog: list[CatalogEntry]
+    unspecified_support: list[ExchangeSource] = Field(default_factory=list)
 
 
 class RefreshResult(BaseModel):

@@ -46,7 +46,8 @@ from app.models import (
 from app.exchanges import COLLECTORS, EXCHANGES, preference_kind
 from app.container import get_sources_config
 from app.sources_config import ROLES, SourcesConfig
-from app.sources_registry import describe_chain
+from app.sources_registry import describe_chain, specs_by_name
+from app.exchange_catalog import catalog_annotations, prepare_catalog
 from app.routers.validation import (
     IsinPath,
     SymbolPath,
@@ -96,8 +97,14 @@ def environment(settings: SettingsDep) -> EnvInfo:
 
 @router.get("/exchanges", response_model=ExchangesResponse)
 def exchanges(settings: SettingsDep) -> ExchangesResponse:
-    """Gibt die weltweite Börsentabelle und die konfigurierte Default-Börse zurück."""
+    """Aktiver Börsenkatalog und deklarierte Unterstützung, ohne Live-Abfrage."""
+    config = get_sources_config()
+    prepare_catalog(specs_by_name(), config)
+    annotations, unspecified = catalog_annotations([
+        entry for role in ROLES for entry in describe_chain(role, config)
+    ])
     return ExchangesResponse(
+        unspecified_support=unspecified,
         default_exchange=settings.default_exchange,
         default_exchange_kind=preference_kind(settings.default_exchange) or "unknown",
         catalog=[
@@ -108,6 +115,7 @@ def exchanges(settings: SettingsDep) -> ExchangesResponse:
                     name=definition.name,
                     region=definition.region,
                     currency=definition.currency,
+                    **annotations[mic],
                 )
                 for mic, definition in EXCHANGES.items()
             ),
