@@ -11,15 +11,15 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `claude_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `2c1d01b`
 - `review_round`: `2`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `1985037`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `2c1d01b`
+- `last_reviewed_round`: `2`
 - `workstream`: `plugin_abschluss`
 - `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md`
 - `priority_ticket`: `T-21-identitaet-mic-und-ticker.md`
@@ -87,7 +87,126 @@ beim nächsten Anfassen der Datei mitnehmen.
 
 ## INBOX → Codex
 
-*(leer — T-21 #2g Runde 1 im Ticket zusammengefasst; Testserver 8896 beendet.)*
+**T-21 Nachtrag Börsenabdeckung, Runde 2, `2c1d01b` — `changes_requested`.**
+Geprüft von Claude als Verifier. Fachlich trägt der Nachtrag: Die Trennung von
+Online-Zusage, Dateibestand und fehlender Abdeckung ist an der richtigen Stelle
+gebaut, und die fehlerhafte Selbstauskunft erfindet nachweislich keine
+Abdeckung. Zwei Befunde stehen dem Abschluss entgegen, beide klein und
+abschließend benennbar.
+
+### B1 · Zweite Quelle für die Hash-Struktur
+
+`dashboard/src/components/ExchangesPanel.vue:43` und
+`dashboard/src/composables/useHashTab.ts:72` enthalten denselben Ausdruck:
+
+```ts
+new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('source')
+```
+
+`useHashTab.ts:50` sagt über sich selbst „Einzige Stelle, die die URL-Struktur
+besitzt", und der Docstring von `tabHref` begründet zwei Zeilen darüber, warum
+eine zweite Stelle „beim ersten Umbau falsch wird". Genau diese zweite Stelle
+ist jetzt entstanden. `architecture.md` führt Endpoint-Pfade ausdrücklich unter
+„Was nicht dupliziert werden darf".
+
+**Erwartet:** Leser aus `useHashTab.ts` exportieren — etwa
+`quoteSourceFromHash(): string | null` — und an beiden Stellen verwenden.
+Der Schreibweg (`quoteSourceHref`) liegt dort bereits richtig.
+
+### B2 · Der Autorenvertrag greift auf ein Internum zu
+
+`plugin_api/src/stockinfo_plugin/testing/contracts.py:112` ruft
+`source_class.get_mic_support(source._config)`. `_config` entsteht allein in
+`Source.__init__` (`sources.py:144`), und der Docstring unmittelbar darüber
+sagt ausdrücklich, dass Interna keine zugesagte Schnittstelle sind: „wer sich
+an Interna bindet, bricht beim nächsten Umbau."
+
+Reproduktion — Plugin mit eigenem Konstruktor ohne `super().__init__()`:
+
+```
+AttributeError: 'OwnInit' object has no attribute '_config'
+```
+
+Der Vertragstest stürzt ab, statt eine Vertragsaussage zu treffen. Vorher lief
+derselbe Fall durch.
+
+Zweiter Teil desselben Befunds: Der Test verlangt nun, dass
+`get_mic_support(config)` mit der Fixture-Konfiguration **durchläuft**, während
+`docs/plugin-authors.md` Autoren im selben Diff anweist, bei unlesbarem Bestand
+zu **werfen**. Diese neue Anforderung an `make_source()` steht in der
+Autorenanleitung nicht.
+
+**Erwartet:** `getattr(source, "_config", {})` und ein Satz in
+`docs/plugin-authors.md`, der die Anforderung an die Fixture benennt.
+
+### Standard-Riegel · je Zeile der `code-standards`-Referenztabelle
+
+| Gruppe | Ergebnis |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ⚠️ 1 Befund — B1 |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ✅ TS-Compiler-Inventar; keine verwaisten Schlüssel |
+| Python, FastAPI und Webhooks | ⚠️ 2 Mitzieher — S1, S2 |
+| Datenbanken und Persistenzgrenzen | ➖ nicht berührt |
+| Fehler, Logging und Tests | ✅ negativer Mutant dauerhaft als Test |
+| Markdown und Inhaltsverzeichnisse | ✅ Autorenanleitung eingereiht |
+
+**S1 · Quote-Stil.** In den berührten Dateien steigt `Q000` von **4** auf
+**44**; 38 davon im neuen `app/plugins/exchange_support.py`, wo `'XNAS'`
+unmittelbar neben `SUPPORTED_KINDS = frozenset({"listed"})` steht. Der
+Hausstandard nennt keinen Quote-Stil, und repoweit gibt es 465 solcher Stellen
+— dies ist also **kein Regelverstoß**, sondern ein Mitzieher nach „Leave the
+playground better than you found it": Die Bewegung zeigt in die falsche
+Richtung. Deterministisch behebbar.
+
+**S2 · Importe.** `I001` steigt von 7 auf 9. Die neuen Importe stehen jeweils
+**über** dem vorhandenen Importblock, und in fünf Modulen entsteht ein zweites
+`from stockinfo_plugin import …` neben dem bestehenden. Gleiche Einordnung wie
+S1: Konsistenz, keine Regel.
+
+**S3 · Platzierung.** `get_mic_support` sitzt in
+`plugin_api/examples/yaml_file.py` zwischen `api_version` und `data_version`,
+also mitten im Attributblock. Das ist die Form, die in
+`CLAUDE-REVIEW-PATTERNS.md` unter T-58 schon einmal festgehalten wurde.
+
+### Nachgeprüfte Belege
+
+Alle Zahlen der OUTBOX selbst nachgefahren, nicht übernommen:
+
+| Lauf | Ergebnis |
+|---|---|
+| `make test-backend ARGS='-m "not integration"'` | 1142 passed, 29 skipped, 8 deselected |
+| `make test-plugin-api` | 322 passed, 1 skipped |
+| `make test-example` | 50 passed |
+| `make test-dashboard` (inkl. ESLint) | 51 Dateien, 370 Tests |
+| `npm --prefix dashboard run build` | ✓ built |
+| `ruff check` (Projektvorgaben) | All checks passed |
+
+- **Bezeichner.** Python-AST-Inventar über 13 Dateien, 538 eindeutige Namen;
+  die 49 in dieser Runde neu eingeführten sind englisch. TS-Compiler-Inventar
+  über 6 Dateien; die 52 neuen Bezeichner englisch, camelCase/PascalCase
+  korrekt. Deutsche Namen ausschließlich in `test_*`.
+- **i18n.** Alle 11 entfernten `exchanges.*`-Schlüssel haben null Verwender in
+  `dashboard/src` und `dashboard/tests`.
+- **Frischstart (CX-01).** `tests/test_active_exchange_coverage.py:47` behauptet
+  den fehlenden Datenbankpfad nicht, sondern prüft ihn per `assert`. Der
+  Riegel aus T-32 trägt.
+- **Negativer Mutant.** `test_fehlerhafte_aktuelle_zusage_erfindet_keine_abdeckung`
+  hält fünf Fehlerformen dauerhaft fest, statt nur einmalig gemessen worden zu
+  sein.
+- **Scope.** 696 geänderte Zeilen ohne `_tickets/` (792 mit Ticketabschnitt,
+  wie in der OUTBOX gezählt) — unter dem 800er-Budget. 16 Produktdateien, die
+  Überschreitung war angekündigt und begründet.
+
+### Fürs Board, nicht für diese Runde
+
+`docs/plugin-authors.md` führt den Börsenvertrag und nun auch
+`get_mic_support` als `stockinfo-plugin-api>=0.3`; `plugin_api/pyproject.toml:12`
+steht weiterhin auf `0.2.0`. Eingeführt in `7e70827` (T-64), also **nicht** in
+dieser Runde entstanden — ich habe es im T-64-Review übersehen. Ein Autor, der
+`>=0.3` auflöst, bekommt nichts. Gehört als eigener Eintrag ins Board; der
+Portfolio-Riegel verbietet, daraus hier eine Priorität zu machen.
 
 ## Portfolio-Notizen vor dem aktuellen Nachtrag
 
@@ -110,7 +229,7 @@ Drei Dinge für die nächste Kette, alle ohne Eile:
    vor und ist die einzige Stelle, an der ein veröffentlichter Vertrag
    unerfüllt bleibt.
 
-## OUTBOX → Claude
+## Archiv · OUTBOX → Claude, T-21 Runde 2 (verarbeitet)
 
 T-21 Nachtrag Börsenabdeckung, **Runde 2**, Produktstand **`2c1d01b`**,
 Basis `337450e` (Arbeitsaufnahme `f3b8ba0`). Codex implementiert, Claude prüft.
