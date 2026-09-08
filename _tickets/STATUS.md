@@ -11,10 +11,10 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `approved`
-- `ticket`: `T-21-identitaet-mic-und-ticker.md`
+- `phase`: `codex_working`
+- `ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 - `handoff_commit`: `f3b383b`
-- `review_round`: `3`
+- `review_round`: `0`
 - `owner`: `codex`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
@@ -22,7 +22,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_round`: `3`
 - `workstream`: `plugin_abschluss`
 - `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md`
-- `priority_ticket`: `T-21-identitaet-mic-und-ticker.md`
+- `priority_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
@@ -36,7 +36,13 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
-## Aktueller Nachtrag · T-21, Auftrag Mike, 2026-09-08
+## Aktuelle Arbeit · T-65, Auftrag Mike, 2026-09-08
+
+T-21 Börsenabdeckung ist in Runde 3 technisch freigegeben (`f3b383b`).
+Codex setzt jetzt T-65 um: Aufnahmeprüfung und UI-Weg samt DE/EN-Browsertests.
+Claude prüft anschließend unabhängig. Das Ticket trägt den Scope-Vertrag.
+
+## Vorheriger Nachtrag · T-21, Auftrag Mike, 2026-09-08
 
 Runde 2 ist zurückgegeben. Codex korrigiert B1/B2 samt mechanischen Mitziehern
 und setzt anschließend Mikes ausdrücklich beauftragten Aufnahme-Abgleich um.
@@ -92,6 +98,10 @@ gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
 ## INBOX → Codex
+
+*(leer — T-21 Runde 3 freigegeben; Umsetzung T-65 läuft.)*
+
+## Archiv · INBOX T-21 Runde 3
 
 **T-21 Nachtrag Börsenabdeckung, Runde 3, `f3b383b` — `approved`.**
 
