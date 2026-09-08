@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-64-boersen-ui-und-autorennachweise.md`
-- `handoff_commit`: `none`
-- `review_round`: `0`
-- `owner`: `codex`
+- `handoff_commit`: `1814232`
+- `review_round`: `1`
+- `owner`: `claude`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-30-plugin-boersenauskunft.md`
 - `last_reviewed_commit`: `441b4b0`
@@ -82,7 +82,45 @@ beim nächsten Anfassen der Datei mitnehmen.
 
 ## OUTBOX → Claude
 
-*(leer — Runde 2 verarbeitet.)*
+**T-64 Runde 1 — Prüfstand `1814232`, Basis `f624670`.** Codex entwickelt,
+Claude prüft. Mikes beide aktuellen UI-Nachträge sind enthalten: App-Suffix
+in eigener Desktop-Spalte; mobil auf eigener Zeile, fett, größer, Akzentfarbe.
+
+Exchanges liest Katalog, Herkunft und rollenbezogene Unterstützung aus REST.
+Suche nach MIC/Name/Quelle, eigene Sammelcodes mit Mitgliedern, Default-Marke,
+kompakte Liste, Neuladen samt Lade-/Fehlerzustand. Inaktiv, Bestand und fehlende
+Deklaration bleiben unterscheidbar. Neue öffentliche REST-Felder sind im
+Dashboard typisiert; Backend/Schema bleiben unverändert. Geerbter Autor-Vertrag
+ruft die öffentliche Validierung auf; US-Beispiel und englische Anleitung
+sind nachgezogen, Paketanforderung 0.3 ausdrücklich noch unveröffentlicht.
+
+**Scope geplant/tatsächlich:** 3/3 fachliche Änderungen; 10/10 Produktdateien;
+6/6 Test-/Dokudateien; 800/639 manuelle Zeilen vor dieser Statusübergabe.
+Nachträge bleiben in denselben Dateien. Keine neue Schicht oder Abhängigkeit.
+`details.source/manual` beim ohnehin nötigen Katalogedit entfernt, wie als
+nicht blockierender T-26-Rest vereinbart.
+
+**Nachweise:** normaler `make test ARGS="-m 'not integration'"` mit isolierten
+Testdaten: 1135 Backend bestanden, 29 übersprungen, 8 abgewählt; 321 Plugin-API,
+1 übersprungen; 50 Beispiel; 342 Dashboard in 51 Dateien. ESLint, Ruff,
+TypeScript/Build und Bezeichnerinventare grün. Nach Suffix-Nachträgen die
+betroffenen 4 Komponententests, Build und ESLint erneut grün. Details und
+kopierbare Befehle in der einzigen aktuellen T-64-Matrix.
+
+Drei zurückgenommene Mutanten: fehlende Inaktiv-Marke 2 rote UI-Fälle,
+fehlender Suchfilter 1 roter UI-Fall, fehlende Harness-Validierung 5 rote
+Vertragsfälle. Browser DE/EN mit realem REST, eigenem normalem Server und
+frischen temporären Daten: neue MIC-Angaben, Ausfall/Neuladen und Profilwechsel
+korrekt. Nach Entfernen des deklarierenden Plugins aus dem Profil verschwinden
+XBUD/regional aus REST und der bereits geöffneten Seite. Keine horizontalen
+Überläufe bei 390/1024/1440 px. Mobile Hervorhebung zuletzt gemessen: .DE,
+18 px/700/Akzentfarbe. Keine Online-/Docker-Prüfung behauptet.
+
+Die eigene Testseite wurde geschlossen. Isolierter Server auf Port 8896
+(PID 62450) bleibt für den Review verfügbar, aktuell mit Legacy-only-Profil;
+Pfad steht im Ticket. Mikes Browserseite und Arbeitsdaten blieben unberührt.
+Nach Freigabe folgt laut Kette T-21 ausschließlich #2g; T-63 bleibt stehen.
+
 
 ## Archiv · T-60 Scope-Checkpoint: `continue`
 
