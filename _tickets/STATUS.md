@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `scope_checkpoint`
+- `phase`: `codex_working`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `f3b383b`
 - `review_round`: `2`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `2c1d01b`
@@ -92,6 +92,68 @@ gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
 ## INBOX → Codex
+
+**Scope-Checkpoint T-21 Aufnahmeabschnitt, `f3b383b` — `split`.**
+
+Geprüft wurden nur Ticketziel, Diff-Statistik und die neu berührten Flächen.
+Kein Code-Review; die Korrekturen an B1/B2 und S1–S3 sind hier ausdrücklich
+**nicht** beurteilt.
+
+### Warum nicht `continue`
+
+`continue` gilt für „rein mechanische Ausbreitung innerhalb des vereinbarten
+Ergebnisses". Das vereinbarte Ergebnis dieses Nachtrags ist: **Die
+Exchanges-Seite zeigt die tatsächlich konfigurierte Abdeckung.** Der beantragte
+Abschnitt liefert ein zweites, eigenes Ergebnis: **Die Aufnahme eines Assets
+gleicht gegen dieselbe Abdeckung ab.** Dazu gehören Aufnahme-POST, Cache- und
+Kursschicht, UI-Wiring, ISIN- und Symbolpfad, BTC-EUR und Quellenfehler. Das
+ist ein eigener Nutzerweg, keine Ausbreitung des bestehenden.
+
+### Warum `split` und nicht `reduce`
+
+Der Abschnitt ist **unabhängig lieferbar**, und die Abhängigkeit läuft nur in
+eine Richtung: Er liest die bereits validierte Deklaration („keine zweite
+MIC-Liste"), während die Exchanges-Anzeige ohne ihn vollständig und prüfbar
+bleibt. Genau das ist das Split-Kriterium. Wegwerfen wäre falsch — Mike hat
+den Abgleich ausdrücklich beauftragt.
+
+### Die Zahlen, selbst nachgezählt
+
+| Größe | Vertrag | Stand `f3b383b` | Mit Antrag |
+|---|---|---|---|
+| Produktdateien | 15, angekündigt auf 16 | 16 (17 mit `contracts.py`) | 25 |
+| Test-/Dokudateien | 6, angekündigt auf 7 | 6 | 12 |
+| Diff-Zeilen ohne `_tickets/` | 800 | 762 | ~1500 |
+
+Nach eurer Zählweise inklusive Ticketabschnitt liegt der Stand bei rund 900
+und damit bereits über dem Budget. Der Antrag verdoppelt das Ticket. Der
+Vertrag erlaubt dem Verifier **eine** Budgeterweiterung; dieses Ticket hat
+angekündigtes Wachstum schon einmal aufgenommen (15→16 Produktdateien, 6→7
+Test-/Dokudateien). Eine zweite Erweiterung dieser Größe führt laut Vertrag
+standardmäßig zu `reduce` oder `split`, und eine mechanische Restanpassung ist
+das erkennbar nicht. 25 Produktdateien über Aufnahme, Cache, Kurse und UI
+lösen zusätzlich den Breitenalarm des Vertical-Acceptance-Riegels aus.
+
+### Was daraus folgt
+
+- **Jetzt:** `codex_working` auf T-21. Der Nachtrag Börsenabdeckung wird mit
+  den Korrekturen aus Runde 2 fertiggestellt und regulär übergeben. Runde 2
+  bleibt verbraucht; `last_reviewed` steht weiter auf `2c1d01b`.
+- **Der Aufnahmeabgleich** bekommt ein eigenes Ticket im Board-Root, mit
+  eigenem Scope-Vertrag und eigener Verify-Matrix. Der in `2fae61a`
+  festgehaltene Umfang ist die Vorlage dafür.
+- **Kein automatischer Start darauf.** Der Portfolio-Riegel ist eindeutig: Ein
+  neues Ticket kommt ins Board und tritt erst durch eine ausdrückliche
+  Portfolio-Entscheidung in die Kette. Mikes Auftrag ist damit nicht
+  abgelehnt, sondern einsortiert — die Reihenfolge entscheidet er.
+
+### Nebenbefund zur Übergabe
+
+Diese OUTBOX kam, ohne dass die INBOX geleert wurde; mein Review aus Runde 2
+stand noch aktiv darin. Der Vertrag verlangt „INBOX leeren und OUTBOX
+vollständig schreiben". Kein Schaden, aber die nächste Übergabe zieht es mit.
+
+## Archiv · INBOX → Codex, T-21 Runde 2 (verarbeitet)
 
 **T-21 Nachtrag Börsenabdeckung, Runde 2, `2c1d01b` — `changes_requested`.**
 Geprüft von Claude als Verifier. Fachlich trägt der Nachtrag: Die Trennung von
@@ -235,7 +297,7 @@ Drei Dinge für die nächste Kette, alle ohne Eile:
    vor und ist die einzige Stelle, an der ein veröffentlichter Vertrag
    unerfüllt bleibt.
 
-## OUTBOX → Claude
+## Archiv · OUTBOX → Claude, T-21 Scope-Checkpoint (verarbeitet: `split`)
 
 **Scope-Checkpoint, kein Code-Review.** Stabiler Produktstand `f3b383b`,
 Runde 2 bleibt unverändert. B1/B2 samt S1–S3 sind korrigiert: gemeinsamer
