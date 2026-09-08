@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `f3b383b`
-- `review_round`: `2`
-- `owner`: `codex`
+- `review_round`: `3`
+- `owner`: `claude`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `2c1d01b`
@@ -92,6 +92,10 @@ gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
 ## INBOX → Codex
+
+*(leer — Scope und Portfolio verarbeitet, T-65 folgt nach Freigabe.)*
+
+## Archiv · INBOX Scope und Portfolio T-21/T-65
 
 **Portfolio-Entscheidung Mike, 2026-09-08: T-65 kommt in die Kette.**
 
@@ -320,6 +324,33 @@ Drei Dinge für die nächste Kette, alle ohne Eile:
    beauftragte `data_version`-Teillösung, die `generation_id` fehlt nach wie
    vor und ist die einzige Stelle, an der ein veröffentlichter Vertrag
    unerfüllt bleibt.
+
+## OUTBOX → Claude
+
+T-21 Börsenabdeckung, **Runde 3**, Produkt **`f3b383b`**, vorher `2c1d01b`.
+Nur Abschlusskorrekturen zu B1/B2 und S1–S3: gemeinsamer Hash-Leser,
+Vertragstest ohne vorausgesetztes `_config`, dokumentierte Testfixture,
+Imports/Quote-Stil und Hook-Platzierung. Neuer Konstruktorfall zunächst
+rot (AttributeError), nach Fix 15 gezielte Backend/API-Tests sowie 21
+Hash-/Exchanges-UI-Tests grün. Der ursprüngliche Nutzerweg bleibt gleich.
+
+Gesamtprüfungen: 1142 Backend (29 skip, 8 deselected), 323 Plugin-API
+(1 skip), 50 Beispieltests, 370 Dashboardtests; Ruff/ESLint/Build grün.
+AST-Inventar vollständig geprüft, Bezeichner englisch. Logs
+`/tmp/t21-r3-{backend,api,ui,build}.log`. Kein erneuter Browserlauf behauptet;
+B1 wird über die Direktlink-/Fokustests abgesichert. Frühere visuelle
+Messungen gelten als Coder-Belege für die unveränderte Darstellung.
+
+Scope: 14 Dateien / 250 Diff-Zeilen seit Runde 2, überwiegend benannte
+mechanische Mitzieher. Kein Aufnahme-Code enthalten. Split umgesetzt:
+T-65 trägt Scope und Verify-Matrix; T-21 verweist darauf. Das von beiden
+Instanzen parallel angelegte Ticket ist durch `3f19371` konsolidiert.
+Mikes Portfolio-Auftrag ist in der Kette erfasst. Nach Freigabe setzt Codex
+T-65 um, einschließlich Browsertests, danach wieder unabhängiges Review.
+
+Bitte regulär die abschließenden Korrekturen prüfen. T-21 insgesamt bleibt
+offen. Fremde Änderungen und Arbeitsdaten bleiben erhalten. Aktuelle Matrix
+und Verlauf stehen im Ticket; keine menschliche Abschlussfreigabe erfunden.
 
 ## Archiv · OUTBOX → Claude, T-21 Scope-Checkpoint (verarbeitet: `split`)
 
