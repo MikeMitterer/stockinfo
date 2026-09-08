@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
-- `handoff_commit`: `f3b383b`
-- `review_round`: `0`
-- `owner`: `codex`
+- `handoff_commit`: `d7b4ab3`
+- `review_round`: `1`
+- `owner`: `claude`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `f3b383b`
@@ -39,8 +39,8 @@ Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 ## Aktuelle Arbeit · T-65, Auftrag Mike, 2026-09-08
 
 T-21 Börsenabdeckung ist in Runde 3 technisch freigegeben (`f3b383b`).
-Codex setzt jetzt T-65 um: Aufnahmeprüfung und UI-Weg samt DE/EN-Browsertests.
-Claude prüft anschließend unabhängig. Das Ticket trägt den Scope-Vertrag.
+T-65 ist umgesetzt: Aufnahmeprüfung und UI-Weg samt DE/EN-Browsertests.
+Claude prüft den eingefrorenen Stand unabhängig. Das Ticket trägt Scope und Belege.
 
 ## Vorheriger Nachtrag · T-21, Auftrag Mike, 2026-09-08
 
@@ -70,13 +70,14 @@ Du entwickelst, Claude überprüft.“
 | T-32 | Abgeschlossen und von Mike am 2026-09-08 bestätigt; Ticket unter `solved/`. Der zentrale Testriegel steht: Backend-Tests laufen ohne manuell gesetzten Datenpfad, Zugriffe nach `data/` werden vor dem Öffnen abgewiesen. |
 | T-30 | Neue Handelsplätze und Rollenunterstützung für externe Plugin-Autoren ermöglichen; bestehende Core-Aliase bleiben unverändert. |
 | T-64 | Technisch freigegeben durch Claude, Runde 1, e427013. Dynamische Exchanges samt UI-Nachträgen und Autorennachweisen umgesetzt; Abschluss durch Mike steht aus. |
-| T-21 | #2g freigegeben. Aktuell: explizit beauftragter Nachtrag Börsenabdeckung samt vereinfachter Exchanges-UI; Übergabe an Claude. Börsenabweichungs-UI und Docker-Pending-Langzeittest bleiben außerhalb dieses Nachtrags. |
+| T-21 | #2g und Nachtrag Börsenabdeckung freigegeben, letzterer Runde 3, f3b383b. Börsenabweichungs-UI und Docker-Pending-Langzeittest bleiben außerhalb dieses Nachtrags. |
+| T-65 | Aufnahme-Abgleich und UI-POST umgesetzt; unabhängiges Review des Standes d7b4ab3. |
 
 T-63 bleibt offen und außerhalb der Kette. T-25 hat die beauftragte
 `data_version`-Teillösung; die weitergehende automatische Migration wird durch
 diese Kette nicht beauftragt. Zurückgestellte Tickets bleiben zurückgestellt.
-Nach T-21 #2g folgt `portfolio_review`, Owner Mike; keine vollständige
-Erledigung von T-21 allein aus dieser Teilkorrektur ableiten.
+Nach T-65 folgt `portfolio_review`, Owner Mike; keine vollständige
+Erledigung von T-21 allein aus dessen Teilkorrekturen ableiten.
 
 Vor jeder Übergabe stehen Befunde und Prüfnachweise vollständig in der
 OUTBOX. Erst danach folgen `ready_for_claude` und Owner Claude. Nach dem
@@ -99,7 +100,79 @@ beim nächsten Anfassen der Datei mitnehmen.
 
 ## INBOX → Codex
 
-*(leer — T-21 Runde 3 freigegeben; Umsetzung T-65 läuft.)*
+*(leer — T-21 Runde 3 verarbeitet; T-65 zur Prüfung übergeben.)*
+
+## OUTBOX → Claude
+
+**T-65, Runde 1: `d7b4ab3`, Basis `96a1646`.** Bitte unabhängig prüfen.
+Auftrag Mike: vollständiger Aufnahme-Abgleich einschließlich UI-Tests.
+T-21 ist nicht Prüfgegenstand; dessen Nachtrag ist in Runde 3 freigegeben.
+
+Geplant/tatsächlich: **2/2 fachliche Änderungen, 11/11 Produktdateien,
+6/4 Test-/Dokudateien, maximal 700/tatsächlich 613 Diff-Zeilen** einschließlich
+T-65-Ticket. Keine neue Schicht, Abhängigkeit, Migration oder Plugin-Schnittstelle.
+Die UI nutzt POST `/instruments/intake` über den vorhandenen JSON-Transport.
+Die Abdeckung liest dieselben validierten, aktuellen Angaben wie `/exchanges`.
+Die Prüfung greift vor Kurs und Speicherung, auch bei gespeicherten Listings.
+Paar-/ISIN-only-Aufnahme bleibt möglich. Gemeinsame REST-Fehlerdarstellung
+erhält die bisherigen UI-Fehlercodes. Der vorhandene Listing-Auflösungsweg
+probiert bei Bedarf den kanonischen YAML-Ticker, ausschließlich bei gleichem MIC.
+
+### Verify-Zuordnung
+
+| Matrix | Orakel → Ergebnis |
+|---|---|
+| #1 | `test_aufnahme_prueft_dieselbe_aktuelle_abdeckung`, beide Profile und Symbol/ISIN: 400 mit MIC ohne Quote/DB-Änderung; Alias/MIC identische Aufnahme, aktuelle Exchanges-Auskunft stimmt. |
+| #2 | Derselbe Test: YAML hinzufügen/entfernen/defekt, Zusage fehlend/ungültig, Metadaten allein, gespeicherter Cache → keine erfundene Abdeckung. |
+| #3 | Paar-, Quellenfehler- und Fremd-MIC-Tests in `test_active_exchange_coverage.py`; ISIN-only im ersten Test → Aufnahme-/Fehlersemantik erhalten. |
+| #4 | `useInstrumentActions.spec.ts`: 4 Identifierformen, POST-Body und DE/EN-Fehler. Browser in beiden Profilen: erfolgreiche Aufnahme und Ablehnung, DE/EN, 390 px mobil und 1440/1787 px Desktop, kein Überlauf. |
+
+Browser auf eigener Testinstanz: YAML zunächst leere DB; Online/Fallback
+verwendete anschließend denselben Testbestand für Cache-Gegenprobe. Externe
+Online-Antworten kontrolliert ersetzt, **kein Live-Anbieterbeleg**. UI, REST,
+Registry, YAML und SQLite echt. Dynamische YAML-Ergänzung erlaubte zuvor
+abgelehnte ISIN ohne Neustart; nach Entfernen Preis ISIN/Symbol abgelehnt,
+auch bei gespeicherter Zeile. Keine Listenänderung bei Fehler, MIC-Alias kein
+Duplikat. Beide Testserver und eigene Browserregisterkarte geschlossen.
+Automatisierte Profile jeweils nachweislich neue DB und normaler App-Start.
+
+Rote Ausgangsproben: Backend **6 failed** (Abdeckung/Paar), UI **6 failed**
+(GET/Übersetzung), Quellenfehler **4 failed**. Negative Mutanten: Schranke
+entfernt **4 failed**, Cache-Guard entfernt **4 failed**, falscher MIC beim
+Ticker-Rückfall erlaubt **2 failed**, UI wieder GET **4 failed**. Alle restauriert.
+Details, Testnamen und Browserhandgriffe dauerhaft im T-65-Ticket.
+
+### Abschlussprüfungen
+
+- `make test-backend ARGS='-m not\ integration'`: **1156 passed, 29 skipped, 8 deselected**.
+- `make test-dashboard` einschließlich ESLint: **374 Tests / 51 Dateien**.
+- `npm --prefix dashboard run build`: erfolgreich.
+- Profil-/Identitätsregressionen: **46 passed**; nach letzter Testassertion Profiltests erneut **21 passed**.
+- Ruff-Vorgaben sowie `--select I,Q` auf allen 8 berührten Python-Dateien und `git diff --check`: grün.
+- Logs `/tmp/t65-{backend,ui,build,targeted-final}.log`, `/tmp/t65-mutant-{coverage,cache,identity,ui}.log`.
+
+### Standard-Riegel
+
+| Gruppe | Ergebnis / Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ Inventar aller Bezeichner über Python-AST/TS-Compiler-API; englische Namen. Gemeinsame Katalogauskunft, eine Intake-Schranke, ein Cache-Guard. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ✅ bestehender API-Transport, DE/EN-Schlüssel, ESLint/374 Tests/Build und Browser. |
+| Python, FastAPI und Webhooks | ✅ vorhandene Router/Services, zusätzliche I/Q-Prüfung grün; vorbestehende Quote-/Importreste mitgezogen. |
+| Datenbanken und Persistenzgrenzen | ✅ keine direkten neuen DB-Zugriffe; Guard vor Cache/Fetch/Persistenz, frische temporäre DB je Profiltest. |
+| Fehler, Logging und Tests | ✅ gemeinsame strukturierte REST-Fehler; rote Akzeptanzproben, 4 negative Mutanten, Gesamtsuiten. |
+| Markdown und Inhaltsverzeichnisse | ✅ Autorenanleitung beschreibt aktuelles Admission-Verhalten; Scope/Matrix/Belege im Ticket. |
+
+**DRY:** neue Regeln, Callback, Fehlercode/-darstellung und Transport gegen
+`app/`, `dashboard/`, Plugin-API und `.libs/` abgeglichen. Katalogdeklaration
+bleibt einzige Abdeckungsquelle; Intake und Quotes verwenden dieselben
+Fehlerhelfer. Callback-Weitergabe ist Wiring, keine zweite Abdeckungsregel.
+Testprofile teilen Setup über normale pytest-Fixtures; kein Test-Subsystem.
+
+**Worktree:** fremde Dokumentationsänderungen (insbesondere CLAUDE/AGENTS,
+Review-Vertrag, T-21-Prosa, gelöschte Workflow-Entwürfe) bleiben unverändert
+und sind nicht in d7b4ab3 enthalten. Produktdateien nach Commit sauber.
 
 ## Archiv · INBOX T-21 Runde 3
 
