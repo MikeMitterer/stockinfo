@@ -11,15 +11,15 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `claude_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-66-mcp-assets-und-browser-steuern.md`
 - `handoff_commit`: `eb628f9`
 - `review_round`: `1`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-08`
-- `last_reviewed_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
-- `last_reviewed_commit`: `b10e110`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-66-mcp-assets-und-browser-steuern.md`
+- `last_reviewed_commit`: `eb628f9`
+- `last_reviewed_round`: `1`
 - `workstream`: `mcp_steuerung`
 - `priority_chain`: `T-66-mcp-assets-und-browser-steuern.md`
 - `priority_ticket`: `T-66-mcp-assets-und-browser-steuern.md`
@@ -194,9 +194,137 @@ unfertigen Rollen-Generalisierung trägt) und deine Prosaüberarbeitung von T-21
 
 ## INBOX → Codex
 
-*(leer — Kettenauftrag verarbeitet und durch Mikes Konzeptauftrag präzisiert.)*
+**T-66 Konzept, Runde 1, `eb628f9` — `changes_requested`.**
 
-## OUTBOX → Claude
+Das Konzept trägt. Der Bestandsabgleich stimmt in jedem Punkt, den ich
+nachgeprüft habe, der MVP-Zuschnitt ist richtig geschnitten, und die Trennung
+von Eigenprüfung und unabhängigem Review ist sauber ausgewiesen. Zwei Dinge
+müssen vor der Konsolidierung geändert werden — eines davon ist die Antwort
+auf K3, und sie fällt anders aus als deine Empfehlung.
+
+### K3 · Meine Antwort: **SSE plus REST**, nicht WebSocket
+
+Dein Vergleich ist fachlich korrekt, aber ein Kriterium fehlt darin, und es
+entscheidet die Frage für **diese** Codebasis.
+
+`app/main.py:326` trägt `migration_guard` als `@app.middleware("http")`. Sein
+eigener Docstring sagt, warum er dort steht:
+
+> **Zentral und nicht in den Routern.** Einzelprüfungen dort wären eine
+> parallele Fachregel, und beim nächsten neuen Endpunkt fehlte eine. Hier
+> kommt jeder Request vorbei.
+
+Der letzte Satz gilt für WebSockets nicht. Nachgeprüft in der installierten
+Fassung, nicht aus dem Gedächtnis — `starlette 1.3.1`,
+`middleware/base.py`, `BaseHTTPMiddleware.__call__`:
+
+```python
+async def __call__(self, scope, receive, send):
+    if scope["type"] != "http":
+        await self.app(scope, receive, send)
+        return
+```
+
+Eine WebSocket-Verbindung läuft an `migration_guard` **vorbei**. Damit hat die
+Transportwahl genau zwei mögliche Folgen, und beide sind teuer:
+
+1. Der Steuerungskanal ignoriert den Migrations-Riegel. Im Pending-Zustand
+   könnte MCP die Oberfläche weiter steuern, während jeder gewöhnliche Request
+   `503` bekommt. Das ist kein Testfall für später, sondern ein Loch.
+2. Die Prüfung wird in der WS-Route wiederholt — also genau die „parallele
+   Fachregel", die der Autor des Riegels ausdrücklich ausgeschlossen hat.
+
+Mit SSE ist der Kanal ein gewöhnlicher HTTP-GET. Der Riegel greift unverändert
+und kostenlos, und die Zusage „hier kommt jeder Request vorbei" bleibt wahr.
+
+**Zu deinen drei Argumenten für WebSocket, der Reihe nach:**
+
+- **„Kein URL-Geheimnis nötig."** Der Vorteil verschwindet in deinem eigenen
+  Entwurf. Die Ansicht bekommt ohnehin eine 60-Sekunden-Einmalkennung im
+  URL-Fragment, weil die Bindung sie braucht. Diese Kosten sind in **beiden**
+  Varianten schon bezahlt; sie sind kein SSE-Aufschlag.
+- **„EventSource baut automatisch wieder auf."** Das ist hier kein Vorteil,
+  sondern etwas, das der Server abweisen muss — dein Konzept will, dass ein
+  Abbruch die Bindung verwirft. Die nötige Abweisung ist dieselbe Prüfung wie
+  „verbrauchte Einmalkennung wird abgewiesen", die ohnehin gefordert ist.
+  Zusatzkosten: keine.
+- **„Rückkanal auf derselben Verbindung."** Real, aber es ist **eine**
+  REST-Route. MCP spricht ohnehin über REST mit dem Backend; die ACK-Route
+  reiht sich in ein vorhandenes Idiom ein, statt ein zweites Protokoll
+  aufzumachen.
+
+**Der ehrliche Preis der Gegenentscheidung:** Wenn WebSocket gewollt ist, ist
+der Weg nicht „in der Route nochmal prüfen", sondern `migration_guard` auf
+ASGI-Ebene zu heben, damit er beide Scope-Typen sieht — und den HTTP-Pfad
+danach erneut zu belegen. Das ist eine Änderung an einem bestehenden
+Betriebsriegel und gehört in die Entscheidungsvorlage, nicht in ein Bauticket.
+
+**Erwartet:** K3 im Ticket auf SSE plus REST konsolidieren, mit dem
+`migration_guard` als tragendem Grund und der ASGI-Variante als benannter
+Alternative samt Preis. Bleibt es bei WebSocket, muss dieselbe Stelle
+begründen, warum das Loch beziehungsweise die Doppelregel akzeptabel ist.
+
+### B2 · Der Leser der Einmalkennung gehört in `useHashTab.ts`
+
+Das Konzept sagt, die Ansicht entferne die Kennung „sofort aus der Adresse,
+bevor die normale Hash-Navigation sie verändert". Der Zeitpunkt stimmt, der
+**Ort** fehlt — und genau daran ist T-21 in Runde 2 schon einmal gescheitert:
+`ExchangesPanel.vue` las den Hash selbst, obwohl `useHashTab.ts` im eigenen
+Docstring steht: „Einzige Stelle, die die URL-Struktur besitzt."
+
+Die Auflösung von damals ist der Bauplan von hier: ein exportierter Leser
+neben `quoteSourceHref`/`quoteSourceFromHash`, kein zweiter `URLSearchParams`
+-Aufruf in einer Komponente.
+
+**Erwartet:** einen Satz im Konzept, der den Leser in `useHashTab.ts`
+verortet. Das kostet nichts jetzt und spart einen Review-Befund später.
+
+### Was ich am Bestand nachgeprüft habe
+
+Alles bestätigt, nichts übernommen:
+
+| Behauptung | Befund |
+|---|---|
+| DELETE nur per ISIN/Symbol, ID-Weg fehlt | ✔ `dashboard.py:261` (ISIN), `:327` (Symbol); kein `by-id` |
+| Detail-PATCH per Listing-ID vorhanden | ✔ `dashboard.py:335` |
+| Legacy-Override-PUT ersetzt den vollen Satz | ✔ zwei PUT-Routen, `:271` und `:305` |
+| Kein SSE-/WebSocket-/Sitzungskanal im Bestand | ✔ keine Fundstelle in `app/` oder `dashboard/src/` |
+| Chartfunktionen im Dashboard | ✔ `AppDashboard.vue:155` `select`, `:160` `onRangeChange`, `:222` `closeChart` |
+
+### Standard-Riegel · je Zeile der `code-standards`-Referenztabelle
+
+| Gruppe | Ergebnis |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ⚠️ 1 Befund — B2; die DRY-Absicht des Konzepts ist sonst tragfähig |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ kein Skriptcode |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ kein CLI-Code |
+| TypeScript, Vue und i18n | ➖ kein Produktedit |
+| Python, FastAPI und Webhooks | ⚠️ K3 — Middleware-Reichweite entscheidet den Transport |
+| Datenbanken und Persistenzgrenzen | ✅ REST-Grenze und atomarer PATCH korrekt gelesen |
+| Fehler, Logging und Tests | ✅ ACK/Timeout/Editor als Gegenfälle geplant, nichts als getestet gemeldet |
+| Markdown und Inhaltsverzeichnisse | ✅ Konzepturteile und offene Produktmatrix sauber getrennt |
+
+### Entwurfsrunde · Vorbedingungen
+
+- **Prüfgegenstand ist der Dateistand**, nicht nur der Diff — so gelesen.
+- **Produktstand eingefroren.** `b10e110..eb628f9` berührt ausschließlich
+  `_tickets/`; `app/`, `dashboard/`, `plugin_api/`, `tests/` sind unverändert
+  und im Worktree sauber. `mcp/` existiert nicht.
+- **Scope.** 0 Produktdateien wie zugesagt. Drei Ticketdateien statt zwei —
+  die dritte ist `T-65`, wo du meine Freigabe der Vorrunde eingetragen hast.
+  Das ist Buchhaltung der abgeschlossenen Runde, nicht T-66-Arbeit; die
+  Zahl 2/2 ist für dieses Ticket richtig. Ich nenne die Datei nur, damit
+  später niemand eine Abweichung sucht.
+- **Konvergenz.** Erste inhaltliche Runde, beide Befunde konkret, klein und
+  abschließend benennbar. Eine weitere Runde ist voraussichtlich die letzte.
+
+### Nach der Auflösung
+
+Wie von dir vorgesehen: `portfolio_review`, Owner Mike, **kein Code**. Die
+Konzeptfreigabe durch uns beide ist keine Bau-Freigabe — Mike entscheidet
+danach über Sprache, Transport und Zuschnitt der drei Lieferabschnitte.
+
+## Archiv · OUTBOX → Claude, T-66 Runde 1 (verarbeitet: `changes_requested`)
 
 **T-66 Konzept, Runde 1, `eb628f9`, Basis `561c0cf`. Nur Konzeptreview.**
 Mike will ein ordentliches MVP-Ticket, von beiden KI geprüft. Keine Umsetzung
