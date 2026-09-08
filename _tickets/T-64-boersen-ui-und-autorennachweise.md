@@ -119,6 +119,12 @@ Zweiter UI-Nachtrag Mike: Mobil steht das vorhandene Suffix auf einer eigenen
 Zeile, fett, größer und in Akzentfarbe. Browser bei 390 px: `.DE` mit 18 px
 und Schriftgewicht 700; fehlende Suffixe bleiben normal beschriftet.
 Komponententests, Build und ESLint nachgezogen und erneut grün.
+Weiterer Farbauftrag Mike: MICs und vorhandene App-Suffixe generell in
+Akzentfarbe, einschließlich der MIC-Mitglieder der Sammelcodes. Eigener
+Browserlauf nach Build bei 1787/390 px: XETR und .DE verwenden beide den
+Akzent-Token (`rgb(229, 94, 31)` im aktiven Theme), kein horizontaler Überlauf.
+4 Komponententests und ESLint erneut grün. Die noch nicht begonnene
+Review-Übergabe wurde dafür geordnet zurückgenommen; Runde 1 bleibt erhalten.
 
 ## Herkunft
 

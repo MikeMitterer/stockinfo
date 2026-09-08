@@ -42,9 +42,9 @@ function venue(entry: ExchangeEntry) {
 }
 
 const columns = computed<DataTableColumns<ExchangeEntry>>(() => [
-  { title: t('exchanges.mic'), key: 'mic' },
+  { title: t('exchanges.mic'), key: 'mic', render: entry => h('strong', { class: 'exchanges__code' }, entry.mic) },
   { title: t('exchanges.colExchange'), key: 'name', render: venue },
-  { title: t('exchanges.colSuffix'), key: 'alias', render: entry => entry.alias ? `.${entry.alias}` : t('exchanges.noSuffix') },
+  { title: t('exchanges.colSuffix'), key: 'alias', render: entry => entry.alias ? h('strong', { class: 'exchanges__code' }, `.${entry.alias}`) : t('exchanges.noSuffix') },
   { title: t('exchanges.colRegion'), key: 'region', render: entry => t(`exchanges.regions.${entry.region}`) },
   { title: t('exchanges.support'), key: 'support', render: entry => h(ExchangeSupport, { entries: entry.support ?? [] }) },
 ])
@@ -65,12 +65,12 @@ const columns = computed<DataTableColumns<ExchangeEntry>>(() => [
     <template v-if="data">
       <NList v-if="compact" class="exchanges__venues">
         <NListItem v-for="entry in exchanges" :key="entry.mic">
-          <strong>{{ entry.mic }} · {{ entry.name }}</strong>
+          <strong><span class="exchanges__code">{{ entry.mic }}</span> · {{ entry.name }}</strong>
           <NTag v-if="entry.mic === data.default_exchange" size="small" type="info" class="exchanges__default">{{ t('exchanges.default') }}</NTag>
           <p>{{ t(`exchanges.regions.${entry.region}`) }} · {{ entry.currency }}</p>
           <p class="exchanges__suffix">
             {{ t('exchanges.colSuffix') }}:
-            <strong v-if="entry.alias">.{{ entry.alias }}</strong>
+            <strong v-if="entry.alias" class="exchanges__code">.{{ entry.alias }}</strong>
             <span v-else>{{ t('exchanges.noSuffix') }}</span>
           </p>
           <NText depth="3">{{ origin(entry) }}</NText>
@@ -87,9 +87,9 @@ const columns = computed<DataTableColumns<ExchangeEntry>>(() => [
         <p class="exchanges__hint">{{ t('exchanges.collectorHint') }}</p>
         <NList>
           <NListItem v-for="entry in collectors" :key="entry.code">
-            <strong>{{ entry.code }} · {{ entry.name }}</strong>
+            <strong><span class="exchanges__code">{{ entry.code }}</span> · {{ entry.name }}</strong>
             <NTag v-if="entry.code === data.default_exchange" size="small" type="info" class="exchanges__default">{{ t('exchanges.default') }}</NTag>
-            <p>{{ t('exchanges.members') }}: {{ entry.members.join(', ') }}</p>
+            <p>{{ t('exchanges.members') }}: <span class="exchanges__code">{{ entry.members.join(', ') }}</span></p>
           </NListItem>
         </NList>
       </section>
@@ -109,9 +109,10 @@ const columns = computed<DataTableColumns<ExchangeEntry>>(() => [
   overflow-wrap: anywhere;
   &__heading { @include row; justify-content: space-between; flex-wrap: wrap; }
   :deep(.exchanges__default) { margin-inline-start: var(--space-2); }
+  :deep(.exchanges__code) { color: token(--accent); }
   &__hint { color: token(--text-muted); }
   h2, h3, p { margin: 0; }
   &__venues p { margin-block: var(--space-2); }
-  &__suffix strong { color: token(--accent); font-size: var(--font-lg); }
+  &__suffix strong { font-size: var(--font-lg); }
 }
 </style>
