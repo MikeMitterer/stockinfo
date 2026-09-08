@@ -335,6 +335,7 @@ export const en = {
         '{symbol} is quoted in {expected} but the source delivered ' +
         '{delivered} — that is a different instrument.',
       identifier_empty: 'Nothing was entered.',
+      exchange_not_covered: 'No quote source is available for {mic} in the current profile. See “Exchanges” for available venues.',
       identifier_unknown_form:
         '{identifier} is neither an ISIN nor a symbol with an exchange suffix.',
       /* `Unavailable` does not say the security exists — nobody could check. */

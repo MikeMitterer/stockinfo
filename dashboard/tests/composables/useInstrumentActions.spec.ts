@@ -57,18 +57,30 @@ describe('useInstrumentActions', () => {
     })
   })
 
-  it('add ruft /quote/{isin} bei ISIN', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }))
+  it.each(['IE00B3RBWM25', 'VGWL.DE', 'VGWL.XETR', 'BTC-EUR'])('nimmt %s über den gemeinsamen POST auf', async (identifier) => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 201 }))
     vi.stubGlobal('fetch', fetchMock)
-    await useInstrumentActions().add('IE00B3RBWM25')
-    expect(fetchMock.mock.calls[0][0]).toContain('/quote/IE00B3RBWM25')
+    const { add, error } = useInstrumentActions()
+    await add(`  ${identifier}  `)
+    expect(fetchMock.mock.calls[0][0]).toContain('/instruments/intake')
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST', body: JSON.stringify({ identifier }) })
+    expect(error.value).toBeNull()
   })
 
-  it('add ruft /quote?symbol bei Symbol', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response('{}', { status: 200 }))
-    vi.stubGlobal('fetch', fetchMock)
-    await useInstrumentActions().add('VGWL.DE')
-    expect(fetchMock.mock.calls[0][0]).toContain('/quote?symbol=VGWL.DE')
+  it.each(['de', 'en'] as const)('erklärt fehlende Abdeckung auf %s', async (locale) => {
+    const previousLocale = i18n.global.locale.value
+    i18n.global.locale.value = locale
+    try {
+      vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ code: 'exchange_not_covered', params: { mic: 'XBUD' } }), { status: 400 })))
+      const { add, error, busy } = useInstrumentActions()
+      await add('DEMO.XBUD')
+      expect(error.value).toContain('XBUD')
+      expect(error.value).not.toContain('exchange_not_covered')
+      expect(error.value).toContain(locale === 'de' ? 'Kursquelle' : 'quote source')
+      expect(busy.value).toBe(false)
+    } finally {
+      i18n.global.locale.value = previousLocale
+    }
   })
 
   it('setIsin ruft PUT und toleriert 204', async () => {

@@ -18,12 +18,14 @@ Repository-Logik, die er nicht enthalten darf.
 from dataclasses import dataclass
 
 import structlog
+from stockinfo_plugin import Identity, ListedIdentity
 
-from app.exchanges import identity_from_input, input_failure, is_isin
+from app.exchanges import REASON_NO_SUFFIX, identity_from_input, input_failure, is_isin
 from app.services.quote_cache import CachedQuoteService, StoredQuote
 from app.services.quote_service import (
     InstrumentNotFoundError,
     QuoteUnavailableError,
+    UnresolvableSymbolError,
 )
 
 logger = structlog.get_logger()
@@ -69,14 +71,15 @@ class IntakeRejected(Exception):
 class IntakeService:
     """Nimmt einen rohen Feldwert entgegen und macht daraus ein Instrument."""
 
-    def __init__(self, quotes: CachedQuoteService) -> None:
+    def __init__(self, quotes: CachedQuoteService, covered_mics: frozenset[str]) -> None:
         self._quotes = quotes
+        self._covered_mics = covered_mics
 
     def add(self, identifier: str) -> IntakeResult:
         """Löst den Rohwert auf, beschafft den Kurs und speichert das Papier.
 
-        Zwei Formen sind zugesagt und werden hier auseinandergehalten: die
-        ISIN und ein Symbol, das seinen Handelsplatz nennt — entweder über den
+        Unterstützt sind ISIN, quellenbestimmte Paare und ein Symbol, das
+        seinen Handelsplatz nennt — entweder über den
         Provider-Alias (`EUNL.DE`) oder über den echten MIC (`EUNL.XETR`).
         Beide Symbolformen ergeben **dieselbe** kanonische Identität und
         denselben Abrufalias; der Alias entsteht ausschließlich in
@@ -154,13 +157,25 @@ class IntakeService:
         an dasselbe Symbol, nur an anderer Stelle gestellt.
         """
         if is_isin(value):
-            return self._quotes.store_by_isin(value)
+            return self._quotes.store_by_isin(value, check_identity=self._check_identity)
 
         identity = identity_from_input(value)
         if identity is None:
+            failure = input_failure(value) or REASON_UNKNOWN_FORM
+            if failure == REASON_NO_SUFFIX:
+                def check_unlisted(resolved: Identity | None) -> None:
+                    if isinstance(resolved, ListedIdentity):
+                        raise IntakeRejected(REASON_NO_SUFFIX, identifier=value)
+
+                try:
+                    return self._quotes.store_by_symbol(value, check_identity=check_unlisted)
+                except UnresolvableSymbolError as exc:
+                    raise IntakeRejected(failure, identifier=value) from exc
             raise IntakeRejected(
-                input_failure(value) or REASON_UNKNOWN_FORM, identifier=value
+                failure, identifier=value
             )
+
+        self._check_identity(ListedIdentity(ticker=identity[0], mic=identity[1]))
 
         # **Über die Identität, nicht über den Alias.** Der Alias ist für die
         # US-Plätze mehrdeutig: `AAPL.XNAS` und `AAPL.XNYS` heißen beide
@@ -169,3 +184,8 @@ class IntakeService:
         # ein `500`, bei vorhandenem `AAPL/XNYS` eine Antwort mit der falschen
         # Börse. Gebildet wird er erst dort, wo die Kursquelle ihn braucht.
         return self._quotes.store_by_identity(*identity)
+
+    def _check_identity(self, identity: Identity | None) -> None:
+        """Nur Listings benötigen eine Kursquelle für ihren Handelsplatz."""
+        if isinstance(identity, ListedIdentity) and identity.mic not in self._covered_mics:
+            raise IntakeRejected("exchange_not_covered", mic=identity.mic)

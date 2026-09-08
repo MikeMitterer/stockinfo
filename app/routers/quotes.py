@@ -22,6 +22,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 
 from app.container import get_cached_quote_service, get_daily_history_service
+from app.exchanges import REASON_NO_SUFFIX
 from app.models import (
     IDENTITY_CONFLICT_RESPONSE,
     INSTRUMENT_NOT_FOUND_RESPONSE,
@@ -30,35 +31,27 @@ from app.models import (
     ErrorDetail,
     QuotePoint,
     QuoteResponse,
+    invalid_isin_response,
 )
-from app.models import invalid_isin_response
-from app.exchanges import REASON_NO_SUFFIX
-from app.routers.instruments import REASON_QUOTE_UNAVAILABLE
-from app.services.intake_service import REASON_NOT_FOUND
+from app.routers.instruments import (
+    REASON_QUOTE_UNAVAILABLE,
+    _currency_mismatch,
+    _unsupported_type,
+)
 from app.routers.validation import IsinPath, SymbolPath, TimeRange, normalize_symbol
 from app.services.daily_history import DailyHistoryService, DailySeriesNotFoundError
+from app.services.intake_service import REASON_NOT_FOUND
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import (
     InstrumentNotFoundError,
-    QuoteUnavailableError,
     QuoteCurrencyMismatchError,
+    QuoteUnavailableError,
     UnresolvableSymbolError,
     UnsupportedInstrumentTypeError,
 )
 
 router = APIRouter(tags=["quotes"])
 
-
-# Die Kennung der bewusst nicht aufgenommenen Gattung (T-31, Matrix `#6`).
-# Sie steht hier und nicht bei den Symbolform-Gründen in `app.exchanges`: Jene
-# beschreiben, was mit der **Eingabe** nicht stimmt; diese sagt, dass die
-# Eingabe verstanden wurde und die Antwort trotzdem Nein lautet.
-REASON_UNSUPPORTED_TYPE = "unsupported_instrument_type"
-
-# Der gelieferte Kurs steht in einer anderen Waehrung als das Paar (`#7`).
-# Ein **Datenfehler der Quelle**, deshalb 502 und nicht 400: Der Aufrufer
-# hat nichts falsch gemacht und kann nichts besser machen.
-REASON_CURRENCY_MISMATCH = "quote_currency_mismatch"
 
 # Keine Quelle fuehrt fuer dieses Papier eine Tagesreihe. **Kein Ausfall**:
 # Die Kette ist vollstaendig durchgelaufen, jede Quelle hat geantwortet — nur
@@ -80,9 +73,8 @@ def _not_found(isin: str) -> JSONResponse:
     Aufgefallen ist es im UI-Lauf, und zwar doppelt: Die Oberfläche zeigte nur
     „Hinzufügen fehlgeschlagen", weil sie mit einem Fließtext nichts anfangen
     kann — den eigentlichen Grund fand man erst in der Browserkonsole. Und der
-    **Anlegeweg des Dashboards** läuft über `GET /quote/…`, nicht über
-    `POST /instruments/intake`; die typisierte Auskunft, die dort längst
-    existiert, kam beim Benutzer deshalb nie an.
+    Aufnahmeweg des Dashboards verwendet inzwischen `POST /instruments/intake`;
+    auch Kursabfragen liefern dieselbe strukturierte Kennung.
 
     Die Kennung ist bewusst dieselbe wie beim Aufnahmeweg
     (`REASON_NOT_FOUND`): Derselbe Sachverhalt bekommt denselben Namen, sonst
@@ -92,35 +84,6 @@ def _not_found(isin: str) -> JSONResponse:
         status_code=404,
         content=ErrorDetail(
             code=REASON_NOT_FOUND, params={"identifier": isin}
-        ).model_dump(),
-    )
-
-
-def _unsupported_type(exc: UnsupportedInstrumentTypeError) -> JSONResponse:
-    """„Diese Gattung führen wir nicht" — an **beiden** Türen gleich.
-
-    **Eine eigene Kennung, kein Zufallsbefund** (T-31, Matrix `#6`). Ohne sie
-    fällt ein Index in die Ablehnung daneben: auf dem Symbolweg in
-    „nennt keinen Handelsplatz", auf dem ISIN-Weg in ein 404. Beides ist
-    richtig beobachtet und am Grund vorbei — der Benutzer probierte
-    Schreibweisen durch oder schlüge eine Kennung nach, die längst stimmt.
-
-    **Warum eine gemeinsame Funktion und keine zweite Fassung.** Der Symbolweg
-    hatte diese Antwort seit Runde 6, der ISIN-Weg nicht; genau diese
-    Ungleichheit war Codex' Restbefund. Zwei Kopien wären die Stelle, an der
-    das beim nächsten Mal wieder auseinanderläuft.
-
-    Der Parameter heißt weiterhin `symbol`, obwohl hier auch eine ISIN
-    stehen kann: Es ist das, wonach der Benutzer gefragt hat, und der Katalog
-    im Dashboard führt den Namen bereits. Ihn hier umzubenennen hieße, einen
-    stabilen Kennungsvertrag für eine Genauigkeit zu brechen, die im
-    angezeigten Satz nicht vorkommt.
-    """
-    return JSONResponse(
-        status_code=400,
-        content=ErrorDetail(
-            code=REASON_UNSUPPORTED_TYPE,
-            params={"symbol": exc.symbol, "instrument_type": exc.instrument_type},
         ).model_dump(),
     )
 
@@ -172,17 +135,7 @@ def quote_by_symbol(
     try:
         return service.get_by_symbol(symbol)
     except QuoteCurrencyMismatchError as exc:
-        return JSONResponse(
-            status_code=502,
-            content=ErrorDetail(
-                code=REASON_CURRENCY_MISMATCH,
-                params={
-                    "symbol": exc.symbol,
-                    "expected": exc.expected,
-                    "delivered": exc.delivered,
-                },
-            ).model_dump(),
-        )
+        return _currency_mismatch(exc)
     except UnsupportedInstrumentTypeError as exc:
         return _unsupported_type(exc)
     except UnresolvableSymbolError:

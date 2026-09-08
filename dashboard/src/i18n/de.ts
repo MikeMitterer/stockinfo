@@ -391,6 +391,7 @@ export const de = {
         '{symbol} notiert in {expected}, die Quelle lieferte {delivered} — ' +
         'das ist ein anderes Instrument.',
       identifier_empty: 'Es wurde nichts eingegeben.',
+      exchange_not_covered: 'Für {mic} ist im aktuellen Profil keine Kursquelle verfügbar. Die verfügbaren Handelsplätze findest du unter „Börsen“.',
       identifier_unknown_form:
         '{identifier} ist weder eine ISIN noch ein Symbol mit Börsenkürzel.',
       /*

@@ -255,6 +255,13 @@ For a file-backed source, override the additive class method
 It receives only your source's configuration and returns the same mapping
 of roles to `MicCoverage`. The default returns `MIC_SUPPORT`. Do not make
 network requests here: this hook is read again when `/exchanges` is requested.
+The host also reads it for `POST /instruments/intake`, used by the UI when
+adding assets. Listings require a declared MIC in a usable `quotes` source;
+metadata-only, missing, or invalid coverage does not permit admission.
+Symbol inputs are checked before querying sources; ISIN inputs after resolution
+and before fetching a quote or writing the asset. Cached listings are checked
+too. Pair and ISIN-only identities have no MIC requirement. Coverage still
+does not guarantee that the source knows the requested security.
 Raise on unreadable/invalid inventory; never return an old coverage snapshot.
 The host validates current declarations and displays failed coverage as unknown.
 For contract tests, `make_source()` must provide valid inventory/configuration

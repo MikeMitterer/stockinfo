@@ -29,7 +29,11 @@ from app.models import (
     IntakeRequest,
 )
 from app.services.intake_service import IntakeRejected, IntakeService
-from app.services.quote_service import QuoteUnavailableError
+from app.services.quote_service import (
+    QuoteCurrencyMismatchError,
+    QuoteUnavailableError,
+    UnsupportedInstrumentTypeError,
+)
 
 router = APIRouter(tags=["instruments"])
 
@@ -37,6 +41,32 @@ IntakeDep = Annotated[IntakeService, Depends(get_intake_service)]
 
 # Die Quelle hat nicht geantwortet — kein Fehler des Aufrufers.
 REASON_QUOTE_UNAVAILABLE = "quote_unavailable"
+
+
+REASON_UNSUPPORTED_TYPE = "unsupported_instrument_type"
+REASON_CURRENCY_MISMATCH = "quote_currency_mismatch"
+
+
+def _unsupported_type(exc: UnsupportedInstrumentTypeError) -> JSONResponse:
+    """Dieselbe Gattungsablehnung an Kurs- und Aufnahme-Eingang."""
+    return JSONResponse(
+        status_code=400,
+        content=ErrorDetail(
+            code=REASON_UNSUPPORTED_TYPE,
+            params={"symbol": exc.symbol, "instrument_type": exc.instrument_type},
+        ).model_dump(),
+    )
+
+
+def _currency_mismatch(exc: QuoteCurrencyMismatchError) -> JSONResponse:
+    """Eine falsche Paarwährung ist ein Quellenfehler, kein Eingabefehler."""
+    return JSONResponse(
+        status_code=502,
+        content=ErrorDetail(
+            code=REASON_CURRENCY_MISMATCH,
+            params={"symbol": exc.symbol, "expected": exc.expected, "delivered": exc.delivered},
+        ).model_dump(),
+    )
 
 
 @router.post(
@@ -64,6 +94,10 @@ def intake(payload: IntakeRequest, service: IntakeDep, response: Response):
             status_code=400,
             content=ErrorDetail(code=exc.code, params=exc.params).model_dump(),
         )
+    except UnsupportedInstrumentTypeError as exc:
+        return _unsupported_type(exc)
+    except QuoteCurrencyMismatchError as exc:
+        return _currency_mismatch(exc)
     except QuoteUnavailableError as exc:
         return JSONResponse(
             status_code=502,

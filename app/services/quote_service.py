@@ -6,21 +6,21 @@ in der Router-Schicht auf HTTP-Statuscodes abgebildet.
 
 import math
 import statistics
+from collections.abc import Callable
 from dataclasses import dataclass, fields, replace
 from datetime import datetime, timezone
 
 import structlog
-
-from stockinfo_plugin.types import Unavailable, Unsupported
+from stockinfo_plugin.types import Identity, Unavailable, Unsupported
 
 from app.contract import required_fields
 from app.exchanges import EXCHANGES, provider_alias, split_symbol
 from app.models import (
-    identity_columns,
     IdentityOut,
     ListedIdentityOut,
     PairIdentityOut,
     QuoteResponse,
+    identity_columns,
     identity_from_columns,
 )
 from app.providers.base import (
@@ -416,11 +416,15 @@ class QuoteService:
         return raw.source or declared_name(self._quote_provider)
 
 
-    def get_quote_by_isin(self, isin: str, enrich_etf: bool = True) -> QuoteResponse:
+    def get_quote_by_isin(
+        self, isin: str, enrich_etf: bool = True,
+        *, check_identity: Callable[[Identity | None], None] | None = None,
+    ) -> QuoteResponse:
         """Beschafft den Kurs zu einer ISIN.
 
         Args:
             isin: ISIN des Wertpapiers.
+            check_identity: Optionale Aufnahmeprüfung nach Auflösung, vor Kursabruf.
             enrich_etf: Ob justETF gefragt wird. ``False`` heißt „der
                 gespeicherte Metadatenstand ist jung genug" — die Antwort
                 trägt die ETF-Extras dann nicht und ist als unvollständig
@@ -453,14 +457,18 @@ class QuoteService:
             )
         if not isinstance(resolution, ResolvedInstrument):
             raise InstrumentNotFoundError(isin)
-        return self._build(resolution, enrich_etf)
+        return self._build(resolution, enrich_etf, check_identity=check_identity)
 
-    def get_quote_by_symbol(self, symbol: str, enrich_etf: bool = True) -> QuoteResponse:
+    def get_quote_by_symbol(
+        self, symbol: str, enrich_etf: bool = True,
+        *, check_identity: Callable[[Identity | None], None] | None = None,
+    ) -> QuoteResponse:
         """Beschafft den Kurs zu einem vollständigen Yahoo-Symbol.
 
         Args:
             symbol: Vollständiges Yahoo-Symbol inkl. Börsen-Suffix, z.B.
                 'VGWL.DE' (Xetra) oder 'AAPL' (US). Das Suffix wählt die Börse.
+            check_identity: Optionale Aufnahmeprüfung nach Auflösung, vor Kursabruf.
             enrich_etf: Ob justETF gefragt wird — siehe `get_quote_by_isin`.
 
         Returns:
@@ -484,7 +492,7 @@ class QuoteService:
         # Geraten wird weiterhin nicht: `AAPL` bekommt keinen erfundenen MIC.
         ticker, mic = split_symbol(symbol)
         if ticker and mic:
-            return self._build(self._described(symbol, ticker, mic), enrich_etf)
+            return self._build(self._described(symbol, ticker, mic), enrich_etf, check_identity=check_identity)
 
         # **Erst jetzt wird gefragt** (T-31, Matrix `#5`). Ein Symbol ohne
         # Börsensuffix ist nicht zwangsläufig unbrauchbar — es kann ein Papier
@@ -516,7 +524,7 @@ class QuoteService:
             raise UnresolvableSymbolError(symbol)
         if resolution.type is not None and resolution.type not in INSTRUMENT_TYPES:
             raise UnsupportedInstrumentTypeError(symbol, resolution.type)
-        return self._build(resolution, enrich_etf)
+        return self._build(resolution, enrich_etf, check_identity=check_identity)
 
     def get_quote_by_identity(self, ticker: str, mic: str) -> QuoteResponse:
         """Beschreibt ein neues Listing, ohne dessen gewählten MIC zu ersetzen."""
@@ -550,6 +558,16 @@ class QuoteService:
             QuoteUnavailableError: Die Quelle ist ausgefallen.
         """
         described = self._resolver.resolve_symbol(symbol)
+        # Dateiquellen kennen den kanonischen Ticker, nicht zwingend den
+        # Anbieter-Alias. Ein solcher Treffer darf nur dasselbe Listing ergänzen.
+        if symbol != ticker and not isinstance(described, (ResolvedInstrument, Unsupported, Unavailable)):
+            candidate = self._resolver.resolve_symbol(ticker)
+            if (
+                isinstance(candidate, ResolvedInstrument)
+                and candidate.kind == "listed"
+                and (candidate.ticker, candidate.mic) == (ticker, mic)
+            ):
+                described = candidate
         if isinstance(described, Unsupported):
             raise UnsupportedInstrumentTypeError(symbol, described.instrument_type)
         if isinstance(described, Unavailable):
@@ -669,18 +687,22 @@ class QuoteService:
         return self._build(resolved, enrich_etf)
 
     def _build(
-        self, resolved: ResolvedInstrument, enrich_etf: bool = True
+        self, resolved: ResolvedInstrument, enrich_etf: bool = True,
+        *, check_identity: Callable[[Identity | None], None] | None = None,
     ) -> QuoteResponse:
         """Fragt den Kurs ab, baut die Antwort und reichert ETFs an.
 
         Args:
             resolved: Aufgelöstes Instrument (Symbol, ggf. ISIN und Typ).
             enrich_etf: Ob justETF gefragt wird.
+            check_identity: Optionale Prüfung, bevor eine Kursquelle gefragt wird.
 
         Returns:
             Kurs-Antwort; ``metadata_complete`` sagt, ob ihre ETF-Felder
             belastbar sind.
         """
+        if check_identity is not None:
+            check_identity(resolved.identity())
         raw = self._quote_provider.fetch_quote(resolved)
         if raw is None:
             # Die Auflösung reist mit: Wer sie hat, kann das Papier aufnehmen,

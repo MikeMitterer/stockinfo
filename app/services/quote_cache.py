@@ -7,15 +7,15 @@ zurückgegeben statt eines Fehlers.
 """
 
 import threading
-
-from app.details import CANONICAL, merge_value, validate_input
-from app.detail_models import DetailInput, DetailValue
 from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta, timezone
 
 import structlog
+from stockinfo_plugin import Identity
 
+from app.detail_models import DetailInput, DetailValue
+from app.details import CANONICAL, merge_value, validate_input
 from app.models import (
     OVERRIDE_FIELDS,
     ListedIdentityOut,
@@ -102,15 +102,15 @@ def apply_overrides(row: dict) -> dict:
     shadowed_fields: list[str] = []
 
     for field in OVERRIDE_FIELDS:
-        manual = result.get(f'manual_{field}')
+        manual = result.get(f"manual_{field}")
         provider = result.get(field)
-        if field == 'accumulating':
+        if field == "accumulating":
             manual = _as_bool(manual)
             provider = _as_bool(provider)
-        merged = merge_value({'value': provider}, {'value': manual}, CANONICAL[field][1])
+        merged = merge_value({"value": provider}, {"value": manual}, CANONICAL[field][1])
         result[field] = merged.value
-        result[f'manual_{field}'] = merged.manual_value
-        if merged.origin == 'manual':
+        result[f"manual_{field}"] = merged.manual_value
+        if merged.origin == "manual":
             manual_fields.append(field)
         if merged.shadowed:
             shadowed_fields.append(field)
@@ -174,7 +174,9 @@ class CachedQuoteService:
         """
         return self.store_by_isin(isin).quote
 
-    def store_by_isin(self, isin: str) -> StoredQuote:
+    def store_by_isin(
+        self, isin: str, *, check_identity: Callable[[Identity | None], None] | None = None,
+    ) -> StoredQuote:
         """Wie `get_by_isin`, sagt aber zusätzlich, ob das Papier entstanden ist.
 
         **Ein Weg, zwei Sichten** — kein Zwilling: `get_by_isin` ist die
@@ -184,9 +186,10 @@ class CachedQuoteService:
         """
         instrument = self._repository.get_instrument_by_isin(isin)
         if instrument:
-            return self._get(instrument, lambda: self._fetch_live(instrument))
+            return self._get(instrument, lambda: self._fetch_live(instrument), check_identity=check_identity)
+        options = {"check_identity": check_identity} if check_identity is not None else {}
         return self._get(
-            None, lambda: self._quote_service.get_quote_by_isin(isin, enrich_etf=True)
+            None, lambda: self._quote_service.get_quote_by_isin(isin, enrich_etf=True, **options)
         )
 
     def get_by_symbol(self, symbol: str) -> QuoteResponse:
@@ -234,17 +237,20 @@ class CachedQuoteService:
             lambda: self._quote_service.get_quote_by_identity(ticker, mic),
         )
 
-    def store_by_symbol(self, symbol: str) -> StoredQuote:
+    def store_by_symbol(
+        self, symbol: str, *, check_identity: Callable[[Identity | None], None] | None = None,
+    ) -> StoredQuote:
         """Wie `get_by_symbol`, sagt aber zusätzlich, ob das Papier entstanden ist.
 
         Die Begründung für das Paar steht bei `store_by_isin`.
         """
         instrument = self._repository.get_instrument_by_symbol(symbol)
         if instrument:
-            return self._get(instrument, lambda: self._fetch_live(instrument))
+            return self._get(instrument, lambda: self._fetch_live(instrument), check_identity=check_identity)
+        options = {"check_identity": check_identity} if check_identity is not None else {}
         return self._get(
             None,
-            lambda: self._quote_service.get_quote_by_symbol(symbol, enrich_etf=True),
+            lambda: self._quote_service.get_quote_by_symbol(symbol, enrich_etf=True, **options),
         )
 
     def get_history(
@@ -495,7 +501,7 @@ class CachedQuoteService:
             row = apply_overrides(stored)
             for field in OVERRIDE_FIELDS:
                 setattr(response, field, row[field])
-            response.details = {key: DetailValue.model_validate(value) for key, value in row['details'].items()}
+            response.details = {key: DetailValue.model_validate(value) for key, value in row["details"].items()}
         return response
 
     def _save_fresh(self, fresh: QuoteResponse) -> StoredQuote:
@@ -694,17 +700,17 @@ class CachedQuoteService:
         instrument = self._require_instrument(symbol)
         definitions, _ = self._repository.detail_catalog()
         by_name = {definition.name: definition for definition in definitions}
-        currency = (values.get('fund_currency')
-                    or instrument.get('details', {}).get('fund_size', {}).get('manual_currency')
-                    or instrument.get('manual_fund_currency')
-                    or instrument.get('fund_currency'))
+        currency = (values.get("fund_currency")
+                    or instrument.get("details", {}).get("fund_size", {}).get("manual_currency")
+                    or instrument.get("manual_fund_currency")
+                    or instrument.get("fund_currency"))
         if definitions or self._repository.has_detail_catalog():
             for field, value in values.items():
                 if value is None:
                     continue
                 definition = by_name.get(field)
-                if definition is None or not definition.applies(instrument['type'], instrument['kind']) or not definition.overridable:
-                    raise ValueError(f'Feld nicht bearbeitbar: {field}')
+                if definition is None or not definition.applies(instrument["type"], instrument["kind"]) or not definition.overridable:
+                    raise ValueError(f"Feld nicht bearbeitbar: {field}")
                 validate_input(definition, DetailInput(value=value,
                     currency=currency if definition.currency_required else None))
         self._repository.set_overrides(
@@ -724,13 +730,13 @@ class CachedQuoteService:
         by_name = {definition.name: definition for definition in definitions}
         for field, entry in values.items():
             definition = by_name.get(field)
-            if definition is None or not definition.applies(instrument['type'], instrument['kind']):
-                raise ValueError(f'Feld für dieses Instrument nicht deklariert: {field}')
+            if definition is None or not definition.applies(instrument["type"], instrument["kind"]):
+                raise ValueError(f"Feld für dieses Instrument nicht deklariert: {field}")
             if not definition.overridable:
-                raise ValueError(f'Feld nicht bearbeitbar: {field}')
+                raise ValueError(f"Feld nicht bearbeitbar: {field}")
             validate_input(definition, entry)
-        self._repository.set_detail_overrides(instrument['id'], values, datetime.now(timezone.utc).isoformat())
-        return self.get_instrument_summary(instrument['id'])['details']
+        self._repository.set_detail_overrides(instrument["id"], values, datetime.now(timezone.utc).isoformat())
+        return self.get_instrument_summary(instrument["id"])["details"]
 
     def _require_instrument(self, symbol: str) -> dict:
         """Holt ein Instrument per Symbol oder wirft."""
@@ -816,13 +822,15 @@ class CachedQuoteService:
         return not is_fresh(fetched_at, self._metadata_ttl_days * 24)
 
     def _get(
-        self, instrument: dict | None, fetch: Callable[[], QuoteResponse]
+        self, instrument: dict | None, fetch: Callable[[], QuoteResponse],
+        *, check_identity: Callable[[Identity | None], None] | None = None,
     ) -> StoredQuote:
         """Gemeinsame Cache-Logik: frischer Cache → nutzen, sonst neu beschaffen.
 
         Args:
             instrument: Bereits bekanntes Instrument-Dict (oder None).
             fetch: Callable, das den Kurs live beschafft.
+            check_identity: Aufnahmeprüfung auch vor einem vorhandenen Cache-Treffer.
 
         Returns:
             Kurs-Antwort (aus Cache, frisch oder stale bei Fehler) samt der
@@ -830,6 +838,8 @@ class CachedQuoteService:
             Cache-Wege beantworten das mit `False` — sie haben nichts
             geschrieben, und das Papier lag bereits vor.
         """
+        if instrument and check_identity is not None:
+            check_identity(identity_from_row(instrument))
         latest = (
             self._repository.get_latest_quote(instrument["id"]) if instrument else None
         )

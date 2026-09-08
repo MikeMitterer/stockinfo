@@ -12,6 +12,7 @@ import structlog
 from fastapi import Depends
 
 from app.config import get_settings
+from app.exchange_catalog import covered_quote_mics
 from app.providers.base import EtfEnricher, InstrumentResolver
 from app.providers.composite_etf import CompositeEtfEnricher
 from app.providers.composite_market import (
@@ -20,9 +21,8 @@ from app.providers.composite_market import (
 )
 from app.repository import QuoteRepository
 from app.resolver import CompositeResolver
-from app.sources_config import SourcesConfig, load_sources_config
-from app.sources_registry import build_chain, detail_definitions
-from app.services.analyzer import ROLES as ANALYZED_ROLES, QuoteAnalyzer
+from app.services.analyzer import ROLES as ANALYZED_ROLES
+from app.services.analyzer import QuoteAnalyzer
 from app.services.backup import BackupService
 from app.services.daily_history import DailyHistoryService
 from app.services.daily_sync import DailyCloseSync
@@ -30,6 +30,8 @@ from app.services.fx_service import CachedFxService
 from app.services.intake_service import IntakeService
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteService
+from app.sources_config import SourcesConfig, load_sources_config
+from app.sources_registry import build_chain, describe_chain, detail_definitions
 
 logger = structlog.get_logger()
 
@@ -202,7 +204,10 @@ def get_intake_service(
     aus den Settings mit; im Test schrieb er damit in die Testdatenbank und las
     die Antwortzeile aus der echten.
     """
-    return IntakeService(quotes)
+    _chain("quotes")
+    return IntakeService(
+        quotes, covered_quote_mics(describe_chain("quotes", get_sources_config()))
+    )
 
 
 @lru_cache

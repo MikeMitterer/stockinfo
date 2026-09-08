@@ -150,3 +150,12 @@ def catalog_annotations(chains: list) -> tuple[dict, list]:
                 }
             )
     return annotations, unspecified
+
+
+def covered_quote_mics(chains: list) -> frozenset[str]:
+    """Nutzbare Kursabdeckung aus derselben aktuellen Auskunft wie Exchanges."""
+    annotations, _ = catalog_annotations(chains)
+    return frozenset(
+        mic for mic, entry in annotations.items()
+        if any(item["role"] == "quotes" and item["usable"] for item in entry["support"])
+    )

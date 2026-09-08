@@ -55,7 +55,8 @@ export const apiClient = {
   get: <T>(path: string): Promise<T> => request<T>(path),
   /** Für die Diagnosewege: `503` ist dort eine Antwort, siehe `PROBE_STATUS`. */
   probe: <T>(path: string): Promise<T> => request<T>(path, undefined, PROBE_STATUS),
-  post: <T>(path: string): Promise<T> => request<T>(path, { method: 'POST' }),
+  post: <T>(path: string, body?: unknown): Promise<T> =>
+    request<T>(path, { method: 'POST', ...(body === undefined ? {} : { body: JSON.stringify(body) }) }),
   put: <T>(path: string, body: unknown): Promise<T> =>
     request<T>(path, { method: 'PUT', body: JSON.stringify(body) }),
   patch: <T>(path: string, body: unknown): Promise<T> =>
