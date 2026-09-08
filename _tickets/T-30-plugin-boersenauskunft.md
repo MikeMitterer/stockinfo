@@ -1,20 +1,28 @@
 # T-30 · Plugins ergänzen Börsen und deklarieren ihre Unterstützung
 
-**T-30 gehört zum Abschluss des erweiterbaren Plugin-Systems.** Ein
-Plugin-Autor muss zusätzliche Handelsplätze einbringen können, ohne den
-StockInfo-Core ändern zu müssen. Bestehende Börsen werden referenziert,
-fehlende ergänzt und widersprüchliche Deklarationen abgelehnt.
+Ein Plugin soll **zusätzliche Handelsplätze nutzbar machen**, ohne dass dafür
+StockInfo selbst geändert werden muss.
 
-**Core-Aliase werden nicht überschrieben.** Die unterschiedliche Schreibweise
-eines Anbieters übersetzt das Plugin intern aus Ticker und MIC. Daraus entsteht
-kein Änderungs- oder Migrationsauftrag für bestehende `symbol`-Werte.
-Der Umfang ist entschieden; die Umsetzung steht noch aus.
+Bisher begrenzt der fest eingebaute
+Börsenkatalog diese Erweiterbarkeit.
+
+Beispiel: Ein regionales Plugin unterstützt eine Börse, die StockInfo noch
+nicht kennt. Es soll deren Börsenkennung (MIC) und Namen ergänzen können.
+Danach lässt sich ein Wertpapier dieses Handelsplatzes regulär aufnehmen.
+
+Für eine bereits bekannte Börse meldet das Plugin nur seine Unterstützung.
+**Bestehende Börsendefinitionen bleiben erhalten**; abweichende Schreibweisen
+seines Datenanbieters übersetzt das Plugin intern.
+
+Der Umfang ist **entschieden, der Entwurf wird vorbereitet**. Bestehende Symbole
+werden durch dieses Ticket weder umdefiniert noch migriert.
 
 ## Für dich
 
-Aktuell kein Handgriff nötig. Als Nächstes sind Deklaration und Validierung
-innerhalb dieses Umfangs konkret auszuarbeiten. Keine neue Implementierungs-
-oder Review-Übergabe wird allein durch diese Notiz gestartet.
+Aktuell ist **kein Handgriff nötig**.
+
+Codex führt das Ticket als nächstes Element der beauftragten Kette aus.
+Der Entwurf geht wegen der erwarteten Breite vor Produktcode an Claude.
 
 ### Bisherige Antworten und Rückmeldungen
 
@@ -30,6 +38,26 @@ Für T-30 genügt „bestehende Börsen referenzieren, fehlende Börsen ergänze
 widersprüchliche Deklarationen ablehnen“. Mike bestätigt: **„Ja, halte das so fest“**.
 
 ## Umsetzung und technische Nachweise
+
+### Scope-Vertrag · 2026-09-08
+
+Ergebnis: Ein externes Plugin deklariert einen neuen MIC, ein Nutzer nimmt
+darüber ein Asset regulär auf, und REST/Exchanges zeigen Quelle und
+Unterstützung je Rolle ohne Änderung bestehender Aliase oder Assets.
+
+1. Optionaler Plugin-Vertrag für Handelsplätze und Rollenabdeckung samt
+   gemeinsamer Validierung und Autor-Harness.
+2. Deterministischer Core-Katalog aus dem aktiven Profil, Aufnahmeweg und
+   REST-Auskunft einschließlich Konflikten und Entfernung.
+3. Exchanges-UI und ausführbares Autorenbeispiel samt gezielten Tests.
+
+Der [Entwurf](../docs/superpowers/specs/2026-09-08-plugin-exchanges-design.md)
+legt Vertragsform, Lebenszyklus, Grenzen und Akzeptanzfälle fest. Die
+Schätzung von 16–20 Produktdateien, 8–10 Test-/Dokumentationsdateien und
+1400–1800 manuellen Diff-Zeilen überschreitet den allgemeinen 800-Zeilen-
+Riegel. Deshalb zunächst Scope-Checkpoint, keine Produktimplementierung.
+Keine Migration, keine Alias-Überschreibung, kein ISO-Vollimport und kein
+neues Test-Subsystem. Der bestehende UI-Entwurf vom Vortag bleibt unberührt.
 
 ### Verbindlicher Umfang
 
