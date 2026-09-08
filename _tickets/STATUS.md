@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `1985037`
-- `review_round`: `1`
-- `owner`: `codex`
+- `handoff_commit`: `2c1d01b`
+- `review_round`: `2`
+- `owner`: `claude`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `1985037`
@@ -58,7 +58,7 @@ Du entwickelst, Claude überprüft.“
 | T-32 | Abgeschlossen und von Mike am 2026-09-08 bestätigt; Ticket unter `solved/`. Der zentrale Testriegel steht: Backend-Tests laufen ohne manuell gesetzten Datenpfad, Zugriffe nach `data/` werden vor dem Öffnen abgewiesen. |
 | T-30 | Neue Handelsplätze und Rollenunterstützung für externe Plugin-Autoren ermöglichen; bestehende Core-Aliase bleiben unverändert. |
 | T-64 | Technisch freigegeben durch Claude, Runde 1, e427013. Dynamische Exchanges samt UI-Nachträgen und Autorennachweisen umgesetzt; Abschluss durch Mike steht aus. |
-| T-21 | Zunächst ausschließlich offenes #2g: übersetzte Fehlertexte samt gezielter Verifikation. Börsenabweichungs-UI und Docker-Pending-Langzeittest sind keine automatisch gestarteten Folgearbeiten. |
+| T-21 | #2g freigegeben. Aktuell: explizit beauftragter Nachtrag Börsenabdeckung samt vereinfachter Exchanges-UI; Übergabe an Claude. Börsenabweichungs-UI und Docker-Pending-Langzeittest bleiben außerhalb dieses Nachtrags. |
 
 T-63 bleibt offen und außerhalb der Kette. T-25 hat die beauftragte
 `data_version`-Teillösung; die weitergehende automatische Migration wird durch
@@ -89,7 +89,7 @@ beim nächsten Anfassen der Datei mitnehmen.
 
 *(leer — T-21 #2g Runde 1 im Ticket zusammengefasst; Testserver 8896 beendet.)*
 
-## An Mike · die Kette ist durch
+## Portfolio-Notizen vor dem aktuellen Nachtrag
 
 T-60, T-32, T-30, T-64 und T-21 `#2g` sind technisch geprüft. Bestätigt und
 unter `solved/` liegen bisher T-60 und T-32. T-30 und T-64 warten auf
@@ -112,7 +112,40 @@ Drei Dinge für die nächste Kette, alle ohne Eile:
 
 ## OUTBOX → Claude
 
-*(leer — Runde 1 verarbeitet.)*
+T-21 Nachtrag Börsenabdeckung, **Runde 2**, Produktstand **`2c1d01b`**,
+Basis `337450e` (Arbeitsaufnahme `f3b8ba0`). Codex implementiert, Claude prüft.
+Mike hat die Umsetzung und Zuordnung zu T-21 ausdrücklich beauftragt.
+UI-Rückmeldung: „UI - viel besser“, weitere Wünsche vollständig eingearbeitet.
+
+Prüfgegenstand: Online-MIC-Deklarationen, je Rolle zusammengeführtes yfinance,
+additiver `get_mic_support(config)`-Hook mit validiertem YAML-Dateibestand.
+REST behält die vollständigen Rollen; UI zeigt MIC, Suffix (zweite Spalte),
+Handelsplatz und verlinkte Kursquellen. Standard nur abgedeckte Börsen;
+Schiebeschalter nur bei fehlender Abdeckung, eingeblendete Zeilen grau.
+Quelleninfos unten, Beispiele fett, keine Sammelcode-Liste im UI.
+
+Scope geplant/tatsächlich: 3/3 Änderungen, 15/16 Produktdateien (+7 %,
+gemeinsamer UI-Filter nach Mikes ausdrücklichem Farbwunsch), 6/7 Test-/Dokudateien
+(+17 %, Direktlinktest in vorhandenem Hash-Composable), **800/792 manuelle
+Diff-Zeilen** vor Statusübergabe. Kein Schema-/DB-/Migrationsumbau, keine
+neue Abhängigkeit. Public Hook und bestehende Hash-Route im Scope angekündigt.
+
+Nachweise im neuen Ticketabschnitt: 1142 Backend grün (29 skip, 8 Integration
+ausgenommen), 322 Plugin-API grün (1 skip), 50 Beispieltests, 370 Dashboardtests,
+Ruff/ESLint/TypeScript/Build. Frische Testdatenbanken explizit nachgewiesen.
+YAML-Mutant ohne Datenvoraussetzung: 2 rot; UI-Mutant, der Metadaten als
+Kursabdeckung zulässt: 4 rot; anschließend Original gezielt wieder grün.
+Browser DE/EN, Online/Fallback und YAML-only, 390/1440/1787 ohne Überlauf,
+Dateiergänzung + Reload macht XTSE sichtbar, Quellen-Direktlink samt Fokus,
+Schalter bei 35 unversorgten Börsen und graue MICs/Suffixe gemessen. Testserver
+und eigene Tabs sind beendet; Mikes Browserfenster blieb erhalten.
+
+Logs: `/tmp/t21-coverage-{backend,api,ui,build,targeted}.log`, Mutanten
+`/tmp/t21-coverage-mutant-{yaml,ui-final}.log`. Keine Live-Online-Kursabrufe
+behauptet. Bezeichner-Inventare vollständig geprüft. Vorbestehende fremde
+Änderungen (u.a. Ticket-Einstieg/Regelwerk/Dokumentlöschungen) sind weiterhin
+uncommittet und gehören nicht zum Review-Diff. Nach Freigabe endet dieser
+Nachtrag bei `portfolio_review`; T-21 insgesamt bleibt offen.
 
 ## Archiv · T-60 Scope-Checkpoint: `continue`
 
