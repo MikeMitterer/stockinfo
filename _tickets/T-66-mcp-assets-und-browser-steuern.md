@@ -11,8 +11,9 @@ wartet auf deren Rückmeldung. „Schließe den Chart“ schließt nur das Diagr
 in dieser verbundenen Ansicht.
 
 **Stand:** Konzeptentwurf, keine Umsetzung. Codex hat den Ausgangsentwurf am
-Code geprüft und diese Redaktion ausgearbeitet. Claudes unabhängige Prüfung
-steht aus. Codex prüft anschließend auch die Auflösung der Review-Befunde.
+Code geprüft und diese Redaktion ausgearbeitet. Claude bestätigt in Runde 1
+Zuschnitt und Bestandsabgleich; Transport und Hash-Zuständigkeit sind nach
+Gegenprüfung korrigiert. Die abschließende zweite Prüfung steht aus.
 Die Eigenprüfung dieser Redaktion wird nicht als unabhängig bezeichnet.
 
 **Für Mike:** Jetzt ist kein Handgriff nötig. Zuerst prüfen beide KI das
@@ -28,6 +29,11 @@ Mikes Rückmeldungen vom 2026-09-08:
 - „Ich möchte erstmal ein Tickt bzw das das Konzept ordentlich steht und beide KI das verifiziert haben“
 - „Genau - bei Claude läuft auch wieder der Loop der alle 5 min das Status.md überprüft“
 - „Als kommunikationsweg zum WebClient steht SSM oder WebSockets zur Verfügung - kläre auch mit Claude ab was in dem Fall besser passt“
+- „Die Anzahl der Iterationen über das Ticket T-66 sollte sowieso begrenzt sein - also, nicht ausufern!“
+
+**Höchstens zwei Konzept-Reviewrunden insgesamt.** Danach geht das Ergebnis
+mit gegebenenfalls offenen Restpunkten an Mike. Keine dritte Schleife und
+kein zusätzlicher Funktionsumfang für Detailpolitur.
 
 „SSM“ wird hier als **SSE / Server-Sent Events** verstanden; diese Annahme
 wurde Mike im Chat genannt. Transportentscheidung siehe unten.
@@ -128,20 +134,25 @@ Transport gibt daher nicht den Ausschlag.
 | Bindung und Zugriff | SSE-Stream und ACK-Route müssen dieselbe Ansicht prüfen | Nach Anmeldung an diese Verbindung gebunden; Auftrags-ID weiter nötig |
 | Zugang ohne URL-Geheimnis | Native EventSource hat keinen frei setzbaren Authorization-Header; Cookie- oder Fetch-Streaming-Lösung nötig | Anmeldung als erste Nachricht möglich; davor keine Aufträge/Daten |
 | Betrieb | Gewöhnlicher HTTP-Strom; Buffering/Timeouts beachten | Upgrade-Unterstützung nötig, besonders später hinter Proxy |
-| Für diesen lokalen MVP | Tragfähig; Rückkanal und Zugang lösen zusätzlichen Aufwand aus | Wenige bidirektionale Meldungen auf einer Verbindung |
+| Bestehender Migrationsriegel | Zentraler HTTP-Guard erfasst Stream-Anmeldung, Auftrag und ACK | HTTP-Middleware wird umgangen; zentraler ASGI-Umbau mit Regression nötig |
+| Für diesen lokalen MVP | **Empfohlen:** vorhandene HTTP-Grenze, eine ACK-Route zusätzlich | Rückkanal einfacher, aber größerer Eingriff in den Betriebsriegel |
 
-**Codex empfiehlt für den WebClient WebSocket.** Ausschlaggebend sind
-Bereitschaft, Ausführungsbestätigung und Editorstatus auf derselben gebundenen
-Verbindung, nicht Datenmenge oder Geschwindigkeit. FastAPI und der Browser
-bieten die Grundbausteine; es braucht weder Socket.IO noch einen allgemeinen
-Event-Bus. Reconnect, Zeitgrenzen und fachliche ACKs müssen trotzdem gebaut
-werden. SSE wäre bei überwiegend reinen Benachrichtigungen naheliegender.
+**Gemeinsame Empfehlung nach Gegenprüfung: SSE plus REST.**
+`app/main.py:migration_guard` ist HTTP-Middleware. Die installierte
+`BaseHTTPMiddleware.__call__` leitet andere Scope-Typen ungeprüft weiter;
+Claude hat das benannt, Codex hat es am installierten Code nachgeprüft.
+SSE-Anmeldung und ACK-/Auftrags-POSTs laufen durch den bestehenden Riegel.
+Dieser prüft den Anfragebeginn, nicht jedes spätere Stream-Ereignis: neue
+UI-Aufträge bleiben deshalb REST-Anfragen hinter diesem Guard; es gibt keine
+unabhängige Befehlsquelle auf einem alten offenen Stream.
 
-**Zur ausdrücklichen Gegenprüfung durch Claude:** Ist diese Bilanz für den
-konkreten MVP überzeugend, oder ist SSE plus vorhandenes REST-Wiring insgesamt
-kleiner? Erst nach dieser Gegenprüfung wird die Empfehlung konsolidiert.
-Es werden nicht beide Varianten implementiert und kein vorsorglicher
-Transport-Abstraktionslayer vorgesehen.
+WebSocket bliebe möglich, erforderte hier aber eine gemeinsame ASGI-Absicherung
+für beide Scope-Typen samt Regression der bisherigen HTTP-Wege. Eine zweite
+Kopie der Migrationsregel in der Socket-Route ist keine Lösung. Für wenige
+Bestätigungen lohnt der Umbau im MVP nicht. SSE kostet eine ACK-Route und
+die unten beschriebene Cookie-Bindung; das einmalige URL-Fragment allein löst
+den Zugang zum dauerhaften Stream nicht. Es entsteht nur ein Transport ohne
+vorsorglichen Abstraktionslayer.
 
 Grundlagen: [MDN SSE](https://developer.mozilla.org/en-US/docs/Web/API/Server-sent_events/Using_server-sent_events),
 [EventSource-Konstruktor](https://developer.mozilla.org/en-US/docs/Web/API/EventSource/EventSource),
@@ -155,20 +166,29 @@ MCP-stdio und WebClient-Transport sind getrennte Verbindungen.
 **Eine gezielt verbundene Ansicht.** StockInfo erhält eine allgemeine
 UI-Steuerung für Anmeldung, Auftrag und Rückmeldung, ohne MCP-Werkzeugnamen
 im Backend. MCP sendet UI-Aufträge über REST. Der WebClient empfängt sie über
-den gewählten Kanal und bestätigt dort bzw. bei SSE über REST.
+SSE und bestätigt über REST.
 
 Der Steuerungskanal ist standardmäßig deaktiviert. Vorgeschlagen ist für den
 lokalen MVP ein explizit eingerichteter gemeinsamer Zugangswert zwischen MCP
 und Backend. Nur dieser darf eine Bindung erstellen und Aufträge senden.
 Die Browseransicht bekommt stattdessen eine 60 Sekunden gültige Einmalkennung
-im URL-Fragment. Sie entfernt diese nach Übernahme sofort aus der Adresse,
-bevor die normale Hash-Navigation sie verändert.
+im URL-Fragment. Lesen und Entfernen liegen als exportierte Helfer in
+`useHashTab.ts`, neben den bestehenden URL-Helfern; keine zweite Hash-Zerlegung
+in einer Komponente. Die Übernahme erfolgt vor der normalen Hash-Normalisierung.
+
+Der Browser tauscht die Einmalkennung per POST gegen eine an die Ansicht
+gebundene HttpOnly-/SameSite-Strict-Sitzungscookie. Sie gilt nur für deren
+UI-Stream-/ACK-Pfad. Dashboard und API stammen im MVP vom selben Origin
+(ausgeliefertes Dashboard oder Vite-Proxy); EventSource benötigt so weder
+Authorization-Header noch ein Query-Geheimnis. Der MCP-Steuerungs-POST verwendet
+weiter seinen eigenen Zugang. Ein Ansichtsbezeichner allein autorisiert nichts.
 
 MCP startet nur die konfigurierte Dashboard-Adresse über den lokalen
 Betriebssystemaufruf mit getrennten Argumenten, ohne Shell. Es übernimmt keine
 vorhandene manuelle Registerkarte. Browser-Origin, Einmalkennung, Bindung und
-Auftragszuordnung werden serverseitig geprüft. Bei WebSocket: Anmeldung als
-erste Nachricht mit kurzer Frist; vorher keine Nutzdaten oder Befehle.
+Auftragszuordnung werden serverseitig geprüft. Browser-POSTs erfordern den
+konfigurierten Origin; beim Stream wird ein vorhandener fremder Origin
+abgewiesen. Ohne passende Sitzung gibt es keine Nutzdaten oder Befehle.
 Eine gebrauchte/abgelaufene Kennung oder zweite Übernahme wird abgewiesen.
 CORS allein ersetzt diese Prüfungen nicht. Kein langlebiger MCP-Zugang gelangt
 zum Browser; Verbindungskennungen werden nicht protokolliert.
@@ -190,6 +210,8 @@ flüchtige Bindung, keine dauerhafte Queue und kein Replay. Weitere gleichzeitig
 Aufträge werden als beschäftigt abgewiesen. Neustart oder Verbindungsabbruch
 verwerfen die Bindung; erneutes Verbinden erfordert eine neue Einmalkennung.
 Der Client lädt dann aktuelle Daten, spielt aber keine alten Befehle ab.
+Bei Fehler schließt er EventSource; der Server weist Wiederaufbauversuche mit
+der verworfenen Sitzung ab. SSE-Reconnect ist kein fachliches Befehls-Replay.
 Ohne verbundene Ansicht meldet `close_chart` „keine verbundene Ansicht“ und
 startet keinen Browser. Die bestehende Ansicht wird durch Neuverbinden nicht
 automatisch zur zweiten steuerbaren Ansicht.
@@ -235,17 +257,23 @@ Jeder Abschnitt braucht vor Implementierung einen eigenen Datei-/Diff-Scope.
 Die alte Schätzung von 6–10 Tagen betraf den größeren Gesamtentwurf und ist
 kein Budget dieses Konzepts. Nicht enthalten: Restore, Migration, DB-Umbau,
 neue Benutzerverwaltung oder Umbau der Geschäftslogik. Existierende
-Betriebsriegel müssen auch neue Daten-/UI-Wege sperren; WebSockets dürfen
-insbesondere einen nur für HTTP implementierten Riegel nicht umgehen.
+Betriebsriegel müssen auch neue Daten-/UI-Wege sperren; die SSE-/REST-Wege
+laufen durch den bestehenden zentralen HTTP-Riegel.
 
 ## Verifikation des Konzepts und spätere Abnahme
 
 | Konzeptprüfung | Nachweis | Codex | Claude |
 |---|---|---|---|
-| K1 MVP / spätere Ausbaustufen | Lokaler durchgängiger Beispielablauf, Remote ausdrücklich später. | Bestandsabgleich/Eigenprüfung erfolgt | ausstehend |
-| K2 REST / eindeutige Identität | Router-Inventar; Wiederverwendung und DELETE-Lücke explizit. | geprüft | ausstehend |
-| K3 WebClient-Transport | SSE/REST gegen WebSocket am konkreten Hin-/Rückkanal verglichen. | WebSocket empfohlen | ausstehend |
-| K4 Fehler / prüfbare Abnahme | ACK, Schreibausgang, Editor, Neustart und Betriebsriegel betrachtet. | Konzeptprüfung, kein Laufzeitbeleg | ausstehend |
+| K1 MVP / spätere Ausbaustufen | Lokaler Beispielablauf, Remote ausdrücklich später. | Eigenprüfung erfolgt | Runde 1 bestätigt |
+| K2 REST / eindeutige Identität | Inventar, Wiederverwendung, DELETE-Lücke und zentraler Hash-Leser. | geprüft; Hash-Leser ergänzt | Bestand bestätigt; B2 zur Endprüfung |
+| K3 WebClient-Transport | HTTP-Guard entscheidet für SSE/REST; Cookie-Bindung benannt. | Befund nachgeprüft, SSE empfohlen | SSE empfohlen; Endfassung zur Prüfung |
+| K4 Fehler / prüfbare Abnahme | ACK, Schreibausgang, Editor, Neustart und Betriebsriegel. | Konzeptprüfung, kein Laufzeitbeleg | Runde 1 bestätigt |
+
+Runde 1 (`eb628f9`): Claude bestätigt den Bestandsabgleich und fordert zwei
+Korrekturen. K3 ist nach gemeinsamer Code-Gegenprobe auf SSE/REST konsolidiert;
+B2 verortet den Bindungsleser ausdrücklich in `useHashTab.ts`. Codex hat die
+geänderten Aussagen einschließlich Cookie-/Reconnect-Weg erneut geprüft.
+Keine neuen Funktionen; die zweite Runde prüft nur diese abschließende Fassung.
 
 Keine dieser Angaben behauptet bestandene Produkt- oder UI-Tests. Die einzige
 geplante Produkt-Verify-Matrix folgt; alle Läufe sind offen:
