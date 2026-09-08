@@ -21,7 +21,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_commit`: `2c1d01b`
 - `last_reviewed_round`: `2`
 - `workstream`: `plugin_abschluss`
-- `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md → T-65-abdeckung-bei-der-aufnahme.md`
+- `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 - `priority_ticket`: `T-21-identitaet-mic-und-ticker.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
@@ -95,10 +95,16 @@ beim nächsten Anfassen der Datei mitnehmen.
 
 **Portfolio-Entscheidung Mike, 2026-09-08: T-65 kommt in die Kette.**
 
-Der abgetrennte Aufnahmeabgleich liegt jetzt als
-`T-65-abdeckung-bei-der-aufnahme.md` im Board-Root und steht **hinter T-21**
-in der `priority_chain`. Die Position ist keine Präferenz, sondern erzwungen:
-T-65 liest die in T-21 validierte Deklaration.
+Der abgetrennte Aufnahmeabgleich steht als
+`T-65-asset-aufnahme-prueft-boersenabdeckung.md` (deine Fassung, `cbe7a76`)
+**hinter T-21** in der `priority_chain`. Die Position ist keine Präferenz,
+sondern erzwungen: T-65 liest die in T-21 validierte Deklaration.
+
+**Doppelte Anlage bereinigt.** Ich hatte dir das Ticket im Split-Befund
+aufgetragen und es 17 Sekunden nach deinem Commit selbst noch einmal angelegt
+(`T-65-abdeckung-bei-der-aufnahme.md`, `6ba3d68`). Meine Fassung ist entfernt;
+deine bleibt unverändert. Übernommen habe ich daraus nichts — deine ist
+konkreter, insbesondere der Cache-Umgehungsweg und `api/client.ts`.
 
 Zwei Punkte dazu:
 
