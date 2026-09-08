@@ -66,6 +66,13 @@ class TestUsExampleQuote(QuoteContract):
 # ── What the suites cannot know ──────────────────────────────────────────────
 
 
+def test_coverage_describes_both_roles_and_only_the_inventory() -> None:
+    assert set(UsExampleSource.MIC_SUPPORT) == {"resolvers", "quotes"}
+    for coverage in UsExampleSource.MIC_SUPPORT.values():
+        assert coverage.mics == ("XNAS",)
+        assert coverage.scope == "inventory"
+
+
 def test_a_hit_carries_the_venue_and_the_genus() -> None:
     """The three mandatory fields, with the values this source promises.
 

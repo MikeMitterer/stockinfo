@@ -5,7 +5,7 @@ import { apiClient } from '../api/client'
 import { translate } from '../i18n'
 import type { ExchangesResponse } from '../types'
 
-/** Lädt die weltweite Börsentabelle inkl. konfigurierter Default-Börse. */
+/** Lädt den aktiven Börsenkatalog samt deklarierter Quellenunterstützung. */
 export function useExchanges(): {
   data: Ref<ExchangesResponse | null>
   loading: Ref<boolean>
@@ -17,11 +17,13 @@ export function useExchanges(): {
   const error = ref<string | null>(null)
 
   async function load(): Promise<void> {
+    if (loading.value) return
     loading.value = true
     error.value = null
     try {
       data.value = await apiClient.get<ExchangesResponse>('/exchanges')
     } catch (err) {
+      data.value = null
       error.value = translate('errors.exchanges')
       consola.error('useExchanges.load', err)
     } finally {

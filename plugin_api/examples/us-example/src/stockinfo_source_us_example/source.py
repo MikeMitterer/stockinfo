@@ -6,9 +6,11 @@ a plugin does in practice.
 """
 
 from datetime import datetime, timezone
+from types import MappingProxyType
 from typing import Any, Protocol
 
 from stockinfo_plugin import (
+    MicCoverage,
     ListedIdentity,
     NotFound,
     NotResponsible,
@@ -109,6 +111,13 @@ class UsExampleSource(Resolver, QuoteSource):
     # the host would skip this source for every known genus.
     SUPPORTED_KINDS = frozenset({"listed"})
     SUPPORTED_TYPES = frozenset({"stock", "etf"})
+
+    # XNAS is already in the core catalog; do not redefine its metadata.
+    # The fake vendor covers only its inventory, not the whole market.
+    MIC_SUPPORT = MappingProxyType({
+        "resolvers": MicCoverage((VENUE,), scope="inventory"),
+        "quotes": MicCoverage((VENUE,), scope="inventory"),
+    })
 
     def __init__(
         self, config: dict[str, Any] | None = None, market: Market | None = None

@@ -37,6 +37,7 @@ from datetime import date
 
 import pytest
 
+from stockinfo_plugin.exchanges import validate_exchanges
 from stockinfo_plugin.invariants import (
     currency_problem,
     days_are_ordered,
@@ -45,6 +46,13 @@ from stockinfo_plugin.invariants import (
     is_finite_price,
     isin_check_digit_is_valid,
     resolution_problem,
+)
+from stockinfo_plugin.sources import (
+    DailyCloseSource,
+    FxSource,
+    MetadataSource,
+    QuoteSource,
+    Resolver,
 )
 from stockinfo_plugin.types import (
     API_VERSION,
@@ -86,6 +94,18 @@ class SourceContract:
     def make_source(self):
         """Baut die zu prüfende Quelle. Muss überschrieben werden."""
         raise NotImplementedError
+
+    def test_boersendeklarationen_sind_gueltig(self) -> None:
+        """Prüft Klassenmetadaten; Konflikte mit dem Katalog prüft der Host."""
+        source_class = type(self.make_source())
+        roles = frozenset(
+            role for base, role in (
+                (Resolver, "resolvers"), (QuoteSource, "quotes"),
+                (DailyCloseSource, "daily"), (MetadataSource, "etf_meta"),
+                (FxSource, "fx"),
+            ) if issubclass(source_class, base)
+        )
+        validate_exchanges(source_class, roles)
 
     def test_kein_veraenderlicher_zustand_an_der_klasse(self) -> None:
         """Zwei Testfälle dürfen sich nicht beeinflussen — und tun es doch.

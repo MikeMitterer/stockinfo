@@ -230,7 +230,7 @@ export interface EnvInfo {
 export type Provenance = { kind: 'core' } | { kind: 'plugin'; id: string }
 
 /**
- * Ein **Handelsplatz**: echter MIC und höchstens ein Provider-Alias.
+ * Ein **Handelsplatz**: echter MIC und höchstens ein App-Suffix.
  *
  * `alias` ist das nackte Token ohne Punkt (`'DE'`). Den Punkt setzt das Backend
  * beim Zusammensetzen des Symbols.
@@ -253,6 +253,16 @@ export interface ExchangeEntry {
   region: string
   currency: string
   provenance: Provenance
+  declared_by?: string[]
+  support?: ExchangeSupport[]
+}
+
+/** Optionale Angaben bleiben mit älteren REST-Antworten lesbar. */
+export interface ExchangeSupport {
+  source: string
+  role: string
+  usable: boolean
+  scope?: 'market' | 'inventory'
 }
 
 /**
@@ -279,6 +289,7 @@ export interface ExchangesResponse {
   default_exchange: string
   default_exchange_kind: 'exchange' | 'collector' | 'unknown'
   catalog: CatalogEntry[]
+  unspecified_support?: ExchangeSupport[]
 }
 
 export interface QuotePoint {

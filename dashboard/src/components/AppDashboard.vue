@@ -44,7 +44,7 @@ const { t } = useI18n()
 
 const { env, load: loadEnv } = useEnvironment()
 const { quoteChain, load: loadSources } = useSources()
-const { data: exchanges, load: loadExchanges } = useExchanges()
+const { data: exchanges, loading: exchangesLoading, error: exchangesError, load: loadExchanges } = useExchanges()
 const fxCurrencies = computed(() => currenciesFromExchanges(exchanges.value))
 const { instruments, load: loadInstruments, error: instrumentsError } = useInstruments()
 /**
@@ -267,7 +267,8 @@ function closeChart(): void {
         />
       </template>
 
-      <ExchangesPanel v-else-if="activeTab === 'exchanges'" :data="exchanges" />
+      <ExchangesPanel v-else-if="activeTab === 'exchanges'" :data="exchanges"
+        :loading="exchangesLoading" :error="exchangesError" @reload="loadExchanges" />
       <AnalysisPanel v-else-if="activeTab === 'analysis'" :instruments="instruments" />
       <FxPanel v-else-if="activeTab === 'fx'" :currencies="fxCurrencies" />
       <SettingsPanel v-else-if="activeTab === 'settings'" v-model:tab="settingsTab" :env="env" />

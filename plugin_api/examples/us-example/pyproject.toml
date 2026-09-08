@@ -14,10 +14,10 @@ requires-python = ">=3.11"
 #
 # No HTTP library either: the example takes its transport as a constructor
 # argument, which is what makes its tests run without a network.
-dependencies = ["stockinfo-plugin-api>=0.2"]
+dependencies = ["stockinfo-plugin-api>=0.3"]
 
 [project.optional-dependencies]
-testing = ["stockinfo-plugin-api[testing]>=0.2"]
+testing = ["stockinfo-plugin-api[testing]>=0.3"]
 
 # One source, announced once, usable in two roles. The host asks the class
 # which roles it implements; the operator writes `UsExampleSource.name` on

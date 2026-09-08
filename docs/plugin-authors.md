@@ -223,6 +223,46 @@ The sentence is read by someone who did not write your plugin, in
 `GET /sources`. "Not configured" tells them something is wrong and nothing
 about what to do. Name the setting and the way to supply it.
 
+### Declare venues and coverage
+
+The optional declarations below require `stockinfo-plugin-api>=0.3` (the
+next additive release; this checkout already contains them). Existing API-2
+plugins can omit them; their coverage is shown as **unspecified**, not absent.
+`data_version` does not change for these descriptive additions.
+
+```python
+from types import MappingProxyType
+from stockinfo_plugin import ExchangeSpec, MicCoverage
+
+# Class attributes on your source:
+EXCHANGES = (ExchangeSpec("XBUD", "Budapest", "europe", "HUF"),)
+MIC_SUPPORT = MappingProxyType({
+    "quotes": MicCoverage(("XBUD",), scope="market"),
+    "daily": MicCoverage((), scope="market"),
+})
+```
+
+Declare only roles your class implements. An omitted role means unknown;
+an empty MIC tuple explicitly promises no coverage. Use `inventory` for a
+file or limited inventory; `market` describes general market coverage, not a
+guarantee that every request succeeds. FX has no MIC declaration.
+
+`EXCHANGES` adds venues missing from the core catalog. Core MICs such as
+`XNAS` belong in `MIC_SUPPORT`; do not redefine their names or aliases.
+New venues use their MIC as the app suffix (`DEMO.XBUD`). Vendor symbol
+translation remains inside your plugin. Conflicting definitions are rejected
+by the host; identical declarations may coexist. Removing the plugin removes
+its catalog contribution without rewriting stored assets.
+
+Every inherited role contract validates declaration structure. Catalog
+conflicts need a host run. The bundled US example declares inventory coverage
+for both its roles using only public imports. Run it from the repository root
+against the checkout, without waiting for the package release:
+
+```bash
+PYTHONPATH=plugin_api/src:plugin_api/examples/us-example/src .venv/bin/python -m pytest -q plugin_api/examples/us-example/tests
+```
+
 ### Inherit the tests
 
 ```python
@@ -237,8 +277,7 @@ class TestMyResolver(ResolverContract):
         return MySource({"api_key": "test"})
 ```
 
-Six lines buy you the whole role suite. For the bundled example that is 19
-inherited cases for the resolver and 15 for the quote source: that you never
+Six lines buy you the whole role suite: that you never
 raise, that you say why you stand still, that an unrelated request costs
 nothing, that a hit carries every mandatory field, that no mutable state lives
 on the class.
