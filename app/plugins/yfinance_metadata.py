@@ -16,6 +16,10 @@ das Ergebnis dieses Tickets: Sie braucht Handelswährung und Börse.
 damit war die einheitliche Schnittstelle eine Behauptung.
 """
 
+from types import MappingProxyType
+from stockinfo_plugin import MicCoverage
+from app.plugins.exchange_support import ONLINE_MICS
+
 from typing import Any
 
 from stockinfo_plugin import FieldSpec, MetadataSource, Reading, ResolveRequest
@@ -44,6 +48,9 @@ class YFinanceMetadataPlugin(MetadataSource):
     name = "yfinance"
     cost = "free"
     api_version = 2
+    MIC_SUPPORT = MappingProxyType({
+        'etf_meta': MicCoverage(ONLINE_MICS),
+    })
     SUPPORTED_KINDS = frozenset({"listed"})
     SUPPORTED_TYPES = frozenset({"etf", "etc", "fund"})
 

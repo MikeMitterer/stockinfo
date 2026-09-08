@@ -111,3 +111,13 @@ describe('useHashTab', () => {
     unmount()
   })
 })
+
+
+it('erhält das Ziel eines direkten Kursquellenlinks beim Start', async () => {
+  window.location.hash = '#/exchanges?source=yaml-file'
+  const { tab, unmount } = mountHashTab()
+  await nextTick()
+  expect(tab.value).toBe('exchanges')
+  expect(window.location.hash).toBe('#/exchanges?source=yaml-file')
+  unmount()
+})

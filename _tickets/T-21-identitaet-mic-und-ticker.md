@@ -1,5 +1,101 @@
 # T-21 · Identität auf MIC + Ticker umstellen
 
+## Nachtrag Börsenabdeckung · 2026-09-08
+
+Mike beauftragt die Deklaration ausdrücklich in T-21. Die Exchanges-Seite
+soll die tatsächlich konfigurierten Quellen zeigen: Online-Abdeckung je
+Rolle, YAML ausschließlich für im aktuellen Dateibestand vertretene
+Instrumente mit passenden Daten. Ein YAML-Eintrag verspricht keine allgemeine
+Marktabdeckung. Beide Profile werden geprüft; derzeit ist kein Handgriff
+von Mike erforderlich.
+
+**Scope-Vertrag:** Drei Änderungen: (1) eingebaute Online-Plugins deklarieren
+bekannte MICs je Rolle; (2) der additive Plugin-Hook `get_mic_support(config)`
+liefert aktuelle Bestandsabdeckung, YAML wertet seine Datei aus; (3) REST und
+UI unterscheiden Online-Funktionen, Dateibestand und fehlende Abdeckung.
+Der Host sammelt die Deklarationen auch bei getrennten Klassen einer Quelle
+(yfinance-Kurse und Metadaten). Statische Deklarationen bleiben kompatibel.
+Die bestehende Marktabdeckungszusage garantiert weiterhin keinen Einzeltreffer.
+
+Erwartet höchstens **15 Produktdateien**, **6 Test-/Dokudateien** und
+**800 manuelle Diff-Zeilen** ab `337450e`: fünf Online-Pluginmodule samt
+MIC-Konstante, Registry/Katalog, Source-Vertrag und YAML-Beispiel,
+ExchangeSupport/ExchangesPanel und DE/EN; Vertragstests, Backend-Profiltests,
+Dashboardtests und Autorenanleitung/Ticket. Kein neuer Endpunkt, Schema,
+Datenbankzugriff, Datenmigration, Online-Download oder Umbau des Symbolformats.
+Keine Änderungen an Arbeitsbeständen. Unbekannte Drittanbieter-Zusagen bleiben
+als unbekannt erkennbar; fehlende Angaben werden nicht als Abdeckung erfunden.
+
+UI-Nachsteuerung Mike: keine Rollenlisten oder Abdeckungs-Badges je Quelle.
+Die Tabelle zeigt MIC, nutzbaren App-Suffix als zweite Spalte, Handelsplatz
+und kompakte Kursquellen. Ohne Alias zeigt sie den als Eingabe gültigen MIC-Suffix,
+beispielsweise `.XNAS`. YAML erscheint als Datei; die Erklärung gilt zentral.
+Ausführliche Rollen-/Abdeckungsangaben bleiben im REST-Vertrag erhalten.
+Quellennamen verlinken zum Infobereich am Seitenende; beide Eingabebeispiele
+sind fett hervorgehoben (weitere explizite UI-Aufträge von Mike).
+Die bestehende Hash-Navigation erhält dafür einen `source`-Queryparameter
+auf Exchanges; Direktlinks müssen auch bei verzögert eintreffenden Daten
+funktionieren. Dafür wird `useHashTab.ts` samt bestehendem Test ergänzt
+(insgesamt weiterhin höchstens 15 Produktdateien, jetzt 7 Test-/Dokudateien).
+Weiterer UI-Auftrag: nicht abgedeckte Zeilen samt MIC/Suffix ausgrauen.
+Eine kleine gemeinsame Auswahlfunktion unter `utils/` hält Zeilenfarbe und
+Quellenanzeige konsistent; damit 16 statt 15 Produktdateien (+7 %, im Riegel).
+Standardmäßig zeigt die Seite nur abgedeckte Börsen; der vollständige Katalog
+ist optional über einen Schiebeschalter einblendbar. Dieser erscheint nur,
+wenn mindestens eine Börse nicht abgedeckt ist. Der Sammelcode-Abschnitt
+entfällt auf Mikes Wunsch aus der UI; die REST-Auskunft bleibt vollständig.
+
+Prüffolge: gezielte rote Profil-/Dateibestandtests, Implementierung, isolierte
+REST-Profile einschließlich Dateiänderung/-fehler und Entfernung von Quellen,
+DE/EN-Komponententests, Gesamtsuiten/Lint/Build, Desktop-/Mobil-Smoke und Claude.
+
+| # | Nachweis | AI |
+|---|---|:--:|
+| coverage-online | Aktive Online-Quellen deklarieren ihre Rollen; entfernte Quellen verschwinden. | ✅ |
+| coverage-yaml | Reines YAML zeigt nur vorhandene MICs je Datenrolle, Aktualisierung und Fehler ohne alte Zusage. | ✅ |
+| coverage-ui | Online/Fallback und reines YAML sind auf Desktop/Mobil in DE/EN unterscheidbar. | ✅ |
+
+**Nachweise Codex:** 1142 Backendtests bestanden, 29 übersprungen,
+8 Integrationstests abgewählt; 322 Plugin-API-Tests (1 übersprungen),
+50 Beispieltests und 370 Dashboardtests in 51 Dateien bestanden.
+Ruff, ESLint und TypeScript/Build grün. Zwei gezielte Profiltests waren vor
+Implementierung rot. Eine Gegenprobe ohne YAML-Datenprüfung rötet beide
+Profiltests; die Zulassung von Metadaten als Kursquelle rötet vier UI-Tests.
+Mutanten zurückgenommen, betroffene Tests danach erneut grün.
+
+```bash
+make test-backend ARGS='-m not\ integration'
+make test-plugin-api test-example
+make test-dashboard
+npm --prefix dashboard run build
+```
+
+Logs: `/tmp/t21-coverage-{backend,api,ui,build,targeted}.log`,
+Gegenproben `/tmp/t21-coverage-mutant-{yaml,ui-final}.log`.
+Alle Backend-Profiltests starten mit nachweislich fehlender Testdatenbank.
+Keine Arbeitsdaten oder Zugangsdaten gelesen/geändert. Keine Online-Kurse
+abgerufen: geprüft werden die Deklaration, Auswahl und lokale Dateidaten,
+nicht die aktuelle Lieferfähigkeit jeder einzelnen Börse.
+
+Browser: isolierter Server auf 8896, eigene temporäre Datenbank und Fachdatei.
+Online/Fallback zeigt 38 deklarierte Börsen und kompakte Kursquellen;
+YAML-only zunächst XNAS/XPAR, nach zusätzlichem Toronto-Kurs und „Neu laden“
+auch XTSE. Vollständiger Katalog optional: 38 Zeilen, fehlende Abdeckung
+in Textfarbe gedämpft (RGB 170/160/151), verfügbare Codes Akzent (229/94/31).
+Desktop 1440/1787 und Mobil 390 ohne horizontalen Überlauf. DE/EN geprüft;
+Suffix zweite Spalte, SAP.DE/SAP.XETR fett (700), Quellenlink setzt Fokus
+auf den Infotitel. Direktlink `#/exchanges?source=yaml-file` funktioniert
+auch nach normalem App-Start. Reiner YAML-Betrieb zeigt keine Online-Quelle.
+Schiebeschalter bei 35 nicht abgedeckten Börsen sichtbar; Einschalten zeigt
+38 Zeilen, davon 35 grau (MIC und Suffix), mobil ohne Überlauf. Im
+Online-Profil mit 38 abgedeckten Börsen kein Schalter. Sammelcode-Abschnitt
+entfernt. Eigene Testtabs geschlossen, Testserver beendet.
+Python-AST- und TS-Compiler-Inventare: englische Bezeichner; deutsche Testnamen.
+
+**Mikes Rückmeldung:** „UI - viel besser“. Das ist die Rückmeldung zur
+überarbeiteten Oberfläche; kein Abschluss des gesamten Tickets T-21.
+Unabhängiges Review dieses Nachtrags steht noch aus.
+
 ## Aktuelle Teilumsetzung #2g · 2026-09-08
 
 Scope-Vertrag: Nur die übersetzten Fehlertexte werden korrigiert. Ohne

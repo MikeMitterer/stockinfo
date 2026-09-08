@@ -18,6 +18,10 @@ Einheit und ihre Herkunft mit sich, damit ein Feld, das die App nicht kennt,
 trotzdem ankommen kann. Genau deshalb ist die Metadata-Rolle so geschnitten.
 """
 
+from types import MappingProxyType
+from stockinfo_plugin import MicCoverage
+from app.plugins.exchange_support import ONLINE_MICS
+
 from typing import Any
 
 from stockinfo_plugin import FieldSpec, MetadataSource, Reading, ResolveRequest, Unit
@@ -93,6 +97,9 @@ class JustEtfMetadataPlugin(MetadataSource):
     name = "justetf"
     cost = "free"
     api_version = 2
+    MIC_SUPPORT = MappingProxyType({
+        'etf_meta': MicCoverage(ONLINE_MICS),
+    })
     SUPPORTED_KINDS = frozenset({"listed"})
     SUPPORTED_TYPES = frozenset({"etf", "etc"})
 

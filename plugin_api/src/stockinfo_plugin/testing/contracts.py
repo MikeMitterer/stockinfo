@@ -33,6 +33,7 @@ Verwendung::
         unknown = ResolveRequest(isin="CA0679011084")
 """
 
+from types import SimpleNamespace
 from datetime import date
 
 import pytest
@@ -97,7 +98,8 @@ class SourceContract:
 
     def test_boersendeklarationen_sind_gueltig(self) -> None:
         """Prüft Klassenmetadaten; Konflikte mit dem Katalog prüft der Host."""
-        source_class = type(self.make_source())
+        source = self.make_source()
+        source_class = type(source)
         roles = frozenset(
             role for base, role in (
                 (Resolver, "resolvers"), (QuoteSource, "quotes"),
@@ -106,6 +108,9 @@ class SourceContract:
             ) if issubclass(source_class, base)
         )
         validate_exchanges(source_class, roles)
+        validate_exchanges(SimpleNamespace(
+            MIC_SUPPORT=source_class.get_mic_support(source._config),
+        ), roles)
 
     def test_kein_veraenderlicher_zustand_an_der_klasse(self) -> None:
         """Zwei Testfälle dürfen sich nicht beeinflussen — und tun es doch.

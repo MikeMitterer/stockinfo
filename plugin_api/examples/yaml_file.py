@@ -69,7 +69,10 @@ from stockinfo_plugin.invariants import (
     has_timezone,
     identity_problem,
 )
+from types import MappingProxyType
+
 from stockinfo_plugin import (
+    MicCoverage,
     DailyBar,
     DailyCloseSource,
     DailyRequest,
@@ -678,6 +681,34 @@ class YamlFileSource(
     name = "yaml-file"
     cost = "free"
     api_version = 2
+    MIC_SUPPORT = MappingProxyType({
+        role: MicCoverage((), "inventory")
+        for role in ("resolvers", "quotes", "daily", "etf_meta")
+    })
+
+    @classmethod
+    def get_mic_support(cls, config: dict[str, Any]) -> dict[str, MicCoverage]:
+        """Nur Listings mit Daten für die jeweilige Rolle zählen zur Abdeckung."""
+        catalogue = _Catalogue(Path(config.get("path", "/data/assets.yaml")))
+        markets = {role: set() for role in cls.MIC_SUPPORT}
+        for entry in catalogue.by_symbol.values():
+            identity = entry["identity"]
+            if not isinstance(identity, ListedIdentity):
+                continue
+            available = {
+                "resolvers": True,
+                "quotes": bool(entry.get("price") or _closes(entry)),
+                "daily": bool(_closes(entry)),
+                "etf_meta": bool(entry.get("metadata")),
+            }
+            for role in markets:
+                if available.get(role):
+                    markets[role].add(identity.mic)
+        return {
+            role: MicCoverage(tuple(sorted(mics)), "inventory")
+            for role, mics in markets.items()
+        }
+
     data_version = 1  # Increase only for incompatible changes to stored data.
     SUPPORTED_KINDS = frozenset({"listed", "pair", "isin_only"})
     SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "crypto", "bond"})

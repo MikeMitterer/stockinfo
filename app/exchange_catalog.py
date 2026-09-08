@@ -12,6 +12,7 @@ _CONFIG = None
 _DECLARATIONS: dict[str, object] = {}
 _ORIGINS: dict[str, list[str]] = {}
 _PROBLEMS: dict[str, str] = {}
+_SPECS: dict[str, object] = {}
 
 
 def reset_catalog() -> None:
@@ -21,6 +22,7 @@ def reset_catalog() -> None:
     _DECLARATIONS.clear()
     _ORIGINS.clear()
     _PROBLEMS.clear()
+    _SPECS.clear()
     EXCHANGES.clear()
     EXCHANGES.update(_CORE)
 
@@ -39,8 +41,10 @@ def prepare_catalog(specs: dict, config) -> dict[str, str]:
                 candidates[name] = spec
     for name, spec in candidates.items():
         try:
-            validate_exchanges(spec.declaration, spec.roles)
-            _DECLARATIONS[name] = spec.declaration
+            declaration = spec.exchange_declaration()
+            validate_exchanges(declaration, spec.roles)
+            _DECLARATIONS[name] = declaration
+            _SPECS[name] = spec
         except Exception as error:  # noqa: BLE001 — fremde Klassenmetadaten
             _PROBLEMS[name] = f"Invalid exchange declaration: {error}"
 
@@ -110,6 +114,19 @@ def catalog_annotations(chains: list) -> tuple[dict, list]:
         }
         for mic in EXCHANGES
     }
+    # Einmal je Quelle lesen, damit Rollen denselben Dateistand zeigen.
+    current = {}
+    for name, spec in _SPECS.items():
+        if name in _PROBLEMS:
+            continue
+        try:
+            declaration = spec.exchange_declaration(_CONFIG.config_for(name))
+            validate_exchanges(declaration, spec.roles)
+            if any(mic not in EXCHANGES for coverage in declaration.MIC_SUPPORT.values() for mic in coverage.mics):
+                raise ValueError("Unknown exchange in current coverage")
+            current[name] = declaration.MIC_SUPPORT
+        except Exception:  # noqa: BLE001 — fremde Selbstauskunft, keine erfundene Abdeckung
+            current[name] = None
     unspecified = []
     for entry in chains:
         if entry.role == "fx" or not entry.known or not entry.role_ok:
@@ -117,10 +134,10 @@ def catalog_annotations(chains: list) -> tuple[dict, list]:
         declaration = _DECLARATIONS.get(entry.name)
         if declaration is None or entry.name in _PROBLEMS:
             continue
-        coverage = getattr(declaration, "MIC_SUPPORT", {}).get(entry.role)
+        coverage = (current.get(entry.name) or {}).get(entry.role)
         if coverage is None:
             unspecified.append(
-                {"source": entry.name, "role": entry.role, "usable": entry.usable}
+                {"source": entry.name, "role": entry.role, "usable": entry.usable and current.get(entry.name) is not None}
             )
             continue
         for mic in coverage.mics:

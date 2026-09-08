@@ -10,9 +10,10 @@ vi.mock('@mmit/ux-foundation', async (original) => ({
 }))
 afterEach(() => { compact.value = false })
 
-function render(locale: 'de' | 'en' = 'de') {
+function render(locale: 'de' | 'en' = 'de', attached = false) {
   i18n.global.locale.value = locale
   return mount(ExchangesPanel, {
+    attachTo: attached ? document.body : undefined,
     global: { plugins: [i18n] },
     props: { data: {
       default_exchange: 'XBUD', default_exchange_kind: 'exchange' as const,
@@ -25,7 +26,10 @@ function render(locale: 'de' | 'en' = 'de') {
             { source: 'archive', role: 'daily', scope: 'inventory' as const, usable: false },
           ] },
         { kind: 'exchange' as const, mic: 'XNAS', alias: null, name: 'NASDAQ',
-          region: 'usa', currency: 'USD', provenance: { kind: 'core' as const }, support: [] },
+          region: 'usa', currency: 'USD', provenance: { kind: 'core' as const }, support: [
+            { source: 'metadata-only', role: 'etf_meta', scope: 'market' as const, usable: true },
+            { source: 'offline', role: 'quotes', scope: 'market' as const, usable: false },
+          ] },
         { kind: 'collector' as const, code: 'US', name: 'NYSE / NASDAQ', region: 'usa',
           currency: 'USD', members: ['XNAS', 'XNYS'], provenance: { kind: 'core' as const } },
       ],
@@ -34,12 +38,10 @@ function render(locale: 'de' | 'en' = 'de') {
 }
 
 describe('ExchangesPanel', () => {
-  it.each(['de', 'en'] as const)('zeigt dynamische MICs und Rollen in %s', (locale) => {
+  it.each(['de', 'en'] as const)('zeigt MIC, Suffix und kompakte Kursquelle in %s', async (locale) => {
     const wrapper = render(locale)
+    await wrapper.find('[role=switch]').trigger('click')
     expect(wrapper.text()).toContain('XBUD')
-    expect(wrapper.text()).toContain('shared')
-    expect(wrapper.text()).toContain(i18n.global.t('roles.quotes'))
-    expect(wrapper.text()).toContain(i18n.global.t('roles.daily'))
     expect(wrapper.text()).toContain(i18n.global.t('exchanges.default'))
     const headings = wrapper.findAll('th').map(cell => cell.text())
     const suffixColumn = headings.indexOf(i18n.global.t('exchanges.colSuffix'))
@@ -47,10 +49,18 @@ describe('ExchangesPanel', () => {
     const cells = wrapper.find('.n-data-table-tbody tr').findAll('td')
     expect(cells[suffixColumn]!.text()).toBe('.XBUD')
     expect(cells[headings.indexOf(i18n.global.t('exchanges.colExchange'))]!.text()).not.toContain('.XBUD')
-    const inactive = wrapper.findAll('.exchange-support__item').find(row => row.text().includes('archive'))!
-    expect(inactive.text()).toContain(i18n.global.t('exchanges.inactive'))
-    expect(inactive.text()).toContain(i18n.global.t('exchanges.inventory'))
-    expect(inactive.text()).not.toContain(i18n.global.t('exchanges.declared'))
+    expect(wrapper.findAll('.exchanges__hint strong').map(item => item.text())).toEqual(['SAP.DE', 'SAP.XETR'])
+    expect(headings).toEqual([
+      i18n.global.t('exchanges.mic'), i18n.global.t('exchanges.colSuffix'),
+      i18n.global.t('exchanges.colExchange'), i18n.global.t('exchanges.support'),
+    ])
+    expect(cells[3]!.text()).toBe('regional')
+    expect(wrapper.text()).not.toContain('archive')
+    expect(wrapper.text()).not.toContain(i18n.global.t('roles.daily'))
+    expect(wrapper.find('.n-data-table-tbody tr').classes()).not.toContain('exchanges__uncovered')
+    expect(wrapper.findAll('.n-data-table-tbody tr')[1]!.classes()).toContain('exchanges__uncovered')
+    const nasdaq = wrapper.findAll('.n-data-table-tbody tr')[1]!.findAll('td')
+    expect(nasdaq[1]!.text()).toBe('.XNAS')
     expect(wrapper.text()).toContain('legacy')
     expect(wrapper.text()).toContain(i18n.global.t('exchanges.unspecified'))
     expect(wrapper.text()).toContain(i18n.global.t('exchanges.noSupport'))
@@ -58,9 +68,10 @@ describe('ExchangesPanel', () => {
     wrapper.unmount()
   })
 
-  it('trennt Sammelcodes, zeigt Mitglieder und findet MIC, Name und Quelle', async () => {
+  it('blendet Sammelcodes aus und findet MIC, Name und Quelle', async () => {
     const wrapper = render()
-    expect(wrapper.find('.exchanges__collectors').text()).toContain('XNAS, XNYS')
+    await wrapper.find('[role=switch]').trigger('click')
+    expect(wrapper.find('.exchanges__collectors').exists()).toBe(false)
     expect(wrapper.find('.n-data-table').text()).not.toContain('NYSE / NASDAQ')
     for (const query of ['xbud', 'Budapest', 'shared', 'archive']) {
       await wrapper.find('input').setValue(query)
@@ -74,9 +85,11 @@ describe('ExchangesPanel', () => {
 
   it('ersetzt entfernte Pluginangaben und erhält die Suche in kompakter Ansicht', async () => {
     const wrapper = render()
+    await wrapper.find('[role=switch]').trigger('click')
     compact.value = true
     await wrapper.find('input').setValue('Budapest')
     expect(wrapper.find('.n-data-table').exists()).toBe(false)
+    expect(wrapper.find('.exchanges__venues .n-list-item').classes()).not.toContain('exchanges__uncovered')
     expect(wrapper.find('.exchanges__venues').text()).toContain('regional')
     expect(wrapper.find('.exchanges__suffix strong').text()).toBe('.XBUD')
     await wrapper.setProps({ data: { default_exchange: 'US', default_exchange_kind: 'collector',
@@ -84,9 +97,84 @@ describe('ExchangesPanel', () => {
     expect(wrapper.text()).not.toContain('regional')
     expect(wrapper.text()).not.toContain('legacy')
     await wrapper.find('input').setValue('')
-    expect(wrapper.find('.exchanges__collectors').text()).toContain(i18n.global.t('exchanges.default'))
+    expect(wrapper.find('.exchanges__collectors').exists()).toBe(false)
+    expect(wrapper.text()).toContain(i18n.global.t('exchanges.empty'))
     await wrapper.find('button').trigger('click')
     expect(wrapper.emitted('reload')).toHaveLength(1)
     wrapper.unmount()
   })
+})
+
+it.each(['de', 'en'] as const)('trennt Online und reines Dateiprofil in %s', async (locale) => {
+  compact.value = true
+  const wrapper = render(locale)
+  const row = wrapper.props('data')!.catalog[0]!
+  if (row.kind !== 'exchange') throw new Error('Expected exchange fixture')
+  await wrapper.setProps({ data: { default_exchange: 'XBUD', default_exchange_kind: 'exchange',
+    unspecified_support: [], catalog: [{ ...row, support: [
+      { source: 'yaml-file', role: 'quotes', scope: 'inventory', usable: true },
+      { source: 'yaml-file', role: 'daily', scope: 'inventory', usable: true },
+      { source: 'online', role: 'quotes', scope: 'market', usable: true },
+    ] }] } })
+  expect(wrapper.find('.exchanges__venues').text()).toContain(`${i18n.global.t('exchanges.yamlFile')} · online`)
+  expect(wrapper.find('.exchanges__venues').text()).not.toContain(i18n.global.t('roles.daily'))
+  await wrapper.setProps({ data: { ...wrapper.props('data')!, catalog: [{ ...row, support: [
+    { source: 'yaml-file', role: 'quotes', scope: 'inventory', usable: true },
+  ] }] } })
+  expect(wrapper.find('.exchanges__venues').text()).not.toContain('online')
+  expect(wrapper.find('.exchanges__venues').text()).toContain(i18n.global.t('exchanges.yamlFile'))
+  expect(wrapper.find('.exchanges__source-info').text()).toContain(i18n.global.t('exchanges.yamlRefreshInfo'))
+  expect(wrapper.find('.exchanges__source-info').text()).not.toContain(i18n.global.t('exchanges.marketInfo'))
+  wrapper.unmount()
+})
+
+
+it('verlinkt die Kursquelle zum fokussierbaren Infobereich ohne Routenwechsel', async () => {
+  const wrapper = render('de', true)
+  const target = wrapper.find<HTMLElement>('#exchange-source-regional')
+  const scroll = vi.fn()
+  target.element.scrollIntoView = scroll
+  const hash = window.location.hash
+  const link = wrapper.find('a[href="#/exchanges?source=regional"]')
+  await link.trigger('click')
+  expect(scroll).toHaveBeenCalledWith({ block: 'start' })
+  expect(document.activeElement).toBe(target.element)
+  expect(window.location.hash).toBe(hash)
+  expect(wrapper.find('.exchanges__source-info').text()).toContain(i18n.global.t('exchanges.marketInfo'))
+  wrapper.unmount()
+})
+
+
+it('graut auf Mobilgeräten Börsen ohne aktive Kursquelle aus', async () => {
+  compact.value = true
+  const wrapper = render()
+  expect(wrapper.findAll('.exchanges__venues .n-list-item')).toHaveLength(1)
+  await wrapper.find('[role=switch]').trigger('click')
+  expect(wrapper.findAll('.exchanges__venues .n-list-item')[1]!.classes()).toContain('exchanges__uncovered')
+  wrapper.unmount()
+})
+
+
+it('zeigt standardmäßig nur abgedeckte Börsen und bietet den vollständigen Katalog an', async () => {
+  const wrapper = render()
+  expect(wrapper.findAll('.n-data-table-tbody tr')).toHaveLength(1)
+  expect(wrapper.find('.exchanges__collectors').exists()).toBe(false)
+  await wrapper.find('[role=switch]').trigger('click')
+  expect(wrapper.findAll('.n-data-table-tbody tr')).toHaveLength(2)
+  expect(wrapper.find('.exchanges__collectors').exists()).toBe(false)
+  await wrapper.find('[role=switch]').trigger('click')
+  expect(wrapper.findAll('.n-data-table-tbody tr')).toHaveLength(1)
+  wrapper.unmount()
+})
+
+
+it('zeigt den Schalter nur bei nicht abgedeckten Börsen', async () => {
+  const wrapper = render()
+  expect(wrapper.find('[role=switch]').exists()).toBe(true)
+  const initial = wrapper.props('data')!
+  await wrapper.setProps({ data: { ...initial, catalog: [initial.catalog[0]!] } })
+  expect(wrapper.find('[role=switch]').exists()).toBe(false)
+  await wrapper.setProps({ data: initial })
+  expect(wrapper.find('[role=switch]').exists()).toBe(true)
+  wrapper.unmount()
 })

@@ -50,6 +50,16 @@ class Source:
     Eine Deklaration ist keine Garantie für jeden Ticker oder Live-Abruf.
     """
 
+    @classmethod
+    def get_mic_support(cls, config: dict[str, Any]) -> Mapping[str, MicCoverage]:
+        """Aktuelle Zusage ohne Netzabruf; Dateiquellen dürfen ihren Bestand lesen.
+
+        Der Host übergibt nur die eigene Quellenkonfiguration. Bei Lesefehlern
+        werfen, statt veraltete Abdeckung zu behaupten. Die Vorgabe liefert
+        die statische Deklaration und bleibt für bestehende Plugins gültig.
+        """
+        return cls.MIC_SUPPORT
+
     data_version: int = 1
     """Datenkompatibilität, unabhängig von Paket- und API-Version.
 

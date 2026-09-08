@@ -249,6 +249,27 @@ guarantee that every request succeeds. FX has no MIC declaration.
 
 `EXCHANGES` adds venues missing from the core catalog. Core MICs such as
 `XNAS` belong in `MIC_SUPPORT`; do not redefine their names or aliases.
+
+For a file-backed source, override the additive class method
+`get_mic_support(config)` (available with the exchange contract in 0.3).
+It receives only your source's configuration and returns the same mapping
+of roles to `MicCoverage`. The default returns `MIC_SUPPORT`. Do not make
+network requests here: this hook is read again when `/exchanges` is requested.
+Raise on unreadable/invalid inventory; never return an old coverage snapshot.
+The host validates current declarations and displays failed coverage as unknown.
+
+The bundled YAML source reports only MICs actually present in its file:
+resolver coverage for listed identities, quotes for a price or history,
+history for stored closes, and metadata for stored fields. Pair and ISIN-only
+instruments do not create exchange coverage. Its `inventory` scope means
+**only stored instruments**, not the entire market. Static `EXCHANGES` is
+still required when inventory references a venue unknown to the host.
+Removing an online source from the configured chains removes its coverage;
+a YAML-only profile never inherits online coverage. The bundled online
+sources declare their known MIC universe explicitly; a newly added plugin
+venue does not silently extend that universe. Instrument type and fund
+domicile restrictions still apply to individual metadata requests.
+
 New venues use their MIC as the app suffix (`DEMO.XBUD`). Vendor symbol
 translation remains inside your plugin. Conflicting definitions are rejected
 by the host; identical declarations may coexist. Removing the plugin removes

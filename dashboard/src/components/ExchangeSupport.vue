@@ -1,28 +1,29 @@
 <script setup lang="ts">
-import { NTag, NText } from 'naive-ui'
+import { computed } from 'vue'
+import { NText } from 'naive-ui'
 import { useI18n } from 'vue-i18n'
+import { availableQuoteSources } from '../utils/exchangeCoverage'
+import { quoteSourceHref } from '../composables/useHashTab'
 import type { ExchangeSupport } from '../types'
 
-defineProps<{ entries: ExchangeSupport[] }>()
+const props = defineProps<{ entries: ExchangeSupport[] }>()
 const { t } = useI18n()
+const emit = defineEmits<{ showSource: [source: string] }>()
+const sources = computed(() => [...new Set(availableQuoteSources(props.entries).map(entry => entry.source))])
+
+function openSource(event: MouseEvent, source: string) {
+  if (event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return
+  event.preventDefault()
+  emit('showSource', source)
+}
 </script>
 
 <template>
-  <div class="exchange-support">
-    <NText v-if="!entries.length" depth="3">{{ t('exchanges.noSupport') }}</NText>
-    <div v-for="entry in entries" :key="`${entry.source}:${entry.role}`" class="exchange-support__item">
-      <span>{{ entry.source }} · {{ t(`roles.${entry.role}`) }}</span>
-      <NTag v-if="!entry.usable" size="small">{{ t('exchanges.inactive') }}</NTag>
-      <NTag v-if="!entry.scope" size="small">{{ t('exchanges.unspecified') }}</NTag>
-      <NTag v-else-if="entry.scope === 'inventory'" size="small">{{ t('exchanges.inventory') }}</NTag>
-      <NTag v-else-if="entry.usable" size="small" type="info">{{ t('exchanges.declared') }}</NTag>
-    </div>
-  </div>
+  <span v-if="sources.length">
+    <template v-for="(source, index) in sources" :key="source">
+      <span v-if="index"> · </span>
+      <a :href="quoteSourceHref(source)" @click="openSource($event, source)">{{ source === 'yaml-file' ? t('exchanges.yamlFile') : source }}</a>
+    </template>
+  </span>
+  <NText v-else depth="3">{{ t('exchanges.noSupport') }}</NText>
 </template>
-
-<style scoped lang="scss">
-.exchange-support {
-  @include stack(var(--space-2));
-  &__item { @include row; flex-wrap: wrap; overflow-wrap: anywhere; }
-}
-</style>

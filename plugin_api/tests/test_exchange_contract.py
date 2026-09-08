@@ -4,7 +4,7 @@ from types import MappingProxyType
 
 import pytest
 
-from stockinfo_plugin import ExchangeSpec, MicCoverage
+from stockinfo_plugin import ExchangeSpec, MicCoverage, QuoteSource
 from stockinfo_plugin.testing import FakeQuoteSource, QuoteContract
 
 
@@ -42,3 +42,17 @@ def test_optionale_und_neue_deklarationen_brauchen_keinen_host():
     contract.make_source = DeclaredSource
     contract.test_boersendeklarationen_sind_gueltig()
     contract.test_kein_veraenderlicher_zustand_an_der_klasse()
+
+
+def test_autor_vertrag_prueft_auch_die_aktuelle_bestandszusage():
+    class InventorySource(QuoteSource):
+        @classmethod
+        def get_mic_support(cls, config):
+            return {"quotes": MicCoverage((config["mic"],), "inventory")}
+
+    contract = QuoteContract()
+    contract.make_source = lambda: InventorySource({"mic": "US"})
+    with pytest.raises(ValueError, match="canonical"):
+        contract.test_boersendeklarationen_sind_gueltig()
+    contract.make_source = lambda: InventorySource({"mic": "XETR"})
+    contract.test_boersendeklarationen_sind_gueltig()

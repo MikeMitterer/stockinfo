@@ -16,6 +16,9 @@ eingebaute Quelle, die an der Registry vorbei verdrahtet bleibt, wäre genau die
 Sonderbehandlung, die T-23 danach wieder auseinandernehmen müsste.
 """
 
+from stockinfo_plugin.exchanges import validate_exchanges
+from types import SimpleNamespace
+
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
@@ -91,6 +94,23 @@ class SourceSpec:
 
     declaration: type | None = None
     """Plugin-Klasse: statische Feldzusagen sind ohne Konstruktor lesbar."""
+
+    additional_declarations: tuple[type, ...] = ()
+    """Weitere Rollenklassen derselben Quelle, ohne doppelte Registry-Einträge."""
+
+    def exchange_declaration(self, config: dict | None = None) -> object:
+        """Sammelt Rollenklassen; aktuelle Dateizusagen nur auf ausdrückliche Anfrage."""
+        exchanges, support = [], {}
+        for declaration in (self.declaration, *self.additional_declarations):
+            if declaration is None:
+                continue
+            query = getattr(declaration, "get_mic_support", None)
+            coverage = query(config) if config is not None and query else getattr(declaration, "MIC_SUPPORT", {})
+            definitions = getattr(declaration, "EXCHANGES", ())
+            validate_exchanges(SimpleNamespace(EXCHANGES=definitions, MIC_SUPPORT=coverage), self.roles)
+            exchanges.extend(definitions)
+            support.update(coverage)
+        return SimpleNamespace(EXCHANGES=tuple(exchanges), MIC_SUPPORT=support)
 
 
 def _openfigi(role: str, config: dict, settings) -> object:
@@ -170,6 +190,7 @@ BUILTIN_SOURCES: tuple[SourceSpec, ...] = (
         frozenset({"etf_meta", "quotes", "daily", "fx"}),
         _yfinance,
         declaration=YFinanceMetadataPlugin,
+        additional_declarations=(YFinancePlugin,),
     ),
 )
 
