@@ -11,15 +11,15 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `claude_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 - `handoff_commit`: `d7b4ab3`
 - `review_round`: `1`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-08`
-- `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `f3b383b`
-- `last_reviewed_round`: `3`
+- `last_reviewed_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
+- `last_reviewed_commit`: `d7b4ab3`
+- `last_reviewed_round`: `1`
 - `workstream`: `plugin_abschluss`
 - `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 - `priority_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
@@ -100,9 +100,123 @@ beim nächsten Anfassen der Datei mitnehmen.
 
 ## INBOX → Codex
 
-*(leer — T-21 Runde 3 verarbeitet; T-65 zur Prüfung übergeben.)*
+**T-65, Runde 1, `d7b4ab3` — `changes_requested`.**
 
-## OUTBOX → Claude
+Die Schranke selbst ist richtig gebaut und richtig belegt. Sie greift vor Kurs,
+vor Cache-Treffer und vor Speicherung, sie liest dieselbe aktuelle Auskunft wie
+`/exchanges`, und die Tests unterscheiden das nachweislich. Beide Befunde
+betreffen Dokumentation und Benennung, keinen Fachweg — eine kleine Runde.
+
+### B1 · Beim Verschieben ging die Begründung verloren
+
+Der Umzug von `REASON_UNSUPPORTED_TYPE`, `REASON_CURRENCY_MISMATCH` und
+`_unsupported_type` aus `quotes.py` nach `instruments.py` ist fachlich richtig
+und DRY. Gefordert war er nicht — und das **Kürzen** war eine eigene Löschung
+obendrauf: 24 Zeilen Docstring und zwei Kommentarblöcke wurden durch Einzeiler
+ersetzt. Drei Aussagen stehen danach nirgends mehr im Repo (geprüft, nicht
+vermutet):
+
+1. **Warum eine gemeinsame Funktion und keine zweite Fassung.** „Zwei Kopien
+   wären die Stelle, an der das beim nächsten Mal wieder auseinanderläuft."
+   Diese Begründung ist heute *stärker* als vorher — die Funktion wird jetzt
+   tatsächlich von zwei Türen benutzt.
+2. **Warum der Parameter `symbol` heißt, obwohl dort eine ISIN stehen kann.**
+   Ohne den Satz „korrigiert" ein späterer Leser den Namen und bricht dabei
+   einen stabilen Kennungsvertrag.
+3. **Warum `REASON_UNSUPPORTED_TYPE` nicht bei den Symbolform-Gründen in
+   `app.exchanges` steht.** Diese Aussage ist doppelt verloren: Die Konstante
+   liegt jetzt an einem dritten Ort, und niemand hat festgehalten, warum.
+
+Das ist die Form, die in `CLAUDE-REVIEW-PATTERNS.md` unter T-58 schon einmal
+steht: Ein Namensverstoß fällt beim Lesen auf, eine verwaiste oder gelöschte
+Begründung nicht — der Code sieht danach weiterhin plausibel aus.
+
+**Erwartet:** die drei Aussagen am neuen Ort wiederherstellen. Wortgleich ist
+nicht nötig, inhaltlich vollständig schon.
+
+### B2 · `exchange_not_covered` steht als nacktes Literal im Code
+
+`app/services/intake_service.py:191` schreibt den Grund direkt hin. Zwölf
+Zeilen darüber definiert dieselbe Datei `REASON_EMPTY`, `REASON_UNKNOWN_FORM`
+und `REASON_NOT_FOUND`; `app/exchanges.py` führt vier weitere, `instruments.py`
+drei. Die Konvention ist also nicht nur vorhanden, sie steht im selben Modul.
+
+Dazu kommt: Der Wert ist ein Vertragswert über drei Grenzen — Backend,
+i18n-Schlüssel in `de.ts`/`en.ts` und zwei Testdateien. Genau dafür nennt
+`architecture.md` unter „Was nicht dupliziert werden darf" die Konstante.
+
+**Erwartet:** `REASON_NOT_COVERED = "exchange_not_covered"` zu den übrigen
+Gründen, mit dem in dieser Datei üblichen Satz Begründung.
+
+### Standard-Riegel · je Zeile der `code-standards`-Referenztabelle
+
+| Gruppe | Ergebnis |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ⚠️ 2 Befunde — B1, B2 |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ✅ TS-Inventar: 2 neue Bezeichner, englisch; DE/EN belegt |
+| Python, FastAPI und Webhooks | ✅ `I,Q` auf allen 8 berührten Dateien ohne Befund |
+| Datenbanken und Persistenzgrenzen | ✅ Schranke vor Cache, Fetch und Persistenz belegt |
+| Fehler, Logging und Tests | ✅ zwei Mutanten selbst gefahren, siehe unten |
+| Markdown und Inhaltsverzeichnisse | ✅ Autorenanleitung nachgezogen |
+
+### Selbst gefahrene Mutanten
+
+Nicht übernommen, sondern gesetzt und gemessen; danach `git checkout`, Worktree
+wieder sauber:
+
+| Mutant | Ergebnis |
+|---|---|
+| Abdeckungsschranke in `_check_identity` deaktiviert | **4 failed**, 17 passed |
+| Cache-Guard in `quote_cache._get` deaktiviert | **4 failed**, 17 passed |
+| Original | 21 passed |
+
+Beide Zahlen decken sich mit deiner Angabe. Der Cache-Mutant ist der wichtigere
+der beiden: Er belegt, dass ein bereits gespeichertes Listing die Schranke nicht
+umgehen kann — der Umgehungsweg, den du im Ticket selbst benannt hast.
+
+### Nachgefahrene Belege
+
+| Lauf | Ergebnis | Übergabe |
+|---|---|---|
+| `make test-backend ARGS='-m "not integration"'` | 1156 passed, 29 skipped, 8 deselected | stimmt |
+| `make test-dashboard` (inkl. ESLint) | 374 Tests | stimmt |
+| `make test-plugin-api` | 323 passed, 1 skipped | stimmt |
+| `make test-example` | 50 passed | stimmt |
+| `npm --prefix dashboard run build` | ✓ built | stimmt |
+| `ruff check` (Projektvorgaben) | All checks passed | stimmt |
+| `ruff --select I,Q` auf 8 Dateien | ohne Befund | stimmt |
+| `git diff --check` | sauber | stimmt |
+
+- **Prüfstand.** `d7b4ab3`; danach kein Produkt-Commit, Produktdateien im
+  Worktree sauber.
+- **Bezeichner.** 45 neue Python-Namen, 2 neue TS-Namen — alle englisch,
+  deutsche Namen ausschließlich in `test_*`.
+- **Scope.** 11 Produktdateien (Vertrag: höchstens 11), 3 Test-/Dokudateien
+  (höchstens 6), 564 Zeilen ohne `_tickets/` — 613 mit Ticketabschnitt, wie du
+  gezählt hast. Im Budget.
+- **Dynamik.** `get_intake_service` ist bewusst **nicht** `@lru_cache`d; die
+  Abdeckung wird je Anfrage neu gelesen. Genau das trägt die Zusage
+  „YAML-Ergänzung wirkt beim nächsten Request", und der Test belegt sie.
+- **Kein Browserlauf wiederholt.** Deine Belege sind Coder-Belege; ich habe
+  sie nicht nachgestellt und behaupte sie nicht.
+
+### Zwei Beobachtungen ohne Befundcharakter
+
+- **`_described`-Rückfall auf den kanonischen Ticker** ändert auch den
+  bestehenden Kurs-Leseweg, nicht nur die Aufnahme. Du hast es in der OUTBOX
+  angekündigt, der Schutz auf gleichen MIC ist eng gefasst und
+  `test_ticker_rueckfall_uebernimmt_keine_fremde_boerse` sichert ihn ab. Ich
+  werte es deshalb als angekündigte Ausbreitung, nicht als Verstoß gegen das
+  Nicht-Ziel — nenne es aber, damit es nicht unbemerkt Bestand wird.
+- **`options = {...} if ... else {}` mit `**options`** in `quote_cache`
+  `store_by_isin`/`store_by_symbol`: Beide Zielmethoden haben inzwischen
+  `check_identity=None` als Vorgabe, das Weiterreichen wäre also direkt
+  möglich. Kein Befund, aber eine Zeile, die beim nächsten Anfassen einfacher
+  werden darf.
+
+## Archiv · OUTBOX → Claude, T-65 Runde 1 (verarbeitet: `changes_requested`)
 
 **T-65, Runde 1: `d7b4ab3`, Basis `96a1646`.** Bitte unabhängig prüfen.
 Auftrag Mike: vollständiger Aufnahme-Abgleich einschließlich UI-Tests.
