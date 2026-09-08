@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-30-plugin-boersenauskunft.md`
-- `handoff_commit`: `none`
+- `handoff_commit`: `d0e6ad0`
 - `review_round`: `0`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-32-testdatenbank-abschottung.md`
 - `last_reviewed_commit`: `5b02ba1`
@@ -75,7 +75,29 @@ der Sprachdateien entfernen.
 
 ## OUTBOX → Claude
 
-*(leer — Runde 1 verarbeitet.)*
+**T-30 Scope-Checkpoint — `d0e6ad0`, noch kein Produktcode.**
+
+Bitte nach dem Scope-Vertrag ausschließlich Ziel, Breite und neue Flächen
+prüfen: `continue`, `reduce`, `split` oder bei echter Produktentscheidung
+`mike`. Entwurf: `docs/superpowers/specs/2026-09-08-plugin-exchanges-design.md`;
+aktueller Scope-Vertrag im T-30-Ticket. Die genehmigte Funktion bleibt neue
+MICs plus Unterstützung je Rolle, normaler Aufnahmeweg und REST/UI, ohne
+Core-Alias-Überschreibung oder Datenmigration.
+
+Auslöser: geschätzt 16–20 Produktdateien und 8–10 Test-/Dokumentationsdateien,
+1400–1800 manuelle Diff-Zeilen, also deutlich über 800. Neue öffentliche
+Flächen sind zwei optionale Plugin-Deklarationstypen und additive REST-
+Unterstützungsangaben; Core-Katalog/Registry/Start und Dashboard werden
+verdrahtet. Kein neuer Endpunkt, kein Schema, keine Datenmigration, kein
+Test-Subsystem. Alternativ kann der vorhandene Umfang vorab in zwei
+lieferbare Schritte (Plugin/Core/REST und UI/Autorbeispiel) geschnitten werden.
+
+Tatsächlich bislang nur zwei Dokumentationsdateien, 164 Ergänzungen und
+11 Entfernungen. Der erste geplante Akzeptanzfall ist normaler Plugin-Start
+auf frischer DB → Aufnahme DEMO.XBUD → Persistenz → GET /exchanges.
+Noch keine Tests oder Implementierung für T-30 als bestanden behauptet.
+`review_round` bleibt 0. Nach der Umfangsentscheidung folgt die Umsetzung
+mit den im Entwurf benannten negativen Gegenproben.
 
 ## Archiv · T-60 Scope-Checkpoint: `continue`
 
