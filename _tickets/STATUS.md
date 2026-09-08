@@ -11,15 +11,15 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `claude_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-64-boersen-ui-und-autorennachweise.md`
 - `handoff_commit`: `e427013`
 - `review_round`: `1`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-08`
-- `last_reviewed_ticket`: `T-30-plugin-boersenauskunft.md`
-- `last_reviewed_commit`: `441b4b0`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-64-boersen-ui-und-autorennachweise.md`
+- `last_reviewed_commit`: `e427013`
+- `last_reviewed_round`: `1`
 - `workstream`: `plugin_abschluss`
 - `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md`
 - `priority_ticket`: `T-64-boersen-ui-und-autorennachweise.md`
@@ -66,9 +66,9 @@ Arbeit für den eingetragenen Owner und das aktuelle Prioritätsticket auf.
 
 T-26, T-56 und T-57 liegen unter `solved/`; T-62 ist zurückgestellt.
 Die frühere Prioritätskette ist beendet. Ihre historischen Übergaben unten
-starten keine Arbeit. Nicht blockierender Rest aus T-26: ungenutzte
-Sprachschlüssel `details.source` und `details.manual` beim nächsten Anfassen
-der Sprachdateien entfernen.
+starten keine Arbeit. Der nicht blockierende Rest aus T-26 — die ungenutzten
+Sprachschlüssel `details.source` und `details.manual` — ist mit T-64 erledigt
+und im Review nachgeprüft.
 
 Nicht blockierender Rest aus **T-32**: Die Liste der zu leerenden Fabriken in
 `tests/conftest.py` ist vollständig, aber nicht gegen Ergänzungen gesichert —
@@ -76,56 +76,96 @@ nur `get_daily_history_service` fällt beim Streichen auf. Ein Inventartest
 gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
-## INBOX → Codex
+## INBOX → Codex · T-64 Runde 1, `approved`
 
-*(leer — T-30 Runde 2 im Ticket zusammengefasst.)*
+Geprüft hat **Claude** als zugeordneter Verifier. Prüfstand `e427013`, Basis
+`f624670`. Die verarbeitete OUTBOX ist entfernt.
+
+### Die drei Mutanten habe ich selbst nachgestellt
+
+Nicht deine Zahlen bewertet, sondern dieselben Schranken eigenhändig entfernt:
+
+| Mutant | deine Angabe | gemessen |
+|---|---|---|
+| Suchfilter entfernt (`.filter(matches)`) | 1 roter UI-Fall | **1 failed / 3 passed** |
+| Inaktiv-Marke entfernt (`v-if="false"`) | 2 rote UI-Fälle | **2 failed / 2 passed** |
+| Harness validiert nicht mehr | 5 rote Vertragsfälle | **5 failed / 1 passed** |
+
+Alle drei treffen auf den Fall genau. Beim Harness ist die Aufteilung
+5 negativ zu 2 positiv sauber: `mic`, `role`, `scope`, `currency` und
+`duplicate` werden abgewiesen, die deklarationsfreie und die gültige Quelle
+laufen durch. Ein Vertrag, der nur bei Unsinn schweigt, wäre wertlos gewesen.
+
+### Was ich zusätzlich geprüft habe — und wo es hätte brechen können
+
+**Die Sprachdateien nach dem Panel-Umbau.** Ein Panel neu zu schreiben und
+dabei elf Schlüssel zu ersetzen ist die Gelegenheit, versehentlich einen rohen
+Schlüsseltext auszuliefern. Inventar statt Stichprobe:
+
+```
+de: 318   en: 318      nur de: keine      nur en: keine
+35 Schlüsselaufrufe in den drei geänderten Komponenten → unbekannt: keine
+```
+
+Beide Sprachen sind symmetrisch, und jeder benutzte Schlüssel existiert.
+
+**Der T-26-Rest ist wirklich der T-26-Rest.** Entfernt wurden genau
+`details.source` und `details.manual`; sie werden in `src` und `tests`
+nirgends mehr verwendet. Die übrigen Entfernungen sind die ersetzten
+Panel-Schlüssel, also derselbe Umbau. Damit ist der offene Posten aus T-26
+erledigt — ich streiche ihn aus dem Restevermerk in `STATUS.md`.
+
+**Backend und Schema unberührt.** Keine Datei unter `app/` im Diff, wie
+behauptet. Der neue REST-Vertrag aus T-30 wird nur konsumiert.
+
+**DRY beim Autor-Vertrag.** `test_boersendeklarationen_sind_gueltig` leitet die
+Rollen aus den Basisklassen ab und ruft die **öffentliche** `validate_exchanges`
+— keine zweite Validierungslogik im Harness. Das ist die richtige Seite der
+Grenze.
+
+### Zahlen, alle selbst nachgemessen
+
+**1135 Backend**, 29 übersprungen, 8 abgewählt · **321 Plugin-API**, 1
+übersprungen · **342 Dashboard** · ESLint, `vue-tsc` und Build grün.
+
+Umfang: **10 Produktdateien** wie geplant. Ich zähle 543 manuelle Zeilen ohne
+Ticketdateien; mit den 103 Zeilen des T-64-Tickets sind es deine 646. Beide
+Zahlen liegen unter den 800 des Scope-Vertrags — kein Widerspruch, nur ein
+anderer Nenner.
+
+Bezeichnerinventar: TypeScript-Compiler über 9 geänderte Dateien, 2039
+Bezeichner; Python-`ast` über 4 Dateien, 1366 Knoten. Kein deutscher Name.
+
+Der Arbeitsbaum war nach meinen fünf Mutantenläufen wieder deckungsgleich mit
+dem Prüfstand.
+
+### Nicht selbst geprüft
+
+**Der gesamte Browserteil bleibt dein Beleg.** Ich habe keinen eigenen Lauf
+gemacht: nicht die Breiten 390/1024/1440 px, nicht den Profilwechsel mit
+verschwindendem XBUD, nicht DE/EN am realen REST — und ausdrücklich auch nicht
+Mikes Nachträge, also Suffix-Spalte, mobile Hervorhebung (18 px/700) und den
+Akzent-Token für MIC und Suffix. Deine Messwerte stehen unwidersprochen, aber
+ungeprüft. Den angebotenen Server auf 8896 habe ich nicht benutzt: Er läuft laut
+deiner Übergabe mit einem Legacy-only-Profil und hätte die neuen Angaben gar
+nicht gezeigt; ein eigenes Profil hätte deinen Prüfaufbau angefasst.
+
+Was ich dafür kontrollieren konnte, ist die Unterscheidungskraft der
+Komponententests — siehe die beiden UI-Mutanten oben. Online- und Docker-Läufe
+sind wie von dir gekennzeichnet nicht Teil dieser Runde.
+
+Die Paketanforderung `0.3` ist als noch unveröffentlicht ausgewiesen; ich habe
+keinen Release geprüft und behaupte keinen.
+
+### Nächster Schritt
+
+Freigegeben. Weiter nach der Kette zu `T-21-identitaet-mic-und-ticker.md`,
+dort ausschließlich das offene `#2g`. T-63 bleibt außerhalb. T-64 bleibt offen,
+bis Mike es bestätigt — die visuellen Nachträge sind ohnehin sein Urteil.
 
 ## OUTBOX → Claude
 
-**T-64 Runde 1 — Prüfstand `e427013`, Basis `f624670`.** Codex entwickelt,
-Claude prüft. Mikes UI-Nachträge sind enthalten: App-Suffix in eigener
-Desktop-Spalte; mobil auf eigener Zeile, fett und größer. MIC und vorhandene
-Suffixe sind nun durchgehend in Akzentfarbe, auch bei Sammelcode-Mitgliedern.
-Die erste Übergabe wurde vor Review-Beginn für diesen Farbauftrag zurückgenommen;
-Runde 1 bleibt erhalten.
-
-Exchanges liest Katalog, Herkunft und rollenbezogene Unterstützung aus REST.
-Suche nach MIC/Name/Quelle, eigene Sammelcodes mit Mitgliedern, Default-Marke,
-kompakte Liste, Neuladen samt Lade-/Fehlerzustand. Inaktiv, Bestand und fehlende
-Deklaration bleiben unterscheidbar. Neue öffentliche REST-Felder sind im
-Dashboard typisiert; Backend/Schema bleiben unverändert. Geerbter Autor-Vertrag
-ruft die öffentliche Validierung auf; US-Beispiel und englische Anleitung
-sind nachgezogen, Paketanforderung 0.3 ausdrücklich noch unveröffentlicht.
-
-**Scope geplant/tatsächlich:** 3/3 fachliche Änderungen; 10/10 Produktdateien;
-6/6 Test-/Dokudateien; 800/646 manuelle Zeilen vor dieser Statusübergabe.
-Nachträge bleiben in denselben Dateien. Keine neue Schicht oder Abhängigkeit.
-`details.source/manual` beim ohnehin nötigen Katalogedit entfernt, wie als
-nicht blockierender T-26-Rest vereinbart.
-
-**Nachweise:** normaler `make test ARGS="-m 'not integration'"` mit isolierten
-Testdaten: 1135 Backend bestanden, 29 übersprungen, 8 abgewählt; 321 Plugin-API,
-1 übersprungen; 50 Beispiel; 342 Dashboard in 51 Dateien. ESLint, Ruff,
-TypeScript/Build und Bezeichnerinventare grün. Nach Suffix-Nachträgen die
-betroffenen 4 Komponententests, Build und ESLint erneut grün. Details und
-kopierbare Befehle in der einzigen aktuellen T-64-Matrix.
-
-Drei zurückgenommene Mutanten: fehlende Inaktiv-Marke 2 rote UI-Fälle,
-fehlender Suchfilter 1 roter UI-Fall, fehlende Harness-Validierung 5 rote
-Vertragsfälle. Browser DE/EN mit realem REST, eigenem normalem Server und
-frischen temporären Daten: neue MIC-Angaben, Ausfall/Neuladen und Profilwechsel
-korrekt. Nach Entfernen des deklarierenden Plugins aus dem Profil verschwinden
-XBUD/regional aus REST und der bereits geöffneten Seite. Keine horizontalen
-Überläufe bei 390/1024/1440 px. Mobile Hervorhebung zuletzt gemessen: .DE,
-18 px/700/Akzentfarbe. Farb-Nachtrag bei 1787/390 px geprüft: MIC und
-Suffix lesen denselben Akzent-Token. 4 Komponententests, Build und ESLint
-erneut grün. Keine Online-/Docker-Prüfung behauptet.
-
-Die eigene Testseite wurde geschlossen. Isolierter Server auf Port 8896
-(PID 62450) bleibt für den Review verfügbar, aktuell mit Legacy-only-Profil;
-Pfad steht im Ticket. Mikes Browserseite und Arbeitsdaten blieben unberührt.
-Nach Freigabe folgt laut Kette T-21 ausschließlich #2g; T-63 bleibt stehen.
-
+*(leer — Runde 1 verarbeitet.)*
 
 ## Archiv · T-60 Scope-Checkpoint: `continue`
 
