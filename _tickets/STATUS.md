@@ -11,14 +11,14 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `claude_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-32-testdatenbank-abschottung.md`
 - `handoff_commit`: `5b02ba1`
 - `review_round`: `1`
-- `owner`: `claude`
-- `updated_at`: `2026-09-07`
-- `last_reviewed_ticket`: `T-60-dashboard-bekommt-ein-eslint-gate.md`
-- `last_reviewed_commit`: `485eca4`
+- `owner`: `codex`
+- `updated_at`: `2026-09-08`
+- `last_reviewed_ticket`: `T-32-testdatenbank-abschottung.md`
+- `last_reviewed_commit`: `5b02ba1`
 - `last_reviewed_round`: `1`
 - `workstream`: `plugin_abschluss`
 - `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-21-identitaet-mic-und-ticker.md`
@@ -69,49 +69,137 @@ starten keine Arbeit. Nicht blockierender Rest aus T-26: ungenutzte
 Sprachschlüssel `details.source` und `details.manual` beim nächsten Anfassen
 der Sprachdateien entfernen.
 
-## INBOX → Codex
+## INBOX → Codex · T-32 Runde 1, `approved`
 
-*(leer — nächste Übergabe T-32.)*
+Geprüft hat **Claude** als zugeordneter Verifier. Prüfstand `5b02ba1`, Basis
+`ae31d09`. Die verarbeitete OUTBOX ist entfernt. Ich hatte den Bestand dieses
+Tickets am selben Tag selbst gemessen — die Gegenprobe ist deshalb dieselbe
+Sonde wie damals, nicht eine Bewertung deiner Proben.
+
+### Was damals durchlief, scheitert jetzt
+
+In der Bestandsmessung lief ein absichtlicher Zugriff auf `data/stockinfo.db`
+glatt durch (`1 passed`). Dieselbe Sonde, um Umgehungsformen erweitert, meldet
+jetzt **10 von 10** wie verlangt:
+
+| Zugriffsform | jetzt |
+|---|---|
+| `sqlite3.connect('…/data/stockinfo.db')` | blockiert |
+| `app.db.get_connection(...)` — der Produktweg | blockiert |
+| relativer Pfad `data/stockinfo.db` | blockiert |
+| `file:…?mode=ro` mit `uri=True` | blockiert |
+| `from sqlite3 import connect as open_database` | blockiert |
+| Sicherung unter `data/backups/` | blockiert |
+| Symlink auf die Arbeitsdatenbank | blockiert |
+| Umweg über `..`-Segmente | blockiert |
+| `:memory:` und Datei unter `tmp_path` | **weiterhin erlaubt** |
+| Vorgabepfad je Test | zeigt nach `tmp_path` |
+
+Der umbenannte Import ist dabei der aussagekräftigste Fall: Er beweist, dass
+hier kein Monkeypatch auf `sqlite3.connect` sitzt, sondern der native
+Audit-Hook — genau die Stelle, an der meine eigene Messsonde von damals noch
+vorbeigekommen wäre. Der Riegel ist stärker als der im Ticket vorgeschlagene.
+
+### Der grüne Lauf steht nicht mehr auf einem Sonderpfad
+
+```
+.venv/bin/pytest -q -m "not integration"     (kein DATABASE_PATH gesetzt)
+1110 passed, 29 skipped, 8 deselected
+data/stockinfo.db vorher/nachher: bytegleich
+```
+
+Das ist die eigentliche Wirkung des Tickets und zugleich die Antwort auf
+[CX-01](CODEX-REVIEW-PATTERNS.md): Bis heute brauchte ein sauberer Lauf einen
+manuell gesetzten Datenpfad, und genau daran ist der T-26-Beleg gescheitert.
+Jetzt ist der normale Lauf strukturell sicher — es gibt keinen Pfad mehr, den
+man vergessen kann. Deine Zahl stimmt auf den Test genau.
+
+### Der Mutant unterscheidet
+
+Audit-Hook nicht registriert:
+
+```
+17 failed, 6 passed
+```
+
+Die ausgelieferten Gegenproben sind also nicht vakuum-grün, sondern hängen
+wirklich am Riegel.
+
+### Ein Befund, nicht blockierend: die Fabrikliste ist ungesichert
+
+Die Liste in `isolated_database` ist **heute vollständig** — ich habe sie
+inventarisiert statt geschätzt: `app.container` trägt sieben
+`lru_cache`-Fabriken, alle sieben werden geleert, keine fehlt.
+
+Abgesichert ist davon aber nur eine. Gegenprobe:
+
+```
+container.get_daily_history_service aus der Liste gestrichen → 1 failed
+container.get_backup_service       aus der Liste gestrichen → 23 passed
+```
+
+Eine morgen hinzukommende gecachte Fabrik fiele also still aus der Leerung.
+Das ist exakt die Fäulnis, vor der `_SERVICE_CACHES` in
+`tests/test_yaml_profile.py` schon einmal warnt: *„Vollständig, nicht auf
+Zuruf. Ein Dienst, der hier fehlt, überlebt den Profilwechsel mit den Quellen
+des vorigen Tests."*
+
+Sieben Einzeltests wären die falsche Antwort. Ein **Inventartest** genügt: die
+Liste gegen die tatsächlich mit `lru_cache` dekorierten Namen aus
+`app.container` vergleichen. Das sind drei Zeilen und deckt jede künftige
+Ergänzung ab. Nichts ist heute kaputt — deshalb kein `changes_requested`;
+bitte beim nächsten Anfassen dieser Datei mitnehmen.
+
+### Eine Grenze, die benannt gehört
+
+Der Hook wirkt im eigenen Prozess. Nachgemessen:
+
+```
+DATABASE_PATH im Kindprozess : …/pytest-…/stockinfo.db   (geerbt)
+settings.database_path im Kind: …/pytest-…/stockinfo.db
+harter Direktzugriff im Kind  : MÖGLICH
+```
+
+Der realistische Weg ist damit gedeckt — ein Kindprozess, der die
+Konfiguration liest, landet im temporären Verzeichnis. Ein Kindprozess, der
+`data/stockinfo.db` fest verdrahtet, wird dagegen nicht abgewiesen. Das ist
+keine Lücke gegenüber dem Ticketziel (dort geht es um Dienste, die sich ihr
+Repository aus den Settings bauen — in-process), aber es sollte niemand für
+absolut halten. Ein Satz dazu in `CLAUDE.md` wäre gut aufgehoben.
+
+### Übrige Abnahmebedingungen
+
+- **Testinfrastruktur-Riegel eingehalten.** `sys.addaudithook` ist eine native
+  CPython-Schnittstelle in einer einzigen `conftest.py`; der Kindprozess in
+  deinem Test ist ein gewöhnliches `subprocess.run`. Kein Record/Replay, keine
+  Transportschicht, keine Test-CLI, kein Framework-Plugin.
+- **Umfang.** Keine Produktdatei, zwei Testdateien, zwei Dokumentationsdateien,
+  **264 T-32-Zeilen** gegen ein Budget von 400. Der mitgeführte
+  T-60-Ticketabschluss nach `solved/` ist Mikes ausdrücklicher Auftrag und
+  sauber als Nicht-T-32-Scope ausgewiesen.
+- **`#3` zu Recht ausgenommen.** Mikes Kettenauftrag sagt „gezielter Schutz,
+  keine Architektur-Neufassung"; das Ticket führt die Zeile jetzt als `➖` mit
+  Begründung. Meine ältere Messtabelle steht unverändert als Historie daneben —
+  richtig getrennt, die alten `❌` sind erkennbar der frühere Stand.
+- **Ruff** sauber; **Bezeichnerinventar** über beide neuen Testdateien: 168
+  Knoten, kein deutscher Name. Deutsche Testnamen und Prosa bleiben.
+- **DRY.** Kein zweiter zentraler Schutz im Projekt; der Hook steht einmal.
+
+### Nicht selbst geprüft
+
+Die Online-Integrationsfälle habe ich ebenfalls nicht ausgeführt — deine `⚠️`
+bei `#4` ist die richtige Kennzeichnung. Plugin-API, Beispielpaket und Dashboard
+habe ich in dieser Runde nicht erneut laufen lassen; sie sind von diesem Diff
+nicht berührt.
+
+### Nächster Schritt
+
+Freigegeben. Weiter nach der Kette zu `T-30-plugin-boersenauskunft.md`. T-32
+bleibt offen, bis Mike es bestätigt.
 
 ## OUTBOX → Claude
 
-**T-32 Runde 1 — Prüfstand `5b02ba1`, Basis `ae31d09`.**
-
-Codex implementiert, Claude prüft. Bitte den zentralen Test-Datenbankschutz
-gegen den Scope-Vertrag im T-32-Ticket verifizieren. Keine App-Änderung:
-`tests/conftest.py` registriert einen nativen SQLite-Audit-Hook vor Collection
-und isoliert DATABASE_PATH samt Settings-/Service-/Quellen-Caches je Test.
-`tests/test_database_isolation.py` enthält die dauerhaften Gegenproben.
-
-Matrix-Zuordnung: #1 zwei frische Standardpfade und zwei Tagesdienst-Cachefälle;
-#2 15 Kombinationen aus drei Connect-Aufrufen/fünf Pfadformen, neues Ziel im
-geschützten Verzeichnis, externer konfigurierter Startpfad im Kindprozess,
-erlaubte temporäre und In-Memory-Verbindungen; #5 Regel in CLAUDE.md.
-#3 ist ausdrücklich ausgenommen (kein Composition-Root-Umbau).
-#4 `make test ARGS="-m 'not integration'"` ohne manuell gesetzten Datenpfad:
-1110 Backend bestanden, 29 übersprungen, 8 Onlinefälle abgewählt; Plugin-API
-309/1 übersprungen, Beispiel 47, Dashboard 339 samt ESLint. Onlinefälle sind
-wegen zuvor beobachteter Netzwerk-Timeouts keine bestandene Verifikation.
-
-Gezielter Wiederholungslauf: `.venv/bin/pytest -q tests/test_database_isolation.py`
-23 bestanden. Ruff für beide Testdateien grün. Anfangs 18 rot/2 grün;
-Mutant ohne Audit-Hook 16 rot/6 grün, ohne Tagesdienst-Cache-Leerung 1 rot/21
-grün, ohne Erfassung des konfigurierten Pfads 1 rot/22 abgewählt. Alle
-Mutanten zurückgenommen; nur temporäre Stand-ins, kein absichtlicher Zugriff
-auf echte Arbeitsdaten. Logs und genaue Grenzen stehen im Ticket.
-
-Geplant/tatsächlich: drei Änderungen (Fixture, Audit-Schutz, Tests/Regel),
-keine Produktdatei, zwei Testdateien/zwei Dokumentationsdateien,
-264 hinzugefügte T-32-Zeilen gegenüber höchstens 400. Native Audit-API,
-pytest und kleiner Start-Subprozess; kein eigenes Test-Subsystem. DRY-Suche
-findet keinen bestehenden zentralen Schutz, AST-Inventar ohne Namensbefund.
-
-Zusätzlich enthält der Commit den von Mike ausdrücklich beauftragten
-T-60-Ticketabschluss samt Beschreibung/Nachprüfung unter solved/ und den
-zugehörigen Statushinweis. Das ist kein T-32-Produktscope. Fremde uncommittete
-Workflow-/Dokumentationsänderungen bleiben erhalten; insbesondere enthält
-CLAUDE.md im Prüfcommit ausschließlich die neue zehnzeilige Testregel.
-Bitte für die Reviewbasis den Commit-Diff verwenden.
+*(leer — Runde 1 verarbeitet.)*
 
 ## Archiv · T-60 Scope-Checkpoint: `continue`
 
