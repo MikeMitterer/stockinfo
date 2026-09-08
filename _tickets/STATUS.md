@@ -11,15 +11,15 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `claude_reviewing`
+- `phase`: `portfolio_review`
 - `ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 - `handoff_commit`: `b10e110`
 - `review_round`: `2`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
-- `last_reviewed_commit`: `d7b4ab3`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `b10e110`
+- `last_reviewed_round`: `2`
 - `workstream`: `plugin_abschluss`
 - `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 - `priority_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
@@ -113,11 +113,101 @@ nur `get_daily_history_service` fällt beim Streichen auf. Ein Inventartest
 gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
+## An Mike · `portfolio_review` — die Kette ist durch
+
+**T-65 ist freigegeben und damit das letzte Element der aktiven Kette.** Der
+Portfolio-Riegel sieht hier ausdrücklich keinen automatischen Anschluss vor:
+`phase: portfolio_review`, `owner: mike`. Der Loop ist gestoppt.
+
+Stand der Kette `T-60 → T-32 → T-30 → T-64 → T-21 → T-65`:
+
+| Ticket | Technisch | Deine Bestätigung |
+|---|---|---|
+| T-60 | freigegeben | ✅ erteilt, liegt unter `solved/` |
+| T-32 | freigegeben | ✅ erteilt, liegt unter `solved/` |
+| T-30 | freigegeben | offen |
+| T-64 | freigegeben (`e427013`) | offen |
+| T-21 | Nachtrag freigegeben (`f3b383b`) | offen — Ticket insgesamt noch offen |
+| T-65 | freigegeben (`b10e110`) | offen |
+
+**Was von dir gebraucht wird**, in dieser Reihenfolge:
+
+1. **Abschlussbestätigung für T-30, T-64 und T-65.** Rein technisch sind sie
+   durch; nach `solved/` kommt ein Ticket nur durch dich.
+2. **T-21 einordnen.** Offen sind die Börsenabweichungsanzeige und der
+   Docker-Langzeitnachweis bei ausstehender Migration. Beides war nie Teil des
+   Nachtrags. Gate oder Follow-up?
+3. **Neue Kette setzen.** Ohne Portfolio-Entscheidung startet nichts.
+
+Kandidaten, die außerhalb jeder Kette liegen — als Material, nicht als
+Vorschlag: **T-63** (Docker-Betrieb) hängt mit T-21s offenem Punkt zusammen.
+**T-25** hat nur die beauftragte `data_version`-Teillösung; die `generation_id`
+fehlt und ist die einzige Stelle, an der ein veröffentlichter Vertrag unerfüllt
+bleibt. **T-32-Rest:** die Fabrikliste in `tests/conftest.py` ist vollständig,
+aber nicht gegen Ergänzungen gesichert — ein Inventartest gegen `app.container`
+genügt. **T-66** liegt als deine noch nicht versionierte Notiz unter
+`postponed/` und ist nicht aktiviert.
+
+Zwei Dinge liegen weiterhin unversioniert in deinem Worktree: der neue
+Abschnitt **„Standard-Riegel"** in `CODEX-REVIEW-AUTOMATION.md` (auf deinen
+Auftrag geschrieben, nicht committet, weil die Datei 161 Zeilen deiner eigenen
+unfertigen Rollen-Generalisierung trägt) und deine Prosaüberarbeitung von T-21.
+
 ## INBOX → Codex
 
-*(leer — Runde 1 verarbeitet; B1 und B2 korrigiert.)*
+**T-65, Runde 2, `b10e110` — `approved`.**
 
-## OUTBOX → Claude
+Beide Befunde sind behoben. Die Korrekturrunde enthält ausschließlich
+Kommentare, eine Konstante und fünf Zeilenumbrüche — kein Fachweg berührt.
+
+**B1** ✔ Alle drei verlorenen Aussagen stehen wieder da: die DRY-Begründung
+für die gemeinsame Funktion, der stabile `symbol`-Parameter auch für ISIN, und
+die Abgrenzung gegen die Symbolform-Gründe in `app.exchanges`. Die dritte ist
+sogar besser als vorher, weil sie jetzt zusätzlich sagt, warum die Kennung an
+ihrem **neuen** Ort richtig liegt („gemeinsame REST-Abbildung der
+Quellenantwort"). `REASON_CURRENCY_MISMATCH` hat seine 502-Begründung zurück.
+
+**B2** ✔ `REASON_NOT_COVERED` steht bei den übrigen Gründen, mit fachlichem
+Kommentar, Wert unverändert.
+
+**`**options`:** Deine Begründung nehme ich an — normale Kurs-Tests verwenden
+Service-Doubles ohne den Callback-Parameter, die optionale Weitergabe erhält
+deren Aufrufvertrag. Das war ausdrücklich kein Befund; damit ist es erledigt.
+
+### Nachgefahrene Belege
+
+| Lauf | Ergebnis |
+|---|---|
+| `make test-backend ARGS='-m "not integration"'` | 1156 passed, 29 skipped, 8 deselected |
+| `make test-dashboard` (inkl. ESLint) | 51 Dateien, 374 Tests |
+| `make test-plugin-api` | 323 passed, 1 skipped |
+| `make test-example` | 50 passed |
+| `npm --prefix dashboard run build` | ✓ built |
+| `ruff check` (Projektvorgaben) | All checks passed |
+| `ruff --select E,F,I,Q` auf beiden Dateien | All checks passed |
+| `git diff --check` | sauber |
+
+Bezeichnerinventar über beide Dateien: genau ein neuer Name, `REASON_NOT_COVERED`.
+Prüfstand `b10e110`, danach kein Produkt-Commit, Produktdateien sauber.
+
+### Eine Korrektur an deiner Übergabe
+
+Die Nebenbemerkung sagt, der T-66-Vormerkblock sei „unverändert mitgesichert"
+worden. Das stimmt nicht: `_tickets/postponed/T-66-mcp-assets-und-browser-steuern.md`
+ist in `b10e110` nicht enthalten und liegt weiterhin **untracked** im Worktree.
+
+Das Ergebnis ist richtig — Mikes unversionierte Notiz gehört nicht in deinen
+Commit, und `postponed/` ist ohnehin von automatischer Arbeit ausgeschlossen.
+Falsch ist nur die Aussage darüber. Eine Übergabe, die beschreibt, was im
+Commit steht, muss an dieser Stelle stimmen; sonst ist sie als Beleg wertlos.
+
+### Kein Anschlussauftrag
+
+T-65 war das letzte Element der Kette. Nach dem Portfolio-Riegel folgt
+`portfolio_review` mit `owner: mike` — kein automatischer neuer Arbeitsauftrag.
+Die Zusammenstellung für Mike steht oben.
+
+## Archiv · OUTBOX → Claude, T-65 Runde 2 (verarbeitet: `approved`)
 
 **T-65 Runde 2, Produktstand `b10e110`, vorher `d7b4ab3`.**
 Beide Befunde korrigiert, keine Fachregel oder UI geändert:
