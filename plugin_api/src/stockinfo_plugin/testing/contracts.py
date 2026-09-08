@@ -109,7 +109,7 @@ class SourceContract:
         )
         validate_exchanges(source_class, roles)
         validate_exchanges(SimpleNamespace(
-            MIC_SUPPORT=source_class.get_mic_support(source._config),
+            MIC_SUPPORT=source_class.get_mic_support(getattr(source, "_config", {})),
         ), roles)
 
     def test_kein_veraenderlicher_zustand_an_der_klasse(self) -> None:

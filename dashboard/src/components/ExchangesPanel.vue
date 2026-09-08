@@ -6,6 +6,7 @@ import { NAlert, NButton, NDataTable, NEmpty, NInput, NList, NListItem, NSwitch,
 import type { DataTableColumns } from 'naive-ui'
 import ExchangeSupport from './ExchangeSupport.vue'
 import { availableQuoteSources } from '../utils/exchangeCoverage'
+import { quoteSourceFromHash } from '../composables/useHashTab'
 import InfoHint from './InfoHint.vue'
 import type { ExchangeEntry, ExchangesResponse } from '../types'
 
@@ -40,7 +41,7 @@ function showSource(source: string) {
   target?.focus({ preventScroll: true })
 }
 // Vor der Routennormalisierung lesen; die Daten können erst später eintreffen.
-let linkedSource = new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('source')
+let linkedSource = quoteSourceFromHash()
 watch(sourceInfo, async sources => {
   if (!linkedSource || !sources.some(source => source.name === linkedSource)) return
   const source = linkedSource

@@ -56,3 +56,13 @@ def test_autor_vertrag_prueft_auch_die_aktuelle_bestandszusage():
         contract.test_boersendeklarationen_sind_gueltig()
     contract.make_source = lambda: InventorySource({"mic": "XETR"})
     contract.test_boersendeklarationen_sind_gueltig()
+
+
+def test_eigener_konstruktor_braucht_keinen_internen_konfigurationsspeicher():
+    class OwnInit(QuoteSource):
+        def __init__(self):
+            pass
+
+    contract = QuoteContract()
+    contract.make_source = OwnInit
+    contract.test_boersendeklarationen_sind_gueltig()

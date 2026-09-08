@@ -257,6 +257,9 @@ of roles to `MicCoverage`. The default returns `MIC_SUPPORT`. Do not make
 network requests here: this hook is read again when `/exchanges` is requested.
 Raise on unreadable/invalid inventory; never return an old coverage snapshot.
 The host validates current declarations and displays failed coverage as unknown.
+For contract tests, `make_source()` must provide valid inventory/configuration
+so that the current coverage hook can run successfully. Constructors without
+the base configuration storage are tested with an empty configuration mapping.
 
 The bundled YAML source reports only MICs actually present in its file:
 resolver coverage for listed identities, quotes for a price or history,

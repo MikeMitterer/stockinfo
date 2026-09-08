@@ -45,6 +45,11 @@ export function quoteSourceHref(source: string): string {
   return `${tabHref('exchanges')}?source=${encodeURIComponent(source)}`
 }
 
+/** Liest das Quellenziel mit derselben Hash-Struktur wie der Schreibweg. */
+export function quoteSourceFromHash(): string | null {
+  return new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('source')
+}
+
 /**
  * Aktiver Tab + Settings-Reiter, synchron mit einer deep-linkbaren Hash-Route.
  * Einzige Stelle, die die URL-Struktur besitzt.
@@ -69,7 +74,7 @@ export function useHashTab(): { tab: Ref<TabKey>; settingsTab: Ref<SettingsTab> 
 
   onMounted(() => {
     const source = tab.value === 'exchanges'
-      ? new URLSearchParams(window.location.hash.split('?')[1] ?? '').get('source') : null
+      ? quoteSourceFromHash() : null
     const next = source ? quoteSourceHref(source) : toHash(tab.value, settingsTab.value)
     if (window.location.hash !== next) {
       window.location.hash = next

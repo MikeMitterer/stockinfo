@@ -37,15 +37,12 @@ dieser Stelle schon gemeinsam — hier bleibt nur der Treffer zu übersetzen.
 """
 
 from types import MappingProxyType
-from stockinfo_plugin import MicCoverage
-from app.plugins.exchange_support import ONLINE_MICS
-
 from typing import Any
 
 import structlog
-
 from stockinfo_plugin import (
     ListedIdentity,
+    MicCoverage,
     NotFound,
     NotResponsible,
     Resolution,
@@ -55,6 +52,7 @@ from stockinfo_plugin import (
 )
 from stockinfo_plugin.invariants import isin_check_digit_is_valid
 
+from app.plugins.exchange_support import ONLINE_MICS
 from app.providers.base import ResolvedInstrument
 from app.providers.openfigi_provider import OpenFigiClient
 from app.resolver import OpenFigiResolver as CoreOpenFigiResolver
@@ -74,7 +72,7 @@ class OpenFigiResolverPlugin(Resolver):
     cost = "free"
     api_version = 2
     MIC_SUPPORT = MappingProxyType({
-        'resolvers': MicCoverage(ONLINE_MICS),
+        "resolvers": MicCoverage(ONLINE_MICS),
     })
     SUPPORTED_KINDS = frozenset({"listed"})
     SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "bond"})

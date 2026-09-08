@@ -19,11 +19,8 @@ nicht beantworten, und das ist der ehrliche Grund, warum diese Quelle
 eingebaut bleibt und nicht als Beispiel für Fremdautoren taugt.
 """
 
-from types import MappingProxyType
-from stockinfo_plugin import MicCoverage
-from app.plugins.exchange_support import ONLINE_MICS
-
 from datetime import date, datetime, timezone
+from types import MappingProxyType
 from typing import Any
 
 from stockinfo_plugin import (
@@ -35,6 +32,7 @@ from stockinfo_plugin import (
     FxRequest,
     FxResult,
     ListedIdentity,
+    MicCoverage,
     NotFound,
     NotResponsible,
     PairIdentity,
@@ -47,6 +45,7 @@ from stockinfo_plugin.invariants import currency_problem, is_finite_price
 from stockinfo_plugin.sources import DailyCloseSource, FxSource, QuoteSource
 
 from app.exchanges import EXCHANGES, provider_alias
+from app.plugins.exchange_support import ONLINE_MICS
 from app.providers.base import INSTRUMENT_TYPES
 from app.providers.yfinance_provider import YFinanceProvider
 
@@ -58,8 +57,8 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
     cost = "free"
     api_version = 2
     MIC_SUPPORT = MappingProxyType({
-        'quotes': MicCoverage(ONLINE_MICS),
-        'daily': MicCoverage(ONLINE_MICS),
+        "quotes": MicCoverage(ONLINE_MICS),
+        "daily": MicCoverage(ONLINE_MICS),
     })
     SUPPORTED_KINDS = frozenset({"listed", "pair"})
     # **Ausgeschrieben, seit eine leere Menge „nichts zugesagt" heisst.** Sie

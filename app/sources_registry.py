@@ -16,14 +16,15 @@ eingebaute Quelle, die an der Registry vorbei verdrahtet bleibt, wäre genau die
 Sonderbehandlung, die T-23 danach wieder auseinandernehmen müsste.
 """
 
-from stockinfo_plugin.exchanges import validate_exchanges
-from types import SimpleNamespace
-
 from collections.abc import Callable
 from dataclasses import dataclass, replace
+from types import SimpleNamespace
 
 import structlog
+from stockinfo_plugin.exchanges import validate_exchanges
 
+from app.details import definitions_for, merge_definitions
+from app.exchange_catalog import prepare_catalog, reset_catalog
 from app.plugin_adapters import (
     DailyAdapter,
     FxAdapter,
@@ -39,15 +40,12 @@ from app.plugins.yahoo_search_resolver import YahooSearchResolverPlugin
 from app.plugins.yfinance_metadata import YFinanceMetadataPlugin
 from app.plugins.yfinance_quotes import YFinancePlugin
 
-from app.details import definitions_for, merge_definitions
-from app.exchange_catalog import prepare_catalog, reset_catalog
-
 _DETAIL_SCHEMAS: dict[str, list] = {}
 
 
 def detail_definitions(config, settings) -> list:
     """Validiertes Profilschema, auch bei einer vorübergehend kranken Quelle."""
-    build_chain('etf_meta', config, settings)
+    build_chain("etf_meta", config, settings)
     return merge_definitions(_DETAIL_SCHEMAS.values())
 
 
@@ -572,7 +570,7 @@ def _register_detail_schema(name: str, declaration: object) -> bool:
         return True
     except Exception as error:  # noqa: BLE001 — fremde Deklarationen dürfen den Start nicht abbrechen
         _LAST_REASON[name] = str(error)
-        logger.warning('source_fields_invalid', source=name, error=str(error))
+        logger.warning("source_fields_invalid", source=name, error=str(error))
         return False
 
 
@@ -598,7 +596,7 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | 
         Die einsatzbereite Quelle, oder ``None`` — dann steht der Grund im
         Protokoll und die Kette geht ohne sie weiter.
     """
-    if role == 'etf_meta' and spec.declaration is not None:
+    if role == "etf_meta" and spec.declaration is not None:
         if not _register_detail_schema(spec.name, spec.declaration):
             return None
     try:
@@ -613,7 +611,7 @@ def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | 
         )
         return None
 
-    if role == 'etf_meta' and spec.declaration is None:
+    if role == "etf_meta" and spec.declaration is None:
         if not _register_detail_schema(spec.name, source):
             return None
     problem = _diagnosis(spec, source)

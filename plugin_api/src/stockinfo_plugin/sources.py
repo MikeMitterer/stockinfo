@@ -10,11 +10,11 @@ Ein Plugin erfüllt eine Rolle oder mehrere. Die kommerziellen Anbieter decken
 üblicherweise alle ab — Auflösung, Kurs, Historie, Devisen aus einer Hand.
 """
 
-from typing import Any
 from collections.abc import Mapping
 from types import MappingProxyType
-from stockinfo_plugin.exchanges import ExchangeSpec, MicCoverage
+from typing import Any
 
+from stockinfo_plugin.exchanges import ExchangeSpec, MicCoverage
 from stockinfo_plugin.types import (
     API_VERSION,
     Cost,
@@ -26,8 +26,8 @@ from stockinfo_plugin.types import (
     QuoteRequest,
     QuoteResult,
     Reading,
-    ResolveRequest,
     Resolution,
+    ResolveRequest,
 )
 
 

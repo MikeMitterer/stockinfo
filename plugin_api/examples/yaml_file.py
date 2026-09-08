@@ -59,20 +59,11 @@ Datei hinter einer Online-Kette.
 import logging
 from datetime import date, datetime, timezone
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 import yaml
-
-from stockinfo_plugin.invariants import (
-    currency_problem,
-    is_finite_number,
-    has_timezone,
-    identity_problem,
-)
-from types import MappingProxyType
-
 from stockinfo_plugin import (
-    MicCoverage,
     DailyBar,
     DailyCloseSource,
     DailyRequest,
@@ -86,6 +77,7 @@ from stockinfo_plugin import (
     IsinOnlyIdentity,
     ListedIdentity,
     MetadataSource,
+    MicCoverage,
     NotFound,
     NotResponsible,
     PairIdentity,
@@ -96,11 +88,17 @@ from stockinfo_plugin import (
     Reading,
     Resolution,
     Resolved,
-    ResolveRequest,
     Resolver,
+    ResolveRequest,
     Unavailable,
     Unit,
     isin_of,
+)
+from stockinfo_plugin.invariants import (
+    currency_problem,
+    has_timezone,
+    identity_problem,
+    is_finite_number,
 )
 
 logger = logging.getLogger(__name__)
@@ -686,29 +684,6 @@ class YamlFileSource(
         for role in ("resolvers", "quotes", "daily", "etf_meta")
     })
 
-    @classmethod
-    def get_mic_support(cls, config: dict[str, Any]) -> dict[str, MicCoverage]:
-        """Nur Listings mit Daten für die jeweilige Rolle zählen zur Abdeckung."""
-        catalogue = _Catalogue(Path(config.get("path", "/data/assets.yaml")))
-        markets = {role: set() for role in cls.MIC_SUPPORT}
-        for entry in catalogue.by_symbol.values():
-            identity = entry["identity"]
-            if not isinstance(identity, ListedIdentity):
-                continue
-            available = {
-                "resolvers": True,
-                "quotes": bool(entry.get("price") or _closes(entry)),
-                "daily": bool(_closes(entry)),
-                "etf_meta": bool(entry.get("metadata")),
-            }
-            for role in markets:
-                if available.get(role):
-                    markets[role].add(identity.mic)
-        return {
-            role: MicCoverage(tuple(sorted(mics)), "inventory")
-            for role, mics in markets.items()
-        }
-
     data_version = 1  # Increase only for incompatible changes to stored data.
     SUPPORTED_KINDS = frozenset({"listed", "pair", "isin_only"})
     SUPPORTED_TYPES = frozenset({"stock", "etf", "etc", "fund", "crypto", "bond"})
@@ -748,6 +723,29 @@ class YamlFileSource(
     cacheable = False
     """Eine gepflegte Datei kostet nichts und soll sofort wirken — ein
     Zwischenspeicher schützte hier kein Kontingent."""
+
+    @classmethod
+    def get_mic_support(cls, config: dict[str, Any]) -> dict[str, MicCoverage]:
+        """Nur Listings mit Daten für die jeweilige Rolle zählen zur Abdeckung."""
+        catalogue = _Catalogue(Path(config.get("path", "/data/assets.yaml")))
+        markets = {role: set() for role in cls.MIC_SUPPORT}
+        for entry in catalogue.by_symbol.values():
+            identity = entry["identity"]
+            if not isinstance(identity, ListedIdentity):
+                continue
+            available = {
+                "resolvers": True,
+                "quotes": bool(entry.get("price") or _closes(entry)),
+                "daily": bool(_closes(entry)),
+                "etf_meta": bool(entry.get("metadata")),
+            }
+            for role in markets:
+                if available.get(role):
+                    markets[role].add(identity.mic)
+        return {
+            role: MicCoverage(tuple(sorted(mics)), "inventory")
+            for role, mics in markets.items()
+        }
 
     def __init__(self, config: dict[str, Any] | None = None) -> None:
         """

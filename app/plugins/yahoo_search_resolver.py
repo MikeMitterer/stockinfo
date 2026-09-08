@@ -33,15 +33,13 @@ kennt, wie die Suche fragt und was ein Treffer ist, entscheidet
 """
 
 from types import MappingProxyType
-from stockinfo_plugin import MicCoverage
-from app.plugins.exchange_support import ONLINE_MICS
-
 from typing import Any
 
 from stockinfo_plugin import (
     ListedIdentity,
-    PairIdentity,
+    MicCoverage,
     NotFound,
+    PairIdentity,
     Resolution,
     Resolved,
     Resolver,
@@ -49,6 +47,7 @@ from stockinfo_plugin import (
     Unsupported,
 )
 
+from app.plugins.exchange_support import ONLINE_MICS
 from app.providers.base import ResolvedInstrument
 from app.resolver import DEFAULT_EXCHANGE, YFinanceResolver
 
@@ -60,7 +59,7 @@ class YahooSearchResolverPlugin(Resolver):
     cost = "free"
     api_version = 2
     MIC_SUPPORT = MappingProxyType({
-        'resolvers': MicCoverage(ONLINE_MICS),
+        "resolvers": MicCoverage(ONLINE_MICS),
     })
     # **`pair` und `crypto` seit T-31.** Yahoo führt `BTC-EUR` nativ und
     # meldet `quoteType: CRYPTOCURRENCY`; ohne diese beiden Zeilen wies der
