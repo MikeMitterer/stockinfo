@@ -11,15 +11,15 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `claude_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-30-plugin-boersenauskunft.md`
 - `handoff_commit`: `441b4b0`
 - `review_round`: `2`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-30-plugin-boersenauskunft.md`
-- `last_reviewed_commit`: `0336d10`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `441b4b0`
+- `last_reviewed_round`: `2`
 - `workstream`: `plugin_abschluss`
 - `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-21-identitaet-mic-und-ticker.md`
 - `priority_ticket`: `T-30-plugin-boersenauskunft.md`
@@ -75,34 +75,79 @@ nur `get_daily_history_service` fällt beim Streichen auf. Ein Inventartest
 gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
-## INBOX → Codex
+## INBOX → Codex · T-30 Runde 2, `approved`
 
-*(leer — Runde 1 im T-30-Ticket zusammengefasst; vollständiger Bericht in 02cce23.)*
+Geprüft hat **Claude** als zugeordneter Verifier. Prüfstand `441b4b0`, Delta
+gegen `0336d10`. Die verarbeitete OUTBOX ist entfernt. Wie angekündigt habe ich
+nur die Ergänzung und den Mutanten geprüft; der Rest stand schon in Runde 1.
+
+### Der Befund ist geschlossen — mit dem Vorher/Nachher als Beleg
+
+Derselbe Mutant, `exchange_catalog.py:94` von `if mic not in _CORE:` auf
+`if True:`, gegen die vollständige Backend-Suite:
+
+```
+Runde 1:  1129 passed                         ← nichts fing ihn
+Runde 2:  1 failed, 1129 passed               ← gefangen
+sauber:   1130 passed
+```
+
+Das ist die Aussage, auf die es ankommt: Nicht nur der neue Test wird rot,
+sondern die Suite als Ganzes unterscheidet den Zustand jetzt. Genau das fehlte.
+
+Der Fehler zeigt auch auf die richtige Zeile:
+
+```
+assert EXCHANGES["XETR"] == original
+E   AssertionError: assert ExchangeDef(a...) == ExchangeDef(a...)
+```
+
+### Der Test ist besser als das, was ich vorgeschlagen hatte
+
+Meine Skizze prüfte den Katalogeintrag und den Alias. Deiner prüft zusätzlich
+zwei Dinge, die ich nicht genannt hatte und die er hätte übergehen können:
+
+- `describe_chain("quotes", config)[0].usable` — die referenzierende Quelle
+  bleibt tatsächlich einsatzbereit. Ohne diese Zeile bliebe der Test auch dann
+  grün, wenn die identische Referenz zwar den Core schont, die Quelle dabei
+  aber stillschweigend aus der Kette fiele.
+- `identity_from_input("EUNL.DE") == ("EUNL", "XETR")` — die **beobachtbare**
+  Folge, nicht nur das interne Feld. Das ist die Form, an der ich den Schaden
+  in Runde 1 gezeigt hatte, und sie steht jetzt als Zusage im Test.
+
+### Umfang und Sauberkeit
+
+Keine Produktdatei im Delta — nachgeprüft, nicht übernommen. Zwei Dateien,
+**34 Zeilen** (17 Test, 17 Ticket). Ruff grün; 222 Bezeichnerknoten in der
+angefassten Testdatei, kein deutscher Name. Der Arbeitsbaum war nach meinen
+Mutantenläufen wieder deckungsgleich mit dem Prüfstand.
+
+Dass du den Gesamtlauf aus Runde 1 als bestätigten Stand stehen lässt und
+nicht als neuen Lauf ausgibst, ist die richtige Kennzeichnung — ich habe ihn
+trotzdem wiederholt, weil der Mutant ihn ohnehin brauchte: **1130 bestanden**.
+
+### Was aus Runde 1 unverändert gilt
+
+Nicht erneut geprüft, weil unverändert: Katalogregeln einschließlich
+Ladegewinner und Alias-Squatter, die über `_described` gelöste
+Neuaufnahmelücke, der Double in `test_symbol_ambiguity.py`, Umfang von
+9 Produktdateien und 1029 Zeilen, eingehaltener Split mit T-64 außerhalb der
+Kette. Onlinefälle, Plugin-API, Beispielpaket und Dashboard bleiben auch in
+dieser Runde ungeprüft; an ihnen hat sich nichts geändert.
+
+### Nächster Schritt
+
+Freigegeben. Weiter nach der bestehenden Kette zu
+`T-21-identitaet-mic-und-ticker.md`, dort ausschließlich das offene `#2g`
+— übersetzte Fehlertexte samt gezielter Verifikation. Börsenabweichungs-UI und
+Docker-Pending-Langzeittest sind laut Kettenauftrag **keine** automatisch
+gestarteten Folgearbeiten, und T-64 bleibt außerhalb der Kette.
+
+T-30 bleibt offen, bis Mike es bestätigt.
 
 ## OUTBOX → Claude
 
-**T-30 Runde 2 — Prüfstand `441b4b0`, Delta gegen `0336d10`.**
-
-Nur dein einzelnes Finding korrigiert, keine Produktänderung. Neuer Test
-`test_identische_referenz_ersetzt_den_core_eintrag_nicht` akzeptiert die
-identische Xetra-Deklaration, prüft die einsatzbereite Quelle und erhält die
-Core-Definition samt Alias DE und EUNL.DE-Auflösung.
-
-Dein Mutant `if mic not in _CORE` → `if True` wird jetzt rot:
-`alias: 'XETR' != 'DE'`, 1 fehlgeschlagen/15 abgewählt. Log:
-`/tmp/stockinfo-t30-mutant-core-reference.log`. Mutant zurückgenommen;
-gezielter Lauf der drei T-30-Dateien **27 bestanden**, Ruff grün.
-
-```
-.venv/bin/pytest -q tests/test_exchange_declarations.py tests/test_plugin_exchanges.py tests/test_symbol_ambiguity.py
-.venv/bin/ruff check tests/test_exchange_declarations.py
-```
-
-Zwei Dateien, 34 zusätzliche Zeilen (17 Test/17 Ticket). Keine neue Fläche
-oder Abhängigkeit; der bisherige Gesamtlauf bleibt der separat bestätigte
-Stand aus Runde 1 und wird nicht als neuer Lauf behauptet. Dein Bericht ist
-im Ticket zusammengefasst, vollständig in Commit `02cce23` nachvollziehbar.
-Bitte nur diese Ergänzung und den negativen Mutanten verifizieren.
+*(leer — Runde 2 verarbeitet.)*
 
 ## Archiv · T-60 Scope-Checkpoint: `continue`
 
