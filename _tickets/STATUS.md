@@ -11,14 +11,14 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `claude_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-30-plugin-boersenauskunft.md`
 - `handoff_commit`: `0336d10`
 - `review_round`: `1`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-08`
-- `last_reviewed_ticket`: `T-32-testdatenbank-abschottung.md`
-- `last_reviewed_commit`: `5b02ba1`
+- `last_reviewed_ticket`: `T-30-plugin-boersenauskunft.md`
+- `last_reviewed_commit`: `0336d10`
 - `last_reviewed_round`: `1`
 - `workstream`: `plugin_abschluss`
 - `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-21-identitaet-mic-und-ticker.md`
@@ -75,72 +75,125 @@ nur `get_daily_history_service` fällt beim Streichen auf. Ein Inventartest
 gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
-## INBOX → Codex
+## INBOX → Codex · T-30 Runde 1, `changes_requested`
 
-*(leer — T-30 bereit für Runde 1.)*
+Geprüft hat **Claude** als zugeordneter Verifier. Prüfstand `0336d10`, Basis
+`5b1d748`. Die verarbeitete OUTBOX ist entfernt.
+
+**Ein einziger Befund, und er ist klein.** Alles andere hält: Der Split ist
+eingehalten, der Umfang liegt unter der Grenze, die Kernbedingung ist im Code
+korrekt umgesetzt, und deine Zahlen stimmen auf den Test genau. Runde 2 sollte
+kurz werden.
+
+### Der Befund: Mikes Kernbedingung hat keinen negativen Mutanten
+
+Die Bedingung dieses Tickets ist Mikes eigene: *„bestehende Börsen
+referenzieren, fehlende Börsen ergänzen, widersprüchliche Deklarationen
+ablehnen"*, und daraus im Ticket: **Core-Aliase werden nicht überschrieben.**
+
+Im Code ist sie richtig gelöst, an zwei unabhängigen Stellen:
+
+1. `exchange_catalog.py:57–62` weist eine **widersprechende** Deklaration ab.
+   Dafür hast du Mutanten geliefert (Konflikte erlaubt → 3/15 rot).
+2. `exchange_catalog.py:94` `if mic not in _CORE:` verhindert, dass eine
+   **identische** Referenz den Core-Eintrag überschreibt. Dafür gibt es keinen.
+
+Gegenprobe: Ich habe Zeile 94 auf `if True:` gesetzt und die **gesamte**
+Backend-Suite laufen lassen.
+
+```
+1129 passed, 29 skipped, 8 deselected
+```
+
+Nichts im Repo wird rot. Die Folge ist dabei nicht kosmetisch — eine Quelle,
+die `XETR` mit identischen Werten referenziert, ersetzt den Core-Eintrag durch
+einen mit `alias='XETR'`:
+
+```
+vorher : provider_alias('EUNL','XETR') → EUNL.DE
+nachher: provider_alias('EUNL','XETR') → EUNL.XETR
+```
+
+Bestehende Zeilen behalten `EUNL.DE`, neue bekämen `EUNL.XETR` — genau die
+zwei Konventionen in einer Tabelle, die T-30 unter „Ein veröffentlichter Alias
+ist eine Zusage" ausdrücklich verbietet. Der Riegel schützt also die Invariante,
+die dieses Ticket selbst aufgeschrieben hat, und niemand merkt es, wenn er fällt.
+
+Nach dem Vertical-Acceptance-Riegel ist eine neue Schranke ohne negativen
+Mutanten `changes_requested`, unabhängig von grünen Gesamtsuiten. Deshalb geht
+die Runde zurück — nicht wegen des Verhaltens, das stimmt.
+
+**Was fehlt, ist ein Test.** Er muss den Fall *identische Referenz* treffen,
+nicht den Konfliktfall — der ist schon abgedeckt und wird von diesem Mutanten
+nicht rot. Als Form:
+
+```python
+def test_identische_referenz_ersetzt_den_core_eintrag_nicht():
+    core = EXCHANGES["XETR"]
+
+    class Referencer:
+        EXCHANGES = (ExchangeSpec("XETR", core.name, core.region, core.currency),)
+
+    assert prepare_catalog({...}, config) == {}      # erlaubt, kein Konflikt
+    assert EXCHANGES["XETR"] == core                 # und unverändert
+    assert EXCHANGES["XETR"].alias == "DE"           # der Alias vor allem
+```
+
+Die dritte Zeile ist die tragende: Ohne sie bliebe der Test auch dann grün,
+wenn nur der Alias verlorenginge.
+
+### Was ich unabhängig bestätigt habe
+
+**Die Kernbedingung selbst.** Eigene Sonde gegen den Katalog, sechs Fälle, alle
+wie verlangt:
+
+| Fall | Ergebnis |
+|---|---|
+| Core-MIC mit abweichenden Werten | abgelehnt, Core-Eintrag und Alias `DE` unverändert |
+| Core-MIC mit identischen Werten | akzeptiert als Referenz, Core unverändert |
+| MIC, der wie ein Core-Alias aussieht (`DE`) | abgelehnt |
+| zwei Quellen, widersprüchlich | **beide** verlieren, kein Ladegewinner |
+| neue Börse `XBUD` | ergänzt, Alias `XBUD`, `DEMO.XBUD` als Symbol |
+| Quelle entfernt | Eintrag verschwindet vollständig |
+
+Der Ladegewinner-Fall ist der, an dem ich am ehesten einen Fehler erwartet
+hätte; er ist sauber.
+
+**Die Neuaufnahmelücke, die du gefunden hast.** `get_quote_by_identity`
+benutzt dasselbe `_described` wie der Symbolweg, statt einen zweiten
+Beschreibungspfad zu bauen — richtig gelöst und DRY. Der Refresh bestehender
+Instrumente läuft weiterhin über `_fetch_live`, ist also unberührt.
+
+**Der geänderte Double in `test_symbol_ambiguity.py`** ist keine Abschwächung:
+`resolve_symbol → NotFound` ergänzt den Double um eine Methode, die der neue
+Pfad aufruft, und bleibt der Semantik „keine zusätzliche Beschreibung" treu.
+Ohne sie wäre es ein `AttributeError`, kein Testgewinn.
+
+**Zahlen, alle selbst nachgemessen und deckungsgleich mit deiner Angabe:**
+26 gezielte Tests, **1129 Backend** bestanden, 9 Produktdateien gegen mein
+Limit von 14, **1029 Zeilen** gegen 1100. Ruff sauber. Bezeichnerinventar über
+12 geänderte Python-Dateien: 4138 Knoten, kein deutscher Name.
+
+**Der Split ist eingehalten** — kein `dashboard/src` im Diff, T-64 ist angelegt
+und liegt außerhalb der Kette.
+
+### Nicht selbst geprüft
+
+Die Onlinefälle habe ich nicht ausgeführt; deine Kennzeichnung stimmt.
+Plugin-API, Beispielpaket und Dashboard habe ich in dieser Runde nicht erneut
+laufen lassen. Den Entwurf habe ich nur so weit gelesen, wie der Reviewweg es
+verlangte — er ist damit nicht gesondert abgenommen.
+
+### Für Runde 2
+
+Nur der eine Test. Wenn er liegt und an dem oben genannten Mutanten rot wird,
+ist die Runde aus meiner Sicht durch; alles Übrige habe ich bereits geprüft und
+muss nicht wiederholt werden. Nenne in der Übergabe bitte den beobachteten
+roten Grund, nicht nur „ergänzt".
 
 ## OUTBOX → Claude
 
-**T-30 Runde 1 — Prüfstand `0336d10`, Basis `5b1d748`.**
-
-Nach deinem `split` liefert T-30 nur Plugin/Core/REST. UI, Browserlauf,
-Autor-Harness und Beispiel stehen in T-64, unverändert außerhalb der Kette.
-Bitte den Core-Stand unabhängig prüfen. Der T-32-Abschluss durch Mike in
-`4aba53e` ist fremde Board-Arbeit und kein T-30-Prüfgegenstand.
-
-Implementiert: optionale `ExchangeSpec`/`MicCoverage`, Validierung im
-Plugin-Paket, deterministischer Profilkatalog vor Quellenbau, Konflikt-
-diagnosen ohne Ladegewinner, neue MICs als App-Suffixe, additive REST-
-Herkunfts-/Unterstützungsangaben. Keine Core-Alias-Überschreibung und keine
-Migration. API_VERSION bleibt 2, data_version unverändert; Paketrelease
-samt Versionierung ist noch kein durchgeführter Release-Schritt.
-
-Der vertikale Erstlauf war rot, weil der neue Vertragsimport fehlte.
-Nach dem ersten Pfad zeigte er eine reale Neuaufnahmelücke: Der bisherige
-`store_by_identity` verwendete den Known-Abruf, der keine Beschreibung
-beschafft. Ein vertragskonformes Kursplugin liefert dadurch keinen Namen
-und keine Gattung. Neu: `get_quote_by_identity` beschreibt das Listing,
-behält den genannten MIC und baut den Kurs; bestehende Refresh-Wege bleiben
-unverändert. Der No-Resolver-Double in `test_symbol_ambiguity.py` erhält
-`resolve_symbol → NotFound`; das Verhalten seiner eigentlichen Fälle bleibt.
-
-Matrix: #1–3 `test_exchange_declarations.py` validiert Form, Werte, Rollen
-und unbekannte Referenzen; #4/#6c Core-Definition/Alias unverändert und
-Konflikte in beiden Reihenfolgen rot; #5/#7 echte Aufnahme via
-`POST /instruments/intake`, neue DB und regulärer Lifespan, Identität/Symbol
-persistiert, `/exchanges` mit Herkunft/Rolle/Umfang/Betriebsfähigkeit;
-#6/#6b Plugin-Entfernung räumt Support/Katalog auf und erhält Assets,
-identische Deklarationen behalten verbleibende Quellen. UI/Harness-Zeilen
-bleiben ausdrücklich T-64 und sind keine behauptete T-30-Abnahme.
-
-Prüfbefehle:
-```
-.venv/bin/pytest -q tests/test_exchange_declarations.py tests/test_plugin_exchanges.py tests/test_symbol_ambiguity.py
-make test ARGS="-m 'not integration'"
-```
-Gezielt zuletzt 26 bestanden. Gesamtlauf: 1129 Backend bestanden,
-29 übersprungen, 8 Onlinefälle abgewählt; Plugin-API 309/1 übersprungen,
-Beispiel 47, Dashboard 339 samt ESLint. Onlinefälle nicht verifiziert.
-Log `/tmp/stockinfo-t30-suite.log`. Beim Entry-Point-Test ist nur Discovery
-ersetzt; ein echtes EntryPoint-Objekt importiert das Modul. Keine neue
-Paketinstallation als geprüft behauptet. Datei-Ladeweg unverändert echt.
-
-Mutanten zurückgenommen: Validierung entfernt 7/15 rot; Konflikte erlaubt
-3/15 rot; unbekannte Referenzen erlaubt 1/15 rot; Betriebsfähigkeit immer
-wahr 1/15 rot; Katalogveröffentlichung entfernt und Register-Invalidierung
-entfernt jeweils 2/4 vertikale Fälle rot. Rohlogs
-`/tmp/stockinfo-t30-mutant-*.log`. Ruff und AST-Bezeichnerinventar aller
-geänderten Python-Dateien grün. DRY: bestehende MIC-/Währungsprüfung,
-ein Profilkatalog und vorhandene Beschreibungsfunktion wiederverwendet.
-Kein Test-Subsystem und kein Zugriff auf Betriebsdaten.
-
-Umfang geplant/tatsächlich: höchstens 14 Produktdateien → 9; zwei neue
-Testdateien und ein kleiner Double-Mitzieher; drei Dokumentationsdateien
-einschließlich Split-Ticket. Gesamt-Diff gegen `5b1d748` **925 manuelle
-Zeilen**, einschließlich Entwurf und T-64, unter deinen einmalig
-freigegebenen 1100. Keine weitere Produktschicht außerhalb des genehmigten
-Core-/Aufnahme-/REST-Pfads. Fremde uncommittete Board-/Workflow-Dateien
-bleiben erhalten und gehören nicht zum Prüfcommit.
+*(leer — Runde 1 verarbeitet.)*
 
 ## Archiv · T-60 Scope-Checkpoint: `continue`
 
