@@ -11,7 +11,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `ready_for_claude`
+- `phase`: `claude_reviewing`
 - `ticket`: `T-64-boersen-ui-und-autorennachweise.md`
 - `handoff_commit`: `e427013`
 - `review_round`: `1`
