@@ -11,9 +11,9 @@ ohne Kursabfrage oder neue Datenbankzeile. Nach Ergänzung passender Dateidaten
 ist die Aufnahme möglich. Eine Börsenzusage garantiert weiterhin keinen Kurs
 für jedes Wertpapier.
 
-**Stand:** Implementiert und durch Codex geprüft. Claude hat in Runde 1 die
-Fachwege und Tests bestätigt; zwei Dokumentations-/Benennungsbefunde korrigiert,
-erneute unabhängige Prüfung steht aus.
+**Stand:** Implementiert, einschließlich UI durch Codex geprüft und von Claude
+in Runde 2 technisch freigegeben (`b10e110`). Keine offenen Review-Befunde;
+Mikes Abschlussbestätigung steht aus.
 Ergänzung zu T-21, aus dessen
 Nachtrag auf Empfehlung von Claude im Scope-Checkpoint `f3b383b` getrennt.
 Mike hat die Umsetzung ausdrücklich beauftragt; sie folgt unmittelbar auf die
@@ -116,6 +116,12 @@ AST-Bezeichnerinventar und DRY-Suche geprüft. UI-/Browserbelege aus Runde 1
 gelten unverändert; in dieser rein mechanischen Runde nicht erneut ausgeführt.
 
 ### Side-Effects
+
+Die unabhängige Freigabe vom 2026-09-08 bestätigt beide Korrekturen und die
+erneut ausgeführten Gesamtläufe: 1156 Backend-, 374 UI-, 323 Plugin-API- und
+50 Beispieltests erfolgreich, Lint und Build grün. Claude hat keinen eigenen
+Browserlauf durchgeführt; die Browserbelege oben stammen von Codex.
+Die aktive Kette endet mit T-65 bei `portfolio_review`, Owner Mike.
 
 Neuaufnahmen an bekannten, aktuell nicht abgedeckten Börsen werden explizit
 abgelehnt. Die UI verwendet den zugesagten Aufnahmeweg. Bestehende Assets

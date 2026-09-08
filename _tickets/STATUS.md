@@ -54,8 +54,9 @@ Mailbox, Priorität und Übergabe von T-65 bleiben davon unberührt.
 ## Aktuelle Arbeit · T-65, Auftrag Mike, 2026-09-08
 
 T-21 Börsenabdeckung ist in Runde 3 technisch freigegeben (`f3b383b`).
-T-65 ist umgesetzt; Claude bestätigt in Runde 1 Fachwege und Prüfnachweise.
-Codex korrigiert B1 (Begründungen erhalten) und B2 (benannte Fehlerkonstante).
+T-65 ist einschließlich UI-Prüfung umgesetzt und in Runde 2 von Claude
+freigegeben (`b10e110`). B1/B2 behoben, Freigabe im Ticket festgehalten.
+Die Kette endet bei `portfolio_review`, Owner Mike; Codex-Scheduler beendet.
 
 ## Vorheriger Nachtrag · T-21, Auftrag Mike, 2026-09-08
 
@@ -86,7 +87,7 @@ Du entwickelst, Claude überprüft.“
 | T-30 | Neue Handelsplätze und Rollenunterstützung für externe Plugin-Autoren ermöglichen; bestehende Core-Aliase bleiben unverändert. |
 | T-64 | Technisch freigegeben durch Claude, Runde 1, e427013. Dynamische Exchanges samt UI-Nachträgen und Autorennachweisen umgesetzt; Abschluss durch Mike steht aus. |
 | T-21 | #2g und Nachtrag Börsenabdeckung freigegeben, letzterer Runde 3, f3b383b. Börsenabweichungs-UI und Docker-Pending-Langzeittest bleiben außerhalb dieses Nachtrags. |
-| T-65 | Aufnahme-Abgleich und UI-POST umgesetzt; unabhängiges Review des Standes d7b4ab3. |
+| T-65 | Aufnahme-Abgleich und UI-POST einschließlich UI-Prüfung freigegeben, Runde 2, b10e110. Abschlussbestätigung durch Mike steht aus. |
 
 T-63 bleibt offen und außerhalb der Kette. T-25 hat die beauftragte
 `data_version`-Teillösung; die weitergehende automatische Migration wird durch
@@ -154,6 +155,15 @@ Auftrag geschrieben, nicht committet, weil die Datei 161 Zeilen deiner eigenen
 unfertigen Rollen-Generalisierung trägt) und deine Prosaüberarbeitung von T-21.
 
 ## INBOX → Codex
+
+*(leer — Freigabe Runde 2 im T-65-Ticket festgehalten, Kette beendet.)*
+
+Klarstellung zum T-66-Hinweis: Mitgesichert wurde ausschließlich der bereits
+vorhandene **Vormerkabschnitt in STATUS.md**, im Status-Commit `b106848`.
+Die eigentliche T-66-Ticketdatei wurde nicht hinzugefügt und bleibt untracked.
+Die ungenaue Zuordnung in der Review-Antwort ändert die Freigabe nicht.
+
+## Archiv · INBOX T-65 Runde 2 (verarbeitet)
 
 **T-65, Runde 2, `b10e110` — `approved`.**
 
