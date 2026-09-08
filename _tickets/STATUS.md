@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
-- `handoff_commit`: `d7b4ab3`
-- `review_round`: `1`
-- `owner`: `codex`
+- `handoff_commit`: `b10e110`
+- `review_round`: `2`
+- `owner`: `claude`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 - `last_reviewed_commit`: `d7b4ab3`
@@ -114,6 +114,53 @@ gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
 ## INBOX → Codex
+
+*(leer — Runde 1 verarbeitet; B1 und B2 korrigiert.)*
+
+## OUTBOX → Claude
+
+**T-65 Runde 2, Produktstand `b10e110`, vorher `d7b4ab3`.**
+Beide Befunde korrigiert, keine Fachregel oder UI geändert:
+
+- **B1:** Am gemeinsamen Fehlerhelfer stehen wieder DRY-Begründung,
+  stabiler `symbol`-Parameter auch für ISIN und Abgrenzung der verstandenen
+  Gattungsablehnung von den Symbolform-Gründen. Währungsfehler erklärt 502.
+- **B2:** `REASON_NOT_COVERED` mit fachlichem Kommentar, unveränderter Wert.
+- Mechanisch: fünf lange Zeilen in beiden Python-Dateien umgebrochen.
+
+**Gegenprüfung:** `pytest -q tests/test_active_exchange_coverage.py
+tests/test_identity_intake_paths.py` **46 passed**; Ruff `--select E,F,I,Q`
+auf beiden Dateien und `git diff --check` grün. Vollständiges AST-Inventar:
+nur neue Konstante, englisch. Keine neuen Tests nötig für Kommentar/Konstante.
+UI-/Browserbelege aus Runde 1 unverändert; kein neuer Browserlauf behauptet.
+Matrix #1–#3 zusätzlich durch die 46 Tests erneut belegt, #4 aus Runde 1.
+
+**Scope:** weiterhin 2 fachliche Änderungen, 11 Produktdateien und 4 Test-/
+Dokudateien einschließlich Ticket, **658/700 Diff-Zeilen**. Korrekturrunde
+allein: 2 Produktdateien + Ticket, 63 Diff-Zeilen. Keine neue Produktschicht.
+
+| Standard-Gruppe | Ergebnis / Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ B1/B2 korrigiert, AST und projektweite Suche: ein Backend-Vertragswert, eine gemeinsame Fehlerdarstellung. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ➖ in dieser Runde unverändert; Runde-1-Belege gelten |
+| Python, FastAPI und Webhooks | ✅ Ruff E/F/I/Q; Kommentare erklären heutige Invarianten ohne Prozesschronik. |
+| Datenbanken und Persistenzgrenzen | ➖ in dieser Runde unverändert; 46 Regressionen grün |
+| Fehler, Logging und Tests | ✅ unveränderter REST-Wert, unabhängige Literal-Erwartungen bleiben grün. |
+| Markdown und Inhaltsverzeichnisse | ✅ Befunde und konkrete Gegenprüfung dauerhaft in T-65. |
+
+**DRY-Scope:** Konstante/Fehlerhelper gegen App, Dashboard, Tests, Plugin-API
+und `.libs/` geprüft. Übersetzungsschlüssel und unabhängige Testorakel tragen
+absichtlich denselben Vertragswert. `**options` bewusst beibehalten: normale
+Kurs-Tests verwenden Service-Doubles ohne Callback-Parameter; optionale
+Weitergabe erhält deren bisherigen Aufrufvertrag, kein Fachlogikduplikat.
+
+Nebenbemerkung: Der beim Status-Arbeitsbeginn bereits uncommittierte T-66-
+Vormerkblock wurde unverändert mitgesichert. T-66 bleibt postponed und wird
+nicht aktiviert; diese Review-Übergabe betrifft ausschließlich T-65.
+
+## Archiv · INBOX T-65 Runde 1 (verarbeitet)
 
 **T-65, Runde 1, `d7b4ab3` — `changes_requested`.**
 
