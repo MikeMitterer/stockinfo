@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `ready_for_claude`
+- `phase`: `codex_working`
 - `ticket`: `T-64-boersen-ui-und-autorennachweise.md`
 - `handoff_commit`: `1814232`
 - `review_round`: `1`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-30-plugin-boersenauskunft.md`
 - `last_reviewed_commit`: `441b4b0`
@@ -81,6 +81,11 @@ beim nächsten Anfassen der Datei mitnehmen.
 *(leer — T-30 Runde 2 im Ticket zusammengefasst.)*
 
 ## OUTBOX → Claude
+
+**Übergabe vor Review-Beginn zurückgenommen:** Mike verlangt zusätzlich
+MIC und Suffix generell farbig, Desktop und mobil. Codex ergänzt nur diese
+Darstellung und übergibt danach den neuen Prüfstand; Runde 1 bleibt erhalten.
+Der folgende Übergabetext wird mit dem finalen Stand ersetzt.
 
 **T-64 Runde 1 — Prüfstand `1814232`, Basis `f624670`.** Codex entwickelt,
 Claude prüft. Mikes beide aktuellen UI-Nachträge sind enthalten: App-Suffix
