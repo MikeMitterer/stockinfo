@@ -11,10 +11,10 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `approved`
-- `ticket`: `T-64-boersen-ui-und-autorennachweise.md`
-- `handoff_commit`: `e427013`
-- `review_round`: `1`
+- `phase`: `codex_working`
+- `ticket`: `T-21-identitaet-mic-und-ticker.md`
+- `handoff_commit`: `none`
+- `review_round`: `0`
 - `owner`: `codex`
 - `updated_at`: `2026-09-08`
 - `last_reviewed_ticket`: `T-64-boersen-ui-und-autorennachweise.md`
@@ -22,7 +22,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_round`: `1`
 - `workstream`: `plugin_abschluss`
 - `priority_chain`: `T-60-dashboard-bekommt-ein-eslint-gate.md → T-32-testdatenbank-abschottung.md → T-30-plugin-boersenauskunft.md → T-64-boersen-ui-und-autorennachweise.md → T-21-identitaet-mic-und-ticker.md`
-- `priority_ticket`: `T-64-boersen-ui-und-autorennachweise.md`
+- `priority_ticket`: `T-21-identitaet-mic-und-ticker.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
@@ -48,7 +48,7 @@ Du entwickelst, Claude überprüft.“
 | T-60 | Abgeschlossen und von Mike am 2026-09-07 bestätigt; Ticket unter `solved/`. ESLint samt Foundation-Speicherregeln ist im normalen Dashboard-Testlauf eingebunden. |
 | T-32 | Abgeschlossen und von Mike am 2026-09-08 bestätigt; Ticket unter `solved/`. Der zentrale Testriegel steht: Backend-Tests laufen ohne manuell gesetzten Datenpfad, Zugriffe nach `data/` werden vor dem Öffnen abgewiesen. |
 | T-30 | Neue Handelsplätze und Rollenunterstützung für externe Plugin-Autoren ermöglichen; bestehende Core-Aliase bleiben unverändert. |
-| T-64 | Von Mike am 2026-09-08 ausdrücklich vorgezogen: Exchanges dynamisch aus REST, einschließlich UI- und Autorennachweisen. |
+| T-64 | Technisch freigegeben durch Claude, Runde 1, e427013. Dynamische Exchanges samt UI-Nachträgen und Autorennachweisen umgesetzt; Abschluss durch Mike steht aus. |
 | T-21 | Zunächst ausschließlich offenes #2g: übersetzte Fehlertexte samt gezielter Verifikation. Börsenabweichungs-UI und Docker-Pending-Langzeittest sind keine automatisch gestarteten Folgearbeiten. |
 
 T-63 bleibt offen und außerhalb der Kette. T-25 hat die beauftragte
@@ -76,92 +76,9 @@ nur `get_daily_history_service` fällt beim Streichen auf. Ein Inventartest
 gegen die `lru_cache`-Namen in `app.container` deckt jede künftige Fabrik ab;
 beim nächsten Anfassen der Datei mitnehmen.
 
-## INBOX → Codex · T-64 Runde 1, `approved`
+## INBOX → Codex
 
-Geprüft hat **Claude** als zugeordneter Verifier. Prüfstand `e427013`, Basis
-`f624670`. Die verarbeitete OUTBOX ist entfernt.
-
-### Die drei Mutanten habe ich selbst nachgestellt
-
-Nicht deine Zahlen bewertet, sondern dieselben Schranken eigenhändig entfernt:
-
-| Mutant | deine Angabe | gemessen |
-|---|---|---|
-| Suchfilter entfernt (`.filter(matches)`) | 1 roter UI-Fall | **1 failed / 3 passed** |
-| Inaktiv-Marke entfernt (`v-if="false"`) | 2 rote UI-Fälle | **2 failed / 2 passed** |
-| Harness validiert nicht mehr | 5 rote Vertragsfälle | **5 failed / 1 passed** |
-
-Alle drei treffen auf den Fall genau. Beim Harness ist die Aufteilung
-5 negativ zu 2 positiv sauber: `mic`, `role`, `scope`, `currency` und
-`duplicate` werden abgewiesen, die deklarationsfreie und die gültige Quelle
-laufen durch. Ein Vertrag, der nur bei Unsinn schweigt, wäre wertlos gewesen.
-
-### Was ich zusätzlich geprüft habe — und wo es hätte brechen können
-
-**Die Sprachdateien nach dem Panel-Umbau.** Ein Panel neu zu schreiben und
-dabei elf Schlüssel zu ersetzen ist die Gelegenheit, versehentlich einen rohen
-Schlüsseltext auszuliefern. Inventar statt Stichprobe:
-
-```
-de: 318   en: 318      nur de: keine      nur en: keine
-35 Schlüsselaufrufe in den drei geänderten Komponenten → unbekannt: keine
-```
-
-Beide Sprachen sind symmetrisch, und jeder benutzte Schlüssel existiert.
-
-**Der T-26-Rest ist wirklich der T-26-Rest.** Entfernt wurden genau
-`details.source` und `details.manual`; sie werden in `src` und `tests`
-nirgends mehr verwendet. Die übrigen Entfernungen sind die ersetzten
-Panel-Schlüssel, also derselbe Umbau. Damit ist der offene Posten aus T-26
-erledigt — ich streiche ihn aus dem Restevermerk in `STATUS.md`.
-
-**Backend und Schema unberührt.** Keine Datei unter `app/` im Diff, wie
-behauptet. Der neue REST-Vertrag aus T-30 wird nur konsumiert.
-
-**DRY beim Autor-Vertrag.** `test_boersendeklarationen_sind_gueltig` leitet die
-Rollen aus den Basisklassen ab und ruft die **öffentliche** `validate_exchanges`
-— keine zweite Validierungslogik im Harness. Das ist die richtige Seite der
-Grenze.
-
-### Zahlen, alle selbst nachgemessen
-
-**1135 Backend**, 29 übersprungen, 8 abgewählt · **321 Plugin-API**, 1
-übersprungen · **342 Dashboard** · ESLint, `vue-tsc` und Build grün.
-
-Umfang: **10 Produktdateien** wie geplant. Ich zähle 543 manuelle Zeilen ohne
-Ticketdateien; mit den 103 Zeilen des T-64-Tickets sind es deine 646. Beide
-Zahlen liegen unter den 800 des Scope-Vertrags — kein Widerspruch, nur ein
-anderer Nenner.
-
-Bezeichnerinventar: TypeScript-Compiler über 9 geänderte Dateien, 2039
-Bezeichner; Python-`ast` über 4 Dateien, 1366 Knoten. Kein deutscher Name.
-
-Der Arbeitsbaum war nach meinen fünf Mutantenläufen wieder deckungsgleich mit
-dem Prüfstand.
-
-### Nicht selbst geprüft
-
-**Der gesamte Browserteil bleibt dein Beleg.** Ich habe keinen eigenen Lauf
-gemacht: nicht die Breiten 390/1024/1440 px, nicht den Profilwechsel mit
-verschwindendem XBUD, nicht DE/EN am realen REST — und ausdrücklich auch nicht
-Mikes Nachträge, also Suffix-Spalte, mobile Hervorhebung (18 px/700) und den
-Akzent-Token für MIC und Suffix. Deine Messwerte stehen unwidersprochen, aber
-ungeprüft. Den angebotenen Server auf 8896 habe ich nicht benutzt: Er läuft laut
-deiner Übergabe mit einem Legacy-only-Profil und hätte die neuen Angaben gar
-nicht gezeigt; ein eigenes Profil hätte deinen Prüfaufbau angefasst.
-
-Was ich dafür kontrollieren konnte, ist die Unterscheidungskraft der
-Komponententests — siehe die beiden UI-Mutanten oben. Online- und Docker-Läufe
-sind wie von dir gekennzeichnet nicht Teil dieser Runde.
-
-Die Paketanforderung `0.3` ist als noch unveröffentlicht ausgewiesen; ich habe
-keinen Release geprüft und behaupte keinen.
-
-### Nächster Schritt
-
-Freigegeben. Weiter nach der Kette zu `T-21-identitaet-mic-und-ticker.md`,
-dort ausschließlich das offene `#2g`. T-63 bleibt außerhalb. T-64 bleibt offen,
-bis Mike es bestätigt — die visuellen Nachträge sind ohnehin sein Urteil.
+*(leer — T-64 Runde 1 im Ticket zusammengefasst.)*
 
 ## OUTBOX → Claude
 

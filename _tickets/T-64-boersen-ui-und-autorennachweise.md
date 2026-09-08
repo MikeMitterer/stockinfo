@@ -7,7 +7,7 @@ ohne Frontendänderung erscheinen, mit klarer Auskunft über die deklarierte
 Unterstützung. Beispielsweise zeigt XBUD nun „regional · Kurs“ und eine
 inaktive Archivquelle getrennt davon.
 
-**Umgesetzt und selbst geprüft; Claudes unabhängiges Review steht aus.**
+**Umgesetzt und von Claude in Runde 1 technisch freigegeben (`e427013`).**
 Die Seite lädt Katalog und Unterstützung aus REST, bietet Suche und Neuladen
 und wechselt bei schmalem Fenster in eine Liste. Autor-Harness, US-Beispiel
 und Anleitung sind nachgezogen. Die Paketanforderung des Beispiels ist 0.3;
@@ -18,7 +18,9 @@ die Veröffentlichung dieser additiven API-Version ist noch nicht erfolgt.
 Mike hat die dynamische Exchanges-Seite am 2026-09-08 ausdrücklich beauftragt:
 „UI berücksichtigst du auch“ und „Die Exchanges Seite muss entsprechend
 dynamisch werden“. T-64 folgt unmittelbar nach dem laufenden T-30-Review,
-vor T-21 #2g. T-30 ist freigegeben; STATUS.md führt jetzt T-64 als aktives Ticket. Aktuell kein weiterer Handgriff nötig.
+vor T-21 #2g. Die technische Prüfung ist abgeschlossen; offen bleibt deine
+Abschlussbestätigung. Die UI-Nachträge sind umgesetzt und von Codex im Browser
+geprüft. Claude hat den Browserlauf nicht selbst wiederholt.
 
 ## Umsetzung und technische Nachweise
 
@@ -125,6 +127,20 @@ Browserlauf nach Build bei 1787/390 px: XETR und .DE verwenden beide den
 Akzent-Token (`rgb(229, 94, 31)` im aktiven Theme), kein horizontaler Überlauf.
 4 Komponententests und ESLint erneut grün. Die noch nicht begonnene
 Review-Übergabe wurde dafür geordnet zurückgenommen; Runde 1 bleibt erhalten.
+
+## Unabhängiges Review · Claude, 2026-09-08
+
+Runde 1, Prüfstand `e427013`, Basis `f624670`: **approved**. Drei Mutanten
+selbst wiederholt: Suchfilter 1 rot, Inaktiv-Marke 2 rot, Harness-Validierung
+5 rot. 1135 Backend, 321 Plugin-API und 342 Dashboard selbst nachgemessen;
+ESLint, TypeScript und Build grün. i18n-Inventar: 318 Schlüssel je Sprache,
+keine Differenz, keine unbekannten Aufrufe. Python-/TS-Bezeichner geprüft.
+10 Produktdateien, 646 manuelle Zeilen einschließlich Ticket bestätigt.
+
+Browser, visuelle Nachträge und Profilwechsel bleiben ausschließlich Codex’
+Belege; Claude nutzte den temporären Legacy-only-Server nicht. Keine
+Online-, Docker- oder Release-Prüfung. Vollständiger Reviewtext im
+STATUS-Verlauf von git. Technische Freigabe ersetzt Mikes Abschluss nicht.
 
 ## Herkunft
 
