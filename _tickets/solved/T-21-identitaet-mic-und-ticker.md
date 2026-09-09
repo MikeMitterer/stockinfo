@@ -1,5 +1,39 @@
 # T-21 · Identität auf MIC + Ticker umstellen
 
+StockInfo soll Wertpapiere dem **richtigen Handelsplatz zuordnen**.
+
+Ihre Identität soll außerdem **unabhängig vom Datenanbieter** sein.
+Dafür beschreibt StockInfo börsennotierte Instrumente über Börsenkennung
+(MIC) und Ticker eindeutig.
+
+**Beispiel:** Wird dieselbe Aktie an zwei Börsen gehandelt, reicht der Name
+allein nicht aus. StockInfo muss wissen, welche Notierung gemeint ist.
+
+Liefert es eine andere als die bevorzugte Börse, soll diese Abweichung
+sichtbar sein.
+
+Der Identitätskern ist **technisch freigegeben**.
+
+Zum Abschluss fehlt noch die Anzeige der Börsenabweichung. Mike hat den
+Docker-Pending-Langzeitnachweis am 2026-09-09 ausdrücklich aus den
+Abschlussbedingungen genommen; er ist nicht als bestanden zu werten.
+
+Die heutige Identitätsform für Währungspaare und reine ISIN-Instrumente bleibt
+erhalten; MIC und Ticker sind nicht für jedes Instrument vorgeschrieben.
+
+## Für dich
+
+Aktuell ist **keine zusätzliche Prüfung durch dich** angesetzt.
+
+Die offenen Punkte liegen zunächst bei Coder und Verifier.
+
+T-21 läuft am 2026-09-09 vor T-67; die jeweils laufende Arbeit steht in
+[STATUS.md](STATUS.md). Dieses Ticket ist noch nicht als erledigt freigegeben.
+
+Die folgenden Details dokumentieren den bisherigen Prüfstand. Die Aussage,
+dass die damalige Verifikation allein keine Umsetzung beauftragte, bezieht
+sich auf diesen Prüfauftrag; die aktuelle Arbeitsreihenfolge steht in STATUS.
+
 ## Restumsetzung Börsenabweichung · Auftrag Mike, 2026-09-09
 
 Codex implementiert, Claude prüft unabhängig über [STATUS.md](STATUS.md).
@@ -341,8 +375,9 @@ Der eigene temporäre Server auf 8896 wurde nach dem Review beendet.
 
 ## Historische Verifikation · Codex, 2026-09-07
 
-**Ergebnis: Der freigegebene Identitätskern besteht die gezielten aktuellen
-Regressionstests; das gesamte Ticket ist weiterhin nicht abschlussreif.**
+Der freigegebene Identitätskern besteht die gezielten aktuellen
+Regressionstests. Das gesamte Ticket ist **weiterhin nicht abschlussreif**.
+
 Geprüft wurde der Arbeitsstand bei `de8501b`. Der Auftrag „T-21 - verifiziere
 das Ticket“ hebt die bisherige Einfrierung nicht als Implementierungsauftrag
 auf. Keine Produktänderung und keine neue Freigabe der damals ungeprüften 4A-Fassung.
@@ -412,6 +447,12 @@ oder von Mike ausdrücklich aus dem Umfang genommen werden.
 ---
 
 
+## Frühere Anforderungen und Prüfungen · Historie
+
+Die folgenden Statusangaben, Übergaben und Nachweise beschreiben die damaligen
+Fassungen. Aktueller Restumfang und überholte Aussagen sind oben eingeordnet;
+die historischen Freigaben gelten nur für ihren jeweiligen Prüfstand.
+
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
 | StockInfo (Backend + Dashboard) | eingefroren nach Übergabe 3 | 1 Tag | Schema-Migration, Symbolerzeugung | — |
@@ -474,7 +515,7 @@ muss, ist kein Plugin).
 >   *Nachtrag 2026-09-07: verworfen. Der Alias ist seit T-23/T-31 kein
 >   Abrufschlüssel mehr, die Bestandsschutzregel steht in T-30, den
 >   JSON-Export/Import hat Mike gestrichen.*
-> * [`T-30`](T-30-plugin-boersenauskunft.md) — **plugin-deklarierte
+> * [`T-30`](solved/T-30-plugin-boersenauskunft.md) — **plugin-deklarierte
 >   Börsenauskunft.** Neuer `plugin_api`-Typ samt Merge-, Vorrang-, Kollisions-,
 >   Provenienz- und Invalidierungsregeln.
 >

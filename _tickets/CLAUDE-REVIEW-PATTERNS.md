@@ -1580,10 +1580,15 @@ seine Auslassungen sauber; die nie genannten `test_migration_plan.py`,
 `test_openfigi_lookup.py`, `test_plugin_openfigi.py`,
 `test_plugin_openfigi_integration.py`, `test_repository.py`,
 `test_yaml_profile.py` und `test_resolver_identity.py:67` blieben stehen,
-ohne dass ihm etwas vorzuwerfen wäre. Der Rest wurde als Mitzieher vermerkt,
-statt eine dritte Runde dafür zu eröffnen
-([R-02](CODEX-REVIEW-PATTERNS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt)).
-Befund von Claude über eigene Arbeit, 2026-09-09.
+ohne dass ihm etwas vorzuwerfen wäre. Befund von Claude über eigene Arbeit,
+2026-09-09.
+
+**Wie der Fall ausgegangen ist:** Auf Mikes Anweisung hat der Verifier die
+restlichen 20 Fundstellen selbst korrigiert, statt sie an den Coder zu geben.
+Daraus ist die Regel
+[Der bereits benannte Rest wird nicht zur nächsten Runde](CODEX-REVIEW-AUTOMATION.md#der-bereits-benannte-rest-wird-nicht-zur-nächsten-runde)
+geworden. Sie ändert nichts an P-12: Die Liste muss trotzdem vollständig sein,
+denn wer sie selbst abarbeitet, arbeitet genau sie ab.
 
 **Der Zusammenhang zu CLAUDE.md:** Dort steht „Die Gegenprobe ist ein
 Inventar, keine Textsuche“ für Bezeichner. Dieselbe Regel gilt für

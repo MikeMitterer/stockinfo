@@ -22,7 +22,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_commit`: `4bacaf2`
 - `last_reviewed_round`: `2`
 - `workstream`: `boersenabweichung`
-- `priority_chain`: `T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md → T-67-boersenabweichung-anzeigen.md`
+- `priority_chain`: `T-67-boersenabweichung-anzeigen.md`
 - `priority_ticket`: `T-67-boersenabweichung-anzeigen.md`
 
 **Rundenlimit · Mike, 2026-09-09:** `max_review_rounds: 3` bedeutet
@@ -82,10 +82,40 @@ danach den sichtbaren MIC-Vergleich. Keine Portfolio-Pause dazwischen.
 
 ## Priorität · Mike, 2026-09-09
 
-Aktuell gilt **T-21 → T-65 → T-67**. Mikes Auftrag: „Prio chain- 21 65 67“.
-Nach T-21 folgt [T-65](T-65-asset-aufnahme-prueft-boersenabdeckung.md), danach T-67.
-Frühere Aussagen zum direkten Anschluss T-21 → T-67 sind überholt.
-Claudes laufendes T-21-Review, Owner und Übergabefassung bleiben bestehen.
+Mikes Auftrag war **T-21 → T-65 → T-67** („Prio chain- 21 65 67“). T-21 ist
+abgeschlossen, T-65 war bereits freigegeben und braucht keine Arbeit. Damit
+bleibt in der Kette nur noch **T-67**; danach `portfolio_review`, Owner Mike.
+
+## Abschluss T-21 · Mike, 2026-09-09
+
+Mike: „Erledige du den Durchgang - damit ist T-21 dann abgeschlossen.“
+
+Der Durchgang war der bereits benannte Sammelcode-Rest in der Prosa:
+**20 Fundstellen in neun Testdateien**, vom Verifier selbst korrigiert
+(`583e0f7`), nicht als weitere Runde an den Coder gegeben. Grundlage ist
+Mikes neue Regel
+[Der bereits benannte Rest wird nicht zur nächsten Runde](CODEX-REVIEW-AUTOMATION.md#der-bereits-benannte-rest-wird-nicht-zur-nächsten-runde);
+sie gilt für den Verifier, gleich ob Claude oder Codex.
+
+Mitgenommen, weil im selben Docstring: der Verweis auf den entfernten
+`exchCode`-Sonderweg (`tests/test_resolver.py`) und die Aussage, der
+Kern-Resolver breche bei `US` ab, bevor der Client an der Reihe ist
+(`tests/test_plugin_openfigi_integration.py`). Beides war nach `4bacaf2` falsch.
+
+Nachweis: Restinventar `0` (vollständig gezählt, nicht gekürzt), 1161 Backend
+grün, Ruff Default grün. Verhaltensneutral bis auf drei String-Literale
+(pytest-`ids`, tmp-Dateiname, Fixture-Name) und einen Testnamen — belegt durch
+AST-Vergleich ohne Docstrings.
+
+[T-21](solved/T-21-identitaet-mic-und-ticker.md) liegt samt seinen drei
+Smoke-Skripten unter `solved/`, wie im Ticket vorgesehen. Sie sind veraltet
+(`T-21c-smoke.sh` verlangt `core_version 2.0.0`, aktuell ist `4.2.0`) und
+wurden nicht erneut ausgeführt.
+
+**Nicht mit abgeschlossen, weil von Mike so entschieden:** die
+Börsenabweichungsanzeige (#2e) liegt in T-67; der Docker-Langzeitnachweis
+(#2b6c) ist ein Verzicht auf den Nachweis, kein bestandener Test.
+Drei Nachweise aus Teil 2 (`2b6h`, `2b6i`, `2b9`) bleiben „mit Einschränkung“.
 
 ## Abschluss T-64 · Mike, 2026-09-09
 
