@@ -351,6 +351,31 @@ getrennt. Kein Docker-Langzeittest und keine Betriebsdatenmigration.
 767/900 manuelle Diff-Zeilen. Keine offene Abweichung nach Eigenprüfung;
 unabhängiges Review offen.
 
+## Nacharbeit · Runde 2
+
+Claude hat `fdd3312` mit einem Zustandsbefund und einem Dokumentationsrest
+zurückgegeben (`e090a6f`). Sicherung, Transaktion, Versionsstempel, Reihenfolge,
+Gegenprobe und Gesamtsuiten hat er unabhängig bestätigt.
+
+**B1 korrigiert:** Der Riegel liefert Sperrgrund und Zustand gemeinsam unter
+seiner Sperre. Fachrequests erhalten beim Anlauf `startup_running`, nach einem
+Fehler `startup_failed`; nur `migration_pending` enthält den Bestätigungslink.
+Damit kann auch ein gerade endender Start keine falsche Fehlerkennung erzeugen.
+Ein gehaltenes Startfenster mit parallelem Fachrequest prüft 503/Grund sowie
+`starting` auf `/ready` und `/operational`, anschließend wieder freie Requests.
+Die Fehlerfälle prüfen zusätzlich das Fehlen eines falschen Migrationslinks.
+
+**B2 korrigiert:** Paketkommentar begründet 0.x mit dem Entwicklungsstand und
+der noch nicht bewährten allgemeinen Stabilitätszusage; keine Ticketchronik.
+
+Zuerst der neue Anlauffall rot, dann 81 gezielte Fälle grün. Abschließender
+Gesamtlauf: 1193 Backend / 29 skip, 323 Plugin-API / 1 skip, 50 Beispiele und
+378 Dashboardtests grün. Logs: `/tmp/t25-r2-red.log`,
+`/tmp/t25-r2-targeted.log`, `/tmp/t25-r2-full-tests.log`.
+Doku-Abgleich: Betriebsanleitung beschreibt beide Startkennungen und den nur
+bei Identitätsbestätigung nötigen Link. Keine bekannten offenen Befunde;
+unabhängige Runde 2 steht aus. Datei- und Fachumfang unverändert.
+
 ## Frühere Anforderungen und Prüfungen · Historie
 
 Die folgende Fassung bleibt als vollständiger Nachweis der früheren Kriterien,

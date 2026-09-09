@@ -5,6 +5,8 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "stockinfo-plugin-api"
 # Paketversion; unabhängig von API_VERSION und data_version.
+# 0.x: Der Plugin-Vertrag ist noch in Entwicklung; eine allgemeine
+# Stabilitätszusage für externe Autoren hat sich noch nicht bewährt.
 version = "0.3.0"
 description = "Vertrag für StockInfo-Datenquellen-Plugins"
 license = "MIT"

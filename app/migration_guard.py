@@ -36,6 +36,9 @@ REASON_MIGRATION_PENDING = "migration_pending"
 # zusammenwirft, schickt den Benutzer in den falschen Ablauf.
 REASON_STARTUP_FAILED = "startup_failed"
 
+# Der Betrieb läuft noch an; das ist kein gescheiterter Start.
+REASON_STARTUP_RUNNING = "startup_running"
+
 # Der Pfad, den der Docker-`HEALTHCHECK` abfragt.
 #
 # **Eine** Konstante, drei Verbraucher: der Guard hier, der Routentabellen-Test
@@ -246,6 +249,17 @@ class MigrationGate:
     def running(self) -> bool:
         """Läuft gerade ein Umzug?"""
         return self._state is GateState.MIGRATING
+
+    @property
+    def blocking_reason(self) -> str | None:
+        """Liest Sperre und Kennung atomar, auch wenn der Start gerade endet."""
+        with self._lock:
+            return {
+                GateState.PENDING: REASON_MIGRATION_PENDING,
+                GateState.MIGRATING: REASON_MIGRATION_PENDING,
+                GateState.STARTING: REASON_STARTUP_RUNNING,
+                GateState.STARTUP_FAILED: REASON_STARTUP_FAILED,
+            }.get(self._state)
 
     def block(self) -> None:
         """Versetzt den Dienst in den Pending-Zustand."""

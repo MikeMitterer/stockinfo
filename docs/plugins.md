@@ -183,7 +183,10 @@ Version ohne Migration, fehlende Einträge im Altbestand gelten als Version 1.
 Fehlt eine Funktion, scheitert die Sicherung/Umwandlung oder liegt ein Downgrade
 vor, bleiben Fachrequests und Hintergrundaktualisierung gesperrt. `/ready` und
 `/operational` melden `degraded`; das Serverlog nennt Plugin, Ausgangs- und
-Zielversion sowie den Fehler. Prüfe diesen Hinweis und korrigiere das Plugin,
+Zielversion sowie den Fehler. Während des Anlaufs melden Fachrequests dagegen
+`503` mit `startup_running`; erst ein gescheiterter Start liefert
+`startup_failed`. Der Link auf `/migration` gehört nur zur noch ausstehenden
+Identitätsbestätigung. Prüfe den Fehlerhinweis und korrigiere das Plugin,
 bevor du neu startest. Eine offene Bestätigung der Identitätsmigration hat
 Vorrang. Es gibt keinen zusätzlichen Migrationsdialog.
 

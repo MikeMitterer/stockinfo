@@ -30,7 +30,6 @@ from app.docs import register_docs
 from app.migration_guard import (
     HEALTHCHECK_PATH,
     REASON_MIGRATION_PENDING,
-    REASON_STARTUP_FAILED,
     is_allowed,
     static_allowlist,
 )
@@ -339,7 +338,7 @@ async def ambiguous_symbol(
 
 @app.middleware("http")
 async def migration_guard(request: Request, call_next):
-    """Weist im Pending-Zustand alles ab, was nicht auf der Allowlist steht.
+    """Sperrt Fachrequests bei Migration, Anlauf und fehlgeschlagenem Start.
 
     **Zentral und nicht in den Routern.** Einzelprüfungen dort wären eine
     parallele Fachregel, und beim nächsten neuen Endpunkt fehlte eine. Hier
@@ -359,21 +358,18 @@ async def migration_guard(request: Request, call_next):
     Returns:
         Die Antwort — oder `503` mit stabiler Kennung.
     """
-    gate = get_gate()
-    if not (gate.pending or gate.starting or gate.startup_failed):
+    reason = get_gate().blocking_reason
+    if reason is None:
         return await call_next(request)
 
     static_paths = static_allowlist(get_settings().static_dir)
     if is_allowed(request.method, request.url.path, static_paths):
         return await call_next(request)
 
-    return JSONResponse(
-        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-        content={
-            "detail": REASON_MIGRATION_PENDING if gate.pending else REASON_STARTUP_FAILED,
-            "migration": "/migration",
-        },
-    )
+    content = {"detail": reason}
+    if reason == REASON_MIGRATION_PENDING:
+        content["migration"] = "/migration"
+    return JSONResponse(status_code=status.HTTP_503_SERVICE_UNAVAILABLE, content=content)
 
 
 app.add_middleware(

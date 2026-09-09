@@ -120,7 +120,9 @@ def test_fehler_sperrt_betrieb_ohne_falschen_stempel(installation, failure, miss
     seed(database, stored)
     write_plugin(root, 2, failure=failure, missing=missing)
     with boot() as client:
-        assert client.get("/instruments").status_code == 503
+        response = client.get("/instruments")
+        assert response.status_code == 503
+        assert response.json() == {"detail": "startup_failed"}
         assert client.get("/ready").status_code == 503
         assert client.get("/health").status_code == 200
         assert not started
@@ -266,3 +268,31 @@ def test_paket_bump_startet_keine_migration(installation, monkeypatch):
             assert values(database)["example-data"] == "old"
             assert not list((root / "backups").glob("*.db"))
     assert requested == [("example==1.0.0",), ("example==1.1.0",)]
+
+
+def test_anlauf_ist_keine_fehlgeschlagene_migration(installation):
+    import threading
+
+    root, _, _ = installation
+    write_plugin(root, 1)
+    entered, finish = threading.Event(), threading.Event()
+    def starting():
+        entered.set()
+        assert finish.wait(5)
+    with boot() as client:
+        gate = migration.get_gate()
+        gate.on_release(starting)
+        worker = threading.Thread(target=gate.start)
+        worker.start()
+        try:
+            assert entered.wait(2)
+            response = client.get("/instruments")
+            assert response.status_code == 503
+            assert response.json() == {"detail": "startup_running"}
+            assert client.get("/ready").json()["status"] == "starting"
+            assert client.get("/operational").json()["mode"] == "starting"
+        finally:
+            finish.set()
+            worker.join(timeout=2)
+        assert not worker.is_alive()
+        assert client.get("/instruments").status_code == 200
