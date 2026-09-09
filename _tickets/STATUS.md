@@ -11,12 +11,12 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `approved`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-67-boersenabweichung-anzeigen.md`
-- `handoff_commit`: `8099fc6`
-- `review_round`: `3`
+- `handoff_commit`: `41085c3`
+- `review_round`: `4`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-67-boersenabweichung-anzeigen.md`
 - `last_reviewed_commit`: `8099fc6`
@@ -148,14 +148,12 @@ Die aktive T-21-/T-67-Kette und Claudes laufendes Review bleiben unverändert.
 
 ## Aktuelle Arbeit · T-67, 2026-09-09
 
-Runde 2 ist für `a8b3a18` freigegeben; B1/B2 sind geschlossen und im Ticket
-verarbeitet. Danach hat Mike die ursprüngliche Eingabe fett und einen
-verständlichen Fließtext verlangt und den endgültigen deutschen Wortlaut
-selbst vorgegeben. Dieser UI-Nachtrag liegt in `8099fc6` für Runde 3 bereit.
-Bekannte offene Befunde: keine. Runde 3 entsteht wegen der neuen Vorgaben nach
-Freigabe, nicht wegen liegen gebliebener Korrekturen. T-25 folgt erst nach
-Freigabe dieses Nachtrags. Budget: 18 Produktdateien, 8 Test-/Dokudateien,
-889/1000 manuelle Diff-Zeilen.
+Runden 2 und 3 freigegeben, letzter Produktstand `8099fc6`. Mike hat während
+Runde 3 Leerzeile, „Übernehmen“ und fette Börsen/Währung ergänzt; anschließend
+bestätigt er die Browser-Vorschau mit „Dialog passt“. Genau diese Fassung ist
+in `41085c3` umgesetzt und wird gezielt in Runde 4 nachgeprüft. Keine bekannten
+offenen Befunde. Budget unverändert 18 Produkt-/8 Test-/Dokudateien,
+930/1000 manuelle Diff-Zeilen. Nach Freigabe folgt T-25.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 
@@ -355,16 +353,32 @@ Kettenglied zugeordnet. Und im Worktree liegen weiter unversioniert: der
 Abschnitt „Standard-Riegel" in `CODEX-REVIEW-AUTOMATION.md` und deine
 T-21-Prosaüberarbeitung.
 
-## Nachtrag Mike während Runde 3 · noch durch Codex umzusetzen
+## OUTBOX → Claude · T-67 gezielte Nachprüfung Runde 4
 
-Nach „nicht gefunden.“ verlangt Mike **zwei Zeilenschaltungen** (eine sichtbare
-Leerzeile). Buttons: **„Abbrechen“ + „Übernehmen“**, englisch „Cancel“ + „Accept“.
-Zusätzlich verlangt Mike beide Börsennamen und die Kurswährung fett sowie
-eine erneute Browseransicht. Codex übernimmt diesen UI-Nachtrag nach Rückgabe des laufenden Reviews;
-der Prüfstand `8099fc6` bleibt während Claudes Prüfung eingefroren. Bitte nach
-Runde 3 an Codex zurückgeben; T-25 wartet auf diesen letzten Nachtrag.
+**Prüfstand `41085c3`, zuvor freigegeben `8099fc6`.** Mikes zuletzt bestätigte
+Vorschau ist umgesetzt: eine Leerzeile vor der Alternative, Eingabe/beide
+Börsennamen/Kurswährung fett, Buttons „Abbrechen“ und „Übernehmen“; Englisch
+„Cancel“ und „Accept“. Bitte diesen begrenzten UI-Nachtrag gezielt prüfen.
+Keine API, kein Backend und keine Aufnahmeentscheidung geändert.
 
-## INBOX → Codex · T-67 Runde 3
+378 Dashboardtests einschließlich beider Dialogaktionen und aller vier fetten
+Werte grün, ESLint und Typecheck/Build grün. Browser nach echtem Reload/Submit:
+DE/Mobil 390 und EN/Desktop 1440, vier Werte Gewicht 700, Abstand eine Textzeile
+(22,4 Pixel), korrekte Buttons, kein horizontaler Überlauf. Keine DOM-Vorschau
+als Produktnachweis: der neue Build ist geprüft. REST-Anleitung und Ticket samt
+Matrix aktualisiert. Standard-Riegel: i18n-Slots, vorhandene Komponente, keine
+neue Schicht, überschaubarer SCSS-Nachtrag. Nachweise im Ticket.
+
+**Rundenlimit:** Wie im verbindlichen Rundenlimit-Abschnitt bereits festgelegt,
+braucht der Zähler allein keine neue Entscheidung von Mike. Deine Aussage in
+Runde 3 „danach entscheidet er über die vierte Runde“ wird dadurch korrigiert:
+Es folgt eine begründete gezielte Nachprüfung, ehrlich als Runde 4 gezählt.
+Grund: neue Benutzervorgaben während der vorherigen Prüfung, keine liegen
+gebliebenen Befunde. Keine vierte reguläre Vollprüfung. Bei einem neuen Blocker
+bleibt das Ticket aktiv; sonst anschließend T-25. Kein `solved/` allein aus
+Mikes Zustimmung zur Dialoggestaltung ableiten.
+
+## Archiv · INBOX T-67 Runde 3 (verarbeitet)
 
 **Ergebnis: `approved`** für den Produktstand `8099fc6`. Ein Befund, von mir
 selbst geheilt (`653aa2a`, nur Ticketdatei). Prüfer Claude.
