@@ -11,19 +11,19 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `approved`
-- `ticket`: `T-67-boersenabweichung-anzeigen.md`
+- `phase`: `codex_working`
+- `ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
 - `handoff_commit`: `41085c3`
-- `review_round`: `4`
+- `review_round`: `0`
 - `max_review_rounds`: `3`
 - `owner`: `codex`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-67-boersenabweichung-anzeigen.md`
 - `last_reviewed_commit`: `41085c3`
 - `last_reviewed_round`: `4`
-- `workstream`: `boersenabweichung`
-- `priority_chain`: `T-67-boersenabweichung-anzeigen.md → T-25-Plugin-Datenkompatibilität-und-Migration.md`
-- `priority_ticket`: `T-67-boersenabweichung-anzeigen.md`
+- `workstream`: `plugin_datenkompatibilitaet`
+- `priority_chain`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
+- `priority_ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
 
 **Rundenlimit · Mike, präzisiert 2026-09-09:** `max_review_rounds: 3`
 begrenzt die regulären vollständigen Reviews je Ticket. Beim Erreichen nennt
@@ -93,11 +93,33 @@ danach den sichtbaren MIC-Vergleich. Keine Portfolio-Pause dazwischen.
 Mikes Auftrag war **T-21 → T-65 → T-67** („Prio chain- 21 65 67“). T-21 ist
 abgeschlossen, T-65 war bereits freigegeben und braucht keine Arbeit. Damit
 gilt nach Mikes Ergänzung „Nach T-67 kommt noch T-25 als wichtiger Punkt,
-trag das ein“ die verbleibende Kette **T-67 → T-25**. Nach Freigabe von T-67
-folgt [T-25](T-25-Plugin-Datenkompatibilität-und-Migration.md), ohne
-Portfolio-Pause dazwischen. Erst nach T-25 folgt `portfolio_review`, Owner Mike.
-T-67 bleibt das aktuelle Prioritätsticket; dessen laufende Prüfung und
-Übergabefassung sind unverändert.
+trag das ein“ die verbleibende Kette **T-67 → T-25**. T-67 ist abgeschlossen;
+aktuelles Prioritätsticket ist damit
+[T-25](T-25-Plugin-Datenkompatibilität-und-Migration.md). Erst danach folgt
+`portfolio_review`, Owner Mike.
+
+## Abschluss T-67 · Mike, 2026-09-09
+
+Mike: „T-67 nach solved/ verschieben“.
+
+[T-67](solved/T-67-boersenabweichung-anzeigen.md) liegt unter `solved/`.
+Technisch freigegeben in **Runde 4** auf `41085c3` (`c7eba5d`); die Runden 2
+bis 4 gingen für Mikes Textvorgaben nach bereits erteilter Freigabe drauf,
+nicht für liegen gebliebene Befunde. Eigene Smoke-Skripte hatte das Ticket
+keine.
+
+Geliefert: Börsenabweichung wird beim Submit vor dem Speichern bestätigt oder
+abgebrochen, `POST /instruments/intake` trägt dafür `check_exchange`,
+`confirmed_listing` und eine `202`-Bestätigungsanforderung im geschlossenen
+Kernvertrag (`core_version 4.3.0`). Dazu Mikes drei UI-Ergänzungen: „API &
+Links“ als letzter Einstellungs-Tab, GitHub-Link hinter MangoLila und der
+Plugin-Hinweis auf der Börsenseite.
+
+Der Zustand wechselt mit diesem Commit auf T-25: `review_round: 0`,
+`phase: codex_working`, Owner Codex. Der Wechsel gehört normalerweise dem
+Coder; er steht hier nur deshalb im Reviewcommit, weil sonst `ticket` auf eine
+Datei außerhalb des Board-Roots zeigen würde — das wäre ein
+`portfolio_mismatch` beim nächsten Durchlauf.
 
 ## Abschluss T-21 · Mike, 2026-09-09
 
