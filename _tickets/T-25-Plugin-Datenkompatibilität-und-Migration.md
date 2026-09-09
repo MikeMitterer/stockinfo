@@ -348,7 +348,7 @@ Anleitung entfernt. Fremde Prosaänderungen derselben Autoren-Datei bleiben
 getrennt. Kein Docker-Langzeittest und keine Betriebsdatenmigration.
 
 **Umfang:** 3 Fachänderungen, 9/12 Produktdateien, 7/8 Test-/Dokudateien;
-767/900 manuelle Diff-Zeilen. Keine offene Abweichung nach Eigenprüfung;
+851/900 manuelle Diff-Zeilen. Keine offene Abweichung nach Eigenprüfung;
 unabhängiges Review offen.
 
 ## Nacharbeit · Runde 2
