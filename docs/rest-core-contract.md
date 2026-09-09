@@ -46,7 +46,8 @@ Währung stammt aus dem Kurs; die bevorzugte Währung aus dem Börsenkatalog.
 Zu diesem Zeitpunkt ist das Instrument noch nicht gespeichert.
 
 Das Dashboard erklärt den Vergleich nach Submit als Fließtext und hebt die
-ursprüngliche Eingabe fett hervor. Du entscheidest mit „Übernehmen“
+ursprüngliche Eingabe, beide Börsennamen und die Kurswährung fett hervor.
+Die Alternative steht nach einer Leerzeile. Du entscheidest mit „Übernehmen“
 oder „Abbrechen“. Abbruch benötigt keinen weiteren Request. Bestätigung sendet
 dieselbe Eingabe mit `check_exchange: true` und der angezeigten `identity`
 als `confirmed_listing`. Eine geänderte Auflösung erfordert eine neue
