@@ -1,79 +1,24 @@
-"""Wie OpenFIGI eine Börse adressiert — Wissen des Anbieters (T-21, Teil 2b).
-
-Bis hierher stand es in `ExchangeDef`: Jede Börse der eigenen Tabelle trug zwei
-Spalten mit, die **nur** OpenFIGI etwas angehen. Damit hätte jede weitere
-Kursquelle ihre eigenen zwei Spalten dazugelegt, und die Börsentabelle wäre zur
-Sammelstelle für Anbieter-Eigenheiten geworden.
-
-Die Tabelle beschreibt jetzt nur noch die Börse selbst: Suffix, Name, Region,
-Währung.
-"""
+"""Konkrete Handelsplätze und MIC-Formregel ohne Sammelcodes."""
 
 import pytest
 
-from app.exchanges import COLLECTOR_CODES, COLLECTORS, EXCHANGES, ExchangeDef, is_real_mic
-from app.providers.openfigi_provider import figi_lookup
+from app.exchanges import EXCHANGES, ExchangeDef, home_exchange, is_real_mic
 
 
-def test_eine_gewoehnliche_boerse_wird_ueber_ihren_mic_gesucht() -> None:
-    """Der Regelfall braucht keinen Eintrag — der MIC ist die Antwort."""
-    assert figi_lookup("XETR") == ("micCode", "XETR")
+@pytest.mark.parametrize("mic", ["XETR", "XNAS", "ARCX"])
+def test_eine_konkrete_boerse_hat_einen_gueltigen_mic(mic: str) -> None:
+    """US-Plätze bleiben einzeln adressierbar."""
+    assert is_real_mic(mic)
+    assert mic in EXCHANGES
 
 
-def test_der_sammelcode_us_ist_die_ausnahme() -> None:
-    """`US` ist kein MIC, sondern OpenFIGIs Composite für NYSE und NASDAQ.
-
-    Es wird über ein **anderes Feld** gesucht (`exchCode`), und genau diese
-    Ausnahme ist der einzige Grund, warum es die Zuordnung überhaupt gibt.
-    """
-    assert figi_lookup("US") == ("exchCode", "US")
+def test_die_boersentabelle_traegt_kein_anbieterwissen() -> None:
+    """Anfragefelder gehören zum Provider, nicht in den Börsenkatalog."""
+    assert set(ExchangeDef.__dataclass_fields__) == {"alias", "name", "region", "currency"}
 
 
-def test_eine_unbekannte_boerse_wird_wie_ein_mic_behandelt() -> None:
-    """`XNAS` steht nicht in der eigenen Tabelle und ist trotzdem ein MIC.
-
-    Die Tabelle ist eine Auswahl der Börsen, die StockInfo auflösen kann —
-    kein Verzeichnis aller MICs. Eine manuelle Zuordnung darf einen Wert
-    setzen, den sie nicht kennt.
-    """
-    assert figi_lookup("XNAS") == ("micCode", "XNAS")
-
-
-def test_die_boersentabelle_traegt_kein_anbieterwissen_mehr() -> None:
-    """Der eigentliche Punkt dieses Umbaus — festgehalten, damit er hält.
-
-    Ohne diese Zeile wanderte die nächste Anbieter-Eigenheit wieder in
-    `ExchangeDef`: Es ist der bequemste Ort, weil dort schon alle Börsen
-    stehen.
-    """
-    fields = set(ExchangeDef.__dataclass_fields__)
-
-    assert fields == {"alias", "name", "region", "currency"}
-
-
-def test_der_sammelcode_ist_ausdruecklich_benannt() -> None:
-    """`is_real_mic` erkennt ihn jetzt an einer Liste, nicht am Suchverfahren.
-
-    Vorher war das Merkmal indirekt: „wird über `exchCode` gesucht" hieß „ist
-    kein echter MIC". Diese Kopplung verschwindet mit den Spalten — und ein
-    Sammelcode bleibt einer, auch wenn ihn nie jemand bei OpenFIGI sucht.
-    """
-    assert "US" in COLLECTOR_CODES
-    assert is_real_mic("US") is False
-
-
-@pytest.mark.parametrize("code", sorted(COLLECTOR_CODES))
-def test_kein_sammelcode_steht_in_der_boersentabelle(code: str) -> None:
-    """Umgekehrt seit T-21 Teil 3 — und das ist der Kern der Trennung.
-
-    Bis dahin verlangte dieser Test das **Gegenteil**: Ein Sammelcode musste
-    in `EXCHANGES` stehen, sonst sei er „ein toter Buchstabe". Die Begründung
-    war richtig, die Schlussfolgerung falsch — er stand dort nicht als Börse,
-    sondern damit ihn irgendjemand findet. Deshalb lieferte `GET /exchanges`
-    ihn als ``mic="US"`` aus, einen Wert, den `is_real_mic` nebenan ablehnt.
-
-    Gefunden wird er jetzt über `COLLECTORS`; ein toter Buchstabe ist er damit
-    nicht, aber auch kein Handelsplatz mehr.
-    """
-    assert code not in EXCHANGES
-    assert code in COLLECTORS
+def test_ein_land_ist_keine_boerse() -> None:
+    """Eine US-ISIN darf weder einen Sammelcode noch eine geratene Börse erhalten."""
+    assert not is_real_mic("US")
+    assert home_exchange("US0378331005") is None
+    assert home_exchange("CA7800871021") == "XTSE"

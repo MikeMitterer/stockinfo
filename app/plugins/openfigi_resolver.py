@@ -1,39 +1,8 @@
-"""Die vorhandene OpenFIGI-Auflösung in der Resolver-Rolle des Plugin-Vertrags.
+"""Übersetzt die bestehende OpenFIGI-Auflösung in den Plugin-Vertrag.
 
-**Dieses Modul entscheidet nichts.** Es delegiert an
-`app.resolver.OpenFigiResolver` und übersetzt dessen Antwort in die Typen des
-Vertrags. Der HTTP-Aufruf, das Anfrageformat, die Yahoo-Symbolregel, die
-Kaskade „bevorzugte Börse, dann Heimatbörse aus dem ISIN-Präfix" (T-18) und die
-Weigerung, mit einem Sammelcode zu fragen (T-21) — all das steht dort und wird
-von hier benutzt.
-
-**Der erste Anlauf hat genau das nicht getan, und der Fehler ist lehrreich.**
-Er baute die Kette `figi_lookup → map_isin → NotFound/Unavailable` ein zweites
-Mal nach. Dabei ging verloren, was der Kern-Resolver längst weiß:
-
-    _try_exchange(): if not is_real_mic(mic): return None
-
-Der Sammelcode `US` fasst sechs Handelsplätze zusammen. OpenFIGI beantwortet
-darauf „welcher Ticker", nicht „welche Börse" — ohne echten MIC ist die
-Identität unvollständig, und deshalb wird **gar nicht erst gefragt**. Mein
-Nachbau fragte trotzdem, bekam `AAPL` und lieferte `Resolved(mic="US")`: einen
-Treffer, dessen MIC keiner ist. `ResolverContract` verbietet genau das, und
-`is_real_mic("US")` ist `False`.
-
-Ich hatte das sogar gemessen — und aus der Messung den falschen Schluss
-gezogen, nämlich die Prüfung zu lockern statt der vorhandenen Entscheidung zu
-folgen. Eine zweite Fassung derselben Fachlogik ist nicht nur doppelt, sie ist
-die **ältere**.
-
-Übersetzt wird deshalb nur noch:
-
-    ResolvedInstrument mit ticker und mic  →  Resolved
-    ResolvedInstrument ohne Identität      →  NotFound
-    NotFound / Unavailable / NotResponsible →  unverändert durchgereicht
-
-Die letzte Zeile ist wörtlich zu nehmen: `app.providers.base.Resolution`
-benutzt für die Fehlfälle bereits `stockinfo_plugin.types`. Der Vertrag ist an
-dieser Stelle schon gemeinsam — hier bleibt nur der Treffer zu übersetzen.
+Anfragebildung, MIC-Präferenz und Heimatfallback bleiben im Kern-Resolver.
+Der Adapter ergänzt ausschließlich die Antworttypen des Plugin-Vertrags,
+so dass die Auswahlregel nicht in zwei Implementierungen auseinanderläuft.
 """
 
 from types import MappingProxyType

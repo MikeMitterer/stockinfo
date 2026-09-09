@@ -30,8 +30,7 @@ function render(locale: 'de' | 'en' = 'de', attached = false) {
             { source: 'metadata-only', role: 'etf_meta', scope: 'market' as const, usable: true },
             { source: 'offline', role: 'quotes', scope: 'market' as const, usable: false },
           ] },
-        { kind: 'collector' as const, code: 'US', name: 'NYSE / NASDAQ', region: 'usa',
-          currency: 'USD', members: ['XNAS', 'XNYS'], provenance: { kind: 'core' as const } },
+
       ],
     } },
   })
@@ -92,8 +91,8 @@ describe('ExchangesPanel', () => {
     expect(wrapper.find('.exchanges__venues .n-list-item').classes()).not.toContain('exchanges__uncovered')
     expect(wrapper.find('.exchanges__venues').text()).toContain('regional')
     expect(wrapper.find('.exchanges__suffix strong').text()).toBe('.XBUD')
-    await wrapper.setProps({ data: { default_exchange: 'US', default_exchange_kind: 'collector',
-      unspecified_support: [], catalog: [wrapper.props('data')!.catalog[2]!] } })
+    await wrapper.setProps({ data: { default_exchange: 'XBUD', default_exchange_kind: 'unknown',
+      unspecified_support: [], catalog: [] } })
     expect(wrapper.text()).not.toContain('regional')
     expect(wrapper.text()).not.toContain('legacy')
     await wrapper.find('input').setValue('')

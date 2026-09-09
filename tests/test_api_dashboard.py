@@ -189,11 +189,7 @@ def test_analyze_verlangt_genau_eine_kennung(client: TestClient) -> None:
 
 
 def test_exchanges_liefert_den_katalog_und_die_vorgabe(client: TestClient) -> None:
-    """Der Katalog trägt seit T-21 Teil 3 zwei Eintragsarten.
-
-    Die Liste heißt deshalb `catalog` und nicht mehr `exchanges` — sonst hieße
-    eine Liste mit Sammelcodes darin weiterhin „Börsen".
-    """
+    """Der Katalog beschreibt konkrete Handelsplätze und die konfigurierte Präferenz."""
     body = client.get("/exchanges").json()
 
     assert body["default_exchange"] == "XETR"
@@ -208,24 +204,14 @@ def test_exchanges_liefert_den_katalog_und_die_vorgabe(client: TestClient) -> No
     assert exchanges["XNAS"]["alias"] is None
 
 
-def test_kein_katalogeintrag_serialisiert_einen_sammelcode_als_mic(
-    client: TestClient,
-) -> None:
-    """Der Vertragstest zur Trennung — hier wäre der alte Fehler sichtbar.
-
-    Bis Teil 3 lieferte dieser Endpunkt ``mic="US"`` aus: einen Wert, den
-    `is_real_mic` im selben Backend ablehnt. Ein Konsument, der ihn übernahm,
-    erzeugte genau die halbe Identität, die T-21 austreibt.
-    """
+def test_der_katalog_liefert_ausschliesslich_konkrete_handelsplaetze(client: TestClient) -> None:
+    """Auch die US-Plätze werden einzeln geliefert, ohne zweite Sammelidentität."""
     body = client.get("/exchanges").json()
-
-    collectors = [entry for entry in body["catalog"] if entry["kind"] == "collector"]
-    assert [entry["code"] for entry in collectors] == ["US"]
-    assert set(collectors[0]["members"]) == {"XNAS", "XNYS", "ARCX", "XASE", "BATS"}
-    assert all("mic" not in entry for entry in collectors)
-    assert all(
-        entry["mic"] != "US" for entry in body["catalog"] if entry["kind"] == "exchange"
-    )
+    assert body["catalog"]
+    assert all(entry["kind"] == "exchange" for entry in body["catalog"])
+    mics = {entry["mic"] for entry in body["catalog"]}
+    assert {"XNAS", "XNYS", "ARCX", "XASE", "BATS"} <= mics
+    assert "US" not in mics
 
 
 def test_der_alias_ist_im_openapi_vertrag_optional(client: TestClient) -> None:
@@ -244,21 +230,12 @@ def test_der_alias_ist_im_openapi_vertrag_optional(client: TestClient) -> None:
     assert {"type": "null"} in schema["properties"]["alias"]["anyOf"]
 
 
-def test_der_sammelcode_bleibt_eine_zulaessige_vorgabe(client: TestClient) -> None:
-    """`US` hat die Börsentabelle verlassen, nicht die Konfiguration.
-
-    Ohne diese Zeile wäre die Trennung ein Rückschritt: Der Vorgabewert `US`
-    ist dokumentiert und muss weiterhin gelten — er heißt jetzt nur
-    ausdrücklich `collector` statt heimlich `mic`.
-    """
+def test_us_ist_keine_gueltige_boersenpraeferenz(client: TestClient) -> None:
+    """Ein alter Sammelwert wird nicht mehr als unterstützte Präferenz ausgewiesen."""
     app.dependency_overrides[get_settings] = lambda: Settings(default_exchange="US")
-    try:
-        body = client.get("/exchanges").json()
-    finally:
-        app.dependency_overrides.pop(get_settings, None)
-
+    body = client.get("/exchanges").json()
     assert body["default_exchange"] == "US"
-    assert body["default_exchange_kind"] == "collector"
+    assert body["default_exchange_kind"] == "unknown"
 
 
 def test_analyze_liefert_stages(client: TestClient) -> None:

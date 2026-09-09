@@ -1,21 +1,9 @@
-"""Der Börsenkatalog aus T-21 Teil 3, Übergabe 1.
-
-Zwei Eintragsarten statt einer: Eine **Börse** hat einen echten MIC und
-höchstens einen Provider-Alias; ein **Sammelcode** hat Mitglieder und keinen
-MIC. Vorher lagen beide in derselben Tabelle, und `GET /exchanges` lieferte
-`mic="US"` — einen Wert, den `is_real_mic` im selben Modul ablehnt.
-
-Der zweite Umbau steckt im Alias: Er trägt jetzt das **nackte Token ohne
-Punkt**. Vorher stand `".DE"` in der Tabelle, nachgeschlagen wurde aber der
-Teil hinter dem Punkt — zwei Schichten, die aneinander vorbeisuchen konnten.
-"""
+"""Konkrete MICs, App-Aliase und ihre Katalogdarstellung."""
 
 import pytest
 from pydantic import TypeAdapter, ValidationError
 
 from app.exchanges import (
-    COLLECTOR_CODES,
-    COLLECTORS,
     EXCHANGES,
     is_real_mic,
     mic_for_alias,
@@ -35,7 +23,6 @@ def test_der_sammelcode_liegt_nicht_in_der_boersentabelle() -> None:
     diesen Wert ab. Die REST-Antwort tat es bis Teil 3 tatsächlich.
     """
     assert "US" not in EXCHANGES
-    assert "US" in COLLECTORS
     assert is_real_mic("US") is False
 
 
@@ -46,47 +33,19 @@ def test_jeder_boerseneintrag_ist_ein_echter_mic() -> None:
     assert rejected == []
 
 
-def test_collector_codes_werden_abgeleitet_nicht_gepflegt() -> None:
-    """Eine Quelle für die Sammelcodes, nicht zwei nebeneinander.
-
-    Vorher stand `US` in `EXCHANGES`, in `COLLECTOR_CODES` **und** wäre nach
-    dem ersten Entwurf zusätzlich als Mitgliedsliste an fünf Börsen gelandet —
-    dreimal dieselbe Regel.
-    """
-    assert COLLECTOR_CODES == frozenset(COLLECTORS)
-
-
-def test_die_mitgliedschaft_steht_nur_am_sammelcode() -> None:
-    """`US` kennt seine Mitglieder; die Mitglieder kennen ihren Sammelcode nicht.
-
-    Andersherum — eine `collectors`-Liste an jeder Börse — liefe beim
-    Plugin-Merge auseinander, sobald zwei Quellen dieselbe Börse beisteuern.
-    """
-    members = COLLECTORS["US"].members
-
-    assert set(members) == {"XNAS", "XNYS", "ARCX", "XASE", "BATS"}
-    assert all(mic in EXCHANGES for mic in members)
-    assert not hasattr(EXCHANGES["XNAS"], "collectors")
-
-
 @pytest.mark.parametrize(
     ("code", "expected"),
     [
         ("XETR", "exchange"),
         ("XSTU", "exchange"),
         ("XNAS", "exchange"),
-        ("US", "collector"),
+        ("US", None),
         ("XXXX", None),
         ("", None),
     ],
 )
-def test_eine_praeferenz_ist_boerse_oder_sammelcode(code: str, expected: str | None) -> None:
-    """`DEFAULT_EXCHANGE` darf beides sein — der Aufrufer muss wissen, was.
-
-    `US` bleibt ein zulässiger Vorgabewert, obwohl es die Börsentabelle
-    verlassen hat. Ohne diese Auskunft müsste jeder Aufrufer zwei Tabellen
-    abfragen und sich seine eigene Regel bauen.
-    """
+def test_eine_praeferenz_ist_nur_ein_konkreter_handelsplatz(code: str, expected: str | None) -> None:
+    """Nur ein geführter MIC ist eine bekannte Börsenpräferenz."""
     assert preference_kind(code) == expected
 
 
@@ -131,7 +90,7 @@ def test_jeder_eintrag_hat_waehrung_und_anzeigename() -> None:
     """Beides hängt an der Anzeige und an der Abweichungsprüfung."""
     incomplete = [
         code
-        for code, definition in [*EXCHANGES.items(), *COLLECTORS.items()]
+        for code, definition in EXCHANGES.items()
         if not definition.name or not definition.currency
     ]
 
@@ -178,25 +137,15 @@ def test_der_provider_alias_entsteht_an_einer_stelle(
     [
         ("XETR", ("XETR",)),
         ("XNAS", ("XNAS",)),
-        ("US", ("XNAS", "XNYS", "ARCX", "XASE", "BATS")),
+        ("US", ("XETR",)),
         ("XXXX", ("XETR",)),
     ],
-    ids=["boerse_mit_alias", "boerse_ohne_alias", "sammelcode", "unbekannt"],
+    ids=["boerse_mit_alias", "boerse_ohne_alias", "alte_us_praeferenz", "unbekannt"],
 )
 def test_eine_praeferenz_umfasst_ihre_handelsplaetze(
     code: str, expected: tuple[str, ...]
 ) -> None:
-    """Was der Vorgabewert umfasst, steht an genau einer Stelle.
-
-    Die Zeile `XNAS` ist der Grund für diese Funktion: Über den Alias sind
-    `XNAS` und der Sammelcode `US` ununterscheidbar — beide führen keinen. Wer
-    die Auswahl allein am Alias festmacht, muss die Abwesenheit als „alles
-    Punktlose zählt" deuten und wählt für `DEFAULT_EXCHANGE=XNAS` dann einen
-    Arca-Treffer. Der MIC trägt die Unterscheidung, die dem Alias fehlt.
-
-    Ein unbekannter Code fällt auf `DEFAULT_EXCHANGE` zurück, damit eine
-    vertippte Konfiguration die Auswahl nicht leer laufen lässt.
-    """
+    """Eine Präferenz bezeichnet genau einen MIC; unbekannt fällt auf Xetra zurück."""
     assert preferred_mics(code) == expected
 
 

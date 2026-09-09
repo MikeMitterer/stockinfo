@@ -11,11 +11,11 @@ ablehnen und sichtbar machen. Niemals raten.*
 
 import pytest
 import structlog
+from stockinfo_plugin.types import Unavailable
 
 from app.exchanges import is_real_mic, split_symbol
-from app.resolver import YAHOO_EXCHANGE_MICS, OpenFigiResolver, YFinanceResolver
 from app.providers.openfigi_provider import FigiMatch
-from stockinfo_plugin.types import Unavailable
+from app.resolver import YAHOO_EXCHANGE_MICS, OpenFigiResolver, YFinanceResolver
 
 
 class _Search:
@@ -53,8 +53,8 @@ class _FigiClient:
     def map_isin(
         self, isin: str, id_value: str, id_type: str = "micCode"
     ) -> FigiMatch | None:
-        treffer = self._by_exchange.get(id_value)
-        return FigiMatch(treffer) if treffer else None
+        hits = self._by_exchange.get(id_value)
+        return FigiMatch(hits) if hits else None
 
 
 # --- Yahoo: der Börsencode schließt die Lücke, die das Suffix offen lässt ---
@@ -185,21 +185,13 @@ def test_openfigi_traegt_die_befragte_boerse_als_mic_ein() -> None:
     assert (resolved.ticker, resolved.mic) == ("VGWL", "XETR")
 
 
-def test_der_sammelcode_us_liefert_keine_identitaet() -> None:
-    """`US` ist kein MIC — und ein Treffer darauf darf keinen vortäuschen.
-
-    Die Kaskade fällt für US-Papiere auf den Sammelcode zurück. OpenFIGI
-    beantwortet die Frage „welcher Ticker", nicht „welche Börse". Der Treffer
-    wird deshalb nicht angelegt; auflösen kann ihn der Yahoo-Fallback, der den
-    Handelsplatz nennt.
-    """
+def test_us_praeferenz_wird_als_unbekannt_protokolliert() -> None:
+    """Kein Sammeltreffer und kein geratener Handelsplatz beim Default-Rückfall."""
     resolver = OpenFigiResolver(_FigiClient({"US": "AAPL"}), default_exchange="US")
-
     with structlog.testing.capture_logs() as logs:
         result = resolver.resolve_isin("US0378331005")
-
     assert getattr(result, "mic", None) is None
-    assert [entry for entry in logs if entry["event"] == "resolve_without_identity"]
+    assert any(entry["event"] == "unknown_default_exchange" for entry in logs)
 
 
 def test_openfigi_lehnt_eine_fremde_ticker_schreibweise_ab() -> None:

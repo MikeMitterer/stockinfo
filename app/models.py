@@ -3,9 +3,9 @@
 from collections.abc import Callable
 from typing import Annotated, Any, Literal, Union
 
-from app.detail_models import DetailDefinition, DetailValue
-
 from pydantic import BaseModel, ConfigDict, Field
+
+from app.detail_models import DetailDefinition, DetailValue
 
 
 def always_present(*fields: str) -> Callable[[dict[str, Any]], None]:
@@ -762,26 +762,7 @@ class ExchangeEntry(BaseModel):
     provenance: Provenance = CoreProvenance()
 
 
-class CollectorEntry(BaseModel):
-    """Ein **Sammelcode** im Katalog — mehrere Handelsplätze, kein MIC.
-
-    Bewusst ein eigener Typ und **kein** `mic`-Feld: Bis T-21 Teil 3 lag `US`
-    in derselben Liste wie die Börsen und wurde als ``mic="US"`` ausgeliefert —
-    ein Wert, den `is_real_mic` im Backend selbst ablehnt. Ein Konsument, der
-    ihn übernahm, erzeugte genau die halbe Identität, die dieses Ticket
-    austreibt.
-    """
-
-    kind: Literal["collector"] = "collector"
-    code: str
-    name: str
-    region: str
-    currency: str
-    members: list[str]
-    provenance: Provenance = CoreProvenance()
-
-
-CatalogEntry = Annotated[ExchangeEntry | CollectorEntry, Field(discriminator="kind")]
+CatalogEntry = ExchangeEntry
 
 
 class FxRate(BaseModel):
@@ -862,20 +843,13 @@ class SourcesResponse(BaseModel):
 
 
 class ExchangesResponse(BaseModel):
-    """Der Börsenkatalog + die konfigurierte Vorgabe der Instanz.
+    """Konkrete Handelsplätze und die konfigurierte MIC-Präferenz.
 
-    Die Liste heißt `catalog` und nicht mehr `exchanges`: Sie trägt seit T-21
-    Teil 3 **zwei** Eintragsarten, und eine heterogene Liste `exchanges` zu
-    nennen, während Sammelcodes darin stehen, wäre dieselbe Unehrlichkeit wie
-    das frühere ``mic="US"``.
-
-    `default_exchange_kind` sagt, was der Vorgabewert **ist** — ein
-    Handelsplatz oder ein Sammelcode. Ohne diese Auskunft müsste jeder
-    Konsument beide Listen durchsuchen und sich seine eigene Regel bauen.
+    Eine nicht im Katalog geführte Präferenz wird als unknown ausgewiesen.
     """
 
     default_exchange: str
-    default_exchange_kind: Literal["exchange", "collector", "unknown"]
+    default_exchange_kind: Literal["exchange", "unknown"]
     catalog: list[CatalogEntry]
     unspecified_support: list[ExchangeSource] = Field(default_factory=list)
 

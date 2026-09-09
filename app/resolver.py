@@ -10,7 +10,6 @@ sondern stammt immer aus dem Live-Quote (siehe yfinance_provider).
 
 import structlog
 import yfinance as yf
-
 from stockinfo_plugin.types import (
     NotFound,
     NotResponsible,
@@ -25,11 +24,9 @@ from app.exchanges import (
     is_canonical_ticker,
     is_real_mic,
     mic_for_alias,
-    preference_kind,
     preferred_mics,
     provider_alias,
 )
-
 from app.providers.base import (
     QUOTE_TYPE_MAP,
     InstrumentResolver,
@@ -37,7 +34,7 @@ from app.providers.base import (
     ResolvedInstrument,
     SourceUnavailableError,
 )
-from app.providers.openfigi_provider import OpenFigiClient, figi_lookup
+from app.providers.openfigi_provider import OpenFigiClient
 
 logger = structlog.get_logger()
 
@@ -196,15 +193,7 @@ class OpenFigiResolver:
             von T-20: Vorher war beides ``None``, und ein Ausfall wurde zu
             einem 404.
         """
-        preferred = self._default_exchange
-        if preference_kind(preferred) is None:
-            # Seit T-21 Teil 3 liegen Börsen und Sammelcodes in getrennten
-            # Tabellen. Geprüft wird deshalb die **Präferenz**, nicht die
-            # Mitgliedschaft in `EXCHANGES` — sonst gälte der zulässige
-            # Vorgabewert `US` plötzlich als unbekannt und fiele still auf
-            # Xetra zurück.
-            logger.warning("unknown_default_exchange", configured=preferred)
-            preferred = DEFAULT_EXCHANGE
+        preferred = preferred_mics(self._default_exchange)[0]
 
         try:
             resolved = self._try_exchange(isin, preferred)
@@ -238,20 +227,12 @@ class OpenFigiResolver:
     def _try_exchange(self, isin: str, mic: str) -> ResolvedInstrument | None:
         """Fragt OpenFIGI nach dem Listing an genau einer Börse."""
         if not is_real_mic(mic):
-            # Der Sammelcode `US` fasst sechs Handelsplätze zusammen. OpenFIGI
-            # beantwortet darauf die Frage „welcher Ticker", nicht „welche
-            # Börse" — und ohne echten MIC ist die Identität unvollständig.
-            #
-            # Deshalb wird hier **gar nicht erst gefragt**: Die Antwort wäre
-            # ohnehin nicht verwendbar, und jede Anfrage zählt gegen OpenFIGIs
-            # Kontingent. Auflösen kann den Fall der Yahoo-Fallback, der den
-            # Handelsplatz benennt (`NMS` → `XNAS`).
+            # Ohne gültige MIC-Schreibweise kann kein Listing entstehen.
             logger.info("resolve_without_identity", isin=isin, source="openfigi", mic=mic)
             return None
 
         exch = EXCHANGES[mic]
-        id_type, id_value = figi_lookup(mic)
-        match = self._client.map_isin(isin, id_value, id_type=id_type)
+        match = self._client.map_isin(isin, mic, id_type="micCode")
         if not match:
             return None
         ticker = match.ticker

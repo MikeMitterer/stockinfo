@@ -12,9 +12,6 @@ const data = {
     { kind: 'exchange' as const, mic: 'XLON', alias: 'L', name: 'London', region: 'europe', currency: 'GBp', provenance: core },
     { kind: 'exchange' as const, mic: 'XNAS', alias: null, name: 'NASDAQ', region: 'usa', currency: 'USD', provenance: core },
     { kind: 'exchange' as const, mic: 'XFRA', alias: 'F', name: 'Frankfurt', region: 'germany', currency: 'EUR', provenance: core },
-    // Der Sammelcode zählt für die Währungsauswahl mit — er trägt eine, auch
-    // wenn er kein Handelsplatz ist.
-    { kind: 'collector' as const, code: 'US', name: 'NYSE / NASDAQ', region: 'usa', currency: 'USD', members: ['XNAS'], provenance: core },
   ],
 }
 

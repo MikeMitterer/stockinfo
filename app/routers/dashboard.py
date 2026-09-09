@@ -19,18 +19,21 @@ Nebenwirkung dieses Tickets.
 
 from typing import Annotated
 
-from app.data_versions import declared_versions
-from app.detail_models import DetailInput, DetailValue
-
 from fastapi import APIRouter, Depends, HTTPException, Response
 
 from app import __version__
 from app.config import Settings, get_settings
-from app.services.backup import fingerprint_of, stamped_fingerprint
-from app.container import get_cached_quote_service, get_quote_analyzer
+from app.container import (
+    get_cached_quote_service,
+    get_quote_analyzer,
+    get_sources_config,
+)
+from app.data_versions import declared_versions
+from app.detail_models import DetailInput, DetailValue
+from app.exchange_catalog import catalog_annotations, prepare_catalog
+from app.exchanges import EXCHANGES, preference_kind
 from app.models import (
     AnalyzeResult,
-    CollectorEntry,
     EnvInfo,
     ExchangeEntry,
     ExchangesResponse,
@@ -43,11 +46,6 @@ from app.models import (
     SourcesResponse,
     invalid_isin_response,
 )
-from app.exchanges import COLLECTORS, EXCHANGES, preference_kind
-from app.container import get_sources_config
-from app.sources_config import ROLES, SourcesConfig
-from app.sources_registry import describe_chain, specs_by_name
-from app.exchange_catalog import catalog_annotations, prepare_catalog
 from app.routers.validation import (
     IsinPath,
     SymbolPath,
@@ -55,12 +53,15 @@ from app.routers.validation import (
     normalize_symbol,
 )
 from app.services.analyzer import QuoteAnalyzer
+from app.services.backup import fingerprint_of, stamped_fingerprint
 from app.services.quote_cache import (
     CachedQuoteService,
     IsinConflictError,
     RefreshInProgressError,
 )
 from app.services.quote_service import InstrumentNotFoundError, QuoteUnavailableError
+from app.sources_config import ROLES, SourcesConfig
+from app.sources_registry import describe_chain, specs_by_name
 
 router = APIRouter(tags=["dashboard"])
 
@@ -108,27 +109,15 @@ def exchanges(settings: SettingsDep) -> ExchangesResponse:
         default_exchange=settings.default_exchange,
         default_exchange_kind=preference_kind(settings.default_exchange) or "unknown",
         catalog=[
-            *(
-                ExchangeEntry(
-                    mic=mic,
-                    alias=definition.alias,
-                    name=definition.name,
-                    region=definition.region,
-                    currency=definition.currency,
-                    **annotations[mic],
-                )
-                for mic, definition in EXCHANGES.items()
-            ),
-            *(
-                CollectorEntry(
-                    code=code,
-                    name=collector.name,
-                    region=collector.region,
-                    currency=collector.currency,
-                    members=list(collector.members),
-                )
-                for code, collector in COLLECTORS.items()
-            ),
+            ExchangeEntry(
+                mic=mic,
+                alias=definition.alias,
+                name=definition.name,
+                region=definition.region,
+                currency=definition.currency,
+                **annotations[mic],
+            )
+            for mic, definition in EXCHANGES.items()
         ],
     )
 
@@ -332,12 +321,12 @@ def delete_instrument_by_symbol(symbol: SymbolPath, service: ServiceDep) -> Resp
     return Response(status_code=204)
 
 
-@router.patch('/instruments/by-id/{listing_id}/details', response_model=dict[str, DetailValue])
+@router.patch("/instruments/by-id/{listing_id}/details", response_model=dict[str, DetailValue])
 def patch_details(listing_id: str, payload: dict[str, DetailInput], service: ServiceDep) -> dict:
     """Partielle manuelle Detailwerte über die eindeutige Listing-ID."""
     try:
         return service.set_detail_overrides(listing_id, payload)
     except InstrumentNotFoundError as error:
-        raise HTTPException(status_code=404, detail='Unbekanntes Listing') from error
+        raise HTTPException(status_code=404, detail="Unbekanntes Listing") from error
     except ValueError as error:
         raise HTTPException(status_code=422, detail=str(error)) from error

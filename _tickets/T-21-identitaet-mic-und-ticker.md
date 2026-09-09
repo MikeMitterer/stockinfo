@@ -10,8 +10,8 @@ Prüfhistorie; daraus folgt kein offener Abschlussriegel mehr.
 **Nachsteuerung Mike:** „Die Plugins geben die MICs zurück die unterstützt
 werden. Aus - den US-Sammelcode sollte es überhautp nicht mehr geben“.
 Damit sind die alten Anforderungen #2e2/#2e3 zum Sammelcode abgelöst.
-Codex hatte sie zunächst in neue UI-Tests übernommen; noch kein Produktcode
-entstanden. Dieser verworfene Testentwurf ist kein Produktnachweis.
+Codex hatte sie zunächst in neue UI-Tests übernommen; zu diesem Zeitpunkt
+war noch kein Produktcode entstanden. Dieser verworfene Testentwurf ist kein Produktnachweis.
 
 ### Verbindlicher Scope nach Claudes Split
 
@@ -52,8 +52,8 @@ Historienabschnitt ab. Human-Antworten bleiben unverändert.
 | # | Nachweis | AI |
 |---|---|:--:|
 | 2e | An [T-67](T-67-boersenabweichung-anzeigen.md) übergeben, unmittelbar nach dieser Bereinigung | ➖ |
-| 2e2 | Alte US-Sammelpräferenz entfällt; konkrete US-MICs bleiben einzeln nutzbar | ➖ |
-| 2e3 | Kein Collector im REST-/UI-Katalog oder in Auswahl-/Heimatregeln | ➖ |
+| 2e2 | Alte US-Sammelpräferenz entfällt; konkrete US-MICs bleiben einzeln nutzbar | ✅ |
+| 2e3 | Kein Collector im REST-/UI-Katalog oder in Auswahl-/Heimatregeln | ✅ |
 | 2b6c | Docker-Pending-Langzeitnachweis: von Mike aus dem Abschlussumfang genommen | ➖ |
 
 Entscheidende Akzeptanzfälle am öffentlichen Eingang: GET /exchanges liefert
@@ -63,6 +63,36 @@ Plugin-Adapter nehmen weiter konkrete US-Identitäten an und weisen ungültige
 Identitäten ab. Rote Tests vor Produktcode; schlanker negativer Mutant;
 Backend-/Dashboard-Suiten und statische Checks vor unabhängiger Übergabe.
 Kein Docker-Langzeittest. UI-Browsernachweise gehören zum anschließenden T-67.
+
+### Nachweise Codex · 2026-09-09
+
+#2e2/#2e3: tests/test_api_dashboard.py prüft GET /exchanges einschließlich US
+als unknown; beide Fälle vorher rot. Resolver-/Plugin-/Präferenztests vorher
+5 rot, danach grün. 198 gezielte Backendtests bestanden. Mutant XNAS → ARCX
+rötet die Yahoo-Auswahlprüfung; Heimatzuordnung US → US rötet die Länderprüfung.
+Beide zurückgenommen, danach 89 Tests grün. AST-Inventar fand treffer in
+bereits berührtem Testcode: in hits umbenannt, betroffene 17 Tests erneut grün.
+
+1153 Backendtests bestanden (29 skip, 8 Integration abgewählt), 323 Plugin-API
+(1 skip), 50 Beispieltests und 374 Dashboardtests in 51 Dateien bestanden.
+Ruff einschließlich I/Q, ESLint und TypeScript/Build grün. Normale
+Sass-/Bundlegrößen- und Starlette-Abkündigungswarnungen, keine neuen Fehler.
+Frischer normaler App-Lifespan ohne vorhandene DB: GET /instruments leer,
+GET /exchanges mit 38 konkreten MICs einschließlich XNAS/ARCX; sauber beendet.
+Keine Arbeitsdatenbank benutzt, keine Online-Lieferfähigkeit behauptet.
+
+```bash
+make test-backend ARGS='-m not\ integration'
+make test-plugin-api test-example test-dashboard
+npm --prefix dashboard run build
+.venv/bin/pytest -q tests/test_resolver.py tests/test_openfigi_lookup.py tests/test_exchange_catalog.py
+```
+
+Logs: /tmp/t21-mic-{red,green,backend,api,dashboard,build,fresh,restored,naming}.log;
+Auswahl-Rotlauf /tmp/t21-selection-red.log; Mutanten
+/tmp/t21-mic-mutant-{selection,home}.log. Python-AST-/TS-Compiler-Inventare
+unter /tmp/t21-mic-{python,ts}-inventory.json; englische Bezeichner geprüft.
+Die historische Spec trägt eine Ablösungsnotiz; Human-Spalten unverändert.
 
 ## Beauftragte Ergänzung: Abdeckung bei der Aufnahme
 

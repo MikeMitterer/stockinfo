@@ -265,29 +265,12 @@ export interface ExchangeSupport {
   scope?: 'market' | 'inventory'
 }
 
-/**
- * Ein **Sammelcode**: mehrere Handelsplätze, **kein** MIC.
- *
- * Bewusst ohne `mic`-Feld. Bis T-21 Teil 3 lag `US` in derselben Liste wie die
- * Börsen und kam als `mic: 'US'` herein — ein Wert, den das Backend selbst als
- * ungültigen MIC ablehnt.
- */
-export interface CollectorEntry {
-  kind: 'collector'
-  code: string
-  name: string
-  region: string
-  currency: string
-  members: string[]
-  provenance: Provenance
-}
-
-export type CatalogEntry = ExchangeEntry | CollectorEntry
+export type CatalogEntry = ExchangeEntry
 
 /** Antwort von GET /exchanges: der Börsenkatalog plus konfigurierte Vorgabe. */
 export interface ExchangesResponse {
   default_exchange: string
-  default_exchange_kind: 'exchange' | 'collector' | 'unknown'
+  default_exchange_kind: 'exchange' | 'unknown'
   catalog: CatalogEntry[]
   unspecified_support?: ExchangeSupport[]
 }

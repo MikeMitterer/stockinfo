@@ -100,29 +100,7 @@ class ExchangeDef:
     currency: str
 
 
-@dataclass(frozen=True)
-class CollectorDef:
-    """Ein **Sammelcode** — mehrere Handelsplätze unter einem Suchbegriff.
-
-    Kein Handelsplatz und deshalb **kein MIC**: `US` steht für „irgendwo in
-    den USA" und taugt nie als kanonischer Wert in `instruments.mic`. Bis
-    Teil 3 lag der Eintrag trotzdem in derselben Tabelle wie die Börsen, und
-    `GET /exchanges` lieferte ihn als ``mic="US"`` aus — einen Wert, den
-    `is_real_mic` im selben Modul ablehnt.
-
-    ``members`` ist die **einzige** Stelle, an der die Zugehörigkeit steht.
-    Sie zusätzlich an jede Börse zu schreiben wäre dieselbe Regel zweimal und
-    liefe beim Plugin-Merge auseinander, sobald zwei Quellen dieselbe Börse
-    beisteuern.
-    """
-
-    name: str
-    region: str
-    currency: str
-    members: tuple[str, ...]
-
-
-# Weltweite Börsentabelle: Key = MIC (bzw. 'US'). Erweiterbar per Zeile.
+# Weltweite Börsentabelle: Jeder Schlüssel ist ein konkreter MIC.
 EXCHANGES: dict[str, ExchangeDef] = {
     # Amerika — die fünf US-Plätze führen keinen Alias, und das steht als
     # `None` da, nicht als Leerstring. Aus `AAPL` lässt sich weiterhin kein MIC
@@ -170,27 +148,7 @@ EXCHANGES: dict[str, ExchangeDef] = {
     "XTAE": ExchangeDef("TA", "Tel Aviv", "global", "ILS"),
 }
 
-# Sammelcodes — **getrennt** von den Börsen, weil sie keine sind.
-#
-# `US` bleibt ein gültiger `DEFAULT_EXCHANGE` und ein gültiger
-# OpenFIGI-Suchcode; es ist nur kein Handelsplatz. Wer es als `mic` speichert,
-# erzeugt genau den Zustand, den T-21 austreibt.
-COLLECTORS: dict[str, CollectorDef] = {
-    "US": CollectorDef(
-        name="NYSE / NASDAQ",
-        region="usa",
-        currency="USD",
-        members=("XNAS", "XNYS", "ARCX", "XASE", "BATS"),
-    ),
-}
 DEFAULT_EXCHANGE = "XETR"
-
-# Abgeleitet, nicht gepflegt: Die Sammelcodes **sind** die Schlüssel von
-# `COLLECTORS`. Eine zweite Liste danebenzustellen hieße, dieselbe Regel an
-# zwei Orten zu führen — und genau das ist in Teil 3 aufgefallen, als der
-# frühere Entwurf sie zusätzlich als Mitgliedschaft an jede Börse schreiben
-# wollte: dreimal dasselbe Wissen.
-COLLECTOR_CODES = frozenset(COLLECTORS)
 
 # Emissionsland (ISIN-Präfix) → Heimatbörse. Der Rückfall der Kaskade: Findet
 # die bevorzugte Börse nichts, ist die Heimatbörse der beste nächste Versuch.
@@ -228,52 +186,23 @@ HOME_EXCHANGES: dict[str, str] = {
     "SE": "XSTO",
     "SG": "XSES",
     "TW": "XTAI",
-    "US": "US",
     "ZA": "XJSE",
 }
 
 
 def is_real_mic(mic: str | None) -> bool:
-    """Ist das ein echter MIC — oder einer der internen Sammelcodes?
+    """Prüft einen MIC mit der gemeinsamen Formregel des Plugin-Vertrags.
 
-    Die Tabelle führt `US` als OpenFIGI-Suchcode für NYSE und NASDAQ zusammen.
-    Das ist **kein** ISO-10383-MIC, und ein Feld, das mal echte MICs und mal
-    diesen Code enthält, wird beim ersten Anbieter zum Problem, der echte MICs
-    erwartet (T-21).
-
-    Geprüft wird **beides**:
-
-    1. **Die Schreibweise** — seit T-27a durch
-       `stockinfo_plugin.invariants.mic_is_wellformed`, nicht mehr hier. Ein
-       MIC nach ISO 10383 hat genau vier Zeichen, Großbuchstaben oder Ziffern.
-       „Der Tabelle unbekannt" ist kein Gütesiegel — meine erste Fassung ließ
-       jeden nichtleeren String durch, und damit hätte auch `NOT-A-MIC`,
-       `xnAs` oder `XNAS ` im kanonischen Feld stehen können. Dort wird mit
-       `fullmatch` geprüft: `$` matcht in Python auch vor einem abschließenden
-       Zeilenumbruch, und `"XNAS\n"` wäre durchgegangen.
-    2. **Kein Sammelcode.** Geprüft gegen `COLLECTOR_CODES`. Die Längenregel
-       fängt das heutige `US` schon ab; die Prüfung bleibt trotzdem, weil ein
-       künftiger vierstelliger Sammelcode sonst durchginge.
-
-    **Warum die Regel geteilt ist.** Die Schreibweise ist eine Aussage über
-    ISO 10383 und gehört in den öffentlichen Vertrag — ein Plugin-Autor muss
-    sie anwenden können, ohne diese App zu installieren. *Welche* Sammelcodes
-    es gibt, hängt dagegen daran, welche Quellen jemand einsetzt, und das weiß
-    nur die App. Deshalb liegt die Form drüben und die Liste hier; diese
-    Funktion ist die Stelle, an der beides zusammenkommt.
-
-    Ein MIC, den die Tabelle nicht kennt, aber richtig geschrieben ist, gilt
-    als echt: `XNAS` steht dort nicht und ist genau der Wert, den eine
-    manuelle Zuordnung setzen soll. Die Tabelle ist eine Auswahl der Börsen,
-    die StockInfo auflösen kann — kein Verzeichnis aller MICs.
+    Die lokale Tabelle ist kein vollständiges MIC-Verzeichnis: Ein unbekannter
+    vierstelliger MIC kann gültig sein. Länderkennungen wie US sind keine MICs.
 
     Args:
-        mic: Der zu prüfende Code, oder ``None``.
+        mic: Zu prüfende Kennung oder None.
 
     Returns:
-        ``True`` wenn der Wert als kanonischer MIC taugt.
+        Ob der Wert die kanonische MIC-Schreibweise erfüllt.
     """
-    return mic_is_wellformed(mic) and mic not in COLLECTOR_CODES
+    return mic_is_wellformed(mic)
 
 
 def identity_form(columns: object) -> str | None:
@@ -570,9 +499,7 @@ def input_failure(value: str) -> str | None:
         return REASON_AMBIGUOUS_SUFFIX
     if mic_for_alias(suffix) is None and suffix not in EXCHANGES:
         return REASON_UNKNOWN_SUFFIX
-    # Der Suffix steht im Katalog, ist aber kein echter MIC — der Sammelcode
-    # `US`. Er ist kein Handelsplatz, und welcher der fünf gemeint ist, sagt
-    # die Eingabe nicht.
+    # Ein Katalogeintrag allein ersetzt keine gültige MIC-Schreibweise.
     return REASON_UNKNOWN_SUFFIX
 
 
@@ -602,55 +529,22 @@ def mic_for_alias(alias: str) -> str | None:
 
 
 def preference_kind(code: str) -> str | None:
-    """Was ist dieser Vorgabewert — eine Börse, ein Sammelcode, oder nichts?
-
-    `DEFAULT_EXCHANGE` darf beides sein: `XETR` meint einen Handelsplatz,
-    `US` meint „irgendwo in den USA". Seit die beiden in getrennten Tabellen
-    liegen, muss ein Aufrufer wissen, welches von beiden er in der Hand hält —
-    sonst baut sich jeder seine eigene Regel aus zwei Lookups.
-
-    Args:
-        code: Der konfigurierte Wert, etwa aus `DEFAULT_EXCHANGE`.
-
-    Returns:
-        ``'exchange'``, ``'collector'`` oder ``None`` für einen unbekannten
-        Wert.
-    """
-    if code in EXCHANGES:
-        return "exchange"
-    if code in COLLECTORS:
-        return "collector"
-    return None
+    """Kennzeichnet eine bekannte MIC-Präferenz, sonst bleibt sie unbekannt."""
+    return "exchange" if code in EXCHANGES else None
 
 
 def preferred_mics(code: str) -> tuple[str, ...]:
-    """Die Handelsplätze, die zu einer Präferenz gehören — Börse **oder** Sammelcode.
-
-    Die **eine** Stelle, die „was umfasst dieser Vorgabewert?" beantwortet.
-    Eine Börse umfasst sich selbst, ein Sammelcode seine Mitglieder.
-
-    Ein unbekannter Code fällt auf `DEFAULT_EXCHANGE` zurück — dieselbe
-    Nachsicht wie in der Auflösungskaskade, damit eine vertippte Konfiguration
-    die Auswahl nicht leer laufen lässt.
-
-    **Warum die MICs und nicht nur die Aliase.** Die fünf US-Plätze führen
-    keinen Alias, und über den Alias sind sie deshalb ununterscheidbar:
-    `XNAS` und der Sammelcode `US` sähen beide gleich aus. Wer nur die Aliase
-    kennt, muss die Abwesenheit als „alles Punktlose zählt" deuten — und wählt
-    dann für `DEFAULT_EXCHANGE=XNAS` einen Arca-Treffer. Der MIC trägt die
-    Unterscheidung, die dem Alias fehlt.
+    """Liefert den konkreten Vorzugs-MIC, bei unbekannter Präferenz den Default.
 
     Args:
-        code: Der konfigurierte Vorgabewert.
+        code: Konfigurierte Börsenkennung.
 
     Returns:
-        Die MICs der umfassten Handelsplätze, nie leer.
+        Genau ein MIC; nie eine vom Land abgeleitete Gruppe von Handelsplätzen.
     """
     if code in EXCHANGES:
         return (code,)
-    collector = COLLECTORS.get(code)
-    if collector is not None:
-        return tuple(mic for mic in collector.members if mic in EXCHANGES)
+    logger.warning("unknown_default_exchange", configured=code)
     return (DEFAULT_EXCHANGE,)
 
 

@@ -18,7 +18,6 @@ Fake-Infrastruktur — die zu bauen war der Fehler, den P-09 beschreibt.
 from typing import Any
 
 import pytest
-
 from stockinfo_plugin import (
     NotFound,
     NotResponsible,
@@ -131,23 +130,14 @@ def test_ein_treffer_wird_mit_ticker_und_mic_uebersetzt() -> None:
     assert answer.identity.isin == "IE00B3RBWM25"
 
 
-def test_ein_sammelcode_erzeugt_keinen_treffer_mit_erfundenem_mic() -> None:
-    """**Der Befund aus Runde 4, und der Grund für diese ganze Nacharbeit.**
-
-    `US` fasst sechs Handelsplätze zusammen. OpenFIGI beantwortet darauf
-    „welcher Ticker", nicht „welche Börse" — ohne echten MIC ist die Identität
-    unvollständig. Der Kern-Resolver fragt deshalb **gar nicht erst**, und
-    genau das prüft dieser Test mit: Der Client darf nicht benutzt werden.
-
-    Meine erste Fassung umging den Kern-Resolver, fragte trotzdem, bekam
-    `AAPL` und lieferte `Resolved(mic="US")` — einen Treffer, dessen MIC keiner
-    ist. `ResolverContract` verbietet das, und zwar zu Recht.
-    """
-    plugin = OpenFigiResolverPlugin(client=PoisonedFigiClient(), home_fallback=False)
-
+def test_eine_alte_us_praeferenz_faellt_auf_einen_konkreten_mic_zurueck() -> None:
+    """Der Pluginweg erhält denselben Default-Rückfall wie der Kern-Resolver."""
+    client = FakeFigiClient({("US0378331005", "XETR"): "APC"})
+    plugin = OpenFigiResolverPlugin(client=client, home_fallback=False)
     answer = plugin.resolve(ResolveRequest(isin="US0378331005", preferred_mic="US"))
-
-    assert isinstance(answer, NotFound), answer
+    assert isinstance(answer, Resolved)
+    assert answer.identity.mic == "XETR"
+    assert client.calls == [("US0378331005", "XETR", "micCode")]
 
 
 def test_ein_ausfall_bleibt_ein_ausfall() -> None:

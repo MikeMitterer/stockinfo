@@ -88,23 +88,12 @@ def test_tsx_bildet_punkt_to_symbol() -> None:
     assert figi.calls == [("CA7800871021", "XTSE", "micCode")]
 
 
-def test_der_sammelcode_us_wird_gar_nicht_erst_gefragt() -> None:
-    """Seit T-21: Ohne echten MIC gibt es keine Identität — und keine Anfrage.
-
-    Früher lieferte dieser Weg `AAPL` ohne Börse. Der Wert taugte für yfinance
-    und für sonst nichts: `US` fasst NYSE, NASDAQ, Arca, American und Cboe
-    zusammen, und welcher davon gilt, sagt OpenFIGI hier nicht.
-
-    Die Anfrage entfällt deshalb ganz, statt ihr Ergebnis wegzuwerfen — sie
-    zählte gegen das Kontingent, ohne je etwas Verwertbares zu liefern. Den
-    Fall löst der Yahoo-Fallback, der den Handelsplatz benennt.
-    """
+def test_us_praeferenz_verwendet_den_unbekannt_rueckfall() -> None:
+    """Ein alter Sammelwert fällt wie jede unbekannte Präferenz auf Xetra zurück."""
     figi = _FakeFigi("AAPL")
-
     resolved = OpenFigiResolver(figi, "US").resolve_isin("US0378331005")
-
-    assert getattr(resolved, "symbol", None) is None
-    assert figi.calls == []
+    assert resolved.symbol == "AAPL.DE"
+    assert figi.calls == [("US0378331005", "XETR", "micCode")]
 
 
 def test_unbekannte_boerse_faellt_auf_xetr_zurueck() -> None:
@@ -683,7 +672,7 @@ def test_yahoo_bevorzugt_bei_boerse_ohne_suffix_das_symbol_ohne_punkt(
             {"symbol": "AAPL", "exchange": "NMS", "exchDisp": "NasdaqGS", "quoteType": "EQUITY"},
         ],
     )
-    resolver = YFinanceResolver(default_exchange="US")
+    resolver = YFinanceResolver(default_exchange="XNAS")
 
     resolved = resolver.resolve_isin("US0378331005")
 
@@ -765,7 +754,7 @@ def test_yahoo_laesst_einen_unbekannten_punktlosen_treffer_nicht_gewinnen(
             {"symbol": "ONEQ", "exchange": "NMS", "exchDisp": "NasdaqGS", "quoteType": "ETF"},
         ],
     )
-    resolver = YFinanceResolver(default_exchange="US")
+    resolver = YFinanceResolver(default_exchange="XNAS")
 
     resolved = resolver.resolve_isin("US0378331005")
 

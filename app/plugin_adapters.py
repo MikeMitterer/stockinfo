@@ -29,11 +29,7 @@ from __future__ import annotations
 from dataclasses import fields
 from datetime import date
 
-from app.details import definitions_for, validate_input
-from app.detail_models import DetailInput
-
 import structlog
-
 from stockinfo_plugin.invariants import identity_problem, resolution_problem
 from stockinfo_plugin.types import (
     DailyRequest,
@@ -50,12 +46,14 @@ from stockinfo_plugin.types import (
     Resolved,
     ResolveRequest,
     Unavailable,
-    Unsupported,
     Unit,
+    Unsupported,
     convert,
 )
 
-from app.exchanges import COLLECTOR_CODES, EXCHANGES, provider_alias
+from app.detail_models import DetailInput
+from app.details import definitions_for, validate_input
+from app.exchanges import EXCHANGES, provider_alias
 from app.providers.base import (
     INSTRUMENT_TYPES,
     EtfDetails,
@@ -556,15 +554,15 @@ class MetadataAdapter(_Adapter):
         if readings is None:
             return None
         definitions = {
-            definition.name.split('.')[-1]: definition
+            definition.name.split(".")[-1]: definition
             for definition in definitions_for(self._source)
             if identity is None or definition.applies(instrument_type, identity.kind)
         }
         normalized = {}
         values = {}
         for reading in readings:
-            if reading.field == 'name':
-                values['name'] = reading.value
+            if reading.field == "name":
+                values["name"] = reading.value
                 continue
             definition = definitions.get(reading.field)
             if definition is None:
@@ -595,8 +593,8 @@ class MetadataAdapter(_Adapter):
             normalized[definition.name] = entry.model_dump()
             if definition.name in {field.name for field in fields(EtfDetails)}:
                 values[definition.name] = entry.value
-        values['source'] = self.name
-        values['detail_readings'] = {self.name: normalized}
+        values["source"] = self.name
+        values["detail_readings"] = {self.name: normalized}
         return EtfDetails(**values)
 
 
@@ -779,7 +777,7 @@ class ResolverAdapter(_Adapter):
                 detail=f"{self.name}: {_symbol_of(answer, fallback_isin)}",
             )
 
-        problem = identity_problem(answer.identity, COLLECTOR_CODES)
+        problem = identity_problem(answer.identity)
         if problem:
             logger.info(
                 "resolve_without_identity", source=self.name, problem=problem
