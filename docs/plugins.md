@@ -170,6 +170,27 @@ Timeout ließe den Aufrufer zurückkehren, der Thread liefe weiter. Zeitgrenzen
 setzt deshalb das Plugin bei seinen eigenen I/O-Aufrufen — der Vertrag verlangt
 es, erzwingen kann er es nicht.
 
+## Datenversion und Migration beim Start
+
+Ein Paketupdate allein verändert den Datenbestand nicht. Erhöht ein aktives
+Plugin seine `data_version`, sichert StockInfo den alten Bestand und ruft die
+Migrationsfunktion des Autors auf. Datenänderungen und neue Version werden je
+Plugin gemeinsam gespeichert. Nach einem Fehler oder Prozessabbruch bleibt die
+fehlgeschlagene Umwandlung ungespeichert; erfolgreiche frühere Schritte werden
+beim nächsten Start nicht wiederholt. Neue Datenbanken übernehmen die aktuelle
+Version ohne Migration, fehlende Einträge im Altbestand gelten als Version 1.
+
+Fehlt eine Funktion, scheitert die Sicherung/Umwandlung oder liegt ein Downgrade
+vor, bleiben Fachrequests und Hintergrundaktualisierung gesperrt. `/ready` und
+`/operational` melden `degraded`; das Serverlog nennt Plugin, Ausgangs- und
+Zielversion sowie den Fehler. Prüfe diesen Hinweis und korrigiere das Plugin,
+bevor du neu startest. Eine offene Bestätigung der Identitätsmigration hat
+Vorrang. Es gibt keinen zusätzlichen Migrationsdialog.
+
+Der [Autorenvertrag](plugin-authors.md#plugin-data-migrations) beschreibt den
+Kontext und ein ausführbares Beispiel. Die vorhandene Sicherungsfunktion wird
+wiederverwendet; StockInfo führt keine automatische Datenbankrotation aus.
+
 ## Wer selbst eine Quelle schreibt
 
 Ab hier ist die Anleitung **englisch** und steht in

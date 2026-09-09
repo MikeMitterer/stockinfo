@@ -21,6 +21,7 @@ Beispiel::
 """
 
 from stockinfo_plugin.exchanges import ExchangeSpec, MicCoverage
+from stockinfo_plugin.migrations import MigrationContext
 from stockinfo_plugin.sources import (
     DailyCloseSource,
     FxSource,
@@ -62,6 +63,7 @@ from stockinfo_plugin.types import (
 )
 
 __all__ = [
+    "MigrationContext",
     "ExchangeSpec",
     "MicCoverage",
     "API_VERSION",

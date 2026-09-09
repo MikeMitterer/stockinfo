@@ -166,6 +166,12 @@ curl http://localhost:8000/quote/IE00B3RBWM25
 
 ---
 
+Plugin data migrations run automatically before normal operation when an
+active source increases its `data_version`. StockInfo backs up first and commits
+each migration together with its new version. Failed or missing migrations
+block business requests and refreshes; the server log identifies the plugin,
+versions and cause. See [plugin data migrations](docs/plugin-authors.md#plugin-data-migrations).
+
 ## Security model
 
 **StockInfo has no authentication, and it is not meant to have one.** Every

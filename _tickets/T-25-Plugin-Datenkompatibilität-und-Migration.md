@@ -17,8 +17,8 @@ Der erste Teil ist **umgesetzt**: Plugins deklarieren mit `data_version`
 eine Datenkompatibilitäts-Version; die Backup-Prüfung berücksichtigt sie.
 Daraus folgt noch keine unabhängige Freigabe des gesamten Tickets.
 
-**Offen** ist der kleine Startablauf: vergleichen, sichern, Autorenfunktion
-ausführen und erst nach Erfolg den Fachbetrieb freigeben. Solange
+**Umgesetzt, unabhängige Prüfung offen:** Der Startablauf vergleicht, sichert,
+führt die Autorenfunktion aus und gibt erst nach Erfolg den Fachbetrieb frei. Solange
 `data_version` unverändert bleibt, entsteht keine zusätzliche Migrationsarbeit.
 
 ## Scope-Vertrag · Umsetzung ab 2026-09-09
@@ -62,12 +62,29 @@ anleitung, Plugin-API-Referenz/Beispiel und vorhandene Startbeschreibung.
 Keine Migration bestehender Betriebsdaten ausführen; keine Rotation,
 `generation_id`, Plugin-Sandbox, Migrationskettensuche oder neue Abhängigkeit.
 
+### Checkpoint verarbeitet · continue
+
+Claude gibt `b2abac0` mit 12 Produkt-/8 Test-/Dokudateien und 900 manuellen
+Zeilen frei (`f5570fc`). Die einmalige Budgeterweiterung ist damit verbraucht.
+Mike legt ausdrücklich fest: **API_VERSION bleibt bei 2** (`2053196`).
+Die Erweiterung ist optional; vorhandene Plugins bleiben bei unveränderter
+Datenversion unverändert nutzbar. Paketversion steigt additiv auf 0.3.0.
+Namentliche Mitzieher: `plugin_api/pyproject.toml`, `sources.py` einschließlich
+`data_version`-Docstring, `__init__.py`, neuer Kontextvertrag; `types.py` bleibt
+inhaltlich bei API_VERSION 2. `testing/contracts.py` nur bei nötigem Harness-Fall.
+
+Umsetzungsfolge: zuerst M1–M6 über echten App-Lifespan rot nachweisen, dann
+Autorenvertrag und Host-Transaktion, zuletzt Startverdrahtung/Guard. Neue
+SQL-Ausführung liegt unter `app/persistence/`; der beschlossene SQLite-Kontext
+und vorhandene Backup-Zugriff bleiben maßgeblich, kein ORM-Umbau und keine
+neue Abhängigkeit. Beispiel und Autorenanleitung im selben Lieferumfang.
+
 ## Für dich
 
 Aktuell ist **kein Handgriff nötig**.
 
-Der Zuschnitt ist entschieden. Der Auftrag vom 2026-09-09 passt dieses Ticket
-an; er aktiviert keine Produktumsetzung und keine unabhängige Abnahme.
+Der Startablauf ist in der priorisierten Kette umgesetzt. Claude prüft die
+Fassung unabhängig; derzeit ist keine zusätzliche Entscheidung von dir nötig.
 
 ### Bisherige Antworten und Rückmeldungen
 
@@ -214,11 +231,10 @@ Transaktion sowie den Versionsvergleich mit Freigabe oder Sperre beim Start.
 Ein kleines Beispielplugin und die gezielten Prüfungen unten belegen den Weg.
 Vorhandene Versionsspeicherung und Backup-Funktion werden wiederverwendet.
 
-Die [Autorenanleitung](../docs/plugin-authors.md#planned-plugin-migrations-not-available-yet)
-beschreibt diesen Ablauf bereits als **geplant, noch nicht verfügbar**. Bei
-Umsetzung wird dort die konkrete Kontext-API samt ausführbarem Beispiel ergänzt
-und der Verfügbarkeitshinweis aktualisiert. Dieser Doku-Abgleich gehört zur
-Lieferung und zur Prüfung M5; ein Eintrag nur im Ticket genügt nicht.
+Die [Autorenanleitung](../docs/plugin-authors.md#plugin-data-migrations)
+beschreibt den verfügbaren Ablauf mit konkreter Kontext-API und ausführbarem
+Beispiel. Die geplante Kennzeichnung ist mit der Umsetzung entfernt. Dieser
+Doku-Abgleich gehört zur Lieferung und zur Prüfung M5.
 
 **T-25 schließt mit diesem Migrationsweg.** Konkrete Datenumwandlungen werden
 erst nötig, wenn ein Autor `data_version` erhöht. Paketpins, Rollenketten,
@@ -255,21 +271,20 @@ Es wird keine Produktionsmigration zum Testen ausgeführt.
 
 | # | Aktion | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| M1 | Paketversion ändern, `data_version` beibehalten | Kein Migrationsaufruf, kein Migrationsbackup und keine Ablehnung allein wegen des Paket-Bumps; Daten bleiben erhalten | ➖ |
-| M2 | Datenversion mit passender Autorenfunktion erhöhen; danach erneut starten | Sicherung enthält den alten Bestand vor der Umwandlung; Daten und Versionsstand gemeinsam gespeichert; Fachbetrieb erst nach Erfolg; zweiter Start wiederholt die Migration nicht | ➖ |
-| M3 | `1 → 3`, fehlende Funktion, nicht unterstützten Ausgangsstand und Downgrade prüfen | Autor erhält tatsächlichen Ausgangs- und Zielstand; unterstützter Sprung gelingt, übrige Fälle sperren den Fachbetrieb mit Diagnose; kein falscher Versionsstempel | ➖ |
-| M4 | Sicherung scheitern lassen; Autorenfunktion nach einer Änderung mit Fehler oder Prozessabbruch beenden und neu starten | Ohne Sicherung kein Funktionsaufruf; nach Fehler/Abbruch bleiben Daten und Version der fehlgeschlagenen Migration auf dem vorherigen Stand; kein halbfertiger Erfolg; Neustart prüft erneut | ➖ |
-| M5 | Dokumentierten Autorenvertrag und Beispielmigration mit gemischtem Datenbestand prüfen | Beispiel ändert nur vorgesehene Daten, erhält fremde Daten und gemeinsames Schema und überlässt Commit/Rollback dem Host; kein Nachweis einer Plugin-Sandbox behauptet | ➖ |
-| M6 | Leere Datenbank sowie vorhandene Datenbank ohne Plugin-Versionsmarker starten | Frische DB übernimmt aktuelle Deklaration ohne Migration und erlaubt eine Fachoperation; Altbestand gilt als Stand 1 und durchläuft bei höherem Ziel die Migration oder bleibt gesperrt | ➖ |
+| M1 | Paketversion ändern, `data_version` beibehalten | Kein Migrationsaufruf, kein Migrationsbackup und keine Ablehnung allein wegen des Paket-Bumps; Daten bleiben erhalten | ✅ |
+| M2 | Datenversion mit passender Autorenfunktion erhöhen; danach erneut starten | Sicherung enthält den alten Bestand vor der Umwandlung; Daten und Versionsstand gemeinsam gespeichert; Fachbetrieb erst nach Erfolg; zweiter Start wiederholt die Migration nicht | ✅ |
+| M3 | `1 → 3`, fehlende Funktion, nicht unterstützten Ausgangsstand und Downgrade prüfen | Autor erhält tatsächlichen Ausgangs- und Zielstand; unterstützter Sprung gelingt, übrige Fälle sperren den Fachbetrieb mit Diagnose; kein falscher Versionsstempel | ✅ |
+| M4 | Sicherung scheitern lassen; Autorenfunktion nach einer Änderung mit Fehler oder Prozessabbruch beenden und neu starten | Ohne Sicherung kein Funktionsaufruf; nach Fehler/Abbruch bleiben Daten und Version der fehlgeschlagenen Migration auf dem vorherigen Stand; kein halbfertiger Erfolg; Neustart prüft erneut | ✅ |
+| M5 | Dokumentierten Autorenvertrag und Beispielmigration mit gemischtem Datenbestand prüfen | Beispiel ändert nur vorgesehene Daten, erhält fremde Daten und gemeinsames Schema und überlässt Commit/Rollback dem Host; kein Nachweis einer Plugin-Sandbox behauptet | ✅ |
+| M6 | Leere Datenbank sowie vorhandene Datenbank ohne Plugin-Versionsmarker starten | Frische DB übernimmt aktuelle Deklaration ohne Migration und erlaubt eine Fachoperation; Altbestand gilt als Stand 1 und durchläuft bei höherem Ziel die Migration oder bleibt gesperrt | ✅ |
 
 M5 ersetzt die frühere Forderung nach technisch erzwungenem Schutz fremder
 Plugin-Daten durch Autorenvertrag und Beispielprüfung. Die Abschottung ist
 entfallen, nicht bestanden. M6 macht die bereits beschlossenen Regeln für
 frische und alte Datenbanken ausdrücklich prüfbar.
 
-Die Ticketanpassung ist kein Implementierungs- oder Migrationsnachweis.
-Alte AI-Nachweise und leere Human-Felder bleiben unverändert in der Historie;
-sie bestätigen den neuen Startablauf nicht.
+Die aktuellen Nachweise zu M1–M6 stehen im Implementierungsbericht unten.
+Frühere AI-Nachweise und Human-Felder bleiben unverändert in der Historie.
 
 ### Side-Effects
 
@@ -284,11 +299,57 @@ Auch dieser Nachtrag führt keine Migration aus.
 
 ### Auflösung
 
-Teilweise umgesetzt: `data_version` und Backup-Kompatibilitätsprüfung sind
-auf Mikes Auftrag implementiert. Der kleine Migrationsweg beim Start ist als
-Restumfang beschlossen und noch umzusetzen. Maßgeblich sind M1–M6; Rotation,
-Plugin-Abschottung und `generation_id` blockieren seinen Abschluss nicht.
-STATUS-Rollen und Prioritätskette bleiben unverändert.
+M1–M6 sind implementiert und durch Codex geprüft. Unabhängige Freigabe durch
+Claude steht aus. Rotation, Plugin-Abschottung und `generation_id` bleiben
+außerhalb des Abschlussumfangs. Nach Freigabe folgt T-68 laut STATUS.md.
+
+## Implementierungsbericht · Runde 1
+
+`Source.migrate` ist optional und statisch, `MigrationContext.execute` liefert
+Zeilen als Wörterbücher ohne Cursor oder Verbindung. Host-SQL liegt unter
+`app/persistence/`. `migrate_plugins` verwendet die bestehende Versionsauskunft
+und `BackupService`, hält je Plugin eine Transaktion und schreibt den neuen
+Versionsstand darin. SQL-Commit durch den Kontext wird abgewiesen; das ist
+keine Sandbox gegen vertrauenswidrigen Python-Code. API_VERSION bleibt gemäß
+Mikes Entscheidung 2, Paketversion ist 0.3.0.
+
+Der vorhandene Riegel führt denselben Start-Rückruf regulär und nach einer
+Identitätsbestätigung aus. Erst Plugin-Migration, dann Katalog und Scheduler.
+Startende oder fehlgeschlagene Instanzen weisen Fachrequests mit 503 ab;
+Diagnose nennt Plugin und beide Versionen. Eine frische, auch als Nullbyte-Datei
+vorhandene DB übernimmt die Deklaration direkt.
+
+| Nachweis | Ergebnis |
+|---|---|
+| M1 | Echter App-Start mit Paketpin 1.0.0 und 1.1.0, gleiche Datenversion: kein Aufruf/Backup, Daten erhalten. Nur die externe Paketinstallation ersetzt; Loader und Start echt. |
+| M2/M3 | Ziele 2 und 3 aus gespeichertem/implizitem Stand 1; Vorher-Backup, gemeinsamer Commit, erneuter Start ohne Wiederholung. Fehlende Funktion, abgelehnter Ausgang und Downgrade sperren mit Versionsdiagnose. |
+| M4 | Backupfehler verhindert Aufruf. Autorenfehler nach UPDATE rollt zurück. Kindprozess endet innerhalb der Transaktion mit os._exit(73): Daten/Version alt, Sicherung erhalten, Neustart erfolgreich. Bei zweitem Pluginfehler bleibt der erste Erfolg erhalten. |
+| M5 | Mitgelieferte Beispielmigration über echtes Dateiplugin geladen: eigener Wert umgewandelt, fremder Wert und gemeinsames Schema unverändert. SQL-COMMIT über den Kontext wird zurückgewiesen. |
+| M6 | Nicht vorhandene und leere Datei erhalten direkt Ziel 3; vorhandener Bestand ohne Marker migriert aus 1. Offene Identitätsbestätigung verhindert vorher jeden Autorenaufruf und Schedulerstart. |
+
+Roter Ausgang: 8 fehlgeschlagene/2 bereits bestandene Startfälle vor Umsetzung.
+15 neue Startfälle grün. Gegenprobe: Scheduler absichtlich vor den
+Migrationsaufruf verschoben → alle fünf betroffenen Schutzfälle rot, danach
+Original wiederhergestellt. Gesamtstand: **1192 Backend / 29 skip, 323
+Plugin-API / 1 skip, 50 Beispiele, 378 Dashboardtests** grün. Ruff Default
+und I/Q über die berührten Python-Dateien grün; AST-Bezeichnerinventar englisch.
+Logs: `/tmp/t25-red.log`, `/tmp/t25-final-targeted.log`,
+`/tmp/t25-scheduler-mutant.log`, `/tmp/t25-final-full-tests.log`.
+
+Im Gesamtlauf mitgezogen: Der CSV-Altlastentest erlaubt das neue Beispiel;
+der Restore-Reload-Test erwartet jetzt bei fehlender Migration die Sperre und
+setzt den globalen Riegel sauber zurück. Ein fehlgeschlagener regulärer Start
+kann erneut versucht werden, ohne eine Identitätsmigration vorzutäuschen.
+
+**Doku-Abgleich:** Autorenanleitung mit Kontext/Beispiel und Ausnahme zu den
+normalerweise nicht werfenden Rollenmethoden; Betriebsanleitung mit Sperre und
+Diagnose; README mit Einstieg. Frühere geplante Aussagen in der aktuellen
+Anleitung entfernt. Fremde Prosaänderungen derselben Autoren-Datei bleiben
+getrennt. Kein Docker-Langzeittest und keine Betriebsdatenmigration.
+
+**Umfang:** 3 Fachänderungen, 9/12 Produktdateien, 7/8 Test-/Dokudateien;
+761/900 manuelle Diff-Zeilen. Keine offene Abweichung nach Eigenprüfung;
+unabhängiges Review offen.
 
 ## Frühere Anforderungen und Prüfungen · Historie
 

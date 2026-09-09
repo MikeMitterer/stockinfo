@@ -350,11 +350,19 @@ class MigrationGate:
             self._state = GateState.STARTING
         return self._run_release()
 
+    def start(self) -> bool:
+        """Führt den normalen Start ohne vorgetäuschte Identitätsmigration aus."""
+        with self._lock:
+            if self._state not in (GateState.SERVING, GateState.STARTUP_FAILED):
+                return False
+            self._state = GateState.STARTING
+        return self._run_release()
+
     def _run_release(self) -> bool:
         """Führt den Rückruf aus und schaltet danach in die Ziel-Lage.
 
-        Aufgerufen wird sie ausschließlich aus `release` und `retry_release`,
-        und beide betreten sie nur über den Übergang nach `STARTING`. Genau
+        Normaler Start, `release` und `retry_release` betreten diese Funktion
+        ausschließlich über den Übergang nach `STARTING`. Genau
         das ist die Einmal-Verriegelung: Solange hier jemand arbeitet, findet
         kein zweiter Aufrufer eine Lage vor, aus der er sie betreten dürfte.
 

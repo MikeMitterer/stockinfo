@@ -9,7 +9,7 @@ name = "stockinfo-plugin-api"
 # fremdes Plugin getragen, und **niemand hat sie je über eine Registry
 # geladen**; das ist T-23. Eine 1.0 würde Stabilität behaupten, die sich noch
 # nicht bewähren konnte.
-version = "0.2.0"
+version = "0.3.0"
 description = "Vertrag für StockInfo-Datenquellen-Plugins"
 license = "MIT"
 requires-python = ">=3.11"

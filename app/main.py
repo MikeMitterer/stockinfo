@@ -5,8 +5,8 @@ Router enthalten nur HTTP-Belange. Fachlogik gehört in die Service-Schicht.
 
 import os
 import threading
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 import structlog
@@ -15,21 +15,22 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from app import __version__
+from app import __version__, plugin_env
 from app.config import Settings, get_settings
-from app.docs import register_docs
-from app.container import get_cached_quote_service
-from app.db import init_db
-from app.data_versions import stamp_versions
-from app.services.backup import (
-    BackupError,
-    apply_pending,
-    fingerprint_of,
-    stamp_fingerprint,
+from app.container import (
+    get_backup_service,
+    get_cached_quote_service,
+    get_sources_config,
+    initialize_detail_catalog,
+    warm_all_chains,
 )
+from app.data_versions import stamp_versions
+from app.db import init_db
+from app.docs import register_docs
 from app.migration_guard import (
     HEALTHCHECK_PATH,
     REASON_MIGRATION_PENDING,
+    REASON_STARTUP_FAILED,
     is_allowed,
     static_allowlist,
 )
@@ -42,19 +43,24 @@ from app.models import (
     OperationalResponse,
     ReadinessResponse,
 )
+from app.persistence.plugin_migration import migrate_plugins
+from app.plugin_loader import load_all
 from app.repository import (
     REASON_IDENTITY_CONFLICT,
     REASON_SYMBOL_AMBIGUOUS,
     AmbiguousSymbolError,
     IdentityConflictError,
 )
-from app import plugin_env
-from app.container import get_sources_config, initialize_detail_catalog, warm_all_chains
-from app.plugin_loader import load_all
 from app.routers import backups, dashboard, fields, fx, instruments, migration, quotes
 from app.routers.migration import get_gate
 from app.routers.validation import REASON_INVALID_ISIN, InvalidIsinError
 from app.scheduler import RefreshScheduler
+from app.services.backup import (
+    BackupError,
+    apply_pending,
+    fingerprint_of,
+    stamp_fingerprint,
+)
 from app.sources_registry import close_all, register_loaded
 
 logger = structlog.get_logger()
@@ -98,7 +104,8 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
     restored = apply_pending(settings.database_path, get_sources_config())
     if restored:
         logger.info("restore_completed", backup=restored)
-    fresh_database = not Path(settings.database_path).exists()
+    database_path = Path(settings.database_path)
+    fresh_database = not database_path.exists() or database_path.stat().st_size == 0
 
     # **Jede Rolle einmal bauen, bevor jemand fragt.** Sonst zeigt `/sources`
     # einen spekulativen Zustand, der sich nach dem ersten Fachrequest ändert.
@@ -108,7 +115,6 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         get_gate().block()
 
     stamp_versions(settings.database_path, get_sources_config(), fresh=fresh_database)
-    initialize_detail_catalog()
 
     # Die Kennung steht in der Datenbank selbst, nicht nur im Manifest daneben:
     # Eine Sicherung ohne Manifest bleibt zuordenbar, ein vertauschtes fällt auf.
@@ -161,10 +167,18 @@ async def lifespan(app: FastAPI) -> AsyncIterator[None]:
             running.append(scheduler)
         logger.info("scheduler_started")
 
-    if get_gate().pending:
-        get_gate().on_release(start_scheduler)
-    else:
+    def start_business() -> None:
+        """Migriert Plugin-Daten vor Katalogschreibzugriffen und Scheduler."""
+        migrate_plugins(
+            settings.database_path, get_sources_config(), get_backup_service()
+        )
+        initialize_detail_catalog()
         start_scheduler()
+
+    gate = get_gate()
+    gate.on_release(start_business)
+    if not gate.pending:
+        gate.start()
 
     logger.info(
         "app_started",
@@ -345,7 +359,8 @@ async def migration_guard(request: Request, call_next):
     Returns:
         Die Antwort — oder `503` mit stabiler Kennung.
     """
-    if not get_gate().pending:
+    gate = get_gate()
+    if not (gate.pending or gate.starting or gate.startup_failed):
         return await call_next(request)
 
     static_paths = static_allowlist(get_settings().static_dir)
@@ -355,7 +370,7 @@ async def migration_guard(request: Request, call_next):
     return JSONResponse(
         status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
         content={
-            "detail": REASON_MIGRATION_PENDING,
+            "detail": REASON_MIGRATION_PENDING if gate.pending else REASON_STARTUP_FAILED,
             "migration": "/migration",
         },
     )

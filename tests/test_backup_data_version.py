@@ -3,12 +3,13 @@
 from dataclasses import replace
 from pathlib import Path
 
+import pytest
+from stockinfo_plugin import Source
+
 from app.db import init_db
 from app.services.backup import BackupService
 from app.sources_config import SourcesConfig
 from app.sources_registry import SourceSpec, register_loaded
-from stockinfo_plugin import Source
-import pytest
 
 
 @pytest.fixture
@@ -99,8 +100,9 @@ def test_frische_datenbank_traegt_deklaration_auch_beim_erneuten_lesen(
 
 @pytest.mark.parametrize("invalid", [True, 0, -1, "2", 1.5, None])
 def test_loader_lehnt_ungueltige_deklaration_ab(invalid):
+    from stockinfo_plugin import API_VERSION, QuoteSource
+
     from app.plugin_loader import _check
-    from stockinfo_plugin import QuoteSource, API_VERSION
 
     class Invalid(QuoteSource):
         name = "invalid-version"
@@ -126,11 +128,16 @@ def test_altes_backup_ohne_versionsmarker_gilt_als_eins(tmp_path, source, config
 
 def test_dateiplugin_wird_vor_restore_neu_geladen(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
-    from app.main import app
+
     from app.config import get_settings
-    from app.container import get_sources_config, get_backup_service
+    from app.container import get_backup_service, get_sources_config
+    from app.main import app
 
     def reset():
+        from app.migration_guard import MigrationGate
+        from app.routers import migration
+
+        migration._gate = MigrationGate()
         for cached in (get_settings, get_sources_config, get_backup_service):
             cached.cache_clear()
 
@@ -175,12 +182,11 @@ SOURCES = [Example]
             assert (
                 listed["backups"][0]["reason"]["code"] == "backup_data_version_differ"
             )
-            declared = client.get("/sources").json()["sources"]
-            assert (
-                next(entry for entry in declared if entry["name"] == "t25-example")[
-                    "data_version"
-                ]
-                == 2
-            )
+            # Das neue Plugin ist geladen, aber sein Migrationsweg fehlt.
+            assert client.get("/sources").status_code == 503
+            assert client.get("/instruments").status_code == 503
+            from app.data_versions import declared_versions
+
+            assert declared_versions(get_sources_config())["t25-example"] == 2
     finally:
         reset()

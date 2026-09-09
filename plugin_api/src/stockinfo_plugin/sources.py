@@ -15,6 +15,7 @@ from types import MappingProxyType
 from typing import Any
 
 from stockinfo_plugin.exchanges import ExchangeSpec, MicCoverage
+from stockinfo_plugin.migrations import MigrationContext
 from stockinfo_plugin.types import (
     API_VERSION,
     Cost,
@@ -64,9 +65,20 @@ class Source:
     """Datenkompatibilität, unabhängig von Paket- und API-Version.
 
     Positive Ganzzahl. Nur bei unverträglicher Bedeutung gespeicherter Daten
-    erhöhen. Der Host vergleicht diesen Stand beim Wiederherstellen; eine
-    Änderung führt noch keine Migration aus. Bestehende Plugins starten bei 1.
+    erhöhen. Der Host vergleicht diesen Stand beim Start und Wiederherstellen.
+    Ein Anstieg benötigt eine erfolgreiche migrate-Funktion vor dem Fachbetrieb.
+    Neue Datenbanken übernehmen die Deklaration ohne Migration.
     """
+
+    @staticmethod
+    def migrate(context: MigrationContext, from_version: int, to_version: int) -> None:
+        """Wandelt eigene Daten um oder lehnt den Ausgangsstand ausdrücklich ab.
+
+        Der Host sichert vorher und schreibt Daten und Version gemeinsam fest.
+        Ohne Versionsanstieg wird dieser optionale Einstieg nicht aufgerufen.
+        Sprünge behandelt der Autor; Downgrades lehnt bereits der Host ab.
+        """
+        raise NotImplementedError("Kein Migrationsweg für diesen Datenstand")
 
     api_version: int = API_VERSION
     """Vertragsversion, gegen die dieses Plugin gebaut wurde.

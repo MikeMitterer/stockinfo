@@ -96,7 +96,7 @@ The difference between `NotFound` and `Unavailable` is the reason the union
 exists. An outage that arrives as "not found" deletes a paper the operator
 still owns.
 
-### Your methods never raise
+### Normal role methods never raise
 
 `resolve`, `fetch_quote`, `fetch_daily`, `fetch` and `fetch_rate` turn every
 failure into `Unavailable` (or `None`, where the role says so). The chain
@@ -123,26 +123,69 @@ through is not one.
 
 ### Data compatibility is independent of package releases
 
-Declare `data_version = 1` on your source class (also the inherited default).
-Use a positive integer, never a boolean or string. Keep it unchanged for
-compatible updates, including package major releases. Increase it only when
-stored data becomes incompatible. The stable source `name` identifies whose
-data version is compared; do not rename a source to bypass this check.
+`data_version` is a positive integer, initially `1`. Increase it only when
+stored data needs conversion. Package releases, chain order and profile names
+do not trigger a migration. `API_VERSION` remains `2`; the migration API is an
+optional addition in `stockinfo-plugin-api` 0.3.0.
 
-StockInfo stores these values in the database and backups and reports the
-installed declaration through `GET /sources`. A backup with a different value
-for an active source is incompatible; package pins, chain order and profile
-names do not decide compatibility. Missing values in older backups mean `1`.
-Removed sources are not compared. A newly added source with version `1` is
-compatible; a newly added source declaring another version requires an explicit
-compatibility decision. The original database stamp is not silently upgraded.
+StockInfo records versions by source name in `meta.plugin_data_versions`.
+Backups carry that record and are compared with active source declarations.
+Missing entries in existing databases mean version `1`. A new database starts
+with the declared versions and does not run migrations. Removed sources are
+not compared; their saved versions remain available if they are reactivated.
 
-This release introduces the declaration and backup check only. It does not
-run plugin migrations. Changing `data_version` is not evidence that the active
-database has been migrated. A migration entry point and its safe execution
-remain follow-up work; do not deploy an incompatible plugin against existing
-data without migrating it first. Restore `force` remains an explicit operator
-override; unreadable schemas and damaged metadata are separate errors.
+### Plugin data migrations
+
+Implement the optional static method on your source class:
+
+```python
+from stockinfo_plugin import MetadataSource, MigrationContext
+
+class Example(MetadataSource):
+    name = "example"
+    api_version = 2
+    data_version = 2
+
+    @staticmethod
+    def migrate(context: MigrationContext, from_version: int, to_version: int) -> None:
+        if (from_version, to_version) != (1, 2):
+            raise ValueError("Unsupported data version")
+        context.execute(
+            "UPDATE meta SET value=? WHERE key=? AND value=?",
+            ("new", "example-data", "old"),
+        )
+```
+
+The source still implements its normal role methods. The executable migration
+example lives in [`plugin_api/examples/migration.py`](../plugin_api/examples/migration.py).
+It changes one example-owned metadata value and leaves other data and the
+shared schema alone. Test your own transformation against mixed data.
+
+`context.execute(statement, parameters=())` runs one SQL statement. Bind values
+through parameters. SELECT results are a list of dictionaries keyed by column
+name; statements without result rows return an empty list. The context exposes
+no cursor, connection or commit method. StockInfo owns the transaction.
+
+On a version increase, StockInfo creates a normal backup before calling the
+function. It commits the data changes and new version together. An exception
+or process crash rolls back that plugin's transaction; earlier successful
+plugin migrations stay committed. A restart skips their completed versions.
+Failed backups prevent the function from running. Missing functions,
+unsupported origins and downgrades keep normal operation blocked; the server
+log names the source, stored version, target and error. With an unchanged
+version no migration function is needed.
+
+The author selects the right data and supports or rejects version jumps such
+as `1 → 3`. StockInfo does not search for intermediate migrations. Do not alter
+the shared schema, start or end transactions, open another write connection,
+write external files or call the network. Those changes would escape the host's
+rollback. Plugins remain trusted Python code; this is not a sandbox.
+
+Migrations run before business requests and scheduled refreshes. An outstanding
+identity-migration confirmation comes first. There is no additional migration
+dialog; `/ready` and `/operational` report a failed start as degraded.
+
+---
 
 ## 3. The smallest package that works
 

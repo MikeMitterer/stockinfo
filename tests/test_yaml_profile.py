@@ -194,9 +194,9 @@ def _restart_chains() -> None:
     und damit das Netz.
     """
     from app.config import get_settings
+    from app.container import initialize_detail_catalog
     from app.sources_config import ROLES
     from app.sources_registry import build_chain
-    from app.container import initialize_detail_catalog
 
     get_sources_config.cache_clear()
     config = get_sources_config()
@@ -899,7 +899,7 @@ def test_kein_csv_beispiel_bleibt_uebrig() -> None:
     remaining = sorted(
         path.name
         for path in examples.glob("*.py")
-        if path.name not in ("__init__.py", "yaml_file.py")
+        if path.name not in ("__init__.py", "yaml_file.py", "migration.py")
     )
 
     assert remaining == [], f"CSV-Beispiele stehen noch: {remaining}"
