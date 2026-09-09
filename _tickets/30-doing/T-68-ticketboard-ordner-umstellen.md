@@ -22,6 +22,7 @@ Der vollständige Observer-Auftrag folgt in T-69.
 - [Scope-Vertrag · 2026-09-09](#scope-vertrag--2026-09-09)
 - [Liefernachweis PersonalSkills](#liefernachweis-personalskills)
 - [Nachweis der gültigen Arbeitsanweisung](#nachweis-der-gültigen-arbeitsanweisung)
+- [Übergabeumfang · Runde 1](#übergabeumfang--runde-1)
 
 ## Für dich
 
@@ -241,7 +242,7 @@ Kein neues Board-Werkzeug und keine zusätzliche Statusdatei. Die Umstellung
 | 6 | Codex und Claude lesen dieselbe aktualisierte Skill-Quelle; andere bestehende Boards werden nicht automatisch umgestellt | ✅ [^t68-6] |
 
 [^t68-1]: Inventar: 98/98 Ausgangsdateien; 77 Tickets ohne Doppelzuordnung.
-[^t68-2]: 312 lokale Links samt Ankern geprüft; 0 Befunde. Aktive Pfadregeln auf Doing.
+[^t68-2]: 314 lokale Links samt Ankern geprüft; 0 Befunde. Aktive Pfadregeln auf Doing.
 [^t68-3]: Aktives T-68 in Doing; T-69 in Ready und Kette; T-63/T-66 im Backlog.
 [^t68-4]: 12 Archivskripte und die 12 ursprünglichen Arbeitsdateien SHA-256-identisch; 3 Proxytests grün; TS-Tokenstrom unverändert. Im späteren Inventar kamen `stockinfo.db-wal` und `stockinfo.db-shm` hinzu. Kein DB-Test oder App-Start wurde für T-68 ausgeführt; die Herkunft der neuen Begleitdateien ist nicht unabhängig zugeordnet. Sie wurden nicht verändert oder entfernt. Deshalb kein vollständiger Gleichheitsclaim für das gesamte Datenverzeichnis.
 [^t68-5]: Gemeinsamer Workflow und Projektvorgabe zentral; README/Skill/Startverträge abgeglichen.
@@ -439,7 +440,7 @@ Das ist ein Datei-/Vertragsnachweis, kein behaupteter Observer-Live-Test.
 Die jetzige Scheduler-Zelle wird mit genau dieser Dateischranke neu gestartet.
 
 Die aktuellen Einstiege und Laufzeitverträge enthalten keine alten
-Agentenpfade und keinen Riegel „Ticket direkt im Root“. 312 lokale Markdown-
+Agentenpfade und keinen Riegel „Ticket direkt im Root“. 314 lokale Markdown-
 Links samt Ankern in Board, Projekteinstiegen und Dokumentation sind geprüft;
 zusätzlich 17 Links/Anker des gemeinsamen Skills und seiner Vorlagen.
 Die unversionierte `docs/markdown-styles/README.md` behält ihren fremden
@@ -450,5 +451,32 @@ Workflow, Scheduler und Board-README gehören zur gemeinsam gelieferten
 Regelfassung. Ihre Autorenschaft wird nicht als reine Codex-Arbeit ausgegeben;
 beide Erfahrungssammlungen wurden vor der Übergabe vollständig gelesen.
 Andere vorbestehende Änderungen bleiben außerhalb der Übergabe erhalten.
+
+[↑ Übersicht](#übersicht)
+
+## Übergabeumfang · Runde 1
+
+Prüfstand der gemeinsamen StockInfo-Regeln: `92d19ab`; die Nachweise dieses
+Abschnitts werden zusätzlich als Ticketdokumentation gesichert.
+PersonalSkills-Prüfstand: `eeaad8c2979b6dd1d5cd470b3a0349cb7dd2be1b`.
+
+| Wert | geplant | gemessen bis `92d19ab` |
+|---|---:|---:|
+| Fachliche Änderungen | 1 | 1: Ablage mit Regeln und Verweisen |
+| Produkt-/aktive Skriptdateien | 2 | 1: ausschließlich TS-Kommentar |
+| Test-/Dokudateien einschließlich Verschiebungen, beide Repos | 110 | 117 |
+| Inhalts-Diff-Zeilen, beide Repos | 2.500 | 2.317 |
+
+59 StockInfo-Dateien tragen Inhaltsänderungen, weitere 56 sind reine
+Verschiebungen. Dazu kommen drei Skill-Dateien. Die 117 Test-/Dokudateien
+liegen 6,4 % über der Schätzung: zusätzliche relative Archivlinks wurden beim
+vollständigen Linkabgleich sichtbar. Keine zusätzliche Produktschicht;
+unterhalb der 25-%-Schwelle des Scope-Vertrags. Die Ticket- und Mailbox-
+Ergänzungen der Übergabe werden vor deren Commit zusätzlich mitgezählt.
+
+Der Codex-Scheduler wurde nach Beenden der alten Zelle als Zelle 363 neu
+angelegt. `scheduler_started` am 2026-09-09 um 14:43:46 UTC bestätigt den
+Start mit `_tickets/30-doing` als aktivem Verzeichnis. Ein regulärer
+Heartbeat ist davon getrennt; erst dieser belegt den fortgesetzten Takt.
 
 [↑ Übersicht](#übersicht)
