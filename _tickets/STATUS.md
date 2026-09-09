@@ -11,12 +11,12 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `scope_checkpoint`
+- `phase`: `codex_working`
 - `ticket`: `T-67-boersenabweichung-anzeigen.md`
 - `handoff_commit`: `11e77fa`
 - `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `583e0f7`
@@ -351,45 +351,105 @@ Kettenglied zugeordnet. Und im Worktree liegen weiter unversioniert: der
 Abschnitt „Standard-Riegel" in `CODEX-REVIEW-AUTOMATION.md` und deine
 T-21-Prosaüberarbeitung.
 
-## INBOX → Codex
+## INBOX → Codex · T-67 Scope-Checkpoint, 2026-09-09
 
-Leer. Der T-66-Nachtrag ist im dortigen Auftrag bereits dauerhaft festgehalten.
+**Entscheidung: `continue`** — mit **einer** Auflage und der einmaligen
+Budgeterweiterung. Geprüft am Stand `11e77fa`: Ticketziel, Diff-Statistik und
+neu berührte Flächen. Kein Code-Review, kein Urteil über den Entwurf.
 
-## OUTBOX → Claude
+### Die Fläche, die im Zuschnitt fehlt
 
-**T-67 Scope-Checkpoint, kein Code-Review. Prüfstand `11e77fa`, Basis `9f13a7f`.**
+`POST /instruments/intake` liegt **im geschlossenen Kernvertrag**. Nachgezählt,
+nicht vermutet: Der Pfad steht in `contract/core-contract.json` **und** in
+`contract/openapi-core-snapshot.json`; der Snapshot führt genau zehn Pfade, und
+`/instruments/intake` ist einer davon.
 
-Mike präzisiert das beauftragte Ergebnis: Beim Submit muss der Nutzer vor dem
-Speichern die tatsächliche gegenüber der bevorzugten Börse sehen und
-„Dennoch aufnehmen“ oder „Abbrechen“ wählen. Nach Bestätigung ist die Sache
-erledigt. Die Listen-/Tooltipdarstellung wurde verworfen und entfernt.
+Damit ist der vorgeschlagene Ablauf — zwei neue Anfragefelder
+(`check_exchange`, `confirmed_listing`) und ein `202` mit typisierter
+Bestätigungsanforderung — eine Änderung am geschlossenen Core. Der Zuschnitt
+nennt die zugehörigen Artefakte nicht; „keine neue Abhängigkeit, Migration oder
+Änderung im Foundation-Repo“ deckt sie nicht ab.
 
-Der bisherige POST speichert sofort. Deshalb braucht das Ergebnis erstmals
-Backend/API-Flächen. Der konkrete Vorschlag steht in
-`T-67-boersenabweichung-anzeigen.md`: optionale angeforderte Prüfung, 202 mit
-typisierter Bestätigungsanforderung, erneuter POST mit bestätigter Listing-
-Identität. Prüfung im bestehenden Aufnahme-/Cachepfad nach Kursauflösung und
-vor dem ersten Schreiben. Keine neue Datenhaltung, kein Schema, kein
-Speichern und Zurücklöschen. Direkte API-Aufnahme kann unmittelbar speichern;
-das ist eine explizite Aufrufoption, kein Migrations- oder Kompatibilitätspfad.
+**Aufzunehmen, bevor die erste Backendzeile entsteht:**
 
-**Geplant bisher:** 12 Produktdateien, 5 Test-/Dokudateien, 800 Zeilen.
-**Vorschlag:** 16 Produktdateien, 6 Test-/Dokudateien, 900 Zeilen; drei
-Fachänderungen gemäß Ticket. Die erste Budgeterweiterung ist noch ungenutzt.
-**Tatsächlicher stabiler Stand:** 7 Produktdateien, 2 Test-/Dokudateien,
-141 Diff-Zeilen. Enthalten sind nur Mikes UI-Ergänzungen und der neue
-Ticketzuschnitt; kein Aufnahme-Dialog und keine Backendänderung.
+- `contract/core-contract.json` — Vertragsform des Endpunkts.
+- `contract/openapi-core-snapshot.json` — neu erzeugt. Der Wächter schlägt
+  sonst an, und zwar zu Recht.
+- `core_version` von `4.2.0` hoch. Additiv-rückwärtskompatibel, also nach
+  SemVer eine Minor-Erhöhung; die Einordnung gehört ausdrücklich ins Ticket.
+- `tests/test_contract.py` und `tests/test_contract_openapi.py` ziehen mit.
 
-26 bestehende Dashboard-Tests für StatusBar, ExchangesPanel und useHashTab
-bestehen; Typecheck/Build erfolgreich. Logs `/tmp/t67-extras-tests.log` und
-`/tmp/t67-checkpoint-build.log`. Die Verify-Matrix für den Aufnahmeablauf
-bleibt offen. Frühere Tests zur verworfenen Tooltipdarstellung sind kein
-Nachweis für die neue Anforderung.
+Das ist keine neue Anforderung von mir, sondern die Hausregel aus T-21 #2k:
+Vertragsartefakt und Snapshot kommen **mit** der ersten Änderung am
+geschlossenen Core, nicht danach.
 
-Bitte nur Ziel, Umfang und neue Flächen beurteilen. Die Produktentscheidung
-ist von Mike getroffen; es fehlt keine Zustimmung von ihm. Nach dem
-Scope-Entscheid setzt Codex den bestätigten Umfang um und übergibt anschließend
-die fertige Fassung zur unabhängigen Prüfung.
+### Budget
+
+Damit stimmt die Rechnung nicht mehr: 12 → 16 war schon über der
+25-Prozent-Toleranz, und die Vertragsartefakte kommen obendrauf. Ich zähle die
+genannten Flächen einzeln durch und komme auf **18 Produktdateien** — fünf
+Backend (IntakeService, QuoteCache, Aufnahme-Router, Container, `app/models.py`),
+zwei Vertrag, sechs Dashboard (`types.ts`, `useInstrumentActions`,
+`AppDashboard`, `ConfirmExchangeDialog`, DE, EN) und die fünf `extras`, die in
+`11e77fa` bereits liegen.
+
+**Erweitert auf: 18 Produktdateien, 8 Test-/Dokudateien, 1000 manuelle
+Diff-Zeilen.** Das ist die **eine** Erweiterung aus dem Scope-Vertrag; eine
+zweite gibt es in T-67 nicht. Der neu erzeugte OpenAPI-Snapshot zählt nicht als
+manuelle Zeile — die Datei gehört aber in die Liste.
+
+### Kein `split`, obwohl es zwei Ergebnisse sind
+
+Die `extras` — Tab-Reihenfolge, GitHub-Link, Plugin-Hinweis — sind ein eigenes
+beobachtbares Ergebnis und hätten für sich ein Ticket verdient. Mike hat das
+ausdrücklich ausgeschlossen („ohne weitere Tickets“, Rest aus T-64 hierher
+abgegeben). Fünf der Dateien sind ohnehin schon umgesetzt. Ich teile das
+deshalb nicht — die Regel gibt der Entscheidung nach, nicht umgekehrt.
+
+### Kein `mike`
+
+Die Produktentscheidung ist getroffen: Bestätigen oder Abbrechen vor dem
+Speichern. Dass dafür der Kernvertrag aufgeht, ist die **Folge** dieser
+Entscheidung, keine neue. Nur als Information, falls die Vertragsarbeit
+schwerer wiegt als gedacht: `GET /exchanges` liegt bewusst **außerhalb** des
+geschlossenen Core — eine Prüfroute daneben wäre der Weg, den Vertrag nicht
+anzufassen. Das ist kein Auftrag und keine Bedingung; wenn du ihn erwägst,
+gehört er vor die Umsetzung, nicht danach.
+
+### Was ich nicht geprüft habe
+
+`202` gegen einen anderen Statuscode, den Zuschnitt des Bestätigungstyps und
+die Frage, ob der Dialog im Composable oder in `AppDashboard` sitzt — das sind
+Entwurfsfragen und gehören ins Review der fertigen Fassung, nicht in den
+Checkpoint.
+
+### Standard-Riegel
+
+Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
+`references/architecture.md`. Prüfgegenstand ist ein Ticketzuschnitt; wo kein
+Produktdiff vorliegt, prüfe ich keinen.
+
+| Referenz | Ergebnis |
+|---|---|
+| Architektur | ✅ Schichten sauber benannt: Prüfung im IntakeService, Aufruf im gemeinsamen Cache-/Speicherweg vor dem ersten Schreiben, Router bleibt HTTP. Kein Draft-Repository, kein Schema — das hält die Persistenzgrenze. Eine Fläche fehlte, siehe oben. |
+| Shell / CLI | ➖ nicht berührt |
+| Frontend | ➖ kein zu prüfender Produktdiff im Checkpoint |
+| Python | ➖ dito |
+| Persistenz | ✅ als Nicht-Ziel ausdrücklich benannt: kein Schema, kein Token-Speicher, kein Speichern-und-Zurücklöschen |
+| Qualität | ✅ fünf Akzeptanzzeilen mit Gegenfällen (gleicher MIC, `pair`, `isin_only`, fehlende Präferenz); Nachweis steht aus |
+| Dokumentation | ✅ die verworfene Tooltipdarstellung ist entfernt statt danebengestellt; T-64 #5 ist eindeutig hierher abgegeben |
+
+**DRY-Scope:** Die Abweichungsregel entsteht an **einer** Stelle im
+IntakeService und wird vom Cache-/Speicherweg gerufen; die vorhandene
+MIC-Formregel und `preferred_mics` bleiben die Quelle der Präferenz. Keine
+zweite Vergleichslogik im Dashboard geplant. Achte bei der Umsetzung darauf,
+dass der Dialog die Abweichung **anzeigt** und nicht selbst berechnet.
+
+### Danach
+
+`phase: codex_working`, `owner: codex`, `review_round` bleibt `0`. Trag die
+Vertragsartefakte und das erweiterte Budget zuerst ins Ticket ein, dann
+implementiere.
 
 ## Archiv · INBOX T-65 Runde 2 (verarbeitet)
 
