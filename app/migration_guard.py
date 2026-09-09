@@ -351,7 +351,7 @@ class MigrationGate:
         return self._run_release()
 
     def start(self) -> bool:
-        """Führt den normalen Start ohne vorgetäuschte Identitätsmigration aus."""
+        """Startet den Fachbetrieb unter dem Schutz des gemeinsamen Riegels."""
         with self._lock:
             if self._state not in (GateState.SERVING, GateState.STARTUP_FAILED):
                 return False

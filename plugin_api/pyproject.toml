@@ -4,11 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "stockinfo-plugin-api"
-# 0.2 mit T-27a: Alle fünf Rollen stehen, dazu Invarianten, Szenarioformat und
-# Doubles. Weiterhin 0.x mit Absicht — die Verträge haben noch kein einziges
-# fremdes Plugin getragen, und **niemand hat sie je über eine Registry
-# geladen**; das ist T-23. Eine 1.0 würde Stabilität behaupten, die sich noch
-# nicht bewähren konnte.
+# Paketversion; unabhängig von API_VERSION und data_version.
 version = "0.3.0"
 description = "Vertrag für StockInfo-Datenquellen-Plugins"
 license = "MIT"
