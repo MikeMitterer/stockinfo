@@ -149,7 +149,7 @@ Bloßes Verstreichen eines Takts belegt keinen Stillstand.
 
 `claude-observer` beziehungsweise `codex-observer` sollen nach erfolgreicher
 Zuordnungsprüfung die passende Beobachtung starten. Der jeweilige
-Startmechanismus wird in `AGENT-ACTIVATION.md` dokumentiert und praktisch
+Startmechanismus wird in `../.agents/AGENT-ACTIVATION.md` dokumentiert und praktisch
 geprüft. Die fachlichen Observer-Regeln stehen einmal im gemeinsamen Workflow.
 Es wird kein zweiter Coder-/Verifier-Ablauf kopiert.
 

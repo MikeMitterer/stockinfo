@@ -10,7 +10,7 @@ inaktive Archivquelle getrennt davon.
 **Von Mike am 2026-09-09 als erledigt bestätigt.** Oberfläche,
 Autor-Vertragstests und Beispiel sind umgesetzt und von Claude freigegeben.
 Der noch fehlende Plugin-Hinweis mit Autorenlink wird ausschließlich in
-[T-67](../T-67-boersenabweichung-anzeigen.md) umgesetzt und geprüft.
+[T-67](T-67-boersenabweichung-anzeigen.md) umgesetzt und geprüft.
 Die Seite lädt Katalog und Unterstützung aus REST, bietet Suche und Neuladen
 und wechselt bei schmalem Fenster in eine Liste. Autor-Harness, US-Beispiel
 und Anleitung sind nachgezogen. Das Beispiel verlangt Plugin-API 0.3;
@@ -36,7 +36,7 @@ Unter "Einbindung" verstehe ich einen Hinweis im oberen Teil der Seit, dass durc
 die Börsenplätze und die entsprechenden MICs erweitert werden können. Zu dem Hinweis gehört ein
 Link auf GH zu dem plugin-authors.md-File
 
-Die Umsetzung ist bereits in [T-67](../T-67-boersenabweichung-anzeigen.md)
+Die Umsetzung ist bereits in [T-67](T-67-boersenabweichung-anzeigen.md)
 beauftragt: unter der Einleitung der Börsenseite, auf Deutsch und Englisch,
 auch auf schmalen Bildschirmen. Das Linkziel ist
 [`docs/plugin-authors.md` auf GitHub](https://github.com/MikeMitterer/stockinfo/blob/master/docs/plugin-authors.md).

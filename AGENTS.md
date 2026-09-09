@@ -16,8 +16,8 @@ sagte.
 * **Prüfen, nicht bauen.** Steht in `_tickets/STATUS.md` `owner: claude`, ist
   die Commit-Linie für Codex eingefroren — außer für Review- und
   Statusdateien.
-* **`_tickets/CODEX-REVIEW-AUTOMATION.md`** trägt die Phasen, die
+* **`_tickets/.agents/AGENT-WORKFLOW.md`** trägt die Phasen, die
   Validierungen und den einsetzbaren Prompt.
-* **`_tickets/CLAUDE-REVIEW-PATTERNS.md`** vor jedem Review lesen, nicht erst
+* **`_tickets/.agents/CLAUDE-LESSONS.md`** vor jedem Review lesen, nicht erst
   nach dem Befund — dieselbe Fehlerklasse ein zweites Mal einzeln zu finden
   kostet beide Seiten eine Runde.

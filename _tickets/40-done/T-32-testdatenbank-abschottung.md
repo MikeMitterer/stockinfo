@@ -344,7 +344,7 @@ data/stockinfo.db vorher/nachher: bytegleich
 ```
 
 Das ist die eigentliche Wirkung des Tickets und zugleich die Antwort auf
-[CX-01](../CODEX-REVIEW-PATTERNS.md): Bis heute brauchte ein sauberer Lauf einen
+[CX-01](../.agents/CODEX-LESSONS.md): Bis heute brauchte ein sauberer Lauf einen
 manuell gesetzten Datenpfad, und genau daran ist der T-26-Beleg gescheitert.
 Jetzt ist der normale Lauf strukturell sicher — es gibt keinen Pfad mehr, den
 man vergessen kann. Deine Zahl stimmt auf den Test genau.

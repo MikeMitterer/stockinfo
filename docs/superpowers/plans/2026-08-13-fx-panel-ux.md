@@ -368,7 +368,7 @@ git commit -m "feat(dashboard): FxPanel Währungs-Dropdowns aus /exchanges (GBp�
 
 **Interfaces:**
 - Consumes: alle vorigen Tasks.
-- Produces: bestätigt „kein hartkodierter UI-Text" und schließt die Verify-Matrix in `_tickets/T-06-fx-panel-ux.md` (#1–#6).
+- Produces: bestätigt „kein hartkodierter UI-Text" und schließt die Verify-Matrix in `_tickets/40-done/T-06-fx-panel-ux.md` (#1–#6).
 
 - [ ] **Step 1: Hardcoded-Text-Audit**
 
@@ -393,7 +393,7 @@ Stack läuft (`make dev-up`). Im Browser `#/fx`:
 - Kurszeit **lesbar** (z.B. „13. Aug. 2026, 09:41"), **kein Umbruch**. → T-06 #3, #6
 - `stale`-Badge unverändert; Sprache DE/EN umschalten → Zahlen/Datum lokalisiert.
 
-Trage die AI-Spalte in `_tickets/T-06-fx-panel-ux.md` mit Evidenz nach (Legende ✅/⚠️/◑/➖). Human-Spalte bleibt frei.
+Trage die AI-Spalte in `_tickets/40-done/T-06-fx-panel-ux.md` mit Evidenz nach (Legende ✅/⚠️/◑/➖). Human-Spalte bleibt frei.
 
 - [ ] **Step 4: Commit (nur falls Audit Änderungen brachte)**
 

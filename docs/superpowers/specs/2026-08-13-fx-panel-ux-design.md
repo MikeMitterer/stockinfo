@@ -1,7 +1,7 @@
 # Design: Devisen-Panel-UX (T-06)
 
 **Datum:** 2026-08-13
-**Ticket:** `_tickets/T-06-fx-panel-ux.md`
+**Ticket:** `_tickets/40-done/T-06-fx-panel-ux.md`
 **Scope:** Frontend (Dashboard). Kein Backend-Change — `/fx` liefert bereits alle
 nötigen Daten (`rate`, `quote_time`, `source`, `stale`).
 
@@ -100,7 +100,7 @@ Kein Backend-Change. `useFx.ts` bleibt unverändert.
 
 ## Verifikation (Human/AI)
 
-Die Verify-Matrix in `_tickets/T-06-fx-panel-ux.md` (#1–#6) ist die
+Die Verify-Matrix in `_tickets/40-done/T-06-fx-panel-ux.md` (#1–#6) ist die
 Abnahme-Checkliste — nach Umsetzung im Browser (`#/fx`) durchgehen.
 
 ## Bewusst NICHT im Scope (YAGNI)

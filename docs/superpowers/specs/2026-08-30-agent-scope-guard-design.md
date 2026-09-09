@@ -109,6 +109,6 @@ sein Produktstand bereits vollständig übergeben ist. Das normale Review darf
 nur konkrete Restbefunde zurückgeben.
 
 Der Guard gilt verbindlich ab T-37 und wird in
-`_tickets/CODEX-REVIEW-AUTOMATION.md`, im Claude-Loop-Prompt und in der
+`_tickets/.agents/AGENT-WORKFLOW.md`, im Claude-Loop-Prompt und in der
 Ticketvorlage verankert. T-40 formuliert ihn später projektneutral; bis dahin
 bleibt diese Fassung bewusst StockInfo-spezifisch.

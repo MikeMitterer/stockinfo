@@ -2,7 +2,7 @@
 
 **Diese Sammlung hält belegte, wiederkehrende Probleme in Codex-Arbeit fest.**
 Sie dient dem Coder zur Vorbeugung und dem Verifier als gezielte Prüfhilfe.
-Die aktuelle Rollenverteilung steht ausschließlich in [STATUS.md](STATUS.md).
+Die aktuelle Rollenverteilung steht ausschließlich in [STATUS.md](../STATUS.md).
 
 ## Gemeinsame Vorgabe zum Rundenlimit
 
@@ -12,7 +12,7 @@ Kommentar-/Docstring-Reste über die Verifier-Selbstheilung erledigen; die
 Rundenzahl macht sie weder zum Blocker noch zu zulässigerweise vergessener
 Arbeit. Echte Blocker verhindern Freigabe, Folgearbeit und `solved/`.
 Keine automatische Übergabe an Mike allein wegen der Zahl. Der gemeinsame
-[Ablauf zum Rundenlimit](CODEX-REVIEW-AUTOMATION.md#rundenlimit-rest-offenlegen-und-abschließen)
+[Ablauf zum Rundenlimit](AGENT-WORKFLOW.md#rundenlimit-rest-offenlegen-und-abschließen)
 ist maßgeblich.
 
 Anlass sind die von Mike benannten, zunächst liegen gebliebenen
@@ -106,7 +106,7 @@ Wirkung fehlte. Die Korrektur erfolgte in `e4b793e`, bestätigt in `e5e0b20`.
 Bei der Review-Übernahme sind **Befund und Architekturfolgerung getrennt** zu
 prüfen; ein zutreffender Codeverweis beweist nicht die behauptete Schwere.
 Die gemeinsame Analyse und Gegenprüfung stehen einmalig in
-[R-01 der Review-Lehren](CLAUDE-REVIEW-PATTERNS.md#r-01--integrationsaufwand-verdrängt-die-fachliche-architekturentscheidung).
+[R-01 der Review-Lehren](CLAUDE-LESSONS.md#r-01--integrationsaufwand-verdrängt-die-fachliche-architekturentscheidung).
 Keine zweite unabhängige Episode wird behauptet.
 
 ## Wann ein Befund zum Muster wird

@@ -23,8 +23,8 @@
 ### Task 1: Encode the checkpoint state and decision contract
 
 **Files:**
-- Modify: `_tickets/CODEX-REVIEW-AUTOMATION.md`
-- Modify: `_tickets/CODEX-IN-CONTEXT-SCHEDULER.md`
+- Modify: `_tickets/.agents/AGENT-WORKFLOW.md`
+- Modify: `_tickets/.agents/CODEX-IN-CONTEXT-SCHEDULER.md`
 - Modify: `_tickets/STATUS.md`
 
 **Interfaces:**
@@ -71,8 +71,8 @@ Run:
 
 ```bash
 rg -n "scope_checkpoint|continue|reduce|split|800|25 Prozent" \
-  _tickets/CODEX-REVIEW-AUTOMATION.md \
-  _tickets/CODEX-IN-CONTEXT-SCHEDULER.md \
+  _tickets/.agents/AGENT-WORKFLOW.md \
+  _tickets/.agents/CODEX-IN-CONTEXT-SCHEDULER.md \
   _tickets/STATUS.md
 git diff --check
 ```
@@ -83,8 +83,8 @@ errors.
 - [ ] **Step 7: Commit**
 
 ```bash
-git add _tickets/CODEX-REVIEW-AUTOMATION.md \
-  _tickets/CODEX-IN-CONTEXT-SCHEDULER.md _tickets/STATUS.md
+git add _tickets/.agents/AGENT-WORKFLOW.md \
+  _tickets/.agents/CODEX-IN-CONTEXT-SCHEDULER.md _tickets/STATUS.md
 git commit -m "docs(process): Scope-Checkpoint verbindlich machen"
 ```
 
@@ -158,8 +158,8 @@ Replace the provisional status with `von Mike bestätigt; im StockInfo-Workflow 
 - [ ] **Step 2: Run the complete static verification**
 
 ```bash
-rg -n "scope_checkpoint" _tickets/CODEX-REVIEW-AUTOMATION.md \
-  _tickets/CODEX-IN-CONTEXT-SCHEDULER.md _tickets/STATUS.md
+rg -n "scope_checkpoint" _tickets/.agents/AGENT-WORKFLOW.md \
+  _tickets/.agents/CODEX-IN-CONTEXT-SCHEDULER.md _tickets/STATUS.md
 rg -n "Scope-Vertrag" _tickets/README.md
 git diff --check
 ```

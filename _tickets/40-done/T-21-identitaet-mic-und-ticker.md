@@ -392,7 +392,7 @@ auf. Keine Produktänderung und keine neue Freigabe der damals ungeprüften 4A-F
 
 ### Prüfauftrag für #2g · Entscheidung vom 2026-09-07
 
-Mit der Zurückstellung von [T-34](postponed/T-34-zusage-gegen-laufzeit.md)
+Mit der Zurückstellung von [T-34](../80-iced/T-34-zusage-gegen-laufzeit.md)
 bleibt die gezielte Fehlertext-Prüfung beim offenen Fehlertext-Punkt #2g.
 Bei dessen Korrektur sind bekannte und unbekannte Fehlerkennungen in DE/EN,
 kaputtes JSON, leere Antworten, scheiterndes Lesen des Fehlerkörpers und
@@ -508,14 +508,14 @@ muss, ist kein Plugin).
 > Der Entwurf war über das Ticket hinausgewachsen. Zwei Themen liegen jetzt als
 > eigene Tickets im Board:
 >
-> * [`T-29`](rejected/T-29-alias-lebenszyklus-und-providerwechsel.md) —
+> * [`T-29`](../90-rejected/T-29-alias-lebenszyklus-und-providerwechsel.md) —
 >   **Provider-Alias: Eigentümer, Lebenszyklus, Wechsel.** Wer `symbol` besitzt,
 >   was beim Providerwechsel damit geschieht, Backup-Pflicht und
 >   Best-Effort-Restore. **Revidiert `T-25:94-110`.**
 >   *Nachtrag 2026-09-07: verworfen. Der Alias ist seit T-23/T-31 kein
 >   Abrufschlüssel mehr, die Bestandsschutzregel steht in T-30, den
 >   JSON-Export/Import hat Mike gestrichen.*
-> * [`T-30`](solved/T-30-plugin-boersenauskunft.md) — **plugin-deklarierte
+> * [`T-30`](T-30-plugin-boersenauskunft.md) — **plugin-deklarierte
 >   Börsenauskunft.** Neuer `plugin_api`-Typ samt Merge-, Vorrang-, Kollisions-,
 >   Provenienz- und Invalidierungsregeln.
 >
@@ -926,7 +926,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     nicht, zeigt die Liste sie **roh** an, statt die Zeile ohne Begründung zu
     lassen.
 [^aa]: `tests/test_migration_apply.py::test_nach_dem_umzug_ist_die_halbe_identitaet_unmoeglich`
-    und `./_tickets/T-21-smoke.sh` `#2e`. Beide prüfen nicht nur, dass gerade
+    und `./_tickets/40-done/T-21-smoke.sh` `#2e`. Beide prüfen nicht nur, dass gerade
     keine halbe Zeile **da** ist, sondern dass keine mehr **entstehen kann**:
     Der `INSERT` ohne Identität muss scheitern. Eine Zählung
     `COUNT(*) WHERE ticker IS NULL` hätte die schwächere Aussage getroffen.
@@ -995,7 +995,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     `test_exchanges.py` — mutationsgeprüft, samt der Gegenprobe, dass ein
     vierstelliger Alias **derselben** Börse kein Konflikt ist.
 
-    Live: `./_tickets/T-21c-smoke.sh --run`, **13/13** mit Netz. Der Smoke
+    Live: `./_tickets/40-done/T-21c-smoke.sh --run`, **13/13** mit Netz. Der Smoke
     zeigte dabei eine falsche Erwartung von mir: Yahoo liefert für `AAPL` eine
     ISIN, und `one_active_listing_per_isin` lässt kein zweites Listing zu — die
     Zeile **wandert** auf die genannte Börse. Ohne ISIN stehen beide
@@ -1042,7 +1042,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     aufgenommen, `ticker` und `mic` sind Pflichtfelder von `quote` und
     `instrument`, `listing_id` von `instrument`. Der Snapshot ist neu erzeugt
     (`UPDATE_CORE_SNAPSHOT=1`), `test_der_core_entspricht_dem_schnappschuss`
-    grün, und `./_tickets/T-21c-smoke.sh` prüft zusätzlich, dass `/fields` zur
+    grün, und `./_tickets/40-done/T-21c-smoke.sh` prüft zusätzlich, dass `/fields` zur
     Laufzeit dieselbe Version nennt.
 
     **`listing_id` steht bewusst nicht auf `quote`** — sie entsteht beim
@@ -1103,7 +1103,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     eigenes Folgeticket — der `409` sagt, was der Fall ist, er löst ihn nicht.
     Ob `#2i` und `#2j2` damit von `◑` auf `✅` steigen, entscheidet Codex: Die
     Einschränkung stammt aus seinem Review, und sie sich selbst aufzuheben
-    wäre genau das selbstbestätigende Orakel aus `CLAUDE-REVIEW-PATTERNS.md`.
+    wäre genau das selbstbestätigende Orakel aus `../.agents/CLAUDE-LESSONS.md`.
 
     **Codex Runde 44:** Der neue `identity_conflict`-Pfad ist geschlossen;
     T-21 bleibt dennoch offen, weil die bereits in T-24 zugesagte allgemeine
@@ -1190,12 +1190,12 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
     drei Endpunktwege, die Rumpfprüfung und der Fixture-Wächter. Grün bleiben
     genau die zwei Gegenrichtungen, und das ist die Aussage: Sie prüfen den
     Normalfall, der von der Regel unberührt bleiben muss.
-[^ab]: `./_tickets/T-21-smoke.sh --run` gegen eine Sicherung des **echten**
+[^ab]: `./_tickets/40-done/T-21-smoke.sh --run` gegen eine Sicherung des **echten**
     Bestands: `GOLD.SG` migriert zu `GOLD/XSTU` und behält seine **257**
     Tagesschlusskurse, `VGWL.DE` seine 2234. Abgelehnt wird allein `VTI` mit
     einem Kurspunkt. Genau die Bilanz aus dem Entwurf; das Original war
     hinterher byte-identisch.
-[^h]: `./_tickets/T-21b-smoke.sh --run` — **sechs Checks live gegen das echte
+[^h]: `./_tickets/40-done/T-21b-smoke.sh --run` — **sechs Checks live gegen das echte
     Netz**, auf frischen temporären Datenbanken, über den HTTP-Weg. Zwei
     Läufe, weil die Kaskade zwei Wege hat: `VGWL.DE → VGWL/XETR` über die
     eigene Börsentabelle (`#5a`) mit der Rückrechnung `VGWL + Suffix(XETR) =
@@ -1281,7 +1281,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
       Börse aufnehmen will, trägt sie in die Tabelle ein, dann greift wieder
       der Suffix-Weg.
 
-[^g]: `./_tickets/T-21-smoke.sh --run` gegen eine **Sicherung** von
+[^g]: `./_tickets/40-done/T-21-smoke.sh --run` gegen eine **Sicherung** von
     `data/stockinfo.db` (sechs gewachsene Papiere, 48 Kurspunkte) — das
     Original wird nur gelesen. Die Sicherung entsteht über die
     SQLite-Backup-API, nicht per `cp`: Die App läuft im WAL-Modus, und eine

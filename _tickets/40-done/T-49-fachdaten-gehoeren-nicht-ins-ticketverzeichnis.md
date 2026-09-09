@@ -137,7 +137,7 @@ Legende: ✅ live bestätigt · ➖ nicht geprüft.
 samt zwei Smoke-Scripts nach `solved/` verschoben:
 
 ```
-git mv _tickets/T-37-*.md _tickets/T-45-*.md _tickets/T-22-smoke.sh _tickets/T-35-smoke.sh _tickets/solved/
+git mv _tickets/T-37-*.md _tickets/T-45-*.md _tickets/40-done/T-22-smoke.sh _tickets/40-done/T-35-smoke.sh _tickets/solved/
 → 964 passed, 29 skipped        (vorher: 13 failed)
 → T-22-Smoke aus solved/: 6/6
 ```

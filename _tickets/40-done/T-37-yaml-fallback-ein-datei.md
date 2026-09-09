@@ -38,7 +38,7 @@ zweite Prüfstrecke zu erzeugen.
 - **Produktflächen/-dateien:** neu `plugin_api/examples/yaml_file.py`;
   entfernt `canada_file.py`, `metadata_file.py`, `prices_file.py`;
   `plugin_api/pyproject.toml` (Entry-Point und PyYAML als Abhängigkeit);
-  `_tickets/T-35-smoke.sh` (Profilname und Vorbereitung).
+  `_tickets/40-done/T-35-smoke.sh` (Profilname und Vorbereitung).
 - **Tests/Dokumentation:** neu `plugin_api/tests/test_yaml_file.py`; entfernt
   die drei CSV-Testdateien und die vier CSV-Fixtures;
   `tests/test_plugin_vertical.py` (benutzt heute `canada_file`);
@@ -67,7 +67,7 @@ lieferbares Teilstück oder eine neue Produktentscheidung ist nicht entstanden.
 
 Das Budget wird einmalig auf **8 Produktdateien, 13 Test-/Dokudateien und
 2.700 gesamte Diff-Zeilen** erweitert. Offen und erlaubt sind ausschließlich
-`_tickets/T-35-smoke.sh`, `docs/plugins.md` und
+`_tickets/40-done/T-35-smoke.sh`, `docs/plugins.md` und
 `docs/sources.yaml.example`. Keine weitere Produktfläche. Eine zweite
 Überschreitung führt gemäß Regelwerk grundsätzlich zu `reduce` oder `split`.
 
@@ -201,8 +201,8 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
 | **1** | `T-37-single-file-sample.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | ✅ [^review-r6] | |
-| **2** | `PROFILE=yaml ./_tickets/T-35-smoke.sh --run` | der gemeinsame Smoke ist grün; `GET /sources` zeigt `yaml-file` in allen fünf Rollen und genau einen Pfad auf die Fachdaten-Datei | ✅ [^r1] | |
-| **3** | `PROFILE=online ./_tickets/T-35-smoke.sh --run` | derselbe Smoke ist grün; normale Online-Quellen stehen zuerst und dasselbe `yaml-file` jeweils zuletzt | ⊘ [^split] | |
+| **2** | `PROFILE=yaml ./_tickets/40-done/T-35-smoke.sh --run` | der gemeinsame Smoke ist grün; `GET /sources` zeigt `yaml-file` in allen fünf Rollen und genau einen Pfad auf die Fachdaten-Datei | ✅ [^r1] | |
+| **3** | `PROFILE=online ./_tickets/40-done/T-35-smoke.sh --run` | derselbe Smoke ist grün; normale Online-Quellen stehen zuerst und dasselbe `yaml-file` jeweils zuletzt | ⊘ [^split] | |
 | **4** | Überschneidungs-Test im Online-Profil | liefert eine Online-Quelle einen gültigen Wert, gewinnt sie; YAML überschreibt ihn nicht. Nur bei fehlendem Ergebnis wird YAML gefragt | ⊘ [^split] | |
 | **5** | Kurs-/History-Persistenz | Online- und YAML-Ergebnisse landen in der Datenbank. Manuelle `history` wird nur für Assets ohne abfragbare History verwendet; fehlt `price`, darf der jüngste Schlusskurs als aktueller Fallback dienen | ✅ [^r1] | |
 | **6** | Browser, `PROFILE=yaml` | `BTC-EUR` (`pair`), eine Anleihe (`isin_only`) und ein nicht börsengehandelter Fonds (`fund`) lassen sich anlegen; Liste, Drilldown, Preis und manueller History-Fallback stimmen; Konsole und fehlgeschlagene Requests sind sauber | ⚠️ [^browser] | |
@@ -405,11 +405,11 @@ Rollen-Suiten des Contract-Kits.
 
 ## Ein Smoke, zwei Profile
 
-`_tickets/T-35-smoke.sh` bekommt zwei Profile, aber nur eine Prüfimplementierung:
+`_tickets/40-done/T-35-smoke.sh` bekommt zwei Profile, aber nur eine Prüfimplementierung:
 
 ```bash
-PROFILE=online ./_tickets/T-35-smoke.sh --run
-PROFILE=yaml   ./_tickets/T-35-smoke.sh --run
+PROFILE=online ./_tickets/40-done/T-35-smoke.sh --run
+PROFILE=yaml   ./_tickets/40-done/T-35-smoke.sh --run
 ```
 
 Das Profil darf nur Testdaten und `sources.yaml` vorbereiten. Die fachlichen

@@ -508,7 +508,7 @@ Berechtigt. Branch und Produktedits für T-27a waren sichtbar, während
 `STATUS.md` noch `approved`/T-22 meldete. Ein Race gab es nicht, aber wer nur
 die Datei liest, sieht ein abgeschlossenes Ticket neben fremden Änderungen an
 einem anderen — von einem Kommunikationsabbruch nicht zu unterscheiden. Die
-Regel steht jetzt im Riegel-Abschnitt von `CODEX-REVIEW-AUTOMATION.md`: Der
+Regel steht jetzt im Riegel-Abschnitt von `../.agents/AGENT-WORKFLOW.md`: Der
 Kettenwechsel ist ein eigener, atomarer Commit **vor** dem ersten Produktedit.
 
 ### Verifikation

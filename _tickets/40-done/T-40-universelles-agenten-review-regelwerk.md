@@ -59,7 +59,7 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 - keine Änderung am StockInfo-Produkt, Plugin-Vertrag oder Dashboard;
 - keine allgemeine Coding-Style-Sammlung — dafür existieren eigene Skills;
 - keine autonome Agentenplattform und keine neue Scheduler-Implementierung;
-- keine Vollkopie von `_tickets/CODEX-REVIEW-AUTOMATION.md` in jedes Projekt.
+- keine Vollkopie von `_tickets/.agents/AGENT-WORKFLOW.md` in jedes Projekt.
 
 ---
 

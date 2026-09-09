@@ -34,10 +34,10 @@ Vollständige Konventionen samt Namensschema je Sprache: Skill `code-standards`.
   wer am Zug ist: **Für den, der dort nicht steht, ist die Commit-Linie
   eingefroren** — außer für Review- und Statusdateien. Claude wartet also bei
   `owner: codex`, Codex bei `owner: claude`.
-- `_tickets/CLAUDE-REVIEW-PATTERNS.md` — Claudes wiederkehrende Fehlermuster,
+- `_tickets/.agents/CLAUDE-LESSONS.md` — Claudes wiederkehrende Fehlermuster,
   gepflegt von beiden Seiten. Claude liest sie vor einer Übergabe, Codex vor
   einem Review — nicht erst nach dem Befund.
-- `_tickets/CODEX-REVIEW-AUTOMATION.md` — Phasen, Validierungen und der
+- `_tickets/.agents/AGENT-WORKFLOW.md` — Phasen, Validierungen und der
   Ablauf einer Übergabe.
 
 > **Diese Datei gilt für beide Agenten.** `AGENTS.md` daneben ist Codex'

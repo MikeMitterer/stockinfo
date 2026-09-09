@@ -134,7 +134,7 @@ bloß den Normalfall.
 ```
 .venv/bin/ruff check app tests plugin_api/src plugin_api/tests plugin_api/examples   → All checks passed
 make test        → 944 Backend + 295 plugin_api + 269 Frontend, alle grün
-PROFILE=yaml ./_tickets/T-35-smoke.sh --run                                          → 20/20
+PROFILE=yaml ./_tickets/40-done/T-35-smoke.sh --run                                          → 20/20
 git diff --check → sauber
 ```
 

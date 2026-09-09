@@ -804,7 +804,7 @@ Zwei Fehler, beide von mir, beide erst durch fremde Prüfung gefunden:
 über drei Entwurfsrunden ein Aufzeichnungsformat, zwei Signaturen, ein Ledger,
 eine Socket-Sperre und ein Release-Befehl. Aufgehoben durch Mikes
 Produktentscheidung; das Muster steht als `P-09` in
-`CLAUDE-REVIEW-PATTERNS.md`, der Riegel in `CODEX-REVIEW-AUTOMATION.md`.
+`../.agents/CLAUDE-LESSONS.md`, der Riegel in `../.agents/AGENT-WORKFLOW.md`.
 
 **Das erste Plugin baute die Fachkette nach.** Es umging damit eine
 Entscheidung, die seit T-21 im Kern-Resolver steht:

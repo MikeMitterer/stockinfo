@@ -10,7 +10,7 @@ Mike hat T-26 am 2026-09-07 abgeschlossen. Die UI-Verifikation läuft in T-56.
 Die technische Prüfung ist abgeschlossen. Die UI-Verifikation gehört zu T-56/F; bestehende Antworten bleiben erhalten.
 Dein Auftrag vom 2026-09-07 gilt: **Codex implementiert einschließlich REST,
 UI und erstem UI-Test; Claude verifiziert anschließend.** Die Rückmeldungen
-zur Oberfläche bleiben unverändert in [T-56](../T-56-was-mike-im-ui-pruefen-soll.md).
+zur Oberfläche bleiben unverändert in [T-56](T-56-was-mike-im-ui-pruefen-soll.md).
 T-62 zum Anzeigenamen bleibt offen.
 
 ## Umsetzung und technische Nachweise

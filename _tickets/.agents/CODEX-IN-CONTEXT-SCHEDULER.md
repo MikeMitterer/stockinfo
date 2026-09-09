@@ -2,7 +2,7 @@
 
 Dies ist ausschließlich der kurze Laufzeitvertrag für den internen Scheduler
 des bestehenden Codex-Arbeits-Chats. Das fachliche Review-Verfahren steht in
-`CODEX-REVIEW-AUTOMATION.md`.
+`AGENT-WORKFLOW.md`.
 
 ## Vertrag
 
@@ -58,14 +58,14 @@ Ein Rollenwechsel startet keinen Scheduler automatisch.
   `priority_chain` gelten. Ein neues Tupel aus `phase`, `ticket`,
   `handoff_commit` und `review_round` weckt denselben Chat mit
   `scope_handoff`. Codex führt dann ausschließlich den Scope-Checkpoint aus
-  `CODEX-REVIEW-AUTOMATION.md` aus — kein vollständiges Review.
+  `AGENT-WORKFLOW.md` aus — kein vollständiges Review.
 - Ist `phase` `ready_for_codex`, müssen vor einem Review **alle** folgenden
   Bedingungen gelten: `owner` ist `codex`, `handoff_commit` ist gesetzt,
   `ticket` entspricht exakt `priority_ticket`, und `priority_ticket` kommt in
   `priority_chain` vor. Erst wenn sich zusätzlich das Tupel aus `ticket`,
   `handoff_commit` und `review_round` vom letzten Review unterscheidet, wird
   derselbe Chat mit einem eindeutigen `review_handoff` per `notify(...)`
-  geweckt und führt `CODEX-REVIEW-AUTOMATION.md` aus.
+  geweckt und führt `AGENT-WORKFLOW.md` aus.
 - Verletzt ein `ready_for_codex`-Zustand diesen Prioritätsriegel, findet
   **kein Review** statt. Die Zelle sendet einmalig `portfolio_mismatch` mit
   Ticket, erwartetem `priority_ticket` und Kette. Derselbe unveränderte
@@ -111,7 +111,7 @@ Ein Rollenwechsel startet keinen Scheduler automatisch.
   vollständiges Review startet weiterhin nur bei `ready_for_codex`.
 - `max_review_rounds` allein stoppt den Scheduler nicht und wechselt keinen
   Owner. Bei tatsächlicher Arbeit gilt die gemeinsame
-  [Rundenlimit-Regel](CODEX-REVIEW-AUTOMATION.md#rundenlimit-rest-offenlegen-und-abschließen):
+  [Rundenlimit-Regel](AGENT-WORKFLOW.md#rundenlimit-rest-offenlegen-und-abschließen):
   Rest und Ursache im Ticket offenlegen, Selbstheilung nutzen, Blocker vor
   Folgearbeit beheben und gezielt nachprüfen. Der Timer entscheidet darüber
   nicht selbst und setzt keine Runde zurück.
@@ -133,5 +133,5 @@ genügt der Auftrag:
 
 ```text
 Starte den In-Context-Scheduler aus
-_tickets/CODEX-IN-CONTEXT-SCHEDULER.md.
+_tickets/.agents/CODEX-IN-CONTEXT-SCHEDULER.md.
 ```

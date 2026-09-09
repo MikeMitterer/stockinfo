@@ -57,7 +57,7 @@ Bestehende Abdeckungs- und Identitätsprüfungen bleiben im selben Pfad.
   über Plugins implementiert werden können; Link auf docs/plugin-authors.md.
 
 Der Plugin-Hinweis übernimmt Prüfpunkt #5 aus
-[T-64](solved/T-64-boersen-ui-und-autorennachweise.md). Mikes Ergänzung dort meint
+[T-64](T-64-boersen-ui-und-autorennachweise.md). Mikes Ergänzung dort meint
 Handelsplätze und MICs sowie den Link zur Anleitung auf GitHub. Mike hat T-64
 am 2026-09-09 geschlossen und diesen Rest ausdrücklich hierher abgegeben.
 Umsetzung und Nachweis stehen ausschließlich bei `extras`; keine Doppelprüfung.

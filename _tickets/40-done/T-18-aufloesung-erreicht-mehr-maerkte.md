@@ -45,7 +45,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 7 | `STRICT_EXCHANGE=true` | **keine** Kaskade — diese Börse oder 404 | ✅ [^g] | |
 
 ```bash
-./_tickets/T-18-smoke.sh --run    # alle Zeilen, eigener Server, temporäre DB
+./_tickets/40-done/T-18-smoke.sh --run    # alle Zeilen, eigener Server, temporäre DB
 ```
 
 Von Hand gegen einen laufenden Stack (`make dev-up`, `DEFAULT_EXCHANGE=XETR`):
@@ -57,7 +57,7 @@ curl -s "http://localhost:8000/quote/IE00B4L5Y983" | python3 -m json.tool   # #3
 curl -s "http://localhost:8000/quote?symbol=XIC.TO" | python3 -m json.tool  # #5
 ```
 
-[^a]: `./_tickets/T-18-smoke.sh --run` → `#1a .symbol = RY.TO`,
+[^a]: `./_tickets/40-done/T-18-smoke.sh --run` → `#1a .symbol = RY.TO`,
     `#1b .currency = CAD`. Code: `HOME_EXCHANGES` und die Kaskade in
     `OpenFigiResolver.resolve_isin`. Unit-Test
     `test_kaskade_weicht_auf_die_heimatboerse_aus` (zuerst rot) prüft

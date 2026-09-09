@@ -94,7 +94,7 @@ sein Rückstand.
 
 1. **Kleine lokale Befunde bleiben im Prüfticket.** Sie werden dort korrigiert
    und gezielt nachgemessen; dafür entsteht kein eigenes Ticket. Nur Befunde
-   außerhalb der Kleinbefund-Grenzen aus `CODEX-REVIEW-AUTOMATION.md` tragen
+   außerhalb der Kleinbefund-Grenzen aus `../.agents/AGENT-WORKFLOW.md` tragen
    ihren Rückstand in einem eigenen Ticket oder Scope-Checkpoint.
 2. **Mikes Lauf findet nie auf einem Stand mit offenen Befunden statt.**
    Findet mein Vorlauf etwas, geht das Ticket **nicht** weiter an Mike,
@@ -223,7 +223,7 @@ sie entscheiden kann.
 | # | Where | Look for | Wer |
 |---|---|---|---|
 | **1** | eine berührte Verify-Matrix | Zeilen tragen genau eine Spalte; die Art ist erkennbar | KI |
-| **2** | `CODEX-REVIEW-AUTOMATION.md` | die drei Regeln stehen dort, wo eine Übergabe sie liest | KI |
+| **2** | `../.agents/AGENT-WORKFLOW.md` | die drei Regeln stehen dort, wo eine Übergabe sie liest | KI |
 | **3** | `make tickets` | nennt die offenen Tickets mit dem Grund; die Legende verfälscht die Zählung nicht | KI |
 | **4** | Gegenprobe zu `#3` | ein Ticket, dem man eine Marke wegnimmt, taucht auf; eines mit voller Matrix nicht | KI |
 | **5** | `_tickets/` | nach dem Räumen liegen dort nur noch Tickets, die etwas verlangen | KI |

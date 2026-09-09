@@ -6,7 +6,7 @@
 
 > **Verworfen am 2026-09-07, Entscheidung Mike.** Der Anlass dieses Tickets ist
 > durch andere Arbeit behoben, der eine verbliebene Rest ist nach
-> [T-30](../T-30-plugin-boersenauskunft.md) übernommen, und den letzten
+> [T-30](../40-done/T-30-plugin-boersenauskunft.md) übernommen, und den letzten
 > eigenständigen Teil — den portablen JSON-Export/Import — hat Mike
 > ausdrücklich gestrichen: *„JSON-Export, Import ist zu aufwendig — wird nicht
 > weiter verfolgt."*

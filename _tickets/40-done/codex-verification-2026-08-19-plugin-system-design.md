@@ -1731,7 +1731,7 @@ darf weder falsche MICs erfinden noch den gesamten alten Stand still löschen.
 
 ## Konkrete Inkonsistenzen in T-21
 
-Unabhängig von der Grundentscheidung ist `_tickets/T-21-identitaet-mic-und-ticker.md`
+Unabhängig von der Grundentscheidung ist `_tickets/40-done/T-21-identitaet-mic-und-ticker.md`
 noch nicht mit Runde 3 synchron:
 
 1. Verify #2 erwartet weiterhin `VTI → VTI / US`. `US` ist nach der getroffenen
@@ -3809,7 +3809,7 @@ Dokuments ergänzen.
 - Design: `docs/superpowers/specs/2026-08-19-plugin-system-design.md`
 - Review-/Kommunikationskanal: dieses Dokument
 - zentrale StockInfo-Tickets zunächst insbesondere:
-  `_tickets/solved/T-24-rest-core-vertrag.md` und
+  `_tickets/40-done/T-24-rest-core-vertrag.md` und
   `_tickets/T-25-quellenprofil-wechseln.md`
 - StockPortfolio-Gegenstück:
   `/Volumes/DevLocal/DevWeb/Production/StockPortfolio/_tickets/T-35-stockinfo-generation-und-waehrung.md`
@@ -3839,7 +3839,7 @@ Wesentliche, nicht erneut zu öffnende Entscheidungen:
 StockInfo enthält genau eine beabsichtigte uncommittete Änderung:
 
 ```
-M _tickets/codex-verification-2026-08-19-plugin-system-design.md
+M _tickets/40-done/codex-verification-2026-08-19-plugin-system-design.md
 ```
 
 Sie enthält die Abnahme von Runde 12, die Arbeitsvereinbarung und diesen
@@ -3986,6 +3986,6 @@ Dokument angehängt wird. Die initiale Umstellungsnachricht liegt bereits in
 
 **Stand:** 2026-08-21. Die operative Rückgabe steht in `_tickets/STATUS.md`.
 Das dauerhaft gepflegte, compaction-feste Musterregister ist ab jetzt
-`_tickets/CLAUDE-REVIEW-PATTERNS.md`; dort stehen Erkennungsregeln, Prüffragen
+`_tickets/.agents/CLAUDE-LESSONS.md`; dort stehen Erkennungsregeln, Prüffragen
 und Belege als Ausgangsbasis für den geplanten Review-Skill. Dieses Dokument
 enthält bewusst keine zweite Kopie.

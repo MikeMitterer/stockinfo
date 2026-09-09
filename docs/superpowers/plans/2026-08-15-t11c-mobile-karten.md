@@ -533,7 +533,7 @@ git commit -m "feat(dashboard): Assets unter md als Kartenliste + Sortierleiste 
 - Aufklappen zeigt die restlichen Kennzahlen; Antippen der Karte öffnet den Graph im Dock.
 - ISIN nachtragen funktioniert in beiden Darstellungen.
 - Sortierung in der Kartenansicht ändert die Reihenfolge und die Richtung.
-- Danach Verify-Matrix in `_tickets/T-11c-assets-tabelle-mobil-karten.md` füllen.
+- Danach Verify-Matrix in `_tickets/40-done/T-11c-assets-tabelle-mobil-karten.md` füllen.
 
 ## Self-Review
 

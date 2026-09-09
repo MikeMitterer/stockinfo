@@ -1,7 +1,7 @@
 # Design: Responsive Header / Mobile-Navigation (T-05)
 
 **Datum:** 2026-08-13
-**Ticket:** `_tickets/T-05-responsive-header-mobile.md`
+**Ticket:** `_tickets/40-done/T-05-responsive-header-mobile.md`
 **Scope:** Frontend (Dashboard). Kein Backend-Change.
 
 ## Problem

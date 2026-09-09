@@ -2,7 +2,7 @@
  * Der Dev-Proxy kennt jeden Pfad, den die App anfordert — `#2b6i`.
  *
  * **Der Fehler ist schon einmal passiert** und liegt als
- * `_tickets/solved/T-04-vite-proxy-fehlende-praefixe.md` im Board: Fehlt ein
+ * `_tickets/40-done/T-04-vite-proxy-fehlende-praefixe.md` im Board: Fehlt ein
  * Präfix, liefert der Dev-Server die `index.html` statt der API-Antwort. Die
  * App bekommt HTML, wo sie JSON erwartet, und der Fehler sieht aus wie ein
  * kaputtes Backend — im Produktionsbau, wo alles derselbe Server ausliefert,

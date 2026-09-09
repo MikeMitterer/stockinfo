@@ -193,7 +193,7 @@ alten Sprache bleiben. Du hast das als **kleinen Bug, nicht als Blocker**
 eingestuft.
 
 Die Nacharbeit liegt in
-[T-61](../postponed/T-61-offener-toast-behaelt-alte-inhaltssprache.md); die Abnahme von T-56
+[T-61](../80-iced/T-61-offener-toast-behaelt-alte-inhaltssprache.md); die Abnahme von T-56
 und der MVP sind dadurch nicht blockiert.
 
 ---
@@ -246,7 +246,7 @@ Port und eigener Fachdatei unter ihrem `/data`:
 [^zeilen]: **`BTC-EUR` allein konnte die Zeilenzahl nicht zeigen** — es trägt
     im YAML einen Preis, aber keine Tagesreihe; die Stufe meldete `nichts`.
     Die Zeile hätte damit grün ausgesehen, ohne ihre zweite Hälfte je geprüft
-    zu haben — genau das Muster, das in `CLAUDE-REVIEW-PATTERNS.md` steht.
+    zu haben — genau das Muster, das in `../.agents/CLAUDE-LESSONS.md` steht.
     Belegt ist sie an der Anleihe `DE0001102531`, die eine History hat:
     `Tagesreihe · yaml-file · 0.00s · geliefert · 3 Zeilen`. Der `pair`-Fall
     bleibt über `BTC-EUR` belegt; **kein neuer Fall, ein zweites Papier im
@@ -291,7 +291,7 @@ den man im Zweifel wegdiskutiert, ist keiner.
 ### Was passiert, wenn mein Vorlauf etwas findet
 
 Ein kleiner, eindeutig lokaler Befund wird nach der Regel in
-`CODEX-REVIEW-AUTOMATION.md` direkt im laufenden Ticket korrigiert. Danach
+`../.agents/AGENT-WORKFLOW.md` direkt im laufenden Ticket korrigiert. Danach
 läuft der betroffene Handgriff erneut; eine Codex-Zwischenfreigabe ist dafür
 nicht nötig. Erst wenn der Befund eine neue Entscheidung, einen Vertrag, ein
 Schema, Konfiguration oder eine weitere Produktschicht berührt beziehungsweise
@@ -466,7 +466,7 @@ genau wie oben festgelegt.
 
 ### Der Aufbau
 
-`_tickets/T-56-vorlauf.sh` baut beide Instanzen. Jede bekommt ein eigenes
+`_tickets/40-done/T-56-vorlauf.sh` baut beide Instanzen. Jede bekommt ein eigenes
 `data/` mit eigener Datenbank, eigenem Port, eigener Fachdatei und dem
 Beispiel-Plugin aus `plugin_api/examples/yaml_file.py`:
 

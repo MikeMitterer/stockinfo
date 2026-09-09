@@ -1,7 +1,7 @@
 # Design: Navigation entrümpeln + Einstellungsseite (T-11a)
 
 **Datum:** 2026-08-15
-**Ticket:** `_tickets/T-11-ux-standards-angleichen.md` (Epic) → Teil-Ticket `T-11a`
+**Ticket:** `_tickets/40-done/T-11-ux-standards-angleichen.md` (Epic) → Teil-Ticket `T-11a`
 **Scope:** Frontend (Dashboard). Kein Backend-Change.
 **Bezug:** Skill `ux-standards` (Navigation, Einstellungen), Gap-Analyse Punkte 1+2.
 

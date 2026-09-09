@@ -282,7 +282,7 @@ git commit -m "feat(dashboard): Header-Navigation mobil als Hamburger-Drawer"
 
 **Interfaces:**
 - Consumes: Task 1.
-- Produces: bestätigt die Verify-Matrix in `_tickets/T-05-responsive-header-mobile.md` (#1–#4); ggf. finaler `$header-bp`-Wert.
+- Produces: bestätigt die Verify-Matrix in `_tickets/40-done/T-05-responsive-header-mobile.md` (#1–#4); ggf. finaler `$header-bp`-Wert.
 
 - [ ] **Step 1: Desktop-Regression prüfen**
 
@@ -300,7 +300,7 @@ Fensterbreite langsam von ~1200px auf ~360px verkleinern. Look for: An **keiner*
 
 - [ ] **Step 4: Matrix nachtragen + ggf. Commit**
 
-AI-Spalte in `_tickets/T-05-responsive-header-mobile.md` (#1–#4) mit Evidenz füllen (Legende ✅/⚠️/◑/➖), Human-Spalte frei lassen.
+AI-Spalte in `_tickets/40-done/T-05-responsive-header-mobile.md` (#1–#4) mit Evidenz füllen (Legende ✅/⚠️/◑/➖), Human-Spalte frei lassen.
 Falls `$header-bp` angepasst wurde:
 ```bash
 git add dashboard/src/styles/_variables.scss

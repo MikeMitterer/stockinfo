@@ -4,7 +4,7 @@ Versioniertes, compaction-festes Gedächtnis für wiederkehrende Fehler in
 Claudes Implementierungen und Übergaben. Der Verifier liest diese Datei
 vollständig, wenn Claude den Prüfgegenstand erstellt hat; Claude liest sie
 vor eigenen Übergaben. Bei gemischter Autorenschaft beide Sammlungen lesen.
-Für Codex-Arbeit gilt [CODEX-REVIEW-PATTERNS.md](CODEX-REVIEW-PATTERNS.md).
+Für Codex-Arbeit gilt [CODEX-REVIEW-PATTERNS.md](CODEX-LESSONS.md).
 Die Rollenverteilung steht in `STATUS.md`; der Dateiname bezeichnet den
 untersuchten Agenten. Die Sammlung ist Ausgangsbasis für einen Review-Skill.
 
@@ -16,7 +16,7 @@ duplizieren.
 
 **Für jedes Review gilt Mikes Projektvorgabe:** StockInfo ist Entwicklungsstand,
 keine angenommene große Nutzerbasis. Die gemeinsame Regel steht in
-[R-02 · Entwicklungsstand](CODEX-REVIEW-PATTERNS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
+[R-02 · Entwicklungsstand](CODEX-LESSONS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
 Migrationen, Kompatibilität und Hinweise brauchen einen konkreten Bedarf.
 
 ## Gemeinsame Vorgabe zum Rundenlimit
@@ -27,7 +27,7 @@ Kommentar-/Docstring-Reste über die Verifier-Selbstheilung erledigen; die
 Rundenzahl macht sie weder zum Blocker noch zu zulässigerweise vergessener
 Arbeit. Echte Blocker verhindern Freigabe, Folgearbeit und `solved/`.
 Keine automatische Übergabe an Mike allein wegen der Zahl. Der gemeinsame
-[Ablauf zum Rundenlimit](CODEX-REVIEW-AUTOMATION.md#rundenlimit-rest-offenlegen-und-abschließen)
+[Ablauf zum Rundenlimit](AGENT-WORKFLOW.md#rundenlimit-rest-offenlegen-und-abschließen)
 ist maßgeblich.
 
 Anlass sind die von Mike benannten, zunächst liegen gebliebenen
@@ -437,7 +437,7 @@ berührten `app/services/quote_service.py` blieben jedoch `fehlend`, `feld`
 sowie die strukturierten Log-Bezeichner `core_unvollstaendig` und `fehlend`;
 `tests/test_resolver.py` enthält unter anderem `_FigiNachBoerse`, `treffer`,
 `unzustaendig`, `zustaendig` und `_mit_suche`. Im ebenfalls berührten
-`_tickets/T-21b-smoke.sh` blieb im eingebetteten Python `zeilen`. Der
+`_tickets/40-done/T-21b-smoke.sh` blieb im eingebetteten Python `zeilen`. Der
 angekündigte Scan deckte seinen behaupteten Dateiscope damit nicht ab.
 
 **Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21 Teil 2
@@ -466,7 +466,7 @@ Scan über Produktcode, Tests, Dashboard, Dokumentation und Plugin-API. Dennoch
 fehlten mindestens `app/exchanges.py:167`, `tests/test_exchanges.py:82`,
 `tests/test_openfigi_lookup.py:36`, `app/services/quote_service.py:171-177` und
 die weiterhin widersprechende Zusage im selben Handoff berührten
-`_tickets/T-21-identitaet-mic-und-ticker.md:480`.
+`_tickets/40-done/T-21-identitaet-mic-und-ticker.md:480`.
 
 **Neuer Beleg wegen ausdrücklich falscher Vollständigkeitsbehauptung:** T-21
 Teil 3 Runde 10, Commit `2421f65`: Die Korrektur erklärte, der Entwurf nenne
@@ -512,7 +512,7 @@ diese anderen Abschnitte nicht.
 Teil 3 Runde 19, Commit `20a4422`: OUTBOX und Commit meldeten das Ticket als
 „einstimmig“ und die Gegenprobe als leer, begrenzten die Suche aber auf den
 Bereich oberhalb des Fußnotenblocks. Im weiterhin aktiven Detailabschnitt
-forderte `_tickets/T-21-identitaet-mic-und-ticker.md:481` unverändert einen
+forderte `_tickets/40-done/T-21-identitaet-mic-und-ticker.md:481` unverändert einen
 „Weg zur Zuordnung von Hand“. Besonders eindeutig war der Fund, weil die
 Dokumentationsinventur im selben übergebenen Entwurf genau diese Ticketstelle
 selbst aufführte, ohne sie zu korrigieren. Die Fundliste war damit vorhanden;
@@ -924,7 +924,7 @@ im Review mit.
 TypeScript-Helfer hieß `KEYS_FOR` — **englisch, aber im Namensschema der
 falschen Sprache.** Die Regel nennt für TypeScript `camelCase`; `GROSS` ist
 die Bash-Konvention, und die stand in derselben Sitzung mehrfach im Kopf, weil
-kurz zuvor `_tickets/T-56-vorlauf.sh` entstand. Dieselbe Übergabe trug
+kurz zuvor `_tickets/40-done/T-56-vorlauf.sh` entstand. Dieselbe Übergabe trug
 außerdem wieder Ticketchronik im Produktdocstring („seit T-44 … der
 Aufnahmeweg sah sie nie … (T-58)"), obwohl genau das in T-54 Runde 1 Punkt 6
 schon einmal beanstandet war. Codex heilte beides verhaltensneutral in
@@ -970,7 +970,7 @@ gespeicherten Identität.
 diesem Lauf? Bei Prozess-Cleanup nur eigene PID beziehungsweise eigene
 Prozessgruppe verwenden und Konflikte vor dem Start abbrechen.
 
-**Beleg:** T-17 Runde 1, Commit `84c9c2d`: `_tickets/solved/T-17-smoke.sh`
+**Beleg:** T-17 Runde 1, Commit `84c9c2d`: `_tickets/40-done/T-17-smoke.sh`
 beendete nach dem Lauf alle Prozesse auf Port 8766; ein bereits laufender
 fremder Server konnte zusätzlich den Health-Check bestehen und danach beendet
 werden.
@@ -1602,7 +1602,7 @@ ohne dass ihm etwas vorzuwerfen wäre. Befund von Claude über eigene Arbeit,
 **Wie der Fall ausgegangen ist:** Auf Mikes Anweisung hat der Verifier die
 restlichen 20 Fundstellen selbst korrigiert, statt sie an den Coder zu geben.
 Daraus ist die Regel
-[Der bereits benannte Rest wird nicht zur nächsten Runde](CODEX-REVIEW-AUTOMATION.md#der-bereits-benannte-rest-wird-nicht-zur-nächsten-runde)
+[Der bereits benannte Rest wird nicht zur nächsten Runde](AGENT-WORKFLOW.md#der-bereits-benannte-rest-wird-nicht-zur-nächsten-runde)
 geworden. Sie ändert nichts an P-12: Die Liste muss trotzdem vollständig sein,
 denn wer sie selbst abarbeitet, arbeitet genau sie ab.
 

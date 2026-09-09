@@ -322,7 +322,7 @@ B2 verortet den Bindungsleser in `useHashTab.ts`. Runde 2 (`e4b793e`, Review
 WebSocket-Scopes tragen kein HTTP-`method`; im Pending-Zustand sind deren
 Handshakes gesperrt, während die bestehende HTTP-Allowlist erhalten bleibt.
 Die Analyse der anfänglichen Guard-Überbewertung steht in
-[Review-Lehre R-01](CLAUDE-REVIEW-PATTERNS.md#r-01--integrationsaufwand-verdrängt-die-fachliche-architekturentscheidung).
+[Review-Lehre R-01](../.agents/CLAUDE-LESSONS.md#r-01--integrationsaufwand-verdrängt-die-fachliche-architekturentscheidung).
 
 Keine dieser Angaben behauptet bestandene Produkt- oder UI-Tests. Die einzige
 geplante Produkt-Verify-Matrix folgt; alle Läufe sind offen:

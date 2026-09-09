@@ -25,7 +25,7 @@ Codex führt das Ticket als nächstes Element der beauftragten Kette aus.
 Claude hat den Umfang vor Produktcode geteilt. Oberfläche, Autor-Harness
 und Beispiel stehen in [T-64](T-64-boersen-ui-und-autorennachweise.md).
 Mike hat T-64 am 2026-09-09 geschlossen; der Plugin-Hinweis mit Autorenlink
-wird ausschließlich in [T-67](../T-67-boersenabweichung-anzeigen.md) umgesetzt
+wird ausschließlich in [T-67](T-67-boersenabweichung-anzeigen.md) umgesetzt
 und geprüft.
 
 ### Bisherige Antworten und Rückmeldungen
@@ -120,7 +120,7 @@ gegen den konkretisierten Entwurf zu prüfen.
 
 ### Gezielte Vertragsprüfungen · Entscheidung vom 2026-09-07
 
-Mit der Zurückstellung von [T-34](postponed/T-34-zusage-gegen-laufzeit.md)
+Mit der Zurückstellung von [T-34](../80-iced/T-34-zusage-gegen-laufzeit.md)
 bleiben die Prüfungen der hier neu eingeführten Zusagen Teil von #8/#9:
 Plugin-Vertragsprüfungen im Autor-Harness und Integrationstests über den echten
 Plugin-Lader → Core → REST. Sie belegen neue MICs im Aufnahmeweg, Unterstützung

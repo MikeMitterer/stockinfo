@@ -1,6 +1,6 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
-**Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
+**Datum:** 2026-08-24 · **Ticket:** `_tickets/40-done/T-21-identitaet-mic-und-ticker.md` ·
 **Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 24** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
 „Hoch"-Befunde waren durchweg Entwurfsfehler — genau dafür läuft Teil 3 als
@@ -573,7 +573,7 @@ Dokumente gegenseitig:
 
 | Stelle | Was dort steht |
 |---|---|
-| `_tickets/solved/T-24-rest-core-vertrag.md:194` | führt `identity_status = legacy_unresolved` als Vertragsgegenstand |
+| `_tickets/40-done/T-24-rest-core-vertrag.md:194` | führt `identity_status = legacy_unresolved` als Vertragsgegenstand |
 | `docs/superpowers/specs/2026-08-19-plugin-system-design.md:667` | *„T-21 braucht Zwischenzustand … `NULL`-fähige Spalten plus `identity_status`, sonst ist ‚melden statt raten' technisch unmöglich"* — als **übernommen** markiert |
 
 Die zweite ist die heikelste: Sie steht als abgehakte Entscheidung in einem
@@ -590,14 +590,14 @@ Einordnen ausgeschieden sind.
 Entscheidung Mike, 2026-08-24: aufteilen. Zwei Themen sind aus diesem Entwurf
 herausgeschnitten und liegen als Tickets im Board:
 
-* **[`T-29`](../../../_tickets/rejected/T-29-alias-lebenszyklus-und-providerwechsel.md)
+* **[`T-29`](../../../_tickets/90-rejected/T-29-alias-lebenszyklus-und-providerwechsel.md)
   — Provider-Alias: Eigentümer, Lebenszyklus, Wechsel.** Aus Runde 9, Finding 1.
   *Nachtrag 2026-09-07: verworfen — der Alias ist seit T-23/T-31 kein
   Abrufschlüssel mehr, der Rest steht in T-30.*
   Wer `symbol` besitzt, was beim Providerwechsel damit geschieht, Backup-Pflicht
   und Best-Effort-Restore samt Importbericht. Revidiert außerdem
   `T-25-quellenprofil-wechseln.md:94-110`.
-* **[`T-30`](../../../_tickets/T-30-plugin-boersenauskunft.md) — plugin-
+* **[`T-30`](../../../_tickets/40-done/T-30-plugin-boersenauskunft.md) — plugin-
   deklarierte Börsenauskunft.** Aus Runde 8 (Finding 3) und Runde 9 (Finding 5).
   Neuer `plugin_api`-Typ samt Merge-, Vorrang-, Kollisions-, Provenienz- und
   Invalidierungsregeln.
@@ -851,7 +851,7 @@ ein Hub aus Katalog, Aufnahmeweg, Sichtbarkeit und Vertrag wäre nicht prüfbar.
 > Ohne Ergänzung liefert Vite das SPA-HTML statt der API-Antwort, und der
 > verpflichtende Ablauf wäre lokal schlicht nicht benutzbar. Das ist kein
 > theoretischer Fall: Genau dieser Fehler steht als gelöstes Ticket im Board —
-> `_tickets/solved/T-04-vite-proxy-fehlende-praefixe.md:42-58`.
+> `_tickets/40-done/T-04-vite-proxy-fehlende-praefixe.md:42-58`.
 >
 > Also: `/migration`, `/operational` und `/ready` kommen in `apiPrefixes`, und
 > ein **Dev-Proxy-Test** belegt für jeden neuen Präfix eine API-Antwort statt
@@ -974,7 +974,7 @@ Betriebszustand.
   `COUNT(*) WHERE ticker IS NULL OR mic IS NULL = 0`; die Quarantäne ist über
   keinen Instrument-Endpunkt erreichbar. **Und:** mit `XSTU` im Katalog
   migriert `GOLD.SG` samt seiner Kurspunkte, statt abgelehnt zu werden.
-* **`_tickets/T-21-smoke.sh` wird umgestellt** — er wertet heute `GOLD.SG` und
+* **`_tickets/40-done/T-21-smoke.sh` wird umgestellt** — er wertet heute `GOLD.SG` und
   `VTI` als zwei gültige offene `NULL`-Fälle und würde die neue Regel grün
   melden. Neu: vier bis fünf migrierte Zeilen, kein offener Fall, der Rest im
   Bericht.
@@ -1000,7 +1000,7 @@ Betriebszustand.
 * **Dashboard:** Vitest für den rohen Durchreichweg **ohne** `isIsin`-Routing,
   und für den Fehlerpfad in beiden Sprachen — bekannte Kennung, unbekannte
   Kennung, kaputtes JSON, leerer Rumpf, Netzwerkfehler. Dazu die beiden Zähler.
-* **Smoke:** `_tickets/T-21c-smoke.sh` auf eigenem Port — `GOLD.SG` vor und nach
+* **Smoke:** `_tickets/40-done/T-21c-smoke.sh` auf eigenem Port — `GOLD.SG` vor und nach
   dem Börseneintrag, der 400er am Aufnahmeweg, beide Listen.
 
 ## Was bewusst nicht gebaut wird

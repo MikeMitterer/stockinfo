@@ -3,8 +3,8 @@
 **Zurückgestellt auf Mikes Entscheidung vom 2026-09-07.** Die allgemeinen
 Wächter sind keine Voraussetzung für den Abschluss des Plugin-Systems.
 Gezielte Tests neuer Plugin- und REST-Zusagen gehören zu
-[T-30](../T-30-plugin-boersenauskunft.md); die Fehlertext-Prüfung bleibt bei
-[T-21 #2g](../T-21-identitaet-mic-und-ticker.md).
+[T-30](../40-done/T-30-plugin-boersenauskunft.md); die Fehlertext-Prüfung bleibt bei
+[T-21 #2g](../40-done/T-21-identitaet-mic-und-ticker.md).
 
 ## Für dich
 

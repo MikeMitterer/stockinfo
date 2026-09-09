@@ -324,8 +324,8 @@ pytest -q tests -m "not integration"                    → 939 passed, 29 skipp
 pytest -q plugin_api/tests                              → 295 passed, 1 skipped
 make test-example                                       → 45 passed
 vitest run (dashboard)                                  → 274 passed
-./_tickets/T-35-smoke.sh --run                          → 20/20
-PROFILE=yaml ./_tickets/T-35-smoke.sh --run             → 20/20
+./_tickets/40-done/T-35-smoke.sh --run                          → 20/20
+PROFILE=yaml ./_tickets/40-done/T-35-smoke.sh --run             → 20/20
 git diff --check                                        → sauber
 ```
 
@@ -395,8 +395,8 @@ gekürzt; „bis T-42" und die Messwerte stehen hier.
 make test        → 947 Backend + 295 Plugin-API + 45 Beispiel + 278 Dashboard
 npm run build    → ✓
 ruff check       → All checks passed
-./_tickets/T-35-smoke.sh --run                → 20/20
-PROFILE=yaml ./_tickets/T-35-smoke.sh --run   → 20/20
+./_tickets/40-done/T-35-smoke.sh --run                → 20/20
+PROFILE=yaml ./_tickets/40-done/T-35-smoke.sh --run   → 20/20
 git diff --check → sauber
 data/stockinfo.db → unverändert, 19. August
 ```

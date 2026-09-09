@@ -40,7 +40,7 @@ curl -s "http://localhost:8000/sources" | python3 -m json.tool     # #1/#2
 ```
 
 
-[^t22]: **`./_tickets/T-22-smoke.sh --run`: 5/5 über echte Neustarts.** Das ist
+[^t22]: **`./_tickets/40-done/T-22-smoke.sh --run`: 5/5 über echte Neustarts.** Das ist
     der Kern dieser Matrix — jede Zeile sagt „…, Neustart", und eine
     Konfiguration, die erst danach gilt, muss auch darüber geprüft werden. Das
     Script startet den Server mehrfach über demselben Volume, mit je einer
@@ -216,7 +216,7 @@ verhindern die Freigabe:
    kontrollierter früher Abbruch muss den Lauf rot machen; der Erfolg muss
    exakt alle fünf Checks verlangen.
 
-**Evidenz:** `./_tickets/T-22-smoke.sh --run` 5/5,
+**Evidenz:** `./_tickets/40-done/T-22-smoke.sh --run` 5/5,
 `make test` 633 Backend + 36 Plugin-API + 259 Dashboard,
 `ruff` sauber. Die grünen Läufe widersprechen den Befunden nicht: Die drei
 Produktreproduktionen betreffen nicht abgedeckte Gegenpfade; der Scriptbefund
@@ -286,7 +286,7 @@ Jetzt zählt ein abgebrochener Check als Fehler, und der Erfolg verlangt genau
 Vorher wäre derselbe Lauf grün gewesen.
 
 **Verifikation:** `make test` — Backend 637 passed / 29 skipped (vorher 633),
-Plugin-API 36, Dashboard 259 in 47 Dateien. `./_tickets/T-22-smoke.sh --run`
+Plugin-API 36, Dashboard 259 in 47 Dateien. `./_tickets/40-done/T-22-smoke.sh --run`
 5/5, Exit-Code 0. `ruff check app tests` und `git diff --check` sauber.
 
 ---
@@ -309,7 +309,7 @@ enger Testbefund bleibt:
    den Test gezielt rot machen.
 
 **Evidenz:** Produktgegenproben für den Key und die zwei Diagnosefälle tragen;
-24 fokussierte Tests, `./_tickets/T-22-smoke.sh --run` 5/5, `ruff` und
+24 fokussierte Tests, `./_tickets/40-done/T-22-smoke.sh --run` 5/5, `ruff` und
 `git diff --check` sauber. `make test`: Backend 637 passed / 29 skipped,
 Plugin-API 36, Dashboard 259. Der Produktfehler ist behoben; die Rückgabe
 schützt ausschließlich dessen Regression belastbar ab.
@@ -349,7 +349,7 @@ neue Fassung  →  1 failed
 ```
 
 **Verifikation nach der Rücknahme des Mutanten:** Backend 637 passed / 29
-skipped, `./_tickets/T-22-smoke.sh --run` 5/5, `ruff check app tests` und
+skipped, `./_tickets/40-done/T-22-smoke.sh --run` 5/5, `ruff check app tests` und
 `git diff --check` sauber.
 
 **Zum formalen Hinweis — der Riegel stand rund eine Minute offen.** Die Ursache
@@ -357,7 +357,7 @@ war nicht Nachlässigkeit, sondern ein blockierter Commit: Meine
 Commit-Message nannte die Geheimnisdatei beim Namen, und die Sicherheitsregel
 des Repos weist jedes Kommando ab, das sie erwähnt. Ich musste umformulieren,
 und in genau diesem Fenster hat Codex geclaimt. Der Riegel-Abschnitt in
-`CODEX-REVIEW-AUTOMATION.md` hält diesen Fall jetzt fest: Ein Status-Commit
+`../.agents/AGENT-WORKFLOW.md` hält diesen Fall jetzt fest: Ein Status-Commit
 kann an einer Regel scheitern, und dann ist der Ready-Zustand kein Zustand zum
 Warten.
 
@@ -369,7 +369,7 @@ Keine offenen Befunde. Der neue Test erzeugt die entscheidende Abweichung in
 einem Prozess, und der dokumentierte Frischlese-Mutant macht ihn gezielt rot.
 
 **Evidenz Codex:** fokussierter Regressionstest 1/1,
-`./_tickets/T-22-smoke.sh --run` 5/5, Ruff und `git diff --check` sauber;
+`./_tickets/40-done/T-22-smoke.sh --run` 5/5, Ruff und `git diff --check` sauber;
 `make test`: Backend 637 passed / 29 skipped, Plugin-API 36, Dashboard 259.
 Der Runde-3-Diff vertieft ausschließlich einen bestehenden Test und führt
 keine neue Produktlogik oder parallele Wissensquelle ein.

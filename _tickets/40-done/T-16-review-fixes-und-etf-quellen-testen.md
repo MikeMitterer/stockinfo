@@ -3,7 +3,7 @@
 Abgeschlossen auf Mikes Auftrag vom 2026-09-07. Die UI-Abnahme wurde durch
 T-56 abgelöst; der alte Befund #5c ist in T-17 behoben und verifiziert.
 Die unbestätigten Docker-Tests stehen jetzt in
-[T-63](../T-63-docker-start-und-betrieb-pruefen.md).
+[T-63](../10-backlog/T-63-docker-start-und-betrieb-pruefen.md).
 
 ## Für dich
 
@@ -35,7 +35,7 @@ und ETF-Metadaten auf zwei Quellen aufgeteilt. Die Unit-Tests decken die Logik
 ab, aber die Hälfte der Befunde lebt an Stellen, die kein Test erreicht — genau
 dort saßen die Fehler.
 
-**Stand:** Die maschinell prüfbaren Zeilen sind durch (`./_tickets/T-16-smoke.sh --run`,
+**Stand:** Die maschinell prüfbaren Zeilen sind durch (`./_tickets/40-done/T-16-smoke.sh --run`,
 11 von 12 grün). Offen sind die vier UI-Zeilen und ein neuer Befund (#5c).
 
 <!--
@@ -53,7 +53,7 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 `AI` = nur KI · `Human` = nur Mensch (nie überschreiben).
 
 **Voraussetzung für die UI-Zeilen:** Stack läuft (`make dev-up`) — Backend `:8000`,
-Dashboard `:5173`. Die Script-Zeilen brauchen nur `./_tickets/T-16-smoke.sh --run`.
+Dashboard `:5173`. Die Script-Zeilen brauchen nur `./_tickets/40-done/T-16-smoke.sh --run`.
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
@@ -72,7 +72,7 @@ Dashboard `:5173`. Die Script-Zeilen brauchen nur `./_tickets/T-16-smoke.sh --ru
 
 ```bash
 # Zeilen #1, #2, #4, #5, #6, #7, #11 in einem Lauf
-./_tickets/T-16-smoke.sh --run
+./_tickets/40-done/T-16-smoke.sh --run
 
 # #9 — Container (nicht im Script: baut ein Image und greift auf Docker zu)
 make build && make up && sleep 3 && docker logs stockinfo 2>&1 | tail -20

@@ -28,15 +28,15 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 3b | `GET /instruments` danach | kein Symbol mit Leerzeichen im Bestand | ✅ [^2] | |
 | 3c | `GET /quote/CA7800871021` (Stammaktie) | löst unverändert auf `RY.TO` auf | ✅ [^2] | |
 | 4 | Papier abrufen, Kurs-TTL ablaufen lassen, erneut abrufen | `ter` in der Antwort entspricht dem Wert in `GET /instruments` | ✅ [^3] | |
-| 5 | `./_tickets/T-16-smoke.sh --run` | Zeile `#5c` ist grün | ✅ [^4] | |
+| 5 | `./_tickets/40-done/T-16-smoke.sh --run` | Zeile `#5c` ist grün | ✅ [^4] | |
 | 6 | `make test` | Backend grün, neue Tests je Fehler | ✅ [^5] | |
 
 ```bash
-./_tickets/T-17-smoke.sh --run    # #1, #2, #3a-c, #4, #6 — eigener Server, temporäre DB
-./_tickets/T-16-smoke.sh --run    # #5
+./_tickets/40-done/T-17-smoke.sh --run    # #1, #2, #3a-c, #4, #6 — eigener Server, temporäre DB
+./_tickets/40-done/T-16-smoke.sh --run    # #5
 ```
 
-[^1]: `./_tickets/T-17-smoke.sh --run`, Lauf 1 (Vorgabebörse `XPAR`):
+[^1]: `./_tickets/40-done/T-17-smoke.sh --run`, Lauf 1 (Vorgabebörse `XPAR`):
     `#1a .isin = FR0000121014`, `#1b` dieselbe ISIN in `/instruments`,
     `#2` im Server-Log
     `[warning] isin_abweichung angefragt=FR0000121014 gemeldet=CA50244Q1037 symbol=MC.PA`.
@@ -220,7 +220,7 @@ dort mitbehoben.
 Ohne sachliche Findings, auf Commit `1a2f2bd`. Codex hat unabhängig
 nachgerechnet: die drei Zieltests (67 bestanden), Ruff über die berührten
 Dateien, `bash -n` für beide Prüf-Scripts, `make test` (256 + 36 + 230) und
-`./_tickets/T-17-smoke.sh --run` (8/8). Die `Human`-Spalte bleibt für eine
+`./_tickets/40-done/T-17-smoke.sh --run` (8/8). Die `Human`-Spalte bleibt für eine
 spätere, von Mike ausdrücklich gewünschte menschliche Abnahme leer.
 
 Branch `t-17-still-falsche-antworten`.

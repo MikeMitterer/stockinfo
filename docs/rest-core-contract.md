@@ -1,8 +1,8 @@
 # Der REST-Core von StockInfo — was zugesagt ist
 
 **Vertragsversion 2.0.0** · Stand 2026-08-26 · Tickets
-[T-24](../_tickets/solved/T-24-rest-core-vertrag.md) und
-[T-21](../_tickets/T-21-identitaet-mic-und-ticker.md)
+[T-24](../_tickets/40-done/T-24-rest-core-vertrag.md) und
+[T-21](../_tickets/40-done/T-21-identitaet-mic-und-ticker.md)
 
 > **Was 2.0.0 gegenüber 1.0.0 ändert** — ein Major-Sprung, weil beides
 > bestehende Konsumenten bricht:
@@ -261,7 +261,7 @@ Ohne Cross-Repo-CI, in drei Stufen:
    sobald sich ein Core-Modell, ein Core-Pfad oder `/fields` ändert, ohne dass
    jemand die Vertragsversion angefasst hat.
 2. **StockPortfolio** prüft seine Mapper gegen dieselben veröffentlichten
-   Fixtures unter [`contract/fixtures/`](../contract/fixtures/).
+   Fixtures unter [`contract/fixtures/`](../contract/fixtures).
 3. **Vor Releases** ein kleiner Lauf: eine bestehende Position gegen eine
    frische Profil-Datenbank.
 

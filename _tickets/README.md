@@ -37,13 +37,13 @@ _tickets/
   `changes_requested`. Identität eines Durchlaufs ist
   `(ticket, handoff_commit, review_round)`; dasselbe Tupel wird nie zweimal
   geprüft. Der vollständige Vertrag und der Scheduled-Task-Prompt stehen in
-  `CODEX-REVIEW-AUTOMATION.md`.
+  `.agents/AGENT-WORKFLOW.md`.
 - **Der Reviewer-Task hängt am bestehenden Codex-Review-Chat.** Kein
   Standalone-Task: Der bestehende Chat liefert die fortlaufende fachliche
   Lernkurve, das Musterregister sichert sie zusätzlich gegen Compaction und
   Sitzungswechsel ab.
 - **Wiederkehrende Claude-Muster überleben Chat-Compaction.** Sie werden nur
-  in `CLAUDE-REVIEW-PATTERNS.md` dauerhaft gepflegt. Jeder Review liest diese
+  in `.agents/CLAUDE-LESSONS.md` dauerhaft gepflegt. Jeder Review liest diese
   Datei zuerst und ergänzt ausschließlich belegte, verallgemeinerbare Muster;
   Einzelfindings bleiben im Ticket beziehungsweise Review-Ergebnis.
 
@@ -65,7 +65,7 @@ Vor dem ersten Produktedit enthält jedes Implementierungsticket diesen Block:
 Für bestehende offene Tickets ergänzt Claude den Block unmittelbar vor dem
 nächsten Produktedit. Historische Tickets unter `solved/` werden nicht
 umgeschrieben. Die Auslöser und der kurze `scope_checkpoint` stehen im
-verbindlichen Vertrag `CODEX-REVIEW-AUTOMATION.md`.
+verbindlichen Vertrag `.agents/AGENT-WORKFLOW.md`.
 
 Jede normale Übergabe enthält zusätzlich diese Soll/Ist-Tabelle:
 
@@ -86,9 +86,9 @@ sichtbar bleiben, ohne als neue Produktarchitektur zu gelten.
 
 | Ticket | Thema | Status |
 |---|---|---|
-| [T-09](T-09-manuelle-etf-werte-nachtragen.md) | Asset-Kennzahlen manuell nachtragen (persistent, DB+API+UI) | in-review |
-| [T-13](T-13-toasts-und-dialoge.md) | Toasts statt Banner, Dialoge auf `NModal` — der Rest aus T-12 | in-review |
-| [T-14](T-14-kontrast-umgekehrte-leisten.md) | Kontrast auf umgekehrten Leisten — und ein Prüfskript, das ihn sieht | ready |
+| [T-09](40-done/T-09-manuelle-etf-werte-nachtragen.md) | Asset-Kennzahlen manuell nachtragen (persistent, DB+API+UI) | in-review |
+| [T-13](40-done/T-13-toasts-und-dialoge.md) | Toasts statt Banner, Dialoge auf `NModal` — der Rest aus T-12 | in-review |
+| [T-14](80-iced/T-14-kontrast-umgekehrte-leisten.md) | Kontrast auf umgekehrten Leisten — und ein Prüfskript, das ihn sieht | ready |
 
 `in-review` heißt: umgesetzt, die `AI`-Spalte der Verify-Matrix ist gefüllt, die
 `Human`-Spalte noch nicht. **Nach `solved/` wandert ein Ticket erst auf Ansage** —

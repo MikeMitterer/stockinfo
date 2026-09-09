@@ -31,7 +31,7 @@ trägt die **Reparaturen**; T-35 bleibt das Protokoll des Laufs.
 > ist dieses Ticket. Die Reihenfolge stimmt damit wieder — T-36 wird
 > freigegeben, danach läuft T-35 von vorn.
 
-**Zum Smoke-Script:** `_tickets/T-35-smoke.sh` steht ebenfalls auf Mikes
+**Zum Smoke-Script:** `_tickets/40-done/T-35-smoke.sh` steht ebenfalls auf Mikes
 ausdrückliche Anforderung (Zitat oben) und liegt jetzt bei **diesem** Ticket.
 Es ist keine zweite Teststrecke neben dem Browserlauf, sondern dessen
 maschinell wiederholbarer Teil: dieselben Fragen über REST, mit Netz gegen die
@@ -61,7 +61,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | **4c** | `dashboard/src/i18n/{de,en}.ts` | jede neue Kennung steht in **beiden** Sprachen | ✅ | |
 | **5** | Assets-Tabelle bei schmalem Fenster | der Trennstrich läuft durch die ganze Zeile, der Löschen-Knopf ist nicht abgeschnitten | ✅ | |
 | **5b** | dieselbe Tabelle | Caret und Ticker stehen auf **einer** Zeile | ✅ | |
-| **6** | `./_tickets/T-35-smoke.sh --run` | 15/15, mit Netz gegen die echten Quellen | ✅ | |
+| **6** | `./_tickets/40-done/T-35-smoke.sh --run` | 15/15, mit Netz gegen die echten Quellen | ✅ | |
 
 ---
 
@@ -260,7 +260,7 @@ i18n-Schlüssel grün. Es bleibt genau ein Regelbefund:
    `fehlend` sowie der Einbuchstabenname `e`; die bereits in Runde 3 wörtlich
    beanstandeten Sätze „es wurde gar nichts built“ und „den Kettennamen
    unusable werden“ blieben stehen. Im eingebetteten Python von
-   `_tickets/T-35-smoke.sh` blieb ebenfalls das ausdrücklich genannte
+   `_tickets/40-done/T-35-smoke.sh` blieb ebenfalls das ausdrücklich genannte
    `unkonfiguriert`; im berührten Dashboard-Test `_fall`. Das ist besonders
    eindeutig, weil OUTBOX erneut ein vollständiges Inventar behauptet und
    „einschließlich des eingebetteten Python“ sagt. Ein **einziger enger

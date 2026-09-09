@@ -33,7 +33,7 @@ Legende: ✅ live bestätigt · ⚠️ mit Einschränkung · ◑ teilweise · �
 | 5 | `make test` | Backend grün; neue Tests je Antwortart | ✅ [^e] | |
 
 ```bash
-./_tickets/T-20-smoke.sh --run    # #1, #2, #3, #5 — zwei Läufe, mit und ohne Netz
+./_tickets/40-done/T-20-smoke.sh --run    # #1, #2, #3, #5 — zwei Läufe, mit und ohne Netz
 ```
 
 [^a]: `T-20-smoke.sh` Lauf 1 (mit Netz): `#1` HTTP **404** für

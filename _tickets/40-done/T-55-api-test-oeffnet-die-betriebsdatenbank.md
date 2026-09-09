@@ -105,7 +105,7 @@ gewinnt, weil er später greift.
 | Datei | Was |
 |---|---|
 | `tests/test_api.py` | Fixture schließt die Naht; Zusage im Docstring präzisiert |
-| `_tickets/T-55-isolation.sh` | Gegenorakel: Bestand der drei Betriebsdateien vor/nach einem **direkten** `pytest`-Lauf |
+| `_tickets/40-done/T-55-isolation.sh` | Gegenorakel: Bestand der drei Betriebsdateien vor/nach einem **direkten** `pytest`-Lauf |
 
 **Kein Produktcode.** `/ready` bleibt, wie es ist — dass es den Dienst direkt
 holt, ist eine Frage für ein anderes Ticket und steht hier unter Nicht-Ziele.
@@ -287,7 +287,7 @@ Skript und Test-Docstrings heraus.
 
 | # | Lauf | Ergebnis |
 |---|---|---|
-| 1 | `_tickets/T-55-isolation.sh --run` | ✓ unberührt |
+| 1 | `_tickets/40-done/T-55-isolation.sh --run` | ✓ unberührt |
 | 2 | aus `_tickets/solved/`, ohne `BASH_LIBS` | ✓ unberührt |
 | 3 | `TARGET=tests/test_analyzer.py` | ✓ unberührt |
 | 4 | Mutant, Naht entfernt | ✗ `mtime …072882996 → …567319217` |

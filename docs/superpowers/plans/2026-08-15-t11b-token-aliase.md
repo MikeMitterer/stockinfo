@@ -286,7 +286,7 @@ git commit -m "refactor(dashboard): color-mix durch token(--x, alpha) ersetzt (T
   Alle acht müssen `true` liefern.
 - **Theme-Vorschau**: `#/settings?tab=appearance` — die acht Kacheln müssen **verschiedene** Paletten zeigen (nicht 8× classic). Das ist der Lackmustest für die Alias-Platzierung.
 - **Deckkraft**: `rgb(var(--surface-card) / .7)` ergibt eine sichtbare Fläche (Verify #4 des Tickets).
-- Danach Verify-Matrix in `_tickets/T-11b-token-aliase-hardcoded-farben.md` füllen.
+- Danach Verify-Matrix in `_tickets/40-done/T-11b-token-aliase-hardcoded-farben.md` füllen.
 
 ## Self-Review
 

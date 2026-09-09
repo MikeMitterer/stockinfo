@@ -10,7 +10,7 @@ Codex-Review-Chat** und ist weder `/goal` noch ein ChatGPT-Scheduled-Task oder
 eine Desktop-App-Automation. So kehrt nur eine neue Übergabe in denselben
 fachlichen Kontext zurück. Die Chat-Historie ist die kurzfristige Lernschicht;
 das versionierte
-`CLAUDE-REVIEW-PATTERNS.md` ist die kanonische, compaction- und
+`CLAUDE-LESSONS.md` ist die kanonische, compaction- und
 sitzungsfeste Lernschicht sowie die Datenbasis für den späteren Skill.
 
 ## Zustandsprotokoll
@@ -568,11 +568,11 @@ Der Scheduler enthält keine Kopie des Review-Verfahrens. Sein vollständiger
 Auftrag ist:
 
 ```text
-Führe _tickets/CODEX-IN-CONTEXT-SCHEDULER.md aus.
+Führe _tickets/.agents/CODEX-IN-CONTEXT-SCHEDULER.md aus.
 ```
 
 Erst wenn dieser kurze Vertrag eine neue Übergabe erkennt, liest Codex dieses
-Dokument und `CLAUDE-REVIEW-PATTERNS.md` vollständig und führt das Review aus.
+Dokument und `CLAUDE-LESSONS.md` vollständig und führt das Review aus.
 Damit kosten Leerdurchläufe nur den Zustandscheck; die ausführlichen Regeln
 bleiben trotzdem versioniert und überstehen Exit sowie Compaction.
 
@@ -586,7 +586,7 @@ Ausstieg wird der Loop gelöscht; dieser Abschnitt hält ihn wiederherstellbar.
 ```text
 /loop 5m Du bist Claude, der Implementierer im StockInfo-Board. Beachte CLAUDE.md und die Skills task-verification-workflow, code-standards, git-conventions.
 
-1. Lies _tickets/STATUS.md, _tickets/CODEX-REVIEW-AUTOMATION.md und _tickets/CLAUDE-REVIEW-PATTERNS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis. Pruefe vor jeder Arbeit: ticket muss exakt priority_ticket entsprechen und in priority_chain stehen. Bei Abweichung nichts implementieren, portfolio_mismatch melden und Schluss. Pruefe vor jedem Entwurf und vor dem ersten Produktedit ausserdem den Testinfrastruktur-Riegel, den Vertical-Acceptance-Riegel und den Scope-Checkpoint-Riegel. Vor dem ersten Produktedit muss im aktiven Ticket ein Scope-Vertrag mit Ergebnis, hoechstens drei fachlichen Aenderungen, erwartetem Datei-Inventar, Nicht-Zielen und Budget stehen. Standard sind normale Unit-Tests plus echte Online-Integrationstests ueber vorhandene Sprach-, Bibliotheks- und Produkt-APIs. Record/Replay, Cassettes oder Mitschnitte, eigene Transport-/Socket-/Freshness-/CLI-/Testplugin-Infrastruktur sind ohne den datierten Ausnahmeblock von Mike im aktiven Ticket verboten. Ist eine Ausnahme wirklich noetig, vor Entwurf und Code mit phase: blocked und owner: mike stoppen; sie niemals aus Robustheit, CI oder Reproduzierbarkeit ableiten. Bei einem mehrschichtigen Fachumbau zuerst die entscheidenden oeffentlichen Akzeptanzfaelle rot belegen, danach einen duennen vertikalen Pfad gruen bauen; Frischstart, negativer Mutant und Matrix-zu-Orakel-Zuordnung sind vor der Uebergabe Pflicht.
+1. Lies _tickets/STATUS.md, _tickets/.agents/AGENT-WORKFLOW.md und _tickets/.agents/CLAUDE-LESSONS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis. Pruefe vor jeder Arbeit: ticket muss exakt priority_ticket entsprechen und in priority_chain stehen. Bei Abweichung nichts implementieren, portfolio_mismatch melden und Schluss. Pruefe vor jedem Entwurf und vor dem ersten Produktedit ausserdem den Testinfrastruktur-Riegel, den Vertical-Acceptance-Riegel und den Scope-Checkpoint-Riegel. Vor dem ersten Produktedit muss im aktiven Ticket ein Scope-Vertrag mit Ergebnis, hoechstens drei fachlichen Aenderungen, erwartetem Datei-Inventar, Nicht-Zielen und Budget stehen. Standard sind normale Unit-Tests plus echte Online-Integrationstests ueber vorhandene Sprach-, Bibliotheks- und Produkt-APIs. Record/Replay, Cassettes oder Mitschnitte, eigene Transport-/Socket-/Freshness-/CLI-/Testplugin-Infrastruktur sind ohne den datierten Ausnahmeblock von Mike im aktiven Ticket verboten. Ist eine Ausnahme wirklich noetig, vor Entwurf und Code mit phase: blocked und owner: mike stoppen; sie niemals aus Robustheit, CI oder Reproduzierbarkeit ableiten. Bei einem mehrschichtigen Fachumbau zuerst die entscheidenden oeffentlichen Akzeptanzfaelle rot belegen, danach einen duennen vertikalen Pfad gruen bauen; Frischstart, negativer Mutant und Matrix-zu-Orakel-Zuordnung sind vor der Uebergabe Pflicht.
 2. Ist `owner` nicht `claude`: veraendere keine Datei, antworte in einer Zeile mit Phase und Owner, Schluss.
 3. Vergleiche vor jeder weiteren Produktflaeche den laufenden Diff mit dem Scope-Vertrag. Bei einer nicht geplanten Schicht, einem nicht geplanten oeffentlichen Vertrag/Schema/Typ/einer Abhaengigkeit/Abstraktion, mehr als 25 Prozent Dateivarianz, mehr als 800 Diff-Zeilen oder Prozesschronik in Codekommentaren: stabilen Stand committen, Plan/Ist und Ausloeser in OUTBOX schreiben, `phase: scope_checkpoint`, `owner: codex`, `handoff_commit` auf den Stand setzen, Status committen und Schluss. Das ist keine Review-Uebergabe; `review_round` bleibt unveraendert.
 4. Bei `phase: changes_requested`: Arbeite die Findings aus INBOX -> Claude der Reihe nach ab, schwerste zuerst. Jedes Finding einzeln verifizieren statt der Zusammenfassung glauben; behauptete Vollstaendigkeit mit rg belegen. Bei wiederholter Entwurfsnacharbeit gilt die Konvergenzpruefung dieses Dokuments: ungefaehr drei erfolglose Runden sind ein Richtwert, keine harte Grenze. Ist eine weitere punktuelle Runde konkret und voraussichtlich abschliessend, begruende das mit dem vollstaendigen Restumfang in der OUTBOX. Verlangt das Review Rebaseline oder Scope-Verkleinerung, korrigiere nicht weiter lokal, sondern konsolidiere beziehungsweise schneide neu. Vor dem ersten Edit auf einem Feature-Branch `t-NN-<slug>` sein. Danach relevante Pytests, das Ticket-Smoke-Script `./_tickets/T-*.sh --run` und `make test` laufen lassen und die Ergebnisse mit Zahlen nennen. Dann genau EIN Uebergabe-Commit, INBOX leeren, Ergebnis nach OUTBOX -> Codex, `review_round` +1, `phase: ready_for_codex`, `owner: codex`, `updated_at` auf heute. Die OUTBOX nennt geplant/tatsaechlich fuer fachliche Aenderungen, Produktdateien, Test-/Dokudateien und Diff-Zeilen. Danach keinen Produktcode mehr anfassen.

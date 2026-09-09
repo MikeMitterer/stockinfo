@@ -12,7 +12,7 @@ Befund wird hier mit reproduzierbarem Aufruf dokumentiert.
 ### Bisheriger Auftrag
 
 Mike, 2026-09-07: „Kennzeichne es als erledigt - erstelle ein eigenes Ticket für die Docker-Tests“.
-[T-16](solved/T-16-review-fixes-und-etf-quellen-testen.md) ist damit abgeschlossen;
+[T-16](../40-done/T-16-review-fixes-und-etf-quellen-testen.md) ist damit abgeschlossen;
 dessen fehlender Docker-Nachweis wird nicht als bestanden übernommen.
 
 ## Umsetzung und technische Nachweise

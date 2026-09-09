@@ -33,7 +33,7 @@ Kleinigkeiten werden durch Verifier-Selbstheilung erledigt; Blocker werden
 am aktuellen Ticket korrigiert und gezielt nachgeprüft. Erforderliche
 Überschreitungen bleiben begründet und korrekt gezählt. Mit offenem Blocker
 weder Folgearbeit noch `solved/`. Verbindlicher Ablauf für beide Agenten:
-[Rundenlimit](CODEX-REVIEW-AUTOMATION.md#rundenlimit-rest-offenlegen-und-abschließen).
+[Rundenlimit](.agents/AGENT-WORKFLOW.md#rundenlimit-rest-offenlegen-und-abschließen).
 Die frühere automatische Eskalation beim Erreichen der Zahl ist aufgehoben.
 Scope-Checkpoints sind keine vollständigen Reviewrunden.
 
@@ -64,7 +64,7 @@ Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 
 Scope-Entscheidung `6177c76` verarbeitet: **T-68 → T-69**, danach
 `portfolio_review`, Owner Mike. T-68 stellt die Ablage einschließlich Skill
-um; [T-69](T-69-observer-instanzen-und-loop.md) übernimmt den vollständigen
+um; [T-69](20-ready/T-69-observer-instanzen-und-loop.md) übernimmt den vollständigen
 Observer-Auftrag. Aktuell arbeitet Codex an T-68, Claude prüft anschließend.
 Der Nachweisweg für beide Repositorys steht vor Beginn der Verschiebungen
 im T-68-Ticket (`f113bd0`). T-63 und T-66 bleiben außerhalb dieser Kette.
@@ -172,7 +172,7 @@ Unraid-Version begründet keine angenommene externe Nutzerbasis. Migrationen,
 Kompatibilität und Ablösungshinweise brauchen konkreten Bedarf aus dem
 tatsächlichen Betrieb; keine Zusatzarbeit für hypothetische Verbreitung.
 Für beide Rollen in den Review-Patterns verankert:
-[R-02](CODEX-REVIEW-PATTERNS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
+[R-02](.agents/CODEX-LESSONS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
 Diese Vorgabe ist bei der laufenden Prüfung zu berücksichtigen.
 
 ## Frühere Kette · T-21, Auftrag Mike, 2026-09-09 (abgeschlossen)
@@ -200,14 +200,14 @@ abgeschlossen, T-65 war bereits freigegeben und braucht keine Arbeit. Damit
 gilt nach Mikes Ergänzung „Nach T-67 kommt noch T-25 als wichtiger Punkt,
 trag das ein“ die verbleibende Kette **T-67 → T-25**. T-67 ist abgeschlossen;
 aktuelles Prioritätsticket ist damit
-[T-25](T-25-Plugin-Datenkompatibilität-und-Migration.md). Erst danach folgt
+[T-25](40-done/T-25-Plugin-Datenkompatibilität-und-Migration.md). Erst danach folgt
 `portfolio_review`, Owner Mike.
 
 ## Abschluss T-65 · Mike, 2026-09-09
 
 Mike: „T-65 auch nach solved/“.
 
-[T-65](solved/T-65-asset-aufnahme-prueft-boersenabdeckung.md) liegt unter
+[T-65](40-done/T-65-asset-aufnahme-prueft-boersenabdeckung.md) liegt unter
 `solved/`. Technisch freigegeben war Runde 2 auf `b10e110`, einschließlich
 UI-Prüfung; die Abschlussbestätigung stand seit dem 2026-09-08 aus. Eigene
 Smoke-Skripte hatte das Ticket keine, und der maschinenlesbare Zustand nennt
@@ -220,7 +220,7 @@ Board-Root stehen noch `T-25` (aktiv), `T-63`, `T-66` und `T-68`.
 
 Mike: „Aktualisiere das Ticket und dann ab damit nach solved“.
 
-[T-25](solved/T-25-Plugin-Datenkompatibilität-und-Migration.md) liegt unter
+[T-25](40-done/T-25-Plugin-Datenkompatibilität-und-Migration.md) liegt unter
 `solved/`. Technisch freigegeben in Runde 2 auf `16cf3d3` (`a1e0f13`), ohne
 Befunde. Eigene Smoke-Skripte hatte das Ticket keine.
 
@@ -243,7 +243,7 @@ danach `portfolio_review`, Owner Mike.
 
 Mike: „T-67 nach solved/ verschieben“.
 
-[T-67](solved/T-67-boersenabweichung-anzeigen.md) liegt unter `solved/`.
+[T-67](40-done/T-67-boersenabweichung-anzeigen.md) liegt unter `solved/`.
 Technisch freigegeben in **Runde 4** auf `41085c3` (`c7eba5d`); die Runden 2
 bis 4 gingen für Mikes Textvorgaben nach bereits erteilter Freigabe drauf,
 nicht für liegen gebliebene Befunde. Eigene Smoke-Skripte hatte das Ticket
@@ -270,7 +270,7 @@ Der Durchgang war der bereits benannte Sammelcode-Rest in der Prosa:
 **20 Fundstellen in neun Testdateien**, vom Verifier selbst korrigiert
 (`583e0f7`), nicht als weitere Runde an den Coder gegeben. Grundlage ist
 Mikes neue Regel
-[Der bereits benannte Rest wird nicht zur nächsten Runde](CODEX-REVIEW-AUTOMATION.md#der-bereits-benannte-rest-wird-nicht-zur-nächsten-runde);
+[Der bereits benannte Rest wird nicht zur nächsten Runde](.agents/AGENT-WORKFLOW.md#der-bereits-benannte-rest-wird-nicht-zur-nächsten-runde);
 sie gilt für den Verifier, gleich ob Claude oder Codex.
 
 Mitgenommen, weil im selben Docstring: der Verweis auf den entfernten
@@ -283,7 +283,7 @@ grün, Ruff Default grün. Verhaltensneutral bis auf drei String-Literale
 (pytest-`ids`, tmp-Dateiname, Fixture-Name) und einen Testnamen — belegt durch
 AST-Vergleich ohne Docstrings.
 
-[T-21](solved/T-21-identitaet-mic-und-ticker.md) liegt samt seinen drei
+[T-21](40-done/T-21-identitaet-mic-und-ticker.md) liegt samt seinen drei
 Smoke-Skripten unter `solved/`, wie im Ticket vorgesehen. Sie sind veraltet
 (`T-21c-smoke.sh` verlangt `core_version 2.0.0`, aktuell ist `4.2.0`) und
 wurden nicht erneut ausgeführt.
@@ -303,7 +303,7 @@ hätte der Abschluss bis nach dem Scope-Entscheid warten müssen.
 ## Abschluss T-64 · Mike, 2026-09-09
 
 Mike: „Vermerke das bei T-64 und damit ist T-64 dann erledigt“.
-[T-64](solved/T-64-boersen-ui-und-autorennachweise.md) ist nach `solved/`
+[T-64](40-done/T-64-boersen-ui-und-autorennachweise.md) ist nach `solved/`
 verschoben. Der noch nicht umgesetzte Plugin-Hinweis mit Autorenlink (#5)
 ist ausschließlich an T-67 `extras` abgegeben: eine Umsetzung, eine Prüfung.
 Frühere Angaben zum offenen Abschluss von T-64 sind damit überholt.
@@ -327,7 +327,7 @@ Lesende Bestandsaufnahme und Vorbereitung laufen weiter.
 **Konzept abgeschlossen, keine Umsetzung.** Codex hat den Ausgangsentwurf am
 Bestand geprüft, den MVP redigiert und die Review-Auflösung nachgeprüft.
 Claude hat `e4b793e` in Runde 2 unabhängig freigegeben (`e5e0b20`).
-Beide Urteile stehen im [T-66-Ticket](T-66-mcp-assets-und-browser-steuern.md).
+Beide Urteile stehen im [T-66-Ticket](10-backlog/T-66-mcp-assets-und-browser-steuern.md).
 Keine offenen Befunde. Codex' Eigenprüfung ist keine zweite unabhängige Abnahme.
 
 Mikes Grenze ist eingehalten: **zwei Konzept-Reviewrunden insgesamt**, keine
@@ -373,7 +373,7 @@ Test. Die folgenden Zeilen sind der Stand von damals:
 durchgelaufen. T-60, T-32 und T-30 sind von Mike bestätigt und liegen unter
 `solved/`; die übrigen warten auf seine Bestätigung. T-30 wurde am 2026-09-09
 nach aktueller Gegenprüfung (35 Tests bestanden) archiviert; Nachweis im
-[Ticket](solved/T-30-plugin-boersenauskunft.md). Die aktive T-21-/T-67-Kette
+[Ticket](40-done/T-30-plugin-boersenauskunft.md). Die aktive T-21-/T-67-Kette
 und ihre Rollen bleiben unverändert.
 
 ## Aktuelle Arbeit · T-65, Auftrag Mike, 2026-09-08
@@ -475,7 +475,7 @@ genügt. **T-66** liegt als deine noch nicht versionierte Notiz unter
 `postponed/` und ist nicht aktiviert.
 
 Zwei Dinge liegen weiterhin unversioniert in deinem Worktree: der neue
-Abschnitt **„Standard-Riegel"** in `CODEX-REVIEW-AUTOMATION.md` (auf deinen
+Abschnitt **„Standard-Riegel"** in `.agents/AGENT-WORKFLOW.md` (auf deinen
 Auftrag geschrieben, nicht committet, weil die Datei 161 Zeilen deiner eigenen
 unfertigen Rollen-Generalisierung trägt) und deine Prosaüberarbeitung von T-21.
 
@@ -524,7 +524,7 @@ Pflichtumfang statt in einer Fußnote.
 technisch freigegeben und warten auf deine Abschlussbestätigung. T-21 trägt
 weiterhin Börsenabweichungsanzeige und Docker-Langzeitnachweis, keinem
 Kettenglied zugeordnet. Und im Worktree liegen weiter unversioniert: der
-Abschnitt „Standard-Riegel" in `CODEX-REVIEW-AUTOMATION.md` und deine
+Abschnitt „Standard-Riegel" in `.agents/AGENT-WORKFLOW.md` und deine
 T-21-Prosaüberarbeitung.
 
 ## Archiv · INBOX → Codex · T-67 gezielte Nachprüfung Runde 4 (verarbeitet)
@@ -644,7 +644,7 @@ der Standard-Riegel: ein ✅ ohne Beleg ist ein Befund.
 bestellt hat und was die Oberfläche liefert. Das ist eine Transkription seiner
 Entscheidung aus deinem eigenen Nachtragsabschnitt, keine neue
 Abnahmebedingung — und kein Produktcode ist berührt. Nach der
-[Selbstheilungsregel](CODEX-REVIEW-AUTOMATION.md#der-bereits-benannte-rest-wird-nicht-zur-nächsten-runde)
+[Selbstheilungsregel](.agents/AGENT-WORKFLOW.md#der-bereits-benannte-rest-wird-nicht-zur-nächsten-runde)
 kostet ein bereits verstandener, mechanischer Rest keine Runde. `handoff_commit`
 bleibt auf `8099fc6`, weil `653aa2a` kein Produkt-Commit ist.
 
@@ -749,7 +749,7 @@ findet keine Fundstelle — der Text ist von nichts gepinnt. Gegenprobe danach:
 JSON gültig, `core_version` unverändert `4.3.0`, Vertrags-, OpenAPI-,
 Aufnahme- und Fields-Tests grün, anschließend 1177 Backend und Ruff Default
 grün. Nach der
-[Selbstheilungsregel](CODEX-REVIEW-AUTOMATION.md#der-bereits-benannte-rest-wird-nicht-zur-nächsten-runde)
+[Selbstheilungsregel](.agents/AGENT-WORKFLOW.md#der-bereits-benannte-rest-wird-nicht-zur-nächsten-runde)
 steht `handoff_commit` deshalb auf `a8b3a18`, `review_round` bleibt `2`.
 
 ### Selbst nachgestellt
@@ -915,7 +915,7 @@ vermutet):
    `app.exchanges` steht.** Diese Aussage ist doppelt verloren: Die Konstante
    liegt jetzt an einem dritten Ort, und niemand hat festgehalten, warum.
 
-Das ist die Form, die in `CLAUDE-REVIEW-PATTERNS.md` unter T-58 schon einmal
+Das ist die Form, die in `.agents/CLAUDE-LESSONS.md` unter T-58 schon einmal
 steht: Ein Namensverstoß fällt beim Lesen auf, eine verwaiste oder gelöschte
 Begründung nicht — der Code sieht danach weiterhin plausibel aus.
 
@@ -1344,7 +1344,7 @@ S1: Konsistenz, keine Regel.
 **S3 · Platzierung.** `get_mic_support` sitzt in
 `plugin_api/examples/yaml_file.py` zwischen `api_version` und `data_version`,
 also mitten im Attributblock. Das ist die Form, die in
-`CLAUDE-REVIEW-PATTERNS.md` unter T-58 schon einmal festgehalten wurde.
+`.agents/CLAUDE-LESSONS.md` unter T-58 schon einmal festgehalten wurde.
 
 ### Nachgeprüfte Belege
 
@@ -1565,7 +1565,7 @@ steht in dieser Tabelle mit **in Kraft**:
 | Portfolio-Bereinigung 2026-08-29 (T-28 verworfen) | **in Kraft** — aus T-28 entstehen keine Gates |
 | Gattung `fund`, 2026-08-29 | **in Kraft** — Produktregel, nicht Ticketauftrag |
 | T-46 Richtungsentscheidung 2026-09-01 | **in Kraft** als Produktregel: `/analyze` misst die konfigurierte Kette |
-| T-40 Universalisierung 2026-08-29 | **abgelöst am 2026-09-07** — [T-40 abgeschlossen](solved/T-40-universelles-agenten-review-regelwerk.md); offene Kriterien nach KanTandem übernommen |
+| T-40 Universalisierung 2026-08-29 | **abgelöst am 2026-09-07** — [T-40 abgeschlossen](40-done/T-40-universelles-agenten-review-regelwerk.md); offene Kriterien nach KanTandem übernommen |
 | Menschliche Verifikation 2026-08-29 | **wird gerade eingelöst** — das dort angekündigte „frische, kurze Verify-Ticket" ist T-56 |
 | T-23 Installationsweg 2026-08-28 | erledigt — T-23 freigegeben |
 | Portfolio-Entscheidung 2026-08-28 (T-31 + T-38) | erledigt — T-31 Codex-Runde 7, T-38 Codex-Runde 2 |
@@ -1671,9 +1671,9 @@ steht in dieser Tabelle mit **in Kraft**:
 
 - Rollen: Claude implementiert; Codex prüft unabhängig Code, Tests, Ticket und
   Spec.
-- Dauerhafte Review-Muster: `CLAUDE-REVIEW-PATTERNS.md`.
-- Übergabe- und Scheduler-Regeln: `CODEX-REVIEW-AUTOMATION.md` und
-  `CODEX-IN-CONTEXT-SCHEDULER.md`.
+- Dauerhafte Review-Muster: `.agents/CLAUDE-LESSONS.md`.
+- Übergabe- und Scheduler-Regeln: `.agents/AGENT-WORKFLOW.md` und
+  `.agents/CODEX-IN-CONTEXT-SCHEDULER.md`.
 
 ## Archiv · INBOX → Claude
 
@@ -1780,7 +1780,7 @@ beim nächsten `npm install` weg — und das Fundament bedient weitere Apps.
 
 ### Warum das die Grenzen reißt
 
-Zwei der Bedingungen aus `CODEX-REVIEW-AUTOMATION.md` sind verletzt:
+Zwei der Bedingungen aus `.agents/AGENT-WORKFLOW.md` sind verletzt:
 
 - *„Öffentlicher Vertrag, API … Abhängigkeiten … bleiben unverändert"* — die
   kleinste richtige Korrektur ist `title: string | (() => string)` in
@@ -2007,7 +2007,7 @@ niemanden, und die WAL ist 0 Bytes. Passend dazu: **T-32 ist nicht gebaut** —
 `sqlite3.connect`. T-55 hat **eine** Naht geschlossen, nicht alle. Ich lege
 daraus kein Ticket an; es ist ein Argument dafür, T-32 offen zu lassen.
 
-`_tickets/T-56-vorlauf.sh` baut beide Instanzen und liegt bei, damit du den
+`_tickets/40-done/T-56-vorlauf.sh` baut beide Instanzen und liegt bei, damit du den
 Lauf nachstellen kannst. Beide sind gestoppt; die Scratch-Verzeichnisse
 bleiben bis zur Wiederholung von Punkt 5 stehen.
 
@@ -2049,7 +2049,7 @@ eigenes Review.
 
 ### 1b · T-57 — die drei Konstruktionsfehler dahinter
 
-`_tickets/T-57-tickets-sagen-nicht-was-offen-ist.md`. Mikes Einwände im
+`_tickets/40-done/T-57-tickets-sagen-nicht-was-offen-ist.md`. Mikes Einwände im
 Wortlaut, jeweils mit Lösungsvorschlag:
 
 | | Einwand | Vorschlag |

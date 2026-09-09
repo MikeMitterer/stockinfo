@@ -33,7 +33,7 @@ Bestand durch Umhängen von Identitäten oder Kursreihen lösen müssen.
 
 Mike bestätigt mit „Passt“ den Vorschlag, T-33 auf Schutz und verständliche
 Fehlermeldung zu reduzieren. Der Ausweg folgt der Entscheidung in
-[T-19](../solved/T-19-neu-aufloesen-ohne-datenverlust.md): eine andere
+[T-19](../40-done/T-19-neu-aufloesen-ohne-datenverlust.md): eine andere
 Börsenzuordnung durch Löschen und Neuanlegen.
 
 ## Umsetzung und technische Nachweise
@@ -202,7 +202,7 @@ hieße, dieselbe Entscheidung zweimal zu treffen.
 
 > **Nachtrag 2026-09-07:** T-29 ist verworfen und trägt diese Politik nicht mehr.
 > Der Alias ist seit T-23/T-31 kein Abrufschlüssel; der Bestandsschutz für
-> veröffentlichte Aliase steht in [T-30](../T-30-plugin-boersenauskunft.md), der
+> veröffentlichte Aliase steht in [T-30](../40-done/T-30-plugin-boersenauskunft.md), der
 > portable JSON-Weg ist gestrichen. Die `listing_id`- und Historienfrage dieses
 > Tickets hat damit **keinen** Vorgänger mehr, an dem sie hängt — sie ist hier
 > zu beantworten oder ausdrücklich einem anderen Ticket zuzuweisen.

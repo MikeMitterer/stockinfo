@@ -108,11 +108,11 @@ Agentendateien sowie ihre Verweise in `AGENTS.md` und im Ticket-Skill.
 
 | Bisher | Vorschlag | Grund |
 |---|---|---|
-| `CODEX-REVIEW-AUTOMATION.md` | `AGENT-WORKFLOW.md` | Gemeinsame Regeln für Implementierung, Übergabe, Review und Abschluss; gilt für beide Agenten und beide Rollen |
-| `AGENT-ACTIVATION.md` | unverändert | Startanweisungen für die jeweiligen Laufzeiten; Rollen kommen aus STATUS |
-| `CODEX-IN-CONTEXT-SCHEDULER.md` | unverändert | Tatsächlich Codex-spezifische Laufzeit; bedient abhängig von STATUS beide Rollen |
-| `CLAUDE-REVIEW-PATTERNS.md` | `CLAUDE-LESSONS.md` | Belegte Fehler und Erfahrungen aus Claudes Arbeit, einschließlich Implementierung und Review |
-| `CODEX-REVIEW-PATTERNS.md` | `CODEX-LESSONS.md` | Belegte Fehler und Erfahrungen aus Codex-Arbeit, einschließlich Implementierung und Review |
+| `../.agents/AGENT-WORKFLOW.md` | `AGENT-WORKFLOW.md` | Gemeinsame Regeln für Implementierung, Übergabe, Review und Abschluss; gilt für beide Agenten und beide Rollen |
+| `../.agents/AGENT-ACTIVATION.md` | unverändert | Startanweisungen für die jeweiligen Laufzeiten; Rollen kommen aus STATUS |
+| `../.agents/CODEX-IN-CONTEXT-SCHEDULER.md` | unverändert | Tatsächlich Codex-spezifische Laufzeit; bedient abhängig von STATUS beide Rollen |
+| `../.agents/CLAUDE-LESSONS.md` | `CLAUDE-LESSONS.md` | Belegte Fehler und Erfahrungen aus Claudes Arbeit, einschließlich Implementierung und Review |
+| `../.agents/CODEX-LESSONS.md` | `CODEX-LESSONS.md` | Belegte Fehler und Erfahrungen aus Codex-Arbeit, einschließlich Implementierung und Review |
 
 Die Agentennamen in den Erfahrungssammlungen bezeichnen die Herkunft der
 Belege, nicht deren Leser oder dessen aktuelle Rolle. Allgemeine Regeln gelten
@@ -157,7 +157,7 @@ Pfade gültig.
 ## Observer-Auftrag ausgelagert
 
 Der vollständige Auftrag samt CLI- und Loop-Prüfungen liegt nach Claudes
-Scope-Entscheidung `6177c76` in [T-69](T-69-observer-instanzen-und-loop.md).
+Scope-Entscheidung `6177c76` in [T-69](../20-ready/T-69-observer-instanzen-und-loop.md).
 Er folgt direkt auf T-68. Die frühere Prüfmatrix #7–10 wird dort als #1–4
 geführt; sie ist durch die Ordnerumstellung nicht bestanden.
 
@@ -165,7 +165,7 @@ geführt; sie ist durch die Ordnerumstellung nicht bestanden.
 
 ### Aktivierungsanleitung geprüft · 2026-09-09
 
-Auf Mikes Auftrag wurde `AGENT-ACTIVATION.md` bereits redaktionell angepasst.
+Auf Mikes Auftrag wurde `../.agents/AGENT-ACTIVATION.md` bereits redaktionell angepasst.
 Der Claude-Startprompt verweist jetzt auf den Abschnitt „Claude-Durchlauf“
 in derselben Datei. Rollenprüfung, Priorität, Pflicht-Skill, Autorensammlung
 und Übergaberegeln bleiben über den Durchlauf und den gemeinsamen Workflow
@@ -184,7 +184,7 @@ geprüft. Die frühere pauschale Aussage zur Löschung beim Ausstieg wurde
 korrigiert. Das ist eine Dokumentations- und Ablaufprüfung, kein Live-Test.
 Die praktische Prüfung bleibt in T-69 offen.
 
-Doku-Abgleich: `AGENT-ACTIVATION.md` und dieses Ticket angepasst. Bestehende
+Doku-Abgleich: `../.agents/AGENT-ACTIVATION.md` und dieses Ticket angepasst. Bestehende
 Dateinamen und Einstiegsanker bleiben erhalten; die übrigen Verweise werden
 bei der vereinbarten Umstellung nachgezogen.
 Prüfergebnis: Claude-Startprompt von 2.471 auf 97 Zeichen gekürzt;

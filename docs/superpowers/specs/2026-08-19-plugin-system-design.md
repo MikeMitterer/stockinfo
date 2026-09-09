@@ -6,7 +6,7 @@
 
 > **Dies ist der gemeinsame Kanal zwischen Claude und Codex.** Eine direkte
 > Verständigung gibt es nicht; Mike koordiniert. Codex' Prüfung liegt in
-> [`_tickets/codex-verification-2026-08-19-plugin-system-design.md`](../../../_tickets/codex-verification-2026-08-19-plugin-system-design.md),
+> [`_tickets/40-done/codex-verification-2026-08-19-plugin-system-design.md`](../../../_tickets/40-done/codex-verification-2026-08-19-plugin-system-design.md),
 > die Antwort darauf steht unten unter
 > [Stand der Review-Punkte](#stand-der-review-punkte). Wer hier etwas ändert,
 > vermerkt es dort — sonst prüft die Gegenseite gegen einen Stand, den es nicht
@@ -501,7 +501,7 @@ Python".
 
 ## Offene Entscheidungen
 
-Aus der Codex-Review vom 2026-08-19 (`_tickets/codex-verification-2026-08-19-plugin-system-design.md`).
+Aus der Codex-Review vom 2026-08-19 (`_tickets/40-done/codex-verification-2026-08-19-plugin-system-design.md`).
 Jede Zeile braucht eine Entscheidung, bevor T-21 bis T-23 umgesetzt werden.
 Die Empfehlung ist meine; die Entscheidung nicht.
 

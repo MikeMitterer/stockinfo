@@ -10,7 +10,7 @@
  * Fehlt hier ein Präfix, liefert der Dev-Server die `index.html` statt der
  * API-Antwort: Die App bekommt HTML, wo sie JSON erwartet. Im Produktionsbau
  * ist der Fehler unsichtbar, weil dort derselbe Server alles ausliefert — er
- * liegt als `_tickets/solved/T-04-vite-proxy-fehlende-praefixe.md` im Board.
+ * liegt als `_tickets/40-done/T-04-vite-proxy-fehlende-praefixe.md` im Board.
  */
 export const apiPrefixes = [
   '/quote',

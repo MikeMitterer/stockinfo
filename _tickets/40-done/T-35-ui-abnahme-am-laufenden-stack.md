@@ -432,7 +432,7 @@ Wer das zuschneidet, sollte T-27a und T-34 danebenlegen: T-34s Wächter `#3`
 
 ## Was der Lauf über die Prüfmittel selbst sagt
 
-`_tickets/T-35-smoke.sh` stellt dieselben Fragen über REST — **15 Checks, alle
+`_tickets/40-done/T-35-smoke.sh` stellt dieselben Fragen über REST — **15 Checks, alle
 grün**, mit Netz gegen die echten Quellen. Er hat sich beim ersten Lauf selbst
 erwischt: `report` gab bei leerem Zusatztext `1` zurück, wodurch im
 `bedingung && report … || report …` **beides** feuerte. 17 Meldungen bei 12

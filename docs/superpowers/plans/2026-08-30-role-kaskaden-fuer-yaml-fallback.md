@@ -118,7 +118,7 @@
 - Modify: `app/container.py`
 - Modify: `tests/test_container.py`
 - Modify: `tests/test_yaml_profile.py`
-- Modify: `_tickets/solved/T-41-role-kaskaden-fuer-yaml-fallback.md`
+- Modify: `_tickets/40-done/T-41-role-kaskaden-fuer-yaml-fallback.md`
 - Modify: `docs/sources.yaml.example`
 - Modify: `docs/plugins.md`
 
@@ -169,7 +169,7 @@
   ```bash
   .venv/bin/pytest -q tests/test_composite_market.py tests/test_container.py tests/test_fx_service.py tests/test_yaml_profile.py tests/test_plugin_vertical.py
   .venv/bin/ruff check app tests plugin_api/src plugin_api/tests plugin_api/examples
-  PROFILE=yaml ./_tickets/solved/T-35-smoke.sh --run
+  PROFILE=yaml ./_tickets/40-done/T-35-smoke.sh --run
   make test
   git diff --check
   ```
