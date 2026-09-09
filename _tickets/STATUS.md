@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `e4b793e`
+- `handoff_commit`: `8af898c`
 - `review_round`: `0`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-66-mcp-assets-und-browser-steuern.md`
 - `last_reviewed_commit`: `e4b793e`
@@ -41,6 +41,45 @@ Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 Mike beauftragt die verbleibende Börsenabweichungsanzeige. Codex implementiert,
 Claude prüft unabhängig; Aktivierung, Übergabe und Ergebnis laufen ausschließlich
 über diese Datei. Nach diesem Ticket folgt `portfolio_review`, Owner Mike.
+
+Nachsteuerung: Mike verlangt die Entfernung des US-Sammelcodes. Konkrete
+MICs aus den Plugin-Deklarationen sind maßgeblich. Der neue Zuschnitt steht
+im T-21-Abschnitt „Restumsetzung Börsenabweichung“, Commit `8af898c`.
+
+## OUTBOX → Claude · T-21 Scope-Checkpoint, 2026-09-09
+
+**Nur Zuschnitt prüfen, noch kein Produktreview.** Prüfgegenstand ist der
+neue T-21-Abschnitt „Restumsetzung Börsenabweichung“ in `8af898c`.
+Auslöser ist Mikes ausdrückliche Korrektur: Der US-Sammelcode soll ganz
+entfallen. Mein erster UI-Plan hatte veraltete #2e2/#2e3 übernommen.
+
+Vorschlag: (1) Collector-Modell und REST-/TS-Variante entfernen,
+(2) die verbliebenen Auswahl-/Heimat-/FIGI-Sonderwege auf konkrete MICs
+beschränken, (3) gemeinsamer MIC-Vergleich in Tabelle/Karten mit DE/EN.
+Details, Flächen, Nicht-Ziele und Akzeptanzfälle stehen vollständig im Ticket.
+US als ungültige Präferenz erhält keine neue Sonderbehandlung; vorhandener
+Unknown-/Default-Rückfall bleibt. US als Länderpräfix ist kein Börsenmodell.
+
+Bitte genau `continue`, `reduce`, `split` oder `mike` laut Scope-Vertrag.
+Für `continue` beantragt: 13 Produktdateien (+ mechanischer Plugin-Kommentar
+innerhalb der Toleranz), 12 Test-/Dokudateien, 1400 manuelle Diff-Zeilen,
+wesentlich durch Löschungen. Bisher geplant 7/4/600, tatsächlich **0
+Produktdateien, 1 Ticketdatei, 81 versionierte Zeilen**. Kein Produktcode.
+Der verworfene rote UI-Test ist aus dem Worktree entfernt; keine defekte
+Testsuite übergeben. Kein neuer Testlauf als Freigabenachweis behauptet.
+
+Standard-Riegel: gelesen `/Users/macminipro/.codex/skills/code-standards/SKILL.md`
+samt architecture, frontend, quality, documentation und python. Architektur:
+✅ vorhandene REST-Auskunft genügt für Anzeige, Entfernungsschichten benannt.
+Shell/CLI/Python/Persistenz/Frontend-Code: ➖ kein Produktdiff. Qualität:
+✅ Akzeptanzfälle und falsche Gegenfälle benannt, noch kein Erfüllungsnachweis.
+Dokumentation: ✅ Auftrag, Entfall Docker und Ablösung der alten Collector-
+Anforderungen getrennt. DRY: Collector-Verwendung in Core, Resolver, REST/TS
+und bestehenden Tests inventarisiert; keine neue Mitgliedschaftsliste geplant.
+
+Vorhandene fremde Dokumentationsänderungen bleiben uncommitted, auch Mikes
+T-21-Einstieg. Nur der neue Abschnitt wurde gezielt committet. Keine Freigabe
+oder Wiedereröffnung der historischen Teilumsetzungen und kein Folgeauftrag.
 
 Den Docker-Pending-Langzeitnachweis nimmt Mike ausdrücklich aus den
 Abschlussbedingungen: „Den Docker-Langzeittest können wir nicht machen,
