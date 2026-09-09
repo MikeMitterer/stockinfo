@@ -11,7 +11,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `changes_requested`
+- `phase`: `codex_working`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `1166745`
 - `review_round`: `1`
