@@ -11,12 +11,12 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-68-ticketboard-ordner-umstellen.md`
-- `handoff_commit`: `a73d454`
-- `review_round`: `0`
+- `handoff_commit`: `92d19ab`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
 - `last_reviewed_commit`: `16cf3d3`
@@ -45,6 +45,71 @@ Die Phasennamen richten sich nach der aktuellen Zuordnung:
 geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
+
+## OUTBOX → Claude · T-68 Runde 1
+
+**Prüfstand StockInfo: `92d19ab`**, Ticketnachweise zusätzlich `71e875e`.
+**Prüfstand PersonalSkills: `eeaad8c2979b6dd1d5cd470b3a0349cb7dd2be1b`**
+im Repository `/Volumes/DevLocal/DevKI/Production/PersonalSkills`.
+Basis für den StockInfo-Diff: `debb3d1`. T-68 liegt unter
+[30-doing](30-doing/T-68-ticketboard-ordner-umstellen.md).
+
+Scope-Entscheidung `6177c76` umgesetzt: Board, Agentenregeln, Skill und
+Vorlagen verwenden die neue Ablage. Vollständiger Observer-Auftrag in
+[T-69](20-ready/T-69-observer-instanzen-und-loop.md), direkt anschließend.
+Die gemeinsame Quelle der Regeln ist der Workflow; Projektstand steht in
+CLAUDE.md, Anlass und Belege bleiben in den beiden Erfahrungssammlungen.
+
+**Nachweisweg für beide Repos:** Der
+[Skill-Liefernachweis](30-doing/T-68-ticketboard-ordner-umstellen.md#liefernachweis-personalskills)
+nennt Ausgangs-/Abschlusscommit, drei Commit- und Worktree-Prüfsummen und beide
+aufgelösten Symlinks. 30 vorbestehende uncommittete Zeilen im Skill-Repo sind
+unverändert erhalten und separat erklärt. Die T-68-Regeln sind vollständig
+committed; diese fremde Ergänzung wird nicht als eigene Änderung mitgeliefert.
+
+| Matrix | Beleg und Ergebnis |
+|---|---|
+| #1 | 98/98 Ausgangsdateien vorhanden, 77 Tickets eindeutig; reiner Verschiebe-Commit `b7c9896`: 95 Dateien, null Inhaltsänderungen. |
+| #2 | 320 lokale Markdown-Links/Anker ohne Befund einschließlich dieser Übergabe; keine alten aktiven Agentenpfade oder Root-Pflicht. |
+| #3 | T-68 in Doing, T-69 in Ready und aktiver Kette; kein Ticket der fünf inaktiven Ordner unter Doing vorhanden. |
+| #4 | 12 Archivskripte bytegleich, nicht ausgeführt. 3 Proxytests grün, TS-Tokenstrom ohne Kommentare unverändert. Zwölf ursprüngliche Arbeitsdateien bytegleich; neue WAL/SHM-Dateien im späteren Inventar ohne gesicherte Herkunft, daher Einschränkung im Ticket. Keine DB- oder Browserprüfung für T-68. |
+| #5 | Projekteinstiege, README, Workflow, Aktivierung, Scheduler und Skill inhaltlich abgeglichen; Historie und Human-Antworten erhalten. |
+| #6 | Beide Skill-Symlinks zeigen auf dieselbe Quelle; zusätzlich 17 Skill-Links/Anker ohne Befund, andere Boards nicht verschoben. |
+
+Scope bis `92d19ab`: 1 fachliche Änderung, 1 Produktdatei (nur Kommentar),
+117 Test-/Dokudateien einschließlich reiner Verschiebungen gegen 110 geplant
+(+6,4 %, zusätzliche Archivlinks; unter der 25-%-Schwelle), 2.317/2.500
+Inhaltszeilen über beide Repos. Nachweisdokumentation und diese Mailbox werden
+vor dem Übergabecommit mitgezählt: konservative Obergrenze **2.450/2.500**
+Zeilen einschließlich der Zustandswechsel. Keine neue Produktschicht.
+
+Gelesen: `/Users/macminipro/.codex/skills/code-standards/SKILL.md` und
+`references/documentation.md`; beide Erfahrungssammlungen vollständig.
+Die vorbereiteten gemeinsamen Regeldateien haben gemischte Autorenschaft.
+
+| Standard-Referenz | Ergebnis |
+|---|---|
+| Architektur | ✅ Gemeinsamer Workflow, zentrale Projektvorgabe, Erfahrungen mit Belegverweisen; keine neue Produktabstraktion. |
+| Shell | ➖ Kein aktiver Shell-Code geändert; Archivskripte bytegleich. |
+| CLI | ➖ Keine CLI-Funktion implementiert; Observer-Starts gehören T-69. |
+| Frontend | ✅ Zwei TS-Kommentare; Tokenvergleich und vollständiges Bezeichnerinventar mit TS-Compiler-API, 3 Proxytests grün. Keine UI-Änderung. |
+| Python | ➖ Kein versionierter Python-Code geändert. |
+| Persistenz | ➖ Keine Persistenzimplementierung oder DB-Prüfung; Dateiprüfsummen mit benannter Einschränkung. |
+| Qualität | ✅ Vollständiges Dateiinventar, Prüfsummen, Rollen-/Pfadabgleich und bestehende Proxytests; keine Archivskripte erneut ausgeführt. |
+| Markdown | ✅ Navigation der aktuellen Regeldokumente, Link-/Ankerprüfung und Doku-Abgleich; Skill-Fassung separat identifiziert. |
+
+**DRY:** Rolle/Phase/Priorität bleiben in STATUS, gemeinsamer Ablauf im
+Workflow, Projektvorgaben in CLAUDE.md. Keine zweite Observer-Regelkopie und
+kein neues Prüf-Subsystem. StockInfo-README erläutert die Anwendung des
+allgemeinen Ticket-Skills. Andere vorbestehende Dirty-Dateien sind nicht
+Teil des Prüfstands; die neue unversionierte Stil-README erhielt nur im
+Worktree einen korrekten T-56-Link.
+
+**Aktivierung:** Der neue Claude-Loop-Prompt steht in
+[.agents/AGENT-ACTIVATION.md](.agents/AGENT-ACTIVATION.md).
+Ein eventuell noch gespeicherter Startprompt mit altem Dateipfad muss im
+eigenen Chat ersetzt werden; die Quelldatei kann keinen fremden Job ändern.
+Codex-Zelle 363 ist mit Doing-Dateischranke neu gestartet; kein Observer-Loop.
 
 ## Gültige Ablage
 
