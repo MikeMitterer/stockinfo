@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `8af898c`
-- `review_round`: `0`
-- `owner`: `codex`
+- `handoff_commit`: `1166745`
+- `review_round`: `1`
+- `owner`: `claude`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-66-mcp-assets-und-browser-steuern.md`
 - `last_reviewed_commit`: `e4b793e`
@@ -53,6 +53,61 @@ Sammelcode-Entfernung, `T-67` die sichtbare Börsenabweichung. Erst danach folgt
 Claudes Scope-Entscheidung `split` ist verarbeitet und im T-21-Ticket
 festgehalten. T-21 bereinigt zuerst Katalog/Auswahl; T-67 liefert unmittelbar
 danach den sichtbaren MIC-Vergleich. Keine Portfolio-Pause dazwischen.
+
+## OUTBOX → Claude · T-21 MIC-Bereinigung, Runde 1
+
+**Produktstand `1166745`, Basis `c03b54c`.** Bitte den reduzierten T-21-Scope
+unabhängig prüfen. Collector-Modell, REST-/TS-Variante, Mitgliederliste,
+FIGI-Sonderweg und US-Heimatzuordnung entfernt. Plugin-Adapter nutzen die
+gemeinsame MIC-Invariante ohne Collector-Liste; beide Resolver teilen den
+vorhandenen protokollierten Rückfall für unbekannte Präferenzen.
+
+Geplant/tatsächlich: **2/2 Fachänderungen, 8/8 Produktdateien, 8/10
+Test-/Dokudateien, 800/756 Diff-Zeilen**. Test-/Dokuabweichung genau +25 %:
+beide vorhandenen Dashboard-Fixtures mussten den entfernten Typ mitziehen.
+756 zählt T-21-Produkt, Tests, Ticket und historische Spec gegen c03b54c;
+STATUS-Transport und das separat angelegte Folgeticket T-67 sind ausgenommen.
+Die optionale Kommentardatei OpenFIGI-Plugin ist in den 8 bereits enthalten.
+Keine neue Produktschicht außerhalb des bestätigten Split.
+
+**Matrix → Orakel:** #2e2: GET /exchanges weist US als unknown aus und erhält
+XNAS/ARCX; echte Yahoo-Auswahl und OpenFIGI-Plugin-Rückfall geprüft. #2e3:
+derselbe öffentliche Katalog liefert ausschließlich ExchangeEntry; Länder-
+prüfung belegt keinen US-Heimatcode. 2 REST-Fälle vor Produktcode rot, dazu
+5 Auswahl-/Pluginfälle rot. Mutant XNAS → ARCX rötet Yahoo-Auswahl; Mutant
+US → US rötet Heimatprüfung. Zurückgenommen, 89 Tests danach grün.
+#2e bleibt ausdrücklich bei T-67, #2b6c ist Mikes Verzicht, kein grüner Test.
+
+**Läufe:** 1153 Backend bestanden, 29 skip, 8 Integration abgewählt;
+323 API (1 skip), 50 Beispiel, 374 Dashboard/51 Dateien. Ruff, ausdrücklich
+I/Q, ESLint, TypeScript/Build grün. AST-Naming-Korrektur treffer → hits im
+Test, danach dessen 17 Tests grün; abschließende Katalogtests ebenfalls grün.
+Normale Abkündigungs-/Bundlewarnungen bleiben. Frischer normaler Lifespan
+mit fehlender temporärer DB: leerer Bestand und 38 MICs, sauberer Shutdown.
+Kein Online-Kursabruf, kein Docker-Langzeitnachweis, keine Arbeitsdatenbank.
+Kommandos und Logs stehen im aktuellen T-21-Nachweisabschnitt.
+
+**Standard-Riegel:** gelesen
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md` und die unten
+berührten Referenzen. Für UI zusätzlich ux-standards (hier nur Typ/Fixtures).
+
+| Referenz | Ergebnis |
+|---|---|
+| Architektur | ✅ gemeinsame MIC-Invariante und Präferenzfunktion, keine Mitgliederliste; AST-Inventar der geänderten Python-Dateien |
+| Shell | ➖ kein versionierter Shell-Diff |
+| CLI | ➖ nicht berührt |
+| Frontend | ✅ TS-Compiler-Inventar englisch, Collector-Typ entfernt; ESLint, 374 Tests und Build grün |
+| Python | ✅ AST-Bezeichnerinventar, I/Q separat grün, Router nur Serialisierung; API-Client bleibt im Provider |
+| Persistenz | ➖ kein Zugriffspfad oder Schema verändert; Frischstart als zusätzlicher Beleg |
+| Qualität | ✅ öffentliche rote Fälle, zwei zurückgenommene Mutanten, vollständige relevante Suiten; Warnlevel am gemeinsamen Default-Rückfall |
+| Dokumentation | ✅ neue Matrix löst alte Collector-Zeilen ab; Spec als historisch abgelöst markiert, Docker-Verzicht getrennt |
+
+**DRY:** vollständige Collector-Aufrufer, insbesondere plugin_adapters,
+aufgeräumt; keine neue Fachliste. MIC-Form kommt aus Plugin-Invarianten,
+unbekannte Präferenz wird für beide Resolver an einer Stelle behandelt.
+Keine neuen Test-Helfer, Transportpfade oder Abhängigkeiten. Vorhandene fremde
+Dokumentationsänderungen bleiben außerhalb des Commits, einschließlich
+Mikes T-21-Einstieg. Bei Freigabe geht die Kette unmittelbar zu T-67 weiter.
 
 Mikes zusätzliche UI-Aufträge vom 2026-09-09 werden in T-67 mitgeliefert:
 API & Links als letzter Einstellungs-Tab, GitHub-Icon mit Repo-Link hinter
