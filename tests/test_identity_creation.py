@@ -165,8 +165,8 @@ def test_ohne_eindeutige_zuordnung_entsteht_gar_keine_zeile(repo) -> None:
     **Geprüft wird seit Runde 40 mit einem *vorhandenen*, aber ungültigen
     Wert.** Eine leere Identität lässt sich am Modell nicht mehr ausdrücken —
     `ticker` und `mic` sind seit `core_version 2.0.0` nicht-nullbare
-    Pflichtfelder. Der Sammelcode `US` ist der Fall, den es weiterhin gibt:
-    Er steht da, ist aber kein Handelsplatz, und `canonical_identity` lehnt
+    Pflichtfelder. Das Länderpräfix `US` ist ein bewusst ungültiger Testwert:
+    Es steht da, ist aber kein Handelsplatz, und `canonical_identity` lehnt
     ihn ab. Die Verteidigung im Repository greift also unverändert — sie
     schützt jetzt gegen falsche statt gegen fehlende Werte.
     """
@@ -210,7 +210,7 @@ def test_eine_offene_aufloesung_verwirft_keine_bestehende_zuordnung(repo) -> Non
     **Der ungültige Fall hat seit Runde 40 eine andere Gestalt.** „Keine
     Identität" lässt sich am Modell nicht mehr ausdrücken; was es weiterhin
     gibt, ist ein Wert, der dasteht und trotzdem nichts bezeichnet — der
-    Sammelcode `US`. `canonical_identity` lehnt ihn ab, und damit greift
+    Ländercode `US`. `canonical_identity` lehnt ihn ab, und damit greift
     dieselbe Regel: Was nicht vollständig ist, ersetzt nichts.
     """
     instrument_id = repo.save_quote(_response()).instrument_id
@@ -218,7 +218,7 @@ def test_eine_offene_aufloesung_verwirft_keine_bestehende_zuordnung(repo) -> Non
     repo.save_quote(_response(price=130.0, ticker="VGWL", mic="US"))
 
     assert _row(repo, instrument_id)["ticker"] == "VGWL"
-    assert _row(repo, instrument_id)["mic"] == "XETR", "der Sammelcode ersetzt nichts"
+    assert _row(repo, instrument_id)["mic"] == "XETR", "das Länderpräfix ersetzt keinen MIC"
 
 
 def test_ein_wechsel_des_handelsplatzes_wird_protokolliert(repo) -> None:

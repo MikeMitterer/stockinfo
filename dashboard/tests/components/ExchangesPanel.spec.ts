@@ -67,11 +67,9 @@ describe('ExchangesPanel', () => {
     wrapper.unmount()
   })
 
-  it('blendet Sammelcodes aus und findet MIC, Name und Quelle', async () => {
+  it('findet Handelsplätze anhand von MIC, Name und Quelle', async () => {
     const wrapper = render()
     await wrapper.find('[role=switch]').trigger('click')
-    expect(wrapper.find('.exchanges__collectors').exists()).toBe(false)
-    expect(wrapper.find('.n-data-table').text()).not.toContain('NYSE / NASDAQ')
     for (const query of ['xbud', 'Budapest', 'shared', 'archive']) {
       await wrapper.find('input').setValue(query)
       expect(wrapper.find('.n-data-table').text()).toContain('Budapest')
@@ -96,7 +94,6 @@ describe('ExchangesPanel', () => {
     expect(wrapper.text()).not.toContain('regional')
     expect(wrapper.text()).not.toContain('legacy')
     await wrapper.find('input').setValue('')
-    expect(wrapper.find('.exchanges__collectors').exists()).toBe(false)
     expect(wrapper.text()).toContain(i18n.global.t('exchanges.empty'))
     await wrapper.find('button').trigger('click')
     expect(wrapper.emitted('reload')).toHaveLength(1)
@@ -157,10 +154,8 @@ it('graut auf Mobilgeräten Börsen ohne aktive Kursquelle aus', async () => {
 it('zeigt standardmäßig nur abgedeckte Börsen und bietet den vollständigen Katalog an', async () => {
   const wrapper = render()
   expect(wrapper.findAll('.n-data-table-tbody tr')).toHaveLength(1)
-  expect(wrapper.find('.exchanges__collectors').exists()).toBe(false)
   await wrapper.find('[role=switch]').trigger('click')
   expect(wrapper.findAll('.n-data-table-tbody tr')).toHaveLength(2)
-  expect(wrapper.find('.exchanges__collectors').exists()).toBe(false)
   await wrapper.find('[role=switch]').trigger('click')
   expect(wrapper.findAll('.n-data-table-tbody tr')).toHaveLength(1)
   wrapper.unmount()

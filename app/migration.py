@@ -204,9 +204,8 @@ def rejection_reason(symbol: str) -> str | None:
         return None
 
     if not symbol or "." not in symbol:
-        # `VTI`, `AAPL`: Suffixlos notiert bei Yahoo genau ein Markt, die USA
-        # — und dort führt die Tabelle nur den Sammelcode `US`. Welcher der
-        # fünf Handelsplätze gemeint ist, weiß das Symbol nicht.
+        # `VTI`, `AAPL`: Ein suffixloses Symbol benennt keinen Handelsplatz.
+        # Das Länderpräfix `US` kann den fehlenden MIC nicht ersetzen.
         return REASON_NO_SUFFIX
 
     ticker, _, alias = symbol.partition(".")
@@ -244,8 +243,8 @@ def keeps_its_identity(
 
     Entschieden wird nach den Daten und je Form: Ein Währungspaar hat keinen
     Ticker, eine OTC-Anleihe keinen MIC. Nur für `listed` gilt Ticker **und**
-    echter MIC; der Sammelcode `US` zählt dort nicht, weil er ein interner
-    Suchcode und im kanonischen Feld unzulässig ist.
+    echter MIC. Das Länderpräfix `US` erfüllt die MIC-Schreibweise nicht
+    und ist deshalb im kanonischen Feld unzulässig.
 
     Args:
         ticker: Der gespeicherte Ticker.

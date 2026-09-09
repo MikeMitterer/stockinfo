@@ -1,8 +1,8 @@
 """Tests der Börsentabelle und der Symbol-Rückrechnung (T-21)."""
 
-import pytest
-
 from dataclasses import replace
+
+import pytest
 
 from app.exchanges import (
     EXCHANGES,
@@ -34,7 +34,7 @@ def test_bekannte_suffixe_sind_eindeutig_umkehrbar(
 @pytest.mark.parametrize(
     "symbol",
     [
-        "AAPL",       # suffixlos → Sammelcode US, kein echter MIC
+        "AAPL",       # suffixlos → kein Handelsplatz bestimmbar
         "BRK-B",      # fremde Schreibweise aus der Yahoo-Suche
         "EUNL.XYZ",   # Suffix, das die Tabelle nicht kennt
         ".DE",        # kein Ticker vor dem Punkt
@@ -175,7 +175,7 @@ def test_echte_mics_werden_angenommen(mic: str) -> None:
 @pytest.mark.parametrize(
     ("mic", "reason"),
     [
-        ("US", "Sammelcode der eigenen Tabelle, kein ISO-MIC"),
+        ("US", "Länderpräfix, kein ISO-MIC"),
         (None, "gar kein Wert"),
         ("", "leer"),
         ("NOT-A-MIC", "zu lang"),
@@ -240,7 +240,7 @@ def test_jede_vollstaendige_form_wird_erkannt(columns: dict, expected: str) -> N
         ({"kind": "isin_only", "isin": None}, "ISIN-only ohne ISIN"),
         ({"kind": "listed", "ticker": "EUNL"}, "Listing ohne MIC"),
         ({"kind": "listed", "mic": "XETR"}, "Listing ohne Ticker"),
-        ({"kind": "listed", "ticker": "EUNL", "mic": "US"}, "Sammelcode ist kein MIC"),
+        ({"kind": "listed", "ticker": "EUNL", "mic": "US"}, "Länderpräfix ist kein MIC"),
         ({"kind": "listed", "ticker": "BRK-B", "mic": "XNAS"}, "fremde Schreibweise"),
         ({"kind": "erfunden", "ticker": "EUNL", "mic": "XETR"}, "unbekannte Form"),
         ({}, "gar nichts"),

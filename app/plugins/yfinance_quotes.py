@@ -110,9 +110,8 @@ class YFinancePlugin(QuoteSource, DailyCloseSource, FxSource):
 
         Im zweiten Fall fragte yfinance danach das **NYSE**-Listing von `RY` ab
         und lieferte einen Kurs — den falschen, in der falschen Währung, ohne
-        dass irgendwo ein Fehler entstünde. Dasselbe Muster wie beim
-        OpenFIGI-Sammelcode: Eine Antwort, die man nicht richtig geben kann,
-        gibt man nicht.
+        dass irgendwo ein Fehler entstünde. Ohne eindeutige Zuordnung des
+        Handelsplatzes darf das Plugin keinen Kurs liefern.
         """
         if isinstance(identity, PairIdentity):
             return f"{identity.base}-{identity.quote_currency}"

@@ -15,12 +15,11 @@ from app.exchanges import (
 from app.models import ExchangeEntry, Provenance
 
 
-def test_der_sammelcode_liegt_nicht_in_der_boersentabelle() -> None:
+def test_das_laenderpraefix_ist_kein_handelsplatz() -> None:
     """`US` ist kein Handelsplatz und darf in keinem `mic`-Feld auftauchen.
 
-    Das ist der Kern der Trennung: Solange `US` in `EXCHANGES` stand, konnte
-    jeder Konsument es als MIC übernehmen — und `is_real_mic` lehnt genau
-    diesen Wert ab. Die REST-Antwort tat es bis Teil 3 tatsächlich.
+    Das Länderpräfix erfüllt die MIC-Schreibweise nicht. Der Katalog darf
+    es keinem Konsumenten als Handelsplatz anbieten.
     """
     assert "US" not in EXCHANGES
     assert is_real_mic("US") is False

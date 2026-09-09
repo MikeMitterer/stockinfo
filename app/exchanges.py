@@ -335,11 +335,9 @@ def split_symbol(symbol: str) -> tuple[str | None, str | None]:
     **Zwei Fälle bleiben bewusst offen**, und in beiden ist ``(None, None)``
     die richtige Antwort:
 
-    * **Suffixlos** (`AAPL`). Die Tabelle führt dafür nur den Sammelcode `US`
-      — kein ISO-10383-MIC. Ob `XNYS` oder `XNAS` gilt, weiß erst das
-      aufgelöste Listing. Ein Feld, das mal echte MICs und mal einen internen
-      Suchcode enthält, wird beim ersten Anbieter zum Problem, der echte MICs
-      erwartet.
+    * **Suffixlos** (`AAPL`). Das Symbol benennt keinen Handelsplatz.
+      Ob `XNYS` oder `XNAS` gilt, weiß erst das aufgelöste Listing.
+      Das Länderpräfix `US` ist kein MIC und erfüllt dessen Schreibweise nicht.
     * **Fremde Schreibweise** (`BRK-B` aus der Yahoo-Suche). Der Bindestrich
       ist anbieterspezifisch und bedeutet bei anderen Tickern etwas anderes;
       `BRK.B` daraus zu machen wäre geraten. Das gilt auch, wenn die **Börse**

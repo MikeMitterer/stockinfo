@@ -17,8 +17,8 @@ war noch kein Produktcode entstanden. Dieser verworfene Testentwurf ist kein Pro
 
 Claude hat 8af898c am 2026-09-09 als Scope-Checkpoint geprüft: **split**,
 keine Produktfreigabe, review_round bleibt 0. Katalogbereinigung und Anzeige
-sind unabhängig prüfbare Ergebnisse. Die einmalige Budgeterweiterung bleibt
-unverbraucht. Befund: app/plugin_adapters.py muss den entfallenden
+sind unabhängig prüfbare Ergebnisse. Die einmalige Budgeterweiterung war beim Split noch unverbraucht;
+Claude erweitert in Reviewrunde 1 für B1/B2 auf 900 Diff-Zeilen. Befund: app/plugin_adapters.py muss den entfallenden
 COLLECTOR_CODES-Import und das Argument an identity_problem mitziehen.
 
 **T-21 liefert einen Katalog und Auswahlwege ausschließlich für konkrete MICs.**
@@ -41,7 +41,7 @@ nötiger Berührung nachziehen, keine historische Generalbereinigung.
 Test-Subsystem oder Änderung der Plugin-Marktabdeckung. Collector aus dem
 Dashboard-Katalogvertrag zu entfernen ist ausdrücklich beauftragt; der
 geschlossene Kurs-Core und die Plugin-API bleiben unverändert. Der
-MIC-Vergleich folgt direkt in [T-67](T-67-boersenabweichung-anzeigen.md),
+MIC-Vergleich folgt nach T-65 in [T-67](T-67-boersenabweichung-anzeigen.md),
 einschließlich Mikes drei zusätzlichen UI-Handgriffe ohne weitere Tickets.
 
 ### Aktuelle Prüfmatrix des Restumfangs
@@ -51,7 +51,7 @@ Historienabschnitt ab. Human-Antworten bleiben unverändert.
 
 | # | Nachweis | AI |
 |---|---|:--:|
-| 2e | An [T-67](T-67-boersenabweichung-anzeigen.md) übergeben, unmittelbar nach dieser Bereinigung | ➖ |
+| 2e | An [T-67](T-67-boersenabweichung-anzeigen.md) übergeben, nach T-65 gemäß Mikes Prioritätskette | ➖ |
 | 2e2 | Alte US-Sammelpräferenz entfällt; konkrete US-MICs bleiben einzeln nutzbar | ✅ |
 | 2e3 | Kein Collector im REST-/UI-Katalog oder in Auswahl-/Heimatregeln | ✅ |
 | 2b6c | Docker-Pending-Langzeitnachweis: von Mike aus dem Abschlussumfang genommen | ➖ |
@@ -93,6 +93,51 @@ Auswahl-Rotlauf /tmp/t21-selection-red.log; Mutanten
 /tmp/t21-mic-mutant-{selection,home}.log. Python-AST-/TS-Compiler-Inventare
 unter /tmp/t21-mic-{python,ts}-inventory.json; englische Bezeichner geprüft.
 Die historische Spec trägt eine Ablösungsnotiz; Human-Spalten unverändert.
+
+### Reviewrunde 1 und Korrektur · 2026-09-09
+
+Claude hat `1166745` unabhängig geprüft: Code, sieben rote Akzeptanzfälle,
+beide Mutanten, Frischstart und Suiten bestätigt; `changes_requested` wegen
+B1 (veraltete Code-/Testprosa) und B2 (aktueller Plugin-Börsenentwurf).
+B1/B2 sind korrigiert, Fachlogik unverändert; Produkt-AST ohne Docstrings
+gegen `1166745` identisch. Zwei Testnamen präzisiert, fünf wirkungslose
+Dashboard-Negativassertionen entfernt; Such-/Katalogprüfungen bleiben erhalten.
+
+**Doku-Abgleich:** aktueller Entwurf `2026-09-08-plugin-exchanges-design.md`,
+„REST und Oberfläche“, beschreibt nur MIC-Einträge und exchange/unknown.
+Die benannten Migration-/Yahoo-Kommentare nennen die heutige Invariante.
+`test_exchanges`, `test_identity_creation`, `test_identity_intake_paths`
+behaupten keinen aktuellen internen US-Suchcode mehr. In
+`test_identity_migration` bleiben die historischen Altbestandsfälle bestehen:
+#401 beschreibt eine vorhandene manuelle Identität; #417 ff. gezielt den
+früher gespeicherten ungültigen US-Wert. Keine Behauptung eines aktuellen
+Katalogeintrags. Der Plugin-Systementwurf vom 2026-08-19 bleibt Historie:
+#381 beschreibt die damalige Umstellung, #638 den datierten Reviewentscheid,
+#797 die damalige Antwort zu Vertragsprüfungen. Die nicht versionierte
+MIC-Abdeckungs-Spec vom 2026-09-07 bleibt Mikes Stand. Die zwei zusätzlichen
+Produkt-Kommentardateien waren im Split benannt; drei weitere Testdateien
+und die aktuelle Spec ziehen ausschließlich B1/B2 mechanisch mit.
+
+**Prüfung:** 298 lokale Pythonfälle, 10 ExchangesPanel-Fälle, ESLint und
+Ruff einschließlich I/Q bestanden. Drei zusätzlich gestartete Yahoo-Netzfälle
+scheiterten zunächst an Sandbox-DNS; mit freigegebenem Netzwerkzugriff alle
+3 bestanden. Python-/TS-Bezeichnerinventare vollständig gelesen, englisch.
+Keine neuen Tests, Fachregeln oder Abhängigkeiten; Gesamt-/Browser-/Buildlauf
+aus Runde 1 nicht erneut behauptet. Logs `/tmp/t21-r2-{python-local,dashboard,lint}.log`,
+Inventare `/tmp/t21-r2-{python,ts}-inventory.json`.
+
+```bash
+.venv/bin/pytest -q tests/test_exchange_catalog.py tests/test_resolver.py tests/test_exchanges.py tests/test_identity_creation.py tests/test_identity_intake_paths.py tests/test_identity_migration.py tests/test_migration_apply.py tests/test_migration_plan.py tests/test_app_plugins_contract.py
+npm --prefix dashboard test -- tests/components/ExchangesPanel.spec.ts
+npm --prefix dashboard run lint
+.venv/bin/pytest -q tests/test_plugin_yfinance_integration.py
+```
+
+P1: T-30 war bereits von Mike bestätigt und durch parallele Arbeit vorgemerkt;
+Codex hat die Verschiebung nicht ausgelöst. Beim Statuscommit wurde sie
+unbeabsichtigt mitgesichert, im Chat offengelegt. T-64 ist inzwischen ebenfalls
+auf Mikes ausdrücklichen Auftrag geschlossen; die aktive Kette lautet
+T-21 → T-65 → T-67. Kein Produktumfang wird dadurch als geprüft gewertet.
 
 ## Beauftragte Ergänzung: Abdeckung bei der Aufnahme
 

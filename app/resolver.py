@@ -48,9 +48,8 @@ logger = structlog.get_logger()
 #
 # Die Rangfolge steht an genau einer Stelle: `_exchange_of`.
 #
-# Suffixlos notiert bei Yahoo genau ein Markt: die USA. Die Börsentabelle führt
-# ihn als Sammelcode `US` zusammen, weil OpenFIGI so sucht — welcher der sechs
-# Handelsplätze gemeint ist, weiß erst der Treffer.
+# Suffixlos notieren bei Yahoo US-Listings. Welcher konkrete Handelsplatz
+# gemeint ist, steht im Treffer; das Länderpräfix `US` ist kein MIC.
 #
 # Alle sechs Codes sind am 2026-08-23 über `yf.Search` **gemessen**, nicht aus
 # der Erinnerung notiert (`AAPL`/`MSFT` → NMS, `QQQ` → NGM, `NAKDX` → NAS,

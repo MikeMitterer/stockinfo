@@ -19,12 +19,12 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from stockinfo_plugin.types import NotFound
 
 from app.container import get_cached_quote_service
 from app.main import app
 from app.providers.base import RawQuote, ResolvedInstrument
 from app.repository import REASON_IDENTITY_CONFLICT, QuoteRepository
-from stockinfo_plugin.types import NotFound
 from tests.boundaries import wire_real_chain
 
 # Die echte ISIN von Apple. Sie steht hier als Konstante, weil sie in diesem
@@ -362,7 +362,7 @@ def test_die_zweite_form_findet_dasselbe_papier_wieder(client_and_repo) -> None:
         ("FOO.ZZ", "unknown_exchange_suffix"),
         ("BRK-B.XNYS", "non_canonical_ticker"),
     ],
-    ids=["suffixlos", "sammelcode", "unbekannter_suffix", "fremde_schreibweise"],
+    ids=["suffixlos", "laenderpraefix", "unbekannter_suffix", "fremde_schreibweise"],
 )
 def test_eine_unauflösbare_eingabe_wird_mit_kennung_abgelehnt(
     client_and_repo, identifier: str, code: str
@@ -374,8 +374,8 @@ def test_eine_unauflösbare_eingabe_wird_mit_kennung_abgelehnt(
     Prosa wäre bei der ersten Umformulierung rot, ohne dass sich etwas
     Fachliches geändert hätte.
 
-    `AAPL.US` ist der Fall, den der Sammelcode kostet: `US` ist ein interner
-    Suchcode, kein Handelsplatz.
+    `AAPL.US` benennt keinen Handelsplatz: Das Länderpräfix `US` erfüllt
+    die MIC-Schreibweise nicht und ist kein App-Suffix.
     """
     client, repository = client_and_repo
 

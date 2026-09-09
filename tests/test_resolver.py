@@ -680,16 +680,11 @@ def test_yahoo_bevorzugt_bei_boerse_ohne_suffix_das_symbol_ohne_punkt(
     assert resolved.symbol == "AAPL"
 
 
-def test_yahoo_unterscheidet_eine_us_boerse_vom_sammelcode(monkeypatch) -> None:
+def test_yahoo_unterscheidet_nasdaq_von_arca(monkeypatch) -> None:
     """`DEFAULT_EXCHANGE=XNAS` meint NASDAQ, nicht „irgendwo in den USA".
 
-    Der Befund aus Runde 26: Solange die Auswahl allein am Alias hing, waren
-    `XNAS` und der Sammelcode `US` ununterscheidbar — beide führen keinen, und
-    die Regel deutete das als „jedes punktlose Symbol gehört dazu". Der
-    Arca-Treffer stand vorn und gewann, obwohl der NASDAQ-Treffer zwei Zeilen
-    später kam.
-
-    Die Reihenfolge ist deshalb Absicht: Der **falsche** Treffer steht zuerst.
+    Beide Listings haben kein Suffix; allein der konkrete MIC entscheidet.
+    Der Arca-Treffer steht absichtlich vor dem bevorzugten NASDAQ-Treffer.
     """
     _with_search(
         monkeypatch,
