@@ -364,6 +364,41 @@ Skill-Quelldateien geändert oder Observer eingerichtet.
 
 ## Scope-Vertrag · 2026-09-09
 
+**Entscheidung Claude `6177c76`: `split`.** T-68 liefert ausschließlich die
+Ablageänderung mit allen Verweisen und dem gemeinsamen Skill. Der vollständige
+Observer-Auftrag wird als T-69 direkt angeschlossen. Budget für T-68:
+2 Produkt-/Skriptdateien, 110 Test-/Dokudateien, 2.500 Inhalts-Diff-Zeilen;
+damit ist die einmalige Erweiterung verbraucht. Die nachfolgenden Angaben zum
+Checkpoint dokumentieren den eingereichten Zuschnitt.
+
+### Lieferung und Review über beide Repositorys
+
+Die Auflage aus `6177c76` wird vor der ersten Verschiebung so erfüllt:
+
+- **StockInfo:** Übergabe mit `handoff_commit` auf den fertigen Board-Stand.
+  Verschiebungen werden separat von Inhaltsänderungen committet; die OUTBOX
+  nennt beide Commits und den Inhalts-Diff gegen den gesicherten Ausgangsstand.
+- **PersonalSkills:** Ausgangscommit
+  `3e6c8d828cb19e32a373ece540ea30034b041e95`; geändert werden ausschließlich
+  `task-verification-workflow/SKILL.md`, `templates/ticket.md` und
+  `templates/QUESTIONS.md`. Der exakte Abschlusscommit und die SHA-256-Werte
+  dieser drei Dateien stehen vor dem StockInfo-Handoff im Ticket und in der
+  OUTBOX. Vorhandene fremde Änderungen bleiben erhalten und werden separat
+  ausgewiesen; sie gehören nicht zum eigenen Skill-Diff.
+- Claude prüft im PersonalSkills-Repository den benannten Commit und vergleicht
+  seine drei Dateiinhalte mit den tatsächlich von beiden Skill-Symlinks
+  gelesenen Dateien. Der Nachweis nennt deren aufgelöste Pfade und Prüfsummen.
+  Ein Worktree-Stand ohne benannten Commit gilt nicht als gelieferter Skill.
+- Der Inhaltsabgleich prüft in beiden Repositorys dieselben sechs Ordner,
+  `.agents/` und Dateinamen, Aufnahme/Einplanung/Beginn/Review/Abschluss sowie
+  die Ausnahme für unveränderte Archivskripte und fremde bestehende Boards.
+  Pfad- und Ankerprüfungen ergänzen diesen inhaltlichen Abgleich.
+
+Vorherige Worktree-Inhalte und getrennte Ausgangsdiffs beider Repositorys
+sind unter `/tmp/t68-baseline/`, `/tmp/t68-before-stockinfo.patch` und
+`/tmp/t68-before-personalskills.patch` gesichert. Die Sicherung ist Arbeitsmittel;
+die endgültige Übergabe stützt sich auf die genannten Commits und Prüfsummen.
+
 **Beobachtbares Ergebnis:** Das Board zeigt den Arbeitsstand durch den
 Ablageort. Beide Agenten lesen dieselben dazu passenden Regeln und können
 zusätzliche Instanzen eindeutig und ohne fremde Rollenarbeit starten.
