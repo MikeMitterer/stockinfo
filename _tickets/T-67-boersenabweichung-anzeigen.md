@@ -81,7 +81,7 @@ Migration oder Änderung im Foundation-Repo.
 
 | # | Beobachtbares Ergebnis | AI |
 |---|---|:--:|
-| 2e | Nach Submit zeigt der Dialog ARCX bei XETR mit beiden MICs, Namen und echter Kurswährung vor dem Speichern, Desktop/Mobil DE/EN | ✅ |
+| 2e | Nach Submit nennt der Dialog vor dem Speichern die ursprüngliche Eingabe fett, die bevorzugte Börse als nicht gefunden und die tatsächliche Börse mit echter Kurswährung als Alternative, Desktop/Mobil DE/EN | ✅ |
 | matching | Gleicher MIC, pair und isin_only lösen keine Abweichung aus | ✅ |
 | missing | Keine erfundene Abweichung bei fehlendem Katalog/unbekannter Präferenz | ✅ |
 | interaction | Vor Submit keine Rückfrage; Abbrechen schreibt nichts, Bestätigung speichert das bestätigte oder inzwischen bevorzugte Listing; danach keine erneute Warnung | ✅ |
@@ -202,6 +202,17 @@ nichts. GitHub-Trennpunkte, Tab-Reihenfolge und Plugin-Link erneut geprüft.
 
 **Doku-Abgleich:** Aufnahmeabschnitt in `docs/rest-core-contract.md` nennt
 Fließtext und fett hervorgehobene Eingabe. Keine neue API oder Fachlogik.
+
+**Selbstheilung durch den Verifier, Runde 3:** Die Verify-Zeile `2e` verlangte
+weiterhin „beide MICs, Namen und echte Kurswährung“ und stand trotzdem auf ✅.
+Der Dialog zeigt nach Mikes Textvorgabe **keinen MIC** — gemessen an der
+gerenderten Komponente, DE und EN: „US9229087690 wurde an deiner bevorzugten
+Börse, Xetra, nicht gefunden. Als Alternative schlage ich dir die NYSE Arca in
+CHF vor.“ Weder `ARCX` noch `XETR`, weder Instrumentenname noch Katalogwährung
+kommen darin vor. Die Zeile beschreibt jetzt das, was Mike bestellt hat und was
+die Oberfläche liefert. Das ist eine Transkription seiner im Nachtrag oben
+festgehaltenen Entscheidung, keine neue Abnahmebedingung. Sollen MIC oder
+Katalogwährung wieder sichtbar werden, ist das ein neues Ticket.
 
 Umfang weiterhin 18 Produkt- und 8 Test-/Dokudateien; einschließlich dieses
 Nachtrags 889/1000 manuelle Diff-Zeilen. TS-Compiler-Namensinventar englisch.
