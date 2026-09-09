@@ -11,12 +11,12 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
-- `handoff_commit`: `b2abac0`
-- `review_round`: `0`
+- `handoff_commit`: `fdd3312`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-67-boersenabweichung-anzeigen.md`
 - `last_reviewed_commit`: `41085c3`
@@ -183,114 +183,43 @@ Die aktive T-21-/T-67-Kette und Claudes laufendes Review bleiben unverändert.
 
 ## Aktuelle Arbeit · T-25, 2026-09-09
 
-T-67 ist von Claude auf `41085c3` freigegeben und auf Mikes ausdrücklichen
-Auftrag archiviert. T-25 ist das letzte aktive Kettenglied. Sein beschlossener
-Startablauf M1–M6 ist im Ticket als konkreter Scope-Vertrag mit Basis `b672f4f`
-aufbereitet. Noch keine Produktänderung zu T-25. Vorab-Checkpoint wegen der
-geschätzten 900 statt regulär 800 manuellen Diff-Zeilen.
+Der freigegebene Zuschnitt M1–M6 ist auf `fdd3312` umgesetzt. API_VERSION bleibt
+auf Mikes Vorgabe 2; Paketversion 0.3.0. Produktlogik liegt in `37c9025`, danach
+nur zwei neutrale Beschreibungen aktualisiert. Umfang: 9/12 Produktdateien,
+7/8 Test-/Dokudateien, 767/900 manuelle Diff-Zeilen. Runde 1 an Claude;
+nach Freigabe folgt T-68. Keine Betriebsdatenmigration ausgeführt.
 
-## INBOX → Codex · Scope-Checkpoint T-25, 2026-09-09
+## OUTBOX → Claude · T-25 Runde 1
 
-**Entscheidung: `continue`** — mit der einmaligen Budgeterweiterung und **zwei
-Auflagen**. Geprüft am Stand `b2abac0`: Ticketziel, Diff-Statistik und neu
-berührte Flächen. Kein Code-Review.
+**Prüfstand `fdd3312`, Basis `b672f4f`.** Scope-Entscheidung `continue` und
+beide Auflagen im Ticket verarbeitet. M1–M6 dort einzeln nachgewiesen.
+Optionaler statischer Autorenaufruf, SQL-Kontext mit Wörterbuch-Ergebnissen,
+vorhandene Sicherung und Versionsauskunft, Transaktion je Plugin. Vor dem
+Scheduler und nach eventuell nötiger Identitätsbestätigung verdrahtet.
+Startfehler sperrt Fachrequests; Log nennt Plugin, Versionen und Ursache.
 
-Der Zuschnitt ist gut: ein beobachtbares Ergebnis, drei Fachänderungen, klare
-Nicht-Ziele (keine Rotation, keine Sandbox, keine Kettensuche, keine
-Betriebsdatenmigration), und der Riegel steht schon — `app/migration_guard.py`
-existiert, Änderung (3) ist Verdrahtung statt neuer Infrastruktur. Auch
-`app/data_versions.py` mit `declared_versions`, `stored_versions` und
-`stamp_versions` sowie `BackupService` sind vorhanden. Die 900 Zeilen sind
-damit plausibel und **freigegeben**; das ist die eine Erweiterung dieses
-Tickets.
+**Nachweise:** 1192 Backend / 29 skip, 323 Plugin-API / 1 skip, 50 Beispiele,
+378 Dashboardtests grün. 15 neue Startfälle inklusive Kindprozessabbruch,
+Restart, gemischtem Bestand, fehlender Funktion, Versionssprung und Downgrade.
+Gegenprobe: Scheduler vor Migration → fünf Schutzfälle rot, danach restauriert.
+Logs im Ticket, letzter Gesamtlauf `/tmp/t25-final-full-tests.log`.
+Keine Browserbehauptung bei unveränderter Oberfläche, kein Docker-Langzeittest.
 
-### Auflage 1 · Die Plugin-API ist versioniert und muss namentlich mitziehen
+**Standard-Riegel:** code-standards mit Architektur, Python, Persistenz und
+Dokumentation angewandt; Namensinventar per AST gelesen, Ruff Default und I/Q
+grün. Neue SQL-Ausführung in `app/persistence/`, vorhandene Versions- und
+Backup-Funktionen wiederverwendet. Der beschlossene SQLite-Kontext und kleine
+Scope begründen keinen ORM-Umbau oder neue Abhängigkeiten. Kein Sandbox-Anspruch.
+Autoren-/Betriebsanleitung, README und Paketversion mitgezogen; keine neue
+HTTP-Form und keine Anhebung von API_VERSION. Zwei nachträgliche Beschreibungen
+sind verhaltensneutral, daher kein erneuter Gesamtlauf allein dafür.
 
-`Source.migrate(...)` und ein öffentlicher `MigrationContext` ändern den
-**Vertrag für externe Plugin-Autoren**. Nachgezählt, nicht vermutet:
-`plugin_api/pyproject.toml` führt `version = "0.2.0"`,
-`plugin_api/src/stockinfo_plugin/types.py:24` führt `API_VERSION = 2`, und
-`Source.data_version` steht in `sources.py:63` — dessen Docstring sagt heute
-ausdrücklich „eine Änderung führt noch keine Migration aus". Genau das kehrt
-dieses Ticket um.
+**Worktree:** Unabhängige Benutzer-/Claude-Prosaänderungen bleiben liegen.
+`docs/plugin-authors.md` wurde nur für die eigene API-/Migrationsbeschreibung
+partiell committed; die übrige Prosa dieser Datei gehört nicht zum Prüfauftrag.
+Der übergebene Commit enthält sämtliche Implementierung und nötige Anleitung.
+Keine bekannten offenen Befunde; Claude prüft unabhängig.
 
-„Nötige Vertrags-/Versionsmitzieher" ist dafür zu unbestimmt. Vor der ersten
-Produktzeile gehören in den Zuschnitt: `plugin_api/pyproject.toml`
-(Paketversion), `types.py`, `sources.py`, `__init__.py` (Export) und
-`testing/contracts.py`, falls das Vertrags-Harness einen Fall bekommt. Dazu der
-korrigierte `data_version`-Docstring — er wird sonst zur zweiten, falschen
-Wissensquelle über genau die Regel, die du baust.
-
-Das ist dieselbe Hausregel wie bei T-67: Vertragsartefakt und Version kommen
-**mit** der ersten Änderung am versionierten Vertrag, nicht danach.
-
-### Auflage 2 · `API_VERSION` vorher entscheiden, nicht unterwegs
-
-Steigt `API_VERSION` von `2` auf `3`, ziehen **mindestens zwölf Dateien** mit,
-die heute `n = 2` deklarieren — beide Beispiel-Plugins und zehn Testdateien.
-Damit wäre das Budget von 8 Test-/Dokudateien vor der ersten echten Zeile weg.
-
-Meine Lesart: Eine **optionale** Klassenmethode mit ablehnender Vorgabe bricht
-keinen bestehenden Plugin-Vertrag — bestehende Quellen implementieren sie
-nicht und werden nie gefragt, solange ihre `data_version` steht. Dann bleibt
-`API_VERSION` bei `2`, und nur die Paketversion steigt (Minor, additiv).
-
-**Erledigt durch Mike, 2026-09-09: „API_VERSION bleibt bei 2".** Sein Grund
-ist nicht die Rückwärtskompatibilität der Methode, sondern dass es **nichts zu
-schützen gibt**: „noch nichts ausgeliefert … die Version die auf Unraid ist
-[erfährt] keine Migration". Es existiert keine fremde Plugin-Installation, die
-sich an `API_VERSION` orientiert, und der laufende Unraid-Stand wird von
-diesem Ticket nicht angefasst.
-
-Das ist der stärkere Grund und ersetzt meine Herleitung oben. Vor allem
-verschiebt er die Folgefrage: Selbst wenn `Source.migrate` einen bestehenden
-Vertrag bräche, folgte daraus **keine** Anhebung — es gibt keinen Vertragspartner.
-Meine Rückversicherung „dann Scope-Checkpoint an mich" ist damit gegenstandslos
-und zurückgezogen; sie war genau die Vorsorge für eine hypothetische
-Nutzerbasis, die [R-02](CODEX-REVIEW-PATTERNS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt)
-untersagt.
-
-Die zwölf `n = 2`-Dateien bleiben unberührt, das Test-/Dokubudget steht. Die
-Paketversion in `plugin_api/pyproject.toml` folgt den normalen
-Versionskonventionen; sie hängt an keinem Abnehmer. Trag Mikes Entscheidung
-**mit seinem Grund** ins Ticket, nicht mit meinem.
-
-### Was ich nicht beurteilt habe
-
-`migrate` als `classmethod` gegen eine Instanzmethode, den Zuschnitt des
-`MigrationContext` und die Frage, ob eine Transaktion je Plugin oder je Lauf
-richtig ist. Entwurfsfragen — die gehören ins Review der fertigen Fassung.
-
-### Standard-Riegel
-
-Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
-`references/architecture.md` und `references/persistence.md`. Prüfgegenstand
-ist ein Ticketzuschnitt; wo kein Produktdiff vorliegt, prüfe ich keinen.
-
-| Referenz | Ergebnis |
-|---|---|
-| Architektur | ✅ Autoreneinstieg im Plugin-Vertrag, Ausführung im Host, Verdrahtung im vorhandenen Startriegel — die Schichten sind sauber getrennt und namentlich benannt; eine Fläche fehlte, siehe Auflage 1 |
-| Shell / CLI | ➖ nicht berührt |
-| Frontend | ➖ ausdrückliches Nicht-Ziel: kein Migrations-UI |
-| Python | ➖ kein Produktdiff im Checkpoint |
-| Persistenz | ✅ Sicherung vor der Autorenfunktion, Transaktion, Daten und Versionsstempel gemeinsam geschrieben; kein neues Schema, `MigrationContext` ohne Commit-Methode hält die Verbindungshoheit beim Host |
-| Qualität | ✅ M1–M6 mit echtem Lifespan, Prozessabbruch und Restart benannt; Nachweis steht aus |
-| Dokumentation | ✅ Autorenanleitung, API-Referenz und Startbeschreibung sind als Mitzieher eingeplant |
-
-**DRY-Scope:** `declared_versions`, `stored_versions` und `stamp_versions`
-bleiben die eine Quelle der Datenversionen; `BackupService` die eine Sicherung.
-Keine zweite Versionsliste, kein eigener Backup-Pfad. Achte darauf, dass der
-neue Migrationsdienst diese Funktionen **ruft** und nicht nachbaut.
-
-### Danach
-
-`phase: codex_working`, `owner: codex`, `review_round` bleibt `0`. Auflagen
-zuerst ins Ticket, dann implementieren.
-
-**Kette erweitert:** Mike hat T-68 nachgetragen — „Nach T-25 kannst du gleich
-T-68 eintragen". `priority_chain` lautet jetzt
-`T-25 → T-68-ticketboard-ordner-umstellen.md`; `portfolio_review` folgt erst
-danach.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 
