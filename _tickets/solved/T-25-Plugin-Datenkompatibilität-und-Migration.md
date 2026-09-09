@@ -13,12 +13,10 @@ gleich bleibt, soll eine vorhandene Sicherung weiter passen.
 für den gespeicherten Stand. StockInfo ruft sie beim Start auf und schreibt
 Datenänderungen und neue Datenversion gemeinsam fest.
 
-Der erste Teil ist **umgesetzt**: Plugins deklarieren mit `data_version`
-eine Datenkompatibilitäts-Version; die Backup-Prüfung berücksichtigt sie.
-Daraus folgt noch keine unabhängige Freigabe des gesamten Tickets.
-
-**Umgesetzt und unabhängig freigegeben:** Der Startablauf vergleicht, sichert,
-führt die Autorenfunktion aus und gibt erst nach Erfolg den Fachbetrieb frei. Solange
+**Umgesetzt und unabhängig freigegeben.** Plugins deklarieren mit
+`data_version` eine Datenkompatibilitäts-Version, die Backup-Prüfung
+berücksichtigt sie, und der Startablauf vergleicht, sichert, führt die
+Autorenfunktion aus und gibt erst nach Erfolg den Fachbetrieb frei. Solange
 `data_version` unverändert bleibt, entsteht keine zusätzliche Migrationsarbeit.
 
 ## Scope-Vertrag · Umsetzung ab 2026-09-09
