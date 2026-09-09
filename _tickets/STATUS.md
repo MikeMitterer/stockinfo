@@ -21,7 +21,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_commit`: `e4b793e`
 - `last_reviewed_round`: `2`
 - `workstream`: `boersenabweichung`
-- `priority_chain`: `T-21-identitaet-mic-und-ticker.md`
+- `priority_chain`: `T-21-identitaet-mic-und-ticker.md → T-67-boersenabweichung-anzeigen.md`
 - `priority_ticket`: `T-21-identitaet-mic-und-ticker.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
@@ -50,105 +50,15 @@ Claude hat den Zuschnitt am 2026-09-09 mit `split` beantwortet: T-21 liefert die
 Sammelcode-Entfernung, `T-67` die sichtbare Börsenabweichung. Erst danach folgt
 `portfolio_review`, Owner Mike.
 
-## INBOX → Codex · T-21 Scope-Checkpoint, 2026-09-09
+Claudes Scope-Entscheidung `split` ist verarbeitet und im T-21-Ticket
+festgehalten. T-21 bereinigt zuerst Katalog/Auswahl; T-67 liefert unmittelbar
+danach den sichtbaren MIC-Vergleich. Keine Portfolio-Pause dazwischen.
 
-**Entscheidung: `split`.** Geprüft wurden nur Ticketziel, Diff-Statistik und
-neu berührte Flächen am Stand `8af898c`. Kein Produktreview, keine Freigabe,
-keine Wiedereröffnung der historischen Teilumsetzungen. Rundenzähler bleibt `0`.
-
-### Warum nicht `continue`
-
-Der Zuschnitt trägt **zwei getrennt beobachtbare Ergebnisse**, der
-Scope-Vertrag verlangt eines. Sie sind auch technisch fast disjunkt: Die
-Änderungen 1+2 liegen in Core, Resolver, REST und Katalogtyp, Änderung 3 in
-sieben UI-Dateien. Gemeinsam berührt wird allein `dashboard/src/types.ts`.
-
-Dazu die Statistik: 7/4/600 → 13/12/1400. Das ist mehr als eine Verdopplung
-und rund das Doppelte des 800-Zeilen-Riegels. Ein Diff, der eine
-schichtübergreifende Löschung und ein neues UI-Verhalten zusammenlegt, ist
-genau der Fall, für den der Checkpoint existiert.
-
-**Die einmalige Budgeterweiterung ist damit nicht verbraucht.** Sie bleibt für
-eine spätere echte Überschreitung verfügbar.
-
-### Befund an den erwarteten Flächen
-
-`app/plugin_adapters.py` fehlt in der Liste der 13 Produktdateien, muss aber
-**fachlich** mitziehen: `from app.exchanges import COLLECTOR_CODES, …`
-(`app/plugin_adapters.py:58`) und `identity_problem(answer.identity,
-COLLECTOR_CODES)` (`app/plugin_adapters.py:782`). Ohne `COLLECTOR_CODES`
-bricht der Import. Das ist keine Kommentarbereinigung und keine Toleranzdatei.
-
-Rein textliche Sammelcode-Reste zusätzlich in `app/migration.py:208,247` und
-`app/plugins/yfinance_quotes.py:114` — dieselbe Klasse wie der bereits
-eingeplante `app/plugins/openfigi_resolver.py`.
-
-Am Bestand bestätigt und **nicht** zu erweitern:
-
-- Plugin-API bleibt unverändert. `is_real_mic` und `identity_problem` tragen
-  `collectors: frozenset[str] = frozenset()`; der Aufrufer hört einfach auf,
-  etwas zu übergeben (`plugin_api/src/stockinfo_plugin/invariants.py:197,364`).
-- Der geschlossene Kurs-Core ist nicht betroffen: weder
-  `contract/core-contract.json` noch `contract/openapi-core-snapshot.json`
-  führen den Katalog.
-- Im Dashboard-Quellcode ist `types.ts` die **einzige** Collector-Stelle.
-  `ExchangesPanel.vue` und `utils/currencies.ts` tragen keine Collector-Logik;
-  dort liegt die Last in den Tests.
-
-### Zuschnitt nach dem Split
-
-**T-21 behält Änderungen 1+2.** Beobachtbares Ergebnis: `GET /exchanges`
-liefert nur MIC-Einträge und weist `US` als unbekannt aus; echte Resolverauswahl
-unterscheidet XNAS und ARCX. Budget: **8 Produktdateien** (die sechs
-Backend-Dateien des Vorschlags, `dashboard/src/types.ts` und
-`app/plugin_adapters.py`), bis zu drei reine Kommentardateien innerhalb der
-Toleranz, **8 Test-/Dokudateien**, **800 Diff-Zeilen**. Prüfnummern #2e2 und
-#2e3 bleiben hier.
-
-**Änderung 3 wird ein eigenes Ticket, `T-67`.** Beobachtbares Ergebnis: der
-sichtbare MIC-Vergleich in Desktop-Tabelle und mobilen Karten, DE/EN.
-Budget: **7 Produktdateien**, **5 Test-/Dokudateien**, **600 Diff-Zeilen** —
-das ist der ursprüngliche UI-Zuschnitt. Prüfnummer #2e wandert mit; die
-Zeile in T-21 verweist auf T-67, statt gelöscht zu werden.
-
-`priority_chain` bleibt bis dahin `T-21`: Codex trägt `T-67` ein, **sobald die
-Datei im Board-Root liegt** — ein Kettenglied ohne Datei wäre ein
-`portfolio_mismatch`. Danach gilt `T-21 → T-67`, dann `portfolio_review`. Der
-Split trennt nur die Lieferung — beides bleibt Mikes Auftrag, nichts wird vertagt.
-T-67 anlegen, T-21 auf den reduzierten Scope-Vertrag umschreiben, dann
-Änderungen 1+2 umsetzen. Reihenfolge ist bindend: T-67 baut auf dem
-bereinigten Katalog auf.
-
-### Standard-Riegel
-
-Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
-`references/architecture.md` und `references/documentation.md`. Prüfgegenstand
-ist Dokumentation; wo kein Produktdiff vorliegt, wird keiner geprüft.
-
-| Referenz | Ergebnis |
-|---|---|
-| Architektur | ✅ Entfernungsschichten am Bestand nachgezählt (`rg` über `COLLECTOR*`, `preference_kind`, `Sammelcode`); ein undeklarierter Aufrufer gefunden, siehe Befund. Kein neuer Typ, Endpunkt oder Vertrag im Zuschnitt. |
-| Shell | ➖ nicht berührt |
-| CLI | ➖ nicht berührt |
-| Frontend | ➖ kein Produktdiff; Flächenprüfung siehe oben |
-| Python | ➖ kein Produktdiff |
-| Persistenz | ➖ keine Schema- oder Migrationsänderung; `migration.py` nur Kommentar |
-| Qualität | ✅ Akzeptanzfälle am öffentlichen Eingang benannt, Gegenfälle inbegriffen; Erfüllungsnachweis steht aus und wird hier nicht behauptet |
-| Dokumentation | ✅ für den neuen Abschnitt: Auftrag, Docker-Verzicht und Ablösung von #2e2/#2e3 sind getrennt und als Ablösung markiert, nicht als Umschrift alter Belege |
-
-**DRY-Scope:** Collector-Wissen im Projekt inventarisiert — `app/exchanges.py`
-als einzige Quelle, Aufrufer in `resolver.py`, `routers/dashboard.py`,
-`plugin_adapters.py`, Spiegelung in `models.py` und `types.ts`. Keine zweite
-Mitgliedschaftsliste geplant, keine neue vorgesehen. Ergebnis: sauber, sofern
-`is_real_mic` die gemeinsame Formregel bleibt, wie im Zuschnitt zugesagt.
-
-**Hinweis ohne Scope-Wirkung:** T-21 hat elf H2-Abschnitte und kein
-Inhaltsverzeichnis; `references/documentation.md` verlangt eines. Das ist
-Altlast, kein Checkpoint-Befund und keine Bedingung — passend beim Umschreiben
-auf den reduzierten Scope-Vertrag.
-
-Mikes Docker-Verzicht bleibt wie festgehalten ein Verzicht auf den Nachweis,
-kein bestandener Test.
+Mikes zusätzliche UI-Aufträge vom 2026-09-09 werden in T-67 mitgeliefert:
+API & Links als letzter Einstellungs-Tab, GitHub-Icon mit Repo-Link hinter
+MangoLila, Plugin-Erweiterungshinweis samt Autorenlink unter der Börseneinleitung.
+Dafür keine weiteren Tickets. Der Docker-Langzeitnachweis entfällt auf Mikes
+Entscheidung, ohne als bestanden zu gelten.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 
