@@ -1,8 +1,15 @@
 # T-61 · Offener Toast behält die alte Inhaltssprache
 
+**Zurückgestellt auf Mikes Wunsch vom 2026-09-07.** Der seltene Sprachwechsel-
+Sonderfall bleibt dokumentiert, ist aber derzeit nicht zur Bearbeitung vorgesehen.
+Für Mike gibt es aktuell nichts zu prüfen oder zu erledigen.
+
+Eine Wiederaufnahme erfolgt erst bei ausdrücklicher neuer Einplanung.
+Ein Termin ist nicht festgelegt; der Fehler ist noch nicht behoben.
+
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| StockInfo (Dashboard) | **offen · minor · nicht blockierend** | ~1–2 h | Toast-Inhalt bei Live-Sprachwechsel | — |
+| StockInfo (Dashboard) | **zurückgestellt · minor · nicht blockierend** | ~1–2 h | Toast-Inhalt bei Live-Sprachwechsel | — |
 
 - **Angelegt:** 2026-09-05, nach Mikes Einordnung von T-56 Runde 6
 - **Priorität:** Minor-Bug; kein Gate für T-56, den MVP oder die aktive Kette
@@ -61,4 +68,5 @@ Prioritätskette und blockiert T-56 nicht.
 
 ### Auflösung
 
-Offen.
+Zurückgestellt nach `postponed/` am 2026-09-07. Kein Abschluss und keine
+zusätzliche Verifikation; Akzeptanzkriterien und bisherige Befunde bleiben erhalten.

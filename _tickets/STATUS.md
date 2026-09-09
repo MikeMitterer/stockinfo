@@ -31,6 +31,10 @@ mit Ticket und Commit zum letzten abgeschlossenen Review und ist kein Limit.
 Mikes Präzisierung vom 2026-09-09 ist im gemeinsamen
 [Rundenlimit](.agents/AGENT-WORKFLOW.md#rundenlimit-rest-offenlegen-und-abschließen)
 verankert. Scope-Checkpoints sind keine vollständigen Reviewrunden.
+Beide Rollen priorisieren ab der ersten Runde nach Wichtigkeit und Auswirkungen
+auf das restliche System. Bereits zu Beginn der Maximalrunde ist ihre
+ausdrückliche Analyse des offenen Rests im Ticket erforderlich; der Coder
+beginnt damit bei der Vorbereitung der Übergabe, der Verifier beim Review.
 Die frühere T-21-Selbstheilung und deren Commitzuordnung stehen im
 [Abschluss T-21](#abschluss-t-21--mike-2026-09-09).
 
@@ -45,6 +49,19 @@ Die Phasennamen richten sich nach der aktuellen Zuordnung:
 geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
+
+## Ticketgrenzen
+
+| Ordner | Zielgrenze | Harte Obergrenze |
+|---|---:|---:|
+| `20-ready` | 5 | 7 |
+| `30-doing` | 2 | 4 |
+
+Die [Aufnahmeregel](.agents/AGENT-WORKFLOW.md#ticketgrenzen) erlaubt höchstens
+zwei zusätzliche Tickets bei begründetem Bedarf. Andere Ordner haben kein Limit.
+Aktuelle Ausnahmen: keine. Bei einer Überschreitung hier Ordner, betroffene
+Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
+Der Bestand wird aus den Ticketdateien ermittelt, nicht als Zähler gepflegt.
 
 ## Archiv · INBOX → Codex · T-68 Runde 1 (verarbeitet)
 

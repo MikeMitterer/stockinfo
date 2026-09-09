@@ -3,8 +3,7 @@
 Ein Plugin soll **zusätzliche Handelsplätze nutzbar machen**, ohne dass dafür
 StockInfo selbst geändert werden muss.
 
-Bisher begrenzt der fest eingebaute
-Börsenkatalog diese Erweiterbarkeit.
+Der zuvor fest eingebaute Börsenkatalog begrenzte diese Erweiterbarkeit.
 
 Beispiel: Ein regionales Plugin unterstützt eine Börse, die StockInfo noch
 nicht kennt. Es soll deren Börsenkennung (MIC) und Namen ergänzen können.
@@ -14,19 +13,19 @@ Für eine bereits bekannte Börse meldet das Plugin nur seine Unterstützung.
 **Bestehende Börsendefinitionen bleiben erhalten**; abweichende Schreibweisen
 seines Datenanbieters übersetzt das Plugin intern.
 
-Der Core-Teil ist **von Claude in Runde 2 freigegeben**. Bestehende Symbole
-werden durch dieses Ticket weder umdefiniert noch migriert.
+Der Core-Teil ist **umgesetzt, von Claude in Runde 2 freigegeben und von Mike
+am 2026-09-09 als erledigt bestätigt**. Die aktuelle Gegenprüfung ist grün.
+Bestehende Symbole werden durch dieses Ticket weder umdefiniert noch migriert.
 
 ## Für dich
 
 Aktuell ist **kein Handgriff nötig**.
 
-Codex führt das Ticket als nächstes Element der beauftragten Kette aus.
-Claude hat den Umfang vor Produktcode geteilt. Oberfläche, Autor-Harness
-und Beispiel stehen in [T-64](T-64-boersen-ui-und-autorennachweise.md).
-Mike hat T-64 am 2026-09-09 geschlossen; der Plugin-Hinweis mit Autorenlink
-wird ausschließlich in [T-67](T-67-boersenabweichung-anzeigen.md) umgesetzt
-und geprüft.
+Der T-30-Umfang ist abgeschlossen. Claude hat den Umfang vor Produktcode
+geteilt. Oberfläche, Autor-Harness und Beispiel stehen in
+[T-64](T-64-boersen-ui-und-autorennachweise.md). Mike hat T-64 am 2026-09-09
+geschlossen; der Plugin-Hinweis mit Autorenlink wird ausschließlich in
+[T-67](T-67-boersenabweichung-anzeigen.md) umgesetzt und geprüft.
 
 ### Bisherige Antworten und Rückmeldungen
 
@@ -43,6 +42,34 @@ widersprüchliche Deklarationen ablehnen“. Mike bestätigt: **„Ja, halte das
 
 ## Umsetzung und technische Nachweise
 
+### Abschlussprüfung · Codex, 2026-09-09
+
+Mike: „T-30 - aus meiner Sicht hat sich das erledigt, check das“.
+
+Die Prüfung bestätigt die Einschätzung: Deklaration und Validierung,
+Konfliktbehandlung und Bestandsschutz, Plugin-Entfernung sowie der normale
+Aufnahmeweg bis Persistenz und REST sind vorhanden. **35 gezielte Tests
+bestanden** auf dem aktuellen Arbeitsstand, einschließlich des Autor-Harness
+aus T-64. Die vertikalen Fälle starten die echte App mit jeweils frischer,
+temporärer Datenbank und prüfen beide Plugin-Ladewege.
+
+Im Repository ausgeführt:
+
+```bash
+.venv/bin/pytest -q tests/test_exchange_declarations.py tests/test_plugin_exchanges.py tests/test_symbol_ambiguity.py plugin_api/tests/test_exchange_contract.py
+```
+
+Kein offener Befund im T-30-Umfang. Claudes unabhängige Freigabe für `441b4b0`
+bleibt der Reviewnachweis; diese Gegenprüfung ist keine neue unabhängige
+Reviewrunde. Der Arbeitsstand enthält laufende T-21-Änderungen, die dadurch
+nicht insgesamt abgenommen sind. Kein erneuter Gesamt-, Browser-, Online-
+oder Veröffentlichungslauf. Ein vorhandener Starlette-Deprecation-Hinweis
+ändert das Testergebnis nicht.
+
+Die nachfolgende Matrix dokumentiert die Zuordnung der freigegebenen
+T-30-Anforderungen. Die aktuelle Gegenprüfung ergänzt deren Nachweise;
+frühere Einschränkungen werden nicht nachträglich als bestanden markiert.
+
 ### Scope-Vertrag · 2026-09-08
 
 Ergebnis: Ein externes Plugin deklariert einen neuen MIC, ein Nutzer nimmt
@@ -55,7 +82,7 @@ Unterstützung je Rolle ohne Änderung bestehender Aliase oder Assets.
    REST-Auskunft einschließlich Konflikten und Entfernung.
 3. Gezielte Akzeptanz- und Konflikttests über Aufnahmeweg und REST.
 
-Der [Entwurf](../docs/superpowers/specs/2026-09-08-plugin-exchanges-design.md)
+Der [Entwurf](../../docs/superpowers/specs/2026-09-08-plugin-exchanges-design.md)
 legt Vertragsform, Lebenszyklus, Grenzen und Akzeptanzfälle fest. Die
 Schätzung von 16–20 Produktdateien, 8–10 Test-/Dokumentationsdateien und
 1400–1800 manuellen Diff-Zeilen überschreitet den allgemeinen 800-Zeilen-
@@ -134,8 +161,10 @@ zu Tests ist keine Voraussetzung für T-30.
 ### Auflösung
 
 Der Core-Teil ist implementiert und am 2026-09-08 von Claude in Runde 2
-für `441b4b0` freigegeben. Mikes Abschlussbestätigung ist noch offen.
-Die Kette bleibt unverändert, T-64 ist noch nicht eingeordnet.
+für `441b4b0` freigegeben. Mike hat ihn am 2026-09-09 als erledigt bestätigt;
+die anschließende Gegenprüfung bestand mit 35 Tests. T-30 wird unter `solved/`
+archiviert. Der abgetrennte T-64-Umfang ist ebenfalls technisch freigegeben,
+bleibt aber ein eigenständiges Ticket. Die aktive T-21-/T-67-Kette bleibt bestehen.
 
 ### Implementierung und Nachweise · Codex, 2026-09-08
 
@@ -238,7 +267,7 @@ den Core müsste es direkt mit Plugins sprechen, was ausgeschlossen ist.
 **Herkunft:** Codex-Review zu T-21 Teil 3, Runde 8 (Finding 3) und Runde 9
 (Finding 5). Aus T-21 herausgeschnitten — Entscheidung Mike, 2026-08-24.
 
-**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 · Entwurf für dieses Ticket steht aus.
 
 **Hängt an:** T-21 Teil 3 (legt den Core-Katalog und die REST-Form fest, an die

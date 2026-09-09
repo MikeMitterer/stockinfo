@@ -1,8 +1,19 @@
 # T-40 · Universelles Agenten-Implementierungs- und Review-Regelwerk
 
+**Abgeschlossen durch Ablösung, 7. September 2026.** Mike hat bestätigt,
+dass der Auftrag nach KanTandem übergeht. In StockInfo bleibt kein paralleler
+T-40-Arbeitsauftrag offen.
+
+Die acht ursprünglichen Kriterien sind **nicht pauschal erfüllt oder
+abgenommen**. Ihr Stand und die noch offenen Arbeiten stehen in
+[KanTandem · übernommene Nacharbeit](/Volumes/DevLocal/DevKI/Production/KanTandem/CONCEPT.md#6-übernommene-nacharbeit-aus-stockinfo-t-40).
+Der begrenzte Anschlusscheck von KanTandem wird dadurch nicht erweitert.
+
+## Ursprünglicher Auftrag · Historie
+
 | Repo | Status | Time-box | Scope | GH-Issue |
 |---|---|---|---|---|
-| projektübergreifend / StockInfo als Ausgangspunkt | wartend | 1 Tag | bestehende Regeln verallgemeinern und wiederverwendbar paketieren; kein Produktcode | — |
+| projektübergreifend / StockInfo als Ausgangspunkt | abgelöst durch KanTandem | 1 Tag | bestehende Regeln verallgemeinern und wiederverwendbar paketieren; kein Produktcode | — |
 
 - **Angelegt:** 2026-08-29, auf Wunsch von Mike
 - **Hängt ab von:** T-31 → T-38 → T-37 → T-35 → T-39 vollständig
@@ -65,4 +76,16 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 
 ## Auflösung
 
-_(wartend — beginnt erst nach der technischen Freigabe von T-39)_
+**Abschlussart:** Ablösung und Übergabe, keine vollständige fachliche Abnahme.
+
+**Entscheidung:** Mike, 7. September 2026, „OK, passt“ zum Vorschlag,
+T-40 in StockInfo als durch KanTandem abgelöst abzuschließen und die offenen
+Anforderungen dort weiterzuführen.
+
+**Übergabe:** Alle acht Kriterien sind in KanTandem/CONCEPT.md, Abschnitt 6,
+mit bestehendem Ergebnis und verbleibender Arbeit erfasst. Der Projekteinstieg
+verlinkt sie. Ticket-Skill und Vorlage wurden bereits verbessert; vollständige
+Universalisierung, neutrale Gegenprobe und StockInfo-Rückbindung bleiben offen.
+
+Die ursprünglichen AI- und Human-Zellen bleiben unverändert. Mit diesem
+Abschluss wird kein bisher fehlender Test- oder Abnahmenachweis behauptet.

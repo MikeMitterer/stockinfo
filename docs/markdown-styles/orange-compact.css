@@ -1,0 +1,152 @@
+/* Orange Compact — kompakte Absätze mit klaren Akzenten
+ * Eigenständige CSS-Datei für die IntelliJ-Markdown-Vorschau.
+ * Originalhintergrund und normale Textfarbe bleiben unverändert.
+ * Farben und Abstände im folgenden Block anpassen.
+ */
+:root {
+  --md-font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif;
+  /* Haupttitel wie zuvor; Unterebenen in kräftigem und gedämpftem Orange. */
+  --md-h1: #ffa321;
+  --md-h2: #f58a24;
+  --md-h3: #dca052;
+  --md-h4: #e9c58d;
+  --md-h5: #ddc9aa;
+  --md-h6: #d0c9bc;
+  /* Aufgehelltes Komplementärblau zum Orange, für dunklen Hintergrund. */
+  --md-strong: #70acff;
+  --md-item-gap: 0.65em;
+  --md-nested-item-gap: 0.4em;
+  --md-line-height: 1.55;
+  --md-font-size: 16px;
+  --md-paragraph-gap: 0.7em;
+  --md-heading-gap: 1.4em;
+  --md-first-heading-gap: 0;
+  --md-table-cell-padding-y: 0.6em;
+  --md-table-cell-padding-x: 0.9em;
+  /* nowrap hält Spaltentitel zusammen; normal erlaubt Zeilenumbrüche. */
+  --md-table-heading-white-space: nowrap;
+  /* Code und kopierbare Chat-Aufträge, unabhängig vom Seitenhintergrund. */
+  --md-code-background: #252525;
+  --md-code-border: #484848;
+  --md-code-text: #e0e0e0;
+  --md-code-padding: 1em 1.2em;
+  --md-code-radius: 6px;
+  --md-code-font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+}
+
+/* Ausschließlich die Markdown-Vorschau, keine eigene Hintergrundfarbe. */
+html body {
+  line-height: var(--md-line-height);
+  font-size: var(--md-font-size);
+  box-sizing: border-box;
+  width: 100%;
+  max-width: none;
+  margin-inline: 0;
+  padding: 0 1rem 1rem;
+  overflow-wrap: anywhere;
+}
+/* Auch bei einem zusätzlichen Inhaltscontainer der IDE wirksam. */
+body .markdown-body, body #markdown-content {
+  width: auto;
+  max-width: none;
+  margin-inline: 0;
+  padding-inline: 0;
+  padding-top: 0;
+  font-size: inherit;
+  line-height: inherit;
+}
+/* Auch obere Theme-Abstände der Vorschaucontainer entfernen. */
+html body, body .markdown-body, body #markdown-content {
+  margin-top: 0 !important;
+  padding-top: 0 !important;
+}
+body p { margin: var(--md-paragraph-gap) 0; }
+body :is(ul, ol) { padding-left: 1.5em; }
+body pre { max-width: 100%; overflow-x: auto; overflow-wrap: normal; }
+body table { max-width: 100%; display: block; overflow-x: auto; }
+body table :is(th, td) {
+  padding: var(--md-table-cell-padding-y) var(--md-table-cell-padding-x) !important;
+  vertical-align: top;
+}
+/* Spaltentitel nicht mitten im Wort zerlegen. Breite Tabellen scrollen. */
+body table th {
+  white-space: var(--md-table-heading-white-space) !important;
+  overflow-wrap: normal !important;
+  word-break: normal !important;
+  hyphens: none !important;
+}
+body img { max-width: 100%; height: auto; }
+/* Theme-Vorgaben dürfen keine Serifenschrift für Lesetext einsetzen. */
+html body, body .markdown-body, body #markdown-content {
+  font-family: var(--md-font-family) !important;
+}
+body :is(h1, h2, h3, h4, h5, h6) {
+  font-family: var(--md-font-family) !important;
+  border: 0 !important;
+  background: transparent !important;
+  box-shadow: none !important;
+  text-decoration: none !important;
+  padding: 0;
+  margin: var(--md-heading-gap) 0 0.6em;
+  line-height: 1.3;
+  font-weight: 750;
+}
+body h1 { color: var(--md-h1); font-size: 2em; }
+/* Nur der Dokumenttitel startet näher am oberen Rand. */
+body h1:first-of-type {
+  margin-top: var(--md-first-heading-gap) !important;
+  padding-top: 0 !important;
+}
+body h2 { color: var(--md-h2); font-size: 1.5em; }
+body h3 { color: var(--md-h3); font-size: 1.25em; }
+body h4 { color: var(--md-h4); font-size: 1.1em; }
+body h5 { color: var(--md-h5); font-size: 1em; }
+body h6 { color: var(--md-h6); font-size: 0.95em; }
+body :is(h1, h2, h3, h4, h5, h6)::before,
+body :is(h1, h2, h3, h4, h5, h6)::after { border: 0; box-shadow: none; background: transparent; }
+body :is(h1, h2, h3, h4, h5, h6) a {
+  color: inherit;
+  text-decoration: none !important;
+  border: 0;
+}
+body :is(strong, b) { color: var(--md-strong); font-weight: 800; }
+body :is(h1, h2, h3, h4, h5, h6) :is(strong, b) { color: inherit; }
+body li + li { margin-top: var(--md-item-gap); }
+body li li + li { margin-top: var(--md-nested-item-gap); }
+body li > p { margin-block: 0.25em; }
+body li > :is(ul, ol) { margin-block: 0.5em; }
+body li::marker { color: var(--md-h2); }
+body :is(pre, code, blockquote, th, td, tr) {
+  background: transparent !important;
+  box-shadow: none;
+}
+body blockquote { border-left: 0; }
+
+/* Nach dem allgemeinen Hintergrund-Reset: Codeblöcke sichtbar absetzen. */
+body pre {
+  background: var(--md-code-background) !important;
+  color: var(--md-code-text);
+  border: 1px solid var(--md-code-border);
+  border-radius: var(--md-code-radius);
+  padding: var(--md-code-padding) !important;
+  margin-block: 1em;
+  box-sizing: border-box;
+  white-space: pre;
+}
+body pre, body code {
+  font-family: var(--md-code-font-family) !important;
+}
+body pre code {
+  background: transparent !important;
+  color: inherit;
+  border: 0;
+  padding: 0 !important;
+  white-space: inherit;
+}
+/* Lange Chat-Aufträge umbrechen, ohne ihren kopierbaren Inhalt zu ändern. */
+body pre code.language-text {
+  display: block;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  word-break: normal;
+}

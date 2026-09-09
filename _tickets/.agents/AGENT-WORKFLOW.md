@@ -20,6 +20,7 @@ Das gilt auch bei manuellem Einstieg ohne Scheduler oder Loop.
 
 - [Rollen und Zustandsprotokoll](#rollen-und-zustandsprotokoll)
 - [Ticketpfade und Arbeitsbeginn](#ticketpfade-und-arbeitsbeginn)
+- [Ticketgrenzen](#ticketgrenzen)
 - [Scope-Checkpoint — Breite entscheiden, bevor sie zum Review-Diff wird](#scope-checkpoint--breite-entscheiden-bevor-sie-zum-review-diff-wird)
 - [Verifier-Selbstheilung — mechanische Kleinigkeiten ohne Zusatzrunde](#verifier-selbstheilung--mechanische-kleinigkeiten-ohne-zusatzrunde)
 - [Kleine Befunde im laufenden Browser- oder Verify-Lauf](#kleine-befunde-im-laufenden-browser--oder-verify-lauf)
@@ -106,6 +107,23 @@ Ordnerwechsel folgen der [Board-Anleitung](../README.md#von-der-aufnahme-bis-zum
 Beim Verschieben aktuelle Verweise mitführen; historische Freigaben und
 menschliche Antworten erhalten. Für bereits archivierte StockInfo-Skripte
 bei T-68 gilt der dort genannte unveränderte Bestand.
+
+[↑ Übersicht](#übersicht)
+
+## Ticketgrenzen
+
+Die Zielgrenze und harte Obergrenze je begrenztem Ordner stehen ausschließlich
+in [STATUS.md](../STATUS.md#ticketgrenzen). Vor jeder Aufnahme oder Verschiebung
+in einen solchen Ordner dessen Ticketdateien zählen; Begleitdateien zählen nicht.
+Review, Nacharbeit und Warten auf Abschlussbestätigung zählen weiterhin zu Doing.
+
+Bis zur Zielgrenze gilt die normale Aufnahme. Ein oder zwei zusätzliche Tickets
+sind bei konkretem Bedarf erlaubt; die Ausnahme mit Tickets und Begründung in
+STATUS festhalten. Die harte Obergrenze darf nicht überschritten werden.
+Ist sie erreicht, erfolgt keine weitere Aufnahme in diesen Ordner. Laufende
+Arbeit, Reviews und Abschlüsse gehen weiter; frei gewordene Plätze dürfen unter
+denselben Regeln wieder belegt werden. Tickets nicht zur Umgehung der Grenze
+umordnen oder vorzeitig abschließen.
 
 [↑ Übersicht](#übersicht)
 
@@ -327,19 +345,32 @@ vollständigen Reviewrunden je Ticket. Es ist keine Mindestanzahl, keine
 Abbruchautomatik und kein Freigabegrund. `last_reviewed_round` bezeichnet
 weiterhin die tatsächlich zuletzt abgeschlossene Runde.
 
-**Beim Erreichen des Limits steht im Ticket deutlich, was noch offen ist
-und warum das Limit erreicht wurde.** Der Verifier aktualisiert dazu die
-bestehende Verify-Matrix und nennt im aktuellen Restabschnitt:
+**Coder und Verifier priorisieren ab der ersten Runde nach Wichtigkeit und
+konkreten Auswirkungen auf das restliche System.** Blocker und Befunde mit
+Folgen für andere Funktionen oder abhängige Arbeiten kommen vor lokalen
+Verbesserungen und verhaltensneutralen Kleinigkeiten. Maßgeblich ist der belegte
+Schaden im tatsächlichen Entwicklungsstand, nicht ein hypothetisches Risiko.
+
+**Bereits zu Beginn der Maximalrunde analysieren beide Rollen ausdrücklich
+den offenen Rest.** Bei `max_review_rounds: 3` beginnt der Coder damit bei der
+Vorbereitung der dritten Übergabe; der Verifier prüft und ergänzt die Analyse
+beim dritten Review aus eigener Sicht. Beide halten ihre Einschätzung im
+aktuellen Restabschnitt desselben Tickets fest. Abweichende Bewertungen und
+ihre Gründe bleiben sichtbar. Die Analyse wird bei neuen Befunden aktualisiert.
+Sie nennt:
 
 - jeden offenen Befund mit Fundstelle, konkreter Auswirkung und Einordnung
   als Blocker oder nicht blockierende Kleinigkeit;
+- die begründete Bearbeitungsreihenfolge, einschließlich Auswirkungen auf
+  andere Funktionen und abhängige Tickets;
 - den Grund, weshalb er noch offen ist und die bisherigen Runden ihn nicht
   erledigt haben; auch eigene ausgelassene Korrekturen werden benannt;
 - den nächsten konkreten Handgriff, den zuständigen Bearbeiter und den
   erforderlichen Nachweis für den Abschluss.
 
-Ist nichts mehr offen, steht das ausdrücklich dort, zusammen mit dem Grund
-für den Rundenverbrauch. Keine zweite Statusmatrix und kein pauschales
+Der Verifier aktualisiert dazu die bestehende Verify-Matrix. Ist nichts mehr
+offen, steht das ausdrücklich dort, zusammen mit dem Grund für den
+Rundenverbrauch. Keine zweite Statusmatrix und kein pauschales
 „Limit erreicht“ anstelle des Befunds.
 
 **Eindeutige, verhaltensneutrale Kleinigkeiten erledigt der Verifier über die

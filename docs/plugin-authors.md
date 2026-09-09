@@ -9,12 +9,28 @@ This guide is for the author of such a plugin. It is not a reference: the
 authoritative field lists live in the contract package itself
 ([`stockinfo_plugin/types.py`](../plugin_api/src/stockinfo_plugin/types.py)
 and [`sources.py`](../plugin_api/src/stockinfo_plugin/sources.py)), and every
-rule below is enforced by a test suite you inherit.
+implemented role contract has a test suite you inherit. Migration tests
+also need to check the specific data transformation supplied by the author.
 
 A complete, installable example accompanies this text:
 [`plugin_api/examples/us-example/`](../plugin_api/examples/us-example/). It is
 short enough to read in one sitting and is built, installed and exercised the
 way this guide describes.
+
+## Contents
+
+- [1. The mental model](#1-the-mental-model)
+- [2. The contract](#2-the-contract)
+- [Data compatibility](#data-compatibility-is-independent-of-package-releases)
+- [Plugin data migrations](#plugin-data-migrations)
+- [3. The smallest package that works](#3-the-smallest-package-that-works)
+- [4. Installing it](#4-installing-it)
+- [5. Choosing sources](#5-choosing-sources-sourcesyaml)
+- [6. Environment variables](#6-environment-variables)
+- [7. Fallback](#7-what-fallback-means-here)
+- [8. Troubleshooting](#8-when-it-does-not-work)
+- [Further reading](#where-to-go-next)
+- [Open detail fields](#open-detail-fields)
 
 ---
 
@@ -37,6 +53,8 @@ five from a single file; the US example serves two.
 makes a source *available*; `data/sources.yaml` decides which sources are
 asked, in which role, and in which order. A source nobody lists is never
 called, and it is not an error — it is a configuration.
+
+[↑ Contents](#contents)
 
 ---
 
@@ -118,8 +136,6 @@ The loader rejects a class that does not carry `api_version` in its own
 `__dict__`. An inherited number would follow the host through a contract
 change your plugin has never been adapted to — a barrier that lets everyone
 through is not one.
-
----
 
 ### Data compatibility is independent of package releases
 
@@ -372,6 +388,8 @@ And build the wheel you hand around:
 python -m pip wheel --no-deps -w dist .
 ```
 
+[↑ Contents](#contents)
+
 ---
 
 ## 4. Installing it
@@ -419,6 +437,8 @@ and survives the update.
 > scan, no suggestions, no updates. A plugin runs with the app's permissions,
 > so what gets installed stays a line somebody typed.
 
+[↑ Contents](#contents)
+
 ---
 
 ## 5. Choosing sources: `sources.yaml`
@@ -452,6 +472,8 @@ Three separate decisions live in that file, and it helps to keep them apart:
 
 The order is your statement and is never re-sorted. `GET /sources` afterwards
 shows what actually applies, including sources that **cannot** work and why.
+
+[↑ Contents](#contents)
 
 ---
 
@@ -491,6 +513,8 @@ Key:         US_MARKET_API_KEY
 Value:       sk-your-key-here
 ```
 
+[↑ Contents](#contents)
+
 ---
 
 ## 7. What "fallback" means here
@@ -517,6 +541,8 @@ And one that costs an hour if you miss it: **a file source has to appear in
 `resolvers` too.** A paper no online source knows cannot be added at all —
 the intake fails at resolution, long before anyone asks for a price.
 
+[↑ Contents](#contents)
+
 ---
 
 ## 8. When it does not work
@@ -536,6 +562,8 @@ filter, and it is never empty** — the host fills it with `XETR` by default.
 Read as a filter, it makes your source answer `NotResponsible` to everything
 while the code still looks perfectly reasonable.
 
+[↑ Contents](#contents)
+
 ---
 
 ## Where to go next
@@ -546,9 +574,9 @@ while the code still looks perfectly reasonable.
   one source serving all five roles from a file.
 * [`docs/plugins.md`](plugins.md) — the operator's view, in German.
 * [`plugin_api/src/stockinfo_plugin/`](../plugin_api/src/stockinfo_plugin/) —
-  the contract itself. Every rule above is a docstring there, and the tests
-  next to it are what enforce them.
+  the implemented contract, migration context and role tests.
 
+[↑ Contents](#contents)
 
 ## Open detail fields
 
@@ -578,9 +606,12 @@ schema and instrument details to choose its fields and editors.
 `GET /fields` returns the configured, validated detail schema, including
 `name`, `kind`, `unit`, labels, `overridable`, `sources`, `scopes`, numeric bounds
 and `currency_required`. Its integer `details_version` increases whenever that
-schema changes, including removals. Cache it with `generation_id`; temporary
-source health does not change the schema. The full generation endpoint and
-response-header contract remain tracked separately in T-25.
+schema changes, including removals. Temporary source health does not change
+the schema. `generation_id` and its endpoint/header are not implemented;
+do not rely on them for cache invalidation today. Their planned status is
+documented under `planned.generation_runtime` in the
+[core contract artifact](../contract/core-contract.json); they are not part
+of T-25's migration completion criteria.
 
 Both quote responses and `GET /instruments` carry a `details` map. Each value
 includes `value`, `unit`, `currency`, `origin`, `source`, `as_of`, `shadowed`,
@@ -599,3 +630,5 @@ value. The server rejects unknown, inapplicable and read-only fields with
 HTTP 422 and validates the entire patch before writing. Absolute amounts
 require a three-letter uppercase currency code. Provider values take
 precedence; a retained manual value is reported as shadowed when applicable.
+
+[↑ Contents](#contents)

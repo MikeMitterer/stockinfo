@@ -54,6 +54,8 @@ Linkprüfungen ausdrücklich eingeschlossen.
    `20-ready/`; diese Ordner starten keine automatische Arbeit.
 
 Bei jedem Verschieben Begleitdateien und aktuelle Verweise mitführen.
+Vor der Aufnahme in Ready oder Doing die [Grenzen in STATUS](STATUS.md#ticketgrenzen)
+nach der gemeinsamen [Aufnahmeregel](.agents/AGENT-WORKFLOW.md#ticketgrenzen) prüfen.
 Die mit T-68 aus `solved/` archivierten Skripte bleiben bytegleich und werden
 für die Ordnerumstellung nicht erneut ausgeführt. Neue oder künftig geänderte
 Skripte folgen dem aktuellen Ticket-Skill und finden den Projekt-Root unabhängig

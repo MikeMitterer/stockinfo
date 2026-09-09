@@ -1,12 +1,24 @@
 # T-63 · Docker-Start und Betrieb prüfen
 
-Die Docker-Verifikation aus T-16 #9 ist noch offen. Dieses Ticket prüft den
-aktuellen Container mit eigener Konfiguration und eigenen Testdaten.
-Die Tests wurden noch nicht ausgeführt und sind noch nicht eingeplant.
+StockInfo soll **auch als fertiger Container zuverlässig laufen**.
+
+Ein erfolgreicher lokaler Entwicklungsstart belegt noch nicht, dass das
+Docker-Image mit eigener Konfiguration startet und gespeicherte Daten behält.
+
+Beispiel: Der Container wird mit demselben Datenverzeichnis neu erstellt.
+Die zuvor aufgenommenen Instrumente und ihre Werte sollen weiterhin da sein.
+Auch das gebaute Dashboard muss ohne Entwicklungsserver erreichbar sein.
+
+Der fehlende Docker-Nachweis aus
+[T-16](../40-done/T-16-review-fixes-und-etf-quellen-testen.md) wird hier nachgeholt.
+Die Tests sind **noch nicht ausgeführt und nicht eingeplant**. Sie verwenden
+eigene Konfiguration und Testdaten; die laufende Arbeitsinstanz bleibt unberührt.
 
 ## Für dich
 
-Aktuell kein Handgriff nötig. Zuerst erfolgt die technische Prüfung; ein
+Aktuell ist **kein Handgriff nötig**.
+
+Zuerst erfolgt die technische Prüfung; ein
 Befund wird hier mit reproduzierbarem Aufruf dokumentiert.
 
 ### Bisheriger Auftrag
