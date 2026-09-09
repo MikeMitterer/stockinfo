@@ -16,7 +16,7 @@ zweite Instanz. Konkrete Fähigkeiten und Grenzen bleiben im jeweiligen
 Laufzeitvertrag; es gibt keinen zweiten fachlichen Workflow je Laufzeit.
 
 Der Observer erhält einen eigenen Chat und Loop. Seine Einführung ist in
-[T-69](../20-ready/T-69-observer-instanzen-und-loop.md) vorbereitet; die
+[T-69](../30-doing/T-69-observer-instanzen-und-loop.md) vorbereitet; die
 [Observer-Aktivierung](#observer-aktivierung--vorbereitet-für-t-69) unten ist
 noch keine Freigabe zum Start.
 
@@ -145,7 +145,7 @@ festlegen und dokumentieren.
 ### Observer-Durchlauf
 
 Der vorgesehene Ablauf und die Grenzen stehen bis zur Einführung in
-[T-69](../20-ready/T-69-observer-instanzen-und-loop.md#eigener-observer-loop).
+[T-69](../30-doing/T-69-observer-instanzen-und-loop.md#eigener-observer-loop).
 Bei Einführung werden sie in den gemeinsamen Workflow übernommen und hier
 verlinkt. Dieser Abschnitt aktiviert die Rolle nicht vorzeitig. Solange der
 gemeinsame Workflow den Observer nicht unterstützt, keine Beobachtung starten.

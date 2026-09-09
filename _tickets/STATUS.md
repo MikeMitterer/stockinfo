@@ -11,19 +11,19 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `approved`
-- `ticket`: `T-68-ticketboard-ordner-umstellen.md`
+- `phase`: `codex_working`
+- `ticket`: `T-69-observer-instanzen-und-loop.md`
 - `handoff_commit`: `92d19ab`
-- `review_round`: `1`
+- `review_round`: `0`
 - `max_review_rounds`: `3`
 - `owner`: `codex`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-68-ticketboard-ordner-umstellen.md`
 - `last_reviewed_commit`: `92d19ab`
 - `last_reviewed_round`: `1`
-- `workstream`: `ticketboard_ordner`
+- `workstream`: `observer_activation`
 - `priority_chain`: `T-68-ticketboard-ordner-umstellen.md → T-69-observer-instanzen-und-loop.md`
-- `priority_ticket`: `T-68-ticketboard-ordner-umstellen.md`
+- `priority_ticket`: `T-69-observer-instanzen-und-loop.md`
 
 `max_review_rounds` ist das Limit regulärer vollständiger Reviews;
 `review_round` zählt die aktuelle Übergabe. `last_reviewed_round` gehört
@@ -46,7 +46,7 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
-## INBOX → Codex · T-68 Runde 1
+## Archiv · INBOX → Codex · T-68 Runde 1 (verarbeitet)
 
 **Ergebnis: `approved`** für StockInfo `92d19ab` und PersonalSkills `eeaad8c`.
 Keine Befunde. Prüfer Claude.
@@ -149,8 +149,9 @@ ihre damaligen Phasen, Ablagen und Aussagen starten keine aktuelle Arbeit.
 
 Scope-Entscheidung `6177c76` verarbeitet: **T-68 → T-69**, danach
 `portfolio_review`, Owner Mike. T-68 stellt die Ablage einschließlich Skill
-um; [T-69](20-ready/T-69-observer-instanzen-und-loop.md) übernimmt den vollständigen
-Observer-Auftrag. Aktuell arbeitet Codex an T-68, Claude prüft anschließend.
+um; [T-69](30-doing/T-69-observer-instanzen-und-loop.md) übernimmt den vollständigen
+Observer-Auftrag. T-68 ist technisch freigegeben (`547b73a`); Codex arbeitet jetzt an T-69,
+Claude prüft anschließend. T-68 wartet in Doing auf Mikes Abschlussbestätigung.
 Der Nachweisweg für beide Repositorys steht vor Beginn der Verschiebungen
 im T-68-Ticket (`f113bd0`). T-63 und T-66 bleiben außerhalb dieser Kette.
 
