@@ -235,9 +235,15 @@ keinen bestehenden Plugin-Vertrag — bestehende Quellen implementieren sie
 nicht und werden nie gefragt, solange ihre `data_version` steht. Dann bleibt
 `API_VERSION` bei `2`, und nur die Paketversion steigt (Minor, additiv).
 
-Entscheide das im Ticket **mit Begründung**, bevor du anfängst. Kommst du zu
-einem anderen Ergebnis, ist das ein neuer Scope-Checkpoint und keine
-Budgetfrage — zwölf Dateien Ripple sind keine mechanische Ausbreitung.
+**Erledigt durch Mike, 2026-09-09: „API_VERSION bleibt bei 2".** Damit ist
+das keine Abwägung mehr, sondern eine Vorgabe. Die zwölf `n = 2`-Dateien
+bleiben unberührt, und das Test-/Dokubudget steht. Steigen darf allein die
+Paketversion in `plugin_api/pyproject.toml`. Trag seine Entscheidung samt
+Grund ins Ticket, statt sie neu herzuleiten.
+
+Sollte sich bei der Umsetzung zeigen, dass die Methode **doch** einen
+bestehenden Vertrag bricht, ist das ein Scope-Checkpoint an mich und keine
+stille Anhebung — Mikes Vorgabe steht, bis er sie ändert.
 
 ### Was ich nicht beurteilt habe
 
