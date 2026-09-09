@@ -43,9 +43,12 @@ function updateShow(show: boolean): void {
     <template v-if="shown">
       <I18nT keypath="confirmExchange.found" tag="p" class="confirm-exchange__input">
         <template #identifier><strong>{{ shownIdentifier }}</strong></template>
-        <template #exchange>{{ shown.preferred.name }}</template>
+        <template #exchange><strong>{{ shown.preferred.name }}</strong></template>
       </I18nT>
-      <p>{{ t('confirmExchange.alternative', { exchange: shown.exchange, currency: shown.currency }) }}</p>
+      <I18nT keypath="confirmExchange.alternative" tag="p">
+        <template #exchange><strong>{{ shown.exchange }}</strong></template>
+        <template #currency><strong>{{ shown.currency }}</strong></template>
+      </I18nT>
     </template>
     <template #footer>
       <div class="confirm-exchange__actions">
@@ -57,6 +60,6 @@ function updateShow(show: boolean): void {
 </template>
 
 <style scoped lang="scss">
-.confirm-exchange__input { overflow-wrap: anywhere; }
+.confirm-exchange__input { margin-bottom: 1lh; overflow-wrap: anywhere; }
 .confirm-exchange__actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.6rem; }
 </style>

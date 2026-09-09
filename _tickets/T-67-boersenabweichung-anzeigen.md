@@ -3,9 +3,11 @@
 Ein gefundenes Papier kann an einer anderen Börse notieren als aktuell
 bevorzugt. Nach dem Absenden der Asset-Erfassung zeigt ein Dialog diesen
 Unterschied vor dem Speichern:
-etwa NYSE Arca (ARCX) gegenüber Xetra (XETR), mit beiden Währungen.
+etwa NYSE Arca mit der tatsächlichen Kurswährung gegenüber Xetra.
+Die Eingabe, beide Börsen und die Kurswährung sind fett hervorgehoben.
 
-Die Meldung ist nach T-21 und T-65 umgesetzt; das unabhängige Review steht aus.
+Die Meldung ist nach T-21 und T-65 umgesetzt und bis Runde 3 freigegeben.
+Mike hat die letzte Dialogvorschau bestätigt; deren kleiner Nachtrag folgt.
 Codex implementiert, Claude prüft; die Kette steht in [STATUS.md](STATUS.md).
 Aktuell ist keine zusätzliche Prüfung durch Mike angesetzt.
 
@@ -24,7 +26,8 @@ Die verworfene Listen-/Tooltipdarstellung ist entfernt.
 **Scope-Vertrag (Claude: continue):** Beim Submit prüft der normale Aufnahmeweg
 vor seiner Speicherung, ob das neue Listing vom bevorzugten MIC abweicht.
 Dann erscheint ein Dialog mit tatsächlichem und bevorzugtem Handelsplatz,
-MIC und Währung sowie „Dennoch aufnehmen“ / „Abbrechen“. Abbruch schreibt
+in Mikes bestätigtem Fließtext, mit Kurswährung und „Übernehmen“ / „Abbrechen“.
+Die frühere Detaildarstellung mit MICs ist durch seine Textvorgabe ersetzt. Abbruch schreibt
 nichts; Bestätigung nimmt das angezeigte oder inzwischen an der bevorzugten
 Börse gefundene Listing auf. Danach kein
 Listenhinweis und keine erneute Rückfrage beim Lesen oder Aktualisieren.
@@ -81,7 +84,7 @@ Migration oder Änderung im Foundation-Repo.
 
 | # | Beobachtbares Ergebnis | AI |
 |---|---|:--:|
-| 2e | Nach Submit nennt der Dialog vor dem Speichern die ursprüngliche Eingabe fett, die bevorzugte Börse als nicht gefunden und die tatsächliche Börse mit echter Kurswährung als Alternative, Desktop/Mobil DE/EN | ✅ |
+| 2e | Nach Submit nennt der Dialog vor dem Speichern die ursprüngliche Eingabe, beide Börsen und die echte Kurswährung fett; die Alternative folgt nach einer Leerzeile, Buttons Abbrechen/Übernehmen, Desktop/Mobil DE/EN | ✅ |
 | matching | Gleicher MIC, pair und isin_only lösen keine Abweichung aus | ✅ |
 | missing | Keine erfundene Abweichung bei fehlendem Katalog/unbekannter Präferenz | ✅ |
 | interaction | Vor Submit keine Rückfrage; Abbrechen schreibt nichts, Bestätigung speichert das bestätigte oder inzwischen bevorzugte Listing; danach keine erneute Warnung | ✅ |
@@ -216,3 +219,24 @@ Katalogwährung wieder sichtbar werden, ist das ein neues Ticket.
 
 Umfang weiterhin 18 Produkt- und 8 Test-/Dokudateien; einschließlich dieses
 Nachtrags 889/1000 manuelle Diff-Zeilen. TS-Compiler-Namensinventar englisch.
+
+## Bestätigte Dialogfassung · Nachtrag nach Runde 3
+
+Mike: „Dialog passt“ zur Browser-Vorschau mit Leerzeile, fetter Eingabe,
+fetten Börsennamen und fetter Kurswährung sowie „Abbrechen“ / „Übernehmen“.
+Diese Vorschau ist jetzt im Produkt umgesetzt, englisch „Cancel“ / „Accept“.
+Runde 3 war für `8099fc6` freigegeben; Claudes mechanische Matrixkorrektur
+`653aa2a` ist übernommen. Kein offener Befund aus diesem Review.
+
+378 Dashboardtests einschließlich Fett-Auszeichnung und beider Aktionen grün,
+ESLint und Typecheck/Build grün. Nach echtem Reload/Submit im Browser DE/Mobil:
+vier fette Werte mit Gewicht 700, Absatzabstand 22,4 Pixel = eine Textzeile,
+Buttons korrekt, kein Überlauf bei 390 Pixeln. Logs:
+`/tmp/t67-approved-dialog-tests.log`, `/tmp/t67-approved-dialog-build.log`.
+Doku-Abgleich: REST-Anleitung und Ticket einschließlich Matrix nachgezogen.
+
+**Rundenlimit:** Runde 4 ist eine gezielte Nachprüfung dieser von Mike während
+Runde 3 ergänzten und visuell bestätigten Darstellung. Keine vierte reguläre
+Vollprüfung und keine automatische Rückfrage wegen des Zählers. Bekannte offene
+Befunde: keine; offen ist nur diese Nachprüfung durch Claude. T-25 folgt nach
+Freigabe, bei einem neuen Blocker bleibt T-67 aktiv.

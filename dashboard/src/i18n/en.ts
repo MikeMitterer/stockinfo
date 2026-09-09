@@ -108,7 +108,7 @@ export const en = {
     title: 'Found on another exchange',
     found: '{identifier} was not found on your preferred exchange, {exchange}.',
     alternative: 'As an alternative, I suggest {exchange} in {currency}.',
-    confirm: 'Add anyway',
+    confirm: 'Accept',
   },
   exchanges: {
     pluginHint: 'Plugins can add further trading venues and MICs. See the {guide} to learn how.',

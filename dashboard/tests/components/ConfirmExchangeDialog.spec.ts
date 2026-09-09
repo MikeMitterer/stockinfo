@@ -19,11 +19,12 @@ it.each(['de', 'en'] as const)('zeigt beide Börsen und beide Entscheidungen auf
   wrapper = mount(ConfirmExchangeDialog, { props: { decision, identifier: 'vti.arcx', busy: false }, attachTo: document.body, global: { plugins: [i18n] } })
   await nextTick()
   expect(document.querySelector('.confirm-exchange__input strong')?.textContent).toBe('vti.arcx')
+  expect([...document.querySelectorAll('[role=dialog] strong')].map(element => element.textContent)).toEqual(['vti.arcx', 'Xetra', 'NYSE Arca', 'CHF'])
   const text = document.body.textContent
   for (const value of ['vti.arcx', 'NYSE Arca', 'CHF', 'Xetra']) expect(text).toContain(value)
   const buttons = [...document.querySelectorAll('button')]
   const cancel = buttons.find(button => button.textContent === (locale === 'de' ? 'Abbrechen' : 'Cancel'))
-  const confirm = buttons.find(button => button.textContent === (locale === 'de' ? 'Dennoch aufnehmen' : 'Add anyway'))
+  const confirm = buttons.find(button => button.textContent === (locale === 'de' ? 'Übernehmen' : 'Accept'))
   expect(cancel).toBeDefined()
   expect(confirm).toBeDefined()
   cancel?.click()

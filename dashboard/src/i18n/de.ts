@@ -123,7 +123,7 @@ export const de = {
     title: 'Andere Börse gefunden',
     found: '{identifier} wurde an deiner bevorzugten Börse, {exchange}, nicht gefunden.',
     alternative: 'Als Alternative schlage ich dir die {exchange} in {currency} vor.',
-    confirm: 'Dennoch aufnehmen',
+    confirm: 'Übernehmen',
   },
   exchanges: {
     pluginHint: 'Plugins können weitere Handelsplätze und MICs ergänzen. Wie das geht, erklärt die {guide}.',
