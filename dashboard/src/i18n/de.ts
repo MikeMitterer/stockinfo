@@ -120,10 +120,9 @@ export const de = {
     },
   },
   confirmExchange: {
-    title: 'Börse bestätigen',
-    text: 'Prüfe das gefundene Listing im Vergleich zu deiner bevorzugten Börse. Möchtest du dieses Listing aufnehmen?',
-    actual: 'Gefundenes Listing',
-    preferred: 'Bevorzugte Börse (Katalogwährung)',
+    title: 'Andere Börse gefunden',
+    found: '{identifier} wurde an deiner bevorzugten Börse, {exchange}, nicht gefunden.',
+    alternative: 'Als Alternative schlage ich dir die {exchange} in {currency} vor.',
     confirm: 'Dennoch aufnehmen',
   },
   exchanges: {

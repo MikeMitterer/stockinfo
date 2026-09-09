@@ -1,19 +1,23 @@
 <script setup lang="ts">
 import { ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { I18nT, useI18n } from 'vue-i18n'
 import { NButton, NModal } from 'naive-ui'
 
 import type { IntakeConfirmation } from '../types'
 
-const props = defineProps<{ decision: IntakeConfirmation | null; busy: boolean }>()
+const props = defineProps<{ decision: IntakeConfirmation | null; identifier: string; busy: boolean }>()
 const emit = defineEmits<{ (event: 'confirm'): void; (event: 'cancel'): void }>()
 const { t } = useI18n()
 const cancelButton = ref<InstanceType<typeof NButton> | null>(null)
 
 // Inhalt bis zum Ende der Ausblendung behalten.
 const shown = ref<IntakeConfirmation | null>(null)
+const shownIdentifier = ref('')
 watch(() => props.decision, (decision) => {
-  if (decision) shown.value = decision
+  if (decision) {
+    shown.value = decision
+    shownIdentifier.value = props.identifier
+  }
 }, { immediate: true })
 
 /** Ein versehentliches Enter soll keine Aufnahme bestätigen. */
@@ -37,14 +41,11 @@ function updateShow(show: boolean): void {
     @update:show="updateShow" @after-enter="focusCancel" @after-leave="shown = null"
   >
     <template v-if="shown">
-      <p>{{ shown.name }}</p>
-      <p>{{ t('confirmExchange.text') }}</p>
-      <dl>
-        <dt>{{ t('confirmExchange.actual') }}</dt>
-        <dd>{{ shown.identity.ticker }} · {{ shown.exchange }} ({{ shown.identity.mic }}) · {{ shown.currency }}</dd>
-        <dt>{{ t('confirmExchange.preferred') }}</dt>
-        <dd>{{ shown.preferred.name }} ({{ shown.preferred.mic }}) · {{ shown.preferred.currency }}</dd>
-      </dl>
+      <I18nT keypath="confirmExchange.found" tag="p" class="confirm-exchange__input">
+        <template #identifier><strong>{{ shownIdentifier }}</strong></template>
+        <template #exchange>{{ shown.preferred.name }}</template>
+      </I18nT>
+      <p>{{ t('confirmExchange.alternative', { exchange: shown.exchange, currency: shown.currency }) }}</p>
     </template>
     <template #footer>
       <div class="confirm-exchange__actions">
@@ -56,7 +57,6 @@ function updateShow(show: boolean): void {
 </template>
 
 <style scoped lang="scss">
-dt { font-weight: 600; }
-dd { margin: 0 0 1rem; overflow-wrap: anywhere; }
+.confirm-exchange__input { overflow-wrap: anywhere; }
 .confirm-exchange__actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 0.6rem; }
 </style>

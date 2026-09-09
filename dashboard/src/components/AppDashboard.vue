@@ -303,7 +303,7 @@ function closeChart(): void {
     </div>
 
     <JsonModal :item="jsonItem" @close="jsonItem = null" />
-    <ConfirmExchangeDialog :decision="pendingIntake?.decision ?? null" :busy="busy" @confirm="onConfirmAdd" @cancel="cancelAdd" />
+    <ConfirmExchangeDialog :decision="pendingIntake?.decision ?? null" :identifier="pendingIntake?.identifier ?? ''" :busy="busy" @confirm="onConfirmAdd" @cancel="cancelAdd" />
   <ConfirmDeleteDialog
       :item="pendingRemoval"
       @confirm="confirmRemoval"

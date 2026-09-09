@@ -16,10 +16,11 @@ afterEach(() => { wrapper?.unmount(); document.body.innerHTML = ''; i18n.global.
 
 it.each(['de', 'en'] as const)('zeigt beide Börsen und beide Entscheidungen auf %s', async (locale) => {
   i18n.global.locale.value = locale
-  wrapper = mount(ConfirmExchangeDialog, { props: { decision, busy: false }, attachTo: document.body, global: { plugins: [i18n] } })
+  wrapper = mount(ConfirmExchangeDialog, { props: { decision, identifier: 'vti.arcx', busy: false }, attachTo: document.body, global: { plugins: [i18n] } })
   await nextTick()
+  expect(document.querySelector('.confirm-exchange__input strong')?.textContent).toBe('vti.arcx')
   const text = document.body.textContent
-  for (const value of ['Vanguard', 'NYSE Arca', 'ARCX', 'CHF', 'Xetra', 'XETR', 'EUR']) expect(text).toContain(value)
+  for (const value of ['vti.arcx', 'NYSE Arca', 'CHF', 'Xetra']) expect(text).toContain(value)
   const buttons = [...document.querySelectorAll('button')]
   const cancel = buttons.find(button => button.textContent === (locale === 'de' ? 'Abbrechen' : 'Cancel'))
   const confirm = buttons.find(button => button.textContent === (locale === 'de' ? 'Dennoch aufnehmen' : 'Add anyway'))

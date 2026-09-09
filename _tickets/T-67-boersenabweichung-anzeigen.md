@@ -112,7 +112,8 @@ zwei XETR-Fälle scheiterten an 202 statt 201. Danach bestanden 108 gezielte Tes
 Abdeckungs-/Aufnahmefälle; 29 bestehende Vertragsfälle ausgelassen.
 Ruff `--select I,Q` über alle acht berührten Python-Dateien grün. Logs:
 `/tmp/t67-r2-red.log` und `/tmp/t67-r2-targeted.log`.
-Offene Befunde nach Eigenprüfung: keine; unabhängige Runde 2 steht aus.
+Runde 2: Claude hat `a8b3a18` freigegeben (`d21affe`); B1/B2 geschlossen.
+Seine Selbstheilung korrigierte ausschließlich die Zeichensetzung im Vertrag.
 
 ## Nachweise aus Runde 1 · historischer Prüfstand 9c1eb3d
 
@@ -172,3 +173,35 @@ für eine hypothetische Nutzerbasis und kein Docker-Langzeitnachweis.
 Der generierte OpenAPI-Snapshot ist von der manuellen Zeilenzahl ausgenommen.
 Die mechanischen englischen Bezeichner in den angefassten Vertragstests und
 Mikes letzte UI-Text-/Trennpunktkorrekturen sind darin enthalten.
+
+## Nachtrag Mike · ursprüngliche Eingabe und Fließtext, Runde 3
+
+Nach erfolgreicher Runde 2 verlangt Mike die ursprüngliche Eingabe **fett**
+in einem natürlich formulierten Fließtext. Der Dialog erklärt in DE/EN die
+gefundene Börse und Kurswährung sowie die bevorzugte Börse. Mike hat den
+Wortlaut selbst festgelegt: erst an der bevorzugten Börse nicht gefunden,
+dann in einem neuen Absatz die Alternative. Zusätzliche technische Angaben
+zu MICs und Katalogwährung entfallen nach dieser konkreten Textvorgabe.
+Die Aufnahmeentscheidung und der Backend-Vertrag sind unverändert.
+
+**Grund für Runde 3 / Rundenlimit:** neue UI-Vorgaben nach bereits erteilter
+Freigabe, keine verschleppten Restbefunde. Bekannte offene Befunde: keine.
+Offen ist Claudes unabhängige Prüfung dieses Nachtrags; bei einem Blocker
+bleibt T-67 aktiv und T-25 wartet. Keine automatische Übergabe an Mike.
+
+**Nachweise:** zwei Dialogfälle zunächst rot ohne Eingabe; anschließend
+378 Dashboardtests einschließlich DE/EN-Dialog und ESLint grün. Typecheck und
+Build grün. Logs: `/tmp/t67-input-red.log`, `/tmp/t67-user-text-tests.log`,
+`/tmp/t67-user-text-build.log`. Browser mit isolierter DB: DE/Desktop 1440 mit
+`US9229087690`, EN/Mobil 390 mit `vti.arcx`, Eingabe jeweils unverändert und
+Schriftgewicht 700, kein horizontaler Überlauf. Mobiler Dialog 358 Pixel breit. Mikes finaler Wortlaut wurde anschließend
+auf DE/Mobil als zwei Absätze mit fetter ISIN im Browser nachgeprüft.
+Vor diesem reinen Textnachtrag auch Runde-2-Verhalten im Browser nachgestellt:
+ARCX → XETR bestätigt direkt 201; ARCX → XNYS bleibt 202, Abbrechen speichert
+nichts. GitHub-Trennpunkte, Tab-Reihenfolge und Plugin-Link erneut geprüft.
+
+**Doku-Abgleich:** Aufnahmeabschnitt in `docs/rest-core-contract.md` nennt
+Fließtext und fett hervorgehobene Eingabe. Keine neue API oder Fachlogik.
+
+Umfang weiterhin 18 Produkt- und 8 Test-/Dokudateien; einschließlich dieses
+Nachtrags 889/1000 manuelle Diff-Zeilen. TS-Compiler-Namensinventar englisch.

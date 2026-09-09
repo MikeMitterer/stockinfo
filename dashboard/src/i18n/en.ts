@@ -105,10 +105,9 @@ export const en = {
     },
   },
   confirmExchange: {
-    title: 'Confirm exchange',
-    text: 'Compare the listing found with your preferred exchange. Would you like to add this listing?',
-    actual: 'Listing found',
-    preferred: 'Preferred exchange (catalog currency)',
+    title: 'Found on another exchange',
+    found: '{identifier} was not found on your preferred exchange, {exchange}.',
+    alternative: 'As an alternative, I suggest {exchange} in {currency}.',
     confirm: 'Add anyway',
   },
   exchanges: {

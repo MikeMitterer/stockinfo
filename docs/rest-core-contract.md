@@ -45,8 +45,9 @@ gegen die konfigurierte bevorzugte Börse. Weicht der MIC ab, liefert er
 Währung stammt aus dem Kurs; die bevorzugte Währung aus dem Börsenkatalog.
 Zu diesem Zeitpunkt ist das Instrument noch nicht gespeichert.
 
-Das Dashboard zeigt diesen Vergleich nach Submit mit „Dennoch aufnehmen“
-und „Abbrechen“. Abbruch benötigt keinen weiteren Request. Bestätigung sendet
+Das Dashboard erklärt den Vergleich nach Submit als Fließtext und hebt die
+ursprüngliche Eingabe fett hervor. Du entscheidest mit „Dennoch aufnehmen“
+oder „Abbrechen“. Abbruch benötigt keinen weiteren Request. Bestätigung sendet
 dieselbe Eingabe mit `check_exchange: true` und der angezeigten `identity`
 als `confirmed_listing`. Eine geänderte Auflösung erfordert eine neue
 Bestätigung, solange ihre Börse weiterhin von der bevorzugten abweicht. Erfolgreiche Aufnahme liefert `201`, ein vorhandenes Listing
