@@ -457,3 +457,19 @@ export interface DetailValue {
   manual_currency: string | null
 }
 export type OverridePatch = Partial<InstrumentOverrides> & { details?: Record<string, DetailInput> }
+
+
+/** Vor Speicherung vom Core gelieferte Börsenentscheidung. */
+export interface IntakeConfirmation {
+  status: 'confirmation_required'
+  identity: Extract<Identity, { kind: 'listed' }>
+  name: string
+  exchange: string
+  currency: string
+  preferred: { mic: string; name: string; currency: string }
+}
+
+export interface PendingIntake {
+  identifier: string
+  decision: IntakeConfirmation
+}

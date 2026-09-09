@@ -306,3 +306,60 @@ def test_aufnahme_erhaelt_die_strukturierten_quellenfehler(intake_profile, monke
         "unavailable": "quote_unavailable",
     }[failure]
     assert client.get("/instruments").json() == []
+
+
+@pytest.mark.parametrize("identifier", ["PRICE.ARCX", "US9229087690"])
+def test_abweichendes_listing_wird_erst_nach_bestaetigung_gespeichert(intake_profile, identifier):
+    client, inventory, _, _, _, original, _ = intake_profile
+    inventory.write_text(original.replace("ticker: PRICE, mic: XETR", "ticker: PRICE, mic: ARCX, isin: US9229087690").replace("value: 42, currency: EUR", "value: 42, currency: CHF"))
+    request = {"identifier": identifier, "check_exchange": True}
+    response = client.post("/instruments/intake", json=request)
+    assert response.status_code == 202, response.text
+    decision = response.json()
+    assert decision["status"] == "confirmation_required"
+    assert decision["identity"] == {"kind": "listed", "ticker": "PRICE", "mic": "ARCX", "isin": "US9229087690"}
+    assert decision["currency"] == "CHF"
+    assert decision["exchange"] == "NYSE Arca"
+    assert decision["preferred"] == {"mic": "XETR", "name": "Xetra", "currency": "EUR"}
+    assert client.get("/instruments").json() == []
+    # Abbrechen benötigt keinen Request und hinterlässt keinen Bestand.
+    assert client.post("/instruments/intake", json=request).status_code == 202
+    assert client.get("/instruments").json() == []
+    request["confirmed_listing"] = decision["identity"]
+    response = client.post("/instruments/intake", json=request)
+    assert response.status_code == 201, response.text
+    assert response.json()["identity"] == decision["identity"]
+    assert len(client.get("/instruments").json()) == 1
+    assert client.post("/instruments/intake", json={"identifier": identifier, "check_exchange": True}).status_code == 200
+
+
+@pytest.mark.parametrize("next_mic", ["XNYS", "XETR"])
+def test_neues_aufloesungsergebnis_braucht_eigene_bestaetigung(intake_profile, next_mic):
+    client, inventory, _, _, _, original, _ = intake_profile
+    inventory.write_text(original.replace("ticker: PRICE, mic: XETR", "ticker: PRICE, mic: ARCX, isin: US9229087690"))
+    request = {"identifier": "US9229087690", "check_exchange": True}
+    decision = client.post("/instruments/intake", json=request).json()
+    inventory.write_text(inventory.read_text().replace("mic: ARCX", f"mic: {next_mic}"))
+    response = client.post("/instruments/intake", json={**request, "confirmed_listing": decision["identity"]})
+    assert response.status_code == 202, response.text
+    assert response.json()["identity"]["mic"] == next_mic
+    assert client.get("/instruments").json() == []
+
+
+def test_passende_und_boersenlose_aufnahme_braucht_keine_rueckfrage(intake_profile):
+    client, inventory, _, _, _, original, _ = intake_profile
+    inventory.write_text(original.replace("name: Bitcoin", 'price: {value: 50000, currency: EUR, as_of: "2026-01-03T21:00:00+00:00"}\n    name: Bitcoin'))
+    for identifier in ("PRICE.XETR", "BTC-EUR", "DE0001102531"):
+        response = client.post("/instruments/intake", json={"identifier": identifier, "check_exchange": True})
+        assert response.status_code == 201, response.text
+
+
+@pytest.mark.parametrize("preferred_mic", ["", "XXXX"])
+def test_unbekannte_praeferenz_erfindet_keinen_vergleich(intake_profile, monkeypatch, preferred_mic):
+    from app.config import get_settings
+
+    client, inventory, _, _, _, original, _ = intake_profile
+    monkeypatch.setattr(get_settings(), "default_exchange", preferred_mic)
+    inventory.write_text(original.replace("ticker: PRICE, mic: XETR", "ticker: PRICE, mic: ARCX"))
+    response = client.post("/instruments/intake", json={"identifier": "PRICE.ARCX", "check_exchange": True})
+    assert response.status_code == 201, response.text

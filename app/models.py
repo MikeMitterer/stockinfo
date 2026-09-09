@@ -905,8 +905,27 @@ class AnalyzeResult(BaseModel):
     stages: list[AnalyzeStage]
 
 
+class PreferredExchange(BaseModel):
+    """Bevorzugter Handelsplatz mit seiner Katalogwährung."""
+
+    mic: str
+    name: str
+    currency: str
+
+
+class IntakeConfirmation(BaseModel):
+    """Noch nicht gespeichertes Listing, dessen Börse bestätigt werden muss."""
+
+    status: Literal["confirmation_required"] = "confirmation_required"
+    identity: ListedIdentityOut
+    name: str
+    exchange: str
+    currency: str
+    preferred: PreferredExchange
+
+
 class IntakeRequest(BaseModel):
-    """Body des Aufnahmewegs — **ein** roher Feldwert.
+    """Rohwert der Aufnahme und optionale Bestätigung einer Börsenabweichung.
 
     Kein `isin`/`symbol`-Verzweigen am Client und kein zweiter Parameter für
     den MIC: Was der Wert bedeutet, entscheidet allein der Core (T-21 Teil 3).
@@ -925,6 +944,9 @@ class IntakeRequest(BaseModel):
         max_length=32,
         description="ISIN, TICKER.ALIAS (EUNL.DE) oder TICKER.MIC (EUNL.XETR)",
     )
+
+    check_exchange: bool = Field(default=False, description="Vor Speicherung eine abweichende Börse bestätigen lassen")
+    confirmed_listing: ListedIdentityOut | None = Field(default=None, description="Zuvor angezeigtes und bestätigtes Listing")
 
 
 class ErrorDetail(BaseModel):

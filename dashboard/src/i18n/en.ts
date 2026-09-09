@@ -104,6 +104,13 @@ export const en = {
       max: 'Max',
     },
   },
+  confirmExchange: {
+    title: 'Confirm exchange',
+    text: 'Compare the listing found with your preferred exchange. Would you like to add this listing?',
+    actual: 'Listing found',
+    preferred: 'Preferred exchange (catalog currency)',
+    confirm: 'Add anyway',
+  },
   exchanges: {
     pluginHint: 'Plugins can add further trading venues and MICs. See the {guide} to learn how.',
     pluginGuide: 'plugin author guide',

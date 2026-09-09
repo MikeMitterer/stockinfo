@@ -1,4 +1,4 @@
-/** Deutscher Message-Katalog — Schema-Quelle für alle weiteren Sprachen. */
+/** Deutscher Message-Katalog — Schema-Quelle; direkte Anrede einheitlich mit du/dein. */
 /**
  * Die fünf Rollen der Quellenkette — **einmal** benannt.
  *
@@ -118,6 +118,13 @@ export const de = {
       oneYear: '1J',
       max: 'Max',
     },
+  },
+  confirmExchange: {
+    title: 'Börse bestätigen',
+    text: 'Prüfe das gefundene Listing im Vergleich zu deiner bevorzugten Börse. Möchtest du dieses Listing aufnehmen?',
+    actual: 'Gefundenes Listing',
+    preferred: 'Bevorzugte Börse (Katalogwährung)',
+    confirm: 'Dennoch aufnehmen',
   },
   exchanges: {
     pluginHint: 'Plugins können weitere Handelsplätze und MICs ergänzen. Wie das geht, erklärt die {guide}.',
@@ -569,8 +576,8 @@ export const de = {
 
     backupTitle: 'Vorher sichern',
     backupBody:
-      'Der Umzug lässt sich nicht rückgängig machen. Sichern Sie die Datenbank, ' +
-      'bevor Sie bestätigen — danach sind die oben genannten Zeilen und ihre ' +
+      'Der Umzug lässt sich nicht rückgängig machen. Sichere die Datenbank, ' +
+      'bevor du bestätigst — danach sind die oben genannten Zeilen und ihre ' +
       'Kurse nur noch im Bericht vorhanden.',
     backupNow: 'Jetzt sichern',
     backingUp: 'Sichere…',
@@ -593,7 +600,7 @@ export const de = {
     retrying: 'Der Betrieb wird gestartet…',
 
     downTitle: 'Der Dienst antwortet nicht',
-    downBody: 'Die Datenbank ist nicht erreichbar. Prüfen Sie den Server und laden Sie neu.',
+    downBody: 'Die Datenbank ist nicht erreichbar. Prüfe den Server und lade neu.',
 
     reason: {
       symbol_without_exchange_suffix:

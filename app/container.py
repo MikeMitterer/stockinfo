@@ -206,7 +206,8 @@ def get_intake_service(
     """
     _chain("quotes")
     return IntakeService(
-        quotes, covered_quote_mics(describe_chain("quotes", get_sources_config()))
+        quotes, covered_quote_mics(describe_chain("quotes", get_sources_config())),
+        preferred_mic=get_settings().default_exchange
     )
 
 

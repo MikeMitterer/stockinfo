@@ -40,17 +40,17 @@ def _generation_header(fixture: dict, contract: dict) -> str | None:
     return fixture["response"]["headers"].get(contract["generation"]["header"])
 
 
-def _header_fehlt(fixture: dict, contract: dict) -> bool:
+def _header_missing(fixture: dict, contract: dict) -> bool:
     """Trägt die Antwort den Generationsheader **nicht**?"""
     return _generation_header(fixture, contract) is None
 
 
-def _header_widerspricht_rumpf(fixture: dict, contract: dict) -> bool:
+def _header_contradicts_body(fixture: dict, contract: dict) -> bool:
     """Nennen Header und Rumpf **verschiedene** Generationen?"""
-    rumpf = fixture["response"]["body"]
-    if not isinstance(rumpf, dict) or "generation_id" not in rumpf:
+    body = fixture["response"]["body"]
+    if not isinstance(body, dict) or "generation_id" not in body:
         return False
-    return _generation_header(fixture, contract) != rumpf["generation_id"]
+    return _generation_header(fixture, contract) != body["generation_id"]
 
 
 # Jede Regel, auf die sich eine Fixture berufen darf, samt der Prüfung, die
@@ -61,8 +61,8 @@ def _header_widerspricht_rumpf(fixture: dict, contract: dict) -> bool:
 # aufhören, negativ zu sein — Header ergänzt, Widerspruch beseitigt —, und
 # blieb grün (Codex, T-24 Runde 1).
 _VIOLATION_CHECKS = {
-    "generation.required_on_every_response": _header_fehlt,
-    "generation.rule": _header_widerspricht_rumpf,
+    "generation.required_on_every_response": _header_missing,
+    "generation.rule": _header_contradicts_body,
 }
 
 # Die Negativfälle, die T-24 `#7h` ausdrücklich verlangt. Verschwindet einer,
@@ -91,9 +91,9 @@ def _load(path: Path) -> dict:
 def _endpoint_specs(contract: dict) -> dict[str, dict]:
     """Alle Endpunkte des Vertrags als ``pfad → spec``, inklusive /generation."""
     specs = {
-        spec["path"]: {**spec, "model": modell}
-        for modell, spezifikationen in contract["endpoints"].items()
-        for spec in spezifikationen
+        spec["path"]: {**spec, "model": model}
+        for model, specifications in contract["endpoints"].items()
+        for spec in specifications
     }
     generation = contract["generation"]
     specs[generation["endpoint"]] = {
@@ -105,7 +105,7 @@ def _endpoint_specs(contract: dict) -> dict[str, dict]:
     return specs
 
 
-def _passt_auf_vorlage(pfad: str, vorlage: str) -> bool:
+def _matches_template(route: str, template: str) -> bool:
     """Deckt sich ein konkreter Pfad mit einer Endpunktvorlage?
 
     ``/quote/IE00B4L5Y983/daily`` passt auf ``/quote/{isin}/daily``; die
@@ -113,12 +113,12 @@ def _passt_auf_vorlage(pfad: str, vorlage: str) -> bool:
     stimmen. Ohne den Segmentvergleich ginge `/quote/by-symbol/{symbol}/daily`
     als `/quote/{isin}/daily` durch.
     """
-    teile, vorlagenteile = pfad.strip("/").split("/"), vorlage.strip("/").split("/")
-    if len(teile) != len(vorlagenteile):
+    parts, template_parts = route.strip("/").split("/"), template.strip("/").split("/")
+    if len(parts) != len(template_parts):
         return False
     return all(
-        vorlagenteil.startswith("{") or vorlagenteil == teil
-        for teil, vorlagenteil in zip(teile, vorlagenteile)
+        template_part.startswith("{") or template_part == part
+        for part, template_part in zip(parts, template_parts)
     )
 
 
@@ -131,21 +131,21 @@ def test_vertragsartefakt_existiert_und_nennt_seine_version(contract: dict) -> N
 def test_jeder_antworttyp_hat_felder_mit_art_und_pflicht(contract: dict) -> None:
     """Eine Feldliste ohne Nullability ist ungenauer als das OpenAPI-Dokument."""
     assert set(contract["core"]) >= {"quote", "instrument", "daily", "fx"}
-    for modell, felder in contract["core"].items():
-        assert felder, f"{modell} hat keine Felder"
-        for feld in felder:
-            assert feld["kind"] in _KIND_TO_TYPES, f"{modell}.{feld['name']}"
-            assert isinstance(feld["required"], bool)
-            assert feld["meaning"].strip(), f"{modell}.{feld['name']} ohne Bedeutung"
+    for model, fields in contract["core"].items():
+        assert fields, f"{model} hat keine Felder"
+        for field in fields:
+            assert field["kind"] in _KIND_TO_TYPES, f"{model}.{field['name']}"
+            assert isinstance(field["required"], bool)
+            assert field["meaning"].strip(), f"{model}.{field['name']} ohne Bedeutung"
 
 
 def test_jeder_endpunkt_nennt_methode_und_zulaessige_query_namen(
     contract: dict,
 ) -> None:
     """Ein Endpunkt ohne Query-Liste lässt jedes erfundene Beispiel durchgehen."""
-    for modell, spezifikationen in contract["endpoints"].items():
-        assert spezifikationen, f"{modell} hat keine Endpunkte"
-        for spec in spezifikationen:
+    for model, specifications in contract["endpoints"].items():
+        assert specifications, f"{model} hat keine Endpunkte"
+        for spec in specifications:
             assert spec["path"].startswith("/")
             assert spec["method"] in {"GET", "POST", "PUT", "DELETE"}
             assert isinstance(spec["query"], list)
@@ -173,15 +173,15 @@ def test_fixture_nennt_endpunkt_und_erwartung(path: Path, contract: dict) -> Non
     # hängt die Erwartung am Status. Ohne diese Unterscheidung wäre entweder
     # `quote-404.json` falsch beanstandet oder ein `200` ohne Modell erlaubt,
     # und dann liefe die Schemaprüfung darunter ins Leere.
-    erwartet = specs[fixture["endpoint"]]["model"]
+    expected = specs[fixture["endpoint"]]["model"]
     if fixture["response"]["status"] >= 400:
         assert fixture["model"] is None, (
             f"{path.name}: Fehlerantworten tragen kein Core-Modell"
         )
     else:
-        assert fixture["model"] == erwartet, (
+        assert fixture["model"] == expected, (
             f"{path.name}: model '{fixture['model']}' passt nicht zu "
-            f"{fixture['endpoint']} (erwartet {erwartet})"
+            f"{fixture['endpoint']} (erwartet {expected})"
         )
 
 
@@ -199,18 +199,18 @@ def test_fixture_ruft_ihren_endpunkt_so_auf_wie_er_existiert(
     """
     fixture = _load(path)
     spec = _endpoint_specs(contract)[fixture["endpoint"]]
-    zerlegt = urlsplit(fixture["request"]["path"])
+    parsed = urlsplit(fixture["request"]["path"])
 
     assert fixture["request"]["method"] == spec["method"], (
         f"{path.name}: Methode {fixture['request']['method']} passt nicht zu "
         f"{spec['path']} ({spec['method']})"
     )
-    assert _passt_auf_vorlage(zerlegt.path, spec["path"]), (
-        f"{path.name}: '{zerlegt.path}' passt nicht auf '{spec['path']}'"
+    assert _matches_template(parsed.path, spec["path"]), (
+        f"{path.name}: '{parsed.path}' passt nicht auf '{spec['path']}'"
     )
-    unbekannt = set(parse_qs(zerlegt.query)) - set(spec["query"])
-    assert not unbekannt, (
-        f"{path.name}: {sorted(unbekannt)} gibt es an {spec['path']} nicht — "
+    unknown = set(parse_qs(parsed.query)) - set(spec["query"])
+    assert not unknown, (
+        f"{path.name}: {sorted(unknown)} gibt es an {spec['path']} nicht — "
         f"zulässig sind {spec['query'] or 'keine'}"
     )
 
@@ -224,7 +224,7 @@ def test_vertragstreue_fixture_traegt_den_generationsheader(
     if not fixture["contract_compliant"]:
         pytest.skip("absichtlich vertragswidrig")
 
-    assert not _header_fehlt(fixture, contract), (
+    assert not _header_missing(fixture, contract), (
         f"{path.name} ist als vertragstreu markiert, trägt aber keinen "
         f"{contract['generation']['header']}"
     )
@@ -248,26 +248,26 @@ def test_vertragswidrige_fixture_traegt_ihre_verletzung_wirklich(
         )
         pytest.skip("vertragstreu")
 
-    regel = fixture["violates"]
-    assert regel in _VIOLATION_CHECKS, (
-        f"{path.name} beruft sich auf '{regel}' — bekannt sind nur "
+    rule = fixture["violates"]
+    assert rule in _VIOLATION_CHECKS, (
+        f"{path.name} beruft sich auf '{rule}' — bekannt sind nur "
         f"{sorted(_VIOLATION_CHECKS)}"
     )
-    assert _VIOLATION_CHECKS[regel](fixture, contract), (
-        f"{path.name} behauptet die Verletzung '{regel}', erfüllt den Vertrag "
+    assert _VIOLATION_CHECKS[rule](fixture, contract), (
+        f"{path.name} behauptet die Verletzung '{rule}', erfüllt den Vertrag "
         f"an dieser Stelle aber — die Fixture ist kein Negativfall mehr"
     )
 
 
 def test_die_geforderten_negativfaelle_sind_vorhanden(contract: dict) -> None:
     """T-24 `#7h` nennt sie ausdrücklich — Löschen darf kein Weg zum Grün sein."""
-    vorhanden = {
+    existing = {
         _load(path)["violates"]
         for path in _fixture_files()
         if not _load(path)["contract_compliant"]
     }
-    assert _REQUIRED_VIOLATIONS <= vorhanden, (
-        f"fehlende Negativfälle: {sorted(_REQUIRED_VIOLATIONS - vorhanden)}"
+    assert _REQUIRED_VIOLATIONS <= existing, (
+        f"fehlende Negativfälle: {sorted(_REQUIRED_VIOLATIONS - existing)}"
     )
 
 
@@ -278,8 +278,8 @@ def test_die_pruefung_erkennt_eine_luegende_negativfixture(contract: dict) -> No
     hat: Eine Fixture behauptet `generation.rule`, trägt in Header und Rumpf
     aber dieselbe UUID. Der Prüfer muss das ablehnen.
     """
-    gleiche_uuid = "550e8400-e29b-41d4-a716-446655440000"
-    luegner = {
+    same_uuid = "550e8400-e29b-41d4-a716-446655440000"
+    liar = {
         "endpoint": "/generation",
         "model": None,
         "contract_compliant": False,
@@ -290,17 +290,17 @@ def test_die_pruefung_erkennt_eine_luegende_negativfixture(contract: dict) -> No
             "status": 200,
             "headers": {
                 "Cache-Control": "no-store",
-                contract["generation"]["header"]: gleiche_uuid,
+                contract["generation"]["header"]: same_uuid,
             },
-            "body": {"generation_id": gleiche_uuid},
+            "body": {"generation_id": same_uuid},
         },
     }
 
-    assert not _VIOLATION_CHECKS["generation.rule"](luegner, contract)
+    assert not _VIOLATION_CHECKS["generation.rule"](liar, contract)
 
-    luegner_ohne_widerspruch = dict(luegner, violates="generation.required_on_every_response")
+    liar_without_conflict = dict(liar, violates="generation.required_on_every_response")
     assert not _VIOLATION_CHECKS["generation.required_on_every_response"](
-        luegner_ohne_widerspruch, contract
+        liar_without_conflict, contract
     )
 
 
@@ -317,23 +317,23 @@ def test_erfolgsfixture_erfuellt_das_schema_ihres_modells(
     if not fixture["contract_compliant"] or fixture["response"]["status"] >= 400:
         pytest.skip("kein Erfolgsfall")
 
-    modell = fixture["model"]
-    if modell is None:
+    model = fixture["model"]
+    if model is None:
         pytest.skip("Fixture ohne Core-Modell (z.B. /generation)")
 
-    felder = contract["core"][modell]
-    rumpf = fixture["response"]["body"]
-    eintraege = rumpf if isinstance(rumpf, list) else [rumpf]
+    fields = contract["core"][model]
+    body = fixture["response"]["body"]
+    entries = body if isinstance(body, list) else [body]
 
-    for eintrag in eintraege:
-        for feld in felder:
-            name, kind = feld["name"], feld["kind"]
-            if feld["required"]:
-                assert name in eintrag, f"{path.name}: '{name}' fehlt"
-                assert eintrag[name] is not None, f"{path.name}: '{name}' ist null"
-            if eintrag.get(name) is not None:
-                assert isinstance(eintrag[name], _KIND_TO_TYPES[kind]), (
-                    f"{path.name}: '{name}' ist {type(eintrag[name]).__name__}, "
+    for entry in entries:
+        for field in fields:
+            name, kind = field["name"], field["kind"]
+            if field["required"]:
+                assert name in entry, f"{path.name}: '{name}' fehlt"
+                assert entry[name] is not None, f"{path.name}: '{name}' ist null"
+            if entry.get(name) is not None:
+                assert isinstance(entry[name], _KIND_TO_TYPES[kind]), (
+                    f"{path.name}: '{name}' ist {type(entry[name]).__name__}, "
                     f"erwartet {kind}"
                 )
 
@@ -353,10 +353,17 @@ def test_generationsfixture_haelt_header_und_rumpf_zusammen(
     if not fixture["contract_compliant"]:
         pytest.skip("Negativfall — geprüft in der Verletzungsprüfung")
 
-    assert not _header_widerspricht_rumpf(fixture, contract), (
+    assert not _header_contradicts_body(fixture, contract), (
         f"{path.name}: Header und Rumpf widersprechen sich"
     )
     assert (
         fixture["response"]["headers"].get("Cache-Control")
         == contract["generation"]["cache_control"]
     )
+
+
+def test_aufnahmevertrag_benennt_entscheidung_vor_dem_speichern(contract: dict) -> None:
+    """Die optionale Prüfung liefert noch kein gespeichertes Instrument."""
+    intake = next(spec for spec in contract["endpoints"]["instrument"] if spec["method"] == "POST")
+    assert intake["request_optional"] == ["check_exchange", "confirmed_listing"]
+    assert intake["responses"]["202"] == "IntakeConfirmation"

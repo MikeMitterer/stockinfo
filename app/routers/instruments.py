@@ -27,8 +27,9 @@ from app.models import (
     ErrorDetail,
     InstrumentSummary,
     IntakeRequest,
+    IntakeConfirmation,
 )
-from app.services.intake_service import IntakeRejected, IntakeService
+from app.services.intake_service import ExchangeConfirmationRequired, IntakeRejected, IntakeService
 from app.services.quote_service import (
     QuoteCurrencyMismatchError,
     QuoteUnavailableError,
@@ -92,21 +93,25 @@ def _currency_mismatch(exc: QuoteCurrencyMismatchError) -> JSONResponse:
     response_model=InstrumentSummary,
     responses={
         201: {"model": InstrumentSummary, "description": "Papier neu angelegt"},
+        202: {"model": IntakeConfirmation, "description": "Börsenabweichung vor Speicherung bestätigen"},
         400: {"model": ErrorDetail, "description": "Eingabe nicht auflösbar"},
         **IDENTITY_CONFLICT_RESPONSE,
         502: {"model": ErrorDetail, "description": "Quelle nicht erreichbar"},
     },
 )
 def intake(payload: IntakeRequest, service: IntakeDep, response: Response):
-    """Nimmt ein Wertpapier über einen rohen Feldwert auf.
+    """Nimmt auf oder liefert vor Speicherung die angeforderte Börsenentscheidung.
 
-    Beide Erfolgsfälle tragen denselben Typ; unterschieden wird nur der Status,
-    damit „war schon da" nicht als Neuanlage erscheint. Ein `204` wäre die
-    bequemere Zusage, wirft aber genau die Information weg, um die der Aufrufer
-    gebeten hat: Welche Identität ist daraus geworden?
+    200/201 tragen das gespeicherte Instrument, 202 die noch unbestätigte
+    Abweichung. Der Service entscheidet; der Router bildet nur HTTP ab.
     """
     try:
-        result = service.add(payload.identifier)
+        result = service.add(
+            payload.identifier, check_exchange=payload.check_exchange,
+            confirmed_listing=payload.confirmed_listing,
+        )
+    except ExchangeConfirmationRequired as exc:
+        return JSONResponse(status_code=202, content=exc.confirmation.model_dump())
     except IntakeRejected as exc:
         return JSONResponse(
             status_code=400,

@@ -1,5 +1,5 @@
 {
-  "core_version": "4.2.0",
+  "core_version": "4.3.0",
   "paths": {
     "/fields": {
       "get": {
@@ -86,6 +86,13 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/InstrumentSummary"
+              }
+            }
+          },
+          "202": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/IntakeConfirmation"
               }
             }
           },
@@ -1289,9 +1296,64 @@
       "title": "InstrumentSummary",
       "type": "object"
     },
-    "IntakeRequest": {
-      "description": "Body des Aufnahmewegs — **ein** roher Feldwert.\n\nKein `isin`/`symbol`-Verzweigen am Client und kein zweiter Parameter für\nden MIC: Was der Wert bedeutet, entscheidet allein der Core (T-21 Teil 3).\nEin Dashboard, das die Form selbst klassifizierte, hätte dieselbe Grammatik\nein zweites Mal — und beide liefen auseinander, sobald ein Plugin weitere\nFormen erlaubt.",
+    "IntakeConfirmation": {
+      "description": "Noch nicht gespeichertes Listing, dessen Börse bestätigt werden muss.",
       "properties": {
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "exchange": {
+          "title": "Exchange",
+          "type": "string"
+        },
+        "identity": {
+          "$ref": "#/components/schemas/ListedIdentityOut"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "preferred": {
+          "$ref": "#/components/schemas/PreferredExchange"
+        },
+        "status": {
+          "const": "confirmation_required",
+          "default": "confirmation_required",
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "identity",
+        "name",
+        "exchange",
+        "currency",
+        "preferred"
+      ],
+      "title": "IntakeConfirmation",
+      "type": "object"
+    },
+    "IntakeRequest": {
+      "description": "Rohwert der Aufnahme und optionale Bestätigung einer Börsenabweichung.\n\nKein `isin`/`symbol`-Verzweigen am Client und kein zweiter Parameter für\nden MIC: Was der Wert bedeutet, entscheidet allein der Core (T-21 Teil 3).\nEin Dashboard, das die Form selbst klassifizierte, hätte dieselbe Grammatik\nein zweites Mal — und beide liefen auseinander, sobald ein Plugin weitere\nFormen erlaubt.",
+      "properties": {
+        "check_exchange": {
+          "default": false,
+          "description": "Vor Speicherung eine abweichende Börse bestätigen lassen",
+          "title": "Check Exchange",
+          "type": "boolean"
+        },
+        "confirmed_listing": {
+          "anyOf": [
+            {
+              "$ref": "#/components/schemas/ListedIdentityOut"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Zuvor angezeigtes und bestätigtes Listing"
+        },
         "identifier": {
           "description": "ISIN, TICKER.ALIAS (EUNL.DE) oder TICKER.MIC (EUNL.XETR)",
           "maxLength": 32,
@@ -1446,6 +1508,30 @@
         "quote_currency"
       ],
       "title": "PairIdentityOut",
+      "type": "object"
+    },
+    "PreferredExchange": {
+      "description": "Bevorzugter Handelsplatz mit seiner Katalogwährung.",
+      "properties": {
+        "currency": {
+          "title": "Currency",
+          "type": "string"
+        },
+        "mic": {
+          "title": "Mic",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "mic",
+        "name",
+        "currency"
+      ],
+      "title": "PreferredExchange",
       "type": "object"
     },
     "QuotePoint": {

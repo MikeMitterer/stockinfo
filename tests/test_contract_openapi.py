@@ -456,13 +456,13 @@ def test_der_echte_koerper_des_vierhundertvier_passt_zur_zusage(
     get_sources_config.cache_clear()
     get_cached_quote_service.cache_clear()
 
-    class KenntNichts:
+    class KnowsNothing:
         """Ein Kursdienst, der genau diese eine Ausnahme wirft."""
 
         def get_by_isin(self, isin: str):
             raise InstrumentNotFoundError(isin)
 
-    app.dependency_overrides[get_cached_quote_service] = KenntNichts
+    app.dependency_overrides[get_cached_quote_service] = KnowsNothing
     try:
         with TestClient(app) as client:
             response = client.get("/quote/XX0000000000")
@@ -538,3 +538,15 @@ def test_kein_optionales_feld_ist_im_schema_heimlich_pflicht(model: str) -> None
             f"tatsächlich hält. Entweder das Artefakt nachziehen (und "
             f"`core_version` anheben) oder das Modell wieder lockern."
         )
+
+
+def test_aufnahme_pruefung_und_bestaetigung_sind_im_core_schema() -> None:
+    """Der 202-Vertrag enthält auch Identität und bevorzugten Handelsplatz."""
+    excerpt = _core_excerpt()
+    response = excerpt["paths"]["/instruments/intake"]["post"]["responses"]["202"]
+    assert response["application/json"]["schema"]["$ref"].endswith("/IntakeConfirmation")
+    request = excerpt["schemas"]["IntakeRequest"]
+    assert request["properties"]["check_exchange"]["default"] is False
+    assert "confirmed_listing" in request["properties"]
+    assert request["required"] == ["identifier"]
+    assert "PreferredExchange" in excerpt["schemas"]

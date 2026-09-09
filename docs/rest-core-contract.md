@@ -35,6 +35,29 @@ eigenes Artefakt mit eigenem Image und eigenem Update-Zeitpunkt. Auf einer
 Unraid-Box laufen beide als getrennte Container, die niemand gleichzeitig
 aktualisiert. Gemeinsame Eigentümerschaft ersetzt keinen Vertrag.
 
+## Börsenentscheidung bei der Aufnahme
+
+`POST /instruments/intake` nimmt eine `identifier` entgegen. Mit
+`check_exchange: true` prüft der Core ein neues Listing vor dem Speichern
+gegen die konfigurierte bevorzugte Börse. Weicht der MIC ab, liefert er
+`202` mit `status: confirmation_required`, `identity`, `name`, `exchange`,
+`currency` und `preferred` (`mic`, `name`, `currency`). Die tatsächliche
+Währung stammt aus dem Kurs; die bevorzugte Währung aus dem Börsenkatalog.
+Zu diesem Zeitpunkt ist das Instrument noch nicht gespeichert.
+
+Das Dashboard zeigt diesen Vergleich nach Submit mit „Dennoch aufnehmen“
+und „Abbrechen“. Abbruch benötigt keinen weiteren Request. Bestätigung sendet
+dieselbe Eingabe mit `check_exchange: true` und der angezeigten `identity`
+als `confirmed_listing`. Eine geänderte Auflösung erfordert eine neue
+Bestätigung. Erfolgreiche Aufnahme liefert `201`, ein vorhandenes Listing
+`200`, jeweils mit `InstrumentSummary`.
+
+Gleiche Börse, Paare, reine ISIN-Instrumente und vorhandene Listings benötigen
+keine Rückfrage. Eine unbekannte Präferenz erzeugt keinen geratenen Vergleich.
+Ohne `check_exchange` wird direkt aufgenommen. Nach einer bestätigten Aufnahme
+gibt es keine dauerhafte Warnung und keine Rückfrage beim Lesen oder Refresh.
+Die Anfragefelder und die 202-Antwort gehören zu Core-Version `4.3.0`.
+
 ## Was der Core umfasst
 
 Fünf öffentliche Modelle, jedes mit eigener Pflichtfeldmenge:

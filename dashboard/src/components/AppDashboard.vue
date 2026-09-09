@@ -6,6 +6,7 @@ import { UxAppShell, useNotifier } from '@mmit/ux-foundation'
 import AnalysisPanel from './AnalysisPanel.vue'
 import AppHeader from './AppHeader.vue'
 import ConfirmDeleteDialog from './ConfirmDeleteDialog.vue'
+import ConfirmExchangeDialog from './ConfirmExchangeDialog.vue'
 import ExchangesPanel from './ExchangesPanel.vue'
 import FxPanel from './FxPanel.vue'
 import HistoryChart from './HistoryChart.vue'
@@ -68,7 +69,7 @@ const {
   daily,
 } = useDaily()
 const { refreshing, trigger, error: refreshError } = useRefresh()
-const { busy, add, refreshOne, remove, setIsin, error: actionsError } = useInstrumentActions()
+const { busy, add, confirmAdd, cancelAdd, pendingIntake, refreshOne, remove, setIsin, error: actionsError } = useInstrumentActions()
 const { saving: savingSymbol, save: saveOverrides, error: overridesError } = useOverrides()
 const { status: healthStatus, version: healthVersion, start: startHealth, stop: stopHealth } =
   useHealth()
@@ -168,8 +169,12 @@ async function onRefreshAll(): Promise<void> {
 }
 
 async function onAdd(identifier: string): Promise<void> {
-  await add(identifier)
-  await loadInstruments()
+  if (await add(identifier)) await loadInstruments()
+}
+
+/** Lädt den Bestand erst nach bestätigter Speicherung neu. */
+async function onConfirmAdd(): Promise<void> {
+  if (await confirmAdd()) await loadInstruments()
 }
 
 /**
@@ -298,7 +303,8 @@ function closeChart(): void {
     </div>
 
     <JsonModal :item="jsonItem" @close="jsonItem = null" />
-    <ConfirmDeleteDialog
+    <ConfirmExchangeDialog :decision="pendingIntake?.decision ?? null" :busy="busy" @confirm="onConfirmAdd" @cancel="cancelAdd" />
+  <ConfirmDeleteDialog
       :item="pendingRemoval"
       @confirm="confirmRemoval"
       @cancel="pendingRemoval = null"

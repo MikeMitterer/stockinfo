@@ -63,7 +63,7 @@ describe('useInstrumentActions', () => {
     const { add, error } = useInstrumentActions()
     await add(`  ${identifier}  `)
     expect(fetchMock.mock.calls[0][0]).toContain('/instruments/intake')
-    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST', body: JSON.stringify({ identifier }) })
+    expect(fetchMock.mock.calls[0][1]).toMatchObject({ method: 'POST', body: JSON.stringify({ identifier, check_exchange: true }) })
     expect(error.value).toBeNull()
   })
 
@@ -105,5 +105,34 @@ describe('useInstrumentActions', () => {
     vi.stubGlobal('fetch', fetchMock)
     await useInstrumentActions().remove({ isin: null, symbol: 'GOLD.SG' })
     expect(fetchMock.mock.calls[0][0]).toContain('/instruments/by-symbol/GOLD.SG')
+  })
+})
+
+
+describe('Aufnahmeentscheidung', () => {
+  const decision = {
+    status: 'confirmation_required', name: 'Vanguard', currency: 'CHF', exchange: 'NYSE Arca',
+    identity: { kind: 'listed', ticker: 'VTI', mic: 'ARCX', isin: 'US9229087690' },
+    preferred: { mic: 'XETR', name: 'Xetra', currency: 'EUR' },
+  }
+  it('wartet auf Entscheidung und bricht ohne weiteren Request ab', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(JSON.stringify(decision), { status: 202 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const actions = useInstrumentActions()
+    expect(await actions.add('VTI.ARCX')).toBe(false)
+    expect(actions.pendingIntake.value).toEqual({ identifier: 'VTI.ARCX', decision })
+    actions.cancelAdd()
+    expect(actions.pendingIntake.value).toBeNull()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+  it('bestätigt genau das angezeigte Listing und verwirft danach die Rückfrage', async () => {
+    const fetchMock = vi.fn().mockResolvedValueOnce(new Response(JSON.stringify(decision), { status: 202 }))
+      .mockResolvedValueOnce(new Response('{}', { status: 201 }))
+    vi.stubGlobal('fetch', fetchMock)
+    const actions = useInstrumentActions()
+    await actions.add('US9229087690')
+    expect(await actions.confirmAdd()).toBe(true)
+    expect(JSON.parse(fetchMock.mock.calls[1][1].body)).toEqual({ identifier: 'US9229087690', check_exchange: true, confirmed_listing: decision.identity })
+    expect(actions.pendingIntake.value).toBeNull()
   })
 })

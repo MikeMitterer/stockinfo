@@ -176,6 +176,7 @@ class CachedQuoteService:
 
     def store_by_isin(
         self, isin: str, *, check_identity: Callable[[Identity | None], None] | None = None,
+        before_store: Callable[[QuoteResponse], None] | None = None,
     ) -> StoredQuote:
         """Wie `get_by_isin`, sagt aber zusätzlich, ob das Papier entstanden ist.
 
@@ -189,7 +190,8 @@ class CachedQuoteService:
             return self._get(instrument, lambda: self._fetch_live(instrument), check_identity=check_identity)
         options = {"check_identity": check_identity} if check_identity is not None else {}
         return self._get(
-            None, lambda: self._quote_service.get_quote_by_isin(isin, enrich_etf=True, **options)
+            None, lambda: self._quote_service.get_quote_by_isin(isin, enrich_etf=True, **options),
+            before_store=before_store
         )
 
     def get_by_symbol(self, symbol: str) -> QuoteResponse:
@@ -203,7 +205,9 @@ class CachedQuoteService:
         """
         return self.store_by_symbol(symbol).quote
 
-    def store_by_identity(self, ticker: str, mic: str) -> StoredQuote:
+    def store_by_identity(
+        self, ticker: str, mic: str, *, before_store: Callable[[QuoteResponse], None] | None = None,
+    ) -> StoredQuote:
         """Der Weg des Aufnahmewegs — über die **kanonische Identität**.
 
         Nicht über das Symbol, und das ist der ganze Punkt: `AAPL.XNAS` und
@@ -235,10 +239,12 @@ class CachedQuoteService:
         return self._get(
             None,
             lambda: self._quote_service.get_quote_by_identity(ticker, mic),
+            before_store=before_store,
         )
 
     def store_by_symbol(
         self, symbol: str, *, check_identity: Callable[[Identity | None], None] | None = None,
+        before_store: Callable[[QuoteResponse], None] | None = None,
     ) -> StoredQuote:
         """Wie `get_by_symbol`, sagt aber zusätzlich, ob das Papier entstanden ist.
 
@@ -251,6 +257,7 @@ class CachedQuoteService:
         return self._get(
             None,
             lambda: self._quote_service.get_quote_by_symbol(symbol, enrich_etf=True, **options),
+            before_store=before_store,
         )
 
     def get_history(
@@ -824,6 +831,7 @@ class CachedQuoteService:
     def _get(
         self, instrument: dict | None, fetch: Callable[[], QuoteResponse],
         *, check_identity: Callable[[Identity | None], None] | None = None,
+        before_store: Callable[[QuoteResponse], None] | None = None,
     ) -> StoredQuote:
         """Gemeinsame Cache-Logik: frischer Cache → nutzen, sonst neu beschaffen.
 
@@ -831,6 +839,7 @@ class CachedQuoteService:
             instrument: Bereits bekanntes Instrument-Dict (oder None).
             fetch: Callable, das den Kurs live beschafft.
             check_identity: Aufnahmeprüfung auch vor einem vorhandenen Cache-Treffer.
+            before_store: Prüfung eines neuen Listings vor dem ersten Schreibzugriff.
 
         Returns:
             Kurs-Antwort (aus Cache, frisch oder stale bei Fehler) samt der
@@ -879,6 +888,10 @@ class CachedQuoteService:
                 )
             raise
 
+        if before_store is not None and instrument is None:
+            existing = self._repository.get_instrument_by_identity(fresh.identity)
+            if existing is None:
+                before_store(fresh)
         return self._save_fresh(fresh)
 
     @staticmethod

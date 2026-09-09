@@ -15,12 +15,14 @@ vorherigen Datenbankzustand ein zweites Mal ermitteln — genau die Fach- und
 Repository-Logik, die er nicht enthalten darf.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 
 import structlog
 from stockinfo_plugin import Identity, ListedIdentity
 
-from app.exchanges import REASON_NO_SUFFIX, identity_from_input, input_failure, is_isin
+from app.exchanges import EXCHANGES, REASON_NO_SUFFIX, identity_from_input, input_failure, is_isin
+from app.models import IntakeConfirmation, ListedIdentityOut, PreferredExchange, QuoteResponse
 from app.services.quote_cache import CachedQuoteService, StoredQuote
 from app.services.quote_service import (
     InstrumentNotFoundError,
@@ -71,16 +73,29 @@ class IntakeRejected(Exception):
         self.params = params
 
 
+class ExchangeConfirmationRequired(Exception):
+    """Unterbricht die Aufnahme vor Speicherung für eine bewusste Entscheidung."""
+
+    def __init__(self, confirmation: IntakeConfirmation) -> None:
+        super().__init__("exchange_confirmation_required")
+        self.confirmation = confirmation
+
+
 class IntakeService:
     """Nimmt einen rohen Feldwert entgegen und macht daraus ein Instrument."""
 
     def __init__(
-        self, quotes: CachedQuoteService, covered_mics: frozenset[str]
+        self, quotes: CachedQuoteService, covered_mics: frozenset[str],
+        preferred_mic: str | None = None
     ) -> None:
         self._quotes = quotes
         self._covered_mics = covered_mics
+        self._preferred_mic = preferred_mic
 
-    def add(self, identifier: str) -> IntakeResult:
+    def add(
+        self, identifier: str, *, check_exchange: bool = False,
+        confirmed_listing: ListedIdentityOut | None = None,
+    ) -> IntakeResult:
         """Löst den Rohwert auf, beschafft den Kurs und speichert das Papier.
 
         Unterstützt sind ISIN, quellenbestimmte Paare und ein Symbol, das
@@ -92,11 +107,14 @@ class IntakeService:
 
         Args:
             identifier: Der rohe Feldwert, ungetrimmt.
+            check_exchange: Bei neuer Börsenabweichung vor Speicherung unterbrechen.
+            confirmed_listing: Zuvor angezeigte und vom Aufrufer bestätigte Identität.
 
         Returns:
             Das Ergebnis samt `created`.
 
         Raises:
+            ExchangeConfirmationRequired: Neues Listing benötigt eine Entscheidung.
             IntakeRejected: Der Wert führt zu keiner Identität, oder die
                 Quellen kennen das Papier nicht.
             QuoteUnavailableError: Die Quelle ist nicht erreichbar. Bewusst
@@ -108,7 +126,11 @@ class IntakeService:
             raise IntakeRejected(REASON_EMPTY)
 
         try:
-            stored = self._store(value)
+            before_store = None
+            if check_exchange:
+                def before_store(quote: QuoteResponse) -> None:
+                    self._check_exchange(quote, confirmed_listing)
+            stored = self._store(value, before_store)
         except InstrumentNotFoundError as exc:
             raise IntakeRejected(REASON_NOT_FOUND, identifier=value) from exc
         except QuoteUnavailableError as exc:
@@ -153,7 +175,9 @@ class IntakeService:
         )
         return IntakeResult(summary, created=stored.created)
 
-    def _store(self, value: str) -> StoredQuote:
+    def _store(
+        self, value: str, before_store: Callable[[QuoteResponse], None] | None,
+    ) -> StoredQuote:
         """Wählt den Weg — ISIN oder Symbol — und beschafft über ihn.
 
         Die Zerlegung selbst steht in `identity_from_input`; hier wird sie nur
@@ -161,9 +185,10 @@ class IntakeService:
         Kennungen, mit denen der Umzugsbericht ablehnt: Es ist dieselbe Frage
         an dasselbe Symbol, nur an anderer Stelle gestellt.
         """
+        options = {"before_store": before_store} if before_store is not None else {}
         if is_isin(value):
             return self._quotes.store_by_isin(
-                value, check_identity=self._check_identity
+                value, check_identity=self._check_identity, **options
             )
 
         identity = identity_from_input(value)
@@ -176,7 +201,7 @@ class IntakeService:
 
                 try:
                     return self._quotes.store_by_symbol(
-                        value, check_identity=check_unlisted
+                        value, check_identity=check_unlisted, **options
                     )
                 except UnresolvableSymbolError as exc:
                     raise IntakeRejected(failure, identifier=value) from exc
@@ -192,7 +217,7 @@ class IntakeService:
         # Börse weg, die der Benutzer gerade genannt hatte — auf leerem Bestand
         # ein `500`, bei vorhandenem `AAPL/XNYS` eine Antwort mit der falschen
         # Börse. Gebildet wird er erst dort, wo die Kursquelle ihn braucht.
-        return self._quotes.store_by_identity(*identity)
+        return self._quotes.store_by_identity(*identity, **options)
 
     def _check_identity(self, identity: Identity | None) -> None:
         """Nur Listings benötigen eine Kursquelle für ihren Handelsplatz."""
@@ -201,3 +226,19 @@ class IntakeService:
             and identity.mic not in self._covered_mics
         ):
             raise IntakeRejected(REASON_NOT_COVERED, mic=identity.mic)
+
+
+    def _check_exchange(self, quote: QuoteResponse, confirmed: ListedIdentityOut | None) -> None:
+        """Vergleicht das neue Listing vor Speicherung mit der bekannten Präferenz."""
+        identity = quote.identity
+        preferred = EXCHANGES.get(self._preferred_mic)
+        if not isinstance(identity, ListedIdentityOut) or preferred is None:
+            return
+        if identity == confirmed or (confirmed is None and identity.mic == self._preferred_mic):
+            return
+        actual = EXCHANGES.get(identity.mic)
+        raise ExchangeConfirmationRequired(IntakeConfirmation(
+            identity=identity, name=quote.name, currency=quote.currency,
+            exchange=actual.name if actual else identity.mic,
+            preferred=PreferredExchange(mic=self._preferred_mic, name=preferred.name, currency=preferred.currency),
+        ))
