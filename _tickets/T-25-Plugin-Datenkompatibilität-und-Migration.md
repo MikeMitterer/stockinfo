@@ -1,12 +1,59 @@
 # T-25 · Plugin-Datenkompatibilität und Migration
 
-**Der Plugin-Autor erklärt die Datenkompatibilität und liefert die Migration.**
-StockInfo leitet sie weder aus Paketversionen noch aus einem Hash der
-Quellenkonfiguration ab. StockInfo sichert den Bestand und kontrolliert den
-Migrationsaufruf. Diese Richtung ist von Mike am 2026-09-07 bestätigt;
-die erste Umsetzung (`data_version` und Backup-Prüfung) steht im Abschnitt unten.
+Ein Plugin-Update soll **vorhandene Daten sicher weiterverwenden** können.
 
-## Umgesetzt · data_version, 2026-09-07
+StockInfo muss unterscheiden, ob sich nur das Paket oder tatsächlich das
+Datenformat geändert hat. Die Beurteilung und nötige Umwandlung liefert der
+Plugin-Autor; StockInfo sichert den Bestand und kontrolliert den Aufruf.
+
+Beispiel: Ein Update behebt nur einen Fehler beim Abruf. Solange das Datenformat
+gleich bleibt, soll eine vorhandene Sicherung weiter passen.
+
+Ändert das Plugin sein Datenformat, liefert sein Autor eine Migrationsfunktion
+für den gespeicherten Stand. StockInfo ruft sie beim Start auf und schreibt
+Datenänderungen und neue Datenversion gemeinsam fest.
+
+Der erste Teil ist **umgesetzt**: Plugins deklarieren mit `data_version`
+eine Datenkompatibilitäts-Version; die Backup-Prüfung berücksichtigt sie.
+Daraus folgt noch keine unabhängige Freigabe des gesamten Tickets.
+
+**Offen** ist der kleine Startablauf: vergleichen, sichern, Autorenfunktion
+ausführen und erst nach Erfolg den Fachbetrieb freigeben. Solange
+`data_version` unverändert bleibt, entsteht keine zusätzliche Migrationsarbeit.
+
+## Für dich
+
+Aktuell ist **kein Handgriff nötig**.
+
+Der Zuschnitt ist entschieden. Der Auftrag vom 2026-09-09 passt dieses Ticket
+an; er aktiviert keine Produktumsetzung und keine unabhängige Abnahme.
+
+### Bisherige Antworten und Rückmeldungen
+
+Mike, 2026-09-07:
+
+> Wenn wir diese Automatismen, die sehr komplex sind, einfach dem Plugin-Autor überlassen? Er soll ein Flag setzen, das die DB inkompatibel zum Vorgänger macht. Der Plugin-Author muss für die DB-Migration sorgen in dem ein von ihm bereitgestelltest Script oder so läuft
+
+Auf den Vorschlag einer Datenkompatibilitäts-Version (`data_version`) statt
+eines booleschen Flags, einer vom Plugin bereitgestellten Migration und eines
+gesicherten Aufrufs durch StockInfo antwortete Mike: **„Passt“**.
+
+Damit ist die Richtung entschieden; die genaue Schnittstelle ist noch nicht
+implementiert. Die früher diskutierte Major-Versionsregel wird nicht verfolgt.
+
+Mike, 2026-09-09:
+
+> Ich möchte nicht, dass es zum Blocker wird - wie können wir mit möglichst wenig aufwand einen Migrationsweg vorbereiten?
+
+Den darauf vorgeschlagenen kleinen Startablauf mit Autorenfunktion, Sicherung
+und Transaktion hat Mike mit **„Pass das Ticket entsprechend an“** als
+Ticketumfang beauftragt. Datenauswahl und fachliche Korrektheit liegen beim
+Autor. Technische Abschottung fremder Plugin-Daten, Datenbankrotation und
+`generation_id` sind keine Abschlussbedingungen dieses Umfangs.
+
+## Umsetzung und technische Nachweise
+
+### Umgesetzt · data_version, 2026-09-07
 
 Mike: „T-21 Fehlertext klären wir gleich, T-25 - führe zumindest die angesprochene data_version ein. Das ist die einzige Zahl das ein Backup inkompatibel machen kann.“
 
@@ -33,7 +80,7 @@ allein zur Rotation oder Migration. Die neue Zahl sperrt **Backups**, noch
 nicht automatisch den Betrieb einer aktualisierten Quelle auf dem vorhandenen
 Bestand: Migrationsausführung und Betriebssperre bleiben im Folgeumfang.
 
-### Verifikation des beauftragten Teils
+#### Verifikation des beauftragten Teils
 
 - 13 gezielte Tests: Paket-/Kettenwechsel, Datenversionswechsel, fehlendes
   Manifest, Altbackup, unveränderter DB-Stempel, frische DB, ungültige Werte
@@ -51,7 +98,7 @@ Bestand: Migrationsausführung und Betriebssperre bleiben im Folgeumfang.
   Gesamtlauf behauptet; der Befund gehört nicht zur Datenkompatibilität.
 
 ```bash
-# M1 und Datenversionsvergleich; noch keine Migrationsabnahme M2–M5
+# M1 und Datenversionsvergleich; noch keine Abnahme des Startablaufs
 .venv/bin/pytest -q tests/test_backup_data_version.py tests/test_backup.py
 # Backend: frischer Datenpfad, keine echte externe API
 TASK_DATA_DIR=$(mktemp -d /tmp/stockinfo-t25-verify.XXXXXX)
@@ -63,77 +110,91 @@ npm --prefix dashboard test -- tests/components/BackupsPanel.spec.ts
 ./dashboard/node_modules/.bin/vue-tsc -b dashboard/tsconfig.json
 ```
 
-Die bisherige Richtung unten bleibt der Folgeumfang. Der aktuelle Teil ist
+Der nachfolgend beschlossene Startablauf bleibt der Folgeumfang. Der aktuelle Teil ist
 keine Implementierung des gesamten Migrationssystems und keine unabhängige
 Agentenfreigabe. T-25 bleibt für diese Restarbeit offen.
 
-## Für dich
+### Beschlossener Startablauf · 2026-09-09
 
-Aktuell kein Handgriff nötig. Der beauftragte Teil ist implementiert und
-geprüft. Für den Folgeumfang sind Migrationseinstieg und Fehlerverhalten
-noch zu entwerfen; keine unabhängige Abnahme läuft.
+1. **Datenstände vergleichen.** StockInfo vergleicht je aktivem Plugin die
+   deklarierte `data_version` mit `meta.plugin_data_versions`, zugeordnet über
+   den vorhandenen Quellennamen. Bei Gleichheit startet der Betrieb ohne
+   Migrationsaufruf. Eine frische Datenbank erhält direkt die aktuellen Werte;
+   auf vorhandenem Bestand gilt ein fehlender Eintrag weiterhin als Stand 1.
+2. **Vor der Umwandlung sichern.** Bei einem Versionsanstieg verwendet StockInfo
+   die vorhandene Backup-Funktion vor dem ersten Schreibzugriff der Migration.
+   Scheitert die Sicherung, wird die Autorenfunktion nicht ausgeführt.
+3. **Autorenfunktion aufrufen.** Das Plugin liefert einen einheitlichen Einstieg
+   `migrate(context, from_version, to_version)`. Der Kontext stellt den vom Host
+   kontrollierten Datenzugriff bereit. Der Autor implementiert darin die
+   nötige Umwandlung und lehnt nicht unterstützte Ausgangsstände ausdrücklich ab.
+4. **Daten und Version gemeinsam festschreiben.** StockInfo kontrolliert je
+   Migration eine Transaktion. Erst wenn die Funktion erfolgreich zurückkehrt,
+   werden ihre Datenänderungen und der neue Versionsstand gemeinsam committet.
+   Bei einem Fehler wird die Transaktion zurückgerollt. Die Sicherung bleibt
+   zusätzlich verfügbar.
+5. **Danach den Fachbetrieb freigeben.** Migrationen laufen vor Fachrequests und
+   Scheduler. Fehlt ein passender Weg, scheitert die Ausführung oder liegt ein
+   Downgrade vor, bleibt der Fachbetrieb gesperrt. Die Diagnose nennt Plugin,
+   gespeicherten Stand, Zielstand und Fehlergrund. Bei einem erneuten Start
+   werden bereits erfolgreich gespeicherte Übergänge nicht wiederholt.
 
-### Bisherige Antworten und Rückmeldungen
+Der Startablauf ergänzt die vorhandene Startverdrahtung und Betriebssperre.
+Eine noch offene Bestätigung der bestehenden Identitätsmigration darf er
+nicht übergehen. Ein neuer Migrationsdialog gehört nicht zum Umfang.
 
-Mike, 2026-09-07:
+### Verantwortung des Autors
 
-> Wenn wir diese Automatismen, die sehr komplex sind, einfach dem Plugin-Autor überlassen? Er soll ein Flag setzen, das die DB inkompatibel zum Vorgänger macht. Der Plugin-Author muss für die DB-Migration sorgen in dem ein von ihm bereitgestelltest Script oder so läuft
+**Der Autor verantwortet Datenauswahl und fachliche Korrektheit.** Dazu gehören
+die Verträglichkeit mit gemeinsam genutzten Daten und ein gezielter Test der
+eigenen Umwandlung. Änderungen am gemeinsamen StockInfo-Schema bleiben
+Verantwortung des Hosts.
 
-Auf den Vorschlag einer Datenkompatibilitäts-Version (`data_version`) statt
-eines booleschen Flags, einer vom Plugin bereitgestellten Migration und eines
-gesicherten Aufrufs durch StockInfo antwortete Mike: **„Passt“**.
+Die Autorenfunktion arbeitet ausschließlich über den bereitgestellten
+Datenzugriff. Sie führt keinen eigenen Commit aus und öffnet keine zweite
+Schreibverbindung. Externe Dateiänderungen und Netzoperationen sind nicht Teil
+dieser DB-Migration, weil sie nicht mit der DB-Transaktion zurückgerollt werden.
 
-Damit ist die Richtung entschieden; die genaue Schnittstelle ist noch nicht
-implementiert. Die früher diskutierte Major-Versionsregel wird nicht verfolgt.
+**Versionssprünge löst der Autor.** Bei `1 → 3` muss die Funktion diesen
+Übergang unterstützen oder ablehnen. Ob sie intern `1 → 2 → 3` ausführt,
+entscheidet der Autor; StockInfo sucht keine Migrationskette. Downgrades werden
+zunächst abgelehnt. Unveränderte Datenversionen benötigen keine Funktion.
 
-## Umsetzung und technische Nachweise
+Plugins laufen bereits als vertrauenswürdiger Python-Code. Der Vertrag ist
+keine Sicherheitsgrenze gegen ein Plugin, das ihn umgeht. Eine technische
+Abschottung fremder Daten wäre bei den gemeinsam genutzten Tabellen ein
+zusätzliches Vorhaben und gehört nicht zu T-25.
 
-### Beschlossener Ablauf
+### Lieferumfang und Abschlussgrenze
 
-1. Jedes Plugin deklariert seine Datenkompatibilitäts-Version; StockInfo
-   speichert den verwendeten Stand je Plugin. `data_version` ist jetzt als
-   additive Deklaration implementiert.
-2. Bei unverändertem Stand braucht ein Paketupdate keine Datenmigration.
-3. Bei verändertem Stand muss das Plugin einen passenden Migrationsweg vom
-   gespeicherten zum neuen Stand bereitstellen. Übersprungene Paketversionen
-   müssen berücksichtigt werden; ein Flag „zum Vorgänger inkompatibel“ genügt
-   deshalb nicht.
-4. StockInfo sichert vor der Migration und ruft einen einheitlichen
-   Migrationseinstieg des Plugins auf.
-5. Erst nach erfolgreicher Migration darf der neue Plugin-Stand den Bestand
-   verwenden. Fehlt ein passender Weg oder scheitert die Migration, bleibt
-   diese Verwendung gesperrt. Der Bestand muss wiederherstellbar bleiben.
+Der Folgeumfang umfasst drei fachliche Änderungen: den dokumentierten
+Migrationseinstieg im Plugin-Vertrag, seine Ausführung mit Sicherung und
+Transaktion sowie den Versionsvergleich mit Freigabe oder Sperre beim Start.
+Ein kleines Beispielplugin und die gezielten Prüfungen unten belegen den Weg.
+Vorhandene Versionsspeicherung und Backup-Funktion werden wiederverwendet.
 
-Das Plugin verantwortet seine Datenumwandlung. Das gemeinsame StockInfo-Schema
-bleibt Verantwortung des Hosts; eine Migration darf nicht beliebig die von
-anderen Plugins verwendeten Tabellen verändern. Wie diese Grenze technisch
-durchgesetzt wird, gehört zum Schnittstellenentwurf.
+Die [Autorenanleitung](../docs/plugin-authors.md#planned-plugin-migrations-not-available-yet)
+beschreibt diesen Ablauf bereits als **geplant, noch nicht verfügbar**. Bei
+Umsetzung wird dort die konkrete Kontext-API samt ausführbarem Beispiel ergänzt
+und der Verfügbarkeitshinweis aktualisiert. Dieser Doku-Abgleich gehört zur
+Lieferung und zur Prüfung M5; ein Eintrag nur im Ticket genügt nicht.
 
-### Was dadurch entfällt und was noch zu klären ist
+**T-25 schließt mit diesem Migrationsweg.** Konkrete Datenumwandlungen werden
+erst nötig, wenn ein Autor `data_version` erhöht. Paketpins, Rollenketten,
+Profilnamen und Major-Versionen lösen keine Migration aus; der Fingerprint
+bleibt Herkunftsinformation.
 
-Die bisherige automatische Entscheidung über Dateninkompatibilität anhand von
-Paketpins, Rollenketten oder Major-Versionen entfällt. Es wird auch keine
-frische Datenbank allein wegen eines solchen Vergleichs angelegt. Der
-bestehende Konfigurations-Fingerprint kann Herkunft dokumentieren, ist aber
-kein Ersatz für die deklarierte Datenkompatibilität.
+Nicht zum Abschlussumfang gehören ein allgemeines Migrationsframework,
+automatische Datenbankrotation, fortlaufende Backupnummern, Wiederherstellung
+alter Plugin-Umgebungen oder die frühere siebenstufige Crash-Matrix.
+Ein gezielter Prozessabbruch innerhalb der Transaktion bleibt Teil der Prüfung.
+Der in T-23 gestrichene Preflight ist keine Abhängigkeit.
 
-Der alte Rotationsentwurf samt Last-known-good-Plugin-Umgebung und siebenstufiger
-Crash-Matrix wird nicht unverändert als Implementierungsauftrag übernommen.
-Backup und Schutz vor einer halbfertigen Migration bleiben erforderlich.
-T-23 liefert keinen Preflight: Dieser wurde dort ausdrücklich gestrichen.
-
-Vor Umsetzung sind Plugin-Identifikation, Speicherung der Versionsstände,
-Migrationsparameter und erlaubte Schreibzugriffe sowie das atomare Abschließen
-oder Wiederherstellen bei einem Fehler festzulegen. Auch die Behandlung alter
-Datenbanken ohne gespeicherten Plugin-Stand benötigt eine ausdrückliche Regel;
-sie darf weder Kompatibilität raten noch Daten verwerfen.
-
-Die Erkennung einer neuen Datenbankgeneration durch StockPortfolio ist davon
-fachlich unabhängig. `generation_id` ist weiterhin nicht implementiert und im
-aktuellen Core-Artefakt unter `planned.generation_runtime` als noch nicht
-zugesagt gekennzeichnet. Die heutige Zustimmung erledigt oder verwirft diese
-Restanforderung nicht. Ihre Einplanung sowie die alte Forderung nach
-fortlaufenden Backupnummern sind bei der weiteren Eingrenzung separat zu klären.
+`generation_id` bleibt eine eigenständige Restanforderung für StockPortfolio.
+Sie ist nicht implementiert und unter `planned.generation_runtime` als noch
+nicht zugesagt gekennzeichnet. Ihre spätere Einplanung blockiert weder diesen
+Migrationsweg noch dessen Abschluss; mit diesem Zuschnitt gilt sie nicht als
+erledigt oder verworfen.
 
 ### Befund vor der Umsetzung · Historie
 
@@ -144,35 +205,49 @@ und exakte Paketpins. Beim geprüften Wechsel `example-source==1.0.0` auf
 `backup_sources_differ`. Ein Profilname allein geht dagegen nicht in den Hash
 ein. Die gewünschte Datenkompatibilitäts-Erklärung ist noch nicht vorhanden.
 
-### Verify · neuer Umfang
+### Verify · verbindlicher Umfang vom 2026-09-09
 
-Neue Kennungen M1–M5 unterscheiden diese Kriterien von der alten Matrix.
-Legende: ➖ keine Live-Verifikation. Prüfläufe müssen eigene temporäre Daten
-und kontrollierte Testplugins verwenden; keine Produktionsmigration zum Testen.
+M1–M6 sind die aktuellen Abschlusskriterien. Legende: ➖ kein neuer Nachweis
+für den Startablauf; bestehende Teilnachweise stehen oben. Prüfläufe verwenden
+den echten App-Start mit temporären Datenbanken und kontrollierten Testplugins.
+Es wird keine Produktionsmigration zum Testen ausgeführt.
 
 | # | Aktion | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| M1 | Paketversion ändern, Datenkompatibilitäts-Version beibehalten | Keine Migration und keine Ablehnung allein wegen des Paket-Bumps | ➖ |
-| M2 | Datenkompatibilitäts-Version mit passender Migration ändern | Sicherung vor erstem Schreibzugriff; neue Daten und Versionsstand erst nach Erfolg verwendbar | ➖ |
-| M3 | Mehrere Paketstände überspringen oder passende Migration weglassen | Passender Weg vom tatsächlich gespeicherten Stand; andernfalls keine Nutzung durch den neuen Plugin-Stand | ➖ |
-| M4 | Migration mit Fehler oder Prozessabbruch beenden | Kein als erfolgreich markierter Teilstand; Bestand konsistent wiederherstellbar | ➖ |
-| M5 | Migration mit Daten anderer Plugins und gemeinsamem Schema prüfen | Nur erlaubte Daten betroffen; gemeinsames Schema und fremde Daten geschützt | ➖ |
+| M1 | Paketversion ändern, `data_version` beibehalten | Kein Migrationsaufruf, kein Migrationsbackup und keine Ablehnung allein wegen des Paket-Bumps; Daten bleiben erhalten | ➖ |
+| M2 | Datenversion mit passender Autorenfunktion erhöhen; danach erneut starten | Sicherung enthält den alten Bestand vor der Umwandlung; Daten und Versionsstand gemeinsam gespeichert; Fachbetrieb erst nach Erfolg; zweiter Start wiederholt die Migration nicht | ➖ |
+| M3 | `1 → 3`, fehlende Funktion, nicht unterstützten Ausgangsstand und Downgrade prüfen | Autor erhält tatsächlichen Ausgangs- und Zielstand; unterstützter Sprung gelingt, übrige Fälle sperren den Fachbetrieb mit Diagnose; kein falscher Versionsstempel | ➖ |
+| M4 | Sicherung scheitern lassen; Autorenfunktion nach einer Änderung mit Fehler oder Prozessabbruch beenden und neu starten | Ohne Sicherung kein Funktionsaufruf; nach Fehler/Abbruch bleiben Daten und Version der fehlgeschlagenen Migration auf dem vorherigen Stand; kein halbfertiger Erfolg; Neustart prüft erneut | ➖ |
+| M5 | Dokumentierten Autorenvertrag und Beispielmigration mit gemischtem Datenbestand prüfen | Beispiel ändert nur vorgesehene Daten, erhält fremde Daten und gemeinsames Schema und überlässt Commit/Rollback dem Host; kein Nachweis einer Plugin-Sandbox behauptet | ➖ |
+| M6 | Leere Datenbank sowie vorhandene Datenbank ohne Plugin-Versionsmarker starten | Frische DB übernimmt aktuelle Deklaration ohne Migration und erlaubt eine Fachoperation; Altbestand gilt als Stand 1 und durchläuft bei höherem Ziel die Migration oder bleibt gesperrt | ➖ |
 
-Dies ist eine beschlossene Richtung mit prüfbaren Kernanforderungen, noch kein
-vollständiger Implementierungsplan. Alte AI-Nachweise und leere Human-Felder
-bleiben unverändert in der Historie; sie bestätigen die neue Migration nicht.
+M5 ersetzt die frühere Forderung nach technisch erzwungenem Schutz fremder
+Plugin-Daten durch Autorenvertrag und Beispielprüfung. Die Abschottung ist
+entfallen, nicht bestanden. M6 macht die bereits beschlossenen Regeln für
+frische und alte Datenbanken ausdrücklich prüfbar.
+
+Die Ticketanpassung ist kein Implementierungs- oder Migrationsnachweis.
+Alte AI-Nachweise und leere Human-Felder bleiben unverändert in der Historie;
+sie bestätigen den neuen Startablauf nicht.
 
 ### Side-Effects
 
-Heute nur Ticketänderung. Keine Plugin-Installation, Migration, Sicherung oder
-Datenbankrotation ausgeführt. Der spätere Vertrag betrifft Plugin-API und Host;
-eine Paketversionsänderung allein soll keine Datenumwandlung auslösen.
+Die erste Anpassung vom 2026-09-09 betraf nur dieses Ticket. Keine Plugin-Installation,
+Migration, Sicherung oder Datenbankrotation ausgeführt. Die bestehende Umsetzung
+von `data_version` ist oben gesondert dokumentiert.
+
+Doku-Nachtrag auf Mikes Auftrag vom selben Tag: `docs/plugin-authors.md`
+unterscheidet vorhandene Datenkompatibilität vom geplanten Startablauf;
+`CLAUDE.md` verlangt den Doku-Abgleich als Teil künftiger Änderungen.
+Auch dieser Nachtrag führt keine Migration aus.
 
 ### Auflösung
 
 Teilweise umgesetzt: `data_version` und Backup-Kompatibilitätsprüfung sind
-auf Mikes Auftrag implementiert. Der Migrationseinstieg und seine sichere
-Ausführung fehlen weiterhin. STATUS-Rollen und Prioritätskette bleiben unverändert.
+auf Mikes Auftrag implementiert. Der kleine Migrationsweg beim Start ist als
+Restumfang beschlossen und noch umzusetzen. Maßgeblich sind M1–M6; Rotation,
+Plugin-Abschottung und `generation_id` blockieren seinen Abschluss nicht.
+STATUS-Rollen und Prioritätskette bleiben unverändert.
 
 ## Frühere Anforderungen und Prüfungen · Historie
 
