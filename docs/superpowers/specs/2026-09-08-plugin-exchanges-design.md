@@ -81,10 +81,9 @@ Die gespeicherten Zeilen werden dabei weder gelöscht noch umgeschrieben.
 
 ## REST und Oberfläche
 
-`GET /exchanges` behält `catalog`, `default_exchange` und
-`default_exchange_kind`. Seit T-21 (2026-09-09) enthält `catalog` ausschließlich
-konkrete MICs; `default_exchange_kind` ist `exchange` oder `unknown`.
-`US` ist keine gültige Börsenpräferenz. Börseneinträge erhalten zusätzlich alle
+`GET /exchanges` liefert `catalog`, `default_exchange` und
+`default_exchange_kind`. Der Katalog enthält ausschließlich konkrete MICs;
+`default_exchange_kind` ist `exchange` oder `unknown`. Börseneinträge nennen alle
 deklarierenden Quellen sowie Unterstützungsangaben mit Quelle, Rolle,
 Deklarationsumfang und aktueller Einsatzbereitschaft. Die bestehende
 `provenance` bleibt für Core-Einträge Core; bei mehreren identischen
@@ -98,8 +97,7 @@ Rollen machen Kursabruf und Tageshistorie unterscheidbar. Bestandsabhängig,
 nicht einsatzbereit und nicht angegeben bleiben unterscheidbar. Es wird kein
 erfolgreicher Live-Abruf versprochen. App-Suffix und Währung bleiben als
 Zusatzinformation erhalten; der MIC ist die primäre Kennung.
-Sammelcodes und Mitgliederlisten entfallen. Standardsymbol, Suche und schmale
-Fenster werden berücksichtigt. Alle Texte DE/EN.
+Standardsymbol, Suche und schmale Fenster werden berücksichtigt. Alle Texte DE/EN.
 
 ## Umsetzung in prüfbaren Schritten
 

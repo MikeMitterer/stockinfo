@@ -92,7 +92,8 @@ Logs: /tmp/t21-mic-{red,green,backend,api,dashboard,build,fresh,restored,naming}
 Auswahl-Rotlauf /tmp/t21-selection-red.log; Mutanten
 /tmp/t21-mic-mutant-{selection,home}.log. Python-AST-/TS-Compiler-Inventare
 unter /tmp/t21-mic-{python,ts}-inventory.json; englische Bezeichner geprüft.
-Die historische Spec trägt eine Ablösungsnotiz; Human-Spalten unverändert.
+Human-Spalten unverändert. Mikes Nachsteuerung: keine US-Ablösungshinweise;
+die aktuelle Dokumentation beschreibt unmittelbar den gültigen MIC-Vertrag.
 
 ### Reviewrunde 1 und Korrektur · 2026-09-09
 

@@ -1,11 +1,5 @@
 # T-21 Teil 3 — Identität sichtbar machen und im Vertrag verlangen
 
-> **Ablösung am 2026-09-09, Auftrag Mike:** Die nachfolgenden historischen
-> Collector-Anforderungen gelten nicht mehr. T-21 entfernt Sammelcodes aus
-> App-Katalog und Auswahl; T-67 zeigt ausschließlich MIC-Abweichungen.
-> Der Docker-Pending-Langzeitnachweis ist aus dem Abschlussumfang genommen.
-> Frühere Prüfbelege bleiben historische Aussagen über ihre damalige Fassung.
-
 **Datum:** 2026-08-24 · **Ticket:** `_tickets/T-21-identitaet-mic-und-ticker.md` ·
 **Branch:** `t-21d-offene-zuordnungen` · **Status:** entworfen, **Runde 24** ·
 **Vorlauf:** Runden 8, 9 und 10 haben je fünf bis sechs Befunde gebracht. Die
