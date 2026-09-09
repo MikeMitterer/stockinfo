@@ -1,10 +1,10 @@
-# Claude-Review-Muster
+# Erfahrungen aus Claude-Arbeit
 
 Versioniertes, compaction-festes Gedächtnis für wiederkehrende Fehler in
 Claudes Implementierungen und Übergaben. Der Verifier liest diese Datei
 vollständig, wenn Claude den Prüfgegenstand erstellt hat; Claude liest sie
 vor eigenen Übergaben. Bei gemischter Autorenschaft beide Sammlungen lesen.
-Für Codex-Arbeit gilt [CODEX-REVIEW-PATTERNS.md](CODEX-LESSONS.md).
+Für Codex-Arbeit gilt [CODEX-LESSONS.md](CODEX-LESSONS.md).
 Die Rollenverteilung steht in `STATUS.md`; der Dateiname bezeichnet den
 untersuchten Agenten. Die Sammlung ist Ausgangsbasis für einen Review-Skill.
 
@@ -14,21 +14,15 @@ Bugs bleiben im Ticket. Ein Eintrag enthält Erkennungsregel, Prüffrage und
 Belege; neue Belege werden am bestehenden Eintrag ergänzt statt ihn zu
 duplizieren.
 
-**Für jedes Review gilt Mikes Projektvorgabe:** StockInfo ist Entwicklungsstand,
-keine angenommene große Nutzerbasis. Die gemeinsame Regel steht in
-[R-02 · Entwicklungsstand](CODEX-LESSONS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
-Migrationen, Kompatibilität und Hinweise brauchen einen konkreten Bedarf.
+Die [Projektvorgabe zum Entwicklungsstand](../../CLAUDE.md#tatsächlicher-entwicklungsstand)
+gilt für beide Rollen. Anlass und Erkennung stehen in
+[R-02](CODEX-LESSONS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
 
 ## Gemeinsame Vorgabe zum Rundenlimit
 
-**Mike, 2026-09-09:** Am Limit müssen offene Befunde und der Grund für den
-Rundenverbrauch im Ticket klar erkennbar sein. Verhaltensneutrale
-Kommentar-/Docstring-Reste über die Verifier-Selbstheilung erledigen; die
-Rundenzahl macht sie weder zum Blocker noch zu zulässigerweise vergessener
-Arbeit. Echte Blocker verhindern Freigabe, Folgearbeit und `solved/`.
-Keine automatische Übergabe an Mike allein wegen der Zahl. Der gemeinsame
-[Ablauf zum Rundenlimit](AGENT-WORKFLOW.md#rundenlimit-rest-offenlegen-und-abschließen)
-ist maßgeblich.
+Maßgeblich ist der gemeinsame
+[Ablauf zum Rundenlimit](AGENT-WORKFLOW.md#rundenlimit-rest-offenlegen-und-abschließen).
+Die folgende Erfahrung erklärt den Anlass; sie ist keine zweite Regelkopie.
 
 Anlass sind die von Mike benannten, zunächst liegen gebliebenen
 Docstring-Korrekturen aus T-21 und Codex' anschließende zu starre

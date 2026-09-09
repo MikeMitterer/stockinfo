@@ -14,6 +14,12 @@ Für Mike steht aktuell kein Handgriff an. Vor der Umsetzung wird der konkrete
 CLI-Umfang erfasst; ein behaupteter Start oder `/clear`-Nachweis braucht einen
 praktischen Lauf in der jeweils verwendeten Laufzeit.
 
+## Übersicht
+
+- [Vereinbarter Observer-Auftrag](#vereinbarter-observer-auftrag)
+- [Lieferung und Grenzen](#lieferung-und-grenzen)
+- [Prüfung](#prüfung)
+
 ## Vereinbarter Observer-Auftrag
 
 Mike fragt nach einer dritten Rolle. Vorschlag: Ein optionaler Observer
@@ -159,6 +165,8 @@ Falls die Laufzeit nach `/clear` einen erneuten Start verlangt, wird dieser
 ausdrücklich dokumentiert. Ein beendeter Observer blockiert weder Umsetzung
 noch Freigabe. Bis zur späteren Umstellung wird kein Observer-Loop gestartet.
 
+[↑ Übersicht](#übersicht)
+
 ## Lieferung und Grenzen
 
 Die gemeinsamen Rollenregeln gehören in den Workflow, die konkrete
@@ -171,6 +179,8 @@ prüfbarer Diff vorbereitet. Bestehende CLI-Zusatzanweisungen, Standardbefehle,
 Arbeitsverzeichnis, Argumente und Exit-Code bleiben erhalten. Keine Observer-
 Zuordnung in einem realen Board ohne ausdrücklichen Auftrag eintragen.
 
+[↑ Übersicht](#übersicht)
+
 ## Prüfung
 
 Die Prüfpunkte stammen unverändert im Umfang aus T-68 #7–10; hier #1–4.
@@ -181,3 +191,5 @@ Die Prüfpunkte stammen unverändert im Umfang aus T-68 #7–10; hier #1–4.
 | 2 | Beide Observer-Starts erhalten die richtige Kennung und lesen ihre Rolle aus STATUS; ein paralleler Standardagent behält seine eigene Kennung; der Start verändert keine Rollenzuordnung | ➖ |
 | 3 | Nach `/clear` ist die Kennung in beiden verwendeten CLIs erneut verfügbar und die aktuelle Rolle wird neu gelesen; andernfalls vor Einführung einen geprüften Wiedereinstieg einrichten und dokumentieren | ➖ |
 | 4 | Der Observer-Loop liest unabhängig vom Owner, arbeitet nur bei passender Observer-Zuordnung und meldet unveränderte Beobachtungen nicht wiederholt; Stoppen, Rollenwechsel, `/clear` und Wiederanlauf erzeugen weder fremde Rollenarbeit noch doppelte Loops | ➖ |
+
+[↑ Übersicht](#übersicht)

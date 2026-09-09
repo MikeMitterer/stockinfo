@@ -1,24 +1,30 @@
-# Codex-Review-Muster
+# Erfahrungen aus Codex-Arbeit
 
 **Diese Sammlung hält belegte, wiederkehrende Probleme in Codex-Arbeit fest.**
 Sie dient dem Coder zur Vorbeugung und dem Verifier als gezielte Prüfhilfe.
 Die aktuelle Rollenverteilung steht ausschließlich in [STATUS.md](../STATUS.md).
 
+## Übersicht
+
+- [Gemeinsame Vorgabe zum Rundenlimit](#gemeinsame-vorgabe-zum-rundenlimit)
+- [Verwendung](#verwendung)
+- [R-02 · Entwicklungsstand wird wie ein breit ausgerolltes Produkt behandelt](#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt)
+- [CX-01 · Der grüne Gesamtlauf steht auf Reststand statt auf Frischstart](#cx-01--der-grüne-gesamtlauf-steht-auf-reststand-statt-auf-frischstart)
+- [T-66 · Fachbefund übernommen, Gewichtung nicht eigenständig geprüft](#t-66--fachbefund-übernommen-gewichtung-nicht-eigenständig-geprüft)
+- [Wann ein Befund zum Muster wird](#wann-ein-befund-zum-muster-wird)
+
 ## Gemeinsame Vorgabe zum Rundenlimit
 
-**Mike, 2026-09-09:** Am Limit müssen offene Befunde und der Grund für den
-Rundenverbrauch im Ticket klar erkennbar sein. Verhaltensneutrale
-Kommentar-/Docstring-Reste über die Verifier-Selbstheilung erledigen; die
-Rundenzahl macht sie weder zum Blocker noch zu zulässigerweise vergessener
-Arbeit. Echte Blocker verhindern Freigabe, Folgearbeit und `solved/`.
-Keine automatische Übergabe an Mike allein wegen der Zahl. Der gemeinsame
-[Ablauf zum Rundenlimit](AGENT-WORKFLOW.md#rundenlimit-rest-offenlegen-und-abschließen)
-ist maßgeblich.
+Maßgeblich ist der gemeinsame
+[Ablauf zum Rundenlimit](AGENT-WORKFLOW.md#rundenlimit-rest-offenlegen-und-abschließen).
+Die folgende Erfahrung erklärt den Anlass; sie ist keine zweite Regelkopie.
 
 Anlass sind die von Mike benannten, zunächst liegen gebliebenen
 Docstring-Korrekturen aus T-21 und Codex' anschließende zu starre
 Eskalationsregel in `4dbb9bd`. Das ist eine ausdrückliche gemeinsame
 Arbeitsvorgabe, keine Behauptung zusätzlicher unabhängiger Vorfälle.
+
+[↑ Übersicht](#übersicht)
 
 ## Verwendung
 
@@ -31,35 +37,19 @@ einem Rollenwechsel.
 Einzelbefunde bleiben zunächst in ihren Tickets; die Claude-Sammlung wird nicht
 als Codex-Befund kopiert.
 
+[↑ Übersicht](#übersicht)
+
 ## R-02 · Entwicklungsstand wird wie ein breit ausgerolltes Produkt behandelt
 
-**Verbindliche Projektvorgabe von Mike, 2026-09-09; gilt für Coder und Verifier.**
-StockInfo ist im Entwicklungsstand und wird bislang nur von Mike verwendet.
-Eine erste Version läuft auf Unraid. Daraus folgt keine große externe
-Nutzerbasis und keine Pflicht zu Übergangsfristen oder Änderungskampagnen.
-Diese Einordnung gilt, bis Mike einen anderen Betriebsstand festlegt.
+Die verbindliche Vorgabe steht im
+[Projekteinstieg](../../CLAUDE.md#tatsächlicher-entwicklungsstand).
+Dieser Eintrag hält Anlass und Erkennung des Fehlmusters fest.
 
 **Erkennungsregel:** Eine Änderung wird mit Rückwärtskompatibilität,
 Migrationspfaden, Ablösungshinweisen oder zusätzlicher Reviewarbeit belastet,
 weil hypothetisch viele Nutzer oder unbekannte Altinstallationen betroffen
 sein könnten. Eine Veröffentlichung auf Unraid wird dabei ohne Beleg mit
 breiter Nutzung gleichgesetzt. So entsteht Aufwand ohne konkreten Nutzen.
-
-**Regel für Umsetzung und Review:**
-
-- Maßstab sind Mikes tatsächlich verwendete Daten, Installationen und
-  ausdrücklich benannte Verbraucher. Eine große Nutzerbasis wird nicht erfunden.
-- Migration oder Kompatibilität nur bei einem konkreten Bedarf: Welche
-  vorhandenen Daten oder welcher tatsächlich genutzte Ablauf wären betroffen?
-  Ohne diesen Bezug entsteht daraus weder Implementierungsauftrag noch Finding.
-- Die aktuelle Dokumentation beschreibt den gültigen Stand direkt.
-  Keine Ablösungs- oder Umstellungshinweise für verworfene Entwicklungsregeln.
-  Alte Entscheidungen bleiben bei Bedarf in Ticket und Git nachvollziehbar.
-- Veraltete Konzepte entfernen, statt sie durch Übergangsschichten am Leben
-  zu halten. Vorhandene Daten schützen heißt nicht, jede frühere Entwicklungsidee
-  dauerhaft unterstützen zu müssen.
-- Prüfaufwand und Befundgewicht folgen dem belegten Schaden. Kein zusätzliches
-  Ticket, Testsystem oder Reviewzyklus allein wegen hypothetischer Verbreitung.
 
 **Prüffrage:** Welcher reale Nutzer, Datenbestand oder Verbraucher braucht diese
 Maßnahme heute, und welchen konkreten Nachteil verhindert sie? Ohne belegbare
@@ -71,6 +61,8 @@ weist beides zurück; entfernt in `4bacaf2`. Mike benennt das übergeordnete
 Problem ausdrücklich als wiederkehrend: „Der aktuelle Stand ist ein
 Entwicklungsstand“ und „Wir schießen mit Kanonen auf Spatzen“. Diese Vorgabe
 wird auf seinen Auftrag festgehalten; es werden keine weiteren Vorfälle erfunden.
+
+[↑ Übersicht](#übersicht)
 
 ## CX-01 · Der grüne Gesamtlauf steht auf Reststand statt auf Frischstart
 
@@ -97,6 +89,8 @@ diesem Diff `meta`, ohne dass `init_db` gelaufen sein muss
 Gegenprobe mit initialisierter Datenbank: dieselben 36 Tests grün. Befund von
 Claude als Verifier, 2026-09-07.
 
+[↑ Übersicht](#übersicht)
+
 ## T-66 · Fachbefund übernommen, Gewichtung nicht eigenständig geprüft
 
 Einzelfall-Lehre auf ausdrücklichen Auftrag von Mike, 2026-09-08: Codex
@@ -108,6 +102,8 @@ prüfen; ein zutreffender Codeverweis beweist nicht die behauptete Schwere.
 Die gemeinsame Analyse und Gegenprüfung stehen einmalig in
 [R-01 der Review-Lehren](CLAUDE-LESSONS.md#r-01--integrationsaufwand-verdrängt-die-fachliche-architekturentscheidung).
 Keine zweite unabhängige Episode wird behauptet.
+
+[↑ Übersicht](#übersicht)
 
 ## Wann ein Befund zum Muster wird
 
@@ -127,3 +123,5 @@ Keine zweite unabhängige Episode wird behauptet.
 Wiederkehrende Probleme können Implementierung, Tests, Dokumentation,
 Übergaben oder die Arbeit als Verifier betreffen. Die Rolle beim jeweiligen
 Befund ausdrücklich nennen. Fachliche Regeln gelten unabhängig vom Agenten.
+
+[↑ Übersicht](#übersicht)

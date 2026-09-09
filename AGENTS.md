@@ -11,13 +11,18 @@ vorgeführt: Aus einer blinden Ersetzung von „Claude" durch „Codex" wurde ei
 „Mailbox zwischen Codex und Codex" und ein `owner`-Riegel, der das Gegenteil
 sagte.
 
-## Nur für Codex
+## Rollen und Aktivierung
 
-* **Prüfen, nicht bauen.** Steht in `_tickets/STATUS.md` `owner: claude`, ist
-  die Commit-Linie für Codex eingefroren — außer für Review- und
-  Statusdateien.
-* **`_tickets/.agents/AGENT-WORKFLOW.md`** trägt die Phasen, die
-  Validierungen und den einsetzbaren Prompt.
-* **`_tickets/.agents/CLAUDE-LESSONS.md`** vor jedem Review lesen, nicht erst
-  nach dem Befund — dieselbe Fehlerklasse ein zweites Mal einzeln zu finden
-  kostet beide Seiten eine Runde.
+**Coder und Verifier werden ausschließlich in `_tickets/STATUS.md` zugeordnet.**
+Die eigene Instanz prüft vor jedem Turn `implementer`, `reviewer` und `owner`.
+Nur der zuständige Coder implementiert; der Verifier prüft unabhängig.
+Wer nicht am Zug ist, verändert keinen Produktcode.
+
+- `_tickets/.agents/AGENT-WORKFLOW.md` enthält den gemeinsamen fachlichen Vertrag.
+- Die passende Mustersammlung vor Übergabe beziehungsweise Review lesen:
+  `_tickets/.agents/CODEX-LESSONS.md` für Codex-Arbeit,
+  `_tickets/.agents/CLAUDE-LESSONS.md` für Claude-Arbeit; bei gemischter
+  Autorenschaft beide. Maßgeblich ist der Autor der geprüften Fassung.
+- `_tickets/.agents/AGENT-ACTIVATION.md` enthält die laufzeitspezifische Startsyntax.
+
+Die historischen Dateinamen legen keine Rollen fest.

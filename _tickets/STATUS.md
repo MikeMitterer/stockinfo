@@ -25,28 +25,14 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `priority_chain`: `T-68-ticketboard-ordner-umstellen.md → T-69-observer-instanzen-und-loop.md`
 - `priority_ticket`: `T-68-ticketboard-ordner-umstellen.md`
 
-**Rundenlimit · Mike, präzisiert 2026-09-09:** `max_review_rounds: 3`
-begrenzt die regulären vollständigen Reviews je Ticket. Beim Erreichen nennt
-das Ticket alle offenen Befunde, ihre Bedeutung und den Grund für den
-Rundenverbrauch. Kein automatischer Wechsel zu Mike. Mechanische
-Kleinigkeiten werden durch Verifier-Selbstheilung erledigt; Blocker werden
-am aktuellen Ticket korrigiert und gezielt nachgeprüft. Erforderliche
-Überschreitungen bleiben begründet und korrekt gezählt. Mit offenem Blocker
-weder Folgearbeit noch `solved/`. Verbindlicher Ablauf für beide Agenten:
-[Rundenlimit](.agents/AGENT-WORKFLOW.md#rundenlimit-rest-offenlegen-und-abschließen).
-Die frühere automatische Eskalation beim Erreichen der Zahl ist aufgehoben.
-Scope-Checkpoints sind keine vollständigen Reviewrunden.
-
-`review_round` zählt die aktuelle Übergaberunde. `last_reviewed_round`
-gehört zusammen mit `last_reviewed_ticket` und `last_reviewed_commit` zum
-zuletzt abgeschlossenen Review; es ist kein Limit. T-21 wurde in Runde 2
-freigegeben. Die von Mike als Limit gedachte 3 steht deshalb jetzt im
-eigenen Feld `max_review_rounds`.
-
-`last_reviewed_commit` zeigt auf **`583e0f7`**, nicht auf die übergebene
-Fassung `4bacaf2`: Die Verifier-Selbstheilung setzt den Zeiger auf den
-finalen Produkt-Commit. Beide Stände sind im
-[Abschluss T-21](#abschluss-t-21--mike-2026-09-09) festgehalten.
+`max_review_rounds` ist das Limit regulärer vollständiger Reviews;
+`review_round` zählt die aktuelle Übergabe. `last_reviewed_round` gehört
+mit Ticket und Commit zum letzten abgeschlossenen Review und ist kein Limit.
+Mikes Präzisierung vom 2026-09-09 ist im gemeinsamen
+[Rundenlimit](.agents/AGENT-WORKFLOW.md#rundenlimit-rest-offenlegen-und-abschließen)
+verankert. Scope-Checkpoints sind keine vollständigen Reviewrunden.
+Die frühere T-21-Selbstheilung und deren Commitzuordnung stehen im
+[Abschluss T-21](#abschluss-t-21--mike-2026-09-09).
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
@@ -59,6 +45,17 @@ Die Phasennamen richten sich nach der aktuellen Zuordnung:
 geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
+
+## Gültige Ablage
+
+Die Umstellung auf die sechs Ticketordner ist aktiv. `ticket` und die
+Prioritätsfelder bleiben Dateinamen; der aktive Dateiname wird ausschließlich
+unter `30-doing/` aufgelöst. Folgearbeit liegt bis zum atomaren Arbeitsbeginn
+in `20-ready/`. Rollen und aktuelle Phase stehen im Zustandsblock oben.
+Regeln: [Workflow](.agents/AGENT-WORKFLOW.md#ticketpfade-und-arbeitsbeginn),
+Startsyntax: [Aktivierung](.agents/AGENT-ACTIVATION.md).
+Die folgenden abgeschlossenen Ketten und Nachrichten sind Historie;
+ihre damaligen Phasen, Ablagen und Aussagen starten keine aktuelle Arbeit.
 
 ## Aktuelle Kette · Board und Observer
 
@@ -167,13 +164,9 @@ zuerst ins Ticket, dann verschieben.
 
 ## Projektstand · verbindliche Vorgabe Mike, 2026-09-09
 
-StockInfo ist Entwicklungsstand, bislang nur von Mike verwendet. Die erste
-Unraid-Version begründet keine angenommene externe Nutzerbasis. Migrationen,
-Kompatibilität und Ablösungshinweise brauchen konkreten Bedarf aus dem
-tatsächlichen Betrieb; keine Zusatzarbeit für hypothetische Verbreitung.
-Für beide Rollen in den Review-Patterns verankert:
-[R-02](.agents/CODEX-LESSONS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
-Diese Vorgabe ist bei der laufenden Prüfung zu berücksichtigen.
+Maßgeblich ist die [Projektvorgabe zum Entwicklungsstand](../CLAUDE.md#tatsächlicher-entwicklungsstand).
+Die [Erfahrung R-02](.agents/CODEX-LESSONS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt)
+nennt Anlass und Erkennungsregel. Diese Vorgabe gilt für beide Rollen.
 
 ## Frühere Kette · T-21, Auftrag Mike, 2026-09-09 (abgeschlossen)
 
@@ -376,7 +369,7 @@ nach aktueller Gegenprüfung (35 Tests bestanden) archiviert; Nachweis im
 [Ticket](40-done/T-30-plugin-boersenauskunft.md). Die aktive T-21-/T-67-Kette
 und ihre Rollen bleiben unverändert.
 
-## Aktuelle Arbeit · T-65, Auftrag Mike, 2026-09-08
+## Historie · Arbeit T-65, Auftrag Mike, 2026-09-08
 
 T-21 Börsenabdeckung ist in Runde 3 technisch freigegeben (`f3b383b`).
 T-65 ist einschließlich UI-Prüfung umgesetzt und in Runde 2 von Claude
@@ -398,7 +391,7 @@ den abgeschlossenen Nachtrag unabhängig. Frühere Freigaben bleiben erhalten;
 Börsenabweichungsanzeige und Docker-Langzeittest sind weiterhin außerhalb
 dieses Nachtrags.
 
-## Aktive Kette · Auftrag Mike, 2026-09-07
+## Historie · Kette vom 2026-09-07
 
 **Codex entwickelt, Claude prüft unabhängig.** Mike: „Beginne mit T-60,
 überleg dir dann für STATUS.md eine vernünftige Kette. T-63 kannst du

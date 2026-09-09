@@ -1,86 +1,96 @@
 # _tickets — Verify-Board
 
-Datei-basiertes Board für kleine, verifizierbare Arbeitseinheiten mit
-**zweistufiger Mensch/KI-Verifikation** (Skill `task-verification-workflow`).
+Der Ablageort zeigt den Arbeitsstand eines Tickets. Die genaue Reihenfolge,
+Rollen und aktuelle Bearbeitungsphase stehen ausschließlich in [STATUS.md](STATUS.md).
 
-## Layout
+## Übersicht
 
-```
+- [Ablage](#ablage)
+- [Von der Aufnahme bis zum Abschluss](#von-der-aufnahme-bis-zum-abschluss)
+- [Nachweise und Agentenregeln](#nachweise-und-agentenregeln)
+- [Historischer Stand](#historischer-stand--august-2026)
+
+## Ablage
+
+```text
 _tickets/
-├── README.md      # dieser Workflow (stabil)
-├── STATUS.md      # ephemere Claude↔Codex-Mailbox
-├── CODEX-REVIEW-AUTOMATION.md # Zustandsprotokoll + Scheduled-Task-Prompt
-├── CLAUDE-REVIEW-PATTERNS.md   # dauerhaftes, compaction-festes Review-Wissen
-├── QUESTIONS.md   # ephemerer Capture-Buffer, tendiert gegen leer
-├── T-NN-*.md      # offene Tickets (Board-Root)
-└── solved/        # erledigte Tickets (git mv bei done)
+├── .agents/       # Workflow, Aktivierung, Scheduler und Erfahrungen
+├── 10-backlog/    # gewollt, noch nicht eingeplant
+├── 20-ready/      # beauftragt, als Nächstes vorgesehen
+├── 30-doing/      # begonnen, einschließlich Review und Nacharbeit
+├── 40-done/       # abgeschlossen
+├── 80-iced/       # auf Eis, keine Wiederaufnahme eingeplant
+├── 90-rejected/   # bewusst verworfen
+├── README.md      # diese Anleitung
+├── STATUS.md      # Rollen, Reihenfolge, Phase und Mailbox
+└── QUESTIONS.md   # offene Fragen während der Arbeit
 ```
 
-## Regeln
+Tickets und ihre Begleitdateien liegen gemeinsam im passenden Ordner.
+Im Root bleiben nur die drei genannten Board-Dateien. Der versteckte
+Ordner [.agents/](.agents/) ist versioniert und wird bei Inventaren und
+Linkprüfungen ausdrücklich eingeschlossen.
 
-- **Ort = Status.** Ticket im Root = offen. Erledigt → `git mv T-NN-*.md solved/`.
-- **Verify-Matrix zweistufig.** Spalte `AI` füllt nur die KI (Live-Vorabcheck,
-  Ehrlichkeits-Legende + Fußnoten-Evidenz). Spalte `Human` füllt **nur der
-  Mensch** — die KI überschreibt sie **nie**.
-- Legende `AI`: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung ·
-  ◑ teilweise · ➖ keine Live-Verifikation.
-- **Fragen** landen in `QUESTIONS.md` und drainieren → erledigt / GitHub-Issue /
-  gelöscht. Nichts wohnt dort.
-- **Claude↔Codex-Kommunikation** läuft operativ über `STATUS.md`: aktuelle
-  Nachricht in `INBOX → Claude`, Antwort oder Übergabe in `OUTBOX → Codex`.
-  Beide Bereiche werden nach Verarbeitung geleert; dauerhafte Erkenntnisse
-  wandern ins Ticket, in die Spec oder das Review-Dokument. Keine Historie im
-  Status-Hub — dafür existiert Git.
-- **Zustandsübergaben sind atomar.** Claude setzt nach dem Produkt-Commit
-  `ready_for_codex` samt `handoff_commit` und stoppt Produktänderungen. Codex
-  setzt während der Prüfung `codex_reviewing` und danach `approved` oder
-  `changes_requested`. Identität eines Durchlaufs ist
-  `(ticket, handoff_commit, review_round)`; dasselbe Tupel wird nie zweimal
-  geprüft. Der vollständige Vertrag und der Scheduled-Task-Prompt stehen in
-  `.agents/AGENT-WORKFLOW.md`.
-- **Der Reviewer-Task hängt am bestehenden Codex-Review-Chat.** Kein
-  Standalone-Task: Der bestehende Chat liefert die fortlaufende fachliche
-  Lernkurve, das Musterregister sichert sie zusätzlich gegen Compaction und
-  Sitzungswechsel ab.
-- **Wiederkehrende Claude-Muster überleben Chat-Compaction.** Sie werden nur
-  in `.agents/CLAUDE-LESSONS.md` dauerhaft gepflegt. Jeder Review liest diese
-  Datei zuerst und ergänzt ausschließlich belegte, verallgemeinerbare Muster;
-  Einzelfindings bleiben im Ticket beziehungsweise Review-Ergebnis.
+[↑ Übersicht](#übersicht)
 
-## Scope-Vertrag für Implementierungstickets
+## Von der Aufnahme bis zum Abschluss
 
-Vor dem ersten Produktedit enthält jedes Implementierungsticket diesen Block:
+1. Neue gewollte Arbeit in `10-backlog/` erfassen. Noch keine Umsetzung aus
+   Ticketnummer, Dateiablage oder einer Konzeptfreigabe ableiten.
+2. Beauftragte Folgearbeit nach `20-ready/` verschieben und in STATUS einplanen.
+   Die Ordnernummern sortieren die Ablage; sie bestimmen keine Priorität.
+3. Vor dem ersten Edit das nächste Kettenglied von `20-ready/` nach `30-doing/`
+   verschieben. In demselben Commit `ticket`, `priority_ticket`, Arbeitsphase
+   und `review_round: 0` setzen; vorhandene Reviewhistorie bleibt erhalten.
+4. Während Umsetzung, Review und Nacharbeit bleibt das Ticket in `30-doing/`.
+   Die Phase steht ausschließlich in STATUS; die technische Verify-Matrix
+   beschreibt die Nachweise und ist kein zweiter Board-Status.
+5. Erst nach der erforderlichen Abschlussbestätigung nach `40-done/`
+   verschieben. Eine technische Freigabe allein verschiebt kein Ticket.
+   Vorhandene menschliche Antworten bleiben unverändert; offene Blocker
+   verhindern den Abschluss und den Beginn des nächsten Tickets.
+6. Zurückstellen nach `80-iced/`, Verwerfen nach `90-rejected/`: Grund und Datum
+   festhalten. Wiederaufnahme braucht eine ausdrückliche Einplanung nach
+   `20-ready/`; diese Ordner starten keine automatische Arbeit.
 
-```markdown
-## Scope-Vertrag
+Bei jedem Verschieben Begleitdateien und aktuelle Verweise mitführen.
+Die mit T-68 aus `solved/` archivierten Skripte bleiben bytegleich und werden
+für die Ordnerumstellung nicht erneut ausgeführt. Neue oder künftig geänderte
+Skripte folgen dem aktuellen Ticket-Skill und finden den Projekt-Root unabhängig
+vom Ticketordner. Historische Berichte behalten ihre Aussagen und Belege.
 
-- **Ergebnis:** Ein Satz mit dem beobachtbaren Ergebnis.
-- **Fachliche Änderungen:** Höchstens drei einzeln benannte Regeln.
-- **Produktflächen/-dateien:** Erwartetes Inventar vor dem ersten Edit.
-- **Tests/Dokumentation:** Erwartete mechanische Anpassungen.
-- **Nicht-Ziele:** Ausdrücklich ausgeschlossene Arbeiten.
-- **Budget:** Geschätzte Produktdateien, Test-/Dokudateien und Diff-Zeilen.
-```
+[↑ Übersicht](#übersicht)
 
-Für bestehende offene Tickets ergänzt Claude den Block unmittelbar vor dem
-nächsten Produktedit. Historische Tickets unter `solved/` werden nicht
-umgeschrieben. Die Auslöser und der kurze `scope_checkpoint` stehen im
-verbindlichen Vertrag `.agents/AGENT-WORKFLOW.md`.
+## Nachweise und Agentenregeln
 
-Jede normale Übergabe enthält zusätzlich diese Soll/Ist-Tabelle:
+`AI` füllt die KI anhand konkreter Belege: ✅ bestätigt, ⚠️ mit Einschränkung,
+◑ teilweise, ➖ ohne Live-Nachweis. `Human` und Originalantworten schreibt
+nur der Mensch. Jedes Ticket hat eine aktuelle technische Verify-Matrix.
+[QUESTIONS.md](QUESTIONS.md) sammelt kurzfristige Fragen; Antworten werden
+ins Ticket oder die passende dauerhafte Dokumentation übertragen.
 
-| Wert | geplant | tatsächlich |
-|---|---:|---:|
-| fachliche Änderungen | | |
-| Produktdateien | | |
-| Test-/Dokumentationsdateien | | |
-| Diff-Zeilen | | |
+Der gemeinsame [Workflow](.agents/AGENT-WORKFLOW.md) regelt Rollen, Übergabe,
+Scope-Vertrag, Rundenlimit, Selbstheilung und Fortsetzung. Die
+[Aktivierung](.agents/AGENT-ACTIVATION.md) beschreibt die jeweiligen Laufzeiten;
+der [Codex-Scheduler](.agents/CODEX-IN-CONTEXT-SCHEDULER.md) deren Codex-Vertrag.
+Die Sammlungen [Claude](.agents/CLAUDE-LESSONS.md) und
+[Codex](.agents/CODEX-LESSONS.md) halten belegte Erfahrungen ihrer Autoren fest.
+Vor Übergabe beziehungsweise Review die zur Autorenschaft passende Sammlung
+lesen, bei gemischter Autorenschaft beide.
 
-Jede Abweichung erhält einen Satz Begründung. Test- und Dokumentationsdateien
-stehen getrennt von Produktdateien, damit mechanische Fixture-Anpassungen
-sichtbar bleiben, ohne als neue Produktarchitektur zu gelten.
+Beide Rollen laden `code-standards` vor fachlicher Arbeit. Scope-Vertrag und
+Soll/Ist-Budget richten sich nach dem gemeinsamen Workflow. Die allgemeinen
+Ticketformate und die sechs Ordner sind im Skill `task-verification-workflow`
+beschrieben; diese README beschreibt ihre Anwendung in StockInfo.
+Andere bestehende Projektboards behalten ihre dokumentierte Ablage bis zu
+einer eigenen Umstellung.
 
-## Stand dieser Runde
+[↑ Übersicht](#übersicht)
+
+## Historischer Stand · August 2026
+
+Die folgende Übersicht dokumentiert eine frühere Runde. Aktuelle Einordnung:
+Ticketordner; aktive Arbeit und Priorität: `STATUS.md`.
 
 **Offen (Board-Root):**
 

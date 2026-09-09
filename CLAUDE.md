@@ -1,5 +1,13 @@
 # StockInfo — Projektregeln
 
+## Übersicht
+
+- [Bezeichner sind englisch. Ausnahmslos.](#bezeichner-sind-englisch-ausnahmslos)
+- [Vor Arbeitsbeginn](#vor-arbeitsbeginn)
+- [Tatsächlicher Entwicklungsstand](#tatsächlicher-entwicklungsstand)
+- [Dokumentation gehört zur Änderung](#dokumentation-gehört-zur-änderung)
+- [Datenbankzugriffe in Tests](#datenbankzugriffe-in-tests)
+
 ## Bezeichner sind englisch. Ausnahmslos.
 
 Funktionen, Klassen, Felder, Parameter und **auch lokale Variablen** — in
@@ -28,22 +36,78 @@ T-21 Runde 37 gescheitert.
 
 Vollständige Konventionen samt Namensschema je Sprache: Skill `code-standards`.
 
+[↑ Übersicht](#übersicht)
+
 ## Vor Arbeitsbeginn
 
-- `_tickets/STATUS.md` — die Mailbox zwischen Claude und Codex. `owner` sagt,
-  wer am Zug ist: **Für den, der dort nicht steht, ist die Commit-Linie
-  eingefroren** — außer für Review- und Statusdateien. Claude wartet also bei
-  `owner: codex`, Codex bei `owner: claude`.
-- `_tickets/.agents/CLAUDE-LESSONS.md` — Claudes wiederkehrende Fehlermuster,
-  gepflegt von beiden Seiten. Claude liest sie vor einer Übergabe, Codex vor
-  einem Review — nicht erst nach dem Befund.
-- `_tickets/.agents/AGENT-WORKFLOW.md` — Phasen, Validierungen und der
-  Ablauf einer Übergabe.
+- `_tickets/STATUS.md` ist die einzige Quelle für die aktuelle Rollenverteilung.
+  `implementer` bezeichnet den **Coder**, `reviewer` den **Verifier**.
+  `owner` sagt, wer am Zug ist. Für die andere Instanz bleibt die Commit-Linie
+  eingefroren, außer für ausdrücklich beauftragte Review- und Statusdateien.
+- `_tickets/.agents/CLAUDE-LESSONS.md` und `_tickets/.agents/CODEX-LESSONS.md`
+  sammeln Fehlermuster des jeweils benannten Agenten. Der Coder liest seine
+  Sammlung vor der Übergabe; der Verifier liest die des Autors der geprüften
+  Fassung vor dem Review. Bei gemischter Autorenschaft beide lesen.
+- `_tickets/.agents/AGENT-WORKFLOW.md` enthält den gemeinsamen fachlichen Ablauf.
+- `_tickets/.agents/AGENT-ACTIVATION.md` trennt davon die laufzeitspezifischen Startwege.
 
-> **Diese Datei gilt für beide Agenten.** `AGENTS.md` daneben ist Codex'
-> üblicher Einstieg und **verweist** hierher, statt die Regeln zu kopieren —
-> zwei Kopien liefen beim ersten Nachtrag auseinander. Wo eine Zeile
-> rollenabhängig ist, nennt sie die Rolle ausdrücklich.
+Diese Regeln gelten für beide Rollen. Dateinamen und historische Akteursnamen
+sind keine Rollenverteilung. Ein Rollenwechsel wird ausdrücklich im Status
+festgehalten und ändert weder geprüfte Fassungen noch den Rundenverbrauch.
+
+[↑ Übersicht](#übersicht)
+
+## Tatsächlicher Entwicklungsstand
+
+StockInfo ist Entwicklungsstand und wird bislang nur von Mike verwendet.
+Eine erste Unraid-Version begründet keine angenommene externe Nutzerbasis.
+Migrationspfade, Kompatibilität und Ablösungshinweise brauchen konkreten
+Bedarf aus tatsächlich genutzten Daten, Installationen oder ausdrücklich
+benannten Verbrauchern. Keine Zusatzarbeit für hypothetische Verbreitung.
+Aktuelle Dokumentation beschreibt den gültigen Stand direkt; verworfene
+Entwicklungsregeln brauchen keine Übergangs- oder Ablösungshinweise.
+Prüfaufwand und Befundgewicht folgen dem belegten Schaden. Diese Einordnung
+gilt, bis Mike einen anderen Betriebsstand festlegt.
+
+[↑ Übersicht](#übersicht)
+
+## Dokumentation gehört zur Änderung
+
+**Schreibe für normale Programmierer, ohne Vorwissen über dieses Projekt.**
+Das gilt für alle Dokumente, auf Deutsch und Englisch. Der Leser soll schnell
+erkennen, was etwas macht, wie er es benutzt und welche Grenzen gelten.
+
+- Kurze, direkte Sätze und geläufige Wörter. Keine KI-Floskeln, Werbesprache
+  oder erfundenen Fachbegriffe.
+- Fachbegriffe nur, wenn sie nötig sind; beim ersten Auftreten kurz erklären.
+  Ein kleines Beispiel hilft oft mehr als eine abstrakte Erklärung.
+- Aussagekräftige Überschriften und kurze Absätze. Schritte als nummerierte
+  Liste, Vergleiche bei Bedarf als Tabelle. Nicht jeden Satz fett setzen.
+- Die wichtigste Information zuerst. Details stehen beim jeweiligen Thema;
+  Wiederholungen und Erklärungen ohne Nutzen für den Leser entfallen.
+- Anleitungen beschreiben die Benutzung und das aktuelle Verhalten.
+  Interne Arbeitsabläufe und Review-Geschichte gehören in die Tickets.
+
+Bei Änderungen an Verhalten, Verträgen, Konfiguration, Installation oder
+beschlossenem Umfang gehört der **Doku-Abgleich zum selben Auftrag**.
+Mike muss betroffene Anleitungen nicht eigens nennen.
+
+- Der Bearbeiter ermittelt über das Datei- und Überschrifteninventar die
+  betroffenen Anleitungen, Referenzen, Beispiele und Specs; dazu gehören auch
+  README-Dateien außerhalb von `docs/`. Anschließend verfolgt er die geänderten
+  Zusagen und ihre Verweise gezielt durch diese Dokumente.
+- Aktuelle Anleitungen werden mitgezogen. Geplantes wird ausdrücklich als
+  noch nicht verfügbar gekennzeichnet; bei Umsetzung entfällt diese Markierung.
+  Historische Entwürfe und Prüfnachweise bleiben als Historie erkennbar.
+- Im Ticket beziehungsweise Abschlussbericht steht knapp: **Doku-Abgleich:**
+  betroffene Dateien/Abschnitte und Ergebnis. Ist keine Anpassung nötig, wird
+  der Grund genannt. Eine zweite handgepflegte Dokumentationsliste entfällt.
+- Der Verifier prüft die Zuordnung und die Aussagen gegen die geprüfte Fassung.
+  Fehlende oder widersprüchliche aktuelle Dokumentation gehört zur Nacharbeit.
+  Linkprüfungen und ausführbare Beispiele ergänzen diesen Inhaltsabgleich;
+  ein grüner Testlauf ersetzt ihn nicht.
+
+[↑ Übersicht](#übersicht)
 
 ## Datenbankzugriffe in Tests
 
@@ -54,3 +118,5 @@ Arbeitsdatenbank werden vor dem Öffnen abgewiesen. Zusätzliche Datenbanken
 gehören unter `tmp_path`. Den Riegel nicht für einen Test abschalten; Gegenproben
 verwenden temporäre Stand-ins. Die App-Verdrahtung darf Settings verwenden,
 aber Tests dürfen sich nicht auf Daten aus dem Arbeitsbestand verlassen.
+
+[↑ Übersicht](#übersicht)

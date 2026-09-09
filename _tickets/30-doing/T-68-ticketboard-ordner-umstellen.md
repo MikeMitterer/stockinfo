@@ -3,16 +3,32 @@
 Geplante, laufende und abgeschlossene Arbeit soll schon im Dateibrowser
 unterscheidbar sein. Im bisherigen Root liegen diese Zustände nebeneinander.
 
-**Von Mike beauftragt, aber erst nach den laufenden Arbeiten ausführen.**
-Andere Instanzen arbeiten noch mit den bisherigen Ticketpfaden. Dieses Ticket
-aktiviert sich nicht selbst und ändert die laufende Prioritätskette nicht.
+**Umgestellt; unabhängige Prüfung steht aus.** Tickets liegen nach
+Arbeitsstand in den sechs vereinbarten Ordnern. Die Agentenregeln liegen
+unter `.agents/`; beide Agenten verwenden dieselbe aktualisierte Skill-Quelle.
+Der vollständige Observer-Auftrag folgt in T-69.
+
+## Übersicht
+
+- [Für dich](#für-dich)
+- [Vereinbarte Ordner](#vereinbarte-ordner)
+- [Umsetzung](#umsetzung)
+- [Ticket-Skill mit umstellen](#ticket-skill-mit-umstellen)
+- [Dateinamen der Agentenregeln · Prüfung vom 2026-09-09](#dateinamen-der-agentenregeln--prüfung-vom-2026-09-09)
+- [Observer-Auftrag ausgelagert](#observer-auftrag-ausgelagert)
+- [Reihenfolge und Grenzen](#reihenfolge-und-grenzen)
+- [Prüfung](#prüfung)
+- [Stand](#stand)
+- [Scope-Vertrag · 2026-09-09](#scope-vertrag--2026-09-09)
+- [Liefernachweis PersonalSkills](#liefernachweis-personalskills)
+- [Nachweis der gültigen Arbeitsanweisung](#nachweis-der-gültigen-arbeitsanweisung)
 
 ## Für dich
 
-Die Ordnernamen und ihre Reihenfolge sind entschieden. Keine weitere
-Entscheidung dazu nötig. Vor dem Verschieben muss feststehen, dass die anderen
-Instanzen ihre laufenden Arbeiten und Reviews beendet haben. Ein Wechsel des
-Owners allein reicht dafür nicht.
+Aktuell ist kein Handgriff nötig. Codex liefert die Nachweise an Claude;
+die technische Freigabe ersetzt keine spätere Abschlussbestätigung.
+Die Wartebedingung vor dem Umzug ist mit Mikes „Ja, ist durch“ nach Claudes
+T-25-Abschluss erfüllt.
 
 Mike, 2026-09-09:
 
@@ -21,6 +37,8 @@ Mike, 2026-09-09:
 Ergänzung von Mike, 2026-09-09: Alte Skripte in `solved/` bleiben inhaltlich
 unverändert. Die neuen Regeln gelten auch für das Skill
 `task-verification-workflow` und seine Vorlagen.
+
+[↑ Übersicht](#übersicht)
 
 ## Vereinbarte Ordner
 
@@ -49,6 +67,8 @@ Agentendokumente ziehen nach `.agents/`. Die Ordnernummern bestimmen
 die Anzeige im Dateibrowser. Die Arbeitsreihenfolge steht weiterhin in
 `STATUS.md`; die genaue Bearbeitungsphase und die Rollen werden dort geführt.
 
+[↑ Übersicht](#übersicht)
+
 ## Umsetzung
 
 1. Den dann aktuellen Bestand erfassen und die laufenden Arbeiten prüfen.
@@ -72,6 +92,8 @@ die Anzeige im Dateibrowser. Die Arbeitsreihenfolge steht weiterhin in
    beschreibt die allgemeinen Regeln, die README deren Anwendung in StockInfo.
    Die Agenten dürfen erst wieder mit den neuen Pfadregeln arbeiten, wenn
    Verschiebungen, Skill und Verweise stimmen.
+
+[↑ Übersicht](#übersicht)
 
 ## Ticket-Skill mit umstellen
 
@@ -97,6 +119,8 @@ automatisch verschoben. Deren dokumentierte Ablage gilt bis zu einer eigenen
 Umstellung weiter. Beide Skill-Zugänge werden am Ende auf dieselbe aktualisierte
 Quelle geprüft. Das PersonalSkills-Repository gehört damit zum Änderungsumfang.
 
+[↑ Übersicht](#übersicht)
+
 ## Dateinamen der Agentenregeln · Prüfung vom 2026-09-09
 
 Mike verlangt auch hier eine klare Trennung: Claude und Codex können jeweils
@@ -104,9 +128,9 @@ Coder oder Verifier sein. Ein Agentenname im Dateinamen darf keine feste Rolle
 vorgeben. Geprüft wurden die Aufgaben, Einleitungen und Abschnitte der fünf
 Agentendateien sowie ihre Verweise in `AGENTS.md` und im Ticket-Skill.
 
-**Namensschema für die vereinbarte Ablage; noch keine Dateien umbenannt:**
+**Umgesetzte Namen:**
 
-| Bisher | Vorschlag | Grund |
+| Bisher | Jetzt | Grund |
 |---|---|---|
 | `../.agents/AGENT-WORKFLOW.md` | `AGENT-WORKFLOW.md` | Gemeinsame Regeln für Implementierung, Übergabe, Review und Abschluss; gilt für beide Agenten und beide Rollen |
 | `../.agents/AGENT-ACTIVATION.md` | unverändert | Startanweisungen für die jeweiligen Laufzeiten; Rollen kommen aus STATUS |
@@ -126,9 +150,8 @@ Autorenschaft, Review-Rollen und Befunde werden nicht durch Umbenennen geändert
 Projekt-Einstiegsdateien `AGENTS.md` und `CLAUDE.md` außerhalb von `_tickets/`
 sind von dieser Namensprüfung nicht zur Umbenennung vorgesehen.
 
-Die später verwendeten Namen müssen gemeinsam in Board-Regeln, Aktivierung,
-Scheduler, Ticket-Skill, Vorlagen und aktuellen Verweisen nachgezogen werden.
-Die bereits vereinbarte Wartebedingung gilt auch für diese Umbenennungen.
+Die Namen sind in Board-Regeln, Aktivierung, Scheduler, Ticket-Skill,
+Vorlagen und aktuellen Verweisen nachgeführt.
 
 ### Eigener Ordner für Agentendokumente · beschlossen
 
@@ -151,8 +174,9 @@ Auch relative Links innerhalb der verschobenen Dateien, Ankerlinks und
 Pfadangaben in Startprompts werden angepasst und geprüft. Dazu gehören
 Verweise aus Projektregeln, Board-Dateien, aktueller Dokumentation und dem
 Ticket-Skill samt Vorlagen. Für archivierte Skripte gilt weiterhin die
-vereinbarte Ausnahme. Bis zur gemeinsamen Umstellung bleiben die bisherigen
-Pfade gültig.
+vereinbarte Ausnahme. Die neuen Pfade gelten gemeinsam für Board und Agentenregeln.
+
+[↑ Übersicht](#übersicht)
 
 ## Observer-Auftrag ausgelagert
 
@@ -160,6 +184,8 @@ Der vollständige Auftrag samt CLI- und Loop-Prüfungen liegt nach Claudes
 Scope-Entscheidung `6177c76` in [T-69](../20-ready/T-69-observer-instanzen-und-loop.md).
 Er folgt direkt auf T-68. Die frühere Prüfmatrix #7–10 wird dort als #1–4
 geführt; sie ist durch die Ordnerumstellung nicht bestanden.
+
+[↑ Übersicht](#übersicht)
 
 ## Reihenfolge und Grenzen
 
@@ -201,24 +227,38 @@ beauftragte Umsetzung auseinanderhalten; die Ablage startet keinen Bauauftrag.
 Kein neues Board-Werkzeug und keine zusätzliche Statusdatei. Die Umstellung
 ändert weder Produktverhalten noch bisherige Freigaben oder Review-Runden.
 
+[↑ Übersicht](#übersicht)
+
 ## Prüfung
 
 | # | Erwartetes Ergebnis | AI |
 |---|---|:--:|
-| 1 | Vorherige Ticket- und Begleitdateien vollständig vorhanden; jedes Ticket genau einem Ordner zugeordnet | ➖ |
-| 2 | Aktuelle Ticketlinks und Arbeitsanweisungen verwenden gültige Pfade; keine veraltete Root-Pflicht. Alte Pfadtexte in archivierten Skripten sind von der Anpassung ausgenommen | ➖ |
-| 3 | Status, Prioritätskette und Ordner passen zusammen; Backlog, Iced, Done und Rejected starten keine Arbeit | ➖ |
-| 4 | Noch verwendete Skripte und betroffene vorhandene Prüfungen funktionieren nach dem Umzug; archivierte Skripte aus `solved/` sind inhaltlich unverändert und werden nicht erneut ausgeführt; Arbeitsdaten bleiben unberührt | ➖ |
-| 5 | README, Ticket-Skill samt Vorlagen und Agentenregeln erklären denselben Ablauf; bisherige Nachweise und menschliche Antworten bleiben erhalten | ➖ |
-| 6 | Codex und Claude lesen dieselbe aktualisierte Skill-Quelle; andere bestehende Boards werden nicht automatisch umgestellt | ➖ |
+| 1 | Vorherige Ticket- und Begleitdateien vollständig vorhanden; jedes Ticket genau einem Ordner zugeordnet | ✅ [^t68-1] |
+| 2 | Aktuelle Ticketlinks und Arbeitsanweisungen verwenden gültige Pfade; keine veraltete Root-Pflicht. Alte Pfadtexte in archivierten Skripten sind von der Anpassung ausgenommen | ✅ [^t68-2] |
+| 3 | Status, Prioritätskette und Ordner passen zusammen; Backlog, Iced, Done und Rejected starten keine Arbeit | ✅ [^t68-3] |
+| 4 | Noch verwendete Skripte und betroffene vorhandene Prüfungen funktionieren nach dem Umzug; archivierte Skripte aus `solved/` sind inhaltlich unverändert und werden nicht erneut ausgeführt; Arbeitsdaten bleiben unberührt | ⚠️ [^t68-4] |
+| 5 | README, Ticket-Skill samt Vorlagen und Agentenregeln erklären denselben Ablauf; bisherige Nachweise und menschliche Antworten bleiben erhalten | ✅ [^t68-5] |
+| 6 | Codex und Claude lesen dieselbe aktualisierte Skill-Quelle; andere bestehende Boards werden nicht automatisch umgestellt | ✅ [^t68-6] |
+
+[^t68-1]: Inventar: 98/98 Ausgangsdateien; 77 Tickets ohne Doppelzuordnung.
+[^t68-2]: 312 lokale Links samt Ankern geprüft; 0 Befunde. Aktive Pfadregeln auf Doing.
+[^t68-3]: Aktives T-68 in Doing; T-69 in Ready und Kette; T-63/T-66 im Backlog.
+[^t68-4]: 12 Archivskripte und die 12 ursprünglichen Arbeitsdateien SHA-256-identisch; 3 Proxytests grün; TS-Tokenstrom unverändert. Im späteren Inventar kamen `stockinfo.db-wal` und `stockinfo.db-shm` hinzu. Kein DB-Test oder App-Start wurde für T-68 ausgeführt; die Herkunft der neuen Begleitdateien ist nicht unabhängig zugeordnet. Sie wurden nicht verändert oder entfernt. Deshalb kein vollständiger Gleichheitsclaim für das gesamte Datenverzeichnis.
+[^t68-5]: Gemeinsamer Workflow und Projektvorgabe zentral; README/Skill/Startverträge abgeglichen.
+[^t68-6]: PersonalSkills eeaad8c; beide Symlinks zeigen auf dieselbe Quelle, Hashvergleich siehe Nachweis.
+
+[↑ Übersicht](#übersicht)
 
 ## Stand
 
-**Begonnen; Scope-Checkpoint vor der Umstellung.** Claude hat T-25 mit
-`c1ce421` nach `solved/` verschoben und den Einstieg mit `debb3d1` aktualisiert.
-Mike bestätigt anschließend: „Ja, ist durch“. Damit ist die Wartebedingung
-für die gemeinsame Umstellung erfüllt. Noch keine Ordner verschoben,
-Skill-Quelldateien geändert oder Observer eingerichtet.
+Die Ablage ist umgesetzt. Reiner Verschiebe-Commit: `b7c9896` (95 Dateien,
+100 % unveränderter Git-Inhalt). Pfadkorrekturen: `3d01098`, `d76ac27`;
+die begleitenden Regeländerungen werden im Übergabecommit festgehalten.
+T-63 und T-66 liegen im Backlog, T-68 in Doing und T-69 in Ready.
+Die Matrix unten beziehungsweise im Abschnitt „Prüfung“ ist die einzige
+aktuelle technische Bewertung. Claudes unabhängiges Review steht noch aus.
+
+[↑ Übersicht](#übersicht)
 
 ## Scope-Vertrag · 2026-09-09
 
@@ -257,11 +297,13 @@ sind unter `/tmp/t68-baseline/`, `/tmp/t68-before-stockinfo.patch` und
 `/tmp/t68-before-personalskills.patch` gesichert. Die Sicherung ist Arbeitsmittel;
 die endgültige Übergabe stützt sich auf die genannten Commits und Prüfsummen.
 
-**Beobachtbares Ergebnis:** Das Board zeigt den Arbeitsstand durch den
-Ablageort. Beide Agenten lesen dieselben dazu passenden Regeln und können
-zusätzliche Instanzen eindeutig und ohne fremde Rollenarbeit starten.
+**Beobachtbares Ergebnis von T-68:** Das Board zeigt den Arbeitsstand durch
+den Ablageort; beide Agenten lesen dieselben passenden Regeln und Vorlagen.
+Zusätzliche Instanzen sind Gegenstand von T-69.
 
-Der bisherige Auftrag enthält drei fachliche Änderungen:
+### Eingereichter Zuschnitt · Historie des Checkpoints
+
+Der ursprüngliche Auftrag enthielt drei fachliche Änderungen:
 
 1. Bestehende Tickets und Begleitdateien in die vereinbarten Ordner verschieben;
    aktuelle Pfade und Regeln einschließlich Skill und Vorlagen gemeinsam ändern.
@@ -317,10 +359,10 @@ Reine Umbenennungen werden mit Git-Rename-Erkennung gesondert ausgewiesen;
 die vorhandenen Inhalte zählen nicht nochmals als neu geschriebene Zeilen.
 Neue Ticket- und Übergabedokumentation zählt dagegen mit.
 
-Aktuell: keine Produktdatei geändert; nur dieses Ticket um Bestand und
-Scope-Vertrag ergänzt. Der erwartete mechanische Diff überschreitet die
+Beim Checkpoint: keine Produktdatei geändert; nur dieses Ticket um Bestand
+und Scope-Vertrag ergänzt. Der erwartete mechanische Diff überschreitet die
 800-Zeilen-Schwelle. Das und der unabhängig lieferbare Observer-Umfang sind
-die Auslöser des Checkpoints. Noch keine Budgeterweiterung verbraucht.
+die Auslöser des Checkpoints. Damals war noch keine Budgeterweiterung verbraucht; `6177c76` hat sie erteilt.
 
 Nicht-Ziele: Produktverhalten, Datenmigration, Containerprüfung, MCP-Bau,
 neues Board-Werkzeug, neue Statusdatei, Änderungen an menschlichen Antworten
@@ -341,3 +383,72 @@ oder bisherigen Freigaben. Keine Neufassung historischer Reviewberichte.
    vorhandene Tests gezielt ausführen; keine Archivskripte starten.
 6. Aktuelle Verify-Zeilen mit konkreten Belegen aktualisieren, Scope-Budget
    messen, gemeinsamen Doku-Abgleich dokumentieren und an Claude übergeben.
+
+[↑ Übersicht](#übersicht)
+
+## Liefernachweis PersonalSkills
+
+Repository: `/Volumes/DevLocal/DevKI/Production/PersonalSkills`.
+Basis: `3e6c8d828cb19e32a373ece540ea30034b041e95`.
+Ablageregeln: `94a766d`; Navigation und abschließender Skill-Prüfstand:
+`eeaad8c2979b6dd1d5cd470b3a0349cb7dd2be1b`.
+Die drei Dateien sind gemeinsam mit dem StockInfo-Handoff zu prüfen.
+
+Beide Zugänge lösen nach `PersonalSkills/task-verification-workflow` auf:
+`/Users/macminipro/.codex/skills/task-verification-workflow` und
+`/Users/macminipro/.claude/skills/task-verification-workflow`.
+
+| Datei | SHA-256 im Commit | SHA-256 der gemeinsamen Quelle |
+|---|---|---|
+| `SKILL.md` | `7a164b3369b2669ee1445392ba80b305ae8b03c5979675639a538b808cfe85bb` | `30f936bde19120b32f15f4d6baecbf099db9c26250c4887ac7f2305d2ccef037` |
+| `templates/ticket.md` | `1eb99d39652e6101342559266264b017eaca8491446fe0480f9d70a553a8cb32` | `6a3fb39c4d97e5514ae126b330215ad02fc0be7756a486ec05c1fc62353f79a5` |
+| `templates/QUESTIONS.md` | `1c1916b25b3ee5ae6c1125553a0bd304ad93d4293b351fa2829ae9fbac995579` | `1c1916b25b3ee5ae6c1125553a0bd304ad93d4293b351fa2829ae9fbac995579` |
+
+Die unterschiedlichen Hashes bei Skill und Ticketvorlage sind vollständig
+durch **30 bereits vor T-68 vorhandene, uncommittete Zeilen** erklärt:
+26 Zeilen zum widerspruchsfreien Ticketabschluss und vier Kommentarzeilen
+in der Vorlage. Dieser Ausgangsdiff bleibt unverändert und gehört nicht
+zum eigenen Commit. Die Board-Regeln selbst sind im benannten Commit und
+in der von beiden Agenten gelesenen Quelle identisch. Die QUESTIONS-Vorlage
+ist vollständig bytegleich. Andere Projektboards wurden nicht verschoben.
+
+Kopierbare Gegenprüfung:
+
+```bash
+git -C /Volumes/DevLocal/DevKI/Production/PersonalSkills diff eeaad8c -- task-verification-workflow
+git -C /Volumes/DevLocal/DevKI/Production/PersonalSkills show --stat eeaad8c
+git show --stat b7c9896
+cd dashboard
+npm test -- tests/viteProxy.spec.ts
+```
+
+Doku-Abgleich: Projekteinstiege, Board-README und STATUS, fünf Agentendokumente,
+Ticket-Skill samt zwei Vorlagen, betroffene Archivlinks und aktuelle
+Spec-/Vertragsverweise beschreiben dieselbe Ablage. Historische Nachweise
+bleiben Historie; die Observer-Prüfungen sind ausdrücklich nach T-69 übertragen.
+Die neue Navigation und die geprüften Links betreffen Markdown, kein UI.
+
+[↑ Übersicht](#übersicht)
+
+## Nachweis der gültigen Arbeitsanweisung
+
+Realer Zustandsabgleich: T-68 ist `ticket == priority_ticket` und liegt in
+`30-doing/`; T-69 ist das anschließende Kettenglied und liegt in `20-ready/`.
+Kein Ticket aus den fünf inaktiven Ordnern wird unter `30-doing/` gefunden.
+Das ist ein Datei-/Vertragsnachweis, kein behaupteter Observer-Live-Test.
+Die jetzige Scheduler-Zelle wird mit genau dieser Dateischranke neu gestartet.
+
+Die aktuellen Einstiege und Laufzeitverträge enthalten keine alten
+Agentenpfade und keinen Riegel „Ticket direkt im Root“. 312 lokale Markdown-
+Links samt Ankern in Board, Projekteinstiegen und Dokumentation sind geprüft;
+zusätzlich 17 Links/Anker des gemeinsamen Skills und seiner Vorlagen.
+Die unversionierte `docs/markdown-styles/README.md` behält ihren fremden
+Inhalt; allein ihr T-56-Link wurde im Worktree mitgezogen.
+
+Bereits vorbereitete Änderungen in AGENTS.md, CLAUDE.md, Aktivierung,
+Workflow, Scheduler und Board-README gehören zur gemeinsam gelieferten
+Regelfassung. Ihre Autorenschaft wird nicht als reine Codex-Arbeit ausgegeben;
+beide Erfahrungssammlungen wurden vor der Übergabe vollständig gelesen.
+Andere vorbestehende Änderungen bleiben außerhalb der Übergabe erhalten.
+
+[↑ Übersicht](#übersicht)

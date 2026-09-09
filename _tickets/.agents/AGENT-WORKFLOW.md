@@ -1,61 +1,113 @@
-# Codex-Review-Automation
+# Coder-/Verifier-Workflow
 
-Dieses Dokument ist der stabile Vertrag für den periodischen Claude→Codex-
-Review. Operativer Zustand und aktuelle Nachrichten stehen ausschließlich in
+Dieses Dokument ist der stabile Vertrag für Implementierung und unabhängigen
+Review zwischen den aktuell zugeordneten Agenten. Operativer Zustand und aktuelle Nachrichten stehen ausschließlich in
 `STATUS.md`; dieses Dokument enthält keine Laufhistorie.
 
-Der kurze Laufzeitvertrag des internen Schedulers steht separat in
-`CODEX-IN-CONTEXT-SCHEDULER.md`. Er läuft **in dem bestehenden
-Codex-Review-Chat** und ist weder `/goal` noch ein ChatGPT-Scheduled-Task oder
-eine Desktop-App-Automation. So kehrt nur eine neue Übergabe in denselben
-fachlichen Kontext zurück. Die Chat-Historie ist die kurzfristige Lernschicht;
-das versionierte
-`CLAUDE-LESSONS.md` ist die kanonische, compaction- und
-sitzungsfeste Lernschicht sowie die Datenbasis für den späteren Skill.
+Die Aktivierung richtet sich nach der Agentenlaufzeit und steht in
+[AGENT-ACTIVATION.md](AGENT-ACTIVATION.md). Sie legt keine fachliche Rolle fest.
+Die dauerhafte Lernschicht liegt in `CLAUDE-LESSONS.md` für Claude-Arbeit
+und `CODEX-LESSONS.md` für Codex-Arbeit. Der Coder liest seine Sammlung
+vor einer Übergabe; der Verifier liest vor dem Review die Sammlung des Autors
+der geprüften Fassung. Bei gemischter Autorenschaft beide lesen. Dateinamen
+bezeichnen die untersuchten Agenten, keine feste Coder-/Verifier-Zuordnung.
 
-## Zustandsprotokoll
+Vor fachlicher Arbeit laden **Coder und Verifier** den Skill `code-standards`
+nach dem [Standard-Riegel](#standard-riegel--die-hausregeln-stehen-im-bericht-nicht-im-vorsatz).
+Das gilt auch bei manuellem Einstieg ohne Scheduler oder Loop.
 
-`STATUS.md` enthält unter **Maschinenlesbarer Zustand** genau diese Felder:
+## Übersicht
 
-- `phase`: `claude_working`, `scope_checkpoint`, `ready_for_codex`,
-  `codex_reviewing`, `changes_requested`, `approved`, `portfolio_review` oder
-  `blocked`
-- `ticket`: Ticketdatei im Board-Root
-- `handoff_commit`: exakt zu prüfender Produkt-Commit
-- `review_round`: bei jeder neuen Übergabe hochzählen
-- `owner`: `claude`, `codex` oder `mike`
-- `updated_at`: lokales Datum im Format `YYYY-MM-DD`
-- `last_reviewed_ticket`, `last_reviewed_commit`, `last_reviewed_round`:
-  zuletzt abgeschlossenes Review-Tupel zur dauerhaften Duplikatsperre
-- `workstream`: aktuell priorisierter Arbeitsstrom
-- `priority_chain`: ausdrücklich freigegebene Ticketreihenfolge
-- `priority_ticket`: genau das Ticket, das jetzt bearbeitet werden darf
+- [Rollen und Zustandsprotokoll](#rollen-und-zustandsprotokoll)
+- [Ticketpfade und Arbeitsbeginn](#ticketpfade-und-arbeitsbeginn)
+- [Scope-Checkpoint — Breite entscheiden, bevor sie zum Review-Diff wird](#scope-checkpoint--breite-entscheiden-bevor-sie-zum-review-diff-wird)
+- [Verifier-Selbstheilung — mechanische Kleinigkeiten ohne Zusatzrunde](#verifier-selbstheilung--mechanische-kleinigkeiten-ohne-zusatzrunde)
+- [Kleine Befunde im laufenden Browser- oder Verify-Lauf](#kleine-befunde-im-laufenden-browser--oder-verify-lauf)
+- [Portfolio-Riegel — das richtige Ergebnis vor lokaler Perfektion](#portfolio-riegel--das-richtige-ergebnis-vor-lokaler-perfektion)
+- [Entwurfsrunden — wenn noch kein Produktcode existiert](#entwurfsrunden--wenn-noch-kein-produktcode-existiert)
+- [Der Übergabe-Riegel — `<ready_phase>` steht zuletzt](#der-übergabe-riegel--ready_phase-steht-zuletzt)
+- [Browsertests nach verfügbarer Ausstattung](#browsertests-nach-verfügbarer-ausstattung)
+- [Testinfrastruktur-Riegel — schlank und online ist der Standard](#testinfrastruktur-riegel--schlank-und-online-ist-der-standard)
+- [Vertical-Acceptance-Riegel — erst der Nutzerweg, dann die Fläche](#vertical-acceptance-riegel--erst-der-nutzerweg-dann-die-fläche)
+- [Standard-Riegel — die Hausregeln stehen im Bericht, nicht im Vorsatz](#standard-riegel--die-hausregeln-stehen-im-bericht-nicht-im-vorsatz)
+- [DRY-Prüfguard](#dry-prüfguard)
+- [Aktivierung der Agenten](#aktivierung-der-agenten)
 
-Der eindeutige Schlüssel eines Reviews ist
-`(ticket, handoff_commit, review_round)`. Derselbe Schlüssel wird nie zweimal
-bearbeitet.
+## Rollen und Zustandsprotokoll
 
-Claude commitet vor der Übergabe die Produktänderungen, beschreibt sie in
-`OUTBOX → Codex`, setzt `ready_for_codex` und `owner: codex` und verändert
-danach keinen Produktcode mehr. Ein nachfolgender Commit darf ausschließlich
-Kommunikations- oder Ticketdateien enthalten.
+**Die Zuordnung steht in `STATUS.md`, nicht im Dateinamen.** `implementer`
+und `reviewer` sind verschiedene Agenteninstanzen; `owner` bezeichnet den
+Akteur, der jetzt am Zug ist. Vor jedem Turn alle drei Felder lesen.
+Ein Rollenwechsel erfolgt ausdrücklich und mit geordneter Übergabe.
+Der Autor darf seine eigene Fassung nicht als unabhängiger Verifier abnehmen.
 
-`ready_for_codex` ist **keine Zwischenfrage**. Ist der Sachverhalt im aktiven
-Ticket bereits entschieden, leitet Claude die Implementierung daraus ab und
-bleibt bei `claude_working`, `owner: claude`. Fehlt tatsächlich eine
-Produktentscheidung, gilt `blocked`, `owner: mike`. Ein unfertiger
-Produktzwischenstand wird weder durch einen vorläufigen Commit noch durch eine
-Frage an Codex zu einer Review-Übergabe; `handoff_commit` und `review_round`
-bleiben bis zur vollständigen Übergabe auf dem zuletzt abgeschlossenen Stand.
+**Coder** ist die in `STATUS.md` unter `implementer` eingetragene Instanz.
+**Verifier** ist die dort unter `reviewer` eingetragene Instanz.
+Die konkrete Zuordnung und die Phasentabelle werden ausschließlich dort gepflegt.
 
-Codex führt ein vollständiges Review nur bei `ready_for_codex` aus. Nach den Vorbedingungen setzt Codex
-`codex_reviewing`. Codex verändert im Review grundsätzlich keinen Produktcode;
-die eng begrenzte Selbstheilung unten ist die einzige Ausnahme. Die
-Human-Spalte bleibt immer unverändert, und Codex verschiebt kein Ticket nach
-`solved/`. Das Ergebnis kommt in `INBOX → Claude`; die verarbeitete
-OUTBOX-Nachricht wird entfernt. Danach ist die Phase `approved` oder
-`changes_requested`, **beide mit `owner: claude`**. Bei einem echten, nicht
-sicher lösbaren Hindernis gilt `blocked` mit `owner: mike`.
+In den Regeln unten bedeuten `<working_phase>`, `<ready_phase>` und
+`<reviewing_phase>` die Arbeits-, Übergabe- und Prüfphase aus dieser Tabelle.
+`<implementer>` und `<reviewer>` sind die dort eingetragenen Akteurs-IDs.
+Diese Platzhalter erläutern den Vertrag; sie werden nie wörtlich in STATUS.md
+übernommen. Bei Widersprüchen stoppt die Verarbeitung vor einer Änderung.
+
+Weitere Felder: `ticket`, `handoff_commit`, `review_round`, `updated_at`,
+`last_reviewed_ticket`, `last_reviewed_commit`, `last_reviewed_round`,
+`workstream`, `priority_chain` und `priority_ticket`. Übergaben müssen das
+aktive Prioritätsticket betreffen. Rundenverbrauch und offene Befunde bleiben
+bei einem Rollenwechsel erhalten; ein Wechsel startet kein Review von selbst.
+
+Der Coder stellt den Prüfgegenstand fertig, commitet die
+Produktänderung und schreibt die vollständige `OUTBOX → <reviewer>`.
+Erst zuletzt setzt er die passende Übergabephase, `owner` auf den Verifier,
+`handoff_commit` und `review_round`. Danach keine weiteren Produktänderungen.
+Eine Zwischenfrage oder unfertige Änderung ist keine Review-Übergabe.
+
+Der Verifier prüft nur bei der zu ihm passenden Übergabephase und Owner-
+Zuordnung. Er setzt die Prüfphase, prüft den eingefrorenen Stand und schreibt
+sein Ergebnis in `INBOX → <implementer>`. Danach gelten `approved` oder
+`changes_requested`, jeweils mit `owner` beim Coder. Die verarbeitete
+OUTBOX wird entfernt. Human-Antworten bleiben unverändert; allein ein Review
+verschiebt kein Ticket nach `40-done/`. Für Produktänderungen im Review gilt
+nur die unten ausdrücklich begrenzte mechanische Selbstheilung.
+
+Ein `scope_checkpoint` geht an den aktuellen Verifier. Bei `continue`,
+`reduce` oder `split` geht die Arbeit in der passenden Arbeitsphase an den
+Coder zurück. Eine echte menschliche Entscheidung setzt `blocked`
+und `owner: mike`. Nach Freigabe des letzten priorisierten Tickets folgt
+`portfolio_review`, `owner: mike`; kein automatischer neuer Arbeitsauftrag.
+
+Das Tupel `(ticket, handoff_commit, review_round)` wird nach abgeschlossenem
+Review nicht erneut bearbeitet. Die Identität des Prüfers bleibt im Bericht
+festgehalten. Ein explizit zusätzlich beauftragter Verifier benötigt eine
+eindeutige Auftragszuordnung; bloßes Tauschen der Rollen ist kein neuer Auftrag.
+
+[↑ Übersicht](#übersicht)
+
+## Ticketpfade und Arbeitsbeginn
+
+`ticket`, `priority_ticket`, `priority_chain` und `last_reviewed_ticket`
+enthalten Ticket-Dateinamen ohne Ordner. Vor fachlicher Arbeit muss genau
+`_tickets/30-doing/<ticket>` existieren; `ticket == priority_ticket`,
+Mitgliedschaft in der Kette und passende Rollen/Owner sind zusätzlich Pflicht.
+Ein Ticket in Backlog, Done, Iced oder Rejected löst keine Arbeit aus.
+Bei widersprüchlicher Ablage oder Priorität einmalig `portfolio_mismatch`
+melden und vor der Arbeit stoppen.
+
+Das nächste ausdrücklich eingeplante Kettenglied liegt in `20-ready/`.
+Vor seinem ersten Produktedit verschiebt der Coder Ticket und Begleitdateien
+nach `30-doing/` und setzt in demselben Commit `ticket`, `priority_ticket`,
+Arbeitsphase und `review_round: 0`. Ein vorheriges Ticket bleibt bis zur
+Abschlussbestätigung in `30-doing/`, auch wenn das nächste schon begonnen ist.
+Nur das ausdrücklich in STATUS benannte Ticket ist aktiv.
+
+Review und Nacharbeit ändern den Ordner nicht. Abschluss und übrige
+Ordnerwechsel folgen der [Board-Anleitung](../README.md#von-der-aufnahme-bis-zum-abschluss).
+Beim Verschieben aktuelle Verweise mitführen; historische Freigaben und
+menschliche Antworten erhalten. Für bereits archivierte StockInfo-Skripte
+bei T-68 gilt der dort genannte unveränderte Bestand.
+
+[↑ Übersicht](#übersicht)
 
 ## Scope-Checkpoint — Breite entscheiden, bevor sie zum Review-Diff wird
 
@@ -67,7 +119,7 @@ Vor dem ersten Produktedit trägt jedes Implementierungsticket einen
 Dokumentationsanpassungen, Nicht-Ziele sowie ein Budget für Produktdateien,
 Test-/Dokudateien und gesamte Diff-Zeilen.
 
-Claude stoppt **vor weiterer Produktarbeit**, sobald mindestens eines gilt:
+Coder stoppt **vor weiterer Produktarbeit**, sobald mindestens eines gilt:
 
 - Eine nicht angekündigte Produktschicht wird berührt.
 - Ein neuer öffentlicher Typ, Endpunkt, Vertrag, ein Schema, eine Abhängigkeit
@@ -79,13 +131,13 @@ Claude stoppt **vor weiterer Produktarbeit**, sobald mindestens eines gilt:
   Commit-IDs, Gesprächszitate, Datumsfolgen und Implementierungschroniken
   gehören in Ticket, Spec und Git, nicht in den Code.
 
-Claude friert einen stabilen Commit ein, beschreibt geplanten und tatsächlichen
+Coder friert einen stabilen Commit ein, beschreibt geplanten und tatsächlichen
 Umfang samt Auslöser in der OUTBOX und setzt `phase: scope_checkpoint`,
-`owner: codex` sowie `handoff_commit` auf diesen Stand. Das ist **kein
-Code-Review**: Codex prüft nur Ticketziel, Diff-Statistik und neu berührte
+`owner: <reviewer>` sowie `handoff_commit` auf diesen Stand. Das ist **kein
+Code-Review**: Verifier prüft nur Ticketziel, Diff-Statistik und neu berührte
 Flächen und erfindet keine zusätzlichen Qualitätsanforderungen.
 
-Codex antwortet mit genau einer Entscheidung:
+Verifier antwortet mit genau einer Entscheidung:
 
 - `continue`: rein mechanische Ausbreitung innerhalb des vereinbarten
   Ergebnisses;
@@ -93,8 +145,8 @@ Codex antwortet mit genau einer Entscheidung:
 - `split`: ein unabhängig lieferbares Ergebnis wird ein eigenes Ticket;
 - `mike`: eine neue Produktentscheidung ist erforderlich.
 
-Bei `continue`, `reduce` oder `split` setzt Codex `phase: claude_working` und
-`owner: claude`; bei `mike` gilt `blocked`, `owner: mike`. Codex darf das
+Bei `continue`, `reduce` oder `split` setzt Verifier `phase: <working_phase>` und
+`owner: <implementer>`; bei `mike` gilt `blocked`, `owner: mike`. Verifier darf das
 Budget eines Tickets einmal erweitern. Eine zweite Überschreitung führt
 standardmäßig zu `reduce` oder `split`; nur eine eindeutig mechanische
 Restanpassung darf nochmals weiterlaufen.
@@ -105,11 +157,15 @@ Abweichung erhält einen Satz Begründung; eine grüne Gesamtsuite ersetzt diese
 Umfangskontrolle nicht. T-38 wird nicht rückwirkend unterbrochen, der Riegel
 gilt ab T-37.
 
-## Codex-Selbstheilung — mechanische Kleinigkeiten ohne Zusatzrunde
+<a id="codex-selbstheilung--mechanische-kleinigkeiten-ohne-zusatzrunde"></a>
+
+[↑ Übersicht](#übersicht)
+
+## Verifier-Selbstheilung — mechanische Kleinigkeiten ohne Zusatzrunde
 
 *(Entscheidung Mike, 2026-08-29.)*
 
-Codex darf einen beim Review gefundenen Rest in derselben Runde selbst
+Verifier darf einen beim Review gefundenen Rest in derselben Runde selbst
 korrigieren, wenn **alle** folgenden Bedingungen erfüllt sind:
 
 - Die Korrektur ist rein mechanisch, eindeutig und verhaltensneutral, zum
@@ -122,26 +178,59 @@ korrigieren, wenn **alle** folgenden Bedingungen erfüllt sind:
   Datenmodell und Migration, Konfiguration, Abhängigkeiten, Security,
   UI-Verhalten, i18n-Texte sowie Fixtures, Assertions und Erwartungswerte von
   Tests.
-- Der Worktree enthält keinen parallelen Produktedit von Claude oder Mike.
+- Der Worktree enthält keinen parallelen Produktedit von Coder oder Mike.
   Bei fremden oder unklaren Änderungen gilt die Ausnahme nicht.
 
 Die Selbstheilung erhält genau einen eigenen Produkt-Commit mit Präfix
-`fix(review):` oder `style(review):`. Codex prüft dessen vollständigen Diff
+`fix(review):` oder `style(review):`. Verifier prüft dessen vollständigen Diff
 noch einmal mit dem zur Sprache passenden Inventar, führt mindestens die
 direkt betroffenen Tests und statischen Checks aus und wiederholt jeden durch
-den Fix berührten Smoke. Danach setzt Codex `handoff_commit` auf diesen
+den Fix berührten Smoke. Danach setzt Verifier `handoff_commit` auf diesen
 finalen Produkt-Commit, behält `review_round` bei und dokumentiert im Ticket
 sowohl den ursprünglich übergebenen als auch den selbst geheilten Stand.
 Besteht die Gegenprüfung, darf dieselbe Runde unmittelbar `approved` werden;
 andernfalls geht sie mit dem vollständigen Rest als `changes_requested` an
-Claude. Diese Ausnahme ist kein Weg, einen strittigen Reviewbefund selbst zur
+Coder. Diese Ausnahme ist kein Weg, einen strittigen Reviewbefund selbst zur
 richtigen Lösung zu erklären.
+
+### Der bereits benannte Rest wird nicht zur nächsten Runde
+
+*(Entscheidung Mike, 2026-09-09. Gilt für den Verifier, gleich ob Claude oder
+Codex — die Rolle steht in `STATUS.md`, nicht im Dateinamen.)*
+
+Ist eine Kleinigkeit dieser Art **schon beschrieben** — in einem Befund, einer
+Antwort an Mike oder einer eigenen Restliste —, dann erledigt der Verifier sie
+selbst, statt dafür eine Runde zu eröffnen. Wer die Fundstellen bereits
+aufzählen kann, hat die Arbeit ohnehin getan; sie danach durch die Übergabe zu
+schicken, kostet einen vollen Zyklus für ein Ergebnis, das schon feststeht.
+
+Zwei Bedingungen der Liste oben werden dafür gelockert:
+
+- Der Rest darf aus einer **früheren** Runde stammen. Er muss nicht in der
+  laufenden Prüfung entdeckt worden sein.
+- **Fremde Änderungen im Arbeitsbaum blockieren nicht mehr allein.** Maßgeblich
+  ist, dass die geheilten Dateien selbst unberührt sind: kein paralleler Edit
+  an ihnen, und der eigene Commit nimmt nur sie mit. Fremde Dateien bleiben
+  uncommitted liegen.
+
+Unverändert gelten: rein mechanisch und verhaltensneutral, kein neuer Scope,
+keine fachliche Entscheidung, eigener `fix(review):`- oder
+`style(review):`-Commit, Inventar und Tests danach selbst gelaufen. Der Bericht
+nennt die Zahl der geänderten Fundstellen und was **nicht** mitgezogen wurde.
+
+Die Abgrenzung bleibt der belegte Schaden nach
+[R-02](CODEX-LESSONS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt):
+Was eine fachliche Entscheidung braucht, geht weiterhin als
+`changes_requested` zurück. Nur der bereits verstandene, mechanische Rest wird
+hier erledigt.
+
+[↑ Übersicht](#übersicht)
 
 ## Kleine Befunde im laufenden Browser- oder Verify-Lauf
 
 *(Entscheidung Mike, 2026-09-02, nach T-56 Punkt 5.)*
 
-Nicht jeder kleine Befund braucht ein eigenes Bauticket. Claude darf ihn im
+Nicht jeder kleine Befund braucht ein eigenes Bauticket. Coder darf ihn im
 aktiven Abnahme- oder Verify-Ticket korrigieren und den betroffenen Handgriff
 unmittelbar wiederholen, wenn **alle** folgenden Grenzen eingehalten sind:
 
@@ -157,11 +246,13 @@ unmittelbar wiederholen, wenn **alle** folgenden Grenzen eingehalten sind:
   oder Verify-Handgriff werden nach der Korrektur erneut ausgeführt und mit
   ihrem tatsächlichen Ergebnis dokumentiert.
 
-Claude bleibt dabei `claude_working`; es gibt **keine** Codex-Zwischenfreigabe
+Coder bleibt dabei `<working_phase>`; es gibt **keine** Verifier-Zwischenfreigabe
 zwischen Korrektur und Wiederholung. Die gemeinsame Übergabe enthält Befund,
-Produkt-Diff und Wiederholungsbeleg. Erst dort prüft Codex den finalen Stand.
+Produkt-Diff und Wiederholungsbeleg. Erst dort prüft Verifier den finalen Stand.
 Überschreitet der Befund eine dieser Grenzen, greift der normale
 Scope-Checkpoint oder ein eigenes Ticket.
+
+[↑ Übersicht](#übersicht)
 
 ## Portfolio-Riegel — das richtige Ergebnis vor lokaler Perfektion
 
@@ -172,6 +263,9 @@ wird. `priority_chain` ist deshalb eine Produktentscheidung, keine
 unverbindliche Empfehlung:
 
 - `ticket` muss bei Arbeit und Übergabe exakt `priority_ticket` entsprechen.
+- Die [Ticketpfade](#ticketpfade-und-arbeitsbeginn) müssen zum aktiven Auftrag
+  passen. Bei veralteter Ablage oder Priorität `portfolio_mismatch` melden
+  und stoppen.
 - Ein Review-Finding erzeugt keine neue Priorität. Folgearbeiten kommen ins
   Board und werden erst durch eine ausdrückliche Portfolio-Entscheidung in die
   Kette aufgenommen.
@@ -181,15 +275,15 @@ unverbindliche Empfehlung:
 - Nach dem letzten Element wechselt der Zustand auf `portfolio_review` mit
   `owner: mike`. Erst die Einordnung der übrigen Tickets in Gate oder Follow-up
   setzt eine neue Kette.
-- Der Scheduler lehnt ein `ready_for_codex` außerhalb der Priorität mit
-  `portfolio_mismatch` ab. Codex reviewt diesen Handoff nicht.
+- Der Scheduler lehnt ein `<ready_phase>` außerhalb der Priorität mit
+  `portfolio_mismatch` ab. Verifier reviewt diesen Handoff nicht.
 
 Aktuell lautet die von Mike bestätigte MVP-Kette **T-22 → T-27a → T-27b →
 T-23**. Ihr Ziel ist nicht mehr Vorarbeit, sondern ein belegter Lauf
 **Registry → Core → REST** über beide Ladewege.
 
 **Warum eine Freigabe nicht bei Mike landet** *(Entscheidung Mike,
-2026-08-22)*: Als dieser Vertrag entstand, hieß `approved` „Codex ist durch,
+2026-08-22)*: Als dieser Vertrag entstand, hieß `approved` sinngemäß „Verifier ist durch,
 jetzt kommt Mikes Abnahme" — pro Ticket. Wenige Stunden später ist entschieden
 worden, dass keine menschliche Abnahme nach jedem Einzelticket läuft. Damit
 stand hinter `owner: mike` keine Arbeit mehr; die Reihe blieb nach jeder
@@ -197,6 +291,8 @@ Freigabe stehen, bis Mike sie von Hand weiterschob. Bei `blocked` bleibt er
 Eigentümer — dort braucht es ihn wirklich. Das spätere Sammel-Ticket T-28
 wurde am 2026-08-29 als veraltet verworfen; an der Owner-Regel ändert das
 nichts.
+
+[↑ Übersicht](#übersicht)
 
 ## Entwurfsrunden — wenn noch kein Produktcode existiert
 
@@ -264,7 +360,7 @@ Rundennummer zählt ehrlich weiter. Weder Zähler zurücksetzen noch durch ein
 neues Ticket denselben Blocker aus dem Limit herauslösen.
 
 Solange ein Blocker offen ist, gibt es kein `approved`, keinen Anschluss an
-das nächste Ticket und kein Verschieben nach `solved/`. Nicht blockierende
+das nächste Ticket und kein Verschieben nach `40-done/`. Nicht blockierende
 Restpunkte verhindern eine begründete Freigabe nicht; sie bleiben ausdrücklich
 sichtbar. Die sonstigen Regeln für den Ticketabschluss gelten unverändert.
 `owner: mike` und ein gestoppter Ablauf sind nur nötig, wenn tatsächlich seine
@@ -281,7 +377,7 @@ aufeinanderfolgende inhaltlich erfolglose Reviews desselben Entwurfsscope eine
 ausdrückliche Konvergenzprüfung aus. Ein formaler Handoff-Blocker zählt dabei
 nicht als inhaltlich erfolglose Runde.
 
-Der Reviewer beantwortet dann im Review knapp:
+Der Verifier beantwortet dann im Review knapp:
 
 1. Sind die Grundentscheidungen stabil und alle betroffenen Schichten
    inventarisiert?
@@ -296,30 +392,34 @@ sein. Bei gesetztem `max_review_rounds` gilt dafür die dokumentierte
 Rundenlimit nicht. Je länger die Schleife
 läuft, desto konkreter muss jedoch die Begründung für eine weitere punktuelle
 Korrektur sein. Ist keine belastbare Konvergenz absehbar, endet die
-Patch-Schleife: Claude erstellt eine konsolidierte Neufassung oder verkleinert
+Patch-Schleife: Coder erstellt eine konsolidierte Neufassung oder verkleinert
 den Scope auf ein beobachtbares Ergebnis. Eine neue Grundentscheidung löst
 dieselbe Neubewertung sofort aus; abhängige alte Aussagen, Tests und
 Verify-Markierungen werden nicht nur mit Nachträgen überklebt.
 
 Die Konvergenzprüfung ändert die Rollen nicht. Ein technischer Rebaseline- oder
-Split-Auftrag bleibt `changes_requested` mit `owner: claude`. `blocked` und
+Split-Auftrag bleibt `changes_requested` mit `owner: <implementer>`. `blocked` und
 `owner: mike` gelten weiterhin ausschließlich für ein echtes Hindernis oder
 eine tatsächlich notwendige Produktentscheidung. Nach jeder weiteren
 inhaltlich erfolglosen Entwurfsrunde wird die Konvergenz erneut beurteilt.
 
-## Der Übergabe-Riegel — `ready_for_codex` steht zuletzt
+<a id="der-übergabe-riegel--ready_for_codex-steht-zuletzt"></a>
+
+[↑ Übersicht](#übersicht)
+
+## Der Übergabe-Riegel — `<ready_phase>` steht zuletzt
 
 *(Ergänzt 2026-08-24, nach einer Race Condition in Runde 15.)*
 
-`STATUS.md` ist ein **gemeinsamer Dateihub**, kein Postfach mit Sperre. Codex
-liest die Datei, nicht den Git-Verlauf. Sobald dort `ready_for_codex` steht,
+`STATUS.md` ist ein **gemeinsamer Dateihub**, kein Postfach mit Sperre. Verifier
+liest die Datei, nicht den Git-Verlauf. Sobald dort `<ready_phase>` steht,
 darf er claimen — auch wenn der Rest der Datei noch halb geschrieben ist.
 
-In Runde 15 stand `phase: ready_for_codex` bereits auf der Platte, während die
-`OUTBOX → Codex` noch leer war. Codex hat in genau diesem Fenster geclaimt und
+In Runde 15 stand `phase: <ready_phase>` bereits auf der Platte, während die
+`OUTBOX → <reviewer>` noch leer war. Verifier hat in genau diesem Fenster geclaimt und
 ein Review ohne Nachricht begonnen. Kein Schaden, aber sichtbar Glück.
 
-**Deshalb gilt für Claude bei jeder Übergabe diese Reihenfolge, ohne Ausnahme:**
+**Deshalb gilt für Coder bei jeder Übergabe diese Reihenfolge, ohne Ausnahme:**
 
 1. Inhalt fertigstellen und committen.
 2. `INBOX` leeren und `OUTBOX` **vollständig** schreiben.
@@ -328,24 +428,24 @@ ein Review ohne Nachricht begonnen. Kein Schaden, aber sichtbar Glück.
    Platte liegen.
 
 Schritt 3 ist der Riegel: Vorher gibt es nichts zu claimen. **Nach dem Claim
-schreibt Claude bis zum Review-Ergebnis nicht mehr in `STATUS.md`** — auch nicht
+schreibt Coder bis zum Review-Ergebnis nicht mehr in `STATUS.md`** — auch nicht
 „nur schnell" einen Tippfehler.
 
-**Eng begrenzte Selbstheilung bei ausgebliebenem Status-Commit:** Findet Codex
-einen vollständigen `ready_for_codex`-Zustand nur uncommitted im Worktree, wartet
-er kurz auf Claudes unmittelbar folgenden Commit. Bleibt er aus, darf Codex die
+**Eng begrenzte Selbstheilung bei ausgebliebenem Status-Commit:** Findet Verifier
+einen vollständigen `<ready_phase>`-Zustand nur uncommitted im Worktree, wartet
+er kurz auf den unmittelbar folgenden Commit des Coders. Bleibt er aus, darf Verifier die
 Übergabe nur dann atomar claimen und mitsichern, wenn ausschließlich
 `_tickets/STATUS.md` verändert ist, die OUTBOX vollständig ist und der genannte
 Produkt-Commit existiert. Bei weiteren Dirty-Dateien, unvollständiger OUTBOX
 oder widersprüchlichem Handoff wird nicht geraten: formaler Handoff-Fehler.
-Diese Ausnahme heilt nur den Transport; sie ersetzt nicht Claudes Pflicht,
+Diese Ausnahme heilt nur den Transport; sie ersetzt nicht die Pflicht des Coders,
 jede Übergabe sofort zu committen.
 
 **Der Commit aus Schritt 4 kann scheitern — und dann ist der Riegel offen.**
 *(Ergänzt 2026-08-27, nach T-22 Runde 2.)* In dieser Übergabe wies eine
 Sicherheitsregel des Repos das Kommando ab, weil die **Commit-Message** die
 Geheimnisdatei beim Namen nannte; der Riegel stand dadurch rund eine Minute
-ohne Commit, und Codex hat in genau diesem Fenster geclaimt. Der Fall ist
+ohne Commit, und Verifier hat in genau diesem Fenster geclaimt. Der Fall ist
 allgemeiner als sein Anlass: Jeder Hook, jeder Pre-Commit-Lauf und jeder
 Formatprüfer kann Schritt 4 abweisen, nachdem Schritt 3 bereits auf der Platte
 steht.
@@ -358,12 +458,12 @@ zurückgenommen, bis der Commit steht. Still im Ready zu verharren überlässt d
 
 ### Der Wechsel zum nächsten Kettenglied kommt **vor** dem ersten Produktedit
 
-*(Ergänzt 2026-08-27, nach T-27a Runde 1.)* Nach einer Freigabe zieht Claude
+*(Ergänzt 2026-08-27, nach T-27a Runde 1.)* Nach einer Freigabe zieht Coder
 zum nächsten Ticket der `priority_chain` weiter. Dabei entstand ein Fenster, in
 dem Branch und Produktänderungen für T-27a schon sichtbar waren, während
 `STATUS.md` noch `approved` und T-22 meldete.
 
-Ein Race gab es nicht — der Owner blieb Claude. Trotzdem ist der Zustand
+Ein Race gab es nicht — der Owner blieb Coder. Trotzdem ist der Zustand
 schädlich: **Wer nur die Datei liest, sieht ein abgeschlossenes Ticket und
 gleichzeitig fremde Änderungen an einem anderen.** Das ist von einem
 Kommunikationsabbruch nicht zu unterscheiden, und die Datei ist genau dafür da,
@@ -371,7 +471,7 @@ diesen Unterschied zu machen.
 
 Deshalb ist der Wechsel ein eigener, **atomarer** Schritt vor dem ersten
 Produktedit: `ticket`, `priority_ticket`, `review_round: 0` und
-`phase: claude_working` in einem Commit. Erst danach der Branch, erst danach
+`phase: <working_phase>` in einem Commit. Erst danach der Branch, erst danach
 die erste Zeile Code.
 
 `review_round: 0` heißt wörtlich „noch keine Runde geprüft". Die `1` entsteht
@@ -381,42 +481,37 @@ zwei verschiedene Runden mit derselben Nummer, und der Schlüssel
 dort, wo die Duplikatsperre auf ihn baut. *(Der Loop-Prompt unten sagte hier
 bis 2026-08-28 fälschlich `1`; Befund aus T-27a Runde 2.)*
 
-Mike hat die Ausführung aller versionierten Prüfskripte nach dem Muster
-`./_tickets/T-*.sh` ausdrücklich und dauerhaft freigegeben. Codex darf diese
+Die Freigabe gilt für eingeplante Prüfungen, nicht für die von T-68
+ausdrücklich ausgenommenen Archivskripte. Mike hat die Ausführung aller
+versionierten Prüfskripte nach dem Muster
+`./_tickets/30-doing/T-*.sh` ausdrücklich und dauerhaft freigegeben. Verifier darf diese
 Skripte im Review ohne erneute fachliche Rückfrage ausführen, einschließlich
 der für lokale Testserver oder externe Testquellen nötigen Sandbox-Freigabe.
 Vor dem Lauf bleibt die übliche Sicherheitsprüfung des konkreten Skripts
 verbindlich; die Freigabe erweitert weder den erlaubten Review-Scope noch die
 Berechtigung, Produktcode oder fremde Ressourcen zu verändern.
 
-## Browsertests macht Claude — nicht als Arbeitsteilung, sondern mangels Browser
+<a id="browsertests-macht-claude--nicht-als-arbeitsteilung-sondern-mangels-browser"></a>
+
+[↑ Übersicht](#übersicht)
+
+## Browsertests nach verfügbarer Ausstattung
 
 *(Entscheidung Mike, 2026-08-27, nach Runde 51.)*
 
-**Codex kann keine Browsertests ausführen.** Seine Umgebung hat keinen
-verbundenen Browser; er hat das in Runde 51 selbst so gemeldet („Ein echter
-Desktop-/Mobile-Browsercheck war in dieser Codex-Umgebung nicht möglich"). Das
-ist keine Frage der Gelegenheit, sondern der Ausstattung — es wird sich beim
-nächsten Review nicht anders verhalten.
+Die damalige Browserzuordnung beschrieb die Ausstattung vom 27. August 2026.
+Sie ist keine dauerhafte Eigenschaft von Coder oder Verifier.
 
-Daraus folgt eine Rollenregel, die von der übrigen Aufteilung abweicht:
+**Heute entscheidet die verfügbare Ausstattung.** Der Coder führt
+nötige visuelle Prüfungen mit tatsächlich verfügbaren Browserwerkzeugen aus
+oder nennt konkret die fehlenden Belege. Für breite und schmale Ansichten
+gelten die Messregeln aus `ux-standards`.
 
-* **Claude führt visuelle Prüfungen aus** — in breiter und schmaler Ansicht,
-  nach `ux-standards`: gemessen, nicht geschätzt (waagrechter Überhang,
-  Höhe der Leisten, Kanten von Kopf/Inhalt/Fuß, Kontrast gegen die
-  **gerenderte** Fläche).
-* **Codex prüft das Ergebnis**, so wie er Code und Tests prüft — er verlangt
-  die Messung, liest die Zahlen und widerspricht ihnen, wenn sie nicht tragen.
-  Er wiederholt sie nicht.
-* **Eine ungemessene Oberfläche wird benannt, nicht verschwiegen.** Wo eine
-  Übergabe ohne visuelle Prüfung herausgeht, steht in der OUTBOX, **was**
-  ungemessen blieb — nicht nur, dass etwas fehlt. „Die Toastbreite in schmaler
-  Ansicht" ist eine Lücke, „visuelle QA offen" ist eine Floskel.
+Der unabhängige Verifier bewertet die Belege und führt verfügbare Gegenproben
+aus. Fehlt ihm ein Browser, weist er die nicht selbst geprüften Punkte aus.
+Weder Agentenname noch Rollenwechsel ersetzen einen Browsernachweis.
 
-Der Grund, warum das hier steht und nicht nur im Ticket: Ohne die Regel fragt
-Codex bei jeder UI-Übergabe nach einem Check, den er nicht bekommen kann, und
-Claude verweist auf eine Zuständigkeit, die nirgends steht. Beides kostet je
-eine Runde.
+[↑ Übersicht](#übersicht)
 
 ## Testinfrastruktur-Riegel — schlank und online ist der Standard
 
@@ -453,22 +548,24 @@ und vor dem ersten Produktedit** diesen Block enthält:
 ```
 
 Eine allgemeine Forderung nach Robustheit, CI-Tauglichkeit, Reproduzierbarkeit
-oder „Integrationstests“ ist keine solche Freigabe. Claude und Codex dürfen sie
+oder „Integrationstests“ ist keine solche Freigabe. Coder und Verifier dürfen sie
 nicht aus vermuteten Bedürfnissen ableiten.
 
-**Riegel beim Implementierer:** Reicht der schlanke Standard aus, wird er ohne
-Rückfrage verwendet. Hält Claude ein Test-Subsystem dennoch für notwendig,
+**Riegel beim Coder:** Reicht der schlanke Standard aus, wird er ohne
+Rückfrage verwendet. Hält Coder ein Test-Subsystem dennoch für notwendig,
 stoppt er vor Entwurf und Code mit `phase: blocked`, `owner: mike`, nennt die
 minimale Standardlösung, den konkreten Mehrwert und den begrenzten Umfang der
 gewünschten Ausnahme. Bis zur ausdrücklichen Entscheidung entsteht dafür kein
 Code und kein Detailentwurf.
 
-**Riegel beim Reviewer:** Codex inventarisiert in jedem Handoff neue
+**Riegel beim Verifier:** Verifier inventarisiert in jedem Handoff neue
 Test-Helfer, persistierte Testdaten, Plugins, Entry-Points, CLIs und
 Transportpfade. Findet er ein Test-Subsystem ohne den Freigabeblock, ist das
 unabhängig von grünen Tests ein `changes_requested`: entfernen und auf den
 schlanken Standard zurückführen. Nur wenn der Standard nachweislich unmöglich
 ist und dafür eine Produktentscheidung fehlt, wird an Mike blockiert.
+
+[↑ Übersicht](#übersicht)
 
 ## Vertical-Acceptance-Riegel — erst der Nutzerweg, dann die Fläche
 
@@ -506,7 +603,7 @@ Er ergänzt TDD und die Verify-Matrix; er baut kein eigenes Test-Subsystem.
    normaler Testfall, kein Mutationstest-Framework.
 6. Berührt der geplante Diff mehr als drei Produktschichten oder ungefähr
    25–30 Produktdateien, ist das ein **Breitenalarm**, keine starre Grenze.
-   Claude stoppt vor weiterer Flächenarbeit und hält fest, welcher dünne Pfad
+   Coder stoppt vor weiterer Flächenarbeit und hält fest, welcher dünne Pfad
    bereits grün ist. Fehlt er, wird der Rest neu geschnitten; Dateizahl oder
    grüne Gesamttestzahl ersetzen diese Begründung nicht.
 
@@ -520,16 +617,62 @@ Er ergänzt TDD und die Verify-Matrix; er baut kein eigenes Test-Subsystem.
    Verhaltensbeleg. Eine Behauptung „gebaut" braucht zuerst den ausführbaren
    Pfad und sein Orakel.
 
-**Riegel beim Reviewer:** Codex sucht die entscheidenden Akzeptanzfälle zuerst
+**Riegel beim Verifier:** Verifier sucht die entscheidenden Akzeptanzfälle zuerst
 und prüft mit einem kleinen Gegenlauf oder Mutanten, ob sie den alten/falschen
 Zustand wirklich unterscheiden. Fehlen öffentlicher Eintritt, Frischstart,
 negativer Mutant oder Matrix-Zuordnung, ist das unabhängig von grünen
 Gesamtsuiten `changes_requested`.
 
 Wird dieser Riegel während einer bereits laufenden Runde eingeführt, muss
-Claude keinen Produktstand künstlich zurückdrehen. Vor der nächsten Übergabe
+Coder keinen Produktstand künstlich zurückdrehen. Vor der nächsten Übergabe
 müssen die entscheidenden Tests jedoch nachweislich am alten beziehungsweise
 minimal falschen Pfad rot und am neuen Pfad grün gewesen sein.
+
+[↑ Übersicht](#übersicht)
+
+## Standard-Riegel — die Hausregeln stehen im Bericht, nicht im Vorsatz
+
+*(Entscheidung Mike, 2026-09-08.)*
+
+Der Skill `code-standards` gilt für beide Rollen, und er gilt ab der ersten
+Zeile: **Der Coder wendet ihn beim Schreiben an**, nicht erst, wenn der
+Verifier danach fragt. Ein Review kann einen Standardverstoß nur finden — es
+kann ihn nicht ungeschehen machen, und jede Fundstelle kostet eine Runde.
+
+**Beide Rollen lesen die tatsächliche `SKILL.md` vor ihrer fachlichen Arbeit:**
+der Coder vor dem ersten Codeedit, der Verifier vor der Prüfung. Dazu lesen
+sie die zum Umfang passenden Referenzen aus dem Skill. Die bloße Nennung im
+Prompt oder die Beschreibung im Skill-Katalog ersetzt das Lesen nicht.
+Nach einem Kontextverlust ohne verfügbaren Skill-Inhalt erneut laden.
+
+Der Verifier prüft die Anwendung unabhängig vom Coder-Bericht und berichtet **je Zeile der
+Referenztabelle** ein Ergebnis:
+
+- `✅` mit dem Beleg, der die Aussage trägt;
+- `⚠️ n Befunde` mit Fundstelle und erwarteter Korrektur;
+- `➖ nicht berührt`, wenn der Diff die Gruppe nicht anfasst.
+
+Die OUTBOX des Coders trägt dieselben Zeilen. Sie sind seine Zusage, nicht
+sein Wunsch: Ein `✅` ohne Beleg ist ein Befund, kein Ergebnis.
+Beide Berichte nennen außerdem den tatsächlich gelesenen Skill-Pfad und die
+verwendeten Referenzen. Fehlende Nachweise werden nachgetragen, bevor eine
+Standards-Prüfung als vollständig bestätigt wird. Bei Konzept- und
+Dokumentationsarbeit nur die anwendbaren Regeln prüfen; keine Codeprüfung
+behaupten, wenn kein Code zum Prüfgegenstand gehört.
+
+**Die Gruppenliste wird nicht hierher kopiert.** Sie steht in der Skill; eine
+zweite Fassung wäre genau die parallele Wissensquelle, die der DRY-Prüfguard
+unten verbietet. Kommt dort eine Referenz dazu, entsteht die Berichtszeile von
+selbst. Wer die Zeilen nicht kennt, hat die Skill nicht geladen — und genau
+das ist der Zweck der Konstruktion.
+
+**Warum das nicht schon durch den Linter erledigt ist.** Ein grüner Lauf
+belegt nur die Regeln, die der Linter kennt. `pyproject.toml` hat keinen
+`[tool.ruff]`-Abschnitt; Ruff läuft mit Vorgaben, also ohne Importsortierung
+(`I`) und ohne Quote-Stil (`Q`). Für genau die Hausregeln, um die es hier
+geht, ist ein grüner Ruff-Lauf deshalb kein Nachweis.
+
+[↑ Übersicht](#übersicht)
 
 ## DRY-Prüfguard
 
@@ -562,40 +705,12 @@ Dabei gilt:
   zurückverfolgt; bei einem Finding stehen beide Fundstellen und die erwartete
   gemeinsame Abstraktion oder Source of Truth dabei.
 
-## Trigger für den Codex-In-Context-Scheduler
+[↑ Übersicht](#übersicht)
 
-Der Scheduler enthält keine Kopie des Review-Verfahrens. Sein vollständiger
-Auftrag ist:
+## Aktivierung der Agenten
 
-```text
-Führe _tickets/.agents/CODEX-IN-CONTEXT-SCHEDULER.md aus.
-```
+Die kopierbaren Startbefehle und die Unterschiede zwischen In-Context-Scheduler
+und Chat-Loop stehen in [AGENT-ACTIVATION.md](AGENT-ACTIVATION.md).
+Beide Wege lesen vor fachlicher Arbeit die Rollen und den Owner aus STATUS.md.
 
-Erst wenn dieser kurze Vertrag eine neue Übergabe erkennt, liest Codex dieses
-Dokument und `CLAUDE-LESSONS.md` vollständig und führt das Review aus.
-Damit kosten Leerdurchläufe nur den Zustandscheck; die ausführlichen Regeln
-bleiben trotzdem versioniert und überstehen Exit sowie Compaction.
-
-## Prompt für den periodischen Claude-Loop
-
-Das Gegenstück zum Codex-Task: Claude fragt im selben Takt, ob eine Antwort
-aus dem Review auf ihn wartet. Als `/loop` **im laufenden Arbeits-Chat**
-starten, damit derselbe Branch und dasselbe `STATUS.md` gesehen werden. Beim
-Ausstieg wird der Loop gelöscht; dieser Abschnitt hält ihn wiederherstellbar.
-
-```text
-/loop 5m Du bist Claude, der Implementierer im StockInfo-Board. Beachte CLAUDE.md und die Skills task-verification-workflow, code-standards, git-conventions.
-
-1. Lies _tickets/STATUS.md, _tickets/.agents/AGENT-WORKFLOW.md und _tickets/.agents/CLAUDE-LESSONS.md. Der maschinenlesbare Zustand oben in STATUS.md ist massgeblich, nicht dein Gedaechtnis. Pruefe vor jeder Arbeit: ticket muss exakt priority_ticket entsprechen und in priority_chain stehen. Bei Abweichung nichts implementieren, portfolio_mismatch melden und Schluss. Pruefe vor jedem Entwurf und vor dem ersten Produktedit ausserdem den Testinfrastruktur-Riegel, den Vertical-Acceptance-Riegel und den Scope-Checkpoint-Riegel. Vor dem ersten Produktedit muss im aktiven Ticket ein Scope-Vertrag mit Ergebnis, hoechstens drei fachlichen Aenderungen, erwartetem Datei-Inventar, Nicht-Zielen und Budget stehen. Standard sind normale Unit-Tests plus echte Online-Integrationstests ueber vorhandene Sprach-, Bibliotheks- und Produkt-APIs. Record/Replay, Cassettes oder Mitschnitte, eigene Transport-/Socket-/Freshness-/CLI-/Testplugin-Infrastruktur sind ohne den datierten Ausnahmeblock von Mike im aktiven Ticket verboten. Ist eine Ausnahme wirklich noetig, vor Entwurf und Code mit phase: blocked und owner: mike stoppen; sie niemals aus Robustheit, CI oder Reproduzierbarkeit ableiten. Bei einem mehrschichtigen Fachumbau zuerst die entscheidenden oeffentlichen Akzeptanzfaelle rot belegen, danach einen duennen vertikalen Pfad gruen bauen; Frischstart, negativer Mutant und Matrix-zu-Orakel-Zuordnung sind vor der Uebergabe Pflicht.
-2. Ist `owner` nicht `claude`: veraendere keine Datei, antworte in einer Zeile mit Phase und Owner, Schluss.
-3. Vergleiche vor jeder weiteren Produktflaeche den laufenden Diff mit dem Scope-Vertrag. Bei einer nicht geplanten Schicht, einem nicht geplanten oeffentlichen Vertrag/Schema/Typ/einer Abhaengigkeit/Abstraktion, mehr als 25 Prozent Dateivarianz, mehr als 800 Diff-Zeilen oder Prozesschronik in Codekommentaren: stabilen Stand committen, Plan/Ist und Ausloeser in OUTBOX schreiben, `phase: scope_checkpoint`, `owner: codex`, `handoff_commit` auf den Stand setzen, Status committen und Schluss. Das ist keine Review-Uebergabe; `review_round` bleibt unveraendert.
-4. Bei `phase: changes_requested`: Arbeite die Findings aus INBOX -> Claude der Reihe nach ab, schwerste zuerst. Jedes Finding einzeln verifizieren statt der Zusammenfassung glauben; behauptete Vollstaendigkeit mit rg belegen. Bei wiederholter Entwurfsnacharbeit gilt die Konvergenzpruefung dieses Dokuments: ungefaehr drei erfolglose Runden sind ein Richtwert, keine harte Grenze. Ist eine weitere punktuelle Runde konkret und voraussichtlich abschliessend, begruende das mit dem vollstaendigen Restumfang in der OUTBOX. Verlangt das Review Rebaseline oder Scope-Verkleinerung, korrigiere nicht weiter lokal, sondern konsolidiere beziehungsweise schneide neu. Vor dem ersten Edit auf einem Feature-Branch `t-NN-<slug>` sein. Danach relevante Pytests, das Ticket-Smoke-Script `./_tickets/T-*.sh --run` und `make test` laufen lassen und die Ergebnisse mit Zahlen nennen. Dann genau EIN Uebergabe-Commit, INBOX leeren, Ergebnis nach OUTBOX -> Codex, `review_round` +1, `phase: ready_for_codex`, `owner: codex`, `updated_at` auf heute. Die OUTBOX nennt geplant/tatsaechlich fuer fachliche Aenderungen, Produktdateien, Test-/Dokudateien und Diff-Zeilen. Danach keinen Produktcode mehr anfassen.
-5. Bei `phase: approved`: Ticket NICHT nach solved/ verschieben, das macht Mike. Nur zum naechsten Element aus priority_chain wechseln, priority_ticket und ticket gemeinsam setzen, review_round fuer das neue Ticket auf 0 setzen — die 1 entsteht erst beim Hochzaehlen in Schritt 4, wenn die erste Uebergabe tatsaechlich herausgeht —, eigener Branch vor dem ersten Edit, phase: claude_working. War das freigegebene Ticket das letzte Element, nichts Neues beginnen: phase: portfolio_review, owner: mike; Mike braucht die Gate-vs-Follow-up-Einordnung.
-6. Bei `phase: claude_working`: die begonnene Arbeit fortsetzen, sonst wie Punkt 4 uebergeben.
-7. Bei `phase: blocked`, `phase: portfolio_review` oder wenn eine Entscheidung von Mike noetig ist: nichts weiterschreiben, in einer Zeile melden, `owner: mike` lassen und den Loop stoppen.
-8. Melde nur Uebergabe, Scope-Checkpoint, Blocker oder Entscheidungsbedarf. Leerdurchlaeufe bleiben einzeilig.
-```
-
-Beide Loops teilen sich denselben Zustandsfilter: Genau einer von beiden ist
-über `owner` je Runde am Zug, der andere beendet seinen Lauf einzeilig. Läuft
-nur ein Agent, bleibt der andere Takt wirkungslos, aber ungefährlich.
+[↑ Übersicht](#übersicht)

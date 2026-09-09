@@ -4,6 +4,12 @@ Dies ist ausschließlich der kurze Laufzeitvertrag für den internen Scheduler
 des bestehenden Codex-Arbeits-Chats. Das fachliche Review-Verfahren steht in
 `AGENT-WORKFLOW.md`.
 
+## Übersicht
+
+- [Vertrag](#vertrag)
+- [Gesundheits- und Wiederanlaufregeln](#gesundheits--und-wiederanlaufregeln)
+- [Wiederanlauf nach Exit oder Compaction](#wiederanlauf-nach-exit-oder-compaction)
+
 ## Vertrag
 
 **Der Scheduler folgt seit Mikes Auftrag vom 2026-09-07 der aktuellen Rolle.**
@@ -21,6 +27,12 @@ liest der Chat den Zustand erneut. Während einer laufenden Implementierung
 ist ein Heartbeat kein paralleler Arbeitsauftrag. Bei Owner Claude bleibt
 Codex still. Fehlende oder widersprüchliche Rollenfelder sind ein Zustandsfehler.
 Ein Rollenwechsel startet keinen Scheduler automatisch.
+
+Bei einem fälligen Auftrag lädt der geweckte Chat **als Coder wie als Verifier**
+den Skill `code-standards` samt passenden Referenzen vor der fachlichen Arbeit.
+Für Anwendung und Nachweise gilt der
+[Standard-Riegel](AGENT-WORKFLOW.md#standard-riegel--die-hausregeln-stehen-im-bericht-nicht-im-vorsatz)
+des gemeinsamen Vertrags. Der Timer selbst lädt keine Skills für Leerdurchläufe.
 
 - Mechanismus: interner In-Context-Scheduler dieses Chats; kein `/goal`, kein
   ChatGPT-Scheduled-Task und keine Desktop-App-Automation.
@@ -48,11 +60,12 @@ Ein Rollenwechsel startet keinen Scheduler automatisch.
   keine Nachricht an Mike und keine Dateiänderung.
 - Für die Verifier-Rolle gilt: Ist `phase` weder `ready_for_codex` noch
   `scope_checkpoint`, endet die fachliche Verarbeitung nach dem Heartbeat still.
-- Vor jedem fachlichen Auftrag (auch `coder_handoff`) muss `ticket` eine vorhandene Datei direkt
-  im Board-Root bezeichnen. Tickets in `postponed/`, `rejected/` oder
-  `solved/` lösen keinen Auftrag aus; bei veralteter Priorität einmalig
-  `portfolio_mismatch` melden. Diese Dateiprüfung erfolgt nur bei einem
-  ansonsten fälligen Auftrag, nicht bei jedem Leerdurchlauf.
+- Vor jedem fachlichen Auftrag (auch `coder_handoff`) gelten die
+  [Ticketpfade](AGENT-WORKFLOW.md#ticketpfade-und-arbeitsbeginn): Der Dateiname
+  `ticket` muss eine vorhandene Datei unter `_tickets/30-doing/` bezeichnen.
+  Backlog, Ready, Done, Iced und Rejected lösen keinen Arbeitsauftrag aus.
+  Bei veralteter Priorität einmalig `portfolio_mismatch` melden. Die
+  Dateiprüfung erfolgt nur bei einem ansonsten fälligen Auftrag.
 - Ist `phase` `scope_checkpoint`, müssen `owner: codex`, ein gesetzter
   `handoff_commit`, `ticket == priority_ticket` und die Mitgliedschaft in
   `priority_chain` gelten. Ein neues Tupel aus `phase`, `ticket`,
@@ -80,6 +93,8 @@ Ein Rollenwechsel startet keinen Scheduler automatisch.
   dem konkreten Fehler informiert. Derselbe unveränderte Fehler wird nicht bei
   jedem Heartbeat wiederholt; nach einer Erholung darf ein neuer Fehler wieder
   gemeldet werden.
+
+[↑ Übersicht](#übersicht)
 
 ## Gesundheits- und Wiederanlaufregeln
 
@@ -124,6 +139,8 @@ Ein Rollenwechsel startet keinen Scheduler automatisch.
   beendet. Es dürfen nicht zwei Scheduler gleichzeitig dasselbe Tupel
   verarbeiten.
 
+[↑ Übersicht](#übersicht)
+
 ## Wiederanlauf nach Exit oder Compaction
 
 Der Vertrag überlebt in dieser Datei; der laufende Timer selbst überlebt nur
@@ -135,3 +152,5 @@ genügt der Auftrag:
 Starte den In-Context-Scheduler aus
 _tickets/.agents/CODEX-IN-CONTEXT-SCHEDULER.md.
 ```
+
+[↑ Übersicht](#übersicht)
