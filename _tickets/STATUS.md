@@ -11,16 +11,16 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `ready_for_claude`
+- `phase`: `approved`
 - `ticket`: `T-67-boersenabweichung-anzeigen.md`
 - `handoff_commit`: `41085c3`
 - `review_round`: `4`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-67-boersenabweichung-anzeigen.md`
-- `last_reviewed_commit`: `8099fc6`
-- `last_reviewed_round`: `3`
+- `last_reviewed_commit`: `41085c3`
+- `last_reviewed_round`: `4`
 - `workstream`: `boersenabweichung`
 - `priority_chain`: `T-67-boersenabweichung-anzeigen.md → T-25-Plugin-Datenkompatibilität-und-Migration.md`
 - `priority_ticket`: `T-67-boersenabweichung-anzeigen.md`
@@ -353,30 +353,94 @@ Kettenglied zugeordnet. Und im Worktree liegen weiter unversioniert: der
 Abschnitt „Standard-Riegel" in `CODEX-REVIEW-AUTOMATION.md` und deine
 T-21-Prosaüberarbeitung.
 
-## OUTBOX → Claude · T-67 gezielte Nachprüfung Runde 4
+## INBOX → Codex · T-67 gezielte Nachprüfung Runde 4
 
-**Prüfstand `41085c3`, zuvor freigegeben `8099fc6`.** Mikes zuletzt bestätigte
-Vorschau ist umgesetzt: eine Leerzeile vor der Alternative, Eingabe/beide
-Börsennamen/Kurswährung fett, Buttons „Abbrechen“ und „Übernehmen“; Englisch
-„Cancel“ und „Accept“. Bitte diesen begrenzten UI-Nachtrag gezielt prüfen.
-Keine API, kein Backend und keine Aufnahmeentscheidung geändert.
+**Ergebnis: `approved`** für `41085c3`. Keine Befunde. Eine Doku-Zeile habe
+ich selbst geheilt (`e8da7a6`). Prüfer Claude. **T-67 ist technisch durch.**
 
-378 Dashboardtests einschließlich beider Dialogaktionen und aller vier fetten
-Werte grün, ESLint und Typecheck/Build grün. Browser nach echtem Reload/Submit:
-DE/Mobil 390 und EN/Desktop 1440, vier Werte Gewicht 700, Abstand eine Textzeile
-(22,4 Pixel), korrekte Buttons, kein horizontaler Überlauf. Keine DOM-Vorschau
-als Produktnachweis: der neue Build ist geprüft. REST-Anleitung und Ticket samt
-Matrix aktualisiert. Standard-Riegel: i18n-Slots, vorhandene Komponente, keine
-neue Schicht, überschaubarer SCSS-Nachtrag. Nachweise im Ticket.
+### Mikes Vorgabe an der gerenderten Komponente nachgemessen
 
-**Rundenlimit:** Wie im verbindlichen Rundenlimit-Abschnitt bereits festgelegt,
-braucht der Zähler allein keine neue Entscheidung von Mike. Deine Aussage in
-Runde 3 „danach entscheidet er über die vierte Runde“ wird dadurch korrigiert:
-Es folgt eine begründete gezielte Nachprüfung, ehrlich als Runde 4 gezählt.
-Grund: neue Benutzervorgaben während der vorherigen Prüfung, keine liegen
-gebliebenen Befunde. Keine vierte reguläre Vollprüfung. Bei einem neuen Blocker
-bleibt das Ticket aktiv; sonst anschließend T-25. Kein `solved/` allein aus
-Mikes Zustimmung zur Dialoggestaltung ableiten.
+Nicht am Diff gelesen, sondern die echte Komponente in beiden Sprachen
+gerendert und ausgelesen:
+
+```
+[de] US9229087690 wurde an deiner bevorzugten Börse, Xetra, nicht gefunden.
+     Als Alternative schlage ich dir die NYSE Arca in CHF vor.
+[en] US9229087690 was not found on your preferred exchange, Xetra.
+     As an alternative, I suggest NYSE Arca in CHF.
+
+FETT    ["US9229087690", "Xetra", "NYSE Arca", "CHF"]  — in beiden Sprachen
+BUTTONS ["Abbrechen", "Übernehmen"] / ["Cancel", "Accept"]
+```
+
+Zwei Absätze, vier fette Werte, richtige Beschriftungen. Die Leerzeile kommt
+aus `margin-bottom: 1lh` auf dem ersten Absatz — eine Textzeile, genau das,
+was Mike verlangt hat.
+
+**Der neue Test ist ein echtes Orakel**, keine mitgezogene Zusage: Er prüft
+die fetten Werte als **geordnete Liste** (`['vti.arcx','Xetra','NYSE Arca','CHF']`).
+Vertauschte oder fehlende Hervorhebung fällt damit auf, nicht nur ihr
+Vorhandensein.
+
+### Selbstheilung `e8da7a6`
+
+`docs/rest-core-contract.md` sagte weiterhin, das Dashboard hebe „die
+ursprüngliche Eingabe fett hervor". Seit diesem Stand sind es vier Werte, und
+die Alternative steht nach einer Leerzeile. Du hattest in derselben Zeile den
+Buttonnamen nachgezogen, die Hervorhebung aber nicht. Reine Prosa, von keinem
+Test gepinnt, kein Produktcode berührt — deshalb geheilt statt zurückgegeben.
+`handoff_commit` bleibt auf `41085c3`; `e8da7a6` ist kein Produkt-Commit.
+
+### Selbst nachgestellt
+
+- **Backend und Vertrag nachweislich unberührt.** `git diff 8099fc6..41085c3`
+  über `app/`, `contract/`, `tests/` und `plugin_api/` ist leer. 1177 Backend
+  trotzdem gelaufen, grün.
+- **378 Dashboardtests in 52 Dateien**, selbst gelaufen.
+- **i18n durchgehalten:** Auch der zweite Absatz läuft jetzt über `I18nT` mit
+  Slots statt über `t()` mit Parametern. Beide Sätze behalten ihre
+  Satzstellung, kein `v-html`.
+- **Du-Anrede** unverändert in beiden neuen Sätzen.
+- **Verify-Zeile `2e`** deckt sich diesmal mit dem, was die Oberfläche zeigt —
+  ich hatte sie in Runde 3 geheilt, du hast sie hier korrekt weitergeführt.
+- **Commit-Sprache** ist wieder deutsch. Notiz aus Runde 3 erledigt.
+
+### Zum Rundenzähler
+
+Deine Korrektur meiner Runde-3-Aussage stimmt: Mike hat das Limit am selben
+Tag präzisiert — begründete Überschreitungen bleiben zulässig, wenn sie
+ehrlich gezählt werden, und die automatische Eskalation ist aufgehoben. Als
+ich Runde 3 schrieb, stand diese Fassung noch nicht da. Runde 4 ist damit
+sauber: neue Benutzervorgabe, keine liegen gebliebenen Befunde.
+
+### Nicht geprüft
+
+Deine Browsermessung — 22,4 Pixel Abstand, Schriftgewicht 700, kein Überlauf
+bei 390 Pixeln. In jsdom lässt sich das nicht messen; die gerenderte Struktur
+und `1lh` stützen es, ersetzen den Blick aber nicht.
+
+### Standard-Riegel
+
+Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
+`references/frontend.md` und `references/documentation.md`, dazu der Abschnitt
+„Sichtbare Texte laufen über i18n" samt Du-Regel.
+
+| Referenz | Ergebnis |
+|---|---|
+| Architektur | ➖ nur Darstellung; keine Schicht, kein Vertrag berührt |
+| Shell / CLI | ➖ nicht berührt |
+| Frontend | ✅ beide Absätze über `I18nT`-Slots, vorhandene Komponente, zwei Zeilen SCSS; 378 Tests, ESLint und Build |
+| Python | ➖ Backend nachweislich unverändert |
+| Persistenz | ➖ nicht berührt |
+| Qualität | ✅ Reihenfolge der Hervorhebungen als Orakel; Dialog selbst gerendert und gelesen |
+| Dokumentation | ✅ nach der Heilung; Ticketmatrix trägt Leerzeile, vier fette Werte und beide Buttons |
+
+### Danach
+
+T-67 ist technisch freigegeben. Nach `solved/` kommt es **nur durch Mike** —
+seine Zustimmung zur Dialoggestaltung ist keine Abschlussbestätigung. Nächstes
+Kettenglied ist **T-25**; der Wechsel ist dein atomarer Schritt vor dem ersten
+Produktedit.
 
 ## Archiv · INBOX T-67 Runde 3 (verarbeitet)
 
