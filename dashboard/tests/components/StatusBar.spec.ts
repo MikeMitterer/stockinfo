@@ -1,24 +1,20 @@
-import { mount } from '@vue/test-utils'
+import { mount, type VueWrapper } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
 
 import StatusBar from '../../src/components/StatusBar.vue'
 import { i18n } from '../../src/i18n'
 
-/**
- * Geprueft wird der **Kontexttext**, den die Zeile ans Fundament reicht — nicht
- * dessen Darstellung. Wie `UxStatusBar` ihn setzt, ist Sache des Fundaments;
- * dass diese App die richtige Angabe hineinlegt, ist Sache dieser Datei.
- */
-function mountBar(props: Record<string, unknown> = {}) {
+/** Prüft den sichtbaren Kontext der echten Statuszeile. */
+function mountBar(props: Record<string, unknown> = {}): VueWrapper {
   return mount(StatusBar, {
     props: { status: 'ok', version: '0.6.0', ...props },
     global: { plugins: [i18n] },
   })
 }
 
-/** Der Kontexttext, wie ihn die Zeile an das Fundament weitergibt. */
+/** Der Kontext steht im linken Slot unmittelbar nach dem Repo-Link. */
 function contextOf(wrapper: ReturnType<typeof mountBar>): string {
-  return wrapper.findComponent({ name: 'UxStatusBar' }).props('context') as string
+  return wrapper.get('.status__context').text()
 }
 
 beforeEach(() => {

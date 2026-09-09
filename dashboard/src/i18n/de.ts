@@ -120,6 +120,8 @@ export const de = {
     },
   },
   exchanges: {
+    pluginHint: 'Plugins können weitere Handelsplätze und MICs ergänzen. Wie das geht, erklärt die {guide}.',
+    pluginGuide: 'Anleitung für Plugin-Autoren',
     title: 'Handelsplätze',
     hint: 'Verwende Ticker und App-Suffix, z. B. {alias}. Alternativ ist der MIC möglich: {mic}. Die YAML-Datei liefert nur Kurse für hinterlegte Wertpapiere.',
     colSuffix: 'App-Suffix',

@@ -8,6 +8,7 @@ import ExchangeSupport from './ExchangeSupport.vue'
 import { availableQuoteSources } from '../utils/exchangeCoverage'
 import { quoteSourceFromHash } from '../composables/useHashTab'
 import InfoHint from './InfoHint.vue'
+import { PLUGIN_AUTHORS_URL } from '../config'
 import type { ExchangeEntry, ExchangesResponse } from '../types'
 
 const props = defineProps<{ data: ExchangesResponse | null; loading?: boolean; error?: string | null }>()
@@ -89,6 +90,11 @@ const columns = computed<DataTableColumns<ExchangeEntry>>(() => [
         <template #mic><strong>SAP.XETR</strong></template>
       </I18nT>
       <InfoHint :text="t('env.strictExchangeHint')" settings-tab="environment" />
+    </p>
+    <p class="exchanges__hint">
+      <I18nT keypath="exchanges.pluginHint" tag="span">
+        <template #guide><a :href="PLUGIN_AUTHORS_URL" target="_blank" rel="noopener noreferrer">{{ t('exchanges.pluginGuide') }}</a></template>
+      </I18nT>
     </p>
     <NAlert v-if="error" type="error">{{ error }}</NAlert>
     <NInput v-model:value="query" clearable :placeholder="t('exchanges.search')" :aria-label="t('exchanges.search')" />

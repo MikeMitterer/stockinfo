@@ -105,6 +105,8 @@ export const en = {
     },
   },
   exchanges: {
+    pluginHint: 'Plugins can add further trading venues and MICs. See the {guide} to learn how.',
+    pluginGuide: 'plugin author guide',
     title: 'Trading venues',
     hint: 'Use the ticker and app suffix, e.g. {alias}. You can also use the MIC: {mic}. The YAML file only provides quotes for stored securities.',
     colSuffix: 'App suffix',

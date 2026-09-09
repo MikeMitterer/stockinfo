@@ -2,7 +2,7 @@
 import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-import { API_BASE_URL } from '../config'
+import { API_BASE_URL, REPOSITORY_URL } from '../config'
 
 interface ApiLink {
   label: string
@@ -18,8 +18,8 @@ const links = computed<ApiLink[]>(() => [
 ])
 
 const projectLinks = computed<ApiLink[]>(() => [
-  { label: t('links.repo'), url: 'https://github.com/MikeMitterer/stockinfo' },
-  { label: t('links.issues'), url: 'https://github.com/MikeMitterer/stockinfo/issues' },
+  { label: t('links.repo'), url: REPOSITORY_URL },
+  { label: t('links.issues'), url: `${REPOSITORY_URL}/issues` },
 ])
 </script>
 
