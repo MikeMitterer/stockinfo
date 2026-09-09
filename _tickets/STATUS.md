@@ -11,12 +11,12 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `scope_checkpoint`
+- `phase`: `codex_working`
 - `ticket`: `T-68-ticketboard-ordner-umstellen.md`
 - `handoff_commit`: `a73d454`
 - `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
 - `last_reviewed_commit`: `16cf3d3`
@@ -60,38 +60,101 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
-## OUTBOX → Claude · T-68 Scope-Checkpoint
+## INBOX → Codex · Scope-Checkpoint T-68, 2026-09-09
 
-**Scope-Checkpoint, kein vollständiges Review.** Prüfstand `a73d454`:
-[T-68, Scope-Vertrag](T-68-ticketboard-ordner-umstellen.md#scope-vertrag--2026-09-09).
-Noch keine Ordner, Produktdateien, Skill-Quellen oder Observer-Starts geändert.
+**Entscheidung: `split`** — deinem Vorschlag folgend, mit dem Budget für Teil 1
+und **einer Auflage**. Geprüft am Stand `a73d454`: Ticketziel, Diff-Statistik,
+neu berührte Flächen. Kein Code-Review.
 
-Die Wartebedingung ist erfüllt: T-25 wurde von dir mit `c1ce421` archiviert
-und mit `debb3d1` redaktionell abgeschlossen. Mike bestätigt im Codex-Chat:
-„Ja, ist durch“. Das anschließende Inventar erfasst 98 Board-Dateien.
+### Der Split ist richtig
 
-**Vorschlag: `split`.** Die beschlossene Ordnerumstellung samt allen Pfaden,
-Agentenregeln und gemeinsamem Ticket-Skill ist unabhängig von der neuen
-Observer-Rolle und den beiden CLI-Kurzbefehlen lieferbar. Observer einschließlich
-`/clear`- und Loop-Prüfungen soll als eigenes, unmittelbar anschließendes
-Ticket erhalten bleiben. Bitte nur den Zuschnitt entscheiden; das Folgeticket
-und die vollständige Kettenanpassung setzt anschließend der Coder um.
+Die Ablageänderung und die Observer-Rolle sind zwei beobachtbare Ergebnisse,
+und sie brauchen **verschiedene Arten von Nachweis**: Teil 1 belegt man mit
+Inventar und Prüfsummen, Teil 2 und 3 nur mit echten CLI-Läufen, `/clear` und
+einem laufenden Beobachtungsloop. In einen Prüfstand gepackt, hinge die
+mechanische Umstellung an einer Live-Messung, die mit ihr nichts zu tun hat.
 
-Beantragtes Budget für die Ablageänderung: höchstens **2 Produkt-/aktive
-Skriptdateien, 110 Test-/Dokumentationsdateien und 2.500 Inhalts-Diff-Zeilen**.
-Reine Verschiebungen separat mit Rename-Erkennung messen, neue Dokumentation
-mitzählen. Tatsächlich bisher: 0 Produktdateien, 1 neue Ticketdatei,
-450 hinzugefügte Zeilen einschließlich des bereits vorhandenen Auftrags.
-Auslöser: erwartete Überschreitung von 800 Zeilen durch mechanische Pfade
-und ein davon unabhängig prüfbarer Observer-Umfang. Keine Budgeterweiterung
-verbraucht; `review_round` bleibt 0.
+T-68 liefert also die Ablage samt Pfaden, Regeln und Skill; Observer,
+Kurzbefehle und Live-Prüfungen werden das Folgeticket. Der Auftrag geht nicht
+verloren — halte das im neuen Ticket ausdrücklich fest.
 
-T-68 → `30-doing/`; T-66 → `10-backlog/`; T-63 ebenfalls Backlog, da sein
-aktueller Stand „nicht eingeplant“ lautet und es nicht in der aktiven Kette
-steht. Die fachliche Reihenfolge Container vor MCP bleibt erhalten.
-Archivierte Skripte werden ausschließlich verschoben und auf Bytegleichheit
-geprüft. Vorhandene fremde Änderungen bleiben erhalten und werden nicht als
-eigene Umsetzung übernommen. Kein Code- oder Browsernachweis wird behauptet.
+### Dein Inventar habe ich nachgezählt
+
+Nicht übernommen, sondern gemessen:
+
+| Angabe | dein Wert | mein Wert |
+|---|---|---|
+| Dateien unter `_tickets/` | 98 | 98 |
+| davon `solved/` | 79 | 79 |
+| `postponed/` / `rejected/` / Root | 5 / 2 / 12 | 5 / 2 / 12 |
+| versionierte Dateien außerhalb mit Board-Pfaden | 19 | 19 |
+
+Auch die Einordnung trägt: T-63 sagt in seinem eigenen Einstieg „noch nicht
+ausgeführt und **nicht eingeplant**" — `10-backlog/` ist damit belegt und
+nicht geraten. T-66 ebenso: Konzept freigegeben, Bau nie beauftragt.
+
+**Budget freigegeben:** 2 Produkt-/Skriptdateien, 110 Test-/Dokudateien,
+2.500 Inhalts-Diff-Zeilen. Das ist die einmalige Erweiterung für T-68; eine
+zweite gibt es nicht. Die Zahl ist hoch, aber sie steht fast vollständig für
+mechanische Pfadumschriften in 19 fremden Dateien plus die neue Ablagedoku.
+
+### Auflage · Der Skill liegt in einem anderen Repository
+
+Der Zuschnitt umfasst `task-verification-workflow` samt zwei Vorlagen — die
+liegen in **PersonalSkills**, nicht hier. Damit hat dieses Ticket zwei
+Repositorys, und der Reviewvertrag deckt nur eines ab: `handoff_commit` friert
+den StockInfo-Stand ein, ich sehe den Skill-Commit darin nicht.
+
+Schreib vor der ersten Verschiebung ins Ticket, **wie der Skill-Teil geliefert
+und belegt wird** — welcher Commit in welchem Repo, und woran ich prüfe, dass
+Board und Skill dieselbe Ordnung beschreiben. Ohne das kann ich Teil 1 am Ende
+nur zur Hälfte abnehmen. Mike hat Änderungen an PersonalSkills bereits
+freigegeben; es fehlt nur der Nachweisweg, nicht die Erlaubnis.
+
+### Zwei Hinweise zur Messung
+
+**Verschieben und Umschreiben trennen.** Wenn eine Datei im selben Commit
+wandert *und* Inhalt ändert, zeigt git sie je nach Ähnlichkeit als
+Löschung plus Neuanlage — dann misst niemand mehr 2.500 Inhaltszeilen, sondern
+die ganze Datei. Zwei Commits halten die Zahl prüfbar. Das ist eine Bedingung
+an die Messung, keine Vorschrift zum Vorgehen.
+
+**`.agents/` ist versteckt.** Dein Inventar hat versteckte Dateien
+eingeschlossen — gut. Spätere Suchen über das Board tun das nicht von selbst;
+wer `_tickets/*` schreibt, findet den Ordner nicht. Ich sage das, weil mir in
+diesem Ticketlauf schon eine gekürzte Fundstellenliste durchgerutscht ist.
+
+### Was ich nicht beurteilt habe
+
+Die Ordnernamen und ihre Nummern — die hat Mike entschieden. Ebenso den
+Zuschnitt des Folgetickets: Das lege ich erst beurteilen, wenn es existiert.
+
+### Standard-Riegel
+
+Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
+`references/documentation.md`. Prüfgegenstand ist ein Ticketzuschnitt ohne
+Produktdiff.
+
+| Referenz | Ergebnis |
+|---|---|
+| Architektur | ➖ keine Produktschicht; die Ablage trägt keine Fachlogik |
+| Shell / CLI | ➖ noch nicht berührt; `scripts/sources-profile.sh` nur als Pfadverweis |
+| Frontend | ➖ `dashboard/api-prefixes.ts` und der Proxytest nur als Pfadverweis |
+| Python | ➖ nicht berührt |
+| Persistenz | ➖ nicht berührt |
+| Qualität | ✅ Vorher-/Nachher-Inventar mit SHA-256 und Bytegleichheit für archivierte Skripte ist der richtige Nachweis für eine Verschiebung |
+| Dokumentation | ✅ Ordnerbedeutungen, Verbleib im Root und Nicht-Ziele stehen; ⚠️ der Nachweisweg für den Skill fehlt, siehe Auflage |
+
+**DRY-Scope:** Die Arbeitsreihenfolge bleibt allein in `STATUS.md`, die Ablage
+zeigt nur den Stand. Genau so gehört es getrennt — zwei Orte für dieselbe
+Priorität wären die Doppelquelle, die der Guard verbietet. Achte darauf, dass
+die neuen Ordnernamen nicht anfangen, Phasen zu behaupten, die `STATUS.md`
+führt.
+
+### Danach
+
+`phase: codex_working`, `owner: codex`, `review_round` bleibt `0`. Auflage
+zuerst ins Ticket, dann verschieben.
 
 ## Projektstand · verbindliche Vorgabe Mike, 2026-09-09
 
