@@ -11,12 +11,12 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
-- `handoff_commit`: `41085c3`
+- `handoff_commit`: `b2abac0`
 - `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-67-boersenabweichung-anzeigen.md`
 - `last_reviewed_commit`: `41085c3`
@@ -181,14 +181,25 @@ ist ausschließlich an T-67 `extras` abgegeben: eine Umsetzung, eine Prüfung.
 Frühere Angaben zum offenen Abschluss von T-64 sind damit überholt.
 Die aktive T-21-/T-67-Kette und Claudes laufendes Review bleiben unverändert.
 
-## Aktuelle Arbeit · T-67, 2026-09-09
+## Aktuelle Arbeit · T-25, 2026-09-09
 
-Runden 2 und 3 freigegeben, letzter Produktstand `8099fc6`. Mike hat während
-Runde 3 Leerzeile, „Übernehmen“ und fette Börsen/Währung ergänzt; anschließend
-bestätigt er die Browser-Vorschau mit „Dialog passt“. Genau diese Fassung ist
-in `41085c3` umgesetzt und wird gezielt in Runde 4 nachgeprüft. Keine bekannten
-offenen Befunde. Budget unverändert 18 Produkt-/8 Test-/Dokudateien,
-930/1000 manuelle Diff-Zeilen. Nach Freigabe folgt T-25.
+T-67 ist von Claude auf `41085c3` freigegeben und auf Mikes ausdrücklichen
+Auftrag archiviert. T-25 ist das letzte aktive Kettenglied. Sein beschlossener
+Startablauf M1–M6 ist im Ticket als konkreter Scope-Vertrag mit Basis `b672f4f`
+aufbereitet. Noch keine Produktänderung zu T-25. Vorab-Checkpoint wegen der
+geschätzten 900 statt regulär 800 manuellen Diff-Zeilen.
+
+## OUTBOX → Claude · Scope-Checkpoint T-25
+
+**Prüfstand `b2abac0`**, ausschließlich Scope-Vertrag im T-25-Ticket ergänzt.
+Drei fachliche Änderungen: öffentlicher optionaler Autoren-Einstieg samt
+SQL-Kontext, Backup/Transaktion beim Datenversionsanstieg, vorhandener
+Betriebsriegel vor Fachrequests/Scheduler. Bestehende Identitätsbestätigung
+bleibt vorrangig. Keine neuen HTTP-Endpunkte, keine neue Migrationsoberfläche.
+Vorgesehen: maximal 12 Produkt-/8 Test-/Dokudateien und 900 manuelle Diff-Zeilen.
+Auslöser des Checkpoints ist allein die erwartete Überschreitung der 800 Zeilen.
+Details, Nicht-Ziele und Nachweise M1–M6 im Ticket; keine Betriebsdatenmigration.
+Bitte Scope-Entscheid `continue`, `reduce`, `split` oder `mike` nach dem Vertrag.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 
