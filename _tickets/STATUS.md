@@ -36,6 +36,16 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
+## Projektstand · verbindliche Vorgabe Mike, 2026-09-09
+
+StockInfo ist Entwicklungsstand, bislang nur von Mike verwendet. Die erste
+Unraid-Version begründet keine angenommene externe Nutzerbasis. Migrationen,
+Kompatibilität und Ablösungshinweise brauchen konkreten Bedarf aus dem
+tatsächlichen Betrieb; keine Zusatzarbeit für hypothetische Verbreitung.
+Für beide Rollen in den Review-Patterns verankert:
+[R-02](CODEX-REVIEW-PATTERNS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
+Diese Vorgabe ist bei der laufenden Prüfung zu berücksichtigen.
+
 ## Aktive Kette · T-21, Auftrag Mike, 2026-09-09
 
 Mike beauftragt die verbleibende Börsenabweichungsanzeige. Codex implementiert,

@@ -15,6 +15,47 @@ einem Rollenwechsel.
 Einzelbefunde bleiben zunächst in ihren Tickets; die Claude-Sammlung wird nicht
 als Codex-Befund kopiert.
 
+## R-02 · Entwicklungsstand wird wie ein breit ausgerolltes Produkt behandelt
+
+**Verbindliche Projektvorgabe von Mike, 2026-09-09; gilt für Coder und Verifier.**
+StockInfo ist im Entwicklungsstand und wird bislang nur von Mike verwendet.
+Eine erste Version läuft auf Unraid. Daraus folgt keine große externe
+Nutzerbasis und keine Pflicht zu Übergangsfristen oder Änderungskampagnen.
+Diese Einordnung gilt, bis Mike einen anderen Betriebsstand festlegt.
+
+**Erkennungsregel:** Eine Änderung wird mit Rückwärtskompatibilität,
+Migrationspfaden, Ablösungshinweisen oder zusätzlicher Reviewarbeit belastet,
+weil hypothetisch viele Nutzer oder unbekannte Altinstallationen betroffen
+sein könnten. Eine Veröffentlichung auf Unraid wird dabei ohne Beleg mit
+breiter Nutzung gleichgesetzt. So entsteht Aufwand ohne konkreten Nutzen.
+
+**Regel für Umsetzung und Review:**
+
+- Maßstab sind Mikes tatsächlich verwendete Daten, Installationen und
+  ausdrücklich benannte Verbraucher. Eine große Nutzerbasis wird nicht erfunden.
+- Migration oder Kompatibilität nur bei einem konkreten Bedarf: Welche
+  vorhandenen Daten oder welcher tatsächlich genutzte Ablauf wären betroffen?
+  Ohne diesen Bezug entsteht daraus weder Implementierungsauftrag noch Finding.
+- Die aktuelle Dokumentation beschreibt den gültigen Stand direkt.
+  Keine Ablösungs- oder Umstellungshinweise für verworfene Entwicklungsregeln.
+  Alte Entscheidungen bleiben bei Bedarf in Ticket und Git nachvollziehbar.
+- Veraltete Konzepte entfernen, statt sie durch Übergangsschichten am Leben
+  zu halten. Vorhandene Daten schützen heißt nicht, jede frühere Entwicklungsidee
+  dauerhaft unterstützen zu müssen.
+- Prüfaufwand und Befundgewicht folgen dem belegten Schaden. Kein zusätzliches
+  Ticket, Testsystem oder Reviewzyklus allein wegen hypothetischer Verbreitung.
+
+**Prüffrage:** Welcher reale Nutzer, Datenbestand oder Verbraucher braucht diese
+Maßnahme heute, und welchen konkreten Nachteil verhindert sie? Ohne belegbare
+Antwort entfällt die zusätzliche Maßnahme; die eigentliche Änderung wird fertig.
+
+**Anlass:** T-21, Codex als Implementer, `1166745`: Ablösungsnotiz zur früheren
+US-Sonderregel; anschließend Übergangssprache im Entwurf (`f0fb8c8`). Mike
+weist beides zurück; entfernt in `4bacaf2`. Mike benennt das übergeordnete
+Problem ausdrücklich als wiederkehrend: „Der aktuelle Stand ist ein
+Entwicklungsstand“ und „Wir schießen mit Kanonen auf Spatzen“. Diese Vorgabe
+wird auf seinen Auftrag festgehalten; es werden keine weiteren Vorfälle erfunden.
+
 ## CX-01 · Der grüne Gesamtlauf steht auf Reststand statt auf Frischstart
 
 **Erkennungsregel:** Die Übergabe nennt eine vollständige grüne Suite und ein

@@ -10,6 +10,11 @@ Bugs bleiben im Ticket. Ein Eintrag enthält Erkennungsregel, Prüffrage und
 Belege; neue Belege werden am bestehenden Eintrag ergänzt statt ihn zu
 duplizieren.
 
+**Für jedes Review gilt Mikes Projektvorgabe:** StockInfo ist Entwicklungsstand,
+keine angenommene große Nutzerbasis. Die gemeinsame Regel steht in
+[R-02 · Entwicklungsstand](CODEX-REVIEW-PATTERNS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
+Migrationen, Kompatibilität und Hinweise brauchen einen konkreten Bedarf.
+
 ## Übersicht
 
 - [P-01 · Testtiefe wird überzeichnet](#p-01--testtiefe-wird-in-der-übergabe-überzeichnet)
