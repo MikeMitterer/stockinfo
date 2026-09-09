@@ -223,10 +223,60 @@ Abweichungen:
 `handoff_commit` eintragen — und danach ausschließlich `_tickets/` anfassen.
 Eine nachgezogene Statuszeile im Entwurf ist Inhalt, keine Formalie.
 
-### Konvergenzprüfung statt starrer Rundengrenze
+### Rundenlimit: Rest offenlegen und abschließen
 
-Mehrere Entwurfsrunden sind kein Qualitätsmerkmal und ihre Anzahl allein ist
-auch kein Abbruchgrund. Als **grober Richtwert** lösen ungefähr drei
+**Vorgabe Mike, 2026-09-09; gilt für Coder und Verifier bei Code- und
+Konzeptreviews.** `max_review_rounds` in `STATUS.md` begrenzt die regulären
+vollständigen Reviewrunden je Ticket. Es ist keine Mindestanzahl, keine
+Abbruchautomatik und kein Freigabegrund. `last_reviewed_round` bezeichnet
+weiterhin die tatsächlich zuletzt abgeschlossene Runde.
+
+**Beim Erreichen des Limits steht im Ticket deutlich, was noch offen ist
+und warum das Limit erreicht wurde.** Der Verifier aktualisiert dazu die
+bestehende Verify-Matrix und nennt im aktuellen Restabschnitt:
+
+- jeden offenen Befund mit Fundstelle, konkreter Auswirkung und Einordnung
+  als Blocker oder nicht blockierende Kleinigkeit;
+- den Grund, weshalb er noch offen ist und die bisherigen Runden ihn nicht
+  erledigt haben; auch eigene ausgelassene Korrekturen werden benannt;
+- den nächsten konkreten Handgriff, den zuständigen Bearbeiter und den
+  erforderlichen Nachweis für den Abschluss.
+
+Ist nichts mehr offen, steht das ausdrücklich dort, zusammen mit dem Grund
+für den Rundenverbrauch. Keine zweite Statusmatrix und kein pauschales
+„Limit erreicht“ anstelle des Befunds.
+
+**Eindeutige, verhaltensneutrale Kleinigkeiten erledigt der Verifier über die
+Selbstheilung oben, auch am Limit.** Dazu gehören passende Kommentar- und
+Docstring-Korrekturen. Das Limit rechtfertigt weder ihr Liegenlassen noch eine
+zusätzliche vollständige Runde. Ein solcher Textrest ist ohne belegten
+fachlichen Schaden kein Blocker. Ist Selbstheilung im konkreten Fall nicht
+zulässig, bleibt der Rest mit Grund und Zuständigkeit sichtbar; er wird nicht
+als erledigt ausgegeben.
+
+**Echte Blocker bleiben beim aktuellen Ticket.** Der Coder behebt sie, der
+Verifier prüft gezielt die Korrektur und ihre betroffenen Folgen. Das läuft
+über die bestehenden Arbeits- und Übergabephasen weiter, ohne automatische
+Übergabe an Mike. Es beginnt keine neue breite Suche nach Nebenbefunden.
+Eine erforderliche Nachprüfung jenseits des regulären Limits wird im Ticket
+als begründete Überschreitung mit Umfang und Ergebnis ausgewiesen; die
+Rundennummer zählt ehrlich weiter. Weder Zähler zurücksetzen noch durch ein
+neues Ticket denselben Blocker aus dem Limit herauslösen.
+
+Solange ein Blocker offen ist, gibt es kein `approved`, keinen Anschluss an
+das nächste Ticket und kein Verschieben nach `solved/`. Nicht blockierende
+Restpunkte verhindern eine begründete Freigabe nicht; sie bleiben ausdrücklich
+sichtbar. Die sonstigen Regeln für den Ticketabschluss gelten unverändert.
+`owner: mike` und ein gestoppter Ablauf sind nur nötig, wenn tatsächlich seine
+Entscheidung oder eine von den Agenten nicht auflösbare Voraussetzung fehlt.
+Das Erreichen der Zahl allein ist kein solcher Grund.
+
+### Konvergenzprüfung bei wiederholt erfolglosen Entwurfsrunden
+
+Die Regel zum Rundenlimit oben gilt auch für Entwürfe. Die folgende
+Konvergenzprüfung ergänzt sie; sie erlaubt keine undokumentierte
+Überschreitung. Mehrere Entwurfsrunden sind kein Qualitätsmerkmal und ihre
+Anzahl allein ist auch kein Abbruchgrund. Als **grober Richtwert** lösen ungefähr drei
 aufeinanderfolgende inhaltlich erfolglose Reviews desselben Entwurfsscope eine
 ausdrückliche Konvergenzprüfung aus. Ein formaler Handoff-Blocker zählt dabei
 nicht als inhaltlich erfolglose Runde.
@@ -240,8 +290,10 @@ Der Reviewer beantwortet dann im Review knapp:
 4. Warum ist eine weitere Korrekturrunde voraussichtlich die letzte — oder
    warum wäre diese Annahme nicht belastbar?
 
-Sind Rest und Abschlussweg konkret, ist auch eine vierte oder weitere Runde
-zulässig. Der Richtwert ist **keine absolute Grenze**. Je länger die Schleife
+Sind Rest und Abschlussweg konkret, kann eine gezielte Nachprüfung nötig
+sein. Bei gesetztem `max_review_rounds` gilt dafür die dokumentierte
+Überschreitung nach der Regel oben; der Konvergenz-Richtwert ersetzt das
+Rundenlimit nicht. Je länger die Schleife
 läuft, desto konkreter muss jedoch die Begründung für eine weitere punktuelle
 Korrektur sein. Ist keine belastbare Konvergenz absehbar, endet die
 Patch-Schleife: Claude erstellt eine konsolidierte Neufassung oder verkleinert

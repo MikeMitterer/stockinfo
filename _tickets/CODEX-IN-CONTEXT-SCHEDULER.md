@@ -109,6 +109,12 @@ Ein Rollenwechsel startet keinen Scheduler automatisch.
   Scope-Entscheid auslösen. Ausschlaggebend bleibt ausschließlich ein neues,
   valides `ready_for_codex`- beziehungsweise `scope_checkpoint`-Tupel; ein
   vollständiges Review startet weiterhin nur bei `ready_for_codex`.
+- `max_review_rounds` allein stoppt den Scheduler nicht und wechselt keinen
+  Owner. Bei tatsächlicher Arbeit gilt die gemeinsame
+  [Rundenlimit-Regel](CODEX-REVIEW-AUTOMATION.md#rundenlimit-rest-offenlegen-und-abschließen):
+  Rest und Ursache im Ticket offenlegen, Selbstheilung nutzen, Blocker vor
+  Folgearbeit beheben und gezielt nachprüfen. Der Timer entscheidet darüber
+  nicht selbst und setzt keine Runde zurück.
 - Ein neues Ticket darf nicht aus der Nummernfolge oder aus einer während des
   Reviews entdeckten Nebenarbeit abgeleitet werden. Maßgeblich ist allein
   `priority_ticket`. Nach dem letzten Element einer Kette bleibt der Scheduler

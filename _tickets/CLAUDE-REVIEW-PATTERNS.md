@@ -19,6 +19,22 @@ keine angenommene große Nutzerbasis. Die gemeinsame Regel steht in
 [R-02 · Entwicklungsstand](CODEX-REVIEW-PATTERNS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
 Migrationen, Kompatibilität und Hinweise brauchen einen konkreten Bedarf.
 
+## Gemeinsame Vorgabe zum Rundenlimit
+
+**Mike, 2026-09-09:** Am Limit müssen offene Befunde und der Grund für den
+Rundenverbrauch im Ticket klar erkennbar sein. Verhaltensneutrale
+Kommentar-/Docstring-Reste über die Verifier-Selbstheilung erledigen; die
+Rundenzahl macht sie weder zum Blocker noch zu zulässigerweise vergessener
+Arbeit. Echte Blocker verhindern Freigabe, Folgearbeit und `solved/`.
+Keine automatische Übergabe an Mike allein wegen der Zahl. Der gemeinsame
+[Ablauf zum Rundenlimit](CODEX-REVIEW-AUTOMATION.md#rundenlimit-rest-offenlegen-und-abschließen)
+ist maßgeblich.
+
+Anlass sind die von Mike benannten, zunächst liegen gebliebenen
+Docstring-Korrekturen aus T-21 und Codex' anschließende zu starre
+Eskalationsregel in `4dbb9bd`. Das ist eine ausdrückliche gemeinsame
+Arbeitsvorgabe, keine Behauptung zusätzlicher unabhängiger Vorfälle.
+
 ## Übersicht
 
 - [P-01 · Testtiefe wird überzeichnet](#p-01--testtiefe-wird-in-der-übergabe-überzeichnet)

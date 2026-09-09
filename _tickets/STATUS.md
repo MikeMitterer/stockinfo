@@ -25,14 +25,17 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `priority_chain`: `T-67-boersenabweichung-anzeigen.md`
 - `priority_ticket`: `T-67-boersenabweichung-anzeigen.md`
 
-**Rundenlimit · Mike, 2026-09-09:** `max_review_rounds: 3` bedeutet
-höchstens drei vollständige Reviewrunden je Ticket der aktiven Kette, keine
-Mindestanzahl. Bei Freigabe endet das Review früher. Bleiben nach Runde 3
-Befunde offen, geht der Vorgang mit konkreten Restbefunden an Mike
-(`phase: blocked`, `owner: mike`); keine automatische Runde 4 und kein
-Zurücksetzen des Zählers, um das Limit zu umgehen. Scope-Checkpoints sind
-keine vollständigen Reviewrunden. Diese ausdrückliche Vorgabe geht dem
-allgemeinen Richtwert zur Konvergenzprüfung vor.
+**Rundenlimit · Mike, präzisiert 2026-09-09:** `max_review_rounds: 3`
+begrenzt die regulären vollständigen Reviews je Ticket. Beim Erreichen nennt
+das Ticket alle offenen Befunde, ihre Bedeutung und den Grund für den
+Rundenverbrauch. Kein automatischer Wechsel zu Mike. Mechanische
+Kleinigkeiten werden durch Verifier-Selbstheilung erledigt; Blocker werden
+am aktuellen Ticket korrigiert und gezielt nachgeprüft. Erforderliche
+Überschreitungen bleiben begründet und korrekt gezählt. Mit offenem Blocker
+weder Folgearbeit noch `solved/`. Verbindlicher Ablauf für beide Agenten:
+[Rundenlimit](CODEX-REVIEW-AUTOMATION.md#rundenlimit-rest-offenlegen-und-abschließen).
+Die frühere automatische Eskalation beim Erreichen der Zahl ist aufgehoben.
+Scope-Checkpoints sind keine vollständigen Reviewrunden.
 
 `review_round` zählt die aktuelle Übergaberunde. `last_reviewed_round`
 gehört zusammen mit `last_reviewed_ticket` und `last_reviewed_commit` zum
