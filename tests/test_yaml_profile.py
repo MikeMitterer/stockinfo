@@ -741,11 +741,11 @@ instruments:
 instruments:
   - id: a
     identity: {kind: listed, isin: IE00B4L5Y983, ticker: EUNL, mic: US}
-    name: Sammelcode statt MIC
+    name: Länderpräfix statt MIC
     instrument_type: etf
 """,
             "mic",
-            id="sammelcode-statt-mic",
+            id="laenderpraefix-statt-mic",
         ),
         pytest.param(
             """version: 1

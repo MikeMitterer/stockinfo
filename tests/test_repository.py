@@ -563,7 +563,7 @@ def test_ein_papier_ohne_handelsplatz_wird_nicht_angelegt(
     # Seit Runde 40 mit einem **vorhandenen, aber ungültigen** Wert: `ticker`
     # und `mic` sind nicht-nullbare Pflichtfelder, „gar keine Identität" lässt
     # sich am Modell nicht mehr ausdrücken. Für eine Kryptowährung gibt es
-    # keinen ISO-10383-MIC — der Sammelcode ist der nächstbeste Griff, und
+    # keinen ISO-10383-MIC — das Länderpräfix ist der nächstbeste Griff, und
     # genau den lehnt `canonical_identity` ab.
     with pytest.raises(IncompleteIdentityError) as rejected:
         repo.save_quote(
@@ -571,8 +571,8 @@ def test_ein_papier_ohne_handelsplatz_wird_nicht_angelegt(
                 identity=ListedIdentityOut(ticker="BTC", mic="US", isin=None),
                 symbol="BTC-USD",
                 name="BTC-USD Testpapier",
-                # Ebenfalls beiläufig: Abgelehnt wird wegen des Sammelcodes
-                # `US` als MIC, nicht wegen der Gattung.
+                # Ebenfalls beiläufig: Abgelehnt wird, weil `US` die
+                # MIC-Schreibweise nicht erfüllt, nicht wegen der Gattung.
                 type="crypto",
                 currency="USD",
                 price=61234.0,

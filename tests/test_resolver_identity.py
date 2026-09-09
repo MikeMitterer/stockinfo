@@ -63,10 +63,10 @@ class _FigiClient:
 def test_suffixloses_symbol_bekommt_seinen_mic_aus_dem_boersencode(monkeypatch) -> None:
     """Genau die Lücke aus Teil 1 — und der Grund, warum sie dort offen blieb.
 
-    Die Migration kann `AAPL` nicht zuordnen: Die Börsentabelle führt für
-    suffixlose Symbole nur den Sammelcode `US`, und ob NYSE oder NASDAQ gilt,
-    steht dort nicht. Die **Auflösung** weiß es — Yahoo nennt den Handelsplatz
-    im Feld `exchange`.
+    Die Migration kann `AAPL` nicht zuordnen: Ein suffixloses Symbol benennt
+    keinen Handelsplatz, und ob NYSE oder NASDAQ gilt, steht nirgends in der
+    Eingabe. Die **Auflösung** weiß es — Yahoo nennt den Handelsplatz im Feld
+    `exchange`.
     """
     _with_hits(monkeypatch, {"symbol": "AAPL", "exchange": "NMS", "quoteType": "EQUITY"})
 

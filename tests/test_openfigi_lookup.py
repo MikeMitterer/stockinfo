@@ -1,4 +1,4 @@
-"""Konkrete Handelsplätze und MIC-Formregel ohne Sammelcodes."""
+"""Konkrete Handelsplätze und die gemeinsame MIC-Formregel."""
 
 import pytest
 
@@ -18,7 +18,7 @@ def test_die_boersentabelle_traegt_kein_anbieterwissen() -> None:
 
 
 def test_ein_land_ist_keine_boerse() -> None:
-    """Eine US-ISIN darf weder einen Sammelcode noch eine geratene Börse erhalten."""
+    """Eine US-ISIN darf weder das Länderpräfix noch eine geratene Börse erhalten."""
     assert not is_real_mic("US")
     assert home_exchange("US0378331005") is None
     assert home_exchange("CA7800871021") == "XTSE"

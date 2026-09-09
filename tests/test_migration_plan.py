@@ -338,12 +338,12 @@ def test_ein_verlustloser_altbestand_wird_beim_start_gehaertet(tmp_path) -> None
         ("EUNL", None, False),
         ("", "XETR", False),
     ],
-    ids=["vollstaendig", "sammelcode_als_mic", "ohne_ticker", "ohne_mic", "leerer_ticker"],
+    ids=["vollstaendig", "laenderpraefix_als_mic", "ohne_ticker", "ohne_mic", "leerer_ticker"],
 )
 def test_nur_eine_vollstaendige_zuordnung_bleibt_unangetastet(
     ticker: str | None, mic: str | None, expected: bool
 ) -> None:
-    """Der Sammelcode `US` im MIC-Feld ist keine Identität, sondern ihr Gegenteil.
+    """Das Länderpräfix `US` im MIC-Feld ist keine Identität, sondern ihr Gegenteil.
 
     Eine solche Zeile wird neu bewertet statt durchgewunken — sonst überlebte
     genau der Wert den Umzug, den T-21 austreibt.

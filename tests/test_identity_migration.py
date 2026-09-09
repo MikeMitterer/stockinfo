@@ -397,8 +397,8 @@ def _mit_gesetzter_identitaet(
 def test_eine_gueltige_zuordnung_bleibt_unangetastet(tmp_path) -> None:
     """Handarbeit wird nicht zurückgenommen.
 
-    Ein von Hand gesetztes `VTI/XNAS` ist vollständig und trägt keinen
-    Sammelcode. Der Umzug lässt es in Ruhe, obwohl sich `symbol` nicht
+    Ein von Hand gesetztes `VTI/XNAS` ist vollständig und trägt einen echten
+    MIC. Der Umzug lässt es in Ruhe, obwohl sich `symbol` nicht
     zerlegen ließe — sonst nähme er genau die Arbeit zurück, die jemand
     vorher hineingesteckt hat.
     """
@@ -414,19 +414,18 @@ def test_eine_gueltige_zuordnung_bleibt_unangetastet(tmp_path) -> None:
     assert _rejections(path) == {}
 
 
-def test_der_sammelcode_ueberlebt_die_migration_nicht(tmp_path) -> None:
+def test_das_laenderpraefix_ueberlebt_die_migration_nicht(tmp_path) -> None:
     """`US` ist kein MIC — auch nicht, wenn eine Zeile ihn als solchen führt.
 
-    Das Prüf-Script erkannte diesen Zustand, die Migration nicht: Sie sah zwei
-    nichtleere Felder und ließ die Zeile in Ruhe. Damit blieb der ausdrücklich
-    nichtkanonische Sammelcode dauerhaft als MIC gespeichert — der grüne
-    Smoke-Lauf bewies nur, dass er ihn hinterher meldet.
+    Der Fall stammt aus einer Altdatenbank: Die Migration sah zwei nichtleere
+    Felder und ließ die Zeile in Ruhe. Damit blieb ein Wert dauerhaft als MIC
+    gespeichert, der die MIC-Schreibweise nicht erfüllt.
 
     Vollständig ist eine Identität erst mit einem **echten** MIC. Alles andere
     wird neu bewertet — und `VTI` verlässt dabei den Bestand, weil sich sein
     Symbol nicht zerlegen lässt.
     """
-    path = str(tmp_path / "sammelcode.db")
+    path = str(tmp_path / "laenderpraefix.db")
     _legacy_database(path, [("VTI", "US9229087690")])
     _mit_gesetzter_identitaet(path, "VTI", "VTI", "US")
 
@@ -455,9 +454,9 @@ def test_der_sammelcode_ueberlebt_die_migration_nicht(tmp_path) -> None:
     [
         ("NOT-A-MIC", "sieht nicht einmal wie ein MIC aus"),
         ("XNAS\n", "trägt einen Zeilenumbruch"),
-        ("US", "ist ein Sammelcode"),
+        ("US", "ist ein Länderpräfix"),
     ],
-    ids=["unsinn", "zeilenumbruch", "sammelcode"],
+    ids=["unsinn", "zeilenumbruch", "laenderpraefix"],
 )
 def test_ein_untauglicher_mic_ueberlebt_den_umzug_nicht(
     tmp_path, mic: str, warum: str

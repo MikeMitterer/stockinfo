@@ -108,13 +108,13 @@ def test_us_notiert_ohne_suffix() -> None:
     """Was von diesem Test übrig bleibt, nachdem das Anbieterwissen umgezogen ist.
 
     Der fehlende Alias ist eine Eigenschaft der **Börse**: In den USA ist das
-    punktlose Symbol die Notierung. Dass OpenFIGI dort über `exchCode` sucht,
-    ist dagegen eine Eigenschaft des Anbieters und steht seit T-21 Teil 2b bei
-    ihm — geprüft in `tests/test_openfigi_lookup.py`.
+    punktlose Symbol die Notierung. Wie ein Anbieter nach dieser Börse fragt,
+    gehört dagegen zu ihm und nicht in den Katalog — geprüft in
+    `tests/test_openfigi_lookup.py`.
 
-    Seit Teil 3 steht hier ein **echter MIC** statt des Sammelcodes `US`: Die
-    Eigenschaft gehört dem Handelsplatz, und `US` ist keiner. Die Abwesenheit
-    steht als `None` da, nicht als Leerstring.
+    Der Schlüssel ist ein echter MIC: Die Eigenschaft gehört dem Handelsplatz,
+    und `US` ist keiner. Die Abwesenheit steht als `None` da, nicht als
+    Leerstring.
     """
     assert EXCHANGES["XNAS"].alias is None
 
@@ -737,10 +737,10 @@ def test_yahoo_laesst_einen_unbekannten_punktlosen_treffer_nicht_gewinnen(
 ) -> None:
     """Ein Treffer, dessen Börse niemand kennt, gehört zu keiner Präferenz.
 
-    Vorher zählte er beim Sammelcode `US` als Treffer der bevorzugten Börse,
-    verdrängte das gültige Mitglied dahinter — und die anschließende
-    MIC-Abbildung machte daraus `Unavailable`. Der Fehlerfall war damit
-    schlimmer als kein Vorzug: Ein auflösbarer Treffer lag vor.
+    Zählte er als Treffer der bevorzugten Börse, verdrängte er das gültige
+    Listing dahinter — und die anschließende MIC-Abbildung machte daraus
+    `Unavailable`. Der Fehlerfall wäre damit schlimmer als kein Vorzug:
+    Ein auflösbarer Treffer lag vor.
     """
     _with_search(
         monkeypatch,

@@ -2,13 +2,14 @@
 
 Hier stehen **drei** Fälle, und jeder von ihnen fasst den Dienst wirklich an.
 Alles, was sich ohne fremden Dienst entscheiden lässt — Zuständigkeit,
-Übersetzung, der geerbte `ResolverContract`, der Sammelcode-Fall —, steht in
-`test_plugin_openfigi.py` und läuft auch dann, wenn diese Datei abgewählt ist.
+Übersetzung, der geerbte `ResolverContract`, der Rückfall bei unbekannter
+Präferenz —, steht in `test_plugin_openfigi.py` und läuft auch dann, wenn
+diese Datei abgewählt ist.
 
-Der Sammelcode-Fall gehörte ausdrücklich **nicht** hierher: Der Kern-Resolver
-bricht bei `US` ab, bevor der Client an der Reihe ist. Ein Test unter dem
-Marker `integration`, der gar nichts fragt, macht die Angabe „drei echte
-Netzfälle" zu einer Behauptung.
+Der Rückfall gehört ausdrücklich **nicht** hierher: Er entscheidet sich im
+Kern-Resolver an der Präferenz, nicht an der Antwort des Dienstes. Ein Test
+unter dem Marker `integration`, der die echte API gar nicht braucht, macht die
+Angabe „drei echte Netzfälle" zu einer Behauptung.
 
     pytest tests/test_plugin_openfigi_integration.py   # fragt OpenFIGI
     pytest -m "not integration"                        # ohne fremde Dienste

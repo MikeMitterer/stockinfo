@@ -81,8 +81,8 @@ class TestOpenFigiPluginContract(ResolverContract):
     """Der vollständige Resolver-Vertrag — geerbt, nicht geschrieben.
 
     Der Vertrag prüft unter anderem, dass ein Treffer einen **echten** MIC
-    trägt. Genau daran ist die erste Fassung dieses Plugins gescheitert: Sie
-    lieferte `Resolved(mic="US")`, und `US` ist ein Sammelcode.
+    trägt. Ein Ergebnis wie `Resolved(mic="US")` erfüllt das nicht: Das
+    Länderpräfix benennt keinen Handelsplatz.
     """
 
     responsible = ResolveRequest(isin="IE00B3RBWM25", preferred_mic="XETR")
