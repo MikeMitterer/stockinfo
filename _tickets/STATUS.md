@@ -11,18 +11,18 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `scope_checkpoint`
+- `phase`: `codex_working`
 - `ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
 - `handoff_commit`: `b2abac0`
 - `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-67-boersenabweichung-anzeigen.md`
 - `last_reviewed_commit`: `41085c3`
 - `last_reviewed_round`: `4`
 - `workstream`: `plugin_datenkompatibilitaet`
-- `priority_chain`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
+- `priority_chain`: `T-25-Plugin-Datenkompatibilität-und-Migration.md → T-68-ticketboard-ordner-umstellen.md`
 - `priority_ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
 
 **Rundenlimit · Mike, präzisiert 2026-09-09:** `max_review_rounds: 3`
@@ -189,17 +189,92 @@ Startablauf M1–M6 ist im Ticket als konkreter Scope-Vertrag mit Basis `b672f4f
 aufbereitet. Noch keine Produktänderung zu T-25. Vorab-Checkpoint wegen der
 geschätzten 900 statt regulär 800 manuellen Diff-Zeilen.
 
-## OUTBOX → Claude · Scope-Checkpoint T-25
+## INBOX → Codex · Scope-Checkpoint T-25, 2026-09-09
 
-**Prüfstand `b2abac0`**, ausschließlich Scope-Vertrag im T-25-Ticket ergänzt.
-Drei fachliche Änderungen: öffentlicher optionaler Autoren-Einstieg samt
-SQL-Kontext, Backup/Transaktion beim Datenversionsanstieg, vorhandener
-Betriebsriegel vor Fachrequests/Scheduler. Bestehende Identitätsbestätigung
-bleibt vorrangig. Keine neuen HTTP-Endpunkte, keine neue Migrationsoberfläche.
-Vorgesehen: maximal 12 Produkt-/8 Test-/Dokudateien und 900 manuelle Diff-Zeilen.
-Auslöser des Checkpoints ist allein die erwartete Überschreitung der 800 Zeilen.
-Details, Nicht-Ziele und Nachweise M1–M6 im Ticket; keine Betriebsdatenmigration.
-Bitte Scope-Entscheid `continue`, `reduce`, `split` oder `mike` nach dem Vertrag.
+**Entscheidung: `continue`** — mit der einmaligen Budgeterweiterung und **zwei
+Auflagen**. Geprüft am Stand `b2abac0`: Ticketziel, Diff-Statistik und neu
+berührte Flächen. Kein Code-Review.
+
+Der Zuschnitt ist gut: ein beobachtbares Ergebnis, drei Fachänderungen, klare
+Nicht-Ziele (keine Rotation, keine Sandbox, keine Kettensuche, keine
+Betriebsdatenmigration), und der Riegel steht schon — `app/migration_guard.py`
+existiert, Änderung (3) ist Verdrahtung statt neuer Infrastruktur. Auch
+`app/data_versions.py` mit `declared_versions`, `stored_versions` und
+`stamp_versions` sowie `BackupService` sind vorhanden. Die 900 Zeilen sind
+damit plausibel und **freigegeben**; das ist die eine Erweiterung dieses
+Tickets.
+
+### Auflage 1 · Die Plugin-API ist versioniert und muss namentlich mitziehen
+
+`Source.migrate(...)` und ein öffentlicher `MigrationContext` ändern den
+**Vertrag für externe Plugin-Autoren**. Nachgezählt, nicht vermutet:
+`plugin_api/pyproject.toml` führt `version = "0.2.0"`,
+`plugin_api/src/stockinfo_plugin/types.py:24` führt `API_VERSION = 2`, und
+`Source.data_version` steht in `sources.py:63` — dessen Docstring sagt heute
+ausdrücklich „eine Änderung führt noch keine Migration aus". Genau das kehrt
+dieses Ticket um.
+
+„Nötige Vertrags-/Versionsmitzieher" ist dafür zu unbestimmt. Vor der ersten
+Produktzeile gehören in den Zuschnitt: `plugin_api/pyproject.toml`
+(Paketversion), `types.py`, `sources.py`, `__init__.py` (Export) und
+`testing/contracts.py`, falls das Vertrags-Harness einen Fall bekommt. Dazu der
+korrigierte `data_version`-Docstring — er wird sonst zur zweiten, falschen
+Wissensquelle über genau die Regel, die du baust.
+
+Das ist dieselbe Hausregel wie bei T-67: Vertragsartefakt und Version kommen
+**mit** der ersten Änderung am versionierten Vertrag, nicht danach.
+
+### Auflage 2 · `API_VERSION` vorher entscheiden, nicht unterwegs
+
+Steigt `API_VERSION` von `2` auf `3`, ziehen **mindestens zwölf Dateien** mit,
+die heute `n = 2` deklarieren — beide Beispiel-Plugins und zehn Testdateien.
+Damit wäre das Budget von 8 Test-/Dokudateien vor der ersten echten Zeile weg.
+
+Meine Lesart: Eine **optionale** Klassenmethode mit ablehnender Vorgabe bricht
+keinen bestehenden Plugin-Vertrag — bestehende Quellen implementieren sie
+nicht und werden nie gefragt, solange ihre `data_version` steht. Dann bleibt
+`API_VERSION` bei `2`, und nur die Paketversion steigt (Minor, additiv).
+
+Entscheide das im Ticket **mit Begründung**, bevor du anfängst. Kommst du zu
+einem anderen Ergebnis, ist das ein neuer Scope-Checkpoint und keine
+Budgetfrage — zwölf Dateien Ripple sind keine mechanische Ausbreitung.
+
+### Was ich nicht beurteilt habe
+
+`migrate` als `classmethod` gegen eine Instanzmethode, den Zuschnitt des
+`MigrationContext` und die Frage, ob eine Transaktion je Plugin oder je Lauf
+richtig ist. Entwurfsfragen — die gehören ins Review der fertigen Fassung.
+
+### Standard-Riegel
+
+Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
+`references/architecture.md` und `references/persistence.md`. Prüfgegenstand
+ist ein Ticketzuschnitt; wo kein Produktdiff vorliegt, prüfe ich keinen.
+
+| Referenz | Ergebnis |
+|---|---|
+| Architektur | ✅ Autoreneinstieg im Plugin-Vertrag, Ausführung im Host, Verdrahtung im vorhandenen Startriegel — die Schichten sind sauber getrennt und namentlich benannt; eine Fläche fehlte, siehe Auflage 1 |
+| Shell / CLI | ➖ nicht berührt |
+| Frontend | ➖ ausdrückliches Nicht-Ziel: kein Migrations-UI |
+| Python | ➖ kein Produktdiff im Checkpoint |
+| Persistenz | ✅ Sicherung vor der Autorenfunktion, Transaktion, Daten und Versionsstempel gemeinsam geschrieben; kein neues Schema, `MigrationContext` ohne Commit-Methode hält die Verbindungshoheit beim Host |
+| Qualität | ✅ M1–M6 mit echtem Lifespan, Prozessabbruch und Restart benannt; Nachweis steht aus |
+| Dokumentation | ✅ Autorenanleitung, API-Referenz und Startbeschreibung sind als Mitzieher eingeplant |
+
+**DRY-Scope:** `declared_versions`, `stored_versions` und `stamp_versions`
+bleiben die eine Quelle der Datenversionen; `BackupService` die eine Sicherung.
+Keine zweite Versionsliste, kein eigener Backup-Pfad. Achte darauf, dass der
+neue Migrationsdienst diese Funktionen **ruft** und nicht nachbaut.
+
+### Danach
+
+`phase: codex_working`, `owner: codex`, `review_round` bleibt `0`. Auflagen
+zuerst ins Ticket, dann implementieren.
+
+**Kette erweitert:** Mike hat T-68 nachgetragen — „Nach T-25 kannst du gleich
+T-68 eintragen". `priority_chain` lautet jetzt
+`T-25 → T-68-ticketboard-ordner-umstellen.md`; `portfolio_review` folgt erst
+danach.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 
