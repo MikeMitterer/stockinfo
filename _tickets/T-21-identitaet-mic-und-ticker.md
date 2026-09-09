@@ -1,5 +1,86 @@
 # T-21 · Identität auf MIC + Ticker umstellen
 
+## Restumsetzung Börsenabweichung · Auftrag Mike, 2026-09-09
+
+Codex implementiert, Claude prüft unabhängig über [STATUS.md](STATUS.md).
+Mike: „OK, dann erledige das. Den Docker-Langzeittest können wir nicht
+machen, das wird sich zeigen.“ Die historischen Docker-Zeilen bleiben
+Prüfhistorie; daraus folgt kein offener Abschlussriegel mehr.
+
+**Nachsteuerung Mike:** „Die Plugins geben die MICs zurück die unterstützt
+werden. Aus - den US-Sammelcode sollte es überhautp nicht mehr geben“.
+Damit sind die alten Anforderungen #2e2/#2e3 zum Sammelcode abgelöst.
+Codex hatte sie zunächst in neue UI-Tests übernommen; noch kein Produktcode
+entstanden. Dieser verworfene Testentwurf ist kein Produktnachweis.
+
+### Scope-Checkpoint vor Umsetzung
+
+Der erste UI-Zuschnitt (7 Produktdateien, 4 Test-/Dokudateien, 600 Zeilen)
+reicht nach Mikes Korrektur nicht: zusätzlich betroffen sind Core-Katalog,
+Resolver und der öffentliche Katalogtyp. Claude entscheidet über den folgenden
+konsolidierten Zuschnitt; bis dahin keine Produktänderung.
+
+**Vorgeschlagener Scope-Vertrag:** Drei fachliche Änderungen:
+
+1. App-Katalog und Präferenz kennen nur konkrete MICs. CollectorDef,
+   COLLECTORS, COLLECTOR_CODES und die REST-/TS-Collector-Variante entfallen.
+   Die vorhandene MIC-Formprüfung bleibt die gemeinsame Gültigkeitsregel.
+2. Auswahlwege verwenden einen einzelnen bevorzugten MIC. Die US-Sonderregel
+   in OpenFIGIs Anfragebildung und die Heimatsuche mit „US → US“ entfallen;
+   das Land allein bestimmt keinen US-Handelsplatz. Unbekannte Präferenzen
+   werden weiterhin als unbekannt ausgewiesen; für Resolver gilt der schon
+   vorhandene protokollierte Default-Rückfall, keine neue Startvalidierung.
+3. Sichtbarer MIC-Vergleich in Desktop-Tabelle und mobilen Karten. Die
+   gemeinsame Ableitung verwendet vorhandene REST-Daten, die Darstellung
+   DE/EN-Katalogtexte. Beide Kennungen, Anzeigenamen und Währungen: tatsächlich
+   aus dem letzten Kurs, bevorzugt aus dem Katalog. Fehlende Daten werden nicht
+   geraten. Der Hinweis beschreibt die aktuelle Präferenz, keinen behaupteten
+   historischen Aufnahmegrund; pair und isin_only bleiben ohne Vergleich.
+
+Erwartet **13 Produktdateien**: app/exchanges.py, app/models.py,
+app/routers/dashboard.py, app/resolver.py, app/providers/openfigi_provider.py,
+dashboard/src/types.ts sowie die sieben UI-Dateien des ersten Zuschnitts
+(AppDashboard, InstrumentsTable, InstrumentCard, ExchangeDeviation,
+utils/exchangeDeviation und DE/EN). Rein mechanische Kommentarbereinigung
+im OpenFIGI-Plugin gegebenenfalls als 14. Datei, innerhalb der Toleranz.
+Erwartet **12 Test-/Dokudateien**, **1400 manuelle Diff-Zeilen** einschließlich
+entfallender Altlogik und Testkommentare, ab c03b54c ohne Mikes vorbestehende
+Dokumentationsänderungen. Neue Funktionalität bleibt deutlich kleiner;
+kein neuer Endpunkt, keine Datenbank-/Migrationsänderung, keine Abhängigkeit,
+kein Test-Subsystem, keine Ausweitung der Plugin-Marktabdeckung.
+
+Die Entfernung der Collector-Variante ist eine bewusste Änderung des
+Dashboard-Katalogvertrags aufgrund Mikes ausdrücklichem Auftrag. Der
+versionierte geschlossene Kurs-Core und Plugin-API bleiben unverändert.
+Historische Spezifikationen erhalten eine klare Ablösungsnotiz, statt alte
+Reviewbelege umzuschreiben. Eine notwendige Budgetteilung kann Claude im
+Checkpoint als split festlegen; keine andere Portfolio-Arbeit wird aktiviert.
+
+### Aktuelle Prüfmatrix des Restumfangs
+
+Die folgenden Zeilen lösen für diese Prüfnummern die alten Snapshots im
+Historienabschnitt ab. Human-Antworten bleiben unverändert.
+
+| # | Nachweis | AI |
+|---|---|:--:|
+| 2e | Abweichende MICs, beide Anzeigenamen und Währungen, Desktop/Mobil DE/EN | ➖ |
+| 2e2 | Alte US-Sammelpräferenz entfällt; konkrete US-MICs bleiben einzeln nutzbar | ➖ |
+| 2e3 | Kein Collector im REST-/UI-Katalog oder in Auswahl-/Heimatregeln | ➖ |
+| 2b6c | Docker-Pending-Langzeitnachweis: von Mike aus dem Abschlussumfang genommen | ➖ |
+
+Entscheidende Akzeptanzfälle am öffentlichen Eingang: GET /exchanges liefert
+nur MIC-Einträge und weist US als unbekannt aus; echte Resolverauswahl
+unterscheidet XNAS und ARCX. Tabelle einschließlich echter Kartenkomponente
+zeigt ARCX bei XETR als abweichend, XETR bei XETR nicht; pair/isin_only nicht.
+Fehlende Katalogdaten und unbekannte Präferenz erzeugen keinen erfundenen
+Vergleich. Nachladen/Präferenzwechsel aktualisieren ihn. Tatsächliche Währung
+wird nie aus dem Katalog ergänzt. Ein gewöhnlicher Zeilenklick funktioniert,
+die Hinweisbedienung öffnet kein Diagramm.
+
+Rote Akzeptanztests vor Produktcode; schlanke negative Mutanten für Katalog
+und MIC-Vergleich; Backend-/Dashboard-Suiten, Lint/Build und isolierter
+Browserlauf vor unabhängiger Übergabe. Kein Docker-Langzeittest.
+
 ## Beauftragte Ergänzung: Abdeckung bei der Aufnahme
 
 Mikes ausdrücklicher Umsetzungsauftrag und die UI-Tests werden in
