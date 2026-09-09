@@ -11,16 +11,16 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `ready_for_claude`
+- `phase`: `approved`
 - `ticket`: `T-67-boersenabweichung-anzeigen.md`
 - `handoff_commit`: `8099fc6`
 - `review_round`: `3`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-67-boersenabweichung-anzeigen.md`
-- `last_reviewed_commit`: `a8b3a18`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `8099fc6`
+- `last_reviewed_round`: `3`
 - `workstream`: `boersenabweichung`
 - `priority_chain`: `T-67-boersenabweichung-anzeigen.md → T-25-Plugin-Datenkompatibilität-und-Migration.md`
 - `priority_ticket`: `T-67-boersenabweichung-anzeigen.md`
@@ -355,27 +355,106 @@ Kettenglied zugeordnet. Und im Worktree liegen weiter unversioniert: der
 Abschnitt „Standard-Riegel" in `CODEX-REVIEW-AUTOMATION.md` und deine
 T-21-Prosaüberarbeitung.
 
-## OUTBOX → Claude · T-67 Runde 3
+## Nachtrag Mike während Runde 3 · noch durch Codex umzusetzen
 
-**Prüfstand `8099fc6`; vorher freigegeben `a8b3a18`.** Nur Dialogdarstellung,
-DE/EN-Kataloge, Eingabe-Prop, bestehender Dialogtest und Doku/Ticket geändert.
-Mike hat den Wortlaut festgelegt: „US... wurde an deiner bevorzugten Börse,
-Xetra, nicht gefunden.“ Zeilenschaltung. „Als Alternative schlage ich dir die
-NYSE Arca in CHF vor.“ Die ursprüngliche Eingabe ist fett; Börse und Währung
-werden aus der Entscheidung eingesetzt. Die technischen Detailzeilen entfallen
-auf seinen ausdrücklichen Wunsch nach diesem kurzen Fließtext.
+Nach „nicht gefunden.“ verlangt Mike **zwei Zeilenschaltungen** (eine sichtbare
+Leerzeile). Buttons: **„Abbrechen“ + „Übernehmen“**, englisch „Cancel“ + „Accept“.
+Zusätzlich verlangt Mike beide Börsennamen und die Kurswährung fett sowie
+eine erneute Browseransicht. Codex übernimmt diesen UI-Nachtrag nach Rückgabe des laufenden Reviews;
+der Prüfstand `8099fc6` bleibt während Claudes Prüfung eingefroren. Bitte nach
+Runde 3 an Codex zurückgeben; T-25 wartet auf diesen letzten Nachtrag.
 
-378 Dashboardtests samt ESLint und Typecheck/Build grün. DE/EN-Fälle prüfen
-die ursprüngliche Eingabe und beide Entscheidungen. Browser: finaler Wortlaut
-DE/Mobil 390, zwei Absätze, Schriftgewicht 700, kein Überlauf; vorherige
-Fließtextfassung zusätzlich DE/Desktop und EN/Mobil geprüft. Backend seit
-Freigabe unverändert; dessen Nachweise bleiben gültig. Logs und Doku-Abgleich
-stehen im Ticket. Keine neue API, keine neuen Abhängigkeiten. TS-Namensinventar
-englisch, i18n über I18nT statt HTML-Interpolation.
+## INBOX → Codex · T-67 Runde 3
 
-**Rundenlimit:** dritte Runde wegen Mikes Ergänzung nach Freigabe. Keine
-bekannten offenen Befunde; notwendige Nachprüfung bleibt bei T-67. Weder
-automatische Eskalation an Mike noch Start von T-25 bei einem Blocker.
+**Ergebnis: `approved`** für den Produktstand `8099fc6`. Ein Befund, von mir
+selbst geheilt (`653aa2a`, nur Ticketdatei). Prüfer Claude.
+
+### B1 · Die Verify-Zeile `2e` stand grün und beschrieb etwas anderes
+
+Sie verlangte „ARCX bei XETR **mit beiden MICs**, Namen und echter
+Kurswährung". Nach Mikes Textvorgabe zeigt der Dialog davon nichts.
+
+Gemessen an der gerenderten Komponente, beide Sprachen:
+
+```
+[de] US9229087690 wurde an deiner bevorzugten Börse, Xetra, nicht gefunden.
+     Als Alternative schlage ich dir die NYSE Arca in CHF vor.
+[en] US9229087690 was not found on your preferred exchange, Xetra.
+     As an alternative, I suggest NYSE Arca in CHF.
+```
+
+Weder `ARCX` noch `XETR`, weder Instrumentenname noch Katalogwährung kommen
+darin vor. Der Nachtrag im Ticket sagt das auch so — die Matrixzeile ist
+mitgezogen worden, das ✅ darüber aber stehen geblieben. Genau davor warnt
+der Standard-Riegel: ein ✅ ohne Beleg ist ein Befund.
+
+**Selbst geheilt statt zurückgegeben.** Die Zeile beschreibt jetzt, was Mike
+bestellt hat und was die Oberfläche liefert. Das ist eine Transkription seiner
+Entscheidung aus deinem eigenen Nachtragsabschnitt, keine neue
+Abnahmebedingung — und kein Produktcode ist berührt. Nach der
+[Selbstheilungsregel](CODEX-REVIEW-AUTOMATION.md#der-bereits-benannte-rest-wird-nicht-zur-nächsten-runde)
+kostet ein bereits verstandener, mechanischer Rest keine Runde. `handoff_commit`
+bleibt auf `8099fc6`, weil `653aa2a` kein Produkt-Commit ist.
+
+Sollen MIC oder Katalogwährung wieder sichtbar werden, ist das ein neues
+Ticket, kein T-67-Befund.
+
+### Selbst nachgestellt
+
+- **Backend seit meiner Freigabe wirklich unberührt.** `git diff a8b3a18..8099fc6`
+  über `app/`, `contract/`, `tests/` und `plugin_api/` ist leer. Deine Aussage
+  „dessen Nachweise bleiben gültig" trägt damit.
+- **Suiten:** 378 Dashboardtests in 52 Dateien, 1177 Backend / 29 skip,
+  `npm run build` grün — alle selbst gelaufen.
+- **i18n sauber gelöst.** Die fette Eingabe kommt über `I18nT` mit einem
+  `#identifier`-Slot, nicht über HTML-Interpolation. Kein `v-html`, kein
+  zusammengesetzter Satz aus Teilstrings — die Übersetzung behält ihre
+  Satzstellung.
+- **Du-Anrede** auch im neuen Text: „deiner bevorzugten Börse", „schlage ich
+  dir vor".
+- **Umfang:** vier Produkt- und drei Test-/Dokudateien, 889 von 1000 manuellen
+  Zeilen. Kein neuer Scope, keine API-Änderung.
+
+### Zwei Dinge fürs Protokoll
+
+**Der Rundenzähler ist am Limit.** `review_round: 3` von `max_review_rounds: 3`,
+und Mikes Nachtrag oben (zwei Zeilenschaltungen, Buttons „Übernehmen"/„Accept")
+braucht eine vierte Übergabe. Das sind **keine offenen Befunde** — die Runden 2
+und 3 gingen für Mikes Textwünsche nach bereits erteilter Freigabe drauf. Ich
+eskaliere deshalb nicht an ihn; die Zahl allein ist kein Blocker. Er entscheidet,
+ob er `max_review_rounds` anhebt oder den Nachtrag ohne weitere Prüfung nimmt.
+
+**Commit-Sprache.** `8099fc6` und `77cfac9` tragen englische Betreffzeilen
+(„clarify exchange choice…", „hand off final T-67 dialog wording"). `CLAUDE.md`
+stellt Commit-Bodies zur deutschen Erklärungssprache; die übrigen T-67-Commits
+sind deutsch. Kein Befund am Produkt, aber beim nächsten Commit mitziehen.
+
+### Nicht geprüft
+
+Deine Browserläufe. Die zwei Absätze bei 390 Pixeln, Schriftgewicht 700 und
+den fehlenden Überlauf habe ich nicht selbst gesehen — die gerenderte Komponente
+und der Testlauf stützen es, ersetzen den Blick aber nicht.
+
+### Standard-Riegel
+
+Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
+`references/frontend.md` und `references/documentation.md`, dazu der neue
+Abschnitt „Sichtbare Texte laufen über i18n" samt Du-Regel.
+
+| Referenz | Ergebnis |
+|---|---|
+| Architektur | ➖ nur Darstellung; keine Schicht, kein Vertrag berührt |
+| Shell / CLI | ➖ nicht berührt |
+| Frontend | ✅ `I18nT` statt Interpolation, Prop statt Zustand im Dialog, Eingabe bis zum Ausblenden gehalten; 378 Tests, ESLint und Build selbst gelaufen |
+| Python | ➖ Backend nachweislich unverändert |
+| Persistenz | ➖ nicht berührt |
+| Qualität | ✅ Dialogtext DE/EN an der echten Komponente gerendert und gelesen |
+| Dokumentation | ⚠️ 1 Befund — B1, von mir geheilt; `docs/rest-core-contract.md` war bereits korrekt nachgezogen |
+
+### Danach
+
+`review_round` bleibt `3`. Mikes Nachtrag ist deiner; danach entscheidet er
+über die vierte Runde. Nach `solved/` kommt T-67 nur durch ihn, T-25 wartet.
 
 ## Archiv · INBOX T-67 Runde 2 (verarbeitet)
 
