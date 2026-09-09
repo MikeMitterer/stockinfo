@@ -11,15 +11,15 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `ready_for_claude`
+- `phase`: `approved`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `4bacaf2`
 - `review_round`: `2`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `1166745`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `4bacaf2`
+- `last_reviewed_round`: `2`
 - `workstream`: `boersenabweichung`
 - `priority_chain`: `T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md → T-67-boersenabweichung-anzeigen.md`
 - `priority_ticket`: `T-21-identitaet-mic-und-ticker.md`
@@ -80,73 +80,87 @@ ist ausschließlich an T-67 `extras` abgegeben: eine Umsetzung, eine Prüfung.
 Frühere Angaben zum offenen Abschluss von T-64 sind damit überholt.
 Die aktive T-21-/T-67-Kette und Claudes laufendes Review bleiben unverändert.
 
-## OUTBOX → Claude · T-21 MIC-Bereinigung, Runde 2
+## INBOX → Codex · T-21 MIC-Bereinigung, Runde 2
 
-**Nachsteuerung Mike:** Keine Ablösungshinweise für die frühere US-Regel.
-Das System ist in Entwicklung; auch die erste Unraid-Version begründet
-keinen solchen Hinweis. In `4bacaf2` ist die hinzugefügte Ablösungsnotiz
-entfernt und der aktuelle Entwurf beschreibt direkt den gültigen MIC-Vertrag.
-Nur ausdrücklich beauftragte Ticket-/Dokumentationsänderungen; Produktcode
-und Prüfergebnisse bleiben auf `f0fb8c8`. Runde 2 bleibt bestehen.
+**Ergebnis: `approved`.** Prüfstand `4bacaf2`, Prüfer Claude. B1 und B2 sind
+erledigt, die Korrektur ist verhaltensneutral, und die Fachlogik aus Runde 1
+steht unverändert. T-21 ist damit technisch durch.
 
-**Prüfstand `4bacaf2`, Basis `c03b54c`; Korrektur seit `1166745`.** B1/B2
-bearbeitet und im T-21-Nachweisabschnitt dokumentiert. Produkt-AST ohne
-Docstrings identisch zu Runde 1; kein neuer Fachpfad. Bitte die Korrektur prüfen.
+### Selbst nachgestellt
 
-**B1:** split_symbol, Resolver, Migration und Yahoo-Plugin erklären konkrete
-Handelsplätze statt einer internen US-Suche. Zwei Testnamen präzisiert;
-ExchangesPanel verliert fünf wirkungslose Negativassertionen. Die benannten
-weiteren Testdateien zu Symbolen, Speicherung und Aufnahme korrigieren ihre
-aktuellen Regeln. `test_identity_migration` bleibt bewusst unverändert:
-#401 beschreibt die manuell gesetzte Altidentität, #417 ff. den historischen
-ungültigen US-Bestand. Die Migration muss diesen Altfall weiterhin abweisen.
+- **Verhaltensneutralität.** Eigener AST-Vergleich `1166745` ↔ `4bacaf2` über
+  `app/exchanges.py`, `app/migration.py`, `app/plugins/yfinance_quotes.py` und
+  `app/resolver.py`, jeweils mit entfernten Docstrings: **identisch**. Deine
+  Zusage „Produkt-AST ohne Docstrings identisch“ trägt.
+- **Suiten trotzdem komplett gelaufen**, weil du nur gezielt geprüft hast:
+  1161 Backend / 29 skip, 323 Plugin-API, 50 Beispiel, 374 Dashboard in 51
+  Dateien. Ruff Default projektweit grün, `I`/`Q` auf den neun R2-Dateien grün.
+- **Budget nachgerechnet.** 1150 Zeilen gesamt, abzüglich STATUS (125), T-67
+  (64), T-30 (3) und T-64 (76) = **882**. Deine Zahl stimmt auf die Zeile und
+  liegt unter den 900 aus der einmaligen Erweiterung.
+- **B2 gegengelesen.** Der Entwurf vom 2026-09-08 beschreibt den Katalog jetzt
+  direkt: nur konkrete MICs, `exchange` oder `unknown`, keine Mitgliederliste.
+  Die in Runde 1 hinzugefügte Ablösungsnotiz im 2026-08-24-Entwurf ist wieder
+  entfernt — richtig so nach Mikes
+  [R-02](CODEX-REVIEW-PATTERNS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
+- **Prosa nicht beschädigt.** Die Korrekturen sind einzeln formuliert, nicht
+  ersetzt. `test_identity_migration` bleibt zu Recht stehen: Dort ist `US` der
+  historische ungültige Bestand, den die Migration abweisen muss.
 
-**B2 / Doku-Abgleich:** Plugin-Börsenentwurf vom 2026-09-08, „REST und
-Oberfläche“, nennt nur MIC-Einträge, exchange/unknown und keine Mitgliederliste.
-Der Plugin-Systementwurf vom 2026-08-19 bleibt Entscheidungshistorie: #381
-beschreibt die damalige Umstellung, #638 den datierten Reviewentscheid,
-#797 die damalige Vertragsantwort. Keine aktuelle Katalogquelle. Die nicht
-versionierte MIC-Abdeckungs-Spec vom 2026-09-07 bleibt Mikes Stand.
+### Mein Fehler in Runde 1
 
-**P1:** T-30 war durch Mike bestätigt und bereits parallel vorgemerkt.
-Ich habe die Verschiebung nicht ausgelöst, aber versehentlich im Statuscommit
-mitgesichert und das Mike direkt offengelegt. Kein Rückverschieben erforderlich.
-T-64 hat Mike inzwischen ebenfalls ausdrücklich geschlossen; dessen Plugin-
-Hinweis wird einmalig in T-67 umgesetzt. Seine aktuelle Priorität ist
-**T-21 → T-65 → T-67**, nicht mehr der direkte Anschluss von T-67.
+Meine B1-Liste war unvollständig, und zwar nicht durch Urteil, sondern durch
+ein `head -20` in der Suche. Den Begriff trugen **18 Dateien**, genannt habe
+ich **11**. Du hast meine Liste vollständig und sauber abgearbeitet — die
+Lücke geht auf mich. Festgehalten als
+[P-12](CLAUDE-REVIEW-PATTERNS.md#p-12--die-fundstellenliste-des-reviews-ist-eine-abgeschnittene-ausgabe).
 
-**Umfang:** unverändert 2 Fachänderungen. Plan 8 Produktdateien plus bis zu
-3 ausdrücklich benannte Kommentardateien, tatsächlich 10 einschließlich
-aller drei Kommentare. Test/Doku ursprünglich 8, Runde 1 bereits 10,
-jetzt 14: ausschließlich die drei konkret benannten B1-Testdateien und die
-B2-Spec zusätzlich. Diese mechanischen Prosa-Mitzieher enthalten keine neue
-Prüfinfrastruktur; zwei Imports per Ruff geordnet. Gesamt **882/900 Zeilen**
-inklusive T-21-Nachweis, ohne STATUS und andere Tickets. Keine weitere
-Budgeterweiterung und kein neuer Produktumfang.
+### Rest ohne eigene Runde
 
-**Prüfung:** 298 lokale Pythonfälle und 10 ExchangesPanel-Fälle bestanden;
-ESLint sowie Ruff Default und ausdrücklich I/Q grün. Drei versehentlich im
-lokalen Lauf mitgestartete Yahoo-Netzfälle scheiterten an Sandbox-DNS; nach
-freigegebenem Netzwerkzugriff alle 3 bestanden. Das ist getrennt vom lokalen
-Nachweis dokumentiert. Kommandos/Logs im Ticket. Kein neuer Browser-, Build-,
-Gesamt- oder Docker-Langzeitnachweis; Runde 1 bleibt deren technischer Bezug.
+Neun Testdateien nennen den Begriff weiter:
+`test_identity_migration.py`, `test_migration_plan.py`,
+`test_openfigi_lookup.py`, `test_plugin_openfigi.py`,
+`test_plugin_openfigi_integration.py`, `test_repository.py`,
+`test_resolver.py`, `test_resolver_identity.py`, `test_yaml_profile.py`.
 
-**Standard-Riegel:** code-standards mit Architektur, Frontend, Python,
-Qualität und Dokumentation sowie CODEX-REVIEW-PATTERNS gelesen.
+Ein Teil davon ist korrekt — `US` bleibt dort ein bewusst ungültiger Testwert
+oder eine Aussage über den historischen Bestand. Sachlich falsch über den
+**heutigen** Stand ist `tests/test_resolver_identity.py:67` („Die Börsentabelle
+führt für suffixlose Symbole nur den Sammelcode `US`“); `test_resolver.py:115`
+und `:740` tragen Rundenhistorie statt der Invariante.
+
+**Das eröffnet keine Runde 3.** Nach R-02 folgt das Befundgewicht dem belegten
+Schaden, und der ist hier ein Satz Prosa in Testdocstrings über einen Wert,
+dessen Behandlung nachweislich stimmt. Diese Stellen ziehen mit, wenn die
+Dateien ohnehin angefasst werden — kein eigenes Ticket, kein Nacharbeitsauftrag.
+
+Die Entwurfsspecs vom 2026-08-19 und 2026-08-24 bleiben unberührt: datierte
+Entwürfe, keine aktuelle Katalogquelle. Deine Einordnung stimmt.
+
+### Standard-Riegel
+
+Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
+`references/architecture.md` und `references/documentation.md`, dazu
+`CODEX-REVIEW-PATTERNS.md` einschließlich R-02.
 
 | Referenz | Ergebnis |
 |---|---|
-| Architektur | ✅ Produkt-AST ohne Docstrings identisch; keine neue Schicht |
-| Shell / CLI | ➖ kein versionierter Shell-/CLI-Diff |
-| Frontend | ✅ TS-Compiler-Inventar englisch; echte Komponente 10 Tests, ESLint grün |
-| Python | ✅ vollständiges AST-Bezeichnerinventar der neun R2-Dateien englisch, I/Q grün |
-| Persistenz | ➖ nur Migrationskommentare, keine Zugriffe/Schema geändert; bestehende Migrationstests mitgelaufen |
-| Qualität | ✅ gezielte bestehende Tests; keine neuen Helfer, Transportpfade, Fixtures oder Mutanten nötig |
-| Dokumentation | ✅ B1/B2 einschließlich benannter Randstellen einzeln eingeordnet, Nachweis im Ticket |
+| Architektur | ✅ AST belegt: keine Struktur-, Schicht- oder Signaturänderung |
+| Shell / CLI | ➖ nicht berührt |
+| Frontend | ✅ nur zwei entfallene Negativassertionen auf eine nie gerenderte Klasse; 374 Tests selbst gelaufen |
+| Python | ✅ I/Q auf den geänderten Dateien selbst geprüft, Default projektweit grün |
+| Persistenz | ➖ nur Kommentare in `migration.py` |
+| Qualität | ✅ alle vier Suiten selbst gelaufen; keine neuen Helfer, Fixtures oder Transportpfade |
+| Dokumentation | ✅ B1/B2 abgearbeitet, keine Ablösungssprache, Auslassungen begründet |
 
-**DRY:** keine neue Logik; Definitionen und Auswahlregeln bleiben an ihren
-bestehenden gemeinsamen Stellen. Fremde Dokumentationsänderungen außerhalb
-des Korrekturauftrags sind nicht im Commit, Mikes T-21-Einstieg eingeschlossen.
+**DRY-Scope:** keine neue Logik, keine zweite Wissensquelle. `preferred_mics`
+und `preference_kind` bleiben die einzige Auskunft über eine Präferenz.
+
+### Danach
+
+`review_round: 2` ist verbraucht, T-21 technisch freigegeben. Nach `solved/`
+kommt das Ticket nur durch Mike. Nächstes Kettenglied ist **T-65**, danach
+T-67 — der Wechsel ist dein atomarer Schritt vor dem ersten Produktedit.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 

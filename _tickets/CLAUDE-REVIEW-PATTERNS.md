@@ -1,8 +1,12 @@
 # Claude-Review-Muster
 
 Versioniertes, compaction-festes Gedächtnis für wiederkehrende Fehler in
-Claudes Implementierungen und Übergaben. Jeder Codex-Review liest diese Datei
-vollständig. Sie ist die spätere Ausgangsbasis für einen eigenen Review-Skill.
+Claudes Implementierungen und Übergaben. Der Verifier liest diese Datei
+vollständig, wenn Claude den Prüfgegenstand erstellt hat; Claude liest sie
+vor eigenen Übergaben. Bei gemischter Autorenschaft beide Sammlungen lesen.
+Für Codex-Arbeit gilt [CODEX-REVIEW-PATTERNS.md](CODEX-REVIEW-PATTERNS.md).
+Die Rollenverteilung steht in `STATUS.md`; der Dateiname bezeichnet den
+untersuchten Agenten. Die Sammlung ist Ausgangsbasis für einen Review-Skill.
 
 Aufgenommen werden nur verallgemeinerbare Muster mit mindestens zwei konkreten
 Belegen oder eine ausdrücklich falsche Vollständigkeitsbehauptung. Einzelne
@@ -28,6 +32,7 @@ Migrationen, Kompatibilität und Hinweise brauchen einen konkreten Bedarf.
 - [P-09 · Eine Testanforderung wächst zum unbeauftragten Subsystem](#p-09--eine-testanforderung-wächst-zum-unbeauftragten-subsystem)
 - [P-10 · Ein Integrationstest berührt seine Außengrenze nicht](#p-10--ein-integrationstest-berührt-seine-außengrenze-nicht)
 - [P-11 · Die Übergabe steht in der Mailbox, bevor es sie gibt](#p-11--die-übergabe-steht-in-der-mailbox-bevor-es-sie-gibt)
+- [P-12 · Die Fundstellenliste des Reviews ist eine abgeschnittene Ausgabe](#p-12--die-fundstellenliste-des-reviews-ist-eine-abgeschnittene-ausgabe)
 - [R-01 · Integrationsaufwand verdrängt die fachliche Architekturentscheidung](#r-01--integrationsaufwand-verdrängt-die-fachliche-architekturentscheidung)
 - [Leitplanken für das spätere Skill-Proposal](#leitplanken-für-das-spätere-skill-proposal)
 
@@ -1544,5 +1549,46 @@ normalisieren; die Prüffrage 3 hätte den Fehler vor der Übergabe verhindert.
 Übergabe ist selbst noch Arbeit, die Befunde erzeugt. Wer die Mailbox
 umschaltet, *während* er sie schreibt, hat die Übergabe für die Dauer dieser
 Arbeit versprochen.
+
+[↑ Übersicht](#übersicht)
+
+---
+
+## P-12 · Die Fundstellenliste des Reviews ist eine abgeschnittene Ausgabe
+
+**Rolle: Claude als Verifier.** Der Befund betrifft nicht die Umsetzung,
+sondern den Reviewbericht selbst.
+
+**Erkennungsregel:** Ein Finding nennt Fundstellen und liest sich als
+Inventar — „in den geänderten Dateien … weiter außerhalb liegen …“. Erzeugt
+wurde die Liste aber mit einer begrenzten Ausgabe: `head`, `-m`, `| head -20`,
+`--max-count`, ein Werkzeug mit eigener Trefferkappe. Der Coder arbeitet die
+Liste vollständig ab, und die nächste Runde findet den Rest — der die ganze
+Zeit da war.
+
+**Prüffrage:** Wurde die Zahl der Treffer **gezählt**, bevor die Liste in den
+Bericht kam? Jede Suche, deren Ergebnis eine Fundstellenliste wird, läuft
+ohne Ausgabebegrenzung und mit `-c` oder `wc -l` als Gegenprobe. Steht in der
+Pipe ein `head`, gehört in den Bericht die Gesamtzahl und das Wort
+„gekürzt“ — sonst ist die Liste eine Behauptung über Vollständigkeit.
+
+**Beleg:** T-21 Runde 1, Prüfstand `1166745`. Der Befund B1 zählte die
+verbliebenen Sammelcode-Stellen auf; die zugrunde liegende Suche lief als
+`git grep … | head -20`. Genannt wurden **11 Dateien**, den entfernten Begriff
+trugen **18**. Codex korrigierte in Runde 2 genau die genannten und begründete
+seine Auslassungen sauber; die nie genannten `test_migration_plan.py`,
+`test_openfigi_lookup.py`, `test_plugin_openfigi.py`,
+`test_plugin_openfigi_integration.py`, `test_repository.py`,
+`test_yaml_profile.py` und `test_resolver_identity.py:67` blieben stehen,
+ohne dass ihm etwas vorzuwerfen wäre. Der Rest wurde als Mitzieher vermerkt,
+statt eine dritte Runde dafür zu eröffnen
+([R-02](CODEX-REVIEW-PATTERNS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt)).
+Befund von Claude über eigene Arbeit, 2026-09-09.
+
+**Der Zusammenhang zu CLAUDE.md:** Dort steht „Die Gegenprobe ist ein
+Inventar, keine Textsuche“ für Bezeichner. Dieselbe Regel gilt für
+Fundstellen im Review. Eine gekappte Ausgabe ist noch schlechter als eine
+schlecht geratene Suche: Sie sieht vollständig aus, weil sie mit einem
+korrekten Kommando entstanden ist.
 
 [↑ Übersicht](#übersicht)
