@@ -11,11 +11,11 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `1166745`
-- `review_round`: `1`
-- `owner`: `codex`
+- `handoff_commit`: `f0fb8c8`
+- `review_round`: `2`
+- `owner`: `claude`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `1166745`
@@ -70,148 +70,66 @@ ist ausschließlich an T-67 `extras` abgegeben: eine Umsetzung, eine Prüfung.
 Frühere Angaben zum offenen Abschluss von T-64 sind damit überholt.
 Die aktive T-21-/T-67-Kette und Claudes laufendes Review bleiben unverändert.
 
-## INBOX → Codex · T-21 MIC-Bereinigung, Runde 1
+## OUTBOX → Claude · T-21 MIC-Bereinigung, Runde 2
 
-**Ergebnis: `changes_requested`.** Zwei Befunde, beide Dokumentation zur
-geänderten Fachregel. Der Code selbst ist sauber: Umfang, Akzeptanzfälle,
-Mutanten, Frischstart und Suiten habe ich unabhängig nachgestellt, und sie
-tragen, was die OUTBOX behauptet. Prüfstand `1166745` gegen Basis `c03b54c`,
-Prüfer Claude.
+**Prüfstand `f0fb8c8`, Basis `c03b54c`; Korrektur seit `1166745`.** B1/B2
+bearbeitet und im T-21-Nachweisabschnitt dokumentiert. Produkt-AST ohne
+Docstrings identisch zu Runde 1; kein neuer Fachpfad. Bitte die Korrektur prüfen.
 
-### B1 · Der entfernte Sammelcode erklärt weiter die geltenden Regeln
+**B1:** split_symbol, Resolver, Migration und Yahoo-Plugin erklären konkrete
+Handelsplätze statt einer internen US-Suche. Zwei Testnamen präzisiert;
+ExchangesPanel verliert fünf wirkungslose Negativassertionen. Die benannten
+weiteren Testdateien zu Symbolen, Speicherung und Aufnahme korrigieren ihre
+aktuellen Regeln. `test_identity_migration` bleibt bewusst unverändert:
+#401 beschreibt die manuell gesetzte Altidentität, #417 ff. den historischen
+ungültigen US-Bestand. Die Migration muss diesen Altfall weiterhin abweisen.
 
-Das Ticket nimmt `US` aus Katalog und Auswahl — die Begründungen im Code
-beschreiben aber unverändert eine Tabelle, die den Sammelcode noch führt.
-Sie sind damit nicht historisch, sondern falsch.
+**B2 / Doku-Abgleich:** Plugin-Börsenentwurf vom 2026-09-08, „REST und
+Oberfläche“, nennt nur MIC-Einträge, exchange/unknown und keine Mitgliederliste.
+Der Plugin-Systementwurf vom 2026-08-19 bleibt Entscheidungshistorie: #381
+beschreibt die damalige Umstellung, #638 den datierten Reviewentscheid,
+#797 die damalige Vertragsantwort. Keine aktuelle Katalogquelle. Die nicht
+versionierte MIC-Abdeckungs-Spec vom 2026-09-07 bleibt Mikes Stand.
 
-In den **geänderten** Dateien:
+**P1:** T-30 war durch Mike bestätigt und bereits parallel vorgemerkt.
+Ich habe die Verschiebung nicht ausgelöst, aber versehentlich im Statuscommit
+mitgesichert und das Mike direkt offengelegt. Kein Rückverschieben erforderlich.
+T-64 hat Mike inzwischen ebenfalls ausdrücklich geschlossen; dessen Plugin-
+Hinweis wird einmalig in T-67 umgesetzt. Seine aktuelle Priorität ist
+**T-21 → T-65 → T-67**, nicht mehr der direkte Anschluss von T-67.
 
-- `app/exchanges.py:337` — Docstring von `split_symbol`: „Die Tabelle führt
-  dafür nur den Sammelcode `US`“. Sie führt ihn nicht mehr. Das Ergebnis
-  `(None, None)` stimmt weiter, der genannte Grund nicht.
-- `app/resolver.py:51` — „Die Börsentabelle führt ihn als Sammelcode `US`
-  zusammen, weil OpenFIGI so sucht“. Der Weg ist entfernt.
-- `tests/test_exchange_catalog.py:18` und `tests/test_resolver.py:672` — die
-  Testnamen `…_der_sammelcode_liegt_nicht_in_der_boersentabelle` und
-  `…_unterscheidet_eine_us_boerse_vom_sammelcode` benennen einen Begriff, den
-  es nicht mehr gibt.
-- `dashboard/tests/components/ExchangesPanel.spec.ts:70,73,99,160,163` — der
-  Testname „blendet Sammelcodes aus“ und vier `.exchanges__collectors`-
-  Assertions auf eine Klasse, die die Komponente nie gerendert hat.
+**Umfang:** unverändert 2 Fachänderungen. Plan 8 Produktdateien plus bis zu
+3 ausdrücklich benannte Kommentardateien, tatsächlich 10 einschließlich
+aller drei Kommentare. Test/Doku ursprünglich 8, Runde 1 bereits 10,
+jetzt 14: ausschließlich die drei konkret benannten B1-Testdateien und die
+B2-Spec zusätzlich. Diese mechanischen Prosa-Mitzieher enthalten keine neue
+Prüfinfrastruktur; zwei Imports per Ruff geordnet. Gesamt **887/900 Zeilen**
+inklusive T-21-Nachweis, ohne STATUS und andere Tickets. Keine weitere
+Budgeterweiterung und kein neuer Produktumfang.
 
-Zusätzlich die beiden Dateien, die ich im Scope-Checkpoint ausdrücklich als
-Kommentarreste benannt hatte und die unangetastet blieben:
-`app/migration.py:208,247` und `app/plugins/yfinance_quotes.py:114`.
+**Prüfung:** 298 lokale Pythonfälle und 10 ExchangesPanel-Fälle bestanden;
+ESLint sowie Ruff Default und ausdrücklich I/Q grün. Drei versehentlich im
+lokalen Lauf mitgestartete Yahoo-Netzfälle scheiterten an Sandbox-DNS; nach
+freigegebenem Netzwerkzugriff alle 3 bestanden. Das ist getrennt vom lokalen
+Nachweis dokumentiert. Kommandos/Logs im Ticket. Kein neuer Browser-, Build-,
+Gesamt- oder Docker-Langzeitnachweis; Runde 1 bleibt deren technischer Bezug.
 
-Weiter außerhalb liegen `tests/test_exchanges.py:37,178,243`,
-`tests/test_identity_creation.py:168,213,221`,
-`tests/test_identity_intake_paths.py:365,377` und
-`tests/test_identity_migration.py:401`. Dort beschreibt der Sammelcode teils
-den historischen Fall, teils die aktuelle Regel — bitte pro Fundstelle
-entscheiden und die Entscheidung im Bericht begründen, statt pauschal zu
-ersetzen. `replace_all` würde hier Prosa zerstören.
-
-**Erwartete Korrektur:** In den geänderten Dateien und den zwei benannten
-Kommentardateien tritt an die Stelle des Sammelcodes die heutige Invariante —
-`US` ist ein Länderpräfix, kein Handelsplatz, und scheitert an der
-MIC-Schreibweise. **Dafür erweitere ich das Budget einmalig auf 900 manuelle
-Diff-Zeilen** (bisher 756/800). Das ist die eine Erweiterung aus dem
-Scope-Vertrag; eine zweite gibt es in diesem Ticket nicht.
-
-### B2 · Doku-Abgleich unvollständig
-
-`docs/superpowers/specs/2026-09-08-plugin-exchanges-design.md` ist der
-aktuelle T-30-Entwurf und beschreibt in „REST und Oberfläche“ genau den
-Vertrag, den dieser Commit ändert:
-
-- Zeile 85: `GET /exchanges` behalte `default_exchange_kind` — die Variante
-  `collector` gibt es nicht mehr.
-- Zeile 99: „Sammelcodes wie `US` stehen separat mit ihren Mitgliedern.“ —
-  gilt nicht mehr.
-
-Der 2026-08-24-Entwurf hat eine Ablösungsnotiz bekommen, dieser nicht. Nach
-`CLAUDE.md` → „Dokumentation gehört zur Änderung“ gehört er in denselben
-Auftrag. Die OUTBOX-Zeile *Dokumentation ✅* trägt diesen Beleg nicht.
-
-`docs/superpowers/specs/2026-08-19-plugin-system-design.md:381,638,797` liest
-sich dagegen als Entscheidungshistorie und braucht vermutlich keine Änderung —
-bitte diesen Grund ausdrücklich in den Doku-Abgleich schreiben, statt die
-Datei stillschweigend auszulassen. `…2026-09-07-exchanges-mic-coverage-design.md:62`
-ist nicht versioniert und bleibt Mikes Stand; nur zur Kenntnis.
-
-### P1 · Prozessfrage, kein Produktbefund
-
-Der Übergabecommit `6f63a36` verschiebt nebenbei
-`T-30-plugin-boersenauskunft.md` nach `solved/`. Ein Ticket kommt nur durch
-Mike dorthin. War das sein Handgriff, ist alles in Ordnung — dann bitte
-kurz vermerken. War es deiner, gehört er zurück.
-
-### Unabhängig nachgestellt — hier keine Befunde
-
-- **Umfang.** 8/8 Produktdateien exakt wie zugesagt. 10 Test-/Dokudateien.
-  841 Zeilen gesamt minus STATUS (27) und T-67 (58) = **756**; die Rechnung
-  stimmt auf die Zeile.
-- **Akzeptanz.** Eigener Worktree auf `c03b54c`, die **neuen** Tests
-  daraufgelegt: 7 Fälle rot — `test_der_katalog_liefert_ausschliesslich_
-  konkrete_handelsplaetze`, `test_us_ist_keine_gueltige_boersenpraeferenz`
-  (die 2 REST-Fälle), dazu `preference_kind[US-None]`,
-  `preferred_mics[alte_us_praeferenz]`, der Plugin-Rückfall, der
-  Resolver-Rückfall und `test_ein_land_ist_keine_boerse` (die 5
-  Auswahl-/Pluginfälle). Genau die behauptete Aufteilung.
-- **Mutanten selbst gesetzt.** `"US": "US"` zurück in `HOME_EXCHANGES` →
-  `test_ein_land_ist_keine_boerse` rot. `NMS: XNAS → ARCX` → 5 Tests rot,
-  darunter beide Yahoo-Auswahlfälle. Beide zurückgenommen.
-- **Frischstart selbst gefahren.** Leeres Verzeichnis, normaler Lifespan,
-  `DATABASE_PATH` auf eine noch nicht existierende Datei: 38 Katalogeinträge,
-  ausschließlich `kind=exchange`, kein `US`, Default `XETR`/`exchange`,
-  Bestand 0, sauberer Shutdown.
-- **Suiten.** 1161 Backend / 29 skip (deine 1153 plus die 8 abgewählten
-  Integrationstests, die hier mitliefen), 323 Plugin-API, 50 Beispiel,
-  374 Dashboard in 51 Dateien, Build grün. Ruff mit `I` und `Q` auf den
-  geänderten Dateien grün, Projektlauf mit den Default-Regeln grün.
-- **Kein Verhaltensbruch durch die entfernten Sonderwege.**
-  `_FIGI_EXCEPTIONS` enthielt nur `US`; `micCode` war schon der Regelfall,
-  das feste `id_type="micCode"` ändert für echte MICs nichts. Und
-  `HOME_EXCHANGES["US"] = "US"` lief vorher ohnehin in `home not in EXCHANGES`
-  → `NotFound`; heute liefert `home_exchange` `None` und es wird dasselbe
-  `NotFound`.
-- **Testinfrastruktur-Riegel.** Keine neuen Helfer, Cassettes, Transportpfade,
-  Entry-Points oder Abhängigkeiten. Der weggefallene `try/finally` in
-  `test_us_ist_keine_gueltige_boersenpraeferenz` ist unkritisch: die
-  `client`-Fixture räumt `dependency_overrides` im Teardown, auch nach einem
-  fehlgeschlagenen Assert.
-- **Plugin-API unverändert**, wie zugesagt. `collector_codes` bleibt im
-  Vertrags-Harness stehen — richtig so, fremde Hosts dürfen Sammelcodes haben.
-
-### Standard-Riegel
-
-Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
-`references/architecture.md` und `references/documentation.md`. Ergebnisse aus
-eigener Prüfung, nicht aus deinem Bericht übernommen.
+**Standard-Riegel:** code-standards mit Architektur, Frontend, Python,
+Qualität und Dokumentation sowie CODEX-REVIEW-PATTERNS gelesen.
 
 | Referenz | Ergebnis |
 |---|---|
-| Architektur | ✅ `preferred_mics` ist die eine Stelle des Rückfalls, beide Resolver rufen sie (`resolver.py:196,471`); `is_real_mic` delegiert an die Plugin-Formregel — Delegation, keine zweite Fachregel |
-| Shell | ➖ nicht berührt |
-| CLI | ➖ nicht berührt |
-| Frontend | ✅ `types.ts` nur Löschung, `CatalogEntry` sauber verengt; ESLint, 374 Tests und `npm run build` selbst gelaufen |
-| Python | ✅ eigenes AST-Inventar über alle 13 geänderten Dateien: 578 Bezeichner, kein deutscher darunter; `treffer → hits` ist korrekt nachgezogen |
-| Persistenz | ➖ kein Schema, kein Zugriffspfad; Frischstart zusätzlich belegt |
-| Qualität | ✅ rote Fälle am öffentlichen Eingang selbst nachgestellt, zwei eigene Mutanten, alle vier Suiten selbst gelaufen |
-| Dokumentation | ⚠️ 2 Befunde — B1 im Code, B2 im T-30-Entwurf |
+| Architektur | ✅ Produkt-AST ohne Docstrings identisch; keine neue Schicht |
+| Shell / CLI | ➖ kein versionierter Shell-/CLI-Diff |
+| Frontend | ✅ TS-Compiler-Inventar englisch; echte Komponente 10 Tests, ESLint grün |
+| Python | ✅ vollständiges AST-Bezeichnerinventar der neun R2-Dateien englisch, I/Q grün |
+| Persistenz | ➖ nur Migrationskommentare, keine Zugriffe/Schema geändert; bestehende Migrationstests mitgelaufen |
+| Qualität | ✅ gezielte bestehende Tests; keine neuen Helfer, Transportpfade, Fixtures oder Mutanten nötig |
+| Dokumentation | ✅ B1/B2 einschließlich benannter Randstellen einzeln eingeordnet, Nachweis im Ticket |
 
-**DRY-Scope:** Collector-Wissen im ganzen Projekt nachgesucht. In `app/`,
-`dashboard/src/` und `plugin_api/src/` ist außer den unter B1 genannten
-Kommentaren nichts übrig; keine zweite Mitgliedschaftsliste, keine neue
-Fachliste. `preference_kind` und `preferred_mics` bleiben die einzige Auskunft
-über eine Präferenz. Ergebnis: sauber.
-
-### Danach
-
-`review_round` bleibt `1`; die Korrektur wird Runde 2. Die Befunde sind
-Prosa und Ablösungsnotizen — die Fachlogik steht. Bei Freigabe geht die Kette
-unmittelbar zu T-67. Mikes zusätzliche UI-Aufträge und der Verzicht auf den
-Docker-Langzeitnachweis bleiben wie von dir festgehalten.
+**DRY:** keine neue Logik; Definitionen und Auswahlregeln bleiben an ihren
+bestehenden gemeinsamen Stellen. Fremde Dokumentationsänderungen außerhalb
+des Korrekturauftrags sind nicht im Commit, Mikes T-21-Einstieg eingeschlossen.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 
