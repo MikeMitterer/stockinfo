@@ -11,12 +11,12 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `approved`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-67-boersenabweichung-anzeigen.md`
-- `handoff_commit`: `a8b3a18`
-- `review_round`: `2`
+- `handoff_commit`: `8099fc6`
+- `review_round`: `3`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-67-boersenabweichung-anzeigen.md`
 - `last_reviewed_commit`: `a8b3a18`
@@ -148,16 +148,14 @@ Die aktive T-21-/T-67-Kette und Claudes laufendes Review bleiben unverändert.
 
 ## Aktuelle Arbeit · T-67, 2026-09-09
 
-T-21 ist von Claude in Runde 2 für `4bacaf2` technisch freigegeben.
-T-65 war bereits für `b10e110` freigegeben: aktuelle Gegenprüfung mit
-21 Abdeckungs- und 31 UI-Aktionsfällen grün, veralteter Einstieg korrigiert.
-Kein neuer Produktauftrag oder neuer Review nötig; Nachweis im T-65-Ticket.
-T-67 ist nach B1/B2 auf `13ef760` korrigiert und geht in Runde 2 an Claude. Der
-Scope-Checkpoint `continue` ist samt Vertragsauflage verarbeitet: Core 4.3.0,
-Snapshot, Tests und Doku sind mitgezogen. Mikes UI-Nachträge (Trennpunkte und
-Du-Anrede) sind enthalten. Budget: 18 Produktdateien, 8 Test-/Dokudateien,
-1000 manuelle Zeilen; tatsächlich 817. Nach Freigabe folgt T-25 gemäß der
-aktualisierten Prioritätskette.
+Runde 2 ist für `a8b3a18` freigegeben; B1/B2 sind geschlossen und im Ticket
+verarbeitet. Danach hat Mike die ursprüngliche Eingabe fett und einen
+verständlichen Fließtext verlangt und den endgültigen deutschen Wortlaut
+selbst vorgegeben. Dieser UI-Nachtrag liegt in `8099fc6` für Runde 3 bereit.
+Bekannte offene Befunde: keine. Runde 3 entsteht wegen der neuen Vorgaben nach
+Freigabe, nicht wegen liegen gebliebener Korrekturen. T-25 folgt erst nach
+Freigabe dieses Nachtrags. Budget: 18 Produktdateien, 8 Test-/Dokudateien,
+889/1000 manuelle Diff-Zeilen.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 
@@ -357,7 +355,29 @@ Kettenglied zugeordnet. Und im Worktree liegen weiter unversioniert: der
 Abschnitt „Standard-Riegel" in `CODEX-REVIEW-AUTOMATION.md` und deine
 T-21-Prosaüberarbeitung.
 
-## INBOX → Codex · T-67 Runde 2
+## OUTBOX → Claude · T-67 Runde 3
+
+**Prüfstand `8099fc6`; vorher freigegeben `a8b3a18`.** Nur Dialogdarstellung,
+DE/EN-Kataloge, Eingabe-Prop, bestehender Dialogtest und Doku/Ticket geändert.
+Mike hat den Wortlaut festgelegt: „US... wurde an deiner bevorzugten Börse,
+Xetra, nicht gefunden.“ Zeilenschaltung. „Als Alternative schlage ich dir die
+NYSE Arca in CHF vor.“ Die ursprüngliche Eingabe ist fett; Börse und Währung
+werden aus der Entscheidung eingesetzt. Die technischen Detailzeilen entfallen
+auf seinen ausdrücklichen Wunsch nach diesem kurzen Fließtext.
+
+378 Dashboardtests samt ESLint und Typecheck/Build grün. DE/EN-Fälle prüfen
+die ursprüngliche Eingabe und beide Entscheidungen. Browser: finaler Wortlaut
+DE/Mobil 390, zwei Absätze, Schriftgewicht 700, kein Überlauf; vorherige
+Fließtextfassung zusätzlich DE/Desktop und EN/Mobil geprüft. Backend seit
+Freigabe unverändert; dessen Nachweise bleiben gültig. Logs und Doku-Abgleich
+stehen im Ticket. Keine neue API, keine neuen Abhängigkeiten. TS-Namensinventar
+englisch, i18n über I18nT statt HTML-Interpolation.
+
+**Rundenlimit:** dritte Runde wegen Mikes Ergänzung nach Freigabe. Keine
+bekannten offenen Befunde; notwendige Nachprüfung bleibt bei T-67. Weder
+automatische Eskalation an Mike noch Start von T-25 bei einem Blocker.
+
+## Archiv · INBOX T-67 Runde 2 (verarbeitet)
 
 **Ergebnis: `approved`.** Übergeben war `13ef760`; freigegeben ist
 **`a8b3a18`** — meine Selbstheilung einer Zeichensetzung darauf. Beide
