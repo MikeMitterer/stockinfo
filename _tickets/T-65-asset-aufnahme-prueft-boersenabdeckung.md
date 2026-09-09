@@ -1,9 +1,9 @@
 # T-65 · Asset-Aufnahme prüft die Börsenabdeckung
 
-Die Exchanges-Seite zeigt die vom aktiven Profil abgedeckten Börsen. **Die
-Asset-Aufnahme prüft diese Abdeckung bisher nicht.** Außerdem verwendet die
-Oberfläche beim Hinzufügen den Kurs-Endpunkt statt des Aufnahme-Endpunkts.
-Beide Wege müssen dieselbe aktuelle Auskunft verwenden.
+Die Asset-Aufnahme soll dieselbe aktuelle Börsenabdeckung berücksichtigen
+wie die Exchanges-Seite. Zuvor fehlte diese Prüfung, und die Oberfläche
+verwendete zum Hinzufügen den Kurs-Endpunkt. Jetzt prüft der Aufnahmeweg
+die Abdeckung; die Oberfläche verwendet den Aufnahme-Endpunkt.
 
 Beispiel: Im reinen YAML-Profil ist Xetra ohne passende Kurse ausgegraut.
 `SAP.DE` und `SAP.XETR` sollen dann mit verständlichem Grund abgelehnt werden,
@@ -16,9 +16,8 @@ in Runde 2 technisch freigegeben (`b10e110`). Keine offenen Review-Befunde;
 Mikes Abschlussbestätigung steht aus.
 Ergänzung zu T-21, aus dessen
 Nachtrag auf Empfehlung von Claude im Scope-Checkpoint `f3b383b` getrennt.
-Mike hat die Umsetzung ausdrücklich beauftragt; sie folgt unmittelbar auf die
-Review-Korrekturen der Exchanges-Anzeige. Kein weiterer Handgriff von Mike
-erforderlich. Codex entwickelt, Claude prüft.
+Die technische Arbeit ist abgeschlossen. Offen bleibt ausschließlich Mikes
+Abschlussbestätigung; eine weitere Prüfung durch ihn ist nicht angesetzt.
 
 ## Rückmeldungen von Mike
 
@@ -63,6 +62,22 @@ Browserläufe verwenden eigene Testprofile und keine Arbeitsdaten.
 Vor Implementierung je neuem Unterschied eine rote Akzeptanzprobe am
 öffentlichen Eingang; danach grün und gezielter negativer Mutant. Zuletzt
 betroffene Gesamtsuiten, Lint/Build, Browserprüfung und unabhängiges Review.
+
+### Gegenprüfung der Prioritätskette · 2026-09-09
+
+Nach T-21 erneut gezielt geprüft: **21 Abdeckungsfälle und 31 UI-Aktionsfälle
+bestanden**. Keine offene Nacharbeit, kein neuer Produktcode. Claudes Freigabe
+für `b10e110` bleibt der unabhängige Nachweis; keine neue Reviewrunde.
+Mikes aktuelle Kette läuft anschließend mit T-67 weiter.
+
+```bash
+.venv/bin/pytest -q tests/test_active_exchange_coverage.py
+npm --prefix dashboard test -- tests/composables/useInstrumentActions.spec.ts
+```
+
+Logs: `/tmp/t65-current-coverage.log`, `/tmp/t65-current-actions.log`.
+Doku-Abgleich: Einstieg und Kettenzuordnung dieses Tickets korrigiert;
+keine Verhaltensänderung, deshalb keine weitere Anleitungsänderung.
 
 ### Prüfnachweise Codex · 2026-09-08
 
@@ -121,7 +136,8 @@ Die unabhängige Freigabe vom 2026-09-08 bestätigt beide Korrekturen und die
 erneut ausgeführten Gesamtläufe: 1156 Backend-, 374 UI-, 323 Plugin-API- und
 50 Beispieltests erfolgreich, Lint und Build grün. Claude hat keinen eigenen
 Browserlauf durchgeführt; die Browserbelege oben stammen von Codex.
-Die aktive Kette endet mit T-65 bei `portfolio_review`, Owner Mike.
+Die damalige Kette endete mit T-65. Die am 2026-09-09 beauftragte Kette
+läuft nach der Gegenprüfung mit T-67 weiter.
 
 Neuaufnahmen an bekannten, aktuell nicht abgedeckten Börsen werden explizit
 abgelehnt. Die UI verwendet den zugesagten Aufnahmeweg. Bestehende Assets

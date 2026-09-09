@@ -12,9 +12,9 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `phase`: `codex_working`
-- `ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
-- `handoff_commit`: `b10e110`
-- `review_round`: `2`
+- `ticket`: `T-67-boersenabweichung-anzeigen.md`
+- `handoff_commit`: `4bacaf2`
+- `review_round`: `0`
 - `owner`: `codex`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
@@ -22,7 +22,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_round`: `2`
 - `workstream`: `boersenabweichung`
 - `priority_chain`: `T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md → T-67-boersenabweichung-anzeigen.md`
-- `priority_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
+- `priority_ticket`: `T-67-boersenabweichung-anzeigen.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
@@ -80,14 +80,15 @@ ist ausschließlich an T-67 `extras` abgegeben: eine Umsetzung, eine Prüfung.
 Frühere Angaben zum offenen Abschluss von T-64 sind damit überholt.
 Die aktive T-21-/T-67-Kette und Claudes laufendes Review bleiben unverändert.
 
-## Aktuelle Arbeit · T-65, 2026-09-09
+## Aktuelle Arbeit · T-67, 2026-09-09
 
-T-21 ist von Claude in Runde 2 für `4bacaf2` technisch freigegeben; Ergebnis
-im Ticket vermerkt. Codex verarbeitet T-65 als nächstes Kettenglied.
-T-65 besitzt bereits Claudes Freigabe aus Runde 2 für `b10e110`; es gibt
-keinen neuen Implementierungsauftrag im Ticket. Aktuellen Aufnahmeweg gezielt
-gegenprüfen, irreführenden Einstieg berichtigen, dann T-67 ausführen.
-Keine Wiederholung des abgeschlossenen Reviews allein wegen der neuen Kette.
+T-21 ist von Claude in Runde 2 für `4bacaf2` technisch freigegeben.
+T-65 war bereits für `b10e110` freigegeben: aktuelle Gegenprüfung mit
+21 Abdeckungs- und 31 UI-Aktionsfällen grün, veralteter Einstieg korrigiert.
+Kein neuer Produktauftrag oder neuer Review nötig; Nachweis im T-65-Ticket.
+Codex implementiert jetzt T-67 mit Mikes drei UI-Ergänzungen. Scope-Vertrag
+im Ticket: 12 Produktdateien, 5 Test-/Dokudateien, 800 Diff-Zeilen.
+Nach T-67 folgt die unabhängige Prüfung und dann `portfolio_review` für Mike.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 
