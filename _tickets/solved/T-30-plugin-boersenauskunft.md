@@ -24,6 +24,9 @@ Aktuell ist **kein Handgriff nötig**.
 Codex führt das Ticket als nächstes Element der beauftragten Kette aus.
 Claude hat den Umfang vor Produktcode geteilt. Oberfläche, Autor-Harness
 und Beispiel stehen in [T-64](T-64-boersen-ui-und-autorennachweise.md).
+Mike hat T-64 am 2026-09-09 geschlossen; der Plugin-Hinweis mit Autorenlink
+wird ausschließlich in [T-67](../T-67-boersenabweichung-anzeigen.md) umgesetzt
+und geprüft.
 
 ### Bisherige Antworten und Rückmeldungen
 

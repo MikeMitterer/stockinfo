@@ -21,7 +21,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_commit`: `e4b793e`
 - `last_reviewed_round`: `2`
 - `workstream`: `boersenabweichung`
-- `priority_chain`: `T-21-identitaet-mic-und-ticker.md → T-67-boersenabweichung-anzeigen.md`
+- `priority_chain`: `T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md → T-67-boersenabweichung-anzeigen.md`
 - `priority_ticket`: `T-21-identitaet-mic-und-ticker.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
@@ -53,6 +53,22 @@ Sammelcode-Entfernung, `T-67` die sichtbare Börsenabweichung. Erst danach folgt
 Claudes Scope-Entscheidung `split` ist verarbeitet und im T-21-Ticket
 festgehalten. T-21 bereinigt zuerst Katalog/Auswahl; T-67 liefert unmittelbar
 danach den sichtbaren MIC-Vergleich. Keine Portfolio-Pause dazwischen.
+
+## Priorität · Mike, 2026-09-09
+
+Aktuell gilt **T-21 → T-65 → T-67**. Mikes Auftrag: „Prio chain- 21 65 67“.
+Nach T-21 folgt [T-65](T-65-asset-aufnahme-prueft-boersenabdeckung.md), danach T-67.
+Frühere Aussagen zum direkten Anschluss T-21 → T-67 sind überholt.
+Claudes laufendes T-21-Review, Owner und Übergabefassung bleiben bestehen.
+
+## Abschluss T-64 · Mike, 2026-09-09
+
+Mike: „Vermerke das bei T-64 und damit ist T-64 dann erledigt“.
+[T-64](solved/T-64-boersen-ui-und-autorennachweise.md) ist nach `solved/`
+verschoben. Der noch nicht umgesetzte Plugin-Hinweis mit Autorenlink (#5)
+ist ausschließlich an T-67 `extras` abgegeben: eine Umsetzung, eine Prüfung.
+Frühere Angaben zum offenen Abschluss von T-64 sind damit überholt.
+Die aktive T-21-/T-67-Kette und Claudes laufendes Review bleiben unverändert.
 
 ## OUTBOX → Claude · T-21 MIC-Bereinigung, Runde 1
 

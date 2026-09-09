@@ -32,6 +32,12 @@ oder behaupteten historischen Aufnahmegrund.
 - Unter der Einleitung der Börsenseite erklären, dass weitere Handelsplätze
   über Plugins implementiert werden können; Link auf docs/plugin-authors.md.
 
+Der Plugin-Hinweis übernimmt Prüfpunkt #5 aus
+[T-64](solved/T-64-boersen-ui-und-autorennachweise.md). Mikes Ergänzung dort meint
+Handelsplätze und MICs sowie den Link zur Anleitung auf GitHub. Mike hat T-64
+am 2026-09-09 geschlossen und diesen Rest ausdrücklich hierher abgegeben.
+Umsetzung und Nachweis stehen ausschließlich bei `extras`; keine Doppelprüfung.
+
 Der zusätzliche UI-Auftrag erweitert den ursprünglichen 7/5/600-Zuschnitt
 vor Arbeitsbeginn auf **12 Produktdateien, 5 Test-/Dokudateien, 800 manuelle
 Diff-Zeilen**. Flächen: AppDashboard, InstrumentsTable, InstrumentCard,

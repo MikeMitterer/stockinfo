@@ -7,22 +7,77 @@ ohne Frontendänderung erscheinen, mit klarer Auskunft über die deklarierte
 Unterstützung. Beispielsweise zeigt XBUD nun „regional · Kurs“ und eine
 inaktive Archivquelle getrennt davon.
 
-**Umgesetzt und von Claude in Runde 1 technisch freigegeben (`e427013`).**
+**Von Mike am 2026-09-09 als erledigt bestätigt.** Oberfläche,
+Autor-Vertragstests und Beispiel sind umgesetzt und von Claude freigegeben.
+Der noch fehlende Plugin-Hinweis mit Autorenlink wird ausschließlich in
+[T-67](../T-67-boersenabweichung-anzeigen.md) umgesetzt und geprüft.
 Die Seite lädt Katalog und Unterstützung aus REST, bietet Suche und Neuladen
 und wechselt bei schmalem Fenster in eine Liste. Autor-Harness, US-Beispiel
-und Anleitung sind nachgezogen. Die Paketanforderung des Beispiels ist 0.3;
-die Veröffentlichung dieser additiven API-Version ist noch nicht erfolgt.
+und Anleitung sind nachgezogen. Das Beispiel verlangt Plugin-API 0.3;
+die Paketveröffentlichung gehört nicht zum Ticketumfang.
 
 ## Für dich
 
-Mike hat die dynamische Exchanges-Seite am 2026-09-08 ausdrücklich beauftragt:
-„UI berücksichtigst du auch“ und „Die Exchanges Seite muss entsprechend
-dynamisch werden“. T-64 folgt unmittelbar nach dem laufenden T-30-Review,
-vor T-21 #2g. Die technische Prüfung ist abgeschlossen; offen bleibt deine
-Abschlussbestätigung. Die UI-Nachträge sind umgesetzt und von Codex im Browser
-geprüft. Claude hat den Browserlauf nicht selbst wiederholt.
+Mike hat seine Einschätzung „T-64 sollte erledigt sein“ am 2026-09-09 ergänzt:
+„Ah - warte bei T-64 sind die Plugin-Authoren noch nicht eingebunden...“.
+Damit wurde das Ticket zunächst wieder geöffnet. Anschließend hat Mike die
+Überschneidung mit T-67 bestätigt und den Abschluss beauftragt:
+„Vermerke das bei T-64 und damit ist T-64 dann erledigt“.
+Für T-64 ist kein weiterer Handgriff nötig.
+
+Die Anforderung ist durch Mikes Ergänzung geklärt. Aktuell ist kein weiterer
+Handgriff nötig. Oben auf der Börsenseite soll stehen, dass Plugins zusätzliche
+Handelsplätze und MICs ergänzen können. Ein Link führt zur Autorenanleitung
+auf GitHub. Die vorhandenen Autor-Vertragstests belegen diesen UI-Hinweis nicht.
+
+Mikes Ergänzung im Wortlaut:
+
+Unter "Einbindung" verstehe ich einen Hinweis im oberen Teil der Seit, dass durch neue Plugins
+die Börsenplätze und die entsprechenden MICs erweitert werden können. Zu dem Hinweis gehört ein
+Link auf GH zu dem plugin-authors.md-File
+
+Die Umsetzung ist bereits in [T-67](../T-67-boersenabweichung-anzeigen.md)
+beauftragt: unter der Einleitung der Börsenseite, auf Deutsch und Englisch,
+auch auf schmalen Bildschirmen. Das Linkziel ist
+[`docs/plugin-authors.md` auf GitHub](https://github.com/MikeMitterer/stockinfo/blob/master/docs/plugin-authors.md).
+Prüfpunkt #5 ist an T-67 (`extras`) abgegeben. Es gibt dafür genau eine
+Umsetzung und Prüfung; der fehlende Hinweis wird hier nicht als umgesetzt
+oder bestanden gewertet. T-64 ist mit Mikes Entscheidung abgeschlossen.
 
 ## Umsetzung und technische Nachweise
+
+### Gegenprüfung · Codex, 2026-09-09
+
+Der zunächst daraus abgeleitete Ticketabschluss wurde nach Mikes Hinweis
+zurückgenommen. Die folgenden Testergebnisse bleiben gültig, decken den
+Plugin-Hinweis mit Autorenlink aber nicht ab.
+
+Die gezielten Tests auf dem aktuellen Stand sind grün:
+**12 UI-Tests, 8 Autoren-Vertragstests und 50 Beispieltests**. Geprüft sind
+Darstellung in DE/EN, Suche, Neuladen, entfernte Pluginangaben, kompakte Ansicht
+sowie gültige und ungültige Börsendeklarationen und das ausführbare Beispiel.
+
+Im Repository ausgeführt:
+
+```bash
+npm --prefix dashboard test -- tests/components/ExchangesPanel.spec.ts tests/composables/useExchanges.spec.ts
+env PYTHONPATH=plugin_api/src:plugin_api/examples/us-example/src .venv/bin/python -m pytest -q plugin_api/tests/test_exchange_contract.py plugin_api/examples/us-example/tests
+```
+
+Die geprüften Fälle bestehen. Der UI-Lauf meldet Sass-Deprecations sowie
+Vue-/i18n-Hinweise aus der Testeinbettung; alle Tests bestehen. Browser, Build,
+Gesamtsuite und Paketveröffentlichung wurden bei dieser Gegenprüfung nicht
+erneut ausgeführt. Die Browsernachweise und Claudes unabhängige Freigabe
+(`e427013`, Runde 1) stehen unten.
+
+Die nachfolgende Matrix beschreibt den abgenommenen Stand vom 2026-09-08.
+Spätere Änderungen an Kursquellenanzeige und Sammelcodes gehören zu T-21;
+dessen laufendes Review wird durch diese Gegenprüfung nicht ersetzt.
+
+**Doku-Abgleich:** `docs/plugin-authors.md`, Abschnitt „Declare venues and
+coverage“, beschreibt Deklaration, Prüfung und Beispiel samt Checkout-Befehl.
+Für die geprüften Fälle war dort keine Änderung nötig. Bei Umsetzung des
+Hinweises werden Linkziel und Beschreibung erneut gegen die Anleitung geprüft.
 
 ### Scope-Vertrag · 2026-09-08
 
@@ -51,7 +106,7 @@ Browserprüfung mit isolierten Daten in DE/EN und schmalem Fenster; danach Claud
 
 Abhängigkeit: [T-30](T-30-plugin-boersenauskunft.md), dessen REST-Auskunft
 die einzige Datenquelle der Oberfläche ist. Der
-[Gesamtentwurf](../docs/superpowers/specs/2026-09-08-plugin-exchanges-design.md)
+[Gesamtentwurf](../../docs/superpowers/specs/2026-09-08-plugin-exchanges-design.md)
 beschreibt das vereinbarte Verhalten.
 
 - Exchanges zeigt MIC, Handelsplatz, Region und Unterstützung mit Quelle und
@@ -69,6 +124,7 @@ beschreibt das vereinbarte Verhalten.
 | 2 | Browser: archive inaktiv und bestandsabhängig; legacy nicht angegeben. Backend-Ausfall leert alte Angaben und zeigt übersetzten Fehler; Neuladen stellt die Ansicht wieder her. | ✅ | |
 | 3 | DE/EN, 1440/390 px ohne horizontalen Überlauf. Suche nach Quelle und MIC, US samt Mitgliedern getrennt; Standard XBUD im Browser, Standard US im Komponententest. | ✅ | |
 | 4 | 6 gezielte Harness-Fälle, 50 US-Beispieltests; ungültiger MIC, fremde Rolle, Umfang, Währung und Duplikat werden abgewiesen. | ✅ | |
+| 5 | Unter der Einleitung der Börsenseite erklärt ein Hinweis, dass Plugins weitere Handelsplätze und MICs ergänzen können. Link öffnet `docs/plugin-authors.md` auf GitHub; Hinweis und Link sind in DE/EN auf Desktop und Mobil nutzbar. Am 2026-09-09 von Mike an T-67, Prüfpunkt `extras`, abgegeben; hier kein Umsetzungsnachweis. | ➖ | |
 
 ### Eigene Prüfung · Codex, 2026-09-08
 
