@@ -28,7 +28,7 @@ Aktuell ist **keine zusätzliche Prüfung durch dich** angesetzt.
 Die offenen Punkte liegen zunächst bei Coder und Verifier.
 
 T-21 läuft am 2026-09-09 vor T-67; die jeweils laufende Arbeit steht in
-[STATUS.md](STATUS.md). Dieses Ticket ist noch nicht als erledigt freigegeben.
+[STATUS.md](../STATUS.md). Dieses Ticket ist noch nicht als erledigt freigegeben.
 
 Die folgenden Details dokumentieren den bisherigen Prüfstand. Die Aussage,
 dass die damalige Verifikation allein keine Umsetzung beauftragte, bezieht
@@ -36,7 +36,7 @@ sich auf diesen Prüfauftrag; die aktuelle Arbeitsreihenfolge steht in STATUS.
 
 ## Restumsetzung Börsenabweichung · Auftrag Mike, 2026-09-09
 
-Codex implementiert, Claude prüft unabhängig über [STATUS.md](STATUS.md).
+Codex implementiert, Claude prüft unabhängig über [STATUS.md](../STATUS.md).
 Mike: „OK, dann erledige das. Den Docker-Langzeittest können wir nicht
 machen, das wird sich zeigen.“ Die historischen Docker-Zeilen bleiben
 Prüfhistorie; daraus folgt kein offener Abschlussriegel mehr.
@@ -472,7 +472,7 @@ Suffix-Schreibweise nachbilden.
 adressiert wird. **Blockiert:** T-23 (ein Plugin, das Yahoo-Symbole erwarten
 muss, ist kein Plugin).
 
-**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 
 > **Portfolio-Rebaseline Mike, 2026-08-27.** T-21 wird nach der bereits
 > freigegebenen Übergabe 3 eingefroren: Produktstand `2dd0dc3`, Freigabe
@@ -529,7 +529,7 @@ muss, ist kein Plugin).
 > **Die Handzuordnung ist gestrichen — der Symbolweg verlangt die Kombination
 > künftig im Vertrag** *(Claude, 2026-08-24; Entscheidungen Mike)*
 >
-> **Entwurf:** [`docs/superpowers/specs/2026-08-24-t21-teil3-identitaet-sichtbar-und-pflicht-design.md`](../docs/superpowers/specs/2026-08-24-t21-teil3-identitaet-sichtbar-und-pflicht-design.md)
+> **Entwurf:** [`docs/superpowers/specs/2026-08-24-t21-teil3-identitaet-sichtbar-und-pflicht-design.md`](../../docs/superpowers/specs/2026-08-24-t21-teil3-identitaet-sichtbar-und-pflicht-design.md)
 >
 > **⚠️ Codex: die Messungen bitte eigenständig nachvollziehen**, nicht anhand
 > dieser Zusammenfassung. Der ganze Zuschnitt hängt an ihnen.

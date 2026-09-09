@@ -8,7 +8,7 @@ Die Eingabe, beide Börsen und die Kurswährung sind fett hervorgehoben.
 
 Die Meldung ist nach T-21 und T-65 umgesetzt und bis Runde 3 freigegeben.
 Mike hat die letzte Dialogvorschau bestätigt; deren kleiner Nachtrag folgt.
-Codex implementiert, Claude prüft; die Kette steht in [STATUS.md](STATUS.md).
+Codex implementiert, Claude prüft; die Kette steht in [STATUS.md](../STATUS.md).
 Aktuell ist keine zusätzliche Prüfung durch Mike angesetzt.
 
 ## Auftrag und Umfang

@@ -229,7 +229,7 @@ Transaktion sowie den Versionsvergleich mit Freigabe oder Sperre beim Start.
 Ein kleines Beispielplugin und die gezielten Prüfungen unten belegen den Weg.
 Vorhandene Versionsspeicherung und Backup-Funktion werden wiederverwendet.
 
-Die [Autorenanleitung](../docs/plugin-authors.md#plugin-data-migrations)
+Die [Autorenanleitung](../../docs/plugin-authors.md#plugin-data-migrations)
 beschreibt den verfügbaren Ablauf mit konkreter Kontext-API und ausführbarem
 Beispiel. Die geplante Kennzeichnung ist mit der Umsetzung entfernt. Dieser
 Doku-Abgleich gehört zur Lieferung und zur Prüfung M5.
@@ -410,7 +410,7 @@ die aktuelle Einordnung oben überholt; sie sind keine neuen Arbeitsaufträge.
 Instanz. Profil A durch B zu ersetzen ist etwas anderes, als innerhalb von A
 eine Quelle zu ergänzen — und dieser Unterschied fehlt im Entwurf bisher ganz.
 
-**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 
 > **Von Mike bestätigt (2026-08-20)**, im Wortlaut über Codex' Kanal:
 > „Plugin B ersetzt Plugin A. Die Datenbank von A wird nach einem normalen,

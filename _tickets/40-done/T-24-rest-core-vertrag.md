@@ -22,7 +22,7 @@ welche Felder verbindlich sind, was `stale` bedeutet oder ob ein Schlusskurs
 bereinigt ist. Solange das so bleibt, ist jede Änderung an der Identität ein
 Blindflug.
 
-**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 
 **Hängt an:** nichts. **Blockiert: T-21** — erst wissen, was zugesagt ist, dann
 die Identität ändern.

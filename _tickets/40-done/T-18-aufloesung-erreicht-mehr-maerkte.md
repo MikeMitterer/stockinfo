@@ -26,7 +26,7 @@ Kaskade schneller ein Symbol, das es nicht gibt.
 >    erreicht ihn nicht; über das Symbol `XIC.TO` kommt er herein, und genau
 >    darum geht es in Zeile #5.
 
-**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 
 ---
 

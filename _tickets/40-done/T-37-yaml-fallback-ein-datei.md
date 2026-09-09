@@ -200,7 +200,7 @@ Legende: ✅ live bestätigt · ⚠️ bestätigt mit Einschränkung (Fußnote) 
 
 | # | Where | Look for | AI | Human |
 |---|---|---|:--:|---|
-| **1** | `T-37-single-file-sample.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | ✅ [^review-r6] | |
+| **1** | `../../tests/_resources/assets.yaml` + Schema-/Invariantentest | eine Datei enthält valide Beispiele für `listed`, `pair` und `isin_only` sowie `stock`, `etf`, `fund`, `crypto` und `bond`; ISIN, MIC, Währungen, Preise und History-Werte werden vor dem Lauf geprüft | ✅ [^review-r6] | |
 | **2** | `PROFILE=yaml ./_tickets/40-done/T-35-smoke.sh --run` | der gemeinsame Smoke ist grün; `GET /sources` zeigt `yaml-file` in allen fünf Rollen und genau einen Pfad auf die Fachdaten-Datei | ✅ [^r1] | |
 | **3** | `PROFILE=online ./_tickets/40-done/T-35-smoke.sh --run` | derselbe Smoke ist grün; normale Online-Quellen stehen zuerst und dasselbe `yaml-file` jeweils zuletzt | ⊘ [^split] | |
 | **4** | Überschneidungs-Test im Online-Profil | liefert eine Online-Quelle einen gültigen Wert, gewinnt sie; YAML überschreibt ihn nicht. Nur bei fehlendem Ergebnis wird YAML gefragt | ⊘ [^split] | |
@@ -294,12 +294,12 @@ providers:
 ```
 
 Das vollständige Online-Beispiel liegt in
-[`examples/sources-fallback.yaml`](../examples/sources-fallback.yaml).
+[`examples/sources-fallback.yaml`](../../examples/sources-fallback.yaml).
 
 `/data/assets.yaml` ist die **eine vom Benutzer gepflegte Fachdaten-Datei**.
 Sie enthält Instrumente, optionale aktuelle Preise, optionale manuelle History,
 Metadaten und Devisenkurse. Das abgestimmte Beispiel liegt in
-[`T-37-single-file-sample.yaml`](T-37-single-file-sample.yaml).
+[`../../tests/_resources/assets.yaml`](../../tests/_resources/assets.yaml).
 
 `sources.yaml` zählt nicht als zweite Fachdaten-Datei: Sie existiert ohnehin
 für jedes Profil und enthält keine Instrumentendaten.

@@ -15,7 +15,7 @@ automatisierbar. T-23 gilt erst als fertig, wenn seine Tests damit laufen. Ohne 
 Plugin müsste Yahoo-Symbole verstehen, Yahoos Gattungsnamen kennen und mit `None`
 drei Zustände ausdrücken.
 
-**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 
 > **Verbindliche MVP-Reihenfolge, Mike 2026-08-27:** T-22 → T-27a →
 > T-27b → **T-23**. T-23 ist erst fertig, wenn mindestens ein Datei-Plugin

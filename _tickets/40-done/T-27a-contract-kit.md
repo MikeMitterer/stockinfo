@@ -8,7 +8,7 @@
 fünf Rollen. Ein Plugin kann damit die ISIN-Auflösung nachweisen und bliebe für
 Kurse, Historie und Devisen trotzdem implizit an yfinance gebunden.
 
-**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 
 **Hängt an:** T-22 für die vollständige Rollenabdeckung (dort werden
 `DailyCloseProvider` und `FxRateProvider` als kanonische Protokolle gebündelt).

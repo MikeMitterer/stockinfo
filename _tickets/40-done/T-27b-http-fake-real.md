@@ -12,7 +12,7 @@ Die App hat drei solche Anbindungen bereits: Yahoo, justETF und OpenFIGI. Sie
 werden **benutzt**, nicht nachgebaut — ein Plugin, das seine API neu schreiben
 muss, um den Vertrag zu erfüllen, wäre der Fehler und nicht die Lösung.
 
-**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
+**Design:** [`docs/superpowers/specs/2026-08-19-plugin-system-design.md`](../../docs/superpowers/specs/2026-08-19-plugin-system-design.md)
 
 **Hängt an:** T-27a (das Szenarioformat kommt von dort).
 **Muss vor Abschluss von T-23 stehen.**
