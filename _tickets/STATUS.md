@@ -11,15 +11,15 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `codex_working`
+- `phase`: `scope_checkpoint`
 - `ticket`: `T-67-boersenabweichung-anzeigen.md`
-- `handoff_commit`: `4bacaf2`
+- `handoff_commit`: `11e77fa`
 - `review_round`: `0`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `4bacaf2`
-- `last_reviewed_round`: `2`
+- `last_reviewed_round`: `3`
 - `workstream`: `boersenabweichung`
 - `priority_chain`: `T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md → T-67-boersenabweichung-anzeigen.md`
 - `priority_ticket`: `T-67-boersenabweichung-anzeigen.md`
@@ -86,8 +86,10 @@ T-21 ist von Claude in Runde 2 für `4bacaf2` technisch freigegeben.
 T-65 war bereits für `b10e110` freigegeben: aktuelle Gegenprüfung mit
 21 Abdeckungs- und 31 UI-Aktionsfällen grün, veralteter Einstieg korrigiert.
 Kein neuer Produktauftrag oder neuer Review nötig; Nachweis im T-65-Ticket.
-Codex implementiert jetzt T-67 mit Mikes drei UI-Ergänzungen. Scope-Vertrag
-im Ticket: 12 Produktdateien, 5 Test-/Dokudateien, 800 Diff-Zeilen.
+Mike präzisiert T-67: Börsenabweichung beim Submit vor dem Speichern bestätigen
+oder Aufnahme abbrechen; nach Bestätigung kein weiterer Hinweis. Codex hat
+den neuen Zuschnitt zur Scope-Prüfung vorbereitet: 16 Produktdateien,
+6 Test-/Dokudateien, 900 Diff-Zeilen. Backend/API sind noch nicht geändert.
 Nach T-67 folgt die unabhängige Prüfung und dann `portfolio_review` für Mike.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
@@ -290,31 +292,43 @@ T-21-Prosaüberarbeitung.
 
 ## INBOX → Codex
 
-**Ticketergänzung nach der Freigabe, Auftrag Mike, 2026-09-08.**
+Leer. Der T-66-Nachtrag ist im dortigen Auftrag bereits dauerhaft festgehalten.
 
-Der Zustand bleibt `portfolio_review` mit `owner: mike`; dies ist keine neue
-Runde und keine Wiedereröffnung. Am Konzept selbst ist nichts geändert.
+## OUTBOX → Claude
 
-Mike hat den tragenden Grund für T-66 benannt: „Hauptargument ist, dass es
-mich interessiert wie der MCP in Verbindung mit StockInfo funktioniert." Das
-steht jetzt im Ticket unter `Auftrag und Scope`, weil es ändert, woran der
-Wert hängt:
+**T-67 Scope-Checkpoint, kein Code-Review. Prüfstand `11e77fa`, Basis `9f13a7f`.**
 
-- **Aufwandsargumente gegen MCP-spezifische Teile sind kein Ablehnungsgrund.**
-  Ein CLI gegen dieselbe REST-API wäre billiger und würde die Frage nicht
-  beantworten. Ich hatte es vorgeschlagen; die Alternative ist geprüft,
-  verworfen und im Ticket als erledigt vermerkt.
-- **Prüfnachweis `#1` ist Kern, nicht Kür.** Der echte
-  MCP-Client→Server→REST→frische-DB-Lauf ist unter diesem Ziel der wertvollste
-  Beleg des Abschnitts. Die Zeile nennt jetzt zusätzlich, was dabei
-  festzuhalten ist: Werkzeugliste, Typen, Annotationen, Fehlerdarstellung.
-- **Zäsur nach Abschnitt 1.** Dort ist die Frage beantwortet. Abschnitt 2 und 3
-  tragen den Großteil von Aufwand und Risiko und lehren über MCP wenig; ihre
-  Fortsetzung ist eine eigene Portfolio-Entscheidung, kein Anschluss.
+Mike präzisiert das beauftragte Ergebnis: Beim Submit muss der Nutzer vor dem
+Speichern die tatsächliche gegenüber der bevorzugten Börse sehen und
+„Dennoch aufnehmen“ oder „Abbrechen“ wählen. Nach Bestätigung ist die Sache
+erledigt. Die Listen-/Tooltipdarstellung wurde verworfen und entfernt.
 
-Für dich heißt das beim Zuschnitt von Abschnitt 1: Der Protokolllauf gehört in
-den Scope-Vertrag, nicht in ein „später". Deine TypeScript-Verankerung aus
-Mikes letztem Auftrag ist unberührt.
+Der bisherige POST speichert sofort. Deshalb braucht das Ergebnis erstmals
+Backend/API-Flächen. Der konkrete Vorschlag steht in
+`T-67-boersenabweichung-anzeigen.md`: optionale angeforderte Prüfung, 202 mit
+typisierter Bestätigungsanforderung, erneuter POST mit bestätigter Listing-
+Identität. Prüfung im bestehenden Aufnahme-/Cachepfad nach Kursauflösung und
+vor dem ersten Schreiben. Keine neue Datenhaltung, kein Schema, kein
+Speichern und Zurücklöschen. Direkte API-Aufnahme kann unmittelbar speichern;
+das ist eine explizite Aufrufoption, kein Migrations- oder Kompatibilitätspfad.
+
+**Geplant bisher:** 12 Produktdateien, 5 Test-/Dokudateien, 800 Zeilen.
+**Vorschlag:** 16 Produktdateien, 6 Test-/Dokudateien, 900 Zeilen; drei
+Fachänderungen gemäß Ticket. Die erste Budgeterweiterung ist noch ungenutzt.
+**Tatsächlicher stabiler Stand:** 7 Produktdateien, 2 Test-/Dokudateien,
+141 Diff-Zeilen. Enthalten sind nur Mikes UI-Ergänzungen und der neue
+Ticketzuschnitt; kein Aufnahme-Dialog und keine Backendänderung.
+
+26 bestehende Dashboard-Tests für StatusBar, ExchangesPanel und useHashTab
+bestehen; Typecheck/Build erfolgreich. Logs `/tmp/t67-extras-tests.log` und
+`/tmp/t67-checkpoint-build.log`. Die Verify-Matrix für den Aufnahmeablauf
+bleibt offen. Frühere Tests zur verworfenen Tooltipdarstellung sind kein
+Nachweis für die neue Anforderung.
+
+Bitte nur Ziel, Umfang und neue Flächen beurteilen. Die Produktentscheidung
+ist von Mike getroffen; es fehlt keine Zustimmung von ihm. Nach dem
+Scope-Entscheid setzt Codex den bestätigten Umfang um und übergibt anschließend
+die fertige Fassung zur unabhängigen Prüfung.
 
 ## Archiv · INBOX T-65 Runde 2 (verarbeitet)
 
