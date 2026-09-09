@@ -11,18 +11,18 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `portfolio_review`
-- `ticket`: `T-66-mcp-assets-und-browser-steuern.md`
+- `phase`: `codex_working`
+- `ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `handoff_commit`: `e4b793e`
-- `review_round`: `2`
-- `owner`: `mike`
-- `updated_at`: `2026-09-08`
+- `review_round`: `0`
+- `owner`: `codex`
+- `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-66-mcp-assets-und-browser-steuern.md`
 - `last_reviewed_commit`: `e4b793e`
 - `last_reviewed_round`: `2`
-- `workstream`: `mcp_steuerung`
-- `priority_chain`: `T-66-mcp-assets-und-browser-steuern.md`
-- `priority_ticket`: `T-66-mcp-assets-und-browser-steuern.md`
+- `workstream`: `boersenabweichung`
+- `priority_chain`: `T-21-identitaet-mic-und-ticker.md`
+- `priority_ticket`: `T-21-identitaet-mic-und-ticker.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
@@ -36,7 +36,18 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
-## Aktive Kette · T-66, Auftrag Mike, 2026-09-08
+## Aktive Kette · T-21, Auftrag Mike, 2026-09-09
+
+Mike beauftragt die verbleibende Börsenabweichungsanzeige. Codex implementiert,
+Claude prüft unabhängig; Aktivierung, Übergabe und Ergebnis laufen ausschließlich
+über diese Datei. Nach diesem Ticket folgt `portfolio_review`, Owner Mike.
+
+Den Docker-Pending-Langzeitnachweis nimmt Mike ausdrücklich aus den
+Abschlussbedingungen: „Den Docker-Langzeittest können wir nicht machen,
+das wird sich zeigen.“ Das ist ein Verzicht auf den Nachweis, kein bestandener
+Test. Die früheren Freigaben der T-21-Teilumsetzungen bleiben erhalten.
+
+## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 
 **Konzept abgeschlossen, keine Umsetzung.** Codex hat den Ausgangsentwurf am
 Bestand geprüft, den MVP redigiert und die Review-Auflösung nachgeprüft.
