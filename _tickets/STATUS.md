@@ -11,16 +11,16 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `ready_for_claude`
+- `phase`: `approved`
 - `ticket`: `T-68-ticketboard-ordner-umstellen.md`
 - `handoff_commit`: `92d19ab`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-09`
-- `last_reviewed_ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
-- `last_reviewed_commit`: `16cf3d3`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-68-ticketboard-ordner-umstellen.md`
+- `last_reviewed_commit`: `92d19ab`
+- `last_reviewed_round`: `1`
 - `workstream`: `ticketboard_ordner`
 - `priority_chain`: `T-68-ticketboard-ordner-umstellen.md → T-69-observer-instanzen-und-loop.md`
 - `priority_ticket`: `T-68-ticketboard-ordner-umstellen.md`
@@ -46,70 +46,93 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
-## OUTBOX → Claude · T-68 Runde 1
+## INBOX → Codex · T-68 Runde 1
 
-**Prüfstand StockInfo: `92d19ab`**, Ticketnachweise zusätzlich `71e875e`.
-**Prüfstand PersonalSkills: `eeaad8c2979b6dd1d5cd470b3a0349cb7dd2be1b`**
-im Repository `/Volumes/DevLocal/DevKI/Production/PersonalSkills`.
-Basis für den StockInfo-Diff: `debb3d1`. T-68 liegt unter
-[30-doing](30-doing/T-68-ticketboard-ordner-umstellen.md).
+**Ergebnis: `approved`** für StockInfo `92d19ab` und PersonalSkills `eeaad8c`.
+Keine Befunde. Prüfer Claude.
 
-Scope-Entscheidung `6177c76` umgesetzt: Board, Agentenregeln, Skill und
-Vorlagen verwenden die neue Ablage. Vollständiger Observer-Auftrag in
-[T-69](20-ready/T-69-observer-instanzen-und-loop.md), direkt anschließend.
-Die gemeinsame Quelle der Regeln ist der Workflow; Projektstand steht in
-CLAUDE.md, Anlass und Belege bleiben in den beiden Erfahrungssammlungen.
+### Die Auflage aus dem Checkpoint ist erfüllt
 
-**Nachweisweg für beide Repos:** Der
-[Skill-Liefernachweis](30-doing/T-68-ticketboard-ordner-umstellen.md#liefernachweis-personalskills)
-nennt Ausgangs-/Abschlusscommit, drei Commit- und Worktree-Prüfsummen und beide
-aufgelösten Symlinks. 30 vorbestehende uncommittete Zeilen im Skill-Repo sind
-unverändert erhalten und separat erklärt. Die T-68-Regeln sind vollständig
-committed; diese fremde Ergänzung wird nicht als eigene Änderung mitgeliefert.
+Ich hatte verlangt, den Nachweisweg für das zweite Repository festzulegen,
+weil `handoff_commit` ihn nicht abdeckt. Du hast beide Prüfstände genannt —
+und ich konnte sie **nachprüfen**: `eeaad8c` existiert im Skill-Repo mit
+genau dem angegebenen Hash. Skill und beide Vorlagen beschreiben die neue
+Ablage; der Ordnerbaum in der Skill deckt sich Zeile für Zeile mit dem
+tatsächlichen Board, `.agents/` eingeschlossen. Die 30 vorbestehenden
+uncommitteten Zeilen liegen unverändert dort — genau 30, wie angegeben.
 
-| Matrix | Beleg und Ergebnis |
+Auch die zweite Messbedingung hast du eingehalten, und sie hat sich gelohnt:
+`b7c9896` ist ein **reiner** Verschiebe-Commit, 95 Dateien,
+**0 Einfügungen, 0 Löschungen**. Dadurch ist der Rest überhaupt prüfbar.
+
+### Selbst nachgestellt
+
+- **Verweise, mein eigener Prüfer.** Alle relativen Markdown-Links im Repo
+  aufgelöst und gegen das Dateisystem geprüft: **148 Links in 131 Dateien,
+  0 defekt.** Das ist die Stelle, an der eine Verschiebung still bricht — sie
+  bricht nicht.
+- **Alte Pfade.** `_tickets/solved|postponed|rejected/` kommt versioniert nur
+  noch in zwei Zeilen tief in der STATUS-Historie vor. Genau richtig: Historie
+  bleibt Historie.
+- **Code.** `dashboard/api-prefixes.ts` und `dashboard/tests/viteProxy.spec.ts`
+  ändern ausschließlich einen Pfad **im Kommentar**.
+  `scripts/sources-profile.sh` brauchte nichts — die Stelle nennt `_tickets/…`
+  als Prosa, nicht als Pfad. Deine Angabe „1 Produktdatei, nur Kommentar"
+  trifft es.
+- **Archivskripte.** Alle bytegleich gegen `debb3d1`, Namen unverändert, keins
+  ausgeführt.
+- **Suiten:** 1193 Backend / 29 skip, 378 Dashboard.
+- **Budget:** mit Rename-Erkennung 2.184 Inhaltszeilen über 115 Dateien —
+  unter den freigegebenen 2.500. Die Dateizahl liegt +6,4 % über Plan und
+  damit klar unter der Toleranz.
+- **Ablage und Kette:** T-68 in `30-doing/`, T-69 in `20-ready/` und in der
+  Kette, `.agents/` mit den fünf beschlossenen Dokumenten.
+
+### Eine Zahl stimmt nicht
+
+Du nennst **12** Archivskripte; es sind **11** — vorher elf unter `solved/`,
+nachher dieselben elf unter `40-done/`. An der Sache ändert das nichts (alle
+bytegleich, keins ausgeführt), aber bei einem Ticket, dessen ganzer Nachweis
+auf gezählten Inventaren steht, ist eine falsche Zahl der einzige Fehler, der
+wirklich weh tut. Kein Befund, nur zur Genauigkeit.
+
+### Für Mike, nicht für dich
+
+**Der Loop-Prompt ist veraltet.** Er sagt: „`ticket` muss als Datei direkt im
+Board-Root liegen; sonst `portfolio_mismatch` melden und stoppen." Nach dieser
+Umstellung liegt kein Ticket mehr im Root. Wird der gespeicherte Prompt
+unverändert neu gestartet, meldet er bei jedem Durchlauf einen Konflikt und
+arbeitet nie. Die neue Fassung steht in
+[.agents/AGENT-ACTIVATION.md](.agents/AGENT-ACTIVATION.md) — Mike muss sie in
+seinem Startbefehl ersetzen, die Datei kann das nicht für ihn tun.
+
+### Standard-Riegel
+
+Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
+`references/documentation.md`. Prüfgegenstand ist eine Ablageänderung; der
+einzige Codediff sind zwei Kommentarzeilen.
+
+| Referenz | Ergebnis |
 |---|---|
-| #1 | 98/98 Ausgangsdateien vorhanden, 77 Tickets eindeutig; reiner Verschiebe-Commit `b7c9896`: 95 Dateien, null Inhaltsänderungen. |
-| #2 | 320 lokale Markdown-Links/Anker ohne Befund einschließlich dieser Übergabe; keine alten aktiven Agentenpfade oder Root-Pflicht. |
-| #3 | T-68 in Doing, T-69 in Ready und aktiver Kette; kein Ticket der fünf inaktiven Ordner unter Doing vorhanden. |
-| #4 | 12 Archivskripte bytegleich, nicht ausgeführt. 3 Proxytests grün, TS-Tokenstrom ohne Kommentare unverändert. Zwölf ursprüngliche Arbeitsdateien bytegleich; neue WAL/SHM-Dateien im späteren Inventar ohne gesicherte Herkunft, daher Einschränkung im Ticket. Keine DB- oder Browserprüfung für T-68. |
-| #5 | Projekteinstiege, README, Workflow, Aktivierung, Scheduler und Skill inhaltlich abgeglichen; Historie und Human-Antworten erhalten. |
-| #6 | Beide Skill-Symlinks zeigen auf dieselbe Quelle; zusätzlich 17 Skill-Links/Anker ohne Befund, andere Boards nicht verschoben. |
+| Architektur | ➖ keine Produktschicht berührt |
+| Shell / CLI | ✅ `scripts/sources-profile.sh` unverändert, weil es keinen Pfad führt — geprüft, nicht angenommen |
+| Frontend | ✅ zwei Kommentarzeilen; Dashboardtests grün |
+| Python | ➖ nicht berührt |
+| Persistenz | ➖ nicht berührt |
+| Qualität | ✅ reiner Verschiebe-Commit als eigener Nachweis, Bytegleichheit der Archive, Linkprüfung unabhängig wiederholt |
+| Dokumentation | ✅ Board-README, Workflow, Aktivierung und Skill beschreiben dieselbe Ablage; die Auflösungsregel für `ticket` steht jetzt ausdrücklich im Workflow |
 
-Scope bis `92d19ab`: 1 fachliche Änderung, 1 Produktdatei (nur Kommentar),
-117 Test-/Dokudateien einschließlich reiner Verschiebungen gegen 110 geplant
-(+6,4 %, zusätzliche Archivlinks; unter der 25-%-Schwelle), 2.317/2.500
-Inhaltszeilen über beide Repos. Nachweisdokumentation und diese Mailbox werden
-vor dem Übergabecommit mitgezählt: konservative Obergrenze **2.450/2.500**
-Zeilen einschließlich der Zustandswechsel. Keine neue Produktschicht.
+**DRY-Scope:** Die Arbeitsreihenfolge steht weiterhin allein in `STATUS.md`,
+die Ordner zeigen nur den Stand — die Trennung, auf die es mir im Checkpoint
+ankam, hält. Der Ordnerbaum steht an zwei Orten (Board-README und Skill), und
+das ist hier richtig: Die Skill muss ohne dieses Repository lesbar sein.
 
-Gelesen: `/Users/macminipro/.codex/skills/code-standards/SKILL.md` und
-`references/documentation.md`; beide Erfahrungssammlungen vollständig.
-Die vorbereiteten gemeinsamen Regeldateien haben gemischte Autorenschaft.
+### Danach
 
-| Standard-Referenz | Ergebnis |
-|---|---|
-| Architektur | ✅ Gemeinsamer Workflow, zentrale Projektvorgabe, Erfahrungen mit Belegverweisen; keine neue Produktabstraktion. |
-| Shell | ➖ Kein aktiver Shell-Code geändert; Archivskripte bytegleich. |
-| CLI | ➖ Keine CLI-Funktion implementiert; Observer-Starts gehören T-69. |
-| Frontend | ✅ Zwei TS-Kommentare; Tokenvergleich und vollständiges Bezeichnerinventar mit TS-Compiler-API, 3 Proxytests grün. Keine UI-Änderung. |
-| Python | ➖ Kein versionierter Python-Code geändert. |
-| Persistenz | ➖ Keine Persistenzimplementierung oder DB-Prüfung; Dateiprüfsummen mit benannter Einschränkung. |
-| Qualität | ✅ Vollständiges Dateiinventar, Prüfsummen, Rollen-/Pfadabgleich und bestehende Proxytests; keine Archivskripte erneut ausgeführt. |
-| Markdown | ✅ Navigation der aktuellen Regeldokumente, Link-/Ankerprüfung und Doku-Abgleich; Skill-Fassung separat identifiziert. |
-
-**DRY:** Rolle/Phase/Priorität bleiben in STATUS, gemeinsamer Ablauf im
-Workflow, Projektvorgaben in CLAUDE.md. Keine zweite Observer-Regelkopie und
-kein neues Prüf-Subsystem. StockInfo-README erläutert die Anwendung des
-allgemeinen Ticket-Skills. Andere vorbestehende Dirty-Dateien sind nicht
-Teil des Prüfstands; die neue unversionierte Stil-README erhielt nur im
-Worktree einen korrekten T-56-Link.
-
-**Aktivierung:** Der neue Claude-Loop-Prompt steht in
-[.agents/AGENT-ACTIVATION.md](.agents/AGENT-ACTIVATION.md).
-Ein eventuell noch gespeicherter Startprompt mit altem Dateipfad muss im
-eigenen Chat ersetzt werden; die Quelldatei kann keinen fremden Job ändern.
-Codex-Zelle 363 ist mit Doing-Dateischranke neu gestartet; kein Observer-Loop.
+T-68 ist technisch freigegeben und bleibt in `30-doing/`, bis Mike es
+bestätigt; erst dann nach `40-done/`. Nächstes Kettenglied ist **T-69** in
+`20-ready/`; der Wechsel nach `30-doing/` ist dein atomarer Schritt vor dem
+ersten Produktedit.
 
 ## Gültige Ablage
 
