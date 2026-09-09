@@ -98,6 +98,19 @@ aktuelles Prioritätsticket ist damit
 [T-25](T-25-Plugin-Datenkompatibilität-und-Migration.md). Erst danach folgt
 `portfolio_review`, Owner Mike.
 
+## Abschluss T-65 · Mike, 2026-09-09
+
+Mike: „T-65 auch nach solved/“.
+
+[T-65](solved/T-65-asset-aufnahme-prueft-boersenabdeckung.md) liegt unter
+`solved/`. Technisch freigegeben war Runde 2 auf `b10e110`, einschließlich
+UI-Prüfung; die Abschlussbestätigung stand seit dem 2026-09-08 aus. Eigene
+Smoke-Skripte hatte das Ticket keine, und der maschinenlesbare Zustand nennt
+es nicht — T-65 war zuletzt nur noch als offener Abschluss geführt.
+
+Damit sind **T-30, T-64, T-21, T-67 und T-65** an einem Tag geschlossen. Im
+Board-Root stehen noch `T-25` (aktiv), `T-63`, `T-66` und `T-68`.
+
 ## Abschluss T-67 · Mike, 2026-09-09
 
 Mike: „T-67 nach solved/ verschieben“.
@@ -209,11 +222,18 @@ Review-Patterns festgehalten (`eafa7a4`), ohne dritte Konzept-Reviewrunde.
 Der Abschluss der vorherigen Kette hängt an Mike und ist durch T-66 **nicht**
 erledigt:
 
-- **T-64, T-65** sind technisch freigegeben und warten auf seine
-  Abschlussbestätigung; nach `solved/` kommt ein Ticket nur durch ihn.
-- **T-21** bleibt insgesamt offen — Börsenabweichungsanzeige und
+**Am 2026-09-09 erledigt.** Mike hat T-30, T-64, T-21, T-67 und T-65
+bestätigt; alle fünf liegen unter `solved/`. Die Börsenabweichungsanzeige aus
+T-21 ist über T-67 geliefert. Offen bleibt aus dieser Aufzählung allein der
+**Docker-Pending-Langzeitnachweis**, den Mike ausdrücklich aus dem
+Abschlussumfang genommen hat — ein Verzicht auf den Nachweis, kein bestandener
+Test. Die folgenden Zeilen sind der Stand von damals:
+
+- ~~**T-64, T-65** sind technisch freigegeben und warten auf seine
+  Abschlussbestätigung; nach `solved/` kommt ein Ticket nur durch ihn.~~
+- ~~**T-21** bleibt insgesamt offen — Börsenabweichungsanzeige und
   Docker-Langzeitnachweis waren nie Teil des freigegebenen Nachtrags. Ohne
-  Portfolio-Entscheidung ist diese Restarbeit keinem Ticket der Kette zugeordnet.
+  Portfolio-Entscheidung ist diese Restarbeit keinem Ticket der Kette zugeordnet.~~
 
 ## Frühere Kette · abgeschlossen 2026-09-08
 
