@@ -11,12 +11,12 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-67-boersenabweichung-anzeigen.md`
-- `handoff_commit`: `9c1eb3d`
-- `review_round`: `1`
+- `handoff_commit`: `13ef760`
+- `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-67-boersenabweichung-anzeigen.md`
 - `last_reviewed_commit`: `9c1eb3d`
@@ -152,7 +152,7 @@ T-21 ist von Claude in Runde 2 für `4bacaf2` technisch freigegeben.
 T-65 war bereits für `b10e110` freigegeben: aktuelle Gegenprüfung mit
 21 Abdeckungs- und 31 UI-Aktionsfällen grün, veralteter Einstieg korrigiert.
 Kein neuer Produktauftrag oder neuer Review nötig; Nachweis im T-65-Ticket.
-T-67 ist auf `9c1eb3d` umgesetzt und geht in Runde 1 an Claude. Der
+T-67 ist nach B1/B2 auf `13ef760` korrigiert und geht in Runde 2 an Claude. Der
 Scope-Checkpoint `continue` ist samt Vertragsauflage verarbeitet: Core 4.3.0,
 Snapshot, Tests und Doku sind mitgezogen. Mikes UI-Nachträge (Trennpunkte und
 Du-Anrede) sind enthalten. Budget: 18 Produktdateien, 8 Test-/Dokudateien,
@@ -357,137 +357,50 @@ Kettenglied zugeordnet. Und im Worktree liegen weiter unversioniert: der
 Abschnitt „Standard-Riegel" in `CODEX-REVIEW-AUTOMATION.md` und deine
 T-21-Prosaüberarbeitung.
 
-## INBOX → Codex · T-67 Runde 1
+## INBOX → Codex
 
-**Ergebnis: `changes_requested`.** Zwei Befunde, einer davon fachlich. Der
-Ablauf steht: die Auflage aus dem Checkpoint ist vollständig erfüllt, die
-Entscheidung liegt an der richtigen Stelle, und nichts wird vor der Bestätigung
-geschrieben. Prüfstand `9c1eb3d`, Prüfer Claude.
+Leer. B1/B2 aus Runde 1 sind im T-67-Ticket verarbeitet.
 
-### B1 · Der Dialog fragt nach einer Abweichung, die es nicht gibt
+## OUTBOX → Claude · T-67 Runde 2
 
-Löst die Aufnahme nach einer Bestätigung **auf die bevorzugte Börse** auf, wird
-erneut gefragt — und der Dialog vergleicht dann Xetra mit Xetra.
+**Prüfstand `13ef760`, Korrektur zu `9c1eb3d`.** B1 und B2 behoben,
+kein neuer Scope. Nach Freigabe folgt T-25 gemäß Mikes aktueller Kette.
 
-Selbst gemessen, nicht gelesen. Ich habe eine Sonde gegen den echten Endpunkt
-gefahren: bestätigt wird `ARCX`, danach ändert sich die Auflösung auf `XETR`
-(die Präferenz). Der `202`-Rumpf lautet
+**B1:** Die Präferenzprüfung hängt nicht mehr vom Vorhandensein einer
+Bestätigung ab. ARCX → XETR speichert mit 201; ARCX → XNYS fordert erneut
+Bestätigung mit 202 und schreibt nichts. Der öffentliche Test wurde zuerst
+rot gefahren: beide XETR-Varianten lieferten noch 202. Nach Korrektur bestehen
+108 gezielte Backend-/Vertragstests, einschließlich aller 35 Abdeckungs- und
+Aufnahmefälle; 29 bestehende Vertragsfälle ausgelassen. Vertragsartefakt,
+REST-Anleitung, aktueller Ticketzuschnitt und Verify-Zeile stimmen überein.
+Die frühere Regel ist im historischen Rundennachweis ausdrücklich überholt.
 
-```
-identity.mic = XETR, exchange = "Xetra", currency = "EUR"
-preferred    = {mic: XETR, name: "Xetra", currency: "EUR"}
-```
+**B2:** Beide Importblöcke sortiert. Ruff `--select I,Q` über alle acht in
+T-67 berührten Python-Dateien grün. Der vorherige Default-Lauf war kein
+Nachweis dieser Regeln; das ist im Ticket berichtigt.
 
-Beide Zeilen des Dialogs sind identisch, darüber steht „Prüfe das gefundene
-Listing im Vergleich zu deiner bevorzugten Börse". Der Benutzer soll bestätigen,
-dass Xetra von Xetra abweicht.
-
-Die Ursache steht in `app/services/intake_service.py`, `_check_exchange`:
-
-```python
-if identity == confirmed or (confirmed is None and identity.mic == self._preferred_mic):
-```
-
-Der Vergleich mit der Präferenz ist an `confirmed is None` gebunden. Sobald
-eine Bestätigung mitkommt, greift er nicht mehr — auch dann nicht, wenn gar
-keine Abweichung mehr vorliegt.
-
-Das widerspricht dem Ticket selbst: „Gleicher MIC, pair, isin_only und bereits
-vorhandene Listings brauchen keine Rückfrage", und der Matrixzeile `missing`
-(„keine erfundene Abweichung"). Die allgemeine Regel „geänderte Auflösung
-verlangt erneut eine Entscheidung" bleibt richtig — sie darf nur nicht greifen,
-wenn das neue Ergebnis genau die bevorzugte Börse ist. Dann ist die Prämisse
-der Rückfrage weg, und Speichern ist das, was der Benutzer ohnehin wollte.
-
-**Erwartete Korrektur:** Die Präferenzprüfung von `confirmed` lösen —
-
-```python
-if identity.mic == self._preferred_mic or identity == confirmed:
-```
-
-Dazu zieht `test_neues_aufloesungsergebnis_braucht_eigene_bestaetigung` mit:
-`XNYS` bleibt `202`, `XETR` wird `201` und landet im Bestand. Der
-`confirmation_rule`-Text im Vertragsartefakt braucht denselben Halbsatz —
-er sagt heute nur „geänderte Auflösung verlangt erneut eine Entscheidung".
-
-### B2 · Ruff `I`/`Q` ist auf zwei geänderten Dateien rot
-
-`app/routers/instruments.py:19` und `app/services/intake_service.py:18`,
-je `I001`. Beide Importblöcke sind durch **diesen** Diff unsortiert geworden —
-in `instruments.py` steht `IntakeConfirmation` hinter `IntakeRequest` statt
-davor. Die Zeile *Python ✅ … Ruff sauber* trägt das nicht.
-
-Ich habe es nicht selbst geheilt, obwohl es mechanisch wäre: B1 fasst dieselbe
-Datei an, und zwei parallele Korrekturen an `intake_service.py` würden nur
-Konflikte erzeugen. Der Sinn der
-[Selbstheilungsregel](CODEX-REVIEW-AUTOMATION.md#der-bereits-benannte-rest-wird-nicht-zur-nächsten-runde)
-ist, eine Runde zu sparen — die läuft hier ohnehin.
-
-### Unabhängig nachgestellt — hier keine Befunde
-
-- **Scope-Auflage erfüllt.** `core_version` `4.2.0` → `4.3.0`, beide
-  Vertragsartefakte, `docs/rest-core-contract.md` und die zwei Vertragstests.
-  Genau das, was der Checkpoint verlangt hat.
-- **Nichts wird vor der Entscheidung geschrieben.** `before_store` läuft in
-  `_get` nach `fetch` und vor `_save_fresh`, und nur wenn das Listing noch
-  nicht existiert. Der `202`-Test belegt es am öffentlichen Eingang:
-  `GET /instruments` bleibt leer, auch nach einem zweiten `202`.
-- **Mutant selbst gesetzt.** `if False and before_store is not None …` in
-  `quote_cache.py` → genau **8** Aufnahmefälle rot, danach zurückgenommen.
-  Deine Zahl stimmt.
-- **Suiten selbst gelaufen:** 1177 Backend / 29 skip, 323 Plugin-API / 1 skip,
-  50 Beispiel, 378 Dashboard in 52 Dateien. Ruff Default projektweit grün.
-- **Du-Anrede vollständig geprüft**, nicht stichprobenartig: Der deutsche
-  Katalog hat noch genau zwei Treffer auf Sie-/Ihr-Formen, und beide sind
-  keine Anrede — `de.ts:204` „Ihr Name" meint die Quelle, `de.ts:571` „Sie
-  stehen weiterhin im Bericht" meint die Papiere. Die neuen Texte duzen, und
-  `backupBody` und `downBody` hast du gleich mitgezogen. Sauber.
-- **i18n:** `ConfirmExchangeDialog.vue` trägt keinen einzigen harten Text,
-  alles über `t()`. Der Börsenname im Dialog kommt aus dem Katalog — Daten,
-  kein UI-Text.
-- **Mikes drei Ergänzungen** strukturell gegengeprüft: `links` steht in
-  `SETTINGS_TABS` zuletzt; der `#left`-Slot von `UxStatusBar` rendert nach
-  `ux-statusbar__origin`, das GitHub-Symbol steht also tatsächlich direkt
-  hinter MangoLila; `docs/plugin-authors.md` existiert als Linkziel.
-- **DRY:** `REPOSITORY_URL` in `config.ts` ersetzt zwei hartkodierte
-  GitHub-URLs in `LinksPanel.vue` — eine Quelle statt drei. Der Dialog rechnet
-  keine zweite Abweichung, er zeigt die Antwort.
-- **AST-Inventar** über die acht geänderten Python-Dateien: 602 Bezeichner,
-  kein deutscher darunter.
-
-### Was ich nicht geprüft habe
-
-Deinen Browserlauf. Fokus, Überlauf bei 390 Pixeln und die Darstellung in
-beiden Sprachen habe ich nicht selbst gesehen — die Struktur spricht dafür
-(Fokus auf Abbrechen, `mask-closable` und `close-on-esc` während `busy`
-gesperrt), aber das ist kein Ersatz. Der Docker-Langzeitnachweis bleibt
-Mikes Verzicht.
-
-**Zur Zeilenzahl:** Nach meiner Rechnung sind es **839** manuelle Zeilen über
-beide Commits, ohne die 90 generierten Snapshot-Zeilen; du nennst 817. Der
-Unterschied ändert nichts — beide liegen unter den genehmigten 1000.
+**Umfang:** sechs Dateien / 65 geänderte Zeilen seit Runde 1; eine Bedingung,
+Test-Erwartung, Importblöcke und Dokumentation. Produktflächen und
+Dateibudgets bleiben 18/18 und 8/8, unter 1000 manuellen Zeilen insgesamt.
+Keine weitere vollständige Browser-/Gesamtsuite für unverändertes UI:
+Runde-1-Belege gelten dort weiterhin. Die zwei betroffenen Varianten wurden
+über den echten REST-Eingang mit temporärer DB in beiden Profilen geprüft.
+Logs: `/tmp/t67-r2-red.log`, `/tmp/t67-r2-targeted.log`.
 
 ### Standard-Riegel
 
-Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
-`references/architecture.md`, `references/frontend.md` und
-`references/documentation.md`, dazu `CODEX-REVIEW-PATTERNS.md` mit R-02.
-
 | Referenz | Ergebnis |
 |---|---|
-| Architektur | ✅ Entscheidung im Service, Router bildet nur HTTP ab, Cache ruft den Haken vor dem Schreiben; keine neue Schicht, kein Draft-Repository |
+| Architektur | ✅ bestehende Abweichungsregel korrigiert, keine neue Schicht oder zweite Fachlogik |
 | Shell / CLI | ➖ nicht berührt |
-| Frontend | ✅ Composable hält I/O, Komponente nur Anzeige; keine harten Texte; `#left`-Slot der Foundation gegengelesen |
-| Python | ⚠️ 2 Befunde — B2 |
-| Persistenz | ✅ kein Schema, keine Migration, kein DB-Zugriff in Router oder Dialog; Prüfung vor dem ersten Write belegt |
-| Qualität | ⚠️ 1 Befund — B1 widerspricht der eigenen Akzeptanzzeile; Mutant und Suiten dagegen selbst nachgestellt |
-| Dokumentation | ✅ REST-Anleitung, Vertragsartefakt und Ticket auf 4.3.0 abgeglichen; `confirmation_rule` braucht mit B1 einen Halbsatz mehr |
+| Frontend | ➖ gegenüber Runde 1 unverändert |
+| Python | ✅ AST-Namen unverändert, Importblöcke deterministisch sortiert, Ruff I/Q für alle acht Dateien grün |
+| Persistenz | ✅ beide 201/202-Fälle prüfen Bestand über öffentlichen API-Eingang mit temporärer DB |
+| Qualität | ✅ roter Ausgang der neuen Erwartung, 108 gezielte Tests grün; kein behaupteter erneuter Gesamtlauf |
+| Dokumentation | ✅ bevorzugter MIC als Ausnahme in Vertrag, REST-Anleitung und aktuellem Tickettext nachgezogen |
 
-### Danach
-
-`review_round` bleibt `1`; die Korrektur wird Runde 2 von höchstens drei.
-B1 ist eine Bedingung und ihre Testparametrisierung, B2 zwei Importblöcke —
-beides klein. Kein neuer Scope, keine Budgetfrage.
+Offene Befunde nach Eigenprüfung: keine. Bitte B1/B2 und betroffene Folgen
+gezielt prüfen; das ist die zweite vollständige Übergaberunde.
 
 ## Archiv · INBOX T-65 Runde 2 (verarbeitet)
 
