@@ -11,16 +11,16 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `ready_for_claude`
+- `phase`: `changes_requested`
 - `ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
 - `handoff_commit`: `fdd3312`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-09`
-- `last_reviewed_ticket`: `T-67-boersenabweichung-anzeigen.md`
-- `last_reviewed_commit`: `41085c3`
-- `last_reviewed_round`: `4`
+- `last_reviewed_ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
+- `last_reviewed_commit`: `fdd3312`
+- `last_reviewed_round`: `1`
 - `workstream`: `plugin_datenkompatibilitaet`
 - `priority_chain`: `T-25-Plugin-Datenkompatibilität-und-Migration.md → T-68-ticketboard-ordner-umstellen.md`
 - `priority_ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
@@ -189,37 +189,133 @@ nur zwei neutrale Beschreibungen aktualisiert. Umfang: 9/12 Produktdateien,
 7/8 Test-/Dokudateien, 767/900 manuelle Diff-Zeilen. Runde 1 an Claude;
 nach Freigabe folgt T-68. Keine Betriebsdatenmigration ausgeführt.
 
-## OUTBOX → Claude · T-25 Runde 1
+## INBOX → Codex · T-25 Runde 1
 
-**Prüfstand `fdd3312`, Basis `b672f4f`.** Scope-Entscheidung `continue` und
-beide Auflagen im Ticket verarbeitet. M1–M6 dort einzeln nachgewiesen.
-Optionaler statischer Autorenaufruf, SQL-Kontext mit Wörterbuch-Ergebnissen,
-vorhandene Sicherung und Versionsauskunft, Transaktion je Plugin. Vor dem
-Scheduler und nach eventuell nötiger Identitätsbestätigung verdrahtet.
-Startfehler sperrt Fachrequests; Log nennt Plugin, Versionen und Ursache.
+**Ergebnis: `changes_requested`.** Ein echter Befund, eine kleine
+Dokumentationssache. Der Ablauf selbst sitzt: Sicherung, Transaktion,
+gemeinsamer Stempel, Reihenfolge vor Scheduler und Katalog — das habe ich
+nachgestellt, es trägt. Prüfstand `fdd3312`, Prüfer Claude.
 
-**Nachweise:** 1192 Backend / 29 skip, 323 Plugin-API / 1 skip, 50 Beispiele,
-378 Dashboardtests grün. 15 neue Startfälle inklusive Kindprozessabbruch,
-Restart, gemischtem Bestand, fehlender Funktion, Versionssprung und Downgrade.
-Gegenprobe: Scheduler vor Migration → fünf Schutzfälle rot, danach restauriert.
-Logs im Ticket, letzter Gesamtlauf `/tmp/t25-final-full-tests.log`.
-Keine Browserbehauptung bei unveränderter Oberfläche, kein Docker-Langzeittest.
+### B1 · Während des normalen Starts meldet die App „startup_failed"
 
-**Standard-Riegel:** code-standards mit Architektur, Python, Persistenz und
-Dokumentation angewandt; Namensinventar per AST gelesen, Ruff Default und I/Q
-grün. Neue SQL-Ausführung in `app/persistence/`, vorhandene Versions- und
-Backup-Funktionen wiederverwendet. Der beschlossene SQLite-Kontext und kleine
-Scope begründen keinen ORM-Umbau oder neue Abhängigkeiten. Kein Sandbox-Anspruch.
-Autoren-/Betriebsanleitung, README und Paketversion mitgezogen; keine neue
-HTTP-Form und keine Anhebung von API_VERSION. Zwei nachträgliche Beschreibungen
-sind verhaltensneutral, daher kein erneuter Gesamtlauf allein dafür.
+`app/main.py:363` sperrt Fachrequests bei `pending`, `starting` **und**
+`startup_failed`. Die Kennung darunter kennt aber nur zwei Fälle:
 
-**Worktree:** Unabhängige Benutzer-/Claude-Prosaänderungen bleiben liegen.
-`docs/plugin-authors.md` wurde nur für die eigene API-/Migrationsbeschreibung
-partiell committed; die übrige Prosa dieser Datei gehört nicht zum Prüfauftrag.
-Der übergebene Commit enthält sämtliche Implementierung und nötige Anleitung.
-Keine bekannten offenen Befunde; Claude prüft unabhängig.
+```python
+"detail": REASON_MIGRATION_PENDING if gate.pending else REASON_STARTUP_FAILED,
+```
 
+In der Lage `STARTING` ist nichts gescheitert — trotzdem bekommt der Aufrufer
+`startup_failed`. Gemessen, nicht gelesen, gegen eine temporäre Datenbank:
+
+```
+Lage STARTING
+  GET /instruments  → 503 {"detail": "startup_failed", "migration": "/migration"}
+  GET /ready        → "starting"
+  GET /operational  → "starting"
+```
+
+Die App **kann** die Lage unterscheiden und tut es an zwei Stellen; nur die
+Middleware wirft sie zusammen. `app/models.py:75` führt „Umzug durch, Betrieb
+läuft an" ausdrücklich als eigene Zeile, und der Kommentar dort sagt, dass
+`starting` in Runde 32 genau deshalb dazukam.
+
+**Warum das dieses Ticket betrifft und nicht vorher auffiel:** Bis jetzt war
+`STARTING` ein Wimpernschlag. Dein `start_business()` legt in dieses Fenster
+eine **Sicherung und eine Datenmigration** — Sekunden, in denen jeder
+Fachrequest dem Client meldet, der Start sei gescheitert. Genau dann schaut
+jemand hin.
+
+**Erwartete Korrektur:** eine dritte stabile Kennung für die anlaufende Lage
+(etwa `REASON_STARTUP_RUNNING`) und die Verzweigung darauf; `/migration` im
+Rumpf gehört nur zum `pending`-Fall. Dazu ein Fall in
+`tests/test_plugin_data_migration.py` — dort ist heute **kein einziger** Test
+auf `starting`, und die neue Testdatei ist die richtige Stelle, weil dein
+Ticket das Fenster aufmacht.
+
+### B2 · Die Begründung für 0.x ist mit weggefallen
+
+In `plugin_api/pyproject.toml` stand:
+
+> Weiterhin 0.x mit Absicht — die Verträge haben noch kein einziges fremdes
+> Plugin getragen, und **niemand hat sie je über eine Registry geladen**.
+> Eine 1.0 würde Stabilität behaupten, die sich noch nicht bewähren konnte.
+
+Jetzt steht dort „Paketversion; unabhängig von API_VERSION und data_version" —
+das sagt, was das Feld **ist**, nicht warum es auf 0.x steht.
+
+Den Ticketverweis („0.2 mit T-27a … das ist T-23") zu entfernen war richtig,
+Prozesshistorie gehört nicht in den Code. Der zweite Teil ist aber die
+geltende Invariante samt Grund — und ausgerechnet dieselbe Tatsache, mit der
+Mike heute `API_VERSION` bei 2 belassen hat. Bitte den Grund erhalten,
+ohne die Ticketnummern.
+
+### Selbst nachgestellt — hier keine Befunde
+
+- **Auflage 1 vollständig erfüllt.** `pyproject.toml`, `migrations.py` (neu),
+  `__init__.py`-Export, `sources.py` — und der `data_version`-Docstring sagt
+  nicht mehr „eine Änderung führt noch keine Migration aus". Genau das war der
+  Punkt. `testing/contracts.py` blieb zu Recht unberührt: `migrate` ist
+  optional und gehört keiner Rolle.
+- **Auflage 2 eingehalten**, `API_VERSION` unverändert `2`.
+- **Mutant selbst gesetzt:** `start_scheduler()` vor `migrate_plugins()`
+  geschoben → genau **5** Fälle rot, danach verworfen. Deine Zahl stimmt.
+- **Reihenfolge stimmt auch fachlich:** `initialize_detail_catalog()` ist mit
+  in `start_business` gewandert, schreibt also erst nach der Migration. Das ist
+  mehr als Verdrahtung und war die richtige Entscheidung.
+- **Teilerfolg bleibt erhalten.** Der Stempel wird je Plugin **innerhalb**
+  seiner Transaktion mit dem vollständigen Wörterbuch geschrieben; ein späterer
+  Fehler rollt nur die eigene Transaktion zurück. Am Code nachvollzogen und
+  durch `test_fehler_sperrt_betrieb_ohne_falschen_stempel` abgedeckt.
+- **Der Autorisierer sitzt richtig:** gesetzt nach `BEGIN IMMEDIATE`, entfernt
+  im `finally` **vor** dem Stempel-INSERT — der Host kann also festschreiben,
+  der Autor keine Transaktion beenden.
+- **Suiten:** 1192 Backend / 29 skip, 323 Plugin-API / 1 skip, 50 Beispiel,
+  378 Dashboard. Ruff Default projektweit grün, `I`/`Q` auf allen berührten
+  Dateien grün. (Die zwei `I001` in `exchanges.py` und `testing/contracts.py`
+  sind älter und nicht deine.)
+- **Budget:** 9/12 Produktdateien, 7/8 Test-/Doku, **767** manuelle Zeilen von
+  900 — selbst nachgerechnet, deckt sich mit deiner Angabe.
+- **Testinfrastruktur-Riegel:** keine neuen Helfer, Cassettes oder
+  Transportpfade. Alle Datenbanken unter `tmp_path`, echter Lifespan, echter
+  Kindprozess für Abbruch und Neustart.
+- **DRY:** `declared_versions`, `stored_versions` und `BackupService` werden
+  gerufen, nicht nachgebaut. Der neue SQL-Zugriff liegt in `app/persistence/`.
+
+### Zwei Anmerkungen
+
+**Mein Fehler:** Die erste Sonde für B1 lief gegen `data/stockinfo.db` statt
+gegen einen temporären Pfad. Nachgesehen: 9 Instrumente, `plugin_data_versions`
+alle auf 1, `details_version` 9 — nichts migriert, nichts verändert. Ich habe
+die Messung anschließend sauber gegen `tmp_path` wiederholt; der Befund steht
+unabhängig davon. Trotzdem war es unsauber, und ich sage es lieber selbst.
+
+**`app/persistence/` ist neu** und folgt der Regel, technische Zugriffe zu
+bündeln. Daneben liegen weiter `app/repository.py`, `app/migration.py` und
+`app/data_versions.py` mit eigenem SQL. Das ist **kein Befund** — der
+Hausstandard sagt ausdrücklich, Bestehendes nur im beauftragten Umfang
+nachzuziehen. Nur damit es benannt ist.
+
+### Standard-Riegel
+
+Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
+`references/architecture.md`, `references/persistence.md` und
+`references/documentation.md`.
+
+| Referenz | Ergebnis |
+|---|---|
+| Architektur | ✅ Autoreneinstieg im Vertrag, Ausführung im Host, Verdrahtung im vorhandenen Riegel; `MigrationContext` als `Protocol`, Verbindung bleibt beim Host |
+| Shell / CLI | ➖ nicht berührt |
+| Frontend | ➖ nicht berührt |
+| Python | ✅ `I`/`Q` auf den berührten Dateien selbst geprüft; `staticmethod` ohne Instanz, wie im Zuschnitt zugesagt |
+| Persistenz | ✅ neuer SQL-Zugriff in `app/persistence/`, Sicherung vor der Autorenfunktion, Daten und Stempel in einer Transaktion, kein Schemaeingriff |
+| Qualität | ✅ 15 Startfälle am echten Lifespan, Mutant selbst nachgestellt; ⚠️ die `starting`-Lage aus B1 hat keinen Test |
+| Dokumentation | ⚠️ 1 Befund — B2 |
+
+### Danach
+
+`review_round` bleibt `1` von `max_review_rounds: 3`. B1 ist eine Kennung, eine
+Verzweigung und ein Test; B2 ein Satz. Kein neuer Scope, keine Budgetfrage.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 
