@@ -15,14 +15,30 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `ticket`: `T-67-boersenabweichung-anzeigen.md`
 - `handoff_commit`: `11e77fa`
 - `review_round`: `0`
+- `max_review_rounds`: `3`
 - `owner`: `claude`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
 - `last_reviewed_commit`: `4bacaf2`
-- `last_reviewed_round`: `3`
+- `last_reviewed_round`: `2`
 - `workstream`: `boersenabweichung`
 - `priority_chain`: `T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md → T-67-boersenabweichung-anzeigen.md`
 - `priority_ticket`: `T-67-boersenabweichung-anzeigen.md`
+
+**Rundenlimit · Mike, 2026-09-09:** `max_review_rounds: 3` bedeutet
+höchstens drei vollständige Reviewrunden je Ticket der aktiven Kette, keine
+Mindestanzahl. Bei Freigabe endet das Review früher. Bleiben nach Runde 3
+Befunde offen, geht der Vorgang mit konkreten Restbefunden an Mike
+(`phase: blocked`, `owner: mike`); keine automatische Runde 4 und kein
+Zurücksetzen des Zählers, um das Limit zu umgehen. Scope-Checkpoints sind
+keine vollständigen Reviewrunden. Diese ausdrückliche Vorgabe geht dem
+allgemeinen Richtwert zur Konvergenzprüfung vor.
+
+`review_round` zählt die aktuelle Übergaberunde. `last_reviewed_round`
+gehört zusammen mit `last_reviewed_ticket` und `last_reviewed_commit` zum
+zuletzt abgeschlossenen Review; es ist kein Limit. T-21 `4bacaf2` wurde in
+Runde 2 freigegeben. Die von Mike als Limit gedachte 3 steht deshalb jetzt
+im eigenen Feld `max_review_rounds`.
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
