@@ -3,7 +3,7 @@
 Geplante, laufende und abgeschlossene Arbeit soll schon im Dateibrowser
 unterscheidbar sein. Im bisherigen Root liegen diese Zustände nebeneinander.
 
-**Umgestellt; unabhängige Prüfung steht aus.** Tickets liegen nach
+**Umgestellt und in Runde 1 von Claude freigegeben.** Tickets liegen nach
 Arbeitsstand in den sechs vereinbarten Ordnern. Die Agentenregeln liegen
 unter `.agents/`; beide Agenten verwenden dieselbe aktualisierte Skill-Quelle.
 Der vollständige Observer-Auftrag folgt in T-69.
@@ -23,11 +23,12 @@ Der vollständige Observer-Auftrag folgt in T-69.
 - [Liefernachweis PersonalSkills](#liefernachweis-personalskills)
 - [Nachweis der gültigen Arbeitsanweisung](#nachweis-der-gültigen-arbeitsanweisung)
 - [Übergabeumfang · Runde 1](#übergabeumfang--runde-1)
+- [Unabhängige Freigabe · Claude, Runde 1](#unabhängige-freigabe--claude-runde-1)
 
 ## Für dich
 
-Aktuell ist kein Handgriff nötig. Codex liefert die Nachweise an Claude;
-die technische Freigabe ersetzt keine spätere Abschlussbestätigung.
+Für Mike steht die Abschlussbestätigung noch aus. Die technische Freigabe
+liegt vor; bis zur Bestätigung bleibt T-68 in `30-doing/`.
 Die Wartebedingung vor dem Umzug ist mit Mikes „Ja, ist durch“ nach Claudes
 T-25-Abschluss erfüllt.
 
@@ -257,7 +258,7 @@ Die Ablage ist umgesetzt. Reiner Verschiebe-Commit: `b7c9896` (95 Dateien,
 die begleitenden Regeländerungen werden im Übergabecommit festgehalten.
 T-63 und T-66 liegen im Backlog, T-68 in Doing und T-69 in Ready.
 Die Matrix unten beziehungsweise im Abschnitt „Prüfung“ ist die einzige
-aktuelle technische Bewertung. Claudes unabhängiges Review steht noch aus.
+aktuelle technische Bewertung. Claude hat den Stand in Runde 1 ohne offene Befunde freigegeben (`547b73a`).
 
 [↑ Übersicht](#übersicht)
 
@@ -478,5 +479,25 @@ Der Codex-Scheduler wurde nach Beenden der alten Zelle als Zelle 363 neu
 angelegt. `scheduler_started` am 2026-09-09 um 14:43:46 UTC bestätigt den
 Start mit `_tickets/30-doing` als aktivem Verzeichnis. Ein regulärer
 Heartbeat ist davon getrennt; erst dieser belegt den fortgesetzten Takt.
+
+[↑ Übersicht](#übersicht)
+
+## Unabhängige Freigabe · Claude, Runde 1
+
+`547b73a`: **approved**, StockInfo `92d19ab` und PersonalSkills `eeaad8c`,
+keine offenen Befunde. Claude hat Linkziele, Ablage, Rollenvertrag, Skill-Commit
+und die 30 unveränderten fremden Skill-Zeilen unabhängig geprüft. Seine
+zusätzlichen Suiten: 1193 Backend / 29 übersprungen und 378 Dashboard.
+Die Datenverzeichnis-Einschränkung aus #4 bleibt ausdrücklich sichtbar.
+
+Der Hinweis zur Skriptzahl wurde nachgezählt: **elf Shell-Skripte plus
+`T-57-inventory.py` ergeben zwölf Archivskripte**. Die ursprüngliche Zahl
+schließt Python ein; Claudes elf beziehen sich auf Shell. Alle zwölf sind
+bytegleich. Daraus entsteht weder Nacharbeit noch eine weitere Reviewrunde.
+
+Der gespeicherte Claude-Loop-Prompt muss beim Wiederanlauf die neue
+Aktivierungsanleitung verwenden. Die Quelldateien sind korrigiert; Änderungen
+an einem Job in Claudes anderem Chat werden hier nicht behauptet.
+T-69 ist das nächste Kettenglied. T-68 bleibt bis zu Mikes Bestätigung in Doing.
 
 [↑ Übersicht](#übersicht)
