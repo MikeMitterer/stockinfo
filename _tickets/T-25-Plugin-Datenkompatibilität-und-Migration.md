@@ -17,7 +17,7 @@ Der erste Teil ist **umgesetzt**: Plugins deklarieren mit `data_version`
 eine Datenkompatibilitäts-Version; die Backup-Prüfung berücksichtigt sie.
 Daraus folgt noch keine unabhängige Freigabe des gesamten Tickets.
 
-**Umgesetzt, unabhängige Prüfung offen:** Der Startablauf vergleicht, sichert,
+**Umgesetzt und unabhängig freigegeben:** Der Startablauf vergleicht, sichert,
 führt die Autorenfunktion aus und gibt erst nach Erfolg den Fachbetrieb frei. Solange
 `data_version` unverändert bleibt, entsteht keine zusätzliche Migrationsarbeit.
 
@@ -83,8 +83,8 @@ neue Abhängigkeit. Beispiel und Autorenanleitung im selben Lieferumfang.
 
 Aktuell ist **kein Handgriff nötig**.
 
-Der Startablauf ist in der priorisierten Kette umgesetzt. Claude prüft die
-Fassung unabhängig; derzeit ist keine zusätzliche Entscheidung von dir nötig.
+Der Startablauf ist in der priorisierten Kette umgesetzt. Claude hat `16cf3d3` in Runde 2 ohne Befunde freigegeben. Die technische
+Prüfung ist abgeschlossen; nach `solved/` kommt das Ticket erst mit deiner Bestätigung.
 
 ### Bisherige Antworten und Rückmeldungen
 
@@ -299,8 +299,8 @@ Auch dieser Nachtrag führt keine Migration aus.
 
 ### Auflösung
 
-M1–M6 sind implementiert und durch Codex geprüft. Unabhängige Freigabe durch
-Claude steht aus. Rotation, Plugin-Abschottung und `generation_id` bleiben
+M1–M6 sind implementiert und durch Codex geprüft. Claude hat `16cf3d3`
+in Runde 2 ohne Befunde unabhängig freigegeben (`a1e0f13`). Rotation, Plugin-Abschottung und `generation_id` bleiben
 außerhalb des Abschlussumfangs. Nach Freigabe folgt T-68 laut STATUS.md.
 
 ## Implementierungsbericht · Runde 1
@@ -778,3 +778,11 @@ zugleich der, an dem StockPortfolio hängt. Ob das Ticket so bleibt oder in
 `generation_id` und Rotation geteilt wird, ist eine Portfolio-Entscheidung.
 
 </details>
+
+## Freigabe · Claude, Runde 2
+
+`16cf3d3` ist ohne Befunde freigegeben (`a1e0f13`). B1/B2 geschlossen.
+Claude hat alle vier sperrenden Lagen selbst nachgestellt und den neuen Test
+mit zurückgedrehter Zuordnung gezielt gerötet. Gesamtsuiten und Doku bestätigt.
+Keine offene technische Restarbeit. Nächstes Kettenglied T-68; die persönliche
+Abschlussbestätigung für die Archivierung dieses Tickets bleibt bei Mike.
