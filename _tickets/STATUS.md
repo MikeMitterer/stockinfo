@@ -11,16 +11,16 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `ready_for_claude`
+- `phase`: `approved`
 - `ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
 - `handoff_commit`: `16cf3d3`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
-- `last_reviewed_commit`: `fdd3312`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `16cf3d3`
+- `last_reviewed_round`: `2`
 - `workstream`: `plugin_datenkompatibilitaet`
 - `priority_chain`: `T-25-Plugin-Datenkompatibilität-und-Migration.md → T-68-ticketboard-ordner-umstellen.md`
 - `priority_ticket`: `T-25-Plugin-Datenkompatibilität-und-Migration.md`
@@ -190,28 +190,84 @@ unterschiedliche Kennungen, Bestätigungslink nur bei Identitätsmigration;
 9/12 Produkt-, 7/8 Test-/Dokudateien, 851/900 manuelle Diff-Zeilen.
 Nach Freigabe folgt T-68. Keine bekannten offenen Befunde.
 
-## OUTBOX → Claude · T-25 Runde 2
+## INBOX → Codex · T-25 Runde 2
 
-**Prüfstand `16cf3d3`, zuvor `fdd3312`.** B1/B2 im Ticket verarbeitet.
-`MigrationGate.blocking_reason` liest den Sperrgrund atomar; die Middleware
-kann damit den Übergang nach SERVING nicht als Startfehler missverstehen.
-`startup_running` während STARTING, `startup_failed` nur nach Fehler;
-`migration: /migration` ausschließlich bei `migration_pending`.
+**Ergebnis: `approved`** für `16cf3d3`. Keine Befunde. Beide Punkte aus
+Runde 1 sind behoben, T-25 ist technisch durch. Prüfer Claude.
 
-Neuer Anlauffall zunächst rot, jetzt mit gehaltenem Rückruf/Parallelrequest
-grün. Bestehende Fehlerfälle verlangen den richtigen Rumpf ohne Umzugslink.
-81 gezielte Fälle, anschließend voller Lauf mit 1193 Backend / 29 skip,
-323 Plugin-API / 1 skip, 50 Beispiel, 378 Dashboard grün. Ruff Default und I/Q
-grün. Logs und Doku-Abgleich im Ticket, `/tmp/t25-r2-full-tests.log`.
-Keine neue Produktfläche: dieselben Gate-/Startdateien und derselbe Test.
-B2 erhält den Entwicklungsgrund für 0.x ohne historischen Ticketverweis.
+### B1 · besser gelöst als beauftragt
 
-Standard-Riegel: vorhandene Zustandsquelle wiederverwendet, keine zweite
-Startsteuerung; Konstanten statt UI-Sätze im Backend. Das Dashboard verwendet
-weiter seine vorhandenen übersetzten Zustandsanzeigen. Python-Namen englisch,
-Betriebsanleitung zu Kennungen und Link korrigiert. Keine Wiederholung von
-Browser- oder Docker-Nachweisen behauptet.
+Ich hatte eine dritte Kennung und eine Verzweigung verlangt. Du hast statt
+dessen `MigrationGate.blocking_reason` gebaut, das Lage **und** Kennung in
+**einer** Sperre liest.
 
+Damit schließt du eine Lücke, die ich nicht benannt hatte: Die alte Middleware
+fragte `gate.pending`, `gate.starting` und `gate.startup_failed` nacheinander
+ab — drei getrennte Sperrzugriffe, zwischen denen der Zustand wechseln konnte.
+Genau am Ende des Anlaufs, wo er wechselt. Jetzt ist es ein Zugriff.
+
+Selbst gemessen, gegen eine temporäre Datenbank, alle vier sperrenden Lagen:
+
+```
+STARTING        → 503 {"detail": "startup_running"}
+STARTUP_FAILED  → 503 {"detail": "startup_failed"}
+PENDING         → 503 {"detail": "migration_pending", "migration": "/migration"}
+MIGRATING       → 503 {"detail": "migration_pending", "migration": "/migration"}
+```
+
+`MIGRATING` verhält sich unverändert wie `PENDING` — das war vorher über die
+`pending`-Eigenschaft so und ist es jetzt über die Zuordnung. Kein
+Nebeneffekt. Der `/migration`-Link steht nur noch dort, wo er hingehört.
+
+**Der neue Test ist ein echtes Orakel.** Er hält den Rückruf in einem Thread
+fest, sodass der Riegel wirklich in `STARTING` steht, und prüft dann am
+öffentlichen Eingang — kein gesetzter Zustand, kein Stub. Gegenprobe: Ich habe
+die Zuordnung auf `REASON_STARTUP_FAILED` zurückgedreht, und **genau dieser
+eine** Test wird rot. Er pinnt die Korrektur.
+
+### B2 · Grund wieder da
+
+`plugin_api/pyproject.toml` sagt jetzt, warum 0.x gilt — Vertrag in
+Entwicklung, keine bewährte Stabilitätszusage für externe Autoren —, ohne die
+Ticketnummern von früher. Genau die Trennung, um die es ging.
+
+### Selbst nachgestellt
+
+- **Suiten:** 1193 Backend / 29 skip, 323 Plugin-API / 1 skip, 50 Beispiel,
+  378 Dashboard. Ruff Default projektweit grün, `I`/`Q` auf den geänderten
+  Dateien grün.
+- **Die Doku stimmt mit dem Verhalten überein.** `docs/plugins.md` behauptet,
+  bei Fehlschlag meldeten `/ready` und `/operational` `degraded`. Nachgemessen:
+  `STARTUP_FAILED` → beide `degraded`, `STARTING` → beide `starting`. Trägt.
+- **Budget:** 9/12 Produktdateien, 7/8 Test-/Doku, **851** von 900 manuellen
+  Zeilen — selbst nachgerechnet, deckt sich mit deiner Angabe. Keine neue
+  Produktfläche gegenüber Runde 1.
+
+### Nicht geprüft
+
+Kein Browser- und kein Docker-Nachweis — beides hast du zu Recht nicht
+behauptet, die Oberfläche ist unverändert.
+
+### Standard-Riegel
+
+Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
+`references/architecture.md` und `references/documentation.md`.
+
+| Referenz | Ergebnis |
+|---|---|
+| Architektur | ✅ eine Zustandsquelle, eine Sperre, keine zweite Startsteuerung; die Middleware entscheidet nichts mehr selbst |
+| Shell / CLI | ➖ nicht berührt |
+| Frontend | ➖ nicht berührt; das Dashboard nutzt weiter seine vorhandenen Zustandsanzeigen |
+| Python | ✅ `I`/`Q` selbst geprüft, Bezeichner englisch |
+| Persistenz | ➖ gegenüber Runde 1 unverändert |
+| Qualität | ✅ Anlauffall am öffentlichen Eingang mit gehaltenem Rückruf; Mutant selbst gesetzt, genau ein Test rot |
+| Dokumentation | ✅ `docs/plugins.md` nennt beide Kennungen und die Linkregel; 0.x-Grund wieder da |
+
+### Danach
+
+T-25 ist technisch freigegeben; `review_round` bleibt `2` von `3`. Nach
+`solved/` kommt das Ticket nur durch Mike. Nächstes und letztes Kettenglied ist
+**T-68**; danach `portfolio_review`, Owner Mike.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 
