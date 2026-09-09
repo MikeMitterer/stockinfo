@@ -11,9 +11,9 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
-- `phase`: `approved`
-- `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `4bacaf2`
+- `phase`: `codex_working`
+- `ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
+- `handoff_commit`: `b10e110`
 - `review_round`: `2`
 - `owner`: `codex`
 - `updated_at`: `2026-09-09`
@@ -22,7 +22,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_round`: `2`
 - `workstream`: `boersenabweichung`
 - `priority_chain`: `T-21-identitaet-mic-und-ticker.md → T-65-asset-aufnahme-prueft-boersenabdeckung.md → T-67-boersenabweichung-anzeigen.md`
-- `priority_ticket`: `T-21-identitaet-mic-und-ticker.md`
+- `priority_ticket`: `T-65-asset-aufnahme-prueft-boersenabdeckung.md`
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
@@ -80,87 +80,14 @@ ist ausschließlich an T-67 `extras` abgegeben: eine Umsetzung, eine Prüfung.
 Frühere Angaben zum offenen Abschluss von T-64 sind damit überholt.
 Die aktive T-21-/T-67-Kette und Claudes laufendes Review bleiben unverändert.
 
-## INBOX → Codex · T-21 MIC-Bereinigung, Runde 2
+## Aktuelle Arbeit · T-65, 2026-09-09
 
-**Ergebnis: `approved`.** Prüfstand `4bacaf2`, Prüfer Claude. B1 und B2 sind
-erledigt, die Korrektur ist verhaltensneutral, und die Fachlogik aus Runde 1
-steht unverändert. T-21 ist damit technisch durch.
-
-### Selbst nachgestellt
-
-- **Verhaltensneutralität.** Eigener AST-Vergleich `1166745` ↔ `4bacaf2` über
-  `app/exchanges.py`, `app/migration.py`, `app/plugins/yfinance_quotes.py` und
-  `app/resolver.py`, jeweils mit entfernten Docstrings: **identisch**. Deine
-  Zusage „Produkt-AST ohne Docstrings identisch“ trägt.
-- **Suiten trotzdem komplett gelaufen**, weil du nur gezielt geprüft hast:
-  1161 Backend / 29 skip, 323 Plugin-API, 50 Beispiel, 374 Dashboard in 51
-  Dateien. Ruff Default projektweit grün, `I`/`Q` auf den neun R2-Dateien grün.
-- **Budget nachgerechnet.** 1150 Zeilen gesamt, abzüglich STATUS (125), T-67
-  (64), T-30 (3) und T-64 (76) = **882**. Deine Zahl stimmt auf die Zeile und
-  liegt unter den 900 aus der einmaligen Erweiterung.
-- **B2 gegengelesen.** Der Entwurf vom 2026-09-08 beschreibt den Katalog jetzt
-  direkt: nur konkrete MICs, `exchange` oder `unknown`, keine Mitgliederliste.
-  Die in Runde 1 hinzugefügte Ablösungsnotiz im 2026-08-24-Entwurf ist wieder
-  entfernt — richtig so nach Mikes
-  [R-02](CODEX-REVIEW-PATTERNS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
-- **Prosa nicht beschädigt.** Die Korrekturen sind einzeln formuliert, nicht
-  ersetzt. `test_identity_migration` bleibt zu Recht stehen: Dort ist `US` der
-  historische ungültige Bestand, den die Migration abweisen muss.
-
-### Mein Fehler in Runde 1
-
-Meine B1-Liste war unvollständig, und zwar nicht durch Urteil, sondern durch
-ein `head -20` in der Suche. Den Begriff trugen **18 Dateien**, genannt habe
-ich **11**. Du hast meine Liste vollständig und sauber abgearbeitet — die
-Lücke geht auf mich. Festgehalten als
-[P-12](CLAUDE-REVIEW-PATTERNS.md#p-12--die-fundstellenliste-des-reviews-ist-eine-abgeschnittene-ausgabe).
-
-### Rest ohne eigene Runde
-
-Neun Testdateien nennen den Begriff weiter:
-`test_identity_migration.py`, `test_migration_plan.py`,
-`test_openfigi_lookup.py`, `test_plugin_openfigi.py`,
-`test_plugin_openfigi_integration.py`, `test_repository.py`,
-`test_resolver.py`, `test_resolver_identity.py`, `test_yaml_profile.py`.
-
-Ein Teil davon ist korrekt — `US` bleibt dort ein bewusst ungültiger Testwert
-oder eine Aussage über den historischen Bestand. Sachlich falsch über den
-**heutigen** Stand ist `tests/test_resolver_identity.py:67` („Die Börsentabelle
-führt für suffixlose Symbole nur den Sammelcode `US`“); `test_resolver.py:115`
-und `:740` tragen Rundenhistorie statt der Invariante.
-
-**Das eröffnet keine Runde 3.** Nach R-02 folgt das Befundgewicht dem belegten
-Schaden, und der ist hier ein Satz Prosa in Testdocstrings über einen Wert,
-dessen Behandlung nachweislich stimmt. Diese Stellen ziehen mit, wenn die
-Dateien ohnehin angefasst werden — kein eigenes Ticket, kein Nacharbeitsauftrag.
-
-Die Entwurfsspecs vom 2026-08-19 und 2026-08-24 bleiben unberührt: datierte
-Entwürfe, keine aktuelle Katalogquelle. Deine Einordnung stimmt.
-
-### Standard-Riegel
-
-Gelesen: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` mit
-`references/architecture.md` und `references/documentation.md`, dazu
-`CODEX-REVIEW-PATTERNS.md` einschließlich R-02.
-
-| Referenz | Ergebnis |
-|---|---|
-| Architektur | ✅ AST belegt: keine Struktur-, Schicht- oder Signaturänderung |
-| Shell / CLI | ➖ nicht berührt |
-| Frontend | ✅ nur zwei entfallene Negativassertionen auf eine nie gerenderte Klasse; 374 Tests selbst gelaufen |
-| Python | ✅ I/Q auf den geänderten Dateien selbst geprüft, Default projektweit grün |
-| Persistenz | ➖ nur Kommentare in `migration.py` |
-| Qualität | ✅ alle vier Suiten selbst gelaufen; keine neuen Helfer, Fixtures oder Transportpfade |
-| Dokumentation | ✅ B1/B2 abgearbeitet, keine Ablösungssprache, Auslassungen begründet |
-
-**DRY-Scope:** keine neue Logik, keine zweite Wissensquelle. `preferred_mics`
-und `preference_kind` bleiben die einzige Auskunft über eine Präferenz.
-
-### Danach
-
-`review_round: 2` ist verbraucht, T-21 technisch freigegeben. Nach `solved/`
-kommt das Ticket nur durch Mike. Nächstes Kettenglied ist **T-65**, danach
-T-67 — der Wechsel ist dein atomarer Schritt vor dem ersten Produktedit.
+T-21 ist von Claude in Runde 2 für `4bacaf2` technisch freigegeben; Ergebnis
+im Ticket vermerkt. Codex verarbeitet T-65 als nächstes Kettenglied.
+T-65 besitzt bereits Claudes Freigabe aus Runde 2 für `b10e110`; es gibt
+keinen neuen Implementierungsauftrag im Ticket. Aktuellen Aufnahmeweg gezielt
+gegenprüfen, irreführenden Einstieg berichtigen, dann T-67 ausführen.
+Keine Wiederholung des abgeschlossenen Reviews allein wegen der neuen Kette.
 
 ## Frühere Kette · T-66, Auftrag Mike, 2026-09-08
 

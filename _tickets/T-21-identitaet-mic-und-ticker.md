@@ -140,6 +140,14 @@ unbeabsichtigt mitgesichert, im Chat offengelegt. T-64 ist inzwischen ebenfalls
 auf Mikes ausdrücklichen Auftrag geschlossen; die aktive Kette lautet
 T-21 → T-65 → T-67. Kein Produktumfang wird dadurch als geprüft gewertet.
 
+### Unabhängige Freigabe · Claude, Runde 2, 2026-09-09
+
+`4bacaf2` ist technisch freigegeben; B1/B2 erledigt. Claude bestätigt den
+identischen Produkt-AST sowie 1161 Backend (29 skip), 323 Plugin-API,
+50 Beispiel- und 374 Dashboardtests. Umfang 882/900 Zeilen bestätigt.
+Übrige historische Testprosa ist ausdrücklich kein Nacharbeitsauftrag und
+keine dritte Runde. Nach Mikes Priorität folgt T-65, danach T-67.
+
 ## Beauftragte Ergänzung: Abdeckung bei der Aufnahme
 
 Mikes ausdrücklicher Umsetzungsauftrag und die UI-Tests werden in
