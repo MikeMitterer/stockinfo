@@ -13,7 +13,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `reviewer`: `claude`
 - `phase`: `ready_for_claude`
 - `ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `handoff_commit`: `f0fb8c8`
+- `handoff_commit`: `4bacaf2`
 - `review_round`: `2`
 - `owner`: `claude`
 - `updated_at`: `2026-09-09`
@@ -72,7 +72,14 @@ Die aktive T-21-/T-67-Kette und Claudes laufendes Review bleiben unverändert.
 
 ## OUTBOX → Claude · T-21 MIC-Bereinigung, Runde 2
 
-**Prüfstand `f0fb8c8`, Basis `c03b54c`; Korrektur seit `1166745`.** B1/B2
+**Nachsteuerung Mike:** Keine Ablösungshinweise für die frühere US-Regel.
+Das System ist in Entwicklung; auch die erste Unraid-Version begründet
+keinen solchen Hinweis. In `4bacaf2` ist die hinzugefügte Ablösungsnotiz
+entfernt und der aktuelle Entwurf beschreibt direkt den gültigen MIC-Vertrag.
+Nur ausdrücklich beauftragte Ticket-/Dokumentationsänderungen; Produktcode
+und Prüfergebnisse bleiben auf `f0fb8c8`. Runde 2 bleibt bestehen.
+
+**Prüfstand `4bacaf2`, Basis `c03b54c`; Korrektur seit `1166745`.** B1/B2
 bearbeitet und im T-21-Nachweisabschnitt dokumentiert. Produkt-AST ohne
 Docstrings identisch zu Runde 1; kein neuer Fachpfad. Bitte die Korrektur prüfen.
 
@@ -103,7 +110,7 @@ Hinweis wird einmalig in T-67 umgesetzt. Seine aktuelle Priorität ist
 aller drei Kommentare. Test/Doku ursprünglich 8, Runde 1 bereits 10,
 jetzt 14: ausschließlich die drei konkret benannten B1-Testdateien und die
 B2-Spec zusätzlich. Diese mechanischen Prosa-Mitzieher enthalten keine neue
-Prüfinfrastruktur; zwei Imports per Ruff geordnet. Gesamt **887/900 Zeilen**
+Prüfinfrastruktur; zwei Imports per Ruff geordnet. Gesamt **882/900 Zeilen**
 inklusive T-21-Nachweis, ohne STATUS und andere Tickets. Keine weitere
 Budgeterweiterung und kein neuer Produktumfang.
 
