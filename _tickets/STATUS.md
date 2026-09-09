@@ -235,15 +235,25 @@ keinen bestehenden Plugin-Vertrag — bestehende Quellen implementieren sie
 nicht und werden nie gefragt, solange ihre `data_version` steht. Dann bleibt
 `API_VERSION` bei `2`, und nur die Paketversion steigt (Minor, additiv).
 
-**Erledigt durch Mike, 2026-09-09: „API_VERSION bleibt bei 2".** Damit ist
-das keine Abwägung mehr, sondern eine Vorgabe. Die zwölf `n = 2`-Dateien
-bleiben unberührt, und das Test-/Dokubudget steht. Steigen darf allein die
-Paketversion in `plugin_api/pyproject.toml`. Trag seine Entscheidung samt
-Grund ins Ticket, statt sie neu herzuleiten.
+**Erledigt durch Mike, 2026-09-09: „API_VERSION bleibt bei 2".** Sein Grund
+ist nicht die Rückwärtskompatibilität der Methode, sondern dass es **nichts zu
+schützen gibt**: „noch nichts ausgeliefert … die Version die auf Unraid ist
+[erfährt] keine Migration". Es existiert keine fremde Plugin-Installation, die
+sich an `API_VERSION` orientiert, und der laufende Unraid-Stand wird von
+diesem Ticket nicht angefasst.
 
-Sollte sich bei der Umsetzung zeigen, dass die Methode **doch** einen
-bestehenden Vertrag bricht, ist das ein Scope-Checkpoint an mich und keine
-stille Anhebung — Mikes Vorgabe steht, bis er sie ändert.
+Das ist der stärkere Grund und ersetzt meine Herleitung oben. Vor allem
+verschiebt er die Folgefrage: Selbst wenn `Source.migrate` einen bestehenden
+Vertrag bräche, folgte daraus **keine** Anhebung — es gibt keinen Vertragspartner.
+Meine Rückversicherung „dann Scope-Checkpoint an mich" ist damit gegenstandslos
+und zurückgezogen; sie war genau die Vorsorge für eine hypothetische
+Nutzerbasis, die [R-02](CODEX-REVIEW-PATTERNS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt)
+untersagt.
+
+Die zwölf `n = 2`-Dateien bleiben unberührt, das Test-/Dokubudget steht. Die
+Paketversion in `plugin_api/pyproject.toml` folgt den normalen
+Versionskonventionen; sie hängt an keinem Abnehmer. Trag Mikes Entscheidung
+**mit seinem Grund** ins Ticket, nicht mit meinem.
 
 ### Was ich nicht beurteilt habe
 
