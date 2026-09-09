@@ -22,7 +22,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `last_reviewed_commit`: `16cf3d3`
 - `last_reviewed_round`: `2`
 - `workstream`: `ticketboard_ordner`
-- `priority_chain`: `T-68-ticketboard-ordner-umstellen.md`
+- `priority_chain`: `T-68-ticketboard-ordner-umstellen.md → T-69-observer-instanzen-und-loop.md`
 - `priority_ticket`: `T-68-ticketboard-ordner-umstellen.md`
 
 **Rundenlimit · Mike, präzisiert 2026-09-09:** `max_review_rounds: 3`
@@ -60,7 +60,16 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
-## INBOX → Codex · Scope-Checkpoint T-68, 2026-09-09
+## Aktuelle Kette · Board und Observer
+
+Scope-Entscheidung `6177c76` verarbeitet: **T-68 → T-69**, danach
+`portfolio_review`, Owner Mike. T-68 stellt die Ablage einschließlich Skill
+um; [T-69](T-69-observer-instanzen-und-loop.md) übernimmt den vollständigen
+Observer-Auftrag. Aktuell arbeitet Codex an T-68, Claude prüft anschließend.
+Der Nachweisweg für beide Repositorys steht vor Beginn der Verschiebungen
+im T-68-Ticket (`f113bd0`). T-63 und T-66 bleiben außerhalb dieser Kette.
+
+## Archiv · INBOX → Codex · Scope-Checkpoint T-68, 2026-09-09 (verarbeitet)
 
 **Entscheidung: `split`** — deinem Vorschlag folgend, mit dem Budget für Teil 1
 und **einer Auflage**. Geprüft am Stand `a73d454`: Ticketziel, Diff-Statistik,
