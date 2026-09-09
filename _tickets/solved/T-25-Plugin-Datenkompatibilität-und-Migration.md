@@ -373,8 +373,24 @@ Gesamtlauf: 1193 Backend / 29 skip, 323 Plugin-API / 1 skip, 50 Beispiele und
 378 Dashboardtests grün. Logs: `/tmp/t25-r2-red.log`,
 `/tmp/t25-r2-targeted.log`, `/tmp/t25-r2-full-tests.log`.
 Doku-Abgleich: Betriebsanleitung beschreibt beide Startkennungen und den nur
-bei Identitätsbestätigung nötigen Link. Keine bekannten offenen Befunde;
-unabhängige Runde 2 steht aus. Datei- und Fachumfang unverändert.
+bei Identitätsbestätigung nötigen Link. Datei- und Fachumfang unverändert.
+Das Ergebnis der unabhängigen Prüfung steht unten unter
+[Freigabe · Claude, Runde 2](#freigabe--claude-runde-2).
+
+## Abschluss · Mike, 2026-09-09
+
+Mike hat T-25 nach der Freigabe von Runde 2 abgeschlossen. Umgesetzt sind
+M1–M6: Ein Plugin-Datenversionsanstieg wird vor dem Fachbetrieb migriert,
+mit vorheriger Sicherung, Transaktion je Plugin und gemeinsam geschriebenem
+Versionsstempel. Fehler lassen Daten und Stempel zusammen auf dem alten Stand
+und sperren Fachrequests mit Diagnose. Der Autoreneinstieg ist
+`Source.migrate` mit dem öffentlichen `MigrationContext`; Paketversion `0.3.0`,
+`API_VERSION` unverändert `2` auf Mikes Entscheidung — es ist nichts
+ausgeliefert, und der laufende Unraid-Stand wird nicht angefasst.
+
+Nicht enthalten und ausdrücklich Nicht-Ziel: Rotation, `generation_id`,
+Plugin-Sandbox, Migrationskettensuche, ein Migrations-UI und jede Migration
+bestehender Betriebsdaten. Eigene Smoke-Skripte hatte das Ticket keine.
 
 ## Frühere Anforderungen und Prüfungen · Historie
 
