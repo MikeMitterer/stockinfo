@@ -21,6 +21,47 @@ Daraus folgt noch keine unabhängige Freigabe des gesamten Tickets.
 ausführen und erst nach Erfolg den Fachbetrieb freigeben. Solange
 `data_version` unverändert bleibt, entsteht keine zusätzliche Migrationsarbeit.
 
+## Scope-Vertrag · Umsetzung ab 2026-09-09
+
+Die Prioritätskette und die Rückgabe nach T-67 aktivieren jetzt die Umsetzung
+von M1–M6. Die frühere Aussage „nur Ticketanpassung“ beschreibt den damaligen
+Auftrag, nicht diese Aktivierung. Basis ist `b672f4f`.
+
+**Ergebnis:** Nach einem Plugin-Datenversionsanstieg startet der Fachbetrieb
+nur mit erfolgreich migriertem Bestand; Fehler lassen alte Daten und deren
+Versionsstempel zusammen erhalten und nennen Plugin, Ausgang, Ziel und Grund.
+
+Drei Änderungen: (1) optionaler Autoren-Einstieg und dokumentierter SQL-Kontext,
+(2) Host-Ausführung mit vorhandener Sicherung und Transaktion je Plugin,
+(3) Einbindung vor dem Fachbetrieb in den vorhandenen Start-/Migrationsriegel.
+
+Vorgesehen ist `Source.migrate(context, from_version, to_version)` als statischer
+Einstieg, damit die Umwandlung keine Provider-Instanz oder Netzwerkinitialisierung
+benötigt. Ein öffentlicher `MigrationContext` beschreibt den SQL-Zugriff ohne
+Commit-Methode; der Host hält die Verbindung. Keine Sandbox-Zusage. Die Basis
+lehnt fehlende Wege ab; unveränderte Datenversionen rufen sie nie auf.
+
+Der Host sichert vor jeder anstehenden Autorenfunktion mit `BackupService`,
+öffnet danach eine Transaktion und schreibt Daten und Datenversion gemeinsam.
+Bereits erfolgreiche Übergänge bleiben bei späterem Plugin-Fehler gespeichert.
+Nach einer Identitätsmigration läuft derselbe Start-Rückruf; deren offene
+Benutzerbestätigung wird nicht übergangen. Bei Fehler bleibt der vorhandene
+Startfehlerzustand aktiv, Fachrequests und Scheduler bleiben gesperrt; Diagnose
+im Serverlog mit Plugin, Versionen und Fehlergrund. Kein neues Migrations-UI.
+
+**Flächen/Budget:** höchstens 12 Produktdateien und 8 Test-/Dokudateien,
+900 manuelle Diff-Zeilen (einschließlich Ticket; generierte Vertragsausschnitte
+separat gezählt). Geplant: Plugin-Source/Export/Kontext und Beispielmigration,
+Host-Migrationsservice und Datenversionsspeicherung, main/Guard sowie nötige
+Vertrags-/Versionsmitzieher. Tests: echter Lifespan, Prozessabbruch und
+Restart, gemischte Daten, bestehende Gate-/Backup-Regression. Doku: Autoren-
+anleitung, Plugin-API-Referenz/Beispiel und vorhandene Startbeschreibung.
+
+**Checkpoint vor Produktarbeit:** Die erwarteten 900 Zeilen überschreiten die
+800-Zeilen-Grenze. Bitte den gemeinsamen Umfang M1–M6 vorab beurteilen.
+Keine Migration bestehender Betriebsdaten ausführen; keine Rotation,
+`generation_id`, Plugin-Sandbox, Migrationskettensuche oder neue Abhängigkeit.
+
 ## Für dich
 
 Aktuell ist **kein Handgriff nötig**.
