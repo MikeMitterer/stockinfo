@@ -19,7 +19,7 @@ fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
 - `owner`: `claude`
 - `updated_at`: `2026-09-09`
 - `last_reviewed_ticket`: `T-21-identitaet-mic-und-ticker.md`
-- `last_reviewed_commit`: `4bacaf2`
+- `last_reviewed_commit`: `583e0f7`
 - `last_reviewed_round`: `2`
 - `workstream`: `boersenabweichung`
 - `priority_chain`: `T-67-boersenabweichung-anzeigen.md`
@@ -36,9 +36,14 @@ allgemeinen Richtwert zur Konvergenzprüfung vor.
 
 `review_round` zählt die aktuelle Übergaberunde. `last_reviewed_round`
 gehört zusammen mit `last_reviewed_ticket` und `last_reviewed_commit` zum
-zuletzt abgeschlossenen Review; es ist kein Limit. T-21 `4bacaf2` wurde in
-Runde 2 freigegeben. Die von Mike als Limit gedachte 3 steht deshalb jetzt
-im eigenen Feld `max_review_rounds`.
+zuletzt abgeschlossenen Review; es ist kein Limit. T-21 wurde in Runde 2
+freigegeben. Die von Mike als Limit gedachte 3 steht deshalb jetzt im
+eigenen Feld `max_review_rounds`.
+
+`last_reviewed_commit` zeigt auf **`583e0f7`**, nicht auf die übergebene
+Fassung `4bacaf2`: Die Verifier-Selbstheilung setzt den Zeiger auf den
+finalen Produkt-Commit. Beide Stände sind im
+[Abschluss T-21](#abschluss-t-21--mike-2026-09-09) festgehalten.
 
 Die Phasennamen richten sich nach der aktuellen Zuordnung:
 
@@ -62,7 +67,7 @@ Für beide Rollen in den Review-Patterns verankert:
 [R-02](CODEX-REVIEW-PATTERNS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
 Diese Vorgabe ist bei der laufenden Prüfung zu berücksichtigen.
 
-## Aktive Kette · T-21, Auftrag Mike, 2026-09-09
+## Frühere Kette · T-21, Auftrag Mike, 2026-09-09 (abgeschlossen)
 
 Mike beauftragt die verbleibende Börsenabweichungsanzeige. Codex implementiert,
 Claude prüft unabhängig; Aktivierung, Übergabe und Ergebnis laufen ausschließlich
@@ -116,6 +121,13 @@ wurden nicht erneut ausgeführt.
 Börsenabweichungsanzeige (#2e) liegt in T-67; der Docker-Langzeitnachweis
 (#2b6c) ist ein Verzicht auf den Nachweis, kein bestandener Test.
 Drei Nachweise aus Teil 2 (`2b6h`, `2b6i`, `2b9`) bleiben „mit Einschränkung“.
+
+**Anmerkung zur Reihenfolge:** `583e0f7` liegt hinter Codex' T-67-Übergabe
+`5a54e85`. Der eingefrorene Prüfstand `11e77fa` ist damit nicht mehr die
+Spitze, und hinter ihm stehen geänderte Produktdateien. Sie gehören
+ausschließlich zum T-21-Abschluss (neun Testdateien, reine Prosa) und
+berühren keine Fläche des T-67-Zuschnitts. Ohne Mikes ausdrücklichen Auftrag
+hätte der Abschluss bis nach dem Scope-Entscheid warten müssen.
 
 ## Abschluss T-64 · Mike, 2026-09-09
 
