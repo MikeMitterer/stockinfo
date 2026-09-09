@@ -21,8 +21,19 @@ from dataclasses import dataclass
 import structlog
 from stockinfo_plugin import Identity, ListedIdentity
 
-from app.exchanges import EXCHANGES, REASON_NO_SUFFIX, identity_from_input, input_failure, is_isin
-from app.models import IntakeConfirmation, ListedIdentityOut, PreferredExchange, QuoteResponse
+from app.exchanges import (
+    EXCHANGES,
+    REASON_NO_SUFFIX,
+    identity_from_input,
+    input_failure,
+    is_isin,
+)
+from app.models import (
+    IntakeConfirmation,
+    ListedIdentityOut,
+    PreferredExchange,
+    QuoteResponse,
+)
 from app.services.quote_cache import CachedQuoteService, StoredQuote
 from app.services.quote_service import (
     InstrumentNotFoundError,
@@ -234,7 +245,7 @@ class IntakeService:
         preferred = EXCHANGES.get(self._preferred_mic)
         if not isinstance(identity, ListedIdentityOut) or preferred is None:
             return
-        if identity == confirmed or (confirmed is None and identity.mic == self._preferred_mic):
+        if identity.mic == self._preferred_mic or identity == confirmed:
             return
         actual = EXCHANGES.get(identity.mic)
         raise ExchangeConfirmationRequired(IntakeConfirmation(

@@ -51,7 +51,7 @@
           "201": "InstrumentSummary",
           "202": "IntakeConfirmation"
         },
-        "confirmation_rule": "check_exchange=true prüft neue Listings vor Speicherung. 202 enthält status=confirmation_required, identity, name, exchange, echte currency und preferred mit mic/name/Katalogwährung. Abbruch schreibt nichts. Erneuter POST mit confirmed_listing bestätigt genau dieses Listing; geänderte Auflösung verlangt erneut eine Entscheidung. Vorhandene Listings brauchen keine erneute Bestätigung."
+        "confirmation_rule": "check_exchange=true prüft neue Listings vor Speicherung. 202 enthält status=confirmation_required, identity, name, exchange, echte currency und preferred mit mic/name/Katalogwährung. Abbruch schreibt nichts. Erneuter POST mit confirmed_listing bestätigt genau dieses Listing; Eine geänderte Auflösung verlangt erneut eine Entscheidung, solange sie von der bevorzugten Börse abweicht. Vorhandene Listings brauchen keine erneute Bestätigung."
       }
     ],
     "daily": [

@@ -25,7 +25,8 @@ Die verworfene Listen-/Tooltipdarstellung ist entfernt.
 vor seiner Speicherung, ob das neue Listing vom bevorzugten MIC abweicht.
 Dann erscheint ein Dialog mit tatsächlichem und bevorzugtem Handelsplatz,
 MIC und Währung sowie „Dennoch aufnehmen“ / „Abbrechen“. Abbruch schreibt
-nichts; Bestätigung nimmt das konkret angezeigte Listing auf. Danach kein
+nichts; Bestätigung nimmt das angezeigte oder inzwischen an der bevorzugten
+Börse gefundene Listing auf. Danach kein
 Listenhinweis und keine erneute Rückfrage beim Lesen oder Aktualisieren.
 Gleicher MIC, pair, isin_only und bereits vorhandene Listings brauchen keine
 Rückfrage. Fehlende/unbekannte Präferenz erzeugt keine erfundene Abweichung.
@@ -39,7 +40,8 @@ InstrumentSummary. Der gemeinsame Cache-/Speicherweg ruft vor dem ersten
 Schreiben eine vom IntakeService gelieferte Prüfung mit dem fertigen Kurs auf.
 So stehen die echte Währung und das Listing fest, ohne eine Zeile anzulegen.
 Bei Bestätigung wird erneut geprüft und nur das bestätigte Listing akzeptiert;
-eine geänderte Auflösung braucht eine neue Entscheidung. Kein Draft-Repository,
+eine geänderte Auflösung braucht eine neue Entscheidung, solange die Börse
+weiterhin von der bevorzugten abweicht. Kein Draft-Repository,
 Token-Speicher oder DB-Schema, kein Speichern mit anschließendem Zurücklöschen.
 Bestehende Abdeckungs- und Identitätsprüfungen bleiben im selben Pfad.
 
@@ -82,7 +84,7 @@ Migration oder Änderung im Foundation-Repo.
 | 2e | Nach Submit zeigt der Dialog ARCX bei XETR mit beiden MICs, Namen und echter Kurswährung vor dem Speichern, Desktop/Mobil DE/EN | ✅ |
 | matching | Gleicher MIC, pair und isin_only lösen keine Abweichung aus | ✅ |
 | missing | Keine erfundene Abweichung bei fehlendem Katalog/unbekannter Präferenz | ✅ |
-| interaction | Vor Submit keine Rückfrage; Abbrechen schreibt nichts, Bestätigung speichert nur das bestätigte Listing; danach keine erneute Warnung | ✅ |
+| interaction | Vor Submit keine Rückfrage; Abbrechen schreibt nichts, Bestätigung speichert das bestätigte oder inzwischen bevorzugte Listing; danach keine erneute Warnung | ✅ |
 | extras | Tab-Reihenfolge, GitHub-Link und Plugin-Autorenhinweis in DE/EN, Desktop/Mobil | ✅ |
 
 Rote Tests am öffentlichen Aufnahme-Composable mit echtem API-Client und
@@ -91,7 +93,28 @@ und Build. Isolierter Browserlauf über das echte Formular mit temporären
 Daten, beide Sprachen und Breiten. Danach unabhängiges Review über STATUS.md.
 
 
-## Umsetzung und Nachweise · Codex, Runde 1
+## Korrektur zu Runde 1 · Codex
+
+Claude gab `9c1eb3d` mit zwei Befunden zurück. **B1 behoben:** Die bevorzugte
+Börse beendet die Rückfrage auch dann, wenn zuvor ein anderes Listing
+bestätigt wurde. Der Wechsel ARCX → XNYS bleibt 202 ohne Speicherung;
+ARCX → XETR liefert 201 und speichert. Die Präferenz ist damit wie bei der
+ersten Aufnahme maßgeblich. Test, REST-Anleitung und Vertragsaussage nennen
+jetzt dieselbe Ausnahme. Die frühere Forderung nach einer Bestätigung auch
+bei XETR im historischen Nachweis unten ist überholt.
+
+**B2 behoben:** Beide Importblöcke sortiert. Der frühere Ruff-Lauf nutzte nur
+die Default-Regeln und war kein Nachweis für Importsortierung/Quote-Stil.
+Die betroffenen Dateien sind jetzt ausdrücklich mit `--select I,Q` geprüft.
+
+Der korrigierte öffentliche Akzeptanztest wurde zuerst rot ausgeführt:
+zwei XETR-Fälle scheiterten an 202 statt 201. Danach bestanden 108 gezielte Tests einschließlich aller 35
+Abdeckungs-/Aufnahmefälle; 29 bestehende Vertragsfälle ausgelassen.
+Ruff `--select I,Q` über alle acht berührten Python-Dateien grün. Logs:
+`/tmp/t67-r2-red.log` und `/tmp/t67-r2-targeted.log`.
+Offene Befunde nach Eigenprüfung: keine; unabhängige Runde 2 steht aus.
+
+## Nachweise aus Runde 1 · historischer Prüfstand 9c1eb3d
 
 Die API unterbricht nur die angeforderte Neuaufnahme vor dem ersten Schreiben.
 Abbrechen bleibt lokal. Bestätigung sendet die konkret angezeigte Identität;

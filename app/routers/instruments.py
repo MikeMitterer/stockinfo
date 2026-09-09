@@ -26,10 +26,14 @@ from app.models import (
     IDENTITY_CONFLICT_RESPONSE,
     ErrorDetail,
     InstrumentSummary,
-    IntakeRequest,
     IntakeConfirmation,
+    IntakeRequest,
 )
-from app.services.intake_service import ExchangeConfirmationRequired, IntakeRejected, IntakeService
+from app.services.intake_service import (
+    ExchangeConfirmationRequired,
+    IntakeRejected,
+    IntakeService,
+)
 from app.services.quote_service import (
     QuoteCurrencyMismatchError,
     QuoteUnavailableError,

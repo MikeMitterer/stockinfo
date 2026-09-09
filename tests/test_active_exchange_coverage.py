@@ -341,9 +341,10 @@ def test_neues_aufloesungsergebnis_braucht_eigene_bestaetigung(intake_profile, n
     decision = client.post("/instruments/intake", json=request).json()
     inventory.write_text(inventory.read_text().replace("mic: ARCX", f"mic: {next_mic}"))
     response = client.post("/instruments/intake", json={**request, "confirmed_listing": decision["identity"]})
-    assert response.status_code == 202, response.text
+    assert response.status_code == (201 if next_mic == "XETR" else 202), response.text
     assert response.json()["identity"]["mic"] == next_mic
-    assert client.get("/instruments").json() == []
+    rows = client.get("/instruments").json()
+    assert len(rows) == (1 if next_mic == "XETR" else 0)
 
 
 def test_passende_und_boersenlose_aufnahme_braucht_keine_rueckfrage(intake_profile):

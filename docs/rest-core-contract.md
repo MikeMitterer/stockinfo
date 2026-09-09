@@ -49,7 +49,7 @@ Das Dashboard zeigt diesen Vergleich nach Submit mit „Dennoch aufnehmen“
 und „Abbrechen“. Abbruch benötigt keinen weiteren Request. Bestätigung sendet
 dieselbe Eingabe mit `check_exchange: true` und der angezeigten `identity`
 als `confirmed_listing`. Eine geänderte Auflösung erfordert eine neue
-Bestätigung. Erfolgreiche Aufnahme liefert `201`, ein vorhandenes Listing
+Bestätigung, solange ihre Börse weiterhin von der bevorzugten abweicht. Erfolgreiche Aufnahme liefert `201`, ein vorhandenes Listing
 `200`, jeweils mit `InstrumentSummary`.
 
 Gleiche Börse, Paare, reine ISIN-Instrumente und vorhandene Listings benötigen
