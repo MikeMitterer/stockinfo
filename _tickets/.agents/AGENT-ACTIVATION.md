@@ -80,7 +80,7 @@ löschen. Claude bestätigt beim Anlegen den Takt und die Job-ID.
    `_tickets/30-doing/<ticket>` muss existieren, `ticket` muss
    `priority_ticket` entsprechen und in `priority_chain` stehen.
    Andernfalls `portfolio_mismatch` melden und stoppen.
-4. Beachte `CLAUDE.md` und lies das Ticket sowie den vollständigen
+4. Beachte `AGENTS.md` und lies das Ticket sowie den vollständigen
    [gemeinsamen Workflow](AGENT-WORKFLOW.md). Lade `code-standards`
    samt passenden Referenzen nach dessen Standard-Riegel und die zur
    Autorenschaft passende Mustersammlung. Führe ausschließlich den für deine

@@ -270,7 +270,7 @@ zuerst ins Ticket, dann verschieben.
 
 ## Projektstand · verbindliche Vorgabe Mike, 2026-09-09
 
-Maßgeblich ist die [Projektvorgabe zum Entwicklungsstand](../CLAUDE.md#tatsächlicher-entwicklungsstand).
+Maßgeblich ist die [Projektvorgabe zum Entwicklungsstand](../AGENTS.md#tatsächlicher-entwicklungsstand).
 Die [Erfahrung R-02](.agents/CODEX-LESSONS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt)
 nennt Anlass und Erkennungsregel. Diese Vorgabe gilt für beide Rollen.
 

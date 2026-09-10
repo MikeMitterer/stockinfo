@@ -42,7 +42,7 @@ als Codex-Befund kopiert.
 ## R-02 · Entwicklungsstand wird wie ein breit ausgerolltes Produkt behandelt
 
 Die verbindliche Vorgabe steht im
-[Projekteinstieg](../../CLAUDE.md#tatsächlicher-entwicklungsstand).
+[Projekteinstieg](../../AGENTS.md#tatsächlicher-entwicklungsstand).
 Dieser Eintrag hält Anlass und Erkennung des Fehlmusters fest.
 
 **Erkennungsregel:** Eine Änderung wird mit Rückwärtskompatibilität,
