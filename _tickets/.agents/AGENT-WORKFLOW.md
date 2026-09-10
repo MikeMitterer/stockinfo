@@ -124,11 +124,11 @@ Muster belegen, Autorenschaft richtig zuordnen, Regeln für Coder und Verifier
 formulieren und die Änderung im eigenen Chat nennen. Ein ausdrücklicher
 Nur-Lese-Auftrag hat Vorrang; dann steht der Nachtrag als Vorschlag im Chat.
 
-Startweg und Takt stehen in
-[AGENT-ACTIVATION.md](AGENT-ACTIVATION.md#observer-aktivierung--vorbereitet-für-t-69).
-Der praktische Nachweis für Instanzkennung, `/clear` und Wiederanlauf gehört zu
-[T-69](../30-doing/T-69-observer-instanzen-und-loop.md); bis dahin wird kein
-Observer gestartet.
+Startweg und Takt stehen in der
+[Observer-Aktivierung](AGENT-ACTIVATION.md#observer-aktivierung), der Ablauf im
+[Observer-Durchlauf](AGENT-ACTIVATION.md#observer-durchlauf). Für Codex gilt
+zusätzlich der [Observer-Auftrag](CODEX-IN-CONTEXT-SCHEDULER.md#observer-auftrag)
+des Schedulers.
 
 [↑ Übersicht](#übersicht)
 

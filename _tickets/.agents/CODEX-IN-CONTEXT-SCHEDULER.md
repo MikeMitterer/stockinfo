@@ -7,6 +7,7 @@ des bestehenden Codex-Arbeits-Chats. Das fachliche Review-Verfahren steht in
 ## Übersicht
 
 - [Vertrag](#vertrag)
+- [Observer-Auftrag](#observer-auftrag)
 - [Gesundheits- und Wiederanlaufregeln](#gesundheits--und-wiederanlaufregeln)
 - [Wiederanlauf nach Exit oder Compaction](#wiederanlauf-nach-exit-oder-compaction)
 
@@ -27,6 +28,9 @@ liest der Chat den Zustand erneut. Während einer laufenden Implementierung
 ist ein Heartbeat kein paralleler Arbeitsauftrag. Bei Owner Claude bleibt
 Codex still. Fehlende oder widersprüchliche Rollenfelder sind ein Zustandsfehler.
 Ein Rollenwechsel startet keinen Scheduler automatisch.
+
+Die Regeln dieses Abschnitts gelten für Coder und Verifier. Ein Chat mit der
+Kennung `codex-observer` folgt stattdessen dem [Observer-Auftrag](#observer-auftrag).
 
 Bei einem fälligen Auftrag lädt der geweckte Chat **als Coder wie als Verifier**
 den Skill `code-standards` samt passenden Referenzen vor der fachlichen Arbeit.
@@ -93,6 +97,38 @@ des gemeinsamen Vertrags. Der Timer selbst lädt keine Skills für Leerdurchläu
   dem konkreten Fehler informiert. Derselbe unveränderte Fehler wird nicht bei
   jedem Heartbeat wiederholt; nach einer Erholung darf ein neuer Fehler wieder
   gemeldet werden.
+
+[↑ Übersicht](#übersicht)
+
+## Observer-Auftrag
+
+**Derselbe Zellenmechanismus, aber ohne Review- und Coder-Trigger.** Diesen
+Auftrag führt ausschließlich ein Chat mit der vollständigen Kennung
+`codex-observer` aus; ein Chat mit der Kennung `codex` übernimmt ihn nicht.
+`owner` und `phase` lösen hier nichts aus und halten nichts auf. Der fachliche
+Vertrag steht im [Workflow](AGENT-WORKFLOW.md#observer--beobachten-nicht-mitarbeiten).
+
+- Start, Startprüfung, Takt, Heartbeat und Wiederanlauf gelten unverändert wie
+  oben. Der Heartbeat belegt nur die lebende Zelle; er ist kein
+  Beobachtungsauftrag.
+- Jeder Tick prüft zuerst, ob `observer` weiterhin exakt `codex-observer`
+  nennt. Fehlt die Zuordnung oder widerspricht sie sich, meldet die Zelle das
+  einmalig, wird beendet und nicht neu gestartet.
+- Danach vergleicht der Tick das Zustands-Tupel und die Ticketdateien unter
+  `30-doing/` und `20-ready/` mit dem letzten Durchlauf. Ohne Änderung endet
+  er nach dem Heartbeat still.
+- Bei einer Änderung weckt die Zelle denselben Chat, der den
+  [Observer-Durchlauf](AGENT-ACTIVATION.md#observer-durchlauf) ausführt und
+  ausschließlich in seinem eigenen Chat berichtet.
+- Der Observer schreibt nichts: keine Mailbox, keine Tickets, keine Rollen-,
+  Phasen- oder Zählerfelder, keinen `portfolio_mismatch`-Eintrag und kein
+  Verschieben nach `40-done/`. Ein widersprüchlicher Board-Zustand ist eine
+  Beobachtung, keine Statusänderung.
+- `review_handoff`, `scope_handoff` und `coder_handoff` gibt es in diesem
+  Auftrag nicht. Eine Observer-Zelle löst niemals ein Review, einen
+  Scope-Entscheid oder eine Implementierung aus.
+- Arbeitszelle und Observer-Zelle laufen getrennt. Dieselbe Zelle bedient nie
+  beide Aufträge.
 
 [↑ Übersicht](#übersicht)
 

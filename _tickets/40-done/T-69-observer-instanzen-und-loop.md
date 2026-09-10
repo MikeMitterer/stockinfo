@@ -5,19 +5,32 @@ Arbeit des Coders oder Verifiers zu übernehmen. Die Befehle
 `codex-observer` und `claude-observer` sollen im jeweiligen Projekt starten
 und die eigene Kennung auch beim Wiedereinstieg eindeutig machen.
 
-**Beauftragt; nach T-68 eingeplant, noch nicht umgesetzt.** Dieser Auftrag
-ist der vollständige Observer-Teil aus T-68. Claude hat die getrennte Lieferung
-mit `6177c76` beschlossen; der Auftrag wird dadurch weder zurückgestellt
-noch neu zur Genehmigung vorgelegt. Die Arbeitsreihenfolge steht in STATUS.md.
+**Abgeschlossen am 2026-09-10 durch Mike.** Die Rolle ist im Board vollständig
+eingerichtet: `STATUS.md` führt das Feld `observer`, der gemeinsame Workflow
+den fachlichen Vertrag, die Aktivierung Startweg und Durchlauf, der
+Codex-Scheduler seinen eigenen Observer-Auftrag. Die Startbefehle sind
+installiert. Was eingerichtet wurde, steht unter
+[Eingerichtete Rolle](#eingerichtete-rolle--2026-09-10).
 
-Für Mike steht aktuell kein Handgriff an. Vor der Umsetzung wird der konkrete
-CLI-Umfang erfasst; ein behaupteter Start oder `/clear`-Nachweis braucht einen
-praktischen Lauf in der jeweils verwendeten Laufzeit.
+**Nicht praktisch geprüft.** Es wurde kein Observer zugeordnet und keiner
+gestartet. Kennung nach `/clear`, durchgereichte Argumente, Exit-Code,
+Arbeitsverzeichnis und ein laufender Beobachtungstakt sind unbelegt; die
+Prüfmatrix weist das aus. Mike schließt das Ticket in diesem Zustand ab —
+der erste echte Lauf ist die Probe.
+
+Dieser Auftrag war der Observer-Teil aus T-68. Claude hat die getrennte
+Lieferung mit `6177c76` beschlossen.
+
+**Wenn du den Observer einsetzen willst:** `observer` in `STATUS.md` von
+`unassigned` auf `claude-observer` beziehungsweise `codex-observer` setzen und
+den gleichnamigen Befehl im Projektverzeichnis starten. Ohne passende
+Zuordnung meldet der Agent den Konflikt und beginnt nichts.
 
 ## Übersicht
 
 - [Vereinbarter Observer-Auftrag](#vereinbarter-observer-auftrag)
 - [Lieferung und Grenzen](#lieferung-und-grenzen)
+- [Eingerichtete Rolle · 2026-09-10](#eingerichtete-rolle--2026-09-10)
 - [Prüfung](#prüfung)
 
 ## Vereinbarter Observer-Auftrag
@@ -46,10 +59,12 @@ und technische Abnahme zuständig. Ein fehlender Observer hält keine Arbeit auf
   Chat. Die frühere Beschränkung auf einzelne manuelle Aufträge entfällt.
   Start, Zustandsprüfung und Meldeweg sind unten beschrieben.
 
-Der genaue Schwerpunkt ist noch offen. Diese Beschreibung aktiviert keine
-Instanz und ändert den laufenden Zwei-Rollen-Vertrag nicht. Bei Umsetzung
-gehören die Regeln in den gemeinsamen Workflow, den Einstieg, die Aktivierung
-und den Ticket-Skill; keine eigene Kopie des Workflows für den Observer.
+Dieser Abschnitt hält die Vereinbarung vom 2026-09-09 fest; der umgesetzte
+Stand steht unter [Eingerichtete Rolle](#eingerichtete-rolle--2026-09-10).
+Die Regeln liegen wie vereinbart im gemeinsamen Workflow, in der Aktivierung
+und im Codex-Scheduler — keine eigene Workflow-Kopie für den Observer.
+Der inhaltliche Schwerpunkt der Beobachtung bleibt offen und ergibt sich aus
+dem ersten echten Lauf.
 
 ### Instanznamen · Vorgabe von Mike
 
@@ -132,10 +147,10 @@ Die Kennung wird beim Start mitgegeben; die Rolle wird weiter aus der
 ins Board ein und ändert keine laufende Rollenverteilung. Bereits vorhandene
 zusätzliche CLI-Anweisungen müssen beim Einrichten erhalten bleiben.
 
-Die Startanleitung steht künftig in `.agents/AGENT-ACTIVATION.md`; der
-Ticket-Skill erklärt die Zuordnung über die Instanzkennung. Die Einrichtung
-gehört zur späteren Umstellung. Bisher wurden weder Startskripte installiert
-noch Shell-Startdateien geändert.
+Die Startanleitung steht in `.agents/AGENT-ACTIVATION.md`; der Ticket-Skill
+erklärt die Zuordnung über die Instanzkennung. Der Vorschlag von zwei eigenen
+Startskripten ist überholt: Es gibt ein gemeinsames Basis-Script mit acht
+Symlinks, geliefert vom Ticket-Skill. Shell-Startdateien wurden nicht geändert.
 
 ### Eigener Observer-Loop
 
@@ -163,7 +178,9 @@ Stoppen, `/clear` und Wiederanlauf gehören zur Prüfung: Es darf kein alter
 Loop unter verlorener Kennung weiterarbeiten und kein doppelter Loop entstehen.
 Falls die Laufzeit nach `/clear` einen erneuten Start verlangt, wird dieser
 ausdrücklich dokumentiert. Ein beendeter Observer blockiert weder Umsetzung
-noch Freigabe. Bis zur späteren Umstellung wird kein Observer-Loop gestartet.
+noch Freigabe. Der Ablauf steht jetzt als
+[Observer-Durchlauf](../.agents/AGENT-ACTIVATION.md#observer-durchlauf) in der
+Aktivierung; gelaufen ist er noch nicht.
 
 [↑ Übersicht](#übersicht)
 
@@ -181,15 +198,51 @@ Zuordnung in einem realen Board ohne ausdrücklichen Auftrag eintragen.
 
 [↑ Übersicht](#übersicht)
 
+## Eingerichtete Rolle · 2026-09-10
+
+Vier Lücken standen einem Einsatz im Weg. Sie sind geschlossen.
+
+| Datei | Was fehlte | Was jetzt drinsteht |
+|---|---|---|
+| `.agents/AGENT-ACTIVATION.md` | „Erst nach Einführung der Rolle über T-69 verwenden“ — ein gestarteter Observer wäre daran stehengeblieben | Abschnitt „Observer-Aktivierung“ ohne Sperre; gestartet wird nach `observer`-Zuordnung |
+| `.agents/AGENT-ACTIVATION.md` | „Solange der gemeinsame Workflow den Observer nicht unterstützt, keine Beobachtung starten“ — die Bedingung war erfüllt, der Satz sperrte weiter | entfallen; der Workflow trägt den Vertrag seit dem Board-Abgleich |
+| `.agents/AGENT-ACTIVATION.md` | Abschnitt „Observer-Durchlauf“ ohne ausführbaren Inhalt, obwohl der Loop-Prompt genau ihn aufruft | fünf nummerierte Schritte: Zuordnung, Änderungserkennung, genaues Lesen, Bericht, Schreibverbot |
+| `.agents/CODEX-IN-CONTEXT-SCHEDULER.md` | kein Observer-Trigger; `codex-observer` bekommt vom Startbefehl aber genau diesen Scheduler genannt | Abschnitt „Observer-Auftrag“: eigene Zelle, Zuordnungsprüfung je Tick, kein Review-/Coder-Trigger, kein Schreiben |
+
+Dazu die überholte Angabe zu den Startbefehlen: Beschrieben waren
+`agent-session` und sechs Symlinks, installiert sind `agent-session.sh`, die
+Farbdatei `.agent-session.conf.sh` und acht Symlinks samt `codex-neutral`
+und `claude-neutral`.
+
+Die Rollenpflicht des Observers an den Mustersammlungen steht bewusst nur im
+gemeinsamen Workflow. Die Köpfe von `CLAUDE-LESSONS.md` und `CODEX-LESSONS.md`
+nennen weiterhin nur Coder und Verifier als Leser; eine zweite Regelkopie
+wurde vermieden.
+
+Doku-Abgleich: `.agents/AGENT-ACTIVATION.md`, `.agents/CODEX-IN-CONTEXT-SCHEDULER.md`
+und der Observer-Abschnitt in `.agents/AGENT-WORKFLOW.md` angepasst.
+`STATUS.md` führt das Feld bereits seit dem Board-Abgleich. 293 lokale
+Markdown-Links samt Ankern geprüft, keine Befunde.
+
+[↑ Übersicht](#übersicht)
+
 ## Prüfung
 
 Die Prüfpunkte stammen unverändert im Umfang aus T-68 #7–10; hier #1–4.
+**Keiner davon ist durch einen Lauf belegt.** Mike hat das Ticket am
+2026-09-10 in diesem Zustand abgeschlossen; die Punkte sind damit nicht
+erfüllt, sondern bewusst offen geblieben.
 
 | # | Erwartetes Ergebnis | AI |
 |---|---|:--:|
-| 1 | `claude-observer` und `codex-observer` sind in Bash und Zsh aufrufbar; Projektverzeichnis, zusätzliche Argumente und Exit-Code bleiben erhalten; Standardbefehle sind unverändert | ➖ |
-| 2 | Beide Observer-Starts erhalten die richtige Kennung und lesen ihre Rolle aus STATUS; ein paralleler Standardagent behält seine eigene Kennung; der Start verändert keine Rollenzuordnung | ➖ |
-| 3 | Nach `/clear` ist die Kennung in beiden verwendeten CLIs erneut verfügbar und die aktuelle Rolle wird neu gelesen; andernfalls vor Einführung einen geprüften Wiedereinstieg einrichten und dokumentieren | ➖ |
-| 4 | Der Observer-Loop liest unabhängig vom Owner, arbeitet nur bei passender Observer-Zuordnung und meldet unveränderte Beobachtungen nicht wiederholt; Stoppen, Rollenwechsel, `/clear` und Wiederanlauf erzeugen weder fremde Rollenarbeit noch doppelte Loops | ➖ |
+| 1 | `claude-observer` und `codex-observer` sind in Bash und Zsh aufrufbar; Projektverzeichnis, zusätzliche Argumente und Exit-Code bleiben erhalten; Standardbefehle sind unverändert | ◑ [^t69-1] |
+| 2 | Beide Observer-Starts erhalten die richtige Kennung und lesen ihre Rolle aus STATUS; ein paralleler Standardagent behält seine eigene Kennung; der Start verändert keine Rollenzuordnung | ➖ [^t69-2] |
+| 3 | Nach `/clear` ist die Kennung in beiden verwendeten CLIs erneut verfügbar und die aktuelle Rolle wird neu gelesen; andernfalls vor Einführung einen geprüften Wiedereinstieg einrichten und dokumentieren | ➖ [^t69-3] |
+| 4 | Der Observer-Loop liest unabhängig vom Owner, arbeitet nur bei passender Observer-Zuordnung und meldet unveränderte Beobachtungen nicht wiederholt; Stoppen, Rollenwechsel, `/clear` und Wiederanlauf erzeugen weder fremde Rollenarbeit noch doppelte Loops | ➖ [^t69-4] |
+
+[^t69-1]: Nur Bestand und Auffindbarkeit: `command -v claude-observer codex-observer agent-session.sh` liefert in Bash- und Zsh-Login-Shell die acht Symlinks auf `~/.local/bin/agent-session.sh`. Arbeitsverzeichnis, durchgereichte Argumente und Exit-Code wurden nicht gemessen.
+[^t69-2]: Kein Start. Gelesen wurde nur der Quelltext von `agent-session.sh`: Er setzt `IDENTITY="${CLI}-observer"`, gibt den Rollenauftrag samt Zuordnungsprüfung als Prompt mit und schreibt selbst nichts ins Board. Eine Codelesung ist kein Lauf.
+[^t69-3]: Kein `/clear`-Versuch in einer der beiden CLIs.
+[^t69-4]: Der Vertrag steht jetzt im Workflow, der Ablauf in der Aktivierung und der Codex-Trigger im Scheduler. Ein Beobachtungstakt lief nie; Stoppen, Rollenwechsel und Wiederanlauf sind unbelegt.
 
 [↑ Übersicht](#übersicht)

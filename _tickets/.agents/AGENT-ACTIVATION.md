@@ -16,16 +16,16 @@ Laufzeit. Die Änderung der Rollenfelder startet weder einen Timer noch eine
 zweite Instanz. Konkrete Fähigkeiten und Grenzen bleiben im jeweiligen
 Laufzeitvertrag; es gibt keinen zweiten fachlichen Workflow je Laufzeit.
 
-Der Observer erhält einen eigenen Chat und Loop. Seine Einführung ist in
-[T-69](../30-doing/T-69-observer-instanzen-und-loop.md) vorbereitet; die
-[Observer-Aktivierung](#observer-aktivierung--vorbereitet-für-t-69) unten ist
-noch keine Freigabe zum Start.
+Der Observer erhält einen eigenen Chat und Loop. Sein Startweg steht unter
+[Observer-Aktivierung](#observer-aktivierung). Gestartet wird er nur, wenn das
+Feld `observer` in `STATUS.md` genau seine Kennung nennt.
 
 ## Übersicht
 
 - [Trigger für den Codex-In-Context-Scheduler](#trigger-für-den-codex-in-context-scheduler)
 - [Prompt für den periodischen Claude-Loop](#prompt-für-den-periodischen-claude-loop)
-- [Observer-Aktivierung · vorbereitet für T-69](#observer-aktivierung--vorbereitet-für-t-69)
+- [Observer-Aktivierung](#observer-aktivierung)
+- [Observer-Durchlauf](#observer-durchlauf)
 
 ## Trigger für den Codex-In-Context-Scheduler
 
@@ -113,20 +113,35 @@ Kennung, Rollen und vorhandene Jobs prüfen. Wiederkehrende Jobs laufen laut
 aktueller Dokumentation nach sieben Tagen ab.
 
 Quelle: [Claude Code — geplante Aufgaben](https://code.claude.com/docs/en/scheduled-tasks).
-Syntax und Laufzeitbeschreibung sind an der Dokumentation geprüft;
-ein Live-Test des Board-Loops steht noch aus. Die Prüfung nach `/clear`
-einschließlich Instanzkennung bleibt Teil von T-69.
+Syntax und Laufzeitbeschreibung sind an der Dokumentation geprüft. Ein
+Live-Test des Board-Loops und das Verhalten der Instanzkennung nach `/clear`
+sind weiterhin unbelegt; T-69 wurde ohne diesen Nachweis abgeschlossen.
 
 [↑ Übersicht](#übersicht)
 
-## Observer-Aktivierung · vorbereitet für T-69
+## Observer-Aktivierung
 
-**Erst nach Einführung der Rolle über T-69 verwenden.** Der Observer braucht
-eine eigene Instanzkennung und einen eigenen Chat. Der Startauftrag benennt
-die Kennung; der aktuelle Auftrag steht im Feld `observer` in `STATUS.md`.
-Der Observer wartet nicht auf `owner` und übernimmt keine Coder-/Verifier-Arbeit.
+**Der Observer läuft in einem eigenen Chat mit eigenem Takt.** Er braucht eine
+eigene Instanzkennung und wartet nicht auf `owner`. Er startet nur, wenn das
+Feld `observer` in `STATUS.md` genau seine Kennung nennt; sonst meldet er den
+Konflikt und beginnt nichts. Sein fachlicher Vertrag steht im
+[Workflow](AGENT-WORKFLOW.md#observer--beobachten-nicht-mitarbeiten).
 
-Vorlage für den separaten Claude-Observer-Chat nach der Einführung:
+Kürzester Weg aus dem Projektverzeichnis. Die Shortcuts vergeben Kennung und
+Rollenauftrag selbst:
+
+```bash
+claude-observer
+codex-observer
+```
+
+Installiert sind das Basis-Script `~/.local/bin/agent-session.sh`, die Farbdatei
+`.agent-session.conf.sh` daneben und acht relative Symlinks: `observer`,
+`verifier`, `coder` und `neutral`, jeweils mit `codex-` und `claude-`.
+Sie sind in Bash und Zsh auffindbar. Nicht praktisch nachgewiesen sind die
+Kennung nach `/clear`, durchgereichte Argumente, Exit-Code und Wiederanlauf.
+
+Ohne Shortcut im bestehenden Claude-Chat:
 
 ```text
 /loop 5m Deine Instanzkennung ist claude-observer. Lies _tickets/.agents/AGENT-ACTIVATION.md und führe einmal den Abschnitt „Observer-Durchlauf“ aus.
@@ -135,28 +150,39 @@ Vorlage für den separaten Claude-Observer-Chat nach der Einführung:
 Es gelten dieselben Regeln für Job-ID, doppelte Jobs, Stoppen und Wiederanlauf
 wie beim Claude-Arbeitsloop.
 
-Die Startbefehle sind inzwischen installiert: ein gemeinsames Basis-Script
-`~/.local/bin/agent-session` und sechs relative Symlinks
-(`codex-observer`, `codex-verifier`, `codex-coder` sowie dieselben drei mit
-`claude-`). Sie sind in Bash und Zsh auffindbar. Ihr praktischer Nachweis —
-Instanzkennung, Arbeitsverzeichnis, durchgereichte Argumente, Exit-Code und
-Wiederanlauf nach `/clear` — gehört zu T-69 und ist noch offen.
+Für Codex läuft der Observer über den
+[Observer-Auftrag des In-Context-Schedulers](CODEX-IN-CONTEXT-SCHEDULER.md#observer-auftrag).
+Einen Claude-`/loop`-Befehl nicht in Codex übernehmen. Stellt die gestartete
+Codex-Laufzeit keinen In-Context-Scheduler bereit, führt der Chat den
+Observer-Durchlauf auf Ansage einzeln aus und nennt diese Einschränkung.
 
-Für Codex wird der vorhandene In-Context-Scheduler um einen eigenen
-Observer-Auftrag ergänzt. Der aktuelle Vertrag unterstützt diese Rolle noch
-nicht. Einen Claude-`/loop`-Befehl nicht in Codex übernehmen. Vor Einführung
-des Kurzbefehls muss außerdem geprüft sein, ob die gestartete Codex-Laufzeit
-den erforderlichen Scheduler bereitstellt; sonst einen passenden Startweg
-festlegen und dokumentieren.
+[↑ Übersicht](#übersicht)
 
-### Observer-Durchlauf
+## Observer-Durchlauf
 
-Der vorgesehene Ablauf und die Grenzen stehen bis zur Einführung in
-[T-69](../30-doing/T-69-observer-instanzen-und-loop.md#eigener-observer-loop).
-Bei Einführung werden sie in den gemeinsamen Workflow übernommen und hier
-verlinkt. Dieser Abschnitt aktiviert die Rolle nicht vorzeitig. Solange der
-gemeinsame Workflow den Observer nicht unterstützt, keine Beobachtung starten.
-Nach Einführung gilt vor jedem Durchlauf: nur bei exakt passender
-`observer`-Kennung beobachten, andernfalls den eigenen Loop beenden.
+Gilt für beide Laufzeiten. Der Durchlauf ändert nichts am Board.
+
+1. **Zuordnung prüfen.** Den maschinenlesbaren Zustand in `_tickets/STATUS.md`
+   lesen und `observer` exakt mit der eigenen vollständigen Kennung
+   vergleichen. Fehlt sie, widerspricht sie sich oder wurde sie geändert:
+   Konflikt melden, eigenen Loop beenden, keine andere Rolle übernehmen.
+   `owner` und `phase` sind für diesen Schritt ohne Bedeutung.
+2. **Änderungen feststellen.** Knapp prüfen, ob sich seit dem letzten
+   Durchlauf das Zustands-Tupel, die Ticketdateien unter `30-doing/` und
+   `20-ready/` oder eine vereinbarte Frist geändert haben. Unverändert:
+   einzeilige Statuszeile, Durchlauf beenden. Ein verstrichener Takt allein
+   belegt keinen Stillstand.
+3. **Nur bei Änderung genauer lesen.** Ticketablauf und Reihenfolge,
+   Überschneidungen zwischen Tickets, Doku-Abgleich und wiederkehrende
+   Probleme über mehrere Tickets hinweg. Neue Hinweise mit beiden
+   Mustersammlungen abgleichen.
+4. **Im eigenen Chat berichten.** Je Beobachtung Ticket beziehungsweise
+   geprüfte Fassung, Beleg, Auswirkung und konkreter Vorschlag. Bereits
+   gemeldete Punkte bei unverändertem Stand nicht wiederholen.
+5. **Nichts ändern.** Kein Produktcode, keine Tickets, keine Mailbox, keine
+   Human-Antworten, keine Rollen, Phasen, Prioritäten, Freigaben oder
+   Reviewzähler. Einzige Ausnahme ist die im Workflow beschriebene Pflege der
+   Mustersammlungen; bei einem Nur-Lese-Auftrag steht der Nachtrag als
+   Vorschlag im Chat.
 
 [↑ Übersicht](#übersicht)

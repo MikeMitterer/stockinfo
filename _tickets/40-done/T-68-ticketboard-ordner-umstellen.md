@@ -184,7 +184,7 @@ vereinbarte Ausnahme. Die neuen Pfade gelten gemeinsam für Board und Agentenreg
 ## Observer-Auftrag ausgelagert
 
 Der vollständige Auftrag samt CLI- und Loop-Prüfungen liegt nach Claudes
-Scope-Entscheidung `6177c76` in [T-69](../30-doing/T-69-observer-instanzen-und-loop.md).
+Scope-Entscheidung `6177c76` in [T-69](T-69-observer-instanzen-und-loop.md).
 Er folgt direkt auf T-68. Die frühere Prüfmatrix #7–10 wird dort als #1–4
 geführt; sie ist durch die Ordnerumstellung nicht bestanden.
 

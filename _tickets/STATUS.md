@@ -10,27 +10,34 @@ gerade am Zug ist; der Observer wartet nicht darauf.
 
 `unassigned` heißt: Die Rolle steht bereit, ist aber niemandem zugeteilt.
 Sie hält weder Umsetzung noch Review noch Abschluss auf. Der Observer ist
-derzeit unbesetzt; seine Einführung läuft über
-[T-69](30-doing/T-69-observer-instanzen-und-loop.md).
+eingerichtet und unbesetzt: Trage `claude-observer` beziehungsweise
+`codex-observer` ein und starte den gleichnamigen Befehl, wenn du ihn
+einsetzen willst. Startweg und Ablauf stehen in der
+[Aktivierung](.agents/AGENT-ACTIVATION.md#observer-aktivierung).
 
 ## Maschinenlesbarer Zustand
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
-- `ticket`: `T-69-observer-instanzen-und-loop.md`
+- `phase`: `portfolio_review`
+- `ticket`: `none`
 - `handoff_commit`: `92d19ab`
 - `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `mike`
 - `updated_at`: `2026-09-10`
 - `last_reviewed_ticket`: `T-68-ticketboard-ordner-umstellen.md`
 - `last_reviewed_commit`: `92d19ab`
 - `last_reviewed_round`: `1`
-- `workstream`: `observer_activation`
-- `priority_chain`: `T-69-observer-instanzen-und-loop.md`
-- `priority_ticket`: `T-69-observer-instanzen-und-loop.md`
+- `workstream`: `none`
+- `priority_chain`: `none`
+- `priority_ticket`: `none`
+
+`none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
+eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
+setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
+letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
 `max_review_rounds` ist das Limit regulärer vollständiger Reviews;
 `review_round` zählt die aktuelle Übergabe. `last_reviewed_round` gehört
@@ -169,24 +176,26 @@ Startsyntax: [Aktivierung](.agents/AGENT-ACTIVATION.md).
 Die folgenden abgeschlossenen Ketten und Nachrichten sind Historie;
 ihre damaligen Phasen, Ablagen und Aussagen starten keine aktuelle Arbeit.
 
-## Aktuelle Kette · Board und Observer
+## An Mike · `portfolio_review` — die Kette Board und Observer ist durch
 
-**T-68 ist abgeschlossen.** Mike hat den Abschluss am 2026-09-10 bestätigt;
-das Ticket liegt in [`40-done/`](40-done/T-68-ticketboard-ordner-umstellen.md).
-Damit bleibt [T-69](30-doing/T-69-observer-instanzen-und-loop.md) als einziges
-Kettenglied, danach `portfolio_review` mit Owner Mike.
+**Beide Kettenglieder sind abgeschlossen.** Mike hat
+[T-68](40-done/T-68-ticketboard-ordner-umstellen.md) und
+[T-69](40-done/T-69-observer-instanzen-und-loop.md) am 2026-09-10 bestätigt.
+`30-doing/` ist leer, es ist keine Folgearbeit eingeplant. Der Portfolio-Riegel
+sieht hier ausdrücklich keinen automatischen Anschluss vor.
 
-Vor dem Abschluss wurde das Board gegen den aktuellen Ticket-Skill
-abgeglichen: Die dritte Rolle ist als `observer` im Zustandsblock vorhanden
-und unbesetzt, ihr fachlicher Vertrag steht im
-[Workflow](.agents/AGENT-WORKFLOW.md#observer--beobachten-nicht-mitarbeiten).
-T-69 liefert weiterhin den praktischen Nachweis für Kennung, Loop und
-Wiederanlauf; ohne ihn wird kein Observer gestartet.
+T-68 lieferte die Ablage in sechs Ordnern einschließlich Ticket-Skill und wurde
+in Runde 1 technisch freigegeben (`547b73a`). T-69 richtete die Observer-Rolle
+ein: Feld, Vertrag, Startweg, Durchlauf und Codex-Auftrag.
 
-Zur Herkunft: Scope-Entscheidung `6177c76` teilte den Auftrag in **T-68 → T-69**.
-T-68 lieferte die Ablage einschließlich Skill und wurde in Runde 1 technisch
-freigegeben (`547b73a`); der Nachweisweg für beide Repositorys steht im Ticket
-(`f113bd0`). T-63 und T-66 bleiben außerhalb dieser Kette.
+**Was am Observer unbelegt bleibt:** Es lief nie einer. Kennung nach `/clear`,
+durchgereichte Argumente, Exit-Code und ein echter Beobachtungstakt sind nicht
+gemessen; die Prüfmatrix in T-69 weist das als offen aus. Mike hat in diesem
+Zustand abgeschlossen — der erste Einsatz ist die Probe.
+
+**Was von dir gebraucht wird:** eine neue Kette. Im Backlog liegen T-63
+(Docker-Betrieb prüfen) und T-66 (MCP); beide waren nie Teil dieser Kette.
+Ohne deine Einplanung startet nichts.
 
 ## Archiv · INBOX → Codex · Scope-Checkpoint T-68, 2026-09-09 (verarbeitet)
 
