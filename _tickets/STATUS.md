@@ -3,26 +3,33 @@
 Kleine, ephemere Mailbox für den asynchronen Austausch. Dauerhafte
 Entscheidungen stehen in den Tickets und in der Plugin-System-Spec.
 
-**Die Rollen legst du über `implementer` (Coder) und `reviewer` (Verifier)
-fest.** Die beiden Felder stehen direkt am Anfang des folgenden Zustandsblocks.
-`owner` weiter unten bezeichnet dagegen die Instanz, die gerade am Zug ist.
+**Die Rollen legst du über `implementer` (Coder), `reviewer` (Verifier) und
+`observer` fest.** Die drei Felder stehen direkt am Anfang des folgenden
+Zustandsblocks. `owner` weiter unten bezeichnet dagegen die Instanz, die
+gerade am Zug ist; der Observer wartet nicht darauf.
+
+`unassigned` heißt: Die Rolle steht bereit, ist aber niemandem zugeteilt.
+Sie hält weder Umsetzung noch Review noch Abschluss auf. Der Observer ist
+derzeit unbesetzt; seine Einführung läuft über
+[T-69](30-doing/T-69-observer-instanzen-und-loop.md).
 
 ## Maschinenlesbarer Zustand
 
 - `implementer`: `codex`
 - `reviewer`: `claude`
+- `observer`: `unassigned`
 - `phase`: `codex_working`
 - `ticket`: `T-69-observer-instanzen-und-loop.md`
 - `handoff_commit`: `92d19ab`
 - `review_round`: `0`
 - `max_review_rounds`: `3`
 - `owner`: `codex`
-- `updated_at`: `2026-09-09`
+- `updated_at`: `2026-09-10`
 - `last_reviewed_ticket`: `T-68-ticketboard-ordner-umstellen.md`
 - `last_reviewed_commit`: `92d19ab`
 - `last_reviewed_round`: `1`
 - `workstream`: `observer_activation`
-- `priority_chain`: `T-68-ticketboard-ordner-umstellen.md → T-69-observer-instanzen-und-loop.md`
+- `priority_chain`: `T-69-observer-instanzen-und-loop.md`
 - `priority_ticket`: `T-69-observer-instanzen-und-loop.md`
 
 `max_review_rounds` ist das Limit regulärer vollständiger Reviews;
@@ -164,13 +171,22 @@ ihre damaligen Phasen, Ablagen und Aussagen starten keine aktuelle Arbeit.
 
 ## Aktuelle Kette · Board und Observer
 
-Scope-Entscheidung `6177c76` verarbeitet: **T-68 → T-69**, danach
-`portfolio_review`, Owner Mike. T-68 stellt die Ablage einschließlich Skill
-um; [T-69](30-doing/T-69-observer-instanzen-und-loop.md) übernimmt den vollständigen
-Observer-Auftrag. T-68 ist technisch freigegeben (`547b73a`); Codex arbeitet jetzt an T-69,
-Claude prüft anschließend. T-68 wartet in Doing auf Mikes Abschlussbestätigung.
-Der Nachweisweg für beide Repositorys steht vor Beginn der Verschiebungen
-im T-68-Ticket (`f113bd0`). T-63 und T-66 bleiben außerhalb dieser Kette.
+**T-68 ist abgeschlossen.** Mike hat den Abschluss am 2026-09-10 bestätigt;
+das Ticket liegt in [`40-done/`](40-done/T-68-ticketboard-ordner-umstellen.md).
+Damit bleibt [T-69](30-doing/T-69-observer-instanzen-und-loop.md) als einziges
+Kettenglied, danach `portfolio_review` mit Owner Mike.
+
+Vor dem Abschluss wurde das Board gegen den aktuellen Ticket-Skill
+abgeglichen: Die dritte Rolle ist als `observer` im Zustandsblock vorhanden
+und unbesetzt, ihr fachlicher Vertrag steht im
+[Workflow](.agents/AGENT-WORKFLOW.md#observer--beobachten-nicht-mitarbeiten).
+T-69 liefert weiterhin den praktischen Nachweis für Kennung, Loop und
+Wiederanlauf; ohne ihn wird kein Observer gestartet.
+
+Zur Herkunft: Scope-Entscheidung `6177c76` teilte den Auftrag in **T-68 → T-69**.
+T-68 lieferte die Ablage einschließlich Skill und wurde in Runde 1 technisch
+freigegeben (`547b73a`); der Nachweisweg für beide Repositorys steht im Ticket
+(`f113bd0`). T-63 und T-66 bleiben außerhalb dieser Kette.
 
 ## Archiv · INBOX → Codex · Scope-Checkpoint T-68, 2026-09-09 (verarbeitet)
 
@@ -408,7 +424,7 @@ ist ausschließlich an T-67 `extras` abgegeben: eine Umsetzung, eine Prüfung.
 Frühere Angaben zum offenen Abschluss von T-64 sind damit überholt.
 Die aktive T-21-/T-67-Kette und Claudes laufendes Review bleiben unverändert.
 
-## Aktuelle Arbeit · T-68, 2026-09-09
+## Historie · Arbeitsbeginn T-68, 2026-09-09
 
 T-25 ist auf `16cf3d3` in Runde 2 ohne Befunde freigegeben; dauerhaft im Ticket
 verarbeitet. T-68 ist jetzt das letzte aktive Kettenglied. Zunächst Inventar

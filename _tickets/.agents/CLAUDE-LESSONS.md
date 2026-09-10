@@ -14,7 +14,7 @@ Bugs bleiben im Ticket. Ein Eintrag enthält Erkennungsregel, Prüffrage und
 Belege; neue Belege werden am bestehenden Eintrag ergänzt statt ihn zu
 duplizieren.
 
-Die [Projektvorgabe zum Entwicklungsstand](../../CLAUDE.md#tatsächlicher-entwicklungsstand)
+Die [Projektvorgabe zum Entwicklungsstand](../../AGENTS.md#tatsächlicher-entwicklungsstand)
 gilt für beide Rollen. Anlass und Erkennung stehen in
 [R-02](CODEX-LESSONS.md#r-02--entwicklungsstand-wird-wie-ein-breit-ausgerolltes-produkt-behandelt).
 
@@ -949,8 +949,9 @@ sie mit `grep` erhoben, behauptet sie nur, dass die geratenen Suchwörter
 vorkommen — nicht, dass es keine weiteren gibt. Wer über einen Bezeichnerscope
 redet, zählt ihn vorher aus dem AST auf. Und wer eine Regelfrage stellt, liest
 zuerst die Regel: Sie stand vollständig in der Skill `code-standards`, die in
-dieser Runde nicht geladen war. Seither steht die Kernaussage in `CLAUDE.md`,
-weil die lädt, ohne dass jemand daran denkt.
+dieser Runde nicht geladen war. Seither steht die Kernaussage in den
+Projektregeln (`AGENTS.md`, über `CLAUDE.md` eingebunden), weil die laden,
+ohne dass jemand daran denkt.
 
 [↑ Übersicht](#übersicht)
 
@@ -1600,7 +1601,7 @@ Daraus ist die Regel
 geworden. Sie ändert nichts an P-12: Die Liste muss trotzdem vollständig sein,
 denn wer sie selbst abarbeitet, arbeitet genau sie ab.
 
-**Der Zusammenhang zu CLAUDE.md:** Dort steht „Die Gegenprobe ist ein
+**Der Zusammenhang zu den Projektregeln:** In `AGENTS.md` steht „Die Gegenprobe ist ein
 Inventar, keine Textsuche“ für Bezeichner. Dieselbe Regel gilt für
 Fundstellen im Review. Eine gekappte Ausgabe ist noch schlechter als eine
 schlecht geratene Suche: Sie sieht vollständig aus, weil sie mit einem

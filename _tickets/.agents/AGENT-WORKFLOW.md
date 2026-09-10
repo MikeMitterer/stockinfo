@@ -1,7 +1,9 @@
-# Coder-/Verifier-Workflow
+# Agenten-Workflow · Coder, Verifier, Observer
 
-Dieses Dokument ist der stabile Vertrag für Implementierung und unabhängigen
-Review zwischen den aktuell zugeordneten Agenten. Operativer Zustand und aktuelle Nachrichten stehen ausschließlich in
+Dieses Dokument ist der stabile Vertrag für Implementierung, unabhängigen
+Review und Beobachtung zwischen den aktuell zugeordneten Agenten. Alle drei
+Rollen verwenden diesen einen Vertrag; es gibt keine eigene Kopie je Rolle.
+Operativer Zustand und aktuelle Nachrichten stehen ausschließlich in
 `STATUS.md`; dieses Dokument enthält keine Laufhistorie.
 
 Die Aktivierung richtet sich nach der Agentenlaufzeit und steht in
@@ -19,6 +21,7 @@ Das gilt auch bei manuellem Einstieg ohne Scheduler oder Loop.
 ## Übersicht
 
 - [Rollen und Zustandsprotokoll](#rollen-und-zustandsprotokoll)
+- [Observer — beobachten, nicht mitarbeiten](#observer--beobachten-nicht-mitarbeiten)
 - [Ticketpfade und Arbeitsbeginn](#ticketpfade-und-arbeitsbeginn)
 - [Ticketgrenzen](#ticketgrenzen)
 - [Scope-Checkpoint — Breite entscheiden, bevor sie zum Review-Diff wird](#scope-checkpoint--breite-entscheiden-bevor-sie-zum-review-diff-wird)
@@ -44,7 +47,14 @@ Der Autor darf seine eigene Fassung nicht als unabhängiger Verifier abnehmen.
 
 **Coder** ist die in `STATUS.md` unter `implementer` eingetragene Instanz.
 **Verifier** ist die dort unter `reviewer` eingetragene Instanz.
+**Observer** ist die dort unter `observer` eingetragene Instanz; sein Vertrag
+steht [unten](#observer--beobachten-nicht-mitarbeiten).
 Die konkrete Zuordnung und die Phasentabelle werden ausschließlich dort gepflegt.
+
+Ein Rollenfeld auf `unassigned` bedeutet: Die Rolle steht bereit, ist aber
+niemandem zugeteilt. Sie wird weder gestartet noch erfunden. Ein laut Auftrag
+oder Akzeptanzkriterien nötiger Review entfällt dadurch nicht; der offene
+Schritt bleibt sichtbar, und `approved` bleibt ein echtes Verifier-Urteil.
 
 In den Regeln unten bedeuten `<working_phase>`, `<ready_phase>` und
 `<reviewing_phase>` die Arbeits-, Übergabe- und Prüfphase aus dieser Tabelle.
@@ -82,6 +92,43 @@ Das Tupel `(ticket, handoff_commit, review_round)` wird nach abgeschlossenem
 Review nicht erneut bearbeitet. Die Identität des Prüfers bleibt im Bericht
 festgehalten. Ein explizit zusätzlich beauftragter Verifier benötigt eine
 eindeutige Auftragszuordnung; bloßes Tauschen der Rollen ist kein neuer Auftrag.
+
+[↑ Übersicht](#übersicht)
+
+## Observer — beobachten, nicht mitarbeiten
+
+**Der Observer liest den Ablauf, er arbeitet nicht mit.** Er braucht eine
+eigene Instanzkennung, auch wenn er dasselbe Agentenprodukt wie Coder oder
+Verifier verwendet. Steht `observer` auf `unassigned`, gibt es keinen
+Observer; das hält weder Umsetzung noch Review noch Abschluss auf.
+
+Er liest unabhängig vom `owner`, auch im Leerlauf, und prüft vor jedem
+Durchlauf seine exakte Zuordnung. Fehlt sie, widerspricht sie sich oder wurde
+sie geändert, beendet er den eigenen Loop und übernimmt keine andere Rolle.
+
+Sein Gegenstand ist der Ablauf, nicht der Diff: Ticketreihenfolge,
+Überschneidungen zwischen Tickets, Doku-Abgleich und wiederkehrende Probleme
+über mehrere Tickets hinweg. Neue Hinweise gleicht er mit beiden
+Mustersammlungen ab.
+
+Er ändert weder Produktcode noch Tickets, Mailbox, Human-Antworten, Rollen,
+Phasen, Prioritäten, Freigaben oder Reviewzähler. Er startet keine Folgearbeit
+und schafft keine zusätzliche Abnahmestufe. Hinweise erscheinen in seinem
+eigenen Chat mit Ticket beziehungsweise geprüfter Fassung, Beleg, Auswirkung
+und konkretem Vorschlag. Der zuständige Coder oder Verifier ordnet sie ein;
+erforderliche Entscheidungen bleiben bei Mike. Bei unverändertem Stand
+wiederholt er eine Beobachtung nicht.
+
+Die einzige Schreibausnahme ist die gezielte Pflege der Mustersammlungen:
+Muster belegen, Autorenschaft richtig zuordnen, Regeln für Coder und Verifier
+formulieren und die Änderung im eigenen Chat nennen. Ein ausdrücklicher
+Nur-Lese-Auftrag hat Vorrang; dann steht der Nachtrag als Vorschlag im Chat.
+
+Startweg und Takt stehen in
+[AGENT-ACTIVATION.md](AGENT-ACTIVATION.md#observer-aktivierung--vorbereitet-für-t-69).
+Der praktische Nachweis für Instanzkennung, `/clear` und Wiederanlauf gehört zu
+[T-69](../30-doing/T-69-observer-instanzen-und-loop.md); bis dahin wird kein
+Observer gestartet.
 
 [↑ Übersicht](#übersicht)
 

@@ -3,9 +3,10 @@
 Geplante, laufende und abgeschlossene Arbeit soll schon im Dateibrowser
 unterscheidbar sein. Im bisherigen Root liegen diese Zustände nebeneinander.
 
-**Umgestellt und in Runde 1 von Claude freigegeben.** Tickets liegen nach
-Arbeitsstand in den sechs vereinbarten Ordnern. Die Agentenregeln liegen
-unter `.agents/`; beide Agenten verwenden dieselbe aktualisierte Skill-Quelle.
+**Abgeschlossen.** Tickets liegen nach Arbeitsstand in den sechs vereinbarten
+Ordnern. Die Agentenregeln liegen unter `.agents/`; beide Agenten verwenden
+dieselbe aktualisierte Skill-Quelle. Claude hat in Runde 1 ohne offene Befunde
+freigegeben, Mike hat den Abschluss am 2026-09-10 bestätigt.
 Der vollständige Observer-Auftrag folgt in T-69.
 
 ## Übersicht
@@ -24,13 +25,13 @@ Der vollständige Observer-Auftrag folgt in T-69.
 - [Nachweis der gültigen Arbeitsanweisung](#nachweis-der-gültigen-arbeitsanweisung)
 - [Übergabeumfang · Runde 1](#übergabeumfang--runde-1)
 - [Unabhängige Freigabe · Claude, Runde 1](#unabhängige-freigabe--claude-runde-1)
+- [Abschluss · Mike, 2026-09-10](#abschluss--mike-2026-09-10)
 
 ## Für dich
 
-Für Mike steht die Abschlussbestätigung noch aus. Die technische Freigabe
-liegt vor; bis zur Bestätigung bleibt T-68 in `30-doing/`.
-Die Wartebedingung vor dem Umzug ist mit Mikes „Ja, ist durch“ nach Claudes
-T-25-Abschluss erfüllt.
+Nichts mehr. Mike hat den Abschluss am 2026-09-10 bestätigt; das Ticket liegt
+in `40-done/`. Die Wartebedingung vor dem Umzug war mit seinem „Ja, ist durch“
+nach Claudes T-25-Abschluss erfüllt.
 
 Mike, 2026-09-09:
 
@@ -255,10 +256,14 @@ Kein neues Board-Werkzeug und keine zusätzliche Statusdatei. Die Umstellung
 
 Die Ablage ist umgesetzt. Reiner Verschiebe-Commit: `b7c9896` (95 Dateien,
 100 % unveränderter Git-Inhalt). Pfadkorrekturen: `3d01098`, `d76ac27`;
-die begleitenden Regeländerungen werden im Übergabecommit festgehalten.
-T-63 und T-66 liegen im Backlog, T-68 in Doing und T-69 in Ready.
-Die Matrix unten beziehungsweise im Abschnitt „Prüfung“ ist die einzige
-aktuelle technische Bewertung. Claude hat den Stand in Runde 1 ohne offene Befunde freigegeben (`547b73a`).
+die begleitenden Regeländerungen stehen im Übergabecommit.
+Die Matrix im Abschnitt „Prüfung“ ist die einzige aktuelle technische
+Bewertung. Claude hat den Stand in Runde 1 ohne offene Befunde freigegeben
+(`547b73a`), Mike hat am 2026-09-10 abgeschlossen.
+
+Ablage beim Abschluss: T-63 und T-66 im Backlog, T-69 in Doing, T-68 in Done.
+Die Angabe „T-69 in Ready“ in der Freigabefußnote `[^t68-3]` beschreibt den
+geprüften Stand `92d19ab` vom 2026-09-09 und bleibt als Beleg unverändert.
 
 [↑ Übersicht](#übersicht)
 
@@ -434,8 +439,9 @@ Die neue Navigation und die geprüften Links betreffen Markdown, kein UI.
 
 ## Nachweis der gültigen Arbeitsanweisung
 
-Realer Zustandsabgleich: T-68 ist `ticket == priority_ticket` und liegt in
-`30-doing/`; T-69 ist das anschließende Kettenglied und liegt in `20-ready/`.
+Realer Zustandsabgleich zum Übergabestand `92d19ab`, 2026-09-09: T-68 ist
+`ticket == priority_ticket` und liegt in `30-doing/`; T-69 ist das
+anschließende Kettenglied und liegt in `20-ready/`.
 Kein Ticket aus den fünf inaktiven Ordnern wird unter `30-doing/` gefunden.
 Das ist ein Datei-/Vertragsnachweis, kein behaupteter Observer-Live-Test.
 Die jetzige Scheduler-Zelle wird mit genau dieser Dateischranke neu gestartet.
@@ -498,6 +504,44 @@ bytegleich. Daraus entsteht weder Nacharbeit noch eine weitere Reviewrunde.
 Der gespeicherte Claude-Loop-Prompt muss beim Wiederanlauf die neue
 Aktivierungsanleitung verwenden. Die Quelldateien sind korrigiert; Änderungen
 an einem Job in Claudes anderem Chat werden hier nicht behauptet.
-T-69 ist das nächste Kettenglied. T-68 bleibt bis zu Mikes Bestätigung in Doing.
+T-69 ist das nächste Kettenglied.
+
+[↑ Übersicht](#übersicht)
+
+## Abschluss · Mike, 2026-09-10
+
+Mike hat T-68 abgeschlossen. Vor dem Umzug nach `40-done/` wurde das Board
+noch einmal gegen den Ticket-Skill abgeglichen, der seit dem 2026-09-10 drei
+Rollen statt zwei führt. Der Observer fehlte im Board vollständig.
+
+| Datei | Änderung |
+|---|---|
+| `STATUS.md` | Feld `observer`: `unassigned` im Zustandsblock; Rollenerklärung auf drei Rollen erweitert |
+| `.agents/AGENT-WORKFLOW.md` | Titel und Einstieg auf drei Rollen; neuer Abschnitt „Observer — beobachten, nicht mitarbeiten“; `unassigned` erklärt |
+| `.agents/AGENT-ACTIVATION.md` | Observer-Zeile in der Laufzeittabelle; überholte Aussage zu den Startbefehlen korrigiert |
+| `README.md` | Die drei Rollen und ihre Quelle benannt |
+| `20-ready/.gitkeep` | Der leere Ordner war nicht versioniert |
+
+Die sechs Startbefehle sind installiert — `~/.local/bin/agent-session` mit sechs
+relativen Symlinks — und in Bash wie Zsh auffindbar. Das ist ein Bestands-,
+kein Funktionsnachweis: Instanzkennung, Arbeitsverzeichnis, durchgereichte
+Argumente, Exit-Code, `/clear` und Wiederanlauf bleiben die Prüfpunkte #1–4
+von T-69. Es wurde kein Observer zugeordnet und keiner gestartet.
+
+Zwei Punkte gehören ausdrücklich **nicht** zu diesem Ticket:
+
+- **`STATUS.md` drainiert nicht.** Verarbeitete Nachrichten stehen in
+  „Archiv“- und „Historie“-Abschnitten, die Datei ist auf 125 KB gewachsen.
+  Der Skill verlangt einen Hub ohne Archivsektionen. Das Ausräumen berührt
+  Mikes Originalantworten und braucht einen eigenen Auftrag.
+- **Die Skill-Änderung ist im Quellrepository nicht committet.** In
+  `PersonalSkills` sind `SKILL.md` und `templates/ticket.md` geändert,
+  `assets/`, `references/` und `templates/board/` unversioniert.
+
+Doku-Abgleich: `_tickets/README.md`, `_tickets/STATUS.md`,
+`_tickets/.agents/AGENT-WORKFLOW.md` und `_tickets/.agents/AGENT-ACTIVATION.md`
+angepasst. `AGENTS.md` verweist unverändert auf Board und Workflow und brauchte
+keine Änderung. Prüfnachweise in `40-done/` und die Reviewhistorie dieses
+Tickets bleiben als Historie unverändert.
 
 [↑ Übersicht](#übersicht)

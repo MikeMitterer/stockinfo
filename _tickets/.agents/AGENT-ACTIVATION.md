@@ -1,14 +1,15 @@
 # Agenten aktivieren · laufzeitspezifische Syntax
 
 **Die Rolle steht ausschließlich in [STATUS.md](../STATUS.md).** Der fachliche
-Vertrag spricht von Coder und Verifier. Diese Datei nennt konkrete Laufzeiten,
-weil deren Startmechanismen verschieden sind. Ein `/loop`-Befehl wird im
-entsprechenden Chat eingegeben; er ist kein Terminalbefehl.
+Vertrag spricht von Coder, Verifier und Observer. Diese Datei nennt konkrete
+Laufzeiten, weil deren Startmechanismen verschieden sind. Ein `/loop`-Befehl
+wird im entsprechenden Chat eingegeben; er ist kein Terminalbefehl.
 
 | Laufzeit | Aktivierung | Rollenwahl |
 |---|---|---|
 | Codex | In-Context-Scheduler des bestehenden Chats | Aus `implementer`, `reviewer` und `owner` |
 | Claude | `/loop` im bestehenden Arbeits-Chat | Aus denselben Rollenfeldern |
+| Observer | eigener Chat mit eigenem Loop, unabhängig vom `owner` | Aus `observer`, mit vollständiger Instanzkennung |
 
 Eine Anweisung in einem Agentenchat steuert nicht automatisch eine andere
 Laufzeit. Die Änderung der Rollenfelder startet weder einen Timer noch eine
@@ -132,8 +133,14 @@ Vorlage für den separaten Claude-Observer-Chat nach der Einführung:
 ```
 
 Es gelten dieselben Regeln für Job-ID, doppelte Jobs, Stoppen und Wiederanlauf
-wie beim Claude-Arbeitsloop. Die Startskripte `claude-observer` und
-`codex-observer` sind noch nicht eingerichtet.
+wie beim Claude-Arbeitsloop.
+
+Die Startbefehle sind inzwischen installiert: ein gemeinsames Basis-Script
+`~/.local/bin/agent-session` und sechs relative Symlinks
+(`codex-observer`, `codex-verifier`, `codex-coder` sowie dieselben drei mit
+`claude-`). Sie sind in Bash und Zsh auffindbar. Ihr praktischer Nachweis —
+Instanzkennung, Arbeitsverzeichnis, durchgereichte Argumente, Exit-Code und
+Wiederanlauf nach `/clear` — gehört zu T-69 und ist noch offen.
 
 Für Codex wird der vorhandene In-Context-Scheduler um einen eigenen
 Observer-Auftrag ergänzt. Der aktuelle Vertrag unterstützt diese Rolle noch

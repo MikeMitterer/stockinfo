@@ -71,6 +71,12 @@ nur der Mensch. Jedes Ticket hat eine aktuelle technische Verify-Matrix.
 [QUESTIONS.md](QUESTIONS.md) sammelt kurzfristige Fragen; Antworten werden
 ins Ticket oder die passende dauerhafte Dokumentation übertragen.
 
+Das Board kennt drei Rollen: **Coder** (`implementer`) setzt um, **Verifier**
+(`reviewer`) prüft unabhängig, **Observer** (`observer`) beobachtet den Ablauf,
+ohne etwas zu ändern. Zugeordnet werden sie ausschließlich in
+[STATUS.md](STATUS.md); `unassigned` heißt bereit, aber unbesetzt, und hält
+keine Arbeit auf. Der Observer ist derzeit unbesetzt.
+
 Der gemeinsame [Workflow](.agents/AGENT-WORKFLOW.md) regelt Rollen, Übergabe,
 Scope-Vertrag, Rundenlimit, Selbstheilung und Fortsetzung. Die
 [Aktivierung](.agents/AGENT-ACTIVATION.md) beschreibt die jeweiligen Laufzeiten;
