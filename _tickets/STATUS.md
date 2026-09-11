@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `implementing`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-70-agentlessons-verweis.md`
-- `handoff_commit`: `none`
-- `review_round`: `0`
+- `handoff_commit`: `b498c665a4e58defc1405d551ef808dabfc420cc`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-11`
 - `last_reviewed_ticket`: `T-68-ticketboard-ordner-umstellen.md`
 - `last_reviewed_commit`: `92d19ab`
@@ -65,6 +65,12 @@ Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
 ## Kontext · AgentLessons aus StockPortfolio T-41
+
+**Erster Schritt übergeben · 2026-09-11:** StockInfo-Prüffassung `b498c665a4e58defc1405d551ef808dabfc420cc`.
+Formatfassung 1 und Einzeldateien sind vorhanden; die bisherigen Sammeldateien
+sind Linkeinstiege. Vollständige Nachweise und Reviewauftrag stehen ausschließlich
+in StockPortfolio T-41/STATUS. Die dort beauftragte Instanz `claude` prüft
+diesen Anteil mit; hier keinen zweiten unabhängigen Reviewlauf starten.
 
 Mike hat am 2026-09-11 im Codex-Chat von StockPortfolio ausdrücklich bestätigt:
 „StockInfo-Anteil passt“. Damit darf `codex` den begrenzten Anteil hier
