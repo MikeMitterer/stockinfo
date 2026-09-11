@@ -20,19 +20,19 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `none`
-- `handoff_commit`: `92d19ab`
+- `phase`: `implementing`
+- `ticket`: `T-70-agentlessons-verweis.md`
+- `handoff_commit`: `none`
 - `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
-- `updated_at`: `2026-09-10`
+- `owner`: `codex`
+- `updated_at`: `2026-09-11`
 - `last_reviewed_ticket`: `T-68-ticketboard-ordner-umstellen.md`
 - `last_reviewed_commit`: `92d19ab`
 - `last_reviewed_round`: `1`
-- `workstream`: `none`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `workstream`: `agent-lessons`
+- `priority_chain`: `T-70-agentlessons-verweis.md`
+- `priority_ticket`: `T-70-agentlessons-verweis.md`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
@@ -63,6 +63,17 @@ Die Phasennamen richten sich nach der aktuellen Zuordnung:
 geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
+
+## Kontext · AgentLessons aus StockPortfolio T-41
+
+Mike hat am 2026-09-11 im Codex-Chat von StockPortfolio ausdrücklich bestätigt:
+„StockInfo-Anteil passt“. Damit darf `codex` den begrenzten Anteil hier
+aktivieren und ausführen; `claude` prüft. Der vorhandene Observer bleibt unbesetzt.
+Aktiv ist der [lokale Verweis T-70](30-doing/T-70-agentlessons-verweis.md).
+Der vollständige Auftrag, Entscheidungen und Austausch liegen ausschließlich
+in StockPortfolio T-41 und dessen STATUS. Hier gelten weiterhin die lokalen
+Regeln, eigene Commits und eine eindeutige Rollen-/Owner-Zuordnung.
+T-70 ist keine zweite fortgeschriebene Fassung des Haupttickets.
 
 ## Ticketgrenzen
 
