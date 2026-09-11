@@ -26,7 +26,7 @@ Arbeitsvorgabe, keine Behauptung zusätzlicher unabhängiger Vorfälle.
 
 ## Leitplanken für das spätere Skill-Proposal
 
-Siehe auch die ausdrücklich von Mike beauftragte [T-66-Review-Lehre](lessons/SI-R-01.md)
+Siehe auch die ausdrücklich von Mike beauftragte [T-66-Review-Lehre](lessons/SI-R-01-integrationsaufwand-verdraengt-die-fachliche-architekturentscheidung.md)
 zur Gewichtung von Befunden. Sie betrifft Claude als Verifier und Codex bei
 der Übernahme seiner Empfehlung.
 
