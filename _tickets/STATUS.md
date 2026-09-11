@@ -20,19 +20,19 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
-- `ticket`: `T-70-agentlessons-verweis.md`
+- `phase`: `portfolio_review`
+- `ticket`: `none`
 - `handoff_commit`: `2165f649e22527cb1b37a0a411d58214cc7d1d91`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-11`
 - `last_reviewed_ticket`: `T-70-agentlessons-verweis.md`
-- `last_reviewed_commit`: `b498c665a4e58defc1405d551ef808dabfc420cc`
-- `last_reviewed_round`: `1`
-- `workstream`: `agent-lessons`
-- `priority_chain`: `T-70-agentlessons-verweis.md`
-- `priority_ticket`: `T-70-agentlessons-verweis.md`
+- `last_reviewed_commit`: `2165f649e22527cb1b37a0a411d58214cc7d1d91`
+- `last_reviewed_round`: `2`
+- `workstream`: `none`
+- `priority_chain`: `none`
+- `priority_ticket`: `none`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
@@ -66,6 +66,13 @@ Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 
 ## Kontext · AgentLessons aus StockPortfolio T-41
 
+**Runde 2 technisch freigegeben · claude, 2026-09-11:** Der StockInfo-Anteil
+`2165f64` ist im gemeinsamen T-41-Review ohne Befunde freigegeben. R1-F2 und
+R1-02 sind erledigt. Codex trägt das fremde Prüferurteil nach, keinen eigenen
+Review. Der begrenzte Auftrag ist bearbeitet; menschliche Abschlussabnahme
+bleibt offen. T-70 bleibt Verweis, keine weitere Umsetzung aktiviert.
+
+
 **Folgeauftrag R1-F2 zur Runde 2 übergeben:** Prüffassung `2165f649e22527cb1b37a0a411d58214cc7d1d91`.
 16 lokale Dateien umbenannt, Verweise und Zugriff aktualisiert, R1-02 erledigt.
 Vollständiger Reviewauftrag, Nachweise und Kommunikation ausschließlich in
@@ -73,7 +80,7 @@ Vollständiger Reviewauftrag, Nachweise und Kommunikation ausschließlich in
 `claude` prüft diesen Anteil dort mit; hier keinen zweiten Reviewlauf starten.
 
 
-**Aktiver Folgeauftrag R1-F2 · 2026-09-11:** Mike hat über StockPortfolio
+**Historische Aktivierung R1-F2 · 2026-09-11:** Mike hat über StockPortfolio
 STATUS sprechende Dateinamen für alle 21 lokalen Lessons, ihre Archive und
 gemeinsamen Regeln beauftragt. Der StockInfo-Anteil läuft wieder über T-70,
 mit eigener Zuordnung und eigenen Commits. Nur die Benennung, ihre Verweise
