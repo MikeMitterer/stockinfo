@@ -8,11 +8,13 @@ Operativer Zustand und aktuelle Nachrichten stehen ausschließlich in
 
 Die Aktivierung richtet sich nach der Agentenlaufzeit und steht in
 [AGENT-ACTIVATION.md](AGENT-ACTIVATION.md). Sie legt keine fachliche Rolle fest.
-Die dauerhafte Lernschicht liegt in `CLAUDE-LESSONS.md` für Claude-Arbeit
-und `CODEX-LESSONS.md` für Codex-Arbeit. Der Coder liest seine Sammlung
-vor einer Übergabe; der Verifier liest vor dem Review die Sammlung des Autors
-der geprüften Fassung. Bei gemischter Autorenschaft beide lesen. Dateinamen
-bezeichnen die untersuchten Agenten, keine feste Coder-/Verifier-Zuordnung.
+Die dauerhafte Lernschicht besteht aus Einzeldateien unter `lessons/` und
+gemeinsamen Regeln in AgentLessons. [Zugriff und Pflege](LESSONS-ACCESS.md)
+regeln die Lesepflicht: Coder vor Umsetzung und Übergabe, Verifier vor dem
+Review nach Autorenschaft, Observer für beide. Die alten Sammeldateien sind
+nur Linkeinstiege; auch neue Dateien im Verzeichnis berücksichtigen.
+Die bisherigen [Verfahrensabschnitte](LESSONS-PROCESS.md) gehören zu diesem
+Workflow und werden nicht als Erfahrungen eingesammelt.
 
 Vor fachlicher Arbeit laden **Coder und Verifier** den Skill `code-standards`
 nach dem [Standard-Riegel](#standard-riegel--die-hausregeln-stehen-im-bericht-nicht-im-vorsatz).

@@ -60,15 +60,21 @@ Commit-Linie eingefroren, außer für ausdrücklich beauftragte Review- und
 Statusdateien.
 
 - `_tickets/.agents/CLAUDE-LESSONS.md` und `_tickets/.agents/CODEX-LESSONS.md`
-  sammeln Fehlermuster des jeweils benannten Agenten. Der Coder liest seine
-  Sammlung vor der Übergabe; der Verifier liest die des Autors der geprüften
-  Fassung vor dem Review. Bei gemischter Autorenschaft beide lesen.
+  sind Linkeinstiege zu den lokalen Einzel-Lessons. Der Coder liest die
+  Erfahrungen seiner Autorenschaft vor Umsetzung und Übergabe; der Verifier
+  die des Autors der Prüffassung vor dem Review. Bei gemischter Arbeit beide.
 - `_tickets/.agents/AGENT-WORKFLOW.md` enthält den gemeinsamen fachlichen Ablauf.
 - `_tickets/.agents/AGENT-ACTIVATION.md` trennt davon die laufzeitspezifischen Startwege.
 
 Diese Regeln gelten für beide Rollen. Dateinamen und historische Akteursnamen
 sind keine Rollenverteilung. Ein Rollenwechsel wird ausdrücklich im Status
 festgehalten und ändert weder geprüfte Fassungen noch den Rundenverbrauch.
+
+Lokale Lessons liegen als Einzeldateien unter `_tickets/.agents/lessons/`.
+Die alten Sammeldateien sind Linkeinstiege. Verzeichnisinventar, gemeinsamer
+AgentLessons-Bestand und Herkunft folgen
+[Lessons lesen und pflegen](_tickets/.agents/LESSONS-ACCESS.md); die gemeinsame
+Sammlung wird noch nicht automatisch aktualisiert.
 
 [↑ Übersicht](#übersicht)
 

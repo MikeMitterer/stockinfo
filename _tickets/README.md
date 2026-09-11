@@ -81,10 +81,11 @@ Der gemeinsame [Workflow](.agents/AGENT-WORKFLOW.md) regelt Rollen, Übergabe,
 Scope-Vertrag, Rundenlimit, Selbstheilung und Fortsetzung. Die
 [Aktivierung](.agents/AGENT-ACTIVATION.md) beschreibt die jeweiligen Laufzeiten;
 der [Codex-Scheduler](.agents/CODEX-IN-CONTEXT-SCHEDULER.md) deren Codex-Vertrag.
-Die Sammlungen [Claude](.agents/CLAUDE-LESSONS.md) und
-[Codex](.agents/CODEX-LESSONS.md) halten belegte Erfahrungen ihrer Autoren fest.
-Vor Übergabe beziehungsweise Review die zur Autorenschaft passende Sammlung
-lesen, bei gemischter Autorenschaft beide.
+Die Linkeinstiege [Claude](.agents/CLAUDE-LESSONS.md) und
+[Codex](.agents/CODEX-LESSONS.md) verweisen auf lokale Einzeldateien.
+[Zugriff und Pflege](.agents/LESSONS-ACCESS.md) beschreiben das vollständige
+Verzeichnisinventar und den gemeinsamen Bestand in AgentLessons. Der Workflow
+regelt Vorbeugung, unabhängige Gegenprüfung und Lessons-Pflege.
 
 Beide Rollen laden `code-standards` vor fachlicher Arbeit. Scope-Vertrag und
 Soll/Ist-Budget richten sich nach dem gemeinsamen Workflow. Die allgemeinen
