@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-70-agentlessons-verweis.md`
-- `handoff_commit`: `none`
-- `review_round`: `1`
+- `handoff_commit`: `2165f649e22527cb1b37a0a411d58214cc7d1d91`
+- `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-11`
 - `last_reviewed_ticket`: `T-70-agentlessons-verweis.md`
 - `last_reviewed_commit`: `b498c665a4e58defc1405d551ef808dabfc420cc`
@@ -65,6 +65,13 @@ Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
 ## Kontext · AgentLessons aus StockPortfolio T-41
+
+**Folgeauftrag R1-F2 zur Runde 2 übergeben:** Prüffassung `2165f649e22527cb1b37a0a411d58214cc7d1d91`.
+16 lokale Dateien umbenannt, Verweise und Zugriff aktualisiert, R1-02 erledigt.
+Vollständiger Reviewauftrag, Nachweise und Kommunikation ausschließlich in
+[StockPortfolio STATUS](../../StockPortfolio/_tickets/STATUS.md) und dessen T-41.
+`claude` prüft diesen Anteil dort mit; hier keinen zweiten Reviewlauf starten.
+
 
 **Aktiver Folgeauftrag R1-F2 · 2026-09-11:** Mike hat über StockPortfolio
 STATUS sprechende Dateinamen für alle 21 lokalen Lessons, ihre Archive und
