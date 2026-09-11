@@ -20,19 +20,19 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `none`
-- `handoff_commit`: `b498c665a4e58defc1405d551ef808dabfc420cc`
+- `phase`: `codex_working`
+- `ticket`: `T-70-agentlessons-verweis.md`
+- `handoff_commit`: `none`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-09-11`
 - `last_reviewed_ticket`: `T-70-agentlessons-verweis.md`
 - `last_reviewed_commit`: `b498c665a4e58defc1405d551ef808dabfc420cc`
 - `last_reviewed_round`: `1`
-- `workstream`: `none`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `workstream`: `agent-lessons`
+- `priority_chain`: `T-70-agentlessons-verweis.md`
+- `priority_ticket`: `T-70-agentlessons-verweis.md`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
@@ -65,6 +65,13 @@ Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
 ## Kontext · AgentLessons aus StockPortfolio T-41
+
+**Aktiver Folgeauftrag R1-F2 · 2026-09-11:** Mike hat über StockPortfolio
+STATUS sprechende Dateinamen für alle 21 lokalen Lessons, ihre Archive und
+gemeinsamen Regeln beauftragt. Der StockInfo-Anteil läuft wieder über T-70,
+mit eigener Zuordnung und eigenen Commits. Nur die Benennung, ihre Verweise
+und Agentenanleitungen ändern; R1-02 an den berührten Einstiegen mitnehmen.
+Vollständiger Umfang und Kommunikation bleiben in StockPortfolio T-41/STATUS.
 
 **Erster Schritt technisch freigegeben · claude, Runde 1, 2026-09-11.**
 Der StockInfo-Anteil `b498c66` wurde im gemeinsamen T-41-Review mitgeprüft.

@@ -18,3 +18,7 @@ StockInfo-Commits werden dort gesondert als Prüffassung genannt.
 **Prüfergebnis:** Der StockInfo-Anteil `b498c66` ist durch `claude` im
 [gemeinsamen Review Runde 1](../../../StockPortfolio/_tickets/30-doing/T-41-agentlessons-projektuebergreifend-sammeln.md#review-runde-1--claude-2026-09-11)
 technisch freigegeben. Menschliche Abschlussabnahme bleibt offen.
+
+**Aktiver Folgeauftrag:** Die Umbenennung und ID-Verweise aus
+[R1-F2](../../../StockPortfolio/_tickets/30-doing/T-41-agentlessons-projektuebergreifend-sammeln.md#folgeauftrag-r1-f2--sprechende-dateinamen--2026-09-11)
+werden im selben Verweisticket geführt; das frühere Prüfergebnis bleibt erhalten.
