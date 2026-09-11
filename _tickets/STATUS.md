@@ -20,19 +20,19 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
-- `ticket`: `T-70-agentlessons-verweis.md`
+- `phase`: `portfolio_review`
+- `ticket`: `none`
 - `handoff_commit`: `b498c665a4e58defc1405d551ef808dabfc420cc`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-11`
-- `last_reviewed_ticket`: `T-68-ticketboard-ordner-umstellen.md`
-- `last_reviewed_commit`: `92d19ab`
+- `last_reviewed_ticket`: `T-70-agentlessons-verweis.md`
+- `last_reviewed_commit`: `b498c665a4e58defc1405d551ef808dabfc420cc`
 - `last_reviewed_round`: `1`
-- `workstream`: `agent-lessons`
-- `priority_chain`: `T-70-agentlessons-verweis.md`
-- `priority_ticket`: `T-70-agentlessons-verweis.md`
+- `workstream`: `none`
+- `priority_chain`: `none`
+- `priority_ticket`: `none`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
@@ -65,6 +65,15 @@ Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
 ## Kontext · AgentLessons aus StockPortfolio T-41
+
+**Erster Schritt technisch freigegeben · claude, Runde 1, 2026-09-11.**
+Der StockInfo-Anteil `b498c66` wurde im gemeinsamen T-41-Review mitgeprüft.
+Der Coder trägt hier das dortige Prüferurteil nach, keinen zweiten Review.
+Vollständige Befunde und Abgrenzung stehen in StockPortfolio T-41.
+Keine erforderliche Nacharbeit; menschliche Abschlussabnahme bleibt offen.
+T-70 bleibt ein Verweis unter `30-doing/`. Der begrenzte Agentenauftrag ist
+bearbeitet; gemäß lokalem Workflow zurück zu `portfolio_review`, Owner `mike`,
+ohne aktive Kette. Kein weiterer StockInfo-Auftrag wird daraus abgeleitet.
 
 **Erster Schritt übergeben · 2026-09-11:** StockInfo-Prüffassung `b498c665a4e58defc1405d551ef808dabfc420cc`.
 Formatfassung 1 und Einzeldateien sind vorhanden; die bisherigen Sammeldateien

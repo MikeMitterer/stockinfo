@@ -14,3 +14,7 @@ Dort stehen vollständiger Umfang, Schemaentscheidung, Nachweise und Review.
 Die Kommunikation läuft über [StockPortfolio STATUS](../../../StockPortfolio/_tickets/STATUS.md).
 Dieser Verweis enthält keine zweite Verify-Matrix oder kopierte Auftragsfassung.
 StockInfo-Commits werden dort gesondert als Prüffassung genannt.
+
+**Prüfergebnis:** Der StockInfo-Anteil `b498c66` ist durch `claude` im
+[gemeinsamen Review Runde 1](../../../StockPortfolio/_tickets/30-doing/T-41-agentlessons-projektuebergreifend-sammeln.md#review-runde-1--claude-2026-09-11)
+technisch freigegeben. Menschliche Abschlussabnahme bleibt offen.
