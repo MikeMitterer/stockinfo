@@ -1,46 +1,38 @@
-# Commercial License
+# Commercial licensing
 
-StockInfo is dual-licensed:
+StockInfo's application code is available under the
+**[GNU AGPL-3.0-or-later](LICENSE)**. The AGPL permits use by individuals and
+companies, including self-hosting, hosted services, modification, and
+redistribution, as long as its terms are followed. Hosting or rebranding
+StockInfo does not by itself require a commercial license. Rebranding under
+the AGPL still requires keeping its copyright and license notices; trademark
+rights are separate from copyright licensing.
 
-- **[AGPL-3.0](LICENSE)** — free for everyone, including companies. Covers
-  self-hosting for your own use (e.g. running the Unraid container on your own
-  NAS), and any modification or redistribution as long as you comply with the
-  AGPL, including publishing the source of any modified version you run as a
-  network service.
-- **Commercial license** — for organizations that want to use StockInfo
-  without the AGPL's copyleft obligations.
+If you run a **modified** version that people use over a network, AGPL section
+13 requires you to offer those users the corresponding source code. This
+includes users on an internal company network; it does not require offering
+the source to people who do not use that service. You do not have to convey
+copies of the software for section 13 to apply. Distributing copies, including
+container images, has separate notice and source-code requirements under the
+AGPL. Running an unmodified version for your own use does not trigger the
+section 13 requirement.
 
-## When you need a commercial license
+The independently packaged [`plugin_api/`](plugin_api/) is licensed under the
+[MIT license](plugin_api/LICENSE). Third-party components keep their own
+licenses.
 
-The AGPL is free for everyone, but its terms don't fit every commercial use.
-You need a commercial license if your organization wants to, without
-releasing your own source code under the AGPL:
+## Commercial agreements
 
-- **Offer StockInfo as a hosted service** to third parties (SaaS, managed
-  hosting, white-label offering).
-- **Embed StockInfo's code** in a proprietary product you distribute or sell.
-- **Rebrand or white-label** StockInfo for redistribution under a different
-  name.
-- **Get contractual support, warranty or liability terms** — the AGPL
-  provides the software "as is", with no warranty and no support obligation.
+You can request a separate commercial license if you want to use StockInfo's
+application code without the AGPL's copyleft conditions, for example in a
+proprietary combined product or a modified hosted service whose source you do
+not want to offer to its users. Support, warranty, and liability terms can
+also be negotiated. A different product name or a hosted deployment alone
+does not create a requirement to buy a license.
 
-Running StockInfo yourself — on a home server, NAS, Unraid box, or internal
-company infrastructure, for your own use — never requires a commercial
-license. The AGPL's network-source-disclosure clause only applies once you
-convey a *modified* version to others; deploying an unmodified build for your
-own use doesn't trigger it either way.
+There is no fixed price list. Terms depend on the intended use. Contact
+Mike Mitterer at office@mikemitterer.at to discuss an agreement.
 
-## How it works
-
-There is no fixed price list. Terms are negotiated case by case, based on the
-intended use (hosted service, embedding, white-label, support level). Reach
-out to discuss your use case:
-
-- Mike Mitterer — office@mikemitterer.at
-
-## Not legal advice
-
-This document explains the practical boundary between the two licenses. The
-binding terms are the [AGPL-3.0 license text](LICENSE) itself and whatever
-commercial agreement is signed. If you're unsure which side of the line your
-use case falls on, ask before you build on it.
+**This page does not grant commercial rights.** Those rights arise only from
+a separately signed agreement and cover only code for which Mike Mitterer can
+grant them. The [AGPL text](LICENSE) governs use under the open-source option.

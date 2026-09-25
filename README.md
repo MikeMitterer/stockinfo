@@ -454,19 +454,22 @@ Technical details and design decisions: see
 
 ## License
 
-Dual-licensed. **[AGPL-3.0](LICENSE)** covers self-hosting (including the
-Unraid container) and any AGPL-compliant use, free of charge. Companies
-that want to host StockInfo as a service, embed it in a proprietary
-product, or white-label it need a **[commercial license](COMMERCIAL-LICENSE.md)**
-instead — see that document for exactly when it applies.
+StockInfo's application code is licensed under the
+**[GNU AGPL-3.0-or-later](LICENSE)**. The license permits private and
+commercial use, including self-hosting, hosted services, modification, and
+redistribution, subject to its terms. If you run a **modified** version for
+people who use it over a network, you must offer those users the corresponding
+source code under section 13. This includes internal network users and does
+not depend on distributing copies. Distributing copies, including container
+images, has separate notice and source-code requirements. Unmodified
+self-hosting does not trigger section 13.
 
-In plain language (not a substitute for the license text, which is what
-actually governs): if you run StockInfo yourself — on your Unraid box, a
-home server, or anywhere else for your own use — nothing is asked of you.
-The obligation only kicks in if you take a *modified* version and make it
-available to other people over a network (e.g. run your own fork as a
-public service); then you must offer those users the modified source code.
+The independent [`plugin_api/`](plugin_api/) package uses the
+[MIT license](plugin_api/LICENSE). Third-party components keep their own
+licenses. [Commercial terms](COMMERCIAL-LICENSE.md) for StockInfo's application
+code are available by separate agreement if the AGPL does not fit your use.
+Hosting or rebranding alone does not require one.
 
-© Mike Mitterer
+© 2026 Mike Mitterer
 
 [↑ Contents](#contents)
