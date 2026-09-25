@@ -460,6 +460,13 @@ that want to host StockInfo as a service, embed it in a proprietary
 product, or white-label it need a **[commercial license](COMMERCIAL-LICENSE.md)**
 instead — see that document for exactly when it applies.
 
+In plain language (not a substitute for the license text, which is what
+actually governs): if you run StockInfo yourself — on your Unraid box, a
+home server, or anywhere else for your own use — nothing is asked of you.
+The obligation only kicks in if you take a *modified* version and make it
+available to other people over a network (e.g. run your own fork as a
+public service); then you must offer those users the modified source code.
+
 © Mike Mitterer
 
 [↑ Contents](#contents)
