@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-71-docker-quellenprofile-abgleichen.md`
-- `handoff_commit`: `2165f649e22527cb1b37a0a411d58214cc7d1d91`
-- `review_round`: `2`
+- `handoff_commit`: `aaf48fdea642bc6f1c6b134f981d1426f6f813fb`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-25`
 - `last_reviewed_ticket`: `T-70-agentlessons-verweis.md`
 - `last_reviewed_commit`: `2165f649e22527cb1b37a0a411d58214cc7d1d91`
@@ -34,10 +34,10 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `priority_chain`: `T-71-docker-quellenprofile-abgleichen.md`
 - `priority_ticket`: `T-71-docker-quellenprofile-abgleichen.md`
 
-T-71 ist auf Mikes Auftrag vom 2026-09-25 aktiv. Codex setzt die vereinbarte
-Docker-Profilumschaltung um; Claude prüft danach unabhängig. Die letzte
+T-71 ist auf Mikes Auftrag vom 2026-09-25 aktiv. Codex hat die vereinbarte
+Docker-Profilumschaltung zur unabhängigen Prüfung an Claude übergeben. Die letzte
 abgeschlossene Übergabe T-70 und ihre `last_reviewed_*`-Felder sind Historie.
-`handoff_commit` bleibt bis zur neuen Übergabe historisch.
+`handoff_commit` bezeichnet jetzt die T-71-Prüffassung.
 
 `max_review_rounds` ist das Limit regulärer vollständiger Reviews;
 `review_round` zählt die aktuelle Übergabe. `last_reviewed_round` gehört
@@ -63,6 +63,71 @@ Die Phasennamen richten sich nach der aktuellen Zuordnung:
 geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
+
+## OUTBOX → Claude · T-71 Runde 1
+
+Prüffassung: `aaf48fdea642bc6f1c6b134f981d1426f6f813fb` auf
+`t-71-docker-quellenprofile-abgleichen`. Bitte T-71 gegen den beauftragten
+Vertrag prüfen. Insbesondere soll `--target docker` das benannte Volume aus
+`make up` vor dem App-Start treffen; `--data-dir` bleibt der getrennte
+Unraid-Host-Mount. Es gibt keine automatische Migration und keinen Eingriff
+in den laufenden StockInfo-Container.
+
+**Umfang:** Geplant und tatsächlich: zwei Produktdateien (Skript, neuer
+Volume-Helfer), vier Test-/Dokudateien außerhalb des Tickets (Test, README,
+`docs/plugins.md`, Makefile-Kommentar), rund 606 Diff-Zeilen einschließlich
+Ticket, unter dem Budget von 800. Der Scope-Vertrag wurde erst bei der
+Übergabe nachgetragen; das ist als Verfahrensabweichung im Ticket benannt.
+
+**Verify-Orakel:** Matrix #1 und #2: echter Docker-Aufruf auf zuvor
+nicht vorhandenem isoliertem Volume, danach `--show`; YAML und Online wurden
+aus `/data/sources.yaml` gelesen, beim zweiten Wechsel eine Sicherung
+angelegt, Testvolume entfernt. Zusätzlich
+`test_docker_vorgabe_schreibt_vor_dem_start_ins_benannte_volume` mit echter
+Python-Helferlogik und Fake nur an der Docker-Grenze; diese Tests waren vor
+der Änderung rot. #3: `test_profile_bleiben_getrennt_und_benutzerdaten_erhalten`
+und `test_docker_kopiert_nicht_ueber_vorhandene_fachdaten` auf temporärem
+Host-Verzeichnis. #4: `test_docker_fehler_meldet_keinen_erfolgreichen_wechsel`
+und `test_named_volume_custom_asset_collision_erhaelt_config`; fehlendes
+Image nicht separat am echten Daemon ausgelöst, daher `◑`. #5:
+`test_docker_vorgaben_passen_zu_make_up` liest Makefile und `--info`;
+README-Abschnitte Docker/Unraid und `docs/plugins.md` sind abgeglichen.
+Der App-Container wurde auf dem Testvolume nicht gestartet.
+
+**Checks:** 20 Skripttests grün; Offline-Backend-Lauf 1195 bestanden,
+29 übersprungen. Der vollständige Lauf hatte acht DNS-bedingte Fehler bei
+justETF, OpenFIGI und Yahoo, ohne Bezug zum Diff. `bash -n`, ShellCheck,
+Ruff Check/Format und `git diff --check` grün.
+
+**Doku-Abgleich:** README Docker/Unraid, `docs/plugins.md` Profilauswahl und
+Makefile-Standard geprüft und angepasst; historische Entwürfe unverändert.
+Lokale Lessons SI-CX-01, SI-R-02 und SI-T-66 wurden angewandt. Bei neuen
+Befunden bitte Autorenschaft und gemeinsame Regel nach
+`LESSONS-ACCESS.md` einordnen; keine Sammlung ohne eigenen Auftrag.
+
+**Standards:** Gelesen:
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md` mit
+`references/architecture.md`, `shell.md`, `cli.md`, `python.md`,
+`quality.md`, `documentation.md` und
+`/Users/macminipro/.codex/skills/makefile-conventions/SKILL.md`.
+
+| Gruppe der code-standards-Referenztabelle | Coder-Befund |
+|---|---|
+| Architektur, DRY, Namen | ✅ Bash-Zuweisungen/Funktionsköpfe und Python-AST inventarisiert; neue Logik liegt im Skript/Helfer. |
+| Shell | ✅ BashLib-Module geprüft; `bash -n` und ShellCheck grün; Quoting und Fehlerpfade geprüft. |
+| CLI | ✅ `--volume` hat `-v`, steht in Header und Hilfe; `--show`/`--info` unterscheiden Volume und Host-Mount. |
+| TypeScript, Vue, i18n | ⚠️ Frontend nicht berührt; das bestehende Bash-CLI und die neuen Meldungen haben keinen i18n-Katalog. Eine Nachrüstung würde eine neue Host-Abhängigkeit erfordern. |
+| Python | ✅ Helfer nutzt Standardbibliothek, Typen und getrennte CLI-Grenze; lokale Tests über `.venv`. |
+| Persistenz | ➖ Keine Datenbanklogik geändert; Tests nutzen temporäre Pfade. |
+| Fehler, Logging, Tests | ✅ Docker-Fehler meldet keinen Erfolg; Kollision erhält Konfiguration; echter isolierter Docker-Lauf. |
+| Dokumentation | ✅ README/Plugin-Anleitung aktualisiert, Verweise geprüft. |
+
+**DRY-Scope:** Skript, Helfer, Makefile, Tests, `.libs/` und bestehende
+Konfigurationspfade auf doppelte Regel, Kopier- oder Backup-Logik geprüft.
+Der Volume-Name steht bewusst als Standard an den zwei unabhängigen
+CLI-Einstiegen; der Vertrags-Test vergleicht beide. `copy_atomic` bündelt
+die neuen Volume-Schreibvorgänge. Keine weitere gemeinsame Abstraktion
+erforderlich.
 
 ## Abschluss T-70 · Mike, 2026-09-25
 
