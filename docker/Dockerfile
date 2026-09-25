@@ -1,6 +1,8 @@
 # syntax=docker/dockerfile:1
-# ─── Stage 1: Dashboard bauen ─────────────────────────────────────────────────
-FROM node:22-slim AS dashboard
+# ─── Stage 1: Dashboard auf der Builder-Architektur bauen ────────────────────
+# Das Vite-Ergebnis ist statisch. Auf ARM-Macs vermeidet dies den emulierten
+# Node-Build und den separaten amd64-Download; Stage 2 bleibt das Zielsystem.
+FROM --platform=$BUILDPLATFORM node:22-slim AS dashboard
 
 WORKDIR /dashboard
 

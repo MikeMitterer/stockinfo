@@ -340,6 +340,9 @@ make down      # stop & remove
 make docker-logs   # follow logs
 ```
 
+On ARM Macs, the dashboard build runs natively; the final image still uses the
+platform selected by `PLATFORM` (`linux/amd64` by default for Unraid).
+
 FastAPI serves the dashboard itself (relative API calls) — no separate web server
 required. The cache lives in the `stockinfo-data` volume (`/data` inside the
 container). The container runs as a non-root user (UID 99 / GID 100 — Unraid's
