@@ -26,7 +26,7 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `review_round`: `2`
 - `max_review_rounds`: `3`
 - `owner`: `mike`
-- `updated_at`: `2026-09-11`
+- `updated_at`: `2026-09-25`
 - `last_reviewed_ticket`: `T-70-agentlessons-verweis.md`
 - `last_reviewed_commit`: `2165f649e22527cb1b37a0a411d58214cc7d1d91`
 - `last_reviewed_round`: `2`
@@ -64,7 +64,29 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
-## Kontext · AgentLessons aus StockPortfolio T-41
+## Abschluss T-70 · Mike, 2026-09-25
+
+Mike hat die Bereinigung und Übernahme des Branches nach `master` beauftragt:
+„Ich folge deiner Empfehlung - erledig das“. Codex hat den begrenzten
+Dokumentations- und Abschlussauftrag ausgeführt; die Rollenzuordnung bleibt erhalten.
+[T-70](40-done/T-70-agentlessons-verweis.md) ist damit lokal abgeschlossen.
+Keine weitere StockInfo-Arbeit ist eingeplant; `20-ready/` und `30-doing/`
+sind leer. Die letzten Reviewfelder bleiben als historische Nachweise erhalten.
+
+Die 16 lokalen Lessons bleiben die registrierte Quelle für AgentLessons.
+Die aktuelle Anleitung steht in [Lessons lesen und pflegen](.agents/LESSONS-ACCESS.md).
+Das Hauptticket liegt inzwischen im eigenständigen Projekt
+[AgentLessons T-41](../../../../DevKI/Production/AgentLessons/_tickets/30-doing/T-41-agentlessons-projektuebergreifend-sammeln.md);
+dessen weiterer Umfang und Abschluss werden dort geführt. Dieser lokale
+Abschluss erteilt keine zusätzliche Abnahme für das Hauptprojekt.
+
+## Archiv · AgentLessons aus StockPortfolio T-41 · 2026-09-11
+
+Die folgenden Übergaben beschreiben den damaligen Stand. Die lokale
+Abschlussabnahme ist inzwischen erfolgt; maßgeblich ist der Abschluss oben.
+
+<details>
+<summary>Historische Übergaben und Freigaben des StockInfo-Anteils</summary>
 
 **Runde 2 technisch freigegeben · claude, 2026-09-11:** Der StockInfo-Anteil
 `2165f64` ist im gemeinsamen T-41-Review ohne Befunde freigegeben. R1-F2 und
@@ -105,11 +127,13 @@ diesen Anteil mit; hier keinen zweiten unabhängigen Reviewlauf starten.
 Mike hat am 2026-09-11 im Codex-Chat von StockPortfolio ausdrücklich bestätigt:
 „StockInfo-Anteil passt“. Damit darf `codex` den begrenzten Anteil hier
 aktivieren und ausführen; `claude` prüft. Der vorhandene Observer bleibt unbesetzt.
-Aktiv ist der [lokale Verweis T-70](30-doing/T-70-agentlessons-verweis.md).
+Aktiv ist der [lokale Verweis T-70](40-done/T-70-agentlessons-verweis.md).
 Der vollständige Auftrag, Entscheidungen und Austausch liegen ausschließlich
 in StockPortfolio T-41 und dessen STATUS. Hier gelten weiterhin die lokalen
 Regeln, eigene Commits und eine eindeutige Rollen-/Owner-Zuordnung.
 T-70 ist keine zweite fortgeschriebene Fassung des Haupttickets.
+
+</details>
 
 ## Ticketgrenzen
 

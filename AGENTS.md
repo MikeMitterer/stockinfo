@@ -73,8 +73,9 @@ festgehalten und ändert weder geprüfte Fassungen noch den Rundenverbrauch.
 Lokale Lessons liegen als Einzeldateien unter `_tickets/.agents/lessons/`.
 Die alten Sammeldateien sind Linkeinstiege. Verzeichnisinventar, gemeinsamer
 AgentLessons-Bestand und Herkunft folgen
-[Lessons lesen und pflegen](_tickets/.agents/LESSONS-ACCESS.md); die gemeinsame
-Sammlung wird noch nicht automatisch aktualisiert.
+[Lessons lesen und pflegen](_tickets/.agents/LESSONS-ACCESS.md). Der Collector
+aktualisiert die gemeinsame Sammlung auf ausdrücklichen Aufruf; ein
+periodischer Lauf und die automatische Regelableitung sind noch nicht umgesetzt.
 
 [↑ Übersicht](#übersicht)
 

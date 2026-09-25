@@ -27,15 +27,28 @@ Kennung, benutzte Fassung und der zugehörige Prüfbeleg. Unklare Herkunft bleib
 
 ## Gemeinsame Regeln
 
-Der gemeinsame Bestand liegt unter `${XDG_DATA_HOME:-$HOME/.local/share}/agent-lessons/`.
-`INDEX.md` erschließt `shared/`; `collected/` enthält den ersten Archivstand.
-Diese Fassung wurde einmalig aus bestehenden Lessons und bereits kuratierten
-Regeln überführt. Collector, automatische Aktualisierung und KI-Ableitung sind
-noch nicht implementiert. `needs_review` kennzeichnet die ausstehende Prüfung
-der überführten Fassung; keine bereits geprüfte globale Aktualität behaupten.
+Die Anwendung und ihre Anleitung liegen im eigenständigen Projekt
+[AgentLessons](../../../../../DevKI/Production/AgentLessons/README.md).
+Der gemeinsame Wissensbestand liegt unter
+`${XDG_DATA_HOME:-$HOME/.local/share}/agent-lessons/`.
+`INDEX.md` erschließt die Regeln unter `shared/` und die archivierten
+Projekt-Lessons unter `collected/`. Die lokalen Originale bleiben in StockInfo;
+der Collector liest sie und erhält frühere Fassungen im zentralen Archiv.
 
-Bei gesetztem absolutem `XDG_DATA_HOME` diesen Ort verwenden; bei leerem oder
-ungültigem relativem Wert den Standardort unter Home. Dasselbe gilt für
+```bash
+agent-lessons --info                  # Datenorte und Quellenstatus nur lesen
+agent-lessons --resolve SI-CX-01 -p stockinfo  # Archivierte Lesson finden
+agent-lessons --collect               # Registrierte Quellen ins Archiv sammeln
+```
+
+`--collect` aktualisiert den gemeinsamen Bestand und die Laufberichte.
+Den Aufruf nur im beauftragten Umfang ausführen; eine reine Statusprüfung
+verwendet `--info`. Ein periodischer Lauf und KI-Ableitung sind noch nicht
+umgesetzt. `needs_review` kennzeichnet die ausstehende fachliche Prüfung einer
+Regel; ein erfolgreicher Sammellauf ersetzt diese Prüfung nicht.
+
+Bei gesetztem absolutem `XDG_DATA_HOME` diesen Ort verwenden; bei leerem Wert
+gilt der Standardort unter Home. Relative Werte weist die CLI ab. Dasselbe gilt für
 `XDG_CONFIG_HOME`, `XDG_STATE_HOME` und `XDG_CACHE_HOME` mit `.config`,
 `.local/state` und `.cache`. Grundlage ist die
 [XDG Base Directory Specification](https://specifications.freedesktop.org/basedir/latest/).
@@ -47,8 +60,9 @@ Projektbasis und Quellenregistrierung stehen gemeinsam in
 zu `project_root`, der Lessons-Pfad relativ zum jeweiligen Projekt. Im
 Wissensbestand liegt keine zweite Registrierungsdatei. Bei fehlender
 Konfiguration nicht aus einer Restdatei im Bestand ergänzen oder Werte erraten;
-die fehlende Konfiguration sichtbar nennen. Ein Collector, der das automatisch
-prüft, ist noch nicht implementiert.
+die fehlende Konfiguration sichtbar nennen. `agent-lessons --info` zeigt die
+verwendete Konfiguration und die aufgelösten Quellenpfade. StockInfo ist mit
+`_tickets/.agents/lessons` als Quelle registriert.
 
 Die Sammlung ist ein eigenständiges Git-Repository ohne Remote. Ihre Quellen
 sind relativ zu der benannten Projektbasis registriert. Zum Lesen gemeinsamer
@@ -64,8 +78,8 @@ den nächsten zuständigen Schritt vormerken, die Prüffassung stabil halten.
 
 Neue Projekte wählen passende Regeln nach Architektur, Betrieb und Testgrenzen.
 Übernahme, Anpassung oder Auslassung mit Regel-ID, Fassung und Grund lokal
-festhalten, ohne Quellbelege als eigene Vorfälle zu zählen. Lokale Originale
-werden durch eine spätere Aggregation nicht überschrieben.
+festhalten, ohne Quellbelege als eigene Vorfälle zu zählen. Der Collector
+überschreibt keine lokalen Originale.
 
 [↑ Übersicht](#übersicht)
 
@@ -95,19 +109,19 @@ angelieferte Normalisierung. ASCII-Dateinamen vermeiden diese Unterschiede.
 [Git-Konfiguration](https://git-scm.com/docs/git-config#Documentation/git-config.txt-coreprecomposeUnicode),
 [Apple-Dateisystembeschreibung](https://developer.apple.com/library/archive/documentation/FileManagement/Conceptual/APFS_Guide/FAQ/FAQ.html).
 
-Die ID ist der Referenzschlüssel. Zum Auflösen die YAML-Köpfe der passenden
-Einzeldateien inventarisieren und nach `id` suchen; Kommentare und Belegtext
-sind keine Kennungsquelle. `sources[].id` verweist auf die Archiv-Lesson.
-`sources[].path` wird daraus relativ zur Regeldatei erzeugt und darf jederzeit
-regeneriert werden. Ein alter Pfad entscheidet nicht über die gefundene Lesson.
-Den angegebenen Original-Hash anschließend mit `archive.source_sha256` prüfen;
-fehlende oder mehrdeutige Kennungen beziehungsweise eine andere Fassung melden,
-statt anhand eines Dateinamens zu raten.
+Die ID ist der Referenzschlüssel. Lokale Lessons über die YAML-Köpfe
+inventarisieren; Kommentare und Belegtext sind keine Kennungsquelle.
+Archivierte Fassungen mit `agent-lessons --resolve ID --project stockinfo`
+auflösen; `--sha256 ORIGINAL_SHA256` grenzt auf eine bestimmte Fassung ein.
+`sources[].id` und `sources[].sha256` bestimmen die Archivfassung einer Regel.
+Der Collector erzeugt daraus `sources[].path` relativ zur Regeldatei.
+Ein alter Pfad entscheidet nicht über die gefundene Lesson. Fehlende oder
+mehrdeutige Kennungen und abweichende Fassungen sichtbar melden.
 
 Bei Titeländerung ID beibehalten, Datei und Überschrift zusammen ändern und
-den Index sowie Markdown-Verweise aus dem ID-Inventar nachziehen. Bis der
-Collector existiert, führen die zuständigen Agenten diese Schritte aus.
-Es gibt derzeit keine automatische Reparatur beliebiger alter Markdown-URLs.
+lokale Markdown-Verweise nachziehen. Beim nächsten beauftragten Sammellauf
+aktualisiert der Collector den zentralen Index und bekannte Regelverweise.
+Beliebige alte Markdown-URLs repariert er nicht automatisch.
 
 Die vollständige Formatbeschreibung liegt im Skill `task-verification-workflow`
 unter `references/lesson-format.md`. Formatänderungen in den Lesekanälen aller
