@@ -44,6 +44,12 @@ COPY pyproject.toml .
 COPY LICENSE .
 COPY app ./app
 
+# Alle im Repository mitgelieferten Lizenztexte müssen im fertigen Image liegen.
+# Fehlt einer im Build-Kontext, schlägt der Build an dieser Stelle fehl.
+RUN test -s /app/LICENSE \
+    && test -s /app/plugin_api/LICENSE \
+    && test -s /app/plugin_api/examples/us-example/LICENSE
+
 # Das Vertragsartefakt liegt neben `app/` — genau dort sucht `app/contract.py`,
 # im Repository wie im Image. Ohne diese Zeile antwortet `GET /fields` im
 # Container mit 503, während er lokal läuft.

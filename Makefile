@@ -32,7 +32,8 @@ LOG_FILE   := uvicorn.log
 # Zielplattform des Images. Vorgabe x86, **nicht** die des Rechners: Der Server,
 # auf dem das Image läuft, ist amd64 — ein ARM-Mac baute sonst still ein Image,
 # das dort nicht startet, und der Fehler fiele erst beim Update auf.
-# Überschreibbar: `make build PLATFORM=arm` oder `PLATFORM=all` (multi-arch).
+# Überschreibbar: `make build PLATFORM=arm`. Mehrplattform-Builds würden
+# vor der lokalen Image-Prüfung veröffentlichen und sind hier gesperrt.
 PLATFORM    ?= x86
 IMAGE_NAME  ?= mangolila/stockinfo
 CONTAINER   ?= stockinfo
@@ -186,19 +187,12 @@ down: ## Container stoppen und entfernen
 docker-logs: ## Container-Logs folgen
 	docker logs -f $(CONTAINER)
 
-# `all` ist kein drittes Ziel neben x86 und arm, sondern ein anderer Ablauf:
-# buildx baut und pusht multi-arch in einem Schritt. Danach gibt es kein
-# `.last-build-tag`, und ein anschliessendes `make push` findet entweder nichts
-# oder — schlimmer — den Tag eines früheren Single-Arch-Builds und pusht den.
 .PHONY: build
-build: ## Docker-Image bauen (PLATFORM=x86|arm, Default x86; all = multi-arch inkl. Push)
+build: ## Docker-Image bauen und prüfen (PLATFORM=x86|arm, Default x86)
 	docker/build.sh --build $(PLATFORM)
-	@if [[ "$(PLATFORM)" == "all" ]]; then \
-		echo -e "  $(YELLOW)⚠$(RESET) PLATFORM=all hat bereits gepusht — $(WHITE)make push$(RESET) entfällt"; \
-	fi
 
 .PHONY: push
-push: ## Image in Registry pushen (TARGET=ghcr|dockerhub|ecr, Default dockerhub; nicht nach PLATFORM=all)
+push: ## Geprüftes Image in Registry pushen (TARGET=ghcr|dockerhub|ecr, Default dockerhub)
 	docker/build.sh --push
 
 # ─── Status ───────────────────────────────────────────────────────────────────

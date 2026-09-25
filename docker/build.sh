@@ -120,6 +120,12 @@ esac
 readonly CMDLINE=${1:-}
 readonly OPTION=${2:-""}
 
+# Jeder Buildversuch entwertet den vorherigen Push-Nachweis, auch wenn schon
+# die Plattformwahl oder die Tag-Ermittlung fehlschlägt.
+if [[ "${CMDLINE}" == "-b" || "${CMDLINE}" == "--build" ]]; then
+    rm -f "${TAGFILE}"
+fi
+
 # DEV_LOCAL ist bei den Jenkins-Tests bzw. in Docker-Containern nicht gesetzt,
 # IS_CI geht also auf "true"
 readonly IS_CI="${DEV_LOCAL:-"true"}"
@@ -138,7 +144,6 @@ else
 fi
 
 PLATFORM="${DEFAULT_PLATFORM}"
-BUILD_MULTIARCH=false
 
 while [ $# -ne 0 ]; do
     case "${1}" in
@@ -149,8 +154,8 @@ while [ $# -ne 0 ]; do
             elif [[ "${OPTION}" == "arm" || "${OPTION}" == "m1" ]]; then
                 PLATFORM="linux/arm64"
             elif [[ "${OPTION}" == "all" ]]; then
-                PLATFORM="linux/arm64,linux/amd64"
-                BUILD_MULTIARCH=true
+                echo -e "${RED}Build abgebrochen:${NC} PLATFORM=all würde vor der Image-Prüfung automatisch veröffentlichen. x86 oder arm verwenden." >&2
+                exit 1
             else
                 PLATFORM="${DEFAULT_PLATFORM}"
                 echo "Platform: ${PLATFORM}"
@@ -173,6 +178,7 @@ readonly STRICT=${STRICT:-2}
 # Streng nur für --build (dort wird das Image getaggt). Für Anzeige/Hilfe reicht
 # best-effort (STRICT=0) — so funktioniert --help auch ohne Git-Tag im Clone.
 if [[ "${CMDLINE}" == "-b" || "${CMDLINE}" == "--build" ]]; then
+    BUILD_SOURCE_COMMIT=$(git -C .. rev-parse HEAD) || exit 1
     _tag_rc=0
     TAG="$(gitDockerTag "${STRICT}")" || _tag_rc=$?
     if [[ $_tag_rc -eq 2 ]]; then
@@ -191,23 +197,93 @@ if [[ "${CMDLINE}" == "-b" || "${CMDLINE}" == "--build" ]]; then
         echo -e "\n${RED}Build abgebrochen:${NC} gitDockerTag fehlgeschlagen (rc=${_tag_rc}).\n" >&2
         exit 1
     fi
+    if [[ "$(git -C .. rev-parse HEAD)" != "${BUILD_SOURCE_COMMIT}" ]]; then
+        echo -e "${RED}Build abgebrochen:${NC} Quellcommit hat sich während der Tag-Ermittlung geändert." >&2
+        exit 1
+    fi
 else
     TAG="$(gitDockerTag 0 2>/dev/null)" || TAG="n/a"
+    BUILD_SOURCE_COMMIT=""
 fi
 readonly TAG
+readonly BUILD_SOURCE_COMMIT
 
 #------------------------------------------------------------------------------
 # Functions
 #
 
-# prepareConfig — Optionaler Build-Vorbereitungs-Schritt
-#
-#   No-op solange das (Multi-Stage-)Dockerfile Build + Deps selbst übernimmt.
-#   Bei Services die vor dem Build Dateien ins Build-Kontext-Verzeichnis kopieren
-#   müssen (Configs, Scripts, Zertifikate) hier befüllen — vgl. certbot-Template.
+verifySourceTree() {
+    local _untracked
+    if ! git -C .. diff --quiet HEAD --; then
+        echo -e "${RED}Abgebrochen:${NC} Der Quellstand enthält vorgemerkte oder ungespeicherte Änderungen." >&2
+        return 1
+    fi
+    _untracked=$(git -C .. ls-files --others --exclude-standard -- app dashboard plugin_api contract docker/entrypoint.sh) || return 1
+    if [[ -n "${_untracked}" ]]; then
+        echo -e "${RED}Abgebrochen:${NC} Nicht versionierte Dateien liegen im Docker-Build-Kontext:${NC}" >&2
+        printf '%s\n' "${_untracked}" >&2
+        return 1
+    fi
+}
+
+# prepareConfig — Build-Eingaben prüfen. Das Dockerfile kopiert die Lizenzen
+# direkt aus dem Repository; es gibt keinen manuellen Vorbereitungsschritt.
 #
 prepareConfig() {
-    : # kein separates Config-Prep nötig
+    local _file
+    if (( STRICT >= 1 )); then
+        verifySourceTree || return 1
+    fi
+    for _file in LICENSE plugin_api/LICENSE plugin_api/examples/us-example/LICENSE; do
+        if [[ ! -s "../${_file}" ]]; then
+            echo -e "${RED}Build abgebrochen:${NC} Lizenz fehlt oder ist leer: ${_file}" >&2
+            return 1
+        fi
+    done
+}
+
+# verifyBuiltImage — Den tatsächlich gebauten Tag und die kopierten Lizenzen
+# prüfen. Erst danach darf der Tag als pushbar gespeichert werden.
+verifyBuiltImage() {
+    local _local_image="${NAMESPACE}/${NAME}:${TAG}"
+    local _image_id _latest_id _registry_id _registry_latest_id _arch
+    local _license _expected _actual
+
+    _image_id=$(docker image inspect "${_local_image}" --format '{{.Id}}') || return 1
+    _latest_id=$(docker image inspect "${NAMESPACE}/${NAME}:latest" --format '{{.Id}}') || return 1
+    _registry_id=$(docker image inspect "${IMAGE}:${TAG}" --format '{{.Id}}') || return 1
+    _registry_latest_id=$(docker image inspect "${IMAGE}:latest" --format '{{.Id}}') || return 1
+    if [[ "${_image_id}" != "${_latest_id}" ]] \
+       || [[ "${_image_id}" != "${_registry_id}" ]] \
+       || [[ "${_image_id}" != "${_registry_latest_id}" ]]; then
+        echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Image-Tags zeigen auf unterschiedliche Images." >&2
+        return 1
+    fi
+
+    _arch=$(docker image inspect "${_local_image}" --format '{{.Architecture}}') || return 1
+    if [[ "linux/${_arch}" != "${PLATFORM}" ]]; then
+        echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Architektur ${_arch} statt ${PLATFORM}." >&2
+        return 1
+    fi
+
+    if [[ "$(docker image inspect "${_local_image}" --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}')" != "AGPL-3.0-or-later" \
+       || "$(docker image inspect "${_local_image}" --format '{{index .Config.Labels "org.opencontainers.image.source"}}')" != "https://github.com/MikeMitterer/stockinfo" ]]; then
+        echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Lizenz- oder Quelllabel fehlt." >&2
+        return 1
+    fi
+
+    for _license in LICENSE plugin_api/LICENSE plugin_api/examples/us-example/LICENSE; do
+        _expected=$(shasum -a 256 "../${_license}") || return 1
+        _expected=${_expected%% *}
+        _actual=$(docker run --rm --platform "${PLATFORM}" --entrypoint sha256sum "${_local_image}" "/app/${_license}") || return 1
+        _actual=${_actual%% *}
+        if [[ "${_expected}" != "${_actual}" ]]; then
+            echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Lizenz weicht ab: ${_license}" >&2
+            return 1
+        fi
+    done
+
+    echo -e "${GREEN}Build geprüft:${NC} ${_local_image} (${_arch}, ${_image_id}); drei Lizenzen und OCI-Labels stimmen."
 }
 
 # pushImage — Delegiert an die Registry-spezifische Lib-Push-Funktion (nach TARGET)
@@ -242,29 +318,26 @@ showBuiltImages() {
 
 # build — Image für die gewählte Plattform bauen
 #
-#   Multiarch (BUILD_MULTIARCH=true): buildx baut UND pusht in einem Schritt —
-#   Login vorher via ensureRegistryLogin; danach kein TAGFILE, push() nicht aufrufen.
-#   Single-arch: lokal bauen, Images anzeigen, Tag + Zeitstempel in TAGFILE
-#   persistieren (von push()/loadLastBuildTag gelesen).
+#   Das Image wird lokal gebaut, geprüft und erst danach als pushbar markiert.
 #
 build() {
     prepareConfig
 
     echo -e "\nBuilding for Platform: ${YELLOW}${PLATFORM}${NC} → Target: ${YELLOW}${TARGET}${NC}\n"
 
-    if [[ "${BUILD_MULTIARCH}" == true ]]; then
-        ensureRegistryLogin "${TARGET}" "${NAME}" "${AWS_REGION:-}" "${AMAZON_REPO_URI:-}"
-        buildMultiArchImage "${PLATFORM}" "${IMAGE}" "${TAG}" "${LOGFILE}"
-        # Push ist bereits erledigt — kein TAGFILE, push() nicht aufrufen
-        return
-    fi
-
     buildSingleArchImage "${PLATFORM}" "${NAMESPACE}/${NAME}" "${IMAGE}" "${TAG}" "${LOGFILE}"
+    verifyBuiltImage
+    verifySourceTree
+    if [[ "$(git -C .. rev-parse HEAD)" != "${BUILD_SOURCE_COMMIT}" ]]; then
+        echo -e "${RED}Build abgebrochen:${NC} Quellcommit hat sich während des Builds geändert." >&2
+        return 1
+    fi
     showBuiltImages
 
-    # Tag + Zeitstempel persistieren — wird von push() gelesen
-    echo "${TAG}"      > "${TAGFILE}"
-    echo "$(date +%s)" >> "${TAGFILE}"
+    # Tag, Zeitpunkt, Image-ID, Quellcommit und Registry-Ziel festhalten.
+    local _image_id
+    _image_id=$(docker image inspect "${NAMESPACE}/${NAME}:${TAG}" --format '{{.Id}}')
+    printf '%s\n' "${TAG}" "$(date +%s)" "${_image_id}" "${BUILD_SOURCE_COMMIT}" "${TARGET}" > "${TAGFILE}"
 }
 
 # loadLastBuildTag — Tag des letzten Builds lesen und zurückgeben
@@ -310,8 +383,28 @@ loadLastBuildTag() {
 #   Voraussetzung: der jeweilige Registry-Login ist vorhanden bzw. möglich.
 #
 push() {
-    local _tag
+    local _tag _saved_image_id _saved_commit _saved_target _current_commit _ref _current_image_id
+    verifySourceTree || return 1
     _tag=$(loadLastBuildTag) || exit 1
+    _saved_image_id=$(sed -n '3p' "${TAGFILE}")
+    _saved_commit=$(sed -n '4p' "${TAGFILE}")
+    _saved_target=$(sed -n '5p' "${TAGFILE}")
+    _current_commit=$(git -C .. rev-parse HEAD) || return 1
+    if [[ -z "${_saved_image_id}" || -z "${_saved_commit}" || "${_saved_commit}" != "${_current_commit}" ]]; then
+        echo -e "${RED}Push abgebrochen:${NC} Build-Nachweis fehlt oder der Quellcommit hat sich geändert. Erneut make build ausführen." >&2
+        return 1
+    fi
+    if [[ "${_saved_target}" != "${TARGET}" ]]; then
+        echo -e "${RED}Push abgebrochen:${NC} Build-Ziel ${_saved_target:-unbekannt} passt nicht zu ${TARGET}. Mit TARGET=${TARGET} make build neu bauen." >&2
+        return 1
+    fi
+    for _ref in "${NAMESPACE}/${NAME}:${_tag}" "${NAMESPACE}/${NAME}:latest" "${IMAGE}:${_tag}" "${IMAGE}:latest"; do
+        _current_image_id=$(docker image inspect "${_ref}" --format '{{.Id}}') || return 1
+        if [[ "${_current_image_id}" != "${_saved_image_id}" ]]; then
+            echo -e "${RED}Push abgebrochen:${NC} ${_ref} gehört nicht zum zuletzt geprüften Build." >&2
+            return 1
+        fi
+    done
 
     echo -e "\nPushing ${YELLOW}${IMAGE}:${_tag}${NC} → ${YELLOW}${REGISTRY}${NC} (target: ${YELLOW}${TARGET}${NC})\n"
     pushImage "${_tag}"
@@ -360,7 +453,6 @@ usage() {
     usageLine "                                         " "${YELLOW}$PLATFORMS${NC}" 2
     usageLine "                                         " "${YELLOW}x86${NC}      - shortcut for ${YELLOW}linux/amd64${NC}" 2
     usageLine "                                         " "${YELLOW}arm | m1${NC} - shortcut for ${YELLOW}linux/arm64${NC}" 2
-    usageLine "                                         " "${YELLOW}all${NC}      - shortcut for ${YELLOW}linux/amd64, linux/arm64${NC}" 2
     echo
     usageLine "-p | --push                              " "Push zu ${YELLOW}${IMAGE}${NC}"
     echo
