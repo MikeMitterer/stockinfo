@@ -173,6 +173,8 @@ readonly STRICT=${STRICT:-2}
 # Streng nur für --build (dort wird das Image getaggt). Für Anzeige/Hilfe reicht
 # best-effort (STRICT=0) — so funktioniert --help auch ohne Git-Tag im Clone.
 if [[ "${CMDLINE}" == "-b" || "${CMDLINE}" == "--build" ]]; then
+    # Auch ein Fehler beim Ermitteln des Tags entwertet einen früheren Build.
+    rm -f "${TAGFILE}"
     _tag_rc=0
     TAG="$(gitDockerTag "${STRICT}")" || _tag_rc=$?
     if [[ $_tag_rc -eq 2 ]]; then
@@ -312,8 +314,6 @@ showBuiltImages() {
 #   persistieren (von push()/loadLastBuildTag gelesen).
 #
 build() {
-    # Ein fehlgeschlagener Build darf keinen früheren Tag für --push freigeben.
-    rm -f "${TAGFILE}"
     prepareConfig
 
     echo -e "\nBuilding for Platform: ${YELLOW}${PLATFORM}${NC} → Target: ${YELLOW}${TARGET}${NC}\n"
