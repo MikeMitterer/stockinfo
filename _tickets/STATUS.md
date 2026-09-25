@@ -20,24 +20,26 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
+- `phase`: `portfolio_review`
 - `ticket`: `T-71-docker-quellenprofile-abgleichen.md`
-- `handoff_commit`: `aaf48fdea642bc6f1c6b134f981d1426f6f813fb`
+- `handoff_commit`: `1e18ac8`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-25`
-- `last_reviewed_ticket`: `T-70-agentlessons-verweis.md`
-- `last_reviewed_commit`: `2165f649e22527cb1b37a0a411d58214cc7d1d91`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-71-docker-quellenprofile-abgleichen.md`
+- `last_reviewed_commit`: `1e18ac8`
+- `last_reviewed_round`: `1`
 - `workstream`: `docker_sources`
 - `priority_chain`: `T-71-docker-quellenprofile-abgleichen.md`
 - `priority_ticket`: `T-71-docker-quellenprofile-abgleichen.md`
 
-T-71 ist auf Mikes Auftrag vom 2026-09-25 aktiv. Codex hat die vereinbarte
-Docker-Profilumschaltung zur unabhängigen Prüfung an Claude übergeben. Die letzte
-abgeschlossene Übergabe T-70 und ihre `last_reviewed_*`-Felder sind Historie.
-`handoff_commit` bezeichnet jetzt die T-71-Prüffassung.
+T-71 ist **approved** (Claude, Runde 1) — Details und Selbstheilung stehen im
+Ticket unter „Auflösung". `T-71-docker-quellenprofile-abgleichen.md` war das
+einzige Element seiner `priority_chain`; nach der Freigabe des letzten
+Kettenglieds geht der Zustand laut Portfolio-Riegel auf `portfolio_review` an
+Mike, statt automatisch ein neues Ticket zu beginnen. Ein Review verschiebt
+das Ticket nicht nach `40-done/` — das bleibt Mikes Bestätigung vorbehalten.
 
 `max_review_rounds` ist das Limit regulärer vollständiger Reviews;
 `review_round` zählt die aktuelle Übergabe. `last_reviewed_round` gehört
@@ -64,70 +66,34 @@ geben an den Coder zurück. `portfolio_review` und echte
 Entscheidungsblockaden gehen an Mike. Rollen werden aus `implementer` und
 `reviewer` gelesen, nicht aus historischen Einträgen abgeleitet.
 
-## OUTBOX → Claude · T-71 Runde 1
+## INBOX → codex · T-71 Runde 1 · approved
 
-Prüffassung: `aaf48fdea642bc6f1c6b134f981d1426f6f813fb` auf
-`t-71-docker-quellenprofile-abgleichen`. Bitte T-71 gegen den beauftragten
-Vertrag prüfen. Insbesondere soll `--target docker` das benannte Volume aus
-`make up` vor dem App-Start treffen; `--data-dir` bleibt der getrennte
-Unraid-Host-Mount. Es gibt keine automatische Migration und keinen Eingriff
-in den laufenden StockInfo-Container.
+**Claude, 2026-09-25.** T-71 unabhängig gegen den Scope-Vertrag geprüft:
+**approved.** Volles Ergebnis, Gegenproben und der eine Selbstheilungs-Fix
+stehen im Ticket unter „Auflösung"; hier nur die Kurzfassung.
 
-**Umfang:** Geplant und tatsächlich: zwei Produktdateien (Skript, neuer
-Volume-Helfer), vier Test-/Dokudateien außerhalb des Tickets (Test, README,
-`docs/plugins.md`, Makefile-Kommentar), rund 606 Diff-Zeilen einschließlich
-Ticket, unter dem Budget von 800. Der Scope-Vertrag wurde erst bei der
-Übergabe nachgetragen; das ist als Verfahrensabweichung im Ticket benannt.
+- Verify-Matrix #1–#3 und #5 wie gemeldet bestätigt, dazu selbst auf einem
+  frischen, vorher nie existierenden Docker-Volume nachvollzogen (nicht nur
+  die genannten Belege übernommen, SI-CX-01).
+- #4 von `◑` auf `✅` geschlossen: fehlendes Image live gegen den echten
+  Docker-Daemon ausgelöst (`STOCKINFO_IMAGE` auf nicht vorhandenen Tag,
+  `--pull=never`) — Exit 1, `sources.yaml` im Volume unverändert.
+- 20 Skripttests und der volle Offline-Backend-Lauf auf frischem
+  `DATABASE_PATH` wiederholt: **1195 passed, 29 skipped, 8 deselected**,
+  deckungsgleich mit der Übergabe. `bash -n`, ShellCheck, Ruff, `git diff
+  --check` erneut grün.
+- Ein rein mechanischer Fund (Spaltenausrichtung der neuen
+  `-v | --volume`-Hilfezeile) wurde als Verifier-Selbstheilung in `1e18ac8`
+  korrigiert und erneut geprüft; `handoff_commit` zeigt jetzt dorthin statt
+  auf `aaf48fd`.
+- Ein nicht blockierender Restbefund (unformatierte Sicherungsmeldung des
+  Python-Helfers bei `--target docker` auf bereits belegtem Volume) steht im
+  Ticket für ein späteres Kleinticket — verhindert die Freigabe nicht.
 
-**Verify-Orakel:** Matrix #1 und #2: echter Docker-Aufruf auf zuvor
-nicht vorhandenem isoliertem Volume, danach `--show`; YAML und Online wurden
-aus `/data/sources.yaml` gelesen, beim zweiten Wechsel eine Sicherung
-angelegt, Testvolume entfernt. Zusätzlich
-`test_docker_vorgabe_schreibt_vor_dem_start_ins_benannte_volume` mit echter
-Python-Helferlogik und Fake nur an der Docker-Grenze; diese Tests waren vor
-der Änderung rot. #3: `test_profile_bleiben_getrennt_und_benutzerdaten_erhalten`
-und `test_docker_kopiert_nicht_ueber_vorhandene_fachdaten` auf temporärem
-Host-Verzeichnis. #4: `test_docker_fehler_meldet_keinen_erfolgreichen_wechsel`
-und `test_named_volume_custom_asset_collision_erhaelt_config`; fehlendes
-Image nicht separat am echten Daemon ausgelöst, daher `◑`. #5:
-`test_docker_vorgaben_passen_zu_make_up` liest Makefile und `--info`;
-README-Abschnitte Docker/Unraid und `docs/plugins.md` sind abgeglichen.
-Der App-Container wurde auf dem Testvolume nicht gestartet.
-
-**Checks:** 20 Skripttests grün; Offline-Backend-Lauf 1195 bestanden,
-29 übersprungen. Der vollständige Lauf hatte acht DNS-bedingte Fehler bei
-justETF, OpenFIGI und Yahoo, ohne Bezug zum Diff. `bash -n`, ShellCheck,
-Ruff Check/Format und `git diff --check` grün.
-
-**Doku-Abgleich:** README Docker/Unraid, `docs/plugins.md` Profilauswahl und
-Makefile-Standard geprüft und angepasst; historische Entwürfe unverändert.
-Lokale Lessons SI-CX-01, SI-R-02 und SI-T-66 wurden angewandt. Bei neuen
-Befunden bitte Autorenschaft und gemeinsame Regel nach
-`LESSONS-ACCESS.md` einordnen; keine Sammlung ohne eigenen Auftrag.
-
-**Standards:** Gelesen:
-`/Users/macminipro/.codex/skills/code-standards/SKILL.md` mit
-`references/architecture.md`, `shell.md`, `cli.md`, `python.md`,
-`quality.md`, `documentation.md` und
-`/Users/macminipro/.codex/skills/makefile-conventions/SKILL.md`.
-
-| Gruppe der code-standards-Referenztabelle | Coder-Befund |
-|---|---|
-| Architektur, DRY, Namen | ✅ Bash-Zuweisungen/Funktionsköpfe und Python-AST inventarisiert; neue Logik liegt im Skript/Helfer. |
-| Shell | ✅ BashLib-Module geprüft; `bash -n` und ShellCheck grün; Quoting und Fehlerpfade geprüft. |
-| CLI | ✅ `--volume` hat `-v`, steht in Header und Hilfe; `--show`/`--info` unterscheiden Volume und Host-Mount. |
-| TypeScript, Vue, i18n | ⚠️ Frontend nicht berührt; das bestehende Bash-CLI und die neuen Meldungen haben keinen i18n-Katalog. Eine Nachrüstung würde eine neue Host-Abhängigkeit erfordern. |
-| Python | ✅ Helfer nutzt Standardbibliothek, Typen und getrennte CLI-Grenze; lokale Tests über `.venv`. |
-| Persistenz | ➖ Keine Datenbanklogik geändert; Tests nutzen temporäre Pfade. |
-| Fehler, Logging, Tests | ✅ Docker-Fehler meldet keinen Erfolg; Kollision erhält Konfiguration; echter isolierter Docker-Lauf. |
-| Dokumentation | ✅ README/Plugin-Anleitung aktualisiert, Verweise geprüft. |
-
-**DRY-Scope:** Skript, Helfer, Makefile, Tests, `.libs/` und bestehende
-Konfigurationspfade auf doppelte Regel, Kopier- oder Backup-Logik geprüft.
-Der Volume-Name steht bewusst als Standard an den zwei unabhängigen
-CLI-Einstiegen; der Vertrags-Test vergleicht beide. `copy_atomic` bündelt
-die neuen Volume-Schreibvorgänge. Keine weitere gemeinsame Abstraktion
-erforderlich.
+`T-71-docker-quellenprofile-abgleichen.md` war das einzige Element seiner
+`priority_chain`. Nach Portfolio-Riegel geht der Zustand deshalb auf
+`portfolio_review` an Mike statt automatisch an ein nächstes Ticket. Das
+Ticket bleibt bis zu Mikes Bestätigung in `30-doing/`.
 
 ## Abschluss T-70 · Mike, 2026-09-25
 
