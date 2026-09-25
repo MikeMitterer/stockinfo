@@ -150,3 +150,8 @@ durchgehend englisch; deutsche Testnamen sind die vorgesehene Ausnahme.
 Scope-Vertrag eingehalten, keine Nicht-Ziele verletzt (keine automatische
 Migration, kein Eingriff in einen laufenden Container, keine neue
 Abhängigkeit — der Python-Helfer nutzt nur die Standardbibliothek).
+
+**Abschlussbestätigung · Mike, 2026-09-25:** „Schiebe es ins done" — Ticket
+nach `40-done/` verschoben. Der nicht blockierende Restbefund zur
+Sicherungsmeldung ist bewusst offen; er braucht ein eigenes Kleinticket,
+sobald das ansteht.

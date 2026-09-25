@@ -21,7 +21,7 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `reviewer`: `claude`
 - `observer`: `unassigned`
 - `phase`: `portfolio_review`
-- `ticket`: `T-71-docker-quellenprofile-abgleichen.md`
+- `ticket`: `none`
 - `handoff_commit`: `1e18ac8`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
@@ -30,16 +30,23 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `last_reviewed_ticket`: `T-71-docker-quellenprofile-abgleichen.md`
 - `last_reviewed_commit`: `1e18ac8`
 - `last_reviewed_round`: `1`
-- `workstream`: `docker_sources`
-- `priority_chain`: `T-71-docker-quellenprofile-abgleichen.md`
-- `priority_ticket`: `T-71-docker-quellenprofile-abgleichen.md`
+- `workstream`: `none`
+- `priority_chain`: `none`
+- `priority_ticket`: `none`
 
-T-71 ist **approved** (Claude, Runde 1) — Details und Selbstheilung stehen im
-Ticket unter „Auflösung". `T-71-docker-quellenprofile-abgleichen.md` war das
-einzige Element seiner `priority_chain`; nach der Freigabe des letzten
-Kettenglieds geht der Zustand laut Portfolio-Riegel auf `portfolio_review` an
-Mike, statt automatisch ein neues Ticket zu beginnen. Ein Review verschiebt
-das Ticket nicht nach `40-done/` — das bleibt Mikes Bestätigung vorbehalten.
+`none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
+eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
+setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
+letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
+
+## Abschluss T-71 · Mike, 2026-09-25
+
+Mike hat die Freigabe bestätigt: „Schiebe es ins done".
+[T-71](40-done/T-71-docker-quellenprofile-abgleichen.md) ist damit
+abgeschlossen; `20-ready/` und `30-doing/` sind wieder leer. Der im Review
+notierte, nicht blockierende Restbefund zur Sicherungsmeldung bleibt offen
+und braucht bei Bedarf ein eigenes Kleinticket. Keine weitere StockInfo-
+Arbeit ist eingeplant.
 
 `max_review_rounds` ist das Limit regulärer vollständiger Reviews;
 `review_round` zählt die aktuelle Übergabe. `last_reviewed_round` gehört
