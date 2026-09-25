@@ -376,6 +376,11 @@ make push                     # docker/build.sh --push   (TARGET=dockerhub, defa
 TARGET=ghcr make push         # alternatively GitHub Container Registry
 ```
 
+The image includes the [AGPL license](LICENSE) and points to this repository
+through its OCI source label. The versioned image tag contains the source commit
+hash; publish that commit before publishing the image so recipients can obtain
+the corresponding source.
+
 [↑ Contents](#contents)
 
 ---

@@ -20,6 +20,9 @@ RUN npm run build
 # ─── Stage 2: Backend + statisches Dashboard ──────────────────────────────────
 FROM python:3.12-slim
 
+LABEL org.opencontainers.image.source="https://github.com/MikeMitterer/stockinfo" \
+    org.opencontainers.image.licenses="AGPL-3.0-or-later"
+
 # git für die justetf-scraping-Abhängigkeit (git+https), curl für den Healthcheck.
 RUN apt-get update \
     && apt-get install -y --no-install-recommends git curl \
@@ -36,7 +39,9 @@ COPY plugin_api ./plugin_api
 RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 
 # pyproject.toml ist die Versions-Quelle — app/__init__.py liest sie zur Laufzeit.
+# Die Lizenz begleitet auch das ausgelieferte Image.
 COPY pyproject.toml .
+COPY LICENSE .
 COPY app ./app
 
 # Das Vertragsartefakt liegt neben `app/` — genau dort sucht `app/contract.py`,
