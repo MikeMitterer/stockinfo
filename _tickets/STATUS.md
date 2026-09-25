@@ -20,24 +20,24 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `none`
+- `phase`: `codex_working`
+- `ticket`: `T-71-docker-quellenprofile-abgleichen.md`
 - `handoff_commit`: `2165f649e22527cb1b37a0a411d58214cc7d1d91`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-09-25`
 - `last_reviewed_ticket`: `T-70-agentlessons-verweis.md`
 - `last_reviewed_commit`: `2165f649e22527cb1b37a0a411d58214cc7d1d91`
 - `last_reviewed_round`: `2`
-- `workstream`: `none`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `workstream`: `docker_sources`
+- `priority_chain`: `T-71-docker-quellenprofile-abgleichen.md`
+- `priority_ticket`: `T-71-docker-quellenprofile-abgleichen.md`
 
-`none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
-eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
-setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
-letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
+T-71 ist auf Mikes Auftrag vom 2026-09-25 aktiv. Codex setzt die vereinbarte
+Docker-Profilumschaltung um; Claude prüft danach unabhängig. Die letzte
+abgeschlossene Übergabe T-70 und ihre `last_reviewed_*`-Felder sind Historie.
+`handoff_commit` bleibt bis zur neuen Übergabe historisch.
 
 `max_review_rounds` ist das Limit regulärer vollständiger Reviews;
 `review_round` zählt die aktuelle Übergabe. `last_reviewed_round` gehört
