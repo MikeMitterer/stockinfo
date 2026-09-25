@@ -124,6 +124,10 @@ Quellenprofil und die Fachdatei, auf die es zeigt —
 Rückfall, `sources-standalone.yaml` mit `assets-standalone.yaml` für eine
 Instanz ohne Netz.
 
+Für den Wechsel zwischen diesen beiden Profilen im Docker-Container siehe
+[Docker](../README.md#docker) und [Unraid](../README.md#unraid). Der Pfad für
+`make up` ist ein benanntes Volume; Unraid verwendet ein Host-Verzeichnis.
+
 **Eine Quelle darf in mehreren Rollen stehen.** Das mitgelieferte `yaml-file`
 tut genau das: Es liest eine Datei und bedient daraus Auflösung, Kurs,
 Historie, Metadaten und Devisen.

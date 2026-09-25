@@ -36,6 +36,7 @@ LOG_FILE   := uvicorn.log
 PLATFORM    ?= x86
 IMAGE_NAME  ?= mangolila/stockinfo
 CONTAINER   ?= stockinfo
+# sources-profile.sh --target docker verwendet denselben Standardnamen.
 DATA_VOLUME ?= stockinfo-data
 
 # ─── Hilfe ────────────────────────────────────────────────────────────────────

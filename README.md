@@ -345,6 +345,27 @@ required. The cache lives in the `stockinfo-data` volume (`/data` inside the
 container). The container runs as a non-root user (UID 99 / GID 100 — Unraid's
 `nobody:users`).
 
+To select the file-only source profile **before the first start**, build the
+image and write the profile to the same named volume that `make up` mounts:
+
+```bash
+make build
+./scripts/sources-profile.sh --yaml --target docker
+make up
+```
+
+Use `--online --target docker` to restore the online chains with a YAML
+fallback. The script copies the matching example asset file only if it is
+missing, backs up an existing `sources.yaml`, and leaves the application
+container untouched. If the container is already running, restart it after
+switching; the source chains are loaded at startup. The named-volume route
+needs Docker access and a locally available `mangolila/stockinfo:latest`
+image. For a different `make up DATA_VOLUME=other-volume`, pass
+`--volume other-volume` to the script as well. No data is moved between
+named volumes and host directories.
+If `make up` uses a different `IMAGE_NAME`, set `STOCKINFO_IMAGE` to that
+image with the `:latest` tag when running the script.
+
 **Push to a registry:**
 
 ```bash
@@ -371,6 +392,17 @@ wget -O /boot/config/plugins/dockerMan/templates-user/my-stockinfo.xml https://r
 ```
 
 Then: **Docker → Add Container** → pick “stockinfo” under *User templates*.
+This template uses a host directory instead of the named volume from `make up`.
+Create the host directory first, then write the source profile to that **same**
+directory before starting the container:
+
+```bash
+mkdir -p /mnt/user/appdata/stockinfo
+./scripts/sources-profile.sh --yaml --target docker --data-dir /mnt/user/appdata/stockinfo
+```
+
+The host-directory route also works without a running Docker daemon. It does
+not copy data from the named volume.
 Support: [GitHub Issues](https://github.com/MikeMitterer/stockinfo/issues).
 
 [↑ Contents](#contents)
