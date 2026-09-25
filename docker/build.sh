@@ -120,6 +120,12 @@ esac
 readonly CMDLINE=${1:-}
 readonly OPTION=${2:-""}
 
+# Jeder Buildversuch entwertet den vorherigen Push-Nachweis, auch wenn schon
+# die Plattformwahl oder die Tag-Ermittlung fehlschlägt.
+if [[ "${CMDLINE}" == "-b" || "${CMDLINE}" == "--build" ]]; then
+    rm -f "${TAGFILE}"
+fi
+
 # DEV_LOCAL ist bei den Jenkins-Tests bzw. in Docker-Containern nicht gesetzt,
 # IS_CI geht also auf "true"
 readonly IS_CI="${DEV_LOCAL:-"true"}"
@@ -138,7 +144,6 @@ else
 fi
 
 PLATFORM="${DEFAULT_PLATFORM}"
-BUILD_MULTIARCH=false
 
 while [ $# -ne 0 ]; do
     case "${1}" in
@@ -149,8 +154,8 @@ while [ $# -ne 0 ]; do
             elif [[ "${OPTION}" == "arm" || "${OPTION}" == "m1" ]]; then
                 PLATFORM="linux/arm64"
             elif [[ "${OPTION}" == "all" ]]; then
-                PLATFORM="linux/arm64,linux/amd64"
-                BUILD_MULTIARCH=true
+                echo -e "${RED}Build abgebrochen:${NC} PLATFORM=all würde vor der Image-Prüfung automatisch veröffentlichen. x86 oder arm verwenden." >&2
+                exit 1
             else
                 PLATFORM="${DEFAULT_PLATFORM}"
                 echo "Platform: ${PLATFORM}"
@@ -173,8 +178,7 @@ readonly STRICT=${STRICT:-2}
 # Streng nur für --build (dort wird das Image getaggt). Für Anzeige/Hilfe reicht
 # best-effort (STRICT=0) — so funktioniert --help auch ohne Git-Tag im Clone.
 if [[ "${CMDLINE}" == "-b" || "${CMDLINE}" == "--build" ]]; then
-    # Auch ein Fehler beim Ermitteln des Tags entwertet einen früheren Build.
-    rm -f "${TAGFILE}"
+    BUILD_SOURCE_COMMIT=$(git -C .. rev-parse HEAD) || exit 1
     _tag_rc=0
     TAG="$(gitDockerTag "${STRICT}")" || _tag_rc=$?
     if [[ $_tag_rc -eq 2 ]]; then
@@ -193,10 +197,16 @@ if [[ "${CMDLINE}" == "-b" || "${CMDLINE}" == "--build" ]]; then
         echo -e "\n${RED}Build abgebrochen:${NC} gitDockerTag fehlgeschlagen (rc=${_tag_rc}).\n" >&2
         exit 1
     fi
+    if [[ "$(git -C .. rev-parse HEAD)" != "${BUILD_SOURCE_COMMIT}" ]]; then
+        echo -e "${RED}Build abgebrochen:${NC} Quellcommit hat sich während der Tag-Ermittlung geändert." >&2
+        exit 1
+    fi
 else
     TAG="$(gitDockerTag 0 2>/dev/null)" || TAG="n/a"
+    BUILD_SOURCE_COMMIT=""
 fi
 readonly TAG
+readonly BUILD_SOURCE_COMMIT
 
 #------------------------------------------------------------------------------
 # Functions
@@ -308,32 +318,26 @@ showBuiltImages() {
 
 # build — Image für die gewählte Plattform bauen
 #
-#   Multiarch (BUILD_MULTIARCH=true): buildx baut UND pusht in einem Schritt —
-#   Login vorher via ensureRegistryLogin; danach kein TAGFILE, push() nicht aufrufen.
-#   Single-arch: lokal bauen, Images anzeigen, Tag + Zeitstempel in TAGFILE
-#   persistieren (von push()/loadLastBuildTag gelesen).
+#   Das Image wird lokal gebaut, geprüft und erst danach als pushbar markiert.
 #
 build() {
     prepareConfig
 
     echo -e "\nBuilding for Platform: ${YELLOW}${PLATFORM}${NC} → Target: ${YELLOW}${TARGET}${NC}\n"
 
-    if [[ "${BUILD_MULTIARCH}" == true ]]; then
-        ensureRegistryLogin "${TARGET}" "${NAME}" "${AWS_REGION:-}" "${AMAZON_REPO_URI:-}"
-        buildMultiArchImage "${PLATFORM}" "${IMAGE}" "${TAG}" "${LOGFILE}"
-        # Push ist bereits erledigt — kein TAGFILE, push() nicht aufrufen
-        return
-    fi
-
     buildSingleArchImage "${PLATFORM}" "${NAMESPACE}/${NAME}" "${IMAGE}" "${TAG}" "${LOGFILE}"
     verifyBuiltImage
+    verifySourceTree
+    if [[ "$(git -C .. rev-parse HEAD)" != "${BUILD_SOURCE_COMMIT}" ]]; then
+        echo -e "${RED}Build abgebrochen:${NC} Quellcommit hat sich während des Builds geändert." >&2
+        return 1
+    fi
     showBuiltImages
 
-    # Tag, Zeitpunkt, Image-ID und Quellcommit für --push festhalten.
-    local _image_id _source_commit
+    # Tag, Zeitpunkt, Image-ID, Quellcommit und Registry-Ziel festhalten.
+    local _image_id
     _image_id=$(docker image inspect "${NAMESPACE}/${NAME}:${TAG}" --format '{{.Id}}')
-    _source_commit=$(git -C .. rev-parse HEAD)
-    printf '%s\n' "${TAG}" "$(date +%s)" "${_image_id}" "${_source_commit}" > "${TAGFILE}"
+    printf '%s\n' "${TAG}" "$(date +%s)" "${_image_id}" "${BUILD_SOURCE_COMMIT}" "${TARGET}" > "${TAGFILE}"
 }
 
 # loadLastBuildTag — Tag des letzten Builds lesen und zurückgeben
@@ -379,14 +383,19 @@ loadLastBuildTag() {
 #   Voraussetzung: der jeweilige Registry-Login ist vorhanden bzw. möglich.
 #
 push() {
-    local _tag _saved_image_id _saved_commit _current_commit _ref _current_image_id
+    local _tag _saved_image_id _saved_commit _saved_target _current_commit _ref _current_image_id
     verifySourceTree || return 1
     _tag=$(loadLastBuildTag) || exit 1
     _saved_image_id=$(sed -n '3p' "${TAGFILE}")
     _saved_commit=$(sed -n '4p' "${TAGFILE}")
+    _saved_target=$(sed -n '5p' "${TAGFILE}")
     _current_commit=$(git -C .. rev-parse HEAD) || return 1
     if [[ -z "${_saved_image_id}" || -z "${_saved_commit}" || "${_saved_commit}" != "${_current_commit}" ]]; then
         echo -e "${RED}Push abgebrochen:${NC} Build-Nachweis fehlt oder der Quellcommit hat sich geändert. Erneut make build ausführen." >&2
+        return 1
+    fi
+    if [[ "${_saved_target}" != "${TARGET}" ]]; then
+        echo -e "${RED}Push abgebrochen:${NC} Build-Ziel ${_saved_target:-unbekannt} passt nicht zu ${TARGET}. Mit TARGET=${TARGET} make build neu bauen." >&2
         return 1
     fi
     for _ref in "${NAMESPACE}/${NAME}:${_tag}" "${NAMESPACE}/${NAME}:latest" "${IMAGE}:${_tag}" "${IMAGE}:latest"; do
@@ -444,7 +453,6 @@ usage() {
     usageLine "                                         " "${YELLOW}$PLATFORMS${NC}" 2
     usageLine "                                         " "${YELLOW}x86${NC}      - shortcut for ${YELLOW}linux/amd64${NC}" 2
     usageLine "                                         " "${YELLOW}arm | m1${NC} - shortcut for ${YELLOW}linux/arm64${NC}" 2
-    usageLine "                                         " "${YELLOW}all${NC}      - shortcut for ${YELLOW}linux/amd64, linux/arm64${NC}" 2
     echo
     usageLine "-p | --push                              " "Push zu ${YELLOW}${IMAGE}${NC}"
     echo

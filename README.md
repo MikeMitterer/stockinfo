@@ -13,6 +13,16 @@ Yahoo Finance, JSON export).
 
 ![StockInfo dashboard](unraid/screenshots/dashboard.png)
 
+### What's new in 1.0.0
+
+- StockInfo's application code is now licensed under the
+  [AGPL-3.0-or-later](LICENSE). The independent plugin API remains under the
+  [MIT license](plugin_api/LICENSE); commercial terms are available separately.
+- `make build` includes and checks the license texts in the Docker image.
+  `make push` accepts only the checked image from the current source commit.
+- The Docker source-profile command writes to the named volume used by
+  `make up`, including before the first container start.
+
 ### What's new in 0.6.0
 
 - **All eight ETF metrics are maintainable by hand** — provider, replication,
@@ -341,7 +351,9 @@ make docker-logs   # follow logs
 ```
 
 On ARM Macs, the dashboard build runs natively; the final image still uses the
-platform selected by `PLATFORM` (`linux/amd64` by default for Unraid).
+platform selected by `PLATFORM` (`linux/amd64` by default for Unraid;
+`PLATFORM=arm` selects `linux/arm64`). The checked build publishes one platform
+at a time.
 
 FastAPI serves the dashboard itself (relative API calls) — no separate web server
 required. The cache lives in the `stockinfo-data` volume (`/data` inside the
@@ -372,8 +384,10 @@ image with the `:latest` tag when running the script.
 **Push to a registry:**
 
 ```bash
-make push                     # docker/build.sh --push   (TARGET=dockerhub, default)
-TARGET=ghcr make push         # alternatively GitHub Container Registry
+make build                   # Docker Hub image, checked locally
+make push                    # push that exact build to Docker Hub
+TARGET=ghcr make build       # alternatively build for GitHub Container Registry
+TARGET=ghcr make push        # push to the same target used for the build
 ```
 
 `make build` copies the [AGPL license](LICENSE), the
@@ -382,9 +396,9 @@ license into the image. It checks the files, their SHA-256 hashes, the target
 architecture, and the OCI license and source labels before recording a build as
 ready to push. No manual license-copy step is needed. A failed build clears the
 previous push marker; `make push` also rejects an image from a different source
-commit. The versioned image tag contains the source commit hash; publish that
-commit before publishing the image so recipients can obtain the corresponding
-source.
+commit or registry target. The versioned image tag contains the source commit
+hash; publish that commit before publishing the image so recipients can obtain
+the corresponding source.
 
 [↑ Contents](#contents)
 

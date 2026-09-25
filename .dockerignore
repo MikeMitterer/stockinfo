@@ -3,6 +3,11 @@ data/
 *.db
 __pycache__/
 *.pyc
+**/__pycache__/
+**/.pytest_cache/
+**/build/
+**/dist/
+**/*.egg-info/
 .git/
 .gitignore
 uvicorn.log
@@ -13,6 +18,7 @@ tests/
 dashboard/node_modules
 dashboard/dist
 dashboard/.env
+dashboard/tsconfig.tsbuildinfo
 docs/
 # Kontext schlank halten — nur entrypoint.sh aus docker/ wird ins Image kopiert
 docker/
