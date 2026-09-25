@@ -37,7 +37,7 @@
 #   -t | --target TARGET   local (Vorgabe) oder docker
 #   -a | --assets FILE     Fachdatendatei für `yaml-file`
 #   -d | --data-dir DIR    Datenverzeichnis (bei Docker der Host-Mount)
-#   -v | --volume NAME    Benanntes Docker-Volume (Vorgabe: stockinfo-data)
+#   -v | --volume NAME     Benanntes Docker-Volume (Vorgabe: stockinfo-data)
 #   -s | --show            Aktives Profil zeigen — Datei und laufender Server
 #   -i | --info            Einstellungen anzeigen
 #   -h | --help            Diese Hilfe anzeigen
