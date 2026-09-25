@@ -376,10 +376,15 @@ make push                     # docker/build.sh --push   (TARGET=dockerhub, defa
 TARGET=ghcr make push         # alternatively GitHub Container Registry
 ```
 
-The image includes the [AGPL license](LICENSE) and points to this repository
-through its OCI source label. The versioned image tag contains the source commit
-hash; publish that commit before publishing the image so recipients can obtain
-the corresponding source.
+`make build` copies the [AGPL license](LICENSE), the
+[`plugin_api` MIT license](plugin_api/LICENSE), and the example plugin's MIT
+license into the image. It checks the files, their SHA-256 hashes, the target
+architecture, and the OCI license and source labels before recording a build as
+ready to push. No manual license-copy step is needed. A failed build clears the
+previous push marker; `make push` also rejects an image from a different source
+commit. The versioned image tag contains the source commit hash; publish that
+commit before publishing the image so recipients can obtain the corresponding
+source.
 
 [↑ Contents](#contents)
 

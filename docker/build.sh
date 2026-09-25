@@ -200,14 +200,61 @@ readonly TAG
 # Functions
 #
 
-# prepareConfig — Optionaler Build-Vorbereitungs-Schritt
-#
-#   No-op solange das (Multi-Stage-)Dockerfile Build + Deps selbst übernimmt.
-#   Bei Services die vor dem Build Dateien ins Build-Kontext-Verzeichnis kopieren
-#   müssen (Configs, Scripts, Zertifikate) hier befüllen — vgl. certbot-Template.
+# prepareConfig — Build-Eingaben prüfen. Das Dockerfile kopiert die Lizenzen
+# direkt aus dem Repository; es gibt keinen manuellen Vorbereitungsschritt.
 #
 prepareConfig() {
-    : # kein separates Config-Prep nötig
+    local _file
+    for _file in LICENSE plugin_api/LICENSE plugin_api/examples/us-example/LICENSE; do
+        if [[ ! -s "../${_file}" ]]; then
+            echo -e "${RED}Build abgebrochen:${NC} Lizenz fehlt oder ist leer: ${_file}" >&2
+            return 1
+        fi
+    done
+}
+
+# verifyBuiltImage — Den tatsächlich gebauten Tag und die kopierten Lizenzen
+# prüfen. Erst danach darf der Tag als pushbar gespeichert werden.
+verifyBuiltImage() {
+    local _local_image="${NAMESPACE}/${NAME}:${TAG}"
+    local _image_id _latest_id _registry_id _registry_latest_id _arch
+    local _license _expected _actual
+
+    _image_id=$(docker image inspect "${_local_image}" --format '{{.Id}}') || return 1
+    _latest_id=$(docker image inspect "${NAMESPACE}/${NAME}:latest" --format '{{.Id}}') || return 1
+    _registry_id=$(docker image inspect "${IMAGE}:${TAG}" --format '{{.Id}}') || return 1
+    _registry_latest_id=$(docker image inspect "${IMAGE}:latest" --format '{{.Id}}') || return 1
+    if [[ "${_image_id}" != "${_latest_id}" ]] \
+       || [[ "${_image_id}" != "${_registry_id}" ]] \
+       || [[ "${_image_id}" != "${_registry_latest_id}" ]]; then
+        echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Image-Tags zeigen auf unterschiedliche Images." >&2
+        return 1
+    fi
+
+    _arch=$(docker image inspect "${_local_image}" --format '{{.Architecture}}') || return 1
+    if [[ "linux/${_arch}" != "${PLATFORM}" ]]; then
+        echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Architektur ${_arch} statt ${PLATFORM}." >&2
+        return 1
+    fi
+
+    if [[ "$(docker image inspect "${_local_image}" --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}')" != "AGPL-3.0-or-later" \
+       || "$(docker image inspect "${_local_image}" --format '{{index .Config.Labels "org.opencontainers.image.source"}}')" != "https://github.com/MikeMitterer/stockinfo" ]]; then
+        echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Lizenz- oder Quelllabel fehlt." >&2
+        return 1
+    fi
+
+    for _license in LICENSE plugin_api/LICENSE plugin_api/examples/us-example/LICENSE; do
+        _expected=$(shasum -a 256 "../${_license}") || return 1
+        _expected=${_expected%% *}
+        _actual=$(docker run --rm --platform "${PLATFORM}" --entrypoint sha256sum "${_local_image}" "/app/${_license}") || return 1
+        _actual=${_actual%% *}
+        if [[ "${_expected}" != "${_actual}" ]]; then
+            echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Lizenz weicht ab: ${_license}" >&2
+            return 1
+        fi
+    done
+
+    echo -e "${GREEN}Build geprüft:${NC} ${_local_image} (${_arch}, ${_image_id}); drei Lizenzen und OCI-Labels stimmen."
 }
 
 # pushImage — Delegiert an die Registry-spezifische Lib-Push-Funktion (nach TARGET)
@@ -248,6 +295,8 @@ showBuiltImages() {
 #   persistieren (von push()/loadLastBuildTag gelesen).
 #
 build() {
+    # Ein fehlgeschlagener Build darf keinen früheren Tag für --push freigeben.
+    rm -f "${TAGFILE}"
     prepareConfig
 
     echo -e "\nBuilding for Platform: ${YELLOW}${PLATFORM}${NC} → Target: ${YELLOW}${TARGET}${NC}\n"
@@ -260,11 +309,14 @@ build() {
     fi
 
     buildSingleArchImage "${PLATFORM}" "${NAMESPACE}/${NAME}" "${IMAGE}" "${TAG}" "${LOGFILE}"
+    verifyBuiltImage
     showBuiltImages
 
-    # Tag + Zeitstempel persistieren — wird von push() gelesen
-    echo "${TAG}"      > "${TAGFILE}"
-    echo "$(date +%s)" >> "${TAGFILE}"
+    # Tag, Zeitpunkt, Image-ID und Quellcommit für --push festhalten.
+    local _image_id _source_commit
+    _image_id=$(docker image inspect "${NAMESPACE}/${NAME}:${TAG}" --format '{{.Id}}')
+    _source_commit=$(git -C .. rev-parse HEAD)
+    printf '%s\n' "${TAG}" "$(date +%s)" "${_image_id}" "${_source_commit}" > "${TAGFILE}"
 }
 
 # loadLastBuildTag — Tag des letzten Builds lesen und zurückgeben
@@ -310,8 +362,22 @@ loadLastBuildTag() {
 #   Voraussetzung: der jeweilige Registry-Login ist vorhanden bzw. möglich.
 #
 push() {
-    local _tag
+    local _tag _saved_image_id _saved_commit _current_commit _ref _current_image_id
     _tag=$(loadLastBuildTag) || exit 1
+    _saved_image_id=$(sed -n '3p' "${TAGFILE}")
+    _saved_commit=$(sed -n '4p' "${TAGFILE}")
+    _current_commit=$(git -C .. rev-parse HEAD) || return 1
+    if [[ -z "${_saved_image_id}" || -z "${_saved_commit}" || "${_saved_commit}" != "${_current_commit}" ]]; then
+        echo -e "${RED}Push abgebrochen:${NC} Build-Nachweis fehlt oder der Quellcommit hat sich geändert. Erneut make build ausführen." >&2
+        return 1
+    fi
+    for _ref in "${NAMESPACE}/${NAME}:${_tag}" "${NAMESPACE}/${NAME}:latest" "${IMAGE}:${_tag}" "${IMAGE}:latest"; do
+        _current_image_id=$(docker image inspect "${_ref}" --format '{{.Id}}') || return 1
+        if [[ "${_current_image_id}" != "${_saved_image_id}" ]]; then
+            echo -e "${RED}Push abgebrochen:${NC} ${_ref} gehört nicht zum zuletzt geprüften Build." >&2
+            return 1
+        fi
+    done
 
     echo -e "\nPushing ${YELLOW}${IMAGE}:${_tag}${NC} → ${YELLOW}${REGISTRY}${NC} (target: ${YELLOW}${TARGET}${NC})\n"
     pushImage "${_tag}"
