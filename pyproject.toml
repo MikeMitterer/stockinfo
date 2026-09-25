@@ -2,7 +2,7 @@
 name = "stockinfo"
 version = "0.6.0"
 description = "REST-Kursabfrage für Aktien und ETFs mit SQLite-Cache"
-license = "MIT"
+license = "AGPL-3.0-or-later"
 requires-python = ">=3.11"
 
 # Nur die Tests der App. `plugin_api/` ist ein eigenständiges Paket mit eigener

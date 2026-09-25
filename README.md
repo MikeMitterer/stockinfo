@@ -454,6 +454,12 @@ Technical details and design decisions: see
 
 ## License
 
-[MIT](LICENSE) © Mike Mitterer
+Dual-licensed. **[AGPL-3.0](LICENSE)** covers self-hosting (including the
+Unraid container) and any AGPL-compliant use, free of charge. Companies
+that want to host StockInfo as a service, embed it in a proprietary
+product, or white-label it need a **[commercial license](COMMERCIAL-LICENSE.md)**
+instead — see that document for exactly when it applies.
+
+© Mike Mitterer
 
 [↑ Contents](#contents)
