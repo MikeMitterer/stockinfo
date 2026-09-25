@@ -200,11 +200,28 @@ readonly TAG
 # Functions
 #
 
+verifySourceTree() {
+    local _untracked
+    if ! git -C .. diff --quiet HEAD --; then
+        echo -e "${RED}Abgebrochen:${NC} Der Quellstand enthält vorgemerkte oder ungespeicherte Änderungen." >&2
+        return 1
+    fi
+    _untracked=$(git -C .. ls-files --others --exclude-standard -- app dashboard plugin_api contract docker/entrypoint.sh) || return 1
+    if [[ -n "${_untracked}" ]]; then
+        echo -e "${RED}Abgebrochen:${NC} Nicht versionierte Dateien liegen im Docker-Build-Kontext:${NC}" >&2
+        printf '%s\n' "${_untracked}" >&2
+        return 1
+    fi
+}
+
 # prepareConfig — Build-Eingaben prüfen. Das Dockerfile kopiert die Lizenzen
 # direkt aus dem Repository; es gibt keinen manuellen Vorbereitungsschritt.
 #
 prepareConfig() {
     local _file
+    if (( STRICT >= 1 )); then
+        verifySourceTree || return 1
+    fi
     for _file in LICENSE plugin_api/LICENSE plugin_api/examples/us-example/LICENSE; do
         if [[ ! -s "../${_file}" ]]; then
             echo -e "${RED}Build abgebrochen:${NC} Lizenz fehlt oder ist leer: ${_file}" >&2
@@ -363,6 +380,7 @@ loadLastBuildTag() {
 #
 push() {
     local _tag _saved_image_id _saved_commit _current_commit _ref _current_image_id
+    verifySourceTree || return 1
     _tag=$(loadLastBuildTag) || exit 1
     _saved_image_id=$(sed -n '3p' "${TAGFILE}")
     _saved_commit=$(sed -n '4p' "${TAGFILE}")

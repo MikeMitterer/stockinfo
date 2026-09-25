@@ -80,6 +80,22 @@ Lauf denselben SHA-256-Wert
 `f5ca9afdf809f7a9e0fd28d806a84849a904aea44bf3d89a06e0739d6eaaa7b4`.
 Produktive Pfade und der Containername `stockinfo` wurden nicht verwendet.
 
+**Wiederholung nach Build-Automatisierung:** `make build` auf Commit `768f312`
+erzeugte `mangolila/stockinfo:0.6.0-260925.1423.768f3.ahead1105` für
+`linux/amd64` mit Image-ID
+`sha256:cbe17ec616dbc2317e2375875f478adcf60b6859466abeb4b05101a2940659ab`.
+Der Build prüfte die drei mitkopierten Lizenztexte gegen das Repository, die
+Architektur und die OCI-Labels. Der Smoke-Lauf mit genau diesem `IMAGE_REF`
+endete mit Exit-Code 0: Kurs 128.21, Anbieter iShares und TER 0.2 waren auch
+nach der Container-Neuerstellung vorhanden; beide App-Prozesse liefen mit
+UID 99/GID 100. Der ungültige Env-Wert führte zum erwarteten `ValidationError`.
+Das Skript entfernt Container anhand der von Docker geschriebenen IDs, nicht
+anhand bloß vorhergesagter Namen.
+
+**Doku-Abgleich:** README „Docker“ erklärt den automatischen Lizenztransport,
+die Build-Prüfung und den Push-Nachweis. Die historische Deployment-Spec unter
+`docs/superpowers/` bleibt als Entwurf unverändert.
+
 ### Side-Effects
 
 Nur lokale Testimages, eigener Container und temporäre Daten. Kein Registry-Push,
