@@ -1,5 +1,6 @@
 # Aktuelle Tätigkeit
 
+- 2026-09-26 12:07:57 CEST · codex · T-77: Lokales README-Upload-Script mit Linkkonvertierung und Make-Targets beauftragt; GitHub-Automatisierung entfällt.
 - 2026-09-26 11:55:09 CEST · codex · T-76: Dokumentation mit d2f0827 in master integriert und gepusht. Docker-Hub-Beschreibung und automatische Synchronisierung sind unverändert; Funktionsweise erklärt.
 - 2026-09-26 11:53:54 CEST · codex · T-76: Vier Anleitungen korrigiert, 113 gezielte Tests bestanden, 35 Fixture-Skips. Beispiele und 117 lokale Links geprüft; Docker-Hub-Link und Erklärung ergänzt.
 - 2026-09-26 11:44:32 CEST · codex · T-76: README und API-Referenzen werden an den aktuellen Code angeglichen; anschließend sind Merge und Push beauftragt.
