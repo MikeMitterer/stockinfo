@@ -41,6 +41,12 @@ letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
 ## Abschluss T-75 · Mike, 2026-09-26
 
+Mike bestätigt „Funktioniert jetzt“, ausdrücklich für T-75, und beauftragt
+„commit, merge + push“. Codex übernimmt die Integration des freigegebenen
+Branches einschließlich T-73/T-74 in `master` und den Push nach `origin`.
+Erneute Prüfung vor Integration: 378 Dashboard-Tests und 51 gezielte
+Backend-Tests bestanden.
+
 Mike: „Schiebe T-75 auch nach done“.
 [T-75](40-done/T-75-instrument-types-dev-proxy.md) (Dev-Proxy-Präfix für
 `GET /instrument-types`, approved Runde 1, `fc67ea3`) ist damit abgeschlossen.
@@ -99,8 +105,8 @@ Referenz `frontend.md`.
 
 Keine Befunde. `T-75-instrument-types-dev-proxy.md` ist das einzige Element
 seiner `priority_chain`; nach Portfolio-Riegel geht der Zustand auf
-`portfolio_review` an Mike. Ticket bleibt bis zur Abschlussbestätigung in
-`30-doing/`.
+`portfolio_review` an Mike. Zum Reviewzeitpunkt wartete das Ticket auf die
+Abschlussbestätigung; diese liegt inzwischen vor, siehe Abschluss T-75 oben.
 
 ## Archiv · T-73 Runde 1 · approved (verarbeitet)
 

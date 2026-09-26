@@ -6,8 +6,8 @@ fehlende Eintrag in `dashboard/api-prefixes.ts`; der bestehende Proxy-Test
 prüft nur UI-Aufrufe und erfasst Swagger-Aufrufe deshalb nicht.
 
 **Stand:** Korrektur umgesetzt, live geprüft und unabhängig geprüft —
-**approved**, Claude, Runde 1, `fc67ea3`. Keine Befunde. Nur der
-menschliche Abschluss (Verschieben nach `40-done/`) steht noch aus.
+**approved**, Claude, Runde 1, `fc67ea3`. Keine Befunde. Mike hat die Funktion
+mit „Funktioniert jetzt“ bestätigt; das Ticket ist in `40-done/` abgeschlossen.
 
 ## Scope und Prüfung
 
@@ -64,4 +64,13 @@ Kurzfassung.
 - Live selbst reproduziert: Mikes exakter Aufruf auf Port 5173 liefert bei
   mir ebenfalls HTTP 200 mit den sechs Typen und `complete: true`.
 
-Menschlicher Abschluss (Verschieben nach `40-done/`) steht noch aus.
+## Abschluss · 2026-09-26
+
+Mike bestätigt „Funktioniert jetzt“ und ordnet die Bestätigung ausdrücklich
+T-75 zu. Das Ticket liegt in `40-done/`; anschließend beauftragt Mike
+„commit, merge + push“.
+
+Vor der Integration erneut geprüft: 378 Dashboard-Tests und 51 Backend-Tests
+aus `test_api_instrument_types.py`, `test_api_fields.py` und
+`test_contract_openapi.py` bestanden. Doku-Abgleich: veraltete Abschlussangaben
+in diesem Ticket und `STATUS.md` nachgezogen; Produktdokumentation unverändert.
