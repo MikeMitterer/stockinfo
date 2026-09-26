@@ -20,24 +20,32 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `T-73-plugin-assettypen-per-rest-bereitstellen.md`
+- `phase`: `codex_working`
+- `ticket`: `T-75-instrument-types-dev-proxy.md`
 - `handoff_commit`: `a559c09`
-- `review_round`: `1`
+- `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-73-plugin-assettypen-per-rest-bereitstellen.md`
 - `last_reviewed_commit`: `a559c09`
 - `last_reviewed_round`: `1`
-- `workstream`: `plugin-instrument-types`
-- `priority_chain`: `T-74-field-meanings-english.md → T-73-plugin-assettypen-per-rest-bereitstellen.md`
-- `priority_ticket`: `T-73-plugin-assettypen-per-rest-bereitstellen.md`
+- `workstream`: `instrument-types-dev-proxy`
+- `priority_chain`: `T-75-instrument-types-dev-proxy.md`
+- `priority_ticket`: `T-75-instrument-types-dev-proxy.md`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
+
+## Nacharbeit T-75 · Mike, 2026-09-26
+
+Mikes echter Swagger-Aufruf an Port 5173 liefert HTML. [T-75](30-doing/T-75-instrument-types-dev-proxy.md)
+behebt die fehlende Weiterleitung als begrenztes Folgeticket zu T-73.
+Ausnahme: drei Tickets in Doing statt Ziel zwei, weil T-73/T-74 auf Mikes
+Abschluss warten und der gemeldete Nutzerweg sofort korrigiert wird.
+Die bisherige Backend-Freigabe bleibt historisch erhalten.
 
 ## Auftrag T-74 · Mike, 2026-09-26
 
@@ -52,7 +60,7 @@ T-74 ist technisch freigegeben. Mike hat mit „Ja und? Los gehts“ T-73
 aktiviert. Zwei Tickets in Doing, keine Überschreitung der Zielgrenze.
 T-74 bleibt bis zur menschlichen Abschlussbestätigung dort.
 
-## INBOX → codex · T-73 Runde 1 · approved
+## Archiv · T-73 Runde 1 · approved (verarbeitet)
 
 **Claude, 2026-09-26.** T-73 unabhängig geprüft: **approved.** Prüfstand
 `a559c09` auf `t-73-plugin-instrument-types`, Basis `3d64132` (mein eigener
