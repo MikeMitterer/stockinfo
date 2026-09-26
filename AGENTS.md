@@ -114,6 +114,17 @@ Bei Änderungen an Verhalten, Verträgen, Konfiguration, Installation oder
 beschlossenem Umfang gehört der **Doku-Abgleich zum selben Auftrag**.
 Mike muss betroffene Anleitungen nicht eigens nennen.
 
+**Beide READMEs gemeinsam prüfen:** Bei Änderungen an Funktionen,
+Konfiguration, Installation oder Betrieb immer `README.md` und
+`docker/README.md` abgleichen. Das gilt sowohl für Codeänderungen als auch
+für Änderungen an einer der beiden Anleitungen. Gemeinsame Aussagen müssen
+übereinstimmen; Entwickleranleitungen gehören ins Root-README,
+Containeranleitungen in `docker/README.md`.
+Der Doku-Abgleich im Ticket beziehungsweise Abschlussbericht nennt die
+nötigen Anpassungen oder begründet, weshalb die andere Datei unverändert
+bleibt. Der Verifier prüft die inhaltliche Übereinstimmung; Änderungen an
+beiden Dateien allein sind kein Nachweis.
+
 **Docker-Hub-Beschreibung:** `make push` überträgt nach dem erfolgreichen
 Docker-Hub-Image-Push `docker/README.md`. Diese Datei erklärt Installation und
 Betrieb des fertigen Containers; das Root-README bleibt die Projektanleitung.

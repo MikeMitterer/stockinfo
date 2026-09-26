@@ -10,8 +10,8 @@ lokales Script nach Skill-Konventionen. Präzisierung: keine eigenen Targets;
 der erfolgreiche bestehende Docker-Hub-Push ruft das Script auf.
 **Stand:** Grundfassung **und** Docker-Beschreibung/403-Diagnose von Claude
 unabhängig approved (Runde 1: StockInfo `535e7a7`, ProjectTools `8780252`;
-Runde 2: StockInfo `efeab04`, ProjectTools `a1908f7`). Offen ist Mikes
-Abschlussbestätigung. Keine GitHub Action angelegt.
+Runde 2: StockInfo `efeab04`, ProjectTools `a1908f7`). Mike hat den Abschluss einschließlich Integration, Push und Veröffentlichung
+beauftragt. Der abschließende Regel-/Skill-Nachtrag wird noch geprüft. Keine GitHub Action angelegt.
 Die neue Beschreibung wurde lokal geprüft, noch nicht nach Docker Hub übertragen.
 
 ## Übersicht
@@ -52,7 +52,7 @@ Vorschau und API-Fehler werden gezielt geprüft.
 | 1 | Echte Pandoc-Konvertierung: Bilder, Dokumente, Anker, Code und Referenzlinks | Bestanden |
 | 2 | HTTP-Grenze: Authentifizierung, PATCH, Fehler ohne Secret-Ausgabe | Bestanden |
 | 3 | CLI, Make-Aufrufe, Namensinventar, Ruff und Doku-Abgleich | Bestanden |
-| 4 | Vorschau des echten README; tatsächlicher Hub-Upload getrennt ausweisen | Vorschau: 24.980 Bytes; echter Upload nicht ausgeführt |
+| 4 | Vorschau des echten README; tatsächlicher Hub-Upload getrennt ausweisen | Aktuelle Docker-Vorschau: 6.232 Bytes; alter README-Upload von Mike bestätigt, neue Beschreibung zur Veröffentlichung beauftragt |
 
 [↑ Übersicht](#übersicht)
 
@@ -184,7 +184,7 @@ REST-/Plugin-Verträge bleiben unverändert.
 **Zurückgenommener erster Prüfstand:** ProjectTools `3c4e025`, Basis `ff45053`, Branch
 `t-77-dockerhub-readme`. Dort war `AGENTS.md` bereits vor Arbeitsbeginn
 unversioniert; unverändert gelassen und nicht mitcommittet.
-Der lokale Makefile-Skill liegt außerhalb eines Git-Repositorys; SHA-256:
+Damals erfasster SHA-256 des Makefile-Skills (Quelle liegt im Git-Repo PersonalSkills):
 `b664731f9482a639aa235bd5ec7fe63c8dcc1323f7fb9ac5ae0dc5cc3687db5b`.
 Skill-Validator: gültig. 27 lokale Dateiverweise in README, Release-Notizen,
 AGENTS.md und diesem Ticket geprüft.
@@ -343,7 +343,7 @@ bei 403 einen Hinweis auf Login, Repository-Zugriff und Token-Rechte.
 Antwortkörper und Auth-Header bleiben verborgen. Drei neue Tests prüfen
 Schrittunterscheidung und Geheimnisschutz (vor Korrektur alle drei rot).
 
-Die Ursache des tatsächlichen Docker-Hub-403 ist noch unbestätigt. Für den
+Zum damaligen Diagnosezeitpunkt war die Ursache des Docker-Hub-403 unbestätigt. Für den
 Beschreibungs-Upload benötigt ein PAT Read, Write, Delete; reine Push-Rechte
 reichen dafür nicht aus (Referenz: README von peter-evans/dockerhub-description).
 Mike wurde nur nach der Berechtigungsstufe gefragt; keine echten Tokens
@@ -354,7 +354,7 @@ ProjectTools README und Makefile-Skill. Keine Änderung dieser Zusage nötig.
 Die neue Diagnose und ihre Grenzen sind hier und in STATUS.md festgehalten.
 
 Prüfstand Diagnose: ProjectTools `9e6dfc4`, 46 Tests grün, Ruff Check/Format
-und Diff-Prüfung bestanden. Der Live-403 ist damit noch nicht als behoben bestätigt.
+und Diff-Prüfung bestanden. Der Live-403 war damit noch nicht als behoben bestätigt; Mikes spätere Bestätigung folgt unten.
 
 
 ### Eigene Beschreibung für Docker Hub
@@ -391,3 +391,51 @@ auf Existenz geprüft; Compose-YAML eingelesen und Volume-Zuordnung bestätigt.
 Ruff Check/Format und Diff-Prüfung gegen die freigegebenen Basen bestanden.
 AST-Inventar: englische Bezeichner, deutsche Testnamen wie erlaubt.
 Kein Containerstart oder Live-Upload für diesen Dokumentationsnachtrag.
+
+### Beide READMEs dauerhaft aktuell halten
+
+Auf Mikes Auftrag steht in [AGENTS.md](../../AGENTS.md#dokumentation-gehört-zur-änderung)
+jetzt ausdrücklich: Bei Änderungen an Funktionen, Konfiguration, Installation
+oder Betrieb immer `README.md` und `docker/README.md` gemeinsam prüfen.
+Das gilt für Codeänderungen ebenso wie für Änderungen an einer der Anleitungen.
+Gemeinsame Aussagen müssen übereinstimmen; Entwickleranleitungen bleiben im
+Root-README, Containeranleitungen in `docker/README.md`.
+
+Im Ticket beziehungsweise Abschlussbericht werden die nötigen Anpassungen
+genannt oder begründet, weshalb die andere Datei unverändert bleibt. Der
+Verifier prüft den Inhalt; bloße Änderungen an beiden Dateien reichen nicht
+als Nachweis. Weitere Projekte wie StockPortfolio sollten diese Regel in
+ihre eigene AGENTS.md übernehmen, wenn sie getrennte Beschreibungen pflegen.
+
+Die Verweise sind in beiden Richtungen vorhanden: Das Root-README verlinkt
+oben auf Docker Hub, die Docker-Beschreibung direkt nach der Einleitung auf
+das GitHub-Repository.
+
+**Doku-Abgleich:** AGENTS.md und dieser Ticketnachtrag halten die neue
+Pflegeregel fest. Beide READMEs benötigen dafür keine Inhaltsänderung, da
+die Regel den internen Bearbeitungs- und Review-Ablauf beschreibt.
+
+
+### Abschlussnachtrag: Regeln, Skills und Statusmeldung
+
+Die README-Abgleichregel in AGENTS.md und der entsprechende Ticketabschnitt
+wurden nach Runde 2 ausdrücklich von Mike beauftragt. Sie werden nun zusammen
+mit den Skill-Nachträgen regulär committet und zur Prüfung übergeben.
+
+Die geteilten Regeln liegen in PersonalSkills: `docker-conventions/SKILL.md`
+bündelt Dockerfile/Laufzeit, die tatsächlichen Make-Targets und Defaults aus
+StockInfo/StockPortfolio, Nginx nur bei Notwendigkeit oder ausdrücklichem Wunsch,
+README-/AGENTS-Abgleich, `dockerhub-readme.sh` und den verpflichtenden
+Unraid-Template-Abgleich bei Unraid-Auslieferung. Build- und Unraid-Skill
+verweisen konsistent auf getrenntes `build`/`push`. Skill-Commit `3da0d17`;
+Bootstrap-, CLI- und Makefile-Ergänzungen sind in `cf34083` gesichert.
+Beide Skills-Laufzeiten verwenden Symlinks auf dieselbe Quelle.
+
+Die Anzeige „README vorbereiten“ war missverständlich. Sie lautet jetzt nach
+Konvertierung und Größenprüfung „GitHub-Links umgewandelt, Größenlimit geprüft“.
+Es wird kein Beschreibungstext generiert; Quelle ist weiterhin docker/README.md.
+Realer deutscher Bash-Vorschaulauf erfolgreich; die Ausgabe bleibt 6.232 Bytes.
+
+Doku-Abgleich: AGENTS.md, dieses Ticket sowie die betroffenen PersonalSkills.
+Die Benutzeranleitungen beschreiben die Linkumwandlung bereits korrekt und
+brauchen für die reine Meldungskorrektur keine weitere Änderung.

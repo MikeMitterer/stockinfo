@@ -1,7 +1,7 @@
 # Aktuelle Tätigkeit
 
+- 2026-09-26 13:58:52 CEST · claude · T-77 Runde 2 approved (efeab04/a1908f7: Docker-Hub-Beschreibung + 403-Diagnose); Formalbefund: uncommitteter AGENTS.md/Ticket-Nachtrag lag außerhalb des Prüfstands, gesichert und wiederhergestellt, nicht mitgeprüft
 - 2026-09-26 · codex · T-77: Eigene docker/README.md mit GitHub-Link, Container-Anleitung und Repo-Bildern; Uploader nutzt diese Quelle. 47 Tests grün, Vorschau 6.232 Bytes. Token-Anpassung hat laut Mike den Live-403 behoben.
-
 - 2026-09-26 13:27:46 CEST · claude · T-77 Runde 1 unabhängig geprüft: approved, ein Whitespace-Fund selbst geheilt (535e7a7); Zustand auf portfolio_review an Mike
 - 2026-09-26 · codex · T-77: Defaults master und docker/preview/README.md, automatische Docker-Hub-Zielermittlung fertig; 43 Tests grün, reale Vorschau 24.929 Bytes. Erneute Übergabe über STATUS.md.
 - 2026-09-26 12:58:06 CEST · codex · T-77: CLI-Gestaltung nach Mikes Befund korrigiert; BashLib-Farben, ausgerichtete Optionen und Beispiele im echten Pseudoterminal geprüft. 34 gezielte Tests grün; abschließende Review-Übergabe wird vorbereitet.
