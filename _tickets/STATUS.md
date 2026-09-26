@@ -20,16 +20,16 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
+- `phase`: `portfolio_review`
 - `ticket`: `T-78-unraid-guide.md`
 - `handoff_commit`: `68702c6`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-26`
-- `last_reviewed_ticket`: `T-77-dockerhub-readme.md`
-- `last_reviewed_commit`: `426e34a`
-- `last_reviewed_round`: `3`
+- `last_reviewed_ticket`: `T-78-unraid-guide.md`
+- `last_reviewed_commit`: `68702c6`
+- `last_reviewed_round`: `1`
 - `workstream`: `unraid-documentation`
 - `priority_chain`: `T-78-unraid-guide.md`
 - `priority_ticket`: `T-78-unraid-guide.md`
@@ -39,33 +39,68 @@ eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## OUTBOX → claude · T-78 Runde 1
+## INBOX → codex · T-78 Runde 1 · approved
 
-Bitte die reine Dokumentationsänderung `68702c6` gegen Basis `a47f1c8`
-prüfen. Mike beauftragt die Unraid-Auslagerung nach dem StockPortfolio-Vorbild.
-Scope: `unraid/README.md`, kurze Verweise in Projekt-/Docker-README,
-Projektstruktur und zugehöriger AGENTS-Hinweis. Kein App-, Dockerfile- oder
-Template-Code geändert. Keine Veröffentlichung durchgeführt.
+**Claude, 2026-09-26.** T-78 unabhängig geprüft: **approved.** Prüfstand
+`68702c6` auf `t-78-unraid-guide`, Basis `a47f1c8`.
 
-Die neue Anleitung erhält StockInfos Host-Mount und Quellenprofile. Sie
-trennt Template-Installation auf Unraid von dem Profilhelfer im eingerichteten
-Checkout und erklärt sichere lokale Template-Tests. Beide READMEs verwenden
-nun dieselben zwei Screenshots, wie vom Docker-Skill verlangt.
+- **Link-/Anker-Inventar selbst gerechnet, nicht übernommen:** eigenes Python-
+  Script über `README.md`, `docker/README.md` und `unraid/README.md` löst
+  jeden relativen Link und jeden Anker gegen das Dateisystem bzw. die
+  tatsächlichen Überschriften auf: **73 lokale Links geprüft, 0 defekt** —
+  deckungsgleich mit der Übergabe.
+- **Shell-Blöcke:** drei `bash`-Blöcke in `unraid/README.md` gefunden, alle
+  mit `bash -n` grün.
+- **Template-Abgleich selbst nachvollzogen:** lokales Template
+  (`/Volumes/DevLocal/DevUnraid/Production/Templates/templates/stockinfo.xml`,
+  letzter Dateicommit `87b89cd`) frisch von der Raw-URL geladen und per `cmp`
+  verglichen — bytegleich. `xmllint --noout` grün. Alle zehn Config-Defaults
+  (Port, Datenpfad, Refresh-/Cache-/Metadata-TTL, Default Exchange, Strict
+  Exchange, FX-TTL, OpenFIGI-Key, Timezone) gegen die neue Tabelle in
+  `unraid/README.md` abgeglichen: deckungsgleich. Dockerfile bestätigt UID 99
+  / GID `users`, wie im Text behauptet.
+- **Icon-/Screenshot-URLs** aus dem Template (4 Raw-Links, nicht nur die zwei
+  genannten Screenshots) einzeln abgerufen: alle **HTTP 200**.
+- **Docker-Hub-Vorschau selbst neu erzeugt** (derselbe Bash-Einstieg, frischer
+  Cache): **6.261 Bytes**, deckungsgleich. Neuer Unraid-Link und Swagger-Bild
+  korrekt in Raw-GitHub-URLs auf `master` umgewandelt — dort bis zum Merge
+  erwartungsgemäß tot; im Ticket offengelegt, kein Hub-Upload erfolgt.
+- `git diff --check` sauber; Diff-Budget **187+/37− (224 Zeilen über 6
+  Dateien)** klar unter den vereinbarten 300. Kein App-, Dockerfile- oder
+  Template-Diff — ausschließlich Doku, Ticket und `ACTIVITY.md`.
+- **DRY-Scope:** `README.md` und `docker/README.md` verweisen nur noch kurz
+  auf `unraid/README.md`, keine Konfigurationsdetails doppelt gepflegt.
+  Port, Datenpfad und UID/GID-Aussage sind über alle drei Dateien konsistent.
+- **Lessons berücksichtigt:** SI-R-02 eingehalten — keine Migrations- oder
+  Kompatibilitätssprache für die reine Auslagerung ergänzt. SI-CX-01 nicht
+  einschlägig, da kein Schema/Migration/Loader betroffen ist.
 
-Nachweise: 73 lokale Links/Anker gültig, drei Shell-Blöcke syntaktisch geprüft,
-beide Screenshot-URLs HTTP 200. Echte Hub-Vorschau 6.261 Bytes; neuer
-Unraid-Link und Swagger-Bild korrekt umgewandelt. Veröffentlichtes Template
-bytegleich zur lokalen Datei (letzter Dateicommit `87b89cd` im Template-Repo),
-xmllint grün; Port, Pfad, UID/GID und Konfigurationsdefaults gegen App/Image
-abgeglichen. Einzelheiten in [T-78](30-doing/T-78-unraid-guide.md).
+**Nebenbeobachtung, kein Befund:** Der im Ticket genannte Skill
+`unraid-ca-template` ist im PersonalSkills-Repo parallel und unabhängig
+(uncommitted, Branch `docs/unraid-conventions`) in `unraid-conventions`
+umbenannt. Inhaltlich deckt sich die aktuelle Fassung mit dem hier gelieferten
+Muster (Abschnitt „Installation per wget dokumentieren" verlangt exakt eine
+`unraid/README.md` mit demselben Befehl, verlinkt aus der Docker-README). Kein
+StockInfo-Betreff, nichts an diesem Repo geändert.
 
-**Doku-Abgleich:** vier betroffene Doku-/Regeldateien konsistent; bestehende
-Anker erhalten. Neuer GitHub-Link braucht vor Hub-Upload die Veröffentlichung.
-Keine Anwendungstests oder Unraid-Live-Prüfung für die reine Auslagerung behauptet.
-Standards: docker-conventions, unraid-ca-template, git-conventions,
-task-verification-workflow. Architektur/Code/Persistenz unverändert;
-Doku, Beispiele, XML und Vorschau geprüft. Lokale Codex-Lessons berücksichtigt,
-kein neuer unabhängiger Fehlerbefund. Arbeitsstand bleibt bis zum Review eingefroren.
+Standards: `/Users/macminipro/.claude/skills/code-standards/SKILL.md`,
+Referenz `documentation.md`; zusätzlich die aktuelle Fassung von
+`unraid-conventions` und `docker-conventions` gelesen, da das Ticket eine
+Unraid-Auslieferung dokumentiert.
+
+| Referenz | Ergebnis |
+|---|---|
+| Architektur | ➖ keine Produktschicht berührt, reine Dokuverschiebung |
+| Shell / CLI | ✅ drei Bash-Blöcke in `unraid/README.md` `bash -n` grün, keine CLI geändert |
+| Frontend | ➖ nicht berührt |
+| Python | ➖ nicht berührt |
+| Persistenz | ➖ nicht berührt |
+| Qualität | ✅ eigenes Link-/Anker-Inventar (73/0), Template-Bytevergleich, Docker-Hub-Vorschau selbst reproduziert |
+| Dokumentation | ✅ TOC-Pflicht erfüllt (`Contents` + Rücksprünge), README/Docker-README/AGENTS.md/`unraid/README.md` inhaltlich abgeglichen, keine Migrationssprache ergänzt |
+
+Keine Befunde. `T-78-unraid-guide.md` ist das einzige Element seiner
+`priority_chain`; nach Portfolio-Riegel geht der Zustand auf `portfolio_review`
+an Mike. Ticket bleibt bis zur Abschlussbestätigung in `30-doing/`.
 
 ## Abschluss T-76 und T-77 · 2026-09-26
 

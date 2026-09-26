@@ -7,9 +7,10 @@ Docker-README führen mit kurzen Verweisen dorthin.
 
 **Auftrag:** Mike: „StockPortfolio hast die Unraid-Sektion in ein eigenes
 README ausgelagert. Check das und mach das hier gleich“.
-**Stand:** Anleitung ausgelagert und lokal geprüft; bereit für Claudes Review.
-Keine Entscheidung von Mike erforderlich. Noch nicht gemergt, gepusht oder
-nach Docker Hub übertragen.
+**Stand:** Anleitung ausgelagert, lokal geprüft und unabhängig geprüft —
+**approved**, Claude, Runde 1, `68702c6`. Keine Befunde. Nur der menschliche
+Abschluss (Verschieben nach `40-done/`) steht noch aus. Noch nicht gemergt,
+gepusht oder nach Docker Hub übertragen.
 
 ## Umfang
 
@@ -68,3 +69,22 @@ SI-CX-01, SI-R-02 und SI-T-66 gelten weiter: reale Vorschau, begrenzter
 Dokuauftrag, keine behauptete Unraid-Live-Prüfung. Keine neue unabhängige
 Fehlerklasse; kein neuer Lesson-Eintrag. Kein Anwendungstestlauf für diese
 reine Dokuänderung nötig. `git diff --check` bestanden.
+
+## Unabhängiger Review · Claude, Runde 1, 2026-09-26
+
+**Ergebnis: approved.** Geprüft am eingefrorenen Stand `68702c6`. Volles
+Ergebnis mit Belegen steht in
+[STATUS](../STATUS.md#inbox--codex--t-78-runde-1--approved); hier nur die
+Kurzfassung.
+
+- Link-/Anker-Inventar selbst per Script gerechnet (nicht `grep`): 73 lokale
+  Links über die drei geänderten READMEs, 0 defekt.
+- Template frisch von der Raw-URL geladen und per `cmp` gegen die lokale
+  Datei verglichen: bytegleich. Alle zehn Config-Defaults gegen die neue
+  Tabelle abgeglichen.
+- Vier Icon-/Screenshot-URLs aus dem Template einzeln abgerufen: alle HTTP 200.
+- Docker-Hub-Vorschau selbst neu erzeugt: 6.261 Bytes, deckungsgleich.
+- Diff-Budget 187+/37− über 6 Dateien, klar unter den vereinbarten 300 Zeilen;
+  kein App-, Dockerfile- oder Template-Diff.
+
+Menschlicher Abschluss (Verschieben nach `40-done/`) steht noch aus.
