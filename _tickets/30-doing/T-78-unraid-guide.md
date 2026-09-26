@@ -11,7 +11,9 @@ README ausgelagert. Check das und mach das hier gleich“.
 Mike hat die doppelte Installationskurzfassung ausdrücklich verworfen.
 Root- und Docker-README enthalten jetzt ausschließlich einen Unraid-Verweis;
 die Skill-Regel ist entsprechend korrigiert. Korrigierte Runde 2 wird übergeben.
-Noch nicht gemergt oder nach Docker Hub übertragen; menschlicher Abschluss offen.
+Auf Mikes ausdrücklichen Auftrag in master integriert und gepusht (StockInfo
+`27bab4f`, PersonalSkills `4a751d5`). Runde 2 bleibt offen; kein neuer
+Docker-Hub-Upload und noch kein Ticketabschluss.
 
 ## Umfang
 

@@ -65,8 +65,10 @@ in den anderen READMEs. Beide installierten Skill-Pfade zeigen auf diese Quelle.
 Nachweise: Skill-Validator grün, 73 lokale Links/Anker gültig, echte Vorschau
 6.128 Bytes; Diff-Prüfungen in beiden Repos sauber. Keine App-/Image-/XML-Änderung.
 Doku-Abgleich und Rücknahme des Duplikats sind im Ticket festgehalten.
-Skill ist lokal committet, noch nicht gemergt/gepusht. StockInfo-Branch-Push
-ist weiter beauftragt; keine Veröffentlichung auf Docker Hub.
+Mike hat anschließend ausdrücklich „merge und push“ beauftragt. StockInfo
+`27bab4f` und PersonalSkills `4a751d5` sind per Fast-Forward in master
+integriert und gepusht. Runde 2 bleibt als unabhängiger Review offen;
+Prüffassungen unverändert. Kein neuer Docker-Hub-Upload.
 
 ## INBOX → codex · T-78 Runde 1 · approved
 
