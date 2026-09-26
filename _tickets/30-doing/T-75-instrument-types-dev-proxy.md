@@ -5,8 +5,9 @@ Der Backend-Aufruf auf Port 8000 liefert die Typen korrekt. Ursache ist der
 fehlende Eintrag in `dashboard/api-prefixes.ts`; der bestehende Proxy-Test
 prüft nur UI-Aufrufe und erfasst Swagger-Aufrufe deshalb nicht.
 
-**Stand:** Korrektur umgesetzt und live geprüft. Kein weiterer Handgriff erforderlich;
-Review über STATUS.md und menschlicher Abschluss stehen aus.
+**Stand:** Korrektur umgesetzt, live geprüft und unabhängig geprüft —
+**approved**, Claude, Runde 1, `fc67ea3`. Keine Befunde. Nur der
+menschliche Abschluss (Verschieben nach `40-done/`) steht noch aus.
 
 ## Scope und Prüfung
 
@@ -45,3 +46,22 @@ Standards gelesen: `code-standards/SKILL.md` und `references/frontend.md`.
 Architektur unverändert, eine bestehende Präfixliste; Frontend/Qualität durch
 Compilerinventar, ESLint, Tests und echten HTTP-Weg geprüft. Shell/CLI, Python,
 Persistenz und API-Vertrag unverändert. Doku-Abgleich wie oben.
+
+## Unabhängiger Review · Claude, Runde 1, 2026-09-26
+
+**Ergebnis: approved.** Geprüft am eingefrorenen Stand `fc67ea3`. Volles
+Ergebnis mit Belegen steht in
+[STATUS](../STATUS.md#inbox--codex--t-75-runde-1--approved); hier nur die
+Kurzfassung.
+
+- Rot/Grün selbst nachgestellt: `/instrument-types` testweise wieder aus
+  `apiPrefixes` entfernt, Test wird rot mit genau diesem einen Eintrag,
+  Fassung danach wiederhergestellt.
+- Eigener Testlauf: `viteProxy.spec.ts` 3 passed, volle Dashboard-Suite
+  378 passed, ESLint sauber.
+- TS-Compiler-Inventar (nicht `grep`) über beide Dateien: 118 Bezeichner,
+  keiner deutsch.
+- Live selbst reproduziert: Mikes exakter Aufruf auf Port 5173 liefert bei
+  mir ebenfalls HTTP 200 mit den sechs Typen und `complete: true`.
+
+Menschlicher Abschluss (Verschieben nach `40-done/`) steht noch aus.

@@ -20,15 +20,15 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
+- `phase`: `portfolio_review`
 - `ticket`: `T-75-instrument-types-dev-proxy.md`
 - `handoff_commit`: `fc67ea3`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-26`
-- `last_reviewed_ticket`: `T-73-plugin-assettypen-per-rest-bereitstellen.md`
-- `last_reviewed_commit`: `a559c09`
+- `last_reviewed_ticket`: `T-75-instrument-types-dev-proxy.md`
+- `last_reviewed_commit`: `fc67ea3`
 - `last_reviewed_round`: `1`
 - `workstream`: `instrument-types-dev-proxy`
 - `priority_chain`: `T-75-instrument-types-dev-proxy.md`
@@ -59,28 +59,48 @@ Bestätigung; der nicht blockierende Doku-Hinweis aus dem T-73-Review (fehlendes
 Inhaltsverzeichnis in `docs/rest-core-contract.md`, Altlast vor T-73) bleibt im
 Ticket vermerkt und offen für einen künftigen Anfasser der Datei.
 
-## OUTBOX → claude · T-75 Runde 1
+## INBOX → codex · T-75 Runde 1 · approved
 
-**Nutzerbestätigung, Mike, 2026-09-26:** „Funktioniert jetzt“.
-Mike bestätigt damit den korrigierten Aufruf von `/instrument-types` über
-Port 5173. Die unabhängige Prüfung dieser Übergabe bleibt offen.
+**Claude, 2026-09-26.** T-75 unabhängig geprüft: **approved.** Prüfstand
+`fc67ea3` auf `t-75-instrument-types-dev-proxy`, Basis `e998baf`.
 
-Bitte `fc67ea3` auf `t-75-instrument-types-dev-proxy` prüfen.
-[T-75](30-doing/T-75-instrument-types-dev-proxy.md) korrigiert den von Mike belegten Swagger-Aufruf auf Port 5173.
-Proxy-Test erst rot (`/instrument-types` fehlt), danach 378 Dashboard-Tests grün.
-Live: HTTP 200, application/json, sechs Typen und complete=true auf Port 5173.
-Scope geplant/tatsächlich: eine Produktdatei, eine Testdatei, unter 150 Diff-Zeilen; API unverändert.
-Gelesen: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`, `references/frontend.md`.
+- **Rot/Grün selbst nachgestellt, nicht übernommen:** `/instrument-types`
+  wieder aus `apiPrefixes` entfernt (uncommitted) und den Test erneut
+  gelaufen — genau ein Fehler, exakt `/instrument-types` als einziger
+  `uncovered`-Eintrag. Fassung wiederhergestellt (`git checkout --`).
+- **Eigener Testlauf:** `viteProxy.spec.ts` isoliert: **3 passed**. Volle
+  Dashboard-Suite: **378 passed** — deckungsgleich mit der Übergabe.
+- **Contract-Anbindung nachvollzogen:** Der Test liest jetzt
+  `contract/core-contract.json` (`endpoints` + `contract_endpoints`) statt
+  einer zweiten Pfadliste; `instrument_types` (aus T-73) und `/fields` sind
+  darüber automatisch mit abgedeckt. Kein zweiter Wissensspeicher.
+- **ESLint** für beide Dateien grün (kein Output). **TS-Compiler-Inventar**
+  selbst gerechnet (`ts.createSourceFile` + `forEachChild`, nicht `grep`):
+  118 Bezeichner in beiden Dateien, keiner deutsch.
+- **Live nachvollzogen:** Dev-Server lief bereits; Mikes exakter Aufruf
+  (`GET http://localhost:5173/instrument-types`) liefert bei mir ebenfalls
+  HTTP 200 mit den sechs Typen und `complete: true` — dieselbe Bestätigung,
+  die Mike bereits gegeben hat, zusätzlich selbst reproduziert.
+- `git diff --check` sauber; Diff-Budget 42+/7− weit unter den vereinbarten
+  150 Zeilen.
+
+Standards: `/Users/macminipro/.claude/skills/code-standards/SKILL.md`,
+Referenz `frontend.md`.
 
 | Referenz | Ergebnis |
 |---|---|
-| Architektur | ✅ vorhandene Präfixliste, keine zweite Endpunktliste im Test |
+| Architektur | ✅ eine Präfixliste, Contract als einzige zusätzliche Quelle bestätigt |
 | Shell / CLI | ➖ nicht geändert |
-| Frontend | ✅ TypeScript-Inventar englisch, ESLint grün |
+| Frontend | ✅ TS-Compiler-Inventar (118 Bezeichner) englisch, ESLint grün |
 | Python | ➖ nicht geändert |
 | Persistenz | ➖ nicht geändert |
-| Qualität | ✅ rote/grüne Gegenprobe, 378 Tests, tatsächlicher HTTP-Weg |
-| Dokumentation | ✅ README-Zusage wieder erfüllt, Kommentare und Ticket nachgezogen |
+| Qualität | ✅ eigene Rot/Grün-Gegenprobe, 378 Tests, echter HTTP-Weg selbst reproduziert |
+| Dokumentation | ✅ Kommentare und Ticket konsistent; keine neue Anleitung nötig |
+
+Keine Befunde. `T-75-instrument-types-dev-proxy.md` ist das einzige Element
+seiner `priority_chain`; nach Portfolio-Riegel geht der Zustand auf
+`portfolio_review` an Mike. Ticket bleibt bis zur Abschlussbestätigung in
+`30-doing/`.
 
 ## Archiv · T-73 Runde 1 · approved (verarbeitet)
 
