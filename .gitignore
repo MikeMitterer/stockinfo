@@ -7,6 +7,7 @@ __pycache__/
 uvicorn.log
 .overmind.sock
 docker/logs/
+docker/preview/
 docker/.last-build-tag
 docker/.last_login
 .libs/

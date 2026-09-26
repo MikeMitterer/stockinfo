@@ -420,22 +420,20 @@ readability first; only Docker Hub receives the credentials.
 Preview without Docker Hub credentials (initial setup may download packages):
 
 ```bash
-./.libs/ProjectTools/src/bash/dockerhub-readme.sh --preview --ref master \
-  -o docker/logs/dockerhub-readme.md
-# Output: docker/logs/dockerhub-readme.md
+./.libs/ProjectTools/src/bash/dockerhub-readme.sh --preview
+# Output: docker/preview/README.md
 ```
 
 If the README upload fails, `make push` fails too, but the image is already
 published. Retry only the description with:
 
 ```bash
-./.libs/ProjectTools/src/bash/dockerhub-readme.sh --publish --ref master \
-  -r mangolila/stockinfo
+./.libs/ProjectTools/src/bash/dockerhub-readme.sh --publish
 ```
 
-Options: `--username` overrides the namespace as login user; `--ref` selects
-the GitHub branch; `--description` changes the otherwise preserved short
-summary. The script verifies the saved overview and enforces the 25,000-byte
+Defaults: repository from project settings, branch `master`. Override with
+`--repository`, `--ref`, or `--output`. Use `--username` for an organization
+login and `--description` to change the short summary. The script verifies the saved overview and enforces the 25,000-byte
 limit without truncation. Run without arguments for help.
 
 [↑ Contents](#contents)

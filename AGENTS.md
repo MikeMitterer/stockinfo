@@ -118,7 +118,7 @@ Mike muss betroffene Anleitungen nicht eigens nennen.
 Docker-Hub-Image-Push auch das README. Die konvertierte Fassung darf höchstens
 **25.000 UTF-8-Bytes** umfassen; die absoluten Bild- und Dokumentlinks zählen
 mit. Nach README-Änderungen die Vorschau prüfen:
-`./.libs/ProjectTools/src/bash/dockerhub-readme.sh --preview --ref master -o docker/logs/dockerhub-readme.md`.
+`./.libs/ProjectTools/src/bash/dockerhub-readme.sh --preview`.
 Das Script prüft die Grenze und schneidet nichts ab. Längere Details in
 verlinkte Dokumente auslagern; das README bleibt der kurze Projekteinstieg.
 

@@ -74,9 +74,9 @@ beliebigen Verbraucherprojekt; Namespace, Repository und Branch ersetzen:
 
 ```bash
 ./.libs/ProjectTools/src/bash/dockerhub-readme.sh \
-  --preview --ref main --output /tmp/dockerhub-readme.md
+  --preview
 ./.libs/ProjectTools/src/bash/dockerhub-readme.sh \
-  --publish --ref main --repository namespace/project
+  --publish
 ```
 
 | Parameter | Bedeutung |
@@ -84,12 +84,12 @@ beliebigen Verbraucherprojekt; Namespace, Repository und Branch ersetzen:
 | `--project-dir` / `-C` | Projektwurzel; Vorgabe ist das Arbeitsverzeichnis, nicht der Scriptort |
 | `--readme` / `-s` | Quelldatei relativ zur Projektwurzel; Vorgabe `README.md` |
 | `--github-repository` / `-g` | GitHub `owner/repository`; sonst aus dem `origin` des Verbrauchers |
-| `--ref` / `-b` | Erforderlicher, bereits veröffentlichter GitHub-Branch oder Commit |
-| `--repository` / `-r` | Docker-Hub-Repository; beim Upload erforderlich |
+| `--ref` / `-b` | Bereits veröffentlichter GitHub-Branch oder Commit; Vorgabe `master` |
+| `--repository` / `-r` | Docker-Hub-Repository; überschreibt die automatische Ermittlung |
 | `--username` / `-u` | Login-Benutzer, falls abweichend vom Docker-Hub-Namespace |
 | `--token-file` / `-t` | Lokale Token-Datei; Vorgabe siehe unten |
 | `--description` / `-d` | Optionale Kurzbeschreibung; sonst bleibt sie unverändert |
-| `--output` / `-o` | Vorschauziel, relativ zum Projekt; Vorgabe `README.dockerhub.md` |
+| `--output` / `-o` | Vorschauziel, relativ zum Projekt; Vorgabe `docker/preview/README.md` |
 
 Keine Argumente zeigen Hilfe ohne Installation. Die Vorschau braucht keinen
 Token; nur die erstmalige Paketinstallation kann Netz benötigen.
@@ -241,7 +241,7 @@ auf den gemeinsamen Bash-Einstieg. Die alten Commit-/Hash-Angaben oben sind
 die zurückgenommene Erstübergabe; aktuelle Prüffassung steht in STATUS.md.
 
 
-**Aktuelle Prüfung nach Bash-/Isolationsauftrag:** 23 ProjectTools-Tests und
+**Zwischenprüfung nach Bash-/Isolationsauftrag:** 23 ProjectTools-Tests und
 7 StockInfo-Integrationstests bestanden. ShellCheck für den neuen Bash-Einstieg,
 Bash-Syntax, Ruff Check/Format und beide Skill-Validatoren bestanden.
 Aktuelles konvertiertes README: 24.980 UTF-8-Bytes. Test-Installationen erfolgten
@@ -251,9 +251,62 @@ und zu fehlenden Eingaben sind durch CLI-Tests abgedeckt. Kein Live-Upload.
 Doku-Abgleich schließt jetzt ausdrücklich auch die isolierte Werkzeugumgebung
 und die prinzipielle Vorgehensweise im code-standards-Skill ein.
 
-Aktueller ProjectTools-Prüfstand: `3005e11` (Vorgänger `3c4e025`).
+Zwischenstand ProjectTools: `3005e11` (Vorgänger `3c4e025`).
 
-Aktuelle Skill-Prüfstände (SHA-256, lokale Dateien außerhalb von Git):
+Damals erfasste Skill-Prüfstände (aktuelle Werte siehe STATUS.md):
 - `makefile-conventions/SKILL.md`: `d9e6ee6615e28ae5336a71a1810b305a4bc90e6ed7ed4e1a8d96ee1d6bd10c66`
 - `code-standards/SKILL.md`: `93b2b62cbacc9ac73f0188afd8fb97146bed4a90db54e9bc0f3d96bc5776c7c6`
 - `code-standards/references/python.md`: `97829547aefe04bc9e379dffb6b853a912a90e57a80fcd5d44184ae5397d5b53`
+
+
+### CLI-Gestaltung nach Mikes Befund
+
+Der bisherige Standards-Nachweis war zu pauschal: Technische Tests und native
+Parser-Hilfe belegten nicht die verlangte Farbgestaltung und das Look-and-feel.
+Mike hat dies ausdrücklich beanstandet. Die erneute Review-Übergabe wurde deshalb
+vor Freigabe weiter zurückgehalten.
+
+Jetzt: Bash reicht die BashLib-Farben an Python weiter. Der native argparse-Parser
+bleibt die einzige Quelle der Optionen. Ein Formatter richtet Kurzoption, `|`,
+Langoption und Erklärung aus; Gruppen „Aktionen“, „Repository“, „Dateien“, „Hilfe“
+und Beispiele gliedern die Ausgabe. Überschriften sind hellblau, Optionen und
+Pfade gelb, Beispiele/Erfolg grün, Fehler rot. Die Hilfe nennt den tatsächlich
+aufgerufenen Bash-Einstieg. `NO_COLOR`, Pipes und nicht-interaktive Ausgaben
+bleiben ohne ANSI-Sequenzen. Es kommt keine neue Python-Abhängigkeit hinzu.
+
+Beleg: tatsächliche Hilfe und Vorschau im Pseudoterminal betrachtet. Vier
+zusätzliche CLI-Prüffälle prüfen Terminalfarben, feste Spalten, Beispiele,
+NO_COLOR, Pipe-Ausgabe und rote Fehlermeldung ohne Traceback. Aktueller Stand:
+**27 ProjectTools-Tests plus 7 StockInfo-Tests bestanden (34 insgesamt)**.
+Ruff Check/Format und ShellCheck bestanden. Die frühere Behauptung vollständiger
+CLI-Konformität ist damit durch konkrete Ausgaben und Tests ersetzt.
+
+
+### Defaults und Zielermittlung für weitere Projekte
+
+Vorschau: `--preview` reicht im Projektverzeichnis aus. Quelle ist `README.md`,
+GitHub-Branch `master`, Ziel `docker/preview/README.md`. Fehlende Zielordner
+werden angelegt; `--output` überschreibt den Pfad. StockInfo ignoriert den
+Vorschauordner in Git. Verbraucher wie StockPortfolio sollten das ebenfalls tun.
+
+Upload: `--publish` ermittelt das Ziel aus `DOCKERHUB_REPOSITORY`, sonst aus
+`IMAGE_NAME` (Umgebung/Makefile) und `NAMESPACE` + `NAME` in `docker/build.sh`.
+Die Werte müssen zusammen genau ein Repository ergeben. Das Script liest nur
+literale Zuweisungen und führt keine Buildscripts oder Make-Ausdrücke aus.
+Fehlende, berechnete oder widersprüchliche Werte erfordern `--repository`;
+der explizite Parameter hat Vorrang. Das GitHub-Repository bestimmt keine
+Docker-Hub-Namensräume. Docker-Hub-Präfixe und Tags werden entfernt, andere
+Registries abgewiesen. Der Push-Hook übergibt weiterhin sein tatsächliches Ziel.
+
+Doku-Abgleich: StockInfo README, AGENTS und diese Übertragungsnotizen sowie
+ProjectTools README und Makefile-Skill beschreiben die aktuellen Defaults.
+
+
+Abschließende Prüfung: **36 ProjectTools-Tests + 7 StockInfo-Tests = 43 grün**.
+Ruff Check/Format, ShellCheck und Diff-Whitespace-Prüfung bestanden. AST-Inventar
+aller Python-Bezeichner geprüft: englisch, außer erlaubten deutschen Testnamen.
+Echter Bash-Aufruf mit nur `--preview` erzeugt `docker/preview/README.md`
+mit **24.929 UTF-8-Bytes**. Die statische Erkennung an den tatsächlichen
+Projektdateien liefert `mangolila/stockinfo` und `mangolila/stockportfolio`.
+Keine echten Zugangsdaten gelesen, kein Live-Upload. Aktuelle Commitstände
+und Skill-Hashes stehen in der erneuten Review-Übergabe in STATUS.md.

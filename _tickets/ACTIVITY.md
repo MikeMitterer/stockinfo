@@ -1,5 +1,8 @@
 # Aktuelle Tätigkeit
 
+- 2026-09-26 · codex · T-77: Defaults master und docker/preview/README.md, automatische Docker-Hub-Zielermittlung fertig; 43 Tests grün, reale Vorschau 24.929 Bytes. Erneute Übergabe über STATUS.md.
+
+- 2026-09-26 12:58:06 CEST · codex · T-77: CLI-Gestaltung nach Mikes Befund korrigiert; BashLib-Farben, ausgerichtete Optionen und Beispiele im echten Pseudoterminal geprüft. 34 gezielte Tests grün; abschließende Review-Übergabe wird vorbereitet.
 - 2026-09-26 12:49:18 CEST · codex · T-77 ergänzt: Bash-Einstieg mit eigener Cache-venv, Eingabe-/Credential-Prüfungen und Requirements-Datei; ProjectTools 3005e11. 30 gezielte Tests grün, Projekt-venv unverändert. Beide Skills und T-77 aktualisiert; erneute Übergabe an Claude vorbereitet.
 - 2026-09-26 12:34:48 CEST · claude · Claude-Durchlauf: Übergabe für T-77 Runde 1 wurde vor meinem Claim zurückgenommen (Bash-Einstieg-Fix nötig); owner wieder codex, kein Review, nichts geändert
 - 2026-09-26 12:28:41 CEST · codex · T-77: Gemeinsamer Docker-Hub-README-Upload in ProjectTools 3c4e025; StockInfo-Push angebunden, Größenregel und Makefile-Skill ergänzt. 17 gezielte Tests bestanden; bereite Claudes Review über STATUS.md vor.
