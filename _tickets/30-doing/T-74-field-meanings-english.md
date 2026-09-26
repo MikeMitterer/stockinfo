@@ -4,9 +4,10 @@
 Die technischen Beschreibungen sollen einheitlich Englisch sein. Beispiel:
 `quote.price` erklärt den letzten bekannten Kurs künftig auf Englisch.
 
-**Stand:** Umsetzung und gezielte Vertragsprüfung abgeschlossen. Mike hat die feste Sprache bestätigt:
-„Passt - meaning auf Englisch“. Aktuell ist kein weiterer Handgriff nötig.
-Unabhängiger Review und menschlicher Abschluss stehen noch aus.
+**Stand:** Umsetzung, gezielte Vertragsprüfung und unabhängiger Review
+abgeschlossen — **approved**, Claude, Runde 1, `fc0063e`. Mike hat die feste
+Sprache bestätigt: „Passt - meaning auf Englisch“. Keine Befunde. Nur der
+menschliche Abschluss (Verschieben nach `40-done/`) steht noch aus.
 
 ## Scope-Vertrag
 
@@ -25,7 +26,7 @@ Abhängigkeiten oder Änderungen an Kursdaten und UI-Übersetzungen.
 
 | # | Prüfung | Nachweis | AI |
 |---|---|---|---|
-| 1 | Alle Beschreibungen englisch, Aussagen erhalten | 61 Core- und 21 Plugin-Einträge vollständig übersetzt und gelesen; JSON-/AST-Vergleich bestätigt ausschließlich Text- und Versionsänderung | ➖ |
+| 1 | Alle Beschreibungen englisch, Aussagen erhalten | 61 Core- und 21 Plugin-Einträge vollständig übersetzt und gelesen; JSON-/AST-Vergleich bestätigt ausschließlich Text- und Versionsänderung; vom Verifier mit eigenem Python-Strukturvergleich (Core) und eigenem AST-Bezeichnerinventar (Plugin) nachgerechnet, 0 verbliebene deutsche Zeichen | ✅ |
 | 2 | Route liefert feste Sprache | Sechs API-Fälle: beide Quellen, jeweils ohne Sprachheader sowie mit `en` und `de`; vor der Änderung rot, danach grün | ✅ |
 | 3 | Vertrag und Pflichtfelder bleiben konsistent | 120 Tests bestanden, 29 bestehende Auslassungen; Snapshot ohne Aktualisierungsmodus geprüft | ✅ |
 | 4 | Doku und Cacheversion passen zur Änderung | Drei Anleitungen abgeglichen; Version 4.3.1, Snapshot unterscheidet sich nur in der Version | ✅ |
@@ -91,4 +92,35 @@ Aktivitätsmeldungen über den globalen Helfer geschrieben. Der ältere lokale
 Workflow dokumentiert die globale Übernahmefassung noch nicht; eine allgemeine
 Board-Migration ist nicht Teil von T-74 und bleibt als gesonderter Auftrag offen.
 
-Unabhängiger Review: **ausstehend**, zuständig ist Claude laut STATUS.
+## Unabhängiger Review · Claude, Runde 1, 2026-09-26
+
+**Ergebnis: approved.** Geprüft am eingefrorenen Stand `fc0063e`
+(identisch mit `HEAD~1` zum Prüfzeitpunkt, kein weiterer Produktcommit).
+Volles Ergebnis mit Belegen steht in
+[STATUS](../STATUS.md#inbox--codex--t-74-runde-1--approved); hier nur die
+Kurzfassung.
+
+- Eigener Python-Strukturvergleich von `core-contract.json` gegen den
+  Vorgänger (`meaning` und `core_version` maskiert): identisch, nur diese
+  beiden Felder geändert. 61 Core- plus 21 Plugin-Einträge einzeln
+  ausgezählt und auf verbliebene deutsche Sonderzeichen geprüft: 0 Treffer.
+- Eigener AST-Vergleich von `app/contract.py` (String-Konstanten maskiert):
+  identisch, keine Logikänderung. Eigenes Bezeichnerinventar über
+  `ast.Name`/`ast.arg`/Funktions- und Klassennamen: 44 Bezeichner, keiner
+  deutsch.
+- Testbefehl aus diesem Ticket selbst erneut ausgeführt:
+  **120 passed, 29 skipped**, deckungsgleich mit der Übergabe. `ruff check`,
+  `ruff format --check` und `git diff --check` erneut grün.
+- Drei Doku-Anpassungen inhaltlich gegen den tatsächlichen Response-Text
+  geprüft, nicht nur auf Vorhandensein.
+- Die feste, nicht sprachheader-abhängige `meaning`-Sprache ist Mikes
+  ausdrückliche Entscheidung und fällt unter die Ausnahme für stabile
+  technische Vertragsfelder ohne Endnutzer-Publikum — kein i18n-Befund.
+
+Keine Befunde. Die im Ticket bereits selbst benannte offene Board-Konvention
+(`AGENT-WORKFLOW.md` dokumentiert den Übernahmestand
+`2026-09-11-lessons-follow-through` noch nicht, `STATUS.md` verlinkt
+`ACTIVITY.md` nicht) bleibt außerhalb des T-74-Scope offen sichtbar; sie
+blockiert diese Freigabe nicht.
+
+Menschlicher Abschluss (Verschieben nach `40-done/`) steht noch aus.

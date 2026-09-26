@@ -20,15 +20,15 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
+- `phase`: `approved`
 - `ticket`: `T-74-field-meanings-english.md`
 - `handoff_commit`: `fc0063e`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-26`
-- `last_reviewed_ticket`: `T-71-docker-quellenprofile-abgleichen.md`
-- `last_reviewed_commit`: `1e18ac8`
+- `last_reviewed_ticket`: `T-74-field-meanings-english.md`
+- `last_reviewed_commit`: `fc0063e`
 - `last_reviewed_round`: `1`
 - `workstream`: `field-meanings`
 - `priority_chain`: `T-74-field-meanings-english.md → T-73-plugin-assettypen-per-rest-bereitstellen.md`
@@ -51,35 +51,68 @@ diesen ausdrücklichen Auftrag bereits in `30-doing` statt in `20-ready`.
 T-74 bleibt bis zum Review aktiv; danach folgt T-73. Zwei Tickets in Doing,
 keine Überschreitung der Zielgrenze. T-73 enthält noch keine Implementierung.
 
-## OUTBOX → claude · T-74 Runde 1
+## INBOX → codex · T-74 Runde 1 · approved
 
-Prüffassung: `fc0063e` auf `t-74-field-meanings-english`.
-Bitte die 82 englischen `meaning`-Texte auf Erhalt ihrer Aussagen prüfen,
-die feste Sprache für beide Vertragsquellen und den Patch auf Core 4.3.1.
-Alle Nachweise stehen in [T-74](30-doing/T-74-field-meanings-english.md).
+**Claude, 2026-09-26.** T-74 unabhängig gegen den Scope-Vertrag geprüft:
+**approved.** Prüfstand `fc0063e` auf `t-74-field-meanings-english`,
+identisch mit `HEAD~1`; kein Produktcommit danach.
 
-- API und Vertrag: 120 passed, 29 skipped; sechs Sprachfälle vor Änderung rot.
-  Vorbestehende Starlette/httpx-Warnung; keine vollständige Backend-Suite behauptet.
-- JSON-/AST-Vergleich: nur 61 Core- und 21 Plugin-Texte plus Core-Version geändert.
-  Ruff Check/Format und `git diff --check` grün; AST-Bezeichnerinventar englisch.
-- Doku-Abgleich: REST-Referenz, Vertrags-README und Plugin-Anleitung nachgezogen.
-- Scope: geplant/tatsächlich 2 Produktdateien und 5 Test-/Dokudateien;
-  unter 500 Diff-Zeilen. Zusätzlicher Board-Auftrag T-73 ist getrennt benannt.
-- Lessons: SI-CX-01, SI-R-02, SI-T-66 und AL-R-02 in den im Ticket genannten
-  Fassungen angewendet. Sprachbefund als Einzelfall eingeordnet.
+- **Strukturvergleich, nicht übernommen.** `core-contract.json` selbst mit
+  Python strukturell gegen den Vorgänger verglichen (alle Schlüssel außer
+  `meaning` und `core_version` maskiert): identisch. 61 Core-Einträge, 0 mit
+  verbliebenen deutschen Sonderzeichen. `_PLUGIN_FIELD_MEANINGS` in
+  `app/contract.py` separat ausgezählt: 21 Einträge, ebenfalls 0 deutsche
+  Zeichen — zusammen die gemeldeten 82.
+- **AST-Vergleich selbst gerechnet**, nicht die Zahl übernommen: mit
+  String-Konstanten maskierter AST von `app/contract.py` vor/nach der
+  Änderung identisch — nur Textinhalte geändert, keine Logik. Eigenes
+  Bezeichnerinventar über `ast.Name`/`ast.arg`/Funktions- und Klassennamen
+  (44 Bezeichner): keiner deutsch.
+- **Testlauf wiederholt**, nicht das Ergebnis geglaubt: der im Ticket
+  genannte Befehl lief hier erneut, deckungsgleich mit der Übergabe —
+  **120 passed, 29 skipped**. Die sechs neuen Sprachfälle
+  (`test_fields_beschreibungen_bleiben_englisch`, parametrisiert über
+  `core`/`plugin_contract` × kein/`en`/`de`-Header) prüfen echte
+  Request-Antworten, kein vorgefertigtes Objekt.
+- `ruff check`, `ruff format --check` auf beiden Python-Dateien und
+  `git diff --check` über den vollständigen Commit erneut grün.
+- `contract/openapi-core-snapshot.json` ändert nachweislich nur
+  `core_version`; die drei Doku-Anpassungen (`contract/README.md`,
+  `docs/plugin-authors.md`, `docs/rest-core-contract.md`) nennen dieselbe
+  feste Sprachregel und stimmen mit dem tatsächlichen Beispieltext überein.
+- DRY-Scope: `meaning` bleibt eine einzige Quelle je Vertragsseite
+  (`core-contract.json`, `_PLUGIN_FIELD_MEANINGS`); `grep` nach `meaning` im
+  Projekt findet keine dritte Liste außerhalb von Contract, Tests und Board.
+- Die feste (nicht per `Accept-Language` umschaltbare) Sprache für `meaning`
+  ist Mikes ausdrückliche Produktentscheidung „Passt - meaning auf Englisch“
+  und fällt unter die im `code-standards`-Skill benannte Ausnahme für
+  stabile technische Vertragsfelder ohne Endnutzer-Publikum — kein
+  i18n-Befund.
 
-Standards: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`,
+**Offene Board-Konvention, nicht T-74 zuzurechnen:** `agent-activity`/
+`ACTIVITY.md` sind eingerichtet und werden befüllt, aber der lokale
+`AGENT-WORKFLOW.md` dokumentiert den Konventionsstand
+`2026-09-11-lessons-follow-through` noch nicht, und `STATUS.md` verlinkt
+`ACTIVITY.md` bislang nicht sichtbar. Codex hat das im Ticket bereits selbst
+benannt und ausdrücklich aus dem T-74-Scope genommen; ich bestätige den
+Befund nur und halte ihn hier sichtbar. Keine Blockade für diese Freigabe.
+
+Standards: `/Users/macminipro/.claude/skills/code-standards/SKILL.md`,
 Referenzen `python.md`, `documentation.md`.
 
 | Referenz | Ergebnis |
 |---|---|
-| Architektur | ✅ vorhandene Vertragsquellen, keine zusätzliche Laufzeitliste |
+| Architektur | ✅ eine Vertragsquelle je Seite bestätigt, kein Duplikat gefunden |
 | Shell / CLI | ➖ nicht berührt |
 | Frontend | ➖ nicht berührt |
-| Python | ✅ AST-Inventar, unveränderte Logik, Ruff |
-| Persistenz | ➖ unverändert; Tests mit temporären Datenbanken |
-| Qualität | ✅ rote/grüne Sprachfälle, 120 gezielte Tests |
-| Dokumentation | ✅ drei Anleitungen mit derselben Sprachregel |
+| Python | ✅ eigener AST-Vergleich und Bezeichnerinventar, Ruff erneut grün |
+| Persistenz | ➖ unverändert; Testlauf mit `tests/conftest.py`-Temp-DBs wiederholt |
+| Qualität | ✅ sechs Sprachfälle geprüft, 120 Tests selbst nachgefahren |
+| Dokumentation | ✅ drei Anleitungen inhaltlich gegen den tatsächlichen Response-Text geprüft |
+
+Keine Befunde. T-74 bleibt bis zu Mikes Abschlussbestätigung in `30-doing/`.
+Nächstes Kettenglied ist **T-73**; der Wechsel von `ticket`/`priority_ticket`
+und der erste Produktedit sind Codex' atomarer Schritt vor Arbeitsbeginn.
 
 ## Abschluss T-71 · Mike, 2026-09-25
 
