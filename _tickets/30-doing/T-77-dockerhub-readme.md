@@ -330,3 +330,27 @@ release-notes.md` (`535e7a7`) behoben und erneut geprüft (43 Tests grün,
 
 Kein weiterer Befund. T-77 ist das einzige Element seiner `priority_chain`;
 Zustand geht auf `portfolio_review` an Mike.
+
+
+### Laufzeitnachtrag: HTTP 403 beim ersten echten Upload
+
+Mike meldet einen 403 bei `dockerhub-readme.sh -p`. Der bisherige Fehlertext
+unterscheidet nicht zwischen Anmeldung, Änderung und Rücklesen. Die lokale
+HTTP-Gegenprobe bestätigt diese Diagnose-Lücke für alle drei Schritte.
+Die neue Meldung nennt den jeweiligen Schritt mit POST/PATCH/GET und gibt
+bei 403 einen Hinweis auf Login, Repository-Zugriff und Token-Rechte.
+Antwortkörper und Auth-Header bleiben verborgen. Drei neue Tests prüfen
+Schrittunterscheidung und Geheimnisschutz (vor Korrektur alle drei rot).
+
+Die Ursache des tatsächlichen Docker-Hub-403 ist noch unbestätigt. Für den
+Beschreibungs-Upload benötigt ein PAT Read, Write, Delete; reine Push-Rechte
+reichen dafür nicht aus (Referenz: README von peter-evans/dockerhub-description).
+Mike wurde nur nach der Berechtigungsstufe gefragt; keine echten Tokens
+wurden ausgelesen und kein echter Upload zur Diagnose ausgelöst.
+
+Doku-Abgleich: Die Token-Anforderung steht bereits in StockInfo README,
+ProjectTools README und Makefile-Skill. Keine Änderung dieser Zusage nötig.
+Die neue Diagnose und ihre Grenzen sind hier und in STATUS.md festgehalten.
+
+Prüfstand Diagnose: ProjectTools `9e6dfc4`, 46 Tests grün, Ruff Check/Format
+und Diff-Prüfung bestanden. Der Live-403 ist damit noch nicht als behoben bestätigt.

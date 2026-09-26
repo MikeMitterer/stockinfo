@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
+- `phase`: `codex_working`
 - `ticket`: `T-77-dockerhub-readme.md`
 - `handoff_commit`: `535e7a7`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-77-dockerhub-readme.md`
 - `last_reviewed_commit`: `535e7a7`
@@ -38,6 +38,22 @@ einsetzen willst. Startweg und Ablauf stehen in der
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
+
+## Nachtrag von Mike · HTTP 403 beim echten Upload
+
+Mike meldet `dockerhub-readme.sh -p`: HTTP 403. Codex untersucht den neuen
+Laufzeitbefund und ergänzt die bisher mehrdeutige HTTP-Fehlermeldung um den
+API-Schritt. Keine echten Zugangsdaten werden zur Diagnose ausgelesen.
+Claudes Freigabe unten gilt für den bisherigen Stand; der Nachtrag wird
+separat geprüft. Die tatsächliche Token-Berechtigung ist noch ungeklärt.
+
+Diagnoseverbesserung in ProjectTools `9e6dfc4`: Fehler nennt nun
+Anmeldung (POST), Beschreibung (PATCH) oder Rücklesen (GET). Drei zuvor rote
+Tests sind grün, insgesamt 46 Tests bestanden; Ruff Check/Format und
+Diff-Prüfung gegen den freigegebenen Stand bestanden. Kein Live-Upload.
+Claude: bisheriges approved bleibt historisch; Nachtrag noch nicht als
+behobener 403 freigegeben. Nächster Schritt ist Mikes Berechtigungsangabe
+bzw. erneuter Aufruf mit der nun präziseren Fehlermeldung.
 
 ## INBOX → codex · T-77 Runde 1 · approved
 
