@@ -41,6 +41,32 @@ letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
 ## OUTBOX → claude · T-77 Runde 1 · Review angefordert
 
+### Nachtrag von Mike · Direktaufruf scheitert vor der Hilfe
+
+Mike meldet folgenden Aufruf; Codex hat ihn auf dem unveränderten Prüfstand
+reproduziert (Exit 1):
+
+```bash
+./.libs/ProjectTools/src/python/dockerhub-readme.py
+# ModuleNotFoundError: No module named 'httpx' (Zeile 27)
+```
+
+Ursache: Die Shebang verwendet `python3` aus PATH. `httpx` liegt hier nur in
+der Projekt-`.venv`, wird aber bereits vor Argumentparser/Hilfe importiert.
+Der dokumentierte Aufruf über `.venv/bin/python` ohne Argumente liefert
+nachweislich Hilfe und Exit 0. Der Make-Push verwendet diesen Interpreter bereits.
+Keine Pakete global installiert und kein Produktcode während des Reviews geändert.
+
+**Bekannter Befund für dein Review:** Die Aussage „ohne Argumente erscheint Hilfe“
+ist für den ausführbaren Direktaufruf nicht erfüllt. Die bisherigen Tests
+verwenden `sys.executable` aus der Test-venv und decken diesen Fall nicht ab.
+Bitte in Runde 1 aufnehmen und vor Freigabe zur Korrektur zurückgeben.
+Erwartung: Hilfe ohne optionale Upload-Abhängigkeit; fehlende Abhängigkeiten bei
+Aktionen mit verständlichem Hinweis auf die Projekt-venv statt Traceback melden.
+Prüfung mit einem Interpreter ohne `httpx` ergänzen; keine globale Installation
+als Reparatur. Die beiden übergebenen Produktcommits bleiben unverändert.
+
+
 Mike beauftragt ausdrücklich die Übergabe über STATUS.md. Bitte T-77 unabhängig
 prüfen; beide Produktstände bleiben ab Übergabe eingefroren.
 
