@@ -10,33 +10,63 @@ uses `mangolila/stockinfo:latest`, port **8000** and persistent storage at
 
 ## Contents
 
-- [Installing the template](#installing-the-template)
+- [Installing through Unraid Apps](#installing-through-unraid-apps)
+- [Test installation with wget](#test-installation-with-wget)
 - [Configuration](#configuration)
 - [Data and source profiles](#data-and-source-profiles)
 - [Updates and troubleshooting](#updates-and-troubleshooting)
 - [Testing a local template](#testing-a-local-template)
 
-## Installing the template
+## Installing through Unraid Apps
 
-If `my-stockinfo.xml` already contains your saved container settings, keep it
-and use the existing template instead. The following `wget -O` command
-overwrites the target file; run it only for a new installation, in the terminal
-on your Unraid server:
+Use **Apps / Community Applications** in the Unraid web interface for a normal
+installation:
+
+1. Open **Apps** and search for **StockInfo**.
+2. Select the application and click **Install**.
+3. Check the host port and [appdata path](#configuration). Set your timezone
+   if needed.
+4. Apply the settings to install and start the container, then open its **WebUI**
+   from the **Docker** tab, normally `http://YOUR_UNRAID_SERVER:8000/`.
+   The API documentation is at `/docs`.
+
+If Community Applications is not installed, follow the
+[Unraid setup instructions](https://docs.unraid.net/community-applications/#installing-the-plugin).
+If the application is not listed yet, the manual procedure below can be used
+for testing; it is not the standard installation path.
+
+StockInfo has no login. Anyone who can reach it can change or delete data.
+Use a trusted network or an authenticated reverse proxy; do not expose the
+port directly to the internet. See the [security model](../README.md#security-model).
+
+[↑ Contents](#contents)
+
+## Test installation with wget
+
+To test the published template manually, download it as a **User template**.
+This is an optional test installation; normal installations use **Apps**.
+The image must be available to start the test container.
+
+Run this command in the terminal on your Unraid server. It replaces any
+existing `stockinfo-test.xml`. Never overwrite `my-stockinfo.xml` containing
+saved container settings:
 
 ```bash
-wget -O /boot/config/plugins/dockerMan/templates-user/my-stockinfo.xml \
+wget -O /boot/config/plugins/dockerMan/templates-user/stockinfo-test.xml \
   https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml
 ```
 
 1. Choose **Docker → Add Container** and select **stockinfo** under
    **User templates**.
-2. Check the host port and appdata path below. Set your timezone if needed.
-3. Start the container and open its **WebUI**, normally
-   `http://YOUR_UNRAID_SERVER:8000/`. The API documentation is at `/docs`.
+2. Set a different container name, such as `stockinfo-test`, an unused host port
+   and a **separate appdata directory**, such as `/mnt/user/appdata/stockinfo-test`.
+   Two containers must not share the same SQLite database.
+3. Check the other [settings](#configuration), start the test container and
+   open its **WebUI** using the test port.
 
-StockInfo has no login. Anyone who can reach it can change or delete data.
-Use a trusted network or an authenticated reverse proxy; do not expose the
-port directly to the internet. See the [security model](../README.md#security-model).
+This downloads the published template with `TemplateURL` intact. To test local
+XML changes, follow [Testing a local template](#testing-a-local-template).
+Remove the test container and test template when finished.
 
 [↑ Contents](#contents)
 
