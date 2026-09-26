@@ -1,39 +1,39 @@
 # Der REST-Core von StockInfo — was zugesagt ist
 
-**Vertragsversion 4.4.0** · Stand 2026-09-26 · Ursprung in den Tickets
-[T-24](../_tickets/40-done/T-24-rest-core-vertrag.md) und
-[T-21](../_tickets/40-done/T-21-identitaet-mic-und-ticker.md)
+**Vertragsversion 4.4.0** · Stand 2026-09-26
 
-> **Historischer Stand: Änderungen von 1.0.0 auf 2.0.0** — der damalige
-> Major-Sprung umfasste:
->
-> * **`ticker` und `mic` sind zugesagte Pflichtfelder** von `quote` und
->   `instrument`, `listing_id` von `instrument`. Sie sind **nicht nullable**:
->   Ein Papier ohne kanonische Identität kommt seit T-21 gar nicht mehr in den
->   Bestand, und `null` zuzulassen wäre die Zusage, mit einem Zustand zu
->   rechnen, den es nicht geben darf.
-> * **`GET /quote?symbol=` verlangt den Handelsplatz.** Ein suffixloses Symbol
->   wie `AAPL` wird mit `400` abgelehnt statt mit einer halben Identität
->   gespeichert. Eine Anfrage, die bisher `200` lieferte, liefert künftig
->   `400`.
-> * **Neu im Core: `POST /instruments/intake`** — der eine zugesagte
->   Schreibweg. Er nimmt einen rohen Feldwert entgegen; was er bedeutet,
->   entscheidet der Core.
+`GET /fields` liefert den Feldvertrag und das aktuelle Detailschema.
+`GET /instrument-types` liefert die Typen der konfigurierten Plugins.
+Instrumente werden über `identity` beschrieben und über `listing_id`
+dauerhaft referenziert. Das allgemeine Generation-Protokoll ist noch nicht
+verfügbar; der Stand und bekannte Vertragsabweichungen stehen unten.
 
-Dieses Dokument erklärt den Vertrag. **Verbindlich ist die Datei daneben:**
-[`contract/core-contract.json`](../contract/core-contract.json). Sie ist
-maschinenlesbar, die Fixtures werden gegen sie geprüft, und `GET /fields`
-beantwortet sie zur Laufzeit aus derselben Quelle. Wo Text und Artefakt
-auseinandergehen, gilt das Artefakt.
+Die maschinenlesbaren Zusagen stehen in
+[`contract/core-contract.json`](../contract/core-contract.json).
+Die Fixtures werden gegen dieses Artefakt geprüft. Ein dort beschriebener,
+unter `planned` geführter Ablauf ist noch keine verfügbare Laufzeitfunktion.
+
+## Übersicht
+
+- [Warum es das gibt](#warum-es-das-gibt)
+- [Börsenentscheidung bei der Aufnahme](#börsenentscheidung-bei-der-aufnahme)
+- [Was der Core umfasst](#was-der-core-umfasst)
+- [Die Begriffe, die sich sonst niemand erschließt](#die-begriffe-die-sich-sonst-niemand-erschließt)
+- [Identität: `listing_id` für Maschinen, `symbol` für Menschen](#identität-listing_id-für-maschinen-symbol-für-menschen)
+- [Die Generation: woran ein Konsument einen Datensatzwechsel erkennt](#die-generation-woran-ein-konsument-einen-datensatzwechsel-erkennt)
+- [Was additiv ist und was ein Bruch wäre](#was-additiv-ist-und-was-ein-bruch-wäre)
+- [Entschieden, aber noch nicht zugesagt](#entschieden-aber-noch-nicht-zugesagt)
+- [Der Vertrag ist abfragbar, nicht nur dokumentiert](#der-vertrag-ist-abfragbar-nicht-nur-dokumentiert)
+- [Asset-Typen aus der Plugin-Konfiguration](#asset-typen-aus-der-plugin-konfiguration)
+- [Wie man den Vertrag prüft](#wie-man-den-vertrag-prüft)
 
 ## Warum es das gibt
 
-StockInfo wird verteilt — GitHub, Docker Hub, Unraid-Template. Wer die API
-direkt nutzt statt des mitgelieferten Dashboards, bekommt jede Änderung ab, und
-niemand erfährt davon. Dazu kommt StockPortfolio: derselbe Autor, aber ein
-eigenes Artefakt mit eigenem Image und eigenem Update-Zeitpunkt. Auf einer
-Unraid-Box laufen beide als getrennte Container, die niemand gleichzeitig
-aktualisiert. Gemeinsame Eigentümerschaft ersetzt keinen Vertrag.
+StockInfo und sein Konsument StockPortfolio haben getrennte Releases.
+Der Vertrag beschreibt die gemeinsamen Datenformen und macht Änderungen
+zwischen diesen Anwendungen prüfbar.
+
+[↑ Übersicht](#übersicht)
 
 ## Börsenentscheidung bei der Aufnahme
 
@@ -60,6 +60,8 @@ Ohne `check_exchange` wird direkt aufgenommen. Nach einer bestätigten Aufnahme
 gibt es keine dauerhafte Warnung und keine Rückfrage beim Lesen oder Refresh.
 Die Anfragefelder und die 202-Antwort gehören zu Core-Version `4.3.0`.
 
+[↑ Übersicht](#übersicht)
+
 ## Was der Core umfasst
 
 Fünf öffentliche Modelle, jedes mit eigener Pflichtfeldmenge:
@@ -72,16 +74,16 @@ Fünf öffentliche Modelle, jedes mit eigener Pflichtfeldmenge:
 | `history` | `/quote/{isin}/history`, `/quote/by-symbol/{symbol}/history` |
 | `fx` | `/fx` |
 
-Nicht im Core: die Diagnoseendpunkte (`/env`, `/analyze`, `/ready`), die
-Schreibvorgänge des Dashboards und `/exchanges`. Sie dürfen sich ändern.
+`GET /fields` und `GET /instrument-types` sind ebenfalls im Artefakt und im
+OpenAPI-Schnappschuss erfasst. Diagnoseendpunkte (`/env`, `/analyze`, `/ready`),
+`/exchanges` und die übrigen Schreibwege des Dashboards gehören nicht zu
+diesem versionierten Core.
 
-**Eine Ausnahme seit 2.0.0:** `POST /instruments/intake` ist ein
-Schreibvorgang und **trotzdem** zugesagt. Er ist der eine Weg, auf dem ein
-Papier in den Bestand kommt, und das Dashboard darf ihn nicht selbst
-nachbauen — täte es das, klassifizierte es Eingaben nach einer zweiten
-Grammatik, die beim ersten Plugin von der des Core abwiche. Die übrigen
-Schreibknöpfe der Oberfläche (`PUT`/`DELETE` an Instrumenten, `/refresh`)
-bleiben außerhalb.
+`POST /instruments/intake` ist der Aufnahmeweg des Dashboards. Der Core
+klassifiziert und löst die Eingabe auf; ein Konsument braucht dafür keine
+eigene Erkennungslogik. Auch eine Kursabfrage kann ein Instrument speichern.
+
+[↑ Übersicht](#übersicht)
 
 ## Die Begriffe, die sich sonst niemand erschließt
 
@@ -97,41 +99,48 @@ Minuten ist gut. `stale` heißt: Die frische Beschaffung ist **fehlgeschlagen**,
 und der zuletzt bekannte Wert wird trotzdem ausgeliefert, älter als die TTL.
 `stale=true` zieht `cached=true` nach sich, umgekehrt gilt es nicht.
 
-**Der Tages-Schlusskurs ist unbereinigt.** `daily.close` ist der Kurs, wie er an
-dem Tag galt — Dividenden und Splits sind nicht eingerechnet. Das ist eine
-Entscheidung, keine Auslassung: Eine bereinigte Reihe ändert rückwirkend alte
-Werte, und ein Depot, das Stückzahlen zu historischen Kursen hält, rechnet
-damit falsch. Wer eine bereinigte Reihe braucht, rechnet sie selbst.
+**Bekannte Abweichung bei Tageskursen:** Das Vertragsartefakt beschreibt
+`daily.close` als unbereinigt. Die Yahoo-Anbindung ruft jedoch
+`history(..., auto_adjust=True)` auf und liefert um Dividenden und Splits
+bereinigte Kurse. Der Daily-Adapter reicht diese Werte weiter; die REST-Antwort
+enthält kein `adjusted`-Feld. Konsumenten dürfen daher derzeit keine
+durchgehend unbereinigte Reihe voraussetzen.
 
 **Währung ist Pflicht, nicht Zierde.** Ein Preis ohne Währung ist für eine
 Depotrechnung wertlos, und die naheliegende Vermutung — „wird schon Euro sein" —
 ist bei einem Londoner Listing in Pence falsch. Liefert eine Quelle einen Preis
-ohne Währung, antwortet die API mit `502`, statt zu raten. Das ist die eine
-bewusste Verhaltensänderung dieses Tickets.
+ohne Währung, kann diese Antwort nicht als Kurs verwendet werden. Liefert
+auch keine weitere Quelle einen gültigen Kurs und gibt es keinen nutzbaren
+Cachewert, antwortet die API mit `502`.
 
-**`GBp` ist kein Tippfehler.** Londoner Kurse notieren in Pence, ein Hundertstel
-Pfund. Der Wert wird originalgetreu durchgereicht; wer nach `GBP` umrechnen
-will, teilt durch 100.
+**Bekannte Abweichung bei Pence-Kursen:** Das REST-Artefakt erlaubt `GBp`
+(Pence), der Plugin-Vertrag verlangt dagegen ISO-Währungscodes und lehnt
+Untereinheiten ab. Die Yahoo-Kursquelle reicht einen solchen Wert nicht als
+gültigen Treffer weiter und rechnet ihn derzeit auch nicht in `GBP` um.
+Ein in Pence notiertes Instrument kann deshalb auf eine andere Quelle oder
+den Cache zurückfallen; ohne beides schlägt der Abruf fehl.
+
+[↑ Übersicht](#übersicht)
 
 ## Identität: `listing_id` für Maschinen, `symbol` für Menschen
 
-`symbol` bleibt Pflichtfeld und Anzeigename — aber es ist **nicht garantiert
-eindeutig**. Sobald `US` in `XNYS` und `XNAS` zerfällt (T-21), können zwei
-Listings dasselbe Symbol tragen; regionale Plugins bringen weitere Konventionen
-mit.
+`identity` ist ein Pflichtobjekt in Quote- und Instrumentantworten.
+`identity.kind` bestimmt seine Felder:
 
-Der heutige Lookup lautet:
+| `kind` | Felder | Beispiel |
+|---|---|---|
+| `listed` | `ticker`, `mic`, optional `isin` | Aktie oder ETF an einem Handelsplatz |
+| `pair` | `base`, `quote_currency` | natives Kryptopaar wie BTC/EUR |
+| `isin_only` | `isin` | außerbörsliche Anleihe |
 
-```sql
-SELECT * FROM instruments WHERE symbol = ? ORDER BY id LIMIT 1
-```
-
-Das ist nicht undefiniert, sondern definiert falsch: Bei zwei gleichnamigen
-Zeilen trifft `DELETE /instruments/by-symbol/{symbol}` die ältere. Deshalb:
+`mic` ist die eindeutige Handelsplatzkennung nach ISO 10383.
+Ticker, MIC und ISIN stehen innerhalb von `identity`, nicht daneben.
+`symbol` bleibt ein Pflichtfeld für die Anzeige, ist aber **nicht garantiert
+eindeutig**. Mehrere Listings können denselben Namen tragen.
 
 - **`listing_id`** — eine opake UUID, bei Anlage einmal erzeugt und **nicht**
   aus `ticker`, `mic`, ISIN oder dem lokalen Schlüssel abgeleitet. Jede Zeile
-  bekommt eine, auch eine unaufgelöste. Sie überlebt manuelle Zuordnung,
+  bekommt eine, unabhängig von ihrer Identitätsform. Sie überlebt manuelle Zuordnung,
   Metadatenänderungen, Sicherung und Wiederherstellung. Konsumenten zerlegen
   sie nie.
 - **`409 Conflict`** bei mehrdeutigem Symbol, mit Kandidatenliste im Rumpf —
@@ -143,9 +152,8 @@ derselben ISIN wären eine eigene Schema- und Konsumenten-Erweiterung.
 
 ### Zwei Fälle unter einem `409` — unterschieden wird über `code`
 
-Der Status allein sagt seit 2.0.0 nicht mehr, was los ist. Der Rumpf ist in
-beiden Fällen ein `ErrorDetail` (`{code, params}`), und erst die Kennung trennt
-sie:
+Beide Antworten enthalten `code` und `params`. Die Antwort auf ein
+mehrdeutiges Symbol ergänzt `detail` und `candidates`:
 
 | `code` | Bedeutung | Gilt an |
 |---|---|---|
@@ -153,28 +161,35 @@ sie:
 | `identity_conflict` | Zwei gewachsene Zeilen beanspruchen dieselbe kanonische Identität — `AAPL/XNAS` ohne ISIN neben `AAPL/XNYS` mit ihr, und dieselbe ISIN wandert nach XNAS. Rumpf: `code`, `params` mit `ticker`, `mic`, `isin` (sofern bekannt). | jedem Endpunkt, der speichert |
 
 **Keiner der beiden ist ein Eingabefehler**, und deshalb ist keiner ein `400`:
-Der Aufrufer hat nichts falsch gemacht. Beim mehrdeutigen Symbol hat er einen
-Namen genannt, der seit T-21 keiner mehr ist; beim Identitätskonflikt meinen
-zwei gewachsene Zeilen dasselbe Listing.
+Beim mehrdeutigen Symbol reicht der Anzeigename nicht zur Auswahl eines
+Listings; beim Identitätskonflikt beanspruchen zwei gespeicherte Zeilen
+dieselbe Identität.
 
 `symbol_ambiguous` trägt die Kandidaten mit, weil ein `409` ohne sie eine
 Sackgasse wäre — mit ihnen hat der Aufrufer je Kandidat eine `listing_id`, und
-die ist eindeutig. **Verändert wird dabei nichts.** Das ist der Punkt: Der
-Löschweg per Symbol entfernte bei zwei gleichnamigen Listings beide samt
-Historie, der Kursweg gab still die ältere Notierung aus, und das Nachtragen
-einer ISIN schrieb sie an den Handelsplatz, den niemand gemeint hatte. Alle
-drei sind seit Runde 45 dieser `409`.
+die ist eindeutig. **Verändert wird dabei nichts.**
 
 `identity_conflict` sagt, was der Fall ist — er löst ihn nicht. Die
-Zusammenführung zweier Zeilen ist eine Datenoperation mit eigener
-Entscheidung und liegt in `T-33`. Bis Runde 43 sagte die API gar nichts: Der
-Fehler entstand im Repository, wurde nirgends behandelt und trat als
-`500 Internal Server Error` aus.
+Zusammenführung zweier Zeilen ist eine eigene Datenoperation und findet
+nicht nebenbei in einer Kursabfrage statt.
+
+[↑ Übersicht](#übersicht)
 
 ## Die Generation: woran ein Konsument einen Datensatzwechsel erkennt
 
-Wechselt das Quellenprofil oder die Datenbank, sind gespeicherte Kursdaten eines
-Konsumenten nicht mehr zuzuordnen. Dafür gibt es zwei Dinge:
+**Verfügbar:** `GET /fields` liefert `generation_id` aus der Datenbank.
+Die UUID bleibt über Neustarts erhalten und wird mit der Datenbank gesichert.
+`GET /instrument-types` sendet dieselbe UUID im Header `StockInfo-Generation`
+und setzt `Cache-Control: no-store`. Sie ist keine Typkatalogversion und
+ändert sich nicht automatisch bei jedem Wechsel der Quellenkonfiguration.
+
+**Noch nicht verfügbar:** `GET /generation`, ein Generation-Header auf jeder
+Antwort und dessen CORS-Freigabe für Browser anderer Origins. Das Artefakt
+beschreibt diese Teile unter `planned.generation_runtime`. Seine allgemeinen
+Generation-Fixtures zeigen den vorgesehenen Vertrag, keine heutigen
+Antworten der laufenden App.
+
+Der geplante Ablauf verwendet folgende Route:
 
 ```http
 GET /generation
@@ -183,7 +198,7 @@ Cache-Control: no-store
 { "generation_id": "550e8400-e29b-41d4-a716-446655440000" }
 ```
 
-und auf **jeder** Antwort — auch auf `404`, `409`, `422`, `502` — den Header:
+und auf jeder Antwort — auch auf `404`, `409`, `422`, `502` — diesen Header:
 
 ```http
 StockInfo-Generation: 550e8400-e29b-41d4-a716-446655440000
@@ -193,16 +208,18 @@ Die Fehlerfälle sind kein Detail: Nach einem Profilwechsel kann ein bisher
 bekanntes Papier fehlen. Ohne Header auf der `404` zeigt der Konsument seinen
 alten Cache weiter.
 
-**`/generation` ist die Wahrheit, der Header nur das Signal.** Zwei Anfragen
+**Im geplanten Ablauf bestätigt `/generation` den aktuellen Stand.** Zwei Anfragen
 können sich über einen Profilwechsel hinweg überschneiden, und eine verspätete
 Antwort aus A trifft nach einer schnellen aus B ein. UUIDs tragen keine
 Reihenfolge — wer dem Header blind folgt, springt von B zurück auf A. Weicht
 der Header ab, wird die Antwort deshalb verworfen, `/generation` bestätigt den
 Stand, und erst danach wird umgeschaltet.
 
-**CORS gehört dazu.** Ohne `Access-Control-Expose-Headers` kann
+**Die CORS-Freigabe des Headers fehlt derzeit.** Ohne `Access-Control-Expose-Headers` kann
 Browser-JavaScript den Antwort-Header nicht lesen. StockPortfolio läuft
 cross-origin; der Header wäre dort unsichtbar — gesetzt, aber wirkungslos.
+
+[↑ Übersicht](#übersicht)
 
 ## Was additiv ist und was ein Bruch wäre
 
@@ -217,15 +234,21 @@ cross-origin; der Header wäre dort unsichtbar — gesetzt, aber wirkungslos.
 **Regel für den Konsumenten:** Unbekannte Felder werden ignoriert, nicht als
 Fehler behandelt. Nur so bleibt eine additive Erweiterung wirklich additiv.
 
+[↑ Übersicht](#übersicht)
+
 ## Entschieden, aber noch nicht zugesagt
 
-Der Abschnitt `planned` im Artefakt nennt, was kommt und in welchem Ticket:
-der `details`-Container mit T-26, die Laufzeitseite der Generation mit T-25.
-Diese Einträge sind **nicht** Teil von `core_version 2.0.0`. Sie stehen da,
-damit ein Konsument weiß, was kommt — nicht, damit er sich darauf verlässt.
+Unter `planned` ist das allgemeine Generation-Protokoll aufgeführt. Die oben
+genannten Laufzeitteile stehen noch aus; die dort ebenfalls genannte
+persistierte UUID ist für das Detailschema bereits vorhanden.
+Der `details`-Container ist implementiert:
+Quote- und Instrumentantworten liefern Werte, Einheiten, Währungen und
+Herkunft; `/fields` liefert die zugehörigen Felddefinitionen. Manuelle Werte
+werden mit `PATCH /instruments/by-id/{listing_id}/details` gepflegt.
+Die [Detailfeld-Anleitung](plugin-authors.md#open-detail-fields) beschreibt
+Quellenvorrang, Validierung und das Entfernen manueller Werte.
 
-`listing_id` und `(ticker, mic)` standen bis 1.0.0 hier; mit T-21 sind sie
-zugesagt und deshalb aus `planned` verschwunden.
+[↑ Übersicht](#übersicht)
 
 ## Der Vertrag ist abfragbar, nicht nur dokumentiert
 
@@ -238,23 +261,30 @@ Feldbeschreibung. Diese Sprache ist fest: `Accept-Language` und die
 Dashboard-Sprache ändern sie nicht. Die Texte erläutern den Vertrag;
 Programme verwenden die Feldnamen, Typen und Pflichtangaben.
 
+Gekürzter Auszug; `core` und `endpoints` enthalten hier jeweils nur einen Eintrag:
+
 ```json
 {
   "core_version": "4.4.0",
-  "core": { "quote": [ {"name": "price", "kind": "number", "required": true, "meaning": "Latest known price in the trading currency. Never guessed or converted."} ], … },
-  "endpoints": { "quote": [ {"path": "/quote/{isin}", "method": "GET", "query": []} ], … },
+  "core": { "quote": [ {"name": "price", "kind": "number", "required": true, "meaning": "Latest known price in the trading currency. Never guessed or converted."} ] },
+  "endpoints": { "quote": [ {"path": "/quote/{isin}", "method": "GET", "query": []} ] },
+  "generation_id": "550e8400-e29b-41d4-a716-446655440000",
   "details_version": 0,
   "details": []
 }
 ```
 
-Bedient wird das aus **derselben Datei**, gegen die auch die Fixtures geprüft
-werden. Eine zweite Feldliste im Code gäbe es sonst sofort — und der Konsument
-bekäme je nach Weg eine andere Zusage.
+Der Core kommt aus **derselben Datei**, gegen die die Fixtures geprüft werden.
+Der Plugin-Vertrag wird aus den Plugin-Typen abgeleitet. Detailschema,
+`details_version` und `generation_id` stammen aus der Datenbank; das beim
+Start aus den konfigurierten Plugins ermittelte Detailschema wird dort gespeichert.
 
 Zwei Nummern, zwei Ebenen: `core_version` folgt SemVer über den geschlossenen
-Core, `details_version` zählt die offene Detailmenge (T-26). Zwischenspeichern
+Core, `details_version` zählt Änderungen am Detailschema. Zwischenspeichern
 sollte ein Konsument unter `(generation_id, core_version, details_version)`.
+Zum Erkennen einer Änderung muss er `/fields` erneut abrufen.
+
+[↑ Übersicht](#übersicht)
 
 ## Asset-Typen aus der Plugin-Konfiguration
 
@@ -308,6 +338,8 @@ Beispiele für Offline-Konsumententests liegen unter
 [`…-200-empty.json`](../contract/fixtures/instrument-types-200-empty.json) und
 [`…-200-incomplete.json`](../contract/fixtures/instrument-types-200-incomplete.json).
 
+[↑ Übersicht](#übersicht)
+
 ## Wie man den Vertrag prüft
 
 Ohne Cross-Repo-CI, in drei Stufen:
@@ -315,11 +347,13 @@ Ohne Cross-Repo-CI, in drei Stufen:
 1. **StockInfo** prüft Artefakt und Fixtures statisch gegeneinander
    (`tests/test_contract.py`) und die App gegen einen
    OpenAPI-Schnappschuss (`tests/test_contract_openapi.py`) — der schlägt an,
-   sobald sich ein Core-Modell, ein Core-Pfad oder `/fields` ändert, ohne dass
-   jemand die Vertragsversion angefasst hat.
+   sobald sich ein erfasstes Modell, ein Core-Pfad, `/fields` oder
+   `/instrument-types` gegenüber dem gespeicherten Stand ändert.
 2. **StockPortfolio** prüft seine Mapper gegen dieselben veröffentlichten
    Fixtures unter [`contract/fixtures/`](../contract/fixtures).
 3. **Vor Releases** ein kleiner Lauf: eine bestehende Position gegen eine
    frische Profil-Datenbank.
 
 Kein Repo klont das andere.
+
+[↑ Übersicht](#übersicht)

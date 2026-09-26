@@ -620,11 +620,16 @@ schema and instrument details to choose its fields and editors.
 `name`, `kind`, `unit`, labels, `overridable`, `sources`, `scopes`, numeric bounds
 and `currency_required`. Its integer `details_version` increases whenever that
 schema changes, including removals. Temporary source health does not change
-the schema. `generation_id` and its endpoint/header are not implemented;
-do not rely on them for cache invalidation today. Their planned status is
-documented under `planned.generation_runtime` in the
-[core contract artifact](../contract/core-contract.json); they are not part
-of T-25's migration completion criteria.
+the schema. `generation_id` is a persisted UUID from the same database.
+Cache the field catalog under `(generation_id, core_version, details_version)`;
+fetch `/fields` again to discover a change.
+
+`GET /instrument-types` sends that same UUID in `StockInfo-Generation`,
+alongside `Cache-Control: no-store`. This is not a type-catalog version.
+The general generation protocol is still unavailable: there is no
+`GET /generation` route, no generation header on every response, and no CORS
+exposure of that header. These remaining parts are described by
+`planned.generation_runtime` in the [core contract artifact](../contract/core-contract.json).
 
 Both quote responses and `GET /instruments` carry a `details` map. Each value
 includes `value`, `unit`, `currency`, `origin`, `source`, `as_of`, `shadowed`,

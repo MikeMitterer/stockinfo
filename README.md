@@ -5,6 +5,8 @@ A small app that serves **stock and ETF quotes via a REST API** and caches them 
 **JSON** with price, currency, timestamp, name and — for ETFs — extras such as TER,
 provider and fund size.
 
+Docker image: [mangolila/stockinfo on Docker Hub](https://hub.docker.com/repository/docker/mangolila/stockinfo/general).
+
 It ships with a **web dashboard** (Vue): asset overview with sortable columns,
 configuration view, exchange legend, 8 switchable themes, German/English UI, a price
 chart (intraday **and** real end-of-day closes) that docks at the bottom of the
@@ -12,6 +14,14 @@ viewport, plus per-asset actions (refresh, delete, add ISIN) and links (extraETF
 Yahoo Finance, JSON export).
 
 ![StockInfo dashboard](unraid/screenshots/dashboard.png)
+
+### What's new in 1.1.0
+
+- `GET /instrument-types` lists the asset types declared by the configured
+  plugins, including source status and whether the catalog is complete.
+- `GET /fields` describes core and plugin fields in English, independently of
+  the dashboard language or `Accept-Language`.
+- The dashboard development proxy also forwards `/instrument-types`.
 
 ### What's new in 1.0.0
 
@@ -97,13 +107,19 @@ Yahoo Finance, JSON export).
 
 ## How quotes are fetched
 
-The app combines three **free** data sources:
+The default online chains use these **free** data sources:
 
 | Source | Used for |
 |---|---|
 | **yfinance** (Yahoo Finance) | price, currency, volume, name, EOD closes (basis of the computed volatility) — stocks & ETFs, EU & US. Also the fund provider for **non-European ETFs**, which justETF does not list |
 | **justETF** | ETF extras for **European** (UCITS) funds: TER, provider, replication, fund size, 1-year volatility, distribution policy |
 | **OpenFIGI** | resolves an ISIN to the listing at your preferred exchange (default: Xetra → EUR) |
+| **Yahoo search** | fallback for resolving instruments when OpenFIGI cannot resolve them |
+
+Source chains are configurable in `sources.yaml` beside the database.
+The bundled `yaml-file` plugin can supply manually maintained data as a
+fallback or as a file-only profile. See [source configuration](docs/plugins.md)
+and the [plugin author guide](docs/plugin-authors.md).
 
 **ETFs outside Europe.** justETF is a database of European UCITS funds, so a US or
 Canadian ETF finds nothing there. For those, Yahoo supplies the fund provider —
@@ -114,9 +130,11 @@ none, because a value from a source *hides* one you entered by hand instead of
 leaving the gap open. So TER, fund size and domicile stay empty for those funds —
 enter them yourself and they stay put.
 
-**A note on currency:** the exchange suffix selects the exchange, not the currency —
-the currency always comes from the live quote. Example: the same ISIN trades on
-Xetra in EUR, in London often in pence (GBp). The app returns the currency verbatim.
+**A note on currency:** the exchange suffix selects the exchange; the currency
+comes from the quote. The current Yahoo plugin rejects pence codes such as
+`GBp` instead of converting them to `GBP`. Yahoo daily prices are adjusted for
+splits and dividends. Both behaviors differ from the REST artifact; see the
+[known contract differences](docs/rest-core-contract.md#die-begriffe-die-sich-sonst-niemand-erschließt).
 
 [↑ Contents](#contents)
 
@@ -190,7 +208,8 @@ change or destroy data:
 
 - `DELETE /instruments/{isin}` removes an instrument together with its entire
   price history.
-- `PUT /instruments/{symbol}/isin` and `PUT /instruments/{symbol}/overrides`
+- `PUT /instruments/by-symbol/{symbol}/isin` and
+  `PUT /instruments/by-symbol/{symbol}/overrides`
   change stored data.
 - `POST /refresh` and `GET /analyze` trigger live requests to Yahoo and
   justETF and write their results to the database.
@@ -236,14 +255,19 @@ forces it).
 | `GET /quote/{isin}/history` | intraday history (collected ticks) |
 | `GET /quote/{isin}/daily?period=1w\|1m\|3m\|1y\|max` | real end-of-day closes (EOD, cached) |
 | `GET /instruments` | all cached instruments with their latest quote |
+| `POST /instruments/intake` | resolve an identifier and add the instrument; optionally confirm a different exchange before saving |
+| `GET /fields` | core and plugin field descriptions, detail schema and schema versions |
 | `GET /instrument-types` | declared asset types from the running plugin configuration, including completeness and source status |
+| `GET /sources` | configured source chains and local source diagnostics |
 | `GET /env` | current configuration (secrets masked) |
 | `POST /refresh` · `POST /refresh/{isin}` | refresh all / a single instrument |
 | `PUT /instruments/by-symbol/{symbol}/isin` | add an ISIN after the fact |
+| `PATCH /instruments/by-id/{listing_id}/details` | set or remove manual detail values |
 | `DELETE /instruments/{isin}` | delete an instrument including its history |
 
-For instruments **without an ISIN** there is a `…/by-symbol/{symbol}` variant of
-each endpoint (quote, history, daily, refresh, delete).
+For instruments **without an ISIN**, use `GET /quote?symbol=…` for a quote.
+History, daily, refresh and delete have `…/by-symbol/{symbol}` variants.
+An ambiguous symbol returns `409` with the candidate listings.
 
 For dynamic type filters, read `GET /instrument-types` instead of collecting
 types from stored instruments. New plugin types appear without a fixed client
@@ -251,11 +275,16 @@ enumeration. Known types remain listed during source outages; `complete: false`
 indicates missing or invalid declarations. See the
 [type catalog contract](docs/rest-core-contract.md#asset-typen-aus-der-plugin-konfiguration).
 
-**Example response** (`GET /quote/IE00B3RBWM25`):
+**Example response excerpt** (`GET /quote/IE00B3RBWM25`; optional fields omitted):
 
 ```json
 {
-  "isin": "IE00B3RBWM25",
+  "identity": {
+    "kind": "listed",
+    "ticker": "VGWL",
+    "mic": "XETR",
+    "isin": "IE00B3RBWM25"
+  },
   "symbol": "VGWL.DE",
   "exchange": "Xetra",
   "name": "Vanguard FTSE All-World UCITS ETF",
@@ -267,7 +296,6 @@ indicates missing or invalid declarations. See the
   "ter": 0.19,
   "provider": "Vanguard",
   "replication": "Physical(Optimized sampling)",
-  "fund_size": 22638.0,
   "volatility": 9.95,
   "accumulating": false,
   "source": "yfinance+justetf",
@@ -276,6 +304,13 @@ indicates missing or invalid declarations. See the
   "fetched_at": "2026-07-12T18:16:28+00:00"
 }
 ```
+
+Read `identity.kind` before accessing identity fields: listed instruments carry
+`ticker` and `mic`, pairs carry `base` and `quote_currency`, and ISIN-only
+instruments carry `isin`. Quote and instrument responses also contain a
+`details` map with values, units, currencies and provenance. Instruments have
+a persistent `listing_id`. See the [REST reference](docs/rest-core-contract.md)
+and [detail fields](docs/plugin-authors.md#open-detail-fields).
 
 `volatility` is the 1-year volatility in percent — from justETF for ETFs, otherwise
 computed (annualized) from the cached EOD closes. `accumulating` states whether an
@@ -301,6 +336,8 @@ All values can be overridden via `.env` (`cp .env.example .env`):
 | `REFRESH_INTERVAL_HOURS` | interval of the background refresh | `6` |
 | `METADATA_TTL_DAYS` | refresh cadence for ETF metadata | `7` |
 | `DEFAULT_EXCHANGE` | preferred exchange for ISIN queries (MIC) | `XETR` (Xetra) |
+| `STRICT_EXCHANGE` | require the preferred exchange when resolving an ISIN | `false` |
+| `FX_TTL_HOURS` | cache lifetime for exchange rates | `1` |
 | `OPENFIGI_API_KEY` | optional key for a higher OpenFIGI rate limit | empty |
 | `EXTRAETF_ETF_URL` / `EXTRAETF_STOCK_URL` | profile link templates (placeholder `{isin}`) | extraetf.com/… |
 | `YAHOO_URL` | Yahoo link template (placeholder `{symbol}`) | de.finance.yahoo.com/… |
@@ -346,6 +383,8 @@ The backend must run in parallel. Both together: **`make dev-up`** (see Quick st
 ---
 
 ## Docker
+
+Published image: [mangolila/stockinfo on Docker Hub](https://hub.docker.com/repository/docker/mangolila/stockinfo/general).
 
 Backend **and** dashboard run in a single image on one port. Built with
 `docker/build.sh` (ecosystem convention, versioned via `gitDockerTag`):
@@ -407,6 +446,12 @@ commit or registry target. The versioned image tag contains the source commit
 hash; publish that commit before publishing the image so recipients can obtain
 the corresponding source.
 
+`make push` publishes image tags only. Docker Hub's short description and
+repository overview are separate metadata; this repository does not currently
+sync them from GitHub. Docker Hub imports `README.md` after successful
+[automated builds](https://docs.docker.com/docker-hub/repos/manage/information/#repository-overview)
+when those are enabled. A local image push does not trigger that import.
+
 [↑ Contents](#contents)
 
 ---
@@ -446,11 +491,20 @@ Support: [GitHub Issues](https://github.com/MikeMitterer/stockinfo/issues).
 ## Tests
 
 ```bash
-make test                       # backend (pytest)
-cd dashboard && npm run test    # dashboard (Vitest)
+make test                       # backend, plugin API, example plugin and dashboard
+make test-backend               # backend only (pytest)
+cd dashboard && npm run test    # dashboard only (Vitest)
 ```
 
-The tests run without network access — external data sources are mocked.
+The normal backend run includes tests marked `integration` that call real
+external APIs. To exclude those tests when working offline:
+
+```bash
+.venv/bin/pytest -m "not integration"
+```
+
+Backend tests use temporary databases. The test setup blocks connections to
+the working database; additional test databases belong under `tmp_path`.
 
 [↑ Contents](#contents)
 
@@ -465,19 +519,25 @@ app/                    # FastAPI backend
   db.py, repository.py  #   SQLite: schema and data access
   resolver.py           #   ISIN → symbol/exchange (OpenFIGI + Yahoo)
   providers/            #   data sources: yfinance, justETF, OpenFIGI
+  plugins/              #   bundled sources implementing the plugin API
   services/             #   quote fetching + cache/TTL logic
   scheduler.py          #   periodic background refresh
   routers/              #   HTTP endpoints (quotes, dashboard)
   docs.py               #   dark-themed Swagger UI (/docs)
 dashboard/              # Vue dashboard (standalone app)
+plugin_api/             # independent plugin contract, examples and role tests
+contract/               # REST contract, HTTP fixtures and OpenAPI snapshot
+examples/               # source profiles and manually maintained asset examples
 tests/                  # backend tests (pytest)
 docker/                 # Dockerfile, build.sh (single-image build)
 unraid/screenshots/     # dashboard, detail area + swagger (README + CA template)
 Makefile                # service start/stop (make help)
 ```
 
-Technical details and design decisions: see
-[`docs/superpowers/specs/`](docs/superpowers/specs/).
+Current references: [REST API](docs/rest-core-contract.md),
+[source configuration](docs/plugins.md), [plugin development](docs/plugin-authors.md)
+and [contract checks](contract/README.md). Historical designs and plans live
+under [`docs/superpowers/`](docs/superpowers/).
 
 [↑ Contents](#contents)
 
