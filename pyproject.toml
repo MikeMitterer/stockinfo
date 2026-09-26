@@ -1,6 +1,6 @@
 [project]
 name = "stockinfo"
-version = "1.0.0"
+version = "1.1.0"
 description = "REST-Kursabfrage für Aktien und ETFs mit SQLite-Cache"
 license = "AGPL-3.0-or-later"
 requires-python = ">=3.11"
