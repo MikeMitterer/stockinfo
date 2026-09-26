@@ -18,15 +18,15 @@ uses `mangolila/stockinfo:latest`, port **8000** and persistent storage at
 
 ## Installing the template
 
-For a new installation, run this command in the terminal on your Unraid server:
+If `my-stockinfo.xml` already contains your saved container settings, keep it
+and use the existing template instead. The following `wget -O` command
+overwrites the target file; run it only for a new installation, in the terminal
+on your Unraid server:
 
 ```bash
 wget -O /boot/config/plugins/dockerMan/templates-user/my-stockinfo.xml \
   https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml
 ```
-
-The command overwrites the target file. If `my-stockinfo.xml` already contains
-your saved container settings, keep it and use the existing template instead.
 
 1. Choose **Docker → Add Container** and select **stockinfo** under
    **User templates**.
@@ -93,7 +93,8 @@ See the [source configuration guide](../docs/plugins.md) for details.
 ## Updates and troubleshooting
 
 Use **Docker → stockinfo → Force Update** to pull the current image, keeping
-the same appdata mapping. Before an update, stop the container and back up
+the same appdata mapping. Do not download over the saved `my-stockinfo.xml`
+to update an existing container. Before an update, stop the container and back up
 the complete appdata directory to a separate location.
 
 View logs through Unraid's container menu or with `docker logs --tail=100 stockinfo`.

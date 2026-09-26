@@ -7,10 +7,11 @@ Docker-README führen mit kurzen Verweisen dorthin.
 
 **Auftrag:** Mike: „StockPortfolio hast die Unraid-Sektion in ein eigenes
 README ausgelagert. Check das und mach das hier gleich“.
-**Stand:** Anleitung ausgelagert, lokal geprüft und unabhängig geprüft —
-**approved**, Claude, Runde 1, `68702c6`. Keine Befunde. Nur der menschliche
-Abschluss (Verschieben nach `40-done/`) steht noch aus. Noch nicht gemergt,
-gepusht oder nach Docker Hub übertragen.
+**Stand:** Erste Fassung von Claude freigegeben (Runde 1, `68702c6`). Auf Mikes
+weiteren Auftrag mit `unraid-conventions` abgeglichen: Installationskurzfassung
+im Root-README ergänzt und Schutz bestehender Einstellungen vor den Download
+gestellt. Der Nachtrag geht in Runde 2. Branch bereits gepusht; noch nicht
+gemergt oder nach Docker Hub übertragen. Menschlicher Abschluss steht aus.
 
 ## Umfang
 
@@ -25,7 +26,7 @@ bleiben unberührt. StockInfos Port, Datenablage und UID/GID gelten weiter.
 | # | Prüfung | Ergebnis |
 |---|---|---|
 | 1 | Unraid-Anleitung gegen Template, Dockerfile und App-Settings | Lokales und veröffentlichtes XML bytegleich, XML gültig; Port 8000, /data-Mount, UID/GID 99/100 und alle aufgeführten Defaults abgeglichen |
-| 2 | README-Verweise, Abschnittsanker und Shell-Beispiele | 73 lokale Links/Anker gültig; drei Shell-Blöcke mit bash -n geprüft; Screenshot-Ziele beider READMEs identisch und öffentlich HTTP 200 |
+| 2 | README-Verweise, Abschnittsanker und Shell-Beispiele | 73 lokale Links/Anker gültig; vier relevante Shell-Blöcke in Root-/Unraid-README mit bash -n geprüft, Download-Befehle identisch; Screenshot-Ziele beider READMEs identisch und öffentlich HTTP 200 |
 | 3 | Docker-Hub-Vorschau mit absoluten Links und Größenprüfung | Echter Bash-Einstieg erfolgreich: 6.261 UTF-8-Bytes; neuer Unraid-Link und Swagger-Bild korrekt umgewandelt |
 
 Template-Prüfstand: `/Volumes/DevLocal/DevUnraid/Production/Templates/templates/stockinfo.xml`,
@@ -88,3 +89,26 @@ Kurzfassung.
   kein App-, Dockerfile- oder Template-Diff.
 
 Menschlicher Abschluss (Verschieben nach `40-done/`) steht noch aus.
+
+## Nachtrag: Abgleich mit unraid-conventions
+
+Das inzwischen benannte Skill verlangt unter „Installation per wget
+dokumentieren“ den Download und die Bedienfolge in **beiden** Anleitungen.
+Der bloße Verweis im Root-README war damit zu knapp. Root- und Unraid-README
+enthalten jetzt denselben Befehl; der Hinweis auf gespeicherte Nutzereinstellungen
+steht vor dem Download. Beide erklären Force Update ohne erneuten Download
+der gespeicherten Vorlage. Die Docker-README verlinkt weiterhin die Detailanleitung.
+
+Die zusätzliche Pflicht zum Template-Abgleich nach jedem Image-Push ist für
+diesen Doku-Auftrag nicht ausgelöst: Es wurde kein Image gepusht. Zentraler
+Templatepfad, lokale Testkopie ohne TemplateURL, getrennte Testdaten und
+Appdata-Rechte entsprechen bereits dem Skill. Docker-Hub-Vorschau unverändert
+6.261 Bytes. Doku-Abgleich: zwei Installationsabschnitte nachgezogen,
+Docker-README und AGENTS.md unverändert passend.
+Die vier Installations-/Testblöcke sind erneut mit `bash -n` geprüft;
+Download-Befehle bytegleich und Hinweise jeweils vor dem Befehl. Links und
+Überschriften sind gegenüber der 73-Link-Prüfung unverändert. Diff-Prüfung sauber.
+
+Einordnung: neu konkretisierte Konvention aus dem aktualisierten Skill,
+keine neue unabhängige Lesson-Episode. Claudes Runde-1-Freigabe bleibt auf
+`68702c6` begrenzt; der Nachtrag erhält eine eigene Prüfung.

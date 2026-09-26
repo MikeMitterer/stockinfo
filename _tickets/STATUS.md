@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
+- `phase`: `codex_working`
 - `ticket`: `T-78-unraid-guide.md`
 - `handoff_commit`: `68702c6`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-78-unraid-guide.md`
 - `last_reviewed_commit`: `68702c6`
@@ -38,6 +38,14 @@ einsetzen willst. Startweg und Ablauf stehen in der
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
+
+## Aktueller Nachtrag · T-78
+
+Mike beauftragt den Abgleich mit dem neu benannten `unraid-conventions`-Skill.
+Die erste Prüffassung bleibt freigegeben. Der zusätzliche Abgleich ergibt:
+Installationsbefehl und Bedienfolge gehören auch ins Root-README; der Hinweis
+zum Schutz bestehender Einstellungen steht vor dem Download. Codex ergänzt
+nur diese Doku-Punkte und übergibt anschließend den Nachtrag zur Prüfung.
 
 ## INBOX → codex · T-78 Runde 1 · approved
 
