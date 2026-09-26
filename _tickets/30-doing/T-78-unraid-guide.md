@@ -7,11 +7,14 @@ Docker-README führen mit kurzen Verweisen dorthin.
 
 **Auftrag:** Mike: „StockPortfolio hast die Unraid-Sektion in ein eigenes
 README ausgelagert. Check das und mach das hier gleich“.
-**Stand:** Umsetzung begonnen. Keine Entscheidung von Mike erforderlich.
+**Stand:** Anleitung ausgelagert und lokal geprüft; bereit für Claudes Review.
+Keine Entscheidung von Mike erforderlich. Noch nicht gemergt, gepusht oder
+nach Docker Hub übertragen.
 
 ## Umfang
 
-Drei Benutzeranleitungen und Board-Nachweise, höchstens 300 neue/geänderte
+Die drei Benutzeranleitungen, zugehöriger AGENTS-Hinweis und Board-Nachweise,
+höchstens 300 neue/geänderte
 Zeilen ohne bestehende Status-Historie. Keine App-, Image- oder XML-Änderung.
 StockPortfolio ist nur die gelesene Vorlage; dessen laufende Änderungen
 bleiben unberührt. StockInfos Port, Datenablage und UID/GID gelten weiter.
@@ -20,13 +23,48 @@ bleiben unberührt. StockInfos Port, Datenablage und UID/GID gelten weiter.
 
 | # | Prüfung | Ergebnis |
 |---|---|---|
-| 1 | Unraid-Anleitung gegen Template, Dockerfile und App-Settings | Offen |
-| 2 | README-Verweise, Abschnittsanker und Shell-Beispiele | Offen |
-| 3 | Docker-Hub-Vorschau mit absoluten Links und Größenprüfung | Offen |
+| 1 | Unraid-Anleitung gegen Template, Dockerfile und App-Settings | Lokales und veröffentlichtes XML bytegleich, XML gültig; Port 8000, /data-Mount, UID/GID 99/100 und alle aufgeführten Defaults abgeglichen |
+| 2 | README-Verweise, Abschnittsanker und Shell-Beispiele | 73 lokale Links/Anker gültig; drei Shell-Blöcke mit bash -n geprüft; Screenshot-Ziele beider READMEs identisch und öffentlich HTTP 200 |
+| 3 | Docker-Hub-Vorschau mit absoluten Links und Größenprüfung | Echter Bash-Einstieg erfolgreich: 6.261 UTF-8-Bytes; neuer Unraid-Link und Swagger-Bild korrekt umgewandelt |
+
+Template-Prüfstand: `/Volumes/DevLocal/DevUnraid/Production/Templates/templates/stockinfo.xml`,
+letzter Dateicommit `87b89cd`. Öffentliche Fassung von
+`https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml`
+am 2026-09-26 nach `/private/tmp/stockinfo-t78-published.xml` geladen und per
+`cmp` verglichen. Container-/Hostpfade, Port, Image, Konfigurationswerte und
+Verweise passen; kein XML-Änderungsbedarf. Keine AGENTS.md im Template-Repo
+vorhanden. Kein Containerstart und kein Test auf einer laufenden Unraid-Box.
+
+```bash
+# #1: XML prüfen und lokale mit öffentlicher Fassung vergleichen
+xmllint --noout /private/tmp/stockinfo-t78-published.xml
+cmp /private/tmp/stockinfo-t78-published.xml \
+  /Volumes/DevLocal/DevUnraid/Production/Templates/templates/stockinfo.xml
+
+# #3: echte Konvertierung, ohne Docker-Hub-Zugangsdaten
+LANGUAGE=de XDG_CACHE_HOME=/private/tmp/stockinfo-t77-default-preview \
+  ./.libs/ProjectTools/src/bash/dockerhub-readme.sh --preview
+wc -c docker/preview/README.md
+```
 
 ## Doku-Abgleich
 
 `README.md`, `docker/README.md` und die neue `unraid/README.md` werden
-gemeinsam geprüft. Bestehende Anker bleiben erreichbar. Lokale Lessons
+gemeinsam geprüft. Bestehende `#unraid`-Anker bleiben erreichbar; Hauptanleitung
+und Docker-Beschreibung verweisen auf die neue Anleitung. AGENTS.md nennt sie
+für künftige Unraid-Änderungen. Der bislang nur im Root-README enthaltene
+Swagger-Screenshot ist gemäß Docker-Skill auch in der Docker-Beschreibung
+ergänzt. Der neue GitHub-Link wird erst nach Veröffentlichung dieses Branches
+erreichbar; deshalb noch kein Hub-Upload.
+
+StockPortfolios gelesener Arbeitsstand enthält bereits `unraid/README.md`;
+die Root-README hat dort noch eine längere Installationskurzfassung. Übernommen
+ist die Trennung mit beidseitigen Verweisen, nicht dessen Browser-Datenspeicher
+oder Containerport 8080. StockInfos persistente Daten und Quellenprofil-Ablauf
+sind erhalten; der Checkout-/BashLib-Bedarf des lokalen Profilhelfers ist erklärt.
+
+Lokale Lessons
 SI-CX-01, SI-R-02 und SI-T-66 gelten weiter: reale Vorschau, begrenzter
-Dokuauftrag, keine behauptete Unraid-Live-Prüfung.
+Dokuauftrag, keine behauptete Unraid-Live-Prüfung. Keine neue unabhängige
+Fehlerklasse; kein neuer Lesson-Eintrag. Kein Anwendungstestlauf für diese
+reine Dokuänderung nötig. `git diff --check` bestanden.

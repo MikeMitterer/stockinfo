@@ -445,31 +445,10 @@ limit without truncation. Run without arguments for help.
 
 ## Unraid
 
-A ready-made container template lives in the dedicated CA repo
-[`MikeMitterer/unraid-templates`](https://github.com/MikeMitterer/unraid-templates/blob/master/templates/stockinfo.xml)
-— image `mangolila/stockinfo:latest` (Docker Hub), WebUI port `8000`, path
-`/mnt/user/appdata/stockinfo → /data`, plus the most important settings as
-variables (refresh interval, TTLs, exchange, OpenFIGI key, timezone).
-
-Install it as a user template (run on the Unraid box):
-
-```bash
-wget -O /boot/config/plugins/dockerMan/templates-user/my-stockinfo.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml
-```
-
-Then: **Docker → Add Container** → pick “stockinfo” under *User templates*.
-This template uses a host directory instead of the named volume from `make up`.
-Create the host directory first, then write the source profile to that **same**
-directory before starting the container:
-
-```bash
-mkdir -p /mnt/user/appdata/stockinfo
-./scripts/sources-profile.sh --yaml --target docker --data-dir /mnt/user/appdata/stockinfo
-```
-
-The host-directory route also works without a running Docker daemon. It does
-not copy data from the named volume.
-Support: [GitHub Issues](https://github.com/MikeMitterer/stockinfo/issues).
+The [Unraid guide](unraid/README.md) covers template installation, settings,
+persistent data, source profiles and local template testing.
+StockInfo uses `mangolila/stockinfo:latest`, port `8000` and the host directory
+`/mnt/user/appdata/stockinfo`, mounted at `/data`.
 
 [↑ Contents](#contents)
 
@@ -517,7 +496,7 @@ contract/               # REST contract, HTTP fixtures and OpenAPI snapshot
 examples/               # source profiles and manually maintained asset examples
 tests/                  # backend tests (pytest)
 docker/                 # Dockerfile, build.sh (single-image build)
-unraid/screenshots/     # dashboard, detail area + swagger (README + CA template)
+unraid/                 # Unraid guide and screenshots (README + CA template)
 Makefile                # service start/stop (make help)
 ```
 

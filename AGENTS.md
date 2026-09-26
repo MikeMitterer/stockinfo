@@ -120,6 +120,8 @@ Konfiguration, Installation oder Betrieb immer `README.md` und
 für Änderungen an einer der beiden Anleitungen. Gemeinsame Aussagen müssen
 übereinstimmen; Entwickleranleitungen gehören ins Root-README,
 Containeranleitungen in `docker/README.md`.
+Bei Unraid-bezogenen Änderungen zusätzlich `unraid/README.md` abgleichen;
+dort stehen Template-Installation, Einstellungen und Unraid-Betrieb.
 Der Doku-Abgleich im Ticket beziehungsweise Abschlussbericht nennt die
 nötigen Anpassungen oder begründet, weshalb die andere Datei unverändert
 bleibt. Der Verifier prüft die inhaltliche Übereinstimmung; Änderungen an

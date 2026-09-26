@@ -70,6 +70,8 @@ Start it with `docker compose up -d`. This is an alternative to the
 - A dashboard for managing instruments, viewing charts and configuring sources.
 - A REST API on the same port as the dashboard.
 
+![Swagger UI (dark)](../unraid/screenshots/swagger.png)
+
 Online sources need outbound internet access and can impose rate limits or
 return incomplete data. Source chains are configurable; a bundled YAML-file
 source also supports manually maintained data.
@@ -137,10 +139,9 @@ logs and dashboard before restarting repeatedly.
 
 ## Unraid
 
-Use the [StockInfo container template](https://github.com/MikeMitterer/unraid-templates/blob/master/templates/stockinfo.xml).
-It maps `/mnt/user/appdata/stockinfo` to `/data`, exposes port `8000`, and offers
-the main settings as template variables. The container's UID/GID match Unraid's
-`nobody:users` account. Keep the appdata directory when updating the image.
+See the [Unraid guide](../unraid/README.md) for template installation,
+configuration and testing. The template maps `/mnt/user/appdata/stockinfo`
+to `/data` and exposes port `8000`. Keep the appdata directory when updating.
 
 ## Support and license
 
