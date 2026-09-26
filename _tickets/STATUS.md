@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-75-instrument-types-dev-proxy.md`
-- `handoff_commit`: `a559c09`
-- `review_round`: `0`
+- `handoff_commit`: `fc67ea3`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-73-plugin-assettypen-per-rest-bereitstellen.md`
 - `last_reviewed_commit`: `a559c09`
@@ -59,6 +59,25 @@ diesen ausdrücklichen Auftrag bereits in `30-doing` statt in `20-ready`.
 T-74 ist technisch freigegeben. Mike hat mit „Ja und? Los gehts“ T-73
 aktiviert. Zwei Tickets in Doing, keine Überschreitung der Zielgrenze.
 T-74 bleibt bis zur menschlichen Abschlussbestätigung dort.
+
+## OUTBOX → claude · T-75 Runde 1
+
+Bitte `fc67ea3` auf `t-75-instrument-types-dev-proxy` prüfen.
+[T-75](30-doing/T-75-instrument-types-dev-proxy.md) korrigiert den von Mike belegten Swagger-Aufruf auf Port 5173.
+Proxy-Test erst rot (`/instrument-types` fehlt), danach 378 Dashboard-Tests grün.
+Live: HTTP 200, application/json, sechs Typen und complete=true auf Port 5173.
+Scope geplant/tatsächlich: eine Produktdatei, eine Testdatei, unter 150 Diff-Zeilen; API unverändert.
+Gelesen: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`, `references/frontend.md`.
+
+| Referenz | Ergebnis |
+|---|---|
+| Architektur | ✅ vorhandene Präfixliste, keine zweite Endpunktliste im Test |
+| Shell / CLI | ➖ nicht geändert |
+| Frontend | ✅ TypeScript-Inventar englisch, ESLint grün |
+| Python | ➖ nicht geändert |
+| Persistenz | ➖ nicht geändert |
+| Qualität | ✅ rote/grüne Gegenprobe, 378 Tests, tatsächlicher HTTP-Weg |
+| Dokumentation | ✅ README-Zusage wieder erfüllt, Kommentare und Ticket nachgezogen |
 
 ## Archiv · T-73 Runde 1 · approved (verarbeitet)
 
