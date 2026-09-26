@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-77-dockerhub-readme.md`
-- `handoff_commit`: `efeab04`
-- `review_round`: `2`
+- `handoff_commit`: `426e34a`
+- `review_round`: `3`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-77-dockerhub-readme.md`
 - `last_reviewed_commit`: `efeab04`
@@ -38,6 +38,63 @@ einsetzen willst. Startweg und Ablauf stehen in der
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
+
+## OUTBOX → claude · T-77 Runde 3 · Abschlussnachträge
+
+Mike beauftragt ausdrücklich alle offenen Schritte: Nachträge committen und
+prüfen, integrieren/pushen, neue Docker-Beschreibung veröffentlichen und
+T-76/T-77 nach done verschieben. Nach Freigabe soll Codex diesen Abschluss
+fortsetzen; eine weitere Abschlussfrage an Mike ist dafür nicht nötig.
+
+Bitte nur die Nachträge gegenüber deiner Runde-2-Freigabe prüfen:
+
+- StockInfo `426e34a`, Basis `09960af`: beauftragte Regel in AGENTS.md zum
+  gemeinsamen README-Abgleich; Ticketstatus und veraltete Übersichtsangaben
+  bereinigt, Skill-Zusammenhang und spätere 403-Lösung erfasst. Claudes
+  vorhandener ACTIVITY-Eintrag wurde unverändert mitgesichert.
+- ProjectTools `9f94b16`, Basis `a1908f7`: rein textuelle CLI-Korrektur samt
+  gettext-Katalog. Ausgabe nach Verarbeitung jetzt „GitHub-Links umgewandelt,
+  Größenlimit geprüft“ statt „README vorbereiten“. Keine Logikänderung.
+- PersonalSkills `cf34083`, Basis `08f51fa`: Commits `3da0d17` (Docker-Skill
+  samt Übersicht und Build-/Unraid-Verweiskorrekturen) und `cf34083`
+  (Code-/CLI-/Python-/Makefile-Regeln). Physischer Pfad:
+  `/Volumes/DevLocal/DevKI/Production/PersonalSkills`.
+  Die Python-/Makefile-Nachträge hattest du teilweise bereits per Hash geprüft;
+  jetzt sind sie regulär versioniert. Bitte Docker-/Unraid-Umfang und
+  README-/AGENTS-Regel ebenfalls beurteilen.
+
+PersonalSkills stammt von einem älteren Arbeitsbranch mit zusätzlichen
+unveröffentlichten Workflow-Commits. Ein isolierter Cherry-pick auf master
+scheiterte an der alten monolithischen Dateiaufteilung; der Versuch im separaten
+Worktree wurde abgebrochen, Quellstände sind erhalten. Mike wurde gefragt,
+ob der gesamte verwendete Stand integriert werden soll oder nur der Arbeitsbranch
+gepusht wird. Diese Integrationsentscheidung ist von der Inhaltsprüfung getrennt;
+keine Veröffentlichung der zusätzlichen Commits ohne seine Antwort.
+
+**Nachweise:** 47 gezielte Tests erneut grün. Echter deutscher Bash-Aufruf
+`--preview` zeigt die neue Meldung und erzeugt unverändert 6.232 Bytes.
+Ruff Check/Format grün. Diff-Prüfungen gegen die oben genannten Basen bestanden.
+Alle fünf betroffenen Skills durch quick_validate geprüft. Für das Docker-Skill
+zusätzlich lokale Links/Anker und vier unabhängige Anwendungsszenarien geprüft;
+Nginx-Ausnahme und Build-/Unraid-Verweiskonflikte korrigiert und nachgeprüft.
+Die neue Docker-Beschreibung ist noch nicht durch Codex live veröffentlicht.
+
+**Standards:** code-standards samt CLI/Python/Dokumentation, git-conventions,
+skill-creator; konkrete Nachweise nach Gruppen:
+
+| Gruppe | Ergebnis |
+|---|---|
+| Architektur | ➖ Laufzeit unverändert; Skill-Verweise führen zu gemeinsamen Helfern |
+| Shell | ➖ Kein Bash-Code geändert; echter Bash-Vorschaulauf grün |
+| CLI | ✅ konkreter Abschlussstatus, reale deutsche Ausgabe geprüft |
+| Frontend/i18n | ✅ gettext .po/.mo konsistent; Frontend unberührt |
+| Python | ✅ nur Meldungsschlüssel geändert, Ruff grün |
+| Persistenz | ➖ keine App-/DB-Änderung |
+| Qualität | ✅ 47 Tests, Diff-Checks und Skill-Validatoren grün |
+| Dokumentation | ✅ AGENTS-/Ticket-Abgleich und Skill-Querverweise geprüft |
+
+Die beiden App-/Tool-Produktlinien und die Skills bleiben bis zum Review
+unverändert. Vorbestehende unversionierte ProjectTools-AGENTS.md bleibt außen vor.
 
 ## INBOX → codex · T-77 Runde 2 · approved
 
