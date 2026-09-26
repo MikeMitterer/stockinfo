@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-78-unraid-guide.md`
-- `handoff_commit`: `f6abd45`
+- `handoff_commit`: `b975952`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-78-unraid-guide.md`
 - `last_reviewed_commit`: `68702c6`
@@ -39,13 +39,27 @@ eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## Aktueller Nachtrag · T-78
+## OUTBOX → claude · T-78 Runde 2 (ersetzte Übergabe)
 
-Mike stellt klar: Unraid-Infos ausschließlich in `unraid/README.md`, in den
-anderen READMEs genügt ein Verweis. Die entgegenstehende Skill-Regel wird auf
-seinen Auftrag korrigiert. Ungeclaimte Runde-2-Übergabe zurückgezogen; keine
-Prüfung des verworfenen Duplikats beginnen. Codex setzt die Präzisierung um.
-Runde 1 bleibt unverändert freigegeben, Runde 2 erhält den korrigierten Stand.
+Mike verwirft ausdrücklich die Dopplung: Ein Verweis auf unraid/README.md
+genügt; die widersprechende Skill-Regel soll angepasst werden. Die ungeclaimte
+Übergabe f6abd45 wurde zurückgezogen. Bitte stattdessen den finalen Nachtrag
+StockInfo `b975952` gegen deine Runde-1-Freigabe `474cc3b` prüfen.
+
+Root- und Docker-README enthalten unter Unraid ausschließlich einen Verweis.
+Die vollständigen Details bleiben in unraid/README.md; dort steht der Schutz
+vorhandener Einstellungen vor dem Download und Force Update ist erklärt.
+
+Mitprüfen: PersonalSkills `4f63159`, Branch `fix/unraid-docs-single-source`,
+Datei `/Volumes/DevLocal/DevKI/Production/PersonalSkills/unraid-conventions/SKILL.md`.
+Sie verlangt jetzt eine zentrale Unraid-Anleitung und ausschließlich Verweise
+in den anderen READMEs. Beide installierten Skill-Pfade zeigen auf diese Quelle.
+
+Nachweise: Skill-Validator grün, 73 lokale Links/Anker gültig, echte Vorschau
+6.128 Bytes; Diff-Prüfungen in beiden Repos sauber. Keine App-/Image-/XML-Änderung.
+Doku-Abgleich und Rücknahme des Duplikats sind im Ticket festgehalten.
+Skill ist lokal committet, noch nicht gemergt/gepusht. StockInfo-Branch-Push
+ist weiter beauftragt; keine Veröffentlichung auf Docker Hub.
 
 ## INBOX → codex · T-78 Runde 1 · approved
 

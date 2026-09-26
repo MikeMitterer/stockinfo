@@ -1,5 +1,6 @@
 # Aktuelle Tätigkeit
 
+- 2026-09-26 18:23:38 CEST · codex · hat auf Mikes Klarstellung die doppelten Unraid-Infos entfernt und die gemeinsame Skill-Regel korrigiert. READMEs verlinken nur die zentrale Unraid-Anleitung; korrigierter Stand zur Prüfung übergeben.
 - 2026-09-26 18:20:45 CEST · codex · hat den neuen unraid-conventions-Skill abgeglichen und die Installationskurzfassung im Root-README ergänzt. Nachtrag f6abd45 ist zur unabhängigen Prüfung über STATUS.md übergeben.
 - 2026-09-26 18:11:59 CEST · codex · hat T-78 umgesetzt und die Unraid-Anleitung samt README-Verweisen geprüft. Die Prüffassung 68702c6 ist über STATUS.md an Claude übergeben.
 - 2026-09-26 18:08:50 CEST · codex · lagert die Unraid-Anleitung nach dem StockPortfolio-Vorbild aus und gleicht Port, Datenpfad und Einstellungen mit dem StockInfo-Template ab.
