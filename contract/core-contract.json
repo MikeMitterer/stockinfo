@@ -1,5 +1,5 @@
 {
-  "core_version": "4.3.0",
+  "core_version": "4.3.1",
   "details_version": 0,
   "generation": {
     "endpoint": "/generation",
@@ -124,127 +124,127 @@
         "name": "symbol",
         "kind": "string",
         "required": true,
-        "meaning": "Anzeigename des Listings beim Kursanbieter. Nicht garantiert eindeutig."
+        "meaning": "Display name of the listing at the quote provider. Not guaranteed to be unique."
       },
       {
         "name": "identity",
         "kind": "object",
         "required": true,
-        "meaning": "Die Identität des Papiers, als diskriminierte Union über 'kind'. kind='listed' trägt ticker und mic (ISO 10383, nie ein Sammelcode) und optional isin; kind='pair' trägt base und quote_currency — die Form für natives Krypto, das an keinem Handelsplatz notiert; kind='isin_only' trägt isin und ist die Form der OTC-Anleihe. Ein Konsument liest zuerst kind und weiß danach, welche Felder es gibt."
+        "meaning": "The instrument identity, as a discriminated union using 'kind'. kind='listed' contains ticker and mic (ISO 10383, never an aggregate code) and an optional isin; kind='pair' contains base and quote_currency for native crypto not listed on a trading venue; kind='isin_only' contains isin for an OTC bond. Read kind first to determine which fields are present."
       },
       {
         "name": "price",
         "kind": "number",
         "required": true,
-        "meaning": "Letzter bekannter Kurs in der Handelswährung. Nie geraten, nie umgerechnet."
+        "meaning": "Latest known price in the trading currency. Never guessed or converted."
       },
       {
         "name": "currency",
         "kind": "string",
         "required": true,
-        "meaning": "Handelswährung des Kurses. ISO-4217, mit einer Ausnahme: 'GBp' bezeichnet Pence und wird originalgetreu durchgereicht. Ohne Währung ist ein Preis nicht verwertbar — dann antwortet die API mit einem Fehler statt zu raten."
+        "meaning": "Trading currency of the price. ISO 4217, with one exception: 'GBp' means pence and is passed through unchanged. A price without a currency is unusable; the API returns an error instead of guessing."
       },
       {
         "name": "quote_time",
         "kind": "string",
         "required": true,
-        "meaning": "Zeitpunkt, zu dem der Kurs an der Börse galt. ISO-8601 mit Zeitzone."
+        "meaning": "Time when the price applied at the exchange. ISO 8601 with a time zone."
       },
       {
         "name": "fetched_at",
         "kind": "string",
         "required": true,
-        "meaning": "Zeitpunkt, zu dem StockInfo den Wert beschafft hat. ISO-8601 mit Zeitzone. Nicht zu verwechseln mit quote_time: Ein frisch geholter Kurs vom Freitagabend hat ein junges fetched_at und ein altes quote_time."
+        "meaning": "Time when StockInfo retrieved the value. ISO 8601 with a time zone. Do not confuse this with quote_time: a newly retrieved Friday evening price has a recent fetched_at and an old quote_time."
       },
       {
         "name": "cached",
         "kind": "boolean",
         "required": true,
-        "meaning": "true = die Antwort kommt aus dem lokalen Bestand, es gab keinen Anbieteraufruf. Sagt nichts über die Güte des Werts."
+        "meaning": "true = the response comes from local storage without calling a provider. Does not indicate the quality of the value."
       },
       {
         "name": "stale",
         "kind": "boolean",
         "required": true,
-        "meaning": "true = die frische Beschaffung ist fehlgeschlagen und der zuletzt bekannte Wert wird ausgeliefert. Der Wert ist damit älter als die TTL. stale=true impliziert cached=true."
+        "meaning": "true = fetching a fresh value failed, so the last known value is returned. The value is older than the TTL. stale=true implies cached=true."
       },
       {
         "name": "exchange",
         "kind": "string",
         "required": false,
-        "meaning": "Anzeigename des Handelsplatzes."
+        "meaning": "Display name of the trading venue."
       },
       {
         "name": "name",
         "kind": "string",
         "required": true,
-        "meaning": "Name des Wertpapiers."
+        "meaning": "Name of the instrument."
       },
       {
         "name": "type",
         "kind": "string",
         "required": true,
-        "meaning": "Gattung aus dem offenen kanonischen Katalog: 'stock', 'etf', 'etc', 'fund', 'crypto', 'bond'. Die Aufzählung ist offen — ein neuer Wert ist ein Nachtrag und kein Bruch. Was die App nicht kennt, zeigt sie als das, was die Quelle sagt, statt es zu runden."
+        "meaning": "Instrument type from the open canonical catalog: 'stock', 'etf', 'etc', 'fund', 'crypto', 'bond'. The list is open: a new value is an addition, not a breaking change. Unknown values are displayed as supplied by the source, without mapping them to a known type."
       },
       {
         "name": "volume",
         "kind": "integer",
         "required": false,
-        "meaning": "Handelsvolumen des Tages, sofern der Anbieter es nennt."
+        "meaning": "Trading volume for the day, if supplied by the provider."
       },
       {
         "name": "source",
         "kind": "string",
         "required": false,
-        "meaning": "Woher der jüngste Metadatenstand kommt, z.B. 'yfinance+justetf' oder 'cache'."
+        "meaning": "Source of the latest metadata, e.g. 'yfinance+justetf' or 'cache'."
       },
       {
         "name": "ter",
         "kind": "number",
         "required": false,
-        "meaning": "Gesamtkostenquote in Prozent (nur ETF)."
+        "meaning": "Total expense ratio in percent (ETF only)."
       },
       {
         "name": "provider",
         "kind": "string",
         "required": false,
-        "meaning": "Fondsanbieter (nur ETF)."
+        "meaning": "Fund provider (ETF only)."
       },
       {
         "name": "replication",
         "kind": "string",
         "required": false,
-        "meaning": "Replikationsart (nur ETF)."
+        "meaning": "Replication method (ETF only)."
       },
       {
         "name": "fund_size",
         "kind": "number",
         "required": false,
-        "meaning": "Fondsvolumen (nur ETF)."
+        "meaning": "Fund size (ETF only)."
       },
       {
         "name": "fund_domicile",
         "kind": "string",
         "required": false,
-        "meaning": "Fondsdomizil (nur ETF)."
+        "meaning": "Fund domicile (ETF only)."
       },
       {
         "name": "fund_currency",
         "kind": "string",
         "required": false,
-        "meaning": "Währung des Fonds — nicht die des Handelsplatzes (nur ETF)."
+        "meaning": "Currency of the fund, not of the trading venue (ETF only)."
       },
       {
         "name": "volatility",
         "kind": "number",
         "required": false,
-        "meaning": "Annualisierte Volatilität in Prozent über ein Jahr."
+        "meaning": "Annualized volatility in percent over one year."
       },
       {
         "name": "accumulating",
         "kind": "boolean",
         "required": false,
-        "meaning": "true = thesaurierend, false = ausschüttend. false ist eine Aussage, keine Lücke."
+        "meaning": "true = accumulating, false = distributing. false is a value, not missing data."
       }
     ],
     "instrument": [
@@ -252,145 +252,145 @@
         "name": "symbol",
         "kind": "string",
         "required": true,
-        "meaning": "Anzeigename des Listings. Siehe quote.symbol."
+        "meaning": "Display name of the listing. See quote.symbol."
       },
       {
         "name": "identity",
         "kind": "object",
         "required": true,
-        "meaning": "Die Identität des Papiers, als diskriminierte Union über 'kind'. kind='listed' trägt ticker und mic (ISO 10383, nie ein Sammelcode) und optional isin; kind='pair' trägt base und quote_currency — die Form für natives Krypto, das an keinem Handelsplatz notiert; kind='isin_only' trägt isin und ist die Form der OTC-Anleihe. Ein Konsument liest zuerst kind und weiß danach, welche Felder es gibt."
+        "meaning": "The instrument identity, as a discriminated union using 'kind'. kind='listed' contains ticker and mic (ISO 10383, never an aggregate code) and an optional isin; kind='pair' contains base and quote_currency for native crypto not listed on a trading venue; kind='isin_only' contains isin for an OTC bond. Read kind first to determine which fields are present."
       },
       {
         "name": "listing_id",
         "kind": "string",
         "required": true,
-        "meaning": "Opake, dauerhafte Kennung des Listings. Bei der Anlage einmal erzeugt, nicht aus ticker, mic, ISIN oder dem lokalen Schlüssel abgeleitet — Konsumenten behandeln sie als undurchsichtigen String und zerlegen sie nie. Nur hier zugesagt, nicht auf quote: Sie entsteht mit der gespeicherten Zeile, und eine frisch beschaffte Kursantwort hat noch keine."
+        "meaning": "Opaque, permanent listing identifier. Generated once on creation, not derived from ticker, mic, ISIN or the local key. Consumers treat it as an opaque string and never parse it. Guaranteed only here, not on quote: it is created with the stored record, and a freshly fetched quote does not have one yet."
       },
       {
         "name": "history_count",
         "kind": "integer",
         "required": true,
-        "meaning": "Anzahl gespeicherter Kurspunkte zu diesem Instrument."
+        "meaning": "Number of stored price points for this instrument."
       },
       {
         "name": "manual_fields",
         "kind": "array",
         "required": true,
-        "meaning": "Kennzahlen, deren angezeigter Wert gerade von Hand stammt. Leer, wenn keine."
+        "meaning": "Metrics whose displayed value currently comes from manual input. Empty if none."
       },
       {
         "name": "shadowed_fields",
         "kind": "array",
         "required": true,
-        "meaning": "Kennzahlen mit manuellem Wert, den die Quelle gerade überstimmt. Der eingetragene Wert steht unter manual_<feld>."
+        "meaning": "Metrics with a manual value currently overridden by the source. The entered value is available under manual_<field>."
       },
       {
         "name": "exchange",
         "kind": "string",
         "required": false,
-        "meaning": "Anzeigename des Handelsplatzes."
+        "meaning": "Display name of the trading venue."
       },
       {
         "name": "name",
         "kind": "string",
         "required": true,
-        "meaning": "Name des Wertpapiers."
+        "meaning": "Name of the instrument."
       },
       {
         "name": "type",
         "kind": "string",
         "required": true,
-        "meaning": "Gattung aus dem offenen kanonischen Katalog: 'stock', 'etf', 'etc', 'fund', 'crypto', 'bond'. Die Aufzählung ist offen — ein neuer Wert ist ein Nachtrag und kein Bruch. Was die App nicht kennt, zeigt sie als das, was die Quelle sagt, statt es zu runden."
+        "meaning": "Instrument type from the open canonical catalog: 'stock', 'etf', 'etc', 'fund', 'crypto', 'bond'. The list is open: a new value is an addition, not a breaking change. Unknown values are displayed as supplied by the source, without mapping them to a known type."
       },
       {
         "name": "currency",
         "kind": "string",
         "required": false,
-        "meaning": "Zuletzt gesehene Handelswährung des Instruments."
+        "meaning": "Last observed trading currency of the instrument."
       },
       {
         "name": "latest_price",
         "kind": "number",
         "required": false,
-        "meaning": "Letzter gespeicherter Kurs. null, solange kein Kurspunkt vorliegt."
+        "meaning": "Last stored price. null until a price point is available."
       },
       {
         "name": "latest_quote_time",
         "kind": "string",
         "required": false,
-        "meaning": "quote_time des letzten gespeicherten Kurses."
+        "meaning": "quote_time of the last stored price."
       },
       {
         "name": "latest_currency",
         "kind": "string",
         "required": false,
-        "meaning": "Währung des letzten gespeicherten Kurses."
+        "meaning": "Currency of the last stored price."
       },
       {
         "name": "latest_fetched_at",
         "kind": "string",
         "required": false,
-        "meaning": "fetched_at des letzten gespeicherten Kurses."
+        "meaning": "fetched_at of the last stored price."
       },
       {
         "name": "meta_fetched_at",
         "kind": "string",
         "required": false,
-        "meaning": "Wann die ETF-Kennzahlen zuletzt beschafft wurden. null heißt 'nie'."
+        "meaning": "Time when the ETF metrics were last retrieved. null means 'never'."
       },
       {
         "name": "source",
         "kind": "string",
         "required": false,
-        "meaning": "Woher der jüngste Metadatenstand kommt."
+        "meaning": "Source of the latest metadata."
       },
       {
         "name": "ter",
         "kind": "number",
         "required": false,
-        "meaning": "Wirksame Gesamtkostenquote (Quelle, sonst manueller Wert)."
+        "meaning": "Effective total expense ratio (source value, otherwise manual value)."
       },
       {
         "name": "provider",
         "kind": "string",
         "required": false,
-        "meaning": "Wirksamer Fondsanbieter."
+        "meaning": "Effective fund provider."
       },
       {
         "name": "replication",
         "kind": "string",
         "required": false,
-        "meaning": "Wirksame Replikationsart."
+        "meaning": "Effective replication method."
       },
       {
         "name": "fund_size",
         "kind": "number",
         "required": false,
-        "meaning": "Wirksames Fondsvolumen."
+        "meaning": "Effective fund size."
       },
       {
         "name": "fund_domicile",
         "kind": "string",
         "required": false,
-        "meaning": "Wirksames Fondsdomizil."
+        "meaning": "Effective fund domicile."
       },
       {
         "name": "fund_currency",
         "kind": "string",
         "required": false,
-        "meaning": "Wirksame Fondswährung."
+        "meaning": "Effective fund currency."
       },
       {
         "name": "volatility",
         "kind": "number",
         "required": false,
-        "meaning": "Wirksame Volatilität in Prozent."
+        "meaning": "Effective volatility in percent."
       },
       {
         "name": "accumulating",
         "kind": "boolean",
         "required": false,
-        "meaning": "Wirksame Ertragsverwendung."
+        "meaning": "Effective income distribution policy."
       }
     ],
     "daily": [
@@ -398,19 +398,19 @@
         "name": "date",
         "kind": "string",
         "required": true,
-        "meaning": "Handelstag als ISO-Datum (YYYY-MM-DD)."
+        "meaning": "Trading day as an ISO date (YYYY-MM-DD)."
       },
       {
         "name": "close",
         "kind": "number",
         "required": true,
-        "meaning": "Schlusskurs des Tages, **unbereinigt** — so, wie er an dem Tag galt. Dividenden und Splits sind nicht eingerechnet. Wer eine bereinigte Reihe braucht, rechnet sie selbst."
+        "meaning": "Closing price for the day, **unadjusted**, as quoted on that day. Dividends and splits are not factored in. Consumers requiring an adjusted series must calculate it themselves."
       },
       {
         "name": "currency",
         "kind": "string",
         "required": true,
-        "meaning": "Währung des Schlusskurses. Wie bei quote.currency gilt: ohne Währung kein verwertbarer Punkt."
+        "meaning": "Currency of the closing price. As with quote.currency, a point without a currency is unusable."
       }
     ],
     "history": [
@@ -418,31 +418,31 @@
         "name": "price",
         "kind": "number",
         "required": true,
-        "meaning": "Gespeicherter Kurs zu diesem Zeitpunkt."
+        "meaning": "Stored price at this point in time."
       },
       {
         "name": "quote_time",
         "kind": "string",
         "required": true,
-        "meaning": "Zeitpunkt, zu dem der Kurs galt."
+        "meaning": "Time when the price applied."
       },
       {
         "name": "fetched_at",
         "kind": "string",
         "required": true,
-        "meaning": "Zeitpunkt der Beschaffung."
+        "meaning": "Time of retrieval."
       },
       {
         "name": "currency",
         "kind": "string",
         "required": true,
-        "meaning": "Währung des Kurses."
+        "meaning": "Currency of the price."
       },
       {
         "name": "volume",
         "kind": "integer",
         "required": false,
-        "meaning": "Handelsvolumen, sofern bekannt."
+        "meaning": "Trading volume, if known."
       }
     ],
     "fx": [
@@ -450,49 +450,49 @@
         "name": "base",
         "kind": "string",
         "required": true,
-        "meaning": "Ausgangswährung. 1 base = rate quote."
+        "meaning": "Base currency. 1 base = rate quote."
       },
       {
         "name": "quote",
         "kind": "string",
         "required": true,
-        "meaning": "Zielwährung."
+        "meaning": "Quote currency."
       },
       {
         "name": "rate",
         "kind": "number",
         "required": true,
-        "meaning": "Umrechnungsfaktor von base nach quote."
+        "meaning": "Conversion factor from base to quote."
       },
       {
         "name": "quote_time",
         "kind": "string",
         "required": true,
-        "meaning": "Zeitpunkt, zu dem der Kurs galt."
+        "meaning": "Time when the rate applied."
       },
       {
         "name": "fetched_at",
         "kind": "string",
         "required": true,
-        "meaning": "Zeitpunkt der Beschaffung."
+        "meaning": "Time of retrieval."
       },
       {
         "name": "cached",
         "kind": "boolean",
         "required": true,
-        "meaning": "Siehe quote.cached."
+        "meaning": "See quote.cached."
       },
       {
         "name": "stale",
         "kind": "boolean",
         "required": true,
-        "meaning": "Siehe quote.stale."
+        "meaning": "See quote.stale."
       },
       {
         "name": "source",
         "kind": "string",
         "required": false,
-        "meaning": "Woher der Kurs stammt."
+        "meaning": "Source of the exchange rate."
       }
     ]
   },

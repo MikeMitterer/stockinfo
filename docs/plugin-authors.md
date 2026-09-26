@@ -60,6 +60,10 @@ called, and it is not an error — it is a configuration.
 
 ## 2. The contract
 
+`GET /fields` describes REST fields under `core` and plugin fields under
+`plugin_contract`. Their `meaning` descriptions are always in English,
+regardless of `Accept-Language` or the dashboard language.
+
 ### Identity comes in three shapes
 
 Not every paper trades on an exchange, so there is no single "identity" field:

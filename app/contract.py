@@ -65,9 +65,7 @@ def required_fields(model: str) -> tuple[str, ...]:
         Die Namen der Pflichtfelder in der Reihenfolge des Artefakts.
     """
     return tuple(
-        field["name"]
-        for field in core_contract()["core"][model]
-        if field["required"]
+        field["name"] for field in core_contract()["core"][model] if field["required"]
     )
 
 
@@ -75,54 +73,54 @@ def required_fields(model: str) -> tuple[str, ...]:
 
 _PLUGIN_FIELD_MEANINGS: dict[tuple[str, str], str] = {
     ("resolved", "identity"): (
-        "Die Identität in ihrer Form — 'listed' (ticker + mic), 'pair' "
-        "(base + quote_currency) oder 'isin_only' (isin). Welche Form gilt, "
-        "sagt das Feld 'kind'."
+        "The identity in its applicable form: 'listed' (ticker + mic), 'pair' "
+        "(base + quote_currency) or 'isin_only' (isin). The 'kind' field "
+        "identifies the form."
     ),
     ("resolved", "name"): (
-        "Anzeigename des Papiers. Pflicht: Eine Auflösung ohne Namen erzeugt "
-        "eine Zeile, die der Benutzer nicht wiedererkennt."
+        "Display name of the instrument. Required: resolving an instrument "
+        "without a name produces a row the user cannot recognize."
     ),
     ("resolved", "instrument_type"): (
-        "Gattung aus dem offenen Katalog — stock, etf, etc, fund, crypto, "
-        "bond. Pflicht: An ihr hängt, welche Metadatenquellen überhaupt "
-        "gefragt werden. Fehlt sie, läuft die Kaskade stillschweigend nicht."
+        "Instrument type from the open catalog: stock, etf, etc, fund, crypto, "
+        "bond. Required: it determines which metadata sources are queried. "
+        "Without it, the fallback chain silently does not run."
     ),
-    ("quote", "price"): "Der Kurs. Positiv und endlich; 0 ist keine Angabe.",
+    ("quote", "price"): "The price. Positive and finite; zero is not a valid price.",
     ("quote", "currency"): (
-        "ISO-4217-Code. Wer in Untereinheiten notiert (London in Pence), "
-        "rechnet vorher um."
+        "ISO 4217 code. Prices quoted in subunits (pence in London) "
+        "must be converted first."
     ),
-    ("quote", "as_of"): "Wann dieser Kurs galt, mit Zeitzone.",
-    ("quote", "volume"): "Tagesvolumen, falls der Anbieter es kennt.",
-    ("daily_bar", "day"): "Handelstag des Schlusskurses.",
-    ("daily_bar", "close"): "Schlusskurs dieses Tages. Positiv und endlich.",
+    ("quote", "as_of"): "Time when this price applied, with a time zone.",
+    ("quote", "volume"): "Daily volume, if known to the provider.",
+    ("daily_bar", "day"): "Trading day of the closing price.",
+    ("daily_bar", "close"): "Closing price for this day. Positive and finite.",
     ("daily_series", "bars"): (
-        "Die Tagesbalken, aufsteigend nach Datum und ohne Duplikate."
+        "Daily bars in ascending date order, without duplicates."
     ),
     ("daily_series", "currency"): (
-        "ISO-4217-Code der ganzen Reihe. Eine Reihe mit wechselnder Währung "
-        "ist keine Reihe."
+        "ISO 4217 code for the entire series. The currency must be "
+        "the same throughout the series."
     ),
     ("daily_series", "adjusted"): (
-        "Ob die Kurse um Splits und Ausschüttungen bereinigt sind. Pflicht, "
-        "weil sich bereinigte und unbereinigte Reihen nicht vergleichen "
-        "lassen und man es ihnen nicht ansieht."
+        "Whether prices are adjusted for splits and distributions. Required: "
+        "adjusted and unadjusted series are not comparable, and the values "
+        "alone do not reveal which kind of series they belong to."
     ),
-    ("fx_rate", "base"): "Ausgangswährung als ISO-4217-Code.",
-    ("fx_rate", "quote"): "Zielwährung als ISO-4217-Code.",
-    ("fx_rate", "rate"): "Wieviel Zielwährung eine Einheit Ausgangswährung kostet.",
-    ("fx_rate", "as_of"): "Wann dieser Kurs galt, mit Zeitzone.",
-    ("reading", "field"): "Name der Kennzahl, wie die Quelle sie deklariert.",
+    ("fx_rate", "base"): "Base currency as an ISO 4217 code.",
+    ("fx_rate", "quote"): "Quote currency as an ISO 4217 code.",
+    ("fx_rate", "rate"): "Amount of quote currency per unit of base currency.",
+    ("fx_rate", "as_of"): "Time when this rate applied, with a time zone.",
+    ("reading", "field"): "Metric name as declared by the source.",
     ("reading", "value"): (
-        "Der Wert. Zahl, Text oder Wahrheitswert — was die Kennzahl hergibt."
+        "The value: a number, string or boolean, as appropriate for the metric."
     ),
     ("reading", "unit"): (
-        "Die Einheit, in der der Wert steht. Ohne sie ist eine Kostenquote "
-        "von 0.19 nicht von einer von 0.0019 zu unterscheiden."
+        "Unit of the value. Without it, an expense ratio of 0.19 cannot "
+        "be distinguished from one of 0.0019."
     ),
-    ("reading", "source"): "Woher der Wert stammt.",
-    ("reading", "currency"): "Währung, falls der Wert ein Betrag ist.",
+    ("reading", "source"): "Source of the value.",
+    ("reading", "currency"): "Currency, if the value is a monetary amount.",
 }
 """Die Bedeutung je Feld — der einzige Teil, den kein Typ hergibt.
 
@@ -213,9 +211,7 @@ def plugin_contract() -> dict[str, list[dict]]:
                 "required": (
                     field.default is MISSING and field.default_factory is MISSING
                 ),
-                "meaning": _PLUGIN_FIELD_MEANINGS.get(
-                    (label, field.name), "—"
-                ),
+                "meaning": _PLUGIN_FIELD_MEANINGS.get((label, field.name), "—"),
             }
             for field in dataclass_fields(dataclass_type)
         ]

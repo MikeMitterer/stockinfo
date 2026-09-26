@@ -1,11 +1,11 @@
 # Der REST-Core von StockInfo — was zugesagt ist
 
-**Vertragsversion 2.0.0** · Stand 2026-08-26 · Tickets
+**Vertragsversion 4.3.1** · Stand 2026-09-26 · Ursprung in den Tickets
 [T-24](../_tickets/40-done/T-24-rest-core-vertrag.md) und
 [T-21](../_tickets/40-done/T-21-identitaet-mic-und-ticker.md)
 
-> **Was 2.0.0 gegenüber 1.0.0 ändert** — ein Major-Sprung, weil beides
-> bestehende Konsumenten bricht:
+> **Historischer Stand: Änderungen von 1.0.0 auf 2.0.0** — der damalige
+> Major-Sprung umfasste:
 >
 > * **`ticker` und `mic` sind zugesagte Pflichtfelder** von `quote` und
 >   `instrument`, `listing_id` von `instrument`. Sie sind **nicht nullable**:
@@ -231,12 +231,17 @@ zugesagt und deshalb aus `planned` verschwunden.
 
 Ein Dokument, das niemand zur Laufzeit lesen kann, hilft einem Konsumenten
 nicht — er müsste raten, ob seine gecachte Feldliste noch stimmt. `GET /fields`
-liefert deshalb dieselbe Auskunft im Betrieb:
+liefert deshalb dieselbe Auskunft im Betrieb.
+
+`meaning` enthält in `core` und `plugin_contract` eine englische
+Feldbeschreibung. Diese Sprache ist fest: `Accept-Language` und die
+Dashboard-Sprache ändern sie nicht. Die Texte erläutern den Vertrag;
+Programme verwenden die Feldnamen, Typen und Pflichtangaben.
 
 ```json
 {
-  "core_version": "2.0.0",
-  "core": { "quote": [ {"name": "price", "kind": "number", "required": true, "meaning": "…"} ], … },
+  "core_version": "4.3.1",
+  "core": { "quote": [ {"name": "price", "kind": "number", "required": true, "meaning": "Latest known price in the trading currency. Never guessed or converted."} ], … },
   "endpoints": { "quote": [ {"path": "/quote/{isin}", "method": "GET", "query": []} ], … },
   "details_version": 0,
   "details": []

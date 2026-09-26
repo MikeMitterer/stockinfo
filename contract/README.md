@@ -18,6 +18,10 @@ seine Kopie unter `(generation_id, core_version, details_version)` zwischen und
 erkennt an den Nummern, dass er neu holen muss — ohne den Inhalt zu
 vergleichen.
 
+`meaning` beschreibt die Felder von `core` und `plugin_contract` immer auf
+Englisch. Die Sprache ist fest und unabhängig von `Accept-Language` oder der
+Dashboard-Sprache.
+
 ## Für Konsumenten
 
 Die Fixtures sind kein reines JSON, sondern ein **HTTP-Umschlag** aus Status,

@@ -21,7 +21,7 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `reviewer`: `claude`
 - `observer`: `unassigned`
 - `phase`: `codex_working`
-- `ticket`: `T-73-field-meanings-english.md`
+- `ticket`: `T-74-field-meanings-english.md`
 - `handoff_commit`: `1e18ac8`
 - `review_round`: `0`
 - `max_review_rounds`: `3`
@@ -31,17 +31,17 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `last_reviewed_commit`: `1e18ac8`
 - `last_reviewed_round`: `1`
 - `workstream`: `field-meanings`
-- `priority_chain`: `T-73-field-meanings-english.md`
-- `priority_ticket`: `T-73-field-meanings-english.md`
+- `priority_chain`: `T-74-field-meanings-english.md`
+- `priority_ticket`: `T-74-field-meanings-english.md`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## Auftrag T-73 · Mike, 2026-09-26
+## Auftrag T-74 · Mike, 2026-09-26
 
-„Passt - meaning auf Englisch“: [T-73](30-doing/T-73-field-meanings-english.md)
+„Passt - meaning auf Englisch“: [T-74](30-doing/T-74-field-meanings-english.md)
 stellt die Feldbeschreibungen von `GET /fields` auf Englisch um.
 Codex setzt um, Claude prüft anschließend. Frühere Abschlüsse bleiben Historie.
 
