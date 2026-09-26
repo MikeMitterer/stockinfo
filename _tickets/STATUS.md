@@ -20,24 +20,30 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `none`
+- `phase`: `codex_working`
+- `ticket`: `T-73-field-meanings-english.md`
 - `handoff_commit`: `1e18ac8`
-- `review_round`: `1`
+- `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
-- `updated_at`: `2026-09-25`
+- `owner`: `codex`
+- `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-71-docker-quellenprofile-abgleichen.md`
 - `last_reviewed_commit`: `1e18ac8`
 - `last_reviewed_round`: `1`
-- `workstream`: `none`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `workstream`: `field-meanings`
+- `priority_chain`: `T-73-field-meanings-english.md`
+- `priority_ticket`: `T-73-field-meanings-english.md`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
+
+## Auftrag T-73 · Mike, 2026-09-26
+
+„Passt - meaning auf Englisch“: [T-73](30-doing/T-73-field-meanings-english.md)
+stellt die Feldbeschreibungen von `GET /fields` auf Englisch um.
+Codex setzt um, Claude prüft anschließend. Frühere Abschlüsse bleiben Historie.
 
 ## Abschluss T-71 · Mike, 2026-09-25
 
