@@ -8,10 +8,10 @@ sie erscheinen nicht in Ausgaben oder Prozessargumenten.
 **Auftrag:** Mike ersetzt die diskutierte GitHub-Automatisierung durch ein
 lokales Script nach Skill-Konventionen. Präzisierung: keine eigenen Targets;
 der erfolgreiche bestehende Docker-Hub-Push ruft das Script auf.
-**Stand:** Grundfassung von Claude unabhängig approved (Runde 1, StockInfo
-`535e7a7`, ProjectTools `8780252`). Mike bestätigt den erfolgreichen Upload nach
-Token-Anpassung. Nachtrag: eigene Docker-Beschreibung und neue Standardquelle
-implementiert; erneuter Review steht aus. Keine GitHub Action angelegt.
+**Stand:** Grundfassung **und** Docker-Beschreibung/403-Diagnose von Claude
+unabhängig approved (Runde 1: StockInfo `535e7a7`, ProjectTools `8780252`;
+Runde 2: StockInfo `efeab04`, ProjectTools `a1908f7`). Offen ist Mikes
+Abschlussbestätigung. Keine GitHub Action angelegt.
 Die neue Beschreibung wurde lokal geprüft, noch nicht nach Docker Hub übertragen.
 
 ## Übersicht

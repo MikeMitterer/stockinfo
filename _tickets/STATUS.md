@@ -20,16 +20,16 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
+- `phase`: `portfolio_review`
 - `ticket`: `T-77-dockerhub-readme.md`
 - `handoff_commit`: `efeab04`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-77-dockerhub-readme.md`
-- `last_reviewed_commit`: `535e7a7`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `efeab04`
+- `last_reviewed_round`: `2`
 - `workstream`: `dockerhub-documentation`
 - `priority_chain`: `T-77-dockerhub-readme.md`
 - `priority_ticket`: `T-77-dockerhub-readme.md`
@@ -39,78 +39,115 @@ eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## OUTBOX → claude · T-77 Runde 2 · Docker-Beschreibung
+## INBOX → codex · T-77 Runde 2 · approved
 
-Mike bestätigt den erfolgreichen Live-Upload nach Anpassung der Token-Rechte.
-Der 403 ist damit gelöst. Er beauftragt anschließend eine eigene Docker-Hub-
-Beschreibung unter `docker/README.md`, mit Repo-Bildern und einem GitHub-Link
-weit oben. Das normale README soll weiterhin auf Docker Hub verweisen.
+**Claude, 2026-09-26.** T-77 Runde 2 unabhängig geprüft: **approved.**
+Prüfstand StockInfo `efeab04` (Basis `535e7a7`), ProjectTools `a1908f7`
+(Basis `8780252`) — genau wie übergeben, keine Selbstheilung diesmal nötig.
 
-**Prüfstand:** StockInfo `efeab04` (Basis deiner Freigabe `535e7a7`),
-ProjectTools `a1908f7` (Basis `8780252`). Beide Branch `t-77-dockerhub-readme`.
-Shared Repo: `/Volumes/DevLocal/DevBash/Production/ProjectTools`, verlinkt als
-`.libs/ProjectTools`; vorbestehende unversionierte AGENTS.md unverändert.
-Nach Übergabe bleiben beide Produktlinien eingefroren.
+**403-Diagnose selbst nachvollzogen:** `check_status`/`checked_response`
+gelesen, nicht nur den Diff überflogen — jeder Docker-Hub-Aufruf nennt jetzt
+seinen Schritt (`authentication`/`description update`/`verification`) und bei
+403 zusätzlich den Rechte-Hinweis, ohne Header oder Antwortkörper. Den
+parametrisierten Test `test_http_fehler_nennt_schritt_ohne_geheimnisse`
+gelesen: unterscheidet POST/PATCH/GET, prüft `"private-token" not in message`
+auch bei serverseitigem Echo.
 
-**Änderung:** Eigene Container-Anleitung mit Docker Run, Compose, Port, Volume,
-Einstellungen, Updates, Logs und Unraid. GitHub-Link direkt nach Einleitung;
-Screenshot referenziert die vorhandene Repo-Datei. Root-README verweist in
-Zeile 8 und im Docker-Abschnitt auf Docker Hub und zusätzlich auf die neue Anleitung.
-Uploader-Default ist jetzt `docker/README.md`, kein stiller Fallback; `--readme`
-bleibt Override. Vorschau weiterhin `docker/preview/README.md` und Ref `master`.
-Das Größenlimit gilt für die Docker-Beschreibung. Relative Links werden weiterhin
-von Pandoc relativ zur Quelldatei aufgelöst. Push-Hook braucht keinen zweiten Pfad.
+**`docker/README.md` als neue Pflichtquelle — gegen den echten Code geprüft,
+nicht nur gegen die Behauptung:**
+- `docker/Dockerfile` und `docker/entrypoint.sh` gelesen: UID `99`/GID `100`
+  (Gruppe `users`), Port `8000`, `HEALTHCHECK_PATH = "/operational"` in
+  `app/migration_guard.py` — jede Aussage in `docker/README.md` stimmt.
+- Alle sieben dokumentierten Env-Var-Defaults gegen `app/config.py`
+  nachgerechnet: `cache_ttl_hours=6`, `refresh_interval_hours=6`,
+  `metadata_ttl_days=7`, `fx_ttl_hours=1`, `DEFAULT_EXCHANGE="XETR"`,
+  `strict_exchange=False`, `openfigi_api_key=""` — alle sieben exakt.
+- `../unraid/screenshots/dashboard.png` existiert; die Compose-YAML per
+  `yaml.safe_load` eingelesen — mountet `stockinfo-data:/data`, Port
+  `127.0.0.1:8000:8000`, wie dokumentiert. Alle vier `../`-Dokumentlinks
+  (`docs/plugins.md`, `README.md`, `docs/release-notes.md`, `LICENSE`)
+  lösen tatsächlich auf.
+- Echter Bash-Aufruf `--preview` (kein Override): **6.232 Bytes**,
+  deckungsgleich. Konvertierte Ausgabe geprüft: Screenshot →
+  `raw.githubusercontent.com/.../master/unraid/screenshots/dashboard.png`,
+  interne Doku-Links → `github.com/.../blob/master/...`, der bereits absolute
+  externe GitHub-Link blieb unverändert stehen.
+- „Kein stiller Fallback" selbst geprüft: `--readme` weiterhin nötig für ein
+  Projekt ohne eigene `docker/README.md` — `validate_inputs` bricht dort mit
+  `UploadError` ab, kein automatischer Rückgriff auf `README.md`.
 
-Der Diff enthält außerdem `9e6dfc4`: HTTP-Fehler nennen POST/PATCH/GET und einen
-403-Berechtigungshinweis, ohne Header/Antwortkörper zu zeigen. Die drei
-entsprechenden Regressionstests waren vorher rot. Dieser Nachtrag war noch
-nicht Teil deiner ersten Freigabe und gehört zur Prüfung.
+**Übrige Nachweise erneut selbst gelaufen:**
+`.venv/bin/python -m pytest -q .libs/ProjectTools/tests/python/
+tests/test_dockerhub_readme.py` → **47 passed**, deckungsgleich.
+`ruff check`/`ruff format --check` grün. `git diff --check 535e7a7 efeab04`
+(StockInfo) **und** `git diff --check 8780252 a1908f7` (ProjectTools) beide
+clean — dieses Mal ohne Befund. AST-Inventar aller sechs Python-Dateien:
+weiterhin 0 nicht-englische Produktbezeichner. Makefile-Skill-Hash
+`4b586cb1…` gegen `.codex`- und `.claude`-Kopie nachgerechnet: exakter
+Treffer; der aktualisierte Abschnitt beschreibt exakt den neuen Default.
 
-**Prüfung:** 40 ProjectTools- plus 7 StockInfo-Tests = **47 bestanden**.
+Standards: `/Users/macminipro/.claude/skills/code-standards/SKILL.md`
+(Referenzen wie Runde 1) sowie `makefile-conventions/SKILL.md`.
 
-```bash
-PIP_NO_INDEX=1 PIP_FIND_LINKS=/private/tmp/stockinfo-t77-bootstrap/wheels \
-  .venv/bin/python -m pytest -q .libs/ProjectTools/tests/python/ \
-  tests/test_dockerhub_readme.py --tb=short -p no:cacheprovider
+| Referenz | Ergebnis |
+|---|---|
+| Architektur/DRY | ✅ ein Konverter, nur der Default geändert, kein zweiter Wissensspeicher |
+| Shell / CLI | ✅ Hilfe zeigt neue Quelle; Bootstrap-Verhalten unverändert, selbst nachgestellt |
+| Frontend | ➖ nicht berührt |
+| Python | ✅ AST-Inventar weiterhin 0 nicht-englisch, Ruff grün |
+| Persistenz | ➖ keine App-/DB-Änderung |
+| Qualität | ✅ 47 Tests selbst nachgefahren, `git diff --check` beidseitig clean, Security-Test gelesen |
+| Dokumentation | ✅ `docker/README.md` Zeile für Zeile gegen Dockerfile/Entrypoint/Settings verifiziert |
+
+Kein Befund am geprüften Diff, keine Selbstheilung nötig. Kein Live-Upload,
+kein Merge/Push. `T-77-dockerhub-readme.md` bleibt das einzige Element seiner
+`priority_chain`; Zustand geht erneut auf `portfolio_review` an Mike. Ticket
+bleibt bis zur Abschlussbestätigung in `30-doing/`.
+
+**Formalbefund, kein Review-Befund:** Im Arbeitsbaum lagen zusätzlich zu
+`efeab04`/`a1908f7` uncommittete Änderungen — eine neue Regel „Beide READMEs
+gemeinsam prüfen" in `AGENTS.md` und ein passender Ticketabschnitt „Beide
+READMEs dauerhaft aktuell halten". Beides ist inhaltlich zum Ticket passend,
+aber nicht Teil des eingefrorenen Prüfstands und wurde von mir **nicht**
+geprüft. Per Übergabe-Riegel bleibt der Stand ab Übergabe eingefroren; ich
+habe die Datei deshalb nicht selbst committet, um sie nicht ungeprüft in
+meinen Review-Commit zu ziehen. `AGENTS.md` liegt per `git stash` gesichert
+(nicht verworfen), der Ticketabschnitt ist als Text unten dokumentiert und
+aus dem Ticket entfernt; nach diesem Commit stelle ich beides unverändert
+uncommitted wieder her. Codex: bitte regulär committen und als eigenen
+Handoff (neue Runde oder Scope-Checkpoint) übergeben.
+
+<details>
+<summary>Gesicherter, noch nicht committeter Ticketabschnitt (Wortlaut erhalten)</summary>
+
+```markdown
+### Beide READMEs dauerhaft aktuell halten
+
+Auf Mikes Auftrag steht in [AGENTS.md](../../AGENTS.md#dokumentation-gehört-zur-änderung)
+jetzt ausdrücklich: Bei Änderungen an Funktionen, Konfiguration, Installation
+oder Betrieb immer `README.md` und `docker/README.md` gemeinsam prüfen.
+Das gilt für Codeänderungen ebenso wie für Änderungen an einer der Anleitungen.
+Gemeinsame Aussagen müssen übereinstimmen; Entwickleranleitungen bleiben im
+Root-README, Containeranleitungen in `docker/README.md`.
+
+Im Ticket beziehungsweise Abschlussbericht werden die nötigen Anpassungen
+genannt oder begründet, weshalb die andere Datei unverändert bleibt. Der
+Verifier prüft den Inhalt; bloße Änderungen an beiden Dateien reichen nicht
+als Nachweis. Weitere Projekte wie StockPortfolio sollten diese Regel in
+ihre eigene AGENTS.md übernehmen, wenn sie getrennte Beschreibungen pflegen.
+
+Die Verweise sind in beiden Richtungen vorhanden: Das Root-README verlinkt
+oben auf Docker Hub, die Docker-Beschreibung direkt nach der Einleitung auf
+das GitHub-Repository.
+
+**Doku-Abgleich:** AGENTS.md und dieser Ticketnachtrag halten die neue
+Pflegeregel fest. Beide READMEs benötigen dafür keine Inhaltsänderung, da
+die Regel den internen Bearbeitungs- und Review-Ablauf beschreibt.
 ```
 
-Default/Kein-Fallback-Gegenproben vor Anpassung rot; danach grün. Reale Vorschau
-per Bash `--preview`: **6.232 UTF-8-Bytes**, absoluter Raw-GitHub-Screenshot und
-früher GitHub-Link geprüft. Lokale Bild-/Dokumentziele existieren, Compose-YAML
-ist parsebar und mountet das deklarierte Volume nach /data. Anleitung gegen
-Dockerfile, Entrypoint und Settings gelesen; kein neuer Containerlauf behauptet.
-Ruff Check/Format grün. `git diff --check 535e7a7` (StockInfo) und
-`git diff --check 8780252` (ProjectTools) grün. AST-Bezeichnerinventar geprüft.
-Neue Beschreibung noch nicht veröffentlicht; keine Tokens durch Codex gelesen.
+</details>
 
-**Doku-Abgleich:** docker/README.md, Root-README, AGENTS, Make-Hilfe, T-77,
-ProjectTools README und Makefile-Skill. T-77 dokumentiert auch die Umstellung
-für weitere Verbraucher wie StockPortfolio. Umfang entspricht Mikes Nachträgen.
-
-**Standards:** `/Users/macminipro/.codex/skills/code-standards/SKILL.md`,
-Referenzen architecture, shell, cli, python, quality, documentation;
-zusätzlich docker-build-script und makefile-conventions.
-
-| Gruppe | Ergebnis/Beleg |
-|---|---|
-| Architektur/DRY | ✅ Ein Konverter, nur Default geändert, kein Fallback oder zweite Quelle |
-| Shell | ➖ Bootstrap unverändert; echter Bash-Aufruf und vorhandene Tests grün |
-| CLI | ✅ Hilfe zeigt neue Quelle, bestehende PTY-/NO_COLOR-Tests grün |
-| Frontend/i18n | ✅ HTTP-Diagnose über gettext inkl. DE-Katalog; kein Frontend-Diff |
-| Python | ✅ AST-Inventar englisch außer Testnamen, Ruff grün |
-| Persistenz | ➖ keine App-/DB-Änderung |
-| Qualität | ✅ 47 Tests; Rot/Grün-Nachweis, Grenzen oben ausdrücklich benannt |
-| Dokumentation | ✅ Container-Anleitung gegen Code, Links und Compose-YAML geprüft |
-
-Lokaler Makefile-Skill außerhalb Git mitprüfen:
-`/Users/macminipro/.codex/skills/makefile-conventions/SKILL.md`, SHA-256
-`4b586cb1991ffc4b39560228bb634042b731b544f7c2585b4a2720b20ce3af56`.
-Die in Runde 1 geprüften code-standards-Dateien sind unverändert.
-
-Bitte Inhalt aus Sicht eines Container-Nutzers, Standardquelle, Quellordner-
-Bildauflösung, Fehlerdiagnose und Doku-Zuordnung unabhängig prüfen.
-
-## INBOX → codex · T-77 Runde 1 · approved
+## Archiv · INBOX → codex · T-77 Runde 1 · approved (verarbeitet)
 
 **Claude, 2026-09-26.** T-77 unabhängig geprüft: **approved.** Prüfstand
 `535e7a7` auf `t-77-dockerhub-readme` (StockInfo), ProjectTools `8780252`,
