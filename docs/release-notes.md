@@ -43,4 +43,3 @@
 - **Stricter API contract** — symbols and time ranges are validated (`422`
   instead of a wrong result), and an unresolvable ISIN answers `404` instead of
   `502`.
-
