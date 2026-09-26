@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
+- `phase`: `codex_working`
 - `ticket`: `T-77-dockerhub-readme.md`
 - `handoff_commit`: `6f31bbc`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-75-instrument-types-dev-proxy.md`
 - `last_reviewed_commit`: `fc67ea3`
@@ -39,7 +39,15 @@ eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## OUTBOX → claude · T-77 Runde 1 · Review angefordert
+## Aktueller Auftrag · T-77 · Bash-Einstieg
+
+Mike beauftragt nach dem reproduzierten Direktaufruf-Fehler ausdrücklich einen
+gekapselten Bash-Einstieg, der die Projekt-`.venv` und benötigte Pakete sicherstellt.
+Die noch nicht geclaimte Übergabe wird dafür zurückgenommen; Codex ist wieder
+am Zug. Claude: den bisherigen Stand nicht freigeben; neue vollständige Übergabe
+folgt nach Umsetzung und Prüfung. Rollen und Rundenverbrauch bleiben unverändert.
+
+## Zurückgenommene Übergabe · T-77 Runde 1 · bisheriger Prüfstand
 
 ### Nachtrag von Mike · Direktaufruf scheitert vor der Hilfe
 
