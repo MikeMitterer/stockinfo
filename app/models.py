@@ -619,6 +619,29 @@ class InstrumentSummary(BaseModel):
     )
 
 
+class InstrumentTypeSource(BaseModel):
+    """Deklarierte Asset-Typen und Betriebszustand einer konfigurierten Rolle."""
+
+    name: str
+    role: str
+    instrument_types: list[str]
+    status: Literal[
+        "available",
+        "unavailable",
+        "unknown_source",
+        "unsupported_role",
+        "invalid_declaration",
+    ]
+
+
+class InstrumentTypesResponse(BaseModel):
+    """Typkatalog; vollständige Deklarationen garantieren keine Beschaffung."""
+
+    instrument_types: list[str]
+    complete: bool
+    sources: list[InstrumentTypeSource]
+
+
 class FieldSpec(BaseModel):
     """Ein Feld des Core-Vertrags samt Art, Pflicht und Bedeutung."""
 

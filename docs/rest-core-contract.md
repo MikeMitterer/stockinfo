@@ -1,6 +1,6 @@
 # Der REST-Core von StockInfo — was zugesagt ist
 
-**Vertragsversion 4.3.1** · Stand 2026-09-26 · Ursprung in den Tickets
+**Vertragsversion 4.4.0** · Stand 2026-09-26 · Ursprung in den Tickets
 [T-24](../_tickets/40-done/T-24-rest-core-vertrag.md) und
 [T-21](../_tickets/40-done/T-21-identitaet-mic-und-ticker.md)
 
@@ -240,7 +240,7 @@ Programme verwenden die Feldnamen, Typen und Pflichtangaben.
 
 ```json
 {
-  "core_version": "4.3.1",
+  "core_version": "4.4.0",
   "core": { "quote": [ {"name": "price", "kind": "number", "required": true, "meaning": "Latest known price in the trading currency. Never guessed or converted."} ], … },
   "endpoints": { "quote": [ {"path": "/quote/{isin}", "method": "GET", "query": []} ], … },
   "details_version": 0,
@@ -255,6 +255,58 @@ bekäme je nach Weg eine andere Zusage.
 Zwei Nummern, zwei Ebenen: `core_version` folgt SemVer über den geschlossenen
 Core, `details_version` zählt die offene Detailmenge (T-26). Zwischenspeichern
 sollte ein Konsument unter `(generation_id, core_version, details_version)`.
+
+## Asset-Typen aus der Plugin-Konfiguration
+
+`GET /instrument-types` liefert die Typkennungen für dynamische Filter.
+Grundlage sind `SUPPORTED_TYPES` der geladenen Plugin-Klassen in den laufenden
+Ketten `resolvers`, `etf_meta`, `quotes` und `daily`. Nur die jeweilige
+Rollenklasse zählt; eine reine FX-Kette liefert keine Asset-Typen.
+Der Instrumentenbestand spielt keine Rolle. Es gibt keine feste Ersatzliste.
+
+```json
+{
+  "instrument_types": ["future-type", "stock"],
+  "complete": true,
+  "sources": [
+    {"name": "catalog-quote", "role": "quotes", "instrument_types": ["future-type", "stock"], "status": "available"}
+  ]
+}
+```
+
+Die Gesamtmenge und die Typen je Quelle sind sortiert und duplikatfrei.
+`sources` enthält einen Eintrag je konfigurierter Position, in der oben
+genannten Rollenfolge und innerhalb der Rolle in Kettenreihenfolge.
+Neue Kennungen sind normale Strings und brauchen keine neue Client-Version.
+
+| Status je Quelle/Rolle | Bedeutung | Beitrag zur Typmenge |
+|---|---|---|
+| `available` | Deklaration lesbar, lokale Betriebsdiagnose positiv | Deklarierte Typen |
+| `unavailable` | Deklaration lesbar, aber Quelle derzeit nicht einsatzbereit | Deklarierte Typen bleiben erhalten |
+| `unknown_source` | Konfigurierter Name ist nicht geladen oder wurde entfernt | Kein Beitrag |
+| `unsupported_role` | Quelle implementiert die ausgewählte Rolle nicht | Kein Beitrag |
+| `invalid_declaration` | Typdeklaration fehlt oder ist ungültig | Kein Beitrag |
+
+`complete` ist nur dann `true`, wenn alle ausgewählten Asset-Rollen lesbare
+Deklarationen haben. Eine leere Konfiguration liefert HTTP 200 mit
+`instrument_types: []`, `sources: []`, `complete: true`. Fehlende oder ungültige
+Deklarationen liefern ebenfalls HTTP 200, aber `complete: false`; vorhandene
+gültige Typen bleiben enthalten. Ein Betriebsproblem allein macht den Katalog
+nicht unvollständig. Gründe zur Betriebsdiagnose stehen unter `/sources`.
+
+Die Auskunft löst keine Kurs-, Resolver- oder Metadatenabfragen aus.
+`available` bestätigt keine Erreichbarkeit eines externen Dienstes und keine
+Unterstützung jedes einzelnen Instruments. Änderungen an `sources.yaml` oder
+Plugin-Dateien werden nach Neustart sichtbar. Der Endpunkt sendet
+`Cache-Control: no-store` und `StockInfo-Generation`; die Generation stammt aus
+derselben Datenbank wie `generation_id` von `GET /fields` und ist keine Katalogversion.
+Clients laden die Auskunft beim Öffnen ihrer Filter neu. Während einer
+gesperrten Migration gilt wie für andere Fachendpunkte der HTTP-503-Riegel.
+
+Beispiele für Offline-Konsumententests liegen unter
+[`contract/fixtures/instrument-types-200.json`](../contract/fixtures/instrument-types-200.json),
+[`…-200-empty.json`](../contract/fixtures/instrument-types-200-empty.json) und
+[`…-200-incomplete.json`](../contract/fixtures/instrument-types-200-incomplete.json).
 
 ## Wie man den Vertrag prüft
 

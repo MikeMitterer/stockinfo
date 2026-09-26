@@ -236,6 +236,7 @@ forces it).
 | `GET /quote/{isin}/history` | intraday history (collected ticks) |
 | `GET /quote/{isin}/daily?period=1w\|1m\|3m\|1y\|max` | real end-of-day closes (EOD, cached) |
 | `GET /instruments` | all cached instruments with their latest quote |
+| `GET /instrument-types` | declared asset types from the running plugin configuration, including completeness and source status |
 | `GET /env` | current configuration (secrets masked) |
 | `POST /refresh` · `POST /refresh/{isin}` | refresh all / a single instrument |
 | `PUT /instruments/by-symbol/{symbol}/isin` | add an ISIN after the fact |
@@ -243,6 +244,12 @@ forces it).
 
 For instruments **without an ISIN** there is a `…/by-symbol/{symbol}` variant of
 each endpoint (quote, history, daily, refresh, delete).
+
+For dynamic type filters, read `GET /instrument-types` instead of collecting
+types from stored instruments. New plugin types appear without a fixed client
+enumeration. Known types remain listed during source outages; `complete: false`
+indicates missing or invalid declarations. See the
+[type catalog contract](docs/rest-core-contract.md#asset-typen-aus-der-plugin-konfiguration).
 
 **Example response** (`GET /quote/IE00B3RBWM25`):
 

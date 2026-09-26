@@ -1,5 +1,5 @@
 {
-  "core_version": "4.3.1",
+  "core_version": "4.4.0",
   "paths": {
     "/fields": {
       "get": {
@@ -47,6 +47,20 @@
             "application/json": {
               "schema": {
                 "$ref": "#/components/schemas/ErrorDetail"
+              }
+            }
+          }
+        }
+      }
+    },
+    "/instrument-types": {
+      "get": {
+        "parameters": [],
+        "responses": {
+          "200": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/InstrumentTypesResponse"
               }
             }
           }
@@ -1294,6 +1308,75 @@
         "type"
       ],
       "title": "InstrumentSummary",
+      "type": "object"
+    },
+    "InstrumentTypeSource": {
+      "description": "Deklarierte Asset-Typen und Betriebszustand einer konfigurierten Rolle.",
+      "properties": {
+        "instrument_types": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Instrument Types",
+          "type": "array"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "role": {
+          "title": "Role",
+          "type": "string"
+        },
+        "status": {
+          "enum": [
+            "available",
+            "unavailable",
+            "unknown_source",
+            "unsupported_role",
+            "invalid_declaration"
+          ],
+          "title": "Status",
+          "type": "string"
+        }
+      },
+      "required": [
+        "name",
+        "role",
+        "instrument_types",
+        "status"
+      ],
+      "title": "InstrumentTypeSource",
+      "type": "object"
+    },
+    "InstrumentTypesResponse": {
+      "description": "Typkatalog; vollständige Deklarationen garantieren keine Beschaffung.",
+      "properties": {
+        "complete": {
+          "title": "Complete",
+          "type": "boolean"
+        },
+        "instrument_types": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Instrument Types",
+          "type": "array"
+        },
+        "sources": {
+          "items": {
+            "$ref": "#/components/schemas/InstrumentTypeSource"
+          },
+          "title": "Sources",
+          "type": "array"
+        }
+      },
+      "required": [
+        "instrument_types",
+        "complete",
+        "sources"
+      ],
+      "title": "InstrumentTypesResponse",
       "type": "object"
     },
     "IntakeConfirmation": {

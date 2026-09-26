@@ -6,14 +6,26 @@ ganze OpenAPI-Dokument holen und daraus ableiten, welche Felder in welcher
 Antwort Pflicht sind.
 """
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Response
 
+from app.container import get_sources_config
 from app.contract import ContractUnavailableError, core_contract, plugin_contract
 from app.config import get_settings
-from app.models import FieldsResponse
+from app.models import FieldsResponse, InstrumentTypesResponse
 from app.repository import QuoteRepository
+from app.services.instrument_types import instrument_type_catalog
 
 router = APIRouter(tags=["contract"])
+
+
+@router.get("/instrument-types", response_model=InstrumentTypesResponse)
+def instrument_types(response: Response) -> InstrumentTypesResponse:
+    """Liefert den aktuellen Typkatalog der konfigurierten Plugin-Rollen."""
+    response.headers["Cache-Control"] = "no-store"
+    response.headers[core_contract()["generation"]["header"]] = QuoteRepository(
+        get_settings().database_path
+    ).detail_generation()
+    return instrument_type_catalog(get_sources_config())
 
 
 @router.get("/fields", response_model=FieldsResponse)

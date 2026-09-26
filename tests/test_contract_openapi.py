@@ -199,6 +199,7 @@ _CONTRACT_MODELS = {
     "daily": "DailyPoint",
     "history": "QuotePoint",
     "fx": "FxRate",
+    "instrument_types": "InstrumentTypesResponse",
 }
 
 

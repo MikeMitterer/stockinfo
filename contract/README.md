@@ -22,6 +22,11 @@ vergleichen.
 Englisch. Die Sprache ist fest und unabhängig von `Accept-Language` oder der
 Dashboard-Sprache.
 
+`GET /instrument-types` ergänzt den Vertrag um die Asset-Typen der laufenden
+Plugin-Konfiguration. Die drei `fixtures/instrument-types-*.json` zeigen
+vollständige, leere und unvollständige HTTP-Auskünfte. Semantik und Statuswerte:
+[Typkatalog](../docs/rest-core-contract.md#asset-typen-aus-der-plugin-konfiguration).
+
 ## Für Konsumenten
 
 Die Fixtures sind kein reines JSON, sondern ein **HTTP-Umschlag** aus Status,

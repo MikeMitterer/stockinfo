@@ -1,5 +1,5 @@
 {
-  "core_version": "4.3.1",
+  "core_version": "4.4.0",
   "details_version": 0,
   "generation": {
     "endpoint": "/generation",
@@ -98,6 +98,13 @@
           "base",
           "quote"
         ]
+      }
+    ],
+    "instrument_types": [
+      {
+        "path": "/instrument-types",
+        "method": "GET",
+        "query": []
       }
     ]
   },
@@ -494,6 +501,26 @@
         "required": false,
         "meaning": "Source of the exchange rate."
       }
+    ],
+    "instrument_types": [
+      {
+        "name": "instrument_types",
+        "kind": "array",
+        "required": true,
+        "meaning": "Sorted unique type identifiers declared by loaded plugins in the active resolver, metadata, quote and daily chains. Independent of stored instruments; known types remain listed during source outages. FX-only declarations are excluded."
+      },
+      {
+        "name": "complete",
+        "kind": "boolean",
+        "required": true,
+        "meaning": "Whether every selected asset-role entry has a readable type declaration. An empty configuration is complete. Unknown sources, unsupported roles or invalid declarations make this false; a source outage alone does not."
+      },
+      {
+        "name": "sources",
+        "kind": "array",
+        "required": true,
+        "meaning": "One entry per configured asset-role position, in role and chain order: name, role, instrument_types and status. Status is available, unavailable, unknown_source, unsupported_role or invalid_declaration. Available reflects local configuration diagnostics, not guaranteed upstream reachability or support for every instrument."
+      }
     ]
   },
   "errors": {
@@ -533,5 +560,11 @@
       "ticket": "T-25",
       "effect": "Route /generation, Header-Middleware, expose_headers, persistierte UUID"
     }
+  },
+  "instrument_type_catalog": {
+    "cache_control": "no-store",
+    "configuration": "The running configuration and loaded plugin classes are read. Restart after changing sources.yaml or plugin files. No quote, resolution or metadata requests are made to discover types.",
+    "declaration": "SUPPORTED_TYPES is a set or frozenset of non-empty string identifiers without leading or trailing whitespace. Only classes implementing the selected role contribute. New type identifiers require no host enumeration update.",
+    "failures": "HTTP 200 may contain a partial catalog with complete=false. Do not substitute a fixed list. Empty instrument_types with complete=true is a known empty catalog. Source outages retain their declared types with status=unavailable; unknown or invalid declarations contribute no types."
   }
 }

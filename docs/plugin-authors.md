@@ -89,6 +89,15 @@ Declare which shapes you serve in `SUPPORTED_KINDS`. The default is
 nothing rather than everything, so a genus added next year does not silently
 become your responsibility.
 
+`GET /instrument-types` exposes these declarations for the running resolver,
+metadata, quote and daily chains, even when no instruments are stored. Only
+the class implementing the configured role contributes; FX-only sources do
+not contribute asset types. Use a `set` or `frozenset` of non-empty strings
+without surrounding whitespace. Identifiers remain open, including new types.
+Restart StockInfo after changing declarations or `sources.yaml`. Source outages
+retain known types with `status: unavailable`; unreadable declarations make
+`complete` false. `/sources` provides the configuration diagnosis.
+
 ### Three fields are mandatory on a hit
 
 `Resolved` requires `identity`, `name` **and** `instrument_type`. None of them

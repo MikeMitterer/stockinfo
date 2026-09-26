@@ -14,7 +14,8 @@ Instrumentenliste oder im Depot vorhanden ist.
 Möglichen Typen über das REST-Api abfragen“. Mike hat anschließend beauftragt:
 „Danach T-73 nach doing - Wichtig!“ Das Ticket liegt deshalb in `30-doing`;
 Mike hat mit „Ja und? Los gehts“ die Umsetzung gestartet. T-74 ist technisch
-freigegeben. Codex setzt T-73 um, Claude prüft anschließend über STATUS.md.
+freigegeben. T-73 ist umgesetzt und zur Prüfung vorbereitet; Claude prüft
+über STATUS.md. Noch nicht deployed.
 
 ## Beleg und Auswirkung
 
@@ -44,11 +45,11 @@ freigegeben. Codex setzt T-73 um, Claude prüft anschließend über STATUS.md.
 
 | Prüfung | Erwartung | AI |
 |---|---|:--:|
-| Plugin mit zusätzlichem Typ, kein Asset dieses Typs vorhanden | Typ über REST verfügbar | ➖ |
-| Konfiguration/Plugin-Menge geändert | Antwort folgt der dokumentierten Semantik | ➖ |
-| Leerzustand und fehlerhafte Quelle | Dokumentiertes, unterscheidbares Verhalten | ➖ |
-| Neuer unbekannter Typ | Keine geschlossene Konsumenten-Enumeration notwendig | ➖ |
-| Vertrag, Fixture und Doku | Vollständige konsumierbare Beschreibung | ➖ |
+| Plugin mit zusätzlichem Typ, kein Asset dieses Typs vorhanden | `future-type` ohne gespeicherte Instrumente, keine Fachabfragen | ✅ |
+| Konfiguration/Plugin-Menge geändert | Neue Konfiguration erst nach echtem Neustart sichtbar | ✅ |
+| Leerzustand und fehlerhafte Quelle | Leer, unbekannt, falsche Rolle, Baufehler, Ausfall/Erholung und ungültige Deklaration geprüft | ✅ |
+| Neuer unbekannter Typ | Offene Strings, keine Host-Enumeration; Rollenklassen getrennt, Duplikate entfernt | ✅ |
+| Vertrag, Fixture und Doku | Core 4.4.0, Snapshot, drei echte HTTP-Fixtures und dokumentierte Semantik | ✅ |
 
 ## Für Mike
 
@@ -58,8 +59,9 @@ Handgriff erforderlich; technischer Review und menschlicher Abschluss stehen aus
 
 ## Doku-Abgleich
 
-Bei Umsetzung REST-Vertrag und Konsumentenanleitung aktualisieren. Bisher nur
-Bedarf erfasst; keine Produktänderung und keine technische Freigabe.
+README/API-Tabelle, REST-Referenz/Typkatalog, Plugin-Anleitung/SUPPORTED_TYPES
+und Vertrags-README/Fixtures aktualisiert. Datei- und Überschrifteninventar
+abgeglichen; historische Entwürfe und UI-Anleitungen benötigen keine Änderung.
 
 
 ## Scope-Vertrag und Umsetzung
@@ -81,17 +83,46 @@ Plugin-Konfiguration für REST-Konsumenten zurück, auch bei leerem Bestand.
 
 Produktdateien: `app/services/instrument_types.py`, `app/models.py`,
 `app/routers/fields.py`, `contract/core-contract.json`.
-Begleitdateien: neuer API-Test, `tests/test_contract.py`, OpenAPI-Snapshot,
+Begleitdateien: neuer API-Test, `tests/test_contract_openapi.py`, OpenAPI-Snapshot,
 HTTP-Fixtures (drei), README, REST-Referenz, Plugin-Anleitung, Vertrags-README.
 Budget: vier Produktdateien, zehn Test-/Dokudateien, höchstens 800 Diff-Zeilen
 ab T-74-Prüfabschluss. Keine Plugin-API-Änderung, Datenmigration, UI-Arbeit,
 Netzabfrage zum Ermitteln der Typen oder Änderungen in StockPortfolio.
 
-Arbeitsschritte: API-Gegenproben schreiben und rot ausführen; Katalog und
-Route implementieren; Vertrag/Fixtures/Doku ergänzen; gezielte Tests und
-Backend-Suite prüfen; eigenständigen Prüfstand über STATUS.md übergeben.
-
 Lessons: SI-CX-01 (frische Testdatenbank), SI-R-02 (kein hypothetischer
 Kompatibilitätsbau), SI-T-66 (deklarierte Typen und heutige Verfügbarkeit
 unterscheiden), AL-R-02 (alle konfigurierten Rollenklassen inventarisieren).
 Lokale Fassungen vom 2026-09-11; AL-R-02 weiterhin `needs_review`.
+
+
+## Prüfnachweise · Codex, 2026-09-26
+
+15 API-Fälle mit echten Plugin-Dateien und Lifespan bestanden, Erstprobe vor
+Implementierung 404. Drei HTTP-Fixtures auf frischen Datenbanken aufgezeichnet
+und gegen die laufende API verglichen.
+
+Voller Backend-Lauf: **1228 passed, 35 skipped, 10 failed**. Acht Fehler waren
+DNS-Sperren zu justETF/OpenFIGI/Yahoo; Wiederholung mit Netzwerkfreigabe:
+**8 passed**. Die anderen beiden betreffen `tests/test_yaml_profile.py`:
+`test_die_tagesreihe_faellt_auf_die_datei_durch` und
+`test_die_manuelle_history_kommt_als_tagesreihe`. Gegen einen separaten Archivstand
+von **3d64132 vor T-73** identisch reproduziert: `period=1m` enthält am 26.09.
+nur die Werte vom 26./27.08., die Tests erwarten auch den 25.08. Keine Regression
+von T-73; im Ticket ausdrücklich offen gehalten, nicht nebenbei geändert.
+Logs: `/private/tmp/stockinfo-t73-full-tests.log` und
+`/private/tmp/stockinfo-t73-network-tests.log`. Vorbestehende Starlette-Warnung.
+
+Prüfung: `.venv/bin/python -m pytest tests/test_api_instrument_types.py -q`.
+Ruff Check für alle fünf Python-Dateien grün. Neue Dateien, Router und neue
+Modellklassen formatgeprüft. Vollformatierung von `models.py` und dem bestehenden
+OpenAPI-Test war bereits in 3d64132 rot; keine flächige Formatänderung.
+Vollständiges AST-Bezeichnerinventar einschließlich eingebettetem Plugin geprüft:
+englische Bezeichner; deutsche Testnamen als Projektausnahme. JSON-Schema bleibt
+offen für Typstrings. `git diff --check` grün.
+
+Gelesen: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`, Referenzen
+`architecture.md`, `python.md`, `quality.md`, `documentation.md`.
+Vorhandene Registry, Rollenableitung und Generationsleser verwendet; Warnlog bei
+ungültiger Deklaration. Lessons wie oben umgesetzt, keine neue globale Lesson.
+Scope: vier Produktdateien, zehn Test-/Dokudateien, unter 800 Zeilen.
+Unabhängiger Review und menschlicher Abschluss bleiben offen.
