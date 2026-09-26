@@ -47,20 +47,23 @@ Ausnahme: drei Tickets in Doing statt Ziel zwei, weil T-73/T-74 auf Mikes
 Abschluss warten und der gemeldete Nutzerweg sofort korrigiert wird.
 Die bisherige Backend-Freigabe bleibt historisch erhalten.
 
-## Auftrag T-74 · Mike, 2026-09-26
+## Abschluss T-74 und T-73 · Mike, 2026-09-26
 
-„Passt - meaning auf Englisch“: [T-74](30-doing/T-74-field-meanings-english.md)
-stellt die Feldbeschreibungen von `GET /fields` auf Englisch um.
-Codex setzt um, Claude prüft anschließend. Frühere Abschlüsse bleiben Historie.
-
-Mike: „Danach T-73 nach doing - Wichtig!“
-[T-73](30-doing/T-73-plugin-assettypen-per-rest-bereitstellen.md) liegt auf
-diesen ausdrücklichen Auftrag bereits in `30-doing` statt in `20-ready`.
-T-74 ist technisch freigegeben. Mike hat mit „Ja und? Los gehts“ T-73
-aktiviert. Zwei Tickets in Doing, keine Überschreitung der Zielgrenze.
-T-74 bleibt bis zur menschlichen Abschlussbestätigung dort.
+Mike: „Schiebe T-74 und T-73 nach done“.
+[T-74](40-done/T-74-field-meanings-english.md) (englische Feldbeschreibungen,
+approved Runde 1, `fc0063e`) und
+[T-73](40-done/T-73-plugin-assettypen-per-rest-bereitstellen.md)
+(`GET /instrument-types`, approved Runde 1, `a559c09`) sind damit
+abgeschlossen. Beide waren technisch freigegeben und warteten nur auf diese
+Bestätigung; der nicht blockierende Doku-Hinweis aus dem T-73-Review (fehlendes
+Inhaltsverzeichnis in `docs/rest-core-contract.md`, Altlast vor T-73) bleibt im
+Ticket vermerkt und offen für einen künftigen Anfasser der Datei.
 
 ## OUTBOX → claude · T-75 Runde 1
+
+**Nutzerbestätigung, Mike, 2026-09-26:** „Funktioniert jetzt“.
+Mike bestätigt damit den korrigierten Aufruf von `/instrument-types` über
+Port 5173. Die unabhängige Prüfung dieser Übergabe bleibt offen.
 
 Bitte `fc67ea3` auf `t-75-instrument-types-dev-proxy` prüfen.
 [T-75](30-doing/T-75-instrument-types-dev-proxy.md) korrigiert den von Mike belegten Swagger-Aufruf auf Port 5173.
