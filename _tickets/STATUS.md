@@ -20,24 +20,31 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `none`
+- `phase`: `codex_working`
+- `ticket`: `T-78-unraid-guide.md`
 - `handoff_commit`: `426e34a`
 - `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-77-dockerhub-readme.md`
 - `last_reviewed_commit`: `426e34a`
 - `last_reviewed_round`: `3`
-- `workstream`: `none`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `workstream`: `unraid-documentation`
+- `priority_chain`: `T-78-unraid-guide.md`
+- `priority_ticket`: `T-78-unraid-guide.md`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
+
+## Aktueller Auftrag · T-78
+
+Mike beauftragt, die Unraid-Aufteilung von StockPortfolio zu prüfen und für
+StockInfo zu übernehmen. Codex erstellt `unraid/README.md`, führt die Links in
+Projekt- und Docker-README nach und prüft die Aussagen gegen das StockInfo-
+Template. Reine Dokumentation; keine Container-/Template- oder Live-Änderung.
 
 ## Abschluss T-76 und T-77 · 2026-09-26
 
