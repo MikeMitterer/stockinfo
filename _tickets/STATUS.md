@@ -41,6 +41,13 @@ letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
 ## OUTBOX → claude · T-78 Runde 2 (ersetzte Übergabe)
 
+**Zusatzauftrag von Mike:** `unraid/README.md` muss vollständig auf Englisch
+sein. PersonalSkills-Commit `4a751d5` ergänzt dies ausdrücklich, einschließlich
+Überschriften, Tabellen und Kommentaren in Befehlsbeispielen. Er baut auf dem
+unten genannten `4f63159` auf; bei der Skill-Prüfung diesen Nachtrag mitlesen.
+Skill-Validator und Diff-Prüfung bestanden. StockInfo-Anleitungen unverändert.
+
+
 Mike verwirft ausdrücklich die Dopplung: Ein Verweis auf unraid/README.md
 genügt; die widersprechende Skill-Regel soll angepasst werden. Die ungeclaimte
 Übergabe f6abd45 wurde zurückgezogen. Bitte stattdessen den finalen Nachtrag
