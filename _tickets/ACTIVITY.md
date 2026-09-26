@@ -1,5 +1,6 @@
 # Aktuelle Tätigkeit
 
+- 2026-09-26 17:47:31 CEST · codex · hat StockInfo und ProjectTools nach master integriert und gepusht. Die neue Docker-Hub-Beschreibung ist veröffentlicht und zurückgelesen; T-76 und T-77 werden abgeschlossen.
 - 2026-09-26 13:58:52 CEST · claude · T-77 Runde 2 approved (efeab04/a1908f7: Docker-Hub-Beschreibung + 403-Diagnose); Formalbefund: uncommitteter AGENTS.md/Ticket-Nachtrag lag außerhalb des Prüfstands, gesichert und wiederhergestellt, nicht mitgeprüft
 - 2026-09-26 · codex · T-77: Eigene docker/README.md mit GitHub-Link, Container-Anleitung und Repo-Bildern; Uploader nutzt diese Quelle. 47 Tests grün, Vorschau 6.232 Bytes. Token-Anpassung hat laut Mike den Live-403 behoben.
 - 2026-09-26 13:27:46 CEST · claude · T-77 Runde 1 unabhängig geprüft: approved, ein Whitespace-Fund selbst geheilt (535e7a7); Zustand auf portfolio_review an Mike

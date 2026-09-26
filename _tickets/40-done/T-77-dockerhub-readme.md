@@ -11,15 +11,16 @@ der erfolgreiche bestehende Docker-Hub-Push ruft das Script auf.
 **Stand:** Alle drei Runden von Claude unabhängig **approved** (Runde 1:
 StockInfo `535e7a7`, ProjectTools `8780252`; Runde 2: StockInfo `efeab04`,
 ProjectTools `a1908f7`; Runde 3: StockInfo `426e34a`, ProjectTools `9f94b16`,
-PersonalSkills `cf34083`). Mike hat Integration, Push, Veröffentlichung der
-Docker-Beschreibung und den Abschluss nach `40-done/` bereits beauftragt;
-Codex führt das jetzt aus. Keine GitHub Action angelegt.
-Die neue Beschreibung wurde lokal geprüft, noch nicht nach Docker Hub übertragen.
+PersonalSkills `cf34083`). Integration und Push sind erledigt. Die neue
+Docker-Beschreibung ist veröffentlicht und durch Rücklesen geprüft.
+Mike hat mit „Dann mach das“ auch den Ticketabschluss beauftragt; abgeschlossen
+am 2026-09-26. Für Mike ist nichts mehr zu tun. Keine GitHub Action angelegt.
 
 ## Übersicht
 
 - [Umfang](#umfang)
 - [Prüfung](#prüfung)
+- [Abschluss und Veröffentlichung](#abschluss-und-veröffentlichung)
 - [Übernahme in StockPortfolio und weitere Projekte](#übernahme-in-stockportfolio-und-weitere-projekte)
 - [Doku und Lessons](#doku-und-lessons)
 
@@ -54,7 +55,49 @@ Vorschau und API-Fehler werden gezielt geprüft.
 | 1 | Echte Pandoc-Konvertierung: Bilder, Dokumente, Anker, Code und Referenzlinks | Bestanden |
 | 2 | HTTP-Grenze: Authentifizierung, PATCH, Fehler ohne Secret-Ausgabe | Bestanden |
 | 3 | CLI, Make-Aufrufe, Namensinventar, Ruff und Doku-Abgleich | Bestanden |
-| 4 | Vorschau des echten README; tatsächlicher Hub-Upload getrennt ausweisen | Aktuelle Docker-Vorschau: 6.232 Bytes; alter README-Upload von Mike bestätigt, neue Beschreibung zur Veröffentlichung beauftragt |
+| 4 | Vorschau des echten README; tatsächlicher Hub-Upload getrennt ausweisen | 6.232 UTF-8-Bytes; neue Docker-Beschreibung am 2026-09-26 erfolgreich veröffentlicht und per GET inhaltsgleich zurückgelesen |
+
+Abschlusslauf: **47 Tests bestanden** (40 ProjectTools, 7 StockInfo).
+Vollständiger Testbefehl für #1–#3:
+
+```bash
+PIP_NO_INDEX=1 PIP_FIND_LINKS=/private/tmp/stockinfo-t77-bootstrap/wheels \
+  .venv/bin/python -m pytest -q .libs/ProjectTools/tests/python/ \
+  tests/test_dockerhub_readme.py --tb=short -p no:cacheprovider
+```
+
+Die lokalen Wheels stellen die Pakete für echte Erstlaufprüfungen bereit;
+dieser temporäre Verzeichnisname ist kein Projektdefault.
+
+[↑ Übersicht](#übersicht)
+
+## Abschluss und Veröffentlichung
+
+StockInfo `3f5ed5a` und ProjectTools `9f94b16` sind per Fast-Forward in
+`master` integriert und nach `origin/master` gepusht. PersonalSkills enthält
+die geprüften Commits `3da0d17` und `cf34083` ebenfalls in `master`; der
+Remote-Stand wurde mit `git ls-remote origin refs/heads/master` auf
+`d81d44b` bestätigt. Die zuvor offene Integrationsfrage ist damit erledigt.
+
+Veröffentlichung für Prüfpunkt #4 aus der StockInfo-Projektwurzel:
+
+```bash
+LANGUAGE=de ./.libs/ProjectTools/src/bash/dockerhub-readme.sh --publish
+```
+
+Exit 0. Ausgabe: „GitHub-Links umgewandelt, Größenlimit geprüft“, danach
+„Docker-Hub-Beschreibung aktualisiert und geprüft: mangolila/stockinfo“.
+Die Übersicht enthält die 6.232 Bytes aus `docker/README.md` nach
+Linkumwandlung. Das Script hat den gespeicherten Inhalt per GET verglichen.
+Der lokale Token wurde vom Script verwendet; sein Inhalt wurde weder
+ausgegeben noch in Chat oder Ticket aufgenommen. Kein neues Image gebaut
+oder gepusht, keine Unraid-Installation verändert.
+
+**Doku-Abgleich:** Beide READMEs und AGENTS.md sind im geprüften Stand
+veröffentlicht; der Abschluss ändert deren Anleitung nicht. Ticketstatus,
+Veröffentlichungsnachweis und STATUS.md sind nachgezogen. Die nachfolgenden
+Zwischenprüfungen dokumentieren die Entwicklung bis zu diesem Abschluss;
+ihre früheren Testzahlen und Aussagen zum fehlenden Live-Upload sind Historie.
 
 [↑ Übersicht](#übersicht)
 
@@ -138,7 +181,7 @@ README-Uploads. `DOCKER_README_AFTER_PUSH=1` ergänzt im Fehlerfall den Hinweis,
 dass das Image bereits veröffentlicht wurde. Der Aufrufer übernimmt den Fehlercode;
 nur `--publish` separat zu wiederholen genügt, kein neuer Image-Push erforderlich.
 
-### Prüfnachweise und Grenzen
+### Ursprüngliche Prüfnachweise und Grenzen (Historie)
 
 - ProjectTools: **23 Tests bestanden**, einschließlich zweier verschiedener
   Verbraucher, README im Unterordner und CLI-Fehler mit AGENTS.md-Hinweis.
@@ -215,7 +258,7 @@ Der Erstlauf wurde mit echten leeren venvs und echten pip-Installationen geprüf
 Die Testpakete wurden einmal nach `/tmp` geladen; die Installationstests laufen
 mit `PIP_NO_INDEX=1` und `PIP_FIND_LINKS` auf diese Wheels. Damit wird weder eine
 bereits eingerichtete Umgebung als Erstlauf ausgegeben noch Docker Hub beschrieben.
-Die Rücknahme der ersten, ungeclaimten Übergabe steht in STATUS.md; die nächste
+Die Rücknahme der ersten, ungeclaimten Übergabe steht in der Git-Historie von STATUS.md; die nächste
 Übergabe benennt die ergänzten Prüfcommits bei unverändertem Rundenverbrauch.
 
 
@@ -243,7 +286,7 @@ Grundsatz auf Mikes Auftrag im `code-standards`-Skill samt Python-Referenz:
 werkzeugeigene venv für geteilte Helfer, Requirements-Datei als Paketquelle,
 echte Erstlauf-/Wiederverwendungs-/Fehlertests. Der Makefile-Skill verweist
 auf den gemeinsamen Bash-Einstieg. Die alten Commit-/Hash-Angaben oben sind
-die zurückgenommene Erstübergabe; aktuelle Prüffassung steht in STATUS.md.
+die zurückgenommene Erstübergabe; die finale Prüffassung steht im Einstieg.
 
 
 **Zwischenprüfung nach Bash-/Isolationsauftrag:** 23 ProjectTools-Tests und
@@ -258,7 +301,7 @@ und die prinzipielle Vorgehensweise im code-standards-Skill ein.
 
 Zwischenstand ProjectTools: `3005e11` (Vorgänger `3c4e025`).
 
-Damals erfasste Skill-Prüfstände (aktuelle Werte siehe STATUS.md):
+Damals erfasste Skill-Prüfstände (historische Hashes):
 - `makefile-conventions/SKILL.md`: `d9e6ee6615e28ae5336a71a1810b305a4bc90e6ed7ed4e1a8d96ee1d6bd10c66`
 - `code-standards/SKILL.md`: `93b2b62cbacc9ac73f0188afd8fb97146bed4a90db54e9bc0f3d96bc5776c7c6`
 - `code-standards/references/python.md`: `97829547aefe04bc9e379dffb6b853a912a90e57a80fcd5d44184ae5397d5b53`
@@ -313,13 +356,13 @@ aller Python-Bezeichner geprüft: englisch, außer erlaubten deutschen Testnamen
 Echter Bash-Aufruf mit nur `--preview` erzeugt `docker/preview/README.md`
 mit **24.929 UTF-8-Bytes**. Die statische Erkennung an den tatsächlichen
 Projektdateien liefert `mangolila/stockinfo` und `mangolila/stockportfolio`.
-Keine echten Zugangsdaten gelesen, kein Live-Upload. Aktuelle Commitstände
-und Skill-Hashes stehen in der erneuten Review-Übergabe in STATUS.md.
+Keine echten Zugangsdaten gelesen, kein Live-Upload bei dieser Zwischenprüfung.
+Die damalige Review-Übergabe bleibt in der Git-Historie von STATUS.md erhalten.
 
 ### Unabhängiger Review Runde 1 · Claude, approved
 
-Vollständiges Ergebnis in `STATUS.md` unter „INBOX → codex · T-77 Runde 1 ·
-approved". Kurzfassung: Übergebener Stand `a7e37ba` (StockInfo) und
+Vollständiges Ergebnis in `git show 3f5ed5a:_tickets/STATUS.md` unter
+„T-77 Runde 1“. Kurzfassung: Übergebener Stand `a7e37ba` (StockInfo) und
 ProjectTools `8780252` unabhängig nachgestellt, nicht nur gelesen — unter
 anderem echter Erstlauf in leerer, isolierter Cache-`.venv`, Symlink-Schutz,
 `.mo`-Neukompilierung, AST-Bezeichnerinventar und Skill-Hash-Gegenrechnung.
@@ -353,7 +396,7 @@ wurden ausgelesen und kein echter Upload zur Diagnose ausgelöst.
 
 Doku-Abgleich: Die Token-Anforderung steht bereits in StockInfo README,
 ProjectTools README und Makefile-Skill. Keine Änderung dieser Zusage nötig.
-Die neue Diagnose und ihre Grenzen sind hier und in STATUS.md festgehalten.
+Die neue Diagnose und ihre Grenzen sind hier festgehalten.
 
 Prüfstand Diagnose: ProjectTools `9e6dfc4`, 46 Tests grün, Ruff Check/Format
 und Diff-Prüfung bestanden. Der Live-403 war damit noch nicht als behoben bestätigt; Mikes spätere Bestätigung folgt unten.
@@ -421,8 +464,8 @@ die Regel den internen Bearbeitungs- und Review-Ablauf beschreibt.
 ### Abschlussnachtrag: Regeln, Skills und Statusmeldung
 
 Die README-Abgleichregel in AGENTS.md und der entsprechende Ticketabschnitt
-wurden nach Runde 2 ausdrücklich von Mike beauftragt. Sie werden nun zusammen
-mit den Skill-Nachträgen regulär committet und zur Prüfung übergeben.
+wurden nach Runde 2 ausdrücklich von Mike beauftragt. Sie wurden zusammen
+mit den Skill-Nachträgen regulär committet und in Runde 3 geprüft.
 
 Die geteilten Regeln liegen in PersonalSkills: `docker-conventions/SKILL.md`
 bündelt Dockerfile/Laufzeit, die tatsächlichen Make-Targets und Defaults aus
@@ -444,8 +487,8 @@ brauchen für die reine Meldungskorrektur keine weitere Änderung.
 
 ### Unabhängiger Review Runde 3 · Claude, approved (letzte reguläre Runde)
 
-Vollständiges Ergebnis in `STATUS.md` unter „INBOX → codex · T-77 Runde 3 ·
-approved". Kurzfassung: alle drei Nachträge gegen den echten Projektstand
+Vollständiges Ergebnis in `git show 3f5ed5a:_tickets/STATUS.md` unter
+„T-77 Runde 3“. Kurzfassung: alle drei Nachträge gegen den echten Projektstand
 geprüft, nicht nur gegen die Behauptung — insbesondere das neue
 `docker-conventions/SKILL.md` (PersonalSkills) Zeile für Zeile gegen die
 tatsächlichen Makefiles/Buildscripts/Dockerfiles von StockInfo **und**

@@ -8,6 +8,8 @@ Die Anleitungen sollen den vorhandenen Stand korrekt erklären.
 **Stand:** Vier Anleitungen korrigiert, technisch geprüft und mit `d2f0827`
 in `master` integriert sowie nach `origin/master` gepusht. Mike beauftragt
 „Dann aktualiere das“ und anschließend „Danach push + merge“.
+Mit „Dann mach das“ hat Mike auch den Ticketabschluss beauftragt. Das Ticket
+ist am 2026-09-26 abgeschlossen; für Mike ist nichts mehr zu tun.
 Der unterstützende Faktencheck
 `docs_check` ist abgeschlossen; eine formale Freigabe durch Claude wird nicht
 behauptet.
@@ -29,8 +31,7 @@ Testcodeänderung, keine neue API-Zusage. Budget: vier Dokudateien und
 Board-Nachweise, insgesamt höchstens 800 Diff-Zeilen. Historische Entwürfe
 bleiben Historie. Keine Board-Migration im Rahmen dieses Doku-Auftrags.
 
-Merge und Push sind gemäß Mikes Auftrag erledigt. Für die Ablage des Tickets
-unter `40-done/` steht die gesonderte Abschlussbestätigung noch aus.
+Merge, Push und Ablage unter `40-done/` sind gemäß Mikes Auftrag erledigt.
 
 [↑ Übersicht](#übersicht)
 
@@ -66,7 +67,9 @@ ergänzt. Öffentliche Hub-API am 2026-09-26: `description: ""`,
 `pushImage2DockerHub` veröffentlichen nur Tags; keine README-Synchronisierung
 eingerichtet. Automatische Übernahme bei Hub-Autobuilds gegen
 [Docker-Dokumentation](https://docs.docker.com/docker-hub/repos/manage/information/#repository-overview)
-geprüft. Keine Änderung der Docker-Hub-Metadaten beauftragt oder durchgeführt.
+geprüft. Zu diesem Zeitpunkt waren Änderungen der Docker-Hub-Metadaten noch
+nicht beauftragt. Der spätere Upload und seine Veröffentlichung sind in
+[T-77](T-77-dockerhub-readme.md) abgeschlossen.
 
 [↑ Übersicht](#übersicht)
 
