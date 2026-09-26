@@ -8,7 +8,9 @@ sie erscheinen nicht in Ausgaben oder Prozessargumenten.
 **Auftrag:** Mike ersetzt die diskutierte GitHub-Automatisierung durch ein
 lokales Script nach Skill-Konventionen. Präzisierung: keine eigenen Targets;
 der erfolgreiche bestehende Docker-Hub-Push ruft das Script auf.
-**Stand:** Implementiert und lokal geprüft; unabhängiger Review steht aus.
+**Stand:** Implementiert, lokal geprüft und von Claude unabhängig **approved**
+(Runde 1, Prüfstand StockInfo `535e7a7`, ProjectTools `8780252`; volles
+Ergebnis in STATUS.md). Offen ist Mikes Abschlussbestätigung.
 Keine GitHub Action angelegt und kein echter Image-/README-Upload ausgeführt.
 
 ## Übersicht
@@ -310,3 +312,21 @@ mit **24.929 UTF-8-Bytes**. Die statische Erkennung an den tatsächlichen
 Projektdateien liefert `mangolila/stockinfo` und `mangolila/stockportfolio`.
 Keine echten Zugangsdaten gelesen, kein Live-Upload. Aktuelle Commitstände
 und Skill-Hashes stehen in der erneuten Review-Übergabe in STATUS.md.
+
+### Unabhängiger Review Runde 1 · Claude, approved
+
+Vollständiges Ergebnis in `STATUS.md` unter „INBOX → codex · T-77 Runde 1 ·
+approved". Kurzfassung: Übergebener Stand `a7e37ba` (StockInfo) und
+ProjectTools `8780252` unabhängig nachgestellt, nicht nur gelesen — unter
+anderem echter Erstlauf in leerer, isolierter Cache-`.venv`, Symlink-Schutz,
+`.mo`-Neukompilierung, AST-Bezeichnerinventar und Skill-Hash-Gegenrechnung.
+
+Ein Fund: `git diff --check` war entgegen der Zusage nicht clean —
+`docs/release-notes.md` trug seit dem allerersten Commit `6f31bbc` eine
+Leerzeile am Dateiende. Mechanisch und verhaltensneutral; als
+Verifier-Selbstheilung mit `style(review): drop trailing blank line in
+release-notes.md` (`535e7a7`) behoben und erneut geprüft (43 Tests grün,
+`git diff --check` clean). `535e7a7` ist der geprüfte Endstand.
+
+Kein weiterer Befund. T-77 ist das einzige Element seiner `priority_chain`;
+Zustand geht auf `portfolio_review` an Mike.

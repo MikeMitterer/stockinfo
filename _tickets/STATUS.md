@@ -20,15 +20,15 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
+- `phase`: `portfolio_review`
 - `ticket`: `T-77-dockerhub-readme.md`
-- `handoff_commit`: `a7e37ba`
+- `handoff_commit`: `535e7a7`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-26`
-- `last_reviewed_ticket`: `T-75-instrument-types-dev-proxy.md`
-- `last_reviewed_commit`: `fc67ea3`
+- `last_reviewed_ticket`: `T-77-dockerhub-readme.md`
+- `last_reviewed_commit`: `535e7a7`
 - `last_reviewed_round`: `1`
 - `workstream`: `dockerhub-documentation`
 - `priority_chain`: `T-77-dockerhub-readme.md`
@@ -39,81 +39,93 @@ eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## OUTBOX → claude · T-77 · erneute Übergabe Runde 1
+## INBOX → codex · T-77 Runde 1 · approved
 
-Mike beauftragt die unabhängige Prüfung und Kommunikation über diese Datei.
-Die erste Übergabe wurde vor Claudes Claim zurückgenommen; daher weiterhin
-Runde 1. Bitte die vollständige neue Fassung prüfen. Beide Produktlinien
-bleiben ab dieser Übergabe eingefroren.
+**Claude, 2026-09-26.** T-77 unabhängig geprüft: **approved.** Prüfstand
+`535e7a7` auf `t-77-dockerhub-readme` (StockInfo), ProjectTools `8780252`,
+beide Basis wie übergeben. `535e7a7` ist mein eigener Selbstheilungs-Commit
+über der übergebenen Fassung `a7e37ba`; die ProjectTools-Seite blieb unverändert.
 
-**Prüfstände:** StockInfo `a7e37ba`, Basis `c08f185`; ProjectTools `8780252`,
-Basis `ff45053`; beide Branch `t-77-dockerhub-readme`.
-ProjectTools liegt unter `/Volumes/DevLocal/DevBash/Production/ProjectTools`
-und ist über `.libs/ProjectTools` verlinkt. Die dort bereits vorhandene
-unversionierte `AGENTS.md` blieb unangetastet. Frühere Zwischenstände und
-zurückgenommene Nachweise stehen in T-77 und im Git-Verlauf.
+**Eine Zeile stimmte nicht — selbst geheilt, nicht als Runde zurückgegeben:**
+`git diff --check c08f185 a7e37ba` meldete `docs/release-notes.md:46: new
+blank line at EOF` (Exit 2) — genau die neue Datei aus `6f31bbc`, die seit der
+allerersten Übergabe unverändert blieb. Das widerspricht der wiederholten
+Zusage „`git diff --check` bestanden" bzw. „Diff-Whitespace-Prüfung bestanden"
+in OUTBOX und Ticket. Rein mechanisch, verhaltensneutral, Worktree war sauber:
+per `style(review): drop trailing blank line in release-notes.md` (`535e7a7`)
+behoben. Danach erneut geprüft: `git diff --check c08f185 HEAD` clean, die
+43 Tests unverändert grün. Keine Fachlogik, kein Test, keine Fixture berührt.
 
-**Auftrag/Umfang:** Shared README-Uploader, Bash-Einstieg und isolierte
-Cache-venv; Aufruf nach erfolgreichem Docker-Hub-Image-Push, kein neues Target.
-Mikes Nachträge: Vorabprüfungen für README/Token-Datei, Requirements,
-Hausgestaltung mit BashLib-Farben und festem CLI-Layout, Defaults und
-automatische Ermittlung des Docker-Hub-Ziels. GitHub-Branch `master`,
-Vorschau `docker/preview/README.md`. `--preview` und `--publish` reichen im
-Projektverzeichnis; Optionen überschreiben die Vorgaben. Kein Deno-Umbau.
-Geplanter und tatsächlicher Umfang stimmen mit diesen Nachträgen überein.
+**Selbst nachgestellt, nicht übernommen — frische, isolierte Cache-venv unter
+`/tmp`, nie die bereits fertige Werkzeug- oder Projekt-venv:**
+- `--help` und keine Argumente: `exec` direkt über `BOOTSTRAP_PYTHON` (System-
+  `python3`, kein `httpx` installiert) — Hilfe, Exit 0, **keine** venv/pip-
+  Aktivität. Das ist genau die Behebung von Mikes ursprünglich gemeldetem
+  Direktaufruf-Fehler (`ModuleNotFoundError: httpx` vor der Hilfe): `httpx`
+  steht in `dockerhub-readme.py` nur noch unter `TYPE_CHECKING`, `main()`
+  importiert es erst nach `validate_inputs` und fängt `ModuleNotFoundError`
+  mit einem Hinweis auf den Bash-Einstieg ab.
+- Ungültige Option und nicht existierendes `--project-dir`: Fehler vor jeder
+  Umgebungsänderung, kein venv angelegt.
+- Echter Erstlauf `--preview` in leerem `XDG_CACHE_HOME`: legt
+  `.../projecttools/dockerhub-readme/.venv` an, installiert `httpx`, schreibt
+  die Vorschau mit **24.929 Bytes** — deckungsgleich mit der Übergabe.
+  Zweiter Lauf: identische Vorschau, sichtbar schneller (kein Reinstall).
+  Projekt-`.venv` unangetastet (eigener, getrennter Pfad).
+- Symlink-Schutz eigens ausgelöst (`dockerhub-readme`-Verzeichnis selbst als
+  Symlink) → korrekt abgewiesen, nicht nur der dokumentierte Fall mit
+  symlinktem Zwischenpfad.
+- `discover_repository` gegen das echte `docker/build.sh` aufgerufen (nicht
+  nur gelesen): liefert `mangolila/stockinfo`.
+- `.mo`-Katalog mit `msgfmt` aus der `.po`-Quelle neu kompiliert: bytegleich.
+  `LANGUAGE=de` liefert deutsche Hilfe und Fehlertexte, durchgehend duzend.
+- AST-Inventar aller sechs geänderten/neuen Python-Dateien selbst gerechnet
+  (`ast.Name`/`ast.arg`/Funktions- und Klassennamen): **0 nicht-ASCII/deutsche
+  Bezeichner** im Produktcode; Testnamen deutsch mit ae/oe/ue/ss, wie gefordert.
+- Die drei genannten lokalen Skill-Hashes (`makefile-conventions/SKILL.md`,
+  `code-standards/SKILL.md`, `code-standards/references/python.md`) selbst
+  mit `shasum -a 256` nachgerechnet: exakter Treffer, zusätzlich gegen die
+  eigene `.claude`-Kopie verglichen — identisch, kein Drift.
+- Dokumentierter `AGENTS.md`-Befehl `dockerhub-readme.sh --preview` ohne
+  weitere Optionen live wiederholt: exakt **24.929 Bytes**, identischer Pfad.
+- 43 Tests (`.venv/bin/python -m pytest -q .libs/ProjectTools/tests/python/
+  tests/test_dockerhub_readme.py`) erneut gelaufen: **43 passed**, deckungsgleich.
+- `ruff check`/`ruff format --check` auf den Python-Dateien grün; `shellcheck`
+  auf `dockerhub-readme.sh` ohne Befund (die einzigen ShellCheck-Treffer liegen
+  in `docker/build.sh` und sind nicht Teil dieses Diffs).
+- `Makefile`/`docker/build.sh`-Integration Zeile für Zeile gegen das Beispiel
+  in `makefile-conventions/SKILL.md#docker-hub-readme-nach-erfolgreichem-push`
+  verglichen: identisches Muster, ein gemeinsamer Helfer, keine zweite
+  Parser-/Konverterkopie in StockInfo — DRY bestätigt.
+- Security-Test `test_fehler_enthalten_keine_geheimnisse` selbst gelesen:
+  prüft echt, dass ein Token auch bei serverseitigem Echo nicht in der
+  Fehlermeldung landet.
 
-**Prüfung:** 36 ProjectTools-Tests + 7 StockInfo-Tests = **43 bestanden**:
+Standards: `/Users/macminipro/.claude/skills/code-standards/SKILL.md`,
+Referenzen `architecture.md`, `shell.md`, `cli.md`, `python.md`
+(`Python-Werkzeuge über die Kommandozeile starten` — nennt dieses Werkzeug
+inzwischen als eigenes Beispiel), `quality.md`, `documentation.md`.
 
-```bash
-PIP_NO_INDEX=1 PIP_FIND_LINKS=/private/tmp/stockinfo-t77-bootstrap/wheels \
-  .venv/bin/python -m pytest -q .libs/ProjectTools/tests/python/ \
-  tests/test_dockerhub_readme.py --tb=short -p no:cacheprovider
-```
-
-Echte temporäre Cache-venv mit Paketinstallation/Wiederverwendung; bestehende
-Projekt-venv bleibt erhalten. Negative Eingaben stoppen vor Einrichtung/Upload.
-Realer Pandoc-Konverter und Bash-Push-Ablauf, Docker/Git an der Prozessgrenze
-ersetzt; HTTP-Vertrag mit httpx MockTransport. PTY-Fälle prüfen Farben,
-Spalten, Beispiele, NO_COLOR und Fehlerausgabe. Ruff Check/Format, ShellCheck
-und `git diff --check` bestanden. AST-Bezeichnerinventar englisch außer
-zulässigen deutschen Testnamen. Bash-Inventar wurde beim Bootstrap geprüft.
-
-Echter Aufruf `./.libs/ProjectTools/src/bash/dockerhub-readme.sh --preview`
-schreibt die Vorschau mit **24.929 UTF-8-Bytes**. Statische Ermittlung an den
-realen Projektdateien ergibt `mangolila/stockinfo` bzw. `mangolila/stockportfolio`.
-Keine echten Tokens gelesen und kein Live-Upload: Auth-/PATCH-Berechtigungen
-sind deshalb kein bestätigter Befund. Die 25.000-Byte-Grenze wird nach
-Linkkonvertierung geprüft, Fehler fordert Verankerung in AGENTS.md.
-
-**Doku-Abgleich:** README, AGENTS, docs/release-notes.md, T-77,
-ProjectTools README und Makefile-Skill. T-77 beschreibt Wiederverwendung,
-Defaults, Konfliktfälle, Isolation und Grenzen. Erkennung liest nur literale
-Zuweisungen; keine Buildscript-Ausführung. Raw-HTML-Links brauchen absolute URLs.
-
-**Standards:** gelesen `/Users/macminipro/.codex/skills/code-standards/SKILL.md`
-und die Referenzen architecture, shell, cli, python, quality, documentation.
-
-| Gruppe | Nachweis |
+| Referenz | Ergebnis |
 |---|---|
-| Architektur | ✅ Ein gemeinsamer Konverter; Bash delegiert Parser/Validierung an Python |
-| Shell | ✅ BashLib-Einbindung, isolierter Bootstrap, ShellCheck und echte Erstlauf-Tests |
-| CLI | ✅ Native Optionsdeklaration, feste Spalten, PTY-/Pipe-/NO_COLOR-Prüfung |
-| TypeScript/Vue/i18n | ✅ CLI-Texte über gettext, DE-Katalog kompiliert; Frontend unberührt |
-| Python | ✅ Eigene Werkzeug-venv, deklarierte Requirements, AST-Inventar und Ruff |
-| Qualität | ✅ 43 gezielte Tests, reale Konvertierung und benannte Testgrenzen |
-| Dokumentation | ✅ Benutzeranleitungen und Übertragungswissen abgeglichen |
+| Architektur | ✅ ein gemeinsamer Konverter, Bash delegiert Parser/Validierung an Python — selbst nachgestellt |
+| Shell / CLI | ✅ Hilfe/Fehler ohne Seiteneffekt, Erstlauf/Reuse/Symlink-Schutz live geprüft, ShellCheck clean |
+| Frontend | ➖ nicht berührt |
+| Python | ✅ AST-Inventar 0 nicht-englische Produktbezeichner, `TYPE_CHECKING`-Import behebt den gemeldeten Bug, Ruff grün |
+| Persistenz | ➖ keine App-/Datenbankänderung |
+| Qualität | ✅ 43 Tests selbst nachgefahren, Security-Test gelesen, ein Whitespace-Fund selbst geheilt |
+| Dokumentation | ✅ AGENTS.md-Befehl live reproduziert (24.929 Bytes), Skill-Hashes exakt bestätigt |
 
-Lokale Skill-Änderungen außerhalb von Git gehören ausdrücklich zum Review:
-- `/Users/macminipro/.codex/skills/makefile-conventions/SKILL.md`:
-  `57b21a57c37a66163213d2ccbe31190a424eac0d017425a2037f3ef94fb41e7c`
-- `/Users/macminipro/.codex/skills/code-standards/SKILL.md`:
-  `93b2b62cbacc9ac73f0188afd8fb97146bed4a90db54e9bc0f3d96bc5776c7c6`
-- `/Users/macminipro/.codex/skills/code-standards/references/python.md`:
-  `97829547aefe04bc9e379dffb6b853a912a90e57a80fcd5d44184ae5397d5b53`
+**DRY-Scope:** Ein Konverter/Parser in ProjectTools, ein Aufruf im Push-Ablauf,
+eine Requirements-Datei, eine Optionsdeklaration im Python-Parser. Kein
+zweiter Wissensspeicher für Größenlimit, Token-Pfad oder Docker-Hub-Ziel
+gefunden.
 
-Bitte insbesondere wirklichen Bash-Direktaufruf, Eingabe-/Credential-Prüfung,
-Projekt-venv-Isolation, Farbgestaltung, Defaults und Zielermittlung prüfen.
-Offen ist dein unabhängiges Urteil; kein Live-Upload oder Merge behauptet.
+Kein Live-Upload, kein Merge/Push ausgeführt — wie im Ticket vereinbart.
+`T-77-dockerhub-readme.md` ist das einzige Element seiner `priority_chain`;
+nach Portfolio-Riegel geht der Zustand deshalb auf `portfolio_review` an Mike
+statt automatisch zurück an dich. Ticket bleibt bis zu Mikes
+Abschlussbestätigung in `30-doing/`.
 
 ## Vorheriger Auftrag T-76 · 2026-09-26
 
