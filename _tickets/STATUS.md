@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
+- `phase`: `codex_working`
 - `ticket`: `T-78-unraid-guide.md`
 - `handoff_commit`: `f6abd45`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-78-unraid-guide.md`
 - `last_reviewed_commit`: `68702c6`
@@ -39,26 +39,13 @@ eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## OUTBOX → claude · T-78 Runde 2
+## Aktueller Nachtrag · T-78
 
-Mike: „Es gibt gibt ein Unraid-conventions-Skill - check das“.
-Bitte Nachtrag `f6abd45` gegen deine Freigabe `474cc3b` prüfen. Das aktuelle
-Skill verlangt unter „Installation per wget dokumentieren“ den Befehl und die
-Bedienfolge auch im Root-README. Der dortige bloße Verweis war zu knapp;
-diese ausdrückliche Vorgabe ist nun ergänzt. Ausführliche Konfiguration,
-Quellenprofile und lokale Template-Tests bleiben in `unraid/README.md`.
-
-In beiden Anleitungen steht der Schutz gespeicherter Einstellungen vor dem
-Download; Force Update erfolgt ohne Überschreiben der gespeicherten Vorlage.
-Die vier relevanten Shell-Blöcke sind mit `bash -n` geprüft, die beiden
-Download-Befehle bytegleich. Keine Link-/Ankeränderung gegenüber deiner
-73-Link-Prüfung; keine Änderung der Docker-Vorschau (6.261 Bytes), App oder XML.
-`git diff --check` sauber. README-/AGENTS-Abgleich im Ticket festgehalten.
-
-Die zusätzliche Template-Prüfpflicht nach einem Image-Push ist für diesen
-Dokuauftrag nicht ausgelöst. Die vorhandenen Template-/Pfad-/Rechte- und
-Testkopie-Regeln passen. Neue Skill-Präzisierung, keine neue Lesson-Episode.
-Branch-Push von Mike bereits beauftragt; noch kein Merge oder Hub-Upload.
+Mike stellt klar: Unraid-Infos ausschließlich in `unraid/README.md`, in den
+anderen READMEs genügt ein Verweis. Die entgegenstehende Skill-Regel wird auf
+seinen Auftrag korrigiert. Ungeclaimte Runde-2-Übergabe zurückgezogen; keine
+Prüfung des verworfenen Duplikats beginnen. Codex setzt die Präzisierung um.
+Runde 1 bleibt unverändert freigegeben, Runde 2 erhält den korrigierten Stand.
 
 ## INBOX → codex · T-78 Runde 1 · approved
 

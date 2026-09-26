@@ -139,9 +139,7 @@ logs and dashboard before restarting repeatedly.
 
 ## Unraid
 
-See the [Unraid guide](../unraid/README.md) for template installation,
-configuration and testing. The template maps `/mnt/user/appdata/stockinfo`
-to `/data` and exposes port `8000`. Keep the appdata directory when updating.
+See the [Unraid guide](../unraid/README.md) for installation, configuration and operation.
 
 ## Support and license
 

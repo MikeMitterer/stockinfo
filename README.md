@@ -445,24 +445,7 @@ limit without truncation. Run without arguments for help.
 
 ## Unraid
 
-The [Unraid guide](unraid/README.md) covers template installation, settings,
-persistent data, source profiles and local template testing.
-StockInfo uses `mangolila/stockinfo:latest`, port `8000` and the host directory
-`/mnt/user/appdata/stockinfo`, mounted at `/data`.
-
-For a new installation, download the user template from a terminal **on your
-Unraid server**. Keep an existing `my-stockinfo.xml` if it contains saved
-container settings and use that template instead: `wget -O` overwrites it.
-
-```bash
-wget -O /boot/config/plugins/dockerMan/templates-user/my-stockinfo.xml \
-  https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml
-```
-
-Choose **Docker → Add Container → User templates → stockinfo**. Check the host
-port, appdata path and timezone, then start the container and open its WebUI.
-Existing containers use **Force Update**; do not download over their saved
-template to update the image.
+See the [Unraid guide](unraid/README.md) for installation, configuration and operation.
 
 [↑ Contents](#contents)
 

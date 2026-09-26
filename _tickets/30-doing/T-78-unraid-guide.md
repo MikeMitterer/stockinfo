@@ -7,11 +7,11 @@ Docker-README führen mit kurzen Verweisen dorthin.
 
 **Auftrag:** Mike: „StockPortfolio hast die Unraid-Sektion in ein eigenes
 README ausgelagert. Check das und mach das hier gleich“.
-**Stand:** Erste Fassung von Claude freigegeben (Runde 1, `68702c6`). Auf Mikes
-weiteren Auftrag mit `unraid-conventions` abgeglichen: Installationskurzfassung
-im Root-README ergänzt und Schutz bestehender Einstellungen vor den Download
-gestellt. Der Nachtrag geht in Runde 2. Branch bereits gepusht; noch nicht
-gemergt oder nach Docker Hub übertragen. Menschlicher Abschluss steht aus.
+**Stand:** Erste Fassung von Claude freigegeben (Runde 1, `68702c6`).
+Mike hat die doppelte Installationskurzfassung ausdrücklich verworfen.
+Root- und Docker-README enthalten jetzt ausschließlich einen Unraid-Verweis;
+die Skill-Regel ist entsprechend korrigiert. Korrigierte Runde 2 wird übergeben.
+Noch nicht gemergt oder nach Docker Hub übertragen; menschlicher Abschluss offen.
 
 ## Umfang
 
@@ -26,8 +26,8 @@ bleiben unberührt. StockInfos Port, Datenablage und UID/GID gelten weiter.
 | # | Prüfung | Ergebnis |
 |---|---|---|
 | 1 | Unraid-Anleitung gegen Template, Dockerfile und App-Settings | Lokales und veröffentlichtes XML bytegleich, XML gültig; Port 8000, /data-Mount, UID/GID 99/100 und alle aufgeführten Defaults abgeglichen |
-| 2 | README-Verweise, Abschnittsanker und Shell-Beispiele | 73 lokale Links/Anker gültig; vier relevante Shell-Blöcke in Root-/Unraid-README mit bash -n geprüft, Download-Befehle identisch; Screenshot-Ziele beider READMEs identisch und öffentlich HTTP 200 |
-| 3 | Docker-Hub-Vorschau mit absoluten Links und Größenprüfung | Echter Bash-Einstieg erfolgreich: 6.261 UTF-8-Bytes; neuer Unraid-Link und Swagger-Bild korrekt umgewandelt |
+| 2 | README-Verweise, Abschnittsanker und Shell-Beispiele | 73 lokale Links/Anker gültig; drei Shell-Blöcke ausschließlich in unraid/README.md mit bash -n geprüft; Screenshot-Ziele beider READMEs identisch und öffentlich HTTP 200 |
+| 3 | Docker-Hub-Vorschau mit absoluten Links und Größenprüfung | Echter Bash-Einstieg erfolgreich: 6.128 UTF-8-Bytes; neuer Unraid-Link und Swagger-Bild korrekt umgewandelt |
 
 Template-Prüfstand: `/Volumes/DevLocal/DevUnraid/Production/Templates/templates/stockinfo.xml`,
 letzter Dateicommit `87b89cd`. Öffentliche Fassung von
@@ -90,7 +90,7 @@ Kurzfassung.
 
 Menschlicher Abschluss (Verschieben nach `40-done/`) steht noch aus.
 
-## Nachtrag: Abgleich mit unraid-conventions
+## Historie: Abgleich mit unraid-conventions (zurückgenommen)
 
 Das inzwischen benannte Skill verlangt unter „Installation per wget
 dokumentieren“ den Download und die Bedienfolge in **beiden** Anleitungen.
@@ -112,3 +112,28 @@ Download-Befehle bytegleich und Hinweise jeweils vor dem Befehl. Links und
 Einordnung: neu konkretisierte Konvention aus dem aktualisierten Skill,
 keine neue unabhängige Lesson-Episode. Claudes Runde-1-Freigabe bleibt auf
 `68702c6` begrenzt; der Nachtrag erhält eine eigene Prüfung.
+
+## Mikes Korrektur: eine einzige Unraid-Anleitung
+
+Mike: „Die Unraid-Infos brauchen nicht doppelt sein!!! ein Verweis auf das
+Unraid-Readme genügt. Wenn das Skill was anderes behauptet - dann passe das
+entsprechend an“.
+
+Die übernommene Skill-Regel widersprach dem gewünschten Auslagern. Die
+Dopplung ist entfernt, einschließlich der Unraid-spezifischen Port-/Pfad-
+Kurzfassung in den beiden verweisenden READMEs. `unraid/README.md` bleibt die
+vollständige Anleitung; die Hinweise zum Schutz vorhandener Einstellungen
+bleiben dort vor dem Download erhalten.
+
+`unraid-conventions/SKILL.md` in PersonalSkills verlangt nun ausschließlich
+`unraid/README.md` als Ort für Installation, Einstellungen, Datenablage, Updates
+und lokale Template-Tests. Root-/Docker-README verlinken nur darauf. Codex und
+Claude verwenden über ihre installierten Symlinks dieselbe korrigierte Quelle.
+Skill-Validator bestanden, 73 lokale Links/Anker gültig, reale Hub-Vorschau
+6.128 Bytes. Keine doppelte Befehlsanleitung mehr; Diff-Prüfungen sauber.
+
+**Doku-Abgleich:** Root-/Docker-README und Skill korrigiert. Unraid-README
+und AGENTS.md bereits passend. Die bisherige ungeclaimte Runde-2-Übergabe wurde
+zurückgezogen, nicht als abgeschlossenes Review gezählt. Die neue Fassung
+ersetzt sie. Der konkrete Lernpunkt ist direkt in der beauftragten Skill-Regel
+verankert: Nutzervorgabe zur Auslagerung erhalten, keine Kopierpflicht ableiten.
