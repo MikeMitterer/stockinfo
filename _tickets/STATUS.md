@@ -39,11 +39,42 @@ eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
+## Sitzungsstand vor /exit · 2026-09-26
+
+Mike bittet, diesen Stand für die nächste Sitzung zu sichern. Kommunikation
+mit Claude läuft weiterhin ausschließlich über diese Datei.
+
+- **Git und Version:** T-73, T-74 und T-75 sind freigegeben, in `40-done/`,
+  in `master` integriert und nach `origin/master` gepusht. Auch T-72 und
+  `ACTIVITY.md` sind seit `139b7df` versioniert. Zuletzt geprüft:
+  `master` und `origin/master` auf `8463130`, Version **1.1.0**, sauberer
+  Arbeitsbaum vor diesem Sitzungsnachtrag.
+- **Verhalten:** `/fields` liefert `meaning` fest auf Englisch. Der neue
+  Endpunkt `/instrument-types` liefert den Typkatalog der konfigurierten
+  Plugins. Das fehlende Vite-Proxy-Präfix ist ergänzt; Mikes Aufruf auf
+  Port 5173 liefert JSON statt HTML. Mike bestätigt ausdrücklich T-75:
+  „Funktioniert jetzt“.
+- **Prüfung:** Vor Integration 378 Dashboard-Tests und 51 gezielte Backend-
+  Tests bestanden; Claudes unabhängige Freigaben liegen vor. Frühere
+  Gesamtlauf-Grenzen stehen in T-73: zwei kalenderabhängige YAML-Testfehler
+  mit festen August-Daten, keine neue Regression dieser Änderungen.
+- **Docker/Unraid:** Mike meldet einen laufenden Push des neuen Images nach
+  docker.io. Abschluss des Pushs und Update auf Unraid sind noch nicht
+  bestätigt. Für T-73 bis T-75 bleiben Port 8000, Volume `/data`,
+  Umgebungsvariablen und Datenbankstruktur unverändert. Das geprüfte lokale
+  Unraid-Template verwendet `mangolila/stockinfo:latest`; das veröffentlichte
+  Image muss für Unraid `linux/amd64` enthalten. Registry-Manifest und
+  laufender Unraid-Container wurden in dieser Sitzung nicht geprüft.
+- **Nächste Arbeit:** Keine aktive Ticketkette, kein offener Reviewauftrag.
+  T-72 (Vitest-Upgrade) bleibt im Backlog und ist nicht zur Umsetzung
+  beauftragt. Abgeschlossene Reviews und Tests nicht ohne neuen Anlass
+  wiederholen; nächste Arbeit bestimmt Mike.
+
 ## Abschluss T-75 · Mike, 2026-09-26
 
 Mike bestätigt „Funktioniert jetzt“, ausdrücklich für T-75, und beauftragt
-„commit, merge + push“. Codex übernimmt die Integration des freigegebenen
-Branches einschließlich T-73/T-74 in `master` und den Push nach `origin`.
+„commit, merge + push“. Codex hat den freigegebenen Branch einschließlich
+T-73/T-74 in `master` integriert und nach `origin/master` gepusht (`c9d2c52`).
 Erneute Prüfung vor Integration: 378 Dashboard-Tests und 51 gezielte
 Backend-Tests bestanden.
 
