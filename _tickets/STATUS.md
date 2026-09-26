@@ -21,7 +21,7 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `reviewer`: `claude`
 - `observer`: `unassigned`
 - `phase`: `portfolio_review`
-- `ticket`: `T-75-instrument-types-dev-proxy.md`
+- `ticket`: `none`
 - `handoff_commit`: `fc67ea3`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
@@ -30,22 +30,22 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `last_reviewed_ticket`: `T-75-instrument-types-dev-proxy.md`
 - `last_reviewed_commit`: `fc67ea3`
 - `last_reviewed_round`: `1`
-- `workstream`: `instrument-types-dev-proxy`
-- `priority_chain`: `T-75-instrument-types-dev-proxy.md`
-- `priority_ticket`: `T-75-instrument-types-dev-proxy.md`
+- `workstream`: `none`
+- `priority_chain`: `none`
+- `priority_ticket`: `none`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## Nacharbeit T-75 · Mike, 2026-09-26
+## Abschluss T-75 · Mike, 2026-09-26
 
-Mikes echter Swagger-Aufruf an Port 5173 liefert HTML. [T-75](30-doing/T-75-instrument-types-dev-proxy.md)
-behebt die fehlende Weiterleitung als begrenztes Folgeticket zu T-73.
-Ausnahme: drei Tickets in Doing statt Ziel zwei, weil T-73/T-74 auf Mikes
-Abschluss warten und der gemeldete Nutzerweg sofort korrigiert wird.
-Die bisherige Backend-Freigabe bleibt historisch erhalten.
+Mike: „Schiebe T-75 auch nach done“.
+[T-75](40-done/T-75-instrument-types-dev-proxy.md) (Dev-Proxy-Präfix für
+`GET /instrument-types`, approved Runde 1, `fc67ea3`) ist damit abgeschlossen.
+`20-ready/` und `30-doing/` sind wieder leer. Keine weitere StockInfo-Arbeit
+ist eingeplant.
 
 ## Abschluss T-74 und T-73 · Mike, 2026-09-26
 
