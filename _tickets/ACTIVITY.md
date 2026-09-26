@@ -1,5 +1,6 @@
 # Aktuelle Tätigkeit
 
+- 2026-09-26 11:55:09 CEST · codex · T-76: Dokumentation mit d2f0827 in master integriert und gepusht. Docker-Hub-Beschreibung und automatische Synchronisierung sind unverändert; Funktionsweise erklärt.
 - 2026-09-26 11:53:54 CEST · codex · T-76: Vier Anleitungen korrigiert, 113 gezielte Tests bestanden, 35 Fixture-Skips. Beispiele und 117 lokale Links geprüft; Docker-Hub-Link und Erklärung ergänzt.
 - 2026-09-26 11:44:32 CEST · codex · T-76: README und API-Referenzen werden an den aktuellen Code angeglichen; anschließend sind Merge und Push beauftragt.
 - 2026-09-26 11:26:30 CEST · claude · T-75 auf Mikes Bestätigung nach 40-done verschoben. 20-ready/ und 30-doing/ sind wieder leer, keine Kette eingeplant.

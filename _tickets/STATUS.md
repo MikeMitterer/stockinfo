@@ -20,19 +20,19 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
-- `ticket`: `T-76-current-documentation.md`
+- `phase`: `portfolio_review`
+- `ticket`: `none`
 - `handoff_commit`: `fc67ea3`
 - `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `mike`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-75-instrument-types-dev-proxy.md`
 - `last_reviewed_commit`: `fc67ea3`
 - `last_reviewed_round`: `1`
-- `workstream`: `documentation`
-- `priority_chain`: `T-76-current-documentation.md`
-- `priority_ticket`: `T-76-current-documentation.md`
+- `workstream`: `none`
+- `priority_chain`: `none`
+- `priority_ticket`: `none`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
@@ -42,9 +42,17 @@ letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 ## Aktueller Auftrag · 2026-09-26
 
 Mike: „Dann aktualiere das“, anschließend „Danach push + merge“.
-Codex aktualisiert die vier betroffenen aktuellen Anleitungen in
-[T-76](30-doing/T-76-current-documentation.md) und prüft Beispiele, Aussagen
-und Links vor der beauftragten Integration. Keine Produktcodeänderung.
+Die vier Anleitungen aus [T-76](30-doing/T-76-current-documentation.md) sind
+mit `d2f0827` in `master` integriert und nach `origin/master` gepusht.
+113 gezielte Tests bestanden, 35 Fixture-Skips; fünf JSON-Blöcke und 117 lokale
+Links/Anker geprüft. Der ergänzend beauftragte Docker-Hub-Link steht im README.
+Die fehlende Hub-Beschreibung ist erklärt: keine Autobuilds, keine separate
+README-Synchronisierung. Hub-Metadaten wurden nicht verändert.
+
+Unterstützender Faktencheck durch `docs_check`, keine formale Claude-Freigabe
+behauptet; die letzte formale Review-Übergabe oben bleibt T-75 zugeordnet.
+Keine Produktcodeänderung und keine weitere aktive Arbeit. T-76 bleibt bis
+zur gesonderten Abschlussbestätigung in `30-doing/`.
 Der folgende Sitzungsstand ist Historie vor diesem Auftrag.
 
 ## Sitzungsstand vor /exit · 2026-09-26

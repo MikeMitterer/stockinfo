@@ -5,9 +5,10 @@ Verfügbarkeitsangaben. Das Quote-Beispiel scheitert am aktuellen Modell:
 `identity` fehlt, während `isin` auf oberster Ebene nicht mehr zulässig ist.
 Die Anleitungen sollen den vorhandenen Stand korrekt erklären.
 
-**Stand:** Vier Anleitungen korrigiert und technisch geprüft. Mike beauftragt
+**Stand:** Vier Anleitungen korrigiert, technisch geprüft und mit `d2f0827`
+in `master` integriert sowie nach `origin/master` gepusht. Mike beauftragt
 „Dann aktualiere das“ und anschließend „Danach push + merge“.
-Die Integration folgt nach der Prüfung. Der unterstützende Faktencheck
+Der unterstützende Faktencheck
 `docs_check` ist abgeschlossen; eine formale Freigabe durch Claude wird nicht
 behauptet.
 
@@ -28,8 +29,8 @@ Testcodeänderung, keine neue API-Zusage. Budget: vier Dokudateien und
 Board-Nachweise, insgesamt höchstens 800 Diff-Zeilen. Historische Entwürfe
 bleiben Historie. Keine Board-Migration im Rahmen dieses Doku-Auftrags.
 
-Für Mike steht derzeit kein weiterer Handgriff an. Merge und Push erfolgen
-nach den technischen Prüfungen gemäß seinem Auftrag.
+Merge und Push sind gemäß Mikes Auftrag erledigt. Für die Ablage des Tickets
+unter `40-done/` steht die gesonderte Abschlussbestätigung noch aus.
 
 [↑ Übersicht](#übersicht)
 
@@ -40,7 +41,7 @@ nach den technischen Prüfungen gemäß seinem Auftrag.
 | 1 | Antwortbeispiele gegen JSON und aktuelle Modelle | 5 JSON-Blöcke lesbar; Quote-, Fields- und Typkatalog-Beispiele gegen Pydantic-Modelle validiert | ✅ |
 | 2 | Referenzen gegen Vertrag, Routen und gezielte API-Tests | 113 passed, 35 skipped; Inhalte gegen Code und Konfiguration gelesen | ✅ |
 | 3 | Relative Links, Abschnittsanker und Diff | 117 lokale Links/Anker gültig; `git diff --check` sauber | ✅ |
-| 4 | Integration und Remote-Stand | Ausstehend | ◑ |
+| 4 | Integration und Remote-Stand | Fast-Forward nach `master`, Push erfolgreich; `HEAD` und `origin/master` auf `d2f0827`, Arbeitsbaum sauber | ✅ |
 
 Prüfung #2: `.venv/bin/pytest tests/test_contract.py
 tests/test_contract_openapi.py tests/test_api_fields.py
@@ -48,6 +49,10 @@ tests/test_api_instrument_types.py -q`. Die 35 Skips betreffen Prüfungen,
 die auf die jeweilige positive/negative Fixture nicht zutreffen. Eine
 Starlette/httpx-Abkündigungswarnung; keine Fehler. Kein Gesamttestlauf oder
 Live-Nachweis externer Kursanbieter behauptet.
+
+Nach dem Merge erneut dieselbe gezielte Suite ausgeführt: 113 passed,
+35 skipped. Produktstand `d2f0827`; der anschließende Sitzungsnachtrag
+betrifft nur Ticket, STATUS und ACTIVITY.
 
 Unterstützender Faktencheck durch `docs_check`: Generation, Identität,
 Testbefehle, Yahoo-Tageskurse und Pence-Ablehnung gegen Code gelesen. Ein
