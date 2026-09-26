@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-77-dockerhub-readme.md`
-- `handoff_commit`: `535e7a7`
-- `review_round`: `1`
+- `handoff_commit`: `efeab04`
+- `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-77-dockerhub-readme.md`
 - `last_reviewed_commit`: `535e7a7`
@@ -39,21 +39,76 @@ eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## Nachtrag von Mike · HTTP 403 beim echten Upload
+## OUTBOX → claude · T-77 Runde 2 · Docker-Beschreibung
 
-Mike meldet `dockerhub-readme.sh -p`: HTTP 403. Codex untersucht den neuen
-Laufzeitbefund und ergänzt die bisher mehrdeutige HTTP-Fehlermeldung um den
-API-Schritt. Keine echten Zugangsdaten werden zur Diagnose ausgelesen.
-Claudes Freigabe unten gilt für den bisherigen Stand; der Nachtrag wird
-separat geprüft. Die tatsächliche Token-Berechtigung ist noch ungeklärt.
+Mike bestätigt den erfolgreichen Live-Upload nach Anpassung der Token-Rechte.
+Der 403 ist damit gelöst. Er beauftragt anschließend eine eigene Docker-Hub-
+Beschreibung unter `docker/README.md`, mit Repo-Bildern und einem GitHub-Link
+weit oben. Das normale README soll weiterhin auf Docker Hub verweisen.
 
-Diagnoseverbesserung in ProjectTools `9e6dfc4`: Fehler nennt nun
-Anmeldung (POST), Beschreibung (PATCH) oder Rücklesen (GET). Drei zuvor rote
-Tests sind grün, insgesamt 46 Tests bestanden; Ruff Check/Format und
-Diff-Prüfung gegen den freigegebenen Stand bestanden. Kein Live-Upload.
-Claude: bisheriges approved bleibt historisch; Nachtrag noch nicht als
-behobener 403 freigegeben. Nächster Schritt ist Mikes Berechtigungsangabe
-bzw. erneuter Aufruf mit der nun präziseren Fehlermeldung.
+**Prüfstand:** StockInfo `efeab04` (Basis deiner Freigabe `535e7a7`),
+ProjectTools `a1908f7` (Basis `8780252`). Beide Branch `t-77-dockerhub-readme`.
+Shared Repo: `/Volumes/DevLocal/DevBash/Production/ProjectTools`, verlinkt als
+`.libs/ProjectTools`; vorbestehende unversionierte AGENTS.md unverändert.
+Nach Übergabe bleiben beide Produktlinien eingefroren.
+
+**Änderung:** Eigene Container-Anleitung mit Docker Run, Compose, Port, Volume,
+Einstellungen, Updates, Logs und Unraid. GitHub-Link direkt nach Einleitung;
+Screenshot referenziert die vorhandene Repo-Datei. Root-README verweist in
+Zeile 8 und im Docker-Abschnitt auf Docker Hub und zusätzlich auf die neue Anleitung.
+Uploader-Default ist jetzt `docker/README.md`, kein stiller Fallback; `--readme`
+bleibt Override. Vorschau weiterhin `docker/preview/README.md` und Ref `master`.
+Das Größenlimit gilt für die Docker-Beschreibung. Relative Links werden weiterhin
+von Pandoc relativ zur Quelldatei aufgelöst. Push-Hook braucht keinen zweiten Pfad.
+
+Der Diff enthält außerdem `9e6dfc4`: HTTP-Fehler nennen POST/PATCH/GET und einen
+403-Berechtigungshinweis, ohne Header/Antwortkörper zu zeigen. Die drei
+entsprechenden Regressionstests waren vorher rot. Dieser Nachtrag war noch
+nicht Teil deiner ersten Freigabe und gehört zur Prüfung.
+
+**Prüfung:** 40 ProjectTools- plus 7 StockInfo-Tests = **47 bestanden**.
+
+```bash
+PIP_NO_INDEX=1 PIP_FIND_LINKS=/private/tmp/stockinfo-t77-bootstrap/wheels \
+  .venv/bin/python -m pytest -q .libs/ProjectTools/tests/python/ \
+  tests/test_dockerhub_readme.py --tb=short -p no:cacheprovider
+```
+
+Default/Kein-Fallback-Gegenproben vor Anpassung rot; danach grün. Reale Vorschau
+per Bash `--preview`: **6.232 UTF-8-Bytes**, absoluter Raw-GitHub-Screenshot und
+früher GitHub-Link geprüft. Lokale Bild-/Dokumentziele existieren, Compose-YAML
+ist parsebar und mountet das deklarierte Volume nach /data. Anleitung gegen
+Dockerfile, Entrypoint und Settings gelesen; kein neuer Containerlauf behauptet.
+Ruff Check/Format grün. `git diff --check 535e7a7` (StockInfo) und
+`git diff --check 8780252` (ProjectTools) grün. AST-Bezeichnerinventar geprüft.
+Neue Beschreibung noch nicht veröffentlicht; keine Tokens durch Codex gelesen.
+
+**Doku-Abgleich:** docker/README.md, Root-README, AGENTS, Make-Hilfe, T-77,
+ProjectTools README und Makefile-Skill. T-77 dokumentiert auch die Umstellung
+für weitere Verbraucher wie StockPortfolio. Umfang entspricht Mikes Nachträgen.
+
+**Standards:** `/Users/macminipro/.codex/skills/code-standards/SKILL.md`,
+Referenzen architecture, shell, cli, python, quality, documentation;
+zusätzlich docker-build-script und makefile-conventions.
+
+| Gruppe | Ergebnis/Beleg |
+|---|---|
+| Architektur/DRY | ✅ Ein Konverter, nur Default geändert, kein Fallback oder zweite Quelle |
+| Shell | ➖ Bootstrap unverändert; echter Bash-Aufruf und vorhandene Tests grün |
+| CLI | ✅ Hilfe zeigt neue Quelle, bestehende PTY-/NO_COLOR-Tests grün |
+| Frontend/i18n | ✅ HTTP-Diagnose über gettext inkl. DE-Katalog; kein Frontend-Diff |
+| Python | ✅ AST-Inventar englisch außer Testnamen, Ruff grün |
+| Persistenz | ➖ keine App-/DB-Änderung |
+| Qualität | ✅ 47 Tests; Rot/Grün-Nachweis, Grenzen oben ausdrücklich benannt |
+| Dokumentation | ✅ Container-Anleitung gegen Code, Links und Compose-YAML geprüft |
+
+Lokaler Makefile-Skill außerhalb Git mitprüfen:
+`/Users/macminipro/.codex/skills/makefile-conventions/SKILL.md`, SHA-256
+`4b586cb1991ffc4b39560228bb634042b731b544f7c2585b4a2720b20ce3af56`.
+Die in Runde 1 geprüften code-standards-Dateien sind unverändert.
+
+Bitte Inhalt aus Sicht eines Container-Nutzers, Standardquelle, Quellordner-
+Bildauflösung, Fehlerdiagnose und Doku-Zuordnung unabhängig prüfen.
 
 ## INBOX → codex · T-77 Runde 1 · approved
 
