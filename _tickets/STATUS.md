@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-78-unraid-guide.md`
-- `handoff_commit`: `426e34a`
-- `review_round`: `0`
+- `handoff_commit`: `68702c6`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-77-dockerhub-readme.md`
 - `last_reviewed_commit`: `426e34a`
@@ -39,12 +39,33 @@ eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## Aktueller Auftrag · T-78
+## OUTBOX → claude · T-78 Runde 1
 
-Mike beauftragt, die Unraid-Aufteilung von StockPortfolio zu prüfen und für
-StockInfo zu übernehmen. Codex erstellt `unraid/README.md`, führt die Links in
-Projekt- und Docker-README nach und prüft die Aussagen gegen das StockInfo-
-Template. Reine Dokumentation; keine Container-/Template- oder Live-Änderung.
+Bitte die reine Dokumentationsänderung `68702c6` gegen Basis `a47f1c8`
+prüfen. Mike beauftragt die Unraid-Auslagerung nach dem StockPortfolio-Vorbild.
+Scope: `unraid/README.md`, kurze Verweise in Projekt-/Docker-README,
+Projektstruktur und zugehöriger AGENTS-Hinweis. Kein App-, Dockerfile- oder
+Template-Code geändert. Keine Veröffentlichung durchgeführt.
+
+Die neue Anleitung erhält StockInfos Host-Mount und Quellenprofile. Sie
+trennt Template-Installation auf Unraid von dem Profilhelfer im eingerichteten
+Checkout und erklärt sichere lokale Template-Tests. Beide READMEs verwenden
+nun dieselben zwei Screenshots, wie vom Docker-Skill verlangt.
+
+Nachweise: 73 lokale Links/Anker gültig, drei Shell-Blöcke syntaktisch geprüft,
+beide Screenshot-URLs HTTP 200. Echte Hub-Vorschau 6.261 Bytes; neuer
+Unraid-Link und Swagger-Bild korrekt umgewandelt. Veröffentlichtes Template
+bytegleich zur lokalen Datei (letzter Dateicommit `87b89cd` im Template-Repo),
+xmllint grün; Port, Pfad, UID/GID und Konfigurationsdefaults gegen App/Image
+abgeglichen. Einzelheiten in [T-78](30-doing/T-78-unraid-guide.md).
+
+**Doku-Abgleich:** vier betroffene Doku-/Regeldateien konsistent; bestehende
+Anker erhalten. Neuer GitHub-Link braucht vor Hub-Upload die Veröffentlichung.
+Keine Anwendungstests oder Unraid-Live-Prüfung für die reine Auslagerung behauptet.
+Standards: docker-conventions, unraid-ca-template, git-conventions,
+task-verification-workflow. Architektur/Code/Persistenz unverändert;
+Doku, Beispiele, XML und Vorschau geprüft. Lokale Codex-Lessons berücksichtigt,
+kein neuer unabhängiger Fehlerbefund. Arbeitsstand bleibt bis zum Review eingefroren.
 
 ## Abschluss T-76 und T-77 · 2026-09-26
 

@@ -1,5 +1,6 @@
 # Aktuelle Tätigkeit
 
+- 2026-09-26 18:11:59 CEST · codex · hat T-78 umgesetzt und die Unraid-Anleitung samt README-Verweisen geprüft. Die Prüffassung 68702c6 ist über STATUS.md an Claude übergeben.
 - 2026-09-26 18:08:50 CEST · codex · lagert die Unraid-Anleitung nach dem StockPortfolio-Vorbild aus und gleicht Port, Datenpfad und Einstellungen mit dem StockInfo-Template ab.
 - 2026-09-26 17:47:31 CEST · codex · hat StockInfo und ProjectTools nach master integriert und gepusht. Die neue Docker-Hub-Beschreibung ist veröffentlicht und zurückgelesen; T-76 und T-77 werden abgeschlossen.
 - 2026-09-26 13:58:52 CEST · claude · T-77 Runde 2 approved (efeab04/a1908f7: Docker-Hub-Beschreibung + 403-Diagnose); Formalbefund: uncommitteter AGENTS.md/Ticket-Nachtrag lag außerhalb des Prüfstands, gesichert und wiederhergestellt, nicht mitgeprüft
