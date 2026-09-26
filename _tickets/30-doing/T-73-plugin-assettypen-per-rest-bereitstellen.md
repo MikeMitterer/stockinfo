@@ -13,7 +13,8 @@ Instrumentenliste oder im Depot vorhanden ist.
 „Die Typen kommen aus dem neuen Plugin … das ist dynamisch. Du musst die
 Möglichen Typen über das REST-Api abfragen“. Mike hat anschließend beauftragt:
 „Danach T-73 nach doing - Wichtig!“ Das Ticket liegt deshalb in `30-doing`;
-die Umsetzung folgt nach T-74. Endpunkt und Vertrag sind noch nicht umgesetzt.
+Mike hat mit „Ja und? Los gehts“ die Umsetzung gestartet. T-74 ist technisch
+freigegeben. Codex setzt T-73 um, Claude prüft anschließend über STATUS.md.
 
 ## Beleg und Auswirkung
 
@@ -52,9 +53,45 @@ die Umsetzung folgt nach T-74. Endpunkt und Vertrag sind noch nicht umgesetzt.
 ## Für Mike
 
 Keine fachliche Rückfrage zur Anforderung offen. Von Mike nach `30-doing`
-eingeplant. Während T-74 im Review ist, bleibt T-74 der aktive Auftrag in STATUS.
+eingeplant und anschließend zur Umsetzung aktiviert. Aktuell kein weiterer
+Handgriff erforderlich; technischer Review und menschlicher Abschluss stehen aus.
 
 ## Doku-Abgleich
 
 Bei Umsetzung REST-Vertrag und Konsumentenanleitung aktualisieren. Bisher nur
 Bedarf erfasst; keine Produktänderung und keine technische Freigabe.
+
+
+## Scope-Vertrag und Umsetzung
+
+Ergebnis: `GET /instrument-types` gibt die deklarierten Typen der laufenden
+Plugin-Konfiguration für REST-Konsumenten zurück, auch bei leerem Bestand.
+
+1. Katalog aus `SUPPORTED_TYPES` der konfigurierten, geladenen Rollenklassen
+   für Resolver, Kurse, Tagesreihen und Metadaten. FX allein zählt nicht als
+   Asset-Unterstützung. Sortierte Vereinigung ohne Duplikate oder Ersatzliste.
+2. Je Quelle/Rolle Typen und `status`: `available`, `unavailable`,
+   `unknown_source`, `unsupported_role` oder `invalid_declaration`.
+   `complete` sagt, ob alle ausgewählten Deklarationen lesbar sind. Bekannte
+   Typen bleiben bei Betriebsstörungen erhalten; die Auskunft garantiert
+   keine erfolgreiche Beschaffung eines bestimmten Instruments.
+3. Core 4.4.0, dokumentierter GET-Endpunkt ohne Query, `Cache-Control: no-store`,
+   HTTP-Fixtures für vollständige, leere und unvollständige Auskünfte.
+   Änderungen an Plugin-Dateien und Konfiguration wirken nach Neustart.
+
+Produktdateien: `app/services/instrument_types.py`, `app/models.py`,
+`app/routers/fields.py`, `contract/core-contract.json`.
+Begleitdateien: neuer API-Test, `tests/test_contract.py`, OpenAPI-Snapshot,
+HTTP-Fixtures (drei), README, REST-Referenz, Plugin-Anleitung, Vertrags-README.
+Budget: vier Produktdateien, zehn Test-/Dokudateien, höchstens 800 Diff-Zeilen
+ab T-74-Prüfabschluss. Keine Plugin-API-Änderung, Datenmigration, UI-Arbeit,
+Netzabfrage zum Ermitteln der Typen oder Änderungen in StockPortfolio.
+
+Arbeitsschritte: API-Gegenproben schreiben und rot ausführen; Katalog und
+Route implementieren; Vertrag/Fixtures/Doku ergänzen; gezielte Tests und
+Backend-Suite prüfen; eigenständigen Prüfstand über STATUS.md übergeben.
+
+Lessons: SI-CX-01 (frische Testdatenbank), SI-R-02 (kein hypothetischer
+Kompatibilitätsbau), SI-T-66 (deklarierte Typen und heutige Verfügbarkeit
+unterscheiden), AL-R-02 (alle konfigurierten Rollenklassen inventarisieren).
+Lokale Fassungen vom 2026-09-11; AL-R-02 weiterhin `needs_review`.

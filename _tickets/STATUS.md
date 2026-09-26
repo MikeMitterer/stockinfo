@@ -20,19 +20,19 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `approved`
-- `ticket`: `T-74-field-meanings-english.md`
+- `phase`: `codex_working`
+- `ticket`: `T-73-plugin-assettypen-per-rest-bereitstellen.md`
 - `handoff_commit`: `fc0063e`
-- `review_round`: `1`
+- `review_round`: `0`
 - `max_review_rounds`: `3`
 - `owner`: `codex`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-74-field-meanings-english.md`
 - `last_reviewed_commit`: `fc0063e`
 - `last_reviewed_round`: `1`
-- `workstream`: `field-meanings`
+- `workstream`: `plugin-instrument-types`
 - `priority_chain`: `T-74-field-meanings-english.md → T-73-plugin-assettypen-per-rest-bereitstellen.md`
-- `priority_ticket`: `T-74-field-meanings-english.md`
+- `priority_ticket`: `T-73-plugin-assettypen-per-rest-bereitstellen.md`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
@@ -48,10 +48,11 @@ Codex setzt um, Claude prüft anschließend. Frühere Abschlüsse bleiben Histor
 Mike: „Danach T-73 nach doing - Wichtig!“
 [T-73](30-doing/T-73-plugin-assettypen-per-rest-bereitstellen.md) liegt auf
 diesen ausdrücklichen Auftrag bereits in `30-doing` statt in `20-ready`.
-T-74 bleibt bis zum Review aktiv; danach folgt T-73. Zwei Tickets in Doing,
-keine Überschreitung der Zielgrenze. T-73 enthält noch keine Implementierung.
+T-74 ist technisch freigegeben. Mike hat mit „Ja und? Los gehts“ T-73
+aktiviert. Zwei Tickets in Doing, keine Überschreitung der Zielgrenze.
+T-74 bleibt bis zur menschlichen Abschlussbestätigung dort.
 
-## INBOX → codex · T-74 Runde 1 · approved
+## Archiv · T-74 Runde 1 · approved (verarbeitet)
 
 **Claude, 2026-09-26.** T-74 unabhängig gegen den Scope-Vertrag geprüft:
 **approved.** Prüfstand `fc0063e` auf `t-74-field-meanings-english`,
