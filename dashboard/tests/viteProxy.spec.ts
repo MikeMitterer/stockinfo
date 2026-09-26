@@ -1,5 +1,5 @@
 /**
- * Der Dev-Proxy kennt jeden Pfad, den die App anfordert — `#2b6i`.
+ * Der Dev-Proxy kennt App-Aufrufe und veröffentlichte REST-Vertragspfade.
  *
  * **Der Fehler ist schon einmal passiert** und liegt als
  * `_tickets/40-done/T-04-vite-proxy-fehlende-praefixe.md` im Board: Fehlt ein
@@ -9,7 +9,7 @@
  * ist er unsichtbar.
  *
  * **Geprüft wird gegen die Wirklichkeit, nicht gegen eine zweite Liste.** Der
- * Test liest die Pfade aus dem Quelltext der App und hält sie gegen die
+ * Test liest die Pfade aus App-Quelltext und Vertragsartefakt und hält sie gegen die
  * Präfixe aus `vite.config.ts`. Eine hier abgeschriebene Erwartungsliste
  * belegte nur, dass zwei Listen gleich sind — und beim nächsten neuen Endpunkt
  * hätte man sie beide zu ergänzen vergessen.
@@ -58,12 +58,24 @@ function requestedPaths(): Set<string> {
 }
 
 describe('Dev-Proxy', () => {
-  it('deckt jeden angeforderten Pfad mit einem Präfix ab', () => {
-    const paths = [...requestedPaths()]
+  it('deckt App-Aufrufe und veröffentlichte REST-Vertragspfade ab', () => {
+    // Swagger nutzt dieselbe Origin, auch für Wege ohne eigenen UI-Aufrufer.
+    const contract = JSON.parse(
+      readFileSync(join(__dirname, '..', '..', 'contract', 'core-contract.json'), 'utf-8'),
+    ) as {
+      endpoints: Record<string, { path: string }[]>
+      contract_endpoints: { path: string }[]
+    }
+    const contractPaths = [
+      ...Object.values(contract.endpoints).flat(),
+      ...contract.contract_endpoints,
+    ].map((entry) => entry.path)
+    const appPaths = [...requestedPaths()]
+    const paths = [...appPaths, ...contractPaths]
 
     // Ohne diese Zusicherung wäre ein kaputter Regex ein grüner Test über
     // einer leeren Menge — die Prüfung, die sich selbst bestätigt.
-    expect(paths.length).toBeGreaterThan(5)
+    expect(appPaths.length).toBeGreaterThan(5)
 
     const uncovered = paths.filter(
       (path) => !apiPrefixes.some((prefix) => path === prefix || path.startsWith(`${prefix}/`)),

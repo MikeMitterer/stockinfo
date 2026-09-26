@@ -3,7 +3,7 @@
  *
  * **Eine eigene Datei, weil es zwei Verbraucher gibt:** `vite.config.ts` baut
  * daraus den Dev-Proxy, `tests/viteProxy.spec.ts` hält sie gegen die Pfade,
- * die die App tatsächlich anfordert. Der Test kann die Vite-Konfiguration
+ * die App und der veröffentlichte REST-Vertrag benötigen. Der Test kann die Vite-Konfiguration
  * nicht importieren, ohne esbuild in die Testumgebung zu ziehen — und eine
  * abgeschriebene Kopie im Test belegte nur, dass zwei Listen gleich sind.
  *
@@ -15,6 +15,7 @@
 export const apiPrefixes = [
   '/quote',
   '/instruments',
+  '/instrument-types',
   '/exchanges',
   '/fx',
   '/analyze',
