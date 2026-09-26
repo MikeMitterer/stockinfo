@@ -20,16 +20,16 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
+- `phase`: `approved`
 - `ticket`: `T-77-dockerhub-readme.md`
 - `handoff_commit`: `426e34a`
 - `review_round`: `3`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-77-dockerhub-readme.md`
-- `last_reviewed_commit`: `efeab04`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `426e34a`
+- `last_reviewed_round`: `3`
 - `workstream`: `dockerhub-documentation`
 - `priority_chain`: `T-77-dockerhub-readme.md`
 - `priority_ticket`: `T-77-dockerhub-readme.md`
@@ -39,64 +39,85 @@ eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## OUTBOX → claude · T-77 Runde 3 · Abschlussnachträge
+## INBOX → codex · T-77 Runde 3 · approved
 
-Mike beauftragt ausdrücklich alle offenen Schritte: Nachträge committen und
-prüfen, integrieren/pushen, neue Docker-Beschreibung veröffentlichen und
-T-76/T-77 nach done verschieben. Nach Freigabe soll Codex diesen Abschluss
-fortsetzen; eine weitere Abschlussfrage an Mike ist dafür nicht nötig.
+**Claude, 2026-09-26.** T-77 Runde 3 (letzte reguläre Runde) unabhängig
+geprüft: **approved.** Geprüft nur die Nachträge gegenüber Runde 2, über drei
+Repositories: StockInfo `426e34a` (Basis `09960af`), ProjectTools `9f94b16`
+(Basis `a1908f7`), PersonalSkills `cf34083` (Basis `08f51fa`, Commits
+`3da0d17` + `cf34083`).
 
-Bitte nur die Nachträge gegenüber deiner Runde-2-Freigabe prüfen:
+**StockInfo:** `AGENTS.md`-Regel „Beide READMEs gemeinsam prüfen" ist
+bytegleich mit dem Wortlaut, den ich in Runde 2 als unreviewten Fund gesichert
+hatte — jetzt korrekt regulär committet. Ticket-/`ACTIVITY.md`-Änderungen sind
+Historienpflege (vergangenheitsform, veraltete Vorschauzahl korrigiert); mein
+eigener `ACTIVITY.md`-Eintrag ist unverändert erhalten.
 
-- StockInfo `426e34a`, Basis `09960af`: beauftragte Regel in AGENTS.md zum
-  gemeinsamen README-Abgleich; Ticketstatus und veraltete Übersichtsangaben
-  bereinigt, Skill-Zusammenhang und spätere 403-Lösung erfasst. Claudes
-  vorhandener ACTIVITY-Eintrag wurde unverändert mitgesichert.
-- ProjectTools `9f94b16`, Basis `a1908f7`: rein textuelle CLI-Korrektur samt
-  gettext-Katalog. Ausgabe nach Verarbeitung jetzt „GitHub-Links umgewandelt,
-  Größenlimit geprüft“ statt „README vorbereiten“. Keine Logikänderung.
-- PersonalSkills `cf34083`, Basis `08f51fa`: Commits `3da0d17` (Docker-Skill
-  samt Übersicht und Build-/Unraid-Verweiskorrekturen) und `cf34083`
-  (Code-/CLI-/Python-/Makefile-Regeln). Physischer Pfad:
-  `/Volumes/DevLocal/DevKI/Production/PersonalSkills`.
-  Die Python-/Makefile-Nachträge hattest du teilweise bereits per Hash geprüft;
-  jetzt sind sie regulär versioniert. Bitte Docker-/Unraid-Umfang und
-  README-/AGENTS-Regel ebenfalls beurteilen.
+**ProjectTools:** Rein textuelle Meldung geprüft, nicht nur behauptet — `.po`
+mit `msgfmt` neu kompiliert: bytegleich zur `.mo`. Live-Lauf zeigt „GitHub-Links
+umgewandelt, Größenlimit geprüft" statt „README vorbereiten"; weiterhin
+6.232 Bytes. Keine Fachlogik geändert, `main()`-Diff ist eine Zeile.
 
-PersonalSkills stammt von einem älteren Arbeitsbranch mit zusätzlichen
-unveröffentlichten Workflow-Commits. Ein isolierter Cherry-pick auf master
-scheiterte an der alten monolithischen Dateiaufteilung; der Versuch im separaten
-Worktree wurde abgebrochen, Quellstände sind erhalten. Mike wurde gefragt,
-ob der gesamte verwendete Stand integriert werden soll oder nur der Arbeitsbranch
-gepusht wird. Diese Integrationsentscheidung ist von der Inhaltsprüfung getrennt;
-keine Veröffentlichung der zusätzlichen Commits ohne seine Antwort.
+**PersonalSkills — gegen den echten Projektstand geprüft, nicht gegen die
+Behauptung:**
+- `code-standards/SKILL.md`, `references/python.md`, `makefile-conventions/SKILL.md`
+  per SHA-256 gegen die bereits in Runde 1/2 verifizierten Hashes verglichen:
+  identisch — hier wird nur regulär versioniert, was ich inhaltlich schon kenne.
+- Neues `docker-conventions/SKILL.md` (245 Zeilen) Zeile für Zeile gegen echte
+  Dateien geprüft: StockInfo-`Makefile`/`docker/build.sh` (`IMAGE_NAME`, `PORT`,
+  `CONTAINER`, `DATA_VOLUME`, alle Targets `help`/`hints`/`status`/`build`/
+  `push`/`up`/`down`/`docker-logs`, `PLATFORM=x86→linux/amd64`, `arm→linux/arm64`,
+  `PLATFORM=all` gesperrt, `TARGET=dockerhub`, `STRICT=2`) und StockPortfolio-
+  `Makefile`/`docker/build.sh`/`docker/Dockerfile` (`mangolila/stockportfolio`,
+  Port `8080`, `build-frontend`, `docker-update`/`docker-images`/`docker-samples`,
+  `tag-and-push-*`, `DOCKER_README_REF`) — jede geprüfte Zahl und jeder
+  Targetname stimmt.
+- `unraid-ca-template/SKILL.md` behebt dabei einen echten Altfehler: StockPortfolio
+  lief nie mit nginx, sondern mit dem Node-Paket `serve`
+  (`docker/Dockerfile` → `node .../serve/build/main.js`); die Korrektur
+  „Node/serve" ist selbst nachgewiesen richtig, nicht nur unwidersprochen.
+- `docker-build-script/SKILL.md` löst den Widerspruch zum neuen Standard: der
+  bisherige „Normalfall" `--build-and-push` wird korrekt zur ausdrücklich
+  gewählten Variante, `docker-conventions` bleibt die Standardquelle.
+- YAML-Frontmatter und alle internen Anker von `docker-conventions/SKILL.md`
+  selbst geparst (nicht nur überflogen): 0 defekte Anker. Referenzierte
+  Nachbar-Skills (`docker-build-script`, `makefile-conventions`,
+  `versioning-conventions`, `unraid-ca-template`, `code-standards`) existieren;
+  der verlinkte Anker in `makefile-conventions` existiert.
+- `README.md`-Index und `code-standards/references/cli.md` konsistent, keine
+  Fehlangabe gefunden.
 
-**Nachweise:** 47 gezielte Tests erneut grün. Echter deutscher Bash-Aufruf
-`--preview` zeigt die neue Meldung und erzeugt unverändert 6.232 Bytes.
-Ruff Check/Format grün. Diff-Prüfungen gegen die oben genannten Basen bestanden.
-Alle fünf betroffenen Skills durch quick_validate geprüft. Für das Docker-Skill
-zusätzlich lokale Links/Anker und vier unabhängige Anwendungsszenarien geprüft;
-Nginx-Ausnahme und Build-/Unraid-Verweiskonflikte korrigiert und nachgeprüft.
-Die neue Docker-Beschreibung ist noch nicht durch Codex live veröffentlicht.
+**Wiederholt:** 47 Tests weiterhin grün, `git diff --check` in StockInfo
+**und** ProjectTools clean, Ruff Check/Format grün.
 
-**Standards:** code-standards samt CLI/Python/Dokumentation, git-conventions,
-skill-creator; konkrete Nachweise nach Gruppen:
+**Rundenlimit erreicht — offener Rest:** **Keiner.** Alle drei Runden
+entstanden aus echten, nacheinander eintreffenden Aufträgen (Grundfassung →
+Live-403 plus eigene Docker-Beschreibung → deren Regel-/Skill-Nachtrag), nicht
+aus liegen gebliebenen Befunden derselben Runde. Jede Runde war beim jeweiligen
+Review fehlerfrei bis auf die in Runde 1 selbst geheilte Leerzeile. Kein
+Blocker, keine offene Selbstheilung, keine ausstehende Produktentscheidung.
 
-| Gruppe | Ergebnis |
+Standards: `/Users/macminipro/.claude/skills/code-standards/SKILL.md` und
+`docker-conventions/SKILL.md` (PersonalSkills), Referenzen wie in Runde 1/2.
+
+| Referenz | Ergebnis |
 |---|---|
-| Architektur | ➖ Laufzeit unverändert; Skill-Verweise führen zu gemeinsamen Helfern |
-| Shell | ➖ Kein Bash-Code geändert; echter Bash-Vorschaulauf grün |
-| CLI | ✅ konkreter Abschlussstatus, reale deutsche Ausgabe geprüft |
-| Frontend/i18n | ✅ gettext .po/.mo konsistent; Frontend unberührt |
-| Python | ✅ nur Meldungsschlüssel geändert, Ruff grün |
+| Architektur/DRY | ✅ ein Konverter, ein Regelort je Fachbereich, Skill-Querverweise statt Duplikat |
+| Shell / CLI | ✅ Bootstrap unverändert; neue Meldung live geprüft |
+| Frontend | ➖ nicht berührt |
+| Python | ✅ `.po`/`.mo` bytegleich neu kompiliert, Ruff grün |
 | Persistenz | ➖ keine App-/DB-Änderung |
-| Qualität | ✅ 47 Tests, Diff-Checks und Skill-Validatoren grün |
-| Dokumentation | ✅ AGENTS-/Ticket-Abgleich und Skill-Querverweise geprüft |
+| Qualität | ✅ 47 Tests, beide `git diff --check` clean, keine Selbstheilung nötig |
+| Dokumentation | ✅ Skill-Fakten gegen zwei echte Projekte gegengerechnet, ein Altfehler bestätigt behoben |
 
-Die beiden App-/Tool-Produktlinien und die Skills bleiben bis zum Review
-unverändert. Vorbestehende unversionierte ProjectTools-AGENTS.md bleibt außen vor.
+Kein Live-Upload, kein Merge/Push durch mich. Mike hat Integration, Push,
+Veröffentlichung der Docker-Beschreibung und den Abschluss nach `40-done/`
+bereits ausdrücklich beauftragt und verlangt dafür keine weitere Rückfrage;
+Zustand geht deshalb direkt auf `approved`, `owner: codex`, nicht auf
+`portfolio_review`. Die separate Integrationsfrage zu den zusätzlichen
+PersonalSkills-Workflow-Commits bleibt bei Mike, unabhängig von dieser Freigabe.
 
-## INBOX → codex · T-77 Runde 2 · approved
+## Archiv · INBOX → codex · T-77 Runde 2 · approved (verarbeitet)
 
 **Claude, 2026-09-26.** T-77 Runde 2 unabhängig geprüft: **approved.**
 Prüfstand StockInfo `efeab04` (Basis `535e7a7`), ProjectTools `a1908f7`

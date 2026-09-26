@@ -8,10 +8,12 @@ sie erscheinen nicht in Ausgaben oder Prozessargumenten.
 **Auftrag:** Mike ersetzt die diskutierte GitHub-Automatisierung durch ein
 lokales Script nach Skill-Konventionen. Präzisierung: keine eigenen Targets;
 der erfolgreiche bestehende Docker-Hub-Push ruft das Script auf.
-**Stand:** Grundfassung **und** Docker-Beschreibung/403-Diagnose von Claude
-unabhängig approved (Runde 1: StockInfo `535e7a7`, ProjectTools `8780252`;
-Runde 2: StockInfo `efeab04`, ProjectTools `a1908f7`). Mike hat den Abschluss einschließlich Integration, Push und Veröffentlichung
-beauftragt. Der abschließende Regel-/Skill-Nachtrag wird noch geprüft. Keine GitHub Action angelegt.
+**Stand:** Alle drei Runden von Claude unabhängig **approved** (Runde 1:
+StockInfo `535e7a7`, ProjectTools `8780252`; Runde 2: StockInfo `efeab04`,
+ProjectTools `a1908f7`; Runde 3: StockInfo `426e34a`, ProjectTools `9f94b16`,
+PersonalSkills `cf34083`). Mike hat Integration, Push, Veröffentlichung der
+Docker-Beschreibung und den Abschluss nach `40-done/` bereits beauftragt;
+Codex führt das jetzt aus. Keine GitHub Action angelegt.
 Die neue Beschreibung wurde lokal geprüft, noch nicht nach Docker Hub übertragen.
 
 ## Übersicht
@@ -439,3 +441,24 @@ Realer deutscher Bash-Vorschaulauf erfolgreich; die Ausgabe bleibt 6.232 Bytes.
 Doku-Abgleich: AGENTS.md, dieses Ticket sowie die betroffenen PersonalSkills.
 Die Benutzeranleitungen beschreiben die Linkumwandlung bereits korrekt und
 brauchen für die reine Meldungskorrektur keine weitere Änderung.
+
+### Unabhängiger Review Runde 3 · Claude, approved (letzte reguläre Runde)
+
+Vollständiges Ergebnis in `STATUS.md` unter „INBOX → codex · T-77 Runde 3 ·
+approved". Kurzfassung: alle drei Nachträge gegen den echten Projektstand
+geprüft, nicht nur gegen die Behauptung — insbesondere das neue
+`docker-conventions/SKILL.md` (PersonalSkills) Zeile für Zeile gegen die
+tatsächlichen Makefiles/Buildscripts/Dockerfiles von StockInfo **und**
+StockPortfolio nachgerechnet. Dabei bestätigt: Die Korrektur „StockPortfolio
+läuft mit Node/`serve`, nicht mit nginx" behebt einen echten, vorher im Skill
+stehenden Fehler.
+
+Kein Befund. Rundenlimit-Analyse: Alle drei Runden entstanden aus echten,
+nacheinander eintreffenden Aufträgen (Grundfassung → Live-403 plus eigene
+Docker-Beschreibung → deren Regel-/Skill-Nachtrag), nicht aus liegen
+gebliebenen Befunden. Kein Blocker, keine offene Selbstheilung, keine
+ausstehende Produktentscheidung.
+
+Mike hat Integration, Push, Veröffentlichung der Docker-Beschreibung und den
+Abschluss nach `40-done/` bereits ausdrücklich beauftragt; Zustand geht daher
+direkt auf `approved`, `owner: codex`, nicht auf `portfolio_review`.
