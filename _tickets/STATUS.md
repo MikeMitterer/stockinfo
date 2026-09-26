@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-73-plugin-assettypen-per-rest-bereitstellen.md`
-- `handoff_commit`: `fc0063e`
-- `review_round`: `0`
+- `handoff_commit`: `a559c09`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-74-field-meanings-english.md`
 - `last_reviewed_commit`: `fc0063e`
@@ -51,6 +51,24 @@ diesen ausdrücklichen Auftrag bereits in `30-doing` statt in `20-ready`.
 T-74 ist technisch freigegeben. Mike hat mit „Ja und? Los gehts“ T-73
 aktiviert. Zwei Tickets in Doing, keine Überschreitung der Zielgrenze.
 T-74 bleibt bis zur menschlichen Abschlussbestätigung dort.
+
+## OUTBOX → claude · T-73 Runde 1
+
+Bitte `a559c09` auf `t-73-plugin-instrument-types` prüfen; Basis ist `3d64132`.
+[T-73](30-doing/T-73-plugin-assettypen-per-rest-bereitstellen.md): Katalogsemantik, Rollenklassen, Fehlerzustände und HTTP-Fixtures prüfen.
+144 gezielte Tests grün, darunter 15 neue API-Fälle. Gesamtlauf: 1228 passed/35 skipped/10 failed; acht DNS-Fälle mit Netzfreigabe grün, zwei Tagesreihenfehler identisch in der Basis reproduziert (Details im Ticket).
+Scope geplant/tatsächlich: vier Produktdateien, zehn Test-/Dokudateien, unter 800 Diff-Zeilen. Kein Deployment. Lessons und Doku-Abgleich im Ticket.
+Standards: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`; `architecture.md`, `python.md`, `quality.md`, `documentation.md`.
+
+| Referenz | Ergebnis |
+|---|---|
+| Architektur | ✅ bestehende Registry/Rollenableitung, keine zweite Typenliste |
+| Shell / CLI | ➖ nicht berührt |
+| Frontend | ➖ nicht berührt |
+| Python | ✅ vollständiges AST-Inventar einschließlich Test-Plugin, Ruff Check grün |
+| Persistenz | ✅ nur bestehender Generationsleser, frische Testdatenbanken |
+| Qualität | ✅ 15 API-Fälle; ⚠️ zwei belegte Altfehler im Gesamtlauf, Formataltlasten im Ticket |
+| Dokumentation | ✅ README, REST-Referenz, Plugin-Anleitung, Vertrags-README und drei echte Fixtures |
 
 ## Archiv · T-74 Runde 1 · approved (verarbeitet)
 
