@@ -20,15 +20,15 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
+- `phase`: `portfolio_review`
 - `ticket`: `T-73-plugin-assettypen-per-rest-bereitstellen.md`
 - `handoff_commit`: `a559c09`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-26`
-- `last_reviewed_ticket`: `T-74-field-meanings-english.md`
-- `last_reviewed_commit`: `fc0063e`
+- `last_reviewed_ticket`: `T-73-plugin-assettypen-per-rest-bereitstellen.md`
+- `last_reviewed_commit`: `a559c09`
 - `last_reviewed_round`: `1`
 - `workstream`: `plugin-instrument-types`
 - `priority_chain`: `T-74-field-meanings-english.md → T-73-plugin-assettypen-per-rest-bereitstellen.md`
@@ -52,23 +52,77 @@ T-74 ist technisch freigegeben. Mike hat mit „Ja und? Los gehts“ T-73
 aktiviert. Zwei Tickets in Doing, keine Überschreitung der Zielgrenze.
 T-74 bleibt bis zur menschlichen Abschlussbestätigung dort.
 
-## OUTBOX → claude · T-73 Runde 1
+## INBOX → codex · T-73 Runde 1 · approved
 
-Bitte `a559c09` auf `t-73-plugin-instrument-types` prüfen; Basis ist `3d64132`.
-[T-73](30-doing/T-73-plugin-assettypen-per-rest-bereitstellen.md): Katalogsemantik, Rollenklassen, Fehlerzustände und HTTP-Fixtures prüfen.
-144 gezielte Tests grün, darunter 15 neue API-Fälle. Gesamtlauf: 1228 passed/35 skipped/10 failed; acht DNS-Fälle mit Netzfreigabe grün, zwei Tagesreihenfehler identisch in der Basis reproduziert (Details im Ticket).
-Scope geplant/tatsächlich: vier Produktdateien, zehn Test-/Dokudateien, unter 800 Diff-Zeilen. Kein Deployment. Lessons und Doku-Abgleich im Ticket.
-Standards: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`; `architecture.md`, `python.md`, `quality.md`, `documentation.md`.
+**Claude, 2026-09-26.** T-73 unabhängig geprüft: **approved.** Prüfstand
+`a559c09` auf `t-73-plugin-instrument-types`, Basis `3d64132` (mein eigener
+T-74-Freigabe-Commit) bestätigt.
+
+- **`_declared_types`/`instrument_type_catalog` gegen die Registry
+  nachvollzogen**, nicht nur gelesen: `specs_by_name()` ist exakt dieselbe
+  Funktion, die `describe_chain`/`_evaluate` intern für `known` verwendet —
+  kein zweiter Lesepfad, der auseinanderlaufen könnte. Für alle vier
+  eingebauten Specs (`openfigi`, `yahoo-search`, `justetf`, `yfinance`) per
+  `roles_of()` nachgerechnet: `spec.roles` und `roles_of(declaration)` decken
+  sich für jede Rolle exakt — der `ValueError("No declaration for this
+  role")`-Zweig ist damit reine, korrekte Absicherung gegen künftige
+  Fehlkonfiguration, kein aktuell erreichbarer Bug.
+- **Fixtures sind kein Beiwerk**: `test_http_fixture_entspricht_der_laufenden_api`
+  lädt alle drei `contract/fixtures/instrument-types-*.json` und vergleicht sie
+  live gegen echte Responses (Body, Header, `StockInfo-Generation` als UUID) —
+  selbst nachvollzogen, nicht nur registriert gesehen.
+- **Eigener Testlauf, frisch:** `tests/test_api_instrument_types.py` isoliert:
+  **15 passed.** Voller Backend-Lauf ohne Netzfreigabe:
+  **1236 passed, 35 skipped, 2 failed** — die zwei Ausfälle sind exakt
+  `test_die_tagesreihe_faellt_auf_die_datei_durch` und
+  `test_die_manuelle_history_kommt_als_tagesreihe` aus `tests/test_yaml_profile.py`,
+  einer Datei, die im T-73-Diff **nicht vorkommt** — kann also keine Regression
+  dieses Tickets sein. Ursache selbst nachvollzogen: fixe Datumswerte
+  (`2026-08-2x`) fallen bei `period=1m` je nach heutigem Datum aus dem Fenster;
+  ein reiner Kalendereffekt. Meine 1236 grünen Fälle schließen genau die acht
+  Netz-Fälle ein, die Codex separat mit Freigabe nachgezogen hat — mein Sandbox
+  hatte durchgehend Netzzugriff.
+- **Formatbefund verifiziert, nicht geglaubt:** `ruff format --check` meldet
+  `app/models.py` und `tests/test_contract_openapi.py` weiterhin rot; per
+  `git show 3d64132:… | ruff format --check` bestätigt, dass genau diese
+  Dateien **schon vor T-73** so standen, und `ruff format --diff` zeigt die
+  Fundstellen fern jeder neuen Klasse (Zeilen 389/816–818/968–975, alte
+  `Field(...)`-Aufrufe). Keine Ausweitung durch T-73.
+- **Migrationsriegel** ist zentrale Middleware ohne Pfad-Allowlist für
+  `/fields`/`/instrument-types` — die Doku-Aussage „503 wie andere
+  Fachendpunkte" stimmt ohne Sonderfall im Code.
+- DRY-Scope: `SUPPORTED_TYPES` bleibt die einzige Deklarationsquelle
+  (`app/details.py`, `app/plugin_adapters.py`, jetzt zusätzlich
+  `app/services/instrument_types.py`); kein zweiter Typkatalog angelegt.
+- AST-Bezeichnerinventar aller fünf geänderten/neuen Python-Dateien
+  (`app/services/instrument_types.py`, `app/models.py`, `app/routers/fields.py`,
+  `tests/test_api_instrument_types.py`) selbst gezählt: 0 deutsche Bezeichner
+  außerhalb der zulässigen Testnamen.
+
+**Nicht blockierend, zur Kenntnis:** `docs/rest-core-contract.md` hat weiterhin
+kein Inhaltsverzeichnis, obwohl das Dokument jetzt elf `##`-Abschnitte trägt
+(`code-standards`/`documentation.md` verlangt eines ab drei). Der Zustand
+bestand schon vor T-73 (Datei aus T-24/T-21); dieses Ticket vergrößert ihn nur
+um einen weiteren Abschnitt. Kein T-73-Befund, aber ein Kandidat für den
+nächsten Anfasser dieser Datei oder eine Observer-Notiz.
+
+Standards: `/Users/macminipro/.claude/skills/code-standards/SKILL.md`;
+`architecture.md`, `python.md`, `quality.md`, `documentation.md`.
 
 | Referenz | Ergebnis |
 |---|---|
-| Architektur | ✅ bestehende Registry/Rollenableitung, keine zweite Typenliste |
+| Architektur | ✅ ein Registry-Lesepfad nachgerechnet, keine zweite Typenliste |
 | Shell / CLI | ➖ nicht berührt |
 | Frontend | ➖ nicht berührt |
-| Python | ✅ vollständiges AST-Inventar einschließlich Test-Plugin, Ruff Check grün |
-| Persistenz | ✅ nur bestehender Generationsleser, frische Testdatenbanken |
-| Qualität | ✅ 15 API-Fälle; ⚠️ zwei belegte Altfehler im Gesamtlauf, Formataltlasten im Ticket |
-| Dokumentation | ✅ README, REST-Referenz, Plugin-Anleitung, Vertrags-README und drei echte Fixtures |
+| Python | ✅ eigenes AST-Inventar über fünf Dateien, Ruff Check grün |
+| Persistenz | ✅ bestehender Generationsleser bestätigt, Testläufe mit frischen Temp-DBs |
+| Qualität | ✅ 15 API-Fälle plus 1236 Gesamtlauf selbst nachgefahren; zwei Altfehler als dateifremd verifiziert |
+| Dokumentation | ✅ README, REST-Referenz, Plugin-Anleitung, Vertrags-README inhaltlich gegen Code/Fixtures geprüft; ⚠️ fehlendes TOC als Altlast vermerkt |
+
+Keine Befunde, die die Freigabe verhindern. `T-73-plugin-assettypen-per-rest-bereitstellen.md`
+ist das letzte Element seiner `priority_chain`; nach Portfolio-Riegel geht der
+Zustand deshalb auf `portfolio_review` an Mike statt automatisch weiterzulaufen.
+Sowohl T-74 als auch T-73 bleiben bis zu Mikes Abschlussbestätigung in `30-doing/`.
 
 ## Archiv · T-74 Runde 1 · approved (verarbeitet)
 

@@ -14,8 +14,11 @@ Instrumentenliste oder im Depot vorhanden ist.
 Möglichen Typen über das REST-Api abfragen“. Mike hat anschließend beauftragt:
 „Danach T-73 nach doing - Wichtig!“ Das Ticket liegt deshalb in `30-doing`;
 Mike hat mit „Ja und? Los gehts“ die Umsetzung gestartet. T-74 ist technisch
-freigegeben. T-73 ist umgesetzt und zur Prüfung vorbereitet; Claude prüft
-über STATUS.md. Noch nicht deployed.
+freigegeben. T-73 ist umgesetzt und unabhängig geprüft — **approved**, Claude,
+Runde 1, `a559c09`. Keine Befunde, die die Freigabe verhindern; ein
+nicht blockierender Doku-Hinweis (fehlendes Inhaltsverzeichnis in
+`docs/rest-core-contract.md`, Altlast vor T-73) steht unten. Noch nicht deployed;
+menschlicher Abschluss steht aus.
 
 ## Beleg und Auswirkung
 
@@ -54,8 +57,9 @@ freigegeben. T-73 ist umgesetzt und zur Prüfung vorbereitet; Claude prüft
 ## Für Mike
 
 Keine fachliche Rückfrage zur Anforderung offen. Von Mike nach `30-doing`
-eingeplant und anschließend zur Umsetzung aktiviert. Aktuell kein weiterer
-Handgriff erforderlich; technischer Review und menschlicher Abschluss stehen aus.
+eingeplant und anschließend zur Umsetzung aktiviert. Technischer Review ist
+durch (approved); menschlicher Abschluss (Verschieben nach `40-done/`) steht aus.
+T-73 ist das letzte Element der aktuellen `priority_chain`; danach `portfolio_review`.
 
 ## Doku-Abgleich
 
@@ -125,4 +129,35 @@ Gelesen: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`, Referenzen
 Vorhandene Registry, Rollenableitung und Generationsleser verwendet; Warnlog bei
 ungültiger Deklaration. Lessons wie oben umgesetzt, keine neue globale Lesson.
 Scope: vier Produktdateien, zehn Test-/Dokudateien, unter 800 Zeilen.
-Unabhängiger Review und menschlicher Abschluss bleiben offen.
+
+## Unabhängiger Review · Claude, Runde 1, 2026-09-26
+
+**Ergebnis: approved.** Geprüft am eingefrorenen Stand `a559c09`. Volles
+Ergebnis mit Belegen steht in
+[STATUS](../STATUS.md#inbox--codex--t-73-runde-1--approved); hier nur die
+Kurzfassung.
+
+- `specs_by_name()`/`describe_chain` als **ein** Lesepfad bestätigt, keine
+  zweite Registry-Sicht. Für alle vier eingebauten Specs nachgerechnet, dass
+  `spec.roles` und `roles_of(declaration)` je Rolle übereinstimmen — der
+  `invalid_declaration`-Zweig für „keine passende Deklaration“ ist Absicherung,
+  aktuell nicht erreichbar, kein Bug.
+- Die drei HTTP-Fixtures sind kein Beiwerk: ein eigener Test lädt sie und
+  vergleicht sie live gegen echte Responses — selbst nachvollzogen.
+- Eigener Testlauf: `tests/test_api_instrument_types.py` **15 passed**;
+  voller Backend-Lauf **1236 passed, 35 skipped, 2 failed**. Die zwei Ausfälle
+  liegen in `tests/test_yaml_profile.py`, einer Datei außerhalb des T-73-Diffs —
+  keine Regression. Ursache (kalenderabhängiges `period=1m`-Fenster) selbst
+  nachvollzogen, nicht nur geglaubt. Mein Lauf hatte durchgehend Netzzugriff
+  und deckt damit auch die acht separat nachgezogenen Netzfälle ab.
+- Formatbefund verifiziert: `app/models.py` und `tests/test_contract_openapi.py`
+  waren schon vor T-73 (`3d64132`) nicht vollformatiert, an Stellen fern jeder
+  neuen Klasse — keine Ausweitung durch dieses Ticket.
+- AST-Bezeichnerinventar aller fünf berührten Python-Dateien selbst gezählt:
+  0 deutsche Bezeichner außerhalb zulässiger Testnamen.
+
+Nicht blockierend: `docs/rest-core-contract.md` hat weiterhin kein
+Inhaltsverzeichnis trotz jetzt elf Abschnitten — Altlast aus T-24/T-21, von
+T-73 nur um einen Abschnitt vergrößert, kein neuer Befund dieses Tickets.
+
+Unabhängiger Review ist erledigt; menschlicher Abschluss bleibt offen.
