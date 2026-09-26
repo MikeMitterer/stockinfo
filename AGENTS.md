@@ -114,6 +114,14 @@ Bei Änderungen an Verhalten, Verträgen, Konfiguration, Installation oder
 beschlossenem Umfang gehört der **Doku-Abgleich zum selben Auftrag**.
 Mike muss betroffene Anleitungen nicht eigens nennen.
 
+**README und Docker Hub:** `make push` überträgt nach dem erfolgreichen
+Docker-Hub-Image-Push auch das README. Die konvertierte Fassung darf höchstens
+**25.000 UTF-8-Bytes** umfassen; die absoluten Bild- und Dokumentlinks zählen
+mit. Nach README-Änderungen die Vorschau prüfen:
+`.venv/bin/python .libs/ProjectTools/src/python/dockerhub-readme.py --preview --ref master -o docker/logs/dockerhub-readme.md`.
+Das Script prüft die Grenze und schneidet nichts ab. Längere Details in
+verlinkte Dokumente auslagern; das README bleibt der kurze Projekteinstieg.
+
 - Der Bearbeiter ermittelt über das Datei- und Überschrifteninventar die
   betroffenen Anleitungen, Referenzen, Beispiele und Specs; dazu gehören auch
   README-Dateien außerhalb von `docs/`. Anschließend verfolgt er die geänderten

@@ -410,6 +410,14 @@ push() {
     pushImage "${_tag}"
 
     echo -e "\n${GREEN}Push erfolgreich: ${IMAGE}:${_tag}${NC}"
+    if [[ "${TARGET}" == "dockerhub" ]]; then
+        if ! DOCKER_README_AFTER_PUSH=1 "${SCRIPTPATH}/../.venv/bin/python" \
+            "${PROJECT_TOOLS:-${SCRIPTPATH}/../.libs/ProjectTools/src}/python/dockerhub-readme.py" \
+            --project-dir "${SCRIPTPATH}/.." --ref master \
+            --publish --repository "${NAMESPACE}/${NAME}" --token-file "${DOCKER_PW_FILE}"; then
+            return 1
+        fi
+    fi
 }
 
 # Samples-Array — Beispiel-`docker run`-Befehle für dieses Image

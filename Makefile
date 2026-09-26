@@ -17,6 +17,7 @@ include ${DEV_MAKE}/tools.mk
 
 # ProjectTools (geteilte Dev-Scripte) — Fallback für nicht-interaktive Shells (Jenkins etc.)
 PROJECT_TOOLS ?= $(WORKSPACE)/.libs/ProjectTools/src
+export PROJECT_TOOLS
 
 VENV    := .venv
 UVICORN := $(VENV)/bin/uvicorn
@@ -192,7 +193,7 @@ build: ## Docker-Image bauen und prüfen (PLATFORM=x86|arm, Default x86)
 	docker/build.sh --build $(PLATFORM)
 
 .PHONY: push
-push: ## Geprüftes Image in Registry pushen (TARGET=ghcr|dockerhub|ecr, Default dockerhub)
+push: ## Geprüftes Image pushen, danach README bei Docker Hub (TARGET=ghcr|dockerhub|ecr)
 	docker/build.sh --push
 
 # ─── Status ───────────────────────────────────────────────────────────────────

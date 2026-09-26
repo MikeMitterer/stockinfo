@@ -7,11 +7,8 @@ provider and fund size.
 
 Docker image: [mangolila/stockinfo on Docker Hub](https://hub.docker.com/repository/docker/mangolila/stockinfo/general).
 
-It ships with a **web dashboard** (Vue): asset overview with sortable columns,
-configuration view, exchange legend, 8 switchable themes, German/English UI, a price
-chart (intraday **and** real end-of-day closes) that docks at the bottom of the
-viewport, plus per-asset actions (refresh, delete, add ISIN) and links (extraETF,
-Yahoo Finance, JSON export).
+The **web dashboard** provides an asset overview, price charts, manual ETF
+metrics and source configuration, with German and English UI.
 
 ![StockInfo dashboard](unraid/screenshots/dashboard.png)
 
@@ -23,44 +20,7 @@ Yahoo Finance, JSON export).
   the dashboard language or `Accept-Language`.
 - The dashboard development proxy also forwards `/instrument-types`.
 
-### What's new in 1.0.0
-
-- StockInfo's application code is now licensed under the
-  [AGPL-3.0-or-later](LICENSE). The independent plugin API remains under the
-  [MIT license](plugin_api/LICENSE); commercial terms are available separately.
-- `make build` includes and checks the license texts in the Docker image.
-  `make push` accepts only the checked image from the current source commit.
-- The Docker source-profile command writes to the named volume used by
-  `make up`, including before the first container start.
-
-### What's new in 0.6.0
-
-- **All eight ETF metrics are maintainable by hand** — provider, replication,
-  fund size, fund domicile and fund currency join TER, volatility and
-  accumulating. Maintained in an expandable detail area per row, not in the
-  table cell.
-
-  ![Detail area](unraid/screenshots/detail-area.png)
-
-- **Stored metrics survive an outage.** A failed justETF request no longer wipes
-  what was already there — "asked and empty" is now distinguishable from "could
-  not ask". `METADATA_TTL_DAYS` finally does what it always claimed: justETF is
-  scraped once per cycle instead of on every quote.
-- **Merging duplicate instruments no longer loses data.** Manual values and the
-  daily-sync watermark move to the surviving row instead of being cascaded away.
-- **Three probes, three questions.** `/health` stays cheap (is the process
-  alive?), `/ready` actually touches the database (is normal operation
-  released?), and the new `/operational` answers what the Docker healthcheck
-  needs (can the process do its current job?). A pending migration is not a
-  fault — `/ready` says `503`, `/operational` stays `200`.
-- **The identity migration is a mandatory, two-phase flow.** On startup the
-  service works out what a migration would cost, blocks every business route
-  and shows the list; only an explicit confirmation runs it. Instruments whose
-  symbol cannot be split into ticker and exchange leave the portfolio and are
-  named in the report instead of being guessed.
-- **Stricter API contract** — symbols and time ranges are validated (`422`
-  instead of a wrong result), and an unresolvable ISIN answers `404` instead of
-  `502`.
+Earlier changes: [release notes](docs/release-notes.md).
 
 ## Contents
 
@@ -446,11 +406,36 @@ commit or registry target. The versioned image tag contains the source commit
 hash; publish that commit before publishing the image so recipients can obtain
 the corresponding source.
 
-`make push` publishes image tags only. Docker Hub's short description and
-repository overview are separate metadata; this repository does not currently
-sync them from GitHub. Docker Hub imports `README.md` after successful
-[automated builds](https://docs.docker.com/docker-hub/repos/manage/information/#repository-overview)
-when those are enabled. A local image push does not trigger that import.
+After a successful Docker Hub image push, `make push` uploads this README
+with absolute GitHub links for documents and images. Other registries skip
+this step. Install [Pandoc](https://pandoc.org/installing.html) and the project
+Python dependencies in `.venv` first. Links use the published `master` branch.
+
+The script reads a Docker Hub personal access token from `DOCKER_PW_FILE`
+(default: `${DOCKER_CONFIG:-$HOME/.docker}/dockerhub.sec`), as the image login
+does. The token needs permission to update repository descriptions
+(Read, Write, Delete). Keep that file outside the repository. Credentials go only to Docker Hub over HTTPS.
+
+Preview without credentials or network access:
+
+```bash
+.venv/bin/python .libs/ProjectTools/src/python/dockerhub-readme.py --preview --ref master \
+  -o docker/logs/dockerhub-readme.md
+# Output: docker/logs/dockerhub-readme.md
+```
+
+If the README upload fails, `make push` fails too, but the image is already
+published. Retry only the description with:
+
+```bash
+.venv/bin/python .libs/ProjectTools/src/python/dockerhub-readme.py --publish --ref master \
+  -r mangolila/stockinfo
+```
+
+Options: `--username` overrides the namespace as login user; `--ref` selects
+the GitHub branch; `--description` changes the otherwise preserved short
+summary. The script verifies the saved overview and enforces the 25,000-byte
+limit without truncation. Run without arguments for help.
 
 [↑ Contents](#contents)
 
