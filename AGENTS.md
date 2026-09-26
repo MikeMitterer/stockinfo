@@ -114,13 +114,17 @@ Bei Änderungen an Verhalten, Verträgen, Konfiguration, Installation oder
 beschlossenem Umfang gehört der **Doku-Abgleich zum selben Auftrag**.
 Mike muss betroffene Anleitungen nicht eigens nennen.
 
-**README und Docker Hub:** `make push` überträgt nach dem erfolgreichen
-Docker-Hub-Image-Push auch das README. Die konvertierte Fassung darf höchstens
+**Docker-Hub-Beschreibung:** `make push` überträgt nach dem erfolgreichen
+Docker-Hub-Image-Push `docker/README.md`. Diese Datei erklärt Installation und
+Betrieb des fertigen Containers; das Root-README bleibt die Projektanleitung.
+Die konvertierte Fassung darf höchstens
 **25.000 UTF-8-Bytes** umfassen; die absoluten Bild- und Dokumentlinks zählen
-mit. Nach README-Änderungen die Vorschau prüfen:
+mit. Nach Änderungen an `docker/README.md` die Vorschau prüfen:
 `./.libs/ProjectTools/src/bash/dockerhub-readme.sh --preview`.
 Das Script prüft die Grenze und schneidet nichts ab. Längere Details in
-verlinkte Dokumente auslagern; das README bleibt der kurze Projekteinstieg.
+verlinkte Dokumente auslagern. Bildpfade relativ zu `docker/README.md` angeben
+(z. B. `../unraid/screenshots/dashboard.png`); der Uploader wandelt sie in
+Raw-GitHub-URLs um. Die Größenbeschränkung gilt für die Docker-Hub-Beschreibung.
 
 - Der Bearbeiter ermittelt über das Datei- und Überschrifteninventar die
   betroffenen Anleitungen, Referenzen, Beispiele und Specs; dazu gehören auch

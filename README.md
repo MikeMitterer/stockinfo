@@ -344,6 +344,8 @@ The backend must run in parallel. Both together: **`make dev-up`** (see Quick st
 
 ## Docker
 
+Container installation and operation: [Docker guide](docker/README.md).
+
 Published image: [mangolila/stockinfo on Docker Hub](https://hub.docker.com/repository/docker/mangolila/stockinfo/general).
 
 Backend **and** dashboard run in a single image on one port. Built with
@@ -406,7 +408,8 @@ commit or registry target. The versioned image tag contains the source commit
 hash; publish that commit before publishing the image so recipients can obtain
 the corresponding source.
 
-After a successful Docker Hub image push, `make push` uploads this README
+After a successful Docker Hub image push, `make push` uploads
+[`docker/README.md`](docker/README.md), the container-specific description,
 with absolute GitHub links for documents and images. Other registries skip
 this step. Install Python 3.11+ and [Pandoc](https://pandoc.org/installing.html).
 The Bash entry point installs its dependencies in its own user-cache environment,

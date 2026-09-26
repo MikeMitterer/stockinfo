@@ -193,7 +193,7 @@ build: ## Docker-Image bauen und prüfen (PLATFORM=x86|arm, Default x86)
 	docker/build.sh --build $(PLATFORM)
 
 .PHONY: push
-push: ## Geprüftes Image pushen, danach README bei Docker Hub (TARGET=ghcr|dockerhub|ecr)
+push: ## Geprüftes Image pushen, danach docker/README.md bei Docker Hub (TARGET=ghcr|dockerhub|ecr)
 	docker/build.sh --push
 
 # ─── Status ───────────────────────────────────────────────────────────────────

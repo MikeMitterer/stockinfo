@@ -8,10 +8,11 @@ sie erscheinen nicht in Ausgaben oder Prozessargumenten.
 **Auftrag:** Mike ersetzt die diskutierte GitHub-Automatisierung durch ein
 lokales Script nach Skill-Konventionen. Präzisierung: keine eigenen Targets;
 der erfolgreiche bestehende Docker-Hub-Push ruft das Script auf.
-**Stand:** Implementiert, lokal geprüft und von Claude unabhängig **approved**
-(Runde 1, Prüfstand StockInfo `535e7a7`, ProjectTools `8780252`; volles
-Ergebnis in STATUS.md). Offen ist Mikes Abschlussbestätigung.
-Keine GitHub Action angelegt und kein echter Image-/README-Upload ausgeführt.
+**Stand:** Grundfassung von Claude unabhängig approved (Runde 1, StockInfo
+`535e7a7`, ProjectTools `8780252`). Mike bestätigt den erfolgreichen Upload nach
+Token-Anpassung. Nachtrag: eigene Docker-Beschreibung und neue Standardquelle
+implementiert; erneuter Review steht aus. Keine GitHub Action angelegt.
+Die neue Beschreibung wurde lokal geprüft, noch nicht nach Docker Hub übertragen.
 
 ## Übersicht
 
@@ -84,7 +85,7 @@ beliebigen Verbraucherprojekt; Namespace, Repository und Branch ersetzen:
 | Parameter | Bedeutung |
 |---|---|
 | `--project-dir` / `-C` | Projektwurzel; Vorgabe ist das Arbeitsverzeichnis, nicht der Scriptort |
-| `--readme` / `-s` | Quelldatei relativ zur Projektwurzel; Vorgabe `README.md` |
+| `--readme` / `-s` | Quelldatei relativ zur Projektwurzel; Vorgabe `docker/README.md` |
 | `--github-repository` / `-g` | GitHub `owner/repository`; sonst aus dem `origin` des Verbrauchers |
 | `--ref` / `-b` | Bereits veröffentlichter GitHub-Branch oder Commit; Vorgabe `master` |
 | `--repository` / `-r` | Docker-Hub-Repository; überschreibt die automatische Ermittlung |
@@ -286,7 +287,7 @@ CLI-Konformität ist damit durch konkrete Ausgaben und Tests ersetzt.
 
 ### Defaults und Zielermittlung für weitere Projekte
 
-Vorschau: `--preview` reicht im Projektverzeichnis aus. Quelle ist `README.md`,
+Vorschau: `--preview` reicht im Projektverzeichnis aus. Quelle ist `docker/README.md`,
 GitHub-Branch `master`, Ziel `docker/preview/README.md`. Fehlende Zielordner
 werden angelegt; `--output` überschreibt den Pfad. StockInfo ignoriert den
 Vorschauordner in Git. Verbraucher wie StockPortfolio sollten das ebenfalls tun.
@@ -354,3 +355,39 @@ Die neue Diagnose und ihre Grenzen sind hier und in STATUS.md festgehalten.
 
 Prüfstand Diagnose: ProjectTools `9e6dfc4`, 46 Tests grün, Ruff Check/Format
 und Diff-Prüfung bestanden. Der Live-403 ist damit noch nicht als behoben bestätigt.
+
+
+### Eigene Beschreibung für Docker Hub
+
+Mike bestätigt den erfolgreichen Live-Upload nach Anpassung der Token-Rechte.
+Der 403 ist gelöst. Danach beauftragt er eine eigene Container-Beschreibung:
+`docker/README.md` behandelt Docker Run/Compose, Datenvolume, Port, Einstellungen,
+Updates, Logs und Unraid. Keine Python-/Node-Installation und keine Make-Build-
+Anleitung für Nutzer des fertigen Images. Das Root-README bleibt Projekt-Doku.
+
+Der gemeinsame Uploader verwendet nun standardmäßig `docker/README.md`.
+`--readme` bleibt der explizite Override; fehlt die eigene Beschreibung, gibt
+es keinen stillen Rückfall auf `README.md`. Andere Projekte wie StockPortfolio
+müssen ihre eigene `docker/README.md` bereitstellen oder die Quelle ausdrücklich
+wählen. Ausgabe bleibt `docker/preview/README.md`, GitHub-Branch bleibt `master`.
+
+Bilder verweisen relativ zur Quelldatei auf bestehende Repo-Dateien, z. B.
+`../unraid/screenshots/dashboard.png`. Die vorhandene Pandoc-Konvertierung
+berücksichtigt den Quellordner und erzeugt Raw-GitHub-URLs. Keine Bildkopien
+im Docker-Verzeichnis und kein separates Hosting. Das 25.000-Byte-Limit gilt
+für die konvertierte Docker-Beschreibung, nicht mehr für das Root-README.
+
+Doku-Abgleich: neue Docker-README gegen Dockerfile, Entrypoint und App-Settings;
+Root-README, AGENTS, Make-Hilfe, ProjectTools README und Makefile-Skill angepasst.
+Die vorherigen Prüfnachweise und Größenangaben oben beziehen sich auf die damals
+veröffentlichte Root-README. Der jetzige Auftrag ändert diese Quellenwahl.
+
+
+Aktueller Nachweis: **40 ProjectTools-Tests + 7 StockInfo-Tests = 47 grün**.
+Default- und Kein-Fallback-Gegenproben waren vor Anpassung rot. Reale Vorschau
+mit `--preview`: **6.232 UTF-8-Bytes**. GitHub-Repo-Link direkt unter der
+Einleitung, Screenshot als absolute Raw-GitHub-URL. Lokale Dokument-/Bildlinks
+auf Existenz geprüft; Compose-YAML eingelesen und Volume-Zuordnung bestätigt.
+Ruff Check/Format und Diff-Prüfung gegen die freigegebenen Basen bestanden.
+AST-Inventar: englische Bezeichner, deutsche Testnamen wie erlaubt.
+Kein Containerstart oder Live-Upload für diesen Dokumentationsnachtrag.

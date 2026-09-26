@@ -40,6 +40,9 @@ def test_cli_ohne_aktion_zeigt_hilfe_und_vorschau_braucht_keinen_token(
         check=False,
     )
     assert result.returncode == 0, result.stderr
+    content = output.read_text()
+    assert "docker run -d" in content
+    assert "python3.11 -m venv" not in content
     assert (
         "raw.githubusercontent.com/MikeMitterer/stockinfo/master/unraid/screenshots/dashboard.png"
         in output.read_text()
