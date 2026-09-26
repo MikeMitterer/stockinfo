@@ -20,24 +20,32 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `none`
+- `phase`: `codex_working`
+- `ticket`: `T-76-current-documentation.md`
 - `handoff_commit`: `fc67ea3`
-- `review_round`: `1`
+- `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-75-instrument-types-dev-proxy.md`
 - `last_reviewed_commit`: `fc67ea3`
 - `last_reviewed_round`: `1`
-- `workstream`: `none`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `workstream`: `documentation`
+- `priority_chain`: `T-76-current-documentation.md`
+- `priority_ticket`: `T-76-current-documentation.md`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
+
+## Aktueller Auftrag · 2026-09-26
+
+Mike: „Dann aktualiere das“, anschließend „Danach push + merge“.
+Codex aktualisiert die vier betroffenen aktuellen Anleitungen in
+[T-76](30-doing/T-76-current-documentation.md) und prüft Beispiele, Aussagen
+und Links vor der beauftragten Integration. Keine Produktcodeänderung.
+Der folgende Sitzungsstand ist Historie vor diesem Auftrag.
 
 ## Sitzungsstand vor /exit · 2026-09-26
 

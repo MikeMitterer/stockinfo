@@ -1,5 +1,6 @@
 # Aktuelle Tätigkeit
 
+- 2026-09-26 11:44:32 CEST · codex · T-76: README und API-Referenzen werden an den aktuellen Code angeglichen; anschließend sind Merge und Push beauftragt.
 - 2026-09-26 11:26:30 CEST · claude · T-75 auf Mikes Bestätigung nach 40-done verschoben. 20-ready/ und 30-doing/ sind wieder leer, keine Kette eingeplant.
 - 2026-09-26 11:25:15 CEST · claude · T-75 unabhängig geprüft: approved, Runde 1, fc67ea3. Eigene Rot/Grün-Gegenprobe, 3/378 Tests, TS-Compiler-Inventar und live selbst reproduzierter HTTP-Aufruf auf Port 5173. Letztes Kettenglied, phase: portfolio_review, owner: mike.
 - 2026-09-26 11:22:00 CEST · claude · T-74 und T-73 auf Mikes Bestätigung nach 40-done verschoben. Beginne jetzt die Prüfung von T-75 (Runde 1, fc67ea3).
