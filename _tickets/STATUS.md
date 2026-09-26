@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-77-dockerhub-readme.md`
-- `handoff_commit`: `fc67ea3`
-- `review_round`: `0`
+- `handoff_commit`: `6f31bbc`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-75-instrument-types-dev-proxy.md`
 - `last_reviewed_commit`: `fc67ea3`
@@ -39,12 +39,65 @@ eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## Aktueller Auftrag · 2026-09-26
+## OUTBOX → claude · T-77 Runde 1 · Review angefordert
 
-Mike beauftragt ein lokales Script nach Skill-Konventionen samt Makefile-
-Target für README-Upload und automatische Linkanpassung. Das ersetzt die
-zuvor diskutierte GitHub Action. [T-77](30-doing/T-77-dockerhub-readme.md)
-ist aktiv; Codex implementiert. Es wurden keine GitHub-Secrets verändert.
+Mike beauftragt ausdrücklich die Übergabe über STATUS.md. Bitte T-77 unabhängig
+prüfen; beide Produktstände bleiben ab Übergabe eingefroren.
+
+**Prüfstände:** StockInfo `6f31bbc`, Basis `c08f185`, Branch
+`t-77-dockerhub-readme`; ProjectTools `3c4e025`, Basis `ff45053`, gleicher
+Branchname. ProjectTools liegt physisch unter
+`/Volumes/DevLocal/DevBash/Production/ProjectTools` und ist als `.libs/ProjectTools`
+verlinkt. Dort vorhandene unversionierte `AGENTS.md` war fremder Ausgangsstand,
+unverändert und nicht Teil des Commits.
+
+**Auftrag und Ergebnis:** Kein neues Make-Target. Der erfolgreiche Docker-Hub-
+Image-Push ruft das gemeinsame Python-Script auf; GHCR/ECR überspringen es.
+Relative Markdown-Links/Bilder werden auf GitHub bezogen. Projekt, Quelldatei,
+Repository und veröffentlichte Referenz sind konfigurierbar. Vorschau ohne
+Zugangsdaten, Upload liest lokale Token-Datei; API-Ergebnis wird zurückgelesen.
+Über 25.000 konvertierte UTF-8-Bytes: Fehler samt Hinweis auf die Projekt-AGENTS.md.
+Die Größenregel steht in StockInfo-AGENTS.md. Ältere Release-Hinweise sind
+verlinkt ausgelagert. T-77 enthält die Erkenntnisse für StockPortfolio/weitere Projekte.
+
+**Zusätzlich prüfen:** `/Users/macminipro/.codex/skills/makefile-conventions/SKILL.md`,
+Abschnitt „Docker-Hub-README nach erfolgreichem Push“. Lokale Skill-Datei ohne
+Git-Repository; SHA-256 `b664731f9482a639aa235bd5ec7fe63c8dcc1323f7fb9ac5ae0dc5cc3687db5b`.
+Validator erfolgreich. Scope-Erweiterungen (ProjectTools, AGENTS-Regel, Skill und
+wiederverwendbare Erkenntnisse) jeweils von Mike ausdrücklich beauftragt.
+
+**Prüfung:** 7 StockInfo-Integrationstests + 10 gemeinsame Tests bestanden:
+
+```bash
+.venv/bin/python -m pytest -q tests/test_dockerhub_readme.py
+.venv/bin/python -m pytest -q .libs/ProjectTools/tests/python/test_dockerhub_readme.py
+.venv/bin/python .libs/ProjectTools/src/python/dockerhub-readme.py --preview --ref master -o docker/logs/dockerhub-readme.md
+```
+
+Vorschau: **24.945 Bytes**. Echte Pandoc-Konvertierung, HTTP-Protokoll mit
+MockTransport; Buildscript mit kontrollierten äußeren Git-/Docker-/Upload-
+Prozessen. Kein tatsächlicher Docker-Hub-Schreibzugriff, kein echter Token gelesen.
+Der zunächst rote Vorschautest deckte die Größenüberschreitung auf; README gekürzt
+und Historie ausgelagert, danach grün. Kein vollständiger App-Testlauf behauptet.
+Ruff Check/Format, Bash-Syntax, Make-Trockenlauf, deutsche Vorschau und
+Diff-Prüfungen bestanden. 27 lokale Dateilinks geprüft. Details/Grenzen in T-77.
+
+Standards tatsächlich gelesen: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`,
+Referenzen `architecture.md`, `shell.md`, `cli.md`, `python.md`, `quality.md`,
+`documentation.md`; ergänzend Docker-Build-, Makefile-, Git- und Skill-Konventionen.
+
+| Referenz | Coder-Nachweis |
+|---|---|
+| Architektur | ✅ ein gemeinsamer Helfer, Verbraucher übergeben Konfiguration |
+| Shell / CLI | ✅ kein Argument zeigt Hilfe; Kurz-/Langoptionen; Push-Erfolg/Fehler/Registry gezielt geprüft |
+| Frontend | ➖ nicht berührt |
+| Python | ✅ Ruff; AST-Inventar: Fachbezeichner englisch; gettext DE/EN |
+| Persistenz | ➖ keine App-/Datenbankänderung |
+| Qualität | ✅ 17 gezielte Tests, echte Konvertierung, HTTP- und Prozessgrenzen ausdrücklich benannt |
+| Dokumentation | ✅ README, Release-Notizen, AGENTS.md, ProjectTools-README, T-77 und Makefile-Skill abgeglichen |
+
+**Offen:** unabhängiges Claude-Urteil. Keine eigene Freigabe, kein Merge/Push dieser
+Implementierung und kein Live-Upload behauptet. Kommunikation ausschließlich hier.
 
 ## Vorheriger Auftrag T-76 · 2026-09-26
 
