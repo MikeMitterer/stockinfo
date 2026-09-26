@@ -20,118 +20,37 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
-- `ticket`: `T-78-unraid-guide.md`
+- `phase`: `portfolio_review`
+- `ticket`: `none`
 - `handoff_commit`: `b975952`
-- `review_round`: `2`
+- `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-78-unraid-guide.md`
 - `last_reviewed_commit`: `68702c6`
 - `last_reviewed_round`: `1`
-- `workstream`: `unraid-documentation`
-- `priority_chain`: `T-78-unraid-guide.md`
-- `priority_ticket`: `T-78-unraid-guide.md`
+- `workstream`: `none`
+- `priority_chain`: `none`
+- `priority_ticket`: `none`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## OUTBOX → claude · T-78 Runde 2 (ersetzte Übergabe)
+## Abschluss T-78 · Mike, 2026-09-26
 
-**Zusatzauftrag von Mike:** `unraid/README.md` muss vollständig auf Englisch
-sein. PersonalSkills-Commit `4a751d5` ergänzt dies ausdrücklich, einschließlich
-Überschriften, Tabellen und Kommentaren in Befehlsbeispielen. Er baut auf dem
-unten genannten `4f63159` auf; bei der Skill-Prüfung diesen Nachtrag mitlesen.
-Skill-Validator und Diff-Prüfung bestanden. StockInfo-Anleitungen unverändert.
+Mike: „In dem Fall kannst du die Claude-Überprüfung ignorieren. Der Punkt ist erledigt“.
+[T-78](40-done/T-78-unraid-guide.md) ist damit abgeschlossen. Der offene
+Runde-2-Reviewauftrag ist beendet; Claude soll dafür keinen Review mehr starten.
+Diese ausdrückliche Ausnahme gilt nur für T-78. Runde 1 (`68702c6`) bleibt die
+letzte unabhängige Freigabe; Runde 2 wird nicht als geprüft oder approved geführt.
 
-
-Mike verwirft ausdrücklich die Dopplung: Ein Verweis auf unraid/README.md
-genügt; die widersprechende Skill-Regel soll angepasst werden. Die ungeclaimte
-Übergabe f6abd45 wurde zurückgezogen. Bitte stattdessen den finalen Nachtrag
-StockInfo `b975952` gegen deine Runde-1-Freigabe `474cc3b` prüfen.
-
-Root- und Docker-README enthalten unter Unraid ausschließlich einen Verweis.
-Die vollständigen Details bleiben in unraid/README.md; dort steht der Schutz
-vorhandener Einstellungen vor dem Download und Force Update ist erklärt.
-
-Mitprüfen: PersonalSkills `4f63159`, Branch `fix/unraid-docs-single-source`,
-Datei `/Volumes/DevLocal/DevKI/Production/PersonalSkills/unraid-conventions/SKILL.md`.
-Sie verlangt jetzt eine zentrale Unraid-Anleitung und ausschließlich Verweise
-in den anderen READMEs. Beide installierten Skill-Pfade zeigen auf diese Quelle.
-
-Nachweise: Skill-Validator grün, 73 lokale Links/Anker gültig, echte Vorschau
-6.128 Bytes; Diff-Prüfungen in beiden Repos sauber. Keine App-/Image-/XML-Änderung.
-Doku-Abgleich und Rücknahme des Duplikats sind im Ticket festgehalten.
-Mike hat anschließend ausdrücklich „merge und push“ beauftragt. StockInfo
-`27bab4f` und PersonalSkills `4a751d5` sind per Fast-Forward in master
-integriert und gepusht. Runde 2 bleibt als unabhängiger Review offen;
-Prüffassungen unverändert. Kein neuer Docker-Hub-Upload.
-
-## INBOX → codex · T-78 Runde 1 · approved
-
-**Claude, 2026-09-26.** T-78 unabhängig geprüft: **approved.** Prüfstand
-`68702c6` auf `t-78-unraid-guide`, Basis `a47f1c8`.
-
-- **Link-/Anker-Inventar selbst gerechnet, nicht übernommen:** eigenes Python-
-  Script über `README.md`, `docker/README.md` und `unraid/README.md` löst
-  jeden relativen Link und jeden Anker gegen das Dateisystem bzw. die
-  tatsächlichen Überschriften auf: **73 lokale Links geprüft, 0 defekt** —
-  deckungsgleich mit der Übergabe.
-- **Shell-Blöcke:** drei `bash`-Blöcke in `unraid/README.md` gefunden, alle
-  mit `bash -n` grün.
-- **Template-Abgleich selbst nachvollzogen:** lokales Template
-  (`/Volumes/DevLocal/DevUnraid/Production/Templates/templates/stockinfo.xml`,
-  letzter Dateicommit `87b89cd`) frisch von der Raw-URL geladen und per `cmp`
-  verglichen — bytegleich. `xmllint --noout` grün. Alle zehn Config-Defaults
-  (Port, Datenpfad, Refresh-/Cache-/Metadata-TTL, Default Exchange, Strict
-  Exchange, FX-TTL, OpenFIGI-Key, Timezone) gegen die neue Tabelle in
-  `unraid/README.md` abgeglichen: deckungsgleich. Dockerfile bestätigt UID 99
-  / GID `users`, wie im Text behauptet.
-- **Icon-/Screenshot-URLs** aus dem Template (4 Raw-Links, nicht nur die zwei
-  genannten Screenshots) einzeln abgerufen: alle **HTTP 200**.
-- **Docker-Hub-Vorschau selbst neu erzeugt** (derselbe Bash-Einstieg, frischer
-  Cache): **6.261 Bytes**, deckungsgleich. Neuer Unraid-Link und Swagger-Bild
-  korrekt in Raw-GitHub-URLs auf `master` umgewandelt — dort bis zum Merge
-  erwartungsgemäß tot; im Ticket offengelegt, kein Hub-Upload erfolgt.
-- `git diff --check` sauber; Diff-Budget **187+/37− (224 Zeilen über 6
-  Dateien)** klar unter den vereinbarten 300. Kein App-, Dockerfile- oder
-  Template-Diff — ausschließlich Doku, Ticket und `ACTIVITY.md`.
-- **DRY-Scope:** `README.md` und `docker/README.md` verweisen nur noch kurz
-  auf `unraid/README.md`, keine Konfigurationsdetails doppelt gepflegt.
-  Port, Datenpfad und UID/GID-Aussage sind über alle drei Dateien konsistent.
-- **Lessons berücksichtigt:** SI-R-02 eingehalten — keine Migrations- oder
-  Kompatibilitätssprache für die reine Auslagerung ergänzt. SI-CX-01 nicht
-  einschlägig, da kein Schema/Migration/Loader betroffen ist.
-
-**Nebenbeobachtung, kein Befund:** Der im Ticket genannte Skill
-`unraid-ca-template` ist im PersonalSkills-Repo parallel und unabhängig
-(uncommitted, Branch `docs/unraid-conventions`) in `unraid-conventions`
-umbenannt. Inhaltlich deckt sich die aktuelle Fassung mit dem hier gelieferten
-Muster (Abschnitt „Installation per wget dokumentieren" verlangt exakt eine
-`unraid/README.md` mit demselben Befehl, verlinkt aus der Docker-README). Kein
-StockInfo-Betreff, nichts an diesem Repo geändert.
-
-Standards: `/Users/macminipro/.claude/skills/code-standards/SKILL.md`,
-Referenz `documentation.md`; zusätzlich die aktuelle Fassung von
-`unraid-conventions` und `docker-conventions` gelesen, da das Ticket eine
-Unraid-Auslieferung dokumentiert.
-
-| Referenz | Ergebnis |
-|---|---|
-| Architektur | ➖ keine Produktschicht berührt, reine Dokuverschiebung |
-| Shell / CLI | ✅ drei Bash-Blöcke in `unraid/README.md` `bash -n` grün, keine CLI geändert |
-| Frontend | ➖ nicht berührt |
-| Python | ➖ nicht berührt |
-| Persistenz | ➖ nicht berührt |
-| Qualität | ✅ eigenes Link-/Anker-Inventar (73/0), Template-Bytevergleich, Docker-Hub-Vorschau selbst reproduziert |
-| Dokumentation | ✅ TOC-Pflicht erfüllt (`Contents` + Rücksprünge), README/Docker-README/AGENTS.md/`unraid/README.md` inhaltlich abgeglichen, keine Migrationssprache ergänzt |
-
-Keine Befunde. `T-78-unraid-guide.md` ist das einzige Element seiner
-`priority_chain`; nach Portfolio-Riegel geht der Zustand auf `portfolio_review`
-an Mike. Ticket bleibt bis zur Abschlussbestätigung in `30-doing/`.
+StockInfo `a517d06` und PersonalSkills `4a751d5` sind in master integriert
+und gepusht. Die READMEs verweisen auf die zentrale englische Unraid-Anleitung.
+Keine offene Entscheidung oder aktive Ticketkette. Weitere Arbeit bestimmt Mike.
+Vollständige frühere Reviewtexte: `git show a517d06:_tickets/STATUS.md`.
 
 ## Abschluss T-76 und T-77 · 2026-09-26
 

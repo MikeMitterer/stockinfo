@@ -7,13 +7,15 @@ Docker-README führen mit kurzen Verweisen dorthin.
 
 **Auftrag:** Mike: „StockPortfolio hast die Unraid-Sektion in ein eigenes
 README ausgelagert. Check das und mach das hier gleich“.
-**Stand:** Erste Fassung von Claude freigegeben (Runde 1, `68702c6`).
-Mike hat die doppelte Installationskurzfassung ausdrücklich verworfen.
-Root- und Docker-README enthalten jetzt ausschließlich einen Unraid-Verweis;
-die Skill-Regel ist entsprechend korrigiert. Korrigierte Runde 2 wird übergeben.
-Auf Mikes ausdrücklichen Auftrag in master integriert und gepusht (StockInfo
-`27bab4f`, PersonalSkills `4a751d5`). Runde 2 bleibt offen; kein neuer
-Docker-Hub-Upload und noch kein Ticketabschluss.
+**Stand:** Abgeschlossen auf Mikes ausdrückliche Entscheidung:
+„In dem Fall kannst du die Claude-Überprüfung ignorieren. Der Punkt ist erledigt“.
+Die erste Fassung wurde in Runde 1 von Claude freigegeben (`68702c6`);
+auf die noch offene Runde 2 verzichtet Mike für diesen konkreten Fall.
+Keine technische Freigabe für Runde 2 behauptet. Root- und Docker-README
+verweisen ausschließlich auf die englische Unraid-Anleitung; die Skill-Regel
+ist korrigiert. StockInfo (`a517d06`) und PersonalSkills (`4a751d5`) sind in
+master integriert und gepusht. Kein neuer Docker-Hub-Upload in diesem Auftrag.
+Für Mike ist nichts mehr zu tun.
 
 ## Umfang
 
@@ -77,7 +79,7 @@ reine Dokuänderung nötig. `git diff --check` bestanden.
 
 **Ergebnis: approved.** Geprüft am eingefrorenen Stand `68702c6`. Volles
 Ergebnis mit Belegen steht in
-[STATUS](../STATUS.md#inbox--codex--t-78-runde-1--approved); hier nur die
+`git show a517d06:_tickets/STATUS.md`; hier nur die
 Kurzfassung.
 
 - Link-/Anker-Inventar selbst per Script gerechnet (nicht `grep`): 73 lokale
@@ -90,7 +92,8 @@ Kurzfassung.
 - Diff-Budget 187+/37− über 6 Dateien, klar unter den vereinbarten 300 Zeilen;
   kein App-, Dockerfile- oder Template-Diff.
 
-Menschlicher Abschluss (Verschieben nach `40-done/`) steht noch aus.
+Zum Zeitpunkt der Runde-1-Freigabe stand der menschliche Abschluss noch aus;
+Mikes spätere Abschlussentscheidung steht im Einstieg.
 
 ## Historie: Abgleich mit unraid-conventions (zurückgenommen)
 
@@ -113,7 +116,7 @@ Download-Befehle bytegleich und Hinweise jeweils vor dem Befehl. Links und
 
 Einordnung: neu konkretisierte Konvention aus dem aktualisierten Skill,
 keine neue unabhängige Lesson-Episode. Claudes Runde-1-Freigabe bleibt auf
-`68702c6` begrenzt; der Nachtrag erhält eine eigene Prüfung.
+`68702c6` begrenzt; die geplante Nachprüfung wurde später von Mike erlassen.
 
 ## Mikes Korrektur: eine einzige Unraid-Anleitung
 
@@ -137,5 +140,13 @@ Skill-Validator bestanden, 73 lokale Links/Anker gültig, reale Hub-Vorschau
 **Doku-Abgleich:** Root-/Docker-README und Skill korrigiert. Unraid-README
 und AGENTS.md bereits passend. Die bisherige ungeclaimte Runde-2-Übergabe wurde
 zurückgezogen, nicht als abgeschlossenes Review gezählt. Die neue Fassung
-ersetzt sie. Der konkrete Lernpunkt ist direkt in der beauftragten Skill-Regel
+ersetzte sie; Mike hat anschließend auf die offene Nachprüfung verzichtet. Der konkrete Lernpunkt ist direkt in der beauftragten Skill-Regel
 verankert: Nutzervorgabe zur Auslagerung erhalten, keine Kopierpflicht ableiten.
+
+## Abschluss · 2026-09-26
+
+T-78 nach `40-done/` verschoben. Offenen Reviewauftrag in STATUS.md beendet;
+keine aktive Ticketkette. Die Ausnahme betrifft nur diesen Auftrag und ändert
+keine allgemeinen Reviewregeln. Die letzte unabhängige Freigabe bleibt Runde 1.
+Doku-Abgleich: nur Ticket-/Kommunikationsstatus geändert, Benutzeranleitungen
+und Skill bleiben im bereits veröffentlichten Stand.
