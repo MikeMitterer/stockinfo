@@ -20,7 +20,8 @@ Keine GitHub Action angelegt und kein echter Image-/README-Upload ausgeführt.
 
 ## Umfang
 
-`--preview` erzeugt eine lokale Markdown-Vorschau ohne Token oder Netz.
+`--preview` erzeugt eine lokale Markdown-Vorschau ohne Docker-Hub-Zugriff.
+Der Bash-Einstieg kann beim Erststart fehlende Python-Pakete herunterladen.
 `--publish` überträgt sie mit einem lokalen Token an Docker Hub; der bestehende
 `make push` ruft diese Aktion nach erfolgreichem Docker-Hub-Push auf.
 Das Original-README bleibt unverändert. Pandoc liest
@@ -34,8 +35,8 @@ ProjectTools; StockInfo erhält den Push-Aufruf, Integrationstests, README,
 ausgelagerte Release-Notizen und die Größenregel in AGENTS.md.
 Keine App-, Datenbank- oder GitHub-Secrets-Änderung. Auf weiteren Auftrag
 Hinweis im Makefile-Skill und wiederverwendbare Erkenntnisse in diesem Ticket.
-Erweiterter Scope: zwei Repositories plus Skill, höchstens zwölf Produkt-/Test-/
-Dokudateien plus Board und 1.200 Diff-Zeilen. Der bisherige
+Erweiterter Scope: zwei Repositories plus Skill, Bash-Einstieg, Paketdatei, zusätzliche Bootstrap-Tests und code-standards-Skill
+zusätzlich zum Ausgangsumfang; Gesamtbudget einschließlich Board: 2.000 Diff-Zeilen. Der bisherige
 Image-Push bleibt erhalten; andere Registries lösen keinen Hub-Upload aus.
 Vorschau und API-Fehler werden gezielt geprüft.
 
@@ -48,28 +49,33 @@ Vorschau und API-Fehler werden gezielt geprüft.
 | 1 | Echte Pandoc-Konvertierung: Bilder, Dokumente, Anker, Code und Referenzlinks | Bestanden |
 | 2 | HTTP-Grenze: Authentifizierung, PATCH, Fehler ohne Secret-Ausgabe | Bestanden |
 | 3 | CLI, Make-Aufrufe, Namensinventar, Ruff und Doku-Abgleich | Bestanden |
-| 4 | Vorschau des echten README; tatsächlicher Hub-Upload getrennt ausweisen | Vorschau: 24.945 Bytes; echter Upload nicht ausgeführt |
+| 4 | Vorschau des echten README; tatsächlicher Hub-Upload getrennt ausweisen | Vorschau: 24.980 Bytes; echter Upload nicht ausgeführt |
 
 [↑ Übersicht](#übersicht)
 
 ## Übernahme in StockPortfolio und weitere Projekte
 
 Die Implementierung liegt ausschließlich in **ProjectTools**:
-`src/python/dockerhub-readme.py`, deutsche Texte daneben unter
+`src/bash/dockerhub-readme.sh` kapselt die Einrichtung und startet
+`src/python/dockerhub-readme.py`; deutsche Texte liegen unter
 `src/python/locales/de/LC_MESSAGES/`, allgemeine Tests in
 `tests/python/test_dockerhub_readme.py`. Der `.libs/ProjectTools`-Link des
 Verbrauchers zeigt darauf. Keine Scriptkopie im Verbraucherprojekt anlegen.
 
 ### Voraussetzungen und Aufruf
 
-Python 3.11+ aus der Projekt-`.venv`, `httpx` und Pandoc bereitstellen.
+Python 3.11+ und Pandoc bereitstellen. Der Bash-Einstieg legt eine eigene Werkzeug-`.venv`
+im Benutzer-Cache bei Bedarf an, ergänzt fehlendes pip über ensurepip und installiert die
+Paketliste `src/python/dockerhub-readme.requirements.txt`. Eine vorhandene
+passende Umgebung wird ohne erneute Installation verwendet.
+`PYTHON_BOOTSTRAP` wählt bei Bedarf den Python-Interpreter (Vorgabe `python3`).
 Das Script braucht keine StockInfo-Konfiguration. Beispiel aus einem
 beliebigen Verbraucherprojekt; Namespace, Repository und Branch ersetzen:
 
 ```bash
-.venv/bin/python .libs/ProjectTools/src/python/dockerhub-readme.py \
+./.libs/ProjectTools/src/bash/dockerhub-readme.sh \
   --preview --ref main --output /tmp/dockerhub-readme.md
-.venv/bin/python .libs/ProjectTools/src/python/dockerhub-readme.py \
+./.libs/ProjectTools/src/bash/dockerhub-readme.sh \
   --publish --ref main --repository namespace/project
 ```
 
@@ -85,7 +91,8 @@ beliebigen Verbraucherprojekt; Namespace, Repository und Branch ersetzen:
 | `--description` / `-d` | Optionale Kurzbeschreibung; sonst bleibt sie unverändert |
 | `--output` / `-o` | Vorschauziel, relativ zum Projekt; Vorgabe `README.dockerhub.md` |
 
-Keine Argumente zeigen Hilfe. Die Vorschau braucht weder Token noch Netzwerk.
+Keine Argumente zeigen Hilfe ohne Installation. Die Vorschau braucht keinen
+Token; nur die erstmalige Paketinstallation kann Netz benötigen.
 Sie schreibt eine neue Datei; das Quell-README wird nicht verändert.
 
 ### Linkumwandlung und Größenlimit
@@ -128,7 +135,7 @@ nur `--publish` separat zu wiederholen genügt, kein neuer Image-Push erforderli
 
 ### Prüfnachweise und Grenzen
 
-- ProjectTools: **10 Tests bestanden**, einschließlich zweier verschiedener
+- ProjectTools: **23 Tests bestanden**, einschließlich zweier verschiedener
   Verbraucher, README im Unterordner und CLI-Fehler mit AGENTS.md-Hinweis.
 - StockInfo: **7 Integrationstests bestanden**. Echtes Buildscript, äußere
   Git-/Docker-/Upload-Prozesse kontrolliert ersetzt; Erfolg, fehlgeschlagener
@@ -136,13 +143,13 @@ nur `--publish` separat zu wiederholen genügt, kein neuer Image-Push erforderli
 - Echte Pandoc-Konvertierung; HTTP-Ablauf mit `httpx.MockTransport` geprüft.
   Kein echter Docker-Hub-Schreibzugriff und keine tatsächlichen Tokens gelesen.
 - Ruff Check/Format, Bash-Syntax, `make -n push`, deutsche Vorschau und
-  `git diff --check` bestanden. AST-Inventar: 78 Script-, 32 Shared-Test-
-  und 32 Integrationstest-Bezeichner; Bash-Zuweisungen/Funktionsköpfe inventarisiert.
+  `git diff --check` bestanden. AST-Inventar: 84 Script-, 32 HTTP-/Markdown-Test-,
+  34 Bootstrap-Test- und 31 Integrationstest-Bezeichner; Bash-Zuweisungen/Funktionsköpfe inventarisiert.
   Fachliche Bezeichner englisch, erklärende Testnamen deutsch.
 
 ```bash
 .venv/bin/python -m pytest -q tests/test_dockerhub_readme.py
-.venv/bin/python -m pytest -q .libs/ProjectTools/tests/python/test_dockerhub_readme.py
+.venv/bin/python -m pytest -q .libs/ProjectTools/tests/python/
 ```
 
 [↑ Übersicht](#übersicht)
@@ -171,10 +178,82 @@ Makefile-Skill (gemeinsamen Helfer verwenden) auf den implementierten Ablauf
 abgeglichen. `docs/plugins.md` verweist weiterhin korrekt auf README/Docker;
 REST-/Plugin-Verträge bleiben unverändert.
 
-**Gemeinsamer Prüfstand:** ProjectTools `3c4e025`, Basis `ff45053`, Branch
+**Zurückgenommener erster Prüfstand:** ProjectTools `3c4e025`, Basis `ff45053`, Branch
 `t-77-dockerhub-readme`. Dort war `AGENTS.md` bereits vor Arbeitsbeginn
 unversioniert; unverändert gelassen und nicht mitcommittet.
 Der lokale Makefile-Skill liegt außerhalb eines Git-Repositorys; SHA-256:
 `b664731f9482a639aa235bd5ec7fe63c8dcc1323f7fb9ac5ae0dc5cc3687db5b`.
 Skill-Validator: gültig. 27 lokale Dateiverweise in README, Release-Notizen,
 AGENTS.md und diesem Ticket geprüft.
+
+
+### Ergänzung: Bash-Einstieg und Vorprüfungen
+
+Mike hat nach dem fehlgeschlagenen Python-Direktaufruf einen gekapselten
+Bash-Einstieg beauftragt. StockInfo-Push, README, AGENTS.md und Makefile-Skill
+verwenden jetzt `src/bash/dockerhub-readme.sh`. Die öffentliche Optionsliste
+bleibt im Python-Parser; Bash reicht alle Argumente unverändert weiter.
+
+Vor der Einrichtung werden Projektverzeichnis und lesbares UTF-8-README geprüft.
+Bei `--publish` muss außerdem die Token-Datei lesbar und nach Entfernen von
+Leerraum nicht leer sein. Fehler stoppen vor venv/pip/Upload. Die tatsächliche
+Gültigkeit und Schreibberechtigung prüft Docker Hub beim Auth-/PATCH-Aufruf;
+eine vorhandene Datei allein bestätigt keine gültigen Credentials.
+
+Bash prüft Pandoc, legt eine eigene Cache-`.venv` an und installiert darin
+`httpx` gemäß gemeinsamer Paketliste. Es installiert nichts global und löscht
+keine vorhandene Umgebung. Nicht funktionsfähige/zu alte Werkzeug-venvs werden gemeldet.
+Hilfe sowie ungültige Optionen verändern keine Umgebung. Auch die Python-Hilfe
+funktioniert ohne httpx; direkte Aktionen mit fehlendem Paket verweisen auf Bash.
+
+Der Erstlauf wurde mit echten leeren venvs und echten pip-Installationen geprüft.
+Die Testpakete wurden einmal nach `/tmp` geladen; die Installationstests laufen
+mit `PIP_NO_INDEX=1` und `PIP_FIND_LINKS` auf diese Wheels. Damit wird weder eine
+bereits eingerichtete Umgebung als Erstlauf ausgegeben noch Docker Hub beschrieben.
+Die Rücknahme der ersten, ungeclaimten Übergabe steht in STATUS.md; die nächste
+Übergabe benennt die ergänzten Prüfcommits bei unverändertem Rundenverbrauch.
+
+
+### Eigene Werkzeugumgebung (Mikes Präzisierung)
+
+Die Projekt-`.venv` wird weder verwendet noch verändert. Der Bash-Einstieg
+verwaltet ausschließlich
+`${XDG_CACHE_HOME:-$HOME/.cache}/projecttools/dockerhub-readme/.venv`.
+Ein Symlink an diesem Werkzeugverzeichnis oder direkt an dessen `.venv`
+wird abgewiesen. Unterschiedliche Projekte nutzen denselben Werkzeugcache;
+Projektwurzel, README und Repository werden unabhängig davon ausgewählt.
+
+Bei neuem Runtime-Setup wählt der Einstieg einen verfügbaren Python-Interpreter
+ab 3.11; auf diesem Mac ist `python3` noch 3.9, `python3.14` wird gefunden.
+`PYTHON_BOOTSTRAP` überschreibt die Auswahl explizit. Eine defekte/zu alte
+Werkzeugumgebung wird mit Fehler gemeldet, nicht blind gelöscht.
+
+Die Isolation ist im Test belegt: Eine bestehende Projekt-`.venv/bin/python`
+endet absichtlich mit Exit 42. Vorschau und Paketinstallation funktionieren
+trotzdem; anschließend sind Inhalt und Dateiinventar der Projektumgebung
+unverändert. Zusätzlich wird ein Symlink auf eine fremde venv abgewiesen.
+
+Grundsatz auf Mikes Auftrag im `code-standards`-Skill samt Python-Referenz:
+öffentlicher Bash-Einstieg, Hilfe ohne Installation, lokale Vorprüfungen,
+werkzeugeigene venv für geteilte Helfer, Requirements-Datei als Paketquelle,
+echte Erstlauf-/Wiederverwendungs-/Fehlertests. Der Makefile-Skill verweist
+auf den gemeinsamen Bash-Einstieg. Die alten Commit-/Hash-Angaben oben sind
+die zurückgenommene Erstübergabe; aktuelle Prüffassung steht in STATUS.md.
+
+
+**Aktuelle Prüfung nach Bash-/Isolationsauftrag:** 23 ProjectTools-Tests und
+7 StockInfo-Integrationstests bestanden. ShellCheck für den neuen Bash-Einstieg,
+Bash-Syntax, Ruff Check/Format und beide Skill-Validatoren bestanden.
+Aktuelles konvertiertes README: 24.980 UTF-8-Bytes. Test-Installationen erfolgten
+in temporären Werkzeugcaches aus lokalen Wheels; keine globale Installation
+und keine Änderung der StockInfo-`.venv`. Die Befunde zum Python-Direktaufruf
+und zu fehlenden Eingaben sind durch CLI-Tests abgedeckt. Kein Live-Upload.
+Doku-Abgleich schließt jetzt ausdrücklich auch die isolierte Werkzeugumgebung
+und die prinzipielle Vorgehensweise im code-standards-Skill ein.
+
+Aktueller ProjectTools-Prüfstand: `3005e11` (Vorgänger `3c4e025`).
+
+Aktuelle Skill-Prüfstände (SHA-256, lokale Dateien außerhalb von Git):
+- `makefile-conventions/SKILL.md`: `d9e6ee6615e28ae5336a71a1810b305a4bc90e6ed7ed4e1a8d96ee1d6bd10c66`
+- `code-standards/SKILL.md`: `93b2b62cbacc9ac73f0188afd8fb97146bed4a90db54e9bc0f3d96bc5776c7c6`
+- `code-standards/references/python.md`: `97829547aefe04bc9e379dffb6b853a912a90e57a80fcd5d44184ae5397d5b53`

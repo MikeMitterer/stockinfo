@@ -4,19 +4,18 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
-import sys
 import time
 
 import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
-SCRIPT = ROOT / ".libs/ProjectTools/src/python/dockerhub-readme.py"
+SCRIPT = ROOT / ".libs/ProjectTools/src/bash/dockerhub-readme.sh"
 
 
 def test_cli_ohne_aktion_zeigt_hilfe_und_vorschau_braucht_keinen_token(
     tmp_path: Path,
 ) -> None:
-    command = [sys.executable, str(SCRIPT)]
+    command = [str(SCRIPT)]
     help_result = subprocess.run(command, capture_output=True, text=True, check=False)
     assert help_result.returncode == 0
     assert "--preview" in help_result.stdout and "--publish" in help_result.stdout
@@ -35,6 +34,7 @@ def test_cli_ohne_aktion_zeigt_hilfe_und_vorschau_braucht_keinen_token(
             str(tmp_path / "missing-token"),
         ],
         cwd=tmp_path,
+        env={**os.environ, "XDG_CACHE_HOME": str(tmp_path / "cache")},
         capture_output=True,
         text=True,
         check=False,
@@ -65,7 +65,7 @@ def test_push_startet_readme_nur_nach_erfolgreichem_hub_push(
     expected_calls: list[str],
 ) -> None:
     """Echtes Buildscript; Git, Docker und Upload-Prozess sind äußere Testgrenzen."""
-    for directory in ("docker", "bin", "libs", ".venv/bin"):
+    for directory in ("docker", "bin", "libs", "tools/bash"):
         (tmp_path / directory).mkdir(parents=True)
     shutil.copy(ROOT / "docker/build.sh", tmp_path / "docker/build.sh")
     (tmp_path / "docker/Dockerfile").write_text("FROM python:3.11\n")
@@ -84,7 +84,7 @@ def test_push_startet_readme_nur_nach_erfolgreichem_hub_push(
     programs = {
         "bin/git": 'case "$*" in *rev-parse*) echo source-commit;; esac\n',
         "bin/docker": "echo image-id\n",
-        ".venv/bin/python": (
+        "tools/bash/dockerhub-readme.sh": (
             'echo readme >> "$CALL_LOG"\nprintf "%s\\n" "$@" > "$ARG_LOG"\n'
             'exit "$README_STATUS"\n'
         ),
@@ -98,6 +98,7 @@ def test_push_startet_readme_nur_nach_erfolgreichem_hub_push(
         "PATH": f"{tmp_path / 'bin'}:{os.environ['PATH']}",
         "BASH_LIBS": str(tmp_path / "libs"),
         "TARGET": target,
+        "PROJECT_TOOLS": str(tmp_path / "tools"),
         "AMAZON_REPO_URI": "example.ecr",
         "CALL_LOG": str(tmp_path / "calls"),
         "ARG_LOG": str(tmp_path / "args"),
@@ -115,7 +116,7 @@ def test_push_startet_readme_nur_nach_erfolgreichem_hub_push(
     assert result.returncode == expected_status, result.stdout + result.stderr
     assert (tmp_path / "calls").read_text().splitlines() == expected_calls
     if "readme" in expected_calls:
-        assert (tmp_path / "args").read_text().splitlines()[1:] == [
+        assert (tmp_path / "args").read_text().splitlines() == [
             "--project-dir",
             str(tmp_path / "docker/.."),
             "--ref",
@@ -131,7 +132,6 @@ def test_push_startet_readme_nur_nach_erfolgreichem_hub_push(
 def test_uploadfehler_nach_image_push_wird_klar_gemeldet(tmp_path: Path) -> None:
     result = subprocess.run(
         [
-            sys.executable,
             str(SCRIPT),
             "--publish",
             "--project-dir",

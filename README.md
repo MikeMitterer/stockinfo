@@ -408,18 +408,19 @@ the corresponding source.
 
 After a successful Docker Hub image push, `make push` uploads this README
 with absolute GitHub links for documents and images. Other registries skip
-this step. Install [Pandoc](https://pandoc.org/installing.html) and the project
-Python dependencies in `.venv` first. Links use the published `master` branch.
+this step. Install Python 3.11+ and [Pandoc](https://pandoc.org/installing.html).
+The Bash entry point installs its dependencies in its own user-cache environment,
+leaving the project `.venv` untouched. Links use the published `master` branch.
 
-The script reads a Docker Hub personal access token from `DOCKER_PW_FILE`
-(default: `${DOCKER_CONFIG:-$HOME/.docker}/dockerhub.sec`), as the image login
-does. The token needs permission to update repository descriptions
-(Read, Write, Delete). Keep that file outside the repository. Credentials go only to Docker Hub over HTTPS.
+Set `DOCKER_PW_FILE` to a Docker Hub token file outside the repository
+(default: `${DOCKER_CONFIG:-$HOME/.docker}/dockerhub.sec`). The token needs
+Read, Write, Delete permissions. The script checks README and token-file
+readability first; only Docker Hub receives the credentials.
 
-Preview without credentials or network access:
+Preview without Docker Hub credentials (initial setup may download packages):
 
 ```bash
-.venv/bin/python .libs/ProjectTools/src/python/dockerhub-readme.py --preview --ref master \
+./.libs/ProjectTools/src/bash/dockerhub-readme.sh --preview --ref master \
   -o docker/logs/dockerhub-readme.md
 # Output: docker/logs/dockerhub-readme.md
 ```
@@ -428,7 +429,7 @@ If the README upload fails, `make push` fails too, but the image is already
 published. Retry only the description with:
 
 ```bash
-.venv/bin/python .libs/ProjectTools/src/python/dockerhub-readme.py --publish --ref master \
+./.libs/ProjectTools/src/bash/dockerhub-readme.sh --publish --ref master \
   -r mangolila/stockinfo
 ```
 

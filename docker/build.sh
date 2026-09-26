@@ -411,8 +411,8 @@ push() {
 
     echo -e "\n${GREEN}Push erfolgreich: ${IMAGE}:${_tag}${NC}"
     if [[ "${TARGET}" == "dockerhub" ]]; then
-        if ! DOCKER_README_AFTER_PUSH=1 "${SCRIPTPATH}/../.venv/bin/python" \
-            "${PROJECT_TOOLS:-${SCRIPTPATH}/../.libs/ProjectTools/src}/python/dockerhub-readme.py" \
+        if ! DOCKER_README_AFTER_PUSH=1 \
+            "${PROJECT_TOOLS:-${SCRIPTPATH}/../.libs/ProjectTools/src}/bash/dockerhub-readme.sh" \
             --project-dir "${SCRIPTPATH}/.." --ref master \
             --publish --repository "${NAMESPACE}/${NAME}" --token-file "${DOCKER_PW_FILE}"; then
             return 1

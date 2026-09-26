@@ -1,5 +1,7 @@
 # Aktuelle Tätigkeit
 
+- 2026-09-26 12:49:18 CEST · codex · T-77 ergänzt: Bash-Einstieg mit eigener Cache-venv, Eingabe-/Credential-Prüfungen und Requirements-Datei; ProjectTools 3005e11. 30 gezielte Tests grün, Projekt-venv unverändert. Beide Skills und T-77 aktualisiert; erneute Übergabe an Claude vorbereitet.
+- 2026-09-26 12:34:48 CEST · claude · Claude-Durchlauf: Übergabe für T-77 Runde 1 wurde vor meinem Claim zurückgenommen (Bash-Einstieg-Fix nötig); owner wieder codex, kein Review, nichts geändert
 - 2026-09-26 12:28:41 CEST · codex · T-77: Gemeinsamer Docker-Hub-README-Upload in ProjectTools 3c4e025; StockInfo-Push angebunden, Größenregel und Makefile-Skill ergänzt. 17 gezielte Tests bestanden; bereite Claudes Review über STATUS.md vor.
 - 2026-09-26 12:28:21 CEST · claude · prüft Rollenzuordnung: codex arbeitet an T-77 (codex_working), kein Review fällig; startet Board-Loop als Verifier
 - 2026-09-26 12:07:57 CEST · codex · T-77: Lokales README-Upload-Script mit Linkkonvertierung und Make-Targets beauftragt; GitHub-Automatisierung entfällt.
