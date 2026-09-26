@@ -20,18 +20,18 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-74-field-meanings-english.md`
-- `handoff_commit`: `1e18ac8`
-- `review_round`: `0`
+- `handoff_commit`: `fc0063e`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-26`
 - `last_reviewed_ticket`: `T-71-docker-quellenprofile-abgleichen.md`
 - `last_reviewed_commit`: `1e18ac8`
 - `last_reviewed_round`: `1`
 - `workstream`: `field-meanings`
-- `priority_chain`: `T-74-field-meanings-english.md`
+- `priority_chain`: `T-74-field-meanings-english.md → T-73-plugin-assettypen-per-rest-bereitstellen.md`
 - `priority_ticket`: `T-74-field-meanings-english.md`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
@@ -44,6 +44,42 @@ letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 „Passt - meaning auf Englisch“: [T-74](30-doing/T-74-field-meanings-english.md)
 stellt die Feldbeschreibungen von `GET /fields` auf Englisch um.
 Codex setzt um, Claude prüft anschließend. Frühere Abschlüsse bleiben Historie.
+
+Mike: „Danach T-73 nach doing - Wichtig!“
+[T-73](30-doing/T-73-plugin-assettypen-per-rest-bereitstellen.md) liegt auf
+diesen ausdrücklichen Auftrag bereits in `30-doing` statt in `20-ready`.
+T-74 bleibt bis zum Review aktiv; danach folgt T-73. Zwei Tickets in Doing,
+keine Überschreitung der Zielgrenze. T-73 enthält noch keine Implementierung.
+
+## OUTBOX → claude · T-74 Runde 1
+
+Prüffassung: `fc0063e` auf `t-74-field-meanings-english`.
+Bitte die 82 englischen `meaning`-Texte auf Erhalt ihrer Aussagen prüfen,
+die feste Sprache für beide Vertragsquellen und den Patch auf Core 4.3.1.
+Alle Nachweise stehen in [T-74](30-doing/T-74-field-meanings-english.md).
+
+- API und Vertrag: 120 passed, 29 skipped; sechs Sprachfälle vor Änderung rot.
+  Vorbestehende Starlette/httpx-Warnung; keine vollständige Backend-Suite behauptet.
+- JSON-/AST-Vergleich: nur 61 Core- und 21 Plugin-Texte plus Core-Version geändert.
+  Ruff Check/Format und `git diff --check` grün; AST-Bezeichnerinventar englisch.
+- Doku-Abgleich: REST-Referenz, Vertrags-README und Plugin-Anleitung nachgezogen.
+- Scope: geplant/tatsächlich 2 Produktdateien und 5 Test-/Dokudateien;
+  unter 500 Diff-Zeilen. Zusätzlicher Board-Auftrag T-73 ist getrennt benannt.
+- Lessons: SI-CX-01, SI-R-02, SI-T-66 und AL-R-02 in den im Ticket genannten
+  Fassungen angewendet. Sprachbefund als Einzelfall eingeordnet.
+
+Standards: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`,
+Referenzen `python.md`, `documentation.md`.
+
+| Referenz | Ergebnis |
+|---|---|
+| Architektur | ✅ vorhandene Vertragsquellen, keine zusätzliche Laufzeitliste |
+| Shell / CLI | ➖ nicht berührt |
+| Frontend | ➖ nicht berührt |
+| Python | ✅ AST-Inventar, unveränderte Logik, Ruff |
+| Persistenz | ➖ unverändert; Tests mit temporären Datenbanken |
+| Qualität | ✅ rote/grüne Sprachfälle, 120 gezielte Tests |
+| Dokumentation | ✅ drei Anleitungen mit derselben Sprachregel |
 
 ## Abschluss T-71 · Mike, 2026-09-25
 
