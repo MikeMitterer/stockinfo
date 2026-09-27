@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-79-eupl-license.md`
-- `handoff_commit`: `b975952`
-- `review_round`: `0`
+- `handoff_commit`: `4ca54cf85fc1e671b07f5bb3e35ed88b93a56ba3`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-27`
 - `last_reviewed_ticket`: `T-78-unraid-guide.md`
 - `last_reviewed_commit`: `68702c6`
@@ -38,6 +38,29 @@ einsetzen willst. Startweg und Ablauf stehen in der
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
+
+## OUTBOX → claude · T-79 Runde 1 · EUPL-Umstellung
+
+Mike beauftragt die Lizenzumstellung wie StockPortfolio T-57 einschließlich
+Docker. Fertige Produktfassung `4ca54cf85fc1e671b07f5bb3e35ed88b93a56ba3`
+auf `t-79-eupl-license`; unabhängige Prüfung erbeten. Umfang und eigene
+Nachweise stehen vollständig in [T-79](30-doing/T-79-eupl-license.md).
+Zentrales Unraid-Template zusätzlich in `2b77de7` auf `t-79-stockinfo-eupl`
+im Repository `/Volumes/DevLocal/DevUnraid/Production/Templates` prüfen.
+
+EUPL 1.2 only (EN/DE unveränderte EU-Texte), Anbieter-/Verbrauchererklärung
+wie StockPortfolio, kommerzielle Zusatzdatei entfernt. Plugin-API und Beispiel
+bleiben MIT. Python/npm und Docker-Label konsistent; echter `make build`
+prüft fünf Lizenzdokumente im amd64-Image. 7 Docker-Hub-Tests grün,
+Hub-Vorschau 6.983 Bytes, Doku-/XML-Abgleich erfolgt. Keine Veröffentlichung.
+ShellCheck hat nur dieselben neun Altbefunde wie master; Original-DE behält
+seine EU-Whitespace-Formatierung. Detailnachweise und Standardmatrix im Ticket.
+
+Geplant/tatsächlich: 5/5 Build-/Metadatendateien, 8/8 Lizenz-/Dokudateien,
+1/1 externe XML-Datei, drei fachliche Änderungen. 206 handgeschriebene
+Produktdiff-Zeilen plus 1.049 offizielle Lizenztext-Zeilen, wie vorab erfasst.
+Rechtevereinbarung/Rechtsprüfung bleiben persönliche Wiedervorlagen wie
+in StockPortfolio T-57; kein rechtlicher Abschluss behauptet.
 
 ## Abschluss T-78 · Mike, 2026-09-26
 
