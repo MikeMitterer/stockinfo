@@ -20,47 +20,42 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
-- `ticket`: `T-79-eupl-license.md`
+- `phase`: `portfolio_review`
+- `ticket`: `none`
 - `handoff_commit`: `4ca54cf85fc1e671b07f5bb3e35ed88b93a56ba3`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-27`
 - `last_reviewed_ticket`: `T-78-unraid-guide.md`
 - `last_reviewed_commit`: `68702c6`
 - `last_reviewed_round`: `1`
-- `workstream`: `eupl-license`
-- `priority_chain`: `T-79-eupl-license.md`
-- `priority_ticket`: `T-79-eupl-license.md`
+- `workstream`: `none`
+- `priority_chain`: `none`
+- `priority_ticket`: `none`
 
 `none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
 eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
 setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
 letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
 
-## OUTBOX → claude · T-79 Runde 1 · EUPL-Umstellung
+## Abschluss T-79 · Mike, 2026-09-27
 
-Mike beauftragt die Lizenzumstellung wie StockPortfolio T-57 einschließlich
-Docker. Fertige Produktfassung `4ca54cf85fc1e671b07f5bb3e35ed88b93a56ba3`
-auf `t-79-eupl-license`; unabhängige Prüfung erbeten. Umfang und eigene
-Nachweise stehen vollständig in [T-79](30-doing/T-79-eupl-license.md).
-Zentrales Unraid-Template zusätzlich in `2b77de7` auf `t-79-stockinfo-eupl`
-im Repository `/Volumes/DevLocal/DevUnraid/Production/Templates` prüfen.
+Mike: „Wir verzichten in dem Fall auf den verifier“.
+[T-79](40-done/T-79-eupl-license.md) ist damit abgeschlossen. Der vorbereitete
+Runde-1-Reviewauftrag ist beendet; Claude soll dafür keinen Review starten.
+Diese Ausnahme gilt nur für T-79 einschließlich der zugehörigen Unraid-
+Template-Änderung. Keine unabhängige Prüfung oder Verifier-Freigabe behauptet;
+`last_reviewed_*` bleibt unverändert bei der letzten tatsächlich geprüften Fassung.
 
-EUPL 1.2 only (EN/DE unveränderte EU-Texte), Anbieter-/Verbrauchererklärung
-wie StockPortfolio, kommerzielle Zusatzdatei entfernt. Plugin-API und Beispiel
-bleiben MIT. Python/npm und Docker-Label konsistent; echter `make build`
-prüft fünf Lizenzdokumente im amd64-Image. 7 Docker-Hub-Tests grün,
-Hub-Vorschau 6.983 Bytes, Doku-/XML-Abgleich erfolgt. Keine Veröffentlichung.
-ShellCheck hat nur dieselben neun Altbefunde wie master; Original-DE behält
-seine EU-Whitespace-Formatierung. Detailnachweise und Standardmatrix im Ticket.
-
-Geplant/tatsächlich: 5/5 Build-/Metadatendateien, 8/8 Lizenz-/Dokudateien,
-1/1 externe XML-Datei, drei fachliche Änderungen. 206 handgeschriebene
-Produktdiff-Zeilen plus 1.049 offizielle Lizenztext-Zeilen, wie vorab erfasst.
-Rechtevereinbarung/Rechtsprüfung bleiben persönliche Wiedervorlagen wie
-in StockPortfolio T-57; kein rechtlicher Abschluss behauptet.
+Die selbst geprüfte Produktfassung ist `4ca54cf` auf `t-79-eupl-license`.
+Das Unraid-Template liegt in `2b77de7` auf `t-79-stockinfo-eupl` im separaten
+Template-Repository. Eigene Nachweise und Doku-Abgleich stehen im Ticket.
+Beide Änderungen sind committet; Merge, Git-Push, Image-Push und Hub-Upload
+sind noch nicht erfolgt. Keine offene Ticketkette oder Reviewanforderung.
+Rechtevereinbarung und Rechtsprüfung bleiben persönliche Wiedervorlagen.
+Die zurückgezogene Übergabe ist über `git show c9dfd0f:_tickets/STATUS.md`
+als Historie verfügbar.
 
 ## Abschluss T-78 · Mike, 2026-09-26
 

@@ -1,9 +1,13 @@
 # T-79 · EUPL-Lizenz für StockInfo
 
 Mike beauftragt am 2026-09-27 die Umstellung wie in StockPortfolio T-57,
-einschließlich Docker und weiterer Auslieferungswege. Codex implementiert,
-Claude prüft unabhängig. Stand: technisch umgesetzt und selbst geprüft;
-Runde 1 zur unabhängigen Prüfung vorbereitet, keine Freigabe behauptet.
+einschließlich Docker und weiterer Auslieferungswege. Codex hat umgesetzt
+und selbst geprüft. **Stand: abgeschlossen auf Mikes Entscheidung vom
+2026-09-27: „Wir verzichten in dem Fall auf den verifier“.** Der vorbereitete
+Reviewauftrag für Runde 1 ist beendet. Es gab keine unabhängige Prüfung;
+keine Verifier-Freigabe oder `approved`-Bewertung wird behauptet. Die Ausnahme
+gilt ausschließlich für T-79 einschließlich der zugehörigen Template-Änderung.
+Merge und Veröffentlichung sind noch nicht erfolgt.
 
 ## Scope-Vertrag
 
@@ -127,8 +131,9 @@ Produktdiff 1.255 Zeilen, davon 1.049 rein offizielle Lizenztexte und
 
 Gelesen: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`,
 Referenzen `shell.md`, `documentation.md`; Docker-, Docker-Build-, Unraid-
-und Git-Konventionen. `requesting-code-review` wird über die verbindlich
-zugeordnete Instanz Claude und STATUS.md umgesetzt, kein Ersatzprüfer erfunden.
+und Git-Konventionen. `requesting-code-review` wurde über die verbindlich
+zugeordnete Instanz Claude und STATUS.md vorbereitet. Mike hat diesen
+Reviewauftrag anschließend ausdrücklich aufgehoben; kein Ersatzprüfer.
 
 | Gruppe | Ergebnis |
 |---|---|
