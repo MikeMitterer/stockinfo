@@ -398,7 +398,8 @@ TARGET=ghcr make build       # alternatively build for GitHub Container Registry
 TARGET=ghcr make push        # push to the same target used for the build
 ```
 
-`make build` copies the [AGPL license](LICENSE), the
+`make build` copies the [EUPL license](LICENSE), its [German text](LICENSE.de.txt),
+[licensing and provider declaration](LICENSING.md), the
 [`plugin_api` MIT license](plugin_api/LICENSE), and the example plugin's MIT
 license into the image. It checks the files, their SHA-256 hashes, the target
 architecture, and the OCI license and source labels before recording a build as
@@ -509,21 +510,20 @@ under [`docs/superpowers/`](docs/superpowers/).
 ## License
 
 StockInfo's application code is licensed under the
-**[GNU AGPL-3.0-or-later](LICENSE)**. The license permits private and
-commercial use, including self-hosting, hosted services, modification, and
-redistribution, subject to its terms. If you run a **modified** version for
-people who use it over a network, you must offer those users the corresponding
-source code under section 13. This includes internal network users and does
-not depend on distributing copies. Distributing copies, including container
-images, has separate notice and source-code requirements. Unmodified
-self-hosting does not trigger section 13.
+**[European Union Public Licence 1.2 only](LICENSE)** (`EUPL-1.2`).
+Personal and commercial use, modification, redistribution, sale and hosting
+are permitted under its terms without an additional paid license. Preserve
+required notices and meet the source-code and copyleft requirements,
+including those for covered network services. See [licensing and source
+information](LICENSING.md) and the [German license text](LICENSE.de.txt).
 
-The independent [`plugin_api/`](plugin_api/) package uses the
-[MIT license](plugin_api/LICENSE). Third-party components keep their own
-licenses. [Commercial terms](COMMERCIAL-LICENSE.md) for StockInfo's application
-code are available by separate agreement if the AGPL does not fit your use.
-Hosting or rebranding alone does not require one.
+Copyright © 2026 **Michael Mitterer**, author and copyright holder.
+**MangoLila GmbH** is the provider and licensor. Its separate
+[declaration for consumers](LICENSING.md#mangolilas-declaration-for-consumers)
+applies alongside the unchanged EUPL text.
 
-© 2026 Mike Mitterer
+The independent [`plugin_api/`](plugin_api/) package and its example plugin
+remain under [MIT](plugin_api/LICENSE). Third-party components retain their
+own licenses.
 
 [↑ Contents](#contents)

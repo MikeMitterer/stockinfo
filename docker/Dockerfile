@@ -21,7 +21,7 @@ RUN npm run build
 FROM python:3.12-slim
 
 LABEL org.opencontainers.image.source="https://github.com/MikeMitterer/stockinfo" \
-    org.opencontainers.image.licenses="AGPL-3.0-or-later"
+    org.opencontainers.image.licenses="EUPL-1.2"
 
 # git für die justetf-scraping-Abhängigkeit (git+https), curl für den Healthcheck.
 RUN apt-get update \
@@ -41,12 +41,14 @@ RUN --mount=type=cache,target=/root/.cache/pip pip install -r requirements.txt
 # pyproject.toml ist die Versions-Quelle — app/__init__.py liest sie zur Laufzeit.
 # Die Lizenz begleitet auch das ausgelieferte Image.
 COPY pyproject.toml .
-COPY LICENSE .
+COPY LICENSE LICENSE.de.txt LICENSING.md ./
 COPY app ./app
 
 # Alle im Repository mitgelieferten Lizenztexte müssen im fertigen Image liegen.
 # Fehlt einer im Build-Kontext, schlägt der Build an dieser Stelle fehl.
 RUN test -s /app/LICENSE \
+    && test -s /app/LICENSE.de.txt \
+    && test -s /app/LICENSING.md \
     && test -s /app/plugin_api/LICENSE \
     && test -s /app/plugin_api/examples/us-example/LICENSE
 

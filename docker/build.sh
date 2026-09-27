@@ -234,7 +234,7 @@ prepareConfig() {
     if (( STRICT >= 1 )); then
         verifySourceTree || return 1
     fi
-    for _file in LICENSE plugin_api/LICENSE plugin_api/examples/us-example/LICENSE; do
+    for _file in LICENSE LICENSE.de.txt LICENSING.md plugin_api/LICENSE plugin_api/examples/us-example/LICENSE; do
         if [[ ! -s "../${_file}" ]]; then
             echo -e "${RED}Build abgebrochen:${NC} Lizenz fehlt oder ist leer: ${_file}" >&2
             return 1
@@ -266,13 +266,13 @@ verifyBuiltImage() {
         return 1
     fi
 
-    if [[ "$(docker image inspect "${_local_image}" --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}')" != "AGPL-3.0-or-later" \
+    if [[ "$(docker image inspect "${_local_image}" --format '{{index .Config.Labels "org.opencontainers.image.licenses"}}')" != "EUPL-1.2" \
        || "$(docker image inspect "${_local_image}" --format '{{index .Config.Labels "org.opencontainers.image.source"}}')" != "https://github.com/MikeMitterer/stockinfo" ]]; then
         echo -e "${RED}Build-Prüfung fehlgeschlagen:${NC} Lizenz- oder Quelllabel fehlt." >&2
         return 1
     fi
 
-    for _license in LICENSE plugin_api/LICENSE plugin_api/examples/us-example/LICENSE; do
+    for _license in LICENSE LICENSE.de.txt LICENSING.md plugin_api/LICENSE plugin_api/examples/us-example/LICENSE; do
         _expected=$(shasum -a 256 "../${_license}") || return 1
         _expected=${_expected%% *}
         _actual=$(docker run --rm --platform "${PLATFORM}" --entrypoint sha256sum "${_local_image}" "/app/${_license}") || return 1
@@ -283,7 +283,7 @@ verifyBuiltImage() {
         fi
     done
 
-    echo -e "${GREEN}Build geprüft:${NC} ${_local_image} (${_arch}, ${_image_id}); drei Lizenzen und OCI-Labels stimmen."
+    echo -e "${GREEN}Build geprüft:${NC} ${_local_image} (${_arch}, ${_image_id}); fünf Lizenzdokumente und OCI-Labels stimmen."
 }
 
 # pushImage — Delegiert an die Registry-spezifische Lib-Push-Funktion (nach TARGET)

@@ -1,6 +1,7 @@
 {
   "name": "stockinfo-dashboard",
   "private": true,
+  "license": "EUPL-1.2",
   "type": "module",
   "scripts": {
     "lint": "eslint . --max-warnings 0",

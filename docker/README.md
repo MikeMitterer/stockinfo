@@ -146,4 +146,17 @@ See the [Unraid guide](../unraid/README.md) for installation, configuration and 
 - [Report a problem](https://github.com/MikeMitterer/stockinfo/issues)
 - [Source code and full documentation](../README.md)
 - [Release notes](../docs/release-notes.md)
-- [License: AGPL-3.0-or-later](../LICENSE)
+- [License: EUPL 1.2 only](../LICENSE)
+
+StockInfo permits personal and commercial use, modification, redistribution,
+sale and hosting under the EUPL without an additional paid license. Preserve
+notices and provide the corresponding source as required by the license,
+including for covered network services. Image tags identify the source commit
+in the [source repository](https://github.com/MikeMitterer/stockinfo).
+
+Copyright © 2026 Michael Mitterer; provider and licensor: MangoLila GmbH.
+See [licensing, source and the consumer declaration](../LICENSING.md).
+The image includes `/app/LICENSE`, `/app/LICENSE.de.txt` and `/app/LICENSING.md`.
+The independent plugin API and example plugin retain their MIT licenses at
+`/app/plugin_api/LICENSE` and `/app/plugin_api/examples/us-example/LICENSE`.
+Third-party components retain their own licenses.

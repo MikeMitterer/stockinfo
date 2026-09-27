@@ -7,9 +7,10 @@
 
 ## What's new in 1.0.0
 
-- StockInfo's application code is now licensed under the
-  [AGPL-3.0-or-later](../LICENSE). The independent plugin API remains under the
-  [MIT license](../plugin_api/LICENSE); commercial terms are available separately.
+- Version 1.0.0 introduced AGPL-3.0-or-later for the application and offered
+  separate commercial terms. This is historical; the current license is
+  [EUPL 1.2 only](../LICENSING.md). The independent plugin API remains
+  under [MIT](../plugin_api/LICENSE).
 - `make build` includes and checks the license texts in the Docker image.
   `make push` accepts only the checked image from the current source commit.
 - The Docker source-profile command writes to the named volume used by

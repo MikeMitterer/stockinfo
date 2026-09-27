@@ -16,6 +16,7 @@ uses `mangolila/stockinfo:latest`, port **8000** and persistent storage at
 - [Data and source profiles](#data-and-source-profiles)
 - [Updates and troubleshooting](#updates-and-troubleshooting)
 - [Testing a local template](#testing-a-local-template)
+- [License](#license)
 
 ## Installing through Unraid Apps
 
@@ -156,5 +157,16 @@ share the same SQLite database. Never overwrite an existing `my-stockinfo.xml`
 with saved settings. Remove the test container and test template after testing.
 
 A local XML or Docker check does not replace a test on an actual Unraid server.
+
+[↑ Contents](#contents)
+
+## License
+
+StockInfo is licensed under [EUPL 1.2 only](../LICENSE), including the Docker
+image used on Unraid. Copyright © 2026 Michael Mitterer; provider and licensor:
+MangoLila GmbH. See [licensing and the consumer declaration](../LICENSING.md)
+and the [image license documents and source](../docker/README.md#support-and-license).
+The independent plugin API and its example remain under MIT. The separate
+Unraid template repository retains its own license.
 
 [↑ Contents](#contents)
