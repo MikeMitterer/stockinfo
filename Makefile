@@ -69,6 +69,7 @@ hints: ## Nützliche URLs und Hinweise anzeigen
 	@echo
 	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Dashboard" "http://localhost:5173/"
 	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Container" "http://localhost:$(PORT)/  (make up — Dashboard + API)"
+	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "Docker Hub" "https://hub.docker.com/r/mangolila/stockinfo"
 	@echo
 	@echo "  $(YELLOW)Beispiel$(RESET)"
 	@echo
