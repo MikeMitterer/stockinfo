@@ -7,7 +7,9 @@ und selbst geprüft. **Stand: abgeschlossen auf Mikes Entscheidung vom
 Reviewauftrag für Runde 1 ist beendet. Es gab keine unabhängige Prüfung;
 keine Verifier-Freigabe oder `approved`-Bewertung wird behauptet. Die Ausnahme
 gilt ausschließlich für T-79 einschließlich der zugehörigen Template-Änderung.
-Merge und Veröffentlichung sind noch nicht erfolgt.
+Die Änderungen sind in master integriert und veröffentlicht;
+StockInfo 1.2.0 ist einschließlich Docker-Image und Hub-Beschreibung verfügbar.
+Veröffentlichungsnachweise stehen am Ende dieses Tickets.
 
 ## Scope-Vertrag
 
@@ -145,3 +147,48 @@ Reviewauftrag anschließend ausdrücklich aufgehoben; kein Ersatzprüfer.
 | Persistenz | ➖ nicht berührt |
 | Qualität | ✅ 7 vorhandene Tests, Original-/Image-Hashes, echter Build |
 | Dokumentation | ✅ inhaltlicher Abgleich, lokale Links/Anker und Hub-Vorschau |
+
+## Veröffentlichung und Minor-Release · 2026-09-27
+
+Mike bestätigt den Abschluss („Von mir aus ist das durch“), beauftragt Merge
+und Veröffentlichung („mach“), bestätigt den Template-Abgleich und fordert
+zusätzlich: „Die Lizenz im StockPortfolio-Template. check die“,
+„OK + pushe das Template-Repo“ und
+„Setze mit make die minur version nach oben inkl. message“.
+
+- StockInfo per Fast-forward in master integriert und gepusht. Auf dem
+  integrierten Stand erneut 7 Docker-Hub-Tests erfolgreich.
+- `make tag-minor MSG='StockInfo unter EUPL 1.2 bereitstellen'` erhöht
+  1.1.0 auf **1.2.0**, Versionscommit `9e591b7`; Git-Tag
+  `v1.2.0+260927.2159.9e591` mit exakt dieser Tag-Nachricht.
+  Commit und annotierter Tag durch `git ls-remote` auf origin bestätigt.
+- `make build STRICT=1 PLATFORM=x86` am Release-Tag erfolgreich; fünf
+  Dokumenthashes, OCI-Labels und amd64 geprüft. `make push` veröffentlicht
+  `mangolila/stockinfo:1.2.0-260927.2000.9e591` und `latest` mit Digest
+  `sha256:4c111c5bfc097e03c068d1ac973784ac8b6e985c1e39e3d5017c33ec35f34905`.
+  Registry-Manifest für latest bestätigt linux/amd64 und genau diesen Digest.
+  Image am veröffentlichten Digest erneut abgerufen und darin
+  `pyproject.toml`: **1.2.0 / EUPL-1.2** direkt per Python geprüft.
+- Der vorhandene Push-Ablauf aktualisiert die Docker-Hub-Beschreibung und
+  bestätigt sie per GET-Rücklesen; 6.983 UTF-8-Bytes.
+- Template-Repository in master integriert und gepusht: `7c5276d`.
+  StockInfo `2b77de7`: AGPL → EUPL-1.2. StockPortfolio `7c5276d`:
+  zuvor fehlendes License-Feld ergänzt, passend zu StockPortfolio/LICENSING.md.
+  Die MIT-Lizenz des Template-Repositories bleibt unverändert.
+- Beide veröffentlichten XML-Dateien am Commit `7c5276d` und unter
+  `refs/heads/master` bytegleich zum lokalen Stand, gültiges XML und
+  License-Feld EUPL-1.2. Die kurzen `/master/`-Raw-URLs lieferten unmittelbar
+  nach dem Push noch gecachte alte Antworten; der volle Branch-Ref lieferte
+  bereits den neuen Stand. Kein fehlgeschlagener Git-Push.
+- XML vor/nach ohne License-Knoten strukturell identisch: Repository/latest,
+  Ports, WebUI, Netzwerk, Volumes und Konfigurationswerte bleiben erhalten.
+  StockInfos Icon, drei Screenshots, Projekt-, Support- und Registry-URL
+  liefern HTTP 200. Kein Test auf einer echten Unraid-Box behauptet.
+
+Doku-Abgleich: Die bereits angepassten Root-/Docker-/Unraid-READMEs und
+LICENSING.md beschreiben den veröffentlichten Stand; keine weiteren
+Produkttextänderungen durch den reinen Versionsbump. StockPortfolio-Appcode
+und dessen Versionsstand wurden durch die Template-Korrektur nicht geändert.
+Die persönlichen rechtlichen Wiedervorlagen und der Verifier-Verzicht bleiben
+unverändert. Ein weiterer Boardcommit verändert keine Image-Inhalte; der
+veröffentlichte Release bleibt dem Git-Tag und Commit `9e591b7` zugeordnet.

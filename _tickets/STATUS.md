@@ -51,8 +51,18 @@ Template-Änderung. Keine unabhängige Prüfung oder Verifier-Freigabe behauptet
 Die selbst geprüfte Produktfassung ist `4ca54cf` auf `t-79-eupl-license`.
 Das Unraid-Template liegt in `2b77de7` auf `t-79-stockinfo-eupl` im separaten
 Template-Repository. Eigene Nachweise und Doku-Abgleich stehen im Ticket.
-Beide Änderungen sind committet; Merge, Git-Push, Image-Push und Hub-Upload
-sind noch nicht erfolgt. Keine offene Ticketkette oder Reviewanforderung.
+Mike beauftragt anschließend Merge/Veröffentlichung, den Template-Push und
+`make tag-minor` mit Nachricht. StockInfo und Templates sind in master
+integriert und gepusht. **StockInfo 1.2.0**: Versionscommit `9e591b7`, Tag
+`v1.2.0+260927.2159.9e591`, Nachricht „StockInfo unter EUPL 1.2 bereitstellen“.
+Docker `1.2.0-260927.2000.9e591` und `latest` veröffentlicht, Digest
+`sha256:4c111c5bfc097e03c068d1ac973784ac8b6e985c1e39e3d5017c33ec35f34905`;
+amd64 und 1.2.0/EUPL-1.2 im veröffentlichten Image bestätigt.
+Docker-Hub-Beschreibung aktualisiert und zurückgelesen. Template-master
+`7c5276d` enthält EUPL-1.2 für StockInfo und das zuvor fehlende Lizenzfeld
+für StockPortfolio; beide XML am veröffentlichten Commit und vollständigen
+master-Ref bytegleich geprüft. Details einschließlich kurzer Raw-URL-Caches
+stehen im Ticket. Keine offene Ticketkette oder Reviewanforderung.
 Rechtevereinbarung und Rechtsprüfung bleiben persönliche Wiedervorlagen.
 Die zurückgezogene Übergabe ist über `git show c9dfd0f:_tickets/STATUS.md`
 als Historie verfügbar.
