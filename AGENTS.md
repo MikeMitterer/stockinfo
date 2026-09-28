@@ -88,8 +88,12 @@ Bedarf aus tatsächlich genutzten Daten, Installationen oder ausdrücklich
 benannten Verbrauchern. Keine Zusatzarbeit für hypothetische Verbreitung.
 Aktuelle Dokumentation beschreibt den gültigen Stand direkt; verworfene
 Entwicklungsregeln brauchen keine Übergangs- oder Ablösungshinweise.
-Prüfaufwand und Befundgewicht folgen dem belegten Schaden. Diese Einordnung
-gilt, bis Mike einen anderen Betriebsstand festlegt.
+Prüfaufwand und Befundgewicht folgen dem belegten Schaden. Das gilt für die
+Breite zusätzlicher Arbeit, nicht für bereits geltende, als MUST oder eigene
+Abnahmebedingung formulierte Standardregeln (etwa i18n oder DRY in
+`code-standards`): ein Verstoß dagegen bleibt blockierend, unabhängig vom
+beobachteten Schaden ([SI-P-13](_tickets/.agents/lessons/SI-P-13-eine-muss-regel-wird-per-schadensabwaegung-zur-kann-regel.md)).
+Diese Einordnung gilt, bis Mike einen anderen Betriebsstand festlegt.
 
 [↑ Übersicht](#übersicht)
 
