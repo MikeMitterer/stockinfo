@@ -616,8 +616,8 @@ export const de = {
     retry: 'Betrieb erneut starten',
     retrying: 'Der Betrieb wird gestartet…',
 
-    downTitle: 'Der Dienst antwortet nicht',
-    downBody: 'Die Datenbank ist nicht erreichbar. Prüfe den Server und lade neu.',
+    downTitle: 'StockInfo ist nicht verfügbar',
+    downBody: 'Prüfe, ob Server und Datenbank laufen, und lade die Seite neu.',
 
     reason: {
       symbol_without_exchange_suffix:

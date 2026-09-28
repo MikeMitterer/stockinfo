@@ -53,6 +53,12 @@ function mountGate(props: Partial<InstanceType<typeof MigrationGate>['$props']> 
 }
 
 describe('MigrationGate · Phase 1', () => {
+  it('zeigt bei leerer Serverantwort eine lesbare Fehlermeldung', () => {
+    const text = mountGate({ phase: 'databaseDown', error: '' }).text()
+
+    expect(text).toContain('Check that the server and database are running')
+  })
+
   it('nennt jedes Papier, das den Bestand verlässt, samt Grund und Verlust', () => {
     const text = mountGate().text()
 

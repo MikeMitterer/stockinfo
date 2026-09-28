@@ -89,7 +89,7 @@ const startupFailed = computed(
 
       <template v-else-if="phase === 'databaseDown'">
         <h1 class="gate__title">{{ t('migration.downTitle') }}</h1>
-        <NAlert type="error" :bordered="false">{{ error ?? t('migration.downBody') }}</NAlert>
+        <NAlert type="error" :bordered="false">{{ error || t('migration.downBody') }}</NAlert>
       </template>
 
       <template v-else-if="startupFailed">

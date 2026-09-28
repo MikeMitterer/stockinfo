@@ -496,8 +496,8 @@ export const en = {
     retry: 'Start the service again',
     retrying: 'Starting the service…',
 
-    downTitle: 'The service does not answer',
-    downBody: 'The database is unreachable. Check the server and reload.',
+    downTitle: 'StockInfo is unavailable',
+    downBody: 'Check that the server and database are running, then reload the page.',
 
     reason: {
       symbol_without_exchange_suffix:
