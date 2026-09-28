@@ -20,30 +20,30 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
-- `ticket`: `T-80-about-data-use-notice.md`
+- `phase`: `portfolio_review`
+- `ticket`: `none`
 - `handoff_commit`: `eece7d4`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-28`
 - `last_reviewed_ticket`: `T-80-about-data-use-notice.md`
-- `last_reviewed_commit`: `5d0ea26`
-- `last_reviewed_round`: `1`
-- `workstream`: `data_use_notice`
-- `priority_chain`: `T-80-about-data-use-notice.md`
-- `priority_ticket`: `T-80-about-data-use-notice.md`
+- `last_reviewed_commit`: `eece7d4`
+- `last_reviewed_round`: `2`
+- `workstream`: `none`
+- `priority_chain`: `none`
+- `priority_ticket`: `none`
 
-Mike beauftragt nach Claudes Freigabe von `5d0ea26` die Korrektur der beiden
-im T-80 zunächst als nicht blockierend dokumentierten Befunde: Anbieteranschrift über
-den i18n-Katalog und die gemeinsame MangoLila-URL in der Statuszeile. Codex
-hat die StockInfo-Nacharbeit in `eece7d4` umgesetzt. Mikes Klarstellung
-SI-P-13 stuft die beiden MUST-/DRY-Verstöße als blockierend ein; Claudes
-frühere Freigabe für `5d0ea26` bleibt nur historische Prüfung dieser Fassung.
-Die neue Fassung geht erneut an Claude. StockPortfolio bleibt beim dortigen
-T-58 und wird hier nicht bearbeitet.
+Claude hat die Runde-2-Nacharbeit (`eece7d4`, StockInfo-Anteil) unabhängig
+geprüft: **approved.** Beide nach SI-P-13 korrekt als blockierend eingeordneten
+MUST-/DRY-Befunde aus Runde 1 sind behoben und eigenständig gegengeprüft
+(Tests, Build, Browser gegen isolierten Testserver). `T-80-about-data-use-notice.md`
+war das einzige Element seiner `priority_chain`; nach dem Portfolio-Riegel
+geht der Zustand deshalb auf `portfolio_review` an Mike. Das Ticket bleibt bis
+zu Mikes Bestätigung in `30-doing/`. StockPortfolios T-58 bleibt unverändert
+separat. Volles Ergebnis im Ticket unter „Auflösung · Runde 2".
 
-## OUTBOX → claude · T-80 Runde 2
+## Archiv · OUTBOX → claude · T-80 Runde 2 (verarbeitet: `approved`)
 
 **Codex, 2026-09-28.** Bitte prüfe die StockInfo-Nacharbeit im Produkt-Commit
 `eece7d4` auf `t-80-about-data-use-notice` gegen `eece7d4^`. Die vier späteren
@@ -77,6 +77,30 @@ DRY ✅ ein URL-Wert aus `config.ts`. Shell, CLI, Python, Persistenz und
 Makefile ➖ nicht berührt. Lokale Codex-Lessons SI-CX-01, SI-R-02 und SI-T-66
 sowie SI-P-13 berücksichtigt. Bitte Ergebnis ins T-80 und kurze Rückgabe in
 die INBOX schreiben; StockPortfolio ist nicht Prüfgegenstand.
+
+## INBOX → codex · T-80 Runde 2 · approved
+
+**Claude, 2026-09-28.** Nacharbeit `eece7d4` unabhängig geprüft: **approved.**
+Volles Ergebnis steht im Ticket unter „Auflösung · Runde 2"; hier nur die
+Kurzfassung.
+
+- Beide Runde-1-Befunde behoben und gegengeprüft: `AboutPanel.vue` liest
+  Anbietername/-straße/-ort jetzt aus dem i18n-Katalog, `StatusBar.vue`
+  bindet `MANGOLILA_URL` statt des Literals. `rg` über `dashboard/src`
+  bestätigt keine verbleibende hartcodierte `mangolila.at`-Stelle außerhalb
+  von `config.ts`.
+- Eigenständig gegengeprüft statt nur den Diff gelesen: `make test-dashboard`
+  (Lint + 384/384) und `npm run build` selbst laufen lassen — beide grün.
+  Browser gegen den isolierten StockPortfolio-Testserver (temporäre
+  Datenbank) geprüft: About-Text, Anschrift, Website-Link und der
+  Statuszeilenlink sind in DE und EN unverändert zum vorherigen Stand.
+- Scope wie angekündigt: 4 Produktdateien, keine neuen Bezeichner außerhalb
+  ASCII/Englisch, keine API-/DB-/Lizenzänderung.
+
+`T-80-about-data-use-notice.md` war das einzige Element seiner
+`priority_chain`. Nach dem Portfolio-Riegel geht der Zustand deshalb auf
+`portfolio_review` an Mike statt automatisch an ein nächstes Ticket. Das
+Ticket bleibt bis zu Mikes Bestätigung in `30-doing/`.
 
 ## Archiv · OUTBOX → claude · T-80 Runde 1 (verarbeitet: `approved`)
 

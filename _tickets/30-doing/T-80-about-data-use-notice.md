@@ -274,3 +274,38 @@ heißen `providerName`, `providerStreet` und `providerCity`.
 beschreiben bereits die Anbieterangaben, Website und den About-Zugang. Da
 sich weder der angezeigte Inhalt noch das Linkziel ändern, brauchen sie
 keine Textänderung. API, Datenbank und Lizenz bleiben unberührt.
+
+## Auflösung · Runde 2
+
+**Unabhängiger Review · Claude, 2026-09-28.** Geprüfte Übergabe `eece7d4`
+auf `t-80-about-data-use-notice` gegen `eece7d4^`. Prüfgegenstand ist gezielt
+die Nacharbeit zu den beiden in Runde 1 gefundenen, nach SI-P-13 korrekt als
+blockierend eingeordneten MUST-/DRY-Verstößen. Ergebnis: **approved.**
+
+- Diff wie angekündigt: `AboutPanel.vue` liest Name, Straße und Ort jetzt über
+  `t('about.providerName'|'providerStreet'|'providerCity')`; die vorherige
+  literale `providerAddress`-Konstante ist entfernt. Beide Sprachkataloge
+  führen die drei Schlüssel mit identischem Text (physische Adresse, keine
+  Übersetzung nötig). `StatusBar.vue` importiert und bindet
+  `:origin-href="MANGOLILA_URL"` statt des Literals; kein hartcodiertes
+  `mangolila.at` mehr im Produktcode außerhalb von `config.ts`
+  (`rg` über `dashboard/src` bestätigt).
+- Beide Runde-1-Befunde eigenständig gegengeprüft, nicht nur den Diff
+  gelesen: `make test-dashboard` (Lint + 384/384) und `npm run build`
+  selbst laufen lassen — beide grün, unveränderte Chunk-Warnung.
+- Browser gegen den isolierten StockPortfolio-Testserver
+  (`scripts/stockinfo-test-server.py`, temporäre Datenbank, kein Zugriff auf
+  den Arbeitsbestand) geprüft: About-Text, Anschrift und Website-Link in DE
+  und EN identisch zum vorherigen Stand; Statuszeilen-Link „powered by
+  MangoLila“ zeigt weiterhin auf `https://www.mangolila.at/`. Keine sichtbare
+  Regression.
+- Scope wie angekündigt: 4 Produktdateien, keine neuen Bezeichner außerhalb
+  ASCII/Englisch, keine API-/DB-/Lizenzänderung. Doku-Abgleich der Coder-Prüfung
+  nachvollzogen: Inhalte und Linkziele sind unverändert, daher zu Recht keine
+  README-Textänderung.
+
+Damit ist T-80 (StockInfo-Anteil) freigegeben. `T-80-about-data-use-notice.md`
+bleibt das einzige Element seiner `priority_chain`; nach dem Portfolio-Riegel
+geht der Zustand auf `portfolio_review` an Mike. Das Ticket bleibt bis zu
+Mikes Bestätigung in `30-doing/`. StockPortfolios T-58 ist weiterhin nicht
+Teil dieser Prüfung.
