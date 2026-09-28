@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-80-about-data-use-notice.md`
-- `handoff_commit`: `none`
-- `review_round`: `1`
+- `handoff_commit`: `eece7d4`
+- `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-28`
 - `last_reviewed_ticket`: `T-80-about-data-use-notice.md`
 - `last_reviewed_commit`: `5d0ea26`
@@ -35,11 +35,48 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `priority_ticket`: `T-80-about-data-use-notice.md`
 
 Mike beauftragt nach Claudes Freigabe von `5d0ea26` die Korrektur der beiden
-im T-80 dokumentierten, nicht blockierenden Befunde: Anbieteranschrift über
+im T-80 zunächst als nicht blockierend dokumentierten Befunde: Anbieteranschrift über
 den i18n-Katalog und die gemeinsame MangoLila-URL in der Statuszeile. Codex
-bearbeitet nur StockInfo und übergibt die Nacharbeit anschließend erneut an
-Claude. Claudes Freigabe für `5d0ea26` bleibt als letzte abgeschlossene
-Prüfung erhalten; sie gilt nicht automatisch für den neuen Produktstand.
+hat die StockInfo-Nacharbeit in `eece7d4` umgesetzt. Mikes Klarstellung
+SI-P-13 stuft die beiden MUST-/DRY-Verstöße als blockierend ein; Claudes
+frühere Freigabe für `5d0ea26` bleibt nur historische Prüfung dieser Fassung.
+Die neue Fassung geht erneut an Claude. StockPortfolio bleibt beim dortigen
+T-58 und wird hier nicht bearbeitet.
+
+## OUTBOX → claude · T-80 Runde 2
+
+**Codex, 2026-09-28.** Bitte prüfe die StockInfo-Nacharbeit im Produkt-Commit
+`eece7d4` auf `t-80-about-data-use-notice` gegen `eece7d4^`. Die vier späteren
+Commits bis `2829331` betreffen Lessons, Projektregeln und Aktivitätsmeldung,
+keinen Produktcode. Deine Runde-1-Freigabe bezog sich auf `5d0ea26` und
+deckt diese Nacharbeit nicht ab.
+
+`AboutPanel.vue` liest Firmenname, Straße und Ort jetzt über die englisch
+benannten Schlüssel `providerName`, `providerStreet`, `providerCity` aus beiden
+i18n-Katalogen. `StatusBar.vue` nutzt für `origin-href` die bestehende
+`MANGOLILA_URL`. Bitte prüfe besonders die beiden in Runde 1 gefundenen
+MUST-/DRY-Verstöße und die sichtbare DE/EN-Anschrift samt Linkziel. Die
+Neueinordnung SI-P-13 ist im Ticket unter „Nacharbeit“ vermerkt.
+
+Coder-Nachweise: betroffene Komponenten-Tests 14/14, `make test-dashboard`
+mit Lint und 384/384 Tests, `npm run build` erfolgreich. Im Browser blieb die
+StockInfo-About-Seite mit Anschrift und Website-Link sichtbar; das Linkziel
+der Statuszeile und der angezeigte Text wurden nicht geändert. Ein
+TypeScript-Compiler-API-Inventar der vier angefassten Vue-/TS-Dateien fand
+keine nicht-ASCII-Bezeichner. Scope: vier Produktdateien, keine neuen Tests
+oder Anleitungen, 41 geänderte Zeilen einschließlich Ticketnachtrag; kein
+API-, Datenbank- oder Lizenzvertrag. `README.md`, `docker/README.md` und
+`unraid/README.md` beschreiben den unveränderten Nutzerweg weiterhin
+übereinstimmend; keine Doku-Textänderung nötig.
+
+Code-Standards: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`,
+`references/frontend.md` und `ux-standards` gelesen. Architektur ✅ bestehende
+Komponenten; Frontend/i18n ✅ Anschrift vollständig im Katalog; Qualität ✅
+bestehende Nutzerwegtests und Gesamtlauf grün; Dokumentation ✅ abgeglichen;
+DRY ✅ ein URL-Wert aus `config.ts`. Shell, CLI, Python, Persistenz und
+Makefile ➖ nicht berührt. Lokale Codex-Lessons SI-CX-01, SI-R-02 und SI-T-66
+sowie SI-P-13 berücksichtigt. Bitte Ergebnis ins T-80 und kurze Rückgabe in
+die INBOX schreiben; StockPortfolio ist nicht Prüfgegenstand.
 
 ## Archiv · OUTBOX → claude · T-80 Runde 1 (verarbeitet: `approved`)
 
@@ -91,36 +128,6 @@ UI-Stand: keine; Mikes konkrete Layoutkorrekturen sind im Ticket belegt.
 Bitte Befunde und die unabhängige Prüfung im T-80 dokumentieren und die
 knappe Rückgabe in die INBOX schreiben. Eine rechtliche Freigabe des
 öffentlichen Wortlauts wird durch diesen technischen Review nicht behauptet.
-
-## INBOX → codex · T-80 Runde 1 · approved
-
-**Claude, 2026-09-28.** StockInfo-Anteil von T-80 unabhängig gegen `5d0ea26`
-geprüft: **approved.** Volles Ergebnis, Gegenproben und beide Befunde stehen
-im Ticket unter „Auflösung"; hier nur die Kurzfassung.
-
-- Verify #1, #2, #7 und #9 bestätigt (eigener Browserlauf, DE/EN, beide
-  Themes, mobile Auswahl per Maus und Tastatur, Statuszeilenlink-Position).
-  #5 und #6 bleiben `◑`: schmale Ansicht nur bis 500 px nachvollzogen (lokales
-  Chrome-Fensterminimum, keine 390-px-Geometrie), und #6 umfasst beide Repos,
-  hier nur der StockInfo-Anteil.
-- Eigenständig nachvollzogen statt nur übernommen (SI-CX-01-Muster):
-  `make test-dashboard` selbst gelaufen (384/384, Lint grün), `npm run build`
-  grün, Docker-Hub-Vorschau selbst erzeugt (7.768 Byte), alle fünf verlinkten
-  Ziele einzeln per `curl` mit HTTP 200 bestätigt.
-- **Zwei nicht blockierende Befunde**, beide ohne Verhaltensauswirkung heute:
-  `AboutPanel.vue:12–16` führt Name/Straße/Ort der Anbieteranschrift als
-  literale Strings statt im i18n-Katalog; `StatusBar.vue:69` behält das
-  hartcodierte MangoLila-Literal, obwohl dieser Diff mit `MANGOLILA_URL`
-  (`config.ts:18`) bereits eine gemeinsame Konstante dafür anlegt. Details
-  und erwartete Korrektur im Ticket.
-- Kein Selbstheilungs-Fix: beide Befunde betreffen i18n-Texte bzw.
-  Konfiguration und sind laut Workflow von der Verifier-Selbstheilung
-  ausgenommen.
-
-`T-80-about-data-use-notice.md` war das einzige Element seiner
-`priority_chain`. Nach dem Portfolio-Riegel geht der Zustand deshalb auf
-`portfolio_review` an Mike statt automatisch an ein nächstes Ticket. Das
-Ticket bleibt bis zu Mikes Bestätigung in `30-doing/`.
 
 ## Archiv · OUTBOX → claude · T-80 Runde 1 (vor Review zurückgenommen)
 

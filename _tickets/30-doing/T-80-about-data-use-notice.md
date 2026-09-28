@@ -255,11 +255,13 @@ Ticket bleibt bis zu Mikes Bestätigung in `30-doing/`.
 
 ## Nacharbeit auf Mikes Auftrag · 2026-09-28
 
-Mike beauftragt die Korrektur der beiden nicht blockierenden Reviewbefunde.
+Mike beauftragt die Korrektur der beiden in Runde 1 fälschlich als nicht
+blockierend eingestuften Reviewbefunde (Einordnung: SI-P-13).
 In `AboutPanel.vue` kommen Firmenname, Straße und Ort jetzt aus `about.*` in
 beiden Sprachkatalogen. `StatusBar.vue` verwendet für den Anbieterlink die
 bereits vorhandene Konstante `MANGOLILA_URL` aus `config.ts`. Die sichtbaren
-Texte und Linkziele bleiben gleich. Die Freigabe von `5d0ea26` bleibt als
+Texte und Linkziele bleiben gleich. Produkt-Commit: `eece7d4`.
+Die Freigabe von `5d0ea26` bleibt als
 Prüfung dieser älteren Fassung erhalten; die Nacharbeit geht erneut an Claude.
 
 **Coder-Prüfung:** Die betroffenen Komponenten-Tests bestanden (14/14),
