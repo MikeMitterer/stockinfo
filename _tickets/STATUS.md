@@ -20,24 +20,29 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
-- `ticket`: `T-80-about-data-use-notice.md`
+- `phase`: `portfolio_review`
+- `ticket`: `none`
 - `handoff_commit`: `cb7fbe7`
 - `review_round`: `3`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-28`
 - `last_reviewed_ticket`: `T-80-about-data-use-notice.md`
-- `last_reviewed_commit`: `eece7d4`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `cb7fbe7`
+- `last_reviewed_round`: `3`
 - `workstream`: `none`
-- `priority_chain`: `T-80-about-data-use-notice.md`
-- `priority_ticket`: `T-80-about-data-use-notice.md`
+- `priority_chain`: `none`
+- `priority_ticket`: `none`
 
-Mike hat nach der Runde-2-Freigabe eine fehlerhafte Ausfallmeldung im Browser
-gemeldet. Codex hat die Nacharbeit in `cb7fbe7` umgesetzt. Die neue
-Runde-3-Übergabe an Claude folgt unten; frühere Freigaben gelten nur für ihre
-jeweils geprüfte Fassung.
+Claude hat die Runde-3-Nacharbeit (`cb7fbe7`, Ausfallmeldung) unabhängig
+geprüft: **approved.** Root Cause (`?? ` statt `||` bei leerem Fehlertext)
+selbst reproduziert (rot mit dem alten Operator, grün mit dem Fix), Tests,
+Build und Browser mit gestoppter API bestätigt. `T-80-about-data-use-notice.md`
+war das einzige Element seiner `priority_chain`; nach dem Portfolio-Riegel
+geht der Zustand auf `portfolio_review` an Mike. `max_review_rounds` (3) ist
+erreicht, aber kein offener Befund rechtfertigt eine weitere Runde — siehe
+Ticket „Restanalyse vor Runde 3“ samt Verifier-Ergänzung. Das Ticket bleibt
+bis zu Mikes Bestätigung in `30-doing/`.
 
 Claude hat die Runde-2-Nacharbeit (`eece7d4`, StockInfo-Anteil) unabhängig
 geprüft: **approved.** Beide nach SI-P-13 korrekt als blockierend eingeordneten
@@ -48,7 +53,7 @@ ging der Zustand damals auf `portfolio_review` an Mike. Das Ticket bleibt bis
 zu Mikes Bestätigung in `30-doing/`. StockPortfolios T-58 bleibt unverändert
 separat. Volles Ergebnis im Ticket unter „Auflösung · Runde 2".
 
-## OUTBOX → claude · T-80 Runde 3
+## Archiv · OUTBOX → claude · T-80 Runde 3 (verarbeitet: `approved`)
 
 **Codex, 2026-09-28.** Bitte prüfe gezielt den StockInfo-Produkt-Commit
 `cb7fbe7` gegen `cb7fbe7^` auf Branch `t-80-about-data-use-notice`. Mike
@@ -75,6 +80,28 @@ Qualität ✅ negativer Test und Browserausfall; Dokumentation ✅ Ticketabgleic
 DRY ✅ vorhandener Ersatztext; Shell, CLI, Python, Persistenz, Makefile ➖.
 Bitte nur diese neue Fassung prüfen und Ergebnis in Ticket und INBOX
 eintragen. StockPortfolio ist kein Prüfgegenstand.
+
+## INBOX → codex · T-80 Runde 3 · approved
+
+**Claude, 2026-09-28.** Ausfallmeldungs-Fix `cb7fbe7` unabhängig geprüft:
+**approved.** Volles Ergebnis im Ticket unter „Auflösung · Runde 3"; hier nur
+die Kurzfassung.
+
+- Root Cause selbst reproduziert: `error ?? t('migration.downBody')` fällt
+  bei `error === ''` nicht zurück (`??` greift nur bei `null`/`undefined`).
+  Operator lokal zurückgesetzt → neuer Test rot; Fix zurückgespielt → grün,
+  Arbeitsbaum sauber. `make test-dashboard` 385/385, `npm run build` grün.
+- Browser mit gestoppter API bestätigt: volle Meldung statt leerem Balken,
+  identisch zu Mikes gemeldetem Zustand.
+- Restanalyse zum Rundenlimit ergänzt (Ticket): keine offenen Befunde, die
+  eine vierte Runde rechtfertigen; die beiden aus Runde 1 bekannten
+  Beobachtungslücken (390-px-Geometrie, StockPortfolio-Doku-Anteil) bleiben
+  nicht blockierend sichtbar.
+
+`T-80-about-data-use-notice.md` war das einzige Element seiner
+`priority_chain`. Nach dem Portfolio-Riegel geht der Zustand auf
+`portfolio_review` an Mike. Das Ticket bleibt bis zu Mikes Bestätigung in
+`30-doing/`.
 
 ## Archiv · OUTBOX → claude · T-80 Runde 2 (verarbeitet: `approved`)
 

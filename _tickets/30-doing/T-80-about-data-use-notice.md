@@ -360,3 +360,54 @@ offenen Punkt aus Claudes Review. Der Verifier prüft zuerst den
 Ausfall-Nutzerweg und den nicht leeren Fehlertext, danach den engen Diff und
 die Dokumentationszuordnung. StockPortfolios T-58 und Mikes rechtliche
 Wiedervorlage liegen außerhalb dieser Produktnachprüfung.
+
+**Verifier-Ergänzung zur Restanalyse (Claude, 2026-09-28, `max_review_rounds`
+erreicht):** Stimme der Coder-Einschätzung zu — kein aus Claudes eigenem
+Review offen gebliebener Befund. Zwei nicht blockierende Beobachtungen aus
+Runde 1 bleiben unverändert sichtbar, sind aber kein Grund für eine weitere
+Runde: (1) Verify #5/#9 wurden nicht px-genau bei 390 px nachgestellt (lokales
+Chrome-Fensterminimum 500 px); schließbar nur mit einem Gerät/Emulator, der
+schmaler geht, kein Produktfehler. (2) Verify #6 deckt nur den StockInfo-Anteil
+der Doku ab; StockPortfolios READMEs laufen über dessen eigenes T-58. Beide
+Punkte betreffen nicht den in dieser Runde geprüften Ausfall-Fix und
+blockieren ihn nicht.
+
+## Auflösung · Runde 3
+
+**Unabhängiger Review · Claude, 2026-09-28.** Geprüfte Übergabe `cb7fbe7`
+auf `t-80-about-data-use-notice` gegen `cb7fbe7^`. Prüfgegenstand ist gezielt
+Mikes gemeldete Ausfallmeldung bei leerem API-Fehlertext. Ergebnis:
+**approved.**
+
+- Root Cause nachvollzogen: `error ?? t('migration.downBody')` fällt bei
+  `error === ''` **nicht** auf den Katalogtext zurück, weil `??` nur bei
+  `null`/`undefined` greift — ein leerer String ist beides nicht. Der Fix auf
+  `error || t('migration.downBody')` behebt genau das, ohne nicht leere
+  Fehlertexte zu verdecken.
+- Rot/Grün selbst reproduziert statt nur den Coder-Bericht übernommen
+  (SI-CX-01-Muster): Operator lokal auf `??` zurückgesetzt,
+  `MigrationGate.spec.ts` erneut gelaufen — der neue Test
+  „zeigt bei leerer Serverantwort eine lesbare Fehlermeldung" schlägt fehl
+  (`expected 'StockInfo is unavailable' to contain 'Check that the server
+  and database are running'`); Fix zurückgespielt, Test wieder grün,
+  Arbeitsbaum danach sauber.
+- `make test-dashboard`: 385/385 grün, Lint sauber. `npm run build` grün.
+- Browser: Dashboard ohne laufende API gestartet (derselbe Fehlerzustand, den
+  Mike gemeldet hat) — zeigt jetzt „StockInfo is unavailable" mit vollem
+  Fließtext „Check that the server and database are running, then reload the
+  page.“ statt des leeren roten Balkens.
+- DRY/i18n: `downTitle`/`downBody` bleiben einzige Quelle in beiden Katalogen,
+  keine zweite Fehlermeldung an anderer Stelle (`rg` über `dashboard/src`).
+  Kein hartcodierter sichtbarer Text.
+- Scope wie angekündigt: 4 Dateien (1 Komponente, 2 Kataloge, 1 Test), kein
+  About-Produktcode berührt, keine API-/DB-/Konfigurationsänderung.
+  Doku-Abgleich nachvollzogen: Keine der drei READMEs zitiert den
+  Fehlermeldungstext, daher zu Recht keine Änderung nötig.
+- Restanalyse siehe oben — kein weiterer offener Befund, der eine vierte
+  Runde rechtfertigen würde.
+
+Damit ist T-80 (StockInfo-Anteil) in Runde 3 freigegeben.
+`T-80-about-data-use-notice.md` bleibt das einzige Element seiner
+`priority_chain`; nach dem Portfolio-Riegel geht der Zustand auf
+`portfolio_review` an Mike. Das Ticket bleibt bis zu Mikes Bestätigung in
+`30-doing/`. StockPortfolios T-58 ist weiterhin nicht Teil dieser Prüfung.
