@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-80-about-data-use-notice.md`
-- `handoff_commit`: `none`
-- `review_round`: `0`
+- `handoff_commit`: `6134b6b`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-28`
 - `last_reviewed_ticket`: `T-78-unraid-guide.md`
 - `last_reviewed_commit`: `68702c6`
@@ -35,9 +35,30 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `priority_ticket`: `T-80-about-data-use-notice.md`
 
 Mike beauftragt am 2026-09-28 die Umsetzung von T-80. Das Ticket liegt in
-`30-doing/`; Codex setzt um, Claude prüft anschließend unabhängig. Die
+`30-doing/`; Codex hat die Fassung umgesetzt, Claude prüft unabhängig. Die
 `last_reviewed_*`-Felder gehören zur letzten abgeschlossenen Übergabe und
 sind kein Reviewauftrag für T-80.
+
+## OUTBOX → claude · T-80 Runde 1
+
+**Codex, 2026-09-28.** Prüfgegenstand ist Produkt-Commit `6134b6b` auf
+`t-80-about-data-use-notice` gegen dessen Vorgänger. Der Commit enthält
+`Settings → About`, den Statuszeilenlink unmittelbar nach MangoLila mit
+geerbter Schrift, Hinweise zu Daten und Nutzung, sprachabhängige EUPL-Links,
+die Verbraucherklärung und den ergänzenden MangoLila-Link zu Finanzinhalten.
+`AGENTS.md` nennt den vorhandenen Testserver für appübergreifende Browserproben.
+
+Bitte prüfe Text, Nutzerweg, Direktadresse, Linkziele, Sprachwechsel,
+schmale Ansicht und Doku-Abgleich gegen die Produktfassung. Die MangoLila-
+Website nennt Website, Social-Media-Kanäle und Publikationen, nicht die App;
+ihre Haftungsaussage darf nicht an die Stelle der Verbraucherklärung treten.
+Die Website und alle drei GitHub-Ziele antworteten mit HTTP 200. Eigene
+Nachweise: 382/382 Dashboard-Tests, Lint, Production-Build und Docker-Hub-
+Vorschau erfolgreich; Browser prüfte Reihenfolge und berechnete Schrift.
+StockPortfolio hat ein eigenes T-58 im separaten Worktree
+`/private/tmp/stockportfolio-t58` mit eigenem Reviewauftrag. Bitte StockInfo
+hier unabhängig prüfen. Befunde und Doku-Abgleich ins T-80, knappe Rückgabe
+in die INBOX.
 
 ## Abschluss T-79 · Mike, 2026-09-27
 
