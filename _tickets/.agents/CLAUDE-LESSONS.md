@@ -22,6 +22,7 @@ im Verzeichnis inventarisieren; hier keinen zweiten Lesson-Inhalt pflegen.
 - [P-10 · Ein Integrationstest berührt seine Außengrenze nicht](#p-10--ein-integrationstest-berührt-seine-außengrenze-nicht)
 - [P-11 · Die Übergabe steht in der Mailbox, bevor es sie gibt](#p-11--die-übergabe-steht-in-der-mailbox-bevor-es-sie-gibt)
 - [P-12 · Die Fundstellenliste des Reviews ist eine abgeschnittene Ausgabe](#p-12--die-fundstellenliste-des-reviews-ist-eine-abgeschnittene-ausgabe)
+- [P-13 · Eine Muss-Regel wird per Schadensabwägung zur Kann-Regel](#p-13--eine-muss-regel-wird-per-schadensabwägung-zur-kann-regel)
 
 ## Gemeinsame Vorgabe zum Rundenlimit
 
@@ -82,3 +83,7 @@ im Verzeichnis inventarisieren; hier keinen zweiten Lesson-Inhalt pflegen.
 ## P-12 · Die Fundstellenliste des Reviews ist eine abgeschnittene Ausgabe
 
 [Weiterlesen](lessons/SI-P-12-die-fundstellenliste-des-reviews-ist-eine-abgeschnittene-ausgabe.md)
+
+## P-13 · Eine Muss-Regel wird per Schadensabwägung zur Kann-Regel
+
+[Weiterlesen](lessons/SI-P-13-eine-muss-regel-wird-per-schadensabwaegung-zur-kann-regel.md)
