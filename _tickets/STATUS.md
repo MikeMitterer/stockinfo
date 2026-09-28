@@ -31,14 +31,18 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `last_reviewed_commit`: `cb7fbe7`
 - `last_reviewed_round`: `3`
 - `workstream`: `none`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `priority_chain`: `T-81-zeitabhaengige-yaml-historientests.md`
+- `priority_ticket`: `T-81-zeitabhaengige-yaml-historientests.md`
+
+**Einplanung T-81 · Mike, 2026-09-28.** Mike beauftragt, die beiden
+YAML-Historientests vom Tagesdatum zu entkoppeln. T-81 liegt dafür in
+`20-ready/`; Codex übernimmt die Umsetzung und Claude die unabhängige Prüfung.
 
 **Abschluss T-80 · Mike, 2026-09-28.** Mike bestätigte Claudes Freigabe und
 beauftragte Commit und Merge. Das Ticket liegt in `40-done/`; StockPortfolios
 T-58 und die rechtliche Wiedervorlage aus T-79 bleiben eigenständig.
 Beim Merge-Test fiel ein älteres Zeitfensterproblem in zwei Backend-Tests auf;
-es ist in [T-81](10-backlog/T-81-zeitabhaengige-yaml-historientests.md)
+es ist in [T-81](20-ready/T-81-zeitabhaengige-yaml-historientests.md)
 erfasst. Es betrifft keinen T-80-Produktcode.
 
 Claude hat die Runde-3-Nacharbeit (`cb7fbe7`, Ausfallmeldung) unabhängig
