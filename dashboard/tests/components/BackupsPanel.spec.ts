@@ -213,7 +213,7 @@ describe('BackupsPanel', () => {
     // Wirkung und ohne Grund. Der Text kommt aus dem Katalog, nicht aus
     // `String(err)`: Sonst stünde in der englischen Oberfläche ein deutscher.
     for (const [locale, expected] of [
-      ['de', 'Sicherung fehlgeschlagen'],
+      ['de', 'Backup fehlgeschlagen'],
       ['en', 'Backup failed'],
     ] as const) {
       i18n.global.locale.value = locale
@@ -284,7 +284,7 @@ describe('BackupsPanel', () => {
     vi.spyOn(apiClient, 'get').mockResolvedValue(listing())
 
     for (const [locale, expected] of [
-      ['de', 'Sicherungen der Datenbank'],
+      ['de', 'Backups der Datenbank'],
       ['en', 'Database backups'],
     ] as const) {
       i18n.global.locale.value = locale

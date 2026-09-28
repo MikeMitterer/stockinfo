@@ -93,9 +93,11 @@ function humanSize(bytes: number): string {
       {{ t('backups.pending', { name: data.pending_restore }) }}
     </p>
 
-    <NButton :loading="loading" type="primary" @click="create">
-      {{ t('backups.create') }}
-    </NButton>
+    <div class="backups__create-row">
+      <NButton :loading="loading" type="primary" @click="create">
+        {{ t('backups.create') }}
+      </NButton>
+    </div>
 
     <p v-if="error" class="backups__state backups__state--error">{{ error }}</p>
 
@@ -152,6 +154,7 @@ function humanSize(bytes: number): string {
 @use '../styles/variables' as *;
 
 .backups__scroll { overflow-x: auto; }
+.backups__create-row { margin: 0.75rem 0 1.25rem; }
 .backups__table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
 .backups__table th, .backups__table td { padding: 0.35rem 0.6rem; text-align: left; white-space: nowrap; }
 .num { text-align: right; }

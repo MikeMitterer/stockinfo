@@ -26,13 +26,13 @@ beforeEach(() => {
 })
 
 describe('SettingsPanel', () => {
-  it('rendert die Reiter in der Reihenfolge Darstellung, Sprache, Links, Sicherungen, Environment', () => {
+  it('rendert die Reiter in der Reihenfolge Darstellung, Sprache, Links, Backup, Environment', () => {
     // Über die Reiter-Leiste, nicht über die Panes: Naive rendert nur die
     // aktive Pane — die Beschriftungen stehen trotzdem alle in der Leiste.
     const wrapper = mountPanel()
     const bar = wrapper.find('.n-tabs-nav').text()
 
-    for (const label of ['Darstellung', 'Sprache', 'API & Links', 'Sicherungen', 'Environment']) {
+    for (const label of ['Darstellung', 'Sprache', 'API & Links', 'Backup', 'Environment']) {
       expect(bar, label).toContain(label)
     }
   })

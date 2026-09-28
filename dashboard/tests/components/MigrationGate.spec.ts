@@ -210,7 +210,7 @@ describe('MigrationGate · die Sicherung im Hinweis', () => {
   })
 
   it.each([
-    ['de', 'Jetzt sichern'],
+    ['de', 'Backup erstellen'],
     ['en', 'Create backup now'],
   ])('beschriftet die Handlung in %s aus dem Katalog', (locale, expected) => {
     i18n.global.locale.value = locale as 'de' | 'en'
@@ -225,9 +225,9 @@ describe('MigrationGate · die Sicherung im Hinweis', () => {
       i18n.global.t('migration.backupDone'),
     )
 
-    const failed = mountGate({ backupDone: true, backupError: 'Sicherung fehlgeschlagen' })
+    const failed = mountGate({ backupDone: true, backupError: 'Backup fehlgeschlagen' })
 
-    expect(failed.text()).toContain('Sicherung fehlgeschlagen')
+    expect(failed.text()).toContain('Backup fehlgeschlagen')
     expect(failed.text()).not.toContain(i18n.global.t('migration.backupDone'))
   })
 })

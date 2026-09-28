@@ -271,13 +271,13 @@ export const de = {
   },
   roles,
   backups: {
-    title: 'Sicherungen der Datenbank',
+    title: 'Backups der Datenbank',
     hint:
-      'Es bleiben {keep} Sicherungen liegen; die älteste weicht beim Anlegen ' +
-      'der nächsten. Gesichert wird auf Knopfdruck, nicht nach Zeitplan.',
-    create: 'Jetzt sichern',
+      'Es bleiben {keep} Backups liegen; das älteste weicht beim Anlegen ' +
+      'des nächsten. Backups werden auf Knopfdruck erstellt, nicht nach Zeitplan.',
+    create: 'Backup erstellen',
     restore: 'Wiederherstellen',
-    empty: 'Noch keine Sicherung angelegt.',
+    empty: 'Noch kein Backup angelegt.',
     colCreated: 'Zeitpunkt',
     colSize: 'Größe',
     colFit: 'Passung',
@@ -313,7 +313,7 @@ export const de = {
       appearance: 'Darstellung',
       language: 'Sprache',
       links: 'API & Links',
-      backups: 'Sicherungen',
+      backups: 'Backup',
       environment: 'Environment',
     },
     language: {
@@ -368,8 +368,8 @@ export const de = {
     analysis: 'Analyse fehlgeschlagen',
     fx: 'Wechselkurs konnte nicht geladen werden',
     overrides: 'Kennzahlen konnten nicht gespeichert werden',
-    backupsLoad: 'Sicherungen konnten nicht geladen werden',
-    backupCreate: 'Sicherung fehlgeschlagen',
+    backupsLoad: 'Backups konnten nicht geladen werden',
+    backupCreate: 'Backup fehlgeschlagen',
     backupRestore: 'Wiederherstellen fehlgeschlagen',
 
     /*
@@ -573,14 +573,14 @@ export const de = {
       'Dabei entfallen {quotes} Intraday-Kurspunkte und {daily} Tagesschlusskurse.',
     rowLoss: '{quotes} Kurspunkte, {daily} Tagesschlusskurse',
 
-    backupTitle: 'Vorher sichern',
+    backupTitle: 'Vorher Backup erstellen',
     backupBody:
-      'Der Umzug lässt sich nicht rückgängig machen. Sichere die Datenbank, ' +
+      'Der Umzug lässt sich nicht rückgängig machen. Erstelle ein Backup der Datenbank, ' +
       'bevor du bestätigst — danach sind die oben genannten Zeilen und ihre ' +
       'Kurse nur noch im Bericht vorhanden.',
-    backupNow: 'Jetzt sichern',
-    backingUp: 'Sichere…',
-    backupDone: 'Gesichert. Die Kopie liegt bei den Sicherungen.',
+    backupNow: 'Backup erstellen',
+    backingUp: 'Backup wird erstellt…',
+    backupDone: 'Backup erstellt. Du findest es unter Backup in den Einstellungen.',
 
     confirm: 'Umzug jetzt ausführen',
     confirming: 'Der Umzug läuft…',
