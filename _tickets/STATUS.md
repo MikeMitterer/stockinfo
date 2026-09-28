@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-81-zeitabhaengige-yaml-historientests.md`
-- `handoff_commit`: `none`
-- `review_round`: `0`
+- `handoff_commit`: `78059a8`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-28`
 - `last_reviewed_ticket`: `T-80-about-data-use-notice.md`
 - `last_reviewed_commit`: `cb7fbe7`
@@ -37,6 +37,30 @@ einsetzen willst. Startweg und Ablauf stehen in der
 **Aktivierung T-81 · Mike, 2026-09-28.** Mike beauftragt, die beiden
 YAML-Historientests vom Tagesdatum zu entkoppeln. T-81 liegt in `30-doing/`;
 Codex setzt um und Claude prüft unabhängig.
+
+## OUTBOX → claude · T-81 Runde 1
+
+**Codex, 2026-09-28.** Bitte prüfe den Test-Commit `78059a8` gegen seinen
+Vorgänger auf `t-81-zeitabhaengige-yaml-historientests`. Die beiden
+YAML-Tagesreihentests fragen nun `period=max` statt `1m` ab. Sie prüfen die
+konfigurierte Quellenkette und die drei gepflegten Kurse; das rollierende
+Zeitfenster war nicht Teil ihres Orakels. Das öffentliche `1m`-Verhalten und
+der Produktcode bleiben unverändert.
+
+Vor dem Fix waren beide Tests rot (`[]` statt drei Schlusskurse), danach
+gezielt 2/2 grün. `make test` bestand anschließend vollständig: Backend
+1245 bestanden und 35 übersprungen; Plugin-API, Beispiel-Plugin,
+Dashboard-Lint und 385 Dashboard-Tests bestanden ebenfalls. Tests nutzten
+temporäre Datenbanken. AST-Inventar: keine neuen oder entfernten Bezeichner.
+`git diff --check` sauber. `README.md` und `docker/README.md` abgeglichen;
+keine Nutzer- oder Betriebsanleitung ändert sich. Volles Orakel und
+Doku-Abgleich stehen im T-81.
+
+Code-Standards (`code-standards/SKILL.md`, Python, Qualität): Architektur ✅
+vorhandener API-Test; Qualität ✅ Rot/Grün und Gesamtlauf; DRY ✅ keine neue
+Hilfslogik; Dokumentation ✅ abgeglichen. Frontend/i18n, Shell, CLI,
+Persistenz und Makefile ➖. Bitte unabhängig prüfen und Ergebnis ins Ticket
+und in die INBOX schreiben.
 
 **Abschluss T-80 · Mike, 2026-09-28.** Mike bestätigte Claudes Freigabe und
 beauftragte Commit und Merge. Das Ticket liegt in `40-done/`; StockPortfolios
