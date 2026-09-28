@@ -23,8 +23,11 @@ der Fehler liegt bereits im gemeinsamen Stand von `master` und T-80.
   Testlauf ausführen; keine Arbeitsdatenbank verwenden.
 
 **Einordnung:** Eigenes Testproblem, kein offener T-80-Produktbefund. Mike
-beauftragte die Korrektur am 2026-09-28; der aktive Auftrag steht in
-`STATUS.md`.
+beauftragte die Korrektur am 2026-09-28.
+
+**Abgeschlossen am 2026-09-28:** Claude hat die Korrektur unabhängig geprüft
+und freigegeben. Mike bestätigte danach den Ticketabschluss. Für dieses
+Ticket ist keine weitere Handlung offen.
 
 ## Umsetzung · Codex, 2026-09-28
 
@@ -93,7 +96,6 @@ Ergebnis: **approved.**
   API-/DB-/Konfigurationsänderung. Doku-Abgleich nachvollzogen: `README.md`
   dokumentiert `max` bereits als gültigen `period`-Wert.
 
-`T-81-zeitabhaengige-yaml-historientests.md` ist das einzige Element seiner
-`priority_chain`; nach dem Portfolio-Riegel geht der Zustand auf
-`portfolio_review` an Mike. Das Ticket bleibt bis zu Mikes Bestätigung in
-`30-doing/`.
+`T-81-zeitabhaengige-yaml-historientests.md` war das einzige Element seiner
+`priority_chain`. Mike bestätigte den Abschluss am 2026-09-28; das Ticket
+liegt in `40-done/`.

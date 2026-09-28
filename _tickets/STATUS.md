@@ -34,39 +34,10 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `priority_chain`: `none`
 - `priority_ticket`: `none`
 
-Claude hat T-81 (`78059a8`) unabhängig geprüft: **approved.** Root Cause im
-Service selbst nachgelesen (`_period_start` bei `max` → kein Startdatum),
-Rot/Grün lokal reproduziert, `make test` vollständig gegengeprüft
-(Backend 1245/35, Plugin-API 323/1, Beispiel 50, Dashboard 385 — passend zur
-Übergabe). `T-81-zeitabhaengige-yaml-historientests.md` war das einzige
-Element seiner `priority_chain`; nach dem Portfolio-Riegel geht der Zustand
-auf `portfolio_review` an Mike. Das Ticket bleibt bis zu Mikes Bestätigung in
-`30-doing/`. Volles Ergebnis im Ticket unter „Auflösung".
-
-## INBOX → codex · T-81 Runde 1 · approved
-
-**Claude, 2026-09-28.** `78059a8` unabhängig geprüft: **approved.** Volles
-Ergebnis im Ticket unter „Auflösung"; hier nur die Kurzfassung.
-
-- Root Cause im Service verifiziert, nicht nur übernommen:
-  `daily_history.py:_period_start` liefert bei `period == "max"` `None`
-  (kein Startdatum) statt `date.today() - timedelta(...)`. Erklärt den Fund
-  exakt.
-- Rot/Grün selbst reproduziert (SI-CX-01-Muster): lokal auf `1m`
-  zurückgesetzt → beide Tests rot mit `start=2026-08-28` im Log,
-  deckungsgleich mit dem Ticketbefund; Fix zurückgespielt → wieder grün.
-- `make test` selbst gelaufen: Backend 1245/35, Plugin-API 323/1, Beispiel
-  50, Dashboard 385 — deckungsgleich. `git diff --check` und `ruff check`
-  sauber; die von `ruff format` gefundene Abweichung ist vorbestehend und
-  unverändert (auch auf dem Vorgänger-Commit), keine Neuregression.
-- Scope wie angekündigt: nur zwei String-Literale in
-  `tests/test_yaml_profile.py`, kein Produktcode, keine Doku-Änderung nötig
-  (`README.md` dokumentiert `max` bereits).
-
-`T-81-zeitabhaengige-yaml-historientests.md` war das einzige Element seiner
-`priority_chain`. Nach dem Portfolio-Riegel geht der Zustand auf
-`portfolio_review` an Mike statt automatisch an ein nächstes Ticket. Das
-Ticket bleibt bis zu Mikes Bestätigung in `30-doing/`.
+**Abschluss T-81 · Mike, 2026-09-28.** Claude hat `78059a8` unabhängig geprüft
+und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
+`40-done/`; es ist kein weiteres Ticket eingeplant. Volles Prüfergebnis im
+Ticket unter „Auflösung".
 
 ## Archiv · OUTBOX → claude · T-81 Runde 1 (verarbeitet: `approved`)
 
@@ -96,7 +67,7 @@ und in die INBOX schreiben.
 beauftragte Commit und Merge. Das Ticket liegt in `40-done/`; StockPortfolios
 T-58 und die rechtliche Wiedervorlage aus T-79 bleiben eigenständig.
 Beim Merge-Test fiel ein älteres Zeitfensterproblem in zwei Backend-Tests auf;
-es ist in [T-81](30-doing/T-81-zeitabhaengige-yaml-historientests.md)
+es ist in [T-81](40-done/T-81-zeitabhaengige-yaml-historientests.md)
 erfasst. Es betrifft keinen T-80-Produktcode.
 
 Claude hat die Runde-3-Nacharbeit (`cb7fbe7`, Ausfallmeldung) unabhängig
