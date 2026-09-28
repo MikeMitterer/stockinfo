@@ -11,15 +11,15 @@ verbindlicher Handelskurs. Eine Entscheidung sollte anhand der maßgeblichen
 Quelle geprüft werden. Die Oberfläche erklärt das in der gewählten Sprache;
 ein Link in der Statuszeile führt direkt zur Erklärung.
 
-**Stand:** Das Ticket ist aufgenommen; Produktcode wurde dafür noch nicht
+**Stand:** Die Umsetzung ist beauftragt; Produktcode wurde dafür noch nicht
 geändert. StockPortfolio hat bereits `legal.html` und den Statuszeilenlink
 „Lizenz & Quellcode“. Beide Projekte enthalten `LICENSE`, `LICENSE.de.txt`
 und `LICENSING.md`. StockInfos EUPL-Ticket T-79 nennt eine persönliche
 Wiedervorlage zur rechtlichen Prüfung; sie ist hier nicht als erledigt erklärt.
 
-**Nächster Schritt:** Die Umsetzung im zuständigen Board einplanen. Die
-rechtliche Prüfung des endgültigen Wortlauts bleibt als gesonderte menschliche
-Wiedervorlage sichtbar.
+**Nächster Schritt:** Codex setzt um und übergibt die geprüfte Fassung an
+Claude. Die rechtliche Prüfung des endgültigen Wortlauts bleibt als
+gesonderte menschliche Wiedervorlage sichtbar.
 
 ## Umfang
 

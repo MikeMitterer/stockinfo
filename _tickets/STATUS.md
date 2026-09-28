@@ -20,25 +20,24 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `none`
-- `handoff_commit`: `4ca54cf85fc1e671b07f5bb3e35ed88b93a56ba3`
-- `review_round`: `1`
+- `phase`: `codex_working`
+- `ticket`: `T-80-about-data-use-notice.md`
+- `handoff_commit`: `none`
+- `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
-- `updated_at`: `2026-09-27`
+- `owner`: `codex`
+- `updated_at`: `2026-09-28`
 - `last_reviewed_ticket`: `T-78-unraid-guide.md`
 - `last_reviewed_commit`: `68702c6`
 - `last_reviewed_round`: `1`
-- `workstream`: `none`
+- `workstream`: `data_use_notice`
 - `priority_chain`: `T-80-about-data-use-notice.md`
 - `priority_ticket`: `T-80-about-data-use-notice.md`
 
 Mike beauftragt am 2026-09-28 die Umsetzung von T-80. Das Ticket liegt in
-`20-ready/` und ist als nächstes Kettenglied eingeplant. Vor dem ersten
-Produktedit wechselt es mit dem Arbeitszustand nach `30-doing/`.
-`handoff_commit` und die `last_reviewed_*`-Felder gehören noch zur letzten
-abgeschlossenen Übergabe und sind kein Reviewauftrag für T-80.
+`30-doing/`; Codex setzt um, Claude prüft anschließend unabhängig. Die
+`last_reviewed_*`-Felder gehören zur letzten abgeschlossenen Übergabe und
+sind kein Reviewauftrag für T-80.
 
 ## Abschluss T-79 · Mike, 2026-09-27
 
