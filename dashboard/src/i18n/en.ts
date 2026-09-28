@@ -307,6 +307,9 @@ export const en = {
   },
   about: {
     title: 'About StockInfo',
+    providerName: 'MangoLila GmbH',
+    providerStreet: 'Dorfstraße 112',
+    providerCity: '6363 Westendorf',
     providerCountry: 'Austria',
     websiteLink: 'www.mangolila.at',
     intro: 'StockInfo shows quotes and metrics from external sources and your own entries.',

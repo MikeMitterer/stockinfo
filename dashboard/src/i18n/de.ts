@@ -341,6 +341,9 @@ export const de = {
   },
   about: {
     title: 'Über StockInfo',
+    providerName: 'MangoLila GmbH',
+    providerStreet: 'Dorfstraße 112',
+    providerCity: '6363 Westendorf',
     providerCountry: 'Österreich',
     websiteLink: 'www.mangolila.at',
     intro: 'StockInfo zeigt Kurse und Kennzahlen aus externen Quellen und aus deinen Eingaben.',

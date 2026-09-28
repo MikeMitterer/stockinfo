@@ -10,11 +10,6 @@ const { t, locale } = useI18n()
 const { current: currentTheme } = useTheme()
 const licenseUrl = computed(() => locale.value === 'de' ? LICENSE_URLS.de : LICENSE_URLS.en)
 const logoUrl = computed(() => `${import.meta.env.BASE_URL}mangolila-logo-${THEMES[currentTheme.value].isDark ? 'dark' : 'light'}.png`)
-const providerAddress = {
-  name: 'MangoLila GmbH',
-  street: 'Dorfstraße 112',
-  city: '6363 Westendorf',
-} as const
 </script>
 
 <template>
@@ -37,9 +32,9 @@ const providerAddress = {
           <img :src="logoUrl" alt="" width="200" height="57">
         </div>
         <address class="about__address">
-          <strong>{{ providerAddress.name }}</strong><br>
-          {{ providerAddress.street }}<br>
-          {{ providerAddress.city }}<br>
+          <strong>{{ t('about.providerName') }}</strong><br>
+          {{ t('about.providerStreet') }}<br>
+          {{ t('about.providerCity') }}<br>
           {{ t('about.providerCountry') }}
         </address>
         <a :href="MANGOLILA_URL" target="_blank" rel="noopener noreferrer">

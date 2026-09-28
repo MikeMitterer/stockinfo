@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { computed } from 'vue'
 import { NButton } from 'naive-ui'
-import { REPOSITORY_URL } from '../config'
+import { MANGOLILA_URL, REPOSITORY_URL } from '../config'
 import { tabHref } from '../composables/useHashTab'
 import { useI18n } from 'vue-i18n'
 import { UxStatusBar, type BackendState } from '@mmit/ux-foundation'
@@ -66,7 +66,7 @@ const context = computed(() => {
     app-name="StockInfo"
     :powered-by-label="t('status.poweredBy')"
     origin-name="MangoLila"
-    origin-href="https://www.mangolila.at/"
+    :origin-href="MANGOLILA_URL"
     :version="version ? t('status.version', { version }) : ''"
     :backend-state="backendState"
     :backend-state-label="t(`status.${status}`)"

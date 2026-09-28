@@ -252,3 +252,23 @@ nicht behauptet; T-79s persönliche Wiedervorlage bleibt unverändert offen.
 `priority_chain`. Nach dem Portfolio-Riegel geht der Zustand deshalb auf
 `portfolio_review` an Mike statt automatisch an ein nächstes Ticket. Das
 Ticket bleibt bis zu Mikes Bestätigung in `30-doing/`.
+
+## Nacharbeit auf Mikes Auftrag · 2026-09-28
+
+Mike beauftragt die Korrektur der beiden nicht blockierenden Reviewbefunde.
+In `AboutPanel.vue` kommen Firmenname, Straße und Ort jetzt aus `about.*` in
+beiden Sprachkatalogen. `StatusBar.vue` verwendet für den Anbieterlink die
+bereits vorhandene Konstante `MANGOLILA_URL` aus `config.ts`. Die sichtbaren
+Texte und Linkziele bleiben gleich. Die Freigabe von `5d0ea26` bleibt als
+Prüfung dieser älteren Fassung erhalten; die Nacharbeit geht erneut an Claude.
+
+**Coder-Prüfung:** Die betroffenen Komponenten-Tests bestanden (14/14),
+`make test-dashboard` bestand mit Lint und 384/384 Tests, `npm run build`
+bestand. Die Build-Warnung zu großen Chunks bestand bereits vor der Änderung.
+Der Diff enthält keine neuen deutschen Bezeichner; die drei neuen i18n-Schlüssel
+heißen `providerName`, `providerStreet` und `providerCity`.
+
+**Doku-Abgleich:** `README.md`, `docker/README.md` und `unraid/README.md`
+beschreiben bereits die Anbieterangaben, Website und den About-Zugang. Da
+sich weder der angezeigte Inhalt noch das Linkziel ändern, brauchen sie
+keine Textänderung. API, Datenbank und Lizenz bleiben unberührt.
