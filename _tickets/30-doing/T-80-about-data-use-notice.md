@@ -19,10 +19,10 @@ und `LICENSING.md`. StockInfos EUPL-Ticket T-79 nennt eine persönliche
 Wiedervorlage zur rechtlichen Prüfung; sie ist hier nicht als erledigt erklärt.
 
 **Nächster Schritt:** Die StockInfo-About-Seite ist mit Mikes zwei
-Original-Logos für helle und dunkle Themes im Browser geprüft. Die zuständige
-StockPortfolio-Instanz übernimmt das Layout anhand ihres lokalen T-58; danach
-werden die Fassungen unabhängig geprüft. Die
-rechtliche Prüfung des endgültigen Wortlauts bleibt als
+Original-Logos für helle und dunkle Themes im Browser geprüft und wird Claude
+zur unabhängigen Prüfung übergeben. Die zuständige StockPortfolio-Instanz
+übernimmt das Layout anhand ihres lokalen T-58 und organisiert dort die eigene
+Prüfung. Die rechtliche Prüfung des endgültigen Wortlauts bleibt als
 gesonderte menschliche Wiedervorlage sichtbar.
 
 ## Umfang

@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `ready_for_claude`
 - `ticket`: `T-80-about-data-use-notice.md`
-- `handoff_commit`: `none`
+- `handoff_commit`: `5d0ea26`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-09-28`
 - `last_reviewed_ticket`: `T-78-unraid-guide.md`
 - `last_reviewed_commit`: `68702c6`
@@ -35,14 +35,65 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `priority_ticket`: `T-80-about-data-use-notice.md`
 
 Mike erweitert am 2026-09-28 T-80 um die Anbieteranschrift. Die bisherige
-Übergabe `6134b6b` ist vor Claudes Review zurückgenommen. Auf Mikes
-Anweisung gestaltet Codex zuerst die StockInfo-About-Seite mit den beiden
-Original-Logos, Anschrift und Website-Link; StockPortfolio folgt nach dieser
-Ansicht durch die zuständige StockPortfolio-Instanz. Anschließend erfolgt eine
-neue Übergabe. Das Ticket liegt in
-`30-doing/`. Die
+Übergabe `6134b6b` ist vor Claudes Review zurückgenommen. Codex hat die
+StockInfo-About-Seite mit den beiden Original-Logos, Anschrift und Website-Link
+im Commit `5d0ea26` fertiggestellt. Diese Fassung geht jetzt eigenständig an
+Claude zur Prüfung. StockPortfolio übernimmt das Layout durch seine zuständige
+Instanz aus dem dortigen T-58; dessen Review bleibt separat. Das Ticket liegt
+in `30-doing/`. Die
 `last_reviewed_*`-Felder gehören zur letzten abgeschlossenen Übergabe und
 sind kein Reviewauftrag für T-80.
+
+## OUTBOX → claude · T-80 Runde 1
+
+**Codex, 2026-09-28.** Bitte prüfe den eingefrorenen StockInfo-Produktstand
+`5d0ea26` auf Branch `t-80-about-data-use-notice` gegen `master`. Die frühere
+Übergabe `6134b6b` wurde vor einem Review zurückgenommen. Prüfgegenstand ist
+nur StockInfo; StockPortfolio arbeitet separat an T-58.
+
+Der Nutzerweg umfasst `Einstellungen → About`, den Statuszeilenlink unmittelbar
+nach „powered by MangoLila“ mit geerbter Schrift, Datenhinweise in DE und EN,
+sprachrichtige EUPL-Links, `LICENSING.md` und MangoLilas separaten Hinweis zu
+Finanzinhalten. Rechts auf About stehen beide unveränderten Original-Logos je
+Theme, Anschrift und Website-Link. Bei 390 px ersetzt eine Auswahl die zu breite
+Tab-Leiste; inneres Label und Rahmen haben dieselbe Mindesthöhe. Bitte auch
+Direktadresse, Sprachwechsel, Tastaturbedienung und den Doku-Abgleich prüfen.
+Der MangoLila-Webhinweis nennt Website und Publikationen, nicht die App;
+die Verbraucherklärung wird dadurch nicht ersetzt.
+
+Eigene Nachweise am Stand `5d0ea26`: `make test-dashboard` 384/384, Lint,
+Build mit isoliertem Testserver und Docker-Hub-Vorschau erfolgreich. Im Browser
+wurden 1440 px und emulierte 390 px in beiden Themes geprüft, einschließlich
+Logo, Trennlinie, Auswahlrahmen, Direktadresse und fehlender Überbreite.
+Die Details stehen im T-80 unter „Coder-Prüfung“. Die Verify-Zeilen #1, #2,
+#7 und #9 betreffen diesen Review unmittelbar; #5 und #6 nur für den
+StockInfo-Anteil. #3, #4 und #8 gehören zur StockPortfolio-Instanz.
+
+Umfangskontrolle: Das Ticket plante Datenhinweis/About, Anbieterbereich und
+mobile Einstellungen; ein vorab beziffertes Dateibudget wurde dort nicht
+erfasst. Tatsächlich berührt der Branch 11 Produktdateien einschließlich der
+beiden PNGs, 3 Testdateien sowie `README.md`, `docker/README.md` und
+`unraid/README.md`; der Gesamtdiff gegen `master` bleibt unter 800 Zeilen.
+Keine API-, Datenbank- oder Lizenztextänderung. Doku-Abgleich: Die drei
+READMEs beschreiben den Zugang, die Anbieterangaben und die Lizenzlinks
+übereinstimmend; die Docker-Hub-Vorschau bestand.
+
+Code-Standards: Gelesen wurde
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md`; für die
+Vue-/i18n-Oberfläche gelten `references/frontend.md` und `ux-standards`.
+Architektur ✅ About- und Auswahlverhalten bleiben in vorhandenen Vue-Flächen;
+Frontend ✅ sichtbare Texte stehen in DE/EN-Katalogen, Naive UI wird für die
+mobile Auswahl verwendet; Qualität ✅ vorhandene Komponenten- und
+Hash-Tab-Tests wurden erweitert; Dokumentation ✅ drei READMEs abgeglichen.
+Shell, CLI, Python, Persistenz und Makefile ➖ im Produktdiff nicht berührt.
+Die lokalen Codex-Lessons SI-CX-01, SI-R-02 und SI-T-66 wurden vor der Übergabe
+gelesen: kein Datenbank-Startzustand berührt, keine hypothetische Migration,
+keine fremde Reviewwertung übernommen. Neue allgemeine Lesson aus diesem
+UI-Stand: keine; Mikes konkrete Layoutkorrekturen sind im Ticket belegt.
+
+Bitte Befunde und die unabhängige Prüfung im T-80 dokumentieren und die
+knappe Rückgabe in die INBOX schreiben. Eine rechtliche Freigabe des
+öffentlichen Wortlauts wird durch diesen technischen Review nicht behauptet.
 
 ## Archiv · OUTBOX → claude · T-80 Runde 1 (vor Review zurückgenommen)
 
