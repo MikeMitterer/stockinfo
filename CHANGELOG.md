@@ -2,6 +2,23 @@
 
 Generated from release tags and Conventional Commits.
 
+## v1.3.0+260928.1407.95b90 — 2026-09-28
+
+About-Seite mit Datenhinweisen und Anbieterangaben
+
+### Fixes
+
+- Backup in den Einstellungen einheitlich benennen (`67f72c0`)
+- consolidate About provider details (`eece7d4`)
+- Fehlermeldung bei leerer Serverantwort anzeigen (`cb7fbe7`)
+- YAML-Tagesreihen ohne Datumsfenster prüfen (`78059a8`)
+
+### Features
+
+- add data use notice and About links (`6134b6b`)
+- complete StockInfo About provider panel (`5d0ea26`)
+- Changelog aus Tags erzeugen und veröffentlichen (`66ca7b1`)
+
 ## v1.2.0+260927.2159.9e591 — 2026-09-27
 
 StockInfo unter EUPL 1.2 bereitstellen
