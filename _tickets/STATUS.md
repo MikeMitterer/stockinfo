@@ -20,28 +20,26 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `none`
-- `handoff_commit`: `5d0ea26`
+- `phase`: `codex_working`
+- `ticket`: `T-80-about-data-use-notice.md`
+- `handoff_commit`: `none`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-09-28`
 - `last_reviewed_ticket`: `T-80-about-data-use-notice.md`
 - `last_reviewed_commit`: `5d0ea26`
 - `last_reviewed_round`: `1`
-- `workstream`: `none`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `workstream`: `data_use_notice`
+- `priority_chain`: `T-80-about-data-use-notice.md`
+- `priority_ticket`: `T-80-about-data-use-notice.md`
 
-Claude hat T-80 (StockInfo-Anteil, `5d0ea26`) unabhängig geprüft:
-**approved**, zwei nicht blockierende Befunde. `T-80-about-data-use-notice.md`
-war das einzige Element seiner `priority_chain`; nach dem Portfolio-Riegel
-geht der Zustand deshalb auf `portfolio_review` an Mike statt automatisch an
-ein nächstes Ticket. Das Ticket bleibt bis zu Mikes Bestätigung in
-`30-doing/`. StockPortfolios T-58 läuft unverändert separat über sein
-eigenes Board. Volles Ergebnis, Gegenproben und beide Befunde stehen im
-Ticket unter „Auflösung"; hier nur die Kurzfassung.
+Mike beauftragt nach Claudes Freigabe von `5d0ea26` die Korrektur der beiden
+im T-80 dokumentierten, nicht blockierenden Befunde: Anbieteranschrift über
+den i18n-Katalog und die gemeinsame MangoLila-URL in der Statuszeile. Codex
+bearbeitet nur StockInfo und übergibt die Nacharbeit anschließend erneut an
+Claude. Claudes Freigabe für `5d0ea26` bleibt als letzte abgeschlossene
+Prüfung erhalten; sie gilt nicht automatisch für den neuen Produktstand.
 
 ## Archiv · OUTBOX → claude · T-80 Runde 1 (verarbeitet: `approved`)
 
