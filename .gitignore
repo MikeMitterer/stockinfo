@@ -11,6 +11,7 @@ docker/preview/
 docker/.last-build-tag
 docker/.last_login
 .libs/
+_tickets/ACTIVITY.md
 # Bauartefakte der Python-Pakete (`plugin_api/`, das Beispiel-Plugin).
 #
 # **Hier und nicht nur global:** Auf dieser Maschine verdeckt eine

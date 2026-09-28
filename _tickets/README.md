@@ -23,13 +23,16 @@ _tickets/
 ├── 90-rejected/   # bewusst verworfen
 ├── README.md      # diese Anleitung
 ├── STATUS.md      # Rollen, Reihenfolge, Phase und Mailbox
-└── QUESTIONS.md   # offene Fragen während der Arbeit
+├── QUESTIONS.md   # offene Fragen während der Arbeit
+└── ACTIVITY.md    # lokales Tätigkeitsprotokoll, nicht versioniert
 ```
 
 Tickets und ihre Begleitdateien liegen gemeinsam im passenden Ordner.
-Im Root bleiben nur die drei genannten Board-Dateien. Der versteckte
-Ordner [.agents/](.agents/) ist versioniert und wird bei Inventaren und
-Linkprüfungen ausdrücklich eingeschlossen.
+`STATUS.md` und `QUESTIONS.md` sind versioniert. `ACTIVITY.md` bleibt als
+lokales Protokoll erhalten und wird von Git ignoriert; ein frischer Klon
+enthält sie erst nach dem ersten lokalen Eintrag. Der versteckte Ordner
+[.agents/](.agents/) ist versioniert und wird bei Inventaren und Linkprüfungen
+ausdrücklich eingeschlossen.
 
 [↑ Übersicht](#übersicht)
 
