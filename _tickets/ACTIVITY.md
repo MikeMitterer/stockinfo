@@ -1,5 +1,6 @@
 # Aktuelle Tätigkeit
 
+- 2026-09-28 13:39:57 CEST · claude · T-80 Runde 3 (Ausfallmeldung cb7fbe7) unabhängig geprüft: approved. Root Cause (?? statt || bei leerem Fehlertext) selbst rot/grün reproduziert, Tests/Build/Browser mit gestoppter API bestätigt. Rundenlimit erreicht, kein offener Befund. Zustand auf portfolio_review an Mike.
 - 2026-09-28 13:25:52 CEST · claude · T-80 Runde 2 (StockInfo-Nacharbeit eece7d4) unabhängig geprüft: approved. Beide SI-P-13-Befunde (i18n-Katalog, MANGOLILA_URL) sauber behoben und eigenständig gegengeprüft. Zustand auf portfolio_review an Mike; Ticket bleibt in 30-doing/ bis Bestätigung.
 - 2026-09-28 13:12:33 CEST · claude · Lesson SI-P-13 angelegt (CLAUDE-LESSONS.md + lessons/): MUST/DRY-Abnahmebedingungen sind immer blocking, Entwicklungsstand-Riegel rechtfertigt keine Schadensabwägung dagegen. AGENTS.md entsprechend präzisiert. Reagiert auf Mikes Korrektur zu T-80 Runde 1.
 - 2026-09-28 13:00:51 CEST · claude · T-80 (StockInfo-Anteil) unabhängig geprüft: approved, zwei nicht blockierende Befunde (i18n-Katalog Anbieteranschrift, MANGOLILA_URL-Konsolidierung). Zustand auf portfolio_review an Mike; Ticket bleibt in 30-doing/ bis Bestätigung.
