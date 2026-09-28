@@ -438,7 +438,7 @@ def test_die_tagesreihe_faellt_auf_die_datei_durch(volume: Path, client) -> None
         },
     )
 
-    points = client.get(f"/quote/{_BOND}/daily", params={"period": "1m"}).json()
+    points = client.get(f"/quote/{_BOND}/daily", params={"period": "max"}).json()
 
     assert [point["close"] for point in points] == [99.18, 99.31, 99.42], (
         f"die gepflegte Reihe hinter der stummen Quelle kam nicht dran: {points}"
@@ -624,7 +624,7 @@ def test_die_manuelle_history_kommt_als_tagesreihe(volume: Path, client) -> None
         },
     )
 
-    points = client.get(f"/quote/{_BOND}/daily", params={"period": "1m"}).json()
+    points = client.get(f"/quote/{_BOND}/daily", params={"period": "max"}).json()
 
     assert [point["close"] for point in points] == [99.18, 99.31, 99.42]
 
