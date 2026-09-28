@@ -6,21 +6,21 @@ A small app that serves **stock and ETF quotes via a REST API** and caches them 
 provider and fund size.
 
 Docker image: [mangolila/stockinfo on Docker Hub](https://hub.docker.com/repository/docker/mangolila/stockinfo/general).
+Tagged changes: [changelog](CHANGELOG.md). Curated older summaries:
+[release notes](docs/release-notes.md).
 
 The **web dashboard** provides an asset overview, price charts, manual ETF
 metrics and source configuration, with German and English UI.
 
 ![StockInfo dashboard](unraid/screenshots/dashboard.png)
 
-### What's new in 1.1.0
+### Release highlight: 1.1.0
 
 - `GET /instrument-types` lists the asset types declared by the configured
   plugins, including source status and whether the catalog is complete.
 - `GET /fields` describes core and plugin fields in English, independently of
   the dashboard language or `Accept-Language`.
 - The dashboard development proxy also forwards `/instrument-types`.
-
-Earlier changes: [release notes](docs/release-notes.md).
 
 ## Contents
 
@@ -35,6 +35,7 @@ Earlier changes: [release notes](docs/release-notes.md).
 - [Docker](#docker)
 - [Unraid](#unraid)
 - [Tests](#tests)
+- [Releases and changelog](#releases-and-changelog)
 - [Project layout](#project-layout)
 - [License](#license)
 
@@ -481,6 +482,26 @@ the working database; additional test databases belong under `tmp_path`.
 
 ---
 
+## Releases and changelog
+
+`make changelog` regenerates [CHANGELOG.md](CHANGELOG.md) locally from release
+tags and Conventional Commits. It does not commit or push. The generated file
+is replaced on the next run; its content comes from commit and release tag
+messages. Use `make changelog PYTHON=/path/to/python3`
+to select another Python interpreter (Python 3.9+).
+
+`make tag-major`, `make tag-minor` and `make tag-patch` bump the version,
+commit, tag and push it, then generate, commit and push the changelog. Pass
+`MSG="Release summary"` for the release tag message. A release needs a clean
+working tree and the shared BashLib and ProjectTools libraries. If the
+changelog step fails after the tag has been pushed, fix the cause and run
+`python3 .libs/ProjectTools/src/python/changelog.py --publish` to retry
+without bumping the version again.
+
+[↑ Contents](#contents)
+
+---
+
 ## Project layout
 
 ```
@@ -503,6 +524,7 @@ tests/                  # backend tests (pytest)
 docker/                 # Dockerfile, build.sh (single-image build)
 unraid/                 # Unraid guide and screenshots (README + CA template)
 Makefile                # service start/stop (make help)
+CHANGELOG.md            # generated history of tagged releases
 ```
 
 Current references: [REST API](docs/rest-core-contract.md),

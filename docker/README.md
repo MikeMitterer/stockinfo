@@ -151,6 +151,7 @@ See the [Unraid guide](../unraid/README.md) for installation, configuration and 
 - [Report a problem](https://github.com/MikeMitterer/stockinfo/issues)
 - [Source code and full documentation](../README.md)
 - [Release notes](../docs/release-notes.md)
+- [Changelog by release tag](../CHANGELOG.md)
 - [License: EUPL 1.2 only](../LICENSE)
 
 The dashboard's **Settings → About** tab links to the English or German EUPL

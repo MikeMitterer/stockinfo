@@ -17,6 +17,7 @@ include ${DEV_MAKE}/tools.mk
 
 # ProjectTools (geteilte Dev-Scripte) — Fallback für nicht-interaktive Shells (Jenkins etc.)
 PROJECT_TOOLS ?= $(WORKSPACE)/.libs/ProjectTools/src
+PYTHON ?= python3
 export PROJECT_TOOLS
 
 VENV    := .venv
@@ -210,23 +211,24 @@ status: ## Git-Status aller Workspace-Repos anzeigen
 ##@ Versionierung
 
 .PHONY: precheck
-precheck:  ## Prüft, ob BASH_LIBS gesetzt ist
-	@if [[ -z "$${BASH_LIBS+x}" ]]; then \
-		echo "$(RED)Achtung: '$(YELLOW)BASH_LIBS$(RED)' ist nicht gesetzt!$(RESET)"; \
-		exit 1; \
-	fi
+precheck:  ## Prüft die Versionierungsbibliothek
+	@test -r "$${BASH_LIBS:-}/version.lib.sh" || { echo "BashLib fehlt: make setup ausführen." >&2; exit 1; }
 
-.PHONY: tag-major
-tag-major: precheck ## Version hochzählen — Major (X.y.z → X+1.0.0)  [MSG="..."]
-	source "$${BASH_LIBS}/version.lib.sh" && semVerBump major auto "" "$${MSG:-}"
+.PHONY: changelog
+changelog: ## CHANGELOG.md aus Release-Tags erstellen (ohne Commit)
+	@LANGUAGE=en "$(PYTHON)" "$(PROJECT_TOOLS)/python/changelog.py" --generate
 
-.PHONY: tag-minor
-tag-minor: precheck ## Version hochzählen — Minor (x.Y.z → x.Y+1.0)  [MSG="..."]
-	source "$${BASH_LIBS}/version.lib.sh" && semVerBump minor auto "" "$${MSG:-}"
+.PHONY: tag-major tag-minor tag-patch
+tag-major: ## Version committen, taggen UND pushen — Major; danach Changelog [MSG="..."]
+tag-minor: ## Version committen, taggen UND pushen — Minor; danach Changelog [MSG="..."]
+tag-patch: ## Version committen, taggen UND pushen — Patch; danach Changelog [MSG="..."]
 
-.PHONY: tag-patch
-tag-patch: precheck ## Version hochzählen — Patch (x.y.Z → x.y.Z+1)  [MSG="..."]
-	source "$${BASH_LIBS}/version.lib.sh" && semVerBump patch auto "" "$${MSG:-}"
+# Alle Stufen verwenden dieselbe Reihenfolge: Release, dann Changelog-Commit.
+tag-major tag-minor tag-patch: precheck
+	@test -r "$(PROJECT_TOOLS)/python/changelog.py"
+	@test -z "$$(git status --porcelain)"
+	@source "$${BASH_LIBS}/version.lib.sh" && semVerBump "$(patsubst tag-%,%,$@)" auto "" "$${MSG:-}"
+	@LANGUAGE=en "$(PYTHON)" "$(PROJECT_TOOLS)/python/changelog.py" --publish
 
 .PHONY: version
 version: ## Aktuelle Version anzeigen (Versionsdatei + git tag)
