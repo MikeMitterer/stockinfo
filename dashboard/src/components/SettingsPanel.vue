@@ -5,6 +5,7 @@ import { NButton, NButtonGroup, NTabPane, NTabs } from 'naive-ui'
 import { LOCALES, setLanguage } from '../i18n'
 import { SETTINGS_TABS } from '../composables/useHashTab'
 import type { EnvInfo, SettingsTab } from '../types'
+import AboutPanel from './AboutPanel.vue'
 import BackupsPanel from './BackupsPanel.vue'
 import EnvironmentPanel from './EnvironmentPanel.vue'
 import LinksPanel from './LinksPanel.vue'
@@ -76,6 +77,8 @@ const { t, locale } = useI18n()
           v-else-if="key === 'environment'"
           :env="env"
         />
+
+        <AboutPanel v-else-if="key === 'about'" />
       </NTabPane>
     </NTabs>
   </section>

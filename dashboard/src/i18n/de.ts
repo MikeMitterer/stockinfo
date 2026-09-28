@@ -315,6 +315,7 @@ export const de = {
       links: 'API & Links',
       backups: 'Backup',
       environment: 'Environment',
+      about: 'About',
     },
     language: {
       hint:
@@ -324,6 +325,7 @@ export const de = {
   },
   status: {
     poweredBy: 'powered by',
+    about: 'Über StockInfo',
     version: 'v{version}',
     instruments: 'keine Papiere | ein Papier | {count} Papiere',
     /*
@@ -335,6 +337,16 @@ export const de = {
     ok: 'Online',
     degraded: 'Prüfe…',
     down: 'Offline',
+  },
+  about: {
+    title: 'Über StockInfo',
+    intro: 'StockInfo zeigt Kurse und Kennzahlen aus externen Quellen und aus deinen Eingaben.',
+    data: 'Angaben können fehlen, veraltet oder fehlerhaft sein. Angezeigte Kurse sind keine verbindlichen Handelskurse.',
+    use: 'Prüfe wichtige Angaben vor einer Entscheidung bei der ursprünglichen Quelle. StockInfo berücksichtigt deine persönliche Situation nicht und bietet keine persönliche Anlageberatung.',
+    legal: 'Die Software steht unter der EUPL 1.2. MangoLilas Erklärung für Verbraucher erläutert die geltenden Regeln zu Gewährleistung und Haftung.',
+    licenseLink: 'EUPL 1.2 (Deutsch)',
+    licensingLink: 'Lizenz- und Verbraucherklärung',
+    financialContentLink: 'MangoLila: Hinweise zu Finanzinhalten',
   },
   json: {
     copyUrl: 'URL kopieren',

@@ -1,5 +1,6 @@
 # Aktuelle Tätigkeit
 
+- 2026-09-28 11:16:12 CEST · codex · T-80 ist aktiviert. Ich setze zuerst den About-Hinweis und den Statuszeilenlink in StockInfo um.
 - 2026-09-26 18:29:21 CEST · codex · schließt T-78 auf Mikes ausdrückliche Entscheidung ab. Die offene Claude-Nachprüfung entfällt nur für diesen Auftrag; Ticket nach done, keine aktive Kette.
 - 2026-09-26 18:23:38 CEST · codex · hat auf Mikes Klarstellung die doppelten Unraid-Infos entfernt und die gemeinsame Skill-Regel korrigiert. READMEs verlinken nur die zentrale Unraid-Anleitung; korrigierter Stand zur Prüfung übergeben.
 - 2026-09-26 18:20:45 CEST · codex · hat den neuen unraid-conventions-Skill abgeglichen und die Installationskurzfassung im Root-README ergänzt. Nachtrag f6abd45 ist zur unabhängigen Prüfung über STATUS.md übergeben.

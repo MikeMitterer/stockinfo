@@ -285,6 +285,7 @@ export const en = {
       links: 'API & Links',
       backups: 'Backups',
       environment: 'Environment',
+      about: 'About',
     },
     language: {
       hint:
@@ -294,6 +295,7 @@ export const en = {
   },
   status: {
     poweredBy: 'powered by',
+    about: 'About StockInfo',
     version: 'v{version}',
     instruments: 'no instruments | one instrument | {count} instruments',
     /* Which role this names — see the German file. */
@@ -301,6 +303,16 @@ export const en = {
     ok: 'Online',
     degraded: 'Checking…',
     down: 'Offline',
+  },
+  about: {
+    title: 'About StockInfo',
+    intro: 'StockInfo shows quotes and metrics from external sources and your own entries.',
+    data: 'Data may be missing, outdated or incorrect. Displayed prices are not binding trading prices.',
+    use: 'Check important figures against the original source before making a decision. StockInfo does not consider your personal circumstances and does not provide personal investment advice.',
+    legal: 'The software is licensed under EUPL 1.2. MangoLila’s consumer declaration explains the applicable warranty and liability rules.',
+    licenseLink: 'EUPL 1.2 (English)',
+    licensingLink: 'Licensing and consumer declaration',
+    financialContentLink: 'MangoLila: Financial content disclaimer (German)',
   },
   json: {
     copyUrl: 'Copy URL',

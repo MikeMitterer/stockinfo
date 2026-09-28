@@ -68,6 +68,9 @@ Start it with `docker compose up -d`. This is an alternative to the
 - ETF metadata such as TER, provider and fund size when the source supplies it.
 - Manual values for metadata that the sources do not provide.
 - A dashboard for managing instruments, viewing charts and configuring sources.
+- An **About** tab under Settings, also linked from the status bar, explains the
+  limits of displayed data and links to the EUPL and consumer declaration.
+  It also links to MangoLila's separate notice for website financial content.
 - A REST API on the same port as the dashboard.
 
 ![Swagger UI (dark)](../unraid/screenshots/swagger.png)
@@ -147,6 +150,13 @@ See the [Unraid guide](../unraid/README.md) for installation, configuration and 
 - [Source code and full documentation](../README.md)
 - [Release notes](../docs/release-notes.md)
 - [License: EUPL 1.2 only](../LICENSE)
+
+The dashboard's **Settings → About** tab links to the English or German EUPL
+according to the selected UI language. It also links to the consumer
+declaration. Displayed data may be incomplete or outdated; check important
+figures against their original sources.
+MangoLila's linked financial content notice addresses its website and
+publications; the app's license and consumer declaration remain separate.
 
 StockInfo permits personal and commercial use, modification, redistribution,
 sale and hosting under the EUPL without an additional paid license. Preserve

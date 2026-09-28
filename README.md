@@ -325,6 +325,10 @@ bar (**health traffic light** green/orange/red + version):
 - **Exchanges** — legend of the Yahoo suffixes (exchange, region, currency).
 - **Environment** — current configuration incl. a note on the automatic refresh;
   **Themes** — 8 selectable, persisted themes.
+- **About** — open it from Settings or the **About StockInfo** status bar link.
+  It explains the limits of displayed data and links to the EUPL in the selected language and to the
+  provider's consumer declaration. A separate link opens MangoLila's financial
+  content notice for its website and publications.
 
 ```bash
 cd dashboard

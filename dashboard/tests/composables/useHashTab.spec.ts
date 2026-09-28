@@ -76,6 +76,14 @@ describe('useHashTab', () => {
     unmount()
   })
 
+  it('öffnet den About-Reiter über eine direkte Adresse', () => {
+    window.location.hash = '#/settings?tab=about'
+    const { tab, settingsTab, unmount } = mountHashTab()
+    expect(tab.value).toBe('settings')
+    expect(settingsTab.value).toBe('about')
+    unmount()
+  })
+
   it('fällt bei unbekanntem Reiter auf appearance zurück', () => {
     window.location.hash = '#/settings?tab=bogus'
     const { tab, settingsTab, unmount } = mountHashTab()

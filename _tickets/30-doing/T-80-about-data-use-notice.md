@@ -11,48 +11,53 @@ verbindlicher Handelskurs. Eine Entscheidung sollte anhand der maßgeblichen
 Quelle geprüft werden. Die Oberfläche erklärt das in der gewählten Sprache;
 ein Link in der Statuszeile führt direkt zur Erklärung.
 
-**Stand:** Die Umsetzung ist beauftragt; Produktcode wurde dafür noch nicht
-geändert. StockPortfolio hat bereits `legal.html` und den Statuszeilenlink
+**Stand:** Beide Oberflächen sind in den Ticket-Branches umgesetzt und vom
+Coder geprüft; Claudes unabhängige Prüfung steht aus. StockPortfolio hat
+weiterhin `legal.html` und den Statuszeilenlink
 „Lizenz & Quellcode“. Beide Projekte enthalten `LICENSE`, `LICENSE.de.txt`
 und `LICENSING.md`. StockInfos EUPL-Ticket T-79 nennt eine persönliche
 Wiedervorlage zur rechtlichen Prüfung; sie ist hier nicht als erledigt erklärt.
 
-**Nächster Schritt:** Codex setzt um und übergibt die geprüfte Fassung an
-Claude. Die rechtliche Prüfung des endgültigen Wortlauts bleibt als
+**Nächster Schritt:** Codex übergibt die geprüfte Fassung an Claude. Die
+rechtliche Prüfung des endgültigen Wortlauts bleibt als
 gesonderte menschliche Wiedervorlage sichtbar.
 
 ## Umfang
 
 Dieses Ticket hat einen Ort im StockInfo-Board und zwei betroffene Repositories:
 StockInfo und StockPortfolio. Die UI und die Datenhinweise werden je App
-angepasst. Es entsteht kein dritter, gemeinsam gepflegter Rechtstext und keine
-zweite Ticketkopie im StockPortfolio-Board.
+angepasst. Es entsteht kein dritter, gemeinsam gepflegter Rechtstext.
+StockPortfolios lokales T-58 regelt dort Umsetzung und Reviewübergabe.
 
 ### StockInfo
 
-- Unter **Einstellungen** einen adressierbaren Reiter „Über StockInfo“ / „About
-  StockInfo“ mit kurzen Hinweisen zu Datenherkunft, Aktualität, Fehlergrenzen
+- Unter **Einstellungen** einen adressierbaren Reiter „About“ mit kurzen
+  Hinweisen zu Datenherkunft, Aktualität, Fehlergrenzen
   und eigenverantwortlicher Prüfung ergänzen. Die fünf Punkte der
   Hauptnavigation bleiben wie bisher.
-- Den Reiter aus der Statuszeile direkt erreichbar machen. Beschriftung und
-  Inhalt folgen der gewählten Sprache; ein Sprachwechsel wirkt ohne Neuladen.
+- Den Reiter aus der Statuszeile direkt erreichbar machen. Der Link steht
+  unmittelbar nach „powered by MangoLila“ in der Schrift der Statuszeile.
+  Beschriftung und Inhalt folgen der gewählten Sprache; ein Sprachwechsel
+  wirkt ohne Neuladen.
 - Auf die EUPL verlinken: Deutsch zu `LICENSE.de.txt`, Englisch zu `LICENSE`.
   Die tatsächlich ausgelieferte URL muss in der laufenden App funktionieren.
   Die bestehende Verbraucherklärung in `LICENSING.md` ist ebenfalls erreichbar;
-  die Oberfläche widerspricht ihr nicht.
+  die Oberfläche widerspricht ihr nicht. Ein zusätzlicher Link führt zu
+  MangoLilas Hinweis für Finanzinhalte auf Website und in Publikationen.
 
 ### StockPortfolio
 
-- Den gleichen **Nutzerweg** bereitstellen: eine auffindbare „Über
-  StockPortfolio“ / „About StockPortfolio“-Ansicht und einen direkten
+- Den gleichen **Nutzerweg** bereitstellen: einen auffindbaren Reiter „About“
+  und einen direkten
   Statuszeilenlink. Den vorhandenen Link „Lizenz & Quellcode“ zu `legal.html`
   berücksichtigen; seine Lizenz- und Quellcode-Funktion erhalten.
 - Die Aussagen an Bestandswerte, Kursalter, Berechnungen und die tatsächlich
-  vorhandenen Handlungsanzeigen anpassen. Nicht pauschal behaupten, die App
-  gebe keine Empfehlung, bevor ihre sichtbaren Funktionen geprüft wurden.
+  vorhandenen Handlungsanzeigen anpassen. Unter Dashboard- und Rebalancing-
+  Tabelle steht ein kleiner Hinweis zu berechneten Kauf- und Verkaufswerten.
 - Den vorhandenen Auslieferungsweg für die englische und deutsche EUPL sowie
   `LICENSING.md` benutzen. Der sprachabhängige Link zeigt auf den passenden
-  Lizenztext und erreicht eine im Build enthaltene Datei.
+  Lizenztext und erreicht eine im Build enthaltene Datei. Der MangoLila-Hinweis
+  für Website-Finanzinhalte wird ebenfalls verlinkt.
 
 ### Wortlaut und Grenzen
 
@@ -75,9 +80,26 @@ endgültigen öffentlichen Texts ist weiterhin Mikes Entscheidung.
 | 5 | Beide Apps: schmale Ansicht, Tastatur und Sprachwechsel prüfen | Links bleiben bedienbar und beschriftet; Inhalte wechseln ohne Neuladen | ➖ |
 | 6 | Dokumentation beider Repositories abgleichen | Root- und Docker-READMEs erklären den aktuellen Zugang; Unraid-READMEs bei betroffenem Betrieb | ➖ |
 
-`➖` bedeutet hier: noch nicht umgesetzt oder live geprüft. Technische Belege
-werden beim jeweiligen Schritt unter derselben Prüfnummer ergänzt; menschliche
-Antworten und eine rechtliche Freigabe werden nicht von der KI eingetragen.
+Die Tabelle enthält die ursprünglichen Prüffälle. Die Coder-Nachweise stehen
+darunter; menschliche Antworten und eine rechtliche Freigabe werden nicht von
+der KI eingetragen.
+
+## Coder-Prüfung · 2026-09-28
+
+- StockInfo: `make test-dashboard` — 382 Tests in 52 Dateien bestanden;
+  Production-Build bestanden. Browser: Direktadresse `#/settings?tab=about`,
+  Position nach MangoLila und identische berechnete Schrift (11 px) geprüft.
+  Die drei GitHub-Ziele für EUPL DE/EN und `LICENSING.md` antworten mit HTTP 200.
+  Die MangoLila-Seite antwortet ebenfalls mit HTTP 200. Ihr Wortlaut nennt
+  Website, Social-Media-Kanäle und Publikationen, nicht diese Software; die
+  About-Ansicht stellt sie daher als ergänzenden Link dar.
+- StockPortfolio: lokaler T-58-Branch mit `Settings → About`, Statuszeilenlink
+  sowie Hinweisen unter beiden Tabellen. Details und der bekannte unabhängige
+  Docker-Testfehler stehen im dortigen Ticket.
+- **Doku-Abgleich:** `README.md`, `docker/README.md`, `unraid/README.md`
+  erklären den Zugang und die sprachabhängigen Lizenzlinks übereinstimmend.
+  Docker-Hub-Vorschau erfolgreich. `AGENTS.md` nennt den Testserver mit
+  temporärer Datenbank.
 
 ## Dokumentation und Schnittstellen
 

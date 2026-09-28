@@ -65,4 +65,26 @@ describe('SettingsPanel', () => {
     // einer Messung, und verrutscht deshalb beim Sprachwechsel nicht.
     expect(wrapper.findComponent(NTabs).props('value')).toBe('language')
   })
+
+  it('zeigt im deutschen About-Reiter Datenhinweis und deutsche Lizenz', () => {
+    const wrapper = mountPanel('about')
+
+    expect(wrapper.find('.n-tabs-nav').text()).toContain('About')
+    expect(wrapper.find('.n-tabs-nav').text()).not.toContain('Über')
+    expect(wrapper.text()).toContain('Angaben können fehlen, veraltet oder fehlerhaft sein')
+    expect(wrapper.find('a[href$="/LICENSE.de.txt"]').exists()).toBe(true)
+    expect(wrapper.find('a[href$="/LICENSING.md"]').exists()).toBe(true)
+    expect(wrapper.find('a[href="https://www.mangolila.at/impressum/haftungsausschluss-disclaimer-finanzinhalte/"]').exists()).toBe(true)
+  })
+
+  it('wechselt im offenen About-Reiter Text und Lizenzziel auf Englisch', async () => {
+    const wrapper = mountPanel('about')
+
+    i18n.global.locale.value = 'en'
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.text()).toContain('Data may be missing, outdated or incorrect')
+    expect(wrapper.find('a[href$="/LICENSE"]').exists()).toBe(true)
+    expect(wrapper.find('a[href$="/LICENSE.de.txt"]').exists()).toBe(false)
+  })
 })

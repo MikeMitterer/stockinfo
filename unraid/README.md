@@ -166,6 +166,10 @@ StockInfo is licensed under [EUPL 1.2 only](../LICENSE), including the Docker
 image used on Unraid. Copyright © 2026 Michael Mitterer; provider and licensor:
 MangoLila GmbH. See [licensing and the consumer declaration](../LICENSING.md)
 and the [image license documents and source](../docker/README.md#support-and-license).
+In the dashboard, **Settings → About** explains the limits of
+displayed data and links to the license in the selected language. The status
+bar links directly to that tab.
+About also links to MangoLila's separate notice for website financial content.
 The independent plugin API and its example remain under MIT. The separate
 Unraid template repository retains its own license.
 

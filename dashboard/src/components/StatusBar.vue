@@ -2,6 +2,7 @@
 import { computed } from 'vue'
 import { NButton } from 'naive-ui'
 import { REPOSITORY_URL } from '../config'
+import { tabHref } from '../composables/useHashTab'
 import { useI18n } from 'vue-i18n'
 import { UxStatusBar, type BackendState } from '@mmit/ux-foundation'
 
@@ -73,6 +74,8 @@ const context = computed(() => {
   >
     <template #left>
       <span class="status__separator status__separator--brand" aria-hidden="true">·</span>
+      <a class="status__about" :href="tabHref('settings', 'about')">{{ t('status.about') }}</a>
+      <span class="status__separator" aria-hidden="true">·</span>
       <NButton
         class="status__repo" text tag="a" :href="REPOSITORY_URL"
         target="_blank" rel="noopener noreferrer" :aria-label="t('links.repo')" :title="t('links.repo')"
@@ -89,6 +92,13 @@ const context = computed(() => {
 
 <style scoped lang="scss">
 .status {
+  &__about {
+    color: token(--text-bar-accent);
+    font: inherit;
+    text-decoration: none;
+
+    &:hover { text-decoration: underline; }
+  }
   &__repo {
     color: token(--text-bar-accent);
     svg { inline-size: var(--font-base); block-size: var(--font-base); }

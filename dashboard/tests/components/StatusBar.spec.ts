@@ -64,4 +64,19 @@ describe('StatusBar', () => {
 
     expect(contextOf(wrapper)).toBe('one instrument · Quotes: yfinance → yaml-file')
   })
+
+  it('verlinkt den About-Reiter in beiden Sprachen aus der Statuszeile', async () => {
+    const wrapper = mountBar()
+    const aboutLink = () => wrapper.get('a.status__about[href="#/settings?tab=about"]')
+
+    expect(aboutLink().text()).toBe('Über StockInfo')
+    const origin = wrapper.get('.ux-statusbar__origin').element
+    const about = aboutLink().element
+    const repository = wrapper.get('.status__repo').element
+    expect(origin.compareDocumentPosition(about) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(about.compareDocumentPosition(repository) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    i18n.global.locale.value = 'en'
+    await wrapper.vm.$nextTick()
+    expect(aboutLink().text()).toBe('About StockInfo')
+  })
 })

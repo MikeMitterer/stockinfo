@@ -310,7 +310,7 @@ export interface FxRate {
 export type TabKey = 'assets' | 'exchanges' | 'analysis' | 'fx' | 'settings'
 
 /** Reiter innerhalb der Einstellungsseite (adressierbar via #/settings?tab=…). */
-export type SettingsTab = 'appearance' | 'language' | 'links' | 'backups' | 'environment'
+export type SettingsTab = 'appearance' | 'language' | 'links' | 'backups' | 'environment' | 'about'
 
 /** Bekannte Icon-Namen der Navigation (deckungsgleich mit den Tabs). */
 export type NavIconName = TabKey

@@ -166,4 +166,10 @@ gehören unter `tmp_path`. Den Riegel nicht für einen Test abschalten; Gegenpro
 verwenden temporäre Stand-ins. Die App-Verdrahtung darf Settings verwenden,
 aber Tests dürfen sich nicht auf Daten aus dem Arbeitsbestand verlassen.
 
+Für eine Browserprüfung mit beiden Apps gibt es in StockPortfolio
+`scripts/stockinfo-test-server.py`. Es startet die echte StockInfo-API mit
+temporärer Datenbank und lokalen Testkursen. Start und Stop sind in seinem
+Modul-Docstring und in StockPortfolios `AGENTS.md` beschrieben. Dafür nie die
+Arbeitsdatenbank verwenden.
+
 [↑ Übersicht](#übersicht)
