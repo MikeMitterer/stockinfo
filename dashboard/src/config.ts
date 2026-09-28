@@ -15,3 +15,4 @@ export const LICENSE_URLS = {
 } as const
 export const LICENSING_URL = `${REPOSITORY_URL}/blob/master/LICENSING.md`
 export const FINANCIAL_CONTENT_URL = 'https://www.mangolila.at/impressum/haftungsausschluss-disclaimer-finanzinhalte/'
+export const MANGOLILA_URL = 'https://www.mangolila.at/'

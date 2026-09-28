@@ -1,10 +1,11 @@
 import { mount } from '@vue/test-utils'
 import { beforeEach, describe, expect, it } from 'vitest'
-import { NButton, NTabs } from 'naive-ui'
+import { NButton, NSelect, NTabs } from 'naive-ui'
 
 import SettingsPanel from '../../src/components/SettingsPanel.vue'
 import type { SettingsTab } from '../../src/types'
 import { i18n } from '../../src/i18n'
+import { useTheme } from '../../src/composables/useTheme'
 
 /**
  * Die Einstellungsseite nach der Umstellung auf Naive UI (T-12).
@@ -23,6 +24,7 @@ function mountPanel(tab: SettingsTab = 'appearance') {
 
 beforeEach(() => {
   i18n.global.locale.value = 'de'
+  useTheme().setTheme('mangolila')
 })
 
 describe('SettingsPanel', () => {
@@ -41,6 +43,21 @@ describe('SettingsPanel', () => {
     const wrapper = mountPanel('language')
 
     expect(wrapper.findComponent(NTabs).props('value')).toBe('language')
+    expect(wrapper.findComponent(NSelect).props('value')).toBe('language')
+  })
+
+  it('bietet alle Reiter über die mobile Auswahl an', async () => {
+    const wrapper = mountPanel('about')
+    const selection = wrapper.findComponent(NSelect)
+
+    expect(selection.attributes('aria-label')).toBe('Einstellungsbereich')
+    expect(selection.props('options')?.map((option) => option.label)).toEqual([
+      'Darstellung', 'Sprache', 'Backup', 'Environment', 'API & Links', 'About',
+    ])
+    selection.vm.$emit('update:value', 'language')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.emitted('update:tab')?.[0]).toEqual(['language'])
   })
 
   it('meldet den Wechsel des Reiters', async () => {
@@ -75,6 +92,22 @@ describe('SettingsPanel', () => {
     expect(wrapper.find('a[href$="/LICENSE.de.txt"]').exists()).toBe(true)
     expect(wrapper.find('a[href$="/LICENSING.md"]').exists()).toBe(true)
     expect(wrapper.find('a[href="https://www.mangolila.at/impressum/haftungsausschluss-disclaimer-finanzinhalte/"]').exists()).toBe(true)
+    const address = wrapper.get('address.about__address')
+    expect(address.text()).toContain('MangoLila GmbH')
+    expect(address.text()).toContain('Dorfstraße 112')
+    expect(address.text()).toContain('6363 Westendorf')
+    expect(address.text()).toContain('Österreich')
+    expect(wrapper.get('.about__brand img').attributes('src')).toContain('mangolila-logo-dark.png')
+    expect(wrapper.get('a[href="https://www.mangolila.at/"]').text()).toBe('www.mangolila.at')
+  })
+
+  it('verwendet in hellen Themes das dunkle Original-Logo', async () => {
+    const wrapper = mountPanel('about')
+
+    useTheme().setTheme('paper')
+    await wrapper.vm.$nextTick()
+
+    expect(wrapper.get('.about__brand img').attributes('src')).toContain('mangolila-logo-light.png')
   })
 
   it('wechselt im offenen About-Reiter Text und Lizenzziel auf Englisch', async () => {
@@ -86,5 +119,6 @@ describe('SettingsPanel', () => {
     expect(wrapper.text()).toContain('Data may be missing, outdated or incorrect')
     expect(wrapper.find('a[href$="/LICENSE"]').exists()).toBe(true)
     expect(wrapper.find('a[href$="/LICENSE.de.txt"]').exists()).toBe(false)
+    expect(wrapper.get('address.about__address').text()).toContain('Austria')
   })
 })

@@ -59,11 +59,14 @@ h2 { font-size: 0.95rem; letter-spacing: 0.02em; margin: 0 0 0.75rem; }
  * anderen, eine Unregelmäßigkeit ohne Nutzen.
  *
  * Dieselbe Regel lag vorher in fünf Komponenten verstreut und addierte sich
- * dort zu Naives eigenem Innenabstand. Es gibt eine Sorte Knopf.
+ * dort zu Naives eigenem Innenabstand. Es gibt eine Sorte Knopf. Bei NSelect
+ * braucht auch das innere Label die Höhe, sonst sitzt der Rahmen tiefer als
+ * dessen Hintergrund.
  */
 @media (pointer: coarse) {
   .n-button,
-  .n-base-selection {
+  .n-base-selection,
+  .n-base-selection-label {
     min-height: 44px;
   }
 }

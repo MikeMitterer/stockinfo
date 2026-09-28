@@ -309,6 +309,7 @@ export const de = {
   },
   settings: {
     title: 'Einstellungen',
+    sectionLabel: 'Einstellungsbereich',
     tab: {
       appearance: 'Darstellung',
       language: 'Sprache',
@@ -340,6 +341,8 @@ export const de = {
   },
   about: {
     title: 'Über StockInfo',
+    providerCountry: 'Österreich',
+    websiteLink: 'www.mangolila.at',
     intro: 'StockInfo zeigt Kurse und Kennzahlen aus externen Quellen und aus deinen Eingaben.',
     data: 'Angaben können fehlen, veraltet oder fehlerhaft sein. Angezeigte Kurse sind keine verbindlichen Handelskurse.',
     use: 'Prüfe wichtige Angaben vor einer Entscheidung bei der ursprünglichen Quelle. StockInfo berücksichtigt deine persönliche Situation nicht und bietet keine persönliche Anlageberatung.',

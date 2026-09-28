@@ -35,8 +35,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `priority_ticket`: `T-80-about-data-use-notice.md`
 
 Mike erweitert am 2026-09-28 T-80 um die Anbieteranschrift. Die bisherige
-Übergabe `6134b6b` ist vor Claudes Review zurückgenommen; Codex ergänzt die
-beiden Apps und übergibt danach neu. Das Ticket liegt in `30-doing/`. Die
+Übergabe `6134b6b` ist vor Claudes Review zurückgenommen. Auf Mikes
+Anweisung gestaltet Codex zuerst die StockInfo-About-Seite mit den beiden
+Original-Logos, Anschrift und Website-Link; StockPortfolio folgt nach dieser
+Ansicht durch die zuständige StockPortfolio-Instanz. Anschließend erfolgt eine
+neue Übergabe. Das Ticket liegt in
+`30-doing/`. Die
 `last_reviewed_*`-Felder gehören zur letzten abgeschlossenen Übergabe und
 sind kein Reviewauftrag für T-80.
 

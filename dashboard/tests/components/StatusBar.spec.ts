@@ -75,6 +75,7 @@ describe('StatusBar', () => {
     const repository = wrapper.get('.status__repo').element
     expect(origin.compareDocumentPosition(about) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
     expect(about.compareDocumentPosition(repository) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+    expect(wrapper.find('address').exists()).toBe(false)
     i18n.global.locale.value = 'en'
     await wrapper.vm.$nextTick()
     expect(aboutLink().text()).toBe('About StockInfo')

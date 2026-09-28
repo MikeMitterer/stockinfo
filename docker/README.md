@@ -70,7 +70,9 @@ Start it with `docker compose up -d`. This is an alternative to the
 - A dashboard for managing instruments, viewing charts and configuring sources.
 - An **About** tab under Settings, also linked from the status bar, explains the
   limits of displayed data and links to the EUPL and consumer declaration.
-  It also links to MangoLila's separate notice for website financial content.
+  It also links to MangoLila's separate notice for website financial content
+  and shows MangoLila GmbH's logo, postal address and website link beside the
+  About text. On narrow screens, a section selector replaces the tab row.
 - A REST API on the same port as the dashboard.
 
 ![Swagger UI (dark)](../unraid/screenshots/swagger.png)

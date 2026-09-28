@@ -18,7 +18,10 @@ weiterhin `legal.html` und den Statuszeilenlink
 und `LICENSING.md`. StockInfos EUPL-Ticket T-79 nennt eine persönliche
 Wiedervorlage zur rechtlichen Prüfung; sie ist hier nicht als erledigt erklärt.
 
-**Nächster Schritt:** Codex übergibt die geprüfte Fassung an Claude. Die
+**Nächster Schritt:** Die StockInfo-About-Seite ist mit Mikes zwei
+Original-Logos für helle und dunkle Themes im Browser geprüft. Die zuständige
+StockPortfolio-Instanz übernimmt das Layout anhand ihres lokalen T-58; danach
+werden die Fassungen unabhängig geprüft. Die
 rechtliche Prüfung des endgültigen Wortlauts bleibt als
 gesonderte menschliche Wiedervorlage sichtbar.
 
@@ -44,6 +47,10 @@ StockPortfolios lokales T-58 regelt dort Umsetzung und Reviewübergabe.
   Die bestehende Verbraucherklärung in `LICENSING.md` ist ebenfalls erreichbar;
   die Oberfläche widerspricht ihr nicht. Ein zusätzlicher Link führt zu
   MangoLilas Hinweis für Finanzinhalte auf Website und in Publikationen.
+- Logo, Anschrift und Website-Link der MangoLila GmbH stehen rechts neben dem
+  About-Text, durch eine senkrechte Linie getrennt. Auf schmalen Bildschirmen
+  stehen sie darunter ohne Querlinie. Die Statuszeile enthält ausschließlich
+  den About-Link, keine Anschrift.
 
 ### StockPortfolio
 
@@ -58,6 +65,8 @@ StockPortfolios lokales T-58 regelt dort Umsetzung und Reviewübergabe.
   `LICENSING.md` benutzen. Der sprachabhängige Link zeigt auf den passenden
   Lizenztext und erreicht eine im Build enthaltene Datei. Der MangoLila-Hinweis
   für Website-Finanzinhalte wird ebenfalls verlinkt.
+- Das StockInfo-Layout wird von der StockPortfolio-Instanz anhand ihres
+  T-58 übertragen. Die neue Anschrift ist dort noch nicht umgesetzt.
 
 ### Wortlaut und Grenzen
 
@@ -79,6 +88,9 @@ endgültigen öffentlichen Texts ist weiterhin Mikes Entscheidung.
 | 4 | StockPortfolio: Hinweis mit tatsächlichen Ansichten abgleichen | Kursalter, Bestands- und Berechnungsdaten sowie Handlungsanzeigen werden zutreffend beschrieben | ➖ |
 | 5 | Beide Apps: schmale Ansicht, Tastatur und Sprachwechsel prüfen | Links bleiben bedienbar und beschriftet; Inhalte wechseln ohne Neuladen | ➖ |
 | 6 | Dokumentation beider Repositories abgleichen | Root- und Docker-READMEs erklären den aktuellen Zugang; Unraid-READMEs bei betroffenem Betrieb | ➖ |
+| 7 | StockInfo-Anbieterbereich prüfen | Logo, Anschrift und Website-Link auf About rechts mit senkrechter Linie, mobil ohne Querlinie; keine Anschrift in der Statuszeile | ➖ |
+| 8 | Anbieterbereich nach StockPortfolio übertragen | Gleiches Layout und Theme-Logos auf About; Statuszeile bleibt unverändert | ➖ |
+| 9 | StockInfo-Einstellungen mobil bedienen | Unter 768 px ersetzt eine Bereichsauswahl die Tab-Leiste; der aktive Bereich und Direktadressen bleiben erreichbar | ➖ |
 
 Die Tabelle enthält die ursprünglichen Prüffälle. Die Coder-Nachweise stehen
 darunter; menschliche Antworten und eine rechtliche Freigabe werden nicht von
@@ -86,7 +98,7 @@ der KI eingetragen.
 
 ## Coder-Prüfung · 2026-09-28
 
-- StockInfo: `make test-dashboard` — 382 Tests in 52 Dateien bestanden;
+- StockInfo: `make test-dashboard` — 384 Tests in 52 Dateien bestanden;
   Production-Build bestanden. Browser: Direktadresse `#/settings?tab=about`,
   Position nach MangoLila und identische berechnete Schrift (11 px) geprüft.
   Die drei GitHub-Ziele für EUPL DE/EN und `LICENSING.md` antworten mit HTTP 200.
@@ -100,6 +112,33 @@ der KI eingetragen.
   erklären den Zugang und die sprachabhängigen Lizenzlinks übereinstimmend.
   Docker-Hub-Vorschau erfolgreich. `AGENTS.md` nennt den Testserver mit
   temporärer Datenbank.
+
+## Coder-Prüfung · About-Anbieterbereich · 2026-09-28
+
+- Die Anschrift steht nur auf `Settings → About`; die Statuszeile enthält
+  weiterhin nur den Link zum Reiter. Das transparente Original-Logo mit
+  weißer Schrift erscheint im dunklen Theme, das mit schwarzer Schrift im
+  hellen Theme. Beide sind 200 × 57 px groß; die Bilddateien wurden unverändert
+  übernommen. Der Website-Link führt zu `https://www.mangolila.at/`.
+- Browserprüfung bei 1440 px sowie bei emulierten 390 px Breite: Der Abstand
+  zwischen Text und senkrechter Linie beträgt 24 px; mobil stehen Logo,
+  Anschrift und Website-Link unter dem Text ohne Querlinie. Keine horizontale
+  Überbreite. Die zuvor verwendete, im Theme nicht definierte Variable
+  `--space-5` wurde durch `--space-6` ersetzt.
+- `make test-dashboard`: 384/384 bestanden; `npm run build` mit isoliertem
+  Testserver bestanden; Docker-Hub-Vorschau bestanden. StockPortfolio bleibt
+  im T-58-Worktree unverändert, bis das StockInfo-Layout übernommen wird.
+- Die Reiterzeile passte bei 390 px nicht: `About` lag außerhalb des sichtbaren
+  Bereichs. Unter 768 px zeigt jetzt eine Naive-UI-Auswahl den aktiven Bereich.
+  Im Browser von `About` auf `Sprache` gewechselt; die Direktadresse änderte
+  sich zu `#/settings?tab=language`. Ab 768 px bleibt die Tab-Leiste erhalten.
+  Der zunächst unterhalb der Auswahl sitzende Rahmen kam von einer globalen
+  Touch-Mindesthöhe am äußeren Naive-UI-Element: Das innere Label blieb 34 px
+  hoch, der Rahmen wurde 44 px hoch. Beide erhalten nun dieselbe Mindesthöhe.
+- **Doku-Abgleich:** `README.md`, `docker/README.md`, `unraid/README.md`
+  nennen jetzt Logo, Anschrift und Website-Link auf About. Die Lizenzhinweise
+  und die Trennung des MangoLila-Webhinweises von der Verbraucherklärung
+  bleiben inhaltlich gleich.
 
 ## Dokumentation und Schnittstellen
 

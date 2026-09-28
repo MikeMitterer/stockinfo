@@ -279,6 +279,7 @@ export const en = {
   },
   settings: {
     title: 'Settings',
+    sectionLabel: 'Settings section',
     tab: {
       appearance: 'Appearance',
       language: 'Language',
@@ -306,6 +307,8 @@ export const en = {
   },
   about: {
     title: 'About StockInfo',
+    providerCountry: 'Austria',
+    websiteLink: 'www.mangolila.at',
     intro: 'StockInfo shows quotes and metrics from external sources and your own entries.',
     data: 'Data may be missing, outdated or incorrect. Displayed prices are not binding trading prices.',
     use: 'Check important figures against the original source before making a decision. StockInfo does not consider your personal circumstances and does not provide personal investment advice.',

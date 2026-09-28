@@ -170,6 +170,9 @@ In the dashboard, **Settings → About** explains the limits of
 displayed data and links to the license in the selected language. The status
 bar links directly to that tab.
 About also links to MangoLila's separate notice for website financial content.
+MangoLila GmbH's logo, postal address and website link are shown beside the
+About text. On narrow screens, choose the Settings section from the selector
+above its content.
 The independent plugin API and its example remain under MIT. The separate
 Unraid template repository retains its own license.
 

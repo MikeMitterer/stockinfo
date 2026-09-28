@@ -1,6 +1,7 @@
 <script setup lang="ts">
+import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
-import { NButton, NButtonGroup, NTabPane, NTabs } from 'naive-ui'
+import { NButton, NButtonGroup, NSelect, NTabPane, NTabs } from 'naive-ui'
 
 import { LOCALES, setLanguage } from '../i18n'
 import { SETTINGS_TABS } from '../composables/useHashTab'
@@ -26,11 +27,23 @@ const emit = defineEmits<{
 }>()
 
 const { t, locale } = useI18n()
+const tabOptions = computed(() => SETTINGS_TABS.map((key) => ({
+  label: t(`settings.tab.${key}`),
+  value: key,
+})))
 </script>
 
 <template>
   <section class="settings">
     <h2 class="settings__title">{{ t('settings.title') }}</h2>
+
+    <NSelect
+      class="settings__mobile-tabs"
+      :value="tab"
+      :options="tabOptions"
+      :aria-label="t('settings.sectionLabel')"
+      @update:value="emit('update:tab', $event as SettingsTab)"
+    />
 
     <NTabs
       :value="tab"
@@ -96,6 +109,13 @@ const { t, locale } = useI18n()
     font-size: 1.25rem;
     font-weight: 600;
     margin: 0 0 1rem;
+  }
+
+  &__mobile-tabs { display: none; }
+
+  @include below(md) {
+    &__mobile-tabs { display: block; margin-bottom: var(--space-4); }
+    :deep(.n-tabs-nav) { display: none; }
   }
 
   &__hint {

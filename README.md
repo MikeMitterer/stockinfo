@@ -328,7 +328,10 @@ bar (**health traffic light** green/orange/red + version):
 - **About** — open it from Settings or the **About StockInfo** status bar link.
   It explains the limits of displayed data and links to the EUPL in the selected language and to the
   provider's consumer declaration. A separate link opens MangoLila's financial
-  content notice for its website and publications.
+  content notice for its website and publications. MangoLila GmbH's logo,
+  postal address and website link appear beside the About text.
+  On narrow screens, choose the Settings section from the selector above its
+  content.
 
 ```bash
 cd dashboard
