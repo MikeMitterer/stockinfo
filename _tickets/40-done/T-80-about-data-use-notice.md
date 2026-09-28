@@ -15,23 +15,16 @@ ein Link in der Statuszeile führt direkt zur Erklärung.
 Erkennbarkeit der About-Links im dunklen Theme prüfen lassen. Im MangoLila-Theme
 hebt sie die orange Akzentfarbe bei 4,55:1 Kontrast von der Kartenfläche ab;
 Mike hat die Darstellung ohne Unterstreichung bestätigt. Dabei fiel eine
-weitere Browsermeldung auf: Bei einer leeren API-Fehlerantwort zeigt der
-Startbildschirm einen roten Hinweis ohne Text. Codex korrigiert diesen Befund
-und übergibt die neue Fassung erneut; die frühere Freigabe bleibt auf
+weitere Browsermeldung auf: Bei einer leeren API-Fehlerantwort zeigte der
+Startbildschirm einen roten Hinweis ohne Text. Codex korrigierte diesen Befund
+und übergab die neue Fassung erneut; die frühere Freigabe bleibt auf
 `eece7d4` begrenzt.
 
-**Stand:** StockInfos About-Ansicht wurde in Runde 2 von Claude freigegeben.
-Ein danach im Browser gefundener Fehler der Ausfallmeldung wird in Runde 3
-gezielt nachgeprüft. StockPortfolio hat
-weiterhin `legal.html` und den Statuszeilenlink
-„Lizenz & Quellcode“. Beide Projekte enthalten `LICENSE`, `LICENSE.de.txt`
-und `LICENSING.md`. StockInfos EUPL-Ticket T-79 nennt eine persönliche
-Wiedervorlage zur rechtlichen Prüfung; sie ist hier nicht als erledigt erklärt.
-
-**Nächster Schritt:** Claude prüft die neue StockInfo-Ausfallmeldung. Die
-zuständige StockPortfolio-Instanz bearbeitet ihr lokales T-58 separat. Die
-rechtliche Prüfung des endgültigen Wortlauts bleibt als gesonderte menschliche
-Wiedervorlage sichtbar.
+**Stand:** StockInfos About-Ansicht und die korrigierte Ausfallmeldung sind
+von Claude in Runde 3 freigegeben. Mike bestätigte am 2026-09-28 den Abschluss
+und beauftragte Commit und Merge. StockPortfolios eigener Stand und Review
+liegen in dessen lokalem T-58. Die rechtliche Prüfung des endgültigen Wortlauts
+aus StockInfos T-79 bleibt eine gesonderte menschliche Wiedervorlage.
 
 ## Umfang
 
@@ -411,3 +404,18 @@ Damit ist T-80 (StockInfo-Anteil) in Runde 3 freigegeben.
 `priority_chain`; nach dem Portfolio-Riegel geht der Zustand auf
 `portfolio_review` an Mike. Das Ticket bleibt bis zu Mikes Bestätigung in
 `30-doing/`. StockPortfolios T-58 ist weiterhin nicht Teil dieser Prüfung.
+
+## Abschluss · Mike, 2026-09-28
+
+Mike bestätigte Claudes Runde-3-Freigabe: „Ticket ist durch, commit + merge“.
+Der StockInfo-Anteil ist damit abgeschlossen und liegt in `40-done/`.
+StockPortfolios T-58 und die rechtliche Wiedervorlage aus T-79 behalten ihre
+eigene Zuständigkeit.
+
+Beim abschließenden `make test` fielen zwei zeitabhängige Backend-Tests zu
+YAML-Tagesreihen auf (1243 bestanden, 35 übersprungen, 2 fehlgeschlagen).
+Ihre festen August-Daten liegen seit dem 28. September außerhalb des
+abgefragten `1m`-Fensters. Backend, Test und Beispieldatei sind auf `master`
+und diesem Branch identisch. Der unabhängige Befund ist in
+[T-81](../10-backlog/T-81-zeitabhaengige-yaml-historientests.md) erfasst;
+er ändert Claudes Freigabe des T-80-Produktstands nicht.

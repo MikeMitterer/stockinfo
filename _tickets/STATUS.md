@@ -34,22 +34,26 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `priority_chain`: `none`
 - `priority_ticket`: `none`
 
+**Abschluss T-80 · Mike, 2026-09-28.** Mike bestätigte Claudes Freigabe und
+beauftragte Commit und Merge. Das Ticket liegt in `40-done/`; StockPortfolios
+T-58 und die rechtliche Wiedervorlage aus T-79 bleiben eigenständig.
+Beim Merge-Test fiel ein älteres Zeitfensterproblem in zwei Backend-Tests auf;
+es ist in [T-81](10-backlog/T-81-zeitabhaengige-yaml-historientests.md)
+erfasst. Es betrifft keinen T-80-Produktcode.
+
 Claude hat die Runde-3-Nacharbeit (`cb7fbe7`, Ausfallmeldung) unabhängig
-geprüft: **approved.** Root Cause (`?? ` statt `||` bei leerem Fehlertext)
+geprüft: **approved.** Root Cause (`??` statt `||` bei leerem Fehlertext)
 selbst reproduziert (rot mit dem alten Operator, grün mit dem Fix), Tests,
-Build und Browser mit gestoppter API bestätigt. `T-80-about-data-use-notice.md`
-war das einzige Element seiner `priority_chain`; nach dem Portfolio-Riegel
-geht der Zustand auf `portfolio_review` an Mike. `max_review_rounds` (3) ist
-erreicht, aber kein offener Befund rechtfertigt eine weitere Runde — siehe
-Ticket „Restanalyse vor Runde 3“ samt Verifier-Ergänzung. Das Ticket bleibt
-bis zu Mikes Bestätigung in `30-doing/`.
+Build und Browser mit gestoppter API bestätigt. `max_review_rounds` (3) ist
+erreicht, aber kein offener T-80-Befund rechtfertigt eine weitere Runde — siehe
+Ticket „Restanalyse vor Runde 3“ samt Verifier-Ergänzung.
 
 Claude hat die Runde-2-Nacharbeit (`eece7d4`, StockInfo-Anteil) unabhängig
 geprüft: **approved.** Beide nach SI-P-13 korrekt als blockierend eingeordneten
 MUST-/DRY-Befunde aus Runde 1 sind behoben und eigenständig gegengeprüft
 (Tests, Build, Browser gegen isolierten Testserver). `T-80-about-data-use-notice.md`
 war das einzige Element seiner `priority_chain`; nach dem Portfolio-Riegel
-ging der Zustand damals auf `portfolio_review` an Mike. Das Ticket bleibt bis
+ging der Zustand damals auf `portfolio_review` an Mike. Das Ticket blieb bis
 zu Mikes Bestätigung in `30-doing/`. StockPortfolios T-58 bleibt unverändert
 separat. Volles Ergebnis im Ticket unter „Auflösung · Runde 2".
 
@@ -81,7 +85,7 @@ DRY ✅ vorhandener Ersatztext; Shell, CLI, Python, Persistenz, Makefile ➖.
 Bitte nur diese neue Fassung prüfen und Ergebnis in Ticket und INBOX
 eintragen. StockPortfolio ist kein Prüfgegenstand.
 
-## INBOX → codex · T-80 Runde 3 · approved
+## Archiv · INBOX → codex · T-80 Runde 3 · approved
 
 **Claude, 2026-09-28.** Ausfallmeldungs-Fix `cb7fbe7` unabhängig geprüft:
 **approved.** Volles Ergebnis im Ticket unter „Auflösung · Runde 3"; hier nur
