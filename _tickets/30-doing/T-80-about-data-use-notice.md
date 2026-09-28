@@ -82,15 +82,15 @@ endgültigen öffentlichen Texts ist weiterhin Mikes Entscheidung.
 
 | # | Fall | Erwartetes Ergebnis | AI |
 |---|---|---|:--:|
-| 1 | StockInfo: Statuszeilenlink in DE und EN öffnen | Jeweils der About-Reiter mit übersetztem Hinweis; Direktadresse funktioniert nach Neuladen | ➖ |
-| 2 | StockInfo: Lizenz- und Erklärungslinks in DE und EN öffnen | DE führt zur deutschen EUPL, EN zur englischen EUPL; `LICENSING.md` ist erreichbar | ➖ |
+| 1 | StockInfo: Statuszeilenlink in DE und EN öffnen | Jeweils der About-Reiter mit übersetztem Hinweis; Direktadresse funktioniert nach Neuladen | ✅ |
+| 2 | StockInfo: Lizenz- und Erklärungslinks in DE und EN öffnen | DE führt zur deutschen EUPL, EN zur englischen EUPL; `LICENSING.md` ist erreichbar | ✅ |
 | 3 | StockPortfolio: Statuszeilenlink und vorhandene Lizenzseite prüfen | About-Hinweis erreichbar; Lizenz-/Quellcodezugang bleibt funktionsfähig | ➖ |
 | 4 | StockPortfolio: Hinweis mit tatsächlichen Ansichten abgleichen | Kursalter, Bestands- und Berechnungsdaten sowie Handlungsanzeigen werden zutreffend beschrieben | ➖ |
-| 5 | Beide Apps: schmale Ansicht, Tastatur und Sprachwechsel prüfen | Links bleiben bedienbar und beschriftet; Inhalte wechseln ohne Neuladen | ➖ |
-| 6 | Dokumentation beider Repositories abgleichen | Root- und Docker-READMEs erklären den aktuellen Zugang; Unraid-READMEs bei betroffenem Betrieb | ➖ |
-| 7 | StockInfo-Anbieterbereich prüfen | Logo, Anschrift und Website-Link auf About rechts mit senkrechter Linie, mobil ohne Querlinie; keine Anschrift in der Statuszeile | ➖ |
+| 5 | Beide Apps: schmale Ansicht, Tastatur und Sprachwechsel prüfen | Links bleiben bedienbar und beschriftet; Inhalte wechseln ohne Neuladen | ◑ |
+| 6 | Dokumentation beider Repositories abgleichen | Root- und Docker-READMEs erklären den aktuellen Zugang; Unraid-READMEs bei betroffenem Betrieb | ◑ |
+| 7 | StockInfo-Anbieterbereich prüfen | Logo, Anschrift und Website-Link auf About rechts mit senkrechter Linie, mobil ohne Querlinie; keine Anschrift in der Statuszeile | ✅ |
 | 8 | Anbieterbereich nach StockPortfolio übertragen | Gleiches Layout und Theme-Logos auf About; Statuszeile bleibt unverändert | ➖ |
-| 9 | StockInfo-Einstellungen mobil bedienen | Unter 768 px ersetzt eine Bereichsauswahl die Tab-Leiste; der aktive Bereich und Direktadressen bleiben erreichbar | ➖ |
+| 9 | StockInfo-Einstellungen mobil bedienen | Unter 768 px ersetzt eine Bereichsauswahl die Tab-Leiste; der aktive Bereich und Direktadressen bleiben erreichbar | ✅ |
 
 Die Tabelle enthält die ursprünglichen Prüffälle. Die Coder-Nachweise stehen
 darunter; menschliche Antworten und eine rechtliche Freigabe werden nicht von
@@ -152,3 +152,103 @@ nicht für die About-Ansicht kopiert.
 Keine Änderung der REST-API, Datenbank oder Lizenzbedingungen vorgesehen.
 StockPortfolio liegt in einem eigenen Repository; dessen Regeln, Rollen und
 Schreibrechte sind vor dem Produktedit gesondert zu prüfen.
+
+## Auflösung
+
+**Unabhängiger Review · Claude, 2026-09-28.** Geprüfte Übergabe `5d0ea26`
+auf `t-80-about-data-use-notice` gegen `master`. Prüfgegenstand ist
+ausschließlich der StockInfo-Anteil; StockPortfolio läuft separat über sein
+lokales T-58. Ergebnis: **approved**.
+
+**Eigenständig nachvollzogen, nicht nur die Coder-Angaben übernommen:**
+
+- `make test-dashboard` auf dem eingefrorenen Stand selbst laufen lassen:
+  52 Dateien, 384/384 grün, Lint sauber. `npm run build` (vue-tsc + vite)
+  erfolgreich; die vorbestehende Chunk-Size-Warnung ist unverändert und
+  gehört nicht zu diesem Diff.
+- `./.libs/ProjectTools/src/bash/dockerhub-readme.sh --preview` selbst
+  ausgeführt: Größenprüfung bestanden, Vorschau 7.768 Byte, weit unter dem
+  25.000-Byte-Limit.
+- Alle fünf verlinkten Ziele einzeln mit `curl` gegen die echten Server
+  geprüft (nicht nur die Coder-Angabe übernommen, SI-CX-01-Muster): EUPL DE,
+  EUPL EN, `LICENSING.md`, MangoLilas Finanzinhalte-Hinweis und
+  `mangolila.at` — alle HTTP 200.
+- Browser (Vite-Dev-Server, `#/settings?tab=about`): About-Reiter bei
+  1440 px mit Logo, Anschrift, Website-Link und senkrechter Trennlinie
+  geprüft; Statuszeilenlink „Über StockInfo“ steht unmittelbar nach „powered
+  by MangoLila“ und vor dem GitHub-Link, in geerbter Schrift, ohne eigene
+  Anschrift in der Statuszeile. Theme-Wechsel auf ein helles Theme („Papier“)
+  bestätigt den Logo-Tausch (dunkler Text auf hell, heller Text auf dunkel,
+  beide Originaldateien 200×57 px). Sprachwechsel DE→EN ohne Neuladen
+  bestätigt: Texte, Statuszeilenlink und Lizenzlink-Ziel (`LICENSE` statt
+  `LICENSE.de.txt`) wechseln live.
+- Schmale Ansicht: Bei ≤ 500 px ersetzt die Naive-UI-Auswahl die Tab-Leiste
+  wie vorgesehen, per Maus und per Pfeiltasten+Enter bedienbar, ändert die
+  Direktadresse und lädt den gewählten Bereich; kein horizontales Scrollen.
+  **Einschränkung:** Das lokale Chrome-Fenster dieser Prüfsitzung lässt sich
+  nicht unter 500 px verkleinern (macOS-Fensterminimum); die genaue 390-px-
+  Geometrie aus der Coder-Prüfung (24 px Abstand, Wegfall der Querlinie,
+  Select-/Rahmen-Mindesthöhe) wurde deshalb nicht px-genau nachgestellt,
+  sondern nur das Verhalten unterhalb der `md`-Schwelle bestätigt. Verify
+  #5 bleibt deshalb `◑` statt `✅`.
+- Doku-Abgleich selbst nachvollzogen: `README.md`, `docker/README.md` und
+  `unraid/README.md` beschreiben Reiter, Statuszeilenlink, Sprachabhängigkeit
+  der Lizenzlinks, den getrennten MangoLila-Finanzhinweis und Anbieterangaben
+  übereinstimmend. Verify #6 bleibt `◑`, weil die Zeile beide Repositories
+  umfasst und nur der StockInfo-Anteil hier geprüft ist.
+- Ticketpfad und Kette geprüft: `T-80-about-data-use-notice.md` liegt in
+  `30-doing/`, entspricht `priority_ticket` und ist einziges Element seiner
+  `priority_chain`. Umfangskontrolle nachgerechnet: 21 geänderte Dateien laut
+  `git diff --stat` gegen den Merge-Base, davon 11 Produkt- (inkl. der zwei
+  PNGs), 3 Testdateien sowie drei READMEs; 404 Zeilen Gesamtdiff, unter der
+  800-Zeilen-Schwelle. Keine API-, Datenbank- oder Lizenztextänderung.
+
+**Code-Standards (unabhängig vom Coder-Bericht geprüft, `code-standards`-
+SKILL.md und `references/frontend.md` sowie `ux-standards`/`references/
+responsive.md` gelesen):**
+
+- Architektur ✅ — About bleibt eine gewöhnliche Vue-Komponente in
+  vorhandener Struktur, keine neue Abstraktion.
+- Frontend/i18n ⚠️ **1 Befund** — `AboutPanel.vue:12–16` trägt Name, Straße
+  und Ort der Anbieteranschrift als literale Strings im `<script setup>`,
+  nicht im Katalog (`providerCountry` daneben geht korrekt über `t(...)`).
+  Verstößt gegen die absolute i18n-MUST-Regel aus `code-standards`, auch wenn
+  der Text in beiden Sprachen identisch ist. **Nicht blockierend:** kein
+  Sprachunterschied, kein Verhalten betroffen, geringes Pflegerisiko für eine
+  praktisch unveränderliche Firmenadresse (`AGENTS.md`
+  „Tatsächlicher Entwicklungsstand“ — Prüfgewicht folgt belegtem Schaden).
+  Erwartete Korrektur: die drei Felder als Katalogeinträge führen, sobald
+  ohnehin an der Datei gearbeitet wird.
+- Qualität ✅ — neue/erweiterte Tests in `SettingsPanel.spec.ts`,
+  `StatusBar.spec.ts` und `useHashTab.spec.ts` decken DOM-Position des
+  Statuszeilenlinks, das Fehlen einer `<address>` in der Statuszeile,
+  Theme-abhängigen Logo-Tausch, Sprachwechsel und Direktadresse konkret ab —
+  keine bloße Gesamtzahl.
+- Dokumentation ✅ — siehe Doku-Abgleich oben.
+- DRY-Prüfguard ⚠️ **1 Befund** — `MANGOLILA_URL` ist neu in
+  `dashboard/src/config.ts:18` entstanden, während `StatusBar.vue:69`
+  (in diesem Diff ohnehin angefasst, neuer Import in Zeile 5) weiterhin das
+  identische Literal `"https://www.mangolila.at/"` hartcodiert führt — eine
+  zweite Quelle für dieselbe URL statt der neuen gemeinsamen Konstante. Die
+  hartcodierte Stelle stammt aus `67af83a` (2026-08-16, T-12) und ist keine
+  Neuregression, aber die neue Konstante hätte sie ablösen sollen.
+  **Nicht blockierend:** beide Stellen stimmen heute überein, keine
+  Verhaltensdivergenz. Erwartete Korrektur: `StatusBar.vue` auf
+  `:origin-href="MANGOLILA_URL"` umstellen.
+- Shell, CLI, Python, Persistenz, Makefile ➖ — im Produktdiff nicht berührt.
+
+Lokale Lessons SI-CX-01, SI-R-02 und SI-T-66 vor dem Review gelesen (Autor
+Codex): kein Datenbank-Startzustand betroffen, keine hypothetische
+Migration/Ablösung verlangt, keine fremde Reviewwertung unbesehen
+übernommen — die beiden Befunde oben sind eigenständig gefunden.
+
+**Verbleibt sichtbar, verhindert die Freigabe nicht:** die zwei ⚠️-Befunde
+oben (i18n-Katalog für die Anbieteranschrift, `MANGOLILA_URL`-Konsolidierung)
+sowie die nicht px-genau nachvollzogene 390-px-Geometrie. Eine rechtliche
+Freigabe des öffentlichen Wortlauts wird durch diesen technischen Review
+nicht behauptet; T-79s persönliche Wiedervorlage bleibt unverändert offen.
+
+`T-80-about-data-use-notice.md` ist das einzige Element seiner
+`priority_chain`. Nach dem Portfolio-Riegel geht der Zustand deshalb auf
+`portfolio_review` an Mike statt automatisch an ein nächstes Ticket. Das
+Ticket bleibt bis zu Mikes Bestätigung in `30-doing/`.

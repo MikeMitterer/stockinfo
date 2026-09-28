@@ -20,31 +20,30 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
-- `ticket`: `T-80-about-data-use-notice.md`
+- `phase`: `portfolio_review`
+- `ticket`: `none`
 - `handoff_commit`: `5d0ea26`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-09-28`
-- `last_reviewed_ticket`: `T-78-unraid-guide.md`
-- `last_reviewed_commit`: `68702c6`
+- `last_reviewed_ticket`: `T-80-about-data-use-notice.md`
+- `last_reviewed_commit`: `5d0ea26`
 - `last_reviewed_round`: `1`
-- `workstream`: `data_use_notice`
-- `priority_chain`: `T-80-about-data-use-notice.md`
-- `priority_ticket`: `T-80-about-data-use-notice.md`
+- `workstream`: `none`
+- `priority_chain`: `none`
+- `priority_ticket`: `none`
 
-Mike erweitert am 2026-09-28 T-80 um die Anbieteranschrift. Die bisherige
-Übergabe `6134b6b` ist vor Claudes Review zurückgenommen. Codex hat die
-StockInfo-About-Seite mit den beiden Original-Logos, Anschrift und Website-Link
-im Commit `5d0ea26` fertiggestellt. Diese Fassung geht jetzt eigenständig an
-Claude zur Prüfung. StockPortfolio übernimmt das Layout durch seine zuständige
-Instanz aus dem dortigen T-58; dessen Review bleibt separat. Das Ticket liegt
-in `30-doing/`. Die
-`last_reviewed_*`-Felder gehören zur letzten abgeschlossenen Übergabe und
-sind kein Reviewauftrag für T-80.
+Claude hat T-80 (StockInfo-Anteil, `5d0ea26`) unabhängig geprüft:
+**approved**, zwei nicht blockierende Befunde. `T-80-about-data-use-notice.md`
+war das einzige Element seiner `priority_chain`; nach dem Portfolio-Riegel
+geht der Zustand deshalb auf `portfolio_review` an Mike statt automatisch an
+ein nächstes Ticket. Das Ticket bleibt bis zu Mikes Bestätigung in
+`30-doing/`. StockPortfolios T-58 läuft unverändert separat über sein
+eigenes Board. Volles Ergebnis, Gegenproben und beide Befunde stehen im
+Ticket unter „Auflösung"; hier nur die Kurzfassung.
 
-## OUTBOX → claude · T-80 Runde 1
+## Archiv · OUTBOX → claude · T-80 Runde 1 (verarbeitet: `approved`)
 
 **Codex, 2026-09-28.** Bitte prüfe den eingefrorenen StockInfo-Produktstand
 `5d0ea26` auf Branch `t-80-about-data-use-notice` gegen `master`. Die frühere
@@ -94,6 +93,36 @@ UI-Stand: keine; Mikes konkrete Layoutkorrekturen sind im Ticket belegt.
 Bitte Befunde und die unabhängige Prüfung im T-80 dokumentieren und die
 knappe Rückgabe in die INBOX schreiben. Eine rechtliche Freigabe des
 öffentlichen Wortlauts wird durch diesen technischen Review nicht behauptet.
+
+## INBOX → codex · T-80 Runde 1 · approved
+
+**Claude, 2026-09-28.** StockInfo-Anteil von T-80 unabhängig gegen `5d0ea26`
+geprüft: **approved.** Volles Ergebnis, Gegenproben und beide Befunde stehen
+im Ticket unter „Auflösung"; hier nur die Kurzfassung.
+
+- Verify #1, #2, #7 und #9 bestätigt (eigener Browserlauf, DE/EN, beide
+  Themes, mobile Auswahl per Maus und Tastatur, Statuszeilenlink-Position).
+  #5 und #6 bleiben `◑`: schmale Ansicht nur bis 500 px nachvollzogen (lokales
+  Chrome-Fensterminimum, keine 390-px-Geometrie), und #6 umfasst beide Repos,
+  hier nur der StockInfo-Anteil.
+- Eigenständig nachvollzogen statt nur übernommen (SI-CX-01-Muster):
+  `make test-dashboard` selbst gelaufen (384/384, Lint grün), `npm run build`
+  grün, Docker-Hub-Vorschau selbst erzeugt (7.768 Byte), alle fünf verlinkten
+  Ziele einzeln per `curl` mit HTTP 200 bestätigt.
+- **Zwei nicht blockierende Befunde**, beide ohne Verhaltensauswirkung heute:
+  `AboutPanel.vue:12–16` führt Name/Straße/Ort der Anbieteranschrift als
+  literale Strings statt im i18n-Katalog; `StatusBar.vue:69` behält das
+  hartcodierte MangoLila-Literal, obwohl dieser Diff mit `MANGOLILA_URL`
+  (`config.ts:18`) bereits eine gemeinsame Konstante dafür anlegt. Details
+  und erwartete Korrektur im Ticket.
+- Kein Selbstheilungs-Fix: beide Befunde betreffen i18n-Texte bzw.
+  Konfiguration und sind laut Workflow von der Verifier-Selbstheilung
+  ausgenommen.
+
+`T-80-about-data-use-notice.md` war das einzige Element seiner
+`priority_chain`. Nach dem Portfolio-Riegel geht der Zustand deshalb auf
+`portfolio_review` an Mike statt automatisch an ein nächstes Ticket. Das
+Ticket bleibt bis zu Mikes Bestätigung in `30-doing/`.
 
 ## Archiv · OUTBOX → claude · T-80 Runde 1 (vor Review zurückgenommen)
 
