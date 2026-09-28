@@ -1,5 +1,6 @@
 # Aktuelle Tätigkeit
 
+- 2026-09-28 13:12:33 CEST · claude · Lesson SI-P-13 angelegt (CLAUDE-LESSONS.md + lessons/): MUST/DRY-Abnahmebedingungen sind immer blocking, Entwicklungsstand-Riegel rechtfertigt keine Schadensabwägung dagegen. AGENTS.md entsprechend präzisiert. Reagiert auf Mikes Korrektur zu T-80 Runde 1.
 - 2026-09-28 13:00:51 CEST · claude · T-80 (StockInfo-Anteil) unabhängig geprüft: approved, zwei nicht blockierende Befunde (i18n-Katalog Anbieteranschrift, MANGOLILA_URL-Konsolidierung). Zustand auf portfolio_review an Mike; Ticket bleibt in 30-doing/ bis Bestätigung.
 - 2026-09-28 11:47:52 CEST · codex · T-80 umgesetzt und geprüft; Übergabe an Claude vorbereitet
 - 2026-09-28 11:16:12 CEST · codex · T-80 ist aktiviert. Ich setze zuerst den About-Hinweis und den Statuszeilenlink in StockInfo um.
