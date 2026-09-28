@@ -31,13 +31,14 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `last_reviewed_commit`: `68702c6`
 - `last_reviewed_round`: `1`
 - `workstream`: `none`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `priority_chain`: `T-80-about-data-use-notice.md`
+- `priority_ticket`: `T-80-about-data-use-notice.md`
 
-`none` in den Ticketfeldern heißt: **Die Kette ist durch, es ist keine Arbeit
-eingeplant.** Kein Agent leitet daraus einen Auftrag ab; die nächste Kette
-setzt Mike. `handoff_commit` und die `last_reviewed_*`-Felder gehören zur
-letzten abgeschlossenen Übergabe und sind kein offener Auftrag.
+Mike beauftragt am 2026-09-28 die Umsetzung von T-80. Das Ticket liegt in
+`20-ready/` und ist als nächstes Kettenglied eingeplant. Vor dem ersten
+Produktedit wechselt es mit dem Arbeitszustand nach `30-doing/`.
+`handoff_commit` und die `last_reviewed_*`-Felder gehören noch zur letzten
+abgeschlossenen Übergabe und sind kein Reviewauftrag für T-80.
 
 ## Abschluss T-79 · Mike, 2026-09-27
 
