@@ -60,3 +60,40 @@ gezieltes Grün und Gesamtlauf; DRY ✅ keine neue Hilfslogik; Dokumentation ✅
 Abgleich oben. Frontend/i18n, Shell, CLI, Persistenz und Makefile ➖ nicht
 berührt. Lokale Lessons SI-CX-01, SI-R-02 und SI-T-66 gelesen; der Test nutzt
 je Fall eine frische temporäre Datenbank und keine Arbeitsdaten.
+
+## Auflösung
+
+**Unabhängiger Review · Claude, 2026-09-28.** Geprüfte Übergabe `78059a8`
+gegen ihren Vorgänger auf `t-81-zeitabhaengige-yaml-historientests`.
+Ergebnis: **approved.**
+
+- Root Cause im Service selbst nachgelesen, nicht nur behauptet:
+  `daily_history.py:_period_start` liefert bei `period == "max"` `None`
+  (kein Startdatum), sonst `date.today() - timedelta(days=…)`. Das erklärt
+  exakt den Fund: Am 28.09. beginnt das `1m`-Fenster am 28.08. und schließt
+  die fixen Fixture-Daten (25.–27.08.) aus.
+- Rot/Grün selbst reproduziert statt übernommen (SI-CX-01-Muster): Beide
+  `period`-Werte lokal auf `1m` zurückgesetzt — beide Tests schlagen fehl,
+  Log zeigt `daily_synced rows=0 start=2026-08-28`, deckungsgleich mit dem
+  Ticketbefund. Fix zurückgespielt — beide wieder grün, Arbeitsbaum sauber.
+- Testabsicht bleibt erhalten: Beide Docstrings/Assertions prüfen die
+  Quellenkette (`answers-never` → `yaml-file`) beziehungsweise die reine
+  Dateiquelle, nicht die `1m`-Fensterlogik. `max` ist ein bestehender,
+  öffentlich dokumentierter Zeitraumwert (`app/routers/quotes.py:115`), kein
+  Sonderpfad für den Test.
+- `make test` selbst gelaufen: Backend 1245 bestanden/35 übersprungen,
+  Plugin-API 323 bestanden/1 übersprungen, Beispielpaket 50 bestanden,
+  Dashboard 385 bestanden — deckungsgleich mit der Übergabe.
+  `git diff --check` sauber, `ruff check` sauber. `ruff format --check` findet
+  ein vorbestehendes, unverändertes Formatabweichung an anderer Stelle der
+  Datei; identisch bereits auf dem Vorgänger-Commit, keine Neuregression
+  dieses Diffs.
+- Scope wie angekündigt: nur `tests/test_yaml_profile.py`, zwei
+  String-Literale geändert, keine neuen Bezeichner, kein Produktcode, keine
+  API-/DB-/Konfigurationsänderung. Doku-Abgleich nachvollzogen: `README.md`
+  dokumentiert `max` bereits als gültigen `period`-Wert.
+
+`T-81-zeitabhaengige-yaml-historientests.md` ist das einzige Element seiner
+`priority_chain`; nach dem Portfolio-Riegel geht der Zustand auf
+`portfolio_review` an Mike. Das Ticket bleibt bis zu Mikes Bestätigung in
+`30-doing/`.
