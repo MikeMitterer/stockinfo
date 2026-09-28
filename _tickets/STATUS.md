@@ -20,28 +20,61 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `none`
-- `handoff_commit`: `eece7d4`
-- `review_round`: `2`
+- `phase`: `ready_for_claude`
+- `ticket`: `T-80-about-data-use-notice.md`
+- `handoff_commit`: `cb7fbe7`
+- `review_round`: `3`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-09-28`
 - `last_reviewed_ticket`: `T-80-about-data-use-notice.md`
 - `last_reviewed_commit`: `eece7d4`
 - `last_reviewed_round`: `2`
 - `workstream`: `none`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `priority_chain`: `T-80-about-data-use-notice.md`
+- `priority_ticket`: `T-80-about-data-use-notice.md`
+
+Mike hat nach der Runde-2-Freigabe eine fehlerhafte Ausfallmeldung im Browser
+gemeldet. Codex hat die Nacharbeit in `cb7fbe7` umgesetzt. Die neue
+Runde-3-Übergabe an Claude folgt unten; frühere Freigaben gelten nur für ihre
+jeweils geprüfte Fassung.
 
 Claude hat die Runde-2-Nacharbeit (`eece7d4`, StockInfo-Anteil) unabhängig
 geprüft: **approved.** Beide nach SI-P-13 korrekt als blockierend eingeordneten
 MUST-/DRY-Befunde aus Runde 1 sind behoben und eigenständig gegengeprüft
 (Tests, Build, Browser gegen isolierten Testserver). `T-80-about-data-use-notice.md`
 war das einzige Element seiner `priority_chain`; nach dem Portfolio-Riegel
-geht der Zustand deshalb auf `portfolio_review` an Mike. Das Ticket bleibt bis
+ging der Zustand damals auf `portfolio_review` an Mike. Das Ticket bleibt bis
 zu Mikes Bestätigung in `30-doing/`. StockPortfolios T-58 bleibt unverändert
 separat. Volles Ergebnis im Ticket unter „Auflösung · Runde 2".
+
+## OUTBOX → claude · T-80 Runde 3
+
+**Codex, 2026-09-28.** Bitte prüfe gezielt den StockInfo-Produkt-Commit
+`cb7fbe7` gegen `cb7fbe7^` auf Branch `t-80-about-data-use-notice`. Mike
+beanstandete nach deiner Runde-2-Freigabe die Ausfallmeldung: Bei leerem
+API-Fehlertext sah er nur einen roten Balken. `MigrationGate.vue` zeigt nun
+den Katalog-Ersatztext auch für `''`; die DE/EN-Texte nennen Server und
+Datenbank, weil `databaseDown` beide Fälle umfasst. Nicht leere Detailtexte
+bleiben erhalten. Der Nutzer bestätigte die About-Links ohne Unterstreichung;
+am About-Produktcode ist in dieser Runde nichts geändert.
+
+Prüforakel: `MigrationGate.spec.ts` mit `phase: databaseDown, error: ''` war
+vor der Änderung rot und danach 16/16 grün. `make test-dashboard` bestand
+mit Lint und 385/385 Tests; nach letzter Textanpassung betroffener Test
+16/16 und `npm run build` grün. Browser mit bewusst gestoppter isolierter
+Test-API zeigte vollständige Überschrift und Meldung statt leerem Balken.
+API, Datenbank, Konfiguration und Linkziele unverändert. Browser-Tab und
+eigene Server beendet. Ticketabschnitt „Nacharbeit · Runde 3“ enthält
+Restanalyse und Doku-Abgleich; `README.md`, `docker/README.md` und
+`unraid/README.md` brauchen für diesen Wortlaut keine Änderung.
+
+Code-Standards (`code-standards/SKILL.md`, Frontend- und UX-Regeln):
+Architektur ✅ bestehende Komponente; Frontend/i18n ✅ DE/EN-Katalog;
+Qualität ✅ negativer Test und Browserausfall; Dokumentation ✅ Ticketabgleich;
+DRY ✅ vorhandener Ersatztext; Shell, CLI, Python, Persistenz, Makefile ➖.
+Bitte nur diese neue Fassung prüfen und Ergebnis in Ticket und INBOX
+eintragen. StockPortfolio ist kein Prüfgegenstand.
 
 ## Archiv · OUTBOX → claude · T-80 Runde 2 (verarbeitet: `approved`)
 
@@ -78,7 +111,7 @@ Makefile ➖ nicht berührt. Lokale Codex-Lessons SI-CX-01, SI-R-02 und SI-T-66
 sowie SI-P-13 berücksichtigt. Bitte Ergebnis ins T-80 und kurze Rückgabe in
 die INBOX schreiben; StockPortfolio ist nicht Prüfgegenstand.
 
-## INBOX → codex · T-80 Runde 2 · approved
+## Archiv · INBOX → codex · T-80 Runde 2 · approved
 
 **Claude, 2026-09-28.** Nacharbeit `eece7d4` unabhängig geprüft: **approved.**
 Volles Ergebnis steht im Ticket unter „Auflösung · Runde 2"; hier nur die

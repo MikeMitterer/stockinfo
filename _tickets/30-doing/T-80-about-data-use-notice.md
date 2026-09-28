@@ -11,19 +11,27 @@ verbindlicher Handelskurs. Eine Entscheidung sollte anhand der maßgeblichen
 Quelle geprüft werden. Die Oberfläche erklärt das in der gewählten Sprache;
 ein Link in der Statuszeile führt direkt zur Erklärung.
 
-**Stand:** Beide Oberflächen sind in den Ticket-Branches umgesetzt und vom
-Coder geprüft; Claudes unabhängige Prüfung steht aus. StockPortfolio hat
+**Nachtrag · 2026-09-28:** Mike hat nach Claudes Freigabe der Runde 2 die
+Erkennbarkeit der About-Links im dunklen Theme prüfen lassen. Im MangoLila-Theme
+hebt sie die orange Akzentfarbe bei 4,55:1 Kontrast von der Kartenfläche ab;
+Mike hat die Darstellung ohne Unterstreichung bestätigt. Dabei fiel eine
+weitere Browsermeldung auf: Bei einer leeren API-Fehlerantwort zeigt der
+Startbildschirm einen roten Hinweis ohne Text. Codex korrigiert diesen Befund
+und übergibt die neue Fassung erneut; die frühere Freigabe bleibt auf
+`eece7d4` begrenzt.
+
+**Stand:** StockInfos About-Ansicht wurde in Runde 2 von Claude freigegeben.
+Ein danach im Browser gefundener Fehler der Ausfallmeldung wird in Runde 3
+gezielt nachgeprüft. StockPortfolio hat
 weiterhin `legal.html` und den Statuszeilenlink
 „Lizenz & Quellcode“. Beide Projekte enthalten `LICENSE`, `LICENSE.de.txt`
 und `LICENSING.md`. StockInfos EUPL-Ticket T-79 nennt eine persönliche
 Wiedervorlage zur rechtlichen Prüfung; sie ist hier nicht als erledigt erklärt.
 
-**Nächster Schritt:** Die StockInfo-About-Seite ist mit Mikes zwei
-Original-Logos für helle und dunkle Themes im Browser geprüft und wird Claude
-zur unabhängigen Prüfung übergeben. Die zuständige StockPortfolio-Instanz
-übernimmt das Layout anhand ihres lokalen T-58 und organisiert dort die eigene
-Prüfung. Die rechtliche Prüfung des endgültigen Wortlauts bleibt als
-gesonderte menschliche Wiedervorlage sichtbar.
+**Nächster Schritt:** Claude prüft die neue StockInfo-Ausfallmeldung. Die
+zuständige StockPortfolio-Instanz bearbeitet ihr lokales T-58 separat. Die
+rechtliche Prüfung des endgültigen Wortlauts bleibt als gesonderte menschliche
+Wiedervorlage sichtbar.
 
 ## Umfang
 
@@ -309,3 +317,46 @@ bleibt das einzige Element seiner `priority_chain`; nach dem Portfolio-Riegel
 geht der Zustand auf `portfolio_review` an Mike. Das Ticket bleibt bis zu
 Mikes Bestätigung in `30-doing/`. StockPortfolios T-58 ist weiterhin nicht
 Teil dieser Prüfung.
+
+## Nacharbeit · Runde 3 · Ausfallmeldung
+
+**Coder, 2026-09-28.** Mike beanstandete nach der Runde-2-Freigabe die
+Ausfallmeldung im Browser. Der Vite-Proxy lieferte bei nicht laufender API
+einen Fehler mit leerem Detailtext. `MigrationGate.vue` verwendete bei `''`
+keinen Ersatztext; im Browser blieb nur ein roter Balken mit Fehlerzeichen.
+Produkt-Commit `cb7fbe7` zeigt bei leerem Text den i18n-Hinweis. Titel und
+Hinweis in DE/EN beschreiben sowohl einen Server- als auch einen
+Datenbankausfall zutreffend. Vorhandene nicht leere Fehlertexte bleiben erhalten.
+Die About-Links wurden im dunklen MangoLila-Theme mit 4,55:1 gegen die
+Kartenfläche geprüft; Mike bestätigte die Darstellung ohne Unterstreichung.
+An `AboutPanel.vue` wurde nichts geändert.
+
+**Nachweise:** Der neue Komponententest war vor dem Fix rot und danach grün
+(16/16 Tests in `MigrationGate.spec.ts`). `make test-dashboard` bestand mit
+Lint und 385/385 Tests; nach der abschließenden Formulierung bestanden der
+betroffene Test (16/16) und `npm run build` erneut. Browserprobe mit
+gestoppter isolierter Test-API: Überschrift und vollständiger Satz sind
+sichtbar, statt des leeren Balkens. Die Test-API nutzte eine temporäre
+Datenbank. Browser-Tab und beide eigens gestarteten Testserver sind beendet.
+`git diff --check` ist sauber.
+
+**Doku-Abgleich:** `README.md` (Dashboard), `docker/README.md`
+(Troubleshooting und About) und `unraid/README.md` (About) wurden geprüft.
+Die Anleitungen beschreiben weder den Wortlaut dieser Fehlermeldung noch eine
+abweichende Bedienhandlung; daher ist dort keine Textänderung nötig. API,
+Datenbank, Konfiguration, Lizenz und About-Linkziele sind unverändert.
+
+**Code-Standards:** `code-standards/SKILL.md`, Frontend- und UX-Regeln
+berücksichtigt. Architektur ✅ bestehende Ausfallkomponente; Frontend/i18n ✅
+beide sichtbaren Sprachen im Katalog; Qualität ✅ negativer Test und echter
+Browser-Ausfall; Dokumentation ✅ Abgleich oben; DRY ✅ vorhandener
+Katalog-Ersatztext statt zweiter Meldung. Shell, CLI, Python, Persistenz und
+Makefile ➖ nicht berührt. Lokale Lessons SI-CX-01 und SI-P-13 berücksichtigt.
+
+**Restanalyse vor Runde 3:** Im StockInfo-Produktdiff ist kein bekannter
+offener technischer Befund verblieben. Runde 3 entsteht durch Mikes neuen
+Browserbefund nach der bereits abgeschlossenen Runde 2, nicht durch einen
+offenen Punkt aus Claudes Review. Der Verifier prüft zuerst den
+Ausfall-Nutzerweg und den nicht leeren Fehlertext, danach den engen Diff und
+die Dokumentationszuordnung. StockPortfolios T-58 und Mikes rechtliche
+Wiedervorlage liegen außerhalb dieser Produktnachprüfung.
