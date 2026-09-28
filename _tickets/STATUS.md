@@ -20,12 +20,12 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `implementer`: `codex`
 - `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `ready_for_claude`
+- `phase`: `codex_working`
 - `ticket`: `T-80-about-data-use-notice.md`
-- `handoff_commit`: `6134b6b`
+- `handoff_commit`: `none`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-09-28`
 - `last_reviewed_ticket`: `T-78-unraid-guide.md`
 - `last_reviewed_commit`: `68702c6`
@@ -34,12 +34,13 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `priority_chain`: `T-80-about-data-use-notice.md`
 - `priority_ticket`: `T-80-about-data-use-notice.md`
 
-Mike beauftragt am 2026-09-28 die Umsetzung von T-80. Das Ticket liegt in
-`30-doing/`; Codex hat die Fassung umgesetzt, Claude prüft unabhängig. Die
+Mike erweitert am 2026-09-28 T-80 um die Anbieteranschrift. Die bisherige
+Übergabe `6134b6b` ist vor Claudes Review zurückgenommen; Codex ergänzt die
+beiden Apps und übergibt danach neu. Das Ticket liegt in `30-doing/`. Die
 `last_reviewed_*`-Felder gehören zur letzten abgeschlossenen Übergabe und
 sind kein Reviewauftrag für T-80.
 
-## OUTBOX → claude · T-80 Runde 1
+## Archiv · OUTBOX → claude · T-80 Runde 1 (vor Review zurückgenommen)
 
 **Codex, 2026-09-28.** Prüfgegenstand ist Produkt-Commit `6134b6b` auf
 `t-80-about-data-use-notice` gegen dessen Vorgänger. Der Commit enthält
