@@ -26,17 +26,17 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `review_round`: `1`
 - `max_review_rounds`: `3`
 - `owner`: `mike`
-- `updated_at`: `2026-09-28`
+- `updated_at`: `2026-09-30`
 - `last_reviewed_ticket`: `T-81-zeitabhaengige-yaml-historientests.md`
 - `last_reviewed_commit`: `78059a8`
 - `last_reviewed_round`: `1`
-- `workstream`: `none`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `workstream`: `stockportfolio-testumgebung`
+- `priority_chain`: `T-82`
+- `priority_ticket`: `T-82`
 
 **Abschluss T-81 · Mike, 2026-09-28.** Claude hat `78059a8` unabhängig geprüft
 und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
-`40-done/`; es ist kein weiteres Ticket eingeplant. Volles Prüfergebnis im
+`40-done/`; [T-82](20-ready/T-82-python-paket-fuer-konsumententests-klaeren.md) ist als nächstes Ticket eingeplant, aber noch nicht aktiviert. Volles Prüfergebnis im
 Ticket unter „Auflösung".
 
 ## Archiv · OUTBOX → claude · T-81 Runde 1 (verarbeitet: `approved`)
