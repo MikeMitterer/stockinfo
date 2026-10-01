@@ -23,23 +23,32 @@ schaltet den Branch. Regel:
 
 ## Maschinenlesbarer Zustand
 
-- `implementer`: `claude`
-- `reviewer`: `codex`
+- `implementer`: `codex`
+- `reviewer`: `claude`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `T-86-container-start-rechte-absichern.md`
+- `phase`: `codex_working`
+- `ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
 - `branch`: `master`
-- `handoff_commit`: `d495030`
-- `review_round`: `3`
+- `handoff_commit`: ``
+- `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-86-container-start-rechte-absichern.md`
 - `last_reviewed_commit`: `d495030`
 - `last_reviewed_round`: `3`
-- `workstream`: `container-start-rechte`
-- `priority_chain`: `T-82 → T-86`
-- `priority_ticket`: `T-86`
+- `workstream`: `internetbetrieb-hinweise`
+- `priority_chain`: `T-84`
+- `priority_ticket`: `T-84`
+
+**Rollenwechsel und Aktivierung T-84 · Mike, 2026-10-01.** Mike: „T-84 ist
+noch zu erledigen“; Rollen „Wie im Ticket“: Coder `codex`, Verifier
+`claude`. [T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md) ist
+aktiv. Der Root steht auf `master`; Codex legt als Owner den Ticketbranch an,
+bringt seinen vorbereiteten Stand (`396e8be` auf
+`docs/internet-zugriff-hinweis`) auf das aktuelle `master`, setzt `branch`
+und übergibt mit OUTBOX. Der StockInfo-Teil der Unraid-Vorlage (`ca7ae2d`,
+eigenes Repository) gehört zum Prüfgegenstand.
 
 **Aktivierung T-82 · Mike, 2026-10-01.** Mike: „T-83 ist erledigt, push es
 und starte T-82“. [T-82](40-done/T-82-python-paket-fuer-konsumententests-klaeren.md)
