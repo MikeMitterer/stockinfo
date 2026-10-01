@@ -14,8 +14,9 @@ die Kurstabelle leer; im Browser stehen 401-Antworten oder CORS-Fehler.
 
 **Stand:** Gemeldet aus StockPortfolio am 2026-10-01 (Mikes Auftrag).
 Mike hat T-87 am selben Tag aktiviert („T-87 wird damit aktiv“). Coder
-`claude`, Verifier `codex`; maßgeblich ist `STATUS.md`. Für Mike ist
-aktuell kein Handgriff nötig.
+`claude`, Verifier `codex`; maßgeblich ist `STATUS.md`. Codex hat Runde 1
+technisch freigegeben, Mike hat es abgenommen („T-87 ist abgenommen“).
+Das Ticket ist erledigt und lokal nach `master` gemergt; kein Push.
 
 ## Scope-Vertrag (Claude, 2026-10-01)
 
@@ -100,11 +101,13 @@ Konsumentensicht:
 
 ### Akzeptanzkriterien
 
-- [ ] Die StockInfo-Anleitungen und die Vorlage empfehlen keinen Zugriffsweg,
+- [x] Die StockInfo-Anleitungen und die Vorlage empfehlen keinen Zugriffsweg,
       der StockPortfolio ohne Hinweis ausschließt.
-- [ ] Der Betrieb zusammen mit StockPortfolio hat einen beschriebenen,
+- [x] Der Betrieb zusammen mit StockPortfolio hat einen beschriebenen,
       geprüften Weg für den Zugriff von außen, oder die Grenze ist klar benannt.
-- [ ] Der Doku-Abgleich nennt README, Docker-README, Unraid-Anleitung und
+      (Nach Mikes Vorgabe: Heimnetz und VPN; beide funktionieren auch für
+      StockPortfolio, weil dort keine Anmeldung vor StockInfo liegt.)
+- [x] Der Doku-Abgleich nennt README, Docker-README, Unraid-Anleitung und
       `templates/stockinfo.xml`.
 
 ### Side-Effects
@@ -134,6 +137,17 @@ Der Zwischencommit `b93ff36` (Sonderhinweis für StockPortfolio) ist durch
 | 5 | `xmllint --noout` und Docker-Hub-Vorschau | XML gültig; Vorschau unter 25.000 Bytes (Coder: 8.763) | ➖ |
 
 Kein Merge im Vorlagen-Repo, kein Push, kein Docker-Hub- oder Unraid-Update.
+Die Spalte AI blieb bei der Übergabe offen; das Urteil steht unten in der
+Verifier-Prüfung (#1–#5 ✅).
+
+### Auflösung
+
+Codex hat Runde 1 technisch freigegeben. Claude hat den Ticketbranch am
+2026-10-01 lokal nach `master` gemergt; kein Push, kein Docker-Hub- oder
+Unraid-Update. Der Vorlagenbranch `docs/internet-zugriff-hinweis` (jetzt
+mit `a2d80a6`) ist nicht gemergt; Merge und Push folgen nach Mikes
+Abnahme von T-84. Mike hat T-87 am 2026-10-01 abgenommen; das Ticket
+liegt in `40-done/`.
 
 ## Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
 

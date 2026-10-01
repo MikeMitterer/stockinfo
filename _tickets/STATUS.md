@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-87-login-proxy-sperrt-stockportfolio-aus.md`
-- `branch`: `t-87-login-proxy-stockportfolio`
+- `branch`: `master`
 - `handoff_commit`: `7b46d6b`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-87-login-proxy-sperrt-stockportfolio-aus.md`
 - `last_reviewed_commit`: `7b46d6b`
@@ -42,12 +42,12 @@ schaltet den Branch. Regel:
 - `priority_ticket`: `T-87`
 
 **Aktivierung T-87 · Mike, 2026-10-01.** Mike: „T-87 wird damit aktiv“.
-[T-87](30-doing/T-87-login-proxy-sperrt-stockportfolio-aus.md) ist aktiv
+[T-87](40-done/T-87-login-proxy-sperrt-stockportfolio-aus.md) ist aktiv
 auf `t-87-login-proxy-stockportfolio` (von `master`), Coder `claude`,
 Verifier `codex` wie bisher. T-84 bleibt bis zu Mikes Abnahme in
 `30-doing/`; die Punkte dazu stehen unten unter „An Mike“.
 
-## INBOX → claude · T-87 Runde 1 · approved
+## Archiv · INBOX → claude · T-87 Runde 1 · approved (verarbeitet)
 
 **Codex, 2026-10-01.** StockInfo `7b46d6b` gegen `1cbc39e` und nur
 `templates/stockinfo.xml` aus dem Vorlagen-Commit `a2d80a6` gegen
@@ -57,7 +57,7 @@ Login-Proxys; native Loopback-Bindung und Docker-Hostport bleiben richtig
 getrennt. XML-Syntax, beide `git diff --check` und Docker-Hub-Vorschau
 (8.763 UTF-8-Bytes) bestanden. Der volle Befund, Standards und
 Doku-Abgleich stehen in
-[T-87](30-doing/T-87-login-proxy-sperrt-stockportfolio-aus.md#verifier-prüfung--runde-1-codex-2026-10-01).
+[T-87](40-done/T-87-login-proxy-sperrt-stockportfolio-aus.md#verifier-prüfung--runde-1-codex-2026-10-01).
 
 Bitte die technische Freigabe als Coder verarbeiten. Kein Produktcode,
 keine Vorlage, kein Push und keine Veröffentlichung wurden im Review
@@ -140,23 +140,31 @@ Bitte die Arbeitskopie auf `master` zurückstellen, nach der Integration den
 Worktree entfernen und die erledigten Branches aufräumen. StockPortfolio
 ändert im Templates-Repo nichts.
 
-## An Mike · T-84 technisch freigegeben, auf `master` zur Abnahme
+## Abschluss T-87 · Mike, 2026-10-01
 
-**Claude, 2026-10-01.** Codex hat T-84 in Runde 2 freigegeben (`8b89864`,
-Vorlagentext `fdeb4fd`). Der Ticketbranch ist lokal nach `master`
-gemergt (`1cbc39e`). Kein Push. Der Root steht inzwischen auf dem
-T-87-Branch; T-84 liest du dort oder mit `git show master:<datei>`.
-Für dich offen:
+Mike: „T-87 ist abgenommen“. Codex hatte Runde 1 (`7b46d6b`) technisch
+freigegeben. [T-87](40-done/T-87-login-proxy-sperrt-stockportfolio-aus.md)
+liegt in `40-done/` und ist lokal nach `master` gemergt; kein Push.
 
-1. **Abnahme T-84:** Die Warnung zum Internetzugriff in `README.md`
-   (Abschnitt „Security model“), `docker/README.md` (unter dem
-   GitHub-Link) und `unraid/README.md` lesen. Das Ticket bleibt bis zu
+## An Mike · T-84 auf `master` zur Abnahme
+
+**Claude, 2026-10-01.** Codex hat T-84 in Runde 2 freigegeben
+(`8b89864`). Der Ticketbranch ist lokal nach `master` gemergt, der Root
+steht auf `master`. Kein Push. Den Wortlaut aus T-84 hat T-87 ersetzt:
+Die Texte sagen jetzt nur noch „nicht ins Internet, Heimnetz, von außen
+per VPN (WireGuard oder Tailscale)“. Für dich offen:
+
+1. **Abnahme T-84:** Mit der T-87-Abnahme sind die Texte bereits
+   bestätigt. Übrig bleibt der Rest von T-84, also die berichtigte
+   Routenliste im „Security model“ von `README.md`. T-84 bleibt bis zu
    deiner Bestätigung in `30-doing/`.
-2. **Unraid-Vorlage:** `fdeb4fd` liegt im Vorlagen-Repo weiter nur auf
-   `docs/internet-zugriff-hinweis` und ist nicht gemergt. Der Branch
-   enthält auch `stockportfolio.xml`; dessen Prüfung gehört zu
-   StockPortfolio T-67.
-3. **Veröffentlichung:** Push, Docker-Hub-Beschreibung (`make push`) und
+2. **Unraid-Vorlage:** `docs/internet-zugriff-hinweis` im Vorlagen-Repo
+   (`fdeb4fd`, dazu `a2d80a6` aus T-87) ist nicht gemergt. Der
+   StockPortfolio-Teil ist laut StockPortfolio T-67 freigegeben. Merge,
+   Push und Entfernen des Worktrees folgen nach deiner Abnahme.
+3. **Branch `fix/stockportfolio-template-links`** im Vorlagen-Repo
+   (`72fc39a`) ist nicht in `master` enthalten. Behalten oder löschen?
+4. **Veröffentlichung:** Push, Docker-Hub-Beschreibung (`make push`) und
    Unraid-Listing sind eigene Schritte und brauchen deinen Auftrag.
 
 ## Archiv · INBOX → claude · T-84 Runde 2 · technisch approved (verarbeitet)
