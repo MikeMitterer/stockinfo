@@ -46,7 +46,7 @@ Codex das abgenommen hat ist es auch für mich OK und das Ticket ist
 erledigt. Fange dann gleich mit T-83 an“. Codex hat T-85 mit `4bcad36`
 freigegeben. [T-85](40-done/T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md)
 liegt in `40-done/` und ist lokal nach `master` gemergt; kein Push.
-[T-83](30-doing/T-83-assets-datenhinweis.md) ist wieder aktiv, jetzt mit
+[T-83](40-done/T-83-assets-datenhinweis.md) ist wieder aktiv, jetzt mit
 Claude als Coder und Codex als Verifier. Der Branch `t-83-assets-datenhinweis`
 wird auf den neuen `master` vorgespult. [T-82](20-ready/T-82-python-paket-fuer-konsumententests-klaeren.md)
 bleibt bereit und folgt in der Prioritätskette. Die rechtliche Freigabe des
@@ -57,7 +57,13 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## An Mike · T-83 technisch freigegeben, auf `master` zur Abnahme
+## Abschluss T-83 · Mike, 2026-10-01
+
+Mike: „T-83 ist erledigt, push es und starte T-82“.
+[T-83](40-done/T-83-assets-datenhinweis.md) liegt mit Prüfskript in
+`40-done/`; `master` ist gepusht.
+
+## Archiv · An Mike · T-83 technisch freigegeben, auf `master` zur Abnahme (erledigt)
 
 **Claude, 2026-10-01.** Codex hat T-83 in Runde 2 freigegeben (`2690819`).
 Der Ticketbranch ist lokal nach `master` gemergt, der Root steht auf
@@ -83,7 +89,7 @@ isolierter API und Browser bestätigt: genau ein Hinweis direkt **unter**
 `.table.card`, nicht in der Karte, bündig, ohne Überbreite. DE → EN → DE,
 389 Dashboard-Tests, Lint, Build und der Browser-Smoke nach Selbstheilung
 bestanden. Standards, DRY, Doku-Abgleich und vollständige Belege stehen in
-[T-83](30-doing/T-83-assets-datenhinweis.md#verifier-prüfung--runde-2-codex-2026-10-01).
+[T-83](40-done/T-83-assets-datenhinweis.md#verifier-prüfung--runde-2-codex-2026-10-01).
 
 Verify #4 bleibt ◑: Der technische Abgleich mit About und `LICENSING.md`
 fand keinen Widerspruch; die rechtliche Freigabe des endgültigen öffentlichen
@@ -109,7 +115,7 @@ DE → EN → DE sowie 389 Dashboard-Tests, Lint, Build und Docker-Hub-Vorschau.
 Der verhaltensneutrale Review-Commit `606aa16` dokumentiert die beiden
 Funktionen des Skripts; dieser Stand ist im Ticket geprüft. Voller Befund,
 Standards und Doku-Abgleich:
-[T-83](30-doing/T-83-assets-datenhinweis.md#verifier-prüfung--runde-1-codex-2026-10-01).
+[T-83](40-done/T-83-assets-datenhinweis.md#verifier-prüfung--runde-1-codex-2026-10-01).
 Die rechtliche Freigabe des Wortlauts bleibt bei Mike. T-82 bleibt bereit,
 bis T-83 technisch freigegeben ist.
 

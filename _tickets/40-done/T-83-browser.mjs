@@ -9,8 +9,8 @@
 // (Startweg im Ticket T-83 unter „Belege“) und playwright-core aus dashboard/.
 //
 // Verwendung:
-//   node _tickets/30-doing/T-83-browser.mjs --run [URL]
-//   node _tickets/30-doing/T-83-browser.mjs --help
+//   node _tickets/40-done/T-83-browser.mjs --run [URL]
+//   node _tickets/40-done/T-83-browser.mjs --help
 //
 // Optionen:
 //   -r | --run [URL]   Messung starten (Standard-URL: http://localhost:15183/#assets)

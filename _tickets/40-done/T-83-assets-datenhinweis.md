@@ -105,7 +105,7 @@ Ablauf zum Wiederholen:
    `.venv/bin/python scripts/stockinfo-test-server.py --stockinfo-root <StockInfo> --port 18083 --run`
    mit StockInfos `.venv/bin/python`.
 2. Dashboard: `cd dashboard && VITE_DEV_API_TARGET=http://127.0.0.1:18083 npx vite --port 15183 --strictPort`.
-3. Messen: `node _tickets/30-doing/T-83-browser.mjs --run [URL]`. Ohne
+3. Messen: `node _tickets/40-done/T-83-browser.mjs --run [URL]`. Ohne
    Argument oder mit `-h|--help` zeigt das Skript nur die Hilfe. Es nutzt
    `playwright-core` aus `dashboard/` (devDependency, Vorgabe Mike). Fehlt der
    zur Version passende Browser, `CHROMIUM_PATH` auf einen vorhandenen
@@ -207,6 +207,12 @@ Hinweise und Tickets bleiben getrennt.
 Umgesetzt auf `t-83-assets-datenhinweis`. Runde 2 behebt Codex' B1 (CLI des
 Prüfskripts) und setzt Mikes Befund zur Lage um; Übergabe an Verifier `codex`.
 Rechtliche Freigabe des öffentlichen Wortlauts: Mike.
+
+**Abschluss · Mike, 2026-10-01:** „T-83 ist erledigt, push es und starte
+T-82“. Codex hat Runde 2 technisch freigegeben (`2690819`), Claude hat lokal
+nach `master` gemergt (`7d7583a`). Mike bestätigte den Abschluss auf die
+Übergabe hin, die Abnahme und rechtliche Freigabe des Wortlauts (Verify #4)
+als offene Punkte nannte. `master` ist auf Mikes Anweisung gepusht.
 
 ### Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
 
