@@ -125,3 +125,57 @@ Umgesetzt auf `t-85-ein-arbeitsort`, Übergabe an den Verifier `codex`.
 Nach technischer Freigabe mergt der Coder lokal nach `master`. Der Branch
 enthält dabei auch die Boardcommits zu T-82 und T-83 sowie den T-84-Ticket-Commit;
 das sind ausschließlich Dateien unter `_tickets/`. Kein Push.
+
+### Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
+
+**Ergebnis: `approved`.** Prüfgegenstand war `7b19fb3` gegen `7d38879`.
+Die technische Freigabe umfasst den verhaltensneutralen Review-Commit
+`4bcad36` zu T-84. Sie ist keine menschliche Abnahme und belegt noch keinen
+Merge, Push oder eine Veröffentlichung.
+
+- **Verify #1:** Die Regel steht in `AGENTS.md`; STATUS, Workflow, Aktivierung,
+  Scheduler und Board-README verweisen auf sie. Rollen und Owner waren beim
+  Review eindeutig; `branch` und `git branch --show-current` stimmten auf
+  `t-85-ein-arbeitsort` überein. Die lokale Abweichung vom gemeinsamen
+  `PROJECT-RULES.md` ist ausdrücklich benannt.
+- **Verify #2:** `git worktree list --porcelain` zeigte nur den Projekt-Root.
+  `docs/internet-zugriff-hinweis` steht weiter auf `6ca09d2`, das den
+  vorbereiteten Dokumentations-Commit `396e8be` enthält. Die Branches
+  `t-83-assets-datenhinweis` und `t-85-ein-arbeitsort` bewahren die jeweiligen
+  Boardstände. Der Arbeitsbaum war nach der Korrektur sauber.
+- **Verify #3:** Das T-84-Ticket aus `6ca09d2` ist mit seinem Prüfgegenstand
+  und den offenen Verify-Zeilen im Root unter `10-backlog/` erhalten. Bei der
+  Übernahme wurde der Arbeitsorttext angepasst. Im übernommenen Ticket
+  stand T-83 noch als aktiv; `4bcad36` hat diese zwei Gegenwartsaussagen an
+  STATUS angepasst. Der vollständige Selbstheilungs-Diff wurde erneut gelesen;
+  `git diff --check 7d38879 4bcad36` blieb sauber.
+- **Verify #4:** Die Dokumente trennen technische Freigabe, lokalen Merge,
+  Mikes Abnahme und Push. Der tatsächliche Merge ist noch ausstehend; die
+  Zeile bleibt deshalb auf ◑. Claude führt ihn erst nach dieser Freigabe aus.
+
+**Umfang:** `git diff --name-status 7d38879 7b19fb3` bestätigt acht
+Dokumentations- und Boarddateien, keine Produktdatei. Seit der Übergabe kam
+außer STATUS nur die genannte T-84-Textkorrektur hinzu. Der Vergleich
+`master..7b19fb3` enthält zusätzlich die bereits benannten Boardtickets
+T-82 und T-83, keinen Produktcode. DRY: Die neue Arbeitsortregel steht nur
+in `AGENTS.md`; die übrigen aktiven Einstiege verlinken sie.
+
+**Code-Standards:** Gelesen:
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md` und
+`references/documentation.md`. Architektur ➖, Shell ➖, CLI ➖,
+Frontend/i18n ➖, Python ➖, Persistenz ➖, Qualität/Tests ➖: nicht berührt.
+Dokumentation ✅: Übersicht und Rücklink in `AGENTS.md`, aktuelle
+Board-Einstiege und T-84-Stand abgeglichen. DRY ✅: eine Regelquelle mit
+Verweisen. Die passenden Autoren-Lessons SI-P-02, SI-P-06, SI-P-11,
+SI-P-12 und SI-P-13 wurden auf Diff und Übergabe angewendet; ein neues
+allgemeines Muster ist aus der redaktionellen T-84-Korrektur nicht belegt.
+
+**Doku-Abgleich:** `AGENTS.md`, STATUS, Workflow, Aktivierung, Scheduler,
+`_tickets/README.md` und T-84 sind geprüft; die T-84-Gegenwartsaussagen
+wurden nachgezogen. `README.md`, `docker/README.md` und `unraid/README.md`
+enthalten keine Aussagen zu Worktrees oder Ticketbranches und benötigen
+keine Änderung. AgentLessons T-52 bleibt die offene gemeinsame Übernahme
+der Branchregel. Der lokale Board-Konventionsstand
+`2026-09-28-activity-local` ist weiterhin nicht vollständig übernommen;
+der offene Abgleich ist oben mit dem zuständigen künftigen Board-Coder
+benannt. Dieser Review behauptet keine zentrale Übernahme.
