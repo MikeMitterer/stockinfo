@@ -14,12 +14,14 @@ sollen einen geschützten Zugriffsweg nennen.
 Codex ausdrücklich als Verifier bestimmt. Claude ist Coder; die maßgebliche
 Zuordnung steht in `STATUS.md`. Claude hat die StockInfo-Endfassung
 `8b89864` und seinen StockInfo-Vorlagentext `fdeb4fd` zur unabhängigen
-Prüfung übergeben. Eine Freigabe liegt noch nicht vor. Dieses Ticket ist
-in `30-doing/` aktiv.
+Prüfung übergeben. Codex hat beides in Runde 2 technisch freigegeben.
+Die StockInfo-Fassung ist lokal nach `master` gemergt; kein Push.
 
-Für Mike steht jetzt kein Handgriff an. Abschluss und Veröffentlichung
-bleiben nach der technischen Prüfung getrennt; Docker Hub und das
-Unraid-Listing zeigen die neue Fassung derzeit nicht.
+Für Mike offen ist die Abnahme der drei Anleitungen auf `master`. Bis
+dahin bleibt das Ticket in `30-doing/`. Der Vorlagen-Commit `fdeb4fd`
+liegt weiter nur auf dem Vorlagenbranch. Docker Hub und das
+Unraid-Listing zeigen die neue Fassung nicht; die Veröffentlichung ist
+ein eigener Schritt.
 
 ## Rollen und Scope-Vertrag (Claude, 2026-10-01)
 
@@ -71,8 +73,8 @@ Prüffassungen; Claudes neuer Vorlagentext steht in `fdeb4fd`.
 
 ### Verify
 
-Legende: ➖ unabhängige Prüfung steht aus. Die Autorprüfung ist unten genannt
-und ersetzt kein Verifier-Urteil.
+Legende: ✅ von Codex in Runde 2 unabhängig bestätigt. Die Autorprüfung ist
+unten genannt und ersetzt kein Verifier-Urteil.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
@@ -120,10 +122,10 @@ Vorprüfungen, keine unabhängige Freigabe.
 
 ### Akzeptanzkriterien
 
-- [ ] `codex` prüft die eindeutig benannte Endfassung unabhängig und hält Befunde oder Freigabe im Ticket fest.
-- [ ] Der Doku-Abgleich umfasst beide READMEs, die Unraid-Anleitung und den StockInfo-Teil der zentralen Vorlage.
-- [ ] Der Coder löst nötige Korrekturen auf dem aktuellen Branch; danach wird die tatsächlich geprüfte Fassung übergeben.
-- [ ] Veröffentlichung wird erst nach der vorgesehenen Abnahme als eigener Schritt ausgewiesen.
+- [x] `codex` prüft die eindeutig benannte Endfassung unabhängig und hält Befunde oder Freigabe im Ticket fest.
+- [x] Der Doku-Abgleich umfasst beide READMEs, die Unraid-Anleitung und den StockInfo-Teil der zentralen Vorlage.
+- [x] Der Coder löst nötige Korrekturen auf dem aktuellen Branch; danach wird die tatsächlich geprüfte Fassung übergeben.
+- [x] Veröffentlichung wird erst nach der vorgesehenen Abnahme als eigener Schritt ausgewiesen.
 
 ### Side-Effects
 
@@ -135,8 +137,12 @@ geändert.
 ### Auflösung
 
 Runde 1 ging mit `changes_requested` an Claude zurück. Die korrigierte
-Runde 2 ist technisch freigegeben; beide Berichte stehen unten. Ein
-Ticketabschluss und eine menschliche Abnahme liegen nicht vor.
+Runde 2 ist technisch freigegeben; beide Berichte stehen unten. Claude
+hat den Ticketbranch am 2026-10-01 lokal nach `master` gemergt; kein
+Push, kein Docker-Hub- oder Unraid-Update. Der Vorlagenbranch im
+Vorlagen-Repo ist nicht gemergt, weil der StockPortfolio-Anteil noch
+T-67 braucht. Ein Ticketabschluss und eine menschliche Abnahme liegen
+nicht vor.
 
 ## Nacharbeit Runde 2 (Claude, 2026-10-01)
 

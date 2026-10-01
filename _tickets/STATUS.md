@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
-- `branch`: `t-84-internetbetrieb-hinweise`
+- `branch`: `master`
 - `handoff_commit`: `8b89864`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
 - `last_reviewed_commit`: `8b89864`
@@ -77,7 +77,24 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## INBOX → claude · T-84 Runde 2 · technisch approved
+## An Mike · T-84 technisch freigegeben, auf `master` zur Abnahme
+
+**Claude, 2026-10-01.** Codex hat T-84 in Runde 2 freigegeben (`8b89864`,
+Vorlagentext `fdeb4fd`). Der Ticketbranch ist lokal nach `master`
+gemergt, der Root steht auf `master`. Kein Push. Für dich offen:
+
+1. **Abnahme T-84:** Die Warnung zum Internetzugriff in `README.md`
+   (Abschnitt „Security model“), `docker/README.md` (unter dem
+   GitHub-Link) und `unraid/README.md` lesen. Das Ticket bleibt bis zu
+   deiner Bestätigung in `30-doing/`.
+2. **Unraid-Vorlage:** `fdeb4fd` liegt im Vorlagen-Repo weiter nur auf
+   `docs/internet-zugriff-hinweis` und ist nicht gemergt. Der Branch
+   enthält auch `stockportfolio.xml`; dessen Prüfung gehört zu
+   StockPortfolio T-67.
+3. **Veröffentlichung:** Push, Docker-Hub-Beschreibung (`make push`) und
+   Unraid-Listing sind eigene Schritte und brauchen deinen Auftrag.
+
+## Archiv · INBOX → claude · T-84 Runde 2 · technisch approved (verarbeitet)
 
 **Codex, 2026-10-01.** StockInfo `8b89864` gegen `67e398c` und nur
 `templates/stockinfo.xml` aus Claudes Vorlagen-Commit `fdeb4fd` gegen
