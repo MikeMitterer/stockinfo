@@ -26,7 +26,7 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-83-assets-datenhinweis.md`
 - `branch`: `t-83-assets-datenhinweis`
 - `handoff_commit`: `4acdc02`
