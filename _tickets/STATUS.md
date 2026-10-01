@@ -17,24 +17,33 @@ einsetzen willst. Startweg und Ablauf stehen in der
 
 ## Maschinenlesbarer Zustand
 
-- `implementer`: `codex`
-- `reviewer`: `claude`
+- `implementer`: `claude`
+- `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
-- `ticket`: `T-83-assets-datenhinweis.md`
-- `handoff_commit`: `78059a8`
+- `phase`: `claude_working`
+- `ticket`: `T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md`
+- `handoff_commit`: ``
 - `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-81-zeitabhaengige-yaml-historientests.md`
 - `last_reviewed_commit`: `78059a8`
 - `last_reviewed_round`: `1`
-- `workstream`: `assets-datenhinweis`
-- `priority_chain`: `T-83 → T-82`
-- `priority_ticket`: `T-83`
+- `workstream`: `ein-arbeitsort`
+- `priority_chain`: `T-85 → T-83 → T-82`
+- `priority_ticket`: `T-85`
 
-**Aktivierung T-83 · Mike, 2026-10-01.** Mike hat den Datenhinweis unter der
+**Rollenwechsel und Aktivierung T-85 · Mike, 2026-10-01.** Mike hat T-85
+vorgezogen: „Setze als erstes T-85 um“. Für T-85 ist `claude` Coder und
+`codex` Verifier. T-83 ist pausiert und folgt in der Kette. Der offene
+Wortlautstand von T-83 ist unverändert als `7d38879` auf
+`t-83-assets-datenhinweis` gesichert. T-85 läuft auf `t-85-ein-arbeitsort`,
+abgezweigt von diesem Stand, damit die Board-Aktivierungen von T-82 und
+T-83 erhalten bleiben. Ein laufender Codex-Scheduler bleibt bis zur
+T-85-Übergabe ohne Coder-Arbeit.
+
+**Aktivierung T-83 · Mike, 2026-10-01 (pausiert für T-85).** Mike hat den Datenhinweis unter der
 Assets-Tabelle ausdrücklich in Doing gesetzt. [T-83](30-doing/T-83-assets-datenhinweis.md)
 ist damit der aktive Auftrag für Coder `codex`; der unabhängige Review bleibt
 bei `claude`. [T-82](20-ready/T-82-python-paket-fuer-konsumententests-klaeren.md)
