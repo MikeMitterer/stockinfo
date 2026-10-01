@@ -16,6 +16,11 @@ Laufzeit. Die Änderung der Rollenfelder startet weder einen Timer noch eine
 zweite Instanz. Konkrete Fähigkeiten und Grenzen bleiben im jeweiligen
 Laufzeitvertrag; es gibt keinen zweiten fachlichen Workflow je Laufzeit.
 
+**Board-Pfad:** immer `_tickets/` im Projekt-Root
+`/Volumes/DevLocal/DevWeb/Production/StockInfo`; es gibt keine Worktrees
+([AGENTS.md · Ein Arbeitsort](../../AGENTS.md#ein-arbeitsort-der-projekt-root)).
+Der dort ausgecheckte Branch muss dem Feld `branch` in STATUS entsprechen.
+
 Der Observer erhält einen eigenen Chat und Loop. Sein Startweg steht unter
 [Observer-Aktivierung](#observer-aktivierung). Gestartet wird er nur, wenn das
 Feld `observer` in `STATUS.md` genau seine Kennung nennt.
@@ -69,7 +74,9 @@ löschen. Claude bestätigt beim Anlegen den Takt und die Job-ID.
    Rollen, `owner`, `phase`, Ticket, Prioritätskette und Übergabetupel samt
    letztem Review. Vergleiche vollständige Instanzkennungen. Fehlt die eigene
    eindeutige Zuordnung oder widersprechen sich Rolle, Owner und Phase,
-   melde den Konflikt und ändere nichts. Ist eine andere Instanz am Zug,
+   melde den Konflikt und ändere nichts. Dasselbe gilt, wenn
+   `git branch --show-current` im Projekt-Root nicht dem Feld `branch`
+   entspricht. Ist eine andere Instanz am Zug,
    endet dieser Durchlauf mit einer kurzen Statuszeile.
 2. Prüfe bei eigenem Owner, ob ein Auftrag zur Rolle passt: als Verifier eine
    neue Review-Übergabe oder ein `scope_checkpoint`; als Coder die Arbeitsphase,

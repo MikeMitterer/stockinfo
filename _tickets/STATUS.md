@@ -15,6 +15,12 @@ eingerichtet und unbesetzt: Trage `claude-observer` beziehungsweise
 einsetzen willst. Startweg und Ablauf stehen in der
 [Aktivierung](.agents/AGENT-ACTIVATION.md#observer-aktivierung).
 
+**Arbeitsort:** nur der Projekt-Root, keine Worktrees. `branch` nennt den
+dort ausgecheckten Branch; jede Instanz vergleicht ihn vor jedem Durchlauf
+mit `git branch --show-current` und stoppt bei Abweichung. Nur der Owner
+schaltet den Branch. Regel:
+[AGENTS.md · Ein Arbeitsort](../AGENTS.md#ein-arbeitsort-der-projekt-root).
+
 ## Maschinenlesbarer Zustand
 
 - `implementer`: `claude`
@@ -22,6 +28,7 @@ einsetzen willst. Startweg und Ablauf stehen in der
 - `observer`: `unassigned`
 - `phase`: `claude_working`
 - `ticket`: `T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md`
+- `branch`: `t-85-ein-arbeitsort`
 - `handoff_commit`: ``
 - `review_round`: `0`
 - `max_review_rounds`: `3`

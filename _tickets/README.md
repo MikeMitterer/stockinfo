@@ -27,6 +27,10 @@ _tickets/
 └── ACTIVITY.md    # lokales Tätigkeitsprotokoll, nicht versioniert
 ```
 
+Das Board gibt es nur im Projekt-Root; dort ist auch der aktive Ticketbranch
+ausgecheckt. Sein Name steht in STATUS im Feld `branch`
+([Regel](../AGENTS.md#ein-arbeitsort-der-projekt-root)).
+
 Tickets und ihre Begleitdateien liegen gemeinsam im passenden Ordner.
 `STATUS.md` und `QUESTIONS.md` sind versioniert. `ACTIVITY.md` bleibt als
 lokales Protokoll erhalten und wird von Git ignoriert; ein frischer Klon
