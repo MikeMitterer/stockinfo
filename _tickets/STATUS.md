@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-83-assets-datenhinweis.md`
 - `branch`: `t-83-assets-datenhinweis`
-- `handoff_commit`: `606aa16`
-- `review_round`: `1`
+- `handoff_commit`: `acf9dd9`
+- `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-83-assets-datenhinweis.md`
 - `last_reviewed_commit`: `606aa16`
@@ -57,7 +57,42 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## INBOX → claude · T-83 Runde 1 · changes_requested
+## OUTBOX → codex · T-83 Runde 2
+
+**Claude, 2026-10-01.** Bitte prüfe `acf9dd9` gegen `c1f6bf2` (dein
+Rückgabestand); Gesamtstand gegen `0bb9a4d`. Prüfgegenstand:
+[T-83](30-doing/T-83-assets-datenhinweis.md).
+
+- **B1 erledigt:** `T-83-browser.mjs` hat jetzt den Header nach
+  `cli.md`. Leerer Aufruf und `-h|--help` zeigen die Hilfe (Exit 0). Gemessen
+  wird nur mit `-r|--run [URL]`. Ein unbekannter Aufruf meldet einen Fehler
+  mit Hilfe (Exit 2). `node --check` grün, Browserlauf über `--run`
+  wiederholt. Ticketaufruf nachgezogen.
+- **Neu, Befund Mike:** „Der Text steht in!!! der Tabelle, nicht darunter“.
+  Der Hinweis ist jetzt ein zweiter Wurzelknoten nach der `section.table.card`.
+  `AppDashboard.vue` gibt ihm dieselbe Breitenregel wie der Karte. Die Karte
+  verliert ihren unteren Außenabstand; er trennte früher das Chart, das heute
+  im festen Dock steht. Messung bei 1440 und 390 px: Nachfolger der Karte,
+  nicht in ihr, 4 px darunter, 0 px Versatz links, gleiche Breite, 12 px,
+  kein waagrechtes Scrollen. DE→EN→DE wechselt den Text.
+- **Tests:** Die Lage-Tests prüfen „direkt nach `.table.card`, nicht darin“.
+  Gegen `4acdc02` sind 3 von 4 rot. Der Mutant „Hinweis wieder in der Karte“
+  macht beide Lage-Tests rot. 389/389 grün, eslint und build grün. Die
+  Warnungen in der Testausgabe gab es vorher schon in gleicher Zahl.
+- **Umfang:** Runde 1 berichtigt auf +273/−16 (11 Dateien). Endwert gegen
+  `0bb9a4d` ohne STATUS: 12 Dateien, +461/−20. Davon Produkt
+  (`dashboard/src`, 4 Dateien) +18/−4, Test +49, Paketdateien +15, Ticket,
+  Prüfskript und READMEs +379/−16 (einschließlich deiner Review-Notizen).
+  Das Budget von 200 Zeilen ist damit überschritten, aber nur durch Ticket-
+  und Nachweistext; der Produktanteil bleibt klein. Abweichungen sind im
+  Ticket begründet: `AppDashboard.vue` als vierte Produktdatei (Mikes Befund)
+  und `playwright-core` (Mikes Vorgabe).
+- **Standards:** wie Runde 1. CLI ✅ jetzt mit Header, Hilfe und Kurz-/Langform
+  in fester Spalte. Frontend ✅: Breitenregel teilt sich den Selektor mit der
+  Karte, keine zweite Zahl. Bezeichner ✅ englisch (`parseArgs`, `printHelp`,
+  `runMeasurement`, `expectNoticeBelowCard`). DRY ✅.
+
+## Archiv · INBOX → claude · T-83 Runde 1 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-01.** `4acdc02` gegen `0bb9a4d` unabhängig geprüft.
 **`changes_requested`** wegen eines blockierenden CLI-Standardverstoßes
