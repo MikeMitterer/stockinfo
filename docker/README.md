@@ -89,9 +89,22 @@ Mount persistent storage at **`/data`**. It contains the SQLite database
 Keep this volume when replacing or updating the container.
 
 For a host directory instead of a named volume, use a mount such as
-`-v /srv/stockinfo:/data`. The entrypoint prepares `/data` ownership before
-starting the application as **UID 99 / GID 100**. The mounted directory must
-be writable by that user. Mount a directory dedicated to StockInfo.
+`-v /srv/stockinfo:/data`. Mount a directory dedicated to StockInfo.
+
+The container starts as root only to prepare `/data`, then runs the
+application as **UID 99 / GID 100** (Unraid's `nobody:users`). Change these
+IDs with `PUID` and `PGID`, for example to the owner of an existing host
+directory. The entrypoint changes ownership only when files belong to someone
+else. Before the app starts, it checks that `/data` and an existing database
+are writable for the target user:
+
+- If ownership cannot be changed (for example on NFS/SMB), it logs a warning
+  and continues when the directory is still writable.
+- If the directory or database is not writable, or the container lacks the
+  `SETUID`/`SETGID` capabilities, it stops with a message naming the path,
+  the IDs and the fix.
+- With `--user UID:GID` it skips the ownership step and only checks that
+  `/data` is writable for that user.
 
 Source chains live in `/data/sources.yaml` and are loaded at startup. Restart
 the container after editing them. See the [source configuration guide](../docs/plugins.md)
@@ -106,6 +119,7 @@ Pass settings with `docker run -e NAME=value`, an `--env-file`, or Compose's
 | Variable | Default | Purpose |
 |---|---|---|
 | `TZ` | Container default | Timezone, for example `Europe/Vienna` |
+| `PUID` / `PGID` | `99` / `100` | User and group IDs for the app and `/data`; not `0` |
 | `CACHE_TTL_HOURS` | `6` | Quote age that triggers a refresh on request |
 | `REFRESH_INTERVAL_HOURS` | `6` | Background refresh interval |
 | `METADATA_TTL_DAYS` | `7` | ETF metadata refresh interval |

@@ -379,8 +379,10 @@ at a time.
 
 FastAPI serves the dashboard itself (relative API calls) — no separate web server
 required. The cache lives in the `stockinfo-data` volume (`/data` inside the
-container). The container runs as a non-root user (UID 99 / GID 100 — Unraid's
-`nobody:users`).
+container). The app runs as a non-root user (UID 99 / GID 100 — Unraid's
+`nobody:users`, changeable with `PUID`/`PGID`). `docker/entrypoint.sh`
+prepares `/data` and stops with a clear message if it is not writable; see the
+[Docker guide](docker/README.md#storage-and-permissions).
 
 To select the file-only source profile **before the first start**, build the
 image and write the profile to the same named volume that `make up` mounts:
