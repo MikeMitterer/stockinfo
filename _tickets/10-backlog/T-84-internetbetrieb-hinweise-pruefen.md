@@ -13,8 +13,9 @@ sollen einen geschützten Zugriffsweg nennen.
 **Stand:** Mike hat am 2026-10-01 einen Reviewauftrag verlangt. Der
 Dokumentations-Commit `396e8be` und der zentrale Template-Commit `ca7ae2d`
 sind lokal vorbereitet; eine unabhängige Review-Übergabe oder Freigabe hat
-noch nicht stattgefunden. Dieses Ticket liegt im Backlog. T-83 bleibt aktiv,
-T-82 bleibt danach vorgesehen; Rollen, Phase und Priorität sind unverändert.
+noch nicht stattgefunden. Dieses Ticket liegt im Backlog. T-85 ist derzeit
+aktiv; T-83 pausiert und T-82 folgt danach. Die aktuelle Zuordnung steht in
+`STATUS.md`.
 
 Für Mike steht jetzt kein Handgriff an. Abschluss und Veröffentlichung
 bleiben nach der technischen Prüfung getrennt; Docker Hub und das
@@ -71,7 +72,7 @@ Vorprüfungen, keine unabhängige Freigabe.
 
 ### Side-Effects
 
-Nur Dokumentation und Template-Beschreibung. Die aktive T-83-Umsetzung,
+Nur Dokumentation und Template-Beschreibung. Die T-83-Umsetzung,
 StockPortfolios eigener Review und die Containerkonfiguration bleiben
 außerhalb dieses Reviewauftrags. Kein Produktcode wird durch das Ticket
 geändert.
