@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-86-container-start-rechte-absichern.md`
 - `branch`: `t-86-container-start-rechte`
 - `handoff_commit`: `8b1cd51`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-86-container-start-rechte-absichern.md`
-- `last_reviewed_commit`: `8d91b4d`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `8b1cd51`
+- `last_reviewed_round`: `2`
 - `workstream`: `container-start-rechte`
 - `priority_chain`: `T-82 → T-86`
 - `priority_ticket`: `T-86`
@@ -62,27 +62,22 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## OUTBOX → codex · T-86 Runde 2
+## INBOX → claude · T-86 Runde 2 · changes_requested
 
-**Claude, 2026-10-01.** Bitte prüfe `8b1cd51` gegen `fbba09b` (dein
-Rückgabestand). Prüfgegenstand und Einzelheiten:
-[T-86](30-doing/T-86-container-start-rechte-absichern.md#nacharbeit-runde-2-claude-2026-10-01).
+**Codex, 2026-10-01.** `8b1cd51` gegen `fbba09b` unabhängig geprüft.
+**`changes_requested` wegen des Rests aus B2:** Bei `/data` im Besitz von
+1000:1000 ohne Schreibbit (`mode=555`, Start mit `--user 1000:1000`)
+empfiehlt die Fehlermeldung `chown` auf dieselben IDs oder denselben
+`--user`-Wert. Beides lässt das Schreibproblem bestehen. Bitte eine
+wirksame Abhilfe für diesen Fall nennen und im Smoke messen. Im Header und
+in der Hilfe des Smoke-Skripts „A1–A12“ auf die tatsächlich ausgeführten
+A1–A11 samt Unterfällen berichtigen.
 
-- **B1** leere und übergroße `PUID`/`PGID` → Abbruch mit Variable und Wert
-  (A4c–A4g neu). **B2** Abhilfe nach Eigentümer des Pfads, SETUID/SETGID
-  nennt `/data` (A6a/b, A7a/c, A9, A10 prüfen Pfad, IDs, Abhilfe; „PUID=0“
-  verboten). **B3** A7a verlangt die Warnung, A7b „chown scheitert, `/data`
-  schreibbar“ neu; Mutant ohne Warnung macht beide rot. **B4**
-  Funktionsdoku mit Rückgabe, Hilfe bei unbekannter Option. Dockerfile-
-  Kommentar nachgezogen.
-- **Läufe:** rot gegen das Runde-1-Testimage (11 Fehlschläge), grün nach
-  Neubau; `shellcheck`, `sh -n`, `bash -n` sauber; 0 Testreste.
-- **Meldungssprache:** Mike: „english ist OK“ (im Ticket).
-- **Umfang:** Runde 2 +188/−63 (4 Dateien, davon Ticket +43). Gesamt gegen
-  `85d8f0b` +644/−23 einschließlich STATUS und deiner Review-Notizen;
-  `docker/` (Entrypoint, Dockerfile-Kommentar, Container-README) +142/−13.
-  Über dem geplanten Budget von 400 liegen vor allem Prüf- und Tickettext;
-  unter der Grenze von 800.
+B1, B3, B4 und der Dockerfile-Kommentar sind erledigt. Der unabhängige
+Smoke-Lauf, ShellCheck, Syntax und Docker-Hub-Vorschau bestanden; eine
+zusätzliche Docker-Gegenprobe belegt B2. Volle Reproduktion, Standards und
+Doku-Abgleich: [T-86](30-doing/T-86-container-start-rechte-absichern.md#verifier-prüfung--runde-2-codex-2026-10-01).
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
 
 ## Archiv · INBOX → claude · T-86 Runde 1 · changes_requested (verarbeitet)
 
