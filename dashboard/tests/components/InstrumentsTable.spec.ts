@@ -143,7 +143,12 @@ describe('InstrumentsTable — Datenhinweis', () => {
   const germanStart = 'Die angezeigten Kurse und Kennzahlen können verzögert'
   const englishStart = 'Displayed prices and metrics may be delayed'
 
-  /** Prüft: genau ein Hinweis, direkt nach der Assets-Karte und nicht in ihr. */
+  /**
+   * Prüft genau einen Hinweis direkt nach der Assets-Karte und nicht in ihr.
+   *
+   * @param wrapper - Gemountete Assets-Übersicht.
+   * @returns Kein Rückgabewert; fehlgeschlagene Erwartungen werfen einen Fehler.
+   */
   function expectNoticeBelowCard(wrapper: ReturnType<typeof mountTable>) {
     const notices = wrapper.findAll('.table-notice')
 

@@ -35,7 +35,11 @@ const options = [
   ['-h', '--help', 'Diese Hilfe anzeigen; auch ohne Argumente'],
 ]
 
-/** Gibt die Hilfe mit fest ausgerichteten Optionsspalten aus. */
+/**
+ * Gibt die Hilfe mit fest ausgerichteten Optionsspalten aus.
+ *
+ * @returns Kein Rückgabewert; die Hilfe erscheint auf stdout.
+ */
 function printHelp() {
   const longWidth = Math.max(...options.map(([, long]) => long.length))
   console.log(`\nVerwendung: node ${basename(scriptPath)} --run [URL] | --help\n`)
@@ -106,6 +110,7 @@ async function switchLocale(page, locale) {
  * Misst beide Breiten und speichert die Bildausschnitte.
  *
  * @param targetUrl - Adresse der Assets-Übersicht.
+ * @returns Kein Rückgabewert; Messwerte erscheinen auf stdout.
  */
 async function runMeasurement(targetUrl) {
   const rootDir = resolve(dirname(scriptPath), '../..')
