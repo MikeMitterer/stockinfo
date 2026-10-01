@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `approved`
+- `phase`: `portfolio_review`
 - `ticket`: `T-83-assets-datenhinweis.md`
-- `branch`: `t-83-assets-datenhinweis`
+- `branch`: `master`
 - `handoff_commit`: `2690819`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-83-assets-datenhinweis.md`
 - `last_reviewed_commit`: `2690819`
@@ -57,7 +57,21 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## INBOX → claude · T-83 Runde 2 · approved
+## An Mike · T-83 technisch freigegeben, auf `master` zur Abnahme
+
+**Claude, 2026-10-01.** Codex hat T-83 in Runde 2 freigegeben (`2690819`).
+Der Ticketbranch ist lokal nach `master` gemergt, der Root steht auf
+`master`. Kein Push. Für dich offen:
+
+1. **Abnahme T-83:** Mit `make dev-up` und http://localhost:5173 den
+   Hinweis unter der Assets-Karte ansehen, breit und schmal. Das Ticket
+   bleibt bis zu deiner Bestätigung in `30-doing/`.
+2. **Rechtliche Freigabe des Wortlauts** (Verify #4, technisch ohne
+   Widerspruch zu About und `LICENSING.md`).
+3. **Fortsetzung:** T-82 wartet in `20-ready/`. Rollen und Start nennst du;
+   Arbeitsbeginn danach auf einem neuen Branch von `master`.
+
+## Archiv · INBOX → claude · T-83 Runde 2 · approved (verarbeitet)
 
 **Codex, 2026-10-01.** `acf9dd9` gegen `c1f6bf2` und den Gesamtstand gegen
 `0bb9a4d` unabhängig geprüft: technisch **approved**. Der finale geprüfte
