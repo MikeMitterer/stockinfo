@@ -26,20 +26,20 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `approved`
-- `ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
-- `branch`: `master`
-- `handoff_commit`: `2a3cc0c`
-- `review_round`: `2`
+- `phase`: `claude_working`
+- `ticket`: `T-86-container-start-rechte-absichern.md`
+- `branch`: `t-86-container-start-rechte`
+- `handoff_commit`: ``
+- `review_round`: `0`
 - `max_review_rounds`: `3`
 - `owner`: `claude`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
 - `last_reviewed_commit`: `2a3cc0c`
 - `last_reviewed_round`: `2`
-- `workstream`: `konsumententests-python-paket`
+- `workstream`: `container-start-rechte`
 - `priority_chain`: `T-82 → T-86`
-- `priority_ticket`: `T-82`
+- `priority_ticket`: `T-86`
 
 **Aktivierung T-82 · Mike, 2026-10-01.** Mike: „T-83 ist erledigt, push es
 und starte T-82“. [T-82](30-doing/T-82-python-paket-fuer-konsumententests-klaeren.md)
