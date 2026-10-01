@@ -26,32 +26,43 @@ einem Aufruf über Origins hinweg schickt der Browser weder Cookie noch
 Basic-Auth mit. Ein Login-Proxy vor einem eigenen StockInfo-Host
 blockiert StockPortfolio deshalb immer.
 
-**Umfang nach Mikes Vorgabe:** „Stelle einfach die Beschreibung, den Text
-richtig“. Die Anleitungen benennen die Grenze. Sie empfehlen keinen
-weiteren Zugriffsweg, und ein Prüfaufbau mit Proxy entfällt.
+**Umfang nach Mikes Vorgaben vom 2026-10-01:**
 
-- **Ergebnis:** Alle drei Anleitungen sagen: Mit StockPortfolio
-  funktionieren nur LAN und VPN. Ein Login-Proxy vor StockInfo blockiert
-  StockPortfolios Browseraufrufe, weil diese keine Anmeldung mitsenden.
-- **Fachliche Änderungen (2):** (1) Hinweis in `README.md` (Security
-  model), `docker/README.md` (Hinweis oben und Quick start) und
-  `unraid/README.md`; (2) derselbe Hinweis knapp in
-  `templates/stockinfo.xml`. Die Vorlage liegt im Vorlagen-Repo und
-  baut auf `fdeb4fd` auf.
+- „Stelle einfach die Beschreibung, den Text richtig“: kein Prüf-Script,
+  kein Proxy-Aufbau.
+- „Die Grundaussage ist, dass der User StockInfo nicht im Internet laufen
+  lassen soll, sondern entweder im LAN oder per VPN oder WireGuard“: Der
+  Reverse Proxy mit Login entfällt als empfohlener Weg. Damit braucht
+  StockPortfolio keinen Sonderhinweis.
+- „Verkompliziert den Text nicht zu sehr. Alle User müssen sich auskennen“:
+  kurze Sätze ohne Fachjargon, überall dieselbe Aussage.
+
+- „Wireguard/Tailscale - wäre besser oder?“: Beide werden als
+  VPN-Beispiel genannt.
+
+- **Ergebnis:** Alle Texte sagen: StockInfo nicht ins Internet stellen,
+  nur im Heimnetz nutzen, von außen per VPN (etwa WireGuard oder
+  Tailscale). Kein Text
+  empfiehlt mehr einen Reverse Proxy.
+- **Fachliche Änderungen (2):** (1) `README.md` (Security model),
+  `docker/README.md` (Hinweis oben und Quick start), `unraid/README.md`;
+  (2) `templates/stockinfo.xml` (Overview, Description, Portfeld) im
+  Vorlagen-Repo, aufbauend auf `fdeb4fd`.
 - **Dateien:** drei READMEs, Vorlage, dieses Ticket. Kein Produktcode.
 - **Budget:** 0 Produktdateien, 5 Dokudateien, 80 Diff-Zeilen.
-- **Nicht-Ziele:** kein Prüf-Script; keine Empfehlung eines nicht
-  geprüften Proxy-Wegs, etwa StockInfo unter einem Pfad des
-  StockPortfolio-Hosts; keine Anmeldung in StockInfo; kein
-  `allow_credentials=True`; keine Änderung an StockPortfolio.
+- **Nicht-Ziele:** kein Prüf-Script, keine Anmeldung in StockInfo, keine
+  Änderung an StockPortfolio.
 
-**Doku-Abgleich (StockInfo-Teil):** Das Inventar aller versionierten
-Markdown-, XML- und HTML-Dateien außerhalb von `_tickets/` nennt den
-Proxy-Weg nur in `README.md`, `docker/README.md` und `unraid/README.md`.
-Alle drei sind angepasst und sagen dasselbe. Die Treffer in `CHANGELOG.md`
-und in der alten Spec betreffen Dev-Proxy und Registry-Login und sind
-nicht betroffen. Die Docker-Hub-Vorschau hat 9.001 UTF-8-Bytes. Offen
-ist `templates/stockinfo.xml`.
+**Doku-Abgleich:** Das Inventar aller versionierten Markdown- und
+HTML-Dateien außerhalb von `_tickets/` nannte den Proxy-Weg nur in
+`README.md`, `docker/README.md` und `unraid/README.md`. In der Vorlage
+stand er nur in der Overview. Danach findet die Suche nach „reverse proxy“
+in den aktuellen Anleitungen und der Vorlage keinen Treffer mehr. Die
+Treffer in `CHANGELOG.md` und in der alten Spec betreffen Dev-Proxy und
+Registry-Login und sind nicht betroffen. Die Erklärung zum Betrieb nur
+auf dem eigenen Rechner (Loopback, Fix B1 aus T-84) bleibt im Root-README
+erhalten, kürzer gefasst. `xmllint --noout` ist ok. Die Docker-Hub-Vorschau
+hat 8.763 UTF-8-Bytes.
 
 ## Warum das passiert (Konsumentensicht)
 
@@ -101,3 +112,25 @@ Konsumentensicht:
 Betrifft Dokumentation und Vorlagentext. StockPortfolios Texte (T-67 dort)
 sollten danach dieselbe Aussage treffen; der Abgleich läuft über das
 StockPortfolio-Board.
+
+## Übergabe Runde 1 (Claude, 2026-10-01)
+
+| Repo | Prüfgegenstand |
+|---|---|
+| StockInfo | `7b46d6b` gegen `master` (`1cbc39e`): `README.md`, `docker/README.md`, `unraid/README.md` |
+| Unraid-Templates | `a2d80a6` gegen `fdeb4fd`, nur `templates/stockinfo.xml` (Branch `docs/internet-zugriff-hinweis`, Arbeitskopie `/private/tmp/unraid-internet-hinweis`) |
+
+Der Zwischencommit `b93ff36` (Sonderhinweis für StockPortfolio) ist durch
+`7b46d6b` überholt; geprüft wird der Endstand.
+
+### Verify
+
+| # | Handgriff | Erwarteter Nachweis | AI |
+|---|---|---|:--:|
+| 1 | Die drei Anleitungen und die Vorlage lesen | Gleiche Aussage überall: nicht ins Internet, nur Heimnetz, von außen per VPN (WireGuard oder Tailscale); kein Reverse Proxy empfohlen | ➖ |
+| 2 | Verständlichkeit prüfen | Kurze Sätze ohne Fachjargon, für Nutzer ohne Vorwissen lesbar (Mikes Vorgabe) | ➖ |
+| 3 | Loopback-Absatz im Root-README gegen T-84 B1 prüfen | Native Bindung und Docker-Hostport weiterhin richtig getrennt | ➖ |
+| 4 | Inventar nach „reverse proxy“ in aktuellen Anleitungen und Vorlage | Kein Treffer außer `CHANGELOG.md` und alter Spec (andere Bedeutung) | ➖ |
+| 5 | `xmllint --noout` und Docker-Hub-Vorschau | XML gültig; Vorschau unter 25.000 Bytes (Coder: 8.763) | ➖ |
+
+Kein Merge im Vorlagen-Repo, kein Push, kein Docker-Hub- oder Unraid-Update.

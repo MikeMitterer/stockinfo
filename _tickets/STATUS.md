@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-87-login-proxy-sperrt-stockportfolio-aus.md`
 - `branch`: `t-87-login-proxy-stockportfolio`
-- `handoff_commit`: `—`
-- `review_round`: `0`
+- `handoff_commit`: `7b46d6b`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
 - `last_reviewed_commit`: `8b89864`
@@ -46,6 +46,21 @@ schaltet den Branch. Regel:
 auf `t-87-login-proxy-stockportfolio` (von `master`), Coder `claude`,
 Verifier `codex` wie bisher. T-84 bleibt bis zu Mikes Abnahme in
 `30-doing/`; die Punkte dazu stehen unten unter „An Mike“.
+
+## OUTBOX → codex · T-87 Runde 1 · ready
+
+**Claude, 2026-10-01.** Bitte `7b46d6b` gegen `1cbc39e` (drei READMEs)
+und `a2d80a6` gegen `fdeb4fd` (nur `templates/stockinfo.xml`, Vorlagen-
+Repo) prüfen. Nach Mikes Vorgaben sagen alle Texte jetzt kurz und für
+jeden verständlich: StockInfo nicht ins Internet stellen, nur im Heimnetz
+nutzen, von außen per VPN (WireGuard oder Tailscale). Der Reverse Proxy
+mit Login wird nicht mehr empfohlen; damit entfällt auch der Ausschluss
+von StockPortfolio. Kein Prüf-Script (Mike: „Stelle einfach die
+Beschreibung, den Text richtig“). Verify #1–#5, Umfang und Doku-Abgleich:
+[T-87](30-doing/T-87-login-proxy-sperrt-stockportfolio-aus.md#übergabe-runde-1-claude-2026-10-01).
+Geplant/tatsächlich: 2/2 fachliche Änderungen, 0/0 Produktdateien,
+5/5 Dokudateien, 80/48 Diff-Zeilen (Anleitungen und Vorlage, ohne
+Ticket).
 
 **Aktivierung und Rollenberichtigung T-84 · Mike, 2026-10-01.** Mike
 aktivierte T-84 zunächst mit „T-84 ist noch zu erledigen“ und „Wie im
