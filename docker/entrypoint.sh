@@ -57,6 +57,7 @@ runAs() {
 }
 
 # Beschreibt eine ausführbare Abhilfe für einen nicht beschreibbaren Pfad.
+# Gehört er schon den Ziel-IDs, fehlt nur das Schreibrecht: chmod auf dem Host.
 # Gehört er root, hilft nur ein chown auf dem Host. Sonst kann der Container
 # auch die IDs des Eigentümers übernehmen.
 # Params: $1 Pfad, $2 Ziel als UID:GID, $3 Startweg (puid|user).
@@ -64,7 +65,9 @@ runAs() {
 remedyFor() {
     _OWNER="$(stat -c '%u:%g' "$1")"
     _HOST_FIX="change the owner of the mounted host path to $2 (for example: chown -R $2 <host path>)"
-    if [ "${_OWNER%%:*}" -eq 0 ]; then
+    if [ "${_OWNER}" = "$2" ]; then
+        printf 'it already belongs to %s but lacks write permission; add it on the host (for example: chmod -R u+rwX <host path>)' "$2"
+    elif [ "${_OWNER%%:*}" -eq 0 ]; then
         printf '%s' "${_HOST_FIX}"
     elif [ "$3" = puid ]; then
         printf '%s, or set PUID=%s PGID=%s to match its current owner' "${_HOST_FIX}" "${_OWNER%%:*}" "${_OWNER##*:}"

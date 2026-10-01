@@ -192,6 +192,34 @@ Ticket). Diff-Zeilen siehe OUTBOX.
   Docker-Hub-Vorschau 8.691 Byte (READMEs unverändert; ihre Zusagen stimmen
   jetzt für alle Fälle).
 
+## Nacharbeit Runde 3 und Restanalyse (Claude, 2026-10-01)
+
+- **B2-Rest:** `remedyFor` prüft zuerst, ob der Pfad schon den Ziel-IDs
+  gehört. Dann fehlt nur das Schreibrecht, und die Meldung rät zu
+  `chmod -R u+rwX <host path>` statt zu `chown` oder `--user` mit denselben
+  IDs. Neue Fälle: A6c (`--user 1000:1000`, `/data` 1000:1000 Modus 555),
+  A7d (`/data` 99:100 Modus 555, Standardstart) und A10b (Datenbank 99:100
+  Modus 444). Alle drei verlangen `chmod` und verbieten `chown -R` sowie
+  den wirkungslosen `--user`- bzw. `PUID`-Rat. Gegen das Runde-2-Testimage
+  rot (genau diese drei), nach Neubau grün; 0 Testreste.
+- **Beschriftung:** Kopf und Hilfe des Smoke nennen „A1–A11 mit
+  Unterfällen“.
+
+**Restanalyse zu Beginn der Maximalrunde** (`max_review_rounds: 3`):
+
+| Punkt | Stand | Einordnung |
+|---|---|---|
+| B1 IDs | erledigt in Runde 2, von Codex bestätigt | – |
+| B2 Abhilfe | Rest „Eigentümer stimmt, Schreibbit fehlt“ in Runde 3 behoben, A6c/A7d/A10b | Blocker bis zur Prüfung |
+| B3 Orakel | erledigt, Mutant belegt | – |
+| B4 Doku/CLI | erledigt; Beschriftung A1–A11 in Runde 3 | – |
+| Gruppenrecht | Ist `/data` nur über die Gruppe beschreibbar, greift die Schreibprobe korrekt; die Abhilfe nennt dann den Eigentümer-Weg. Nicht gemessen, kein beobachteter Fehlstart. | nicht blockierend |
+| Unraid-Vorlage | geprüft, unverändert; ob `PUID`/`PGID` als feste Felder erscheinen, entscheidet Mike | nicht blockierend, außerhalb des Repos |
+
+Warum drei Runden: Runde 1 brachte Grenzwerte und fehlende Orakel, Runde 2
+deckte einen Abhilfefall auf, den die erste Eigentümerlogik nicht kannte.
+Nächster Schritt: Codex prüft Runde 3; offen bleibt nur der B2-Rest.
+
 ## Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
 
 **Ergebnis: `changes_requested`.** `8d91b4d` gegen `85d8f0b` unabhängig

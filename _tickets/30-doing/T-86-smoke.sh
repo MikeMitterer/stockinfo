@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #------------------------------------------------------------------------------
-# T-86-smoke.sh — Containerstart bei Rechteproblemen nachstellen (A1–A12)
+# T-86-smoke.sh — Containerstart bei Rechteproblemen nachstellen (A1–A11 mit Unterfällen)
 #
 # Baut ein eigenes Testimage aus dem Arbeitsstand und startet je Fall einen
 # eigenen Container. /data ist ein tmpfs oder ein eigenes Testvolume. Danach
@@ -42,7 +42,7 @@ OWN_VOLUMES=()
 usage() {
     printf '\nUsage: %s [ options ]\n' "${APPNAME}"
     printThemeHeading 'Optionen'
-    printThemeRow '-r | --run' 'Testimage bauen (ohne IMAGE_REF) und A1–A12 prüfen'
+    printThemeRow '-r | --run' 'Testimage bauen (ohne IMAGE_REF) und A1–A11 prüfen'
     printThemeRow '-h | --help' 'Diese Hilfe anzeigen'
     printThemeHeading 'Umgebung'
     printThemeRow 'IMAGE_REF' 'Vorhandenes Image prüfen statt selbst zu bauen'
@@ -172,14 +172,16 @@ expectFailure() {
     fi
 }
 
-# Legt ein Testvolume an: /data gehört 99:100, die Datenbankdatei root (644).
-# Params: keine.
+# Legt ein eigenes Testvolume an: /data gehört 99:100, die Datenbankdatei
+# erhält den angegebenen Eigentümer und Modus.
+# Params: $1 Namenszusatz, $2 Eigentümer der Datei (UID:GID), $3 Dateimodus.
 # Returns: 0; gibt den Volumenamen auf stdout aus.
-prepareRootOwnedDatabase() {
+prepareDatabase() {
     local _VOLUME
-    _VOLUME=$(docker volume create "${PREFIX}-rootdb")
+    _VOLUME=$(docker volume create "${PREFIX}-$1")
     docker run --rm --platform "${PLATFORM}" --entrypoint sh -v "${_VOLUME}:/data" "${IMAGE}" \
-        -c ': > /data/stockinfo.db && chmod 644 /data/stockinfo.db && chown 99:100 /data' >/dev/null
+        -c ": > /data/stockinfo.db && chown $2 /data/stockinfo.db && chmod $3 /data/stockinfo.db \
+            && chown 99:100 /data" >/dev/null
     printf '%s' "${_VOLUME}"
 }
 
@@ -226,10 +228,19 @@ runSmoke() {
         -- --cap-drop CHOWN --tmpfs /data:uid=99,gid=100,mode=755
     expectFailure A9 "cannot switch to UID 99 / GID 100 to use /data" "remove --cap-drop for SETUID/SETGID" \
         -- --cap-drop SETUID --cap-drop SETGID --tmpfs "${ROOT_DATA}"
-    _VOLUME=$(prepareRootOwnedDatabase)
+    _VOLUME=$(prepareDatabase rootdb 0:0 644)
     OWN_VOLUMES+=("${_VOLUME}")
-    expectFailure A10 "/data/stockinfo.db is not writable for UID 99 / GID 100" "chown -R 99:100" '!PUID=0' \
+    expectFailure A10a "/data/stockinfo.db is not writable for UID 99 / GID 100" "chown -R 99:100" '!PUID=0' \
         -- --cap-drop CHOWN -v "${_VOLUME}:/data"
+    _VOLUME=$(prepareDatabase readonlydb 99:100 444)
+    OWN_VOLUMES+=("${_VOLUME}")
+    expectFailure A10b "/data/stockinfo.db is not writable for UID 99 / GID 100" "chmod -R u+rwX" '!chown -R' \
+        -- -v "${_VOLUME}:/data"
+    # Eigentümer stimmt, nur das Schreibbit fehlt: chown/--user ändern nichts.
+    expectFailure A6c "/data is not writable for UID 1000 / GID 1000" "chmod -R u+rwX" '!chown -R' '!--user 1000:1000' \
+        -- --user 1000:1000 --tmpfs /data:uid=1000,gid=1000,mode=555
+    expectFailure A7d "/data is not writable for UID 99 / GID 100" "chmod -R u+rwX" '!chown -R' '!PUID=99' \
+        -- --tmpfs /data:uid=99,gid=100,mode=555
     # A11 steckt in jedem expectRunning: Prozess-IDs müssen den Zielwert treffen, nie 0:0.
 
     if ((FAILURES > 0)); then
