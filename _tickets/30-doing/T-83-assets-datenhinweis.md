@@ -21,17 +21,18 @@ ist mit der bestehenden Verbrauchererklärung abzugleichen.
 **Deutsch:**
 
 > Die angezeigten Kurse und Kennzahlen können verzögert, unvollständig oder
-> fehlerhaft sein. Prüfe wichtige Angaben vor einer Entscheidung anhand der
-> ursprünglichen Quelle und deiner Eingaben. StockInfo kann ihre Richtigkeit
-> nicht garantieren; für Gewährleistung und Haftung gelten die gesetzlichen
-> Regeln.
+> fehlerhaft sein. Angezeigte Kurse sind keine verbindlichen Handelskurse.
+> Prüfe wichtige Angaben vor einer Entscheidung anhand der ursprünglichen
+> Quelle und deiner Eingaben. StockInfo kann ihre Richtigkeit nicht garantieren;
+> für Gewährleistung und Haftung gelten die gesetzlichen Regeln.
 
 **Englisch:**
 
-> Displayed prices and metrics may be delayed, incomplete or incorrect. Check
-> important information against the original source and your own entries
-> before making a decision. StockInfo cannot guarantee its accuracy; statutory
-> rules on warranties and liability apply.
+> Displayed prices and metrics may be delayed, incomplete or incorrect.
+> Displayed prices are not binding trading prices. Check important information
+> against the original source and your own entries before making a decision.
+> StockInfo cannot guarantee its accuracy; statutory rules on warranties and
+> liability apply.
 
 Der Hinweis soll keine pauschale Haftungsfreistellung behaupten. StockInfos
 [`LICENSING.md`](../../LICENSING.md) erklärt für Verbraucher ausdrücklich, dass
@@ -80,5 +81,5 @@ Hinweise und Tickets bleiben getrennt.
 
 ### Auflösung
 
-Offen. Umsetzung, Verifikation und unabhängiges Review folgen erst nach
-Aktivierung gemäß `_tickets/STATUS.md`.
+T-83 ist gemäß `_tickets/STATUS.md` aktiviert. Umsetzung, Verifikation und
+unabhängiges Review stehen noch aus.
