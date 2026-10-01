@@ -13,9 +13,9 @@ sollen einen geschützten Zugriffsweg nennen.
 **Stand:** Mike hat am 2026-10-01 einen Reviewauftrag verlangt und später
 Codex ausdrücklich als Verifier bestimmt. Claude ist Coder; die maßgebliche
 Zuordnung steht in `STATUS.md`. Claude hat die StockInfo-Endfassung
-`3733624` zur unabhängigen Prüfung übergeben. Der zentrale Template-Commit
-`ca7ae2d` ist weiterhin vorbereitet, aber von Codex verfasst. Eine
-Freigabe liegt noch nicht vor. Dieses Ticket ist in `30-doing/` aktiv.
+`8b89864` und seinen StockInfo-Vorlagentext `fdeb4fd` zur unabhängigen
+Prüfung übergeben. Eine Freigabe liegt noch nicht vor. Dieses Ticket ist
+in `30-doing/` aktiv.
 
 Für Mike steht jetzt kein Handgriff an. Abschluss und Veröffentlichung
 bleiben nach der technischen Prüfung getrennt; Docker Hub und das
@@ -40,19 +40,20 @@ der API ab.
 - **Dateien:** drei READMEs, dieses Ticket. Kein Produktcode.
 - **Budget:** 0 Produktdateien, 4 Dokudateien, 150 Diff-Zeilen.
 - **Nicht-Ziele:** keine Anmeldung bauen, keine Änderung an App oder Image.
-  Die Unraid-Vorlage liegt in einem eigenen Repository; ihr StockInfo-Teil
-  aus `ca7ae2d` stammt von Codex und kann von Codex nicht unabhängig
-  geprüft werden (siehe Übergabe).
+  Die Unraid-Vorlage liegt in einem eigenen Repository. Der erste Text
+  `ca7ae2d` stammte von Codex; Claudes neu verfasster StockInfo-Teil
+  `fdeb4fd` ist der aktuelle Prüfgegenstand.
 
 ## Prüfgegenstand
 
 | Repo | Time-box | Scope | GH-Issue |
 |---|---|---|---|
-| StockInfo | 0,5–1 h | `README.md`, `docker/README.md`, `unraid/README.md`; Commit `396e8bebc403144a8900bf45bf9c56644467499c` gegen `f821c2ab546ba7b47f3dc2828de3fc953490ea3d` | — |
-| Unraid-Templates | 0,5 h | ausschließlich `templates/stockinfo.xml` aus Commit `ca7ae2d7b15331bf84a0fa344f436c37e3863e9c` gegen `c828e24671a81fd53824f67e3fea21b4e35b280b` | — |
+| StockInfo | 0,5–1 h | `README.md`, `docker/README.md`, `unraid/README.md`; Commit `8b89864` gegen `7bac219` | — |
+| Unraid-Templates | 0,5 h | ausschließlich `templates/stockinfo.xml` aus Commit `fdeb4fd` gegen `c828e24` | — |
 
-Die vorbereiteten Commits liegen auf dem jeweiligen Branch
-`docs/internet-zugriff-hinweis`. StockInfos Projekt-Root steht jetzt auf
+Die ursprünglichen Vorbereitungscommits `396e8be` und `ca7ae2d` liegen
+auf `docs/internet-zugriff-hinweis`; Claudes aktuelle Endfassungen stehen
+oben. StockInfos Projekt-Root steht jetzt auf
 `t-84-internetbetrieb-hinweise`; die frühere Arbeitskopie unter
 `/private/tmp/stockinfo-internet-hinweis` entfällt mit T-85. Das
 Unraid-Templates-Repository hat weiterhin seine Arbeitskopie
@@ -63,11 +64,10 @@ Eine Freigabe des gesamten Template-Commits braucht auch das StockPortfolio-
 Prüfergebnis aus T-67.
 
 Claude hat die StockInfo-Dokumentationsfassung auf dem aktuellen Stand
-selbst geschrieben und die OUTBOX mit `3733624` übergeben. Der
-unabhängige Review gehört `codex`. Die vorbereitete StockInfo-Fassung
-`396e8be` aus der früheren Codex-Coder-Zuordnung ist nicht die
-Prüffassung. Der Vorlagentext aus `ca7ae2d` stammt dagegen weiterhin von
-Codex; dafür fehlt ein unabhängiger Verifier.
+selbst geschrieben und die OUTBOX zuletzt mit `8b89864` übergeben. Der
+unabhängige Review gehört `codex`. Die vorbereiteten Fassungen `396e8be`
+und `ca7ae2d` aus der früheren Codex-Coder-Zuordnung sind nicht die
+Prüffassungen; Claudes neuer Vorlagentext steht in `fdeb4fd`.
 
 ### Verify
 
