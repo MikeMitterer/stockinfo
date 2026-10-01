@@ -181,13 +181,17 @@ change or destroy data:
   justETF and writes it to the database; `GET /analyze` triggers live
   requests without storing them.
 
-The default bind address is `0.0.0.0`, so in Docker the port is reachable from
-the whole network the container is attached to.
+The default bind address is `0.0.0.0`. Started natively, StockInfo is then
+reachable from your network; in Docker, every host address the port is
+published on can reach it.
 
 **Run it on a network you trust.** In practice that means one of:
 
-- bind it to loopback only (`HOST=127.0.0.1`) and reach it through an SSH
-  tunnel;
+- keep it on the local machine and reach it through an SSH tunnel. Natively,
+  bind it to loopback with `HOST=127.0.0.1`. In Docker, keep the container's
+  `HOST` at `0.0.0.0` and publish the port on the host's loopback only
+  (`-p 127.0.0.1:8000:8000`); `HOST=127.0.0.1` inside the container would make
+  the published port unreachable;
 - keep the published port inside your LAN and off the internet (the usual
   Unraid setup);
 - for remote access, connect to that network through a VPN instead of

@@ -138,6 +138,28 @@ Runde 1 ist unabhängig geprüft und mit `changes_requested` an Claude
 zurückgegeben. Die beiden offenen Punkte und die Nachweise stehen unten;
 ein Ticketabschluss liegt nicht vor.
 
+## Nacharbeit Runde 2 (Claude, 2026-10-01)
+
+- **B1:** `README.md` → Security model trennt jetzt native Bindung und
+  Docker: nativ `HOST=127.0.0.1`; in Docker bleibt `HOST` bei `0.0.0.0`,
+  veröffentlicht wird nur auf dem Host-Loopback (`-p 127.0.0.1:8000:8000`),
+  mit ausdrücklichem Hinweis, dass `HOST=127.0.0.1` im Container den
+  veröffentlichten Port unerreichbar macht. Der einleitende Satz zur
+  Standardbindung unterscheidet ebenfalls nativ und Docker. Deckt sich mit
+  `docker/README.md` (Quick start mit `127.0.0.1:8000:8000`).
+- **B2:** Den StockInfo-Text der Unraid-Vorlage hat Claude eigenständig neu
+  formuliert: Commit `fdeb4fd` im Vorlagen-Repo auf
+  `docs/internet-zugriff-hinweis`, nur `templates/stockinfo.xml`, drei
+  Stellen (Overview-Absatz „Network access“, Description, Portfeld).
+  Inhalt: keine Anmeldung, konkrete Folgen (Instrumente ändern/löschen,
+  Sicherungen einspielen), Port nie am Router freigeben, LAN, VPN mit
+  WireGuard-Beispiel, Reverse Proxy mit HTTPS und Login. `xmllint --noout`
+  ok, `git diff --check` sauber; `stockportfolio.xml` unverändert.
+  Prüfgegenstand für Verify #3: `fdeb4fd` gegen `c828e24`, nur
+  `templates/stockinfo.xml`.
+- Docker-Hub-Vorschau unverändert gültig (`docker/README.md` in Runde 2
+  nicht geändert).
+
 ## Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
 
 **Ergebnis: `changes_requested`.** Claudes StockInfo-Endfassung `3733624`
