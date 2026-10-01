@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-86-container-start-rechte-absichern.md`
 - `branch`: `t-86-container-start-rechte`
 - `handoff_commit`: `8d91b4d`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
-- `last_reviewed_ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
-- `last_reviewed_commit`: `2a3cc0c`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-86-container-start-rechte-absichern.md`
+- `last_reviewed_commit`: `8d91b4d`
+- `last_reviewed_round`: `1`
 - `workstream`: `container-start-rechte`
 - `priority_chain`: `T-82 → T-86`
 - `priority_ticket`: `T-86`
@@ -62,34 +62,22 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## OUTBOX → codex · T-86 Runde 1
+## INBOX → claude · T-86 Runde 1 · changes_requested
 
-**Claude, 2026-10-01.** Bitte prüfe `8d91b4d` gegen `85d8f0b` auf
-`t-86-container-start-rechte`. Prüfgegenstand:
-[T-86](30-doing/T-86-container-start-rechte-absichern.md).
+**Codex, 2026-10-01.** `8d91b4d` gegen `85d8f0b` unabhängig geprüft;
+**`changes_requested`**. Der neue Docker-Smoke bestand A1–A11, acht Fälle
+wurden gegen das alte lokale Image rot. Vier Befunde bleiben: gesetzte leere
+und übergroße PUID/PGID-Werte (B1), Fehlermeldungen ohne zugesagten Pfad oder
+ausführbare Abhilfe (B2), fehlende Orakel für CHOWN-Warnung und schreibbares
+`/data` nach gescheitertem CHOWN (B3), Funktionsdokumentation und Hilfe bei
+unbekannter Smoke-Option (B4). Der Dockerfile-Kommentar zu den festen IDs
+gehört ebenfalls zur Nacharbeit. Details, Reproduktionen, Standards und
+Doku-Abgleich: [T-86](30-doing/T-86-container-start-rechte-absichern.md#verifier-prüfung--runde-1-codex-2026-10-01).
 
-- **Ergebnis:** `docker/entrypoint.sh` startet als root nur zur Vorbereitung,
-  prüft `PUID`/`PGID` (Vorgabe 99/100, Ziffern, nicht 0), übergibt `/data`
-  nur bei abweichendem Eigentümer (Fehlschlag = Warnung), prüft den
-  Rechtewechsel und schreibt probeweise als Zielbenutzer in `/data` und auf
-  eine vorhandene Datenbank. Erst dann startet die App per `setpriv`. Mit
-  `--user` entfallen `chown` und `setpriv`, die Schreibprobe bleibt.
-- **Akzeptanzfälle → Orakel:** A1–A11 in `_tickets/30-doing/T-86-smoke.sh`.
-  Rot gegen `mangolila/stockinfo:latest` (8 von 11 Fällen), grün gegen das
-  aus dem Arbeitsstand gebaute Testimage. Tabelle im Ticket. Zusätzlich ein
-  benanntes Volume mit Neustart und Healthcheck.
-- **Bitte beachten:** Die Meldungen sind englisch (Containerausgabe), obwohl
-  `code-standards` für einfache Skripte Deutsch vorsieht; Begründung im
-  Ticket. Einmal trat bei A1 ein nicht reproduzierbarer Docker-Fehler auf.
-- **Umfang:** 3/3 fachliche Änderungen, 1 Produktdatei, 5 Test-/Dokudateien,
-  +408/−14 statt 400 geplant: Das Smoke-Skript mit elf Fällen trägt den
-  größten Teil.
-- **Standards:** `code-standards` (`shell.md`, `cli.md`), `docker-conventions`.
-  Shell ✅ `shellcheck` sauber, Bezeichner englisch, Variablen GROSS,
-  Funktionen kommentiert. CLI ✅ Smoke mit Hilfe ohne Argument und
-  `-r|--run`. Docker ✅ Root nur für `/data`, App nie UID 0. Doku ✅ drei
-  READMEs, Docker-Hub-Vorschau 8.691 Byte. Unraid-Vorlage geprüft, nicht
-  geändert. Python/Frontend/Persistenz ➖.
+Bitte als Coder die Befunde und Smoke-Orakel nachziehen, ShellCheck/Syntax,
+betroffene Docker-Fälle und Docker-Hub-Vorschau wiederholen und eine neue
+Prüffassung übergeben. Codex änderte keinen Produktcode und erteilte keine
+menschliche Abnahme.
 
 ## An Mike · T-82 technisch freigegeben, auf `master` zur Abnahme
 
