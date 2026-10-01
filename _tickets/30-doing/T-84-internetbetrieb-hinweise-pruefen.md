@@ -76,11 +76,11 @@ und ersetzt kein Verifier-Urteil.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | StockInfo-Diff gegen tatsächliche API-Routen und das Authentifizierungsmodell lesen | Hinweis erklärt fehlende Anmeldung und ändernde/löschende Zugriffe ohne unzutreffende Sicherheitszusage | ➖ |
-| 2 | `README.md`, `docker/README.md` und `unraid/README.md` inhaltlich abgleichen | Direkte Internetfreigabe wird konsistent abgeraten; LAN, VPN und HTTPS-Proxy mit Anmeldung sind verständlich beschrieben | ➖ |
-| 3 | `templates/stockinfo.xml` gegen die Anleitungen und Containerkonfiguration prüfen | Englischer Hinweis steht sichtbar in Overview, Description und Portfeld; keine andere Template-Funktion geändert | ➖ |
-| 4 | Docker-Hub-Vorschau und XML erneut am endgültigen Prüfstand erzeugen | Vorschau unter 25.000 UTF-8-Bytes, Links korrekt; XML gültig | ➖ |
-| 5 | Git-Fassung und Veröffentlichungsstand trennen | Review benennt geprüfte Commit-IDs und hält fest, dass kein Merge, Push oder Hub-/Unraid-Update belegt ist | ➖ |
+| 1 | StockInfo-Diff gegen tatsächliche API-Routen und das Authentifizierungsmodell lesen | Hinweis erklärt fehlende Anmeldung und ändernde/löschende Zugriffe ohne unzutreffende Sicherheitszusage | ✅ |
+| 2 | `README.md`, `docker/README.md` und `unraid/README.md` inhaltlich abgleichen | Direkte Internetfreigabe wird konsistent abgeraten; LAN, VPN und HTTPS-Proxy mit Anmeldung sind verständlich beschrieben | ⚠️ |
+| 3 | `templates/stockinfo.xml` gegen die Anleitungen und Containerkonfiguration prüfen | Englischer Hinweis steht sichtbar in Overview, Description und Portfeld; keine andere Template-Funktion geändert | ⚠️ |
+| 4 | Docker-Hub-Vorschau und XML erneut am endgültigen Prüfstand erzeugen | Vorschau unter 25.000 UTF-8-Bytes, Links korrekt; XML gültig | ✅ |
+| 5 | Git-Fassung und Veröffentlichungsstand trennen | Review benennt geprüfte Commit-IDs und hält fest, dass kein Merge, Push oder Hub-/Unraid-Update belegt ist | ✅ |
 
 **Coder-Belege (Claude, 2026-10-01), Endfassung auf `t-84-internetbetrieb-hinweise`:**
 
@@ -134,5 +134,68 @@ geändert.
 
 ### Auflösung
 
-Offen. Erst nach Aktivierung darf der Coder die formelle Übergabe vorbereiten;
-ein Prüfurteil oder Ticketabschluss liegt noch nicht vor.
+Runde 1 ist unabhängig geprüft und mit `changes_requested` an Claude
+zurückgegeben. Die beiden offenen Punkte und die Nachweise stehen unten;
+ein Ticketabschluss liegt nicht vor.
+
+## Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
+
+**Ergebnis: `changes_requested`.** Claudes StockInfo-Endfassung `3733624`
+gegen `7bac219` auf `t-84-internetbetrieb-hinweise` geprüft. Sie ist
+gegenüber der früheren Codex-Vorbereitung `396e8be` inhaltlich neu
+bearbeitet. Das Unraid-Template `ca7ae2d:templates/stockinfo.xml` ist
+dagegen unverändert Codex-Text; dafür erteile ich kein unabhängiges
+Verifier-Urteil. Kein Produktcode und keine Vorlage wurden im Review
+geändert.
+
+**B1 · Loopback-Anleitung vermischt Container- und Host-Bindung.**
+`README.md:189-190` empfiehlt im Abschnitt „Security model“ direkt nach
+dem Docker-Hinweis `HOST=127.0.0.1` als Loopback-Weg. Im Container bindet
+damit Uvicorn nur an dessen eigenes Loopback; ein mit `-p` veröffentlichter
+Hostport erreicht den Dienst nicht. Eine isolierte Netzprobe mit demselben
+Testimage und `python -m http.server` zeigte: Container-Bindung an
+`127.0.0.1`, Host-Publishing auf `127.0.0.1` → `curl` Exit 52 („Empty reply
+from server“); Container-Bindung an `0.0.0.0` bei demselben Host-Publishing
+→ `curl` Exit 0 mit Antwort. `docker/README.md:25` zeigt das richtige
+Host-Publishing `-p 127.0.0.1:8000:8000`; [Docker-Dokumentation zur
+Portfreigabe](https://docs.docker.com/engine/network/port-publishing/)
+unterscheidet ebenfalls die Host-Adresse. Bitte im Root-README native
+`HOST`-Bindung und Docker-Host-Publishing getrennt erklären, zumal der neue
+Docker-Abschnitt auf diesen Sicherheitsabschnitt verweist.
+
+**B2 · Der Vorlagentext hat keinen unabhängigen Verifier.** Claude hat
+`ca7ae2d:templates/stockinfo.xml` aus der früheren Codex-Coder-Arbeit
+unverändert übernommen. Ich kann die eigene Formulierung in Overview,
+Description und Portfeld nicht unabhängig abnehmen. Der Diff betrifft
+faktisch nur diese drei Texte, und `xmllint --noout` besteht; das ist ein
+Syntax- und Umfangsnachweis, kein unabhängiges Texturteil. Für Verify #3
+braucht es eine eigenständig von Claude verfasste Endfassung mit neuer
+Commit-ID oder einen ausdrücklich zugeordneten anderen unabhängigen
+Verifier. Der StockPortfolio-Teil des gemeinsamen Vorlagen-Commits ist
+kein T-84-Prüfgegenstand.
+
+**Bestätigte Nachweise:** `app.openapi()` enthält keine Security-Schemes
+und keine globale Security-Anforderung. Die im README genannten Methoden
+und Pfade existieren. Die Aufzählung ist mit „including“ erkennbar
+beispielhaft; `POST /backups` und `POST /migration/confirm` sind weitere
+schreibende Wege. Der veraltete Satz über `GET /analyze` ist entfernt;
+die Route ruft den Analyzer ohne Datenbankschreiben auf. Alle drei
+Anleitungen warnen vor direkter Portfreigabe und nennen LAN, VPN und
+HTTPS-Proxy mit Anmeldung. [Unraids WireGuard-Anleitung](https://docs.unraid.net/unraid-os/system-administration/secure-your-server/wireguard/)
+bestätigt den VPN-Beispielweg. Docker-Hub-Vorschau 8.846 UTF-8-Bytes mit
+absoluten Bildlinks; XML aus `ca7ae2d` syntaktisch gültig;
+`git diff --check 7bac219 3733624` sauber. Beide eigenen
+Netztestcontainer wurden entfernt. `origin/master` enthält die T-84-
+Dokumentation nicht; kein Merge, Push, Hub- oder Unraid-Update wurde in
+diesem Review ausgeführt oder als geschehen bestätigt.
+
+**Standards und Doku-Abgleich:** `code-standards` (Dokumentation),
+`docker-conventions` und `unraid-conventions` wurden auf die betroffenen
+Dateien angewandt. Struktur, Anker und kurze Warntexte ✅; Docker-Bindung
+⚠️ B1; unabhängiger Unraid-Textnachweis ⚠️ B2. DRY und Produktcode-Regeln
+➖, da nur Dokumentation und Vorlage betroffen sind. Die Aussagen von
+`README.md`, `docker/README.md` und `unraid/README.md` wurden gemeinsam
+abgeglichen; ihre Kernwarnung stimmt überein, der Loopback-Weg im Root-
+README muss korrigiert werden. Die mechanische Berichtigung des veralteten
+Ticketstands ist im separaten Review-Commit `fb29d46` festgehalten.
+Menschliche Abnahme wurde nicht erteilt.
