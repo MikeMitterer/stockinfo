@@ -28,8 +28,10 @@ Unraid-Listing zeigen die neue Fassung derzeit nicht.
 | Unraid-Templates | 0,5 h | ausschließlich `templates/stockinfo.xml` aus Commit `ca7ae2d7b15331bf84a0fa344f436c37e3863e9c` gegen `c828e24671a81fd53824f67e3fea21b4e35b280b` | — |
 
 Beide Commits liegen auf dem jeweiligen Branch `docs/internet-zugriff-hinweis`.
-Lokale Arbeitskopien: `/private/tmp/stockinfo-internet-hinweis` und
-`/private/tmp/unraid-internet-hinweis`. Das Gegenstück für StockPortfolio
+In StockInfo wird dieser Branch im Projekt-Root ausgecheckt; die frühere
+Arbeitskopie unter `/private/tmp/stockinfo-internet-hinweis` entfällt mit
+T-85. Das Unraid-Templates-Repository hat weiterhin seine Arbeitskopie
+`/private/tmp/unraid-internet-hinweis`; T-85 ändert dort nichts. Das Gegenstück für StockPortfolio
 wird im dortigen T-67 mit dessen Rollen geprüft. Der gemeinsame Template-
 Commit wird pro Ticket nur für die eigene XML-Datei bewertet.
 Eine Freigabe des gesamten Template-Commits braucht auch das StockPortfolio-

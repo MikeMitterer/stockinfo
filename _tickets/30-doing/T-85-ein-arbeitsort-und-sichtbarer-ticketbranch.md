@@ -45,10 +45,34 @@ Dieser Branch enthält gegenüber `master` nur Boardcommits.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | `AGENTS.md`, `STATUS.md` und Board-Einstiege lesen | Ein Arbeitsort, Owner-Wechsel und Branch-Prüfung widerspruchsfrei beschrieben | ➖ |
-| 2 | `git worktree list --porcelain` und `git branch --show-current` im StockInfo-Root prüfen | Root und `STATUS.branch` stimmen; keine benötigte Ticketfassung liegt nur außerhalb des Roots | ➖ |
-| 3 | T-84 mit seinem bisherigen Branch und Commit vergleichen | Ticket und Dokumentationsstand bleiben vollständig erhalten und vom Root aus erreichbar | ➖ |
-| 4 | Übergabe, technische Freigabe und menschliche Abnahme am dokumentierten Beispiel durchgehen | Merge auf `master` erfolgt nach technischer Freigabe, ohne Abnahme oder Push vorzutäuschen | ➖ |
+| 1 | `AGENTS.md`, `STATUS.md` und Board-Einstiege lesen | Ein Arbeitsort, Owner-Wechsel und Branch-Prüfung widerspruchsfrei beschrieben | ✅ |
+| 2 | `git worktree list --porcelain` und `git branch --show-current` im StockInfo-Root prüfen | Root und `STATUS.branch` stimmen; keine benötigte Ticketfassung liegt nur außerhalb des Roots | ✅ |
+| 3 | T-84 mit seinem bisherigen Branch und Commit vergleichen | Ticket und Dokumentationsstand bleiben vollständig erhalten und vom Root aus erreichbar | ✅ |
+| 4 | Übergabe, technische Freigabe und menschliche Abnahme am dokumentierten Beispiel durchgehen | Merge auf `master` erfolgt nach technischer Freigabe, ohne Abnahme oder Push vorzutäuschen | ◑ |
+
+**Belege (Claude, 2026-10-01):**
+
+1. Die Regel steht einmal in `AGENTS.md` im Abschnitt „Ein Arbeitsort: der
+   Projekt-Root“. STATUS (Hinweis über dem Zustandsblock), Workflow
+   („Ticketpfade und Arbeitsbeginn“), Aktivierung (Board-Pfad und
+   Claude-Durchlauf Schritt 1), Codex-Scheduler („Projekt“) und
+   `_tickets/README.md` („Ablage“) verweisen nur darauf. Sie nennen jeweils
+   die Prüfung, die an ihrer Stelle anfällt.
+2. `git worktree list --porcelain` zeigt nur noch den Root, auf
+   `t-85-ein-arbeitsort`; `STATUS.branch` nennt denselben Branch. Der
+   saubere Worktree `/private/tmp/stockinfo-internet-hinweis` ist per
+   `git worktree remove` entfernt; dort lag nur die ignorierte, erzeugte
+   Vorschau `docker/preview/`. Der verwaiste Eintrag
+   `stockinfo-release-20260925` (Gitdir fehlte, `release/stockinfo-0-7`
+   ohne Commits außerhalb von `master`) ist per `git worktree prune`
+   entfernt. Sein Verzeichnis unter `/private/tmp` ist nicht gelöscht.
+3. Der Branch `docs/internet-zugriff-hinweis` steht unverändert auf
+   `6ca09d2`; Doku-Commit `396e8be` ist darin enthalten. Der
+   reine Ticket-Commit `6ca09d2` ist per `cherry-pick -x` als `336ef69`
+   auf das Board übernommen. T-84 liegt damit unter `10-backlog/`. Das
+   Ticket nennt jetzt den Root als Arbeitsort für seinen Branch.
+4. Beschrieben, aber noch nicht durchlaufen: Der erste echte Lauf ist die
+   Integration dieses Tickets nach seiner technischen Freigabe.
 
 ### Akzeptanzkriterien
 
@@ -75,6 +99,29 @@ Benutzungsanleitungen mit Branch- oder Arbeitsortbezug. `README.md` und
 prüfen. AgentLessons T-52 bleibt eine offene zentrale Übernahme, bis Paket
 und Skill tatsächlich geändert und installiert sind.
 
+**Doku-Abgleich (Claude, 2026-10-01):**
+
+- Geändert: `AGENTS.md` (neuer Abschnitt mit Übersichtseintrag),
+  `_tickets/STATUS.md` (Feld `branch` und Hinweis),
+  `_tickets/.agents/AGENT-WORKFLOW.md`, `AGENT-ACTIVATION.md`,
+  `CODEX-IN-CONTEXT-SCHEDULER.md`, `_tickets/README.md`, T-84 (Arbeitsort).
+- Unverändert: `README.md`, `docker/README.md` und `unraid/README.md`.
+  Sie erwähnen weder Worktrees noch Ticketbranches; „`master`“ steht dort nur
+  für veröffentlichte Links. `git grep` nach `worktree`, `/private/tmp` und
+  `show-current` außerhalb archivierter Tickets: die übrigen Treffer meinen
+  den Arbeitsbaum, sind Historie in STATUS oder ein temporäres
+  Datenverzeichnis des T-63-Smokes.
+- Gemeinsames Paket: Die installierte Fassung `df699dd1…` enthält keine
+  Arbeitsort- oder `branch`-Regel. `PROJECT-RULES.md` mergt dort erst nach
+  menschlicher Abnahme. `AGENTS.md` weist den früheren lokalen Merge als
+  StockInfo-Ausnahme aus. Übernahme: AgentLessons T-52, offen.
+- Offen, nicht Teil von T-85: Der lokale Workflow trägt noch keinen
+  `Übernahmestand der Board-Konventionen` (Paket: `2026-09-28-activity-local`).
+  Zuständig ist der Coder des Board-Abgleichs, sobald Mike ihn einplant.
+
 ### Auflösung
 
-Offen. Dieses Backlog-Ticket aktiviert keine Arbeit und ändert keine Rollen.
+Umgesetzt auf `t-85-ein-arbeitsort`, Übergabe an den Verifier `codex`.
+Nach technischer Freigabe mergt der Coder lokal nach `master`. Der Branch
+enthält dabei auch die Boardcommits zu T-82 und T-83 sowie den T-84-Ticket-Commit;
+das sind ausschließlich Dateien unter `_tickets/`. Kein Push.
