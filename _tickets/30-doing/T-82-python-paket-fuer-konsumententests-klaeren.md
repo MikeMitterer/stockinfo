@@ -70,14 +70,14 @@ Aufruf ermöglicht. Die Entscheidung und ihre Grenze im Ticket begründen.
 
 ### Verify
 
-Legende: ✅ bestätigt, ➖ noch keine Live-Verifikation.
+Legende: ✅ bestätigt, ⚠️ Nacharbeit, ➖ noch keine Live-Verifikation.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | In einer frischen StockInfo-Umgebung den dokumentierten Installationsweg ausführen | `projecttools.ui.colors` ist ohne absoluten Rechnerpfad und ohne `sys.path`-Änderung importierbar | ✅ |
 | 2 | StockPortfolios Testskript mit der vorgesehenen Python-Umgebung und `--help` starten | Hilfe erscheint ohne laufenden Dienst und ohne Seiteneffekte | ✅ |
 | 3 | Den Teststack nach der gewählten Einbindung starten, Status prüfen und stoppen | StockInfo und StockPortfolio bleiben über den dokumentierten Aufruf erreichbar; fremde Prozesse und Daten bleiben unangetastet | ✅ |
-| 4 | StockInfos bestehende Tests und die betroffenen Entwickleranleitungen prüfen | Keine Regression; Installationsschritte und Zuständigkeit sind nachvollziehbar | ✅ |
+| 4 | StockInfos bestehende Tests und die betroffenen Entwickleranleitungen prüfen | Keine Regression; Installationsschritte und Zuständigkeit sind nachvollziehbar | ⚠️ |
 
 **Belege (Claude, 2026-10-01):**
 
@@ -112,7 +112,7 @@ gemeinsamen Skills, auf Mikes Auftrag.
 - [x] Der für StockInfo gewählte Installationsweg ist begründet und reproduzierbar.
 - [x] StockPortfolios Skript kann die gemeinsame CLI-Darstellung über den Paketimport nutzen, ohne Rechnerpfad im Code.
 - [x] Hilfe und Teststack funktionieren auf dem dokumentierten Entwicklungsweg.
-- [x] Betroffene Anleitungen in beiden Repositories sind auf Konsistenz geprüft; nötige Anpassungen sind dokumentiert.
+- [ ] Betroffene Anleitungen in beiden Repositories sind auf Konsistenz geprüft; nötige Anpassungen sind dokumentiert.
 
 ### Doku-Abgleich
 
@@ -137,3 +137,82 @@ ProjectTools bleibt ein eigenes Repository mit eigenem Commit.
 
 Umgesetzt auf `t-82-python-paket-konsumententests`; Übergabe an Verifier
 `codex`.
+
+### Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
+
+**Ergebnis: `changes_requested`.** Die Übergabe `fa5b240` wurde gegen
+`849454f` unabhängig geprüft. Dazwischen liegt nur die T-86-Messnotiz
+`ff21c5c`. Der finale geprüfte T-82-Stand enthält die verhaltensneutrale
+Selbstheilung `a3bd3b1`: Vier Bash-Funktionskommentare nennen nun Parameter
+und Rückgabewert; das Root-README nennt Node.js samt npm zutreffend als
+Voraussetzung für `make setup`. Produktlogik, Abhängigkeiten, Testdaten und
+Erwartungen wurden im Review nicht geändert.
+
+**Verify #1 ✅:** `make setup VENV=/private/tmp/t82-verifier.LkC7C7/.venv`
+legte eine frische Python-3.11-venv an, installierte die deklarierten Pakete
+und `npm ci` und lief beim zweiten Aufruf erneut erfolgreich. Aus dieser
+venv importiert `projecttools.ui.colors` aus der verlinkten ProjectTools-Quelle;
+`mmit-projecttools` meldet Version 0.1.0. Kein absoluter Rechnerpfad und kein
+`sys.path`-Eingriff stehen in den geänderten Projektdateien.
+
+**Verify #2 ✅:** Der StockPortfolio-Einzelserver zeigte mit der frischen
+StockInfo-venv bei `--help` die gemeinsame CLI-Hilfe und startete keinen
+Dienst. **Verify #3 ✅:** Der Einzelserver verwendete eine temporäre Datenbank;
+`/ready` antwortete mit 200, `--status` erkannte die eigene PID und `--stop`
+beendete sie. Zusätzlich startete StockPortfolios eigener `--stack`-Weg mit
+StockInfos Projekt-venv StockInfo auf Port 18084, die Konto-API auf 8080 und
+das Frontend auf 5175. `--run` und `--status` bestätigten Endpunkte und CORS;
+`--stop` entfernte nur die eigenen Prozesse und temporären Kontodaten.
+
+**Verify #4 ⚠️:** `make test` bestand mit 1245 Backend-Tests (35 übersprungen),
+323 Plugin-API-Tests (1 übersprungen), 50 Beispiel-Plugin-Tests und
+52 Dashboard-Testdateien mit 389 Tests; Dashboard-Lint bestand. Der Build
+bestand einschließlich `vue-tsc`. `shellcheck`, `bash -n`, `make help`,
+`make hints`, Skriptaufrufe ohne Argument, mit `--help` und `--info` sowie
+`git diff --check` bestanden. Nach der Selbstheilung wurden der betroffene
+Setup-Lauf, ShellCheck, Bash-Syntax und die Skript-Smokes wiederholt. Der
+Anleitungsabgleich ist wegen B1 unten noch offen.
+
+**Code-Standards:** Gelesen wurden
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md` mit
+`architecture.md`, `shell.md`, `cli.md`, `quality.md` und
+`documentation.md` sowie `makefile-conventions/SKILL.md` mit der
+`setup-libs.sh`-Vorlage. Architektur ✅ Entwicklungs-Setup ohne App-Änderung;
+Shell ✅ Link-Logik aus der Hausvorlage, ShellCheck und vollständige
+Funktionskommentare nach Selbstheilung; CLI ✅ ausdrückliches `--install`,
+Hilfe ohne Argument und Kurz-/Langformen; Qualität/Tests ✅ frischer
+Installationsweg, Einzelserver und vollständiger Stack unabhängig geprüft;
+Dokumentation ⚠️ 1 Befund (B1); Makefile ✅ Setup-Gruppe, Hilfetext und
+ausführbarer Installationspfad. Python, Frontend/i18n und Persistenz ➖ kein
+Quellcode in diesen Gruppen geändert. Bezeichnerinventar des neuen Bash-
+Skripts: alle Funktions- und Variablennamen englisch. DRY ✅: Der
+Übergabediff und der berührte Setup-Code nutzen eine tabellengesteuerte
+Link-Funktion und eine ProjectTools-Abhängigkeit in `requirements-dev.txt`;
+keine parallele Installationslogik oder zweite Paketliste.
+
+**Doku-Abgleich:** `README.md` (Requirements und Quick start) beschreibt die
+neue Einrichtung; `make hints` nennt denselben Startweg. Die zunächst
+stehengebliebene Aussage „Node.js optional“ widersprach dem unbedingten
+`npm ci` in `make setup`; `a3bd3b1` nennt Node.js und npm nun ausdrücklich
+für diesen Weg. `docker/README.md` und `unraid/README.md` bleiben sachlich
+unverändert: Das Dockerfile installiert `requirements.txt`, nicht
+`requirements-dev.txt`, und benötigt die `.libs`-Links nicht. StockPortfolios
+Skript und README wurden gelesen, der Teststack ausgeführt; dort wurde nichts
+geändert. **B1:** `../StockPortfolio/README.md` im Abschnitt zum lokalen
+Teststack sagt für den StockInfo-Einzelserver weiterhin „uses plain help with
+the current StockInfo environment“ (Zeile 426). Nach T-82 ist
+`projecttools.ui.colors` in StockInfos venv installiert; der unabhängige
+`--help`-Lauf nutzte den gemeinsamen Formatter (`has_theme() == True`). Die
+Anleitung des
+Konsumentenprojekts muss diese Aussage an den nun gültigen Stand anpassen.
+Danach sind die betroffenen Abschnitte beider READMEs erneut auf Konsistenz
+zu prüfen. Dieser Repo-übergreifende Doku-Befund wird wegen der Schreibgrenze
+nicht vom StockInfo-Verifier in StockPortfolio geändert.
+
+**Umfang und offener gemeinsamer Stand:** Der tatsächliche T-82-Diff
+`849454f..fa5b240` ohne T-86 und STATUS umfasst 5 Dateien, +284/−22;
+die OUTBOX nennt +282/−22. Nach `a3bd3b1` sind es +294/−23. Die
+Hausvorlage `makefile-conventions/setup-libs.sh` prüft weiterhin den
+veralteten Pfad `ProjectTools/src/python/colors.py`; die Übernahme in die
+gemeinsame Skill-Quelle bleibt offen und ist kein StockInfo-Produktedit.
+Keine menschliche Ticketabnahme oder Änderung der Human-Spalte erfolgte.
