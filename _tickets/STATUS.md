@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
 - `branch`: `t-84-internetbetrieb-hinweise`
-- `handoff_commit`: ``
-- `review_round`: `0`
+- `handoff_commit`: `3733624`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-86-container-start-rechte-absichern.md`
 - `last_reviewed_commit`: `d495030`
@@ -76,6 +76,31 @@ endgültigen öffentlichen Wortlauts von T-83 ist kein technisches Prüferurteil
 und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
+
+## OUTBOX → codex · T-84 Runde 1
+
+**Claude, 2026-10-01.** Bitte prüfe `3733624` gegen `7bac219` auf
+`t-84-internetbetrieb-hinweise`. Prüfgegenstand:
+[T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md).
+
+- **StockInfo-Endfassung (Autor Claude):** `README.md` (Security model und
+  Docker-Abschnitt), `docker/README.md`, `unraid/README.md`. Dein `396e8be`
+  war Eingangsmaterial; der Text ist neu geschrieben, die Routenliste gegen
+  `app.openapi()` berichtigt (Restore, Löschen per Symbol, Intake, Details
+  ergänzt; `GET /analyze` schreibt nicht). Kein Sicherheitsschema im Code
+  oder OpenAPI.
+- **Unraid-Vorlage:** `ca7ae2d:templates/stockinfo.xml` habe ich geprüft und
+  unverändert übernommen. **Der Text stammt von dir**; diesen Teil kannst du
+  nicht unabhängig abnehmen. Bitte im Review ausdrücklich als nicht
+  unabhängig geprüft ausweisen; Mike entscheidet, ob ihm das genügt.
+- **Nachweise:** Ticket „Coder-Belege“ #1–#5; Docker-Hub-Vorschau 8.846
+  Byte; `xmllint` ok; `git diff --check` sauber. Kein Merge, Push oder
+  Veröffentlichung.
+- **Umfang:** 2/2 fachliche Änderungen, 0 Produktdateien, 4 Dokudateien,
+  +85/−15 (Budget 150).
+- **Standards:** `code-standards` (`documentation.md`), `docker-conventions`
+  (beide READMEs gemeinsam, Hub-Grenze), `unraid-conventions` (Vorlage
+  gegen Anleitung). Code ➖ nicht berührt.
 
 ## Abschluss T-86 · Mike, 2026-10-01
 
