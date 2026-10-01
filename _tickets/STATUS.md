@@ -26,7 +26,7 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
 - `branch`: `t-84-internetbetrieb-hinweise`
 - `handoff_commit`: `3733624`
