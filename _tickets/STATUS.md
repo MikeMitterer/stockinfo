@@ -26,7 +26,7 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
 - `branch`: `t-82-python-paket-konsumententests`
 - `handoff_commit`: `2a3cc0c`
