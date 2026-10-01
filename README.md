@@ -107,7 +107,8 @@ splits and dividends. Both behaviors differ from the REST artifact; see the
   interpreter with `PYTHON_BOOTSTRAP=python3.12 make setup`)
 - **make** (drives setup and start/stop of the services)
 - optional **Docker** (to run the container)
-- optional **Node.js 20+** (dashboard only)
+- **Node.js 20+ with npm** (`make setup` installs the dashboard packages;
+  the backend and prebuilt Docker image do not use Node.js on the host)
 
 The project uses shared ecosystem helpers under `.libs/` (MakeLib, BashLib,
 ProjectTools). `make setup` links them via `scripts/setup-libs.sh`; it finds the

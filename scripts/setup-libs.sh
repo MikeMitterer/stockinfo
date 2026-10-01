@@ -50,7 +50,9 @@ readonly CLI_FILES=(
     "ProjectTools/src/python/changelog.py"
 )
 
-# Optionen einmal deklarieren; Hilfe verändert weder Links noch Umgebungen.
+# Zeigt Optionen und Voraussetzungen ohne Änderungen an Links oder Umgebungen.
+# Params: keine.
+# Returns: 0 nach Ausgabe der Hilfe.
 usage() {
     printf '\nUsage: %s [ options ]\n' "${APPNAME}"
     printThemeHeading 'Optionen'
@@ -82,6 +84,8 @@ linkOnce() {
 }
 
 # Prüft die tatsächlich konsumierten CLI-Dateien ohne Programme zu starten.
+# Params: keine.
+# Returns: 0 wenn alle Dateien lesbar sind, sonst 1.
 checkCliFiles() {
     local _FILE _RESULT=0
     printThemeHeading 'Gemeinsame CLI-Dateien'
@@ -96,7 +100,9 @@ checkCliFiles() {
     return "${_RESULT}"
 }
 
-# Alle Quellen vor ihrem Link-Ersatz physisch auflösen; keine Links auf sich selbst.
+# Löst alle Quellen vor ihrem Link-Ersatz physisch auf; keine Selbstlinks.
+# Params: keine; Quellen stammen aus LINKED_REPOS.
+# Returns: 0 bei vollständigem Setup, sonst 1.
 installLinks() {
     local _RESULT=0 _ENTRY _NAME _VARIABLE _REPO _EXPECTED _SOURCE
     printThemeHeading "Symlinks unter ${LIBS_DIR}"
@@ -127,7 +133,9 @@ installLinks() {
     printThemeStatus '✓' 'Setup fertig' SUCCESS
 }
 
-# Linkstatus und nutzbare CLI-Dateien zeigen; keine Links oder venv anlegen.
+# Zeigt Linkstatus und nutzbare CLI-Dateien, ohne Links oder venv anzulegen.
+# Params: keine.
+# Returns: 0 wenn Links und Dateien nutzbar sind, sonst 1.
 showLinks() {
     local _ENTRY _NAME _PATH _TARGET _RESULT=0
     printThemeHeading 'Aktuelle Verlinkung'
