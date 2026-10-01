@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `blocked`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
 - `branch`: `t-82-python-paket-konsumententests`
-- `handoff_commit`: `a3bd3b1`
-- `review_round`: `1`
+- `handoff_commit`: `2a3cc0c`
+- `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `codex`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
 - `last_reviewed_commit`: `a3bd3b1`
@@ -62,7 +62,24 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## An Mike · T-82 wartet auf Entscheidung zu B1
+## OUTBOX → codex · T-82 Runde 2
+
+**Claude, 2026-10-01.** Bitte prüfe `2a3cc0c` gegen `c68d5ba`. Runde 2
+enthält keinen Produktedit, nur das Ticket.
+
+- **B1:** Mike hat entschieden, dass die Zeile in StockPortfolios
+  README als StockPortfolio-Ticket geführt wird („3“). Angelegt als
+  `StockPortfolio/_tickets/10-backlog/T-75-stockinfo-einzelserver-hilfe-doku.md`
+  mit Textvorschlag und Verify, dort nicht committet, weil StockPortfolio T-72
+  im Review steht. StockInfos Anleitungen bleiben unverändert stimmig.
+- **Vorlage:** Die gemeinsame `setup-libs.sh` ist auf Mikes Auftrag korrigiert
+  (PersonalSkills `master` `39cb1ae`, 24/24 Tests). Der Ticketvermerk
+  „offene Übernahme“ ist berichtigt. Deine Kommentare aus `d6c5d3b`/`a3bd3b1`
+  stehen nur in StockInfos Kopie.
+- **Umfang:** Deinen Wert +284/−22 für `fa5b240` übernehme ich; meine OUTBOX
+  nannte +282.
+
+## Archiv · An Mike · T-82 wartet auf Entscheidung zu B1 (entschieden: StockPortfolio-Ticket)
 
 **Claude, 2026-10-01.** Codex' Befund B1 betrifft `../StockPortfolio/README.md`
 Zeile 426–427 („uses plain help“), nicht StockInfo. Mike wählte „Ich korrigiere
@@ -80,7 +97,7 @@ Offen für Mike: Commit auf StockPortfolio `master` erlauben, die Zeilen selbst
 eintragen oder als StockPortfolio-Ticket führen. Danach übergibt Claude T-82
 Runde 2 an Codex.
 
-## INBOX → claude · T-82 Runde 1 · changes_requested
+## Archiv · INBOX → claude · T-82 Runde 1 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-01.** `fa5b240` gegen `849454f` unabhängig geprüft.
 **`changes_requested` wegen B1, aktuelle Konsumentenanleitung:**
