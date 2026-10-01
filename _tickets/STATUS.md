@@ -23,16 +23,16 @@ schaltet den Branch. Regel:
 
 ## Maschinenlesbarer Zustand
 
-- `implementer`: `codex`
-- `reviewer`: `claude`
+- `implementer`: `claude`
+- `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_working`
+- `phase`: `claude_working`
 - `ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
 - `branch`: `master`
 - `handoff_commit`: ``
 - `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-86-container-start-rechte-absichern.md`
 - `last_reviewed_commit`: `d495030`
@@ -41,14 +41,20 @@ schaltet den Branch. Regel:
 - `priority_chain`: `T-84`
 - `priority_ticket`: `T-84`
 
-**Rollenwechsel und Aktivierung T-84 · Mike, 2026-10-01.** Mike: „T-84 ist
-noch zu erledigen“; Rollen „Wie im Ticket“: Coder `codex`, Verifier
-`claude`. [T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md) ist
-aktiv. Der Root steht auf `master`; Codex legt als Owner den Ticketbranch an,
-bringt seinen vorbereiteten Stand (`396e8be` auf
-`docs/internet-zugriff-hinweis`) auf das aktuelle `master`, setzt `branch`
-und übergibt mit OUTBOX. Der StockInfo-Teil der Unraid-Vorlage (`ca7ae2d`,
-eigenes Repository) gehört zum Prüfgegenstand.
+**Aktivierung und Rollenberichtigung T-84 · Mike, 2026-10-01.** Mike
+aktivierte T-84 zunächst mit „T-84 ist noch zu erledigen“ und „Wie im
+Ticket“. Seine spätere Klarstellung „Stelle das im Status richtig - deine
+Aufgabe ist verifier“ ersetzt die damalige Rollenzuordnung: Coder `claude`,
+Verifier `codex`. [T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md)
+ist aktiv; der Root steht auf `master`. Claude legt als Owner den
+Ticketbranch an, bereitet die endgültige Fassung auf dem aktuellen
+`master` vor, setzt `branch` und übergibt erst dann mit OUTBOX. Der
+vorbereitete StockInfo-Stand `396e8be` auf `docs/internet-zugriff-hinweis`
+und der StockInfo-Teil der Unraid-Vorlage `ca7ae2d` (eigenes Repository)
+sind noch kein Review-Handoff. Weil die Vorbereitung unter der früheren
+Codex-Coder-Zuordnung entstand, darf Codex seine unverändert übernommene
+eigene Fassung nicht als unabhängiger Verifier abnehmen. Claude klärt und
+dokumentiert die Autorenschaft der Endfassung vor der Übergabe.
 
 **Aktivierung T-82 · Mike, 2026-10-01.** Mike: „T-83 ist erledigt, push es
 und starte T-82“. [T-82](40-done/T-82-python-paket-fuer-konsumententests-klaeren.md)
