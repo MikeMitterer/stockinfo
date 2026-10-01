@@ -77,8 +77,8 @@ und ersetzt kein Verifier-Urteil.
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | StockInfo-Diff gegen tatsächliche API-Routen und das Authentifizierungsmodell lesen | Hinweis erklärt fehlende Anmeldung und ändernde/löschende Zugriffe ohne unzutreffende Sicherheitszusage | ✅ |
-| 2 | `README.md`, `docker/README.md` und `unraid/README.md` inhaltlich abgleichen | Direkte Internetfreigabe wird konsistent abgeraten; LAN, VPN und HTTPS-Proxy mit Anmeldung sind verständlich beschrieben | ⚠️ |
-| 3 | `templates/stockinfo.xml` gegen die Anleitungen und Containerkonfiguration prüfen | Englischer Hinweis steht sichtbar in Overview, Description und Portfeld; keine andere Template-Funktion geändert | ⚠️ |
+| 2 | `README.md`, `docker/README.md` und `unraid/README.md` inhaltlich abgleichen | Direkte Internetfreigabe wird konsistent abgeraten; LAN, VPN und HTTPS-Proxy mit Anmeldung sind verständlich beschrieben | ✅ |
+| 3 | `templates/stockinfo.xml` gegen die Anleitungen und Containerkonfiguration prüfen | Englischer Hinweis steht sichtbar in Overview, Description und Portfeld; keine andere Template-Funktion geändert | ✅ |
 | 4 | Docker-Hub-Vorschau und XML erneut am endgültigen Prüfstand erzeugen | Vorschau unter 25.000 UTF-8-Bytes, Links korrekt; XML gültig | ✅ |
 | 5 | Git-Fassung und Veröffentlichungsstand trennen | Review benennt geprüfte Commit-IDs und hält fest, dass kein Merge, Push oder Hub-/Unraid-Update belegt ist | ✅ |
 
@@ -134,9 +134,9 @@ geändert.
 
 ### Auflösung
 
-Runde 1 ist unabhängig geprüft und mit `changes_requested` an Claude
-zurückgegeben. Die beiden offenen Punkte und die Nachweise stehen unten;
-ein Ticketabschluss liegt nicht vor.
+Runde 1 ging mit `changes_requested` an Claude zurück. Die korrigierte
+Runde 2 ist technisch freigegeben; beide Berichte stehen unten. Ein
+Ticketabschluss und eine menschliche Abnahme liegen nicht vor.
 
 ## Nacharbeit Runde 2 (Claude, 2026-10-01)
 
@@ -221,3 +221,50 @@ abgeglichen; ihre Kernwarnung stimmt überein, der Loopback-Weg im Root-
 README muss korrigiert werden. Die mechanische Berichtigung des veralteten
 Ticketstands ist im separaten Review-Commit `fb29d46` festgehalten.
 Menschliche Abnahme wurde nicht erteilt.
+
+## Verifier-Prüfung · Runde 2 (Codex, 2026-10-01)
+
+**Ergebnis: technisch `approved`.** StockInfo-Commit `8b89864` gegen
+`67e398c` und ausschließlich `templates/stockinfo.xml` aus Claudes
+Vorlagen-Commit `fdeb4fd` gegen `c828e24` unabhängig geprüft. Die beiden
+Befunde aus Runde 1 sind behoben; Verify #1–#5 sind ✅. Kein Produktcode
+und keine Vorlage wurden von Codex geändert.
+
+**B1 erledigt:** `README.md` trennt jetzt native Bindung
+(`HOST=127.0.0.1`) von Docker: Der Container behält `HOST=0.0.0.0`, und
+`-p 127.0.0.1:8000:8000` bindet nur den Hostport an Loopback. Das stimmt
+mit dem Docker-Quick-start und der unabhängigen Netzprobe aus Runde 1
+überein. Der Text sagt ausdrücklich, dass `HOST=127.0.0.1` *im Container*
+den veröffentlichten Port unerreichbar macht.
+
+**B2 erledigt, begrenzter Prüfgegenstand:** Claudes neuer Vorlagentext
+`fdeb4fd` unterscheidet sich in Overview, Description und Portfeld von
+Codex' vorbereitetem `ca7ae2d`. Er nennt fehlende Anmeldung, mögliche
+Änderungen/Löschungen und das Einspielen von Sicherungen; er rät von
+Router-Portfreigabe ab und nennt LAN, VPN sowie einen Reverse Proxy mit
+HTTPS und Login. Das stimmt mit den drei StockInfo-Anleitungen und den
+tatsächlichen Routen überein. Der Diff `ca7ae2d..fdeb4fd` betrifft nur
+`templates/stockinfo.xml`; der Gesamtstand des Vorlagenbranches enthält
+weiterhin `stockportfolio.xml` aus `ca7ae2d`. Diese Freigabe gilt nur für
+StockInfos XML-Datei. Der StockPortfolio-Anteil braucht sein eigenes
+Prüfergebnis aus T-67, bevor der Gesamtbranch integriert wird.
+
+**Unabhängige Nachweise:** `git diff --check 67e398c 8b89864` und
+`git diff --check c828e24 fdeb4fd -- templates/stockinfo.xml` bestanden.
+`xmllint --noout` bestand für `fdeb4fd:templates/stockinfo.xml`. Die
+Docker-Hub-Vorschau wurde erneut erzeugt: 8.846 UTF-8-Bytes, absolute
+GitHub-Bildlinks, unter 25.000 Bytes. Die T-84-Änderungen liegen auf dem
+StockInfo-Ticketbranch und dem Vorlagenbranch; in den lokalen
+`origin/master`-Ständen sind sie nicht enthalten. In diesem Review fand
+kein Merge, Push, Docker-Hub- oder Unraid-Update statt. Die veralteten
+Prüfcommit-Verweise des Tickets wurden im mechanischen Review-Commit
+`e8163c9` berichtigt.
+
+**Standards und Doku-Abgleich:** `code-standards` (Dokumentation),
+`docker-conventions` und `unraid-conventions` wurden erneut angewandt.
+Dokustruktur/Links ✅; Host- und Containerport ✅; Unraid-Text und XML ✅;
+DRY und Produktcode-Regeln ➖. `README.md`, `docker/README.md` und
+`unraid/README.md` geben die Zugriffsgrenze und die drei Zugriffswege
+inhaltlich gleich wieder; nur das Root-README änderte sich in Runde 2.
+Die technische Freigabe ist keine menschliche Abnahme und kein Auftrag,
+den gesamten Vorlagenbranch oder das Ticket als abgeschlossen zu markieren.
