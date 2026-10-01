@@ -71,17 +71,19 @@ Dieser Branch enthält gegenüber `master` nur Boardcommits.
    reine Ticket-Commit `6ca09d2` ist per `cherry-pick -x` als `336ef69`
    auf das Board übernommen. T-84 liegt damit unter `10-backlog/`. Das
    Ticket nennt jetzt den Root als Arbeitsort für seinen Branch.
-4. Beschrieben, aber noch nicht durchlaufen: Der erste echte Lauf ist die
-   Integration dieses Tickets nach seiner technischen Freigabe.
+4. Durchlaufen an diesem Ticket: technische Freigabe durch Codex
+   (`4bcad36`), danach lokaler Merge von `t-85-ein-arbeitsort` nach
+   `master` durch den Coder. Mikes Abnahme stand vorab fest (siehe Auflösung).
+   Kein Push.
 
 ### Akzeptanzkriterien
 
-- [ ] Neue Arbeit nutzt nur den StockInfo-Root und einen dort ausgecheckten Ticketbranch.
-- [ ] `STATUS.branch` ist maschinenlesbar und stimmt mit Git überein.
-- [ ] Nur der Owner wechselt den Branch; der Verifier prüft die übergebene Fassung ohne Wechsel.
-- [ ] Technische Freigabe, lokaler Merge, menschliche Abnahme und Veröffentlichung sind getrennt dokumentiert.
-- [ ] T-84 ist im Root sichtbar; seine vorbereiteten Änderungen und Nachweise bleiben erhalten.
-- [ ] Doku-Abgleich nennt StockInfo-Dateien und den tatsächlichen Stand der gemeinsamen Skill-Übernahme.
+- [x] Neue Arbeit nutzt nur den StockInfo-Root und einen dort ausgecheckten Ticketbranch.
+- [x] `STATUS.branch` ist maschinenlesbar und stimmt mit Git überein.
+- [x] Nur der Owner wechselt den Branch; der Verifier prüft die übergebene Fassung ohne Wechsel.
+- [x] Technische Freigabe, lokaler Merge, menschliche Abnahme und Veröffentlichung sind getrennt dokumentiert.
+- [x] T-84 ist im Root sichtbar; seine vorbereiteten Änderungen und Nachweise bleiben erhalten.
+- [x] Doku-Abgleich nennt StockInfo-Dateien und den tatsächlichen Stand der gemeinsamen Skill-Übernahme.
 
 ### Side-Effects
 
@@ -125,6 +127,14 @@ Umgesetzt auf `t-85-ein-arbeitsort`, Übergabe an den Verifier `codex`.
 Nach technischer Freigabe mergt der Coder lokal nach `master`. Der Branch
 enthält dabei auch die Boardcommits zu T-82 und T-83 sowie den T-84-Ticket-Commit;
 das sind ausschließlich Dateien unter `_tickets/`. Kein Push.
+
+**Abschluss · Mike, 2026-10-01.** Vor dem Review hat Mike festgelegt:
+„Wenn Codex das abgenommen hat ist es auch für mich OK und das Ticket ist
+erledigt. Fange dann gleich mit T-83 an“. Codex hat Runde 1 mit dem Stand
+`4bcad36` freigegeben. Claude hat das Ticket nach `40-done/` verschoben und
+den Branch lokal nach `master` gemergt. Danach ist T-83 aktiviert, mit
+Claude als Coder. Ein Push ist nicht beauftragt und nicht erfolgt. Offen
+bleiben AgentLessons T-52 und der Abgleich des Board-Konventionsstands.
 
 ### Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
 

@@ -26,50 +26,45 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `approved`
-- `ticket`: `T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md`
-- `branch`: `t-85-ein-arbeitsort`
-- `handoff_commit`: `4bcad36`
-- `review_round`: `1`
+- `phase`: `claude_working`
+- `ticket`: `T-83-assets-datenhinweis.md`
+- `branch`: `t-83-assets-datenhinweis`
+- `handoff_commit`: ``
+- `review_round`: `0`
 - `max_review_rounds`: `3`
 - `owner`: `claude`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md`
 - `last_reviewed_commit`: `4bcad36`
 - `last_reviewed_round`: `1`
-- `workstream`: `ein-arbeitsort`
-- `priority_chain`: `T-85 → T-83 → T-82`
-- `priority_ticket`: `T-85`
+- `workstream`: `assets-datenhinweis`
+- `priority_chain`: `T-83 → T-82`
+- `priority_ticket`: `T-83`
 
-**Rollenwechsel und Aktivierung T-85 · Mike, 2026-10-01.** Mike hat T-85
-vorgezogen: „Setze als erstes T-85 um“. Für T-85 ist `claude` Coder und
-`codex` Verifier. T-83 ist pausiert und folgt in der Kette. Der offene
-Wortlautstand von T-83 ist unverändert als `7d38879` auf
-`t-83-assets-datenhinweis` gesichert. T-85 läuft auf `t-85-ein-arbeitsort`,
-abgezweigt von diesem Stand, damit die Board-Aktivierungen von T-82 und
-T-83 erhalten bleiben. Ein laufender Codex-Scheduler bleibt bis zur
-T-85-Übergabe ohne Coder-Arbeit.
-
-**Aktivierung T-83 · Mike, 2026-10-01 (pausiert für T-85).** Mike hat den Datenhinweis unter der
-Assets-Tabelle ausdrücklich in Doing gesetzt. [T-83](30-doing/T-83-assets-datenhinweis.md)
-ist damit der aktive Auftrag für Coder `codex`; der unabhängige Review bleibt
-bei `claude`. [T-82](20-ready/T-82-python-paket-fuer-konsumententests-klaeren.md)
+**Abschluss T-85 und Fortsetzung T-83 · Mike, 2026-10-01.** Mike: „Wenn
+Codex das abgenommen hat ist es auch für mich OK und das Ticket ist
+erledigt. Fange dann gleich mit T-83 an“. Codex hat T-85 mit `4bcad36`
+freigegeben. [T-85](40-done/T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md)
+liegt in `40-done/` und ist lokal nach `master` gemergt; kein Push.
+[T-83](30-doing/T-83-assets-datenhinweis.md) ist wieder aktiv, jetzt mit
+Claude als Coder und Codex als Verifier. Der Branch `t-83-assets-datenhinweis`
+wird auf den neuen `master` vorgespult. [T-82](20-ready/T-82-python-paket-fuer-konsumententests-klaeren.md)
 bleibt bereit und folgt in der Prioritätskette. Die rechtliche Freigabe des
-endgültigen öffentlichen Wortlauts ist kein technisches Prüferurteil.
+endgültigen öffentlichen Wortlauts von T-83 ist kein technisches Prüferurteil.
 
 **Abschluss T-81 · Mike, 2026-09-28.** Claude hat `78059a8` unabhängig geprüft
 und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## INBOX → claude · T-85 Runde 1 · approved
+## Archiv · INBOX → claude · T-85 Runde 1 · approved (verarbeitet)
 
 **Codex, 2026-10-01.** Die Übergabe `7b19fb3` gegen `7d38879` ist
 unabhängig geprüft und technisch **approved**. Der finale geprüfte Stand
 enthält die redaktionelle Selbstheilung `4bcad36` in T-84: Zwei Aussagen
 nannten T-83 noch aktiv, obwohl T-85 vorgezogen und T-83 pausiert ist.
 Diff und `git diff --check` sind sauber. Der vollständige Review mit
-Standard- und Doku-Abgleich steht in [T-85](30-doing/T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md#verifier-prüfung--runde-1-codex-2026-10-01).
+Standard- und Doku-Abgleich steht in [T-85](40-done/T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md#verifier-prüfung--runde-1-codex-2026-10-01).
 
 Verify #1–#3 sind unabhängig belegt; #4 bleibt ◑ bis zum ersten tatsächlichen
 lokalen Merge. Bitte als Coder den freigegebenen Ticketbranch nach `master`
