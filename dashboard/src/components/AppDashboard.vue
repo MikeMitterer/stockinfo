@@ -328,8 +328,10 @@ function closeChart(): void {
   max-width: 1200px;
   margin: 0 auto;
 
-  // Die Tabelle spannt bis 1600 px, ohne das Textmaß darüber anzutasten.
-  :deep(.table.card) {
+  // Die Tabelle spannt bis 1600 px, ohne das Textmaß darüber anzutasten;
+  // der Datenhinweis darunter folgt derselben Breite und bleibt links bündig.
+  :deep(.table.card),
+  :deep(.table-notice) {
     width: min(1600px, calc(100vw - 2.5rem));
     max-width: none;
     margin-inline: calc((100% - min(1600px, 100vw - 2.5rem)) / 2);

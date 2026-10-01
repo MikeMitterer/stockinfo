@@ -461,18 +461,18 @@ function price(value: number | null): string {
         </tbody>
       </table>
     </div>
-    <!-- Einmal für die ganze Übersicht, in beiden Breiten bündig mit der Karte. -->
-    <p v-if="instruments.length > 0" class="table__notice">{{ t('table.dataNotice') }}</p>
   </section>
+  <!-- Einmal für die ganze Übersicht, unter der Karte; Breite folgt ihr (AppDashboard). -->
+  <p v-if="instruments.length > 0" class="table-notice">{{ t('table.dataNotice') }}</p>
 </template>
 
 <style scoped lang="scss">
 @use '../styles/variables' as *;
 
 .table {
-  // globale .card-Basis — kompakteres Padding + Abstand zum Chart darunter
+  // globale .card-Basis mit kompakterem Padding; der Hinweis folgt direkt darunter
   padding: 1rem 1.1rem;
-  margin: 0 0 1.1rem;
+  margin: 0;
 }
 
 // Kopfzeile der Komponente (Überschrift + ggf. Sortierzeile). Ab Desktop bleibt
@@ -496,7 +496,7 @@ function price(value: number | null): string {
 .cards { display: flex; flex-direction: column; }
 
 // Schriftbild wie StockPortfolios Hinweis unter Dashboard- und Rebalancing-Tabelle.
-.table__notice {
+.table-notice {
   margin: var(--space-1) 0 0;
   color: $color-muted;
   font-size: var(--font-xs);

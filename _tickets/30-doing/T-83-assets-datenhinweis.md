@@ -21,17 +21,25 @@ StockPortfolios Hinweis unter Dashboard- und Rebalancing-Tabelle
 (`TradeNotice.vue`: `var(--font-xs)`, `token(--text-muted)`,
 `line-height: 1.45`, oben `var(--space-1)` Abstand).
 
+**Befund Mike, 2026-10-01, zur Fassung `4acdc02`:** „Der Text steht in!!!
+der Tabelle, nicht darunter“. Der Hinweis gehört unter die Tabellenkarte, nicht
+als letzte Zeile in sie hinein, wie `TradeNotice` außerhalb der Section in
+StockPortfolio. Mike ließ Codex' Runde 1 erst zu Ende prüfen; umgesetzt in
+Runde 2.
+
 ## Scope-Vertrag
 
 - **Ergebnis:** Bei mindestens einem Asset steht unter der Tabelle (breit)
   beziehungsweise unter der Kartenliste (schmal) genau ein Datenhinweis in
   der aktiven Sprache. Bei leerer Übersicht steht er nicht dort.
-- **Fachliche Änderungen (2):** Katalogtext DE/EN; Ausgabe am Ende der
-  Assets-Karte in `InstrumentsTable.vue`, nach Tabelle bzw. Kartenliste.
-  Damit gibt es eine Stelle für beide Breiten, bündig mit der Karte, auch
-  wenn die Tabelle über 1200 px hinaus breiter wird.
-- **Produktdateien (3):** `dashboard/src/components/InstrumentsTable.vue`,
-  `dashboard/src/i18n/de.ts`, `dashboard/src/i18n/en.ts`.
+- **Fachliche Änderungen (2):** Katalogtext DE/EN; Ausgabe in
+  `InstrumentsTable.vue` direkt **nach** der Assets-Karte (zweiter
+  Wurzelknoten). Eine Stelle für beide Breiten. `AppDashboard.vue` gibt dem
+  Hinweis dieselbe Breitenregel wie der Karte, die über 1200 px hinaus bis
+  1600 px breiter wird; so steht er links bündig darunter.
+- **Produktdateien (3, ab Runde 2: 4):** `dashboard/src/components/InstrumentsTable.vue`,
+  `dashboard/src/i18n/de.ts`, `dashboard/src/i18n/en.ts`; mit Mikes Befund
+  zusätzlich `dashboard/src/components/AppDashboard.vue` (Breitenregel).
 - **Test-/Dokudateien (2–4):** `tests/components/InstrumentsTable.spec.ts`,
   dieses Ticket; README-Abgleich nur, falls die READMEs die Oberfläche
   der Assets-Übersicht beschreiben.
@@ -97,23 +105,29 @@ Ablauf zum Wiederholen:
    `.venv/bin/python scripts/stockinfo-test-server.py --stockinfo-root <StockInfo> --port 18083 --run`
    mit StockInfos `.venv/bin/python`.
 2. Dashboard: `cd dashboard && VITE_DEV_API_TARGET=http://127.0.0.1:18083 npx vite --port 15183 --strictPort`.
-3. Messen: `node _tickets/30-doing/T-83-browser.mjs`. Das Skript nutzt
+3. Messen: `node _tickets/30-doing/T-83-browser.mjs --run [URL]`. Ohne
+   Argument oder mit `-h|--help` zeigt das Skript nur die Hilfe. Es nutzt
    `playwright-core` aus `dashboard/` (devDependency, Vorgabe Mike). Fehlt der
    zur Version passende Browser, `CHROMIUM_PATH` auf einen vorhandenen
    Chromium setzen; hier lief es mit dem lokalen `chromium_headless_shell-1234`.
 
-- **#1 (1440 × 900):** genau ein `.table__notice`, Vorgänger `.scroll`
-  (Tabelle), 4 px Abstand, innerhalb der Karte, `font-size` 12 px,
-  `line-height` 17,4 px, kein waagrechtes Scrollen. Der Ausschnitt zeigt den
-  Text in zwei Zeilen unter der letzten Tabellenzeile; nichts wird verdeckt.
-- **#2 (390 × 844):** genau ein Hinweis, Vorgänger `.cards`, nicht in einer
-  Karte, gleiche Schriftwerte, kein waagrechtes Scrollen.
+Messwerte Runde 2 (Stand nach Mikes Befund):
+
+- **#1 (1440 × 900):** genau ein `.table-notice`, direkter Nachfolger der
+  Karte `.table.card`, nicht in ihr; 4 px unter der Karte, links bündig
+  (0 px Versatz, gleiche Breite), `font-size` 12 px, `line-height` 17,4 px,
+  kein waagrechtes Scrollen. Der Ausschnitt zeigt den Text in zwei Zeilen
+  unter dem Kartenrand; nichts wird verdeckt.
+- **#2 (390 × 844):** dieselben Werte unter der Karte mit der Kartenliste;
+  nicht in einer einzelnen Karte.
 - **#3:** Im selben Seitenaufruf DE → EN → DE über die i18n-Instanz: Der Text
   wechselt jedes Mal. Dazu der Komponententest „folgt dem Sprachwechsel ohne
   Neuaufbau“.
 - **Schrift wie StockPortfolio:** `TradeNotice.vue` verwendet `var(--font-xs)`
   (ux-foundation: 0,75rem = 12 px), gedämpfte Textfarbe und `line-height: 1.45`.
-  `.table__notice` übernimmt diese drei Werte und den Abstand `var(--space-1)`.
+  `.table-notice` übernimmt diese drei Werte und den Abstand `var(--space-1)`.
+  Die Karte hat dafür keinen eigenen Außenabstand nach unten mehr; er trennte
+  früher das Chart, das inzwischen im festen Dock steht.
 - **#4 ◑:** Technisch abgeglichen: About (`about.data`, `about.use`,
   `about.legal`) nennt dieselben Grenzen und verweist für Gewährleistung und
   Haftung auf die Verbrauchererklärung. `LICENSING.md` sagt: gesetzliche Regeln
@@ -121,14 +135,21 @@ Ablauf zum Wiederholen:
   („kann ihre Richtigkeit nicht garantieren; … gelten die gesetzlichen Regeln“)
   widerspricht dem nicht und schließt nichts aus. Die rechtliche Freigabe des
   Wortlauts bleibt bei Mike.
-- **#5:** `vitest` 52 Dateien / 389 Tests grün, `eslint` ohne Befund,
-  `npm run build` (inkl. `vue-tsc`) erfolgreich. Die Stacktraces in der
-  Testausgabe stammen aus `BackupsPanel.spec.ts` und gehören nicht zu T-83.
-  Doku-Abgleich siehe unten.
-- **Testreihenfolge:** Die vier Hinweis-Tests in `InstrumentsTable.spec.ts`
-  waren vor dem Produktedit rot, weil `.table__notice` fehlte (3 rot, der
-  Leerfall trivial grün). Negativer Mutant: Ohne `v-if` wird
-  „fehlt bei leerer Übersicht“ rot.
+- **#5:** Runde 2: `vitest` 52 Dateien / 389 Tests grün, `eslint` ohne
+  Befund, `npm run build` (inkl. `vue-tsc`) erfolgreich. Stacktraces und
+  sieben `n-config-provider`-Warnungen stehen unverändert auch ohne diese
+  Änderung in der Ausgabe (`BackupsPanel.spec.ts` u. a.). Doku-Abgleich
+  siehe unten.
+- **Testreihenfolge Runde 1:** Die vier Hinweis-Tests waren vor dem
+  Produktedit rot (3 rot, Leerfall trivial grün). Mutant ohne `v-if`: Der
+  Leerfall-Test wird rot.
+- **Testreihenfolge Runde 2:** Die Lage-Tests prüfen jetzt, dass der Hinweis
+  direkt auf `.table.card` folgt und nicht in ihr liegt. Gegen `4acdc02`
+  waren 3 von 4 rot. Gezielter Mutant „neue Klasse, aber wieder in der
+  Karte“: Beide Lage-Tests (breit, schmal) werden rot.
+- **Prüfskript (B1 aus Runde 1):** `node --check` besteht. Leerer Aufruf und
+  `-h` zeigen die Hilfe (Exit 0). Ein unbekannter Aufruf meldet den Fehler
+  mit Hilfe (Exit 2). `--run` liefert die Messwerte oben.
 
 ### Akzeptanzkriterien
 
@@ -158,10 +179,14 @@ Hinweise und Tickets bleiben getrennt.
 
 ### Umfang gegenüber dem Scope-Vertrag
 
-- **Geplant / tatsächlich:** 2 / 2 fachliche Änderungen; 3 / 3 Produktdateien,
-  dazu `dashboard/package.json` und `package-lock.json` für die
-  devDependency; Test-/Dokudateien 4 geplant, tatsächlich 6 (Spec, Ticket,
+- **Geplant / tatsächlich:** 2 / 2 fachliche Änderungen; 3 / 4
+  Produktdateien (`AppDashboard.vue` nach Mikes Befund), dazu
+  `dashboard/package.json` und `package-lock.json` für die devDependency;
+  Test-/Dokudateien 4 geplant, tatsächlich 6 (Spec, Ticket,
   `T-83-browser.mjs`, drei READMEs).
+- **Diff-Zeilen:** Runde 1 `0bb9a4d..4acdc02`: 11 Dateien, +273/−16. In der
+  Übergabe stand zunächst +312; das war falsch gezählt (Codex, Runde 1).
+  Endwert Runde 2 siehe OUTBOX.
 - **Abweichung 1, Vorgabe Mike 2026-10-01:** „Wenn du playwright-core
   benötigst - installiere es hier bei den Dependencies. Verwende es nicht
   einfach von einem anderen Project“. Deshalb ist `playwright-core` jetzt
@@ -179,7 +204,8 @@ Hinweise und Tickets bleiben getrennt.
 
 ### Auflösung
 
-Umgesetzt auf `t-83-assets-datenhinweis`; Übergabe an Verifier `codex`.
+Umgesetzt auf `t-83-assets-datenhinweis`. Runde 2 behebt Codex' B1 (CLI des
+Prüfskripts) und setzt Mikes Befund zur Lage um; Übergabe an Verifier `codex`.
 Rechtliche Freigabe des öffentlichen Wortlauts: Mike.
 
 ### Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)

@@ -143,31 +143,35 @@ describe('InstrumentsTable — Datenhinweis', () => {
   const germanStart = 'Die angezeigten Kurse und Kennzahlen können verzögert'
   const englishStart = 'Displayed prices and metrics may be delayed'
 
-  it('steht breit genau einmal direkt unter der Tabelle', () => {
-    stubMatchMedia(false)
-    const wrapper = mountTable()
-    const notices = wrapper.findAll('.table__notice')
+  /** Prüft: genau ein Hinweis, direkt nach der Assets-Karte und nicht in ihr. */
+  function expectNoticeBelowCard(wrapper: ReturnType<typeof mountTable>) {
+    const notices = wrapper.findAll('.table-notice')
 
     expect(notices).toHaveLength(1)
     expect(notices[0].text()).toContain(germanStart)
-    expect(notices[0].element.previousElementSibling?.classList.contains('scroll')).toBe(true)
+    expect(notices[0].element.previousElementSibling?.matches('.table.card')).toBe(true)
+    expect(wrapper.find('.table.card .table-notice').exists()).toBe(false)
+  }
+
+  it('steht breit genau einmal direkt unter der Tabellenkarte, nicht in ihr', () => {
+    stubMatchMedia(false)
+
+    expectNoticeBelowCard(mountTable())
   })
 
   it('steht schmal genau einmal unter der Kartenliste, nicht in einer Karte', () => {
     stubMatchMedia(true)
     const wrapper = mountTable()
-    const notices = wrapper.findAll('.table__notice')
 
-    expect(notices).toHaveLength(1)
-    expect(notices[0].element.previousElementSibling?.classList.contains('cards')).toBe(true)
-    expect(wrapper.find('.icard .table__notice').exists()).toBe(false)
+    expectNoticeBelowCard(wrapper)
+    expect(wrapper.find('.icard .table-notice').exists()).toBe(false)
   })
 
   it('fehlt bei leerer Übersicht', () => {
     stubMatchMedia(false)
     const wrapper = mountTable([])
 
-    expect(wrapper.find('.table__notice').exists()).toBe(false)
+    expect(wrapper.find('.table-notice').exists()).toBe(false)
   })
 
   it('folgt dem Sprachwechsel ohne Neuaufbau', async () => {
@@ -176,11 +180,11 @@ describe('InstrumentsTable — Datenhinweis', () => {
 
     i18n.global.locale.value = 'en'
     await nextTick()
-    expect(wrapper.find('.table__notice').text()).toContain(englishStart)
+    expect(wrapper.find('.table-notice').text()).toContain(englishStart)
 
     i18n.global.locale.value = 'de'
     await nextTick()
-    expect(wrapper.find('.table__notice').text()).toContain(germanStart)
+    expect(wrapper.find('.table-notice').text()).toContain(germanStart)
   })
 })
 
