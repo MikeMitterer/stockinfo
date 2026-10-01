@@ -42,7 +42,7 @@ schaltet den Branch. Regel:
 - `priority_ticket`: `T-86`
 
 **Aktivierung T-82 · Mike, 2026-10-01.** Mike: „T-83 ist erledigt, push es
-und starte T-82“. [T-82](30-doing/T-82-python-paket-fuer-konsumententests-klaeren.md)
+und starte T-82“. [T-82](40-done/T-82-python-paket-fuer-konsumententests-klaeren.md)
 ist aktiv auf `t-82-python-paket-konsumententests` (von `master`), Coder
 `claude`, Verifier `codex`.
 
@@ -53,7 +53,7 @@ freigegeben. [T-85](40-done/T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md)
 liegt in `40-done/` und ist lokal nach `master` gemergt; kein Push.
 [T-83](40-done/T-83-assets-datenhinweis.md) ist wieder aktiv, jetzt mit
 Claude als Coder und Codex als Verifier. Der Branch `t-83-assets-datenhinweis`
-wird auf den neuen `master` vorgespult. [T-82](30-doing/T-82-python-paket-fuer-konsumententests-klaeren.md)
+wird auf den neuen `master` vorgespult. [T-82](40-done/T-82-python-paket-fuer-konsumententests-klaeren.md)
 bleibt bereit und folgt in der Prioritätskette. Die rechtliche Freigabe des
 endgültigen öffentlichen Wortlauts von T-83 ist kein technisches Prüferurteil.
 
@@ -125,7 +125,13 @@ betroffene Docker-Fälle und Docker-Hub-Vorschau wiederholen und eine neue
 Prüffassung übergeben. Codex änderte keinen Produktcode und erteilte keine
 menschliche Abnahme.
 
-## An Mike · T-82 technisch freigegeben, auf `master` zur Abnahme
+## Abschluss T-82 · Mike, 2026-10-01
+
+Mike: „T-82 ist erledigt, push es“.
+[T-82](40-done/T-82-python-paket-fuer-konsumententests-klaeren.md) liegt in
+`40-done/`; `master` ist mit T-82 und T-86 gepusht.
+
+## Archiv · An Mike · T-82 technisch freigegeben, auf `master` zur Abnahme (erledigt)
 
 **Claude, 2026-10-01.** Codex hat T-82 in Runde 2 freigegeben (`2a3cc0c`).
 Der Ticketbranch ist lokal nach `master` gemergt, kein Push. Zum Abnehmen:
@@ -150,7 +156,7 @@ nach T-74 eingeplant. Dessen README sagt bis zur Umsetzung weiterhin
 korrigiert, der installierte Skill-Checkout enthält den Fix noch nicht.
 Diese Übernahme bleibt sichtbar offen. Voller Befund, Standards und
 Doku-Abgleich:
-[T-82](30-doing/T-82-python-paket-fuer-konsumententests-klaeren.md#verifier-prüfung--runde-2-codex-2026-10-01).
+[T-82](40-done/T-82-python-paket-fuer-konsumententests-klaeren.md#verifier-prüfung--runde-2-codex-2026-10-01).
 
 Bitte als Coder die technische Freigabe verarbeiten. Codex erteilt keine
 menschliche Abnahme und verschiebt T-82 nicht nach Done.
@@ -191,7 +197,7 @@ Der finale geprüfte T-82-Stand enthält die verhaltensneutrale Selbstheilung
 `a3bd3b1`: Funktionskommentare im Setup-Skript und die Node/npm-Voraussetzung
 im Root-README. Der Umfang der ursprünglichen T-82-Übergabe war +284/−22
 statt +282/−22. Voller Befund, Standards und Doku-Abgleich:
-[T-82](30-doing/T-82-python-paket-fuer-konsumententests-klaeren.md#verifier-prüfung--runde-1-codex-2026-10-01).
+[T-82](40-done/T-82-python-paket-fuer-konsumententests-klaeren.md#verifier-prüfung--runde-1-codex-2026-10-01).
 Die veraltete gemeinsame `setup-libs.sh`-Vorlage bleibt als offene Übernahme
 sichtbar. Keine menschliche Abnahme und kein Ticketabschluss durch Codex.
 

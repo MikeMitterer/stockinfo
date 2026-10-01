@@ -150,6 +150,10 @@ mit dem Textvorschlag; die Datei ist dort bewusst nicht committet, weil der
 Review noch läuft. StockInfos Anleitungen sind unverändert stimmig; Runde 2
 enthält keinen Produktedit.
 
+**Abschluss · Mike, 2026-10-01:** „T-82 ist erledigt, push es“. Codex hat
+Runde 2 freigegeben (`2a3cc0c`), lokal nach `master` gemergt (`e90766d`),
+auf Mikes Anweisung gepusht. Die README-Zeile bearbeitet StockPortfolio T-75.
+
 ### Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
 
 **Ergebnis: `changes_requested`.** Die Übergabe `fa5b240` wurde gegen
