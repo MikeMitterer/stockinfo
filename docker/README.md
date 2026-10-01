@@ -7,6 +7,11 @@ and German; the REST API returns JSON for use by other applications.
 
 **GitHub:** [MikeMitterer/stockinfo — source code and documentation](https://github.com/MikeMitterer/stockinfo)
 
+**No login:** anyone who can reach StockInfo can change or delete its data.
+Do not forward its port to the internet. Use it in a trusted network, reach
+that network through a VPN, or put a reverse proxy with HTTPS and a login in
+front of it.
+
 ![StockInfo dashboard](../unraid/screenshots/dashboard.png)
 
 ## Quick start
@@ -31,9 +36,8 @@ curl http://localhost:8000/quote/IE00B3RBWM25
 
 The example exposes the service only on the Docker host. To reach it from
 your trusted LAN, replace `127.0.0.1:8000:8000` with `8000:8000` and use the
-host's address in your browser. StockInfo has no login or authentication:
-anyone who can reach it can also change or delete data. Use a trusted network
-or a reverse proxy with authentication; do not expose it directly to the internet.
+host's address in your browser. Keep that port inside your LAN; for remote
+access use a VPN or a reverse proxy with HTTPS and a login (see above).
 
 ## Docker Compose
 

@@ -21,6 +21,29 @@ Für Mike steht jetzt kein Handgriff an. Abschluss und Veröffentlichung
 bleiben nach der technischen Prüfung getrennt; Docker Hub und das
 Unraid-Listing zeigen die neue Fassung derzeit nicht.
 
+## Rollen und Scope-Vertrag (Claude, 2026-10-01)
+
+Mike, 2026-10-01: „Du bist coder“. Coder `claude`, Verifier `codex`.
+Codex' Vorbereitung (`396e8be`, `ca7ae2d`) ist Eingangsmaterial, keine
+Übergabe. Damit Codex unabhängig prüfen kann, schreibt Claude die
+StockInfo-Endfassung selbst auf dem aktuellen `master` und gleicht sie mit
+der API ab.
+
+- **Ergebnis:** Alle drei Anleitungen raten konsistent von einer direkten
+  Internetfreigabe ab und nennen LAN, VPN und HTTPS-Reverse-Proxy mit
+  Anmeldung. Der Abschnitt „Security model“ nennt die tatsächlich
+  verändernden Routen.
+- **Fachliche Änderungen (2):** Warnhinweise in `README.md`,
+  `docker/README.md`, `unraid/README.md`; Routenliste im „Security model“
+  berichtigt (`GET /analyze` schreibt nicht in die Datenbank; Restore,
+  Löschen per Symbol und Detailpflege fehlten).
+- **Dateien:** drei READMEs, dieses Ticket. Kein Produktcode.
+- **Budget:** 0 Produktdateien, 4 Dokudateien, 150 Diff-Zeilen.
+- **Nicht-Ziele:** keine Anmeldung bauen, keine Änderung an App oder Image.
+  Die Unraid-Vorlage liegt in einem eigenen Repository; ihr StockInfo-Teil
+  aus `ca7ae2d` stammt von Codex und kann von Codex nicht unabhängig
+  geprüft werden (siehe Übergabe).
+
 ## Prüfgegenstand
 
 | Repo | Time-box | Scope | GH-Issue |
@@ -62,7 +85,38 @@ und ersetzt kein Verifier-Urteil.
 | 4 | Docker-Hub-Vorschau und XML erneut am endgültigen Prüfstand erzeugen | Vorschau unter 25.000 UTF-8-Bytes, Links korrekt; XML gültig | ➖ |
 | 5 | Git-Fassung und Veröffentlichungsstand trennen | Review benennt geprüfte Commit-IDs und hält fest, dass kein Merge, Push oder Hub-/Unraid-Update belegt ist | ➖ |
 
-**Autorbelege vom 2026-10-01:** `git diff --check` ohne Befund;
+**Coder-Belege (Claude, 2026-10-01), Endfassung auf `t-84-internetbetrieb-hinweise`:**
+
+- **#1 Routen:** Gegen `app.openapi()` geprüft. Alle im „Security model“
+  genannten Pfade existieren mit der genannten Methode. Ändernd sind
+  insgesamt: `POST /backups`, `POST /backups/{name}/restore`,
+  `DELETE /instruments/{isin}`, `DELETE /instruments/by-symbol/{symbol}`,
+  `POST /instruments/intake`, `PUT …/isin`, `PUT …/overrides`,
+  `PATCH /instruments/by-id/{listing_id}/details`, `POST /migration/confirm`,
+  `POST /refresh` samt `{isin}`/`by-symbol`. Die bisherige Aussage, `GET
+  /analyze` schreibe in die Datenbank, war falsch (`AnalyzerService` misst
+  nur, ohne Persistenz) und ist berichtigt. Keine Anmeldung im Code
+  (keine Security-Abhängigkeit an den Routern).
+- **#2 Anleitungen:** `README.md` (Security model: Routenliste, VPN,
+  HTTPS-Reverse-Proxy mit Login, „Never forward“; Docker-Abschnitt: kurzer
+  Hinweis mit Link), `docker/README.md` (Hinweis direkt unter dem
+  GitHub-Link, Quick start verweist darauf), `unraid/README.md` (fetter
+  Hinweis, VPN mit Beispiel WireGuard). Alle drei: kein Login, Port nicht
+  ins Internet, LAN, VPN, HTTPS-Proxy mit Login.
+- **#3 Vorlage:** `ca7ae2d:templates/stockinfo.xml` gelesen: Hinweis in
+  Overview (eigener Absatz „Security“), Description und Portfeld; sonst
+  keine Template-Funktion geändert; deckt sich inhaltlich mit den
+  Anleitungen. Seit `c828e24` keine weitere Änderung an `stockinfo.xml` auf
+  dem `master` des Vorlagen-Repos. **Autorschaft:** Der Vorlagentext stammt
+  unverändert von Codex; Claude hat ihn geprüft und übernimmt ihn. Codex
+  kann diesen Teil deshalb nicht unabhängig abnehmen.
+- **#4:** Docker-Hub-Vorschau 8.846 UTF-8-Bytes; `xmllint --noout` für die
+  Vorlage aus `ca7ae2d` erfolgreich.
+- **#5:** Kein Merge, Push, Docker-Hub- oder Unraid-Update; der
+  Vorlagen-Commit liegt weiter nur auf `docs/internet-zugriff-hinweis` im
+  Vorlagen-Repo.
+
+**Autorbelege vom 2026-10-01 (Codex, Vorbereitung):** `git diff --check` ohne Befund;
 `xmllint --noout` für beide Templates erfolgreich. Die Docker-Hub-Vorschau
 von StockInfo wurde erzeugt und hatte 8.006 UTF-8-Bytes. Das sind
 Vorprüfungen, keine unabhängige Freigabe.
