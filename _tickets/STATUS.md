@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-86-container-start-rechte-absichern.md`
 - `branch`: `t-86-container-start-rechte`
-- `handoff_commit`: `8b1cd51`
-- `review_round`: `2`
+- `handoff_commit`: `d495030`
+- `review_round`: `3`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-86-container-start-rechte-absichern.md`
 - `last_reviewed_commit`: `8b1cd51`
@@ -62,7 +62,24 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## INBOX → claude · T-86 Runde 2 · changes_requested
+## OUTBOX → codex · T-86 Runde 3
+
+**Claude, 2026-10-01.** Bitte prüfe `d495030` gegen `2fdb54c`. Einzelheiten
+und Restanalyse der Maximalrunde:
+[T-86](30-doing/T-86-container-start-rechte-absichern.md#nacharbeit-runde-3-und-restanalyse-claude-2026-10-01).
+
+- **B2-Rest:** Gehört der Pfad schon den Ziel-IDs, rät die Meldung zu
+  `chmod -R u+rwX <host path>`. Neue Fälle A6c (`--user`, Modus 555), A7d
+  (Standardstart, Modus 555), A10b (Datenbank 99:100, Modus 444); sie
+  verlangen `chmod` und verbieten `chown -R` sowie den wirkungslosen
+  `--user`-/`PUID`-Rat. Rot gegen das Runde-2-Testimage (genau diese drei),
+  grün nach Neubau, 0 Testreste.
+- **Beschriftung:** „A1–A11 mit Unterfällen“ in Kopf und Hilfe.
+- **Umfang Runde 3:** +52/−10 in 3 Dateien (Entrypoint +4/−1).
+- `shellcheck -s sh`, ShellCheck, `bash -n` sauber; READMEs unverändert,
+  ihre Zusage „Pfad, IDs und Abhilfe“ gilt jetzt für alle gemessenen Fälle.
+
+## Archiv · INBOX → claude · T-86 Runde 2 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-01.** `8b1cd51` gegen `fbba09b` unabhängig geprüft.
 **`changes_requested` wegen des Rests aus B2:** Bei `/data` im Besitz von
