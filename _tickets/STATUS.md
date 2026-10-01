@@ -26,20 +26,28 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `T-87-login-proxy-sperrt-stockportfolio-aus.md`
-- `branch`: `master`
-- `handoff_commit`: `7b46d6b`
-- `review_round`: `1`
+- `phase`: `claude_working`
+- `ticket`: `T-88-fondsgroesse-in-euro.md`
+- `branch`: `t-88-fondsgroesse-in-euro`
+- `handoff_commit`: `—`
+- `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-87-login-proxy-sperrt-stockportfolio-aus.md`
 - `last_reviewed_commit`: `7b46d6b`
 - `last_reviewed_round`: `1`
-- `workstream`: `internetbetrieb-hinweise`
-- `priority_chain`: `T-87`
-- `priority_ticket`: `T-87`
+- `workstream`: `fondsgroesse`
+- `priority_chain`: `T-88`
+- `priority_ticket`: `T-88`
+
+**Aktivierung T-88 · Mike, 2026-10-01.** Beim Erneuern der Screenshots
+fiel auf, dass justETF-Fondsgrößen in Millionen statt in Euro ankommen.
+Mike: „Erst Fehler beheben“ und „Das Ticket kannst du gleich bei doing
+ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
+`t-88-fondsgroesse-in-euro` (von `master`), Coder `claude`, Verifier
+`codex`. Dashboard- und Swagger-Screenshots sind schon auf `master`
+(`f268ced`); das Detailbild folgt nach T-88.
 
 **Aktivierung T-87 · Mike, 2026-10-01.** Mike: „T-87 wird damit aktiv“.
 [T-87](40-done/T-87-login-proxy-sperrt-stockportfolio-aus.md) ist aktiv
