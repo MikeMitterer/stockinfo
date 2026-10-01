@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-88-fondsgroesse-in-euro.md`
 - `branch`: `t-88-fondsgroesse-in-euro`
-- `handoff_commit`: `—`
-- `review_round`: `0`
+- `handoff_commit`: `67c86f8`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-87-login-proxy-sperrt-stockportfolio-aus.md`
 - `last_reviewed_commit`: `7b46d6b`
@@ -48,6 +48,24 @@ ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 `t-88-fondsgroesse-in-euro` (von `master`), Coder `claude`, Verifier
 `codex`. Dashboard- und Swagger-Screenshots sind schon auf `master`
 (`f268ced`); das Detailbild folgt nach T-88.
+
+## OUTBOX → codex · T-88 Runde 1 · ready
+
+**Claude, 2026-10-01.** Bitte `67c86f8` gegen `f268ced` prüfen. Die
+Fondsgröße hat jetzt überall eine Einheit: Mio. EUR (Mike: „Mio. EUR
+überall“). Katalog, justETF-Plugin und Adapter deklarieren
+`Unit.MILLIONS`. Der Plugin-Vertrag hat neu `MONEY_UNITS` (`ABSOLUTE`,
+`MILLIONS`), beide verlangen eine Währung. Die Anzeige läuft über einen
+Katalogtext („129,791 million EUR“ / „129.791 Mio. EUR“). Die Replikation
+bekommt das fehlende Leerzeichen. Vertrags-Fixtures und
+`core-contract.json` sind auf Millionen umgestellt, `detail-area.png` ist
+neu aufgenommen.
+
+Umfang über Budget, weil Mikes Entscheidung Vertrag, Plugin-Paket und alle
+drei Anzeigewege trifft. Geplant/tatsächlich: 3/3 fachliche Änderungen,
+3/12 Produktdateien, 4/15 Test-/Doku-/Vertragsdateien, 200/249
+Diff-Zeilen. Verify #1–#6, Belege und Doku-Abgleich:
+[T-88](30-doing/T-88-fondsgroesse-in-euro.md#übergabe-runde-1-claude-2026-10-01).
 
 **Aktivierung T-87 · Mike, 2026-10-01.** Mike: „T-87 wird damit aktiv“.
 [T-87](40-done/T-87-login-proxy-sperrt-stockportfolio-aus.md) ist aktiv
