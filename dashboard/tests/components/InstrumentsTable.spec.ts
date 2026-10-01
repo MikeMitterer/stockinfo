@@ -139,6 +139,60 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
   })
 })
 
+describe('InstrumentsTable — Datenhinweis', () => {
+  const germanStart = 'Die angezeigten Kurse und Kennzahlen können verzögert'
+  const englishStart = 'Displayed prices and metrics may be delayed'
+
+  /**
+   * Prüft genau einen Hinweis direkt nach der Assets-Karte und nicht in ihr.
+   *
+   * @param wrapper - Gemountete Assets-Übersicht.
+   * @returns Kein Rückgabewert; fehlgeschlagene Erwartungen werfen einen Fehler.
+   */
+  function expectNoticeBelowCard(wrapper: ReturnType<typeof mountTable>) {
+    const notices = wrapper.findAll('.table-notice')
+
+    expect(notices).toHaveLength(1)
+    expect(notices[0].text()).toContain(germanStart)
+    expect(notices[0].element.previousElementSibling?.matches('.table.card')).toBe(true)
+    expect(wrapper.find('.table.card .table-notice').exists()).toBe(false)
+  }
+
+  it('steht breit genau einmal direkt unter der Tabellenkarte, nicht in ihr', () => {
+    stubMatchMedia(false)
+
+    expectNoticeBelowCard(mountTable())
+  })
+
+  it('steht schmal genau einmal unter der Kartenliste, nicht in einer Karte', () => {
+    stubMatchMedia(true)
+    const wrapper = mountTable()
+
+    expectNoticeBelowCard(wrapper)
+    expect(wrapper.find('.icard .table-notice').exists()).toBe(false)
+  })
+
+  it('fehlt bei leerer Übersicht', () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable([])
+
+    expect(wrapper.find('.table-notice').exists()).toBe(false)
+  })
+
+  it('folgt dem Sprachwechsel ohne Neuaufbau', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+
+    i18n.global.locale.value = 'en'
+    await nextTick()
+    expect(wrapper.find('.table-notice').text()).toContain(englishStart)
+
+    i18n.global.locale.value = 'de'
+    await nextTick()
+    expect(wrapper.find('.table-notice').text()).toContain(germanStart)
+  })
+})
+
 /*
  * Konflikt gelöst wie im Plan festgehalten: Die Zeile öffnet weiterhin das
  * Chart (`@click`), nur Caret und Symbol klinken sich mit `@click.stop` aus und

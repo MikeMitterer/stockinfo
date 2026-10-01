@@ -51,6 +51,7 @@ export const en = {
   table: {
     title: 'Assets',
     empty: 'No securities cached yet — add one above by ISIN or symbol.',
+    dataNotice: 'Displayed prices and metrics may be delayed, incomplete or incorrect. Displayed prices are not binding trading prices. Check important information against the original source and your own entries before making a decision. StockInfo cannot guarantee its accuracy; statutory rules on warranties and liability apply.',
     colSymbol: 'Symbol',
     toggleDetails: 'Show/hide details',
     colIsin: 'ISIN',

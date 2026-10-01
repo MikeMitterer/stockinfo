@@ -61,6 +61,7 @@ export const de = {
   table: {
     title: 'Assets',
     empty: 'Noch keine Wertpapiere gecacht — oben per ISIN oder Symbol hinzufügen.',
+    dataNotice: 'Die angezeigten Kurse und Kennzahlen können verzögert, unvollständig oder fehlerhaft sein. Angezeigte Kurse sind keine verbindlichen Handelskurse. Prüfe wichtige Angaben vor einer Entscheidung anhand der ursprünglichen Quelle und deiner Eingaben. StockInfo kann ihre Richtigkeit nicht garantieren; für Gewährleistung und Haftung gelten die gesetzlichen Regeln.',
     colSymbol: 'Symbol',
     toggleDetails: 'Details ein-/ausblenden',
     colIsin: 'ISIN',
