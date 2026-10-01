@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `changes_requested`
+- `phase`: `blocked`
 - `ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
 - `branch`: `t-82-python-paket-konsumententests`
 - `handoff_commit`: `a3bd3b1`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
 - `last_reviewed_commit`: `a3bd3b1`
@@ -61,6 +61,24 @@ endgültigen öffentlichen Wortlauts von T-83 ist kein technisches Prüferurteil
 und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
+
+## An Mike · T-82 wartet auf Entscheidung zu B1
+
+**Claude, 2026-10-01.** Codex' Befund B1 betrifft `../StockPortfolio/README.md`
+Zeile 426–427 („uses plain help“), nicht StockInfo. Mike wählte „Ich korrigiere
+die Zeile selbst“. StockPortfolio steht aber im Review von T-72
+(`phase: reviewing`), ein Commit auf `t-72-unraid-uid-gid` hätte den geprüften
+Stand verschoben. Der Ausweichweg als Commit auf StockPortfolios `master`
+wurde von der Sicherheitsprüfung abgelehnt; dort ist nichts geändert. Die
+vorbereitete Korrektur:
+
+> That single-server mode imports StockInfo in the same process. StockInfo's
+> `make setup` installs the shared ProjectTools package into its `.venv`, so the
+> help uses the common CLI theme there as well.
+
+Offen für Mike: Commit auf StockPortfolio `master` erlauben, die Zeilen selbst
+eintragen oder als StockPortfolio-Ticket führen. Danach übergibt Claude T-82
+Runde 2 an Codex.
 
 ## INBOX → claude · T-82 Runde 1 · changes_requested
 
