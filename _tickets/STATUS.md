@@ -26,20 +26,25 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `T-83-assets-datenhinweis.md`
-- `branch`: `master`
-- `handoff_commit`: `2690819`
-- `review_round`: `2`
+- `phase`: `claude_working`
+- `ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
+- `branch`: `t-82-python-paket-konsumententests`
+- `handoff_commit`: ``
+- `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-83-assets-datenhinweis.md`
 - `last_reviewed_commit`: `2690819`
 - `last_reviewed_round`: `2`
-- `workstream`: `assets-datenhinweis`
-- `priority_chain`: `T-83 → T-82`
-- `priority_ticket`: `T-83`
+- `workstream`: `konsumententests-python-paket`
+- `priority_chain`: `T-82`
+- `priority_ticket`: `T-82`
+
+**Aktivierung T-82 · Mike, 2026-10-01.** Mike: „T-83 ist erledigt, push es
+und starte T-82“. [T-82](30-doing/T-82-python-paket-fuer-konsumententests-klaeren.md)
+ist aktiv auf `t-82-python-paket-konsumententests` (von `master`), Coder
+`claude`, Verifier `codex`.
 
 **Abschluss T-85 und Fortsetzung T-83 · Mike, 2026-10-01.** Mike: „Wenn
 Codex das abgenommen hat ist es auch für mich OK und das Ticket ist
@@ -48,7 +53,7 @@ freigegeben. [T-85](40-done/T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md)
 liegt in `40-done/` und ist lokal nach `master` gemergt; kein Push.
 [T-83](40-done/T-83-assets-datenhinweis.md) ist wieder aktiv, jetzt mit
 Claude als Coder und Codex als Verifier. Der Branch `t-83-assets-datenhinweis`
-wird auf den neuen `master` vorgespult. [T-82](20-ready/T-82-python-paket-fuer-konsumententests-klaeren.md)
+wird auf den neuen `master` vorgespult. [T-82](30-doing/T-82-python-paket-fuer-konsumententests-klaeren.md)
 bleibt bereit und folgt in der Prioritätskette. Die rechtliche Freigabe des
 endgültigen öffentlichen Wortlauts von T-83 ist kein technisches Prüferurteil.
 
