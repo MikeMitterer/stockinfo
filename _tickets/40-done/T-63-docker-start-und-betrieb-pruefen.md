@@ -16,8 +16,7 @@ und Konfigurationen ausgeführt. Die laufende Arbeitsinstanz blieb unberührt.
 
 ## Für dich
 
-Für die lokale Docker-Prüfung ist kein Handgriff nötig. Der Test ist
-reproduzierbar; die Abschlussentscheidung im Ticketboard steht noch aus.
+Nichts mehr offen. Mike hat das Ticket am 2026-10-01 abgeschlossen.
 
 ### Bisheriger Auftrag
 
@@ -109,4 +108,8 @@ Prüfwerkzeuge auf Wiederverwendung prüfen.
 Die technische Docker-Prüfung ist durchgeführt. Der absichtlich ungültige
 Env-Wert bleibt ein dokumentierter Fehlerfall; die aktuelle `.env.example`
 stellt Kommentare über die Werte und enthält keinen nachgestellten Kommentar.
-Eine menschliche Abschlussbestätigung für den Ticketordner liegt nicht vor.
+
+
+**Abschluss · Mike, 2026-10-01:** „T-63 hat sich erledigt - Docker läuft“.
+Ticket und `T-63-smoke.sh` liegen in `40-done/`; das Skript findet den
+Projekt-Root unabhängig vom Ticketordner.
