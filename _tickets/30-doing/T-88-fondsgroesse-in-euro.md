@@ -80,12 +80,12 @@ Prüfgegenstand: `67c86f8` gegen `master` (`f268ced`); darin `20b673a`
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | Einheit über alle Stellen verfolgen (`git grep fund_size`, `ABSOLUTE`, `2_000_000`) | Nirgends mehr „absolut“ für die Fondsgröße; Grenzen passen zu Millionen. Coder-Suche nach `fund_size` neben `ABSOLUTE`/„absolut“ und nach `1_200_000_000` über `app`, `tests`, `plugin_api`, `dashboard`, `contract`: einziger Treffer ist der Docstring des Mutantentests, der bewusst beide Einheiten prüft | ➖ |
-| 2 | `.venv/bin/python -m pytest -q` und `cd plugin_api && ../.venv/bin/python -m pytest -q` | grün | ➖ |
-| 3 | `cd dashboard && npx vitest run && npx vue-tsc -b && npx eslint src tests` | grün | ➖ |
-| 4 | Detailansicht im Browser (Temp-Datenbank, ETF aufklappen, deutsch und englisch) | „129,791 million EUR“ / „129.791 Mio. EUR“, „Physical (Optimized sampling)“ | ➖ |
-| 5 | Bezeichner-Inventar (Python `ast`, TS-Compiler-API) über die geänderten Dateien | nur englische Bezeichner | ➖ |
-| 6 | Doku- und Vertragsabgleich | README, Docker-README und `contract/` nennen Millionen; Docker-Hub-Vorschau unter 25.000 Bytes | ➖ |
+| 1 | Einheit über alle Stellen verfolgen (`git grep fund_size`, `ABSOLUTE`, `2_000_000`) | Nirgends mehr „absolut“ für die Fondsgröße; Grenzen passen zu Millionen. Coder-Suche nach `fund_size` neben `ABSOLUTE`/„absolut“ und nach `1_200_000_000` über `app`, `tests`, `plugin_api`, `dashboard`, `contract`: einziger Treffer ist der Docstring des Mutantentests, der bewusst beide Einheiten prüft | ⚠️ B1 |
+| 2 | `.venv/bin/python -m pytest -q` und `cd plugin_api && ../.venv/bin/python -m pytest -q` | grün | ✅ |
+| 3 | `cd dashboard && npx vitest run && npx vue-tsc -b && npx eslint src tests` | grün | ✅ |
+| 4 | Detailansicht im Browser (Temp-Datenbank, ETF aufklappen, deutsch und englisch) | „129,791 million EUR“ / „129.791 Mio. EUR“, „Physical (Optimized sampling)“ | ◑ |
+| 5 | Bezeichner-Inventar (Python `ast`, TS-Compiler-API) über die geänderten Dateien | nur englische Bezeichner | ⚠️ B2 |
+| 6 | Doku- und Vertragsabgleich | README, Docker-README und `contract/` nennen Millionen; Docker-Hub-Vorschau unter 25.000 Bytes | ✅ |
 
 **Coder-Belege:**
 
@@ -111,3 +111,86 @@ millions of EUR)“) und `docker/README.md` (Funktionsliste) sagen dasselbe.
 Millionen; Quellenwerte in EUR, manuelle Werte in der eingegebenen Währung.
 
 Kein Merge, kein Push, kein Docker-Hub- oder Unraid-Update.
+
+## Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
+
+**Prüfstand:** `67c86f8` gegen `f268ced`. Seit der Übergabe wurden nur
+`_tickets/`-Dateien committet. Ergebnis: **`changes_requested`**; keine
+technische oder menschliche Abnahme. Der Review verändert keinen Produktcode.
+
+### Blockierende Befunde
+
+1. **B1 · Falsche Währung bei manuell erfasster Fondsgröße.**
+   `dashboard/src/utils/fundSize.ts:14` setzt für die flachen Anzeigen
+   stets `EUR`; `MetricValue.vue:68` und `MetricEditor.vue:136` nutzen
+   diesen Text. Der Vertrag in `contract/core-contract.json` erlaubt für
+   manuelle `fund_size` die eingegebene Währung, und `DetailEditor.vue`
+   zeigt diese Währung auch an. Gegenprobe mit echtem `CachedQuoteService`
+   und temporärer Datenbank: Ein Instrument mit `fund_currency=USD` nimmt
+   `set_overrides('EUNL.DE', {'fund_size': 30})` an. Der Summary-Wert ist
+   `flat_fund_size=30`, das Detail hat `manual_currency=USD`; die flache
+   Anzeige macht daraus „30 Mio. EUR“. Auch `validate_input` akzeptiert
+   `DetailInput(value=30, currency='USD')` für `fund_size`. Bitte die
+   Währung für alle Anzeigewege und den Vertrag mit Mikes Entscheidung
+   „Mio. EUR überall“ in Einklang bringen und den manuellen USD-Pfad
+   gezielt prüfen.
+2. **B2 · Deutsche Bezeichner in berührten Testdateien.** Die
+   Projektregel verlangt englische Bezeichner ausnahmslos auch in Tests;
+   bereits vorhandene Namen ziehen beim Berühren der Datei mit. Das
+   Python-`ast`-Inventar über alle elf geänderten Python-Dateien fand
+   unter anderem `_StummeQuelle`, `_SchwaetzerischeQuelle` und
+   `_HalbherzigeZone` in
+   `plugin_api/tests/test_contract_mutants.py:96,115,373` sowie
+   `_KontextabhaengigerEnricher`, `aufrufe`, `spion`, `politik`,
+   `faelle`, `erwartet`, `kaputt`, `europaeisch`, `uebersee`,
+   `ausgefallen` und `ersatz` in `tests/test_providers.py`. Bitte das
+   vollständige Inventar dieser berührten Dateien bereinigen und erneut
+   per AST prüfen. Deutsche Testfunktionsnamen bleiben nach Projektregel
+   zulässig. Das TS-Compiler-Inventar der geänderten TS-/Vue-Dateien
+   fand keine entsprechende Abweichung.
+
+### Nachweise und Grenzen
+
+- **Verify #1:** Katalog, justETF-Plugin, Adapter, `MONEY_UNITS`,
+  Maximalwert und Vertrags-Fixtures nutzen Millionen; B1 durchbricht
+  jedoch die geforderte einheitliche Anzeige.
+- **Verify #2:** Backend vollständig **1252 passed, 35 skipped**;
+  Plugin-API **324 passed, 1 skipped**. Der erste Backend-Lauf in der
+  Sandbox scheiterte an DNS und Paketindex, der erneute vollständige Lauf
+  mit freigegebenem Netzwerkzugang war grün.
+- **Verify #3:** Dashboard **393 passed**; `vue-tsc -b` und
+  `eslint src tests` bestanden.
+- **Verify #4:** Das neue Bild `unraid/screenshots/detail-area.png`
+  zeigt den englischen Betrag und „Physical (Optimized sampling)“.
+  Der deutsche Betrag ist im Komponententest belegt, nicht in einem
+  unabhängigen deutschen Browserlauf. Die manuelle USD-Konstellation
+  bleibt durch B1 falsch.
+- **Verify #5:** Python-`ast` und TS-Compiler-API über die berührten
+  Dateien ausgeführt; B2 ist der Befund. Der normale Ruff-Lauf war grün.
+- **Verify #6 / Doku-Abgleich:** `README.md` und `docker/README.md`
+  beschreiben justETF-Werte in Millionen EUR übereinstimmend;
+  `unraid/README.md` enthält keine Fondsgrößen-Zusage. Der Vertrag
+  beschreibt Quellenwerte in EUR und manuelle Werte in der Eingabewährung;
+  B1 betrifft dessen Umsetzung. Die Docker-Hub-Vorschau bestand mit
+  **8.784 UTF-8-Bytes**. `git diff --check` bestand.
+
+**Standard-Riegel:** Gelesen wurde
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md` mit
+`references/architecture.md`, `frontend.md`, `python.md`, `quality.md`
+und `documentation.md`.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ⚠️ B2; DRY-Suche über den Diff und berührten Umgebungscode: `MONEY_UNITS` ist die gemeinsame Geld-Einheitenmenge, `fundSizeText` bündelt die beiden flachen Anzeigewege. Keine weitere doppelte Fachregel gefunden. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ⚠️ B1; neuer Betragstext kommt aus den DE/EN-Katalogen, die flache Währung ist jedoch fest verdrahtet. Typprüfung und ESLint bestanden. |
+| Python, FastAPI und Webhooks | ⚠️ B2 in zwei berührten Python-Testdateien; Backend-Suite und normaler Ruff-Lauf bestanden. |
+| Datenbanken und Persistenzgrenzen | ➖ keine produktive DB-/Persistenzänderung im Diff |
+| Fehler, Logging und Tests | ✅ volle Suiten und gezielte Service-Gegenprobe mit temporärer Datenbank; kein neuer stiller Fehlerpfad im Diff gefunden. |
+| Markdown und Inhaltsverzeichnisse | ✅ beide README-Aussagen und Vertragsbeschreibung gegen den Diff geprüft; Docker-Hub-Vorschau bestanden. |
+
+**Offene Board-Übernahme:** Die bereits in `STATUS.md` dokumentierte
+Activity-/Observer-/Lessons-Übernahme aus Paketfassung `df699dd1`
+bleibt ein getrennter Board-Schritt für die zuständige schreibberechtigte
+Instanz. Sie ändert dieses Reviewurteil nicht.

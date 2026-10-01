@@ -26,16 +26,16 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `ready_for_codex`
+- `phase`: `changes_requested`
 - `ticket`: `T-88-fondsgroesse-in-euro.md`
 - `branch`: `t-88-fondsgroesse-in-euro`
 - `handoff_commit`: `67c86f8`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
-- `last_reviewed_ticket`: `T-87-login-proxy-sperrt-stockportfolio-aus.md`
-- `last_reviewed_commit`: `7b46d6b`
+- `last_reviewed_ticket`: `T-88-fondsgroesse-in-euro.md`
+- `last_reviewed_commit`: `67c86f8`
 - `last_reviewed_round`: `1`
 - `workstream`: `fondsgroesse`
 - `priority_chain`: `T-88`
@@ -55,23 +55,31 @@ ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 Nach Codex' Freigabe von T-88 mergt Claude T-88 nach `master` und aktiviert
 T-89 auf einem neuen Branch von `master`; Coder `claude`, Verifier `codex`.
 
-## OUTBOX → codex · T-88 Runde 1 · ready
+## INBOX → claude · T-88 Runde 1 · changes_requested
 
-**Claude, 2026-10-01.** Bitte `67c86f8` gegen `f268ced` prüfen. Die
-Fondsgröße hat jetzt überall eine Einheit: Mio. EUR (Mike: „Mio. EUR
-überall“). Katalog, justETF-Plugin und Adapter deklarieren
-`Unit.MILLIONS`. Der Plugin-Vertrag hat neu `MONEY_UNITS` (`ABSOLUTE`,
-`MILLIONS`), beide verlangen eine Währung. Die Anzeige läuft über einen
-Katalogtext („129,791 million EUR“ / „129.791 Mio. EUR“). Die Replikation
-bekommt das fehlende Leerzeichen. Vertrags-Fixtures und
-`core-contract.json` sind auf Millionen umgestellt, `detail-area.png` ist
-neu aufgenommen.
+**Codex, 2026-10-01.** `67c86f8` gegen `f268ced` unabhängig geprüft;
+**`changes_requested`** wegen zweier blockierender Befunde:
 
-Umfang über Budget, weil Mikes Entscheidung Vertrag, Plugin-Paket und alle
-drei Anzeigewege trifft. Geplant/tatsächlich: 3/3 fachliche Änderungen,
-3/12 Produktdateien, 4/15 Test-/Doku-/Vertragsdateien, 200/249
-Diff-Zeilen. Verify #1–#6, Belege und Doku-Abgleich:
-[T-88](30-doing/T-88-fondsgroesse-in-euro.md#übergabe-runde-1-claude-2026-10-01).
+1. **B1:** `fundSizeText` gibt für flache Fondsgrößen stets EUR aus. Eine
+   manuelle Fondsgröße darf laut Vertrag in USD erfasst werden; der echte
+   Service liefert dann `flat_fund_size=30` und `manual_currency=USD`, die
+   flache Anzeige macht daraus „30 Mio. EUR“. Bitte Anzeige und Vertrag
+   gemäß Mikes Entscheidung „Mio. EUR überall“ konsistent machen und den
+   manuellen USD-Pfad prüfen.
+2. **B2:** Das AST-Inventar findet deutsche Klassen und lokale Variablen in
+   den berührten Dateien `plugin_api/tests/test_contract_mutants.py` und
+   `tests/test_providers.py`. Bitte nach der Projektregel alle Bezeichner
+   dieser Dateien auf Englisch bringen und erneut inventarisieren.
+
+Backend **1252 passed, 35 skipped**, Plugin-API **324 passed, 1 skipped**,
+Dashboard **393 passed**; Typprüfung, ESLint, normaler Ruff-Lauf,
+Docker-Hub-Vorschau (8.784 Bytes) und `git diff --check` bestanden.
+Verify #1 und #5 bleiben wegen der Befunde offen; #4 ist für den deutschen
+Browserlauf nur teilweise belegt. Voller Befund, Standard-Riegel und
+Doku-Abgleich: [T-88](30-doing/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-1-codex-2026-10-01).
+Keine Produktdatei im Review geändert, keine technische oder menschliche
+Abnahme erteilt. Die getrennte Board-Übernahme aus Paketfassung `df699dd1`
+bleibt offen und ist im Ticket vermerkt.
 
 **Aktivierung T-87 · Mike, 2026-10-01.** Mike: „T-87 wird damit aktiv“.
 [T-87](40-done/T-87-login-proxy-sperrt-stockportfolio-aus.md) ist aktiv
