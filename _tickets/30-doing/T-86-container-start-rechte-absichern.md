@@ -137,8 +137,8 @@ Lauf geprüft: 0 übrig).
 - **Meldungssprache:** Die Entrypoint-Meldungen sind englisch wie die übrige
   Containerausgabe (App-Logs, `docker/README.md`). `code-standards` sieht für
   einfache Skripte Deutsch vor; hier ist der Entrypoint Teil der
-  ausgelieferten, englisch dokumentierten Containeroberfläche. Bewusste
-  Abweichung, zur Prüfung durch den Verifier und Mike.
+  ausgelieferten, englisch dokumentierten Containeroberfläche.
+  **Entscheidung Mike, 2026-10-01:** „english ist OK“.
 
 ## Doku-Abgleich
 
@@ -159,9 +159,38 @@ Lauf geprüft: 0 übrig).
 
 ## Umfang
 
-Geplant / tatsächlich: 3 / 3 fachliche Änderungen; 1 Produktdatei
-(`docker/entrypoint.sh`, Dockerfile unverändert); 5 Test-/Dokudateien
-(Smoke, drei READMEs, Ticket). Diff-Zeilen siehe OUTBOX.
+Geplant / tatsächlich: 3 / 3 fachliche Änderungen; Produktdateien Runde 1:
+1 (`docker/entrypoint.sh`), Runde 2: 2 (zusätzlich ein Kommentar in
+`docker/Dockerfile`, Befund Codex); 5 Test-/Dokudateien (Smoke, drei READMEs,
+Ticket). Diff-Zeilen siehe OUTBOX.
+
+## Nacharbeit Runde 2 (Claude, 2026-10-01)
+
+- **B1:** `PUID`/`PGID` fallen nur noch ohne Zuweisung auf 99/100 zurück
+  (`${PUID-99}`); ein gesetzter leerer Wert bricht ab. `validateId` prüft
+  Länge und Bereich 1 bis 4294967294 vor dem Vergleich mit 0. Neue Fälle
+  A4c–A4g (PGID=0, beide leer, beide übergroß; übergroß darf weder
+  „Illegal number“ noch „would run the app as root“ zeigen).
+- **B2:** Die Abhilfe richtet sich nach dem Eigentümer des betroffenen
+  Pfads (`remedyFor`): Gehört er root, nennt sie nur `chown -R UID:GID` auf
+  dem Host; sonst zusätzlich `PUID`/`PGID` beziehungsweise `--user` mit den
+  IDs des Eigentümers. Die SETUID/SETGID-Meldung nennt `/data`, die
+  fehlenden Fähigkeiten und zwei ausführbare Wege. Fälle A6a/b, A7a/c, A9,
+  A10 prüfen Pfad, IDs und Abhilfe; A7a und A10 verbieten „PUID=0“.
+- **B3:** A7a verlangt zusätzlich die `chown`-Warnung; neu A7b
+  (root-eigenes `tmpfs` Modus 777, `--cap-drop CHOWN`): Warnung und Start
+  als 99:100. A1 und A8 verbieten die Warnung. Mutant „Warnung entfernt“:
+  A7a und A7b rot, danach wiederhergestellt und erneut grün.
+- **B4:** Alle Funktionen in Entrypoint und Smoke nennen Zweck, Parameter
+  und Rückgabe; `T-86-smoke.sh --bogus` zeigt Fehlermeldung und Hilfe
+  (Exit 2).
+- **Dockerfile:** Kommentar zu den IDs beschreibt die Vorgabe 99/100 und
+  `PUID`/`PGID`.
+- **Läufe:** Rot gegen das Runde-1-Testimage (11 Fehlschläge, A7b grün, weil
+  die Warnung dort schon existierte). Grün nach Neubau, zweimal; 0 eigene
+  Container oder Volumes übrig. `shellcheck`/`sh -n`/`bash -n` sauber.
+  Docker-Hub-Vorschau 8.691 Byte (READMEs unverändert; ihre Zusagen stimmen
+  jetzt für alle Fälle).
 
 ## Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
 

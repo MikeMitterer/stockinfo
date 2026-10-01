@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 #------------------------------------------------------------------------------
-# T-86-smoke.sh — Containerstart bei Rechteproblemen nachstellen (A1–A11)
+# T-86-smoke.sh — Containerstart bei Rechteproblemen nachstellen (A1–A12)
 #
 # Baut ein eigenes Testimage aus dem Arbeitsstand und startet je Fall einen
 # eigenen Container. /data ist ein tmpfs oder ein eigenes Testvolume. Danach
@@ -31,13 +31,18 @@ readonly PREFIX="si-t86-$$"
 readonly PLATFORM="${SMOKE_PLATFORM:-linux/amd64}"
 IMAGE="${IMAGE_REF:-stockinfo-t86:smoke}"
 readonly IMAGE
+readonly ROOT_DATA='/data:uid=0,gid=0,mode=755'
+readonly WARNING_TEXT='entrypoint WARNING'
 FAILURES=0
 OWN_VOLUMES=()
 
+# Zeigt Optionen und Umgebungsvariablen, ohne etwas zu starten.
+# Params: keine.
+# Returns: 0.
 usage() {
     printf '\nUsage: %s [ options ]\n' "${APPNAME}"
     printThemeHeading 'Optionen'
-    printThemeRow '-r | --run' 'Testimage bauen (ohne IMAGE_REF) und A1–A11 prüfen'
+    printThemeRow '-r | --run' 'Testimage bauen (ohne IMAGE_REF) und A1–A12 prüfen'
     printThemeRow '-h | --help' 'Diese Hilfe anzeigen'
     printThemeHeading 'Umgebung'
     printThemeRow 'IMAGE_REF' 'Vorhandenes Image prüfen statt selbst zu bauen'
@@ -45,7 +50,9 @@ usage() {
     printf '\n'
 }
 
-# Entfernt nur die eigenen Container und Volumes dieses Laufs.
+# Entfernt nur die Container und Volumes dieses Laufs (Präfix mit eigener PID).
+# Params: keine.
+# Returns: 0.
 cleanupSmoke() {
     local _NAME _VOLUME
     for _NAME in $(docker ps -aq --filter "name=^${PREFIX}-"); do
@@ -58,6 +65,7 @@ cleanupSmoke() {
 
 # Meldet ein Ergebnis und zählt Fehlschläge.
 # Params: $1 Fall, $2 0 = bestanden, $3 Beschreibung.
+# Returns: 0.
 report() {
     if [[ $2 -eq 0 ]]; then
         printThemeStatus '✓' "$1 $3" SUCCESS
@@ -67,8 +75,9 @@ report() {
     fi
 }
 
-# Startet einen Container und wartet, bis er läuft oder endet.
-# Params: $1 Fall, weitere: docker-run-Argumente. Gibt den Namen aus.
+# Startet einen Container und wartet, bis er antwortet oder endet.
+# Params: $1 Fall, weitere: docker-run-Argumente.
+# Returns: 0; gibt den Containernamen auf stdout aus.
 startCase() {
     local -r _NAME="${PREFIX}-$1"
     shift
@@ -84,8 +93,9 @@ startCase() {
     printf '%s' "${_NAME}"
 }
 
-# Liefert UID:GID aller App-Prozesse (ohne Probe-Shell), eine Zeile je Prozess.
+# Liefert UID:GID der App-Prozesse, ohne die eigene Prüf-Shell.
 # Params: $1 Containername.
+# Returns: 0; eine Zeile je unterschiedlichem UID:GID auf stdout.
 processIds() {
     docker exec "$1" sh -c 'for P in /proc/[0-9]*; do
         [ "$P" = "/proc/$$" ] && continue
@@ -94,45 +104,77 @@ processIds() {
     done' | sort -u
 }
 
+# Prüft Texte in den Containerlogs.
+# Params: $1 Logs, weitere: Texte; ein Text mit Präfix '!' darf nicht vorkommen.
+# Returns: 0, wenn alle Bedingungen gelten, sonst 1; stdout nennt die erste Abweichung.
+checkTexts() {
+    local -r _LOGS="$1"
+    shift
+    local _TEXT
+    for _TEXT in "$@"; do
+        if [[ ${_TEXT} == '!'* ]]; then
+            if [[ ${_LOGS} == *"${_TEXT#!}"* ]]; then printf 'unerwartet: %s' "${_TEXT#!}"; return 1; fi
+        elif [[ ${_LOGS} != *"${_TEXT}"* ]]; then
+            printf 'fehlt: %s' "${_TEXT}"
+            return 1
+        fi
+    done
+}
+
 # Erwartet einen laufenden Container mit Prozess- und Datei-IDs.
-# Params: $1 Fall, $2 erwartete UID:GID, weitere: docker-run-Argumente.
+# Params: $1 Fall, $2 erwartete UID:GID, $3 zu prüfende Pfade (Leerzeichen),
+#         dann Log-Texte (siehe checkTexts), '--', docker-run-Argumente.
+# Returns: 0; das Ergebnis meldet report.
 expectRunning() {
-    local -r _CASE="$1" _IDS="$2"
-    shift 2
-    local _NAME _PROCS _FILES
+    local -r _CASE="$1" _IDS="$2" _PATHS="$3"
+    shift 3
+    local _TEXTS=()
+    while [[ $1 != -- ]]; do _TEXTS+=("$1"); shift; done
+    shift
+    local _NAME _PROCS _FILES _LOGS _DETAIL
     _NAME=$(startCase "${_CASE}" "$@")
+    _LOGS=$(docker logs "${_NAME}" 2>&1)
     if [[ $(docker inspect -f '{{.State.Status}}' "${_NAME}") != running ]]; then
-        report "${_CASE}" 1 "erwartet Start, Container endete: $(docker logs "${_NAME}" 2>&1 | tail -1)"
-        return
+        report "${_CASE}" 1 "erwartet Start, Container endete: $(tail -1 <<< "${_LOGS}")"
+        return 0
     fi
     _PROCS=$(processIds "${_NAME}")
-    _FILES=$(docker exec "${_NAME}" stat -c '%u:%g' /data /data/stockinfo.db | sort -u)
-    if [[ ${_PROCS} == "${_IDS}" && ${_FILES} == "${_IDS}" ]]; then
-        report "${_CASE}" 0 "läuft, Prozesse und Dateien ${_IDS}"
+    # shellcheck disable=SC2086  # Pfadliste bewusst aufteilen.
+    _FILES=$(docker exec "${_NAME}" stat -c '%u:%g' ${_PATHS} | sort -u)
+    if ! _DETAIL=$(checkTexts "${_LOGS}" "${_TEXTS[@]+"${_TEXTS[@]}"}"); then
+        report "${_CASE}" 1 "läuft, aber Log ${_DETAIL}"
+    elif [[ ${_PROCS} == "${_IDS}" && ${_FILES} == "${_IDS}" ]]; then
+        report "${_CASE}" 0 "läuft, Prozesse und ${_PATHS} ${_IDS}"
     else
         report "${_CASE}" 1 "Prozesse '${_PROCS//$'\n'/,}', Dateien '${_FILES//$'\n'/,}', erwartet ${_IDS}"
     fi
 }
 
-# Erwartet einen Abbruch vor dem App-Start mit einer Meldung.
-# Params: $1 Fall, $2 erwarteter Text in den Logs, weitere: docker-run-Argumente.
+# Erwartet einen Abbruch vor dem App-Start.
+# Params: $1 Fall, dann Log-Texte (siehe checkTexts), '--', docker-run-Argumente.
+# Returns: 0; das Ergebnis meldet report.
 expectFailure() {
-    local -r _CASE="$1" _TEXT="$2"
-    shift 2
-    local _NAME _LOGS _EXIT
+    local -r _CASE="$1"
+    shift
+    local _TEXTS=()
+    while [[ $1 != -- ]]; do _TEXTS+=("$1"); shift; done
+    shift
+    local _NAME _LOGS _EXIT _DETAIL
     _NAME=$(startCase "${_CASE}" "$@")
     _LOGS=$(docker logs "${_NAME}" 2>&1)
     _EXIT=$(docker inspect -f '{{.State.ExitCode}}' "${_NAME}")
-    if [[ $(docker inspect -f '{{.State.Status}}' "${_NAME}") == exited && ${_EXIT} -ne 0 \
-        && ${_LOGS} == *"${_TEXT}"* && ${_LOGS} != *"app_started"* ]]; then
-        report "${_CASE}" 0 "Abbruch (Exit ${_EXIT}): $(grep -m1 'entrypoint ERROR' <<< "${_LOGS}")"
+    if [[ $(docker inspect -f '{{.State.Status}}' "${_NAME}") != exited || ${_EXIT} -eq 0 ]]; then
+        report "${_CASE}" 1 "erwartet Abbruch, Status/Exit ${_EXIT}: $(tail -1 <<< "${_LOGS}")"
+    elif ! _DETAIL=$(checkTexts "${_LOGS}" "${_TEXTS[@]}" '!app_started'); then
+        report "${_CASE}" 1 "Abbruch (Exit ${_EXIT}), aber Log ${_DETAIL}: $(tail -1 <<< "${_LOGS}")"
     else
-        report "${_CASE}" 1 "erwartet Abbruch mit '${_TEXT}', Status/Exit ${_EXIT}: $(tail -2 <<< "${_LOGS}")"
+        report "${_CASE}" 0 "Abbruch (Exit ${_EXIT}): $(grep -m1 'entrypoint ERROR' <<< "${_LOGS}")"
     fi
 }
 
-# Legt ein Testvolume mit Datenbankdatei im Besitz von root (644) an,
-# /data selbst gehört 99:100. Gibt den Volumenamen aus.
+# Legt ein Testvolume an: /data gehört 99:100, die Datenbankdatei root (644).
+# Params: keine.
+# Returns: 0; gibt den Volumenamen auf stdout aus.
 prepareRootOwnedDatabase() {
     local _VOLUME
     _VOLUME=$(docker volume create "${PREFIX}-rootdb")
@@ -141,6 +183,9 @@ prepareRootOwnedDatabase() {
     printf '%s' "${_VOLUME}"
 }
 
+# Baut bei Bedarf das Testimage und prüft alle Fälle.
+# Params: keine.
+# Returns: 0, wenn alle Fälle bestehen, sonst 1.
 runSmoke() {
     trap cleanupSmoke EXIT
     if [[ -z ${IMAGE_REF:-} ]]; then
@@ -149,25 +194,42 @@ runSmoke() {
             -t "${IMAGE}" "${ROOT_DIR}" >/dev/null
     fi
     printThemeHeading "Fälle gegen ${IMAGE}"
-    local -r _ROOT_DATA='/data:uid=0,gid=0,mode=755'
+    local -r _RANGE='must be a number from 1 to 4294967294'
+    local -r _HUGE='999999999999999999999999'
     local _VOLUME
 
-    expectRunning A1 99:100 --tmpfs "${_ROOT_DATA}"
-    expectRunning A2 99:100 --tmpfs /data:uid=1000,gid=1000,mode=700
-    expectRunning A3 1234:4321 -e PUID=1234 -e PGID=4321 --tmpfs "${_ROOT_DATA}"
-    expectFailure A4a "PUID must be a positive number" -e PUID=abc --tmpfs "${_ROOT_DATA}"
-    expectFailure A4b "PUID=0 would run the app as root" -e PUID=0 --tmpfs "${_ROOT_DATA}"
-    expectRunning A5 1000:1000 --user 1000:1000 --tmpfs /data:uid=1000,gid=1000,mode=755
-    expectFailure A6 "/data is not writable for UID 1000 / GID 1000" --user 1000:1000 --tmpfs "${_ROOT_DATA}"
-    expectFailure A7 "/data is not writable for UID 99 / GID 100" --cap-drop CHOWN --tmpfs "${_ROOT_DATA}"
-    expectRunning A8 99:100 --cap-drop CHOWN --tmpfs /data:uid=99,gid=100,mode=755
-    if docker logs "${PREFIX}-A8" 2>&1 | grep -q 'entrypoint WARNING'; then
-        report A8 1 "unnötige chown-Warnung bei passendem Eigentümer"
-    fi
-    expectFailure A9 "cannot switch to UID 99 / GID 100" --cap-drop SETUID --cap-drop SETGID --tmpfs "${_ROOT_DATA}"
+    expectRunning A1 99:100 '/data /data/stockinfo.db' "!${WARNING_TEXT}" -- --tmpfs "${ROOT_DATA}"
+    expectRunning A2 99:100 '/data /data/stockinfo.db' -- --tmpfs /data:uid=1000,gid=1000,mode=700
+    expectRunning A3 1234:4321 '/data /data/stockinfo.db' -- -e PUID=1234 -e PGID=4321 --tmpfs "${ROOT_DATA}"
+    expectFailure A4a "PUID ${_RANGE}, got 'abc'" -- -e PUID=abc --tmpfs "${ROOT_DATA}"
+    expectFailure A4b "PUID=0 would run the app as root" -- -e PUID=0 --tmpfs "${ROOT_DATA}"
+    expectFailure A4c "PGID=0 would run the app as root" -- -e PGID=0 --tmpfs "${ROOT_DATA}"
+    expectFailure A4d "PUID ${_RANGE}, got ''" -- -e PUID= --tmpfs "${ROOT_DATA}"
+    expectFailure A4e "PGID ${_RANGE}, got ''" -- -e PGID= --tmpfs "${ROOT_DATA}"
+    expectFailure A4f "PUID ${_RANGE}, got '${_HUGE}'" '!Illegal number' '!would run the app as root' \
+        -- -e "PUID=${_HUGE}" --tmpfs "${ROOT_DATA}"
+    expectFailure A4g "PGID ${_RANGE}, got '${_HUGE}'" '!Illegal number' '!would run the app as root' \
+        -- -e "PGID=${_HUGE}" --tmpfs "${ROOT_DATA}"
+    expectRunning A5 1000:1000 '/data /data/stockinfo.db' -- --user 1000:1000 --tmpfs /data:uid=1000,gid=1000,mode=755
+    expectFailure A6a "/data is not writable for UID 1000 / GID 1000" "chown -R 1000:1000" '!--user 0:0' \
+        -- --user 1000:1000 --tmpfs "${ROOT_DATA}"
+    expectFailure A6b "/data is not writable for UID 2000 / GID 2000" "--user 1000:1000 to match its current owner" \
+        -- --user 2000:2000 --tmpfs /data:uid=1000,gid=1000,mode=700
+    expectFailure A7a "${WARNING_TEXT}: could not change the owner of /data" \
+        "/data is not writable for UID 99 / GID 100" "chown -R 99:100" '!PUID=0' \
+        -- --cap-drop CHOWN --tmpfs "${ROOT_DATA}"
+    expectRunning A7b 99:100 '/data/stockinfo.db' "${WARNING_TEXT}: could not change the owner of /data" \
+        -- --cap-drop CHOWN --tmpfs /data:uid=0,gid=0,mode=777
+    expectFailure A7c "/data is not writable for UID 99 / GID 100" "set PUID=1000 PGID=1000 to match its current owner" \
+        -- --cap-drop CHOWN --tmpfs /data:uid=1000,gid=1000,mode=700
+    expectRunning A8 99:100 '/data /data/stockinfo.db' "!${WARNING_TEXT}" \
+        -- --cap-drop CHOWN --tmpfs /data:uid=99,gid=100,mode=755
+    expectFailure A9 "cannot switch to UID 99 / GID 100 to use /data" "remove --cap-drop for SETUID/SETGID" \
+        -- --cap-drop SETUID --cap-drop SETGID --tmpfs "${ROOT_DATA}"
     _VOLUME=$(prepareRootOwnedDatabase)
     OWN_VOLUMES+=("${_VOLUME}")
-    expectFailure A10 "/data/stockinfo.db is not writable" --cap-drop CHOWN -v "${_VOLUME}:/data"
+    expectFailure A10 "/data/stockinfo.db is not writable for UID 99 / GID 100" "chown -R 99:100" '!PUID=0' \
+        -- --cap-drop CHOWN -v "${_VOLUME}:/data"
     # A11 steckt in jedem expectRunning: Prozess-IDs müssen den Zielwert treffen, nie 0:0.
 
     if ((FAILURES > 0)); then
@@ -181,5 +243,9 @@ if (($# == 0)); then usage; exit 0; fi
 case "$1" in
     -r | --run) runSmoke ;;
     -h | --help) usage ;;
-    *) printThemeStatus '✗' "Unbekannte Option: $1" DANGER >&2; exit 2 ;;
+    *)
+        printThemeStatus '✗' "Unbekannte Option: $1" DANGER >&2
+        usage >&2
+        exit 2
+        ;;
 esac
