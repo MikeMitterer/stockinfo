@@ -286,3 +286,67 @@ Produktanleitungen. SI-P-01, SI-P-02, SI-P-04, SI-P-08 und SI-P-13 wurden
 gegen Testtiefe, Umfang und Standardgewicht geprüft. B1 ist ein konkreter
 Standardverstoß; ein neuer allgemeiner Lesson-Eintrag ist daraus nicht
 belegt.
+
+### Verifier-Prüfung · Runde 2 (Codex, 2026-10-01)
+
+**Ergebnis: technisch `approved`.** Geprüft wurde Claudes Übergabe `acf9dd9`
+gegen den Rückgabestand `c1f6bf2`, der Gesamtstand gegen `0bb9a4d`.
+Der abschließende, verhaltensneutrale Review-Commit `2690819` ergänzt
+ausschließlich JSDoc in zwei Testdateien. Produktcode, Test-Assertions,
+Fixtures und öffentliche Texte blieben im Review unverändert. Die rechtliche
+Freigabe des endgültigen Wortlauts bleibt bei Mike; Verify #4 bleibt deshalb
+◑ und die Human-Spalte unangetastet.
+
+**B1 behoben:** Das Browser-Prüfskript zeigt bei leerem Aufruf sowie `-h`
+und `--help` die Hilfe mit Exit 0. Nur `-r|--run [URL]` startet die Messung;
+ein unbekanntes Argument endet nach Fehlermeldung und Hilfe mit Exit 2.
+Header und Ticketaufruf stimmen damit mit `cli.md` überein. Der falsche
+Umfangswert aus Runde 1 ist auf 11 Dateien, +273/−16 berichtigt; der
+Gesamtstand `0bb9a4d..acf9dd9` umfasst ohne STATUS 12 Dateien, +461/−20.
+
+**Mikes Lagebefund behoben:** Die Komponente setzt `.table-notice` als
+direkten Geschwisterknoten nach `.table.card`. Der Lage-Test unterscheidet
+dies von einem Hinweis innerhalb der Karte. Der unabhängige Browserlauf mit
+echter API, temporärer Datenbank und 14 Test-Assets misst bei 1440 und 390 px
+jeweils genau einen Hinweis: direkter Nachfolger der Karte, nicht darin,
+4 px darunter, links 0 px Versatz, gleiche Breite, 12 px Schrift und keine
+horizontale Überbreite. Die Screenshots wurden angesehen. DE → EN → DE
+wechselt den Text ohne Seitenreload. Der Leerfall wird im Komponententest
+abgedeckt. Die Gegenprobe gegen den alten Stand und der Lage-Mutant röteten
+die entscheidenden Tests, wie in den Belegen oben beschrieben.
+
+**Unabhängige Prüfungen:** `make test-dashboard` bestand mit Lint sowie
+52 Testdateien und 389 Tests; `npm --prefix dashboard run build` bestand
+einschließlich `vue-tsc`. `node --check`, alle CLI-Fälle und
+`git diff --check c1f6bf2 acf9dd9` bestanden. Nach `2690819` bestanden
+erneut der direkt betroffene Komponententest (34/34), Dashboard-Lint,
+`node --check`, `git diff --check` und der Browser-Smoke mit beiden Breiten
+und Sprachwechsel. Die isolierten Testserver wurden gestoppt. Das
+TypeScript-Compiler-API-Inventar der geänderten Vue-/TS-/JS-Dateien fand
+keine deutschen Bezeichner.
+
+**Code-Standards:** Gelesen wurden
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md` mit
+`architecture.md`, `frontend.md`, `quality.md`, `cli.md` und
+`documentation.md` sowie `ux-standards/SKILL.md` mit `styles.md` und
+`responsive.md`. Architektur ✅ vorhandene Darstellungskomponenten;
+Shell ➖, Python ➖, Persistenz ➖ nicht berührt; CLI ✅ expliziter Start,
+Hilfe, Header und Fehlerstatus; Frontend/i18n ✅ gemeinsamer Hinweis für
+beide Breiten, reaktiver Katalogtext und Token-Stil; Qualität/Tests ✅
+Leerfall, Lage, Sprache, Gegenprobe und Browser; Dokumentation ✅ wie unten.
+DRY ✅: Der Diff und der berührte Umgebungscode führen keine zweite
+fachliche Regel oder Hilfsfunktion ein. Der selbständig lesbare Satz in
+About und Assets ist als bewusste Textwiederholung im Scope begründet;
+der gemeinsame Breitenwert bleibt an einem Selektor. Die repoübergreifende
+Stilwiederholung zu StockPortfolio ist als möglicher ux-foundation-Bedarf
+erfasst und ändert diese Freigabe nicht.
+
+**Selbstheilung und Doku-Abgleich:** `2690819` ergänzt nur Parameter- und
+Rückgabebeschreibungen der Testhelfer; der vollständige Diff und die
+betroffenen Tests, statischen Checks und Smokes wurden danach erneut
+geprüft. `README.md` (Assets), `docker/README.md` (What you get) und
+`unraid/README.md` (About) beschreiben denselben Platz und Zweck des
+Hinweises. About und `LICENSING.md` widersprechen dem vorgeschlagenen
+Wortlaut technisch nicht. Die Docker-Hub-Vorschau lag bei 7.940 UTF-8-Bytes
+und damit unter der Grenze. Eine menschliche Wortlaut- oder Ticketabnahme
+ist mit diesem Review nicht erfolgt.
