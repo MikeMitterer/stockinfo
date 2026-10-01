@@ -276,3 +276,62 @@ es setzt weder `--user` noch Cap-Drops. Die Standard-IDs 99:100 sind damit
 abgedeckt; ein Template-Push fand nicht statt. Die Dockerfile-Kommentarzeile
 und die Zusage zum A9-Fehlerpfad gehören zur Nacharbeit. Keine menschliche
 Abnahme erfolgte.
+
+## Verifier-Prüfung · Runde 2 (Codex, 2026-10-01)
+
+**Ergebnis: `changes_requested`.** `8b1cd51` gegen `fbba09b` unabhängig
+geprüft. B1, B3, B4 und der Dockerfile-Kommentar sind erledigt. Von B2
+bleibt ein konkreter Fall offen; Produktcode wurde im Review nicht geändert.
+
+**B2 · Rest: Die Abhilfe kann den gemeldeten Zustand unverändert lassen.**
+`docker/entrypoint.sh:61-72` bildet den Rat allein aus dem Eigentümer des
+Pfads. Bei `--user 1000:1000` und `/data` mit Eigentümer 1000:1000,
+Modus 0555, endet der Container korrekt vor dem App-Start (Exit 1), meldet
+aber als Abhilfe `chown -R 1000:1000 <host path>` oder nochmals
+`--user 1000:1000`. Beide Vorschläge beschreiben schon den Ist-Zustand;
+das fehlende Schreibrecht bleibt. Unabhängige Gegenprobe:
+
+```sh
+docker run --rm --user 1000:1000 \
+  --tmpfs /data:uid=1000,gid=1000,mode=555 stockinfo-t86:smoke true
+```
+
+Die Meldung nennt `/data` und die IDs, aber keine wirksame Änderung der
+Schreibrechte. Der Scope-Vertrag und `docker/README.md` sagen für diesen
+Abbruch eine Abhilfe zu. Ein ebenso fehlender Schreibmodus einer bereits
+passend besessenen Datenbankdatei führt nach derselben `remedyFor`-Logik
+zum gleichen Problem (aus dem Code abgeleitet, nicht separat ausgeführt).
+Bitte die Meldung auch für unverändertes Eigentum mit fehlendem Schreibrecht
+brauchbar machen und einen Smoke-Fall mit passendem Eigentümer und fehlendem
+Schreibbit ergänzen. Die Fälle A6a/b, A7a/c, A9 und A10 können bleiben.
+
+**Bestätigte Nacharbeit:** Leere und übergroße Werte beider ID-Variablen
+werden mit passender Meldung abgelehnt; A4c–A4g bestehen. A7a verlangt
+die CHOWN-Warnung, A7b belegt Warnung mit anschließendem Start bei
+beschreibbarem `/data`; A1 und A8 verbieten die Warnung. Die
+SETUID/SETGID-Meldung nennt jetzt `/data`, IDs und Abhilfe. Die Funktionen
+haben Zweck-, Parameter- und Rückgabeangaben; eine unbekannte Smoke-Option
+zeigt Fehler und Hilfe (Exit 2). Der Dockerfile-Kommentar nennt die
+konfigurierbaren IDs.
+
+**Unabhängige Nachweise:** `./_tickets/30-doing/T-86-smoke.sh --run` baute
+das lokale Testimage für `linux/amd64`; alle A1–A11 samt A4a–g, A6a/b und
+A7a–c bestanden. `shellcheck -s sh docker/entrypoint.sh`, ShellCheck für
+den Smoke, `sh -n`, `bash -n` und `git diff --check fbba09b 8b1cd51`
+bestanden. Die Docker-Hub-Vorschau bestand; die zuvor gemessene Größe von
+8.691 UTF-8-Bytes gilt weiterhin, da `docker/README.md` unverändert ist.
+Eigene Smoke-Container und Volumes sind entfernt; kein Push und keine
+menschliche Abnahme.
+
+**Standards und Doku-Abgleich:** `code-standards` (Architektur, Shell, CLI,
+Qualität, Dokumentation), `docker-conventions` und `unraid-conventions`
+wurden gegen die geänderten Dateien angewandt. Shell/CLI/Qualität ✅ für
+B1/B3/B4; Docker-Laufzeit und Dokumentation ⚠️ wegen B2. DRY ✅: Die
+Abhilfe wird in einer Funktion gebildet. Python, Frontend/i18n und
+Persistenz ➖. `README.md`, `docker/README.md` und `unraid/README.md`
+wurden erneut gegen das Verhalten abgeglichen; die Dateien selbst sind in
+Runde 2 unverändert. Die konkrete Zusage einer wirksamen Abhilfe in
+`docker/README.md` ist noch nicht erfüllt. Das Unraid-Template ist von
+der Nacharbeit nicht betroffen. Der Smoke-Header und seine Hilfe nennen
+„A1–A12“, obwohl das Skript A1–A11 mit Unterfällen ausführt; bitte diese
+beiden Beschriftungen berichtigen.
