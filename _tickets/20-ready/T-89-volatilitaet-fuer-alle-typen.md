@@ -55,6 +55,10 @@ der Coder im Scope-Vertrag fest.
 - [ ] TER und Thesaurierung bleiben bei Aktien ausgeblendet (Regel aus T-56).
 - [ ] Wenn justETF ebenfalls eine Volatilität liefert, ist festgelegt und
       getestet, welcher Wert gilt.
+- [ ] **Sichtbare Prüfung im Browser** (nicht headless, Mike: „Vergiss auch
+      die visuellen Tests pro Ticket nicht“): Temp-Instanz mit Aktie, ETF und
+      Fonds; Tabelle und Detailbereich auf Deutsch und Englisch ansehen;
+      Screenshots als Beleg im Ticket.
 - [ ] `unraid/screenshots/dashboard.png` wird danach neu aufgenommen.
 - [ ] Doku-Abgleich für `README.md` und `docker/README.md`.
 
