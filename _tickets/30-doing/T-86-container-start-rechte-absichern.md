@@ -220,6 +220,19 @@ Warum drei Runden: Runde 1 brachte Grenzwerte und fehlende Orakel, Runde 2
 deckte einen Abhilfefall auf, den die erste Eigentümerlogik nicht kannte.
 Nächster Schritt: Codex prüft Runde 3; offen bleibt nur der B2-Rest.
 
+**Verifier-Nachtrag zur Maximalrunde:** B2 bleibt auch nach Runde 3
+blockierend: `remedyFor` empfiehlt bei einem root-eigenen Pfad weiterhin
+allein `chown`, selbst wenn am Pfad das Schreibbit fehlt. Der Eigentümerwechsel
+allein kann dann den Start nicht ermöglichen. Dieser Fall war in der
+Runde-2-Rückgabe mit „Eigentümer stimmt“ zu eng beschrieben; die neue
+Gegenprobe unten zeigt die fehlende zweite Stufe. Bearbeitungsreihenfolge:
+zuerst diesen B2-Rest am Entrypoint und am gezielten Smoke-Orakel schließen,
+danach dieselben Fälle nachprüfen. Zuständig ist Claude als Coder; Codex
+prüft die Korrektur gezielt. Eine vierte Runde überschreitet das reguläre
+Limit wegen dieses belegten Blockers, nicht wegen einer neuen breiten Suche.
+Die übrigen B1/B3/B4-Punkte und die Smoke-Beschriftung sind erledigt;
+Gruppenrechte und Unraid-Vorlage bleiben wie oben eingeordnet.
+
 ## Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
 
 **Ergebnis: `changes_requested`.** `8d91b4d` gegen `85d8f0b` unabhängig
@@ -363,3 +376,56 @@ Runde 2 unverändert. Die konkrete Zusage einer wirksamen Abhilfe in
 der Nacharbeit nicht betroffen. Der Smoke-Header und seine Hilfe nennen
 „A1–A12“, obwohl das Skript A1–A11 mit Unterfällen ausführt; bitte diese
 beiden Beschriftungen berichtigen.
+
+## Verifier-Prüfung · Runde 3 (Codex, 2026-10-01)
+
+**Ergebnis: `changes_requested`.** `d495030` gegen `2fdb54c` unabhängig
+geprüft. Die drei neuen Smoke-Fälle A6c, A7d und A10b bestehen; die
+Beschriftung nennt jetzt A1–A11 mit Unterfällen. B2 bleibt in einem
+benachbarten, belegten Fall offen. Kein Produktcode wurde im Review geändert.
+
+**B2 · Chown allein behebt fehlendes Schreibrecht bei fremdem Eigentümer
+nicht.** `docker/entrypoint.sh:67-73` nennt bei abweichendem Eigentümer
+`chown -R` als Abhilfe, ohne die Dateirechte zu berücksichtigen. Zwei
+unabhängige Containerläufe mit demselben Modus 0555 zeigen die Folge:
+
+```sh
+docker run --rm --platform linux/amd64 --user 1000:1000 \
+  --tmpfs /data:uid=0,gid=0,mode=555 stockinfo-t86:smoke true
+# Exit 1: Rat chown -R 1000:1000; kein Hinweis auf Schreibrechte.
+
+docker run --rm --platform linux/amd64 --user 1000:1000 \
+  --tmpfs /data:uid=1000,gid=1000,mode=555 stockinfo-t86:smoke true
+# Exit 1: nun Rat chmod -R u+rwX; chown allein war nicht ausreichend.
+```
+
+Der zweite Lauf stellt das Ergebnis des zuerst empfohlenen
+Eigentümerwechsels bei unverändertem Modus her. Der Scope-Vertrag und
+`docker/README.md` versprechen im Fehlerfall eine Abhilfe. Bitte den Rat
+auch bei abweichendem Eigentümer so formulieren, dass neben der Zuordnung
+die tatsächliche Schreibbarkeit des Hostpfads hergestellt wird. Ein
+gezielter Smoke-Fall mit abweichendem Eigentümer und Modus 0555 soll den
+Hinweis auf Schreibrechte verlangen. Danach die betroffenen A6/A7/A10-
+Fälle und die statischen Checks wiederholen. Das ist eine gezielte
+Nachprüfung des bekannten B2-Rests über `max_review_rounds: 3` hinaus;
+eine neue breite Reviewrunde ist nicht nötig. Die erforderliche Änderung
+betrifft die Verhaltensmeldung und ein Testorakel; die mechanische
+Verifier-Selbstheilung greift dafür nicht, und die Nutzeranweisung
+verbietet Codex Produktcodeänderungen.
+
+**Bestätigte Nachweise:** Der neu gebaute `stockinfo-t86:smoke` bestand
+alle A1–A11 mit Unterfällen einschließlich A6c/A7d/A10b. `shellcheck -s sh`
+für den Entrypoint, ShellCheck für den Smoke, `sh -n`, `bash -n` und
+`git diff --check 2fdb54c d495030` waren sauber. Die Docker-Hub-Vorschau
+bestand mit 8.691 UTF-8-Bytes. Eigene Testcontainer und Testvolumes wurden
+entfernt; kein Push. B1, B3, B4 und Dockerfile-Kommentar bleiben erledigt.
+
+**Standards und Doku-Abgleich:** `code-standards` (Architektur, Shell, CLI,
+Qualität, Dokumentation), `docker-conventions` und `unraid-conventions`
+wurden auf den Runde-3-Diff und die betroffene Umgebung angewandt. Shell,
+CLI und Testaufbau ✅; Docker-Laufzeit und Dokumentation ⚠️ B2. DRY ✅:
+die Abhilfe liegt in `remedyFor`. Python, Frontend/i18n, Persistenz ➖.
+`README.md`, `docker/README.md` und `unraid/README.md` sind in Runde 3
+unverändert; die konkrete Fix-Zusage in `docker/README.md` trifft für die
+Gegenprobe noch nicht zu. Das Unraid-Template ist nicht betroffen. Keine
+menschliche Abnahme erfolgte.
