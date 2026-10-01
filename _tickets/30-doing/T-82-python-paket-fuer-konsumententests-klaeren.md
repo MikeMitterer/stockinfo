@@ -70,14 +70,14 @@ Aufruf ermöglicht. Die Entscheidung und ihre Grenze im Ticket begründen.
 
 ### Verify
 
-Legende: ✅ bestätigt, ⚠️ Nacharbeit, ➖ noch keine Live-Verifikation.
+Legende: ✅ bestätigt, ◑ teilweise, ⚠️ Nacharbeit, ➖ noch keine Live-Verifikation.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | In einer frischen StockInfo-Umgebung den dokumentierten Installationsweg ausführen | `projecttools.ui.colors` ist ohne absoluten Rechnerpfad und ohne `sys.path`-Änderung importierbar | ✅ |
 | 2 | StockPortfolios Testskript mit der vorgesehenen Python-Umgebung und `--help` starten | Hilfe erscheint ohne laufenden Dienst und ohne Seiteneffekte | ✅ |
 | 3 | Den Teststack nach der gewählten Einbindung starten, Status prüfen und stoppen | StockInfo und StockPortfolio bleiben über den dokumentierten Aufruf erreichbar; fremde Prozesse und Daten bleiben unangetastet | ✅ |
-| 4 | StockInfos bestehende Tests und die betroffenen Entwickleranleitungen prüfen | Keine Regression; Installationsschritte und Zuständigkeit sind nachvollziehbar | ⚠️ |
+| 4 | StockInfos bestehende Tests und die betroffenen Entwickleranleitungen prüfen | Keine Regression; Installationsschritte und Zuständigkeit sind nachvollziehbar | ◑ |
 
 **Belege (Claude, 2026-10-01):**
 
@@ -115,7 +115,7 @@ anderen Ticketbranch. Die Funktionskommentare aus Codex' Selbstheilung
 - [x] Der für StockInfo gewählte Installationsweg ist begründet und reproduzierbar.
 - [x] StockPortfolios Skript kann die gemeinsame CLI-Darstellung über den Paketimport nutzen, ohne Rechnerpfad im Code.
 - [x] Hilfe und Teststack funktionieren auf dem dokumentierten Entwicklungsweg.
-- [ ] Betroffene Anleitungen in beiden Repositories sind auf Konsistenz geprüft; nötige Anpassungen sind dokumentiert.
+- [x] Betroffene Anleitungen in beiden Repositories sind auf Konsistenz geprüft; nötige Anpassungen sind dokumentiert (StockPortfolio T-75 bleibt offen).
 
 ### Doku-Abgleich
 
@@ -228,3 +228,42 @@ Hausvorlage `makefile-conventions/setup-libs.sh` prüft weiterhin den
 veralteten Pfad `ProjectTools/src/python/colors.py`; die Übernahme in die
 gemeinsame Skill-Quelle bleibt offen und ist kein StockInfo-Produktedit.
 Keine menschliche Ticketabnahme oder Änderung der Human-Spalte erfolgte.
+
+### Verifier-Prüfung · Runde 2 (Codex, 2026-10-01)
+
+**Ergebnis: technisch `approved` unter Mikes dokumentierter
+Folgeticket-Entscheidung.** `2a3cc0c` gegen `c68d5ba` ändert nur dieses
+Ticket und `STATUS.md`; `git diff --check` ist sauber. Es gibt keinen neuen
+Produktedit, keinen geänderten Paketvertrag und keinen Anlass, die grünen
+Setup-, Test- und Stack-Läufe aus Runde 1 zu wiederholen. Der geprüfte
+T-82-Produktstand bleibt `a3bd3b1`.
+
+**B1 eingeordnet:** Der falsche Satz steht weiterhin in
+`../StockPortfolio/README.md:426`. Mike hat entschieden, ihn als eigenes
+StockPortfolio-Ticket bearbeiten zu lassen. T-75 enthält den genauen Satz,
+die betroffene Anleitung und zwei Verify-Handgriffe. Entgegen dem Stand der
+OUTBOX ist es inzwischen im StockPortfolio-Commit `deaaf46` erfasst und laut
+dortigem `STATUS.md` nach T-74 eingeplant. T-82 fügt StockInfo keine
+Querverweise hinzu. Verify #4 bleibt ◑, weil die fremde aktuelle Anleitung
+bis T-75 noch falsch ist; die nötige Anpassung ist benannt und durch Mikes
+Entscheidung getrennt beauftragt. Dies ist keine Abnahme von StockPortfolio
+T-75 und keine Aussage, dass dessen README bereits korrigiert sei.
+
+**Gemeinsame Vorlage:** In PersonalSkills-`master` enthält `39cb1ae` den
+richtigen Prüfpfad `ProjectTools/src/python/projecttools/ui/colors.py`.
+Der installierte Skill zeigt noch den alten Pfad, weil sein Checkout auf
+`t-45-central-agentlessons-entry` steht. Diese Übernahme bleibt bis zur
+Aktualisierung des installierten Checkouts sichtbar offen; StockInfos lokale
+Kopie funktioniert und wurde in Runde 1 geprüft. Die gemeldeten 24
+PersonalSkills-Tests wurden hier nicht wiederholt.
+
+**Standards und Doku-Abgleich:** Die in Runde 1 gelesenen
+`code-standards/SKILL.md`-Referenzen (`architecture.md`, `shell.md`,
+`cli.md`, `quality.md`, `documentation.md`) und
+`makefile-conventions/SKILL.md` bleiben für den unveränderten Produktstand
+maßgeblich. Architektur, Shell, CLI, Qualität/Tests, Makefile und DRY ✅ wie
+in Runde 1 belegt; Python, Frontend/i18n und Persistenz ➖. Dokumentation
+für StockInfo ✅: Root-README, Docker-README, Unraid-README und `make hints`
+wurden in Runde 1 abgeglichen. Die abweichende StockPortfolio-Anleitung ist
+als T-75 offen und erklärt das ◑ bei Verify #4. Kein Produktcode wurde im
+Review geändert; menschliche Abnahme und Ticketabschluss bleiben unberührt.
