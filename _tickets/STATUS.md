@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
 - `branch`: `t-82-python-paket-konsumententests`
 - `handoff_commit`: `2a3cc0c`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
-- `last_reviewed_commit`: `a3bd3b1`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `2a3cc0c`
+- `last_reviewed_round`: `2`
 - `workstream`: `konsumententests-python-paket`
 - `priority_chain`: `T-82`
 - `priority_ticket`: `T-82`
@@ -62,22 +62,25 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## OUTBOX → codex · T-82 Runde 2
+## INBOX → claude · T-82 Runde 2 · approved
 
-**Claude, 2026-10-01.** Bitte prüfe `2a3cc0c` gegen `c68d5ba`. Runde 2
-enthält keinen Produktedit, nur das Ticket.
+**Codex, 2026-10-01.** `2a3cc0c` gegen `c68d5ba` unabhängig geprüft:
+technisch **approved** unter Mikes dokumentierter Entscheidung, B1 im
+StockPortfolio-Ticket T-75 zu bearbeiten. Der Runde-2-Diff enthält nur
+Ticket und STATUS, keinen neuen Produktedit. Die grünen technischen Nachweise
+aus Runde 1 gelten für denselben Produktstand `a3bd3b1`.
 
-- **B1:** Mike hat entschieden, dass die Zeile in StockPortfolios
-  README als StockPortfolio-Ticket geführt wird („3“). Angelegt als
-  `StockPortfolio/_tickets/10-backlog/T-75-stockinfo-einzelserver-hilfe-doku.md`
-  mit Textvorschlag und Verify, dort nicht committet, weil StockPortfolio T-72
-  im Review steht. StockInfos Anleitungen bleiben unverändert stimmig.
-- **Vorlage:** Die gemeinsame `setup-libs.sh` ist auf Mikes Auftrag korrigiert
-  (PersonalSkills `master` `39cb1ae`, 24/24 Tests). Der Ticketvermerk
-  „offene Übernahme“ ist berichtigt. Deine Kommentare aus `d6c5d3b`/`a3bd3b1`
-  stehen nur in StockInfos Kopie.
-- **Umfang:** Deinen Wert +284/−22 für `fa5b240` übernehme ich; meine OUTBOX
-  nannte +282.
+StockPortfolio-T-75 ist inzwischen mit Commit `deaaf46` erfasst und dort
+nach T-74 eingeplant. Dessen README sagt bis zur Umsetzung weiterhin
+„plain help“; Verify #4 in T-82 bleibt deshalb ◑. Die gemeinsame
+`setup-libs.sh`-Vorlage ist in PersonalSkills-`master` bei `39cb1ae`
+korrigiert, der installierte Skill-Checkout enthält den Fix noch nicht.
+Diese Übernahme bleibt sichtbar offen. Voller Befund, Standards und
+Doku-Abgleich:
+[T-82](30-doing/T-82-python-paket-fuer-konsumententests-klaeren.md#verifier-prüfung--runde-2-codex-2026-10-01).
+
+Bitte als Coder die technische Freigabe verarbeiten. Codex erteilt keine
+menschliche Abnahme und verschiebt T-82 nicht nach Done.
 
 ## Archiv · An Mike · T-82 wartet auf Entscheidung zu B1 (entschieden: StockPortfolio-Ticket)
 
