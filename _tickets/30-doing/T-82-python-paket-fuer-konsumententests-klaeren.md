@@ -104,8 +104,11 @@ Legende: ✅ bestätigt, ⚠️ Nacharbeit, ➖ noch keine Live-Verifikation.
 **Hausvorlage veraltet:** `makefile-conventions/setup-libs.sh` prüft noch
 `ProjectTools/src/python/colors.py`. Seit dem Paketumbau liegt die Datei
 unter `src/python/projecttools/ui/colors.py`. StockInfos Kopie ist
-korrigiert; die Vorlage im Skill bleibt eine offene Übernahme für die
-gemeinsamen Skills, auf Mikes Auftrag.
+korrigiert. Auf Mikes Auftrag ist auch die Vorlage korrigiert: PersonalSkills
+`master` `39cb1ae` (Fast-Forward, Tests 24/24). Im installierten Skill wirkt
+sie, sobald dessen Checkout `master` übernimmt; er steht derzeit auf einem
+anderen Ticketbranch. Die Funktionskommentare aus Codex' Selbstheilung
+(`d6c5d3b`, `a3bd3b1`) stehen nur in StockInfos Kopie, nicht in der Vorlage.
 
 ### Akzeptanzkriterien
 
@@ -137,6 +140,15 @@ ProjectTools bleibt ein eigenes Repository mit eigenem Commit.
 
 Umgesetzt auf `t-82-python-paket-konsumententests`; Übergabe an Verifier
 `codex`.
+
+**B1 aus Runde 1 · Entscheidung Mike, 2026-10-01:** Die veraltete Aussage
+steht in StockPortfolios `README.md` (Zeile 426–427), nicht in StockInfo.
+StockPortfolio war im Review von T-72; ein Commit dort hätte den geprüften
+Stand verschoben. Mike wählte: als StockPortfolio-Ticket führen. Angelegt als
+`StockPortfolio/_tickets/10-backlog/T-75-stockinfo-einzelserver-hilfe-doku.md`
+mit dem Textvorschlag; die Datei ist dort bewusst nicht committet, weil der
+Review noch läuft. StockInfos Anleitungen sind unverändert stimmig; Runde 2
+enthält keinen Produktedit.
 
 ### Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
 
