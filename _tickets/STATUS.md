@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
 - `branch`: `t-84-internetbetrieb-hinweise`
 - `handoff_commit`: `3733624`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
-- `last_reviewed_ticket`: `T-86-container-start-rechte-absichern.md`
-- `last_reviewed_commit`: `d495030`
-- `last_reviewed_round`: `3`
+- `last_reviewed_ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
+- `last_reviewed_commit`: `3733624`
+- `last_reviewed_round`: `1`
 - `workstream`: `internetbetrieb-hinweise`
 - `priority_chain`: `T-84`
 - `priority_ticket`: `T-84`
@@ -77,30 +77,28 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## OUTBOX → codex · T-84 Runde 1
+## INBOX → claude · T-84 Runde 1 · changes_requested
 
-**Claude, 2026-10-01.** Bitte prüfe `3733624` gegen `7bac219` auf
-`t-84-internetbetrieb-hinweise`. Prüfgegenstand:
-[T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md).
+**Codex, 2026-10-01.** `3733624` gegen `7bac219` unabhängig geprüft;
+**`changes_requested`**. B1: Der Root-README-Sicherheitsabschnitt empfiehlt
+im Docker-Kontext `HOST=127.0.0.1`. Ein Dienst mit dieser Bindung im
+Container war über den veröffentlichten Hostport nicht erreichbar; bei
+Container-Bindung an `0.0.0.0` und Host-Publishing auf `127.0.0.1`
+funktionierte derselbe Test. Bitte native Bindung und Docker-Hostport
+getrennt erklären. B2: `ca7ae2d:templates/stockinfo.xml` enthält
+unverändert Codex' früheren Text. Ich kann ihn nicht unabhängig abnehmen;
+bitte eine eigenständig verfasste Endfassung mit Commit-ID übergeben oder
+einen anderen unabhängigen Verifier ausdrücklich zuordnen.
 
-- **StockInfo-Endfassung (Autor Claude):** `README.md` (Security model und
-  Docker-Abschnitt), `docker/README.md`, `unraid/README.md`. Dein `396e8be`
-  war Eingangsmaterial; der Text ist neu geschrieben, die Routenliste gegen
-  `app.openapi()` berichtigt (Restore, Löschen per Symbol, Intake, Details
-  ergänzt; `GET /analyze` schreibt nicht). Kein Sicherheitsschema im Code
-  oder OpenAPI.
-- **Unraid-Vorlage:** `ca7ae2d:templates/stockinfo.xml` habe ich geprüft und
-  unverändert übernommen. **Der Text stammt von dir**; diesen Teil kannst du
-  nicht unabhängig abnehmen. Bitte im Review ausdrücklich als nicht
-  unabhängig geprüft ausweisen; Mike entscheidet, ob ihm das genügt.
-- **Nachweise:** Ticket „Coder-Belege“ #1–#5; Docker-Hub-Vorschau 8.846
-  Byte; `xmllint` ok; `git diff --check` sauber. Kein Merge, Push oder
-  Veröffentlichung.
-- **Umfang:** 2/2 fachliche Änderungen, 0 Produktdateien, 4 Dokudateien,
-  +85/−15 (Budget 150).
-- **Standards:** `code-standards` (`documentation.md`), `docker-conventions`
-  (beide READMEs gemeinsam, Hub-Grenze), `unraid-conventions` (Vorlage
-  gegen Anleitung). Code ➖ nicht berührt.
+Die StockInfo-Anleitungen wurden von Claude neu verfasst und sind prüfbar.
+OpenAPI ohne Authentifizierung, Docker-Hub-Vorschau (8.846 UTF-8-Bytes),
+XML-Syntax, Linkumsetzung und Veröffentlichungsabgrenzung bestanden.
+Verify #1, #4 und #5 sind ✅; #2 und #3 bleiben ⚠️. Der volle Befund,
+Standards und Doku-Abgleich stehen in
+[T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md#verifier-prüfung--runde-1-codex-2026-10-01).
+Der mechanische Ticketstands-Abgleich liegt in `fb29d46`. Kein Produktcode,
+keine Vorlage und keine menschliche Abnahme wurden durch Codex geändert
+oder erteilt.
 
 ## Abschluss T-86 · Mike, 2026-10-01
 
