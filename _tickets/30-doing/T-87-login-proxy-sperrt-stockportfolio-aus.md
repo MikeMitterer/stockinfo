@@ -134,3 +134,61 @@ Der Zwischencommit `b93ff36` (Sonderhinweis für StockPortfolio) ist durch
 | 5 | `xmllint --noout` und Docker-Hub-Vorschau | XML gültig; Vorschau unter 25.000 Bytes (Coder: 8.763) | ➖ |
 
 Kein Merge im Vorlagen-Repo, kein Push, kein Docker-Hub- oder Unraid-Update.
+
+## Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
+
+**Ergebnis: `approved`.** StockInfo `7b46d6b` gegen `1cbc39e` und
+`a2d80a6:templates/stockinfo.xml` gegen `fdeb4fd` unabhängig geprüft.
+`a2d80a6` ist der neue Vorlagenstand; `fdeb4fd` enthält noch die frühere
+Proxy-Empfehlung. Nach dem Produktcommit folgten im StockInfo-Branch nur
+Ticket- und Statuscommits. Kein Produktcode und keine Vorlage wurden im
+Review geändert; eine menschliche Abnahme ist damit nicht erteilt.
+
+| Verify | Ergebnis und Beleg |
+|---|---|
+| #1 | ✅ Alle drei READMEs und `a2d80a6:templates/stockinfo.xml` nennen Heimnetz und VPN für Zugriff von außen. Die Vorlage nennt WireGuard und Tailscale im Overview. Keine dieser aktuellen Aussagen empfiehlt den Login-Proxy. |
+| #2 | ✅ Die geänderten Warnungen bestehen aus kurzen, direkten Sätzen und erklären den Nutzweg ohne Proxy-Fachbegriffe. Andere, bereits bestehende Fachtexte der Vorlage sind nicht Teil dieser Textänderung. |
+| #3 | ✅ `README.md` trennt `HOST=127.0.0.1` für nativen Start von Docker-Host-Publishing mit `-p 127.0.0.1:8000:8000`; im Container bleibt `HOST` unverändert. Der T-84-B1-Fix bleibt erhalten. |
+| #4 | ✅ `git grep` über alle versionierten Markdown- und HTML-Dateien außerhalb von `_tickets/` findet „Reverse-Proxy“ nur in der historischen Design-Spec `docs/superpowers/specs/2026-07-13-single-container-deployment-design.md`. In `a2d80a6:templates/stockinfo.xml` gibt es keinen Treffer. |
+| #5 | ✅ `xmllint --noout` für die XML aus `a2d80a6` und beide `git diff --check` bestanden. Die Docker-Hub-Vorschau wurde erzeugt und misst 8.763 UTF-8-Bytes; die Grenze beträgt 25.000. |
+
+**Umfang:** 2/2 fachliche Änderungen, 0/0 Produktdateien, 5/5
+Dokudateien einschließlich der externen Vorlage. Die drei README-Diffs
+haben 53 geänderte Zeilen; die XML hat sechs. Das bleibt unter dem
+vereinbarten Budget von 80 Diff-Zeilen. Es gab keinen Anlass für ein
+Prüf-Script oder einen Produktlauf. Ein Live-Test mit VPN oder auf Unraid
+war nicht Teil von Mikes Textauftrag und wird nicht behauptet.
+
+**Doku-Abgleich:** `README.md` („Security model“), `docker/README.md`
+(Warnung und „Quick start“), `unraid/README.md` (Installation) und
+`a2d80a6:templates/stockinfo.xml` (Overview, Description, Portfeld)
+sagen inhaltlich dasselbe. Das Root-README behält den Sonderfall für
+Zugriff nur vom eigenen Rechner. Historische Spec und Changelog bleiben
+Historie. StockPortfolio-Texte sind im dortigen Board zu prüfen; diese
+Freigabe umfasst sie nicht.
+
+**Standards:** Gelesen:
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md` mit
+`references/documentation.md`, dazu `docker-conventions` und
+`unraid-conventions`. Die lokale Entscheidung gegen einen Login-Proxy
+geht der allgemeineren Unraid-Empfehlung vor.
+
+| `code-standards`-Gruppe | Ergebnis |
+|---|---|
+| Architektur, Shell, CLI, Frontend, Python, Persistenz, Qualität | ➖ Kein Code oder Test im Diff. |
+| Dokumentation | ✅ Die geänderten Abschnitte sind kurz; vorhandene Inhaltsverzeichnisse und Anker bleiben intakt. |
+| DRY | ✅ Die Sicherheitszusage ist über die vier nötigen Auslieferungsorte konsistent; keine zusätzliche gepflegte Quelle wurde eingeführt. |
+
+**Lessons-Einordnung:** Claudes einschlägige lokale Lessons wurden vor
+dem Review gegen die Übergabe geprüft, insbesondere SI-P-11 (gültiger
+Übergabecommit), SI-P-12 (vollständiges Fundstelleninventar) und SI-P-13
+(Muss-Regeln). Kein neuer Fehlbefund und keine neue Lesson. Der separate
+Abgleich der Board-Konventionen gegen Paketfassung `df699dd1` bleibt
+offen: Der lokale Workflow trägt die Kennung
+`2026-09-28-activity-local` noch nicht und bildet Activity-Pflege,
+Observer-Koordination und Lessons-Einordnung nicht vollständig ab.
+`ACTIVITY.md` ist bereits über die Root-`.gitignore` ausgeschlossen;
+STATUS verlinkt die Datei erst in einem älteren Abschnitt. Diese
+Board-Übernahme ist kein T-87-Blocker und braucht einen gesondert
+schreibberechtigten Board-Schritt. Keine zentrale Paketänderung wurde
+behauptet.

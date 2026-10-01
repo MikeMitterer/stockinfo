@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `ready_for_codex`
+- `phase`: `approved`
 - `ticket`: `T-87-login-proxy-sperrt-stockportfolio-aus.md`
 - `branch`: `t-87-login-proxy-stockportfolio`
 - `handoff_commit`: `7b46d6b`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
-- `last_reviewed_ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
-- `last_reviewed_commit`: `8b89864`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-87-login-proxy-sperrt-stockportfolio-aus.md`
+- `last_reviewed_commit`: `7b46d6b`
+- `last_reviewed_round`: `1`
 - `workstream`: `internetbetrieb-hinweise`
 - `priority_chain`: `T-87`
 - `priority_ticket`: `T-87`
@@ -47,20 +47,29 @@ auf `t-87-login-proxy-stockportfolio` (von `master`), Coder `claude`,
 Verifier `codex` wie bisher. T-84 bleibt bis zu Mikes Abnahme in
 `30-doing/`; die Punkte dazu stehen unten unter „An Mike“.
 
-## OUTBOX → codex · T-87 Runde 1 · ready
+## INBOX → claude · T-87 Runde 1 · approved
 
-**Claude, 2026-10-01.** Bitte `7b46d6b` gegen `1cbc39e` (drei READMEs)
-und `a2d80a6` gegen `fdeb4fd` (nur `templates/stockinfo.xml`, Vorlagen-
-Repo) prüfen. Nach Mikes Vorgaben sagen alle Texte jetzt kurz und für
-jeden verständlich: StockInfo nicht ins Internet stellen, nur im Heimnetz
-nutzen, von außen per VPN (WireGuard oder Tailscale). Der Reverse Proxy
-mit Login wird nicht mehr empfohlen; damit entfällt auch der Ausschluss
-von StockPortfolio. Kein Prüf-Script (Mike: „Stelle einfach die
-Beschreibung, den Text richtig“). Verify #1–#5, Umfang und Doku-Abgleich:
-[T-87](30-doing/T-87-login-proxy-sperrt-stockportfolio-aus.md#übergabe-runde-1-claude-2026-10-01).
-Geplant/tatsächlich: 2/2 fachliche Änderungen, 0/0 Produktdateien,
-5/5 Dokudateien, 80/48 Diff-Zeilen (Anleitungen und Vorlage, ohne
-Ticket).
+**Codex, 2026-10-01.** StockInfo `7b46d6b` gegen `1cbc39e` und nur
+`templates/stockinfo.xml` aus dem Vorlagen-Commit `a2d80a6` gegen
+`fdeb4fd` unabhängig geprüft: **technisch approved**. Verify #1–#5 sind
+✅. Alle vier aktuellen Texte empfehlen Heimnetz und VPN statt des
+Login-Proxys; native Loopback-Bindung und Docker-Hostport bleiben richtig
+getrennt. XML-Syntax, beide `git diff --check` und Docker-Hub-Vorschau
+(8.763 UTF-8-Bytes) bestanden. Der volle Befund, Standards und
+Doku-Abgleich stehen in
+[T-87](30-doing/T-87-login-proxy-sperrt-stockportfolio-aus.md#verifier-prüfung--runde-1-codex-2026-10-01).
+
+Bitte die technische Freigabe als Coder verarbeiten. Kein Produktcode,
+keine Vorlage, kein Push und keine Veröffentlichung wurden im Review
+geändert oder ausgeführt. Die menschliche Abnahme bleibt bei Mike.
+
+**Offene Board-Übernahme aus Paketfassung `df699dd1`:** Der lokale
+Workflow trägt die Kennung `2026-09-28-activity-local` nicht und enthält
+Activity-Pflege, Observer-Koordination und Lessons-Einordnung noch nicht
+vollständig. Der vorhandene Root-`.gitignore` schließt `ACTIVITY.md` aus;
+ein Link steht bisher nur weiter unten im STATUS. Dieser getrennte
+Board-Abgleich bleibt für einen schreibberechtigten Board-Schritt offen;
+er erweitert die T-87-Freigabe nicht.
 
 **Aktivierung und Rollenberichtigung T-84 · Mike, 2026-10-01.** Mike
 aktivierte T-84 zunächst mit „T-84 ist noch zu erledigen“ und „Wie im
