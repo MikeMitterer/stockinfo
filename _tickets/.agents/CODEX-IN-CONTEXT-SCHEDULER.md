@@ -53,7 +53,10 @@ des gemeinsamen Vertrags. Der Timer selbst lädt keine Skills für Leerdurchläu
   (`next_tick += 300000`) und nicht aus dem Ende des letzten Durchlaufs. Nach
   einer Verzögerung werden verpasste Termine übersprungen; es gibt weder Drift
   noch eine Folge sofortiger Nachhol-Ticks.
-- Projekt: aktueller lokaler Checkout von StockInfo; kein anderer Worktree.
+- Projekt: der StockInfo-Projekt-Root; kein Worktree und keine Kopie. Vor
+  jedem fachlichen Auftrag muss `git branch --show-current` dem Feld `branch`
+  in STATUS entsprechen, sonst Konflikt melden und nicht arbeiten
+  ([AGENTS.md · Ein Arbeitsort](../../AGENTS.md#ein-arbeitsort-der-projekt-root)).
 - Pro Tick: ausschließlich den maschinenlesbaren Zustand in `STATUS.md` lesen.
   Neben dem Review-Tupel sind `workstream`, `priority_chain` und
   `priority_ticket` Teil dieses Zustands.

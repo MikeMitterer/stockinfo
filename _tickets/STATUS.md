@@ -15,29 +15,63 @@ eingerichtet und unbesetzt: Trage `claude-observer` beziehungsweise
 einsetzen willst. Startweg und Ablauf stehen in der
 [Aktivierung](.agents/AGENT-ACTIVATION.md#observer-aktivierung).
 
+**Arbeitsort:** nur der Projekt-Root, keine Worktrees. `branch` nennt den
+dort ausgecheckten Branch; jede Instanz vergleicht ihn vor jedem Durchlauf
+mit `git branch --show-current` und stoppt bei Abweichung. Nur der Owner
+schaltet den Branch. Regel:
+[AGENTS.md · Ein Arbeitsort](../AGENTS.md#ein-arbeitsort-der-projekt-root).
+
 ## Maschinenlesbarer Zustand
 
-- `implementer`: `codex`
-- `reviewer`: `claude`
+- `implementer`: `claude`
+- `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `none`
-- `handoff_commit`: `78059a8`
-- `review_round`: `1`
+- `phase`: `claude_working`
+- `ticket`: `T-83-assets-datenhinweis.md`
+- `branch`: `t-83-assets-datenhinweis`
+- `handoff_commit`: ``
+- `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
-- `updated_at`: `2026-09-28`
-- `last_reviewed_ticket`: `T-81-zeitabhaengige-yaml-historientests.md`
-- `last_reviewed_commit`: `78059a8`
+- `owner`: `claude`
+- `updated_at`: `2026-10-01`
+- `last_reviewed_ticket`: `T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md`
+- `last_reviewed_commit`: `4bcad36`
 - `last_reviewed_round`: `1`
-- `workstream`: `none`
-- `priority_chain`: `none`
-- `priority_ticket`: `none`
+- `workstream`: `assets-datenhinweis`
+- `priority_chain`: `T-83 → T-82`
+- `priority_ticket`: `T-83`
+
+**Abschluss T-85 und Fortsetzung T-83 · Mike, 2026-10-01.** Mike: „Wenn
+Codex das abgenommen hat ist es auch für mich OK und das Ticket ist
+erledigt. Fange dann gleich mit T-83 an“. Codex hat T-85 mit `4bcad36`
+freigegeben. [T-85](40-done/T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md)
+liegt in `40-done/` und ist lokal nach `master` gemergt; kein Push.
+[T-83](30-doing/T-83-assets-datenhinweis.md) ist wieder aktiv, jetzt mit
+Claude als Coder und Codex als Verifier. Der Branch `t-83-assets-datenhinweis`
+wird auf den neuen `master` vorgespult. [T-82](20-ready/T-82-python-paket-fuer-konsumententests-klaeren.md)
+bleibt bereit und folgt in der Prioritätskette. Die rechtliche Freigabe des
+endgültigen öffentlichen Wortlauts von T-83 ist kein technisches Prüferurteil.
 
 **Abschluss T-81 · Mike, 2026-09-28.** Claude hat `78059a8` unabhängig geprüft
 und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
-`40-done/`; es ist kein weiteres Ticket eingeplant. Volles Prüfergebnis im
-Ticket unter „Auflösung".
+`40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
+aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
+
+## Archiv · INBOX → claude · T-85 Runde 1 · approved (verarbeitet)
+
+**Codex, 2026-10-01.** Die Übergabe `7b19fb3` gegen `7d38879` ist
+unabhängig geprüft und technisch **approved**. Der finale geprüfte Stand
+enthält die redaktionelle Selbstheilung `4bcad36` in T-84: Zwei Aussagen
+nannten T-83 noch aktiv, obwohl T-85 vorgezogen und T-83 pausiert ist.
+Diff und `git diff --check` sind sauber. Der vollständige Review mit
+Standard- und Doku-Abgleich steht in [T-85](40-done/T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md#verifier-prüfung--runde-1-codex-2026-10-01).
+
+Verify #1–#3 sind unabhängig belegt; #4 bleibt ◑ bis zum ersten tatsächlichen
+lokalen Merge. Bitte als Coder den freigegebenen Ticketbranch nach `master`
+integrieren, den Root auf `master` stellen und `STATUS.branch` im selben
+Abschlussschritt aktualisieren. Mikes menschliche Abnahme und ein Push sind
+dadurch nicht erfolgt. AgentLessons T-52 und der lokale Board-Konventionsabgleich
+bleiben sichtbar offen.
 
 ## Archiv · OUTBOX → claude · T-81 Runde 1 (verarbeitet: `approved`)
 

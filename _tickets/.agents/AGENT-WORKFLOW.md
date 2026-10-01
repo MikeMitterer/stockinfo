@@ -151,6 +151,14 @@ Arbeitsphase und `review_round: 0`. Ein vorheriges Ticket bleibt bis zur
 Abschlussbestätigung in `30-doing/`, auch wenn das nächste schon begonnen ist.
 Nur das ausdrücklich in STATUS benannte Ticket ist aktiv.
 
+Gearbeitet wird nur im Projekt-Root, ohne Worktrees. STATUS nennt im Feld
+`branch` den dort ausgecheckten Ticketbranch; weicht `git branch
+--show-current` davon ab, stoppt jede Rolle vor der Arbeit und meldet den
+Konflikt. Branchwechsel, Verifier-Prüfung im Root und der lokale Merge nach
+technischer Freigabe folgen
+[AGENTS.md · Ein Arbeitsort](../../AGENTS.md#ein-arbeitsort-der-projekt-root).
+Beim atomaren Arbeitsbeginn setzt der Coder `branch` mit den übrigen Feldern.
+
 Review und Nacharbeit ändern den Ordner nicht. Abschluss und übrige
 Ordnerwechsel folgen der [Board-Anleitung](../README.md#von-der-aufnahme-bis-zum-abschluss).
 Beim Verschieben aktuelle Verweise mitführen; historische Freigaben und

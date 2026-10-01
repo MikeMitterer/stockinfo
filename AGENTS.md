@@ -13,6 +13,7 @@ durch „Codex" wurden eine „Mailbox zwischen Codex und Codex" und ein
 
 - [Bezeichner sind englisch. Ausnahmslos.](#bezeichner-sind-englisch-ausnahmslos)
 - [Vor Arbeitsbeginn](#vor-arbeitsbeginn)
+- [Ein Arbeitsort: der Projekt-Root](#ein-arbeitsort-der-projekt-root)
 - [Tatsächlicher Entwicklungsstand](#tatsächlicher-entwicklungsstand)
 - [Dokumentation gehört zur Änderung](#dokumentation-gehört-zur-änderung)
 - [Datenbankzugriffe in Tests](#datenbankzugriffe-in-tests)
@@ -76,6 +77,41 @@ AgentLessons-Bestand und Herkunft folgen
 [Lessons lesen und pflegen](_tickets/.agents/LESSONS-ACCESS.md). Der Collector
 aktualisiert die gemeinsame Sammlung auf ausdrücklichen Aufruf; ein
 periodischer Lauf und die automatische Regelableitung sind noch nicht umgesetzt.
+
+[↑ Übersicht](#übersicht)
+
+## Ein Arbeitsort: der Projekt-Root
+
+**Alle Instanzen arbeiten ausschließlich im Projekt-Root
+`/Volumes/DevLocal/DevWeb/Production/StockInfo`** (Mike, 2026-10-01).
+Keine `git worktree add` und keine Kopien unter `/private/tmp` oder anderswo,
+außer Mike ordnet es ausdrücklich an. Grund: Mike sieht Board und prüfbaren
+Quellstand an einer Stelle und testet genau dort.
+
+- **Ein Board.** `_tickets/` gibt es nur im Root. Board-Änderungen kommen auf
+  den gerade ausgecheckten Branch. Ein Ticket im Backlog ist damit vom Root
+  aus sichtbar, auch wenn seine Umsetzung noch nicht aktiviert ist.
+- **Branch im Feld `branch`.** Der Ticketbranch wird im Root ausgecheckt
+  (`git switch`). `_tickets/STATUS.md` nennt ihn im Feld `branch`. Vor jedem
+  fachlichen Durchlauf vergleicht jede Instanz `git branch --show-current`
+  mit diesem Feld. Bei Abweichung meldet sie den Konflikt und arbeitet nicht
+  weiter.
+- **Nur der Owner schaltet den Branch.** Er setzt `branch` im selben Commit,
+  der den neuen Stand beginnt. Der Verifier prüft die Übergabe im Root und
+  wechselt den Branch nicht; ältere Fassungen liest er mit `git show` und
+  `git diff`.
+- **Früh integrieren.** Nach der technischen Freigabe mergt der Coder den
+  geprüften Ticketbranch lokal nach `master` und stellt den Root auf `master`
+  zurück. Mikes menschliche Abnahme findet auf `master` statt. Nacharbeit
+  beginnt auf einem neuen Branch von `master`. Bereits offene menschliche
+  Abnahmen bleiben offen; der Merge ersetzt sie nicht.
+- **Push ist eine eigene Entscheidung.** Weder technische Freigabe noch lokaler
+  Merge beauftragen einen Push oder eine Veröffentlichung.
+
+Lokale Ausnahme vom gemeinsamen Paket: `PROJECT-RULES.md` mergt erst nach
+Prüfung **und** menschlicher Abnahme. In StockInfo folgt der lokale Merge
+bereits auf die technische Freigabe. Die gemeinsame Übernahme ins Paket ist
+AgentLessons T-52.
 
 [↑ Übersicht](#übersicht)
 
