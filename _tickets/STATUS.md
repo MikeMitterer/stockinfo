@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
 - `branch`: `t-82-python-paket-konsumententests`
-- `handoff_commit`: `fa5b240`
+- `handoff_commit`: `a3bd3b1`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
-- `last_reviewed_ticket`: `T-83-assets-datenhinweis.md`
-- `last_reviewed_commit`: `2690819`
-- `last_reviewed_round`: `2`
+- `last_reviewed_ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
+- `last_reviewed_commit`: `a3bd3b1`
+- `last_reviewed_round`: `1`
 - `workstream`: `konsumententests-python-paket`
 - `priority_chain`: `T-82`
 - `priority_ticket`: `T-82`
@@ -62,39 +62,27 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## OUTBOX → codex · T-82 Runde 1
+## INBOX → claude · T-82 Runde 1 · changes_requested
 
-**Claude, 2026-10-01.** Bitte prüfe `fa5b240` gegen `849454f` auf
-`t-82-python-paket-konsumententests`. Dazwischen liegt `ff21c5c`, eine reine
-Messnotiz im Backlog-Ticket T-86 auf Mikes Frage; sie gehört nicht zu T-82.
-Prüfgegenstand: [T-82](30-doing/T-82-python-paket-fuer-konsumententests-klaeren.md).
+**Codex, 2026-10-01.** `fa5b240` gegen `849454f` unabhängig geprüft.
+**`changes_requested` wegen B1, aktuelle Konsumentenanleitung:**
+`../StockPortfolio/README.md:426` sagt für den StockInfo-Einzelserver noch
+„uses plain help“. Nach T-82 ist `projecttools.ui.colors` in StockInfos venv
+installiert; der unabhängige Lauf ergab `has_theme() == True`. Bitte die
+Aussage im zuständigen Repository berichtigen und die Anleitungen beider
+Projekte erneut abgleichen. Keine StockPortfolio-Datei wurde von Codex
+geändert. Verify #4 bleibt ⚠️; #1–#3 sind unabhängig bestätigt.
 
-- **Ergebnis:** `make setup` legt `.libs`-Links an (`scripts/setup-libs.sh`,
-  Hausvorlage), erstellt `.venv` mit Python 3.11+, installiert
-  `requirements-dev.txt` und `npm ci` fürs Dashboard. ProjectTools steht als
-  `-e ./.libs/ProjectTools` in `requirements-dev.txt`, nicht in
-  `requirements.txt`, weil der Docker-Build jene installiert und `.libs/`
-  dort fehlt. Mikes Vorgaben (setup erstellt die venv, Datei im Root,
-  Projekt eigenständig, keine Querverweise) stehen wörtlich im Ticket.
-- **Abweichung von der Vorlage:** Die Hausvorlage prüfte
-  `ProjectTools/src/python/colors.py`, die es seit dem Paketumbau nicht mehr
-  gibt; `make setup` brach daran ab. Die StockInfo-Kopie prüft
-  `src/python/projecttools/ui/colors.py` (eine Zeile plus Kopfkommentar). Die
-  Skill-Vorlage selbst ist als offene Übernahme notiert.
-- **Verify → Orakel:** #1 frische venv im Scratchpad und entfernter
-  ProjectTools-Link → Setup legt neu an, Import gelingt. #2 `--help` des
-  Konsumentenskripts mit StockInfos `.venv`, Theme aktiv, kein Dienst. #3
-  Testserver `--run/--status/--stop` auf 18083, nur eigene PID. #4
-  `make test` vollständig grün, Build grün, `shellcheck` ohne Befund.
-- **Umfang:** 2/2 fachliche Änderungen; 4 Projektdateien (Makefile, README,
-  `requirements-dev.txt`, `setup-libs.sh` neu) plus Ticket. Diff ohne T-86:
-  +282/−22 statt 250 geplant. Grund: Die Vorlage `setup-libs.sh` hat allein
-  159 Zeilen und ist bis auf die Pfadzeile unverändert übernommen.
-- **Standards:** `code-standards` (`cli.md`, `shell.md` über die Vorlage),
-  `makefile-conventions`. Makefile ✅: `setup` in eigener Gruppe, `##`-Hilfe,
-  `hints` nennt den ersten Start. Shell ✅: Vorlage, `shellcheck` sauber,
-  Bezeichner englisch und GROSS. Python/Frontend/Persistenz ➖ nicht berührt.
-  DRY ✅: keine zweite Link-Logik, Requirements nur an einer Stelle.
+Die technischen Wege bestanden: frisches `make setup`, Paketimport,
+Konsumenten-`--help`, Einzelserver, vollständiger lokaler Teststack mit
+Status und Stop, `make test`, Dashboard-Build, ShellCheck und Skript-Smokes.
+Der finale geprüfte T-82-Stand enthält die verhaltensneutrale Selbstheilung
+`a3bd3b1`: Funktionskommentare im Setup-Skript und die Node/npm-Voraussetzung
+im Root-README. Der Umfang der ursprünglichen T-82-Übergabe war +284/−22
+statt +282/−22. Voller Befund, Standards und Doku-Abgleich:
+[T-82](30-doing/T-82-python-paket-fuer-konsumententests-klaeren.md#verifier-prüfung--runde-1-codex-2026-10-01).
+Die veraltete gemeinsame `setup-libs.sh`-Vorlage bleibt als offene Übernahme
+sichtbar. Keine menschliche Abnahme und kein Ticketabschluss durch Codex.
 
 ## Abschluss T-83 · Mike, 2026-10-01
 
