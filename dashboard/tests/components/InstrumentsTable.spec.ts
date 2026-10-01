@@ -139,6 +139,51 @@ describe('InstrumentsTable — Darstellung nach Breite', () => {
   })
 })
 
+describe('InstrumentsTable — Datenhinweis', () => {
+  const germanStart = 'Die angezeigten Kurse und Kennzahlen können verzögert'
+  const englishStart = 'Displayed prices and metrics may be delayed'
+
+  it('steht breit genau einmal direkt unter der Tabelle', () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+    const notices = wrapper.findAll('.table__notice')
+
+    expect(notices).toHaveLength(1)
+    expect(notices[0].text()).toContain(germanStart)
+    expect(notices[0].element.previousElementSibling?.classList.contains('scroll')).toBe(true)
+  })
+
+  it('steht schmal genau einmal unter der Kartenliste, nicht in einer Karte', () => {
+    stubMatchMedia(true)
+    const wrapper = mountTable()
+    const notices = wrapper.findAll('.table__notice')
+
+    expect(notices).toHaveLength(1)
+    expect(notices[0].element.previousElementSibling?.classList.contains('cards')).toBe(true)
+    expect(wrapper.find('.icard .table__notice').exists()).toBe(false)
+  })
+
+  it('fehlt bei leerer Übersicht', () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable([])
+
+    expect(wrapper.find('.table__notice').exists()).toBe(false)
+  })
+
+  it('folgt dem Sprachwechsel ohne Neuaufbau', async () => {
+    stubMatchMedia(false)
+    const wrapper = mountTable()
+
+    i18n.global.locale.value = 'en'
+    await nextTick()
+    expect(wrapper.find('.table__notice').text()).toContain(englishStart)
+
+    i18n.global.locale.value = 'de'
+    await nextTick()
+    expect(wrapper.find('.table__notice').text()).toContain(germanStart)
+  })
+})
+
 /*
  * Konflikt gelöst wie im Plan festgehalten: Die Zeile öffnet weiterhin das
  * Chart (`@click`), nur Caret und Symbol klinken sich mit `@click.stop` aus und

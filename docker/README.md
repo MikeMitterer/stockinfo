@@ -68,6 +68,7 @@ Start it with `docker compose up -d`. This is an alternative to the
 - ETF metadata such as TER, provider and fund size when the source supplies it.
 - Manual values for metadata that the sources do not provide.
 - A dashboard for managing instruments, viewing charts and configuring sources.
+  A short note below the asset list states the limits of the displayed data.
 - An **About** tab under Settings, also linked from the status bar, explains the
   limits of displayed data and links to the EUPL and consumer declaration.
   It also links to MangoLila's separate notice for website financial content

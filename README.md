@@ -319,6 +319,8 @@ bar (**health traffic light** green/orange/red + version):
   header: ascending → descending → off; persisted); add (ISIN/symbol), refresh,
   delete, **add ISIN**; per row links to **extraETF**, **Yahoo Finance** and a
   **JSON popup** (URL + result copyable — works on plain `http://` too).
+  A short note below the table (or the card list on narrow screens) states
+  the limits of the displayed prices and metrics.
 - **Chart** — selecting a row docks the price history at the bottom of the
   viewport (always visible, even with long asset lists). Range switch
   `1D · 1W · 1M · 3M · 1Y · Max`: `1D` = intraday curve (collected ticks), the rest

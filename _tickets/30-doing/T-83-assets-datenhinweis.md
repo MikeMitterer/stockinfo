@@ -11,10 +11,33 @@ Liste und nicht unter jeder Karte.
 am Ende der Übersicht und prüft den Wert vor einer Entscheidung bei der
 ursprünglichen Quelle.
 
-**Stand:** Mike hat das Ticket am 2026-10-01 ausdrücklich in Doing gesetzt.
-StockInfos Coder `codex` ist laut `_tickets/STATUS.md` am Zug; T-82 bleibt
+**Stand:** Mike hat das Ticket am 2026-10-01 ausdrücklich in Doing gesetzt
+und nach T-85 an Coder `claude` gegeben; Verifier ist `codex`. T-82 bleibt
 danach als nächstes Ticket in Ready. Die endgültige öffentliche Formulierung
 ist mit der bestehenden Verbrauchererklärung abzugleichen.
+
+**Vorgabe Mike, 2026-10-01:** Der Hinweis hat dieselbe Schriftgröße wie
+StockPortfolios Hinweis unter Dashboard- und Rebalancing-Tabelle
+(`TradeNotice.vue`: `var(--font-xs)`, `token(--text-muted)`,
+`line-height: 1.45`, oben `var(--space-1)` Abstand).
+
+## Scope-Vertrag
+
+- **Ergebnis:** Bei mindestens einem Asset steht unter der Tabelle (breit)
+  beziehungsweise unter der Kartenliste (schmal) genau ein Datenhinweis in
+  der aktiven Sprache. Bei leerer Übersicht steht er nicht dort.
+- **Fachliche Änderungen (2):** Katalogtext DE/EN; Ausgabe am Ende der
+  Assets-Karte in `InstrumentsTable.vue`, nach Tabelle bzw. Kartenliste.
+  Damit gibt es eine Stelle für beide Breiten, bündig mit der Karte, auch
+  wenn die Tabelle über 1200 px hinaus breiter wird.
+- **Produktdateien (3):** `dashboard/src/components/InstrumentsTable.vue`,
+  `dashboard/src/i18n/de.ts`, `dashboard/src/i18n/en.ts`.
+- **Test-/Dokudateien (2–4):** `tests/components/InstrumentsTable.spec.ts`,
+  dieses Ticket; README-Abgleich nur, falls die READMEs die Oberfläche
+  der Assets-Übersicht beschreiben.
+- **Budget:** 3 Produktdateien, 4 Test-/Dokudateien, 200 Diff-Zeilen.
+- **Nicht-Ziele:** keine eigene Komponente, kein Paketumbau in ux-foundation,
+  keine Änderung an About, API, Kursdaten oder Berechnung.
 
 ## Vorgeschlagener Wortlaut
 
@@ -55,23 +78,65 @@ Kursdaten, API oder Berechnung.
 
 ### Verify
 
-Legende: ➖ noch keine Live-Verifikation.
+Legende: ✅ bestätigt, ◑ teilweise, ➖ noch keine Live-Verifikation.
 
 | # | Handgriff | Erwarteter Nachweis | AI | Human |
 |---|---|---|:--:|---|
-| 1 | Assets-Übersicht auf breitem Bildschirm öffnen | Hinweis steht direkt unter der Tabelle, gut lesbar und ohne Überlagerung | ➖ | |
-| 2 | Dieselbe Übersicht schmal öffnen | Hinweis steht einmal unter der Kartenliste; keine horizontale Überbreite | ➖ | |
-| 3 | Sprache DE → EN → DE wechseln | Wortlaut wechselt ohne Neuladen und bleibt inhaltlich gleich | ➖ | |
-| 4 | Wortlaut mit About und `LICENSING.md` abgleichen | Aussagen zu Datenrisiko, Garantie und gesetzlichen Ansprüchen widersprechen einander nicht | ➖ | |
-| 5 | Betroffene Dashboard-Prüfungen und Doku-Abgleich ausführen | Keine UI-Regression; `README.md` und `docker/README.md` sind inhaltlich abgeglichen, weitere betroffene Anleitungen benannt | ➖ | |
+| 1 | Assets-Übersicht auf breitem Bildschirm öffnen | Hinweis steht direkt unter der Tabelle, gut lesbar und ohne Überlagerung | ✅ | |
+| 2 | Dieselbe Übersicht schmal öffnen | Hinweis steht einmal unter der Kartenliste; keine horizontale Überbreite | ✅ | |
+| 3 | Sprache DE → EN → DE wechseln | Wortlaut wechselt ohne Neuladen und bleibt inhaltlich gleich | ✅ | |
+| 4 | Wortlaut mit About und `LICENSING.md` abgleichen | Aussagen zu Datenrisiko, Garantie und gesetzlichen Ansprüchen widersprechen einander nicht | ◑ | |
+| 5 | Betroffene Dashboard-Prüfungen und Doku-Abgleich ausführen | Keine UI-Regression; `README.md` und `docker/README.md` sind inhaltlich abgeglichen, weitere betroffene Anleitungen benannt | ✅ | |
+
+**Belege (Claude, 2026-10-01):**
+
+Browserlauf mit echter StockInfo-API, temporärer Datenbank und 14 Test-Assets.
+Ablauf zum Wiederholen:
+
+1. Test-API starten (aus StockPortfolio, temporäre DB, Port 18083):
+   `.venv/bin/python scripts/stockinfo-test-server.py --stockinfo-root <StockInfo> --port 18083 --run`
+   mit StockInfos `.venv/bin/python`.
+2. Dashboard: `cd dashboard && VITE_DEV_API_TARGET=http://127.0.0.1:18083 npx vite --port 15183 --strictPort`.
+3. Messen: `node _tickets/30-doing/T-83-browser.mjs`. Das Skript nutzt
+   `playwright-core` aus `dashboard/` (devDependency, Vorgabe Mike). Fehlt der
+   zur Version passende Browser, `CHROMIUM_PATH` auf einen vorhandenen
+   Chromium setzen; hier lief es mit dem lokalen `chromium_headless_shell-1234`.
+
+- **#1 (1440 × 900):** genau ein `.table__notice`, Vorgänger `.scroll`
+  (Tabelle), 4 px Abstand, innerhalb der Karte, `font-size` 12 px,
+  `line-height` 17,4 px, kein waagrechtes Scrollen. Der Ausschnitt zeigt den
+  Text in zwei Zeilen unter der letzten Tabellenzeile; nichts wird verdeckt.
+- **#2 (390 × 844):** genau ein Hinweis, Vorgänger `.cards`, nicht in einer
+  Karte, gleiche Schriftwerte, kein waagrechtes Scrollen.
+- **#3:** Im selben Seitenaufruf DE → EN → DE über die i18n-Instanz: Der Text
+  wechselt jedes Mal. Dazu der Komponententest „folgt dem Sprachwechsel ohne
+  Neuaufbau“.
+- **Schrift wie StockPortfolio:** `TradeNotice.vue` verwendet `var(--font-xs)`
+  (ux-foundation: 0,75rem = 12 px), gedämpfte Textfarbe und `line-height: 1.45`.
+  `.table__notice` übernimmt diese drei Werte und den Abstand `var(--space-1)`.
+- **#4 ◑:** Technisch abgeglichen: About (`about.data`, `about.use`,
+  `about.legal`) nennt dieselben Grenzen und verweist für Gewährleistung und
+  Haftung auf die Verbrauchererklärung. `LICENSING.md` sagt: gesetzliche Regeln
+  statt EUPL-Ausschlüsse, keine freiwillige Garantie. Der Hinweis
+  („kann ihre Richtigkeit nicht garantieren; … gelten die gesetzlichen Regeln“)
+  widerspricht dem nicht und schließt nichts aus. Die rechtliche Freigabe des
+  Wortlauts bleibt bei Mike.
+- **#5:** `vitest` 52 Dateien / 389 Tests grün, `eslint` ohne Befund,
+  `npm run build` (inkl. `vue-tsc`) erfolgreich. Die Stacktraces in der
+  Testausgabe stammen aus `BackupsPanel.spec.ts` und gehören nicht zu T-83.
+  Doku-Abgleich siehe unten.
+- **Testreihenfolge:** Die vier Hinweis-Tests in `InstrumentsTable.spec.ts`
+  waren vor dem Produktedit rot, weil `.table__notice` fehlte (3 rot, der
+  Leerfall trivial grün). Negativer Mutant: Ohne `v-if` wird
+  „fehlt bei leerer Übersicht“ rot.
 
 ### Akzeptanzkriterien
 
-- [ ] Der kurze Hinweis steht unmittelbar unter der Assets-Tabelle bzw. der mobilen Kartenliste.
-- [ ] Deutsch und Englisch entsprechen dem gewählten Sprachzustand.
-- [ ] Der Wortlaut erklärt mögliche Datenfehler und behauptet keinen vollständigen Ausschluss gesetzlicher Ansprüche.
-- [ ] Die bestehende About-Erklärung und die Verbraucherklärung bleiben konsistent.
-- [ ] Doku-Abgleich und Prüfnachweise stehen vor der Übergabe im Ticket.
+- [x] Der kurze Hinweis steht unmittelbar unter der Assets-Tabelle bzw. der mobilen Kartenliste.
+- [x] Deutsch und Englisch entsprechen dem gewählten Sprachzustand.
+- [x] Der Wortlaut erklärt mögliche Datenfehler und behauptet keinen vollständigen Ausschluss gesetzlicher Ansprüche.
+- [x] Die bestehende About-Erklärung und die Verbraucherklärung bleiben konsistent.
+- [x] Doku-Abgleich und Prüfnachweise stehen vor der Übergabe im Ticket.
 
 ### Side-Effects
 
@@ -79,7 +144,40 @@ Die zusätzliche Textzeile kann die Übersicht vertikal verlängern. Sie darf
 keine Tabelle, Karte oder Bedienfunktion verdecken. StockPortfolios eigene
 Hinweise und Tickets bleiben getrennt.
 
+### Doku-Abgleich
+
+- `README.md`, Abschnitt Dashboard → **Assets**: ein Satz zum Hinweis unter
+  Tabelle bzw. Kartenliste.
+- `docker/README.md`, **What you get**: ein Satz beim Dashboard-Punkt. Die
+  Vorschau `dockerhub-readme.sh --preview` hält die 25.000-Byte-Grenze ein.
+- `unraid/README.md`, Lizenz- und About-Absatz: ein Satz, dass auch die
+  Assets-Liste die Grenzen nennt.
+- Die drei Fassungen sagen dasselbe: About erklärt die Grenzen ausführlich,
+  der Hinweis unter der Liste nennt sie kurz. `LICENSING.md` und About bleiben
+  unverändert.
+
+### Umfang gegenüber dem Scope-Vertrag
+
+- **Geplant / tatsächlich:** 2 / 2 fachliche Änderungen; 3 / 3 Produktdateien,
+  dazu `dashboard/package.json` und `package-lock.json` für die
+  devDependency; Test-/Dokudateien 4 geplant, tatsächlich 6 (Spec, Ticket,
+  `T-83-browser.mjs`, drei READMEs).
+- **Abweichung 1, Vorgabe Mike 2026-10-01:** „Wenn du playwright-core
+  benötigst - installiere es hier bei den Dependencies. Verwende es nicht
+  einfach von einem anderen Project“. Deshalb ist `playwright-core` jetzt
+  devDependency im Dashboard. Es kommt nur im Prüfskript vor, nicht im Bundle.
+- **Abweichung 2:** Alle drei READMEs beschreiben die Datengrenzen, darum
+  ist in jeder ein Satz dazugekommen.
+- **DRY:** Der Satz „Angezeigte Kurse sind keine verbindlichen Handelskurse“
+  steht auch in `about.data`. Das ist bewusst so: Der Wortlaut des Hinweises
+  ist im Ticket vorgegeben und soll für sich allein lesbar sein. Ein
+  zusammengesetzter Text aus About-Schlüsseln würde beide Stellen
+  aneinanderkoppeln. Der Hinweisstil wiederholt StockPortfolios
+  `TradeNotice` über Repo-Grenzen hinweg. Damit gibt es einen zweiten Bedarf
+  für eine gemeinsame Hinweiszeile in ux-foundation. Sie ist hier nicht
+  beauftragt und als Bedarf festgehalten.
+
 ### Auflösung
 
-T-83 ist gemäß `_tickets/STATUS.md` aktiviert. Umsetzung, Verifikation und
-unabhängiges Review stehen noch aus.
+Umgesetzt auf `t-83-assets-datenhinweis`; Übergabe an Verifier `codex`.
+Rechtliche Freigabe des öffentlichen Wortlauts: Mike.

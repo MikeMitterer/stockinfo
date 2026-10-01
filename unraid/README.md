@@ -168,7 +168,8 @@ MangoLila GmbH. See [licensing and the consumer declaration](../LICENSING.md)
 and the [image license documents and source](../docker/README.md#support-and-license).
 In the dashboard, **Settings → About** explains the limits of
 displayed data and links to the license in the selected language. The status
-bar links directly to that tab.
+bar links directly to that tab. A short note below the asset list also
+states these limits.
 About also links to MangoLila's separate notice for website financial content.
 MangoLila GmbH's logo, postal address and website link are shown beside the
 About text. On narrow screens, choose the Settings section from the selector

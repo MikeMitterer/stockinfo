@@ -461,6 +461,8 @@ function price(value: number | null): string {
         </tbody>
       </table>
     </div>
+    <!-- Einmal für die ganze Übersicht, in beiden Breiten bündig mit der Karte. -->
+    <p v-if="instruments.length > 0" class="table__notice">{{ t('table.dataNotice') }}</p>
   </section>
 </template>
 
@@ -492,6 +494,14 @@ function price(value: number | null): string {
 .scroll { overflow-x: auto; }
 
 .cards { display: flex; flex-direction: column; }
+
+// Schriftbild wie StockPortfolios Hinweis unter Dashboard- und Rebalancing-Tabelle.
+.table__notice {
+  margin: var(--space-1) 0 0;
+  color: $color-muted;
+  font-size: var(--font-xs);
+  line-height: 1.45;
+}
 
 // `.visually-hidden` stand hier als scoped Kopie — die Annahme „im Projekt
 // bislang keine geteilte Fassung vorhanden" stimmte schon damals nicht:
