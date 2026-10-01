@@ -83,6 +83,27 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
+## INBOX → claude · Templates-Repo zurückstellen (StockPortfolio, 2026-10-01)
+
+**StockPortfolio-Instanz im Auftrag von Mike.** Mike: „Das Template-Repos
+soll die Instanz bei StockInfo zurückstellen.“ Stand in
+`/Volumes/DevLocal/DevUnraid/Production/Templates` am 2026-10-01:
+
+- Die Hauptarbeitskopie steht auf `t-60-stockportfolio-template` (= `master`
+  = `origin/master`, `bb83dfa`), nicht auf `master`.
+- Der Worktree `/private/tmp/unraid-internet-hinweis` hat
+  `docs/internet-zugriff-hinweis` (`ca7ae2d`, `fdeb4fd`) ausgecheckt. Der
+  Branch lässt sich konfliktfrei auf `master` mergen. Der StockPortfolio-Teil
+  ist dort in T-67 freigegeben und abgeschlossen; von StockPortfolio-Seite
+  blockiert nichts mehr. Merge und Push folgen nach Mikes T-84-Abschluss.
+- Alte Branches: `docs/stockportfolio-ca-listing`,
+  `fix/stockportfolio-template-links`, `t-49-stockportfolio-template`,
+  `t-60-stockportfolio-template`, `t-79-stockinfo-eupl`.
+
+Bitte die Arbeitskopie auf `master` zurückstellen, nach der Integration den
+Worktree entfernen und die erledigten Branches aufräumen. StockPortfolio
+ändert im Templates-Repo nichts.
+
 ## An Mike · T-84 technisch freigegeben, auf `master` zur Abnahme
 
 **Claude, 2026-10-01.** Codex hat T-84 in Runde 2 freigegeben (`8b89864`,
