@@ -103,13 +103,18 @@ splits and dividends. Both behaviors differ from the REST artifact; see the
 
 ## Requirements
 
-- **Python 3.11+** (the app creates its own `.venv`)
-- **make** (drives start/stop of the services)
+- **Python 3.11+** (`make setup` creates the project `.venv`; override the
+  interpreter with `PYTHON_BOOTSTRAP=python3.12 make setup`)
+- **make** (drives setup and start/stop of the services)
 - optional **Docker** (to run the container)
-- optional **Node.js 20+** (dashboard only)
+- **Node.js 20+ with npm** (`make setup` installs the dashboard packages;
+  the backend and prebuilt Docker image do not use Node.js on the host)
 
-The project uses shared ecosystem helpers under `.libs/` (MakeLib, BashLib). For the
-Makefile the environment variable `DEV_MAKE` must point to the MakeLib.
+The project uses shared ecosystem helpers under `.libs/` (MakeLib, BashLib,
+ProjectTools). `make setup` links them via `scripts/setup-libs.sh`; it finds the
+source repositories through `DEV_MAKE` (MakeLib), `BASH_LIBS` (BashLib `src`) and
+`PROJECT_TOOLS` (ProjectTools `src`). The Python part of ProjectTools is installed
+into `.venv` from `requirements-dev.txt`. The Docker image needs none of this.
 
 [↑ Contents](#contents)
 
@@ -121,9 +126,8 @@ Makefile the environment variable `DEV_MAKE` must point to the MakeLib.
 # 1. Create the configuration
 cp .env.example .env
 
-# 2. Install dependencies (once)
-python3.11 -m venv .venv
-.venv/bin/pip install -r requirements-dev.txt
+# 2. Install dependencies (.libs links, Python .venv, dashboard packages)
+make setup
 
 # 3. Start the server
 make dev            # backend only, foreground (auto-reload)
