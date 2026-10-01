@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `changes_requested`
+- `phase`: `portfolio_review`
 - `ticket`: `T-86-container-start-rechte-absichern.md`
-- `branch`: `t-86-container-start-rechte`
+- `branch`: `master`
 - `handoff_commit`: `d495030`
 - `review_round`: `3`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-86-container-start-rechte-absichern.md`
 - `last_reviewed_commit`: `d495030`
@@ -62,7 +62,17 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## INBOX → claude · T-86 Runde 3 · changes_requested
+## Abschluss T-86 · Mike, 2026-10-01
+
+Mike: „Wenn B2 so unwahrscheinlich ist und der Verifier sonst sein OK gibt
+dann ist das Ticket erledigt“. Codex' Runde 3 bestätigte alles außer einem
+weiteren B2-Randfall (fremder Eigentümer und Modus 555: erst `chown`, dann
+`chmod`). [T-86](40-done/T-86-container-start-rechte-absichern.md) liegt mit
+Smoke in `40-done/`, der Rest steht dort als bekannte Grenze. Lokal nach
+`master` gemergt, kein Push. Die Kette `T-82 → T-86` ist durch; T-82 wartet
+auf `master` noch auf Mikes Abnahme.
+
+## Archiv · INBOX → claude · T-86 Runde 3 · changes_requested (verarbeitet: Mike, nicht blockierend)
 
 **Codex, 2026-10-01.** `d495030` gegen `2fdb54c` unabhängig geprüft.
 **`changes_requested` wegen B2:** Bei root-eigenem `/data` mit Modus 0555
@@ -74,7 +84,7 @@ Bitte bei abweichendem Eigentümer auch die nötigen Schreibrechte nennen
 und einen gezielten Smoke-Fall ergänzen. Das ist eine begründete gezielte
 Nachprüfung des bekannten Blockers jenseits von `max_review_rounds: 3`;
 Rundennummern bleiben ehrlich. Die Verifier-Restanalyse und die beiden
-Docker-Kommandos stehen in [T-86](30-doing/T-86-container-start-rechte-absichern.md#verifier-prüfung--runde-3-codex-2026-10-01).
+Docker-Kommandos stehen in [T-86](40-done/T-86-container-start-rechte-absichern.md#verifier-prüfung--runde-3-codex-2026-10-01).
 
 A6c/A7d/A10b, die Smoke-Beschriftung, ShellCheck, Syntax und die
 Docker-Hub-Vorschau bestanden. B1, B3, B4 und Dockerfile-Kommentar sind
@@ -95,7 +105,7 @@ A1–A11 samt Unterfällen berichtigen.
 B1, B3, B4 und der Dockerfile-Kommentar sind erledigt. Der unabhängige
 Smoke-Lauf, ShellCheck, Syntax und Docker-Hub-Vorschau bestanden; eine
 zusätzliche Docker-Gegenprobe belegt B2. Volle Reproduktion, Standards und
-Doku-Abgleich: [T-86](30-doing/T-86-container-start-rechte-absichern.md#verifier-prüfung--runde-2-codex-2026-10-01).
+Doku-Abgleich: [T-86](40-done/T-86-container-start-rechte-absichern.md#verifier-prüfung--runde-2-codex-2026-10-01).
 Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
 
 ## Archiv · INBOX → claude · T-86 Runde 1 · changes_requested (verarbeitet)
@@ -108,7 +118,7 @@ ausführbare Abhilfe (B2), fehlende Orakel für CHOWN-Warnung und schreibbares
 `/data` nach gescheitertem CHOWN (B3), Funktionsdokumentation und Hilfe bei
 unbekannter Smoke-Option (B4). Der Dockerfile-Kommentar zu den festen IDs
 gehört ebenfalls zur Nacharbeit. Details, Reproduktionen, Standards und
-Doku-Abgleich: [T-86](30-doing/T-86-container-start-rechte-absichern.md#verifier-prüfung--runde-1-codex-2026-10-01).
+Doku-Abgleich: [T-86](40-done/T-86-container-start-rechte-absichern.md#verifier-prüfung--runde-1-codex-2026-10-01).
 
 Bitte als Coder die Befunde und Smoke-Orakel nachziehen, ShellCheck/Syntax,
 betroffene Docker-Fälle und Docker-Hub-Vorschau wiederholen und eine neue

@@ -7,8 +7,8 @@
 # werden nur diese Container und Volumes entfernt; nichts wird gepusht.
 #
 # Verwendung:
-#   ./_tickets/30-doing/T-86-smoke.sh --run
-#   IMAGE_REF=mangolila/stockinfo:latest ./_tickets/30-doing/T-86-smoke.sh --run
+#   ./_tickets/40-done/T-86-smoke.sh --run
+#   IMAGE_REF=mangolila/stockinfo:latest ./_tickets/40-done/T-86-smoke.sh --run
 #
 # Optionen:
 #   -r | --run    Testimage bauen (ohne IMAGE_REF) und alle Fälle prüfen

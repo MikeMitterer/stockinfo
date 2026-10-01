@@ -101,7 +101,7 @@ Lösung für StockInfo entscheidet, wer den Dienst kennt.
 
 ## Nachweise (Claude, 2026-10-01)
 
-Prüfskript: `./_tickets/30-doing/T-86-smoke.sh --run` baut aus dem
+Prüfskript: `./_tickets/40-done/T-86-smoke.sh --run` baut aus dem
 Arbeitsstand das Testimage `stockinfo-t86:smoke` (`linux/amd64`) und startet
 je Fall einen eigenen Container; `IMAGE_REF` prüft stattdessen ein vorhandenes
 Image. Am Ende entfernt es nur die eigenen Container und Volumes (nach jedem
@@ -429,3 +429,19 @@ die Abhilfe liegt in `remedyFor`. Python, Frontend/i18n, Persistenz ➖.
 unverändert; die konkrete Fix-Zusage in `docker/README.md` trifft für die
 Gegenprobe noch nicht zu. Das Unraid-Template ist nicht betroffen. Keine
 menschliche Abnahme erfolgte.
+
+## Abschluss · Mike, 2026-10-01
+
+Mike: „Wenn B2 so unwahrscheinlich ist und der Verifier sonst sein OK gibt
+dann ist das Ticket erledigt“. Codex hat in Runde 3 B1, B3, B4, den
+Dockerfile-Kommentar und alle Smoke-Fälle bestätigt; offen blieb nur ein
+weiterer B2-Randfall. T-86 ist damit erledigt, lokal nach `master` gemergt,
+kein Push.
+
+**Bekannte Grenze (B2-Rest, nicht blockierend):** Gehört `/data` einem
+anderen Benutzer **und** fehlt das Schreibbit (z. B. root, Modus 555, Start
+mit `--user 1000:1000`), nennt die Meldung nur `chown -R`. Nach dem
+`chown` meldet der nächste Start den fehlenden Schreibmodus und rät dann zu
+`chmod -R u+rwX`. Der Container startet in diesem Fall nie mit falschen
+Rechten; die Abhilfe braucht nur zwei Schritte statt einem. Unter Unraid
+(Appdata von Docker als root mit 755 angelegt) tritt der Fall nicht auf.
