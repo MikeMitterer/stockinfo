@@ -13,7 +13,47 @@ StockInfo-Dashboard funktioniert nach der Anmeldung. In StockPortfolio bleibt
 die Kurstabelle leer; im Browser stehen 401-Antworten oder CORS-Fehler.
 
 **Stand:** Gemeldet aus StockPortfolio am 2026-10-01 (Mikes Auftrag).
-Noch nicht eingeplant. Für Mike ist aktuell kein Handgriff nötig.
+Mike hat T-87 am selben Tag aktiviert („T-87 wird damit aktiv“). Coder
+`claude`, Verifier `codex`; maßgeblich ist `STATUS.md`. Für Mike ist
+aktuell kein Handgriff nötig.
+
+## Scope-Vertrag (Claude, 2026-10-01)
+
+**Ursache bestätigt:** StockInfo erlaubt CORS ohne Zugangsdaten
+(`app/main.py`: `allow_credentials=False`). StockPortfolio ruft `fetch`
+ohne `credentials`-Option auf, also mit dem Standard `same-origin`. Bei
+einem Aufruf über Origins hinweg schickt der Browser weder Cookie noch
+Basic-Auth mit. Ein Login-Proxy vor einem eigenen StockInfo-Host
+blockiert StockPortfolio deshalb immer.
+
+**Lösungsansatz, noch zu belegen:** Bei **derselben Origin** schickt der
+Browser Cookie und gespeicherte Basic-Auth-Daten mit. Der Proxy stellt
+StockInfo dafür unter einem Pfad des StockPortfolio-Hosts bereit, etwa
+`https://portfolio.example/stockinfo/`, und schützt den ganzen Host mit
+einer Anmeldung. `STOCKINFO_API_URL=/stockinfo` funktioniert laut Code
+ohne Änderung an StockPortfolio. Die Adresse wird nicht geprüft, und
+`fetch` löst den relativen Pfad gegen die Seite auf. Das gilt erst, wenn
+ein echter Browserlauf durch einen Proxy mit Anmeldung es zeigt.
+
+- **Ergebnis:** Die Anleitungen und die Vorlage nennen für den Betrieb mit
+  StockPortfolio einen geprüften Zugriffsweg von außen oder benennen die
+  Grenze. Ein eigener Login-Host für StockInfo wird dort nicht mehr
+  empfohlen, ohne den Ausschluss zu nennen.
+- **Fachliche Änderungen (2):** (1) Hinweis „mit StockPortfolio“ in
+  `README.md`, `docker/README.md` und `unraid/README.md`; (2) derselbe
+  Hinweis knapp in `templates/stockinfo.xml`. Die Vorlage liegt im
+  Vorlagen-Repo, aufbauend auf `fdeb4fd`.
+- **Nachweis:** Ein Prüf-Script `_tickets/T-87-*.sh` startet StockInfo mit
+  temporärer Datenbank, StockPortfolio und einen Proxy mit Basic-Auth auf
+  derselben Origin. Der Browser lädt dort die Kurse. Die Gegenprobe läuft
+  mit getrennter Origin und muss scheitern.
+- **Dateien:** drei READMEs, Vorlage, dieses Ticket, ein Prüf-Script.
+  Kein Produktcode.
+- **Budget:** 0 Produktdateien, 6 Doku-/Prüfdateien, 350 Diff-Zeilen.
+- **Nicht-Ziele:** keine Anmeldung in StockInfo, kein
+  `allow_credentials=True`, keine Änderung an StockPortfolio. Zeigt der
+  Nachweis, dass StockPortfolio etwas ändern muss, stoppe ich und lege das
+  Mike als Entscheidung vor (eigenes Ticket im StockPortfolio-Board).
 
 ## Warum das passiert (Konsumentensicht)
 

@@ -26,20 +26,26 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `portfolio_review`
-- `ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
-- `branch`: `master`
-- `handoff_commit`: `8b89864`
-- `review_round`: `2`
+- `phase`: `claude_working`
+- `ticket`: `T-87-login-proxy-sperrt-stockportfolio-aus.md`
+- `branch`: `t-87-login-proxy-stockportfolio`
+- `handoff_commit`: `—`
+- `review_round`: `0`
 - `max_review_rounds`: `3`
-- `owner`: `mike`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
 - `last_reviewed_commit`: `8b89864`
 - `last_reviewed_round`: `2`
 - `workstream`: `internetbetrieb-hinweise`
-- `priority_chain`: `T-84`
-- `priority_ticket`: `T-84`
+- `priority_chain`: `T-87`
+- `priority_ticket`: `T-87`
+
+**Aktivierung T-87 · Mike, 2026-10-01.** Mike: „T-87 wird damit aktiv“.
+[T-87](30-doing/T-87-login-proxy-sperrt-stockportfolio-aus.md) ist aktiv
+auf `t-87-login-proxy-stockportfolio` (von `master`), Coder `claude`,
+Verifier `codex` wie bisher. T-84 bleibt bis zu Mikes Abnahme in
+`30-doing/`; die Punkte dazu stehen unten unter „An Mike“.
 
 **Aktivierung und Rollenberichtigung T-84 · Mike, 2026-10-01.** Mike
 aktivierte T-84 zunächst mit „T-84 ist noch zu erledigen“ und „Wie im
@@ -81,7 +87,9 @@ aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
 **Claude, 2026-10-01.** Codex hat T-84 in Runde 2 freigegeben (`8b89864`,
 Vorlagentext `fdeb4fd`). Der Ticketbranch ist lokal nach `master`
-gemergt, der Root steht auf `master`. Kein Push. Für dich offen:
+gemergt (`1cbc39e`). Kein Push. Der Root steht inzwischen auf dem
+T-87-Branch; T-84 liest du dort oder mit `git show master:<datei>`.
+Für dich offen:
 
 1. **Abnahme T-84:** Die Warnung zum Internetzugriff in `README.md`
    (Abschnitt „Security model“), `docker/README.md` (unter dem
