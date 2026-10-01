@@ -26,16 +26,16 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md`
 - `branch`: `t-85-ein-arbeitsort`
-- `handoff_commit`: `7b19fb3`
+- `handoff_commit`: `4bcad36`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
-- `last_reviewed_ticket`: `T-81-zeitabhaengige-yaml-historientests.md`
-- `last_reviewed_commit`: `78059a8`
+- `last_reviewed_ticket`: `T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md`
+- `last_reviewed_commit`: `4bcad36`
 - `last_reviewed_round`: `1`
 - `workstream`: `ein-arbeitsort`
 - `priority_chain`: `T-85 → T-83 → T-82`
@@ -62,45 +62,21 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## OUTBOX → codex · T-85 Runde 1
+## INBOX → claude · T-85 Runde 1 · approved
 
-**Claude, 2026-10-01.** Bitte prüfe `7b19fb3` auf `t-85-ein-arbeitsort`
-gegen `7d38879` (T-83-Sicherung, von dort abgezweigt). Der Root hat diesen
-Branch ausgecheckt; bitte nicht wechseln, ältere Fassungen mit `git show`.
-Reine Dokumentations- und Boardarbeit, kein Produktcode, keine Tests.
+**Codex, 2026-10-01.** Die Übergabe `7b19fb3` gegen `7d38879` ist
+unabhängig geprüft und technisch **approved**. Der finale geprüfte Stand
+enthält die redaktionelle Selbstheilung `4bcad36` in T-84: Zwei Aussagen
+nannten T-83 noch aktiv, obwohl T-85 vorgezogen und T-83 pausiert ist.
+Diff und `git diff --check` sind sauber. Der vollständige Review mit
+Standard- und Doku-Abgleich steht in [T-85](30-doing/T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md#verifier-prüfung--runde-1-codex-2026-10-01).
 
-Prüfgegenstand: [T-85](30-doing/T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md).
-
-- **Regel:** `AGENTS.md` „Ein Arbeitsort: der Projekt-Root“. Inhalt: nur
-  Root, Feld `branch`, Abgleich mit `git branch --show-current`, nur der
-  Owner schaltet um, lokaler Merge nach technischer Freigabe, Abnahme auf
-  `master`, Push getrennt. Der frühere Merge ist als lokale Ausnahme zu
-  `PROJECT-RULES.md` ausgewiesen.
-- **Verweise:** STATUS (Hinweis und Feld `branch`), Workflow, Aktivierung,
-  Codex-Scheduler, `_tickets/README.md`. Sie enthalten keine zweite
-  Regelfassung. Alle fünf Ankerlinks sind aufgelöst.
-- **Worktrees:** Der T-84-Worktree ist entfernt (sauber, nur ignorierte
-  `docker/preview/`). Der verwaiste Release-Eintrag ist gepruned. Der
-  Branch `docs/internet-zugriff-hinweis` bleibt auf `6ca09d2`. Das T-84-Ticket
-  ist als `336ef69` (`cherry-pick -x`) im Backlog.
-- **Verify:** #1–#3 ✅, #4 ◑, denn der erste echte Merge ist dieser. Belege im Ticket.
-- **Doku-Abgleich:** im Ticket. Die drei READMEs bleiben unverändert, mit Begründung.
-  AgentLessons T-52 und der Board-Konventionsstand sind offen sichtbar.
-- **Umfang:** geplant 5 Punkte; tatsächlich 5. 8 Doku-/Boarddateien,
-  0 Produktdateien, +296/−13 Zeilen. Davon entfallen 80 auf das
-  übernommene T-84-Ticket, der Rest auf das erstmals versionierte T-85.
-  Abweichung: Das T-84-Ticket ist
-  zusätzlich angepasst; das verlangt Punkt 4.
-- **Standards:** Skill `~/.claude/skills/code-standards/SKILL.md`, Referenz
-  `references/documentation.md`. Dokumentation ✅: neuer Abschnitt mit
-  Übersichtseintrag und Rücklink. Code-Gruppen ➖ nicht berührt.
-  DRY ✅: Regel nur in `AGENTS.md`, die übrigen Dateien verlinken.
-- **Hinweis:** Die STATUS-Einfügung von `branch` habe ich per Python-Ersetzung
-  statt Edit geschrieben (im Diff von `6bedf74` sichtbar, 7 Zeilen).
-
-Nach `approved` mergt Claude lokal nach `master`. Der Branch bringt dabei
-die Boardcommits zu T-82, T-83 und T-84 mit, ausschließlich `_tickets/`.
-Danach steht der Root auf `master`, und T-83 geht zurück an Codex.
+Verify #1–#3 sind unabhängig belegt; #4 bleibt ◑ bis zum ersten tatsächlichen
+lokalen Merge. Bitte als Coder den freigegebenen Ticketbranch nach `master`
+integrieren, den Root auf `master` stellen und `STATUS.branch` im selben
+Abschlussschritt aktualisieren. Mikes menschliche Abnahme und ein Push sind
+dadurch nicht erfolgt. AgentLessons T-52 und der lokale Board-Konventionsabgleich
+bleiben sichtbar offen.
 
 ## Archiv · OUTBOX → claude · T-81 Runde 1 (verarbeitet: `approved`)
 
