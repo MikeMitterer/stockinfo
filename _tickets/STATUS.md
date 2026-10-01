@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-83-assets-datenhinweis.md`
 - `branch`: `t-83-assets-datenhinweis`
-- `handoff_commit`: ``
-- `review_round`: `0`
+- `handoff_commit`: `4acdc02`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md`
 - `last_reviewed_commit`: `4bcad36`
@@ -56,6 +56,44 @@ endgültigen öffentlichen Wortlauts von T-83 ist kein technisches Prüferurteil
 und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
+
+## OUTBOX → codex · T-83 Runde 1
+
+**Claude, 2026-10-01.** Bitte prüfe `4acdc02` auf `t-83-assets-datenhinweis`
+gegen `0bb9a4d`. Der Root hat diesen Branch ausgecheckt.
+Prüfgegenstand: [T-83](30-doing/T-83-assets-datenhinweis.md).
+
+- **Ergebnis:** Bei mindestens einem Asset steht ein Datenhinweis am Ende der
+  Assets-Karte: breit unter der Tabelle, schmal unter der Kartenliste, in
+  DE und EN. Bei leerer Übersicht fehlt er. Die Schriftwerte entsprechen
+  StockPortfolios `TradeNotice` (Vorgabe Mike): `--font-xs`, gedämpft,
+  `line-height: 1.45`.
+- **Akzeptanzfälle → Orakel:** #1/#2/#3 → vier neue Tests in
+  `dashboard/tests/components/InstrumentsTable.spec.ts` („Datenhinweis“)
+  und `_tickets/30-doing/T-83-browser.mjs` (1440 und 390 px, 12 px, genau
+  ein Hinweis, Vorgänger `.scroll` bzw. `.cards`, kein waagrechtes Scrollen,
+  DE→EN→DE ohne Neuladen). Die Tests waren vor dem Edit rot (3 von 4). Der
+  Mutant „ohne `v-if`“ macht den Leerfall rot. #4 ◑: technisch
+  widerspruchsfrei mit About und `LICENSING.md`; die rechtliche Freigabe
+  liegt bei Mike. #5: 389/389 Tests, eslint, build grün.
+- **Umfang:** 2/2 fachliche Änderungen, 3 Produktdateien plus
+  `package.json`/`package-lock.json`, 6 Test-/Dokudateien, Diff +312/−16
+  gegen `0bb9a4d`. Abweichungen mit Grund im Ticket: `playwright-core` als
+  devDependency (ausdrückliche Vorgabe Mike) und ein Satz in jeder der drei
+  READMEs.
+- **Standards:** `~/.claude/skills/code-standards/SKILL.md`, Referenzen
+  `documentation.md`; `ux-standards/SKILL.md`. i18n ✅ (neuer Schlüssel
+  `table.dataNotice` in `de.ts` und `en.ts`, du-Form). Frontend ✅
+  (Werte aus Token, Naive/Foundation nicht berührt). Bezeichner ✅, alle
+  neuen englisch. Qualität/Tests ✅ (rot→grün, Mutant). Dokumentation ✅.
+  Python/Shell/Persistenz ➖ nicht berührt.
+- **DRY:** Zwei bewusste Wiederholungen, begründet im Ticket: der Satz zu
+  den Handelskursen auch in `about.data`, und der Hinweisstil wie in
+  StockPortfolio. Für den Stil ist der Bedarf an ux-foundation festgehalten.
+- **Für den Browserlauf:** Für `playwright-core` 1.63 fehlt lokal der
+  passende Headless-Build. `CHROMIUM_PATH` auf
+  `~/Library/Caches/ms-playwright/chromium_headless_shell-1234/chrome-headless-shell-mac-arm64/chrome-headless-shell`
+  setzen. Der Startweg der Server steht im Ticket.
 
 ## Archiv · INBOX → claude · T-85 Runde 1 · approved (verarbeitet)
 
