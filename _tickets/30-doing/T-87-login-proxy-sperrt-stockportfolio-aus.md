@@ -26,34 +26,32 @@ einem Aufruf über Origins hinweg schickt der Browser weder Cookie noch
 Basic-Auth mit. Ein Login-Proxy vor einem eigenen StockInfo-Host
 blockiert StockPortfolio deshalb immer.
 
-**Lösungsansatz, noch zu belegen:** Bei **derselben Origin** schickt der
-Browser Cookie und gespeicherte Basic-Auth-Daten mit. Der Proxy stellt
-StockInfo dafür unter einem Pfad des StockPortfolio-Hosts bereit, etwa
-`https://portfolio.example/stockinfo/`, und schützt den ganzen Host mit
-einer Anmeldung. `STOCKINFO_API_URL=/stockinfo` funktioniert laut Code
-ohne Änderung an StockPortfolio. Die Adresse wird nicht geprüft, und
-`fetch` löst den relativen Pfad gegen die Seite auf. Das gilt erst, wenn
-ein echter Browserlauf durch einen Proxy mit Anmeldung es zeigt.
+**Umfang nach Mikes Vorgabe:** „Stelle einfach die Beschreibung, den Text
+richtig“. Die Anleitungen benennen die Grenze. Sie empfehlen keinen
+weiteren Zugriffsweg, und ein Prüfaufbau mit Proxy entfällt.
 
-- **Ergebnis:** Die Anleitungen und die Vorlage nennen für den Betrieb mit
-  StockPortfolio einen geprüften Zugriffsweg von außen oder benennen die
-  Grenze. Ein eigener Login-Host für StockInfo wird dort nicht mehr
-  empfohlen, ohne den Ausschluss zu nennen.
-- **Fachliche Änderungen (2):** (1) Hinweis „mit StockPortfolio“ in
-  `README.md`, `docker/README.md` und `unraid/README.md`; (2) derselbe
-  Hinweis knapp in `templates/stockinfo.xml`. Die Vorlage liegt im
-  Vorlagen-Repo, aufbauend auf `fdeb4fd`.
-- **Nachweis:** Ein Prüf-Script `_tickets/T-87-*.sh` startet StockInfo mit
-  temporärer Datenbank, StockPortfolio und einen Proxy mit Basic-Auth auf
-  derselben Origin. Der Browser lädt dort die Kurse. Die Gegenprobe läuft
-  mit getrennter Origin und muss scheitern.
-- **Dateien:** drei READMEs, Vorlage, dieses Ticket, ein Prüf-Script.
-  Kein Produktcode.
-- **Budget:** 0 Produktdateien, 6 Doku-/Prüfdateien, 350 Diff-Zeilen.
-- **Nicht-Ziele:** keine Anmeldung in StockInfo, kein
-  `allow_credentials=True`, keine Änderung an StockPortfolio. Zeigt der
-  Nachweis, dass StockPortfolio etwas ändern muss, stoppe ich und lege das
-  Mike als Entscheidung vor (eigenes Ticket im StockPortfolio-Board).
+- **Ergebnis:** Alle drei Anleitungen sagen: Mit StockPortfolio
+  funktionieren nur LAN und VPN. Ein Login-Proxy vor StockInfo blockiert
+  StockPortfolios Browseraufrufe, weil diese keine Anmeldung mitsenden.
+- **Fachliche Änderungen (2):** (1) Hinweis in `README.md` (Security
+  model), `docker/README.md` (Hinweis oben und Quick start) und
+  `unraid/README.md`; (2) derselbe Hinweis knapp in
+  `templates/stockinfo.xml`. Die Vorlage liegt im Vorlagen-Repo und
+  baut auf `fdeb4fd` auf.
+- **Dateien:** drei READMEs, Vorlage, dieses Ticket. Kein Produktcode.
+- **Budget:** 0 Produktdateien, 5 Dokudateien, 80 Diff-Zeilen.
+- **Nicht-Ziele:** kein Prüf-Script; keine Empfehlung eines nicht
+  geprüften Proxy-Wegs, etwa StockInfo unter einem Pfad des
+  StockPortfolio-Hosts; keine Anmeldung in StockInfo; kein
+  `allow_credentials=True`; keine Änderung an StockPortfolio.
+
+**Doku-Abgleich (StockInfo-Teil):** Das Inventar aller versionierten
+Markdown-, XML- und HTML-Dateien außerhalb von `_tickets/` nennt den
+Proxy-Weg nur in `README.md`, `docker/README.md` und `unraid/README.md`.
+Alle drei sind angepasst und sagen dasselbe. Die Treffer in `CHANGELOG.md`
+und in der alten Spec betreffen Dev-Proxy und Registry-Login und sind
+nicht betroffen. Die Docker-Hub-Vorschau hat 9.001 UTF-8-Bytes. Offen
+ist `templates/stockinfo.xml`.
 
 ## Warum das passiert (Konsumentensicht)
 

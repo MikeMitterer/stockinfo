@@ -201,6 +201,13 @@ published on can reach it.
 
 Never forward StockInfo's port directly to the internet.
 
+**With StockPortfolio, a login proxy does not work.** StockPortfolio's web
+page calls StockInfo's API directly from the browser, and these calls carry
+no login: no cookie and no `Authorization` header. A login in front of
+StockInfo therefore blocks them, and StockPortfolio shows no quotes. If you
+use StockInfo together with StockPortfolio, keep StockInfo in your LAN and
+use a VPN for remote access.
+
 `CORS_ORIGINS` is **not** a protection. It restricts what a browser on another
 origin may do — it does nothing about `curl`, a script, or any server-to-server
 call.

@@ -39,7 +39,9 @@ for testing; it is not the standard installation path.
 **Do not forward the WebUI port to the internet.** StockInfo has no login;
 anyone who can reach it can change or delete data. Use it in your LAN, reach
 the LAN through a VPN (for example Unraid's WireGuard), or put a reverse
-proxy with HTTPS and a login in front of it. See the
+proxy with HTTPS and a login in front of it. If StockPortfolio uses this
+StockInfo, only LAN and VPN work: StockPortfolio's browser calls carry no
+login, so a login proxy blocks them. See the
 [security model](../README.md#security-model).
 
 [↑ Contents](#contents)
