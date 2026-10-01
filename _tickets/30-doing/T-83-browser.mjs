@@ -22,6 +22,11 @@ const targetUrl = process.argv[2] ?? 'http://localhost:15183/#assets'
 const shotDir = process.env.SHOT_DIR ?? mkdtempSync(join(tmpdir(), 't83-browser-'))
 const viewports = [['wide', 1440, 900], ['narrow', 390, 844]]
 
+/**
+ * Misst Lage und Schriftbild des Hinweises im aktuellen Browserdokument.
+ *
+ * @returns Messwerte oder die Kennung für einen fehlenden Hinweis.
+ */
 function measureNotice() {
   const notice = document.querySelector('.table__notice')
   if (!notice) return { notice: false }
@@ -44,6 +49,13 @@ function measureNotice() {
   }
 }
 
+/**
+ * Wechselt die Sprache ohne Neuladen und liest den sichtbaren Hinweis an.
+ *
+ * @param page - Geöffnete Browserseite.
+ * @param locale - Gewünschte Sprache.
+ * @returns Anfang des sichtbaren Hinweistextes.
+ */
 async function switchLocale(page, locale) {
   await page.evaluate((value) => {
     document.querySelector('#app').__vue_app__.config.globalProperties.$i18n.locale = value
