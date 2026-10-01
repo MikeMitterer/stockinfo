@@ -162,3 +162,88 @@ Lauf geprüft: 0 übrig).
 Geplant / tatsächlich: 3 / 3 fachliche Änderungen; 1 Produktdatei
 (`docker/entrypoint.sh`, Dockerfile unverändert); 5 Test-/Dokudateien
 (Smoke, drei READMEs, Ticket). Diff-Zeilen siehe OUTBOX.
+
+## Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
+
+**Ergebnis: `changes_requested`.** `8d91b4d` gegen `85d8f0b` unabhängig
+geprüft. Kein Produktcode wurde im Review geändert. Der Diff umfasst sechs
+Dateien mit +408/−14 Zeilen; `git diff --check` ist sauber.
+
+**B1 · ID-Validierung übersieht leere Werte und meldet Überlauf als Root-ID.**
+`docker/entrypoint.sh:78-81` setzt mit `${PUID:-99}` und `${PGID:-100}` auch
+einen *ausdrücklich leeren* Wert auf die Vorgabe zurück. `PUID=` und `PGID=`
+liefen im lokalen Testimage mit Exit 0 durch, obwohl der Scope Ziffern
+verlangt. `validateId` in Zeile 37 verwendet danach `[ "$2" -ne 0 ]` ohne
+Bereichsprüfung. Für `999999999999999999999999` erschien jeweils
+`[: Illegal number` und anschließend fälschlich `PUID=0` beziehungsweise
+`PGID=0 would run the app as root` (Exit 1). Bitte gesetzte leere Werte
+ablehnen und übergroße IDs vor dem numerischen Vergleich mit korrekter
+Variablen- und Wertmeldung abfangen. Die A4-Orakel brauchen beide Variablen
+und diese Randwerte als negative Fälle.
+
+**B2 · Fehlermeldungen erfüllen den zugesagten Abhilfevertrag nicht durchweg.**
+Ohne `SETUID`/`SETGID` endet der Container vor dem App-Start, doch
+`docker/entrypoint.sh:92` nennt nur IDs, Fähigkeiten und `--user`, nicht
+`/data`. Scope-Vertrag und `docker/README.md` versprechen für diesen Fall
+Pfad, IDs und Abhilfe; A9 prüft den Pfad nicht. Bei A7 gehört `/data` root,
+`chown` ist gesperrt, und die Fehlermeldung empfiehlt dennoch als zweite
+Option `PUID/PGID` auf den Eigentümer von `/data` zu setzen — das wäre 0
+und wird von B1s ID-Regel abgelehnt. Bei A10 ist `/data` bereits 99:100;
+dieselbe Empfehlung ändert an der root-eigenen Datenbankdatei nichts.
+Bitte die Meldungen für diese Fälle passend machen und A7/A9/A10 auf die
+jeweils zugesagten Angaben und eine ausführbare Abhilfe prüfen.
+
+**B3 · Der Smoke misst zwei neue CHOWN-Zusagen nicht.**
+`T-86-smoke.sh:162` verlangt für A7 nur den späteren Fehlertext;
+`expectFailure` in Zeile 126 prüft keine `entrypoint WARNING`. Entfernte man
+die Warnung, bliebe A7 grün. Der zweite zugesagte Zweig „`chown` scheitert,
+aber `/data` ist schreibbar → Warnung und Start“ hat keinen Smoke-Fall.
+Die unabhängige Gegenprobe mit root-eigenem `tmpfs` Modus 777 und
+`--cap-drop CHOWN` zeigte Warnung und Exit 0; mit Modus 755 Warnung und
+frühen Fehler. Bitte beide Orakel ergänzen, ohne fremde Container oder
+Volumes in die Bereinigung einzubeziehen.
+
+**B4 · Funktionsdokumentation und CLI-Hilfe aus dem Hausstandard fehlen.**
+`code-standards/references/architecture.md` verlangt bei jeder neuen
+Funktion Zweck, Parameter und Rückgabewert. Die fünf Funktionen in
+`docker/entrypoint.sh` nennen keinen Rückgabewert; im neuen Smoke-Skript
+fehlen Rückgabebeschreibungen, bei `usage` und `runSmoke` auch der
+Funktionskommentar. `code-standards/references/cli.md` zeigt für unbekannte
+Optionen Fehlermeldung *und* Usage; `T-86-smoke.sh --unknown` endet zwar mit
+Exit 2, zeigt aber nur die Fehlermeldung. Bitte diese mechanischen Standards
+im Coder-Stand nachziehen und Syntax, ShellCheck und betroffene CLI-Smokes
+wiederholen.
+
+**Unabhängig bestandene Nachweise:** `./_tickets/30-doing/T-86-smoke.sh --run`
+baute `stockinfo-t86:smoke` für `linux/amd64` und meldete A1–A11 grün.
+Gegen das bereits lokale `mangolila/stockinfo:latest` wurden A3, A4a/b,
+A5–A7, A9 und A10 rot (acht Fälle), A1/A2/A8 blieben grün. `shellcheck -s sh`
+für den Entrypoint, ShellCheck und `bash -n` für den Smoke, `sh -n` für den
+Entrypoint sowie Hilfe ohne Argument und mit `--help` bestanden. Die
+Testcontainer und Testvolumes sind entfernt; kein Image wurde gepusht.
+
+**Standards und Doku-Abgleich:** Gelesen wurden
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md` mit
+`architecture.md`, `shell.md`, `cli.md`, `quality.md` und
+`documentation.md`, außerdem `docker-conventions/SKILL.md` und
+`unraid-conventions/SKILL.md`. Architektur ✅ Entrypoint bleibt für den
+Containerstart zuständig; Shell ⚠️ B1/B4; CLI ⚠️ B4; Qualität/Tests ⚠️ B3;
+Docker-Laufzeit ⚠️ B1/B2; Dokumentation ⚠️ B2 und der veraltete Kommentar
+`docker/Dockerfile:78-80`, der die jetzt konfigurierbare App-ID noch
+uneingeschränkt als 99:100 beschreibt. Python, Frontend/i18n und Persistenz
+➖. DRY ✅: Im Übergabediff und der berührten Umgebung liegt die
+UID/GID-Validierung nur im Entrypoint und die Fallauswertung nur im
+Smoke-Helfer; die wiederholten `setpriv`-Aufrufe sind Start- und
+Prüfverdrahtung, keine zweite Fachregel. Die englischen Entrypoint-Meldungen
+sind interne Containerausgabe; dafür ist kein App-i18n-Katalog nötig.
+
+`README.md` (Docker-Abschnitt), `docker/README.md` (Storage/Configuration)
+und `unraid/README.md` (Data) wurden gegen Entrypoint und Dockerfile
+abgeglichen. Die Docker-Hub-Vorschau bestand mit 8.691 UTF-8-Bytes.
+Das lokale Unraid-Template unter
+`/Volumes/DevLocal/DevUnraid/Production/Templates/templates/stockinfo.xml`
+nennt weiterhin Image `mangolila/stockinfo:latest`, Port 8000 und `/data`;
+es setzt weder `--user` noch Cap-Drops. Die Standard-IDs 99:100 sind damit
+abgedeckt; ein Template-Push fand nicht statt. Die Dockerfile-Kommentarzeile
+und die Zusage zum A9-Fehlerpfad gehören zur Nacharbeit. Keine menschliche
+Abnahme erfolgte.
