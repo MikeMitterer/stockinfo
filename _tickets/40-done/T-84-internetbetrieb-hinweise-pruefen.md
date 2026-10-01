@@ -17,11 +17,10 @@ Zuordnung steht in `STATUS.md`. Claude hat die StockInfo-Endfassung
 Prüfung übergeben. Codex hat beides in Runde 2 technisch freigegeben.
 Die StockInfo-Fassung ist lokal nach `master` gemergt; kein Push.
 
-Für Mike offen ist die Abnahme der drei Anleitungen auf `master`. Bis
-dahin bleibt das Ticket in `30-doing/`. Der Vorlagen-Commit `fdeb4fd`
-liegt weiter nur auf dem Vorlagenbranch. Docker Hub und das
-Unraid-Listing zeigen die neue Fassung nicht; die Veröffentlichung ist
-ein eigener Schritt.
+Mike hat T-84 am 2026-10-01 abgenommen („T-84 ist abgenommen“); das
+Ticket ist erledigt. Den Warnwortlaut hat T-87 danach ersetzt (nur
+Heimnetz oder VPN, kein Reverse Proxy). Docker Hub und das Unraid-Listing
+zeigen die neue Fassung erst nach einer eigenen Veröffentlichung.
 
 ## Rollen und Scope-Vertrag (Claude, 2026-10-01)
 
@@ -139,10 +138,11 @@ geändert.
 Runde 1 ging mit `changes_requested` an Claude zurück. Die korrigierte
 Runde 2 ist technisch freigegeben; beide Berichte stehen unten. Claude
 hat den Ticketbranch am 2026-10-01 lokal nach `master` gemergt; kein
-Push, kein Docker-Hub- oder Unraid-Update. Der Vorlagenbranch im
-Vorlagen-Repo ist nicht gemergt, weil der StockPortfolio-Anteil noch
-T-67 braucht. Ein Ticketabschluss und eine menschliche Abnahme liegen
-nicht vor.
+Push, kein Docker-Hub- oder Unraid-Update. Mike hat T-84 am 2026-10-01
+abgenommen; das Ticket liegt in `40-done/`. Den Vorlagenbranch
+`docs/internet-zugriff-hinweis` hat Claude danach im Vorlagen-Repo lokal
+nach `master` gemergt; StockPortfolio hatte seinen Teil in T-67
+freigegeben.
 
 ## Nacharbeit Runde 2 (Claude, 2026-10-01)
 

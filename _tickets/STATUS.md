@@ -75,7 +75,7 @@ er erweitert die T-87-Freigabe nicht.
 aktivierte T-84 zunächst mit „T-84 ist noch zu erledigen“ und „Wie im
 Ticket“. Seine spätere Klarstellung „Stelle das im Status richtig - deine
 Aufgabe ist verifier“ ersetzt die damalige Rollenzuordnung: Coder `claude`,
-Verifier `codex`. [T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md)
+Verifier `codex`. [T-84](40-done/T-84-internetbetrieb-hinweise-pruefen.md)
 ist aktiv; der Root steht auf `master`. Claude legt als Owner den
 Ticketbranch an, bereitet die endgültige Fassung auf dem aktuellen
 `master` vor, setzt `branch` und übergibt erst dann mit OUTBOX. Der
@@ -107,17 +107,17 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## Archiv · INBOX → claude · Templates-Repo zurückstellen (teilweise verarbeitet)
+## Archiv · INBOX → claude · Templates-Repo zurückstellen (verarbeitet bis auf Push)
 
-**Claude, 2026-10-01, erledigt:** Hauptarbeitskopie auf `master`
-(`bb83dfa`). Lokal gelöscht, alle vollständig in `master` enthalten:
+**Claude, 2026-10-01, erledigt:** Hauptarbeitskopie auf `master`.
+Lokal gelöscht, alle vollständig in `master` enthalten:
 `docs/stockportfolio-ca-listing`, `t-49-stockportfolio-template`,
-`t-60-stockportfolio-template`, `t-79-stockinfo-eupl`. **Offen:**
-`docs/internet-zugriff-hinweis` trägt jetzt auch T-87 (`a2d80a6`, im
-Review). Merge, Push und Entfernen des Worktrees folgen nach T-84-Abnahme
-und T-87-Freigabe. `fix/stockportfolio-template-links` (`72fc39a`) ist
-nicht in `master` enthalten und weicht inhaltlich ab; er bleibt bis zu
-Mikes Entscheidung stehen. Kein Push.
+`t-60-stockportfolio-template`, `t-79-stockinfo-eupl`. Nach Mikes
+Abnahme von T-84 und T-87 ist `docs/internet-zugriff-hinweis` lokal nach
+`master` gemergt (`25d395c`, beide XML gültig). Der Worktree
+`/private/tmp/unraid-internet-hinweis` und der Branch sind entfernt.
+**Offen:** Push; `fix/stockportfolio-template-links` (`72fc39a`) ist
+nicht in `master` enthalten und bleibt bis zu Mikes Entscheidung stehen.
 
 **Ursprüngliche Nachricht:**
 
@@ -146,26 +146,25 @@ Mike: „T-87 ist abgenommen“. Codex hatte Runde 1 (`7b46d6b`) technisch
 freigegeben. [T-87](40-done/T-87-login-proxy-sperrt-stockportfolio-aus.md)
 liegt in `40-done/` und ist lokal nach `master` gemergt; kein Push.
 
-## An Mike · T-84 auf `master` zur Abnahme
+## Abschluss T-84 · Mike, 2026-10-01
 
-**Claude, 2026-10-01.** Codex hat T-84 in Runde 2 freigegeben
-(`8b89864`). Der Ticketbranch ist lokal nach `master` gemergt, der Root
-steht auf `master`. Kein Push. Den Wortlaut aus T-84 hat T-87 ersetzt:
-Die Texte sagen jetzt nur noch „nicht ins Internet, Heimnetz, von außen
-per VPN (WireGuard oder Tailscale)“. Für dich offen:
+Mike: „T-84 ist abgenommen“. Codex hatte Runde 2 (`8b89864`) technisch
+freigegeben. [T-84](40-done/T-84-internetbetrieb-hinweise-pruefen.md)
+liegt in `40-done/`; der Ticketbranch war bereits lokal nach `master`
+gemergt. Kein Push.
 
-1. **Abnahme T-84:** Mit der T-87-Abnahme sind die Texte bereits
-   bestätigt. Übrig bleibt der Rest von T-84, also die berichtigte
-   Routenliste im „Security model“ von `README.md`. T-84 bleibt bis zu
-   deiner Bestätigung in `30-doing/`.
-2. **Unraid-Vorlage:** `docs/internet-zugriff-hinweis` im Vorlagen-Repo
-   (`fdeb4fd`, dazu `a2d80a6` aus T-87) ist nicht gemergt. Der
-   StockPortfolio-Teil ist laut StockPortfolio T-67 freigegeben. Merge,
-   Push und Entfernen des Worktrees folgen nach deiner Abnahme.
+## An Mike · offen nach T-84 und T-87
+
+**Claude, 2026-10-01.** In `30-doing/` liegt kein Ticket mehr. Offen:
+
+1. **Push StockInfo:** `master` enthält T-84 und T-87 lokal. Push,
+   Docker-Hub-Beschreibung (`make push`) und Unraid-Listing brauchen
+   deinen Auftrag.
+2. **Push Vorlagen-Repo:** `master` ist dort lokal 4 Commits vor
+   `origin/master` (Merge `25d395c` mit StockInfo T-84/T-87 und
+   StockPortfolio T-67). Push braucht deinen Auftrag.
 3. **Branch `fix/stockportfolio-template-links`** im Vorlagen-Repo
    (`72fc39a`) ist nicht in `master` enthalten. Behalten oder löschen?
-4. **Veröffentlichung:** Push, Docker-Hub-Beschreibung (`make push`) und
-   Unraid-Listing sind eigene Schritte und brauchen deinen Auftrag.
 
 ## Archiv · INBOX → claude · T-84 Runde 2 · technisch approved (verarbeitet)
 
@@ -176,7 +175,7 @@ klare Trennung von nativer Loopback-Bindung und Docker-Hostport behoben.
 B2 ist durch Claudes neu verfassten StockInfo-Vorlagentext behoben.
 Verify #1–#5 sind ✅; `git diff --check`, XML-Syntax und Docker-Hub-
 Vorschau (8.846 UTF-8-Bytes) bestanden. Voller Befund, Standards und
-Doku-Abgleich: [T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md#verifier-prüfung--runde-2-codex-2026-10-01).
+Doku-Abgleich: [T-84](40-done/T-84-internetbetrieb-hinweise-pruefen.md#verifier-prüfung--runde-2-codex-2026-10-01).
 
 Bitte die technische Freigabe als Coder verarbeiten. Diese Freigabe
 umfasst weder `templates/stockportfolio.xml` aus demselben Vorlagenbranch
@@ -202,7 +201,7 @@ OpenAPI ohne Authentifizierung, Docker-Hub-Vorschau (8.846 UTF-8-Bytes),
 XML-Syntax, Linkumsetzung und Veröffentlichungsabgrenzung bestanden.
 Verify #1, #4 und #5 sind ✅; #2 und #3 bleiben ⚠️. Der volle Befund,
 Standards und Doku-Abgleich stehen in
-[T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md#verifier-prüfung--runde-1-codex-2026-10-01).
+[T-84](40-done/T-84-internetbetrieb-hinweise-pruefen.md#verifier-prüfung--runde-1-codex-2026-10-01).
 Der mechanische Ticketstands-Abgleich liegt in `fb29d46`. Kein Produktcode,
 keine Vorlage und keine menschliche Abnahme wurden durch Codex geändert
 oder erteilt.
