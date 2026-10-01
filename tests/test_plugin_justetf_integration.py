@@ -20,8 +20,9 @@ Vertrag an den Doubles gefunden — hier stehen sie gegen die Wirklichkeit.
 
 import pytest
 
-from stockinfo_plugin import ResolveRequest, Unit
+from stockinfo_plugin import ResolveRequest
 from stockinfo_plugin.invariants import currency_problem
+from stockinfo_plugin.types import MONEY_UNITS
 
 from app.plugins.justetf_metadata import JustEtfMetadataPlugin
 
@@ -53,7 +54,7 @@ def test_ein_bekannter_ucits_fonds_liefert_deklarierte_felder(
         )
 
 
-def test_ein_absoluter_betrag_traegt_seine_waehrung(
+def test_ein_betrag_traegt_seine_waehrung(
     plugin: JustEtfMetadataPlugin,
 ) -> None:
     """Ein Betrag ohne Währung ist bedeutungslos — dieselbe Regel wie beim Kurs.
@@ -64,15 +65,15 @@ def test_ein_absoluter_betrag_traegt_seine_waehrung(
     """
     readings = plugin.fetch(ResolveRequest(isin="IE00B4L5Y983"))
 
-    absolute = [
+    amounts = [
         reading
         for reading in readings or []
         if (reading.unit or getattr(plugin.declared(reading.field), "unit", None))
-        is Unit.ABSOLUTE
+        in MONEY_UNITS
     ]
 
-    assert absolute, "ohne einen absoluten Betrag prüft dieser Test nichts"
-    for reading in absolute:
+    assert amounts, "ohne einen Betrag prüft dieser Test nichts"
+    for reading in amounts:
         assert not currency_problem(reading.currency), (
             f"'{reading.field}' = {reading.value!r} ohne brauchbare Währung "
             f"({reading.currency!r})"

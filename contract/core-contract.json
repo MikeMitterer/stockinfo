@@ -227,7 +227,7 @@
         "name": "fund_size",
         "kind": "number",
         "required": false,
-        "meaning": "Fund size (ETF only)."
+        "meaning": "Fund size in millions (ETF only); 89123.0 from justETF means EUR 89.123 billion. Source values are in EUR; a manual value uses the currency entered with it."
       },
       {
         "name": "fund_domicile",
@@ -373,7 +373,7 @@
         "name": "fund_size",
         "kind": "number",
         "required": false,
-        "meaning": "Effective fund size."
+        "meaning": "Effective fund size in millions. Source values are in EUR; a manual value uses the currency entered with it."
       },
       {
         "name": "fund_domicile",

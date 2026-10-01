@@ -17,6 +17,18 @@ describe('MetricValue', () => {
     expect(wrapper.text()).toBe(i18n.global.t('common.noValue'))
   })
 
+  it('zeigt die Fondsgröße in Millionen Euro', () => {
+    const previousLocale = i18n.global.locale.value
+    i18n.global.locale.value = 'de'
+    const wrapper = mount(MetricValue, {
+      global: { plugins: [i18n] },
+      props: { item: makeInstrument({ fund_size: 129791 }), field: 'fund_size' },
+    })
+
+    expect(wrapper.text()).toBe('129.791,00 Mio. EUR')
+    i18n.global.locale.value = previousLocale
+  })
+
   it('zeigt den wirksamen Wert ohne jede Bedienung', () => {
     const wrapper = mount(MetricValue, {
       global: { plugins: [i18n] },

@@ -16,8 +16,11 @@ const display = computed(() => {
   if (value === null) return t('common.noValue')
   if (typeof value === 'boolean') return t(value ? 'table.yes' : 'table.no')
   const text = typeof value === 'number' ? n(value) : value
+  // Beim Bearbeiten steht die Währung in der eigenen Auswahl daneben.
+  const currency = editable.value ? '' : props.value.currency || ''
+  if (props.definition.unit === 'millions') return t('details.amountMillions', { amount: text, currency }).trim()
   const unit = props.definition.currency_required
-    ? (editable.value ? '' : props.value.currency || '')
+    ? currency
     : props.definition.unit === 'percent' ? '%' : props.definition.unit || ''
   return `${text}${unit ? ` ${unit}` : ''}`
 })

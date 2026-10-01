@@ -29,6 +29,7 @@ from stockinfo_plugin import (
     ResolveRequest,
     Unit,
 )
+from stockinfo_plugin.types import MONEY_UNITS
 
 from app.exchanges import EXCHANGES
 from app.plugins.exchange_support import ONLINE_MICS
@@ -64,7 +65,7 @@ FIELDS: tuple[FieldSpec, ...] = (
     FieldSpec(
         "fund_size",
         kind="number",
-        unit=Unit.ABSOLUTE,
+        unit=Unit.MILLIONS,
         label_en="Fund size",
         label_de="Fondsvolumen",
     ),
@@ -208,17 +209,15 @@ def as_readings(details: EtfDetails, source: str = "justetf") -> list[Reading]:
             value=getattr(details, spec.name),
             unit=spec.unit,
             source=source,
-            # **Ein absoluter Betrag ohne Währung ist bedeutungslos** — dieselbe
-            # Regel, die für Kurse gilt, und ein Befund des Vertrags.
+            # **Ein Betrag ohne Währung ist bedeutungslos** — auch in Millionen.
             #
             # Die Währung ist **EUR und nicht `fund_currency`.** Der Provider
             # liest `overview["fund_size_eur"]`; das Volumen ist also bereits
             # umgerechnet. `fund_currency` ist die Währung des **Fonds** — bei
             # `IE00B4L5Y983` USD —, und den EUR-Betrag damit zu beschriften
             # hätte ihn um den Wechselkurs verfälscht, ohne dass irgendwo ein
-            # Fehler entstünde. Zweiter Befund derselben Sorte in diesem
-            # Ticket: Der Wert stimmte, seine Bedeutung nicht.
-            currency=FUND_SIZE_CURRENCY if spec.unit is Unit.ABSOLUTE else None,
+            # Fehler entstünde.
+            currency=FUND_SIZE_CURRENCY if spec.unit in MONEY_UNITS else None,
         )
         for spec in FIELDS
         if getattr(details, spec.name, None) is not None

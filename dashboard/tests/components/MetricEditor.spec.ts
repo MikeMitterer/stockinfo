@@ -19,6 +19,18 @@ describe('MetricEditor', () => {
     expect(wrapper.findComponent({ name: 'UxInlineNumber' }).exists()).toBe(true)
   })
 
+  it('zeigt eine eingetragene Fondsgröße in Millionen Euro', () => {
+    const previousLocale = i18n.global.locale.value
+    i18n.global.locale.value = 'en'
+    const wrapper = mountEditor(
+      makeInstrument({ fund_size: 500, manual_fund_size: 500, manual_fields: ['fund_size'] }),
+      'fund_size',
+    )
+
+    expect(wrapper.text()).toContain('500.00 million EUR')
+    i18n.global.locale.value = previousLocale
+  })
+
   it('sperrt das Feld, sobald die Quelle etwas hat', () => {
     const wrapper = mountEditor(makeInstrument({ ter: 0.2 }))
 

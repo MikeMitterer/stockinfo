@@ -3,6 +3,7 @@ import { computed } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 import { manualValue, overrideState, sourceProvides } from '../composables/useOverrides'
+import { fundSizeText } from '../utils/fundSize'
 import type { InstrumentSummary, OverrideField } from '../types'
 
 /**
@@ -61,9 +62,10 @@ const fromSource = computed(() => applicable.value && sourceProvides(props.item,
  */
 const DIGITS = { minimumFractionDigits: 2, maximumFractionDigits: 2 }
 
-/** Formatiert eine Zahl passend zum Feld — mit Prozentzeichen nur bei ter/volatility. */
+/** Formatiert eine Zahl passend zum Feld: Prozent bei ter/volatility, Mio. EUR bei fund_size. */
 function formatNumber(raw: number): string {
   const formatted = n(raw, DIGITS)
+  if (props.field === 'fund_size') return fundSizeText(t, formatted)
   return isPercentField.value ? `${formatted} %` : formatted
 }
 

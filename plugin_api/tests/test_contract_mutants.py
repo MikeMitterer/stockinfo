@@ -298,8 +298,13 @@ def test_ein_wert_ausserhalb_des_selbst_deklarierten_bereichs_faellt_auf() -> No
     )
 
 
-def test_ein_absoluter_betrag_ohne_waehrung_faellt_auf() -> None:
-    """Ein Fondsvolumen ohne Währung ist eine Zahl. Der Befund, wörtlich."""
+@pytest.mark.parametrize(
+    ("unit", "value"),
+    [(Unit.ABSOLUTE, 2_289_978_572_800.0), (Unit.MILLIONS, 2_289_978.5728)],
+    ids=["absolut", "millionen"],
+)
+def test_ein_betrag_ohne_waehrung_faellt_auf(unit: Unit, value: float) -> None:
+    """Ein Fondsvolumen ohne Währung ist eine Zahl — absolut wie in Millionen."""
     assert_contract_rejects(
         MetadataContract,
         "test_ein_betrag_ohne_waehrung_ist_bedeutungslos",
@@ -307,14 +312,14 @@ def test_ein_absoluter_betrag_ohne_waehrung_faellt_auf() -> None:
             [
                 Reading(
                     field="fund_size",
-                    value=2_289_978_572_800.0,
-                    unit=Unit.ABSOLUTE,
+                    value=value,
+                    unit=unit,
                     currency=None,
                     source="mutant",
                 )
             ]
         ),
-        "absoluter Betrag ohne",
+        "Betrag ohne",
         **METADATA_REQUESTS,
     )
 

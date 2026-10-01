@@ -123,9 +123,46 @@ def test_justetf_mappt_dict_felder(monkeypatch) -> None:
     assert details is not None
     assert details.ter == 0.19
     assert details.provider == "Vanguard"
-    assert details.fund_size == 22638.0
     assert details.volatility == 9.95
     assert details.accumulating is False
+
+
+def test_justetf_fondsgroesse_bleibt_in_millionen(monkeypatch) -> None:
+    """justETF schreibt „EUR 22,638 m"; die Bibliothek liefert daraus 22638.0.
+
+    Der Katalog führt die Fondsgröße in Mio. EUR, der Wert bleibt also
+    unverändert. Die Einheit deklariert das justETF-Plugin.
+    """
+    overview = {"fund_size_eur": 22638.0}
+    monkeypatch.setattr(
+        justetf_module.justetf_scraping, "get_etf_overview", lambda isin, **kw: overview
+    )
+
+    details = JustEtfProvider().fetch_etf("IE00B3RBWM25")
+
+    assert details is not None
+    assert details.fund_size == 22638.0
+
+
+@pytest.mark.parametrize(
+    ("raw", "expected"),
+    [
+        ("Physical(Optimized sampling)", "Physical (Optimized sampling)"),
+        ("Physical (Full replication)", "Physical (Full replication)"),
+        ("Synthetic", "Synthetic"),
+    ],
+    ids=["leerzeichen-fehlt", "leerzeichen-vorhanden", "ohne-klammer"],
+)
+def test_justetf_replikation_hat_leerzeichen_vor_der_klammer(monkeypatch, raw, expected) -> None:
+    overview = {"replication": raw}
+    monkeypatch.setattr(
+        justetf_module.justetf_scraping, "get_etf_overview", lambda isin, **kw: overview
+    )
+
+    details = JustEtfProvider().fetch_etf("IE00B3RBWM25")
+
+    assert details is not None
+    assert details.replication == expected
 
 
 def test_justetf_thesaurierend_wird_erkannt(monkeypatch) -> None:

@@ -18,6 +18,7 @@ export const en = {
     shadowed: 'The source takes precedence over your value {value}.',
     loadFailed: 'Could not load field definitions.',
     empty: 'No detail fields are declared for this instrument.',
+    amountMillions: '{amount} million {currency}',
   },
   /*
    * Wortmarke in zwei Teilen: Farbig ist der Teil, der die App

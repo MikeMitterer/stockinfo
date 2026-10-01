@@ -5,6 +5,7 @@ Daher strikt best-effort: bei jedem Fehler ``None`` und Weiterarbeit ohne
 ETF-Extras.
 """
 
+import re
 from typing import Any
 
 import justetf_scraping
@@ -183,7 +184,9 @@ class JustEtfProvider:
         return EtfDetails(
             ter=self._as_float(overview.get("ter")),
             provider=overview.get("fund_provider"),
-            replication=overview.get("replication"),
+            replication=self._as_replication(overview.get("replication")),
+            # justETF liefert Millionen („EUR 22,638 m" → 22638.0); der Katalog
+            # führt die Fondsgröße ebenfalls in Mio. EUR.
             fund_size=self._as_float(overview.get("fund_size_eur")),
             fund_currency=overview.get("fund_currency"),
             fund_domicile=overview.get("fund_domicile"),
@@ -224,3 +227,14 @@ class JustEtfProvider:
             return float(value) if value is not None else None
         except (TypeError, ValueError):
             return None
+
+    @staticmethod
+    def _as_replication(value: Any) -> str | None:
+        """Setzt das Leerzeichen vor der Klammer, das justETF auslässt.
+
+        justETF schreibt „Physical(Optimized sampling)"; angezeigt wird
+        „Physical (Optimized sampling)".
+        """
+        if not isinstance(value, str):
+            return None
+        return re.sub(r"(\S)\(", r"\1 (", value)

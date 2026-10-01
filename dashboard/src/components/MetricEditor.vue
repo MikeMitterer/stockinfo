@@ -7,6 +7,7 @@ import { UxInlineNumber } from '@mmit/ux-foundation'
 import MetricValue from './MetricValue.vue'
 import { manualValue, sourceProvides } from '../composables/useOverrides'
 import { FIELD_LABEL_KEY } from '../utils/fieldLabels'
+import { fundSizeText } from '../utils/fundSize'
 import type { InstrumentOverrides, InstrumentSummary, OverrideField } from '../types'
 
 /**
@@ -128,11 +129,11 @@ const numericValue = computed(() => (typeof manual.value === 'number' ? manual.v
 
 const numberMax = computed(() => NUMBER_MAX[props.field] ?? Number.MAX_SAFE_INTEGER)
 
-/** Fondsvolumen ist keine Prozentzahl — TER und Volatilität schon. */
+/** Fondsvolumen steht in Mio. EUR — TER und Volatilität in Prozent. */
 const numberDisplay = computed(() => {
   if (numericValue.value === null) return t('common.noValue')
   const formatted = n(numericValue.value, DIGITS)
-  return props.field === 'fund_size' ? formatted : `${formatted} %`
+  return props.field === 'fund_size' ? fundSizeText(t, formatted) : `${formatted} %`
 })
 
 function onNumber(value: number | null): void {

@@ -73,7 +73,7 @@ The default online chains use these **free** data sources:
 | Source | Used for |
 |---|---|
 | **yfinance** (Yahoo Finance) | price, currency, volume, name, EOD closes (basis of the computed volatility) — stocks & ETFs, EU & US. Also the fund provider for **non-European ETFs**, which justETF does not list |
-| **justETF** | ETF extras for **European** (UCITS) funds: TER, provider, replication, fund size, 1-year volatility, distribution policy |
+| **justETF** | ETF extras for **European** (UCITS) funds: TER, provider, replication, fund size (in millions of EUR), 1-year volatility, distribution policy |
 | **OpenFIGI** | resolves an ISIN to the listing at your preferred exchange (default: Xetra → EUR) |
 | **Yahoo search** | fallback for resolving instruments when OpenFIGI cannot resolve them |
 

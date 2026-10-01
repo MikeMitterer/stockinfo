@@ -33,6 +33,21 @@ describe('Offene Detailfelder', () => {
     expect(wrapper.emitted('commit')?.[0]).toEqual([{ value: null, currency: currencyRequired ? 'EUR' : null }])
   })
 
+  it.each([
+    ['de', '129.791 Mio. EUR'],
+    ['en', '129,791 million EUR'],
+  ])('zeigt die Fondsgröße in Millionen mit Währung (%s)', (locale, expected) => {
+    i18n.global.locale.value = locale as 'de' | 'en'
+    const wrapper = mount(DetailEditor, {
+      props: {
+        definition: { ...definition, name: 'fund_size', unit: 'millions', currency_required: true, overridable: false },
+        value: { ...value, value: 129791, currency: 'EUR', origin: 'provider', source: 'justetf' },
+      },
+      global: { plugins: [i18n] },
+    })
+    expect(wrapper.text()).toBe(expected)
+  })
+
   it('zeigt ein vorher unbekanntes Plugin-Feld und reicht die Eingabe weiter', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(JSON.stringify({ details: [definition] }))))
     const wrapper = mount(OpenDetails, {

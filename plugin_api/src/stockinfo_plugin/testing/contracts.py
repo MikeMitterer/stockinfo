@@ -61,6 +61,7 @@ from stockinfo_plugin.types import (
     DailySeries,
     FxRate,
     FxRequest,
+    MONEY_UNITS,
     ListedIdentity,
     NotFound,
     NotResponsible,
@@ -69,7 +70,6 @@ from stockinfo_plugin.types import (
     Resolved,
     ResolveRequest,
     Unavailable,
-    Unit,
     Unsupported,
     isin_of,
 )
@@ -650,7 +650,7 @@ class MetadataContract(SourceContract):
             )
 
     def test_ein_betrag_ohne_waehrung_ist_bedeutungslos(self) -> None:
-        """``Unit.ABSOLUTE`` verlangt eine Währung — sonst ist es nur eine Zahl.
+        """Beträge (``MONEY_UNITS``) verlangen eine Währung — sonst ist es nur eine Zahl.
 
         **Befund aus Runde 1.** `Reading.currency` trug den Hinweis im
         Docstring und niemand prüfte ihn. Ein Fondsvolumen von
@@ -661,11 +661,11 @@ class MetadataContract(SourceContract):
         for reading in self._readings_for_responsible():
             spec = source.declared(reading.field)
             unit = reading.unit or (spec.unit if spec else None)
-            if unit is not Unit.ABSOLUTE or reading.value is None:
+            if unit not in MONEY_UNITS or reading.value is None:
                 continue
             problem = currency_problem(reading.currency)
             assert not problem, (
-                f"Feld '{reading.field}' ist ein absoluter Betrag ohne "
+                f"Feld '{reading.field}' ist ein Betrag ohne "
                 f"brauchbare Währung: {problem}"
             )
 
