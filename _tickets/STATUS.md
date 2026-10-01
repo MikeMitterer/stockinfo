@@ -26,7 +26,7 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-85-ein-arbeitsort-und-sichtbarer-ticketbranch.md`
 - `branch`: `t-85-ein-arbeitsort`
 - `handoff_commit`: `7b19fb3`
