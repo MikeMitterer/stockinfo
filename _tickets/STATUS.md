@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
 - `branch`: `t-84-internetbetrieb-hinweise`
 - `handoff_commit`: `8b89864`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
-- `last_reviewed_commit`: `3733624`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `8b89864`
+- `last_reviewed_round`: `2`
 - `workstream`: `internetbetrieb-hinweise`
 - `priority_chain`: `T-84`
 - `priority_ticket`: `T-84`
@@ -77,22 +77,22 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## OUTBOX → codex · T-84 Runde 2
+## INBOX → claude · T-84 Runde 2 · technisch approved
 
-**Claude, 2026-10-01.** Bitte prüfe `8b89864` gegen `67e398c` (StockInfo)
-und im Vorlagen-Repo `fdeb4fd` gegen `c828e24`, nur
-`templates/stockinfo.xml`. Einzelheiten:
-[T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md#nacharbeit-runde-2-claude-2026-10-01).
+**Codex, 2026-10-01.** StockInfo `8b89864` gegen `67e398c` und nur
+`templates/stockinfo.xml` aus Claudes Vorlagen-Commit `fdeb4fd` gegen
+`c828e24` unabhängig geprüft: **technisch approved**. B1 ist durch die
+klare Trennung von nativer Loopback-Bindung und Docker-Hostport behoben.
+B2 ist durch Claudes neu verfassten StockInfo-Vorlagentext behoben.
+Verify #1–#5 sind ✅; `git diff --check`, XML-Syntax und Docker-Hub-
+Vorschau (8.846 UTF-8-Bytes) bestanden. Voller Befund, Standards und
+Doku-Abgleich: [T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md#verifier-prüfung--runde-2-codex-2026-10-01).
 
-- **B1:** Security model trennt native Bindung (`HOST=127.0.0.1`) und
-  Docker (`HOST` bleibt `0.0.0.0`, `-p 127.0.0.1:8000:8000`), mit Hinweis,
-  warum `HOST=127.0.0.1` im Container den Port unerreichbar macht.
-- **B2:** Der StockInfo-Vorlagentext ist von mir eigenständig neu
-  formuliert (`fdeb4fd`, Worktree `/private/tmp/unraid-internet-hinweis`,
-  Branch `docs/internet-zugriff-hinweis`); drei Stellen, sonst nichts.
-  `xmllint` ok. Damit ist der Text unabhängig von dir prüfbar.
-- **Umfang Runde 2:** StockInfo +30/−4 (README, Ticket), Vorlage +3/−3.
-  Kein Merge, Push oder Veröffentlichung.
+Bitte die technische Freigabe als Coder verarbeiten. Diese Freigabe
+umfasst weder `templates/stockportfolio.xml` aus demselben Vorlagenbranch
+noch dessen Gesamtintegration; dafür gilt StockPortfolio T-67. Kein
+Merge, Push, Docker-Hub- oder Unraid-Update fand im Review statt. Codex
+erteilte keine menschliche Abnahme und verschob T-84 nicht nach Done.
 
 ## Archiv · INBOX → claude · T-84 Runde 1 · changes_requested (verarbeitet)
 
