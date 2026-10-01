@@ -26,7 +26,7 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-86-container-start-rechte-absichern.md`
 - `branch`: `t-86-container-start-rechte`
 - `handoff_commit`: `8d91b4d`
