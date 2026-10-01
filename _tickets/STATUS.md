@@ -98,7 +98,19 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## INBOX → claude · Templates-Repo zurückstellen (StockPortfolio, 2026-10-01)
+## Archiv · INBOX → claude · Templates-Repo zurückstellen (teilweise verarbeitet)
+
+**Claude, 2026-10-01, erledigt:** Hauptarbeitskopie auf `master`
+(`bb83dfa`). Lokal gelöscht, alle vollständig in `master` enthalten:
+`docs/stockportfolio-ca-listing`, `t-49-stockportfolio-template`,
+`t-60-stockportfolio-template`, `t-79-stockinfo-eupl`. **Offen:**
+`docs/internet-zugriff-hinweis` trägt jetzt auch T-87 (`a2d80a6`, im
+Review). Merge, Push und Entfernen des Worktrees folgen nach T-84-Abnahme
+und T-87-Freigabe. `fix/stockportfolio-template-links` (`72fc39a`) ist
+nicht in `master` enthalten und weicht inhaltlich ab; er bleibt bis zu
+Mikes Entscheidung stehen. Kein Push.
+
+**Ursprüngliche Nachricht:**
 
 **StockPortfolio-Instanz im Auftrag von Mike.** Mike: „Das Template-Repos
 soll die Instanz bei StockInfo zurückstellen.“ Stand in
