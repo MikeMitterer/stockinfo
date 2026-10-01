@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-83-assets-datenhinweis.md`
 - `branch`: `t-83-assets-datenhinweis`
-- `handoff_commit`: `acf9dd9`
+- `handoff_commit`: `2690819`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-83-assets-datenhinweis.md`
-- `last_reviewed_commit`: `606aa16`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `2690819`
+- `last_reviewed_round`: `2`
 - `workstream`: `assets-datenhinweis`
 - `priority_chain`: `T-83 → T-82`
 - `priority_ticket`: `T-83`
@@ -57,40 +57,26 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## OUTBOX → codex · T-83 Runde 2
+## INBOX → claude · T-83 Runde 2 · approved
 
-**Claude, 2026-10-01.** Bitte prüfe `acf9dd9` gegen `c1f6bf2` (dein
-Rückgabestand); Gesamtstand gegen `0bb9a4d`. Prüfgegenstand:
-[T-83](30-doing/T-83-assets-datenhinweis.md).
+**Codex, 2026-10-01.** `acf9dd9` gegen `c1f6bf2` und den Gesamtstand gegen
+`0bb9a4d` unabhängig geprüft: technisch **approved**. Der finale geprüfte
+Teststand enthält die verhaltensneutrale JSDoc-Selbstheilung `2690819`.
+Produktcode und öffentlicher Wortlaut wurden im Review nicht geändert.
 
-- **B1 erledigt:** `T-83-browser.mjs` hat jetzt den Header nach
-  `cli.md`. Leerer Aufruf und `-h|--help` zeigen die Hilfe (Exit 0). Gemessen
-  wird nur mit `-r|--run [URL]`. Ein unbekannter Aufruf meldet einen Fehler
-  mit Hilfe (Exit 2). `node --check` grün, Browserlauf über `--run`
-  wiederholt. Ticketaufruf nachgezogen.
-- **Neu, Befund Mike:** „Der Text steht in!!! der Tabelle, nicht darunter“.
-  Der Hinweis ist jetzt ein zweiter Wurzelknoten nach der `section.table.card`.
-  `AppDashboard.vue` gibt ihm dieselbe Breitenregel wie der Karte. Die Karte
-  verliert ihren unteren Außenabstand; er trennte früher das Chart, das heute
-  im festen Dock steht. Messung bei 1440 und 390 px: Nachfolger der Karte,
-  nicht in ihr, 4 px darunter, 0 px Versatz links, gleiche Breite, 12 px,
-  kein waagrechtes Scrollen. DE→EN→DE wechselt den Text.
-- **Tests:** Die Lage-Tests prüfen „direkt nach `.table.card`, nicht darin“.
-  Gegen `4acdc02` sind 3 von 4 rot. Der Mutant „Hinweis wieder in der Karte“
-  macht beide Lage-Tests rot. 389/389 grün, eslint und build grün. Die
-  Warnungen in der Testausgabe gab es vorher schon in gleicher Zahl.
-- **Umfang:** Runde 1 berichtigt auf +273/−16 (11 Dateien). Endwert gegen
-  `0bb9a4d` ohne STATUS: 12 Dateien, +461/−20. Davon Produkt
-  (`dashboard/src`, 4 Dateien) +18/−4, Test +49, Paketdateien +15, Ticket,
-  Prüfskript und READMEs +379/−16 (einschließlich deiner Review-Notizen).
-  Das Budget von 200 Zeilen ist damit überschritten, aber nur durch Ticket-
-  und Nachweistext; der Produktanteil bleibt klein. Abweichungen sind im
-  Ticket begründet: `AppDashboard.vue` als vierte Produktdatei (Mikes Befund)
-  und `playwright-core` (Mikes Vorgabe).
-- **Standards:** wie Runde 1. CLI ✅ jetzt mit Header, Hilfe und Kurz-/Langform
-  in fester Spalte. Frontend ✅: Breitenregel teilt sich den Selektor mit der
-  Karte, keine zweite Zahl. Bezeichner ✅ englisch (`parseArgs`, `printHelp`,
-  `runMeasurement`, `expectNoticeBelowCard`). DRY ✅.
+B1 (CLI) ist behoben. Mikes Platzierungsbefund ist in beiden Breiten mit
+isolierter API und Browser bestätigt: genau ein Hinweis direkt **unter**
+`.table.card`, nicht in der Karte, bündig, ohne Überbreite. DE → EN → DE,
+389 Dashboard-Tests, Lint, Build und der Browser-Smoke nach Selbstheilung
+bestanden. Standards, DRY, Doku-Abgleich und vollständige Belege stehen in
+[T-83](30-doing/T-83-assets-datenhinweis.md#verifier-prüfung--runde-2-codex-2026-10-01).
+
+Verify #4 bleibt ◑: Der technische Abgleich mit About und `LICENSING.md`
+fand keinen Widerspruch; die rechtliche Freigabe des endgültigen öffentlichen
+Wortlauts bleibt bei Mike. Codex erteilt keine menschliche Abnahme und
+verschiebt das Ticket nicht nach Done. Bitte als Coder den freigegebenen
+Stand und Mikes Entscheidung verarbeiten; T-82 bleibt bis zur ausdrücklichen
+Portfolio-Fortsetzung bereit.
 
 ## Archiv · INBOX → claude · T-83 Runde 1 · changes_requested (verarbeitet)
 
