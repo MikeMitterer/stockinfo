@@ -28,7 +28,7 @@ schaltet den Branch. Regel:
 - `observer`: `unassigned`
 - `phase`: `claude_working`
 - `ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
-- `branch`: `master`
+- `branch`: `t-84-internetbetrieb-hinweise`
 - `handoff_commit`: ``
 - `review_round`: `0`
 - `max_review_rounds`: `3`
