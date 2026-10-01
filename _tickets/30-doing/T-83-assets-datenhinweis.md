@@ -181,3 +181,82 @@ Hinweise und Tickets bleiben getrennt.
 
 Umgesetzt auf `t-83-assets-datenhinweis`; Übergabe an Verifier `codex`.
 Rechtliche Freigabe des öffentlichen Wortlauts: Mike.
+
+### Verifier-Prüfung · Runde 1 (Codex, 2026-10-01)
+
+**Ergebnis: `changes_requested`.** Prüfgegenstand war `4acdc02` gegen
+`0bb9a4d`. Der verhaltensneutrale Review-Commit `606aa16` ergänzt nur die
+Funktionsdokumentation des Browser-Prüfskripts. Produktcode, Katalogtexte,
+Assertions und Testdaten wurden im Review nicht geändert.
+
+**Blocker B1 · Browser-Prüfskript startet ohne ausdrücklichen Befehl.**
+`_tickets/30-doing/T-83-browser.mjs:21` setzt ohne Argument eine Ziel-URL;
+der Ablauf ab Zeile 67 startet dann Chromium und schreibt Screenshots.
+`--help` wird an derselben Stelle als URL behandelt. Das widerspricht
+`code-standards/references/cli.md` („Kein stilles Loslegen — --help bei
+keiner Option“ und Kurz-/Langform für Optionen). Auch der dort verlangte
+dokumentierte Header-Block fehlt. Der Coder ergänzt Hilfe bei leerem Aufruf
+und `-h|--help`, eine ausdrückliche Aktion wie `-r|--run [URL]`, den Header
+und zieht die Verwendung im Ticket nach. Danach sind
+`node --check`, der betroffene Browserlauf und der Doku-Abgleich erneut
+auszuführen. Diese Änderung betrifft das Skriptverhalten und ist deshalb
+keine Verifier-Selbstheilung.
+
+**Unabhängige Nachweise:**
+
+- Verify #1/#2: Mit StockPortfolios isoliertem StockInfo-Testserver
+  (temporäre Datenbank, 14 Assets) und dem Dashboard unter 1440 × 900 und
+  390 × 844 gemessen. Jeweils ein Hinweis nach `.scroll` beziehungsweise
+  `.cards`, 4 px Abstand, innerhalb der Karte, 12 px Schrift, 17,4 px
+  Zeilenhöhe, keine horizontale Überbreite. Die Ausschnitte wurden angesehen.
+  Der Stil stimmt mit StockPortfolios `TradeNotice.vue` überein; `$color-muted`
+  ist ein Alias für `token(--text-muted)`.
+- Verify #3: Browserlauf auf derselben Seite zeigte DE → EN → DE ohne
+  Neuladen; der Komponententest prüft die reaktive Übersetzung ebenfalls.
+  Der Browserlauf ändert die i18n-Instanz direkt und belegt damit die
+  Aktualisierung des Textes, keinen Klickweg durch die Einstellungen.
+- Verify #4 bleibt ◑: `about.data`, `about.use`, `about.legal` und
+  `LICENSING.md` wurden auf Aussagen zu Datenqualität und gesetzlichen
+  Ansprüchen abgeglichen. Eine rechtliche Freigabe wird nicht erteilt.
+- Verify #5: `make test-dashboard` mit Lint und 389/389 Tests,
+  `npm --prefix dashboard run build`, Docker-Hub-Vorschau (7.940 Bytes)
+  und `git diff --check 0bb9a4d 4acdc02` bestanden. Der Browserlauf
+  nach `606aa16` lieferte dieselben Werte. Die eigenen Testserver wurden
+  beendet. Ein TypeScript-Compiler-API-Inventar der berührten TS-/Vue-/JS-
+  Dateien fand keine deutschen Bezeichner.
+
+**Umfang:** Der tatsächliche Diff `0bb9a4d..4acdc02` enthält 11 Dateien,
+273 Einfügungen und 16 Löschungen; die OUTBOX nennt 312 Einfügungen. Das
+ändert den Prüfgegenstand nicht, ist aber bei der Nacharbeit zu berichtigen.
+Die zusätzliche `playwright-core`-Abhängigkeit ist durch Mikes ausdrückliche
+Vorgabe gedeckt. Browser-Skript und drei README-Sätze sind im Ticket erklärt.
+
+**Code-Standards:** Gelesen:
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md`, Referenzen
+`architecture.md`, `frontend.md`, `quality.md`, `cli.md` und
+`documentation.md` sowie `ux-standards/SKILL.md` mit `styles.md` und
+`responsive.md`. Architektur ✅: reine Darstellung in der vorhandenen
+Komponente. Shell ➖, Python ➖, Persistenz ➖: nicht berührt. CLI ⚠️ 1 Befund
+(B1). Frontend/i18n ✅: DE/EN-Katalogschlüssel, reaktiver Text, Token-Stil.
+Qualität/Tests ✅: Leerfall, Platzierung, Sprache und negativer `v-if`-Mutant;
+eigene Testläufe oben. Dokumentation ✅ für den geprüften Produktstand;
+die Skriptverwendung muss nach B1 nachgezogen werden. DRY ✅: keine neue
+fachliche Hilfslogik; die eigenständig lesbaren Hinweise in About und Assets
+teilen einen Satz bewusst. Die repoübergreifende Wiederholung des
+Hinweisstils ist im Ticket als Bedarf für ux-foundation sichtbar und nicht
+Teil dieses StockInfo-Auftrags.
+
+**Selbstheilung:** `606aa16` ergänzt an `measureNotice` und `switchLocale`
+JSDoc mit Zweck, Parametern und Rückgabewert. Nur diese zwei Fundstellen
+wurden geändert; `node --check`, `git diff --check` und beide Browserbreiten
+wurden danach erneut geprüft. Es gab keine Änderung an Produktdateien.
+
+**Doku-Abgleich:** `README.md` (Dashboard → Assets), `docker/README.md`
+(What you get) und `unraid/README.md` (About) nennen den neuen Hinweis
+übereinstimmend. `LICENSING.md` und About bleiben unverändert; die
+öffentliche Rechtsfreigabe bleibt offen. Die Nacharbeit an der
+Skriptbedienung betrifft dieses Ticket und den Skriptheader, nicht die
+Produktanleitungen. SI-P-01, SI-P-02, SI-P-04, SI-P-08 und SI-P-13 wurden
+gegen Testtiefe, Umfang und Standardgewicht geprüft. B1 ist ein konkreter
+Standardverstoß; ein neuer allgemeiner Lesson-Eintrag ist daraus nicht
+belegt.
