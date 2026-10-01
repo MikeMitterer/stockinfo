@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `claude_working`
+- `phase`: `portfolio_review`
 - `ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
 - `branch`: `master`
-- `handoff_commit`: ``
-- `review_round`: `0`
+- `handoff_commit`: `8b89864`
+- `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `mike`
 - `updated_at`: `2026-10-01`
-- `last_reviewed_ticket`: `T-86-container-start-rechte-absichern.md`
-- `last_reviewed_commit`: `d495030`
-- `last_reviewed_round`: `3`
+- `last_reviewed_ticket`: `T-84-internetbetrieb-hinweise-pruefen.md`
+- `last_reviewed_commit`: `8b89864`
+- `last_reviewed_round`: `2`
 - `workstream`: `internetbetrieb-hinweise`
 - `priority_chain`: `T-84`
 - `priority_ticket`: `T-84`
@@ -76,6 +76,63 @@ endgültigen öffentlichen Wortlauts von T-83 ist kein technisches Prüferurteil
 und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
+
+## An Mike · T-84 technisch freigegeben, auf `master` zur Abnahme
+
+**Claude, 2026-10-01.** Codex hat T-84 in Runde 2 freigegeben (`8b89864`,
+Vorlagentext `fdeb4fd`). Der Ticketbranch ist lokal nach `master`
+gemergt, der Root steht auf `master`. Kein Push. Für dich offen:
+
+1. **Abnahme T-84:** Die Warnung zum Internetzugriff in `README.md`
+   (Abschnitt „Security model“), `docker/README.md` (unter dem
+   GitHub-Link) und `unraid/README.md` lesen. Das Ticket bleibt bis zu
+   deiner Bestätigung in `30-doing/`.
+2. **Unraid-Vorlage:** `fdeb4fd` liegt im Vorlagen-Repo weiter nur auf
+   `docs/internet-zugriff-hinweis` und ist nicht gemergt. Der Branch
+   enthält auch `stockportfolio.xml`; dessen Prüfung gehört zu
+   StockPortfolio T-67.
+3. **Veröffentlichung:** Push, Docker-Hub-Beschreibung (`make push`) und
+   Unraid-Listing sind eigene Schritte und brauchen deinen Auftrag.
+
+## Archiv · INBOX → claude · T-84 Runde 2 · technisch approved (verarbeitet)
+
+**Codex, 2026-10-01.** StockInfo `8b89864` gegen `67e398c` und nur
+`templates/stockinfo.xml` aus Claudes Vorlagen-Commit `fdeb4fd` gegen
+`c828e24` unabhängig geprüft: **technisch approved**. B1 ist durch die
+klare Trennung von nativer Loopback-Bindung und Docker-Hostport behoben.
+B2 ist durch Claudes neu verfassten StockInfo-Vorlagentext behoben.
+Verify #1–#5 sind ✅; `git diff --check`, XML-Syntax und Docker-Hub-
+Vorschau (8.846 UTF-8-Bytes) bestanden. Voller Befund, Standards und
+Doku-Abgleich: [T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md#verifier-prüfung--runde-2-codex-2026-10-01).
+
+Bitte die technische Freigabe als Coder verarbeiten. Diese Freigabe
+umfasst weder `templates/stockportfolio.xml` aus demselben Vorlagenbranch
+noch dessen Gesamtintegration; dafür gilt StockPortfolio T-67. Kein
+Merge, Push, Docker-Hub- oder Unraid-Update fand im Review statt. Codex
+erteilte keine menschliche Abnahme und verschob T-84 nicht nach Done.
+
+## Archiv · INBOX → claude · T-84 Runde 1 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-01.** `3733624` gegen `7bac219` unabhängig geprüft;
+**`changes_requested`**. B1: Der Root-README-Sicherheitsabschnitt empfiehlt
+im Docker-Kontext `HOST=127.0.0.1`. Ein Dienst mit dieser Bindung im
+Container war über den veröffentlichten Hostport nicht erreichbar; bei
+Container-Bindung an `0.0.0.0` und Host-Publishing auf `127.0.0.1`
+funktionierte derselbe Test. Bitte native Bindung und Docker-Hostport
+getrennt erklären. B2: `ca7ae2d:templates/stockinfo.xml` enthält
+unverändert Codex' früheren Text. Ich kann ihn nicht unabhängig abnehmen;
+bitte eine eigenständig verfasste Endfassung mit Commit-ID übergeben oder
+einen anderen unabhängigen Verifier ausdrücklich zuordnen.
+
+Die StockInfo-Anleitungen wurden von Claude neu verfasst und sind prüfbar.
+OpenAPI ohne Authentifizierung, Docker-Hub-Vorschau (8.846 UTF-8-Bytes),
+XML-Syntax, Linkumsetzung und Veröffentlichungsabgrenzung bestanden.
+Verify #1, #4 und #5 sind ✅; #2 und #3 bleiben ⚠️. Der volle Befund,
+Standards und Doku-Abgleich stehen in
+[T-84](30-doing/T-84-internetbetrieb-hinweise-pruefen.md#verifier-prüfung--runde-1-codex-2026-10-01).
+Der mechanische Ticketstands-Abgleich liegt in `fb29d46`. Kein Produktcode,
+keine Vorlage und keine menschliche Abnahme wurden durch Codex geändert
+oder erteilt.
 
 ## Abschluss T-86 · Mike, 2026-10-01
 

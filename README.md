@@ -171,24 +171,35 @@ versions and cause. See [plugin data migrations](docs/plugin-authors.md#plugin-d
 endpoint is open to anyone who can reach the port — including the ones that
 change or destroy data:
 
-- `DELETE /instruments/{isin}` removes an instrument together with its entire
-  price history.
-- `PUT /instruments/by-symbol/{symbol}/isin` and
-  `PUT /instruments/by-symbol/{symbol}/overrides`
-  change stored data.
-- `POST /refresh` and `GET /analyze` trigger live requests to Yahoo and
-  justETF and write their results to the database.
+- `POST /backups/{name}/restore` replaces the whole database with a backup.
+- `DELETE /instruments/{isin}` and `DELETE /instruments/by-symbol/{symbol}`
+  remove an instrument together with its entire price history.
+- `POST /instruments/intake`, `PUT /instruments/by-symbol/{symbol}/isin`,
+  `PUT /instruments/by-symbol/{symbol}/overrides` and
+  `PATCH /instruments/by-id/{listing_id}/details` add or change stored data.
+- `POST /refresh` (also for one instrument) fetches live data from Yahoo and
+  justETF and writes it to the database; `GET /analyze` triggers live
+  requests without storing them.
 
-The default bind address is `0.0.0.0`, so in Docker the port is reachable from
-the whole network the container is attached to.
+The default bind address is `0.0.0.0`. Started natively, StockInfo is then
+reachable from your network; in Docker, every host address the port is
+published on can reach it.
 
 **Run it on a network you trust.** In practice that means one of:
 
-- bind it to loopback only (`HOST=127.0.0.1`) and reach it through an SSH
-  tunnel;
+- keep it on the local machine and reach it through an SSH tunnel. Natively,
+  bind it to loopback with `HOST=127.0.0.1`. In Docker, keep the container's
+  `HOST` at `0.0.0.0` and publish the port on the host's loopback only
+  (`-p 127.0.0.1:8000:8000`); `HOST=127.0.0.1` inside the container would make
+  the published port unreachable;
 - keep the published port inside your LAN and off the internet (the usual
   Unraid setup);
-- or put an authenticating reverse proxy in front of it if it must be exposed.
+- for remote access, connect to that network through a VPN instead of
+  forwarding the port;
+- or, if it must be reachable from outside, put a reverse proxy with HTTPS
+  **and** a login in front of it.
+
+Never forward StockInfo's port directly to the internet.
 
 `CORS_ORIGINS` is **not** a protection. It restricts what a browser on another
 origin may do — it does nothing about `curl`, a script, or any server-to-server
@@ -359,6 +370,9 @@ The backend must run in parallel. Both together: **`make dev-up`** (see Quick st
 ## Docker
 
 Container installation and operation: [Docker guide](docker/README.md).
+
+StockInfo has no login. Do not forward the container port to the internet;
+the [security model](#security-model) lists safe ways to reach it.
 
 Published image: [mangolila/stockinfo on Docker Hub](https://hub.docker.com/repository/docker/mangolila/stockinfo/general).
 
