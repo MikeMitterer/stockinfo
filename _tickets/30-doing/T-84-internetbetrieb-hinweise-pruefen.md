@@ -12,10 +12,10 @@ sollen einen geschützten Zugriffsweg nennen.
 
 **Stand:** Mike hat am 2026-10-01 einen Reviewauftrag verlangt und später
 Codex ausdrücklich als Verifier bestimmt. Claude ist Coder; die maßgebliche
-Zuordnung steht in `STATUS.md`. Der Dokumentations-Commit `396e8be` und der
-zentrale Template-Commit `ca7ae2d` sind lokal vorbereitet; eine unabhängige
-Review-Übergabe oder Freigabe hat noch nicht stattgefunden. Dieses Ticket
-ist in `30-doing/` aktiv.
+Zuordnung steht in `STATUS.md`. Claude hat die StockInfo-Endfassung
+`3733624` zur unabhängigen Prüfung übergeben. Der zentrale Template-Commit
+`ca7ae2d` ist weiterhin vorbereitet, aber von Codex verfasst. Eine
+Freigabe liegt noch nicht vor. Dieses Ticket ist in `30-doing/` aktiv.
 
 Für Mike steht jetzt kein Handgriff an. Abschluss und Veröffentlichung
 bleiben nach der technischen Prüfung getrennt; Docker Hub und das
@@ -51,9 +51,9 @@ der API ab.
 | StockInfo | 0,5–1 h | `README.md`, `docker/README.md`, `unraid/README.md`; Commit `396e8bebc403144a8900bf45bf9c56644467499c` gegen `f821c2ab546ba7b47f3dc2828de3fc953490ea3d` | — |
 | Unraid-Templates | 0,5 h | ausschließlich `templates/stockinfo.xml` aus Commit `ca7ae2d7b15331bf84a0fa344f436c37e3863e9c` gegen `c828e24671a81fd53824f67e3fea21b4e35b280b` | — |
 
-Beide vorbereiteten Commits liegen auf dem jeweiligen Branch
-`docs/internet-zugriff-hinweis`. StockInfos Projekt-Root steht bis zur
-Anlage des T-84-Ticketbranches auf `master`; die frühere Arbeitskopie unter
+Die vorbereiteten Commits liegen auf dem jeweiligen Branch
+`docs/internet-zugriff-hinweis`. StockInfos Projekt-Root steht jetzt auf
+`t-84-internetbetrieb-hinweise`; die frühere Arbeitskopie unter
 `/private/tmp/stockinfo-internet-hinweis` entfällt mit T-85. Das
 Unraid-Templates-Repository hat weiterhin seine Arbeitskopie
 `/private/tmp/unraid-internet-hinweis`; T-85 ändert dort nichts. Das Gegenstück für StockPortfolio
@@ -62,15 +62,12 @@ Commit wird pro Ticket nur für die eigene XML-Datei bewertet.
 Eine Freigabe des gesamten Template-Commits braucht auch das StockPortfolio-
 Prüfergebnis aus T-67.
 
-Vor einer formellen Übergabe stellt der zuständige Coder `claude` die
-Dokumentationsfassung auf dem aktuellen StockInfo-Stand bereit und schreibt
-die OUTBOX mit den endgültigen Commit-IDs. Der unabhängige Review gehört
-`codex`. Die vorbereitete StockInfo-Fassung entstand unter der früheren
-Codex-Coder-Zuordnung; Claude klärt und dokumentiert die Autorenschaft der
-Endfassung, damit Codex keine unverändert übernommene eigene Fassung prüft.
-Der bisherige Branch baut auf der T-83-Aktivierung auf; spätere
-T-83-Änderungen sind darin noch nicht enthalten. Keine Reviewphase allein
-aus den vorbereiteten Commits ableiten.
+Claude hat die StockInfo-Dokumentationsfassung auf dem aktuellen Stand
+selbst geschrieben und die OUTBOX mit `3733624` übergeben. Der
+unabhängige Review gehört `codex`. Die vorbereitete StockInfo-Fassung
+`396e8be` aus der früheren Codex-Coder-Zuordnung ist nicht die
+Prüffassung. Der Vorlagentext aus `ca7ae2d` stammt dagegen weiterhin von
+Codex; dafür fehlt ein unabhängiger Verifier.
 
 ### Verify
 
