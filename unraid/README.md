@@ -96,7 +96,11 @@ bridge networking. Dashboard and API share the same port.
 Keep the appdata directory when updating or replacing the container. It holds
 the SQLite database, `sources.yaml` and other application data. The entrypoint
 prepares `/data` ownership and runs the app as **UID 99 / GID 100**, matching
-Unraid's `nobody:users`. The directory must be writable by that user.
+Unraid's `nobody:users`; a freshly created appdata directory owned by `root`
+works without changes. If the directory belongs to another user, add the
+variables `PUID` and `PGID` to the container with that owner's IDs. When the
+directory is not writable, the container stops with a log message naming the
+path and IDs.
 
 The template uses a host directory, whereas `make up` uses a named Docker
 volume. Data is not copied between them automatically.
