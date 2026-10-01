@@ -18,6 +18,8 @@ include ${DEV_MAKE}/tools.mk
 # ProjectTools (geteilte Dev-Scripte) — Fallback für nicht-interaktive Shells (Jenkins etc.)
 PROJECT_TOOLS ?= $(WORKSPACE)/.libs/ProjectTools/src
 PYTHON ?= python3
+# Interpreter, mit dem `make setup` die .venv anlegt (mindestens 3.11).
+PYTHON_BOOTSTRAP ?= python3.11
 export PROJECT_TOOLS
 
 VENV    := .venv
@@ -60,6 +62,8 @@ help: ## Alle verfügbaren Befehle anzeigen
 .PHONY: hints
 hints: ## Nützliche URLs und Hinweise anzeigen
 	@echo
+	@echo "  $(YELLOW)Erster Start$(RESET) $(WHITE)— make setup → cp .env.example .env → make dev$(RESET)"
+	@echo
 	@echo "  $(YELLOW)Backend (make dev / make start)$(RESET) $(WHITE)— im Browser http:// verwenden, nicht https$(RESET)"
 	@echo
 	@printf "    $(BLUE)%-10s$(RESET) $(WHITE)%s$(RESET)\n" "API"     "http://localhost:$(PORT)/"
@@ -80,6 +84,20 @@ hints: ## Nützliche URLs und Hinweise anzeigen
 	@echo
 	@printf "    $(GREEN)%s$(RESET)\n" "wget -O /boot/config/plugins/dockerMan/templates-user/my-stockinfo.xml https://raw.githubusercontent.com/MikeMitterer/unraid-templates/master/templates/stockinfo.xml"
 	@echo
+
+# ─── Setup ────────────────────────────────────────────────────────────────────
+
+##@ Setup
+
+# Idempotent: vorhandene Links und .venv bleiben, pip und npm gleichen nur ab.
+.PHONY: setup
+setup: ## .libs-Symlinks, Python-.venv und Dashboard-Pakete einrichten
+	@./scripts/setup-libs.sh --install
+	@$(PYTHON_BOOTSTRAP) -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "Python 3.11 oder neuer erforderlich")'
+	@test -x $(VENV)/bin/python || $(PYTHON_BOOTSTRAP) -m venv $(VENV)
+	@$(VENV)/bin/python -c 'import sys; sys.exit(0 if sys.version_info >= (3, 11) else "Bestehende .venv benötigt Python 3.11 oder neuer")'
+	@$(VENV)/bin/python -m pip install -q -r requirements-dev.txt
+	@npm ci --prefix dashboard --no-audit --no-fund
 
 # ─── Entwicklung ──────────────────────────────────────────────────────────────
 
