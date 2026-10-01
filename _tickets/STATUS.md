@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
 - `branch`: `t-82-python-paket-konsumententests`
-- `handoff_commit`: ``
-- `review_round`: `0`
+- `handoff_commit`: `fa5b240`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-83-assets-datenhinweis.md`
 - `last_reviewed_commit`: `2690819`
@@ -61,6 +61,40 @@ endgültigen öffentlichen Wortlauts von T-83 ist kein technisches Prüferurteil
 und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
+
+## OUTBOX → codex · T-82 Runde 1
+
+**Claude, 2026-10-01.** Bitte prüfe `fa5b240` gegen `849454f` auf
+`t-82-python-paket-konsumententests`. Dazwischen liegt `ff21c5c`, eine reine
+Messnotiz im Backlog-Ticket T-86 auf Mikes Frage; sie gehört nicht zu T-82.
+Prüfgegenstand: [T-82](30-doing/T-82-python-paket-fuer-konsumententests-klaeren.md).
+
+- **Ergebnis:** `make setup` legt `.libs`-Links an (`scripts/setup-libs.sh`,
+  Hausvorlage), erstellt `.venv` mit Python 3.11+, installiert
+  `requirements-dev.txt` und `npm ci` fürs Dashboard. ProjectTools steht als
+  `-e ./.libs/ProjectTools` in `requirements-dev.txt`, nicht in
+  `requirements.txt`, weil der Docker-Build jene installiert und `.libs/`
+  dort fehlt. Mikes Vorgaben (setup erstellt die venv, Datei im Root,
+  Projekt eigenständig, keine Querverweise) stehen wörtlich im Ticket.
+- **Abweichung von der Vorlage:** Die Hausvorlage prüfte
+  `ProjectTools/src/python/colors.py`, die es seit dem Paketumbau nicht mehr
+  gibt; `make setup` brach daran ab. Die StockInfo-Kopie prüft
+  `src/python/projecttools/ui/colors.py` (eine Zeile plus Kopfkommentar). Die
+  Skill-Vorlage selbst ist als offene Übernahme notiert.
+- **Verify → Orakel:** #1 frische venv im Scratchpad und entfernter
+  ProjectTools-Link → Setup legt neu an, Import gelingt. #2 `--help` des
+  Konsumentenskripts mit StockInfos `.venv`, Theme aktiv, kein Dienst. #3
+  Testserver `--run/--status/--stop` auf 18083, nur eigene PID. #4
+  `make test` vollständig grün, Build grün, `shellcheck` ohne Befund.
+- **Umfang:** 2/2 fachliche Änderungen; 4 Projektdateien (Makefile, README,
+  `requirements-dev.txt`, `setup-libs.sh` neu) plus Ticket. Diff ohne T-86:
+  +282/−22 statt 250 geplant. Grund: Die Vorlage `setup-libs.sh` hat allein
+  159 Zeilen und ist bis auf die Pfadzeile unverändert übernommen.
+- **Standards:** `code-standards` (`cli.md`, `shell.md` über die Vorlage),
+  `makefile-conventions`. Makefile ✅: `setup` in eigener Gruppe, `##`-Hilfe,
+  `hints` nennt den ersten Start. Shell ✅: Vorlage, `shellcheck` sauber,
+  Bezeichner englisch und GROSS. Python/Frontend/Persistenz ➖ nicht berührt.
+  DRY ✅: keine zweite Link-Logik, Requirements nur an einer Stelle.
 
 ## Abschluss T-83 · Mike, 2026-10-01
 
