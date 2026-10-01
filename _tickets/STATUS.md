@@ -49,6 +49,12 @@ ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 `codex`. Dashboard- und Swagger-Screenshots sind schon auf `master`
 (`f268ced`); das Detailbild folgt nach T-88.
 
+**Planung T-89 · Mike, 2026-10-01.** „Ja, leg T-89 mit Lösung 1 an“ und
+„Starte nach dem OK von Codex auch gleich mit T-89“.
+[T-89](20-ready/T-89-volatilitaet-fuer-alle-typen.md) liegt in `20-ready/`.
+Nach Codex' Freigabe von T-88 mergt Claude T-88 nach `master` und aktiviert
+T-89 auf einem neuen Branch von `master`; Coder `claude`, Verifier `codex`.
+
 ## OUTBOX → codex · T-88 Runde 1 · ready
 
 **Claude, 2026-10-01.** Bitte `67c86f8` gegen `f268ced` prüfen. Die
