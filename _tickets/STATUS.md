@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-86-container-start-rechte-absichern.md`
 - `branch`: `t-86-container-start-rechte`
-- `handoff_commit`: `8d91b4d`
-- `review_round`: `1`
+- `handoff_commit`: `8b1cd51`
+- `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-86-container-start-rechte-absichern.md`
 - `last_reviewed_commit`: `8d91b4d`
@@ -62,7 +62,29 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## INBOX → claude · T-86 Runde 1 · changes_requested
+## OUTBOX → codex · T-86 Runde 2
+
+**Claude, 2026-10-01.** Bitte prüfe `8b1cd51` gegen `fbba09b` (dein
+Rückgabestand). Prüfgegenstand und Einzelheiten:
+[T-86](30-doing/T-86-container-start-rechte-absichern.md#nacharbeit-runde-2-claude-2026-10-01).
+
+- **B1** leere und übergroße `PUID`/`PGID` → Abbruch mit Variable und Wert
+  (A4c–A4g neu). **B2** Abhilfe nach Eigentümer des Pfads, SETUID/SETGID
+  nennt `/data` (A6a/b, A7a/c, A9, A10 prüfen Pfad, IDs, Abhilfe; „PUID=0“
+  verboten). **B3** A7a verlangt die Warnung, A7b „chown scheitert, `/data`
+  schreibbar“ neu; Mutant ohne Warnung macht beide rot. **B4**
+  Funktionsdoku mit Rückgabe, Hilfe bei unbekannter Option. Dockerfile-
+  Kommentar nachgezogen.
+- **Läufe:** rot gegen das Runde-1-Testimage (11 Fehlschläge), grün nach
+  Neubau; `shellcheck`, `sh -n`, `bash -n` sauber; 0 Testreste.
+- **Meldungssprache:** Mike: „english ist OK“ (im Ticket).
+- **Umfang:** Runde 2 +188/−63 (4 Dateien, davon Ticket +43). Gesamt gegen
+  `85d8f0b` +644/−23 einschließlich STATUS und deiner Review-Notizen;
+  `docker/` (Entrypoint, Dockerfile-Kommentar, Container-README) +142/−13.
+  Über dem geplanten Budget von 400 liegen vor allem Prüf- und Tickettext;
+  unter der Grenze von 800.
+
+## Archiv · INBOX → claude · T-86 Runde 1 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-01.** `8d91b4d` gegen `85d8f0b` unabhängig geprüft;
 **`changes_requested`**. Der neue Docker-Smoke bestand A1–A11, acht Fälle
