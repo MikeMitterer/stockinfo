@@ -63,7 +63,7 @@ class FakeJustEtf:
             ter=0.2,
             provider="iShares",
             replication="Physisch",
-            fund_size=1_200_000_000.0,
+            fund_size=1200.0,
             fund_currency="USD",
             fund_domicile="Irland",
             name="iShares Core MSCI World",
@@ -116,8 +116,8 @@ class TestJustEtfMetadata(MetadataContract):
     * Bei Unzuständigkeit kam `None` statt einer leeren Liste zurück. Das ist
       ein Unterschied: „nicht zuständig" und „zuständig, nichts gefunden" darf
       der Aufrufer nicht verwechseln.
-    * `fund_size` trägt `Unit.ABSOLUTE` und kam **ohne Währung**. Ein Betrag
-      ohne Währung ist bedeutungslos — dieselbe Regel, die für Kurse gilt.
+    * `fund_size` ist ein Betrag und kam **ohne Währung**. Ein Betrag ohne
+      Währung ist bedeutungslos — dieselbe Regel, die für Kurse gilt.
     """
 
     responsible = ResolveRequest(isin="IE00B4L5Y983")
@@ -226,7 +226,7 @@ def test_das_fondsvolumen_traegt_euro_und_nicht_die_fondswaehrung() -> None:
     Der Test nimmt deshalb bewusst einen Fonds, dessen Fondswährung **nicht**
     EUR ist: Mit einem EUR-Fonds wäre er grün gewesen, ohne etwas zu prüfen.
     """
-    details = EtfDetails(fund_size=1_200_000_000.0, fund_currency="USD")
+    details = EtfDetails(fund_size=1200.0, fund_currency="USD")
 
     readings = {reading.field: reading for reading in as_readings(details)}
 
