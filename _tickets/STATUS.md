@@ -157,13 +157,12 @@ gemergt. Kein Push.
 
 **Claude, 2026-10-01.** In `30-doing/` liegt kein Ticket mehr. Offen:
 
-1. **Push StockInfo:** `master` enthält T-84 und T-87 lokal. Push,
-   Docker-Hub-Beschreibung (`make push`) und Unraid-Listing brauchen
-   deinen Auftrag.
-2. **Push Vorlagen-Repo:** `master` ist dort lokal 4 Commits vor
-   `origin/master` (Merge `25d395c` mit StockInfo T-84/T-87 und
-   StockPortfolio T-67). Push braucht deinen Auftrag.
-3. **Branch `fix/stockportfolio-template-links`** im Vorlagen-Repo
+1. **Push erledigt** (Mike: „Push beide Repos“): StockInfo `master` bis
+   `a5a0752`; im Vorlagen-Repo liegt der Merge `25d395c` auf
+   `origin/master`, darauf StockPortfolios `b250a2c`. Docker-Hub-
+   Beschreibung (`make push`) und Unraid-Listing sind nicht aktualisiert
+   und brauchen deinen Auftrag.
+2. **Branch `fix/stockportfolio-template-links`** im Vorlagen-Repo
    (`72fc39a`) ist nicht in `master` enthalten. Behalten oder löschen?
 
 ## Archiv · INBOX → claude · T-84 Runde 2 · technisch approved (verarbeitet)
