@@ -2,6 +2,32 @@
 
 Generated from release tags and Conventional Commits.
 
+## v1.4.0+261001.2241.6c366 — 2026-10-01
+
+Datenhinweis im Dashboard, robusterer Containerstart bei Rechteproblemen, make setup und Hinweise zum Betrieb nur im Heimnetz oder per VPN
+
+### Features
+
+- Datenhinweis unter der Assets-Übersicht (`4acdc02`)
+
+### Fixes
+
+- Datenhinweis unter statt in der Assets-Karte (`acf9dd9`)
+- Containerstart bei Rechteproblemen absichern (`8d91b4d`)
+- ID-Pruefung und Abhilfe-Meldungen schaerfen (`8b1cd51`)
+- chmod-Abhilfe bei passendem Eigentuemer ohne Schreibrecht (`d495030`)
+
+### Other changes
+
+- make setup richtet .libs, .venv und Dashboard ein (`fa5b240`)
+
+### Documentation
+
+- Internetfreigabe warnen, Routenliste berichtigen (`3733624`)
+- Loopback nativ und in Docker getrennt erklaeren (`8b89864`)
+- Login-Proxy schliesst StockPortfolio aus, nur LAN und VPN nennen (`b93ff36`)
+- StockInfo nur im Heimnetz oder per VPN betreiben (`7b46d6b`)
+
 ## v1.3.0+260928.1407.95b90 — 2026-09-28
 
 About-Seite mit Datenhinweisen und Anbieterangaben
