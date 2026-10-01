@@ -185,21 +185,14 @@ The default bind address is `0.0.0.0`. Started natively, StockInfo is then
 reachable from your network; in Docker, every host address the port is
 published on can reach it.
 
-**Run it on a network you trust.** In practice that means one of:
+**Do not put StockInfo on the internet.** Use it only in your home network.
+From outside, connect to your home network with a VPN, for example
+WireGuard or Tailscale. Never open StockInfo's port on your router.
 
-- keep it on the local machine and reach it through an SSH tunnel. Natively,
-  bind it to loopback with `HOST=127.0.0.1`. In Docker, keep the container's
-  `HOST` at `0.0.0.0` and publish the port on the host's loopback only
-  (`-p 127.0.0.1:8000:8000`); `HOST=127.0.0.1` inside the container would make
-  the published port unreachable;
-- keep the published port inside your LAN and off the internet (the usual
-  Unraid setup);
-- for remote access, connect to that network through a VPN instead of
-  forwarding the port;
-- or, if it must be reachable from outside, put a reverse proxy with HTTPS
-  **and** a login in front of it.
-
-Never forward StockInfo's port directly to the internet.
+To use it only on your own computer: started natively, set
+`HOST=127.0.0.1`. In Docker, publish the port with `-p 127.0.0.1:8000:8000`
+and leave `HOST` unchanged; `HOST=127.0.0.1` inside the container makes the
+port unreachable.
 
 `CORS_ORIGINS` is **not** a protection. It restricts what a browser on another
 origin may do — it does nothing about `curl`, a script, or any server-to-server

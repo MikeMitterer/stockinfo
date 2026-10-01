@@ -36,10 +36,10 @@ If Community Applications is not installed, follow the
 If the application is not listed yet, the manual procedure below can be used
 for testing; it is not the standard installation path.
 
-**Do not forward the WebUI port to the internet.** StockInfo has no login;
-anyone who can reach it can change or delete data. Use it in your LAN, reach
-the LAN through a VPN (for example Unraid's WireGuard), or put a reverse
-proxy with HTTPS and a login in front of it. See the
+**Do not put StockInfo on the internet.** It has no login; anyone who can
+reach it can change or delete your data. Use it only in your home network.
+From outside, connect to your home network with a VPN, for example
+WireGuard or Tailscale. See the
 [security model](../README.md#security-model).
 
 [↑ Contents](#contents)
