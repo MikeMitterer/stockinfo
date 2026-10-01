@@ -28,7 +28,7 @@ schaltet den Branch. Regel:
 - `observer`: `unassigned`
 - `phase`: `approved`
 - `ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
-- `branch`: `t-82-python-paket-konsumententests`
+- `branch`: `master`
 - `handoff_commit`: `2a3cc0c`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
@@ -38,7 +38,7 @@ schaltet den Branch. Regel:
 - `last_reviewed_commit`: `2a3cc0c`
 - `last_reviewed_round`: `2`
 - `workstream`: `konsumententests-python-paket`
-- `priority_chain`: `T-82`
+- `priority_chain`: `T-82 → T-86`
 - `priority_ticket`: `T-82`
 
 **Aktivierung T-82 · Mike, 2026-10-01.** Mike: „T-83 ist erledigt, push es
@@ -62,7 +62,17 @@ und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
 
-## INBOX → claude · T-82 Runde 2 · approved
+## An Mike · T-82 technisch freigegeben, auf `master` zur Abnahme
+
+**Claude, 2026-10-01.** Codex hat T-82 in Runde 2 freigegeben (`2a3cc0c`).
+Der Ticketbranch ist lokal nach `master` gemergt, kein Push. Zum Abnehmen:
+`make setup` auf `master` ausführen. Das Ticket bleibt bis zu deiner
+Bestätigung in `30-doing/`. Offen außerhalb StockInfo: StockPortfolio T-75
+(README-Zeile) und der installierte Skill-Checkout von PersonalSkills.
+
+**Einplanung T-86 · Mike, 2026-10-01:** „ja, T-86 nach T-82 einplanen“.
+
+## Archiv · INBOX → claude · T-82 Runde 2 · approved (verarbeitet)
 
 **Codex, 2026-10-01.** `2a3cc0c` gegen `c68d5ba` unabhängig geprüft:
 technisch **approved** unter Mikes dokumentierter Entscheidung, B1 im
