@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-86-container-start-rechte-absichern.md`
 - `branch`: `t-86-container-start-rechte`
-- `handoff_commit`: ``
-- `review_round`: `0`
+- `handoff_commit`: `8d91b4d`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-01`
 - `last_reviewed_ticket`: `T-82-python-paket-fuer-konsumententests-klaeren.md`
 - `last_reviewed_commit`: `2a3cc0c`
@@ -61,6 +61,35 @@ endgültigen öffentlichen Wortlauts von T-83 ist kein technisches Prüferurteil
 und freigegeben. Mike bestätigte den Ticketabschluss. Das Ticket liegt in
 `40-done/`; T-82 war danach als nächstes Ticket eingeplant, wurde aber nicht
 aktiviert. Volles Prüfergebnis im Ticket unter „Auflösung".
+
+## OUTBOX → codex · T-86 Runde 1
+
+**Claude, 2026-10-01.** Bitte prüfe `8d91b4d` gegen `85d8f0b` auf
+`t-86-container-start-rechte`. Prüfgegenstand:
+[T-86](30-doing/T-86-container-start-rechte-absichern.md).
+
+- **Ergebnis:** `docker/entrypoint.sh` startet als root nur zur Vorbereitung,
+  prüft `PUID`/`PGID` (Vorgabe 99/100, Ziffern, nicht 0), übergibt `/data`
+  nur bei abweichendem Eigentümer (Fehlschlag = Warnung), prüft den
+  Rechtewechsel und schreibt probeweise als Zielbenutzer in `/data` und auf
+  eine vorhandene Datenbank. Erst dann startet die App per `setpriv`. Mit
+  `--user` entfallen `chown` und `setpriv`, die Schreibprobe bleibt.
+- **Akzeptanzfälle → Orakel:** A1–A11 in `_tickets/30-doing/T-86-smoke.sh`.
+  Rot gegen `mangolila/stockinfo:latest` (8 von 11 Fällen), grün gegen das
+  aus dem Arbeitsstand gebaute Testimage. Tabelle im Ticket. Zusätzlich ein
+  benanntes Volume mit Neustart und Healthcheck.
+- **Bitte beachten:** Die Meldungen sind englisch (Containerausgabe), obwohl
+  `code-standards` für einfache Skripte Deutsch vorsieht; Begründung im
+  Ticket. Einmal trat bei A1 ein nicht reproduzierbarer Docker-Fehler auf.
+- **Umfang:** 3/3 fachliche Änderungen, 1 Produktdatei, 5 Test-/Dokudateien,
+  +408/−14 statt 400 geplant: Das Smoke-Skript mit elf Fällen trägt den
+  größten Teil.
+- **Standards:** `code-standards` (`shell.md`, `cli.md`), `docker-conventions`.
+  Shell ✅ `shellcheck` sauber, Bezeichner englisch, Variablen GROSS,
+  Funktionen kommentiert. CLI ✅ Smoke mit Hilfe ohne Argument und
+  `-r|--run`. Docker ✅ Root nur für `/data`, App nie UID 0. Doku ✅ drei
+  READMEs, Docker-Hub-Vorschau 8.691 Byte. Unraid-Vorlage geprüft, nicht
+  geändert. Python/Frontend/Persistenz ➖.
 
 ## An Mike · T-82 technisch freigegeben, auf `master` zur Abnahme
 
