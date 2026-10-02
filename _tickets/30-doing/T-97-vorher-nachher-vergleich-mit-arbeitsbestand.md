@@ -14,10 +14,10 @@ vor T-90 `fund_size` = 1.234.000.000 EUR mit Quelle `manual`. Nach der
 Umstellung muss dieselbe Abfrage auf derselben Datenbank denselben Wert und
 dieselbe Quelle liefern.
 
-**Stand:** Runde 1 am 2026-10-02 mit `changes_requested`. Der unabhängige
+**Stand:** Runde 2 am 2026-10-02 mit `changes_requested`. Der unabhängige
 Positivlauf bestätigt 16 gespeicherte Assets und einen unveränderten
-Arbeitsbestand; Fehlerpfade des Vergleichswerkzeugs können noch fälschlich
-mit Exit 0 enden. Angelegt am 2026-10-02 auf Mikes Auftrag. Mike: „die visuellen
+Arbeitsbestand; ein fehlgeschlagener Aktualisierungsaufruf kann noch als
+erfolgreicher Schreibweg gelten. Angelegt am 2026-10-02 auf Mikes Auftrag. Mike: „die visuellen
 Tests werden mit dem YAML-File gemacht obwohl massive Änderungen bei dem
 Datenbankzugriffen gemacht wurden … am aktuellen Grund vorbei“ und „Ja, leg
 T-97 an und trag es ein“. Folgeticket der SQL-Umstellung in der
@@ -75,16 +75,17 @@ Kopie des Arbeitsbestands ist erteilt (siehe Grenzen).
       unverändert (Prüfsumme vor und nach dem Vergleich).
 - [x] Der Vergleich deckt die oben genannten Bereiche ab und nennt die Zahl
       der verglichenen Instrumente und Felder.
-- [ ] Der sichtbare Datenbankweg prüft **mindestens 15 verschiedene
+- [x] Der sichtbare Datenbankweg prüft **mindestens 15 verschiedene
       Assets** (Mike, 2026-10-02: „Zwei Papiere sind mir zu wenig … ich denke
       da mindestens 15“): verschiedene Gattungen, Identitätsformen, Börsen
       und Währungen, mit und ohne Details. Reicht der Arbeitsbestand dafür
       nicht, wird er mit einem eigenen Testbestand ergänzt.
-- [ ] Jeder Unterschied ist als erwartet (mit Ticket) oder als Befund
+- [x] Jeder Unterschied ist als erwartet (mit Ticket) oder als Befund
       eingeordnet; Befunde stehen als Folgetickets in der Kette. Im
-      Positivlauf keine Unterschiede; die Fehlerentscheidung fehlt noch.
+      Positivlauf keine Unterschiede; der Fehlerausstieg wurde gegengeprüft.
 - [ ] Der Schreibweg auf der Nachher-Kopie ändert nur die erwarteten Zeilen.
-      Im Positivlauf stimmig; die Assertion fehlt noch.
+      Die Tabellenänderung wird geprüft; der HTTP-Status der Aktualisierung
+      wird noch ignoriert (Runde 2, B6).
 - [x] Kopien und Antwortdateien sind nach dem Vergleich gelöscht.
 
 ### Side-Effects
@@ -100,6 +101,45 @@ Vergleichsskript greift nur darüber auf Datenbanken zu. Die App ruft keine
 der drei Funktionen auf; ihr Laufzeitverhalten ändert sich nicht.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
+
+**Ergebnis: `changes_requested`.** `e2c5f4e` gegen `780abf3` geprüft;
+Gesamtumfang gegen `master` acht Dateien und höchstens 900 Zeilen wie
+beschlossen. Rollen, Owner, Priorität, Branch und eingefrorener Commit
+stimmten, der Arbeitsbaum war sauber. Die Paket-VERSION blieb
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+Keine technische oder menschliche Freigabe, kein Merge und kein Push.
+
+**Unabhängige Gegenprüfung:** Sichtbarer W17-Lauf auf dem Hauptmonitor,
+Fenster x = 100: 16 Assets (9 aus dem Arbeitsbestand, 7 ergänzt) vor und
+nach Neustart, 4 Wechselkurspaare, 23 888 verglichene Felder, 0 Befunde,
+Exit 0. Die SHA-256 des Originals blieb
+`3627a9871d536ec943edab8d8a758719f74410367cbc9add8fb9ba18a01f986a`;
+`.tmp/t97/` ist leer. `make check` war grün (1310 Backendtests,
+399 Dashboardtests, 324 Plugin-API-Tests, 50 Beispieltests, Ruff, ESLint,
+`vue-tsc`). `git diff --check` war sauber. Die Korrekturen B1–B5 sind im
+Diff und durch den Positivlauf beziehungsweise die vorgelegten Gegenproben
+belegt.
+
+**B6 · Aktualisierungsfehler bleibt unbemerkt (blockierend):**
+`scripts/compare_database_versions.py`, `write_path`, verwirft den von
+`send(... /refresh/by-symbol/... POST)` gelieferten HTTP-Status. Wenn dieser
+Aufruf mit 500 scheitert und folglich keine Tabelle ändert, ergibt die
+Tabellenprüfung trotzdem `aktualisieren: []`, exakt den erwarteten Wert.
+Eine isolierte Gegenprobe mit `send` = 200, 200, 500 und den erwarteten
+Tabellen-Snapshots lieferte
+`{'setzen': ['detail_overrides'], 'zurücksetzen': [], 'aktualisieren': []}`.
+Damit kann der verlangte Aktualisierungsschritt ausfallen, während das
+Gesamtwerkzeug Exit 0 meldet. Den HTTP-Erfolg aller drei Schreibaufrufe
+prüfen und einen fehlgeschlagenen Refresh bis zum Prozess-Exit rot machen.
+Die Gegenprobe muss den 500er erfassen; ein weiterer Positivlauf bleibt
+sichtbar mit mindestens 15 Assets.
+
+**Doku-Abgleich:** `AGENTS.md` beschreibt den aktuellen Aufruf korrekt.
+`README.md`, `docker/README.md` und `unraid/README.md` brauchen für dieses
+agentenseitige Vergleichswerkzeug keine Änderung. Die fachliche Lücke ist
+im Ticket als B6 und im noch offenen Schreibweg-Kriterium sichtbar.
 
 ### Übergabe Runde 2 (Claude, 2026-10-02)
 
