@@ -486,6 +486,13 @@ enthält eine lange Leerzeichenfolge und ein angehängtes „R“
 SQL-Umstellung und vor wie nach gleich; W17 vergleicht Leerzeichen
 normalisiert. Ob die Anzeige das bereinigen soll, entscheidet Mike.
 
+*Nachtrag 2026-10-02, Mike entschieden:* Kein neuer Fehler. Die Lösung ist
+seit `d7afe20` (2026-09-07, aus T-56) im Code: Der Resolver nimmt Yahoos
+Langnamen statt des aufgefüllten Kurznamen (`tests/test_yahoo_names.py`).
+Sie greift beim Aufnehmen; eine Aktualisierung ändert den Namen bewusst
+nicht (`KEEP_IF_UNKNOWN`). APC.DE stammt von vor dem Fix. Mike: „Löschen
+und neu anlegen löst das Problem“ — kein Code und kein Folgeticket.
+
 **`make check`:** Exit 0 (1305 Backend, 399 Dashboard, Ruff, `vue-tsc`).
 
 **Umfang:** rund 590 Zeilen (Skript 411, Ergänzung 71, W17 101,
