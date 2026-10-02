@@ -96,6 +96,64 @@ Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
 
+## Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
+
+**Prüfstand:** `7d0be5e` gegen `833e3cf`; Rollen, Owner, Priorität,
+Ticketpfad und Branch stimmten. Paket-VERSION vor diesem Durchlauf
+unverändert:
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+**Ergebnis: `changes_requested`**, Runde 2 von höchstens 5.
+Kein Merge, Push oder menschliche Abnahme durch Codex.
+
+**B1 nur teilweise behoben · Die Ausnahme akzeptiert dynamisches SQL.**
+Der neue Wächter meldet das tatsächliche `exec_driver_sql` in
+`session.py:55` ohne Ausnahme und erlaubt die beiden festen
+Transaktionsanweisungen mit Ausnahme. Er sammelt dafür jedoch alle
+Stringkonstanten irgendwo in den Argumenten und prüft nur, ob diese
+Teilmenge von `{BEGIN, BEGIN IMMEDIATE}` sind. Meine unabhängige
+Gegenprobe:
+
+```python
+source = ('def run(connection, statement, immediate):\n'
+          '    connection.exec_driver_sql("BEGIN IMMEDIATE" if immediate else statement)\n')
+assert raw_sql(source, transactions_allowed=True) == []  # derzeitiger Fehler
+```
+
+Der zweite Zweig kann beliebiges SQL ausführen, obwohl die zugesagte
+Ausnahme **genau** `BEGIN` und `BEGIN IMMEDIATE` umfasst. Ebenso passiert
+`"BEGIN" + suffix` den Wächter. Bitte den ersten SQL-Argumentausdruck
+vollständig prüfen (feste Zeichenkette oder bedingter Ausdruck mit zwei
+festen erlaubten Zeichenketten); ein dynamischer Zweig muss als negative
+Gegenprobe rot sein. Der vorhandene echte Session-Ausdruck muss grün
+bleiben. Zusätzlich steht im Scope-Vertrag oben noch „rohes SQL nur in“
+den fünf anderen Modulen; dort die begründete Transaktionsausnahme aus
+Verify #2/#3 ebenfalls mitziehen. Verify #2/#3 bleiben ⚠️.
+
+**Geprüfter Rest:** Die neue Gegenprobe erkennt feste `PRAGMA`-, `COMMIT`-
+und `VACUUM`-Anweisungen; der Produktcode in `session.py` ist bis auf
+Docstring und Kommentar unverändert. Unabhängig **15 passed** im
+gezielten Grenztest, Ruff für `session.py` und den Grenztest sowie
+`git diff --check` grün. Die **1293 netzunabhängigen Backend-Tests**,
+**324 Plugin-API-Tests**, Browserbilder, übrige Verify-Zeilen,
+DRY-Prüfung und Doku-Abgleich aus Runde 1 bleiben ohne betroffenen
+Produktdiff gültig. Verify #1 und #4–#7 sind ✅.
+
+**Standards:** `/Users/macminipro/.codex/skills/code-standards/SKILL.md`
+mit `architecture.md`, `python.md`, `persistence.md`, `quality.md`,
+`documentation.md`; `task-verification-workflow` und lokale
+Autor-Lessons. Die getrennte Board-Übernahme `df699dd1` bleibt offen.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ nur ein bestehender Transaktionspfad; keine neue doppelte Logik, englische Namen im geänderten Code. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ➖ kein UI-Diff |
+| Python, FastAPI und Webhooks | ✅ kein Python-Verhaltensdiff; gezielter Test und Ruff grün. |
+| Datenbanken und Persistenzgrenzen | ⚠️ 1 Rest B1: dokumentierte Ausnahme wird vom Wächter zu weit gefasst. |
+| Fehler, Logging und Tests | ⚠️ 1 Rest B1: dynamischer SQL-Ausdruck ist ein falsches Grün der Gegenprobe. |
+| Markdown und Inhaltsverzeichnisse | ⚠️ 1 Rest B1: Scope-Vertrag nennt die Session-Ausnahme noch nicht. |
+
 ## Nacharbeit Runde 1 (Claude, 2026-10-02)
 
 Prüfgegenstand: `7d0be5e` gegen `833e3cf` (Nacharbeit) und gegen `master`
