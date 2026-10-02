@@ -32,6 +32,8 @@ const STAMP = new Date().toISOString().replace(/[:.]/g, '-')
 const OUT = join(ROOT, '.tmp', 'visual-check', STAMP)
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(',')) : null
+const HEADLESS = process.env.HEADLESS === '1'
+const WINDOW_X = 100
 const VIEWPORT = { width: 1512, height: 860 }
 
 class CheckFailed extends Error {}
@@ -39,6 +41,20 @@ class CheckFailed extends Error {}
 /** Bricht den laufenden Weg mit einer lesbaren Begründung ab. */
 function check(condition, message) {
   if (!condition) throw new CheckFailed(message)
+}
+
+/**
+ * Liegt das Fenster auf dem Hauptmonitor?
+ *
+ * Unter macOS beginnt nur der Hauptmonitor bei x = 0 mit der Menüleiste
+ * oben; ein Monitor daneben, darüber oder darunter hat einen anderen
+ * Ursprung. Chrome meldet den Monitor des Fensters über `screen`.
+ */
+async function checkOnMainDisplay(page) {
+  const place = await page.evaluate(() => ({ left: screen.availLeft, top: screen.availTop, x: window.screenX, width: screen.width }))
+  check(place.left === 0 && place.top >= 0 && place.top < 100 && place.x >= 0 && place.x < place.width,
+    `Fenster nicht auf dem Hauptmonitor: ${JSON.stringify(place)}`)
+  check(place.x >= WINDOW_X, `Fenster liegt unter dem Dock: x = ${place.x} statt mindestens ${WINDOW_X}`)
 }
 
 // ─── Instanz ──────────────────────────────────────────────────────────────
@@ -181,6 +197,7 @@ async function way(id, title, expect, body) {
       const page = await (options ? await newContext(options) : context).newPage()
       await page.goto(state.server.base + path)
       await settle(page)
+      if (!HEADLESS) await checkOnMainDisplay(page)
       return page
     },
     async shot(page, name) {
@@ -272,8 +289,11 @@ let browser = null
 try {
   browser = await chromium.launch({
     executablePath: CHROME,
-    headless: process.env.HEADLESS === '1',
-    args: ['--no-first-run'],
+    headless: HEADLESS,
+    // Sichtbare Läufe auf dem Hauptmonitor (Mike, 2026-10-02): Unter macOS
+    // liegt dessen Ursprung bei (0,0); 100 px Abstand links lassen das Dock
+    // frei. `ctx.page` prüft die Lage je Seite.
+    args: ['--no-first-run', ...(HEADLESS ? [] : [`--window-position=${WINDOW_X},0`])],
   })
 
   await way('W1', 'Start', {}, async (ctx) => {
@@ -361,20 +381,28 @@ try {
 
   await way('W4', 'Detailbereich', {}, async (ctx) => {
     const page = await ctx.page('/')
-    // Je Identitätsform, was die Quelle für diese Gattung deklariert.
+    // Je Identitätsform die Werte aus `examples/assets-standalone.yaml`.
+    // `fields` ist der ganze Feldteil bis „Source as of“, wörtlich: Bitcoin
+    // hat in der Datei keine Kurshistorie, seine Volatilität fehlt also
+    // ausdrücklich („-“). Der Fonds liefert nur den Anbieter; TER und Sitz
+    // stehen leer, damit W6 sie von Hand eintragen kann.
     const expectations = {
-      'EUNL.DE': ['iShares', 'Ireland', '0.2 %', 'yaml-file'],
-      'BTC-EUR': ['Volatility (1y)'],
-      DE0001102531: ['No detail fields are declared for this instrument.'],
-      DE0009848119: ['Total expense ratio (TER)', 'Fund provider', 'Fund domicile'],
+      'EUNL.DE': { texts: ['iShares', 'Ireland', '0.2 %', 'yaml-file'] },
+      'BTC-EUR': { fields: 'Volatility (1y)\n-' },
+      DE0001102531: { fields: 'No detail fields are declared for this instrument.' },
+      DE0009848119: { fields: 'Total expense ratio (TER)\n-\nFund provider\nDWS\nFund domicile\nFund domicile\n\nSource: yaml-file' },
     }
-    for (const [key, texts] of Object.entries(expectations)) {
+    for (const [key, { texts = [], fields }] of Object.entries(expectations)) {
       await row(page, key).locator('td.caret-col button').click()
       await settle(page)
       const detail = page.locator('.drilldown').first()
       check(await detail.isVisible(), `${key}: Detailbereich öffnet nicht`)
       const text = await detail.innerText()
       for (const expected of texts) check(text.includes(expected), `${key}: „${expected}“ fehlt im Detailbereich`)
+      if (fields !== undefined) {
+        const shown = text.split('Source as of')[0].trim()
+        check(shown === fields, `${key}: Felder „${shown.replace(/\n/g, ' | ')}“ statt „${fields.replace(/\n/g, ' | ')}“`)
+      }
       check(/Source as of: [A-Z][a-z]{2} \d{1,2}, \d{4}/.test(text), `${key}: kein Stand der Quelle im englischen Datumsformat`)
       await ctx.shot(page, key.replace(/[^A-Za-z0-9]/g, ''))
       await row(page, key).locator('td.caret-col button').click()
@@ -408,21 +436,26 @@ try {
     }
     const field = (page, label) => page.locator('.drilldown dl > div', { hasText: label })
     let page = await open()
-    await field(page, 'Fund provider').locator('.detail-editor__text').click()
-    await page.keyboard.type('Sichtpruefung KVG')
+    // Was die Quelle liefert, ist nicht editierbar: Der Anbieter kommt aus
+    // der Datei und hat kein Eingabefeld.
+    check(await field(page, 'Fund provider').locator('.detail-editor__text').count() === 0,
+      'gelieferter Anbieter lässt sich überschreiben')
+    // Text: der Fondssitz, den die Datei nicht liefert.
+    await field(page, 'Fund domicile').locator('.detail-editor__text').click()
+    await page.keyboard.type('Sichtpruefung Land')
     await page.keyboard.press('Enter')
     await settle(page)
     await page.close()
     page = await open()
-    check((await field(page, 'Fund provider').innerText()).includes('Sichtpruefung KVG'),
-      'manueller Anbieter übersteht das Neuladen nicht')
+    check((await field(page, 'Fund domicile').innerText()).includes('Sichtpruefung Land'),
+      'manueller Sitz übersteht das Neuladen nicht')
     const stored = await paper(fund)
-    check(stored?.details?.provider?.origin === 'manual', 'API meldet den Anbieter nicht als manuell')
+    check(stored?.details?.fund_domicile?.origin === 'manual', 'API meldet den Sitz nicht als manuell')
     await ctx.shot(page, 'entered')
-    await field(page, 'Fund provider').getByTitle('Remove your entry').click()
+    await field(page, 'Fund domicile').getByTitle('Remove your entry').click()
     await settle(page)
     const cleared = await paper(fund)
-    check(cleared?.details?.provider?.manual_value === null, 'Eingabe lässt sich nicht entfernen')
+    check(cleared?.details?.fund_domicile?.manual_value === null, 'Eingabe lässt sich nicht entfernen')
     await ctx.shot(page, 'removed')
 
     // Zahl: die TER des Fonds, die die Datei nicht liefert.
