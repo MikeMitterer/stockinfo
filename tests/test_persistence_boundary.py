@@ -246,15 +246,40 @@ def test_die_persistenzschicht_selbst_wird_gefunden() -> None:
 # dort begründet.
 ORM_ONLY_MODULES = ["repository.py", "detail_store.py", "meta_store.py", "session.py", "tables.py"]
 
+# Die eine zugelassene Ausnahme: `session.py` setzt die Transaktion selbst
+# (SQLAlchemy-Rezept für pysqlite) — genau diese beiden Anweisungen, sonst nichts.
+TRANSACTION_STATEMENTS = frozenset({"BEGIN", "BEGIN IMMEDIATE"})
 
-def raw_sql(source: str) -> list[str]:
-    """Nennt SQL-Text und `text(...)`-Aufrufe — das, was ein ORM-Modul nicht hat."""
+
+def raw_sql(source: str, *, transactions_allowed: bool = False) -> list[str]:
+    """Nennt rohes SQL — das, was ein ORM-Modul nicht hat.
+
+    Gezählt werden SQL-Text in Strings, `text(...)`, jeder Aufruf von
+    `exec_driver_sql(...)` und ein `execute(...)`, dessen erstes Argument
+    selbst ein String ist — nicht Spaltennamen in einem SQLAlchemy-Ausdruck.
+    Mit `transactions_allowed` bleibt ein `exec_driver_sql` erlaubt, dessen
+    Strings alle in `TRANSACTION_STATEMENTS` liegen.
+    """
     found = [finding for finding in database_accesses(source) if "SQL im String" in finding]
-    found += [
-        f"{node.lineno}: text(...)"
-        for node in ast.walk(ast.parse(source))
-        if isinstance(node, ast.Call) and isinstance(node.func, ast.Name) and node.func.id == "text"
-    ]
+    for node in ast.walk(ast.parse(source)):
+        if not isinstance(node, ast.Call):
+            continue
+        name = node.func.id if isinstance(node.func, ast.Name) else (
+            node.func.attr if isinstance(node.func, ast.Attribute) else None
+        )
+        strings = {
+            part.value
+            for argument in node.args
+            for part in ast.walk(argument)
+            if isinstance(part, ast.Constant) and isinstance(part.value, str)
+        }
+        if name == "text":
+            found.append(f"{node.lineno}: text(...)")
+        elif name == "exec_driver_sql":
+            if not (transactions_allowed and strings and strings <= TRANSACTION_STATEMENTS):
+                found.append(f"{node.lineno}: exec_driver_sql(...)")
+        elif name == "execute" and node.args and _string_text(node.args[0]) is not None:
+            found.append(f"{node.lineno}: execute('...')")
     return sorted(found)
 
 
@@ -262,7 +287,33 @@ def raw_sql(source: str) -> list[str]:
 def test_die_laufzeitmodule_enthalten_kein_rohes_sql(module: str) -> None:
     source = (PERSISTENCE_DIR / module).read_text(encoding="utf-8")
 
-    assert raw_sql(source) == []
+    assert raw_sql(source, transactions_allowed=module == "session.py") == []
+
+
+def test_die_transaktionsausnahme_gilt_nur_fuer_begin() -> None:
+    """Gegenprobe zur Ausnahme: Anderes rohes SQL im Session-Modul fällt auf."""
+    source = (
+        "def _on_begin(connection, immediate):\n"
+        "    connection.exec_driver_sql('BEGIN IMMEDIATE' if immediate else 'BEGIN')\n"
+        "def _on_connect(connection):\n"
+        "    connection.exec_driver_sql('PRAGMA foreign_keys = OFF')\n"
+        "    connection.exec_driver_sql('COMMIT')\n"
+        "    connection.execute('VACUUM')\n"
+    )
+
+    assert raw_sql(source, transactions_allowed=True) == [
+        "4: SQL im String",
+        "4: exec_driver_sql(...)",
+        "5: exec_driver_sql(...)",
+        "6: execute('...')",
+    ]
+    assert raw_sql(source) == [
+        "2: exec_driver_sql(...)",
+        "4: SQL im String",
+        "4: exec_driver_sql(...)",
+        "5: exec_driver_sql(...)",
+        "6: execute('...')",
+    ]
 
 
 def test_gegenprobe_rohes_sql_im_ormmodul_wird_gefunden() -> None:
