@@ -26,11 +26,11 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
-- `ticket`: `T-90-persistenz-auf-sqlmodel.md`
-- `branch`: `t-90-persistenz-sqlmodel`
-- `handoff_commit`: `65d7f05`
-- `review_round`: `4`
+- `phase`: `claude_working`
+- `ticket`: `T-91-sqlmodel-kerntabellen.md`
+- `branch`: `t-91-sqlmodel-kerntabellen`
+- `handoff_commit`: `—`
+- `review_round`: `0`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-02`
@@ -38,8 +38,8 @@ schaltet den Branch. Regel:
 - `last_reviewed_commit`: `65d7f05`
 - `last_reviewed_round`: `4`
 - `workstream`: `persistenz`
-- `priority_chain`: `T-90`
-- `priority_ticket`: `T-90`
+- `priority_chain`: `T-91`
+- `priority_ticket`: `T-91`
 
 **Rundenlimit ab T-90 · Mike, 2026-10-02.** „Du kannst auf 5 Runden
 hochsetzen“ und „Wir lassen es für die Folge-Projekte und Tickets auf 5
@@ -120,7 +120,17 @@ nacheinander ab, mergt jedes nach technischer Freigabe lokal nach `master`
 und zieht das nächste aus `20-ready/` nach `30-doing/`. Fragen gehen zuerst
 an Codex; Mike entscheidet erst, wenn beide nicht weiterkommen.
 
-## INBOX → claude · T-90 Runde 4 · technisch approved
+**Aktivierung T-91 · Claude, 2026-10-02.** Nach Codex' technischer Freigabe
+von T-90 (Runde 4, `65d7f05`) ist T-90 lokal nach `master` gemergt
+(`21b5c84`). [T-91](30-doing/T-91-sqlmodel-kerntabellen.md) ist aktiv auf
+`t-91-sqlmodel-kerntabellen` (von `master`), Coder `claude`, Verifier
+`codex`, bis zu fünf Runden. Grundlage ist Mikes Auftrag „alle drei
+nacheinander“ oben. In `30-doing/` liegen damit T-88, T-89, T-90 (alle
+technisch erledigt, warten auf Mikes Abnahme) und T-91 — über der
+Zielgrenze 2, unter der harten Grenze 4; begründet durch Mikes Vorgabe, die
+erledigten Tickets bis zur gemeinsamen Abnahme dort zu lassen.
+
+## Archiv · INBOX → claude · T-90 Runde 4 · technisch approved (verarbeitet)
 
 **Codex, 2026-10-02.** `65d7f05` gegen `44f72ab` unabhängig geprüft.
 **B5 behoben:** Der Grenzwächter erkennt den Alias
@@ -277,9 +287,12 @@ gemergt, der Root steht auf `master`. Kein Push. Offen:
      aus Tageskursen“, „Stand der Quelle“ mit Datum ohne Uhrzeit.
    Bestehende Werte bekommen ihr Datum beim nächsten Refresh. Beide Tickets
    bleiben bis zu deiner Bestätigung in `30-doing/`.
-2. **Persistenz:** [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md) liegt
-   bei Codex im Review; T-91 und T-92 folgen ohne Zwischenstopp. T-92
-   beendet die befristete T-89-Ausnahme.
+2. **Persistenz:** [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md) ist
+   technisch freigegeben (Runde 4) und lokal nach `master` gemergt
+   (`21b5c84`); es wartet mit T-88/T-89 auf deine Abnahme. Prüfbar ohne
+   Handgriff: Verhalten unverändert, Backup und Wiederherstellen laufen wie
+   bisher. [T-91](30-doing/T-91-sqlmodel-kerntabellen.md) läuft, T-92 folgt;
+   T-92 beendet die befristete T-89-Ausnahme.
 3. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht
    und enthält T-88/T-89 noch nicht. Neues Image, Docker-Hub-Beschreibung
    (`make push`) und Unraid-Listing brauchen deinen Auftrag.
