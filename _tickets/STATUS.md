@@ -26,10 +26,10 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `approved`
-- `ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
-- `branch`: `t-95-vertippte-isin-verstaendlich-melden`
-- `handoff_commit`: `c0dd47e`
+- `phase`: `claude_working`
+- `ticket`: `T-93-visuelle-gesamtpruefung.md`
+- `branch`: `t-93-visuelle-gesamtpruefung`
+- `handoff_commit`: `ce9673b`
 - `review_round`: `2`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
@@ -39,17 +39,14 @@ schaltet den Branch. Regel:
 - `last_reviewed_round`: `2`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md`
-- `priority_ticket`: `T-95-vertippte-isin-verstaendlich-melden.md`
+- `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
 
-**T-95 aktiv, T-93 pausiert · 2026-10-02.** Codex-Befund B5 aus T-93
-Runde 2 ist ein Produktfehler: Eine vertippte ISIN wird als Symbol ohne
-Börsenzusatz gemeldet. Folgeticket
-[T-95](30-doing/T-95-vertippte-isin-verstaendlich-melden.md), aktiviert
-wie T-94 (Mikes Regel: Folgetickets aus den Tests gehören in die Kette;
-Muster „T-94 vorziehen und T-93 danach abschließen“). Der Branch zweigt
-von `t-93-visuelle-gesamtpruefung` (`1c69db2`) ab und kommt nach der
-Freigabe dorthin zurück. Danach T-93 Runde 3 mit B5 (W2), B6 (W4) und
-Mikes Vorgabe „sichtbare Läufe auf dem Hauptmonitor“.
+**T-95 freigegeben, T-93 wieder aktiv · 2026-10-02.** T-95 (`f200fa3`,
+`c0dd47e`, Freigabe `04daa2b`) ist per Fast-Forward in
+`t-93-visuelle-gesamtpruefung` übernommen; W2 erwartet darin schon den
+ISIN-Text (B5). Wie T-94 geht es nach der Freigabe von T-93 gemeinsam mit
+ihm nach `master`. T-93 Runde 3: B6 (W4-Orakel), Mikes Vorgabe „sichtbare
+Läufe auf dem Hauptmonitor“, vollständiger sichtbarer Lauf.
 
 **T-94 freigegeben, T-93 wieder aktiv · 2026-10-02.** T-94 (`8991a55`,
 Freigabe `a188046`) ist per Fast-Forward in `t-93-visuelle-gesamtpruefung`
