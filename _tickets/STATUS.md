@@ -81,6 +81,16 @@ dort steht, obwohl kein Mensch ihr folgen kann. Sie ist ein Werkzeug für
 die Agenten: Aufruf im Kopf von `dashboard/e2e/visual-check.mjs`, Hinweis
 in `AGENTS.md`. Node 24 bleibt als Voraussetzung im README.
 
+**T-97 · Vergleich mit Kopie des Arbeitsbestands · Mike, 2026-10-02.**
+„Die visuellen Tests werden mit dem YAML-File gemacht obwohl massive
+Änderungen bei dem Datenbankzugriffen gemacht wurden … am aktuellen Grund
+vorbei“ und „Ja, leg T-97 an und trag es ein“ (an claude-observer).
+[T-97](20-ready/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
+vergleicht den Stand vor T-90 (`de620e9`) mit dem aktuellen Stand auf je
+einer **Kopie** der Arbeitsdatenbank. Mike erlaubt diese Kopie ausdrücklich;
+das Original bleibt tabu, der Testriegel bleibt an. T-97 steht nach T-95 in
+der `priority_chain` und gehört zur Abnahme der SQL-Umstellung.
+
 **Fonds-Beispiel in der Offline-Vorlage · Mike, 2026-10-02.** Zu T-93 B6:
 Die Testwerte für den Fonds (`metadata` mit `ter_bps`, `provider`,
 `fund_domicile`) dürfen in `examples/assets-standalone.yaml` stehen statt
