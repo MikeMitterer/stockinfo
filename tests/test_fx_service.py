@@ -4,8 +4,8 @@ from pathlib import Path
 
 import pytest
 
-from app.db import init_db
-from app.repository import QuoteRepository
+from app.persistence.db import init_db
+from app.persistence.repository import QuoteRepository
 from app.providers.base import SourceAnswer
 from app.services.fx_service import (
     CachedFxService,

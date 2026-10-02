@@ -5,10 +5,10 @@ from pathlib import Path
 
 import pytest
 
-from app.db import init_db
 from app.models import ListedIdentityOut, QuoteResponse
+from app.persistence.db import init_db
+from app.persistence.repository import QuoteRepository
 from app.providers.base import SourceAnswer
-from app.repository import QuoteRepository
 from app.services.daily_history import DailyHistoryService, DailySeriesNotFoundError
 from app.services.quote_service import QuoteUnavailableError
 

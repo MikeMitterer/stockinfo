@@ -12,7 +12,6 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import pytest
-
 from stockinfo_plugin import (
     ListedIdentity,
     NotFound,

@@ -22,9 +22,9 @@ Grenze konkret zurückgeben lassen will, bleibt bei ihm.
 
 from stockinfo_plugin.types import Identity
 
-from app.db import init_db
+from app.persistence.db import init_db
+from app.persistence.repository import QuoteRepository
 from app.providers.base import EtfDetails, SourceAnswer
-from app.repository import QuoteRepository
 from app.services.daily_sync import DailyCloseSync
 from app.services.quote_cache import CachedQuoteService
 from app.services.quote_service import QuoteService

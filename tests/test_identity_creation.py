@@ -14,9 +14,9 @@ from pathlib import Path
 
 import pytest
 
-from app.db import init_db
 from app.models import ListedIdentityOut, QuoteResponse
-from app.repository import IncompleteIdentityError, QuoteRepository
+from app.persistence.db import init_db
+from app.persistence.repository import IncompleteIdentityError, QuoteRepository
 
 
 @pytest.fixture

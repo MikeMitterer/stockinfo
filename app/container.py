@@ -13,13 +13,14 @@ from fastapi import Depends
 
 from app.config import get_settings
 from app.exchange_catalog import covered_quote_mics
+from app.persistence.quote_store import QuoteStore
+from app.persistence.repository import QuoteRepository
 from app.providers.base import EtfEnricher, InstrumentResolver
 from app.providers.composite_etf import CompositeEtfEnricher
 from app.providers.composite_market import (
     CompositeDailyCloseProvider,
     CompositeQuoteProvider,
 )
-from app.repository import QuoteRepository
 from app.resolver import CompositeResolver
 from app.services.analyzer import ROLES as ANALYZED_ROLES
 from app.services.analyzer import QuoteAnalyzer
@@ -36,11 +37,19 @@ from app.sources_registry import build_chain, describe_chain, detail_definitions
 logger = structlog.get_logger()
 
 
+def get_quote_store() -> QuoteStore:
+    """Der Kursspeicher für die aktuelle Datenbank — die eine Stelle, die ihn baut.
+
+    Dienste und Router bekommen ihn hierüber (FastAPI `Depends` oder beim
+    Zusammenbau der Dienste) und kennen nur das Interface `QuoteStore`.
+    """
+    return QuoteRepository(get_settings().database_path)
+
+
 def initialize_detail_catalog() -> None:
     """Persistiert das validierte Profilschema nach der DB-Initialisierung."""
-    settings = get_settings()
-    QuoteRepository(settings.database_path).detail_catalog(
-        detail_definitions(get_sources_config(), settings)
+    get_quote_store().detail_catalog(
+        detail_definitions(get_sources_config(), get_settings())
     )
 
 
@@ -170,7 +179,7 @@ def get_cached_quote_service() -> CachedQuoteService:
         _build_etf_enricher(),
         resolver,
     )
-    repository = QuoteRepository(settings.database_path)
+    repository = get_quote_store()
     daily_sync = DailyCloseSync(
         repository, CompositeDailyCloseProvider(*_market_chain("daily"))
     )
@@ -214,9 +223,8 @@ def get_intake_service(
 @lru_cache
 def get_daily_history_service() -> DailyHistoryService:
     """Baut den (gecachten) DailyHistoryService für EOD-Historien."""
-    settings = get_settings()
     return DailyHistoryService(
-        QuoteRepository(settings.database_path),
+        get_quote_store(),
         CompositeDailyCloseProvider(*_market_chain("daily")),
         get_cached_quote_service(),
     )
@@ -251,6 +259,6 @@ def get_fx_service() -> CachedFxService:
     settings = get_settings()
     return CachedFxService(
         _market_chain("fx"),
-        QuoteRepository(settings.database_path),
+        get_quote_store(),
         settings.fx_ttl_hours,
     )

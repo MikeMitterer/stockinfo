@@ -5,7 +5,7 @@ den Satz dazu liefert das UI aus seinem Katalog. Ein Satz aus dem Backend wäre
 in der zweiten Sprache sofort falsch.
 
 Der Preis dieser Teilung ist eine Fuge, die niemand sieht: Wer in
-`app/migration.py` eine Kennung ergänzt, merkt nicht, dass zwei
+`app/persistence/migration.py` eine Kennung ergänzt, merkt nicht, dass zwei
 TypeScript-Dateien davon nichts wissen. Im UI stünde dann für ein entferntes
 Papier die rohe Kennung statt eines Grundes — und das ausgerechnet in der
 Liste, auf deren Grundlage jemand einer Löschung zustimmt.
@@ -20,7 +20,7 @@ from pathlib import Path
 
 import pytest
 
-from app.migration import REJECTION_REASONS
+from app.persistence.migration import REJECTION_REASONS
 
 _CATALOGUES = (
     Path("dashboard/src/i18n/de.ts"),
@@ -65,7 +65,7 @@ def _reason_entries(catalogue: Path) -> dict[str, str]:
     # Migrationsgründe als „fehlend" — er prüfte einen Katalog, den er gar
     # nicht meint.
     #
-    # Dieser Test gilt `REJECTION_REASONS` aus `app/migration.py`, also dem
+    # Dieser Test gilt `REJECTION_REASONS` aus `app/persistence/migration.py`, also dem
     # Block unter `migration`. Die Kennungen aus `ErrorDetail` brauchen einen
     # eigenen Wächter; das ist Wächter `#3` aus T-34.
     scope = text.index("  migration: {")

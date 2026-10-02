@@ -15,7 +15,6 @@ from pathlib import Path
 
 import pytest
 import yaml
-
 from stockinfo_plugin import NotFound, QuoteSource
 
 from app.config import Settings

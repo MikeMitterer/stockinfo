@@ -2,11 +2,11 @@ import pytest
 from pydantic import ValidationError
 
 from app.models import (
-    IsinOnlyIdentityOut,
-    PairIdentityOut,
     EnvInfo,
     InstrumentSummary,
+    IsinOnlyIdentityOut,
     ListedIdentityOut,
+    PairIdentityOut,
     RefreshResult,
 )
 

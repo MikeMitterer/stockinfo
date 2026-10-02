@@ -63,6 +63,7 @@ from types import MappingProxyType
 from typing import Any
 
 import yaml
+
 from stockinfo_plugin import (
     DailyBar,
     DailyCloseSource,

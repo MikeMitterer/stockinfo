@@ -28,7 +28,6 @@ from app.container import (
     get_quote_analyzer,
     get_sources_config,
 )
-from app.data_versions import declared_versions
 from app.detail_models import DetailInput, DetailValue
 from app.exchange_catalog import catalog_annotations, prepare_catalog
 from app.exchanges import EXCHANGES, preference_kind
@@ -46,6 +45,7 @@ from app.models import (
     SourcesResponse,
     invalid_isin_response,
 )
+from app.persistence.data_versions import declared_versions
 from app.routers.validation import (
     IsinPath,
     SymbolPath,

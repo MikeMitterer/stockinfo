@@ -25,15 +25,14 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-
 from stockinfo_plugin import (
     DailyCloseSource,
     DailySeries,
     ListedIdentity,
-    NotFound,
     MetadataSource,
-    PairIdentity,
+    NotFound,
     NotResponsible,
+    PairIdentity,
     Resolved,
     Resolver,
     Unavailable,
@@ -43,8 +42,8 @@ from stockinfo_plugin import (
 from app.container import get_sources_config
 from app.main import app
 from app.plugin_adapters import DailyAdapter, MetadataAdapter, ResolverAdapter
-from app.providers.base import SourceAnswer
 from app.plugin_loader import ENTRY_POINT_GROUP, load_all
+from app.providers.base import SourceAnswer
 from app.sources_registry import register_loaded, specs_by_name
 
 EXAMPLES = Path(__file__).parent.parent / "plugin_api" / "examples"
@@ -531,8 +530,8 @@ def test_das_herunterfahren_schliesst_jede_quelle_genau_einmal(
     Herunterfahren aufträte, wo ihn niemand mehr sieht.
     """
     from app.config import Settings
-    from app.sources_registry import build_chain, close_all
     from app.plugin_adapters import unwrap
+    from app.sources_registry import build_chain, close_all
 
     config, _, instances = counted_chain
     build_chain("quotes", config, Settings())

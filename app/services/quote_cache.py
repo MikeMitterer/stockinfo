@@ -26,8 +26,8 @@ from app.models import (
     identity_from_columns,
     with_identity,
 )
+from app.persistence.quote_store import PROTECTED_META_FIELDS, QuoteStore
 from app.providers.base import identity_from_row
-from app.repository import PROTECTED_META_FIELDS, QuoteRepository
 from app.services.daily_sync import DailyCloseSync
 from app.services.freshness import is_fresh
 from app.services.quote_service import (
@@ -135,7 +135,7 @@ class CachedQuoteService:
     def __init__(
         self,
         quote_service: QuoteService,
-        repository: QuoteRepository,
+        repository: QuoteStore,
         ttl_hours: int,
         daily_sync: DailyCloseSync,
         metadata_ttl_days: int = 7,

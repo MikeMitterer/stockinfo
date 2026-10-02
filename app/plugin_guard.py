@@ -27,12 +27,11 @@ from __future__ import annotations
 
 from collections.abc import Callable
 from dataclasses import dataclass, field
-from threading import Lock
 from datetime import datetime, timedelta, timezone
+from threading import Lock
 from typing import Any
 
 import structlog
-
 from stockinfo_plugin.types import Unavailable
 
 logger = structlog.get_logger()

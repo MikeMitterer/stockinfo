@@ -23,8 +23,8 @@ from stockinfo_plugin.types import NotFound
 
 from app.container import get_cached_quote_service
 from app.main import app
+from app.persistence.repository import REASON_IDENTITY_CONFLICT, QuoteRepository
 from app.providers.base import RawQuote, ResolvedInstrument
-from app.repository import REASON_IDENTITY_CONFLICT, QuoteRepository
 from tests.boundaries import wire_real_chain
 
 # Die echte ISIN von Apple. Sie steht hier als Konstante, weil sie in diesem

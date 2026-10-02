@@ -12,7 +12,7 @@ from pathlib import Path
 import structlog
 
 from app.models import OVERRIDE_FIELDS
-from app.migration import (
+from app.persistence.migration import (
     IDENTITY_CHECK,
     MigrationPlan,
     apply_migration,
@@ -174,6 +174,18 @@ def get_connection(database_path: str) -> sqlite3.Connection:
     return connection
 
 
+def is_fresh_database(database_path: str | Path) -> bool:
+    """Ob die Datenbank neu ist: Die Datei fehlt oder ist leer.
+
+    Vor `init_db` fragen — danach existiert die Datei immer.
+
+    Args:
+        database_path: Pfad zur SQLite-Datei.
+    """
+    path = Path(database_path)
+    return not path.exists() or path.stat().st_size == 0
+
+
 def init_db(database_path: str) -> bool:
     """Erstellt das Schema und sagt, ob ein Identitäts-Umzug **aussteht**.
 
@@ -204,7 +216,7 @@ def init_db(database_path: str) -> bool:
     try:
         connection.executescript(_SCHEMA)
         _migrate(connection)
-        from app.detail_store import initialize
+        from app.persistence.detail_store import initialize
 
         initialize(connection)
         _create_identity_indices(connection)
@@ -234,6 +246,51 @@ def init_db(database_path: str) -> bool:
 def _now() -> str:
     """Der aktuelle Zeitpunkt als ISO-8601-String."""
     return datetime.now(timezone.utc).isoformat()
+
+
+def preview_migration(database_path: str) -> MigrationPlan:
+    """Rechnet den Umzug vor, ohne die Datenbank zu ändern (Phase 1).
+
+    Args:
+        database_path: Pfad zur SQLite-Datei.
+
+    Returns:
+        Der Plan mit umziehenden, unveränderten und abgelehnten Zeilen.
+    """
+    connection = get_connection(database_path)
+    try:
+        return plan_migration(connection)
+    finally:
+        connection.close()
+
+
+def stored_rejections(database_path: str) -> list[dict[str, object]] | None:
+    """Liest den gespeicherten Umzugsbericht.
+
+    Args:
+        database_path: Pfad zur SQLite-Datei.
+
+    Returns:
+        Die abgelehnten Instrumente nach Symbol sortiert, je als einfaches
+        Mapping aller Spalten von `migration_rejections`; ``None``, wenn noch
+        nie ein Umzug lief. Welche Felder davon nach außen gehen, entscheidet
+        das REST-Modell `RejectedInstrument` — eine zweite Feldliste hier
+        liefe neben ihm auseinander.
+    """
+    connection = get_connection(database_path)
+    try:
+        exists = connection.execute(
+            "SELECT 1 FROM sqlite_master WHERE type = 'table' "
+            "AND name = 'migration_rejections'"
+        ).fetchone()
+        if exists is None:
+            return None
+        rows = connection.execute(
+            "SELECT * FROM migration_rejections ORDER BY symbol"
+        ).fetchall()
+    finally:
+        connection.close()
+    return [dict(row) for row in rows]
 
 
 def run_migration(database_path: str, rejected_at: str) -> MigrationPlan:
@@ -291,7 +348,7 @@ def run_migration(database_path: str, rejected_at: str) -> MigrationPlan:
 # Berichtstabelle und gehärtetes Schema dauerhaft zurück, obwohl die Funktion
 # „alles oder nichts" zusagt.
 #
-# Derselbe Fehler war in `app/migration.py` bereits gefunden, behoben und im
+# Derselbe Fehler war in `app/persistence/migration.py` bereits gefunden, behoben und im
 # Kommentar festgehalten — und hier zwei Stunden später wieder eingebaut
 # (Codex, Runde 30). Eine Liste statt eines Scripts macht ihn unmöglich.
 #

@@ -141,7 +141,7 @@ class RejectedInstrument(BaseModel):
     exchange: str | None = None
     type: str | None = None
     currency: str | None = None
-    reason: str = Field(description="stabile Kennung, siehe app/migration.py")
+    reason: str = Field(description="stabile Kennung, siehe app/persistence/migration.py")
     quotes: int = Field(description="Intraday-Kurspunkte, die entfallen")
     daily_closes: int = Field(description="Tagesschlusskurse, die entfallen")
 
@@ -340,33 +340,6 @@ def with_identity(row: dict) -> dict:
     if identity is not None:
         folded["identity"] = identity
     return folded
-
-
-def identity_where(identity: IdentityOut) -> tuple[str, tuple]:
-    """Die `WHERE`-Bedingung, die genau diese Identität trifft.
-
-    Je Form eine andere, und je Form liegt ein eigener partieller Unique-Index
-    darauf. Eine gemeinsame Bedingung über alle sechs Spalten gäbe es zwar,
-    aber sie könnte keinen Index nutzen und träfe bei ``NULL`` ohnehin nichts —
-    SQLite hält zwei ``NULL`` nie für gleich.
-
-    Args:
-        identity: Die gesuchte Identität.
-
-    Returns:
-        Die Bedingung und ihre Parameter, für ein ``SELECT … WHERE``.
-    """
-    if isinstance(identity, PairIdentityOut):
-        return (
-            "kind = 'pair' AND base = ? AND quote_currency = ?",
-            (identity.base, identity.quote_currency),
-        )
-    if isinstance(identity, IsinOnlyIdentityOut):
-        return ("kind = 'isin_only' AND isin = ?", (identity.isin,))
-    return (
-        "kind = 'listed' AND ticker = ? AND mic = ?",
-        (identity.ticker, identity.mic),
-    )
 
 
 class QuoteResponse(BaseModel):

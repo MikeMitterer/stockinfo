@@ -24,8 +24,9 @@ from fastapi.testclient import TestClient
 
 from app.config import get_settings
 from app.container import get_backup_service, get_sources_config
-from app.db import SCHEMA_VERSION, get_connection, init_db
 from app.main import app
+from app.persistence.db import SCHEMA_VERSION, get_connection, init_db
+from app.plugins.yfinance_metadata import YFinanceMetadataPlugin
 from app.services.backup import (
     KEEP_BACKUPS,
     PENDING_FILENAME,
@@ -37,7 +38,6 @@ from app.services.backup import (
     stamp_fingerprint,
 )
 from app.sources_config import ROLES, SourcesConfig
-from app.plugins.yfinance_metadata import YFinanceMetadataPlugin
 
 _ONLINE = SourcesConfig(
     chains={
@@ -761,7 +761,7 @@ def test_der_fehlerzustand_ist_ueber_backups_sichtbar(
     def _boom(*args: object, **kwargs: object) -> None:
         raise OSError("Zielmedium voll")
 
-    monkeypatch.setattr("app.services.backup.shutil.copy2", _boom)
+    monkeypatch.setattr("app.persistence.backup_store.shutil.copy2", _boom)
 
     seen = []
     for _ in range(2):

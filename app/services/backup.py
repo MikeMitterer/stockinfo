@@ -6,15 +6,14 @@ Paketpins und Rollenketten bleiben Herkunftsinformation, keine Sperre.
 **`VACUUM INTO` statt einer Dateikopie:** Im WAL-Modus liegen die jüngsten
 Schreibvorgänge in der `-wal`-Datei; eine Kopie der `.db` allein ergibt einen
 Stand, den es nie gab. `VACUUM INTO` erzeugt eine in sich stimmige Datei und
-trägt `PRAGMA user_version` mit.
+trägt `PRAGMA user_version` mit. Die Datenbankzugriffe dafür stehen in
+`app/persistence/backup_store.py`.
 """
 
 import hashlib
 import json
 import os
 import re
-import shutil
-import sqlite3
 import tempfile
 import threading
 from dataclasses import dataclass
@@ -23,9 +22,21 @@ from pathlib import Path
 
 import structlog
 
-from app.db import SCHEMA_VERSION, get_connection
-from app.data_versions import declared_versions, stored_versions, stamp_versions
 from app.models import BackupReason, SourceDifference
+from app.persistence.backup_store import (
+    UnreadableDatabaseError,
+    copy_database,
+    database_exists,
+    read_stamp,
+    replace_database,
+    write_stamp_if_missing,
+)
+from app.persistence.data_versions import (
+    declared_versions,
+    stamp_versions,
+    stored_versions,
+)
+from app.persistence.db import SCHEMA_VERSION
 from app.sources_config import ROLES, SourcesConfig
 
 logger = structlog.get_logger()
@@ -109,33 +120,13 @@ def stamp_fingerprint(database_path: str | Path, fingerprint: str) -> None:
     fremder Bestand sähe aus, als wäre er hier entstanden. Eine Abweichung wird
     **gemeldet, nicht geheilt**.
     """
-    connection = get_connection(str(database_path))
-    try:
-        connection.execute(
-            "INSERT INTO meta (key, value) VALUES (?, ?) "
-            "ON CONFLICT(key) DO NOTHING",
-            (FINGERPRINT_KEY, fingerprint),
-        )
-        connection.commit()
-    finally:
-        connection.close()
+    write_stamp_if_missing(database_path, FINGERPRINT_KEY, fingerprint)
 
 
 def _read_stamp(database_file: Path) -> tuple[str | None, int]:
     """Kennung und Schemaversion **aus der Datei selbst**, nicht aus ihrem
     Manifest — das ist der Punkt der Übung."""
-    connection = sqlite3.connect(f"file:{database_file}?mode=ro", uri=True)
-    try:
-        version = int(connection.execute("PRAGMA user_version").fetchone()[0])
-        try:
-            row = connection.execute(
-                "SELECT value FROM meta WHERE key = ?", (FINGERPRINT_KEY,)
-            ).fetchone()
-        except sqlite3.DatabaseError:
-            return None, version  # älter als die `meta`-Tabelle, nicht kaputt
-        return (row[0] if row else None), version
-    finally:
-        connection.close()
+    return read_stamp(database_file, FINGERPRINT_KEY)
 
 
 class BackupService:
@@ -199,11 +190,7 @@ class BackupService:
         fingerprint = self.fingerprint
         created_at, target = self._free_name(datetime.now(timezone.utc), fingerprint)
 
-        connection = get_connection(str(self._database))
-        try:
-            connection.execute("VACUUM INTO ?", (str(target),))
-        finally:
-            connection.close()
+        copy_database(self._database, target)
 
         stamp_versions(target, self._config)
         _write_atomic(
@@ -383,17 +370,13 @@ def apply_pending(database_path: str, config: SourcesConfig) -> str | None:
     2. Erneut prüfen — die Prüfung beim REST-Aufruf ist keine dauerhafte Zusage.
     3. **Jetzt** den aktuellen Stand sichern. Zwischen Klick und Neustart wird
        weitergeschrieben; eine Sicherung vom Klick fehlten genau diese Zeilen.
-    4. Über eine temporäre Zieldatei und atomaren Austausch tauschen; die
-       Sicherung wird kopiert, nicht verbraucht.
-    5. `-wal`/`-shm` entfernen — sie gehören zur alten Datei. Bliebe eines
-       liegen, läse SQLite den neuen Bestand mit dem Journal des vorigen.
-    6. Erst danach die Absicht löschen.
+    4. Die Datei tauschen (`replace_database`: atomar, Journale entfernt).
+    5. Erst danach die Absicht löschen.
 
     Ein Fehler bricht den Start **nicht** ab und lässt die Absicht liegen: Die
     Datenbank ist unangetastet, und der Wunsch verschwindet nicht spurlos.
     """
-    database = Path(database_path)
-    pending = database.parent / PENDING_FILENAME
+    pending = Path(database_path).parent / PENDING_FILENAME
     if not pending.is_file():
         return None
 
@@ -408,20 +391,15 @@ def apply_pending(database_path: str, config: SourcesConfig) -> str | None:
     service = BackupService(database_path, config)
     name = str(intent.get("backup", ""))
     force = bool(intent.get("force", False))
-    temporary = database.with_name(database.name + ".incoming")
     try:
         source = service.resolve(service.check(name, force=force).name)
 
-        if database.is_file():
+        if database_exists(database_path):
             service.create(reason="pre-restore", protect=source.name)
 
-        shutil.copy2(source, temporary)
-        os.replace(temporary, database)
-        for suffix in ("-wal", "-shm"):
-            database.with_name(database.name + suffix).unlink(missing_ok=True)
+        replace_database(database_path, source)
     except Exception as exc:  # noqa: BLE001 — ein Start bricht daran nicht ab
         logger.error("restore_failed", name=name, error=str(exc))
-        temporary.unlink(missing_ok=True)
         _write_atomic(
             pending,
             json.dumps({**intent, "failed": f"{type(exc).__name__}: {exc}"}, indent=2),
@@ -455,12 +433,11 @@ def restore_state(database_path: str) -> tuple[str | None, str]:
 
 def stamped_fingerprint(database_path: str | Path) -> str | None:
     """Die Kennung, unter der die **vorhandene** Datenbank entstanden ist."""
-    path = Path(database_path)
-    if not path.is_file():
+    if not database_exists(database_path):
         return None
     try:
-        return _read_stamp(path)[0]
-    except sqlite3.DatabaseError:
+        return _read_stamp(Path(database_path))[0]
+    except UnreadableDatabaseError:
         return None
 
 

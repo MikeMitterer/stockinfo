@@ -124,7 +124,7 @@ def test_ein_vierstelliger_alias_derselben_boerse_ist_kein_konflikt(monkeypatch)
 
 
 def test_die_schema_schicht_zieht_kein_yfinance_mit() -> None:
-    """`app/db.py` darf für den Umzug nicht den halben Netzstack laden.
+    """`app/persistence/db.py` darf für den Umzug nicht den halben Netzstack laden.
 
     Die Zerlegung sitzt deshalb in `app/exchanges.py` und nicht im Resolver:
     Dort steht `import yfinance`, und die Schema-Schicht hat damit nichts zu
@@ -139,7 +139,7 @@ def test_die_schema_schicht_zieht_kein_yfinance_mit() -> None:
     eine einzige Datei.
 
     Geprüft wird deshalb der ganze Importbaum, in einem frischen Prozess:
-    Nach `import app.db` darf `yfinance` nicht geladen sein.
+    Nach `import app.persistence.db` darf `yfinance` nicht geladen sein.
     """
     import subprocess
     import sys
@@ -148,7 +148,7 @@ def test_die_schema_schicht_zieht_kein_yfinance_mit() -> None:
         [
             sys.executable,
             "-c",
-            "import sys; import app.db; "
+            "import sys; import app.persistence.db; "
             "print('yfinance' in sys.modules or 'app.resolver' in sys.modules)",
         ],
         capture_output=True,
@@ -157,7 +157,7 @@ def test_die_schema_schicht_zieht_kein_yfinance_mit() -> None:
     )
 
     assert completed.stdout.strip() == "False", (
-        "app.db zieht den Netzstack mit: " + completed.stdout
+        "app.persistence.db zieht den Netzstack mit: " + completed.stdout
     )
 
 

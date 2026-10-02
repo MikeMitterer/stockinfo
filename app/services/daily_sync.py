@@ -9,11 +9,10 @@ speichert sie im akkumulierenden ``daily_closes``-Cache. Wird sowohl vom
 from datetime import date
 
 import structlog
-
 from stockinfo_plugin.types import Identity
 
+from app.persistence.quote_store import QuoteStore
 from app.providers.base import DailyCloseProvider, SourceAnswer
-from app.repository import QuoteRepository
 
 logger = structlog.get_logger()
 
@@ -21,7 +20,7 @@ logger = structlog.get_logger()
 class DailyCloseSync:
     """Synchronisiert den ``daily_closes``-Cache inkrementell (nur fehlende Tage)."""
 
-    def __init__(self, repository: QuoteRepository, provider: DailyCloseProvider) -> None:
+    def __init__(self, repository: QuoteStore, provider: DailyCloseProvider) -> None:
         """
         Args:
             repository: SQLite-Persistenz (daily_closes, daily_meta).

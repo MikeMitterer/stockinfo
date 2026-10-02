@@ -320,7 +320,7 @@ zusätzliches Test-Subsystem.
   beide grün.
 - **B5 durch Mikes Entscheidung eingeordnet:** STATUS nennt die
   ausdrückliche, auf T-89 begrenzte Persistenz-Ausnahme und den späteren
-  Umbau in [T-90](../20-ready/T-90-persistenz-auf-sqlmodel.md). T-90
+  Umbau in [T-90](T-90-persistenz-auf-sqlmodel.md). T-90
   erfasst Ordner, ORM, Interface, Migrationen, Backups und sichtbare
   Prüfung. Das aktuelle T-89 fügt keine weitere SQL-Stelle hinzu.
   Die Ausnahme ist eine Projektentscheidung, keine Verifier-Freigabe
@@ -379,7 +379,7 @@ Quellenregistry).
 
 - **B5 · Persistenz:** Nach Vorlage des gemessenen Umfangs entschied Mike
   „Eigenes Ticket T-90“. Die befristete, an
-  [T-90](../20-ready/T-90-persistenz-auf-sqlmodel.md) gebundene Ausnahme
+  [T-90](T-90-persistenz-auf-sqlmodel.md) gebundene Ausnahme
   steht in `STATUS.md` („Persistenzumbau als eigenes Ticket, befristete
   Ausnahme für T-89“). T-89 ändert an der Persistenz nur
   `set_volatility` und die Typangabe von `detail_catalog`.

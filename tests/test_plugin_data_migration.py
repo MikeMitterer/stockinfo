@@ -9,10 +9,10 @@ from fastapi.testclient import TestClient
 
 from app import container
 from app.config import get_settings
-from app.data_versions import stored_versions
-from app.db import init_db
 from app.main import app
 from app.migration_guard import MigrationGate
+from app.persistence.data_versions import stored_versions
+from app.persistence.db import init_db
 from app.routers import migration
 from app.scheduler import RefreshScheduler
 from app.services.backup import BackupService

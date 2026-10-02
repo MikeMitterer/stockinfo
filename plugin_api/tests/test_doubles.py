@@ -20,6 +20,13 @@ from stockinfo_plugin import (
     Unavailable,
     Unsupported,
 )
+from stockinfo_plugin.sources import (
+    DailyCloseSource,
+    FxSource,
+    MetadataSource,
+    QuoteSource,
+    Resolver,
+)
 from stockinfo_plugin.testing import (
     EPOCH,
     CallLog,
@@ -30,13 +37,6 @@ from stockinfo_plugin.testing import (
     FakeResolver,
     ResolverContract,
     SourceContract,
-)
-from stockinfo_plugin.sources import (
-    DailyCloseSource,
-    FxSource,
-    MetadataSource,
-    QuoteSource,
-    Resolver,
 )
 
 REQUEST = ResolveRequest(isin="CA78012H5675")

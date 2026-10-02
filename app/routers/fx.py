@@ -4,7 +4,6 @@ import re
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
-
 from fastapi.responses import JSONResponse
 
 from app.container import get_fx_service

@@ -1,11 +1,11 @@
 """Die Testumgebung isoliert den Standardpfad und stoppt falsche Verbindungen."""
 
-from contextlib import closing
 import os
-from pathlib import Path
 import sqlite3
 import subprocess
 import sys
+from contextlib import closing
+from pathlib import Path
 
 import pytest
 

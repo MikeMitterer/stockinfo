@@ -6,30 +6,31 @@ ganze OpenAPI-Dokument holen und daraus ableiten, welche Felder in welcher
 Antwort Pflicht sind.
 """
 
-from fastapi import APIRouter, HTTPException, Response
+from typing import Annotated
 
-from app.container import get_sources_config
+from fastapi import APIRouter, Depends, HTTPException, Response
+
+from app.container import get_quote_store, get_sources_config
 from app.contract import ContractUnavailableError, core_contract, plugin_contract
-from app.config import get_settings
 from app.models import FieldsResponse, InstrumentTypesResponse
-from app.repository import QuoteRepository
+from app.persistence.quote_store import QuoteStore
 from app.services.instrument_types import instrument_type_catalog
 
 router = APIRouter(tags=["contract"])
 
+StoreDep = Annotated[QuoteStore, Depends(get_quote_store)]
+
 
 @router.get("/instrument-types", response_model=InstrumentTypesResponse)
-def instrument_types(response: Response) -> InstrumentTypesResponse:
+def instrument_types(response: Response, store: StoreDep) -> InstrumentTypesResponse:
     """Liefert den aktuellen Typkatalog der konfigurierten Plugin-Rollen."""
     response.headers["Cache-Control"] = "no-store"
-    response.headers[core_contract()["generation"]["header"]] = QuoteRepository(
-        get_settings().database_path
-    ).detail_generation()
+    response.headers[core_contract()["generation"]["header"]] = store.detail_generation()
     return instrument_type_catalog(get_sources_config())
 
 
 @router.get("/fields", response_model=FieldsResponse)
-def fields() -> FieldsResponse:
+def fields(store: StoreDep) -> FieldsResponse:
     """Liefert Pflichtfelder, Bedeutung und Vertragsversion.
 
     Gegliedert nach Antworttyp, nicht flach: `price` und `currency` sind im
@@ -52,13 +53,12 @@ def fields() -> FieldsResponse:
             status_code=503, detail="Vertragsartefakt nicht lesbar"
         ) from exc
 
-    repository = QuoteRepository(get_settings().database_path)
-    definitions, version = repository.detail_catalog()
+    definitions, version = store.detail_catalog()
     return FieldsResponse(
         core_version=contract["core_version"],
         core=contract["core"],
         endpoints=contract["endpoints"],
-        generation_id=repository.detail_generation(),
+        generation_id=store.detail_generation(),
         details_version=version,
         details=definitions,
         plugin_contract=plugin_contract(),

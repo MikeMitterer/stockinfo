@@ -26,7 +26,6 @@ hält, und schweigt bei normaler Bewegung.
 from datetime import date, timedelta
 
 import pytest
-
 from stockinfo_plugin import (
     DailyRequest,
     DailySeries,

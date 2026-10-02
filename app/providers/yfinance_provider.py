@@ -4,10 +4,9 @@ Nutzt ``fast_info`` für die robusten Kernwerte (Preis, Währung, Volumen) und
 ``get_info`` best-effort für Name und Kurszeitpunkt.
 """
 
+import math
 from datetime import datetime, timezone
 from typing import Any
-
-import math
 
 import structlog
 import yfinance as yf

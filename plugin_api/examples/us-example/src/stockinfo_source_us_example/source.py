@@ -10,8 +10,8 @@ from types import MappingProxyType
 from typing import Any, Protocol
 
 from stockinfo_plugin import (
-    MicCoverage,
     ListedIdentity,
+    MicCoverage,
     NotFound,
     NotResponsible,
     Quote,
@@ -20,8 +20,8 @@ from stockinfo_plugin import (
     QuoteSource,
     Resolution,
     Resolved,
-    ResolveRequest,
     Resolver,
+    ResolveRequest,
     Unavailable,
 )
 

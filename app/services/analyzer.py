@@ -22,12 +22,12 @@ from stockinfo_plugin.types import NotFound, NotResponsible, Unavailable, Unsupp
 
 from app.models import AnalyzeResult, AnalyzeStage
 from app.providers.base import ResolvedInstrument, SourceAnswer, declared_name
-from app.resolver import CompositeResolver
 from app.providers.composite_etf import CompositeEtfEnricher
 from app.providers.composite_market import (
     CompositeDailyCloseProvider,
     CompositeQuoteProvider,
 )
+from app.resolver import CompositeResolver
 
 # Die Rollen, die eine Frage zu **einem Papier** beantworten, in der
 # Reihenfolge, in der die App sie stellt. `fx` fehlt mit Absicht: Ein
