@@ -4,6 +4,7 @@ import json
 import sqlite3
 from pathlib import Path
 
+from app.persistence.db import connect_read_only
 from app.sources_config import ROLES, SourcesConfig
 from app.sources_registry import specs_by_name
 
@@ -28,9 +29,7 @@ def declared_versions(config: SourcesConfig) -> dict[str, int]:
 
 def stored_versions(database: str | Path) -> dict[str, int]:
     """Alte Backups ohne Marker haben implizit Stand 1, niemals den aktuellen."""
-    connection = sqlite3.connect(
-        f"{Path(database).resolve().as_uri()}?mode=ro", uri=True
-    )
+    connection = connect_read_only(database)
     try:
         if not connection.execute(
             "SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta'"

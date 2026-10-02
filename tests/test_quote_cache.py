@@ -17,6 +17,7 @@ from app.services.quote_service import (
     annualized_volatility,
 )
 from tests.boundaries import empty_daily_sync
+from tests.raw_database import raw_database
 
 
 class FakeQuoteService:
@@ -821,7 +822,7 @@ def test_refresh_eines_unbekannten_symbols_geht_weiter_ueber_die_suche(
 def _drop_currency(repo: QuoteRepository, isin: str = "IE00B3RBWM25") -> None:
     """Nimmt Kurspunkt **und** Instrument die Währung — ein Altbestand ohne sie."""
     instrument = repo.get_instrument_by_isin(isin)
-    with repo._connect() as connection:  # noqa: SLF001 — Altbestand nachstellen
+    with raw_database(repo) as connection:  # Altbestand nachstellen
         connection.execute(
             "UPDATE quotes SET currency = NULL WHERE instrument_id = ?",
             (instrument["id"],),
@@ -883,7 +884,7 @@ def test_cache_mit_waehrung_am_instrument_bleibt_nutzbar(repo: QuoteRepository) 
     """
     repo.save_quote(_response(_now()))
     instrument = repo.get_instrument_by_isin("IE00B3RBWM25")
-    with repo._connect() as connection:  # noqa: SLF001
+    with raw_database(repo) as connection:
         connection.execute(
             "UPDATE quotes SET currency = NULL WHERE instrument_id = ?",
             (instrument["id"],),
@@ -910,7 +911,7 @@ def test_historienpunkt_ohne_waehrung_erbt_die_des_listings(
     """
     repo.save_quote(_response(_now()))  # Instrument in EUR
     instrument = repo.get_instrument_by_isin("IE00B3RBWM25")
-    with repo._connect() as connection:  # noqa: SLF001 — Altbestand nachstellen
+    with raw_database(repo) as connection:  # Altbestand nachstellen
         connection.execute(
             "UPDATE quotes SET currency = NULL WHERE instrument_id = ?",
             (instrument["id"],),

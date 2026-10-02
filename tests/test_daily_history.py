@@ -11,6 +11,7 @@ from app.persistence.repository import QuoteRepository
 from app.providers.base import SourceAnswer
 from app.services.daily_history import DailyHistoryService, DailySeriesNotFoundError
 from app.services.quote_service import QuoteUnavailableError
+from tests.raw_database import raw_database
 
 
 @pytest.fixture
@@ -293,7 +294,7 @@ def test_tagespunkt_ohne_jede_waehrung_wird_zum_fehler(repo: QuoteRepository) ->
             type="etf",
         )
     )
-    with repo._connect() as connection:
+    with raw_database(repo) as connection:
         connection.execute("UPDATE instruments SET currency = NULL")
         connection.execute("UPDATE quotes SET currency = NULL")
     service = DailyHistoryService(repo, _ProviderWithoutCurrency(), FakeQuotes(repo))

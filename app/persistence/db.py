@@ -168,10 +168,30 @@ def get_connection(database_path: str) -> sqlite3.Connection:
     Path(database_path).parent.mkdir(parents=True, exist_ok=True)
     connection = sqlite3.connect(database_path, timeout=10.0, check_same_thread=False)
     connection.row_factory = sqlite3.Row
+    configure_connection(connection)
+    return connection
+
+
+def connect_read_only(database_file: str | Path) -> sqlite3.Connection:
+    """Öffnet eine Datei nur lesend, etwa eine Sicherung.
+
+    **Als URI aus `as_uri()`, nicht aus Text.** In `file:{pfad}?mode=ro`
+    beendete ein `?` oder `#` im Verzeichnisnamen den Pfad vorzeitig, und
+    SQLite öffnete eine andere Datei.
+    """
+    return sqlite3.connect(f"{Path(database_file).resolve().as_uri()}?mode=ro", uri=True)
+
+
+def configure_connection(connection: sqlite3.Connection) -> None:
+    """Setzt die PRAGMAs, die jede Verbindung braucht — rohe wie ORM-Verbindungen.
+
+    Foreign-Keys trägt das `ON DELETE CASCADE` beim Löschen eines Instruments;
+    WAL und Wartezeit erlauben, dass Request-Threadpool und Scheduler parallel
+    schreiben.
+    """
     connection.execute("PRAGMA foreign_keys = ON")
     connection.execute("PRAGMA journal_mode = WAL")
     connection.execute("PRAGMA busy_timeout = 10000")
-    return connection
 
 
 def is_fresh_database(database_path: str | Path) -> bool:
@@ -212,18 +232,27 @@ def init_db(database_path: str) -> bool:
         ``True``, wenn ein Umzug aussteht, **bei dem etwas verloren geht** —
         dann gehört der Dienst in den Pending-Zustand.
     """
+    from app.persistence.detail_store import create_schema, migrate_legacy_values
+    from app.persistence.session import open_session
+
     connection = get_connection(database_path)
     try:
         connection.executescript(_SCHEMA)
         _migrate(connection)
-        from app.persistence.detail_store import initialize
-
-        initialize(connection)
+        create_schema(connection)
         _create_identity_indices(connection)
         # Erst wenn das Schema wirklich steht: Die Nummer ist eine Zusage an
         # eine spätere Wiederherstellung.
         connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
         connection.commit()
+    finally:
+        connection.close()
+    # Vor der Vorschau: Der Umzug führt Duplikate zusammen und nimmt dabei
+    # die Detailwerte mit — sie müssen dann schon übernommen sein.
+    with open_session(database_path, immediate=True) as session:
+        migrate_legacy_values(session)
+    connection = get_connection(database_path)
+    try:
         plan = plan_migration(connection)
     finally:
         connection.close()

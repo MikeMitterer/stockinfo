@@ -73,8 +73,8 @@ def _service(repo: QuoteRepository) -> CachedQuoteService:
 
 
 def _put_justetf(repo: QuoteRepository, instrument_id: int, value: float) -> None:
-    with repo._connect() as connection:
-        detail_store.put_provider(connection, instrument_id, "volatility",
+    with repo._session(write=True) as session:
+        detail_store.put_provider(session, instrument_id, "volatility",
                                   {"value": value, "source": "justetf"})
 
 

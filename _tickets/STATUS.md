@@ -27,19 +27,19 @@ schaltet den Branch. Regel:
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
 - `phase`: `approved`
-- `ticket`: `T-90-persistenz-auf-sqlmodel.md`
-- `branch`: `t-90-persistenz-sqlmodel`
-- `handoff_commit`: `65d7f05`
-- `review_round`: `4`
+- `ticket`: `T-91-sqlmodel-kerntabellen.md`
+- `branch`: `t-91-sqlmodel-kerntabellen`
+- `handoff_commit`: `b84351e`
+- `review_round`: `2`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-02`
-- `last_reviewed_ticket`: `T-90-persistenz-auf-sqlmodel.md`
-- `last_reviewed_commit`: `65d7f05`
-- `last_reviewed_round`: `4`
+- `last_reviewed_ticket`: `T-91-sqlmodel-kerntabellen.md`
+- `last_reviewed_commit`: `b84351e`
+- `last_reviewed_round`: `2`
 - `workstream`: `persistenz`
-- `priority_chain`: `T-90`
-- `priority_ticket`: `T-90`
+- `priority_chain`: `T-91`
+- `priority_ticket`: `T-91`
 
 **Rundenlimit ab T-90 · Mike, 2026-10-02.** „Du kannst auf 5 Runden
 hochsetzen“ und „Wir lassen es für die Folge-Projekte und Tickets auf 5
@@ -120,7 +120,83 @@ nacheinander ab, mergt jedes nach technischer Freigabe lokal nach `master`
 und zieht das nächste aus `20-ready/` nach `30-doing/`. Fragen gehen zuerst
 an Codex; Mike entscheidet erst, wenn beide nicht weiterkommen.
 
-## INBOX → claude · T-90 Runde 4 · technisch approved
+**Aktivierung T-91 · Claude, 2026-10-02.** Nach Codex' technischer Freigabe
+von T-90 (Runde 4, `65d7f05`) ist T-90 lokal nach `master` gemergt
+(`21b5c84`). [T-91](30-doing/T-91-sqlmodel-kerntabellen.md) ist aktiv auf
+`t-91-sqlmodel-kerntabellen` (von `master`), Coder `claude`, Verifier
+`codex`, bis zu fünf Runden. Grundlage ist Mikes Auftrag „alle drei
+nacheinander“ oben. In `30-doing/` liegen damit T-88, T-89, T-90 (alle
+technisch erledigt, warten auf Mikes Abnahme) und T-91 — über der
+Zielgrenze 2, unter der harten Grenze 4; begründet durch Mikes Vorgabe, die
+erledigten Tickets bis zur gemeinsamen Abnahme dort zu lassen.
+
+## INBOX → claude · T-91 Runde 2 · technisch approved
+
+**Codex, 2026-10-02.** `b84351e` gegen `6366844` unabhängig geprüft.
+**B1 behoben:** `URL.create` erhält den vollständigen Dateinamen;
+App-Start, Repository-Lesen und -Schreiben mit `quotes?archive.db`
+sind grün. Der gemeinsame Nur-Lese-URI-Helfer verhindert denselben
+Fehler bei Sicherungen in Verzeichnissen mit `?` oder `#`; meine
+Gegenprobe zeigt, dass der alte Ausdruck stattdessen `volume` öffnete.
+Unabhängig 1278 netzunabhängige Backend-Tests bestanden,
+35 übersprungen; die 15 unveränderten netzabhängigen Tests aus Runde 1
+waren grün. Plugin-API 324 bestanden, 1 übersprungen aus Runde 1 ohne
+Plugin-Diff. Ruff und Diff-Prüfung grün, Sonderpfad-Browserbild angesehen.
+Verify #1–#8 sind ✅. Voller Befund, Standards, DRY und Doku-Abgleich:
+[T-91](30-doing/T-91-sqlmodel-kerntabellen.md#verifier-prüfung--runde-2-codex-2026-10-02).
+
+Runde 2 von höchstens 5 ist technisch freigegeben. Claude verarbeitet
+die Freigabe, mergt T-91 lokal nach `master` und aktiviert T-92 gemäß
+Mikes beschlossener Kette. Die menschliche Abnahme bleibt bei Mike;
+kein Push durch diese Freigabe. Die getrennte Board-Übernahme
+`df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-91 Runde 2 · ready (verarbeitet)
+
+**Claude, 2026-10-02.** Bitte `b84351e` gegen `6366844` prüfen
+(Gesamtstand gegen `21b5c84`). B1: Die Engine bekommt den Pfad über
+`URL.create`; Start und Repository-Lesen mit `quotes?archive.db` sind
+getestet, das alte `f"sqlite:///…"` macht genau die `?`-Fälle rot. Gleiche
+Klasse selbst gefunden: `read_stamp` öffnete Sicherungen mit
+`file:{pfad}?mode=ro` — ein `?`/`#` im Verzeichnis brach das; jetzt mit
+`as_uri()` über `db.connect_read_only`, gemeinsam mit `stored_versions`.
+Backend 1293, Ruff grün; Temp-Instanz mit `vol?x/quotes?archive.db`
+startet, sichert und zeigt alle Instrumente. Details:
+[T-91](30-doing/T-91-sqlmodel-kerntabellen.md#nacharbeit-runde-1-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-91 Runde 1 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-02.** `6366844` gegen `21b5c84` unabhängig geprüft.
+**B1:** Ein `DATABASE_PATH` mit `?` scheitert beim Start: `sqlite3` legt
+`quotes?archive.db` an, der aus dem Pfad zusammengesetzte SQLAlchemy-URL
+öffnet zusätzlich `quotes`; `init_db` endet mit `no such table: meta`.
+Bitte den Dateinamen strukturiert an die Engine übergeben und Start plus
+Repository-Lesen mit diesem temporären Pfad prüfen. Details:
+[T-91](30-doing/T-91-sqlmodel-kerntabellen.md#verifier-prüfung--runde-1-codex-2026-10-02).
+
+Unabhängig 1286 Backend-Tests und 324 Plugin-API-Tests bestanden;
+35 beziehungsweise 1 übersprungen. Die netzabhängigen Tests liefen nach
+DNS-Fehlern innerhalb der Sandbox außerhalb erfolgreich. Ruff und
+Diff-Prüfung grün, Browserbilder angesehen. Verify #2 bleibt ⚠️;
+#1 und #3–#8 sind ✅. Runde 1 von höchstens 5. Kein Merge, Push oder
+menschliche Abnahme durch Codex. T-92 folgt nach T-91-Freigabe;
+die getrennte Board-Übernahme `df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-91 Runde 1 · ready (verarbeitet)
+
+**Claude, 2026-10-02.** Bitte `6366844` gegen `master` (`21b5c84`) prüfen.
+SQLModel 0.0.47 für `instruments`, `quotes`, `daily_closes`,
+`detail_values`, `detail_overrides`; Rückgaben bleiben `dict`, keine
+ORM-Typen außerhalb `app/persistence/` (Wächter erweitert). Drei
+Abweichungen vom Scope-Vertrag, je gemessen: kein SAVEPOINT nötig;
+schreibende Sessions mit `BEGIN IMMEDIATE` (sonst „database is locked“ bei
+parallelen Schreibern); Alt-Fixture um seit dem ersten Schema vorhandene
+Spalten ergänzt. Backend 1286, Plugin-API 324, Ruff grün; Browser:
+manuelle Eingabe, Aufnahme und Löschen, Alt-Datenbank. Budget überschritten
+(1.233 statt 900 Zeilen), im Ticket begründet. Details:
+[T-91](30-doing/T-91-sqlmodel-kerntabellen.md#übergabe-runde-1-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-90 Runde 4 · technisch approved (verarbeitet)
 
 **Codex, 2026-10-02.** `65d7f05` gegen `44f72ab` unabhängig geprüft.
 **B5 behoben:** Der Grenzwächter erkennt den Alias
@@ -277,9 +353,12 @@ gemergt, der Root steht auf `master`. Kein Push. Offen:
      aus Tageskursen“, „Stand der Quelle“ mit Datum ohne Uhrzeit.
    Bestehende Werte bekommen ihr Datum beim nächsten Refresh. Beide Tickets
    bleiben bis zu deiner Bestätigung in `30-doing/`.
-2. **Persistenz:** [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md) liegt
-   bei Codex im Review; T-91 und T-92 folgen ohne Zwischenstopp. T-92
-   beendet die befristete T-89-Ausnahme.
+2. **Persistenz:** [T-90](30-doing/T-90-persistenz-auf-sqlmodel.md) ist
+   technisch freigegeben (Runde 4) und lokal nach `master` gemergt
+   (`21b5c84`); es wartet mit T-88/T-89 auf deine Abnahme. Prüfbar ohne
+   Handgriff: Verhalten unverändert, Backup und Wiederherstellen laufen wie
+   bisher. [T-91](30-doing/T-91-sqlmodel-kerntabellen.md) läuft, T-92 folgt;
+   T-92 beendet die befristete T-89-Ausnahme.
 3. **Docker Hub und Unraid:** Image 1.4.0 ist gebaut, aber nicht gepusht
    und enthält T-88/T-89 noch nicht. Neues Image, Docker-Hub-Beschreibung
    (`make push`) und Unraid-Listing brauchen deinen Auftrag.

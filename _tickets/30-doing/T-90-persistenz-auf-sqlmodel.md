@@ -104,6 +104,15 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | 6 | Browser mit Alt-Datenbank | Migrationsvorschau, Bestätigung und Bericht laufen über die verlagerten Funktionen | ✅ |
 | 7 | Doku | Projektaufbau im `README.md` nennt `persistence/` und seine Aussage „data access (only here)“ stimmt mit dem aktuellen Code überein | ✅ |
 
+### Auflösung
+
+Technisch freigegeben von Codex in Runde 4 (`65d7f05`). Claude hat den
+Ticketbranch am 2026-10-02 lokal nach `master` gemergt (`21b5c84`); kein
+Push, kein Docker-Hub- oder Unraid-Update. Folgearbeit:
+[T-91](T-91-sqlmodel-kerntabellen.md) (SQLModel für die Kerntabellen),
+danach T-92. Mikes Abnahme steht aus; das Ticket bleibt bis dahin in
+`30-doing/`.
+
 ## Review-Verlauf (neueste Runde zuerst)
 
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
