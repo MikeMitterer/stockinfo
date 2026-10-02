@@ -11,6 +11,12 @@ haben im ORM keine Entsprechung. `read_stamp` öffnet fremde Sicherungsdateien
 nur lesend und muss auch ältere Schemata lesen, die die Modelle nicht
 abbilden. Der Stempel der **laufenden** Datenbank (`write_stamp_if_missing`)
 geht über die Modelle.
+
+Dasselbe gilt für den Vergleich über einen Datenbestand
+(`scripts/compare_database_versions.py`, T-97): `snapshot_read_only` sichert
+eine fremde Datei mit `immutable=1`, damit neben ihr keine Journale
+entstehen; `table_contents` liest jede Tabelle einer Kopie, auch solche, die
+kein Modell kennt. Das App-Laufzeitverhalten berühren beide nicht.
 """
 
 import os
@@ -88,6 +94,47 @@ def copy_database(database_path: str | Path, target: Path) -> None:
     connection = get_connection(str(database_path))
     try:
         connection.execute("VACUUM INTO ?", (str(target),))
+    finally:
+        connection.close()
+
+
+class DatabaseInUseError(Exception):
+    """Neben der Datei liegt eine nicht leere WAL: Die App läuft oder hat nicht aufgeräumt."""
+
+
+def snapshot_read_only(database_path: str | Path, target: Path) -> None:
+    """Sichert eine fremde Datenbank, ohne neben ihr etwas anzulegen.
+
+    Schon `mode=ro` legt bei einer WAL-Datenbank `-wal` und `-shm` neben die
+    Datei (gemessen am Arbeitsbestand, T-97). `immutable=1` lässt beides
+    weg, liest aber eine WAL mit Inhalt nicht mit. Deshalb wird nur ohne
+    solche WAL gesichert.
+
+    Args:
+        database_path: Die zu sichernde Datei; sie wird nicht verändert.
+        target: Zieldatei der Sicherung.
+
+    Raises:
+        DatabaseInUseError: Neben der Datei liegt eine nicht leere WAL.
+    """
+    database = Path(database_path)
+    wal = database.with_name(database.name + "-wal")
+    if wal.exists() and wal.stat().st_size > 0:
+        raise DatabaseInUseError(f"{wal.name} ist nicht leer")
+    source = sqlite3.connect(f"{database.resolve().as_uri()}?mode=ro&immutable=1", uri=True)
+    try:
+        with sqlite3.connect(target) as copy:
+            source.backup(copy)
+    finally:
+        source.close()
+
+
+def table_contents(database_file: str | Path) -> dict[str, set[tuple]]:
+    """Alle Zeilen je Tabelle, nur lesend — um zwei Stände einer Kopie zu vergleichen."""
+    connection = connect_read_only(database_file)
+    try:
+        tables = [row[0] for row in connection.execute("SELECT name FROM sqlite_master WHERE type = 'table'")]
+        return {table: set(connection.execute(f'SELECT * FROM "{table}"')) for table in tables}
     finally:
         connection.close()
 

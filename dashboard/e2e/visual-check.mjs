@@ -12,8 +12,11 @@
 //   node e2e/visual-check.mjs               # alle Wege, sichtbares Chrome
 //   HEADLESS=1 node e2e/visual-check.mjs    # ohne Fenster
 //   ONLY=W2,W5 node e2e/visual-check.mjs    # nur diese Wege (Nummern wie im Bericht)
-//   ONLINE=1 node e2e/visual-check.mjs      # dazu W17: ein Papier über die echten Quellen
+//   ONLINE=1 node e2e/visual-check.mjs      # dazu W18: ein Papier über die echten Quellen
 //   CHROME=<Pfad> node e2e/visual-check.mjs # Chrome an anderem Ort
+//
+// W17 „Arbeitsbestand“ läuft nur mit `DB_COPY` und `EXPECTED` und wird von
+// `scripts/compare_database_versions.py` gestartet (T-97), nicht von Hand.
 //
 // Ergebnis: eine Zeile `OK`/`FAIL` je Weg, `report.md` und Screenshots unter
 // `.tmp/visual-check/<Zeitstempel>/`. Exit-Code 0 nur, wenn alle Wege grün sind.
@@ -29,10 +32,18 @@ import { chromium } from 'playwright-core'
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..')
 const STAMP = new Date().toISOString().replace(/[:.]/g, '-')
-const OUT = join(ROOT, '.tmp', 'visual-check', STAMP)
+// `VISUAL_OUT` setzt `scripts/compare_database_versions.py` für W17: Bilder
+// echter Daten liegen dann in dessen Laufordner und werden mit ihm gelöscht.
+const OUT = process.env.VISUAL_OUT ?? join(ROOT, '.tmp', 'visual-check', STAMP)
 const CHROME = process.env.CHROME ?? '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
 const ONLY = process.env.ONLY ? new Set(process.env.ONLY.split(',')) : null
 const HEADLESS = process.env.HEADLESS === '1'
+// W17 ist ein sichtbarer Pflichtweg (T-97): ohne Fenster kein Lauf, und das
+// vor dem Start von Server und Chrome.
+if (process.env.DB_COPY && HEADLESS) {
+  console.log('FAIL W17 Arbeitsbestand — W17 braucht ein sichtbares Fenster, HEADLESS=1 ist nicht erlaubt')
+  process.exit(1)
+}
 const WINDOW_X = 100
 const VIEWPORT = { width: 1512, height: 860 }
 
@@ -125,9 +136,16 @@ async function startServer(dataDir, dist) {
   throw new CheckFailed(`Server auf ${port} kam nicht hoch`)
 }
 
+/**
+ * Beendet den Server; ein zweiter Aufruf für denselben Server kehrt sofort zurück.
+ *
+ * Ein per Signal beendeter Prozess hat keinen `exitCode`, sondern einen
+ * `signalCode`. Nur `exitCode` zu prüfen ließ einen zweiten Aufruf auf ein
+ * `exit` warten, das nie mehr kommt (gemessen in W17).
+ */
 function stopServer(server) {
   return new Promise((done) => {
-    if (server.child.exitCode !== null) return done()
+    if (server.child.exitCode !== null || server.child.signalCode !== null) return done()
     server.child.once('exit', () => done())
     server.child.kill('SIGTERM')
   })
@@ -257,6 +275,62 @@ async function settle(page) {
 
 function row(page, text) {
   return page.locator('tbody tr', { hasText: text }).first()
+}
+
+/** Derselbe Schlüssel wie `instrument_key` in `scripts/compare_database_versions.py`. */
+function instrumentKey(item) {
+  const identity = item.identity ?? {}
+  return identity.isin || ['ticker', 'mic', 'base', 'quote_currency'].map((field) => identity[field] ?? 'None').join('/')
+}
+
+/** JSON mit sortierten Schlüsseln — Gleichheit unabhängig von der Feldreihenfolge. */
+function canonical(value) {
+  if (Array.isArray(value)) return `[${value.map(canonical).join(',')}]`
+  if (value && typeof value === 'object') {
+    return `{${Object.keys(value).sort().map((key) => `${JSON.stringify(key)}:${canonical(value[key])}`).join(',')}}`
+  }
+  return JSON.stringify(value)
+}
+
+/**
+ * W17: Jedes erwartete Papier in API und Oberfläche.
+ *
+ * API: das ganze Papier gleich der Antwort des alten Stands — Kurs, Details,
+ * manuelle Werte. Oberfläche: je Zeile Name und Kurs mit zwei Nachkommastellen,
+ * bei Papieren mit Textdetails die Werte im aufgeklappten Detailbereich.
+ */
+async function checkStoredAssets(ctx, expected, round) {
+  const current = (await api(state.server, '/instruments')).body
+  check(current.length === Object.keys(expected).length,
+    `${round}: ${current.length} statt ${Object.keys(expected).length} Papiere`)
+  const byKey = Object.fromEntries(current.map((item) => [instrumentKey(item), item]))
+  // Eigener Kontext je Runde: Offene Verbindungen des gemeinsamen Kontexts
+  // hielten den Server beim Stopp fest (gemessen: `stopServer` hing).
+  const page = await ctx.page('/', {})
+  let detailsChecked = 0
+  for (const [key, old] of Object.entries(expected)) {
+    check(byKey[key] && canonical(byKey[key]) === canonical(old), `${round}: ${old.symbol} weicht von der Antwort vor der Umstellung ab`)
+    const line = row(page, old.identity?.isin ?? old.symbol)
+    // Der Browser fasst Leerzeichenfolgen zusammen; gespeicherte Namen
+    // enthalten solche Folgen (gemessen im Arbeitsbestand).
+    const text = (await line.innerText()).replace(/\s+/g, ' ')
+    const name = old.name.replace(/\s+/g, ' ')
+    const shown = old.latest_price === null ? '-'
+      : old.latest_price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    check(text.includes(name) && text.includes(shown), `${round}: Zeile ${old.symbol} zeigt nicht „${name}“ und ${shown}`)
+    const texts = Object.values(old.details ?? {}).map((detail) => detail.value).filter((value) => typeof value === 'string')
+    if (texts.length === 0) continue
+    await line.locator('td.caret-col button').click()
+    await settle(page)
+    const detail = await page.locator('.drilldown').first().innerText()
+    for (const value of texts) check(detail.includes(value), `${round}: ${old.symbol} zeigt Detail „${value}“ nicht`)
+    detailsChecked += 1
+    await line.locator('td.caret-col button').click()
+    await settle(page)
+  }
+  check(detailsChecked >= 3, `${round}: nur ${detailsChecked} Papiere mit Details geprüft`)
+  await ctx.shot(page, round.toLowerCase())
+  await page.context().close()
 }
 
 /** Das Papier aus `GET /instruments` — per Symbol oder ISIN (steht in `identity`). */
@@ -749,10 +823,35 @@ try {
     }
   })
 
+  // Nur mit DB_COPY und EXPECTED aus `scripts/compare_database_versions.py`
+  // (T-97): eine Kopie des Arbeitsbestands, Erwartungen aus den Antworten des
+  // alten Stands vor der SQL-Umstellung — nicht aus YAML, nicht aus dieser
+  // Instanz. Geprüft vor und nach einem Neustart auf derselben Kopie.
+  if (process.env.DB_COPY && process.env.EXPECTED) {
+    await way('W17', 'Arbeitsbestand', {}, async (ctx) => {
+      const expected = JSON.parse(readFileSync(process.env.EXPECTED, 'utf8'))
+      const keys = Object.keys(expected)
+      check(keys.length >= 15, `nur ${keys.length} Papiere, verlangt sind mindestens 15`)
+      const copyDir = dirname(process.env.DB_COPY)
+      const main = state.server
+      try {
+        for (const round of ['Start', 'Neustart']) {
+          // Die großen TTL-Werte setzt das Vergleichsskript in der Umgebung.
+          state.server = await startServer(copyDir, dist)
+          await checkStoredAssets(ctx, expected, round)
+          await stopServer(state.server)
+        }
+      } finally {
+        if (state.server !== main) await stopServer(state.server)
+        state.server = main
+      }
+    })
+  }
+
   // Nur mit ONLINE=1 und nicht Teil des Bestehens der Pflichtwege: ein Papier
   // über die echten Online-Quellen (Standardkette ohne `sources.yaml`).
   if (process.env.ONLINE === '1') {
-    await way('W17', 'Online-Rauchtest', {}, async (ctx) => {
+    await way('W18', 'Online-Rauchtest', {}, async (ctx) => {
       const onlineDir = mkdtempSync(join(tmpdir(), 'stockinfo-visual-online-'))
       const online = await startServer(onlineDir, dist)
       const main = state.server

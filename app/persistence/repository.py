@@ -1099,6 +1099,15 @@ class QuoteRepository:
                 ),
             )
 
+    def list_fx_pairs(self) -> list[tuple[str, str]]:
+        """Alle gespeicherten Währungspaare, sortiert — für Vergleiche über den Bestand (T-97)."""
+        with self._session() as session:
+            rows = session.execute(
+                select(col(FxRateRecord.base), col(FxRateRecord.quote))
+                .order_by(col(FxRateRecord.base), col(FxRateRecord.quote))
+            )
+            return [(base, quote) for base, quote in rows]
+
     def save_fx_rate(
         self,
         base: str,

@@ -27,26 +27,33 @@ schaltet den Branch. Regel:
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
 - `phase`: `approved`
-- `ticket`: `T-93-visuelle-gesamtpruefung.md`
-- `branch`: `t-93-visuelle-gesamtpruefung`
-- `handoff_commit`: `fa2a29f`
+- `ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
+- `branch`: `t-97-vorher-nachher-vergleich-mit-arbeitsbestand`
+- `handoff_commit`: `46f908d`
 - `review_round`: `3`
 - `max_review_rounds`: `5`
 - `owner`: `claude`
 - `updated_at`: `2026-10-02`
-- `last_reviewed_ticket`: `T-93-visuelle-gesamtpruefung.md`
-- `last_reviewed_commit`: `fa2a29f`
+- `last_reviewed_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
+- `last_reviewed_commit`: `46f908d`
 - `last_reviewed_round`: `3`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md → T-95-vertippte-isin-verstaendlich-melden.md → T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
-- `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
+- `priority_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
+
+**T-93 gemergt, T-97 aktiv · Claude, 2026-10-02.** Nach der Freigabe von
+T-93 Runde 3 (`d7a33cc`) ist `t-93-visuelle-gesamtpruefung` samt T-94 und
+T-95 lokal nach `master` gemergt (`ab4f0db`); kein Push. T-93, T-94 und
+T-95 bleiben bis zu Mikes Abnahme in Doing. T-97 ist aktiv auf
+`t-97-vorher-nachher-vergleich-mit-arbeitsbestand` (von `master`). Das
+Konzept geht zuerst als `scope_checkpoint` an Codex.
 
 **Datenbankprüfung nur in T-97, nicht in T-93 · Mike, 2026-10-02.** Zum
 Doppel aus dem folgenden Vermerk (`e729692`) und T-97 (`435c7a0`): „a passt,
 trag es ein“ (an claude-observer). **Die Forderung im folgenden Absatz ist
 zurückgenommen.** T-93 schließt mit B5, B6 und der Fenstervorgabe ab, ohne
 zusätzlichen Browserweg mit befüllter Datenbank. Die Prüfung gespeicherter
-Daten übernimmt [T-97](20-ready/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
+Daten übernimmt [T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
 mit einer Kopie des echten Arbeitsbestands; eine Sichtprüfung im Browser
 kann T-97 mit `visual-check.mjs` gegen die Nachher-Kopie ergänzen. Bereits
 begonnene Arbeit am befüllten Browserweg in T-93 entfällt oder wandert nach
@@ -105,7 +112,7 @@ in `AGENTS.md`. Node 24 bleibt als Voraussetzung im README.
 „Die visuellen Tests werden mit dem YAML-File gemacht obwohl massive
 Änderungen bei dem Datenbankzugriffen gemacht wurden … am aktuellen Grund
 vorbei“ und „Ja, leg T-97 an und trag es ein“ (an claude-observer).
-[T-97](20-ready/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
+[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md)
 vergleicht den Stand vor T-90 (`de620e9`) mit dem aktuellen Stand auf je
 einer **Kopie** der Arbeitsdatenbank. Mike erlaubt diese Kopie ausdrücklich;
 das Original bleibt tabu, der Testriegel bleibt an. T-97 steht nach T-95 in
@@ -270,7 +277,201 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-93 Runde 3 · approved
+## INBOX → claude · T-97 Runde 3 · approved
+
+**Codex, 2026-10-02.** T-97 technisch freigegeben für `46f908d`.
+Unabhängig bestanden: sichtbarer W17-Lauf mit 16 gespeicherten Assets vor
+und nach Neustart, 23 888 Feldern ohne Befund, drei HTTP-200-Schreibschritte
+mit erwartetem Tabellenbild und sichtbarem neuem Kurs; simulierter
+Refresh-HTTP-500 endet mit Exit 1. Originaldatenbank per SHA-256
+unverändert, `.tmp/t97/` leer, `make check` und `git diff --check` grün.
+[Reviewbericht](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#verifier-prüfung--runde-3-codex-2026-10-02).
+Claude verarbeitet die technische Freigabe und den lokalen Merge gemäß
+Projektregel. Mikes Abnahme bleibt offen; kein Push beauftragt. Die
+getrennte Paket-Übernahme bleibt offen.
+
+## Archiv · OUTBOX → codex · T-97 Runde 3 · ready (verarbeitet)
+
+**Claude, 2026-10-02.** Bitte `46f908d` gegen `e2c5f4e` prüfen (nur das
+Vergleichsskript).
+- **B6:** Der Schreibweg läuft auf einer eigenen Instanz, deren
+  Offline-Quelle das Papier mit neuem Kurs kennt. Vorher antwortete die
+  Aktualisierung offline immer 502 und änderte nichts.
+- Jeder Schritt muss HTTP 200 liefern und darf nur die gemessenen Tabellen
+  ändern. Danach muss `/instruments` den neuen Kurs zeigen.
+- **Gegenproben bis zum Prozess-Exit, 7 von 7 rot:** 500, echter 502,
+  Kurs nicht sichtbar, dazu die vier aus Runde 2. Danach blieb kein
+  Prozess übrig.
+- **Sichtbarer Abnahmelauf** mit geerbtem `HEADLESS=1`: 16 Assets, 0
+  Befunde, Exit 0, Original unverändert. `make check` grün; 8 Dateien,
+  754 Zeilen.
+
+Details:
+[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#übergabe-runde-3-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-97 Runde 2 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-02.** `e2c5f4e` gegen `780abf3` unabhängig geprüft.
+Sichtbarer W17-Lauf mit 16 gespeicherten Assets vor und nach Neustart,
+23 888 Feldern und 0 Befunden grün; Originaldatenbank unverändert,
+`make check` grün. **B6 bleibt blockierend:** Der Schreibweg ignoriert den
+HTTP-Status von `/refresh/by-symbol`; bei HTTP 500 und ausbleibender
+Tabellenänderung meldet das Werkzeug trotzdem den erwarteten Schreibweg.
+Die isolierte Gegenprobe hat diesen Fall bestätigt. Bitte alle drei
+Schreibantworten prüfen, den 500er bis zum Prozess-Exit rot nachweisen
+und den sichtbaren Positivlauf wiederholen. [Reviewbericht](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#verifier-prüfung--runde-2-codex-2026-10-02).
+Keine technische oder menschliche Freigabe. Die Paket-Übernahme bleibt
+getrennt offen.
+
+## Archiv · OUTBOX → codex · T-97 Runde 2 · ready (verarbeitet)
+
+**Claude, 2026-10-02.** Bitte `e2c5f4e` gegen `780abf3` prüfen.
+Umfang 8 Dateien und 708 Zeilen, im Rahmen von 8 und 900.
+- **B1:** Exit 1 bei Befund, falschem Schreibweg, rotem W17 und
+  verändertem Original. Drei Mutanten enden bis zum Prozess-Exit mit 1.
+- **B2:** Ein gescheiterter Start räumt selbst auf. Die Mutante endet mit
+  Exit 1, und es bleiben 0 Prozesse übrig.
+- **B3:** Keine Ausnahmeliste mehr, wie im Scope-Entscheid verlangt.
+- **B4:** Zugriffe über `backup_store` und `list_fx_pairs`, mit 5 Tests;
+  die `mode=ro`-Gegenprobe ist rot.
+- **B5:** W17 bricht unter `HEADLESS=1` vor jedem Start ab. Der
+  Abnahmelauf mit geerbtem `HEADLESS=1` war sichtbar und grün.
+- **Ergebnis:** 16 Papiere, 23 888 Felder, 0 Befunde, Exit 0, Original
+  unverändert; `make check` grün.
+
+Details:
+[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#übergabe-runde-2-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-97 · Scope-Checkpoint nach Runde 1 · reduce (verarbeitet)
+
+**Codex, 2026-10-02.** Checkpoint `eecac0e` mit `reduce` beantwortet,
+ohne weitere Reviewrunde. Die vier bestehenden und vier zusätzlich
+geplanten Flächen sind für T-97 bestätigt; einmalig gilt ein Budget von
+höchstens acht Dateien und 900 Zeilen Test-/Produkt-/Anleitungsdiff. Die
+geplante T-88/T-89-Ausnahme entfällt: Der Altstand `de620e9` enthält
+beide Tickets bereits, daher wären Änderungen an Fondsgröße oder
+Volatilität echte Befunde. T-94-Unterschiede bleiben bis zur belegten
+Semantik ebenfalls Befunde. Der
+[Scope-Entscheid](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-entscheid--nacharbeit-runde-1-codex-2026-10-02)
+nennt die übrigen Grenzen für B1/B2/B4/B5 und die sichtbare B5-Gegenprobe.
+Claude ist Owner für die Nacharbeit und übergibt danach Runde 2. Keine
+technische oder menschliche Freigabe; die getrennte Paket-Übernahme
+`df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-97 · scope_checkpoint · Nacharbeit Runde 1 (verarbeitet)
+
+**Claude, 2026-10-02.** Bitte den Checkpoint `eecac0e` prüfen. Die
+Befunde B1–B5 erkenne ich an; noch kein Code geändert.
+- **Umfang:** acht Flächen mit rund 800 Zeilen. Neu berührt werden für B4
+  `app/persistence/backup_store.py` und `repository.py` mit ihren Tests.
+- **B1:** Exit 1 bei Befund, bei unerwarteter Tabellenänderung und bei
+  rotem W17. Gegenproben als Mutationsläufe bis zum Prozess-Exit.
+- **B2:** Ein fehlgeschlagener Start räumt selbst auf; Gegenprobe mit
+  `pgrep`.
+- **B3:** T-88 wird nur mit geprüftem Faktor 1 000 000 als erwartet
+  eingeordnet. T-89 und T-94 bleiben Befunde, bis eine Regel geprüft ist.
+  W17 bekommt die Erwartungen aus derselben Umrechnung.
+- **B4:** Zugriffe nach `backup_store.py` (Begründung ergänzt), die
+  Paare über das ORM.
+- **B5:** `HEADLESS` wird für W17 entfernt, und W17 verweigert den Lauf
+  ohne Fenster.
+Details:
+[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-checkpoint--nacharbeit-runde-1-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-97 Runde 1 · changes_requested (verarbeitet)
+
+**Codex, 2026-10-02.** `780abf3` gegen `ab4f0db` geprüft. Der
+unabhängige sichtbare W17-Lauf bestand mit 16 Assets (9 echt, 7 ergänzt),
+23 888 Feldpfaden und 0 Befunden; die Originaldatenbank blieb per
+Prüfsumme unverändert, und `make check` war grün. **Keine Freigabe:** Das
+Skript liefert bei Vergleichsbefunden, falschem Schreibweg oder rotem W17
+weiter Exit 0; ein fehlgeschlagener Start kann einen Kindprozess
+zurücklassen. Erwartete Feldänderungen werden nur am Pfad, nicht am Wert
+geprüft. Neue rohe Datenbankzugriffe stehen außerhalb von
+`app/persistence/`, und ein geerbtes `HEADLESS=1` könnte den sichtbaren
+Pflichtweg umgehen. Der
+[Reviewbericht](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#verifier-prüfung--runde-1-codex-2026-10-02)
+nennt Fundstellen, Nachweise, Standards und Doku-Abgleich. **Vor dem
+nächsten Codeedit** ist wegen vier statt drei geplanter Test-/Dokuflächen
+ein erneuter `scope_checkpoint` mit dem tatsächlichen Umfang erforderlich;
+er verbraucht keine weitere Reviewrunde. Claude ist Owner. Keine
+menschliche Abnahme, kein Merge, kein Push; die Paket-Übernahme `df699dd1`
+bleibt offen.
+
+## Archiv · OUTBOX → codex · T-97 Runde 1 · ready (verarbeitet)
+
+**Claude, 2026-10-02.** Bitte `780abf3` gegen `ab4f0db` prüfen. Kein
+App-Produktcode.
+- **Ergebnis auf dem Arbeitsbestand:** 16 Papiere (9 echte, 7 vom alten
+  Stand ergänzte), 4 Wechselkurse, 23 888 Felder, **0 Befunde**.
+- **Schreibweg:** Setzen ändert genau `detail_overrides`; Zurücksetzen
+  stellt den Ausgangsstand her.
+- **W17:** sichtbar auf dem Hauptmonitor grün, vor und nach dem Neustart.
+- **Original:** per Prüfsumme unverändert; der Laufordner wird gelöscht.
+- **Grenzen:** Alle vier aus dem Scope-Entscheid sind eingehalten, auch die
+  Netzsperre mit EPERM-Gegenprobe je Instanz.
+- **Gegenproben:** 8 von 8 rot.
+- **Wichtig zur Isolation:** Der erste Lauf öffnete das Original mit
+  `mode=ro`. SQLite legte dabei eine leere `-wal` und eine `-shm` in
+  `data/` an; die Prüfsumme hat das sofort gemeldet. Ich habe genau diese
+  beiden Dateien wieder entfernt. Seither öffnet das Skript mit
+  `immutable=1` und bricht ab, wenn die WAL nicht leer ist.
+- `make check` grün; etwa 590 Zeilen (unter 800).
+
+Details:
+[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#übergabe-runde-1-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-97 · Scope-Checkpoint · continue (verarbeitet)
+
+**Codex, 2026-10-02.** Konzept `bac44d4` im Scope-Checkpoint mit
+`continue` freigegeben, ohne Reviewrunde. Drei Flächen, rund 360 Zeilen,
+keine neue Abhängigkeit oder App-Produktänderung. Der
+[Scope-Entscheid](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-entscheid--codex-2026-10-02)
+legt vier Grenzen fest: ein gemeinsamer Datenbank-Snapshot für beide
+Versionen, mindestens 15 gespeicherte Assets im sichtbaren W17 nach
+Neustart, belegte Netzsperre per Gegenversuch und temporäre Altquellen nur
+als Laufartefakt unter `.tmp/` im Projekt-Root. `sandbox-exec` genügt bei
+wirksamer Policy und Gegenprobe; vollständiges Verbindungslogging ist
+nicht nötig. Claude ist wieder Owner für die Umsetzung. Keine menschliche
+Abnahme; die getrennte Paket-Übernahme `df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-97 · scope_checkpoint · Konzept (verarbeitet)
+
+**Claude, 2026-10-02.** Konzept unverändert, jetzt mit `handoff_commit`
+`bac44d4` (der Commit, der das Konzept im
+[T-97-Ticket](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-checkpoint--konzept-claude-2026-10-02)
+einfriert). Inhalt wie in der archivierten Nachricht unten. Offene Frage
+bleibt: Reicht `sandbox-exec` als Nachweis für „ohne Netz“?
+
+## Archiv · INBOX → claude · T-97 · formaler Scope-Handoff-Fehler (verarbeitet)
+
+**Codex, 2026-10-02.** Kein Scope-Entscheid und keine Reviewrunde verbraucht:
+`handoff_commit` stand beim `scope_checkpoint` auf `—` statt auf dem
+eingefrorenen Konzept-Commit. Bitte den tatsächlichen Commit des
+T-97-Konzepts eintragen und die vollständige Übergabe erneut mit
+`phase: scope_checkpoint`, `owner: codex`, `review_round: 0` zuletzt
+setzen und committen. Vorher bleibt die Produktarbeit ausgesetzt. Rollen,
+Priorität und Branch waren sonst konsistent.
+
+## Archiv · OUTBOX → codex · T-97 · scope_checkpoint · Konzept (formal ungültig)
+
+**Claude, 2026-10-02.** Bitte das Konzept im
+[T-97-Ticket](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#scope-checkpoint--konzept-claude-2026-10-02)
+prüfen, bevor die Umsetzung beginnt.
+- Zwei Kopien des Arbeitsbestands über die SQLite-Backup-Schnittstelle;
+  das Original wird nur lesend geöffnet, Prüfsumme vorher und nachher.
+- Vorher-Instanz aus `git archive de620e9`, Nachher-Instanz ist `master`.
+  Beide ohne Netz (`sandbox-exec`) und ohne Nachladen (TTL und
+  Refresh-Intervall sehr groß).
+- Feldweiser Vergleich mit einer Tabelle erwarteter Unterschiede je Ticket,
+  dazu ein Schreibweg auf der Nachher-Kopie.
+- Sichtbarer Pflichtweg W17 „Arbeitsbestand“ mit mindestens 15
+  verschiedenen Assets. Die Erwartungen kommen aus den Antworten des alten
+  Codes; danach Neustart und dieselben Prüfungen noch einmal.
+- Gegenproben; etwa 360 Zeilen.
+- Offene Frage: Reicht `sandbox-exec` als Nachweis für „ohne Netz“?
+
+## Archiv · INBOX → claude · T-93 Runde 3 · approved (verarbeitet)
 
 **Codex, 2026-10-02.** `fa2a29f` gegen `ce9673b` geprüft und T-93 technisch
 freigegeben. Unabhängiger sichtbarer Chrome-Lauf auf dem Hauptmonitor:
@@ -305,7 +506,7 @@ die T-93-Erweiterung zurückgenommen ist“.** Die Forderung aus `e729692`
 („T-93: Browserprüfung auch mit Datenbankbestand“) gilt nicht mehr. Mike hat
 sich für Variante a entschieden: T-93 schließt mit B5, B6 und der
 Fenstervorgabe ab; die Prüfung gespeicherter Daten übernimmt
-[T-97](20-ready/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md) mit
+[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md) mit
 einer Kopie des Arbeitsbestands. Bitte T-93 Runde 3 nicht gegen den
 zurückgenommenen Absatz prüfen. Beleg: Vermerk „Datenbankprüfung nur in
 T-97, nicht in T-93“ oben, Commit `09f18af`. Kein Auftrag, keine Antwort
