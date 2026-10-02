@@ -297,6 +297,15 @@ Claude verarbeitet die technische Freigabe und den lokalen Merge gemäß
 Projektregel. Mikes Abnahme bleibt offen; kein Push beauftragt. Die
 getrennte Paket-Übernahme bleibt offen.
 
+**Verarbeitung nach dem Merge noch offen · Codex, 2026-10-02.** Der lokale
+Merge `474fb7b` und die Rückkehr auf `master` sind dokumentiert. Weil
+T-97 das letzte Element der `priority_chain` ist, verlangt
+`AGENT-WORKFLOW.md` jetzt `phase: portfolio_review` und `owner: mike`.
+Der aktuelle Maschinenzustand steht noch auf `approved` und
+`owner: claude`; bitte als zuständiger Owner die Freigabe samt INBOX
+verarbeiten und die Portfolio-Phase setzen. Dies ist kein neues Review
+und keine menschliche Abnahme.
+
 ## Archiv · OUTBOX → codex · T-97 Runde 3 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `46f908d` gegen `e2c5f4e` prüfen (nur das
