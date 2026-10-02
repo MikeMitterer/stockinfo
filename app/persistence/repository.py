@@ -11,12 +11,25 @@ import json
 import uuid
 from contextlib import AbstractContextManager
 from dataclasses import dataclass
+from typing import cast
 
 import structlog
-from sqlalchemy import ColumnElement, Select, and_, delete, func, or_, select, text, update
+from sqlalchemy import (
+    ColumnElement,
+    CursorResult,
+    Result,
+    Select,
+    and_,
+    delete,
+    func,
+    or_,
+    select,
+    text,
+    update,
+)
 from sqlalchemy.dialects.sqlite import insert
 from sqlalchemy.exc import IntegrityError
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from app.calculated_metrics import CALCULATED_SOURCE
 from app.detail_models import DetailDefinition
@@ -41,11 +54,21 @@ from app.persistence.tables import (
     DetailValueRecord,
     InstrumentRecord,
     QuoteRecord,
+    table_of,
 )
 
-_INSTRUMENTS = InstrumentRecord.__table__
-_QUOTES = QuoteRecord.__table__
-_DAILY_CLOSES = DailyCloseRecord.__table__
+_INSTRUMENTS = table_of(InstrumentRecord)
+_QUOTES = table_of(QuoteRecord)
+_DAILY_CLOSES = table_of(DailyCloseRecord)
+
+
+def _changed(result: Result) -> CursorResult:
+    """Das Ergebnis eines `INSERT`/`DELETE` mit Zeilenzahl und neuer Zeilen-ID.
+
+    SQLAlchemy liefert hier zur Laufzeit ein `CursorResult`, typisiert aber
+    `Result`; nur das erste kennt `rowcount` und `lastrowid`.
+    """
+    return cast(CursorResult, result)
 
 logger = structlog.get_logger()
 
@@ -89,16 +112,16 @@ def identity_condition(identity: IdentityOut) -> ColumnElement[bool]:
     """
     if isinstance(identity, PairIdentityOut):
         return and_(
-            InstrumentRecord.kind == "pair",
-            InstrumentRecord.base == identity.base,
-            InstrumentRecord.quote_currency == identity.quote_currency,
+            col(InstrumentRecord.kind) == "pair",
+            col(InstrumentRecord.base) == identity.base,
+            col(InstrumentRecord.quote_currency) == identity.quote_currency,
         )
     if isinstance(identity, IsinOnlyIdentityOut):
-        return and_(InstrumentRecord.kind == "isin_only", InstrumentRecord.isin == identity.isin)
+        return and_(col(InstrumentRecord.kind) == "isin_only", col(InstrumentRecord.isin) == identity.isin)
     return and_(
-        InstrumentRecord.kind == "listed",
-        InstrumentRecord.ticker == identity.ticker,
-        InstrumentRecord.mic == identity.mic,
+        col(InstrumentRecord.kind) == "listed",
+        col(InstrumentRecord.ticker) == identity.ticker,
+        col(InstrumentRecord.mic) == identity.mic,
     )
 
 
@@ -265,7 +288,7 @@ class QuoteRepository:
     def get_instrument_by_isin(self, isin: str) -> dict | None:
         """Gibt das Instrument zur ISIN zurück (oder ``None``)."""
         with self._session() as session:
-            row = fetch_one(session, select(_INSTRUMENTS).where(InstrumentRecord.isin == isin))
+            row = fetch_one(session, select(_INSTRUMENTS).where(col(InstrumentRecord.isin) == isin))
             return detail_store.read(session, row) if row else None
 
     def get_instrument_by_symbol(self, symbol: str) -> dict | None:
@@ -340,7 +363,7 @@ class QuoteRepository:
         """
         rows = fetch_all(
             session,
-            select(_INSTRUMENTS).where(InstrumentRecord.symbol == symbol).order_by(InstrumentRecord.id),
+            select(_INSTRUMENTS).where(col(InstrumentRecord.symbol) == symbol).order_by(col(InstrumentRecord.id)),
         )
         if len(rows) > 1:
             raise AmbiguousSymbolError(
@@ -358,8 +381,8 @@ class QuoteRepository:
             return fetch_one(
                 session,
                 select(_QUOTES)
-                .where(QuoteRecord.instrument_id == instrument_id)
-                .order_by(QuoteRecord.quote_time.desc())
+                .where(col(QuoteRecord.instrument_id) == instrument_id)
+                .order_by(col(QuoteRecord.quote_time).desc())
                 .limit(1),
             )
 
@@ -381,12 +404,12 @@ class QuoteRepository:
         Returns:
             Liste von Kurspunkt-Dicts.
         """
-        statement = select(_QUOTES).where(QuoteRecord.instrument_id == instrument_id)
+        statement = select(_QUOTES).where(col(QuoteRecord.instrument_id) == instrument_id)
         if date_from:
-            statement = statement.where(QuoteRecord.quote_time >= date_from)
+            statement = statement.where(col(QuoteRecord.quote_time) >= date_from)
         if date_to:
-            statement = statement.where(QuoteRecord.quote_time <= date_to)
-        statement = statement.order_by(QuoteRecord.quote_time.desc()).limit(limit)
+            statement = statement.where(col(QuoteRecord.quote_time) <= date_to)
+        statement = statement.order_by(col(QuoteRecord.quote_time).desc()).limit(limit)
         with self._session() as session:
             return fetch_all(session, statement)
 
@@ -402,11 +425,11 @@ class QuoteRepository:
         Returns:
             Liste von Tages-Schlusskurs-Dicts.
         """
-        statement = select(_DAILY_CLOSES).where(DailyCloseRecord.instrument_id == instrument_id)
+        statement = select(_DAILY_CLOSES).where(col(DailyCloseRecord.instrument_id) == instrument_id)
         if date_from:
-            statement = statement.where(DailyCloseRecord.date >= date_from)
+            statement = statement.where(col(DailyCloseRecord.date) >= date_from)
         with self._session() as session:
-            return fetch_all(session, statement.order_by(DailyCloseRecord.date))
+            return fetch_all(session, statement.order_by(col(DailyCloseRecord.date)))
 
     def upsert_daily_closes(self, instrument_id: int, rows: list[dict]) -> None:
         """Speichert/aktualisiert Tages-Schlusskurse (Update bei gleichem Datum).
@@ -443,8 +466,8 @@ class QuoteRepository:
         """Gibt (min, max) der gecachten Datumsgrenzen zurück (oder ``None``)."""
         with self._session() as session:
             row = session.execute(
-                select(func.min(DailyCloseRecord.date), func.max(DailyCloseRecord.date))
-                .where(DailyCloseRecord.instrument_id == instrument_id)
+                select(func.min(col(DailyCloseRecord.date)), func.max(col(DailyCloseRecord.date)))
+                .where(col(DailyCloseRecord.instrument_id) == instrument_id)
             ).one()
             if row[0] is None:
                 return None
@@ -509,7 +532,7 @@ class QuoteRepository:
         """
         with self._session() as session:
             row = fetch_one(
-                session, self._instrument_query().where(InstrumentRecord.id == instrument_id)
+                session, self._instrument_query().where(col(InstrumentRecord.id) == instrument_id)
             )
             return detail_store.read(session, row) if row else None
 
@@ -526,7 +549,7 @@ class QuoteRepository:
         inner = _QUOTES.alias("inner_quotes")
         latest_id = (
             select(inner.c.id)
-            .where(inner.c.instrument_id == InstrumentRecord.id)
+            .where(inner.c.instrument_id == col(InstrumentRecord.id))
             .order_by(inner.c.quote_time.desc())
             .limit(1)
             .correlate(_INSTRUMENTS)
@@ -535,21 +558,21 @@ class QuoteRepository:
         history_count = (
             select(func.count())
             .select_from(inner)
-            .where(inner.c.instrument_id == InstrumentRecord.id)
+            .where(inner.c.instrument_id == col(InstrumentRecord.id))
             .correlate(_INSTRUMENTS)
             .scalar_subquery()
         )
         return (
             select(
                 _INSTRUMENTS,
-                QuoteRecord.price.label("latest_price"),
-                QuoteRecord.quote_time.label("latest_quote_time"),
-                QuoteRecord.currency.label("latest_currency"),
-                QuoteRecord.fetched_at.label("latest_fetched_at"),
+                col(QuoteRecord.price).label("latest_price"),
+                col(QuoteRecord.quote_time).label("latest_quote_time"),
+                col(QuoteRecord.currency).label("latest_currency"),
+                col(QuoteRecord.fetched_at).label("latest_fetched_at"),
                 history_count.label("history_count"),
             )
-            .select_from(_INSTRUMENTS.outerjoin(_QUOTES, QuoteRecord.id == latest_id))
-            .order_by(InstrumentRecord.symbol)
+            .select_from(_INSTRUMENTS.outerjoin(_QUOTES, col(QuoteRecord.id) == latest_id))
+            .order_by(col(InstrumentRecord.symbol))
         )
 
     def count_instruments(self) -> int:
@@ -564,7 +587,7 @@ class QuoteRepository:
             True, wenn ein Instrument gelöscht wurde, sonst False.
         """
         with self._session(write=True) as session:
-            result = session.execute(delete(InstrumentRecord).where(InstrumentRecord.isin == isin))
+            result = _changed(session.execute(delete(InstrumentRecord).where(col(InstrumentRecord.isin) == isin)))
             return result.rowcount > 0
 
     def set_isin(self, symbol: str, isin: str) -> None:
@@ -583,7 +606,7 @@ class QuoteRepository:
             if row is None:
                 return
             session.execute(
-                update(InstrumentRecord).where(InstrumentRecord.id == row["id"]).values(isin=isin)
+                update(InstrumentRecord).where(col(InstrumentRecord.id) == row["id"]).values(isin=isin)
             )
 
     def get_overrides(self, instrument_id: int) -> dict | None:
@@ -592,12 +615,15 @@ class QuoteRepository:
         with self._session() as session:
             rows = fetch_all(
                 session,
-                select(DetailOverrideRecord.field, DetailOverrideRecord.value, DetailOverrideRecord.as_of)
-                .where(DetailOverrideRecord.instrument_id == instrument_id),
+                select(
+                    col(DetailOverrideRecord.field),
+                    col(DetailOverrideRecord.value),
+                    col(DetailOverrideRecord.as_of),
+                ).where(col(DetailOverrideRecord.instrument_id) == instrument_id),
             )
             if not rows:
                 return None
-            values = {field: None for field in OVERRIDE_FIELDS}
+            values: dict[str, object] = {field: None for field in OVERRIDE_FIELDS}
             values.update({row['field']: json.loads(row['value']) for row in rows if row['field'] in values})
             values['instrument_id'] = instrument_id
             values['updated_at'] = max(row['as_of'] or '' for row in rows)
@@ -640,7 +666,7 @@ class QuoteRepository:
     def get_instrument_by_listing_id(self, listing_id: str) -> dict | None:
         """Eindeutiger öffentlicher Schreibweg, auch bei gleichnamigen Listings."""
         with self._session() as session:
-            row = fetch_one(session, select(_INSTRUMENTS).where(InstrumentRecord.listing_id == listing_id))
+            row = fetch_one(session, select(_INSTRUMENTS).where(col(InstrumentRecord.listing_id) == listing_id))
             return detail_store.read(session, row) if row else None
 
     def set_volatility(
@@ -679,7 +705,7 @@ class QuoteRepository:
             row = self._unique_symbol_row(session, symbol)
             if row is None:
                 return False
-            result = session.execute(delete(InstrumentRecord).where(InstrumentRecord.id == row["id"]))
+            result = _changed(session.execute(delete(InstrumentRecord).where(col(InstrumentRecord.id) == row["id"])))
             return result.rowcount > 0
 
     def save_instrument(self, resolved: object, fetched_at: str) -> SavedQuote:
@@ -742,11 +768,11 @@ class QuoteRepository:
                 # Migrierte Sammelquellen wie yfinance+justetf werden beim ersten
                 # Einzelquellen-Refresh durch die feldweise Herkunft ersetzt.
                 session.execute(delete(DetailValueRecord).where(
-                    DetailValueRecord.instrument_id == saved.instrument_id,
+                    col(DetailValueRecord.instrument_id) == saved.instrument_id,
                     or_(
-                        DetailValueRecord.source == source,
-                        func.instr("+" + DetailValueRecord.source + "+", f"+{source}+") > 0,
-                        DetailValueRecord.source == "legacy",
+                        col(DetailValueRecord.source) == source,
+                        func.instr("+" + col(DetailValueRecord.source) + "+", f"+{source}+") > 0,
+                        col(DetailValueRecord.source) == "legacy",
                     ),
                 ))
                 for field, entry in readings.items():
@@ -757,8 +783,8 @@ class QuoteRepository:
             for field in self._writable_fields(response):
                 if field in OVERRIDE_FIELDS and field not in declared and not response.detail_readings:
                     session.execute(delete(DetailValueRecord).where(
-                        DetailValueRecord.instrument_id == saved.instrument_id,
-                        DetailValueRecord.field == field,
+                        col(DetailValueRecord.instrument_id) == saved.instrument_id,
+                        col(DetailValueRecord.field) == field,
                     ))
                     detail_store.put_provider(session, saved.instrument_id, field,
                         {'value': getattr(response, field), 'source': response.source or 'legacy',
@@ -832,7 +858,7 @@ class QuoteRepository:
             meta["meta_fetched_at"] = response.fetched_at
         try:
             session.execute(
-                update(InstrumentRecord).where(InstrumentRecord.id == existing_id).values(meta)
+                update(InstrumentRecord).where(col(InstrumentRecord.id) == existing_id).values(meta)
             )
         except IntegrityError as exc:
             # Die Zeile, die über die ISIN gefunden wurde, soll eine Identität
@@ -894,8 +920,8 @@ class QuoteRepository:
 
         row = fetch_one(
             session,
-            select(*(getattr(InstrumentRecord, column) for column in IDENTITY_COLUMNS))
-            .where(InstrumentRecord.id == instrument_id),
+            select(*(col(getattr(InstrumentRecord, column)) for column in IDENTITY_COLUMNS))
+            .where(col(InstrumentRecord.id) == instrument_id),
         )
         stored = identity_from_columns(row) if row else None
         if stored == identity:
@@ -961,7 +987,7 @@ class QuoteRepository:
             # der `CHECK` im Schema.
             raise IncompleteIdentityError(response.symbol)
 
-        result = session.execute(
+        result = _changed(session.execute(
             insert(InstrumentRecord).values(
                 symbol=response.symbol,
                 first_seen=response.fetched_at,
@@ -977,8 +1003,8 @@ class QuoteRepository:
                 **identity_columns(identity),
                 **meta,
             )
-        )
-        return int(result.inserted_primary_key[0])
+        ))
+        return int(result.lastrowid)
 
     @staticmethod
     def _find_instrument_id(session: Session, symbol: str, identity: IdentityOut) -> int | None:
@@ -1010,7 +1036,7 @@ class QuoteRepository:
         """
         isin = _isin_of(identity)
         if isin:
-            found = session.scalar(select(InstrumentRecord.id).where(InstrumentRecord.isin == isin))
+            found = session.scalar(select(col(InstrumentRecord.id)).where(col(InstrumentRecord.isin) == isin))
             if found is not None:
                 return int(found)
 

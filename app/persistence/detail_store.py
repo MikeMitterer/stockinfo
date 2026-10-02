@@ -6,12 +6,17 @@ import uuid
 
 from sqlalchemy import delete, select, text, update
 from sqlalchemy.dialects.sqlite import insert
-from sqlmodel import Session
+from sqlmodel import Session, col
 
 from app.detail_models import DetailDefinition
 from app.details import CANONICAL, merge_value
 from app.persistence.session import fetch_all
-from app.persistence.tables import DetailOverrideRecord, DetailValueRecord, InstrumentRecord
+from app.persistence.tables import (
+    DetailOverrideRecord,
+    DetailValueRecord,
+    InstrumentRecord,
+    table_of,
+)
 
 SCHEMA = '''
 CREATE TABLE IF NOT EXISTS detail_values (
@@ -48,8 +53,8 @@ def migrate_legacy_values(session: Session) -> None:
     if session.execute(text("SELECT 1 FROM meta WHERE key='details_migrated'")).first():
         return
     fund_currencies = {}
-    columns = [InstrumentRecord.id, InstrumentRecord.source, InstrumentRecord.meta_fetched_at,
-               *(getattr(InstrumentRecord, field) for field in CANONICAL)]
+    columns = [col(InstrumentRecord.id), col(InstrumentRecord.source), col(InstrumentRecord.meta_fetched_at),
+               *(col(getattr(InstrumentRecord, field)) for field in CANONICAL)]
     for row in fetch_all(session, select(*columns)):
         fund_currencies[row['id']] = row.get('fund_currency')
         for field in CANONICAL:
@@ -112,7 +117,7 @@ def put_manual(session: Session, instrument_id: int, field: str, value, currency
     """Null entfernt nur die manuelle Eingabe, niemals den Quellenwert."""
     if value is None:
         session.execute(delete(DetailOverrideRecord).where(
-            DetailOverrideRecord.instrument_id == instrument_id, DetailOverrideRecord.field == field))
+            col(DetailOverrideRecord.instrument_id) == instrument_id, col(DetailOverrideRecord.field) == field))
         return
     statement = insert(DetailOverrideRecord).values(
         instrument_id=instrument_id, field=field, value=json.dumps(value), currency=currency, as_of=as_of)
@@ -127,11 +132,11 @@ def read(session: Session, row: dict, *, effective: bool = False) -> dict:
     definitions = catalog(session)
     by_name = {definition.name: definition for definition in definitions}
     providers: dict[str, list[dict]] = {}
-    for entry in fetch_all(session, select(DetailValueRecord.__table__).where(DetailValueRecord.instrument_id == row['id'])):
+    for entry in fetch_all(session, select(table_of(DetailValueRecord)).where(col(DetailValueRecord.instrument_id) == row['id'])):
         entry['value'] = json.loads(entry['value'])
         providers.setdefault(entry['field'], []).append(entry)
     manual = {}
-    for entry in fetch_all(session, select(DetailOverrideRecord.__table__).where(DetailOverrideRecord.instrument_id == row['id'])):
+    for entry in fetch_all(session, select(table_of(DetailOverrideRecord)).where(col(DetailOverrideRecord.instrument_id) == row['id'])):
         entry['value'] = json.loads(entry['value'])
         manual[entry['field']] = entry
     applicable = {definition.name for definition in definitions if definition.applies(row.get('type'), row.get('kind'))}

@@ -10,7 +10,17 @@ Nach außen gehen nur `dict`s. Ein Modellobjekt, das durch die App wandert,
 wäre ein Datenbankzugriff an jeder Stelle, die es anfasst.
 """
 
+from sqlalchemy import Table
 from sqlmodel import Field, SQLModel
+
+
+def table_of(record: type[SQLModel]) -> Table:
+    """Die Tabelle hinter einem Modell — für Abfragen, die Spalten statt Objekte liefern.
+
+    SQLModel setzt `__table__` erst zur Laufzeit; der Typprüfer sieht es nicht.
+    Hier steht der eine Zugriff darauf.
+    """
+    return record.__table__  # pyright: ignore[reportAttributeAccessIssue]
 
 
 class InstrumentRecord(SQLModel, table=True):
