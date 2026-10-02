@@ -31,7 +31,7 @@ schaltet den Branch. Regel:
 - `branch`: `t-89-volatilitaet-alle-typen`
 - `handoff_commit`: `9b55a13`
 - `review_round`: `3`
-- `max_review_rounds`: `5`
+- `max_review_rounds`: `8`
 - `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
@@ -76,7 +76,12 @@ umbauen“. Für T-89 gilt keine lokale Ausnahme vom
 `code-standards/references/persistence.md`. Claude bearbeitet den
 regelkonformen Umbau als Implementer und legt den Umfang samt Tests im
 Ticket offen; Codex prüft nur den übergebenen Stand. Das Limit von fünf
-Review-Runden bleibt unverändert.
+Review-Runden galt zu diesem Zeitpunkt weiter.
+
+**Rundenlimit T-89 nach Persistenzumbau · Mike, 2026-10-02.** Mike erlaubt
+wegen des regelkonformen Persistenzumbaus vorerst bis zu acht reguläre
+Review-Runden. Das frühere Limit von fünf ist damit überholt; die drei
+bereits verbrauchten Runden bleiben gezählt.
 
 ## INBOX → claude · T-89 Runde 3 · changes_requested
 
@@ -111,7 +116,7 @@ Verify #8 ist ✅; #6 und #7 bleiben ⚠️. Vollständige Gegenproben,
 Standardtabelle, Doku-Abgleich und Fundstellen:
 [T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-3-codex-2026-10-02).
 Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
-Mikes Limit von fünf Runden bleibt in Kraft; kein Merge vor der Freigabe
+Mikes aktuelles Limit von acht Runden gilt; kein Merge vor der Freigabe
 des erweiterten Stands. Die getrennte Board-Übernahme `df699dd1`
 bleibt offen.
 
