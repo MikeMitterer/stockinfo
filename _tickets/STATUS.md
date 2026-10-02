@@ -139,6 +139,28 @@ wenn mindestens eines davon abgenommen ist (Regel
 [Ticketgrenzen](.agents/AGENT-WORKFLOW.md#ticketgrenzen)). Deshalb
 `blocked`, `owner: mike`.
 
+**T-92 startet trotz Doing-Grenze · Mike, 2026-10-02.** „T-92 kann auch
+starten, ich nehme erst ab wenn die SQL-Umstellung durch ist. Danach müssen
+auch noch die visuellen Tests von StockInfo folgen. Erst wenn die Tests auf
+der cmdline und im Browser durch sind, alles funktioniert, dann nehme ich
+den Teil ab“ (an claude-observer; eingetragen auf Mikes Auftrag „Trag du die
+Message von vorhin in das Board ein“).
+
+- **Ausnahme von der harten Obergrenze:** T-92 darf als fünftes Ticket nach
+  `30-doing/`. Das ist Mikes ausdrückliche Entscheidung gegen die Regel
+  [Ticketgrenzen](.agents/AGENT-WORKFLOW.md#ticketgrenzen); sie gilt nur
+  für T-92.
+- **Abnahme:** Mike nimmt T-88 bis T-92 erst ab, wenn die SQL-Umstellung
+  fertig ist und danach die visuellen Tests von StockInfo auf der
+  Kommandozeile und im Browser bestanden sind.
+- **Offen für den Coder:** Für die visuellen Tests gibt es noch kein
+  Ticket. Ob sie in T-92 gehören oder ein eigenes Ticket bekommen, klärt
+  der Coder mit Mike vor der T-92-Übergabe.
+- **Aktivierung:** Der Coder aktiviert T-92 nach Workflow (Ticket nach
+  `30-doing/`, `ticket`, `branch`, Phase, Owner und `review_round: 0` in
+  einem Commit). Der Observer hat nur diese Entscheidung eingetragen und
+  keine Zustandsfelder geändert.
+
 ## Archiv · INBOX → claude · T-91 Runde 2 · technisch approved (verarbeitet)
 
 **Codex, 2026-10-02.** `b84351e` gegen `6366844` unabhängig geprüft.
@@ -1714,7 +1736,9 @@ Aktuelle Ausnahmen: `30-doing` mit vier Tickets (T-88, T-89, T-90, T-91),
 zwei über der Zielgrenze und damit an der harten Obergrenze. Bedarf: Mike
 nimmt die Tickets erst ab, wenn die Tickets in Doing technisch erledigt
 sind, und hat T-90 bis T-92 als Kette beauftragt (2026-10-02). Alle vier
-sind technisch erledigt; T-92 wartet in `20-ready/` auf einen freien Platz. Bei einer Überschreitung hier Ordner, betroffene
+sind technisch erledigt; T-92 wartet in `20-ready/` auf einen freien Platz.
+Mike erlaubt T-92 ausdrücklich als fünftes Ticket über der harten
+Obergrenze (2026-10-02, siehe „T-92 startet trotz Doing-Grenze“). Bei einer Überschreitung hier Ordner, betroffene
 Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
 Der Bestand wird aus den Ticketdateien ermittelt, nicht als Zähler gepflegt.
 
