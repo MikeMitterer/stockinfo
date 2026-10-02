@@ -61,14 +61,14 @@ getroffen, deshalb ging die Arbeit ohne Verifier-Zwischenstopp weiter.
 
 ### Akzeptanzkriterien
 
-- [ ] Die Fondsgröße hat in Katalog, Plugin, Adapter, Vertrag und Anzeige
+- [x] Die Fondsgröße hat in Katalog, Plugin, Adapter, Vertrag und Anzeige
       dieselbe Einheit: Millionen. Die Währung ist EUR bei justETF und die
       Eingabewährung bei manuellen Werten, in allen Anzeigewegen.
-- [ ] Ein Betrag in Millionen verlangt eine Währung (App und Vertragsprüfsuite).
-- [ ] Die Detailansicht zeigt „129,791 million EUR“ / „129.791 Mio. EUR“;
+- [x] Ein Betrag in Millionen verlangt eine Währung (App und Vertragsprüfsuite).
+- [x] Die Detailansicht zeigt „129,791 million EUR“ / „129.791 Mio. EUR“;
       eine manuelle Angabe erscheint in ihrer Währung, etwa „30 Mio. USD“.
-- [ ] Die Replikation enthält das Leerzeichen vor der Klammer.
-- [ ] Doku-Abgleich für `README.md`, `docker/README.md` und `contract/`.
+- [x] Die Replikation enthält das Leerzeichen vor der Klammer.
+- [x] Doku-Abgleich für `README.md`, `docker/README.md` und `contract/`.
 
 ### Side-Effects
 
@@ -89,12 +89,12 @@ wird über alle Runden fortgeschrieben.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | Einheit über alle Stellen verfolgen (`git grep fund_size`, `ABSOLUTE`, `2_000_000`) | Katalog, Plugin, Adapter und Anzeige nutzen Millionen; Quelle und manuelle Eingabe tragen ihre jeweilige Währung. Die Reststellen mit „Mio. EUR“ in aktueller Erklärung stehen unter #6/B5 | ✅ |
+| 1 | Einheit über alle Stellen verfolgen (`git grep fund_size`, `ABSOLUTE`, `2_000_000`) | Katalog, Plugin, Adapter und Anzeige nutzen Millionen; Quelle und manuelle Eingabe tragen ihre jeweilige Währung | ✅ |
 | 2 | `.venv/bin/python -m pytest -q` und `cd plugin_api && ../.venv/bin/python -m pytest -q` | grün | ✅ |
 | 3 | `cd dashboard && npx vitest run && npx vue-tsc -b && npx eslint src tests` | grün | ✅ |
-| 4 | Detailansicht im Browser (Temp-Datenbank, ETF aufklappen, deutsch und englisch) | EN-Beleg aus Runde 1, DE-Belege für EUNL und manuelle USD-Größe aus Runde 2; alle unabhängig visuell angesehen. Runde 3 ändert kein Anzeigeverhalten | ✅ |
+| 4 | Detailansicht im Browser (Temp-Datenbank, ETF aufklappen, deutsch und englisch) | EN-Beleg aus Runde 1, DE-Belege für EUNL und manuelle USD-Größe aus Runde 2; alle unabhängig visuell angesehen. Runden 3 und 4 ändern kein Anzeigeverhalten | ✅ |
 | 5 | Bezeichner-Inventar (Python `ast`, TS-Compiler-API) über die geänderten Dateien | elf Python- und neun TS-/Vue-Dateien vollständig inventarisiert; keine deutschen Nicht-Testbezeichner oder `UPPER_SNAKE_CASE`-Variablen im TS-Scope | ✅ |
-| 6 | Doku- und Vertragsabgleich | Vertrag und Docker-README korrekt; Root-README und aktuelle API-Beschreibung widersprechen manuellen USD-Werten (B5) | ⚠️ B5 |
+| 6 | Doku- und Vertragsabgleich | Root-README, Docker-README, aktuelle API-Beschreibung und Vertrag unterscheiden justETF-EUR von manueller Eingabewährung; B5 behoben | ✅ |
 
 ## Review-Verlauf (neueste Runde zuerst)
 
@@ -102,6 +102,77 @@ Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`). Die Abschnittsüberschriften sind unverändert;
 Links auf einzelne Runden gelten weiter.
+
+## Verifier-Prüfung · Runde 4 (Codex, 2026-10-02)
+
+**Prüfstand:** `2caca38` gegen `8a3ae95`, Gesamtstand gegen `f268ced`.
+Nach dem Produktcommit wurden nur `_tickets/`-Dateien committet; der
+Arbeitsbaum war beim Claim sauber. Ergebnis: **technisch `approved`**.
+B5 ist behoben, weiterer Rest für T-88 ist nicht offen. Das Limit von
+fünf Runden wurde nicht ausgeschöpft. Keine menschliche Abnahme.
+
+### Befund und Rest
+
+- **B5 behoben.** `README.md:88-91` unterscheidet jetzt absolute
+  Yahoo-Angaben von StockInfos Millionenwerten: justETF liefert EUR,
+  manuelle Eingaben verwenden die gewählte Währung.
+  `InstrumentOverrides.fund_size` in `app/models.py:526-535` nennt
+  Millionen und die Währungsfolge des alten Override-Endpunkts. Die
+  direkte `model_json_schema()`-Gegenprobe gab diesen Text aus;
+  `app/services/quote_cache.py:710-713` verwendet in dieser Reihenfolge
+  mitgesendetes `fund_currency`, gespeicherte manuelle Währung,
+  gespeicherte manuelle Fondswährung und Fondswährung. Die gekürzte
+  Beschreibung fasst die beiden gespeicherten Zwischenstufen als
+  „bisher gespeicherte Währung“ zusammen. Der generische Katalogkommentar
+  in `app/details.py:18-19` und der justETF-Providerkommentar in
+  `app/providers/justetf_provider.py:188-190` nennen nur Millionen; EUR
+  steht ausschließlich beim konkreten justETF-Wert.
+- **Kein weiterer offener Rest.** Die Aussagen in `README.md:76` und
+  `docker/README.md:71` betreffen justETF-Quellwerte und bleiben korrekt.
+  `contract/core-contract.json` beschreibt Quell- und Eingabewährung;
+  `unraid/README.md` enthält keine Fondsgrößenaussage. Alte
+  Entwurfsdokumente unter `docs/superpowers/` sind als Historie erkennbar.
+  Der Yahoo-Docstring über den separaten alten `QuoteResponse`-Pfad ist
+  kein Widerspruch zum manuellen Detailwert. Die Restanalyse aus Runde 3
+  ist damit erledigt; die vierte Runde war nötig, weil beide Rollen die
+  drei aktuellen EUR-Texte zuvor übersehen hatten.
+
+### Verify und Standards
+
+- **#1:** ✅ Millionen als Einheit, Währungen je Herkunft getrennt;
+  Runden 3 und 4 änderten kein Anzeigeverhalten.
+- **#2:** ✅ Backend **1252 passed, 35 skipped, 1 warning**; Plugin-API
+  **324 passed, 1 skipped** auf dem Handoff-Stand.
+- **#3:** ✅ Dashboard **395 passed**, `vue-tsc -b` und ESLint in Runde 3;
+  in Runde 4 kein Dashboard-, Plugin- oder Vertragsdiff.
+- **#4:** ✅ Englischer Browserbeleg aus Runde 1 sowie deutsche EUNL-
+  und manuelle USD-Belege aus Runde 2 wurden unabhängig visuell
+  geprüft. Kein eigener Browserlauf in Runde 4 behauptet.
+- **#5:** ✅ Die vollständigen Python-`ast`- und TS-Compiler-API-Inventare
+  aus Runde 3 gelten für unveränderte Bezeichner. Ruff und
+  `ruff --select I` für die drei in Runde 4 berührten Python-Dateien
+  bestehen.
+- **#6 / Doku-Abgleich:** ✅ Beide READMEs inhaltlich abgeglichen;
+  Root-README und API-Schema korrigiert, Docker-README und Vertrag
+  zutreffend. Die Docker-Hub-Vorschau aus Runde 1 bleibt gültig, da
+  `docker/README.md` unverändert ist (8.784 UTF-8-Bytes).
+  `git diff --check` für Nacharbeit und Gesamtstand besteht.
+
+**Standard-Riegel:** `code-standards/SKILL.md` mit Architektur-, Frontend-,
+Python-, Qualitäts- und Dokumentationsregeln berücksichtigt. Im
+Runde-4-Diff nur Beschreibungen und Kommentare, keine neue Fachlogik,
+API-Feldstruktur, i18n-Texte oder Persistenz. Benennungsinventar und
+Importsortierung aus Runde 3 bleiben gültig. Die neue lokale Regel
+„Review-Verlauf — neueste Runde zuerst“ in `.agents/AGENT-WORKFLOW.md`
+verschiebt den Verlauf, ohne alte Rundenüberschriften oder Links zu
+verlieren; der Abschnittsvergleich gegen den vorigen Review-Commit
+fand keine entfernte Runde. Die Verify-Matrix steht unverändert als
+eine aktuelle Matrix im Kopf und ist hier auf den geprüften Stand gesetzt.
+
+**Offene Board-Übernahme:** Activity-/Observer-/Lessons-Abgleich aus
+Paketfassung `df699dd1` bleibt getrennt sichtbar. Codex änderte keinen
+Produktcode und erteilte keine menschliche Abnahme. Merge und
+Folgeticket-Verarbeitung liegen beim Coder; kein Push durch Codex.
 
 ## Nacharbeit Runde 4 (Claude, 2026-10-02)
 

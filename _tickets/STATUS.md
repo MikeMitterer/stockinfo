@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-88-fondsgroesse-in-euro.md`
 - `branch`: `t-88-fondsgroesse-in-euro`
 - `handoff_commit`: `2caca38`
 - `review_round`: `4`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-88-fondsgroesse-in-euro.md`
-- `last_reviewed_commit`: `8a3ae95`
-- `last_reviewed_round`: `3`
+- `last_reviewed_commit`: `2caca38`
+- `last_reviewed_round`: `4`
 - `workstream`: `fondsgroesse`
 - `priority_chain`: `T-88`
 - `priority_ticket`: `T-88`
@@ -59,17 +59,29 @@ ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 Nach Codex' Freigabe von T-88 mergt Claude T-88 nach `master` und aktiviert
 T-89 auf einem neuen Branch von `master`; Coder `claude`, Verifier `codex`.
 
-## OUTBOX → codex · T-88 Runde 4 · ready
+## INBOX → claude · T-88 Runde 4 · technisch approved
 
-**Claude, 2026-10-02.** Bitte `2caca38` gegen `8a3ae95` prüfen
-(Gesamtstand gegen `f268ced`). B5: Die Override-API-Beschreibung nennt
-Millionen und die tatsächliche Währungswahl von `set_overrides`, Katalog-
-und Provider-Kommentar sagen nur „Millionen“, das Root-README unterscheidet
-justETF (EUR) und manuelle Eingabe. Inventar aller „Mio. EUR“-Aussagen in
-Code, Vertrag und Doku im Ticket. Hinweis: T-88 ist nach Mikes neuer Regel
-umgestellt, die neueste Runde steht oben, die Verify-Matrix im Kopf.
-Details:
-[T-88](30-doing/T-88-fondsgroesse-in-euro.md#nacharbeit-runde-4-claude-2026-10-02).
+**Codex, 2026-10-02.** `2caca38` gegen `8a3ae95` unabhängig geprüft;
+**technisch `approved`**. B5 ist behoben: Root-README, Override-API-Schema,
+Katalog- und justETF-Kommentar beschreiben Millionen mit der zutreffenden
+Währung. Die Schema-Gegenprobe bestätigt den öffentlichen Beschreibungstext;
+der unveränderte Servicecode belegt die genannte Währungsfolge.
+
+Backend **1252 passed, 35 skipped**, Plugin-API **324 passed,
+1 skipped**; Ruff und Ruff-`I` für die drei berührten Python-Dateien
+bestanden. Dashboard **395 passed**, Typprüfung und ESLint aus Runde 3
+gelten weiter, weil Runde 4 dort nichts änderte. Die Browserbelege für
+EN, DE und manuelle USD-Größe stammen aus Runde 1/2 und wurden
+unabhängig angesehen. Die aktuelle Verify-Matrix steht vollständig auf
+✅; kein weiterer Rest in T-88. Standard-Riegel, Doku-Abgleich und
+Abschnittsvergleich der neu sortierten Review-Historie:
+[T-88](30-doing/T-88-fondsgroesse-in-euro.md#verifier-prüfung--runde-4-codex-2026-10-02).
+
+Bitte als Coder die technische Freigabe verarbeiten: T-88 nach der
+lokalen StockInfo-Regel auf `master` mergen und T-89 gemäß Mikes
+Prioritätsentscheidung aktivieren. Diese Freigabe ist keine menschliche
+Abnahme und beauftragt keinen Push. Codex änderte keinen Produktcode.
+Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 
 ## Archiv · INBOX → claude · T-88 Runde 3 · changes_requested (verarbeitet)
 
