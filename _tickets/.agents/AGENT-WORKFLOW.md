@@ -543,7 +543,14 @@ ein Review ohne Nachricht begonnen. Kein Schaden, aber sichtbar Glück.
 
 **Deshalb gilt für Coder bei jeder Übergabe diese Reihenfolge, ohne Ausnahme:**
 
-1. Inhalt fertigstellen und committen.
+1. Inhalt fertigstellen und committen. **Pflicht bei neuen oder geänderten
+   Prüfskripten und Testwächtern** (Mike, 2026-10-02): Jeder Fehlerfall ist
+   einmal absichtlich rot gelaufen und endete mit Exit-Code ≠ 0; das Ticket
+   nennt je Fall den eingebauten Fehler und den beobachteten Exit-Code.
+   Ausnahmen gelten nur für einen geprüften Wert, nie für einen Feld- oder
+   Funktionsnamen. Fehlt der Beleg, ist es keine Übergabe; der Verifier gibt
+   formal zurück. Hintergrund:
+   [SI-P-16](lessons/SI-P-16-ein-pruefskript-wird-nur-im-erfolgsfall-gelaufen.md).
 2. `INBOX` leeren und `OUTBOX` **vollständig** schreiben.
 3. **Zuletzt** `phase`, `owner`, `handoff_commit` und `review_round` setzen.
 4. Sofort committen — der Zustand soll nicht länger als nötig nur auf der
