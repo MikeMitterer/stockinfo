@@ -86,7 +86,7 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | `tests/test_persistence_tables.py` | Alle zehn Modelle tragen genau die Spalten ihrer Tabelle, frisch und umgezogen (`migration_rejections` nur umgezogen, frisch gibt es sie nicht) | ✅ |
-| 2 | `tests/test_persistence_boundary.py` | `repository.py`, `detail_store.py`, `meta_store.py`, `tables.py` ohne rohes SQL (SQL-Text, `text()`, `exec_driver_sql`, `execute` mit String); `session.py` ebenso bis auf genau `BEGIN`/`BEGIN IMMEDIATE`; Gegenproben | ⚠️ |
+| 2 | `tests/test_persistence_boundary.py` | `repository.py`, `detail_store.py`, `meta_store.py`, `tables.py` ohne rohes SQL (SQL-Text, `text()`, `exec_driver_sql`, `execute` mit String); `session.py` ebenso bis auf genau `BEGIN`/`BEGIN IMMEDIATE`; Gegenproben | ✅ |
 | 3 | Rohe Stellen | Daten-SQL nur in `db.py`, `migration.py`, `backup_store.py`, `data_versions.py`, `plugin_migration.py`, je mit „Warum hier rohes SQL bleibt“; dazu die Transaktionsanweisung in `session.py`, dort begründet | ⚠️ |
 | 4 | Backend, Plugin-API, Ruff | Backend 1308, Plugin-API 324, Ruff grün | ✅ |
 | 5 | Browser mit Temp-Datenbank | Wechselkurs abrufen und aus dem Cache lesen, Einstellungen, manuelle Eingabe, Sicherung mit echtem Wiederherstellen | ✅ |
@@ -98,6 +98,71 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 3 (Codex, 2026-10-02)
+
+**Prüfstand:** `544e82a` gegen `7d0be5e`; Rollen, Owner, Priorität,
+Ticketpfad und Branch stimmten. Paket-VERSION vor diesem Durchlauf
+unverändert:
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+**Ergebnis: `changes_requested`**, Runde 3 von höchstens 5.
+Kein Merge, Push oder menschliche Abnahme durch Codex.
+
+**B1 behoben.** `_is_transaction_statement` prüft jetzt den ganzen
+ersten Argumentausdruck: eine feste erlaubte Zeichenkette oder beide
+festen Zweige eines bedingten Ausdrucks. Meine Gegenproben liefern
+`[]` für die echte `session.py`, aber
+`2: exec_driver_sql(...)` für den dynamischen Zweig aus Runde 2 und
+für `"BEGIN" + suffix`. Der Scope-Vertrag nennt die nötige
+Transaktionsausnahme nun ausdrücklich. Unabhängig **16 passed** im
+Grenztest, Ruff für Test und Session-Modul sowie `git diff --check`
+grün. Kein Verhaltensdiff am Produktcode. Verify #2 ist für die fünf
+explizit genannten Module ✅.
+
+**B2 · Die Vollständigkeitszusage für die Rohmodule ist nicht geschützt.**
+Verify #3 sagt, dass rohes Daten-SQL nur in fünf begründeten Modulen
+steht. Der neue Test parametrisiert jedoch ausschließlich die
+handgeschriebene Liste `ORM_ONLY_MODULES` mit fünf anderen Dateien;
+weitere Dateien unter `app/persistence/` werden weder entdeckt noch
+gegen die Ausnahmeliste verglichen. Meine unabhängige Gegenprobe in
+einem temporären Ordner fügte `runtime_extra.py` mit
+`connection.exec_driver_sql("SELECT * FROM meta")` hinzu. `raw_sql`
+meldete darin zwei Treffer, aber alle fünf Aufrufe des parametrisierten
+Tests blieben grün: `runtime_extra.py` kam in seiner Liste nicht vor.
+Im tatsächlichen Projekt habe ich alle zwölf Python-Module unter
+`app/persistence/` unabhängig inventarisiert; heute enthält keines
+außer den fünf begründeten Modulen Daten-SQL. Die Lücke betrifft den
+zugesagten Wächter für neue Module. Bitte die Dateinamen aus dem Ordner
+ermitteln, die begründeten Ausnahmen explizit vergleichen und einen
+zusätzlichen Roh-SQL-Modulfall als negative Gegenprobe rot belegen.
+Das ist die konkrete Anwendung der inzwischen eingetragenen
+[SI-P-14](../.agents/lessons/SI-P-14-der-grenzwaechter-bestaetigt-eine-handgeschriebene-liste.md);
+kein neues Analyse-Subsystem nötig. Verify #3 bleibt ⚠️.
+
+**Unverändert:** 1293 netzunabhängige Backend-Tests und 324
+Plugin-API-Tests aus Runde 1, Browserbelege, DRY-Prüfung und Doku-Abgleich
+bleiben mangels Produkt-Verhaltensdiff gültig. AST-Inventar des erneut
+geänderten Grenztests: 493 Bezeichnervorkommen, keine nicht-ASCII-Namen.
+Verify #1–#2 und #4–#7 sind ✅. Die ungetrackte Lesson-Datei wurde
+nach der Übergabe als Board-Commit `6cc18ef` eingetragen; ich habe sie
+gelesen und nicht selbst geändert. Die getrennte Paket-Übernahme
+`df699dd1` bleibt offen.
+
+**Standards:** `/Users/macminipro/.codex/skills/code-standards/SKILL.md`
+mit `architecture.md`, `python.md`, `persistence.md`, `quality.md`,
+`documentation.md`; `task-verification-workflow` und lokale
+Autor-Lessons.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ ein Transaktionspfad, keine neue doppelte Logik; AST-Inventar oben. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ➖ kein UI-Diff |
+| Python, FastAPI und Webhooks | ✅ kein Produkt-Verhaltensdiff; gezielter Test und Ruff grün. |
+| Datenbanken und Persistenzgrenzen | ⚠️ 1 Befund B2: der Wächter inventarisiert neue Persistenzmodule nicht. |
+| Fehler, Logging und Tests | ⚠️ 1 Befund B2: temporäres zusätzliches Roh-SQL-Modul ergibt ein falsches Grün. |
+| Markdown und Inhaltsverzeichnisse | ✅ Scope-Ausnahme und Doku-Abgleich nun stimmig. |
 
 ## Nacharbeit Runde 2 (Claude, 2026-10-02)
 
