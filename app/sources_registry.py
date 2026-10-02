@@ -24,6 +24,8 @@ import structlog
 from stockinfo_plugin.exchanges import validate_exchanges
 
 from app.calculated_metrics import CalculatedMetrics
+from app.config import Settings
+from app.detail_models import DetailDefinition
 from app.details import definitions_for, merge_definitions
 from app.exchange_catalog import prepare_catalog, reset_catalog
 from app.plugin_adapters import (
@@ -40,11 +42,12 @@ from app.plugins.openfigi_resolver import OpenFigiResolverPlugin
 from app.plugins.yahoo_search_resolver import YahooSearchResolverPlugin
 from app.plugins.yfinance_metadata import YFinanceMetadataPlugin
 from app.plugins.yfinance_quotes import YFinancePlugin
+from app.sources_config import SourcesConfig
 
 _DETAIL_SCHEMAS: dict[str, list] = {}
 
 
-def detail_definitions(config, settings) -> list:
+def detail_definitions(config: SourcesConfig, settings: Settings) -> list[DetailDefinition]:
     """Validiertes Profilschema, auch bei einer vorübergehend kranken Quelle.
 
     Die selbst berechneten Kennzahlen kommen nach den Plugins, damit ein
@@ -116,7 +119,7 @@ class SourceSpec:
         return SimpleNamespace(EXCHANGES=tuple(exchanges), MIC_SUPPORT=support)
 
 
-def _openfigi(role: str, config: dict, settings) -> object:
+def _openfigi(role: str, config: dict, settings: Settings) -> object:
     """OpenFIGI — der Schlüssel kommt aus der Datei **oder** aus den Einstellungen.
 
     **Der Rückfall ist der Befund aus Runde 1.** Ohne `sources.yaml` gibt es
@@ -138,7 +141,7 @@ def _openfigi(role: str, config: dict, settings) -> object:
     )
 
 
-def _yahoo_search(role: str, config: dict, settings) -> object:
+def _yahoo_search(role: str, config: dict, settings: Settings) -> object:
     """Die Yahoo-Suche — **seit T-35 ebenfalls über den Vertrag.**
 
     Sie war die letzte eingebaute Quelle, die hier noch als Core-Objekt
@@ -150,7 +153,7 @@ def _yahoo_search(role: str, config: dict, settings) -> object:
     return YahooSearchResolverPlugin(config, default_exchange=settings.default_exchange)
 
 
-def _yfinance(role: str, config: dict, settings) -> object:
+def _yfinance(role: str, config: dict, settings: Settings) -> object:
     """Dieselbe Quelle, je Rolle ein anderer Typ.
 
     **Die Rolle gehört in den Bauplan, nicht nur in die Rollenmenge.** yfinance
@@ -167,7 +170,7 @@ def _yfinance(role: str, config: dict, settings) -> object:
     return YFinancePlugin(config)
 
 
-def _justetf(role: str, config: dict, settings) -> object:
+def _justetf(role: str, config: dict, settings: Settings) -> object:
     return JustEtfMetadataPlugin(config)
 
 
@@ -369,7 +372,9 @@ def close_all() -> None:
     _CHAINS.clear()
 
 
-def describe_chain(role: str, config, settings=None) -> list[ChainEntry]:
+def describe_chain(
+    role: str, config: SourcesConfig, settings: Settings | None = None
+) -> list[ChainEntry]:
     """Was mit jedem konfigurierten Namen dieser Rolle geschieht.
 
     **Die gemeinsame Quelle für Laufzeit und Diagnose.** `build_chain` baut
@@ -412,7 +417,9 @@ def describe_chain(role: str, config, settings=None) -> list[ChainEntry]:
     ]
 
 
-def _evaluate(role: str, config, settings=None) -> list[tuple[ChainEntry, object | None]]:
+def _evaluate(
+    role: str, config: SourcesConfig, settings: Settings | None = None
+) -> list[tuple[ChainEntry, object | None]]:
     """Was mit jedem Namen geschieht — **einmal** ausgewertet, zweifach gelesen.
 
     `build_chain` nimmt die Objekte, `describe_chain` die Beschreibungen. Das
@@ -490,7 +497,7 @@ def _evaluate(role: str, config, settings=None) -> list[tuple[ChainEntry, object
     return result
 
 
-def build_chain(role: str, config, settings) -> list[object]:
+def build_chain(role: str, config: SourcesConfig, settings: Settings) -> list[object]:
     """Baut die Kette einer Rolle aus den konfigurierten Namen.
 
     Die Reihenfolge ist die der Konfiguration und wird **nicht** umsortiert:
@@ -579,7 +586,7 @@ def _register_detail_schema(name: str, declaration: object) -> bool:
         return False
 
 
-def _build_one(spec: SourceSpec, role: str, config: dict, settings) -> object | None:
+def _build_one(spec: SourceSpec, role: str, config: dict, settings: Settings) -> object | None:
     """Baut **eine** Quelle — gekapselt, adaptiert, und mit Diagnose geprüft.
 
     Die Reihenfolge ist der Punkt:
