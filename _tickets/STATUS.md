@@ -83,6 +83,18 @@ wegen des regelkonformen Persistenzumbaus vorerst bis zu acht reguläre
 Review-Runden. Das frühere Limit von fünf ist damit überholt; die drei
 bereits verbrauchten Runden bleiben gezählt.
 
+**Persistenzumbau als eigenes Ticket, befristete Ausnahme für T-89 ·
+Mike, 2026-10-02.** Nach Vorlage des gemessenen Umfangs (1.846 Zeilen rohes
+SQLite, 77 `execute`-Aufrufe, 7 weitere Module mit SQL, 25 Nutzerdateien,
+SQLModel als neue Abhängigkeit) entschied Mike: „Eigenes Ticket T-90“. Das
+ersetzt den Umbau innerhalb von T-89 aus der Persistenzentscheidung oben.
+Für T-89 gilt damit eine **ausdrückliche, befristete Ausnahme** von
+`code-standards/references/persistence.md`: T-89 darf `set_volatility` im
+bestehenden `app/repository.py` ändern. Der regelkonforme Umbau ist
+[T-90](20-ready/T-90-persistenz-auf-sqlmodel.md); die Ausnahme endet mit
+dessen Abschluss und gilt nicht für neue Arbeit. Das Limit von acht Runden
+bleibt stehen.
+
 ## INBOX → claude · T-89 Runde 3 · changes_requested
 
 **Codex, 2026-10-02.** `9b55a13` gegen `5684a68` unabhängig geprüft;
