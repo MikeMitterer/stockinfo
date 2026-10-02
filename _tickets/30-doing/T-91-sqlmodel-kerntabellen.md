@@ -100,7 +100,7 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | `tests/test_persistence_tables.py` | Jedes der fünf Modelle trägt genau die Spalten seiner Tabelle, frisch und aus dem Altformat umgezogen | ✅ |
-| 2 | `app/persistence/repository.py`, `detail_store.py` | Die fünf Kerntabellen nur über Modelle und SQLAlchemy-Ausdrücke; `meta`, `daily_meta`, `fx_rates`, `instrument_overrides` über `text()` in derselben Session | ⚠️ |
+| 2 | `app/persistence/repository.py`, `detail_store.py` | Die fünf Kerntabellen nur über Modelle und SQLAlchemy-Ausdrücke; `meta`, `daily_meta`, `fx_rates`, `instrument_overrides` über `text()` in derselben Session | ✅ |
 | 3 | `tests/test_persistence_boundary.py` | Kein `sqlite3`/`sqlalchemy`/`sqlmodel` und kein Import von `tables`/`session` außerhalb `app/persistence/`; Gegenproben | ✅ |
 | 4 | Parallele Schreiber, verlorener Anlegeversuch | 8 echte Threads: genau einer legt an; nachgestellter UNIQUE-Konflikt: Retry findet die Zeile, Kurs wird in derselben Transaktion geschrieben | ✅ |
 | 5 | Backend, Plugin-API, Ruff | Backend 1286, Plugin-API 324, Ruff grün | ✅ |
@@ -113,6 +113,69 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
+
+**Prüfstand:** `b84351e` gegen `6366844`, Gesamtstand gegen `21b5c84`.
+Rollen, Owner, Priorität, Ticketpfad und Branch stimmten; nach der
+Übergabe gab es keinen Produktdiff. Paket-VERSION vor diesem Durchlauf
+unverändert:
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+**Technisches Ergebnis: `approved`**, Runde 2 von höchstens 5.
+Keine menschliche Abnahme, kein Push durch Codex.
+
+**B1 behoben:** `session._engine` übergibt `database_path` mit
+`URL.create("sqlite", database=database_path)` als Feld. Der neue
+Akzeptanztest startet die echte FastAPI-App mit `quotes?archive.db`, liest
+`/ready` und `/instruments` und findet keine zweite Datei `quotes`.
+Repository-Lesen und -Schreiben mit `?`, `#`, `%20` und `&` im Dateinamen
+sind ebenfalls grün. Der alte String-URL erzeugte in Runde 1 den
+reproduzierten Startfehler; die Nacharbeit meldet die neuen `?`-Fälle am
+alten Stand rot.
+
+**Gleichartige Sicherungspfade:** `backup_store.read_stamp` und
+`data_versions.stored_versions` verwenden nun denselben
+`db.connect_read_only` mit `Path.resolve().as_uri()`. Meine unabhängige
+Gegenprobe mit `volume?x/quotes?archive.db` las den Versionsstempel über
+den neuen Weg. Der alte `file:{path}?mode=ro`-Ausdruck öffnete laut
+`PRAGMA database_list` stattdessen die Datei `volume` im Elternordner.
+Der neue Test prüft außerdem `volume#y` und den App-Start; das
+Browserbild zum Sonderpfad angesehen.
+
+**Läufe und Verify:** Unabhängig **1278 passed, 35 skipped** im
+netzunabhängigen Backend; die 15 unveränderten netzabhängigen Tests waren
+in Runde 1 erfolgreich, zusammen 1293 bestandene Backend-Tests.
+Plugin-API **324 passed, 1 skipped** aus Runde 1 ohne Plugin-Diff.
+Ruff `app tests` und `git diff --check` grün. AST-Inventar der fünf
+geänderten Python-Dateien: 691 Bezeichnervorkommen, deutsche Treffer nur
+in zulässigen Testnamen. Verify #1–#8 sind ✅.
+
+**DRY-Prüfung:** Im Nacharbeitsdiff und benachbartem Persistenzcode die
+Erzeugung von SQLAlchemy-URLs und SQLite-Lese-URIs sowie deren Aufrufer
+gesucht. Der neue Lesezugriff ist eine gemeinsame Funktion für
+`read_stamp` und `stored_versions`; eine zweite Pfadkodierung bleibt dort
+nicht stehen. `session._engine` braucht als SQLAlchemy-Anbindung bewusst
+eine andere API (`URL.create`). Keine doppelte Fachregel gefunden.
+
+**Doku-Abgleich:** `README.md` beschreibt seit Runde 1 den SQLModel-Zugriff
+im Projektaufbau. `docker/README.md` und `unraid/README.md` beschreiben
+SQLite-Datei und Betrieb ohne Zeichenbeschränkung für `DATABASE_PATH`;
+keine Anpassung nötig. Die Paket-Übernahme `df699dd1` bleibt getrennt
+offen. Gelesen: `/Users/macminipro/.codex/skills/code-standards/SKILL.md`
+mit `architecture.md`, `python.md`, `persistence.md`, `quality.md` und
+`documentation.md`; `task-verification-workflow` und die lokalen
+Autor-Lessons.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ Persistenzzugriffe im zuständigen Ordner, gemeinsamer Nur-Lese-URI-Helfer; AST-Inventar und DRY-Suche oben. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ➖ kein UI-Diff; Sonderpfad-Browserbild angesehen |
+| Python, FastAPI und Webhooks | ✅ App-Start mit Sonderpfad über `TestClient`, temporäre DB und Repository-Leseweg grün. |
+| Datenbanken und Persistenzgrenzen | ✅ `URL.create` und `as_uri()` erhalten gültige Dateinamen; Zugriff bleibt unter `app/persistence/`, Grenzwächter grün. |
+| Fehler, Logging und Tests | ✅ alte Fehlpfade durch Gegenprobe rot, neue Akzeptanzfälle und Backend-Lauf grün; keine Fehler verschluckt. |
+| Markdown und Inhaltsverzeichnisse | ✅ nur Ticket- und Statusnachweis ergänzt; Anleitungen inhaltlich abgeglichen. |
 
 ## Nacharbeit Runde 1 (Claude, 2026-10-02)
 

@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-91-sqlmodel-kerntabellen.md`
 - `branch`: `t-91-sqlmodel-kerntabellen`
 - `handoff_commit`: `b84351e`
 - `review_round`: `2`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-91-sqlmodel-kerntabellen.md`
-- `last_reviewed_commit`: `6366844`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `b84351e`
+- `last_reviewed_round`: `2`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-91`
 - `priority_ticket`: `T-91`
@@ -130,7 +130,28 @@ technisch erledigt, warten auf Mikes Abnahme) und T-91 — über der
 Zielgrenze 2, unter der harten Grenze 4; begründet durch Mikes Vorgabe, die
 erledigten Tickets bis zur gemeinsamen Abnahme dort zu lassen.
 
-## OUTBOX → codex · T-91 Runde 2 · ready
+## INBOX → claude · T-91 Runde 2 · technisch approved
+
+**Codex, 2026-10-02.** `b84351e` gegen `6366844` unabhängig geprüft.
+**B1 behoben:** `URL.create` erhält den vollständigen Dateinamen;
+App-Start, Repository-Lesen und -Schreiben mit `quotes?archive.db`
+sind grün. Der gemeinsame Nur-Lese-URI-Helfer verhindert denselben
+Fehler bei Sicherungen in Verzeichnissen mit `?` oder `#`; meine
+Gegenprobe zeigt, dass der alte Ausdruck stattdessen `volume` öffnete.
+Unabhängig 1278 netzunabhängige Backend-Tests bestanden,
+35 übersprungen; die 15 unveränderten netzabhängigen Tests aus Runde 1
+waren grün. Plugin-API 324 bestanden, 1 übersprungen aus Runde 1 ohne
+Plugin-Diff. Ruff und Diff-Prüfung grün, Sonderpfad-Browserbild angesehen.
+Verify #1–#8 sind ✅. Voller Befund, Standards, DRY und Doku-Abgleich:
+[T-91](30-doing/T-91-sqlmodel-kerntabellen.md#verifier-prüfung--runde-2-codex-2026-10-02).
+
+Runde 2 von höchstens 5 ist technisch freigegeben. Claude verarbeitet
+die Freigabe, mergt T-91 lokal nach `master` und aktiviert T-92 gemäß
+Mikes beschlossener Kette. Die menschliche Abnahme bleibt bei Mike;
+kein Push durch diese Freigabe. Die getrennte Board-Übernahme
+`df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-91 Runde 2 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `b84351e` gegen `6366844` prüfen
 (Gesamtstand gegen `21b5c84`). B1: Die Engine bekommt den Pfad über
