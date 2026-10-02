@@ -17,6 +17,7 @@ durch „Codex" wurden eine „Mailbox zwischen Codex und Codex" und ein
 - [Tatsächlicher Entwicklungsstand](#tatsächlicher-entwicklungsstand)
 - [Dokumentation gehört zur Änderung](#dokumentation-gehört-zur-änderung)
 - [Datenbankzugriffe in Tests](#datenbankzugriffe-in-tests)
+- [Browserprüfung](#browserprüfung)
 
 ## Bezeichner sind englisch. Ausnahmslos.
 
@@ -206,16 +207,30 @@ gehören unter `tmp_path`. Den Riegel nicht für einen Test abschalten; Gegenpro
 verwenden temporäre Stand-ins. Die App-Verdrahtung darf Settings verwenden,
 aber Tests dürfen sich nicht auf Daten aus dem Arbeitsbestand verlassen.
 
+[↑ Übersicht](#übersicht)
+
+## Browserprüfung
+
+**Browserbelege für StockInfo kommen aus `dashboard/e2e/visual-check.mjs`.**
+Kein eigenes Skript je Ticket, keine Kopie außerhalb des Repos (Mike,
+2026-10-02). Das Skript startet eine eigene Instanz mit temporärer Datenbank
+und Offline-Daten aus `examples/` und prüft die Hauptwege in Chrome. Die
+Arbeitsdatenbank `data/` berührt es nie.
+
+- **Aufruf:** steht im Kopfkommentar des Skripts, nur dort. Für ein Ticket
+  genügt meist ein gezielter Lauf mit `ONLY=W…`; nach großen Umbauten alle
+  Wege.
+- **Neuer sichtbarer Ablauf:** Er bekommt einen neuen Weg im Skript, mit
+  geprüften Inhalten statt nur einem Screenshot. Bestehende Wege werden
+  angepasst, wenn sich ihr Verhalten ändert.
+- **Kein Make-Target, kein README-Abschnitt:** Die Prüfung ist ein Werkzeug
+  für die Agenten; einem Lauf kann kein Mensch folgen. Voraussetzung ist
+  Node 24+, wie im README angegeben.
+
 Für eine Browserprüfung mit beiden Apps gibt es in StockPortfolio
 `scripts/stockinfo-test-server.py`. Es startet die echte StockInfo-API mit
 temporärer Datenbank und lokalen Testkursen. Start und Stop sind in seinem
 Modul-Docstring und in StockPortfolios `AGENTS.md` beschrieben. Dafür nie die
 Arbeitsdatenbank verwenden.
-
-Die Browser-Gesamtprüfung von StockInfo ist `dashboard/e2e/visual-check.mjs`.
-Sie startet eine eigene Instanz mit temporärer Datenbank und Offline-Daten
-und prüft die Hauptwege in Chrome. Sie ist ein Werkzeug für die Agenten,
-etwa nach großen Umbauten, und hat deshalb kein Make-Target und keinen
-README-Abschnitt. Der Aufruf steht im Kopfkommentar des Skripts.
 
 [↑ Übersicht](#übersicht)
