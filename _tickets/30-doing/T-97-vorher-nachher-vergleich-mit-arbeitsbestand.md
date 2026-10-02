@@ -68,19 +68,20 @@ Kopie des Arbeitsbestands ist erteilt (siehe Grenzen).
 
 ### Akzeptanzkriterien
 
-- [ ] Vorher- und Nachher-Lauf laufen gegen je eine Kopie, das Original ist
+- [x] Vorher- und Nachher-Lauf laufen gegen je eine Kopie, das Original ist
       unverändert (Prüfsumme vor und nach dem Vergleich).
-- [ ] Der Vergleich deckt die oben genannten Bereiche ab und nennt die Zahl
+- [x] Der Vergleich deckt die oben genannten Bereiche ab und nennt die Zahl
       der verglichenen Instrumente und Felder.
-- [ ] Der sichtbare Datenbankweg prüft **mindestens 15 verschiedene
+- [x] Der sichtbare Datenbankweg prüft **mindestens 15 verschiedene
       Assets** (Mike, 2026-10-02: „Zwei Papiere sind mir zu wenig … ich denke
       da mindestens 15“): verschiedene Gattungen, Identitätsformen, Börsen
       und Währungen, mit und ohne Details. Reicht der Arbeitsbestand dafür
       nicht, wird er mit einem eigenen Testbestand ergänzt.
-- [ ] Jeder Unterschied ist als erwartet (mit Ticket) oder als Befund
-      eingeordnet; Befunde stehen als Folgetickets in der Kette.
-- [ ] Der Schreibweg auf der Nachher-Kopie ändert nur die erwarteten Zeilen.
-- [ ] Kopien und Antwortdateien sind nach dem Vergleich gelöscht.
+- [x] Jeder Unterschied ist als erwartet (mit Ticket) oder als Befund
+      eingeordnet; Befunde stehen als Folgetickets in der Kette. — Keine
+      Unterschiede, keine Folgetickets.
+- [x] Der Schreibweg auf der Nachher-Kopie ändert nur die erwarteten Zeilen.
+- [x] Kopien und Antwortdateien sind nach dem Vergleich gelöscht.
 
 ### Side-Effects
 
@@ -89,6 +90,88 @@ Datenbank-Umbauten wiederholbar ist; Ablage und Aufruf in `AGENTS.md`,
 Abschnitt „Browserprüfung“ oder einem eigenen Abschnitt, nicht im README.
 
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Übergabe Runde 1 (Claude, 2026-10-02)
+
+Prüffassung `780abf3` gegen `master` (`ab4f0db`); Commits `7e0be2c`
+(Skript, Ergänzung, W17, `AGENTS.md`) und `780abf3` (Sicherungsliste und
+Quellen, Laufpfade). Kein App-Produktcode.
+
+**Ergebnis auf dem Arbeitsbestand** (Lauf ohne `--keep`, Ordner danach leer):
+
+| Größe | Wert |
+|---|---|
+| Papiere | 16 vorher, 16 nachher — 9 aus dem Arbeitsbestand, 7 ergänzt |
+| Gattungen / Identitätsformen | stock, etf, etc, fund, bond, crypto / listed, isin_only, pair |
+| Börsen / Währungen | u. a. XETR, XNAS, XSWX, XLON / EUR, USD, CHF, GBP |
+| Wechselkurse | 4 Paare |
+| Verglichene Felder | 23 888 (Instrumente samt Details und Overrides, Tagesreihen bis 4 302 Punkte, `/fx`, `/migration`, `/backups`, `/sources` mit den Datenversionen) |
+| Erwartete Unterschiede | keine aufgetreten (Tabelle mit T-88, T-89, T-94 steht im Skript) |
+| **Befunde** | **0** |
+| Schreibweg | Setzen ändert genau `detail_overrides`; Zurücksetzen stellt den Ausgangsstand her; Aktualisieren ohne Netz ändert nichts |
+| W17 sichtbar, Hauptmonitor x = 100 | grün: 16 Papiere je gleich der Antwort des alten Stands, Zeilen mit Name und Kurs, 3+ Detailbereiche — vor und nach Neustart |
+| Original | unverändert (Prüfsumme über Datei und `-wal`/`-shm`) |
+
+**Die vier Grenzen aus dem Scope-Entscheid:**
+
+1. *Ein Ausgangszustand:* ein Backup des Originals; die Ergänzung schreibt
+   der alte Stand in diesen Snapshot; alle Kopien entstehen daraus per
+   Backup-Schnittstelle. Echte und ergänzte Papiere werden getrennt gezählt.
+2. *W17:* siehe Tabelle; Erwartungen aus `expected.json` = `/instruments`
+   des alten Stands, nicht aus YAML.
+3. *Netzsperre:* Jede Instanz läuft als `sandbox-exec … uvicorn`; je Instanz
+   verlangt eine Gegenprobe unter derselben Policy **EPERM** für eine externe
+   Verbindung und Erfolg für den lokalen Port. Ein Timeout gilt nicht.
+4. *Projekt-Root:* beide Stände als `git archive` unter `.tmp/t97/<Zeit>/`
+   (auch `HEAD`, siehe unten); keine Edits daran, kein Worktree.
+
+**Gemessene Fallstricke, im Skript kommentiert:**
+
+- **Lesendes Öffnen schreibt neben das Original.** Der erste Lauf öffnete
+  das Original mit `mode=ro`; SQLite legte dabei im WAL-Modus eine leere
+  `stockinfo.db-wal` und eine `stockinfo.db-shm` in `data/` an. Die
+  Prüfsumme meldete das sofort, das Skript brach ab. Ich habe genau diese
+  beiden Dateien wieder entfernt (WAL leer, Datenbankdatei unverändert,
+  Stand 2026-10-01 22:52). Seitdem `immutable=1`; eine nicht leere WAL
+  bricht ab (laufende App).
+- **Der Root ist kein neutraler Startort:** Er liest `.env` und lokale
+  Paket-Metadaten; `yaml-file` fehlte dort. Deshalb läuft auch `HEAD` als
+  Archiv.
+- **`copyfile` verliert WAL-Inhalt** (9 statt 16 Papiere); Kopien deshalb
+  per Backup-Schnittstelle.
+- **`stopServer` in `visual-check.mjs`** wartete bei einem zweiten Aufruf
+  endlos, weil ein per Signal beendeter Prozess nur `signalCode` setzt.
+  Behoben; W1/W2/W13/W14 erneut grün.
+- **GBp:** Die YAML-Quelle nimmt nur ISO-Codes; Vodafone deshalb in GBP.
+- **Laufpfade:** `/sources` nennt `config_path` im Datenordner der Instanz
+  (`before/` bzw. `after/`). Der Pfad des Laufordners wird vor dem
+  Vergleich durch einen Platzhalter ersetzt; sonst wäre er der einzige
+  „Befund“.
+
+**Gegenproben** (je absichtlicher Fehler, alle rot aus dem genannten Grund):
+Vergleich — Wert verändert, Feld weggelassen, Unterschied ohne Ticket (je 1
+Befund), Unterschied mit Ticket (als T-88 eingeordnet, 0 Befunde). W17 —
+falscher Kurs, falscher Detailwert („weicht … ab“), nur 10 Papiere
+(„mindestens 15“), leere Datenbank („0 statt 16“). Die Zeilenprüfung der
+Oberfläche hat zuvor an einem echten Fall angeschlagen (Name mit
+Leerzeichenfolge, siehe Beobachtung).
+
+**Beobachtung ohne Ticket:** Ein gespeicherter Name im Arbeitsbestand
+enthält eine lange Leerzeichenfolge und ein angehängtes „R“
+(`Apple Inc.␣␣…␣R`). Das kommt von der Quelle, ist älter als die
+SQL-Umstellung und vor wie nach gleich; W17 vergleicht Leerzeichen
+normalisiert. Ob die Anzeige das bereinigen soll, entscheidet Mike.
+
+**`make check`:** Exit 0 (1305 Backend, 399 Dashboard, Ruff, `vue-tsc`).
+
+**Umfang:** rund 590 Zeilen (Skript 411, Ergänzung 71, W17 101,
+`AGENTS.md` 8) — über der Schätzung von 360 (Ergänzung auf 15 Assets,
+schrittweiser Schreibweg, Fallstrick-Kommentare), unter dem Riegel von 800.
+
+**Doku-Abgleich:** `AGENTS.md` „Browserprüfung“ nennt das Vergleichsskript
+und verweist auf seinen Docstring; der Kopf von `visual-check.mjs` nennt
+W17 und W18. README, `docker/README.md`, `unraid/README.md` unverändert:
+Werkzeug für die Agenten, kein Betriebs- oder Installationsthema.
 
 ### Scope-Entscheid · Codex (2026-10-02)
 
