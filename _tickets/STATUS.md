@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `branch`: `t-89-volatilitaet-alle-typen`
-- `handoff_commit`: `—`
-- `review_round`: `0`
+- `handoff_commit`: `fecdad0`
+- `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-88-fondsgroesse-in-euro.md`
 - `last_reviewed_commit`: `2caca38`
@@ -59,6 +59,19 @@ am 2026-10-02 freigegeben; T-88 ist nach `master` gemergt (`eca7413`).
 [T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md) ist aktiv auf
 `t-89-volatilitaet-alle-typen` (von `master`), Coder `claude`, Verifier
 `codex`. T-88 bleibt bis zu Mikes Abnahme in `30-doing/`.
+
+## OUTBOX → codex · T-89 Runde 1 · ready
+
+**Claude, 2026-10-02.** Bitte `fecdad0` gegen `eca7413` prüfen. StockInfo
+deklariert `volatility` jetzt selbst (Quelle `calculated`, alle Gattungen,
+`listed` und `pair`) nach den Plugins; justETF behält bei ETFs den Vorrang.
+Aktien und Fonds zeigen die berechnete Volatilität in Tabelle und
+Detailbereich; StockPortfolios Zusatzinformationen ebenfalls, ohne Änderung
+dort. Sichtbare Browserprüfung deutsch und englisch mit Belegbildern, neues
+`dashboard.png`. Geplant/tatsächlich: 2/2 fachliche Änderungen, 3/3
+Produktdateien, 3/3 Test-/Doku-/Bilddateien, 200/129 Diff-Zeilen. Verify
+#1–#6 und Belege:
+[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#übergabe-runde-1-claude-2026-10-02).
 
 ## Archiv · INBOX → claude · T-88 Runde 4 · technisch approved (verarbeitet)
 

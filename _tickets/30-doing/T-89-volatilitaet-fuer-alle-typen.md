@@ -111,3 +111,73 @@ weil `GET /fields` sie nur für `etf` und `etc` deklariert. Nach T-89 muss die
 Deklaration in `scopes` deshalb `stock` und `fund` samt passender
 Identitätsarten nennen. Dann zeigt StockPortfolio den Wert ohne eigene
 Änderung.
+
+### Verify
+
+Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
+
+| # | Handgriff | Erwarteter Nachweis | AI |
+|---|---|---|:--:|
+| 1 | `GET /fields`, Feld `volatility` | `sources` = `justetf`, `calculated`; Scope `calculated` mit allen Gattungen, `listed` und `pair` | ➖ |
+| 2 | `GET /instruments` mit Aktie, Fonds, ETF | Aktie und Fonds: `details.volatility` mit Quelle `calculated`; ETF mit justETF-Wert: Quelle `justetf` | ➖ |
+| 3 | `.venv/bin/python -m pytest -q`, `tests/test_calculated_metrics.py` | grün; Rot-Grün-Nachweis der neuen Tests | ➖ |
+| 4 | Sichtbare Prüfung im Browser (Temp-Datenbank), deutsch und englisch | Tabelle zeigt „Vola 1Y“ bei Aktie und Fonds; Detailbereich zeigt „Volatilität (1 Jahr)“ | ➖ |
+| 5 | StockPortfolios `projectDetailFields` mit den echten Antworten | Zusatzinformationen zeigen die Volatilität bei Aktie und Fonds | ➖ |
+| 6 | Standard und Doku | Bezeichner englisch, Ruff grün, keine Prozesshistorie im Code; README, `docker/README.md`, `docs/plugin-authors.md` stimmen überein | ➖ |
+
+## Review-Verlauf (neueste Runde zuerst)
+
+Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
+diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
+`.agents/AGENT-WORKFLOW.md`).
+
+## Übergabe Runde 1 (Claude, 2026-10-02)
+
+Prüfgegenstand: `fecdad0` gegen `master` (`eca7413`).
+
+**Coder-Belege:**
+
+- **#1:** Temp-Instanz mit dem Branchstand: `volatility` hat `sources`
+  `["justetf", "calculated"]` und die Scopes `justetf` (etc, etf; listed)
+  sowie `calculated` (bond, crypto, etc, etf, fund, stock; listed, pair).
+- **#2:** `APC.DE` 26,11 und `BRYN.DE` 15,53 (stock), `GOLD.SG` 27,0 (fund)
+  mit Quelle `calculated`; `EUNL.DE` 10,67 und `VGWL.DE` 10,29 mit Quelle
+  `justetf`.
+- **#3:** Neue Tests in `tests/test_calculated_metrics.py`, zuerst rot
+  (Deklaration für stock, fund, crypto, bond und Quellenfolge fehlten; Aktie
+  ohne `details.volatility`), danach grün. Die Fälle für etf, etc und den
+  justETF-Vorrang waren schon vorher grün und sichern das bestehende
+  Verhalten ab. Backend 1261 passed, 35 skipped.
+- **#4:** Chrome sichtbar, 1512×801. Neues
+  `unraid/screenshots/dashboard.png` (englisch): Vola-Spalte bei allen fünf
+  Instrumenten gefüllt. Belege neben dem Ticket:
+  [APC.DE deutsch](T-89-browser-de-apc.png) („Volatilität (1 Jahr)
+  26,11 %“) und [GOLD.SG englisch](T-89-browser-en-gold.png)
+  („Volatility (1y) 27 %“). Der Testfall VTI aus T-88 wurde vorher aus der
+  Temp-Datenbank entfernt, damit das Dashboard-Bild nur die fünf
+  verständlichen Instrumente zeigt.
+- **#5:** `projectDetailFields` (StockPortfolio-Code via `vite-node`, Skript
+  im Scratchpad): APC.DE „26,11 %“, GOLD.SG „27,0 %“, EUNL.DE „10,67 %“.
+  Vorher fehlten APC.DE und GOLD.SG.
+- **#6:** Ruff (Projektlauf und `I` für die berührten Dateien) ohne
+  Befund. Neue Bezeichner englisch (`CalculatedMetrics`,
+  `CALCULATED_SOURCE`, Testhelfer `_volatility`, `_summary`). Keine
+  Ticketnummern oder Rundenhinweise im Code.
+
+**Doku-Abgleich:** `README.md` sagt schon „from justETF for ETFs, otherwise
+computed“ und bleibt unverändert; `docker/README.md` und `unraid/README.md`
+machen keine Aussage zur Herkunft der Volatilität. `docs/plugin-authors.md`
+(„Open detail fields“) erklärt jetzt die Core-Deklaration `calculated` und
+die Rangfolge Plugin vor Berechnung. `contract/core-contract.json`
+beschreibt `volatility` unabhängig von der Quelle und bleibt.
+
+**Umfang geplant / tatsächlich:** 2 / 2 fachliche Änderungen,
+3 / 3 Produktdateien, 3 / 3 Test-/Doku-/Bilddateien, 200 / 129 Diff-Zeilen.
+
+**Nebenbefund, nicht im Scope:** Der Detailbereich zeigt die Quelle als
+Rohname „calculated“, und das Info-Symbol erscheint ohne Datum, weil
+berechnete Werte kein `as_of` tragen (`repository.set_volatility` setzt
+keines). Ein lesbarer Quellname und ein Zeitstempel wären ein eigenes
+Ticket.
+
+Kein Merge, kein Push, kein Docker-Hub- oder Unraid-Update.
