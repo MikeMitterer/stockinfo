@@ -118,18 +118,106 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | `GET /fields`, Feld `volatility` | `sources` = `justetf`, `calculated`; Scope `calculated` mit allen Gattungen, `listed` und `pair` | ➖ |
-| 2 | `GET /instruments` mit Aktie, Fonds, ETF | Aktie und Fonds: `details.volatility` mit Quelle `calculated`; ETF mit justETF-Wert: Quelle `justetf` | ➖ |
-| 3 | `.venv/bin/python -m pytest -q`, `tests/test_calculated_metrics.py` | grün; Rot-Grün-Nachweis der neuen Tests | ➖ |
-| 4 | Sichtbare Prüfung im Browser (Temp-Datenbank), deutsch und englisch | Tabelle zeigt „Vola 1Y“ bei Aktie und Fonds; Detailbereich zeigt „Volatilität (1 Jahr)“ | ➖ |
-| 5 | StockPortfolios `projectDetailFields` mit den echten Antworten | Zusatzinformationen zeigen die Volatilität bei Aktie und Fonds | ➖ |
-| 6 | Standard und Doku | Bezeichner englisch, Ruff grün, keine Prozesshistorie im Code; README, `docker/README.md`, `docs/plugin-authors.md` stimmen überein | ➖ |
+| 1 | `GET /fields`, Feld `volatility` | `sources` = `justetf`, `calculated`; Scope `calculated` mit allen Gattungen, `listed` und `pair` | ✅ |
+| 2 | `GET /instruments` mit Aktie, Fonds, ETF | Aktie und Fonds: `details.volatility` mit Quelle `calculated`; ETF mit justETF-Wert: Quelle `justetf` | ✅ |
+| 3 | `.venv/bin/python -m pytest -q`, `tests/test_calculated_metrics.py` | grün; ein Rot-Grün-Orakel am öffentlichen Eintrittspunkt mit negativem Gegenfall fehlt noch (B1) | ⚠️ B1 |
+| 4 | Sichtbare Prüfung im Browser (Temp-Datenbank), deutsch und englisch | Tabelle zeigt „Vola 1Y“ bei Aktie und Fonds; Detailbereich zeigt „Volatilität (1 Jahr)“ | ✅ |
+| 5 | StockPortfolios `projectDetailFields` mit den echten Antworten | Zusatzinformationen zeigen die Volatilität bei Aktie und Fonds; Coder-Lauf belegt die Ausgaben, API-Scopes wurden unabhängig geprüft | ✅ |
+| 6 | Standard und Doku | Doku und Namensinventar passen; Typangaben im neuen Testmodul sind unvollständig beziehungsweise falsch (B2) | ⚠️ B2 |
 
 ## Review-Verlauf (neueste Runde zuerst)
 
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 1 (Codex, 2026-10-02)
+
+**Prüfstand:** `fecdad0` gegen `eca7413`. Nach dem Produktcommit betraf
+der Übergabecommit nur `_tickets/`; der Arbeitsbaum war beim Claim sauber.
+Ergebnis: **`changes_requested`** wegen B1 und B2. Die fachliche
+Deklaration, der Vorrang und die Browseranzeige stimmen; keine technische
+oder menschliche Abnahme.
+
+### Befunde
+
+1. **B1 blockierend · Vertical-Acceptance-Riegel.** Die neuen roten Tests
+   prüfen `detail_definitions()` und
+   `CachedQuoteService.get_instrument_summary()` direkt. Sie erreichen
+   weder `GET /fields` noch `GET /instruments`; der spätere Browserlauf
+   belegt den grünen Nutzerweg, aber kein rotes Orakel am öffentlichen
+   Eintrittspunkt. Der lokale Workflow verlangt für die neue Regel einen
+   solchen Akzeptanztest und einen negativen Gegenfall, der bei einer
+   minimal falschen Deklaration rot wird. Bitte einen schmalen API-Test
+   mit temporärer Datenbank ergänzen: `GET /fields` zeigt den
+   `calculated`-Scope für `stock` und `fund` (`listed` und `pair`), und
+   `GET /instruments` liefert den berechneten Detailwert für eine Aktie
+   und den justETF-Vorrang für einen ETF. Den Test mit entfernter
+   Core-Deklaration als negativen Mutanten rot und mit der Endfassung grün
+   ausführen und das Ergebnis dokumentieren. Normale Fixtures reichen;
+   kein neues Test-Subsystem.
+2. **B2 blockierend · Python-Typangaben im neuen Testmodul.** Die
+   Python-Referenz von `code-standards` verlangt Type Hints überall.
+   `tests/test_calculated_metrics.py:50` annotiert `_summary()` als
+   `tuple[dict, int]`, gibt aber `CachedQuoteService` und `int` zurück.
+   Das AST-Inventar aller acht Funktionen meldet zudem fehlende
+   Parameter- beziehungsweise Rückgabetypen; `ruff --select ANN`
+   weist acht Stellen aus (`:28,36,41,45,57,67`). Bitte die Typen
+   vollständig und zutreffend setzen und die Gegenprobe wiederholen.
+   Die neue API-Testfunktion aus B1 gehört in denselben Abgleich.
+
+### Prüfung und Doku-Abgleich
+
+- **#1:** ✅ `CalculatedMetrics` deklariert `volatility` in Prozent für
+  alle sechs `INSTRUMENT_TYPES` und `listed`/`pair`. Eigene
+  `definitions_for()`-Gegenprobe: alle sechs Typen gelten für beide
+  Identitätsarten, `isin_only` nicht. Die gemergte Quelle steht nach
+  justETF; Coder-API-Beleg zeigt `sources` in dieser Reihenfolge.
+- **#2:** ✅ Reale Repository- und Service-Tests mit temporärer DB
+  zeigen `calculated` bei der Aktie und justETF beim ETF. Die
+  visuell geprüften Belege zeigen APC.DE, BRYN.DE und GOLD.SG in der
+  Tabelle; APC.DE deutsch und GOLD.SG englisch auch im Detail.
+- **#3:** ⚠️ B1, obwohl Backend **1261 passed, 35 skipped, 1 warning**,
+  Plugin-API **324 passed, 1 skipped**, Dashboard **395 passed**.
+- **#4:** ✅ Alle drei neuen Bilder wurden unabhängig angesehen:
+  [APC deutsch](T-89-browser-de-apc.png),
+  [GOLD englisch](T-89-browser-en-gold.png),
+  `unraid/screenshots/dashboard.png`. Der Browserlauf selbst stammt
+  von Claude; ich behaupte keinen eigenen.
+- **#5:** ✅ Die StockInfo-Antwortfelder und Scopes passen zum
+  dokumentierten `projectDetailFields`-Lauf mit APC.DE, GOLD.SG und
+  EUNL.DE. Der Konsumentenlauf stammt von Claude, nicht von Codex.
+- **#6 / Doku-Abgleich:** ⚠️ B2. `README.md:285-286` beschreibt
+  justETF-Vorrang und sonst berechnete Volatilität bereits; das
+  unveränderte `docker/README.md` trifft keine Herkunftsaussage,
+  ebenso `unraid/README.md`. `docs/plugin-authors.md` erklärt jetzt
+  `calculated` und die Quellenfolge; der Core-Vertrag bleibt
+  quellenunabhängig. Ruff und Ruff-`I` für die vier geänderten
+  Python-Dateien sowie `git diff --check` bestehen. Das AST-Inventar
+  dieser vier Dateien ergab nur englische Nicht-Testbezeichner.
+
+**Standard-Riegel:** Gelesen wurden
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md` und die
+passenden Referenzen `architecture.md`, `python.md`, `persistence.md`,
+`quality.md` und `documentation.md`.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ eine `CALCULATED_SOURCE` für Deklaration und Speicherung; keine zweite Berechnung. AST-Inventar der vier berührten Python-Dateien ohne deutsche Nicht-Testnamen. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ✅ kein Frontend-Code geändert; visuelle DE-/EN-Belege für die neuen Daten geprüft. Rohe Quellkennung `calculated` ist ein dokumentierter Nebenbefund, kein neuer fest verdrahteter UI-Satz. |
+| Python, FastAPI und Webhooks | ⚠️ B2; Ruff und Importsortierung grün, aber fehlende und falsche Typangaben im neuen Testmodul. |
+| Datenbanken und Persistenzgrenzen | ✅ vorhandener Repository-Schreibweg nutzt nur die gemeinsame Quellkonstante; keine neue SQL-Abfrage oder Verbindung. Tests bleiben durch `tmp_path` isoliert. |
+| Fehler, Logging und Tests | ⚠️ B1; bestehende Suite grün, öffentliches rotes Orakel und negativer Mutant fehlen. Neue Fixtures/Helper sind klein, kein Test-Subsystem. |
+| Markdown und Inhaltsverzeichnisse | ✅ `docs/plugin-authors.md` fügt die Erklärung im vorhandenen Abschnitt ein; beide READMEs und Vertrag inhaltlich abgeglichen. |
+
+**Offene Board-Übernahme:** Activity-/Observer-/Lessons-Abgleich aus
+Paketfassung `df699dd1` bleibt getrennt offen. Die sichtbare Quelle
+`calculated` ohne lokalisierten Anzeigenamen und das Info-Symbol ohne
+Datum sind als Nebenbefund dokumentiert. Sie ändern den Umfang von T-89
+nicht und begründen hier keinen Blocker. Codex änderte keinen Produktcode
+und erteilte keine menschliche Abnahme.
 
 ## Übergabe Runde 1 (Claude, 2026-10-02)
 

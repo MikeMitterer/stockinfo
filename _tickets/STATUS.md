@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `branch`: `t-89-volatilitaet-alle-typen`
 - `handoff_commit`: `fecdad0`
 - `review_round`: `1`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
-- `last_reviewed_ticket`: `T-88-fondsgroesse-in-euro.md`
-- `last_reviewed_commit`: `2caca38`
-- `last_reviewed_round`: `4`
+- `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
+- `last_reviewed_commit`: `fecdad0`
+- `last_reviewed_round`: `1`
 - `workstream`: `volatilitaet`
 - `priority_chain`: `T-89`
 - `priority_ticket`: `T-89`
@@ -60,18 +60,33 @@ am 2026-10-02 freigegeben; T-88 ist nach `master` gemergt (`eca7413`).
 `t-89-volatilitaet-alle-typen` (von `master`), Coder `claude`, Verifier
 `codex`. T-88 bleibt bis zu Mikes Abnahme in `30-doing/`.
 
-## OUTBOX → codex · T-89 Runde 1 · ready
+## INBOX → claude · T-89 Runde 1 · changes_requested
 
-**Claude, 2026-10-02.** Bitte `fecdad0` gegen `eca7413` prüfen. StockInfo
-deklariert `volatility` jetzt selbst (Quelle `calculated`, alle Gattungen,
-`listed` und `pair`) nach den Plugins; justETF behält bei ETFs den Vorrang.
-Aktien und Fonds zeigen die berechnete Volatilität in Tabelle und
-Detailbereich; StockPortfolios Zusatzinformationen ebenfalls, ohne Änderung
-dort. Sichtbare Browserprüfung deutsch und englisch mit Belegbildern, neues
-`dashboard.png`. Geplant/tatsächlich: 2/2 fachliche Änderungen, 3/3
-Produktdateien, 3/3 Test-/Doku-/Bilddateien, 200/129 Diff-Zeilen. Verify
-#1–#6 und Belege:
-[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#übergabe-runde-1-claude-2026-10-02).
+**Codex, 2026-10-02.** `fecdad0` gegen `eca7413` unabhängig geprüft;
+**`changes_requested`** wegen zweier Prüfgates. Die fachliche
+Deklaration, der justETF-Vorrang und die sichtbare DE-/EN-Anzeige sind
+belegt. Backend **1261 passed, 35 skipped**, Plugin-API **324 passed,
+1 skipped**, Dashboard **395 passed**; Ruff, Ruff-`I` und
+`git diff --check` bestehen.
+
+1. **B1 · öffentlicher Akzeptanzpfad:** Die neuen roten Tests prüfen
+   Katalog und Service direkt; ein rotes API-Orakel für `GET /fields`
+   und `GET /instruments` sowie ein negativer Mutant für die neue
+   Core-Deklaration fehlen nach dem Vertical-Acceptance-Riegel.
+   Bitte einen kleinen API-Test mit temporärer DB ergänzen und die
+   Rot-/Grün-Gegenprobe dokumentieren; kein Test-Subsystem.
+2. **B2 · Python-Typen:** `_summary()` in
+   `tests/test_calculated_metrics.py:50` behauptet `tuple[dict, int]`,
+   liefert aber `CachedQuoteService` und `int`.
+   `ruff --select ANN` meldet acht weitere fehlende Parameter- oder
+   Rückgabetypen im neuen Testmodul. Bitte die neue Datei vollständig
+   und zutreffend annotieren.
+
+Die aktuelle Verify-Matrix, Standards, Doku-Abgleich, Bildprüfung und
+vollständige Befunde stehen in
+[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-1-codex-2026-10-02).
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 
 ## Archiv · INBOX → claude · T-88 Runde 4 · technisch approved (verarbeitet)
 
