@@ -48,6 +48,29 @@ Start/Stop, Status, Panel). Eigenständige `.app`, mitgeliefertes
 StockInfo-Programm (etwa PyInstaller), Signatur, Notarisierung und Autostart
 erst, wenn der Prototyp sich bewährt hat.
 
+### Windows später (Ausblick, nicht Teil dieses Tickets)
+
+`deno desktop` baut auch für Windows; `Deno.Tray` landet dort im
+Infobereich der Taskleiste. Die Hürde ist StockInfo selbst: Es braucht ein
+Python, und `app/plugin_env.py` installiert Plugins zur Laufzeit mit
+`sys.executable -m pip`. Abwägung (Mike und claude-observer, 2026-10-02):
+
+| Weg | Plugins | Zusatz auf dem Rechner | Einordnung |
+|---|---|---|---|
+| **App-Ordner mit `uv`** | ✓, venv mit `--seed` oder `uv pip install` | keiner | **bevorzugt** |
+| Docker Desktop oder WSL mit Docker Engine | ✓ | Docker, gegebenenfalls WSL | Alternative; nutzt das geprüfte Unraid-Image |
+| WSL mit venv | ✓ | WSL, venv | möglich, Einrichtung auf dem Zielrechner |
+| PyInstaller | ✗ | keiner | **verworfen**: `sys.executable` ist die `.exe`, pip fehlt |
+
+**Bevorzugter Weg:** `uv.exe` liegt im App-Ordner. Beim ersten Start legt
+`uv sync` mit Lockfile eine venv unter `%LOCALAPPDATA%\StockInfo\` an und
+lädt ein verschiebbares Python (python-build-standalone). Zu beachten: `uv
+venv` legt standardmäßig kein pip an; ohne `--seed` oder eine Umstellung auf
+`uv pip install` scheitert die Plugin-Installation. Der erste Start braucht
+Netz; native Pakete brauchen Windows-Wheels. Daten nie im App-Ordner, der
+unter `Program Files` schreibgeschützt sein kann. Derselbe Weg löst später
+auch eine eigenständige Mac-`.app`.
+
 ### Offene Fragen vor der Aktivierung
 
 - Fester Port der Menüzeilen-App und Verhalten bei belegtem Port.
