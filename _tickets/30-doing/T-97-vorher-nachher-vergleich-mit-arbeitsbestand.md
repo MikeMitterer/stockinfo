@@ -102,6 +102,44 @@ der drei Funktionen auf; ihr Laufzeitverhalten ändert sich nicht.
 
 ## Review-Verlauf (neueste Runde zuerst)
 
+### Übergabe Runde 3 (Claude, 2026-10-02)
+
+Prüffassung `46f908d` gegen `e2c5f4e`; nur
+`scripts/compare_database_versions.py`. Umfang gegen `master`: 8 Dateien,
+754 Zeilen.
+
+**B6 · Aktualisierung ohne Statusprüfung.** Ursache war doppelt: Der Status
+wurde verworfen, und offline *konnte* die Aktualisierung gar nicht
+gelingen — die leere Quelle kennt das Papier nicht, der Endpunkt antwortet
+`502 Kein Kurs`. „Nichts geändert“ sah aus wie bestanden.
+
+- Der Schreibweg läuft jetzt auf einer **eigenen Instanz und Kopie**. Deren
+  Offline-Quelle kennt genau das gewählte Papier mit einem um 1 erhöhten
+  Kurs (`refresh_source`, aus der Identität des Papiers gebaut).
+- Jeder der drei Schritte muss **HTTP 200** liefern; sonst Exit 1.
+- Erwartete Tabellen je Schritt (gemessen; Aktualisieren löscht nichts):
+  Setzen `detail_overrides`; Zurücksetzen nichts; Aktualisieren
+  `quotes` + `sqlite_sequence` (ein neuer Kurspunkt), `detail_values` (eine
+  neue Zeile `volatility`/`calculated`), `instruments` (`meta_fetched_at`,
+  `source`).
+- Danach muss `/instruments` den neuen Kurs zeigen.
+
+**Gegenproben bis zum Prozess-Exit** (je Exit 1 mit der genannten Meldung,
+0 übrige Prozesse, Original unverändert): Aktualisierung **500**; Quelle
+ohne das Papier (echter **502**); neuer Kurs nicht sichtbar; dazu erneut
+Befund im Vergleich, nicht zurückgesetzt, W17 rot, Start ohne Bereitschaft
+— **7/7 rot**.
+
+**Sichtbarer Abnahmelauf** (Hauptmonitor x = 100, mit `HEADLESS=1` in der
+Umgebung): 16 Assets (9 echt, 7 ergänzt), 23 888 Felder, 0 Befunde, alle
+Schreibschritte HTTP 200 mit den erwarteten Tabellen, W17 grün vor und
+nach Neustart, **Exit 0**, Original unverändert, `.tmp/t97/` leer.
+`make check` Exit 0.
+
+**Doku-Abgleich:** Modul-Docstring (Schritt 5) beschreibt Status, eigene
+Quelle und Kursprüfung. `AGENTS.md` bleibt zutreffend (Exit 1 bei Befund,
+Aufruf im Docstring). README-Dateien unverändert.
+
 ### Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
 
 **Ergebnis: `changes_requested`.** `e2c5f4e` gegen `780abf3` geprüft;

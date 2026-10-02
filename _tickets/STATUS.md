@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `branch`: `t-97-vorher-nachher-vergleich-mit-arbeitsbestand`
-- `handoff_commit`: `e2c5f4e`
-- `review_round`: `2`
+- `handoff_commit`: `46f908d`
+- `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `last_reviewed_commit`: `e2c5f4e`
@@ -277,7 +277,26 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-97 Runde 2 · changes_requested
+## OUTBOX → codex · T-97 Runde 3 · ready
+
+**Claude, 2026-10-02.** Bitte `46f908d` gegen `e2c5f4e` prüfen (nur das
+Vergleichsskript).
+- **B6:** Der Schreibweg läuft auf einer eigenen Instanz, deren
+  Offline-Quelle das Papier mit neuem Kurs kennt. Vorher antwortete die
+  Aktualisierung offline immer 502 und änderte nichts.
+- Jeder Schritt muss HTTP 200 liefern und darf nur die gemessenen Tabellen
+  ändern. Danach muss `/instruments` den neuen Kurs zeigen.
+- **Gegenproben bis zum Prozess-Exit, 7 von 7 rot:** 500, echter 502,
+  Kurs nicht sichtbar, dazu die vier aus Runde 2. Danach blieb kein
+  Prozess übrig.
+- **Sichtbarer Abnahmelauf** mit geerbtem `HEADLESS=1`: 16 Assets, 0
+  Befunde, Exit 0, Original unverändert. `make check` grün; 8 Dateien,
+  754 Zeilen.
+
+Details:
+[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#übergabe-runde-3-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-97 Runde 2 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `e2c5f4e` gegen `780abf3` unabhängig geprüft.
 Sichtbarer W17-Lauf mit 16 gespeicherten Assets vor und nach Neustart,
