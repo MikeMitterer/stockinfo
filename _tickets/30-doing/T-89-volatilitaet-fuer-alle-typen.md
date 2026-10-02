@@ -87,19 +87,19 @@ der Coder im Scope-Vertrag fest.
 
 ### Akzeptanzkriterien
 
-- [ ] `details` enthält `volatility` für Aktien, ETFs, ETCs und Fonds mit
+- [x] `details` enthält `volatility` für Aktien, ETFs, ETCs und Fonds mit
       berechneter Volatilität.
-- [ ] Tabelle und Detailbereich zeigen die Volatilität bei `APC.DE`,
+- [x] Tabelle und Detailbereich zeigen die Volatilität bei `APC.DE`,
       `BRYN.DE` und `GOLD.SG`.
-- [ ] TER und Thesaurierung bleiben bei Aktien ausgeblendet (Regel aus T-56).
-- [ ] Wenn justETF ebenfalls eine Volatilität liefert, ist festgelegt und
+- [x] TER und Thesaurierung bleiben bei Aktien ausgeblendet (Regel aus T-56).
+- [x] Wenn justETF ebenfalls eine Volatilität liefert, ist festgelegt und
       getestet, welcher Wert gilt.
-- [ ] **Sichtbare Prüfung im Browser** (nicht headless, Mike: „Vergiss auch
+- [x] **Sichtbare Prüfung im Browser** (nicht headless, Mike: „Vergiss auch
       die visuellen Tests pro Ticket nicht“): Temp-Instanz mit Aktie, ETF und
       Fonds; Tabelle und Detailbereich auf Deutsch und Englisch ansehen;
       Screenshots als Beleg im Ticket.
-- [ ] `unraid/screenshots/dashboard.png` wird danach neu aufgenommen.
-- [ ] Doku-Abgleich für `README.md` und `docker/README.md`.
+- [x] `unraid/screenshots/dashboard.png` wird danach neu aufgenommen.
+- [x] Doku-Abgleich für `README.md` und `docker/README.md`.
 
 ### Side-Effects
 
@@ -120,16 +120,91 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 |---|---|---|:--:|
 | 1 | `GET /fields`, Feld `volatility` | `sources` = `justetf`, `calculated`; Scope `calculated` mit allen Gattungen, `listed` und `pair` | ✅ |
 | 2 | `GET /instruments` mit Aktie, Fonds, ETF | Aktie und Fonds: `details.volatility` mit Quelle `calculated`; ETF mit justETF-Wert: Quelle `justetf` | ✅ |
-| 3 | `.venv/bin/python -m pytest -q`, `tests/test_calculated_metrics.py` | grün; ein Rot-Grün-Orakel am öffentlichen Eintrittspunkt mit negativem Gegenfall fehlt noch (B1) | ⚠️ B1 |
+| 3 | `.venv/bin/python -m pytest -q`, `tests/test_calculated_metrics.py` | Backend und 11 gezielte Tests grün; beide HTTP-Tests am negativen Mutanten rot und an der Endfassung grün | ✅ |
 | 4 | Sichtbare Prüfung im Browser (Temp-Datenbank), deutsch und englisch | Tabelle zeigt „Vola 1Y“ bei Aktie und Fonds; Detailbereich zeigt „Volatilität (1 Jahr)“ | ✅ |
 | 5 | StockPortfolios `projectDetailFields` mit den echten Antworten | Zusatzinformationen zeigen die Volatilität bei Aktie und Fonds; Coder-Lauf belegt die Ausgaben, API-Scopes wurden unabhängig geprüft | ✅ |
-| 6 | Standard und Doku | Doku und Namensinventar passen; Typangaben im neuen Testmodul sind unvollständig beziehungsweise falsch (B2) | ⚠️ B2 |
+| 6 | Standard und Doku | Doku und Namensinventar passen; vollständige und richtige Typangaben im Testmodul, Ruff `ANN,I` grün | ✅ |
 
 ## Review-Verlauf (neueste Runde zuerst)
 
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
+
+**Prüfstand:** `5684a68` gegen `fecdad0`, Gesamtstand gegen `eca7413`.
+Nach dem Produktcommit betraf der Übergabecommit nur `_tickets/`; der
+Arbeitsbaum war beim Claim sauber. Ergebnis: **technisch `approved`**.
+B1 und B2 sind behoben; kein weiterer Rest in T-89. Das Limit von drei
+Runden wurde nicht ausgeschöpft. Keine menschliche Abnahme.
+
+### Befunde und Gegenprobe
+
+- **B1 behoben.** Die zwei neuen Tests verwenden `TestClient(app)` mit
+  Lifespan und der temporären Datenbank aus `tests/conftest.py`.
+  `GET /fields` belegt Quellenfolge und Scope für Aktie/Fonds sowie
+  `listed`/`pair`; `GET /instruments` belegt 26,11 % mit Quelle
+  `calculated` für APC.DE und den justETF-Vorrang 10,67 % für EUNL.DE.
+  Meine unabhängige Negativprobe ersetzte **nur zur Laufzeit**
+  `CalculatedMetrics.FIELDS` durch eine leere Liste: Beide HTTP-Tests
+  wurden rot, mit `StopIteration` beim fehlenden Scope und `KeyError`
+  beim fehlenden Aktiendetail. Kein Produktdatei-Edit. Am unveränderten
+  Handoff-Stand bestehen beide Tests. Die neue Test-Fixture benutzt
+  normale pytest-Mittel, kein eigenes Test-Subsystem.
+- **B2 behoben.** `_summary()` mit falscher `dict`-Rückgabe ist durch
+  korrekt annotierte Helfer ersetzt. Das vollständige `ast`-Inventar
+  des Testmoduls umfasst 77 eindeutige Bezeichner und 13 Funktionen:
+  alle Parameter und Rückgaben sind annotiert, deutsche Namen stehen
+  nur in den erlaubten Testfunktionen. `ruff --select ANN,I` und
+  normaler Ruff-Lauf bestehen.
+- **Kein weiterer offener Rest.** Die beiden alten UI-Nebenbefunde
+  (rohe Quellkennung und Info-Symbol ohne Datum) bleiben als eigene
+  Beobachtung im Übergabeabschnitt; T-89 verlangt den Wert und seine
+  Herkunft, die in den Belegen sichtbar sind. Sie ändern die technische
+  Freigabe nicht.
+
+### Verify, Standards und Doku-Abgleich
+
+- **#1–#2:** ✅ Öffentliche API-Tests für Deklaration, Aktie und
+  justETF-Vorrang. Der Umfang der Core-Deklaration wurde zusätzlich in
+  Runde 1 für alle sechs Gattungen und beide Identitätsarten geprüft.
+- **#3:** ✅ Backend **1263 passed, 35 skipped, 1 warning**; gezielt
+  `tests/test_calculated_metrics.py` **11 passed**. Beide neuen
+  HTTP-Tests fallen beim minimalen negativen Mutanten und bestehen im
+  Endstand. Plugin-API **324 passed, 1 skipped** und Dashboard **395
+  passed** aus Runde 1 gelten weiter, weil Runde 2 nur das Backend-
+  Testmodul änderte.
+- **#4–#5:** ✅ Die sichtbaren DE-/EN-Belege und das Dashboard-Bild
+  wurden in Runde 1 unabhängig angesehen; kein UI- oder API-Produktcode
+  hat sich seither geändert. StockPortfolios Konsumentenlauf ist Claudes
+  Beleg, nicht mein eigener.
+- **#6 / Doku-Abgleich:** ✅ `README.md` beschreibt den justETF-Vorrang
+  und sonst berechnete Volatilität, `docker/README.md` und
+  `unraid/README.md` enthalten keine widersprechende Herkunftsaussage,
+  `docs/plugin-authors.md` erklärt die Core-Deklaration. Der Vertrag ist
+  quellenunabhängig und unverändert. `git diff --check` für Nacharbeit
+  und Gesamtstand besteht.
+
+**Standard-Riegel:** `code-standards/SKILL.md` und die Referenzen
+`architecture.md`, `python.md`, `persistence.md`, `quality.md` und
+`documentation.md` aus Runde 1 bleiben maßgeblich.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ keine neue Produktregel in Runde 2; Testhelfer teilen Setup, AST-Inventar mit englischen Nicht-Testnamen. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ➖ kein Frontend-Diff in Runde 2; Runde-1-Belege gelten. |
+| Python, FastAPI und Webhooks | ✅ echte TestClient-HTTP-Pfade, korrekte Type Hints, Ruff `ANN,I` grün. |
+| Datenbanken und Persistenzgrenzen | ✅ temporäre DB je Test durch `conftest.py`; keine Betriebsdatenbank und kein Produkt-Persistenzdiff. |
+| Fehler, Logging und Tests | ✅ Mutant rot, Endstand grün, vollständige Backend-Suite; keine neue Testinfrastruktur. |
+| Markdown und Inhaltsverzeichnisse | ✅ vorhandene aktuelle Doku bleibt korrekt; nur Ticketverlauf und Matrix fortgeschrieben. |
+
+**Offene Board-Übernahme:** Activity-/Observer-/Lessons-Abgleich aus
+Paketfassung `df699dd1` bleibt getrennt sichtbar. Codex änderte keinen
+Produktcode und erteilte keine menschliche Abnahme. Der lokale Merge
+liegt bei Claude; Mike nimmt T-88 und T-89 danach gemeinsam ab.
 
 ## Nacharbeit Runde 1 (Claude, 2026-10-02)
 

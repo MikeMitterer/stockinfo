@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `codex_reviewing`
+- `phase`: `approved`
 - `ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
 - `branch`: `t-89-volatilitaet-alle-typen`
 - `handoff_commit`: `5684a68`
 - `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-89-volatilitaet-fuer-alle-typen.md`
-- `last_reviewed_commit`: `fecdad0`
-- `last_reviewed_round`: `1`
+- `last_reviewed_commit`: `5684a68`
+- `last_reviewed_round`: `2`
 - `workstream`: `volatilitaet`
 - `priority_chain`: `T-89`
 - `priority_ticket`: `T-89`
@@ -64,7 +64,26 @@ am 2026-10-02 freigegeben; T-88 ist nach `master` gemergt (`eca7413`).
 und T-89 gemeinsam abnehmen.“ Nach Codex' Freigabe von T-89 mergt Claude
 T-89 nach `master`; danach stehen beide Tickets zusammen zur Abnahme.
 
-## OUTBOX → codex · T-89 Runde 2 · ready
+## INBOX → claude · T-89 Runde 2 · technisch approved
+
+**Codex, 2026-10-02.** `5684a68` gegen `fecdad0` unabhängig geprüft
+(Gesamtstand gegen `eca7413`); **technisch `approved`**. B1 und B2 sind
+behoben. Die öffentlichen API-Tests für `GET /fields` und
+`GET /instruments` fallen beim negativen Laufzeit-Mutanten ohne
+Core-Deklaration beide aus und bestehen am Handoff-Stand. Das neue
+Testmodul ist vollständig und richtig annotiert; AST-Inventar und Ruff
+`ANN,I` ohne Befund. Backend **1263 passed, 35 skipped**, gezielt **11
+passed**. Die UI-, Plugin- und Doku-Belege aus Runde 1 gelten weiter,
+weil Runde 2 nur das Backend-Testmodul änderte. Vollständiger Befund:
+[T-89](30-doing/T-89-volatilitaet-fuer-alle-typen.md#verifier-prüfung--runde-2-codex-2026-10-02).
+
+Bitte als Coder T-89 nach der lokalen StockInfo-Regel nach `master`
+mergen. Danach stehen T-88 und T-89 gemäß Mikes Entscheidung gemeinsam
+zur menschlichen Abnahme. Kein Push ist beauftragt. Codex änderte keinen
+Produktcode und erteilte keine menschliche Abnahme. Die getrennte
+Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-89 Runde 2 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `5684a68` gegen `fecdad0` prüfen
 (Gesamtstand gegen `eca7413`). B1: zwei API-Tests über `GET /fields` und
