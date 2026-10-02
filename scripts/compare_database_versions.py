@@ -15,9 +15,11 @@ Ablauf:
    feldweise verglichen; **jeder** Unterschied ist ein Befund. Der alte
    Stand enthält T-88 und T-89 schon, und für T-94 ist keine Umrechnung
    belegt — eine Ausnahmeliste gibt es deshalb nicht.
-5. Auf der Nachher-Kopie wird geschrieben (manuelle TER setzen, zurücknehmen,
-   ein Papier aktualisieren); jeder Schritt darf nur die erwarteten Tabellen
-   ändern (`EXPECTED_WRITES`).
+5. Auf einer eigenen Kopie wird geschrieben (manuelle TER setzen, zurücknehmen,
+   ein Papier aktualisieren). Für die Aktualisierung kennt deren Offline-Quelle
+   genau dieses Papier mit einem neuen Kurs. Jeder Schritt muss mit 200
+   antworten und darf nur die erwarteten Tabellen ändern (`EXPECTED_WRITES`);
+   danach muss `/instruments` den neuen Kurs zeigen.
 6. W17 in `dashboard/e2e/visual-check.mjs` läuft **sichtbar** auf einer
    weiteren Kopie, mit den Antworten des alten Stands als Erwartung.
 
@@ -79,8 +81,14 @@ EMPTY_ASSETS = "version: 1\ninstruments: []\nfx_rates: []\n"
 SUPPLEMENT = Path(__file__).with_name("supplement_assets.yaml")
 MINIMUM_ASSETS = 15  # Mike, 2026-10-02: „mindestens 15“
 
-# Welche Tabellen jeder Schritt des Schreibwegs ändern darf.
-EXPECTED_WRITES = {"setzen": ["detail_overrides"], "zurücksetzen": [], "aktualisieren": []}
+# Welche Tabellen jeder Schritt des Schreibwegs ändern darf. Aktualisieren
+# (gemessen): ein neuer Kurspunkt samt Zähler, die daraus berechnete
+# Volatilität und am Papier Abrufzeit und Quelle der Beschreibung.
+EXPECTED_WRITES = {
+    "setzen": ["detail_overrides"],
+    "zurücksetzen": [],
+    "aktualisieren": ["detail_values", "instruments", "quotes", "sqlite_sequence"],
+}
 
 
 def file_hashes(database: Path) -> dict[str, str]:
@@ -283,27 +291,60 @@ def changed_tables(old: dict[str, set[tuple]], new: dict[str, set[tuple]]) -> li
     return sorted(table for table in old.keys() | new.keys() if old.get(table) != new.get(table))
 
 
-def write_path(instance: Instance, database: Path, instruments: dict) -> dict[str, list[str]]:
-    """Schreibt über die API und meldet je Schritt die geänderten Tabellen.
+def refresh_source(item: dict) -> tuple[str, float]:
+    """Eine Offline-Fachdatei, die genau dieses Papier mit einem neuen Kurs kennt.
+
+    Ohne sie antwortet die Aktualisierung mit 502 und ändert nichts — und
+    „nichts geändert“ sähe aus wie ein bestandener Schritt (Runde-2-Befund B6).
+    JSON ist gültiges YAML.
+    """
+    price = round((item.get("latest_price") or 1.0) + 1.0, 4)
+    identity = {field: value for field, value in (item.get("identity") or {}).items() if value is not None}
+    entry = {
+        "id": "refresh-target", "identity": identity, "name": item["name"], "instrument_type": item["type"],
+        "price": {"value": price, "currency": item.get("latest_currency") or item.get("currency") or "EUR",
+                  "as_of": datetime.now().astimezone().isoformat(timespec="seconds")},
+    }
+    return json.dumps({"version": 1, "instruments": [entry], "fx_rates": []}), price
+
+
+def write_path(run_dir: Path, snapshot: Path, source_dir: Path, policy: Path,
+               instruments: dict) -> tuple[dict[str, tuple[int, list[str]]], bool]:
+    """Schreibt über die API einer eigenen Instanz; je Schritt Status und geänderte Tabellen.
 
     Je Schritt gegen den Stand davor: Nur Setzen und Zurücksetzen zusammen zu
     vergleichen hieße, einen wirkungslosen Schreibweg als bestanden zu zählen.
+    Der Status gehört dazu: Ein gescheiterter Aufruf ändert ebenfalls nichts.
+
+    Returns:
+        Je Schritt (HTTP-Status, geänderte Tabellen) und ob die API danach
+        den neuen Kurs zeigt.
     """
     item = next((item for item in instruments.values() if item.get("type") in ("etf", "fund")), next(iter(instruments.values())))
-    path = f"/instruments/by-symbol/{urllib.parse.quote(item['symbol'], safe='')}/overrides"
-    start = table_contents(database)
-    _, overrides = get(instance.base, path)
-    send(instance.base, path, "PUT", {**overrides, "ter": 0.42})
-    after_set = table_contents(database)
-    send(instance.base, path, "PUT", overrides)
-    after_reset = table_contents(database)
-    send(instance.base, f"/refresh/by-symbol/{urllib.parse.quote(item['symbol'], safe='')}", "POST")
-    after_refresh = table_contents(database)
+    assets_text, new_price = refresh_source(item)
+    database = prepare_data_dir(run_dir / "write", snapshot, assets_text)
+    instance = Instance(source_dir, database, policy, run_dir / "write.log")
+    try:
+        check_network_blocked(policy, instance.port)
+        symbol = urllib.parse.quote(item["symbol"], safe="")
+        path = f"/instruments/by-symbol/{symbol}/overrides"
+        start = table_contents(database)
+        _, overrides = get(instance.base, path)
+        set_status = send(instance.base, path, "PUT", {**overrides, "ter": 0.42})
+        after_set = table_contents(database)
+        reset_status = send(instance.base, path, "PUT", overrides)
+        after_reset = table_contents(database)
+        refresh_status = send(instance.base, f"/refresh/by-symbol/{symbol}", "POST")
+        after_refresh = table_contents(database)
+        _, listed = get(instance.base, "/instruments")
+    finally:
+        instance.stop()
+    shown = next((entry.get("latest_price") for entry in listed if entry.get("symbol") == item["symbol"]), None)
     return {
-        "setzen": changed_tables(start, after_set),
-        "zurücksetzen": changed_tables(start, after_reset),
-        "aktualisieren": changed_tables(after_reset, after_refresh),
-    }
+        "setzen": (set_status, changed_tables(start, after_set)),
+        "zurücksetzen": (reset_status, changed_tables(start, after_reset)),
+        "aktualisieren": (refresh_status, changed_tables(after_reset, after_refresh)),
+    }, shown == new_price
 
 
 def run_browser_check(run_dir: Path, snapshot: Path, expected: dict) -> bool:
@@ -360,10 +401,10 @@ def main() -> int:
             (run_dir / f"{name}.json").write_text(json.dumps(answers[name], indent=1, sort_keys=True))
 
         findings, field_count = compare(answers["before"], answers["after"])
-        writes = write_path(instances[-1], run_dir / "after" / "stockinfo.db", answers["after"]["instruments"])
         for instance in instances:
             instance.stop()
         instances.clear()
+        writes, price_shown = write_path(run_dir, snapshot, sources["after"], policy, answers["after"]["instruments"])
 
         print(f"Instrumente: {len(answers['before']['instruments'])} vorher, {len(answers['after']['instruments'])} nachher "
               f"({real_count} aus dem Arbeitsbestand, {len(added)} ergänzt)")
@@ -373,10 +414,14 @@ def main() -> int:
             print(f"  {path}")
         if findings:
             problems.append(f"{len(findings)} Befunde im Vergleich")
-        for step, tables in writes.items():
-            print(f"Schreibweg {step}: geänderte Tabellen {', '.join(tables) or 'keine'}")
+        for step, (status, tables) in writes.items():
+            print(f"Schreibweg {step}: HTTP {status}, geänderte Tabellen {', '.join(tables) or 'keine'}")
+            if status != 200:
+                problems.append(f"Schreibweg {step} antwortet {status}")
             if tables != EXPECTED_WRITES[step]:
                 problems.append(f"Schreibweg {step} ändert {tables or 'nichts'} statt {EXPECTED_WRITES[step] or 'nichts'}")
+        if not price_shown:
+            problems.append("Schreibweg aktualisieren: neuer Kurs nicht in /instruments")
 
         if not options.no_browser:
             visual_ok = run_browser_check(run_dir, snapshot, answers["before"]["instruments"])
