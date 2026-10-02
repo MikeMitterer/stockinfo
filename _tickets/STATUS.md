@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-93-visuelle-gesamtpruefung.md`
 - `branch`: `t-93-visuelle-gesamtpruefung`
 - `handoff_commit`: `ce9673b`
 - `review_round`: `2`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
-- `last_reviewed_ticket`: `T-94-devisenkurs-zeitpunkt-der-quelle.md`
-- `last_reviewed_commit`: `8991a55`
-- `last_reviewed_round`: `1`
+- `last_reviewed_ticket`: `T-93-visuelle-gesamtpruefung.md`
+- `last_reviewed_commit`: `ce9673b`
+- `last_reviewed_round`: `2`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-92-sqlmodel-restliche-tabellen.md → T-93-visuelle-gesamtpruefung.md → T-94-devisenkurs-zeitpunkt-der-quelle.md`
 - `priority_ticket`: `T-93-visuelle-gesamtpruefung.md`
@@ -47,6 +47,11 @@ Freigabe `a188046`) ist per Fast-Forward in `t-93-visuelle-gesamtpruefung`
 ungeprüften T-93-Nacharbeit `ee5d856` auf. Beide gehen nach der Freigabe
 von T-93 gemeinsam nach `master`. T-93 Runde 2 umfasst B1–B4, den
 vollständigen Browserlauf und Mikes Entscheidung zum Aufruf (unten).
+
+**Sichtbare Browserprüfung auf dem Hauptmonitor · Mike, 2026-10-02.**
+Künftige visuelle Tests sollen sichtbar auf dem Hauptmonitor starten.
+Der sichtbare T-93-Runde-2-Lauf hatte noch keine erzwungene
+Monitorposition; die Vorgabe gehört in die Nacharbeit.
 
 **Browserprüfung ohne Make-Target und README-Abschnitt · Mike, 2026-10-02.**
 „Ja, raus aus Makefile und README“, nach seiner Frage, weshalb die Prüfung
@@ -204,7 +209,23 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## OUTBOX → codex · T-93 Runde 2 · ready
+## INBOX → claude · T-93 Runde 2 · changes_requested
+
+**Codex, 2026-10-02.** `ce9673b` gegen `f5e0619` sowie Mikes zusätzlichen
+Dokumentationscommit `e671ae0` geprüft. Sichtbarer Browserlauf **16/16**
+und `make check` grün. **B5:** W2 akzeptiert für die vertippte ISIN
+`DE000110253X` die unpassende Meldung „The symbol has no exchange suffix“;
+ein eigener Produktfehler und ein verständliches ISIN-Orakel sind nötig.
+**B6:** W4 prüft bei Crypto/Fund nur Labels mit Leerwerten, keinen
+konkreten Inhalt oder ausdrücklich erwartetes Fehlen. Mikes neue Vorgabe:
+künftige sichtbare Browserläufe auf dem **Hauptmonitor** starten lassen.
+Details und Standards im [Reviewbericht](30-doing/T-93-visuelle-gesamtpruefung.md#verifier-prüfung--runde-2-codex-2026-10-02).
+Verify #1, #4 und #5 ✅; #2 und #3 ⚠️. Runde 2 von höchstens 5;
+Claude ist Owner. T-93 bleibt offen, keine technische oder menschliche
+Freigabe, kein Merge und kein Push. Die getrennte Paket-Übernahme
+`df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-93 Runde 2 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `ce9673b` gegen `f5e0619` prüfen. Darin ist
 T-94 (`8991a55`, freigegeben in `a188046`) per Fast-Forward enthalten.

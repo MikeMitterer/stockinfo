@@ -12,7 +12,10 @@ eines Instruments, manuelle Eingabe, Wechselkurse, Sicherung und
 Wiederherstellung, Migrationsvorschau und Einstellungen in Deutsch und
 Englisch durch und legt Screenshots ab.
 
-**Stand:** Angelegt am 2026-10-02. Mike: „Eigenes Ticket T-93“ für die
+**Stand:** Runde 2 am 2026-10-02 mit `changes_requested`: Der sichtbare
+Browserlauf meldet 16/16, aber W2 akzeptiert bei einer vertippten ISIN
+eine unpassende Symbol-Meldung; W4 hat für mehrere Formen noch kein
+konkretes Inhaltsorakel. Angelegt am 2026-10-02. Mike: „Eigenes Ticket T-93“ für die
 visuellen Tests, die vor seiner Abnahme laufen müssen („Erst wenn die Tests
 auf der cmdline und im Browser durch sind, alles funktioniert, dann nehme
 ich den Teil ab“). Aktiv seit 2026-10-02 nach T-92s Freigabe; Coder
@@ -188,9 +191,10 @@ fertigen Ablauf prüfen.
 - [x] Ein dokumentierter Befehl führt die Kommandozeilen-Suiten aus.
 - [x] Ein dokumentierter Befehl führt den Browser-Durchlauf aus und meldet
       je Weg bestanden oder nicht bestanden.
-- [x] Alle Wege bestehen auf dem Stand nach T-92. — **16 von 16** mit
-      [T-94](T-94-devisenkurs-zeitpunkt-der-quelle.md); W11 war bis dahin
-      rot an dem älteren Devisenfehler.
+- [ ] Alle Wege bestehen mit tragfähigen Inhaltsorakeln auf dem Stand nach
+      T-92. Der Lauf meldet **16 von 16** mit
+      [T-94](T-94-devisenkurs-zeitpunkt-der-quelle.md); W2 akzeptiert noch
+      eine unpassende Fehlermeldung für eine vertippte ISIN.
 - [x] Die Anleitung nennt beide Befehle: `make check` im README, der
       Browser-Durchlauf im Skriptkopf und in `AGENTS.md` (Mike, 2026-10-02).
 
@@ -205,16 +209,92 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
 | 1 | `make check` | grün; im macOS-Sandbox-Lauf **ohne Netz** (nur `localhost` erlaubt) ebenso grün | ✅ |
-| 2 | `cd dashboard && node e2e/visual-check.mjs` | 16 Wege, je Zeile bestanden/nicht bestanden, Bericht und Bilder unter `.tmp/visual-check/`; zugesagte Inhalte je Weg geprüft | ⚠️ |
-| 3 | Ergebnis | 16/16 grün mit T-94 | ⚠️ T-94 |
-| 4 | Gegenproben | je Weg eine falsche Erwartung → rot aus genau diesem Grund; dazu Rahmen: Konsolenfehler, unbehandelte Seitenfehler, unerwartete Antwort, Netzanfrage, ausbleibender erwarteter Fehler | ⚠️ |
-| 5 | Anleitung | README „Tests“ nennt `make check` und Node 24; Skriptkopf nennt Aufruf und Optionen; `AGENTS.md` verweist darauf; kein Make-Target | ⚠️ |
+| 2 | `cd dashboard && node e2e/visual-check.mjs` | 16 Wege, je Zeile bestanden/nicht bestanden, Bericht und Bilder unter `.tmp/visual-check/`; zugesagte Inhalte je Weg geprüft | ⚠️ W2/W4 |
+| 3 | Ergebnis | 16/16 grün mit T-94; keine falschen grünen Inhaltsorakel | ⚠️ W2 |
+| 4 | Gegenproben | je Weg eine falsche Erwartung → rot aus genau diesem Grund; dazu Rahmen: Konsolenfehler, unbehandelte Seitenfehler, unerwartete Antwort, Netzanfrage, ausbleibender erwarteter Fehler | ✅ |
+| 5 | Anleitung | README „Tests“ nennt `make check` und Node 24; Skriptkopf nennt Aufruf und Optionen; `AGENTS.md` verweist darauf; kein Make-Target | ✅ |
 
 ## Review-Verlauf (neueste Runde zuerst)
 
-Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
-diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
-`.agents/AGENT-WORKFLOW.md`).
+## Verifier-Prüfung · Runde 2 (Codex, 2026-10-02)
+
+**Ergebnis: `changes_requested`.** `ce9673b` gegen `f5e0619` geprüft;
+zusätzlich Mikes ausdrücklich beauftragten Dokumentationscommit `e671ae0`.
+T-94 war als separat freigegebener Teil enthalten. Rollen, Owner, Priorität
+und Branch stimmten. Die gemeinsame Paket-VERSION blieb
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`.
+Keine technische oder menschliche Freigabe, kein Merge und kein Push.
+
+**Unabhängiger Lauf:** `node e2e/visual-check.mjs` aus `dashboard/` in
+**sichtbarem Chrome**: 16/16 grün, Bericht
+`.tmp/visual-check/2026-10-02T16-54-01-489Z/report.md`, Exit 0. Die
+Bilder für W2 (einschließlich des Fehlversuchs), W4 und W11 angesehen.
+`make check` erneut grün: 1299 Backend, 399 Dashboard, 324 Plugin-API,
+50 Beispieltests, ESLint, Ruff und `vue-tsc`. `make help` enthält das
+entfernte Browser-Target nicht; `git diff --check` ist sauber. B1 (Node 24),
+B3 (`weberror`) und B4 (Chrome-Start im `try`) aus Runde 1 sind im Code
+nachgezogen. Die Auswertung der 28 Gegenproben ist in der Übergabe
+dokumentiert; die hinzugefügten Fehlerwächter und Orakel wurden im Diff
+unabhängig geprüft.
+
+**B5 · W2 wird bei einer vertippten ISIN falsch grün.** Der neue Fall
+`DE000110253X` erwartet ausdrücklich „The symbol has no exchange suffix“
+(`dashboard/e2e/visual-check.mjs`, `failures`). Im eigenen sichtbaren
+W2-Screenshot steht dieselbe Meldung. Das Eingabefeld heißt jedoch
+„ISIN or symbol“, und die Eingabe ist eine vertippte ISIN. Die Meldung
+erklärt einen fehlenden Börsenzusatz eines *Symbols* und nennt den
+ISIN-Fehler nicht. Damit belegt W2 das zugesagte „ungültige ISIN mit
+verständlicher Meldung“ nicht; es bestätigt gerade das falsche Verhalten.
+Bitte den Produktfehler als eigenes Folgeticket gemäß T-93-Konzept
+erfassen und in die Prioritätskette aufnehmen. Ein rot/grüner
+Eintrittswegtest und danach W2 müssen die verständliche ISIN-Meldung
+belegen. T-93 bleibt bis dahin offen.
+
+**B6 · W4 prüft bei weiteren Formen nur Feldnamen oder Leerwerte.** Für
+`BTC-EUR` wird lediglich „Volatility (1y)“ erwartet, für den Fonds
+„Total expense ratio (TER)“, „Fund provider“ und „Fund domicile“;
+die Screenshots zeigen dort jeweils `-` beziehungsweise leere Auswahlfelder.
+Die Runde-1-Forderung nach einem konkreten Detailinhalt je Identitätsform
+ist damit nicht erfüllt. Bitte je Form einen tatsächlich gelieferten Wert
+prüfen oder die bewusst fehlenden Details ausdrücklich als solches
+Orakel formulieren. Der Anleihefall mit „No detail fields are declared“
+ist bereits ein ausdrückliches Abwesenheitsorakel.
+
+**Hauptmonitor · neue Vorgabe von Mike.** Künftige sichtbare visuelle
+Tests sollen auf dem Hauptmonitor starten. Der jetzige Lauf wurde sichtbar
+gestartet, die Position aber nicht erzwungen oder belegt. Bitte den
+Startweg entsprechend ausrichten und beim nächsten sichtbaren Lauf
+prüfen. Das ist eine neue Nutzeranweisung, keine Behauptung über den
+bereits geprüften Browserinhalt.
+
+**Standards:** Gelesen:
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md` und
+`references/architecture.md`, `python.md`, `persistence.md`,
+`quality.md`, `documentation.md`, `shell.md`, `cli.md`, `frontend.md`;
+außerdem `makefile-conventions/SKILL.md`.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ Vorlagen und Schema-Helfer wiederverwendet; TypeScript-Compiler-API inventarisierte 299 Identifier im JavaScript-Skript, alle englisch. `PAPERS` ist ein unabhängiges Orakel. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ Kein Bash-Diff. |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ✅ Skriptkopf nennt den direkten Aufruf und Optionen; Exit 0 für 16/16. |
+| TypeScript, Vue und i18n | ✅ Kein Frontend-App-Diff; `weberror` wird zusätzlich zur Konsole erfasst. |
+| Python, FastAPI und Webhooks | ➖ Kein neuer T-93-Python-Diff; T-94 separat geprüft. |
+| Datenbanken und Persistenzgrenzen | ✅ `node:sqlite` liest nur die temporäre Testdatenbank; Node 24 ist dokumentiert. |
+| Fehler, Logging und Tests | ⚠️ B5 und B6: W2 akzeptiert eine unpassende Fehlermeldung, W4 nur Labels/Leerwerte. |
+| Markdown und Inhaltsverzeichnisse | ✅ README, Skriptkopf und `AGENTS.md` folgen Mikes Entscheidung zum Aufruf. |
+
+**DRY-Abgleich:** Neue Fehlersammlung, Kurs- und Detailorakel, Node- und
+Aufrufangaben gegen bestehende Skript-Helfer, `PAPERS`, Paketvorgabe und
+Projektanleitungen gesucht. Keine zweite Fachlogik oder parallele
+Wissensquelle im T-93-Diff. **Doku-Abgleich:** `README.md` nennt Node 24
+und `make check`; `AGENTS.md` hat nach `e671ae0` einen eigenen
+Browserprüfungsabschnitt mit Übersichtseintrag und verweist auf den
+Skriptkopf. Die frühere Passage wurde dorthin verschoben; der Verweis auf
+den gemeinsamen StockPortfolio-Testserver bleibt erhalten. `docker/README.md`
+und `unraid/README.md` sind Betriebsanleitungen ohne Host-Node-Anforderung
+oder Browser-Testaufruf; dort ist keine Anpassung nötig. Die getrennte
+Board-Übernahme der Paketfassung `df699dd1` bleibt offen.
 
 ## Übergabe Runde 2 (Claude, 2026-10-02)
 
