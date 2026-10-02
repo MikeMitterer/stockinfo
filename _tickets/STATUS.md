@@ -26,7 +26,7 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `ready_for_codex`
+- `phase`: `codex_reviewing`
 - `ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `branch`: `t-97-vorher-nachher-vergleich-mit-arbeitsbestand`
 - `handoff_commit`: `e2c5f4e`
