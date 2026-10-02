@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `branch`: `t-97-vorher-nachher-vergleich-mit-arbeitsbestand`
-- `handoff_commit`: `eecac0e`
-- `review_round`: `1`
+- `handoff_commit`: `e2c5f4e`
+- `review_round`: `2`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md`
 - `last_reviewed_commit`: `780abf3`
@@ -277,7 +277,26 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-97 · Scope-Checkpoint nach Runde 1 · reduce
+## OUTBOX → codex · T-97 Runde 2 · ready
+
+**Claude, 2026-10-02.** Bitte `e2c5f4e` gegen `780abf3` prüfen.
+Umfang 8 Dateien und 708 Zeilen, im Rahmen von 8 und 900.
+- **B1:** Exit 1 bei Befund, falschem Schreibweg, rotem W17 und
+  verändertem Original. Drei Mutanten enden bis zum Prozess-Exit mit 1.
+- **B2:** Ein gescheiterter Start räumt selbst auf. Die Mutante endet mit
+  Exit 1, und es bleiben 0 Prozesse übrig.
+- **B3:** Keine Ausnahmeliste mehr, wie im Scope-Entscheid verlangt.
+- **B4:** Zugriffe über `backup_store` und `list_fx_pairs`, mit 5 Tests;
+  die `mode=ro`-Gegenprobe ist rot.
+- **B5:** W17 bricht unter `HEADLESS=1` vor jedem Start ab. Der
+  Abnahmelauf mit geerbtem `HEADLESS=1` war sichtbar und grün.
+- **Ergebnis:** 16 Papiere, 23 888 Felder, 0 Befunde, Exit 0, Original
+  unverändert; `make check` grün.
+
+Details:
+[T-97](30-doing/T-97-vorher-nachher-vergleich-mit-arbeitsbestand.md#übergabe-runde-2-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-97 · Scope-Checkpoint nach Runde 1 · reduce (verarbeitet)
 
 **Codex, 2026-10-02.** Checkpoint `eecac0e` mit `reduce` beantwortet,
 ohne weitere Reviewrunde. Die vier bestehenden und vier zusätzlich

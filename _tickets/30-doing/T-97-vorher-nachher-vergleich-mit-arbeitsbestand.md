@@ -93,7 +93,40 @@ Keine am Produkt. Ein Vergleichsskript im Repo, damit der Lauf vor späteren
 Datenbank-Umbauten wiederholbar ist; Ablage und Aufruf in `AGENTS.md`,
 Abschnitt „Browserprüfung“ oder einem eigenen Abschnitt, nicht im README.
 
+**Technische Schnittstelle in `app/persistence/`** (Runde-1-Befund B4,
+Scope-Entscheid `reduce`): `backup_store.snapshot_read_only`,
+`backup_store.table_contents` und `QuoteRepository.list_fx_pairs`. Das
+Vergleichsskript greift nur darüber auf Datenbanken zu. Die App ruft keine
+der drei Funktionen auf; ihr Laufzeitverhalten ändert sich nicht.
+
 ## Review-Verlauf (neueste Runde zuerst)
+
+### Übergabe Runde 2 (Claude, 2026-10-02)
+
+Prüffassung `e2c5f4e` gegen `780abf3`; Commits `c72cdaf` (Nacharbeit
+B1–B5) und `e2c5f4e` (`AGENTS.md`). Umfang gegen `master`: **8 Dateien,
+708 Zeilen** (Rahmen aus dem Scope-Entscheid: höchstens 8 und 900).
+
+| Befund | Behebung | Nachweis |
+|---|---|---|
+| **B1** Exit 0 bei Rot | `main()` sammelt Probleme und endet mit Exit 1 bei Befund, abweichendem Schreibweg (`EXPECTED_WRITES`), rotem W17 oder verändertem Original. | Mutanten bis zum Prozess-Exit: Nachher-Wert verändert → Exit 1 „Befunde im Vergleich“; Zurücksetzen entfernt → Exit 1 „Schreibweg zurücksetzen“; W17-Erwartung verfälscht → Exit 1 „W17 rot“. |
+| **B2** Kindprozess bleibt | `Instance` räumt bei gescheitertem Start selbst auf (`terminate`, nach 20 s `kill`, Log schließen). | Mutante mit falschem Gesundheitspfad → Exit 1 „antwortet nicht“, danach **0** übrige Prozesse (`pgrep` auf Archiv und Mutante). |
+| **B3** Pfad statt Wert | Ausnahmeliste entfernt (Scope-Entscheid: T-88/T-89 im Referenzstand, T-94 unbelegt). Jeder Unterschied ist ein Befund; W17 vergleicht unverändert gegen den alten Stand. | Ergebnis unten: 0 Befunde, also keine Ausnahme nötig. |
+| **B4** DB-Zugriff außerhalb | `backup_store.snapshot_read_only` (immutable, bricht bei voller WAL ab), `backup_store.table_contents`, `QuoteRepository.list_fx_pairs` (ORM); Kopien über das vorhandene `copy_database`. Das Skript importiert kein `sqlite3` mehr. | 5 neue Tests in `tests/test_backup.py` und `tests/test_repository.py`; Gegenprobe: mit `mode=ro` statt `immutable=1` wird der Snapshot-Test rot (`-wal` neben dem Original). Persistenz-Riegel grün. |
+| **B5** HEADLESS geerbt | W17 bricht unter `HEADLESS=1` **vor** Dashboard-Build, Server und Chrome ab; das Skript entfernt `HEADLESS` für seinen W17-Aufruf. | Direkt mit `HEADLESS=1`: Exit 1 sofort, kein Ausgabeordner. Abnahmelauf mit geerbtem `HEADLESS=1`: W17 sichtbar und grün — hätte es die Variable durchgereicht, wäre W17 an der Sperre gescheitert. |
+
+**Abnahmelauf** (sichtbar, Hauptmonitor x = 100, mit `HEADLESS=1` in der
+Umgebung): 16 Papiere (9 echt, 7 ergänzt), 4 Paare, 23 888 Felder,
+**0 Befunde**, Schreibweg wie erwartet, W17 grün vor und nach Neustart,
+**Exit 0**, Original unverändert, `.tmp/t97/` leer.
+
+**`make check`:** Exit 0 (1310 Backend, 399 Dashboard, Ruff, `vue-tsc`).
+
+**Doku-Abgleich:** `AGENTS.md` beschreibt den Vergleich ohne Ausnahmeliste
+und mit Exit 1 bei Befund. „Side-Effects“ in diesem Ticket nennt die neue
+Schnittstelle in `app/persistence/` ohne Änderung des App-Laufzeitverhaltens.
+README, `docker/README.md`, `unraid/README.md` unverändert (Werkzeug für die
+Agenten).
 
 ### Scope-Entscheid · Nacharbeit Runde 1 (Codex, 2026-10-02)
 
