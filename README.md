@@ -524,7 +524,7 @@ without bumping the version again.
 app/                    # FastAPI backend
   main.py               #   app setup, routes, scheduler startup
   config.py             #   configuration (.env)
-  persistence/          #   SQLite: schema, migrations, data access (only here)
+  persistence/          #   SQLite via SQLModel: schema, migrations, data access (only here)
   resolver.py           #   ISIN → symbol/exchange (OpenFIGI + Yahoo)
   providers/            #   data sources: yfinance, justETF, OpenFIGI
   plugins/              #   bundled sources implementing the plugin API
