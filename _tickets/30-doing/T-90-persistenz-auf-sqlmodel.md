@@ -110,6 +110,53 @@ Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
 
+## Nacharbeit Runde 3 (Claude, 2026-10-02)
+
+Prüfgegenstand: `65d7f05` gegen `44f72ab` (Nacharbeit) und gegen `master`
+`de620e9` (Gesamtstand). Nur `tests/test_persistence_boundary.py`
+geändert; kein Produktcode.
+
+- **B5 · Alias des Datenbankpfads:** Der Wächter verfolgt jetzt die
+  Herkunft des Pfads. Eine Zuweisung, deren Wert auf die Datenbank zeigt
+  (`path = Path(database_path)`), macht den Namen zum Datenbankpfad, auch
+  über Ketten (`target = Path(settings.database_path)`, `file = target`).
+  Lokale Namen gelten je innerster Funktion, Attribute
+  (`self._file = …`) in der ganzen Datei. `.parent` beendet die Spur: Das
+  Verzeichnis ist nicht die Datei — so bleiben Sicherungsverzeichnis,
+  Absichtsdatei und Archivdateien beim Dienst.
+- **Gegenproben:**
+  - Neuer Test mit genau dem Mutanten aus dem Review
+    (`path = Path(database_path); os.replace(incoming, path)`) und einer
+    Kette über zwei Zuweisungen bis `stat()`: beide gefunden;
+    `Path(database_path).parent` mit `exists()` nicht.
+  - **Mutant im echten Produktcode:** `replace_database(...)` in
+    `apply_pending` testweise durch `path = Path(database_path)` und
+    `os.replace(source, path)` ersetzt: Der Wächter wird rot und meldet
+    genau `app/services/backup.py` Zeile 401 `os.replace(Datenbank)`.
+    Zurückgesetzt, `git diff -- app` leer.
+  - Ein erster Entwurf sammelte Aliase dateiweit; am Mutanten meldete er
+    zusätzlich vier unbeteiligte Stellen (226, 269, 357, 480), weil `path`
+    in anderen Funktionen dasselbe Wort ist. Deshalb je Funktion.
+  - Alter Stand `88d54d8`: Jetzt findet er auch, was vorher durchrutschte —
+    `stamped_fingerprint` (`path.is_file()`, Zeile 445) und die
+    `.incoming`-Kopie (404, 410). Die Archivprüfung in `resolve` (Zeile
+    356) bleibt korrekt unberührt.
+  - Aktueller Stand: 56 Dateien außerhalb `app/persistence/` ohne Treffer.
+- **Verbleibende Grenze, bewusst nicht verfolgt:** Ein Datenbankpfad, der
+  als Argument unter anderem Namen in eine andere Funktion wandert, sowie
+  Tupel-Zuweisungen und Closures. Das wäre Datenflussanalyse über
+  Funktionen hinweg — das Test-Subsystem, das Codex ausgeschlossen hat.
+- **Läufe:** Backend **1274 passed, 35 skipped** (1 neue Gegenprobe), zwei
+  Läufe mit verschiedenen `PYTHONHASHSEED`; Ruff `app tests scripts` und
+  `git diff --check` grün. Kein Produktdiff, daher kein neuer Browserlauf;
+  die Restore- und Migrationsbilder aus Runde 2/3 gelten.
+- **Bezeichner:** neu nur `_database_aliases`, `_scoped_aliases` und deren
+  lokale Namen (`scope`, `known`, `attributes`, `module_level`, `owners`,
+  `local`), dazu ein deutscher Testname.
+
+**Doku-Abgleich:** Nur der Modul-Docstring des Tests beschreibt die neue
+Erkennung; Anleitungen sind nicht betroffen.
+
 ## Verifier-Prüfung · Runde 3 (Codex, 2026-10-02)
 
 **Prüfstand:** `44f72ab` gegen `88d54d8`, Gesamtstand gegen `de620e9`.
