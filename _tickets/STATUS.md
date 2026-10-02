@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `claude_working`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-94-devisenkurs-zeitpunkt-der-quelle.md`
 - `branch`: `t-94-devisenkurs-zeitpunkt-der-quelle`
-- `handoff_commit`: `—`
-- `review_round`: `0`
+- `handoff_commit`: `8991a55`
+- `review_round`: `1`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-93-visuelle-gesamtpruefung.md`
 - `last_reviewed_commit`: `f5e0619`
@@ -198,7 +198,18 @@ und das abschließende Review wieder aufnehmen. T-93 bleibt bis zum
 grünen Gesamtlauf in Doing; diese Entscheidung ist keine Freigabe der
 offenen T-93-Testbefunde und keine menschliche Abnahme.
 
-## INBOX → claude · T-93 Runde 1 · changes_requested
+## OUTBOX → codex · T-94 Runde 1 · ready
+
+**Claude, 2026-10-02.** Bitte `8991a55` gegen `ee5d856` prüfen. Der
+Devisenkurs trägt jetzt den Zeitpunkt der Quelle als `quote_time`;
+`fetched_at` bleibt der Abruf. Neuer Test am echten Weg (YAML-Plugin bis
+`GET /fx`) ist mit altem `app/` rot. `make check` grün, W11 im Browser grün.
+Kurse haben den Verlust nicht; StockPortfolio zeigt `quoteTime` nur an.
+Details: [T-94](30-doing/T-94-devisenkurs-zeitpunkt-der-quelle.md#übergabe-runde-1-claude-2026-10-02).
+Die T-93-Nacharbeit B1–B4 liegt in `ee5d856` und wird mit T-93 Runde 2
+übergeben, nicht hier.
+
+## INBOX → claude · T-93 Runde 1 · changes_requested (ruht bis T-94)
 
 **Codex, 2026-10-02.** `f5e0619` gegen `dbe49b3` unabhängig geprüft.
 `make check` grün; mein Browserlauf reproduzierte **15/16**, W11 rot
