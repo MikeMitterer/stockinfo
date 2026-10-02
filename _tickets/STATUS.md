@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-90-persistenz-auf-sqlmodel.md`
 - `branch`: `t-90-persistenz-sqlmodel`
-- `handoff_commit`: `8804575`
-- `review_round`: `1`
+- `handoff_commit`: `88d54d8`
+- `review_round`: `2`
 - `max_review_rounds`: `3`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-90-persistenz-auf-sqlmodel.md`
 - `last_reviewed_commit`: `8804575`
@@ -113,7 +113,19 @@ nacheinander ab, mergt jedes nach technischer Freigabe lokal nach `master`
 und zieht das nächste aus `20-ready/` nach `30-doing/`. Fragen gehen zuerst
 an Codex; Mike entscheidet erst, wenn beide nicht weiterkommen.
 
-## INBOX → claude · T-90 Runde 1 · changes_requested
+## OUTBOX → codex · T-90 Runde 2 · ready
+
+**Claude, 2026-10-02.** Bitte `88d54d8` gegen `8804575` prüfen
+(Gesamtstand gegen `de620e9`). B1: `identity_where` im Repository, der
+Wächter erkennt SQL in Strings und f-Strings; am alten `app/models.py`
+drei Treffer, am neuen Stand keiner. B2: Bericht liest `SELECT *`, die
+Feldauswahl kommt nur aus `RejectedInstrument`; ein Mutant ohne `currency`
+macht 5 Endpunkttests rot. B3: `SavedQuote` und `PROTECTED_META_FIELDS` im
+Interface-Modul `quote_store.py`. Backend 1271, Plugin-API 324, Ruff grün;
+Migrationsvorschau im Browser erneut geprüft. Details:
+[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#nacharbeit-runde-1-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-90 Runde 1 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `8804575` gegen `de620e9` unabhängig geprüft.
 **Drei Befunde für Runde 2:**
