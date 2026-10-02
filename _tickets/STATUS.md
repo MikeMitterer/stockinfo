@@ -139,8 +139,16 @@ Message von vorhin in das Board ein“).
 
 - **Ausnahme von der harten Obergrenze:** T-92 darf als fünftes Ticket nach
   `30-doing/`. Das ist Mikes ausdrückliche Entscheidung gegen die Regel
-  [Ticketgrenzen](.agents/AGENT-WORKFLOW.md#ticketgrenzen); sie gilt nur
-  für T-92.
+  [Ticketgrenzen](.agents/AGENT-WORKFLOW.md#ticketgrenzen). Erweitert
+  durch die folgende Entscheidung.
+- **Obergrenze ausgesetzt · Mike, 2026-10-02:** „Die Obergrenze ist
+  temporär ausgesetzt. T-93 darf also auch nach doing. Der Punkt ist, dass
+  die SQL-Umstellung sauber durchgehen muss — das heißt inkl. der UI-Tests
+  und evtl. noch anfallender Tickets, die als Folge der Tests entstehen“
+  (an claude-observer). Die harte Obergrenze für `30-doing/` gilt nicht für
+  T-92, T-93 und Folgetickets aus den Tests von T-93, bis Mike T-88 bis T-93
+  samt dieser Folgetickets abgenommen hat. Danach gilt sie wieder.
+  Folgetickets kommen in die `priority_chain`.
 - **Abnahme:** Mike nimmt T-88 bis T-92 erst ab, wenn die SQL-Umstellung
   fertig ist und danach die visuellen Tests von StockInfo auf der
   Kommandozeile und im Browser bestanden sind.
@@ -1735,7 +1743,9 @@ ab, wenn die SQL-Umstellung fertig ist und die visuellen Tests bestanden
 sind, und hat T-90 bis T-92 als Kette beauftragt (2026-10-02). T-88 bis
 T-91 sind technisch erledigt; T-92 ist aktiv.
 Mike erlaubt T-92 ausdrücklich als fünftes Ticket über der harten
-Obergrenze (2026-10-02, siehe „T-92 startet trotz Doing-Grenze“). Bei einer Überschreitung hier Ordner, betroffene
+Obergrenze (2026-10-02, siehe „T-92 startet trotz Doing-Grenze“) und hat
+die Obergrenze danach für T-93 und Folgetickets aus dessen Tests temporär
+ausgesetzt, bis zur Abnahme der SQL-Umstellung. Bei einer Überschreitung hier Ordner, betroffene
 Tickets und konkreten Bedarf nennen; nach Rückkehr zur Zielgrenze entfernen.
 Der Bestand wird aus den Ticketdateien ermittelt, nicht als Zähler gepflegt.
 
