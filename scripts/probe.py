@@ -22,10 +22,11 @@ def lap(label: str, since: float) -> float:
     return now
 
 
+# Die Importe stehen absichtlich hier: Ihre Ladezeit ist die erste Messung.
 t0 = time.perf_counter()
-import httpx
-import justetf_scraping
-import yfinance as yf
+import httpx  # noqa: E402
+import justetf_scraping  # noqa: E402
+import yfinance as yf  # noqa: E402
 
 t = lap("import", t0)
 
