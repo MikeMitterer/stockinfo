@@ -103,6 +103,43 @@ diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`). Die Abschnittsüberschriften sind unverändert;
 Links auf einzelne Runden gelten weiter.
 
+## Nacharbeit Runde 4 (Claude, 2026-10-02)
+
+Prüfgegenstand: `2caca38` gegen `8a3ae95` (Nacharbeit) und gegen `f268ced`
+(Gesamtstand).
+
+- **B5 · Override-API:** `app/models.py`, `InstrumentOverrides.fund_size`
+  beschreibt jetzt das tatsächliche Verhalten von `set_overrides`
+  (`app/services/quote_cache.py:710-713`): „Fondsvolumen in Millionen.
+  Währung: das mitgesendete fund_currency, sonst die bisher gespeicherte
+  Währung, sonst die Fondswährung“. Der Kommentar zur Obergrenze sagt
+  „in Millionen“. Schema-Gegenprobe:
+  `InstrumentOverrides.model_json_schema()` liefert genau diesen Text.
+  `contract/openapi-core-snapshot.json` enthält `InstrumentOverrides` nicht
+  und bleibt unverändert.
+- **B5 · Katalog:** Der Kommentar in `app/details.py` sagt „In Millionen;
+  die Währung trägt jeder Wert selbst (justETF: EUR)“.
+- **B5 · Root-README** („ETFs outside Europe“): Yahoo liefert die
+  Fondsgröße als absoluten Betrag, die App führt Fondsgrößen in Millionen,
+  „in EUR from justETF, in your chosen currency when you enter one by hand“.
+- **Inventar über B5 hinaus:** Suche nach „Mio. EUR“, „millions of EUR“
+  und Varianten in `app`, `dashboard/src`, `plugin_api/src`, `contract`,
+  den drei READMEs und `docs/`. Zusätzlich korrigiert: der Kommentar in
+  `app/providers/justetf_provider.py` („der Katalog führt die Fondsgröße
+  ebenfalls in Millionen“). Zutreffend und unverändert: `README.md:76` und
+  `docker/README.md:71` (beide über justETF-Quellwerte), das Ausgabebeispiel
+  in `dashboard/src/utils/fundSize.ts`, der Yahoo-Docstring zum alten
+  `QuoteResponse`-Pfad (wie von Codex bewertet).
+- **Doku-Abgleich:** Root-README und `docker/README.md` widersprechen sich
+  nicht; die Docker-Anleitung macht keine Aussage zu manuellen Werten.
+  `docker/README.md` ist unverändert, die Docker-Hub-Vorschau gilt weiter
+  (8.784 Bytes). `unraid/README.md` nennt keine Fondsgröße. Der Vertrag
+  `contract/core-contract.json` beschreibt Quell- und Eingabewährung.
+- **Läufe:** Backend 1252 passed, 35 skipped; Plugin-Vertrag 324 passed,
+  1 skipped; Ruff ohne Befund, `ruff --select I` für die berührten Dateien
+  ohne Befund. Dashboard unberührt. Kein Verhaltenswechsel; die
+  Browserbelege aus Runde 1 und 2 gelten weiter.
+
 ## Verifier-Prüfung · Runde 3 (Codex, 2026-10-02)
 
 **Prüfstand:** `8a3ae95` gegen `12fac6c`, Gesamtstand gegen `f268ced`.

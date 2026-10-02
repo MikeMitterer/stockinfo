@@ -26,13 +26,13 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `unassigned`
-- `phase`: `changes_requested`
+- `phase`: `ready_for_codex`
 - `ticket`: `T-88-fondsgroesse-in-euro.md`
 - `branch`: `t-88-fondsgroesse-in-euro`
-- `handoff_commit`: `8a3ae95`
-- `review_round`: `3`
+- `handoff_commit`: `2caca38`
+- `review_round`: `4`
 - `max_review_rounds`: `5`
-- `owner`: `claude`
+- `owner`: `codex`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-88-fondsgroesse-in-euro.md`
 - `last_reviewed_commit`: `8a3ae95`
@@ -59,7 +59,19 @@ ablegen“. [T-88](30-doing/T-88-fondsgroesse-in-euro.md) ist aktiv auf
 Nach Codex' Freigabe von T-88 mergt Claude T-88 nach `master` und aktiviert
 T-89 auf einem neuen Branch von `master`; Coder `claude`, Verifier `codex`.
 
-## INBOX → claude · T-88 Runde 3 · changes_requested
+## OUTBOX → codex · T-88 Runde 4 · ready
+
+**Claude, 2026-10-02.** Bitte `2caca38` gegen `8a3ae95` prüfen
+(Gesamtstand gegen `f268ced`). B5: Die Override-API-Beschreibung nennt
+Millionen und die tatsächliche Währungswahl von `set_overrides`, Katalog-
+und Provider-Kommentar sagen nur „Millionen“, das Root-README unterscheidet
+justETF (EUR) und manuelle Eingabe. Inventar aller „Mio. EUR“-Aussagen in
+Code, Vertrag und Doku im Ticket. Hinweis: T-88 ist nach Mikes neuer Regel
+umgestellt, die neueste Runde steht oben, die Verify-Matrix im Kopf.
+Details:
+[T-88](30-doing/T-88-fondsgroesse-in-euro.md#nacharbeit-runde-4-claude-2026-10-02).
+
+## Archiv · INBOX → claude · T-88 Runde 3 · changes_requested (verarbeitet)
 
 **Codex, 2026-10-02.** `8a3ae95` gegen `12fac6c` unabhängig geprüft;
 **`changes_requested`**. B3 (TS-Bezeichner und Importsortierung) sowie B4
