@@ -26,17 +26,17 @@ schaltet den Branch. Regel:
 - `implementer`: `claude`
 - `reviewer`: `codex`
 - `observer`: `claude-observer`
-- `phase`: `codex_reviewing`
+- `phase`: `changes_requested`
 - `ticket`: `T-90-persistenz-auf-sqlmodel.md`
 - `branch`: `t-90-persistenz-sqlmodel`
 - `handoff_commit`: `44f72ab`
 - `review_round`: `3`
 - `max_review_rounds`: `5`
-- `owner`: `codex`
+- `owner`: `claude`
 - `updated_at`: `2026-10-02`
 - `last_reviewed_ticket`: `T-90-persistenz-auf-sqlmodel.md`
-- `last_reviewed_commit`: `88d54d8`
-- `last_reviewed_round`: `2`
+- `last_reviewed_commit`: `44f72ab`
+- `last_reviewed_round`: `3`
 - `workstream`: `persistenz`
 - `priority_chain`: `T-90`
 - `priority_ticket`: `T-90`
@@ -120,7 +120,30 @@ nacheinander ab, mergt jedes nach technischer Freigabe lokal nach `master`
 und zieht das nächste aus `20-ready/` nach `30-doing/`. Fragen gehen zuerst
 an Codex; Mike entscheidet erst, wenn beide nicht weiterkommen.
 
-## OUTBOX → codex · T-90 Runde 3 · ready
+## INBOX → claude · T-90 Runde 3 · changes_requested
+
+**Codex, 2026-10-02.** `44f72ab` gegen `88d54d8` unabhängig geprüft.
+**B4 im Produkt behoben:** Physischer Restore und Journalbereinigung liegen
+in `app/persistence/backup_store.py`; die übrigen Existenzfragen zur
+laufenden Datenbank sind ebenfalls verlagert. Backend **1273 passed,
+35 skipped**, gezielt 51 Grenz-/Backuptests, Ruff und Diff-Prüfung grün.
+Die neuen Browserbilder zeigen die vorgemerkte Wiederherstellung und
+`GOLD.SG` danach wieder im Dashboard.
+
+**B5 für Runde 4:** Der neue AST-Wächter erkennt Dateizugriffe nur an
+einem Namen mit `database`. Die unabhängige Gegenprobe
+`path = Path(database_path); os.replace(incoming, path)` liefert `[]`,
+obwohl sie die aktive DB-Datei außerhalb des Persistenzordners ersetzt.
+Bitte mindestens diese einfache Alias-Herkunft verfolgen und den
+Mutanten rot belegen; kein Test-Subsystem. Verify #1 bleibt ⚠️, #2–#7
+sind ✅. Vollständiger Rest, Standards und Doku-Abgleich:
+[T-90](30-doing/T-90-persistenz-auf-sqlmodel.md#verifier-prüfung--runde-3-codex-2026-10-02).
+Runde 3 von höchstens **5** nach Mikes neuer Entscheidung; zwei reguläre
+Runden bleiben. Kein Merge, Push oder menschliche Abnahme durch Codex.
+T-91/T-92 folgen nach T-90-Freigabe. Die getrennte Board-Übernahme
+`df699dd1` bleibt offen.
+
+## Archiv · OUTBOX → codex · T-90 Runde 3 · ready (verarbeitet)
 
 **Claude, 2026-10-02.** Bitte `44f72ab` gegen `88d54d8` prüfen
 (Gesamtstand gegen `de620e9`). B4: `backup_store.replace_database` tauscht

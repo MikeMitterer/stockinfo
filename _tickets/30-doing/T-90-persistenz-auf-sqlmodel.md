@@ -96,19 +96,103 @@ Aktuelle Statusmatrix; sie wird über alle Runden fortgeschrieben.
 
 | # | Handgriff | Erwarteter Nachweis | AI |
 |---|---|---|:--:|
-| 1 | `tests/test_persistence_boundary.py` | Kein SQL und kein direkter Zugriff auf die aktive SQLite-Datei außerhalb `app/persistence/`; Gegenproben für SQL-Fragmente und physischen Restore | ⚠️ B4 |
+| 1 | `tests/test_persistence_boundary.py` | Kein SQL und kein direkter Zugriff auf die aktive SQLite-Datei außerhalb `app/persistence/`; Gegenproben erkennen auch einfache Pfad-Aliase beim physischen Restore | ⚠️ B5 |
 | 2 | `git diff -M --summary master..HEAD` | Fünf Umbenennungen nach `app/persistence/`, keine Weiterleitungsmodule an den alten Pfaden | ✅ |
 | 3 | `app/container.py`, Dienste, `routers/fields.py` | `QuoteRepository` wird nur in `get_quote_store()` gebaut; Dienste und Feldrouter kennen nur `QuoteStore` und unabhängige Domänentypen | ✅ |
-| 4 | Backend, Plugin-API, Ruff | Backend 1271 grün, Plugin-API 324 grün, `ruff check app tests scripts` und `plugin_api` ohne Befund | ✅ |
+| 4 | Backend, Plugin-API, Ruff | Backend 1273 grün, Plugin-API 324 grün, `ruff check app tests scripts` und `plugin_api` ohne Befund | ✅ |
 | 5 | Browser mit Temp-Datenbank | Dashboard und Detailbereich wie vorher; Backup anlegen, vormerken, Neustart stellt den gelöschten Eintrag wieder her | ✅ |
 | 6 | Browser mit Alt-Datenbank | Migrationsvorschau, Bestätigung und Bericht laufen über die verlagerten Funktionen | ✅ |
-| 7 | Doku | Projektaufbau im `README.md` nennt `persistence/` und seine Aussage „data access (only here)“ stimmt mit dem Code überein | ⚠️ B4 |
+| 7 | Doku | Projektaufbau im `README.md` nennt `persistence/` und seine Aussage „data access (only here)“ stimmt mit dem aktuellen Code überein | ✅ |
 
 ## Review-Verlauf (neueste Runde zuerst)
 
 Neue Übergaben, Nacharbeiten und Verifier-Prüfungen kommen direkt unter
 diese Überschrift (Regel „Review-Verlauf — neueste Runde zuerst“ in
 `.agents/AGENT-WORKFLOW.md`).
+
+## Verifier-Prüfung · Runde 3 (Codex, 2026-10-02)
+
+**Prüfstand:** `44f72ab` gegen `88d54d8`, Gesamtstand gegen `de620e9`.
+Rollen, Owner, Priorität, Ticketpfad und Branch stimmten; nach dem
+Produktcommit folgten nur Boarddateien. Paket-VERSION
+`df699dd1d7583c59030030ad44e3ab896d4660be8d84575662e652f754624da1`
+vor dem Durchlauf unverändert. Mike hat das Limit ausdrücklich auf **5**
+angehoben; Runde 3 von höchstens 5. **Ergebnis: `changes_requested`**
+wegen eines verbleibenden Testlochs. Keine technische oder menschliche
+Abnahme.
+
+**B4 im Produkt behoben.** `app/services/backup.py` steuert die
+Wiederherstellung und ruft `backup_store.replace_database` auf. Kopie,
+atomarer Austausch und WAL/SHM-Bereinigung liegen jetzt in
+`app/persistence/backup_store.py`. Auch die Existenzfragen in
+`apply_pending`, `stamped_fingerprint` und `app/main.py` sind in den
+Persistenzordner gezogen. Der Dienst enthält keinen `shutil.copy2` mehr.
+Der Coder-Gegenlauf findet am alten Stand die benannten Datei-Operationen;
+am aktuellen Produktstand habe ich keine direkte Operation auf die laufende
+DB-Datei außerhalb des Ordners gefunden. Die neuen Browserbilder zeigen
+die vorgemerkte Wiederherstellung und danach `GOLD.SG` wieder im Dashboard.
+
+### Befund für Runde 4
+
+**B5 · Der neue Wächter übersieht einen einfachen Pfad-Alias.**
+`tests/test_persistence_boundary.py:52–75` erkennt Dateizugriffe nur,
+wenn ein Argument oder Attribut einen Namen mit `database` enthält.
+Die unabhängige In-Memory-Gegenprobe mit
+`path = Path(database_path); os.replace(incoming, path)` außerhalb der
+Persistenz liefert von `database_accesses` **`[]`**. Dieser minimale
+Mutant schreibt wieder auf die aktive Datenbankdatei und verletzt genau
+Akzeptanzkriterium #1; die Suite bliebe dennoch grün. Die Übergabe nennt
+diese Grenze selbst, behandelt den Namen aber als Konvention. `AGENTS.md`
+fordert englische Bezeichner, keinen bestimmten Variablennamen für einen
+DB-Pfad. Bitte den Test so schärfen, dass er mindestens den einfachen
+Alias von `database_path` über `Path(...)` bis zum Dateiaufruf verfolgt,
+und den Mutanten rot belegen. Eine kleine AST-Ergänzung genügt; kein
+eigenes Analyse- oder Test-Subsystem.
+
+**Rest:** B5 ist ein blockierender Nachweisfehler für das ausdrücklich
+geforderte Testgate; der aktuelle Produktpfad B4 ist korrigiert. Der
+Aliasfall blieb offen, weil die neue Prüfung an Namen statt an der
+Herkunft des Pfads hängt. Claude ergänzt die Gegenprobe und den Wächter;
+Codex prüft die eingefrorene Runde-4-Fassung. T-91/T-92 folgen erst nach
+T-90-Freigabe. Zwei reguläre Runden bleiben nach Mikes neuem Limit.
+
+### Weitere Gegenproben und Standards
+
+- **#4:** Unabhängig **1273 passed, 35 skipped** im Backend, gezielt
+  **51 passed** für Grenz- und Backuptests; Ruff für
+  `app tests scripts plugin_api` und `git diff --check` grün. Plugin-API
+  **324 passed, 1 skipped** aus Runde 1 bleibt ohne Plugin-Diff gültig.
+- **#5–#6:** Beide neuen Browserbilder angesehen. Der sichtbare
+  Restore-Pfad zeigt `GOLD.SG` wieder; Migrationspfad seit Runde 2
+  unverändert. Backendtests laufen mit temporärer Datenbank.
+- **Bezeichner:** AST-Inventar über alle 78 im Gesamtstand geänderten
+  Python-Dateien: 22.272 Name-/Argument-/Funktions-/Klassenvorkommen,
+  nur der nach `AGENTS.md` zulässige deutsche Testname mit Nicht-ASCII.
+- **Doku-Abgleich:** `README.md` „data access (only here)“ stimmt mit dem
+  aktuellen Produktcode überein. `docker/README.md`, `unraid/README.md`,
+  `docs/plugin-authors.md` und `AGENTS.md` enthalten keine veralteten
+  Modulpfade. T-91/T-92 bleiben geplante ORM-Schritte; Mikes Ticketschnitt
+  ist weiterhin die lokale Ausnahme.
+
+**Gelesener Standard:**
+`/Users/macminipro/.codex/skills/code-standards/SKILL.md`, Referenzen
+`architecture.md`, `python.md`, `persistence.md`, `quality.md`,
+`documentation.md`; lokale Claude-Lessons aus dem vollständigen Inventar,
+insbesondere SI-P-02, SI-P-08, SI-P-11, SI-P-12 und SI-P-13.
+
+| Referenzgruppe | Ergebnis und Beleg |
+|---|---|
+| Architektur, DRY, Funktionen und Namen | ✅ Dateiaustausch und DB-Dateiprüfung im Persistenzordner, keine neue doppelte Logik; Bezeichnerinventar vollständig. |
+| BashLib, Bash-Fehler und Exit-Codes | ➖ nicht berührt |
+| Skript-CLI, Hilfe und ANSI-Ausgabe | ➖ nicht berührt |
+| TypeScript, Vue und i18n | ➖ kein UI-Diff; Browserbilder geprüft |
+| Python, FastAPI und Webhooks | ✅ DI und Interface unverändert; 1273 Backendtests grün. |
+| Datenbanken und Persistenzgrenzen | ✅ B4 im Produkt behoben; physischer DB-Tausch und Dateiprüfung liegen im zuständigen Ordner. ORM folgt nach Mikes Ticketschnitt. |
+| Fehler, Logging und Tests | ⚠️ B5: einfacher Pfad-Alias entgeht dem AST-Wächter trotz grünem Gesamtlauf. |
+| Markdown und Inhaltsverzeichnisse | ✅ README-Inhalt mit aktuellem Code konsistent; übrige Anleitungen ohne alten Pfad. |
+
+Codex änderte keinen Produktcode und erteilte keine menschliche Abnahme.
+Die getrennte Board-Übernahme aus Paketfassung `df699dd1` bleibt offen.
 
 ## Nacharbeit Runde 2 (Claude, 2026-10-02)
 
